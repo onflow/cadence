@@ -33,14 +33,16 @@ const (
 	PathDomainPublic
 )
 
+var AllPathDomains = []PathDomain{
+	PathDomainStorage,
+	PathDomainPrivate,
+	PathDomainPublic,
+}
+
 var AllPathDomainsByIdentifier = map[string]PathDomain{}
 
 func init() {
-	for _, pathDomain := range []PathDomain{
-		PathDomainStorage,
-		PathDomainPrivate,
-		PathDomainPublic,
-	} {
+	for _, pathDomain := range AllPathDomains {
 		identifier := pathDomain.Identifier()
 		AllPathDomainsByIdentifier[identifier] = pathDomain
 	}

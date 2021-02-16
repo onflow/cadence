@@ -16,14 +16,42 @@
  * limitations under the License.
  */
 
-package ir
+package wasm
 
-//go:generate go run golang.org/x/tools/cmd/stringer -type=ValType
-
-type ValType uint
-
-const (
-	ValTypeUnknown ValType = iota
-	ValTypeInt
-	ValTypeString
+import (
+	"fmt"
+	"io/ioutil"
+	"os"
+	"os/exec"
 )
+
+func WASM2WAT(binary []byte) string {
+	f, err := ioutil.TempFile("", "wasm")
+	if err != nil {
+		panic(err)
+	}
+
+	defer os.Remove(f.Name())
+
+	_, err = f.Write(binary)
+	if err != nil {
+		panic(err)
+	}
+
+	err = f.Close()
+	if err != nil {
+		panic(err)
+	}
+
+	cmd := exec.Command("wasm2wat", "--enable-reference-types", f.Name())
+	out, err := cmd.Output()
+	if err != nil {
+		if ee, ok := err.(*exec.ExitError); ok {
+			panic(fmt.Errorf("wasm2wat failed: %w:\n%s", err, ee.Stderr))
+		} else {
+			panic(fmt.Errorf("wasm2wat failed: %w", err))
+		}
+	}
+
+	return string(out)
+}

@@ -3300,10 +3300,10 @@ func (interpreter *Interpreter) ensureLoaded(
 		// If the imported location is a virtual import,
 		// prepare the interpreter
 
-		for name, value := range virtualImport.Globals {
-			variable := NewVariable(value)
-			subInterpreter.setVariable(name, variable)
-			subInterpreter.Globals[name] = variable
+		for _, global := range virtualImport.Globals {
+			variable := NewVariable(global.Value)
+			subInterpreter.setVariable(global.Name, variable)
+			subInterpreter.Globals[global.Name] = variable
 		}
 
 		subInterpreter.typeCodes.
@@ -3666,31 +3666,43 @@ func (interpreter *Interpreter) writeStored(storageAddress common.Address, key s
 
 type ValueConverter func(Value, *Interpreter) Value
 
-var converters = map[string]ValueConverter{
-	"Int":     ConvertInt,
-	"UInt":    ConvertUInt,
-	"Int8":    ConvertInt8,
-	"Int16":   ConvertInt16,
-	"Int32":   ConvertInt32,
-	"Int64":   ConvertInt64,
-	"Int128":  ConvertInt128,
-	"Int256":  ConvertInt256,
-	"UInt8":   ConvertUInt8,
-	"UInt16":  ConvertUInt16,
-	"UInt32":  ConvertUInt32,
-	"UInt64":  ConvertUInt64,
-	"UInt128": ConvertUInt128,
-	"UInt256": ConvertUInt256,
-	"Word8":   ConvertWord8,
-	"Word16":  ConvertWord16,
-	"Word32":  ConvertWord32,
-	"Word64":  ConvertWord64,
-	"Fix64":   ConvertFix64,
-	"UFix64":  ConvertUFix64,
-	"Address": ConvertAddress,
+type valueConverterDeclaration struct {
+	name  string
+	value ValueConverter
+}
+
+var converterDeclarations = []valueConverterDeclaration{
+	{"Int", ConvertInt},
+	{"UInt", ConvertUInt},
+	{"Int8", ConvertInt8},
+	{"Int16", ConvertInt16},
+	{"Int32", ConvertInt32},
+	{"Int64", ConvertInt64},
+	{"Int128", ConvertInt128},
+	{"Int256", ConvertInt256},
+	{"UInt8", ConvertUInt8},
+	{"UInt16", ConvertUInt16},
+	{"UInt32", ConvertUInt32},
+	{"UInt64", ConvertUInt64},
+	{"UInt128", ConvertUInt128},
+	{"UInt256", ConvertUInt256},
+	{"Word8", ConvertWord8},
+	{"Word16", ConvertWord16},
+	{"Word32", ConvertWord32},
+	{"Word64", ConvertWord64},
+	{"Fix64", ConvertFix64},
+	{"UFix64", ConvertUFix64},
+	{"Address", ConvertAddress},
 }
 
 func init() {
+
+	converterNames := make(map[string]struct{}, len(converterDeclarations))
+
+	for _, converterDeclaration := range converterDeclarations {
+		converterNames[converterDeclaration.name] = struct{}{}
+	}
+
 	for _, numberType := range sema.AllNumberTypes {
 
 		// Only leaf number types require a converter,
@@ -3703,7 +3715,7 @@ func init() {
 			continue
 		}
 
-		if _, ok := converters[numberType.String()]; !ok {
+		if _, ok := converterNames[numberType.String()]; !ok {
 			panic(fmt.Sprintf("missing converter for number type: %s", numberType))
 		}
 	}
@@ -3715,10 +3727,10 @@ func (interpreter *Interpreter) defineBaseFunctions() {
 }
 
 func (interpreter *Interpreter) defineConverterFunctions() {
-	for name, converter := range converters {
+	for _, declaration := range converterDeclarations {
 		err := interpreter.ImportValue(
-			name,
-			interpreter.newConverterFunction(converter),
+			declaration.name,
+			interpreter.newConverterFunction(declaration.value),
 		)
 		if err != nil {
 			panic(errors.NewUnreachableError())

@@ -48,11 +48,12 @@ func NewKeyTypeValueTypeOrderedMap() *KeyTypeValueTypeOrderedMap {
 // Get returns the value associated with the given key.
 // Returns nil if not found.
 // The second return value indicates if the key is present in the map.
-func (om *KeyTypeValueTypeOrderedMap) Get(key KeyType) (ValueType, bool) {
-	if pair, present := om.pairs[key]; present {
+func (om *KeyTypeValueTypeOrderedMap) Get(key KeyType) (result ValueType, present bool) {
+	var pair *KeyTypeValueTypePair
+	if pair, present = om.pairs[key]; present {
 		return pair.Value, present
 	}
-	return nil, false
+	return
 }
 
 // GetPair returns the key-value pair associated with the given key.
@@ -63,33 +64,38 @@ func (om *KeyTypeValueTypeOrderedMap) GetPair(key KeyType) *KeyTypeValueTypePair
 
 // Set sets the key-value pair, and returns what `Get` would have returned
 // on that key prior to the call to `Set`.
-func (om *KeyTypeValueTypeOrderedMap) Set(key KeyType, value ValueType) (ValueType, bool) {
-	if pair, present := om.pairs[key]; present {
-		oldValue := pair.Value
+func (om *KeyTypeValueTypeOrderedMap) Set(key KeyType, value ValueType) (oldValue ValueType, present bool) {
+	var pair *KeyTypeValueTypePair
+	if pair, present = om.pairs[key]; present {
+		oldValue = pair.Value
 		pair.Value = value
-		return oldValue, true
+		return
 	}
 
-	pair := &KeyTypeValueTypePair{
+	pair = &KeyTypeValueTypePair{
 		Key:   key,
 		Value: value,
 	}
 	pair.element = om.list.PushBack(pair)
 	om.pairs[key] = pair
 
-	return nil, false
+	return
 }
 
 // Delete removes the key-value pair, and returns what `Get` would have returned
 // on that key prior to the call to `Delete`.
-func (om *KeyTypeValueTypeOrderedMap) Delete(key KeyType) (ValueType, bool) {
-	if pair, present := om.pairs[key]; present {
-		om.list.Remove(pair.element)
-		delete(om.pairs, key)
-		return pair.Value, true
+func (om *KeyTypeValueTypeOrderedMap) Delete(key KeyType) (oldValue ValueType, present bool) {
+	var pair *KeyTypeValueTypePair
+	pair, present = om.pairs[key]
+	if !present {
+		return
 	}
 
-	return nil, false
+	om.list.Remove(pair.element)
+	delete(om.pairs, key)
+	oldValue = pair.Value
+
+	return
 }
 
 // Len returns the length of the ordered map.

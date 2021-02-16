@@ -49,7 +49,9 @@ func TestCompilerSimple(t *testing.T) {
 				Params: []ir.ValType{
 					ir.ValTypeInt,
 				},
-				Result: ir.ValTypeInt,
+				Results: []ir.ValType{
+					ir.ValTypeInt,
+				},
 			},
 			Locals: []ir.Local{
 				{Type: ir.ValTypeInt},

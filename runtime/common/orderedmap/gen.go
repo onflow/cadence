@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2021 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,16 +14,11 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
+ * Based on https://github.com/wk8/go-ordered-map, Copyright Jean Rougé
+ *
  */
 
-package ir
+package orderedmap
 
-//go:generate go run golang.org/x/tools/cmd/stringer -type=ValType
-
-type ValType uint
-
-const (
-	ValTypeUnknown ValType = iota
-	ValTypeInt
-	ValTypeString
-)
+//go:generate go run github.com/cheekybits/genny -pkg=orderedmap -in=orderedmap.go -out=orderedmap_string_string.go gen "KeyType=string ValueType=string"

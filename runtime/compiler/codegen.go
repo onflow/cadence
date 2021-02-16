@@ -19,55 +19,72 @@
 package compiler
 
 import (
+	"fmt"
+
 	"github.com/onflow/cadence/runtime/compiler/ir"
 	"github.com/onflow/cadence/runtime/compiler/wasm"
 	"github.com/onflow/cadence/runtime/errors"
 )
 
-type WasmCodeGen struct {
-	mod  *wasm.ModuleBuilder
-	code *wasm.Code
+const RuntimeModuleName = "crt"
+
+type wasmCodeGen struct {
+	mod                        *wasm.ModuleBuilder
+	code                       *wasm.Code
+	runtimeFunctionIndexInt    uint32
+	runtimeFunctionIndexString uint32
+	runtimeFunctionIndexAdd    uint32
 }
 
-func (codeGen *WasmCodeGen) VisitInt(i ir.Int) ir.Repr {
-	// TODO: box, treated as uint8 for now
-	codeGen.emit(wasm.InstructionI32Const{Value: int32(i.Value[1])})
+func (codeGen *wasmCodeGen) VisitInt(i ir.Int) ir.Repr {
+	codeGen.emitConstantCall(
+		codeGen.runtimeFunctionIndexInt,
+		i.Value,
+	)
 	return nil
 }
 
-func (codeGen *WasmCodeGen) VisitSequence(sequence *ir.Sequence) ir.Repr {
+func (codeGen *wasmCodeGen) VisitString(s ir.String) ir.Repr {
+	codeGen.emitConstantCall(
+		codeGen.runtimeFunctionIndexString,
+		[]byte(s.Value),
+	)
+	return nil
+}
+
+func (codeGen *wasmCodeGen) VisitSequence(sequence *ir.Sequence) ir.Repr {
 	for _, stmt := range sequence.Stmts {
 		stmt.Accept(codeGen)
 	}
 	return nil
 }
 
-func (codeGen *WasmCodeGen) VisitBlock(_ *ir.Block) ir.Repr {
+func (codeGen *wasmCodeGen) VisitBlock(_ *ir.Block) ir.Repr {
 	// TODO
 	panic(errors.NewUnreachableError())
 }
 
-func (codeGen *WasmCodeGen) VisitLoop(_ *ir.Loop) ir.Repr {
+func (codeGen *wasmCodeGen) VisitLoop(_ *ir.Loop) ir.Repr {
 	// TODO
 	panic(errors.NewUnreachableError())
 }
 
-func (codeGen *WasmCodeGen) VisitIf(_ *ir.If) ir.Repr {
+func (codeGen *wasmCodeGen) VisitIf(_ *ir.If) ir.Repr {
 	// TODO
 	panic(errors.NewUnreachableError())
 }
 
-func (codeGen *WasmCodeGen) VisitBranch(_ *ir.Branch) ir.Repr {
+func (codeGen *wasmCodeGen) VisitBranch(_ *ir.Branch) ir.Repr {
 	// TODO
 	panic(errors.NewUnreachableError())
 }
 
-func (codeGen *WasmCodeGen) VisitBranchIf(_ *ir.BranchIf) ir.Repr {
+func (codeGen *wasmCodeGen) VisitBranchIf(_ *ir.BranchIf) ir.Repr {
 	// TODO
 	panic(errors.NewUnreachableError())
 }
 
-func (codeGen *WasmCodeGen) VisitStoreLocal(storeLocal *ir.StoreLocal) ir.Repr {
+func (codeGen *wasmCodeGen) VisitStoreLocal(storeLocal *ir.StoreLocal) ir.Repr {
 	storeLocal.Exp.Accept(codeGen)
 	codeGen.emit(wasm.InstructionLocalSet{
 		LocalIndex: storeLocal.LocalIndex,
@@ -75,23 +92,23 @@ func (codeGen *WasmCodeGen) VisitStoreLocal(storeLocal *ir.StoreLocal) ir.Repr {
 	return nil
 }
 
-func (codeGen *WasmCodeGen) VisitDrop(_ *ir.Drop) ir.Repr {
+func (codeGen *wasmCodeGen) VisitDrop(_ *ir.Drop) ir.Repr {
 	// TODO
 	panic(errors.NewUnreachableError())
 }
 
-func (codeGen *WasmCodeGen) VisitReturn(r *ir.Return) ir.Repr {
+func (codeGen *wasmCodeGen) VisitReturn(r *ir.Return) ir.Repr {
 	r.Exp.Accept(codeGen)
 	codeGen.emit(wasm.InstructionReturn{})
 	return nil
 }
 
-func (codeGen *WasmCodeGen) VisitConst(c *ir.Const) ir.Repr {
+func (codeGen *wasmCodeGen) VisitConst(c *ir.Const) ir.Repr {
 	c.Constant.Accept(codeGen)
 	return nil
 }
 
-func (codeGen *WasmCodeGen) VisitCopyLocal(c *ir.CopyLocal) ir.Repr {
+func (codeGen *wasmCodeGen) VisitCopyLocal(c *ir.CopyLocal) ir.Repr {
 	// TODO: copy
 	codeGen.emit(wasm.InstructionLocalGet{
 		LocalIndex: c.LocalIndex,
@@ -99,54 +116,123 @@ func (codeGen *WasmCodeGen) VisitCopyLocal(c *ir.CopyLocal) ir.Repr {
 	return nil
 }
 
-func (codeGen *WasmCodeGen) VisitMoveLocal(_ *ir.MoveLocal) ir.Repr {
+func (codeGen *wasmCodeGen) VisitMoveLocal(_ *ir.MoveLocal) ir.Repr {
 	// TODO
 	panic(errors.NewUnreachableError())
 }
 
-func (codeGen *WasmCodeGen) VisitUnOpExpr(_ *ir.UnOpExpr) ir.Repr {
+func (codeGen *wasmCodeGen) VisitUnOpExpr(_ *ir.UnOpExpr) ir.Repr {
 	// TODO
 	panic(errors.NewUnreachableError())
 }
 
-func (codeGen *WasmCodeGen) VisitBinOpExpr(expr *ir.BinOpExpr) ir.Repr {
+func (codeGen *wasmCodeGen) VisitBinOpExpr(expr *ir.BinOpExpr) ir.Repr {
 	expr.Left.Accept(codeGen)
 	expr.Right.Accept(codeGen)
 	// TODO: add remaining operations, take types into account
 	switch expr.Op {
 	case ir.BinOpPlus:
-		// TODO: take types into account
-		codeGen.emit(wasm.InstructionI32Add{})
+		codeGen.emit(wasm.InstructionCall{
+			FuncIndex: codeGen.runtimeFunctionIndexAdd,
+		})
 		return nil
 	}
 	panic(errors.NewUnreachableError())
 }
 
-func (codeGen *WasmCodeGen) VisitCall(_ *ir.Call) ir.Repr {
+func (codeGen *wasmCodeGen) VisitCall(_ *ir.Call) ir.Repr {
 	// TODO
 	panic(errors.NewUnreachableError())
 }
 
-func (codeGen *WasmCodeGen) VisitFunc(f *ir.Func) ir.Repr {
+func (codeGen *wasmCodeGen) VisitFunc(f *ir.Func) ir.Repr {
 	codeGen.code = &wasm.Code{}
 	codeGen.code.Locals = generateWasmLocalTypes(f.Locals)
 	f.Statement.Accept(codeGen)
 	functionType := generateWasmFunctionType(f.Type)
-	codeGen.mod.AddFunction(f.Name, functionType, codeGen.code)
+	funcIndex := codeGen.mod.AddFunction(f.Name, functionType, codeGen.code)
+	// TODO: make export dependent on visibility modifier
+	codeGen.mod.AddExport(&wasm.Export{
+		Name: f.Name,
+		Descriptor: wasm.FunctionExport{
+			FunctionIndex: funcIndex,
+		},
+	})
 	return nil
 }
 
-func (codeGen *WasmCodeGen) emit(inst wasm.Instruction) {
+func (codeGen *wasmCodeGen) emit(inst wasm.Instruction) {
 	codeGen.code.Instructions = append(codeGen.code.Instructions, inst)
 }
 
+func (codeGen *wasmCodeGen) addConstant(value []byte) uint32 {
+	offset := codeGen.mod.RequireMemory(uint32(len(value)))
+	// TODO: optimize:
+	//   let module builder generate one data entry of all constants,
+	//   instead of one data entry for each constant
+	codeGen.mod.AddData(offset, value)
+	return offset
+}
+
+func (codeGen *wasmCodeGen) emitConstantCall(funcIndex uint32, value []byte) {
+	memoryOffset := codeGen.addConstant(value)
+	codeGen.emit(wasm.InstructionI32Const{Value: int32(memoryOffset)})
+
+	length := int32(len(value))
+	codeGen.emit(wasm.InstructionI32Const{Value: length})
+
+	codeGen.emit(wasm.InstructionCall{FuncIndex: funcIndex})
+}
+
+var constantFunctionType = &wasm.FunctionType{
+	Params: []wasm.ValueType{
+		// memory offset
+		wasm.ValueTypeI32,
+		// length
+		wasm.ValueTypeI32,
+	},
+	Results: []wasm.ValueType{
+		wasm.ValueTypeExternRef,
+	},
+}
+
+var addFunctionType = &wasm.FunctionType{
+	Params: []wasm.ValueType{
+		wasm.ValueTypeExternRef,
+		wasm.ValueTypeExternRef,
+	},
+	Results: []wasm.ValueType{
+		wasm.ValueTypeExternRef,
+	},
+}
+
+func (codeGen *wasmCodeGen) addRuntimeImports() {
+	codeGen.runtimeFunctionIndexInt = codeGen.addRuntimeImport("Int", constantFunctionType)
+	codeGen.runtimeFunctionIndexString = codeGen.addRuntimeImport("String", constantFunctionType)
+	codeGen.runtimeFunctionIndexAdd = codeGen.addRuntimeImport("add", addFunctionType)
+}
+
+func (codeGen *wasmCodeGen) addRuntimeImport(name string, funcType *wasm.FunctionType) uint32 {
+	funcIndex, err := codeGen.mod.AddFunctionImport(RuntimeModuleName, name, funcType)
+	if err != nil {
+		panic(fmt.Errorf("failed to add runtime import of function %s: %w", name, err))
+	}
+	return funcIndex
+}
+
 func GenerateWasm(funcs []*ir.Func) *wasm.Module {
-	g := &WasmCodeGen{
+	g := &wasmCodeGen{
 		mod: &wasm.ModuleBuilder{},
 	}
+
+	g.addRuntimeImports()
+
 	for _, f := range funcs {
 		f.Accept(g)
 	}
+
+	g.mod.ExportMemory("mem")
+
 	return g.mod.Build()
 }
 
@@ -161,27 +247,30 @@ func generateWasmLocalTypes(locals []ir.Local) []wasm.ValueType {
 func generateWasmValType(valType ir.ValType) wasm.ValueType {
 	// TODO: add remaining types
 	switch valType {
-	case ir.ValTypeInt:
-		// TODO: box, return ref
-		return wasm.ValueTypeI32
+	case ir.ValTypeInt,
+		ir.ValTypeString:
+
+		return wasm.ValueTypeExternRef
 	}
 
 	panic(errors.NewUnreachableError())
 }
 
 func generateWasmFunctionType(funcType ir.FuncType) *wasm.FunctionType {
+	// generate parameter types
 	params := make([]wasm.ValueType, len(funcType.Params))
 	for i, param := range funcType.Params {
 		params[i] = generateWasmValType(param)
 	}
 
-	// TODO: handle void, no results
-	result := generateWasmValType(funcType.Result)
+	// generate result types
+	results := make([]wasm.ValueType, len(funcType.Results))
+	for i, result := range funcType.Results {
+		results[i] = generateWasmValType(result)
+	}
 
 	return &wasm.FunctionType{
-		Params: params,
-		Results: []wasm.ValueType{
-			result,
-		},
+		Params:  params,
+		Results: results,
 	}
 }

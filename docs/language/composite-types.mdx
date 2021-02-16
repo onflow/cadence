@@ -1125,6 +1125,7 @@ resource R {}
 
 // Declare a constant for an array of resources.
 // Create two resources and move them into the array.
+// `resources` has type `@[R]`
 //
 let resources <- [
     <-create R(),
@@ -1161,6 +1162,7 @@ The same applies to dictionaries.
 ```cadence
 // Declare a constant for a dictionary of resources.
 // Create two resources and move them into the dictionary.
+// `resources` has type `@{String: R}`
 //
 let resources <- {
     "r1": <-create R(),
@@ -1301,7 +1303,8 @@ destroy resources
 Resources have an implicit unique identifier associated with them,
 implemented by a predeclared public field `let uuid: UInt64` on each resource.
 
-This identifier will be automatically set when the resource is created,
+This identifier will be automatically set when the resource is created, before the resource's initializer is called
+(i.e. the identifier can be used in the initializer),
 and will be unique even after the resource is destroyed,
 i.e. no two resources will ever have the same identifier.
 

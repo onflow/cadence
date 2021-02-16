@@ -232,9 +232,12 @@ func (compiler *Compiler) VisitFunctionExpression(_ *ast.FunctionExpression) ast
 	panic(errors.NewUnreachableError())
 }
 
-func (compiler *Compiler) VisitStringExpression(_ *ast.StringExpression) ast.Repr {
-	// TODO
-	panic(errors.NewUnreachableError())
+func (compiler *Compiler) VisitStringExpression(e *ast.StringExpression) ast.Repr {
+	return &ir.Const{
+		Constant: ir.String{
+			Value: e.Value,
+		},
+	}
 }
 
 func (compiler *Compiler) VisitCastingExpression(_ *ast.CastingExpression) ast.Repr {
@@ -394,23 +397,30 @@ func compileValueType(ty sema.Type) ir.ValType {
 	switch ty.(type) {
 	case *sema.IntType:
 		return ir.ValTypeInt
+	case *sema.StringType:
+		return ir.ValTypeString
 	}
 
 	panic(errors.NewUnreachableError())
 }
 
 func compileFunctionType(functionType *sema.FunctionType) ir.FuncType {
+	// compile parameter types
 	paramTypes := make([]ir.ValType, len(functionType.Parameters))
 	for i, parameter := range functionType.Parameters {
 		paramTypes[i] = compileValueType(parameter.TypeAnnotation.Type)
 	}
 
-	// TODO: handle void
-	resultType := compileValueType(functionType.ReturnTypeAnnotation.Type)
-
+	// compile return / result type
+	var resultTypes []ir.ValType
+	if functionType.ReturnTypeAnnotation.Type != sema.VoidType {
+		resultTypes = []ir.ValType{
+			compileValueType(functionType.ReturnTypeAnnotation.Type),
+		}
+	}
 	return ir.FuncType{
-		Params: paramTypes,
-		Result: resultType,
+		Params:  paramTypes,
+		Results: resultTypes,
 	}
 }
 

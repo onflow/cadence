@@ -22,6 +22,7 @@ type Repr interface{}
 
 type ConstVisitor interface {
 	VisitInt(Int) Repr
+	VisitString(String) Repr
 }
 
 type StmtVisitor interface {
