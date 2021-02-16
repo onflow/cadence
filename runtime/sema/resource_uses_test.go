@@ -49,6 +49,8 @@ func TestResourceUses(t *testing.T) {
 	assert.False(t, resourceUses.Contains(posB))
 	assert.False(t, resourceUses.Contains(posC))
 
+	assert.Equal(t, 1, resourceUses.Size())
+
 	assert.False(t, resourceUses.IsUseAfterInvalidationReported(posA))
 	assert.False(t, resourceUses.IsUseAfterInvalidationReported(posB))
 	assert.False(t, resourceUses.IsUseAfterInvalidationReported(posC))
@@ -82,6 +84,16 @@ func TestResourceUses(t *testing.T) {
 
 	// ... Assert state before
 
+	assert.True(t, resourceUses.Contains(posA))
+	assert.False(t, resourceUses.Contains(posB))
+	assert.False(t, resourceUses.Contains(posC))
+
+	assert.Equal(t, 1, resourceUses.Size())
+
+	assert.False(t, resourceUses.IsUseAfterInvalidationReported(posA))
+	assert.False(t, resourceUses.IsUseAfterInvalidationReported(posB))
+	assert.False(t, resourceUses.IsUseAfterInvalidationReported(posC))
+
 	forEachResult = nil
 
 	err = resourceUses.ForEach(func(pos ast.Position, use sema.ResourceUse) error {
@@ -108,6 +120,8 @@ func TestResourceUses(t *testing.T) {
 	assert.True(t, resourceUses.Contains(posA))
 	assert.True(t, resourceUses.Contains(posB))
 	assert.False(t, resourceUses.Contains(posC))
+
+	assert.Equal(t, 2, resourceUses.Size())
 
 	assert.False(t, resourceUses.IsUseAfterInvalidationReported(posA))
 	assert.False(t, resourceUses.IsUseAfterInvalidationReported(posB))
@@ -144,6 +158,8 @@ func TestResourceUses(t *testing.T) {
 	assert.True(t, resourceUses.Contains(posB))
 	assert.False(t, resourceUses.Contains(posC))
 
+	assert.Equal(t, 2, resourceUses.Size())
+
 	assert.False(t, resourceUses.IsUseAfterInvalidationReported(posA))
 	assert.True(t, resourceUses.IsUseAfterInvalidationReported(posB))
 	assert.False(t, resourceUses.IsUseAfterInvalidationReported(posC))
@@ -178,6 +194,16 @@ func TestResourceUses(t *testing.T) {
 
 	// ... Assert state before
 
+	assert.True(t, resourceUses.Contains(posA))
+	assert.True(t, resourceUses.Contains(posB))
+	assert.False(t, resourceUses.Contains(posC))
+
+	assert.Equal(t, 2, resourceUses.Size())
+
+	assert.False(t, resourceUses.IsUseAfterInvalidationReported(posA))
+	assert.True(t, resourceUses.IsUseAfterInvalidationReported(posB))
+	assert.False(t, resourceUses.IsUseAfterInvalidationReported(posC))
+
 	forEachResult = nil
 
 	err = resourceUses.ForEach(func(pos ast.Position, use sema.ResourceUse) error {
@@ -211,6 +237,8 @@ func TestResourceUses(t *testing.T) {
 	assert.True(t, resourceUses.Contains(posA))
 	assert.True(t, resourceUses.Contains(posB))
 	assert.True(t, resourceUses.Contains(posC))
+
+	assert.Equal(t, 3, resourceUses.Size())
 
 	assert.False(t, resourceUses.IsUseAfterInvalidationReported(posA))
 	assert.True(t, resourceUses.IsUseAfterInvalidationReported(posB))
@@ -251,6 +279,8 @@ func TestResourceUses(t *testing.T) {
 	assert.True(t, resourceUses.Contains(posB))
 	assert.False(t, resourceUses.Contains(posC))
 
+	assert.Equal(t, 2, resourceUses.Size())
+
 	assert.False(t, resourceUses.IsUseAfterInvalidationReported(posA))
 	assert.True(t, resourceUses.IsUseAfterInvalidationReported(posB))
 	assert.False(t, resourceUses.IsUseAfterInvalidationReported(posC))
@@ -285,6 +315,8 @@ func TestResourceUses(t *testing.T) {
 	assert.True(t, resourceUses.Contains(posA))
 	assert.False(t, resourceUses.Contains(posB))
 	assert.False(t, resourceUses.Contains(posC))
+
+	assert.Equal(t, 1, resourceUses.Size())
 
 	assert.False(t, resourceUses.IsUseAfterInvalidationReported(posA))
 	assert.False(t, resourceUses.IsUseAfterInvalidationReported(posB))

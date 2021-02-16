@@ -25,3 +25,4 @@ package sema
 //go:generate go run github.com/cheekybits/genny -pkg=sema -in=../common/orderedmap/orderedmap.go -out=ordered_map_string_variable.go gen "KeyType=string ValueType=*Variable"
 //go:generate go run github.com/cheekybits/genny -pkg=sema -in=../common/orderedmap/orderedmap.go -out=ordered_map_string_valuedeclaration.go gen "KeyType=string ValueType=ValueDeclaration"
 //go:generate go run github.com/cheekybits/genny -pkg=sema -in=../common/orderedmap/orderedmap.go -out=ordered_map_resourceinvalidation_struct.go gen "KeyType=ResourceInvalidation ValueType=struct{}"
+//go:generate go run github.com/cheekybits/genny -pkg=sema -in=../common/orderedmap/orderedmap.go -out=ordered_map_position_resourceuse.go gen "KeyType=ast.Position ValueType=ResourceUse"
