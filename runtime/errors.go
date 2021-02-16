@@ -255,16 +255,20 @@ func (*InvalidContractDeploymentOriginError) Error() string {
 // It contains all the errors reported during the update validation.
 type ContractUpdateError struct {
 	contractName string
-	Errors       []error
-	interpreter.LocationRange
+	errors       []error
+	location     common.Location
 }
 
-func (e ContractUpdateError) Error() string {
+func (e *ContractUpdateError) Error() string {
 	return fmt.Sprintf("cannot update contract `%s`", e.contractName)
 }
 
-func (e ContractUpdateError) ChildErrors() []error {
-	return e.Errors
+func (e *ContractUpdateError) ChildErrors() []error {
+	return e.errors
+}
+
+func (e *ContractUpdateError) ImportLocation() common.Location {
+	return e.location
 }
 
 // FieldMismatchError is reported during a contract update, when a type of a field

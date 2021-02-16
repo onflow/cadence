@@ -20,7 +20,6 @@ package runtime
 
 import (
 	"github.com/onflow/cadence/runtime/ast"
-	"github.com/onflow/cadence/runtime/interpreter"
 )
 
 type ContractUpdateValidator struct {
@@ -110,7 +109,7 @@ func (validator *ContractUpdateValidator) checkDeclarationUpdatability(
 			name:    oldDeclaration.DeclarationIdentifier().Identifier,
 			oldKind: oldDeclaration.DeclarationKind(),
 			newKind: newDeclaration.DeclarationKind(),
-			Range:   ast.NewRangeFromPositioned(newDeclaration),
+			Range:   ast.NewRangeFromPositioned(newDeclaration.DeclarationIdentifier()),
 		})
 
 		return
@@ -166,7 +165,7 @@ func (validator *ContractUpdateValidator) checkField(oldField *ast.FieldDeclarat
 			declName:  validator.currentDecl.DeclarationIdentifier().Identifier,
 			fieldName: newField.Identifier.Identifier,
 			err:       err,
-			Range:     ast.NewRangeFromPositioned(newField),
+			Range:     ast.NewRangeFromPositioned(newField.TypeAnnotation),
 		})
 	}
 }
@@ -437,10 +436,8 @@ func (validator *ContractUpdateValidator) report(err error) {
 func (validator *ContractUpdateValidator) getContractUpdateError() error {
 	return &ContractUpdateError{
 		contractName: validator.contractName,
-		Errors:       validator.errors,
-		LocationRange: interpreter.LocationRange{
-			Location: validator.location,
-		},
+		errors:       validator.errors,
+		location:     validator.location,
 	}
 }
 

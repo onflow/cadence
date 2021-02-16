@@ -917,10 +917,10 @@ func TestContractUpdateValidation(t *testing.T) {
 		require.Error(t, err)
 
 		const expectedError = "error: mismatching field `a` in `Test21`\n" +
-			" --> 0000000000000042.Test21:3:16\n" +
+			" --> 0000000000000042.Test21:3:27\n" +
 			"  |\n" +
 			"3 |                 pub var a: Int\n" +
-			"  |                 ^^^^^^^^^^^^^^ incompatible type annotations. expected `String`, found `Int`\n" +
+			"  |                            ^^^ incompatible type annotations. expected `String`, found `Int`\n" +
 			"\n" +
 			"error: found new field `b` in `Test21`\n" +
 			" --> 0000000000000042.Test21:4:24\n" +
@@ -929,10 +929,10 @@ func TestContractUpdateValidation(t *testing.T) {
 			"  |                         ^\n" +
 			"\n" +
 			"error: trying to convert structure interface `TestStruct` to a structure\n" +
-			"  --> 0000000000000042.Test21:11:16\n" +
+			"  --> 0000000000000042.Test21:11:27\n" +
 			"   |\n" +
 			"11 |                 pub struct TestStruct {\n" +
-			"   |                 ^"
+			"   |                            ^^^^^^^^^^"
 
 		require.Contains(t, err.Error(), expectedError)
 	})
