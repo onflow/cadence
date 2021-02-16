@@ -87,13 +87,13 @@ func (ri ResourceInfo) Clone() ResourceInfo {
 // Resources is a map which contains invalidation info for resources.
 //
 type Resources struct {
-	resources map[interface{}]ResourceInfo
+	resources *InterfaceResourceInfoOrderedMap
 	Returns   bool
 }
 
 func NewResources() *Resources {
 	return &Resources{
-		resources: make(map[interface{}]ResourceInfo),
+		resources: NewInterfaceResourceInfoOrderedMap(),
 	}
 }
 
@@ -111,19 +111,20 @@ func (ris *Resources) String() string {
 }
 
 func (ris *Resources) Get(resource interface{}) ResourceInfo {
-	return ris.resources[resource]
+	info, _ := ris.resources.Get(resource)
+	return info
 }
 
 // AddInvalidation adds the given invalidation to the set of invalidations for the given resource.
 // If the invalidation is not temporary, marks the resource to be definitely invalidated.
 //
 func (ris *Resources) AddInvalidation(resource interface{}, invalidation ResourceInvalidation) {
-	info := ris.resources[resource]
+	info, _ := ris.resources.Get(resource)
 	info.Invalidations.Add(invalidation)
 	if invalidation.Kind.IsDefinite() {
 		info.DefinitivelyInvalidated = true
 	}
-	ris.resources[resource] = info
+	ris.resources.Set(resource, info)
 }
 
 // RemoveTemporaryMoveInvalidation removes the given invalidation
@@ -134,47 +135,48 @@ func (ris *Resources) RemoveTemporaryMoveInvalidation(resource interface{}, inva
 		panic(errors.NewUnreachableError())
 	}
 
-	info := ris.resources[resource]
+	info, _ := ris.resources.Get(resource)
 	info.Invalidations.DeleteLocally(invalidation)
-	ris.resources[resource] = info
+	ris.resources.Set(resource, info)
 }
 
 // AddUse adds the given use position to the set of use positions for the given resource.
 //
 func (ris *Resources) AddUse(resource interface{}, use ast.Position) {
-	info := ris.resources[resource]
+	info, _ := ris.resources.Get(resource)
 	info.UsePositions.Add(use)
-	ris.resources[resource] = info
+	ris.resources.Set(resource, info)
 }
 
 func (ris *Resources) MarkUseAfterInvalidationReported(resource interface{}, pos ast.Position) {
-	info := ris.resources[resource]
+	info, _ := ris.resources.Get(resource)
 	info.UsePositions.MarkUseAfterInvalidationReported(pos)
-	ris.resources[resource] = info
+	ris.resources.Set(resource, info)
 }
 
 func (ris *Resources) IsUseAfterInvalidationReported(resource interface{}, pos ast.Position) bool {
-	info := ris.resources[resource]
+	info, _ := ris.resources.Get(resource)
 	return info.UsePositions.IsUseAfterInvalidationReported(pos)
 }
 
 func (ris *Resources) Clone() *Resources {
 	result := NewResources()
 	result.Returns = ris.Returns
-	for resource, info := range ris.resources {
-		result.resources[resource] = info.Clone()
+	for pair := ris.resources.Oldest(); pair != nil; pair = pair.Next() {
+		resource := pair.Key
+		info := pair.Value
+
+		result.resources.Set(resource, info.Clone())
 	}
 	return result
 }
 
 func (ris *Resources) Size() int {
-	return len(ris.resources)
+	return ris.resources.Len()
 }
 
 func (ris *Resources) ForEach(f func(resource interface{}, info ResourceInfo)) {
-	for resource, info := range ris.resources {
-		f(resource, info)
-	}
+	ris.resources.Foreach(f)
 }
 
 // MergeBranches merges the given resources from two branches into these resources.
@@ -192,7 +194,7 @@ func (ris *Resources) MergeBranches(thenResources *Resources, elseResources *Res
 	}
 
 	for resource, infoTuple := range infoTuples {
-		info := ris.resources[resource]
+		info, _ := ris.resources.Get(resource)
 
 		// The resource can be considered definitely invalidated in both branches
 		// if in both branches, there were invalidations or the branch returned.
@@ -225,7 +227,7 @@ func (ris *Resources) MergeBranches(thenResources *Resources, elseResources *Res
 			info.UsePositions.Merge(infoTuple.elseInfo.UsePositions)
 		}
 
-		ris.resources[resource] = info
+		ris.resources.Set(resource, info)
 	}
 
 	ris.Returns = ris.Returns ||
