@@ -4397,13 +4397,12 @@ func (t *CheckedFunctionType) CheckArgumentExpressions(
 
 // baseTypes are the nominal types available in programs
 //
-var baseTypes map[string]Type
+var baseTypes = NewStringTypeOrderedMap()
 
 func init() {
 
-	baseTypes = map[string]Type{
-		"": VoidType,
-	}
+	baseTypes = NewStringTypeOrderedMap()
+	baseTypes.Set("", VoidType)
 
 	otherTypes := []Type{
 		&MetaType{},
@@ -4436,11 +4435,11 @@ func init() {
 		typeName := ty.String()
 
 		// check type is not accidentally redeclared
-		if _, ok := baseTypes[typeName]; ok {
+		if _, ok := baseTypes.Get(typeName); ok {
 			panic(errors.NewUnreachableError())
 		}
 
-		baseTypes[typeName] = ty
+		baseTypes.Set(typeName, ty)
 	}
 }
 

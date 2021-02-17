@@ -220,7 +220,7 @@ func NewChecker(program *ast.Program, location common.Location, options ...Optio
 	)
 
 	typeActivations := NewValueActivations()
-	for name, baseType := range baseTypes {
+	baseTypes.Foreach(func(name string, baseType Type) {
 		_, err := typeActivations.DeclareType(typeDeclaration{
 			identifier:               ast.Identifier{Identifier: name},
 			ty:                       baseType,
@@ -231,7 +231,7 @@ func NewChecker(program *ast.Program, location common.Location, options ...Optio
 		if err != nil {
 			panic(err)
 		}
-	}
+	})
 
 	checker := &Checker{
 		Program:             program,

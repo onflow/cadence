@@ -83,7 +83,7 @@ func (i ElaborationImport) AllTypeElements() map[string]ImportElement {
 }
 
 func (i ElaborationImport) IsImportableType(name string) bool {
-	if _, ok := baseTypes[name]; ok {
+	if _, ok := baseTypes.Get(name); ok {
 		return false
 	}
 
