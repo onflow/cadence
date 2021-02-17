@@ -840,7 +840,7 @@ func TestCheckRestrictedTypeNoType(t *testing.T) {
 
 		require.NoError(t, err)
 
-		rType := checker.Elaboration.GlobalValues["r"].Type
+		rType := RequireGlobalValue(t, checker.Elaboration, "r")
 		require.IsType(t, &sema.RestrictedType{}, rType)
 
 		ty := rType.(*sema.RestrictedType)
@@ -849,7 +849,7 @@ func TestCheckRestrictedTypeNoType(t *testing.T) {
 
 		require.Len(t, ty.Restrictions, 1)
 		assert.Same(t,
-			checker.Elaboration.GlobalTypes["I1"].Type,
+			RequireGlobalType(t, checker.Elaboration, "I1"),
 			ty.Restrictions[0],
 		)
 	})
@@ -864,7 +864,7 @@ func TestCheckRestrictedTypeNoType(t *testing.T) {
 
 		require.NoError(t, err)
 
-		rType := checker.Elaboration.GlobalValues["s"].Type
+		rType := RequireGlobalValue(t, checker.Elaboration, "s")
 		require.IsType(t, &sema.RestrictedType{}, rType)
 
 		ty := rType.(*sema.RestrictedType)
@@ -873,7 +873,7 @@ func TestCheckRestrictedTypeNoType(t *testing.T) {
 
 		require.Len(t, ty.Restrictions, 1)
 		assert.Same(t,
-			checker.Elaboration.GlobalTypes["I1"].Type,
+			RequireGlobalType(t, checker.Elaboration, "I1"),
 			ty.Restrictions[0],
 		)
 	})
@@ -888,7 +888,7 @@ func TestCheckRestrictedTypeNoType(t *testing.T) {
 
 		require.NoError(t, err)
 
-		rType := checker.Elaboration.GlobalValues["r"].Type
+		rType := RequireGlobalValue(t, checker.Elaboration, "r")
 		require.IsType(t, &sema.RestrictedType{}, rType)
 
 		ty := rType.(*sema.RestrictedType)
@@ -897,11 +897,11 @@ func TestCheckRestrictedTypeNoType(t *testing.T) {
 
 		require.Len(t, ty.Restrictions, 2)
 		assert.Same(t,
-			checker.Elaboration.GlobalTypes["I1"].Type,
+			RequireGlobalType(t, checker.Elaboration, "I1"),
 			ty.Restrictions[0],
 		)
 		assert.Same(t,
-			checker.Elaboration.GlobalTypes["I2"].Type,
+			RequireGlobalType(t, checker.Elaboration, "I2"),
 			ty.Restrictions[1],
 		)
 	})
@@ -916,7 +916,7 @@ func TestCheckRestrictedTypeNoType(t *testing.T) {
 
 		require.NoError(t, err)
 
-		rType := checker.Elaboration.GlobalValues["s"].Type
+		rType := RequireGlobalValue(t, checker.Elaboration, "s")
 		require.IsType(t, &sema.RestrictedType{}, rType)
 
 		ty := rType.(*sema.RestrictedType)
@@ -925,11 +925,11 @@ func TestCheckRestrictedTypeNoType(t *testing.T) {
 
 		require.Len(t, ty.Restrictions, 2)
 		assert.Same(t,
-			checker.Elaboration.GlobalTypes["I1"].Type,
+			RequireGlobalType(t, checker.Elaboration, "I1"),
 			ty.Restrictions[0],
 		)
 		assert.Same(t,
-			checker.Elaboration.GlobalTypes["I2"].Type,
+			RequireGlobalType(t, checker.Elaboration, "I2"),
 			ty.Restrictions[1],
 		)
 	})
@@ -957,7 +957,7 @@ func TestCheckRestrictedTypeNoType(t *testing.T) {
 
 		require.NoError(t, err)
 
-		refType := checker.Elaboration.GlobalValues["ref"].Type
+		refType := RequireGlobalValue(t, checker.Elaboration, "ref")
 		require.IsType(t, &sema.ReferenceType{}, refType)
 
 		rType := refType.(*sema.ReferenceType).Type
@@ -969,7 +969,7 @@ func TestCheckRestrictedTypeNoType(t *testing.T) {
 
 		require.Len(t, ty.Restrictions, 1)
 		assert.Same(t,
-			checker.Elaboration.GlobalTypes["I1"].Type,
+			RequireGlobalType(t, checker.Elaboration, "I1"),
 			ty.Restrictions[0],
 		)
 	})
@@ -984,7 +984,7 @@ func TestCheckRestrictedTypeNoType(t *testing.T) {
 
 		require.NoError(t, err)
 
-		refType := checker.Elaboration.GlobalValues["ref"].Type
+		refType := RequireGlobalValue(t, checker.Elaboration, "ref")
 		require.IsType(t, &sema.ReferenceType{}, refType)
 
 		rType := refType.(*sema.ReferenceType).Type
@@ -996,7 +996,7 @@ func TestCheckRestrictedTypeNoType(t *testing.T) {
 
 		require.Len(t, ty.Restrictions, 1)
 		assert.Same(t,
-			checker.Elaboration.GlobalTypes["I1"].Type,
+			RequireGlobalType(t, checker.Elaboration, "I1"),
 			ty.Restrictions[0],
 		)
 	})
@@ -1011,7 +1011,7 @@ func TestCheckRestrictedTypeNoType(t *testing.T) {
 
 		require.NoError(t, err)
 
-		refType := checker.Elaboration.GlobalValues["ref"].Type
+		refType := RequireGlobalValue(t, checker.Elaboration, "ref")
 		require.IsType(t, &sema.ReferenceType{}, refType)
 
 		rType := refType.(*sema.ReferenceType).Type
@@ -1023,11 +1023,11 @@ func TestCheckRestrictedTypeNoType(t *testing.T) {
 
 		require.Len(t, ty.Restrictions, 2)
 		assert.Same(t,
-			checker.Elaboration.GlobalTypes["I1"].Type,
+			RequireGlobalType(t, checker.Elaboration, "I1"),
 			ty.Restrictions[0],
 		)
 		assert.Same(t,
-			checker.Elaboration.GlobalTypes["I2"].Type,
+			RequireGlobalType(t, checker.Elaboration, "I2"),
 			ty.Restrictions[1],
 		)
 	})
@@ -1042,7 +1042,7 @@ func TestCheckRestrictedTypeNoType(t *testing.T) {
 
 		require.NoError(t, err)
 
-		refType := checker.Elaboration.GlobalValues["ref"].Type
+		refType := RequireGlobalValue(t, checker.Elaboration, "ref")
 		require.IsType(t, &sema.ReferenceType{}, refType)
 
 		rType := refType.(*sema.ReferenceType).Type
@@ -1054,11 +1054,11 @@ func TestCheckRestrictedTypeNoType(t *testing.T) {
 
 		require.Len(t, ty.Restrictions, 2)
 		assert.Same(t,
-			checker.Elaboration.GlobalTypes["I1"].Type,
+			RequireGlobalType(t, checker.Elaboration, "I1"),
 			ty.Restrictions[0],
 		)
 		assert.Same(t,
-			checker.Elaboration.GlobalTypes["I2"].Type,
+			RequireGlobalType(t, checker.Elaboration, "I2"),
 			ty.Restrictions[1],
 		)
 	})

@@ -122,7 +122,7 @@ func WithPredeclaredValues(predeclaredValues []ValueDeclaration) Option {
 			if variable == nil {
 				continue
 			}
-			checker.Elaboration.GlobalValues[variable.Identifier] = variable
+			checker.Elaboration.GlobalValues.Set(variable.Identifier, variable)
 			checker.Elaboration.EffectivePredeclaredValues[variable.Identifier] = declaration
 		}
 
@@ -288,7 +288,7 @@ func (checker *Checker) declareBaseValues() {
 			continue
 		}
 		variable.IsBaseValue = true
-		checker.Elaboration.GlobalValues[variable.Identifier] = variable
+		checker.Elaboration.GlobalValues.Set(variable.Identifier, variable)
 	}
 }
 
@@ -392,26 +392,27 @@ func (checker *Checker) hint(hint Hint) {
 func (checker *Checker) UserDefinedValues() map[string]*Variable {
 	variables := map[string]*Variable{}
 
-	for key, value := range checker.Elaboration.GlobalValues {
+	checker.Elaboration.GlobalValues.Foreach(func(key string, value *Variable) {
+
 		if value.IsBaseValue {
-			continue
+			return
 		}
 
 		if _, ok := checker.Elaboration.EffectivePredeclaredValues[key]; ok {
-			continue
+			return
 		}
 
 		if _, ok := checker.Elaboration.EffectivePredeclaredTypes[key]; ok {
-			continue
+			return
 		}
 
-		if typeValue, ok := checker.Elaboration.GlobalTypes[key]; ok {
+		if typeValue, ok := checker.Elaboration.GlobalTypes.Get(key); ok {
 			variables[key] = typeValue
-			continue
+			return
 		}
 
 		variables[key] = value
-	}
+	})
 
 	return variables
 }
@@ -812,7 +813,7 @@ func (checker *Checker) declareGlobalValue(name string) {
 	if variable == nil {
 		return
 	}
-	checker.Elaboration.GlobalValues[name] = variable
+	checker.Elaboration.GlobalValues.Set(name, variable)
 }
 
 func (checker *Checker) declareGlobalType(name string) {
@@ -820,7 +821,7 @@ func (checker *Checker) declareGlobalType(name string) {
 	if ty == nil {
 		return
 	}
-	checker.Elaboration.GlobalTypes[name] = ty
+	checker.Elaboration.GlobalTypes.Set(name, ty)
 }
 
 func (checker *Checker) checkResourceMoveOperation(valueExpression ast.Expression, valueType Type) {
@@ -995,7 +996,7 @@ func (checker *Checker) convertRestrictedType(t *ast.RestrictedType) Type {
 
 		// The restrictions may not have clashing members
 
-		// TODO: also include interface conformances's members
+		// TODO: also include interface conformances' members
 		//   once interfaces can have conformances
 
 		restrictionInterfaceType.Members.Foreach(func(name string, member *Member) {

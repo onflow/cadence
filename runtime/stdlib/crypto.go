@@ -24,6 +24,7 @@ import (
 
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
+	errors2 "github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/parser2"
 	"github.com/onflow/cadence/runtime/sema"
@@ -79,7 +80,13 @@ var CryptoChecker = func() *sema.Checker {
 	return checker
 }()
 
-var cryptoContractType = CryptoChecker.Elaboration.GlobalTypes["Crypto"].Type.(*sema.CompositeType)
+var cryptoContractType = func() *sema.CompositeType {
+	variable, ok := CryptoChecker.Elaboration.GlobalTypes.Get("Crypto")
+	if !ok {
+		panic(errors2.NewUnreachableError())
+	}
+	return variable.Type.(*sema.CompositeType)
+}()
 
 var cryptoContractInitializerTypes = func() (result []sema.Type) {
 	result = make([]sema.Type, len(cryptoContractType.ConstructorParameters))

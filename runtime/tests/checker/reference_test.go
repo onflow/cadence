@@ -182,7 +182,7 @@ func TestCheckReferenceExpressionWithNonCompositeResultType(t *testing.T) {
 
 	require.NoError(t, err)
 
-	refValueType := checker.Elaboration.GlobalValues["ref"].Type
+	refValueType := RequireGlobalValue(t, checker.Elaboration, "ref")
 
 	assert.Equal(t,
 		&sema.ReferenceType{
@@ -209,9 +209,9 @@ func TestCheckReferenceExpressionWithCompositeResultType(t *testing.T) {
 
 		require.NoError(t, err)
 
-		rType := checker.Elaboration.GlobalTypes["R"].Type
+		rType := RequireGlobalType(t, checker.Elaboration, "R")
 
-		refValueType := checker.Elaboration.GlobalValues["ref"].Type
+		refValueType := RequireGlobalValue(t, checker.Elaboration, "ref")
 
 		assert.Equal(t,
 			&sema.ReferenceType{
@@ -234,9 +234,9 @@ func TestCheckReferenceExpressionWithCompositeResultType(t *testing.T) {
 
 		require.NoError(t, err)
 
-		sType := checker.Elaboration.GlobalTypes["S"].Type
+		sType := RequireGlobalType(t, checker.Elaboration, "S")
 
-		refValueType := checker.Elaboration.GlobalValues["ref"].Type
+		refValueType := RequireGlobalValue(t, checker.Elaboration, "ref")
 
 		assert.Equal(t,
 			&sema.ReferenceType{
@@ -926,9 +926,9 @@ func TestCheckReferenceExpressionReferenceType(t *testing.T) {
 
 			require.NoError(t, err)
 
-			tType := checker.Elaboration.GlobalTypes["T"].Type
+			tType := RequireGlobalType(t, checker.Elaboration, "T")
 
-			refValueType := checker.Elaboration.GlobalValues["ref"].Type
+			refValueType := RequireGlobalValue(t, checker.Elaboration, "ref")
 
 			require.Equal(t,
 				&sema.ReferenceType{

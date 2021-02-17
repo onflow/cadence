@@ -756,7 +756,11 @@ func (interpreter *Interpreter) prepareInvokeVariable(
 		}
 	}
 
-	ty := interpreter.Program.Elaboration.GlobalValues[functionName].Type
+	functionVariable, ok := interpreter.Program.Elaboration.GlobalValues.Get(functionName)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+	ty := functionVariable.Type
 
 	// function must be invokable
 	invokableType, ok := ty.(sema.InvokableType)

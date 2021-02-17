@@ -61,7 +61,7 @@ func TestCheckIntegerLiteralTypeConversionInVariableDeclaration(t *testing.T) {
 
 				assert.Equal(t,
 					ty,
-					checker.Elaboration.GlobalValues["x"].Type,
+					RequireGlobalValue(t, checker.Elaboration, "x"),
 				)
 			})
 		}
@@ -97,7 +97,7 @@ func TestCheckIntegerLiteralTypeConversionInAssignment(t *testing.T) {
 
 				assert.Equal(t,
 					ty,
-					checker.Elaboration.GlobalValues["x"].Type,
+					RequireGlobalValue(t, checker.Elaboration, "x"),
 				)
 			})
 		}

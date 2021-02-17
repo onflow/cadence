@@ -30,6 +30,7 @@ import (
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
+	"github.com/onflow/cadence/runtime/tests/checker"
 	"github.com/onflow/cadence/runtime/tests/utils"
 	"github.com/onflow/cadence/runtime/trampoline"
 )
@@ -756,7 +757,7 @@ func TestInterpretAuthAccount_link(t *testing.T) {
 
 					actualBorrowType := capability.(interpreter.CapabilityValue).BorrowType
 
-					rType := inter.Program.Elaboration.GlobalTypes["R"].Type
+					rType := checker.RequireGlobalType(t, inter.Program.Elaboration, "R")
 
 					expectedBorrowType := interpreter.ConvertSemaToStaticType(
 						&sema.ReferenceType{
@@ -798,7 +799,7 @@ func TestInterpretAuthAccount_link(t *testing.T) {
 
 					actualBorrowType := capability.(interpreter.CapabilityValue).BorrowType
 
-					r2Type := inter.Program.Elaboration.GlobalTypes["R2"].Type
+					r2Type := checker.RequireGlobalType(t, inter.Program.Elaboration, "R2")
 
 					expectedBorrowType := interpreter.ConvertSemaToStaticType(
 						&sema.ReferenceType{
@@ -891,7 +892,7 @@ func TestInterpretAuthAccount_link(t *testing.T) {
 
 					actualBorrowType := capability.(interpreter.CapabilityValue).BorrowType
 
-					sType := inter.Program.Elaboration.GlobalTypes["S"].Type
+					sType := checker.RequireGlobalType(t, inter.Program.Elaboration, "S")
 
 					expectedBorrowType := interpreter.ConvertSemaToStaticType(
 						&sema.ReferenceType{
@@ -933,7 +934,7 @@ func TestInterpretAuthAccount_link(t *testing.T) {
 
 					actualBorrowType := capability.(interpreter.CapabilityValue).BorrowType
 
-					s2Type := inter.Program.Elaboration.GlobalTypes["S2"].Type
+					s2Type := checker.RequireGlobalType(t, inter.Program.Elaboration, "S2")
 
 					expectedBorrowType := interpreter.ConvertSemaToStaticType(
 						&sema.ReferenceType{

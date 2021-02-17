@@ -70,8 +70,8 @@ type Elaboration struct {
 	InvocationExpressionTypeArguments   map[*ast.InvocationExpression]map[*TypeParameter]Type
 	IdentifierInInvocationTypes         map[*ast.IdentifierExpression]Type
 	ImportDeclarationsResolvedLocations map[*ast.ImportDeclaration][]ResolvedLocation
-	GlobalValues                        map[string]*Variable
-	GlobalTypes                         map[string]*Variable
+	GlobalValues                        *StringVariableOrderedMap
+	GlobalTypes                         *StringVariableOrderedMap
 	TransactionTypes                    []*TransactionType
 	EffectivePredeclaredValues          map[string]ValueDeclaration
 	EffectivePredeclaredTypes           map[string]TypeDeclaration
@@ -118,8 +118,8 @@ func NewElaboration() *Elaboration {
 		InvocationExpressionTypeArguments:      map[*ast.InvocationExpression]map[*TypeParameter]Type{},
 		IdentifierInInvocationTypes:            map[*ast.IdentifierExpression]Type{},
 		ImportDeclarationsResolvedLocations:    map[*ast.ImportDeclaration][]ResolvedLocation{},
-		GlobalValues:                           map[string]*Variable{},
-		GlobalTypes:                            map[string]*Variable{},
+		GlobalValues:                           NewStringVariableOrderedMap(),
+		GlobalTypes:                            NewStringVariableOrderedMap(),
 		EffectivePredeclaredValues:             map[string]ValueDeclaration{},
 		EffectivePredeclaredTypes:              map[string]TypeDeclaration{},
 	}
@@ -143,7 +143,7 @@ func (e *Elaboration) setIsChecking(isChecking bool) {
 //
 func (e *Elaboration) FunctionEntryPointType() (*FunctionType, error) {
 
-	entryPointValue, ok := e.GlobalValues[FunctionEntryPointName]
+	entryPointValue, ok := e.GlobalValues.Get(FunctionEntryPointName)
 	if !ok {
 		return nil, &MissingEntryPointError{
 			Expected: FunctionEntryPointName,

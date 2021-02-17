@@ -193,7 +193,7 @@ func TestCheckNilCoalescingOptionalRightHandSide(t *testing.T) {
 
 	require.NoError(t, err)
 
-	assert.IsType(t, &sema.OptionalType{Type: &sema.IntType{}}, checker.Elaboration.GlobalValues["z"].Type)
+	assert.IsType(t, &sema.OptionalType{Type: &sema.IntType{}}, RequireGlobalValue(t, checker.Elaboration, "z"))
 }
 
 func TestCheckNilCoalescingBothOptional(t *testing.T) {
@@ -208,7 +208,7 @@ func TestCheckNilCoalescingBothOptional(t *testing.T) {
 
 	require.NoError(t, err)
 
-	assert.IsType(t, &sema.OptionalType{Type: &sema.IntType{}}, checker.Elaboration.GlobalValues["z"].Type)
+	assert.IsType(t, &sema.OptionalType{Type: &sema.IntType{}}, RequireGlobalValue(t, checker.Elaboration, "z"))
 }
 
 func TestCheckNilCoalescingWithNever(t *testing.T) {
