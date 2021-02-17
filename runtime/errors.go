@@ -248,3 +248,132 @@ type InvalidContractDeploymentOriginError struct {
 func (*InvalidContractDeploymentOriginError) Error() string {
 	return "cannot deploy invalid contract"
 }
+
+// Contract update related errors
+
+// TooManyFieldsError is reported during a contract update, when the new contract has
+// more fields than the existing contract.
+type TooManyFieldsError struct {
+	declName       string
+	expectedFields int
+	foundFields    int
+	ast.Range
+}
+
+func (e *TooManyFieldsError) Error() string {
+	return fmt.Sprintf("too many fields in `%s`. expected %d, found %d",
+		e.declName,
+		e.expectedFields,
+		e.foundFields,
+	)
+}
+
+// FieldMismatchError is reported during a contract update, when a type of a field
+// does not match the existing type of the same field.
+type FieldMismatchError struct {
+	declName  string
+	fieldName string
+	err       error
+	ast.Range
+}
+
+func (e *FieldMismatchError) Error() string {
+	return fmt.Sprintf("mismatching field `%s` in `%s`: %s",
+		e.fieldName,
+		e.declName,
+		e.err.Error(),
+	)
+}
+
+func (e *FieldMismatchError) ChildErrors() []error {
+	return []error{e.err}
+}
+
+// TypeMismatchError is reported during a contract update, when a type of the new program
+// does not match the existing type.
+type TypeMismatchError struct {
+	expectedType ast.Type
+	foundType    ast.Type
+	ast.Range
+}
+
+func (e *TypeMismatchError) Error() string {
+	return fmt.Sprintf("incompatible type annotations. expected `%s`, found `%s`",
+		e.expectedType,
+		e.foundType,
+	)
+}
+
+// ExtraneousFieldError is reported during a contract update, when the new contract
+// has more fields than the existing contract.
+type ExtraneousFieldError struct {
+	declName  string
+	fieldName string
+	ast.Range
+}
+
+func (e *ExtraneousFieldError) Error() string {
+	return fmt.Sprintf("found new field `%s` in `%s`",
+		e.fieldName,
+		e.declName,
+	)
+}
+
+// ContractNotFoundError is reported during a contract update, if no contract can be
+// found in the program.
+type ContractNotFoundError struct {
+	ast.Range
+}
+
+func (e *ContractNotFoundError) Error() string {
+	return "cannot find any contract or contract interface"
+}
+
+// InvalidDeclarationKindChangeError is reported during a contract update, when an attempt is made
+// to convert an existing contract to a contract interface, or vise versa.
+type InvalidDeclarationKindChangeError struct {
+	name    string
+	oldKind string
+	newKind string
+	ast.Range
+}
+
+func (e *InvalidDeclarationKindChangeError) Error() string {
+	return fmt.Sprintf("trying to convert %s `%s` to a %s", e.oldKind, e.name, e.newKind)
+}
+
+// InvalidNonStorableTypeUsageError is reported during a contract update, when an attempt is made
+// to use a non-storable type as a field of a composite declaration.
+type InvalidNonStorableTypeUsageError struct {
+	nonStorableType ast.Type
+	ast.Range
+}
+
+func (e *InvalidNonStorableTypeUsageError) Error() string {
+	return fmt.Sprintf("cannot use non-storable type `%s` in a composite type field", e.nonStorableType)
+}
+
+// ConformanceMismatchError is reported during a contract update, when the enum conformance of the new program
+// does not match the existing one.
+type ConformanceMismatchError struct {
+	err error
+	ast.Range
+}
+
+func (e *ConformanceMismatchError) Error() string {
+	return fmt.Sprintf("conformances does not match: %s", e.err.Error())
+}
+
+func (e *ConformanceMismatchError) ChildErrors() []error {
+	return []error{e.err}
+}
+
+type ConformanceCountMismatchError struct {
+	expected int
+	found    int
+	ast.Range
+}
+
+func (e *ConformanceCountMismatchError) Error() string {
+	return fmt.Sprintf("conformances count does not match: expected %d, found %d", e.expected, e.found)
+}

@@ -54,6 +54,10 @@ func (d *TransactionDeclaration) DeclarationAccess() Access {
 	return AccessNotSpecified
 }
 
+func (d *TransactionDeclaration) DeclarationMembers() *Members {
+	return nil
+}
+
 func (d *TransactionDeclaration) MarshalJSON() ([]byte, error) {
 	type Alias TransactionDeclaration
 	return json.Marshal(&struct {

@@ -74,6 +74,10 @@ func (d *VariableDeclaration) DeclarationAccess() Access {
 	return d.Access
 }
 
+func (d *VariableDeclaration) DeclarationMembers() *Members {
+	return nil
+}
+
 func (d *VariableDeclaration) MarshalJSON() ([]byte, error) {
 	type Alias VariableDeclaration
 	return json.Marshal(&struct {
