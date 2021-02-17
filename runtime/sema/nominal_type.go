@@ -81,11 +81,11 @@ func (t *NominalType) RewriteWithRestrictedTypes() (Type, bool) {
 	return t, false
 }
 
-func (*NominalType) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
+func (*NominalType) Unify(other Type, typeParameters *TypeParameterTypeOrderedMap, report func(err error), outerRange ast.Range) bool {
 	return false
 }
 
-func (t *NominalType) Resolve(_ map[*TypeParameter]Type) Type {
+func (t *NominalType) Resolve(typeArguments *TypeParameterTypeOrderedMap) Type {
 	return t
 }
 

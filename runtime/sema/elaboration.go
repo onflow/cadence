@@ -67,7 +67,7 @@ type Elaboration struct {
 	// Keyed by qualified identifier
 	CompositeTypes                      map[TypeID]*CompositeType
 	InterfaceTypes                      map[TypeID]*InterfaceType
-	InvocationExpressionTypeArguments   map[*ast.InvocationExpression]map[*TypeParameter]Type
+	InvocationExpressionTypeArguments   map[*ast.InvocationExpression]*TypeParameterTypeOrderedMap
 	IdentifierInInvocationTypes         map[*ast.IdentifierExpression]Type
 	ImportDeclarationsResolvedLocations map[*ast.ImportDeclaration][]ResolvedLocation
 	GlobalValues                        *StringVariableOrderedMap
@@ -115,7 +115,7 @@ func NewElaboration() *Elaboration {
 		EmitStatementEventTypes:                map[*ast.EmitStatement]*CompositeType{},
 		CompositeTypes:                         map[TypeID]*CompositeType{},
 		InterfaceTypes:                         map[TypeID]*InterfaceType{},
-		InvocationExpressionTypeArguments:      map[*ast.InvocationExpression]map[*TypeParameter]Type{},
+		InvocationExpressionTypeArguments:      map[*ast.InvocationExpression]*TypeParameterTypeOrderedMap{},
 		IdentifierInInvocationTypes:            map[*ast.IdentifierExpression]Type{},
 		ImportDeclarationsResolvedLocations:    map[*ast.ImportDeclaration][]ResolvedLocation{},
 		GlobalValues:                           NewStringVariableOrderedMap(),

@@ -2182,7 +2182,7 @@ func (interpreter *Interpreter) functionValueInvocationTrampoline(
 	arguments []Value,
 	argumentTypes []sema.Type,
 	parameterTypes []sema.Type,
-	typeParameterTypes map[*sema.TypeParameter]sema.Type,
+	typeParameterTypes *sema.TypeParameterTypeOrderedMap,
 	invocationRange ast.Range,
 ) Trampoline {
 
@@ -3747,13 +3747,13 @@ func (interpreter *Interpreter) defineTypeFunction() {
 		"Type",
 		NewHostFunctionValue(
 			func(invocation Invocation) Trampoline {
-				// `Invocation.TypeParameterTypes` is a map, so get the first
-				// element / type by iterating over the values of the map.
 
-				var ty sema.Type
-				for _, ty = range invocation.TypeParameterTypes {
-					break
+				typeParameterPair := invocation.TypeParameterTypes.Oldest()
+				if typeParameterPair == nil {
+					panic(errors.NewUnreachableError())
 				}
+
+				ty := typeParameterPair.Value
 
 				result := TypeValue{
 					Type: ConvertSemaToStaticType(ty),
@@ -4106,13 +4106,12 @@ func (interpreter *Interpreter) authAccountReadFunction(addressValue AddressValu
 			// If there is value stored for the given path,
 			// check that it satisfies the type given as the type argument.
 
-			// `Invocation.TypeParameterTypes` is a map, so get the first
-			// element / type by iterating over the values of the map.
-
-			var ty sema.Type
-			for _, ty = range invocation.TypeParameterTypes {
-				break
+			typeParameterPair := invocation.TypeParameterTypes.Oldest()
+			if typeParameterPair == nil {
+				panic(errors.NewUnreachableError())
 			}
+
+			ty := typeParameterPair.Value
 
 			dynamicType := value.Value.DynamicType(interpreter)
 			if !IsSubType(dynamicType, ty) {
@@ -4153,13 +4152,12 @@ func (interpreter *Interpreter) authAccountBorrowFunction(addressValue AddressVa
 			// If there is value stored for the given path,
 			// check that it satisfies the type given as the type argument.
 
-			// `Invocation.TypeParameterTypes` is a map, so get the first
-			// element / type by iterating over the values of the map.
-
-			var ty sema.Type
-			for _, ty = range invocation.TypeParameterTypes {
-				break
+			typeParameterPair := invocation.TypeParameterTypes.Oldest()
+			if typeParameterPair == nil {
+				panic(errors.NewUnreachableError())
 			}
+
+			ty := typeParameterPair.Value
 
 			referenceType := ty.(*sema.ReferenceType)
 
@@ -4187,18 +4185,12 @@ func (interpreter *Interpreter) authAccountLinkFunction(addressValue AddressValu
 
 		address := addressValue.ToAddress()
 
-		// `Invocation.TypeParameterTypes` is a map, so get the first
-		// element / type by iterating over the values of the map.
-
-		var borrowType *sema.ReferenceType
-		for _, ty := range invocation.TypeParameterTypes {
-			borrowType = ty.(*sema.ReferenceType)
-			break
-		}
-
-		if borrowType == nil {
+		typeParameterPair := invocation.TypeParameterTypes.Oldest()
+		if typeParameterPair == nil {
 			panic(errors.NewUnreachableError())
 		}
+
+		borrowType := typeParameterPair.Value.(*sema.ReferenceType)
 
 		newCapabilityPath := invocation.Arguments[0].(PathValue)
 		targetPath := invocation.Arguments[1].(PathValue)
@@ -4300,13 +4292,10 @@ func (interpreter *Interpreter) capabilityBorrowFunction(
 		func(invocation Invocation) Trampoline {
 
 			if borrowType == nil {
-
-				// `Invocation.TypeParameterTypes` is a map, so get the first
-				// element / type by iterating over the values of the map.
-
-				for _, ty := range invocation.TypeParameterTypes {
+				typeParameterPair := invocation.TypeParameterTypes.Oldest()
+				if typeParameterPair != nil {
+					ty := typeParameterPair.Value
 					borrowType = ty.(*sema.ReferenceType)
-					break
 				}
 			}
 
@@ -4350,12 +4339,10 @@ func (interpreter *Interpreter) capabilityCheckFunction(
 
 			if borrowType == nil {
 
-				// `Invocation.TypeParameterTypes` is a map, so get the first
-				// element / type by iterating over the values of the map.
-
-				for _, ty := range invocation.TypeParameterTypes {
+				typeParameterPair := invocation.TypeParameterTypes.Oldest()
+				if typeParameterPair != nil {
+					ty := typeParameterPair.Value
 					borrowType = ty.(*sema.ReferenceType)
-					break
 				}
 			}
 

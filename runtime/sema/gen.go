@@ -28,3 +28,4 @@ package sema
 //go:generate go run github.com/cheekybits/genny -pkg=sema -in=../common/orderedmap/orderedmap.go -out=ordered_map_position_resourceuse.go gen "KeyType=ast.Position ValueType=ResourceUse"
 //go:generate go run github.com/cheekybits/genny -pkg=sema -in=../common/orderedmap/orderedmap.go -out=ordered_map_interface_resourceinfo.go gen "KeyType=interface{} ValueType=ResourceInfo"
 //go:generate go run github.com/cheekybits/genny -pkg=sema -in=../common/orderedmap/orderedmap.go -out=ordered_map_string_importelement.go gen "KeyType=string ValueType=ImportElement"
+//go:generate go run github.com/cheekybits/genny -pkg=sema -in=../common/orderedmap/orderedmap.go -out=ordered_map_typeparameter_type.go gen "KeyType=*TypeParameter ValueType=Type"

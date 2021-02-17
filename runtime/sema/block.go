@@ -155,10 +155,10 @@ func (t *BlockType) GetMembers() map[string]MemberResolver {
 	}
 }
 
-func (t *BlockType) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
+func (t *BlockType) Unify(other Type, typeParameters *TypeParameterTypeOrderedMap, report func(err error), outerRange ast.Range) bool {
 	return false
 }
 
-func (t *BlockType) Resolve(_ map[*TypeParameter]Type) Type {
+func (t *BlockType) Resolve(typeArguments *TypeParameterTypeOrderedMap) Type {
 	return t
 }
