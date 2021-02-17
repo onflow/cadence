@@ -4446,7 +4446,7 @@ func init() {
 
 // BaseValues are the values available in programs
 //
-var BaseValues = map[string]ValueDeclaration{}
+var BaseValues = NewStringValueDeclarationOrderedMap()
 
 var AllSignedFixedPointTypes = []Type{
 	&Fix64Type{},
@@ -4526,11 +4526,11 @@ func init() {
 
 			// Check that the type is not accidentally redeclared
 
-			if _, ok := BaseValues[typeName]; ok {
+			if _, ok := BaseValues.Get(typeName); ok {
 				panic(errors.NewUnreachableError())
 			}
 
-			BaseValues[typeName] = baseFunction{
+			BaseValues.Set(typeName, baseFunction{
 				name: typeName,
 				invokableType: &CheckedFunctionType{
 					FunctionType: &FunctionType{
@@ -4545,7 +4545,7 @@ func init() {
 					},
 					ArgumentExpressionsCheck: numberFunctionArgumentExpressionsChecker(numberType),
 				},
-			}
+			})
 		}
 	}
 }
@@ -4558,11 +4558,11 @@ func init() {
 	typeName := addressType.String()
 
 	// check type is not accidentally redeclared
-	if _, ok := BaseValues[typeName]; ok {
+	if _, ok := BaseValues.Get(typeName); ok {
 		panic(errors.NewUnreachableError())
 	}
 
-	BaseValues[typeName] = baseFunction{
+	BaseValues.Set(typeName, baseFunction{
 		name: typeName,
 		invokableType: &CheckedFunctionType{
 			FunctionType: &FunctionType{
@@ -4588,7 +4588,7 @@ func init() {
 				CheckAddressLiteral(intExpression, checker.report)
 			},
 		},
-	}
+	})
 }
 
 func numberFunctionArgumentExpressionsChecker(targetType Type) ArgumentExpressionsCheck {
@@ -4731,17 +4731,17 @@ func init() {
 	typeName := metaType.String()
 
 	// check type is not accidentally redeclared
-	if _, ok := BaseValues[typeName]; ok {
+	if _, ok := BaseValues.Get(typeName); ok {
 		panic(errors.NewUnreachableError())
 	}
 
-	BaseValues[typeName] = baseFunction{
+	BaseValues.Set(typeName, baseFunction{
 		name: typeName,
 		invokableType: &FunctionType{
 			TypeParameters:       []*TypeParameter{{Name: "T"}},
 			ReturnTypeAnnotation: NewTypeAnnotation(metaType),
 		},
-	}
+	})
 }
 
 // CompositeType
