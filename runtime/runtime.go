@@ -1665,10 +1665,8 @@ func (r *interpreterRuntime) newAuthAccountContractsChangeFunction(
 				}
 
 				panic(&InvalidContractDeploymentError{
-					Err: fmt.Errorf("cannot update contract `%s` in account %s: %w",
-						nameArgument,
-						address.ShortHexWithPrefix(),
-						err),
+					Err:           err,
+					LocationRange: invocation.LocationRange,
 				})
 			}
 
@@ -1763,7 +1761,7 @@ func (r *interpreterRuntime) newAuthAccountContractsChangeFunction(
 					handleContractUpdateError(err)
 				}
 
-				validator := NewContractUpdateValidator(oldProgram, program.Program)
+				validator := NewContractUpdateValidator(context.Location, nameArgument, oldProgram, program.Program)
 				err = validator.Validate()
 				handleContractUpdateError(err)
 			}

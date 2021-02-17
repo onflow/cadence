@@ -251,21 +251,24 @@ func (*InvalidContractDeploymentOriginError) Error() string {
 
 // Contract update related errors
 
-// TooManyFieldsError is reported during a contract update, when the new contract has
-// more fields than the existing contract.
-type TooManyFieldsError struct {
-	declName       string
-	expectedFields int
-	foundFields    int
-	ast.Range
+// ContractUpdateError is reported upon any invalid update to a contract or contract interface.
+// It contains all the errors reported during the update validation.
+type ContractUpdateError struct {
+	contractName string
+	errors       []error
+	location     common.Location
 }
 
-func (e *TooManyFieldsError) Error() string {
-	return fmt.Sprintf("too many fields in `%s`. expected %d, found %d",
-		e.declName,
-		e.expectedFields,
-		e.foundFields,
-	)
+func (e *ContractUpdateError) Error() string {
+	return fmt.Sprintf("cannot update contract `%s`", e.contractName)
+}
+
+func (e *ContractUpdateError) ChildErrors() []error {
+	return e.errors
+}
+
+func (e *ContractUpdateError) ImportLocation() common.Location {
+	return e.location
 }
 
 // FieldMismatchError is reported during a contract update, when a type of a field
@@ -278,15 +281,14 @@ type FieldMismatchError struct {
 }
 
 func (e *FieldMismatchError) Error() string {
-	return fmt.Sprintf("mismatching field `%s` in `%s`: %s",
+	return fmt.Sprintf("mismatching field `%s` in `%s`",
 		e.fieldName,
 		e.declName,
-		e.err.Error(),
 	)
 }
 
-func (e *FieldMismatchError) ChildErrors() []error {
-	return []error{e.err}
+func (e *FieldMismatchError) SecondaryError() string {
+	return e.err.Error()
 }
 
 // TypeMismatchError is reported during a contract update, when a type of the new program
@@ -333,13 +335,13 @@ func (e *ContractNotFoundError) Error() string {
 // to convert an existing contract to a contract interface, or vise versa.
 type InvalidDeclarationKindChangeError struct {
 	name    string
-	oldKind string
-	newKind string
+	oldKind common.DeclarationKind
+	newKind common.DeclarationKind
 	ast.Range
 }
 
 func (e *InvalidDeclarationKindChangeError) Error() string {
-	return fmt.Sprintf("trying to convert %s `%s` to a %s", e.oldKind, e.name, e.newKind)
+	return fmt.Sprintf("trying to convert %s `%s` to a %s", e.oldKind.Name(), e.name, e.newKind.Name())
 }
 
 // InvalidNonStorableTypeUsageError is reported during a contract update, when an attempt is made
@@ -356,18 +358,21 @@ func (e *InvalidNonStorableTypeUsageError) Error() string {
 // ConformanceMismatchError is reported during a contract update, when the enum conformance of the new program
 // does not match the existing one.
 type ConformanceMismatchError struct {
-	err error
+	declName string
+	err      error
 	ast.Range
 }
 
 func (e *ConformanceMismatchError) Error() string {
-	return fmt.Sprintf("conformances does not match: %s", e.err.Error())
+	return fmt.Sprintf("conformances does not match in `%s`", e.declName)
 }
 
-func (e *ConformanceMismatchError) ChildErrors() []error {
-	return []error{e.err}
+func (e *ConformanceMismatchError) SecondaryError() string {
+	return e.err.Error()
 }
 
+// ConformanceCountMismatchError is reported during a contract update, when the conformance count
+// does not match the existing conformance count.
 type ConformanceCountMismatchError struct {
 	expected int
 	found    int
