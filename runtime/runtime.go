@@ -1699,7 +1699,7 @@ func (r *interpreterRuntime) newAuthAccountContractsChangeFunction(
 			var contractTypes []*sema.CompositeType
 			var contractInterfaceTypes []*sema.InterfaceType
 
-			for _, variable := range program.Elaboration.GlobalTypes {
+			program.Elaboration.GlobalTypes.Foreach(func(_ string, variable *sema.Variable) {
 				switch ty := variable.Type.(type) {
 				case *sema.CompositeType:
 					if ty.Kind == common.CompositeKindContract {
@@ -1711,7 +1711,7 @@ func (r *interpreterRuntime) newAuthAccountContractsChangeFunction(
 						contractInterfaceTypes = append(contractInterfaceTypes, ty)
 					}
 				}
-			}
+			})
 
 			var deployedType sema.Type
 			var contractType *sema.CompositeType

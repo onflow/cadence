@@ -39,7 +39,7 @@ func TestCheckCharacter(t *testing.T) {
 
 	assert.Equal(t,
 		&sema.CharacterType{},
-		checker.Elaboration.GlobalValues["x"].Type,
+		RequireGlobalValue(t, checker.Elaboration, "x"),
 	)
 }
 
@@ -55,7 +55,7 @@ func TestCheckCharacterUnicodeScalar(t *testing.T) {
 
 	assert.Equal(t,
 		&sema.CharacterType{},
-		checker.Elaboration.GlobalValues["x"].Type,
+		RequireGlobalValue(t, checker.Elaboration, "x"),
 	)
 }
 
@@ -71,7 +71,7 @@ func TestCheckString(t *testing.T) {
 
 	assert.Equal(t,
 		&sema.StringType{},
-		checker.Elaboration.GlobalValues["x"].Type,
+		RequireGlobalValue(t, checker.Elaboration, "x"),
 	)
 }
 

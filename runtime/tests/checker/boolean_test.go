@@ -37,8 +37,10 @@ func TestCheckBoolean(t *testing.T) {
 
 	require.NoError(t, err)
 
+	xType := RequireGlobalValue(t, checker.Elaboration, "x")
+
 	assert.Equal(t,
 		&sema.BoolType{},
-		checker.Elaboration.GlobalValues["x"].Type,
+		xType,
 	)
 }

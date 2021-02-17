@@ -75,7 +75,7 @@ func TestCheckGenericFunction(t *testing.T) {
 
 			assert.Equal(t,
 				sema.VoidType,
-				checker.Elaboration.GlobalValues["res"].Type,
+				RequireGlobalValue(t, checker.Elaboration, "res"),
 			)
 		}
 	})
@@ -521,7 +521,7 @@ func TestCheckGenericFunction(t *testing.T) {
 
 		assert.IsType(t,
 			&sema.IntType{},
-			checker.Elaboration.GlobalValues["res"].Type,
+			RequireGlobalValue(t, checker.Elaboration, "res"),
 		)
 	})
 
@@ -581,7 +581,7 @@ func TestCheckGenericFunction(t *testing.T) {
 
 		assert.IsType(t,
 			&sema.IntType{},
-			checker.Elaboration.GlobalValues["res"].Type,
+			RequireGlobalValue(t, checker.Elaboration, "res"),
 		)
 	})
 
@@ -769,7 +769,7 @@ func TestCheckGenericFunction(t *testing.T) {
 
 				assert.Equal(t,
 					test.generateType(&sema.IntType{}),
-					checker.Elaboration.GlobalValues["res"].Type,
+					RequireGlobalValue(t, checker.Elaboration, "res"),
 				)
 			})
 		}
@@ -877,7 +877,7 @@ func TestCheckGenericFunction(t *testing.T) {
 
 				assert.Equal(t,
 					test.generateType(&sema.IntType{}),
-					checker.Elaboration.GlobalValues["res"].Type,
+					RequireGlobalValue(t, checker.Elaboration, "res"),
 				)
 			})
 		}

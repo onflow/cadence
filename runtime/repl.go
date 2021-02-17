@@ -223,12 +223,12 @@ type REPLSuggestion struct {
 func (r *REPL) Suggestions() (result []REPLSuggestion) {
 	names := map[string]string{}
 
-	for name, variable := range r.checker.Elaboration.GlobalValues {
+	r.checker.Elaboration.GlobalValues.Foreach(func(name string, variable *sema.Variable) {
 		if names[name] != "" {
-			continue
+			return
 		}
 		names[name] = variable.Type.String()
-	}
+	})
 
 	for name, description := range names {
 		result = append(result, REPLSuggestion{

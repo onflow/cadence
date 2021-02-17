@@ -46,7 +46,7 @@ func TestCheckTypeArguments(t *testing.T) {
 
 		assert.Equal(t,
 			&sema.CapabilityType{},
-			checker.Elaboration.GlobalValues["cap"].Type,
+			RequireGlobalValue(t, checker.Elaboration, "cap"),
 		)
 	})
 
@@ -88,7 +88,7 @@ func TestCheckTypeArguments(t *testing.T) {
 					Type: &sema.IntType{},
 				},
 			},
-			checker.Elaboration.GlobalValues["cap"].Type,
+			RequireGlobalValue(t, checker.Elaboration, "cap"),
 		)
 	})
 
@@ -154,12 +154,12 @@ func TestCheckTypeArgumentSubtyping(t *testing.T) {
 					Type: &sema.IntType{},
 				},
 			},
-			checker.Elaboration.GlobalValues["cap"].Type,
+			RequireGlobalValue(t, checker.Elaboration, "cap"),
 		)
 
 		assert.Equal(t,
 			&sema.CapabilityType{},
-			checker.Elaboration.GlobalValues["cap2"].Type,
+			RequireGlobalValue(t, checker.Elaboration, "cap2"),
 		)
 	})
 
@@ -187,7 +187,7 @@ func TestCheckTypeArgumentSubtyping(t *testing.T) {
 					Type: &sema.IntType{},
 				},
 			},
-			checker.Elaboration.GlobalValues["cap"].Type,
+			RequireGlobalValue(t, checker.Elaboration, "cap"),
 		)
 
 		assert.Equal(t,
@@ -196,7 +196,7 @@ func TestCheckTypeArgumentSubtyping(t *testing.T) {
 					Type: &sema.IntType{},
 				},
 			},
-			checker.Elaboration.GlobalValues["cap2"].Type,
+			RequireGlobalValue(t, checker.Elaboration, "cap2"),
 		)
 	})
 
@@ -214,7 +214,7 @@ func TestCheckTypeArgumentSubtyping(t *testing.T) {
 
 		assert.Equal(t,
 			&sema.CapabilityType{},
-			checker.Elaboration.GlobalValues["cap"].Type,
+			RequireGlobalValue(t, checker.Elaboration, "cap"),
 		)
 
 		assert.Equal(t,
@@ -223,7 +223,7 @@ func TestCheckTypeArgumentSubtyping(t *testing.T) {
 					Type: &sema.IntType{},
 				},
 			},
-			checker.Elaboration.GlobalValues["cap2"].Type,
+			RequireGlobalValue(t, checker.Elaboration, "cap2"),
 		)
 
 		errs := ExpectCheckerErrors(t, err, 1)
@@ -255,7 +255,7 @@ func TestCheckTypeArgumentSubtyping(t *testing.T) {
 					Type: &sema.StringType{},
 				},
 			},
-			checker.Elaboration.GlobalValues["cap"].Type,
+			RequireGlobalValue(t, checker.Elaboration, "cap"),
 		)
 
 		assert.Equal(t,
@@ -264,7 +264,7 @@ func TestCheckTypeArgumentSubtyping(t *testing.T) {
 					Type: &sema.IntType{},
 				},
 			},
-			checker.Elaboration.GlobalValues["cap2"].Type,
+			RequireGlobalValue(t, checker.Elaboration, "cap2"),
 		)
 
 		errs := ExpectCheckerErrors(t, err, 1)

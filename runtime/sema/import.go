@@ -48,16 +48,20 @@ type ElaborationImport struct {
 	Elaboration *Elaboration
 }
 
-func variablesToImportElements(variables map[string]*Variable) map[string]ImportElement {
-	elements := make(map[string]ImportElement, len(variables))
-	for name, variable := range variables {
+func variablesToImportElements(variables *StringVariableOrderedMap) map[string]ImportElement {
+
+	elements := make(map[string]ImportElement, variables.Len())
+
+	variables.Foreach(func(name string, variable *Variable) {
+
 		elements[name] = ImportElement{
 			DeclarationKind: variable.DeclarationKind,
 			Access:          variable.Access,
 			Type:            variable.Type,
 			ArgumentLabels:  variable.ArgumentLabels,
 		}
-	}
+	})
+
 	return elements
 }
 

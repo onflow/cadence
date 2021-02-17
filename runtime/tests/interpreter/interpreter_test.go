@@ -5753,8 +5753,8 @@ func TestInterpretEmitEvent(t *testing.T) {
 	_, err := inter.Invoke("test")
 	require.NoError(t, err)
 
-	transferEventType := inter.Program.Elaboration.GlobalTypes["Transfer"].Type
-	transferAmountEventType := inter.Program.Elaboration.GlobalTypes["TransferAmount"].Type
+	transferEventType := checker.RequireGlobalType(t, inter.Program.Elaboration, "Transfer")
+	transferAmountEventType := checker.RequireGlobalType(t, inter.Program.Elaboration, "TransferAmount")
 
 	expectedEvents := []*interpreter.CompositeValue{
 		interpreter.NewCompositeValue(
@@ -5954,7 +5954,8 @@ func TestInterpretEmitEventParameterTypes(t *testing.T) {
 			_, err := inter.Invoke("test")
 			require.NoError(t, err)
 
-			testType := inter.Program.Elaboration.GlobalTypes["Test"].Type
+			testType := checker.RequireGlobalType(t, inter.Program.Elaboration, "Test")
+
 			expectedEvents := []*interpreter.CompositeValue{
 				interpreter.NewCompositeValue(
 					TestLocation,

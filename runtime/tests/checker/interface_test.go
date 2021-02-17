@@ -447,8 +447,8 @@ func TestCheckInvalidInterfaceConformanceIncompatibleCompositeKinds(t *testing.T
 
 				require.NotNil(t, checker)
 
-				testType := checker.Elaboration.GlobalTypes["Test"].Type
-				testImplType := checker.Elaboration.GlobalTypes["TestImpl"].Type
+				testType := RequireGlobalType(t, checker.Elaboration, "Test")
+				testImplType := RequireGlobalType(t, checker.Elaboration, "TestImpl")
 
 				assert.False(t, sema.IsSubType(testImplType, testType))
 			})
@@ -513,8 +513,8 @@ func TestCheckInvalidInterfaceConformanceUndeclared(t *testing.T) {
 
 			require.NotNil(t, checker)
 
-			testType := checker.Elaboration.GlobalTypes["Test"].Type
-			testImplType := checker.Elaboration.GlobalTypes["TestImpl"].Type
+			testType := RequireGlobalType(t, checker.Elaboration, "Test")
+			testImplType := RequireGlobalType(t, checker.Elaboration, "TestImpl")
 
 			assert.False(t, sema.IsSubType(testImplType, testType))
 		})
@@ -1958,7 +1958,7 @@ func TestCheckInvalidInterfaceUseAsTypeSuggestion(t *testing.T) {
 
 	require.IsType(t, &sema.InvalidInterfaceTypeError{}, errs[0])
 
-	iType := checker.Elaboration.GlobalTypes["I"].Type.(*sema.InterfaceType)
+	iType := RequireGlobalType(t, checker.Elaboration, "I").(*sema.InterfaceType)
 
 	assert.Equal(t,
 		&sema.FunctionType{

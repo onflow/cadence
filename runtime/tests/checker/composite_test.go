@@ -1733,7 +1733,7 @@ func TestCheckCompositeConstructorUseInInitializerAndFunction(t *testing.T) {
 
 			require.NoError(t, err)
 
-			testType := checker.Elaboration.GlobalTypes["Test"].Type
+			testType := RequireGlobalType(t, checker.Elaboration, "Test")
 
 			assert.IsType(t, &sema.CompositeType{}, testType)
 
@@ -2232,7 +2232,7 @@ func TestCheckCompositeFieldOrder(t *testing.T) {
 
 			require.NoError(t, err)
 
-			testType := checker.Elaboration.GlobalTypes["Test"].Type.(*sema.CompositeType)
+			testType := RequireGlobalType(t, checker.Elaboration, "Test").(*sema.CompositeType)
 
 			switch kind {
 			case common.CompositeKindContract:
