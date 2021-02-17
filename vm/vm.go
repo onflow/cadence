@@ -71,28 +71,31 @@ func NewVM(wasm []byte) (VM, error) {
 		return nil, err
 	}
 
-	var mem *wasmtime.Memory
+	intFunc := wasmtime.WrapFunc(
+		store,
+		func(caller *wasmtime.Caller, offset int32, length int32) (interface{}, *wasmtime.Trap) {
+			if offset < 0 {
+				return nil, wasmtime.NewTrap(store, fmt.Sprintf("Int: invalid offset: %d", offset))
+			}
 
-	intFunc := wasmtime.WrapFunc(store, func(offset int32, length int32) (interface{}, *wasmtime.Trap) {
-		if offset < 0 {
-			return nil, wasmtime.NewTrap(store, fmt.Sprintf("Int: invalid offset: %d", offset))
-		}
+			if length < 2 {
+				return nil, wasmtime.NewTrap(store, fmt.Sprintf("Int: invalid length: %d", length))
+			}
 
-		if length < 2 {
-			return nil, wasmtime.NewTrap(store, fmt.Sprintf("Int: invalid length: %d", length))
-		}
+			mem := caller.GetExport("mem").Memory()
 
-		bytes := C.GoBytes(mem.Data(), C.int(length))
+			bytes := C.GoBytes(mem.Data(), C.int(length))
 
-		value := new(big.Int).SetBytes(bytes[1:])
-		if bytes[0] == 0 {
-			value = value.Neg(value)
-		}
+			value := new(big.Int).SetBytes(bytes[1:])
+			if bytes[0] == 0 {
+				value = value.Neg(value)
+			}
 
-		return interpreter.NewIntValueFromBigInt(value), nil
-	})
+			return interpreter.NewIntValueFromBigInt(value), nil
+		},
+	)
 
-	stringFunc := wasmtime.WrapFunc(store, func(offset int32, length int32) (interface{}, *wasmtime.Trap) {
+	stringFunc := wasmtime.WrapFunc(store, func(caller *wasmtime.Caller, offset int32, length int32) (interface{}, *wasmtime.Trap) {
 		if offset < 0 {
 			return nil, wasmtime.NewTrap(store, fmt.Sprintf("String: invalid offset: %d", offset))
 		}
@@ -100,6 +103,8 @@ func NewVM(wasm []byte) (VM, error) {
 		if length < 0 {
 			return nil, wasmtime.NewTrap(store, fmt.Sprintf("String: invalid length: %d", length))
 		}
+
+		mem := caller.GetExport("mem").Memory()
 
 		bytes := C.GoBytes(mem.Data(), C.int(length))
 
@@ -120,6 +125,10 @@ func NewVM(wasm []byte) (VM, error) {
 		return leftNumber.Plus(rightNumber), nil
 	})
 
+	// NOTE: wasmtime currently does not support specifying imports by name,
+	// unlike other WebAssembly APIs like wasmer, JavaScript, etc.,
+	// i.e. imports are imported in the order they are given.
+
 	instance, err := wasmtime.NewInstance(
 		store,
 		module,
@@ -132,8 +141,6 @@ func NewVM(wasm []byte) (VM, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	mem = instance.GetExport("mem").Memory()
 
 	return &vm{
 		instance: instance,
