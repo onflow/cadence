@@ -125,7 +125,7 @@ type Type interface {
 	//
 	Unify(
 		other Type,
-		typeParameters map[*TypeParameter]Type,
+		typeParameters *TypeParameterTypeOrderedMap,
 		report func(err error),
 		outerRange ast.Range,
 	) bool
@@ -136,7 +136,7 @@ type Type interface {
 	//
 	// If resolution fails, it returns `nil`.
 	//
-	Resolve(typeArguments map[*TypeParameter]Type) Type
+	Resolve(typeArguments *TypeParameterTypeOrderedMap) Type
 
 	GetMembers() map[string]MemberResolver
 }
@@ -459,11 +459,11 @@ func (t *MetaType) RewriteWithRestrictedTypes() (result Type, rewritten bool) {
 	return t, false
 }
 
-func (*MetaType) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
+func (*MetaType) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
 	return false
 }
 
-func (t *MetaType) Resolve(_ map[*TypeParameter]Type) Type {
+func (t *MetaType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
 	return t
 }
 
@@ -540,11 +540,11 @@ func (t *AnyType) RewriteWithRestrictedTypes() (result Type, rewritten bool) {
 	return t, false
 }
 
-func (*AnyType) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
+func (*AnyType) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
 	return false
 }
 
-func (t *AnyType) Resolve(_ map[*TypeParameter]Type) Type {
+func (t *AnyType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
 	return t
 }
 
@@ -603,11 +603,11 @@ func (t *AnyStructType) RewriteWithRestrictedTypes() (result Type, rewritten boo
 	return t, false
 }
 
-func (*AnyStructType) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
+func (*AnyStructType) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
 	return false
 }
 
-func (t *AnyStructType) Resolve(_ map[*TypeParameter]Type) Type {
+func (t *AnyStructType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
 	return t
 }
 
@@ -667,11 +667,11 @@ func (t *AnyResourceType) RewriteWithRestrictedTypes() (result Type, rewritten b
 	return t, false
 }
 
-func (*AnyResourceType) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
+func (*AnyResourceType) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
 	return false
 }
 
-func (t *AnyResourceType) Resolve(_ map[*TypeParameter]Type) Type {
+func (t *AnyResourceType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
 	return t
 }
 
@@ -751,7 +751,13 @@ func (t *OptionalType) RewriteWithRestrictedTypes() (Type, bool) {
 	}
 }
 
-func (t *OptionalType) Unify(other Type, typeParameters map[*TypeParameter]Type, report func(err error), outerRange ast.Range) bool {
+func (t *OptionalType) Unify(
+	other Type,
+	typeParameters *TypeParameterTypeOrderedMap,
+	report func(err error),
+	outerRange ast.Range,
+) bool {
+
 	otherOptional, ok := other.(*OptionalType)
 	if !ok {
 		return false
@@ -760,9 +766,9 @@ func (t *OptionalType) Unify(other Type, typeParameters map[*TypeParameter]Type,
 	return t.Type.Unify(otherOptional.Type, typeParameters, report, outerRange)
 }
 
-func (t *OptionalType) Resolve(typeParameters map[*TypeParameter]Type) Type {
+func (t *OptionalType) Resolve(typeArguments *TypeParameterTypeOrderedMap) Type {
 
-	newInnerType := t.Type.Resolve(typeParameters)
+	newInnerType := t.Type.Resolve(typeArguments)
 	if newInnerType == nil {
 		return nil
 	}
@@ -906,12 +912,12 @@ func (t *GenericType) RewriteWithRestrictedTypes() (result Type, rewritten bool)
 
 func (t *GenericType) Unify(
 	other Type,
-	typeParameters map[*TypeParameter]Type,
+	typeParameters *TypeParameterTypeOrderedMap,
 	report func(err error),
 	outerRange ast.Range,
 ) bool {
 
-	if unifiedType, ok := typeParameters[t.TypeParameter]; ok {
+	if unifiedType, ok := typeParameters.Get(t.TypeParameter); ok {
 
 		// If the type parameter is already unified with a type argument
 		// (either explicit by a type argument, or implicit through an argument's type),
@@ -931,7 +937,7 @@ func (t *GenericType) Unify(
 	} else {
 		// If the type parameter is not yet unified to a type argument, unify it.
 
-		typeParameters[t.TypeParameter] = other
+		typeParameters.Set(t.TypeParameter, other)
 
 		// If the type parameter corresponding to the type argument has a type bound,
 		// then check that the argument's type is a subtype of the type bound.
@@ -945,8 +951,8 @@ func (t *GenericType) Unify(
 	return true
 }
 
-func (t *GenericType) Resolve(typeParameters map[*TypeParameter]Type) Type {
-	ty, ok := typeParameters[t.TypeParameter]
+func (t *GenericType) Resolve(typeArguments *TypeParameterTypeOrderedMap) Type {
+	ty, ok := typeArguments.Get(t.TypeParameter)
 	if !ok {
 		return nil
 	}
@@ -1007,11 +1013,11 @@ func (t *BoolType) RewriteWithRestrictedTypes() (result Type, rewritten bool) {
 	return t, false
 }
 
-func (*BoolType) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
+func (*BoolType) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
 	return false
 }
 
-func (t *BoolType) Resolve(_ map[*TypeParameter]Type) Type {
+func (t *BoolType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
 	return t
 }
 
@@ -1070,11 +1076,11 @@ func (t *CharacterType) RewriteWithRestrictedTypes() (result Type, rewritten boo
 	return t, false
 }
 
-func (*CharacterType) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
+func (*CharacterType) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
 	return false
 }
 
-func (t *CharacterType) Resolve(_ map[*TypeParameter]Type) Type {
+func (t *CharacterType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
 	return t
 }
 
@@ -1257,11 +1263,11 @@ func (t *StringType) IndexingType() Type {
 	return &IntegerType{}
 }
 
-func (*StringType) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
+func (*StringType) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
 	return false
 }
 
-func (t *StringType) Resolve(_ map[*TypeParameter]Type) Type {
+func (t *StringType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
 	return t
 }
 
@@ -1323,11 +1329,11 @@ func (*NumberType) MaxInt() *big.Int {
 	return nil
 }
 
-func (*NumberType) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
+func (*NumberType) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
 	return false
 }
 
-func (t *NumberType) Resolve(_ map[*TypeParameter]Type) Type {
+func (t *NumberType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
 	return t
 }
 
@@ -1393,11 +1399,11 @@ func (*SignedNumberType) MaxInt() *big.Int {
 	return nil
 }
 
-func (*SignedNumberType) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
+func (*SignedNumberType) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
 	return false
 }
 
-func (t *SignedNumberType) Resolve(_ map[*TypeParameter]Type) Type {
+func (t *SignedNumberType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
 	return t
 }
 
@@ -1478,11 +1484,11 @@ func (*IntegerType) MaxInt() *big.Int {
 	return nil
 }
 
-func (*IntegerType) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
+func (*IntegerType) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
 	return false
 }
 
-func (t *IntegerType) Resolve(_ map[*TypeParameter]Type) Type {
+func (t *IntegerType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
 	return t
 }
 
@@ -1548,11 +1554,11 @@ func (*SignedIntegerType) MaxInt() *big.Int {
 	return nil
 }
 
-func (*SignedIntegerType) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
+func (*SignedIntegerType) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
 	return false
 }
 
-func (t *SignedIntegerType) Resolve(_ map[*TypeParameter]Type) Type {
+func (t *SignedIntegerType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
 	return t
 }
 
@@ -1618,11 +1624,11 @@ func (*IntType) MaxInt() *big.Int {
 	return nil
 }
 
-func (*IntType) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
+func (*IntType) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
 	return false
 }
 
-func (t *IntType) Resolve(_ map[*TypeParameter]Type) Type {
+func (t *IntType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
 	return t
 }
 
@@ -1692,11 +1698,11 @@ func (*Int8Type) MaxInt() *big.Int {
 	return Int8TypeMaxInt
 }
 
-func (*Int8Type) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
+func (*Int8Type) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
 	return false
 }
 
-func (t *Int8Type) Resolve(_ map[*TypeParameter]Type) Type {
+func (t *Int8Type) Resolve(_ *TypeParameterTypeOrderedMap) Type {
 	return t
 }
 
@@ -1765,11 +1771,11 @@ func (*Int16Type) MaxInt() *big.Int {
 	return Int16TypeMaxInt
 }
 
-func (*Int16Type) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
+func (*Int16Type) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
 	return false
 }
 
-func (t *Int16Type) Resolve(_ map[*TypeParameter]Type) Type {
+func (t *Int16Type) Resolve(_ *TypeParameterTypeOrderedMap) Type {
 	return t
 }
 
@@ -1838,11 +1844,11 @@ func (*Int32Type) MaxInt() *big.Int {
 	return Int32TypeMaxInt
 }
 
-func (*Int32Type) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
+func (*Int32Type) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
 	return false
 }
 
-func (t *Int32Type) Resolve(_ map[*TypeParameter]Type) Type {
+func (t *Int32Type) Resolve(_ *TypeParameterTypeOrderedMap) Type {
 	return t
 }
 
@@ -1911,11 +1917,11 @@ func (*Int64Type) MaxInt() *big.Int {
 	return Int64TypeMaxInt
 }
 
-func (*Int64Type) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
+func (*Int64Type) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
 	return false
 }
 
-func (t *Int64Type) Resolve(_ map[*TypeParameter]Type) Type {
+func (t *Int64Type) Resolve(_ *TypeParameterTypeOrderedMap) Type {
 	return t
 }
 
@@ -1996,11 +2002,11 @@ func (*Int128Type) MaxInt() *big.Int {
 	return Int128TypeMaxIntBig
 }
 
-func (*Int128Type) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
+func (*Int128Type) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
 	return false
 }
 
-func (t *Int128Type) Resolve(_ map[*TypeParameter]Type) Type {
+func (t *Int128Type) Resolve(_ *TypeParameterTypeOrderedMap) Type {
 	return t
 }
 
@@ -2081,11 +2087,11 @@ func (*Int256Type) MaxInt() *big.Int {
 	return Int256TypeMaxIntBig
 }
 
-func (*Int256Type) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
+func (*Int256Type) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
 	return false
 }
 
-func (t *Int256Type) Resolve(_ map[*TypeParameter]Type) Type {
+func (t *Int256Type) Resolve(_ *TypeParameterTypeOrderedMap) Type {
 	return t
 }
 
@@ -2153,11 +2159,11 @@ func (*UIntType) MaxInt() *big.Int {
 	return nil
 }
 
-func (*UIntType) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
+func (*UIntType) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
 	return false
 }
 
-func (t *UIntType) Resolve(_ map[*TypeParameter]Type) Type {
+func (t *UIntType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
 	return t
 }
 
@@ -2227,11 +2233,11 @@ func (*UInt8Type) MaxInt() *big.Int {
 	return UInt8TypeMaxInt
 }
 
-func (*UInt8Type) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
+func (*UInt8Type) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
 	return false
 }
 
-func (t *UInt8Type) Resolve(_ map[*TypeParameter]Type) Type {
+func (t *UInt8Type) Resolve(_ *TypeParameterTypeOrderedMap) Type {
 	return t
 }
 
@@ -2301,11 +2307,11 @@ func (*UInt16Type) MaxInt() *big.Int {
 	return UInt16TypeMaxInt
 }
 
-func (*UInt16Type) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
+func (*UInt16Type) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
 	return false
 }
 
-func (t *UInt16Type) Resolve(_ map[*TypeParameter]Type) Type {
+func (t *UInt16Type) Resolve(_ *TypeParameterTypeOrderedMap) Type {
 	return t
 }
 
@@ -2375,11 +2381,11 @@ func (*UInt32Type) MaxInt() *big.Int {
 	return UInt32TypeMaxInt
 }
 
-func (*UInt32Type) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
+func (*UInt32Type) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
 	return false
 }
 
-func (t *UInt32Type) Resolve(_ map[*TypeParameter]Type) Type {
+func (t *UInt32Type) Resolve(_ *TypeParameterTypeOrderedMap) Type {
 	return t
 }
 
@@ -2449,11 +2455,11 @@ func (*UInt64Type) MaxInt() *big.Int {
 	return UInt64TypeMaxInt
 }
 
-func (*UInt64Type) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
+func (*UInt64Type) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
 	return false
 }
 
-func (t *UInt64Type) Resolve(_ map[*TypeParameter]Type) Type {
+func (t *UInt64Type) Resolve(_ *TypeParameterTypeOrderedMap) Type {
 	return t
 }
 
@@ -2529,11 +2535,11 @@ func (*UInt128Type) MaxInt() *big.Int {
 	return UInt128TypeMaxIntBig
 }
 
-func (*UInt128Type) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
+func (*UInt128Type) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
 	return false
 }
 
-func (t *UInt128Type) Resolve(_ map[*TypeParameter]Type) Type {
+func (t *UInt128Type) Resolve(_ *TypeParameterTypeOrderedMap) Type {
 	return t
 }
 
@@ -2609,11 +2615,11 @@ func (*UInt256Type) MaxInt() *big.Int {
 	return UInt256TypeMaxIntBig
 }
 
-func (*UInt256Type) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
+func (*UInt256Type) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
 	return false
 }
 
-func (t *UInt256Type) Resolve(_ map[*TypeParameter]Type) Type {
+func (t *UInt256Type) Resolve(_ *TypeParameterTypeOrderedMap) Type {
 	return t
 }
 
@@ -2683,11 +2689,11 @@ func (*Word8Type) MaxInt() *big.Int {
 	return Word8TypeMaxInt
 }
 
-func (*Word8Type) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
+func (*Word8Type) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
 	return false
 }
 
-func (t *Word8Type) Resolve(_ map[*TypeParameter]Type) Type {
+func (t *Word8Type) Resolve(_ *TypeParameterTypeOrderedMap) Type {
 	return t
 }
 
@@ -2757,11 +2763,11 @@ func (*Word16Type) MaxInt() *big.Int {
 	return Word16TypeMaxInt
 }
 
-func (*Word16Type) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
+func (*Word16Type) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
 	return false
 }
 
-func (t *Word16Type) Resolve(_ map[*TypeParameter]Type) Type {
+func (t *Word16Type) Resolve(_ *TypeParameterTypeOrderedMap) Type {
 	return t
 }
 
@@ -2831,11 +2837,11 @@ func (*Word32Type) MaxInt() *big.Int {
 	return Word32TypeMaxInt
 }
 
-func (*Word32Type) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
+func (*Word32Type) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
 	return false
 }
 
-func (t *Word32Type) Resolve(_ map[*TypeParameter]Type) Type {
+func (t *Word32Type) Resolve(_ *TypeParameterTypeOrderedMap) Type {
 	return t
 }
 
@@ -2905,11 +2911,11 @@ func (*Word64Type) MaxInt() *big.Int {
 	return Word64TypeMaxInt
 }
 
-func (*Word64Type) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
+func (*Word64Type) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
 	return false
 }
 
-func (t *Word64Type) Resolve(_ map[*TypeParameter]Type) Type {
+func (t *Word64Type) Resolve(_ *TypeParameterTypeOrderedMap) Type {
 	return t
 }
 
@@ -2975,11 +2981,11 @@ func (*FixedPointType) MaxInt() *big.Int {
 	return nil
 }
 
-func (*FixedPointType) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
+func (*FixedPointType) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
 	return false
 }
 
-func (t *FixedPointType) Resolve(_ map[*TypeParameter]Type) Type {
+func (t *FixedPointType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
 	return t
 }
 
@@ -3045,11 +3051,11 @@ func (*SignedFixedPointType) MaxInt() *big.Int {
 	return nil
 }
 
-func (*SignedFixedPointType) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
+func (*SignedFixedPointType) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
 	return false
 }
 
-func (t *SignedFixedPointType) Resolve(_ map[*TypeParameter]Type) Type {
+func (t *SignedFixedPointType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
 	return t
 }
 
@@ -3145,11 +3151,11 @@ func (*Fix64Type) MaxFractional() *big.Int {
 	return Fix64TypeMaxFractionalBig
 }
 
-func (*Fix64Type) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
+func (*Fix64Type) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
 	return false
 }
 
-func (t *Fix64Type) Resolve(_ map[*TypeParameter]Type) Type {
+func (t *Fix64Type) Resolve(_ *TypeParameterTypeOrderedMap) Type {
 	return t
 }
 
@@ -3240,11 +3246,11 @@ func (*UFix64Type) MaxFractional() *big.Int {
 	return UFix64TypeMaxFractionalBig
 }
 
-func (*UFix64Type) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
+func (*UFix64Type) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
 	return false
 }
 
-func (t *UFix64Type) Resolve(_ map[*TypeParameter]Type) Type {
+func (t *UFix64Type) Resolve(_ *TypeParameterTypeOrderedMap) Type {
 	return t
 }
 
@@ -3622,10 +3628,11 @@ func (t *VariableSizedType) IndexingType() Type {
 
 func (t *VariableSizedType) Unify(
 	other Type,
-	typeParameters map[*TypeParameter]Type,
+	typeParameters *TypeParameterTypeOrderedMap,
 	report func(err error),
 	outerRange ast.Range,
 ) bool {
+
 	otherArray, ok := other.(*VariableSizedType)
 	if !ok {
 		return false
@@ -3634,8 +3641,8 @@ func (t *VariableSizedType) Unify(
 	return t.Type.Unify(otherArray.Type, typeParameters, report, outerRange)
 }
 
-func (t *VariableSizedType) Resolve(typeParameters map[*TypeParameter]Type) Type {
-	newInnerType := t.Type.Resolve(typeParameters)
+func (t *VariableSizedType) Resolve(typeArguments *TypeParameterTypeOrderedMap) Type {
+	newInnerType := t.Type.Resolve(typeArguments)
 	if newInnerType == nil {
 		return nil
 	}
@@ -3736,10 +3743,11 @@ func (t *ConstantSizedType) IndexingType() Type {
 
 func (t *ConstantSizedType) Unify(
 	other Type,
-	typeParameters map[*TypeParameter]Type,
+	typeParameters *TypeParameterTypeOrderedMap,
 	report func(err error),
 	outerRange ast.Range,
 ) bool {
+
 	otherArray, ok := other.(*ConstantSizedType)
 	if !ok {
 		return false
@@ -3752,8 +3760,8 @@ func (t *ConstantSizedType) Unify(
 	return t.Type.Unify(otherArray.Type, typeParameters, report, outerRange)
 }
 
-func (t *ConstantSizedType) Resolve(typeParameters map[*TypeParameter]Type) Type {
-	newInnerType := t.Type.Resolve(typeParameters)
+func (t *ConstantSizedType) Resolve(typeArguments *TypeParameterTypeOrderedMap) Type {
+	newInnerType := t.Type.Resolve(typeArguments)
 	if newInnerType == nil {
 		return nil
 	}
@@ -3965,7 +3973,7 @@ func (t *FunctionType) InvocationFunctionType() *FunctionType {
 	return t
 }
 
-func (*FunctionType) CheckArgumentExpressions(checker *Checker, argumentExpressions []ast.Expression, invocationRange ast.Range) {
+func (*FunctionType) CheckArgumentExpressions(_ *Checker, _ []ast.Expression, _ ast.Range) {
 	// NO-OP: no checks for normal functions
 }
 
@@ -4255,7 +4263,7 @@ func (t *FunctionType) ArgumentLabels() (argumentLabels []string) {
 
 func (t *FunctionType) Unify(
 	other Type,
-	typeParameters map[*TypeParameter]Type,
+	typeParameters *TypeParameterTypeOrderedMap,
 	report func(err error),
 	outerRange ast.Range,
 ) (
@@ -4306,7 +4314,7 @@ func (t *FunctionType) Unify(
 	return
 }
 
-func (t *FunctionType) Resolve(typeParameters map[*TypeParameter]Type) Type {
+func (t *FunctionType) Resolve(typeArguments *TypeParameterTypeOrderedMap) Type {
 
 	// TODO: type parameters ?
 
@@ -4315,7 +4323,7 @@ func (t *FunctionType) Resolve(typeParameters map[*TypeParameter]Type) Type {
 	var newParameters []*Parameter
 
 	for _, parameter := range t.Parameters {
-		newParameterType := parameter.TypeAnnotation.Type.Resolve(typeParameters)
+		newParameterType := parameter.TypeAnnotation.Type.Resolve(typeArguments)
 		if newParameterType == nil {
 			return nil
 		}
@@ -4331,7 +4339,7 @@ func (t *FunctionType) Resolve(typeParameters map[*TypeParameter]Type) Type {
 
 	// return type
 
-	newReturnType := t.ReturnTypeAnnotation.Type.Resolve(typeParameters)
+	newReturnType := t.ReturnTypeAnnotation.Type.Resolve(typeArguments)
 	if newReturnType == nil {
 		return nil
 	}
@@ -4944,12 +4952,12 @@ func (t *CompositeType) TypeRequirements() []*CompositeType {
 	return typeRequirements
 }
 
-func (*CompositeType) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
+func (*CompositeType) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
 	// TODO:
 	return false
 }
 
-func (t *CompositeType) Resolve(_ map[*TypeParameter]Type) Type {
+func (t *CompositeType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
 	return t
 }
 
@@ -5584,11 +5592,11 @@ func (*AuthAccountType) NestedTypes() map[string]Type {
 	return authAccountTypeNestedTypes
 }
 
-func (*AuthAccountType) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
+func (*AuthAccountType) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
 	return false
 }
 
-func (t *AuthAccountType) Resolve(_ map[*TypeParameter]Type) Type {
+func (t *AuthAccountType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
 	return t
 }
 
@@ -5707,11 +5715,11 @@ func (t *PublicAccountType) GetMembers() map[string]MemberResolver {
 	})
 }
 
-func (*PublicAccountType) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
+func (*PublicAccountType) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
 	return false
 }
 
-func (t *PublicAccountType) Resolve(_ map[*TypeParameter]Type) Type {
+func (t *PublicAccountType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
 	return t
 }
 
@@ -5973,12 +5981,12 @@ func (t *InterfaceType) RewriteWithRestrictedTypes() (Type, bool) {
 	}
 }
 
-func (*InterfaceType) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
+func (*InterfaceType) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
 	// TODO:
 	return false
 }
 
-func (t *InterfaceType) Resolve(_ map[*TypeParameter]Type) Type {
+func (t *InterfaceType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
 	return t
 }
 
@@ -6243,10 +6251,11 @@ type DictionaryEntryType struct {
 
 func (t *DictionaryType) Unify(
 	other Type,
-	typeParameters map[*TypeParameter]Type,
+	typeParameters *TypeParameterTypeOrderedMap,
 	report func(err error),
 	outerRange ast.Range,
 ) bool {
+
 	otherDictionary, ok := other.(*DictionaryType)
 	if !ok {
 		return false
@@ -6257,13 +6266,13 @@ func (t *DictionaryType) Unify(
 	return keyUnified || valueUnified
 }
 
-func (t *DictionaryType) Resolve(typeParameters map[*TypeParameter]Type) Type {
-	newKeyType := t.KeyType.Resolve(typeParameters)
+func (t *DictionaryType) Resolve(typeArguments *TypeParameterTypeOrderedMap) Type {
+	newKeyType := t.KeyType.Resolve(typeArguments)
 	if newKeyType == nil {
 		return nil
 	}
 
-	newValueType := t.ValueType.Resolve(typeParameters)
+	newValueType := t.ValueType.Resolve(typeArguments)
 	if newValueType == nil {
 		return nil
 	}
@@ -6400,12 +6409,12 @@ func (t *ReferenceType) IndexingType() Type {
 	return referencedType.IndexingType()
 }
 
-func (*ReferenceType) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
+func (*ReferenceType) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
 	// TODO:
 	return false
 }
 
-func (t *ReferenceType) Resolve(_ map[*TypeParameter]Type) Type {
+func (t *ReferenceType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
 	// TODO:
 	return t
 }
@@ -6471,11 +6480,11 @@ func (*AddressType) MaxInt() *big.Int {
 	return AddressTypeMaxIntBig
 }
 
-func (*AddressType) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
+func (*AddressType) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
 	return false
 }
 
-func (t *AddressType) Resolve(_ map[*TypeParameter]Type) Type {
+func (t *AddressType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
 	return t
 }
 
@@ -7223,11 +7232,11 @@ func (t *TransactionType) GetMembers() map[string]MemberResolver {
 	return withBuiltinMembers(t, members)
 }
 
-func (*TransactionType) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
+func (*TransactionType) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
 	return false
 }
 
-func (t *TransactionType) Resolve(_ map[*TypeParameter]Type) Type {
+func (t *TransactionType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
 	return t
 }
 
@@ -7432,12 +7441,12 @@ func (t *RestrictedType) GetMembers() map[string]MemberResolver {
 	return members
 }
 
-func (*RestrictedType) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
+func (*RestrictedType) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
 	// TODO: how do we unify the restriction sets?
 	return false
 }
 
-func (t *RestrictedType) Resolve(_ map[*TypeParameter]Type) Type {
+func (t *RestrictedType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
 	// TODO:
 	return t
 }
@@ -7537,7 +7546,7 @@ func (t *CapabilityType) RewriteWithRestrictedTypes() (Type, bool) {
 
 func (t *CapabilityType) Unify(
 	other Type,
-	typeParameters map[*TypeParameter]Type,
+	typeParameters *TypeParameterTypeOrderedMap,
 	report func(err error),
 	outerRange ast.Range,
 ) bool {
@@ -7553,10 +7562,10 @@ func (t *CapabilityType) Unify(
 	return t.BorrowType.Unify(otherCap.BorrowType, typeParameters, report, outerRange)
 }
 
-func (t *CapabilityType) Resolve(typeParameters map[*TypeParameter]Type) Type {
+func (t *CapabilityType) Resolve(typeArguments *TypeParameterTypeOrderedMap) Type {
 	var resolvedBorrowType Type
 	if t.BorrowType != nil {
-		resolvedBorrowType = t.BorrowType.Resolve(typeParameters)
+		resolvedBorrowType = t.BorrowType.Resolve(typeArguments)
 	}
 
 	return &CapabilityType{

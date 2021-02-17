@@ -36,7 +36,7 @@ type Invocation struct {
 	Self               *CompositeValue
 	Arguments          []Value
 	ArgumentTypes      []sema.Type
-	TypeParameterTypes map[*sema.TypeParameter]sema.Type
+	TypeParameterTypes *sema.TypeParameterTypeOrderedMap
 	LocationRange      LocationRange
 	Interpreter        *Interpreter
 }

@@ -6738,15 +6738,13 @@ func accountGetCapabilityFunction(
 
 			path := invocation.Arguments[0].(PathValue)
 
-			// `Invocation.TypeParameterTypes` is a map, so get the first
-			// element / type by iterating over the values of the map.
-
 			// NOTE: the type parameter is optional, for backwards compatibility
 
 			var borrowType *sema.ReferenceType
-			for _, ty := range invocation.TypeParameterTypes {
+			typeParameterPair := invocation.TypeParameterTypes.Oldest()
+			if typeParameterPair != nil {
+				ty := typeParameterPair.Value
 				borrowType = ty.(*sema.ReferenceType)
-				break
 			}
 
 			var borrowStaticType StaticType

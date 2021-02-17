@@ -77,11 +77,11 @@ func (t *DeployedContractType) RewriteWithRestrictedTypes() (Type, bool) {
 	return t, false
 }
 
-func (*DeployedContractType) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
+func (*DeployedContractType) Unify(other Type, typeParameters *TypeParameterTypeOrderedMap, report func(err error), outerRange ast.Range) bool {
 	return false
 }
 
-func (t *DeployedContractType) Resolve(_ map[*TypeParameter]Type) Type {
+func (t *DeployedContractType) Resolve(typeArguments *TypeParameterTypeOrderedMap) Type {
 	return t
 }
 

@@ -162,12 +162,11 @@ func TestCheckGenericFunction(t *testing.T) {
 		require.IsType(t, &ast.InvocationExpression{}, variableDeclaration.Value)
 		invocationExpression := variableDeclaration.Value.(*ast.InvocationExpression)
 
-		typeParameterTypes := checker.Elaboration.InvocationExpressionTypeArguments[invocationExpression]
+		typeArguments := checker.Elaboration.InvocationExpressionTypeArguments[invocationExpression]
 
-		assert.IsType(t,
-			&sema.IntType{},
-			typeParameterTypes[typeParameter],
-		)
+		ty, present := typeArguments.Get(typeParameter)
+		require.True(t, present, "could not find type argument for parameter %#+v", typeParameter)
+		assert.IsType(t, &sema.IntType{}, ty)
 	})
 
 	t.Run("valid: one type parameter, no type argument, one parameter, one arguments", func(t *testing.T) {
@@ -213,12 +212,11 @@ func TestCheckGenericFunction(t *testing.T) {
 		require.IsType(t, &ast.InvocationExpression{}, variableDeclaration.Value)
 		invocationExpression := variableDeclaration.Value.(*ast.InvocationExpression)
 
-		typeParameterTypes := checker.Elaboration.InvocationExpressionTypeArguments[invocationExpression]
+		typeArguments := checker.Elaboration.InvocationExpressionTypeArguments[invocationExpression]
 
-		assert.IsType(t,
-			&sema.IntType{},
-			typeParameterTypes[typeParameter],
-		)
+		ty, present := typeArguments.Get(typeParameter)
+		require.True(t, present, "could not find type argument for type parameter %#+v", typeParameter)
+		assert.IsType(t, &sema.IntType{}, ty)
 	})
 
 	t.Run("invalid: one type parameter, no type argument, one parameter, no argument", func(t *testing.T) {
@@ -389,10 +387,9 @@ func TestCheckGenericFunction(t *testing.T) {
 
 		typeParameterTypes := checker.Elaboration.InvocationExpressionTypeArguments[invocationExpression]
 
-		assert.IsType(t,
-			&sema.IntType{},
-			typeParameterTypes[typeParameter],
-		)
+		ty, present := typeParameterTypes.Get(typeParameter)
+		require.True(t, present, "could not find type argument for type parameter %#+v", typeParameter)
+		assert.IsType(t, &sema.IntType{}, ty)
 	})
 
 	t.Run("invalid: one type parameter, no type argument, two parameters, two argument: not matching argument types", func(t *testing.T) {
@@ -512,12 +509,11 @@ func TestCheckGenericFunction(t *testing.T) {
 		require.IsType(t, &ast.InvocationExpression{}, variableDeclaration.Value)
 		invocationExpression := variableDeclaration.Value.(*ast.InvocationExpression)
 
-		typeParameterTypes := checker.Elaboration.InvocationExpressionTypeArguments[invocationExpression]
+		typeArguments := checker.Elaboration.InvocationExpressionTypeArguments[invocationExpression]
 
-		assert.IsType(t,
-			&sema.IntType{},
-			typeParameterTypes[typeParameter],
-		)
+		ty, present := typeArguments.Get(typeParameter)
+		require.True(t, present, "could not find type argument for type parameter %#+v", typeParameter)
+		assert.IsType(t, &sema.IntType{}, ty)
 
 		assert.IsType(t,
 			&sema.IntType{},
@@ -572,12 +568,11 @@ func TestCheckGenericFunction(t *testing.T) {
 		require.IsType(t, &ast.InvocationExpression{}, variableDeclaration.Value)
 		invocationExpression := variableDeclaration.Value.(*ast.InvocationExpression)
 
-		typeParameterTypes := checker.Elaboration.InvocationExpressionTypeArguments[invocationExpression]
+		typeArguments := checker.Elaboration.InvocationExpressionTypeArguments[invocationExpression]
 
-		assert.IsType(t,
-			&sema.IntType{},
-			typeParameterTypes[typeParameter],
-		)
+		ty, present := typeArguments.Get(typeParameter)
+		require.True(t, present, "could not find type argument for type parameter %#+v", typeParameter)
+		assert.IsType(t, &sema.IntType{}, ty)
 
 		assert.IsType(t,
 			&sema.IntType{},
@@ -618,12 +613,11 @@ func TestCheckGenericFunction(t *testing.T) {
 		require.IsType(t, &ast.InvocationExpression{}, variableDeclaration.Value)
 		invocationExpression := variableDeclaration.Value.(*ast.InvocationExpression)
 
-		typeParameterTypes := checker.Elaboration.InvocationExpressionTypeArguments[invocationExpression]
+		typeArguments := checker.Elaboration.InvocationExpressionTypeArguments[invocationExpression]
 
-		assert.IsType(t,
-			&sema.IntType{},
-			typeParameterTypes[typeParameter],
-		)
+		ty, present := typeArguments.Get(typeParameter)
+		require.True(t, present, "could not find type argument for type parameter %#+v", typeParameter)
+		assert.IsType(t, &sema.IntType{}, ty)
 	})
 
 	t.Run("invalid: one type parameter with type bound, one type argument, no parameters, no arguments: bound not satisfied", func(t *testing.T) {

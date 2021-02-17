@@ -75,11 +75,11 @@ func (t *AuthAccountContractsType) RewriteWithRestrictedTypes() (Type, bool) {
 	return t, false
 }
 
-func (*AuthAccountContractsType) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
+func (*AuthAccountContractsType) Unify(other Type, typeParameters *TypeParameterTypeOrderedMap, report func(err error), outerRange ast.Range) bool {
 	return false
 }
 
-func (t *AuthAccountContractsType) Resolve(_ map[*TypeParameter]Type) Type {
+func (t *AuthAccountContractsType) Resolve(typeArguments *TypeParameterTypeOrderedMap) Type {
 	return t
 }
 
