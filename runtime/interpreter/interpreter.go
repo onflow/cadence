@@ -3407,7 +3407,7 @@ func (interpreter *Interpreter) importResolvedLocation(resolvedLocation sema.Res
 		}
 
 		// don't import base values
-		if _, ok := sema.BaseValues[name]; ok {
+		if _, ok := sema.BaseValues.Get(name); ok {
 			continue
 		}
 

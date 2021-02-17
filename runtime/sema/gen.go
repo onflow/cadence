@@ -23,3 +23,4 @@ package sema
 //go:generate go run github.com/cheekybits/genny -pkg=sema -in=../common/orderedmap/orderedmap.go -out=ordered_map_interfacetype_struct.go gen "KeyType=*InterfaceType ValueType=struct{}"
 //go:generate go run github.com/cheekybits/genny -pkg=sema -in=../common/orderedmap/orderedmap.go -out=ordered_map_member_struct.go gen "KeyType=*Member ValueType=struct{}"
 //go:generate go run github.com/cheekybits/genny -pkg=sema -in=../common/orderedmap/orderedmap.go -out=ordered_map_string_variable.go gen "KeyType=string ValueType=*Variable"
+//go:generate go run github.com/cheekybits/genny -pkg=sema -in=../common/orderedmap/orderedmap.go -out=ordered_map_string_valuedeclaration.go gen "KeyType=string ValueType=ValueDeclaration"

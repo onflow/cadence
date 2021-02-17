@@ -282,14 +282,14 @@ func (checker *Checker) SubChecker(program *ast.Program, location common.Locatio
 }
 
 func (checker *Checker) declareBaseValues() {
-	for _, declaration := range BaseValues {
+	BaseValues.Foreach(func(_ string, declaration ValueDeclaration) {
 		variable := checker.declareValue(declaration)
 		if variable == nil {
-			continue
+			return
 		}
 		variable.IsBaseValue = true
 		checker.Elaboration.GlobalValues.Set(variable.Identifier, variable)
-	}
+	})
 }
 
 func (checker *Checker) declareValue(declaration ValueDeclaration) *Variable {

@@ -70,7 +70,7 @@ func (i ElaborationImport) AllValueElements() map[string]ImportElement {
 }
 
 func (i ElaborationImport) IsImportableValue(name string) bool {
-	if _, ok := BaseValues[name]; ok {
+	if _, ok := BaseValues.Get(name); ok {
 		return false
 	}
 
