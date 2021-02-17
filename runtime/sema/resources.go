@@ -186,15 +186,36 @@ func (ris *Resources) ForEach(f func(resource interface{}, info ResourceInfo)) {
 //
 func (ris *Resources) MergeBranches(thenResources *Resources, elseResources *Resources) {
 
-	infoTuples := NewBranchesResourceInfos(thenResources, elseResources)
-
 	elseReturns := false
 	if elseResources != nil {
 		elseReturns = elseResources.Returns
 	}
 
-	for resource, infoTuple := range infoTuples {
-		info, _ := ris.resources.Get(resource)
+	merged := make(map[interface{}]struct{})
+
+	merge := func(resource interface{}) {
+
+		// Only merge each resource once.
+		// We iterate over the resources of the then-branch
+		// and the else-branch (if it exists)
+
+		if _, ok := merged[resource]; ok {
+			return
+		}
+		defer func() {
+			merged[resource] = struct{}{}
+		}()
+
+		// Get the resource info in this outer scope,
+		// in the then-branch,
+		// and if there is an else-branch, from it.
+
+		info := ris.Get(resource)
+		thenInfo := thenResources.Get(resource)
+		var elseInfo ResourceInfo
+		if elseResources != nil {
+			elseInfo = elseResources.Get(resource)
+		}
 
 		// The resource can be considered definitely invalidated in both branches
 		// if in both branches, there were invalidations or the branch returned.
@@ -204,8 +225,8 @@ func (ris *Resources) MergeBranches(thenResources *Resources, elseResources *Res
 		// was invalidated.
 
 		definitelyInvalidatedInBranches :=
-			(!infoTuple.thenInfo.Invalidations.IsEmpty() || thenResources.Returns) &&
-				(!infoTuple.elseInfo.Invalidations.IsEmpty() || elseReturns)
+			(!thenInfo.Invalidations.IsEmpty() || thenResources.Returns) &&
+				(!elseInfo.Invalidations.IsEmpty() || elseReturns)
 
 		// The resource can be considered definitively invalidated if it was already invalidated,
 		// or the resource was invalidated in both branches
@@ -218,55 +239,33 @@ func (ris *Resources) MergeBranches(thenResources *Resources, elseResources *Res
 		// so only merge invalidations and uses if the branch did not return
 
 		if !thenResources.Returns {
-			info.Invalidations.Merge(infoTuple.thenInfo.Invalidations)
-			info.UsePositions.Merge(infoTuple.thenInfo.UsePositions)
+			info.Invalidations.Merge(thenInfo.Invalidations)
+			info.UsePositions.Merge(thenInfo.UsePositions)
 		}
 
 		if !elseReturns {
-			info.Invalidations.Merge(infoTuple.elseInfo.Invalidations)
-			info.UsePositions.Merge(infoTuple.elseInfo.UsePositions)
+			info.Invalidations.Merge(elseInfo.Invalidations)
+			info.UsePositions.Merge(elseInfo.UsePositions)
 		}
 
 		ris.resources.Set(resource, info)
 	}
 
+	// Merge the resource info of all resources in the then-branch
+
+	thenResources.ForEach(func(resource interface{}, _ ResourceInfo) {
+		merge(resource)
+	})
+
+	// If there is an else-branch,
+	// then merge the resource info of all resources in it
+
+	if elseResources != nil {
+		elseResources.ForEach(func(resource interface{}, _ ResourceInfo) {
+			merge(resource)
+		})
+	}
+
 	ris.Returns = ris.Returns ||
 		(thenResources.Returns && elseReturns)
-}
-
-type BranchesResourceInfo struct {
-	thenInfo ResourceInfo
-	elseInfo ResourceInfo
-}
-
-type BranchesResourceInfos map[interface{}]BranchesResourceInfo
-
-func (infos BranchesResourceInfos) Add(
-	resources *Resources,
-	setValue func(*BranchesResourceInfo, ResourceInfo),
-) {
-	resources.ForEach(func(resource interface{}, info ResourceInfo) {
-		branchesResourceInfo := infos[resource]
-		setValue(&branchesResourceInfo, info)
-		infos[resource] = branchesResourceInfo
-	})
-}
-
-func NewBranchesResourceInfos(thenResources *Resources, elseResources *Resources) BranchesResourceInfos {
-	infoTuples := make(BranchesResourceInfos)
-	infoTuples.Add(
-		thenResources,
-		func(branchesResourceInfo *BranchesResourceInfo, resourceInfo ResourceInfo) {
-			branchesResourceInfo.thenInfo = resourceInfo
-		},
-	)
-	if elseResources != nil {
-		infoTuples.Add(
-			elseResources,
-			func(branchesResourceInfo *BranchesResourceInfo, resourceInfo ResourceInfo) {
-				branchesResourceInfo.elseInfo = resourceInfo
-			},
-		)
-	}
-	return infoTuples
 }
