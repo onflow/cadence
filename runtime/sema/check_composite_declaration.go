@@ -584,7 +584,7 @@ func (checker *Checker) declareCompositeMembersAndValue(
 					continue
 				}
 
-				nestedCompositeType.AddImplicitTypeRequirementConformance(typeRequirement)
+				nestedCompositeType.addImplicitTypeRequirementConformance(typeRequirement)
 			}
 		})
 
