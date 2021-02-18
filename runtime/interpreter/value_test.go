@@ -648,6 +648,149 @@ func TestVisitor(t *testing.T) {
 	require.Equal(t, 1, stringVisits)
 }
 
+func TestKeyString(t *testing.T) {
+
+	t.Parallel()
+
+	type testCase struct {
+		value    HasKeyString
+		expected string
+	}
+
+	stringerTests := map[string]testCase{
+		"UInt": {
+			value:    NewUIntValueFromUint64(10),
+			expected: "10",
+		},
+		"UInt8": {
+			value:    UInt8Value(8),
+			expected: "8",
+		},
+		"UInt16": {
+			value:    UInt16Value(16),
+			expected: "16",
+		},
+		"UInt32": {
+			value:    UInt32Value(32),
+			expected: "32",
+		},
+		"UInt64": {
+			value:    UInt64Value(64),
+			expected: "64",
+		},
+		"UInt128": {
+			value:    NewUInt128ValueFromUint64(128),
+			expected: "128",
+		},
+		"UInt256": {
+			value:    NewUInt256ValueFromUint64(256),
+			expected: "256",
+		},
+		"Int8": {
+			value:    Int8Value(-8),
+			expected: "-8",
+		},
+		"Int16": {
+			value:    Int16Value(-16),
+			expected: "-16",
+		},
+		"Int32": {
+			value:    Int32Value(-32),
+			expected: "-32",
+		},
+		"Int64": {
+			value:    Int64Value(-64),
+			expected: "-64",
+		},
+		"Int128": {
+			value:    NewInt128ValueFromInt64(-128),
+			expected: "-128",
+		},
+		"Int256": {
+			value:    NewInt256ValueFromInt64(-256),
+			expected: "-256",
+		},
+		"Word8": {
+			value:    Word8Value(8),
+			expected: "8",
+		},
+		"Word16": {
+			value:    Word16Value(16),
+			expected: "16",
+		},
+		"Word32": {
+			value:    Word32Value(32),
+			expected: "32",
+		},
+		"Word64": {
+			value:    Word64Value(64),
+			expected: "64",
+		},
+		"UFix64": {
+			value:    NewUFix64ValueWithInteger(64),
+			expected: "64.00000000",
+		},
+		"Fix64": {
+			value:    NewFix64ValueWithInteger(-32),
+			expected: "-32.00000000",
+		},
+		"true": {
+			value:    BoolValue(true),
+			expected: "true",
+		},
+		"false": {
+			value:    BoolValue(false),
+			expected: "false",
+		},
+		"String": {
+			value:    NewStringValue("Flow ridah!"),
+			expected: "Flow ridah!",
+		},
+		"Address": {
+			value:    NewAddressValue(common.Address{0, 0, 0, 0, 0, 0, 0, 1}),
+			expected: "0x1",
+		},
+		"enum": {
+			value: NewCompositeValue(
+				utils.TestLocation,
+				"Foo",
+				common.CompositeKindEnum,
+				map[string]Value{
+					"rawValue": UInt8Value(42),
+				},
+				nil,
+			),
+			expected: "42",
+		},
+		"Path": {
+			value: PathValue{
+				Domain:     common.PathDomainStorage,
+				Identifier: "foo",
+			},
+			// NOTE: this is an unfortunate mistake,
+			// the KeyString function should have been using Domain.Identifier()
+			expected: "/PathDomainStorage/foo",
+		},
+	}
+
+	test := func(name string, testCase testCase) {
+
+		t.Run(name, func(t *testing.T) {
+
+			t.Parallel()
+
+			assert.Equal(t,
+				testCase.expected,
+				testCase.value.KeyString(),
+			)
+		})
+	}
+
+	for name, testCase := range stringerTests {
+		test(name, testCase)
+	}
+}
+
 func TestBlockValue(t *testing.T) {
 
 	t.Parallel()
