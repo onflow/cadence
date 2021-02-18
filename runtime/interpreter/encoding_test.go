@@ -4107,9 +4107,15 @@ func TestEncodeDecodeDictionaryDeferred(t *testing.T) {
 					0xa0,
 				},
 				deferrals: &EncodingDeferrals{
-					Values: map[string]Value{
-						"v\x1ftest": value1,
-						"v\x1ftrue": value2,
+					Values: []EncodingDeferralValue{
+						{
+							Key:   "v\x1ftest",
+							Value: value1,
+						},
+						{
+							Key:   "v\x1ftrue",
+							Value: value2,
+						},
 					},
 				},
 				decodedValue: &DictionaryValue{
@@ -4177,7 +4183,7 @@ func TestEncodeDecodeDictionaryDeferred(t *testing.T) {
 					// false
 					0xf4,
 				},
-				deferrals: &EncodingDeferrals{Values: map[string]Value{}},
+				deferrals: &EncodingDeferrals{},
 			},
 		)
 	})
