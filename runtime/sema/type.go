@@ -4760,6 +4760,8 @@ type CompositeType struct {
 	ExplicitInterfaceConformances       []*InterfaceType
 	ImplicitTypeRequirementConformances []*CompositeType
 	Members                             *StringMemberOrderedMap
+	memberResolversOnce                 sync.Once
+	memberResolvers                     map[string]MemberResolver
 	Fields                              []string
 	// TODO: add support for overloaded initializers
 	ConstructorParameters []*Parameter
@@ -4785,7 +4787,7 @@ func (t *CompositeType) initializeExplicitInterfaceConformanceSet() {
 	})
 }
 
-func (t *CompositeType) AddImplicitTypeRequirementConformance(typeRequirement *CompositeType) {
+func (t *CompositeType) addImplicitTypeRequirementConformance(typeRequirement *CompositeType) {
 	t.ImplicitTypeRequirementConformances =
 		append(t.ImplicitTypeRequirementConformances, typeRequirement)
 }
@@ -4831,35 +4833,8 @@ func (t *CompositeType) Equal(other Type) bool {
 }
 
 func (t *CompositeType) GetMembers() map[string]MemberResolver {
-	// TODO: optimize
-	members := make(map[string]MemberResolver, t.Members.Len())
-	t.Members.Foreach(func(name string, loopMember *Member) {
-		// NOTE: don't capture loop variable
-		member := loopMember
-		members[name] = MemberResolver{
-			Kind: member.DeclarationKind,
-			Resolve: func(_ string, _ ast.Range, _ func(error)) *Member {
-				return member
-			},
-		}
-	})
-
-	// Check conformances.
-	// If this composite type results from a normal composite declaration,
-	// it must have members declared for all interfaces it conforms to.
-	// However, if this composite type is a type requirement,
-	// it acts like an interface and does not have to declare members.
-
-	t.ExplicitInterfaceConformanceSet().
-		ForEach(func(conformance *InterfaceType) {
-			for name, resolver := range conformance.GetMembers() {
-				if _, ok := members[name]; !ok {
-					members[name] = resolver
-				}
-			}
-		})
-
-	return withBuiltinMembers(t, members)
+	t.initializeMemberResolvers()
+	return t.memberResolvers
 }
 
 func (t *CompositeType) IsResourceType() bool {
@@ -4980,6 +4955,40 @@ func (t *CompositeType) Resolve(_ map[*TypeParameter]Type) Type {
 
 func (t *CompositeType) NestedTypes() *StringTypeOrderedMap {
 	return t.nestedTypes
+}
+
+func (t *CompositeType) initializeMemberResolvers() {
+	t.memberResolversOnce.Do(func() {
+		members := make(map[string]MemberResolver, t.Members.Len())
+
+		t.Members.Foreach(func(name string, loopMember *Member) {
+			// NOTE: don't capture loop variable
+			member := loopMember
+			members[name] = MemberResolver{
+				Kind: member.DeclarationKind,
+				Resolve: func(_ string, _ ast.Range, _ func(error)) *Member {
+					return member
+				},
+			}
+		})
+
+		// Check conformances.
+		// If this composite type results from a normal composite declaration,
+		// it must have members declared for all interfaces it conforms to.
+		// However, if this composite type is a type requirement,
+		// it acts like an interface and does not have to declare members.
+
+		t.ExplicitInterfaceConformanceSet().
+			ForEach(func(conformance *InterfaceType) {
+				for name, resolver := range conformance.GetMembers() {
+					if _, ok := members[name]; !ok {
+						members[name] = resolver
+					}
+				}
+			})
+
+		t.memberResolvers = withBuiltinMembers(t, members)
+	})
 }
 
 // AuthAccountType represents the authorized access to an account.
@@ -5820,11 +5829,13 @@ func (m *Member) testType(test func(Type) bool, results map[*Member]bool) (resul
 // InterfaceType
 
 type InterfaceType struct {
-	Location      common.Location
-	Identifier    string
-	CompositeKind common.CompositeKind
-	Members       *StringMemberOrderedMap
-	Fields        []string
+	Location            common.Location
+	Identifier          string
+	CompositeKind       common.CompositeKind
+	Members             *StringMemberOrderedMap
+	memberResolversOnce sync.Once
+	memberResolvers     map[string]MemberResolver
+	Fields              []string
 	// TODO: add support for overloaded initializers
 	InitializerParameters []*Parameter
 	ContainerType         Type
@@ -5872,19 +5883,26 @@ func (t *InterfaceType) Equal(other Type) bool {
 }
 
 func (t *InterfaceType) GetMembers() map[string]MemberResolver {
-	// TODO: optimize
-	members := make(map[string]MemberResolver, t.Members.Len())
-	t.Members.Foreach(func(name string, loopMember *Member) {
-		// NOTE: don't capture loop variable
-		member := loopMember
-		members[name] = MemberResolver{
-			Kind: member.DeclarationKind,
-			Resolve: func(_ string, _ ast.Range, _ func(error)) *Member {
-				return member
-			},
-		}
+	t.initializeMemberResolvers()
+	return t.memberResolvers
+}
+
+func (t *InterfaceType) initializeMemberResolvers() {
+	t.memberResolversOnce.Do(func() {
+		members := make(map[string]MemberResolver, t.Members.Len())
+		t.Members.Foreach(func(name string, loopMember *Member) {
+			// NOTE: don't capture loop variable
+			member := loopMember
+			members[name] = MemberResolver{
+				Kind: member.DeclarationKind,
+				Resolve: func(_ string, _ ast.Range, _ func(error)) *Member {
+					return member
+				},
+			}
+		})
+
+		t.memberResolvers = withBuiltinMembers(t, members)
 	})
-	return withBuiltinMembers(t, members)
 }
 
 func (t *InterfaceType) IsResourceType() bool {
