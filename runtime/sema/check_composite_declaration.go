@@ -82,7 +82,7 @@ func (checker *Checker) visitCompositeDeclaration(declaration *ast.CompositeDecl
 		// The initializer must initialize all members that are fields,
 		// e.g. not composite functions (which are by definition constant and "initialized")
 
-		fieldMembers := map[*Member]*ast.FieldDeclaration{}
+		fieldMembers := NewMemberAstFieldDeclarationOrderedMap()
 
 		for _, field := range declaration.Members.Fields() {
 			fieldName := field.Identifier.Identifier
@@ -91,7 +91,7 @@ func (checker *Checker) visitCompositeDeclaration(declaration *ast.CompositeDecl
 				continue
 			}
 
-			fieldMembers[member] = field
+			fieldMembers.Set(member, field)
 		}
 
 		initializationInfo = NewInitializationInfo(compositeType, fieldMembers)
