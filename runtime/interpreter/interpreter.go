@@ -199,15 +199,19 @@ type TypeCodes struct {
 }
 
 func (c TypeCodes) Merge(codes TypeCodes) {
-	for typeID, code := range codes.CompositeCodes {
+
+	// Iterating over the maps in a non-deterministic way is OK,
+	// we only copy the values over.
+
+	for typeID, code := range codes.CompositeCodes { //nolint:maprangecheck
 		c.CompositeCodes[typeID] = code
 	}
 
-	for typeID, code := range codes.InterfaceCodes {
+	for typeID, code := range codes.InterfaceCodes { //nolint:maprangecheck
 		c.InterfaceCodes[typeID] = code
 	}
 
-	for typeID, code := range codes.TypeRequirementCodes {
+	for typeID, code := range codes.TypeRequirementCodes { //nolint:maprangecheck
 		c.TypeRequirementCodes[typeID] = code
 	}
 }
@@ -2526,7 +2530,11 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 
 		// Wrap functions
 
-		for name, functionWrapper := range code.FunctionWrappers {
+		// Iterating over the map in a non-deterministic way is OK,
+		// we only apply the function wrapper to each function,
+		// the order does not matter.
+
+		for name, functionWrapper := range code.FunctionWrappers { //nolint:maprangecheck
 			functions[name] = functionWrapper(functions[name])
 		}
 	}
