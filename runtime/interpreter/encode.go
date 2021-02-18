@@ -22,6 +22,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -752,14 +753,28 @@ func (e *Encoder) prepareCompositeValue(
 ) {
 	fields := make(map[string]interface{}, len(v.Fields))
 
-	for name, value := range v.Fields {
-		valuePath := append(path[:], name)
+	var fieldNames []string
+
+	// Gather all field names and sort them lexicographically
+
+	for fieldName := range v.Fields {
+		fieldNames = append(fieldNames, fieldName)
+	}
+
+	// Encode all fields in lexicographic order
+
+	sort.Strings(fieldNames)
+
+	for _, fieldName := range fieldNames {
+		value := v.Fields[fieldName]
+
+		valuePath := append(path[:], fieldName)
 
 		prepared, err := e.prepare(value, valuePath, deferrals)
 		if err != nil {
 			return nil, err
 		}
-		fields[name] = prepared
+		fields[fieldName] = prepared
 	}
 
 	location, err := e.prepareLocation(v.Location)
