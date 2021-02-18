@@ -411,7 +411,10 @@ func (checker *Checker) VisitFunctionExpression(expression *ast.FunctionExpressi
 // to be initialized (as stated in the initialization info) have been initialized.
 //
 func (checker *Checker) checkFieldMembersInitialized(info *InitializationInfo) {
-	for member, field := range info.FieldMembers {
+	for pair := info.FieldMembers.Oldest(); pair != nil; pair = pair.Next() {
+		member := pair.Key
+		field := pair.Value
+
 		isInitialized := info.InitializedFieldMembers.Contains(member)
 		if isInitialized {
 			continue

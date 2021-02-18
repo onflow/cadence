@@ -67,7 +67,7 @@ func (checker *Checker) VisitMemberExpression(expression *ast.MemberExpression) 
 		if isInInitializer {
 			fieldInitialized := info.InitializedFieldMembers.Contains(accessedSelfMember)
 
-			field := info.FieldMembers[accessedSelfMember]
+			field, _ := info.FieldMembers.Get(accessedSelfMember)
 			if field != nil && !fieldInitialized {
 
 				checker.report(

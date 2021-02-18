@@ -97,7 +97,7 @@ func (checker *Checker) checkSelfVariableUseInInitializer(variable *Variable, po
 			// If the member access is to a non-field, e.g. a function,
 			// *all* fields must have been initialized
 
-			field := initializationInfo.FieldMembers[accessedSelfMember]
+			field, _ := initializationInfo.FieldMembers.Get(accessedSelfMember)
 			if field == nil {
 				checkInitializationComplete()
 			}
