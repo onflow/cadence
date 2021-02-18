@@ -19,6 +19,7 @@
 package interpreter
 
 import (
+	"fmt"
 	"math"
 	"math/big"
 	"testing"
@@ -4342,4 +4343,42 @@ func TestDecodeCallback(t *testing.T) {
 		},
 		decodeCallbacks,
 	)
+}
+
+func BenchmarkEncoding(b *testing.B) {
+
+	value := prepareLargeTestValue()
+
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		_, _, _ = EncodeValue(value, nil, false, nil)
+	}
+}
+
+func BenchmarkDecoding(b *testing.B) {
+
+	value := prepareLargeTestValue()
+	encoded, _, err := EncodeValue(value, nil, false, nil)
+	require.NoError(b, err)
+
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		_, _ = DecodeValue(encoded, nil, nil, CurrentEncodingVersion, nil)
+	}
+}
+
+func prepareLargeTestValue() Value {
+	values := NewArrayValueUnownedNonCopying()
+	for i := 0; i < 100; i++ {
+		dict := NewDictionaryValueUnownedNonCopying()
+		for i := 0; i < 100; i++ {
+			key := NewStringValue(fmt.Sprintf("hello world %d", i))
+			value := NewInt256ValueFromInt64(int64(i))
+			dict.Set(nil, LocationRange{}, key, NewSomeValueOwningNonCopying(value))
+		}
+		values.Append(dict)
+	}
+	return values
 }

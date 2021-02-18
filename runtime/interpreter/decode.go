@@ -93,27 +93,26 @@ func NewDecoder(
 	*Decoder,
 	error,
 ) {
-	dm, err := decMode()
-	if err != nil {
-		return nil, err
-	}
-
 	return &Decoder{
-		decoder:        dm.NewDecoder(reader),
+		decoder:        decMode.NewDecoder(reader),
 		owner:          owner,
 		version:        version,
 		decodeCallback: decodeCallback,
 	}, nil
 }
 
-func decMode() (cbor.DecMode, error) {
-	return cbor.DecOptions{
+var decMode = func() cbor.DecMode {
+	decMode, err := cbor.DecOptions{
 		IntDec:           cbor.IntDecConvertNone,
 		MaxArrayElements: 512 * 1024,
 		MaxMapPairs:      512 * 1024,
 		MaxNestedLevels:  256,
 	}.DecMode()
-}
+	if err != nil {
+		panic(err)
+	}
+	return decMode
+}()
 
 // Decode reads CBOR-encoded bytes from the io.Reader and decodes them to a value.
 //

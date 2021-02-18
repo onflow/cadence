@@ -231,13 +231,8 @@ func EncodeValue(value Value, path []string, deferred bool, prepareCallback Enco
 		return nil, nil, err
 	}
 
-	dm, err := decMode()
-	if err != nil {
-		return nil, nil, err
-	}
-
 	data := w.Bytes()
-	err = dm.Valid(data)
+	err = decMode.Valid(data)
 	if err != nil {
 		return nil, nil, fmt.Errorf("encoder produced invalid data: %w", err)
 	}
@@ -245,16 +240,23 @@ func EncodeValue(value Value, path []string, deferred bool, prepareCallback Enco
 	return data, deferrals, nil
 }
 
-// NewEncoder initializes an Encoder that will write CBOR-encoded bytes
-// to the given io.Writer.
+// See https://github.com/fxamacker/cbor:
+// "For best performance, reuse EncMode and DecMode after creating them."
 //
-func NewEncoder(w io.Writer, deferred bool, prepareCallback EncodingPrepareCallback) (*Encoder, error) {
+var encMode = func() cbor.EncMode {
 	options := cbor.CanonicalEncOptions()
 	options.BigIntConvert = cbor.BigIntConvertNone
 	encMode, err := options.EncMode()
 	if err != nil {
-		return nil, err
+		panic(err)
 	}
+	return encMode
+}()
+
+// NewEncoder initializes an Encoder that will write CBOR-encoded bytes
+// to the given io.Writer.
+//
+func NewEncoder(w io.Writer, deferred bool, prepareCallback EncodingPrepareCallback) (*Encoder, error) {
 	enc := encMode.NewEncoder(w)
 	return &Encoder{
 		enc:             enc,
