@@ -230,7 +230,10 @@ func (r *REPL) Suggestions() (result []REPLSuggestion) {
 		names[name] = variable.Type.String()
 	})
 
-	for name, description := range names {
+	// Iterating over the dictionary of names is safe,
+	// as the suggested entries are sorted afterwards
+
+	for name, description := range names { //nolint:maprangecheck
 		result = append(result, REPLSuggestion{
 			Name:        name,
 			Description: description,
