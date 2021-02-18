@@ -183,8 +183,13 @@ type EncodingDeferralMove struct {
 	NewStorageKey      string
 }
 
+type EncodingDeferralValue struct {
+	Key   string
+	Value Value
+}
+
 type EncodingDeferrals struct {
-	Values map[string]Value
+	Values []EncodingDeferralValue
 	Moves  []EncodingDeferralMove
 }
 
@@ -222,9 +227,7 @@ func EncodeValue(value Value, path []string, deferred bool, prepareCallback Enco
 		return nil, nil, err
 	}
 
-	deferrals = &EncodingDeferrals{
-		Values: map[string]Value{},
-	}
+	deferrals = &EncodingDeferrals{}
 
 	err = enc.Encode(value, path, deferrals)
 	if err != nil {
@@ -684,7 +687,12 @@ func (e *Encoder) prepareDictionaryValue(
 			// in the owner's storage.
 
 			if !isDeferred {
-				deferrals.Values[joinPath(valuePath)] = entryValue
+				deferrals.Values = append(deferrals.Values,
+					EncodingDeferralValue{
+						Key:   joinPath(valuePath),
+						Value: entryValue,
+					},
+				)
 			} else {
 
 				// If the value is deferred, and the deferred value
