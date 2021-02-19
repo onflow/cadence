@@ -653,15 +653,19 @@ func (e *Encoder) prepareDictionaryValue(
 		return nil, err
 	}
 
-	entries := make(map[string]interface{}, len(v.Entries))
+	entries := make(map[string]interface{}, v.Entries.Len())
 
 	// Deferring the encoding of values is only supported if all
 	// values are resources: resource typed dictionaries are moved
 
 	deferred := e.deferred
 	if deferred {
-		for _, value := range v.Entries {
-			compositeValue, ok := value.(*CompositeValue)
+
+		// Iterating over the map in a non-deterministic way is OK,
+		// we only determine check if all values are resources.
+
+		for pair := v.Entries.Oldest(); pair != nil; pair = pair.Next() {
+			compositeValue, ok := pair.Value.(*CompositeValue)
 			if !ok || compositeValue.Kind != common.CompositeKindResource {
 				deferred = false
 				break
@@ -671,7 +675,7 @@ func (e *Encoder) prepareDictionaryValue(
 
 	for _, keyValue := range v.Keys.Values {
 		key := dictionaryKey(keyValue)
-		entryValue := v.Entries[key]
+		entryValue, _ := v.Entries.Get(key)
 		valuePath := append(path[:], dictionaryValuePathPrefix, key)
 
 		if deferred {

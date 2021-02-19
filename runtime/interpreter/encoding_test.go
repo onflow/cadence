@@ -4122,7 +4122,7 @@ func TestEncodeDecodeDictionaryDeferred(t *testing.T) {
 				},
 				decodedValue: &DictionaryValue{
 					Keys:          expected.Keys,
-					Entries:       map[string]Value{},
+					Entries:       NewStringValueOrderedMap(),
 					DeferredOwner: &testOwner,
 					DeferredKeys:  deferredKeys,
 				},
