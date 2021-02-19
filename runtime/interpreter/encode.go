@@ -757,7 +757,7 @@ func (e *Encoder) prepareCompositeValue(
 
 	// Gather all field names and sort them lexicographically
 
-	for fieldName := range v.Fields {
+	for fieldName := range v.Fields { //nolint:maprangecheck
 		fieldNames = append(fieldNames, fieldName)
 	}
 
