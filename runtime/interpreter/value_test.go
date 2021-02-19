@@ -759,15 +759,17 @@ func TestKeyString(t *testing.T) {
 			expected: "0x1",
 		},
 		"enum": {
-			value: NewCompositeValue(
-				utils.TestLocation,
-				"Foo",
-				common.CompositeKindEnum,
-				map[string]Value{
-					"rawValue": UInt8Value(42),
-				},
-				nil,
-			),
+			value: func() HasKeyString {
+				members := NewStringValueOrderedMap()
+				members.Set("rawValue", UInt8Value(42))
+				return NewCompositeValue(
+					utils.TestLocation,
+					"Foo",
+					common.CompositeKindEnum,
+					members,
+					nil,
+				)
+			}(),
 			expected: "42",
 		},
 		"Path": {
