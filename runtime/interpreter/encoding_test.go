@@ -401,7 +401,7 @@ func TestEncodeDecodeComposite(t *testing.T) {
 			utils.TestLocation,
 			"TestStruct",
 			common.CompositeKindStructure,
-			map[string]Value{},
+			NewStringValueOrderedMap(),
 			nil,
 		)
 		expected.modified = false
@@ -445,7 +445,7 @@ func TestEncodeDecodeComposite(t *testing.T) {
 			utils.TestLocation,
 			"TestStruct",
 			common.CompositeKindStructure,
-			map[string]Value{},
+			NewStringValueOrderedMap(),
 			nil,
 		)
 		expected.modified = false
@@ -497,7 +497,7 @@ func TestEncodeDecodeComposite(t *testing.T) {
 			},
 			"SimpleStruct",
 			common.CompositeKindStructure,
-			map[string]Value{},
+			NewStringValueOrderedMap(),
 			nil,
 		)
 		expected.modified = false
@@ -547,14 +547,15 @@ func TestEncodeDecodeComposite(t *testing.T) {
 		stringValue := NewStringValue("test")
 		stringValue.modified = false
 
+		members := NewStringValueOrderedMap()
+		members.Set("string", stringValue)
+		members.Set("true", BoolValue(true))
+
 		expected := NewCompositeValue(
 			utils.TestLocation,
 			"TestResource",
 			common.CompositeKindResource,
-			map[string]Value{
-				"true":   BoolValue(true),
-				"string": stringValue,
-			},
+			members,
 			nil,
 		)
 		expected.modified = false
@@ -611,14 +612,15 @@ func TestEncodeDecodeComposite(t *testing.T) {
 		stringValue := NewStringValue("test")
 		stringValue.modified = false
 
+		members := NewStringValueOrderedMap()
+		members.Set("string", stringValue)
+		members.Set("true", BoolValue(true))
+
 		expected := NewCompositeValue(
 			utils.TestLocation,
 			"TestResource",
 			common.CompositeKindResource,
-			map[string]Value{
-				"true":   BoolValue(true),
-				"string": stringValue,
-			},
+			members,
 			nil,
 		)
 		expected.modified = false
@@ -684,7 +686,7 @@ func TestEncodeDecodeComposite(t *testing.T) {
 			},
 			"TestContract.TestStruct",
 			common.CompositeKindStructure,
-			map[string]Value{},
+			NewStringValueOrderedMap(),
 			nil,
 		)
 		expected.modified = false
@@ -777,7 +779,7 @@ func TestEncodeDecodeComposite(t *testing.T) {
 			},
 			"TestStruct",
 			common.CompositeKindStructure,
-			map[string]Value{},
+			NewStringValueOrderedMap(),
 			nil,
 		)
 		expected.modified = false
@@ -4056,7 +4058,7 @@ func TestEncodeDecodeDictionaryDeferred(t *testing.T) {
 			utils.TestLocation,
 			"R",
 			common.CompositeKindResource,
-			map[string]Value{},
+			NewStringValueOrderedMap(),
 			nil,
 		)
 		value1.modified = false
@@ -4066,7 +4068,7 @@ func TestEncodeDecodeDictionaryDeferred(t *testing.T) {
 			utils.TestLocation,
 			"R2",
 			common.CompositeKindResource,
-			map[string]Value{},
+			NewStringValueOrderedMap(),
 			nil,
 		)
 		value2.modified = false

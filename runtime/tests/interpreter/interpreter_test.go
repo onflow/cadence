@@ -5756,36 +5756,39 @@ func TestInterpretEmitEvent(t *testing.T) {
 	transferEventType := checker.RequireGlobalType(t, inter.Program.Elaboration, "Transfer")
 	transferAmountEventType := checker.RequireGlobalType(t, inter.Program.Elaboration, "TransferAmount")
 
+	members1 := interpreter.NewStringValueOrderedMap()
+	members1.Set("to", interpreter.NewIntValueFromInt64(1))
+	members1.Set("from", interpreter.NewIntValueFromInt64(2))
+
+	members2 := interpreter.NewStringValueOrderedMap()
+	members2.Set("to", interpreter.NewIntValueFromInt64(3))
+	members2.Set("from", interpreter.NewIntValueFromInt64(4))
+
+	members3 := interpreter.NewStringValueOrderedMap()
+	members3.Set("to", interpreter.NewIntValueFromInt64(1))
+	members3.Set("from", interpreter.NewIntValueFromInt64(2))
+	members3.Set("amount", interpreter.NewIntValueFromInt64(100))
+
 	expectedEvents := []*interpreter.CompositeValue{
 		interpreter.NewCompositeValue(
 			TestLocation,
 			TestLocation.QualifiedIdentifier(transferEventType.ID()),
 			common.CompositeKindEvent,
-			map[string]interpreter.Value{
-				"to":   interpreter.NewIntValueFromInt64(1),
-				"from": interpreter.NewIntValueFromInt64(2),
-			},
+			members1,
 			nil,
 		),
 		interpreter.NewCompositeValue(
 			TestLocation,
 			TestLocation.QualifiedIdentifier(transferEventType.ID()),
 			common.CompositeKindEvent,
-			map[string]interpreter.Value{
-				"to":   interpreter.NewIntValueFromInt64(3),
-				"from": interpreter.NewIntValueFromInt64(4),
-			},
+			members2,
 			nil,
 		),
 		interpreter.NewCompositeValue(
 			TestLocation,
 			TestLocation.QualifiedIdentifier(transferAmountEventType.ID()),
 			common.CompositeKindEvent,
-			map[string]interpreter.Value{
-				"to":     interpreter.NewIntValueFromInt64(1),
-				"from":   interpreter.NewIntValueFromInt64(2),
-				"amount": interpreter.NewIntValueFromInt64(100),
-			},
+			members3,
 			nil,
 		),
 	}
@@ -5855,7 +5858,7 @@ func TestInterpretEmitEventParameterTypes(t *testing.T) {
 					TestLocation,
 					"S",
 					common.CompositeKindStructure,
-					map[string]interpreter.Value{},
+					interpreter.NewStringValueOrderedMap(),
 					nil,
 				)
 				v.Functions = map[string]interpreter.FunctionValue{}
@@ -5956,14 +5959,15 @@ func TestInterpretEmitEventParameterTypes(t *testing.T) {
 
 			testType := checker.RequireGlobalType(t, inter.Program.Elaboration, "Test")
 
+			members := interpreter.NewStringValueOrderedMap()
+			members.Set("value", value.value)
+
 			expectedEvents := []*interpreter.CompositeValue{
 				interpreter.NewCompositeValue(
 					TestLocation,
 					TestLocation.QualifiedIdentifier(testType.ID()),
 					common.CompositeKindEvent,
-					map[string]interpreter.Value{
-						"value": value.value,
-					},
+					members,
 					nil,
 				),
 			}
@@ -6746,12 +6750,14 @@ func TestInterpretContractAccountFieldUse(t *testing.T) {
 						_ common.Location,
 						_ string,
 						_ common.CompositeKind,
-					) map[string]interpreter.Value {
+					) *interpreter.StringValueOrderedMap {
 						panicFunction := interpreter.NewHostFunctionValue(func(invocation interpreter.Invocation) trampoline.Trampoline {
 							panic(errors.NewUnreachableError())
 						})
-						return map[string]interpreter.Value{
-							"account": interpreter.NewAuthAccountValue(
+						injectedMembers := interpreter.NewStringValueOrderedMap()
+						injectedMembers.Set(
+							"account",
+							interpreter.NewAuthAccountValue(
 								addressValue,
 								func(interpreter *interpreter.Interpreter) interpreter.UInt64Value {
 									return 0
@@ -6761,7 +6767,8 @@ func TestInterpretContractAccountFieldUse(t *testing.T) {
 								panicFunction,
 								interpreter.AuthAccountContractsValue{},
 							),
-						}
+						)
+						return injectedMembers
 					},
 				),
 			},

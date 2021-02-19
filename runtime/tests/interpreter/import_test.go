@@ -83,6 +83,7 @@ func TestInterpretVirtualImport(t *testing.T) {
 										Location:            location,
 										QualifiedIdentifier: "Foo",
 										Kind:                common.CompositeKindContract,
+										Fields:              interpreter.NewStringValueOrderedMap(),
 										Functions: map[string]interpreter.FunctionValue{
 											"bar": interpreter.NewHostFunctionValue(
 												func(invocation interpreter.Invocation) trampoline.Trampoline {

@@ -114,7 +114,7 @@ type HostFunction func(invocation Invocation) Trampoline
 
 type HostFunctionValue struct {
 	Function HostFunction
-	Members  map[string]Value
+	Members  *StringValueOrderedMap
 }
 
 func (f HostFunctionValue) String() string {
@@ -173,7 +173,8 @@ func (f HostFunctionValue) Invoke(invocation Invocation) Trampoline {
 }
 
 func (f HostFunctionValue) GetMember(_ *Interpreter, _ LocationRange, name string) Value {
-	return f.Members[name]
+	value, _ := f.Members.Get(name)
+	return value
 }
 
 func (f HostFunctionValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {

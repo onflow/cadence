@@ -33,7 +33,7 @@ func newTestCompositeValue(owner common.Address) *CompositeValue {
 		utils.TestLocation,
 		"Test",
 		common.CompositeKindStructure,
-		map[string]Value{},
+		NewStringValueOrderedMap(),
 		&owner,
 	)
 }
@@ -344,7 +344,7 @@ func TestSetOwnerComposite(t *testing.T) {
 
 	const fieldName = "test"
 
-	composite.Fields[fieldName] = value
+	composite.Fields.Set(fieldName, value)
 
 	composite.SetOwner(&newOwner)
 
@@ -363,10 +363,10 @@ func TestSetOwnerCompositeCopy(t *testing.T) {
 
 	const fieldName = "test"
 
-	composite.Fields[fieldName] = value
+	composite.Fields.Set(fieldName, value)
 
 	compositeCopy := composite.Copy().(*CompositeValue)
-	valueCopy := compositeCopy.Fields[fieldName]
+	valueCopy, _ := compositeCopy.Fields.Get(fieldName)
 
 	assert.Nil(t, compositeCopy.GetOwner())
 	assert.Nil(t, valueCopy.GetOwner())
@@ -530,15 +530,18 @@ func TestStringer(t *testing.T) {
 			expected: "0x1",
 		},
 		"composite": {
-			value: NewCompositeValue(
-				utils.TestLocation,
-				"Foo",
-				common.CompositeKindResource,
-				map[string]Value{
-					"y": NewStringValue("bar"),
-				},
-				nil,
-			),
+			value: func() Value {
+				members := NewStringValueOrderedMap()
+				members.Set("y", NewStringValue("bar"))
+
+				return NewCompositeValue(
+					utils.TestLocation,
+					"Foo",
+					common.CompositeKindResource,
+					members,
+					nil,
+				)
+			}(),
 			expected: "S.test.Foo(y: \"bar\")",
 		},
 		"Link": {
@@ -632,13 +635,13 @@ func TestVisitor(t *testing.T) {
 	value = NewSomeValueOwningNonCopying(value)
 	value = NewArrayValueUnownedNonCopying(value)
 	value = NewDictionaryValueUnownedNonCopying(NewStringValue("42"), value)
+	members := NewStringValueOrderedMap()
+	members.Set("foo", value)
 	value = NewCompositeValue(
 		utils.TestLocation,
 		"Foo",
 		common.CompositeKindStructure,
-		map[string]Value{
-			"foo": value,
-		},
+		members,
 		nil,
 	)
 

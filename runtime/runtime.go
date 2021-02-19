@@ -871,7 +871,7 @@ func (r *interpreterRuntime) injectedCompositeFieldsHandler(
 		location Location,
 		_ string,
 		compositeKind common.CompositeKind,
-	) map[string]interpreter.Value {
+	) *interpreter.StringValueOrderedMap {
 
 		switch location {
 		case stdlib.CryptoChecker.Location:
@@ -891,15 +891,18 @@ func (r *interpreterRuntime) injectedCompositeFieldsHandler(
 
 				addressValue := interpreter.NewAddressValue(address)
 
-				return map[string]interpreter.Value{
-					"account": r.newAuthAccountValue(
+				injectedMembers := interpreter.NewStringValueOrderedMap()
+				injectedMembers.Set(
+					"account",
+					r.newAuthAccountValue(
 						addressValue,
 						context,
 						runtimeStorage,
 						interpreterOptions,
 						checkerOptions,
 					),
-				}
+				)
+				return injectedMembers
 			}
 		}
 
@@ -1029,7 +1032,8 @@ func (r *interpreterRuntime) emitEvent(
 	fields := make([]exportableValue, len(eventType.ConstructorParameters))
 
 	for i, parameter := range eventType.ConstructorParameters {
-		fields[i] = newExportableValue(event.Fields[parameter.Identifier], inter)
+		value, _ := event.Fields.Get(parameter.Identifier)
+		fields[i] = newExportableValue(value, inter)
 	}
 
 	eventValue := exportableEvent{
