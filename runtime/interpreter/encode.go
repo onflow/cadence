@@ -22,7 +22,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"sort"
 	"strconv"
 	"strings"
 
@@ -751,22 +750,11 @@ func (e *Encoder) prepareCompositeValue(
 	interface{},
 	error,
 ) {
-	fields := make(map[string]interface{}, len(v.Fields))
+	fields := make(map[string]interface{}, v.Fields.Len())
 
-	var fieldNames []string
-
-	// Gather all field names and sort them lexicographically
-
-	for fieldName := range v.Fields { //nolint:maprangecheck
-		fieldNames = append(fieldNames, fieldName)
-	}
-
-	// Encode all fields in lexicographic order
-
-	sort.Strings(fieldNames)
-
-	for _, fieldName := range fieldNames {
-		value := v.Fields[fieldName]
+	for pair := v.Fields.Oldest(); pair != nil; pair = pair.Next() {
+		fieldName := pair.Key
+		value := pair.Value
 
 		valuePath := append(path[:], fieldName)
 

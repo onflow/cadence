@@ -5331,9 +5331,9 @@ type CompositeValue struct {
 	Location            common.Location
 	QualifiedIdentifier string
 	Kind                common.CompositeKind
-	Fields              map[string]Value
-	InjectedFields      map[string]Value
-	NestedValues        map[string]Value
+	Fields              *StringValueOrderedMap
+	InjectedFields      *StringValueOrderedMap
+	NestedValues        *StringValueOrderedMap
 	Functions           map[string]FunctionValue
 	Destructor          FunctionValue
 	Owner               *common.Address
@@ -5345,11 +5345,12 @@ func NewCompositeValue(
 	location common.Location,
 	qualifiedIdentifier string,
 	kind common.CompositeKind,
-	fields map[string]Value,
+	fields *StringValueOrderedMap,
 	owner *common.Address,
 ) *CompositeValue {
+	// TODO: only allocate when setting a field
 	if fields == nil {
-		fields = map[string]Value{}
+		fields = NewStringValueOrderedMap()
 	}
 	return &CompositeValue{
 		Location:            location,
@@ -5401,9 +5402,10 @@ func (v *CompositeValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	if !descend {
 		return
 	}
-	for _, value := range v.Fields {
+
+	v.Fields.Foreach(func(_ string, value Value) {
 		value.Accept(interpreter, visitor)
-	}
+	})
 }
 
 func (v *CompositeValue) DynamicType(interpreter *Interpreter) DynamicType {
@@ -5430,10 +5432,10 @@ func (v *CompositeValue) Copy() Value {
 		break
 	}
 
-	newFields := make(map[string]Value, len(v.Fields))
-	for field, value := range v.Fields {
-		newFields[field] = value.Copy()
-	}
+	newFields := NewStringValueOrderedMap()
+	v.Fields.Foreach(func(fieldName string, value Value) {
+		newFields.Set(fieldName, value.Copy())
+	})
 
 	// NOTE: not copying functions or destructor – they are linked in
 
@@ -5473,9 +5475,9 @@ func (v *CompositeValue) SetOwner(owner *common.Address) {
 
 	v.Owner = owner
 
-	for _, value := range v.Fields {
+	v.Fields.Foreach(func(_ string, value Value) {
 		value.SetOwner(owner)
-	}
+	})
 }
 
 func (v *CompositeValue) IsModified() bool {
@@ -5483,21 +5485,25 @@ func (v *CompositeValue) IsModified() bool {
 		return true
 	}
 
-	for _, value := range v.Fields {
-		if value.IsModified() {
+	for pair := v.Fields.Oldest(); pair != nil; pair = pair.Next() {
+		if pair.Value.IsModified() {
 			return true
 		}
 	}
 
-	for _, value := range v.InjectedFields {
-		if value.IsModified() {
-			return true
+	if v.InjectedFields != nil {
+		for pair := v.InjectedFields.Oldest(); pair != nil; pair = pair.Next() {
+			if pair.Value.IsModified() {
+				return true
+			}
 		}
 	}
 
-	for _, value := range v.NestedValues {
-		if value.IsModified() {
-			return true
+	if v.NestedValues != nil {
+		for pair := v.NestedValues.Oldest(); pair != nil; pair = pair.Next() {
+			if pair.Value.IsModified() {
+				return true
+			}
 		}
 	}
 
@@ -5517,14 +5523,16 @@ func (v *CompositeValue) GetMember(interpreter *Interpreter, locationRange Locat
 		return v.OwnerValue()
 	}
 
-	value, ok := v.Fields[name]
+	value, ok := v.Fields.Get(name)
 	if ok {
 		return value
 	}
 
-	value, ok = v.NestedValues[name]
-	if ok {
-		return value
+	if v.NestedValues != nil {
+		value, ok = v.NestedValues.Get(name)
+		if ok {
+			return value
+		}
 	}
 
 	interpreter = v.getInterpreter(interpreter)
@@ -5544,7 +5552,7 @@ func (v *CompositeValue) GetMember(interpreter *Interpreter, locationRange Locat
 	}
 
 	if v.InjectedFields != nil {
-		value, ok = v.InjectedFields[name]
+		value, ok = v.InjectedFields.Get(name)
 		if ok {
 			return value
 		}
@@ -5605,30 +5613,33 @@ func (v *CompositeValue) SetMember(_ *Interpreter, locationRange LocationRange, 
 
 	value.SetOwner(v.Owner)
 
-	v.Fields[name] = value
+	v.Fields.Set(name, value)
 }
 
 func (v *CompositeValue) String() string {
 	fields := make([]struct {
 		Name  string
 		Value string
-	}, 0, len(v.Fields))
-	for name, value := range v.Fields {
+	}, 0, v.Fields.Len())
+
+	v.Fields.Foreach(func(fieldName string, value Value) {
 		fields = append(fields,
 			struct {
 				Name  string
 				Value string
 			}{
-				Name:  name,
+				Name:  fieldName,
 				Value: value.String(),
 			},
 		)
-	}
+	})
+
 	return format.Composite(string(v.TypeID()), fields)
 }
 
 func (v *CompositeValue) GetField(name string) Value {
-	return v.Fields[name]
+	value, _ := v.Fields.Get(name)
+	return value
 }
 
 func (v *CompositeValue) Equal(interpreter *Interpreter, other Value) BoolValue {
@@ -5643,13 +5654,17 @@ func (v *CompositeValue) Equal(interpreter *Interpreter, other Value) BoolValue 
 		return false
 	}
 
-	return v.Fields[sema.EnumRawValueFieldName].(NumberValue).
-		Equal(interpreter, otherComposite.Fields[sema.EnumRawValueFieldName])
+	rawValue, _ := v.Fields.Get(sema.EnumRawValueFieldName)
+	otherRawValue, _ := otherComposite.Fields.Get(sema.EnumRawValueFieldName)
+
+	return rawValue.(NumberValue).
+		Equal(interpreter, otherRawValue)
 }
 
 func (v *CompositeValue) KeyString() string {
 	if v.Kind == common.CompositeKindEnum {
-		return v.Fields[sema.EnumRawValueFieldName].String()
+		rawValue, _ := v.Fields.Get(sema.EnumRawValueFieldName)
+		return rawValue.String()
 	}
 
 	panic(errors.NewUnreachableError())

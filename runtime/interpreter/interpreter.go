@@ -21,6 +21,7 @@ package interpreter
 import (
 	"fmt"
 	goRuntime "runtime"
+	"sort"
 
 	"github.com/onflow/cadence/fixedpoint"
 	"github.com/onflow/cadence/runtime/activations"
@@ -141,7 +142,7 @@ type InjectedCompositeFieldsHandlerFunc func(
 	location common.Location,
 	qualifiedIdentifier string,
 	compositeKind common.CompositeKind,
-) map[string]Value
+) *StringValueOrderedMap
 
 // ContractValueHandlerFunc is a function that handles contract values.
 //
@@ -2433,7 +2434,7 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 	// Evaluate nested declarations in a new scope, so values
 	// of nested declarations won't be visible after the containing declaration
 
-	members := map[string]Value{}
+	members := NewStringValueOrderedMap()
 
 	(func() {
 		interpreter.activations.PushNewWithCurrent()
@@ -2471,7 +2472,7 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 				interpreter.declareCompositeValue(nestedCompositeDeclaration, lexicalScope)
 
 			memberIdentifier := nestedCompositeDeclaration.Identifier.Identifier
-			members[memberIdentifier] = nestedValue
+			members.Set(memberIdentifier, nestedValue)
 		}
 	})()
 
@@ -2483,7 +2484,7 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 			func(invocation Invocation) Trampoline {
 				for i, argument := range invocation.Arguments {
 					parameter := compositeType.ConstructorParameters[i]
-					invocation.Self.Fields[parameter.Identifier] = argument
+					invocation.Self.Fields.Set(parameter.Identifier, argument)
 				}
 				return Done{}
 			},
@@ -2564,7 +2565,7 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 		func(invocation Invocation) Trampoline {
 
 			// Load injected fields
-			var injectedFields map[string]Value
+			var injectedFields *StringValueOrderedMap
 			if interpreter.injectedCompositeFieldsHandler != nil {
 				injectedFields = interpreter.injectedCompositeFieldsHandler(
 					interpreter,
@@ -2574,7 +2575,7 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 				)
 			}
 
-			fields := map[string]Value{}
+			fields := NewStringValueOrderedMap()
 
 			if declaration.CompositeKind == common.CompositeKindResource {
 
@@ -2589,7 +2590,7 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 					panic(err)
 				}
 
-				fields[sema.ResourceUUIDFieldName] = UInt64Value(uuid)
+				fields.Set(sema.ResourceUUIDFieldName, UInt64Value(uuid))
 			}
 
 			value := &CompositeValue{
@@ -2683,7 +2684,7 @@ func (interpreter *Interpreter) declareEnumConstructor(
 	caseCount := len(enumCases)
 	caseValues := make([]*CompositeValue, caseCount)
 
-	constructorMembers := make(map[string]Value, caseCount)
+	constructorMembers := NewStringValueOrderedMap()
 
 	for i, enumCase := range enumCases {
 
@@ -2693,9 +2694,8 @@ func (interpreter *Interpreter) declareEnumConstructor(
 			compositeType.EnumRawType,
 		)
 
-		caseValueFields := map[string]Value{
-			sema.EnumRawValueFieldName: rawValue,
-		}
+		caseValueFields := NewStringValueOrderedMap()
+		caseValueFields.Set(sema.EnumRawValueFieldName, rawValue)
 
 		caseValue := &CompositeValue{
 			Location:            location,
@@ -2707,7 +2707,7 @@ func (interpreter *Interpreter) declareEnumConstructor(
 			modified: true,
 		}
 		caseValues[i] = caseValue
-		constructorMembers[enumCase.Identifier.Identifier] = caseValue
+		constructorMembers.Set(enumCase.Identifier.Identifier, caseValue)
 	}
 
 	constructor := NewHostFunctionValue(
@@ -3396,8 +3396,20 @@ func (interpreter *Interpreter) importResolvedLocation(resolvedLocation sema.Res
 		variables = subInterpreter.Globals
 	}
 
-	// set variables for all imported values
-	for name, variable := range variables {
+	// Gather all variable names and sort them lexicographically
+
+	var names []string
+
+	for name := range variables { //nolint:maprangecheck
+		names = append(names, name)
+	}
+
+	// Set variables for all imported values in lexicographic order
+
+	sort.Strings(names)
+
+	for _, name := range names {
+		variable := variables[name]
 
 		// don't import predeclared values
 		if subInterpreter.Program != nil {
@@ -3447,7 +3459,7 @@ func (interpreter *Interpreter) declareTransactionEntryPoint(declaration *ast.Tr
 
 	self := &CompositeValue{
 		Location: interpreter.Location,
-		Fields:   map[string]Value{},
+		Fields:   NewStringValueOrderedMap(),
 		modified: true,
 	}
 

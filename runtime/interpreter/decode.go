@@ -679,8 +679,6 @@ func (d *Decoder) decodeComposite(v interface{}, path []string) (*CompositeValue
 		)
 	}
 
-	fields := make(map[string]Value, len(encodedFields))
-
 	// Gather all field names and sort them lexicographically
 
 	var fieldNames []string
@@ -707,6 +705,8 @@ func (d *Decoder) decodeComposite(v interface{}, path []string) (*CompositeValue
 
 	sort.Strings(fieldNames)
 
+	fields := NewStringValueOrderedMap()
+
 	for _, fieldName := range fieldNames {
 
 		value := encodedFields[fieldName]
@@ -722,7 +722,7 @@ func (d *Decoder) decodeComposite(v interface{}, path []string) (*CompositeValue
 			)
 		}
 
-		fields[fieldName] = decodedValue
+		fields.Set(fieldName, decodedValue)
 	}
 
 	compositeValue := NewCompositeValue(location, qualifiedIdentifier, kind, fields, d.owner)
