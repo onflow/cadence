@@ -1239,3 +1239,56 @@ func (v Capability) String() string {
 		v.Path.String(),
 	)
 }
+
+type BuiltinStruct struct {
+	StructType *BuiltinStructType
+	Fields     []Value
+}
+
+func NewBuiltinStruct(structType *BuiltinStructType, fields []Value) BuiltinStruct {
+	return BuiltinStruct{StructType: structType, Fields: fields}
+}
+
+func (BuiltinStruct) isValue() {}
+
+func (v BuiltinStruct) Type() Type {
+	return v.StructType
+}
+
+func (v BuiltinStruct) ToGoValue() interface{} {
+	values := make([]interface{}, len(v.Fields))
+
+	for i, field := range v.Fields {
+		values[i] = field.ToGoValue()
+	}
+
+	return values
+}
+
+func (v BuiltinStruct) String() string {
+	return formatBuiltinStruct(v.Type().ID(), v.StructType.Fields, v.Fields)
+}
+
+func formatBuiltinStruct(typeID string, fields []Field, values []Value) string {
+	preparedFields := make([]struct {
+		Name  string
+		Value string
+	}, 0, len(values))
+
+	for index, field := range fields {
+		value := values[index]
+
+		preparedFields = append(preparedFields,
+			struct {
+				Name  string
+				Value string
+			}{
+				Name:  field.Identifier,
+				Value: value.String(),
+			},
+		)
+
+	}
+
+	return format.BuiltinStructValue(typeID, preparedFields)
+}

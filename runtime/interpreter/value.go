@@ -7132,3 +7132,171 @@ func (v LinkValue) String() string {
 		v.TargetPath.String(),
 	)
 }
+
+// AccountKeyValue
+
+type AccountKeyValue struct {
+	KeyIndex  IntValue
+	PublicKey PublicKeyValue
+	HashAlgo  *StringValue
+	Weight    UFix64Value
+	IsRevoked BoolValue
+}
+
+func NewAccountKeyValue(publicKey PublicKeyValue, hashAlgo *StringValue, weight UFix64Value) AccountKeyValue {
+
+	return AccountKeyValue{
+		// TODO: fix
+		KeyIndex:  NewIntValueFromInt64(1),
+		PublicKey: publicKey,
+		HashAlgo:  hashAlgo,
+		Weight:    weight,
+		IsRevoked: false,
+	}
+}
+
+func (AccountKeyValue) IsValue() {}
+
+func (v AccountKeyValue) Accept(interpreter *Interpreter, visitor Visitor) {
+	visitor.VisitAccountKeyValue(interpreter, v)
+}
+
+func (AccountKeyValue) DynamicType(_ *Interpreter) DynamicType {
+	return BuiltinStructDynamicType{sema.AccountKeyType}
+}
+
+func (AccountKeyValue) StaticType() StaticType {
+	return PrimitiveStaticTypeAccountKey
+}
+
+func (v AccountKeyValue) Copy() Value {
+	return v
+}
+
+func (AccountKeyValue) GetOwner() *common.Address {
+	// value is never owned
+	return nil
+}
+
+func (AccountKeyValue) SetOwner(_ *common.Address) {
+	// NO-OP: value cannot be owned
+}
+
+func (AccountKeyValue) IsModified() bool {
+	return false
+}
+
+func (AccountKeyValue) SetModified(_ bool) {
+	// NO-OP
+}
+
+func (v AccountKeyValue) Destroy(_ *Interpreter, _ LocationRange) trampoline.Trampoline {
+	return trampoline.Done{}
+}
+
+func (v AccountKeyValue) String() string {
+	return fmt.Sprintf("AccountKey(%s)", v.PublicKey.String())
+}
+
+func (v AccountKeyValue) GetMember(inter *Interpreter, _ LocationRange, name string) Value {
+	switch name {
+	case "keyIndex":
+		return v.KeyIndex
+
+	case "publicKey":
+		return v.PublicKey
+
+	case "hashAlgo":
+		return v.HashAlgo
+
+	case "weight":
+		return v.Weight
+
+	case "getLinkTarget":
+		return v.IsRevoked
+	}
+
+	return nil
+}
+
+func (AccountKeyValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+	panic(errors.NewUnreachableError())
+}
+
+// PublicKeyValue
+
+type PublicKeyValue struct {
+	PublicKey *ArrayValue
+	SignAlgo  *StringValue
+}
+
+func NewPublicKeyValue(
+	publicKey *ArrayValue,
+	signAlgorithm *StringValue,
+) PublicKeyValue {
+
+	return PublicKeyValue{
+		PublicKey: publicKey,
+		SignAlgo:  signAlgorithm,
+	}
+}
+
+func (PublicKeyValue) IsValue() {}
+
+func (v PublicKeyValue) Accept(interpreter *Interpreter, visitor Visitor) {
+	visitor.VisitPublicKeyValue(interpreter, v)
+}
+
+func (v PublicKeyValue) DynamicType(_ *Interpreter) DynamicType {
+	return BuiltinStructDynamicType{sema.PublicKeyType}
+}
+
+func (PublicKeyValue) StaticType() StaticType {
+	return PrimitiveStaticTypePublicKey
+}
+
+func (v PublicKeyValue) Copy() Value {
+	return v
+}
+
+func (PublicKeyValue) GetOwner() *common.Address {
+	// value is never owned
+	return nil
+}
+
+func (PublicKeyValue) SetOwner(_ *common.Address) {
+	// NO-OP: value cannot be owned
+}
+
+func (PublicKeyValue) IsModified() bool {
+	return false
+}
+
+func (PublicKeyValue) SetModified(_ bool) {
+	// NO-OP
+}
+
+func (v PublicKeyValue) Destroy(_ *Interpreter, _ LocationRange) trampoline.Trampoline {
+	return trampoline.Done{}
+}
+
+func (v PublicKeyValue) String() string {
+	// FIXME
+	return fmt.Sprintf("AccountKey(%s)", v.PublicKey.String())
+}
+
+func (v PublicKeyValue) GetMember(inter *Interpreter, _ LocationRange, name string) Value {
+	switch name {
+	case "publicKey":
+		return v.PublicKey
+
+	case "signAlgo":
+		return v.SignAlgo
+	}
+
+	return nil
+}
+
+func (PublicKeyValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+	panic(errors.NewUnreachableError())
+}

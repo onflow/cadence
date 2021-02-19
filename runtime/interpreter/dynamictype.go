@@ -208,3 +208,11 @@ func (AuthAccountContractsDynamicType) IsDynamicType() {}
 type BlockDynamicType struct{}
 
 func (BlockDynamicType) IsDynamicType() {}
+
+// BuiltinStructDynamicType
+
+type BuiltinStructDynamicType struct {
+	StaticType *sema.BuiltinStructType
+}
+
+func (BuiltinStructDynamicType) IsDynamicType() {}

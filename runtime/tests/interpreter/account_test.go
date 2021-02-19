@@ -1403,3 +1403,35 @@ func TestCheckAccount_StorageFields(t *testing.T) {
 		}
 	}
 }
+
+func TestAccountKey(t *testing.T) {
+
+	t.Parallel()
+
+	inter := parseCheckAndInterpretWithOptions(t,
+		`let key = AccountKey(
+			PublicKey2(
+				publicKey: "0102".decodeHex(),
+				signAlgo: "ECDSA_P256"
+			),
+			hashAlgo: "SHA3_256",
+			weight: 1.5
+		)`,
+		ParseCheckAndInterpretOptions{
+			Options: []interpreter.Option{
+				interpreter.WithPredeclaredValues(
+					stdlib.BuiltinFunctions.ToInterpreterValueDeclarations(),
+				),
+			},
+
+			CheckerOptions: []sema.Option{
+				sema.WithPredeclaredValues(
+					stdlib.BuiltinFunctions.ToSemaValueDeclarations(),
+				),
+			},
+		},
+	)
+
+	key := inter.Globals["key"].Value
+	fmt.Println(key)
+}

@@ -148,6 +148,20 @@ func exportValueWithInterpreter(
 				return nil
 			}
 			return exportValueWithInterpreter(*referencedValue, inter, results)
+		case interpreter.AccountKeyValue:
+			return exportBuiltinStructValue(
+				inter,
+				results,
+				v.DynamicType(inter),
+				v.KeyIndex,
+				v.PublicKey,
+				v.HashAlgo,
+				v.Weight,
+				v.IsRevoked,
+			)
+
+		case interpreter.PublicKeyValue:
+			return exportBuiltinStructValue(inter, results, v.DynamicType(inter), v.PublicKey, v.SignAlgo)
 		}
 
 		panic(fmt.Sprintf("cannot export value of type %T", value))
@@ -280,6 +294,26 @@ func exportCapabilityValue(v interpreter.CapabilityValue, inter *interpreter.Int
 		Address:    cadence.NewAddress(v.Address),
 		BorrowType: borrowType,
 	}
+}
+
+func exportBuiltinStructValue(
+	inter *interpreter.Interpreter,
+	results exportResults,
+	dynamicType interpreter.DynamicType,
+	fieldValues ...interpreter.Value,
+) cadence.Value {
+
+	builtinDynamicType := dynamicType.(interpreter.BuiltinStructDynamicType)
+
+	// convert internal type to exported type
+	exportedBuiltinStructType := exportBuiltinStructType(builtinDynamicType.StaticType, map[sema.TypeID]cadence.Type{})
+
+	fields := make([]cadence.Value, len(fieldValues))
+	for index, field := range fieldValues {
+		fields[index] = exportValueWithInterpreter(field, inter, results)
+	}
+
+	return cadence.NewBuiltinStruct(exportedBuiltinStructType, fields)
 }
 
 // importValue converts a Cadence value to a runtime value.
@@ -428,3 +462,5 @@ func importCompositeValue(
 		nil,
 	)
 }
+
+// FIXME: add import builtin struct value

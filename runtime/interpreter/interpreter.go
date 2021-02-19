@@ -4027,6 +4027,15 @@ func IsSubType(subType DynamicType, superType sema.Type) bool {
 		default:
 			return false
 		}
+
+	case BuiltinStructDynamicType:
+		switch superType.(type) {
+		case *sema.BuiltinStructType, *sema.AnyStructType:
+			return true
+
+		default:
+			return false
+		}
 	}
 
 	return false

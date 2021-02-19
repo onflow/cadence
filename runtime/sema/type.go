@@ -4424,6 +4424,8 @@ func init() {
 		&CapabilityType{},
 		&DeployedContractType{},
 		&BlockType{},
+		AccountKeyType,
+		PublicKeyType,
 	}
 
 	types := append(
@@ -7678,3 +7680,171 @@ func (t *CapabilityType) GetMembers() map[string]MemberResolver {
 		},
 	})
 }
+
+type BuiltinStructType struct {
+	Identifier string
+	Members    *StringMemberOrderedMap
+}
+
+func (*BuiltinStructType) IsType() {}
+
+func (t *BuiltinStructType) String() string {
+	return string(t.Identifier)
+}
+
+func (t *BuiltinStructType) QualifiedString() string {
+	return string(t.Identifier)
+}
+
+func (t *BuiltinStructType) ID() TypeID {
+	return TypeID(t.Identifier)
+}
+
+func (t *BuiltinStructType) Equal(other Type) bool {
+	otherStructType, ok := other.(*BuiltinStructType)
+	if !ok {
+		return false
+	}
+
+	return otherStructType.ID() == t.ID()
+}
+
+func (*BuiltinStructType) IsResourceType() bool {
+	return false
+}
+
+func (*BuiltinStructType) IsInvalidType() bool {
+	return false
+}
+
+func (*BuiltinStructType) IsStorable(_ map[*Member]bool) bool {
+	return true
+}
+
+func (*BuiltinStructType) IsExternallyReturnable(_ map[*Member]bool) bool {
+	return true
+}
+
+func (*BuiltinStructType) IsEquatable() bool {
+	return true
+}
+func (*BuiltinStructType) TypeAnnotationState() TypeAnnotationState {
+	return TypeAnnotationStateValid
+}
+
+func (t *BuiltinStructType) RewriteWithRestrictedTypes() (result Type, rewritten bool) {
+	return t, false
+}
+
+func (t *BuiltinStructType) GetMembers() map[string]MemberResolver {
+	members := make(map[string]MemberResolver, t.Members.Len())
+	t.Members.Foreach(func(name string, loopMember *Member) {
+		// NOTE: don't capture loop variable
+		member := loopMember
+		members[name] = MemberResolver{
+			Kind: member.DeclarationKind,
+			Resolve: func(_ string, _ ast.Range, _ func(error)) *Member {
+				return member
+			},
+		}
+	})
+
+	return withBuiltinMembers(t, members)
+}
+
+func (*BuiltinStructType) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
+	return false
+}
+
+func (t *BuiltinStructType) Resolve(_ map[*TypeParameter]Type) Type {
+	return t
+}
+
+func getMembersAsMap(members []*Member) *StringMemberOrderedMap {
+	membersMap := NewStringMemberOrderedMap()
+	for _, member := range members {
+		membersMap.Set(member.Identifier.Identifier, member)
+	}
+
+	return membersMap
+}
+
+// AccountKeyType represents the key associated with an account.
+var AccountKeyType = func() *BuiltinStructType {
+
+	accountKeyType := &BuiltinStructType{
+		Identifier: "AccountKey",
+	}
+
+	const accountKeyIndexFieldDocString = `The index of the account key`
+	const accountKeyPublicKeyFieldDocString = `The public key of the account`
+	const accountKeyHashAlgorithmFieldDocString = `The hash algorithm used by the public key`
+	const accountKeyWeightFieldDocString = `The weight assigned to the public key`
+	const accountKeyIsRevokedFieldDocString = `Flag indicating whether the key is revoked`
+
+	var members = []*Member{
+		NewPublicConstantFieldMember(
+			accountKeyType,
+			"keyIndex",
+			&IntType{},
+			accountKeyIndexFieldDocString,
+		),
+		NewPublicConstantFieldMember(
+			accountKeyType,
+			"publicKey",
+			PublicKeyType,
+			accountKeyPublicKeyFieldDocString,
+		),
+		NewPublicConstantFieldMember(
+			accountKeyType,
+			"hashAlgo",
+			&StringType{},
+			accountKeyHashAlgorithmFieldDocString,
+		),
+		NewPublicConstantFieldMember(
+			accountKeyType,
+			"weight",
+			&UFix64Type{},
+			accountKeyWeightFieldDocString,
+		),
+		NewPublicConstantFieldMember(
+			accountKeyType,
+			"isRevoked",
+			&BoolType{},
+			accountKeyIsRevokedFieldDocString,
+		),
+	}
+
+	accountKeyType.Members = getMembersAsMap(members)
+	return accountKeyType
+}()
+
+// PublicKeyType represents the public key associated with an account key.
+var PublicKeyType = func() *BuiltinStructType {
+
+	accountKeyType := &BuiltinStructType{
+		Identifier: "PublicKey2",
+		Members:    nil,
+	}
+
+	const publicKeyKeyFieldDocString = `The public key`
+	const publicKeySignAlgoFieldDocString = `The signature algorithm to be used with the key`
+
+	var members = []*Member{
+		NewPublicConstantFieldMember(
+			accountKeyType,
+			"publicKey",
+			&VariableSizedType{Type: &UInt8Type{}},
+			publicKeyKeyFieldDocString,
+		),
+		NewPublicConstantFieldMember(
+			accountKeyType,
+			"signAlgo",
+			&StringType{},
+			publicKeySignAlgoFieldDocString,
+		),
+	}
+
+	accountKeyType.Members = getMembersAsMap(members)
+	return accountKeyType
+}()

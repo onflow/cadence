@@ -62,6 +62,8 @@ type Visitor interface {
 	VisitBoundFunctionValue(interpreter *Interpreter, value BoundFunctionValue)
 	VisitAuthAccountContractsValue(interpreter *Interpreter, value AuthAccountContractsValue)
 	VisitDeployedContractValue(interpreter *Interpreter, value DeployedContractValue)
+	VisitAccountKeyValue(interpreter *Interpreter, value AccountKeyValue)
+	VisitPublicKeyValue(interpreter *Interpreter, value PublicKeyValue)
 }
 
 type EmptyVisitor struct {
@@ -108,7 +110,11 @@ type EmptyVisitor struct {
 	BoundFunctionValueVisitor        func(interpreter *Interpreter, value BoundFunctionValue)
 	AuthAccountContractsValueVisitor func(interpreter *Interpreter, value AuthAccountContractsValue)
 	DeployedContractValueVisitor     func(interpreter *Interpreter, value DeployedContractValue)
+	AccountKeyValueVisitor           func(interpreter *Interpreter, value AccountKeyValue)
+	PublicKeyValueVisitor            func(interpreter *Interpreter, value PublicKeyValue)
 }
+
+var _ Visitor = &EmptyVisitor{}
 
 func (v EmptyVisitor) VisitValue(interpreter *Interpreter, value Value) {
 	if v.ValueVisitor == nil {
@@ -409,4 +415,18 @@ func (v EmptyVisitor) VisitDeployedContractValue(interpreter *Interpreter, value
 		return
 	}
 	v.DeployedContractValueVisitor(interpreter, value)
+}
+
+func (v EmptyVisitor) VisitAccountKeyValue(interpreter *Interpreter, value AccountKeyValue) {
+	if v.AccountKeyValueVisitor == nil {
+		return
+	}
+	v.AccountKeyValueVisitor(interpreter, value)
+}
+
+func (v EmptyVisitor) VisitPublicKeyValue(interpreter *Interpreter, value PublicKeyValue) {
+	if v.PublicKeyValueVisitor == nil {
+		return
+	}
+	v.PublicKeyValueVisitor(interpreter, value)
 }

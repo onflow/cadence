@@ -106,6 +106,8 @@ var PanicFunction = NewStandardLibraryFunction(
 var BuiltinFunctions = StandardLibraryFunctions{
 	AssertFunction,
 	PanicFunction,
+	CreateAccountKeyFunction,
+	CreatePublicKeyFunction,
 }
 
 // LogFunction
@@ -136,3 +138,59 @@ var LogFunction = NewStandardLibraryFunction(
 var HelperFunctions = StandardLibraryFunctions{
 	LogFunction,
 }
+
+var CreateAccountKeyFunction = NewStandardLibraryFunction(
+	"AccountKey",
+	&sema.FunctionType{
+		Parameters: []*sema.Parameter{
+			{
+				Label:          sema.ArgumentLabelNotRequired,
+				Identifier:     "publicKey",
+				TypeAnnotation: sema.NewTypeAnnotation(sema.PublicKeyType),
+			},
+			{
+				Label:          "hashAlgo",
+				Identifier:     "hashAlgo",
+				TypeAnnotation: sema.NewTypeAnnotation(&sema.StringType{}),
+			},
+			{
+				Label:          "weight",
+				Identifier:     "weight",
+				TypeAnnotation: sema.NewTypeAnnotation(&sema.UFix64Type{}),
+			},
+		},
+		ReturnTypeAnnotation:  sema.NewTypeAnnotation(sema.AccountKeyType),
+		RequiredArgumentCount: sema.RequiredArgumentCount(3),
+	},
+	func(invocation interpreter.Invocation) trampoline.Trampoline {
+		publicKey := invocation.Arguments[0].(interpreter.PublicKeyValue)
+		hashAlgo := invocation.Arguments[1].(*interpreter.StringValue)
+		weight := invocation.Arguments[2].(interpreter.UFix64Value)
+		return trampoline.Done{Result: interpreter.NewAccountKeyValue(publicKey, hashAlgo, weight)}
+	},
+)
+
+var CreatePublicKeyFunction = NewStandardLibraryFunction(
+	"PublicKey2",
+	&sema.FunctionType{
+		Parameters: []*sema.Parameter{
+			{
+				Label:          "publicKey",
+				Identifier:     "publicKey",
+				TypeAnnotation: sema.NewTypeAnnotation(&sema.VariableSizedType{Type: &sema.UInt8Type{}}),
+			},
+			{
+				Label:          "signAlgo",
+				Identifier:     "signAlgo",
+				TypeAnnotation: sema.NewTypeAnnotation(&sema.StringType{}),
+			},
+		},
+		ReturnTypeAnnotation:  sema.NewTypeAnnotation(sema.PublicKeyType),
+		RequiredArgumentCount: sema.RequiredArgumentCount(2),
+	},
+	func(invocation interpreter.Invocation) trampoline.Trampoline {
+		publicKey := invocation.Arguments[0].(*interpreter.ArrayValue)
+		signAlgo := invocation.Arguments[1].(*interpreter.StringValue)
+		return trampoline.Done{Result: interpreter.NewPublicKeyValue(publicKey, signAlgo)}
+	},
+)

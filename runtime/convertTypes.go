@@ -133,6 +133,8 @@ func ExportType(t sema.Type, results map[sema.TypeID]cadence.Type) cadence.Type 
 			return cadence.AuthAccountType{}
 		case *sema.PublicAccountType:
 			return cadence.PublicAccountType{}
+		case *sema.BuiltinStructType:
+			return exportBuiltinStructType(t, results)
 		}
 
 		switch t {
@@ -160,6 +162,32 @@ func ExportType(t sema.Type, results map[sema.TypeID]cadence.Type) cadence.Type 
 	results[typeID] = result
 
 	return result
+}
+
+func exportBuiltinStructType(t *sema.BuiltinStructType, results map[sema.TypeID]cadence.Type) *cadence.BuiltinStructType {
+
+	var fields []cadence.Field
+
+	t.Members.Foreach(func(key string, member *sema.Member) {
+		if member.DeclarationKind != common.DeclarationKindField {
+			return
+		}
+
+		convertedFieldType := ExportType(member.TypeAnnotation.Type, results)
+
+		fields = append(fields, cadence.Field{
+			Identifier: member.Identifier.Identifier,
+			Type:       convertedFieldType,
+		})
+	})
+
+	return &cadence.BuiltinStructType{
+		Identifier: t.Identifier,
+		Fields:     fields,
+
+		// FIXME:
+		Initializers: [][]cadence.Parameter{},
+	}
 }
 
 func exportOptionalType(t *sema.OptionalType, results map[sema.TypeID]cadence.Type) cadence.Type {
