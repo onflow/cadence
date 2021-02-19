@@ -409,7 +409,8 @@ func (d *Decoder) decodeDictionary(v interface{}, path []string) (*DictionaryVal
 		)
 	}
 
-	var entries map[string]Value
+	entries := NewStringValueOrderedMap()
+
 	var deferred *orderedmap.StringStringOrderedMap
 	var deferredOwner *common.Address
 
@@ -428,7 +429,6 @@ func (d *Decoder) decodeDictionary(v interface{}, path []string) (*DictionaryVal
 		}
 
 		deferred = orderedmap.NewStringStringOrderedMap()
-		entries = map[string]Value{}
 		deferredOwner = d.owner
 		for _, keyValue := range keys.Values {
 			key := dictionaryKey(keyValue)
@@ -437,7 +437,6 @@ func (d *Decoder) decodeDictionary(v interface{}, path []string) (*DictionaryVal
 		}
 
 	} else {
-		entries = make(map[string]Value, entryCount)
 
 		index := 0
 
@@ -474,7 +473,7 @@ func (d *Decoder) decodeDictionary(v interface{}, path []string) (*DictionaryVal
 				)
 			}
 
-			entries[keyString] = decodedValue
+			entries.Set(keyString, decodedValue)
 
 			index++
 		}

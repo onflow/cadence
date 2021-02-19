@@ -208,7 +208,7 @@ func TestSetOwnerDictionaryCopy(t *testing.T) {
 	dictionary.SetOwner(&newOwner)
 
 	dictionaryCopy := dictionary.Copy().(*DictionaryValue)
-	valueCopy := dictionaryCopy.Entries[keyValue.KeyString()]
+	valueCopy, _ := dictionaryCopy.Entries.Get(keyValue.KeyString())
 
 	assert.Nil(t, dictionaryCopy.GetOwner())
 	assert.Nil(t, valueCopy.GetOwner())
@@ -584,15 +584,20 @@ func TestStringer(t *testing.T) {
 			expected: `{"a": 42, "b": 99}`,
 		},
 		"Dictionary with deferred value": {
-			value: &DictionaryValue{
-				Keys: NewArrayValueUnownedNonCopying(
-					NewStringValue("a"),
-					NewStringValue("b"),
-				),
-				Entries: map[string]Value{
-					NewStringValue("a").KeyString(): UInt8Value(42),
-				},
-			},
+			value: func() Value {
+				entries := NewStringValueOrderedMap()
+				entries.Set(
+					NewStringValue("a").KeyString(),
+					UInt8Value(42),
+				)
+				return &DictionaryValue{
+					Keys: NewArrayValueUnownedNonCopying(
+						NewStringValue("a"),
+						NewStringValue("b"),
+					),
+					Entries: entries,
+				}
+			}(),
 			expected: `{"a": 42, "b": ...}`,
 		},
 	}

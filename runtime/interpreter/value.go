@@ -5678,7 +5678,7 @@ func (v *CompositeValue) TypeID() common.TypeID {
 
 type DictionaryValue struct {
 	Keys     *ArrayValue
-	Entries  map[string]Value
+	Entries  *StringValueOrderedMap
 	Owner    *common.Address
 	modified bool
 	// Deferral of values:
@@ -5706,7 +5706,7 @@ func NewDictionaryValueUnownedNonCopying(keysAndValues ...Value) *DictionaryValu
 
 	result := &DictionaryValue{
 		Keys:    NewArrayValueUnownedNonCopying(),
-		Entries: make(map[string]Value, keysAndValuesCount/2),
+		Entries: NewStringValueOrderedMap(),
 		// NOTE: new value has no owner
 		Owner:            nil,
 		modified:         true,
@@ -5765,10 +5765,11 @@ func (v *DictionaryValue) StaticType() StaticType {
 func (v *DictionaryValue) Copy() Value {
 	newKeys := v.Keys.Copy().(*ArrayValue)
 
-	newEntries := make(map[string]Value, len(v.Entries))
-	for name, value := range v.Entries {
-		newEntries[name] = value.Copy()
-	}
+	newEntries := NewStringValueOrderedMap()
+
+	v.Entries.Foreach(func(key string, value Value) {
+		newEntries.Set(key, value.Copy())
+	})
 
 	return &DictionaryValue{
 		Keys:             newKeys,
@@ -5795,9 +5796,9 @@ func (v *DictionaryValue) SetOwner(owner *common.Address) {
 
 	v.Keys.SetOwner(owner)
 
-	for _, value := range v.Entries {
+	v.Entries.Foreach(func(_ string, value Value) {
 		value.SetOwner(owner)
-	}
+	})
 }
 
 func (v *DictionaryValue) IsModified() bool {
@@ -5809,7 +5810,8 @@ func (v *DictionaryValue) IsModified() bool {
 		return true
 	}
 
-	for _, value := range v.Entries {
+	for pair := v.Entries.Oldest(); pair != nil; pair = pair.Next() {
+		value := pair.Value
 		if value.IsModified() {
 			return true
 		}
@@ -5852,7 +5854,7 @@ func (v *DictionaryValue) Destroy(inter *Interpreter, locationRange LocationRang
 
 func (v *DictionaryValue) Get(inter *Interpreter, _ LocationRange, keyValue Value) Value {
 	key := dictionaryKey(keyValue)
-	value, ok := v.Entries[key]
+	value, ok := v.Entries.Get(key)
 	if ok {
 		return NewSomeValueOwningNonCopying(value)
 	}
@@ -5869,7 +5871,7 @@ func (v *DictionaryValue) Get(inter *Interpreter, _ LocationRange, keyValue Valu
 			v.prevDeferredKeys.Set(key, storageKey)
 
 			storedValue := inter.readStored(*v.DeferredOwner, storageKey, true)
-			v.Entries[key] = storedValue.(*SomeValue).Value
+			v.Entries.Set(key, storedValue.(*SomeValue).Value)
 
 			// NOTE: *not* writing nil to the storage key,
 			// as this would result in a loss of the value:
@@ -5916,7 +5918,7 @@ func (v *DictionaryValue) String() string {
 
 	for i, keyValue := range v.Keys.Values {
 		key := dictionaryKey(keyValue)
-		value := v.Entries[key]
+		value, _ := v.Entries.Get(key)
 
 		// Value is potentially deferred,
 		// so might be nil
@@ -5940,7 +5942,7 @@ func (v *DictionaryValue) String() string {
 	return format.Dictionary(pairs)
 }
 
-func (v *DictionaryValue) GetMember(_ *Interpreter, _ LocationRange, name string) Value {
+func (v *DictionaryValue) GetMember(interpreter *Interpreter, locationRange LocationRange, name string) Value {
 	switch name {
 	case "length":
 		return NewIntValueFromInt64(int64(v.Count()))
@@ -5954,8 +5956,8 @@ func (v *DictionaryValue) GetMember(_ *Interpreter, _ LocationRange, name string
 		dictionaryValues := make([]Value, v.Count())
 		i := 0
 		for _, keyValue := range v.Keys.Values {
-			key := dictionaryKey(keyValue)
-			dictionaryValues[i] = v.Entries[key].Copy()
+			value := v.Get(interpreter, locationRange, keyValue).(*SomeValue).Value
+			dictionaryValues[i] = value.Copy()
 			i++
 		}
 		return NewArrayValueUnownedNonCopying(dictionaryValues...)
@@ -6027,7 +6029,7 @@ func (v *DictionaryValue) Remove(inter *Interpreter, locationRange LocationRange
 	switch value := value.(type) {
 	case *SomeValue:
 
-		delete(v.Entries, key)
+		v.Entries.Delete(key)
 
 		// TODO: optimize linear scan
 		for i, keyValue := range v.Keys.Values {
@@ -6065,7 +6067,7 @@ func (v *DictionaryValue) Insert(inter *Interpreter, locationRange LocationRange
 
 	value.SetModified(true)
 
-	v.Entries[key] = value
+	v.Entries.Set(key, value)
 
 	switch existingValue := existingValue.(type) {
 	case *SomeValue:

@@ -4216,10 +4216,11 @@ func TestInterpretDictionaryIndexingAssignmentExisting(t *testing.T) {
 		newValue,
 	)
 
+	expectedEntries := interpreter.NewStringValueOrderedMap()
+	expectedEntries.Set("abc", interpreter.NewIntValueFromInt64(23))
+
 	assert.Equal(t,
-		map[string]interpreter.Value{
-			"abc": interpreter.NewIntValueFromInt64(23),
-		},
+		expectedEntries,
 		actualDict.Entries,
 	)
 
@@ -4279,11 +4280,12 @@ func TestInterpretDictionaryIndexingAssignmentNew(t *testing.T) {
 		newValue,
 	)
 
+	expectedEntries := interpreter.NewStringValueOrderedMap()
+	expectedEntries.Set("def", interpreter.NewIntValueFromInt64(42))
+	expectedEntries.Set("abc", interpreter.NewIntValueFromInt64(23))
+
 	assert.Equal(t,
-		map[string]interpreter.Value{
-			"def": interpreter.NewIntValueFromInt64(42),
-			"abc": interpreter.NewIntValueFromInt64(23),
-		},
+		expectedEntries,
 		actualDict.Entries,
 	)
 
@@ -4343,10 +4345,11 @@ func TestInterpretDictionaryIndexingAssignmentNil(t *testing.T) {
 		newValue,
 	)
 
+	expectedEntries := interpreter.NewStringValueOrderedMap()
+	expectedEntries.Set("abc", interpreter.NewIntValueFromInt64(23))
+
 	assert.Equal(t,
-		map[string]interpreter.Value{
-			"abc": interpreter.NewIntValueFromInt64(23),
-		},
+		expectedEntries,
 		actualDict.Entries,
 	)
 
@@ -4911,10 +4914,11 @@ func TestInterpretDictionaryRemove(t *testing.T) {
 		actualDict,
 	)
 
+	expectedEntries := interpreter.NewStringValueOrderedMap()
+	expectedEntries.Set("def", interpreter.NewIntValueFromInt64(2))
+
 	assert.Equal(t,
-		map[string]interpreter.Value{
-			"def": interpreter.NewIntValueFromInt64(2),
-		},
+		expectedEntries,
 		actualDict.Entries,
 	)
 
@@ -4962,11 +4966,12 @@ func TestInterpretDictionaryInsert(t *testing.T) {
 		actualDict,
 	)
 
+	expectedEntries := interpreter.NewStringValueOrderedMap()
+	expectedEntries.Set("abc", interpreter.NewIntValueFromInt64(3))
+	expectedEntries.Set("def", interpreter.NewIntValueFromInt64(2))
+
 	assert.Equal(t,
-		map[string]interpreter.Value{
-			"abc": interpreter.NewIntValueFromInt64(3),
-			"def": interpreter.NewIntValueFromInt64(2),
-		},
+		expectedEntries,
 		actualDict.Entries,
 	)
 
