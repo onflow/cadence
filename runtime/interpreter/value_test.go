@@ -763,9 +763,11 @@ func TestKeyString(t *testing.T) {
 				utils.TestLocation,
 				"Foo",
 				common.CompositeKindEnum,
-				map[string]Value{
-					"rawValue": UInt8Value(42),
-				},
+				func() *StringValueOrderedMap {
+					stringValueMap := NewStringValueOrderedMap()
+					stringValueMap.Set("rawValue", UInt8Value(42))
+					return stringValueMap
+				}(),
 				nil,
 			),
 			expected: "42",
