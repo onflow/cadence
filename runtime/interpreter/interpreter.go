@@ -3806,13 +3806,11 @@ func (interpreter *Interpreter) newConverterFunction(converter ValueConverter) F
 func IsSubType(subType DynamicType, superType sema.Type) bool {
 	switch typedSubType := subType.(type) {
 	case MetaTypeDynamicType:
-		switch superType.(type) {
-		case *sema.MetaType, *sema.AnyStructType:
+		if _, ok := superType.(*sema.AnyStructType); ok {
 			return true
-
-		default:
-			return false
 		}
+
+		return superType == sema.MetaType
 
 	case VoidDynamicType:
 		if _, ok := superType.(*sema.AnyStructType); ok {

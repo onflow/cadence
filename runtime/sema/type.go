@@ -282,7 +282,7 @@ var isInstanceFunctionType = &FunctionType{
 			Label:      ArgumentLabelNotRequired,
 			Identifier: "type",
 			TypeAnnotation: NewTypeAnnotation(
-				&MetaType{},
+				MetaType,
 			),
 		},
 	},
@@ -301,7 +301,7 @@ const GetTypeFunctionName = "getType"
 
 var getTypeFunctionType = &FunctionType{
 	ReturnTypeAnnotation: NewTypeAnnotation(
-		&MetaType{},
+		MetaType,
 	),
 }
 
@@ -407,84 +407,6 @@ func withBuiltinMembers(ty Type, members map[string]MemberResolver) map[string]M
 	}
 
 	return members
-}
-
-// MetaType represents the type of a type.
-type MetaType struct{}
-
-func (*MetaType) IsType() {}
-
-func (*MetaType) String() string {
-	return "Type"
-}
-
-func (*MetaType) QualifiedString() string {
-	return "Type"
-}
-
-func (*MetaType) ID() TypeID {
-	return "Type"
-}
-
-func (*MetaType) Equal(other Type) bool {
-	_, ok := other.(*MetaType)
-	return ok
-}
-
-func (*MetaType) IsResourceType() bool {
-	return false
-}
-
-func (*MetaType) IsInvalidType() bool {
-	return false
-}
-
-func (*MetaType) IsStorable(_ map[*Member]bool) bool {
-	return true
-}
-
-func (*MetaType) IsExternallyReturnable(_ map[*Member]bool) bool {
-	return true
-}
-
-func (*MetaType) IsEquatable() bool {
-	return true
-}
-
-func (*MetaType) TypeAnnotationState() TypeAnnotationState {
-	return TypeAnnotationStateValid
-}
-
-func (t *MetaType) RewriteWithRestrictedTypes() (result Type, rewritten bool) {
-	return t, false
-}
-
-func (*MetaType) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
-	return false
-}
-
-func (t *MetaType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
-	return t
-}
-
-const typeIdentifierDocString = `
-The fully-qualified identifier of the type
-`
-
-func (t *MetaType) GetMembers() map[string]MemberResolver {
-	return withBuiltinMembers(t, map[string]MemberResolver{
-		"identifier": {
-			Kind: common.DeclarationKindField,
-			Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
-				return NewPublicConstantFieldMember(
-					t,
-					identifier,
-					&StringType{},
-					typeIdentifierDocString,
-				)
-			},
-		},
-	})
 }
 
 // AnyType represents the top type of all types.
@@ -4413,7 +4335,7 @@ func init() {
 	baseTypes.Set("", VoidType)
 
 	otherTypes := []Type{
-		&MetaType{},
+		MetaType,
 		VoidType,
 		&AnyStructType{},
 		&AnyResourceType{},
@@ -4734,8 +4656,7 @@ func suggestFixedPointLiteralConversionReplacement(
 
 func init() {
 
-	metaType := &MetaType{}
-	typeName := metaType.String()
+	typeName := MetaType.String()
 
 	// check type is not accidentally redeclared
 	if _, ok := BaseValues.Get(typeName); ok {
@@ -4746,7 +4667,7 @@ func init() {
 		name: typeName,
 		invokableType: &FunctionType{
 			TypeParameters:       []*TypeParameter{{Name: "T"}},
-			ReturnTypeAnnotation: NewTypeAnnotation(metaType),
+			ReturnTypeAnnotation: NewTypeAnnotation(MetaType),
 		},
 	})
 }

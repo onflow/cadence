@@ -190,7 +190,7 @@ func (i PrimitiveStaticType) SemaType() sema.Type {
 		return &sema.CharacterType{}
 
 	case PrimitiveStaticTypeMetaType:
-		return &sema.MetaType{}
+		return sema.MetaType
 
 	case PrimitiveStaticTypeBlock:
 		return &sema.BlockType{}
@@ -320,9 +320,6 @@ func ConvertSemaToPrimitiveStaticType(t sema.Type) PrimitiveStaticType {
 	case *sema.CharacterType:
 		return PrimitiveStaticTypeCharacter
 
-	case *sema.MetaType:
-		return PrimitiveStaticTypeMetaType
-
 	case *sema.BlockType:
 		return PrimitiveStaticTypeBlock
 
@@ -425,6 +422,8 @@ func ConvertSemaToPrimitiveStaticType(t sema.Type) PrimitiveStaticType {
 		return PrimitiveStaticTypeNever
 	case sema.VoidType:
 		return PrimitiveStaticTypeVoid
+	case sema.MetaType:
+		return PrimitiveStaticTypeMetaType
 	}
 
 	return PrimitiveStaticTypeUnknown
