@@ -42,6 +42,8 @@ type Block struct {
 type ResolvedLocation = sema.ResolvedLocation
 type Identifier = ast.Identifier
 type Location = common.Location
+type PublicKey = interpreter.PublicKeyValue
+type AccountKey = interpreter.AccountKeyValue
 
 type Interface interface {
 	// ResolveLocation resolves an import location.
@@ -70,7 +72,7 @@ type Interface interface {
 	// CreateAccount creates a new account.
 	CreateAccount(payer Address) (address Address, err error)
 	// AddAccountKey appends a key to an account.
-	AddAccountKey(address Address, publicKey []byte) error
+	AddAccountKey(address Address, publicKey *PublicKey) (*AccountKey, error)
 	// RemoveAccountKey removes a key from an account by index.
 	RemoveAccountKey(address Address, index int) (publicKey []byte, err error)
 	// UpdateAccountContractCode updates the code associated with an account contract.
@@ -194,8 +196,8 @@ func (i *emptyRuntimeInterface) CreateAccount(_ Address) (address Address, err e
 	return Address{}, nil
 }
 
-func (i *emptyRuntimeInterface) AddAccountKey(_ Address, _ []byte) error {
-	return nil
+func (i *emptyRuntimeInterface) AddAccountKey(_ Address, _ *PublicKey) (*AccountKey, error) {
+	return nil, nil
 }
 
 func (i *emptyRuntimeInterface) RemoveAccountKey(_ Address, _ int) (publicKey []byte, err error) {

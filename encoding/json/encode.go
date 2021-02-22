@@ -146,41 +146,42 @@ type jsonCapabilityValue struct {
 }
 
 const (
-	voidTypeStr       = "Void"
-	optionalTypeStr   = "Optional"
-	boolTypeStr       = "Bool"
-	stringTypeStr     = "String"
-	addressTypeStr    = "Address"
-	intTypeStr        = "Int"
-	int8TypeStr       = "Int8"
-	int16TypeStr      = "Int16"
-	int32TypeStr      = "Int32"
-	int64TypeStr      = "Int64"
-	int128TypeStr     = "Int128"
-	int256TypeStr     = "Int256"
-	uintTypeStr       = "UInt"
-	uint8TypeStr      = "UInt8"
-	uint16TypeStr     = "UInt16"
-	uint32TypeStr     = "UInt32"
-	uint64TypeStr     = "UInt64"
-	uint128TypeStr    = "UInt128"
-	uint256TypeStr    = "UInt256"
-	word8TypeStr      = "Word8"
-	word16TypeStr     = "Word16"
-	word32TypeStr     = "Word32"
-	word64TypeStr     = "Word64"
-	fix64TypeStr      = "Fix64"
-	ufix64TypeStr     = "UFix64"
-	arrayTypeStr      = "Array"
-	dictionaryTypeStr = "Dictionary"
-	structTypeStr     = "Struct"
-	resourceTypeStr   = "Resource"
-	eventTypeStr      = "Event"
-	contractTypeStr   = "Contract"
-	linkTypeStr       = "Link"
-	pathTypeStr       = "Path"
-	typeTypeStr       = "Type"
-	capabilityTypeStr = "Capability"
+	voidTypeStr          = "Void"
+	optionalTypeStr      = "Optional"
+	boolTypeStr          = "Bool"
+	stringTypeStr        = "String"
+	addressTypeStr       = "Address"
+	intTypeStr           = "Int"
+	int8TypeStr          = "Int8"
+	int16TypeStr         = "Int16"
+	int32TypeStr         = "Int32"
+	int64TypeStr         = "Int64"
+	int128TypeStr        = "Int128"
+	int256TypeStr        = "Int256"
+	uintTypeStr          = "UInt"
+	uint8TypeStr         = "UInt8"
+	uint16TypeStr        = "UInt16"
+	uint32TypeStr        = "UInt32"
+	uint64TypeStr        = "UInt64"
+	uint128TypeStr       = "UInt128"
+	uint256TypeStr       = "UInt256"
+	word8TypeStr         = "Word8"
+	word16TypeStr        = "Word16"
+	word32TypeStr        = "Word32"
+	word64TypeStr        = "Word64"
+	fix64TypeStr         = "Fix64"
+	ufix64TypeStr        = "UFix64"
+	arrayTypeStr         = "Array"
+	dictionaryTypeStr    = "Dictionary"
+	structTypeStr        = "Struct"
+	resourceTypeStr      = "Resource"
+	eventTypeStr         = "Event"
+	contractTypeStr      = "Contract"
+	linkTypeStr          = "Link"
+	pathTypeStr          = "Path"
+	typeTypeStr          = "Type"
+	capabilityTypeStr    = "Capability"
+	builtinStructTypeStr = "BuiltinStruct"
 )
 
 // prepare traverses the object graph of the provided value and constructs
@@ -257,6 +258,8 @@ func Prepare(v cadence.Value) jsonValue {
 		return prepareTypeValue(x)
 	case cadence.Capability:
 		return prepareCapability(x)
+	case cadence.BuiltinStruct:
+		return prepareBuiltinStruct(x)
 	default:
 		panic(fmt.Errorf("unsupported value: %T, %v", v, v))
 	}
@@ -483,6 +486,10 @@ func prepareEvent(v cadence.Event) jsonValue {
 
 func prepareContract(v cadence.Contract) jsonValue {
 	return prepareComposite(contractTypeStr, v.ContractType.ID(), v.ContractType.Fields, v.Fields)
+}
+
+func prepareBuiltinStruct(v cadence.BuiltinStruct) jsonValue {
+	return prepareComposite(builtinStructTypeStr, v.StructType.ID(), v.StructType.Fields, v.Fields)
 }
 
 func prepareComposite(kind, id string, fieldTypes []cadence.Field, fields []cadence.Value) jsonValue {

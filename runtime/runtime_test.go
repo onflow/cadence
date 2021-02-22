@@ -94,7 +94,7 @@ type testRuntimeInterface struct {
 	setProgram                func(Location, *interpreter.Program) error
 	storage                   testRuntimeInterfaceStorage
 	createAccount             func(payer Address) (address Address, err error)
-	addAccountKey             func(address Address, publicKey []byte) error
+	addAccountKey             func(address Address, publicKey *PublicKey) (*AccountKey, error)
 	removeAccountKey          func(address Address, index int) (publicKey []byte, err error)
 	updateAccountContractCode func(address Address, name string, code []byte) error
 	getAccountContractCode    func(address Address, name string) (code []byte, err error)
@@ -188,7 +188,7 @@ func (i *testRuntimeInterface) CreateAccount(payer Address) (address Address, er
 	return i.createAccount(payer)
 }
 
-func (i *testRuntimeInterface) AddAccountKey(address Address, publicKey []byte) error {
+func (i *testRuntimeInterface) AddAccountKey(address Address, publicKey *PublicKey) (*AccountKey, error) {
 	return i.addAccountKey(address, publicKey)
 }
 
@@ -2708,125 +2708,6 @@ func TestRuntimeTransaction_CreateAccount(t *testing.T) {
 
 	require.Len(t, events, 1)
 	assert.EqualValues(t, stdlib.AccountCreatedEventType.ID(), events[0].Type().ID())
-}
-
-func TestRuntimeTransaction_AddPublicKey(t *testing.T) {
-	runtime := NewInterpreterRuntime()
-
-	keyA := cadence.NewArray([]cadence.Value{
-		cadence.NewUInt8(1),
-		cadence.NewUInt8(2),
-		cadence.NewUInt8(3),
-	})
-
-	keyB := cadence.NewArray([]cadence.Value{
-		cadence.NewUInt8(4),
-		cadence.NewUInt8(5),
-		cadence.NewUInt8(6),
-	})
-
-	keys := cadence.NewArray([]cadence.Value{
-		keyA,
-		keyB,
-	})
-
-	var tests = []struct {
-		name     string
-		code     string
-		keyCount int
-		args     []cadence.Value
-		expected [][]byte
-	}{
-		{
-			name: "Single key",
-			code: `
-			  transaction(keyA: [UInt8]) {
-				prepare(signer: AuthAccount) {
-				  let acct = AuthAccount(payer: signer)
-				  acct.addPublicKey(keyA)
-				}
-			  }
-			`,
-			keyCount: 1,
-			args:     []cadence.Value{keyA},
-			expected: [][]byte{{1, 2, 3}},
-		},
-		{
-			name: "Multiple keys",
-			code: `
-			  transaction(keys: [[UInt8]]) {
-				prepare(signer: AuthAccount) {
-				  let acct = AuthAccount(payer: signer)
-				  for key in keys {
-					acct.addPublicKey(key)
-				  }
-				}
-			  }
-			`,
-			keyCount: 2,
-			args:     []cadence.Value{keys},
-			expected: [][]byte{{1, 2, 3}, {4, 5, 6}},
-		},
-	}
-
-	for _, tt := range tests {
-
-		var events []cadence.Event
-		var keys [][]byte
-
-		runtimeInterface := &testRuntimeInterface{
-			storage: newTestStorage(nil, nil),
-			getSigningAccounts: func() ([]Address, error) {
-				return []Address{{42}}, nil
-			},
-			createAccount: func(payer Address) (address Address, err error) {
-				return Address{42}, nil
-			},
-			addAccountKey: func(address Address, publicKey []byte) error {
-				keys = append(keys, publicKey)
-				return nil
-			},
-			emitEvent: func(event cadence.Event) error {
-				events = append(events, event)
-				return nil
-			},
-			decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
-				return jsoncdc.Decode(b)
-			},
-		}
-
-		t.Run(tt.name, func(t *testing.T) {
-			args := make([][]byte, len(tt.args))
-			for i, arg := range tt.args {
-				var err error
-				args[i], err = jsoncdc.Encode(arg)
-				if err != nil {
-					panic(fmt.Errorf("broken test: invalid argument: %w", err))
-				}
-			}
-
-			err := runtime.ExecuteTransaction(
-				Script{
-					Source:    []byte(tt.code),
-					Arguments: args,
-				},
-				Context{
-					Interface: runtimeInterface,
-					Location:  utils.TestLocation,
-				},
-			)
-			require.NoError(t, err)
-			assert.Len(t, events, tt.keyCount+1)
-			assert.Len(t, keys, tt.keyCount)
-			assert.Equal(t, tt.expected, keys)
-
-			assert.EqualValues(t, stdlib.AccountCreatedEventType.ID(), events[0].Type().ID())
-
-			for _, event := range events[1:] {
-				assert.EqualValues(t, stdlib.AccountKeyAddedEventType.ID(), event.Type().ID())
-			}
-		})
-	}
 }
 
 func TestRuntimeContractAccount(t *testing.T) {

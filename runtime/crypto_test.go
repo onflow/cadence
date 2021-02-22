@@ -19,7 +19,6 @@
 package runtime
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -193,40 +192,4 @@ func TestRuntimeCrypto_hash(t *testing.T) {
 	)
 
 	assert.True(t, called)
-}
-
-func TestAccountKey(t *testing.T) {
-
-	t.Parallel()
-
-	runtime := NewInterpreterRuntime()
-
-	script := []byte(`
-		pub fun main(): AccountKey {
-			let key = AccountKey(
-				PublicKey2(
-					publicKey: "0102".decodeHex(),
-					signAlgo: "ECDSA_P256"
-				),
-				hashAlgo: "SHA3_256",
-				weight: 1.7
-			)
-
-			return key
-      	}
-	`)
-
-	runtimeInterface := &testRuntimeInterface{}
-
-	result, err := runtime.ExecuteScript(
-		Script{
-			Source: script,
-		},
-		Context{
-			Interface: runtimeInterface,
-			Location:  utils.TestLocation,
-		},
-	)
-	require.NoError(t, err)
-	fmt.Println(result)
 }

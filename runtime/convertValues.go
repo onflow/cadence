@@ -148,20 +148,21 @@ func exportValueWithInterpreter(
 				return nil
 			}
 			return exportValueWithInterpreter(*referencedValue, inter, results)
-		case interpreter.AccountKeyValue:
-			return exportBuiltinStructValue(
-				inter,
-				results,
-				v.DynamicType(inter),
-				v.KeyIndex,
-				v.PublicKey,
-				v.HashAlgo,
-				v.Weight,
-				v.IsRevoked,
-			)
-
-		case interpreter.PublicKeyValue:
-			return exportBuiltinStructValue(inter, results, v.DynamicType(inter), v.PublicKey, v.SignAlgo)
+		case *interpreter.AccountKeyValue:
+			fields := map[string]interpreter.Value{
+				sema.AccountKeyKeyIndexField:  v.KeyIndex,
+				sema.AccountKeyPublicKeyField: v.PublicKey,
+				sema.AccountKeyHashAlgoField:  v.HashAlgo,
+				sema.AccountKeyWeightField:    v.Weight,
+				sema.AccountKeyIsRevokedField: v.IsRevoked,
+			}
+			return exportBuiltinStructValue(v.DynamicType(inter), fields, inter, results)
+		case *interpreter.PublicKeyValue:
+			fields := map[string]interpreter.Value{
+				sema.PublicKeyPublicKeyField: v.PublicKey,
+				sema.PublicKeySignAlgoField:  v.SignAlgo,
+			}
+			return exportBuiltinStructValue(v.DynamicType(inter), fields, inter, results)
 		}
 
 		panic(fmt.Sprintf("cannot export value of type %T", value))
@@ -297,23 +298,27 @@ func exportCapabilityValue(v interpreter.CapabilityValue, inter *interpreter.Int
 }
 
 func exportBuiltinStructValue(
+	dynamicType interpreter.DynamicType,
+	fieldValues map[string]interpreter.Value,
 	inter *interpreter.Interpreter,
 	results exportResults,
-	dynamicType interpreter.DynamicType,
-	fieldValues ...interpreter.Value,
 ) cadence.Value {
 
 	builtinDynamicType := dynamicType.(interpreter.BuiltinStructDynamicType)
 
-	// convert internal type to exported type
+	// Convert internal type to exported type.
 	exportedBuiltinStructType := exportBuiltinStructType(builtinDynamicType.StaticType, map[sema.TypeID]cadence.Type{})
 
-	fields := make([]cadence.Value, len(fieldValues))
-	for index, field := range fieldValues {
-		fields[index] = exportValueWithInterpreter(field, inter, results)
+	fieldNames := exportedBuiltinStructType.Fields
+	fields := make([]cadence.Value, len(fieldNames))
+
+	// NOTE: use the exported type's fields to ensure fields in type and value are in sync.
+	for index, field := range fieldNames {
+		fieldValue := fieldValues[field.Identifier]
+		fields[index] = exportValueWithInterpreter(fieldValue, inter, results)
 	}
 
-	return cadence.NewBuiltinStruct(exportedBuiltinStructType, fields)
+	return cadence.NewBuiltinStruct(fields).WithType(exportedBuiltinStructType)
 }
 
 // importValue converts a Cadence value to a runtime value.
@@ -404,6 +409,8 @@ func importValue(value cadence.Value) interpreter.Value {
 			Domain:     common.PathDomainFromIdentifier(v.Domain),
 			Identifier: v.Identifier,
 		}
+	case cadence.BuiltinStruct:
+		return importBuiltinStructValue(*v.StructType, v.Fields)
 	}
 
 	panic(fmt.Sprintf("cannot import value of type %T", value))
@@ -463,4 +470,38 @@ func importCompositeValue(
 	)
 }
 
-// FIXME: add import builtin struct value
+func importBuiltinStructValue(structType cadence.BuiltinStructType, fieldValues []cadence.Value) interpreter.Value {
+
+	fieldTypes := structType.Fields
+	fields := make(map[string]interpreter.Value, len(fieldTypes))
+
+	for i := 0; i < len(fieldTypes) && i < len(fieldValues); i++ {
+		fieldType := fieldTypes[i]
+		fieldValue := fieldValues[i]
+		fields[fieldType.Identifier] = importValue(fieldValue)
+	}
+
+	switch structType.ID() {
+	case sema.PublicKeyTypeName:
+		arrayValue, ok := fields[sema.PublicKeyPublicKeyField].(*interpreter.ArrayValue)
+		handleFieldImportError(ok, structType, sema.PublicKeyPublicKeyField)
+
+		signAlgo, ok := fields[sema.PublicKeySignAlgoField].(*interpreter.StringValue)
+		handleFieldImportError(ok, structType, sema.PublicKeySignAlgoField)
+
+		return interpreter.NewPublicKeyValue(arrayValue, signAlgo)
+	default:
+		panic(fmt.Sprintf("cannot import value of type %T", structType))
+	}
+}
+
+func handleFieldImportError(errorOccurred bool, structType cadence.BuiltinStructType, fieldName string) {
+	if !errorOccurred {
+		panic(fmt.Sprintf(
+			"invalid field `%s` in `%s`, must be of type %T",
+			fieldName,
+			structType,
+			interpreter.ArrayValue{},
+		))
+	}
+}

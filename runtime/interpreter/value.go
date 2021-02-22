@@ -6659,6 +6659,7 @@ type AuthAccountValue struct {
 	addPublicKeyFunction    FunctionValue
 	removePublicKeyFunction FunctionValue
 	contracts               AuthAccountContractsValue
+	keys                    AuthAccountKeysValue
 }
 
 func NewAuthAccountValue(
@@ -6668,6 +6669,7 @@ func NewAuthAccountValue(
 	addPublicKeyFunction FunctionValue,
 	removePublicKeyFunction FunctionValue,
 	contracts AuthAccountContractsValue,
+	keys AuthAccountKeysValue,
 ) AuthAccountValue {
 	return AuthAccountValue{
 		Address:                 address,
@@ -6676,6 +6678,7 @@ func NewAuthAccountValue(
 		addPublicKeyFunction:    addPublicKeyFunction,
 		removePublicKeyFunction: removePublicKeyFunction,
 		contracts:               contracts,
+		keys:                    keys,
 	}
 }
 
@@ -6808,6 +6811,8 @@ func (v AuthAccountValue) GetMember(inter *Interpreter, _ LocationRange, name st
 
 	case "contracts":
 		return v.contracts
+	case "keys":
+		return v.keys
 	}
 
 	return nil
@@ -7134,20 +7139,17 @@ func (v LinkValue) String() string {
 }
 
 // AccountKeyValue
-
 type AccountKeyValue struct {
 	KeyIndex  IntValue
-	PublicKey PublicKeyValue
+	PublicKey *PublicKeyValue
 	HashAlgo  *StringValue
 	Weight    UFix64Value
 	IsRevoked BoolValue
 }
 
-func NewAccountKeyValue(publicKey PublicKeyValue, hashAlgo *StringValue, weight UFix64Value) AccountKeyValue {
-
-	return AccountKeyValue{
-		// TODO: fix
-		KeyIndex:  NewIntValueFromInt64(1),
+func NewAccountKeyValue(publicKey *PublicKeyValue, hashAlgo *StringValue, weight UFix64Value) *AccountKeyValue {
+	return &AccountKeyValue{
+		KeyIndex:  NewIntValueFromInt64(001),
 		PublicKey: publicKey,
 		HashAlgo:  hashAlgo,
 		Weight:    weight,
@@ -7155,71 +7157,92 @@ func NewAccountKeyValue(publicKey PublicKeyValue, hashAlgo *StringValue, weight 
 	}
 }
 
-func (AccountKeyValue) IsValue() {}
+func (*AccountKeyValue) IsValue() {}
 
-func (v AccountKeyValue) Accept(interpreter *Interpreter, visitor Visitor) {
+func (v *AccountKeyValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitAccountKeyValue(interpreter, v)
 }
 
-func (AccountKeyValue) DynamicType(_ *Interpreter) DynamicType {
+func (v *AccountKeyValue) DynamicType(_ *Interpreter) DynamicType {
 	return BuiltinStructDynamicType{sema.AccountKeyType}
 }
 
-func (AccountKeyValue) StaticType() StaticType {
+func (v *AccountKeyValue) StaticType() StaticType {
 	return PrimitiveStaticTypeAccountKey
 }
 
-func (v AccountKeyValue) Copy() Value {
+func (v *AccountKeyValue) Copy() Value {
 	return v
 }
 
-func (AccountKeyValue) GetOwner() *common.Address {
+func (*AccountKeyValue) GetOwner() *common.Address {
 	// value is never owned
 	return nil
 }
 
-func (AccountKeyValue) SetOwner(_ *common.Address) {
+func (*AccountKeyValue) SetOwner(_ *common.Address) {
 	// NO-OP: value cannot be owned
 }
 
-func (AccountKeyValue) IsModified() bool {
+func (*AccountKeyValue) IsModified() bool {
 	return false
 }
 
-func (AccountKeyValue) SetModified(_ bool) {
+func (*AccountKeyValue) SetModified(_ bool) {
 	// NO-OP
 }
 
-func (v AccountKeyValue) Destroy(_ *Interpreter, _ LocationRange) trampoline.Trampoline {
+func (v *AccountKeyValue) Destroy(_ *Interpreter, _ LocationRange) trampoline.Trampoline {
 	return trampoline.Done{}
 }
 
-func (v AccountKeyValue) String() string {
-	return fmt.Sprintf("AccountKey(%s)", v.PublicKey.String())
+func (v *AccountKeyValue) String() string {
+	fields := []struct {
+		Name  string
+		Value string
+	}{
+		{
+			sema.AccountKeyKeyIndexField,
+			v.KeyIndex.String(),
+		},
+		{
+			sema.PublicKeyPublicKeyField,
+			v.PublicKey.String(),
+		},
+		{
+			sema.AccountKeyHashAlgoField,
+			v.HashAlgo.String(),
+		},
+		{
+			sema.AccountKeyWeightField,
+			v.Weight.String(),
+		},
+		{
+			sema.AccountKeyIsRevokedField,
+			v.IsRevoked.String(),
+		},
+	}
+	return format.BuiltinStructValue(sema.AccountKeyType.QualifiedString(), fields)
 }
 
-func (v AccountKeyValue) GetMember(inter *Interpreter, _ LocationRange, name string) Value {
+func (v *AccountKeyValue) GetMember(_ *Interpreter, _ LocationRange, name string) Value {
 	switch name {
-	case "keyIndex":
+	case sema.AccountKeyKeyIndexField:
 		return v.KeyIndex
-
-	case "publicKey":
+	case sema.AccountKeyPublicKeyField:
 		return v.PublicKey
-
-	case "hashAlgo":
+	case sema.AccountKeyHashAlgoField:
 		return v.HashAlgo
-
-	case "weight":
+	case sema.AccountKeyWeightField:
 		return v.Weight
-
-	case "getLinkTarget":
+	case sema.AccountKeyIsRevokedField:
 		return v.IsRevoked
 	}
 
 	return nil
 }
 
-func (AccountKeyValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+func (*AccountKeyValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
 	panic(errors.NewUnreachableError())
 }
 
@@ -7230,73 +7253,149 @@ type PublicKeyValue struct {
 	SignAlgo  *StringValue
 }
 
-func NewPublicKeyValue(
-	publicKey *ArrayValue,
-	signAlgorithm *StringValue,
-) PublicKeyValue {
-
-	return PublicKeyValue{
+func NewPublicKeyValue(publicKey *ArrayValue, signAlgo *StringValue) *PublicKeyValue {
+	return &PublicKeyValue{
 		PublicKey: publicKey,
-		SignAlgo:  signAlgorithm,
+		SignAlgo:  signAlgo,
 	}
 }
 
-func (PublicKeyValue) IsValue() {}
+func (*PublicKeyValue) IsValue() {}
 
-func (v PublicKeyValue) Accept(interpreter *Interpreter, visitor Visitor) {
+func (v *PublicKeyValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitPublicKeyValue(interpreter, v)
 }
 
-func (v PublicKeyValue) DynamicType(_ *Interpreter) DynamicType {
+func (v *PublicKeyValue) DynamicType(_ *Interpreter) DynamicType {
 	return BuiltinStructDynamicType{sema.PublicKeyType}
 }
 
-func (PublicKeyValue) StaticType() StaticType {
+func (v *PublicKeyValue) StaticType() StaticType {
 	return PrimitiveStaticTypePublicKey
 }
 
-func (v PublicKeyValue) Copy() Value {
+func (v *PublicKeyValue) Copy() Value {
 	return v
 }
 
-func (PublicKeyValue) GetOwner() *common.Address {
+func (*PublicKeyValue) GetOwner() *common.Address {
 	// value is never owned
 	return nil
 }
 
-func (PublicKeyValue) SetOwner(_ *common.Address) {
+func (*PublicKeyValue) SetOwner(_ *common.Address) {
 	// NO-OP: value cannot be owned
 }
 
-func (PublicKeyValue) IsModified() bool {
+func (*PublicKeyValue) IsModified() bool {
 	return false
 }
 
-func (PublicKeyValue) SetModified(_ bool) {
+func (*PublicKeyValue) SetModified(_ bool) {
 	// NO-OP
 }
 
-func (v PublicKeyValue) Destroy(_ *Interpreter, _ LocationRange) trampoline.Trampoline {
+func (v *PublicKeyValue) Destroy(_ *Interpreter, _ LocationRange) trampoline.Trampoline {
 	return trampoline.Done{}
 }
 
-func (v PublicKeyValue) String() string {
-	// FIXME
-	return fmt.Sprintf("AccountKey(%s)", v.PublicKey.String())
+func (v *PublicKeyValue) String() string {
+	fields := []struct {
+		Name  string
+		Value string
+	}{
+		{
+			sema.PublicKeyPublicKeyField,
+			v.PublicKey.String(),
+		},
+		{
+			sema.PublicKeySignAlgoField,
+			v.SignAlgo.String(),
+		},
+	}
+	return format.BuiltinStructValue(sema.PublicKeyType.QualifiedString(), fields)
 }
 
-func (v PublicKeyValue) GetMember(inter *Interpreter, _ LocationRange, name string) Value {
+func (v *PublicKeyValue) GetMember(_ *Interpreter, _ LocationRange, name string) Value {
 	switch name {
-	case "publicKey":
+	case sema.PublicKeyPublicKeyField:
 		return v.PublicKey
 
-	case "signAlgo":
+	case sema.PublicKeySignAlgoField:
 		return v.SignAlgo
 	}
 
 	return nil
 }
 
-func (PublicKeyValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+func (*PublicKeyValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+	panic(errors.NewUnreachableError())
+}
+
+// AuthAccountKeysValue
+
+type AuthAccountKeysValue struct {
+	AddFunction FunctionValue
+}
+
+func NewAuthAccountKeysValue(addFunction FunctionValue) AuthAccountKeysValue {
+	return AuthAccountKeysValue{
+		AddFunction: addFunction,
+	}
+}
+
+func (AuthAccountKeysValue) IsValue() {}
+
+func (v AuthAccountKeysValue) Accept(interpreter *Interpreter, visitor Visitor) {
+	visitor.VisitAuthAccountKeysValue(interpreter, v)
+}
+
+func (v AuthAccountKeysValue) DynamicType(_ *Interpreter) DynamicType {
+	return BuiltinStructDynamicType{sema.AuthAccountKeysType}
+}
+
+func (v AuthAccountKeysValue) StaticType() StaticType {
+	return PrimitiveStaticTypePublicKey
+}
+
+func (v AuthAccountKeysValue) Copy() Value {
+	return v
+}
+
+func (AuthAccountKeysValue) GetOwner() *common.Address {
+	// value is never owned
+	return nil
+}
+
+func (AuthAccountKeysValue) SetOwner(_ *common.Address) {
+	// NO-OP: value cannot be owned
+}
+
+func (AuthAccountKeysValue) IsModified() bool {
+	return false
+}
+
+func (AuthAccountKeysValue) SetModified(_ bool) {
+	// NO-OP
+}
+
+func (v AuthAccountKeysValue) Destroy(_ *Interpreter, _ LocationRange) trampoline.Trampoline {
+	return trampoline.Done{}
+}
+
+func (v AuthAccountKeysValue) String() string {
+	return fmt.Sprintf("%s()", sema.AuthAccountKeysType.QualifiedString())
+}
+
+func (v AuthAccountKeysValue) GetMember(_ *Interpreter, _ LocationRange, name string) Value {
+	switch name {
+	case sema.AuthAccountKeysAddFunctionName:
+		return v.AddFunction
+	}
+
+	return nil
+}
+
+func (AuthAccountKeysValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
 	panic(errors.NewUnreachableError())
 }

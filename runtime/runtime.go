@@ -310,6 +310,7 @@ func (r *interpreterRuntime) newAuthAccountValue(
 			interpreterOptions,
 			checkerOptions,
 		),
+		r.newAuthAccountKeys(addressValue, context.Interface),
 	)
 }
 
@@ -1172,28 +1173,24 @@ func (r *interpreterRuntime) newAddPublicKeyFunction(
 ) interpreter.HostFunctionValue {
 	return interpreter.NewHostFunctionValue(
 		func(invocation interpreter.Invocation) trampoline.Trampoline {
-			publicKeyValue := invocation.Arguments[0].(*interpreter.ArrayValue)
-
-			publicKey, err := interpreter.ByteArrayValueToByteSlice(publicKeyValue)
-			if err != nil {
-				panic("addPublicKey requires the first argument to be a byte array")
-			}
-
-			wrapPanic(func() {
-				err = runtimeInterface.AddAccountKey(addressValue.ToAddress(), publicKey)
-			})
-			if err != nil {
-				panic(err)
-			}
-
-			r.emitAccountEvent(
-				stdlib.AccountKeyAddedEventType,
-				runtimeInterface,
-				[]exportableValue{
-					newExportableValue(addressValue, nil),
-					newExportableValue(publicKeyValue, nil),
-				},
-			)
+			//publicKeyValue := invocation.Arguments[0].(*interpreter.PublicKeyValue)
+			//
+			//var err error
+			//wrapPanic(func() {
+			//	err = runtimeInterface.AddAccountKey(addressValue.ToAddress(), publicKeyValue)
+			//})
+			//if err != nil {
+			//	panic(err)
+			//}
+			//
+			//r.emitAccountEvent(
+			//	stdlib.AccountKeyAddedEventType,
+			//	runtimeInterface,
+			//	[]exportableValue{
+			//		newExportableValue(addressValue, nil),
+			//		newExportableValue(publicKeyValue, nil),
+			//	},
+			//)
 
 			result := interpreter.VoidValue{}
 			return trampoline.Done{Result: result}
@@ -1571,6 +1568,15 @@ func (r *interpreterRuntime) newAuthAccountContracts(
 			runtimeStorage,
 		),
 	}
+}
+
+func (r *interpreterRuntime) newAuthAccountKeys(addressValue interpreter.AddressValue, runtimeInterface Interface) interpreter.AuthAccountKeysValue {
+	return interpreter.NewAuthAccountKeysValue(
+		r.newAuthAccountKeysAddFunction(
+			addressValue,
+			runtimeInterface,
+		),
+	)
 }
 
 // newAuthAccountContractsChangeFunction called when e.g.
@@ -2048,4 +2054,35 @@ func NewBlockValue(block Block) interpreter.BlockValue {
 		ID:        idValue,
 		Timestamp: timestampValue,
 	}
+}
+
+func (r *interpreterRuntime) newAuthAccountKeysAddFunction(
+	addressValue interpreter.AddressValue,
+	runtimeInterface Interface,
+) interpreter.HostFunctionValue {
+	return interpreter.NewHostFunctionValue(
+		func(invocation interpreter.Invocation) trampoline.Trampoline {
+			publicKeyValue := invocation.Arguments[0].(*interpreter.PublicKeyValue)
+
+			var err error
+			var accountKey *AccountKey
+			wrapPanic(func() {
+				accountKey, err = runtimeInterface.AddAccountKey(addressValue.ToAddress(), publicKeyValue)
+			})
+			if err != nil {
+				panic(err)
+			}
+
+			r.emitAccountEvent(
+				stdlib.AccountKeyAddedEventType,
+				runtimeInterface,
+				[]exportableValue{
+					newExportableValue(addressValue, nil),
+					newExportableValue(publicKeyValue, nil),
+				},
+			)
+
+			return trampoline.Done{Result: accountKey}
+		},
+	)
 }

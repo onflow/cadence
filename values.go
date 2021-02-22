@@ -1245,8 +1245,13 @@ type BuiltinStruct struct {
 	Fields     []Value
 }
 
-func NewBuiltinStruct(structType *BuiltinStructType, fields []Value) BuiltinStruct {
-	return BuiltinStruct{StructType: structType, Fields: fields}
+func NewBuiltinStruct(fields []Value) BuiltinStruct {
+	return BuiltinStruct{Fields: fields}
+}
+
+func (v BuiltinStruct) WithType(structType *BuiltinStructType) BuiltinStruct {
+	v.StructType = structType
+	return v
 }
 
 func (BuiltinStruct) isValue() {}

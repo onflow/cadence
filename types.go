@@ -20,7 +20,6 @@ package cadence
 
 import (
 	"fmt"
-
 	"github.com/onflow/cadence/runtime/common"
 )
 
@@ -938,13 +937,12 @@ func (PublicAccountType) ID() string {
 }
 
 type BuiltinStructType struct {
-	Identifier   string
-	Fields       []Field
-	Initializers [][]Parameter
+	QualifiedIdentifier string
+	Fields              []Field
 }
 
 func (*BuiltinStructType) isType() {}
 
 func (t *BuiltinStructType) ID() string {
-	return t.Identifier
+	return t.QualifiedIdentifier
 }

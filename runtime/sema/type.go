@@ -5405,6 +5405,10 @@ const accountTypeStorageCapacityFieldDocString = `
 The storage capacity of the account in bytes
 `
 
+const accountTypeKeysFieldDocString = `
+The keys associated with the account
+`
+
 func (t *AuthAccountType) GetMembers() map[string]MemberResolver {
 	return withBuiltinMembers(t, map[string]MemberResolver{
 		"address": {
@@ -5561,11 +5565,23 @@ func (t *AuthAccountType) GetMembers() map[string]MemberResolver {
 				)
 			},
 		},
+		"keys": {
+			Kind: common.DeclarationKindField,
+			Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
+				return NewPublicConstantFieldMember(
+					t,
+					identifier,
+					AuthAccountKeysType,
+					accountTypeKeysFieldDocString,
+				)
+			},
+		},
 	})
 }
 
 var authAccountTypeNestedTypes = map[string]Type{
 	"Contracts": &AuthAccountContractsType{},
+	"Keys":      AuthAccountKeysType,
 }
 
 func (*AuthAccountType) NestedTypes() map[string]Type {
@@ -7682,22 +7698,28 @@ func (t *CapabilityType) GetMembers() map[string]MemberResolver {
 }
 
 type BuiltinStructType struct {
-	Identifier string
-	Members    *StringMemberOrderedMap
+	Identifier           string
+	Members              *StringMemberOrderedMap
+	Owner                Type
+	IsInvalid            bool
+	IsResource           bool
+	Storable             bool
+	Equatable            bool
+	ExternallyReturnable bool
 }
 
 func (*BuiltinStructType) IsType() {}
 
 func (t *BuiltinStructType) String() string {
-	return string(t.Identifier)
+	return t.Identifier
 }
 
 func (t *BuiltinStructType) QualifiedString() string {
-	return string(t.Identifier)
+	return qualifiedIdentifier(t.Identifier, t.Owner)
 }
 
 func (t *BuiltinStructType) ID() TypeID {
-	return TypeID(t.Identifier)
+	return TypeID(t.QualifiedString())
 }
 
 func (t *BuiltinStructType) Equal(other Type) bool {
@@ -7709,24 +7731,24 @@ func (t *BuiltinStructType) Equal(other Type) bool {
 	return otherStructType.ID() == t.ID()
 }
 
-func (*BuiltinStructType) IsResourceType() bool {
-	return false
+func (t *BuiltinStructType) IsResourceType() bool {
+	return t.IsResource
 }
 
-func (*BuiltinStructType) IsInvalidType() bool {
-	return false
+func (t *BuiltinStructType) IsInvalidType() bool {
+	return t.IsInvalid
 }
 
-func (*BuiltinStructType) IsStorable(_ map[*Member]bool) bool {
-	return true
+func (t *BuiltinStructType) IsStorable(_ map[*Member]bool) bool {
+	return t.Storable
 }
 
-func (*BuiltinStructType) IsExternallyReturnable(_ map[*Member]bool) bool {
-	return true
+func (t *BuiltinStructType) IsExternallyReturnable(_ map[*Member]bool) bool {
+	return t.ExternallyReturnable
 }
 
-func (*BuiltinStructType) IsEquatable() bool {
-	return true
+func (t *BuiltinStructType) IsEquatable() bool {
+	return t.Equatable
 }
 func (*BuiltinStructType) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
@@ -7769,11 +7791,23 @@ func getMembersAsMap(members []*Member) *StringMemberOrderedMap {
 	return membersMap
 }
 
+const AccountKeyTypeName = "AccountKey"
+const AccountKeyKeyIndexField = "keyIndex"
+const AccountKeyPublicKeyField = "publicKey"
+const AccountKeyHashAlgoField = "hashAlgo"
+const AccountKeyWeightField = "weight"
+const AccountKeyIsRevokedField = "isRevoked"
+
 // AccountKeyType represents the key associated with an account.
 var AccountKeyType = func() *BuiltinStructType {
 
 	accountKeyType := &BuiltinStructType{
-		Identifier: "AccountKey",
+		Identifier:           AccountKeyTypeName,
+		IsInvalid:            false,
+		IsResource:           false,
+		Storable:             false,
+		Equatable:            true,
+		ExternallyReturnable: true,
 	}
 
 	const accountKeyIndexFieldDocString = `The index of the account key`
@@ -7785,31 +7819,31 @@ var AccountKeyType = func() *BuiltinStructType {
 	var members = []*Member{
 		NewPublicConstantFieldMember(
 			accountKeyType,
-			"keyIndex",
+			AccountKeyKeyIndexField,
 			&IntType{},
 			accountKeyIndexFieldDocString,
 		),
 		NewPublicConstantFieldMember(
 			accountKeyType,
-			"publicKey",
+			AccountKeyPublicKeyField,
 			PublicKeyType,
 			accountKeyPublicKeyFieldDocString,
 		),
 		NewPublicConstantFieldMember(
 			accountKeyType,
-			"hashAlgo",
+			AccountKeyHashAlgoField,
 			&StringType{},
 			accountKeyHashAlgorithmFieldDocString,
 		),
 		NewPublicConstantFieldMember(
 			accountKeyType,
-			"weight",
+			AccountKeyWeightField,
 			&UFix64Type{},
 			accountKeyWeightFieldDocString,
 		),
 		NewPublicConstantFieldMember(
 			accountKeyType,
-			"isRevoked",
+			AccountKeyIsRevokedField,
 			&BoolType{},
 			accountKeyIsRevokedFieldDocString,
 		),
@@ -7819,12 +7853,20 @@ var AccountKeyType = func() *BuiltinStructType {
 	return accountKeyType
 }()
 
+const PublicKeyTypeName = "PublicKey2"
+const PublicKeyPublicKeyField = "publicKey"
+const PublicKeySignAlgoField = "signAlgo"
+
 // PublicKeyType represents the public key associated with an account key.
 var PublicKeyType = func() *BuiltinStructType {
 
 	accountKeyType := &BuiltinStructType{
-		Identifier: "PublicKey2",
-		Members:    nil,
+		Identifier:           PublicKeyTypeName,
+		IsInvalid:            false,
+		IsResource:           false,
+		Storable:             true,
+		Equatable:            true,
+		ExternallyReturnable: true,
 	}
 
 	const publicKeyKeyFieldDocString = `The public key`
@@ -7833,13 +7875,13 @@ var PublicKeyType = func() *BuiltinStructType {
 	var members = []*Member{
 		NewPublicConstantFieldMember(
 			accountKeyType,
-			"publicKey",
+			PublicKeyPublicKeyField,
 			&VariableSizedType{Type: &UInt8Type{}},
 			publicKeyKeyFieldDocString,
 		),
 		NewPublicConstantFieldMember(
 			accountKeyType,
-			"signAlgo",
+			PublicKeySignAlgoField,
 			&StringType{},
 			publicKeySignAlgoFieldDocString,
 		),
@@ -7848,3 +7890,69 @@ var PublicKeyType = func() *BuiltinStructType {
 	accountKeyType.Members = getMembersAsMap(members)
 	return accountKeyType
 }()
+
+const AuthAccountKeysTypeName = "Keys"
+const AuthAccountKeysAddFunctionName = "add"
+
+// AuthAccountKeysType represents the public key associated with an account key.
+var AuthAccountKeysType = func() *BuiltinStructType {
+
+	authAccountKeys := &BuiltinStructType{
+		Identifier:           AuthAccountKeysTypeName,
+		Owner:                &AuthAccountType{},
+		IsInvalid:            false,
+		IsResource:           false,
+		Storable:             false,
+		Equatable:            true,
+		ExternallyReturnable: false,
+	}
+
+	var members = []*Member{
+		NewPublicFunctionMember(
+			authAccountKeys,
+			AuthAccountKeysAddFunctionName,
+			authAccountKeysTypeAddFunctionType,
+			authAccountKeysTypeAddFunctionDocString,
+		),
+	}
+
+	authAccountKeys.Members = getMembersAsMap(members)
+	return authAccountKeys
+}()
+
+// FIXME:
+const authAccountKeysTypeAddFunctionDocString = `
+Adds the given contract to the account.
+
+The ` + "`code`" + ` parameter is the UTF-8 encoded representation of the source code.
+The code must contain exactly one contract or contract interface,
+which must have the same name as the ` + "`name`" + ` parameter.
+
+All additional arguments that are given are passed further to the initializer
+of the contract that is being deployed.
+
+Fails if a contract/contract interface with the given name already exists in the account,
+if the given code does not declare exactly one contract or contract interface,
+or if the given name does not match the name of the contract/contract interface declaration in the code.
+
+Returns the deployed contract.
+`
+
+var authAccountKeysTypeAddFunctionType = &FunctionType{
+	Parameters: []*Parameter{
+		{
+			Identifier:     AccountKeyPublicKeyField,
+			TypeAnnotation: NewTypeAnnotation(PublicKeyType),
+		},
+		{
+			Identifier:     AccountKeyHashAlgoField,
+			TypeAnnotation: NewTypeAnnotation(&StringType{}),
+		},
+		{
+			Identifier:     AccountKeyWeightField,
+			TypeAnnotation: NewTypeAnnotation(&UFix64Type{}),
+		},
+	},
+	ReturnTypeAnnotation:  NewTypeAnnotation(AccountKeyType),
+	RequiredArgumentCount: RequiredArgumentCount(3),
+}

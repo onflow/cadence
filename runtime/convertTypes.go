@@ -164,32 +164,6 @@ func ExportType(t sema.Type, results map[sema.TypeID]cadence.Type) cadence.Type 
 	return result
 }
 
-func exportBuiltinStructType(t *sema.BuiltinStructType, results map[sema.TypeID]cadence.Type) *cadence.BuiltinStructType {
-
-	var fields []cadence.Field
-
-	t.Members.Foreach(func(key string, member *sema.Member) {
-		if member.DeclarationKind != common.DeclarationKindField {
-			return
-		}
-
-		convertedFieldType := ExportType(member.TypeAnnotation.Type, results)
-
-		fields = append(fields, cadence.Field{
-			Identifier: member.Identifier.Identifier,
-			Type:       convertedFieldType,
-		})
-	})
-
-	return &cadence.BuiltinStructType{
-		Identifier: t.Identifier,
-		Fields:     fields,
-
-		// FIXME:
-		Initializers: [][]cadence.Parameter{},
-	}
-}
-
 func exportOptionalType(t *sema.OptionalType, results map[sema.TypeID]cadence.Type) cadence.Type {
 	convertedType := ExportType(t.Type, results)
 
@@ -413,4 +387,29 @@ func exportCapabilityType(t *sema.CapabilityType, results map[sema.TypeID]cadenc
 	return cadence.CapabilityType{
 		BorrowType: borrowType,
 	}.WithID(string(t.ID()))
+}
+
+func exportBuiltinStructType(t *sema.BuiltinStructType, results map[sema.TypeID]cadence.Type) *cadence.BuiltinStructType {
+
+	var fields []cadence.Field
+
+	t.Members.Foreach(func(key string, member *sema.Member) {
+		if member.DeclarationKind != common.DeclarationKindField {
+			return
+		}
+
+		convertedFieldType := ExportType(member.TypeAnnotation.Type, results)
+
+		fields = append(
+			fields,
+			cadence.Field{
+				Identifier: member.Identifier.Identifier,
+				Type:       convertedFieldType,
+			})
+	})
+
+	return &cadence.BuiltinStructType{
+		QualifiedIdentifier: t.Identifier,
+		Fields:              fields,
+	}
 }

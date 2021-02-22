@@ -140,22 +140,22 @@ var HelperFunctions = StandardLibraryFunctions{
 }
 
 var CreateAccountKeyFunction = NewStandardLibraryFunction(
-	"AccountKey",
+	sema.AccountKeyTypeName,
 	&sema.FunctionType{
 		Parameters: []*sema.Parameter{
 			{
 				Label:          sema.ArgumentLabelNotRequired,
-				Identifier:     "publicKey",
+				Identifier:     sema.AccountKeyPublicKeyField,
 				TypeAnnotation: sema.NewTypeAnnotation(sema.PublicKeyType),
 			},
 			{
-				Label:          "hashAlgo",
-				Identifier:     "hashAlgo",
+				Label:          sema.AccountKeyHashAlgoField,
+				Identifier:     sema.AccountKeyHashAlgoField,
 				TypeAnnotation: sema.NewTypeAnnotation(&sema.StringType{}),
 			},
 			{
-				Label:          "weight",
-				Identifier:     "weight",
+				Label:          sema.AccountKeyWeightField,
+				Identifier:     sema.AccountKeyWeightField,
 				TypeAnnotation: sema.NewTypeAnnotation(&sema.UFix64Type{}),
 			},
 		},
@@ -163,34 +163,39 @@ var CreateAccountKeyFunction = NewStandardLibraryFunction(
 		RequiredArgumentCount: sema.RequiredArgumentCount(3),
 	},
 	func(invocation interpreter.Invocation) trampoline.Trampoline {
-		publicKey := invocation.Arguments[0].(interpreter.PublicKeyValue)
+		publicKey := invocation.Arguments[0].(*interpreter.PublicKeyValue)
 		hashAlgo := invocation.Arguments[1].(*interpreter.StringValue)
 		weight := invocation.Arguments[2].(interpreter.UFix64Value)
-		return trampoline.Done{Result: interpreter.NewAccountKeyValue(publicKey, hashAlgo, weight)}
+
+		accountKey := interpreter.NewAccountKeyValue(publicKey, hashAlgo, weight)
+		return trampoline.Done{Result: accountKey}
 	},
 )
 
 var CreatePublicKeyFunction = NewStandardLibraryFunction(
-	"PublicKey2",
+	sema.PublicKeyTypeName,
 	&sema.FunctionType{
 		Parameters: []*sema.Parameter{
 			{
-				Label:          "publicKey",
-				Identifier:     "publicKey",
+				Label:          sema.PublicKeyPublicKeyField,
+				Identifier:     sema.PublicKeyPublicKeyField,
 				TypeAnnotation: sema.NewTypeAnnotation(&sema.VariableSizedType{Type: &sema.UInt8Type{}}),
 			},
 			{
-				Label:          "signAlgo",
-				Identifier:     "signAlgo",
+				Label:          sema.PublicKeySignAlgoField,
+				Identifier:     sema.PublicKeySignAlgoField,
 				TypeAnnotation: sema.NewTypeAnnotation(&sema.StringType{}),
 			},
 		},
 		ReturnTypeAnnotation:  sema.NewTypeAnnotation(sema.PublicKeyType),
 		RequiredArgumentCount: sema.RequiredArgumentCount(2),
 	},
+
 	func(invocation interpreter.Invocation) trampoline.Trampoline {
 		publicKey := invocation.Arguments[0].(*interpreter.ArrayValue)
 		signAlgo := invocation.Arguments[1].(*interpreter.StringValue)
-		return trampoline.Done{Result: interpreter.NewPublicKeyValue(publicKey, signAlgo)}
+
+		value := interpreter.NewPublicKeyValue(publicKey, signAlgo)
+		return trampoline.Done{Result: value}
 	},
 )

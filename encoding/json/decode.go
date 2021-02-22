@@ -193,6 +193,8 @@ func decodeJSON(v interface{}) cadence.Value {
 		return decodeTypeValue(valueJSON)
 	case capabilityTypeStr:
 		return decodeCapability(valueJSON)
+	case builtinStructTypeStr:
+		return decodeBuiltinStruct(valueJSON)
 	}
 
 	panic(ErrInvalidJSONCadence)
@@ -539,6 +541,24 @@ func decodeStruct(valueJSON interface{}) cadence.Struct {
 		Location:            comp.location,
 		QualifiedIdentifier: comp.qualifiedIdentifier,
 		Fields:              comp.fieldTypes,
+	})
+}
+
+func decodeBuiltinStruct(valueJSON interface{}) cadence.BuiltinStruct {
+	obj := toObject(valueJSON)
+	typeID := obj.GetString(idKey)
+	fields := obj.GetSlice(fieldsKey)
+
+	fieldValues := make([]cadence.Value, len(fields))
+	fieldTypes := make([]cadence.Field, len(fields))
+
+	for i, field := range fields {
+		fieldValues[i], fieldTypes[i] = decodeCompositeField(field)
+	}
+
+	return cadence.NewBuiltinStruct(fieldValues).WithType(&cadence.BuiltinStructType{
+		QualifiedIdentifier: typeID,
+		Fields:              fieldTypes,
 	})
 }
 
