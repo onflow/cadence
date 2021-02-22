@@ -40,7 +40,7 @@ func TestCheckCharacterLiteral(t *testing.T) {
 	aType := RequireGlobalValue(t, checker.Elaboration, "a")
 
 	assert.Equal(t,
-		&sema.CharacterType{},
+		sema.CharacterType,
 		aType,
 	)
 }

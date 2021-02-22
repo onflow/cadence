@@ -38,7 +38,7 @@ func TestCheckCharacter(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Equal(t,
-		&sema.CharacterType{},
+		sema.CharacterType,
 		RequireGlobalValue(t, checker.Elaboration, "x"),
 	)
 }
@@ -54,7 +54,7 @@ func TestCheckCharacterUnicodeScalar(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Equal(t,
-		&sema.CharacterType{},
+		sema.CharacterType,
 		RequireGlobalValue(t, checker.Elaboration, "x"),
 	)
 }

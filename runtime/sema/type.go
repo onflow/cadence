@@ -885,69 +885,6 @@ func (t *GenericType) GetMembers() map[string]MemberResolver {
 	return withBuiltinMembers(t, nil)
 }
 
-// CharacterType represents the character type
-
-type CharacterType struct{}
-
-func (*CharacterType) IsType() {}
-
-func (*CharacterType) String() string {
-	return "Character"
-}
-
-func (*CharacterType) QualifiedString() string {
-	return "Character"
-}
-
-func (*CharacterType) ID() TypeID {
-	return "Character"
-}
-
-func (*CharacterType) Equal(other Type) bool {
-	_, ok := other.(*CharacterType)
-	return ok
-}
-
-func (*CharacterType) IsResourceType() bool {
-	return false
-}
-
-func (*CharacterType) IsInvalidType() bool {
-	return false
-}
-
-func (*CharacterType) IsStorable(_ map[*Member]bool) bool {
-	return true
-}
-
-func (*CharacterType) IsExternallyReturnable(_ map[*Member]bool) bool {
-	return true
-}
-
-func (*CharacterType) IsEquatable() bool {
-	return true
-}
-
-func (*CharacterType) TypeAnnotationState() TypeAnnotationState {
-	return TypeAnnotationStateValid
-}
-
-func (t *CharacterType) RewriteWithRestrictedTypes() (result Type, rewritten bool) {
-	return t, false
-}
-
-func (*CharacterType) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
-	return false
-}
-
-func (t *CharacterType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
-	return t
-}
-
-func (t *CharacterType) GetMembers() map[string]MemberResolver {
-	return withBuiltinMembers(t, nil)
-}
-
 // StringType represents the string type
 type StringType struct{}
 
@@ -1116,7 +1053,7 @@ func (*StringType) AllowsValueIndexingAssignment() bool {
 }
 
 func (t *StringType) ElementType(_ bool) Type {
-	return &CharacterType{}
+	return CharacterType
 }
 
 func (t *StringType) IndexingType() Type {
@@ -4279,7 +4216,7 @@ func init() {
 		&AnyResourceType{},
 		NeverType,
 		BoolType,
-		&CharacterType{},
+		CharacterType,
 		&StringType{},
 		&AddressType{},
 		&AuthAccountType{},

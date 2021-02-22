@@ -97,7 +97,7 @@ func TestCheckEventDeclaration(t *testing.T) {
 		validTypes := append(
 			[]sema.Type{
 				&sema.StringType{},
-				&sema.CharacterType{},
+				sema.CharacterType,
 				sema.BoolType,
 				&sema.AddressType{},
 				sema.MetaType,

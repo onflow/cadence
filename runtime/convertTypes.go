@@ -47,8 +47,6 @@ func ExportType(t sema.Type, results map[sema.TypeID]cadence.Type) cadence.Type 
 			return exportOptionalType(t, results)
 		case *sema.StringType:
 			return cadence.StringType{}
-		case *sema.CharacterType:
-			return cadence.CharacterType{}
 		case *sema.NumberType:
 			return cadence.NumberType{}
 		case *sema.SignedNumberType:
@@ -152,6 +150,8 @@ func ExportType(t sema.Type, results map[sema.TypeID]cadence.Type) cadence.Type 
 			return cadence.MetaType{}
 		case sema.BoolType:
 			return cadence.BoolType{}
+		case sema.CharacterType:
+			return cadence.CharacterType{}
 		}
 
 		panic(fmt.Sprintf("cannot export type of type %T", t))

@@ -648,7 +648,7 @@ func (checker *Checker) checkTypeCompatibility(expression ast.Expression, valueT
 	case *ast.StringExpression:
 		unwrappedTargetType := UnwrapOptionalType(targetType)
 
-		if IsSubType(unwrappedTargetType, &CharacterType{}) {
+		if IsSubType(unwrappedTargetType, CharacterType) {
 			checker.checkCharacterLiteral(typedExpression)
 
 			return true
