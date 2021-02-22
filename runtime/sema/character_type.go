@@ -18,40 +18,16 @@
 
 package sema
 
-import (
-	"github.com/onflow/cadence/runtime/ast"
-	"github.com/onflow/cadence/runtime/common"
-)
-
-const typeIdentifierDocString = `
-The fully-qualified identifier of the type
-`
-
-// MetaType represents the type of a type.
+// CharacterType represents the character type
 //
-var MetaType = &NominalType{
-	Name:                 "Type",
-	QualifiedName:        "Type",
-	TypeID:               "Type",
+var CharacterType = &NominalType{
+	Name:                 "Character",
+	QualifiedName:        "Character",
+	TypeID:               "Character",
 	IsInvalid:            false,
 	IsResource:           false,
 	Storable:             true,
 	Equatable:            true,
 	ExternallyReturnable: true,
 	IsSuperTypeOf:        nil,
-	Members: func(t *NominalType) map[string]MemberResolver {
-		return map[string]MemberResolver{
-			"identifier": {
-				Kind: common.DeclarationKindField,
-				Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
-					return NewPublicConstantFieldMember(
-						t,
-						identifier,
-						&StringType{},
-						typeIdentifierDocString,
-					)
-				},
-			},
-		}
-	},
 }
