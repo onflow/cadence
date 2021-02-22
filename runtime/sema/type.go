@@ -287,7 +287,7 @@ var isInstanceFunctionType = &FunctionType{
 		},
 	},
 	ReturnTypeAnnotation: NewTypeAnnotation(
-		&BoolType{},
+		BoolType,
 	),
 }
 
@@ -882,68 +882,6 @@ func (t *GenericType) Resolve(typeArguments *TypeParameterTypeOrderedMap) Type {
 }
 
 func (t *GenericType) GetMembers() map[string]MemberResolver {
-	return withBuiltinMembers(t, nil)
-}
-
-// BoolType represents the boolean type
-type BoolType struct{}
-
-func (*BoolType) IsType() {}
-
-func (*BoolType) String() string {
-	return "Bool"
-}
-
-func (*BoolType) QualifiedString() string {
-	return "Bool"
-}
-
-func (*BoolType) ID() TypeID {
-	return "Bool"
-}
-
-func (*BoolType) Equal(other Type) bool {
-	_, ok := other.(*BoolType)
-	return ok
-}
-
-func (*BoolType) IsResourceType() bool {
-	return false
-}
-
-func (*BoolType) IsInvalidType() bool {
-	return false
-}
-
-func (*BoolType) IsStorable(_ map[*Member]bool) bool {
-	return true
-}
-
-func (*BoolType) IsExternallyReturnable(_ map[*Member]bool) bool {
-	return true
-}
-
-func (*BoolType) IsEquatable() bool {
-	return true
-}
-
-func (*BoolType) TypeAnnotationState() TypeAnnotationState {
-	return TypeAnnotationStateValid
-}
-
-func (t *BoolType) RewriteWithRestrictedTypes() (result Type, rewritten bool) {
-	return t, false
-}
-
-func (*BoolType) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
-	return false
-}
-
-func (t *BoolType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
-	return t
-}
-
-func (t *BoolType) GetMembers() map[string]MemberResolver {
 	return withBuiltinMembers(t, nil)
 }
 
@@ -3278,7 +3216,7 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 							},
 						},
 						ReturnTypeAnnotation: NewTypeAnnotation(
-							&BoolType{},
+							BoolType,
 						),
 					},
 					arrayTypeContainsFunctionDocString,
@@ -4340,7 +4278,7 @@ func init() {
 		&AnyStructType{},
 		&AnyResourceType{},
 		NeverType,
-		&BoolType{},
+		BoolType,
 		&CharacterType{},
 		&StringType{},
 		&AddressType{},
@@ -7573,7 +7511,7 @@ func capabilityTypeCheckFunctionType(borrowType Type) *FunctionType {
 
 	return &FunctionType{
 		TypeParameters:       typeParameters,
-		ReturnTypeAnnotation: NewTypeAnnotation(&BoolType{}),
+		ReturnTypeAnnotation: NewTypeAnnotation(BoolType),
 	}
 }
 

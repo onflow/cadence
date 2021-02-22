@@ -282,14 +282,6 @@ func LiteralValue(expression ast.Expression, ty sema.Type) (cadence.Value, error
 
 		return cadence.NewString(expression.Value), nil
 
-	case *sema.BoolType:
-		expression, ok := expression.(*ast.BoolExpression)
-		if !ok {
-			return nil, LiteralExpressionTypeError
-		}
-
-		return cadence.NewBool(expression.Value), nil
-
 	case *sema.AddressType:
 		expression, ok := expression.(*ast.IntegerExpression)
 		if !ok {
@@ -301,6 +293,16 @@ func LiteralValue(expression ast.Expression, ty sema.Type) (cadence.Value, error
 		}
 
 		return cadence.BytesToAddress(expression.Value.Bytes()), nil
+	}
+
+	switch ty {
+	case sema.BoolType:
+		expression, ok := expression.(*ast.BoolExpression)
+		if !ok {
+			return nil, LiteralExpressionTypeError
+		}
+
+		return cadence.NewBool(expression.Value), nil
 	}
 
 	switch {

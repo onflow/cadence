@@ -37,7 +37,7 @@ var AssertFunction = NewStandardLibraryFunction(
 			{
 				Label:          sema.ArgumentLabelNotRequired,
 				Identifier:     "condition",
-				TypeAnnotation: sema.NewTypeAnnotation(&sema.BoolType{}),
+				TypeAnnotation: sema.NewTypeAnnotation(sema.BoolType),
 			},
 			{
 				Identifier:     "message",
