@@ -99,7 +99,7 @@ func TestCheckStorable(t *testing.T) {
 		&sema.CapabilityType{},
 		&sema.StringType{},
 		&sema.BoolType{},
-		&sema.MetaType{},
+		sema.MetaType,
 		&sema.CharacterType{},
 		&sema.AnyStructType{},
 		&sema.AnyResourceType{},

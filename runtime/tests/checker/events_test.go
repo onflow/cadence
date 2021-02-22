@@ -100,7 +100,7 @@ func TestCheckEventDeclaration(t *testing.T) {
 				&sema.CharacterType{},
 				&sema.BoolType{},
 				&sema.AddressType{},
-				&sema.MetaType{},
+				sema.MetaType,
 				sema.PathType,
 				sema.StoragePathType,
 				sema.PublicPathType,

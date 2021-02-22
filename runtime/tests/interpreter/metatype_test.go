@@ -111,7 +111,7 @@ func TestInterpretMetaTypeEquality(t *testing.T) {
 		valueDeclarations := stdlib.StandardLibraryValues{
 			{
 				Name: "unknownType",
-				Type: &sema.MetaType{},
+				Type: sema.MetaType,
 				Value: interpreter.TypeValue{
 					Type: nil,
 				},
@@ -149,7 +149,7 @@ func TestInterpretMetaTypeEquality(t *testing.T) {
 		valueDeclarations := stdlib.StandardLibraryValues{
 			{
 				Name: "unknownType1",
-				Type: &sema.MetaType{},
+				Type: sema.MetaType,
 				Value: interpreter.TypeValue{
 					Type: nil,
 				},
@@ -157,7 +157,7 @@ func TestInterpretMetaTypeEquality(t *testing.T) {
 			},
 			{
 				Name: "unknownType2",
-				Type: &sema.MetaType{},
+				Type: sema.MetaType,
 				Value: interpreter.TypeValue{
 					Type: nil,
 				},
@@ -232,7 +232,7 @@ func TestInterpretMetaTypeIdentifier(t *testing.T) {
 		valueDeclarations := stdlib.StandardLibraryValues{
 			{
 				Name: "unknownType",
-				Type: &sema.MetaType{},
+				Type: sema.MetaType,
 				Value: interpreter.TypeValue{
 					Type: nil,
 				},
@@ -356,7 +356,7 @@ func TestInterpretIsInstance(t *testing.T) {
 	valueDeclarations := stdlib.StandardLibraryValues{
 		{
 			Name: "unknownType",
-			Type: &sema.MetaType{},
+			Type: sema.MetaType,
 			Value: interpreter.TypeValue{
 				Type: nil,
 			},
