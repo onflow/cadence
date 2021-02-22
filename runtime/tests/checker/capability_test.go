@@ -317,7 +317,7 @@ func TestCheckCapability_check(t *testing.T) {
 				okType := RequireGlobalValue(t, checker.Elaboration, "ok")
 
 				require.Equal(t,
-					&sema.BoolType{},
+					sema.BoolType,
 					okType,
 				)
 			})
@@ -342,7 +342,7 @@ func TestCheckCapability_check(t *testing.T) {
 				okType := RequireGlobalValue(t, checker.Elaboration, "ok")
 
 				require.Equal(t,
-					&sema.BoolType{},
+					sema.BoolType,
 					okType,
 				)
 			})
@@ -367,7 +367,7 @@ func TestCheckCapability_check(t *testing.T) {
 				okType := RequireGlobalValue(t, checker.Elaboration, "ok")
 
 				require.Equal(t,
-					&sema.BoolType{},
+					sema.BoolType,
 					okType,
 				)
 			})
@@ -392,7 +392,7 @@ func TestCheckCapability_check(t *testing.T) {
 				okType := RequireGlobalValue(t, checker.Elaboration, "ok")
 
 				require.Equal(t,
-					&sema.BoolType{},
+					sema.BoolType,
 					okType,
 				)
 			})

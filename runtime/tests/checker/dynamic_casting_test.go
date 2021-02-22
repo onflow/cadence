@@ -233,7 +233,7 @@ func TestCheckDynamicCastingNumber(t *testing.T) {
 						}
 
 						for _, otherType := range []sema.Type{
-							&sema.BoolType{},
+							sema.BoolType,
 							&sema.StringType{},
 							sema.VoidType,
 						} {
@@ -302,7 +302,7 @@ func TestCheckDynamicCastingVoid(t *testing.T) {
 				}
 
 				for _, otherType := range []sema.Type{
-					&sema.BoolType{},
+					sema.BoolType,
 					&sema.StringType{},
 					&sema.IntType{},
 				} {
@@ -366,7 +366,7 @@ func TestCheckDynamicCastingString(t *testing.T) {
 				}
 
 				for _, otherType := range []sema.Type{
-					&sema.BoolType{},
+					sema.BoolType,
 					sema.VoidType,
 					&sema.IntType{},
 				} {
@@ -400,7 +400,7 @@ func TestCheckDynamicCastingBool(t *testing.T) {
 
 	types := []sema.Type{
 		&sema.AnyStructType{},
-		&sema.BoolType{},
+		sema.BoolType,
 	}
 
 	for _, operation := range dynamicCastingOperations {
@@ -496,7 +496,7 @@ func TestCheckDynamicCastingAddress(t *testing.T) {
 					&sema.StringType{},
 					sema.VoidType,
 					&sema.IntType{},
-					&sema.BoolType{},
+					sema.BoolType,
 				} {
 
 					t.Run(fmt.Sprintf("invalid: from %s to %s", fromType, otherType), func(t *testing.T) {
@@ -582,7 +582,7 @@ func TestCheckDynamicCastingStruct(t *testing.T) {
 					&sema.StringType{},
 					sema.VoidType,
 					&sema.IntType{},
-					&sema.BoolType{},
+					sema.BoolType,
 				} {
 
 					t.Run(fmt.Sprintf("invalid: from %s to %s", fromType, otherType), func(t *testing.T) {
@@ -1047,7 +1047,7 @@ func TestCheckDynamicCastingSome(t *testing.T) {
 				for _, otherType := range []sema.Type{
 					&sema.OptionalType{Type: &sema.StringType{}},
 					&sema.OptionalType{Type: sema.VoidType},
-					&sema.OptionalType{Type: &sema.BoolType{}},
+					&sema.OptionalType{Type: sema.BoolType},
 				} {
 
 					t.Run(fmt.Sprintf("invalid: from %s to %s", fromType, otherType), func(t *testing.T) {
@@ -1109,7 +1109,7 @@ func TestCheckDynamicCastingArray(t *testing.T) {
 				for _, otherType := range []sema.Type{
 					&sema.StringType{},
 					sema.VoidType,
-					&sema.BoolType{},
+					sema.BoolType,
 				} {
 
 					t.Run(fmt.Sprintf("invalid: from %s to %s", fromType, otherType), func(t *testing.T) {
@@ -1176,7 +1176,7 @@ func TestCheckDynamicCastingDictionary(t *testing.T) {
 				for _, otherType := range []sema.Type{
 					&sema.StringType{},
 					sema.VoidType,
-					&sema.BoolType{},
+					sema.BoolType,
 				} {
 
 					t.Run(fmt.Sprintf("invalid: from %s to %s", fromType, otherType), func(t *testing.T) {
@@ -1264,7 +1264,7 @@ func TestCheckDynamicCastingCapability(t *testing.T) {
 				for _, otherType := range []sema.Type{
 					&sema.StringType{},
 					sema.VoidType,
-					&sema.BoolType{},
+					sema.BoolType,
 				} {
 
 					t.Run(fmt.Sprintf("invalid: from %s to Capability<&%s>", fromType, otherType), func(t *testing.T) {

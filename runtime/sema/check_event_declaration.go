@@ -56,7 +56,7 @@ func (checker *Checker) checkEventParameters(
 //
 func IsValidEventParameterType(t Type) bool {
 	switch t := t.(type) {
-	case *BoolType, *StringType, *CharacterType, *AddressType:
+	case *StringType, *CharacterType, *AddressType:
 		return true
 
 	case *OptionalType:
@@ -89,7 +89,7 @@ func IsValidEventParameterType(t Type) bool {
 
 	default:
 		switch t {
-		case MetaType:
+		case MetaType, BoolType:
 			return true
 		}
 

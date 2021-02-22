@@ -130,7 +130,7 @@ func TestCheckIsInstance(t *testing.T) {
 			if testCase.valid {
 				require.NoError(t, err)
 				assert.Equal(t,
-					&sema.BoolType{},
+					sema.BoolType,
 					RequireGlobalValue(t, checker.Elaboration, "result"),
 				)
 			} else {

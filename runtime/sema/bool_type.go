@@ -16,31 +16,18 @@
  * limitations under the License.
  */
 
-package checker
+package sema
 
-import (
-	"testing"
-
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-
-	"github.com/onflow/cadence/runtime/sema"
-)
-
-func TestCheckBoolean(t *testing.T) {
-
-	t.Parallel()
-
-	checker, err := ParseAndCheck(t, `
-        let x = true
-    `)
-
-	require.NoError(t, err)
-
-	xType := RequireGlobalValue(t, checker.Elaboration, "x")
-
-	assert.Equal(t,
-		sema.BoolType,
-		xType,
-	)
+// BoolType represents the boolean type
+//
+var BoolType = &NominalType{
+	Name:                 "Bool",
+	QualifiedName:        "Bool",
+	TypeID:               "Bool",
+	IsInvalid:            false,
+	IsResource:           false,
+	Storable:             true,
+	Equatable:            true,
+	ExternallyReturnable: true,
+	IsSuperTypeOf:        nil,
 }

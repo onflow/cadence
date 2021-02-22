@@ -178,7 +178,7 @@ func (i PrimitiveStaticType) SemaType() sema.Type {
 		return &sema.AnyResourceType{}
 
 	case PrimitiveStaticTypeBool:
-		return &sema.BoolType{}
+		return sema.BoolType
 
 	case PrimitiveStaticTypeAddress:
 		return &sema.AddressType{}
@@ -308,9 +308,6 @@ func ConvertSemaToPrimitiveStaticType(t sema.Type) PrimitiveStaticType {
 	case *sema.AnyResourceType:
 		return PrimitiveStaticTypeAnyResource
 
-	case *sema.BoolType:
-		return PrimitiveStaticTypeBool
-
 	case *sema.AddressType:
 		return PrimitiveStaticTypeAddress
 
@@ -424,6 +421,8 @@ func ConvertSemaToPrimitiveStaticType(t sema.Type) PrimitiveStaticType {
 		return PrimitiveStaticTypeVoid
 	case sema.MetaType:
 		return PrimitiveStaticTypeMetaType
+	case sema.BoolType:
+		return PrimitiveStaticTypeBool
 	}
 
 	return PrimitiveStaticTypeUnknown

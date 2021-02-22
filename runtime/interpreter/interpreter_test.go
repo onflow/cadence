@@ -44,8 +44,8 @@ func TestInterpreterOptionalBoxing(t *testing.T) {
 	t.Run("Bool to Bool?", func(t *testing.T) {
 		value := inter.boxOptional(
 			BoolValue(true),
-			&sema.BoolType{},
-			&sema.OptionalType{Type: &sema.BoolType{}},
+			sema.BoolType,
+			&sema.OptionalType{Type: sema.BoolType},
 		)
 		assert.Equal(t,
 			NewSomeValueOwningNonCopying(BoolValue(true)),
@@ -56,8 +56,8 @@ func TestInterpreterOptionalBoxing(t *testing.T) {
 	t.Run("Bool? to Bool?", func(t *testing.T) {
 		value := inter.boxOptional(
 			NewSomeValueOwningNonCopying(BoolValue(true)),
-			&sema.OptionalType{Type: &sema.BoolType{}},
-			&sema.OptionalType{Type: &sema.BoolType{}},
+			&sema.OptionalType{Type: sema.BoolType},
+			&sema.OptionalType{Type: sema.BoolType},
 		)
 		assert.Equal(t,
 			NewSomeValueOwningNonCopying(BoolValue(true)),
@@ -68,8 +68,8 @@ func TestInterpreterOptionalBoxing(t *testing.T) {
 	t.Run("Bool? to Bool??", func(t *testing.T) {
 		value := inter.boxOptional(
 			NewSomeValueOwningNonCopying(BoolValue(true)),
-			&sema.OptionalType{Type: &sema.BoolType{}},
-			&sema.OptionalType{Type: &sema.OptionalType{Type: &sema.BoolType{}}},
+			&sema.OptionalType{Type: sema.BoolType},
+			&sema.OptionalType{Type: &sema.OptionalType{Type: sema.BoolType}},
 		)
 		assert.Equal(t,
 			NewSomeValueOwningNonCopying(
@@ -84,7 +84,7 @@ func TestInterpreterOptionalBoxing(t *testing.T) {
 		value := inter.boxOptional(
 			NilValue{},
 			&sema.OptionalType{Type: sema.NeverType},
-			&sema.OptionalType{Type: &sema.OptionalType{Type: &sema.BoolType{}}},
+			&sema.OptionalType{Type: &sema.OptionalType{Type: sema.BoolType}},
 		)
 		assert.Equal(t,
 			NilValue{},
@@ -97,7 +97,7 @@ func TestInterpreterOptionalBoxing(t *testing.T) {
 		value := inter.boxOptional(
 			NewSomeValueOwningNonCopying(NilValue{}),
 			&sema.OptionalType{Type: &sema.OptionalType{Type: sema.NeverType}},
-			&sema.OptionalType{Type: &sema.OptionalType{Type: &sema.BoolType{}}},
+			&sema.OptionalType{Type: &sema.OptionalType{Type: sema.BoolType}},
 		)
 		assert.Equal(t,
 			NilValue{},
@@ -133,7 +133,7 @@ func TestInterpreterBoxing(t *testing.T) {
 					),
 					inter.convertAndBox(
 						BoolValue(true),
-						&sema.BoolType{},
+						sema.BoolType,
 						&sema.OptionalType{Type: anyType},
 					),
 				)
@@ -148,7 +148,7 @@ func TestInterpreterBoxing(t *testing.T) {
 					),
 					inter.convertAndBox(
 						NewSomeValueOwningNonCopying(BoolValue(true)),
-						&sema.OptionalType{Type: &sema.BoolType{}},
+						&sema.OptionalType{Type: sema.BoolType},
 						&sema.OptionalType{Type: anyType},
 					),
 				)

@@ -43,7 +43,7 @@ func TestOptionalSubtyping(t *testing.T) {
 		assert.False(t,
 			IsSubType(
 				&OptionalType{Type: &IntType{}},
-				&OptionalType{Type: &BoolType{}},
+				&OptionalType{Type: BoolType},
 			),
 		)
 	})

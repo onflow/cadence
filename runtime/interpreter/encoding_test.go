@@ -3504,7 +3504,7 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 			encodeDecodeTest{
 				value: LinkValue{
 					TargetPath: publicPathValue,
-					Type:       ConvertSemaToPrimitiveStaticType(&sema.BoolType{}),
+					Type:       ConvertSemaToPrimitiveStaticType(sema.BoolType),
 				},
 				encoded: append(
 					expectedLinkEncodingPrefix[:],
@@ -4199,7 +4199,7 @@ func TestEncodeDecodeTypeValue(t *testing.T) {
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				value: TypeValue{
-					Type: ConvertSemaToPrimitiveStaticType(&sema.BoolType{}),
+					Type: ConvertSemaToPrimitiveStaticType(sema.BoolType),
 				},
 				encoded: []byte{
 					// tag

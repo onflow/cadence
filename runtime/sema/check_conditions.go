@@ -47,11 +47,11 @@ func (checker *Checker) VisitCondition(condition *ast.Condition) ast.Repr {
 	testType := condition.Test.Accept(checker).(Type)
 
 	if !testType.IsInvalidType() &&
-		!IsSubType(testType, &BoolType{}) {
+		!IsSubType(testType, BoolType) {
 
 		checker.report(
 			&TypeMismatchError{
-				ExpectedType: &BoolType{},
+				ExpectedType: BoolType,
 				ActualType:   testType,
 				Range:        ast.NewRangeFromPositioned(condition.Test),
 			},

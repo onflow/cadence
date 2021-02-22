@@ -3829,13 +3829,11 @@ func IsSubType(subType DynamicType, superType sema.Type) bool {
 		}
 
 	case BoolDynamicType:
-		switch superType.(type) {
-		case *sema.BoolType, *sema.AnyStructType:
+		if _, ok := superType.(*sema.AnyStructType); ok {
 			return true
-
-		default:
-			return false
 		}
+
+		return superType == sema.BoolType
 
 	case AddressDynamicType:
 		switch superType.(type) {

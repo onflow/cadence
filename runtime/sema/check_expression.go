@@ -168,14 +168,15 @@ func (checker *Checker) VisitExpressionStatement(statement *ast.ExpressionStatem
 }
 
 func (checker *Checker) VisitBoolExpression(_ *ast.BoolExpression) ast.Repr {
-	return &BoolType{}
+	return BoolType
+}
+
+var TypeOfNil = &OptionalType{
+	Type: NeverType,
 }
 
 func (checker *Checker) VisitNilExpression(_ *ast.NilExpression) ast.Repr {
-	// TODO: verify
-	return &OptionalType{
-		Type: NeverType,
-	}
+	return TypeOfNil
 }
 
 func (checker *Checker) VisitIntegerExpression(_ *ast.IntegerExpression) ast.Repr {
