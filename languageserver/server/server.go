@@ -1477,9 +1477,7 @@ func locationToPath(location common.Location) string {
 		return ""
 	}
 
-	s := string(stringLocation)
-
-	return s
+	return string(stringLocation)
 }
 
 func uriToLocation(uri protocol.DocumentUri) common.StringLocation {
