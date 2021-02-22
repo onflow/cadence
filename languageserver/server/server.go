@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path"
 	"strconv"
 	"strings"
 	"time"
@@ -148,7 +149,7 @@ type AddressContractNamesResolver func(address common.Address) ([]string, error)
 
 // StringImportResolver is a function that is used to resolve string imports
 //
-type StringImportResolver func(mainPath string, location common.StringLocation) (string, error)
+type StringImportResolver func(location common.StringLocation) (string, error)
 
 // CodeLensProvider is a function that is used to provide code lenses for the given checker
 //
@@ -1189,7 +1190,7 @@ func (s *Server) getDiagnostics(
 	var checker *sema.Checker
 	checker, diagnosticsErr = sema.NewChecker(
 		program,
-		common.StringLocation(uri),
+		uriToLocation(uri),
 		sema.WithPredeclaredValues(valueDeclarations),
 		sema.WithPredeclaredTypes(typeDeclarations),
 		sema.WithLocationHandler(
@@ -1271,7 +1272,19 @@ func (s *Server) getDiagnostics(
 
 				default:
 
-					importedProgram, err := s.resolveImport(mainPath, importedLocation)
+					if isPathLocation(importedLocation) {
+						// import may be a relative path and therefore should be normalized
+						// against the current location
+						importedLocation = normalizePathLocation(checker.Location, importedLocation)
+
+						if checker.Location == importedLocation {
+							return nil, &sema.CheckerError{
+								Errors: []error{fmt.Errorf("cannot import current file: %s", importedLocation)},
+							}
+						}
+					}
+
+					importedProgram, err := s.resolveImport(importedLocation)
 					if err != nil {
 						return nil, &sema.CheckerError{
 							Errors: []error{err},
@@ -1399,13 +1412,7 @@ func parse(conn protocol.Conn, code, location string) (*ast.Program, error) {
 	return program, err
 }
 
-func (s *Server) resolveImport(
-	mainPath string,
-	location common.Location,
-) (
-	program *ast.Program,
-	err error,
-) {
+func (s *Server) resolveImport(location common.Location) (program *ast.Program, err error) {
 	// NOTE: important, *DON'T* return an error when a location type
 	// is not supported: the import location can simply not be resolved,
 	// no error occurred while resolving it.
@@ -1420,7 +1427,8 @@ func (s *Server) resolveImport(
 		if s.resolveStringImport == nil {
 			return nil, nil
 		}
-		code, err = s.resolveStringImport(mainPath, loc)
+
+		code, err = s.resolveStringImport(loc)
 
 	case common.AddressLocation:
 		if s.resolveAddressImport == nil {
@@ -1436,6 +1444,52 @@ func (s *Server) resolveImport(
 	}
 
 	return parser2.ParseProgram(code)
+}
+
+func isPathLocation(location common.Location) bool {
+	return locationToPath(location) != ""
+}
+
+func normalizePathLocation(base, relative common.Location) common.Location {
+	basePath := locationToPath(base)
+	relativePath := locationToPath(relative)
+
+	if basePath == "" || relativePath == "" {
+		return relative
+	}
+
+	normalizedPath := normalizePath(basePath, relativePath)
+
+	return common.StringLocation(normalizedPath)
+}
+
+func normalizePath(basePath, relativePath string) string {
+	if path.IsAbs(relativePath) {
+		return relativePath
+	}
+
+	return path.Join(path.Dir(basePath), relativePath)
+}
+
+func locationToPath(location common.Location) string {
+	stringLocation, ok := location.(common.StringLocation)
+	if !ok {
+		return ""
+	}
+
+	s := string(stringLocation)
+
+	return s
+}
+
+func uriToLocation(uri protocol.DocumentUri) common.StringLocation {
+	s := string(uri)
+
+	if strings.HasPrefix(s, filePrefix) {
+		return common.StringLocation(s[len(filePrefix):])
+	}
+
+	return common.StringLocation(s)
 }
 
 func (s *Server) GetDocument(uri protocol.DocumentUri) (doc Document, ok bool) {
