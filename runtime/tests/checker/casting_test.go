@@ -91,7 +91,7 @@ func TestCheckCastingIntLiteralToAnyStruct(t *testing.T) {
 	xType := RequireGlobalValue(t, checker.Elaboration, "x")
 
 	assert.Equal(t,
-		&sema.AnyStructType{},
+		sema.AnyStructType,
 		xType,
 	)
 
@@ -855,7 +855,7 @@ func TestCheckCastResourceType(t *testing.T) {
 
 			require.IsType(t,
 				&sema.RestrictedType{
-					Type: &sema.AnyResourceType{},
+					Type: sema.AnyResourceType,
 					Restrictions: []*sema.InterfaceType{
 						iType.(*sema.InterfaceType),
 					},
@@ -913,7 +913,7 @@ func TestCheckCastResourceType(t *testing.T) {
 
 			require.IsType(t,
 				&sema.RestrictedType{
-					Type: &sema.AnyResourceType{},
+					Type: sema.AnyResourceType,
 					Restrictions: []*sema.InterfaceType{
 						i2Type.(*sema.InterfaceType),
 					},
@@ -1907,7 +1907,7 @@ func TestCheckCastStructType(t *testing.T) {
 
 			require.IsType(t,
 				&sema.RestrictedType{
-					Type: &sema.AnyStructType{},
+					Type: sema.AnyStructType,
 					Restrictions: []*sema.InterfaceType{
 						iType.(*sema.InterfaceType),
 					},
@@ -1958,7 +1958,7 @@ func TestCheckCastStructType(t *testing.T) {
 
 			require.IsType(t,
 				&sema.RestrictedType{
-					Type: &sema.AnyStructType{},
+					Type: sema.AnyStructType,
 					Restrictions: []*sema.InterfaceType{
 						i2Type.(*sema.InterfaceType),
 					},
@@ -2638,8 +2638,8 @@ func TestCheckCastAuthorizedResourceReferenceType(t *testing.T) {
 	})
 
 	for _, ty := range []sema.Type{
-		&sema.AnyResourceType{},
-		&sema.AnyType{},
+		sema.AnyResourceType,
+		sema.AnyType,
 	} {
 
 		t.Run(fmt.Sprintf("restricted %s -> conforming restricted type", ty), func(t *testing.T) {
@@ -2841,8 +2841,8 @@ func TestCheckCastAuthorizedResourceReferenceType(t *testing.T) {
 	})
 
 	for _, ty := range []sema.Type{
-		&sema.AnyResourceType{},
-		&sema.AnyType{},
+		sema.AnyResourceType,
+		sema.AnyType,
 	} {
 
 		t.Run(fmt.Sprintf("restricted %s -> conforming resource", ty), func(t *testing.T) {
@@ -3183,8 +3183,8 @@ func TestCheckCastAuthorizedResourceReferenceType(t *testing.T) {
 		})
 
 		for _, otherType := range []sema.Type{
-			&sema.AnyResourceType{},
-			&sema.AnyType{},
+			sema.AnyResourceType,
+			sema.AnyType,
 		} {
 
 			t.Run(fmt.Sprintf("restricted %s -> restricted %s: fewer restrictions", ty, otherType), func(t *testing.T) {
@@ -3214,15 +3214,13 @@ func TestCheckCastAuthorizedResourceReferenceType(t *testing.T) {
 						),
 					)
 
-					if _, ok := ty.(*sema.AnyType); ok {
-						if _, ok = otherType.(*sema.AnyResourceType); ok {
+					if ty == sema.AnyType && otherType == sema.AnyResourceType {
 
-							errs := ExpectCheckerErrors(t, err, 1)
+						errs := ExpectCheckerErrors(t, err, 1)
 
-							assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+						assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 
-							return
-						}
+						return
 					}
 
 					require.NoError(t, err)
@@ -3428,8 +3426,8 @@ func TestCheckCastAuthorizedResourceReferenceType(t *testing.T) {
 		})
 
 		for _, otherType := range []sema.Type{
-			&sema.AnyResourceType{},
-			&sema.AnyType{},
+			sema.AnyResourceType,
+			sema.AnyType,
 		} {
 			t.Run(fmt.Sprintf("restricted %s -> %s", ty, otherType), func(t *testing.T) {
 
@@ -3458,15 +3456,13 @@ func TestCheckCastAuthorizedResourceReferenceType(t *testing.T) {
 						),
 					)
 
-					if _, ok := ty.(*sema.AnyType); ok {
-						if _, ok = otherType.(*sema.AnyResourceType); ok {
+					if ty == sema.AnyType && otherType == sema.AnyResourceType {
 
-							errs := ExpectCheckerErrors(t, err, 1)
+						errs := ExpectCheckerErrors(t, err, 1)
 
-							assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+						assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 
-							return
-						}
+						return
 					}
 
 					require.NoError(t, err)
@@ -3727,8 +3723,8 @@ func TestCheckCastAuthorizedStructReferenceType(t *testing.T) {
 	})
 
 	for _, ty := range []sema.Type{
-		&sema.AnyStructType{},
-		&sema.AnyType{},
+		sema.AnyStructType,
+		sema.AnyType,
 	} {
 		t.Run(fmt.Sprintf("restricted %s -> conforming restricted type", ty), func(t *testing.T) {
 
@@ -3932,8 +3928,8 @@ func TestCheckCastAuthorizedStructReferenceType(t *testing.T) {
 	})
 
 	for _, ty := range []sema.Type{
-		&sema.AnyStructType{},
-		&sema.AnyType{},
+		sema.AnyStructType,
+		sema.AnyType,
 	} {
 
 		t.Run(fmt.Sprintf("restricted %s -> conforming struct", ty), func(t *testing.T) {
@@ -4274,8 +4270,8 @@ func TestCheckCastAuthorizedStructReferenceType(t *testing.T) {
 		})
 
 		for _, otherType := range []sema.Type{
-			&sema.AnyStructType{},
-			&sema.AnyType{},
+			sema.AnyStructType,
+			sema.AnyType,
 		} {
 
 			t.Run(fmt.Sprintf("restricted %s -> restricted %s: fewer restrictions", ty, otherType), func(t *testing.T) {
@@ -4305,15 +4301,13 @@ func TestCheckCastAuthorizedStructReferenceType(t *testing.T) {
 						),
 					)
 
-					if _, ok := ty.(*sema.AnyType); ok {
-						if _, ok := otherType.(*sema.AnyStructType); ok {
+					if ty == sema.AnyType && otherType == sema.AnyStructType {
 
-							errs := ExpectCheckerErrors(t, err, 1)
+						errs := ExpectCheckerErrors(t, err, 1)
 
-							assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+						assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 
-							return
-						}
+						return
 					}
 
 					require.NoError(t, err)
@@ -4735,8 +4729,8 @@ func TestCheckCastUnauthorizedResourceReferenceType(t *testing.T) {
 			})
 
 			for _, ty := range []sema.Type{
-				&sema.AnyResourceType{},
-				&sema.AnyType{},
+				sema.AnyResourceType,
+				sema.AnyType,
 			} {
 
 				t.Run(fmt.Sprintf("restricted %s -> conforming restricted type", ty), func(t *testing.T) {
@@ -4860,8 +4854,8 @@ func TestCheckCastUnauthorizedResourceReferenceType(t *testing.T) {
 			})
 
 			for _, ty := range []sema.Type{
-				&sema.AnyResourceType{},
-				&sema.AnyType{},
+				sema.AnyResourceType,
+				sema.AnyType,
 			} {
 
 				t.Run(fmt.Sprintf("restricted %s -> conforming resource", ty), func(t *testing.T) {
@@ -5054,8 +5048,8 @@ func TestCheckCastUnauthorizedResourceReferenceType(t *testing.T) {
 				})
 
 				for _, otherType := range []sema.Type{
-					&sema.AnyResourceType{},
-					&sema.AnyType{},
+					sema.AnyResourceType,
+					sema.AnyType,
 				} {
 
 					t.Run(fmt.Sprintf("restricted %s -> restricted %s: fewer restrictions", ty, otherType), func(t *testing.T) {
@@ -5079,15 +5073,13 @@ func TestCheckCastUnauthorizedResourceReferenceType(t *testing.T) {
 							),
 						)
 
-						if _, ok := ty.(*sema.AnyType); ok {
-							if _, ok := otherType.(*sema.AnyResourceType); ok {
+						if ty == sema.AnyType && otherType == sema.AnyResourceType {
 
-								errs := ExpectCheckerErrors(t, err, 1)
+							errs := ExpectCheckerErrors(t, err, 1)
 
-								assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+							assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 
-								return
-							}
+							return
 						}
 
 						require.NoError(t, err)
@@ -5192,15 +5184,13 @@ func TestCheckCastUnauthorizedResourceReferenceType(t *testing.T) {
 							),
 						)
 
-						if _, ok := ty.(*sema.AnyType); ok {
-							if _, ok := otherType.(*sema.AnyResourceType); ok {
+						if ty == sema.AnyType && otherType == sema.AnyResourceType {
 
-								errs := ExpectCheckerErrors(t, err, 1)
+							errs := ExpectCheckerErrors(t, err, 1)
 
-								assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+							assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 
-								return
-							}
+							return
 						}
 
 						require.NoError(t, err)
@@ -5386,8 +5376,8 @@ func TestCheckCastUnauthorizedStructReferenceType(t *testing.T) {
 			})
 
 			for _, ty := range []sema.Type{
-				&sema.AnyStructType{},
-				&sema.AnyType{},
+				sema.AnyStructType,
+				sema.AnyType,
 			} {
 
 				t.Run(fmt.Sprintf("restricted %s -> conforming restricted type", ty), func(t *testing.T) {
@@ -5511,8 +5501,8 @@ func TestCheckCastUnauthorizedStructReferenceType(t *testing.T) {
 			})
 
 			for _, ty := range []sema.Type{
-				&sema.AnyStructType{},
-				&sema.AnyType{},
+				sema.AnyStructType,
+				sema.AnyType,
 			} {
 
 				t.Run(fmt.Sprintf("restricted %s -> conforming resource", ty), func(t *testing.T) {
@@ -5704,8 +5694,8 @@ func TestCheckCastUnauthorizedStructReferenceType(t *testing.T) {
 				})
 
 				for _, otherType := range []sema.Type{
-					&sema.AnyStructType{},
-					&sema.AnyType{},
+					sema.AnyStructType,
+					sema.AnyType,
 				} {
 
 					t.Run(fmt.Sprintf("restricted %s -> restricted %s: fewer restrictions", ty, otherType), func(t *testing.T) {
@@ -5729,15 +5719,13 @@ func TestCheckCastUnauthorizedStructReferenceType(t *testing.T) {
 							),
 						)
 
-						if _, ok := ty.(*sema.AnyType); ok {
-							if _, ok := otherType.(*sema.AnyStructType); ok {
+						if ty == sema.AnyType && otherType == sema.AnyStructType {
 
-								errs := ExpectCheckerErrors(t, err, 1)
+							errs := ExpectCheckerErrors(t, err, 1)
 
-								assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+							assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 
-								return
-							}
+							return
 						}
 
 						require.NoError(t, err)

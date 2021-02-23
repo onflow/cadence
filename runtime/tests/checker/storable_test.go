@@ -101,8 +101,8 @@ func TestCheckStorable(t *testing.T) {
 		sema.BoolType,
 		sema.MetaType,
 		sema.CharacterType,
-		&sema.AnyStructType{},
-		&sema.AnyResourceType{},
+		sema.AnyStructType,
+		sema.AnyResourceType,
 	)
 
 	for _, storableType := range storableTypes {

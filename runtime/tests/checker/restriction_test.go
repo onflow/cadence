@@ -845,7 +845,7 @@ func TestCheckRestrictedTypeNoType(t *testing.T) {
 
 		ty := rType.(*sema.RestrictedType)
 
-		assert.IsType(t, &sema.AnyResourceType{}, ty.Type)
+		assert.IsType(t, sema.AnyResourceType, ty.Type)
 
 		require.Len(t, ty.Restrictions, 1)
 		assert.Same(t,
@@ -869,7 +869,7 @@ func TestCheckRestrictedTypeNoType(t *testing.T) {
 
 		ty := rType.(*sema.RestrictedType)
 
-		assert.IsType(t, &sema.AnyStructType{}, ty.Type)
+		assert.IsType(t, sema.AnyStructType, ty.Type)
 
 		require.Len(t, ty.Restrictions, 1)
 		assert.Same(t,
@@ -893,7 +893,7 @@ func TestCheckRestrictedTypeNoType(t *testing.T) {
 
 		ty := rType.(*sema.RestrictedType)
 
-		assert.IsType(t, &sema.AnyResourceType{}, ty.Type)
+		assert.IsType(t, sema.AnyResourceType, ty.Type)
 
 		require.Len(t, ty.Restrictions, 2)
 		assert.Same(t,
@@ -921,7 +921,7 @@ func TestCheckRestrictedTypeNoType(t *testing.T) {
 
 		ty := rType.(*sema.RestrictedType)
 
-		assert.IsType(t, &sema.AnyStructType{}, ty.Type)
+		assert.IsType(t, sema.AnyStructType, ty.Type)
 
 		require.Len(t, ty.Restrictions, 2)
 		assert.Same(t,
@@ -965,7 +965,7 @@ func TestCheckRestrictedTypeNoType(t *testing.T) {
 
 		ty := rType.(*sema.RestrictedType)
 
-		assert.IsType(t, &sema.AnyResourceType{}, ty.Type)
+		assert.IsType(t, sema.AnyResourceType, ty.Type)
 
 		require.Len(t, ty.Restrictions, 1)
 		assert.Same(t,
@@ -992,7 +992,7 @@ func TestCheckRestrictedTypeNoType(t *testing.T) {
 
 		ty := rType.(*sema.RestrictedType)
 
-		assert.IsType(t, &sema.AnyStructType{}, ty.Type)
+		assert.IsType(t, sema.AnyStructType, ty.Type)
 
 		require.Len(t, ty.Restrictions, 1)
 		assert.Same(t,
@@ -1019,7 +1019,7 @@ func TestCheckRestrictedTypeNoType(t *testing.T) {
 
 		ty := rType.(*sema.RestrictedType)
 
-		assert.IsType(t, &sema.AnyResourceType{}, ty.Type)
+		assert.IsType(t, sema.AnyResourceType, ty.Type)
 
 		require.Len(t, ty.Restrictions, 2)
 		assert.Same(t,
@@ -1050,7 +1050,7 @@ func TestCheckRestrictedTypeNoType(t *testing.T) {
 
 		ty := rType.(*sema.RestrictedType)
 
-		assert.IsType(t, &sema.AnyStructType{}, ty.Type)
+		assert.IsType(t, sema.AnyStructType, ty.Type)
 
 		require.Len(t, ty.Restrictions, 2)
 		assert.Same(t,

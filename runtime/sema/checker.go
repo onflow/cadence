@@ -39,7 +39,7 @@ var beforeType = func() *FunctionType {
 
 	typeParameter := &TypeParameter{
 		Name:      "T",
-		TypeBound: &AnyStructType{},
+		TypeBound: AnyStructType,
 	}
 
 	typeAnnotation := NewTypeAnnotation(
@@ -1050,10 +1050,10 @@ func (checker *Checker) convertRestrictedType(t *ast.RestrictedType) Type {
 			)
 
 		case common.CompositeKindResource:
-			restrictedType = &AnyResourceType{}
+			restrictedType = AnyResourceType
 
 		case common.CompositeKindStructure:
-			restrictedType = &AnyStructType{}
+			restrictedType = AnyStructType
 
 		default:
 			panic(errors.NewUnreachableError())
@@ -1074,9 +1074,7 @@ func (checker *Checker) convertRestrictedType(t *ast.RestrictedType) Type {
 
 	var compositeType *CompositeType
 
-	switch typeResult := restrictedType.(type) {
-	case *CompositeType:
-
+	if typeResult, ok := restrictedType.(*CompositeType); ok {
 		switch typeResult.Kind {
 
 		case common.CompositeKindResource,
@@ -1087,13 +1085,16 @@ func (checker *Checker) convertRestrictedType(t *ast.RestrictedType) Type {
 		default:
 			reportInvalidRestrictedType()
 		}
+	} else {
 
-	case *AnyResourceType, *AnyStructType, *AnyType:
-		break
+		switch restrictedType {
+		case AnyResourceType, AnyStructType, AnyType:
+			break
 
-	default:
-		if t.Type != nil {
-			reportInvalidRestrictedType()
+		default:
+			if t.Type != nil {
+				reportInvalidRestrictedType()
+			}
 		}
 	}
 

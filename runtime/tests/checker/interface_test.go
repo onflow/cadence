@@ -1966,7 +1966,7 @@ func TestCheckInvalidInterfaceUseAsTypeSuggestion(t *testing.T) {
 				{
 					TypeAnnotation: sema.NewTypeAnnotation(
 						&sema.RestrictedType{
-							Type: &sema.AnyStructType{},
+							Type: sema.AnyStructType,
 							Restrictions: []*sema.InterfaceType{
 								iType,
 							},
@@ -1978,7 +1978,7 @@ func TestCheckInvalidInterfaceUseAsTypeSuggestion(t *testing.T) {
 				&sema.DictionaryType{
 					KeyType: &sema.IntType{},
 					ValueType: &sema.RestrictedType{
-						Type: &sema.AnyStructType{},
+						Type: sema.AnyStructType,
 						Restrictions: []*sema.InterfaceType{
 							iType,
 						},

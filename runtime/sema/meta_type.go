@@ -38,7 +38,6 @@ var MetaType = &NominalType{
 	Storable:             true,
 	Equatable:            true,
 	ExternallyReturnable: true,
-	IsSuperTypeOf:        nil,
 	Members: func(t *NominalType) map[string]MemberResolver {
 		return map[string]MemberResolver{
 			"identifier": {

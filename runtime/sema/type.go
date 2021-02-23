@@ -409,198 +409,6 @@ func withBuiltinMembers(ty Type, members map[string]MemberResolver) map[string]M
 	return members
 }
 
-// AnyType represents the top type of all types.
-// NOTE: This type is only used internally and not available in programs.
-type AnyType struct{}
-
-func (*AnyType) IsType() {}
-
-func (*AnyType) String() string {
-	return "Any"
-}
-
-func (*AnyType) QualifiedString() string {
-	return "Any"
-}
-
-func (*AnyType) ID() TypeID {
-	return "Any"
-}
-
-func (*AnyType) Equal(other Type) bool {
-	_, ok := other.(*AnyType)
-	return ok
-}
-
-func (*AnyType) IsResourceType() bool {
-	return false
-}
-
-func (*AnyType) IsInvalidType() bool {
-	return false
-}
-
-func (*AnyType) IsStorable(_ map[*Member]bool) bool {
-	// `Any` is never a valid type in user programs
-	return false
-}
-
-func (*AnyType) IsExternallyReturnable(_ map[*Member]bool) bool {
-	// `Any` is never a valid type in user programs
-	return false
-}
-
-func (*AnyType) IsEquatable() bool {
-	return false
-}
-
-func (*AnyType) TypeAnnotationState() TypeAnnotationState {
-	return TypeAnnotationStateValid
-}
-
-func (t *AnyType) RewriteWithRestrictedTypes() (result Type, rewritten bool) {
-	return t, false
-}
-
-func (*AnyType) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
-	return false
-}
-
-func (t *AnyType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
-	return t
-}
-
-func (t *AnyType) GetMembers() map[string]MemberResolver {
-	return withBuiltinMembers(t, nil)
-}
-
-// AnyStructType represents the top type of all non-resource types
-type AnyStructType struct{}
-
-func (*AnyStructType) IsType() {}
-
-func (*AnyStructType) String() string {
-	return "AnyStruct"
-}
-
-func (*AnyStructType) QualifiedString() string {
-	return "AnyStruct"
-}
-
-func (*AnyStructType) ID() TypeID {
-	return "AnyStruct"
-}
-
-func (*AnyStructType) Equal(other Type) bool {
-	_, ok := other.(*AnyStructType)
-	return ok
-}
-
-func (*AnyStructType) IsResourceType() bool {
-	return false
-}
-
-func (*AnyStructType) IsInvalidType() bool {
-	return false
-}
-
-func (*AnyStructType) IsStorable(_ map[*Member]bool) bool {
-	// The actual storability of a value is checked at run-time
-	return true
-}
-
-func (*AnyStructType) IsExternallyReturnable(_ map[*Member]bool) bool {
-	return true
-}
-
-func (*AnyStructType) IsEquatable() bool {
-	return false
-}
-
-func (*AnyStructType) TypeAnnotationState() TypeAnnotationState {
-	return TypeAnnotationStateValid
-}
-
-func (t *AnyStructType) RewriteWithRestrictedTypes() (result Type, rewritten bool) {
-	return t, false
-}
-
-func (*AnyStructType) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
-	return false
-}
-
-func (t *AnyStructType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
-	return t
-}
-
-func (t *AnyStructType) GetMembers() map[string]MemberResolver {
-	return withBuiltinMembers(t, nil)
-}
-
-// AnyResourceType represents the top type of all resource types
-type AnyResourceType struct{}
-
-func (*AnyResourceType) IsType() {}
-
-func (*AnyResourceType) String() string {
-	return "AnyResource"
-}
-
-func (*AnyResourceType) QualifiedString() string {
-	return "AnyResource"
-}
-
-func (*AnyResourceType) ID() TypeID {
-	return "AnyResource"
-}
-
-func (*AnyResourceType) Equal(other Type) bool {
-	_, ok := other.(*AnyResourceType)
-	return ok
-}
-
-func (*AnyResourceType) IsResourceType() bool {
-	return true
-}
-
-func (*AnyResourceType) IsInvalidType() bool {
-	return false
-}
-
-func (*AnyResourceType) IsStorable(_ map[*Member]bool) bool {
-	// The actual storability of a value is checked at run-time
-	return true
-}
-
-func (*AnyResourceType) IsExternallyReturnable(_ map[*Member]bool) bool {
-	// The actual returnability of a value is checked at run-time
-	return true
-}
-
-func (*AnyResourceType) IsEquatable() bool {
-	return false
-}
-
-func (*AnyResourceType) TypeAnnotationState() TypeAnnotationState {
-	return TypeAnnotationStateValid
-}
-
-func (t *AnyResourceType) RewriteWithRestrictedTypes() (result Type, rewritten bool) {
-	return t, false
-}
-
-func (*AnyResourceType) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
-	return false
-}
-
-func (t *AnyResourceType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
-	return t
-}
-
-func (t *AnyResourceType) GetMembers() map[string]MemberResolver {
-	return withBuiltinMembers(t, nil)
-}
-
 // OptionalType represents the optional variant of another type
 type OptionalType struct {
 	Type Type
@@ -4212,8 +4020,8 @@ func init() {
 	otherTypes := []Type{
 		MetaType,
 		VoidType,
-		&AnyStructType{},
-		&AnyResourceType{},
+		AnyStructType,
+		AnyResourceType,
 		NeverType,
 		BoolType,
 		CharacterType,
@@ -4974,7 +4782,7 @@ var authAccountTypeCopyFunctionType = func() *FunctionType {
 
 	typeParameter := &TypeParameter{
 		Name:      "T",
-		TypeBound: &AnyStructType{},
+		TypeBound: AnyStructType,
 	}
 
 	return &FunctionType{
@@ -5015,7 +4823,7 @@ var authAccountTypeBorrowFunctionType = func() *FunctionType {
 
 	typeParameter := &TypeParameter{
 		TypeBound: &ReferenceType{
-			Type: &AnyType{},
+			Type: AnyType,
 		},
 		Name: "T",
 	}
@@ -5060,7 +4868,7 @@ var authAccountTypeLinkFunctionType = func() *FunctionType {
 
 	typeParameter := &TypeParameter{
 		TypeBound: &ReferenceType{
-			Type: &AnyType{},
+			Type: AnyType,
 		},
 		Name: "T",
 	}
@@ -5124,7 +4932,7 @@ var authAccountTypeGetCapabilityFunctionType = func() *FunctionType {
 
 	typeParameter := &TypeParameter{
 		TypeBound: &ReferenceType{
-			Type: &AnyType{},
+			Type: AnyType,
 		},
 		Name:     "T",
 		Optional: true,
@@ -5155,7 +4963,7 @@ var publicAccountTypeGetCapabilityFunctionType = func() *FunctionType {
 
 	typeParameter := &TypeParameter{
 		TypeBound: &ReferenceType{
-			Type: &AnyType{},
+			Type: AnyType,
 		},
 		Name:     "T",
 		Optional: true,
@@ -5764,13 +5572,13 @@ func (t *InterfaceType) RewriteWithRestrictedTypes() (Type, bool) {
 	switch t.CompositeKind {
 	case common.CompositeKindResource:
 		return &RestrictedType{
-			Type:         &AnyResourceType{},
+			Type:         AnyResourceType,
 			Restrictions: []*InterfaceType{t},
 		}, true
 
 	case common.CompositeKindStructure:
 		return &RestrictedType{
-			Type:         &AnyStructType{},
+			Type:         AnyStructType,
 			Restrictions: []*InterfaceType{t},
 		}, true
 
@@ -6330,22 +6138,21 @@ func IsSubType(subType Type, superType Type) bool {
 		return true
 	}
 
-	switch typedSuperType := superType.(type) {
-	case *AnyType:
+	switch superType {
+	case AnyType:
 		return true
 
-	case *AnyStructType:
+	case AnyStructType:
 		if subType.IsResourceType() {
 			return false
 		}
-		if _, ok := subType.(*AnyType); ok {
-			return false
-		}
-		return true
+		return subType != AnyType
 
-	case *AnyResourceType:
+	case AnyResourceType:
 		return subType.IsResourceType()
+	}
 
+	switch typedSuperType := superType.(type) {
 	case *NumberType:
 		switch subType.(type) {
 		case *NumberType, *SignedNumberType:
@@ -6482,8 +6289,9 @@ func IsSubType(subType Type, superType Type) bool {
 		switch typedInnerSuperType := typedSuperType.Type.(type) {
 		case *RestrictedType:
 
-			switch restrictedSuperType := typedInnerSuperType.Type.(type) {
-			case *AnyResourceType, *AnyStructType, *AnyType:
+			restrictedSuperType := typedInnerSuperType.Type
+			switch restrictedSuperType {
+			case AnyResourceType, AnyStructType, AnyType:
 
 				switch typedInnerSubType := typedSubType.Type.(type) {
 				case *RestrictedType:
@@ -6514,8 +6322,10 @@ func IsSubType(subType Type, superType Type) bool {
 					return IsSubType(typedInnerSubType, restrictedSuperType) &&
 						typedInnerSuperType.RestrictionSet().
 							IsSubsetOf(typedInnerSubType.ExplicitInterfaceConformanceSet())
+				}
 
-				case *AnyResourceType, *AnyStructType, *AnyType:
+				switch typedSubType.Type {
+				case AnyResourceType, AnyStructType, AnyType:
 					// An unauthorized reference to an unrestricted type `&T`
 					// is a subtype of a reference to a restricted type
 					// `&AnyResource{Us}` / `&AnyStruct{Us}` / `&Any{Us}`:
@@ -6534,8 +6344,7 @@ func IsSubType(subType Type, superType Type) bool {
 					// An unauthorized reference to a restricted type `&T{Us}`
 					// is a subtype of a reference to a restricted type `&V{Ws}:`
 
-					switch typedInnerSubType.Type.(type) {
-					case *CompositeType:
+					if _, ok := typedInnerSubType.Type.(*CompositeType); ok {
 						// When `T != AnyResource && T != AnyStruct && T != Any`:
 						// if `T == V` and `Ws` is a subset of `Us`.
 						//
@@ -6545,8 +6354,10 @@ func IsSubType(subType Type, superType Type) bool {
 						return typedInnerSubType.Type == typedInnerSuperType.Type &&
 							typedInnerSuperType.RestrictionSet().
 								IsSubsetOf(typedInnerSubType.RestrictionSet())
+					}
 
-					case *AnyResourceType, *AnyStructType, *AnyType:
+					switch typedInnerSubType.Type {
+					case AnyResourceType, AnyStructType, AnyType:
 						// When `T == AnyResource || T == AnyStruct || T == Any`: never.
 
 						return false
@@ -6561,7 +6372,10 @@ func IsSubType(subType Type, superType Type) bool {
 
 					return typedInnerSubType == typedInnerSuperType.Type
 
-				case *AnyResourceType, *AnyStructType, *AnyType:
+				}
+
+				switch typedSubType.Type {
+				case AnyResourceType, AnyStructType, AnyType:
 					// An unauthorized reference to an unrestricted type `&T`
 					// is a subtype of a reference to a restricted type `&U{Vs}`:
 					// When `T == AnyResource || T == AnyStruct || T == Any`: never.
@@ -6579,8 +6393,11 @@ func IsSubType(subType Type, superType Type) bool {
 			// The holder of the reference may not gain more permissions or knowledge.
 
 			return false
+		}
 
-		case *AnyType:
+		switch typedSuperType.Type {
+
+		case AnyType:
 
 			// An unauthorized reference to a restricted type `&T{Us}`
 			// or to a unrestricted type `&T`
@@ -6588,7 +6405,7 @@ func IsSubType(subType Type, superType Type) bool {
 
 			return true
 
-		case *AnyResourceType:
+		case AnyResourceType:
 
 			// An unauthorized reference to a restricted type `&T{Us}`
 			// or to a unrestricted type `&T`
@@ -6597,22 +6414,17 @@ func IsSubType(subType Type, superType Type) bool {
 
 			switch typedInnerSubType := typedSubType.Type.(type) {
 			case *RestrictedType:
-				switch typedInnerInnerSubType := typedInnerSubType.Type.(type) {
-				case *AnyResourceType:
-					return true
-
-				case *CompositeType:
+				if typedInnerInnerSubType, ok := typedInnerSubType.Type.(*CompositeType); ok {
 					return typedInnerInnerSubType.Kind == common.CompositeKindResource
-
-				default:
-					return false
 				}
+
+				return typedInnerSubType.Type == AnyResourceType
 
 			case *CompositeType:
 				return typedInnerSubType.Kind == common.CompositeKindResource
 			}
 
-		case *AnyStructType:
+		case AnyStructType:
 			// `&T <: &AnyStruct` iff `T <: AnyStruct`
 			return IsSubType(typedSubType.Type, typedSuperType.Type)
 		}
@@ -6658,8 +6470,35 @@ func IsSubType(subType Type, superType Type) bool {
 
 	case *RestrictedType:
 
-		switch restrictedSuperType := typedSuperType.Type.(type) {
-		case *AnyResourceType, *AnyStructType, *AnyType:
+		restrictedSuperType := typedSuperType.Type
+		switch restrictedSuperType {
+		case AnyResourceType, AnyStructType, AnyType:
+
+			switch subType {
+			case AnyResourceType:
+				// `AnyResource` is a subtype of a restricted type
+				// - `AnyResource{Us}`: not statically;
+				// - `AnyStruct{Us}`: never.
+				// - `Any{Us}`: not statically;
+
+				return false
+
+			case AnyStructType:
+				// `AnyStruct` is a subtype of a restricted type
+				// - `AnyStruct{Us}`: not statically.
+				// - `AnyResource{Us}`: never;
+				// - `Any{Us}`: not statically.
+
+				return false
+
+			case AnyType:
+				// `Any` is a subtype of a restricted type
+				// - `Any{Us}: not statically.`
+				// - `AnyStruct{Us}`: never;
+				// - `AnyResource{Us}`: never;
+
+				return false
+			}
 
 			switch typedSubType := subType.(type) {
 			case *RestrictedType:
@@ -6667,8 +6506,9 @@ func IsSubType(subType Type, superType Type) bool {
 				// A restricted type `T{Us}`
 				// is a subtype of a restricted type `AnyResource{Vs}` / `AnyStruct{Vs}` / `Any{Vs}`:
 
-				switch restrictedSubtype := typedSubType.Type.(type) {
-				case *AnyResourceType, *AnyStructType, *AnyType:
+				restrictedSubtype := typedSubType.Type
+				switch restrictedSubtype {
+				case AnyResourceType, AnyStructType, AnyType:
 					// When `T == AnyResource || T == AnyStruct || T == Any`:
 					// if the restricted type of the subtype
 					// is a subtype of the restricted supertype,
@@ -6677,8 +6517,9 @@ func IsSubType(subType Type, superType Type) bool {
 					return IsSubType(restrictedSubtype, restrictedSuperType) &&
 						typedSuperType.RestrictionSet().
 							IsSubsetOf(typedSubType.RestrictionSet())
+				}
 
-				case *CompositeType:
+				if restrictedSubtype, ok := restrictedSubtype.(*CompositeType); ok {
 					// When `T != AnyResource && T != AnyStruct && T != Any`:
 					// if the restricted type of the subtype
 					// is a subtype of the restricted supertype,
@@ -6690,30 +6531,6 @@ func IsSubType(subType Type, superType Type) bool {
 						typedSuperType.RestrictionSet().
 							IsSubsetOf(restrictedSubtype.ExplicitInterfaceConformanceSet())
 				}
-
-			case *AnyResourceType:
-				// `AnyResource` is a subtype of a restricted type
-				// - `AnyResource{Us}`: not statically;
-				// - `AnyStruct{Us}`: never.
-				// - `Any{Us}`: not statically;
-
-				return false
-
-			case *AnyStructType:
-				// `AnyStruct` is a subtype of a restricted type
-				// - `AnyStruct{Us}`: not statically.
-				// - `AnyResource{Us}`: never;
-				// - `Any{Us}`: not statically.
-
-				return false
-
-			case *AnyType:
-				// `Any` is a subtype of a restricted type
-				// - `Any{Us}: not statically.`
-				// - `AnyStruct{Us}`: never;
-				// - `AnyResource{Us}`: never;
-
-				return false
 
 			case *CompositeType:
 				// An unrestricted type `T`
@@ -6734,13 +6551,14 @@ func IsSubType(subType Type, superType Type) bool {
 				// A restricted type `T{Us}`
 				// is a subtype of a restricted type `V{Ws}`:
 
-				switch restrictedSubType := typedSubType.Type.(type) {
-				case *AnyResourceType, *AnyStructType, *AnyType:
+				switch typedSubType.Type {
+				case AnyResourceType, AnyStructType, AnyType:
 					// When `T == AnyResource || T == AnyStruct || T == Any`:
 					// not statically.
 					return false
+				}
 
-				case *CompositeType:
+				if restrictedSubType, ok := typedSubType.Type.(*CompositeType); ok {
 					// When `T != AnyResource && T != AnyStructType && T != Any`: if `T == V`.
 					//
 					// `Us` and `Ws` do *not* have to be subsets:
@@ -6757,7 +6575,10 @@ func IsSubType(subType Type, superType Type) bool {
 
 				return typedSubType == typedSuperType.Type
 
-			case *AnyResourceType, *AnyStructType, *AnyType:
+			}
+
+			switch subType {
+			case AnyResourceType, AnyStructType, AnyType:
 				// An unrestricted type `T`
 				// is a subtype of a restricted type `AnyResource{Vs}` / `AnyStruct{Vs}` / `Any{Vs}`:
 				// not statically.
@@ -6777,12 +6598,13 @@ func IsSubType(subType Type, superType Type) bool {
 			// A restricted type `T{Us}`
 			// is a subtype of an unrestricted type `V`:
 
-			switch restrictedSubType := typedSubType.Type.(type) {
-			case *AnyResourceType, *AnyStructType, *AnyType:
+			switch typedSubType.Type {
+			case AnyResourceType, AnyStructType, AnyType:
 				// When `T == AnyResource || T == AnyStruct || T == Any`: not statically.
 				return false
+			}
 
-			case *CompositeType:
+			if restrictedSubType, ok := typedSubType.Type.(*CompositeType); ok {
 				// When `T != AnyResource && T != AnyStruct`: if `T == V`.
 				//
 				// The owner may freely unrestrict.
@@ -7374,7 +7196,7 @@ func (t *CapabilityType) Resolve(typeArguments *TypeParameterTypeOrderedMap) Typ
 var capabilityTypeParameter = &TypeParameter{
 	Name: "T",
 	TypeBound: &ReferenceType{
-		Type: &AnyType{},
+		Type: AnyType,
 	},
 }
 
@@ -7402,7 +7224,7 @@ func (t *CapabilityType) TypeArguments() []Type {
 	borrowType := t.BorrowType
 	if borrowType == nil {
 		borrowType = &ReferenceType{
-			Type: &AnyType{},
+			Type: AnyType,
 		}
 	}
 	return []Type{

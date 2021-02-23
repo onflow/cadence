@@ -828,8 +828,8 @@ func (interpreter *Interpreter) prepareInvoke(
 	for i, argument := range arguments {
 		parameterType := parameters[i].TypeAnnotation.Type
 		// TODO: value type is not known, reject for now
-		switch parameterType.(type) {
-		case *sema.AnyStructType, *sema.AnyResourceType:
+		switch parameterType {
+		case sema.AnyStructType, sema.AnyResourceType:
 			return nil, NotInvokableError{
 				Value: functionValue,
 			}
@@ -3806,43 +3806,36 @@ func (interpreter *Interpreter) newConverterFunction(converter ValueConverter) F
 func IsSubType(subType DynamicType, superType sema.Type) bool {
 	switch typedSubType := subType.(type) {
 	case MetaTypeDynamicType:
-		if _, ok := superType.(*sema.AnyStructType); ok {
+		switch superType {
+		case sema.AnyStructType, sema.MetaType:
 			return true
 		}
-
-		return superType == sema.MetaType
 
 	case VoidDynamicType:
-		if _, ok := superType.(*sema.AnyStructType); ok {
+		switch superType {
+		case sema.AnyStructType, sema.VoidType:
 			return true
 		}
-
-		return superType == sema.VoidType
 
 	case StringDynamicType:
-		switch superType.(type) {
-		case *sema.StringType, *sema.AnyStructType:
+		if _, ok := superType.(*sema.StringType); ok {
 			return true
-
-		default:
-			return false
 		}
+
+		return superType == sema.AnyStructType
 
 	case BoolDynamicType:
-		if _, ok := superType.(*sema.AnyStructType); ok {
+		switch superType {
+		case sema.AnyStructType, sema.BoolType:
 			return true
 		}
-
-		return superType == sema.BoolType
 
 	case AddressDynamicType:
-		switch superType.(type) {
-		case *sema.AddressType, *sema.AnyStructType:
+		if _, ok := superType.(*sema.AddressType); ok {
 			return true
-
-		default:
-			return false
 		}
+
+		return superType == sema.AnyStructType
 
 	case NumberDynamicType:
 		return sema.IsSubType(typedSubType.StaticType, superType)
@@ -3860,11 +3853,13 @@ func IsSubType(subType DynamicType, superType sema.Type) bool {
 		case *sema.ConstantSizedType:
 			superTypeElementType = typedSuperType.Type
 
-		case *sema.AnyStructType, *sema.AnyResourceType:
-			return true
-
 		default:
-			return false
+			switch superType {
+			case sema.AnyStructType, sema.AnyResourceType:
+				return true
+			default:
+				return false
+			}
 		}
 
 		for _, elementType := range typedSubType.ElementTypes {
@@ -3877,8 +3872,7 @@ func IsSubType(subType DynamicType, superType sema.Type) bool {
 
 	case DictionaryDynamicType:
 
-		switch typedSuperType := superType.(type) {
-		case *sema.DictionaryType:
+		if typedSuperType, ok := superType.(*sema.DictionaryType); ok {
 			for _, entryTypes := range typedSubType.EntryTypes {
 				if !IsSubType(entryTypes.KeyType, typedSuperType.KeyType) ||
 					!IsSubType(entryTypes.ValueType, typedSuperType.ValueType) {
@@ -3888,8 +3882,10 @@ func IsSubType(subType DynamicType, superType sema.Type) bool {
 			}
 
 			return true
+		}
 
-		case *sema.AnyStructType, *sema.AnyResourceType:
+		switch superType {
+		case sema.AnyStructType, sema.AnyResourceType:
 			return true
 
 		default:
@@ -3897,8 +3893,12 @@ func IsSubType(subType DynamicType, superType sema.Type) bool {
 		}
 
 	case NilDynamicType:
-		switch superType.(type) {
-		case *sema.OptionalType, *sema.AnyStructType, *sema.AnyResourceType:
+		if _, ok := superType.(*sema.OptionalType); ok {
+			return true
+		}
+
+		switch superType {
+		case sema.AnyStructType, sema.AnyResourceType:
 			return true
 
 		default:
@@ -3906,11 +3906,12 @@ func IsSubType(subType DynamicType, superType sema.Type) bool {
 		}
 
 	case SomeDynamicType:
-		switch typedSuperType := superType.(type) {
-		case *sema.OptionalType:
+		if typedSuperType, ok := superType.(*sema.OptionalType); ok {
 			return IsSubType(typedSubType.InnerType, typedSuperType.Type)
+		}
 
-		case *sema.AnyStructType, *sema.AnyResourceType:
+		switch superType {
+		case sema.AnyStructType, sema.AnyResourceType:
 			return true
 
 		default:
@@ -3918,11 +3919,7 @@ func IsSubType(subType DynamicType, superType sema.Type) bool {
 		}
 
 	case ReferenceDynamicType:
-		switch typedSuperType := superType.(type) {
-		case *sema.AnyStructType:
-			return true
-
-		case *sema.ReferenceType:
+		if typedSuperType, ok := superType.(*sema.ReferenceType); ok {
 			if typedSubType.Authorized() {
 				return IsSubType(typedSubType.InnerType(), typedSuperType.Type)
 			} else {
@@ -3930,17 +3927,12 @@ func IsSubType(subType DynamicType, superType sema.Type) bool {
 				// all invalid cases have already been rejected statically
 				return true
 			}
-
-		default:
-			return false
 		}
 
-	case CapabilityDynamicType:
-		switch typedSuperType := superType.(type) {
-		case *sema.AnyStructType:
-			return true
+		return superType == sema.AnyStructType
 
-		case *sema.CapabilityType:
+	case CapabilityDynamicType:
+		if typedSuperType, ok := superType.(*sema.CapabilityType); ok {
 
 			if typedSuperType.BorrowType != nil {
 
@@ -3967,86 +3959,66 @@ func IsSubType(subType DynamicType, superType sema.Type) bool {
 
 		}
 
-	case PublicPathDynamicType:
-		if _, ok := superType.(*sema.AnyStructType); ok {
-			return true
-		}
+		return superType == sema.AnyStructType
 
+	case PublicPathDynamicType:
 		switch superType {
-		case sema.PublicPathType, sema.CapabilityPathType, sema.PathType:
+		case sema.PublicPathType, sema.CapabilityPathType, sema.PathType, sema.AnyStructType:
 			return true
 		default:
 			return false
 		}
 
 	case PrivatePathDynamicType:
-		if _, ok := superType.(*sema.AnyStructType); ok {
-			return true
-		}
-
 		switch superType {
-		case sema.PrivatePathType, sema.CapabilityPathType, sema.PathType:
+		case sema.PrivatePathType, sema.CapabilityPathType, sema.PathType, sema.AnyStructType:
 			return true
 		default:
 			return false
 		}
 
 	case StoragePathDynamicType:
-		if _, ok := superType.(*sema.AnyStructType); ok {
-			return true
-		}
-
 		switch superType {
-		case sema.StoragePathType, sema.PathType:
+		case sema.StoragePathType, sema.PathType, sema.AnyStructType:
 			return true
 		default:
 			return false
 		}
 
 	case PublicAccountDynamicType:
-		switch superType.(type) {
-		case *sema.PublicAccountType, *sema.AnyStructType:
+		if _, ok := superType.(*sema.PublicAccountType); ok {
 			return true
-
-		default:
-			return false
 		}
+
+		return superType == sema.AnyStructType
 
 	case AuthAccountDynamicType:
-		switch superType.(type) {
-		case *sema.AuthAccountType, *sema.AnyStructType:
+		if _, ok := superType.(*sema.AuthAccountType); ok {
 			return true
-
-		default:
-			return false
 		}
+
+		return superType == sema.AnyStructType
 
 	case DeployedContractDynamicType:
-		switch superType.(type) {
-		case *sema.DeployedContractType, *sema.AnyStructType:
+		if _, ok := superType.(*sema.DeployedContractType); ok {
 			return true
-
-		default:
-			return false
 		}
+
+		return superType == sema.AnyStructType
 
 	case AuthAccountContractsDynamicType:
-		switch superType.(type) {
-		case *sema.AuthAccountContractsType, *sema.AnyStructType:
+		if _, ok := superType.(*sema.AuthAccountContractsType); ok {
 			return true
-
-		default:
-			return false
 		}
+
+		return superType == sema.AnyStructType
 
 	case BlockDynamicType:
-		switch superType.(type) {
-		case *sema.BlockType, *sema.AnyStructType:
+		if _, ok := superType.(*sema.BlockType); ok {
 			return true
-
-		default:
-			return false
 		}
+
+		return superType == sema.AnyStructType
 	}
 
 	return false

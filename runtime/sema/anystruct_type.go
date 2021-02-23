@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2021 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,15 +18,16 @@
 
 package sema
 
-// VoidType represents the void type
+// AnyStructType represents the top type of all non-resource types
 //
-var VoidType = &NominalType{
-	Name:                 "Void",
-	QualifiedName:        "Void",
-	TypeID:               "Void",
-	IsInvalid:            false,
-	IsResource:           false,
-	Storable:             false,
+var AnyStructType = &NominalType{
+	Name:          "AnyStruct",
+	QualifiedName: "AnyStruct",
+	TypeID:        "AnyStruct",
+	IsInvalid:     false,
+	IsResource:    false,
+	// The actual storability of a value is checked at run-time
+	Storable:             true,
 	Equatable:            false,
 	ExternallyReturnable: true,
 }

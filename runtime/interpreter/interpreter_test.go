@@ -119,8 +119,8 @@ func TestInterpreterBoxing(t *testing.T) {
 	require.NoError(t, err)
 
 	for _, anyType := range []sema.Type{
-		&sema.AnyStructType{},
-		&sema.AnyResourceType{},
+		sema.AnyStructType,
+		sema.AnyResourceType,
 	} {
 
 		t.Run(anyType.String(), func(t *testing.T) {
