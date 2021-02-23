@@ -11,3 +11,7 @@ require (
 	github.com/stretchr/testify v1.7.0
 	google.golang.org/grpc v1.32.0
 )
+
+replace (
+	github.com/onflow/cadence => ../
+)
