@@ -43,3 +43,23 @@ func TestParseDocstringPragmaArguments(t *testing.T) {
 		actual,
 	)
 }
+
+func TestParseDocstringPragmaSigners(t *testing.T) {
+
+	actual := ParseDocstringPragmaSigners(`
+	  pragma signers (alice)
+      other stuff
+
+      pragma signers   (alice, bob)  
+
+      pragma signers  ( alice ,  bob   )`)
+
+	require.Equal(t,
+		[]string{
+			"(alice)",
+			"(alice, bob)  ",
+			"( alice ,  bob   )",
+		},
+		actual,
+	)
+}
