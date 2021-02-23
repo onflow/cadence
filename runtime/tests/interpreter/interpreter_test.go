@@ -8131,7 +8131,7 @@ func TestInterpretNestedDestroy(t *testing.T) {
 				{
 					Label:          sema.ArgumentLabelNotRequired,
 					Identifier:     "value",
-					TypeAnnotation: sema.NewTypeAnnotation(&sema.AnyStructType{}),
+					TypeAnnotation: sema.NewTypeAnnotation(sema.AnyStructType),
 				},
 			},
 			ReturnTypeAnnotation: sema.NewTypeAnnotation(

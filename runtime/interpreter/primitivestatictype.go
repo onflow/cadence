@@ -166,16 +166,16 @@ func (i PrimitiveStaticType) SemaType() sema.Type {
 		return sema.VoidType
 
 	case PrimitiveStaticTypeAny:
-		return &sema.AnyType{}
+		return sema.AnyType
 
 	case PrimitiveStaticTypeNever:
 		return sema.NeverType
 
 	case PrimitiveStaticTypeAnyStruct:
-		return &sema.AnyStructType{}
+		return sema.AnyStructType
 
 	case PrimitiveStaticTypeAnyResource:
-		return &sema.AnyResourceType{}
+		return sema.AnyResourceType
 
 	case PrimitiveStaticTypeBool:
 		return sema.BoolType
@@ -299,15 +299,6 @@ func (i PrimitiveStaticType) SemaType() sema.Type {
 //
 func ConvertSemaToPrimitiveStaticType(t sema.Type) PrimitiveStaticType {
 	switch t.(type) {
-	case *sema.AnyType:
-		return PrimitiveStaticTypeAny
-
-	case *sema.AnyStructType:
-		return PrimitiveStaticTypeAnyStruct
-
-	case *sema.AnyResourceType:
-		return PrimitiveStaticTypeAnyResource
-
 	case *sema.AddressType:
 		return PrimitiveStaticTypeAddress
 
@@ -422,6 +413,12 @@ func ConvertSemaToPrimitiveStaticType(t sema.Type) PrimitiveStaticType {
 		return PrimitiveStaticTypeBool
 	case sema.CharacterType:
 		return PrimitiveStaticTypeCharacter
+	case sema.AnyType:
+		return PrimitiveStaticTypeAny
+	case sema.AnyStructType:
+		return PrimitiveStaticTypeAnyStruct
+	case sema.AnyResourceType:
+		return PrimitiveStaticTypeAnyResource
 	}
 
 	return PrimitiveStaticTypeUnknown

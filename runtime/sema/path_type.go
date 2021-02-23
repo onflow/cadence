@@ -45,8 +45,7 @@ var StoragePathType = &NominalType{
 	IsResource:    false,
 	Storable:      true,
 	// TODO: implement support for equating paths in the future
-	Equatable:     false,
-	IsSuperTypeOf: nil,
+	Equatable: false,
 }
 
 // CapabilityPathType
@@ -74,8 +73,7 @@ var PublicPathType = &NominalType{
 	IsResource:    false,
 	Storable:      true,
 	// TODO: implement support for equating paths in the future
-	Equatable:     false,
-	IsSuperTypeOf: nil,
+	Equatable: false,
 }
 
 // PrivatePathType
@@ -87,6 +85,5 @@ var PrivatePathType = &NominalType{
 	IsResource:    false,
 	Storable:      true,
 	// TODO: implement support for equating paths in the future
-	Equatable:     false,
-	IsSuperTypeOf: nil,
+	Equatable: false,
 }

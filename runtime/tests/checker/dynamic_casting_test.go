@@ -205,7 +205,7 @@ func TestCheckDynamicCastingNumber(t *testing.T) {
 				t.Run(test.ty.String(), func(t *testing.T) {
 
 					types := []sema.Type{
-						&sema.AnyStructType{},
+						sema.AnyStructType,
 						test.ty,
 					}
 					for _, fromType := range types {
@@ -270,7 +270,7 @@ func TestCheckDynamicCastingVoid(t *testing.T) {
 	t.Parallel()
 
 	types := []sema.Type{
-		&sema.AnyStructType{},
+		sema.AnyStructType,
 		sema.VoidType,
 	}
 
@@ -336,7 +336,7 @@ func TestCheckDynamicCastingString(t *testing.T) {
 	t.Parallel()
 
 	types := []sema.Type{
-		&sema.AnyStructType{},
+		sema.AnyStructType,
 		&sema.StringType{},
 	}
 
@@ -399,7 +399,7 @@ func TestCheckDynamicCastingBool(t *testing.T) {
 	t.Parallel()
 
 	types := []sema.Type{
-		&sema.AnyStructType{},
+		sema.AnyStructType,
 		sema.BoolType,
 	}
 
@@ -462,7 +462,7 @@ func TestCheckDynamicCastingAddress(t *testing.T) {
 	t.Parallel()
 
 	types := []sema.Type{
-		&sema.AnyStructType{},
+		sema.AnyStructType,
 		&sema.AddressType{},
 	}
 
@@ -1015,8 +1015,8 @@ func TestCheckDynamicCastingSome(t *testing.T) {
 
 	types := []sema.Type{
 		&sema.OptionalType{Type: &sema.IntType{}},
-		&sema.OptionalType{Type: &sema.AnyStructType{}},
-		&sema.AnyStructType{},
+		&sema.OptionalType{Type: sema.AnyStructType},
+		sema.AnyStructType,
 	}
 
 	for _, operation := range dynamicCastingOperations {
@@ -1077,8 +1077,8 @@ func TestCheckDynamicCastingArray(t *testing.T) {
 
 	types := []sema.Type{
 		&sema.VariableSizedType{Type: &sema.IntType{}},
-		&sema.VariableSizedType{Type: &sema.AnyStructType{}},
-		&sema.AnyStructType{},
+		&sema.VariableSizedType{Type: sema.AnyStructType},
+		sema.AnyStructType,
 	}
 
 	for _, operation := range dynamicCastingOperations {
@@ -1144,7 +1144,7 @@ func TestCheckDynamicCastingDictionary(t *testing.T) {
 		},
 		&sema.DictionaryType{
 			KeyType:   &sema.StringType{},
-			ValueType: &sema.AnyStructType{},
+			ValueType: sema.AnyStructType,
 		},
 	}
 
@@ -1220,11 +1220,11 @@ func TestCheckDynamicCastingCapability(t *testing.T) {
 		},
 		&sema.CapabilityType{
 			BorrowType: &sema.ReferenceType{
-				Type: &sema.AnyStructType{},
+				Type: sema.AnyStructType,
 			},
 		},
 		&sema.CapabilityType{},
-		&sema.AnyStructType{},
+		sema.AnyStructType,
 	}
 
 	capabilityType := &sema.CapabilityType{

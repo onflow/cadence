@@ -69,7 +69,7 @@ var logFunctionType = &sema.FunctionType{
 			Label:      sema.ArgumentLabelNotRequired,
 			Identifier: "value",
 			TypeAnnotation: sema.NewTypeAnnotation(
-				&sema.AnyStructType{},
+				sema.AnyStructType,
 			),
 		},
 	},

@@ -29,5 +29,4 @@ var BoolType = &NominalType{
 	Storable:             true,
 	Equatable:            true,
 	ExternallyReturnable: true,
-	IsSuperTypeOf:        nil,
 }

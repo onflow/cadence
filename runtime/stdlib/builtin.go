@@ -115,9 +115,11 @@ var LogFunction = NewStandardLibraryFunction(
 	&sema.FunctionType{
 		Parameters: []*sema.Parameter{
 			{
-				Label:          sema.ArgumentLabelNotRequired,
-				Identifier:     "value",
-				TypeAnnotation: sema.NewTypeAnnotation(&sema.AnyStructType{}),
+				Label:      sema.ArgumentLabelNotRequired,
+				Identifier: "value",
+				TypeAnnotation: sema.NewTypeAnnotation(
+					sema.AnyStructType,
+				),
 			},
 		},
 		ReturnTypeAnnotation: sema.NewTypeAnnotation(

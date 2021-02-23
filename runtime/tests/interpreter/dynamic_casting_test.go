@@ -82,7 +82,7 @@ func TestInterpretDynamicCastingNumber(t *testing.T) {
 				t.Run(test.ty.String(), func(t *testing.T) {
 
 					types := []sema.Type{
-						&sema.AnyStructType{},
+						sema.AnyStructType,
 						test.ty,
 					}
 					for _, fromType := range types {
@@ -174,7 +174,7 @@ func TestInterpretDynamicCastingVoid(t *testing.T) {
 	t.Parallel()
 
 	types := []sema.Type{
-		&sema.AnyStructType{},
+		sema.AnyStructType,
 		sema.VoidType,
 	}
 
@@ -262,7 +262,7 @@ func TestInterpretDynamicCastingString(t *testing.T) {
 	t.Parallel()
 
 	types := []sema.Type{
-		&sema.AnyStructType{},
+		sema.AnyStructType,
 		&sema.StringType{},
 	}
 
@@ -347,7 +347,7 @@ func TestInterpretDynamicCastingBool(t *testing.T) {
 	t.Parallel()
 
 	types := []sema.Type{
-		&sema.AnyStructType{},
+		sema.AnyStructType,
 		sema.BoolType,
 	}
 
@@ -432,7 +432,7 @@ func TestInterpretDynamicCastingAddress(t *testing.T) {
 	t.Parallel()
 
 	types := []sema.Type{
-		&sema.AnyStructType{},
+		sema.AnyStructType,
 		&sema.AddressType{},
 	}
 
@@ -1005,8 +1005,8 @@ func TestInterpretDynamicCastingSome(t *testing.T) {
 
 	types := []sema.Type{
 		&sema.OptionalType{Type: &sema.IntType{}},
-		&sema.OptionalType{Type: &sema.AnyStructType{}},
-		&sema.AnyStructType{},
+		&sema.OptionalType{Type: sema.AnyStructType},
+		sema.AnyStructType,
 	}
 
 	for operation, returnsOptional := range dynamicCastingOperations {
@@ -1040,7 +1040,7 @@ func TestInterpretDynamicCastingSome(t *testing.T) {
 							inter.Globals["y"].Value,
 						)
 
-						if _, ok := targetType.(*sema.AnyStructType); ok && !returnsOptional {
+						if targetType == sema.AnyStructType && !returnsOptional {
 
 							assert.Equal(t,
 								expectedValue,
@@ -1105,8 +1105,8 @@ func TestInterpretDynamicCastingArray(t *testing.T) {
 
 	types := []sema.Type{
 		&sema.VariableSizedType{Type: &sema.IntType{}},
-		&sema.VariableSizedType{Type: &sema.AnyStructType{}},
-		&sema.AnyStructType{},
+		&sema.VariableSizedType{Type: sema.AnyStructType},
+		sema.AnyStructType,
 	}
 
 	for operation, returnsOptional := range dynamicCastingOperations {
@@ -1199,7 +1199,7 @@ func TestInterpretDynamicCastingDictionary(t *testing.T) {
 		},
 		&sema.DictionaryType{
 			KeyType:   &sema.StringType{},
-			ValueType: &sema.AnyStructType{},
+			ValueType: sema.AnyStructType,
 		},
 	}
 
@@ -3317,11 +3317,11 @@ func TestInterpretDynamicCastingCapability(t *testing.T) {
 		},
 		&sema.CapabilityType{
 			BorrowType: &sema.ReferenceType{
-				Type: &sema.AnyStructType{},
+				Type: sema.AnyStructType,
 			},
 		},
 		&sema.CapabilityType{},
-		&sema.AnyStructType{},
+		sema.AnyStructType,
 	}
 
 	capabilityValue := interpreter.CapabilityValue{
