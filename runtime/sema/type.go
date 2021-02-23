@@ -5584,11 +5584,13 @@ func (t *AuthAccountType) GetMembers() map[string]MemberResolver {
 	})
 }
 
-var authAccountTypeNestedTypes = map[string]Type{
-	"Contracts": &AuthAccountContractsType{},
-}
+var authAccountTypeNestedTypes = func() *StringTypeOrderedMap {
+	nestedTypes := NewStringTypeOrderedMap()
+	nestedTypes.Set("Contracts", &AuthAccountContractsType{})
+	return nestedTypes
+}()
 
-func (*AuthAccountType) NestedTypes() map[string]Type {
+func (*AuthAccountType) NestedTypes() *StringTypeOrderedMap {
 	return authAccountTypeNestedTypes
 }
 

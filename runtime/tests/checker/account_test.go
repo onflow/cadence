@@ -1301,3 +1301,14 @@ func TestCheckAccount_StorageFields(t *testing.T) {
 		}
 	}
 }
+
+func TestAuthAccountContractsType(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheckAccount(t, `
+      let contracts: AuthAccount.Contracts = authAccount.contracts
+	`)
+
+	require.NoError(t, err)
+}
