@@ -19,7 +19,6 @@
 package runtime
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/onflow/cadence"
@@ -336,7 +335,7 @@ func (s *runtimeStorage) encodeValue(
 				value,
 				[]string{path},
 				true,
-				s.prepareCallback,
+				nil,
 			)
 		},
 		s.runtimeInterface,
@@ -363,21 +362,6 @@ func (s *runtimeStorage) move(
 
 	// NOTE: not prefix with magic, as data is moved, so might already have it
 	err = s.runtimeInterface.SetValue(newOwner[:], []byte(newKey), data)
-	if err != nil {
-		panic(err)
-	}
-}
-
-func (s *runtimeStorage) prepareCallback(value interpreter.Value, path []string) {
-	logMessage := fmt.Sprintf(
-		"encoding value for key %s: %T",
-		path,
-		value,
-	)
-	var err error
-	wrapPanic(func() {
-		err = s.runtimeInterface.ImplementationDebugLog(logMessage)
-	})
 	if err != nil {
 		panic(err)
 	}
