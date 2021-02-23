@@ -20,7 +20,6 @@ package runtime
 
 import (
 	"bytes"
-	"fmt"
 	"sort"
 	"time"
 
@@ -172,7 +171,7 @@ func (s *runtimeStorage) readValue(
 				&address,
 				[]string{key},
 				version,
-				s.decodeCallback,
+				nil,
 			)
 		},
 		s.runtimeInterface,
@@ -403,20 +402,4 @@ func (s *runtimeStorage) move(
 	if err != nil {
 		panic(err)
 	}
-}
-
-func (s *runtimeStorage) decodeCallback(value interface{}, path []string) {
-	logMessage := fmt.Sprintf(
-		"decoding value for key %s: %T",
-		path,
-		value,
-	)
-	var err error
-	wrapPanic(func() {
-		err = s.runtimeInterface.ImplementationDebugLog(logMessage)
-	})
-	if err != nil {
-		panic(err)
-	}
-
 }
