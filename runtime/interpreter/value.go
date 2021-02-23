@@ -7335,12 +7335,16 @@ func (*PublicKeyValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Va
 // AuthAccountKeysValue
 
 type AuthAccountKeysValue struct {
-	AddFunction FunctionValue
+	AddFunction    FunctionValue
+	GetFunction    FunctionValue
+	RevokeFunction FunctionValue
 }
 
-func NewAuthAccountKeysValue(addFunction FunctionValue) AuthAccountKeysValue {
+func NewAuthAccountKeysValue(addFunction FunctionValue, getFunction FunctionValue, revokeFunction FunctionValue) AuthAccountKeysValue {
 	return AuthAccountKeysValue{
-		AddFunction: addFunction,
+		AddFunction:    addFunction,
+		GetFunction:    getFunction,
+		RevokeFunction: revokeFunction,
 	}
 }
 
@@ -7391,6 +7395,10 @@ func (v AuthAccountKeysValue) GetMember(_ *Interpreter, _ LocationRange, name st
 	switch name {
 	case sema.AuthAccountKeysAddFunctionName:
 		return v.AddFunction
+	case sema.AuthAccountKeysGetFunctionName:
+		return v.GetFunction
+	case sema.AuthAccountKeysRevokeFunctionName:
+		return v.RevokeFunction
 	}
 
 	return nil

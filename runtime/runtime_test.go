@@ -94,8 +94,9 @@ type testRuntimeInterface struct {
 	setProgram                func(Location, *interpreter.Program) error
 	storage                   testRuntimeInterfaceStorage
 	createAccount             func(payer Address) (address Address, err error)
-	addAccountKey             func(address Address, publicKey *PublicKey) (*AccountKey, error)
-	removeAccountKey          func(address Address, index int) (publicKey []byte, err error)
+	addAccountKey             func(address Address, publicKey *PublicKey, hashAlgo HashingAlgorithm, weight int) (*AccountKey, error)
+	getAccountKey             func(address Address, index int) (*AccountKey, error)
+	removeAccountKey          func(address Address, index int) (*AccountKey, error)
 	updateAccountContractCode func(address Address, name string, code []byte) error
 	getAccountContractCode    func(address Address, name string) (code []byte, err error)
 	removeAccountContractCode func(address Address, name string) (err error)
@@ -188,11 +189,15 @@ func (i *testRuntimeInterface) CreateAccount(payer Address) (address Address, er
 	return i.createAccount(payer)
 }
 
-func (i *testRuntimeInterface) AddAccountKey(address Address, publicKey *PublicKey) (*AccountKey, error) {
-	return i.addAccountKey(address, publicKey)
+func (i *testRuntimeInterface) AddAccountKey(address Address, publicKey *PublicKey, hashAlgo HashingAlgorithm, weight int) (*AccountKey, error) {
+	return i.addAccountKey(address, publicKey, hashAlgo, weight)
 }
 
-func (i *testRuntimeInterface) RemoveAccountKey(address Address, index int) (publicKey []byte, err error) {
+func (i *testRuntimeInterface) GetAccountKey(address Address, index int) (*AccountKey, error) {
+	return i.getAccountKey(address, index)
+}
+
+func (i *testRuntimeInterface) RemoveAccountKey(address Address, index int) (*AccountKey, error) {
 	return i.removeAccountKey(address, index)
 }
 

@@ -1204,27 +1204,27 @@ func (r *interpreterRuntime) newRemovePublicKeyFunction(
 ) interpreter.HostFunctionValue {
 	return interpreter.NewHostFunctionValue(
 		func(invocation interpreter.Invocation) trampoline.Trampoline {
-			index := invocation.Arguments[0].(interpreter.IntValue)
-
-			var publicKey []byte
-			var err error
-			wrapPanic(func() {
-				publicKey, err = runtimeInterface.RemoveAccountKey(addressValue.ToAddress(), index.ToInt())
-			})
-			if err != nil {
-				panic(err)
-			}
-
-			publicKeyValue := interpreter.ByteSliceToByteArrayValue(publicKey)
-
-			r.emitAccountEvent(
-				stdlib.AccountKeyRemovedEventType,
-				runtimeInterface,
-				[]exportableValue{
-					newExportableValue(addressValue, nil),
-					newExportableValue(publicKeyValue, nil),
-				},
-			)
+			//index := invocation.Arguments[0].(interpreter.IntValue)
+			//
+			//var publicKey []byte
+			//var err error
+			//wrapPanic(func() {
+			//	publicKey, err = runtimeInterface.RemoveAccountKey(addressValue.ToAddress(), index.ToInt())
+			//})
+			//if err != nil {
+			//	panic(err)
+			//}
+			//
+			//publicKeyValue := interpreter.ByteSliceToByteArrayValue(publicKey)
+			//
+			//r.emitAccountEvent(
+			//	stdlib.AccountKeyRemovedEventType,
+			//	runtimeInterface,
+			//	[]exportableValue{
+			//		newExportableValue(addressValue, nil),
+			//		newExportableValue(publicKeyValue, nil),
+			//	},
+			//)
 
 			result := interpreter.VoidValue{}
 			return trampoline.Done{Result: result}
@@ -1573,6 +1573,14 @@ func (r *interpreterRuntime) newAuthAccountContracts(
 func (r *interpreterRuntime) newAuthAccountKeys(addressValue interpreter.AddressValue, runtimeInterface Interface) interpreter.AuthAccountKeysValue {
 	return interpreter.NewAuthAccountKeysValue(
 		r.newAuthAccountKeysAddFunction(
+			addressValue,
+			runtimeInterface,
+		),
+		r.newAuthAccountKeysGetFunction(
+			addressValue,
+			runtimeInterface,
+		),
+		r.newAuthAccountKeysRevokeFunction(
 			addressValue,
 			runtimeInterface,
 		),
@@ -2063,11 +2071,14 @@ func (r *interpreterRuntime) newAuthAccountKeysAddFunction(
 	return interpreter.NewHostFunctionValue(
 		func(invocation interpreter.Invocation) trampoline.Trampoline {
 			publicKeyValue := invocation.Arguments[0].(*interpreter.PublicKeyValue)
+			//signAlgo := invocation.Arguments[0].(*interpreter.S)
+			weight := invocation.Arguments[2].(interpreter.UFix64Value)
 
 			var err error
 			var accountKey *AccountKey
 			wrapPanic(func() {
-				accountKey, err = runtimeInterface.AddAccountKey(addressValue.ToAddress(), publicKeyValue)
+				// FIXME: signALgo and weight
+				accountKey, err = runtimeInterface.AddAccountKey(addressValue.ToAddress(), publicKeyValue, 3, weight.ToInt())
 			})
 			if err != nil {
 				panic(err)
@@ -2079,6 +2090,68 @@ func (r *interpreterRuntime) newAuthAccountKeysAddFunction(
 				[]exportableValue{
 					newExportableValue(addressValue, nil),
 					newExportableValue(publicKeyValue, nil),
+				},
+			)
+
+			return trampoline.Done{Result: accountKey}
+		},
+	)
+}
+
+func (r *interpreterRuntime) newAuthAccountKeysGetFunction(
+	addressValue interpreter.AddressValue,
+	runtimeInterface Interface,
+) interpreter.HostFunctionValue {
+	return interpreter.NewHostFunctionValue(
+		func(invocation interpreter.Invocation) trampoline.Trampoline {
+			index := invocation.Arguments[0].(interpreter.IntValue)
+
+			var err error
+			var accountKey *AccountKey
+			wrapPanic(func() {
+				accountKey, err = runtimeInterface.GetAccountKey(addressValue.ToAddress(), index.ToInt())
+			})
+			if err != nil {
+				panic(err)
+			}
+
+			r.emitAccountEvent(
+				stdlib.AccountKeyAddedEventType,
+				runtimeInterface,
+				[]exportableValue{
+					newExportableValue(addressValue, nil),
+					newExportableValue(index, nil),
+				},
+			)
+
+			return trampoline.Done{Result: accountKey}
+		},
+	)
+}
+
+func (r *interpreterRuntime) newAuthAccountKeysRevokeFunction(
+	addressValue interpreter.AddressValue,
+	runtimeInterface Interface,
+) interpreter.HostFunctionValue {
+	return interpreter.NewHostFunctionValue(
+		func(invocation interpreter.Invocation) trampoline.Trampoline {
+			index := invocation.Arguments[0].(interpreter.IntValue)
+
+			var err error
+			var accountKey *AccountKey
+			wrapPanic(func() {
+				accountKey, err = runtimeInterface.RemoveAccountKey(addressValue.ToAddress(), index.ToInt())
+			})
+			if err != nil {
+				panic(err)
+			}
+
+			r.emitAccountEvent(
+				stdlib.AccountKeyAddedEventType,
+				runtimeInterface,
+				[]exportableValue{
+					newExportableValue(addressValue, nil),
+					newExportableValue(index, nil),
 				},
 			)
 

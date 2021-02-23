@@ -7893,6 +7893,8 @@ var PublicKeyType = func() *BuiltinStructType {
 
 const AuthAccountKeysTypeName = "Keys"
 const AuthAccountKeysAddFunctionName = "add"
+const AuthAccountKeysGetFunctionName = "get"
+const AuthAccountKeysRevokeFunctionName = "revoke"
 
 // AuthAccountKeysType represents the public key associated with an account key.
 var AuthAccountKeysType = func() *BuiltinStructType {
@@ -7913,6 +7915,18 @@ var AuthAccountKeysType = func() *BuiltinStructType {
 			AuthAccountKeysAddFunctionName,
 			authAccountKeysTypeAddFunctionType,
 			authAccountKeysTypeAddFunctionDocString,
+		),
+		NewPublicFunctionMember(
+			authAccountKeys,
+			AuthAccountKeysGetFunctionName,
+			authAccountKeysTypeGetFunctionType,
+			authAccountKeysTypeGetFunctionDocString,
+		),
+		NewPublicFunctionMember(
+			authAccountKeys,
+			AuthAccountKeysRevokeFunctionName,
+			authAccountKeysTypeRevokeFunctionType,
+			authAccountKeysTypeRevokeFunctionDocString,
 		),
 	}
 
@@ -7955,4 +7969,30 @@ var authAccountKeysTypeAddFunctionType = &FunctionType{
 	},
 	ReturnTypeAnnotation:  NewTypeAnnotation(AccountKeyType),
 	RequiredArgumentCount: RequiredArgumentCount(3),
+}
+
+const authAccountKeysTypeGetFunctionDocString = ``
+
+var authAccountKeysTypeGetFunctionType = &FunctionType{
+	Parameters: []*Parameter{
+		{
+			Identifier:     AccountKeyKeyIndexField,
+			TypeAnnotation: NewTypeAnnotation(&IntType{}),
+		},
+	},
+	ReturnTypeAnnotation:  NewTypeAnnotation(&OptionalType{Type: AccountKeyType}),
+	RequiredArgumentCount: RequiredArgumentCount(1),
+}
+
+const authAccountKeysTypeRevokeFunctionDocString = ``
+
+var authAccountKeysTypeRevokeFunctionType = &FunctionType{
+	Parameters: []*Parameter{
+		{
+			Identifier:     AccountKeyKeyIndexField,
+			TypeAnnotation: NewTypeAnnotation(&IntType{}),
+		},
+	},
+	ReturnTypeAnnotation:  NewTypeAnnotation(&OptionalType{Type: AccountKeyType}),
+	RequiredArgumentCount: RequiredArgumentCount(1),
 }

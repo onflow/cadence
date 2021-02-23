@@ -39,6 +39,42 @@ type Block struct {
 	Timestamp int64
 }
 
+type SigningAlgorithm int
+
+const (
+	// Supported signing algorithms
+	UnknownSigningAlgorithm SigningAlgorithm = iota
+	// BLSBLS12381 is BLS on BLS 12-381 curve
+	BLSBLS12381
+	// ECDSAP256 is ECDSA on NIST P-256 curve
+	ECDSAP256
+	// ECDSASecp256k1 is ECDSA on secp256k1 curve
+	ECDSASecp256k1
+)
+
+// String returns the string representation of this signing algorithm.
+func (f SigningAlgorithm) String() string {
+	return [...]string{"UNKNOWN", "BLS_BLS12381", "ECDSA_P256", "ECDSA_secp256k1"}[f]
+}
+
+// HashingAlgorithm is an identifier for a hashing algorithm.
+type HashingAlgorithm int
+
+const (
+	// Supported hashing algorithms
+	UnknownHashingAlgorithm HashingAlgorithm = iota
+	SHA2_256
+	SHA2_384
+	SHA3_256
+	SHA3_384
+	KMAC128
+)
+
+// String returns the string representation of this hashing algorithm.
+func (f HashingAlgorithm) String() string {
+	return [...]string{"UNKNOWN", "SHA2_256", "SHA2_384", "SHA3_256", "SHA3_384", "KMAC128"}[f]
+}
+
 type ResolvedLocation = sema.ResolvedLocation
 type Identifier = ast.Identifier
 type Location = common.Location
@@ -72,9 +108,11 @@ type Interface interface {
 	// CreateAccount creates a new account.
 	CreateAccount(payer Address) (address Address, err error)
 	// AddAccountKey appends a key to an account.
-	AddAccountKey(address Address, publicKey *PublicKey) (*AccountKey, error)
+	AddAccountKey(address Address, publicKey *PublicKey, hashAlgo HashingAlgorithm, weight int) (*AccountKey, error)
+	// GetAccountKey retrieves a key from an account by index.
+	GetAccountKey(address Address, index int) (*AccountKey, error)
 	// RemoveAccountKey removes a key from an account by index.
-	RemoveAccountKey(address Address, index int) (publicKey []byte, err error)
+	RemoveAccountKey(address Address, index int) (*AccountKey, error)
 	// UpdateAccountContractCode updates the code associated with an account contract.
 	UpdateAccountContractCode(address Address, name string, code []byte) (err error)
 	// GetAccountContractCode returns the code associated with an account contract.
@@ -196,11 +234,15 @@ func (i *emptyRuntimeInterface) CreateAccount(_ Address) (address Address, err e
 	return Address{}, nil
 }
 
-func (i *emptyRuntimeInterface) AddAccountKey(_ Address, _ *PublicKey) (*AccountKey, error) {
+func (i *emptyRuntimeInterface) AddAccountKey(_ Address, _ *PublicKey, _ HashingAlgorithm, _ int) (*AccountKey, error) {
 	return nil, nil
 }
 
-func (i *emptyRuntimeInterface) RemoveAccountKey(_ Address, _ int) (publicKey []byte, err error) {
+func (i *emptyRuntimeInterface) RemoveAccountKey(_ Address, _ int) (*AccountKey, error) {
+	return nil, nil
+}
+
+func (i *emptyRuntimeInterface) GetAccountKey(_ Address, _ int) (*AccountKey, error) {
 	return nil, nil
 }
 

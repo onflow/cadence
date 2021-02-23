@@ -139,6 +139,7 @@ var HelperFunctions = StandardLibraryFunctions{
 	LogFunction,
 }
 
+// FIXME remove this
 var CreateAccountKeyFunction = NewStandardLibraryFunction(
 	sema.AccountKeyTypeName,
 	&sema.FunctionType{
