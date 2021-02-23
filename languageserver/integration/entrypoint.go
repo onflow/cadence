@@ -25,6 +25,7 @@ import (
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/parser2"
 	"github.com/onflow/cadence/runtime/sema"
+	"regexp"
 )
 
 type entryPointKind uint8
@@ -42,6 +43,7 @@ type entryPointInfo struct {
 	parameters            []*sema.Parameter
 	pragmaArgumentStrings []string
 	pragmaArguments       [][]cadence.Value
+	pragmaSignersStrings  [][]string
 }
 
 func (i *FlowIntegration) updateEntryPointInfoIfNeeded(
@@ -77,6 +79,7 @@ func (i *FlowIntegration) updateEntryPointInfoIfNeeded(
 		}
 	}
 
+	var pragmaSigners [][]string
 	var pragmaArgumentStrings []string
 	var pragmaArguments [][]cadence.Value
 
@@ -98,6 +101,11 @@ func (i *FlowIntegration) updateEntryPointInfoIfNeeded(
 			pragmaArgumentStrings = append(pragmaArgumentStrings, pragmaArgumentString)
 			pragmaArguments = append(pragmaArguments, arguments)
 		}
+
+		for _, pragmaSignerString := range parser2.ParseDocstringPragmaSigners(docString) {
+			signers := parseSignersList(pragmaSignerString)
+			pragmaSigners = append(pragmaSigners, signers)
+		}
 	}
 
 	i.entryPointInfo[uri] = entryPointInfo{
@@ -107,5 +115,13 @@ func (i *FlowIntegration) updateEntryPointInfoIfNeeded(
 		parameters:            parameters,
 		pragmaArgumentStrings: pragmaArgumentStrings,
 		pragmaArguments:       pragmaArguments,
+		pragmaSignersStrings:  pragmaSigners,
 	}
+}
+
+func parseSignersList(signerList string) []string {
+	var re = regexp.MustCompile(`[a-zA-Z]+`)
+	result := re.FindAllString(signerList, -1)
+
+	return result
 }
