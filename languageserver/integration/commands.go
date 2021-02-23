@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"net/url"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/onflow/flow-go-sdk/crypto"
@@ -47,6 +48,10 @@ const (
 	CommandCreateAccount         = "cadence.server.flow.createAccount"
 	CommandCreateDefaultAccounts = "cadence.server.flow.createDefaultAccounts"
 	CommandSwitchActiveAccount   = "cadence.server.flow.switchActiveAccount"
+
+	ClientExecuteScript = "cadence.executeScript"
+	ClientSendTransaction = "cadence.sendTransaction"
+	ClientDeployContract = "cadence.deployContract"
 )
 
 func (i *FlowIntegration) commands() []server.Command {
@@ -91,37 +96,30 @@ func (i *FlowIntegration) submitTransaction(conn protocol.Conn, args ...interfac
 		return nil, err
 	}
 
-	uri, ok := args[0].(string)
-	if !ok {
-		return nil, fmt.Errorf("invalid URI argument: %#+v", args[0])
-	}
-
-	doc, ok := i.server.GetDocument(protocol.DocumentUri(uri))
-	if !ok {
-		return nil, fmt.Errorf("could not find document for URI %s", uri)
-	}
-
-	rawTransactionArguments, ok := args[1].([]interface{})
+	_, ok := args[1].([]interface{})
 	if !ok {
 		return nil, fmt.Errorf("invalid transaction arguments: %#+v", args[1])
 	}
 
-	script := []byte(doc.Text)
+	rawTransactionArguments, ok := args[1].([]interface{})
+	if !ok {
+		return nil, fmt.Errorf("invalid script arguments: %#+v", args[1])
+	}
 
-	tx := flow.NewTransaction().
-		SetScript(script).
-		AddAuthorizer(i.activeAddress)
-
+	var transactionArguments []string
 	for i, rawTransactionArgument := range rawTransactionArguments {
-		transactionArgumentString, ok := rawTransactionArgument.(string)
+		stringArgument, ok := rawTransactionArgument.(string)
 		if !ok {
 			return nil, fmt.Errorf("invalid transaction argument at index %d: %#+v", i, rawTransactionArgument)
 		}
 
-		tx.AddRawArgument([]byte(transactionArgumentString))
+		transactionArguments = append(transactionArguments, strings.TrimSuffix(stringArgument, "\n"))
 	}
 
-	_, err = i.sendTransactionHelper(conn, i.activeAddress, tx)
+	// Pass arguments back to extension
+	codeArguments := fmt.Sprintf("%s", strings.Join(transactionArguments, ","))
+	err = conn.Notify(ClientSendTransaction, codeArguments)
+
 	return nil, err
 }
 
@@ -137,80 +135,36 @@ func (i *FlowIntegration) executeScript(conn protocol.Conn, args ...interface{})
 		return nil, err
 	}
 
-	uri, ok := args[0].(string)
+	_, ok := args[0].(string)
 	if !ok {
 		return nil, fmt.Errorf("invalid URI argument: %#+v", args[0])
 	}
 
-	doc, ok := i.server.GetDocument(protocol.DocumentUri(uri))
+/*	doc, ok := i.server.GetDocument(protocol.DocumentUri(uri))
 	if !ok {
 		return nil, fmt.Errorf("could not find document for URI %s", uri)
-	}
+	}*/
 
 	rawScriptArguments, ok := args[1].([]interface{})
 	if !ok {
 		return nil, fmt.Errorf("invalid script arguments: %#+v", args[1])
 	}
 
-	// TODO: remove this decoding.
-	// The Flow Go SDK doesn't allow sending a script with raw arguments,
-	// so decode them for now (and then they get re-encoded, but that's negligible)
-
-	scriptArguments := make([]cadence.Value, len(rawScriptArguments))
+	var scriptArguments []string
 	for i, rawScriptArgument := range rawScriptArguments {
-		scriptArgumentString, ok := rawScriptArgument.(string)
+		stringArgument, ok := rawScriptArgument.(string)
 		if !ok {
 			return nil, fmt.Errorf("invalid script argument at index %d: %#+v", i, rawScriptArgument)
 		}
 
-		scriptArgument, err := jsoncdc.Decode([]byte(scriptArgumentString))
-		if err != nil {
-			return nil, fmt.Errorf("invalid script argument at index %d: %w", i, err)
-		}
-		scriptArguments[i] = scriptArgument
+		scriptArguments = append(scriptArguments, strings.TrimSuffix(stringArgument, "\n"))
 	}
 
-	script := []byte(doc.Text)
-	res, err := i.flowClient.ExecuteScriptAtLatestBlock(context.Background(), script, scriptArguments)
-	if err != nil {
+	// Pass arguments back to extension
+	codeArguments := fmt.Sprintf("%s", strings.Join(scriptArguments, ","))
+	err = conn.Notify(ClientExecuteScript, codeArguments)
 
-		grpcErr, ok := status.FromError(err)
-		if ok {
-			if grpcErr.Code() == codes.Unavailable {
-				// The emulator server isn't running
-				conn.ShowMessage(&protocol.ShowMessageParams{
-					Type:    protocol.Warning,
-					Message: "The emulator server is unavailable. Please start the emulator (`cadence.runEmulator`) first.",
-				})
-				return nil, nil
-			} else if grpcErr.Code() == codes.InvalidArgument {
-				// The request was invalid
-				conn.ShowMessage(&protocol.ShowMessageParams{
-					Type:    protocol.Warning,
-					Message: "The script could not be executed.",
-				})
-				conn.LogMessage(&protocol.LogMessageParams{
-					Type:    protocol.Warning,
-					Message: fmt.Sprintf("Failed to execute script: %s", grpcErr.Message()),
-				})
-				return nil, nil
-			}
-		} else {
-			conn.LogMessage(&protocol.LogMessageParams{
-				Type:    protocol.Warning,
-				Message: fmt.Sprintf("Failed to execute script: %s", err.Error()),
-			})
-		}
-
-		return nil, err
-	}
-
-	conn.LogMessage(&protocol.LogMessageParams{
-		Type:    protocol.Info,
-		Message: fmt.Sprintf("Executed script with result: %v", res),
-	})
-
-	return res, nil
+	return nil, err
 }
 
 // switchActiveAccount sets the account that is currently active and should be
