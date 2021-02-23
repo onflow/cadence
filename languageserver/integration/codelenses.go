@@ -172,10 +172,14 @@ func (i *FlowIntegration) entryPointActions(
 		command = CommandExecuteScript
 
 	case entryPointKindTransaction:
+
+		// TODO: maybe we shall remove this requirement, since we don't track active account anymore
 		// Do not show submit button when no active account exists
+		/*
 		if i.activeAddress == flow.EmptyAddress {
 			return nil, nil
 		}
+		*/
 
 		title = fmt.Sprintf(
 			"submit with account 0x%s",
