@@ -373,7 +373,7 @@ func (s *runtimeStorage) encodeValue(
 				value,
 				[]string{path},
 				true,
-				s.prepareCallback,
+				nil,
 			)
 		},
 		s.runtimeInterface,
@@ -419,19 +419,4 @@ func (s *runtimeStorage) decodeCallback(value interface{}, path []string) {
 		panic(err)
 	}
 
-}
-
-func (s *runtimeStorage) prepareCallback(value interpreter.Value, path []string) {
-	logMessage := fmt.Sprintf(
-		"encoding value for key %s: %T",
-		path,
-		value,
-	)
-	var err error
-	wrapPanic(func() {
-		err = s.runtimeInterface.ImplementationDebugLog(logMessage)
-	})
-	if err != nil {
-		panic(err)
-	}
 }
