@@ -488,6 +488,7 @@ func (e *Encoder) prepareInt64(v Int64Value) cbor.Tag {
 		Content: v,
 	}
 }
+
 func (e *Encoder) prepareInt128(v Int128Value) cbor.Tag {
 	return cbor.Tag{
 		Number:  cborTagInt128Value,

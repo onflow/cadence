@@ -56,7 +56,7 @@ var checkConcurrently = flag.Int(
 )
 
 func ParseAndCheckWithOptions(
-	t *testing.T,
+	t testing.TB,
 	code string,
 	options ParseAndCheckOptions,
 ) (*sema.Checker, error) {
