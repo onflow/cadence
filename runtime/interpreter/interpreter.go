@@ -3886,9 +3886,6 @@ func IsSubType(subType DynamicType, superType sema.Type) bool {
 		switch superType {
 		case sema.AnyStructType, sema.AnyResourceType:
 			return true
-
-		default:
-			return false
 		}
 
 	case NilDynamicType:
@@ -3899,9 +3896,6 @@ func IsSubType(subType DynamicType, superType sema.Type) bool {
 		switch superType {
 		case sema.AnyStructType, sema.AnyResourceType:
 			return true
-
-		default:
-			return false
 		}
 
 	case SomeDynamicType:
@@ -3912,9 +3906,6 @@ func IsSubType(subType DynamicType, superType sema.Type) bool {
 		switch superType {
 		case sema.AnyStructType, sema.AnyResourceType:
 			return true
-
-		default:
-			return false
 		}
 
 	case ReferenceDynamicType:
@@ -3964,64 +3955,48 @@ func IsSubType(subType DynamicType, superType sema.Type) bool {
 		switch superType {
 		case sema.PublicPathType, sema.CapabilityPathType, sema.PathType, sema.AnyStructType:
 			return true
-		default:
-			return false
 		}
 
 	case PrivatePathDynamicType:
 		switch superType {
 		case sema.PrivatePathType, sema.CapabilityPathType, sema.PathType, sema.AnyStructType:
 			return true
-		default:
-			return false
 		}
 
 	case StoragePathDynamicType:
 		switch superType {
 		case sema.StoragePathType, sema.PathType, sema.AnyStructType:
 			return true
-		default:
-			return false
 		}
 
 	case PublicAccountDynamicType:
 		switch superType {
-		case sema.PublicAccountType, sema.AnyStructType:
+		case sema.AnyStructType, sema.PublicAccountType:
 			return true
-		default:
-			return false
 		}
 
 	case AuthAccountDynamicType:
 		switch superType {
-		case sema.AuthAccountType, sema.AnyStructType:
+		case sema.AnyStructType, sema.AuthAccountType:
 			return true
-		default:
-			return false
 		}
 
 	case DeployedContractDynamicType:
 		switch superType {
-		case sema.DeployedContractType, sema.AnyStructType:
+		case sema.AnyStructType, sema.DeployedContractType:
 			return true
-		default:
-			return false
 		}
 
 	case AuthAccountContractsDynamicType:
 		switch superType {
-		case sema.AuthAccountContractsType, sema.AnyStructType:
+		case sema.AnyStructType, sema.AuthAccountContractsType:
 			return true
-		default:
-			return false
 		}
 
 	case BlockDynamicType:
 		switch superType {
-		case sema.BlockType, sema.AnyStructType:
+		case sema.AnyStructType, sema.BlockType:
 			return true
-		default:
-			return false
 		}
 	}
 
