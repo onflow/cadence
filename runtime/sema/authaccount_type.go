@@ -187,7 +187,7 @@ var AuthAccountType = &NominalType{
 					return NewPublicConstantFieldMember(
 						t,
 						identifier,
-						&AuthAccountContractsType{},
+						AuthAccountContractsType,
 						accountTypeContractsFieldDocString,
 					)
 				},
@@ -196,7 +196,7 @@ var AuthAccountType = &NominalType{
 	},
 	NestedTypes: func() *StringTypeOrderedMap {
 		nestedTypes := NewStringTypeOrderedMap()
-		nestedTypes.Set("Contracts", &AuthAccountContractsType{})
+		nestedTypes.Set("Contracts", AuthAccountContractsType)
 		return nestedTypes
 	}(),
 }

@@ -4010,11 +4010,12 @@ func IsSubType(subType DynamicType, superType sema.Type) bool {
 		}
 
 	case AuthAccountContractsDynamicType:
-		if _, ok := superType.(*sema.AuthAccountContractsType); ok {
+		switch superType {
+		case sema.AuthAccountContractsType, sema.AnyStructType:
 			return true
+		default:
+			return false
 		}
-
-		return superType == sema.AnyStructType
 
 	case BlockDynamicType:
 		switch superType {
