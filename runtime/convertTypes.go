@@ -111,8 +111,6 @@ func ExportType(t sema.Type, results map[sema.TypeID]cadence.Type) cadence.Type 
 			return exportReferenceType(t, results)
 		case *sema.RestrictedType:
 			return exportRestrictedType(t, results)
-		case *sema.BlockType:
-			return cadence.BlockType{}
 		case *sema.CheckedFunctionType:
 			return exportFunctionType(t.FunctionType, results)
 		case *sema.CapabilityType:
@@ -152,6 +150,8 @@ func ExportType(t sema.Type, results map[sema.TypeID]cadence.Type) cadence.Type 
 			return cadence.AuthAccountType{}
 		case sema.PublicAccountType:
 			return cadence.PublicAccountType{}
+		case sema.BlockType:
+			return cadence.BlockType{}
 		}
 
 		panic(fmt.Sprintf("cannot export type of type %T", t))

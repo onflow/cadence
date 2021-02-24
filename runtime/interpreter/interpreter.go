@@ -4016,11 +4016,12 @@ func IsSubType(subType DynamicType, superType sema.Type) bool {
 		return superType == sema.AnyStructType
 
 	case BlockDynamicType:
-		if _, ok := superType.(*sema.BlockType); ok {
+		switch superType {
+		case sema.BlockType, sema.AnyStructType:
 			return true
+		default:
+			return false
 		}
-
-		return superType == sema.AnyStructType
 	}
 
 	return false

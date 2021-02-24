@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2021 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,55 +24,64 @@ import (
 )
 
 // BlockType
-
-type BlockType struct{}
-
-func (*BlockType) IsType() {}
-
-func (*BlockType) String() string {
-	return "Block"
-}
-
-func (*BlockType) QualifiedString() string {
-	return "Block"
-}
-
-func (*BlockType) ID() TypeID {
-	return "Block"
-}
-
-func (*BlockType) Equal(other Type) bool {
-	_, ok := other.(*BlockType)
-	return ok
-}
-
-func (*BlockType) IsResourceType() bool {
-	return false
-}
-
-func (*BlockType) TypeAnnotationState() TypeAnnotationState {
-	return TypeAnnotationStateValid
-}
-
-func (*BlockType) IsInvalidType() bool {
-	return false
-}
-
-func (*BlockType) IsStorable(_ map[*Member]bool) bool {
-	return false
-}
-
-func (*BlockType) IsExternallyReturnable(_ map[*Member]bool) bool {
-	return false
-}
-
-func (*BlockType) IsEquatable() bool {
-	// TODO:
-	return false
-}
-
-func (t *BlockType) RewriteWithRestrictedTypes() (Type, bool) {
-	return t, false
+//
+var BlockType = &NominalType{
+	Name:                 "Block",
+	QualifiedName:        "Block",
+	TypeID:               "Block",
+	IsInvalid:            false,
+	IsResource:           false,
+	Storable:             false,
+	Equatable:            false,
+	ExternallyReturnable: false,
+	Members: func(t *NominalType) map[string]MemberResolver {
+		return map[string]MemberResolver{
+			"height": {
+				Kind: common.DeclarationKindField,
+				Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
+					return NewPublicConstantFieldMember(
+						t,
+						identifier,
+						&UInt64Type{},
+						blockTypeHeightFieldDocString,
+					)
+				},
+			},
+			"view": {
+				Kind: common.DeclarationKindField,
+				Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
+					return NewPublicConstantFieldMember(
+						t,
+						identifier,
+						&UInt64Type{},
+						blockTypeViewFieldDocString,
+					)
+				},
+			},
+			"timestamp": {
+				Kind: common.DeclarationKindField,
+				Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
+					return NewPublicConstantFieldMember(
+						t,
+						identifier,
+						&UFix64Type{},
+						blockTypeTimestampFieldDocString,
+					)
+				},
+			},
+			"id": {
+				Kind: common.DeclarationKindField,
+				Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
+					return NewPublicConstantFieldMember(
+						t,
+						identifier,
+						blockIDFieldType,
+						blockTypeIdFieldDocString,
+					)
+				},
+			},
+		}
+	},
 }
 
 const BlockIDSize = 32
@@ -105,60 +114,3 @@ The timestamp of the block.
 
 It is the local clock time of the block proposer when it generates the block
 `
-
-func (t *BlockType) GetMembers() map[string]MemberResolver {
-	return map[string]MemberResolver{
-		"height": {
-			Kind: common.DeclarationKindField,
-			Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
-				return NewPublicConstantFieldMember(
-					t,
-					identifier,
-					&UInt64Type{},
-					blockTypeHeightFieldDocString,
-				)
-			},
-		},
-		"view": {
-			Kind: common.DeclarationKindField,
-			Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
-				return NewPublicConstantFieldMember(
-					t,
-					identifier,
-					&UInt64Type{},
-					blockTypeViewFieldDocString,
-				)
-			},
-		},
-		"timestamp": {
-			Kind: common.DeclarationKindField,
-			Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
-				return NewPublicConstantFieldMember(
-					t,
-					identifier,
-					&UFix64Type{},
-					blockTypeTimestampFieldDocString,
-				)
-			},
-		},
-		"id": {
-			Kind: common.DeclarationKindField,
-			Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
-				return NewPublicConstantFieldMember(
-					t,
-					identifier,
-					blockIDFieldType,
-					blockTypeIdFieldDocString,
-				)
-			},
-		},
-	}
-}
-
-func (t *BlockType) Unify(other Type, typeParameters *TypeParameterTypeOrderedMap, report func(err error), outerRange ast.Range) bool {
-	return false
-}
-
-func (t *BlockType) Resolve(typeArguments *TypeParameterTypeOrderedMap) Type {
-	return t
-}
