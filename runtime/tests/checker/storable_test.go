@@ -119,7 +119,7 @@ func TestCheckStorable(t *testing.T) {
 		sema.NeverType,
 		sema.VoidType,
 		sema.AuthAccountType,
-		&sema.PublicAccountType{},
+		sema.PublicAccountType,
 	}
 
 	// Capabilities of non-storable types are storable

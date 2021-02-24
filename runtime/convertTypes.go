@@ -117,8 +117,6 @@ func ExportType(t sema.Type, results map[sema.TypeID]cadence.Type) cadence.Type 
 			return exportFunctionType(t.FunctionType, results)
 		case *sema.CapabilityType:
 			return exportCapabilityType(t, results)
-		case *sema.PublicAccountType:
-			return cadence.PublicAccountType{}
 		}
 
 		switch t {
@@ -152,6 +150,8 @@ func ExportType(t sema.Type, results map[sema.TypeID]cadence.Type) cadence.Type 
 			return cadence.AnyResourceType{}
 		case sema.AuthAccountType:
 			return cadence.AuthAccountType{}
+		case sema.PublicAccountType:
+			return cadence.PublicAccountType{}
 		}
 
 		panic(fmt.Sprintf("cannot export type of type %T", t))
