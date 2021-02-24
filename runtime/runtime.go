@@ -152,10 +152,13 @@ func (r *interpreterRuntime) ExecuteScript(script Script, context Context) (cade
 		checkerOptions,
 	)
 
+	values := stdlib.BuiltinValues
+
 	program, err := r.parseAndCheckProgram(
 		script.Source,
 		context,
 		functions,
+		values,
 		checkerOptions,
 	)
 	if err != nil {
@@ -198,6 +201,7 @@ func (r *interpreterRuntime) ExecuteScript(script Script, context Context) (cade
 		context,
 		runtimeStorage,
 		functions,
+		stdlib.BuiltinValues,
 		interpreterOptions,
 		checkerOptions,
 		interpret,
@@ -241,6 +245,7 @@ func (r *interpreterRuntime) interpret(
 	context Context,
 	runtimeStorage *runtimeStorage,
 	functions stdlib.StandardLibraryFunctions,
+	values stdlib.StandardLibraryValues,
 	interpreterOptions []interpreter.Option,
 	checkerOptions []sema.Option,
 	f interpretFunc,
@@ -254,6 +259,7 @@ func (r *interpreterRuntime) interpret(
 		program,
 		context,
 		functions,
+		values,
 		runtimeStorage,
 		interpreterOptions,
 		checkerOptions,
@@ -329,10 +335,13 @@ func (r *interpreterRuntime) ExecuteTransaction(script Script, context Context) 
 		checkerOptions,
 	)
 
+	values := stdlib.BuiltinValues
+
 	program, err := r.parseAndCheckProgram(
 		script.Source,
 		context,
 		functions,
+		values,
 		checkerOptions,
 	)
 	if err != nil {
@@ -399,6 +408,7 @@ func (r *interpreterRuntime) ExecuteTransaction(script Script, context Context) 
 		context,
 		runtimeStorage,
 		functions,
+		stdlib.BuiltinValues,
 		interpreterOptions,
 		checkerOptions,
 		r.transactionExecutionFunction(
@@ -539,10 +549,13 @@ func (r *interpreterRuntime) ParseAndCheckProgram(code []byte, context Context) 
 		checkerOptions,
 	)
 
+	values := stdlib.BuiltinValues
+
 	program, err := r.parseAndCheckProgram(
 		code,
 		context,
 		functions,
+		values,
 		checkerOptions,
 	)
 	if err != nil {
@@ -556,6 +569,7 @@ func (r *interpreterRuntime) parseAndCheckProgram(
 	code []byte,
 	context Context,
 	functions stdlib.StandardLibraryFunctions,
+	values stdlib.StandardLibraryValues,
 	checkerOptions []sema.Option,
 ) (
 	program *interpreter.Program,
@@ -590,7 +604,7 @@ func (r *interpreterRuntime) parseAndCheckProgram(
 
 	// Check
 
-	elaboration, err := r.check(parse, context, functions, checkerOptions)
+	elaboration, err := r.check(parse, context, functions, values, checkerOptions)
 	if err != nil {
 		return nil, wrapError(err)
 	}
@@ -616,6 +630,7 @@ func (r *interpreterRuntime) check(
 	program *ast.Program,
 	startContext Context,
 	functions stdlib.StandardLibraryFunctions,
+	values stdlib.StandardLibraryValues,
 	checkerOptions []sema.Option,
 ) (
 	elaboration *sema.Elaboration,
@@ -623,6 +638,7 @@ func (r *interpreterRuntime) check(
 ) {
 
 	valueDeclarations := functions.ToSemaValueDeclarations()
+	valueDeclarations = append(valueDeclarations, values.ToSemaValueDeclarations()...)
 
 	for _, predeclaredValue := range startContext.PredeclaredValues {
 		valueDeclarations = append(valueDeclarations, predeclaredValue)
@@ -654,7 +670,7 @@ func (r *interpreterRuntime) check(
 						default:
 							context := startContext.WithLocation(location)
 
-							program, err := r.getProgram(context, functions, checkerOptions)
+							program, err := r.getProgram(context, functions, values, checkerOptions)
 							if err != nil {
 								return nil, err
 							}
@@ -701,19 +717,21 @@ func (r *interpreterRuntime) newInterpreter(
 	program *interpreter.Program,
 	context Context,
 	functions stdlib.StandardLibraryFunctions,
+	values stdlib.StandardLibraryValues,
 	runtimeStorage *runtimeStorage,
 	interpreterOptions []interpreter.Option,
 	checkerOptions []sema.Option,
 ) (*interpreter.Interpreter, error) {
 
-	values := functions.ToInterpreterValueDeclarations()
+	preDeclaredValues := functions.ToInterpreterValueDeclarations()
+	preDeclaredValues = append(preDeclaredValues, values.ToInterpreterValueDeclarations()...)
 
 	for _, predeclaredValue := range context.PredeclaredValues {
-		values = append(values, predeclaredValue)
+		preDeclaredValues = append(preDeclaredValues, predeclaredValue)
 	}
 
 	defaultOptions := []interpreter.Option{
-		interpreter.WithPredeclaredValues(values),
+		interpreter.WithPredeclaredValues(preDeclaredValues),
 		interpreter.WithOnEventEmittedHandler(
 			func(
 				inter *interpreter.Interpreter,
@@ -756,7 +774,7 @@ func (r *interpreterRuntime) newInterpreter(
 			},
 		),
 		interpreter.WithImportLocationHandler(
-			r.importLocationHandler(context, functions, checkerOptions),
+			r.importLocationHandler(context, functions, values, checkerOptions),
 		),
 		interpreter.WithOnStatementHandler(
 			r.onStatementHandler(),
@@ -784,6 +802,7 @@ func (r *interpreterRuntime) newInterpreter(
 func (r *interpreterRuntime) importLocationHandler(
 	startContext Context,
 	functions stdlib.StandardLibraryFunctions,
+	values stdlib.StandardLibraryValues,
 	checkerOptions []sema.Option,
 ) interpreter.ImportLocationHandlerFunc {
 
@@ -802,7 +821,7 @@ func (r *interpreterRuntime) importLocationHandler(
 		default:
 			context := startContext.WithLocation(location)
 
-			program, err := r.getProgram(context, functions, checkerOptions)
+			program, err := r.getProgram(context, functions, values, checkerOptions)
 			if err != nil {
 				panic(err)
 			}
@@ -824,6 +843,7 @@ func (r *interpreterRuntime) importLocationHandler(
 func (r *interpreterRuntime) getProgram(
 	context Context,
 	functions stdlib.StandardLibraryFunctions,
+	values stdlib.StandardLibraryValues,
 	checkerOptions []sema.Option,
 ) (
 	program *interpreter.Program,
@@ -849,6 +869,7 @@ func (r *interpreterRuntime) getProgram(
 			code,
 			context,
 			functions,
+			values,
 			checkerOptions,
 		)
 		if err != nil {
@@ -1308,6 +1329,7 @@ func (r *interpreterRuntime) instantiateContract(
 	argumentTypes []sema.Type,
 	runtimeStorage *runtimeStorage,
 	functions stdlib.StandardLibraryFunctions,
+	values stdlib.StandardLibraryValues,
 	interpreterOptions []interpreter.Option,
 	checkerOptions []sema.Option,
 	invocationRange ast.Range,
@@ -1416,6 +1438,7 @@ func (r *interpreterRuntime) instantiateContract(
 		context,
 		runtimeStorage,
 		functions,
+		values,
 		allInterpreterOptions,
 		checkerOptions,
 		nil,
@@ -1673,6 +1696,8 @@ func (r *interpreterRuntime) newAuthAccountContractsChangeFunction(
 				checkerOptions,
 			)
 
+			values := stdlib.BuiltinValues
+
 			handleContractUpdateError := func(err error) {
 				if err == nil {
 					return
@@ -1699,6 +1724,7 @@ func (r *interpreterRuntime) newAuthAccountContractsChangeFunction(
 				code,
 				context,
 				functions,
+				values,
 				checkerOptions,
 			)
 			if err != nil {
@@ -1874,6 +1900,7 @@ func (r *interpreterRuntime) updateAccountContractCode(
 	if createContract {
 
 		functions := r.standardLibraryFunctions(context, runtimeStorage, interpreterOptions, checkerOptions)
+		values := stdlib.BuiltinValues
 
 		contract, err := r.instantiateContract(
 			program,
@@ -1883,6 +1910,7 @@ func (r *interpreterRuntime) updateAccountContractCode(
 			constructorArgumentTypes,
 			runtimeStorage,
 			functions,
+			values,
 			interpreterOptions,
 			checkerOptions,
 			invocationRange,

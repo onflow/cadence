@@ -156,13 +156,15 @@ func exportValueWithInterpreter(
 				sema.AccountKeyWeightField:    v.Weight,
 				sema.AccountKeyIsRevokedField: v.IsRevoked,
 			}
-			return exportBuiltinStructValue(v.DynamicType(inter), fields, inter, results)
+			return exportBuiltinStructValueOld(v.DynamicType(inter), fields, inter, results)
 		case *interpreter.PublicKeyValue:
 			fields := map[string]interpreter.Value{
 				sema.PublicKeyPublicKeyField: v.PublicKey,
 				sema.PublicKeySignAlgoField:  v.SignAlgo,
 			}
-			return exportBuiltinStructValue(v.DynamicType(inter), fields, inter, results)
+			return exportBuiltinStructValueOld(v.DynamicType(inter), fields, inter, results)
+		case *interpreter.BuiltinStructValue:
+			return exportBuiltinStructValue(v, inter, results)
 		}
 
 		panic(fmt.Sprintf("cannot export value of type %T", value))
@@ -297,7 +299,26 @@ func exportCapabilityValue(v interpreter.CapabilityValue, inter *interpreter.Int
 	}
 }
 
-func exportBuiltinStructValue(
+func exportBuiltinStructValue(v *interpreter.BuiltinStructValue, inter *interpreter.Interpreter, results exportResults) cadence.Value {
+
+	builtinDynamicType := v.DynamicType(inter).(interpreter.BuiltinStructDynamicType)
+
+	// Convert internal type to exported type.
+	exportedBuiltinStructType := exportBuiltinStructType(builtinDynamicType.StaticType, map[sema.TypeID]cadence.Type{})
+
+	fieldNames := exportedBuiltinStructType.Fields
+	fields := make([]cadence.Value, len(fieldNames))
+
+	// NOTE: use the exported type's fields to ensure fields in type and value are in sync.
+	for index, field := range fieldNames {
+		fieldValue := v.Fields[field.Identifier]
+		fields[index] = exportValueWithInterpreter(fieldValue, inter, results)
+	}
+
+	return cadence.NewBuiltinStruct(fields).WithType(exportedBuiltinStructType)
+}
+
+func exportBuiltinStructValueOld(
 	dynamicType interpreter.DynamicType,
 	fieldValues map[string]interpreter.Value,
 	inter *interpreter.Interpreter,

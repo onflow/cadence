@@ -65,6 +65,7 @@ type Visitor interface {
 	VisitAccountKeyValue(interpreter *Interpreter, value *AccountKeyValue)
 	VisitPublicKeyValue(interpreter *Interpreter, value *PublicKeyValue)
 	VisitAuthAccountKeysValue(interpreter *Interpreter, value AuthAccountKeysValue)
+	VisitBuiltinStructValue(interpreter *Interpreter, value *BuiltinStructValue)
 }
 
 type EmptyVisitor struct {
@@ -114,6 +115,7 @@ type EmptyVisitor struct {
 	AccountKeyValueVisitor           func(interpreter *Interpreter, value *AccountKeyValue)
 	PublicKeyValueVisitor            func(interpreter *Interpreter, value *PublicKeyValue)
 	AuthAccountKeysValueVisitor      func(interpreter *Interpreter, value AuthAccountKeysValue)
+	BuiltinStructValueVisitor        func(interpreter *Interpreter, value *BuiltinStructValue)
 }
 
 var _ Visitor = &EmptyVisitor{}
@@ -438,4 +440,11 @@ func (v EmptyVisitor) VisitAuthAccountKeysValue(interpreter *Interpreter, value 
 		return
 	}
 	v.AuthAccountKeysValueVisitor(interpreter, value)
+}
+
+func (v EmptyVisitor) VisitBuiltinStructValue(interpreter *Interpreter, value *BuiltinStructValue) {
+	if v.BuiltinStructValueVisitor == nil {
+		return
+	}
+	v.BuiltinStructValueVisitor(interpreter, value)
 }

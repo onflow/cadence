@@ -7147,15 +7147,15 @@ type AccountKeyValue struct {
 	IsRevoked BoolValue
 }
 
-func NewAccountKeyValue(publicKey *PublicKeyValue, hashAlgo *StringValue, weight UFix64Value) *AccountKeyValue {
-	return &AccountKeyValue{
-		KeyIndex:  NewIntValueFromInt64(001),
-		PublicKey: publicKey,
-		HashAlgo:  hashAlgo,
-		Weight:    weight,
-		IsRevoked: false,
-	}
-}
+//func NewAccountKeyValue(publicKey *PublicKeyValue, hashAlgo *StringValue, weight UFix64Value) *AccountKeyValue {
+//	return &AccountKeyValue{
+//		KeyIndex:  NewIntValueFromInt64(001),
+//		PublicKey: publicKey,
+//		HashAlgo:  hashAlgo,
+//		Weight:    weight,
+//		IsRevoked: false,
+//	}
+//}
 
 func (*AccountKeyValue) IsValue() {}
 
@@ -7253,12 +7253,12 @@ type PublicKeyValue struct {
 	SignAlgo  *StringValue
 }
 
-func NewPublicKeyValue(publicKey *ArrayValue, signAlgo *StringValue) *PublicKeyValue {
-	return &PublicKeyValue{
-		PublicKey: publicKey,
-		SignAlgo:  signAlgo,
-	}
-}
+//func NewPublicKeyValue(publicKey *ArrayValue, signAlgo *StringValue) *PublicKeyValue {
+//	return &PublicKeyValue{
+//		PublicKey: publicKey,
+//		SignAlgo:  signAlgo,
+//	}
+//}
 
 func (*PublicKeyValue) IsValue() {}
 
@@ -7406,4 +7406,115 @@ func (v AuthAccountKeysValue) GetMember(_ *Interpreter, _ LocationRange, name st
 
 func (AuthAccountKeysValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
 	panic(errors.NewUnreachableError())
+}
+
+// BuiltinStructValue
+
+type BuiltinStructValue struct {
+	Fields     map[string]Value
+	staticType StaticType
+	structType *sema.BuiltinStructType
+}
+
+func NewBuiltinStructValue(structType *sema.BuiltinStructType, fields map[string]Value) *BuiltinStructValue {
+	if fields == nil {
+		fields = map[string]Value{}
+	}
+
+	return &BuiltinStructValue{
+		Fields:     fields,
+		structType: structType,
+		staticType: ConvertSemaToPrimitiveStaticType(structType),
+	}
+}
+
+func (*BuiltinStructValue) IsValue() {}
+
+func (v *BuiltinStructValue) Accept(interpreter *Interpreter, visitor Visitor) {
+	visitor.VisitBuiltinStructValue(interpreter, v)
+}
+
+func (v *BuiltinStructValue) DynamicType(_ *Interpreter) DynamicType {
+	return BuiltinStructDynamicType{v.structType}
+}
+
+func (v *BuiltinStructValue) StaticType() StaticType {
+	return v.staticType
+}
+
+func (v *BuiltinStructValue) Copy() Value {
+	return v
+}
+
+func (*BuiltinStructValue) GetOwner() *common.Address {
+	// value is never owned
+	return nil
+}
+
+func (*BuiltinStructValue) SetOwner(_ *common.Address) {
+	// NO-OP: value cannot be owned
+}
+
+func (*BuiltinStructValue) IsModified() bool {
+	return false
+}
+
+func (*BuiltinStructValue) SetModified(_ bool) {
+	// NO-OP
+}
+
+func (v *BuiltinStructValue) Destroy(_ *Interpreter, _ LocationRange) trampoline.Trampoline {
+	return trampoline.Done{}
+}
+
+func (v *BuiltinStructValue) String() string {
+	fields := make([]struct {
+		Name  string
+		Value string
+	}, 0, len(v.Fields))
+
+	for name, value := range v.Fields {
+		fields = append(fields,
+			struct {
+				Name  string
+				Value string
+			}{
+				Name:  name,
+				Value: value.String(),
+			},
+		)
+	}
+
+	return format.BuiltinStructValue(v.structType.Identifier, fields)
+}
+
+func (v *BuiltinStructValue) GetMember(_ *Interpreter, _ LocationRange, name string) Value {
+	return v.Fields[name]
+}
+
+func (*BuiltinStructValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+	panic(errors.NewUnreachableError())
+}
+
+// NewAccountKeyValue constructs an AccountKey value.
+func NewAccountKeyValue(publicKey *BuiltinStructValue, hashAlgo *StringValue, weight UFix64Value) *BuiltinStructValue {
+	fields := map[string]Value{
+		sema.AccountKeyKeyIndexField:  NewIntValueFromInt64(1),
+		sema.AccountKeyPublicKeyField: publicKey,
+		sema.AccountKeyHashAlgoField:  hashAlgo,
+		sema.AccountKeyWeightField:    weight,
+		sema.AccountKeyIsRevokedField: BoolValue(false),
+	}
+
+	return NewBuiltinStructValue(sema.AccountKeyType, fields)
+}
+
+// NewAccountKeyValue constructs a PublicKey value.
+func NewPublicKeyValue(publicKey *ArrayValue, signAlgo *StringValue) *BuiltinStructValue {
+	fields := map[string]Value{
+		sema.PublicKeyPublicKeyField: publicKey,
+		sema.PublicKeySignAlgoField:  signAlgo,
+	}
+
+	return NewBuiltinStructValue(sema.PublicKeyType, fields)
 }

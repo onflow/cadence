@@ -268,6 +268,61 @@ func TestAuthAccountKeysRevoke(t *testing.T) {
 	assert.Equal(t, revokedAccountKey, storage.returnedKey)
 }
 
+
+func TestSignatureAlgorithm(t *testing.T) {
+
+	t.Parallel()
+
+	runtime := NewInterpreterRuntime()
+
+	//script := []byte(`
+	//	pub fun main(): SignatureAlgorithm2? {
+	//		var key1: Color = Color.red
+	//		var key2: SignatureAlgorithm2? = SignatureAlgorithm2.ECDSA_P256
+	//
+	//		return key2
+    //  	}
+	//
+	//	pub enum Color: UInt8 {
+	//		pub case red
+	//		pub case green
+	//		pub case blue
+	//	}
+	//`)
+
+	script := []byte(`
+		pub fun main(): HashAlgorithm2? {
+			var key1: Color = Color.red
+			var key2: HashAlgorithm2 = HashAlgorithm2.SHA2_256
+
+			var key3: HashAlgorithm2? = HashAlgorithm2(rawValue:1)
+
+			return key3
+      	}
+
+		pub enum Color: UInt8 {
+			pub case red
+			pub case green
+			pub case blue
+		}
+	`)
+
+	runtimeInterface := &testRuntimeInterface{}
+
+	result, err := runtime.ExecuteScript(
+		Script{
+			Source: script,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  utils.TestLocation,
+		},
+	)
+	require.NoError(t, err)
+	fmt.Println(result)
+}
+
+
 // Utility methods
 
 func getRuntimeInterface(storage *Storage) *testRuntimeInterface {

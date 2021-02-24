@@ -21,6 +21,7 @@ package stdlib
 import (
 	"fmt"
 
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/trampoline"
@@ -164,7 +165,7 @@ var CreateAccountKeyFunction = NewStandardLibraryFunction(
 		RequiredArgumentCount: sema.RequiredArgumentCount(3),
 	},
 	func(invocation interpreter.Invocation) trampoline.Trampoline {
-		publicKey := invocation.Arguments[0].(*interpreter.PublicKeyValue)
+		publicKey := invocation.Arguments[0].(*interpreter.BuiltinStructValue)
 		hashAlgo := invocation.Arguments[1].(*interpreter.StringValue)
 		weight := invocation.Arguments[2].(interpreter.UFix64Value)
 
@@ -200,3 +201,129 @@ var CreatePublicKeyFunction = NewStandardLibraryFunction(
 		return trampoline.Done{Result: value}
 	},
 )
+
+// BuiltinValues
+
+var BuiltinValues = StandardLibraryValues{
+	SignatureAlgorithmValue,
+	HashAlgorithmValue,
+}
+
+var SignatureAlgorithmValue = StandardLibraryValue{
+	Name:  sema.SignatureAlgorithmTypeName,
+	Type:  signatureAlgorithmEnumType(),
+	Value: signatureAlgorithmEnumValue(),
+	Kind:  common.DeclarationKindEnum,
+}
+
+var HashAlgorithmValue = StandardLibraryValue{
+	Name:  sema.HashAlgorithmTypeName,
+	Type:  hashAlgorithmEnumType(),
+	Value: hashAlgorithmEnumValue(),
+	Kind:  common.DeclarationKindEnum,
+}
+
+func signatureAlgorithmEnumType() sema.Type {
+	var members = []*sema.Member{
+		sema.NewPublicEnumCaseMember(
+			sema.SignatureAlgorithmType,
+			sema.SignatureAlgorithmECDSA_P256,
+			sema.SignatureAlgorithmDocStringECDSAP256,
+		),
+		sema.NewPublicEnumCaseMember(
+			sema.SignatureAlgorithmType,
+			sema.SignatureAlgorithmECDSA_Secp256k1,
+			sema.SignatureAlgorithmDocStringECDSASecp256k1,
+		),
+	}
+
+	return getEnumType(sema.SignatureAlgorithmType, members)
+}
+
+func signatureAlgorithmEnumValue() interpreter.Value {
+	return getEnumValue([]string{
+		sema.SignatureAlgorithmECDSA_P256,
+		sema.SignatureAlgorithmECDSA_Secp256k1,
+	})
+}
+
+func hashAlgorithmEnumType() sema.Type {
+	var members = []*sema.Member{
+		sema.NewPublicEnumCaseMember(
+			sema.HashAlgorithmType,
+			sema.HashAlgorithmSHA2_256,
+			sema.HashAlgorithmDocStringSHA2_256,
+		),
+		sema.NewPublicEnumCaseMember(
+			sema.HashAlgorithmType,
+			sema.HashAlgorithmSHA3_256,
+			sema.HashAlgorithmDocStringSHA3_256,
+		),
+	}
+
+	return getEnumType(sema.HashAlgorithmType, members)
+}
+
+func hashAlgorithmEnumValue() interpreter.Value {
+	return getEnumValue([]string{
+		sema.HashAlgorithmSHA2_256,
+		sema.HashAlgorithmSHA3_256,
+	})
+}
+
+func getEnumType(enumType *sema.BuiltinStructType, members []*sema.Member) *sema.SpecialFunctionType {
+	constructorType := &sema.SpecialFunctionType{
+		FunctionType: &sema.FunctionType{
+			Parameters: []*sema.Parameter{
+				{
+					Identifier:     sema.EnumRawValueFieldName,
+					TypeAnnotation: sema.NewTypeAnnotation(enumType.EnumRawType),
+				},
+			},
+			ReturnTypeAnnotation: sema.NewTypeAnnotation(
+				&sema.OptionalType{
+					Type: enumType,
+				},
+			),
+		},
+		Members: sema.GetMembersAsMap(members),
+	}
+
+	return constructorType
+}
+
+func getEnumValue(enumCases []string) (value interpreter.Value) {
+	caseCount := len(enumCases)
+	caseValues := make([]*interpreter.BuiltinStructValue, caseCount)
+	constructorMembers := make(map[string]interpreter.Value, caseCount)
+
+	for i, enumCase := range enumCases {
+		caseValue := interpreter.NewBuiltinStructValue(
+			sema.SignatureAlgorithmType,
+			map[string]interpreter.Value{
+				sema.EnumRawValueFieldName: interpreter.NewIntValueFromInt64(int64(i)),
+			},
+		)
+
+		caseValues[i] = caseValue
+		constructorMembers[enumCase] = caseValue
+	}
+
+	constructor := interpreter.NewHostFunctionValue(
+		func(invocation interpreter.Invocation) trampoline.Trampoline {
+			rawValueArgument := invocation.Arguments[0].(interpreter.IntegerValue).ToInt()
+			var result interpreter.Value = interpreter.NilValue{}
+
+			if rawValueArgument >= 0 && rawValueArgument < caseCount {
+				caseValue := caseValues[rawValueArgument]
+				result = interpreter.NewSomeValueOwningNonCopying(caseValue)
+			}
+
+			return trampoline.Done{Result: result}
+		},
+	)
+
+	constructor.Members = constructorMembers
+	value = constructor
+	return value
+}

@@ -4426,6 +4426,8 @@ func init() {
 		&BlockType{},
 		AccountKeyType,
 		PublicKeyType,
+		SignatureAlgorithmType,
+		HashAlgorithmType,
 	}
 
 	types := append(
@@ -5769,6 +5771,23 @@ func NewPublicConstantFieldMember(
 		DeclarationKind: common.DeclarationKindField,
 		VariableKind:    ast.VariableKindConstant,
 		TypeAnnotation:  NewTypeAnnotation(fieldType),
+		DocString:       docString,
+	}
+}
+
+func NewPublicEnumCaseMember(
+	caseType Type,
+	identifier string,
+	docString string,
+) *Member {
+	return &Member{
+		Access: ast.AccessPublic,
+		Identifier: ast.Identifier{
+			Identifier: identifier,
+		},
+		DeclarationKind: common.DeclarationKindField,
+		TypeAnnotation:  NewTypeAnnotation(caseType),
+		VariableKind:    ast.VariableKindConstant,
 		DocString:       docString,
 	}
 }
@@ -7701,6 +7720,7 @@ type BuiltinStructType struct {
 	Identifier           string
 	Members              *StringMemberOrderedMap
 	Owner                Type
+	EnumRawType          Type
 	IsInvalid            bool
 	IsResource           bool
 	Storable             bool
@@ -7782,7 +7802,7 @@ func (t *BuiltinStructType) Resolve(_ map[*TypeParameter]Type) Type {
 	return t
 }
 
-func getMembersAsMap(members []*Member) *StringMemberOrderedMap {
+func GetMembersAsMap(members []*Member) *StringMemberOrderedMap {
 	membersMap := NewStringMemberOrderedMap()
 	for _, member := range members {
 		membersMap.Set(member.Identifier.Identifier, member)
@@ -7849,7 +7869,7 @@ var AccountKeyType = func() *BuiltinStructType {
 		),
 	}
 
-	accountKeyType.Members = getMembersAsMap(members)
+	accountKeyType.Members = GetMembersAsMap(members)
 	return accountKeyType
 }()
 
@@ -7887,7 +7907,7 @@ var PublicKeyType = func() *BuiltinStructType {
 		),
 	}
 
-	accountKeyType.Members = getMembersAsMap(members)
+	accountKeyType.Members = GetMembersAsMap(members)
 	return accountKeyType
 }()
 
@@ -7930,7 +7950,7 @@ var AuthAccountKeysType = func() *BuiltinStructType {
 		),
 	}
 
-	authAccountKeys.Members = getMembersAsMap(members)
+	authAccountKeys.Members = GetMembersAsMap(members)
 	return authAccountKeys
 }()
 
@@ -7995,4 +8015,58 @@ var authAccountKeysTypeRevokeFunctionType = &FunctionType{
 	},
 	ReturnTypeAnnotation:  NewTypeAnnotation(&OptionalType{Type: AccountKeyType}),
 	RequiredArgumentCount: RequiredArgumentCount(1),
+}
+
+const SignatureAlgorithmTypeName = "SignatureAlgorithm2"
+const SignatureAlgorithmECDSA_P256 = "ECDSA_P256"
+const SignatureAlgorithmECDSA_Secp256k1 = "ECDSA_Secp256k1"
+
+const SignatureAlgorithmDocStringECDSAP256 = `
+ECDSA_P256 is Elliptic Curve Digital Signature Algorithm (ECDSA) on the NIST P-256 curve
+`
+const SignatureAlgorithmDocStringECDSASecp256k1 = `
+ECDSA_Secp256k1 is Elliptic Curve Digital Signature Algorithm (ECDSA) on the secp256k1 curve
+`
+
+// PublicKeyType represents the public key associated with an account key.
+var SignatureAlgorithmType = newEnumType(SignatureAlgorithmTypeName, &UInt8Type{})
+
+const HashAlgorithmTypeName = "HashAlgorithm2"
+const HashAlgorithmSHA2_256 = "SHA2_256"
+const HashAlgorithmSHA3_256 = "SHA3_256"
+
+const HashAlgorithmDocStringSHA2_256 = `
+SHA2_256 is Secure Hashing Algorithm 2 (SHA-2) with a 256-bit digest
+`
+const HashAlgorithmDocStringSHA3_256 = `
+SHA3_256 is Secure Hashing Algorithm 3 (SHA-3) with a 256-bit digest
+`
+
+// PublicKeyType represents the public key associated with an account key.
+var HashAlgorithmType = newEnumType(HashAlgorithmTypeName, &UInt8Type{})
+
+func newEnumType(identifier string, rawType Type) *BuiltinStructType {
+	accountKeyType := &BuiltinStructType{
+		Identifier:           identifier,
+		EnumRawType:          rawType,
+		IsInvalid:            false,
+		IsResource:           false,
+		Storable:             true,
+		Equatable:            true,
+		ExternallyReturnable: true,
+	}
+
+	// Members of the enum type are *not* the enum cases!
+	// Each individual enum case is an instance of the enum type,
+	// so only has a single member, the raw value field
+	var members = []*Member{
+		NewPublicEnumCaseMember(
+			rawType,
+			EnumRawValueFieldName,
+			enumRawValueFieldDocString,
+		),
+	}
+
+	accountKeyType.Members = GetMembersAsMap(members)
+	return accountKeyType
 }
