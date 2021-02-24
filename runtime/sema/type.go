@@ -4055,7 +4055,7 @@ func init() {
 		PublicPathType,
 		&CapabilityType{},
 		&DeployedContractType{},
-		&BlockType{},
+		BlockType,
 	}
 
 	types := append(

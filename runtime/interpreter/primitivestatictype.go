@@ -193,7 +193,7 @@ func (i PrimitiveStaticType) SemaType() sema.Type {
 		return sema.MetaType
 
 	case PrimitiveStaticTypeBlock:
-		return &sema.BlockType{}
+		return sema.BlockType
 
 	// Number
 
@@ -304,9 +304,6 @@ func ConvertSemaToPrimitiveStaticType(t sema.Type) PrimitiveStaticType {
 
 	case *sema.StringType:
 		return PrimitiveStaticTypeString
-
-	case *sema.BlockType:
-		return PrimitiveStaticTypeBlock
 
 	// Number
 
@@ -419,6 +416,8 @@ func ConvertSemaToPrimitiveStaticType(t sema.Type) PrimitiveStaticType {
 		return PrimitiveStaticTypeAuthAccount
 	case sema.PublicAccountType:
 		return PrimitiveStaticTypePublicAccount
+	case sema.BlockType:
+		return PrimitiveStaticTypeBlock
 	}
 
 	return PrimitiveStaticTypeUnknown

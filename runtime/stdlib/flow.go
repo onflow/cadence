@@ -79,7 +79,9 @@ var logFunctionType = &sema.FunctionType{
 }
 
 var getCurrentBlockFunctionType = &sema.FunctionType{
-	ReturnTypeAnnotation: sema.NewTypeAnnotation(&sema.BlockType{}),
+	ReturnTypeAnnotation: sema.NewTypeAnnotation(
+		sema.BlockType,
+	),
 }
 
 var getBlockFunctionType = &sema.FunctionType{
@@ -94,7 +96,7 @@ var getBlockFunctionType = &sema.FunctionType{
 	},
 	ReturnTypeAnnotation: sema.NewTypeAnnotation(
 		&sema.OptionalType{
-			Type: &sema.BlockType{},
+			Type: sema.BlockType,
 		},
 	),
 }
