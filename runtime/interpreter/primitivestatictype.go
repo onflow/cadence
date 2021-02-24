@@ -284,7 +284,7 @@ func (i PrimitiveStaticType) SemaType() sema.Type {
 	case PrimitiveStaticTypePublicAccount:
 		return sema.PublicAccountType
 	case PrimitiveStaticTypeDeployedContract:
-		return &sema.DeployedContractType{}
+		return sema.DeployedContractType
 	case PrimitiveStaticTypeAuthAccountContracts:
 		return &sema.AuthAccountContractsType{}
 
@@ -379,8 +379,6 @@ func ConvertSemaToPrimitiveStaticType(t sema.Type) PrimitiveStaticType {
 
 	case *sema.CapabilityType:
 		return PrimitiveStaticTypeCapability
-	case *sema.DeployedContractType:
-		return PrimitiveStaticTypeDeployedContract
 	case *sema.AuthAccountContractsType:
 		return PrimitiveStaticTypeAuthAccountContracts
 	}
@@ -418,6 +416,8 @@ func ConvertSemaToPrimitiveStaticType(t sema.Type) PrimitiveStaticType {
 		return PrimitiveStaticTypePublicAccount
 	case sema.BlockType:
 		return PrimitiveStaticTypeBlock
+	case sema.DeployedContractType:
+		return PrimitiveStaticTypeDeployedContract
 	}
 
 	return PrimitiveStaticTypeUnknown

@@ -117,7 +117,9 @@ var authAccountContractsTypeAddFunctionType = &FunctionType{
 			),
 		},
 	},
-	ReturnTypeAnnotation: NewTypeAnnotation(&DeployedContractType{}),
+	ReturnTypeAnnotation: NewTypeAnnotation(
+		DeployedContractType,
+	),
 	// additional arguments are passed to the contract initializer
 	RequiredArgumentCount: RequiredArgumentCount(2),
 }
@@ -158,7 +160,9 @@ var authAccountContractsTypeUpdateExperimentalFunctionType = &FunctionType{
 			),
 		},
 	},
-	ReturnTypeAnnotation: NewTypeAnnotation(&DeployedContractType{}),
+	ReturnTypeAnnotation: NewTypeAnnotation(
+		DeployedContractType,
+	),
 }
 
 const authAccountContractsTypeGetFunctionDocString = `
@@ -178,7 +182,7 @@ var authAccountContractsTypeGetFunctionType = &FunctionType{
 	},
 	ReturnTypeAnnotation: NewTypeAnnotation(
 		&OptionalType{
-			Type: &DeployedContractType{},
+			Type: DeployedContractType,
 		},
 	),
 }
@@ -202,7 +206,7 @@ var authAccountContractsTypeRemoveFunctionType = &FunctionType{
 	},
 	ReturnTypeAnnotation: NewTypeAnnotation(
 		&OptionalType{
-			Type: &DeployedContractType{},
+			Type: DeployedContractType,
 		},
 	),
 }

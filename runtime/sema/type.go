@@ -4054,7 +4054,7 @@ func init() {
 		PrivatePathType,
 		PublicPathType,
 		&CapabilityType{},
-		&DeployedContractType{},
+		DeployedContractType,
 		BlockType,
 	}
 

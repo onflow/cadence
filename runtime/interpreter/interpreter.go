@@ -4002,11 +4002,12 @@ func IsSubType(subType DynamicType, superType sema.Type) bool {
 		}
 
 	case DeployedContractDynamicType:
-		if _, ok := superType.(*sema.DeployedContractType); ok {
+		switch superType {
+		case sema.DeployedContractType, sema.AnyStructType:
 			return true
+		default:
+			return false
 		}
-
-		return superType == sema.AnyStructType
 
 	case AuthAccountContractsDynamicType:
 		if _, ok := superType.(*sema.AuthAccountContractsType); ok {
