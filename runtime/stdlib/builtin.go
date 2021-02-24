@@ -107,7 +107,6 @@ var PanicFunction = NewStandardLibraryFunction(
 var BuiltinFunctions = StandardLibraryFunctions{
 	AssertFunction,
 	PanicFunction,
-	CreateAccountKeyFunction,
 	CreatePublicKeyFunction,
 }
 
@@ -139,40 +138,6 @@ var LogFunction = NewStandardLibraryFunction(
 var HelperFunctions = StandardLibraryFunctions{
 	LogFunction,
 }
-
-// FIXME remove this
-var CreateAccountKeyFunction = NewStandardLibraryFunction(
-	sema.AccountKeyTypeName,
-	&sema.FunctionType{
-		Parameters: []*sema.Parameter{
-			{
-				Label:          sema.ArgumentLabelNotRequired,
-				Identifier:     sema.AccountKeyPublicKeyField,
-				TypeAnnotation: sema.NewTypeAnnotation(sema.PublicKeyType),
-			},
-			{
-				Label:          sema.AccountKeyHashAlgoField,
-				Identifier:     sema.AccountKeyHashAlgoField,
-				TypeAnnotation: sema.NewTypeAnnotation(&sema.StringType{}),
-			},
-			{
-				Label:          sema.AccountKeyWeightField,
-				Identifier:     sema.AccountKeyWeightField,
-				TypeAnnotation: sema.NewTypeAnnotation(&sema.UFix64Type{}),
-			},
-		},
-		ReturnTypeAnnotation:  sema.NewTypeAnnotation(sema.AccountKeyType),
-		RequiredArgumentCount: sema.RequiredArgumentCount(3),
-	},
-	func(invocation interpreter.Invocation) trampoline.Trampoline {
-		publicKey := invocation.Arguments[0].(*interpreter.BuiltinStructValue)
-		hashAlgo := invocation.Arguments[1].(*interpreter.StringValue)
-		weight := invocation.Arguments[2].(interpreter.UFix64Value)
-
-		accountKey := interpreter.NewAccountKeyValue(publicKey, hashAlgo, weight)
-		return trampoline.Done{Result: accountKey}
-	},
-)
 
 var CreatePublicKeyFunction = NewStandardLibraryFunction(
 	sema.PublicKeyTypeName,

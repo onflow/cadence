@@ -1194,27 +1194,7 @@ func (r *interpreterRuntime) newAddPublicKeyFunction(
 ) interpreter.HostFunctionValue {
 	return interpreter.NewHostFunctionValue(
 		func(invocation interpreter.Invocation) trampoline.Trampoline {
-			//publicKeyValue := invocation.Arguments[0].(*interpreter.PublicKeyValue)
-			//
-			//var err error
-			//wrapPanic(func() {
-			//	err = runtimeInterface.AddAccountKey(addressValue.ToAddress(), publicKeyValue)
-			//})
-			//if err != nil {
-			//	panic(err)
-			//}
-			//
-			//r.emitAccountEvent(
-			//	stdlib.AccountKeyAddedEventType,
-			//	runtimeInterface,
-			//	[]exportableValue{
-			//		newExportableValue(addressValue, nil),
-			//		newExportableValue(publicKeyValue, nil),
-			//	},
-			//)
-
-			result := interpreter.VoidValue{}
-			return trampoline.Done{Result: result}
+			panic("this operation is no longer supported")
 		},
 	)
 }
@@ -1225,30 +1205,7 @@ func (r *interpreterRuntime) newRemovePublicKeyFunction(
 ) interpreter.HostFunctionValue {
 	return interpreter.NewHostFunctionValue(
 		func(invocation interpreter.Invocation) trampoline.Trampoline {
-			//index := invocation.Arguments[0].(interpreter.IntValue)
-			//
-			//var publicKey []byte
-			//var err error
-			//wrapPanic(func() {
-			//	publicKey, err = runtimeInterface.RemoveAccountKey(addressValue.ToAddress(), index.ToInt())
-			//})
-			//if err != nil {
-			//	panic(err)
-			//}
-			//
-			//publicKeyValue := interpreter.ByteSliceToByteArrayValue(publicKey)
-			//
-			//r.emitAccountEvent(
-			//	stdlib.AccountKeyRemovedEventType,
-			//	runtimeInterface,
-			//	[]exportableValue{
-			//		newExportableValue(addressValue, nil),
-			//		newExportableValue(publicKeyValue, nil),
-			//	},
-			//)
-
-			result := interpreter.VoidValue{}
-			return trampoline.Done{Result: result}
+			panic("this operation is no longer supported")
 		},
 	)
 }
@@ -1593,7 +1550,7 @@ func (r *interpreterRuntime) newAuthAccountContracts(
 	}
 }
 
-func (r *interpreterRuntime) newAuthAccountKeys(addressValue interpreter.AddressValue, runtimeInterface Interface) interpreter.AuthAccountKeysValue {
+func (r *interpreterRuntime) newAuthAccountKeys(addressValue interpreter.AddressValue, runtimeInterface Interface) *interpreter.BuiltinStructValue {
 	return interpreter.NewAuthAccountKeysValue(
 		r.newAuthAccountKeysAddFunction(
 			addressValue,
@@ -2098,15 +2055,23 @@ func (r *interpreterRuntime) newAuthAccountKeysAddFunction(
 ) interpreter.HostFunctionValue {
 	return interpreter.NewHostFunctionValue(
 		func(invocation interpreter.Invocation) trampoline.Trampoline {
-			publicKeyValue := invocation.Arguments[0].(*interpreter.PublicKeyValue)
+			publicKeyValue := invocation.Arguments[0].(*interpreter.BuiltinStructValue)
+			if publicKeyValue.StaticType() != interpreter.PrimitiveStaticTypePublicKey {
+				panic(fmt.Sprintf(
+					"add requires the first argument to be an %s",
+					sema.PublicKeyType,
+				))
+			}
+
+			// TODO:
 			//signAlgo := invocation.Arguments[0].(*interpreter.S)
 			weight := invocation.Arguments[2].(interpreter.UFix64Value)
 
 			var err error
 			var accountKey *AccountKey
 			wrapPanic(func() {
-				// FIXME: signALgo and weight
-				accountKey, err = runtimeInterface.AddAccountKey(addressValue.ToAddress(), publicKeyValue, 3, weight.ToInt())
+				publicKey := NewPublicKeyFromValue(publicKeyValue)
+				accountKey, err = runtimeInterface.AddAccountKey(addressValue.ToAddress(), publicKey, 3, weight.ToInt())
 			})
 			if err != nil {
 				panic(err)
@@ -2121,7 +2086,8 @@ func (r *interpreterRuntime) newAuthAccountKeysAddFunction(
 				},
 			)
 
-			return trampoline.Done{Result: accountKey}
+			accountKeyValue := NewAccountKeyValue(accountKey)
+			return trampoline.Done{Result: accountKeyValue}
 		},
 	)
 }
@@ -2152,7 +2118,8 @@ func (r *interpreterRuntime) newAuthAccountKeysGetFunction(
 				},
 			)
 
-			return trampoline.Done{Result: accountKey}
+			accountKeyValue := NewAccountKeyValue(accountKey)
+			return trampoline.Done{Result: accountKeyValue}
 		},
 	)
 }
@@ -2183,7 +2150,43 @@ func (r *interpreterRuntime) newAuthAccountKeysRevokeFunction(
 				},
 			)
 
-			return trampoline.Done{Result: accountKey}
+			accountKeyValue := NewAccountKeyValue(accountKey)
+			return trampoline.Done{Result: accountKeyValue}
 		},
+	)
+}
+
+func NewPublicKeyFromValue(publicKey *interpreter.BuiltinStructValue) *PublicKey {
+
+	// publicKey field
+	key := publicKey.Fields[sema.PublicKeyPublicKeyField]
+	byteArray, err := interpreter.ByteArrayValueToByteSlice(key)
+	if err != nil {
+		panic(fmt.Errorf("public key needs to be a byte array. %w", err))
+	}
+
+	// sign algo field
+	_ = publicKey.Fields[sema.PublicKeySignAlgoField]
+
+	return &PublicKey{
+		PublicKey: byteArray,
+		SignAlgo:  0,
+	}
+}
+
+func NewPublicKeyValue(publicKey *PublicKey) *interpreter.BuiltinStructValue {
+	return interpreter.NewPublicKeyValue(
+		interpreter.ByteSliceToByteArrayValue(publicKey.PublicKey),
+		interpreter.NewStringValue(publicKey.SignAlgo.String()),
+	)
+}
+
+func NewAccountKeyValue(accountKey *AccountKey) *interpreter.BuiltinStructValue {
+	return interpreter.NewAccountKeyValue(
+		interpreter.NewIntValueFromInt64(int64(accountKey.KeyIndex)),
+		NewPublicKeyValue(accountKey.PublicKey),
+		interpreter.NewStringValue(accountKey.HashAlgo.String()),
+		interpreter.NewUFix64ValueWithInteger(uint64(accountKey.Weight)),
+		interpreter.BoolValue(accountKey.IsRevoked),
 	)
 }

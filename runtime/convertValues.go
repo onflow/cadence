@@ -148,21 +148,6 @@ func exportValueWithInterpreter(
 				return nil
 			}
 			return exportValueWithInterpreter(*referencedValue, inter, results)
-		case *interpreter.AccountKeyValue:
-			fields := map[string]interpreter.Value{
-				sema.AccountKeyKeyIndexField:  v.KeyIndex,
-				sema.AccountKeyPublicKeyField: v.PublicKey,
-				sema.AccountKeyHashAlgoField:  v.HashAlgo,
-				sema.AccountKeyWeightField:    v.Weight,
-				sema.AccountKeyIsRevokedField: v.IsRevoked,
-			}
-			return exportBuiltinStructValueOld(v.DynamicType(inter), fields, inter, results)
-		case *interpreter.PublicKeyValue:
-			fields := map[string]interpreter.Value{
-				sema.PublicKeyPublicKeyField: v.PublicKey,
-				sema.PublicKeySignAlgoField:  v.SignAlgo,
-			}
-			return exportBuiltinStructValueOld(v.DynamicType(inter), fields, inter, results)
 		case *interpreter.BuiltinStructValue:
 			return exportBuiltinStructValue(v, inter, results)
 		}
@@ -312,30 +297,6 @@ func exportBuiltinStructValue(v *interpreter.BuiltinStructValue, inter *interpre
 	// NOTE: use the exported type's fields to ensure fields in type and value are in sync.
 	for index, field := range fieldNames {
 		fieldValue := v.Fields[field.Identifier]
-		fields[index] = exportValueWithInterpreter(fieldValue, inter, results)
-	}
-
-	return cadence.NewBuiltinStruct(fields).WithType(exportedBuiltinStructType)
-}
-
-func exportBuiltinStructValueOld(
-	dynamicType interpreter.DynamicType,
-	fieldValues map[string]interpreter.Value,
-	inter *interpreter.Interpreter,
-	results exportResults,
-) cadence.Value {
-
-	builtinDynamicType := dynamicType.(interpreter.BuiltinStructDynamicType)
-
-	// Convert internal type to exported type.
-	exportedBuiltinStructType := exportBuiltinStructType(builtinDynamicType.StaticType, map[sema.TypeID]cadence.Type{})
-
-	fieldNames := exportedBuiltinStructType.Fields
-	fields := make([]cadence.Value, len(fieldNames))
-
-	// NOTE: use the exported type's fields to ensure fields in type and value are in sync.
-	for index, field := range fieldNames {
-		fieldValue := fieldValues[field.Identifier]
 		fields[index] = exportValueWithInterpreter(fieldValue, inter, results)
 	}
 

@@ -27,13 +27,12 @@ import (
 
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/encoding/json"
-	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
-func TestAccountKey(t *testing.T) {
+func TestAccountKeyCreation(t *testing.T) {
 
 	t.Parallel()
 
@@ -56,7 +55,7 @@ func TestAccountKey(t *testing.T) {
 
 	runtimeInterface := &testRuntimeInterface{}
 
-	result, err := runtime.ExecuteScript(
+	_, err := runtime.ExecuteScript(
 		Script{
 			Source: script,
 		},
@@ -65,8 +64,8 @@ func TestAccountKey(t *testing.T) {
 			Location:  utils.TestLocation,
 		},
 	)
-	require.NoError(t, err)
-	fmt.Println(result)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "cannot find variable in this scope: `AccountKey`")
 }
 
 func TestAuthAccountAddPublicKey(t *testing.T) {
@@ -95,13 +94,16 @@ func TestAuthAccountAddPublicKey(t *testing.T) {
 			keyCount: 1,
 			args:     []cadence.Value{keyA},
 			keys: []*AccountKey{
-				newAccountKeyValue(
-					0,
-					newPublicKeyValue([]byte{1, 2, 3}, "ECDSA_P256"),
-					"SHA3_256",
-					100,
-					false,
-				),
+				{
+					KeyIndex: 0,
+					PublicKey: &PublicKey{
+						PublicKey: []byte{1, 2, 3},
+						SignAlgo:  0,
+					},
+					HashAlgo:  3,
+					Weight:    100,
+					IsRevoked: false,
+				},
 			},
 		},
 		{
@@ -123,20 +125,26 @@ func TestAuthAccountAddPublicKey(t *testing.T) {
 			keyCount: 2,
 			args:     []cadence.Value{keys},
 			keys: []*AccountKey{
-				newAccountKeyValue(
-					0,
-					newPublicKeyValue([]byte{1, 2, 3}, "ECDSA_P256"),
-					"SHA3_256",
-					100,
-					false,
-				),
-				newAccountKeyValue(
-					1,
-					newPublicKeyValue([]byte{4, 5, 6}, "ECDSA_P256"),
-					"SHA3_256",
-					100,
-					false,
-				),
+				{
+					KeyIndex: 0,
+					PublicKey: &PublicKey{
+						PublicKey: []byte{1, 2, 3},
+						SignAlgo:  0,
+					},
+					HashAlgo:  3,
+					Weight:    100,
+					IsRevoked: false,
+				},
+				{
+					KeyIndex: 1,
+					PublicKey: &PublicKey{
+						PublicKey: []byte{4, 5, 6},
+						SignAlgo:  0,
+					},
+					HashAlgo:  3,
+					Weight:    100,
+					IsRevoked: false,
+				},
 			},
 		},
 	}
@@ -191,21 +199,27 @@ func TestAuthAccountAddPublicKeyErrors(t *testing.T) {
 	}
 }
 
-var addedAccountKey = newAccountKeyValue(
-	0,
-	newPublicKeyValue([]byte{1, 2}, "ECDSA_P256"),
-	"SHA3_256",
-	100,
-	false,
-)
+var addedAccountKey = &AccountKey{
+	KeyIndex: 0,
+	PublicKey: &PublicKey{
+		PublicKey: []byte{1, 2},
+		SignAlgo:  0,
+	},
+	HashAlgo:  3,
+	Weight:    100,
+	IsRevoked: false,
+}
 
-var revokedAccountKey = newAccountKeyValue(
-	0,
-	newPublicKeyValue([]byte{1, 2}, "ECDSA_P256"),
-	"SHA3_256",
-	100,
-	true,
-)
+var revokedAccountKey = &AccountKey{
+	KeyIndex: 0,
+	PublicKey: &PublicKey{
+		PublicKey: []byte{1, 2},
+		SignAlgo:  0,
+	},
+	HashAlgo:  3,
+	Weight:    100,
+	IsRevoked: true,
+}
 
 func TestAuthAccountKeysAdd(t *testing.T) {
 	storage := newStorage()
@@ -268,7 +282,6 @@ func TestAuthAccountKeysRevoke(t *testing.T) {
 	assert.Equal(t, revokedAccountKey, storage.returnedKey)
 }
 
-
 func TestSignatureAlgorithm(t *testing.T) {
 
 	t.Parallel()
@@ -281,7 +294,7 @@ func TestSignatureAlgorithm(t *testing.T) {
 	//		var key2: SignatureAlgorithm2? = SignatureAlgorithm2.ECDSA_P256
 	//
 	//		return key2
-    //  	}
+	//  	}
 	//
 	//	pub enum Color: UInt8 {
 	//		pub case red
@@ -322,7 +335,6 @@ func TestSignatureAlgorithm(t *testing.T) {
 	fmt.Println(result)
 }
 
-
 // Utility methods
 
 func getRuntimeInterface(storage *Storage) *testRuntimeInterface {
@@ -335,11 +347,12 @@ func getRuntimeInterface(storage *Storage) *testRuntimeInterface {
 			return Address{42}, nil
 		},
 		addAccountKey: func(address Address, publicKey *PublicKey, hashAlgo HashingAlgorithm, weight int) (*AccountKey, error) {
+			index := len(storage.keys)
 			accountKey := &AccountKey{
-				KeyIndex:  interpreter.NewIntValueFromInt64(int64(len(storage.keys))),
+				KeyIndex:  index,
 				PublicKey: publicKey,
-				HashAlgo:  interpreter.NewStringValue(hashAlgo.String()),
-				Weight:    interpreter.UFix64Value(weight),
+				HashAlgo:  hashAlgo,
+				Weight:    weight,
 				IsRevoked: false,
 			}
 
@@ -357,8 +370,10 @@ func getRuntimeInterface(storage *Storage) *testRuntimeInterface {
 		removeAccountKey: func(address Address, index int) (*AccountKey, error) {
 			accountKey := storage.keys[index]
 			accountKey.IsRevoked = true
+
 			storage.keys[index] = accountKey
 			storage.returnedKey = accountKey
+
 			return accountKey, nil
 		},
 
@@ -422,28 +437,6 @@ func encodeArgs(argValues []cadence.Value) [][]byte {
 		}
 	}
 	return args
-}
-
-func newPublicKeyValue(keyBytes []byte, signAlgo string) *PublicKey {
-	intValues := make([]interpreter.Value, len(keyBytes))
-	for index, value := range keyBytes {
-		intValues[index] = interpreter.UInt8Value(value)
-	}
-
-	return &PublicKey{
-		PublicKey: interpreter.NewArrayValueUnownedNonCopying(intValues...),
-		SignAlgo:  interpreter.NewStringValue(signAlgo),
-	}
-}
-
-func newAccountKeyValue(index int64, publicKey *PublicKey, hashAlgo string, weight uint64, isRevoked bool) *AccountKey {
-	return &AccountKey{
-		KeyIndex:  interpreter.NewIntValueFromInt64(index),
-		PublicKey: publicKey,
-		HashAlgo:  interpreter.NewStringValue(hashAlgo),
-		Weight:    interpreter.UFix64Value(weight),
-		IsRevoked: interpreter.BoolValue(isRevoked),
-	}
 }
 
 func newPublicKeyExportedValue(keyBytes []byte, signAlgo string) cadence.BuiltinStruct {

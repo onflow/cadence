@@ -39,6 +39,23 @@ type Block struct {
 	Timestamp int64
 }
 
+type ResolvedLocation = sema.ResolvedLocation
+type Identifier = ast.Identifier
+type Location = common.Location
+
+type AccountKey struct {
+	KeyIndex  int
+	PublicKey *PublicKey
+	HashAlgo  HashingAlgorithm
+	Weight    int
+	IsRevoked bool
+}
+
+type PublicKey struct {
+	PublicKey []byte
+	SignAlgo  SigningAlgorithm
+}
+
 type SigningAlgorithm int
 
 const (
@@ -74,12 +91,6 @@ const (
 func (f HashingAlgorithm) String() string {
 	return [...]string{"UNKNOWN", "SHA2_256", "SHA2_384", "SHA3_256", "SHA3_384", "KMAC128"}[f]
 }
-
-type ResolvedLocation = sema.ResolvedLocation
-type Identifier = ast.Identifier
-type Location = common.Location
-type PublicKey = interpreter.PublicKeyValue
-type AccountKey = interpreter.AccountKeyValue
 
 type Interface interface {
 	// ResolveLocation resolves an import location.

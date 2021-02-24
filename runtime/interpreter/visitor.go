@@ -62,9 +62,6 @@ type Visitor interface {
 	VisitBoundFunctionValue(interpreter *Interpreter, value BoundFunctionValue)
 	VisitAuthAccountContractsValue(interpreter *Interpreter, value AuthAccountContractsValue)
 	VisitDeployedContractValue(interpreter *Interpreter, value DeployedContractValue)
-	VisitAccountKeyValue(interpreter *Interpreter, value *AccountKeyValue)
-	VisitPublicKeyValue(interpreter *Interpreter, value *PublicKeyValue)
-	VisitAuthAccountKeysValue(interpreter *Interpreter, value AuthAccountKeysValue)
 	VisitBuiltinStructValue(interpreter *Interpreter, value *BuiltinStructValue)
 }
 
@@ -112,9 +109,6 @@ type EmptyVisitor struct {
 	BoundFunctionValueVisitor        func(interpreter *Interpreter, value BoundFunctionValue)
 	AuthAccountContractsValueVisitor func(interpreter *Interpreter, value AuthAccountContractsValue)
 	DeployedContractValueVisitor     func(interpreter *Interpreter, value DeployedContractValue)
-	AccountKeyValueVisitor           func(interpreter *Interpreter, value *AccountKeyValue)
-	PublicKeyValueVisitor            func(interpreter *Interpreter, value *PublicKeyValue)
-	AuthAccountKeysValueVisitor      func(interpreter *Interpreter, value AuthAccountKeysValue)
 	BuiltinStructValueVisitor        func(interpreter *Interpreter, value *BuiltinStructValue)
 }
 
@@ -419,27 +413,6 @@ func (v EmptyVisitor) VisitDeployedContractValue(interpreter *Interpreter, value
 		return
 	}
 	v.DeployedContractValueVisitor(interpreter, value)
-}
-
-func (v EmptyVisitor) VisitAccountKeyValue(interpreter *Interpreter, value *AccountKeyValue) {
-	if v.AccountKeyValueVisitor == nil {
-		return
-	}
-	v.AccountKeyValueVisitor(interpreter, value)
-}
-
-func (v EmptyVisitor) VisitPublicKeyValue(interpreter *Interpreter, value *PublicKeyValue) {
-	if v.PublicKeyValueVisitor == nil {
-		return
-	}
-	v.PublicKeyValueVisitor(interpreter, value)
-}
-
-func (v EmptyVisitor) VisitAuthAccountKeysValue(interpreter *Interpreter, value AuthAccountKeysValue) {
-	if v.AuthAccountKeysValueVisitor == nil {
-		return
-	}
-	v.AuthAccountKeysValueVisitor(interpreter, value)
 }
 
 func (v EmptyVisitor) VisitBuiltinStructValue(interpreter *Interpreter, value *BuiltinStructValue) {
