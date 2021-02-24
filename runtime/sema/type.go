@@ -7852,7 +7852,7 @@ var AccountKeyType = func() *BuiltinStructType {
 		NewPublicConstantFieldMember(
 			accountKeyType,
 			AccountKeyHashAlgoField,
-			&StringType{},
+			HashAlgorithmType,
 			accountKeyHashAlgorithmFieldDocString,
 		),
 		NewPublicConstantFieldMember(
@@ -7902,7 +7902,7 @@ var PublicKeyType = func() *BuiltinStructType {
 		NewPublicConstantFieldMember(
 			accountKeyType,
 			PublicKeySignAlgoField,
-			&StringType{},
+			SignatureAlgorithmType,
 			publicKeySignAlgoFieldDocString,
 		),
 	}
@@ -7980,7 +7980,7 @@ var authAccountKeysTypeAddFunctionType = &FunctionType{
 		},
 		{
 			Identifier:     AccountKeyHashAlgoField,
-			TypeAnnotation: NewTypeAnnotation(&StringType{}),
+			TypeAnnotation: NewTypeAnnotation(HashAlgorithmType),
 		},
 		{
 			Identifier:     AccountKeyWeightField,
@@ -8018,22 +8018,99 @@ var authAccountKeysTypeRevokeFunctionType = &FunctionType{
 }
 
 const SignatureAlgorithmTypeName = "SignatureAlgorithm2"
-const SignatureAlgorithmECDSA_P256 = "ECDSA_P256"
-const SignatureAlgorithmECDSA_Secp256k1 = "ECDSA_Secp256k1"
 
-const SignatureAlgorithmDocStringECDSAP256 = `
+const SignatureAlgorithmDocStringECDSA_P256 = `
 ECDSA_P256 is Elliptic Curve Digital Signature Algorithm (ECDSA) on the NIST P-256 curve
 `
-const SignatureAlgorithmDocStringECDSASecp256k1 = `
+const SignatureAlgorithmDocStringECDSA_Secp256k1 = `
 ECDSA_Secp256k1 is Elliptic Curve Digital Signature Algorithm (ECDSA) on the secp256k1 curve
 `
 
 // PublicKeyType represents the public key associated with an account key.
 var SignatureAlgorithmType = newEnumType(SignatureAlgorithmTypeName, &UInt8Type{})
 
+type BuiltinEnumCase interface {
+	RawValue() int
+	Name() string
+	DocString() string
+}
+
+type HashAlgorithm int
+
+const (
+	SHA2_256 HashAlgorithm = iota
+
+	SHA3_256
+
+	//KMAC128
+	//SHA3_384
+	//SHA2_384
+
+	// Supported hashing algorithms
+	UnknownHashingAlgorithm
+)
+
+func (algo HashAlgorithm) Name() string {
+	return [...]string{
+		"SHA2_256",
+		"SHA3_256",
+		//"SHA2_384",
+		//"SHA3_384",
+		//"KMAC128",
+		//"UNKNOWN",
+	}[algo]
+}
+
+func (algo HashAlgorithm) RawValue() int {
+	return int(algo)
+}
+
+func (algo HashAlgorithm) DocString() string {
+	return [...]string{
+		HashAlgorithmDocStringSHA2_256,
+		HashAlgorithmDocStringSHA3_256,
+	}[algo]
+}
+
+type SigningAlgorithm int
+
+const (
+	// Supported signing algorithms
+
+	// ECDSAP256 is ECDSA on NIST P-256 curve
+	ECDSAP256 SigningAlgorithm = iota
+
+	// ECDSASecp256k1 is ECDSA on secp256k1 curve
+	ECDSASecp256k1
+
+	// BLSBLS12381 is BLS on BLS 12-381 curve
+	//BLSBLS12381
+
+	UnknownSigningAlgorithm
+)
+
+// String returns the string representation of this signing algorithm.
+func (algo SigningAlgorithm) Name() string {
+	return [...]string{
+		"ECDSA_P256",
+		"ECDSA_secp256k1",
+		"BLS_BLS12381",
+		"UNKNOWN",
+	}[algo]
+}
+
+func (algo SigningAlgorithm) RawValue() int {
+	return int(algo)
+}
+
+func (algo SigningAlgorithm) DocString() string {
+	return [...]string{
+		SignatureAlgorithmDocStringECDSA_P256,
+		SignatureAlgorithmDocStringECDSA_Secp256k1,
+	}[algo]
+}
+
 const HashAlgorithmTypeName = "HashAlgorithm2"
-const HashAlgorithmSHA2_256 = "SHA2_256"
-const HashAlgorithmSHA3_256 = "SHA3_256"
 
 const HashAlgorithmDocStringSHA2_256 = `
 SHA2_256 is Secure Hashing Algorithm 2 (SHA-2) with a 256-bit digest

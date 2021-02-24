@@ -463,27 +463,17 @@ func importBuiltinStructValue(structType cadence.BuiltinStructType, fieldValues 
 		fields[fieldType.Identifier] = importValue(fieldValue)
 	}
 
+	var importedType *sema.BuiltinStructType
 	switch structType.ID() {
 	case sema.PublicKeyTypeName:
-		arrayValue, ok := fields[sema.PublicKeyPublicKeyField].(*interpreter.ArrayValue)
-		handleFieldImportError(ok, structType, sema.PublicKeyPublicKeyField)
-
-		signAlgo, ok := fields[sema.PublicKeySignAlgoField].(*interpreter.StringValue)
-		handleFieldImportError(ok, structType, sema.PublicKeySignAlgoField)
-
-		return interpreter.NewPublicKeyValue(arrayValue, signAlgo)
+		importedType = sema.PublicKeyType
+	case sema.HashAlgorithmTypeName:
+		importedType = sema.HashAlgorithmType
+	case sema.SignatureAlgorithmTypeName:
+		importedType = sema.SignatureAlgorithmType
 	default:
-		panic(fmt.Sprintf("cannot import value of type %T", structType))
+		panic(fmt.Sprintf("invalid builtin composite type %T", structType))
 	}
-}
 
-func handleFieldImportError(errorOccurred bool, structType cadence.BuiltinStructType, fieldName string) {
-	if !errorOccurred {
-		panic(fmt.Sprintf(
-			"invalid field `%s` in `%s`, must be of type %T",
-			fieldName,
-			structType,
-			interpreter.ArrayValue{},
-		))
-	}
+	return interpreter.NewBuiltinStructValue(importedType, fields)
 }

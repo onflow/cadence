@@ -151,7 +151,7 @@ var CreatePublicKeyFunction = NewStandardLibraryFunction(
 			{
 				Label:          sema.PublicKeySignAlgoField,
 				Identifier:     sema.PublicKeySignAlgoField,
-				TypeAnnotation: sema.NewTypeAnnotation(&sema.StringType{}),
+				TypeAnnotation: sema.NewTypeAnnotation(sema.SignatureAlgorithmType),
 			},
 		},
 		ReturnTypeAnnotation:  sema.NewTypeAnnotation(sema.PublicKeyType),
@@ -160,7 +160,7 @@ var CreatePublicKeyFunction = NewStandardLibraryFunction(
 
 	func(invocation interpreter.Invocation) trampoline.Trampoline {
 		publicKey := invocation.Arguments[0].(*interpreter.ArrayValue)
-		signAlgo := invocation.Arguments[1].(*interpreter.StringValue)
+		signAlgo := invocation.Arguments[1].(*interpreter.BuiltinStructValue)
 
 		value := interpreter.NewPublicKeyValue(publicKey, signAlgo)
 		return trampoline.Done{Result: value}
@@ -176,67 +176,38 @@ var BuiltinValues = StandardLibraryValues{
 
 var SignatureAlgorithmValue = StandardLibraryValue{
 	Name:  sema.SignatureAlgorithmTypeName,
-	Type:  signatureAlgorithmEnumType(),
-	Value: signatureAlgorithmEnumValue(),
+	Type:  getEnumType(sema.SignatureAlgorithmType, signatureAlgorithms),
+	Value: getEnumValue(signatureAlgorithms),
 	Kind:  common.DeclarationKindEnum,
 }
 
 var HashAlgorithmValue = StandardLibraryValue{
 	Name:  sema.HashAlgorithmTypeName,
-	Type:  hashAlgorithmEnumType(),
-	Value: hashAlgorithmEnumValue(),
+	Type:  getEnumType(sema.HashAlgorithmType, hashAlgorithms),
+	Value: getEnumValue(hashAlgorithms),
 	Kind:  common.DeclarationKindEnum,
 }
 
-func signatureAlgorithmEnumType() sema.Type {
-	var members = []*sema.Member{
-		sema.NewPublicEnumCaseMember(
-			sema.SignatureAlgorithmType,
-			sema.SignatureAlgorithmECDSA_P256,
-			sema.SignatureAlgorithmDocStringECDSAP256,
-		),
-		sema.NewPublicEnumCaseMember(
-			sema.SignatureAlgorithmType,
-			sema.SignatureAlgorithmECDSA_Secp256k1,
-			sema.SignatureAlgorithmDocStringECDSASecp256k1,
-		),
+var signatureAlgorithms = []sema.BuiltinEnumCase{
+	sema.ECDSAP256,
+	sema.ECDSASecp256k1,
+}
+
+var hashAlgorithms = []sema.BuiltinEnumCase{
+	sema.SHA2_256,
+	sema.SHA3_256,
+}
+
+func getEnumType(enumType *sema.BuiltinStructType, enumCases []sema.BuiltinEnumCase) *sema.SpecialFunctionType {
+	members := make([]*sema.Member, len(enumCases))
+	for _, algo := range enumCases {
+		members[algo.RawValue()] = sema.NewPublicEnumCaseMember(
+			enumType,
+			algo.Name(),
+			algo.DocString(),
+		)
 	}
 
-	return getEnumType(sema.SignatureAlgorithmType, members)
-}
-
-func signatureAlgorithmEnumValue() interpreter.Value {
-	return getEnumValue([]string{
-		sema.SignatureAlgorithmECDSA_P256,
-		sema.SignatureAlgorithmECDSA_Secp256k1,
-	})
-}
-
-func hashAlgorithmEnumType() sema.Type {
-	var members = []*sema.Member{
-		sema.NewPublicEnumCaseMember(
-			sema.HashAlgorithmType,
-			sema.HashAlgorithmSHA2_256,
-			sema.HashAlgorithmDocStringSHA2_256,
-		),
-		sema.NewPublicEnumCaseMember(
-			sema.HashAlgorithmType,
-			sema.HashAlgorithmSHA3_256,
-			sema.HashAlgorithmDocStringSHA3_256,
-		),
-	}
-
-	return getEnumType(sema.HashAlgorithmType, members)
-}
-
-func hashAlgorithmEnumValue() interpreter.Value {
-	return getEnumValue([]string{
-		sema.HashAlgorithmSHA2_256,
-		sema.HashAlgorithmSHA3_256,
-	})
-}
-
-func getEnumType(enumType *sema.BuiltinStructType, members []*sema.Member) *sema.SpecialFunctionType {
 	constructorType := &sema.SpecialFunctionType{
 		FunctionType: &sema.FunctionType{
 			Parameters: []*sema.Parameter{
@@ -257,21 +228,16 @@ func getEnumType(enumType *sema.BuiltinStructType, members []*sema.Member) *sema
 	return constructorType
 }
 
-func getEnumValue(enumCases []string) (value interpreter.Value) {
+func getEnumValue(enumCases []sema.BuiltinEnumCase) (value interpreter.Value) {
 	caseCount := len(enumCases)
 	caseValues := make([]*interpreter.BuiltinStructValue, caseCount)
 	constructorMembers := make(map[string]interpreter.Value, caseCount)
 
-	for i, enumCase := range enumCases {
-		caseValue := interpreter.NewBuiltinStructValue(
-			sema.SignatureAlgorithmType,
-			map[string]interpreter.Value{
-				sema.EnumRawValueFieldName: interpreter.NewIntValueFromInt64(int64(i)),
-			},
-		)
-
-		caseValues[i] = caseValue
-		constructorMembers[enumCase] = caseValue
+	for _, enumCase := range enumCases {
+		rawValue := enumCase.RawValue()
+		caseValue := interpreter.NewEnumCaseValue(sema.SignatureAlgorithmType, rawValue)
+		caseValues[rawValue] = caseValue
+		constructorMembers[enumCase.Name()] = caseValue
 	}
 
 	constructor := interpreter.NewHostFunctionValue(

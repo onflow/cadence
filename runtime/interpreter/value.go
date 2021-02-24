@@ -7230,7 +7230,7 @@ func (*BuiltinStructValue) SetMember(_ *Interpreter, _ LocationRange, _ string, 
 func NewAccountKeyValue(
 	keyIndex IntValue,
 	publicKey *BuiltinStructValue,
-	hashAlgo *StringValue,
+	hashAlgo *BuiltinStructValue,
 	weight UFix64Value,
 	isRevoked BoolValue,
 ) *BuiltinStructValue {
@@ -7246,7 +7246,7 @@ func NewAccountKeyValue(
 }
 
 // NewPublicKeyValue constructs a PublicKey value.
-func NewPublicKeyValue(publicKey *ArrayValue, signAlgo *StringValue) *BuiltinStructValue {
+func NewPublicKeyValue(publicKey *ArrayValue, signAlgo *BuiltinStructValue) *BuiltinStructValue {
 	fields := map[string]Value{
 		sema.PublicKeyPublicKeyField: publicKey,
 		sema.PublicKeySignAlgoField:  signAlgo,
@@ -7264,4 +7264,13 @@ func NewAuthAccountKeysValue(addFunction FunctionValue, getFunction FunctionValu
 	}
 
 	return NewBuiltinStructValue(sema.PublicKeyType, fields)
+}
+
+func NewEnumCaseValue(enumType *sema.BuiltinStructType, rawValue int) *BuiltinStructValue {
+	return NewBuiltinStructValue(
+		enumType,
+		map[string]Value{
+			sema.EnumRawValueFieldName: NewIntValueFromInt64(int64(rawValue)),
+		},
+	)
 }

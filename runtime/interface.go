@@ -43,6 +43,9 @@ type ResolvedLocation = sema.ResolvedLocation
 type Identifier = ast.Identifier
 type Location = common.Location
 
+type SigningAlgorithm = sema.SigningAlgorithm
+type HashingAlgorithm = sema.HashAlgorithm
+
 type AccountKey struct {
 	KeyIndex  int
 	PublicKey *PublicKey
@@ -54,42 +57,6 @@ type AccountKey struct {
 type PublicKey struct {
 	PublicKey []byte
 	SignAlgo  SigningAlgorithm
-}
-
-type SigningAlgorithm int
-
-const (
-	// Supported signing algorithms
-	UnknownSigningAlgorithm SigningAlgorithm = iota
-	// BLSBLS12381 is BLS on BLS 12-381 curve
-	BLSBLS12381
-	// ECDSAP256 is ECDSA on NIST P-256 curve
-	ECDSAP256
-	// ECDSASecp256k1 is ECDSA on secp256k1 curve
-	ECDSASecp256k1
-)
-
-// String returns the string representation of this signing algorithm.
-func (f SigningAlgorithm) String() string {
-	return [...]string{"UNKNOWN", "BLS_BLS12381", "ECDSA_P256", "ECDSA_secp256k1"}[f]
-}
-
-// HashingAlgorithm is an identifier for a hashing algorithm.
-type HashingAlgorithm int
-
-const (
-	// Supported hashing algorithms
-	UnknownHashingAlgorithm HashingAlgorithm = iota
-	SHA2_256
-	SHA2_384
-	SHA3_256
-	SHA3_384
-	KMAC128
-)
-
-// String returns the string representation of this hashing algorithm.
-func (f HashingAlgorithm) String() string {
-	return [...]string{"UNKNOWN", "SHA2_256", "SHA2_384", "SHA3_256", "SHA3_384", "KMAC128"}[f]
 }
 
 type Interface interface {

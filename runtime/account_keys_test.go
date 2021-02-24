@@ -73,8 +73,8 @@ func TestAuthAccountAddPublicKey(t *testing.T) {
 
 	runtime := NewInterpreterRuntime()
 
-	keyA := newPublicKeyExportedValue([]byte{1, 2, 3}, "ECDSA_P256")
-	keyB := newPublicKeyExportedValue([]byte{4, 5, 6}, "ECDSA_P256")
+	keyA := newPublicKeyExportedValue([]byte{1, 2, 3}, sema.ECDSAP256)
+	keyB := newPublicKeyExportedValue([]byte{4, 5, 6}, sema.ECDSASecp256k1)
 	keys := cadence.NewArray([]cadence.Value{keyA, keyB})
 
 	var tests = []TestCase{
@@ -86,7 +86,7 @@ func TestAuthAccountAddPublicKey(t *testing.T) {
 						let acct = AuthAccount(payer: signer)	
 						acct.keys.add(
 							publicKey: key,
-							hashAlgo: "SHA3_256",
+							hashAlgo: HashAlgorithm2.SHA3_256,
 							weight: 100.0
 						)
 					}
@@ -98,9 +98,9 @@ func TestAuthAccountAddPublicKey(t *testing.T) {
 					KeyIndex: 0,
 					PublicKey: &PublicKey{
 						PublicKey: []byte{1, 2, 3},
-						SignAlgo:  0,
+						SignAlgo:  sema.ECDSAP256,
 					},
-					HashAlgo:  3,
+					HashAlgo:  sema.SHA3_256,
 					Weight:    100,
 					IsRevoked: false,
 				},
@@ -115,7 +115,7 @@ func TestAuthAccountAddPublicKey(t *testing.T) {
 						for key in keys {
 							acct.keys.add(
 								publicKey: key,
-								hashAlgo: "SHA3_256",
+								hashAlgo: HashAlgorithm2.SHA3_256,
 								weight: 100.0
 							)
 						}
@@ -129,9 +129,9 @@ func TestAuthAccountAddPublicKey(t *testing.T) {
 					KeyIndex: 0,
 					PublicKey: &PublicKey{
 						PublicKey: []byte{1, 2, 3},
-						SignAlgo:  0,
+						SignAlgo:  sema.ECDSAP256,
 					},
-					HashAlgo:  3,
+					HashAlgo:  sema.SHA3_256,
 					Weight:    100,
 					IsRevoked: false,
 				},
@@ -139,9 +139,9 @@ func TestAuthAccountAddPublicKey(t *testing.T) {
 					KeyIndex: 1,
 					PublicKey: &PublicKey{
 						PublicKey: []byte{4, 5, 6},
-						SignAlgo:  0,
+						SignAlgo:  sema.ECDSASecp256k1,
 					},
-					HashAlgo:  3,
+					HashAlgo:  sema.SHA3_256,
 					Weight:    100,
 					IsRevoked: false,
 				},
@@ -203,9 +203,9 @@ var addedAccountKey = &AccountKey{
 	KeyIndex: 0,
 	PublicKey: &PublicKey{
 		PublicKey: []byte{1, 2},
-		SignAlgo:  0,
+		SignAlgo:  sema.ECDSAP256,
 	},
-	HashAlgo:  3,
+	HashAlgo:  sema.SHA2_256,
 	Weight:    100,
 	IsRevoked: false,
 }
@@ -214,9 +214,9 @@ var revokedAccountKey = &AccountKey{
 	KeyIndex: 0,
 	PublicKey: &PublicKey{
 		PublicKey: []byte{1, 2},
-		SignAlgo:  0,
+		SignAlgo:  sema.ECDSAP256,
 	},
-	HashAlgo:  3,
+	HashAlgo:  sema.SHA2_256,
 	Weight:    100,
 	IsRevoked: true,
 }
@@ -395,12 +395,12 @@ func addAuthAccountKey(t *testing.T, runtime Runtime, runtimeInterface *testRunt
 					prepare(signer: AuthAccount) {
 						let key = PublicKey2(
 							publicKey: "0102".decodeHex(),
-							signAlgo: "ECDSA_P256"
+							signAlgo: SignatureAlgorithm2.ECDSA_P256
 						)
 
 						signer.keys.add(
 							publicKey: key,
-							hashAlgo: "SHA3_256",
+							hashAlgo: HashAlgorithm2.SHA2_256,
 							weight: 100.0
 						)
 					}
@@ -439,17 +439,21 @@ func encodeArgs(argValues []cadence.Value) [][]byte {
 	return args
 }
 
-func newPublicKeyExportedValue(keyBytes []byte, signAlgo string) cadence.BuiltinStruct {
+func newPublicKeyExportedValue(keyBytes []byte, signAlgo sema.SigningAlgorithm) cadence.BuiltinStruct {
 	byteArray := make([]cadence.Value, len(keyBytes))
 	for index, value := range keyBytes {
 		byteArray[index] = cadence.NewUInt8(value)
 	}
 
+	signAlgoValue := cadence.NewBuiltinStruct([]cadence.Value{
+		cadence.NewInt(signAlgo.RawValue()),
+	}).WithType(SignAlgoType)
+
 	return cadence.BuiltinStruct{
 		StructType: PublicKeyType,
 		Fields: []cadence.Value{
 			cadence.NewArray(byteArray),
-			cadence.NewString(signAlgo),
+			signAlgoValue,
 		},
 	}
 }
@@ -462,12 +466,26 @@ var PublicKeyType = func() *cadence.BuiltinStructType {
 		},
 		{
 			Identifier: sema.PublicKeySignAlgoField,
-			Type:       cadence.StringType{},
+			Type:       SignAlgoType,
 		},
 	}
 
 	return &cadence.BuiltinStructType{
 		QualifiedIdentifier: sema.PublicKeyTypeName,
+		Fields:              fields,
+	}
+}()
+
+var SignAlgoType = func() *cadence.BuiltinStructType {
+	var fields = []cadence.Field{
+		{
+			Identifier: sema.EnumRawValueFieldName,
+			Type:       cadence.Int8Type{},
+		},
+	}
+
+	return &cadence.BuiltinStructType{
+		QualifiedIdentifier: sema.SignatureAlgorithmTypeName,
 		Fields:              fields,
 	}
 }()

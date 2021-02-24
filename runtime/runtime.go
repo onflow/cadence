@@ -2058,20 +2058,39 @@ func (r *interpreterRuntime) newAuthAccountKeysAddFunction(
 			publicKeyValue := invocation.Arguments[0].(*interpreter.BuiltinStructValue)
 			if publicKeyValue.StaticType() != interpreter.PrimitiveStaticTypePublicKey {
 				panic(fmt.Sprintf(
-					"add requires the first argument to be an %s",
+					"add method requires the first argument to be an %s",
 					sema.PublicKeyType,
 				))
 			}
 
-			// TODO:
-			//signAlgo := invocation.Arguments[0].(*interpreter.S)
-			weight := invocation.Arguments[2].(interpreter.UFix64Value)
+			hashAlgoValue, ok := invocation.Arguments[1].(*interpreter.BuiltinStructValue)
+			if !ok {
+				panic(fmt.Sprintf(
+					"add method requires the second argument to be an %s",
+					sema.HashAlgorithmType,
+				))
+			}
+
+			hashAlgoRawValue, ok := hashAlgoValue.Fields[sema.EnumRawValueFieldName].(interpreter.IntValue)
+			if !ok {
+				panic("enum raw value needs to be subtype of integer")
+			}
+
+			hashAlgo := HashingAlgorithm(hashAlgoRawValue.ToInt())
+
+			weight, ok := invocation.Arguments[2].(interpreter.UFix64Value)
+			if !ok {
+				panic(fmt.Sprintf(
+					"add requires the third argument to be an %s",
+					sema.UFix64Type{},
+				))
+			}
 
 			var err error
 			var accountKey *AccountKey
 			wrapPanic(func() {
 				publicKey := NewPublicKeyFromValue(publicKeyValue)
-				accountKey, err = runtimeInterface.AddAccountKey(addressValue.ToAddress(), publicKey, 3, weight.ToInt())
+				accountKey, err = runtimeInterface.AddAccountKey(addressValue.ToAddress(), publicKey, hashAlgo, weight.ToInt())
 			})
 			if err != nil {
 				panic(err)
@@ -2098,7 +2117,10 @@ func (r *interpreterRuntime) newAuthAccountKeysGetFunction(
 ) interpreter.HostFunctionValue {
 	return interpreter.NewHostFunctionValue(
 		func(invocation interpreter.Invocation) trampoline.Trampoline {
-			index := invocation.Arguments[0].(interpreter.IntValue)
+			index, ok := invocation.Arguments[0].(interpreter.IntValue)
+			if !ok {
+				panic("get method requires the first argument to be an integer")
+			}
 
 			var err error
 			var accountKey *AccountKey
@@ -2130,7 +2152,10 @@ func (r *interpreterRuntime) newAuthAccountKeysRevokeFunction(
 ) interpreter.HostFunctionValue {
 	return interpreter.NewHostFunctionValue(
 		func(invocation interpreter.Invocation) trampoline.Trampoline {
-			index := invocation.Arguments[0].(interpreter.IntValue)
+			index, ok := invocation.Arguments[0].(interpreter.IntValue)
+			if !ok {
+				panic("revoke method requires the first argument to be an integer")
+			}
 
 			var err error
 			var accountKey *AccountKey
@@ -2166,18 +2191,26 @@ func NewPublicKeyFromValue(publicKey *interpreter.BuiltinStructValue) *PublicKey
 	}
 
 	// sign algo field
-	_ = publicKey.Fields[sema.PublicKeySignAlgoField]
+	signAlgoValue, ok := publicKey.Fields[sema.PublicKeySignAlgoField].(*interpreter.BuiltinStructValue)
+	if !ok {
+		panic("sign algorithm needs to be of type `SignAlgorithm`")
+	}
+
+	rawValue, ok := signAlgoValue.Fields[sema.EnumRawValueFieldName].(interpreter.IntValue)
+	if !ok {
+		panic("enum raw value needs to be subtype of integer")
+	}
 
 	return &PublicKey{
 		PublicKey: byteArray,
-		SignAlgo:  0,
+		SignAlgo:  SigningAlgorithm(rawValue.ToInt()),
 	}
 }
 
 func NewPublicKeyValue(publicKey *PublicKey) *interpreter.BuiltinStructValue {
 	return interpreter.NewPublicKeyValue(
 		interpreter.ByteSliceToByteArrayValue(publicKey.PublicKey),
-		interpreter.NewStringValue(publicKey.SignAlgo.String()),
+		interpreter.NewEnumCaseValue(sema.SignatureAlgorithmType, int(publicKey.SignAlgo)),
 	)
 }
 
@@ -2185,7 +2218,7 @@ func NewAccountKeyValue(accountKey *AccountKey) *interpreter.BuiltinStructValue 
 	return interpreter.NewAccountKeyValue(
 		interpreter.NewIntValueFromInt64(int64(accountKey.KeyIndex)),
 		NewPublicKeyValue(accountKey.PublicKey),
-		interpreter.NewStringValue(accountKey.HashAlgo.String()),
+		interpreter.NewEnumCaseValue(sema.HashAlgorithmType, int(accountKey.HashAlgo)),
 		interpreter.NewUFix64ValueWithInteger(uint64(accountKey.Weight)),
 		interpreter.BoolValue(accountKey.IsRevoked),
 	)
