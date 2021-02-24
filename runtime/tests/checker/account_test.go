@@ -45,7 +45,7 @@ func ParseAndCheckAccount(t *testing.T, code string) (*sema.Checker, error) {
 		ParseAndCheckOptions{
 			Options: []sema.Option{
 				sema.WithPredeclaredValues([]sema.ValueDeclaration{
-					constantDeclaration("authAccount", &sema.AuthAccountType{}),
+					constantDeclaration("authAccount", sema.AuthAccountType),
 					constantDeclaration("publicAccount", &sema.PublicAccountType{}),
 				}),
 			},

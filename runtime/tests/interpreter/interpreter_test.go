@@ -48,12 +48,12 @@ type ParseCheckAndInterpretOptions struct {
 	HandleCheckerError func(error)
 }
 
-func parseCheckAndInterpret(t *testing.T, code string) *interpreter.Interpreter {
+func parseCheckAndInterpret(t testing.TB, code string) *interpreter.Interpreter {
 	return parseCheckAndInterpretWithOptions(t, code, ParseCheckAndInterpretOptions{})
 }
 
 func parseCheckAndInterpretWithOptions(
-	t *testing.T,
+	t testing.TB,
 	code string,
 	options ParseCheckAndInterpretOptions,
 ) *interpreter.Interpreter {
@@ -1316,6 +1316,29 @@ func TestInterpretRecursionFib(t *testing.T) {
 		interpreter.NewIntValueFromInt64(377),
 		value,
 	)
+}
+
+func BenchmarkInterpretRecursionFib(b *testing.B) {
+
+	inter := parseCheckAndInterpret(b, `
+       fun fib(_ n: Int): Int {
+           if n < 2 {
+              return n
+           }
+           return fib(n - 1) + fib(n - 2)
+       }
+   `)
+
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+
+		_, err := inter.Invoke(
+			"fib",
+			interpreter.NewIntValueFromInt64(14),
+		)
+		require.NoError(b, err)
+	}
 }
 
 func TestInterpretRecursionFactorial(t *testing.T) {
@@ -4168,6 +4191,27 @@ func TestInterpretDictionaryIndexingInt(t *testing.T) {
 		interpreter.NilValue{},
 		inter.Globals["c"].Value,
 	)
+}
+
+func BenchmarkDictionaryIndexingInt(b *testing.B) {
+
+	inter := parseCheckAndInterpret(b, `
+      let x = {23: "a", 42: "b"}
+
+      fun test() {
+          let a = x[23]
+          let b = x[42]
+          let c = x[100]
+      }
+    `)
+
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+
+		_, err := inter.Invoke("test")
+		require.NoError(b, err)
+	}
 }
 
 func TestInterpretDictionaryIndexingAssignmentExisting(t *testing.T) {
@@ -7581,7 +7625,7 @@ func TestInterpretResourceOwnerFieldUse(t *testing.T) {
 
 	valueDeclaration := stdlib.StandardLibraryValue{
 		Name: "account",
-		Type: &sema.AuthAccountType{},
+		Type: sema.AuthAccountType,
 		Value: interpreter.NewAuthAccountValue(
 			addressValue,
 			func(interpreter *interpreter.Interpreter) interpreter.UInt64Value {

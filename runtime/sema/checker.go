@@ -1280,7 +1280,7 @@ func (checker *Checker) convertNominalType(t *ast.NominalType) Type {
 
 	for _, identifier := range t.NestedIdentifiers {
 		if containerType, ok := ty.(ContainerType); ok && containerType.isContainerType() {
-			ty, _ = containerType.NestedTypes().Get(identifier.Identifier)
+			ty, _ = containerType.GetNestedTypes().Get(identifier.Identifier)
 		} else {
 			if !ty.IsInvalidType() {
 				checker.report(
@@ -2026,7 +2026,7 @@ func (checker *Checker) predeclaredMembers(containerType Type) []*Member {
 
 			addPredeclaredMember(
 				"account",
-				&AuthAccountType{},
+				AuthAccountType,
 				common.DeclarationKindField,
 				ast.AccessPrivate,
 				true,

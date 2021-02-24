@@ -39,12 +39,12 @@ var accountFunctionType = &sema.FunctionType{
 		{
 			Identifier: "payer",
 			TypeAnnotation: sema.NewTypeAnnotation(
-				&sema.AuthAccountType{},
+				sema.AuthAccountType,
 			),
 		},
 	},
 	ReturnTypeAnnotation: sema.NewTypeAnnotation(
-		&sema.AuthAccountType{},
+		sema.AuthAccountType,
 	),
 }
 

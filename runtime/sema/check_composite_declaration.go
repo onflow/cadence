@@ -565,14 +565,14 @@ func (checker *Checker) declareCompositeMembersAndValue(
 		// in which case it is a type requirement,
 		// and this nested composite type implicitly conforms to it.
 
-		compositeType.NestedTypes().Foreach(func(nestedTypeIdentifier string, nestedType Type) {
+		compositeType.GetNestedTypes().Foreach(func(nestedTypeIdentifier string, nestedType Type) {
 			nestedCompositeType, ok := nestedType.(*CompositeType)
 			if !ok {
 				return
 			}
 
 			for _, compositeTypeConformance := range compositeType.ExplicitInterfaceConformances {
-				conformanceNestedTypes := compositeTypeConformance.NestedTypes()
+				conformanceNestedTypes := compositeTypeConformance.GetNestedTypes()
 
 				nestedType, ok := conformanceNestedTypes.Get(nestedTypeIdentifier)
 				if !ok {

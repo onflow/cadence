@@ -1093,11 +1093,12 @@ func (r *interpreterRuntime) newCreateAccountFunction(
 	checkerOptions []sema.Option,
 ) interpreter.HostFunction {
 	return func(invocation interpreter.Invocation) trampoline.Trampoline {
+
 		payer, ok := invocation.Arguments[0].(interpreter.AuthAccountValue)
 		if !ok {
 			panic(fmt.Sprintf(
-				"%[1]s requires the third argument to be an %[1]s",
-				&sema.AuthAccountType{},
+				"%[1]s requires the first argument (payer) to be an %[1]s",
+				sema.AuthAccountType,
 			))
 		}
 

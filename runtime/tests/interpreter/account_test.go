@@ -49,7 +49,7 @@ func testAccount(t *testing.T, auth bool, code string) (*interpreter.Interpreter
 
 	authAccountValueDeclaration := stdlib.StandardLibraryValue{
 		Name: "authAccount",
-		Type: &sema.AuthAccountType{},
+		Type: sema.AuthAccountType,
 		Value: interpreter.NewAuthAccountValue(
 			address,
 			func(interpreter *interpreter.Interpreter) interpreter.UInt64Value {

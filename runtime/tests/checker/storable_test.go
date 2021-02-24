@@ -118,7 +118,7 @@ func TestCheckStorable(t *testing.T) {
 		},
 		sema.NeverType,
 		sema.VoidType,
-		&sema.AuthAccountType{},
+		sema.AuthAccountType,
 		&sema.PublicAccountType{},
 	}
 

@@ -35,10 +35,12 @@ type NominalType struct {
 	Storable             bool
 	Equatable            bool
 	ExternallyReturnable bool
+	IsContainerType      bool
 	IsSuperTypeOf        func(subType Type) bool
 	Members              func(*NominalType) map[string]MemberResolver
 	members              map[string]MemberResolver
 	membersOnce          sync.Once
+	NestedTypes          *StringTypeOrderedMap
 }
 
 func (*NominalType) IsType() {}
@@ -108,4 +110,12 @@ func (t *NominalType) initializeMembers() {
 		}
 		t.members = withBuiltinMembers(t, members)
 	})
+}
+
+func (t *NominalType) isContainerType() bool {
+	return t.NestedTypes != nil
+}
+
+func (t *NominalType) GetNestedTypes() *StringTypeOrderedMap {
+	return t.NestedTypes
 }
