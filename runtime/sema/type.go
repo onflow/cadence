@@ -167,19 +167,20 @@ type ContainedType interface {
 //
 type ContainerType interface {
 	Type
+	isContainerType() bool
 	NestedTypes() *StringTypeOrderedMap
 }
 
-func VisitContainerAndNested(t ContainerType, visit func(ty Type)) {
+func VisitThisAndNested(t Type, visit func(ty Type)) {
 	visit(t)
 
-	t.NestedTypes().Foreach(func(_ string, nestedType Type) {
+	containerType, ok := t.(ContainerType)
+	if !ok || !containerType.isContainerType() {
+		return
+	}
 
-		if nestedContainerType, ok := nestedType.(ContainerType); ok {
-			VisitContainerAndNested(nestedContainerType, visit)
-		} else {
-			visit(nestedType)
-		}
+	containerType.NestedTypes().Foreach(func(_ string, nestedType Type) {
+		VisitThisAndNested(nestedType, visit)
 	})
 }
 
@@ -4583,6 +4584,10 @@ func (t *CompositeType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
 	return t
 }
 
+func (*CompositeType) isContainerType() bool {
+	return true
+}
+
 func (t *CompositeType) NestedTypes() *StringTypeOrderedMap {
 	return t.nestedTypes
 }
@@ -5212,6 +5217,10 @@ var authAccountTypeNestedTypes = func() *StringTypeOrderedMap {
 	return nestedTypes
 }()
 
+func (*AuthAccountType) isContainerType() bool {
+	return true
+}
+
 func (*AuthAccountType) NestedTypes() *StringTypeOrderedMap {
 	return authAccountTypeNestedTypes
 }
@@ -5612,6 +5621,10 @@ func (*InterfaceType) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err e
 
 func (t *InterfaceType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
 	return t
+}
+
+func (*InterfaceType) isContainerType() bool {
+	return true
 }
 
 func (t *InterfaceType) NestedTypes() *StringTypeOrderedMap {

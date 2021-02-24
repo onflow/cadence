@@ -445,7 +445,7 @@ func (checker *Checker) VisitProgram(program *ast.Program) ast.Repr {
 		// NOTE: register types in elaboration
 		// *after* the full container chain is fully set up
 
-		VisitContainerAndNested(interfaceType, registerInElaboration)
+		VisitThisAndNested(interfaceType, registerInElaboration)
 	}
 
 	for _, declaration := range program.CompositeDeclarations() {
@@ -454,7 +454,7 @@ func (checker *Checker) VisitProgram(program *ast.Program) ast.Repr {
 		// NOTE: register types in elaboration
 		// *after* the full container chain is fully set up
 
-		VisitContainerAndNested(compositeType, registerInElaboration)
+		VisitThisAndNested(compositeType, registerInElaboration)
 	}
 
 	// Declare interfaces' and composites' members
@@ -1279,11 +1279,10 @@ func (checker *Checker) convertNominalType(t *ast.NominalType) Type {
 	var resolvedIdentifiers []ast.Identifier
 
 	for _, identifier := range t.NestedIdentifiers {
-		switch typedResult := ty.(type) {
-		case ContainerType:
-			ty, _ = typedResult.NestedTypes().Get(identifier.Identifier)
-		default:
-			if !typedResult.IsInvalidType() {
+		if containerType, ok := ty.(ContainerType); ok && containerType.isContainerType() {
+			ty, _ = containerType.NestedTypes().Get(identifier.Identifier)
+		} else {
+			if !ty.IsInvalidType() {
 				checker.report(
 					&InvalidNestedTypeError{
 						Type: &ast.NominalType{
