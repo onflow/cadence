@@ -1257,36 +1257,45 @@ func (s *Server) getDiagnostics(
 				}
 
 				return resolvedLocations, nil
-			}),
+			},
+		),
 		sema.WithOriginsAndOccurrencesEnabled(true),
-		sema.WithImportHandler(func(checker *sema.Checker, location common.Location) (sema.Import, *sema.CheckerError) {
-			switch location {
-			case stdlib.CryptoChecker.Location:
-				return sema.CheckerImport{
-					Checker: stdlib.CryptoChecker,
-				}, nil
+		sema.WithImportHandler(
+			func(checker *sema.Checker, importedLocation common.Location) (sema.Import, error) {
 
-			default:
-				var program *ast.Program
-				var err error
-				checker, checkerErr := checker.EnsureLoaded(location, func() *ast.Program {
-					program, err = s.resolveImport(mainPath, location)
-					return program
-				})
-				// TODO: improve
-				if err != nil {
-					return nil, &sema.CheckerError{
-						Errors: []error{err},
+				switch importedLocation {
+				case stdlib.CryptoChecker.Location:
+					return sema.ElaborationImport{
+						Elaboration: stdlib.CryptoChecker.Elaboration,
+					}, nil
+
+				default:
+
+					importedProgram, err := s.resolveImport(mainPath, importedLocation)
+					if err != nil {
+						return nil, &sema.CheckerError{
+							Errors: []error{err},
+						}
 					}
+
+					importedChecker, err := checker.SubChecker(importedProgram, importedLocation)
+					if err != nil {
+						return nil, &sema.CheckerError{
+							Errors: []error{err},
+						}
+					}
+
+					err = importedChecker.Check()
+					if err != nil {
+						return nil, err
+					}
+
+					return sema.ElaborationImport{
+						Elaboration: importedChecker.Elaboration,
+					}, nil
 				}
-				if checkerErr != nil {
-					return nil, checkerErr
-				}
-				return sema.CheckerImport{
-					Checker: checker,
-				}, nil
-			}
-		}),
+			},
+		),
 	)
 	if diagnosticsErr != nil {
 		return
