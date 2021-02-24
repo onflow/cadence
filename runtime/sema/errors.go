@@ -144,7 +144,7 @@ func (e *RedeclarationError) EndPosition() ast.Position {
 }
 
 func (e *RedeclarationError) ErrorNotes() []errors.ErrorNote {
-	if e.PreviousPos == nil {
+	if e.PreviousPos == nil || e.PreviousPos.Line < 1 {
 		return nil
 	}
 
