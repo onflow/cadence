@@ -1318,29 +1318,6 @@ func TestInterpretRecursionFib(t *testing.T) {
 	)
 }
 
-func BenchmarkInterpretRecursionFib(b *testing.B) {
-
-	inter := parseCheckAndInterpret(b, `
-       fun fib(_ n: Int): Int {
-           if n < 2 {
-              return n
-           }
-           return fib(n - 1) + fib(n - 2)
-       }
-   `)
-
-	b.ResetTimer()
-
-	for i := 0; i < b.N; i++ {
-
-		_, err := inter.Invoke(
-			"fib",
-			interpreter.NewIntValueFromInt64(14),
-		)
-		require.NoError(b, err)
-	}
-}
-
 func TestInterpretRecursionFactorial(t *testing.T) {
 
 	t.Parallel()
@@ -4191,27 +4168,6 @@ func TestInterpretDictionaryIndexingInt(t *testing.T) {
 		interpreter.NilValue{},
 		inter.Globals["c"].Value,
 	)
-}
-
-func BenchmarkDictionaryIndexingInt(b *testing.B) {
-
-	inter := parseCheckAndInterpret(b, `
-      let x = {23: "a", 42: "b"}
-
-      fun test() {
-          let a = x[23]
-          let b = x[42]
-          let c = x[100]
-      }
-    `)
-
-	b.ResetTimer()
-
-	for i := 0; i < b.N; i++ {
-
-		_, err := inter.Invoke("test")
-		require.NoError(b, err)
-	}
 }
 
 func TestInterpretDictionaryIndexingAssignmentExisting(t *testing.T) {
