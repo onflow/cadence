@@ -3818,11 +3818,10 @@ func IsSubType(subType DynamicType, superType sema.Type) bool {
 		}
 
 	case StringDynamicType:
-		if _, ok := superType.(*sema.StringType); ok {
+		switch superType {
+		case sema.AnyStructType, sema.StringType:
 			return true
 		}
-
-		return superType == sema.AnyStructType
 
 	case BoolDynamicType:
 		switch superType {

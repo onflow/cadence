@@ -108,8 +108,10 @@ const AuthAccountContractsTypeAddFunctionName = "add"
 var authAccountContractsTypeAddFunctionType = &FunctionType{
 	Parameters: []*Parameter{
 		{
-			Identifier:     "name",
-			TypeAnnotation: NewTypeAnnotation(&StringType{}),
+			Identifier: "name",
+			TypeAnnotation: NewTypeAnnotation(
+				StringType,
+			),
 		},
 		{
 			Identifier: "code",
@@ -151,8 +153,10 @@ const AuthAccountContractsTypeUpdateExperimentalFunctionName = "update__experime
 var authAccountContractsTypeUpdateExperimentalFunctionType = &FunctionType{
 	Parameters: []*Parameter{
 		{
-			Identifier:     "name",
-			TypeAnnotation: NewTypeAnnotation(&StringType{}),
+			Identifier: "name",
+			TypeAnnotation: NewTypeAnnotation(
+				StringType,
+			),
 		},
 		{
 			Identifier: "code",
@@ -179,8 +183,10 @@ const AuthAccountContractsTypeGetFunctionName = "get"
 var authAccountContractsTypeGetFunctionType = &FunctionType{
 	Parameters: []*Parameter{
 		{
-			Identifier:     "name",
-			TypeAnnotation: NewTypeAnnotation(&StringType{}),
+			Identifier: "name",
+			TypeAnnotation: NewTypeAnnotation(
+				StringType,
+			),
 		},
 	},
 	ReturnTypeAnnotation: NewTypeAnnotation(
@@ -204,7 +210,7 @@ var authAccountContractsTypeRemoveFunctionType = &FunctionType{
 	Parameters: []*Parameter{
 		{
 			Identifier:     "name",
-			TypeAnnotation: NewTypeAnnotation(&StringType{}),
+			TypeAnnotation: NewTypeAnnotation(StringType),
 		},
 	},
 	ReturnTypeAnnotation: NewTypeAnnotation(

@@ -397,7 +397,10 @@ func compileValueType(ty sema.Type) ir.ValType {
 	switch ty.(type) {
 	case *sema.IntType:
 		return ir.ValTypeInt
-	case *sema.StringType:
+	}
+
+	switch ty {
+	case sema.StringType:
 		return ir.ValTypeString
 	}
 

@@ -41,7 +41,7 @@ var AssertFunction = NewStandardLibraryFunction(
 			},
 			{
 				Identifier:     "message",
-				TypeAnnotation: sema.NewTypeAnnotation(&sema.StringType{}),
+				TypeAnnotation: sema.NewTypeAnnotation(sema.StringType),
 			},
 		},
 		ReturnTypeAnnotation: sema.NewTypeAnnotation(
@@ -85,7 +85,7 @@ var PanicFunction = NewStandardLibraryFunction(
 			{
 				Label:          sema.ArgumentLabelNotRequired,
 				Identifier:     "message",
-				TypeAnnotation: sema.NewTypeAnnotation(&sema.StringType{}),
+				TypeAnnotation: sema.NewTypeAnnotation(sema.StringType),
 			},
 		},
 		ReturnTypeAnnotation: sema.NewTypeAnnotation(

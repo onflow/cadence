@@ -194,7 +194,7 @@ func (checker *Checker) VisitFixedPointExpression(expression *ast.FixedPointExpr
 }
 
 func (checker *Checker) VisitStringExpression(_ *ast.StringExpression) ast.Repr {
-	return &StringType{}
+	return StringType
 }
 
 func (checker *Checker) VisitIndexExpression(expression *ast.IndexExpression) ast.Repr {

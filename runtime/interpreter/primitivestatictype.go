@@ -184,7 +184,7 @@ func (i PrimitiveStaticType) SemaType() sema.Type {
 		return &sema.AddressType{}
 
 	case PrimitiveStaticTypeString:
-		return &sema.StringType{}
+		return sema.StringType
 
 	case PrimitiveStaticTypeCharacter:
 		return sema.CharacterType
@@ -302,9 +302,6 @@ func ConvertSemaToPrimitiveStaticType(t sema.Type) PrimitiveStaticType {
 	case *sema.AddressType:
 		return PrimitiveStaticTypeAddress
 
-	case *sema.StringType:
-		return PrimitiveStaticTypeString
-
 	// Number
 
 	case *sema.NumberType:
@@ -418,6 +415,8 @@ func ConvertSemaToPrimitiveStaticType(t sema.Type) PrimitiveStaticType {
 		return PrimitiveStaticTypeDeployedContract
 	case sema.AuthAccountContractsType:
 		return PrimitiveStaticTypeAuthAccountContracts
+	case sema.StringType:
+		return PrimitiveStaticTypeString
 	}
 
 	return PrimitiveStaticTypeUnknown

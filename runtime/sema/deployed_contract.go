@@ -53,7 +53,7 @@ var DeployedContractType = &NominalType{
 					return NewPublicConstantFieldMember(
 						t,
 						identifier,
-						&StringType{},
+						StringType,
 						deployedContractTypeNameFieldDocString,
 					)
 				},

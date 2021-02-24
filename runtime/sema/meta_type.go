@@ -46,7 +46,7 @@ var MetaType = &NominalType{
 					return NewPublicConstantFieldMember(
 						t,
 						identifier,
-						&StringType{},
+						StringType,
 						typeIdentifierDocString,
 					)
 				},
