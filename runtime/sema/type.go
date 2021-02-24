@@ -4047,7 +4047,7 @@ func init() {
 		&StringType{},
 		&AddressType{},
 		AuthAccountType,
-		&PublicAccountType{},
+		PublicAccountType,
 		PathType,
 		StoragePathType,
 		CapabilityPathType,
@@ -4624,129 +4624,6 @@ func (t *CompositeType) initializeMemberResolvers() {
 
 		t.memberResolvers = withBuiltinMembers(t, members)
 	})
-}
-
-// PublicAccountType represents the publicly accessible portion of an account.
-
-type PublicAccountType struct{}
-
-func (*PublicAccountType) IsType() {}
-
-func (*PublicAccountType) String() string {
-	return "PublicAccount"
-}
-
-func (*PublicAccountType) QualifiedString() string {
-	return "PublicAccount"
-}
-
-func (*PublicAccountType) ID() TypeID {
-	return "PublicAccount"
-}
-
-func (*PublicAccountType) Equal(other Type) bool {
-	_, ok := other.(*PublicAccountType)
-	return ok
-}
-
-func (*PublicAccountType) IsResourceType() bool {
-	return false
-}
-
-func (*PublicAccountType) IsInvalidType() bool {
-	return false
-}
-
-func (*PublicAccountType) IsStorable(_ map[*Member]bool) bool {
-	return false
-}
-
-func (*PublicAccountType) IsExternallyReturnable(_ map[*Member]bool) bool {
-	return false
-}
-
-func (*PublicAccountType) IsEquatable() bool {
-	return false
-}
-
-func (*PublicAccountType) TypeAnnotationState() TypeAnnotationState {
-	return TypeAnnotationStateValid
-}
-
-func (t *PublicAccountType) RewriteWithRestrictedTypes() (result Type, rewritten bool) {
-	return t, false
-}
-
-const publicAccountTypeGetLinkTargetFunctionDocString = `
-Returns the capability at the given public path, or nil if it does not exist
-`
-
-func (t *PublicAccountType) GetMembers() map[string]MemberResolver {
-	return withBuiltinMembers(t, map[string]MemberResolver{
-		"address": {
-			Kind: common.DeclarationKindField,
-			Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
-				return NewPublicConstantFieldMember(
-					t,
-					identifier,
-					&AddressType{},
-					accountTypeAddressFieldDocString,
-				)
-			},
-		},
-		"storageUsed": {
-			Kind: common.DeclarationKindField,
-			Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
-				return NewPublicConstantFieldMember(
-					t,
-					identifier,
-					&UInt64Type{},
-					accountTypeStorageUsedFieldDocString,
-				)
-			},
-		},
-		"storageCapacity": {
-			Kind: common.DeclarationKindField,
-			Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
-				return NewPublicConstantFieldMember(
-					t,
-					identifier,
-					&UInt64Type{},
-					accountTypeStorageCapacityFieldDocString,
-				)
-			},
-		},
-		"getCapability": {
-			Kind: common.DeclarationKindFunction,
-			Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
-				return NewPublicFunctionMember(
-					t,
-					identifier,
-					publicAccountTypeGetCapabilityFunctionType,
-					publicAccountTypeGetLinkTargetFunctionDocString,
-				)
-			},
-		},
-		"getLinkTarget": {
-			Kind: common.DeclarationKindFunction,
-			Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
-				return NewPublicFunctionMember(
-					t,
-					identifier,
-					accountTypeGetLinkTargetFunctionType,
-					accountTypeGetLinkTargetFunctionDocString,
-				)
-			},
-		},
-	})
-}
-
-func (*PublicAccountType) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
-	return false
-}
-
-func (t *PublicAccountType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
-	return t
 }
 
 // Member

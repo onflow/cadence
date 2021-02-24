@@ -68,7 +68,7 @@ func testAccount(t *testing.T, auth bool, code string) (*interpreter.Interpreter
 
 	pubAccountValueDeclaration := stdlib.StandardLibraryValue{
 		Name: "pubAccount",
-		Type: &sema.PublicAccountType{},
+		Type: sema.PublicAccountType,
 		Value: interpreter.NewPublicAccountValue(
 			address,
 			func(interpreter *interpreter.Interpreter) interpreter.UInt64Value {

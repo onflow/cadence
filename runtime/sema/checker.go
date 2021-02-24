@@ -2043,7 +2043,7 @@ func (checker *Checker) predeclaredMembers(containerType Type) []*Member {
 			addPredeclaredMember(
 				ResourceOwnerFieldName,
 				&OptionalType{
-					Type: &PublicAccountType{},
+					Type: PublicAccountType,
 				},
 				common.DeclarationKindField,
 				ast.AccessPublic,

@@ -59,7 +59,7 @@ var getAccountFunctionType = &sema.FunctionType{
 		},
 	},
 	ReturnTypeAnnotation: sema.NewTypeAnnotation(
-		&sema.PublicAccountType{},
+		sema.PublicAccountType,
 	),
 }
 
