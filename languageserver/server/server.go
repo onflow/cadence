@@ -1481,13 +1481,9 @@ func locationToPath(location common.Location) string {
 }
 
 func uriToLocation(uri protocol.DocumentUri) common.StringLocation {
-	s := string(uri)
-
-	if strings.HasPrefix(s, filePrefix) {
-		return common.StringLocation(s[len(filePrefix):])
-	}
-
-	return common.StringLocation(s)
+	return common.StringLocation(
+		strings.TrimPrefix(string(uri), filePrefix),
+	)
 }
 
 func (s *Server) GetDocument(uri protocol.DocumentUri) (doc Document, ok bool) {
