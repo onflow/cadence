@@ -35,7 +35,6 @@ type NominalType struct {
 	Storable             bool
 	Equatable            bool
 	ExternallyReturnable bool
-	IsContainerType      bool
 	IsSuperTypeOf        func(subType Type) bool
 	Members              func(*NominalType) map[string]MemberResolver
 	members              map[string]MemberResolver
