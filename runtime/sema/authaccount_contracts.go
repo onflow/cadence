@@ -34,7 +34,6 @@ var AuthAccountContractsType = &NominalType{
 	Storable:             false,
 	Equatable:            false,
 	ExternallyReturnable: false,
-	IsContainerType:      false,
 	IsSuperTypeOf:        nil,
 	Members: func(t *NominalType) map[string]MemberResolver {
 		return withBuiltinMembers(t, map[string]MemberResolver{
