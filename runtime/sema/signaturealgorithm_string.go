@@ -8,13 +8,13 @@ func _() {
 	// An "invalid array index" compiler error signifies that the constant values have changed.
 	// Re-run the stringer command to generate them again.
 	var x [1]struct{}
-	_ = x[ECDSA_P256-0]
-	_ = x[ECDSA_Secp256k1-1]
+	_ = x[SignatureAlgorithmECDSA_P256-0]
+	_ = x[SignatureAlgorithmECDSA_Secp256k1-1]
 }
 
-const _SignatureAlgorithm_name = "ECDSA_P256ECDSA_Secp256k1"
+const _SignatureAlgorithm_name = "SignatureAlgorithmECDSA_P256SignatureAlgorithmECDSA_Secp256k1"
 
-var _SignatureAlgorithm_index = [...]uint8{0, 10, 25}
+var _SignatureAlgorithm_index = [...]uint8{0, 28, 61}
 
 func (i SignatureAlgorithm) String() string {
 	if i < 0 || i >= SignatureAlgorithm(len(_SignatureAlgorithm_index)-1) {

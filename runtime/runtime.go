@@ -2064,20 +2064,7 @@ func (r *interpreterRuntime) newAccountKeysAddFunction(
 				))
 			}
 
-			hashAlgoValue, ok := invocation.Arguments[1].(*interpreter.BuiltinStructValue)
-			if !ok {
-				panic(fmt.Sprintf(
-					"add method requires the second argument to be an %s",
-					sema.HashAlgorithmType,
-				))
-			}
-
-			hashAlgoRawValue, ok := hashAlgoValue.Fields[sema.EnumRawValueFieldName].(interpreter.IntValue)
-			if !ok {
-				panic("enum raw value needs to be subtype of integer")
-			}
-
-			hashAlgo := HashAlgorithm(hashAlgoRawValue.ToInt())
+			hashAlgo := NewHashAlgorithmFromValue(invocation.Arguments[1])
 
 			weight, ok := invocation.Arguments[2].(interpreter.UFix64Value)
 			if !ok {
@@ -2240,4 +2227,19 @@ func NewAccountKeyValue(accountKey *AccountKey) *interpreter.BuiltinStructValue 
 		interpreter.NewUFix64ValueWithInteger(uint64(accountKey.Weight)),
 		interpreter.BoolValue(accountKey.IsRevoked),
 	)
+}
+
+func NewHashAlgorithmFromValue(value interpreter.Value) HashAlgorithm {
+	hashAlgoValue, ok := value.(*interpreter.BuiltinStructValue)
+	if !ok || hashAlgoValue.StaticType() != interpreter.PrimitiveStaticTypeHashAlgorithm {
+		panic(fmt.Sprintf("hash algorithm value must be of type %s", sema.HashAlgorithmType))
+	}
+
+	hashAlgoRawValue, ok := hashAlgoValue.Fields[sema.EnumRawValueFieldName].(interpreter.IntValue)
+	if !ok {
+		panic("hash algorithm raw value needs to be subtype of integer")
+	}
+
+	hashAlgo := HashAlgorithm(hashAlgoRawValue.ToInt())
+	return hashAlgo
 }

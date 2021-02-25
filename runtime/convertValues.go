@@ -467,13 +467,13 @@ func importBuiltinStructValue(v cadence.BuiltinStruct) interpreter.Value {
 
 	var importedType *sema.BuiltinStructType
 	switch structType.ID() {
-	case sema.PublicKeyTypeName:
+	case sema.PublicKeyType.QualifiedString():
 		importedType = sema.PublicKeyType
-	case sema.AccountKeyTypeName:
+	case sema.AccountKeyType.QualifiedString():
 		importedType = sema.PublicKeyType
-	case sema.HashAlgorithmTypeName:
+	case sema.HashAlgorithmType.QualifiedString():
 		importedType = sema.HashAlgorithmType
-	case sema.SignatureAlgorithmTypeName:
+	case sema.SignatureAlgorithmType.QualifiedString():
 		importedType = sema.SignatureAlgorithmType
 	default:
 		panic(fmt.Sprintf("invalid builtin composite type %T", structType))

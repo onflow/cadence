@@ -409,7 +409,7 @@ func ExportBuiltinStructType(t *sema.BuiltinStructType, results map[sema.TypeID]
 	})
 
 	return &cadence.BuiltinStructType{
-		QualifiedIdentifier: t.Identifier,
+		QualifiedIdentifier: t.QualifiedString(),
 		Fields:              fields,
 	}
 }

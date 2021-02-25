@@ -177,14 +177,14 @@ var BuiltinValues = StandardLibraryValues{
 var SignatureAlgorithmValue = StandardLibraryValue{
 	Name:  sema.SignatureAlgorithmTypeName,
 	Type:  getEnumType(sema.SignatureAlgorithmType, sema.SignatureAlgorithms),
-	Value: getEnumValue(sema.SignatureAlgorithms),
+	Value: getEnumValue(sema.SignatureAlgorithmType, sema.SignatureAlgorithms),
 	Kind:  common.DeclarationKindEnum,
 }
 
 var HashAlgorithmValue = StandardLibraryValue{
 	Name:  sema.HashAlgorithmTypeName,
 	Type:  getEnumType(sema.HashAlgorithmType, sema.HashAlgorithms),
-	Value: getEnumValue(sema.HashAlgorithms),
+	Value: getEnumValue(sema.HashAlgorithmType, sema.HashAlgorithms),
 	Kind:  common.DeclarationKindEnum,
 }
 
@@ -218,14 +218,14 @@ func getEnumType(enumType *sema.BuiltinStructType, enumCases []sema.BuiltinEnumC
 	return constructorType
 }
 
-func getEnumValue(enumCases []sema.BuiltinEnumCase) (value interpreter.Value) {
+func getEnumValue(enumType *sema.BuiltinStructType, enumCases []sema.BuiltinEnumCase) (value interpreter.Value) {
 	caseCount := len(enumCases)
 	caseValues := make([]*interpreter.BuiltinStructValue, caseCount)
 	constructorMembers := make(map[string]interpreter.Value, caseCount)
 
 	for _, enumCase := range enumCases {
 		rawValue := enumCase.RawValue()
-		caseValue := interpreter.NewEnumCaseValue(sema.SignatureAlgorithmType, rawValue)
+		caseValue := interpreter.NewEnumCaseValue(enumType, rawValue)
 		caseValues[rawValue] = caseValue
 		constructorMembers[enumCase.Name()] = caseValue
 	}

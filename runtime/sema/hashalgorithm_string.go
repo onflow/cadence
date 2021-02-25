@@ -8,13 +8,13 @@ func _() {
 	// An "invalid array index" compiler error signifies that the constant values have changed.
 	// Re-run the stringer command to generate them again.
 	var x [1]struct{}
-	_ = x[SHA2_256-0]
-	_ = x[SHA3_256-1]
+	_ = x[HashAlgorithmSHA2_256-0]
+	_ = x[HashAlgorithmSHA3_256-1]
 }
 
-const _HashAlgorithm_name = "SHA2_256SHA3_256"
+const _HashAlgorithm_name = "HashAlgorithmSHA2_256HashAlgorithmSHA3_256"
 
-var _HashAlgorithm_index = [...]uint8{0, 8, 16}
+var _HashAlgorithm_index = [...]uint8{0, 21, 42}
 
 func (i HashAlgorithm) String() string {
 	if i < 0 || i >= HashAlgorithm(len(_HashAlgorithm_index)-1) {

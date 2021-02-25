@@ -71,15 +71,15 @@ func TestRuntimeCrypto_verify(t *testing.T) {
       import Crypto
 
       pub fun main(): Bool {
-          let publicKey = Crypto.PublicKey(
+          let publicKey = PublicKey2(
               publicKey: "0102".decodeHex(),
-              signatureAlgorithm: Crypto.ECDSA_P256
+              signAlgo: SignatureAlgorithm2.ECDSA_P256
           )
 
           let keyList = Crypto.KeyList()
           keyList.add(
               publicKey,
-              hashAlgorithm: Crypto.SHA3_256,
+              hashAlgorithm: HashAlgorithm2.SHA3_256,
               weight: 1.0
           )
 

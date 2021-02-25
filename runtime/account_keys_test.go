@@ -43,9 +43,9 @@ func TestAccountKeyCreation(t *testing.T) {
 			let key = AccountKey(
 				PublicKey2(
 					publicKey: "0102".decodeHex(),
-					signAlgo: "ECDSA_P256"
+					signAlgo: "SignatureAlgorithmECDSA_P256"
 				),
-				hashAlgo: "SHA3_256",
+				hashAlgo: "HashAlgorithmSHA3_256",
 				weight: 1.7
 			)
 
@@ -102,9 +102,9 @@ var accountKeyA = AccountKey{
 	KeyIndex: 0,
 	PublicKey: &PublicKey{
 		PublicKey: []byte{1, 2, 3},
-		SignAlgo:  sema.ECDSA_P256,
+		SignAlgo:  sema.SignatureAlgorithmECDSA_P256,
 	},
-	HashAlgo:  sema.SHA3_256,
+	HashAlgo:  sema.HashAlgorithmSHA3_256,
 	Weight:    100,
 	IsRevoked: false,
 }
@@ -113,9 +113,9 @@ var accountKeyB = AccountKey{
 	KeyIndex: 1,
 	PublicKey: &PublicKey{
 		PublicKey: []byte{4, 5, 6},
-		SignAlgo:  sema.ECDSA_Secp256k1,
+		SignAlgo:  sema.SignatureAlgorithmECDSA_Secp256k1,
 	},
-	HashAlgo:  sema.SHA3_256,
+	HashAlgo:  sema.HashAlgorithmSHA3_256,
 	Weight:    100,
 	IsRevoked: false,
 }
@@ -197,8 +197,8 @@ func TestAuthAccountAddPublicKey(t *testing.T) {
 
 	runtime := NewInterpreterRuntime()
 
-	keyA := publicKeyExportedValue([]byte{1, 2, 3}, sema.ECDSA_P256)
-	keyB := publicKeyExportedValue([]byte{4, 5, 6}, sema.ECDSA_Secp256k1)
+	keyA := publicKeyExportedValue([]byte{1, 2, 3}, sema.SignatureAlgorithmECDSA_P256)
+	keyB := publicKeyExportedValue([]byte{4, 5, 6}, sema.SignatureAlgorithmECDSA_Secp256k1)
 	keys := cadence.NewArray([]cadence.Value{keyA, keyB})
 
 	var tests = []TestCase{
@@ -289,7 +289,13 @@ func TestPublicAccountKeys(t *testing.T) {
 		require.IsType(t, cadence.Optional{}, value)
 		optionalValue := value.(cadence.Optional)
 
-		expectedValue := accountKeyExportedValue(0, []byte{1, 2, 3}, sema.ECDSA_P256, sema.SHA3_256, "100.0", false)
+		expectedValue := accountKeyExportedValue(0,
+			[]byte{1, 2, 3},
+			sema.SignatureAlgorithmECDSA_P256,
+			sema.HashAlgorithmSHA3_256,
+			"100.0",
+			false,
+		)
 
 		assert.Equal(t, expectedValue, optionalValue.Value)
 		assert.Equal(t, accountKeyA, storage.returnedKey)
@@ -320,7 +326,13 @@ func TestPublicAccountKeys(t *testing.T) {
 		require.IsType(t, cadence.Optional{}, value)
 		optionalValue := value.(cadence.Optional)
 
-		expectedValue := accountKeyExportedValue(1, []byte{4, 5, 6}, sema.ECDSA_Secp256k1, sema.SHA3_256, "100.0", false)
+		expectedValue := accountKeyExportedValue(1,
+			[]byte{4, 5, 6},
+			sema.SignatureAlgorithmECDSA_Secp256k1,
+			sema.HashAlgorithmSHA3_256,
+			"100.0",
+			false,
+		)
 
 		assert.Equal(t, expectedValue, optionalValue.Value)
 		assert.Equal(t, accountKeyB, storage.returnedKey)
@@ -378,7 +390,14 @@ func TestPublicAccountKeys(t *testing.T) {
 		require.IsType(t, cadence.Optional{}, value)
 		optionalValue := value.(cadence.Optional)
 
-		expectedValue := accountKeyExportedValue(0, []byte{1, 2, 3}, sema.ECDSA_P256, sema.SHA3_256, "100.0", true)
+		expectedValue := accountKeyExportedValue(
+			0,
+			[]byte{1, 2, 3},
+			sema.SignatureAlgorithmECDSA_P256,
+			sema.HashAlgorithmSHA3_256,
+			"100.0",
+			true,
+		)
 
 		assert.Equal(t, expectedValue, optionalValue.Value)
 		assert.Equal(t, revokedAccountKeyA, storage.returnedKey)

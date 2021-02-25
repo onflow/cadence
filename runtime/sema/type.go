@@ -44,6 +44,12 @@ func qualifiedIdentifier(identifier string, containerType Type) string {
 		case *CompositeType:
 			identifiers = append(identifiers, typedContainerType.Identifier)
 			containerType = typedContainerType.ContainerType
+		case *PublicAccountType:
+			identifiers = append(identifiers, string(typedContainerType.ID()))
+			containerType = nil
+		case *AuthAccountType:
+			identifiers = append(identifiers, string(typedContainerType.ID()))
+			containerType = nil
 		default:
 			panic(errors.NewUnreachableError())
 		}
@@ -5732,6 +5738,16 @@ func (t *PublicAccountType) Resolve(_ map[*TypeParameter]Type) Type {
 	return t
 }
 
+var publicAccountTypeNestedTypes = func() *StringTypeOrderedMap {
+	nestedTypes := NewStringTypeOrderedMap()
+	nestedTypes.Set(AccountKeysTypeName, PublicAccountKeysType)
+	return nestedTypes
+}()
+
+func (*PublicAccountType) NestedTypes() *StringTypeOrderedMap {
+	return publicAccountTypeNestedTypes
+}
+
 // Member
 
 type Member struct {
@@ -7730,7 +7746,7 @@ func (t *CapabilityType) GetMembers() map[string]MemberResolver {
 type BuiltinStructType struct {
 	Identifier           string
 	Members              *StringMemberOrderedMap
-	Owner                Type
+	ContainerType        Type
 	EnumRawType          Type
 	IsInvalid            bool
 	IsResource           bool
@@ -7746,7 +7762,7 @@ func (t *BuiltinStructType) String() string {
 }
 
 func (t *BuiltinStructType) QualifiedString() string {
-	return qualifiedIdentifier(t.Identifier, t.Owner)
+	return qualifiedIdentifier(t.Identifier, t.ContainerType)
 }
 
 func (t *BuiltinStructType) ID() TypeID {
@@ -7811,6 +7827,14 @@ func (*BuiltinStructType) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err er
 
 func (t *BuiltinStructType) Resolve(_ map[*TypeParameter]Type) Type {
 	return t
+}
+
+func (t *BuiltinStructType) GetContainerType() Type {
+	return t.ContainerType
+}
+
+func (t *BuiltinStructType) NestedTypes() *StringTypeOrderedMap {
+	return nil
 }
 
 func GetMembersAsMap(members []*Member) *StringMemberOrderedMap {
@@ -7932,7 +7956,7 @@ var AuthAccountKeysType = func() *BuiltinStructType {
 
 	accountKeys := &BuiltinStructType{
 		Identifier:           AccountKeysTypeName,
-		Owner:                &AuthAccountType{},
+		ContainerType:        &AuthAccountType{},
 		IsInvalid:            false,
 		IsResource:           false,
 		Storable:             false,
@@ -8022,7 +8046,7 @@ var PublicAccountKeysType = func() *BuiltinStructType {
 
 	accountKeys := &BuiltinStructType{
 		Identifier:           AccountKeysTypeName,
-		Owner:                &PublicAccountType{},
+		ContainerType:        &PublicAccountType{},
 		IsInvalid:            false,
 		IsResource:           false,
 		Storable:             false,
