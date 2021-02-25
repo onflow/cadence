@@ -203,6 +203,13 @@ func WithImportHandler(handler ImportHandlerFunc) Option {
 func WithOriginsAndOccurrencesEnabled(enabled bool) Option {
 	return func(checker *Checker) error {
 		checker.originsAndOccurrencesEnabled = enabled
+		if enabled {
+			checker.memberOrigins = map[Type]map[string]*Origin{}
+			checker.variableOrigins = map[*Variable]*Origin{}
+			checker.Occurrences = NewOccurrences()
+			checker.MemberAccesses = NewMemberAccesses()
+		}
+
 		return nil
 	}
 }
@@ -240,10 +247,6 @@ func NewChecker(program *ast.Program, location common.Location, options ...Optio
 		resources:           NewResources(),
 		typeActivations:     typeActivations,
 		functionActivations: functionActivations,
-		Occurrences:         NewOccurrences(),
-		variableOrigins:     map[*Variable]*Origin{},
-		memberOrigins:       map[Type]map[string]*Origin{},
-		MemberAccesses:      NewMemberAccesses(),
 		containerTypes:      map[Type]bool{},
 		Elaboration:         NewElaboration(),
 	}
