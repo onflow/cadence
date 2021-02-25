@@ -75,6 +75,9 @@ func testAccount(t *testing.T, auth bool, code string) (*interpreter.Interpreter
 				return 0
 			},
 			returnZero,
+			interpreter.NewPublicAccountKeysValue(
+				nil,
+			),
 		),
 		Kind: common.DeclarationKindConstant,
 	}

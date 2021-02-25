@@ -289,7 +289,7 @@ func exportBuiltinStructValue(v *interpreter.BuiltinStructValue, inter *interpre
 	builtinDynamicType := v.DynamicType(inter).(interpreter.BuiltinStructDynamicType)
 
 	// Convert internal type to exported type.
-	exportedBuiltinStructType := exportBuiltinStructType(builtinDynamicType.StaticType, map[sema.TypeID]cadence.Type{})
+	exportedBuiltinStructType := ExportBuiltinStructType(builtinDynamicType.StaticType, map[sema.TypeID]cadence.Type{})
 
 	fieldNames := exportedBuiltinStructType.Fields
 	fields := make([]cadence.Value, len(fieldNames))
@@ -392,7 +392,7 @@ func importValue(value cadence.Value) interpreter.Value {
 			Identifier: v.Identifier,
 		}
 	case cadence.BuiltinStruct:
-		return importBuiltinStructValue(*v.StructType, v.Fields)
+		return importBuiltinStructValue(v)
 	}
 
 	panic(fmt.Sprintf("cannot import value of type %T", value))
@@ -452,7 +452,9 @@ func importCompositeValue(
 	)
 }
 
-func importBuiltinStructValue(structType cadence.BuiltinStructType, fieldValues []cadence.Value) interpreter.Value {
+func importBuiltinStructValue(v cadence.BuiltinStruct) interpreter.Value {
+	structType := v.StructType
+	fieldValues := v.Fields
 
 	fieldTypes := structType.Fields
 	fields := make(map[string]interpreter.Value, len(fieldTypes))
@@ -466,6 +468,8 @@ func importBuiltinStructValue(structType cadence.BuiltinStructType, fieldValues 
 	var importedType *sema.BuiltinStructType
 	switch structType.ID() {
 	case sema.PublicKeyTypeName:
+		importedType = sema.PublicKeyType
+	case sema.AccountKeyTypeName:
 		importedType = sema.PublicKeyType
 	case sema.HashAlgorithmTypeName:
 		importedType = sema.HashAlgorithmType

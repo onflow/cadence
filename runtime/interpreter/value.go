@@ -6829,17 +6829,20 @@ type PublicAccountValue struct {
 	storageUsedGet     func(interpreter *Interpreter) UInt64Value
 	storageCapacityGet func() UInt64Value
 	Identifier         string
+	keys               *BuiltinStructValue
 }
 
 func NewPublicAccountValue(
 	address AddressValue,
 	storageUsedGet func(interpreter *Interpreter) UInt64Value,
 	storageCapacityGet func() UInt64Value,
+	keys *BuiltinStructValue,
 ) PublicAccountValue {
 	return PublicAccountValue{
 		Address:            address,
 		storageUsedGet:     storageUsedGet,
 		storageCapacityGet: storageCapacityGet,
+		keys:               keys,
 	}
 }
 
@@ -6908,6 +6911,8 @@ func (v PublicAccountValue) GetMember(inter *Interpreter, _ LocationRange, name 
 
 	case "getLinkTarget":
 		return inter.accountGetLinkTargetFunction(v.Address)
+	case "keys":
+		return v.keys
 	}
 
 	return nil
@@ -7258,13 +7263,23 @@ func NewPublicKeyValue(publicKey *ArrayValue, signAlgo *BuiltinStructValue) *Bui
 // NewAuthAccountKeysValue constructs a AuthAccount.Keys value.
 func NewAuthAccountKeysValue(addFunction FunctionValue, getFunction FunctionValue, revokeFunction FunctionValue) *BuiltinStructValue {
 	fields := map[string]Value{
-		sema.AuthAccountContractsTypeAddFunctionName: addFunction,
-		sema.AuthAccountContractsTypeGetFunctionName: getFunction,
-		sema.AuthAccountKeysRevokeFunctionName:       revokeFunction,
+		sema.AccountKeysAddFunctionName:    addFunction,
+		sema.AccountKeysGetFunctionName:    getFunction,
+		sema.AccountKeysRevokeFunctionName: revokeFunction,
 	}
 
 	return NewBuiltinStructValue(sema.PublicKeyType, fields)
 }
+
+// NewPublicAccountKeysValue constructs a PublicAccount.Keys value.
+func NewPublicAccountKeysValue(getFunction FunctionValue) *BuiltinStructValue {
+	fields := map[string]Value{
+		sema.AccountKeysGetFunctionName:    getFunction,
+	}
+
+	return NewBuiltinStructValue(sema.PublicKeyType, fields)
+}
+
 
 func NewEnumCaseValue(enumType *sema.BuiltinStructType, rawValue int) *BuiltinStructValue {
 	return NewBuiltinStructValue(

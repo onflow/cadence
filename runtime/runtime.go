@@ -1415,6 +1415,7 @@ func (r *interpreterRuntime) newGetAccountFunction(runtimeInterface Interface, r
 			accountAddress,
 			storageUsedGetFunction(accountAddress, runtimeInterface, runtimeStorage),
 			storageCapacityGetFunction(accountAddress, runtimeInterface),
+			r.newAuthAccountKeys(accountAddress, runtimeInterface),
 		)
 		return trampoline.Done{Result: publicAccount}
 	}
@@ -1552,15 +1553,15 @@ func (r *interpreterRuntime) newAuthAccountContracts(
 
 func (r *interpreterRuntime) newAuthAccountKeys(addressValue interpreter.AddressValue, runtimeInterface Interface) *interpreter.BuiltinStructValue {
 	return interpreter.NewAuthAccountKeysValue(
-		r.newAuthAccountKeysAddFunction(
+		r.newAccountKeysAddFunction(
 			addressValue,
 			runtimeInterface,
 		),
-		r.newAuthAccountKeysGetFunction(
+		r.newAccountKeysGetFunction(
 			addressValue,
 			runtimeInterface,
 		),
-		r.newAuthAccountKeysRevokeFunction(
+		r.newAccountKeysRevokeFunction(
 			addressValue,
 			runtimeInterface,
 		),
@@ -2049,7 +2050,7 @@ func NewBlockValue(block Block) interpreter.BlockValue {
 	}
 }
 
-func (r *interpreterRuntime) newAuthAccountKeysAddFunction(
+func (r *interpreterRuntime) newAccountKeysAddFunction(
 	addressValue interpreter.AddressValue,
 	runtimeInterface Interface,
 ) interpreter.HostFunctionValue {
@@ -2111,7 +2112,7 @@ func (r *interpreterRuntime) newAuthAccountKeysAddFunction(
 	)
 }
 
-func (r *interpreterRuntime) newAuthAccountKeysGetFunction(
+func (r *interpreterRuntime) newAccountKeysGetFunction(
 	addressValue interpreter.AddressValue,
 	runtimeInterface Interface,
 ) interpreter.HostFunctionValue {
@@ -2127,12 +2128,13 @@ func (r *interpreterRuntime) newAuthAccountKeysGetFunction(
 			wrapPanic(func() {
 				accountKey, err = runtimeInterface.GetAccountKey(addressValue.ToAddress(), index.ToInt())
 			})
+
 			if err != nil {
 				panic(err)
 			}
 
 			r.emitAccountEvent(
-				stdlib.AccountKeyAddedEventType,
+				stdlib.AccountKeyGetEventType,
 				runtimeInterface,
 				[]exportableValue{
 					newExportableValue(addressValue, nil),
@@ -2140,13 +2142,20 @@ func (r *interpreterRuntime) newAuthAccountKeysGetFunction(
 				},
 			)
 
+			// Here it is expected the host function to return a nil key, if a key is not found at the given index.
+			// This is done because is the host function returns an error when a key is not found, then
+			// currently there's no way to distinguish between a 'key not found error' vs other internal errors.
+			if accountKey == nil {
+				return trampoline.Done{Result: interpreter.NilValue{}}
+			}
+
 			accountKeyValue := NewAccountKeyValue(accountKey)
 			return trampoline.Done{Result: accountKeyValue}
 		},
 	)
 }
 
-func (r *interpreterRuntime) newAuthAccountKeysRevokeFunction(
+func (r *interpreterRuntime) newAccountKeysRevokeFunction(
 	addressValue interpreter.AddressValue,
 	runtimeInterface Interface,
 ) interpreter.HostFunctionValue {
@@ -2178,6 +2187,15 @@ func (r *interpreterRuntime) newAuthAccountKeysRevokeFunction(
 			accountKeyValue := NewAccountKeyValue(accountKey)
 			return trampoline.Done{Result: accountKeyValue}
 		},
+	)
+}
+
+func (r *interpreterRuntime) newPublicAccountKeys(addressValue interpreter.AddressValue, runtimeInterface Interface) *interpreter.BuiltinStructValue {
+	return interpreter.NewPublicAccountKeysValue(
+		r.newAccountKeysGetFunction(
+			addressValue,
+			runtimeInterface,
+		),
 	)
 }
 

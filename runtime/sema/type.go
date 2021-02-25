@@ -5582,8 +5582,8 @@ func (t *AuthAccountType) GetMembers() map[string]MemberResolver {
 }
 
 var authAccountTypeNestedTypes = map[string]Type{
-	"Contracts": &AuthAccountContractsType{},
-	"Keys":      AuthAccountKeysType,
+	"Contracts":         &AuthAccountContractsType{},
+	AccountKeysTypeName: AuthAccountKeysType,
 }
 
 func (*AuthAccountType) NestedTypes() map[string]Type {
@@ -5707,6 +5707,17 @@ func (t *PublicAccountType) GetMembers() map[string]MemberResolver {
 					identifier,
 					accountTypeGetLinkTargetFunctionType,
 					accountTypeGetLinkTargetFunctionDocString,
+				)
+			},
+		},
+		"keys": {
+			Kind: common.DeclarationKindField,
+			Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
+				return NewPublicConstantFieldMember(
+					t,
+					identifier,
+					PublicAccountKeysType,
+					accountTypeKeysFieldDocString,
 				)
 			},
 		},
@@ -7911,16 +7922,16 @@ var PublicKeyType = func() *BuiltinStructType {
 	return accountKeyType
 }()
 
-const AuthAccountKeysTypeName = "Keys"
-const AuthAccountKeysAddFunctionName = "add"
-const AuthAccountKeysGetFunctionName = "get"
-const AuthAccountKeysRevokeFunctionName = "revoke"
+const AccountKeysTypeName = "Keys"
+const AccountKeysAddFunctionName = "add"
+const AccountKeysGetFunctionName = "get"
+const AccountKeysRevokeFunctionName = "revoke"
 
-// AuthAccountKeysType represents the public key associated with an account key.
+// AuthAccountKeysType represents the keys associated with an auth account.
 var AuthAccountKeysType = func() *BuiltinStructType {
 
-	authAccountKeys := &BuiltinStructType{
-		Identifier:           AuthAccountKeysTypeName,
+	accountKeys := &BuiltinStructType{
+		Identifier:           AccountKeysTypeName,
 		Owner:                &AuthAccountType{},
 		IsInvalid:            false,
 		IsResource:           false,
@@ -7931,31 +7942,31 @@ var AuthAccountKeysType = func() *BuiltinStructType {
 
 	var members = []*Member{
 		NewPublicFunctionMember(
-			authAccountKeys,
-			AuthAccountKeysAddFunctionName,
+			accountKeys,
+			AccountKeysAddFunctionName,
 			authAccountKeysTypeAddFunctionType,
 			authAccountKeysTypeAddFunctionDocString,
 		),
 		NewPublicFunctionMember(
-			authAccountKeys,
-			AuthAccountKeysGetFunctionName,
-			authAccountKeysTypeGetFunctionType,
-			authAccountKeysTypeGetFunctionDocString,
+			accountKeys,
+			AccountKeysGetFunctionName,
+			accountKeysTypeGetFunctionType,
+			accountKeysTypeGetFunctionDocString,
 		),
 		NewPublicFunctionMember(
-			authAccountKeys,
-			AuthAccountKeysRevokeFunctionName,
+			accountKeys,
+			AccountKeysRevokeFunctionName,
 			authAccountKeysTypeRevokeFunctionType,
 			authAccountKeysTypeRevokeFunctionDocString,
 		),
 	}
 
-	authAccountKeys.Members = GetMembersAsMap(members)
-	return authAccountKeys
+	accountKeys.Members = GetMembersAsMap(members)
+	return accountKeys
 }()
 
 const authAccountKeysTypeAddFunctionDocString = `
-Adds the given key to the keys list of the auth account.
+Adds the given key to the keys list of the account.
 `
 
 var authAccountKeysTypeAddFunctionType = &FunctionType{
@@ -7977,9 +7988,11 @@ var authAccountKeysTypeAddFunctionType = &FunctionType{
 	RequiredArgumentCount: RequiredArgumentCount(3),
 }
 
-const authAccountKeysTypeGetFunctionDocString = ``
+const accountKeysTypeGetFunctionDocString = `
+Retrieves the key at the given index of the account.
+`
 
-var authAccountKeysTypeGetFunctionType = &FunctionType{
+var accountKeysTypeGetFunctionType = &FunctionType{
 	Parameters: []*Parameter{
 		{
 			Identifier:     AccountKeyKeyIndexField,
@@ -7990,7 +8003,8 @@ var authAccountKeysTypeGetFunctionType = &FunctionType{
 	RequiredArgumentCount: RequiredArgumentCount(1),
 }
 
-const authAccountKeysTypeRevokeFunctionDocString = ``
+const authAccountKeysTypeRevokeFunctionDocString = `
+`
 
 var authAccountKeysTypeRevokeFunctionType = &FunctionType{
 	Parameters: []*Parameter{
@@ -8002,6 +8016,32 @@ var authAccountKeysTypeRevokeFunctionType = &FunctionType{
 	ReturnTypeAnnotation:  NewTypeAnnotation(&OptionalType{Type: AccountKeyType}),
 	RequiredArgumentCount: RequiredArgumentCount(1),
 }
+
+// PublicAccountKeysType represents the keys associated with a public account.
+var PublicAccountKeysType = func() *BuiltinStructType {
+
+	accountKeys := &BuiltinStructType{
+		Identifier:           AccountKeysTypeName,
+		Owner:                &PublicAccountType{},
+		IsInvalid:            false,
+		IsResource:           false,
+		Storable:             false,
+		Equatable:            true,
+		ExternallyReturnable: false,
+	}
+
+	var members = []*Member{
+		NewPublicFunctionMember(
+			accountKeys,
+			AccountKeysGetFunctionName,
+			accountKeysTypeGetFunctionType,
+			accountKeysTypeGetFunctionDocString,
+		),
+	}
+
+	accountKeys.Members = GetMembersAsMap(members)
+	return accountKeys
+}()
 
 type BuiltinEnumCase interface {
 	RawValue() int

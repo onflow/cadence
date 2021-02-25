@@ -345,6 +345,12 @@ var AccountKeyAddedEventType = newFlowEventType(
 	AccountEventPublicKeyParameter,
 )
 
+var AccountKeyGetEventType = newFlowEventType(
+	"AccountKeyRetrieved",
+	AccountEventAddressParameter,
+	AccountEventPublicKeyParameter,
+)
+
 var AccountKeyRemovedEventType = newFlowEventType(
 	"AccountKeyRemoved",
 	AccountEventAddressParameter,

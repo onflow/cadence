@@ -134,7 +134,7 @@ func ExportType(t sema.Type, results map[sema.TypeID]cadence.Type) cadence.Type 
 		case *sema.PublicAccountType:
 			return cadence.PublicAccountType{}
 		case *sema.BuiltinStructType:
-			return exportBuiltinStructType(t, results)
+			return ExportBuiltinStructType(t, results)
 		}
 
 		switch t {
@@ -389,7 +389,7 @@ func exportCapabilityType(t *sema.CapabilityType, results map[sema.TypeID]cadenc
 	}.WithID(string(t.ID()))
 }
 
-func exportBuiltinStructType(t *sema.BuiltinStructType, results map[sema.TypeID]cadence.Type) *cadence.BuiltinStructType {
+func ExportBuiltinStructType(t *sema.BuiltinStructType, results map[sema.TypeID]cadence.Type) *cadence.BuiltinStructType {
 
 	var fields []cadence.Field
 
