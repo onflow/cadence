@@ -1121,9 +1121,8 @@ type ImportedProgramError struct {
 
 func (e *ImportedProgramError) Error() string {
 	return fmt.Sprintf(
-		"checking of imported program `%s` failed: %s",
+		"checking of imported program `%s` failed",
 		e.Location,
-		e.CheckerError,
 	)
 }
 
