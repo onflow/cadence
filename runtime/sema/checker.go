@@ -220,30 +220,18 @@ func NewChecker(program *ast.Program, location common.Location, options ...Optio
 		return nil, &MissingLocationError{}
 	}
 
+	valueActivations := NewValueActivations(BaseValueActivation)
+	typeActivations := NewValueActivations(BaseTypeActivation)
 	functionActivations := &FunctionActivations{}
 	functionActivations.EnterFunction(&FunctionType{
 		ReturnTypeAnnotation: NewTypeAnnotation(VoidType)},
 		0,
 	)
 
-	typeActivations := NewValueActivations()
-	baseTypes.Foreach(func(name string, baseType Type) {
-		_, err := typeActivations.DeclareType(typeDeclaration{
-			identifier:               ast.Identifier{Identifier: name},
-			ty:                       baseType,
-			declarationKind:          common.DeclarationKindType,
-			access:                   ast.AccessPublic,
-			allowOuterScopeShadowing: false,
-		})
-		if err != nil {
-			panic(err)
-		}
-	})
-
 	checker := &Checker{
 		Program:             program,
 		Location:            location,
-		valueActivations:    NewValueActivations(),
+		valueActivations:    valueActivations,
 		resources:           NewResources(),
 		typeActivations:     typeActivations,
 		functionActivations: functionActivations,
@@ -252,8 +240,6 @@ func NewChecker(program *ast.Program, location common.Location, options ...Optio
 	}
 
 	checker.beforeExtractor = NewBeforeExtractor(checker.report)
-
-	checker.declareBaseValues()
 
 	for _, option := range options {
 		err := option(checker)
@@ -282,17 +268,6 @@ func (checker *Checker) SubChecker(program *ast.Program, location common.Locatio
 		WithImportHandler(checker.importHandler),
 		WithLocationHandler(checker.locationHandler),
 	)
-}
-
-func (checker *Checker) declareBaseValues() {
-	BaseValues.Foreach(func(_ string, declaration ValueDeclaration) {
-		variable := checker.declareValue(declaration)
-		if variable == nil {
-			return
-		}
-		variable.IsBaseValue = true
-		checker.Elaboration.GlobalValues.Set(variable.Identifier, variable)
-	})
 }
 
 func (checker *Checker) declareValue(declaration ValueDeclaration) *Variable {

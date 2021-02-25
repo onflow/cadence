@@ -28,9 +28,9 @@ type VariableActivations struct {
 	activations *activations.Activations
 }
 
-func NewValueActivations() *VariableActivations {
+func NewValueActivations(parent *activations.Activation) *VariableActivations {
 	valueActivations := &activations.Activations{}
-	valueActivations.PushNewWithParent(nil)
+	valueActivations.PushNewWithParent(parent)
 	return &VariableActivations{
 		activations: valueActivations,
 	}
@@ -158,7 +158,7 @@ func (a *VariableActivations) DeclareImplicitConstant(
 
 func (a *VariableActivations) ForEachVariablesDeclaredInAndBelow(depth int, f func(name string, value *Variable)) {
 
-	activation := a.activations.Current()
+	activation := a.Current()
 
 	_ = activation.ForEach(func(name string, value interface{}) error {
 		variable := value.(*Variable)
@@ -169,4 +169,8 @@ func (a *VariableActivations) ForEachVariablesDeclaredInAndBelow(depth int, f fu
 
 		return nil
 	})
+}
+
+func (a *VariableActivations) Current() *activations.Activation {
+	return a.activations.Current()
 }

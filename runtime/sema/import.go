@@ -70,7 +70,7 @@ func (i ElaborationImport) AllValueElements() *StringImportElementOrderedMap {
 }
 
 func (i ElaborationImport) IsImportableValue(name string) bool {
-	if _, ok := BaseValues.Get(name); ok {
+	if BaseValueActivation.Find(name) != nil {
 		return false
 	}
 
@@ -83,7 +83,7 @@ func (i ElaborationImport) AllTypeElements() *StringImportElementOrderedMap {
 }
 
 func (i ElaborationImport) IsImportableType(name string) bool {
-	if _, ok := baseTypes.Get(name); ok {
+	if BaseTypeActivation.Find(name) != nil {
 		return false
 	}
 

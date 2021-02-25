@@ -26,6 +26,7 @@ import (
 	"sync"
 
 	"github.com/onflow/cadence/fixedpoint"
+	"github.com/onflow/cadence/runtime/activations"
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
@@ -4026,14 +4027,12 @@ func (t *CheckedFunctionType) CheckArgumentExpressions(
 	t.ArgumentExpressionsCheck(checker, argumentExpressions, invocationRange)
 }
 
-// baseTypes are the nominal types available in programs
+// BaseTypeActivation is the base activation that contains
+// the types available in programs
 //
-var baseTypes = NewStringTypeOrderedMap()
+var BaseTypeActivation = activations.NewActivation(nil)
 
 func init() {
-
-	baseTypes = NewStringTypeOrderedMap()
-	baseTypes.Set("", VoidType)
 
 	otherTypes := []Type{
 		MetaType,
@@ -4065,18 +4064,41 @@ func init() {
 	for _, ty := range types {
 		typeName := ty.String()
 
-		// check type is not accidentally redeclared
-		if _, ok := baseTypes.Get(typeName); ok {
+		// Check that the type is not accidentally redeclared
+
+		if BaseTypeActivation.Find(typeName) != nil {
 			panic(errors.NewUnreachableError())
 		}
 
-		baseTypes.Set(typeName, ty)
+		BaseTypeActivation.Set(
+			typeName,
+			baseTypeVariable(typeName, ty),
+		)
+	}
+
+	// The AST contains empty type annotations, resolve them to Void
+
+	BaseTypeActivation.Set(
+		"",
+		BaseTypeActivation.Find("Void"),
+	)
+}
+
+func baseTypeVariable(name string, ty Type) *Variable {
+	return &Variable{
+		Identifier:      name,
+		Type:            ty,
+		DeclarationKind: common.DeclarationKindType,
+		IsConstant:      true,
+		IsBaseValue:     true,
+		Access:          ast.AccessPublic,
 	}
 }
 
-// BaseValues are the values available in programs
+// BaseValueActivation is the base activation that contains
+// the values available in programs
 //
-var BaseValues = NewStringValueDeclarationOrderedMap()
+var BaseValueActivation = activations.NewActivation(nil)
 
 var AllSignedFixedPointTypes = []Type{
 	&Fix64Type{},
@@ -4154,29 +4176,43 @@ func init() {
 		default:
 			typeName := numberType.String()
 
-			// Check that the type is not accidentally redeclared
+			// Check that the function is not accidentally redeclared
 
-			if _, ok := BaseValues.Get(typeName); ok {
+			if BaseValueActivation.Find(typeName) != nil {
 				panic(errors.NewUnreachableError())
 			}
 
-			BaseValues.Set(typeName, baseFunction{
-				name: typeName,
-				invokableType: &CheckedFunctionType{
-					FunctionType: &FunctionType{
-						Parameters: []*Parameter{
-							{
-								Label:          ArgumentLabelNotRequired,
-								Identifier:     "value",
-								TypeAnnotation: NewTypeAnnotation(&NumberType{}),
+			BaseValueActivation.Set(
+				typeName,
+				baseFunctionVariable(
+					typeName,
+					&CheckedFunctionType{
+						FunctionType: &FunctionType{
+							Parameters: []*Parameter{
+								{
+									Label:          ArgumentLabelNotRequired,
+									Identifier:     "value",
+									TypeAnnotation: NewTypeAnnotation(&NumberType{}),
+								},
 							},
+							ReturnTypeAnnotation: NewTypeAnnotation(numberType),
 						},
-						ReturnTypeAnnotation: NewTypeAnnotation(numberType),
+						ArgumentExpressionsCheck: numberFunctionArgumentExpressionsChecker(numberType),
 					},
-					ArgumentExpressionsCheck: numberFunctionArgumentExpressionsChecker(numberType),
-				},
-			})
+				),
+			)
 		}
+	}
+}
+
+func baseFunctionVariable(name string, ty InvokableType) *Variable {
+	return &Variable{
+		Identifier:      name,
+		DeclarationKind: common.DeclarationKindFunction,
+		IsConstant:      true,
+		IsBaseValue:     true,
+		Type:            ty,
+		Access:          ast.AccessPublic,
 	}
 }
 
@@ -4187,38 +4223,42 @@ func init() {
 	addressType := &AddressType{}
 	typeName := addressType.String()
 
-	// check type is not accidentally redeclared
-	if _, ok := BaseValues.Get(typeName); ok {
+	// Check that the function is not accidentally redeclared
+
+	if BaseValueActivation.Find(typeName) != nil {
 		panic(errors.NewUnreachableError())
 	}
 
-	BaseValues.Set(typeName, baseFunction{
-		name: typeName,
-		invokableType: &CheckedFunctionType{
-			FunctionType: &FunctionType{
-				Parameters: []*Parameter{
-					{
-						Label:          ArgumentLabelNotRequired,
-						Identifier:     "value",
-						TypeAnnotation: NewTypeAnnotation(&IntegerType{}),
+	BaseValueActivation.Set(
+		typeName,
+		baseFunctionVariable(
+			typeName,
+			&CheckedFunctionType{
+				FunctionType: &FunctionType{
+					Parameters: []*Parameter{
+						{
+							Label:          ArgumentLabelNotRequired,
+							Identifier:     "value",
+							TypeAnnotation: NewTypeAnnotation(&IntegerType{}),
+						},
 					},
+					ReturnTypeAnnotation: NewTypeAnnotation(addressType),
 				},
-				ReturnTypeAnnotation: NewTypeAnnotation(addressType),
-			},
-			ArgumentExpressionsCheck: func(checker *Checker, argumentExpressions []ast.Expression, _ ast.Range) {
-				if len(argumentExpressions) < 1 {
-					return
-				}
+				ArgumentExpressionsCheck: func(checker *Checker, argumentExpressions []ast.Expression, _ ast.Range) {
+					if len(argumentExpressions) < 1 {
+						return
+					}
 
-				intExpression, ok := argumentExpressions[0].(*ast.IntegerExpression)
-				if !ok {
-					return
-				}
+					intExpression, ok := argumentExpressions[0].(*ast.IntegerExpression)
+					if !ok {
+						return
+					}
 
-				CheckAddressLiteral(intExpression, checker.report)
+					CheckAddressLiteral(intExpression, checker.report)
+				},
 			},
-		},
-	})
+		),
+	)
 }
 
 func numberFunctionArgumentExpressionsChecker(targetType Type) ArgumentExpressionsCheck {
@@ -4359,18 +4399,22 @@ func init() {
 
 	typeName := MetaType.String()
 
-	// check type is not accidentally redeclared
-	if _, ok := BaseValues.Get(typeName); ok {
+	// Check that the function is not accidentally redeclared
+
+	if BaseValueActivation.Find(typeName) != nil {
 		panic(errors.NewUnreachableError())
 	}
 
-	BaseValues.Set(typeName, baseFunction{
-		name: typeName,
-		invokableType: &FunctionType{
-			TypeParameters:       []*TypeParameter{{Name: "T"}},
-			ReturnTypeAnnotation: NewTypeAnnotation(MetaType),
-		},
-	})
+	BaseValueActivation.Set(
+		typeName,
+		baseFunctionVariable(
+			typeName,
+			&FunctionType{
+				TypeParameters:       []*TypeParameter{{Name: "T"}},
+				ReturnTypeAnnotation: NewTypeAnnotation(MetaType),
+			},
+		),
+	)
 }
 
 // CompositeType
