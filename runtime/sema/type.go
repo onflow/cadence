@@ -3147,7 +3147,9 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 
 // VariableSizedType is a variable sized array type
 type VariableSizedType struct {
-	Type Type
+	Type                Type
+	memberResolvers     map[string]MemberResolver
+	memberResolversOnce sync.Once
 }
 
 func (*VariableSizedType) IsType() {}
@@ -3176,7 +3178,14 @@ func (t *VariableSizedType) Equal(other Type) bool {
 }
 
 func (t *VariableSizedType) GetMembers() map[string]MemberResolver {
-	return getArrayMembers(t)
+	t.initializeMemberResolvers()
+	return t.memberResolvers
+}
+
+func (t *VariableSizedType) initializeMemberResolvers() {
+	t.memberResolversOnce.Do(func() {
+		t.memberResolvers = getArrayMembers(t)
+	})
 }
 
 func (t *VariableSizedType) IsResourceType() bool {
@@ -3259,8 +3268,10 @@ func (t *VariableSizedType) Resolve(typeArguments *TypeParameterTypeOrderedMap) 
 
 // ConstantSizedType is a constant sized array type
 type ConstantSizedType struct {
-	Type Type
-	Size int64
+	Type                Type
+	Size                int64
+	memberResolvers     map[string]MemberResolver
+	memberResolversOnce sync.Once
 }
 
 func (*ConstantSizedType) IsType() {}
@@ -3290,7 +3301,14 @@ func (t *ConstantSizedType) Equal(other Type) bool {
 }
 
 func (t *ConstantSizedType) GetMembers() map[string]MemberResolver {
-	return getArrayMembers(t)
+	t.initializeMemberResolvers()
+	return t.memberResolvers
+}
+
+func (t *ConstantSizedType) initializeMemberResolvers() {
+	t.memberResolversOnce.Do(func() {
+		t.memberResolvers = getArrayMembers(t)
+	})
 }
 
 func (t *ConstantSizedType) IsResourceType() bool {
@@ -4372,8 +4390,8 @@ type CompositeType struct {
 	ExplicitInterfaceConformances       []*InterfaceType
 	ImplicitTypeRequirementConformances []*CompositeType
 	Members                             *StringMemberOrderedMap
-	memberResolversOnce                 sync.Once
 	memberResolvers                     map[string]MemberResolver
+	memberResolversOnce                 sync.Once
 	Fields                              []string
 	// TODO: add support for overloaded initializers
 	ConstructorParameters []*Parameter
@@ -5447,8 +5465,8 @@ type InterfaceType struct {
 	Identifier          string
 	CompositeKind       common.CompositeKind
 	Members             *StringMemberOrderedMap
-	memberResolversOnce sync.Once
 	memberResolvers     map[string]MemberResolver
+	memberResolversOnce sync.Once
 	Fields              []string
 	// TODO: add support for overloaded initializers
 	InitializerParameters []*Parameter
@@ -5606,8 +5624,10 @@ func (t *InterfaceType) NestedTypes() *StringTypeOrderedMap {
 // and all values have to be a subtype of the value type.
 
 type DictionaryType struct {
-	KeyType   Type
-	ValueType Type
+	KeyType             Type
+	ValueType           Type
+	memberResolvers     map[string]MemberResolver
+	memberResolversOnce sync.Once
 }
 
 func (*DictionaryType) IsType() {}
@@ -5724,113 +5744,121 @@ Returns the value as an optional if the dictionary contained the key, or nil if 
 `
 
 func (t *DictionaryType) GetMembers() map[string]MemberResolver {
-	return withBuiltinMembers(t, map[string]MemberResolver{
-		"length": {
-			Kind: common.DeclarationKindField,
-			Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
-				return NewPublicConstantFieldMember(
-					t,
-					identifier,
-					&IntType{},
-					dictionaryTypeLengthFieldDocString,
-				)
-			},
-		},
-		"keys": {
-			Kind: common.DeclarationKindField,
-			Resolve: func(identifier string, targetRange ast.Range, report func(error)) *Member {
-				// TODO: maybe allow for resource key type
+	t.initializeMemberResolvers()
+	return t.memberResolvers
+}
 
-				if t.KeyType.IsResourceType() {
-					report(
-						&InvalidResourceDictionaryMemberError{
-							Name:            identifier,
-							DeclarationKind: common.DeclarationKindField,
-							Range:           targetRange,
-						},
+func (t *DictionaryType) initializeMemberResolvers() {
+	t.memberResolversOnce.Do(func() {
+
+		t.memberResolvers = withBuiltinMembers(t, map[string]MemberResolver{
+			"length": {
+				Kind: common.DeclarationKindField,
+				Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
+					return NewPublicConstantFieldMember(
+						t,
+						identifier,
+						&IntType{},
+						dictionaryTypeLengthFieldDocString,
 					)
-				}
-
-				return NewPublicConstantFieldMember(
-					t,
-					identifier,
-					&VariableSizedType{Type: t.KeyType},
-					dictionaryTypeKeysFieldDocString,
-				)
+				},
 			},
-		},
-		"values": {
-			Kind: common.DeclarationKindField,
-			Resolve: func(identifier string, targetRange ast.Range, report func(error)) *Member {
-				// TODO: maybe allow for resource value type
+			"keys": {
+				Kind: common.DeclarationKindField,
+				Resolve: func(identifier string, targetRange ast.Range, report func(error)) *Member {
+					// TODO: maybe allow for resource key type
 
-				if t.ValueType.IsResourceType() {
-					report(
-						&InvalidResourceDictionaryMemberError{
-							Name:            identifier,
-							DeclarationKind: common.DeclarationKindField,
-							Range:           targetRange,
-						},
+					if t.KeyType.IsResourceType() {
+						report(
+							&InvalidResourceDictionaryMemberError{
+								Name:            identifier,
+								DeclarationKind: common.DeclarationKindField,
+								Range:           targetRange,
+							},
+						)
+					}
+
+					return NewPublicConstantFieldMember(
+						t,
+						identifier,
+						&VariableSizedType{Type: t.KeyType},
+						dictionaryTypeKeysFieldDocString,
 					)
-				}
+				},
+			},
+			"values": {
+				Kind: common.DeclarationKindField,
+				Resolve: func(identifier string, targetRange ast.Range, report func(error)) *Member {
+					// TODO: maybe allow for resource value type
 
-				return NewPublicConstantFieldMember(
-					t,
-					identifier,
-					&VariableSizedType{Type: t.ValueType},
-					dictionaryTypeValuesFieldDocString,
-				)
+					if t.ValueType.IsResourceType() {
+						report(
+							&InvalidResourceDictionaryMemberError{
+								Name:            identifier,
+								DeclarationKind: common.DeclarationKindField,
+								Range:           targetRange,
+							},
+						)
+					}
+
+					return NewPublicConstantFieldMember(
+						t,
+						identifier,
+						&VariableSizedType{Type: t.ValueType},
+						dictionaryTypeValuesFieldDocString,
+					)
+				},
 			},
-		},
-		"insert": {
-			Kind: common.DeclarationKindFunction,
-			Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
-				return NewPublicFunctionMember(t,
-					identifier,
-					&FunctionType{
-						Parameters: []*Parameter{
-							{
-								Identifier:     "key",
-								TypeAnnotation: NewTypeAnnotation(t.KeyType),
+			"insert": {
+				Kind: common.DeclarationKindFunction,
+				Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
+					return NewPublicFunctionMember(t,
+						identifier,
+						&FunctionType{
+							Parameters: []*Parameter{
+								{
+									Identifier:     "key",
+									TypeAnnotation: NewTypeAnnotation(t.KeyType),
+								},
+								{
+									Label:          ArgumentLabelNotRequired,
+									Identifier:     "value",
+									TypeAnnotation: NewTypeAnnotation(t.ValueType),
+								},
 							},
-							{
-								Label:          ArgumentLabelNotRequired,
-								Identifier:     "value",
-								TypeAnnotation: NewTypeAnnotation(t.ValueType),
-							},
+							ReturnTypeAnnotation: NewTypeAnnotation(
+								&OptionalType{
+									Type: t.ValueType,
+								},
+							),
 						},
-						ReturnTypeAnnotation: NewTypeAnnotation(
-							&OptionalType{
-								Type: t.ValueType,
-							},
-						),
-					},
-					dictionaryTypeInsertFunctionDocString,
-				)
+						dictionaryTypeInsertFunctionDocString,
+					)
+				},
 			},
-		},
-		"remove": {
-			Kind: common.DeclarationKindFunction,
-			Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
-				return NewPublicFunctionMember(t,
-					identifier,
-					&FunctionType{
-						Parameters: []*Parameter{
-							{
-								Identifier:     "key",
-								TypeAnnotation: NewTypeAnnotation(t.KeyType),
+			"remove": {
+				Kind: common.DeclarationKindFunction,
+				Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
+					return NewPublicFunctionMember(t,
+						identifier,
+						&FunctionType{
+							Parameters: []*Parameter{
+								{
+									Identifier:     "key",
+									TypeAnnotation: NewTypeAnnotation(t.KeyType),
+								},
 							},
+							ReturnTypeAnnotation: NewTypeAnnotation(
+								&OptionalType{
+									Type: t.ValueType,
+								},
+							),
 						},
-						ReturnTypeAnnotation: NewTypeAnnotation(
-							&OptionalType{
-								Type: t.ValueType,
-							},
-						),
-					},
-					dictionaryTypeRemoveFunctionDocString,
-				)
+						dictionaryTypeRemoveFunctionDocString,
+					)
+				},
 			},
-		},
+		})
 	})
 }
 
