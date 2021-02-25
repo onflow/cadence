@@ -73,8 +73,8 @@ func TestAuthAccountAddPublicKey(t *testing.T) {
 
 	runtime := NewInterpreterRuntime()
 
-	keyA := newPublicKeyExportedValue([]byte{1, 2, 3}, sema.ECDSAP256)
-	keyB := newPublicKeyExportedValue([]byte{4, 5, 6}, sema.ECDSASecp256k1)
+	keyA := newPublicKeyExportedValue([]byte{1, 2, 3}, sema.ECDSA_P256)
+	keyB := newPublicKeyExportedValue([]byte{4, 5, 6}, sema.ECDSA_Secp256k1)
 	keys := cadence.NewArray([]cadence.Value{keyA, keyB})
 
 	var tests = []TestCase{
@@ -98,7 +98,7 @@ func TestAuthAccountAddPublicKey(t *testing.T) {
 					KeyIndex: 0,
 					PublicKey: &PublicKey{
 						PublicKey: []byte{1, 2, 3},
-						SignAlgo:  sema.ECDSAP256,
+						SignAlgo:  sema.ECDSA_P256,
 					},
 					HashAlgo:  sema.SHA3_256,
 					Weight:    100,
@@ -129,7 +129,7 @@ func TestAuthAccountAddPublicKey(t *testing.T) {
 					KeyIndex: 0,
 					PublicKey: &PublicKey{
 						PublicKey: []byte{1, 2, 3},
-						SignAlgo:  sema.ECDSAP256,
+						SignAlgo:  sema.ECDSA_P256,
 					},
 					HashAlgo:  sema.SHA3_256,
 					Weight:    100,
@@ -139,7 +139,7 @@ func TestAuthAccountAddPublicKey(t *testing.T) {
 					KeyIndex: 1,
 					PublicKey: &PublicKey{
 						PublicKey: []byte{4, 5, 6},
-						SignAlgo:  sema.ECDSASecp256k1,
+						SignAlgo:  sema.ECDSA_Secp256k1,
 					},
 					HashAlgo:  sema.SHA3_256,
 					Weight:    100,
@@ -203,7 +203,7 @@ var addedAccountKey = &AccountKey{
 	KeyIndex: 0,
 	PublicKey: &PublicKey{
 		PublicKey: []byte{1, 2},
-		SignAlgo:  sema.ECDSAP256,
+		SignAlgo:  sema.ECDSA_P256,
 	},
 	HashAlgo:  sema.SHA2_256,
 	Weight:    100,
@@ -214,7 +214,7 @@ var revokedAccountKey = &AccountKey{
 	KeyIndex: 0,
 	PublicKey: &PublicKey{
 		PublicKey: []byte{1, 2},
-		SignAlgo:  sema.ECDSAP256,
+		SignAlgo:  sema.ECDSA_P256,
 	},
 	HashAlgo:  sema.SHA2_256,
 	Weight:    100,
@@ -346,7 +346,7 @@ func getRuntimeInterface(storage *Storage) *testRuntimeInterface {
 		createAccount: func(payer Address) (address Address, err error) {
 			return Address{42}, nil
 		},
-		addAccountKey: func(address Address, publicKey *PublicKey, hashAlgo HashingAlgorithm, weight int) (*AccountKey, error) {
+		addAccountKey: func(address Address, publicKey *PublicKey, hashAlgo HashAlgorithm, weight int) (*AccountKey, error) {
 			index := len(storage.keys)
 			accountKey := &AccountKey{
 				KeyIndex:  index,
@@ -439,7 +439,7 @@ func encodeArgs(argValues []cadence.Value) [][]byte {
 	return args
 }
 
-func newPublicKeyExportedValue(keyBytes []byte, signAlgo sema.SigningAlgorithm) cadence.BuiltinStruct {
+func newPublicKeyExportedValue(keyBytes []byte, signAlgo sema.SignatureAlgorithm) cadence.BuiltinStruct {
 	byteArray := make([]cadence.Value, len(keyBytes))
 	for index, value := range keyBytes {
 		byteArray[index] = cadence.NewUInt8(value)

@@ -94,7 +94,7 @@ type testRuntimeInterface struct {
 	setProgram                func(Location, *interpreter.Program) error
 	storage                   testRuntimeInterfaceStorage
 	createAccount             func(payer Address) (address Address, err error)
-	addAccountKey             func(address Address, publicKey *PublicKey, hashAlgo HashingAlgorithm, weight int) (*AccountKey, error)
+	addAccountKey             func(address Address, publicKey *PublicKey, hashAlgo HashAlgorithm, weight int) (*AccountKey, error)
 	getAccountKey             func(address Address, index int) (*AccountKey, error)
 	removeAccountKey          func(address Address, index int) (*AccountKey, error)
 	updateAccountContractCode func(address Address, name string, code []byte) error
@@ -189,7 +189,7 @@ func (i *testRuntimeInterface) CreateAccount(payer Address) (address Address, er
 	return i.createAccount(payer)
 }
 
-func (i *testRuntimeInterface) AddAccountKey(address Address, publicKey *PublicKey, hashAlgo HashingAlgorithm, weight int) (*AccountKey, error) {
+func (i *testRuntimeInterface) AddAccountKey(address Address, publicKey *PublicKey, hashAlgo HashAlgorithm, weight int) (*AccountKey, error) {
 	return i.addAccountKey(address, publicKey, hashAlgo, weight)
 }
 

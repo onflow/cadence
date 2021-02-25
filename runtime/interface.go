@@ -42,21 +42,20 @@ type Block struct {
 type ResolvedLocation = sema.ResolvedLocation
 type Identifier = ast.Identifier
 type Location = common.Location
-
-type SigningAlgorithm = sema.SigningAlgorithm
-type HashingAlgorithm = sema.HashAlgorithm
+type SignatureAlgorithm = sema.SignatureAlgorithm
+type HashAlgorithm = sema.HashAlgorithm
 
 type AccountKey struct {
 	KeyIndex  int
 	PublicKey *PublicKey
-	HashAlgo  HashingAlgorithm
+	HashAlgo  HashAlgorithm
 	Weight    int
 	IsRevoked bool
 }
 
 type PublicKey struct {
 	PublicKey []byte
-	SignAlgo  SigningAlgorithm
+	SignAlgo  SignatureAlgorithm
 }
 
 type Interface interface {
@@ -86,7 +85,7 @@ type Interface interface {
 	// CreateAccount creates a new account.
 	CreateAccount(payer Address) (address Address, err error)
 	// AddAccountKey appends a key to an account.
-	AddAccountKey(address Address, publicKey *PublicKey, hashAlgo HashingAlgorithm, weight int) (*AccountKey, error)
+	AddAccountKey(address Address, publicKey *PublicKey, hashAlgo HashAlgorithm, weight int) (*AccountKey, error)
 	// GetAccountKey retrieves a key from an account by index.
 	GetAccountKey(address Address, index int) (*AccountKey, error)
 	// RemoveAccountKey removes a key from an account by index.
@@ -212,7 +211,7 @@ func (i *emptyRuntimeInterface) CreateAccount(_ Address) (address Address, err e
 	return Address{}, nil
 }
 
-func (i *emptyRuntimeInterface) AddAccountKey(_ Address, _ *PublicKey, _ HashingAlgorithm, _ int) (*AccountKey, error) {
+func (i *emptyRuntimeInterface) AddAccountKey(_ Address, _ *PublicKey, _ HashAlgorithm, _ int) (*AccountKey, error) {
 	return nil, nil
 }
 

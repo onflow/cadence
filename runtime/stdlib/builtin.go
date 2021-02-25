@@ -176,26 +176,16 @@ var BuiltinValues = StandardLibraryValues{
 
 var SignatureAlgorithmValue = StandardLibraryValue{
 	Name:  sema.SignatureAlgorithmTypeName,
-	Type:  getEnumType(sema.SignatureAlgorithmType, signatureAlgorithms),
-	Value: getEnumValue(signatureAlgorithms),
+	Type:  getEnumType(sema.SignatureAlgorithmType, sema.SignatureAlgorithms),
+	Value: getEnumValue(sema.SignatureAlgorithms),
 	Kind:  common.DeclarationKindEnum,
 }
 
 var HashAlgorithmValue = StandardLibraryValue{
 	Name:  sema.HashAlgorithmTypeName,
-	Type:  getEnumType(sema.HashAlgorithmType, hashAlgorithms),
-	Value: getEnumValue(hashAlgorithms),
+	Type:  getEnumType(sema.HashAlgorithmType, sema.HashAlgorithms),
+	Value: getEnumValue(sema.HashAlgorithms),
 	Kind:  common.DeclarationKindEnum,
-}
-
-var signatureAlgorithms = []sema.BuiltinEnumCase{
-	sema.ECDSAP256,
-	sema.ECDSASecp256k1,
-}
-
-var hashAlgorithms = []sema.BuiltinEnumCase{
-	sema.SHA2_256,
-	sema.SHA3_256,
 }
 
 func getEnumType(enumType *sema.BuiltinStructType, enumCases []sema.BuiltinEnumCase) *sema.SpecialFunctionType {

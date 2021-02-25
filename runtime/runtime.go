@@ -2076,7 +2076,7 @@ func (r *interpreterRuntime) newAuthAccountKeysAddFunction(
 				panic("enum raw value needs to be subtype of integer")
 			}
 
-			hashAlgo := HashingAlgorithm(hashAlgoRawValue.ToInt())
+			hashAlgo := HashAlgorithm(hashAlgoRawValue.ToInt())
 
 			weight, ok := invocation.Arguments[2].(interpreter.UFix64Value)
 			if !ok {
@@ -2203,7 +2203,7 @@ func NewPublicKeyFromValue(publicKey *interpreter.BuiltinStructValue) *PublicKey
 
 	return &PublicKey{
 		PublicKey: byteArray,
-		SignAlgo:  SigningAlgorithm(rawValue.ToInt()),
+		SignAlgo:  SignatureAlgorithm(rawValue.ToInt()),
 	}
 }
 

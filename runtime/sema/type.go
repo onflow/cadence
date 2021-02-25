@@ -7954,22 +7954,8 @@ var AuthAccountKeysType = func() *BuiltinStructType {
 	return authAccountKeys
 }()
 
-// FIXME:
 const authAccountKeysTypeAddFunctionDocString = `
-Adds the given contract to the account.
-
-The ` + "`code`" + ` parameter is the UTF-8 encoded representation of the source code.
-The code must contain exactly one contract or contract interface,
-which must have the same name as the ` + "`name`" + ` parameter.
-
-All additional arguments that are given are passed further to the initializer
-of the contract that is being deployed.
-
-Fails if a contract/contract interface with the given name already exists in the account,
-if the given code does not declare exactly one contract or contract interface,
-or if the given name does not match the name of the contract/contract interface declaration in the code.
-
-Returns the deployed contract.
+Adds the given key to the keys list of the auth account.
 `
 
 var authAccountKeysTypeAddFunctionType = &FunctionType{
@@ -8017,133 +8003,8 @@ var authAccountKeysTypeRevokeFunctionType = &FunctionType{
 	RequiredArgumentCount: RequiredArgumentCount(1),
 }
 
-const SignatureAlgorithmTypeName = "SignatureAlgorithm2"
-
-const SignatureAlgorithmDocStringECDSA_P256 = `
-ECDSA_P256 is Elliptic Curve Digital Signature Algorithm (ECDSA) on the NIST P-256 curve
-`
-const SignatureAlgorithmDocStringECDSA_Secp256k1 = `
-ECDSA_Secp256k1 is Elliptic Curve Digital Signature Algorithm (ECDSA) on the secp256k1 curve
-`
-
-// PublicKeyType represents the public key associated with an account key.
-var SignatureAlgorithmType = newEnumType(SignatureAlgorithmTypeName, &UInt8Type{})
-
 type BuiltinEnumCase interface {
 	RawValue() int
 	Name() string
 	DocString() string
-}
-
-type HashAlgorithm int
-
-const (
-	SHA2_256 HashAlgorithm = iota
-
-	SHA3_256
-
-	//KMAC128
-	//SHA3_384
-	//SHA2_384
-
-	// Supported hashing algorithms
-	UnknownHashingAlgorithm
-)
-
-func (algo HashAlgorithm) Name() string {
-	return [...]string{
-		"SHA2_256",
-		"SHA3_256",
-		//"SHA2_384",
-		//"SHA3_384",
-		//"KMAC128",
-		//"UNKNOWN",
-	}[algo]
-}
-
-func (algo HashAlgorithm) RawValue() int {
-	return int(algo)
-}
-
-func (algo HashAlgorithm) DocString() string {
-	return [...]string{
-		HashAlgorithmDocStringSHA2_256,
-		HashAlgorithmDocStringSHA3_256,
-	}[algo]
-}
-
-type SigningAlgorithm int
-
-const (
-	// Supported signing algorithms
-
-	// ECDSAP256 is ECDSA on NIST P-256 curve
-	ECDSAP256 SigningAlgorithm = iota
-
-	// ECDSASecp256k1 is ECDSA on secp256k1 curve
-	ECDSASecp256k1
-
-	// BLSBLS12381 is BLS on BLS 12-381 curve
-	//BLSBLS12381
-
-	UnknownSigningAlgorithm
-)
-
-// String returns the string representation of this signing algorithm.
-func (algo SigningAlgorithm) Name() string {
-	return [...]string{
-		"ECDSA_P256",
-		"ECDSA_secp256k1",
-		"BLS_BLS12381",
-		"UNKNOWN",
-	}[algo]
-}
-
-func (algo SigningAlgorithm) RawValue() int {
-	return int(algo)
-}
-
-func (algo SigningAlgorithm) DocString() string {
-	return [...]string{
-		SignatureAlgorithmDocStringECDSA_P256,
-		SignatureAlgorithmDocStringECDSA_Secp256k1,
-	}[algo]
-}
-
-const HashAlgorithmTypeName = "HashAlgorithm2"
-
-const HashAlgorithmDocStringSHA2_256 = `
-SHA2_256 is Secure Hashing Algorithm 2 (SHA-2) with a 256-bit digest
-`
-const HashAlgorithmDocStringSHA3_256 = `
-SHA3_256 is Secure Hashing Algorithm 3 (SHA-3) with a 256-bit digest
-`
-
-// PublicKeyType represents the public key associated with an account key.
-var HashAlgorithmType = newEnumType(HashAlgorithmTypeName, &UInt8Type{})
-
-func newEnumType(identifier string, rawType Type) *BuiltinStructType {
-	accountKeyType := &BuiltinStructType{
-		Identifier:           identifier,
-		EnumRawType:          rawType,
-		IsInvalid:            false,
-		IsResource:           false,
-		Storable:             true,
-		Equatable:            true,
-		ExternallyReturnable: true,
-	}
-
-	// Members of the enum type are *not* the enum cases!
-	// Each individual enum case is an instance of the enum type,
-	// so only has a single member, the raw value field
-	var members = []*Member{
-		NewPublicEnumCaseMember(
-			rawType,
-			EnumRawValueFieldName,
-			enumRawValueFieldDocString,
-		),
-	}
-
-	accountKeyType.Members = GetMembersAsMap(members)
-	return accountKeyType
 }
