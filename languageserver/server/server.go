@@ -23,7 +23,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path"
 	"strconv"
 	"strings"
 	"time"
@@ -1444,46 +1443,6 @@ func (s *Server) resolveImport(location common.Location) (program *ast.Program, 
 	}
 
 	return parser2.ParseProgram(code)
-}
-
-func isPathLocation(location common.Location) bool {
-	return locationToPath(location) != ""
-}
-
-func normalizePathLocation(base, relative common.Location) common.Location {
-	basePath := locationToPath(base)
-	relativePath := locationToPath(relative)
-
-	if basePath == "" || relativePath == "" {
-		return relative
-	}
-
-	normalizedPath := normalizePath(basePath, relativePath)
-
-	return common.StringLocation(normalizedPath)
-}
-
-func normalizePath(basePath, relativePath string) string {
-	if path.IsAbs(relativePath) {
-		return relativePath
-	}
-
-	return path.Join(path.Dir(basePath), relativePath)
-}
-
-func locationToPath(location common.Location) string {
-	stringLocation, ok := location.(common.StringLocation)
-	if !ok {
-		return ""
-	}
-
-	return string(stringLocation)
-}
-
-func uriToLocation(uri protocol.DocumentUri) common.StringLocation {
-	return common.StringLocation(
-		strings.TrimPrefix(string(uri), filePrefix),
-	)
 }
 
 func (s *Server) GetDocument(uri protocol.DocumentUri) (doc Document, ok bool) {
