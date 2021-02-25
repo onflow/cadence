@@ -37,11 +37,13 @@ func (checker *Checker) VisitMemberExpression(expression *ast.MemberExpression) 
 			}
 		}
 
-		checker.MemberAccesses.Put(
-			expression.AccessPos,
-			expression.EndPosition(),
-			memberAccessType,
-		)
+		if checker.originsAndOccurrencesEnabled {
+			checker.MemberAccesses.Put(
+				expression.AccessPos,
+				expression.EndPosition(),
+				memberAccessType,
+			)
+		}
 	}
 
 	if member == nil {
