@@ -53,9 +53,9 @@ func qualifiedIdentifier(identifier string, containerType Type) string {
 			case AuthAccountType:
 				identifiers = append(identifiers, string(typedContainerType.ID()))
 				containerType = nil
+			default:
+				panic(errors.NewUnreachableError())
 			}
-
-			panic(errors.NewUnreachableError())
 		}
 	}
 
