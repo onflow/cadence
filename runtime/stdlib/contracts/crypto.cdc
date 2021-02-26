@@ -6,8 +6,8 @@ pub struct interface SignatureVerifier  {
         tag: String,
         signedData: [UInt8],
         publicKey: [UInt8],
-        signatureAlgorithm: SignatureAlgorithm2,
-        hashAlgorithm: HashAlgorithm2
+        signatureAlgorithm: SignatureAlgorithm,
+        hashAlgorithm: HashAlgorithm
     ): Bool
 }
 
@@ -15,27 +15,27 @@ pub struct interface Hasher  {
 
     pub fun hash(
         data: [UInt8],
-        algorithm: HashAlgorithm2
+        algorithm: HashAlgorithm
     ): [UInt8]
 }
 
 pub contract Crypto {
 
-    pub fun hash(_ data: [UInt8], algorithm: HashAlgorithm2): [UInt8] {
+    pub fun hash(_ data: [UInt8], algorithm: HashAlgorithm): [UInt8] {
         return self.hasher.hash(data: data, algorithm: algorithm)
     }
 
     pub struct KeyListEntry {
         pub let keyIndex: Int
-        pub let publicKey: PublicKey2
-        pub let hashAlgorithm: HashAlgorithm2
+        pub let publicKey: PublicKey
+        pub let hashAlgorithm: HashAlgorithm
         pub let weight: UFix64
         pub let isRevoked: Bool
 
         init(
             keyIndex: Int,
-            publicKey: PublicKey2,
-            hashAlgorithm: HashAlgorithm2,
+            publicKey: PublicKey,
+            hashAlgorithm: HashAlgorithm,
             weight: UFix64,
             isRevoked: Bool
         ) {
@@ -57,8 +57,8 @@ pub contract Crypto {
 
         /// Adds a new key with the given weight
         pub fun add(
-            _ publicKey: PublicKey2,
-            hashAlgorithm: HashAlgorithm2,
+            _ publicKey: PublicKey,
+            hashAlgorithm: HashAlgorithm,
             weight: UFix64
         ): KeyListEntry {
 

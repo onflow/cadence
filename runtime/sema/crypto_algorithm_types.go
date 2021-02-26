@@ -33,7 +33,7 @@ var HashAlgorithms = []BuiltinEnumCase{
 	HashAlgorithmSHA3_256,
 }
 
-const SignatureAlgorithmTypeName = "SignatureAlgorithm2"
+const SignatureAlgorithmTypeName = "SignatureAlgorithm"
 
 const SignatureAlgorithmDocStringECDSA_P256 = `
 SignatureAlgorithmECDSA_P256 is Elliptic Curve Digital Signature Algorithm (ECDSA) on the NIST P-256 curve
@@ -80,7 +80,7 @@ func (algo SignatureAlgorithm) DocString() string {
 	panic(errors.NewUnreachableError())
 }
 
-const HashAlgorithmTypeName = "HashAlgorithm2"
+const HashAlgorithmTypeName = "HashAlgorithm"
 
 const HashAlgorithmDocStringSHA2_256 = `
 HashAlgorithmSHA2_256 is Secure Hashing Algorithm 2 (SHA-2) with a 256-bit digest

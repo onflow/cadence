@@ -7908,7 +7908,7 @@ var AccountKeyType = func() *BuiltinStructType {
 	return accountKeyType
 }()
 
-const PublicKeyTypeName = "PublicKey2"
+const PublicKeyTypeName = "PublicKey"
 const PublicKeyPublicKeyField = "publicKey"
 const PublicKeySignAlgoField = "signAlgo"
 

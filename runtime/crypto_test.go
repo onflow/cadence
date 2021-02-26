@@ -67,15 +67,15 @@ func TestRuntimeCrypto_verify(t *testing.T) {
       import Crypto
 
       pub fun main(): Bool {
-          let publicKey = PublicKey2(
+          let publicKey = PublicKey(
               publicKey: "0102".decodeHex(),
-              signAlgo: SignatureAlgorithm2.ECDSA_P256
+              signAlgo: SignatureAlgorithm.ECDSA_P256
           )
 
           let keyList = Crypto.KeyList()
           keyList.add(
               publicKey,
-              hashAlgorithm: HashAlgorithm2.SHA3_256,
+              hashAlgorithm: HashAlgorithm.SHA3_256,
               weight: 1.0
           )
 
@@ -144,7 +144,7 @@ func TestRuntimeCrypto_hash(t *testing.T) {
       import Crypto
 
       pub fun main() {
-          log(Crypto.hash("01020304".decodeHex(), algorithm: HashAlgorithm2.SHA3_256))
+          log(Crypto.hash("01020304".decodeHex(), algorithm: HashAlgorithm.SHA3_256))
       }
     `)
 

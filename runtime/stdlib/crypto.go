@@ -250,7 +250,7 @@ func getHashAlgorithmFromValue(value interpreter.Value) HashAlgorithm {
 func getSignatureAlgorithmFromValue(value interpreter.Value) SignatureAlgorithm {
 	signAlgoValue, ok := value.(*interpreter.BuiltinStructValue)
 	if !ok || signAlgoValue.StaticType() != interpreter.PrimitiveStaticTypeSignatureAlgorithm {
-		panic(fmt.Sprintf("signature algorithm value must be of type %s", sema.HashAlgorithmType))
+		panic(fmt.Sprintf("signature algorithm value must be of type %s", sema.SignatureAlgorithmType))
 	}
 
 	hashAlgoRawValue, ok := signAlgoValue.Fields[sema.EnumRawValueFieldName].(interpreter.IntValue)

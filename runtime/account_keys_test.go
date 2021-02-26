@@ -41,7 +41,7 @@ func TestAccountKeyCreation(t *testing.T) {
 	script := []byte(`
 		pub fun main(): AccountKey {
 			let key = AccountKey(
-				PublicKey2(
+				PublicKey(
 					publicKey: "0102".decodeHex(),
 					signAlgo: "SignatureAlgorithmECDSA_P256"
 				),
@@ -205,12 +205,12 @@ func TestAuthAccountAddPublicKey(t *testing.T) {
 		{
 			name: "Single key",
 			code: `
-				transaction(key: PublicKey2) {
+				transaction(key: PublicKey) {
 					prepare(signer: AuthAccount) {
 						let acct = AuthAccount(payer: signer)	
 						acct.keys.add(
 							publicKey: key,
-							hashAlgo: HashAlgorithm2.SHA3_256,
+							hashAlgo: HashAlgorithm.SHA3_256,
 							weight: 100.0
 						)
 					}
@@ -223,13 +223,13 @@ func TestAuthAccountAddPublicKey(t *testing.T) {
 		{
 			name: "Multiple keys",
 			code: `
-				transaction(keys: [PublicKey2]) {
+				transaction(keys: [PublicKey]) {
 					prepare(signer: AuthAccount) {
 						let acct = AuthAccount(payer: signer)	
 						for key in keys {
 							acct.keys.add(
 								publicKey: key,
-								hashAlgo: HashAlgorithm2.SHA3_256,
+								hashAlgo: HashAlgorithm.SHA3_256,
 								weight: 100.0
 							)
 						}
@@ -411,9 +411,9 @@ func TestSignatureAlgorithm(t *testing.T) {
 	runtime := NewInterpreterRuntime()
 
 	//script := []byte(`
-	//	pub fun main(): SignatureAlgorithm2? {
+	//	pub fun main(): SignatureAlgorithm? {
 	//		var key1: Color = Color.red
-	//		var key2: SignatureAlgorithm2? = SignatureAlgorithm2.ECDSA_P256
+	//		var key2: SignatureAlgorithm? = SignatureAlgorithm.ECDSA_P256
 	//
 	//		return key2
 	//  	}
@@ -426,11 +426,11 @@ func TestSignatureAlgorithm(t *testing.T) {
 	//`)
 
 	script := []byte(`
-		pub fun main(): HashAlgorithm2? {
+		pub fun main(): HashAlgorithm? {
 			var key1: Color = Color.red
-			var key2: HashAlgorithm2 = HashAlgorithm2.SHA2_256
+			var key2: HashAlgorithm = HashAlgorithm.SHA2_256
 
-			var key3: HashAlgorithm2? = HashAlgorithm2(rawValue:1)
+			var key3: HashAlgorithm? = HashAlgorithm(rawValue:1)
 
 			return key3
       	}
@@ -584,14 +584,14 @@ func addAuthAccountKey(t *testing.T, runtime Runtime, runtimeInterface *testRunt
 		code: `
 				transaction {
 					prepare(signer: AuthAccount) {
-						let key = PublicKey2(
+						let key = PublicKey(
 							publicKey: "010203".decodeHex(),
-							signAlgo: SignatureAlgorithm2.ECDSA_P256
+							signAlgo: SignatureAlgorithm.ECDSA_P256
 						)
 
 						var addedKey: AccountKey = signer.keys.add(
 							publicKey: key,
-							hashAlgo: HashAlgorithm2.SHA3_256,
+							hashAlgo: HashAlgorithm.SHA3_256,
 							weight: 100.0
 						)
 					}
