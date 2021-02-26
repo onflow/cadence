@@ -48,7 +48,9 @@ const (
 	CommandCreateAccount         = "cadence.server.flow.createAccount"
 	CommandCreateDefaultAccounts = "cadence.server.flow.createDefaultAccounts"
 	CommandSwitchActiveAccount   = "cadence.server.flow.switchActiveAccount"
+	CommandChangeEmulatorState	 = "cadence.server.flow.changeEmulatorState"
 
+	ClientStartEmulator = "cadence.runEmulator"
 	ClientExecuteScript = "cadence.executeScript"
 	ClientSendTransaction = "cadence.sendTransaction"
 	ClientDeployContract = "cadence.deployContract"
@@ -67,6 +69,10 @@ func (i *FlowIntegration) commands() []server.Command {
 		{
 			Name:    CommandDeployContract,
 			Handler: i.deployContract,
+		},
+		{
+			Name:    CommandChangeEmulatorState,
+			Handler: i.changeEmulatorState,
 		},
 		{
 			Name:    CommandSwitchActiveAccount,
@@ -91,7 +97,7 @@ func (i *FlowIntegration) commands() []server.Command {
 //   * the arguments, encoded as JSON-CDC
 func (i *FlowIntegration) submitTransaction(conn protocol.Conn, args ...interface{}) (interface{}, error) {
 
-	err := server.CheckCommandArgumentCount(args, 2)
+	err := server.CheckCommandArgumentCount(args, 3)
 	if err != nil {
 		return nil, err
 	}
@@ -118,7 +124,8 @@ func (i *FlowIntegration) submitTransaction(conn protocol.Conn, args ...interfac
 
 	// Pass arguments back to extension
 	codeArguments := fmt.Sprintf("%s", strings.Join(transactionArguments, ","))
-	err = conn.Notify(ClientSendTransaction, codeArguments)
+	signers := args[2].([]interface{})
+	err = conn.Notify(ClientSendTransaction, []interface{}{codeArguments, signers})
 
 	return nil, err
 }
@@ -166,6 +173,27 @@ func (i *FlowIntegration) executeScript(conn protocol.Conn, args ...interface{})
 
 	return nil, err
 }
+
+// changeEmulatorState sets current state of the emulator as reported by LSP
+// used to update codelenses with proper title
+//
+// There should be exactly 1 argument:
+// * current state of the emulator represented as byte
+func (i *FlowIntegration) changeEmulatorState(conn protocol.Conn, args ...interface{})(interface{}, error) {
+	err := server.CheckCommandArgumentCount(args, 1)
+	if err != nil {
+		return nil, err
+	}
+
+	emulatorState, ok := args[0].(float64)
+	if !ok {
+		return nil, errors.New("invalid argument")
+	}
+
+	i.emulatorState = byte(emulatorState)
+	return nil, nil
+}
+
 
 // switchActiveAccount sets the account that is currently active and should be
 // used when submitting transactions.
