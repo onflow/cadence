@@ -45,6 +45,9 @@ func qualifiedIdentifier(identifier string, containerType Type) string {
 		case *CompositeType:
 			identifiers = append(identifiers, typedContainerType.Identifier)
 			containerType = typedContainerType.ContainerType
+		case *BuiltinCompositeType:
+			identifiers = append(identifiers, typedContainerType.Identifier)
+			containerType = typedContainerType.ContainerType
 		default:
 			switch containerType {
 			case PublicAccountType:

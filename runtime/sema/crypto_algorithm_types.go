@@ -79,39 +79,6 @@ func (algo SignatureAlgorithm) DocString() string {
 	panic(errors.NewUnreachableError())
 }
 
-const SignatureAlgorithmTypeName = "SignatureAlgorithm"
-
-const SignatureAlgorithmDocStringECDSA_P256 = `
-SignatureAlgorithmECDSA_P256 is Elliptic Curve Digital Signature Algorithm (ECDSA) on the NIST P-256 curve
-`
-const SignatureAlgorithmDocStringECDSA_Secp256k1 = `
-SignatureAlgorithmECDSA_Secp256k1 is Elliptic Curve Digital Signature Algorithm (ECDSA) on the secp256k1 curve
-`
-const SignatureAlgorithmDocStringBLSBLS12381 = `
-SignatureAlgorithmDocStringBLSBLS12381 is BLS Signature algorithm on BLS 12-381 curve
-`
-
-const HashAlgorithmTypeName = "HashAlgorithm"
-
-const HashAlgorithmDocStringSHA2_256 = `
-HashAlgorithmSHA2_256 is Secure Hashing Algorithm 2 (SHA-2) with a 256-bit digest
-`
-const HashAlgorithmDocStringSHA2_384 = `
-HashAlgorithmSHA2_384 is Secure Hashing Algorithm 2 (SHA-2) with a 384-bit digest
-`
-
-const HashAlgorithmDocStringSHA3_256 = `
-HashAlgorithmSHA3_256 is Secure Hashing Algorithm 3 (SHA-3) with a 256-bit digest
-`
-
-const HashAlgorithmDocStringSHA3_384 = `
-HashAlgorithmSHA3_384 is Secure Hashing Algorithm 3 (SHA-3) with a 384-bit digest
-`
-
-const HashAlgorithmDocStringKMAC128 = `
-HashAlgorithmKMAC128 is KECCAK Message Authentication Code with a 128-bit digest
-`
-
 var HashAlgorithmType = newEnumType(HashAlgorithmTypeName, &UInt8Type{})
 
 type HashAlgorithm int
@@ -188,3 +155,36 @@ func newEnumType(identifier string, rawType Type) *BuiltinCompositeType {
 	accountKeyType.Members = GetMembersAsMap(members)
 	return accountKeyType
 }
+
+const SignatureAlgorithmTypeName = "SignatureAlgorithm"
+
+const SignatureAlgorithmDocStringECDSA_P256 = `
+SignatureAlgorithmECDSA_P256 is Elliptic Curve Digital Signature Algorithm (ECDSA) on the NIST P-256 curve
+`
+const SignatureAlgorithmDocStringECDSA_Secp256k1 = `
+SignatureAlgorithmECDSA_Secp256k1 is Elliptic Curve Digital Signature Algorithm (ECDSA) on the secp256k1 curve
+`
+const SignatureAlgorithmDocStringBLSBLS12381 = `
+SignatureAlgorithmDocStringBLSBLS12381 is BLS Signature algorithm on BLS 12-381 curve
+`
+
+const HashAlgorithmTypeName = "HashAlgorithm"
+
+const HashAlgorithmDocStringSHA2_256 = `
+HashAlgorithmSHA2_256 is Secure Hashing Algorithm 2 (SHA-2) with a 256-bit digest
+`
+const HashAlgorithmDocStringSHA2_384 = `
+HashAlgorithmSHA2_384 is Secure Hashing Algorithm 2 (SHA-2) with a 384-bit digest
+`
+
+const HashAlgorithmDocStringSHA3_256 = `
+HashAlgorithmSHA3_256 is Secure Hashing Algorithm 3 (SHA-3) with a 256-bit digest
+`
+
+const HashAlgorithmDocStringSHA3_384 = `
+HashAlgorithmSHA3_384 is Secure Hashing Algorithm 3 (SHA-3) with a 384-bit digest
+`
+
+const HashAlgorithmDocStringKMAC128 = `
+HashAlgorithmKMAC128 is KECCAK Message Authentication Code with a 128-bit digest
+`

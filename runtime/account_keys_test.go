@@ -225,9 +225,11 @@ func TestAuthAccountAddPublicKey(t *testing.T) {
 			code: `
 				transaction(keys: [PublicKey]) {
 					prepare(signer: AuthAccount) {
-						let acct = AuthAccount(payer: signer)	
+						let acct = AuthAccount(payer: signer)
+						var accountKeys: AuthAccount.Keys = acct.keys
+
 						for key in keys {
-							acct.keys.add(
+							accountKeys.add(
 								publicKey: key,
 								hashAlgo: HashAlgorithm.SHA3_256,
 								weight: 100.0
@@ -378,7 +380,8 @@ func TestPublicAccountKeys(t *testing.T) {
 			code: `
 				pub fun main(): AccountKey? {
 					let acc = getAccount(0x02)
-					return acc.keys.get(keyIndex: 0)
+					var keys :PublicAccount.Keys = acc.keys
+					return keys.get(keyIndex: 0)
 				}`,
 			args: []cadence.Value{},
 		}
@@ -404,41 +407,82 @@ func TestPublicAccountKeys(t *testing.T) {
 	})
 }
 
+func TestHashAlgorithm(t *testing.T) {
+
+	t.Parallel()
+
+	runtime := NewInterpreterRuntime()
+
+	script := []byte(`
+		pub fun main(): [HashAlgorithm?] {
+			var key1: HashAlgorithm? = HashAlgorithm.KMAC128
+
+			var key2: HashAlgorithm? = HashAlgorithm(rawValue:4)
+
+			var key3: HashAlgorithm? = HashAlgorithm(rawValue:10)
+			return [key1, key2, key3]
+      	}
+	`)
+
+	runtimeInterface := &testRuntimeInterface{}
+
+	result, err := runtime.ExecuteScript(
+		Script{
+			Source: script,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  utils.TestLocation,
+		},
+	)
+	require.NoError(t, err)
+
+	require.IsType(t, cadence.Array{}, result)
+	array := result.(cadence.Array)
+
+	require.Equal(t, 3, len(array.Values))
+
+	// Check key1
+	require.IsType(t, cadence.Optional{}, array.Values[0])
+	optionalValue := array.Values[0].(cadence.Optional)
+
+	require.IsType(t, cadence.BuiltinStruct{}, optionalValue.Value)
+	builtinStruct := optionalValue.Value.(cadence.BuiltinStruct)
+
+	require.Equal(t, 1, len(builtinStruct.Fields))
+	assert.Equal(t, cadence.NewInt(HashAlgorithmKMAC128.RawValue()), builtinStruct.Fields[0])
+
+	// Check key2
+	require.IsType(t, cadence.Optional{}, array.Values[1])
+	optionalValue = array.Values[1].(cadence.Optional)
+
+	require.IsType(t, cadence.BuiltinStruct{}, optionalValue.Value)
+	builtinStruct = optionalValue.Value.(cadence.BuiltinStruct)
+
+	require.Equal(t, 1, len(builtinStruct.Fields))
+	assert.Equal(t, cadence.NewInt(HashAlgorithmKMAC128.RawValue()), builtinStruct.Fields[0])
+
+	// Check key3
+	require.IsType(t, cadence.Optional{}, array.Values[2])
+	optionalValue = array.Values[2].(cadence.Optional)
+
+	require.Nil(t, optionalValue.Value)
+}
+
 func TestSignatureAlgorithm(t *testing.T) {
 
 	t.Parallel()
 
 	runtime := NewInterpreterRuntime()
 
-	//script := []byte(`
-	//	pub fun main(): SignatureAlgorithm? {
-	//		var key1: Color = Color.red
-	//		var key2: SignatureAlgorithm? = SignatureAlgorithm.ECDSA_P256
-	//
-	//		return key2
-	//  	}
-	//
-	//	pub enum Color: UInt8 {
-	//		pub case red
-	//		pub case green
-	//		pub case blue
-	//	}
-	//`)
-
 	script := []byte(`
-		pub fun main(): HashAlgorithm? {
-			var key1: Color = Color.red
-			var key2: HashAlgorithm = HashAlgorithm.SHA2_256
+		pub fun main(): [SignatureAlgorithm?] {
+			var key1: SignatureAlgorithm? = SignatureAlgorithm.BLSBLS12381
 
-			var key3: HashAlgorithm? = HashAlgorithm(rawValue:1)
+			var key2: SignatureAlgorithm? = SignatureAlgorithm(rawValue:2)
 
-			return key3
-      	}
-
-		pub enum Color: UInt8 {
-			pub case red
-			pub case green
-			pub case blue
+			var key3: SignatureAlgorithm? = SignatureAlgorithm(rawValue:5)
+			return [key1, key2, key3]
 		}
 	`)
 
@@ -454,7 +498,37 @@ func TestSignatureAlgorithm(t *testing.T) {
 		},
 	)
 	require.NoError(t, err)
-	fmt.Println(result)
+
+	require.IsType(t, cadence.Array{}, result)
+	array := result.(cadence.Array)
+
+	require.Equal(t, 3, len(array.Values))
+
+	// Check key1
+	require.IsType(t, cadence.Optional{}, array.Values[0])
+	optionalValue := array.Values[0].(cadence.Optional)
+
+	require.IsType(t, cadence.BuiltinStruct{}, optionalValue.Value)
+	builtinStruct := optionalValue.Value.(cadence.BuiltinStruct)
+
+	require.Equal(t, 1, len(builtinStruct.Fields))
+	assert.Equal(t, cadence.NewInt(SignatureAlgorithmBLSBLS12381.RawValue()), builtinStruct.Fields[0])
+
+	// Check key2
+	require.IsType(t, cadence.Optional{}, array.Values[1])
+	optionalValue = array.Values[1].(cadence.Optional)
+
+	require.IsType(t, cadence.BuiltinStruct{}, optionalValue.Value)
+	builtinStruct = optionalValue.Value.(cadence.BuiltinStruct)
+
+	require.Equal(t, 1, len(builtinStruct.Fields))
+	assert.Equal(t, cadence.NewInt(SignatureAlgorithmBLSBLS12381.RawValue()), builtinStruct.Fields[0])
+
+	// Check key3
+	require.IsType(t, cadence.Optional{}, array.Values[2])
+	optionalValue = array.Values[2].(cadence.Optional)
+
+	require.Nil(t, optionalValue.Value)
 }
 
 // Utility methods and types

@@ -289,7 +289,7 @@ func exportBuiltinStructValue(v *interpreter.BuiltinCompositeValue, inter *inter
 	builtinDynamicType := v.DynamicType(inter).(interpreter.BuiltinCompositeDynamicType)
 
 	// Convert internal type to exported type.
-	exportedBuiltinStructType := ExportBuiltinStructType(builtinDynamicType.StaticType, map[sema.TypeID]cadence.Type{})
+	exportedBuiltinStructType := exportBuiltinCompositeType(builtinDynamicType.StaticType, map[sema.TypeID]cadence.Type{})
 
 	fieldNames := exportedBuiltinStructType.Fields
 	fields := make([]cadence.Value, len(fieldNames))
@@ -477,7 +477,7 @@ func importBuiltinStructValue(v cadence.BuiltinStruct) interpreter.Value {
 	case sema.PublicKeyType.QualifiedString():
 		importedType = sema.PublicKeyType
 	case sema.AccountKeyType.QualifiedString():
-		importedType = sema.PublicKeyType
+		importedType = sema.AccountKeyType
 	case sema.HashAlgorithmType.QualifiedString():
 		importedType = sema.HashAlgorithmType
 	case sema.SignatureAlgorithmType.QualifiedString():

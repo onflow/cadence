@@ -30,7 +30,6 @@ import (
 
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/parser2"
 	"github.com/onflow/cadence/runtime/pretty"
@@ -6756,9 +6755,6 @@ func TestInterpretContractAccountFieldUse(t *testing.T) {
 						_ string,
 						_ common.CompositeKind,
 					) *interpreter.StringValueOrderedMap {
-						panicFunction := interpreter.NewHostFunctionValue(func(invocation interpreter.Invocation) trampoline.Trampoline {
-							panic(errors.NewUnreachableError())
-						})
 						injectedMembers := interpreter.NewStringValueOrderedMap()
 						injectedMembers.Set(
 							"account",
@@ -6768,8 +6764,6 @@ func TestInterpretContractAccountFieldUse(t *testing.T) {
 									return 0
 								},
 								returnZero,
-								panicFunction,
-								panicFunction,
 								interpreter.AuthAccountContractsValue{},
 								&interpreter.BuiltinCompositeValue{},
 							),
@@ -7574,10 +7568,6 @@ func TestInterpretResourceOwnerFieldUse(t *testing.T) {
       }
     `
 
-	panicFunction := interpreter.NewHostFunctionValue(func(invocation interpreter.Invocation) trampoline.Trampoline {
-		panic(errors.NewUnreachableError())
-	})
-
 	// `authAccount`
 
 	valueDeclaration := stdlib.StandardLibraryValue{
@@ -7589,8 +7579,6 @@ func TestInterpretResourceOwnerFieldUse(t *testing.T) {
 				return 0
 			},
 			returnZero,
-			panicFunction,
-			panicFunction,
 			interpreter.AuthAccountContractsValue{},
 			&interpreter.BuiltinCompositeValue{},
 		),

@@ -114,7 +114,7 @@ func ExportType(t sema.Type, results map[sema.TypeID]cadence.Type) cadence.Type 
 		case *sema.CapabilityType:
 			return exportCapabilityType(t, results)
 		case *sema.BuiltinCompositeType:
-			return ExportBuiltinStructType(t, results)
+			return exportBuiltinCompositeType(t, results)
 		}
 
 		switch t {
@@ -389,15 +389,11 @@ func exportCapabilityType(t *sema.CapabilityType, results map[sema.TypeID]cadenc
 	}.WithID(string(t.ID()))
 }
 
-func ExportBuiltinStructType(t *sema.BuiltinCompositeType, results map[sema.TypeID]cadence.Type) *cadence.BuiltinStructType {
+func exportBuiltinCompositeType(t *sema.BuiltinCompositeType, results map[sema.TypeID]cadence.Type) *cadence.BuiltinStructType {
 
 	var fields []cadence.Field
 
 	t.Members.Foreach(func(key string, member *sema.Member) {
-		if member.DeclarationKind != common.DeclarationKindField {
-			return
-		}
-
 		convertedFieldType := ExportType(member.TypeAnnotation.Type, results)
 
 		fields = append(

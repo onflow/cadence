@@ -6674,21 +6674,17 @@ type AccountValue interface {
 
 // AuthAccountValue
 type AuthAccountValue struct {
-	Address                 AddressValue
-	storageUsedGet          func(interpreter *Interpreter) UInt64Value
-	storageCapacityGet      func() UInt64Value
-	addPublicKeyFunction    FunctionValue
-	removePublicKeyFunction FunctionValue
-	contracts               AuthAccountContractsValue
-	keys                    *BuiltinCompositeValue
+	Address            AddressValue
+	storageUsedGet     func(interpreter *Interpreter) UInt64Value
+	storageCapacityGet func() UInt64Value
+	contracts          AuthAccountContractsValue
+	keys               *BuiltinCompositeValue
 }
 
 func NewAuthAccountValue(
 	address AddressValue,
 	storageUsedGet func(interpreter *Interpreter) UInt64Value,
 	storageCapacityGet func() UInt64Value,
-	addPublicKeyFunction FunctionValue,
-	removePublicKeyFunction FunctionValue,
 	contracts AuthAccountContractsValue,
 	keys *BuiltinCompositeValue,
 ) AuthAccountValue {
@@ -6696,8 +6692,6 @@ func NewAuthAccountValue(
 		Address:                 address,
 		storageUsedGet:          storageUsedGet,
 		storageCapacityGet:      storageCapacityGet,
-		addPublicKeyFunction:    addPublicKeyFunction,
-		removePublicKeyFunction: removePublicKeyFunction,
 		contracts:               contracts,
 		keys:                    keys,
 	}
@@ -6797,12 +6791,6 @@ func (v AuthAccountValue) GetMember(inter *Interpreter, _ LocationRange, name st
 
 	case "storageCapacity":
 		return v.storageCapacityGet()
-
-	case "addPublicKey":
-		return v.addPublicKeyFunction
-
-	case "removePublicKey":
-		return v.removePublicKeyFunction
 
 	case "load":
 		return inter.authAccountLoadFunction(v.Address)
@@ -7268,7 +7256,7 @@ func NewAuthAccountKeysValue(addFunction FunctionValue, getFunction FunctionValu
 	fields.Set(sema.AccountKeysGetFunctionName, getFunction)
 	fields.Set(sema.AccountKeysRevokeFunctionName, revokeFunction)
 
-	return NewBuiltinCompositeValue(sema.PublicKeyType, fields)
+	return NewBuiltinCompositeValue(sema.AuthAccountKeysType, fields)
 }
 
 // NewPublicAccountKeysValue constructs a PublicAccount.Keys value.
@@ -7276,7 +7264,7 @@ func NewPublicAccountKeysValue(getFunction FunctionValue) *BuiltinCompositeValue
 	fields := NewStringValueOrderedMap()
 	fields.Set(sema.AccountKeysGetFunctionName, getFunction)
 
-	return NewBuiltinCompositeValue(sema.PublicKeyType, fields)
+	return NewBuiltinCompositeValue(sema.PublicAccountKeysType, fields)
 }
 
 func NewEnumCaseValue(enumType *sema.BuiltinCompositeType, rawValue int) *BuiltinCompositeValue {

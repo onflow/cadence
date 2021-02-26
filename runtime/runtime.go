@@ -152,13 +152,11 @@ func (r *interpreterRuntime) ExecuteScript(script Script, context Context) (cade
 		checkerOptions,
 	)
 
-	values := stdlib.BuiltinValues
-
 	program, err := r.parseAndCheckProgram(
 		script.Source,
 		context,
 		functions,
-		values,
+		stdlib.BuiltinValues,
 		checkerOptions,
 	)
 	if err != nil {
@@ -307,8 +305,6 @@ func (r *interpreterRuntime) newAuthAccountValue(
 		addressValue,
 		storageUsedGetFunction(addressValue, context.Interface, runtimeStorage),
 		storageCapacityGetFunction(addressValue, context.Interface),
-		r.newAddPublicKeyFunction(addressValue, context.Interface),
-		r.newRemovePublicKeyFunction(addressValue, context.Interface),
 		r.newAuthAccountContracts(
 			addressValue,
 			context,
@@ -335,13 +331,11 @@ func (r *interpreterRuntime) ExecuteTransaction(script Script, context Context) 
 		checkerOptions,
 	)
 
-	values := stdlib.BuiltinValues
-
 	program, err := r.parseAndCheckProgram(
 		script.Source,
 		context,
 		functions,
-		values,
+		stdlib.BuiltinValues,
 		checkerOptions,
 	)
 	if err != nil {
@@ -549,13 +543,11 @@ func (r *interpreterRuntime) ParseAndCheckProgram(code []byte, context Context) 
 		checkerOptions,
 	)
 
-	values := stdlib.BuiltinValues
-
 	program, err := r.parseAndCheckProgram(
 		code,
 		context,
 		functions,
-		values,
+		stdlib.BuiltinValues,
 		checkerOptions,
 	)
 	if err != nil {
@@ -1193,28 +1185,6 @@ func storageCapacityGetFunction(addressValue interpreter.AddressValue, runtimeIn
 	}
 }
 
-func (r *interpreterRuntime) newAddPublicKeyFunction(
-	addressValue interpreter.AddressValue,
-	runtimeInterface Interface,
-) interpreter.HostFunctionValue {
-	return interpreter.NewHostFunctionValue(
-		func(invocation interpreter.Invocation) trampoline.Trampoline {
-			panic("this operation is no longer supported")
-		},
-	)
-}
-
-func (r *interpreterRuntime) newRemovePublicKeyFunction(
-	addressValue interpreter.AddressValue,
-	runtimeInterface Interface,
-) interpreter.HostFunctionValue {
-	return interpreter.NewHostFunctionValue(
-		func(invocation interpreter.Invocation) trampoline.Trampoline {
-			panic("this operation is no longer supported")
-		},
-	)
-}
-
 func (r *interpreterRuntime) writeContract(
 	runtimeStorage *runtimeStorage,
 	addressValue interpreter.AddressValue,
@@ -1420,7 +1390,7 @@ func (r *interpreterRuntime) newGetAccountFunction(runtimeInterface Interface, r
 			accountAddress,
 			storageUsedGetFunction(accountAddress, runtimeInterface, runtimeStorage),
 			storageCapacityGetFunction(accountAddress, runtimeInterface),
-			r.newAuthAccountKeys(accountAddress, runtimeInterface),
+			r.newPublicAccountKeys(accountAddress, runtimeInterface),
 		)
 		return trampoline.Done{Result: publicAccount}
 	}
@@ -1659,8 +1629,6 @@ func (r *interpreterRuntime) newAuthAccountContractsChangeFunction(
 				checkerOptions,
 			)
 
-			values := stdlib.BuiltinValues
-
 			handleContractUpdateError := func(err error) {
 				if err == nil {
 					return
@@ -1687,7 +1655,7 @@ func (r *interpreterRuntime) newAuthAccountContractsChangeFunction(
 				code,
 				context,
 				functions,
-				values,
+				stdlib.BuiltinValues,
 				checkerOptions,
 			)
 			if err != nil {
@@ -2135,7 +2103,7 @@ func (r *interpreterRuntime) newAccountKeysGetFunction(
 			)
 
 			// Here it is expected the host function to return a nil key, if a key is not found at the given index.
-			// This is done because is the host function returns an error when a key is not found, then
+			// This is done because, if the host function returns an error when a key is not found, then
 			// currently there's no way to distinguish between a 'key not found error' vs other internal errors.
 			if accountKey == nil {
 				return trampoline.Done{Result: interpreter.NilValue{}}
@@ -2211,7 +2179,7 @@ func NewPublicKeyFromValue(publicKey *interpreter.BuiltinCompositeValue) *Public
 	}
 
 	signAlgoValue, ok := signAlgoField.(*interpreter.BuiltinCompositeValue)
-	if !ok {
+	if !ok || signAlgoValue.StaticType() != interpreter.PrimitiveStaticTypeSignatureAlgorithm {
 		panic("sign algorithm needs to be of type `SignAlgorithm`")
 	}
 
