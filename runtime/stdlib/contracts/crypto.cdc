@@ -6,8 +6,8 @@ pub struct interface SignatureVerifier  {
         tag: String,
         signedData: [UInt8],
         publicKey: [UInt8],
-        signatureAlgorithm: String,
-        hashAlgorithm: String
+        signatureAlgorithm: SignatureAlgorithm2,
+        hashAlgorithm: HashAlgorithm2
     ): Bool
 }
 
@@ -15,69 +15,27 @@ pub struct interface Hasher  {
 
     pub fun hash(
         data: [UInt8],
-        algorithm: String
+        algorithm: HashAlgorithm2
     ): [UInt8]
 }
 
 pub contract Crypto {
 
-    pub struct SignatureAlgorithm {
-        pub let name: String
-
-        init(name: String) {
-            self.name = name
-        }
-    }
-
-    /// ECDSA_P256 is Elliptic Curve Digital Signature Algorithm (ECDSA) on the NIST P-256 curve
-    pub let ECDSA_P256: SignatureAlgorithm
-
-    /// ECDSA_Secp256k1 is Elliptic Curve Digital Signature Algorithm (ECDSA) on the secp256k1 curve
-    pub let ECDSA_Secp256k1: SignatureAlgorithm
-
-    pub struct HashAlgorithm {
-        pub let name: String
-
-        init(name: String) {
-            self.name = name
-        }
-
-        pub fun hash(_ data: [UInt8]): [UInt8] {
-            return Crypto.hash(data, algorithm: self)
-        }
-    }
-
-    /// SHA2_256 is Secure Hashing Algorithm 2 (SHA-2) with a 256-bit digest
-    pub let SHA2_256: HashAlgorithm
-
-    /// SHA3_256 is Secure Hashing Algorithm 3 (SHA-3) with a 256-bit digest
-    pub let SHA3_256: HashAlgorithm
-
-    pub fun hash(_ data: [UInt8], algorithm: HashAlgorithm): [UInt8] {
-        return self.hasher.hash(data: data, algorithm: algorithm.name)
-    }
-
-    pub struct PublicKey {
-        pub let publicKey: [UInt8]
-        pub let signatureAlgorithm: SignatureAlgorithm
-
-        init(publicKey: [UInt8], signatureAlgorithm: SignatureAlgorithm) {
-            self.publicKey = publicKey
-            self.signatureAlgorithm = signatureAlgorithm
-        }
+    pub fun hash(_ data: [UInt8], algorithm: HashAlgorithm2): [UInt8] {
+        return self.hasher.hash(data: data, algorithm: algorithm)
     }
 
     pub struct KeyListEntry {
         pub let keyIndex: Int
-        pub let publicKey: PublicKey
-        pub let hashAlgorithm: HashAlgorithm
+        pub let publicKey: PublicKey2
+        pub let hashAlgorithm: HashAlgorithm2
         pub let weight: UFix64
         pub let isRevoked: Bool
 
         init(
             keyIndex: Int,
-            publicKey: PublicKey,
-            hashAlgorithm: HashAlgorithm,
+            publicKey: PublicKey2,
+            hashAlgorithm: HashAlgorithm2,
             weight: UFix64,
             isRevoked: Bool
         ) {
@@ -99,8 +57,8 @@ pub contract Crypto {
 
         /// Adds a new key with the given weight
         pub fun add(
-            _ publicKey: PublicKey,
-            hashAlgorithm: HashAlgorithm,
+            _ publicKey: PublicKey2,
+            hashAlgorithm: HashAlgorithm2,
             weight: UFix64
         ): KeyListEntry {
 
@@ -186,8 +144,8 @@ pub contract Crypto {
                     tag: Crypto.domainSeparationTagUser,
                     signedData: signedData,
                     publicKey: key.publicKey.publicKey,
-                    signatureAlgorithm: key.publicKey.signatureAlgorithm.name,
-                    hashAlgorithm:key.hashAlgorithm.name
+                    signatureAlgorithm: key.publicKey.signAlgo,
+                    hashAlgorithm:key.hashAlgorithm
                 ) {
                     return false
                 }
@@ -220,12 +178,6 @@ pub contract Crypto {
         self.hasher = hasher
 
         // Initialize constants
-
-        self.ECDSA_P256 = SignatureAlgorithm(name: "ECDSA_P256")
-        self.ECDSA_Secp256k1 = SignatureAlgorithm(name: "ECDSA_Secp256k1")
-
-        self.SHA2_256 = HashAlgorithm(name: "SHA2_256")
-        self.SHA3_256 = HashAlgorithm(name: "SHA3_256")
 
         self.domainSeparationTagUser = "user"
     }

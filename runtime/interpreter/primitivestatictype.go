@@ -159,8 +159,16 @@ const (
 	_
 	_
 	_
+	_
+	_
+	_
+	_
 	PrimitiveStaticTypeAccountKey
 	PrimitiveStaticTypePublicKey
+	PrimitiveStaticTypeSignatureAlgorithm
+	PrimitiveStaticTypeHashAlgorithm
+	PrimitiveStaticTypePublicAccountKeys
+	PrimitiveStaticTypeAuthAccountKeys
 )
 
 func (PrimitiveStaticType) IsStaticType() {}
@@ -297,7 +305,14 @@ func (i PrimitiveStaticType) SemaType() sema.Type {
 		return sema.AccountKeyType
 	case PrimitiveStaticTypePublicKey:
 		return sema.PublicKeyType
-
+	case PrimitiveStaticTypeAuthAccountKeys:
+		return sema.AuthAccountKeysType
+	case PrimitiveStaticTypePublicAccountKeys:
+		return sema.PublicAccountKeysType
+	case PrimitiveStaticTypeHashAlgorithm:
+		return sema.HashAlgorithmType
+	case PrimitiveStaticTypeSignatureAlgorithm:
+		return sema.SignatureAlgorithmType
 	default:
 		panic(errors.NewUnreachableError())
 	}
@@ -440,6 +455,14 @@ func ConvertSemaToPrimitiveStaticType(t sema.Type) PrimitiveStaticType {
 		return PrimitiveStaticTypeAccountKey
 	case sema.PublicKeyType:
 		return PrimitiveStaticTypePublicKey
+	case sema.AuthAccountKeysType:
+		return PrimitiveStaticTypeAuthAccountKeys
+	case sema.PublicAccountKeysType:
+		return PrimitiveStaticTypePublicAccountKeys
+	case sema.HashAlgorithmType:
+		return PrimitiveStaticTypeHashAlgorithm
+	case sema.SignatureAlgorithmType:
+		return PrimitiveStaticTypeSignatureAlgorithm
 	}
 
 	return PrimitiveStaticTypeUnknown

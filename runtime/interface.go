@@ -42,8 +42,26 @@ type Block struct {
 type ResolvedLocation = sema.ResolvedLocation
 type Identifier = ast.Identifier
 type Location = common.Location
+
 type SignatureAlgorithm = sema.SignatureAlgorithm
+
+const (
+	// Supported signing algorithms
+	SignatureAlgorithmECDSA_P256 SignatureAlgorithm = iota
+	SignatureAlgorithmECDSA_Secp256k1
+	//SignatureAlgorithmBLSBLS12381
+)
+
 type HashAlgorithm = sema.HashAlgorithm
+
+const (
+	// Supported hashing algorithms
+	HashAlgorithmSHA2_256 HashAlgorithm = iota
+	HashAlgorithmSHA3_256
+	//HashAlgorithmKMAC128
+	//HashAlgorithmSHA3_384
+	//HashAlgorithmSHA2_384
+)
 
 type AccountKey struct {
 	KeyIndex  int
@@ -126,11 +144,11 @@ type Interface interface {
 		tag string,
 		signedData []byte,
 		publicKey []byte,
-		signatureAlgorithm string,
-		hashAlgorithm string,
+		signatureAlgorithm SignatureAlgorithm,
+		hashAlgorithm HashAlgorithm,
 	) (bool, error)
 	// Hash returns the digest of hashing the given data with using the given hash algorithm
-	Hash(data []byte, hashAlgorithm string) ([]byte, error)
+	Hash(data []byte, hashAlgorithm HashAlgorithm) ([]byte, error)
 	// GetStorageUsed gets storage used in bytes by the address at the moment of the function call.
 	GetStorageUsed(address Address) (value uint64, err error)
 	// GetStorageCapacity gets storage capacity in bytes on the address.
@@ -288,15 +306,15 @@ func (i *emptyRuntimeInterface) VerifySignature(
 	_ string,
 	_ []byte,
 	_ []byte,
-	_ string,
-	_ string,
+	_ SignatureAlgorithm,
+	_ HashAlgorithm,
 ) (bool, error) {
 	return false, nil
 }
 
 func (i *emptyRuntimeInterface) Hash(
 	_ []byte,
-	_ string,
+	_ HashAlgorithm,
 ) ([]byte, error) {
 	return nil, nil
 }

@@ -31,21 +31,25 @@ import (
 	"github.com/onflow/cadence/runtime/trampoline"
 )
 
+type SignatureAlgorithm = sema.SignatureAlgorithm
+
+type HashAlgorithm = sema.HashAlgorithm
+
 type CryptoSignatureVerifier interface {
 	VerifySignature(
 		signature []byte,
 		tag string,
 		signedData []byte,
 		publicKey []byte,
-		signatureAlgorithm string,
-		hashAlgorithm string,
+		signatureAlgorithm SignatureAlgorithm,
+		hashAlgorithm HashAlgorithm,
 	) (bool, error)
 }
 
 type CryptoHasher interface {
 	Hash(
 		data []byte,
-		hashAlgorithm string,
+		hashAlgorithm HashAlgorithm,
 	) ([]byte, error)
 }
 
@@ -113,17 +117,9 @@ func newCryptoContractVerifySignatureFunction(signatureVerifier CryptoSignatureV
 				panic(fmt.Errorf("verifySignature: invalid public key argument: %w", err))
 			}
 
-			signatureAlgorithmStringValue, ok := invocation.Arguments[4].(*interpreter.StringValue)
-			if !ok {
-				panic(errors.New("verifySignature: invalid signature algorithm argument: not a string"))
-			}
-			signatureAlgorithm := signatureAlgorithmStringValue.Str
+			signatureAlgorithm := getSignatureAlgorithmFromValue(invocation.Arguments[4])
 
-			hashAlgorithmStringValue, ok := invocation.Arguments[5].(*interpreter.StringValue)
-			if !ok {
-				panic(errors.New("verifySignature: invalid hash algorithm argument: not a string"))
-			}
-			hashAlgorithm := hashAlgorithmStringValue.Str
+			hashAlgorithm := getHashAlgorithmFromValue(invocation.Arguments[5])
 
 			isValid, err := signatureVerifier.VerifySignature(signature,
 				tag,
@@ -169,11 +165,7 @@ func newCryptoContractHashFunction(hasher CryptoHasher) interpreter.FunctionValu
 				panic(fmt.Errorf("hash: invalid data argument: %w", err))
 			}
 
-			hashAlgorithmStringValue, ok := invocation.Arguments[1].(*interpreter.StringValue)
-			if !ok {
-				panic(errors.New("hash: invalid hash algorithm argument: not a string"))
-			}
-			hashAlgorithm := hashAlgorithmStringValue.Str
+			hashAlgorithm := getHashAlgorithmFromValue(invocation.Arguments[1])
 
 			digest, err := hasher.Hash(data, hashAlgorithm)
 			if err != nil {
@@ -238,4 +230,34 @@ func NewCryptoContract(
 	compositeValue := value.(*interpreter.CompositeValue)
 
 	return compositeValue, nil
+}
+
+func getHashAlgorithmFromValue(value interpreter.Value) HashAlgorithm {
+	hashAlgoValue, ok := value.(*interpreter.BuiltinStructValue)
+	if !ok || hashAlgoValue.StaticType() != interpreter.PrimitiveStaticTypeHashAlgorithm {
+		panic(fmt.Sprintf("hash algorithm value must be of type %s", sema.HashAlgorithmType))
+	}
+
+	hashAlgoRawValue, ok := hashAlgoValue.Fields[sema.EnumRawValueFieldName].(interpreter.IntValue)
+	if !ok {
+		panic("hash algorithm raw value needs to be subtype of integer")
+	}
+
+	hashAlgo := HashAlgorithm(hashAlgoRawValue.ToInt())
+	return hashAlgo
+}
+
+func getSignatureAlgorithmFromValue(value interpreter.Value) SignatureAlgorithm {
+	signAlgoValue, ok := value.(*interpreter.BuiltinStructValue)
+	if !ok || signAlgoValue.StaticType() != interpreter.PrimitiveStaticTypeSignatureAlgorithm {
+		panic(fmt.Sprintf("signature algorithm value must be of type %s", sema.HashAlgorithmType))
+	}
+
+	hashAlgoRawValue, ok := signAlgoValue.Fields[sema.EnumRawValueFieldName].(interpreter.IntValue)
+	if !ok {
+		panic("signature algorithm raw value needs to be subtype of integer")
+	}
+
+	signAlgo := SignatureAlgorithm(hashAlgoRawValue.ToInt())
+	return signAlgo
 }

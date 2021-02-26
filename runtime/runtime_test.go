@@ -117,10 +117,10 @@ type testRuntimeInterface struct {
 		tag string,
 		signedData []byte,
 		publicKey []byte,
-		signatureAlgorithm string,
-		hashAlgorithm string,
+		signatureAlgorithm SignatureAlgorithm,
+		hashAlgorithm HashAlgorithm,
 	) (bool, error)
-	hash                   func(data []byte, hashAlgorithm string) ([]byte, error)
+	hash                   func(data []byte, hashAlgorithm HashAlgorithm) ([]byte, error)
 	setCadenceValue        func(owner Address, key string, value cadence.Value) (err error)
 	getStorageUsed         func(_ Address) (uint64, error)
 	getStorageCapacity     func(_ Address) (uint64, error)
@@ -320,8 +320,8 @@ func (i *testRuntimeInterface) VerifySignature(
 	tag string,
 	signedData []byte,
 	publicKey []byte,
-	signatureAlgorithm string,
-	hashAlgorithm string,
+	signatureAlgorithm SignatureAlgorithm,
+	hashAlgorithm HashAlgorithm,
 ) (bool, error) {
 	if i.verifySignature == nil {
 		return false, nil
@@ -336,7 +336,7 @@ func (i *testRuntimeInterface) VerifySignature(
 	)
 }
 
-func (i *testRuntimeInterface) Hash(data []byte, hashAlgorithm string) ([]byte, error) {
+func (i *testRuntimeInterface) Hash(data []byte, hashAlgorithm HashAlgorithm) ([]byte, error) {
 	if i.hash == nil {
 		return nil, nil
 	}
