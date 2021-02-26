@@ -5609,12 +5609,16 @@ func (v *CompositeValue) SetMember(_ *Interpreter, locationRange LocationRange, 
 }
 
 func (v *CompositeValue) String() string {
-	fields := make([]struct {
+	return formatComposite(string(v.TypeID()), v.Fields)
+}
+
+func formatComposite(typeId string, fields map[string]Value) string {
+	preparedFields := make([]struct {
 		Name  string
 		Value string
-	}, 0, len(v.Fields))
-	for name, value := range v.Fields {
-		fields = append(fields,
+	}, 0, len(fields))
+	for name, value := range fields {
+		preparedFields = append(preparedFields,
 			struct {
 				Name  string
 				Value string
@@ -5624,7 +5628,7 @@ func (v *CompositeValue) String() string {
 			},
 		)
 	}
-	return format.Composite(string(v.TypeID()), fields)
+	return format.Composite(typeId, preparedFields)
 }
 
 func (v *CompositeValue) GetField(name string) Value {
@@ -6659,7 +6663,7 @@ type AuthAccountValue struct {
 	addPublicKeyFunction    FunctionValue
 	removePublicKeyFunction FunctionValue
 	contracts               AuthAccountContractsValue
-	keys                    *BuiltinStructValue
+	keys                    *BuiltinCompositeValue
 }
 
 func NewAuthAccountValue(
@@ -6669,7 +6673,7 @@ func NewAuthAccountValue(
 	addPublicKeyFunction FunctionValue,
 	removePublicKeyFunction FunctionValue,
 	contracts AuthAccountContractsValue,
-	keys *BuiltinStructValue,
+	keys *BuiltinCompositeValue,
 ) AuthAccountValue {
 	return AuthAccountValue{
 		Address:                 address,
@@ -6829,14 +6833,14 @@ type PublicAccountValue struct {
 	storageUsedGet     func(interpreter *Interpreter) UInt64Value
 	storageCapacityGet func() UInt64Value
 	Identifier         string
-	keys               *BuiltinStructValue
+	keys               *BuiltinCompositeValue
 }
 
 func NewPublicAccountValue(
 	address AddressValue,
 	storageUsedGet func(interpreter *Interpreter) UInt64Value,
 	storageCapacityGet func() UInt64Value,
-	keys *BuiltinStructValue,
+	keys *BuiltinCompositeValue,
 ) PublicAccountValue {
 	return PublicAccountValue{
 		Address:            address,
@@ -7143,102 +7147,84 @@ func (v LinkValue) String() string {
 	)
 }
 
-// BuiltinStructValue
-
-type BuiltinStructValue struct {
+// BuiltinCompositeValue
+type BuiltinCompositeValue struct {
 	Fields     map[string]Value
 	staticType StaticType
-	structType *sema.BuiltinStructType
+	structType *sema.BuiltinCompositeType
 }
 
-func NewBuiltinStructValue(structType *sema.BuiltinStructType, fields map[string]Value) *BuiltinStructValue {
+func NewBuiltinCompositeValue(structType *sema.BuiltinCompositeType, fields map[string]Value) *BuiltinCompositeValue {
 	if fields == nil {
 		fields = map[string]Value{}
 	}
 
-	return &BuiltinStructValue{
+	return &BuiltinCompositeValue{
 		Fields:     fields,
 		structType: structType,
 		staticType: ConvertSemaToPrimitiveStaticType(structType),
 	}
 }
 
-func (*BuiltinStructValue) IsValue() {}
+func (*BuiltinCompositeValue) IsValue() {}
 
-func (v *BuiltinStructValue) Accept(interpreter *Interpreter, visitor Visitor) {
-	visitor.VisitBuiltinStructValue(interpreter, v)
+func (v *BuiltinCompositeValue) Accept(interpreter *Interpreter, visitor Visitor) {
+	visitor.VisitBuiltinCompositeValue(interpreter, v)
 }
 
-func (v *BuiltinStructValue) DynamicType(_ *Interpreter) DynamicType {
-	return BuiltinStructDynamicType{v.structType}
+func (v *BuiltinCompositeValue) DynamicType(_ *Interpreter) DynamicType {
+	return BuiltinCompositeDynamicType{v.structType}
 }
 
-func (v *BuiltinStructValue) StaticType() StaticType {
+func (v *BuiltinCompositeValue) StaticType() StaticType {
 	return v.staticType
 }
 
-func (v *BuiltinStructValue) Copy() Value {
+func (v *BuiltinCompositeValue) Copy() Value {
 	return v
 }
 
-func (*BuiltinStructValue) GetOwner() *common.Address {
+func (*BuiltinCompositeValue) GetOwner() *common.Address {
 	// value is never owned
 	return nil
 }
 
-func (*BuiltinStructValue) SetOwner(_ *common.Address) {
+func (*BuiltinCompositeValue) SetOwner(_ *common.Address) {
 	// NO-OP: value cannot be owned
 }
 
-func (*BuiltinStructValue) IsModified() bool {
+func (*BuiltinCompositeValue) IsModified() bool {
 	return false
 }
 
-func (*BuiltinStructValue) SetModified(_ bool) {
+func (*BuiltinCompositeValue) SetModified(_ bool) {
 	// NO-OP
 }
 
-func (v *BuiltinStructValue) Destroy(_ *Interpreter, _ LocationRange) trampoline.Trampoline {
+func (v *BuiltinCompositeValue) Destroy(_ *Interpreter, _ LocationRange) trampoline.Trampoline {
 	return trampoline.Done{}
 }
 
-func (v *BuiltinStructValue) String() string {
-	fields := make([]struct {
-		Name  string
-		Value string
-	}, 0, len(v.Fields))
-
-	for name, value := range v.Fields {
-		fields = append(fields,
-			struct {
-				Name  string
-				Value string
-			}{
-				Name:  name,
-				Value: value.String(),
-			},
-		)
-	}
-
-	return format.BuiltinStructValue(v.structType.Identifier, fields)
+func (v *BuiltinCompositeValue) String() string {
+	return formatComposite(string(v.structType.ID()), v.Fields)
 }
 
-func (v *BuiltinStructValue) GetMember(_ *Interpreter, _ LocationRange, name string) Value {
+func (v *BuiltinCompositeValue) GetMember(_ *Interpreter, _ LocationRange, name string) Value {
 	return v.Fields[name]
 }
 
-func (*BuiltinStructValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+func (*BuiltinCompositeValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
 	panic(errors.NewUnreachableError())
 }
 
 // NewAccountKeyValue constructs an AccountKey value.
 func NewAccountKeyValue(
 	keyIndex IntValue,
-	publicKey *BuiltinStructValue,
-	hashAlgo *BuiltinStructValue,
+	publicKey *BuiltinCompositeValue,
+	hashAlgo *BuiltinCompositeValue,
 	weight UFix64Value,
 	isRevoked BoolValue,
-) *BuiltinStructValue {
+) *BuiltinCompositeValue {
 	fields := map[string]Value{
 		sema.AccountKeyKeyIndexField:  keyIndex,
 		sema.AccountKeyPublicKeyField: publicKey,
@@ -7247,42 +7233,41 @@ func NewAccountKeyValue(
 		sema.AccountKeyIsRevokedField: isRevoked,
 	}
 
-	return NewBuiltinStructValue(sema.AccountKeyType, fields)
+	return NewBuiltinCompositeValue(sema.AccountKeyType, fields)
 }
 
 // NewPublicKeyValue constructs a PublicKey value.
-func NewPublicKeyValue(publicKey *ArrayValue, signAlgo *BuiltinStructValue) *BuiltinStructValue {
+func NewPublicKeyValue(publicKey *ArrayValue, signAlgo *BuiltinCompositeValue) *BuiltinCompositeValue {
 	fields := map[string]Value{
 		sema.PublicKeyPublicKeyField: publicKey,
 		sema.PublicKeySignAlgoField:  signAlgo,
 	}
 
-	return NewBuiltinStructValue(sema.PublicKeyType, fields)
+	return NewBuiltinCompositeValue(sema.PublicKeyType, fields)
 }
 
 // NewAuthAccountKeysValue constructs a AuthAccount.Keys value.
-func NewAuthAccountKeysValue(addFunction FunctionValue, getFunction FunctionValue, revokeFunction FunctionValue) *BuiltinStructValue {
+func NewAuthAccountKeysValue(addFunction FunctionValue, getFunction FunctionValue, revokeFunction FunctionValue) *BuiltinCompositeValue {
 	fields := map[string]Value{
 		sema.AccountKeysAddFunctionName:    addFunction,
 		sema.AccountKeysGetFunctionName:    getFunction,
 		sema.AccountKeysRevokeFunctionName: revokeFunction,
 	}
 
-	return NewBuiltinStructValue(sema.PublicKeyType, fields)
+	return NewBuiltinCompositeValue(sema.PublicKeyType, fields)
 }
 
 // NewPublicAccountKeysValue constructs a PublicAccount.Keys value.
-func NewPublicAccountKeysValue(getFunction FunctionValue) *BuiltinStructValue {
+func NewPublicAccountKeysValue(getFunction FunctionValue) *BuiltinCompositeValue {
 	fields := map[string]Value{
-		sema.AccountKeysGetFunctionName:    getFunction,
+		sema.AccountKeysGetFunctionName: getFunction,
 	}
 
-	return NewBuiltinStructValue(sema.PublicKeyType, fields)
+	return NewBuiltinCompositeValue(sema.PublicKeyType, fields)
 }
 
-
-func NewEnumCaseValue(enumType *sema.BuiltinStructType, rawValue int) *BuiltinStructValue {
-	return NewBuiltinStructValue(
+func NewEnumCaseValue(enumType *sema.BuiltinCompositeType, rawValue int) *BuiltinCompositeValue {
+	return NewBuiltinCompositeValue(
 		enumType,
 		map[string]Value{
 			sema.EnumRawValueFieldName: NewIntValueFromInt64(int64(rawValue)),

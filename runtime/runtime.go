@@ -1551,7 +1551,7 @@ func (r *interpreterRuntime) newAuthAccountContracts(
 	}
 }
 
-func (r *interpreterRuntime) newAuthAccountKeys(addressValue interpreter.AddressValue, runtimeInterface Interface) *interpreter.BuiltinStructValue {
+func (r *interpreterRuntime) newAuthAccountKeys(addressValue interpreter.AddressValue, runtimeInterface Interface) *interpreter.BuiltinCompositeValue {
 	return interpreter.NewAuthAccountKeysValue(
 		r.newAccountKeysAddFunction(
 			addressValue,
@@ -2056,7 +2056,7 @@ func (r *interpreterRuntime) newAccountKeysAddFunction(
 ) interpreter.HostFunctionValue {
 	return interpreter.NewHostFunctionValue(
 		func(invocation interpreter.Invocation) trampoline.Trampoline {
-			publicKeyValue := invocation.Arguments[0].(*interpreter.BuiltinStructValue)
+			publicKeyValue := invocation.Arguments[0].(*interpreter.BuiltinCompositeValue)
 			if publicKeyValue.StaticType() != interpreter.PrimitiveStaticTypePublicKey {
 				panic(fmt.Sprintf(
 					"add method requires the first argument to be an %s",
@@ -2177,7 +2177,7 @@ func (r *interpreterRuntime) newAccountKeysRevokeFunction(
 	)
 }
 
-func (r *interpreterRuntime) newPublicAccountKeys(addressValue interpreter.AddressValue, runtimeInterface Interface) *interpreter.BuiltinStructValue {
+func (r *interpreterRuntime) newPublicAccountKeys(addressValue interpreter.AddressValue, runtimeInterface Interface) *interpreter.BuiltinCompositeValue {
 	return interpreter.NewPublicAccountKeysValue(
 		r.newAccountKeysGetFunction(
 			addressValue,
@@ -2186,7 +2186,7 @@ func (r *interpreterRuntime) newPublicAccountKeys(addressValue interpreter.Addre
 	)
 }
 
-func NewPublicKeyFromValue(publicKey *interpreter.BuiltinStructValue) *PublicKey {
+func NewPublicKeyFromValue(publicKey *interpreter.BuiltinCompositeValue) *PublicKey {
 
 	// publicKey field
 	key := publicKey.Fields[sema.PublicKeyPublicKeyField]
@@ -2196,7 +2196,7 @@ func NewPublicKeyFromValue(publicKey *interpreter.BuiltinStructValue) *PublicKey
 	}
 
 	// sign algo field
-	signAlgoValue, ok := publicKey.Fields[sema.PublicKeySignAlgoField].(*interpreter.BuiltinStructValue)
+	signAlgoValue, ok := publicKey.Fields[sema.PublicKeySignAlgoField].(*interpreter.BuiltinCompositeValue)
 	if !ok {
 		panic("sign algorithm needs to be of type `SignAlgorithm`")
 	}
@@ -2212,14 +2212,14 @@ func NewPublicKeyFromValue(publicKey *interpreter.BuiltinStructValue) *PublicKey
 	}
 }
 
-func NewPublicKeyValue(publicKey *PublicKey) *interpreter.BuiltinStructValue {
+func NewPublicKeyValue(publicKey *PublicKey) *interpreter.BuiltinCompositeValue {
 	return interpreter.NewPublicKeyValue(
 		interpreter.ByteSliceToByteArrayValue(publicKey.PublicKey),
 		interpreter.NewEnumCaseValue(sema.SignatureAlgorithmType, int(publicKey.SignAlgo)),
 	)
 }
 
-func NewAccountKeyValue(accountKey *AccountKey) *interpreter.BuiltinStructValue {
+func NewAccountKeyValue(accountKey *AccountKey) *interpreter.BuiltinCompositeValue {
 	return interpreter.NewAccountKeyValue(
 		interpreter.NewIntValueFromInt64(int64(accountKey.KeyIndex)),
 		NewPublicKeyValue(accountKey.PublicKey),
@@ -2230,7 +2230,7 @@ func NewAccountKeyValue(accountKey *AccountKey) *interpreter.BuiltinStructValue 
 }
 
 func NewHashAlgorithmFromValue(value interpreter.Value) HashAlgorithm {
-	hashAlgoValue, ok := value.(*interpreter.BuiltinStructValue)
+	hashAlgoValue, ok := value.(*interpreter.BuiltinCompositeValue)
 	if !ok || hashAlgoValue.StaticType() != interpreter.PrimitiveStaticTypeHashAlgorithm {
 		panic(fmt.Sprintf("hash algorithm value must be of type %s", sema.HashAlgorithmType))
 	}

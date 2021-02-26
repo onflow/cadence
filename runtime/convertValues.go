@@ -148,7 +148,7 @@ func exportValueWithInterpreter(
 				return nil
 			}
 			return exportValueWithInterpreter(*referencedValue, inter, results)
-		case *interpreter.BuiltinStructValue:
+		case *interpreter.BuiltinCompositeValue:
 			return exportBuiltinStructValue(v, inter, results)
 		}
 
@@ -284,9 +284,9 @@ func exportCapabilityValue(v interpreter.CapabilityValue, inter *interpreter.Int
 	}
 }
 
-func exportBuiltinStructValue(v *interpreter.BuiltinStructValue, inter *interpreter.Interpreter, results exportResults) cadence.Value {
+func exportBuiltinStructValue(v *interpreter.BuiltinCompositeValue, inter *interpreter.Interpreter, results exportResults) cadence.Value {
 
-	builtinDynamicType := v.DynamicType(inter).(interpreter.BuiltinStructDynamicType)
+	builtinDynamicType := v.DynamicType(inter).(interpreter.BuiltinCompositeDynamicType)
 
 	// Convert internal type to exported type.
 	exportedBuiltinStructType := ExportBuiltinStructType(builtinDynamicType.StaticType, map[sema.TypeID]cadence.Type{})
@@ -465,7 +465,7 @@ func importBuiltinStructValue(v cadence.BuiltinStruct) interpreter.Value {
 		fields[fieldType.Identifier] = importValue(fieldValue)
 	}
 
-	var importedType *sema.BuiltinStructType
+	var importedType *sema.BuiltinCompositeType
 	switch structType.ID() {
 	case sema.PublicKeyType.QualifiedString():
 		importedType = sema.PublicKeyType
@@ -479,5 +479,5 @@ func importBuiltinStructValue(v cadence.BuiltinStruct) interpreter.Value {
 		panic(fmt.Sprintf("invalid builtin composite type %T", structType))
 	}
 
-	return interpreter.NewBuiltinStructValue(importedType, fields)
+	return interpreter.NewBuiltinCompositeValue(importedType, fields)
 }

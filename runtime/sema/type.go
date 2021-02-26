@@ -7743,7 +7743,7 @@ func (t *CapabilityType) GetMembers() map[string]MemberResolver {
 	})
 }
 
-type BuiltinStructType struct {
+type BuiltinCompositeType struct {
 	Identifier           string
 	Members              *StringMemberOrderedMap
 	ContainerType        Type
@@ -7755,22 +7755,22 @@ type BuiltinStructType struct {
 	ExternallyReturnable bool
 }
 
-func (*BuiltinStructType) IsType() {}
+func (*BuiltinCompositeType) IsType() {}
 
-func (t *BuiltinStructType) String() string {
+func (t *BuiltinCompositeType) String() string {
 	return t.Identifier
 }
 
-func (t *BuiltinStructType) QualifiedString() string {
+func (t *BuiltinCompositeType) QualifiedString() string {
 	return qualifiedIdentifier(t.Identifier, t.ContainerType)
 }
 
-func (t *BuiltinStructType) ID() TypeID {
+func (t *BuiltinCompositeType) ID() TypeID {
 	return TypeID(t.QualifiedString())
 }
 
-func (t *BuiltinStructType) Equal(other Type) bool {
-	otherStructType, ok := other.(*BuiltinStructType)
+func (t *BuiltinCompositeType) Equal(other Type) bool {
+	otherStructType, ok := other.(*BuiltinCompositeType)
 	if !ok {
 		return false
 	}
@@ -7778,34 +7778,34 @@ func (t *BuiltinStructType) Equal(other Type) bool {
 	return otherStructType.ID() == t.ID()
 }
 
-func (t *BuiltinStructType) IsResourceType() bool {
+func (t *BuiltinCompositeType) IsResourceType() bool {
 	return t.IsResource
 }
 
-func (t *BuiltinStructType) IsInvalidType() bool {
+func (t *BuiltinCompositeType) IsInvalidType() bool {
 	return t.IsInvalid
 }
 
-func (t *BuiltinStructType) IsStorable(_ map[*Member]bool) bool {
+func (t *BuiltinCompositeType) IsStorable(_ map[*Member]bool) bool {
 	return t.Storable
 }
 
-func (t *BuiltinStructType) IsExternallyReturnable(_ map[*Member]bool) bool {
+func (t *BuiltinCompositeType) IsExternallyReturnable(_ map[*Member]bool) bool {
 	return t.ExternallyReturnable
 }
 
-func (t *BuiltinStructType) IsEquatable() bool {
+func (t *BuiltinCompositeType) IsEquatable() bool {
 	return t.Equatable
 }
-func (*BuiltinStructType) TypeAnnotationState() TypeAnnotationState {
+func (*BuiltinCompositeType) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
 
-func (t *BuiltinStructType) RewriteWithRestrictedTypes() (result Type, rewritten bool) {
+func (t *BuiltinCompositeType) RewriteWithRestrictedTypes() (result Type, rewritten bool) {
 	return t, false
 }
 
-func (t *BuiltinStructType) GetMembers() map[string]MemberResolver {
+func (t *BuiltinCompositeType) GetMembers() map[string]MemberResolver {
 	members := make(map[string]MemberResolver, t.Members.Len())
 	t.Members.Foreach(func(name string, loopMember *Member) {
 		// NOTE: don't capture loop variable
@@ -7821,19 +7821,19 @@ func (t *BuiltinStructType) GetMembers() map[string]MemberResolver {
 	return withBuiltinMembers(t, members)
 }
 
-func (*BuiltinStructType) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
+func (*BuiltinCompositeType) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
 	return false
 }
 
-func (t *BuiltinStructType) Resolve(_ map[*TypeParameter]Type) Type {
+func (t *BuiltinCompositeType) Resolve(_ map[*TypeParameter]Type) Type {
 	return t
 }
 
-func (t *BuiltinStructType) GetContainerType() Type {
+func (t *BuiltinCompositeType) GetContainerType() Type {
 	return t.ContainerType
 }
 
-func (t *BuiltinStructType) NestedTypes() *StringTypeOrderedMap {
+func (t *BuiltinCompositeType) NestedTypes() *StringTypeOrderedMap {
 	return nil
 }
 
@@ -7854,9 +7854,9 @@ const AccountKeyWeightField = "weight"
 const AccountKeyIsRevokedField = "isRevoked"
 
 // AccountKeyType represents the key associated with an account.
-var AccountKeyType = func() *BuiltinStructType {
+var AccountKeyType = func() *BuiltinCompositeType {
 
-	accountKeyType := &BuiltinStructType{
+	accountKeyType := &BuiltinCompositeType{
 		Identifier:           AccountKeyTypeName,
 		IsInvalid:            false,
 		IsResource:           false,
@@ -7913,9 +7913,9 @@ const PublicKeyPublicKeyField = "publicKey"
 const PublicKeySignAlgoField = "signAlgo"
 
 // PublicKeyType represents the public key associated with an account key.
-var PublicKeyType = func() *BuiltinStructType {
+var PublicKeyType = func() *BuiltinCompositeType {
 
-	accountKeyType := &BuiltinStructType{
+	accountKeyType := &BuiltinCompositeType{
 		Identifier:           PublicKeyTypeName,
 		IsInvalid:            false,
 		IsResource:           false,
@@ -7952,9 +7952,9 @@ const AccountKeysGetFunctionName = "get"
 const AccountKeysRevokeFunctionName = "revoke"
 
 // AuthAccountKeysType represents the keys associated with an auth account.
-var AuthAccountKeysType = func() *BuiltinStructType {
+var AuthAccountKeysType = func() *BuiltinCompositeType {
 
-	accountKeys := &BuiltinStructType{
+	accountKeys := &BuiltinCompositeType{
 		Identifier:           AccountKeysTypeName,
 		ContainerType:        &AuthAccountType{},
 		IsInvalid:            false,
@@ -8042,9 +8042,9 @@ var authAccountKeysTypeRevokeFunctionType = &FunctionType{
 }
 
 // PublicAccountKeysType represents the keys associated with a public account.
-var PublicAccountKeysType = func() *BuiltinStructType {
+var PublicAccountKeysType = func() *BuiltinCompositeType {
 
-	accountKeys := &BuiltinStructType{
+	accountKeys := &BuiltinCompositeType{
 		Identifier:           AccountKeysTypeName,
 		ContainerType:        &PublicAccountType{},
 		IsInvalid:            false,

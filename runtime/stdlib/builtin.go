@@ -160,7 +160,7 @@ var CreatePublicKeyFunction = NewStandardLibraryFunction(
 
 	func(invocation interpreter.Invocation) trampoline.Trampoline {
 		publicKey := invocation.Arguments[0].(*interpreter.ArrayValue)
-		signAlgo := invocation.Arguments[1].(*interpreter.BuiltinStructValue)
+		signAlgo := invocation.Arguments[1].(*interpreter.BuiltinCompositeValue)
 
 		value := interpreter.NewPublicKeyValue(publicKey, signAlgo)
 		return trampoline.Done{Result: value}
@@ -188,7 +188,7 @@ var HashAlgorithmValue = StandardLibraryValue{
 	Kind:  common.DeclarationKindEnum,
 }
 
-func getEnumType(enumType *sema.BuiltinStructType, enumCases []sema.BuiltinEnumCase) *sema.SpecialFunctionType {
+func getEnumType(enumType *sema.BuiltinCompositeType, enumCases []sema.BuiltinEnumCase) *sema.SpecialFunctionType {
 	members := make([]*sema.Member, len(enumCases))
 	for _, algo := range enumCases {
 		members[algo.RawValue()] = sema.NewPublicEnumCaseMember(
@@ -218,9 +218,9 @@ func getEnumType(enumType *sema.BuiltinStructType, enumCases []sema.BuiltinEnumC
 	return constructorType
 }
 
-func getEnumValue(enumType *sema.BuiltinStructType, enumCases []sema.BuiltinEnumCase) (value interpreter.Value) {
+func getEnumValue(enumType *sema.BuiltinCompositeType, enumCases []sema.BuiltinEnumCase) (value interpreter.Value) {
 	caseCount := len(enumCases)
-	caseValues := make([]*interpreter.BuiltinStructValue, caseCount)
+	caseValues := make([]*interpreter.BuiltinCompositeValue, caseCount)
 	constructorMembers := make(map[string]interpreter.Value, caseCount)
 
 	for _, enumCase := range enumCases {

@@ -129,8 +129,8 @@ func (algo HashAlgorithm) DocString() string {
 	panic(errors.NewUnreachableError())
 }
 
-func newEnumType(identifier string, rawType Type) *BuiltinStructType {
-	accountKeyType := &BuiltinStructType{
+func newEnumType(identifier string, rawType Type) *BuiltinCompositeType {
+	accountKeyType := &BuiltinCompositeType{
 		Identifier:           identifier,
 		EnumRawType:          rawType,
 		IsInvalid:            false,

@@ -6759,7 +6759,7 @@ func TestInterpretContractAccountFieldUse(t *testing.T) {
 								panicFunction,
 								panicFunction,
 								interpreter.AuthAccountContractsValue{},
-								&interpreter.BuiltinStructValue{},
+								&interpreter.BuiltinCompositeValue{},
 							),
 						}
 					},
@@ -7579,7 +7579,7 @@ func TestInterpretResourceOwnerFieldUse(t *testing.T) {
 			panicFunction,
 			panicFunction,
 			interpreter.AuthAccountContractsValue{},
-			&interpreter.BuiltinStructValue{},
+			&interpreter.BuiltinCompositeValue{},
 		),
 		Kind: common.DeclarationKindConstant,
 	}

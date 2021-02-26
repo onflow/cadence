@@ -1271,29 +1271,5 @@ func (v BuiltinStruct) ToGoValue() interface{} {
 }
 
 func (v BuiltinStruct) String() string {
-	return formatBuiltinStruct(v.Type().ID(), v.StructType.Fields, v.Fields)
-}
-
-func formatBuiltinStruct(typeID string, fields []Field, values []Value) string {
-	preparedFields := make([]struct {
-		Name  string
-		Value string
-	}, 0, len(values))
-
-	for index, field := range fields {
-		value := values[index]
-
-		preparedFields = append(preparedFields,
-			struct {
-				Name  string
-				Value string
-			}{
-				Name:  field.Identifier,
-				Value: value.String(),
-			},
-		)
-
-	}
-
-	return format.BuiltinStructValue(typeID, preparedFields)
+	return formatComposite(v.Type().ID(), v.StructType.Fields, v.Fields)
 }

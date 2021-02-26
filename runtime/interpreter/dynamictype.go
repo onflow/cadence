@@ -209,10 +209,10 @@ type BlockDynamicType struct{}
 
 func (BlockDynamicType) IsDynamicType() {}
 
-// BuiltinStructDynamicType
+// BuiltinCompositeDynamicType
 
-type BuiltinStructDynamicType struct {
-	StaticType *sema.BuiltinStructType
+type BuiltinCompositeDynamicType struct {
+	StaticType *sema.BuiltinCompositeType
 }
 
-func (BuiltinStructDynamicType) IsDynamicType() {}
+func (BuiltinCompositeDynamicType) IsDynamicType() {}
