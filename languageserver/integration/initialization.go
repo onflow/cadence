@@ -27,7 +27,7 @@ import (
 func (i *FlowIntegration) initialize(initializationOptions interface{}) error {
 
 	// Parse the configuration options sent from the client
-	conf, err := configFromInitializationOptions(initializationOptions)
+	conf, emulatorState, err := configFromInitializationOptions(initializationOptions)
 	if err != nil {
 		return err
 	}
@@ -41,6 +41,9 @@ func (i *FlowIntegration) initialize(initializationOptions interface{}) error {
 		i.config.EmulatorAddr,
 		grpc.WithInsecure(),
 	)
+
+	i.emulatorState = byte(emulatorState)
+
 	if err != nil {
 		return err
 	}
