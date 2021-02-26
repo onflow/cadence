@@ -34,6 +34,8 @@ const (
 	entryPointKindUnknown entryPointKind = iota
 	entryPointKindScript
 	entryPointKindTransaction
+	entryPointKindContract
+	// entryPointKindContractInterface
 )
 
 type entryPointInfo struct {
@@ -60,16 +62,23 @@ func (i *FlowIntegration) updateEntryPointInfoIfNeeded(
 	var docString string
 	var parameters []*sema.Parameter
 
+	contractDeclaration := checker.Program.SoleContractDeclaration()
 	transactionDeclaration := checker.Program.SoleTransactionDeclaration()
-	if transactionDeclaration != nil {
+	functionDeclaration := sema.FunctionEntryPointDeclaration(checker.Program)
+
+	if contractDeclaration != nil {
+		startPos = &contractDeclaration.StartPos
+		kind = entryPointKindContract
+		docString = contractDeclaration.DocString
+		// TODO: We need this thing...
+		// contractType := checker.Elaboration.InterfaceDeclarationTypes[contractDeclaration]
+	} else if transactionDeclaration != nil {
 		startPos = &transactionDeclaration.StartPos
 		kind = entryPointKindTransaction
 		docString = transactionDeclaration.DocString
 		transactionType := checker.Elaboration.TransactionDeclarationTypes[transactionDeclaration]
 		parameters = transactionType.Parameters
 	} else {
-
-		functionDeclaration := sema.FunctionEntryPointDeclaration(checker.Program)
 		if functionDeclaration != nil {
 			startPos = &functionDeclaration.StartPos
 			kind = entryPointKindScript
@@ -91,15 +100,17 @@ func (i *FlowIntegration) updateEntryPointInfoIfNeeded(
 			parameterTypes[i] = parameter.TypeAnnotation.Type
 		}
 
-		for _, pragmaArgumentString := range parser2.ParseDocstringPragmaArguments(docString) {
-			arguments, err := runtime.ParseLiteralArgumentList(pragmaArgumentString, parameterTypes)
-			// TODO: record error and show diagnostic
-			if err != nil {
-				continue
-			}
+		if len(parameters) > 0 {
+			for _, pragmaArgumentString := range parser2.ParseDocstringPragmaArguments(docString) {
+				arguments, err := runtime.ParseLiteralArgumentList(pragmaArgumentString, parameterTypes)
+				// TODO: record error and show diagnostic
+				if err != nil {
+					continue
+				}
 
-			pragmaArgumentStrings = append(pragmaArgumentStrings, pragmaArgumentString)
-			pragmaArguments = append(pragmaArguments, arguments)
+				pragmaArgumentStrings = append(pragmaArgumentStrings, pragmaArgumentString)
+				pragmaArguments = append(pragmaArguments, arguments)
+			}
 		}
 
 		for _, pragmaSignerString := range parser2.ParseDocstringPragmaSigners(docString) {
