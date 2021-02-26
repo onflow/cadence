@@ -6477,6 +6477,9 @@ type BuiltinCompositeType struct {
 	Storable             bool
 	Equatable            bool
 	ExternallyReturnable bool
+
+	memberResolvers     map[string]MemberResolver
+	memberResolversOnce sync.Once
 }
 
 func (*BuiltinCompositeType) IsType() {}
@@ -6530,19 +6533,27 @@ func (t *BuiltinCompositeType) RewriteWithRestrictedTypes() (result Type, rewrit
 }
 
 func (t *BuiltinCompositeType) GetMembers() map[string]MemberResolver {
-	members := make(map[string]MemberResolver, t.Members.Len())
-	t.Members.Foreach(func(name string, loopMember *Member) {
-		// NOTE: don't capture loop variable
-		member := loopMember
-		members[name] = MemberResolver{
-			Kind: member.DeclarationKind,
-			Resolve: func(_ string, _ ast.Range, _ func(error)) *Member {
-				return member
-			},
-		}
-	})
+	t.initializeMemberResolvers()
+	return t.memberResolvers
+}
 
-	return withBuiltinMembers(t, members)
+func (t *BuiltinCompositeType) initializeMemberResolvers() {
+	t.memberResolversOnce.Do(func() {
+		members := make(map[string]MemberResolver, t.Members.Len())
+
+		t.Members.Foreach(func(name string, loopMember *Member) {
+			// NOTE: don't capture loop variable
+			member := loopMember
+			members[name] = MemberResolver{
+				Kind: member.DeclarationKind,
+				Resolve: func(_ string, _ ast.Range, _ func(error)) *Member {
+					return member
+				},
+			}
+		})
+
+		t.memberResolvers = withBuiltinMembers(t, members)
+	})
 }
 
 func (*BuiltinCompositeType) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {

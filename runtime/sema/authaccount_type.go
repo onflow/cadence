@@ -644,7 +644,6 @@ var authAccountKeysTypeRevokeFunctionType = &FunctionType{
 	RequiredArgumentCount: RequiredArgumentCount(1),
 }
 
-
 func init() {
 	// Set the container type after initializing the AccountKeysTypes, to avoid initializing loop.
 	AuthAccountKeysType.ContainerType = AuthAccountKeysType
@@ -679,13 +678,14 @@ const accountTypeKeysFieldDocString = `
 The keys associated with the account
 `
 
-const authAccountKeysTypeRevokeFunctionDocString = `
-`
-
 const authAccountKeysTypeAddFunctionDocString = `
 Adds the given key to the keys list of the account.
 `
 
 const accountKeysTypeGetFunctionDocString = `
 Retrieves the key at the given index of the account.
+`
+
+const authAccountKeysTypeRevokeFunctionDocString = `
+Revokes the key at the given index of the account.
 `
