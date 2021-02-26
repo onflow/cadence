@@ -47,30 +47,30 @@ type AccountPrivateKey struct {
 //
 // Returns an error if any fields are missing or malformed.
 //
-func configFromInitializationOptions(opts interface{}) (conf Config, err error) {
+func configFromInitializationOptions(opts interface{}) (conf Config, emulatorState float64, err error) {
 	optsMap, ok := opts.(map[string]interface{})
 	if !ok {
-		return Config{}, errors.New("invalid initialization options")
+		return Config{}, 1 , errors.New("invalid initialization options")
 	}
 
 	emulatorAddr, ok := optsMap["emulatorAddress"].(string)
 	if !ok {
-		return Config{}, errors.New("initialization options: missing emulatorAddress field")
+		return Config{}, 1,  errors.New("initialization options: missing emulatorAddress field")
 	}
 
 	servicePrivateKeyHex, ok := optsMap["servicePrivateKey"].(string)
 	if !ok {
-		return Config{}, errors.New("initialization options: missing servicePrivateKey field")
+		return Config{}, 1, errors.New("initialization options: missing servicePrivateKey field")
 	}
 
 	serviceKeySigAlgoStr, ok := optsMap["serviceKeySignatureAlgorithm"].(string)
 	if !ok {
-		return Config{}, errors.New("initialization options: missing serviceKeySignatureAlgorithm field")
+		return Config{}, 1, errors.New("initialization options: missing serviceKeySignatureAlgorithm field")
 	}
 
 	serviceKeyHashAlgoStr, ok := optsMap["serviceKeyHashAlgorithm"].(string)
 	if !ok {
-		return Config{}, errors.New("initialization options: missing serviceKeyHashAlgorithm field")
+		return Config{}, 1, errors.New("initialization options: missing serviceKeyHashAlgorithm field")
 	}
 
 	serviceAccountKey := AccountPrivateKey{
@@ -81,6 +81,11 @@ func configFromInitializationOptions(opts interface{}) (conf Config, err error) 
 	serviceAccountKey.PrivateKey, err = crypto.DecodePrivateKeyHex(serviceAccountKey.SigAlgo, servicePrivateKeyHex)
 	if err != nil {
 		return
+	}
+
+	emulatorState, ok = optsMap["emulatorState"].(float64)
+	if !ok {
+		emulatorState = 1
 	}
 
 	conf.EmulatorAddr = emulatorAddr
