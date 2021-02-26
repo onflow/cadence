@@ -65,11 +65,11 @@ func (checker *Checker) VisitCondition(condition *ast.Condition) ast.Repr {
 		messageType := condition.Message.Accept(checker).(Type)
 
 		if !messageType.IsInvalidType() &&
-			!IsSubType(messageType, &StringType{}) {
+			!IsSubType(messageType, StringType) {
 
 			checker.report(
 				&TypeMismatchError{
-					ExpectedType: &StringType{},
+					ExpectedType: StringType,
 					ActualType:   testType,
 					Range:        ast.NewRangeFromPositioned(condition.Message),
 				},

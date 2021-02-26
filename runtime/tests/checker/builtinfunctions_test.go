@@ -54,7 +54,7 @@ func TestCheckToString(t *testing.T) {
 			resType := RequireGlobalValue(t, checker.Elaboration, "res")
 
 			assert.Equal(t,
-				&sema.StringType{},
+				sema.StringType,
 				resType,
 			)
 		})

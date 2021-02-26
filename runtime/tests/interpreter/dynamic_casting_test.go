@@ -126,7 +126,7 @@ func TestInterpretDynamicCastingNumber(t *testing.T) {
 
 						for _, otherType := range []sema.Type{
 							sema.BoolType,
-							&sema.StringType{},
+							sema.StringType,
 							sema.VoidType,
 						} {
 
@@ -217,7 +217,7 @@ func TestInterpretDynamicCastingVoid(t *testing.T) {
 
 				for _, otherType := range []sema.Type{
 					sema.BoolType,
-					&sema.StringType{},
+					sema.StringType,
 					&sema.IntType{},
 				} {
 
@@ -263,7 +263,7 @@ func TestInterpretDynamicCastingString(t *testing.T) {
 
 	types := []sema.Type{
 		sema.AnyStructType,
-		&sema.StringType{},
+		sema.StringType,
 	}
 
 	for operation, returnsOptional := range dynamicCastingOperations {
@@ -387,7 +387,7 @@ func TestInterpretDynamicCastingBool(t *testing.T) {
 				}
 
 				for _, otherType := range []sema.Type{
-					&sema.StringType{},
+					sema.StringType,
 					sema.VoidType,
 					&sema.IntType{},
 				} {
@@ -476,7 +476,7 @@ func TestInterpretDynamicCastingAddress(t *testing.T) {
 				}
 
 				for _, otherType := range []sema.Type{
-					&sema.StringType{},
+					sema.StringType,
 					sema.VoidType,
 					&sema.IntType{},
 					sema.BoolType,
@@ -600,7 +600,7 @@ func TestInterpretDynamicCastingStruct(t *testing.T) {
 				})
 
 				for _, otherType := range []sema.Type{
-					&sema.StringType{},
+					sema.StringType,
 					sema.VoidType,
 					&sema.IntType{},
 					sema.BoolType,
@@ -1060,7 +1060,7 @@ func TestInterpretDynamicCastingSome(t *testing.T) {
 				}
 
 				for _, otherType := range []sema.Type{
-					&sema.OptionalType{Type: &sema.StringType{}},
+					&sema.OptionalType{Type: sema.StringType},
 					&sema.OptionalType{Type: sema.VoidType},
 					&sema.OptionalType{Type: sema.BoolType},
 				} {
@@ -1149,7 +1149,7 @@ func TestInterpretDynamicCastingArray(t *testing.T) {
 				}
 
 				for _, otherType := range []sema.Type{
-					&sema.StringType{},
+					sema.StringType,
 					sema.VoidType,
 					sema.BoolType,
 				} {
@@ -1194,11 +1194,11 @@ func TestInterpretDynamicCastingDictionary(t *testing.T) {
 
 	types := []sema.Type{
 		&sema.DictionaryType{
-			KeyType:   &sema.StringType{},
+			KeyType:   sema.StringType,
 			ValueType: &sema.IntType{},
 		},
 		&sema.DictionaryType{
-			KeyType:   &sema.StringType{},
+			KeyType:   sema.StringType,
 			ValueType: sema.AnyStructType,
 		},
 	}
@@ -1244,7 +1244,7 @@ func TestInterpretDynamicCastingDictionary(t *testing.T) {
 				}
 
 				for _, otherType := range []sema.Type{
-					&sema.StringType{},
+					sema.StringType,
 					sema.VoidType,
 					sema.BoolType,
 				} {
@@ -3395,7 +3395,7 @@ func TestInterpretDynamicCastingCapability(t *testing.T) {
 				}
 
 				for _, otherType := range []sema.Type{
-					&sema.StringType{},
+					sema.StringType,
 					sema.VoidType,
 					sema.BoolType,
 				} {

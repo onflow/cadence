@@ -24,63 +24,65 @@ import (
 )
 
 // AuthAccountContractsType represents the type `AuthAccount.Contracts`
-
-type AuthAccountContractsType struct{}
-
-func (*AuthAccountContractsType) IsType() {}
-
-func (*AuthAccountContractsType) String() string {
-	return "Contracts"
-}
-
-func (*AuthAccountContractsType) QualifiedString() string {
-	return "AuthAccount.Contracts"
-}
-
-func (*AuthAccountContractsType) ID() TypeID {
-	return "AuthAccount.Contracts"
-}
-
-func (*AuthAccountContractsType) Equal(other Type) bool {
-	_, ok := other.(*AuthAccountContractsType)
-	return ok
-}
-
-func (*AuthAccountContractsType) IsResourceType() bool {
-	return false
-}
-
-func (*AuthAccountContractsType) IsInvalidType() bool {
-	return false
-}
-
-func (*AuthAccountContractsType) IsStorable(_ map[*Member]bool) bool {
-	return false
-}
-
-func (*AuthAccountContractsType) IsExternallyReturnable(_ map[*Member]bool) bool {
-	return false
-}
-
-func (*AuthAccountContractsType) IsEquatable() bool {
-	// TODO: maybe implement equality
-	return false
-}
-
-func (*AuthAccountContractsType) TypeAnnotationState() TypeAnnotationState {
-	return TypeAnnotationStateValid
-}
-
-func (t *AuthAccountContractsType) RewriteWithRestrictedTypes() (Type, bool) {
-	return t, false
-}
-
-func (*AuthAccountContractsType) Unify(other Type, typeParameters *TypeParameterTypeOrderedMap, report func(err error), outerRange ast.Range) bool {
-	return false
-}
-
-func (t *AuthAccountContractsType) Resolve(typeArguments *TypeParameterTypeOrderedMap) Type {
-	return t
+//
+var AuthAccountContractsType = &NominalType{
+	Name:                 "Contracts",
+	QualifiedName:        "AuthAccount.Contracts",
+	TypeID:               "AuthAccount.Contracts",
+	IsInvalid:            false,
+	IsResource:           false,
+	Storable:             false,
+	Equatable:            false,
+	ExternallyReturnable: false,
+	IsSuperTypeOf:        nil,
+	Members: func(t *NominalType) map[string]MemberResolver {
+		return withBuiltinMembers(t, map[string]MemberResolver{
+			AuthAccountContractsTypeAddFunctionName: {
+				Kind: common.DeclarationKindField,
+				Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
+					return NewPublicFunctionMember(
+						t,
+						identifier,
+						authAccountContractsTypeAddFunctionType,
+						authAccountContractsTypeAddFunctionDocString,
+					)
+				},
+			},
+			AuthAccountContractsTypeUpdateExperimentalFunctionName: {
+				Kind: common.DeclarationKindField,
+				Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
+					return NewPublicFunctionMember(
+						t,
+						identifier,
+						authAccountContractsTypeUpdateExperimentalFunctionType,
+						authAccountContractsTypeUpdateExperimentalFunctionDocString,
+					)
+				},
+			},
+			AuthAccountContractsTypeGetFunctionName: {
+				Kind: common.DeclarationKindField,
+				Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
+					return NewPublicFunctionMember(
+						t,
+						identifier,
+						authAccountContractsTypeGetFunctionType,
+						authAccountContractsTypeGetFunctionDocString,
+					)
+				},
+			},
+			AuthAccountContractsTypeRemoveFunctionName: {
+				Kind: common.DeclarationKindField,
+				Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
+					return NewPublicFunctionMember(
+						t,
+						identifier,
+						authAccountContractsTypeRemoveFunctionType,
+						authAccountContractsTypeRemoveFunctionDocString,
+					)
+				},
+			},
+		})
+	},
 }
 
 const authAccountContractsTypeAddFunctionDocString = `
@@ -105,8 +107,10 @@ const AuthAccountContractsTypeAddFunctionName = "add"
 var authAccountContractsTypeAddFunctionType = &FunctionType{
 	Parameters: []*Parameter{
 		{
-			Identifier:     "name",
-			TypeAnnotation: NewTypeAnnotation(&StringType{}),
+			Identifier: "name",
+			TypeAnnotation: NewTypeAnnotation(
+				StringType,
+			),
 		},
 		{
 			Identifier: "code",
@@ -117,7 +121,9 @@ var authAccountContractsTypeAddFunctionType = &FunctionType{
 			),
 		},
 	},
-	ReturnTypeAnnotation: NewTypeAnnotation(&DeployedContractType{}),
+	ReturnTypeAnnotation: NewTypeAnnotation(
+		DeployedContractType,
+	),
 	// additional arguments are passed to the contract initializer
 	RequiredArgumentCount: RequiredArgumentCount(2),
 }
@@ -146,8 +152,10 @@ const AuthAccountContractsTypeUpdateExperimentalFunctionName = "update__experime
 var authAccountContractsTypeUpdateExperimentalFunctionType = &FunctionType{
 	Parameters: []*Parameter{
 		{
-			Identifier:     "name",
-			TypeAnnotation: NewTypeAnnotation(&StringType{}),
+			Identifier: "name",
+			TypeAnnotation: NewTypeAnnotation(
+				StringType,
+			),
 		},
 		{
 			Identifier: "code",
@@ -158,7 +166,9 @@ var authAccountContractsTypeUpdateExperimentalFunctionType = &FunctionType{
 			),
 		},
 	},
-	ReturnTypeAnnotation: NewTypeAnnotation(&DeployedContractType{}),
+	ReturnTypeAnnotation: NewTypeAnnotation(
+		DeployedContractType,
+	),
 }
 
 const authAccountContractsTypeGetFunctionDocString = `
@@ -172,13 +182,15 @@ const AuthAccountContractsTypeGetFunctionName = "get"
 var authAccountContractsTypeGetFunctionType = &FunctionType{
 	Parameters: []*Parameter{
 		{
-			Identifier:     "name",
-			TypeAnnotation: NewTypeAnnotation(&StringType{}),
+			Identifier: "name",
+			TypeAnnotation: NewTypeAnnotation(
+				StringType,
+			),
 		},
 	},
 	ReturnTypeAnnotation: NewTypeAnnotation(
 		&OptionalType{
-			Type: &DeployedContractType{},
+			Type: DeployedContractType,
 		},
 	),
 }
@@ -197,61 +209,12 @@ var authAccountContractsTypeRemoveFunctionType = &FunctionType{
 	Parameters: []*Parameter{
 		{
 			Identifier:     "name",
-			TypeAnnotation: NewTypeAnnotation(&StringType{}),
+			TypeAnnotation: NewTypeAnnotation(StringType),
 		},
 	},
 	ReturnTypeAnnotation: NewTypeAnnotation(
 		&OptionalType{
-			Type: &DeployedContractType{},
+			Type: DeployedContractType,
 		},
 	),
-}
-
-func (t *AuthAccountContractsType) GetMembers() map[string]MemberResolver {
-	return withBuiltinMembers(t, map[string]MemberResolver{
-		AuthAccountContractsTypeAddFunctionName: {
-			Kind: common.DeclarationKindField,
-			Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
-				return NewPublicFunctionMember(
-					t,
-					identifier,
-					authAccountContractsTypeAddFunctionType,
-					authAccountContractsTypeAddFunctionDocString,
-				)
-			},
-		},
-		AuthAccountContractsTypeUpdateExperimentalFunctionName: {
-			Kind: common.DeclarationKindField,
-			Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
-				return NewPublicFunctionMember(
-					t,
-					identifier,
-					authAccountContractsTypeUpdateExperimentalFunctionType,
-					authAccountContractsTypeUpdateExperimentalFunctionDocString,
-				)
-			},
-		},
-		AuthAccountContractsTypeGetFunctionName: {
-			Kind: common.DeclarationKindField,
-			Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
-				return NewPublicFunctionMember(
-					t,
-					identifier,
-					authAccountContractsTypeGetFunctionType,
-					authAccountContractsTypeGetFunctionDocString,
-				)
-			},
-		},
-		AuthAccountContractsTypeRemoveFunctionName: {
-			Kind: common.DeclarationKindField,
-			Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
-				return NewPublicFunctionMember(
-					t,
-					identifier,
-					authAccountContractsTypeRemoveFunctionType,
-					authAccountContractsTypeRemoveFunctionDocString,
-				)
-			},
-		},
-	})
 }

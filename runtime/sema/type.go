@@ -316,7 +316,7 @@ const ToStringFunctionName = "toString"
 
 var toStringFunctionType = &FunctionType{
 	ReturnTypeAnnotation: NewTypeAnnotation(
-		&StringType{},
+		StringType,
 	),
 }
 
@@ -692,189 +692,6 @@ func (t *GenericType) Resolve(typeArguments *TypeParameterTypeOrderedMap) Type {
 
 func (t *GenericType) GetMembers() map[string]MemberResolver {
 	return withBuiltinMembers(t, nil)
-}
-
-// StringType represents the string type
-type StringType struct{}
-
-func (*StringType) IsType() {}
-
-func (*StringType) String() string {
-	return "String"
-}
-
-func (*StringType) QualifiedString() string {
-	return "String"
-}
-
-func (*StringType) ID() TypeID {
-	return "String"
-}
-
-func (*StringType) Equal(other Type) bool {
-	_, ok := other.(*StringType)
-	return ok
-}
-
-func (*StringType) IsResourceType() bool {
-	return false
-}
-
-func (*StringType) IsInvalidType() bool {
-	return false
-}
-
-func (*StringType) IsStorable(_ map[*Member]bool) bool {
-	return true
-}
-
-func (*StringType) IsExternallyReturnable(_ map[*Member]bool) bool {
-	return true
-}
-
-func (*StringType) IsEquatable() bool {
-	return true
-}
-
-func (*StringType) TypeAnnotationState() TypeAnnotationState {
-	return TypeAnnotationStateValid
-}
-
-func (t *StringType) RewriteWithRestrictedTypes() (result Type, rewritten bool) {
-	return t, false
-}
-
-var stringTypeConcatFunctionType = &FunctionType{
-	Parameters: []*Parameter{
-		{
-			Label:          ArgumentLabelNotRequired,
-			Identifier:     "other",
-			TypeAnnotation: NewTypeAnnotation(&StringType{}),
-		},
-	},
-	ReturnTypeAnnotation: NewTypeAnnotation(
-		&StringType{},
-	),
-}
-
-const stringTypeConcatFunctionDocString = `
-Returns a new string which contains the given string concatenated to the end of the original string, but does not modify the original string
-`
-
-var stringTypeSliceFunctionType = &FunctionType{
-	Parameters: []*Parameter{
-		{
-			Identifier:     "from",
-			TypeAnnotation: NewTypeAnnotation(&IntType{}),
-		},
-		{
-			Identifier:     "upTo",
-			TypeAnnotation: NewTypeAnnotation(&IntType{}),
-		},
-	},
-	ReturnTypeAnnotation: NewTypeAnnotation(
-		&StringType{},
-	),
-}
-
-const stringTypeSliceFunctionDocString = `
-Returns a new string containing the slice of the characters in the given string from start index ` + "`from`" + ` up to, but not including, the end index ` + "`upTo`" + `.
-
-This function creates a new string whose length is ` + "`upTo - from`" + `.
-It does not modify the original string.
-If either of the parameters are out of the bounds of the string, the function will fail
-`
-
-var stringTypeDecodeHexFunctionType = &FunctionType{
-	ReturnTypeAnnotation: NewTypeAnnotation(
-		&VariableSizedType{
-			Type: &UInt8Type{},
-		},
-	),
-}
-
-const stringTypeDecodeHexFunctionDocString = `
-Returns an array containing the bytes represented by the given hexadecimal string.
-
-The given string must only contain hexadecimal characters and must have an even length.
-If the string is malformed, the program aborts
-`
-
-const stringTypeLengthFieldDocString = `
-The number of characters in the string
-`
-
-func (t *StringType) GetMembers() map[string]MemberResolver {
-	return withBuiltinMembers(t, map[string]MemberResolver{
-		"concat": {
-			Kind: common.DeclarationKindFunction,
-			Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
-				return NewPublicFunctionMember(
-					t,
-					identifier,
-					stringTypeConcatFunctionType,
-					stringTypeConcatFunctionDocString,
-				)
-			},
-		},
-		"slice": {
-			Kind: common.DeclarationKindFunction,
-			Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
-				return NewPublicFunctionMember(
-					t,
-					identifier,
-					stringTypeSliceFunctionType,
-					stringTypeSliceFunctionDocString,
-				)
-			},
-		},
-		"decodeHex": {
-			Kind: common.DeclarationKindFunction,
-			Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
-				return NewPublicFunctionMember(
-					t,
-					identifier,
-					stringTypeDecodeHexFunctionType,
-					stringTypeDecodeHexFunctionDocString,
-				)
-			},
-		},
-		"length": {
-			Kind: common.DeclarationKindField,
-			Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
-				return NewPublicConstantFieldMember(
-					t,
-					identifier,
-					&IntType{},
-					stringTypeLengthFieldDocString,
-				)
-			},
-		},
-	})
-}
-
-func (*StringType) isValueIndexableType() bool {
-	return true
-}
-
-func (*StringType) AllowsValueIndexingAssignment() bool {
-	return false
-}
-
-func (t *StringType) ElementType(_ bool) Type {
-	return CharacterType
-}
-
-func (t *StringType) IndexingType() Type {
-	return &IntegerType{}
-}
-
-func (*StringType) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
-	return false
-}
-
-func (t *StringType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
-	return t
 }
 
 // NumberType represents the super-type of all signed number types
@@ -4044,7 +3861,7 @@ func init() {
 		NeverType,
 		BoolType,
 		CharacterType,
-		&StringType{},
+		StringType,
 		&AddressType{},
 		AuthAccountType,
 		PublicAccountType,
@@ -4054,7 +3871,7 @@ func init() {
 		PrivatePathType,
 		PublicPathType,
 		&CapabilityType{},
-		&DeployedContractType{},
+		DeployedContractType,
 		BlockType,
 	}
 

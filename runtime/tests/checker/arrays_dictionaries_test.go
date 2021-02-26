@@ -269,7 +269,7 @@ func TestCheckDictionaryKeys(t *testing.T) {
 	keysType := RequireGlobalValue(t, checker.Elaboration, "keys")
 
 	assert.Equal(t,
-		&sema.VariableSizedType{Type: &sema.StringType{}},
+		&sema.VariableSizedType{Type: sema.StringType},
 		keysType,
 	)
 }

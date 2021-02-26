@@ -1501,7 +1501,7 @@ func TestInterpretHostFunctionWithVariableArguments(t *testing.T) {
 			require.Len(t, invocation.ArgumentTypes, 3)
 			assert.IsType(t, &sema.IntType{}, invocation.ArgumentTypes[0])
 			assert.IsType(t, sema.BoolType, invocation.ArgumentTypes[1])
-			assert.IsType(t, &sema.StringType{}, invocation.ArgumentTypes[2])
+			assert.IsType(t, sema.StringType, invocation.ArgumentTypes[2])
 
 			require.Len(t, invocation.Arguments, 3)
 			assert.Equal(t, interpreter.NewIntValueFromInt64(1), invocation.Arguments[0])

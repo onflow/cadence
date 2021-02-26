@@ -304,7 +304,7 @@ var HashType = &sema.ConstantSizedType{
 }
 
 var TypeIDsType = &sema.VariableSizedType{
-	Type: &sema.StringType{},
+	Type: sema.StringType,
 }
 
 var AccountEventAddressParameter = &sema.Parameter{
@@ -333,7 +333,7 @@ var AccountEventContractsParameter = &sema.Parameter{
 
 var AccountEventContractParameter = &sema.Parameter{
 	Identifier:     "contract",
-	TypeAnnotation: sema.NewTypeAnnotation(&sema.StringType{}),
+	TypeAnnotation: sema.NewTypeAnnotation(sema.StringType),
 }
 
 var AccountCreatedEventType = newFlowEventType(

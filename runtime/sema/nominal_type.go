@@ -24,6 +24,13 @@ import (
 	"github.com/onflow/cadence/runtime/ast"
 )
 
+type ValueIndexingInfo struct {
+	IsValueIndexableType          bool
+	AllowsValueIndexingAssignment bool
+	ElementType                   func(_ bool) Type
+	IndexingType                  *IntegerType
+}
+
 // NominalType represents a simple nominal type.
 //
 type NominalType struct {
@@ -40,6 +47,7 @@ type NominalType struct {
 	members              map[string]MemberResolver
 	membersOnce          sync.Once
 	NestedTypes          *StringTypeOrderedMap
+	ValueIndexingInfo    ValueIndexingInfo
 }
 
 func (*NominalType) IsType() {}
@@ -117,4 +125,20 @@ func (t *NominalType) isContainerType() bool {
 
 func (t *NominalType) GetNestedTypes() *StringTypeOrderedMap {
 	return t.NestedTypes
+}
+
+func (t *NominalType) isValueIndexableType() bool {
+	return t.ValueIndexingInfo.IsValueIndexableType
+}
+
+func (t *NominalType) AllowsValueIndexingAssignment() bool {
+	return t.ValueIndexingInfo.AllowsValueIndexingAssignment
+}
+
+func (t *NominalType) ElementType(isAssignment bool) Type {
+	return t.ValueIndexingInfo.ElementType(isAssignment)
+}
+
+func (t *NominalType) IndexingType() Type {
+	return t.ValueIndexingInfo.IndexingType
 }
