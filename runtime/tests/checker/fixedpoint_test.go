@@ -58,7 +58,7 @@ func TestCheckFixedPointLiteralTypeConversionInVariableDeclaration(t *testing.T)
 
 				assert.Equal(t,
 					ty,
-					checker.Elaboration.GlobalValues["x"].Type,
+					RequireGlobalValue(t, checker.Elaboration, "x"),
 				)
 			})
 		}
@@ -94,7 +94,7 @@ func TestCheckFixedPointLiteralTypeConversionInAssignment(t *testing.T) {
 
 				assert.Equal(t,
 					ty,
-					checker.Elaboration.GlobalValues["x"].Type,
+					RequireGlobalValue(t, checker.Elaboration, "x"),
 				)
 			})
 		}
@@ -119,7 +119,7 @@ func TestCheckFixedPointLiteralRanges(t *testing.T) {
 			),
 		)
 
-		return checker.Elaboration.GlobalValues["x"].Type
+		return RequireGlobalValue(t, checker.Elaboration, "x")
 	}
 
 	for _, ty := range sema.AllFixedPointTypes {

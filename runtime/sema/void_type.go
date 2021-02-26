@@ -29,5 +29,4 @@ var VoidType = &NominalType{
 	Storable:             false,
 	Equatable:            false,
 	ExternallyReturnable: true,
-	IsSuperTypeOf:        nil,
 }

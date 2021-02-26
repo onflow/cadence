@@ -32,7 +32,7 @@ import (
 func TestLiteralValue(t *testing.T) {
 
 	t.Run("String, valid literal", func(t *testing.T) {
-		value, err := ParseLiteral(`"hello"`, &sema.StringType{})
+		value, err := ParseLiteral(`"hello"`, sema.StringType)
 		require.NoError(t, err)
 		require.Equal(t,
 			cadence.NewString("hello"),
@@ -41,13 +41,13 @@ func TestLiteralValue(t *testing.T) {
 	})
 
 	t.Run("String, invalid literal", func(t *testing.T) {
-		value, err := ParseLiteral(`true`, &sema.StringType{})
+		value, err := ParseLiteral(`true`, sema.StringType)
 		require.Error(t, err)
 		require.Nil(t, value)
 	})
 
 	t.Run("Bool, valid literal", func(t *testing.T) {
-		value, err := ParseLiteral(`true`, &sema.BoolType{})
+		value, err := ParseLiteral(`true`, sema.BoolType)
 		require.NoError(t, err)
 		require.Equal(t,
 			cadence.NewBool(true),
@@ -56,13 +56,13 @@ func TestLiteralValue(t *testing.T) {
 	})
 
 	t.Run("Bool, invalid literal", func(t *testing.T) {
-		value, err := ParseLiteral(`"hello"`, &sema.BoolType{})
+		value, err := ParseLiteral(`"hello"`, sema.BoolType)
 		require.Error(t, err)
 		require.Nil(t, value)
 	})
 
 	t.Run("Optional, nil", func(t *testing.T) {
-		value, err := ParseLiteral(`nil`, &sema.OptionalType{Type: &sema.BoolType{}})
+		value, err := ParseLiteral(`nil`, &sema.OptionalType{Type: sema.BoolType})
 		require.NoError(t, err)
 		require.Equal(t,
 			cadence.NewOptional(nil),
@@ -71,7 +71,7 @@ func TestLiteralValue(t *testing.T) {
 	})
 
 	t.Run("Optional, valid literal", func(t *testing.T) {
-		value, err := ParseLiteral(`true`, &sema.OptionalType{Type: &sema.BoolType{}})
+		value, err := ParseLiteral(`true`, &sema.OptionalType{Type: sema.BoolType})
 		require.NoError(t, err)
 		require.Equal(t,
 			cadence.NewOptional(cadence.NewBool(true)),
@@ -80,13 +80,13 @@ func TestLiteralValue(t *testing.T) {
 	})
 
 	t.Run("Optional, invalid literal", func(t *testing.T) {
-		value, err := ParseLiteral(`"hello"`, &sema.OptionalType{Type: &sema.BoolType{}})
+		value, err := ParseLiteral(`"hello"`, &sema.OptionalType{Type: sema.BoolType})
 		require.Error(t, err)
 		require.Nil(t, value)
 	})
 
 	t.Run("VariableSizedArray, empty", func(t *testing.T) {
-		value, err := ParseLiteral(`[]`, &sema.VariableSizedType{Type: &sema.BoolType{}})
+		value, err := ParseLiteral(`[]`, &sema.VariableSizedType{Type: sema.BoolType})
 		require.NoError(t, err)
 		require.Equal(t,
 			cadence.NewArray([]cadence.Value{}),
@@ -95,7 +95,7 @@ func TestLiteralValue(t *testing.T) {
 	})
 
 	t.Run("VariableSizedArray, one element", func(t *testing.T) {
-		value, err := ParseLiteral(`[true]`, &sema.VariableSizedType{Type: &sema.BoolType{}})
+		value, err := ParseLiteral(`[true]`, &sema.VariableSizedType{Type: sema.BoolType})
 		require.NoError(t, err)
 		require.Equal(t,
 			cadence.NewArray([]cadence.Value{
@@ -106,13 +106,13 @@ func TestLiteralValue(t *testing.T) {
 	})
 
 	t.Run("VariableSizedArray, invalid literal", func(t *testing.T) {
-		value, err := ParseLiteral(`"hello"`, &sema.VariableSizedType{Type: &sema.BoolType{}})
+		value, err := ParseLiteral(`"hello"`, &sema.VariableSizedType{Type: sema.BoolType})
 		require.Error(t, err)
 		require.Nil(t, value)
 	})
 
 	t.Run("ConstantSizedArray, empty", func(t *testing.T) {
-		value, err := ParseLiteral(`[]`, &sema.ConstantSizedType{Type: &sema.BoolType{}})
+		value, err := ParseLiteral(`[]`, &sema.ConstantSizedType{Type: sema.BoolType})
 		require.NoError(t, err)
 		require.Equal(t,
 			cadence.NewArray([]cadence.Value{}),
@@ -121,7 +121,7 @@ func TestLiteralValue(t *testing.T) {
 	})
 
 	t.Run("ConstantSizedArray, one element", func(t *testing.T) {
-		value, err := ParseLiteral(`[true]`, &sema.ConstantSizedType{Type: &sema.BoolType{}})
+		value, err := ParseLiteral(`[true]`, &sema.ConstantSizedType{Type: sema.BoolType})
 		require.NoError(t, err)
 		require.Equal(t,
 			cadence.NewArray([]cadence.Value{
@@ -132,15 +132,15 @@ func TestLiteralValue(t *testing.T) {
 	})
 
 	t.Run("ConstantSizedArray, invalid literal", func(t *testing.T) {
-		value, err := ParseLiteral(`"hello"`, &sema.ConstantSizedType{Type: &sema.BoolType{}})
+		value, err := ParseLiteral(`"hello"`, &sema.ConstantSizedType{Type: sema.BoolType})
 		require.Error(t, err)
 		require.Nil(t, value)
 	})
 
 	t.Run("Dictionary, empty", func(t *testing.T) {
 		value, err := ParseLiteral(`{}`, &sema.DictionaryType{
-			KeyType:   &sema.StringType{},
-			ValueType: &sema.BoolType{},
+			KeyType:   sema.StringType,
+			ValueType: sema.BoolType,
 		})
 		require.NoError(t, err)
 		require.Equal(t,
@@ -151,8 +151,8 @@ func TestLiteralValue(t *testing.T) {
 
 	t.Run("Dictionary, one entry", func(t *testing.T) {
 		value, err := ParseLiteral(`{"hello": true}`, &sema.DictionaryType{
-			KeyType:   &sema.StringType{},
-			ValueType: &sema.BoolType{},
+			KeyType:   sema.StringType,
+			ValueType: sema.BoolType,
 		})
 		require.NoError(t, err)
 		require.Equal(t,
@@ -168,8 +168,8 @@ func TestLiteralValue(t *testing.T) {
 
 	t.Run("Dictionary, invalid literal", func(t *testing.T) {
 		value, err := ParseLiteral(`"hello"`, &sema.DictionaryType{
-			KeyType:   &sema.StringType{},
-			ValueType: &sema.BoolType{},
+			KeyType:   sema.StringType,
+			ValueType: sema.BoolType,
 		})
 		require.Error(t, err)
 		require.Nil(t, value)
@@ -586,7 +586,7 @@ func TestParseLiteralArgumentList(t *testing.T) {
 			`(a: 1, 2)`,
 			[]sema.Type{
 				&sema.IntType{},
-				&sema.BoolType{},
+				sema.BoolType,
 			},
 		)
 		require.Error(t, err)

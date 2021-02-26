@@ -5331,9 +5331,9 @@ type CompositeValue struct {
 	Location            common.Location
 	QualifiedIdentifier string
 	Kind                common.CompositeKind
-	Fields              map[string]Value
-	InjectedFields      map[string]Value
-	NestedValues        map[string]Value
+	Fields              *StringValueOrderedMap
+	InjectedFields      *StringValueOrderedMap
+	NestedValues        *StringValueOrderedMap
 	Functions           map[string]FunctionValue
 	Destructor          FunctionValue
 	Owner               *common.Address
@@ -5345,11 +5345,12 @@ func NewCompositeValue(
 	location common.Location,
 	qualifiedIdentifier string,
 	kind common.CompositeKind,
-	fields map[string]Value,
+	fields *StringValueOrderedMap,
 	owner *common.Address,
 ) *CompositeValue {
+	// TODO: only allocate when setting a field
 	if fields == nil {
-		fields = map[string]Value{}
+		fields = NewStringValueOrderedMap()
 	}
 	return &CompositeValue{
 		Location:            location,
@@ -5401,9 +5402,10 @@ func (v *CompositeValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	if !descend {
 		return
 	}
-	for _, value := range v.Fields {
+
+	v.Fields.Foreach(func(_ string, value Value) {
 		value.Accept(interpreter, visitor)
-	}
+	})
 }
 
 func (v *CompositeValue) DynamicType(interpreter *Interpreter) DynamicType {
@@ -5430,10 +5432,10 @@ func (v *CompositeValue) Copy() Value {
 		break
 	}
 
-	newFields := make(map[string]Value, len(v.Fields))
-	for field, value := range v.Fields {
-		newFields[field] = value.Copy()
-	}
+	newFields := NewStringValueOrderedMap()
+	v.Fields.Foreach(func(fieldName string, value Value) {
+		newFields.Set(fieldName, value.Copy())
+	})
 
 	// NOTE: not copying functions or destructor – they are linked in
 
@@ -5473,9 +5475,9 @@ func (v *CompositeValue) SetOwner(owner *common.Address) {
 
 	v.Owner = owner
 
-	for _, value := range v.Fields {
+	v.Fields.Foreach(func(_ string, value Value) {
 		value.SetOwner(owner)
-	}
+	})
 }
 
 func (v *CompositeValue) IsModified() bool {
@@ -5483,21 +5485,25 @@ func (v *CompositeValue) IsModified() bool {
 		return true
 	}
 
-	for _, value := range v.Fields {
-		if value.IsModified() {
+	for pair := v.Fields.Oldest(); pair != nil; pair = pair.Next() {
+		if pair.Value.IsModified() {
 			return true
 		}
 	}
 
-	for _, value := range v.InjectedFields {
-		if value.IsModified() {
-			return true
+	if v.InjectedFields != nil {
+		for pair := v.InjectedFields.Oldest(); pair != nil; pair = pair.Next() {
+			if pair.Value.IsModified() {
+				return true
+			}
 		}
 	}
 
-	for _, value := range v.NestedValues {
-		if value.IsModified() {
-			return true
+	if v.NestedValues != nil {
+		for pair := v.NestedValues.Oldest(); pair != nil; pair = pair.Next() {
+			if pair.Value.IsModified() {
+				return true
+			}
 		}
 	}
 
@@ -5517,14 +5523,16 @@ func (v *CompositeValue) GetMember(interpreter *Interpreter, locationRange Locat
 		return v.OwnerValue()
 	}
 
-	value, ok := v.Fields[name]
+	value, ok := v.Fields.Get(name)
 	if ok {
 		return value
 	}
 
-	value, ok = v.NestedValues[name]
-	if ok {
-		return value
+	if v.NestedValues != nil {
+		value, ok = v.NestedValues.Get(name)
+		if ok {
+			return value
+		}
 	}
 
 	interpreter = v.getInterpreter(interpreter)
@@ -5544,7 +5552,7 @@ func (v *CompositeValue) GetMember(interpreter *Interpreter, locationRange Locat
 	}
 
 	if v.InjectedFields != nil {
-		value, ok = v.InjectedFields[name]
+		value, ok = v.InjectedFields.Get(name)
 		if ok {
 			return value
 		}
@@ -5605,34 +5613,37 @@ func (v *CompositeValue) SetMember(_ *Interpreter, locationRange LocationRange, 
 
 	value.SetOwner(v.Owner)
 
-	v.Fields[name] = value
+	v.Fields.Set(name, value)
 }
 
 func (v *CompositeValue) String() string {
 	return formatComposite(string(v.TypeID()), v.Fields)
 }
 
-func formatComposite(typeId string, fields map[string]Value) string {
+func formatComposite(typeId string, fields *StringValueOrderedMap) string {
 	preparedFields := make([]struct {
 		Name  string
 		Value string
-	}, 0, len(fields))
-	for name, value := range fields {
+	}, 0, fields.Len())
+
+	fields.Foreach(func(fieldName string, value Value) {
 		preparedFields = append(preparedFields,
 			struct {
 				Name  string
 				Value string
 			}{
-				Name:  name,
+				Name:  fieldName,
 				Value: value.String(),
 			},
 		)
-	}
+	})
+
 	return format.Composite(typeId, preparedFields)
 }
 
 func (v *CompositeValue) GetField(name string) Value {
-	return v.Fields[name]
+	value, _ := v.Fields.Get(name)
+	return value
 }
 
 func (v *CompositeValue) Equal(interpreter *Interpreter, other Value) BoolValue {
@@ -5647,13 +5658,17 @@ func (v *CompositeValue) Equal(interpreter *Interpreter, other Value) BoolValue 
 		return false
 	}
 
-	return v.Fields[sema.EnumRawValueFieldName].(NumberValue).
-		Equal(interpreter, otherComposite.Fields[sema.EnumRawValueFieldName])
+	rawValue, _ := v.Fields.Get(sema.EnumRawValueFieldName)
+	otherRawValue, _ := otherComposite.Fields.Get(sema.EnumRawValueFieldName)
+
+	return rawValue.(NumberValue).
+		Equal(interpreter, otherRawValue)
 }
 
 func (v *CompositeValue) KeyString() string {
 	if v.Kind == common.CompositeKindEnum {
-		return v.Fields[sema.EnumRawValueFieldName].String()
+		rawValue, _ := v.Fields.Get(sema.EnumRawValueFieldName)
+		return rawValue.String()
 	}
 
 	panic(errors.NewUnreachableError())
@@ -5667,7 +5682,7 @@ func (v *CompositeValue) TypeID() common.TypeID {
 
 type DictionaryValue struct {
 	Keys     *ArrayValue
-	Entries  map[string]Value
+	Entries  *StringValueOrderedMap
 	Owner    *common.Address
 	modified bool
 	// Deferral of values:
@@ -5695,7 +5710,7 @@ func NewDictionaryValueUnownedNonCopying(keysAndValues ...Value) *DictionaryValu
 
 	result := &DictionaryValue{
 		Keys:    NewArrayValueUnownedNonCopying(),
-		Entries: make(map[string]Value, keysAndValuesCount/2),
+		Entries: NewStringValueOrderedMap(),
 		// NOTE: new value has no owner
 		Owner:            nil,
 		modified:         true,
@@ -5754,10 +5769,11 @@ func (v *DictionaryValue) StaticType() StaticType {
 func (v *DictionaryValue) Copy() Value {
 	newKeys := v.Keys.Copy().(*ArrayValue)
 
-	newEntries := make(map[string]Value, len(v.Entries))
-	for name, value := range v.Entries {
-		newEntries[name] = value.Copy()
-	}
+	newEntries := NewStringValueOrderedMap()
+
+	v.Entries.Foreach(func(key string, value Value) {
+		newEntries.Set(key, value.Copy())
+	})
 
 	return &DictionaryValue{
 		Keys:             newKeys,
@@ -5784,9 +5800,9 @@ func (v *DictionaryValue) SetOwner(owner *common.Address) {
 
 	v.Keys.SetOwner(owner)
 
-	for _, value := range v.Entries {
+	v.Entries.Foreach(func(_ string, value Value) {
 		value.SetOwner(owner)
-	}
+	})
 }
 
 func (v *DictionaryValue) IsModified() bool {
@@ -5798,7 +5814,8 @@ func (v *DictionaryValue) IsModified() bool {
 		return true
 	}
 
-	for _, value := range v.Entries {
+	for pair := v.Entries.Oldest(); pair != nil; pair = pair.Next() {
+		value := pair.Value
 		if value.IsModified() {
 			return true
 		}
@@ -5841,7 +5858,7 @@ func (v *DictionaryValue) Destroy(inter *Interpreter, locationRange LocationRang
 
 func (v *DictionaryValue) Get(inter *Interpreter, _ LocationRange, keyValue Value) Value {
 	key := dictionaryKey(keyValue)
-	value, ok := v.Entries[key]
+	value, ok := v.Entries.Get(key)
 	if ok {
 		return NewSomeValueOwningNonCopying(value)
 	}
@@ -5858,7 +5875,7 @@ func (v *DictionaryValue) Get(inter *Interpreter, _ LocationRange, keyValue Valu
 			v.prevDeferredKeys.Set(key, storageKey)
 
 			storedValue := inter.readStored(*v.DeferredOwner, storageKey, true)
-			v.Entries[key] = storedValue.(*SomeValue).Value
+			v.Entries.Set(key, storedValue.(*SomeValue).Value)
 
 			// NOTE: *not* writing nil to the storage key,
 			// as this would result in a loss of the value:
@@ -5905,7 +5922,7 @@ func (v *DictionaryValue) String() string {
 
 	for i, keyValue := range v.Keys.Values {
 		key := dictionaryKey(keyValue)
-		value := v.Entries[key]
+		value, _ := v.Entries.Get(key)
 
 		// Value is potentially deferred,
 		// so might be nil
@@ -5929,7 +5946,7 @@ func (v *DictionaryValue) String() string {
 	return format.Dictionary(pairs)
 }
 
-func (v *DictionaryValue) GetMember(_ *Interpreter, _ LocationRange, name string) Value {
+func (v *DictionaryValue) GetMember(interpreter *Interpreter, locationRange LocationRange, name string) Value {
 	switch name {
 	case "length":
 		return NewIntValueFromInt64(int64(v.Count()))
@@ -5943,8 +5960,8 @@ func (v *DictionaryValue) GetMember(_ *Interpreter, _ LocationRange, name string
 		dictionaryValues := make([]Value, v.Count())
 		i := 0
 		for _, keyValue := range v.Keys.Values {
-			key := dictionaryKey(keyValue)
-			dictionaryValues[i] = v.Entries[key].Copy()
+			value := v.Get(interpreter, locationRange, keyValue).(*SomeValue).Value
+			dictionaryValues[i] = value.Copy()
 			i++
 		}
 		return NewArrayValueUnownedNonCopying(dictionaryValues...)
@@ -6016,7 +6033,7 @@ func (v *DictionaryValue) Remove(inter *Interpreter, locationRange LocationRange
 	switch value := value.(type) {
 	case *SomeValue:
 
-		delete(v.Entries, key)
+		v.Entries.Delete(key)
 
 		// TODO: optimize linear scan
 		for i, keyValue := range v.Keys.Values {
@@ -6054,7 +6071,7 @@ func (v *DictionaryValue) Insert(inter *Interpreter, locationRange LocationRange
 
 	value.SetModified(true)
 
-	v.Entries[key] = value
+	v.Entries.Set(key, value)
 
 	switch existingValue := existingValue.(type) {
 	case *SomeValue:
@@ -6745,15 +6762,13 @@ func accountGetCapabilityFunction(
 
 			path := invocation.Arguments[0].(PathValue)
 
-			// `Invocation.TypeParameterTypes` is a map, so get the first
-			// element / type by iterating over the values of the map.
-
 			// NOTE: the type parameter is optional, for backwards compatibility
 
 			var borrowType *sema.ReferenceType
-			for _, ty := range invocation.TypeParameterTypes {
+			typeParameterPair := invocation.TypeParameterTypes.Oldest()
+			if typeParameterPair != nil {
+				ty := typeParameterPair.Value
 				borrowType = ty.(*sema.ReferenceType)
-				break
 			}
 
 			var borrowStaticType StaticType
@@ -7149,14 +7164,14 @@ func (v LinkValue) String() string {
 
 // BuiltinCompositeValue
 type BuiltinCompositeValue struct {
-	Fields     map[string]Value
+	Fields     *StringValueOrderedMap
 	staticType StaticType
 	structType *sema.BuiltinCompositeType
 }
 
-func NewBuiltinCompositeValue(structType *sema.BuiltinCompositeType, fields map[string]Value) *BuiltinCompositeValue {
+func NewBuiltinCompositeValue(structType *sema.BuiltinCompositeType, fields *StringValueOrderedMap) *BuiltinCompositeValue {
 	if fields == nil {
-		fields = map[string]Value{}
+		fields = NewStringValueOrderedMap()
 	}
 
 	return &BuiltinCompositeValue{
@@ -7210,7 +7225,8 @@ func (v *BuiltinCompositeValue) String() string {
 }
 
 func (v *BuiltinCompositeValue) GetMember(_ *Interpreter, _ LocationRange, name string) Value {
-	return v.Fields[name]
+	value, _ := v.Fields.Get(name)
+	return value
 }
 
 func (*BuiltinCompositeValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
@@ -7225,52 +7241,50 @@ func NewAccountKeyValue(
 	weight UFix64Value,
 	isRevoked BoolValue,
 ) *BuiltinCompositeValue {
-	fields := map[string]Value{
-		sema.AccountKeyKeyIndexField:  keyIndex,
-		sema.AccountKeyPublicKeyField: publicKey,
-		sema.AccountKeyHashAlgoField:  hashAlgo,
-		sema.AccountKeyWeightField:    weight,
-		sema.AccountKeyIsRevokedField: isRevoked,
-	}
+	fields := NewStringValueOrderedMap()
+	fields.Set(sema.AccountKeyKeyIndexField, keyIndex)
+	fields.Set(sema.AccountKeyPublicKeyField, publicKey)
+	fields.Set(sema.AccountKeyHashAlgoField, hashAlgo)
+	fields.Set(sema.AccountKeyWeightField, weight)
+	fields.Set(sema.AccountKeyIsRevokedField, isRevoked)
 
 	return NewBuiltinCompositeValue(sema.AccountKeyType, fields)
 }
 
 // NewPublicKeyValue constructs a PublicKey value.
 func NewPublicKeyValue(publicKey *ArrayValue, signAlgo *BuiltinCompositeValue) *BuiltinCompositeValue {
-	fields := map[string]Value{
-		sema.PublicKeyPublicKeyField: publicKey,
-		sema.PublicKeySignAlgoField:  signAlgo,
-	}
+
+	fields := NewStringValueOrderedMap()
+	fields.Set(sema.PublicKeyPublicKeyField, publicKey)
+	fields.Set(sema.PublicKeySignAlgoField, signAlgo)
 
 	return NewBuiltinCompositeValue(sema.PublicKeyType, fields)
 }
 
 // NewAuthAccountKeysValue constructs a AuthAccount.Keys value.
 func NewAuthAccountKeysValue(addFunction FunctionValue, getFunction FunctionValue, revokeFunction FunctionValue) *BuiltinCompositeValue {
-	fields := map[string]Value{
-		sema.AccountKeysAddFunctionName:    addFunction,
-		sema.AccountKeysGetFunctionName:    getFunction,
-		sema.AccountKeysRevokeFunctionName: revokeFunction,
-	}
+	fields := NewStringValueOrderedMap()
+	fields.Set(sema.AccountKeysAddFunctionName, addFunction)
+	fields.Set(sema.AccountKeysGetFunctionName, getFunction)
+	fields.Set(sema.AccountKeysRevokeFunctionName, revokeFunction)
 
 	return NewBuiltinCompositeValue(sema.PublicKeyType, fields)
 }
 
 // NewPublicAccountKeysValue constructs a PublicAccount.Keys value.
 func NewPublicAccountKeysValue(getFunction FunctionValue) *BuiltinCompositeValue {
-	fields := map[string]Value{
-		sema.AccountKeysGetFunctionName: getFunction,
-	}
+	fields := NewStringValueOrderedMap()
+	fields.Set(sema.AccountKeysGetFunctionName, getFunction)
 
 	return NewBuiltinCompositeValue(sema.PublicKeyType, fields)
 }
 
 func NewEnumCaseValue(enumType *sema.BuiltinCompositeType, rawValue int) *BuiltinCompositeValue {
+	fields := NewStringValueOrderedMap()
+	fields.Set(sema.EnumRawValueFieldName, NewIntValueFromInt64(int64(rawValue)))
+
 	return NewBuiltinCompositeValue(
 		enumType,
-		map[string]Value{
-			sema.EnumRawValueFieldName: NewIntValueFromInt64(int64(rawValue)),
-		},
+		fields,
 	)
 }

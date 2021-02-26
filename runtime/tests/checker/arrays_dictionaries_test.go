@@ -130,9 +130,13 @@ func TestCheckDictionaryIndexingString(t *testing.T) {
 
 	require.NoError(t, err)
 
+	yType := RequireGlobalValue(t, checker.Elaboration, "y")
+
 	assert.Equal(t,
-		&sema.OptionalType{Type: &sema.IntType{}},
-		checker.Elaboration.GlobalValues["y"].Type,
+		&sema.OptionalType{
+			Type: &sema.IntType{},
+		},
+		yType,
 	)
 }
 
@@ -262,9 +266,11 @@ func TestCheckDictionaryKeys(t *testing.T) {
 
 	require.NoError(t, err)
 
+	keysType := RequireGlobalValue(t, checker.Elaboration, "keys")
+
 	assert.Equal(t,
-		&sema.VariableSizedType{Type: &sema.StringType{}},
-		checker.Elaboration.GlobalValues["keys"].Type,
+		&sema.VariableSizedType{Type: sema.StringType},
+		keysType,
 	)
 }
 
@@ -278,9 +284,11 @@ func TestCheckDictionaryValues(t *testing.T) {
 
 	require.NoError(t, err)
 
+	valuesType := RequireGlobalValue(t, checker.Elaboration, "values")
+
 	assert.Equal(t,
 		&sema.VariableSizedType{Type: &sema.IntType{}},
-		checker.Elaboration.GlobalValues["values"].Type,
+		valuesType,
 	)
 }
 

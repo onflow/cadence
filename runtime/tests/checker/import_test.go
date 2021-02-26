@@ -720,14 +720,16 @@ func TestCheckImportVirtual(t *testing.T) {
 			Options: []sema.Option{
 				sema.WithImportHandler(
 					func(checker *sema.Checker, location common.Location) (sema.Import, error) {
+						valueElements := sema.NewStringImportElementOrderedMap()
+
+						valueElements.Set("Foo", sema.ImportElement{
+							DeclarationKind: common.DeclarationKindStructure,
+							Access:          ast.AccessPublic,
+							Type:            fooType,
+						})
+
 						return sema.VirtualImport{
-							ValueElements: map[string]sema.ImportElement{
-								"Foo": {
-									DeclarationKind: common.DeclarationKindStructure,
-									Access:          ast.AccessPublic,
-									Type:            fooType,
-								},
-							},
+							ValueElements: valueElements,
 						}, nil
 					},
 				),

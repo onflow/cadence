@@ -38,11 +38,11 @@ var AssertFunction = NewStandardLibraryFunction(
 			{
 				Label:          sema.ArgumentLabelNotRequired,
 				Identifier:     "condition",
-				TypeAnnotation: sema.NewTypeAnnotation(&sema.BoolType{}),
+				TypeAnnotation: sema.NewTypeAnnotation(sema.BoolType),
 			},
 			{
 				Identifier:     "message",
-				TypeAnnotation: sema.NewTypeAnnotation(&sema.StringType{}),
+				TypeAnnotation: sema.NewTypeAnnotation(sema.StringType),
 			},
 		},
 		ReturnTypeAnnotation: sema.NewTypeAnnotation(
@@ -86,7 +86,7 @@ var PanicFunction = NewStandardLibraryFunction(
 			{
 				Label:          sema.ArgumentLabelNotRequired,
 				Identifier:     "message",
-				TypeAnnotation: sema.NewTypeAnnotation(&sema.StringType{}),
+				TypeAnnotation: sema.NewTypeAnnotation(sema.StringType),
 			},
 		},
 		ReturnTypeAnnotation: sema.NewTypeAnnotation(
@@ -117,9 +117,11 @@ var LogFunction = NewStandardLibraryFunction(
 	&sema.FunctionType{
 		Parameters: []*sema.Parameter{
 			{
-				Label:          sema.ArgumentLabelNotRequired,
-				Identifier:     "value",
-				TypeAnnotation: sema.NewTypeAnnotation(&sema.AnyStructType{}),
+				Label:      sema.ArgumentLabelNotRequired,
+				Identifier: "value",
+				TypeAnnotation: sema.NewTypeAnnotation(
+					sema.AnyStructType,
+				),
 			},
 		},
 		ReturnTypeAnnotation: sema.NewTypeAnnotation(
@@ -221,13 +223,13 @@ func getEnumType(enumType *sema.BuiltinCompositeType, enumCases []sema.BuiltinEn
 func getEnumValue(enumType *sema.BuiltinCompositeType, enumCases []sema.BuiltinEnumCase) (value interpreter.Value) {
 	caseCount := len(enumCases)
 	caseValues := make([]*interpreter.BuiltinCompositeValue, caseCount)
-	constructorMembers := make(map[string]interpreter.Value, caseCount)
+	constructorMembers := interpreter.NewStringValueOrderedMap()
 
 	for _, enumCase := range enumCases {
 		rawValue := enumCase.RawValue()
 		caseValue := interpreter.NewEnumCaseValue(enumType, rawValue)
 		caseValues[rawValue] = caseValue
-		constructorMembers[enumCase.Name()] = caseValue
+		constructorMembers.Set(enumCase.Name(), caseValue)
 	}
 
 	constructor := interpreter.NewHostFunctionValue(

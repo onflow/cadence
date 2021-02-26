@@ -18,7 +18,18 @@
 
 package sema
 
-import "github.com/onflow/cadence/runtime/ast"
+import (
+	"sync"
+
+	"github.com/onflow/cadence/runtime/ast"
+)
+
+type ValueIndexingInfo struct {
+	IsValueIndexableType          bool
+	AllowsValueIndexingAssignment bool
+	ElementType                   func(_ bool) Type
+	IndexingType                  *IntegerType
+}
 
 // NominalType represents a simple nominal type.
 //
@@ -32,6 +43,11 @@ type NominalType struct {
 	Equatable            bool
 	ExternallyReturnable bool
 	IsSuperTypeOf        func(subType Type) bool
+	Members              func(*NominalType) map[string]MemberResolver
+	members              map[string]MemberResolver
+	membersOnce          sync.Once
+	NestedTypes          *StringTypeOrderedMap
+	ValueIndexingInfo    ValueIndexingInfo
 }
 
 func (*NominalType) IsType() {}
@@ -49,8 +65,7 @@ func (t *NominalType) ID() TypeID {
 }
 
 func (t *NominalType) Equal(other Type) bool {
-	otherType, ok := other.(*NominalType)
-	return ok && otherType == t
+	return other == t
 }
 
 func (t *NominalType) IsResourceType() bool {
@@ -81,14 +96,49 @@ func (t *NominalType) RewriteWithRestrictedTypes() (Type, bool) {
 	return t, false
 }
 
-func (*NominalType) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
+func (*NominalType) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
 	return false
 }
 
-func (t *NominalType) Resolve(_ map[*TypeParameter]Type) Type {
+func (t *NominalType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
 	return t
 }
 
 func (t *NominalType) GetMembers() map[string]MemberResolver {
-	return withBuiltinMembers(t, nil)
+	t.initializeMembers()
+	return t.members
+}
+
+func (t *NominalType) initializeMembers() {
+	t.membersOnce.Do(func() {
+		var members map[string]MemberResolver
+		if t.Members != nil {
+			members = t.Members(t)
+		}
+		t.members = withBuiltinMembers(t, members)
+	})
+}
+
+func (t *NominalType) isContainerType() bool {
+	return t.NestedTypes != nil
+}
+
+func (t *NominalType) GetNestedTypes() *StringTypeOrderedMap {
+	return t.NestedTypes
+}
+
+func (t *NominalType) isValueIndexableType() bool {
+	return t.ValueIndexingInfo.IsValueIndexableType
+}
+
+func (t *NominalType) AllowsValueIndexingAssignment() bool {
+	return t.ValueIndexingInfo.AllowsValueIndexingAssignment
+}
+
+func (t *NominalType) ElementType(isAssignment bool) Type {
+	return t.ValueIndexingInfo.ElementType(isAssignment)
+}
+
+func (t *NominalType) IndexingType() Type {
+	return t.ValueIndexingInfo.IndexingType
 }

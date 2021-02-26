@@ -83,6 +83,7 @@ func TestInterpretVirtualImport(t *testing.T) {
 										Location:            location,
 										QualifiedIdentifier: "Foo",
 										Kind:                common.CompositeKindContract,
+										Fields:              interpreter.NewStringValueOrderedMap(),
 										Functions: map[string]interpreter.FunctionValue{
 											"bar": interpreter.NewHostFunctionValue(
 												func(invocation interpreter.Invocation) trampoline.Trampoline {
@@ -102,14 +103,17 @@ func TestInterpretVirtualImport(t *testing.T) {
 			CheckerOptions: []sema.Option{
 				sema.WithImportHandler(
 					func(checker *sema.Checker, location common.Location) (sema.Import, error) {
+
+						valueElements := sema.NewStringImportElementOrderedMap()
+
+						valueElements.Set("Foo", sema.ImportElement{
+							DeclarationKind: common.DeclarationKindStructure,
+							Access:          ast.AccessPublic,
+							Type:            fooType,
+						})
+
 						return sema.VirtualImport{
-							ValueElements: map[string]sema.ImportElement{
-								"Foo": {
-									DeclarationKind: common.DeclarationKindStructure,
-									Access:          ast.AccessPublic,
-									Type:            fooType,
-								},
-							},
+							ValueElements: valueElements,
 						}, nil
 					},
 				),

@@ -67,11 +67,11 @@ type Elaboration struct {
 	// Keyed by qualified identifier
 	CompositeTypes                      map[TypeID]*CompositeType
 	InterfaceTypes                      map[TypeID]*InterfaceType
-	InvocationExpressionTypeArguments   map[*ast.InvocationExpression]map[*TypeParameter]Type
+	InvocationExpressionTypeArguments   map[*ast.InvocationExpression]*TypeParameterTypeOrderedMap
 	IdentifierInInvocationTypes         map[*ast.IdentifierExpression]Type
 	ImportDeclarationsResolvedLocations map[*ast.ImportDeclaration][]ResolvedLocation
-	GlobalValues                        map[string]*Variable
-	GlobalTypes                         map[string]*Variable
+	GlobalValues                        *StringVariableOrderedMap
+	GlobalTypes                         *StringVariableOrderedMap
 	TransactionTypes                    []*TransactionType
 	EffectivePredeclaredValues          map[string]ValueDeclaration
 	EffectivePredeclaredTypes           map[string]TypeDeclaration
@@ -115,11 +115,11 @@ func NewElaboration() *Elaboration {
 		EmitStatementEventTypes:                map[*ast.EmitStatement]*CompositeType{},
 		CompositeTypes:                         map[TypeID]*CompositeType{},
 		InterfaceTypes:                         map[TypeID]*InterfaceType{},
-		InvocationExpressionTypeArguments:      map[*ast.InvocationExpression]map[*TypeParameter]Type{},
+		InvocationExpressionTypeArguments:      map[*ast.InvocationExpression]*TypeParameterTypeOrderedMap{},
 		IdentifierInInvocationTypes:            map[*ast.IdentifierExpression]Type{},
 		ImportDeclarationsResolvedLocations:    map[*ast.ImportDeclaration][]ResolvedLocation{},
-		GlobalValues:                           map[string]*Variable{},
-		GlobalTypes:                            map[string]*Variable{},
+		GlobalValues:                           NewStringVariableOrderedMap(),
+		GlobalTypes:                            NewStringVariableOrderedMap(),
 		EffectivePredeclaredValues:             map[string]ValueDeclaration{},
 		EffectivePredeclaredTypes:              map[string]TypeDeclaration{},
 	}
@@ -143,7 +143,7 @@ func (e *Elaboration) setIsChecking(isChecking bool) {
 //
 func (e *Elaboration) FunctionEntryPointType() (*FunctionType, error) {
 
-	entryPointValue, ok := e.GlobalValues[FunctionEntryPointName]
+	entryPointValue, ok := e.GlobalValues.Get(FunctionEntryPointName)
 	if !ok {
 		return nil, &MissingEntryPointError{
 			Expected: FunctionEntryPointName,

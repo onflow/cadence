@@ -82,7 +82,7 @@ func (checker *Checker) visitCompositeDeclaration(declaration *ast.CompositeDecl
 		// The initializer must initialize all members that are fields,
 		// e.g. not composite functions (which are by definition constant and "initialized")
 
-		fieldMembers := map[*Member]*ast.FieldDeclaration{}
+		fieldMembers := NewMemberAstFieldDeclarationOrderedMap()
 
 		for _, field := range declaration.Members.Fields() {
 			fieldName := field.Identifier.Identifier
@@ -91,7 +91,7 @@ func (checker *Checker) visitCompositeDeclaration(declaration *ast.CompositeDecl
 				continue
 			}
 
-			fieldMembers[member] = field
+			fieldMembers.Set(member, field)
 		}
 
 		initializationInfo = NewInitializationInfo(compositeType, fieldMembers)
@@ -565,14 +565,14 @@ func (checker *Checker) declareCompositeMembersAndValue(
 		// in which case it is a type requirement,
 		// and this nested composite type implicitly conforms to it.
 
-		compositeType.NestedTypes().Foreach(func(nestedTypeIdentifier string, nestedType Type) {
+		compositeType.GetNestedTypes().Foreach(func(nestedTypeIdentifier string, nestedType Type) {
 			nestedCompositeType, ok := nestedType.(*CompositeType)
 			if !ok {
 				return
 			}
 
 			for _, compositeTypeConformance := range compositeType.ExplicitInterfaceConformances {
-				conformanceNestedTypes := compositeTypeConformance.NestedTypes()
+				conformanceNestedTypes := compositeTypeConformance.GetNestedTypes()
 
 				nestedType, ok := conformanceNestedTypes.Get(nestedTypeIdentifier)
 				if !ok {
@@ -584,7 +584,7 @@ func (checker *Checker) declareCompositeMembersAndValue(
 					continue
 				}
 
-				nestedCompositeType.AddImplicitTypeRequirementConformance(typeRequirement)
+				nestedCompositeType.addImplicitTypeRequirementConformance(typeRequirement)
 			}
 		})
 

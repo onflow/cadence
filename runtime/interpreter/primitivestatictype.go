@@ -179,34 +179,34 @@ func (i PrimitiveStaticType) SemaType() sema.Type {
 		return sema.VoidType
 
 	case PrimitiveStaticTypeAny:
-		return &sema.AnyType{}
+		return sema.AnyType
 
 	case PrimitiveStaticTypeNever:
 		return sema.NeverType
 
 	case PrimitiveStaticTypeAnyStruct:
-		return &sema.AnyStructType{}
+		return sema.AnyStructType
 
 	case PrimitiveStaticTypeAnyResource:
-		return &sema.AnyResourceType{}
+		return sema.AnyResourceType
 
 	case PrimitiveStaticTypeBool:
-		return &sema.BoolType{}
+		return sema.BoolType
 
 	case PrimitiveStaticTypeAddress:
 		return &sema.AddressType{}
 
 	case PrimitiveStaticTypeString:
-		return &sema.StringType{}
+		return sema.StringType
 
 	case PrimitiveStaticTypeCharacter:
-		return &sema.CharacterType{}
+		return sema.CharacterType
 
 	case PrimitiveStaticTypeMetaType:
-		return &sema.MetaType{}
+		return sema.MetaType
 
 	case PrimitiveStaticTypeBlock:
-		return &sema.BlockType{}
+		return sema.BlockType
 
 	// Number
 
@@ -293,13 +293,13 @@ func (i PrimitiveStaticType) SemaType() sema.Type {
 	case PrimitiveStaticTypeCapability:
 		return &sema.CapabilityType{}
 	case PrimitiveStaticTypeAuthAccount:
-		return &sema.AuthAccountType{}
+		return sema.AuthAccountType
 	case PrimitiveStaticTypePublicAccount:
-		return &sema.PublicAccountType{}
+		return sema.PublicAccountType
 	case PrimitiveStaticTypeDeployedContract:
-		return &sema.DeployedContractType{}
+		return sema.DeployedContractType
 	case PrimitiveStaticTypeAuthAccountContracts:
-		return &sema.AuthAccountContractsType{}
+		return sema.AuthAccountContractsType
 
 	case PrimitiveStaticTypeAccountKey:
 		return sema.AccountKeyType
@@ -324,32 +324,8 @@ func (i PrimitiveStaticType) SemaType() sema.Type {
 //
 func ConvertSemaToPrimitiveStaticType(t sema.Type) PrimitiveStaticType {
 	switch t.(type) {
-	case *sema.AnyType:
-		return PrimitiveStaticTypeAny
-
-	case *sema.AnyStructType:
-		return PrimitiveStaticTypeAnyStruct
-
-	case *sema.AnyResourceType:
-		return PrimitiveStaticTypeAnyResource
-
-	case *sema.BoolType:
-		return PrimitiveStaticTypeBool
-
 	case *sema.AddressType:
 		return PrimitiveStaticTypeAddress
-
-	case *sema.StringType:
-		return PrimitiveStaticTypeString
-
-	case *sema.CharacterType:
-		return PrimitiveStaticTypeCharacter
-
-	case *sema.MetaType:
-		return PrimitiveStaticTypeMetaType
-
-	case *sema.BlockType:
-		return PrimitiveStaticTypeBlock
 
 	// Number
 
@@ -425,14 +401,6 @@ func ConvertSemaToPrimitiveStaticType(t sema.Type) PrimitiveStaticType {
 
 	case *sema.CapabilityType:
 		return PrimitiveStaticTypeCapability
-	case *sema.AuthAccountType:
-		return PrimitiveStaticTypeAuthAccount
-	case *sema.PublicAccountType:
-		return PrimitiveStaticTypePublicAccount
-	case *sema.DeployedContractType:
-		return PrimitiveStaticTypeDeployedContract
-	case *sema.AuthAccountContractsType:
-		return PrimitiveStaticTypeAuthAccountContracts
 	}
 
 	switch t {
@@ -450,6 +418,30 @@ func ConvertSemaToPrimitiveStaticType(t sema.Type) PrimitiveStaticType {
 		return PrimitiveStaticTypeNever
 	case sema.VoidType:
 		return PrimitiveStaticTypeVoid
+	case sema.MetaType:
+		return PrimitiveStaticTypeMetaType
+	case sema.BoolType:
+		return PrimitiveStaticTypeBool
+	case sema.CharacterType:
+		return PrimitiveStaticTypeCharacter
+	case sema.AnyType:
+		return PrimitiveStaticTypeAny
+	case sema.AnyStructType:
+		return PrimitiveStaticTypeAnyStruct
+	case sema.AnyResourceType:
+		return PrimitiveStaticTypeAnyResource
+	case sema.AuthAccountType:
+		return PrimitiveStaticTypeAuthAccount
+	case sema.PublicAccountType:
+		return PrimitiveStaticTypePublicAccount
+	case sema.BlockType:
+		return PrimitiveStaticTypeBlock
+	case sema.DeployedContractType:
+		return PrimitiveStaticTypeDeployedContract
+	case sema.AuthAccountContractsType:
+		return PrimitiveStaticTypeAuthAccountContracts
+	case sema.StringType:
+		return PrimitiveStaticTypeString
 
 	case sema.AccountKeyType:
 		return PrimitiveStaticTypeAccountKey

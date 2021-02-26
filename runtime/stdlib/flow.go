@@ -39,12 +39,12 @@ var accountFunctionType = &sema.FunctionType{
 		{
 			Identifier: "payer",
 			TypeAnnotation: sema.NewTypeAnnotation(
-				&sema.AuthAccountType{},
+				sema.AuthAccountType,
 			),
 		},
 	},
 	ReturnTypeAnnotation: sema.NewTypeAnnotation(
-		&sema.AuthAccountType{},
+		sema.AuthAccountType,
 	),
 }
 
@@ -59,7 +59,7 @@ var getAccountFunctionType = &sema.FunctionType{
 		},
 	},
 	ReturnTypeAnnotation: sema.NewTypeAnnotation(
-		&sema.PublicAccountType{},
+		sema.PublicAccountType,
 	),
 }
 
@@ -69,7 +69,7 @@ var logFunctionType = &sema.FunctionType{
 			Label:      sema.ArgumentLabelNotRequired,
 			Identifier: "value",
 			TypeAnnotation: sema.NewTypeAnnotation(
-				&sema.AnyStructType{},
+				sema.AnyStructType,
 			),
 		},
 	},
@@ -79,7 +79,9 @@ var logFunctionType = &sema.FunctionType{
 }
 
 var getCurrentBlockFunctionType = &sema.FunctionType{
-	ReturnTypeAnnotation: sema.NewTypeAnnotation(&sema.BlockType{}),
+	ReturnTypeAnnotation: sema.NewTypeAnnotation(
+		sema.BlockType,
+	),
 }
 
 var getBlockFunctionType = &sema.FunctionType{
@@ -94,7 +96,7 @@ var getBlockFunctionType = &sema.FunctionType{
 	},
 	ReturnTypeAnnotation: sema.NewTypeAnnotation(
 		&sema.OptionalType{
-			Type: &sema.BlockType{},
+			Type: sema.BlockType,
 		},
 	),
 }
@@ -302,7 +304,7 @@ var HashType = &sema.ConstantSizedType{
 }
 
 var TypeIDsType = &sema.VariableSizedType{
-	Type: &sema.StringType{},
+	Type: sema.StringType,
 }
 
 var AccountEventAddressParameter = &sema.Parameter{
@@ -331,7 +333,7 @@ var AccountEventContractsParameter = &sema.Parameter{
 
 var AccountEventContractParameter = &sema.Parameter{
 	Identifier:     "contract",
-	TypeAnnotation: sema.NewTypeAnnotation(&sema.StringType{}),
+	TypeAnnotation: sema.NewTypeAnnotation(sema.StringType),
 }
 
 var AccountCreatedEventType = newFlowEventType(

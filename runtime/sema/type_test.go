@@ -112,7 +112,7 @@ func TestIsResourceType_AnyStructNestedInArray(t *testing.T) {
 	t.Parallel()
 
 	ty := &VariableSizedType{
-		Type: &AnyStructType{},
+		Type: AnyStructType,
 	}
 
 	assert.False(t, ty.IsResourceType())
@@ -123,7 +123,7 @@ func TestIsResourceType_AnyResourceNestedInArray(t *testing.T) {
 	t.Parallel()
 
 	ty := &VariableSizedType{
-		Type: &AnyResourceType{},
+		Type: AnyResourceType,
 	}
 
 	assert.True(t, ty.IsResourceType())
@@ -147,7 +147,7 @@ func TestIsResourceType_ResourceNestedInDictionary(t *testing.T) {
 	t.Parallel()
 
 	ty := &DictionaryType{
-		KeyType: &StringType{},
+		KeyType: StringType,
 		ValueType: &VariableSizedType{
 			Type: &CompositeType{
 				Kind: common.CompositeKindResource,
@@ -163,7 +163,7 @@ func TestIsResourceType_StructNestedInDictionary(t *testing.T) {
 	t.Parallel()
 
 	ty := &DictionaryType{
-		KeyType: &StringType{},
+		KeyType: StringType,
 		ValueType: &VariableSizedType{
 			Type: &CompositeType{
 				Kind: common.CompositeKindStructure,

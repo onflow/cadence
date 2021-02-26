@@ -35,7 +35,7 @@ func (checker *Checker) VisitTransactionDeclaration(declaration *ast.Transaction
 		checker.containerTypes[transactionType] = false
 	}()
 
-	fieldMembers := map[*Member]*ast.FieldDeclaration{}
+	fieldMembers := NewMemberAstFieldDeclarationOrderedMap()
 
 	for _, field := range declaration.Fields {
 		fieldName := field.Identifier.Identifier
@@ -45,7 +45,7 @@ func (checker *Checker) VisitTransactionDeclaration(declaration *ast.Transaction
 			panic(errors.NewUnreachableError())
 		}
 
-		fieldMembers[member] = field
+		fieldMembers.Set(member, field)
 	}
 
 	checker.checkTransactionFields(declaration)
@@ -186,7 +186,7 @@ func (checker *Checker) checkTransactionBlocks(declaration *ast.TransactionDecla
 func (checker *Checker) visitTransactionPrepareFunction(
 	prepareFunction *ast.SpecialFunctionDeclaration,
 	transactionType *TransactionType,
-	fieldMembers map[*Member]*ast.FieldDeclaration,
+	fieldMembers *MemberAstFieldDeclarationOrderedMap,
 ) {
 	if prepareFunction == nil {
 		return
@@ -222,7 +222,7 @@ func (checker *Checker) checkTransactionPrepareFunctionParameters(
 		parameterType := parameters[i].TypeAnnotation.Type
 
 		if !parameterType.IsInvalidType() &&
-			!IsSubType(parameterType, &AuthAccountType{}) {
+			!IsSubType(parameterType, AuthAccountType) {
 
 			checker.report(
 				&InvalidTransactionPrepareParameterTypeError{

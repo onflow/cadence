@@ -45,8 +45,8 @@ func ParseAndCheckAccount(t *testing.T, code string) (*sema.Checker, error) {
 		ParseAndCheckOptions{
 			Options: []sema.Option{
 				sema.WithPredeclaredValues([]sema.ValueDeclaration{
-					constantDeclaration("authAccount", &sema.AuthAccountType{}),
-					constantDeclaration("publicAccount", &sema.PublicAccountType{}),
+					constantDeclaration("authAccount", sema.AuthAccountType),
+					constantDeclaration("publicAccount", sema.PublicAccountType),
 				}),
 			},
 		},
@@ -429,9 +429,8 @@ func TestCheckAccount_load(t *testing.T) {
 
 					require.NoError(t, err)
 
-					rType := checker.Elaboration.GlobalTypes["R"].Type
-
-					rValueType := checker.Elaboration.GlobalValues["r"].Type
+					rType := RequireGlobalType(t, checker.Elaboration, "R")
+					rValueType := RequireGlobalValue(t, checker.Elaboration, "r")
 
 					require.Equal(t,
 						&sema.OptionalType{
@@ -466,9 +465,8 @@ func TestCheckAccount_load(t *testing.T) {
 
 					require.NoError(t, err)
 
-					sType := checker.Elaboration.GlobalTypes["S"].Type
-
-					sValueType := checker.Elaboration.GlobalValues["s"].Type
+					sType := RequireGlobalType(t, checker.Elaboration, "S")
+					sValueType := RequireGlobalValue(t, checker.Elaboration, "s")
 
 					require.Equal(t,
 						&sema.OptionalType{
@@ -560,9 +558,8 @@ func TestCheckAccount_copy(t *testing.T) {
 				if domain == common.PathDomainStorage {
 					require.NoError(t, err)
 
-					sType := checker.Elaboration.GlobalTypes["S"].Type
-
-					sValueType := checker.Elaboration.GlobalValues["s"].Type
+					sType := RequireGlobalType(t, checker.Elaboration, "S")
+					sValueType := RequireGlobalValue(t, checker.Elaboration, "s")
 
 					require.Equal(t,
 						&sema.OptionalType{
@@ -720,9 +717,8 @@ func TestCheckAccount_borrow(t *testing.T) {
 
 					require.NoError(t, err)
 
-					rType := checker.Elaboration.GlobalTypes["R"].Type
-
-					rValueType := checker.Elaboration.GlobalValues["r"].Type
+					rType := RequireGlobalType(t, checker.Elaboration, "R")
+					rValueType := RequireGlobalValue(t, checker.Elaboration, "r")
 
 					require.Equal(t,
 						&sema.OptionalType{
@@ -759,9 +755,8 @@ func TestCheckAccount_borrow(t *testing.T) {
 				if domain == common.PathDomainStorage {
 					require.NoError(t, err)
 
-					sType := checker.Elaboration.GlobalTypes["S"].Type
-
-					sValueType := checker.Elaboration.GlobalValues["s"].Type
+					sType := RequireGlobalType(t, checker.Elaboration, "S")
+					sValueType := RequireGlobalValue(t, checker.Elaboration, "s")
 
 					require.Equal(t,
 						&sema.OptionalType{
@@ -1234,7 +1229,8 @@ func TestCheckAccount_getCapability(t *testing.T) {
 				}
 			}
 
-			capType := checker.Elaboration.GlobalValues["cap"].Type
+			capType := RequireGlobalValue(t, checker.Elaboration, "cap")
+
 			assert.Equal(t,
 				&sema.CapabilityType{
 					BorrowType: expectedBorrowType,
@@ -1297,9 +1293,22 @@ func TestCheckAccount_StorageFields(t *testing.T) {
 				)
 
 				require.NoError(t, err)
-				amountType := checker.Elaboration.GlobalValues["amount"].Type
+
+				amountType := RequireGlobalValue(t, checker.Elaboration, "amount")
+
 				assert.Equal(t, &sema.UInt64Type{}, amountType)
 			})
 		}
 	}
+}
+
+func TestAuthAccountContractsType(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheckAccount(t, `
+      let contracts: AuthAccount.Contracts = authAccount.contracts
+	`)
+
+	require.NoError(t, err)
 }

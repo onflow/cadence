@@ -1,3 +1,83 @@
+# v0.13.0 (2021-02-22)
+
+## ⭐ Features
+
+- Validate contract updates (#593) @SupunS
+- WebAssembly: Use reference types (#448) @turbolent
+- Debug log decode calls (#585) @turbolent
+
+## 🛠 Improvements
+
+- Make CompositeType.Members field an ordered map (#581) @SupunS
+- Add ordered map for nested types in the checker (#580) @SupunS
+- Use elaborations instead of checkers (#576) @turbolent
+- Check ranges over maps (#450) @turbolent
+- Improve resource info merging (#606) @turbolent
+- Make dictionary entries and composite fields deterministic (#614) @turbolent
+- Write cached items in deterministic order (#613) @turbolent
+- Add tests for KeyString function (#612) @turbolent
+- Use ordered map for field initialization check (#609) @turbolent
+- Use ordered maps for type parameters  (#608) @turbolent
+- Use ordered maps for imported values and types (#607) @turbolent
+- Cache members of composite types and interface types (#611) @turbolent
+- Reuse enc mode and dec mode (#610) @turbolent
+- Make resource tracking deterministic  (#603) @turbolent
+- Make base values and base types deterministic (#604) @turbolent
+- Make elaboration globals deterministic (#605) @turbolent
+- Make activations deterministic (#601) @turbolent
+- Make member set deterministic (#602) @turbolent
+- Make interface sets ordered and thread-safe (#600) @turbolent
+- Improve error reporting in contract update validation (#597) @SupunS
+- Optimize resource tracking (#592) @turbolent
+- Make iteration deterministic (#596) @turbolent
+- Optimize member set by using plain Go maps and parent-child chaining (#589) @turbolent
+
+## 🐞 Bug Fixes
+
+- Improve Virtual Machine (#598) @turbolent
+- Fix parsing 'from' keyword in imported-identifiers (#577) @SupunS
+
+## 📖 Documentation
+
+- Minor additions to the docs (#594) @janezpodhostnik
+- Add compilation to runtime diagram (#591) @turbolent
+
+# v0.12.11 (2021-02-15)
+
+## 🐞 Bug Fixes
+
+- Fix `String()` function of `DicitonaryValue` when values are deferred (#587)
+
+# v0.12.10 (2021-02-15)
+
+## 🐞 Bug Fixes
+
+- Revert dictionary key string format for address values (#586)
+
+# v0.12.9 (2021-02-15)
+
+## 🐞 Bug Fixes
+
+- Fix log statement ([1328925](https://github.com/onflow/cadence/commit/1328925a8221d76c41e51f1df81424566262f10c))
+
+# v0.12.8 (2021-02-15)
+
+## ⭐ Features
+
+- Add an optional callback for encoding prepare function calls and debug log them to the runtime interface (#584)
+
+# v0.12.7 (2021-02-04)
+
+## ⭐ Features
+
+- WebAssembly: Add support for start section (#430)
+- WebAssembly: Add support for memory exports (#427)
+
+## 🛠 Improvements
+
+- Return a dedicated error for encoding an unsupported value (#583)
+- Update language server to Cadence v0.12.6 and Go SDK v0.14.3 (#579)
+
 
 # v0.12.6 (2021-02-02)
 

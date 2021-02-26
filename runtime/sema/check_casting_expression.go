@@ -182,9 +182,10 @@ func FailableCastCanSucceed(subType, superType Type) bool {
 		switch typedSubType := subType.(type) {
 		case *RestrictedType:
 
-			switch restrictedSuperType := typedSuperType.Type.(type) {
+			restrictedSuperType := typedSuperType.Type
+			switch restrictedSuperType {
 
-			case *AnyResourceType:
+			case AnyResourceType:
 				// A restricted type `T{Us}`
 				// is a subtype of a restricted type `AnyResource{Vs}`:
 				//
@@ -195,8 +196,8 @@ func FailableCastCanSucceed(subType, superType Type) bool {
 				// if `T` conforms to `Vs`.
 				// `Us` and `Vs` do *not* have to be subsets.
 
-				switch typedSubType.Type.(type) {
-				case *AnyResourceType, *AnyType:
+				switch typedSubType.Type {
+				case AnyResourceType, AnyType:
 					return true
 				default:
 					if typedInnerSubType, ok := typedSubType.Type.(*CompositeType); ok {
@@ -207,7 +208,7 @@ func FailableCastCanSucceed(subType, superType Type) bool {
 					}
 				}
 
-			case *AnyStructType:
+			case AnyStructType:
 				// A restricted type `T{Us}`
 				// is a subtype of a restricted type `AnyStruct{Vs}`:
 				//
@@ -216,8 +217,8 @@ func FailableCastCanSucceed(subType, superType Type) bool {
 				// When `T != AnyStruct && T != Any`: if `T` conforms to `Vs`.
 				// `Us` and `Vs` do *not* have to be subsets.
 
-				switch typedSubType.Type.(type) {
-				case *AnyStructType, *AnyType:
+				switch typedSubType.Type {
+				case AnyStructType, AnyType:
 					return true
 				default:
 					if typedInnerSubType, ok := typedSubType.Type.(*CompositeType); ok {
@@ -228,7 +229,7 @@ func FailableCastCanSucceed(subType, superType Type) bool {
 					}
 				}
 
-			case *AnyType:
+			case AnyType:
 				// A restricted type `T{Us}`
 				// is a subtype of a restricted type `Any{Vs}`:
 				//
@@ -239,8 +240,8 @@ func FailableCastCanSucceed(subType, superType Type) bool {
 				// if `T` conforms to `Vs`.
 				// `Us` and `Vs` do *not* have to be subsets.
 
-				switch typedSubType.Type.(type) {
-				case *AnyResourceType, *AnyStructType, *AnyType:
+				switch typedSubType.Type {
+				case AnyResourceType, AnyStructType, AnyType:
 					return true
 				default:
 					if typedInnerSubType, ok := typedSubType.Type.(*CompositeType); ok {
@@ -264,8 +265,8 @@ func FailableCastCanSucceed(subType, superType Type) bool {
 				// `Us` and `Ws` do *not* have to be subsets:
 				// The owner may freely restrict and unrestrict.
 
-				switch typedSubType.Type.(type) {
-				case *AnyResourceType, *AnyStructType, *AnyType:
+				switch typedSubType.Type {
+				case AnyResourceType, AnyStructType, AnyType:
 					return true
 				default:
 					return typedSubType.Type.Equal(typedSuperType.Type)
@@ -274,8 +275,8 @@ func FailableCastCanSucceed(subType, superType Type) bool {
 
 		case *CompositeType:
 
-			switch typedSuperType.Type.(type) {
-			case *AnyResourceType, *AnyStructType, *AnyType:
+			switch typedSuperType.Type {
+			case AnyResourceType, AnyStructType, AnyType:
 
 				// An unrestricted type `T`
 				// is a subtype of a restricted type `AnyResource{Us}` / `AnyStruct{Us}` / `Any{Us}`:
@@ -299,10 +300,13 @@ func FailableCastCanSucceed(subType, superType Type) bool {
 				return typedSubType.Equal(typedSuperType.Type)
 			}
 
-		case *AnyResourceType, *AnyStructType, *AnyType:
+		}
 
-			switch typedSuperType.Type.(type) {
-			case *AnyResourceType, *AnyStructType, *AnyType:
+		switch subType {
+		case AnyResourceType, AnyStructType, AnyType:
+
+			switch typedSuperType.Type {
+			case AnyResourceType, AnyStructType, AnyType:
 
 				// An unrestricted type `T`
 				// is a subtype of a restricted type `AnyResource{Us}` / `AnyStruct{Us}` / `Any{Us}`:
@@ -322,7 +326,7 @@ func FailableCastCanSucceed(subType, superType Type) bool {
 
 				// NOTE: inverse!
 
-				return IsSubType(typedSuperType.Type, typedSubType)
+				return IsSubType(typedSuperType.Type, subType)
 			}
 		}
 
@@ -341,8 +345,8 @@ func FailableCastCanSucceed(subType, superType Type) bool {
 			// if `T == V`.
 			// The owner may freely unrestrict.
 
-			switch typedSubType.Type.(type) {
-			case *AnyResourceType, *AnyStructType, *AnyType:
+			switch typedSubType.Type {
+			case AnyResourceType, AnyStructType, AnyType:
 				return true
 
 			default:
@@ -350,7 +354,10 @@ func FailableCastCanSucceed(subType, superType Type) bool {
 			}
 		}
 
-	case *AnyResourceType, *AnyStructType:
+	}
+
+	switch superType {
+	case AnyResourceType, AnyStructType:
 
 		// A restricted type `T{Us}`
 		// or unrestricted type `T`
@@ -362,14 +369,12 @@ func FailableCastCanSucceed(subType, superType Type) bool {
 			innerSubtype = restrictedSubType.Type
 		}
 
-		if _, ok := innerSubtype.(*AnyType); ok {
-			return true
-		}
+		return innerSubtype == AnyType ||
+			IsSubType(innerSubtype, superType)
 
-		return IsSubType(innerSubtype, superType)
-
-	case *AnyType:
+	case AnyType:
 		return true
+
 	}
 
 	return true

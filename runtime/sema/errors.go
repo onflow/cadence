@@ -144,7 +144,7 @@ func (e *RedeclarationError) EndPosition() ast.Position {
 }
 
 func (e *RedeclarationError) ErrorNotes() []errors.ErrorNote {
-	if e.PreviousPos == nil {
+	if e.PreviousPos == nil || e.PreviousPos.Line < 1 {
 		return nil
 	}
 
@@ -2398,7 +2398,7 @@ type InvalidTransactionPrepareParameterTypeError struct {
 func (e *InvalidTransactionPrepareParameterTypeError) Error() string {
 	return fmt.Sprintf(
 		"prepare parameter must be of type `%s`, not `%s`",
-		&AuthAccountType{},
+		AuthAccountType,
 		e.Type.QualifiedString(),
 	)
 }

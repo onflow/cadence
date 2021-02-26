@@ -48,7 +48,7 @@ func ParseAndCheckWithAny(t *testing.T, code string) (*sema.Checker, error) {
 				sema.WithPredeclaredTypes([]sema.TypeDeclaration{
 					stdlib.StandardLibraryType{
 						Name: "Any",
-						Type: &sema.AnyType{},
+						Type: sema.AnyType,
 						Kind: common.DeclarationKindType,
 					},
 				}),

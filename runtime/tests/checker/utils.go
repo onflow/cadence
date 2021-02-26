@@ -56,7 +56,7 @@ var checkConcurrently = flag.Int(
 )
 
 func ParseAndCheckWithOptions(
-	t *testing.T,
+	t testing.TB,
 	code string,
 	options ParseAndCheckOptions,
 ) (*sema.Checker, error) {
@@ -174,4 +174,16 @@ func ExpectCheckerErrors(t *testing.T, err error, count int) []error {
 	}
 
 	return errs
+}
+
+func RequireGlobalType(t *testing.T, elaboration *sema.Elaboration, name string) sema.Type {
+	variable, ok := elaboration.GlobalTypes.Get(name)
+	require.True(t, ok, "global type '%s' missing", name)
+	return variable.Type
+}
+
+func RequireGlobalValue(t *testing.T, elaboration *sema.Elaboration, name string) sema.Type {
+	variable, ok := elaboration.GlobalValues.Get(name)
+	require.True(t, ok, "global value '%s' missing", name)
+	return variable.Type
 }

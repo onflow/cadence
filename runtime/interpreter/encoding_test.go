@@ -19,6 +19,7 @@
 package interpreter
 
 import (
+	"fmt"
 	"math"
 	"math/big"
 	"testing"
@@ -400,7 +401,7 @@ func TestEncodeDecodeComposite(t *testing.T) {
 			utils.TestLocation,
 			"TestStruct",
 			common.CompositeKindStructure,
-			map[string]Value{},
+			NewStringValueOrderedMap(),
 			nil,
 		)
 		expected.modified = false
@@ -444,7 +445,7 @@ func TestEncodeDecodeComposite(t *testing.T) {
 			utils.TestLocation,
 			"TestStruct",
 			common.CompositeKindStructure,
-			map[string]Value{},
+			NewStringValueOrderedMap(),
 			nil,
 		)
 		expected.modified = false
@@ -496,7 +497,7 @@ func TestEncodeDecodeComposite(t *testing.T) {
 			},
 			"SimpleStruct",
 			common.CompositeKindStructure,
-			map[string]Value{},
+			NewStringValueOrderedMap(),
 			nil,
 		)
 		expected.modified = false
@@ -546,14 +547,15 @@ func TestEncodeDecodeComposite(t *testing.T) {
 		stringValue := NewStringValue("test")
 		stringValue.modified = false
 
+		members := NewStringValueOrderedMap()
+		members.Set("string", stringValue)
+		members.Set("true", BoolValue(true))
+
 		expected := NewCompositeValue(
 			utils.TestLocation,
 			"TestResource",
 			common.CompositeKindResource,
-			map[string]Value{
-				"true":   BoolValue(true),
-				"string": stringValue,
-			},
+			members,
 			nil,
 		)
 		expected.modified = false
@@ -610,14 +612,15 @@ func TestEncodeDecodeComposite(t *testing.T) {
 		stringValue := NewStringValue("test")
 		stringValue.modified = false
 
+		members := NewStringValueOrderedMap()
+		members.Set("string", stringValue)
+		members.Set("true", BoolValue(true))
+
 		expected := NewCompositeValue(
 			utils.TestLocation,
 			"TestResource",
 			common.CompositeKindResource,
-			map[string]Value{
-				"true":   BoolValue(true),
-				"string": stringValue,
-			},
+			members,
 			nil,
 		)
 		expected.modified = false
@@ -683,7 +686,7 @@ func TestEncodeDecodeComposite(t *testing.T) {
 			},
 			"TestContract.TestStruct",
 			common.CompositeKindStructure,
-			map[string]Value{},
+			NewStringValueOrderedMap(),
 			nil,
 		)
 		expected.modified = false
@@ -776,7 +779,7 @@ func TestEncodeDecodeComposite(t *testing.T) {
 			},
 			"TestStruct",
 			common.CompositeKindStructure,
-			map[string]Value{},
+			NewStringValueOrderedMap(),
 			nil,
 		)
 		expected.modified = false
@@ -3501,7 +3504,7 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 			encodeDecodeTest{
 				value: LinkValue{
 					TargetPath: publicPathValue,
-					Type:       ConvertSemaToPrimitiveStaticType(&sema.BoolType{}),
+					Type:       ConvertSemaToPrimitiveStaticType(sema.BoolType),
 				},
 				encoded: append(
 					expectedLinkEncodingPrefix[:],
@@ -4055,7 +4058,7 @@ func TestEncodeDecodeDictionaryDeferred(t *testing.T) {
 			utils.TestLocation,
 			"R",
 			common.CompositeKindResource,
-			map[string]Value{},
+			NewStringValueOrderedMap(),
 			nil,
 		)
 		value1.modified = false
@@ -4065,7 +4068,7 @@ func TestEncodeDecodeDictionaryDeferred(t *testing.T) {
 			utils.TestLocation,
 			"R2",
 			common.CompositeKindResource,
-			map[string]Value{},
+			NewStringValueOrderedMap(),
 			nil,
 		)
 		value2.modified = false
@@ -4106,14 +4109,20 @@ func TestEncodeDecodeDictionaryDeferred(t *testing.T) {
 					0xa0,
 				},
 				deferrals: &EncodingDeferrals{
-					Values: map[string]Value{
-						"v\x1ftest": value1,
-						"v\x1ftrue": value2,
+					Values: []EncodingDeferralValue{
+						{
+							Key:   "v\x1ftest",
+							Value: value1,
+						},
+						{
+							Key:   "v\x1ftrue",
+							Value: value2,
+						},
 					},
 				},
 				decodedValue: &DictionaryValue{
 					Keys:          expected.Keys,
-					Entries:       map[string]Value{},
+					Entries:       NewStringValueOrderedMap(),
 					DeferredOwner: &testOwner,
 					DeferredKeys:  deferredKeys,
 				},
@@ -4176,7 +4185,7 @@ func TestEncodeDecodeDictionaryDeferred(t *testing.T) {
 					// false
 					0xf4,
 				},
-				deferrals: &EncodingDeferrals{Values: map[string]Value{}},
+				deferrals: &EncodingDeferrals{},
 			},
 		)
 	})
@@ -4190,7 +4199,7 @@ func TestEncodeDecodeTypeValue(t *testing.T) {
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				value: TypeValue{
-					Type: ConvertSemaToPrimitiveStaticType(&sema.BoolType{}),
+					Type: ConvertSemaToPrimitiveStaticType(sema.BoolType),
 				},
 				encoded: []byte{
 					// tag
@@ -4342,4 +4351,42 @@ func TestDecodeCallback(t *testing.T) {
 		},
 		decodeCallbacks,
 	)
+}
+
+func BenchmarkEncoding(b *testing.B) {
+
+	value := prepareLargeTestValue()
+
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		_, _, _ = EncodeValue(value, nil, false, nil)
+	}
+}
+
+func BenchmarkDecoding(b *testing.B) {
+
+	value := prepareLargeTestValue()
+	encoded, _, err := EncodeValue(value, nil, false, nil)
+	require.NoError(b, err)
+
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		_, _ = DecodeValue(encoded, nil, nil, CurrentEncodingVersion, nil)
+	}
+}
+
+func prepareLargeTestValue() Value {
+	values := NewArrayValueUnownedNonCopying()
+	for i := 0; i < 100; i++ {
+		dict := NewDictionaryValueUnownedNonCopying()
+		for i := 0; i < 100; i++ {
+			key := NewStringValue(fmt.Sprintf("hello world %d", i))
+			value := NewInt256ValueFromInt64(int64(i))
+			dict.Set(nil, LocationRange{}, key, NewSomeValueOwningNonCopying(value))
+		}
+		values.Append(dict)
+	}
+	return values
 }

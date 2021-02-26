@@ -339,8 +339,8 @@ func (checker *Checker) visitMemberExpressionAssignment(
 					// TODO: dedicated error: assignment to constant after initialization
 
 					reportAssignmentToConstant()
-				} else if functionActivation.InitializationInfo.FieldMembers[accessedSelfMember] == nil {
-					// This field is not supposed to be initialized
+				} else if _, ok := functionActivation.InitializationInfo.FieldMembers.Get(accessedSelfMember); !ok {
+					// This member is not supposed to be initialized
 
 					reportAssignmentToConstant()
 				} else {

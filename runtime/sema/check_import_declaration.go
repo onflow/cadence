@@ -196,31 +196,31 @@ func (checker *Checker) importResolvedLocation(resolvedLocation ResolvedLocation
 	}
 
 	if len(missing) > 0 {
-		capacity := len(allValueElements) + len(allTypeElements)
+		capacity := allValueElements.Len() + allTypeElements.Len()
 		available := make([]string, 0, capacity)
 		availableSet := make(map[string]struct{}, capacity)
 
-		for identifier := range allValueElements {
+		allValueElements.Foreach(func(identifier string, _ ImportElement) {
 			if _, ok := availableSet[identifier]; ok {
-				continue
+				return
 			}
 			if !imp.IsImportableValue(identifier) {
-				continue
+				return
 			}
 			availableSet[identifier] = struct{}{}
 			available = append(available, identifier)
-		}
+		})
 
-		for identifier := range allTypeElements {
+		allTypeElements.Foreach(func(identifier string, _ ImportElement) {
 			if _, ok := availableSet[identifier]; ok {
-				continue
+				return
 			}
 			if !imp.IsImportableType(identifier) {
-				continue
+				return
 			}
 			availableSet[identifier] = struct{}{}
 			available = append(available, identifier)
-		}
+		})
 
 		checker.handleMissingImports(missing, available, location)
 	}
@@ -266,7 +266,7 @@ func (checker *Checker) handleMissingImports(missing []ast.Identifier, available
 func (checker *Checker) importElements(
 	valueActivations *VariableActivations,
 	requestedIdentifiers []ast.Identifier,
-	availableElements map[string]ImportElement,
+	availableElements *StringImportElementOrderedMap,
 	filter func(name string) bool,
 ) (
 	found map[ast.Identifier]bool,
@@ -280,17 +280,18 @@ func (checker *Checker) importElements(
 
 	explicitlyImported := map[string]ast.Identifier{}
 
-	var elements map[string]ImportElement
+	var elements *StringImportElementOrderedMap
+
 	identifiersCount := len(requestedIdentifiers)
 	if identifiersCount > 0 && availableElements != nil {
-		elements = make(map[string]ImportElement, identifiersCount)
+		elements = NewStringImportElementOrderedMap()
 		for _, identifier := range requestedIdentifiers {
 			name := identifier.Identifier
-			element, ok := availableElements[name]
+			element, ok := availableElements.Get(name)
 			if !ok {
 				continue
 			}
-			elements[name] = element
+			elements.Set(name, element)
 			found[identifier] = true
 			explicitlyImported[name] = identifier
 		}
@@ -298,42 +299,44 @@ func (checker *Checker) importElements(
 		elements = availableElements
 	}
 
-	for name, element := range elements {
+	if elements != nil {
+		elements.Foreach(func(name string, element ImportElement) {
 
-		if !filter(name) {
-			continue
-		}
-
-		// If the variable can't be imported due to restricted access,
-		// report an error, but still import the variable
-
-		access := element.Access
-
-		if !checker.isReadableAccess(access) {
-
-			// If the variable was imported explicitly, report an error
-
-			if identifier, ok := explicitlyImported[name]; ok {
-				invalidAccessed[identifier] = element
-			} else {
-				// Don't import not explicitly imported inaccessible variable
-				continue
+			if !filter(name) {
+				return
 			}
-		}
 
-		_, err := valueActivations.Declare(variableDeclaration{
-			identifier: name,
-			ty:         element.Type,
-			// TODO: implies that type is "re-exported"
-			access: access,
-			kind:   element.DeclarationKind,
-			// TODO:
-			pos:                      ast.Position{},
-			isConstant:               true,
-			argumentLabels:           element.ArgumentLabels,
-			allowOuterScopeShadowing: false,
+			// If the variable can't be imported due to restricted access,
+			// report an error, but still import the variable
+
+			access := element.Access
+
+			if !checker.isReadableAccess(access) {
+
+				// If the variable was imported explicitly, report an error
+
+				if identifier, ok := explicitlyImported[name]; ok {
+					invalidAccessed[identifier] = element
+				} else {
+					// Don't import not explicitly imported inaccessible variable
+					return
+				}
+			}
+
+			_, err := valueActivations.Declare(variableDeclaration{
+				identifier: name,
+				ty:         element.Type,
+				// TODO: implies that type is "re-exported"
+				access: access,
+				kind:   element.DeclarationKind,
+				// TODO:
+				pos:                      ast.Position{},
+				isConstant:               true,
+				argumentLabels:           element.ArgumentLabels,
+				allowOuterScopeShadowing: false,
+			})
+			checker.report(err)
 		})
-		checker.report(err)
 	}
 
 	return

@@ -48,12 +48,12 @@ type ParseCheckAndInterpretOptions struct {
 	HandleCheckerError func(error)
 }
 
-func parseCheckAndInterpret(t *testing.T, code string) *interpreter.Interpreter {
+func parseCheckAndInterpret(t testing.TB, code string) *interpreter.Interpreter {
 	return parseCheckAndInterpretWithOptions(t, code, ParseCheckAndInterpretOptions{})
 }
 
 func parseCheckAndInterpretWithOptions(
-	t *testing.T,
+	t testing.TB,
 	code string,
 	options ParseCheckAndInterpretOptions,
 ) *interpreter.Interpreter {
@@ -1500,8 +1500,8 @@ func TestInterpretHostFunctionWithVariableArguments(t *testing.T) {
 
 			require.Len(t, invocation.ArgumentTypes, 3)
 			assert.IsType(t, &sema.IntType{}, invocation.ArgumentTypes[0])
-			assert.IsType(t, &sema.BoolType{}, invocation.ArgumentTypes[1])
-			assert.IsType(t, &sema.StringType{}, invocation.ArgumentTypes[2])
+			assert.IsType(t, sema.BoolType, invocation.ArgumentTypes[1])
+			assert.IsType(t, sema.StringType, invocation.ArgumentTypes[2])
 
 			require.Len(t, invocation.Arguments, 3)
 			assert.Equal(t, interpreter.NewIntValueFromInt64(1), invocation.Arguments[0])
@@ -4216,10 +4216,11 @@ func TestInterpretDictionaryIndexingAssignmentExisting(t *testing.T) {
 		newValue,
 	)
 
+	expectedEntries := interpreter.NewStringValueOrderedMap()
+	expectedEntries.Set("abc", interpreter.NewIntValueFromInt64(23))
+
 	assert.Equal(t,
-		map[string]interpreter.Value{
-			"abc": interpreter.NewIntValueFromInt64(23),
-		},
+		expectedEntries,
 		actualDict.Entries,
 	)
 
@@ -4279,11 +4280,12 @@ func TestInterpretDictionaryIndexingAssignmentNew(t *testing.T) {
 		newValue,
 	)
 
+	expectedEntries := interpreter.NewStringValueOrderedMap()
+	expectedEntries.Set("def", interpreter.NewIntValueFromInt64(42))
+	expectedEntries.Set("abc", interpreter.NewIntValueFromInt64(23))
+
 	assert.Equal(t,
-		map[string]interpreter.Value{
-			"def": interpreter.NewIntValueFromInt64(42),
-			"abc": interpreter.NewIntValueFromInt64(23),
-		},
+		expectedEntries,
 		actualDict.Entries,
 	)
 
@@ -4343,10 +4345,11 @@ func TestInterpretDictionaryIndexingAssignmentNil(t *testing.T) {
 		newValue,
 	)
 
+	expectedEntries := interpreter.NewStringValueOrderedMap()
+	expectedEntries.Set("abc", interpreter.NewIntValueFromInt64(23))
+
 	assert.Equal(t,
-		map[string]interpreter.Value{
-			"abc": interpreter.NewIntValueFromInt64(23),
-		},
+		expectedEntries,
 		actualDict.Entries,
 	)
 
@@ -4911,10 +4914,11 @@ func TestInterpretDictionaryRemove(t *testing.T) {
 		actualDict,
 	)
 
+	expectedEntries := interpreter.NewStringValueOrderedMap()
+	expectedEntries.Set("def", interpreter.NewIntValueFromInt64(2))
+
 	assert.Equal(t,
-		map[string]interpreter.Value{
-			"def": interpreter.NewIntValueFromInt64(2),
-		},
+		expectedEntries,
 		actualDict.Entries,
 	)
 
@@ -4962,11 +4966,12 @@ func TestInterpretDictionaryInsert(t *testing.T) {
 		actualDict,
 	)
 
+	expectedEntries := interpreter.NewStringValueOrderedMap()
+	expectedEntries.Set("abc", interpreter.NewIntValueFromInt64(3))
+	expectedEntries.Set("def", interpreter.NewIntValueFromInt64(2))
+
 	assert.Equal(t,
-		map[string]interpreter.Value{
-			"abc": interpreter.NewIntValueFromInt64(3),
-			"def": interpreter.NewIntValueFromInt64(2),
-		},
+		expectedEntries,
 		actualDict.Entries,
 	)
 
@@ -5753,39 +5758,42 @@ func TestInterpretEmitEvent(t *testing.T) {
 	_, err := inter.Invoke("test")
 	require.NoError(t, err)
 
-	transferEventType := inter.Program.Elaboration.GlobalTypes["Transfer"].Type
-	transferAmountEventType := inter.Program.Elaboration.GlobalTypes["TransferAmount"].Type
+	transferEventType := checker.RequireGlobalType(t, inter.Program.Elaboration, "Transfer")
+	transferAmountEventType := checker.RequireGlobalType(t, inter.Program.Elaboration, "TransferAmount")
+
+	members1 := interpreter.NewStringValueOrderedMap()
+	members1.Set("to", interpreter.NewIntValueFromInt64(1))
+	members1.Set("from", interpreter.NewIntValueFromInt64(2))
+
+	members2 := interpreter.NewStringValueOrderedMap()
+	members2.Set("to", interpreter.NewIntValueFromInt64(3))
+	members2.Set("from", interpreter.NewIntValueFromInt64(4))
+
+	members3 := interpreter.NewStringValueOrderedMap()
+	members3.Set("to", interpreter.NewIntValueFromInt64(1))
+	members3.Set("from", interpreter.NewIntValueFromInt64(2))
+	members3.Set("amount", interpreter.NewIntValueFromInt64(100))
 
 	expectedEvents := []*interpreter.CompositeValue{
 		interpreter.NewCompositeValue(
 			TestLocation,
 			TestLocation.QualifiedIdentifier(transferEventType.ID()),
 			common.CompositeKindEvent,
-			map[string]interpreter.Value{
-				"to":   interpreter.NewIntValueFromInt64(1),
-				"from": interpreter.NewIntValueFromInt64(2),
-			},
+			members1,
 			nil,
 		),
 		interpreter.NewCompositeValue(
 			TestLocation,
 			TestLocation.QualifiedIdentifier(transferEventType.ID()),
 			common.CompositeKindEvent,
-			map[string]interpreter.Value{
-				"to":   interpreter.NewIntValueFromInt64(3),
-				"from": interpreter.NewIntValueFromInt64(4),
-			},
+			members2,
 			nil,
 		),
 		interpreter.NewCompositeValue(
 			TestLocation,
 			TestLocation.QualifiedIdentifier(transferAmountEventType.ID()),
 			common.CompositeKindEvent,
-			map[string]interpreter.Value{
-				"to":     interpreter.NewIntValueFromInt64(1),
-				"from":   interpreter.NewIntValueFromInt64(2),
-				"amount": interpreter.NewIntValueFromInt64(100),
-			},
+			members3,
 			nil,
 		),
 	}
@@ -5855,7 +5863,7 @@ func TestInterpretEmitEventParameterTypes(t *testing.T) {
 					TestLocation,
 					"S",
 					common.CompositeKindStructure,
-					map[string]interpreter.Value{},
+					interpreter.NewStringValueOrderedMap(),
 					nil,
 				)
 				v.Functions = map[string]interpreter.FunctionValue{}
@@ -5954,15 +5962,17 @@ func TestInterpretEmitEventParameterTypes(t *testing.T) {
 			_, err := inter.Invoke("test")
 			require.NoError(t, err)
 
-			testType := inter.Program.Elaboration.GlobalTypes["Test"].Type
+			testType := checker.RequireGlobalType(t, inter.Program.Elaboration, "Test")
+
+			members := interpreter.NewStringValueOrderedMap()
+			members.Set("value", value.value)
+
 			expectedEvents := []*interpreter.CompositeValue{
 				interpreter.NewCompositeValue(
 					TestLocation,
 					TestLocation.QualifiedIdentifier(testType.ID()),
 					common.CompositeKindEvent,
-					map[string]interpreter.Value{
-						"value": value.value,
-					},
+					members,
 					nil,
 				),
 			}
@@ -6745,12 +6755,14 @@ func TestInterpretContractAccountFieldUse(t *testing.T) {
 						_ common.Location,
 						_ string,
 						_ common.CompositeKind,
-					) map[string]interpreter.Value {
+					) *interpreter.StringValueOrderedMap {
 						panicFunction := interpreter.NewHostFunctionValue(func(invocation interpreter.Invocation) trampoline.Trampoline {
 							panic(errors.NewUnreachableError())
 						})
-						return map[string]interpreter.Value{
-							"account": interpreter.NewAuthAccountValue(
+						injectedMembers := interpreter.NewStringValueOrderedMap()
+						injectedMembers.Set(
+							"account",
+							interpreter.NewAuthAccountValue(
 								addressValue,
 								func(interpreter *interpreter.Interpreter) interpreter.UInt64Value {
 									return 0
@@ -6761,7 +6773,8 @@ func TestInterpretContractAccountFieldUse(t *testing.T) {
 								interpreter.AuthAccountContractsValue{},
 								&interpreter.BuiltinCompositeValue{},
 							),
-						}
+						)
+						return injectedMembers
 					},
 				),
 			},
@@ -7569,7 +7582,7 @@ func TestInterpretResourceOwnerFieldUse(t *testing.T) {
 
 	valueDeclaration := stdlib.StandardLibraryValue{
 		Name: "account",
-		Type: &sema.AuthAccountType{},
+		Type: sema.AuthAccountType,
 		Value: interpreter.NewAuthAccountValue(
 			addressValue,
 			func(interpreter *interpreter.Interpreter) interpreter.UInt64Value {
@@ -8120,7 +8133,7 @@ func TestInterpretNestedDestroy(t *testing.T) {
 				{
 					Label:          sema.ArgumentLabelNotRequired,
 					Identifier:     "value",
-					TypeAnnotation: sema.NewTypeAnnotation(&sema.AnyStructType{}),
+					TypeAnnotation: sema.NewTypeAnnotation(sema.AnyStructType),
 				},
 			},
 			ReturnTypeAnnotation: sema.NewTypeAnnotation(

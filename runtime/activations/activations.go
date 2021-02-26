@@ -21,13 +21,17 @@
 //
 package activations
 
+import (
+	"github.com/onflow/cadence/runtime/common/orderedmap"
+)
+
 // An Activation is a map of strings to arbitrary values.
 // It can be used to represent an active scope in a program,
 // i.e. it can be used as a symbol table during semantic analysis,
 // or as an activation record during interpretation.
 //
 type Activation struct {
-	entries map[string]interface{}
+	entries *orderedmap.StringInterfaceOrderedMap
 	Depth   int
 	Parent  *Activation
 }
@@ -38,9 +42,8 @@ func NewActivation(parent *Activation) *Activation {
 		depth = parent.Depth + 1
 	}
 	return &Activation{
-		entries: map[string]interface{}{},
-		Depth:   depth,
-		Parent:  parent,
+		Depth:  depth,
+		Parent: parent,
 	}
 }
 
@@ -48,9 +51,11 @@ func NewActivation(parent *Activation) *Activation {
 // It returns nil if no value is found.
 //
 func (a *Activation) Find(name string) interface{} {
-	result, ok := a.entries[name]
-	if ok {
-		return result
+	if a.entries != nil {
+		result, ok := a.entries.Get(name)
+		if ok {
+			return result
+		}
 	}
 
 	if a.Parent != nil {
@@ -63,7 +68,11 @@ func (a *Activation) Find(name string) interface{} {
 // Set sets the given key-value pair in the activation.
 //
 func (a *Activation) Set(name string, value interface{}) {
-	a.entries[name] = value
+	if a.entries == nil {
+		a.entries = orderedmap.NewStringInterfaceOrderedMap()
+	}
+
+	a.entries.Set(name, value)
 }
 
 // ForEach calls the given function for each entry (key-value pair) in the activation.
@@ -75,10 +84,12 @@ func (a *Activation) ForEach(cb func(string, interface{}) error) error {
 
 	for activation != nil {
 
-		for name, v := range activation.entries {
-			err := cb(name, v)
-			if err != nil {
-				return err
+		if activation.entries != nil {
+			for pair := activation.entries.Oldest(); pair != nil; pair = pair.Next() {
+				err := cb(pair.Key, pair.Value)
+				if err != nil {
+					return err
+				}
 			}
 		}
 

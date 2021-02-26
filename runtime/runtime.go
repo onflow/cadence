@@ -893,7 +893,7 @@ func (r *interpreterRuntime) injectedCompositeFieldsHandler(
 		location Location,
 		_ string,
 		compositeKind common.CompositeKind,
-	) map[string]interpreter.Value {
+	) *interpreter.StringValueOrderedMap {
 
 		switch location {
 		case stdlib.CryptoChecker.Location:
@@ -913,15 +913,18 @@ func (r *interpreterRuntime) injectedCompositeFieldsHandler(
 
 				addressValue := interpreter.NewAddressValue(address)
 
-				return map[string]interpreter.Value{
-					"account": r.newAuthAccountValue(
+				injectedMembers := interpreter.NewStringValueOrderedMap()
+				injectedMembers.Set(
+					"account",
+					r.newAuthAccountValue(
 						addressValue,
 						context,
 						runtimeStorage,
 						interpreterOptions,
 						checkerOptions,
 					),
-				}
+				)
+				return injectedMembers
 			}
 		}
 
@@ -1051,7 +1054,8 @@ func (r *interpreterRuntime) emitEvent(
 	fields := make([]exportableValue, len(eventType.ConstructorParameters))
 
 	for i, parameter := range eventType.ConstructorParameters {
-		fields[i] = newExportableValue(event.Fields[parameter.Identifier], inter)
+		value, _ := event.Fields.Get(parameter.Identifier)
+		fields[i] = newExportableValue(value, inter)
 	}
 
 	eventValue := exportableEvent{
@@ -1111,11 +1115,12 @@ func (r *interpreterRuntime) newCreateAccountFunction(
 	checkerOptions []sema.Option,
 ) interpreter.HostFunction {
 	return func(invocation interpreter.Invocation) trampoline.Trampoline {
+
 		payer, ok := invocation.Arguments[0].(interpreter.AuthAccountValue)
 		if !ok {
 			panic(fmt.Sprintf(
-				"%[1]s requires the third argument to be an %[1]s",
-				&sema.AuthAccountType{},
+				"%[1]s requires the first argument (payer) to be an %[1]s",
+				sema.AuthAccountType,
 			))
 		}
 
@@ -1697,7 +1702,7 @@ func (r *interpreterRuntime) newAuthAccountContractsChangeFunction(
 			var contractTypes []*sema.CompositeType
 			var contractInterfaceTypes []*sema.InterfaceType
 
-			for _, variable := range program.Elaboration.GlobalTypes {
+			program.Elaboration.GlobalTypes.Foreach(func(_ string, variable *sema.Variable) {
 				switch ty := variable.Type.(type) {
 				case *sema.CompositeType:
 					if ty.Kind == common.CompositeKindContract {
@@ -1709,7 +1714,7 @@ func (r *interpreterRuntime) newAuthAccountContractsChangeFunction(
 						contractInterfaceTypes = append(contractInterfaceTypes, ty)
 					}
 				}
-			}
+			})
 
 			var deployedType sema.Type
 			var contractType *sema.CompositeType
@@ -2189,26 +2194,40 @@ func (r *interpreterRuntime) newPublicAccountKeys(addressValue interpreter.Addre
 func NewPublicKeyFromValue(publicKey *interpreter.BuiltinCompositeValue) *PublicKey {
 
 	// publicKey field
-	key := publicKey.Fields[sema.PublicKeyPublicKeyField]
+	key, ok := publicKey.Fields.Get(sema.PublicKeyPublicKeyField)
+	if !ok {
+		panic("public key value is not set")
+	}
+
 	byteArray, err := interpreter.ByteArrayValueToByteSlice(key)
 	if err != nil {
 		panic(fmt.Errorf("public key needs to be a byte array. %w", err))
 	}
 
 	// sign algo field
-	signAlgoValue, ok := publicKey.Fields[sema.PublicKeySignAlgoField].(*interpreter.BuiltinCompositeValue)
+	signAlgoField, ok := publicKey.Fields.Get(sema.PublicKeySignAlgoField)
+	if !ok {
+		panic("sign algorithm is not set")
+	}
+
+	signAlgoValue, ok := signAlgoField.(*interpreter.BuiltinCompositeValue)
 	if !ok {
 		panic("sign algorithm needs to be of type `SignAlgorithm`")
 	}
 
-	rawValue, ok := signAlgoValue.Fields[sema.EnumRawValueFieldName].(interpreter.IntValue)
+	rawValue, ok := signAlgoValue.Fields.Get(sema.EnumRawValueFieldName)
+	if !ok {
+		panic("cannot find sign algorithm raw value")
+	}
+
+	signAlgoRawValue, ok := rawValue.(interpreter.IntValue)
 	if !ok {
 		panic("enum raw value needs to be subtype of integer")
 	}
 
 	return &PublicKey{
 		PublicKey: byteArray,
-		SignAlgo:  SignatureAlgorithm(rawValue.ToInt()),
+		SignAlgo:  SignatureAlgorithm(signAlgoRawValue.ToInt()),
 	}
 }
 
@@ -2235,7 +2254,12 @@ func NewHashAlgorithmFromValue(value interpreter.Value) HashAlgorithm {
 		panic(fmt.Sprintf("hash algorithm value must be of type %s", sema.HashAlgorithmType))
 	}
 
-	hashAlgoRawValue, ok := hashAlgoValue.Fields[sema.EnumRawValueFieldName].(interpreter.IntValue)
+	rawValue, ok := hashAlgoValue.Fields.Get(sema.EnumRawValueFieldName)
+	if !ok {
+		panic("cannot find hash algorithm raw value")
+	}
+
+	hashAlgoRawValue, ok := rawValue.(interpreter.IntValue)
 	if !ok {
 		panic("hash algorithm raw value needs to be subtype of integer")
 	}

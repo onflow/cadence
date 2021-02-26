@@ -21,6 +21,7 @@ package interpreter
 import (
 	"fmt"
 	goRuntime "runtime"
+	"sort"
 
 	"github.com/onflow/cadence/fixedpoint"
 	"github.com/onflow/cadence/runtime/activations"
@@ -141,7 +142,7 @@ type InjectedCompositeFieldsHandlerFunc func(
 	location common.Location,
 	qualifiedIdentifier string,
 	compositeKind common.CompositeKind,
-) map[string]Value
+) *StringValueOrderedMap
 
 // ContractValueHandlerFunc is a function that handles contract values.
 //
@@ -198,15 +199,19 @@ type TypeCodes struct {
 }
 
 func (c TypeCodes) Merge(codes TypeCodes) {
-	for typeID, code := range codes.CompositeCodes {
+
+	// Iterating over the maps in a non-deterministic way is OK,
+	// we only copy the values over.
+
+	for typeID, code := range codes.CompositeCodes { //nolint:maprangecheck
 		c.CompositeCodes[typeID] = code
 	}
 
-	for typeID, code := range codes.InterfaceCodes {
+	for typeID, code := range codes.InterfaceCodes { //nolint:maprangecheck
 		c.InterfaceCodes[typeID] = code
 	}
 
-	for typeID, code := range codes.TypeRequirementCodes {
+	for typeID, code := range codes.TypeRequirementCodes { //nolint:maprangecheck
 		c.TypeRequirementCodes[typeID] = code
 	}
 }
@@ -756,7 +761,11 @@ func (interpreter *Interpreter) prepareInvokeVariable(
 		}
 	}
 
-	ty := interpreter.Program.Elaboration.GlobalValues[functionName].Type
+	functionVariable, ok := interpreter.Program.Elaboration.GlobalValues.Get(functionName)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+	ty := functionVariable.Type
 
 	// function must be invokable
 	invokableType, ok := ty.(sema.InvokableType)
@@ -819,8 +828,8 @@ func (interpreter *Interpreter) prepareInvoke(
 	for i, argument := range arguments {
 		parameterType := parameters[i].TypeAnnotation.Type
 		// TODO: value type is not known, reject for now
-		switch parameterType.(type) {
-		case *sema.AnyStructType, *sema.AnyResourceType:
+		switch parameterType {
+		case sema.AnyStructType, sema.AnyResourceType:
 			return nil, NotInvokableError{
 				Value: functionValue,
 			}
@@ -2178,7 +2187,7 @@ func (interpreter *Interpreter) functionValueInvocationTrampoline(
 	arguments []Value,
 	argumentTypes []sema.Type,
 	parameterTypes []sema.Type,
-	typeParameterTypes map[*sema.TypeParameter]sema.Type,
+	typeParameterTypes *sema.TypeParameterTypeOrderedMap,
 	invocationRange ast.Range,
 ) Trampoline {
 
@@ -2429,7 +2438,7 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 	// Evaluate nested declarations in a new scope, so values
 	// of nested declarations won't be visible after the containing declaration
 
-	members := map[string]Value{}
+	members := NewStringValueOrderedMap()
 
 	(func() {
 		interpreter.activations.PushNewWithCurrent()
@@ -2467,7 +2476,7 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 				interpreter.declareCompositeValue(nestedCompositeDeclaration, lexicalScope)
 
 			memberIdentifier := nestedCompositeDeclaration.Identifier.Identifier
-			members[memberIdentifier] = nestedValue
+			members.Set(memberIdentifier, nestedValue)
 		}
 	})()
 
@@ -2479,7 +2488,7 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 			func(invocation Invocation) Trampoline {
 				for i, argument := range invocation.Arguments {
 					parameter := compositeType.ConstructorParameters[i]
-					invocation.Self.Fields[parameter.Identifier] = argument
+					invocation.Self.Fields.Set(parameter.Identifier, argument)
 				}
 				return Done{}
 			},
@@ -2521,7 +2530,11 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 
 		// Wrap functions
 
-		for name, functionWrapper := range code.FunctionWrappers {
+		// Iterating over the map in a non-deterministic way is OK,
+		// we only apply the function wrapper to each function,
+		// the order does not matter.
+
+		for name, functionWrapper := range code.FunctionWrappers { //nolint:maprangecheck
 			functions[name] = functionWrapper(functions[name])
 		}
 	}
@@ -2560,7 +2573,7 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 		func(invocation Invocation) Trampoline {
 
 			// Load injected fields
-			var injectedFields map[string]Value
+			var injectedFields *StringValueOrderedMap
 			if interpreter.injectedCompositeFieldsHandler != nil {
 				injectedFields = interpreter.injectedCompositeFieldsHandler(
 					interpreter,
@@ -2570,7 +2583,7 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 				)
 			}
 
-			fields := map[string]Value{}
+			fields := NewStringValueOrderedMap()
 
 			if declaration.CompositeKind == common.CompositeKindResource {
 
@@ -2585,7 +2598,7 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 					panic(err)
 				}
 
-				fields[sema.ResourceUUIDFieldName] = UInt64Value(uuid)
+				fields.Set(sema.ResourceUUIDFieldName, UInt64Value(uuid))
 			}
 
 			value := &CompositeValue{
@@ -2679,7 +2692,7 @@ func (interpreter *Interpreter) declareEnumConstructor(
 	caseCount := len(enumCases)
 	caseValues := make([]*CompositeValue, caseCount)
 
-	constructorMembers := make(map[string]Value, caseCount)
+	constructorMembers := NewStringValueOrderedMap()
 
 	for i, enumCase := range enumCases {
 
@@ -2689,9 +2702,8 @@ func (interpreter *Interpreter) declareEnumConstructor(
 			compositeType.EnumRawType,
 		)
 
-		caseValueFields := map[string]Value{
-			sema.EnumRawValueFieldName: rawValue,
-		}
+		caseValueFields := NewStringValueOrderedMap()
+		caseValueFields.Set(sema.EnumRawValueFieldName, rawValue)
 
 		caseValue := &CompositeValue{
 			Location:            location,
@@ -2703,7 +2715,7 @@ func (interpreter *Interpreter) declareEnumConstructor(
 			modified: true,
 		}
 		caseValues[i] = caseValue
-		constructorMembers[enumCase.Identifier.Identifier] = caseValue
+		constructorMembers.Set(enumCase.Identifier.Identifier, caseValue)
 	}
 
 	constructor := NewHostFunctionValue(
@@ -3392,8 +3404,20 @@ func (interpreter *Interpreter) importResolvedLocation(resolvedLocation sema.Res
 		variables = subInterpreter.Globals
 	}
 
-	// set variables for all imported values
-	for name, variable := range variables {
+	// Gather all variable names and sort them lexicographically
+
+	var names []string
+
+	for name := range variables { //nolint:maprangecheck
+		names = append(names, name)
+	}
+
+	// Set variables for all imported values in lexicographic order
+
+	sort.Strings(names)
+
+	for _, name := range names {
+		variable := variables[name]
 
 		// don't import predeclared values
 		if subInterpreter.Program != nil {
@@ -3403,7 +3427,7 @@ func (interpreter *Interpreter) importResolvedLocation(resolvedLocation sema.Res
 		}
 
 		// don't import base values
-		if _, ok := sema.BaseValues[name]; ok {
+		if _, ok := sema.BaseValues.Get(name); ok {
 			continue
 		}
 
@@ -3443,7 +3467,7 @@ func (interpreter *Interpreter) declareTransactionEntryPoint(declaration *ast.Tr
 
 	self := &CompositeValue{
 		Location: interpreter.Location,
-		Fields:   map[string]Value{},
+		Fields:   NewStringValueOrderedMap(),
 		modified: true,
 	}
 
@@ -3743,13 +3767,13 @@ func (interpreter *Interpreter) defineTypeFunction() {
 		"Type",
 		NewHostFunctionValue(
 			func(invocation Invocation) Trampoline {
-				// `Invocation.TypeParameterTypes` is a map, so get the first
-				// element / type by iterating over the values of the map.
 
-				var ty sema.Type
-				for _, ty = range invocation.TypeParameterTypes {
-					break
+				typeParameterPair := invocation.TypeParameterTypes.Oldest()
+				if typeParameterPair == nil {
+					panic(errors.NewUnreachableError())
 				}
+
+				ty := typeParameterPair.Value
 
 				result := TypeValue{
 					Type: ConvertSemaToStaticType(ty),
@@ -3782,47 +3806,35 @@ func (interpreter *Interpreter) newConverterFunction(converter ValueConverter) F
 func IsSubType(subType DynamicType, superType sema.Type) bool {
 	switch typedSubType := subType.(type) {
 	case MetaTypeDynamicType:
-		switch superType.(type) {
-		case *sema.MetaType, *sema.AnyStructType:
+		switch superType {
+		case sema.AnyStructType, sema.MetaType:
 			return true
-
-		default:
-			return false
 		}
 
 	case VoidDynamicType:
-		if _, ok := superType.(*sema.AnyStructType); ok {
+		switch superType {
+		case sema.AnyStructType, sema.VoidType:
 			return true
 		}
 
-		return superType == sema.VoidType
-
 	case StringDynamicType:
-		switch superType.(type) {
-		case *sema.StringType, *sema.AnyStructType:
+		switch superType {
+		case sema.AnyStructType, sema.StringType:
 			return true
-
-		default:
-			return false
 		}
 
 	case BoolDynamicType:
-		switch superType.(type) {
-		case *sema.BoolType, *sema.AnyStructType:
+		switch superType {
+		case sema.AnyStructType, sema.BoolType:
 			return true
-
-		default:
-			return false
 		}
 
 	case AddressDynamicType:
-		switch superType.(type) {
-		case *sema.AddressType, *sema.AnyStructType:
+		if _, ok := superType.(*sema.AddressType); ok {
 			return true
-
-		default:
-			return false
 		}
+
+		return superType == sema.AnyStructType
 
 	case NumberDynamicType:
 		return sema.IsSubType(typedSubType.StaticType, superType)
@@ -3840,11 +3852,13 @@ func IsSubType(subType DynamicType, superType sema.Type) bool {
 		case *sema.ConstantSizedType:
 			superTypeElementType = typedSuperType.Type
 
-		case *sema.AnyStructType, *sema.AnyResourceType:
-			return true
-
 		default:
-			return false
+			switch superType {
+			case sema.AnyStructType, sema.AnyResourceType:
+				return true
+			default:
+				return false
+			}
 		}
 
 		for _, elementType := range typedSubType.ElementTypes {
@@ -3857,8 +3871,7 @@ func IsSubType(subType DynamicType, superType sema.Type) bool {
 
 	case DictionaryDynamicType:
 
-		switch typedSuperType := superType.(type) {
-		case *sema.DictionaryType:
+		if typedSuperType, ok := superType.(*sema.DictionaryType); ok {
 			for _, entryTypes := range typedSubType.EntryTypes {
 				if !IsSubType(entryTypes.KeyType, typedSuperType.KeyType) ||
 					!IsSubType(entryTypes.ValueType, typedSuperType.ValueType) {
@@ -3868,41 +3881,35 @@ func IsSubType(subType DynamicType, superType sema.Type) bool {
 			}
 
 			return true
+		}
 
-		case *sema.AnyStructType, *sema.AnyResourceType:
+		switch superType {
+		case sema.AnyStructType, sema.AnyResourceType:
 			return true
-
-		default:
-			return false
 		}
 
 	case NilDynamicType:
-		switch superType.(type) {
-		case *sema.OptionalType, *sema.AnyStructType, *sema.AnyResourceType:
+		if _, ok := superType.(*sema.OptionalType); ok {
 			return true
+		}
 
-		default:
-			return false
+		switch superType {
+		case sema.AnyStructType, sema.AnyResourceType:
+			return true
 		}
 
 	case SomeDynamicType:
-		switch typedSuperType := superType.(type) {
-		case *sema.OptionalType:
+		if typedSuperType, ok := superType.(*sema.OptionalType); ok {
 			return IsSubType(typedSubType.InnerType, typedSuperType.Type)
+		}
 
-		case *sema.AnyStructType, *sema.AnyResourceType:
+		switch superType {
+		case sema.AnyStructType, sema.AnyResourceType:
 			return true
-
-		default:
-			return false
 		}
 
 	case ReferenceDynamicType:
-		switch typedSuperType := superType.(type) {
-		case *sema.AnyStructType:
-			return true
-
-		case *sema.ReferenceType:
+		if typedSuperType, ok := superType.(*sema.ReferenceType); ok {
 			if typedSubType.Authorized() {
 				return IsSubType(typedSubType.InnerType(), typedSuperType.Type)
 			} else {
@@ -3910,17 +3917,12 @@ func IsSubType(subType DynamicType, superType sema.Type) bool {
 				// all invalid cases have already been rejected statically
 				return true
 			}
-
-		default:
-			return false
 		}
 
-	case CapabilityDynamicType:
-		switch typedSuperType := superType.(type) {
-		case *sema.AnyStructType:
-			return true
+		return superType == sema.AnyStructType
 
-		case *sema.CapabilityType:
+	case CapabilityDynamicType:
+		if typedSuperType, ok := superType.(*sema.CapabilityType); ok {
 
 			if typedSuperType.BorrowType != nil {
 
@@ -3947,95 +3949,58 @@ func IsSubType(subType DynamicType, superType sema.Type) bool {
 
 		}
 
-	case PublicPathDynamicType:
-		if _, ok := superType.(*sema.AnyStructType); ok {
-			return true
-		}
+		return superType == sema.AnyStructType
 
+	case PublicPathDynamicType:
 		switch superType {
-		case sema.PublicPathType, sema.CapabilityPathType, sema.PathType:
+		case sema.PublicPathType, sema.CapabilityPathType, sema.PathType, sema.AnyStructType:
 			return true
-		default:
-			return false
 		}
 
 	case PrivatePathDynamicType:
-		if _, ok := superType.(*sema.AnyStructType); ok {
-			return true
-		}
-
 		switch superType {
-		case sema.PrivatePathType, sema.CapabilityPathType, sema.PathType:
+		case sema.PrivatePathType, sema.CapabilityPathType, sema.PathType, sema.AnyStructType:
 			return true
-		default:
-			return false
 		}
 
 	case StoragePathDynamicType:
-		if _, ok := superType.(*sema.AnyStructType); ok {
-			return true
-		}
-
 		switch superType {
-		case sema.StoragePathType, sema.PathType:
+		case sema.StoragePathType, sema.PathType, sema.AnyStructType:
 			return true
-		default:
-			return false
 		}
 
 	case PublicAccountDynamicType:
-		switch superType.(type) {
-		case *sema.PublicAccountType, *sema.AnyStructType:
+		switch superType {
+		case sema.AnyStructType, sema.PublicAccountType:
 			return true
-
-		default:
-			return false
 		}
 
 	case AuthAccountDynamicType:
-		switch superType.(type) {
-		case *sema.AuthAccountType, *sema.AnyStructType:
+		switch superType {
+		case sema.AnyStructType, sema.AuthAccountType:
 			return true
-
-		default:
-			return false
 		}
 
 	case DeployedContractDynamicType:
-		switch superType.(type) {
-		case *sema.DeployedContractType, *sema.AnyStructType:
+		switch superType {
+		case sema.AnyStructType, sema.DeployedContractType:
 			return true
-
-		default:
-			return false
 		}
 
 	case AuthAccountContractsDynamicType:
-		switch superType.(type) {
-		case *sema.AuthAccountContractsType, *sema.AnyStructType:
+		switch superType {
+		case sema.AnyStructType, sema.AuthAccountContractsType:
 			return true
-
-		default:
-			return false
 		}
 
 	case BlockDynamicType:
-		switch superType.(type) {
-		case *sema.BlockType, *sema.AnyStructType:
+		switch superType {
+		case sema.AnyStructType, sema.BlockType:
 			return true
-
-		default:
-			return false
 		}
 
 	case BuiltinCompositeDynamicType:
-		switch superType.(type) {
-		case *sema.BuiltinCompositeType, *sema.AnyStructType:
-			return true
-
-		default:
-			return false
-		}
+		return sema.IsSubType(typedSubType.StaticType, superType)
 	}
 
 	return false
@@ -4111,13 +4076,12 @@ func (interpreter *Interpreter) authAccountReadFunction(addressValue AddressValu
 			// If there is value stored for the given path,
 			// check that it satisfies the type given as the type argument.
 
-			// `Invocation.TypeParameterTypes` is a map, so get the first
-			// element / type by iterating over the values of the map.
-
-			var ty sema.Type
-			for _, ty = range invocation.TypeParameterTypes {
-				break
+			typeParameterPair := invocation.TypeParameterTypes.Oldest()
+			if typeParameterPair == nil {
+				panic(errors.NewUnreachableError())
 			}
+
+			ty := typeParameterPair.Value
 
 			dynamicType := value.Value.DynamicType(interpreter)
 			if !IsSubType(dynamicType, ty) {
@@ -4158,13 +4122,12 @@ func (interpreter *Interpreter) authAccountBorrowFunction(addressValue AddressVa
 			// If there is value stored for the given path,
 			// check that it satisfies the type given as the type argument.
 
-			// `Invocation.TypeParameterTypes` is a map, so get the first
-			// element / type by iterating over the values of the map.
-
-			var ty sema.Type
-			for _, ty = range invocation.TypeParameterTypes {
-				break
+			typeParameterPair := invocation.TypeParameterTypes.Oldest()
+			if typeParameterPair == nil {
+				panic(errors.NewUnreachableError())
 			}
+
+			ty := typeParameterPair.Value
 
 			referenceType := ty.(*sema.ReferenceType)
 
@@ -4192,18 +4155,12 @@ func (interpreter *Interpreter) authAccountLinkFunction(addressValue AddressValu
 
 		address := addressValue.ToAddress()
 
-		// `Invocation.TypeParameterTypes` is a map, so get the first
-		// element / type by iterating over the values of the map.
-
-		var borrowType *sema.ReferenceType
-		for _, ty := range invocation.TypeParameterTypes {
-			borrowType = ty.(*sema.ReferenceType)
-			break
-		}
-
-		if borrowType == nil {
+		typeParameterPair := invocation.TypeParameterTypes.Oldest()
+		if typeParameterPair == nil {
 			panic(errors.NewUnreachableError())
 		}
+
+		borrowType := typeParameterPair.Value.(*sema.ReferenceType)
 
 		newCapabilityPath := invocation.Arguments[0].(PathValue)
 		targetPath := invocation.Arguments[1].(PathValue)
@@ -4305,13 +4262,10 @@ func (interpreter *Interpreter) capabilityBorrowFunction(
 		func(invocation Invocation) Trampoline {
 
 			if borrowType == nil {
-
-				// `Invocation.TypeParameterTypes` is a map, so get the first
-				// element / type by iterating over the values of the map.
-
-				for _, ty := range invocation.TypeParameterTypes {
+				typeParameterPair := invocation.TypeParameterTypes.Oldest()
+				if typeParameterPair != nil {
+					ty := typeParameterPair.Value
 					borrowType = ty.(*sema.ReferenceType)
-					break
 				}
 			}
 
@@ -4355,12 +4309,10 @@ func (interpreter *Interpreter) capabilityCheckFunction(
 
 			if borrowType == nil {
 
-				// `Invocation.TypeParameterTypes` is a map, so get the first
-				// element / type by iterating over the values of the map.
-
-				for _, ty := range invocation.TypeParameterTypes {
+				typeParameterPair := invocation.TypeParameterTypes.Oldest()
+				if typeParameterPair != nil {
+					ty := typeParameterPair.Value
 					borrowType = ty.(*sema.ReferenceType)
-					break
 				}
 			}
 

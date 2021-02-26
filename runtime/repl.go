@@ -223,14 +223,17 @@ type REPLSuggestion struct {
 func (r *REPL) Suggestions() (result []REPLSuggestion) {
 	names := map[string]string{}
 
-	for name, variable := range r.checker.Elaboration.GlobalValues {
+	r.checker.Elaboration.GlobalValues.Foreach(func(name string, variable *sema.Variable) {
 		if names[name] != "" {
-			continue
+			return
 		}
 		names[name] = variable.Type.String()
-	}
+	})
 
-	for name, description := range names {
+	// Iterating over the dictionary of names is safe,
+	// as the suggested entries are sorted afterwards
+
+	for name, description := range names { //nolint:maprangecheck
 		result = append(result, REPLSuggestion{
 			Name:        name,
 			Description: description,

@@ -57,7 +57,7 @@ func TestCheckStorable(t *testing.T) {
 			&sema.VariableSizedType{Type: ty},
 			&sema.ConstantSizedType{Type: ty, Size: 1},
 			&sema.DictionaryType{
-				KeyType:   &sema.BoolType{},
+				KeyType:   sema.BoolType,
 				ValueType: ty,
 			},
 		}
@@ -76,7 +76,7 @@ func TestCheckStorable(t *testing.T) {
 			nestedTypes = append(nestedTypes,
 				&sema.DictionaryType{
 					KeyType:   ty,
-					ValueType: &sema.BoolType{},
+					ValueType: sema.BoolType,
 				},
 			)
 		}
@@ -97,12 +97,12 @@ func TestCheckStorable(t *testing.T) {
 		&sema.AddressType{},
 		sema.PathType,
 		&sema.CapabilityType{},
-		&sema.StringType{},
-		&sema.BoolType{},
-		&sema.MetaType{},
-		&sema.CharacterType{},
-		&sema.AnyStructType{},
-		&sema.AnyResourceType{},
+		sema.StringType,
+		sema.BoolType,
+		sema.MetaType,
+		sema.CharacterType,
+		sema.AnyStructType,
+		sema.AnyResourceType,
 	)
 
 	for _, storableType := range storableTypes {
@@ -118,8 +118,8 @@ func TestCheckStorable(t *testing.T) {
 		},
 		sema.NeverType,
 		sema.VoidType,
-		&sema.AuthAccountType{},
-		&sema.PublicAccountType{},
+		sema.AuthAccountType,
+		sema.PublicAccountType,
 	}
 
 	// Capabilities of non-storable types are storable
@@ -137,7 +137,7 @@ func TestCheckStorable(t *testing.T) {
 
 	nonStorableTypes = append(nonStorableTypes,
 		&sema.ReferenceType{
-			Type: &sema.BoolType{},
+			Type: sema.BoolType,
 		},
 	)
 

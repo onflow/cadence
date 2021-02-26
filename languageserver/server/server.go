@@ -148,7 +148,7 @@ type AddressContractNamesResolver func(address common.Address) ([]string, error)
 
 // StringImportResolver is a function that is used to resolve string imports
 //
-type StringImportResolver func(mainPath string, location common.StringLocation) (string, error)
+type StringImportResolver func(location common.StringLocation) (string, error)
 
 // CodeLensProvider is a function that is used to provide code lenses for the given checker
 //
@@ -1189,7 +1189,7 @@ func (s *Server) getDiagnostics(
 	var checker *sema.Checker
 	checker, diagnosticsErr = sema.NewChecker(
 		program,
-		common.StringLocation(uri),
+		uriToLocation(uri),
 		sema.WithPredeclaredValues(valueDeclarations),
 		sema.WithPredeclaredTypes(typeDeclarations),
 		sema.WithLocationHandler(
@@ -1257,36 +1257,57 @@ func (s *Server) getDiagnostics(
 				}
 
 				return resolvedLocations, nil
-			}),
+			},
+		),
 		sema.WithOriginsAndOccurrencesEnabled(true),
-		sema.WithImportHandler(func(checker *sema.Checker, location common.Location) (sema.Import, *sema.CheckerError) {
-			switch location {
-			case stdlib.CryptoChecker.Location:
-				return sema.CheckerImport{
-					Checker: stdlib.CryptoChecker,
-				}, nil
+		sema.WithImportHandler(
+			func(checker *sema.Checker, importedLocation common.Location) (sema.Import, error) {
 
-			default:
-				var program *ast.Program
-				var err error
-				checker, checkerErr := checker.EnsureLoaded(location, func() *ast.Program {
-					program, err = s.resolveImport(mainPath, location)
-					return program
-				})
-				// TODO: improve
-				if err != nil {
-					return nil, &sema.CheckerError{
-						Errors: []error{err},
+				switch importedLocation {
+				case stdlib.CryptoChecker.Location:
+					return sema.ElaborationImport{
+						Elaboration: stdlib.CryptoChecker.Elaboration,
+					}, nil
+
+				default:
+
+					if isPathLocation(importedLocation) {
+						// import may be a relative path and therefore should be normalized
+						// against the current location
+						importedLocation = normalizePathLocation(checker.Location, importedLocation)
+
+						if checker.Location == importedLocation {
+							return nil, &sema.CheckerError{
+								Errors: []error{fmt.Errorf("cannot import current file: %s", importedLocation)},
+							}
+						}
 					}
+
+					importedProgram, err := s.resolveImport(importedLocation)
+					if err != nil {
+						return nil, &sema.CheckerError{
+							Errors: []error{err},
+						}
+					}
+
+					importedChecker, err := checker.SubChecker(importedProgram, importedLocation)
+					if err != nil {
+						return nil, &sema.CheckerError{
+							Errors: []error{err},
+						}
+					}
+
+					err = importedChecker.Check()
+					if err != nil {
+						return nil, err
+					}
+
+					return sema.ElaborationImport{
+						Elaboration: importedChecker.Elaboration,
+					}, nil
 				}
-				if checkerErr != nil {
-					return nil, checkerErr
-				}
-				return sema.CheckerImport{
-					Checker: checker,
-				}, nil
-			}
-		}),
+			},
+		),
 	)
 	if diagnosticsErr != nil {
 		return
@@ -1390,13 +1411,7 @@ func parse(conn protocol.Conn, code, location string) (*ast.Program, error) {
 	return program, err
 }
 
-func (s *Server) resolveImport(
-	mainPath string,
-	location common.Location,
-) (
-	program *ast.Program,
-	err error,
-) {
+func (s *Server) resolveImport(location common.Location) (program *ast.Program, err error) {
 	// NOTE: important, *DON'T* return an error when a location type
 	// is not supported: the import location can simply not be resolved,
 	// no error occurred while resolving it.
@@ -1411,7 +1426,8 @@ func (s *Server) resolveImport(
 		if s.resolveStringImport == nil {
 			return nil, nil
 		}
-		code, err = s.resolveStringImport(mainPath, loc)
+
+		code, err = s.resolveStringImport(loc)
 
 	case common.AddressLocation:
 		if s.resolveAddressImport == nil {

@@ -19,7 +19,8 @@
 package runtime
 
 import (
-	"fmt"
+	"bytes"
+	"sort"
 	"time"
 
 	"github.com/onflow/cadence"
@@ -170,7 +171,7 @@ func (s *runtimeStorage) readValue(
 				&address,
 				[]string{key},
 				version,
-				s.decodeCallback,
+				nil,
 			)
 		},
 		s.runtimeInterface,
@@ -240,7 +241,10 @@ func (s *runtimeStorage) writeCached(inter *interpreter.Interpreter) {
 
 	var items []writeItem
 
-	for fullKey, entry := range s.cache {
+	// First, iterate over the cache
+	// and determine which items have to be written
+
+	for fullKey, entry := range s.cache { //nolint:maprangecheck
 
 		if !entry.MustWrite && entry.Value != nil && !entry.Value.IsModified() {
 			continue
@@ -250,17 +254,43 @@ func (s *runtimeStorage) writeCached(inter *interpreter.Interpreter) {
 			storageKey: fullKey,
 			value:      entry.Value,
 		})
+	}
 
-		if s.highLevelStorageEnabled {
+	// Order the items by storage key in lexicographic order
+
+	sort.Slice(items, func(i, j int) bool {
+		a := items[i].storageKey
+		b := items[j].storageKey
+
+		if bytes.Compare(a.Address[:], b.Address[:]) < 0 {
+			return true
+		}
+
+		if a.Key < b.Key {
+			return true
+		}
+
+		return false
+	})
+
+	// Write cache entries in order
+
+	if s.highLevelStorageEnabled {
+		for _, entry := range items {
+
 			var err error
 
 			var value cadence.Value
-			if entry.Value != nil {
-				value = exportValueWithInterpreter(entry.Value, inter, exportResults{})
+			if entry.value != nil {
+				value = exportValueWithInterpreter(entry.value, inter, exportResults{})
 			}
 
 			wrapPanic(func() {
-				err = s.highLevelStorage.SetCadenceValue(fullKey.Address, fullKey.Key, value)
+				err = s.highLevelStorage.SetCadenceValue(
+					entry.storageKey.Address,
+					entry.storageKey.Key,
+					value,
+				)
 			})
 			if err != nil {
 				panic(err)
@@ -282,20 +312,20 @@ func (s *runtimeStorage) writeCached(inter *interpreter.Interpreter) {
 				panic(err)
 			}
 
-			for deferredKey, deferredValue := range deferrals.Values {
+			for _, deferredValue := range deferrals.Values {
 
 				deferredStorageKey := StorageKey{
 					Address: item.storageKey.Address,
-					Key:     deferredKey,
+					Key:     deferredValue.Key,
 				}
 
-				if !deferredValue.IsModified() {
+				if !deferredValue.Value.IsModified() {
 					continue
 				}
 
 				items = append(items, writeItem{
 					storageKey: deferredStorageKey,
-					value:      deferredValue,
+					value:      deferredValue.Value,
 				})
 			}
 
@@ -342,7 +372,7 @@ func (s *runtimeStorage) encodeValue(
 				value,
 				[]string{path},
 				true,
-				s.prepareCallback,
+				nil,
 			)
 		},
 		s.runtimeInterface,
@@ -369,37 +399,6 @@ func (s *runtimeStorage) move(
 
 	// NOTE: not prefix with magic, as data is moved, so might already have it
 	err = s.runtimeInterface.SetValue(newOwner[:], []byte(newKey), data)
-	if err != nil {
-		panic(err)
-	}
-}
-
-func (s *runtimeStorage) decodeCallback(value interface{}, path []string) {
-	logMessage := fmt.Sprintf(
-		"decoding value for key %s: %T",
-		path,
-		value,
-	)
-	var err error
-	wrapPanic(func() {
-		err = s.runtimeInterface.ImplementationDebugLog(logMessage)
-	})
-	if err != nil {
-		panic(err)
-	}
-
-}
-
-func (s *runtimeStorage) prepareCallback(value interpreter.Value, path []string) {
-	logMessage := fmt.Sprintf(
-		"encoding value for key %s: %T",
-		path,
-		value,
-	)
-	var err error
-	wrapPanic(func() {
-		err = s.runtimeInterface.ImplementationDebugLog(logMessage)
-	})
 	if err != nil {
 		panic(err)
 	}

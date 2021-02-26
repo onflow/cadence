@@ -96,11 +96,11 @@ func TestCheckEventDeclaration(t *testing.T) {
 
 		validTypes := append(
 			[]sema.Type{
-				&sema.StringType{},
-				&sema.CharacterType{},
-				&sema.BoolType{},
+				sema.StringType,
+				sema.CharacterType,
+				sema.BoolType,
 				&sema.AddressType{},
-				&sema.MetaType{},
+				sema.MetaType,
 				sema.PathType,
 				sema.StoragePathType,
 				sema.PublicPathType,
@@ -118,7 +118,7 @@ func TestCheckEventDeclaration(t *testing.T) {
 				&sema.VariableSizedType{Type: ty},
 				&sema.ConstantSizedType{Type: ty},
 				&sema.DictionaryType{
-					KeyType:   &sema.StringType{},
+					KeyType:   sema.StringType,
 					ValueType: ty,
 				},
 			)
@@ -127,7 +127,7 @@ func TestCheckEventDeclaration(t *testing.T) {
 				tests = append(tests,
 					&sema.DictionaryType{
 						KeyType:   ty,
-						ValueType: &sema.StringType{},
+						ValueType: sema.StringType,
 					},
 				)
 			}

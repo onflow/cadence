@@ -29,11 +29,11 @@ func (checker *Checker) VisitWhileStatement(statement *ast.WhileStatement) ast.R
 	testType := testExpression.Accept(checker).(Type)
 
 	if !testType.IsInvalidType() &&
-		!IsSubType(testType, &BoolType{}) {
+		!IsSubType(testType, BoolType) {
 
 		checker.report(
 			&TypeMismatchError{
-				ExpectedType: &BoolType{},
+				ExpectedType: BoolType,
 				ActualType:   testType,
 				Range:        ast.NewRangeFromPositioned(testExpression),
 			},

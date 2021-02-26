@@ -42,8 +42,8 @@ func TestCheckMetaType(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t,
-			&sema.MetaType{},
-			checker.Elaboration.GlobalValues["type"].Type,
+			sema.MetaType,
+			RequireGlobalValue(t, checker.Elaboration, "type"),
 		)
 	})
 
@@ -59,8 +59,8 @@ func TestCheckMetaType(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t,
-			&sema.MetaType{},
-			checker.Elaboration.GlobalValues["type"].Type,
+			sema.MetaType,
+			RequireGlobalValue(t, checker.Elaboration, "type"),
 		)
 	})
 }
@@ -130,8 +130,8 @@ func TestCheckIsInstance(t *testing.T) {
 			if testCase.valid {
 				require.NoError(t, err)
 				assert.Equal(t,
-					&sema.BoolType{},
-					checker.Elaboration.GlobalValues["result"].Type,
+					sema.BoolType,
+					RequireGlobalValue(t, checker.Elaboration, "result"),
 				)
 			} else {
 				require.Error(t, err)
@@ -192,8 +192,8 @@ func TestCheckGetType(t *testing.T) {
 
 			require.NoError(t, err)
 			assert.Equal(t,
-				&sema.MetaType{},
-				checker.Elaboration.GlobalValues["result"].Type,
+				sema.MetaType,
+				RequireGlobalValue(t, checker.Elaboration, "result"),
 			)
 		})
 	}

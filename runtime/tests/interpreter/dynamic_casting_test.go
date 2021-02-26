@@ -82,7 +82,7 @@ func TestInterpretDynamicCastingNumber(t *testing.T) {
 				t.Run(test.ty.String(), func(t *testing.T) {
 
 					types := []sema.Type{
-						&sema.AnyStructType{},
+						sema.AnyStructType,
 						test.ty,
 					}
 					for _, fromType := range types {
@@ -125,8 +125,8 @@ func TestInterpretDynamicCastingNumber(t *testing.T) {
 						}
 
 						for _, otherType := range []sema.Type{
-							&sema.BoolType{},
-							&sema.StringType{},
+							sema.BoolType,
+							sema.StringType,
 							sema.VoidType,
 						} {
 
@@ -174,7 +174,7 @@ func TestInterpretDynamicCastingVoid(t *testing.T) {
 	t.Parallel()
 
 	types := []sema.Type{
-		&sema.AnyStructType{},
+		sema.AnyStructType,
 		sema.VoidType,
 	}
 
@@ -216,8 +216,8 @@ func TestInterpretDynamicCastingVoid(t *testing.T) {
 				}
 
 				for _, otherType := range []sema.Type{
-					&sema.BoolType{},
-					&sema.StringType{},
+					sema.BoolType,
+					sema.StringType,
 					&sema.IntType{},
 				} {
 
@@ -262,8 +262,8 @@ func TestInterpretDynamicCastingString(t *testing.T) {
 	t.Parallel()
 
 	types := []sema.Type{
-		&sema.AnyStructType{},
-		&sema.StringType{},
+		sema.AnyStructType,
+		sema.StringType,
 	}
 
 	for operation, returnsOptional := range dynamicCastingOperations {
@@ -302,7 +302,7 @@ func TestInterpretDynamicCastingString(t *testing.T) {
 				}
 
 				for _, otherType := range []sema.Type{
-					&sema.BoolType{},
+					sema.BoolType,
 					sema.VoidType,
 					&sema.IntType{},
 				} {
@@ -347,8 +347,8 @@ func TestInterpretDynamicCastingBool(t *testing.T) {
 	t.Parallel()
 
 	types := []sema.Type{
-		&sema.AnyStructType{},
-		&sema.BoolType{},
+		sema.AnyStructType,
+		sema.BoolType,
 	}
 
 	for operation, returnsOptional := range dynamicCastingOperations {
@@ -387,7 +387,7 @@ func TestInterpretDynamicCastingBool(t *testing.T) {
 				}
 
 				for _, otherType := range []sema.Type{
-					&sema.StringType{},
+					sema.StringType,
 					sema.VoidType,
 					&sema.IntType{},
 				} {
@@ -432,7 +432,7 @@ func TestInterpretDynamicCastingAddress(t *testing.T) {
 	t.Parallel()
 
 	types := []sema.Type{
-		&sema.AnyStructType{},
+		sema.AnyStructType,
 		&sema.AddressType{},
 	}
 
@@ -476,10 +476,10 @@ func TestInterpretDynamicCastingAddress(t *testing.T) {
 				}
 
 				for _, otherType := range []sema.Type{
-					&sema.StringType{},
+					sema.StringType,
 					sema.VoidType,
 					&sema.IntType{},
-					&sema.BoolType{},
+					sema.BoolType,
 				} {
 
 					t.Run(fmt.Sprintf("invalid: from %s to %s", fromType, otherType), func(t *testing.T) {
@@ -600,10 +600,10 @@ func TestInterpretDynamicCastingStruct(t *testing.T) {
 				})
 
 				for _, otherType := range []sema.Type{
-					&sema.StringType{},
+					sema.StringType,
 					sema.VoidType,
 					&sema.IntType{},
-					&sema.BoolType{},
+					sema.BoolType,
 				} {
 
 					t.Run(fmt.Sprintf("invalid: from %s to %s", fromType, otherType), func(t *testing.T) {
@@ -1005,8 +1005,8 @@ func TestInterpretDynamicCastingSome(t *testing.T) {
 
 	types := []sema.Type{
 		&sema.OptionalType{Type: &sema.IntType{}},
-		&sema.OptionalType{Type: &sema.AnyStructType{}},
-		&sema.AnyStructType{},
+		&sema.OptionalType{Type: sema.AnyStructType},
+		sema.AnyStructType,
 	}
 
 	for operation, returnsOptional := range dynamicCastingOperations {
@@ -1040,7 +1040,7 @@ func TestInterpretDynamicCastingSome(t *testing.T) {
 							inter.Globals["y"].Value,
 						)
 
-						if _, ok := targetType.(*sema.AnyStructType); ok && !returnsOptional {
+						if targetType == sema.AnyStructType && !returnsOptional {
 
 							assert.Equal(t,
 								expectedValue,
@@ -1060,9 +1060,9 @@ func TestInterpretDynamicCastingSome(t *testing.T) {
 				}
 
 				for _, otherType := range []sema.Type{
-					&sema.OptionalType{Type: &sema.StringType{}},
+					&sema.OptionalType{Type: sema.StringType},
 					&sema.OptionalType{Type: sema.VoidType},
-					&sema.OptionalType{Type: &sema.BoolType{}},
+					&sema.OptionalType{Type: sema.BoolType},
 				} {
 
 					t.Run(fmt.Sprintf("invalid: from %s to %s", fromType, otherType), func(t *testing.T) {
@@ -1105,8 +1105,8 @@ func TestInterpretDynamicCastingArray(t *testing.T) {
 
 	types := []sema.Type{
 		&sema.VariableSizedType{Type: &sema.IntType{}},
-		&sema.VariableSizedType{Type: &sema.AnyStructType{}},
-		&sema.AnyStructType{},
+		&sema.VariableSizedType{Type: sema.AnyStructType},
+		sema.AnyStructType,
 	}
 
 	for operation, returnsOptional := range dynamicCastingOperations {
@@ -1149,9 +1149,9 @@ func TestInterpretDynamicCastingArray(t *testing.T) {
 				}
 
 				for _, otherType := range []sema.Type{
-					&sema.StringType{},
+					sema.StringType,
 					sema.VoidType,
-					&sema.BoolType{},
+					sema.BoolType,
 				} {
 
 					t.Run(fmt.Sprintf("invalid: from %s to %s", fromType, otherType), func(t *testing.T) {
@@ -1194,12 +1194,12 @@ func TestInterpretDynamicCastingDictionary(t *testing.T) {
 
 	types := []sema.Type{
 		&sema.DictionaryType{
-			KeyType:   &sema.StringType{},
+			KeyType:   sema.StringType,
 			ValueType: &sema.IntType{},
 		},
 		&sema.DictionaryType{
-			KeyType:   &sema.StringType{},
-			ValueType: &sema.AnyStructType{},
+			KeyType:   sema.StringType,
+			ValueType: sema.AnyStructType,
 		},
 	}
 
@@ -1244,9 +1244,9 @@ func TestInterpretDynamicCastingDictionary(t *testing.T) {
 				}
 
 				for _, otherType := range []sema.Type{
-					&sema.StringType{},
+					sema.StringType,
 					sema.VoidType,
-					&sema.BoolType{},
+					sema.BoolType,
 				} {
 
 					t.Run(fmt.Sprintf("invalid: from %s to %s", fromType, otherType), func(t *testing.T) {
@@ -3317,11 +3317,11 @@ func TestInterpretDynamicCastingCapability(t *testing.T) {
 		},
 		&sema.CapabilityType{
 			BorrowType: &sema.ReferenceType{
-				Type: &sema.AnyStructType{},
+				Type: sema.AnyStructType,
 			},
 		},
 		&sema.CapabilityType{},
-		&sema.AnyStructType{},
+		sema.AnyStructType,
 	}
 
 	capabilityValue := interpreter.CapabilityValue{
@@ -3395,9 +3395,9 @@ func TestInterpretDynamicCastingCapability(t *testing.T) {
 				}
 
 				for _, otherType := range []sema.Type{
-					&sema.StringType{},
+					sema.StringType,
 					sema.VoidType,
-					&sema.BoolType{},
+					sema.BoolType,
 				} {
 
 					t.Run(fmt.Sprintf("invalid: from %s to Capability<&%s>", fromType, otherType), func(t *testing.T) {

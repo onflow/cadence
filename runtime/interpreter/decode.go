@@ -26,6 +26,7 @@ import (
 	"io"
 	"math"
 	"math/big"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -93,27 +94,26 @@ func NewDecoder(
 	*Decoder,
 	error,
 ) {
-	dm, err := decMode()
-	if err != nil {
-		return nil, err
-	}
-
 	return &Decoder{
-		decoder:        dm.NewDecoder(reader),
+		decoder:        decMode.NewDecoder(reader),
 		owner:          owner,
 		version:        version,
 		decodeCallback: decodeCallback,
 	}, nil
 }
 
-func decMode() (cbor.DecMode, error) {
-	return cbor.DecOptions{
+var decMode = func() cbor.DecMode {
+	decMode, err := cbor.DecOptions{
 		IntDec:           cbor.IntDecConvertNone,
 		MaxArrayElements: 512 * 1024,
 		MaxMapPairs:      512 * 1024,
 		MaxNestedLevels:  256,
 	}.DecMode()
-}
+	if err != nil {
+		panic(err)
+	}
+	return decMode
+}()
 
 // Decode reads CBOR-encoded bytes from the io.Reader and decodes them to a value.
 //
@@ -409,7 +409,8 @@ func (d *Decoder) decodeDictionary(v interface{}, path []string) (*DictionaryVal
 		)
 	}
 
-	var entries map[string]Value
+	entries := NewStringValueOrderedMap()
+
 	var deferred *orderedmap.StringStringOrderedMap
 	var deferredOwner *common.Address
 
@@ -428,7 +429,6 @@ func (d *Decoder) decodeDictionary(v interface{}, path []string) (*DictionaryVal
 		}
 
 		deferred = orderedmap.NewStringStringOrderedMap()
-		entries = map[string]Value{}
 		deferredOwner = d.owner
 		for _, keyValue := range keys.Values {
 			key := dictionaryKey(keyValue)
@@ -437,19 +437,28 @@ func (d *Decoder) decodeDictionary(v interface{}, path []string) (*DictionaryVal
 		}
 
 	} else {
-		entries = make(map[string]Value, entryCount)
 
 		index := 0
 
-		for key, value := range encodedEntries {
-
-			keyString, ok := key.(string)
+		for _, keyValue := range keys.Values {
+			keyStringValue, ok := keyValue.(HasKeyString)
 			if !ok {
 				return nil, fmt.Errorf(
 					"invalid dictionary key encoding (@ %s, %d): %T",
 					strings.Join(path, "."),
 					index,
-					key,
+					keyValue,
+				)
+			}
+
+			keyString := keyStringValue.KeyString()
+			value, ok := encodedEntries[keyString]
+			if !ok {
+				return nil, fmt.Errorf(
+					"missing dictionary value for key (@ %s, %d): %s",
+					strings.Join(path, "."),
+					index,
+					keyString,
 				)
 			}
 
@@ -459,12 +468,12 @@ func (d *Decoder) decodeDictionary(v interface{}, path []string) (*DictionaryVal
 				return nil, fmt.Errorf(
 					"invalid dictionary value encoding (@ %s, %s): %w",
 					strings.Join(path, "."),
-					key,
+					keyString,
 					err,
 				)
 			}
 
-			entries[keyString] = decodedValue
+			entries.Set(keyString, decodedValue)
 
 			index++
 		}
@@ -669,33 +678,50 @@ func (d *Decoder) decodeComposite(v interface{}, path []string) (*CompositeValue
 		)
 	}
 
-	fields := make(map[string]Value, len(encodedFields))
+	// Gather all field names and sort them lexicographically
+
+	var fieldNames []string
 
 	index := 0
-	for name, value := range encodedFields {
-		nameString, ok := name.(string)
+
+	for fieldName := range encodedFields { //nolint:maprangecheck
+		nameString, ok := fieldName.(string)
 		if !ok {
 			return nil, fmt.Errorf(
-				"invalid dictionary field name encoding (@ %s, %d): %T",
+				"invalid composite field name encoding (@ %s, %d): %T",
 				strings.Join(path, "."),
 				index,
-				name,
+				fieldName,
 			)
 		}
-		valuePath := append(path[:], nameString)
+
+		fieldNames = append(fieldNames, nameString)
+
+		index++
+	}
+
+	// Decode all fields in lexicographic order
+
+	sort.Strings(fieldNames)
+
+	fields := NewStringValueOrderedMap()
+
+	for _, fieldName := range fieldNames {
+
+		value := encodedFields[fieldName]
+
+		valuePath := append(path[:], fieldName)
 		decodedValue, err := d.decodeValue(value, valuePath)
 		if err != nil {
 			return nil, fmt.Errorf(
-				"invalid dictionary field value encoding (@ %s, %s): %w",
+				"invalid composite field value encoding (@ %s, %s): %w",
 				strings.Join(path, "."),
-				name,
+				fieldName,
 				err,
 			)
 		}
 
-		fields[nameString] = decodedValue
-
-		index++
+		fields.Set(fieldName, decodedValue)
 	}
 
 	compositeValue := NewCompositeValue(location, qualifiedIdentifier, kind, fields, d.owner)

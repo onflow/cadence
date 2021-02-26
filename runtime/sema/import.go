@@ -26,9 +26,9 @@ import (
 // Import
 
 type Import interface {
-	AllValueElements() map[string]ImportElement
+	AllValueElements() *StringImportElementOrderedMap
 	IsImportableValue(name string) bool
-	AllTypeElements() map[string]ImportElement
+	AllTypeElements() *StringImportElementOrderedMap
 	IsImportableType(name string) bool
 	IsChecking() bool
 }
@@ -48,25 +48,29 @@ type ElaborationImport struct {
 	Elaboration *Elaboration
 }
 
-func variablesToImportElements(variables map[string]*Variable) map[string]ImportElement {
-	elements := make(map[string]ImportElement, len(variables))
-	for name, variable := range variables {
-		elements[name] = ImportElement{
+func variablesToImportElements(variables *StringVariableOrderedMap) *StringImportElementOrderedMap {
+
+	elements := NewStringImportElementOrderedMap()
+
+	variables.Foreach(func(name string, variable *Variable) {
+
+		elements.Set(name, ImportElement{
 			DeclarationKind: variable.DeclarationKind,
 			Access:          variable.Access,
 			Type:            variable.Type,
 			ArgumentLabels:  variable.ArgumentLabels,
-		}
-	}
+		})
+	})
+
 	return elements
 }
 
-func (i ElaborationImport) AllValueElements() map[string]ImportElement {
+func (i ElaborationImport) AllValueElements() *StringImportElementOrderedMap {
 	return variablesToImportElements(i.Elaboration.GlobalValues)
 }
 
 func (i ElaborationImport) IsImportableValue(name string) bool {
-	if _, ok := BaseValues[name]; ok {
+	if _, ok := BaseValues.Get(name); ok {
 		return false
 	}
 
@@ -74,12 +78,12 @@ func (i ElaborationImport) IsImportableValue(name string) bool {
 	return !isPredeclaredValue
 }
 
-func (i ElaborationImport) AllTypeElements() map[string]ImportElement {
+func (i ElaborationImport) AllTypeElements() *StringImportElementOrderedMap {
 	return variablesToImportElements(i.Elaboration.GlobalTypes)
 }
 
 func (i ElaborationImport) IsImportableType(name string) bool {
-	if _, ok := baseTypes[name]; ok {
+	if _, ok := baseTypes.Get(name); ok {
 		return false
 	}
 
@@ -94,11 +98,11 @@ func (i ElaborationImport) IsChecking() bool {
 // VirtualImport
 
 type VirtualImport struct {
-	ValueElements map[string]ImportElement
-	TypeElements  map[string]ImportElement
+	ValueElements *StringImportElementOrderedMap
+	TypeElements  *StringImportElementOrderedMap
 }
 
-func (i VirtualImport) AllValueElements() map[string]ImportElement {
+func (i VirtualImport) AllValueElements() *StringImportElementOrderedMap {
 	return i.ValueElements
 }
 
@@ -106,7 +110,7 @@ func (i VirtualImport) IsImportableValue(_ string) bool {
 	return true
 }
 
-func (i VirtualImport) AllTypeElements() map[string]ImportElement {
+func (i VirtualImport) AllTypeElements() *StringImportElementOrderedMap {
 	return i.TypeElements
 }
 

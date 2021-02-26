@@ -194,7 +194,7 @@ func exportCompositeValue(v *interpreter.CompositeValue, inter *interpreter.Inte
 	fields := make([]cadence.Value, len(fieldNames))
 
 	for i, field := range fieldNames {
-		fieldValue := v.Fields[field.Identifier]
+		fieldValue, _ := v.Fields.Get(field.Identifier)
 		fields[i] = exportValueWithInterpreter(fieldValue, inter, results)
 	}
 
@@ -296,7 +296,11 @@ func exportBuiltinStructValue(v *interpreter.BuiltinCompositeValue, inter *inter
 
 	// NOTE: use the exported type's fields to ensure fields in type and value are in sync.
 	for index, field := range fieldNames {
-		fieldValue := v.Fields[field.Identifier]
+		fieldValue, ok := v.Fields.Get(field.Identifier)
+		if !ok {
+			panic(fmt.Errorf("cannot find field %s in %s", field.Identifier, exportedBuiltinStructType.ID()))
+		}
+
 		fields[index] = exportValueWithInterpreter(fieldValue, inter, results)
 	}
 
@@ -435,12 +439,15 @@ func importCompositeValue(
 	fieldTypes []cadence.Field,
 	fieldValues []cadence.Value,
 ) *interpreter.CompositeValue {
-	fields := make(map[string]interpreter.Value, len(fieldTypes))
+	fields := interpreter.NewStringValueOrderedMap()
 
 	for i := 0; i < len(fieldTypes) && i < len(fieldValues); i++ {
 		fieldType := fieldTypes[i]
 		fieldValue := fieldValues[i]
-		fields[fieldType.Identifier] = importValue(fieldValue)
+		fields.Set(
+			fieldType.Identifier,
+			importValue(fieldValue),
+		)
 	}
 
 	return interpreter.NewCompositeValue(
@@ -457,12 +464,12 @@ func importBuiltinStructValue(v cadence.BuiltinStruct) interpreter.Value {
 	fieldValues := v.Fields
 
 	fieldTypes := structType.Fields
-	fields := make(map[string]interpreter.Value, len(fieldTypes))
+	fields := interpreter.NewStringValueOrderedMap()
 
 	for i := 0; i < len(fieldTypes) && i < len(fieldValues); i++ {
 		fieldType := fieldTypes[i]
 		fieldValue := fieldValues[i]
-		fields[fieldType.Identifier] = importValue(fieldValue)
+		fields.Set(fieldType.Identifier, importValue(fieldValue))
 	}
 
 	var importedType *sema.BuiltinCompositeType

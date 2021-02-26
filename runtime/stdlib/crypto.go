@@ -24,6 +24,7 @@ import (
 
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
+	errors2 "github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/parser2"
 	"github.com/onflow/cadence/runtime/sema"
@@ -83,7 +84,13 @@ var CryptoChecker = func() *sema.Checker {
 	return checker
 }()
 
-var cryptoContractType = CryptoChecker.Elaboration.GlobalTypes["Crypto"].Type.(*sema.CompositeType)
+var cryptoContractType = func() *sema.CompositeType {
+	variable, ok := CryptoChecker.Elaboration.GlobalTypes.Get("Crypto")
+	if !ok {
+		panic(errors2.NewUnreachableError())
+	}
+	return variable.Type.(*sema.CompositeType)
+}()
 
 var cryptoContractInitializerTypes = func() (result []sema.Type) {
 	result = make([]sema.Type, len(cryptoContractType.ConstructorParameters))
@@ -238,7 +245,12 @@ func getHashAlgorithmFromValue(value interpreter.Value) HashAlgorithm {
 		panic(fmt.Sprintf("hash algorithm value must be of type %s", sema.HashAlgorithmType))
 	}
 
-	hashAlgoRawValue, ok := hashAlgoValue.Fields[sema.EnumRawValueFieldName].(interpreter.IntValue)
+	rawValue, ok := hashAlgoValue.Fields.Get(sema.EnumRawValueFieldName)
+	if !ok {
+		panic("cannot find hash algorithm raw value")
+	}
+
+	hashAlgoRawValue, ok := rawValue.(interpreter.IntValue)
 	if !ok {
 		panic("hash algorithm raw value needs to be subtype of integer")
 	}
@@ -253,7 +265,12 @@ func getSignatureAlgorithmFromValue(value interpreter.Value) SignatureAlgorithm 
 		panic(fmt.Sprintf("signature algorithm value must be of type %s", sema.SignatureAlgorithmType))
 	}
 
-	hashAlgoRawValue, ok := signAlgoValue.Fields[sema.EnumRawValueFieldName].(interpreter.IntValue)
+	rawValue, ok := signAlgoValue.Fields.Get(sema.EnumRawValueFieldName)
+	if !ok {
+		panic("cannot find signature algorithm raw value")
+	}
+
+	hashAlgoRawValue, ok := rawValue.(interpreter.IntValue)
 	if !ok {
 		panic("signature algorithm raw value needs to be subtype of integer")
 	}

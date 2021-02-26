@@ -31,5 +31,4 @@ var InvalidType = &NominalType{
 	Storable:             false,
 	Equatable:            false,
 	ExternallyReturnable: false,
-	IsSuperTypeOf:        nil,
 }

@@ -183,8 +183,13 @@ type EncodingDeferralMove struct {
 	NewStorageKey      string
 }
 
+type EncodingDeferralValue struct {
+	Key   string
+	Value Value
+}
+
 type EncodingDeferrals struct {
-	Values map[string]Value
+	Values []EncodingDeferralValue
 	Moves  []EncodingDeferralMove
 }
 
@@ -222,22 +227,15 @@ func EncodeValue(value Value, path []string, deferred bool, prepareCallback Enco
 		return nil, nil, err
 	}
 
-	deferrals = &EncodingDeferrals{
-		Values: map[string]Value{},
-	}
+	deferrals = &EncodingDeferrals{}
 
 	err = enc.Encode(value, path, deferrals)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	dm, err := decMode()
-	if err != nil {
-		return nil, nil, err
-	}
-
 	data := w.Bytes()
-	err = dm.Valid(data)
+	err = decMode.Valid(data)
 	if err != nil {
 		return nil, nil, fmt.Errorf("encoder produced invalid data: %w", err)
 	}
@@ -245,16 +243,23 @@ func EncodeValue(value Value, path []string, deferred bool, prepareCallback Enco
 	return data, deferrals, nil
 }
 
-// NewEncoder initializes an Encoder that will write CBOR-encoded bytes
-// to the given io.Writer.
+// See https://github.com/fxamacker/cbor:
+// "For best performance, reuse EncMode and DecMode after creating them."
 //
-func NewEncoder(w io.Writer, deferred bool, prepareCallback EncodingPrepareCallback) (*Encoder, error) {
+var encMode = func() cbor.EncMode {
 	options := cbor.CanonicalEncOptions()
 	options.BigIntConvert = cbor.BigIntConvertNone
 	encMode, err := options.EncMode()
 	if err != nil {
-		return nil, err
+		panic(err)
 	}
+	return encMode
+}()
+
+// NewEncoder initializes an Encoder that will write CBOR-encoded bytes
+// to the given io.Writer.
+//
+func NewEncoder(w io.Writer, deferred bool, prepareCallback EncodingPrepareCallback) (*Encoder, error) {
 	enc := encMode.NewEncoder(w)
 	return &Encoder{
 		enc:             enc,
@@ -483,6 +488,7 @@ func (e *Encoder) prepareInt64(v Int64Value) cbor.Tag {
 		Content: v,
 	}
 }
+
 func (e *Encoder) prepareInt128(v Int128Value) cbor.Tag {
 	return cbor.Tag{
 		Number:  cborTagInt128Value,
@@ -648,15 +654,19 @@ func (e *Encoder) prepareDictionaryValue(
 		return nil, err
 	}
 
-	entries := make(map[string]interface{}, len(v.Entries))
+	entries := make(map[string]interface{}, v.Entries.Len())
 
 	// Deferring the encoding of values is only supported if all
 	// values are resources: resource typed dictionaries are moved
 
 	deferred := e.deferred
 	if deferred {
-		for _, value := range v.Entries {
-			compositeValue, ok := value.(*CompositeValue)
+
+		// Iterating over the map in a non-deterministic way is OK,
+		// we only determine check if all values are resources.
+
+		for pair := v.Entries.Oldest(); pair != nil; pair = pair.Next() {
+			compositeValue, ok := pair.Value.(*CompositeValue)
 			if !ok || compositeValue.Kind != common.CompositeKindResource {
 				deferred = false
 				break
@@ -666,7 +676,7 @@ func (e *Encoder) prepareDictionaryValue(
 
 	for _, keyValue := range v.Keys.Values {
 		key := dictionaryKey(keyValue)
-		entryValue := v.Entries[key]
+		entryValue, _ := v.Entries.Get(key)
 		valuePath := append(path[:], dictionaryValuePathPrefix, key)
 
 		if deferred {
@@ -682,7 +692,12 @@ func (e *Encoder) prepareDictionaryValue(
 			// in the owner's storage.
 
 			if !isDeferred {
-				deferrals.Values[joinPath(valuePath)] = entryValue
+				deferrals.Values = append(deferrals.Values,
+					EncodingDeferralValue{
+						Key:   joinPath(valuePath),
+						Value: entryValue,
+					},
+				)
 			} else {
 
 				// If the value is deferred, and the deferred value
@@ -740,16 +755,19 @@ func (e *Encoder) prepareCompositeValue(
 	interface{},
 	error,
 ) {
-	fields := make(map[string]interface{}, len(v.Fields))
+	fields := make(map[string]interface{}, v.Fields.Len())
 
-	for name, value := range v.Fields {
-		valuePath := append(path[:], name)
+	for pair := v.Fields.Oldest(); pair != nil; pair = pair.Next() {
+		fieldName := pair.Key
+		value := pair.Value
+
+		valuePath := append(path[:], fieldName)
 
 		prepared, err := e.prepare(value, valuePath, deferrals)
 		if err != nil {
 			return nil, err
 		}
-		fields[name] = prepared
+		fields[fieldName] = prepared
 	}
 
 	location, err := e.prepareLocation(v.Location)

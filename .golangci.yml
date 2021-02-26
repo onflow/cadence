@@ -10,3 +10,19 @@ linters:
     - ineffassign
     - typecheck
     - misspell
+    - maprangecheck
+
+issues:
+  exclude-rules:
+    - path: _test\.go
+      linters:
+        - maprangecheck
+
+linters-settings:
+  custom:
+    maprangecheck:
+      path: tools/maprangecheck/maprangecheck.so
+      description: reports range statements over maps
+      original-url: github.com/onflow/cadence/tools/maprangecheck
+
+
