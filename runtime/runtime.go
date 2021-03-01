@@ -2202,7 +2202,7 @@ func NewPublicKeyFromValue(publicKey *interpreter.BuiltinCompositeValue) *Public
 func NewPublicKeyValue(publicKey *PublicKey) *interpreter.BuiltinCompositeValue {
 	return interpreter.NewPublicKeyValue(
 		interpreter.ByteSliceToByteArrayValue(publicKey.PublicKey),
-		interpreter.NewEnumCaseValue(sema.SignatureAlgorithmType, int(publicKey.SignAlgo)),
+		interpreter.NewBuiltinEnumCaseValue(sema.SignatureAlgorithmType, int(publicKey.SignAlgo)),
 	)
 }
 
@@ -2210,7 +2210,7 @@ func NewAccountKeyValue(accountKey *AccountKey) *interpreter.BuiltinCompositeVal
 	return interpreter.NewAccountKeyValue(
 		interpreter.NewIntValueFromInt64(int64(accountKey.KeyIndex)),
 		NewPublicKeyValue(accountKey.PublicKey),
-		interpreter.NewEnumCaseValue(sema.HashAlgorithmType, int(accountKey.HashAlgo)),
+		interpreter.NewBuiltinEnumCaseValue(sema.HashAlgorithmType, int(accountKey.HashAlgo)),
 		interpreter.NewUFix64ValueWithInteger(uint64(accountKey.Weight)),
 		interpreter.BoolValue(accountKey.IsRevoked),
 	)

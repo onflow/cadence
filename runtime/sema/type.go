@@ -6470,6 +6470,7 @@ func (t *CapabilityType) GetMembers() map[string]MemberResolver {
 	})
 }
 
+// BuiltinCompositeType represents composite types that are defined natively.
 type BuiltinCompositeType struct {
 	Identifier           string
 	Members              *StringMemberOrderedMap

@@ -227,7 +227,7 @@ func getEnumValue(enumType *sema.BuiltinCompositeType, enumCases []sema.BuiltinE
 
 	for _, enumCase := range enumCases {
 		rawValue := enumCase.RawValue()
-		caseValue := interpreter.NewEnumCaseValue(enumType, rawValue)
+		caseValue := interpreter.NewBuiltinEnumCaseValue(enumType, rawValue)
 		caseValues[rawValue] = caseValue
 		constructorMembers.Set(enumCase.Name(), caseValue)
 	}

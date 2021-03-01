@@ -6689,11 +6689,11 @@ func NewAuthAccountValue(
 	keys *BuiltinCompositeValue,
 ) AuthAccountValue {
 	return AuthAccountValue{
-		Address:                 address,
-		storageUsedGet:          storageUsedGet,
-		storageCapacityGet:      storageCapacityGet,
-		contracts:               contracts,
-		keys:                    keys,
+		Address:            address,
+		storageUsedGet:     storageUsedGet,
+		storageCapacityGet: storageCapacityGet,
+		contracts:          contracts,
+		keys:               keys,
 	}
 }
 
@@ -7150,7 +7150,7 @@ func (v LinkValue) String() string {
 	)
 }
 
-// BuiltinCompositeValue
+// BuiltinCompositeValue represents the runtime value of native composite types.
 type BuiltinCompositeValue struct {
 	Fields     *StringValueOrderedMap
 	staticType StaticType
@@ -7267,7 +7267,8 @@ func NewPublicAccountKeysValue(getFunction FunctionValue) *BuiltinCompositeValue
 	return NewBuiltinCompositeValue(sema.PublicAccountKeysType, fields)
 }
 
-func NewEnumCaseValue(enumType *sema.BuiltinCompositeType, rawValue int) *BuiltinCompositeValue {
+// NewBuiltinEnumCaseValue constructs an enum-case value for a native enum.
+func NewBuiltinEnumCaseValue(enumType *sema.BuiltinCompositeType, rawValue int) *BuiltinCompositeValue {
 	fields := NewStringValueOrderedMap()
 	fields.Set(sema.EnumRawValueFieldName, NewIntValueFromInt64(int64(rawValue)))
 
