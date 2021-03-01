@@ -5692,12 +5692,12 @@ type DictionaryValue struct {
 	// stay stored in the deferred owner's account until the end of the transaction.
 	DeferredOwner *common.Address
 	// DeferredKeys are the keys which are deferred and have not been loaded from storage yet.
-	DeferredKeys *orderedmap.StringStringOrderedMap
+	DeferredKeys *orderedmap.StringStructOrderedMap
 	// DeferredStorageKeyBase is the storage key prefix for all deferred keys
 	DeferredStorageKeyBase string
 	// prevDeferredKeys are the keys which are deferred and have been loaded from storage,
 	// i.e. they are keys that were previously in DeferredKeys.
-	prevDeferredKeys *orderedmap.StringStringOrderedMap
+	prevDeferredKeys *orderedmap.StringStructOrderedMap
 }
 
 func NewDictionaryValueUnownedNonCopying(keysAndValues ...Value) *DictionaryValue {
@@ -5871,9 +5871,9 @@ func (v *DictionaryValue) Get(inter *Interpreter, _ LocationRange, keyValue Valu
 		if ok {
 			storageKey := joinPathElements(v.DeferredStorageKeyBase, key)
 			if v.prevDeferredKeys == nil {
-				v.prevDeferredKeys = orderedmap.NewStringStringOrderedMap()
+				v.prevDeferredKeys = orderedmap.NewStringStructOrderedMap()
 			}
-			v.prevDeferredKeys.Set(key, "")
+			v.prevDeferredKeys.Set(key, struct{}{})
 
 			storedValue := inter.readStored(*v.DeferredOwner, storageKey, true)
 			v.Entries.Set(key, storedValue.(*SomeValue).Value)
@@ -6088,7 +6088,12 @@ func (v *DictionaryValue) Insert(inter *Interpreter, locationRange LocationRange
 	}
 }
 
-func writeDeferredKeys(inter *Interpreter, owner *common.Address, storageKeyBase string, keys *orderedmap.StringStringOrderedMap) {
+func writeDeferredKeys(
+	inter *Interpreter,
+	owner *common.Address,
+	storageKeyBase string,
+	keys *orderedmap.StringStructOrderedMap,
+) {
 	if keys == nil {
 		return
 	}
