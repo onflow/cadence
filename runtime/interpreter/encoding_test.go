@@ -4358,23 +4358,28 @@ func BenchmarkEncoding(b *testing.B) {
 
 	value := prepareLargeTestValue()
 
+	b.ReportAllocs()
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		_, _, _ = EncodeValue(value, nil, false, nil)
+		_, _, err := EncodeValue(value, nil, false, nil)
+		require.NoError(b, err)
 	}
 }
 
 func BenchmarkDecoding(b *testing.B) {
 
 	value := prepareLargeTestValue()
+
 	encoded, _, err := EncodeValue(value, nil, false, nil)
 	require.NoError(b, err)
 
+	b.ReportAllocs()
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		_, _ = DecodeValue(encoded, nil, nil, CurrentEncodingVersion, nil)
+		_, err = DecodeValue(encoded, nil, nil, CurrentEncodingVersion, nil)
+		require.NoError(b, err)
 	}
 }
 

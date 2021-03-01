@@ -22,6 +22,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"math/big"
 	"strconv"
 	"strings"
 
@@ -457,7 +458,7 @@ func (e *Encoder) prepareBool(v BoolValue) bool {
 func (e *Encoder) prepareInt(v IntValue) cbor.Tag {
 	return cbor.Tag{
 		Number:  cborTagIntValue,
-		Content: v.BigInt,
+		Content: prepareBigInt(v.BigInt),
 	}
 }
 
@@ -492,21 +493,21 @@ func (e *Encoder) prepareInt64(v Int64Value) cbor.Tag {
 func (e *Encoder) prepareInt128(v Int128Value) cbor.Tag {
 	return cbor.Tag{
 		Number:  cborTagInt128Value,
-		Content: v.BigInt,
+		Content: prepareBigInt(v.BigInt),
 	}
 }
 
 func (e *Encoder) prepareInt256(v Int256Value) cbor.Tag {
 	return cbor.Tag{
 		Number:  cborTagInt256Value,
-		Content: v.BigInt,
+		Content: prepareBigInt(v.BigInt),
 	}
 }
 
 func (e *Encoder) prepareUInt(v UIntValue) cbor.Tag {
 	return cbor.Tag{
 		Number:  cborTagUIntValue,
-		Content: v.BigInt,
+		Content: prepareBigInt(v.BigInt),
 	}
 }
 
@@ -541,14 +542,33 @@ func (e *Encoder) prepareUInt64(v UInt64Value) cbor.Tag {
 func (e *Encoder) prepareUInt128(v UInt128Value) cbor.Tag {
 	return cbor.Tag{
 		Number:  cborTagUInt128Value,
-		Content: v.BigInt,
+		Content: prepareBigInt(v.BigInt),
 	}
 }
 
 func (e *Encoder) prepareUInt256(v UInt256Value) cbor.Tag {
 	return cbor.Tag{
 		Number:  cborTagUInt256Value,
-		Content: v.BigInt,
+		Content: prepareBigInt(v.BigInt),
+	}
+}
+
+func prepareBigInt(v *big.Int) cbor.Tag {
+	sign := v.Sign()
+
+	var tagNum uint64 = 2
+
+	if sign < 0 {
+		tagNum = 3
+
+		// For negative number, convert to CBOR encoded number (-v-1).
+		v = new(big.Int).Abs(v)
+		v.Sub(v, bigOne)
+	}
+
+	return cbor.Tag{
+		Number:  tagNum,
+		Content: v.Bytes(),
 	}
 }
 
