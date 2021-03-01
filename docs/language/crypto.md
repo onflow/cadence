@@ -1,8 +1,10 @@
 ---
 title: Crypto
 ---
-The built-in enums `HashAlgorithm` and `SignatureAlgorithm` provide the sets of
-hashing and signing algorithms that are supported by the language natively.
+
+### Hashing Algorithms
+The built-in enum `HashAlgorithm` provides the set of hashing algorithms that
+are supported by the language natively.
 
 ```cadence
 pub enum HashAlgorithm: UInt8 {
@@ -21,7 +23,13 @@ pub enum HashAlgorithm: UInt8 {
     // KMAC128 is KECCAK Message Authentication Code with a 128-bit digest.
     pub case KMAC128
 }
+```
 
+### Signing Algorithms
+The built-in enum `SignatureAlgorithm` provides the set of signing algorithms that
+are supported by the language natively.
+
+```cadence
 pub enum SignatureAlgorithm: UInt8 (
     // ECDSA_P256 is Elliptic Curve Digital Signature Algorithm (ECDSA) on the NIST P-256 curve.
     ECDSA_P256
