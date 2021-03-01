@@ -43,11 +43,19 @@ type CacheEntry struct {
 	Value     interpreter.Value
 }
 
+type ContractUpdates map[StorageKey]ContractUpdate
+
+type ContractUpdate struct {
+	Contract         interpreter.Value
+	ExportedContract cadence.Value
+}
+
 type runtimeStorage struct {
 	runtimeInterface        Interface
 	highLevelStorageEnabled bool
 	highLevelStorage        HighLevelStorage
 	cache                   Cache
+	contractUpdates         ContractUpdates
 }
 
 func newRuntimeStorage(runtimeInterface Interface) *runtimeStorage {
@@ -60,6 +68,7 @@ func newRuntimeStorage(runtimeInterface Interface) *runtimeStorage {
 	return &runtimeStorage{
 		runtimeInterface:        runtimeInterface,
 		cache:                   Cache{},
+		contractUpdates:         ContractUpdates{},
 		highLevelStorage:        highLevelStorage,
 		highLevelStorageEnabled: highLevelStorageEnabled,
 	}
@@ -230,13 +239,31 @@ func (s *runtimeStorage) writeValue(
 	s.cache[fullKey] = entry
 }
 
+func (s *runtimeStorage) recordContractUpdate(
+	address common.Address,
+	key string,
+	contract interpreter.Value,
+	exportedContract cadence.Value,
+) {
+	fullKey := StorageKey{
+		Address: address,
+		Key:     key,
+	}
+
+	s.contractUpdates[fullKey] = ContractUpdate{
+		Contract:         contract,
+		ExportedContract: exportedContract,
+	}
+}
+
 // writeCached serializes/saves all values in the cache in storage (through the runtime interface).
 //
 func (s *runtimeStorage) writeCached(inter *interpreter.Interpreter) {
 
 	type writeItem struct {
-		storageKey StorageKey
-		value      interpreter.Value
+		storageKey    StorageKey
+		value         interpreter.Value
+		exportedValue cadence.Value
 	}
 
 	var items []writeItem
@@ -253,6 +280,14 @@ func (s *runtimeStorage) writeCached(inter *interpreter.Interpreter) {
 		items = append(items, writeItem{
 			storageKey: fullKey,
 			value:      entry.Value,
+		})
+	}
+
+	for fullKey, contractUpdate := range s.contractUpdates { //nolint:maprangecheck
+		items = append(items, writeItem{
+			storageKey:    fullKey,
+			value:         contractUpdate.Contract,
+			exportedValue: contractUpdate.ExportedContract,
 		})
 	}
 
@@ -276,19 +311,21 @@ func (s *runtimeStorage) writeCached(inter *interpreter.Interpreter) {
 	// Write cache entries in order
 
 	if s.highLevelStorageEnabled {
-		for _, entry := range items {
-
-			var err error
+		for _, item := range items {
 
 			var value cadence.Value
-			if entry.value != nil {
-				value = exportValueWithInterpreter(entry.value, inter, exportResults{})
+			switch {
+			case item.exportedValue != nil:
+				value = item.exportedValue
+			case item.value != nil:
+				value = exportValueWithInterpreter(item.value, inter, exportResults{})
 			}
 
+			var err error
 			wrapPanic(func() {
 				err = s.highLevelStorage.SetCadenceValue(
-					entry.storageKey.Address,
-					entry.storageKey.Key,
+					item.storageKey.Address,
+					item.storageKey.Key,
 					value,
 				)
 			})
