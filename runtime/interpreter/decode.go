@@ -413,6 +413,7 @@ func (d *Decoder) decodeDictionary(v interface{}, path []string) (*DictionaryVal
 
 	var deferred *orderedmap.StringStringOrderedMap
 	var deferredOwner *common.Address
+	var deferredStorageKeyBase string
 
 	// Are the values in the dictionary deferred, i.e. are they encoded
 	// separately and stored in separate storage keys?
@@ -430,10 +431,10 @@ func (d *Decoder) decodeDictionary(v interface{}, path []string) (*DictionaryVal
 
 		deferred = orderedmap.NewStringStringOrderedMap()
 		deferredOwner = d.owner
+		deferredStorageKeyBase = joinPath(append(path[:], dictionaryValuePathPrefix))
 		for _, keyValue := range keys.Values {
 			key := dictionaryKey(keyValue)
-			deferredStorageKey := joinPath(append(path[:], dictionaryValuePathPrefix, key))
-			deferred.Set(key, deferredStorageKey)
+			deferred.Set(key, "")
 		}
 
 	} else {
@@ -480,12 +481,13 @@ func (d *Decoder) decodeDictionary(v interface{}, path []string) (*DictionaryVal
 	}
 
 	return &DictionaryValue{
-		Keys:          keys,
-		Entries:       entries,
-		Owner:         d.owner,
-		modified:      false,
-		DeferredOwner: deferredOwner,
-		DeferredKeys:  deferred,
+		Keys:                   keys,
+		Entries:                entries,
+		Owner:                  d.owner,
+		modified:               false,
+		DeferredOwner:          deferredOwner,
+		DeferredKeys:           deferred,
+		DeferredStorageKeyBase: deferredStorageKeyBase,
 	}, nil
 }
 

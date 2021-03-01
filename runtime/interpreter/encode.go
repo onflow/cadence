@@ -598,13 +598,22 @@ func (e *Encoder) prepareString(v *StringValue) string {
 	return v.Str
 }
 
+// \x1F = Information Separator One
+//
+const pathSeparator = "\x1F"
+
 // joinPath returns the path for a nested item, for example the index of an array,
 // the key of a dictionary, or the field name of a composite.
 //
-// \x1F = Information Separator One
-//
 func joinPath(elements []string) string {
-	return strings.Join(elements, "\x1F")
+	return strings.Join(elements, pathSeparator)
+}
+
+// joinPathElements returns the path for a nested item, for example the index of an array,
+// the key of a dictionary, or the field name of a composite.
+//
+func joinPathElements(elements ...string) string {
+	return strings.Join(elements, pathSeparator)
 }
 
 func (e *Encoder) prepareArray(
@@ -681,10 +690,9 @@ func (e *Encoder) prepareDictionaryValue(
 
 		if deferred {
 
-			var deferredStorageKey string
 			var isDeferred bool
 			if v.DeferredKeys != nil {
-				deferredStorageKey, isDeferred = v.DeferredKeys.Get(key)
+				_, isDeferred = v.DeferredKeys.Get(key)
 			}
 
 			// If the value is not deferred, i.e. it is in memory,
@@ -708,6 +716,8 @@ func (e *Encoder) prepareDictionaryValue(
 				owner := *v.Owner
 
 				if deferredOwner != owner {
+
+					deferredStorageKey := joinPathElements(v.DeferredStorageKeyBase, key)
 
 					deferrals.Moves = append(deferrals.Moves,
 						EncodingDeferralMove{
