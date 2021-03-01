@@ -4080,9 +4080,9 @@ func TestEncodeDecodeDictionaryDeferred(t *testing.T) {
 		expected.modified = false
 		expected.Keys.modified = false
 
-		deferredKeys := orderedmap.NewStringStringOrderedMap()
-		deferredKeys.Set("test", "")
-		deferredKeys.Set("true", "")
+		deferredKeys := orderedmap.NewStringStructOrderedMap()
+		deferredKeys.Set("test", struct{}{})
+		deferredKeys.Set("true", struct{}{})
 
 		testEncodeDecode(t,
 			encodeDecodeTest{

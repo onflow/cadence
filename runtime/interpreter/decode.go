@@ -411,7 +411,7 @@ func (d *Decoder) decodeDictionary(v interface{}, path []string) (*DictionaryVal
 
 	entries := NewStringValueOrderedMap()
 
-	var deferred *orderedmap.StringStringOrderedMap
+	var deferred *orderedmap.StringStructOrderedMap
 	var deferredOwner *common.Address
 	var deferredStorageKeyBase string
 
@@ -429,12 +429,12 @@ func (d *Decoder) decodeDictionary(v interface{}, path []string) (*DictionaryVal
 			)
 		}
 
-		deferred = orderedmap.NewStringStringOrderedMap()
+		deferred = orderedmap.NewStringStructOrderedMap()
 		deferredOwner = d.owner
 		deferredStorageKeyBase = joinPath(append(path[:], dictionaryValuePathPrefix))
 		for _, keyValue := range keys.Values {
 			key := dictionaryKey(keyValue)
-			deferred.Set(key, "")
+			deferred.Set(key, struct{}{})
 		}
 
 	} else {
