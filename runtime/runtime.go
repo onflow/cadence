@@ -929,12 +929,12 @@ func (r *interpreterRuntime) storageInterpreterOptions(runtimeStorage *runtimeSt
 			},
 		),
 		interpreter.WithStorageReadHandler(
-			func(_ *interpreter.Interpreter, address common.Address, key string, deferred bool) interpreter.OptionalValue {
+			func(_ *interpreter.Interpreter, address common.Address, key string, deferred bool) interpreter.Value {
 				return runtimeStorage.readValue(address, key, deferred)
 			},
 		),
 		interpreter.WithStorageWriteHandler(
-			func(_ *interpreter.Interpreter, address common.Address, key string, value interpreter.OptionalValue) {
+			func(_ *interpreter.Interpreter, address common.Address, key string, value interpreter.Value) {
 				runtimeStorage.writeValue(address, key, value)
 			},
 		),
@@ -1301,10 +1301,11 @@ func (r *interpreterRuntime) loadContract(
 
 	default:
 
-		var storedValue interpreter.OptionalValue = interpreter.NilValue{}
+		var storedValue interpreter.Value
 
-		switch location := compositeType.Location.(type) {
+		location := compositeType.Location
 
+		switch location := location.(type) {
 		case common.AddressLocation:
 			storedValue = runtimeStorage.readValue(
 				location.Address,
@@ -1313,14 +1314,11 @@ func (r *interpreterRuntime) loadContract(
 			)
 		}
 
-		switch typedValue := storedValue.(type) {
-		case *interpreter.SomeValue:
-			return typedValue.Value.(*interpreter.CompositeValue)
-		case interpreter.NilValue:
-			panic("failed to load contract")
-		default:
-			panic(runtimeErrors.NewUnreachableError())
+		if storedValue == nil {
+			panic(fmt.Sprintf("failed to load contract: %s", location))
 		}
+
+		return storedValue.(*interpreter.CompositeValue)
 	}
 }
 

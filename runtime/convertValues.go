@@ -147,7 +147,7 @@ func exportValueWithInterpreter(
 			if referencedValue == nil {
 				return nil
 			}
-			return exportValueWithInterpreter(*referencedValue, inter, results)
+			return exportValueWithInterpreter(referencedValue, inter, results)
 		}
 
 		panic(fmt.Sprintf("cannot export value of type %T", value))

@@ -35,7 +35,7 @@ import (
 	"github.com/onflow/cadence/runtime/trampoline"
 )
 
-func testAccount(t *testing.T, auth bool, code string) (*interpreter.Interpreter, map[string]interpreter.OptionalValue) {
+func testAccount(t *testing.T, auth bool, code string) (*interpreter.Interpreter, map[string]interpreter.Value) {
 
 	address := interpreter.NewAddressValueFromBytes([]byte{42})
 
@@ -92,7 +92,7 @@ func testAccount(t *testing.T, auth bool, code string) (*interpreter.Interpreter
 	accountValueDeclaration.Name = "account"
 	valueDeclarations = append(valueDeclarations, accountValueDeclaration)
 
-	storedValues := map[string]interpreter.OptionalValue{}
+	storedValues := map[string]interpreter.Value{}
 
 	// NOTE: checker, getter and setter are very naive for testing purposes and don't remove nil values
 	//
@@ -102,18 +102,18 @@ func testAccount(t *testing.T, auth bool, code string) (*interpreter.Interpreter
 		return ok
 	}
 
-	storageSetter := func(_ *interpreter.Interpreter, _ common.Address, key string, value interpreter.OptionalValue) {
-		if _, ok := value.(interpreter.NilValue); ok {
+	storageSetter := func(_ *interpreter.Interpreter, _ common.Address, key string, value interpreter.Value) {
+		if value == nil {
 			delete(storedValues, key)
 		} else {
 			storedValues[key] = value
 		}
 	}
 
-	storageGetter := func(_ *interpreter.Interpreter, _ common.Address, key string, deferred bool) interpreter.OptionalValue {
-		value := storedValues[key]
-		if value == nil {
-			return interpreter.NilValue{}
+	storageGetter := func(_ *interpreter.Interpreter, _ common.Address, key string, deferred bool) interpreter.Value {
+		value, ok := storedValues[key]
+		if !ok {
+			return nil
 		}
 		return value
 	}
@@ -171,11 +171,8 @@ func TestInterpretAuthAccount_save(t *testing.T) {
 			require.Len(t, storedValues, 1)
 			for _, value := range storedValues {
 
-				require.IsType(t, &interpreter.SomeValue{}, value)
-
-				innerValue := value.(*interpreter.SomeValue).Value
-
-				assert.IsType(t, &interpreter.CompositeValue{}, innerValue)
+				require.NotNil(t, value)
+				assert.IsType(t, &interpreter.CompositeValue{}, value)
 			}
 
 		})
@@ -219,11 +216,9 @@ func TestInterpretAuthAccount_save(t *testing.T) {
 			require.Len(t, storedValues, 1)
 			for _, value := range storedValues {
 
-				require.IsType(t, &interpreter.SomeValue{}, value)
+				require.NotNil(t, value)
 
-				innerValue := value.(*interpreter.SomeValue).Value
-
-				assert.IsType(t, &interpreter.CompositeValue{}, innerValue)
+				assert.IsType(t, &interpreter.CompositeValue{}, value)
 			}
 
 		})

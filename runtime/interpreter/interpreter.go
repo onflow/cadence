@@ -116,7 +116,7 @@ type StorageReadHandlerFunc func(
 	storageAddress common.Address,
 	key string,
 	deferred bool,
-) OptionalValue
+) Value
 
 // StorageWriteHandlerFunc is a function that handles storage writes.
 //
@@ -124,7 +124,7 @@ type StorageWriteHandlerFunc func(
 	inter *Interpreter,
 	storageAddress common.Address,
 	key string,
-	value OptionalValue,
+	value Value,
 )
 
 // StorageKeyHandlerFunc is a function that handles storage indexing types.
@@ -3678,12 +3678,14 @@ func (interpreter *Interpreter) storedValueExists(storageAddress common.Address,
 	return interpreter.storageExistenceHandler(interpreter, storageAddress, key)
 }
 
-func (interpreter *Interpreter) readStored(storageAddress common.Address, key string, deferred bool) OptionalValue {
+func (interpreter *Interpreter) readStored(storageAddress common.Address, key string, deferred bool) Value {
 	return interpreter.storageReadHandler(interpreter, storageAddress, key, deferred)
 }
 
-func (interpreter *Interpreter) writeStored(storageAddress common.Address, key string, value OptionalValue) {
-	value.SetOwner(&storageAddress)
+func (interpreter *Interpreter) writeStored(storageAddress common.Address, key string, value Value) {
+	if value != nil {
+		value.SetOwner(&storageAddress)
+	}
 
 	interpreter.storageWriteHandler(interpreter, storageAddress, key, value)
 }
@@ -4062,7 +4064,7 @@ func (interpreter *Interpreter) authAccountSaveFunction(addressValue AddressValu
 		interpreter.writeStored(
 			address,
 			key,
-			NewSomeValueOwningNonCopying(value),
+			value,
 		)
 
 		return Done{Result: VoidValue{}}
@@ -4088,11 +4090,9 @@ func (interpreter *Interpreter) authAccountReadFunction(addressValue AddressValu
 
 		value := interpreter.readStored(address, key, false)
 
-		switch value := value.(type) {
-		case NilValue:
-			return Done{Result: value}
-
-		case *SomeValue:
+		if value == nil {
+			return Done{Result: NilValue{}}
+		} else {
 
 			// If there is value stored for the given path,
 			// check that it satisfies the type given as the type argument.
@@ -4104,7 +4104,7 @@ func (interpreter *Interpreter) authAccountReadFunction(addressValue AddressValu
 
 			ty := typeParameterPair.Value
 
-			dynamicType := value.Value.DynamicType(interpreter)
+			dynamicType := value.DynamicType(interpreter)
 			if !IsSubType(dynamicType, ty) {
 				return Done{Result: NilValue{}}
 			}
@@ -4113,13 +4113,10 @@ func (interpreter *Interpreter) authAccountReadFunction(addressValue AddressValu
 				// Remove the value from storage,
 				// but only if the type check succeeded.
 
-				interpreter.writeStored(address, key, NilValue{})
+				interpreter.writeStored(address, key, nil)
 			}
 
-			return Done{Result: value}
-
-		default:
-			panic(errors.NewUnreachableError())
+			return Done{Result: NewSomeValueOwningNonCopying(value)}
 		}
 	})
 }
@@ -4134,11 +4131,9 @@ func (interpreter *Interpreter) authAccountBorrowFunction(addressValue AddressVa
 
 		value := interpreter.readStored(address, key, false)
 
-		switch value := value.(type) {
-		case NilValue:
-			return Done{Result: value}
-
-		case *SomeValue:
+		if value == nil {
+			return Done{Result: NilValue{}}
+		} else {
 
 			// If there is value stored for the given path,
 			// check that it satisfies the type given as the type argument.
@@ -4152,7 +4147,7 @@ func (interpreter *Interpreter) authAccountBorrowFunction(addressValue AddressVa
 
 			referenceType := ty.(*sema.ReferenceType)
 
-			dynamicType := value.Value.DynamicType(interpreter)
+			dynamicType := value.DynamicType(interpreter)
 			if !IsSubType(dynamicType, referenceType.Type) {
 				return Done{Result: NilValue{}}
 			}
@@ -4164,9 +4159,6 @@ func (interpreter *Interpreter) authAccountBorrowFunction(addressValue AddressVa
 			}
 
 			return Done{Result: NewSomeValueOwningNonCopying(reference)}
-
-		default:
-			panic(errors.NewUnreachableError())
 		}
 	})
 }
@@ -4196,12 +4188,10 @@ func (interpreter *Interpreter) authAccountLinkFunction(addressValue AddressValu
 
 		borrowStaticType := ConvertSemaToStaticType
 
-		storedValue := NewSomeValueOwningNonCopying(
-			LinkValue{
-				TargetPath: targetPath,
-				Type:       borrowStaticType(borrowType),
-			},
-		)
+		storedValue := LinkValue{
+			TargetPath: targetPath,
+			Type:       borrowStaticType(borrowType),
+		}
 
 		interpreter.writeStored(
 			address,
@@ -4232,13 +4222,11 @@ func (interpreter *Interpreter) accountGetLinkTargetFunction(addressValue Addres
 
 		value := interpreter.readStored(address, capabilityKey, false)
 
-		switch value := value.(type) {
-		case NilValue:
-			return Done{Result: value}
+		if value == nil {
+			return Done{Result: NilValue{}}
+		} else {
 
-		case *SomeValue:
-
-			link, ok := value.Value.(LinkValue)
+			link, ok := value.(LinkValue)
 			if !ok {
 				return Done{Result: NilValue{}}
 			}
@@ -4246,9 +4234,6 @@ func (interpreter *Interpreter) accountGetLinkTargetFunction(addressValue Addres
 			returnValue := NewSomeValueOwningNonCopying(link.TargetPath)
 
 			return Done{Result: returnValue}
-
-		default:
-			panic(errors.NewUnreachableError())
 		}
 	})
 }
@@ -4266,7 +4251,7 @@ func (interpreter *Interpreter) authAccountUnlinkFunction(addressValue AddressVa
 		interpreter.writeStored(
 			address,
 			capabilityKey,
-			NilValue{},
+			nil,
 		)
 
 		return Done{Result: VoidValue{}}
@@ -4389,13 +4374,11 @@ func (interpreter *Interpreter) getCapabilityFinalTargetStorageKey(
 
 		value := interpreter.readStored(address, key, false)
 
-		switch value := value.(type) {
-		case NilValue:
+		if value == nil {
 			return "", false
+		} else {
 
-		case *SomeValue:
-
-			if link, ok := value.Value.(LinkValue); ok {
+			if link, ok := value.(LinkValue); ok {
 
 				allowedType := interpreter.ConvertStaticToSemaType(link.Type)
 
@@ -4410,9 +4393,6 @@ func (interpreter *Interpreter) getCapabilityFinalTargetStorageKey(
 			} else {
 				return key, wantedReferenceType.Authorized
 			}
-
-		default:
-			panic(errors.NewUnreachableError())
 		}
 	}
 }

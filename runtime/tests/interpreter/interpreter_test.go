@@ -7527,7 +7527,7 @@ func TestInterpretResourceOwnerFieldUse(t *testing.T) {
 
 	t.Parallel()
 
-	storedValues := map[string]interpreter.OptionalValue{}
+	storedValues := map[string]interpreter.Value{}
 
 	// NOTE: Getter and Setter are very naive for testing purposes and don't remove nil values
 	//
@@ -7537,16 +7537,20 @@ func TestInterpretResourceOwnerFieldUse(t *testing.T) {
 		return ok
 	}
 
-	getter := func(_ *interpreter.Interpreter, _ common.Address, key string, deferred bool) interpreter.OptionalValue {
+	getter := func(_ *interpreter.Interpreter, _ common.Address, key string, deferred bool) interpreter.Value {
 		value, ok := storedValues[key]
 		if !ok {
-			return interpreter.NilValue{}
+			return nil
 		}
 		return value
 	}
 
-	setter := func(_ *interpreter.Interpreter, _ common.Address, key string, value interpreter.OptionalValue) {
-		storedValues[key] = value
+	setter := func(_ *interpreter.Interpreter, _ common.Address, key string, value interpreter.Value) {
+		if value == nil {
+			delete(storedValues, key)
+		} else {
+			storedValues[key] = value
+		}
 	}
 
 	address := common.Address{

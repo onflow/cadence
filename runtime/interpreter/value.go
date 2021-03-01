@@ -5871,14 +5871,14 @@ func (v *DictionaryValue) Get(inter *Interpreter, _ LocationRange, keyValue Valu
 			v.prevDeferredKeys.Set(key, storageKey)
 
 			storedValue := inter.readStored(*v.DeferredOwner, storageKey, true)
-			v.Entries.Set(key, storedValue.(*SomeValue).Value)
+			v.Entries.Set(key, storedValue)
 
 			// NOTE: *not* writing nil to the storage key,
 			// as this would result in a loss of the value:
 			// the read value is not modified,
 			// so it won't be written back
 
-			return storedValue
+			return NewSomeValueOwningNonCopying(storedValue)
 		}
 	}
 
@@ -6022,7 +6022,7 @@ func (v *DictionaryValue) Remove(inter *Interpreter, locationRange LocationRange
 
 	if v.prevDeferredKeys != nil {
 		if storageKey, ok := v.prevDeferredKeys.Get(key); ok {
-			inter.writeStored(*v.DeferredOwner, storageKey, NilValue{})
+			inter.writeStored(*v.DeferredOwner, storageKey, nil)
 		}
 	}
 
@@ -6088,7 +6088,7 @@ func writeDeferredKeys(inter *Interpreter, owner *common.Address, keysToStorageK
 	}
 
 	for pair := keysToStorageKeys.Oldest(); pair != nil; pair = pair.Next() {
-		inter.writeStored(*owner, pair.Value, NilValue{})
+		inter.writeStored(*owner, pair.Value, nil)
 	}
 }
 
@@ -6309,7 +6309,7 @@ func (v *StorageReferenceValue) DynamicType(interpreter *Interpreter) DynamicTyp
 		panic(DereferenceError{})
 	}
 
-	innerType := (*referencedValue).DynamicType(interpreter)
+	innerType := referencedValue.DynamicType(interpreter)
 
 	return StorageReferenceDynamicType{
 		authorized: v.Authorized,
@@ -6347,15 +6347,8 @@ func (*StorageReferenceValue) SetModified(_ bool) {
 	// NO-OP
 }
 
-func (v *StorageReferenceValue) ReferencedValue(interpreter *Interpreter) *Value {
-	switch referenced := interpreter.readStored(v.TargetStorageAddress, v.TargetKey, false).(type) {
-	case *SomeValue:
-		return &referenced.Value
-	case NilValue:
-		return nil
-	default:
-		panic(errors.NewUnreachableError())
-	}
+func (v *StorageReferenceValue) ReferencedValue(interpreter *Interpreter) Value {
+	return interpreter.readStored(v.TargetStorageAddress, v.TargetKey, false)
 }
 
 func (v *StorageReferenceValue) GetMember(interpreter *Interpreter, locationRange LocationRange, name string) Value {
@@ -6366,7 +6359,7 @@ func (v *StorageReferenceValue) GetMember(interpreter *Interpreter, locationRang
 		})
 	}
 
-	return interpreter.getMember(*referencedValue, locationRange, name)
+	return interpreter.getMember(referencedValue, locationRange, name)
 }
 
 func (v *StorageReferenceValue) SetMember(interpreter *Interpreter, locationRange LocationRange, name string, value Value) {
@@ -6377,7 +6370,7 @@ func (v *StorageReferenceValue) SetMember(interpreter *Interpreter, locationRang
 		})
 	}
 
-	interpreter.setMember(*referencedValue, locationRange, name, value)
+	interpreter.setMember(referencedValue, locationRange, name, value)
 }
 
 func (v *StorageReferenceValue) Get(interpreter *Interpreter, locationRange LocationRange, key Value) Value {
@@ -6388,7 +6381,7 @@ func (v *StorageReferenceValue) Get(interpreter *Interpreter, locationRange Loca
 		})
 	}
 
-	return (*referencedValue).(ValueIndexableValue).
+	return referencedValue.(ValueIndexableValue).
 		Get(interpreter, locationRange, key)
 }
 
@@ -6400,7 +6393,7 @@ func (v *StorageReferenceValue) Set(interpreter *Interpreter, locationRange Loca
 		})
 	}
 
-	(*referencedValue).(ValueIndexableValue).
+	referencedValue.(ValueIndexableValue).
 		Set(interpreter, locationRange, key, value)
 }
 

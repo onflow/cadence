@@ -25,7 +25,6 @@ import (
 
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
 )
 
@@ -131,7 +130,7 @@ func (s *runtimeStorage) readValue(
 	address common.Address,
 	key string,
 	deferred bool,
-) interpreter.OptionalValue {
+) interpreter.Value {
 
 	fullKey := StorageKey{
 		Address: address,
@@ -141,11 +140,7 @@ func (s *runtimeStorage) readValue(
 	// Check cache. Return cached value, if any
 
 	if entry, ok := s.cache[fullKey]; ok {
-		if entry.Value == nil {
-			return interpreter.NilValue{}
-		}
-
-		return interpreter.NewSomeValueOwningNonCopying(entry.Value)
+		return entry.Value
 	}
 
 	// Cache miss: Load and deserialize the stored value (if any)
@@ -168,7 +163,7 @@ func (s *runtimeStorage) readValue(
 			MustWrite: false,
 			Value:     nil,
 		}
-		return interpreter.NilValue{}
+		return nil
 	}
 
 	var storedValue interpreter.Value
@@ -199,7 +194,7 @@ func (s *runtimeStorage) readValue(
 		}
 	}
 
-	return interpreter.NewSomeValueOwningNonCopying(storedValue)
+	return storedValue
 }
 
 // writeValue is the StorageWriteHandlerFunc for the interpreter.
@@ -212,7 +207,7 @@ func (s *runtimeStorage) readValue(
 func (s *runtimeStorage) writeValue(
 	address common.Address,
 	key string,
-	value interpreter.OptionalValue,
+	value interpreter.Value,
 ) {
 	fullKey := StorageKey{
 		Address: address,
@@ -224,18 +219,7 @@ func (s *runtimeStorage) writeValue(
 
 	entry := s.cache[fullKey]
 	entry.MustWrite = true
-
-	switch typedValue := value.(type) {
-	case *interpreter.SomeValue:
-		entry.Value = typedValue.Value
-
-	case interpreter.NilValue:
-		entry.Value = nil
-
-	default:
-		panic(errors.NewUnreachableError())
-	}
-
+	entry.Value = value
 	s.cache[fullKey] = entry
 }
 
