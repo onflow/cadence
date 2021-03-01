@@ -4081,8 +4081,8 @@ func TestEncodeDecodeDictionaryDeferred(t *testing.T) {
 		expected.Keys.modified = false
 
 		deferredKeys := orderedmap.NewStringStringOrderedMap()
-		deferredKeys.Set("test", "v\x1ftest")
-		deferredKeys.Set("true", "v\x1ftrue")
+		deferredKeys.Set("test", "")
+		deferredKeys.Set("true", "")
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
@@ -4121,10 +4121,11 @@ func TestEncodeDecodeDictionaryDeferred(t *testing.T) {
 					},
 				},
 				decodedValue: &DictionaryValue{
-					Keys:          expected.Keys,
-					Entries:       NewStringValueOrderedMap(),
-					DeferredOwner: &testOwner,
-					DeferredKeys:  deferredKeys,
+					Keys:                   expected.Keys,
+					Entries:                NewStringValueOrderedMap(),
+					DeferredOwner:          &testOwner,
+					DeferredKeys:           deferredKeys,
+					DeferredStorageKeyBase: "v",
 				},
 			},
 		)
