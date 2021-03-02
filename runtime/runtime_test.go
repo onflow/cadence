@@ -6074,7 +6074,7 @@ func TestRuntime(t *testing.T) {
 	}
 }
 
-func singleIdentifierLocationResolver(t *testing.T) func(identifiers []Identifier, location Location) ([]ResolvedLocation, error) {
+func singleIdentifierLocationResolver(t testing.TB) func(identifiers []Identifier, location Location) ([]ResolvedLocation, error) {
 	return func(identifiers []Identifier, location Location) ([]ResolvedLocation, error) {
 		require.Len(t, identifiers, 1)
 		require.IsType(t, common.AddressLocation{}, location)
