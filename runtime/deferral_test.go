@@ -1666,13 +1666,11 @@ func BenchmarkRuntimeStorageDeferredResourceDictionaryValues(b *testing.B) {
       transaction {
 
           prepare(signer: AuthAccount) {
-              let data <- {
-                  "a": <-Test.createR(),
-                  "b": <-Test.createR(),
-                  "c": <-Test.createR(),
-                  "d": <-Test.createR(),
-                  "e": <-Test.createR(),
-                  "f": <-Test.createR()
+              let data: @{Int: Test.R} <- {}
+              var i = 0
+              while i < 1000 {
+                  data[i] <-! Test.createR()
+                  i = i + 1
               }
               signer.save(<-data, to: /storage/data)
           }
@@ -1735,8 +1733,8 @@ func BenchmarkRuntimeStorageDeferredResourceDictionaryValues(b *testing.B) {
       transaction {
 
           prepare(signer: AuthAccount) {
-              let ref = signer.borrow<&{String: Test.R}>(from: /storage/data)!
-              assert(ref["b"] != nil)
+              let ref = signer.borrow<&{Int: Test.R}>(from: /storage/data)!
+              assert(ref[50] != nil)
          }
       }
     `)
