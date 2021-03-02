@@ -6571,8 +6571,12 @@ func (t *BuiltinCompositeType) GetContainerType() Type {
 	return t.ContainerType
 }
 
-func (t *BuiltinCompositeType) NestedTypes() *StringTypeOrderedMap {
+func (t *BuiltinCompositeType) GetNestedTypes() *StringTypeOrderedMap {
 	return nil
+}
+
+func (t *BuiltinCompositeType) isContainerType() bool {
+	return false
 }
 
 func GetMembersAsMap(members []*Member) *StringMemberOrderedMap {
