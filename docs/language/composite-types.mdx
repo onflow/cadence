@@ -79,7 +79,7 @@ of the composite type requires them.
 
 Composite types can only be declared within [contracts](../contracts)
 and not locally in functions.
-They can also not be nested.
+
 
 Resource must be created (instantiated) by using the `create` keyword
 and calling the type like a function.
@@ -924,7 +924,7 @@ res.value
 // This function is invalid, because it does not always use the resource parameter,
 // which would cause a loss of the resource.
 //
-pub fun sometimesDestroy(resource: @SomeResource, destroy: Bool) {
+pub fun sometimesDestroy(resource: @SomeResource, destroyResource: Bool) {
     if destroyResource {
         destroy resource
     }
