@@ -304,7 +304,7 @@ func exportBuiltinStructValue(v *interpreter.BuiltinCompositeValue, inter *inter
 		fields[index] = exportValueWithInterpreter(fieldValue, inter, results)
 	}
 
-	return cadence.NewBuiltinStruct(fields).WithType(exportedBuiltinStructType)
+	return cadence.NewStruct(fields).WithType(exportedBuiltinStructType)
 }
 
 // importValue converts a Cadence value to a runtime value.
@@ -395,8 +395,6 @@ func importValue(value cadence.Value) interpreter.Value {
 			Domain:     common.PathDomainFromIdentifier(v.Domain),
 			Identifier: v.Identifier,
 		}
-	case cadence.BuiltinStruct:
-		return importBuiltinStructValue(v)
 	}
 
 	panic(fmt.Sprintf("cannot import value of type %T", value))
@@ -438,7 +436,7 @@ func importCompositeValue(
 	qualifiedIdentifier string,
 	fieldTypes []cadence.Field,
 	fieldValues []cadence.Value,
-) *interpreter.CompositeValue {
+) interpreter.Value {
 	fields := interpreter.NewStringValueOrderedMap()
 
 	for i := 0; i < len(fieldTypes) && i < len(fieldValues); i++ {
@@ -450,6 +448,22 @@ func importCompositeValue(
 		)
 	}
 
+	var builtinType *sema.BuiltinCompositeType
+	switch qualifiedIdentifier {
+	case sema.PublicKeyType.QualifiedString():
+		builtinType = sema.PublicKeyType
+	case sema.AccountKeyType.QualifiedString():
+		builtinType = sema.AccountKeyType
+	case sema.HashAlgorithmType.QualifiedString():
+		builtinType = sema.HashAlgorithmType
+	case sema.SignatureAlgorithmType.QualifiedString():
+		builtinType = sema.SignatureAlgorithmType
+	}
+
+	if builtinType != nil {
+		return interpreter.NewBuiltinCompositeValue(builtinType, fields)
+	}
+
 	return interpreter.NewCompositeValue(
 		location,
 		qualifiedIdentifier,
@@ -457,34 +471,4 @@ func importCompositeValue(
 		fields,
 		nil,
 	)
-}
-
-func importBuiltinStructValue(v cadence.BuiltinStruct) interpreter.Value {
-	structType := v.StructType
-	fieldValues := v.Fields
-
-	fieldTypes := structType.Fields
-	fields := interpreter.NewStringValueOrderedMap()
-
-	for i := 0; i < len(fieldTypes) && i < len(fieldValues); i++ {
-		fieldType := fieldTypes[i]
-		fieldValue := fieldValues[i]
-		fields.Set(fieldType.Identifier, importValue(fieldValue))
-	}
-
-	var importedType *sema.BuiltinCompositeType
-	switch structType.ID() {
-	case sema.PublicKeyType.QualifiedString():
-		importedType = sema.PublicKeyType
-	case sema.AccountKeyType.QualifiedString():
-		importedType = sema.AccountKeyType
-	case sema.HashAlgorithmType.QualifiedString():
-		importedType = sema.HashAlgorithmType
-	case sema.SignatureAlgorithmType.QualifiedString():
-		importedType = sema.SignatureAlgorithmType
-	default:
-		panic(fmt.Sprintf("invalid builtin composite type %T", structType))
-	}
-
-	return interpreter.NewBuiltinCompositeValue(importedType, fields)
 }

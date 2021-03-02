@@ -936,14 +936,3 @@ func (PublicAccountType) isType() {}
 func (PublicAccountType) ID() string {
 	return "PublicAccount"
 }
-
-type BuiltinStructType struct {
-	QualifiedIdentifier string
-	Fields              []Field
-}
-
-func (*BuiltinStructType) isType() {}
-
-func (t *BuiltinStructType) ID() string {
-	return t.QualifiedIdentifier
-}

@@ -446,8 +446,8 @@ func TestHashAlgorithm(t *testing.T) {
 	require.IsType(t, cadence.Optional{}, array.Values[0])
 	optionalValue := array.Values[0].(cadence.Optional)
 
-	require.IsType(t, cadence.BuiltinStruct{}, optionalValue.Value)
-	builtinStruct := optionalValue.Value.(cadence.BuiltinStruct)
+	require.IsType(t, cadence.Struct{}, optionalValue.Value)
+	builtinStruct := optionalValue.Value.(cadence.Struct)
 
 	require.Equal(t, 1, len(builtinStruct.Fields))
 	assert.Equal(t, cadence.NewInt(HashAlgorithmKMAC128.RawValue()), builtinStruct.Fields[0])
@@ -456,8 +456,8 @@ func TestHashAlgorithm(t *testing.T) {
 	require.IsType(t, cadence.Optional{}, array.Values[1])
 	optionalValue = array.Values[1].(cadence.Optional)
 
-	require.IsType(t, cadence.BuiltinStruct{}, optionalValue.Value)
-	builtinStruct = optionalValue.Value.(cadence.BuiltinStruct)
+	require.IsType(t, cadence.Struct{}, optionalValue.Value)
+	builtinStruct = optionalValue.Value.(cadence.Struct)
 
 	require.Equal(t, 1, len(builtinStruct.Fields))
 	assert.Equal(t, cadence.NewInt(HashAlgorithmKMAC128.RawValue()), builtinStruct.Fields[0])
@@ -508,8 +508,8 @@ func TestSignatureAlgorithm(t *testing.T) {
 	require.IsType(t, cadence.Optional{}, array.Values[0])
 	optionalValue := array.Values[0].(cadence.Optional)
 
-	require.IsType(t, cadence.BuiltinStruct{}, optionalValue.Value)
-	builtinStruct := optionalValue.Value.(cadence.BuiltinStruct)
+	require.IsType(t, cadence.Struct{}, optionalValue.Value)
+	builtinStruct := optionalValue.Value.(cadence.Struct)
 
 	require.Equal(t, 1, len(builtinStruct.Fields))
 	assert.Equal(t, cadence.NewInt(SignatureAlgorithmBLSBLS12381.RawValue()), builtinStruct.Fields[0])
@@ -518,8 +518,8 @@ func TestSignatureAlgorithm(t *testing.T) {
 	require.IsType(t, cadence.Optional{}, array.Values[1])
 	optionalValue = array.Values[1].(cadence.Optional)
 
-	require.IsType(t, cadence.BuiltinStruct{}, optionalValue.Value)
-	builtinStruct = optionalValue.Value.(cadence.BuiltinStruct)
+	require.IsType(t, cadence.Struct{}, optionalValue.Value)
+	builtinStruct = optionalValue.Value.(cadence.Struct)
 
 	require.Equal(t, 1, len(builtinStruct.Fields))
 	assert.Equal(t, cadence.NewInt(SignatureAlgorithmBLSBLS12381.RawValue()), builtinStruct.Fields[0])
@@ -538,21 +538,21 @@ var PublicKeyType = ExportedBuiltinType(sema.PublicKeyType)
 var SignAlgoType = ExportedBuiltinType(sema.SignatureAlgorithmType)
 var HashAlgoType = ExportedBuiltinType(sema.HashAlgorithmType)
 
-func ExportedBuiltinType(internalType sema.Type) *cadence.BuiltinStructType {
-	return ExportType(internalType, map[sema.TypeID]cadence.Type{}).(*cadence.BuiltinStructType)
+func ExportedBuiltinType(internalType sema.Type) *cadence.StructType {
+	return ExportType(internalType, map[sema.TypeID]cadence.Type{}).(*cadence.StructType)
 }
 
-func publicKeyExportedValue(keyBytes []byte, signAlgo sema.SignatureAlgorithm) cadence.BuiltinStruct {
+func publicKeyExportedValue(keyBytes []byte, signAlgo sema.SignatureAlgorithm) cadence.Struct {
 	byteArray := make([]cadence.Value, len(keyBytes))
 	for index, value := range keyBytes {
 		byteArray[index] = cadence.NewUInt8(value)
 	}
 
-	signAlgoValue := cadence.NewBuiltinStruct([]cadence.Value{
+	signAlgoValue := cadence.NewStruct([]cadence.Value{
 		cadence.NewInt(signAlgo.RawValue()),
 	}).WithType(SignAlgoType)
 
-	return cadence.BuiltinStruct{
+	return cadence.Struct{
 		StructType: PublicKeyType,
 		Fields: []cadence.Value{
 			cadence.NewArray(byteArray),
@@ -568,14 +568,14 @@ func accountKeyExportedValue(
 	hashAlgo sema.HashAlgorithm,
 	weight string,
 	isRevoked bool,
-) cadence.BuiltinStruct {
+) cadence.Struct {
 
 	weightUFix64, err := cadence.NewUFix64(weight)
 	if err != nil {
 		panic(err)
 	}
 
-	return cadence.BuiltinStruct{
+	return cadence.Struct{
 		StructType: AccountKeyType,
 		Fields: []cadence.Value{
 			// key index
@@ -585,7 +585,7 @@ func accountKeyExportedValue(
 			publicKeyExportedValue(publicKeyBytes, signAlgo),
 
 			// Hash algo
-			cadence.NewBuiltinStruct([]cadence.Value{
+			cadence.NewStruct([]cadence.Value{
 				cadence.NewInt(hashAlgo.RawValue()),
 			}).WithType(HashAlgoType),
 

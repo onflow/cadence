@@ -389,7 +389,7 @@ func exportCapabilityType(t *sema.CapabilityType, results map[sema.TypeID]cadenc
 	}.WithID(string(t.ID()))
 }
 
-func exportBuiltinCompositeType(t *sema.BuiltinCompositeType, results map[sema.TypeID]cadence.Type) *cadence.BuiltinStructType {
+func exportBuiltinCompositeType(t *sema.BuiltinCompositeType, results map[sema.TypeID]cadence.Type) *cadence.StructType {
 
 	var fields []cadence.Field
 
@@ -404,8 +404,10 @@ func exportBuiltinCompositeType(t *sema.BuiltinCompositeType, results map[sema.T
 			})
 	})
 
-	return &cadence.BuiltinStructType{
+	return &cadence.StructType{
+		Location:            common.NativeLocation{},
 		QualifiedIdentifier: t.QualifiedString(),
 		Fields:              fields,
+		Initializers:        make([][]cadence.Parameter, 0),
 	}
 }
