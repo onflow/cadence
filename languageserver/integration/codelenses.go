@@ -49,14 +49,6 @@ func (i *FlowIntegration) codeLenses(
 
 	var actions []*protocol.CodeLens
 
-	/*
-	addAction := func(lens *protocol.CodeLens) {
-		if lens != nil {
-			actions = append(actions, lens)
-		}
-	}
-	 */
-
 	program := checker.Program
 
 	deployContractLenses := i.showDeployContractAction(uri, program, version, checker)
