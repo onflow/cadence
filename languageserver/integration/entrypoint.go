@@ -35,7 +35,7 @@ const (
 	entryPointKindScript
 	entryPointKindTransaction
 	entryPointKindContract
-	// entryPointKindContractInterface
+	entryPointKindContractInterface
 )
 
 type entryPointInfo struct {
