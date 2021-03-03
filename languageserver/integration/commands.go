@@ -147,10 +147,6 @@ func (i *FlowIntegration) executeScript(conn protocol.Conn, args ...interface{})
 		return nil, fmt.Errorf("invalid URI argument: %#+v", args[0])
 	}
 
-/*	doc, ok := i.server.GetDocument(protocol.DocumentUri(uri))
-	if !ok {
-		return nil, fmt.Errorf("could not find document for URI %s", uri)
-	}*/
 
 	rawScriptArguments, ok := args[1].([]interface{})
 	if !ok {
