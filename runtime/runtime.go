@@ -66,6 +66,10 @@ type Runtime interface {
 	// Passing nil disables coverage reporting (default).
 	//
 	SetCoverageReport(coverageReport *CoverageReport)
+
+	// SetContractUpdateValidationEnabled configures if contract update validation is enabled.
+	//
+	SetContractUpdateValidationEnabled(enabled bool)
 }
 
 var typeDeclarations = append(
@@ -119,10 +123,20 @@ func reportMetric(
 
 // interpreterRuntime is a interpreter-based version of the Flow runtime.
 type interpreterRuntime struct {
-	coverageReport *CoverageReport
+	coverageReport                  *CoverageReport
+	contractUpdateValidationEnabled bool
 }
 
 type Option func(Runtime)
+
+// WithContractUpdateValidationEnabled returns a runtime option
+// that configures if contract update validation is enabled.
+//
+func WithContractUpdateValidationEnabled(enabled bool) Option {
+	return func(runtime Runtime) {
+		runtime.SetContractUpdateValidationEnabled(enabled)
+	}
+}
 
 // NewInterpreterRuntime returns a interpreter-based version of the Flow runtime.
 func NewInterpreterRuntime(options ...Option) Runtime {
@@ -135,6 +149,10 @@ func NewInterpreterRuntime(options ...Option) Runtime {
 
 func (r *interpreterRuntime) SetCoverageReport(coverageReport *CoverageReport) {
 	r.coverageReport = coverageReport
+}
+
+func (r *interpreterRuntime) SetContractUpdateValidationEnabled(enabled bool) {
+	r.contractUpdateValidationEnabled = enabled
 }
 
 func (r *interpreterRuntime) ExecuteScript(script Script, context Context) (cadence.Value, error) {
@@ -1806,7 +1824,9 @@ func (r *interpreterRuntime) newAuthAccountContractsChangeFunction(
 				))
 			}
 
-			if isUpdate {
+			// Validate the contract update (if enabled)
+
+			if r.contractUpdateValidationEnabled && isUpdate {
 				var oldProgram *ast.Program
 				if cachedProgram != nil {
 					oldProgram = cachedProgram.Program
@@ -1815,7 +1835,12 @@ func (r *interpreterRuntime) newAuthAccountContractsChangeFunction(
 					handleContractUpdateError(err)
 				}
 
-				validator := NewContractUpdateValidator(context.Location, nameArgument, oldProgram, program.Program)
+				validator := NewContractUpdateValidator(
+					context.Location,
+					nameArgument,
+					oldProgram,
+					program.Program,
+				)
 				err = validator.Validate()
 				handleContractUpdateError(err)
 			}
