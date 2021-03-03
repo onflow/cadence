@@ -52,9 +52,9 @@ func (i *FlowIntegration) codeLenses(
 	program := checker.Program
 
 	deployContractLenses := i.showDeployContractAction(uri, program, version, checker)
+	deployContractInterfaceLenses := i.showDeployContractInterfaceAction(uri, program, version, checker)
 	actions = append(actions, deployContractLenses...)
-	// TODO: Fix deploy interface action
-	// addAction(i.showDeployContractInterfaceAction(uri, program, version, checker))
+	actions = append(actions, deployContractInterfaceLenses...)
 
 	entryPointCodeLenses, err := i.entryPointActions(uri, version, checker)
 	if err != nil {
@@ -78,7 +78,6 @@ func (i *FlowIntegration) showDeployContractAction(
 	i.updateEntryPointInfoIfNeeded(uri, version, checker)
 	entryPointInfo := i.entryPointInfo[uri]
 
-
 	contract := program.SoleContractDeclaration()
 
 	if contract == nil {
@@ -95,7 +94,6 @@ func (i *FlowIntegration) showDeployContractAction(
 		return codeLenses
 	}
 
-	argumentLists := entryPointInfo.pragmaArguments[:]
 	signersList := entryPointInfo.pragmaSignersStrings[:]
 	// TODO: resolve check for amount of signers equals to provided by pragma
 	if len(signersList) == 0 {
@@ -103,65 +101,25 @@ func (i *FlowIntegration) showDeployContractAction(
 		signersList = append(signersList, activeAccount...)
 	}
 
-	if len(argumentLists) > 0{
-		for i, argumentList := range argumentLists {
-			var title string
+	for _, signers := range signersList {
+		title := fmt.Sprintf(
+			"%s %s %s %s %s",
+			prefixOK,
+			"Deploy contract",
+			name,
+			"to",
+			signers[0],
+		)
 
-			encodedArgumentList := make([]string, len(argumentList))
-			for i, argument := range argumentList {
-				encodedArgument, err := jsoncdc.Encode(argument)
-				if err != nil {
-					return nil
-				}
-				encodedArgumentList[i] = string(encodedArgument)
-			}
-
-			for _, signers := range signersList {
-				if len(argumentList) > 0 {
-					title = fmt.Sprintf(
-						"%s %s %s %s %s %s %s",
-						prefixOK,
-						"Deploy",
-						name,
-						"with",
-						entryPointInfo.pragmaArgumentStrings[i],
-						"to",
-						signers[0],
-					)
-				}
-
-				codeLens := &protocol.CodeLens{
-					Range: codelensRange,
-					Command: &protocol.Command{
-						Title:     title,
-						Command:   ClientDeployContract,
-						Arguments: []interface{}{uri, name, argumentList, signers[0]},
-					},
-				}
-				codeLenses = append(codeLenses, codeLens)
-			}
+		codeLens := &protocol.CodeLens{
+			Range: codelensRange,
+			Command: &protocol.Command{
+				Title:     title,
+				Command:   ClientDeployContract,
+				Arguments: []interface{}{uri, name, signers[0]},
+			},
 		}
-	} else {
-		for _, signers := range signersList {
-			title := fmt.Sprintf(
-				"%s %s %s %s %s",
-				prefixOK,
-				"Deploy",
-				name,
-				"to",
-				signers[0],
-			)
-
-			codeLens := &protocol.CodeLens{
-				Range: codelensRange,
-				Command: &protocol.Command{
-					Title:     title,
-					Command:   ClientDeployContract,
-					Arguments: []interface{}{uri, name, "", signers[0]},
-				},
-			}
-			codeLenses = append(codeLenses, codeLens)
-		}
+		codeLenses = append(codeLenses, codeLens)
 	}
 
 
@@ -176,31 +134,57 @@ func (i *FlowIntegration) showDeployContractInterfaceAction(
 	program *ast.Program,
 	version float64,
 	checker *sema.Checker,
-) *protocol.CodeLens {
+) 	[]*protocol.CodeLens {
 
-	contractInterface := program.SoleContractInterfaceDeclaration()
-	if contractInterface == nil {
+	i.updateEntryPointInfoIfNeeded(uri, version, checker)
+	entryPointInfo := i.entryPointInfo[uri]
+
+	contract := program.SoleContractInterfaceDeclaration()
+
+	if contract == nil {
 		return nil
 	}
 
-	name := contractInterface.Identifier.Identifier
+	name := contract.Identifier.Identifier
+	position := contract.StartPosition()
+	codelensRange := conversion.ASTToProtocolRange(position, position)
+	var codeLenses []*protocol.CodeLens
 
-	position := contractInterface.StartPosition()
-
-	return &protocol.CodeLens{
-		Range: conversion.ASTToProtocolRange(
-			position,
-			position,
-		),
-		Command: &protocol.Command{
-			Title: fmt.Sprintf(
-				"deploy to account 0x%s",
-				i.activeAddress.Hex(),
-			),
-			Command:   ClientDeployContract,
-			Arguments: []interface{}{uri, name},
-		},
+	// If emulator is not up, we need to provide actionless codelens
+	if i.emulatorState == EmulatorStarting || i.emulatorState == EmulatorOffline {
+		return codeLenses
 	}
+
+	signersList := entryPointInfo.pragmaSignersStrings[:]
+	// TODO: resolve check for amount of signers equals to provided by pragma
+	if len(signersList) == 0 {
+		activeAccount := [][]string{[]string{"active account"}}
+		signersList = append(signersList, activeAccount...)
+	}
+
+	for _, signers := range signersList {
+		title := fmt.Sprintf(
+			"%s %s %s %s %s",
+			prefixOK,
+			"Deploy contract interface",
+			name,
+			"to",
+			signers[0],
+		)
+
+		codeLens := &protocol.CodeLens{
+			Range: codelensRange,
+			Command: &protocol.Command{
+				Title:     title,
+				Command:   ClientDeployContract,
+				Arguments: []interface{}{uri, name, signers[0]},
+			},
+		}
+		codeLenses = append(codeLenses, codeLens)
+	}
+
+
+	return codeLenses
 }
 
 // entryPointActions shows an execute button when there is exactly one valid entry point
