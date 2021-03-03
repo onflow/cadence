@@ -178,19 +178,19 @@ var BuiltinValues = StandardLibraryValues{
 
 var SignatureAlgorithmValue = StandardLibraryValue{
 	Name:  sema.SignatureAlgorithmTypeName,
-	Type:  getNativeEnumType(sema.SignatureAlgorithmType, sema.SignatureAlgorithms),
-	Value: getNativeEnumValue(sema.SignatureAlgorithmType, sema.SignatureAlgorithms),
+	Type:  nativeEnumType(sema.SignatureAlgorithmType, sema.SignatureAlgorithms),
+	Value: nativeEnumValue(sema.SignatureAlgorithmType, sema.SignatureAlgorithms),
 	Kind:  common.DeclarationKindEnum,
 }
 
 var HashAlgorithmValue = StandardLibraryValue{
 	Name:  sema.HashAlgorithmTypeName,
-	Type:  getNativeEnumType(sema.HashAlgorithmType, sema.HashAlgorithms),
-	Value: getNativeEnumValue(sema.HashAlgorithmType, sema.HashAlgorithms),
+	Type:  nativeEnumType(sema.HashAlgorithmType, sema.HashAlgorithms),
+	Value: nativeEnumValue(sema.HashAlgorithmType, sema.HashAlgorithms),
 	Kind:  common.DeclarationKindEnum,
 }
 
-func getNativeEnumType(enumType *sema.CompositeType, enumCases []sema.NativeEnumCase) *sema.SpecialFunctionType {
+func nativeEnumType(enumType *sema.CompositeType, enumCases []sema.NativeEnumCase) *sema.SpecialFunctionType {
 	members := make([]*sema.Member, len(enumCases))
 	for _, algo := range enumCases {
 		members[algo.RawValue()] = sema.NewPublicEnumCaseMember(
@@ -220,7 +220,7 @@ func getNativeEnumType(enumType *sema.CompositeType, enumCases []sema.NativeEnum
 	return constructorType
 }
 
-func getNativeEnumValue(enumType *sema.CompositeType, enumCases []sema.NativeEnumCase) (value interpreter.Value) {
+func nativeEnumValue(enumType *sema.CompositeType, enumCases []sema.NativeEnumCase) (value interpreter.Value) {
 	caseCount := len(enumCases)
 	caseValues := make([]*interpreter.CompositeValue, caseCount)
 	constructorMembers := interpreter.NewStringValueOrderedMap()
@@ -232,21 +232,5 @@ func getNativeEnumValue(enumType *sema.CompositeType, enumCases []sema.NativeEnu
 		constructorMembers.Set(enumCase.Name(), caseValue)
 	}
 
-	constructor := interpreter.NewHostFunctionValue(
-		func(invocation interpreter.Invocation) trampoline.Trampoline {
-			rawValueArgument := invocation.Arguments[0].(interpreter.IntegerValue).ToInt()
-			var result interpreter.Value = interpreter.NilValue{}
-
-			if rawValueArgument >= 0 && rawValueArgument < caseCount {
-				caseValue := caseValues[rawValueArgument]
-				result = interpreter.NewSomeValueOwningNonCopying(caseValue)
-			}
-
-			return trampoline.Done{Result: result}
-		},
-	)
-
-	constructor.Members = constructorMembers
-	value = constructor
-	return value
+	return interpreter.EnumConstructorFunction(caseValues, constructorMembers)
 }
