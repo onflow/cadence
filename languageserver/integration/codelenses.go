@@ -275,7 +275,7 @@ func (i *FlowIntegration) entryPointActions(
 
 	// If there are no parameters and no pragma argument declarations,
 	// offer execution using no arguments
-	if len(entryPointInfo.parameters) == 0 && len(argumentLists) == 0 {
+	if len(entryPointInfo.parameters) == 0{
 		argumentLists = append(argumentLists, []cadence.Value{})
 	}
 
@@ -308,13 +308,19 @@ func (i *FlowIntegration) entryPointActions(
 					"Execute script with",
 					entryPointInfo.pragmaArgumentStrings[i],
 				)
+			} else {
+				title = fmt.Sprintf(
+					"%s %s",
+					prefixOK,
+					"Execute script",
+				)
 			}
 
 			codeLens := &protocol.CodeLens{
 				Range: codelensRange,
 				Command: &protocol.Command{
 					Title:     title,
-					Command:   CommandExecuteScript,
+					Command:   ClientExecuteScript,
 					Arguments: []interface{}{uri, encodedArgumentList},
 				},
 			}
@@ -331,13 +337,20 @@ func (i *FlowIntegration) entryPointActions(
 						"signed by ",
 						strings.Join(signers, " and "),
 					)
+				} else {
+					title = fmt.Sprintf(
+						"%s %s %s",
+						prefixOK,
+						"Send signed by",
+						strings.Join(signers, " and "),
+					)
 				}
 
 				codeLens := &protocol.CodeLens{
 					Range: codelensRange,
 					Command: &protocol.Command{
 						Title:     title,
-						Command:   CommandSubmitTransaction,
+						Command:   ClientSendTransaction,
 						Arguments: []interface{}{uri, encodedArgumentList, signers},
 					},
 				}
