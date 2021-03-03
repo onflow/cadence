@@ -936,6 +936,85 @@ func TestContractUpdateValidation(t *testing.T) {
 
 		require.Contains(t, err.Error(), expectedError)
 	})
+
+	t.Run("Test reference types", func(t *testing.T) {
+		const oldCode = `
+			pub contract Test22 {
+
+				pub var vault: Capability<&TestStruct>?
+
+				init() {
+					self.vault = nil
+				}
+
+				pub struct TestStruct {
+					pub let a: Int
+
+					init() {
+						self.a = 123
+					}
+				}
+			}`
+
+		const newCode = `
+			pub contract Test22 {
+
+				pub var vault: Capability<&TestStruct>?
+
+				init() {
+					self.vault = nil
+				}
+
+				pub struct TestStruct {
+					pub let a: Int
+
+					init() {
+						self.a = 123
+					}
+				}
+			}`
+
+		err := deployAndUpdate("Test22", oldCode, newCode)
+		require.NoError(t, err)
+	})
+
+	t.Run("Test function type", func(t *testing.T) {
+		const oldCode = `
+			pub contract Test23 {
+
+				pub struct TestStruct {
+					pub let a: Int
+
+					init() {
+						self.a = 123
+					}
+				}
+			}`
+
+		const newCode = `
+			pub contract Test23 {
+
+				pub var add: ((Int, Int): Int)
+
+				init() {
+					self.add = fun (a: Int, b: Int): Int {
+						return a + b
+					}
+				}
+
+				pub struct TestStruct {
+					pub let a: Int
+
+					init() {
+						self.a = 123
+					}
+				}
+			}`
+
+		err := deployAndUpdate("Test23", oldCode, newCode)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "error: field add has non-storable type: ((Int, Int): Int)")
+	})
 }
 
 func assertDeclTypeChangeError(

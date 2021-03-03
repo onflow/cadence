@@ -323,27 +323,29 @@ func (validator *ContractUpdateValidator) CheckInstantiationTypeEquality(expecte
 }
 
 func (validator *ContractUpdateValidator) CheckFunctionTypeEquality(expected *ast.FunctionType, found ast.Type) error {
-	_, ok := found.(*ast.FunctionType)
-	if !ok {
+	foundFuncType, ok := found.(*ast.FunctionType)
+	if !ok || len(expected.ParameterTypeAnnotations) != len(foundFuncType.ParameterTypeAnnotations) {
 		return getTypeMismatchError(expected, found)
 	}
 
-	return &InvalidNonStorableTypeUsageError{
-		nonStorableType: found,
-		Range:           ast.NewRangeFromPositioned(found),
+	for index, expectedParamType := range expected.ParameterTypeAnnotations {
+		foundParamType := foundFuncType.ParameterTypeAnnotations[index]
+		err := expectedParamType.Type.CheckEqual(foundParamType.Type, validator)
+		if err != nil {
+			return getTypeMismatchError(expected, found)
+		}
 	}
+
+	return expected.ReturnTypeAnnotation.Type.CheckEqual(foundFuncType.ReturnTypeAnnotation.Type, validator)
 }
 
 func (validator *ContractUpdateValidator) CheckReferenceTypeEquality(expected *ast.ReferenceType, found ast.Type) error {
-	_, ok := found.(*ast.ReferenceType)
+	refType, ok := found.(*ast.ReferenceType)
 	if !ok {
 		return getTypeMismatchError(expected, found)
 	}
 
-	return &InvalidNonStorableTypeUsageError{
-		nonStorableType: found,
-		Range:           ast.NewRangeFromPositioned(found),
-	}
+	return expected.Type.CheckEqual(refType.Type, validator)
 }
 
 func (validator *ContractUpdateValidator) checkNameEquality(expectedType *ast.NominalType, foundType *ast.NominalType) bool {
