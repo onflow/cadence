@@ -5917,7 +5917,7 @@ func TestRuntimeTransaction_ContractUpdate(t *testing.T) {
 
 	nextTransactionLocation := newTransactionLocationGenerator()
 
-	deployTx1 := newDeployTransaction("add", "Test", contract1)
+	deployTx1 := newDeployTransaction(sema.AuthAccountContractsTypeAddFunctionName, "Test", contract1)
 
 	err := runtime.ExecuteTransaction(
 		Script{
@@ -5957,7 +5957,11 @@ func TestRuntimeTransaction_ContractUpdate(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	deployTx2 := newDeployTransaction("update__experimental", "Test", contract2)
+	deployTx2 := newDeployTransaction(
+		sema.AuthAccountContractsTypeUpdateExperimentalFunctionName,
+		"Test",
+		contract2,
+	)
 
 	err = runtime.ExecuteTransaction(
 		Script{

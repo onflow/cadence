@@ -36,7 +36,9 @@ func TestContractUpdateValidation(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := NewInterpreterRuntime()
+	runtime := NewInterpreterRuntime(
+		WithContractUpdateValidationEnabled(true),
+	)
 
 	newDeployTransaction := func(function, name, code string) []byte {
 		return []byte(fmt.Sprintf(`
@@ -430,7 +432,11 @@ func TestContractUpdateValidation(t *testing.T) {
 				}
 			}`
 
-		deployTx1 := newDeployTransaction("add", "Test9Import", importCode)
+		deployTx1 := newDeployTransaction(
+			sema.AuthAccountContractsTypeAddFunctionName,
+			"Test9Import",
+			importCode,
+		)
 		err := runtime.ExecuteTransaction(
 			Script{
 				Source: deployTx1,
@@ -1042,7 +1048,8 @@ func getContractUpdateError(t *testing.T, err error) *ContractUpdateError {
 func getMockedRuntimeInterfaceForTxUpdate(
 	t *testing.T,
 	accountStorage map[string][]byte,
-	events []cadence.Event) *testRuntimeInterface {
+	events []cadence.Event,
+) *testRuntimeInterface {
 
 	return &testRuntimeInterface{
 		getCode: func(location Location) (bytes []byte, err error) {
@@ -1076,4 +1083,78 @@ func getMockedRuntimeInterfaceForTxUpdate(
 			return nil
 		},
 	}
+}
+
+func TestContractUpdateValidationDisabled(t *testing.T) {
+
+	t.Parallel()
+
+	runtime := NewInterpreterRuntime(
+		WithContractUpdateValidationEnabled(false),
+	)
+
+	newDeployTransaction := func(function, name, code string) []byte {
+		return []byte(fmt.Sprintf(`
+			transaction {
+				prepare(signer: AuthAccount) {
+					signer.contracts.%s(name: "%s", code: "%s".decodeHex())
+				}
+			}`,
+			function,
+			name,
+			hex.EncodeToString([]byte(code)),
+		))
+	}
+
+	accountCode := map[string][]byte{}
+	var events []cadence.Event
+	runtimeInterface := getMockedRuntimeInterfaceForTxUpdate(t, accountCode, events)
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	deployAndUpdate := func(name string, oldCode string, newCode string) error {
+		deployTx1 := newDeployTransaction(sema.AuthAccountContractsTypeAddFunctionName, name, oldCode)
+		err := runtime.ExecuteTransaction(
+			Script{
+				Source: deployTx1,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+		require.NoError(t, err)
+
+		deployTx2 := newDeployTransaction(sema.AuthAccountContractsTypeUpdateExperimentalFunctionName, name, newCode)
+		err = runtime.ExecuteTransaction(
+			Script{
+				Source: deployTx2,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+		return err
+	}
+
+	t.Run("change field type", func(t *testing.T) {
+		const oldCode = `
+			pub contract Test1 {
+				pub var a: String
+				init() {
+					self.a = "hello"
+				}
+      		}`
+
+		const newCode = `
+			pub contract Test1 {
+				pub var a: Int
+				init() {
+					self.a = 0
+				}
+			}`
+
+		err := deployAndUpdate("Test1", oldCode, newCode)
+		require.NoError(t, err)
+	})
 }
