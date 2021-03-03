@@ -568,15 +568,12 @@ var accountTypeGetLinkTargetFunctionType = &FunctionType{
 }
 
 // AuthAccountKeysType represents the keys associated with an auth account.
-var AuthAccountKeysType = func() *BuiltinCompositeType {
+var AuthAccountKeysType = func() *CompositeType {
 
-	accountKeys := &BuiltinCompositeType{
-		Identifier:           AccountKeysTypeName,
-		IsInvalid:            false,
-		IsResource:           false,
-		Storable:             false,
-		Equatable:            true,
-		ExternallyReturnable: false,
+	accountKeys := &CompositeType{
+		Identifier: AccountKeysTypeName,
+		Kind:       common.CompositeKindStructure,
+		Location:   common.NativeLocation{},
 	}
 
 	var members = []*Member{
@@ -601,6 +598,7 @@ var AuthAccountKeysType = func() *BuiltinCompositeType {
 	}
 
 	accountKeys.Members = GetMembersAsMap(members)
+	accountKeys.Fields = getFields(members)
 	return accountKeys
 }()
 

@@ -148,8 +148,6 @@ func exportValueWithInterpreter(
 				return nil
 			}
 			return exportValueWithInterpreter(*referencedValue, inter, results)
-		case *interpreter.BuiltinCompositeValue:
-			return exportBuiltinStructValue(v, inter, results)
 		}
 
 		panic(fmt.Sprintf("cannot export value of type %T", value))
@@ -199,6 +197,8 @@ func exportCompositeValue(v *interpreter.CompositeValue, inter *interpreter.Inte
 	}
 
 	switch staticType.Kind {
+	case common.CompositeKindEnum:
+		fallthrough
 	case common.CompositeKindStructure:
 		return cadence.NewStruct(fields).WithType(t.(*cadence.StructType))
 	case common.CompositeKindResource:
@@ -282,29 +282,6 @@ func exportCapabilityValue(v interpreter.CapabilityValue, inter *interpreter.Int
 		Address:    cadence.NewAddress(v.Address),
 		BorrowType: borrowType,
 	}
-}
-
-func exportBuiltinStructValue(v *interpreter.BuiltinCompositeValue, inter *interpreter.Interpreter, results exportResults) cadence.Value {
-
-	builtinDynamicType := v.DynamicType(inter).(interpreter.BuiltinCompositeDynamicType)
-
-	// Convert internal type to exported type.
-	exportedBuiltinStructType := exportBuiltinCompositeType(builtinDynamicType.StaticType, map[sema.TypeID]cadence.Type{})
-
-	fieldNames := exportedBuiltinStructType.Fields
-	fields := make([]cadence.Value, len(fieldNames))
-
-	// NOTE: use the exported type's fields to ensure fields in type and value are in sync.
-	for index, field := range fieldNames {
-		fieldValue, ok := v.Fields.Get(field.Identifier)
-		if !ok {
-			panic(fmt.Errorf("cannot find field %s in %s", field.Identifier, exportedBuiltinStructType.ID()))
-		}
-
-		fields[index] = exportValueWithInterpreter(fieldValue, inter, results)
-	}
-
-	return cadence.NewStruct(fields).WithType(exportedBuiltinStructType)
 }
 
 // importValue converts a Cadence value to a runtime value.
@@ -436,7 +413,7 @@ func importCompositeValue(
 	qualifiedIdentifier string,
 	fieldTypes []cadence.Field,
 	fieldValues []cadence.Value,
-) interpreter.Value {
+) *interpreter.CompositeValue {
 	fields := interpreter.NewStringValueOrderedMap()
 
 	for i := 0; i < len(fieldTypes) && i < len(fieldValues); i++ {
@@ -446,22 +423,6 @@ func importCompositeValue(
 			fieldType.Identifier,
 			importValue(fieldValue),
 		)
-	}
-
-	var builtinType *sema.BuiltinCompositeType
-	switch qualifiedIdentifier {
-	case sema.PublicKeyType.QualifiedString():
-		builtinType = sema.PublicKeyType
-	case sema.AccountKeyType.QualifiedString():
-		builtinType = sema.AccountKeyType
-	case sema.HashAlgorithmType.QualifiedString():
-		builtinType = sema.HashAlgorithmType
-	case sema.SignatureAlgorithmType.QualifiedString():
-		builtinType = sema.SignatureAlgorithmType
-	}
-
-	if builtinType != nil {
-		return interpreter.NewBuiltinCompositeValue(builtinType, fields)
 	}
 
 	return interpreter.NewCompositeValue(

@@ -112,17 +112,13 @@ var PublicAccountType = &NominalType{
 	}(),
 }
 
-
 // PublicAccountKeysType represents the keys associated with a public account.
-var PublicAccountKeysType = func() *BuiltinCompositeType {
+var PublicAccountKeysType = func() *CompositeType {
 
-	accountKeys := &BuiltinCompositeType{
-		Identifier:           AccountKeysTypeName,
-		IsInvalid:            false,
-		IsResource:           false,
-		Storable:             false,
-		Equatable:            true,
-		ExternallyReturnable: false,
+	accountKeys := &CompositeType{
+		Identifier: AccountKeysTypeName,
+		Kind:       common.CompositeKindStructure,
+		Location:   common.NativeLocation{},
 	}
 
 	var members = []*Member{
@@ -135,9 +131,9 @@ var PublicAccountKeysType = func() *BuiltinCompositeType {
 	}
 
 	accountKeys.Members = GetMembersAsMap(members)
+	accountKeys.Fields = getFields(members)
 	return accountKeys
 }()
-
 
 func init() {
 	// Set the container type after initializing the AccountKeysTypes, to avoid initializing loop.

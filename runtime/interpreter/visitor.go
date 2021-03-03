@@ -62,7 +62,6 @@ type Visitor interface {
 	VisitBoundFunctionValue(interpreter *Interpreter, value BoundFunctionValue)
 	VisitAuthAccountContractsValue(interpreter *Interpreter, value AuthAccountContractsValue)
 	VisitDeployedContractValue(interpreter *Interpreter, value DeployedContractValue)
-	VisitBuiltinCompositeValue(interpreter *Interpreter, value *BuiltinCompositeValue)
 }
 
 type EmptyVisitor struct {
@@ -109,7 +108,6 @@ type EmptyVisitor struct {
 	BoundFunctionValueVisitor        func(interpreter *Interpreter, value BoundFunctionValue)
 	AuthAccountContractsValueVisitor func(interpreter *Interpreter, value AuthAccountContractsValue)
 	DeployedContractValueVisitor     func(interpreter *Interpreter, value DeployedContractValue)
-	BuiltinCompositeValueVisitor     func(interpreter *Interpreter, value *BuiltinCompositeValue)
 }
 
 var _ Visitor = &EmptyVisitor{}
@@ -413,11 +411,4 @@ func (v EmptyVisitor) VisitDeployedContractValue(interpreter *Interpreter, value
 		return
 	}
 	v.DeployedContractValueVisitor(interpreter, value)
-}
-
-func (v EmptyVisitor) VisitBuiltinCompositeValue(interpreter *Interpreter, value *BuiltinCompositeValue) {
-	if v.BuiltinCompositeValueVisitor == nil {
-		return
-	}
-	v.BuiltinCompositeValueVisitor(interpreter, value)
 }

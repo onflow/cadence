@@ -59,7 +59,7 @@ func testAccount(t *testing.T, auth bool, code string) (*interpreter.Interpreter
 			panicFunction,
 			panicFunction,
 			interpreter.AuthAccountContractsValue{},
-			&interpreter.BuiltinCompositeValue{},
+			&interpreter.CompositeValue{},
 		),
 		Kind: common.DeclarationKindConstant,
 	}

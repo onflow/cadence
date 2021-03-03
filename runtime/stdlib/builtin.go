@@ -162,7 +162,7 @@ var CreatePublicKeyFunction = NewStandardLibraryFunction(
 
 	func(invocation interpreter.Invocation) trampoline.Trampoline {
 		publicKey := invocation.Arguments[0].(*interpreter.ArrayValue)
-		signAlgo := invocation.Arguments[1].(*interpreter.BuiltinCompositeValue)
+		signAlgo := invocation.Arguments[1].(*interpreter.CompositeValue)
 
 		value := interpreter.NewPublicKeyValue(publicKey, signAlgo)
 		return trampoline.Done{Result: value}
@@ -178,19 +178,19 @@ var BuiltinValues = StandardLibraryValues{
 
 var SignatureAlgorithmValue = StandardLibraryValue{
 	Name:  sema.SignatureAlgorithmTypeName,
-	Type:  getBuiltinEnumType(sema.SignatureAlgorithmType, sema.SignatureAlgorithms),
-	Value: getBuiltinEnumValue(sema.SignatureAlgorithmType, sema.SignatureAlgorithms),
+	Type:  getNativeEnumType(sema.SignatureAlgorithmType, sema.SignatureAlgorithms),
+	Value: getNativeEnumValue(sema.SignatureAlgorithmType, sema.SignatureAlgorithms),
 	Kind:  common.DeclarationKindEnum,
 }
 
 var HashAlgorithmValue = StandardLibraryValue{
 	Name:  sema.HashAlgorithmTypeName,
-	Type:  getBuiltinEnumType(sema.HashAlgorithmType, sema.HashAlgorithms),
-	Value: getBuiltinEnumValue(sema.HashAlgorithmType, sema.HashAlgorithms),
+	Type:  getNativeEnumType(sema.HashAlgorithmType, sema.HashAlgorithms),
+	Value: getNativeEnumValue(sema.HashAlgorithmType, sema.HashAlgorithms),
 	Kind:  common.DeclarationKindEnum,
 }
 
-func getBuiltinEnumType(enumType *sema.BuiltinCompositeType, enumCases []sema.BuiltinEnumCase) *sema.SpecialFunctionType {
+func getNativeEnumType(enumType *sema.CompositeType, enumCases []sema.NativeEnumCase) *sema.SpecialFunctionType {
 	members := make([]*sema.Member, len(enumCases))
 	for _, algo := range enumCases {
 		members[algo.RawValue()] = sema.NewPublicEnumCaseMember(
@@ -220,14 +220,14 @@ func getBuiltinEnumType(enumType *sema.BuiltinCompositeType, enumCases []sema.Bu
 	return constructorType
 }
 
-func getBuiltinEnumValue(enumType *sema.BuiltinCompositeType, enumCases []sema.BuiltinEnumCase) (value interpreter.Value) {
+func getNativeEnumValue(enumType *sema.CompositeType, enumCases []sema.NativeEnumCase) (value interpreter.Value) {
 	caseCount := len(enumCases)
-	caseValues := make([]*interpreter.BuiltinCompositeValue, caseCount)
+	caseValues := make([]*interpreter.CompositeValue, caseCount)
 	constructorMembers := interpreter.NewStringValueOrderedMap()
 
 	for _, enumCase := range enumCases {
 		rawValue := enumCase.RawValue()
-		caseValue := interpreter.NewEnumCaseValue(enumType, rawValue)
+		caseValue := interpreter.NewNativeEnumCaseValue(enumType, rawValue)
 		caseValues[rawValue] = caseValue
 		constructorMembers.Set(enumCase.Name(), caseValue)
 	}

@@ -240,8 +240,8 @@ func NewCryptoContract(
 }
 
 func getHashAlgorithmFromValue(value interpreter.Value) HashAlgorithm {
-	hashAlgoValue, ok := value.(*interpreter.BuiltinCompositeValue)
-	if !ok || hashAlgoValue.StaticType() != interpreter.PrimitiveStaticTypeHashAlgorithm {
+	hashAlgoValue, ok := value.(*interpreter.CompositeValue)
+	if !ok || hashAlgoValue.QualifiedIdentifier != sema.HashAlgorithmTypeName {
 		panic(fmt.Sprintf("hash algorithm value must be of type %s", sema.HashAlgorithmType))
 	}
 
@@ -259,8 +259,8 @@ func getHashAlgorithmFromValue(value interpreter.Value) HashAlgorithm {
 }
 
 func getSignatureAlgorithmFromValue(value interpreter.Value) SignatureAlgorithm {
-	signAlgoValue, ok := value.(*interpreter.BuiltinCompositeValue)
-	if !ok || signAlgoValue.StaticType() != interpreter.PrimitiveStaticTypeSignatureAlgorithm {
+	signAlgoValue, ok := value.(*interpreter.CompositeValue)
+	if !ok || signAlgoValue.QualifiedIdentifier != sema.SignatureAlgorithmTypeName {
 		panic(fmt.Sprintf("signature algorithm value must be of type %s", sema.SignatureAlgorithmType))
 	}
 

@@ -113,8 +113,6 @@ func ExportType(t sema.Type, results map[sema.TypeID]cadence.Type) cadence.Type 
 			return exportFunctionType(t.FunctionType, results)
 		case *sema.CapabilityType:
 			return exportCapabilityType(t, results)
-		case *sema.BuiltinCompositeType:
-			return exportBuiltinCompositeType(t, results)
 		}
 
 		switch t {
@@ -210,6 +208,8 @@ func exportCompositeType(t *sema.CompositeType, results map[sema.TypeID]cadence.
 	fields := make([]cadence.Field, len(fieldMembers))
 
 	switch t.Kind {
+	case common.CompositeKindEnum:
+		fallthrough
 	case common.CompositeKindStructure:
 		result = &cadence.StructType{
 			Location:            t.Location,
@@ -387,27 +387,4 @@ func exportCapabilityType(t *sema.CapabilityType, results map[sema.TypeID]cadenc
 	return cadence.CapabilityType{
 		BorrowType: borrowType,
 	}.WithID(string(t.ID()))
-}
-
-func exportBuiltinCompositeType(t *sema.BuiltinCompositeType, results map[sema.TypeID]cadence.Type) *cadence.StructType {
-
-	var fields []cadence.Field
-
-	t.Members.Foreach(func(key string, member *sema.Member) {
-		convertedFieldType := ExportType(member.TypeAnnotation.Type, results)
-
-		fields = append(
-			fields,
-			cadence.Field{
-				Identifier: member.Identifier.Identifier,
-				Type:       convertedFieldType,
-			})
-	})
-
-	return &cadence.StructType{
-		Location:            common.NativeLocation{},
-		QualifiedIdentifier: t.QualifiedString(),
-		Fields:              fields,
-		Initializers:        make([][]cadence.Parameter, 0),
-	}
 }

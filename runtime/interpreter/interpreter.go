@@ -3998,9 +3998,6 @@ func IsSubType(subType DynamicType, superType sema.Type) bool {
 		case sema.AnyStructType, sema.BlockType:
 			return true
 		}
-
-	case BuiltinCompositeDynamicType:
-		return sema.IsSubType(typedSubType.StaticType, superType)
 	}
 
 	return false
@@ -4431,6 +4428,10 @@ func (interpreter *Interpreter) getElaboration(location common.Location) *sema.E
 }
 
 func (interpreter *Interpreter) getCompositeType(location common.Location, qualifiedIdentifier string) *sema.CompositeType {
+	if _, ok := location.(common.NativeLocation); ok {
+		return sema.NativeCompositeTypes[qualifiedIdentifier]
+	}
+
 	typeID := location.TypeID(qualifiedIdentifier)
 
 	elaboration := interpreter.getElaboration(location)

@@ -6771,7 +6771,7 @@ func TestInterpretContractAccountFieldUse(t *testing.T) {
 								panicFunction,
 								panicFunction,
 								interpreter.AuthAccountContractsValue{},
-								&interpreter.BuiltinCompositeValue{},
+								&interpreter.CompositeValue{},
 							),
 						)
 						return injectedMembers
@@ -7592,7 +7592,7 @@ func TestInterpretResourceOwnerFieldUse(t *testing.T) {
 			panicFunction,
 			panicFunction,
 			interpreter.AuthAccountContractsValue{},
-			&interpreter.BuiltinCompositeValue{},
+			&interpreter.CompositeValue{},
 		),
 		Kind: common.DeclarationKindConstant,
 	}

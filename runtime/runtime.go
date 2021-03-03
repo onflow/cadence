@@ -1597,7 +1597,7 @@ func (r *interpreterRuntime) newAuthAccountContracts(
 	}
 }
 
-func (r *interpreterRuntime) newAuthAccountKeys(addressValue interpreter.AddressValue, runtimeInterface Interface) *interpreter.BuiltinCompositeValue {
+func (r *interpreterRuntime) newAuthAccountKeys(addressValue interpreter.AddressValue, runtimeInterface Interface) *interpreter.CompositeValue {
 	return interpreter.NewAuthAccountKeysValue(
 		r.newAccountKeysAddFunction(
 			addressValue,
@@ -2100,8 +2100,8 @@ func (r *interpreterRuntime) newAccountKeysAddFunction(
 ) interpreter.HostFunctionValue {
 	return interpreter.NewHostFunctionValue(
 		func(invocation interpreter.Invocation) trampoline.Trampoline {
-			publicKeyValue := invocation.Arguments[0].(*interpreter.BuiltinCompositeValue)
-			if publicKeyValue.StaticType() != interpreter.PrimitiveStaticTypePublicKey {
+			publicKeyValue := invocation.Arguments[0].(*interpreter.CompositeValue)
+			if publicKeyValue.QualifiedIdentifier != sema.PublicKeyTypeName {
 				panic(fmt.Sprintf(
 					"add method requires the first argument to be an %s",
 					sema.PublicKeyType,
@@ -2212,7 +2212,7 @@ func (r *interpreterRuntime) newAccountKeysRevokeFunction(
 	)
 }
 
-func (r *interpreterRuntime) newPublicAccountKeys(addressValue interpreter.AddressValue, runtimeInterface Interface) *interpreter.BuiltinCompositeValue {
+func (r *interpreterRuntime) newPublicAccountKeys(addressValue interpreter.AddressValue, runtimeInterface Interface) *interpreter.CompositeValue {
 	return interpreter.NewPublicAccountKeysValue(
 		r.newAccountKeysGetFunction(
 			addressValue,
@@ -2221,7 +2221,7 @@ func (r *interpreterRuntime) newPublicAccountKeys(addressValue interpreter.Addre
 	)
 }
 
-func NewPublicKeyFromValue(publicKey *interpreter.BuiltinCompositeValue) *PublicKey {
+func NewPublicKeyFromValue(publicKey *interpreter.CompositeValue) *PublicKey {
 
 	// publicKey field
 	key, ok := publicKey.Fields.Get(sema.PublicKeyPublicKeyField)
@@ -2240,8 +2240,8 @@ func NewPublicKeyFromValue(publicKey *interpreter.BuiltinCompositeValue) *Public
 		panic("sign algorithm is not set")
 	}
 
-	signAlgoValue, ok := signAlgoField.(*interpreter.BuiltinCompositeValue)
-	if !ok || signAlgoValue.StaticType() != interpreter.PrimitiveStaticTypeSignatureAlgorithm {
+	signAlgoValue, ok := signAlgoField.(*interpreter.CompositeValue)
+	if !ok || signAlgoValue.QualifiedIdentifier != sema.SignatureAlgorithmTypeName {
 		panic("sign algorithm needs to be of type `SignAlgorithm`")
 	}
 
@@ -2261,26 +2261,26 @@ func NewPublicKeyFromValue(publicKey *interpreter.BuiltinCompositeValue) *Public
 	}
 }
 
-func NewPublicKeyValue(publicKey *PublicKey) *interpreter.BuiltinCompositeValue {
+func NewPublicKeyValue(publicKey *PublicKey) *interpreter.CompositeValue {
 	return interpreter.NewPublicKeyValue(
 		interpreter.ByteSliceToByteArrayValue(publicKey.PublicKey),
-		interpreter.NewEnumCaseValue(sema.SignatureAlgorithmType, int(publicKey.SignAlgo)),
+		interpreter.NewNativeEnumCaseValue(sema.SignatureAlgorithmType, int(publicKey.SignAlgo)),
 	)
 }
 
-func NewAccountKeyValue(accountKey *AccountKey) *interpreter.BuiltinCompositeValue {
+func NewAccountKeyValue(accountKey *AccountKey) *interpreter.CompositeValue {
 	return interpreter.NewAccountKeyValue(
 		interpreter.NewIntValueFromInt64(int64(accountKey.KeyIndex)),
 		NewPublicKeyValue(accountKey.PublicKey),
-		interpreter.NewEnumCaseValue(sema.HashAlgorithmType, int(accountKey.HashAlgo)),
+		interpreter.NewNativeEnumCaseValue(sema.HashAlgorithmType, int(accountKey.HashAlgo)),
 		interpreter.NewUFix64ValueWithInteger(uint64(accountKey.Weight)),
 		interpreter.BoolValue(accountKey.IsRevoked),
 	)
 }
 
 func NewHashAlgorithmFromValue(value interpreter.Value) HashAlgorithm {
-	hashAlgoValue, ok := value.(*interpreter.BuiltinCompositeValue)
-	if !ok || hashAlgoValue.StaticType() != interpreter.PrimitiveStaticTypeHashAlgorithm {
+	hashAlgoValue, ok := value.(*interpreter.CompositeValue)
+	if !ok || hashAlgoValue.QualifiedIdentifier != sema.HashAlgorithmTypeName {
 		panic(fmt.Sprintf("hash algorithm value must be of type %s", sema.HashAlgorithmType))
 	}
 

@@ -187,7 +187,7 @@ func TestAccountKeyCreation(t *testing.T) {
 	assert.Contains(t, err.Error(), "cannot find variable in this scope: `AccountKey`")
 }
 
-func TestAuthAccountAddPublicKeyErrors(t *testing.T) {
+func TestImportExportKeys(t *testing.T) {
 	t.Parallel()
 
 	runtime := NewInterpreterRuntime()
@@ -196,11 +196,18 @@ func TestAuthAccountAddPublicKeyErrors(t *testing.T) {
 		{
 			name: "AccountKey as transaction param",
 			code: `
-				transaction(keys: [AccountKey]) {
-					prepare(signer: AuthAccount) {
-					}
+				pub fun main(key: AccountKey): PublicKey {
+					return key.publicKey
 				}
 			`,
+			args: []cadence.Value{accountKeyExportedValue(
+				0,
+				[]byte{1, 2, 3},
+				sema.SignatureAlgorithmECDSA_P256,
+				sema.HashAlgorithmSHA3_256,
+				"100.0",
+				true,
+			)},
 			err: "transaction parameter must be storable: `[AccountKey]`",
 		},
 	}
@@ -210,9 +217,15 @@ func TestAuthAccountAddPublicKeyErrors(t *testing.T) {
 		runtimeInterface := getRuntimeInterface(storage)
 
 		t.Run(test.name, func(t *testing.T) {
-			err := executeTransaction(test, runtime, runtimeInterface)
-			require.Error(t, err)
-			assert.Contains(t, err.Error(), test.err)
+			value, err := executeScript(test, runtime, runtimeInterface)
+			require.NoError(t, err)
+			require.NotNil(t, value)
+
+			expectedValue := publicKeyExportedValue(
+				[]byte{1, 2, 3},
+				sema.SignatureAlgorithmECDSA_P256,
+			)
+			assert.Equal(t, expectedValue, value)
 		})
 	}
 }

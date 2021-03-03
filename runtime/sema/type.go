@@ -45,9 +45,6 @@ func qualifiedIdentifier(identifier string, containerType Type) string {
 		case *CompositeType:
 			identifiers = append(identifiers, typedContainerType.Identifier)
 			containerType = typedContainerType.ContainerType
-		case *BuiltinCompositeType:
-			identifiers = append(identifiers, typedContainerType.Identifier)
-			containerType = typedContainerType.ContainerType
 		default:
 			switch containerType {
 			case PublicAccountType:
@@ -6470,122 +6467,21 @@ func (t *CapabilityType) GetMembers() map[string]MemberResolver {
 	})
 }
 
-type BuiltinCompositeType struct {
-	Identifier           string
-	Members              *StringMemberOrderedMap
-	ContainerType        Type
-	EnumRawType          Type
-	IsInvalid            bool
-	IsResource           bool
-	Storable             bool
-	Equatable            bool
-	ExternallyReturnable bool
+var NativeCompositeTypes = map[string]*CompositeType{}
 
-	memberResolvers     map[string]MemberResolver
-	memberResolversOnce sync.Once
-}
-
-func (*BuiltinCompositeType) IsType() {}
-
-func (t *BuiltinCompositeType) String() string {
-	return t.Identifier
-}
-
-func (t *BuiltinCompositeType) QualifiedString() string {
-	return qualifiedIdentifier(t.Identifier, t.ContainerType)
-}
-
-func (t *BuiltinCompositeType) ID() TypeID {
-	return TypeID(t.QualifiedString())
-}
-
-func (t *BuiltinCompositeType) Equal(other Type) bool {
-	otherStructType, ok := other.(*BuiltinCompositeType)
-	if !ok {
-		return false
+func init() {
+	types := []*CompositeType{
+		AccountKeyType,
+		PublicKeyType,
+		HashAlgorithmType,
+		SignatureAlgorithmType,
+		AuthAccountKeysType,
+		PublicAccountKeysType,
 	}
 
-	return otherStructType.ID() == t.ID()
-}
-
-func (t *BuiltinCompositeType) IsResourceType() bool {
-	return t.IsResource
-}
-
-func (t *BuiltinCompositeType) IsInvalidType() bool {
-	return t.IsInvalid
-}
-
-func (t *BuiltinCompositeType) IsStorable(_ map[*Member]bool) bool {
-	return t.Storable
-}
-
-func (t *BuiltinCompositeType) IsExternallyReturnable(_ map[*Member]bool) bool {
-	return t.ExternallyReturnable
-}
-
-func (t *BuiltinCompositeType) IsEquatable() bool {
-	return t.Equatable
-}
-func (*BuiltinCompositeType) TypeAnnotationState() TypeAnnotationState {
-	return TypeAnnotationStateValid
-}
-
-func (t *BuiltinCompositeType) RewriteWithRestrictedTypes() (result Type, rewritten bool) {
-	return t, false
-}
-
-func (t *BuiltinCompositeType) GetMembers() map[string]MemberResolver {
-	t.initializeMemberResolvers()
-	return t.memberResolvers
-}
-
-func (t *BuiltinCompositeType) initializeMemberResolvers() {
-	t.memberResolversOnce.Do(func() {
-		members := make(map[string]MemberResolver, t.Members.Len())
-
-		t.Members.Foreach(func(name string, loopMember *Member) {
-			// NOTE: don't capture loop variable
-			member := loopMember
-			members[name] = MemberResolver{
-				Kind: member.DeclarationKind,
-				Resolve: func(_ string, _ ast.Range, _ func(error)) *Member {
-					return member
-				},
-			}
-		})
-
-		t.memberResolvers = withBuiltinMembers(t, members)
-	})
-}
-
-func (*BuiltinCompositeType) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
-	return false
-}
-
-func (t *BuiltinCompositeType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
-	return t
-}
-
-func (t *BuiltinCompositeType) GetContainerType() Type {
-	return t.ContainerType
-}
-
-func (t *BuiltinCompositeType) GetNestedTypes() *StringTypeOrderedMap {
-	return nil
-}
-
-func (t *BuiltinCompositeType) isContainerType() bool {
-	return false
-}
-
-func GetMembersAsMap(members []*Member) *StringMemberOrderedMap {
-	membersMap := NewStringMemberOrderedMap()
-	for _, member := range members {
-		membersMap.Set(member.Identifier.Identifier, member)
+	for _, semaType := range types {
+		NativeCompositeTypes[semaType.QualifiedIdentifier()] = semaType
 	}
-
-	return membersMap
 }
 
 const AccountKeyTypeName = "AccountKey"
@@ -6596,15 +6492,12 @@ const AccountKeyWeightField = "weight"
 const AccountKeyIsRevokedField = "isRevoked"
 
 // AccountKeyType represents the key associated with an account.
-var AccountKeyType = func() *BuiltinCompositeType {
+var AccountKeyType = func() *CompositeType {
 
-	accountKeyType := &BuiltinCompositeType{
-		Identifier:           AccountKeyTypeName,
-		IsInvalid:            false,
-		IsResource:           false,
-		Storable:             false,
-		Equatable:            true,
-		ExternallyReturnable: true,
+	accountKeyType := &CompositeType{
+		Identifier: AccountKeyTypeName,
+		Kind:       common.CompositeKindStructure,
+		Location:   common.NativeLocation{},
 	}
 
 	const accountKeyIndexFieldDocString = `The index of the account key`
@@ -6647,6 +6540,7 @@ var AccountKeyType = func() *BuiltinCompositeType {
 	}
 
 	accountKeyType.Members = GetMembersAsMap(members)
+	accountKeyType.Fields = getFields(members)
 	return accountKeyType
 }()
 
@@ -6655,15 +6549,12 @@ const PublicKeyPublicKeyField = "publicKey"
 const PublicKeySignAlgoField = "signAlgo"
 
 // PublicKeyType represents the public key associated with an account key.
-var PublicKeyType = func() *BuiltinCompositeType {
+var PublicKeyType = func() *CompositeType {
 
-	accountKeyType := &BuiltinCompositeType{
-		Identifier:           PublicKeyTypeName,
-		IsInvalid:            false,
-		IsResource:           false,
-		Storable:             true,
-		Equatable:            true,
-		ExternallyReturnable: true,
+	accountKeyType := &CompositeType{
+		Identifier: PublicKeyTypeName,
+		Kind:       common.CompositeKindStructure,
+		Location:   common.NativeLocation{},
 	}
 
 	const publicKeyKeyFieldDocString = `The public key`
@@ -6685,11 +6576,30 @@ var PublicKeyType = func() *BuiltinCompositeType {
 	}
 
 	accountKeyType.Members = GetMembersAsMap(members)
+	accountKeyType.Fields = getFields(members)
 	return accountKeyType
 }()
 
-type BuiltinEnumCase interface {
+type NativeEnumCase interface {
 	RawValue() int
 	Name() string
 	DocString() string
+}
+
+func GetMembersAsMap(members []*Member) *StringMemberOrderedMap {
+	membersMap := NewStringMemberOrderedMap()
+	for _, member := range members {
+		membersMap.Set(member.Identifier.Identifier, member)
+	}
+
+	return membersMap
+}
+
+func getFields(members []*Member) []string {
+	fields := make([]string, len(members))
+	for index, member := range members {
+		fields[index] = member.Identifier.Identifier
+	}
+
+	return fields
 }

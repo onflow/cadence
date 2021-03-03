@@ -6680,7 +6680,7 @@ type AuthAccountValue struct {
 	addPublicKeyFunction    FunctionValue
 	removePublicKeyFunction FunctionValue
 	contracts               AuthAccountContractsValue
-	keys                    *BuiltinCompositeValue
+	keys                    *CompositeValue
 }
 
 func NewAuthAccountValue(
@@ -6690,7 +6690,7 @@ func NewAuthAccountValue(
 	addPublicKeyFunction FunctionValue,
 	removePublicKeyFunction FunctionValue,
 	contracts AuthAccountContractsValue,
-	keys *BuiltinCompositeValue,
+	keys *CompositeValue,
 ) AuthAccountValue {
 	return AuthAccountValue{
 		Address:                 address,
@@ -6848,14 +6848,14 @@ type PublicAccountValue struct {
 	storageUsedGet     func(interpreter *Interpreter) UInt64Value
 	storageCapacityGet func() UInt64Value
 	Identifier         string
-	keys               *BuiltinCompositeValue
+	keys               *CompositeValue
 }
 
 func NewPublicAccountValue(
 	address AddressValue,
 	storageUsedGet func(interpreter *Interpreter) UInt64Value,
 	storageCapacityGet func() UInt64Value,
-	keys *BuiltinCompositeValue,
+	keys *CompositeValue,
 ) PublicAccountValue {
 	return PublicAccountValue{
 		Address:            address,
@@ -7162,85 +7162,14 @@ func (v LinkValue) String() string {
 	)
 }
 
-// BuiltinCompositeValue
-type BuiltinCompositeValue struct {
-	Fields     *StringValueOrderedMap
-	staticType StaticType
-	semaType   *sema.BuiltinCompositeType
-}
-
-func NewBuiltinCompositeValue(structType *sema.BuiltinCompositeType, fields *StringValueOrderedMap) *BuiltinCompositeValue {
-	if fields == nil {
-		fields = NewStringValueOrderedMap()
-	}
-
-	return &BuiltinCompositeValue{
-		Fields:     fields,
-		semaType:   structType,
-		staticType: ConvertSemaToPrimitiveStaticType(structType),
-	}
-}
-
-func (*BuiltinCompositeValue) IsValue() {}
-
-func (v *BuiltinCompositeValue) Accept(interpreter *Interpreter, visitor Visitor) {
-	visitor.VisitBuiltinCompositeValue(interpreter, v)
-}
-
-func (v *BuiltinCompositeValue) DynamicType(_ *Interpreter) DynamicType {
-	return BuiltinCompositeDynamicType{v.semaType}
-}
-
-func (v *BuiltinCompositeValue) StaticType() StaticType {
-	return v.staticType
-}
-
-func (v *BuiltinCompositeValue) Copy() Value {
-	return v
-}
-
-func (*BuiltinCompositeValue) GetOwner() *common.Address {
-	// value is never owned
-	return nil
-}
-
-func (*BuiltinCompositeValue) SetOwner(_ *common.Address) {
-	// NO-OP: value cannot be owned
-}
-
-func (*BuiltinCompositeValue) IsModified() bool {
-	return false
-}
-
-func (*BuiltinCompositeValue) SetModified(_ bool) {
-	// NO-OP
-}
-
-func (v *BuiltinCompositeValue) Destroy(_ *Interpreter, _ LocationRange) trampoline.Trampoline {
-	return trampoline.Done{}
-}
-
-func (v *BuiltinCompositeValue) String() string {
-	return formatComposite(string(v.semaType.ID()), v.Fields)
-}
-
-func (v *BuiltinCompositeValue) GetMember(_ *Interpreter, _ LocationRange, name string) Value {
-	value, _ := v.Fields.Get(name)
-	return value
-}
-
-func (*BuiltinCompositeValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
-	panic(errors.NewUnreachableError())
-}
-
 // NewAccountKeyValue constructs an AccountKey value.
 func NewAccountKeyValue(
 	keyIndex IntValue,
-	publicKey *BuiltinCompositeValue,
-	hashAlgo *BuiltinCompositeValue,
+	publicKey *CompositeValue,
+	hashAlgo *CompositeValue,
 	weight UFix64Value,
 	isRevoked BoolValue,
-) *BuiltinCompositeValue {
+) *CompositeValue {
 	fields := NewStringValueOrderedMap()
 	fields.Set(sema.AccountKeyKeyIndexField, keyIndex)
 	fields.Set(sema.AccountKeyPublicKeyField, publicKey)
@@ -7248,43 +7177,65 @@ func NewAccountKeyValue(
 	fields.Set(sema.AccountKeyWeightField, weight)
 	fields.Set(sema.AccountKeyIsRevokedField, isRevoked)
 
-	return NewBuiltinCompositeValue(sema.AccountKeyType, fields)
+	return &CompositeValue{
+		QualifiedIdentifier: sema.AccountKeyType.QualifiedIdentifier(),
+		Kind:                sema.AccountKeyType.Kind,
+		Fields:              fields,
+		Location:            common.NativeLocation{},
+	}
 }
 
 // NewPublicKeyValue constructs a PublicKey value.
-func NewPublicKeyValue(publicKey *ArrayValue, signAlgo *BuiltinCompositeValue) *BuiltinCompositeValue {
+func NewPublicKeyValue(publicKey *ArrayValue, signAlgo *CompositeValue) *CompositeValue {
 
 	fields := NewStringValueOrderedMap()
 	fields.Set(sema.PublicKeyPublicKeyField, publicKey)
 	fields.Set(sema.PublicKeySignAlgoField, signAlgo)
 
-	return NewBuiltinCompositeValue(sema.PublicKeyType, fields)
+	return &CompositeValue{
+		QualifiedIdentifier: sema.PublicKeyType.QualifiedIdentifier(),
+		Kind:                sema.PublicKeyType.Kind,
+		Fields:              fields,
+		Location:            common.NativeLocation{},
+	}
 }
 
 // NewAuthAccountKeysValue constructs a AuthAccount.Keys value.
-func NewAuthAccountKeysValue(addFunction FunctionValue, getFunction FunctionValue, revokeFunction FunctionValue) *BuiltinCompositeValue {
+func NewAuthAccountKeysValue(addFunction FunctionValue, getFunction FunctionValue, revokeFunction FunctionValue) *CompositeValue {
 	fields := NewStringValueOrderedMap()
 	fields.Set(sema.AccountKeysAddFunctionName, addFunction)
 	fields.Set(sema.AccountKeysGetFunctionName, getFunction)
 	fields.Set(sema.AccountKeysRevokeFunctionName, revokeFunction)
 
-	return NewBuiltinCompositeValue(sema.AuthAccountKeysType, fields)
+	return &CompositeValue{
+		QualifiedIdentifier: sema.AuthAccountKeysType.QualifiedIdentifier(),
+		Kind:                sema.AuthAccountKeysType.Kind,
+		Fields:              fields,
+		Location:            common.NativeLocation{},
+	}
 }
 
 // NewPublicAccountKeysValue constructs a PublicAccount.Keys value.
-func NewPublicAccountKeysValue(getFunction FunctionValue) *BuiltinCompositeValue {
+func NewPublicAccountKeysValue(getFunction FunctionValue) *CompositeValue {
 	fields := NewStringValueOrderedMap()
 	fields.Set(sema.AccountKeysGetFunctionName, getFunction)
 
-	return NewBuiltinCompositeValue(sema.PublicAccountKeysType, fields)
+	return &CompositeValue{
+		QualifiedIdentifier: sema.PublicAccountKeysType.QualifiedIdentifier(),
+		Kind:                sema.PublicAccountKeysType.Kind,
+		Fields:              fields,
+		Location:            common.NativeLocation{},
+	}
 }
 
-func NewEnumCaseValue(enumType *sema.BuiltinCompositeType, rawValue int) *BuiltinCompositeValue {
+func NewNativeEnumCaseValue(enumType *sema.CompositeType, rawValue int) *CompositeValue {
 	fields := NewStringValueOrderedMap()
 	fields.Set(sema.EnumRawValueFieldName, NewIntValueFromInt64(int64(rawValue)))
 
-	return NewBuiltinCompositeValue(
-		enumType,
-		fields,
-	)
+	return &CompositeValue{
+		QualifiedIdentifier: enumType.QualifiedIdentifier(),
+		Kind:                enumType.Kind,
+		Fields:              fields,
+		Location:            common.NativeLocation{},
+	}
 }
