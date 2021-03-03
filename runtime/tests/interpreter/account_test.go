@@ -20,6 +20,8 @@ package interpreter_test
 
 import (
 	"fmt"
+	"github.com/onflow/cadence/runtime/errors"
+	"github.com/onflow/cadence/runtime/trampoline"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -39,6 +41,10 @@ func testAccount(t *testing.T, auth bool, code string) (*interpreter.Interpreter
 
 	var valueDeclarations stdlib.StandardLibraryValues
 
+	panicFunction := interpreter.NewHostFunctionValue(func(invocation interpreter.Invocation) trampoline.Trampoline {
+		panic(errors.NewUnreachableError())
+	})
+
 	// `authAccount`
 
 	authAccountValueDeclaration := stdlib.StandardLibraryValue{
@@ -50,6 +56,8 @@ func testAccount(t *testing.T, auth bool, code string) (*interpreter.Interpreter
 				return 0
 			},
 			returnZero,
+			panicFunction,
+			panicFunction,
 			interpreter.AuthAccountContractsValue{},
 			&interpreter.BuiltinCompositeValue{},
 		),

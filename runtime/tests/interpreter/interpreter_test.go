@@ -21,6 +21,7 @@ package interpreter_test
 import (
 	"bytes"
 	"fmt"
+	"github.com/onflow/cadence/runtime/errors"
 	"math/big"
 	"strings"
 	"testing"
@@ -6755,6 +6756,9 @@ func TestInterpretContractAccountFieldUse(t *testing.T) {
 						_ string,
 						_ common.CompositeKind,
 					) *interpreter.StringValueOrderedMap {
+						panicFunction := interpreter.NewHostFunctionValue(func(invocation interpreter.Invocation) trampoline.Trampoline {
+							panic(errors.NewUnreachableError())
+						})
 						injectedMembers := interpreter.NewStringValueOrderedMap()
 						injectedMembers.Set(
 							"account",
@@ -6764,6 +6768,8 @@ func TestInterpretContractAccountFieldUse(t *testing.T) {
 									return 0
 								},
 								returnZero,
+								panicFunction,
+								panicFunction,
 								interpreter.AuthAccountContractsValue{},
 								&interpreter.BuiltinCompositeValue{},
 							),
@@ -7568,6 +7574,10 @@ func TestInterpretResourceOwnerFieldUse(t *testing.T) {
       }
     `
 
+	panicFunction := interpreter.NewHostFunctionValue(func(invocation interpreter.Invocation) trampoline.Trampoline {
+		panic(errors.NewUnreachableError())
+	})
+
 	// `authAccount`
 
 	valueDeclaration := stdlib.StandardLibraryValue{
@@ -7579,6 +7589,8 @@ func TestInterpretResourceOwnerFieldUse(t *testing.T) {
 				return 0
 			},
 			returnZero,
+			panicFunction,
+			panicFunction,
 			interpreter.AuthAccountContractsValue{},
 			&interpreter.BuiltinCompositeValue{},
 		),

@@ -94,6 +94,8 @@ type testRuntimeInterface struct {
 	setProgram                func(Location, *interpreter.Program) error
 	storage                   testRuntimeInterfaceStorage
 	createAccount             func(payer Address) (address Address, err error)
+	addEncodedAccountKey      func(address Address, publicKey []byte) error
+	removeEncodedAccountKey   func(address Address, index int) (publicKey []byte, err error)
 	addAccountKey             func(address Address, publicKey *PublicKey, hashAlgo HashAlgorithm, weight int) (*AccountKey, error)
 	getAccountKey             func(address Address, index int) (*AccountKey, error)
 	removeAccountKey          func(address Address, index int) (*AccountKey, error)
@@ -187,6 +189,14 @@ func (i *testRuntimeInterface) SetValue(owner, key, value []byte) (err error) {
 
 func (i *testRuntimeInterface) CreateAccount(payer Address) (address Address, err error) {
 	return i.createAccount(payer)
+}
+
+func (i *testRuntimeInterface) AddEncodedAccountKey(address Address, publicKey []byte) error {
+	return i.addEncodedAccountKey(address, publicKey)
+}
+
+func (i *testRuntimeInterface) RemoveEncodedAccountKey(address Address, index int) (publicKey []byte, err error) {
+	return i.removeEncodedAccountKey(address, index)
 }
 
 func (i *testRuntimeInterface) AddAccountKey(address Address, publicKey *PublicKey, hashAlgo HashAlgorithm, weight int) (*AccountKey, error) {

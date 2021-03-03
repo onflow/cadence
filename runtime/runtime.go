@@ -305,6 +305,8 @@ func (r *interpreterRuntime) newAuthAccountValue(
 		addressValue,
 		storageUsedGetFunction(addressValue, context.Interface, runtimeStorage),
 		storageCapacityGetFunction(addressValue, context.Interface),
+		r.newAddPublicKeyFunction(addressValue, context.Interface),
+		r.newRemovePublicKeyFunction(addressValue, context.Interface),
 		r.newAuthAccountContracts(
 			addressValue,
 			context,
@@ -1183,6 +1185,75 @@ func storageCapacityGetFunction(addressValue interpreter.AddressValue, runtimeIn
 		}
 		return interpreter.UInt64Value(capacity)
 	}
+}
+
+func (r *interpreterRuntime) newAddPublicKeyFunction(
+	addressValue interpreter.AddressValue,
+	runtimeInterface Interface,
+) interpreter.HostFunctionValue {
+	return interpreter.NewHostFunctionValue(
+		func(invocation interpreter.Invocation) trampoline.Trampoline {
+			publicKeyValue := invocation.Arguments[0].(*interpreter.ArrayValue)
+
+			publicKey, err := interpreter.ByteArrayValueToByteSlice(publicKeyValue)
+			if err != nil {
+				panic("addPublicKey requires the first argument to be a byte array")
+			}
+
+			wrapPanic(func() {
+				err = runtimeInterface.AddEncodedAccountKey(addressValue.ToAddress(), publicKey)
+			})
+			if err != nil {
+				panic(err)
+			}
+
+			r.emitAccountEvent(
+				stdlib.AccountKeyAddedEventType,
+				runtimeInterface,
+				[]exportableValue{
+					newExportableValue(addressValue, nil),
+					newExportableValue(publicKeyValue, nil),
+				},
+			)
+
+			result := interpreter.VoidValue{}
+			return trampoline.Done{Result: result}
+		},
+	)
+}
+
+func (r *interpreterRuntime) newRemovePublicKeyFunction(
+	addressValue interpreter.AddressValue,
+	runtimeInterface Interface,
+) interpreter.HostFunctionValue {
+	return interpreter.NewHostFunctionValue(
+		func(invocation interpreter.Invocation) trampoline.Trampoline {
+			index := invocation.Arguments[0].(interpreter.IntValue)
+
+			var publicKey []byte
+			var err error
+			wrapPanic(func() {
+				publicKey, err = runtimeInterface.RemoveEncodedAccountKey(addressValue.ToAddress(), index.ToInt())
+			})
+			if err != nil {
+				panic(err)
+			}
+
+			publicKeyValue := interpreter.ByteSliceToByteArrayValue(publicKey)
+
+			r.emitAccountEvent(
+				stdlib.AccountKeyRemovedEventType,
+				runtimeInterface,
+				[]exportableValue{
+					newExportableValue(addressValue, nil),
+					newExportableValue(publicKeyValue, nil),
+				},
+			)
+
+			result := interpreter.VoidValue{}
+			return trampoline.Done{Result: result}
+		},
+	)
 }
 
 func (r *interpreterRuntime) writeContract(
@@ -2092,15 +2163,6 @@ func (r *interpreterRuntime) newAccountKeysGetFunction(
 			if err != nil {
 				panic(err)
 			}
-
-			r.emitAccountEvent(
-				stdlib.AccountKeyGetEventType,
-				runtimeInterface,
-				[]exportableValue{
-					newExportableValue(addressValue, nil),
-					newExportableValue(index, nil),
-				},
-			)
 
 			// Here it is expected the host function to return a nil key, if a key is not found at the given index.
 			// This is done because, if the host function returns an error when a key is not found, then

@@ -6674,17 +6674,21 @@ type AccountValue interface {
 
 // AuthAccountValue
 type AuthAccountValue struct {
-	Address            AddressValue
-	storageUsedGet     func(interpreter *Interpreter) UInt64Value
-	storageCapacityGet func() UInt64Value
-	contracts          AuthAccountContractsValue
-	keys               *BuiltinCompositeValue
+	Address                 AddressValue
+	storageUsedGet          func(interpreter *Interpreter) UInt64Value
+	storageCapacityGet      func() UInt64Value
+	addPublicKeyFunction    FunctionValue
+	removePublicKeyFunction FunctionValue
+	contracts               AuthAccountContractsValue
+	keys                    *BuiltinCompositeValue
 }
 
 func NewAuthAccountValue(
 	address AddressValue,
 	storageUsedGet func(interpreter *Interpreter) UInt64Value,
 	storageCapacityGet func() UInt64Value,
+	addPublicKeyFunction FunctionValue,
+	removePublicKeyFunction FunctionValue,
 	contracts AuthAccountContractsValue,
 	keys *BuiltinCompositeValue,
 ) AuthAccountValue {
@@ -6692,6 +6696,8 @@ func NewAuthAccountValue(
 		Address:                 address,
 		storageUsedGet:          storageUsedGet,
 		storageCapacityGet:      storageCapacityGet,
+		addPublicKeyFunction:    addPublicKeyFunction,
+		removePublicKeyFunction: removePublicKeyFunction,
 		contracts:               contracts,
 		keys:                    keys,
 	}
@@ -6791,6 +6797,12 @@ func (v AuthAccountValue) GetMember(inter *Interpreter, _ LocationRange, name st
 
 	case "storageCapacity":
 		return v.storageCapacityGet()
+
+	case "addPublicKey":
+		return v.addPublicKeyFunction
+
+	case "removePublicKey":
+		return v.removePublicKeyFunction
 
 	case "load":
 		return inter.authAccountLoadFunction(v.Address)
@@ -7154,7 +7166,7 @@ func (v LinkValue) String() string {
 type BuiltinCompositeValue struct {
 	Fields     *StringValueOrderedMap
 	staticType StaticType
-	structType *sema.BuiltinCompositeType
+	semaType   *sema.BuiltinCompositeType
 }
 
 func NewBuiltinCompositeValue(structType *sema.BuiltinCompositeType, fields *StringValueOrderedMap) *BuiltinCompositeValue {
@@ -7164,7 +7176,7 @@ func NewBuiltinCompositeValue(structType *sema.BuiltinCompositeType, fields *Str
 
 	return &BuiltinCompositeValue{
 		Fields:     fields,
-		structType: structType,
+		semaType:   structType,
 		staticType: ConvertSemaToPrimitiveStaticType(structType),
 	}
 }
@@ -7176,7 +7188,7 @@ func (v *BuiltinCompositeValue) Accept(interpreter *Interpreter, visitor Visitor
 }
 
 func (v *BuiltinCompositeValue) DynamicType(_ *Interpreter) DynamicType {
-	return BuiltinCompositeDynamicType{v.structType}
+	return BuiltinCompositeDynamicType{v.semaType}
 }
 
 func (v *BuiltinCompositeValue) StaticType() StaticType {
@@ -7209,7 +7221,7 @@ func (v *BuiltinCompositeValue) Destroy(_ *Interpreter, _ LocationRange) trampol
 }
 
 func (v *BuiltinCompositeValue) String() string {
-	return formatComposite(string(v.structType.ID()), v.Fields)
+	return formatComposite(string(v.semaType.ID()), v.Fields)
 }
 
 func (v *BuiltinCompositeValue) GetMember(_ *Interpreter, _ LocationRange, name string) Value {

@@ -19,6 +19,8 @@
 package interpreter_test
 
 import (
+	"github.com/onflow/cadence/runtime/errors"
+	"github.com/onflow/cadence/runtime/trampoline"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -201,6 +203,10 @@ func TestInterpretTransactions(t *testing.T) {
 		assert.IsType(t, interpreter.ArgumentCountError{}, err)
 	})
 
+	panicFunction := interpreter.NewHostFunctionValue(func(invocation interpreter.Invocation) trampoline.Trampoline {
+		panic(errors.NewUnreachableError())
+	})
+
 	t.Run("TooManyArguments", func(t *testing.T) {
 		inter := parseCheckAndInterpret(t, `
           transaction {
@@ -220,6 +226,8 @@ func TestInterpretTransactions(t *testing.T) {
 				return 0
 			},
 			returnZero,
+			panicFunction,
+			panicFunction,
 			interpreter.AuthAccountContractsValue{},
 			&interpreter.BuiltinCompositeValue{},
 		)
@@ -229,6 +237,8 @@ func TestInterpretTransactions(t *testing.T) {
 				return 0
 			},
 			returnZero,
+			panicFunction,
+			panicFunction,
 			interpreter.AuthAccountContractsValue{},
 			&interpreter.BuiltinCompositeValue{},
 		)
@@ -269,6 +279,8 @@ func TestInterpretTransactions(t *testing.T) {
 					return 0
 				},
 				returnZero,
+				panicFunction,
+				panicFunction,
 				interpreter.AuthAccountContractsValue{},
 				&interpreter.BuiltinCompositeValue{},
 			),
