@@ -298,19 +298,16 @@ func (i *FlowIntegration) entryPointActions(
 			for _, signers := range signersList {
 				if len(argumentList) > 0 {
 					title = fmt.Sprintf(
-						"%s %s %s %s %s",
+						"%s Send with %s signed by %s",
 						prefixOK,
-						"Send with",
 						entryPointInfo.pragmaArgumentStrings[i],
-						"signed by ",
-						strings.Join(signers, " and "),
+						common.EnumerateWords(signers, "and"),
 					)
 				} else {
 					title = fmt.Sprintf(
-						"%s %s %s",
+						"%s Send signed by %s",
 						prefixOK,
-						"Send signed by",
-						strings.Join(signers, " and "),
+						common.EnumerateWords(signers, "and"),
 					)
 				}
 
