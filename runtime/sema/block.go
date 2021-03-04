@@ -25,7 +25,7 @@ import (
 
 // BlockType
 //
-var BlockType = &NominalType{
+var BlockType = &SimpleType{
 	Name:                 "Block",
 	QualifiedName:        "Block",
 	TypeID:               "Block",
@@ -34,7 +34,7 @@ var BlockType = &NominalType{
 	Storable:             false,
 	Equatable:            false,
 	ExternallyReturnable: false,
-	Members: func(t *NominalType) map[string]MemberResolver {
+	Members: func(t *SimpleType) map[string]MemberResolver {
 		return map[string]MemberResolver{
 			"height": {
 				Kind: common.DeclarationKindField,

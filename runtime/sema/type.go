@@ -5857,7 +5857,7 @@ func IsSubType(subType Type, superType Type) bool {
 			}
 		}
 
-	case *NominalType:
+	case *SimpleType:
 		if typedSuperType.IsSuperTypeOf == nil {
 			return false
 		}
