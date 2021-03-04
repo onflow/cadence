@@ -396,18 +396,18 @@ func (validator *ContractUpdateValidator) checkIdentifierEquality(
 }
 
 func (validator *ContractUpdateValidator) checkConformances(
-	oldEnum *ast.CompositeDeclaration,
-	newEnum *ast.CompositeDeclaration,
+	oldDecl *ast.CompositeDeclaration,
+	newDecl *ast.CompositeDeclaration,
 ) {
 
-	oldConformances := oldEnum.Conformances
-	newConformances := newEnum.Conformances
+	oldConformances := oldDecl.Conformances
+	newConformances := newDecl.Conformances
 
 	if len(oldConformances) != len(newConformances) {
 		validator.report(&ConformanceCountMismatchError{
 			expected: len(oldConformances),
 			found:    len(newConformances),
-			Range:    ast.NewRangeFromPositioned(newEnum.Identifier),
+			Range:    ast.NewRangeFromPositioned(newDecl.Identifier),
 		})
 
 		// If the lengths are not the same, trying to match the conformance
@@ -420,7 +420,7 @@ func (validator *ContractUpdateValidator) checkConformances(
 		err := oldConformance.CheckEqual(newConformance, validator)
 		if err != nil {
 			validator.report(&ConformanceMismatchError{
-				declName: newEnum.Identifier.Identifier,
+				declName: newDecl.Identifier.Identifier,
 				err:      err,
 				Range:    ast.NewRangeFromPositioned(newConformance),
 			})
@@ -457,7 +457,7 @@ func identifiersEqual(expected []ast.Identifier, found []ast.Identifier) bool {
 	}
 
 	for index, element := range found {
-		if expected[index] != element {
+		if expected[index].Identifier != element.Identifier {
 			return false
 		}
 	}

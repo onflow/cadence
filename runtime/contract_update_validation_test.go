@@ -1021,6 +1021,71 @@ func TestContractUpdateValidation(t *testing.T) {
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "error: field add has non-storable type: ((Int, Int): Int)")
 	})
+
+	t.Run("Test conformance", func(t *testing.T) {
+		const importCode = `
+			pub contract Test24Import {
+				pub struct interface AnInterface {
+					pub a: Int
+				}
+			}`
+
+		deployTx1 := newDeployTransaction("add", "Test24Import", importCode)
+		err := runtime.ExecuteTransaction(
+			Script{
+				Source: deployTx1,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+		require.NoError(t, err)
+
+		const oldCode = `
+			import Test24Import from 0x42
+
+			pub contract Test24 {
+				pub struct TestStruct1 {
+					pub let a: Int
+					init() {
+						self.a = 123
+					}
+				}
+
+				pub struct TestStruct2: Test24Import.AnInterface {
+					pub let a: Int
+
+					init() {
+						self.a = 123
+					}
+				}
+			}`
+
+		const newCode = `
+			import Test24Import from 0x42
+
+			pub contract Test24 {
+
+				pub struct TestStruct2: Test24Import.AnInterface {
+					pub let a: Int
+
+					init() {
+						self.a = 123
+					}
+				}
+
+				pub struct TestStruct1 {
+					pub let a: Int
+					init() {
+						self.a = 123
+					}
+				}
+			}`
+
+		err = deployAndUpdate("Test24", oldCode, newCode)
+		require.NoError(t, err)
+	})
 }
 
 func assertDeclTypeChangeError(
