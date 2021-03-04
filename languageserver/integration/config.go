@@ -85,7 +85,7 @@ func configFromInitializationOptions(opts interface{}) (conf Config, emulatorSta
 
 	emulatorState, ok = optsMap["emulatorState"].(float64)
 	if !ok {
-		emulatorState = 1
+		emulatorState = EmulatorOffline
 	}
 
 	conf.EmulatorAddr = emulatorAddr
