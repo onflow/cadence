@@ -516,6 +516,10 @@ type StructType struct {
 func (*StructType) isType() {}
 
 func (t *StructType) ID() string {
+	if t.Location == nil {
+		return t.QualifiedIdentifier
+	}
+
 	return string(t.Location.TypeID(t.QualifiedIdentifier))
 }
 

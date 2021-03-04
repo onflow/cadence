@@ -4280,6 +4280,10 @@ func (t *CompositeType) QualifiedIdentifier() string {
 }
 
 func (t *CompositeType) ID() TypeID {
+	if t.Location == nil {
+		return TypeID(t.QualifiedIdentifier())
+	}
+
 	return t.Location.TypeID(t.QualifiedIdentifier())
 }
 
@@ -6497,7 +6501,6 @@ var AccountKeyType = func() *CompositeType {
 	accountKeyType := &CompositeType{
 		Identifier: AccountKeyTypeName,
 		Kind:       common.CompositeKindStructure,
-		Location:   common.NativeLocation{},
 	}
 
 	const accountKeyIndexFieldDocString = `The index of the account key`
@@ -6554,7 +6557,6 @@ var PublicKeyType = func() *CompositeType {
 	accountKeyType := &CompositeType{
 		Identifier: PublicKeyTypeName,
 		Kind:       common.CompositeKindStructure,
-		Location:   common.NativeLocation{},
 	}
 
 	const publicKeyKeyFieldDocString = `The public key`

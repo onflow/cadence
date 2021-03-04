@@ -4430,7 +4430,7 @@ func (interpreter *Interpreter) getElaboration(location common.Location) *sema.E
 }
 
 func (interpreter *Interpreter) getCompositeType(location common.Location, qualifiedIdentifier string) *sema.CompositeType {
-	if _, ok := location.(common.NativeLocation); ok {
+	if location == nil {
 		return sema.NativeCompositeTypes[qualifiedIdentifier]
 	}
 

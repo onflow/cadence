@@ -7181,7 +7181,6 @@ func NewAccountKeyValue(
 		QualifiedIdentifier: sema.AccountKeyType.QualifiedIdentifier(),
 		Kind:                sema.AccountKeyType.Kind,
 		Fields:              fields,
-		Location:            common.NativeLocation{},
 	}
 }
 
@@ -7196,7 +7195,6 @@ func NewPublicKeyValue(publicKey *ArrayValue, signAlgo *CompositeValue) *Composi
 		QualifiedIdentifier: sema.PublicKeyType.QualifiedIdentifier(),
 		Kind:                sema.PublicKeyType.Kind,
 		Fields:              fields,
-		Location:            common.NativeLocation{},
 	}
 }
 
@@ -7211,7 +7209,6 @@ func NewAuthAccountKeysValue(addFunction FunctionValue, getFunction FunctionValu
 		QualifiedIdentifier: sema.AuthAccountKeysType.QualifiedIdentifier(),
 		Kind:                sema.AuthAccountKeysType.Kind,
 		Fields:              fields,
-		Location:            common.NativeLocation{},
 	}
 }
 
@@ -7224,7 +7221,6 @@ func NewPublicAccountKeysValue(getFunction FunctionValue) *CompositeValue {
 		QualifiedIdentifier: sema.PublicAccountKeysType.QualifiedIdentifier(),
 		Kind:                sema.PublicAccountKeysType.Kind,
 		Fields:              fields,
-		Location:            common.NativeLocation{},
 	}
 }
 
@@ -7236,6 +7232,5 @@ func NewNativeEnumCaseValue(enumType *sema.CompositeType, rawValue int) *Composi
 		QualifiedIdentifier: enumType.QualifiedIdentifier(),
 		Kind:                enumType.Kind,
 		Fields:              fields,
-		Location:            common.NativeLocation{},
 	}
 }

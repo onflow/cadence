@@ -208,9 +208,7 @@ func exportCompositeType(t *sema.CompositeType, results map[sema.TypeID]cadence.
 	fields := make([]cadence.Field, len(fieldMembers))
 
 	switch t.Kind {
-	case common.CompositeKindEnum:
-		fallthrough
-	case common.CompositeKindStructure:
+	case common.CompositeKindStructure, common.CompositeKindEnum:
 		result = &cadence.StructType{
 			Location:            t.Location,
 			QualifiedIdentifier: t.QualifiedIdentifier(),

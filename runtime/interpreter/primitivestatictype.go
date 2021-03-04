@@ -155,6 +155,7 @@ const (
 	PrimitiveStaticTypePublicAccount
 	PrimitiveStaticTypeDeployedContract
 	PrimitiveStaticTypeAuthAccountContracts
+	_
 )
 
 func (PrimitiveStaticType) IsStaticType() {}

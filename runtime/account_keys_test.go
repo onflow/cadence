@@ -208,7 +208,6 @@ func TestImportExportKeys(t *testing.T) {
 				"100.0",
 				true,
 			)},
-			err: "transaction parameter must be storable: `[AccountKey]`",
 		},
 	}
 
@@ -228,6 +227,72 @@ func TestImportExportKeys(t *testing.T) {
 			assert.Equal(t, expectedValue, value)
 		})
 	}
+}
+
+func TestImportInvalidType(t *testing.T) {
+	t.Parallel()
+
+	runtime := NewInterpreterRuntime()
+
+	// encoded with an invalid type: 'N.PublicKey'
+	encodedArgs := []byte(`{
+		"type":"Struct",
+		"value":{
+			"id":"N.PublicKey",
+			"fields":[
+				{
+					"name":"publicKey",
+					"value":{
+						"type":"Array",
+						"value":[{"type":"UInt8","value":"1"}]}
+				},
+				{
+					"name":"signAlgo",
+					"value":{
+						"type":"Struct",
+						"value":{
+							"id":"SignatureAlgorithm",
+							"fields":[
+								{
+									"name":"rawValue",
+									"value":{"type":"Int","value":"0"}
+								}
+							]
+						}
+					}
+				}
+			]
+		}
+	}`)
+
+	code := `
+		pub fun main(key: PublicKey): PublicKey {
+			return key
+		}`
+
+	storage := newTestAccountKeyStorage()
+	runtimeInterface := getRuntimeInterface(storage)
+
+	_, err := runtime.ExecuteScript(
+		Script{
+			Source:    []byte(code),
+			Arguments: [][]byte{encodedArgs},
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  utils.TestLocation,
+		},
+	)
+
+	require.Error(t, err)
+	require.IsType(t, Error{}, err)
+
+	runtimeErr := err.(Error)
+	require.IsType(t, &InvalidEntryPointArgumentError{}, runtimeErr.Err)
+
+	argError := runtimeErr.Err.(*InvalidEntryPointArgumentError)
+	require.Error(t, argError.Err)
+	assert.Equal(t, "failed to decode value: invalid JSON Cadence structure. invalid type ID: N.PublicKey", argError.Err.Error())
 }
 
 var accountKeyA = AccountKey{
@@ -856,7 +921,6 @@ type accountKeyTestCase struct {
 	code string
 	args []cadence.Value
 	keys []AccountKey
-	err  string
 }
 
 func newTestAccountKeyStorage() *testAccountKeyStorage {

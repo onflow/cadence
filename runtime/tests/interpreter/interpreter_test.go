@@ -21,7 +21,6 @@ package interpreter_test
 import (
 	"bytes"
 	"fmt"
-	"github.com/onflow/cadence/runtime/errors"
 	"math/big"
 	"strings"
 	"testing"
@@ -31,6 +30,7 @@ import (
 
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/parser2"
 	"github.com/onflow/cadence/runtime/pretty"

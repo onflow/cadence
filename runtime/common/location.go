@@ -80,14 +80,20 @@ func DecodeTypeID(typeID string) (location Location, qualifiedIdentifier string,
 	pieces := strings.Split(typeID, ".")
 
 	if len(pieces) < 1 {
-		return nil, "", errors.New("invalid type ID: missing prefix")
+		return nil, "", errors.New("invalid type ID: missing type name")
 	}
 
 	prefix := pieces[0]
 
 	decoder, ok := typeIDDecoders[prefix]
 	if !ok {
-		return nil, "", fmt.Errorf("invalid type ID: cannot decode prefix %q", prefix)
+		// If there are no decoders registered under the first piece if ID, then it could be:
+		//    (1) A native composite type
+		//    (2) An invalid type/prefix
+		// Either way, return the typeID as the identifier with a nil location. Then, if it is case (1),
+		// it will correctly continue at the downstream code. If it is (2), downstream code will throw
+		// an invalid type error.
+		return nil, typeID, nil
 	}
 
 	return decoder(typeID)

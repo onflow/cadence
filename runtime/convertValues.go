@@ -197,9 +197,7 @@ func exportCompositeValue(v *interpreter.CompositeValue, inter *interpreter.Inte
 	}
 
 	switch staticType.Kind {
-	case common.CompositeKindEnum:
-		fallthrough
-	case common.CompositeKindStructure:
+	case common.CompositeKindStructure, common.CompositeKindEnum:
 		return cadence.NewStruct(fields).WithType(t.(*cadence.StructType))
 	case common.CompositeKindResource:
 		return cadence.NewResource(fields).WithType(t.(*cadence.ResourceType))

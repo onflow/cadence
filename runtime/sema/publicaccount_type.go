@@ -118,7 +118,6 @@ var PublicAccountKeysType = func() *CompositeType {
 	accountKeys := &CompositeType{
 		Identifier: AccountKeysTypeName,
 		Kind:       common.CompositeKindStructure,
-		Location:   common.NativeLocation{},
 	}
 
 	var members = []*Member{

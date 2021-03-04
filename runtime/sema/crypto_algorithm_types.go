@@ -138,7 +138,6 @@ func newNativeEnumType(identifier string, rawType Type) *CompositeType {
 		Identifier:  identifier,
 		EnumRawType: rawType,
 		Kind:        common.CompositeKindEnum,
-		Location:    common.NativeLocation{},
 	}
 
 	// Members of the enum type are *not* the enum cases!

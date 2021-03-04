@@ -93,7 +93,6 @@ var AuthAccountType = &NominalType{
 					)
 				},
 			},
-
 			"save": {
 				Kind: common.DeclarationKindFunction,
 				Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
@@ -573,7 +572,6 @@ var AuthAccountKeysType = func() *CompositeType {
 	accountKeys := &CompositeType{
 		Identifier: AccountKeysTypeName,
 		Kind:       common.CompositeKindStructure,
-		Location:   common.NativeLocation{},
 	}
 
 	var members = []*Member{
