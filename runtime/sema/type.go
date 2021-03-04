@@ -4260,6 +4260,11 @@ type CompositeType struct {
 	nestedTypes           *StringTypeOrderedMap
 	ContainerType         Type
 	EnumRawType           Type
+	cachedIdentifiers     struct {
+		TypeID              TypeID
+		QualifiedIdentifier string
+	}
+	cachedIdentifiersOnce sync.Once
 }
 
 func (t *CompositeType) ExplicitInterfaceConformanceSet() *InterfaceSet {
@@ -4307,11 +4312,20 @@ func (t *CompositeType) GetLocation() common.Location {
 }
 
 func (t *CompositeType) QualifiedIdentifier() string {
-	return qualifiedIdentifier(t.Identifier, t.ContainerType)
+	t.initializeIdentifiers()
+	return t.cachedIdentifiers.QualifiedIdentifier
 }
 
 func (t *CompositeType) ID() TypeID {
-	return t.Location.TypeID(t.QualifiedIdentifier())
+	t.initializeIdentifiers()
+	return t.cachedIdentifiers.TypeID
+}
+
+func (t *CompositeType) initializeIdentifiers() {
+	t.cachedIdentifiersOnce.Do(func() {
+		t.cachedIdentifiers.QualifiedIdentifier = qualifiedIdentifier(t.Identifier, t.ContainerType)
+		t.cachedIdentifiers.TypeID = t.Location.TypeID(t.cachedIdentifiers.QualifiedIdentifier)
+	})
 }
 
 func (t *CompositeType) Equal(other Type) bool {
