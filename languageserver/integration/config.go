@@ -50,7 +50,7 @@ type AccountPrivateKey struct {
 func configFromInitializationOptions(opts interface{}) (conf Config, emulatorState float64, err error) {
 	optsMap, ok := opts.(map[string]interface{})
 	if !ok {
-		return Config{}, 1 , errors.New("invalid initialization options")
+		return Config{}, EmulatorOffline, errors.New("invalid initialization options")
 	}
 
 	emulatorAddr, ok := optsMap["emulatorAddress"].(string)
