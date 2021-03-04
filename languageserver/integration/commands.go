@@ -102,14 +102,9 @@ func (i *FlowIntegration) submitTransaction(conn protocol.Conn, args ...interfac
 		return nil, err
 	}
 
-	_, ok := args[1].([]interface{})
-	if !ok {
-		return nil, fmt.Errorf("invalid transaction arguments: %#+v", args[1])
-	}
-
 	rawTransactionArguments, ok := args[1].([]interface{})
 	if !ok {
-		return nil, fmt.Errorf("invalid script arguments: %#+v", args[1])
+		return nil, fmt.Errorf("invalid transaction arguments: %#+v", args[1])
 	}
 
 	var transactionArguments []string
@@ -122,10 +117,13 @@ func (i *FlowIntegration) submitTransaction(conn protocol.Conn, args ...interfac
 		transactionArguments = append(transactionArguments, strings.TrimSuffix(stringArgument, "\n"))
 	}
 
-	// Pass arguments back to extension
-	codeArguments := fmt.Sprintf("%s", strings.Join(transactionArguments, ","))
-	signers := args[2].([]interface{})
-	err = conn.Notify(ClientSendTransaction, []interface{}{codeArguments, signers})
+	signers, ok := args[2].([]interface{})
+	if !ok {
+		return nil, fmt.Errorf("invalid signers argument: %#+v", args[2])
+	}
+
+	// Pass arguments and signers back to extension
+	err = conn.Notify(ClientSendTransaction, []interface{}{transactionArguments, signers})
 
 	return nil, err
 }
@@ -164,8 +162,7 @@ func (i *FlowIntegration) executeScript(conn protocol.Conn, args ...interface{})
 	}
 
 	// Pass arguments back to extension
-	codeArguments := fmt.Sprintf("%s", strings.Join(scriptArguments, ","))
-	err = conn.Notify(ClientExecuteScript, codeArguments)
+	err = conn.Notify(ClientExecuteScript, scriptArguments)
 
 	return nil, err
 }
@@ -183,10 +180,10 @@ func (i *FlowIntegration) changeEmulatorState(conn protocol.Conn, args ...interf
 
 	emulatorState, ok := args[0].(float64)
 	if !ok {
-		return nil, errors.New("invalid argument")
+		return nil, fmt.Errorf("invalid emulator state argument: %#+v", args[0])
 	}
 
-	i.emulatorState = byte(emulatorState)
+	i.emulatorState = EmulatorState(emulatorState)
 	return nil, nil
 }
 

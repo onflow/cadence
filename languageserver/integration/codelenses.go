@@ -20,7 +20,7 @@ package integration
 
 import (
 	"fmt"
-	"strings"
+	"github.com/onflow/cadence/runtime/common"
 
 	"github.com/onflow/cadence"
 	jsoncdc "github.com/onflow/cadence/encoding/json"
