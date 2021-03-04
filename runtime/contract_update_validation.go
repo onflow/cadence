@@ -20,6 +20,7 @@ package runtime
 
 import (
 	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/sema"
 )
 
 type ContractUpdateValidator struct {
@@ -284,8 +285,25 @@ func (validator *ContractUpdateValidator) CheckRestrictedTypeEquality(expected *
 		return getTypeMismatchError(expected, found)
 	}
 
-	err := expected.Type.CheckEqual(foundRestrictedType.Type, validator)
-	if err != nil || len(expected.Restrictions) != len(foundRestrictedType.Restrictions) {
+	if expected.Type == nil {
+		if !isAnyStructOrAnyResourceType(foundRestrictedType.Type) {
+			return getTypeMismatchError(expected, found)
+		}
+		// else go on to check type restrictions
+	} else if foundRestrictedType.Type == nil {
+		if !isAnyStructOrAnyResourceType(expected.Type) {
+			return getTypeMismatchError(expected, found)
+		}
+		// else go on to check type restrictions
+	} else {
+		// both are not nil
+		err := expected.Type.CheckEqual(foundRestrictedType.Type, validator)
+		if err != nil {
+			return getTypeMismatchError(expected, found)
+		}
+	}
+
+	if len(expected.Restrictions) != len(foundRestrictedType.Restrictions) {
 		return getTypeMismatchError(expected, found)
 	}
 
@@ -462,4 +480,25 @@ func identifiersEqual(expected []ast.Identifier, found []ast.Identifier) bool {
 		}
 	}
 	return true
+}
+
+func isAnyStructOrAnyResourceType(restrictedType ast.Type) bool {
+	// If the restricted type is not stated, then it is either AnyStruct or AnyResource
+	if restrictedType == nil {
+		return true
+	}
+
+	nominalType, ok := restrictedType.(*ast.NominalType)
+	if !ok {
+		return false
+	}
+
+	switch nominalType.Identifier.Identifier {
+	case sema.AnyStructType.Name:
+		return true
+	case sema.AnyResourceType.Name:
+		return true
+	default:
+		return false
+	}
 }
