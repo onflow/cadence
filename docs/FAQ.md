@@ -1,6 +1,6 @@
 ---
 title: FAQ
-type: EXP
+type: FAQ
 ---
 
 # FAQ
