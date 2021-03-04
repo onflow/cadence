@@ -327,6 +327,7 @@ func (s *Server) Initialize(
 				TriggerCharacters: []string{"."},
 				ResolveProvider:   true,
 			},
+			DocumentSymbolProvider: true,
 		},
 	}
 
