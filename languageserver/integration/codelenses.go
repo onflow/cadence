@@ -230,9 +230,8 @@ func (i *FlowIntegration) entryPointActions(
 	// If emulator is not up, we need to provide actionless codelens
 	if i.emulatorState == EmulatorStarting {
 		title := fmt.Sprintf(
-			"%s %s",
+			"%s Emulator is starting up. Please wait \u2026",
 			prefixStarting,
-			"Emulator is starting up. Please wait...",
 		)
 		codeLens := &protocol.CodeLens{
 			Range: codelensRange,
