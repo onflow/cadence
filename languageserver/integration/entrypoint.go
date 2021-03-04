@@ -38,6 +38,8 @@ const (
 	entryPointKindContractInterface
 )
 
+var signersRegexp = regexp.MustCompile(`[a-zA-Z]+`)
+
 type entryPointInfo struct {
 	documentVersion       float64
 	startPos              *ast.Position
@@ -114,7 +116,7 @@ func (i *FlowIntegration) updateEntryPointInfoIfNeeded(
 		}
 
 		for _, pragmaSignerString := range parser2.ParseDocstringPragmaSigners(docString) {
-			signers := parseSignersList(pragmaSignerString)
+			signers := signersRegexp.FindAllString(pragmaSignerString, -1)
 			pragmaSigners = append(pragmaSigners, signers)
 		}
 	}
@@ -128,11 +130,4 @@ func (i *FlowIntegration) updateEntryPointInfoIfNeeded(
 		pragmaArguments:       pragmaArguments,
 		pragmaSignersStrings:  pragmaSigners,
 	}
-}
-
-func parseSignersList(signerList string) []string {
-	var re = regexp.MustCompile(`[a-zA-Z]+`)
-	result := re.FindAllString(signerList, -1)
-
-	return result
 }
