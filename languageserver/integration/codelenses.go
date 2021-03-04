@@ -103,11 +103,9 @@ func (i *FlowIntegration) showDeployContractAction(
 
 	for _, signers := range signersList {
 		title := fmt.Sprintf(
-			"%s %s %s %s %s",
+			"%s Deploy contract %s to %s",
 			prefixOK,
-			"Deploy contract",
 			name,
-			"to",
 			signers[0],
 		)
 
