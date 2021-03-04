@@ -279,9 +279,8 @@ func (i *FlowIntegration) entryPointActions(
 				)
 			} else {
 				title = fmt.Sprintf(
-					"%s %s",
+					"%s Execute script",
 					prefixOK,
-					"Execute script",
 				)
 			}
 
