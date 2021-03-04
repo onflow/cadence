@@ -334,6 +334,7 @@ func (s *Server) Initialize(
 				ResolveProvider:   true,
 			},
 			DocumentHighlightProvider: true,
+			DocumentSymbolProvider:    true,
 		},
 	}
 
