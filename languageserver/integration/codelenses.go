@@ -212,9 +212,8 @@ func (i *FlowIntegration) entryPointActions(
 	// If emulator is not up, we need to show single codelens proposing to start emulator
 	if i.emulatorState == EmulatorOffline {
 		title := fmt.Sprintf(
-			"%s %s",
+			"%s Emulator is Offline. Click here to start it",
 			prefixOffline,
-			"Emulator is Offline. Click here to start it",
 		)
 		codeLens := &protocol.CodeLens{
 			Range: codelensRange,
