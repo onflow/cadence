@@ -1119,6 +1119,42 @@ func (s *Server) ExecuteCommand(conn protocol.Conn, params *protocol.ExecuteComm
 	return f(conn, params.Arguments...)
 }
 
+// DocumentSymbol return information about all known symbols in the document
+func (s *Server) DocumentSymbol(conn protocol.Conn, params *protocol.DocumentSymbolParams) ([]*DocumentSymbol, error) {
+	// TODO: get a list of symbols and pass them back to language server
+	var symbols []*DocumentSymbol
+
+	singleSymbol := DocumentSymbol{
+		Name: "This is basic symbol",
+		Detail: "More stuff here",
+		Kind: protocol.Kind.Variable,
+		Range: protocol.Range{
+			start: Position{
+				line: 1,
+				character: 1
+			},
+			end: Position{
+				line: 1,
+				character: 10
+			}
+		},
+		SelectionRange: protocol.Range{
+			Start: protocol.StartPosition{
+				Line: 1,
+				Character: 1
+			},
+			End: protocol.EndPosition{
+				Line: 1,
+				Character: 10
+			}
+		}
+	}
+
+	symbols = append(symbols, singleSymbol)
+
+	return symbols, nil
+}
+
 // Shutdown tells the server to stop accepting any new requests. This can only
 // be followed by a call to Exit, which exits the process.
 func (*Server) Shutdown(conn protocol.Conn) error {
