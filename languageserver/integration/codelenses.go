@@ -275,9 +275,8 @@ func (i *FlowIntegration) entryPointActions(
 		case entryPointKindScript:
 			if len(argumentList) > 0 {
 				title = fmt.Sprintf(
-					"%s %s %s",
+					"%s Execute script with %s",
 					prefixOK,
-					"Execute script with",
 					entryPointInfo.pragmaArgumentStrings[i],
 				)
 			} else {
