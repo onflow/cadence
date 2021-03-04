@@ -26,10 +26,12 @@ import (
 	"github.com/onflow/cadence/languageserver/server"
 )
 
+type EmulatorState byte
+
 const (
-	EmulatorOffline = 1
-	EmulatorStarting = 2
-	EmulatorOnline = 3
+	EmulatorOffline EmulatorState = iota
+	EmulatorStarting
+	EmulatorOnline
 )
 
 type FlowIntegration struct {
@@ -40,7 +42,7 @@ type FlowIntegration struct {
 	activeAddress  flow.Address
 	serviceAddress flow.Address
 	entryPointInfo map[protocol.DocumentUri]entryPointInfo
-	emulatorState	byte
+	emulatorState  EmulatorState
 }
 
 func NewFlowIntegration(s *server.Server, enableFlowClient bool) (*FlowIntegration, error) {

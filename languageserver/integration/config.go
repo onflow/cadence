@@ -47,7 +47,7 @@ type AccountPrivateKey struct {
 //
 // Returns an error if any fields are missing or malformed.
 //
-func configFromInitializationOptions(opts interface{}) (conf Config, emulatorState float64, err error) {
+func configFromInitializationOptions(opts interface{}) (conf Config, emulatorState EmulatorState, err error) {
 	optsMap, ok := opts.(map[string]interface{})
 	if !ok {
 		return Config{}, EmulatorOffline, errors.New("invalid initialization options")
@@ -83,7 +83,7 @@ func configFromInitializationOptions(opts interface{}) (conf Config, emulatorSta
 		return
 	}
 
-	emulatorState, ok = optsMap["emulatorState"].(float64)
+	emulatorState, ok = optsMap["emulatorState"].(EmulatorState)
 	if !ok {
 		emulatorState = EmulatorOffline
 	}

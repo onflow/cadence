@@ -42,7 +42,7 @@ func (i *FlowIntegration) initialize(initializationOptions interface{}) error {
 		grpc.WithInsecure(),
 	)
 
-	i.emulatorState = byte(emulatorState)
+	i.emulatorState = EmulatorState(emulatorState)
 
 	if err != nil {
 		return err
