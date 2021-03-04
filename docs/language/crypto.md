@@ -1,5 +1,6 @@
 ---
 title: Crypto
+type: REF
 ---
 
 The built-in contract `Crypto` can be used to perform cryptographic operations.

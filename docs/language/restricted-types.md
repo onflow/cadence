@@ -1,5 +1,6 @@
 ---
 title: Restricted Types
+type: REF
 ---
 
 Structure and resource types can be **restricted**. Restrictions are interfaces.

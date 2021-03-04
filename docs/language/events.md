@@ -1,5 +1,6 @@
 ---
 title: Events
+type: REF
 ---
 
 Events are special values that can be emitted during the execution of a program.

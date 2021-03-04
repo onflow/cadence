@@ -1,5 +1,6 @@
 ---
 title: Values and Types
+type: REF
 ---
 
 Values are objects, like for example booleans, integers, or arrays.
@@ -15,8 +16,8 @@ Numbers can be written in various bases. Numbers are assumed to be decimal by de
 Non-decimal literals have a specific prefix.
 
 | Numeral system  | Prefix | Characters                                                            |
-|:----------------|:-------|:----------------------------------------------------------------------|
-| **Decimal**     | *None* | one or more numbers (`0` to `9`)                                      |
+| :-------------- | :----- | :-------------------------------------------------------------------- |
+| **Decimal**     | _None_ | one or more numbers (`0` to `9`)                                      |
 | **Binary**      | `0b`   | one or more zeros or ones (`0` or `1`)                                |
 | **Octal**       | `0o`   | one or more numbers in the range `0` to `7`                           |
 | **Hexadecimal** | `0x`   | one or more numbers, or characters `a` to `f`, lowercase or uppercase |
@@ -67,8 +68,8 @@ let binaryNumber = 0b10_11_01
 ## Integers
 
 Integers are numbers without a fractional part.
-They are either *signed* (positive, zero, or negative)
-or *unsigned* (positive or zero).
+They are either _signed_ (positive, zero, or negative)
+or _unsigned_ (positive or zero).
 
 Signed integer types which check for overflow and underflow have an `Int` prefix
 and can represent values in the following ranges:
@@ -838,7 +839,7 @@ Array literals start with an opening square bracket `[` and end with a closing s
 Arrays either have a fixed size or are variably sized, i.e., elements can be added and removed.
 
 Fixed-size arrays have the form `[T; N]`, where `T` is the element type,
-and `N` is the size of the array.  `N` has to be statically known, meaning
+and `N` is the size of the array. `N` has to be statically known, meaning
 that it needs to be an integer literal.
 For example, a fixed-size array of 3 `Int8` elements has the type `[Int8; 3]`.
 
@@ -1321,7 +1322,7 @@ booleans[0] = true
 
 - `cadence•let keys: [K]`
 
-  Returns an array of the keys of type `K` in the dictionary.  This does not
+  Returns an array of the keys of type `K` in the dictionary. This does not
   modify the dictionary, just returns a copy of the keys as an array.
   If the dictionary is empty, this returns an empty array.
 
@@ -1337,7 +1338,7 @@ booleans[0] = true
 
 - `cadence•let values: [V]`
 
-  Returns an array of the values of type `V` in the dictionary.  This does not
+  Returns an array of the values of type `V` in the dictionary. This does not
   modify the dictionary, just returns a copy of the values as an array.
   If the dictionary is empty, this returns an empty array.
 

@@ -1,5 +1,6 @@
 ---
 title: Operators
+type: REF
 ---
 
 Operators are special symbols that perform a computation

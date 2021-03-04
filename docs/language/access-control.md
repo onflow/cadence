@@ -1,5 +1,6 @@
 ---
 title: Access control
+type: REF
 ---
 
 Access control allows making certain parts of the program accessible/visible

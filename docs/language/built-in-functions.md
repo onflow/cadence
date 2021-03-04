@@ -1,5 +1,6 @@
 ---
 title: Built-in Functions
+type: REF
 ---
 
 - `cadence•fun panic(_ message: String): Never`

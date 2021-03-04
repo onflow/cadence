@@ -1,5 +1,6 @@
 ---
 title: Transactions
+type: REF
 ---
 
 Transactions are objects that are signed by one or more [accounts](../accounts)

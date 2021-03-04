@@ -1,5 +1,6 @@
 ---
 title: Accounts
+type: REF
 ---
 
 Every account can be accessed through two types:

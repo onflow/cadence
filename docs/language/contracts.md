@@ -1,5 +1,6 @@
 ---
 title: Contracts
+type: REF
 ---
 
 A contract in Cadence is a collection of type definitions

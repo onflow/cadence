@@ -1,5 +1,6 @@
 ---
 title: Syntax
+type: REF
 ---
 
 ## Comments

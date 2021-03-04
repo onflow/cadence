@@ -1,5 +1,6 @@
 ---
 title: Enumerations
+type: REF
 ---
 
 Enumerations are sets of symbolic names bound to unique, constant values,

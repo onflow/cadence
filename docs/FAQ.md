@@ -1,3 +1,8 @@
+---
+title: FAQ
+type: EXP
+---
+
 # FAQ
 
 ## Is there a formal grammar (e.g. in BNF) for Cadence?

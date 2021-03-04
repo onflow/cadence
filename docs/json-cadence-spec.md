@@ -1,5 +1,6 @@
 ---
 title: JSON-Cadence Data Interchange Format
+type: REF
 ---
 
 > Version 0.2.0

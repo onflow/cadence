@@ -1,5 +1,6 @@
 ---
 title: Constants and Variable Declarations
+type: REF
 ---
 
 Constants and variables are declarations that bind

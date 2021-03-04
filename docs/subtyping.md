@@ -1,4 +1,7 @@
-
+---
+title: Sub-typing
+type: REF
+---
 ## Resources
 
 - Supertype: **Restricted Resource**:

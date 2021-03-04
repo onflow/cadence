@@ -1,5 +1,6 @@
 ---
 title: Composite Types
+type: REF
 ---
 
 Composite types allow composing simpler types into more complex types,
@@ -19,31 +20,31 @@ and when the value is returned from a function:
 
 - [**Structures**](#structures) are **copied**, they are value types.
 
-    Structures are useful when copies with independent state are desired.
+  Structures are useful when copies with independent state are desired.
 
 - [**Resources**](#resources) are **moved**, they are linear types and **must** be used **exactly once**.
 
-    Resources are useful when it is desired to model ownership
-    (a value exists exactly in one location and it should not be lost).
+  Resources are useful when it is desired to model ownership
+  (a value exists exactly in one location and it should not be lost).
 
-    Certain constructs in a blockchain represent assets of real, tangible value,
-    as much as a house or car or bank account.
-    We have to worry about literal loss and theft,
-    perhaps even on the scale of millions of dollars.
+  Certain constructs in a blockchain represent assets of real, tangible value,
+  as much as a house or car or bank account.
+  We have to worry about literal loss and theft,
+  perhaps even on the scale of millions of dollars.
 
-    Structures are not an ideal way to represent this ownership because they are copied.
-    This would mean that there could be a risk of having multiple copies
-    of certain assets floating around,
-    which breaks the scarcity requirements needed for these assets to have real value.
+  Structures are not an ideal way to represent this ownership because they are copied.
+  This would mean that there could be a risk of having multiple copies
+  of certain assets floating around,
+  which breaks the scarcity requirements needed for these assets to have real value.
 
-    A structure is much more useful for representing information
-    that can be grouped together in a logical way,
-    but doesn't have value or a need to be able to be owned or transferred.
+  A structure is much more useful for representing information
+  that can be grouped together in a logical way,
+  but doesn't have value or a need to be able to be owned or transferred.
 
-    A structure could for example be used to contain the information associated
-    with a division of a company,
-    but a resource would be used to represent the assets that have been allocated
-    to that organization for spending.
+  A structure could for example be used to contain the information associated
+  with a division of a company,
+  but a resource would be used to represent the assets that have been allocated
+  to that organization for spending.
 
 Nesting of resources is only allowed within other resource types,
 or in data structures like arrays and dictionaries,
@@ -118,33 +119,33 @@ The initializer always follows any fields.
 There are three kinds of fields:
 
 - **Constant fields** are also stored in the composite value,
-    but after they have been initialized with a value
-    they **cannot** have new values assigned to them afterwards.
-    A constant field must be initialized exactly once.
+  but after they have been initialized with a value
+  they **cannot** have new values assigned to them afterwards.
+  A constant field must be initialized exactly once.
 
-    Constant fields are declared using the `let` keyword.
+  Constant fields are declared using the `let` keyword.
 
 - **Variable fields** are stored in the composite value
-    and can have new values assigned to them.
+  and can have new values assigned to them.
 
-    Variable fields are declared using the `var` keyword.
+  Variable fields are declared using the `var` keyword.
 
 - **Synthetic fields** are **not stored** in the composite value,
-    i.e. they are derived/computed from other values.
-    They can have new values assigned to them.
+  i.e. they are derived/computed from other values.
+  They can have new values assigned to them.
 
-    Synthetic fields are declared using the `synthetic` keyword.
+  Synthetic fields are declared using the `synthetic` keyword.
 
-    Synthetic fields must have a getter and a setter.
-    Getters and setters are explained in the
-    [next section](#composite-type-field-getters-and-setters).
-    Synthetic fields are explained in a [separate section](#synthetic-composite-type-fields).
+  Synthetic fields must have a getter and a setter.
+  Getters and setters are explained in the
+  [next section](#composite-type-field-getters-and-setters).
+  Synthetic fields are explained in a [separate section](#synthetic-composite-type-fields).
 
-| Field Kind           | Stored in memory | Assignable         | Keyword     |
-|----------------------|------------------|--------------------|-------------|
-| **Variable field**   | Yes              | Yes                | `var`       |
-| **Constant field**   | Yes              | **No**             | `let`       |
-| **Synthetic field**  | **No**           | Yes                | `synthetic` |
+| Field Kind          | Stored in memory | Assignable | Keyword     |
+| ------------------- | ---------------- | ---------- | ----------- |
+| **Variable field**  | Yes              | Yes        | `var`       |
+| **Constant field**  | Yes              | **No**     | `let`       |
+| **Synthetic field** | **No**           | Yes        | `synthetic` |
 
 In initializers, the special constant `self` refers to the composite value
 that is to be initialized.
@@ -194,7 +195,7 @@ pub struct StructureWithConstantField {
 }
 ```
 
-The field access syntax must be used to access fields –  fields are not available as variables.
+The field access syntax must be used to access fields – fields are not available as variables.
 
 ```cadence
 pub struct Token {
@@ -376,7 +377,7 @@ example.balance = -50
 
 </Callout>
 
-Fields which are not stored in the composite value are *synthetic*,
+Fields which are not stored in the composite value are _synthetic_,
 i.e., the field value is computed.
 Synthetic can be either read-only, or readable and writable.
 
@@ -1337,6 +1338,7 @@ id3 != id1  // true
 The details of how the identifiers are generated is an implementation detail.
 
 Do not rely on or assume any particular behaviour in Cadence programs.
+
 </Callout>
 
 ## Unbound References / Nulls

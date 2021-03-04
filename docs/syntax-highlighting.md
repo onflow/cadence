@@ -1,3 +1,8 @@
+---
+title: Syntax Highlighting Cadence
+type: HOWTO
+---
+
 # Syntax Highlighting Cadence
 
 There are currently several options to highlight Cadence code.

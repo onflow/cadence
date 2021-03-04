@@ -1,8 +1,9 @@
 ---
 title: Introduction to Cadence
+type: INTRO
 ---
 
-We commonly refer to programs that are stored in user accounts as smart contracts. 
+We commonly refer to programs that are stored in user accounts as smart contracts.
 A smart contract is a program that verifies and executes the performance of a contract without the need for a trusted third party.
 Programs that run on blockchains are commonly referred to as smart contracts because they mediate important functionality (such as currency)
 without having to rely on a central authority (like a bank).
@@ -16,11 +17,11 @@ that help developers ensure that their code is safe, secure, clear, and approach
 
 - Type safety and a strong static type system
 - Resource-oriented programming, a new paradigm that pairs linear types with object capabilities
-to create a secure and declarative model for digital ownership by ensuring that resources (and their associated assets)
-can only exist in one location at a time, cannot be copied, and cannot be accidentally lost or deleted
+  to create a secure and declarative model for digital ownership by ensuring that resources (and their associated assets)
+  can only exist in one location at a time, cannot be copied, and cannot be accidentally lost or deleted
 - Built-in pre-conditions and post-conditions for functions and [transactions](/intro/glossary/#transaction)
 - The utilization of capability-based security, which enforces access control by requiring that access to objects
-is restricted to only the owner and those who have a valid reference to the object
+  is restricted to only the owner and those who have a valid reference to the object
 
 Swift and Rust inspire Cadence’s syntax. Its use of resource types maps well to that of Move, the programming language being developed by the Libra team.
 
@@ -30,27 +31,27 @@ Swift and Rust inspire Cadence’s syntax. Its use of resource types maps well t
 
 Cadence, a new high-level programming language, observes the following requirements:
 
-- **Safety and Security:** Safety is the underlying reliability of any smart contract (i.e., it’s bug-free and performs its function). 
-Security is the prevention of attacks on the network or smart contracts (i.e., unauthorized actions by malicious actors).
-Safety and security are critical in smart contracts because of the immutable nature of blockchains,
-and because they often deal with high-value assets. While auditing and reviewing code will be a crucial part of smart contract development, 
-Cadence maximizes efficiency while maintaining the highest levels of safety and security at its foundation. 
-It accomplishes this via a strong static type system, design by contract, and ownership primitives inspired by linear types (which are useful when dealing with assets).
-- **Clarity:** Code needs to be easy to read, and its meaning should be as unambiguous as possible. 
-It should also be suited for verification so that tooling can help with ensuring safety and security guarantees. 
-These guarantees can be achieved by making the code declarative and allowing the developer to express their intentions directly. 
-We make those intentions explicit by design, which, along with readability, make auditing and reviewing more efficient, at a small cost to verbosity.
+- **Safety and Security:** Safety is the underlying reliability of any smart contract (i.e., it’s bug-free and performs its function).
+  Security is the prevention of attacks on the network or smart contracts (i.e., unauthorized actions by malicious actors).
+  Safety and security are critical in smart contracts because of the immutable nature of blockchains,
+  and because they often deal with high-value assets. While auditing and reviewing code will be a crucial part of smart contract development,
+  Cadence maximizes efficiency while maintaining the highest levels of safety and security at its foundation.
+  It accomplishes this via a strong static type system, design by contract, and ownership primitives inspired by linear types (which are useful when dealing with assets).
+- **Clarity:** Code needs to be easy to read, and its meaning should be as unambiguous as possible.
+  It should also be suited for verification so that tooling can help with ensuring safety and security guarantees.
+  These guarantees can be achieved by making the code declarative and allowing the developer to express their intentions directly.
+  We make those intentions explicit by design, which, along with readability, make auditing and reviewing more efficient, at a small cost to verbosity.
 - **Approachability:** Writing code and creating programs should be as approachable as possible.
-Incorporating features from languages like Swift and Rust, developers should find Cadence’s syntax and semantics familiar.
-Practical tooling, documentation, and examples enable developers to start creating programs quickly and effectively.
+  Incorporating features from languages like Swift and Rust, developers should find Cadence’s syntax and semantics familiar.
+  Practical tooling, documentation, and examples enable developers to start creating programs quickly and effectively.
 - **Developer Experience:** The developer should be supported throughout the entire development lifecycle, from initial application logic to on-chain bugfixes.
 - **Intuiting Ownership with Resources:** Resources are a composite data type, similar to a struct, that expresses direct ownership of assets.
-Cadence’s strong static type system ensures that resources can only exist in one location at a time and cannot be copied or lost because of a coding mistake.
-Most smart contract languages currently use a ledger-style approach to record ownership,
-where an asset like a fungible token is stored in the smart contract as an entry in a central ledger.
-Cadence’s resources directly tie an asset’s ownership to the [account](glossary#section-account) that owns it by saving the resource in the account’s storage.
-As a result, ownership isn’t centralized in a smart contract’s storage. Each account owns its assets,
-and the assets can be transferred freely between accounts without the need for arbitration by a central smart contract.
+  Cadence’s strong static type system ensures that resources can only exist in one location at a time and cannot be copied or lost because of a coding mistake.
+  Most smart contract languages currently use a ledger-style approach to record ownership,
+  where an asset like a fungible token is stored in the smart contract as an entry in a central ledger.
+  Cadence’s resources directly tie an asset’s ownership to the [account](glossary#section-account) that owns it by saving the resource in the account’s storage.
+  As a result, ownership isn’t centralized in a smart contract’s storage. Each account owns its assets,
+  and the assets can be transferred freely between accounts without the need for arbitration by a central smart contract.
 
 ## Addressing Challenges with Existing Languages
 
@@ -68,7 +69,7 @@ eventually leading to a fork in Ethereum and two separate active blockchains (Et
 Bug fixes are only possible if a smart contract is designed to support changes, a feature that introduces complexity and security issues.
 Lengthy auditing and review processes can ensure a bug-free smart contract. Still, they add substantial time to the already time-consuming task of getting the smart contract’s core logic working correctly.
 
-Overlooked mistakes cause the most damaging scenarios. 
+Overlooked mistakes cause the most damaging scenarios.
 It is easy to lose or duplicate monetary value or assets because existing languages don’t check relevant invariants or make it harder to express them.
 For example, a plain number represents a transferred amount that can be accidentally (or maliciously) multiplied or ignored.
 
@@ -126,7 +127,7 @@ like fixed-point arithmetic, which helps when working with currencies.
 
 ## Intuiting Ownership with Resources
 
-Most smart contract languages currently use a ledger-style approach to record ownership, 
+Most smart contract languages currently use a ledger-style approach to record ownership,
 where an asset is stored in the smart contract as an entry in a central ledger, and this ledger is the source of truth around asset ownership.
 There are many disadvantages to this design, especially when it comes to tracking the ownership of multiple assets belonging to a single account.
 To find out all of the assets that an account owns, you would have to enumerate all the possible smart contracts that could potentially include this account
@@ -140,12 +141,12 @@ Resources are inspired by linear types and increase safety when working with ass
 Resources, as enforced by Cadence’s type system, ensure that assets are correctly manipulated and not abused.
 
 - Every resource has exactly one owner. If a resource is used as a function parameter, an initial value for a variable, or something similar, the object is not copied.
-Instead, it is moved to the new location, and the old location is immediately invalidated.
+  Instead, it is moved to the new location, and the old location is immediately invalidated.
 - The language will report an error if ownership of a resource was not properly transferred, i.e.,
-when the program attempts to introduce multiple owners for the resource or the resource ends up in a state where it does not have an owner.
-For example, a resource can only be assigned to exactly one variable and cannot be passed to functions multiple times.
+  when the program attempts to introduce multiple owners for the resource or the resource ends up in a state where it does not have an owner.
+  For example, a resource can only be assigned to exactly one variable and cannot be passed to functions multiple times.
 - Resources cannot go out of scope. If a function or transaction removes a resource from an account’s storage,
-it either needs to end the transaction in an account's storage, or it needs to be explicitly and safely deleted. There is no “garbage collection” for resources.
+  it either needs to end the transaction in an account's storage, or it needs to be explicitly and safely deleted. There is no “garbage collection” for resources.
 
 The special status of Resource objects must be enforced by the runtime; if they were just a compiler abstraction it would be easy for malicious code to break the value guarantees.
 

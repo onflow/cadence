@@ -1,5 +1,6 @@
 ---
 title: Migration Guide
+type: HOWTO
 ---
 
 ## v0.11

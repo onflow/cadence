@@ -1,5 +1,6 @@
 ---
 title: References
+type: REF
 ---
 
 It is possible to create references to objects, i.e. resources or structures.
