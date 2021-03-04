@@ -1,6 +1,6 @@
 ---
 title: Syntax
-type: REF
+contentType: REF
 ---
 
 ## Comments

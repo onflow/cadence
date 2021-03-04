@@ -1,6 +1,6 @@
 ---
 title: Built-in Functions
-type: REF
+contentType: REF
 ---
 
 - `cadence•fun panic(_ message: String): Never`

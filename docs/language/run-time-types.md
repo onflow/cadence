@@ -1,6 +1,6 @@
 ---
 title: Run-time Types
-type: REF
+contentType: REF
 ---
 
 Types can be represented at run-time.

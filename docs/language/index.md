@@ -1,6 +1,6 @@
 ---
 title: The Cadence Programming Language
-type: REF
+contentType: REF
 ---
 
 ## Introduction

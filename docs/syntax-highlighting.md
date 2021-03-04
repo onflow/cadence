@@ -1,6 +1,6 @@
 ---
 title: Syntax Highlighting Cadence
-type: HOWTO
+contentType: HOWTO
 ---
 
 # Syntax Highlighting Cadence

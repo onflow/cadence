@@ -1,6 +1,6 @@
 ---
 title: Environment Information
-type: REF
+contentType: REF
 ---
 
 ## Transaction Information

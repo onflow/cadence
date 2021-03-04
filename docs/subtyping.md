@@ -1,6 +1,6 @@
 ---
 title: Sub-typing
-type: REF
+contentType: REF
 ---
 ## Resources
 

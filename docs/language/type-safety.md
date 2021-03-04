@@ -1,6 +1,6 @@
 ---
 title: Type Safety
-type: REF
+contentType: REF
 ---
 
 The Cadence programming language is a *type-safe* language.

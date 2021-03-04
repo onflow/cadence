@@ -1,6 +1,6 @@
 ---
 title: References
-type: REF
+contentType: REF
 ---
 
 It is possible to create references to objects, i.e. resources or structures.

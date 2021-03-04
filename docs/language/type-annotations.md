@@ -1,6 +1,6 @@
 ---
 title: Type Annotations
-type: REF
+contentType: REF
 ---
 
 When declaring a constant or variable,

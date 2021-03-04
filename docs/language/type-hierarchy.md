@@ -1,6 +1,6 @@
 ---
 title: Type Hierarchy
-type: REF
+contentType: REF
 ---
 
 ![Cadence type hierarchy](type-hierarchy.png)

@@ -1,6 +1,6 @@
 ---
 title: Scope
-type: REF
+contentType: REF
 ---
 
 Every function and block (`{` ... `}`) introduces a new scope for declarations.

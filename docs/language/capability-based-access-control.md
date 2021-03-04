@@ -1,6 +1,6 @@
 ---
 title: Capability-based Access Control
-type: REF
+contentType: REF
 ---
 
 Users will often want to make it so that specific other users or even anyone else
