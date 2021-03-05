@@ -1132,48 +1132,39 @@ func (s *Server) ExecuteCommand(conn protocol.Conn, params *protocol.ExecuteComm
 	return f(conn, params.Arguments...)
 }
 
-// DocumentSymbol return information about all known symbols in the document
-func (s *Server) DocumentSymbol(conn protocol.Conn, params *protocol.DocumentSymbolParams) ([]*protocol.DocumentSymbol, error) {
-	
-	conn.ShowMessage(&protocol.ShowMessageParams{
-		Type:    0,
-		Message: "Give me Document Symbols...",
-	})
-	
-	// TODO: get a list of symbols and pass them back to language server
-	var symbols []*protocol.DocumentSymbol
+// DocumentSymbol is called every time the document contents change and returns a
+// tree of known  document symbols, which can be shown in outline panel
+func (s *Server) DocumentSymbol(conn protocol.Conn, params *protocol.DocumentSymbolParams) (symbols []*protocol.DocumentSymbol,err error) {
 
-	singleSymbol := protocol.DocumentSymbol{
-		Name:       "This is basic symbol",
-		Detail:     "More stuff here",
-		Kind:       protocol.Variable,
-		Deprecated: false,
-		Range: protocol.Range{
-			Start: protocol.Position{
-				Line:      1,
-				Character: 1,
-			},
-			End: protocol.Position{
-				Line:      1,
-				Character: 10,
-			},
-		},
-		SelectionRange: protocol.Range{
-			Start: protocol.Position{
-				Line:      1,
-				Character: 1,
-			},
-			End: protocol.Position{
-				Line:      1,
-				Character: 10,
-			},
-		},
-		Children: nil,
+	// NOTE: Always initialize to an empty slice, i.e DON'T use nil:
+	// The later will be ignored instead of being treated as no items
+	symbols = []*protocol.DocumentSymbol{}
+
+	// get uri from parameters caught by grpc server
+	uri := params.TextDocument.URI
+	checker, ok := s.checkers[uri]
+	if !ok {
+		// Can we ensure this doesn't happen?
+		return
 	}
 
-	symbols = append(symbols, &singleSymbol)
+	version := s.documents[uri].Version
 
-	return symbols, nil
+	// "documentSymbolProviders" contains all providers added via "WithDocumentSymbolProvider" method
+	// currently we have single provider we define inside of "NewFlowIntegration" method
+	for _, provider := range s.documentSymbolProviders {
+		var moreSymbols []*protocol.DocumentSymbol
+
+		// in this specific case it will call a method implemented in "integration.documentSymbols"
+		moreSymbols, err = provider(uri, version, checker)
+		if err != nil {
+			return
+		}
+
+		symbols = append(symbols, moreSymbols...)
+	}
+
+	return
 }
 
 // Shutdown tells the server to stop accepting any new requests. This can only
