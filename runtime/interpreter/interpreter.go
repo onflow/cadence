@@ -1614,181 +1614,144 @@ func (interpreter *Interpreter) VisitIdentifierExpression(expression *ast.Identi
 	return Done{Result: variable.Value}
 }
 
-// valueTuple
-
-type valueTuple struct {
-	left, right Value
-}
-
-// visitBinaryOperation interprets the left-hand side and the right-hand side and returns
-// the result in a valueTuple
-func (interpreter *Interpreter) visitBinaryOperation(expr *ast.BinaryExpression) Trampoline {
-	// interpret the left-hand side
-	return expr.Left.Accept(interpreter).(Trampoline).
-		FlatMap(func(left interface{}) Trampoline {
-			// after interpreting the left-hand side,
-			// interpret the right-hand side
-			return expr.Right.Accept(interpreter).(Trampoline).
-				FlatMap(func(right interface{}) Trampoline {
-					tuple := valueTuple{
-						left.(Value),
-						right.(Value),
-					}
-					return Done{Result: tuple}
-				})
-		})
-}
-
-func (interpreter *Interpreter) visitNumberBinaryOperation(
-	expression *ast.BinaryExpression,
-	f func(left, right NumberValue) Value,
-) ast.Repr {
-	return interpreter.visitBinaryOperation(expression).
-		Map(func(result interface{}) interface{} {
-			tuple := result.(valueTuple)
-			left := tuple.left.(NumberValue)
-			right := tuple.right.(NumberValue)
-			return f(left, right)
-		})
+func (interpreter *Interpreter) visitBinaryOperation(
+	expr *ast.BinaryExpression,
+	f func(left, right Value) Value,
+) Trampoline {
+	left := interpreter.runAllStatements(expr.Left.Accept(interpreter).(Trampoline)).(Value)
+	right := interpreter.runAllStatements(expr.Right.Accept(interpreter).(Trampoline)).(Value)
+	return Done{Result: f(left, right)}
 }
 
 func (interpreter *Interpreter) VisitBinaryExpression(expression *ast.BinaryExpression) ast.Repr {
 	switch expression.Operation {
 	case ast.OperationPlus:
-		return interpreter.visitNumberBinaryOperation(
+		return interpreter.visitBinaryOperation(
 			expression,
-			func(left, right NumberValue) Value {
-				return left.Plus(right)
+			func(left, right Value) Value {
+				return left.(NumberValue).Plus(right.(NumberValue))
 			},
 		)
 
 	case ast.OperationMinus:
-		return interpreter.visitNumberBinaryOperation(
+		return interpreter.visitBinaryOperation(
 			expression,
-			func(left, right NumberValue) Value {
-				return left.Minus(right)
+			func(left, right Value) Value {
+				return left.(NumberValue).Minus(right.(NumberValue))
 			},
 		)
 
 	case ast.OperationMod:
-		return interpreter.visitNumberBinaryOperation(
+		return interpreter.visitBinaryOperation(
 			expression,
-			func(left, right NumberValue) Value {
-				return left.Mod(right)
+			func(left, right Value) Value {
+				return left.(NumberValue).Mod(right.(NumberValue))
 			},
 		)
 
 	case ast.OperationMul:
-		return interpreter.visitNumberBinaryOperation(
+		return interpreter.visitBinaryOperation(
 			expression,
-			func(left, right NumberValue) Value {
-				return left.Mul(right)
+			func(left, right Value) Value {
+				return left.(NumberValue).Mul(right.(NumberValue))
 			},
 		)
 
 	case ast.OperationDiv:
-		return interpreter.visitNumberBinaryOperation(
+		return interpreter.visitBinaryOperation(
 			expression,
-			func(left, right NumberValue) Value {
-				return left.Div(right)
+			func(left, right Value) Value {
+				return left.(NumberValue).Div(right.(NumberValue))
 			},
 		)
 
 	case ast.OperationBitwiseOr:
-		return interpreter.visitNumberBinaryOperation(
+		return interpreter.visitBinaryOperation(
 			expression,
-			func(left, right NumberValue) Value {
-				leftInteger := left.(IntegerValue)
-				rightInteger := right.(IntegerValue)
-				return leftInteger.BitwiseOr(rightInteger)
+			func(left, right Value) Value {
+				return left.(IntegerValue).BitwiseOr(right.(IntegerValue))
 			},
 		)
 
 	case ast.OperationBitwiseXor:
-		return interpreter.visitNumberBinaryOperation(
+		return interpreter.visitBinaryOperation(
 			expression,
-			func(left, right NumberValue) Value {
-				leftInteger := left.(IntegerValue)
-				rightInteger := right.(IntegerValue)
-				return leftInteger.BitwiseXor(rightInteger)
+			func(left, right Value) Value {
+				return left.(IntegerValue).BitwiseXor(right.(IntegerValue))
 			},
 		)
 
 	case ast.OperationBitwiseAnd:
-		return interpreter.visitNumberBinaryOperation(
+		return interpreter.visitBinaryOperation(
 			expression,
-			func(left, right NumberValue) Value {
-				leftInteger := left.(IntegerValue)
-				rightInteger := right.(IntegerValue)
-				return leftInteger.BitwiseAnd(rightInteger)
+			func(left, right Value) Value {
+				return left.(IntegerValue).BitwiseAnd(right.(IntegerValue))
 			},
 		)
 
 	case ast.OperationBitwiseLeftShift:
-		return interpreter.visitNumberBinaryOperation(
+		return interpreter.visitBinaryOperation(
 			expression,
-			func(left, right NumberValue) Value {
-				leftInteger := left.(IntegerValue)
-				rightInteger := right.(IntegerValue)
-				return leftInteger.BitwiseLeftShift(rightInteger)
+			func(left, right Value) Value {
+				return left.(IntegerValue).BitwiseLeftShift(right.(IntegerValue))
 			},
 		)
 
 	case ast.OperationBitwiseRightShift:
-		return interpreter.visitNumberBinaryOperation(
+		return interpreter.visitBinaryOperation(
 			expression,
-			func(left, right NumberValue) Value {
-				leftInteger := left.(IntegerValue)
-				rightInteger := right.(IntegerValue)
-				return leftInteger.BitwiseRightShift(rightInteger)
+			func(left, right Value) Value {
+				return left.(IntegerValue).BitwiseRightShift(right.(IntegerValue))
 			},
 		)
 
 	case ast.OperationLess:
-		return interpreter.visitNumberBinaryOperation(
+		return interpreter.visitBinaryOperation(
 			expression,
-			func(left, right NumberValue) Value {
-				return left.Less(right)
+			func(left, right Value) Value {
+				return left.(NumberValue).Less(right.(NumberValue))
 			},
 		)
 
 	case ast.OperationLessEqual:
-		return interpreter.visitNumberBinaryOperation(
+		return interpreter.visitBinaryOperation(
 			expression,
-			func(left, right NumberValue) Value {
-				return left.LessEqual(right)
+			func(left, right Value) Value {
+				return left.(NumberValue).LessEqual(right.(NumberValue))
 			},
 		)
 
 	case ast.OperationGreater:
-		return interpreter.visitNumberBinaryOperation(
+		return interpreter.visitBinaryOperation(
 			expression,
-			func(left, right NumberValue) Value {
-				return left.Greater(right)
+			func(left, right Value) Value {
+				return left.(NumberValue).Greater(right.(NumberValue))
 			},
 		)
 
 	case ast.OperationGreaterEqual:
-		return interpreter.visitNumberBinaryOperation(
+		return interpreter.visitBinaryOperation(
 			expression,
-			func(left, right NumberValue) Value {
-				return left.GreaterEqual(right)
+			func(left, right Value) Value {
+				return left.(NumberValue).GreaterEqual(right.(NumberValue))
 			},
 		)
 
 	case ast.OperationEqual:
-		return interpreter.visitBinaryOperation(expression).
-			Map(func(result interface{}) interface{} {
-				tuple := result.(valueTuple)
-				return interpreter.testEqual(tuple.left, tuple.right)
-			})
+		return interpreter.visitBinaryOperation(
+			expression,
+			func(left, right Value) Value {
+				return interpreter.testEqual(left, right)
+			},
+		)
 
 	case ast.OperationNotEqual:
-		return interpreter.visitBinaryOperation(expression).
-			Map(func(result interface{}) interface{} {
-				tuple := result.(valueTuple)
-				return !interpreter.testEqual(tuple.left, tuple.right)
-			})
+		return interpreter.visitBinaryOperation(
+			expression,
+			func(left, right Value) Value {
+				return !interpreter.testEqual(left, right)
+			},
+		)
 
 	case ast.OperationOr:
 		// interpret the left-hand side

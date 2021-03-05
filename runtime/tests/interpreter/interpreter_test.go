@@ -8308,3 +8308,26 @@ func TestInterpretCopyOnReturn(t *testing.T) {
 		value,
 	)
 }
+
+func BenchmarkInterpretRecursionFib(b *testing.B) {
+
+	inter := parseCheckAndInterpret(b, `
+       fun fib(_ n: Int): Int {
+           if n < 2 {
+              return n
+           }
+           return fib(n - 1) + fib(n - 2)
+       }
+   `)
+
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+
+		_, err := inter.Invoke(
+			"fib",
+			interpreter.NewIntValueFromInt64(14),
+		)
+		require.NoError(b, err)
+	}
+}
