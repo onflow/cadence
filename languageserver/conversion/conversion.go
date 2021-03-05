@@ -19,6 +19,7 @@
 package conversion
 
 import (
+	"fmt"
 	"github.com/onflow/cadence/languageserver/protocol"
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
@@ -52,30 +53,39 @@ func ProtocolToSemaPosition(pos protocol.Position) sema.Position {
 	}
 }
 
-func DeclarationKindToSymbolType(kind common.DeclarationKind) protocol.SymbolKind {
+func DeclarationKindToSymbolData(declaration ast.Declaration) (symbolKind protocol.SymbolKind, detail string) {
+	detail = fmt.Sprintf("access: %s", declaration.DeclarationAccess().Description())
+	kind := declaration.DeclarationKind()
+
 	switch kind {
 	case common.DeclarationKindContract:
-		return protocol.Package
+		symbolKind = protocol.Package
 	case common.DeclarationKindField:
-		return protocol.Field
+		symbolKind = protocol.Field
 	case common.DeclarationKindFunction:
-		return protocol.Function
+		symbolKind = protocol.Function
 	case common.DeclarationKindArgumentLabel:
-		return protocol.TypeParameter
+		symbolKind = protocol.TypeParameter
 	case common.DeclarationKindConstant:
-		return protocol.Constant
+		symbolKind = protocol.Constant
 	case common.DeclarationKindVariable:
-		return protocol.Variable
+		symbolKind = protocol.Variable
 
+	// TODO: For some reason events not working and will return empty DocumentSymbol array instead...
+/*	case common.DeclarationKindEvent:
+		symbolKind = protocol.Event
+*/
 	// We can unify response for initializer and destructor
 	case common.DeclarationKindInitializer:
 	case common.DeclarationKindDestructor:
-		return protocol.Constructor
+		// "init" and "destroy" don't have access modifiers, so we shall return empty string there
+		detail = ""
+		symbolKind = protocol.Constructor
 
 	default:
-		return protocol.Null
+		symbolKind = protocol.Null
 	}
-	return 0
+	return symbolKind, detail
 }
 
 // ASTToDocumentSymbol converts AST Declaration to a DocumentSymbol
@@ -91,10 +101,7 @@ func ASTToDocumentSymbol(declaration ast.Declaration) protocol.DocumentSymbol {
 	}
 
 	name := declaration.DeclarationIdentifier().Identifier
-	kind := DeclarationKindToSymbolType(declaration.DeclarationKind())
-
-	// TODO: can we get additional details here like function signature
-	detail := declaration.DeclarationAccess().Description()
+	kind, detail := DeclarationKindToSymbolData(declaration)
 
 	symbol := protocol.DocumentSymbol{
 		Name:       name,
