@@ -29,7 +29,6 @@ import (
 	"github.com/onflow/cadence/runtime/parser2"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib/internal"
-	"github.com/onflow/cadence/runtime/trampoline"
 )
 
 type CryptoSignatureVerifier interface {
@@ -98,7 +97,7 @@ var cryptoContractInitializerTypes = func() (result []sema.Type) {
 
 func newCryptoContractVerifySignatureFunction(signatureVerifier CryptoSignatureVerifier) interpreter.FunctionValue {
 	return interpreter.NewHostFunctionValue(
-		func(invocation interpreter.Invocation) trampoline.Trampoline {
+		func(invocation interpreter.Invocation) interpreter.Value {
 			signature, err := interpreter.ByteArrayValueToByteSlice(invocation.Arguments[0])
 			if err != nil {
 				panic(fmt.Errorf("verifySignature: invalid signature argument: %w", err))
@@ -143,7 +142,7 @@ func newCryptoContractVerifySignatureFunction(signatureVerifier CryptoSignatureV
 				panic(err)
 			}
 
-			return trampoline.Done{Result: interpreter.BoolValue(isValid)}
+			return interpreter.BoolValue(isValid)
 		},
 	)
 }
@@ -170,7 +169,7 @@ func newCryptoContractSignatureVerifier(signatureVerifier CryptoSignatureVerifie
 
 func newCryptoContractHashFunction(hasher CryptoHasher) interpreter.FunctionValue {
 	return interpreter.NewHostFunctionValue(
-		func(invocation interpreter.Invocation) trampoline.Trampoline {
+		func(invocation interpreter.Invocation) interpreter.Value {
 			data, err := interpreter.ByteArrayValueToByteSlice(invocation.Arguments[0])
 			if err != nil {
 				panic(fmt.Errorf("hash: invalid data argument: %w", err))
@@ -188,9 +187,7 @@ func newCryptoContractHashFunction(hasher CryptoHasher) interpreter.FunctionValu
 
 			}
 
-			result := interpreter.ByteSliceToByteArrayValue(digest)
-
-			return trampoline.Done{Result: result}
+			return interpreter.ByteSliceToByteArrayValue(digest)
 		},
 	)
 }

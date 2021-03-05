@@ -32,7 +32,6 @@ import (
 	"github.com/onflow/cadence/runtime/stdlib"
 	"github.com/onflow/cadence/runtime/tests/checker"
 	"github.com/onflow/cadence/runtime/tests/utils"
-	"github.com/onflow/cadence/runtime/trampoline"
 )
 
 func testAccount(t *testing.T, auth bool, code string) (*interpreter.Interpreter, map[string]interpreter.OptionalValue) {
@@ -41,7 +40,7 @@ func testAccount(t *testing.T, auth bool, code string) (*interpreter.Interpreter
 
 	var valueDeclarations stdlib.StandardLibraryValues
 
-	panicFunction := interpreter.NewHostFunctionValue(func(invocation interpreter.Invocation) trampoline.Trampoline {
+	panicFunction := interpreter.NewHostFunctionValue(func(invocation interpreter.Invocation) interpreter.Value {
 		panic(errors.NewUnreachableError())
 	})
 

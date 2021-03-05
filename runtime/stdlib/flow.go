@@ -27,7 +27,6 @@ import (
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
-	"github.com/onflow/cadence/runtime/trampoline"
 )
 
 // This file defines functions built in to the Flow runtime.
@@ -157,21 +156,21 @@ func FlowBuiltInFunctions(impls FlowBuiltinImpls) StandardLibraryFunctions {
 
 func DefaultFlowBuiltinImpls() FlowBuiltinImpls {
 	return FlowBuiltinImpls{
-		CreateAccount: func(invocation interpreter.Invocation) trampoline.Trampoline {
+		CreateAccount: func(invocation interpreter.Invocation) interpreter.Value {
 			panic(fmt.Errorf("cannot create accounts"))
 		},
-		GetAccount: func(invocation interpreter.Invocation) trampoline.Trampoline {
+		GetAccount: func(invocation interpreter.Invocation) interpreter.Value {
 			panic(fmt.Errorf("cannot get accounts"))
 		},
 		Log: LogFunction.Function.Function,
-		GetCurrentBlock: func(invocation interpreter.Invocation) trampoline.Trampoline {
+		GetCurrentBlock: func(invocation interpreter.Invocation) interpreter.Value {
 			panic(fmt.Errorf("cannot get blocks"))
 		},
-		GetBlock: func(invocation interpreter.Invocation) trampoline.Trampoline {
+		GetBlock: func(invocation interpreter.Invocation) interpreter.Value {
 			panic(fmt.Errorf("cannot get blocks"))
 		},
-		UnsafeRandom: func(invocation interpreter.Invocation) trampoline.Trampoline {
-			return trampoline.Done{Result: interpreter.UInt64Value(rand.Uint64())}
+		UnsafeRandom: func(invocation interpreter.Invocation) interpreter.Value {
+			return interpreter.UInt64Value(rand.Uint64())
 		},
 	}
 }

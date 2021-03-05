@@ -28,7 +28,6 @@ import (
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/tests/utils"
-	"github.com/onflow/cadence/runtime/trampoline"
 )
 
 func TestInterpretTransactions(t *testing.T) {
@@ -203,7 +202,7 @@ func TestInterpretTransactions(t *testing.T) {
 		assert.IsType(t, interpreter.ArgumentCountError{}, err)
 	})
 
-	panicFunction := interpreter.NewHostFunctionValue(func(invocation interpreter.Invocation) trampoline.Trampoline {
+	panicFunction := interpreter.NewHostFunctionValue(func(invocation interpreter.Invocation) interpreter.Value {
 		panic(errors.NewUnreachableError())
 	})
 

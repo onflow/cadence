@@ -742,7 +742,7 @@ func (interpreter *Interpreter) declareGlobal(declaration ast.Declaration) {
 func (interpreter *Interpreter) prepareInvokeVariable(
 	functionName string,
 	arguments []Value,
-) (trampoline Trampoline, err error) {
+) (value Value, err error) {
 
 	// function must be defined as a global variable
 	variable, ok := interpreter.Globals[functionName]
@@ -786,7 +786,7 @@ func (interpreter *Interpreter) prepareInvokeVariable(
 func (interpreter *Interpreter) prepareInvokeTransaction(
 	index int,
 	arguments []Value,
-) (trampoline Trampoline, err error) {
+) (value Value, err error) {
 	if index >= len(interpreter.Transactions) {
 		return nil, TransactionNotDeclaredError{Index: index}
 	}
@@ -803,7 +803,7 @@ func (interpreter *Interpreter) prepareInvoke(
 	functionValue FunctionValue,
 	functionType *sema.FunctionType,
 	arguments []Value,
-) (trampoline Trampoline, err error) {
+) (result Value, err error) {
 
 	// ensures the invocation's argument count matches the function's parameter count
 
@@ -842,12 +842,11 @@ func (interpreter *Interpreter) prepareInvoke(
 	}
 
 	// NOTE: can't fill argument types, as they are unknown
-	trampoline = functionValue.Invoke(Invocation{
+	invocation := Invocation{
 		Arguments:   preparedArguments,
 		Interpreter: interpreter,
-	})
-
-	return trampoline, nil
+	}
+	return functionValue.Invoke(invocation), nil
 }
 
 // Invoke invokes a global function with the given arguments
@@ -857,15 +856,7 @@ func (interpreter *Interpreter) Invoke(functionName string, arguments ...Value) 
 		err = internalErr
 	})
 
-	trampoline, err := interpreter.prepareInvokeVariable(functionName, arguments)
-	if err != nil {
-		return nil, err
-	}
-	result := interpreter.runAllStatements(trampoline)
-	if result == nil {
-		return nil, nil
-	}
-	return result.(Value), nil
+	return interpreter.prepareInvokeVariable(functionName, arguments)
 }
 
 func (interpreter *Interpreter) InvokeTransaction(index int, arguments ...Value) (err error) {
@@ -874,14 +865,8 @@ func (interpreter *Interpreter) InvokeTransaction(index int, arguments ...Value)
 		err = internalErr
 	})
 
-	trampoline, err := interpreter.prepareInvokeTransaction(index, arguments)
-	if err != nil {
-		return err
-	}
-
-	_ = interpreter.runAllStatements(trampoline)
-
-	return nil
+	_, err = interpreter.prepareInvokeTransaction(index, arguments)
+	return err
 }
 
 func recoverErrors(onError func(error)) {
@@ -1024,7 +1009,7 @@ func (interpreter *Interpreter) VisitFunctionBlock(_ *ast.FunctionBlock) ast.Rep
 func (interpreter *Interpreter) visitFunctionBody(
 	beforeStatements []ast.Statement,
 	preConditions ast.Conditions,
-	body Trampoline,
+	body func() interface{},
 	postConditions ast.Conditions,
 	returnType sema.Type,
 ) Trampoline {
@@ -1036,8 +1021,12 @@ func (interpreter *Interpreter) visitFunctionBody(
 		FlatMap(func(_ interface{}) Trampoline {
 			return interpreter.visitConditions(preConditions)
 		}).
-		FlatMap(func(_ interface{}) Trampoline {
-			return body
+		Map(func(_ interface{}) interface{} {
+			if body == nil {
+				return nil
+			}
+
+			return body()
 		}).
 		FlatMap(func(blockResult interface{}) Trampoline {
 			var resultValue Value
@@ -2093,7 +2082,9 @@ func (interpreter *Interpreter) VisitInvocationExpression(invocationExpression *
 					parameterTypes :=
 						interpreter.Program.Elaboration.InvocationExpressionParameterTypes[invocationExpression]
 
-					invocation := interpreter.functionValueInvocationTrampoline(
+					interpreter.reportFunctionInvocation(invocationExpression)
+
+					resultValue := interpreter.functionValueInvocationTrampoline(
 						function,
 						arguments,
 						argumentTypes,
@@ -2102,18 +2093,14 @@ func (interpreter *Interpreter) VisitInvocationExpression(invocationExpression *
 						ast.NewRangeFromPositioned(invocationExpression),
 					)
 
-					interpreter.reportFunctionInvocation(invocationExpression)
-
 					// If this is invocation is optional chaining, wrap the result
 					// as an optional, as the result is expected to be an optional
 
-					if !isOptionalChaining {
-						return invocation
+					if isOptionalChaining {
+						resultValue = NewSomeValueOwningNonCopying(resultValue)
 					}
 
-					return invocation.Map(func(result interface{}) interface{} {
-						return NewSomeValueOwningNonCopying(result.(Value))
-					})
+					return Done{Result: resultValue}
 				})
 		})
 }
@@ -2130,20 +2117,14 @@ func (interpreter *Interpreter) InvokeFunctionValue(
 		err = internalErr
 	})
 
-	trampoline := interpreter.functionValueInvocationTrampoline(
+	return interpreter.functionValueInvocationTrampoline(
 		function,
 		arguments,
 		argumentTypes,
 		parameterTypes,
 		nil,
 		invocationRange,
-	)
-
-	result := interpreter.runAllStatements(trampoline)
-	if result == nil {
-		return nil, nil
-	}
-	return result.(Value), nil
+	), nil
 }
 
 func (interpreter *Interpreter) functionValueInvocationTrampoline(
@@ -2153,7 +2134,7 @@ func (interpreter *Interpreter) functionValueInvocationTrampoline(
 	parameterTypes []sema.Type,
 	typeParameterTypes *sema.TypeParameterTypeOrderedMap,
 	invocationRange ast.Range,
-) Trampoline {
+) Value {
 
 	parameterTypeCount := len(parameterTypes)
 	argumentCopies := make([]Value, len(arguments))
@@ -2175,21 +2156,21 @@ func (interpreter *Interpreter) functionValueInvocationTrampoline(
 		Range:    invocationRange,
 	}
 
-	return function.Invoke(
-		Invocation{
-			Arguments:          argumentCopies,
-			ArgumentTypes:      argumentTypes,
-			TypeParameterTypes: typeParameterTypes,
-			LocationRange:      locationRange,
-			Interpreter:        interpreter,
-		},
-	)
+	invocation := Invocation{
+		Arguments:          argumentCopies,
+		ArgumentTypes:      argumentTypes,
+		TypeParameterTypes: typeParameterTypes,
+		LocationRange:      locationRange,
+		Interpreter:        interpreter,
+	}
+
+	return function.Invoke(invocation)
 }
 
 func (interpreter *Interpreter) invokeInterpretedFunction(
 	function InterpretedFunctionValue,
 	invocation Invocation,
-) Trampoline {
+) Value {
 
 	// Start a new activation record.
 	// Lexical scope: use the function declaration's activation record,
@@ -2209,7 +2190,8 @@ func (interpreter *Interpreter) invokeInterpretedFunction(
 func (interpreter *Interpreter) invokeInterpretedFunctionActivated(
 	function InterpretedFunctionValue,
 	arguments []Value,
-) Trampoline {
+) Value {
+	defer interpreter.activations.Pop()
 
 	if function.ParameterList != nil {
 		interpreter.bindParameterArguments(function.ParameterList, arguments)
@@ -2218,15 +2200,14 @@ func (interpreter *Interpreter) invokeInterpretedFunctionActivated(
 	functionBlockTrampoline := interpreter.visitFunctionBody(
 		function.BeforeStatements,
 		function.PreConditions,
-		interpreter.visitStatements(function.Statements),
+		func() interface{} {
+			return interpreter.runAllStatements(interpreter.visitStatements(function.Statements))
+		},
 		function.PostConditions,
 		function.Type.ReturnTypeAnnotation.Type,
 	)
 
-	return functionBlockTrampoline.
-		Then(func(_ interface{}) {
-			interpreter.activations.Pop()
-		})
+	return interpreter.runAllStatements(functionBlockTrampoline).(Value)
 }
 
 // bindParameterArguments binds the argument values to the given parameters
@@ -2449,12 +2430,12 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 	var initializerFunction FunctionValue
 	if declaration.CompositeKind == common.CompositeKindEvent {
 		initializerFunction = NewHostFunctionValue(
-			func(invocation Invocation) Trampoline {
+			func(invocation Invocation) Value {
 				for i, argument := range invocation.Arguments {
 					parameter := compositeType.ConstructorParameters[i]
 					invocation.Self.Fields.Set(parameter.Identifier, argument)
 				}
-				return Done{}
+				return nil
 			},
 		)
 	} else {
@@ -2534,7 +2515,7 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 	qualifiedIdentifier := compositeType.QualifiedIdentifier()
 
 	constructor := NewHostFunctionValue(
-		func(invocation Invocation) Trampoline {
+		func(invocation Invocation) Value {
 
 			// Load injected fields
 			var injectedFields *StringValueOrderedMap
@@ -2592,18 +2573,13 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 				value.NestedValues = members
 			}
 
-			var initializationTrampoline Trampoline = Done{}
-
 			if initializerFunction != nil {
 				// NOTE: arguments are already properly boxed by invocation expression
 
-				initializationTrampoline = initializerFunction.Invoke(invocation)
+				_ = initializerFunction.Invoke(invocation)
 			}
 
-			return initializationTrampoline.
-				Map(func(_ interface{}) interface{} {
-					return value
-				})
+			return value
 		},
 	)
 
@@ -2683,7 +2659,7 @@ func (interpreter *Interpreter) declareEnumConstructor(
 	}
 
 	constructor := NewHostFunctionValue(
-		func(invocation Invocation) Trampoline {
+		func(invocation Invocation) Value {
 
 			rawValueArgument := invocation.Arguments[0].(IntegerValue).ToInt()
 
@@ -2694,7 +2670,7 @@ func (interpreter *Interpreter) declareEnumConstructor(
 				result = NewSomeValueOwningNonCopying(caseValue)
 			}
 
-			return Done{Result: result}
+			return result
 		},
 	)
 
@@ -3180,11 +3156,12 @@ func (interpreter *Interpreter) functionConditionsWrapper(
 	}
 
 	return func(inner FunctionValue) FunctionValue {
-		return NewHostFunctionValue(func(invocation Invocation) Trampoline {
+		return NewHostFunctionValue(func(invocation Invocation) Value {
 			// Start a new activation record.
 			// Lexical scope: use the function declaration's activation record,
 			// not the current one (which would be dynamic scope)
 			interpreter.activations.PushNewWithParent(lexicalScope)
+			defer interpreter.activations.Pop()
 
 			if declaration.ParameterList != nil {
 				interpreter.bindParameterArguments(
@@ -3200,21 +3177,19 @@ func (interpreter *Interpreter) functionConditionsWrapper(
 			// NOTE: The `inner` function might be nil.
 			//   This is the case if the conforming type did not declare a function.
 
-			var body Trampoline = Done{}
+			var body func() interface{}
 			if inner != nil {
 				// NOTE: It is important to wrap the invocation in a trampoline,
 				//  so the inner function isn't invoked here
 
-				body = More(func() Trampoline {
+				body = func() interface{} {
 
 					// NOTE: It is important to actually return the value returned
 					//   from the inner function, otherwise it is lost
 
-					return inner.Invoke(invocation).
-						Map(func(returnValue interface{}) interface{} {
-							return functionReturn{returnValue.(Value)}
-						})
-				})
+					returnValue := inner.Invoke(invocation)
+					return functionReturn{returnValue.(Value)}
+				}
 			}
 
 			functionBlockTrampoline := interpreter.visitFunctionBody(
@@ -3225,10 +3200,7 @@ func (interpreter *Interpreter) functionConditionsWrapper(
 				returnType,
 			)
 
-			return functionBlockTrampoline.
-				Then(func(_ interface{}) {
-					interpreter.activations.Pop()
-				})
+			return interpreter.runAllStatements(functionBlockTrampoline).(Value)
 		})
 	}
 }
@@ -3436,7 +3408,7 @@ func (interpreter *Interpreter) declareTransactionEntryPoint(declaration *ast.Tr
 	}
 
 	transactionFunction := NewHostFunctionValue(
-		func(invocation Invocation) Trampoline {
+		func(invocation Invocation) Value {
 			interpreter.activations.PushNewWithParent(lexicalScope)
 
 			invocation.Self = self
@@ -3460,9 +3432,6 @@ func (interpreter *Interpreter) declareTransactionEntryPoint(declaration *ast.Tr
 			// because current scope has `self` declared
 			transactionScope := interpreter.activations.CurrentOrNew()
 
-			var prepareTrampoline Trampoline = Done{}
-			var executeTrampoline Trampoline = Done{}
-
 			if prepareFunction != nil {
 				prepare := interpreter.functionDeclarationValue(
 					prepareFunction,
@@ -3470,11 +3439,10 @@ func (interpreter *Interpreter) declareTransactionEntryPoint(declaration *ast.Tr
 					transactionScope,
 				)
 
-				prepareTrampoline = More(func() Trampoline {
-					return prepare.Invoke(invocation)
-				})
+				prepare.Invoke(invocation)
 			}
 
+			var body func() interface{}
 			if executeFunction != nil {
 				execute := interpreter.functionDeclarationValue(
 					executeFunction,
@@ -3482,11 +3450,12 @@ func (interpreter *Interpreter) declareTransactionEntryPoint(declaration *ast.Tr
 					transactionScope,
 				)
 
-				executeTrampoline = More(func() Trampoline {
-					invocationWithoutArguments := invocation
-					invocationWithoutArguments.Arguments = nil
+				invocationWithoutArguments := invocation
+				invocationWithoutArguments.Arguments = nil
+
+				body = func() interface{} {
 					return execute.Invoke(invocationWithoutArguments)
-				})
+				}
 			}
 
 			var preConditions ast.Conditions
@@ -3494,16 +3463,15 @@ func (interpreter *Interpreter) declareTransactionEntryPoint(declaration *ast.Tr
 				preConditions = *declaration.PreConditions
 			}
 
-			return prepareTrampoline.
-				FlatMap(func(_ interface{}) Trampoline {
-					return interpreter.visitFunctionBody(
-						postConditionsRewrite.BeforeStatements,
-						preConditions,
-						executeTrampoline,
-						postConditionsRewrite.RewrittenPostConditions,
-						sema.VoidType,
-					)
-				})
+			tram := interpreter.visitFunctionBody(
+				postConditionsRewrite.BeforeStatements,
+				preConditions,
+				body,
+				postConditionsRewrite.RewrittenPostConditions,
+				sema.VoidType,
+			)
+
+			return interpreter.runAllStatements(tram).(Value)
 		})
 
 	interpreter.Transactions = append(interpreter.Transactions, &transactionFunction)
@@ -3730,7 +3698,7 @@ func (interpreter *Interpreter) defineTypeFunction() {
 	err := interpreter.ImportValue(
 		"Type",
 		NewHostFunctionValue(
-			func(invocation Invocation) Trampoline {
+			func(invocation Invocation) Value {
 
 				typeParameterPair := invocation.TypeParameterTypes.Oldest()
 				if typeParameterPair == nil {
@@ -3739,11 +3707,9 @@ func (interpreter *Interpreter) defineTypeFunction() {
 
 				ty := typeParameterPair.Value
 
-				result := TypeValue{
+				return TypeValue{
 					Type: ConvertSemaToStaticType(ty),
 				}
-
-				return Done{Result: result}
 			},
 		),
 	)
@@ -3754,9 +3720,9 @@ func (interpreter *Interpreter) defineTypeFunction() {
 
 func (interpreter *Interpreter) newConverterFunction(converter ValueConverter) FunctionValue {
 	return NewHostFunctionValue(
-		func(invocation Invocation) Trampoline {
+		func(invocation Invocation) Value {
 			value := invocation.Arguments[0]
-			return Done{Result: converter(value, interpreter)}
+			return converter(value, interpreter)
 		},
 	)
 }
@@ -3977,7 +3943,7 @@ func storageKey(path PathValue) string {
 }
 
 func (interpreter *Interpreter) authAccountSaveFunction(addressValue AddressValue) HostFunctionValue {
-	return NewHostFunctionValue(func(invocation Invocation) Trampoline {
+	return NewHostFunctionValue(func(invocation Invocation) Value {
 
 		value := invocation.Arguments[0]
 		path := invocation.Arguments[1].(PathValue)
@@ -4005,7 +3971,7 @@ func (interpreter *Interpreter) authAccountSaveFunction(addressValue AddressValu
 			NewSomeValueOwningNonCopying(value),
 		)
 
-		return Done{Result: VoidValue{}}
+		return VoidValue{}
 	})
 }
 
@@ -4019,7 +3985,7 @@ func (interpreter *Interpreter) authAccountCopyFunction(addressValue AddressValu
 
 func (interpreter *Interpreter) authAccountReadFunction(addressValue AddressValue, clear bool) HostFunctionValue {
 
-	return NewHostFunctionValue(func(invocation Invocation) Trampoline {
+	return NewHostFunctionValue(func(invocation Invocation) Value {
 
 		address := addressValue.ToAddress()
 
@@ -4030,7 +3996,7 @@ func (interpreter *Interpreter) authAccountReadFunction(addressValue AddressValu
 
 		switch value := value.(type) {
 		case NilValue:
-			return Done{Result: value}
+			return value
 
 		case *SomeValue:
 
@@ -4046,7 +4012,7 @@ func (interpreter *Interpreter) authAccountReadFunction(addressValue AddressValu
 
 			dynamicType := value.Value.DynamicType(interpreter)
 			if !IsSubType(dynamicType, ty) {
-				return Done{Result: NilValue{}}
+				return NilValue{}
 			}
 
 			if clear {
@@ -4056,7 +4022,7 @@ func (interpreter *Interpreter) authAccountReadFunction(addressValue AddressValu
 				interpreter.writeStored(address, key, NilValue{})
 			}
 
-			return Done{Result: value}
+			return value
 
 		default:
 			panic(errors.NewUnreachableError())
@@ -4065,7 +4031,7 @@ func (interpreter *Interpreter) authAccountReadFunction(addressValue AddressValu
 }
 
 func (interpreter *Interpreter) authAccountBorrowFunction(addressValue AddressValue) HostFunctionValue {
-	return NewHostFunctionValue(func(invocation Invocation) Trampoline {
+	return NewHostFunctionValue(func(invocation Invocation) Value {
 
 		address := addressValue.ToAddress()
 
@@ -4076,7 +4042,7 @@ func (interpreter *Interpreter) authAccountBorrowFunction(addressValue AddressVa
 
 		switch value := value.(type) {
 		case NilValue:
-			return Done{Result: value}
+			return value
 
 		case *SomeValue:
 
@@ -4094,7 +4060,7 @@ func (interpreter *Interpreter) authAccountBorrowFunction(addressValue AddressVa
 
 			dynamicType := value.Value.DynamicType(interpreter)
 			if !IsSubType(dynamicType, referenceType.Type) {
-				return Done{Result: NilValue{}}
+				return NilValue{}
 			}
 
 			reference := &StorageReferenceValue{
@@ -4103,7 +4069,7 @@ func (interpreter *Interpreter) authAccountBorrowFunction(addressValue AddressVa
 				TargetKey:            key,
 			}
 
-			return Done{Result: NewSomeValueOwningNonCopying(reference)}
+			return NewSomeValueOwningNonCopying(reference)
 
 		default:
 			panic(errors.NewUnreachableError())
@@ -4112,7 +4078,7 @@ func (interpreter *Interpreter) authAccountBorrowFunction(addressValue AddressVa
 }
 
 func (interpreter *Interpreter) authAccountLinkFunction(addressValue AddressValue) HostFunctionValue {
-	return NewHostFunctionValue(func(invocation Invocation) Trampoline {
+	return NewHostFunctionValue(func(invocation Invocation) Value {
 
 		address := addressValue.ToAddress()
 
@@ -4129,7 +4095,7 @@ func (interpreter *Interpreter) authAccountLinkFunction(addressValue AddressValu
 		newCapabilityKey := storageKey(newCapabilityPath)
 
 		if interpreter.storedValueExists(address, newCapabilityKey) {
-			return Done{Result: NilValue{}}
+			return NilValue{}
 		}
 
 		// Write new value
@@ -4149,20 +4115,18 @@ func (interpreter *Interpreter) authAccountLinkFunction(addressValue AddressValu
 			storedValue,
 		)
 
-		returnValue := NewSomeValueOwningNonCopying(
+		return NewSomeValueOwningNonCopying(
 			CapabilityValue{
 				Address:    addressValue,
 				Path:       targetPath,
 				BorrowType: borrowStaticType(borrowType),
 			},
 		)
-
-		return Done{Result: returnValue}
 	})
 }
 
 func (interpreter *Interpreter) accountGetLinkTargetFunction(addressValue AddressValue) HostFunctionValue {
-	return NewHostFunctionValue(func(invocation Invocation) Trampoline {
+	return NewHostFunctionValue(func(invocation Invocation) Value {
 
 		address := addressValue.ToAddress()
 
@@ -4174,18 +4138,16 @@ func (interpreter *Interpreter) accountGetLinkTargetFunction(addressValue Addres
 
 		switch value := value.(type) {
 		case NilValue:
-			return Done{Result: value}
+			return value
 
 		case *SomeValue:
 
 			link, ok := value.Value.(LinkValue)
 			if !ok {
-				return Done{Result: NilValue{}}
+				return NilValue{}
 			}
 
-			returnValue := NewSomeValueOwningNonCopying(link.TargetPath)
-
-			return Done{Result: returnValue}
+			return NewSomeValueOwningNonCopying(link.TargetPath)
 
 		default:
 			panic(errors.NewUnreachableError())
@@ -4194,7 +4156,7 @@ func (interpreter *Interpreter) accountGetLinkTargetFunction(addressValue Addres
 }
 
 func (interpreter *Interpreter) authAccountUnlinkFunction(addressValue AddressValue) HostFunctionValue {
-	return NewHostFunctionValue(func(invocation Invocation) Trampoline {
+	return NewHostFunctionValue(func(invocation Invocation) Value {
 
 		address := addressValue.ToAddress()
 
@@ -4209,7 +4171,7 @@ func (interpreter *Interpreter) authAccountUnlinkFunction(addressValue AddressVa
 			NilValue{},
 		)
 
-		return Done{Result: VoidValue{}}
+		return VoidValue{}
 	})
 }
 
@@ -4220,7 +4182,7 @@ func (interpreter *Interpreter) capabilityBorrowFunction(
 ) HostFunctionValue {
 
 	return NewHostFunctionValue(
-		func(invocation Invocation) Trampoline {
+		func(invocation Invocation) Value {
 
 			if borrowType == nil {
 				typeParameterPair := invocation.TypeParameterTypes.Oldest()
@@ -4243,7 +4205,7 @@ func (interpreter *Interpreter) capabilityBorrowFunction(
 				)
 
 			if targetStorageKey == "" {
-				return Done{Result: NilValue{}}
+				return NilValue{}
 			}
 
 			address := addressValue.ToAddress()
@@ -4254,7 +4216,7 @@ func (interpreter *Interpreter) capabilityBorrowFunction(
 				TargetKey:            targetStorageKey,
 			}
 
-			return Done{Result: NewSomeValueOwningNonCopying(reference)}
+			return NewSomeValueOwningNonCopying(reference)
 		},
 	)
 }
@@ -4266,7 +4228,7 @@ func (interpreter *Interpreter) capabilityCheckFunction(
 ) HostFunctionValue {
 
 	return NewHostFunctionValue(
-		func(invocation Invocation) Trampoline {
+		func(invocation Invocation) Value {
 
 			if borrowType == nil {
 
@@ -4291,7 +4253,7 @@ func (interpreter *Interpreter) capabilityCheckFunction(
 
 			isValid := targetStorageKey != ""
 
-			return Done{Result: BoolValue(isValid)}
+			return BoolValue(isValid)
 		},
 	)
 }
@@ -4475,7 +4437,7 @@ func (interpreter *Interpreter) getMember(self Value, locationRange LocationRang
 
 func (interpreter *Interpreter) isInstanceFunction(self Value) HostFunctionValue {
 	return NewHostFunctionValue(
-		func(invocation Invocation) Trampoline {
+		func(invocation Invocation) Value {
 			firstArgument := invocation.Arguments[0]
 			typeValue := firstArgument.(TypeValue)
 
@@ -4483,25 +4445,24 @@ func (interpreter *Interpreter) isInstanceFunction(self Value) HostFunctionValue
 
 			// Values are never instances of unknown types
 			if staticType == nil {
-				return Done{Result: BoolValue(false)}
+				return BoolValue(false)
 			}
 
 			semaType := interpreter.ConvertStaticToSemaType(staticType)
 			// NOTE: not invocation.Self, as that is only set for composite values
 			dynamicType := self.DynamicType(interpreter)
 			result := IsSubType(dynamicType, semaType)
-			return Done{Result: BoolValue(result)}
+			return BoolValue(result)
 		},
 	)
 }
 
 func (interpreter *Interpreter) getTypeFunction(self Value) HostFunctionValue {
 	return NewHostFunctionValue(
-		func(invocation Invocation) Trampoline {
-			result := TypeValue{
+		func(invocation Invocation) Value {
+			return TypeValue{
 				Type: self.StaticType(),
 			}
-			return Done{Result: result}
 		},
 	)
 }

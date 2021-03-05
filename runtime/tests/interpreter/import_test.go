@@ -29,7 +29,6 @@ import (
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/tests/checker"
-	"github.com/onflow/cadence/runtime/trampoline"
 )
 
 func TestInterpretVirtualImport(t *testing.T) {
@@ -86,10 +85,8 @@ func TestInterpretVirtualImport(t *testing.T) {
 										Fields:              interpreter.NewStringValueOrderedMap(),
 										Functions: map[string]interpreter.FunctionValue{
 											"bar": interpreter.NewHostFunctionValue(
-												func(invocation interpreter.Invocation) trampoline.Trampoline {
-													return trampoline.Done{
-														Result: interpreter.NewIntValueFromInt64(42),
-													}
+												func(invocation interpreter.Invocation) interpreter.Value {
+													return interpreter.NewIntValueFromInt64(42)
 												},
 											),
 										},
