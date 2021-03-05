@@ -5333,6 +5333,7 @@ type CompositeValue struct {
 	Kind                common.CompositeKind
 	Fields              *StringValueOrderedMap
 	InjectedFields      *StringValueOrderedMap
+	computedFields      map[string]func(*Interpreter) Value
 	NestedValues        *StringValueOrderedMap
 	Functions           map[string]FunctionValue
 	Destructor          FunctionValue
@@ -5445,6 +5446,7 @@ func (v *CompositeValue) Copy() Value {
 		Kind:                v.Kind,
 		Fields:              newFields,
 		InjectedFields:      v.InjectedFields,
+		computedFields:      v.computedFields,
 		NestedValues:        v.NestedValues,
 		Functions:           v.Functions,
 		Destructor:          v.Destructor,
@@ -5536,6 +5538,13 @@ func (v *CompositeValue) GetMember(interpreter *Interpreter, locationRange Locat
 	}
 
 	interpreter = v.getInterpreter(interpreter)
+
+	if v.computedFields != nil {
+		fieldResolver, ok := v.computedFields[name]
+		if ok {
+			return fieldResolver(interpreter)
+		}
+	}
 
 	// If the composite value was deserialized, dynamically link in the functions
 	// and get injected fields
