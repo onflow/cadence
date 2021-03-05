@@ -20,6 +20,7 @@ package runtime
 
 import (
 	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/sema"
 )
 
 type ContractUpdateValidator struct {
@@ -284,8 +285,25 @@ func (validator *ContractUpdateValidator) CheckRestrictedTypeEquality(expected *
 		return getTypeMismatchError(expected, found)
 	}
 
-	err := expected.Type.CheckEqual(foundRestrictedType.Type, validator)
-	if err != nil || len(expected.Restrictions) != len(foundRestrictedType.Restrictions) {
+	if expected.Type == nil {
+		if !isAnyStructOrAnyResourceType(foundRestrictedType.Type) {
+			return getTypeMismatchError(expected, found)
+		}
+		// else go on to check type restrictions
+	} else if foundRestrictedType.Type == nil {
+		if !isAnyStructOrAnyResourceType(expected.Type) {
+			return getTypeMismatchError(expected, found)
+		}
+		// else go on to check type restrictions
+	} else {
+		// both are not nil
+		err := expected.Type.CheckEqual(foundRestrictedType.Type, validator)
+		if err != nil {
+			return getTypeMismatchError(expected, found)
+		}
+	}
+
+	if len(expected.Restrictions) != len(foundRestrictedType.Restrictions) {
 		return getTypeMismatchError(expected, found)
 	}
 
@@ -396,18 +414,18 @@ func (validator *ContractUpdateValidator) checkIdentifierEquality(
 }
 
 func (validator *ContractUpdateValidator) checkConformances(
-	oldEnum *ast.CompositeDeclaration,
-	newEnum *ast.CompositeDeclaration,
+	oldDecl *ast.CompositeDeclaration,
+	newDecl *ast.CompositeDeclaration,
 ) {
 
-	oldConformances := oldEnum.Conformances
-	newConformances := newEnum.Conformances
+	oldConformances := oldDecl.Conformances
+	newConformances := newDecl.Conformances
 
 	if len(oldConformances) != len(newConformances) {
 		validator.report(&ConformanceCountMismatchError{
 			expected: len(oldConformances),
 			found:    len(newConformances),
-			Range:    ast.NewRangeFromPositioned(newEnum.Identifier),
+			Range:    ast.NewRangeFromPositioned(newDecl.Identifier),
 		})
 
 		// If the lengths are not the same, trying to match the conformance
@@ -420,7 +438,7 @@ func (validator *ContractUpdateValidator) checkConformances(
 		err := oldConformance.CheckEqual(newConformance, validator)
 		if err != nil {
 			validator.report(&ConformanceMismatchError{
-				declName: newEnum.Identifier.Identifier,
+				declName: newDecl.Identifier.Identifier,
 				err:      err,
 				Range:    ast.NewRangeFromPositioned(newConformance),
 			})
@@ -457,9 +475,28 @@ func identifiersEqual(expected []ast.Identifier, found []ast.Identifier) bool {
 	}
 
 	for index, element := range found {
-		if expected[index] != element {
+		if expected[index].Identifier != element.Identifier {
 			return false
 		}
 	}
 	return true
+}
+
+func isAnyStructOrAnyResourceType(astType ast.Type) bool {
+	// If the restricted type is not stated, then it is either AnyStruct or AnyResource
+	if astType == nil {
+		return true
+	}
+
+	nominalType, ok := astType.(*ast.NominalType)
+	if !ok {
+		return false
+	}
+
+	switch nominalType.Identifier.Identifier {
+	case sema.AnyStructType.Name, sema.AnyResourceType.Name:
+		return true
+	default:
+		return false
+	}
 }

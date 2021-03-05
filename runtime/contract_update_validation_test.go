@@ -1021,6 +1021,311 @@ func TestContractUpdateValidation(t *testing.T) {
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "error: field add has non-storable type: ((Int, Int): Int)")
 	})
+
+	t.Run("Test conformance", func(t *testing.T) {
+		const importCode = `
+			pub contract Test24Import {
+				pub struct interface AnInterface {
+					pub a: Int
+				}
+			}`
+
+		deployTx1 := newDeployTransaction("add", "Test24Import", importCode)
+		err := runtime.ExecuteTransaction(
+			Script{
+				Source: deployTx1,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+		require.NoError(t, err)
+
+		const oldCode = `
+			import Test24Import from 0x42
+
+			pub contract Test24 {
+				pub struct TestStruct1 {
+					pub let a: Int
+					init() {
+						self.a = 123
+					}
+				}
+
+				pub struct TestStruct2: Test24Import.AnInterface {
+					pub let a: Int
+
+					init() {
+						self.a = 123
+					}
+				}
+			}`
+
+		const newCode = `
+			import Test24Import from 0x42
+
+			pub contract Test24 {
+
+				pub struct TestStruct2: Test24Import.AnInterface {
+					pub let a: Int
+
+					init() {
+						self.a = 123
+					}
+				}
+
+				pub struct TestStruct1 {
+					pub let a: Int
+					init() {
+						self.a = 123
+					}
+				}
+			}`
+
+		err = deployAndUpdate("Test24", oldCode, newCode)
+		require.NoError(t, err)
+	})
+
+	t.Run("Test all types", func(t *testing.T) {
+
+		const oldCode = `
+			pub contract Test25 {
+				// simple nominal type
+				pub var a: TestStruct
+
+				// qualified nominal type
+				pub var b: Test25.TestStruct
+
+				// optional type
+				pub var c: Int?
+
+				// variable sized type
+				pub var d: [Int]
+
+				// constant sized type
+				pub var e: [Int; 2]
+
+				// dictionary type
+				pub var f: {Int: String}
+
+				// restricted type
+				pub var g: {TestInterface}
+
+				// instantiation and reference types
+				pub var h:  Capability<&TestStruct>?
+
+				// function type
+				pub var i: Capability<&((Int, Int): Int)>?
+
+				init() {
+					var count: Int = 567
+					self.a = TestStruct()
+					self.b = Test25.TestStruct()
+					self.c = 123
+					self.d = [123]
+					self.e = [123, 456]
+					self.f = {1: "Hello"}
+					self.g = TestStruct()
+					self.h = nil
+					self.i = nil
+				}
+
+				pub struct TestStruct:TestInterface {
+					pub let a: Int
+					init() {
+						self.a = 123
+					}
+				}
+
+				pub struct interface TestInterface {
+					pub let a: Int
+				}
+			}`
+
+		const newCode = `
+			pub contract Test25 {
+
+
+				// function type
+				pub var i: Capability<&((Int, Int): Int)>?
+
+				// instantiation and reference types
+				pub var h:  Capability<&TestStruct>?
+
+				// restricted type
+				pub var g: {TestInterface}
+
+				// dictionary type
+				pub var f: {Int: String}
+
+				// constant sized type
+				pub var e: [Int; 2]
+
+				// variable sized type
+				pub var d: [Int]
+
+				// optional type
+				pub var c: Int?
+
+				// qualified nominal type
+				pub var b: Test25.TestStruct
+
+				// simple nominal type
+				pub var a: TestStruct
+
+				init() {
+					var count: Int = 567
+					self.a = TestStruct()
+					self.b = Test25.TestStruct()
+					self.c = 123
+					self.d = [123]
+					self.e = [123, 456]
+					self.f = {1: "Hello"}
+					self.g = TestStruct()
+					self.h = nil
+					self.i = nil
+				}
+
+				pub struct TestStruct:TestInterface {
+					pub let a: Int
+					init() {
+						self.a = 123
+					}
+				}
+
+				pub struct interface TestInterface {
+					pub let a: Int
+				}
+			}`
+
+		err := deployAndUpdate("Test25", oldCode, newCode)
+		require.NoError(t, err)
+	})
+
+	t.Run("Test restricted types", func(t *testing.T) {
+
+		const oldCode = `
+			pub contract Test26 {
+
+				// restricted type
+				pub var a: {TestInterface}
+				pub var b: {TestInterface}
+				pub var c: AnyStruct{TestInterface}
+				pub var d: AnyStruct{TestInterface}
+
+				init() {
+					var count: Int = 567
+					self.a = TestStruct()
+					self.b = TestStruct()
+					self.c = TestStruct()
+					self.d = TestStruct()
+				}
+
+				pub struct TestStruct:TestInterface {
+					pub let a: Int
+					init() {
+						self.a = 123
+					}
+				}
+
+				pub struct interface TestInterface {
+					pub let a: Int
+				}
+			}`
+
+		const newCode = `
+			pub contract Test26 {
+				pub var a: {TestInterface}
+				pub var b: AnyStruct{TestInterface}
+				pub var c: {TestInterface}
+				pub var d: AnyStruct{TestInterface}
+
+				init() {
+					var count: Int = 567
+					self.a = TestStruct()
+					self.b = TestStruct()
+					self.c = TestStruct()
+					self.d = TestStruct()
+				}
+
+				pub struct TestStruct:TestInterface {
+					pub let a: Int
+					init() {
+						self.a = 123
+					}
+				}
+
+				pub struct interface TestInterface {
+					pub let a: Int
+				}
+			}`
+
+		err := deployAndUpdate("Test26", oldCode, newCode)
+		require.NoError(t, err)
+	})
+
+	t.Run("Test invalid restricted types change", func(t *testing.T) {
+
+		const oldCode = `
+			pub contract Test27 {
+
+				// restricted type
+				pub var a: TestStruct{TestInterface}
+				pub var b: {TestInterface}
+
+				init() {
+					var count: Int = 567
+					self.a = TestStruct()
+					self.b = TestStruct()
+				}
+
+				pub struct TestStruct:TestInterface {
+					pub let a: Int
+					init() {
+						self.a = 123
+					}
+				}
+
+				pub struct interface TestInterface {
+					pub let a: Int
+				}
+			}`
+
+		const newCode = `
+			pub contract Test27 {
+				pub var a: {TestInterface}
+				pub var b: TestStruct{TestInterface}
+
+				init() {
+					var count: Int = 567
+					self.a = TestStruct()
+					self.b = TestStruct()
+				}
+
+				pub struct TestStruct:TestInterface {
+					pub let a: Int
+					init() {
+						self.a = 123
+					}
+				}
+
+				pub struct interface TestInterface {
+					pub let a: Int
+				}
+			}`
+
+		err := deployAndUpdate("Test27", oldCode, newCode)
+		require.Error(t, err)
+
+		assert.Contains(t, err.Error(), "pub var a: {TestInterface}"+
+			"\n  |                ^^^^^^^^^^^^^^^ "+
+			"incompatible type annotations. expected `TestStruct{TestInterface}`, found `{TestInterface}`")
+
+		assert.Contains(t, err.Error(), "pub var b: TestStruct{TestInterface}"+
+			"\n  |                ^^^^^^^^^^^^^^^^^^^^^^^^^ "+
+			"incompatible type annotations. expected `{TestInterface}`, found `TestStruct{TestInterface}`")
+	})
 }
 
 func assertDeclTypeChangeError(
