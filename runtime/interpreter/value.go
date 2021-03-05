@@ -6697,35 +6697,44 @@ func NewAuthAccountValue(
 	fields.Set("contracts", contracts)
 	fields.Set("keys", keys)
 
-	computedFields := map[string]func(*Interpreter) Value{
-		"storageUsed": func(inter *Interpreter) Value {
-			return storageUsedGet(inter)
-		},
-		"storageCapacity": func(*Interpreter) Value {
-			return storageCapacityGet()
-		},
-		"load": func(inter *Interpreter) Value {
-			return inter.authAccountLoadFunction(address)
-		},
-		"copy": func(inter *Interpreter) Value {
-			return inter.authAccountCopyFunction(address)
-		},
-		"save": func(inter *Interpreter) Value {
-			return inter.authAccountSaveFunction(address)
-		},
-		"borrow": func(inter *Interpreter) Value {
-			return inter.authAccountBorrowFunction(address)
-		},
-		"link": func(inter *Interpreter) Value {
-			return inter.authAccountLinkFunction(address)
-		},
-		"unlink": func(inter *Interpreter) Value {
-			return inter.authAccountUnlinkFunction(address)
-		},
-		"getLinkTarget": func(inter *Interpreter) Value {
-			return inter.accountGetLinkTargetFunction(address)
-		},
-	}
+	// Computed fields
+	computedFields := NewStringComputedFieldOrderedMap()
+
+	computedFields.Set("storageUsed", func(inter *Interpreter) Value {
+		return storageUsedGet(inter)
+	})
+
+	computedFields.Set("storageCapacity", func(*Interpreter) Value {
+		return storageCapacityGet()
+	})
+
+	computedFields.Set("load", func(inter *Interpreter) Value {
+		return inter.authAccountLoadFunction(address)
+	})
+
+	computedFields.Set("copy", func(inter *Interpreter) Value {
+		return inter.authAccountCopyFunction(address)
+	})
+
+	computedFields.Set("save", func(inter *Interpreter) Value {
+		return inter.authAccountSaveFunction(address)
+	})
+
+	computedFields.Set("borrow", func(inter *Interpreter) Value {
+		return inter.authAccountBorrowFunction(address)
+	})
+
+	computedFields.Set("link", func(inter *Interpreter) Value {
+		return inter.authAccountLinkFunction(address)
+	})
+
+	computedFields.Set("unlink", func(inter *Interpreter) Value {
+		return inter.authAccountUnlinkFunction(address)
+	})
+
+	computedFields.Set("getLinkTarget", func(inter *Interpreter) Value {
+		return inter.accountGetLinkTargetFunction(address)
+	})
 
 	stringer := func() string {
 		return fmt.Sprintf("AuthAccount(%s)", address)
@@ -6735,7 +6744,7 @@ func NewAuthAccountValue(
 		QualifiedIdentifier: sema.AccountKeyType.QualifiedIdentifier(),
 		Kind:                sema.AccountKeyType.Kind,
 		Fields:              fields,
-		computedFields:      computedFields,
+		ComputedFields:      computedFields,
 		stringer:            stringer,
 	}
 }
