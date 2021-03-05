@@ -26,7 +26,7 @@ Every account can be accessed through two types:
           // Adds a new key with the given hashing algorithm and a weight.
           // Returns the added key.
           fun add(
-              _ publicKey: PublicKey,
+              publicKey: PublicKey,
               hashAlgorithm: HashAlgorithm,
               weight: UFix64
           ): AccountKey
@@ -105,7 +105,7 @@ Every account can be accessed through two types:
           // Adds a new key with the given hashing algorithm and a weight.
           // Returns the added key.
           fun add(
-              _ publicKey: PublicKey,
+              publicKey: PublicKey,
               hashAlgorithm: HashAlgorithm,
               weight: UFix64
           ): AccountKey
@@ -191,6 +191,21 @@ transaction(key: PublicKey) {
 }
 ```
 
+<Callout type="info">
+⚠️  Note: Keys can be added also using the `addPublicKey` function. However, this method is currently
+deprecated and is available only for the backward compatibility. The `addPublicKey` method accepts
+the public key encoded together with their signature algorithm, hashing algorithm and weight.
+```cadence
+transaction(key: [UInt8]) {
+    prepare(signer: AuthAccount) {
+        let account = AuthAccount(payer: signer)
+        account.addPublicKey(key)
+    }
+}
+```
+</Callout>
+
+
 #### Get Account Keys
 Keys that are added to an account can be retrieved using `get()` function, using the index of
 the key. Revoked keys are always returned,  but they have `isRevoked` field set to true.
@@ -221,6 +236,11 @@ transaction() {
     }
 }
 ```
+<Callout type="info">
+⚠️  Note: Keys can also be removed using the `removePublicKey` function. However, this method is
+deprecated and is available only for the backward compatibility.
+```
+</Callout>
 
 ## Account Storage
 
@@ -503,4 +523,3 @@ let storageUsedAfter = authAccount.storageUsed
 
 let storageUsedChanged = storageUsedBefore != storageUsedAfter // is true
 ```
-
