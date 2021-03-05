@@ -274,7 +274,11 @@ func exportTypeValue(v interpreter.TypeValue, inter *interpreter.Interpreter) ca
 }
 
 func exportCapabilityValue(v interpreter.CapabilityValue, inter *interpreter.Interpreter) cadence.Capability {
-	borrowType := string(inter.ConvertStaticToSemaType(v.BorrowType).ID())
+	var borrowType string
+	if v.BorrowType != nil {
+		borrowType = string(inter.ConvertStaticToSemaType(v.BorrowType).ID())
+	}
+
 	return cadence.Capability{
 		Path:       exportPathValue(v.Path),
 		Address:    cadence.NewAddress(v.Address),
