@@ -319,7 +319,7 @@ func (r *interpreterRuntime) newAuthAccountValue(
 	runtimeStorage *runtimeStorage,
 	interpreterOptions []interpreter.Option,
 	checkerOptions []sema.Option,
-) interpreter.AuthAccountValue {
+) *interpreter.CompositeValue {
 	return interpreter.NewAuthAccountValue(
 		addressValue,
 		storageUsedGetFunction(addressValue, context.Interface, runtimeStorage),
@@ -1139,7 +1139,7 @@ func (r *interpreterRuntime) newCreateAccountFunction(
 ) interpreter.HostFunction {
 	return func(invocation interpreter.Invocation) trampoline.Trampoline {
 
-		payer, ok := invocation.Arguments[0].(interpreter.AuthAccountValue)
+		payer, ok := invocation.Arguments[0].(*interpreter.CompositeValue)
 		if !ok {
 			panic(fmt.Sprintf(
 				"%[1]s requires the first argument (payer) to be an %[1]s",
@@ -1147,10 +1147,16 @@ func (r *interpreterRuntime) newCreateAccountFunction(
 			))
 		}
 
+		payerAddress, ok := payer.Fields.Get("address")
+		if !ok {
+			panic("address is not set")
+		}
+
 		var address Address
 		var err error
 		wrapPanic(func() {
-			address, err = context.Interface.CreateAccount(payer.AddressValue().ToAddress())
+			payerAddressValue := payerAddress.(interpreter.AddressValue)
+			address, err = context.Interface.CreateAccount(payerAddressValue.ToAddress())
 		})
 		if err != nil {
 			panic(err)

@@ -5340,6 +5340,7 @@ type CompositeValue struct {
 	Owner               *common.Address
 	destroyed           bool
 	modified            bool
+	stringer            func() string
 }
 
 func NewCompositeValue(
@@ -5626,6 +5627,10 @@ func (v *CompositeValue) SetMember(_ *Interpreter, locationRange LocationRange, 
 }
 
 func (v *CompositeValue) String() string {
+	if v.stringer != nil {
+		return v.stringer()
+	}
+
 	return formatComposite(string(v.TypeID()), v.Fields)
 }
 
@@ -6693,17 +6698,7 @@ type AccountValue interface {
 	AddressValue() AddressValue
 }
 
-// AuthAccountValue
-type AuthAccountValue struct {
-	Address                 AddressValue
-	storageUsedGet          func(interpreter *Interpreter) UInt64Value
-	storageCapacityGet      func() UInt64Value
-	addPublicKeyFunction    FunctionValue
-	removePublicKeyFunction FunctionValue
-	contracts               AuthAccountContractsValue
-	keys                    *CompositeValue
-}
-
+// NewAuthAccountValue
 func NewAuthAccountValue(
 	address AddressValue,
 	storageUsedGet func(interpreter *Interpreter) UInt64Value,
@@ -6712,65 +6707,57 @@ func NewAuthAccountValue(
 	removePublicKeyFunction FunctionValue,
 	contracts AuthAccountContractsValue,
 	keys *CompositeValue,
-) AuthAccountValue {
-	return AuthAccountValue{
-		Address:                 address,
-		storageUsedGet:          storageUsedGet,
-		storageCapacityGet:      storageCapacityGet,
-		addPublicKeyFunction:    addPublicKeyFunction,
-		removePublicKeyFunction: removePublicKeyFunction,
-		contracts:               contracts,
-		keys:                    keys,
+) *CompositeValue {
+
+	fields := NewStringValueOrderedMap()
+	fields.Set("address", address)
+	fields.Set("addPublicKey", addPublicKeyFunction)
+	fields.Set("removePublicKey", removePublicKeyFunction)
+	fields.Set("getCapability", accountGetCapabilityFunction(address, true))
+	fields.Set("contracts", contracts)
+	fields.Set("keys", keys)
+
+	computedFields := map[string]func(*Interpreter) Value{
+		"storageUsed": func(inter *Interpreter) Value {
+			return storageUsedGet(inter)
+		},
+		"storageCapacity": func(*Interpreter) Value {
+			return storageCapacityGet()
+		},
+		"load": func(inter *Interpreter) Value {
+			return inter.authAccountLoadFunction(address)
+		},
+		"copy": func(inter *Interpreter) Value {
+			return inter.authAccountCopyFunction(address)
+		},
+		"save": func(inter *Interpreter) Value {
+			return inter.authAccountSaveFunction(address)
+		},
+		"borrow": func(inter *Interpreter) Value {
+			return inter.authAccountBorrowFunction(address)
+		},
+		"link": func(inter *Interpreter) Value {
+			return inter.authAccountLinkFunction(address)
+		},
+		"unlink": func(inter *Interpreter) Value {
+			return inter.authAccountUnlinkFunction(address)
+		},
+		"getLinkTarget": func(inter *Interpreter) Value {
+			return inter.accountGetLinkTargetFunction(address)
+		},
 	}
-}
 
-func (AuthAccountValue) IsValue() {}
+	stringer := func() string {
+		return fmt.Sprintf("AuthAccount(%s)", address)
+	}
 
-func (v AuthAccountValue) Accept(interpreter *Interpreter, visitor Visitor) {
-	visitor.VisitAuthAccountValue(interpreter, v)
-}
-
-func (AuthAccountValue) isAccountValue() {}
-
-func (v AuthAccountValue) AddressValue() AddressValue {
-	return v.Address
-}
-
-func (AuthAccountValue) DynamicType(_ *Interpreter) DynamicType {
-	return AuthAccountDynamicType{}
-}
-
-func (AuthAccountValue) StaticType() StaticType {
-	return PrimitiveStaticTypeAuthAccount
-}
-
-func (v AuthAccountValue) Copy() Value {
-	return v
-}
-
-func (AuthAccountValue) GetOwner() *common.Address {
-	// value is never owned
-	return nil
-}
-
-func (AuthAccountValue) SetOwner(_ *common.Address) {
-	// NO-OP: value cannot be owned
-}
-
-func (AuthAccountValue) IsModified() bool {
-	return false
-}
-
-func (AuthAccountValue) SetModified(_ bool) {
-	// NO-OP
-}
-
-func (v AuthAccountValue) Destroy(_ *Interpreter, _ LocationRange) trampoline.Trampoline {
-	return trampoline.Done{}
-}
-
-func (v AuthAccountValue) String() string {
-	return fmt.Sprintf("AuthAccount(%s)", v.Address)
+	return &CompositeValue{
+		QualifiedIdentifier: sema.AccountKeyType.QualifiedIdentifier(),
+		Kind:                sema.AccountKeyType.Kind,
+		Fields:              fields,
+		computedFields:      computedFields,
+		stringer:            stringer,
+	}
 }
 
 func accountGetCapabilityFunction(
@@ -6806,60 +6793,6 @@ func accountGetCapabilityFunction(
 			return trampoline.Done{Result: capability}
 		},
 	)
-}
-
-func (v AuthAccountValue) GetMember(inter *Interpreter, _ LocationRange, name string) Value {
-	switch name {
-	case "address":
-		return v.Address
-
-	case "storageUsed":
-		return v.storageUsedGet(inter)
-
-	case "storageCapacity":
-		return v.storageCapacityGet()
-
-	case "addPublicKey":
-		return v.addPublicKeyFunction
-
-	case "removePublicKey":
-		return v.removePublicKeyFunction
-
-	case "load":
-		return inter.authAccountLoadFunction(v.Address)
-
-	case "copy":
-		return inter.authAccountCopyFunction(v.Address)
-
-	case "save":
-		return inter.authAccountSaveFunction(v.Address)
-
-	case "borrow":
-		return inter.authAccountBorrowFunction(v.Address)
-
-	case "link":
-		return inter.authAccountLinkFunction(v.Address)
-
-	case "unlink":
-		return inter.authAccountUnlinkFunction(v.Address)
-
-	case "getLinkTarget":
-		return inter.accountGetLinkTargetFunction(v.Address)
-
-	case "getCapability":
-		return accountGetCapabilityFunction(v.Address, true)
-
-	case "contracts":
-		return v.contracts
-	case "keys":
-		return v.keys
-	}
-
-	return nil
-}
-
-func (AuthAccountValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
-	panic(errors.NewUnreachableError())
 }
 
 // PublicAccountValue
