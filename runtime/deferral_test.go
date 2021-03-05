@@ -1640,3 +1640,119 @@ func TestRuntimeStorageDeferredResourceDictionaryValues_ValueTransferAndDestroy(
 	)
 	require.NoError(t, err)
 }
+
+func BenchmarkRuntimeStorageDeferredResourceDictionaryValues(b *testing.B) {
+
+	runtime := NewInterpreterRuntime()
+
+	addressValue := cadence.BytesToAddress([]byte{0xCA, 0xDE})
+
+	contract := []byte(`
+	  pub contract Test {
+
+          pub resource R {}
+
+          pub fun createR(): @R {
+              return <-create R()
+          }
+      }
+    `)
+
+	deploy := utils.DeploymentTransaction("Test", contract)
+
+	setupTx := []byte(`
+      import Test from 0xCADE
+
+      transaction {
+
+          prepare(signer: AuthAccount) {
+              let data: @{Int: Test.R} <- {}
+              var i = 0
+              while i < 1000 {
+                  data[i] <-! Test.createR()
+                  i = i + 1
+              }
+              signer.save(<-data, to: /storage/data)
+          }
+       }
+    `)
+
+	var accountCode []byte
+	var events []cadence.Event
+
+	storage := newTestStorage(nil, nil)
+
+	runtimeInterface := &testRuntimeInterface{
+		resolveLocation: singleIdentifierLocationResolver(b),
+		getAccountContractCode: func(_ Address, _ string) (bytes []byte, err error) {
+			return accountCode, nil
+		},
+		storage: storage,
+		getSigningAccounts: func() ([]Address, error) {
+			return []Address{common.BytesToAddress(addressValue.Bytes())}, nil
+		},
+		updateAccountContractCode: func(_ Address, _ string, code []byte) error {
+			accountCode = code
+			return nil
+		},
+		emitEvent: func(event cadence.Event) error {
+			events = append(events, event)
+			return nil
+		},
+	}
+
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	err := runtime.ExecuteTransaction(
+		Script{
+			Source: deploy,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(b, err)
+
+	assert.NotNil(b, accountCode)
+
+	err = runtime.ExecuteTransaction(
+		Script{
+			Source: setupTx,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(b, err)
+
+	readTx := []byte(`
+      import Test from 0xCADE
+
+      transaction {
+
+          prepare(signer: AuthAccount) {
+              let ref = signer.borrow<&{Int: Test.R}>(from: /storage/data)!
+              assert(ref[50] != nil)
+         }
+      }
+    `)
+
+	b.ReportAllocs()
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+
+		err = runtime.ExecuteTransaction(
+			Script{
+				Source: readTx,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+		require.NoError(b, err)
+	}
+}

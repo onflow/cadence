@@ -344,17 +344,6 @@ func (e *InvalidDeclarationKindChangeError) Error() string {
 	return fmt.Sprintf("trying to convert %s `%s` to a %s", e.oldKind.Name(), e.name, e.newKind.Name())
 }
 
-// InvalidNonStorableTypeUsageError is reported during a contract update, when an attempt is made
-// to use a non-storable type as a field of a composite declaration.
-type InvalidNonStorableTypeUsageError struct {
-	nonStorableType ast.Type
-	ast.Range
-}
-
-func (e *InvalidNonStorableTypeUsageError) Error() string {
-	return fmt.Sprintf("cannot use non-storable type `%s` in a composite type field", e.nonStorableType)
-}
-
 // ConformanceMismatchError is reported during a contract update, when the enum conformance of the new program
 // does not match the existing one.
 type ConformanceMismatchError struct {

@@ -27,7 +27,7 @@ import (
 // Access to an AuthAccount means having full access to its storage, public keys, and code.
 // Only signed transactions can get the AuthAccount for an account.
 //
-var AuthAccountType = &NominalType{
+var AuthAccountType = &SimpleType{
 	Name:                 "AuthAccount",
 	QualifiedName:        "AuthAccount",
 	TypeID:               "AuthAccount",
@@ -36,7 +36,7 @@ var AuthAccountType = &NominalType{
 	Storable:             false,
 	Equatable:            false,
 	ExternallyReturnable: false,
-	Members: func(t *NominalType) map[string]MemberResolver {
+	Members: func(t *SimpleType) map[string]MemberResolver {
 		return map[string]MemberResolver{
 			"address": {
 				Kind: common.DeclarationKindField,

@@ -25,7 +25,7 @@ import (
 
 // PublicAccountType represents the publicly accessible portion of an account.
 //
-var PublicAccountType = &NominalType{
+var PublicAccountType = &SimpleType{
 	Name:                 "PublicAccount",
 	QualifiedName:        "PublicAccount",
 	TypeID:               "PublicAccount",
@@ -34,7 +34,7 @@ var PublicAccountType = &NominalType{
 	Storable:             false,
 	Equatable:            false,
 	ExternallyReturnable: false,
-	Members: func(t *NominalType) map[string]MemberResolver {
+	Members: func(t *SimpleType) map[string]MemberResolver {
 		return map[string]MemberResolver{
 			"address": {
 				Kind: common.DeclarationKindField,

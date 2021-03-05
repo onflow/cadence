@@ -45,3 +45,26 @@ func ParseDocstringPragmaArguments(docString string) []string {
 
 	return pragmaArguments
 }
+
+var pragmaSignersRegexp = regexp.MustCompile(`^\s+pragma\s+signers\s+(.*)(?:\n|$)`)
+
+// ParseDocstringPragmaSigners parses the docstring and returns the values of all pragma signers declarations.
+//
+// A pragma signers declaration has the form `pragma signers <signers-list>`,
+// where <signers-list> is a list of strings.
+//
+// The validity of the argument list is NOT checked by this function.
+//
+func ParseDocstringPragmaSigners(docString string) []string {
+	var pragmaSigners []string
+
+	for _, line := range strings.Split(docString, "\n") {
+		match := pragmaSignersRegexp.FindStringSubmatch(line)
+		if match == nil {
+			continue
+		}
+		pragmaSigners = append(pragmaSigners, match[1])
+	}
+
+	return pragmaSigners
+}

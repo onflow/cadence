@@ -5696,10 +5696,12 @@ type DictionaryValue struct {
 	// stay stored in the deferred owner's account until the end of the transaction.
 	DeferredOwner *common.Address
 	// DeferredKeys are the keys which are deferred and have not been loaded from storage yet.
-	DeferredKeys *orderedmap.StringStringOrderedMap
+	DeferredKeys *orderedmap.StringStructOrderedMap
+	// DeferredStorageKeyBase is the storage key prefix for all deferred keys
+	DeferredStorageKeyBase string
 	// prevDeferredKeys are the keys which are deferred and have been loaded from storage,
 	// i.e. they are keys that were previously in DeferredKeys.
-	prevDeferredKeys *orderedmap.StringStringOrderedMap
+	prevDeferredKeys *orderedmap.StringStructOrderedMap
 }
 
 func NewDictionaryValueUnownedNonCopying(keysAndValues ...Value) *DictionaryValue {
@@ -5712,11 +5714,12 @@ func NewDictionaryValueUnownedNonCopying(keysAndValues ...Value) *DictionaryValu
 		Keys:    NewArrayValueUnownedNonCopying(),
 		Entries: NewStringValueOrderedMap(),
 		// NOTE: new value has no owner
-		Owner:            nil,
-		modified:         true,
-		DeferredOwner:    nil,
-		DeferredKeys:     nil,
-		prevDeferredKeys: nil,
+		Owner:                  nil,
+		modified:               true,
+		DeferredOwner:          nil,
+		DeferredKeys:           nil,
+		DeferredStorageKeyBase: "",
+		prevDeferredKeys:       nil,
 	}
 
 	for i := 0; i < keysAndValuesCount; i += 2 {
@@ -5776,11 +5779,12 @@ func (v *DictionaryValue) Copy() Value {
 	})
 
 	return &DictionaryValue{
-		Keys:             newKeys,
-		Entries:          newEntries,
-		DeferredOwner:    v.DeferredOwner,
-		DeferredKeys:     v.DeferredKeys,
-		prevDeferredKeys: v.prevDeferredKeys,
+		Keys:                   newKeys,
+		Entries:                newEntries,
+		DeferredOwner:          v.DeferredOwner,
+		DeferredKeys:           v.DeferredKeys,
+		DeferredStorageKeyBase: v.DeferredStorageKeyBase,
+		prevDeferredKeys:       v.prevDeferredKeys,
 		// NOTE: new value has no owner
 		Owner:    nil,
 		modified: true,
@@ -5850,8 +5854,8 @@ func (v *DictionaryValue) Destroy(inter *Interpreter, locationRange LocationRang
 		maybeDestroy(value)
 	}
 
-	writeDeferredKeys(inter, v.DeferredOwner, v.DeferredKeys)
-	writeDeferredKeys(inter, v.DeferredOwner, v.prevDeferredKeys)
+	writeDeferredKeys(inter, v.DeferredOwner, v.DeferredStorageKeyBase, v.DeferredKeys)
+	writeDeferredKeys(inter, v.DeferredOwner, v.DeferredStorageKeyBase, v.prevDeferredKeys)
 
 	return result
 }
@@ -5867,12 +5871,13 @@ func (v *DictionaryValue) Get(inter *Interpreter, _ LocationRange, keyValue Valu
 	// and keep it as an entry in memory
 
 	if v.DeferredKeys != nil {
-		storageKey, ok := v.DeferredKeys.Delete(key)
+		_, ok := v.DeferredKeys.Delete(key)
 		if ok {
+			storageKey := joinPathElements(v.DeferredStorageKeyBase, key)
 			if v.prevDeferredKeys == nil {
-				v.prevDeferredKeys = orderedmap.NewStringStringOrderedMap()
+				v.prevDeferredKeys = orderedmap.NewStringStructOrderedMap()
 			}
-			v.prevDeferredKeys.Set(key, storageKey)
+			v.prevDeferredKeys.Set(key, struct{}{})
 
 			storedValue := inter.readStored(*v.DeferredOwner, storageKey, true)
 			v.Entries.Set(key, storedValue.(*SomeValue).Value)
@@ -6025,7 +6030,8 @@ func (v *DictionaryValue) Remove(inter *Interpreter, locationRange LocationRange
 	// to make sure it is stored or destroyed later
 
 	if v.prevDeferredKeys != nil {
-		if storageKey, ok := v.prevDeferredKeys.Get(key); ok {
+		if _, ok := v.prevDeferredKeys.Get(key); ok {
+			storageKey := joinPathElements(v.DeferredStorageKeyBase, key)
 			inter.writeStored(*v.DeferredOwner, storageKey, NilValue{})
 		}
 	}
@@ -6086,13 +6092,19 @@ func (v *DictionaryValue) Insert(inter *Interpreter, locationRange LocationRange
 	}
 }
 
-func writeDeferredKeys(inter *Interpreter, owner *common.Address, keysToStorageKeys *orderedmap.StringStringOrderedMap) {
-	if keysToStorageKeys == nil {
+func writeDeferredKeys(
+	inter *Interpreter,
+	owner *common.Address,
+	storageKeyBase string,
+	keys *orderedmap.StringStructOrderedMap,
+) {
+	if keys == nil {
 		return
 	}
 
-	for pair := keysToStorageKeys.Oldest(); pair != nil; pair = pair.Next() {
-		inter.writeStored(*owner, pair.Value, NilValue{})
+	for pair := keys.Oldest(); pair != nil; pair = pair.Next() {
+		storageKey := joinPathElements(storageKeyBase, pair.Key)
+		inter.writeStored(*owner, storageKey, NilValue{})
 	}
 }
 

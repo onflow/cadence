@@ -203,10 +203,6 @@ func (i *emptyRuntimeInterface) GetAccountKey(_ Address, _ int) (*AccountKey, er
 	return nil, nil
 }
 
-func (i *emptyRuntimeInterface) UpdateAccountCode(_ Address, _ []byte) error {
-	return nil
-}
-
 func (i *emptyRuntimeInterface) UpdateAccountContractCode(_ Address, _ string, _ []byte) (err error) {
 	return nil
 }
