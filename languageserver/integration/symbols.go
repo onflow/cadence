@@ -1,6 +1,7 @@
 package integration
 
 import (
+	"github.com/onflow/cadence/languageserver/conversion"
 	"github.com/onflow/cadence/languageserver/protocol"
 	"github.com/onflow/cadence/runtime/sema"
 )
@@ -10,11 +11,17 @@ func (i *FlowIntegration) documentSymbols(
 	version float64,
 	checker *sema.Checker,
 ) (
-	[]*protocol.DocumentSymbol,
-	error,
+	symbols []*protocol.DocumentSymbol,
+	err error,
 ) {
-	// TODO: Implement
-	var symbols []*protocol.DocumentSymbol
-	return symbols, nil
+	program := checker.Program
+	symbols  = []*protocol.DocumentSymbol{}
+
+	for _, declaration := range program.Declarations() {
+		symbol := conversion.ASTToDocumentSymbol(declaration)
+		symbols = append(symbols, &symbol)
+	}
+
+	return
 }
 
