@@ -66,6 +66,7 @@ func NewFlowIntegration(s *server.Server, enableFlowClient bool) (*FlowIntegrati
 			server.WithCodeLensProvider(integration.codeLenses),
 			server.WithAddressImportResolver(integration.resolveAddressImport),
 			server.WithAddressContractNamesResolver(integration.resolveAddressContractNames),
+			server.WithDocumentSymbolProvider(integration.documentSymbols),
 		)
 
 		for _, command := range integration.commands() {

@@ -156,6 +156,10 @@ type CodeLensProvider func(uri protocol.DocumentUri, version float64, checker *s
 //
 type DiagnosticProvider func(uri protocol.DocumentUri, version float64, checker *sema.Checker) ([]protocol.Diagnostic, error)
 
+// DocumentSymbolProvider
+//
+type DocumentSymbolProvider func (uri protocol.DocumentUri, version float64, checker *sema.Checker)([]*protocol.DocumentSymbol, error)
+
 // InitializationOptionsHandler is a function that is used to handle initialization options sent by the client
 //
 type InitializationOptionsHandler func(initializationOptions interface{}) error
