@@ -7075,8 +7075,12 @@ func (v CapabilityValue) Destroy(_ *Interpreter, _ LocationRange) trampoline.Tra
 }
 
 func (v CapabilityValue) String() string {
+	var borrowType string
+	if v.BorrowType != nil {
+		borrowType = v.BorrowType.String()
+	}
 	return format.Capability(
-		v.BorrowType.String(),
+		borrowType,
 		v.Address.String(),
 		v.Path.String(),
 	)
