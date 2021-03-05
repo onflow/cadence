@@ -52,7 +52,6 @@ type Visitor interface {
 	VisitStorageReferenceValue(interpreter *Interpreter, value *StorageReferenceValue)
 	VisitEphemeralReferenceValue(interpreter *Interpreter, value *EphemeralReferenceValue)
 	VisitAddressValue(interpreter *Interpreter, value AddressValue)
-	VisitAuthAccountValue(interpreter *Interpreter, value AuthAccountValue)
 	VisitPublicAccountValue(interpreter *Interpreter, value PublicAccountValue)
 	VisitPathValue(interpreter *Interpreter, value PathValue)
 	VisitCapabilityValue(interpreter *Interpreter, value CapabilityValue)
@@ -98,7 +97,6 @@ type EmptyVisitor struct {
 	StorageReferenceValueVisitor     func(interpreter *Interpreter, value *StorageReferenceValue)
 	EphemeralReferenceValueVisitor   func(interpreter *Interpreter, value *EphemeralReferenceValue)
 	AddressValueVisitor              func(interpreter *Interpreter, value AddressValue)
-	AuthAccountValueVisitor          func(interpreter *Interpreter, value AuthAccountValue)
 	PublicAccountValueVisitor        func(interpreter *Interpreter, value PublicAccountValue)
 	PathValueVisitor                 func(interpreter *Interpreter, value PathValue)
 	CapabilityValueVisitor           func(interpreter *Interpreter, value CapabilityValue)
@@ -341,13 +339,6 @@ func (v EmptyVisitor) VisitAddressValue(interpreter *Interpreter, value AddressV
 		return
 	}
 	v.AddressValueVisitor(interpreter, value)
-}
-
-func (v EmptyVisitor) VisitAuthAccountValue(interpreter *Interpreter, value AuthAccountValue) {
-	if v.AuthAccountValueVisitor == nil {
-		return
-	}
-	v.AuthAccountValueVisitor(interpreter, value)
 }
 
 func (v EmptyVisitor) VisitPublicAccountValue(interpreter *Interpreter, value PublicAccountValue) {
