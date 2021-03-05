@@ -20,7 +20,7 @@ package sema
 
 // PathType
 //
-var PathType = &NominalType{
+var PathType = &SimpleType{
 	Name:          "Path",
 	QualifiedName: "Path",
 	TypeID:        "Path",
@@ -38,7 +38,7 @@ var PathType = &NominalType{
 
 // StoragePathType
 //
-var StoragePathType = &NominalType{
+var StoragePathType = &SimpleType{
 	Name:          "StoragePath",
 	QualifiedName: "StoragePath",
 	TypeID:        "StoragePath",
@@ -50,7 +50,7 @@ var StoragePathType = &NominalType{
 
 // CapabilityPathType
 //
-var CapabilityPathType = &NominalType{
+var CapabilityPathType = &SimpleType{
 	Name:          "CapabilityPath",
 	QualifiedName: "CapabilityPath",
 	TypeID:        "CapabilityPath",
@@ -66,7 +66,7 @@ var CapabilityPathType = &NominalType{
 
 // PublicPathType
 //
-var PublicPathType = &NominalType{
+var PublicPathType = &SimpleType{
 	Name:          "PublicPath",
 	QualifiedName: "PublicPath",
 	TypeID:        "PublicPath",
@@ -78,7 +78,7 @@ var PublicPathType = &NominalType{
 
 // PrivatePathType
 //
-var PrivatePathType = &NominalType{
+var PrivatePathType = &SimpleType{
 	Name:          "PrivatePath",
 	QualifiedName: "PrivatePath",
 	TypeID:        "PrivatePath",

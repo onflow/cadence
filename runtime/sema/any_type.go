@@ -21,7 +21,7 @@ package sema
 // AnyType represents the top type of all types.
 // NOTE: This type is only used internally and is not available in programs.
 //
-var AnyType = &NominalType{
+var AnyType = &SimpleType{
 	Name:          "Any",
 	QualifiedName: "Any",
 	TypeID:        "Any",

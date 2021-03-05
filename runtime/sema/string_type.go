@@ -25,7 +25,7 @@ import (
 
 // StringType represents the string type
 //
-var StringType = &NominalType{
+var StringType = &SimpleType{
 	Name:                 "String",
 	QualifiedName:        "String",
 	TypeID:               "String",
@@ -45,7 +45,7 @@ var StringType = &NominalType{
 }
 
 func init() {
-	StringType.Members = func(t *NominalType) map[string]MemberResolver {
+	StringType.Members = func(t *SimpleType) map[string]MemberResolver {
 		return map[string]MemberResolver{
 			"concat": {
 				Kind: common.DeclarationKindFunction,
