@@ -482,21 +482,19 @@ func identifiersEqual(expected []ast.Identifier, found []ast.Identifier) bool {
 	return true
 }
 
-func isAnyStructOrAnyResourceType(restrictedType ast.Type) bool {
+func isAnyStructOrAnyResourceType(astType ast.Type) bool {
 	// If the restricted type is not stated, then it is either AnyStruct or AnyResource
-	if restrictedType == nil {
+	if astType == nil {
 		return true
 	}
 
-	nominalType, ok := restrictedType.(*ast.NominalType)
+	nominalType, ok := astType.(*ast.NominalType)
 	if !ok {
 		return false
 	}
 
 	switch nominalType.Identifier.Identifier {
-	case sema.AnyStructType.Name:
-		return true
-	case sema.AnyResourceType.Name:
+	case sema.AnyStructType.Name, sema.AnyResourceType.Name:
 		return true
 	default:
 		return false
