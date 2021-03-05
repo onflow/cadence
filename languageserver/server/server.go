@@ -182,7 +182,7 @@ type Server struct {
 	codeLensProviders []CodeLensProvider
 	// diagnosticProviders are the functions that are used to provide diagnostics for a checker
 	diagnosticProviders []DiagnosticProvider
-	// documentSymbolProviders are the functions that are used to provide information about docuyment symbols for a checker
+	// documentSymbolProviders are the functions that are used to provide information about document symbols for a checker
 	documentSymbolProviders []DocumentSymbolProvider
 	// initializationOptionsHandlers are the functions that are used to handle initialization options sent by the client
 	initializationOptionsHandlers []InitializationOptionsHandler
