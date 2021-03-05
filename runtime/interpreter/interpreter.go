@@ -4431,7 +4431,14 @@ func (interpreter *Interpreter) getElaboration(location common.Location) *sema.E
 
 func (interpreter *Interpreter) getCompositeType(location common.Location, qualifiedIdentifier string) *sema.CompositeType {
 	if location == nil {
-		return sema.NativeCompositeTypes[qualifiedIdentifier]
+		ty := sema.NativeCompositeTypes[qualifiedIdentifier]
+		if ty == nil {
+			panic(TypeLoadingError{
+				TypeID: common.TypeID(qualifiedIdentifier),
+			})
+		}
+
+		return ty
 	}
 
 	typeID := location.TypeID(qualifiedIdentifier)
