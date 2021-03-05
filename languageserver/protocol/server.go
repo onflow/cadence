@@ -134,14 +134,14 @@ func NewServer(handler Handler) *Server {
 	jsonrpc2Server.Methods["textDocument/completion"] =
 		server.handleCompletion
 
-	jsonrpc2Server.Methods["textDocument/documentSymbol"] =
-		server.handleDocumentSymbol
-
 	jsonrpc2Server.Methods["completionItem/resolve"] =
 		server.handleCompletionItemResolve
 
 	jsonrpc2Server.Methods["workspace/executeCommand"] =
 		server.handleExecuteCommand
+
+	jsonrpc2Server.Methods["textDocument/documentSymbol"] =
+		server.handleDocumentSymbol
 
 	jsonrpc2Server.Methods["shutdown"] =
 		server.handleShutdown

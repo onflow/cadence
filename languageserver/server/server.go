@@ -182,6 +182,8 @@ type Server struct {
 	codeLensProviders []CodeLensProvider
 	// diagnosticProviders are the functions that are used to provide diagnostics for a checker
 	diagnosticProviders []DiagnosticProvider
+	// documentSymbolProviders are the functions that are used to provide information about docuyment symbols for a checker
+	documentSymbolProviders []DocumentSymbolProvider
 	// initializationOptionsHandlers are the functions that are used to handle initialization options sent by the client
 	initializationOptionsHandlers []InitializationOptionsHandler
 	accessCheckMode               sema.AccessCheckMode
@@ -255,6 +257,13 @@ func WithCodeLensProvider(provider CodeLensProvider) Option {
 func WithDiagnosticProvider(provider DiagnosticProvider) Option {
 	return func(s *Server) error {
 		s.diagnosticProviders = append(s.diagnosticProviders, provider)
+		return nil
+	}
+}
+
+func WithDocumentSymbolProvider(provider DocumentSymbolProvider) Option {
+	return func(s *Server) error {
+		s.documentSymbolProviders = append(s.documentSymbolProviders, provider)
 		return nil
 	}
 }
@@ -1353,37 +1362,45 @@ func (s *Server) ExecuteCommand(conn protocol.Conn, params *protocol.ExecuteComm
 }
 
 // DocumentSymbol return information about all known symbols in the document
-func (s *Server) DocumentSymbol(conn protocol.Conn, params *protocol.DocumentSymbolParams) ([]*DocumentSymbol, error) {
+func (s *Server) DocumentSymbol(conn protocol.Conn, params *protocol.DocumentSymbolParams) ([]*protocol.DocumentSymbol, error) {
+	
+	conn.ShowMessage(&protocol.ShowMessageParams{
+		Type:    0,
+		Message: "Give me Document Symbols...",
+	})
+	
 	// TODO: get a list of symbols and pass them back to language server
-	var symbols []*DocumentSymbol
+	var symbols []*protocol.DocumentSymbol
 
-	singleSymbol := DocumentSymbol{
-		Name: "This is basic symbol",
-		Detail: "More stuff here",
-		Kind: protocol.Kind.Variable,
+	singleSymbol := protocol.DocumentSymbol{
+		Name:       "This is basic symbol",
+		Detail:     "More stuff here",
+		Kind:       protocol.Variable,
+		Deprecated: false,
 		Range: protocol.Range{
-			start: Position{
-				line: 1,
-				character: 1
+			Start: protocol.Position{
+				Line:      1,
+				Character: 1,
 			},
-			end: Position{
-				line: 1,
-				character: 10
-			}
+			End: protocol.Position{
+				Line:      1,
+				Character: 10,
+			},
 		},
 		SelectionRange: protocol.Range{
-			Start: protocol.StartPosition{
-				Line: 1,
-				Character: 1
+			Start: protocol.Position{
+				Line:      1,
+				Character: 1,
 			},
-			End: protocol.EndPosition{
-				Line: 1,
-				Character: 10
-			}
-		}
+			End: protocol.Position{
+				Line:      1,
+				Character: 10,
+			},
+		},
+		Children: nil,
 	}
 
-	symbols = append(symbols, singleSymbol)
+	symbols = append(symbols, &singleSymbol)
 
 	return symbols, nil
 }
