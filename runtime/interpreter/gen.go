@@ -19,3 +19,5 @@
 package interpreter
 
 //go:generate go run github.com/cheekybits/genny -pkg=interpreter -in=../common/orderedmap/orderedmap.go -out=ordered_map_string_value.go gen "KeyType=string ValueType=Value"
+
+//go:generate go run github.com/cheekybits/genny -pkg=interpreter -in=../common/orderedmap/orderedmap.go -out=ordered_map_string_computedfield.go gen "KeyType=string ValueType=ComputedField"
