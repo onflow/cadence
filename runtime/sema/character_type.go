@@ -20,7 +20,7 @@ package sema
 
 // CharacterType represents the character type
 //
-var CharacterType = &NominalType{
+var CharacterType = &SimpleType{
 	Name:                 "Character",
 	QualifiedName:        "Character",
 	TypeID:               "Character",

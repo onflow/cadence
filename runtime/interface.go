@@ -22,59 +22,9 @@ import (
 	"time"
 
 	"github.com/onflow/cadence"
-	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
-	"github.com/onflow/cadence/runtime/sema"
 )
-
-const BlockHashLength = 32
-
-type BlockHash [BlockHashLength]byte
-
-type Block struct {
-	Height    uint64
-	View      uint64
-	Hash      BlockHash
-	Timestamp int64
-}
-
-type ResolvedLocation = sema.ResolvedLocation
-type Identifier = ast.Identifier
-type Location = common.Location
-
-type SignatureAlgorithm = sema.SignatureAlgorithm
-
-const (
-	// Supported signing algorithms
-	SignatureAlgorithmECDSA_P256 SignatureAlgorithm = iota
-	SignatureAlgorithmECDSA_Secp256k1
-	SignatureAlgorithmBLSBLS12381
-)
-
-type HashAlgorithm = sema.HashAlgorithm
-
-const (
-	// Supported hashing algorithms
-	HashAlgorithmSHA2_256 HashAlgorithm = iota
-	HashAlgorithmSHA2_384
-	HashAlgorithmSHA3_256
-	HashAlgorithmSHA3_384
-	HashAlgorithmKMAC128
-)
-
-type AccountKey struct {
-	KeyIndex  int
-	PublicKey *PublicKey
-	HashAlgo  HashAlgorithm
-	Weight    int
-	IsRevoked bool
-}
-
-type PublicKey struct {
-	PublicKey []byte
-	SignAlgo  SignatureAlgorithm
-}
 
 type Interface interface {
 	// ResolveLocation resolves an import location.
@@ -102,6 +52,10 @@ type Interface interface {
 	SetValue(owner, key, value []byte) (err error)
 	// CreateAccount creates a new account.
 	CreateAccount(payer Address) (address Address, err error)
+	// AddEncodedAccountKey appends an encoded key to an account.
+	AddEncodedAccountKey(address Address, publicKey []byte) error
+	// RemoveEncodedAccountKey removes a key from an account by index, add returns the encoded key.
+	RemoveEncodedAccountKey(address Address, index int) (publicKey []byte, err error)
 	// AddAccountKey appends a key to an account.
 	AddAccountKey(address Address, publicKey *PublicKey, hashAlgo HashAlgorithm, weight int) (*AccountKey, error)
 	// GetAccountKey retrieves a key from an account by index.
@@ -229,6 +183,14 @@ func (i *emptyRuntimeInterface) CreateAccount(_ Address) (address Address, err e
 	return Address{}, nil
 }
 
+func (i *emptyRuntimeInterface) AddEncodedAccountKey(address Address, publicKey []byte) error {
+	return nil
+}
+
+func (i *emptyRuntimeInterface) RemoveEncodedAccountKey(address Address, index int) (publicKey []byte, err error) {
+	return nil, nil
+}
+
 func (i *emptyRuntimeInterface) AddAccountKey(_ Address, _ *PublicKey, _ HashAlgorithm, _ int) (*AccountKey, error) {
 	return nil, nil
 }
@@ -239,10 +201,6 @@ func (i *emptyRuntimeInterface) RemoveAccountKey(_ Address, _ int) (*AccountKey,
 
 func (i *emptyRuntimeInterface) GetAccountKey(_ Address, _ int) (*AccountKey, error) {
 	return nil, nil
-}
-
-func (i *emptyRuntimeInterface) UpdateAccountCode(_ Address, _ []byte) error {
-	return nil
 }
 
 func (i *emptyRuntimeInterface) UpdateAccountContractCode(_ Address, _ string, _ []byte) (err error) {

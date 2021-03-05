@@ -25,8 +25,10 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/tests/utils"
+	"github.com/onflow/cadence/runtime/trampoline"
 )
 
 func TestInterpretTransactions(t *testing.T) {
@@ -201,6 +203,10 @@ func TestInterpretTransactions(t *testing.T) {
 		assert.IsType(t, interpreter.ArgumentCountError{}, err)
 	})
 
+	panicFunction := interpreter.NewHostFunctionValue(func(invocation interpreter.Invocation) trampoline.Trampoline {
+		panic(errors.NewUnreachableError())
+	})
+
 	t.Run("TooManyArguments", func(t *testing.T) {
 		inter := parseCheckAndInterpret(t, `
           transaction {
@@ -220,8 +226,10 @@ func TestInterpretTransactions(t *testing.T) {
 				return 0
 			},
 			returnZero,
+			panicFunction,
+			panicFunction,
 			interpreter.AuthAccountContractsValue{},
-			&interpreter.BuiltinCompositeValue{},
+			&interpreter.CompositeValue{},
 		)
 		signer2 := interpreter.NewAuthAccountValue(
 			interpreter.AddressValue{0, 0, 0, 0, 0, 0, 0, 2},
@@ -229,8 +237,10 @@ func TestInterpretTransactions(t *testing.T) {
 				return 0
 			},
 			returnZero,
+			panicFunction,
+			panicFunction,
 			interpreter.AuthAccountContractsValue{},
-			&interpreter.BuiltinCompositeValue{},
+			&interpreter.CompositeValue{},
 		)
 
 		// first transaction
@@ -269,8 +279,10 @@ func TestInterpretTransactions(t *testing.T) {
 					return 0
 				},
 				returnZero,
+				panicFunction,
+				panicFunction,
 				interpreter.AuthAccountContractsValue{},
-				&interpreter.BuiltinCompositeValue{},
+				&interpreter.CompositeValue{},
 			),
 		}
 

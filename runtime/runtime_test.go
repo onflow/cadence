@@ -94,6 +94,8 @@ type testRuntimeInterface struct {
 	setProgram                func(Location, *interpreter.Program) error
 	storage                   testRuntimeInterfaceStorage
 	createAccount             func(payer Address) (address Address, err error)
+	addEncodedAccountKey      func(address Address, publicKey []byte) error
+	removeEncodedAccountKey   func(address Address, index int) (publicKey []byte, err error)
 	addAccountKey             func(address Address, publicKey *PublicKey, hashAlgo HashAlgorithm, weight int) (*AccountKey, error)
 	getAccountKey             func(address Address, index int) (*AccountKey, error)
 	removeAccountKey          func(address Address, index int) (*AccountKey, error)
@@ -187,6 +189,14 @@ func (i *testRuntimeInterface) SetValue(owner, key, value []byte) (err error) {
 
 func (i *testRuntimeInterface) CreateAccount(payer Address) (address Address, err error) {
 	return i.createAccount(payer)
+}
+
+func (i *testRuntimeInterface) AddEncodedAccountKey(address Address, publicKey []byte) error {
+	return i.addEncodedAccountKey(address, publicKey)
+}
+
+func (i *testRuntimeInterface) RemoveEncodedAccountKey(address Address, index int) (publicKey []byte, err error) {
+	return i.removeEncodedAccountKey(address, index)
 }
 
 func (i *testRuntimeInterface) AddAccountKey(address Address, publicKey *PublicKey, hashAlgo HashAlgorithm, weight int) (*AccountKey, error) {
@@ -5406,6 +5416,8 @@ func TestRuntimeUpdateCodeCaching(t *testing.T) {
 
 	var programHits []string
 
+	var codeChanged bool
+
 	runtimeInterface := &testRuntimeInterface{
 		createAccount: func(payer Address) (address Address, err error) {
 			accountCounter++
@@ -5429,6 +5441,8 @@ func TestRuntimeUpdateCodeCaching(t *testing.T) {
 			return accountCodes[key], nil
 		},
 		updateAccountContractCode: func(address Address, name string, code []byte) error {
+			codeChanged = true
+
 			location := common.AddressLocation{
 				Address: address,
 				Name:    name,
@@ -5441,6 +5455,18 @@ func TestRuntimeUpdateCodeCaching(t *testing.T) {
 			events = append(events, event)
 			return nil
 		},
+	}
+
+	// When code is changed, the parsed+checked programs have to be invalidated
+
+	clearProgramsIfNeeded := func() {
+		if !codeChanged {
+			return
+		}
+
+		for locationID := range runtimeInterface.programs {
+			delete(runtimeInterface.programs, locationID)
+		}
 	}
 
 	nextTransactionLocation := newTransactionLocationGenerator()
@@ -5466,6 +5492,8 @@ func TestRuntimeUpdateCodeCaching(t *testing.T) {
 
 	signerAddresses = []Address{{accountCounter}}
 
+	codeChanged = false
+
 	err = runtime.ExecuteTransaction(
 		Script{
 			Source: deployTx,
@@ -5477,6 +5505,15 @@ func TestRuntimeUpdateCodeCaching(t *testing.T) {
 	)
 	require.NoError(t, err)
 	require.Empty(t, programHits)
+
+	locationID := common.AddressLocation{
+		Address: signerAddresses[0],
+		Name:    "HelloWorld",
+	}.ID()
+
+	require.NotContains(t, runtimeInterface.programs, locationID)
+
+	clearProgramsIfNeeded()
 
 	// call the initial hello function
 
@@ -5494,9 +5531,17 @@ func TestRuntimeUpdateCodeCaching(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, cadence.NewString("1"), result1)
 
+	// The deployed hello world contract was imported,
+	// assert that it was stored in the program storage
+	// after it was parsed and checked
+
+	initialProgram := runtimeInterface.programs[locationID]
+	require.NotNil(t, initialProgram)
+
 	// update the contract
 
 	programHits = nil
+	codeChanged = false
 
 	err = runtime.ExecuteTransaction(
 		Script{
@@ -5509,6 +5554,17 @@ func TestRuntimeUpdateCodeCaching(t *testing.T) {
 	)
 	require.NoError(t, err)
 	require.Empty(t, programHits)
+
+	// Assert that the contract update did NOT change
+	// the program in program storage
+
+	require.Same(t,
+		initialProgram,
+		runtimeInterface.programs[locationID],
+	)
+	require.NotNil(t, runtimeInterface.programs[locationID])
+
+	clearProgramsIfNeeded()
 
 	// call the new hello function
 
@@ -5743,29 +5799,17 @@ func TestRuntimeTransaction_ContractUpdate(t *testing.T) {
       }
     `
 
-	newDeployTransaction := func(function, name, code string) []byte {
-		return []byte(fmt.Sprintf(
-			`
-              transaction {
-
-                  prepare(signer: AuthAccount) {
-                      signer.contracts.%s(name: "%s", code: "%s".decodeHex())
-                  }
-              }
-            `,
-			function,
-			name,
-			hex.EncodeToString([]byte(code)),
-		))
-	}
-
 	var accountCode []byte
 	var events []cadence.Event
+
+	var codeChanged bool
+
+	signerAddress := common.BytesToAddress([]byte{0x42})
 
 	runtimeInterface := &testRuntimeInterface{
 		storage: newTestStorage(nil, nil),
 		getSigningAccounts: func() ([]Address, error) {
-			return []Address{common.BytesToAddress([]byte{0x42})}, nil
+			return []Address{signerAddress}, nil
 		},
 		getCode: func(_ Location) (bytes []byte, err error) {
 			return accountCode, nil
@@ -5792,6 +5836,7 @@ func TestRuntimeTransaction_ContractUpdate(t *testing.T) {
 			return accountCode, nil
 		},
 		updateAccountContractCode: func(_ Address, _ string, code []byte) error {
+			codeChanged = true
 			accountCode = code
 			return nil
 		},
@@ -5801,9 +5846,24 @@ func TestRuntimeTransaction_ContractUpdate(t *testing.T) {
 		},
 	}
 
+	// When code is changed, the parsed+checked programs have to be invalidated
+
+	clearProgramsIfNeeded := func() {
+		if !codeChanged {
+			return
+		}
+
+		for locationID := range runtimeInterface.programs {
+			delete(runtimeInterface.programs, locationID)
+		}
+	}
+
 	nextTransactionLocation := newTransactionLocationGenerator()
 
-	deployTx1 := newDeployTransaction("add", "Test", contract1)
+	// Deploy the Test contract
+
+	codeChanged = false
+	deployTx1 := utils.DeploymentTransaction("Test", []byte(contract1))
 
 	err := runtime.ExecuteTransaction(
 		Script{
@@ -5815,6 +5875,17 @@ func TestRuntimeTransaction_ContractUpdate(t *testing.T) {
 		},
 	)
 	require.NoError(t, err)
+
+	locationID := common.AddressLocation{
+		Address: signerAddress,
+		Name:    "Test",
+	}.ID()
+
+	require.NotContains(t, runtimeInterface.programs, locationID)
+
+	clearProgramsIfNeeded()
+
+	// Use the Test contract
 
 	script1 := []byte(`
       import 0x42
@@ -5843,7 +5914,18 @@ func TestRuntimeTransaction_ContractUpdate(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	deployTx2 := newDeployTransaction("update__experimental", "Test", contract2)
+	// The deployed hello world contract was imported,
+	// assert that it was stored in the program storage
+	// after it was parsed and checked
+
+	initialProgram := runtimeInterface.programs[locationID]
+	require.NotNil(t, initialProgram)
+
+	// Update the Test contract
+
+	codeChanged = false
+
+	deployTx2 := utils.UpdateTransaction("Test", []byte(contract2))
 
 	err = runtime.ExecuteTransaction(
 		Script{
@@ -5855,6 +5937,19 @@ func TestRuntimeTransaction_ContractUpdate(t *testing.T) {
 		},
 	)
 	require.NoError(t, err)
+
+	// Assert that the contract update did NOT change
+	// the program in program storage
+
+	require.Same(t,
+		initialProgram,
+		runtimeInterface.programs[locationID],
+	)
+	require.NotNil(t, runtimeInterface.programs[locationID])
+
+	clearProgramsIfNeeded()
+
+	// Use the new Test contract
 
 	script2 := []byte(`
       import 0x42
@@ -5960,7 +6055,7 @@ func TestRuntime(t *testing.T) {
 	}
 }
 
-func singleIdentifierLocationResolver(t *testing.T) func(identifiers []Identifier, location Location) ([]ResolvedLocation, error) {
+func singleIdentifierLocationResolver(t testing.TB) func(identifiers []Identifier, location Location) ([]ResolvedLocation, error) {
 	return func(identifiers []Identifier, location Location) ([]ResolvedLocation, error) {
 		require.Len(t, identifiers, 1)
 		require.IsType(t, common.AddressLocation{}, location)

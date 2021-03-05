@@ -18,18 +18,21 @@
 
 package sema
 
-import "github.com/onflow/cadence/runtime/errors"
+import (
+	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/errors"
+)
 
 //go:generate go run golang.org/x/tools/cmd/stringer -type=SignatureAlgorithm
 //go:generate go run golang.org/x/tools/cmd/stringer -type=HashAlgorithm
 
-var SignatureAlgorithms = []BuiltinEnumCase{
+var SignatureAlgorithms = []NativeEnumCase{
 	SignatureAlgorithmECDSA_P256,
 	SignatureAlgorithmECDSA_Secp256k1,
 	SignatureAlgorithmBLSBLS12381,
 }
 
-var HashAlgorithms = []BuiltinEnumCase{
+var HashAlgorithms = []NativeEnumCase{
 	HashAlgorithmSHA2_256,
 	HashAlgorithmSHA2_384,
 	HashAlgorithmSHA3_256,
@@ -37,7 +40,7 @@ var HashAlgorithms = []BuiltinEnumCase{
 	HashAlgorithmKMAC128,
 }
 
-var SignatureAlgorithmType = newEnumType(SignatureAlgorithmTypeName, &UInt8Type{})
+var SignatureAlgorithmType = newNativeEnumType(SignatureAlgorithmTypeName, &UInt8Type{})
 
 type SignatureAlgorithm int
 
@@ -79,7 +82,7 @@ func (algo SignatureAlgorithm) DocString() string {
 	panic(errors.NewUnreachableError())
 }
 
-var HashAlgorithmType = newEnumType(HashAlgorithmTypeName, &UInt8Type{})
+var HashAlgorithmType = newNativeEnumType(HashAlgorithmTypeName, &UInt8Type{})
 
 type HashAlgorithm int
 
@@ -130,15 +133,11 @@ func (algo HashAlgorithm) DocString() string {
 	panic(errors.NewUnreachableError())
 }
 
-func newEnumType(identifier string, rawType Type) *BuiltinCompositeType {
-	accountKeyType := &BuiltinCompositeType{
-		Identifier:           identifier,
-		EnumRawType:          rawType,
-		IsInvalid:            false,
-		IsResource:           false,
-		Storable:             true,
-		Equatable:            true,
-		ExternallyReturnable: true,
+func newNativeEnumType(identifier string, rawType Type) *CompositeType {
+	accountKeyType := &CompositeType{
+		Identifier:  identifier,
+		EnumRawType: rawType,
+		Kind:        common.CompositeKindEnum,
 	}
 
 	// Members of the enum type are *not* the enum cases!
@@ -153,6 +152,7 @@ func newEnumType(identifier string, rawType Type) *BuiltinCompositeType {
 	}
 
 	accountKeyType.Members = GetMembersAsMap(members)
+	accountKeyType.Fields = getFields(members)
 	return accountKeyType
 }
 

@@ -25,7 +25,7 @@ import (
 
 // AuthAccountContractsType represents the type `AuthAccount.Contracts`
 //
-var AuthAccountContractsType = &NominalType{
+var AuthAccountContractsType = &SimpleType{
 	Name:                 "Contracts",
 	QualifiedName:        "AuthAccount.Contracts",
 	TypeID:               "AuthAccount.Contracts",
@@ -35,7 +35,7 @@ var AuthAccountContractsType = &NominalType{
 	Equatable:            false,
 	ExternallyReturnable: false,
 	IsSuperTypeOf:        nil,
-	Members: func(t *NominalType) map[string]MemberResolver {
+	Members: func(t *SimpleType) map[string]MemberResolver {
 		return withBuiltinMembers(t, map[string]MemberResolver{
 			AuthAccountContractsTypeAddFunctionName: {
 				Kind: common.DeclarationKindField,

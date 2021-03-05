@@ -26,6 +26,7 @@ import (
 	"sync"
 
 	"github.com/onflow/cadence/fixedpoint"
+	"github.com/onflow/cadence/runtime/activations"
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
@@ -43,9 +44,6 @@ func qualifiedIdentifier(identifier string, containerType Type) string {
 			identifiers = append(identifiers, typedContainerType.Identifier)
 			containerType = typedContainerType.ContainerType
 		case *CompositeType:
-			identifiers = append(identifiers, typedContainerType.Identifier)
-			containerType = typedContainerType.ContainerType
-		case *BuiltinCompositeType:
 			identifiers = append(identifiers, typedContainerType.Identifier)
 			containerType = typedContainerType.ContainerType
 		default:
@@ -2977,9 +2975,9 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 
 // VariableSizedType is a variable sized array type
 type VariableSizedType struct {
-	Type                Type
-	memberResolvers     map[string]MemberResolver
-	memberResolversOnce sync.Once
+	Type                      Type
+	cachedMemberResolvers     map[string]MemberResolver
+	cachedMemberResolversOnce sync.Once
 }
 
 func (*VariableSizedType) IsType() {}
@@ -3009,12 +3007,12 @@ func (t *VariableSizedType) Equal(other Type) bool {
 
 func (t *VariableSizedType) GetMembers() map[string]MemberResolver {
 	t.initializeMemberResolvers()
-	return t.memberResolvers
+	return t.cachedMemberResolvers
 }
 
 func (t *VariableSizedType) initializeMemberResolvers() {
-	t.memberResolversOnce.Do(func() {
-		t.memberResolvers = getArrayMembers(t)
+	t.cachedMemberResolversOnce.Do(func() {
+		t.cachedMemberResolvers = getArrayMembers(t)
 	})
 }
 
@@ -3098,10 +3096,10 @@ func (t *VariableSizedType) Resolve(typeArguments *TypeParameterTypeOrderedMap) 
 
 // ConstantSizedType is a constant sized array type
 type ConstantSizedType struct {
-	Type                Type
-	Size                int64
-	memberResolvers     map[string]MemberResolver
-	memberResolversOnce sync.Once
+	Type                      Type
+	Size                      int64
+	cachedMemberResolvers     map[string]MemberResolver
+	cachedMemberResolversOnce sync.Once
 }
 
 func (*ConstantSizedType) IsType() {}
@@ -3132,12 +3130,12 @@ func (t *ConstantSizedType) Equal(other Type) bool {
 
 func (t *ConstantSizedType) GetMembers() map[string]MemberResolver {
 	t.initializeMemberResolvers()
-	return t.memberResolvers
+	return t.cachedMemberResolvers
 }
 
 func (t *ConstantSizedType) initializeMemberResolvers() {
-	t.memberResolversOnce.Do(func() {
-		t.memberResolvers = getArrayMembers(t)
+	t.cachedMemberResolversOnce.Do(func() {
+		t.cachedMemberResolvers = getArrayMembers(t)
 	})
 }
 
@@ -3856,14 +3854,12 @@ func (t *CheckedFunctionType) CheckArgumentExpressions(
 	t.ArgumentExpressionsCheck(checker, argumentExpressions, invocationRange)
 }
 
-// baseTypes are the nominal types available in programs
+// BaseTypeActivation is the base activation that contains
+// the types available in programs
 //
-var baseTypes = NewStringTypeOrderedMap()
+var BaseTypeActivation = activations.NewActivation(nil)
 
 func init() {
-
-	baseTypes = NewStringTypeOrderedMap()
-	baseTypes.Set("", VoidType)
 
 	otherTypes := []Type{
 		MetaType,
@@ -3899,18 +3895,41 @@ func init() {
 	for _, ty := range types {
 		typeName := ty.String()
 
-		// check type is not accidentally redeclared
-		if _, ok := baseTypes.Get(typeName); ok {
+		// Check that the type is not accidentally redeclared
+
+		if BaseTypeActivation.Find(typeName) != nil {
 			panic(errors.NewUnreachableError())
 		}
 
-		baseTypes.Set(typeName, ty)
+		BaseTypeActivation.Set(
+			typeName,
+			baseTypeVariable(typeName, ty),
+		)
+	}
+
+	// The AST contains empty type annotations, resolve them to Void
+
+	BaseTypeActivation.Set(
+		"",
+		BaseTypeActivation.Find("Void"),
+	)
+}
+
+func baseTypeVariable(name string, ty Type) *Variable {
+	return &Variable{
+		Identifier:      name,
+		Type:            ty,
+		DeclarationKind: common.DeclarationKindType,
+		IsConstant:      true,
+		IsBaseValue:     true,
+		Access:          ast.AccessPublic,
 	}
 }
 
-// BaseValues are the values available in programs
+// BaseValueActivation is the base activation that contains
+// the values available in programs
 //
-var BaseValues = NewStringValueDeclarationOrderedMap()
+var BaseValueActivation = activations.NewActivation(nil)
 
 var AllSignedFixedPointTypes = []Type{
 	&Fix64Type{},
@@ -3988,29 +4007,43 @@ func init() {
 		default:
 			typeName := numberType.String()
 
-			// Check that the type is not accidentally redeclared
+			// Check that the function is not accidentally redeclared
 
-			if _, ok := BaseValues.Get(typeName); ok {
+			if BaseValueActivation.Find(typeName) != nil {
 				panic(errors.NewUnreachableError())
 			}
 
-			BaseValues.Set(typeName, baseFunction{
-				name: typeName,
-				invokableType: &CheckedFunctionType{
-					FunctionType: &FunctionType{
-						Parameters: []*Parameter{
-							{
-								Label:          ArgumentLabelNotRequired,
-								Identifier:     "value",
-								TypeAnnotation: NewTypeAnnotation(&NumberType{}),
+			BaseValueActivation.Set(
+				typeName,
+				baseFunctionVariable(
+					typeName,
+					&CheckedFunctionType{
+						FunctionType: &FunctionType{
+							Parameters: []*Parameter{
+								{
+									Label:          ArgumentLabelNotRequired,
+									Identifier:     "value",
+									TypeAnnotation: NewTypeAnnotation(&NumberType{}),
+								},
 							},
+							ReturnTypeAnnotation: NewTypeAnnotation(numberType),
 						},
-						ReturnTypeAnnotation: NewTypeAnnotation(numberType),
+						ArgumentExpressionsCheck: numberFunctionArgumentExpressionsChecker(numberType),
 					},
-					ArgumentExpressionsCheck: numberFunctionArgumentExpressionsChecker(numberType),
-				},
-			})
+				),
+			)
 		}
+	}
+}
+
+func baseFunctionVariable(name string, ty InvokableType) *Variable {
+	return &Variable{
+		Identifier:      name,
+		DeclarationKind: common.DeclarationKindFunction,
+		IsConstant:      true,
+		IsBaseValue:     true,
+		Type:            ty,
+		Access:          ast.AccessPublic,
 	}
 }
 
@@ -4021,38 +4054,42 @@ func init() {
 	addressType := &AddressType{}
 	typeName := addressType.String()
 
-	// check type is not accidentally redeclared
-	if _, ok := BaseValues.Get(typeName); ok {
+	// Check that the function is not accidentally redeclared
+
+	if BaseValueActivation.Find(typeName) != nil {
 		panic(errors.NewUnreachableError())
 	}
 
-	BaseValues.Set(typeName, baseFunction{
-		name: typeName,
-		invokableType: &CheckedFunctionType{
-			FunctionType: &FunctionType{
-				Parameters: []*Parameter{
-					{
-						Label:          ArgumentLabelNotRequired,
-						Identifier:     "value",
-						TypeAnnotation: NewTypeAnnotation(&IntegerType{}),
+	BaseValueActivation.Set(
+		typeName,
+		baseFunctionVariable(
+			typeName,
+			&CheckedFunctionType{
+				FunctionType: &FunctionType{
+					Parameters: []*Parameter{
+						{
+							Label:          ArgumentLabelNotRequired,
+							Identifier:     "value",
+							TypeAnnotation: NewTypeAnnotation(&IntegerType{}),
+						},
 					},
+					ReturnTypeAnnotation: NewTypeAnnotation(addressType),
 				},
-				ReturnTypeAnnotation: NewTypeAnnotation(addressType),
-			},
-			ArgumentExpressionsCheck: func(checker *Checker, argumentExpressions []ast.Expression, _ ast.Range) {
-				if len(argumentExpressions) < 1 {
-					return
-				}
+				ArgumentExpressionsCheck: func(checker *Checker, argumentExpressions []ast.Expression, _ ast.Range) {
+					if len(argumentExpressions) < 1 {
+						return
+					}
 
-				intExpression, ok := argumentExpressions[0].(*ast.IntegerExpression)
-				if !ok {
-					return
-				}
+					intExpression, ok := argumentExpressions[0].(*ast.IntegerExpression)
+					if !ok {
+						return
+					}
 
-				CheckAddressLiteral(intExpression, checker.report)
+					CheckAddressLiteral(intExpression, checker.report)
+				},
 			},
-		},
-	})
+		),
+	)
 }
 
 func numberFunctionArgumentExpressionsChecker(targetType Type) ArgumentExpressionsCheck {
@@ -4193,18 +4230,22 @@ func init() {
 
 	typeName := MetaType.String()
 
-	// check type is not accidentally redeclared
-	if _, ok := BaseValues.Get(typeName); ok {
+	// Check that the function is not accidentally redeclared
+
+	if BaseValueActivation.Find(typeName) != nil {
 		panic(errors.NewUnreachableError())
 	}
 
-	BaseValues.Set(typeName, baseFunction{
-		name: typeName,
-		invokableType: &FunctionType{
-			TypeParameters:       []*TypeParameter{{Name: "T"}},
-			ReturnTypeAnnotation: NewTypeAnnotation(MetaType),
-		},
-	})
+	BaseValueActivation.Set(
+		typeName,
+		baseFunctionVariable(
+			typeName,
+			&FunctionType{
+				TypeParameters:       []*TypeParameter{{Name: "T"}},
+				ReturnTypeAnnotation: NewTypeAnnotation(MetaType),
+			},
+		),
+	)
 }
 
 // CompositeType
@@ -4219,34 +4260,39 @@ type CompositeType struct {
 	Identifier string
 	Kind       common.CompositeKind
 	// an internal set of field `ExplicitInterfaceConformances`
-	explicitInterfaceConformanceSet     *InterfaceSet
-	explicitInterfaceConformanceSetOnce sync.Once
-	ExplicitInterfaceConformances       []*InterfaceType
-	ImplicitTypeRequirementConformances []*CompositeType
-	Members                             *StringMemberOrderedMap
-	memberResolvers                     map[string]MemberResolver
-	memberResolversOnce                 sync.Once
-	Fields                              []string
+	cachedExplicitInterfaceConformanceSet     *InterfaceSet
+	cachedExplicitInterfaceConformanceSetOnce sync.Once
+	ExplicitInterfaceConformances             []*InterfaceType
+	ImplicitTypeRequirementConformances       []*CompositeType
+	Members                                   *StringMemberOrderedMap
+	cachedMemberResolvers                     map[string]MemberResolver
+	cachedMemberResolversOnce                 sync.Once
+	Fields                                    []string
 	// TODO: add support for overloaded initializers
 	ConstructorParameters []*Parameter
 	nestedTypes           *StringTypeOrderedMap
 	ContainerType         Type
 	EnumRawType           Type
+	cachedIdentifiers     struct {
+		TypeID              TypeID
+		QualifiedIdentifier string
+	}
+	cachedIdentifiersOnce sync.Once
 }
 
 func (t *CompositeType) ExplicitInterfaceConformanceSet() *InterfaceSet {
 	t.initializeExplicitInterfaceConformanceSet()
-	return t.explicitInterfaceConformanceSet
+	return t.cachedExplicitInterfaceConformanceSet
 }
 
 func (t *CompositeType) initializeExplicitInterfaceConformanceSet() {
-	t.explicitInterfaceConformanceSetOnce.Do(func() {
+	t.cachedExplicitInterfaceConformanceSetOnce.Do(func() {
 		// TODO: also include conformances' conformances recursively
 		//   once interface can have conformances
 
-		t.explicitInterfaceConformanceSet = NewInterfaceSet()
+		t.cachedExplicitInterfaceConformanceSet = NewInterfaceSet()
 		for _, conformance := range t.ExplicitInterfaceConformances {
-			t.explicitInterfaceConformanceSet.Add(conformance)
+			t.cachedExplicitInterfaceConformanceSet.Add(conformance)
 		}
 	})
 }
@@ -4279,11 +4325,25 @@ func (t *CompositeType) GetLocation() common.Location {
 }
 
 func (t *CompositeType) QualifiedIdentifier() string {
-	return qualifiedIdentifier(t.Identifier, t.ContainerType)
+	t.initializeIdentifiers()
+	return t.cachedIdentifiers.QualifiedIdentifier
 }
 
 func (t *CompositeType) ID() TypeID {
-	return t.Location.TypeID(t.QualifiedIdentifier())
+	t.initializeIdentifiers()
+	return t.cachedIdentifiers.TypeID
+}
+
+func (t *CompositeType) initializeIdentifiers() {
+	t.cachedIdentifiersOnce.Do(func() {
+		t.cachedIdentifiers.QualifiedIdentifier = qualifiedIdentifier(t.Identifier, t.ContainerType)
+
+		if t.Location == nil {
+			t.cachedIdentifiers.TypeID = TypeID(t.cachedIdentifiers.QualifiedIdentifier)
+		} else {
+			t.cachedIdentifiers.TypeID = t.Location.TypeID(t.cachedIdentifiers.QualifiedIdentifier)
+		}
+	})
 }
 
 func (t *CompositeType) Equal(other Type) bool {
@@ -4298,7 +4358,7 @@ func (t *CompositeType) Equal(other Type) bool {
 
 func (t *CompositeType) GetMembers() map[string]MemberResolver {
 	t.initializeMemberResolvers()
-	return t.memberResolvers
+	return t.cachedMemberResolvers
 }
 
 func (t *CompositeType) IsResourceType() bool {
@@ -4426,7 +4486,7 @@ func (t *CompositeType) GetNestedTypes() *StringTypeOrderedMap {
 }
 
 func (t *CompositeType) initializeMemberResolvers() {
-	t.memberResolversOnce.Do(func() {
+	t.cachedMemberResolversOnce.Do(func() {
 		members := make(map[string]MemberResolver, t.Members.Len())
 
 		t.Members.Foreach(func(name string, loopMember *Member) {
@@ -4455,7 +4515,7 @@ func (t *CompositeType) initializeMemberResolvers() {
 				}
 			})
 
-		t.memberResolvers = withBuiltinMembers(t, members)
+		t.cachedMemberResolvers = withBuiltinMembers(t, members)
 	})
 }
 
@@ -4590,17 +4650,22 @@ func (m *Member) testType(test func(Type) bool, results map[*Member]bool) (resul
 // InterfaceType
 
 type InterfaceType struct {
-	Location            common.Location
-	Identifier          string
-	CompositeKind       common.CompositeKind
-	Members             *StringMemberOrderedMap
-	memberResolvers     map[string]MemberResolver
-	memberResolversOnce sync.Once
-	Fields              []string
+	Location                  common.Location
+	Identifier                string
+	CompositeKind             common.CompositeKind
+	Members                   *StringMemberOrderedMap
+	cachedMemberResolvers     map[string]MemberResolver
+	cachedMemberResolversOnce sync.Once
+	Fields                    []string
 	// TODO: add support for overloaded initializers
 	InitializerParameters []*Parameter
 	ContainerType         Type
 	nestedTypes           *StringTypeOrderedMap
+	cachedIdentifiers     struct {
+		TypeID              TypeID
+		QualifiedIdentifier string
+	}
+	cachedIdentifiersOnce sync.Once
 }
 
 func (*InterfaceType) IsType() {}
@@ -4626,11 +4691,20 @@ func (t *InterfaceType) GetLocation() common.Location {
 }
 
 func (t *InterfaceType) QualifiedIdentifier() string {
-	return qualifiedIdentifier(t.Identifier, t.ContainerType)
+	t.initializeIdentifiers()
+	return t.cachedIdentifiers.QualifiedIdentifier
 }
 
 func (t *InterfaceType) ID() TypeID {
-	return t.Location.TypeID(t.QualifiedIdentifier())
+	t.initializeIdentifiers()
+	return t.cachedIdentifiers.TypeID
+}
+
+func (t *InterfaceType) initializeIdentifiers() {
+	t.cachedIdentifiersOnce.Do(func() {
+		t.cachedIdentifiers.QualifiedIdentifier = qualifiedIdentifier(t.Identifier, t.ContainerType)
+		t.cachedIdentifiers.TypeID = t.Location.TypeID(t.cachedIdentifiers.QualifiedIdentifier)
+	})
 }
 
 func (t *InterfaceType) Equal(other Type) bool {
@@ -4645,11 +4719,11 @@ func (t *InterfaceType) Equal(other Type) bool {
 
 func (t *InterfaceType) GetMembers() map[string]MemberResolver {
 	t.initializeMemberResolvers()
-	return t.memberResolvers
+	return t.cachedMemberResolvers
 }
 
 func (t *InterfaceType) initializeMemberResolvers() {
-	t.memberResolversOnce.Do(func() {
+	t.cachedMemberResolversOnce.Do(func() {
 		members := make(map[string]MemberResolver, t.Members.Len())
 		t.Members.Foreach(func(name string, loopMember *Member) {
 			// NOTE: don't capture loop variable
@@ -4662,7 +4736,7 @@ func (t *InterfaceType) initializeMemberResolvers() {
 			}
 		})
 
-		t.memberResolvers = withBuiltinMembers(t, members)
+		t.cachedMemberResolvers = withBuiltinMembers(t, members)
 	})
 }
 
@@ -4757,10 +4831,10 @@ func (t *InterfaceType) GetNestedTypes() *StringTypeOrderedMap {
 // and all values have to be a subtype of the value type.
 
 type DictionaryType struct {
-	KeyType             Type
-	ValueType           Type
-	memberResolvers     map[string]MemberResolver
-	memberResolversOnce sync.Once
+	KeyType                   Type
+	ValueType                 Type
+	cachedMemberResolvers     map[string]MemberResolver
+	cachedMemberResolversOnce sync.Once
 }
 
 func (*DictionaryType) IsType() {}
@@ -4878,13 +4952,13 @@ Returns the value as an optional if the dictionary contained the key, or nil if 
 
 func (t *DictionaryType) GetMembers() map[string]MemberResolver {
 	t.initializeMemberResolvers()
-	return t.memberResolvers
+	return t.cachedMemberResolvers
 }
 
 func (t *DictionaryType) initializeMemberResolvers() {
-	t.memberResolversOnce.Do(func() {
+	t.cachedMemberResolversOnce.Do(func() {
 
-		t.memberResolvers = withBuiltinMembers(t, map[string]MemberResolver{
+		t.cachedMemberResolvers = withBuiltinMembers(t, map[string]MemberResolver{
 			"length": {
 				Kind: common.DeclarationKindField,
 				Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
@@ -5846,7 +5920,7 @@ func IsSubType(subType Type, superType Type) bool {
 			}
 		}
 
-	case *NominalType:
+	case *SimpleType:
 		if typedSuperType.IsSuperTypeOf == nil {
 			return false
 		}
@@ -6030,20 +6104,20 @@ type RestrictedType struct {
 	Type         Type
 	Restrictions []*InterfaceType
 	// an internal set of field `Restrictions`
-	restrictionSet     *InterfaceSet
-	restrictionSetOnce sync.Once
+	cachedRestrictionSet     *InterfaceSet
+	cachedRestrictionSetOnce sync.Once
 }
 
 func (t *RestrictedType) RestrictionSet() *InterfaceSet {
 	t.initializeRestrictionSet()
-	return t.restrictionSet
+	return t.cachedRestrictionSet
 }
 
 func (t *RestrictedType) initializeRestrictionSet() {
-	t.restrictionSetOnce.Do(func() {
-		t.restrictionSet = NewInterfaceSet()
+	t.cachedRestrictionSetOnce.Do(func() {
+		t.cachedRestrictionSet = NewInterfaceSet()
 		for _, restriction := range t.Restrictions {
-			t.restrictionSet.Add(restriction)
+			t.cachedRestrictionSet.Add(restriction)
 		}
 	})
 }
@@ -6470,119 +6544,21 @@ func (t *CapabilityType) GetMembers() map[string]MemberResolver {
 	})
 }
 
-// BuiltinCompositeType represents composite types that are defined natively.
-type BuiltinCompositeType struct {
-	Identifier           string
-	Members              *StringMemberOrderedMap
-	ContainerType        Type
-	EnumRawType          Type
-	IsInvalid            bool
-	IsResource           bool
-	Storable             bool
-	Equatable            bool
-	ExternallyReturnable bool
+var NativeCompositeTypes = map[string]*CompositeType{}
 
-	memberResolvers     map[string]MemberResolver
-	memberResolversOnce sync.Once
-}
-
-func (*BuiltinCompositeType) IsType() {}
-
-func (t *BuiltinCompositeType) String() string {
-	return t.Identifier
-}
-
-func (t *BuiltinCompositeType) QualifiedString() string {
-	return qualifiedIdentifier(t.Identifier, t.ContainerType)
-}
-
-func (t *BuiltinCompositeType) ID() TypeID {
-	return TypeID(t.QualifiedString())
-}
-
-func (t *BuiltinCompositeType) Equal(other Type) bool {
-	otherStructType, ok := other.(*BuiltinCompositeType)
-	if !ok {
-		return false
+func init() {
+	types := []*CompositeType{
+		AccountKeyType,
+		PublicKeyType,
+		HashAlgorithmType,
+		SignatureAlgorithmType,
+		AuthAccountKeysType,
+		PublicAccountKeysType,
 	}
 
-	return otherStructType.ID() == t.ID()
-}
-
-func (t *BuiltinCompositeType) IsResourceType() bool {
-	return t.IsResource
-}
-
-func (t *BuiltinCompositeType) IsInvalidType() bool {
-	return t.IsInvalid
-}
-
-func (t *BuiltinCompositeType) IsStorable(_ map[*Member]bool) bool {
-	return t.Storable
-}
-
-func (t *BuiltinCompositeType) IsExternallyReturnable(_ map[*Member]bool) bool {
-	return t.ExternallyReturnable
-}
-
-func (t *BuiltinCompositeType) IsEquatable() bool {
-	return t.Equatable
-}
-func (*BuiltinCompositeType) TypeAnnotationState() TypeAnnotationState {
-	return TypeAnnotationStateValid
-}
-
-func (t *BuiltinCompositeType) RewriteWithRestrictedTypes() (result Type, rewritten bool) {
-	return t, false
-}
-
-func (t *BuiltinCompositeType) GetMembers() map[string]MemberResolver {
-	t.initializeMemberResolvers()
-	return t.memberResolvers
-}
-
-func (t *BuiltinCompositeType) initializeMemberResolvers() {
-	t.memberResolversOnce.Do(func() {
-		members := make(map[string]MemberResolver, t.Members.Len())
-
-		t.Members.Foreach(func(name string, loopMember *Member) {
-			// NOTE: don't capture loop variable
-			member := loopMember
-			members[name] = MemberResolver{
-				Kind: member.DeclarationKind,
-				Resolve: func(_ string, _ ast.Range, _ func(error)) *Member {
-					return member
-				},
-			}
-		})
-
-		t.memberResolvers = withBuiltinMembers(t, members)
-	})
-}
-
-func (*BuiltinCompositeType) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
-	return false
-}
-
-func (t *BuiltinCompositeType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
-	return t
-}
-
-func (t *BuiltinCompositeType) GetContainerType() Type {
-	return t.ContainerType
-}
-
-func (t *BuiltinCompositeType) NestedTypes() *StringTypeOrderedMap {
-	return nil
-}
-
-func GetMembersAsMap(members []*Member) *StringMemberOrderedMap {
-	membersMap := NewStringMemberOrderedMap()
-	for _, member := range members {
-		membersMap.Set(member.Identifier.Identifier, member)
+	for _, semaType := range types {
+		NativeCompositeTypes[semaType.QualifiedIdentifier()] = semaType
 	}
-
-	return membersMap
 }
 
 const AccountKeyTypeName = "AccountKey"
@@ -6593,15 +6569,11 @@ const AccountKeyWeightField = "weight"
 const AccountKeyIsRevokedField = "isRevoked"
 
 // AccountKeyType represents the key associated with an account.
-var AccountKeyType = func() *BuiltinCompositeType {
+var AccountKeyType = func() *CompositeType {
 
-	accountKeyType := &BuiltinCompositeType{
-		Identifier:           AccountKeyTypeName,
-		IsInvalid:            false,
-		IsResource:           false,
-		Storable:             false,
-		Equatable:            true,
-		ExternallyReturnable: true,
+	accountKeyType := &CompositeType{
+		Identifier: AccountKeyTypeName,
+		Kind:       common.CompositeKindStructure,
 	}
 
 	const accountKeyIndexFieldDocString = `The index of the account key`
@@ -6644,6 +6616,7 @@ var AccountKeyType = func() *BuiltinCompositeType {
 	}
 
 	accountKeyType.Members = GetMembersAsMap(members)
+	accountKeyType.Fields = getFields(members)
 	return accountKeyType
 }()
 
@@ -6652,15 +6625,11 @@ const PublicKeyPublicKeyField = "publicKey"
 const PublicKeySignAlgoField = "signAlgo"
 
 // PublicKeyType represents the public key associated with an account key.
-var PublicKeyType = func() *BuiltinCompositeType {
+var PublicKeyType = func() *CompositeType {
 
-	accountKeyType := &BuiltinCompositeType{
-		Identifier:           PublicKeyTypeName,
-		IsInvalid:            false,
-		IsResource:           false,
-		Storable:             true,
-		Equatable:            true,
-		ExternallyReturnable: true,
+	accountKeyType := &CompositeType{
+		Identifier: PublicKeyTypeName,
+		Kind:       common.CompositeKindStructure,
 	}
 
 	const publicKeyKeyFieldDocString = `The public key`
@@ -6682,11 +6651,30 @@ var PublicKeyType = func() *BuiltinCompositeType {
 	}
 
 	accountKeyType.Members = GetMembersAsMap(members)
+	accountKeyType.Fields = getFields(members)
 	return accountKeyType
 }()
 
-type BuiltinEnumCase interface {
+type NativeEnumCase interface {
 	RawValue() int
 	Name() string
 	DocString() string
+}
+
+func GetMembersAsMap(members []*Member) *StringMemberOrderedMap {
+	membersMap := NewStringMemberOrderedMap()
+	for _, member := range members {
+		membersMap.Set(member.Identifier.Identifier, member)
+	}
+
+	return membersMap
+}
+
+func getFields(members []*Member) []string {
+	fields := make([]string, len(members))
+	for index, member := range members {
+		fields[index] = member.Identifier.Identifier
+	}
+
+	return fields
 }

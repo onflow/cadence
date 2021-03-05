@@ -516,6 +516,10 @@ type StructType struct {
 func (*StructType) isType() {}
 
 func (t *StructType) ID() string {
+	if t.Location == nil {
+		return t.QualifiedIdentifier
+	}
+
 	return string(t.Location.TypeID(t.QualifiedIdentifier))
 }
 
@@ -935,15 +939,4 @@ func (PublicAccountType) isType() {}
 
 func (PublicAccountType) ID() string {
 	return "PublicAccount"
-}
-
-type BuiltinStructType struct {
-	QualifiedIdentifier string
-	Fields              []Field
-}
-
-func (*BuiltinStructType) isType() {}
-
-func (t *BuiltinStructType) ID() string {
-	return t.QualifiedIdentifier
 }

@@ -1239,37 +1239,3 @@ func (v Capability) String() string {
 		v.Path.String(),
 	)
 }
-
-type BuiltinStruct struct {
-	StructType *BuiltinStructType
-	Fields     []Value
-}
-
-func NewBuiltinStruct(fields []Value) BuiltinStruct {
-	return BuiltinStruct{Fields: fields}
-}
-
-func (v BuiltinStruct) WithType(structType *BuiltinStructType) BuiltinStruct {
-	v.StructType = structType
-	return v
-}
-
-func (BuiltinStruct) isValue() {}
-
-func (v BuiltinStruct) Type() Type {
-	return v.StructType
-}
-
-func (v BuiltinStruct) ToGoValue() interface{} {
-	values := make([]interface{}, len(v.Fields))
-
-	for i, field := range v.Fields {
-		values[i] = field.ToGoValue()
-	}
-
-	return values
-}
-
-func (v BuiltinStruct) String() string {
-	return formatComposite(v.Type().ID(), v.StructType.Fields, v.Fields)
-}

@@ -26,11 +26,13 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
 	"github.com/onflow/cadence/runtime/tests/checker"
 	"github.com/onflow/cadence/runtime/tests/utils"
+	"github.com/onflow/cadence/runtime/trampoline"
 )
 
 func testAccount(t *testing.T, auth bool, code string) (*interpreter.Interpreter, map[string]interpreter.OptionalValue) {
@@ -38,6 +40,10 @@ func testAccount(t *testing.T, auth bool, code string) (*interpreter.Interpreter
 	address := interpreter.NewAddressValueFromBytes([]byte{42})
 
 	var valueDeclarations stdlib.StandardLibraryValues
+
+	panicFunction := interpreter.NewHostFunctionValue(func(invocation interpreter.Invocation) trampoline.Trampoline {
+		panic(errors.NewUnreachableError())
+	})
 
 	// `authAccount`
 
@@ -50,8 +56,10 @@ func testAccount(t *testing.T, auth bool, code string) (*interpreter.Interpreter
 				return 0
 			},
 			returnZero,
+			panicFunction,
+			panicFunction,
 			interpreter.AuthAccountContractsValue{},
-			&interpreter.BuiltinCompositeValue{},
+			&interpreter.CompositeValue{},
 		),
 		Kind: common.DeclarationKindConstant,
 	}

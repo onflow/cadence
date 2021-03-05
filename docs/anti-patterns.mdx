@@ -1,0 +1,117 @@
+---
+title: Cadence Anti-Patterns
+---
+
+This is an opinionated list of issues that can be improved if they are found in Cadence code intended for production.
+
+## Security and Robustness
+
+### Events From Resources Might Not Be Unique
+
+A public function on a contract that creates a resource can be called by any account.
+
+If that resource has functions that emit events, any account can create an instance of that resource and emit those events.
+
+If those events are meant to indicate actions taken using a single instance of that resource (for example an admin object, switchboard, or registry), or instances created through a particular workflow, then this will make event log search and management harder because events from other instances may be mixed in with the ones that you wish to examine.
+
+To fix this, if there should be only a single instance of the resource it should be created and `link()`ed to a public path in an admin account's storage during the contracts's initializer.
+
+### Named Value Fields Are Preferable
+
+Where contracts, resources, and scripts all have to repeatedly refer to the same constant values, entering these manually is a potential source of error. These are known as [magic values](<https://en.wikipedia.org/wiki/Magic_number_(programming)>).
+
+Rather than typing the values manually in functions, transactions and scripts, store the values once in fields of the contract responsible and then access them via those fields. This is the [Named Value Field pattern](../design-patterns/#named-value-field)
+
+### Public Functions and Fields Should Be Avoided
+
+Be sure to keep track of access modifiers when structuring your code, and make public only what should be public.
+
+### Array or Dictionary Fields Should Be Private
+
+#### Problem
+
+This is a specific case of "Public Functions And Fields Should Be Avoided", above.
+
+Public array or dictionary fields are not directly over-writable, but their members can be accessed and overwritten if the field is public. This could potentially result in security vulnerabilities for the contract if these fields are mistakenly made public.
+
+Ex:
+
+```cadence
+pub contract Array {
+    // array is inteded to be initialized to something constant
+    pub let shouldBeConstantArray: [Int]
+}
+```
+
+Anyone could use a transaction like this to modify it:
+
+```cadence
+import Array from 0x01
+
+transaction {
+    execute {
+		    Array.shouldbeConstantArray[0] = 1000
+    }
+}
+```
+
+#### Solution
+
+Make sure that any array or dictionary fields in contracts, structs, or resources are `access(contract)` or `access(self)` unless they need to be intentionally made public.
+
+```cadence
+pub contract Array {
+    // array is inteded to be initialized to something constant
+    access(self) let shouldBeConstantArray: [Int]
+}
+```
+
+### Public Admin Resource Creation Functions Are Unsafe
+
+This is a specific case of "Public Functions And Fields Should Be Avoided", above.
+
+A public function on a contract that creates a resource can be called by any account.
+
+If that resource provides access to admin functions then the function should not be public.
+
+To fix this, a single instance of that resource created using it then `link()`ed to a private path in an admin account's storage during the contract's initializer. If the code to create the resource is complex enough that it needs its own function, the function that creates the resource should use `access(contract)` as its access modifier.
+
+### Public Capability Fields Are A Security Hole
+
+This is a specific case of "Public Functions And Fields Should Be Avoided", above.
+
+The values of public fields can be copied. Capabilities are value types. Anyone who receives a Capability can use it. So if they can copy it from a public field they can call the functions that it exposes.
+
+This almost certainly is not what you want if a capability has been stored in this way. For public access to a capability, place it in an accounts public area.
+
+### Users Might Rebind Restricted Public Capability Paths
+
+A public capability on a user account that is a variant of a standard resource (such as a Vault) that has additional logic implemented to restrict or alter its behaviour can be replaced by that user at the same path with another resource that does not have those alterations.
+
+To fix this, make sure to carefully specify the type of the capability that you are expecting in any code that accesses it.
+
+## Readability
+
+### Descriptive Names Are Preferable
+
+`account` / `accounts` is better than `array` / `element`.
+
+`providerAccount` / `tokenRecipientAccount` is better than `acct1` / `acct2`.
+
+Unless of course you are dealing with entities that really are best named that way, for example in utility code.
+
+### Omitting "Any" Types In Constraints Is Preferable
+
+Prefer `&{Receiver}` to `&AnyResource{Receiver}`.
+
+It's clearer and the `Any...` is implicit.
+
+Note that this doesn't mean that the restricted type should _always_ be emitted, only if it's specifically `AnyStruct` or `AnyResource` .
+
+A good example of when the code should specify the type being restricted is checking the FLOW balance: the code must borrow `&FlowToken.Vault{FungibleToken.Balance}`, in order to ensure that it gets a FLOW token balance, and not just `&{FungibleToken.Balance}`, any balance – the user could store another object that conforms to the balance interface and return whatever value as the amount.
+
+### Plural Names For Arrays And Maps Are Preferable
+
+e.g. `accounts` rather than `account` for an array of accounts.
+
+This signals that the field or variable is not scalar. It also makes it easier to the singular form for a variable name during iteration.

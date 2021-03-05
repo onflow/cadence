@@ -25,7 +25,7 @@ import (
 
 // DeployedContractType represents the type `DeployedContract`
 //
-var DeployedContractType = &NominalType{
+var DeployedContractType = &SimpleType{
 	Name:                 "DeployedContract",
 	QualifiedName:        "DeployedContract",
 	TypeID:               "DeployedContract",
@@ -34,7 +34,7 @@ var DeployedContractType = &NominalType{
 	Storable:             false,
 	Equatable:            false,
 	ExternallyReturnable: false,
-	Members: func(t *NominalType) map[string]MemberResolver {
+	Members: func(t *SimpleType) map[string]MemberResolver {
 		return map[string]MemberResolver{
 			DeployedContractTypeAddressFieldName: {
 				Kind: common.DeclarationKindField,

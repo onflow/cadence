@@ -27,7 +27,7 @@ import (
 // Access to an AuthAccount means having full access to its storage, public keys, and code.
 // Only signed transactions can get the AuthAccount for an account.
 //
-var AuthAccountType = &NominalType{
+var AuthAccountType = &SimpleType{
 	Name:                 "AuthAccount",
 	QualifiedName:        "AuthAccount",
 	TypeID:               "AuthAccount",
@@ -36,7 +36,7 @@ var AuthAccountType = &NominalType{
 	Storable:             false,
 	Equatable:            false,
 	ExternallyReturnable: false,
-	Members: func(t *NominalType) map[string]MemberResolver {
+	Members: func(t *SimpleType) map[string]MemberResolver {
 		return map[string]MemberResolver{
 			"address": {
 				Kind: common.DeclarationKindField,
@@ -68,6 +68,28 @@ var AuthAccountType = &NominalType{
 						identifier,
 						&UInt64Type{},
 						accountTypeStorageCapacityFieldDocString,
+					)
+				},
+			},
+			"addPublicKey": {
+				Kind: common.DeclarationKindFunction,
+				Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
+					return NewPublicFunctionMember(
+						t,
+						identifier,
+						authAccountTypeAddPublicKeyFunctionType,
+						authAccountTypeAddPublicKeyFunctionDocString,
+					)
+				},
+			},
+			"removePublicKey": {
+				Kind: common.DeclarationKindFunction,
+				Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
+					return NewPublicFunctionMember(
+						t,
+						identifier,
+						authAccountTypeRemovePublicKeyFunctionType,
+						authAccountTypeRemovePublicKeyFunctionDocString,
 					)
 				},
 			},
@@ -190,6 +212,46 @@ var AuthAccountType = &NominalType{
 		return nestedTypes
 	}(),
 }
+
+var authAccountTypeAddPublicKeyFunctionType = &FunctionType{
+	Parameters: []*Parameter{
+		{
+			Label:      ArgumentLabelNotRequired,
+			Identifier: "key",
+			TypeAnnotation: NewTypeAnnotation(
+				&VariableSizedType{
+					Type: &UInt8Type{},
+				},
+			),
+		},
+	},
+	ReturnTypeAnnotation: NewTypeAnnotation(
+		VoidType,
+	),
+}
+
+const authAccountTypeAddPublicKeyFunctionDocString = `
+Adds the given byte representation of a public key to the account's keys
+`
+
+var authAccountTypeRemovePublicKeyFunctionType = &FunctionType{
+	Parameters: []*Parameter{
+		{
+			Label:      ArgumentLabelNotRequired,
+			Identifier: "index",
+			TypeAnnotation: NewTypeAnnotation(
+				&IntType{},
+			),
+		},
+	},
+	ReturnTypeAnnotation: NewTypeAnnotation(
+		VoidType,
+	),
+}
+
+const authAccountTypeRemovePublicKeyFunctionDocString = `
+Removes the public key at the given index from the account's keys
+`
 
 var authAccountTypeSaveFunctionType = func() *FunctionType {
 
@@ -505,15 +567,11 @@ var accountTypeGetLinkTargetFunctionType = &FunctionType{
 }
 
 // AuthAccountKeysType represents the keys associated with an auth account.
-var AuthAccountKeysType = func() *BuiltinCompositeType {
+var AuthAccountKeysType = func() *CompositeType {
 
-	accountKeys := &BuiltinCompositeType{
-		Identifier:           AccountKeysTypeName,
-		IsInvalid:            false,
-		IsResource:           false,
-		Storable:             false,
-		Equatable:            true,
-		ExternallyReturnable: false,
+	accountKeys := &CompositeType{
+		Identifier: AccountKeysTypeName,
+		Kind:       common.CompositeKindStructure,
 	}
 
 	var members = []*Member{
@@ -538,6 +596,7 @@ var AuthAccountKeysType = func() *BuiltinCompositeType {
 	}
 
 	accountKeys.Members = GetMembersAsMap(members)
+	accountKeys.Fields = getFields(members)
 	return accountKeys
 }()
 

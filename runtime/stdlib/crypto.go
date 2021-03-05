@@ -240,8 +240,8 @@ func NewCryptoContract(
 }
 
 func getHashAlgorithmFromValue(value interpreter.Value) HashAlgorithm {
-	hashAlgoValue, ok := value.(*interpreter.BuiltinCompositeValue)
-	if !ok || hashAlgoValue.StaticType() != interpreter.PrimitiveStaticTypeHashAlgorithm {
+	hashAlgoValue, ok := value.(*interpreter.CompositeValue)
+	if !ok || hashAlgoValue.QualifiedIdentifier != sema.HashAlgorithmTypeName {
 		panic(fmt.Sprintf("hash algorithm value must be of type %s", sema.HashAlgorithmType))
 	}
 
@@ -255,13 +255,12 @@ func getHashAlgorithmFromValue(value interpreter.Value) HashAlgorithm {
 		panic("hash algorithm raw value needs to be subtype of integer")
 	}
 
-	hashAlgo := HashAlgorithm(hashAlgoRawValue.ToInt())
-	return hashAlgo
+	return HashAlgorithm(hashAlgoRawValue.ToInt())
 }
 
 func getSignatureAlgorithmFromValue(value interpreter.Value) SignatureAlgorithm {
-	signAlgoValue, ok := value.(*interpreter.BuiltinCompositeValue)
-	if !ok || signAlgoValue.StaticType() != interpreter.PrimitiveStaticTypeSignatureAlgorithm {
+	signAlgoValue, ok := value.(*interpreter.CompositeValue)
+	if !ok || signAlgoValue.QualifiedIdentifier != sema.SignatureAlgorithmTypeName {
 		panic(fmt.Sprintf("signature algorithm value must be of type %s", sema.SignatureAlgorithmType))
 	}
 
@@ -275,6 +274,5 @@ func getSignatureAlgorithmFromValue(value interpreter.Value) SignatureAlgorithm 
 		panic("signature algorithm raw value needs to be subtype of integer")
 	}
 
-	signAlgo := SignatureAlgorithm(hashAlgoRawValue.ToInt())
-	return signAlgo
+	return SignatureAlgorithm(hashAlgoRawValue.ToInt())
 }

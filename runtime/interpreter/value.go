@@ -5696,10 +5696,12 @@ type DictionaryValue struct {
 	// stay stored in the deferred owner's account until the end of the transaction.
 	DeferredOwner *common.Address
 	// DeferredKeys are the keys which are deferred and have not been loaded from storage yet.
-	DeferredKeys *orderedmap.StringStringOrderedMap
+	DeferredKeys *orderedmap.StringStructOrderedMap
+	// DeferredStorageKeyBase is the storage key prefix for all deferred keys
+	DeferredStorageKeyBase string
 	// prevDeferredKeys are the keys which are deferred and have been loaded from storage,
 	// i.e. they are keys that were previously in DeferredKeys.
-	prevDeferredKeys *orderedmap.StringStringOrderedMap
+	prevDeferredKeys *orderedmap.StringStructOrderedMap
 }
 
 func NewDictionaryValueUnownedNonCopying(keysAndValues ...Value) *DictionaryValue {
@@ -5712,11 +5714,12 @@ func NewDictionaryValueUnownedNonCopying(keysAndValues ...Value) *DictionaryValu
 		Keys:    NewArrayValueUnownedNonCopying(),
 		Entries: NewStringValueOrderedMap(),
 		// NOTE: new value has no owner
-		Owner:            nil,
-		modified:         true,
-		DeferredOwner:    nil,
-		DeferredKeys:     nil,
-		prevDeferredKeys: nil,
+		Owner:                  nil,
+		modified:               true,
+		DeferredOwner:          nil,
+		DeferredKeys:           nil,
+		DeferredStorageKeyBase: "",
+		prevDeferredKeys:       nil,
 	}
 
 	for i := 0; i < keysAndValuesCount; i += 2 {
@@ -5776,11 +5779,12 @@ func (v *DictionaryValue) Copy() Value {
 	})
 
 	return &DictionaryValue{
-		Keys:             newKeys,
-		Entries:          newEntries,
-		DeferredOwner:    v.DeferredOwner,
-		DeferredKeys:     v.DeferredKeys,
-		prevDeferredKeys: v.prevDeferredKeys,
+		Keys:                   newKeys,
+		Entries:                newEntries,
+		DeferredOwner:          v.DeferredOwner,
+		DeferredKeys:           v.DeferredKeys,
+		DeferredStorageKeyBase: v.DeferredStorageKeyBase,
+		prevDeferredKeys:       v.prevDeferredKeys,
 		// NOTE: new value has no owner
 		Owner:    nil,
 		modified: true,
@@ -5850,8 +5854,8 @@ func (v *DictionaryValue) Destroy(inter *Interpreter, locationRange LocationRang
 		maybeDestroy(value)
 	}
 
-	writeDeferredKeys(inter, v.DeferredOwner, v.DeferredKeys)
-	writeDeferredKeys(inter, v.DeferredOwner, v.prevDeferredKeys)
+	writeDeferredKeys(inter, v.DeferredOwner, v.DeferredStorageKeyBase, v.DeferredKeys)
+	writeDeferredKeys(inter, v.DeferredOwner, v.DeferredStorageKeyBase, v.prevDeferredKeys)
 
 	return result
 }
@@ -5867,12 +5871,13 @@ func (v *DictionaryValue) Get(inter *Interpreter, _ LocationRange, keyValue Valu
 	// and keep it as an entry in memory
 
 	if v.DeferredKeys != nil {
-		storageKey, ok := v.DeferredKeys.Delete(key)
+		_, ok := v.DeferredKeys.Delete(key)
 		if ok {
+			storageKey := joinPathElements(v.DeferredStorageKeyBase, key)
 			if v.prevDeferredKeys == nil {
-				v.prevDeferredKeys = orderedmap.NewStringStringOrderedMap()
+				v.prevDeferredKeys = orderedmap.NewStringStructOrderedMap()
 			}
-			v.prevDeferredKeys.Set(key, storageKey)
+			v.prevDeferredKeys.Set(key, struct{}{})
 
 			storedValue := inter.readStored(*v.DeferredOwner, storageKey, true)
 			v.Entries.Set(key, storedValue.(*SomeValue).Value)
@@ -6025,7 +6030,8 @@ func (v *DictionaryValue) Remove(inter *Interpreter, locationRange LocationRange
 	// to make sure it is stored or destroyed later
 
 	if v.prevDeferredKeys != nil {
-		if storageKey, ok := v.prevDeferredKeys.Get(key); ok {
+		if _, ok := v.prevDeferredKeys.Get(key); ok {
+			storageKey := joinPathElements(v.DeferredStorageKeyBase, key)
 			inter.writeStored(*v.DeferredOwner, storageKey, NilValue{})
 		}
 	}
@@ -6086,13 +6092,19 @@ func (v *DictionaryValue) Insert(inter *Interpreter, locationRange LocationRange
 	}
 }
 
-func writeDeferredKeys(inter *Interpreter, owner *common.Address, keysToStorageKeys *orderedmap.StringStringOrderedMap) {
-	if keysToStorageKeys == nil {
+func writeDeferredKeys(
+	inter *Interpreter,
+	owner *common.Address,
+	storageKeyBase string,
+	keys *orderedmap.StringStructOrderedMap,
+) {
+	if keys == nil {
 		return
 	}
 
-	for pair := keysToStorageKeys.Oldest(); pair != nil; pair = pair.Next() {
-		inter.writeStored(*owner, pair.Value, NilValue{})
+	for pair := keys.Oldest(); pair != nil; pair = pair.Next() {
+		storageKey := joinPathElements(storageKeyBase, pair.Key)
+		inter.writeStored(*owner, storageKey, NilValue{})
 	}
 }
 
@@ -6674,26 +6686,32 @@ type AccountValue interface {
 
 // AuthAccountValue
 type AuthAccountValue struct {
-	Address            AddressValue
-	storageUsedGet     func(interpreter *Interpreter) UInt64Value
-	storageCapacityGet func() UInt64Value
-	contracts          AuthAccountContractsValue
-	keys               *BuiltinCompositeValue
+	Address                 AddressValue
+	storageUsedGet          func(interpreter *Interpreter) UInt64Value
+	storageCapacityGet      func() UInt64Value
+	addPublicKeyFunction    FunctionValue
+	removePublicKeyFunction FunctionValue
+	contracts               AuthAccountContractsValue
+	keys                    *CompositeValue
 }
 
 func NewAuthAccountValue(
 	address AddressValue,
 	storageUsedGet func(interpreter *Interpreter) UInt64Value,
 	storageCapacityGet func() UInt64Value,
+	addPublicKeyFunction FunctionValue,
+	removePublicKeyFunction FunctionValue,
 	contracts AuthAccountContractsValue,
-	keys *BuiltinCompositeValue,
+	keys *CompositeValue,
 ) AuthAccountValue {
 	return AuthAccountValue{
-		Address:            address,
-		storageUsedGet:     storageUsedGet,
-		storageCapacityGet: storageCapacityGet,
-		contracts:          contracts,
-		keys:               keys,
+		Address:                 address,
+		storageUsedGet:          storageUsedGet,
+		storageCapacityGet:      storageCapacityGet,
+		addPublicKeyFunction:    addPublicKeyFunction,
+		removePublicKeyFunction: removePublicKeyFunction,
+		contracts:               contracts,
+		keys:                    keys,
 	}
 }
 
@@ -6792,6 +6810,12 @@ func (v AuthAccountValue) GetMember(inter *Interpreter, _ LocationRange, name st
 	case "storageCapacity":
 		return v.storageCapacityGet()
 
+	case "addPublicKey":
+		return v.addPublicKeyFunction
+
+	case "removePublicKey":
+		return v.removePublicKeyFunction
+
 	case "load":
 		return inter.authAccountLoadFunction(v.Address)
 
@@ -6836,14 +6860,14 @@ type PublicAccountValue struct {
 	storageUsedGet     func(interpreter *Interpreter) UInt64Value
 	storageCapacityGet func() UInt64Value
 	Identifier         string
-	keys               *BuiltinCompositeValue
+	keys               *CompositeValue
 }
 
 func NewPublicAccountValue(
 	address AddressValue,
 	storageUsedGet func(interpreter *Interpreter) UInt64Value,
 	storageCapacityGet func() UInt64Value,
-	keys *BuiltinCompositeValue,
+	keys *CompositeValue,
 ) PublicAccountValue {
 	return PublicAccountValue{
 		Address:            address,
@@ -7150,85 +7174,14 @@ func (v LinkValue) String() string {
 	)
 }
 
-// BuiltinCompositeValue represents the runtime value of native composite types.
-type BuiltinCompositeValue struct {
-	Fields     *StringValueOrderedMap
-	staticType StaticType
-	structType *sema.BuiltinCompositeType
-}
-
-func NewBuiltinCompositeValue(structType *sema.BuiltinCompositeType, fields *StringValueOrderedMap) *BuiltinCompositeValue {
-	if fields == nil {
-		fields = NewStringValueOrderedMap()
-	}
-
-	return &BuiltinCompositeValue{
-		Fields:     fields,
-		structType: structType,
-		staticType: ConvertSemaToPrimitiveStaticType(structType),
-	}
-}
-
-func (*BuiltinCompositeValue) IsValue() {}
-
-func (v *BuiltinCompositeValue) Accept(interpreter *Interpreter, visitor Visitor) {
-	visitor.VisitBuiltinCompositeValue(interpreter, v)
-}
-
-func (v *BuiltinCompositeValue) DynamicType(_ *Interpreter) DynamicType {
-	return BuiltinCompositeDynamicType{v.structType}
-}
-
-func (v *BuiltinCompositeValue) StaticType() StaticType {
-	return v.staticType
-}
-
-func (v *BuiltinCompositeValue) Copy() Value {
-	return v
-}
-
-func (*BuiltinCompositeValue) GetOwner() *common.Address {
-	// value is never owned
-	return nil
-}
-
-func (*BuiltinCompositeValue) SetOwner(_ *common.Address) {
-	// NO-OP: value cannot be owned
-}
-
-func (*BuiltinCompositeValue) IsModified() bool {
-	return false
-}
-
-func (*BuiltinCompositeValue) SetModified(_ bool) {
-	// NO-OP
-}
-
-func (v *BuiltinCompositeValue) Destroy(_ *Interpreter, _ LocationRange) trampoline.Trampoline {
-	return trampoline.Done{}
-}
-
-func (v *BuiltinCompositeValue) String() string {
-	return formatComposite(string(v.structType.ID()), v.Fields)
-}
-
-func (v *BuiltinCompositeValue) GetMember(_ *Interpreter, _ LocationRange, name string) Value {
-	value, _ := v.Fields.Get(name)
-	return value
-}
-
-func (*BuiltinCompositeValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
-	panic(errors.NewUnreachableError())
-}
-
 // NewAccountKeyValue constructs an AccountKey value.
 func NewAccountKeyValue(
 	keyIndex IntValue,
-	publicKey *BuiltinCompositeValue,
-	hashAlgo *BuiltinCompositeValue,
+	publicKey *CompositeValue,
+	hashAlgo *CompositeValue,
 	weight UFix64Value,
 	isRevoked BoolValue,
-) *BuiltinCompositeValue {
+) *CompositeValue {
 	fields := NewStringValueOrderedMap()
 	fields.Set(sema.AccountKeyKeyIndexField, keyIndex)
 	fields.Set(sema.AccountKeyPublicKeyField, publicKey)
@@ -7236,44 +7189,60 @@ func NewAccountKeyValue(
 	fields.Set(sema.AccountKeyWeightField, weight)
 	fields.Set(sema.AccountKeyIsRevokedField, isRevoked)
 
-	return NewBuiltinCompositeValue(sema.AccountKeyType, fields)
+	return &CompositeValue{
+		QualifiedIdentifier: sema.AccountKeyType.QualifiedIdentifier(),
+		Kind:                sema.AccountKeyType.Kind,
+		Fields:              fields,
+	}
 }
 
 // NewPublicKeyValue constructs a PublicKey value.
-func NewPublicKeyValue(publicKey *ArrayValue, signAlgo *BuiltinCompositeValue) *BuiltinCompositeValue {
+func NewPublicKeyValue(publicKey *ArrayValue, signAlgo *CompositeValue) *CompositeValue {
 
 	fields := NewStringValueOrderedMap()
 	fields.Set(sema.PublicKeyPublicKeyField, publicKey)
 	fields.Set(sema.PublicKeySignAlgoField, signAlgo)
 
-	return NewBuiltinCompositeValue(sema.PublicKeyType, fields)
+	return &CompositeValue{
+		QualifiedIdentifier: sema.PublicKeyType.QualifiedIdentifier(),
+		Kind:                sema.PublicKeyType.Kind,
+		Fields:              fields,
+	}
 }
 
 // NewAuthAccountKeysValue constructs a AuthAccount.Keys value.
-func NewAuthAccountKeysValue(addFunction FunctionValue, getFunction FunctionValue, revokeFunction FunctionValue) *BuiltinCompositeValue {
+func NewAuthAccountKeysValue(addFunction FunctionValue, getFunction FunctionValue, revokeFunction FunctionValue) *CompositeValue {
 	fields := NewStringValueOrderedMap()
 	fields.Set(sema.AccountKeysAddFunctionName, addFunction)
 	fields.Set(sema.AccountKeysGetFunctionName, getFunction)
 	fields.Set(sema.AccountKeysRevokeFunctionName, revokeFunction)
 
-	return NewBuiltinCompositeValue(sema.AuthAccountKeysType, fields)
+	return &CompositeValue{
+		QualifiedIdentifier: sema.AuthAccountKeysType.QualifiedIdentifier(),
+		Kind:                sema.AuthAccountKeysType.Kind,
+		Fields:              fields,
+	}
 }
 
 // NewPublicAccountKeysValue constructs a PublicAccount.Keys value.
-func NewPublicAccountKeysValue(getFunction FunctionValue) *BuiltinCompositeValue {
+func NewPublicAccountKeysValue(getFunction FunctionValue) *CompositeValue {
 	fields := NewStringValueOrderedMap()
 	fields.Set(sema.AccountKeysGetFunctionName, getFunction)
 
-	return NewBuiltinCompositeValue(sema.PublicAccountKeysType, fields)
+	return &CompositeValue{
+		QualifiedIdentifier: sema.PublicAccountKeysType.QualifiedIdentifier(),
+		Kind:                sema.PublicAccountKeysType.Kind,
+		Fields:              fields,
+	}
 }
 
-// NewBuiltinEnumCaseValue constructs an enum-case value for a native enum.
-func NewBuiltinEnumCaseValue(enumType *sema.BuiltinCompositeType, rawValue int) *BuiltinCompositeValue {
+func NewNativeEnumCaseValue(enumType *sema.CompositeType, rawValue int) *CompositeValue {
 	fields := NewStringValueOrderedMap()
 	fields.Set(sema.EnumRawValueFieldName, NewIntValueFromInt64(int64(rawValue)))
 
-	return NewBuiltinCompositeValue(
-		enumType,
-		fields,
-	)
+	return &CompositeValue{
+		QualifiedIdentifier: enumType.QualifiedIdentifier(),
+		Kind:                enumType.Kind,
+		Fields:              fields,
+	}
 }
