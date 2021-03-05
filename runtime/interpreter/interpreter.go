@@ -239,6 +239,7 @@ type Interpreter struct {
 	importLocationHandler          ImportLocationHandlerFunc
 	uuidHandler                    UUIDHandlerFunc
 	interpreted                    bool
+	statement                      *Statement
 }
 
 type Option func(*Interpreter) error
@@ -611,8 +612,6 @@ func (interpreter *Interpreter) runUntilNextStatement(t Trampoline) (interface{}
 // When there is a statement, it calls the onStatement callback, and then continues the execution.
 func (interpreter *Interpreter) runAllStatements(t Trampoline) interface{} {
 
-	var statement *Statement
-
 	// Wrap errors if needed
 
 	defer recoverErrors(func(internalErr error) {
@@ -628,22 +627,25 @@ func (interpreter *Interpreter) runAllStatements(t Trampoline) interface{} {
 		if !ok {
 			internalErr = PositionedError{
 				Err:   internalErr,
-				Range: ast.NewRangeFromPositioned(statement.Statement),
+				Range: ast.NewRangeFromPositioned(interpreter.statement.Statement),
 			}
 		}
 
 		panic(Error{
 			Err:      internalErr,
-			Location: statement.Interpreter.Location,
+			Location: interpreter.statement.Interpreter.Location,
 		})
 	})
 
+	var statement *Statement
 	for {
 		var result interface{}
 		result, statement = interpreter.runUntilNextStatement(t)
 		if statement == nil {
 			return result
 		}
+
+		interpreter.statement = statement
 
 		if interpreter.onStatement != nil {
 			interpreter.onStatement(statement)
