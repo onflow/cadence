@@ -1989,35 +1989,34 @@ func (interpreter *Interpreter) VisitDictionaryExpression(expression *ast.Dictio
 }
 
 func (interpreter *Interpreter) VisitMemberExpression(expression *ast.MemberExpression) ast.Repr {
-	return expression.Expression.Accept(interpreter).(Trampoline).
-		Map(func(result interface{}) interface{} {
-			if expression.Optional {
-				switch typedResult := result.(type) {
-				case NilValue:
-					return typedResult
+	result := interpreter.runAllStatements(expression.Expression.Accept(interpreter).(Trampoline)).(Value)
+	if expression.Optional {
+		switch typedResult := result.(type) {
+		case NilValue:
+			return Done{Result: typedResult}
 
-				case *SomeValue:
-					result = typedResult.Value
+		case *SomeValue:
+			result = typedResult.Value
 
-				default:
-					panic(errors.NewUnreachableError())
-				}
-			}
+		default:
+			panic(errors.NewUnreachableError())
+		}
+	}
 
-			value := result.(Value)
-			locationRange := interpreter.locationRange(expression)
-			resultValue := interpreter.getMember(value, locationRange, expression.Identifier.Identifier)
+	value := result.(Value)
+	locationRange := interpreter.locationRange(expression)
+	resultValue := interpreter.getMember(value, locationRange, expression.Identifier.Identifier)
 
-			// If the member access is optional chaining, only wrap the result value
-			// in an optional, if it is not already an optional value
+	// If the member access is optional chaining, only wrap the result value
+	// in an optional, if it is not already an optional value
 
-			if expression.Optional {
-				if _, ok := resultValue.(OptionalValue); !ok {
-					return NewSomeValueOwningNonCopying(resultValue)
-				}
-			}
-			return resultValue
-		})
+	if expression.Optional {
+		if _, ok := resultValue.(OptionalValue); !ok {
+			resultValue = NewSomeValueOwningNonCopying(resultValue)
+		}
+	}
+
+	return Done{Result: resultValue}
 }
 
 func (interpreter *Interpreter) VisitIndexExpression(expression *ast.IndexExpression) ast.Repr {
