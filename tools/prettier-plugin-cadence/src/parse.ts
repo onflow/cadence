@@ -11,5 +11,5 @@ export function parse(
   if (result.Error) {
     return null
   }
-  return result.Program
+  return result.program
 }
