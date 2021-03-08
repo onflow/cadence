@@ -6897,7 +6897,7 @@ func TestInterpretContractAccountFieldUse(t *testing.T) {
 								returnZero,
 								panicFunction,
 								panicFunction,
-								interpreter.AuthAccountContractsValue{},
+								&interpreter.CompositeValue{},
 								&interpreter.CompositeValue{},
 							),
 						)
@@ -7718,7 +7718,7 @@ func TestInterpretResourceOwnerFieldUse(t *testing.T) {
 			returnZero,
 			panicFunction,
 			panicFunction,
-			interpreter.AuthAccountContractsValue{},
+			&interpreter.CompositeValue{},
 			&interpreter.CompositeValue{},
 		),
 		Kind: common.DeclarationKindConstant,
