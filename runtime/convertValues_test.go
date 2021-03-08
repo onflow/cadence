@@ -804,6 +804,27 @@ func TestExportCapabilityValue(t *testing.T) {
 
 		assert.Equal(t, expected, actual)
 	})
+
+	t.Run("no borrow type", func(t *testing.T) {
+
+		capability := interpreter.CapabilityValue{
+			Address: interpreter.AddressValue{0x1},
+			Path: interpreter.PathValue{
+				Domain:     common.PathDomainStorage,
+				Identifier: "foo",
+			},
+		}
+		actual := exportValueWithInterpreter(capability, nil, exportResults{})
+		expected := cadence.Capability{
+			Path: cadence.Path{
+				Domain:     "storage",
+				Identifier: "foo",
+			},
+			Address: cadence.Address{0x1},
+		}
+
+		assert.Equal(t, expected, actual)
+	})
 }
 
 func TestExportLinkValue(t *testing.T) {
