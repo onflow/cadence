@@ -5613,7 +5613,7 @@ func (v *CompositeValue) OwnerValue() OptionalValue {
 	address := AddressValue(*v.Owner)
 
 	return NewSomeValueOwningNonCopying(
-		PublicAccountValue{Address: address},
+		NewPublicAccountValue(address, nil, nil, nil),
 	)
 }
 
@@ -6692,13 +6692,6 @@ func (AddressValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value
 	panic(errors.NewUnreachableError())
 }
 
-// AccountValue
-
-type AccountValue interface {
-	isAccountValue()
-	AddressValue() AddressValue
-}
-
 // NewAuthAccountValue
 func NewAuthAccountValue(
 	address AddressValue,
@@ -6805,104 +6798,46 @@ func accountGetCapabilityFunction(
 	)
 }
 
-// PublicAccountValue
-
-type PublicAccountValue struct {
-	Address            AddressValue
-	storageUsedGet     func(interpreter *Interpreter) UInt64Value
-	storageCapacityGet func() UInt64Value
-	Identifier         string
-	keys               *CompositeValue
-}
-
+// NewPublicAccountValue constructs a public account value.
 func NewPublicAccountValue(
 	address AddressValue,
 	storageUsedGet func(interpreter *Interpreter) UInt64Value,
 	storageCapacityGet func() UInt64Value,
 	keys *CompositeValue,
-) PublicAccountValue {
-	return PublicAccountValue{
-		Address:            address,
-		storageUsedGet:     storageUsedGet,
-		storageCapacityGet: storageCapacityGet,
-		keys:               keys,
-	}
-}
+) *CompositeValue {
 
-func (PublicAccountValue) IsValue() {}
+	fields := NewStringValueOrderedMap()
+	fields.Set("address", address)
+	fields.Set("getCapability", accountGetCapabilityFunction(address, false))
+	fields.Set("keys", keys)
 
-func (v PublicAccountValue) Accept(interpreter *Interpreter, visitor Visitor) {
-	visitor.VisitPublicAccountValue(interpreter, v)
-}
+	// Computed fields
+	computedFields := NewStringComputedFieldOrderedMap()
 
-func (PublicAccountValue) isAccountValue() {}
+	computedFields.Set("storageUsed", func(inter *Interpreter) Value {
+		return storageUsedGet(inter)
+	})
 
-func (v PublicAccountValue) AddressValue() AddressValue {
-	return v.Address
-}
+	computedFields.Set("storageCapacity", func(*Interpreter) Value {
+		return storageCapacityGet()
+	})
 
-func (PublicAccountValue) DynamicType(_ *Interpreter) DynamicType {
-	return PublicAccountDynamicType{}
-}
+	computedFields.Set("getLinkTarget", func(inter *Interpreter) Value {
+		return inter.accountGetLinkTargetFunction(address)
+	})
 
-func (PublicAccountValue) StaticType() StaticType {
-	return PrimitiveStaticTypePublicAccount
-}
-
-func (v PublicAccountValue) Copy() Value {
-	return v
-}
-
-func (PublicAccountValue) GetOwner() *common.Address {
-	// value is never owned
-	return nil
-}
-
-func (PublicAccountValue) SetOwner(_ *common.Address) {
-	// NO-OP: value cannot be owned
-}
-
-func (PublicAccountValue) IsModified() bool {
-	return false
-}
-
-func (PublicAccountValue) SetModified(_ bool) {
-	// NO-OP
-}
-
-func (v PublicAccountValue) Destroy(_ *Interpreter, _ LocationRange) trampoline.Trampoline {
-	return trampoline.Done{}
-}
-
-func (v PublicAccountValue) String() string {
-	return fmt.Sprintf("PublicAccount(%s)", v.Address)
-}
-
-func (v PublicAccountValue) GetMember(inter *Interpreter, _ LocationRange, name string) Value {
-	switch name {
-	case "address":
-		return v.Address
-
-	case "storageUsed":
-		return v.storageUsedGet(inter)
-
-	case "storageCapacity":
-		return v.storageCapacityGet()
-
-	case "getCapability":
-		return accountGetCapabilityFunction(v.Address, false)
-
-	case "getLinkTarget":
-		return inter.accountGetLinkTargetFunction(v.Address)
-	case "keys":
-		return v.keys
+	// Stringer function
+	stringer := func() string {
+		return fmt.Sprintf("PublicAccount(%s)", address)
 	}
 
-	return nil
-}
-
-func (PublicAccountValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
-	panic(errors.NewUnreachableError())
+	return &CompositeValue{
+		QualifiedIdentifier: sema.PublicAccountType.QualifiedString(),
+		Kind:                common.CompositeKindStructure,
+		Fields:              fields,
+		ComputedFields:      computedFields,
+		stringer:            stringer,
+	}
 }
 
 // PathValue
