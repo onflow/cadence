@@ -1,0 +1,39 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`function-block.cdc 1`] = `
+pub fun block(a: Int): String{
+    return 42
+}~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+pub fun block(a: Int): String {}
+
+
+`;
+
+exports[`function-signature.cdc 1`] = `
+ pub  fun       hello() { }
+
+access(contract) fun accessContract(): String {   }
+
+access(account) fun accessAccount(  a: Int):  @Vault {   }
+access(account) fun accessAccount(  amount: Int, message: String, to: @Vault):  @Vault {   }
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+pub fun hello() {}
+access(contract) fun accessContract(): String {}
+access(account) fun accessAccount(a: Int): @Vault {}
+access(account) fun accessAccount(amount: Int, message: String, to: @Vault): @Vault {}
+
+
+`;
+
+exports[`function-with-import.cdc 1`] = `
+import Hello from 0x01
+
+pub fun main():String{
+    return Hello.message
+}~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+import Hello from 0x1
+
+pub fun main(): String {}
+
+
+`;
