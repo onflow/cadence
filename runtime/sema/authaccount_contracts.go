@@ -23,10 +23,12 @@ import (
 	"github.com/onflow/cadence/runtime/common"
 )
 
+const AuthAccountContractsTypeName = "Contracts"
+
 // AuthAccountContractsType represents the type `AuthAccount.Contracts`
 //
 var AuthAccountContractsType = &SimpleType{
-	Name:                 "Contracts",
+	Name:                 AuthAccountContractsTypeName,
 	QualifiedName:        "AuthAccount.Contracts",
 	TypeID:               "AuthAccount.Contracts",
 	IsInvalid:            false,

@@ -5690,6 +5690,10 @@ func (v *CompositeValue) KeyString() string {
 }
 
 func (v *CompositeValue) TypeID() common.TypeID {
+	if v.Location == nil {
+		return common.TypeID(v.QualifiedIdentifier)
+	}
+
 	return v.Location.TypeID(v.QualifiedIdentifier)
 }
 
@@ -6704,49 +6708,49 @@ func NewAuthAccountValue(
 ) *CompositeValue {
 
 	fields := NewStringValueOrderedMap()
-	fields.Set("address", address)
-	fields.Set("addPublicKey", addPublicKeyFunction)
-	fields.Set("removePublicKey", removePublicKeyFunction)
-	fields.Set("getCapability", accountGetCapabilityFunction(address, true))
-	fields.Set("contracts", contracts)
-	fields.Set("keys", keys)
+	fields.Set(sema.AuthAccountAddressField, address)
+	fields.Set(sema.AuthAccountAddPublicKeyField, addPublicKeyFunction)
+	fields.Set(sema.AuthAccountRemovePublicKeyField, removePublicKeyFunction)
+	fields.Set(sema.AuthAccountGetCapabilityField, accountGetCapabilityFunction(address, true))
+	fields.Set(sema.AuthAccountContractsField, contracts)
+	fields.Set(sema.AuthAccountKeysField, keys)
 
 	// Computed fields
 	computedFields := NewStringComputedFieldOrderedMap()
 
-	computedFields.Set("storageUsed", func(inter *Interpreter) Value {
+	computedFields.Set(sema.AuthAccountStorageUsedField, func(inter *Interpreter) Value {
 		return storageUsedGet(inter)
 	})
 
-	computedFields.Set("storageCapacity", func(*Interpreter) Value {
+	computedFields.Set(sema.AuthAccountStorageCapacityField, func(*Interpreter) Value {
 		return storageCapacityGet()
 	})
 
-	computedFields.Set("load", func(inter *Interpreter) Value {
+	computedFields.Set(sema.AuthAccountLoadField, func(inter *Interpreter) Value {
 		return inter.authAccountLoadFunction(address)
 	})
 
-	computedFields.Set("copy", func(inter *Interpreter) Value {
+	computedFields.Set(sema.AuthAccountCopyField, func(inter *Interpreter) Value {
 		return inter.authAccountCopyFunction(address)
 	})
 
-	computedFields.Set("save", func(inter *Interpreter) Value {
+	computedFields.Set(sema.AuthAccountSaveField, func(inter *Interpreter) Value {
 		return inter.authAccountSaveFunction(address)
 	})
 
-	computedFields.Set("borrow", func(inter *Interpreter) Value {
+	computedFields.Set(sema.AuthAccountBorrowField, func(inter *Interpreter) Value {
 		return inter.authAccountBorrowFunction(address)
 	})
 
-	computedFields.Set("link", func(inter *Interpreter) Value {
+	computedFields.Set(sema.AuthAccountLinkField, func(inter *Interpreter) Value {
 		return inter.authAccountLinkFunction(address)
 	})
 
-	computedFields.Set("unlink", func(inter *Interpreter) Value {
+	computedFields.Set(sema.AuthAccountUnlinkField, func(inter *Interpreter) Value {
 		return inter.authAccountUnlinkFunction(address)
 	})
 
-	computedFields.Set("getLinkTarget", func(inter *Interpreter) Value {
+	computedFields.Set(sema.AuthAccountGetLinkTargetField, func(inter *Interpreter) Value {
 		return inter.accountGetLinkTargetFunction(address)
 	})
 
