@@ -1076,25 +1076,17 @@ func (interpreter *Interpreter) visitConditions(conditions []*ast.Condition) Tra
 		result := value.(BoolValue)
 
 		if !result {
-
-			var messageTrampoline Trampoline
-
-			if condition.Message == nil {
-				messageTrampoline = Done{Result: NewStringValue("")}
-			} else {
-				messageTrampoline = condition.Message.Accept(interpreter).(Trampoline)
+			var message string
+			if condition.Message != nil {
+				messageValue := interpreter.evalExpression(condition.Message)
+				message = messageValue.(*StringValue).Str
 			}
 
-			return messageTrampoline.
-				Then(func(result interface{}) {
-					message := result.(*StringValue).Str
-
-					panic(ConditionError{
-						ConditionKind: condition.Kind,
-						Message:       message,
-						LocationRange: interpreter.locationRange(condition.Test),
-					})
-				})
+			panic(ConditionError{
+				ConditionKind: condition.Kind,
+				Message:       message,
+				LocationRange: interpreter.locationRange(condition.Test),
+			})
 		}
 
 		return interpreter.visitConditions(conditions[1:])
@@ -1102,28 +1094,26 @@ func (interpreter *Interpreter) visitConditions(conditions []*ast.Condition) Tra
 }
 
 func (interpreter *Interpreter) VisitCondition(condition *ast.Condition) ast.Repr {
-	return condition.Test.Accept(interpreter)
+	result := interpreter.evalExpression(condition.Test)
+	return Done{Result: result}
 }
 
 func (interpreter *Interpreter) VisitReturnStatement(statement *ast.ReturnStatement) ast.Repr {
 	// NOTE: returning result
 
+	var value Value
 	if statement.Expression == nil {
-		return Done{Result: functionReturn{VoidValue{}}}
+		value = VoidValue{}
+	} else {
+		value = interpreter.evalExpression(statement.Expression)
+
+		valueType := interpreter.Program.Elaboration.ReturnStatementValueTypes[statement]
+		returnType := interpreter.Program.Elaboration.ReturnStatementReturnTypes[statement]
+
+		// NOTE: copy on return
+		value = interpreter.copyAndConvert(value, valueType, returnType)
 	}
-
-	return statement.Expression.Accept(interpreter).(Trampoline).
-		Map(func(result interface{}) interface{} {
-			value := result.(Value)
-
-			valueType := interpreter.Program.Elaboration.ReturnStatementValueTypes[statement]
-			returnType := interpreter.Program.Elaboration.ReturnStatementReturnTypes[statement]
-
-			// NOTE: copy on return
-			value = interpreter.copyAndConvert(value, valueType, returnType)
-
-			return functionReturn{value}
-		})
+	return Done{Result: functionReturn{value}}
 }
 
 func (interpreter *Interpreter) VisitBreakStatement(_ *ast.BreakStatement) ast.Repr {
@@ -1150,18 +1140,15 @@ func (interpreter *Interpreter) visitIfStatementWithTestExpression(
 	thenBlock, elseBlock *ast.Block,
 ) Trampoline {
 
-	return test.Accept(interpreter).(Trampoline).
-		FlatMap(func(result interface{}) Trampoline {
-			value := result.(BoolValue)
-			if value {
-				return thenBlock.Accept(interpreter).(Trampoline)
-			} else if elseBlock != nil {
-				return elseBlock.Accept(interpreter).(Trampoline)
-			}
+	value := interpreter.evalExpression(test).(BoolValue)
+	if value {
+		return thenBlock.Accept(interpreter).(Trampoline)
+	} else if elseBlock != nil {
+		return elseBlock.Accept(interpreter).(Trampoline)
+	}
 
-			// NOTE: no result, so it does *not* act like a return-statement
-			return Done{}
-		})
+	// NOTE: no result, so it does *not* act like a return-statement
+	return Done{}
 }
 
 func (interpreter *Interpreter) visitIfStatementWithVariableDeclaration(
@@ -1169,32 +1156,30 @@ func (interpreter *Interpreter) visitIfStatementWithVariableDeclaration(
 	thenBlock, elseBlock *ast.Block,
 ) Trampoline {
 
-	return declaration.Value.Accept(interpreter).(Trampoline).
-		FlatMap(func(result interface{}) Trampoline {
+	result := interpreter.evalExpression(declaration.Value)
 
-			if someValue, ok := result.(*SomeValue); ok {
+	if someValue, ok := result.(*SomeValue); ok {
 
-				targetType := interpreter.Program.Elaboration.VariableDeclarationTargetTypes[declaration]
-				valueType := interpreter.Program.Elaboration.VariableDeclarationValueTypes[declaration]
-				unwrappedValueCopy := interpreter.copyAndConvert(someValue.Value, valueType, targetType)
+		targetType := interpreter.Program.Elaboration.VariableDeclarationTargetTypes[declaration]
+		valueType := interpreter.Program.Elaboration.VariableDeclarationValueTypes[declaration]
+		unwrappedValueCopy := interpreter.copyAndConvert(someValue.Value, valueType, targetType)
 
-				interpreter.activations.PushNewWithCurrent()
-				interpreter.declareVariable(
-					declaration.Identifier.Identifier,
-					unwrappedValueCopy,
-				)
+		interpreter.activations.PushNewWithCurrent()
+		interpreter.declareVariable(
+			declaration.Identifier.Identifier,
+			unwrappedValueCopy,
+		)
 
-				return thenBlock.Accept(interpreter).(Trampoline).
-					Then(func(_ interface{}) {
-						interpreter.activations.Pop()
-					})
-			} else if elseBlock != nil {
-				return elseBlock.Accept(interpreter).(Trampoline)
-			}
+		return thenBlock.Accept(interpreter).(Trampoline).
+			Then(func(_ interface{}) {
+				interpreter.activations.Pop()
+			})
+	} else if elseBlock != nil {
+		return elseBlock.Accept(interpreter).(Trampoline)
+	}
 
-			// NOTE: ignore result, so it does *not* act like a return-statement
-			return Done{}
-		})
+	// NOTE: ignore result, so it does *not* act like a return-statement
+	return Done{}
 }
 
 func (interpreter *Interpreter) VisitSwitchStatement(switchStatement *ast.SwitchStatement) ast.Repr {
@@ -1239,59 +1224,52 @@ func (interpreter *Interpreter) VisitSwitchStatement(switchStatement *ast.Switch
 		// The case has an expression.
 		// Evaluate it and compare it to the test value
 
-		return switchCase.Expression.Accept(interpreter).(Trampoline).
-			FlatMap(func(result interface{}) Trampoline {
-				caseValue := result.(EquatableValue)
+		result := interpreter.evalExpression(switchCase.Expression)
 
-				// If the test value and case values are equal,
-				// evaluate the case's statements
+		caseValue := result.(EquatableValue)
 
-				if testValue.Equal(interpreter, caseValue) {
-					return runStatements()
-				}
+		// If the test value and case values are equal,
+		// evaluate the case's statements
 
-				// If the test value and the case values are unequal,
-				// try the next case (recurse)
+		if testValue.Equal(interpreter, caseValue) {
+			return runStatements()
+		}
 
-				return visitCase(i+1, testValue)
-			})
+		// If the test value and the case values are unequal,
+		// try the next case (recurse)
+
+		return visitCase(i+1, testValue)
 	}
 
-	return switchStatement.Expression.Accept(interpreter).(Trampoline).
-		FlatMap(func(result interface{}) Trampoline {
-			testValue := result.(EquatableValue)
-			return visitCase(0, testValue)
-		})
+	testValue := interpreter.evalExpression(switchStatement.Expression).(EquatableValue)
+	return visitCase(0, testValue)
 }
 
 func (interpreter *Interpreter) VisitWhileStatement(statement *ast.WhileStatement) ast.Repr {
 
-	return statement.Test.Accept(interpreter).(Trampoline).
-		FlatMap(func(result interface{}) Trampoline {
-			value := result.(BoolValue)
-			if !value {
+	value := interpreter.evalExpression(statement.Test).(BoolValue)
+	if !value {
+		return Done{}
+	}
+
+	interpreter.reportLoopIteration(statement)
+
+	return statement.Block.Accept(interpreter).(Trampoline).
+		FlatMap(func(value interface{}) Trampoline {
+
+			switch value.(type) {
+			case controlBreak:
 				return Done{}
+
+			case controlContinue:
+				// NO-OP
+
+			case functionReturn:
+				return Done{Result: value}
 			}
 
-			interpreter.reportLoopIteration(statement)
-
-			return statement.Block.Accept(interpreter).(Trampoline).
-				FlatMap(func(value interface{}) Trampoline {
-
-					switch value.(type) {
-					case controlBreak:
-						return Done{}
-
-					case controlContinue:
-						// NO-OP
-
-					case functionReturn:
-						return Done{Result: value}
-					}
-
-					// recurse
-					return statement.Accept(interpreter).(Trampoline)
-				})
+			// recurse
+			return statement.Accept(interpreter).(Trampoline)
 		})
 }
 
@@ -1336,32 +1314,25 @@ func (interpreter *Interpreter) VisitForStatement(statement *ast.ForStatement) a
 			})
 	}
 
-	return statement.Value.Accept(interpreter).(Trampoline).
-		FlatMap(func(result interface{}) Trampoline {
+	values := interpreter.evalExpression(statement.Value).(*ArrayValue).Values[:]
+	count := len(values)
 
-			values := result.(*ArrayValue).Values[:]
-			count := len(values)
-
-			return loop(0, count, values)
-		}).
+	return loop(0, count, values).
 		Then(func(_ interface{}) {
 			interpreter.activations.Pop()
 		})
 }
 
-func (interpreter *Interpreter) visitPotentialStorageRemoval(expression ast.Expression) Trampoline {
+func (interpreter *Interpreter) visitPotentialStorageRemoval(expression ast.Expression) Value {
 	movingStorageIndexExpression := interpreter.movingStorageIndexExpression(expression)
 	if movingStorageIndexExpression == nil {
-		return expression.Accept(interpreter).(Trampoline)
+		return interpreter.evalExpression(expression)
 	}
 
-	return interpreter.indexExpressionGetterSetter(movingStorageIndexExpression).
-		Map(func(result interface{}) interface{} {
-			getterSetter := result.(getterSetter)
-			value := getterSetter.get()
-			getterSetter.set(NilValue{})
-			return value
-		})
+	getterSetter := interpreter.indexExpressionGetterSetter(movingStorageIndexExpression)
+	value := getterSetter.get()
+	getterSetter.set(NilValue{})
+	return value
 }
 
 // VisitVariableDeclaration first visits the declaration's value,
@@ -1372,30 +1343,28 @@ func (interpreter *Interpreter) VisitVariableDeclaration(declaration *ast.Variab
 	valueType := interpreter.Program.Elaboration.VariableDeclarationValueTypes[declaration]
 	secondValueType := interpreter.Program.Elaboration.VariableDeclarationSecondValueTypes[declaration]
 
-	return interpreter.visitPotentialStorageRemoval(declaration.Value).
-		FlatMap(func(result interface{}) Trampoline {
+	result := interpreter.visitPotentialStorageRemoval(declaration.Value)
 
-			valueCopy := interpreter.copyAndConvert(result.(Value), valueType, targetType)
+	valueCopy := interpreter.copyAndConvert(result.(Value), valueType, targetType)
 
-			interpreter.declareVariable(
-				declaration.Identifier.Identifier,
-				valueCopy,
-			)
+	interpreter.declareVariable(
+		declaration.Identifier.Identifier,
+		valueCopy,
+	)
 
-			if declaration.SecondValue == nil {
-				// NOTE: ignore result, so it does *not* act like a return-statement
-				return Done{}
-			}
+	if declaration.SecondValue == nil {
+		// NOTE: ignore result, so it does *not* act like a return-statement
+		return Done{}
+	}
 
-			return interpreter.visitAssignment(
-				declaration.Transfer.Operation,
-				declaration.Value,
-				valueType,
-				declaration.SecondValue,
-				secondValueType,
-				declaration,
-			)
-		})
+	return interpreter.visitAssignment(
+		declaration.Transfer.Operation,
+		declaration.Value,
+		valueType,
+		declaration.SecondValue,
+		secondValueType,
+		declaration,
+	)
 }
 
 func (interpreter *Interpreter) movingStorageIndexExpression(expression ast.Expression) *ast.IndexExpression {
@@ -1450,36 +1419,30 @@ func (interpreter *Interpreter) visitAssignment(
 ) Trampoline {
 
 	// First evaluate the target, which results in a getter/setter function pair
-	return interpreter.assignmentGetterSetter(target).
-		FlatMap(func(result interface{}) Trampoline {
-			getterSetter := result.(getterSetter)
+	getterSetter := interpreter.assignmentGetterSetter(target)
 
-			// If the assignment is a forced move,
-			// ensure that the target is nil,
-			// otherwise panic
+	// If the assignment is a forced move,
+	// ensure that the target is nil,
+	// otherwise panic
 
-			if transferOperation == ast.TransferOperationMoveForced {
-				target := getterSetter.get()
-				if _, ok := target.(NilValue); !ok {
-					locationRange := interpreter.locationRange(position)
+	if transferOperation == ast.TransferOperationMoveForced {
+		target := getterSetter.get()
+		if _, ok := target.(NilValue); !ok {
+			locationRange := interpreter.locationRange(position)
 
-					panic(ForceAssignmentToNonNilResourceError{
-						LocationRange: locationRange,
-					})
-				}
-			}
+			panic(ForceAssignmentToNonNilResourceError{
+				LocationRange: locationRange,
+			})
+		}
+	}
 
-			// Finally, evaluate the value, and assign it using the setter function
-			return value.Accept(interpreter).(Trampoline).
-				FlatMap(func(result interface{}) Trampoline {
+	// Finally, evaluate the value, and assign it using the setter function
 
-					valueCopy := interpreter.copyAndConvert(result.(Value), valueType, targetType)
-					getterSetter.set(valueCopy)
+	valueCopy := interpreter.copyAndConvert(interpreter.evalExpression(value), valueType, targetType)
+	getterSetter.set(valueCopy)
 
-					// NOTE: no result, so it does *not* act like a return-statement
-					return Done{}
-				})
-		})
+	// NOTE: no result, so it does *not* act like a return-statement
+	return Done{}
 }
 
 func (interpreter *Interpreter) VisitSwapStatement(swap *ast.SwapStatement) ast.Repr {
@@ -1488,39 +1451,35 @@ func (interpreter *Interpreter) VisitSwapStatement(swap *ast.SwapStatement) ast.
 	rightType := interpreter.Program.Elaboration.SwapStatementRightTypes[swap]
 
 	// Evaluate the left expression
-	return interpreter.assignmentGetterSetter(swap.Left).
-		FlatMap(func(result interface{}) Trampoline {
-			leftGetterSetter := result.(getterSetter)
-			leftValue := leftGetterSetter.get()
-			if interpreter.movingStorageIndexExpression(swap.Left) != nil {
-				leftGetterSetter.set(NilValue{})
-			}
+	leftGetterSetter := interpreter.assignmentGetterSetter(swap.Left)
+	leftValue := leftGetterSetter.get()
+	if interpreter.movingStorageIndexExpression(swap.Left) != nil {
+		leftGetterSetter.set(NilValue{})
+	}
 
-			// Evaluate the right expression
-			return interpreter.assignmentGetterSetter(swap.Right).
-				Then(func(result interface{}) {
-					rightGetterSetter := result.(getterSetter)
-					rightValue := rightGetterSetter.get()
-					if interpreter.movingStorageIndexExpression(swap.Right) != nil {
-						rightGetterSetter.set(NilValue{})
-					}
+	// Evaluate the right expression
+	rightGetterSetter := interpreter.assignmentGetterSetter(swap.Right)
+	rightValue := rightGetterSetter.get()
+	if interpreter.movingStorageIndexExpression(swap.Right) != nil {
+		rightGetterSetter.set(NilValue{})
+	}
 
-					// Add right value to left target
-					// and left value to right target
+	// Add right value to left target
+	// and left value to right target
 
-					rightValueCopy := interpreter.copyAndConvert(rightValue.(Value), rightType, leftType)
-					leftValueCopy := interpreter.copyAndConvert(leftValue.(Value), leftType, rightType)
+	rightValueCopy := interpreter.copyAndConvert(rightValue.(Value), rightType, leftType)
+	leftValueCopy := interpreter.copyAndConvert(leftValue.(Value), leftType, rightType)
 
-					leftGetterSetter.set(rightValueCopy)
-					rightGetterSetter.set(leftValueCopy)
-				})
-		})
+	leftGetterSetter.set(rightValueCopy)
+	rightGetterSetter.set(leftValueCopy)
+
+	return Done{}
 }
 
 // assignmentGetterSetter returns a getter/setter function pair
 // for the target expression, wrapped in a trampoline
 //
-func (interpreter *Interpreter) assignmentGetterSetter(target ast.Expression) Trampoline {
+func (interpreter *Interpreter) assignmentGetterSetter(target ast.Expression) getterSetter {
 	switch target := target.(type) {
 	case *ast.IdentifierExpression:
 		return interpreter.identifierExpressionGetterSetter(target)
@@ -1538,16 +1497,14 @@ func (interpreter *Interpreter) assignmentGetterSetter(target ast.Expression) Tr
 // identifierExpressionGetterSetter returns a getter/setter function pair
 // for the target identifier expression, wrapped in a trampoline
 //
-func (interpreter *Interpreter) identifierExpressionGetterSetter(identifierExpression *ast.IdentifierExpression) Trampoline {
+func (interpreter *Interpreter) identifierExpressionGetterSetter(identifierExpression *ast.IdentifierExpression) getterSetter {
 	variable := interpreter.findVariable(identifierExpression.Identifier.Identifier)
-	return Done{
-		Result: getterSetter{
-			get: func() Value {
-				return variable.Value
-			},
-			set: func(value Value) {
-				variable.Value = value
-			},
+	return getterSetter{
+		get: func() Value {
+			return variable.Value
+		},
+		set: func(value Value) {
+			variable.Value = value
 		},
 	}
 }
@@ -1555,252 +1512,169 @@ func (interpreter *Interpreter) identifierExpressionGetterSetter(identifierExpre
 // indexExpressionGetterSetter returns a getter/setter function pair
 // for the target index expression, wrapped in a trampoline
 //
-func (interpreter *Interpreter) indexExpressionGetterSetter(indexExpression *ast.IndexExpression) Trampoline {
-	return indexExpression.TargetExpression.Accept(interpreter).(Trampoline).
-		FlatMap(func(result interface{}) Trampoline {
-			typedResult := result.(ValueIndexableValue)
-			return indexExpression.IndexingExpression.Accept(interpreter).(Trampoline).
-				FlatMap(func(result interface{}) Trampoline {
-					indexingValue := result.(Value)
-					locationRange := interpreter.locationRange(indexExpression)
-					return Done{
-						Result: getterSetter{
-							get: func() Value {
-								return typedResult.Get(interpreter, locationRange, indexingValue)
-							},
-							set: func(value Value) {
-								typedResult.Set(interpreter, locationRange, indexingValue, value)
-							},
-						},
-					}
-				})
-		})
+func (interpreter *Interpreter) indexExpressionGetterSetter(indexExpression *ast.IndexExpression) getterSetter {
+	typedResult := interpreter.evalExpression(indexExpression.TargetExpression).(ValueIndexableValue)
+	indexingValue := interpreter.evalExpression(indexExpression.IndexingExpression)
+	locationRange := interpreter.locationRange(indexExpression)
+	return getterSetter{
+		get: func() Value {
+			return typedResult.Get(interpreter, locationRange, indexingValue)
+		},
+		set: func(value Value) {
+			typedResult.Set(interpreter, locationRange, indexingValue, value)
+		},
+	}
 }
 
 // memberExpressionGetterSetter returns a getter/setter function pair
 // for the target member expression, wrapped in a trampoline
 //
-func (interpreter *Interpreter) memberExpressionGetterSetter(memberExpression *ast.MemberExpression) Trampoline {
-	return memberExpression.Expression.Accept(interpreter).(Trampoline).
-		FlatMap(func(result interface{}) Trampoline {
-			target := result.(Value)
-			locationRange := interpreter.locationRange(memberExpression)
-			identifier := memberExpression.Identifier.Identifier
-			return Done{
-				Result: getterSetter{
-					get: func() Value {
-						return interpreter.getMember(target, locationRange, identifier)
-					},
-					set: func(value Value) {
-						interpreter.setMember(target, locationRange, identifier, value)
-					},
-				},
-			}
-		})
+func (interpreter *Interpreter) memberExpressionGetterSetter(memberExpression *ast.MemberExpression) getterSetter {
+	target := interpreter.evalExpression(memberExpression.Expression)
+	locationRange := interpreter.locationRange(memberExpression)
+	identifier := memberExpression.Identifier.Identifier
+	return getterSetter{
+		get: func() Value {
+			return interpreter.getMember(target, locationRange, identifier)
+		},
+		set: func(value Value) {
+			interpreter.setMember(target, locationRange, identifier, value)
+		},
+	}
 }
 
 func (interpreter *Interpreter) VisitIdentifierExpression(expression *ast.IdentifierExpression) ast.Repr {
 	name := expression.Identifier.Identifier
 	variable := interpreter.findVariable(name)
-	return Done{Result: variable.Value}
+	return variable.Value
 }
 
-func (interpreter *Interpreter) visitBinaryOperation(
-	expr *ast.BinaryExpression,
-	f func(left, right Value) Value,
-) Trampoline {
-	left := interpreter.runAllStatements(expr.Left.Accept(interpreter).(Trampoline)).(Value)
-	right := interpreter.runAllStatements(expr.Right.Accept(interpreter).(Trampoline)).(Value)
-	return Done{Result: f(left, right)}
+func (interpreter *Interpreter) evalExpression(expression ast.Expression) Value {
+	return expression.Accept(interpreter).(Value)
 }
 
 func (interpreter *Interpreter) VisitBinaryExpression(expression *ast.BinaryExpression) ast.Repr {
 	switch expression.Operation {
 	case ast.OperationPlus:
-		return interpreter.visitBinaryOperation(
-			expression,
-			func(left, right Value) Value {
-				return left.(NumberValue).Plus(right.(NumberValue))
-			},
-		)
+		left := interpreter.evalExpression(expression.Left).(NumberValue)
+		right := interpreter.evalExpression(expression.Right).(NumberValue)
+		return left.Plus(right)
 
 	case ast.OperationMinus:
-		return interpreter.visitBinaryOperation(
-			expression,
-			func(left, right Value) Value {
-				return left.(NumberValue).Minus(right.(NumberValue))
-			},
-		)
+		left := interpreter.evalExpression(expression.Left).(NumberValue)
+		right := interpreter.evalExpression(expression.Right).(NumberValue)
+		return left.Minus(right)
 
 	case ast.OperationMod:
-		return interpreter.visitBinaryOperation(
-			expression,
-			func(left, right Value) Value {
-				return left.(NumberValue).Mod(right.(NumberValue))
-			},
-		)
+		left := interpreter.evalExpression(expression.Left).(NumberValue)
+		right := interpreter.evalExpression(expression.Right).(NumberValue)
+		return left.Mod(right)
 
 	case ast.OperationMul:
-		return interpreter.visitBinaryOperation(
-			expression,
-			func(left, right Value) Value {
-				return left.(NumberValue).Mul(right.(NumberValue))
-			},
-		)
+		left := interpreter.evalExpression(expression.Left).(NumberValue)
+		right := interpreter.evalExpression(expression.Right).(NumberValue)
+		return left.Mul(right)
 
 	case ast.OperationDiv:
-		return interpreter.visitBinaryOperation(
-			expression,
-			func(left, right Value) Value {
-				return left.(NumberValue).Div(right.(NumberValue))
-			},
-		)
+		left := interpreter.evalExpression(expression.Left).(NumberValue)
+		right := interpreter.evalExpression(expression.Right).(NumberValue)
+		return left.Div(right)
 
 	case ast.OperationBitwiseOr:
-		return interpreter.visitBinaryOperation(
-			expression,
-			func(left, right Value) Value {
-				return left.(IntegerValue).BitwiseOr(right.(IntegerValue))
-			},
-		)
+		left := interpreter.evalExpression(expression.Left).(IntegerValue)
+		right := interpreter.evalExpression(expression.Right).(IntegerValue)
+		return left.BitwiseOr(right)
 
 	case ast.OperationBitwiseXor:
-		return interpreter.visitBinaryOperation(
-			expression,
-			func(left, right Value) Value {
-				return left.(IntegerValue).BitwiseXor(right.(IntegerValue))
-			},
-		)
+		left := interpreter.evalExpression(expression.Left).(IntegerValue)
+		right := interpreter.evalExpression(expression.Right).(IntegerValue)
+		return left.BitwiseXor(right)
 
 	case ast.OperationBitwiseAnd:
-		return interpreter.visitBinaryOperation(
-			expression,
-			func(left, right Value) Value {
-				return left.(IntegerValue).BitwiseAnd(right.(IntegerValue))
-			},
-		)
+		left := interpreter.evalExpression(expression.Left).(IntegerValue)
+		right := interpreter.evalExpression(expression.Right).(IntegerValue)
+		return left.BitwiseAnd(right)
 
 	case ast.OperationBitwiseLeftShift:
-		return interpreter.visitBinaryOperation(
-			expression,
-			func(left, right Value) Value {
-				return left.(IntegerValue).BitwiseLeftShift(right.(IntegerValue))
-			},
-		)
+		left := interpreter.evalExpression(expression.Left).(IntegerValue)
+		right := interpreter.evalExpression(expression.Right).(IntegerValue)
+		return left.BitwiseLeftShift(right)
 
 	case ast.OperationBitwiseRightShift:
-		return interpreter.visitBinaryOperation(
-			expression,
-			func(left, right Value) Value {
-				return left.(IntegerValue).BitwiseRightShift(right.(IntegerValue))
-			},
-		)
+		left := interpreter.evalExpression(expression.Left).(IntegerValue)
+		right := interpreter.evalExpression(expression.Right).(IntegerValue)
+		return left.BitwiseRightShift(right)
 
 	case ast.OperationLess:
-		return interpreter.visitBinaryOperation(
-			expression,
-			func(left, right Value) Value {
-				return left.(NumberValue).Less(right.(NumberValue))
-			},
-		)
+		left := interpreter.evalExpression(expression.Left).(NumberValue)
+		right := interpreter.evalExpression(expression.Right).(NumberValue)
+		return left.Less(right)
 
 	case ast.OperationLessEqual:
-		return interpreter.visitBinaryOperation(
-			expression,
-			func(left, right Value) Value {
-				return left.(NumberValue).LessEqual(right.(NumberValue))
-			},
-		)
+		left := interpreter.evalExpression(expression.Left).(NumberValue)
+		right := interpreter.evalExpression(expression.Right).(NumberValue)
+		return left.LessEqual(right)
 
 	case ast.OperationGreater:
-		return interpreter.visitBinaryOperation(
-			expression,
-			func(left, right Value) Value {
-				return left.(NumberValue).Greater(right.(NumberValue))
-			},
-		)
+		left := interpreter.evalExpression(expression.Left).(NumberValue)
+		right := interpreter.evalExpression(expression.Right).(NumberValue)
+		return left.Greater(right)
 
 	case ast.OperationGreaterEqual:
-		return interpreter.visitBinaryOperation(
-			expression,
-			func(left, right Value) Value {
-				return left.(NumberValue).GreaterEqual(right.(NumberValue))
-			},
-		)
+		left := interpreter.evalExpression(expression.Left).(NumberValue)
+		right := interpreter.evalExpression(expression.Right).(NumberValue)
+		return left.GreaterEqual(right)
 
 	case ast.OperationEqual:
-		return interpreter.visitBinaryOperation(
-			expression,
-			func(left, right Value) Value {
-				return interpreter.testEqual(left, right)
-			},
-		)
+		left := interpreter.evalExpression(expression.Left)
+		right := interpreter.evalExpression(expression.Right)
+		return interpreter.testEqual(left, right)
 
 	case ast.OperationNotEqual:
-		return interpreter.visitBinaryOperation(
-			expression,
-			func(left, right Value) Value {
-				return !interpreter.testEqual(left, right)
-			},
-		)
+		left := interpreter.evalExpression(expression.Left)
+		right := interpreter.evalExpression(expression.Right)
+		return !interpreter.testEqual(left, right)
 
 	case ast.OperationOr:
 		// interpret the left-hand side
-		return expression.Left.Accept(interpreter).(Trampoline).
-			FlatMap(func(left interface{}) Trampoline {
-				// only interpret right-hand side if left-hand side is false
-				leftBool := left.(BoolValue)
-				if leftBool {
-					return Done{Result: leftBool}
-				}
+		left := interpreter.evalExpression(expression.Left).(BoolValue)
+		// only interpret right-hand side if left-hand side is false
+		if left {
+			return left
+		}
 
-				// after interpreting the left-hand side,
-				// interpret the right-hand side
-				return expression.Right.Accept(interpreter).(Trampoline).
-					FlatMap(func(right interface{}) Trampoline {
-						return Done{Result: right.(BoolValue)}
-					})
-			})
+		// after interpreting the left-hand side,
+		// interpret the right-hand side
+		return interpreter.evalExpression(expression.Right).(BoolValue)
 
 	case ast.OperationAnd:
 		// interpret the left-hand side
-		return expression.Left.Accept(interpreter).(Trampoline).
-			FlatMap(func(left interface{}) Trampoline {
-				// only interpret right-hand side if left-hand side is true
-				leftBool := left.(BoolValue)
-				if !leftBool {
-					return Done{Result: leftBool}
-				}
+		left := interpreter.evalExpression(expression.Left).(BoolValue)
+		// only interpret right-hand side if left-hand side is true
+		if !left {
+			return left
+		}
 
-				// after interpreting the left-hand side,
-				// interpret the right-hand side
-				return expression.Right.Accept(interpreter).(Trampoline).
-					FlatMap(func(right interface{}) Trampoline {
-						return Done{Result: right.(BoolValue)}
-					})
-			})
+		// after interpreting the left-hand side,
+		// interpret the right-hand side
+		return interpreter.evalExpression(expression.Right).(BoolValue)
 
 	case ast.OperationNilCoalesce:
 		// interpret the left-hand side
-		return expression.Left.Accept(interpreter).(Trampoline).
-			FlatMap(func(left interface{}) Trampoline {
-				// only evaluate right-hand side if left-hand side is nil
-				if _, ok := left.(NilValue); ok {
-					return expression.Right.Accept(interpreter).(Trampoline).
-						Map(func(result interface{}) interface{} {
-							value := result.(Value)
+		left := interpreter.evalExpression(expression.Left)
 
-							rightType := interpreter.Program.Elaboration.BinaryExpressionRightTypes[expression]
-							resultType := interpreter.Program.Elaboration.BinaryExpressionResultTypes[expression]
+		// only evaluate right-hand side if left-hand side is nil
+		if some, ok := left.(*SomeValue); ok {
+			return some.Value
+		}
 
-							// NOTE: important to convert both any and optional
-							return interpreter.convertAndBox(value, rightType, resultType)
-						})
-				}
+		value := interpreter.evalExpression(expression.Right)
 
-				value := left.(*SomeValue).Value
-				return Done{Result: value}
-			})
+		rightType := interpreter.Program.Elaboration.BinaryExpressionRightTypes[expression]
+		resultType := interpreter.Program.Elaboration.BinaryExpressionResultTypes[expression]
+
+		// NOTE: important to convert both any and optional
+		return interpreter.convertAndBox(value, rightType, resultType)
 	}
 
 	panic(&unsupportedOperation{
@@ -1840,59 +1714,49 @@ func (interpreter *Interpreter) testEqual(left, right Value) BoolValue {
 }
 
 func (interpreter *Interpreter) VisitUnaryExpression(expression *ast.UnaryExpression) ast.Repr {
-	return expression.Expression.Accept(interpreter).(Trampoline).
-		Map(func(result interface{}) interface{} {
-			value := result.(Value)
+	value := interpreter.evalExpression(expression.Expression)
 
-			switch expression.Operation {
-			case ast.OperationNegate:
-				boolValue := value.(BoolValue)
-				return boolValue.Negate()
+	switch expression.Operation {
+	case ast.OperationNegate:
+		boolValue := value.(BoolValue)
+		return boolValue.Negate()
 
-			case ast.OperationMinus:
-				integerValue := value.(NumberValue)
-				return integerValue.Negate()
+	case ast.OperationMinus:
+		integerValue := value.(NumberValue)
+		return integerValue.Negate()
 
-			case ast.OperationMove:
-				return value
-			}
+	case ast.OperationMove:
+		return value
+	}
 
-			panic(&unsupportedOperation{
-				kind:      common.OperationKindUnary,
-				operation: expression.Operation,
-				Range:     ast.NewRangeFromPositioned(expression),
-			})
-		})
+	panic(&unsupportedOperation{
+		kind:      common.OperationKindUnary,
+		operation: expression.Operation,
+		Range:     ast.NewRangeFromPositioned(expression),
+	})
 }
 
 func (interpreter *Interpreter) VisitExpressionStatement(statement *ast.ExpressionStatement) ast.Repr {
-	return statement.Expression.Accept(interpreter).(Trampoline).
-		Map(func(result interface{}) interface{} {
-			var value Value
-			var ok bool
-			value, ok = result.(Value)
-			if !ok {
-				value = nil
-			}
-			return ExpressionStatementResult{value}
-		})
+	result := interpreter.evalExpression(statement.Expression)
+	var value Value
+	var ok bool
+	value, ok = result.(Value)
+	if !ok {
+		value = nil
+	}
+	return Done{Result: ExpressionStatementResult{value}}
 }
 
 func (interpreter *Interpreter) VisitBoolExpression(expression *ast.BoolExpression) ast.Repr {
-	value := BoolValue(expression.Value)
-
-	return Done{Result: value}
+	return BoolValue(expression.Value)
 }
 
 func (interpreter *Interpreter) VisitNilExpression(_ *ast.NilExpression) ast.Repr {
-	value := NilValue{}
-	return Done{Result: value}
+	return NilValue{}
 }
 
 func (interpreter *Interpreter) VisitIntegerExpression(expression *ast.IntegerExpression) ast.Repr {
-	value := IntValue{expression.Value}
-
-	return Done{Result: value}
+	return IntValue{expression.Value}
 }
 
 func (interpreter *Interpreter) VisitFixedPointExpression(expression *ast.FixedPointExpression) ast.Repr {
@@ -1906,83 +1770,72 @@ func (interpreter *Interpreter) VisitFixedPointExpression(expression *ast.FixedP
 		sema.Fix64Scale,
 	)
 
-	var result Value
-
 	if expression.Negative {
-		result = Fix64Value(value.Int64())
+		return Fix64Value(value.Int64())
 	} else {
-		result = UFix64Value(value.Uint64())
+		return UFix64Value(value.Uint64())
 	}
-
-	return Done{Result: result}
 }
 
 func (interpreter *Interpreter) VisitStringExpression(expression *ast.StringExpression) ast.Repr {
-	value := NewStringValue(expression.Value)
-
-	return Done{Result: value}
+	return NewStringValue(expression.Value)
 }
 
 func (interpreter *Interpreter) VisitArrayExpression(expression *ast.ArrayExpression) ast.Repr {
-	return interpreter.visitExpressionsNonCopying(expression.Values).
-		FlatMap(func(result interface{}) Trampoline {
-			values := result.(*ArrayValue)
+	values := interpreter.visitExpressionsNonCopying(expression.Values)
 
-			argumentTypes := interpreter.Program.Elaboration.ArrayExpressionArgumentTypes[expression]
-			elementType := interpreter.Program.Elaboration.ArrayExpressionElementType[expression]
+	argumentTypes := interpreter.Program.Elaboration.ArrayExpressionArgumentTypes[expression]
+	elementType := interpreter.Program.Elaboration.ArrayExpressionElementType[expression]
 
-			copies := make([]Value, len(values.Values))
-			for i, argument := range values.Values {
-				argumentType := argumentTypes[i]
-				copies[i] = interpreter.copyAndConvert(argument, argumentType, elementType)
-			}
+	copies := make([]Value, len(values))
+	for i, argument := range values {
+		argumentType := argumentTypes[i]
+		copies[i] = interpreter.copyAndConvert(argument, argumentType, elementType)
+	}
 
-			return Done{Result: NewArrayValueUnownedNonCopying(copies...)}
-		})
+	return NewArrayValueUnownedNonCopying(copies...)
 }
 
 func (interpreter *Interpreter) VisitDictionaryExpression(expression *ast.DictionaryExpression) ast.Repr {
-	return interpreter.visitEntries(expression.Entries).
-		FlatMap(func(result interface{}) Trampoline {
+	values := interpreter.visitEntries(expression.Entries)
 
-			entryTypes := interpreter.Program.Elaboration.DictionaryExpressionEntryTypes[expression]
-			dictionaryType := interpreter.Program.Elaboration.DictionaryExpressionType[expression]
+	entryTypes := interpreter.Program.Elaboration.DictionaryExpressionEntryTypes[expression]
+	dictionaryType := interpreter.Program.Elaboration.DictionaryExpressionType[expression]
 
-			newDictionary := NewDictionaryValueUnownedNonCopying()
-			for i, dictionaryEntryValues := range result.([]DictionaryEntryValues) {
-				entryType := entryTypes[i]
+	dictionary := NewDictionaryValueUnownedNonCopying()
+	for i, dictionaryEntryValues := range values {
+		entryType := entryTypes[i]
 
-				key := interpreter.copyAndConvert(
-					dictionaryEntryValues.Key,
-					entryType.KeyType,
-					dictionaryType.KeyType,
-				)
+		key := interpreter.copyAndConvert(
+			dictionaryEntryValues.Key,
+			entryType.KeyType,
+			dictionaryType.KeyType,
+		)
 
-				value := interpreter.copyAndConvert(
-					dictionaryEntryValues.Value,
-					entryType.ValueType,
-					dictionaryType.ValueType,
-				)
+		value := interpreter.copyAndConvert(
+			dictionaryEntryValues.Value,
+			entryType.ValueType,
+			dictionaryType.ValueType,
+		)
 
-				// TODO: panic for duplicate keys?
+		// TODO: panic for duplicate keys?
 
-				// NOTE: important to convert in optional, as assignment to dictionary
-				// is always considered as an optional
+		// NOTE: important to convert in optional, as assignment to dictionary
+		// is always considered as an optional
 
-				locationRange := interpreter.locationRange(expression)
-				_ = newDictionary.Insert(interpreter, locationRange, key, value)
-			}
+		locationRange := interpreter.locationRange(expression)
+		_ = dictionary.Insert(interpreter, locationRange, key, value)
+	}
 
-			return Done{Result: newDictionary}
-		})
+	return dictionary
 }
 
 func (interpreter *Interpreter) VisitMemberExpression(expression *ast.MemberExpression) ast.Repr {
-	result := interpreter.runAllStatements(expression.Expression.Accept(interpreter).(Trampoline)).(Value)
+	result := interpreter.evalExpression(expression.Expression)
 	if expression.Optional {
 		switch typedResult := result.(type) {
 		case NilValue:
-			return Done{Result: typedResult}
+			return typedResult
 
 		case *SomeValue:
 			result = typedResult.Value
@@ -2005,104 +1858,89 @@ func (interpreter *Interpreter) VisitMemberExpression(expression *ast.MemberExpr
 		}
 	}
 
-	return Done{Result: resultValue}
+	return resultValue
 }
 
 func (interpreter *Interpreter) VisitIndexExpression(expression *ast.IndexExpression) ast.Repr {
-	return expression.TargetExpression.Accept(interpreter).(Trampoline).
-		FlatMap(func(result interface{}) Trampoline {
-			typedResult := result.(ValueIndexableValue)
-			return expression.IndexingExpression.Accept(interpreter).(Trampoline).
-				FlatMap(func(result interface{}) Trampoline {
-					indexingValue := result.(Value)
-					locationRange := interpreter.locationRange(expression)
-					value := typedResult.Get(interpreter, locationRange, indexingValue)
-					return Done{Result: value}
-				})
-		})
+	typedResult := interpreter.evalExpression(expression.TargetExpression).(ValueIndexableValue)
+	indexingValue := interpreter.evalExpression(expression.IndexingExpression)
+	locationRange := interpreter.locationRange(expression)
+	return typedResult.Get(interpreter, locationRange, indexingValue)
 }
 
 func (interpreter *Interpreter) VisitConditionalExpression(expression *ast.ConditionalExpression) ast.Repr {
-	return expression.Test.Accept(interpreter).(Trampoline).
-		FlatMap(func(result interface{}) Trampoline {
-			value := result.(BoolValue)
-
-			if value {
-				return expression.Then.Accept(interpreter).(Trampoline)
-			}
-			return expression.Else.Accept(interpreter).(Trampoline)
-		})
+	value := interpreter.evalExpression(expression.Test).(BoolValue)
+	if value {
+		return interpreter.evalExpression(expression.Then)
+	} else {
+		return interpreter.evalExpression(expression.Else)
+	}
 }
 
 func (interpreter *Interpreter) VisitInvocationExpression(invocationExpression *ast.InvocationExpression) ast.Repr {
 	// interpret the invoked expression
-	return invocationExpression.InvokedExpression.Accept(interpreter).(Trampoline).
-		FlatMap(func(result interface{}) Trampoline {
+	result := interpreter.evalExpression(invocationExpression.InvokedExpression)
 
-			// Handle optional chaining on member expression, if any:
-			// - If the member expression is nil, finish execution
-			// - If the member expression is some value, the wrapped value
-			//   is the function value that should be invoked
+	// Handle optional chaining on member expression, if any:
+	// - If the member expression is nil, finish execution
+	// - If the member expression is some value, the wrapped value
+	//   is the function value that should be invoked
 
-			isOptionalChaining := false
+	isOptionalChaining := false
 
-			if invokedMemberExpression, ok :=
-				invocationExpression.InvokedExpression.(*ast.MemberExpression); ok && invokedMemberExpression.Optional {
+	if invokedMemberExpression, ok :=
+		invocationExpression.InvokedExpression.(*ast.MemberExpression); ok && invokedMemberExpression.Optional {
 
-				isOptionalChaining = true
+		isOptionalChaining = true
 
-				switch typedResult := result.(type) {
-				case NilValue:
-					return Done{Result: typedResult}
+		switch typedResult := result.(type) {
+		case NilValue:
+			return typedResult
 
-				case *SomeValue:
-					result = typedResult.Value
+		case *SomeValue:
+			result = typedResult.Value
 
-				default:
-					panic(errors.NewUnreachableError())
-				}
-			}
+		default:
+			panic(errors.NewUnreachableError())
+		}
+	}
 
-			function := result.(FunctionValue)
+	function := result.(FunctionValue)
 
-			// NOTE: evaluate all argument expressions in call-site scope, not in function body
-			argumentExpressions := make([]ast.Expression, len(invocationExpression.Arguments))
-			for i, argument := range invocationExpression.Arguments {
-				argumentExpressions[i] = argument.Expression
-			}
+	// NOTE: evaluate all argument expressions in call-site scope, not in function body
+	argumentExpressions := make([]ast.Expression, len(invocationExpression.Arguments))
+	for i, argument := range invocationExpression.Arguments {
+		argumentExpressions[i] = argument.Expression
+	}
 
-			return interpreter.visitExpressionsNonCopying(argumentExpressions).
-				FlatMap(func(result interface{}) Trampoline {
-					arguments := result.(*ArrayValue).Values
+	arguments := interpreter.visitExpressionsNonCopying(argumentExpressions)
 
-					typeParameterTypes :=
-						interpreter.Program.Elaboration.InvocationExpressionTypeArguments[invocationExpression]
-					argumentTypes :=
-						interpreter.Program.Elaboration.InvocationExpressionArgumentTypes[invocationExpression]
-					parameterTypes :=
-						interpreter.Program.Elaboration.InvocationExpressionParameterTypes[invocationExpression]
+	typeParameterTypes :=
+		interpreter.Program.Elaboration.InvocationExpressionTypeArguments[invocationExpression]
+	argumentTypes :=
+		interpreter.Program.Elaboration.InvocationExpressionArgumentTypes[invocationExpression]
+	parameterTypes :=
+		interpreter.Program.Elaboration.InvocationExpressionParameterTypes[invocationExpression]
 
-					interpreter.reportFunctionInvocation(invocationExpression)
+	interpreter.reportFunctionInvocation(invocationExpression)
 
-					resultValue := interpreter.functionValueInvocationTrampoline(
-						function,
-						arguments,
-						argumentTypes,
-						parameterTypes,
-						typeParameterTypes,
-						ast.NewRangeFromPositioned(invocationExpression),
-					)
+	resultValue := interpreter.functionValueInvocationTrampoline(
+		function,
+		arguments,
+		argumentTypes,
+		parameterTypes,
+		typeParameterTypes,
+		ast.NewRangeFromPositioned(invocationExpression),
+	)
 
-					// If this is invocation is optional chaining, wrap the result
-					// as an optional, as the result is expected to be an optional
+	// If this is invocation is optional chaining, wrap the result
+	// as an optional, as the result is expected to be an optional
 
-					if isOptionalChaining {
-						resultValue = NewSomeValueOwningNonCopying(resultValue)
-					}
+	if isOptionalChaining {
+		resultValue = NewSomeValueOwningNonCopying(resultValue)
+	}
 
-					return Done{Result: resultValue}
-				})
-		})
+	return resultValue
 }
 
 func (interpreter *Interpreter) InvokeFunctionValue(
@@ -2222,66 +2060,34 @@ func (interpreter *Interpreter) bindParameterArguments(
 	}
 }
 
-func (interpreter *Interpreter) visitExpressionsNonCopying(expressions []ast.Expression) Trampoline {
-	var trampoline Trampoline = Done{Result: NewArrayValueUnownedNonCopying()}
+func (interpreter *Interpreter) visitExpressionsNonCopying(expressions []ast.Expression) []Value {
+	values := make([]Value, 0, len(expressions))
 
 	for _, expression := range expressions {
-		// NOTE: important: rebind expression, because it is captured in the closure below
-		expression := expression
-
-		// append the evaluation of this expression
-		trampoline = trampoline.FlatMap(func(result interface{}) Trampoline {
-			array := result.(*ArrayValue)
-
-			// evaluate the expression
-			return expression.Accept(interpreter).(Trampoline).
-				FlatMap(func(result interface{}) Trampoline {
-					value := result.(Value)
-
-					newValues := append(array.Values, value)
-					return Done{Result: NewArrayValueUnownedNonCopying(newValues...)}
-				})
-		})
+		value := interpreter.evalExpression(expression)
+		values = append(values, value)
 	}
 
-	return trampoline
+	return values
 }
 
-func (interpreter *Interpreter) visitEntries(entries []ast.DictionaryEntry) Trampoline {
-	var trampoline Trampoline = Done{Result: []DictionaryEntryValues{}}
+func (interpreter *Interpreter) visitEntries(entries []ast.DictionaryEntry) []DictionaryEntryValues {
+	values := make([]DictionaryEntryValues, 0, len(entries))
 
 	for _, entry := range entries {
-		// NOTE: important: rebind entry, because it is captured in the closure below
-		func(entry ast.DictionaryEntry) {
-			// append the evaluation of this entry
-			trampoline = trampoline.FlatMap(func(result interface{}) Trampoline {
-				resultEntries := result.([]DictionaryEntryValues)
+		key := interpreter.evalExpression(entry.Key)
+		value := interpreter.evalExpression(entry.Value)
 
-				// evaluate the key expression
-				return entry.Key.Accept(interpreter).(Trampoline).
-					FlatMap(func(result interface{}) Trampoline {
-						key := result.(Value)
-
-						// evaluate the value expression
-						return entry.Value.Accept(interpreter).(Trampoline).
-							FlatMap(func(result interface{}) Trampoline {
-								value := result.(Value)
-
-								newResultEntries := append(
-									resultEntries,
-									DictionaryEntryValues{
-										Key:   key,
-										Value: value,
-									},
-								)
-								return Done{Result: newResultEntries}
-							})
-					})
-			})
-		}(entry)
+		values = append(
+			values,
+			DictionaryEntryValues{
+				Key:   key,
+				Value: value,
+			},
+		)
 	}
 
-	return trampoline
+	return values
 }
 
 func (interpreter *Interpreter) VisitFunctionExpression(expression *ast.FunctionExpression) ast.Repr {
@@ -2309,7 +2115,7 @@ func (interpreter *Interpreter) VisitFunctionExpression(expression *ast.Function
 
 	statements := expression.FunctionBlock.Block.Statements
 
-	function := InterpretedFunctionValue{
+	return InterpretedFunctionValue{
 		Interpreter:      interpreter,
 		ParameterList:    expression.ParameterList,
 		Type:             functionType,
@@ -2319,8 +2125,6 @@ func (interpreter *Interpreter) VisitFunctionExpression(expression *ast.Function
 		Statements:       statements,
 		PostConditions:   rewrittenPostConditions,
 	}
-
-	return Done{Result: function}
 }
 
 // NOTE: only called for top-level composite declarations
@@ -3478,131 +3282,120 @@ func (interpreter *Interpreter) declareTransactionEntryPoint(declaration *ast.Tr
 }
 
 func (interpreter *Interpreter) VisitEmitStatement(statement *ast.EmitStatement) ast.Repr {
-	return statement.InvocationExpression.Accept(interpreter).(Trampoline).
-		FlatMap(func(result interface{}) Trampoline {
-			event := result.(*CompositeValue)
+	event := interpreter.evalExpression(statement.InvocationExpression).(*CompositeValue)
 
-			eventType := interpreter.Program.Elaboration.EmitStatementEventTypes[statement]
+	eventType := interpreter.Program.Elaboration.EmitStatementEventTypes[statement]
 
-			if interpreter.onEventEmitted == nil {
-				panic(EventEmissionUnavailableError{
-					LocationRange: interpreter.locationRange(statement),
-				})
-			}
-
-			err := interpreter.onEventEmitted(interpreter, event, eventType)
-			if err != nil {
-				panic(err)
-			}
-
-			// NOTE: no result, so it does *not* act like a return-statement
-			return Done{}
+	if interpreter.onEventEmitted == nil {
+		panic(EventEmissionUnavailableError{
+			LocationRange: interpreter.locationRange(statement),
 		})
+	}
+
+	err := interpreter.onEventEmitted(interpreter, event, eventType)
+	if err != nil {
+		panic(err)
+	}
+
+	// NOTE: no result, so it does *not* act like a return-statement
+	return Done{}
 }
 
 func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingExpression) ast.Repr {
-	return expression.Expression.Accept(interpreter).(Trampoline).
-		Map(func(result interface{}) interface{} {
-			value := result.(Value)
+	value := interpreter.evalExpression(expression.Expression)
 
-			expectedType := interpreter.Program.Elaboration.CastingTargetTypes[expression]
+	expectedType := interpreter.Program.Elaboration.CastingTargetTypes[expression]
 
-			switch expression.Operation {
-			case ast.OperationFailableCast, ast.OperationForceCast:
-				dynamicType := value.DynamicType(interpreter)
-				isSubType := IsSubType(dynamicType, expectedType)
+	switch expression.Operation {
+	case ast.OperationFailableCast, ast.OperationForceCast:
+		dynamicType := value.DynamicType(interpreter)
+		isSubType := IsSubType(dynamicType, expectedType)
 
-				switch expression.Operation {
-				case ast.OperationFailableCast:
-					if !isSubType {
-						return NilValue{}
-					}
-
-					return NewSomeValueOwningNonCopying(value)
-
-				case ast.OperationForceCast:
-					if !isSubType {
-						panic(
-							TypeMismatchError{
-								ExpectedType:  expectedType,
-								LocationRange: interpreter.locationRange(expression.Expression),
-							},
-						)
-					}
-
-					return value
-
-				default:
-					panic(errors.NewUnreachableError())
-				}
-
-			case ast.OperationCast:
-				staticValueType := interpreter.Program.Elaboration.CastingStaticValueTypes[expression]
-				return interpreter.convertAndBox(value, staticValueType, expectedType)
-
-			default:
-				panic(errors.NewUnreachableError())
+		switch expression.Operation {
+		case ast.OperationFailableCast:
+			if !isSubType {
+				return NilValue{}
 			}
-		})
+
+			return NewSomeValueOwningNonCopying(value)
+
+		case ast.OperationForceCast:
+			if !isSubType {
+				panic(
+					TypeMismatchError{
+						ExpectedType:  expectedType,
+						LocationRange: interpreter.locationRange(expression.Expression),
+					},
+				)
+			}
+
+			return value
+
+		default:
+			panic(errors.NewUnreachableError())
+		}
+
+	case ast.OperationCast:
+		staticValueType := interpreter.Program.Elaboration.CastingStaticValueTypes[expression]
+		return interpreter.convertAndBox(value, staticValueType, expectedType)
+
+	default:
+		panic(errors.NewUnreachableError())
+	}
 }
 
 func (interpreter *Interpreter) VisitCreateExpression(expression *ast.CreateExpression) ast.Repr {
-	return expression.InvocationExpression.Accept(interpreter)
+	return interpreter.evalExpression(expression.InvocationExpression)
 }
 
 func (interpreter *Interpreter) VisitDestroyExpression(expression *ast.DestroyExpression) ast.Repr {
-	return expression.Expression.Accept(interpreter).(Trampoline).
-		FlatMap(func(result interface{}) Trampoline {
-			value := result.(Value)
+	value := interpreter.evalExpression(expression.Expression)
 
-			// TODO: optimize: only potentially used by host-functions
+	// TODO: optimize: only potentially used by host-functions
 
-			locationRange := interpreter.locationRange(expression)
-			return value.(DestroyableValue).Destroy(interpreter, locationRange)
-		})
+	locationRange := interpreter.locationRange(expression)
+
+	// TODO: change Destroy to return Value
+	return interpreter.runAllStatements(value.(DestroyableValue).Destroy(interpreter, locationRange))
 }
 
 func (interpreter *Interpreter) VisitReferenceExpression(referenceExpression *ast.ReferenceExpression) ast.Repr {
 
 	authorized := referenceExpression.Type.(*ast.ReferenceType).Authorized
 
-	return referenceExpression.Expression.Accept(interpreter).(Trampoline).
-		Map(func(result interface{}) interface{} {
-			return &EphemeralReferenceValue{
-				Authorized: authorized,
-				Value:      result.(Value),
-			}
-		})
+	result := interpreter.evalExpression(referenceExpression.Expression)
+
+	return &EphemeralReferenceValue{
+		Authorized: authorized,
+		Value:      result,
+	}
 }
 
 func (interpreter *Interpreter) VisitForceExpression(expression *ast.ForceExpression) ast.Repr {
-	return expression.Expression.Accept(interpreter).(Trampoline).
-		Map(func(result interface{}) interface{} {
-			switch result := result.(type) {
-			case *SomeValue:
-				return result.Value
+	result := interpreter.evalExpression(expression.Expression)
 
-			case NilValue:
-				panic(
-					ForceNilError{
-						LocationRange: interpreter.locationRange(expression.Expression),
-					},
-				)
+	switch result := result.(type) {
+	case *SomeValue:
+		return result.Value
 
-			default:
-				return result
-			}
-		})
+	case NilValue:
+		panic(
+			ForceNilError{
+				LocationRange: interpreter.locationRange(expression.Expression),
+			},
+		)
+
+	default:
+		return result
+	}
 }
 
 func (interpreter *Interpreter) VisitPathExpression(expression *ast.PathExpression) ast.Repr {
 	domain := common.PathDomainFromIdentifier(expression.Domain.Identifier)
 
-	return Done{
-		Result: PathValue{
-			Domain:     domain,
-			Identifier: expression.Identifier.Identifier,
-		},
+	return PathValue{
+		Domain:     domain,
+		Identifier: expression.Identifier.Identifier,
 	}
 }
 
