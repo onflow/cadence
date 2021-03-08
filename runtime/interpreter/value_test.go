@@ -544,6 +544,27 @@ func TestStringer(t *testing.T) {
 			}(),
 			expected: "S.test.Foo(y: \"bar\")",
 		},
+		"composite with custom stringer": {
+			value: func() Value {
+				members := NewStringValueOrderedMap()
+				members.Set("y", NewStringValue("bar"))
+
+				compositeValue := NewCompositeValue(
+					utils.TestLocation,
+					"Foo",
+					common.CompositeKindResource,
+					members,
+					nil,
+				)
+
+				compositeValue.stringer = func() string {
+					return "y --> bar"
+				}
+
+				return compositeValue
+			}(),
+			expected: "y --> bar",
+		},
 		"Link": {
 			value: LinkValue{
 				TargetPath: PathValue{

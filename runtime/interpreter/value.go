@@ -6811,22 +6811,22 @@ func NewPublicAccountValue(
 ) *CompositeValue {
 
 	fields := NewStringValueOrderedMap()
-	fields.Set("address", address)
-	fields.Set("getCapability", accountGetCapabilityFunction(address, false))
-	fields.Set("keys", keys)
+	fields.Set(sema.PublicAccountAddressField, address)
+	fields.Set(sema.PublicAccountGetCapacityField, accountGetCapabilityFunction(address, false))
+	fields.Set(sema.PublicAccountKeysField, keys)
 
 	// Computed fields
 	computedFields := NewStringComputedFieldOrderedMap()
 
-	computedFields.Set("storageUsed", func(inter *Interpreter) Value {
+	computedFields.Set(sema.PublicAccountStorageUsedField, func(inter *Interpreter) Value {
 		return storageUsedGet(inter)
 	})
 
-	computedFields.Set("storageCapacity", func(*Interpreter) Value {
+	computedFields.Set(sema.PublicAccountStorageCapacityField, func(*Interpreter) Value {
 		return storageCapacityGet()
 	})
 
-	computedFields.Set("getLinkTarget", func(inter *Interpreter) Value {
+	computedFields.Set(sema.PublicAccountGetTargetLinkField, func(inter *Interpreter) Value {
 		return inter.accountGetLinkTargetFunction(address)
 	})
 
