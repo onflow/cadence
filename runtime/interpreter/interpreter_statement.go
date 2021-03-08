@@ -24,6 +24,111 @@ import (
 	"github.com/onflow/cadence/runtime/trampoline"
 )
 
+type Statement struct {
+	Interpreter *Interpreter
+	Trampoline  trampoline.Trampoline
+	Statement   ast.Statement
+}
+
+// runUntilNextStatement executes the trampline until the next statement.
+// It either returns a result or a statement.
+// The difference between "runUntilNextStatement" and "Run" is that:
+// "Run" executes the Trampoline chain all the way until there is no more trampoline and returns the result,
+// whereas "runUntilNextStatement" executes the Trampoline chain, stops as soon as it meets a statement trampoline,
+// and returns the statement, which can be later resumed by calling "runUntilNextStatement" again.
+// Useful for implementing breakpoint debugging.
+func (interpreter *Interpreter) runUntilNextStatement(t trampoline.Trampoline) (interface{}, *Statement) {
+	for {
+		statement := getStatement(t)
+
+		if statement != nil {
+			return nil, &Statement{
+				// NOTE: resumption using outer trampoline,
+				// not just inner statement trampoline
+				Trampoline:  t,
+				Interpreter: statement.Interpreter,
+				Statement:   statement.Statement,
+			}
+		}
+
+		result := t.Resume()
+
+		if continuation, ok := result.(func() trampoline.Trampoline); ok {
+
+			t = continuation()
+			continue
+		}
+
+		return result, nil
+	}
+}
+
+// runAllStatements runs all the statement until there is no more trampoline and returns the result.
+// When there is a statement, it calls the onStatement callback, and then continues the execution.
+func (interpreter *Interpreter) runAllStatements(t trampoline.Trampoline) interface{} {
+
+	// Wrap errors if needed
+
+	defer recoverErrors(func(internalErr error) {
+
+		// if the error is already an execution error, use it as is
+		if _, ok := internalErr.(Error); ok {
+			panic(internalErr)
+		}
+
+		// wrap the error with position information if needed
+
+		_, ok := internalErr.(ast.HasPosition)
+		if !ok {
+			internalErr = PositionedError{
+				Err:   internalErr,
+				Range: ast.NewRangeFromPositioned(interpreter.statement.Statement),
+			}
+		}
+
+		panic(Error{
+			Err:      internalErr,
+			Location: interpreter.statement.Interpreter.Location,
+		})
+	})
+
+	var statement *Statement
+	for {
+		var result interface{}
+		result, statement = interpreter.runUntilNextStatement(t)
+		if statement == nil {
+			return result
+		}
+
+		interpreter.statement = statement
+
+		if interpreter.onStatement != nil {
+			interpreter.onStatement(statement)
+		}
+
+		result = statement.Trampoline.Resume()
+		if continuation, ok := result.(func() trampoline.Trampoline); ok {
+			t = continuation()
+			continue
+		}
+
+		return result
+	}
+}
+
+// getStatement goes through the Trampoline chain and find the first StatementTrampoline
+func getStatement(t trampoline.Trampoline) *StatementTrampoline {
+	switch t := t.(type) {
+	case trampoline.FlatMap:
+		// Recurse into the nested trampoline
+		return getStatement(t.Subroutine)
+	case StatementTrampoline:
+		return &t
+	default:
+		return nil
+	}
+}
+
 func (interpreter *Interpreter) visitStatements(statements []ast.Statement) trampoline.Trampoline {
 	count := len(statements)
 
