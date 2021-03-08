@@ -5333,6 +5333,7 @@ type CompositeValue struct {
 	Kind                common.CompositeKind
 	Fields              *StringValueOrderedMap
 	InjectedFields      *StringValueOrderedMap
+	ComputedFields      *StringComputedFieldOrderedMap
 	NestedValues        *StringValueOrderedMap
 	Functions           map[string]FunctionValue
 	Destructor          FunctionValue
@@ -5340,6 +5341,8 @@ type CompositeValue struct {
 	destroyed           bool
 	modified            bool
 }
+
+type ComputedField func(*Interpreter) Value
 
 func NewCompositeValue(
 	location common.Location,
@@ -5445,6 +5448,7 @@ func (v *CompositeValue) Copy() Value {
 		Kind:                v.Kind,
 		Fields:              newFields,
 		InjectedFields:      v.InjectedFields,
+		ComputedFields:      v.ComputedFields,
 		NestedValues:        v.NestedValues,
 		Functions:           v.Functions,
 		Destructor:          v.Destructor,
@@ -5536,6 +5540,12 @@ func (v *CompositeValue) GetMember(interpreter *Interpreter, locationRange Locat
 	}
 
 	interpreter = v.getInterpreter(interpreter)
+
+	if v.ComputedFields != nil {
+		if computedField, ok := v.ComputedFields.Get(name); ok {
+			return computedField(interpreter)
+		}
+	}
 
 	// If the composite value was deserialized, dynamically link in the functions
 	// and get injected fields
@@ -5675,6 +5685,10 @@ func (v *CompositeValue) KeyString() string {
 }
 
 func (v *CompositeValue) TypeID() common.TypeID {
+	if v.Location == nil {
+		return common.TypeID(v.QualifiedIdentifier)
+	}
+
 	return v.Location.TypeID(v.QualifiedIdentifier)
 }
 
@@ -7089,8 +7103,12 @@ func (v CapabilityValue) Destroy(_ *Interpreter, _ LocationRange) trampoline.Tra
 }
 
 func (v CapabilityValue) String() string {
+	var borrowType string
+	if v.BorrowType != nil {
+		borrowType = v.BorrowType.String()
+	}
 	return format.Capability(
-		v.BorrowType.String(),
+		borrowType,
 		v.Address.String(),
 		v.Path.String(),
 	)
