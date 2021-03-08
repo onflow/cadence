@@ -71,7 +71,7 @@ func (DeployedContractValue) SetModified(_ bool) {
 }
 
 func (v DeployedContractValue) Destroy(_ *Interpreter, _ LocationRange) trampoline.Trampoline {
-	return trampoline.Done{}
+	return trampoline.Done{Result: NilValue{}}
 }
 
 func (v DeployedContractValue) String() string {
