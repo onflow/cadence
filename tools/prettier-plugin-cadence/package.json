@@ -4,16 +4,20 @@
   "description": "",
   "main": "dist",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "jest"
   },
   "author": "",
   "license": "Apache-2.0",
   "devDependencies": {
     "@types/execa": "^2.0.0",
+    "@types/jest": "^26.0.20",
     "@types/node": "^14.0.27",
     "@types/prettier": "^2.0.2",
+    "jest": "^26.6.3",
+    "jest-watch-typeahead": "^0.6.1",
     "prettier": "^2.0.5",
-    "typescript": "^3.9.7"
+    "ts-jest": "^26.5.3",
+    "typescript": "^3.9.9"
   },
   "dependencies": {
     "execa": "^4.0.3"
