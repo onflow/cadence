@@ -580,7 +580,7 @@ func (v *ArrayValue) SetModified(modified bool) {
 }
 
 func (v *ArrayValue) Destroy(interpreter *Interpreter, locationRange LocationRange) trampoline.Trampoline {
-	var result trampoline.Trampoline = trampoline.Done{}
+	var result trampoline.Trampoline = trampoline.Done{Result: NilValue{}}
 	for _, value := range v.Values {
 		capturedValue := value
 		result = result.FlatMap(func(_ interface{}) trampoline.Trampoline {
@@ -5787,7 +5787,7 @@ func (v *DictionaryValue) SetModified(modified bool) {
 }
 
 func (v *DictionaryValue) Destroy(inter *Interpreter, locationRange LocationRange) trampoline.Trampoline {
-	var result trampoline.Trampoline = trampoline.Done{}
+	var result trampoline.Trampoline = trampoline.Done{Result: NilValue{}}
 
 	maybeDestroy := func(value interface{}) {
 		destroyableValue, ok := value.(DestroyableValue)
@@ -6114,7 +6114,7 @@ func (NilValue) SetModified(_ bool) {
 }
 
 func (v NilValue) Destroy(_ *Interpreter, _ LocationRange) trampoline.Trampoline {
-	return trampoline.Done{}
+	return trampoline.Done{Result: NilValue{}}
 }
 
 func (NilValue) String() string {
@@ -6701,7 +6701,7 @@ func (AuthAccountValue) SetModified(_ bool) {
 }
 
 func (v AuthAccountValue) Destroy(_ *Interpreter, _ LocationRange) trampoline.Trampoline {
-	return trampoline.Done{}
+	return trampoline.Done{Result: NilValue{}}
 }
 
 func (v AuthAccountValue) String() string {
@@ -6856,7 +6856,7 @@ func (PublicAccountValue) SetModified(_ bool) {
 }
 
 func (v PublicAccountValue) Destroy(_ *Interpreter, _ LocationRange) trampoline.Trampoline {
-	return trampoline.Done{}
+	return trampoline.Done{Result: NilValue{}}
 }
 
 func (v PublicAccountValue) String() string {
@@ -6949,7 +6949,7 @@ func (PathValue) SetModified(_ bool) {
 }
 
 func (v PathValue) Destroy(_ *Interpreter, _ LocationRange) trampoline.Trampoline {
-	return trampoline.Done{}
+	return trampoline.Done{Result: NilValue{}}
 }
 
 func (v PathValue) String() string {
@@ -7020,7 +7020,7 @@ func (CapabilityValue) SetModified(_ bool) {
 }
 
 func (v CapabilityValue) Destroy(_ *Interpreter, _ LocationRange) trampoline.Trampoline {
-	return trampoline.Done{}
+	return trampoline.Done{Result: NilValue{}}
 }
 
 func (v CapabilityValue) String() string {
@@ -7103,7 +7103,7 @@ func (LinkValue) SetModified(_ bool) {
 }
 
 func (v LinkValue) Destroy(_ *Interpreter, _ LocationRange) trampoline.Trampoline {
-	return trampoline.Done{}
+	return trampoline.Done{Result: NilValue{}}
 }
 
 func (v LinkValue) String() string {
