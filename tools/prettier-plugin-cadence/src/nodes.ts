@@ -1,6 +1,6 @@
 import exp from "constants"
 
-export type Node = Program | Declaration | Expression
+export type Node = Program | Declaration | Expression | ImportGroup | ImportDeclaration
 
 export type Access =
 	| "AccessNotSpecified"
@@ -21,6 +21,18 @@ export type Type =
 	| "RestrictedType"
 	| "InstantiationType"
 
+export type AddressLocation = {
+	Type: "AddressLocation"
+	Address: string
+}
+
+export type StringLocation = {
+	Type: "StringLocation"
+	String: string
+}
+
+export type Location = AddressLocation | StringLocation
+
 export interface Identifier {
 	Identifier: string
 }
@@ -40,6 +52,16 @@ export interface TypeAnnotation {
 	AnnotatedType: AnnotatedType
 }
 
+export interface Parameter {
+	Label: string
+	Identifier: Identifier
+	TypeAnnotation: TypeAnnotation
+}
+
+export interface ParameterList {
+	Parameters: Parameter[]
+}
+
 // Declarations
 
 export type Declaration = FunctionDeclaration
@@ -52,14 +74,15 @@ export interface FunctionDeclaration {
 	ReturnTypeAnnotation: TypeAnnotation
 }
 
-export interface Parameter {
-	Label: string
-	Identifier: Identifier
-	TypeAnnotation: TypeAnnotation
+export interface ImportGroup {
+	Type: "ImportGroup",
+	Declarations: ImportDeclaration[]
 }
 
-export interface ParameterList {
-	Parameters: Parameter[]
+export interface ImportDeclaration {
+	Type: "ImportDeclaration"
+	Identifiers: Identifier[]
+	Location: Location
 }
 
 // Expressions
