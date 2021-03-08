@@ -1,5 +1,6 @@
 import { parse } from "./parse"
 import { print } from "./print"
+import { preprocess } from "./preprocess"
 
 export const languages = [
 	{
@@ -27,6 +28,7 @@ export const parsers = {
 
 export const printers = {
 	cadence: {
+		preprocess,
 		print,
 	},
 }
