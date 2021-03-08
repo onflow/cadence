@@ -27,7 +27,7 @@ import (
 )
 
 // assignmentGetterSetter returns a getter/setter function pair
-// for the target expression, wrapped in a trampoline
+// for the target expression
 //
 func (interpreter *Interpreter) assignmentGetterSetter(target ast.Expression) getterSetter {
 	switch target := target.(type) {
@@ -45,7 +45,7 @@ func (interpreter *Interpreter) assignmentGetterSetter(target ast.Expression) ge
 }
 
 // identifierExpressionGetterSetter returns a getter/setter function pair
-// for the target identifier expression, wrapped in a trampoline
+// for the target identifier expression
 //
 func (interpreter *Interpreter) identifierExpressionGetterSetter(identifierExpression *ast.IdentifierExpression) getterSetter {
 	variable := interpreter.findVariable(identifierExpression.Identifier.Identifier)
@@ -60,7 +60,7 @@ func (interpreter *Interpreter) identifierExpressionGetterSetter(identifierExpre
 }
 
 // indexExpressionGetterSetter returns a getter/setter function pair
-// for the target index expression, wrapped in a trampoline
+// for the target index expression
 //
 func (interpreter *Interpreter) indexExpressionGetterSetter(indexExpression *ast.IndexExpression) getterSetter {
 	typedResult := interpreter.evalExpression(indexExpression.TargetExpression).(ValueIndexableValue)
@@ -77,7 +77,7 @@ func (interpreter *Interpreter) indexExpressionGetterSetter(indexExpression *ast
 }
 
 // memberExpressionGetterSetter returns a getter/setter function pair
-// for the target member expression, wrapped in a trampoline
+// for the target member expression
 //
 func (interpreter *Interpreter) memberExpressionGetterSetter(memberExpression *ast.MemberExpression) getterSetter {
 	target := interpreter.evalExpression(memberExpression.Expression)
