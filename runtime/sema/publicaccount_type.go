@@ -35,8 +35,15 @@ const PublicAccountKeysField = "keys"
 var PublicAccountType = func() *CompositeType {
 
 	publicAccountType := &CompositeType{
-		Identifier: AuthAccountContractsTypeName,
-		Kind:       common.CompositeKindStructure,
+		Identifier:         PublicAccountTypeName,
+		Kind:               common.CompositeKindStructure,
+		hasComputedMembers: true,
+
+		nestedTypes: func() *StringTypeOrderedMap {
+			nestedTypes := NewStringTypeOrderedMap()
+			nestedTypes.Set(AccountKeysTypeName, PublicAccountKeysType)
+			return nestedTypes
+		}(),
 	}
 
 	var members = []*Member{
