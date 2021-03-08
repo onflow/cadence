@@ -1,45 +1,53 @@
 import { doc, Doc, FastPath } from "prettier"
 import {
 	Access,
-	AnnotatedType,
-	Identifier,
+	Location,
 	Node,
 	Parameter,
-	ParameterList,
 	TypeAnnotation,
+	ImportDeclaration,
 } from "./nodes"
+import { isAddressLocation } from "./typeCheck"
 import concat = doc.builders.concat
 import hardline = doc.builders.hardline
 import join = doc.builders.join
-import group = doc.builders.group
+import group = doc.builders.group;
 
-// overload this for different types
-function getIdentifier(annotatedType: AnnotatedType): string
-function getIdentifier(parameter: Parameter): string
+const SPACE = " " // single space character
+const COMMA = ", "
+
 function getIdentifier(item: any): string {
 	return item.Identifier.Identifier
 }
 
 function accessToString(access: Access) {
-	let result = ""
 	switch (access) {
 		case "AccessPublic":
-			result = "pub"
-			break
+			return "pub"
 		case "AccessAccount":
-			result = "access(account)"
-			break
+			return "access(account)"
 		case "AccessContract":
-			result = "access(contract)"
-			break
+			return "access(contract)"
 		case "AccessNotSpecified":
-			result = ""
-			break
+			return ""
 		default:
-			result = ""
+			return ""
 	}
+}
 
-	return `${result} `
+function locationToString(location: Location) {
+	return isAddressLocation(location)
+		? location.Address
+		: `"${location.String}"`
+}
+
+function importToString(importNode: ImportDeclaration) {
+	const contractList = join(
+		COMMA,
+		importNode.Identifiers.map((id) => id.Identifier)
+	)
+	const fromTarget = locationToString(importNode.Location)
+	return join(SPACE, ["import", contractList, "from", fromTarget])
 }
 
 function typeToString(typeAnnotation: TypeAnnotation) {
@@ -93,8 +101,15 @@ export function print(
 
 			return join(hardline, parts)
 
+		case "ImportDeclaration":
+			return importToString(n)
+
+		case "ImportGroup":
+			const result = join(hardline, n.Declarations.map(importToString));
+			return concat([result, hardline])
+
 		case "FunctionDeclaration":
-			const access = accessToString(n.Access)
+			const access = concat([accessToString(n.Access), SPACE])
 			let returnType = concat([typeToString(n.ReturnTypeAnnotation), " "])
 			const parameterList = makeParametersList(n.ParameterList.Parameters)
 			return concat([
