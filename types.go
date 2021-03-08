@@ -920,23 +920,3 @@ func (t CapabilityType) WithID(id string) CapabilityType {
 	t.typeID = id
 	return t
 }
-
-// AuthAccountType
-
-type AuthAccountType struct{}
-
-func (AuthAccountType) isType() {}
-
-func (AuthAccountType) ID() string {
-	return "AuthAccount"
-}
-
-// PublicAccountType
-
-type PublicAccountType struct{}
-
-func (PublicAccountType) isType() {}
-
-func (PublicAccountType) ID() string {
-	return "PublicAccount"
-}
