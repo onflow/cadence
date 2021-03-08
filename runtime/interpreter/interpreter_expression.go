@@ -45,7 +45,7 @@ func (interpreter *Interpreter) assignmentGetterSetter(target ast.Expression) ge
 }
 
 // identifierExpressionGetterSetter returns a getter/setter function pair
-// for the target identifier expression
+// for the target identifier expression, wrapped in a trampoline
 //
 func (interpreter *Interpreter) identifierExpressionGetterSetter(identifierExpression *ast.IdentifierExpression) getterSetter {
 	variable := interpreter.findVariable(identifierExpression.Identifier.Identifier)
