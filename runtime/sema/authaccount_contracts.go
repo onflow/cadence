@@ -32,41 +32,41 @@ const AuthAccountContractsTypeUpdateExperimentalFunctionName = "update__experime
 //
 var AuthAccountContractsType = func() *CompositeType {
 
-	authAccountType := &CompositeType{
+	authAccountContractsType := &CompositeType{
 		Identifier: AuthAccountContractsTypeName,
 		Kind:       common.CompositeKindStructure,
 	}
 
 	var members = []*Member{
 		NewPublicFunctionMember(
-			authAccountType,
+			authAccountContractsType,
 			AuthAccountContractsTypeAddFunctionName,
 			authAccountContractsTypeAddFunctionType,
 			authAccountContractsTypeAddFunctionDocString,
 		),
 		NewPublicFunctionMember(
-			authAccountType,
+			authAccountContractsType,
 			AuthAccountContractsTypeUpdateExperimentalFunctionName,
 			authAccountContractsTypeUpdateExperimentalFunctionType,
 			authAccountContractsTypeUpdateExperimentalFunctionDocString,
 		),
 		NewPublicFunctionMember(
-			authAccountType,
+			authAccountContractsType,
 			AuthAccountContractsTypeGetFunctionName,
 			authAccountContractsTypeGetFunctionType,
 			authAccountContractsTypeGetFunctionDocString,
 		),
 		NewPublicFunctionMember(
-			authAccountType,
+			authAccountContractsType,
 			AuthAccountContractsTypeRemoveFunctionName,
 			authAccountContractsTypeRemoveFunctionType,
 			authAccountContractsTypeRemoveFunctionDocString,
 		),
 	}
 
-	authAccountType.Members = GetMembersAsMap(members)
-	authAccountType.Fields = getFields(members)
-	return authAccountType
+	authAccountContractsType.Members = GetMembersAsMap(members)
+	authAccountContractsType.Fields = getFields(members)
+	return authAccountContractsType
 }()
 
 func init() {
