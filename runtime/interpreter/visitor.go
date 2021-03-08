@@ -59,53 +59,51 @@ type Visitor interface {
 	VisitInterpretedFunctionValue(interpreter *Interpreter, value InterpretedFunctionValue)
 	VisitHostFunctionValue(interpreter *Interpreter, value HostFunctionValue)
 	VisitBoundFunctionValue(interpreter *Interpreter, value BoundFunctionValue)
-	VisitAuthAccountContractsValue(interpreter *Interpreter, value AuthAccountContractsValue)
 	VisitDeployedContractValue(interpreter *Interpreter, value DeployedContractValue)
 }
 
 type EmptyVisitor struct {
-	ValueVisitor                     func(interpreter *Interpreter, value Value)
-	TypeValueVisitor                 func(interpreter *Interpreter, value TypeValue)
-	VoidValueVisitor                 func(interpreter *Interpreter, value VoidValue)
-	BoolValueVisitor                 func(interpreter *Interpreter, value BoolValue)
-	StringValueVisitor               func(interpreter *Interpreter, value *StringValue)
-	ArrayValueVisitor                func(interpreter *Interpreter, value *ArrayValue) bool
-	IntValueVisitor                  func(interpreter *Interpreter, value IntValue)
-	Int8ValueVisitor                 func(interpreter *Interpreter, value Int8Value)
-	Int16ValueVisitor                func(interpreter *Interpreter, value Int16Value)
-	Int32ValueVisitor                func(interpreter *Interpreter, value Int32Value)
-	Int64ValueVisitor                func(interpreter *Interpreter, value Int64Value)
-	Int128ValueVisitor               func(interpreter *Interpreter, value Int128Value)
-	Int256ValueVisitor               func(interpreter *Interpreter, value Int256Value)
-	UIntValueVisitor                 func(interpreter *Interpreter, value UIntValue)
-	UInt8ValueVisitor                func(interpreter *Interpreter, value UInt8Value)
-	UInt16ValueVisitor               func(interpreter *Interpreter, value UInt16Value)
-	UInt32ValueVisitor               func(interpreter *Interpreter, value UInt32Value)
-	UInt64ValueVisitor               func(interpreter *Interpreter, value UInt64Value)
-	UInt128ValueVisitor              func(interpreter *Interpreter, value UInt128Value)
-	UInt256ValueVisitor              func(interpreter *Interpreter, value UInt256Value)
-	Word8ValueVisitor                func(interpreter *Interpreter, value Word8Value)
-	Word16ValueVisitor               func(interpreter *Interpreter, value Word16Value)
-	Word32ValueVisitor               func(interpreter *Interpreter, value Word32Value)
-	Word64ValueVisitor               func(interpreter *Interpreter, value Word64Value)
-	Fix64ValueVisitor                func(interpreter *Interpreter, value Fix64Value)
-	UFix64ValueVisitor               func(interpreter *Interpreter, value UFix64Value)
-	CompositeValueVisitor            func(interpreter *Interpreter, value *CompositeValue) bool
-	DictionaryValueVisitor           func(interpreter *Interpreter, value *DictionaryValue) bool
-	NilValueVisitor                  func(interpreter *Interpreter, value NilValue)
-	SomeValueVisitor                 func(interpreter *Interpreter, value *SomeValue) bool
-	StorageReferenceValueVisitor     func(interpreter *Interpreter, value *StorageReferenceValue)
-	EphemeralReferenceValueVisitor   func(interpreter *Interpreter, value *EphemeralReferenceValue)
-	AddressValueVisitor              func(interpreter *Interpreter, value AddressValue)
-	PublicAccountValueVisitor        func(interpreter *Interpreter, value PublicAccountValue)
-	PathValueVisitor                 func(interpreter *Interpreter, value PathValue)
-	CapabilityValueVisitor           func(interpreter *Interpreter, value CapabilityValue)
-	LinkValueVisitor                 func(interpreter *Interpreter, value LinkValue)
-	InterpretedFunctionValueVisitor  func(interpreter *Interpreter, value InterpretedFunctionValue)
-	HostFunctionValueVisitor         func(interpreter *Interpreter, value HostFunctionValue)
-	BoundFunctionValueVisitor        func(interpreter *Interpreter, value BoundFunctionValue)
-	AuthAccountContractsValueVisitor func(interpreter *Interpreter, value AuthAccountContractsValue)
-	DeployedContractValueVisitor     func(interpreter *Interpreter, value DeployedContractValue)
+	ValueVisitor                    func(interpreter *Interpreter, value Value)
+	TypeValueVisitor                func(interpreter *Interpreter, value TypeValue)
+	VoidValueVisitor                func(interpreter *Interpreter, value VoidValue)
+	BoolValueVisitor                func(interpreter *Interpreter, value BoolValue)
+	StringValueVisitor              func(interpreter *Interpreter, value *StringValue)
+	ArrayValueVisitor               func(interpreter *Interpreter, value *ArrayValue) bool
+	IntValueVisitor                 func(interpreter *Interpreter, value IntValue)
+	Int8ValueVisitor                func(interpreter *Interpreter, value Int8Value)
+	Int16ValueVisitor               func(interpreter *Interpreter, value Int16Value)
+	Int32ValueVisitor               func(interpreter *Interpreter, value Int32Value)
+	Int64ValueVisitor               func(interpreter *Interpreter, value Int64Value)
+	Int128ValueVisitor              func(interpreter *Interpreter, value Int128Value)
+	Int256ValueVisitor              func(interpreter *Interpreter, value Int256Value)
+	UIntValueVisitor                func(interpreter *Interpreter, value UIntValue)
+	UInt8ValueVisitor               func(interpreter *Interpreter, value UInt8Value)
+	UInt16ValueVisitor              func(interpreter *Interpreter, value UInt16Value)
+	UInt32ValueVisitor              func(interpreter *Interpreter, value UInt32Value)
+	UInt64ValueVisitor              func(interpreter *Interpreter, value UInt64Value)
+	UInt128ValueVisitor             func(interpreter *Interpreter, value UInt128Value)
+	UInt256ValueVisitor             func(interpreter *Interpreter, value UInt256Value)
+	Word8ValueVisitor               func(interpreter *Interpreter, value Word8Value)
+	Word16ValueVisitor              func(interpreter *Interpreter, value Word16Value)
+	Word32ValueVisitor              func(interpreter *Interpreter, value Word32Value)
+	Word64ValueVisitor              func(interpreter *Interpreter, value Word64Value)
+	Fix64ValueVisitor               func(interpreter *Interpreter, value Fix64Value)
+	UFix64ValueVisitor              func(interpreter *Interpreter, value UFix64Value)
+	CompositeValueVisitor           func(interpreter *Interpreter, value *CompositeValue) bool
+	DictionaryValueVisitor          func(interpreter *Interpreter, value *DictionaryValue) bool
+	NilValueVisitor                 func(interpreter *Interpreter, value NilValue)
+	SomeValueVisitor                func(interpreter *Interpreter, value *SomeValue) bool
+	StorageReferenceValueVisitor    func(interpreter *Interpreter, value *StorageReferenceValue)
+	EphemeralReferenceValueVisitor  func(interpreter *Interpreter, value *EphemeralReferenceValue)
+	AddressValueVisitor             func(interpreter *Interpreter, value AddressValue)
+	PublicAccountValueVisitor       func(interpreter *Interpreter, value PublicAccountValue)
+	PathValueVisitor                func(interpreter *Interpreter, value PathValue)
+	CapabilityValueVisitor          func(interpreter *Interpreter, value CapabilityValue)
+	LinkValueVisitor                func(interpreter *Interpreter, value LinkValue)
+	InterpretedFunctionValueVisitor func(interpreter *Interpreter, value InterpretedFunctionValue)
+	HostFunctionValueVisitor        func(interpreter *Interpreter, value HostFunctionValue)
+	BoundFunctionValueVisitor       func(interpreter *Interpreter, value BoundFunctionValue)
+	DeployedContractValueVisitor    func(interpreter *Interpreter, value DeployedContractValue)
 }
 
 var _ Visitor = &EmptyVisitor{}
@@ -388,13 +386,6 @@ func (v EmptyVisitor) VisitBoundFunctionValue(interpreter *Interpreter, value Bo
 		return
 	}
 	v.BoundFunctionValueVisitor(interpreter, value)
-}
-
-func (v EmptyVisitor) VisitAuthAccountContractsValue(interpreter *Interpreter, value AuthAccountContractsValue) {
-	if v.AuthAccountContractsValueVisitor == nil {
-		return
-	}
-	v.AuthAccountContractsValueVisitor(interpreter, value)
 }
 
 func (v EmptyVisitor) VisitDeployedContractValue(interpreter *Interpreter, value DeployedContractValue) {

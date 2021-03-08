@@ -1604,10 +1604,10 @@ func (r *interpreterRuntime) newAuthAccountContracts(
 	runtimeStorage *runtimeStorage,
 	interpreterOptions []interpreter.Option,
 	checkerOptions []sema.Option,
-) interpreter.AuthAccountContractsValue {
-	return interpreter.AuthAccountContractsValue{
-		Address: addressValue,
-		AddFunction: r.newAuthAccountContractsChangeFunction(
+) *interpreter.CompositeValue {
+	return interpreter.NewAuthAccountContractsValue(
+		addressValue,
+		r.newAuthAccountContractsChangeFunction(
 			addressValue,
 			context,
 			runtimeStorage,
@@ -1615,7 +1615,7 @@ func (r *interpreterRuntime) newAuthAccountContracts(
 			checkerOptions,
 			false,
 		),
-		UpdateFunction: r.newAuthAccountContractsChangeFunction(
+		r.newAuthAccountContractsChangeFunction(
 			addressValue,
 			context,
 			runtimeStorage,
@@ -1623,16 +1623,16 @@ func (r *interpreterRuntime) newAuthAccountContracts(
 			checkerOptions,
 			true,
 		),
-		GetFunction: r.newAuthAccountContractsGetFunction(
+		r.newAuthAccountContractsGetFunction(
 			addressValue,
 			context.Interface,
 		),
-		RemoveFunction: r.newAuthAccountContractsRemoveFunction(
+		r.newAuthAccountContractsRemoveFunction(
 			addressValue,
 			context.Interface,
 			runtimeStorage,
 		),
-	}
+	)
 }
 
 func (r *interpreterRuntime) newAuthAccountKeys(addressValue interpreter.AddressValue, runtimeInterface Interface) *interpreter.CompositeValue {
