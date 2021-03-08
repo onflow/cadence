@@ -6706,7 +6706,7 @@ func NewAuthAccountValue(
 	storageCapacityGet func() UInt64Value,
 	addPublicKeyFunction FunctionValue,
 	removePublicKeyFunction FunctionValue,
-	contracts AuthAccountContractsValue,
+	contracts *CompositeValue,
 	keys *CompositeValue,
 ) *CompositeValue {
 
@@ -6762,8 +6762,8 @@ func NewAuthAccountValue(
 	}
 
 	return &CompositeValue{
-		QualifiedIdentifier: sema.AccountKeyType.QualifiedIdentifier(),
-		Kind:                sema.AccountKeyType.Kind,
+		QualifiedIdentifier: sema.AuthAccountType.QualifiedString(),
+		Kind:                common.CompositeKindStructure,
 		Fields:              fields,
 		ComputedFields:      computedFields,
 		stringer:            stringer,

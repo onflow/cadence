@@ -228,7 +228,7 @@ func TestInterpretTransactions(t *testing.T) {
 			returnZero,
 			panicFunction,
 			panicFunction,
-			interpreter.AuthAccountContractsValue{},
+			&interpreter.CompositeValue{},
 			&interpreter.CompositeValue{},
 		)
 		signer2 := interpreter.NewAuthAccountValue(
@@ -239,7 +239,7 @@ func TestInterpretTransactions(t *testing.T) {
 			returnZero,
 			panicFunction,
 			panicFunction,
-			interpreter.AuthAccountContractsValue{},
+			&interpreter.CompositeValue{},
 			&interpreter.CompositeValue{},
 		)
 
@@ -281,7 +281,7 @@ func TestInterpretTransactions(t *testing.T) {
 				returnZero,
 				panicFunction,
 				panicFunction,
-				interpreter.AuthAccountContractsValue{},
+				&interpreter.CompositeValue{},
 				&interpreter.CompositeValue{},
 			),
 		}
