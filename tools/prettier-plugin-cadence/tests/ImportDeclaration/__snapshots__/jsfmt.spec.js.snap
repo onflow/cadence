@@ -1,0 +1,12 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`import.cdc 1`] = `
+import Simple    from      0x01
+import      Second from   "./cadence/second.cdc"
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+import Simple from 0x1
+import Second from "./cadence/second.cdc"
+
+
+
+`;
