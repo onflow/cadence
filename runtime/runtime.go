@@ -994,7 +994,7 @@ func (r *interpreterRuntime) meteringInterpreterOptions(runtimeInterface Interfa
 
 	return []interpreter.Option{
 		interpreter.WithOnStatementHandler(
-			func(_ *interpreter.Statement) {
+			func(_ *interpreter.Interpreter, _ ast.Statement) {
 				checkLimit()
 			},
 		),
@@ -2098,9 +2098,9 @@ func (r *interpreterRuntime) onStatementHandler() interpreter.OnStatementFunc {
 		return nil
 	}
 
-	return func(statement *interpreter.Statement) {
-		location := statement.Interpreter.Location
-		line := statement.Statement.StartPosition().Line
+	return func(inter *interpreter.Interpreter, statement ast.Statement) {
+		location := inter.Location
+		line := statement.StartPosition().Line
 		r.coverageReport.AddLineHit(location, line)
 	}
 }

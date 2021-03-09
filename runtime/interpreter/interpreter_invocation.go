@@ -29,9 +29,13 @@ func (interpreter *Interpreter) InvokeFunctionValue(
 	argumentTypes []sema.Type,
 	parameterTypes []sema.Type,
 	invocationRange ast.Range,
-) (value Value, err error) {
+) (
+	value Value,
+	err error,
+) {
+
 	// recover internal panics and return them as an error
-	defer recoverErrors(func(internalErr error) {
+	defer interpreter.recoverErrors(func(internalErr error) {
 		err = internalErr
 	})
 
@@ -115,17 +119,17 @@ func (interpreter *Interpreter) invokeInterpretedFunctionActivated(
 		interpreter.bindParameterArguments(function.ParameterList, arguments)
 	}
 
-	functionBlockTrampoline := interpreter.visitFunctionBody(
+	result := interpreter.visitFunctionBody(
 		function.BeforeStatements,
 		function.PreConditions,
-		func() interface{} {
-			return interpreter.runAllStatements(interpreter.visitStatements(function.Statements))
+		func() controlReturn {
+			return interpreter.visitStatements(function.Statements)
 		},
 		function.PostConditions,
 		function.Type.ReturnTypeAnnotation.Type,
 	)
 
-	return interpreter.runAllStatements(functionBlockTrampoline).(Value)
+	return result.(functionReturn).Value
 }
 
 // bindParameterArguments binds the argument values to the given parameters

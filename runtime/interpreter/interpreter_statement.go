@@ -21,140 +21,36 @@ package interpreter
 import (
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/errors"
-	"github.com/onflow/cadence/runtime/trampoline"
 )
 
-type Statement struct {
-	Interpreter *Interpreter
-	Trampoline  trampoline.Trampoline
-	Statement   ast.Statement
-}
+func (interpreter *Interpreter) evalStatement(statement ast.Statement) interface{} {
 
-// runUntilNextStatement executes the trampline until the next statement.
-// It either returns a result or a statement.
-// The difference between "runUntilNextStatement" and "Run" is that:
-// "Run" executes the Trampoline chain all the way until there is no more trampoline and returns the result,
-// whereas "runUntilNextStatement" executes the Trampoline chain, stops as soon as it meets a statement trampoline,
-// and returns the statement, which can be later resumed by calling "runUntilNextStatement" again.
-// Useful for implementing breakpoint debugging.
-func (interpreter *Interpreter) runUntilNextStatement(t trampoline.Trampoline) (interface{}, *Statement) {
-	for {
-		statement := getStatement(t)
+	// Recover and re-throw a panic, so that this interpreter's location and statement are used,
+	// instead of a potentially calling interpreter's location and statement
 
-		if statement != nil {
-			return nil, &Statement{
-				// NOTE: resumption using outer trampoline,
-				// not just inner statement trampoline
-				Trampoline:  t,
-				Interpreter: statement.Interpreter,
-				Statement:   statement.Statement,
-			}
-		}
-
-		result := t.Resume()
-
-		if continuation, ok := result.(func() trampoline.Trampoline); ok {
-
-			t = continuation()
-			continue
-		}
-
-		return result, nil
-	}
-}
-
-// runAllStatements runs all the statement until there is no more trampoline and returns the result.
-// When there is a statement, it calls the onStatement callback, and then continues the execution.
-func (interpreter *Interpreter) runAllStatements(t trampoline.Trampoline) interface{} {
-
-	// Wrap errors if needed
-
-	defer recoverErrors(func(internalErr error) {
-
-		// if the error is already an execution error, use it as is
-		if _, ok := internalErr.(Error); ok {
-			panic(internalErr)
-		}
-
-		// wrap the error with position information if needed
-
-		_, ok := internalErr.(ast.HasPosition)
-		if !ok {
-			internalErr = PositionedError{
-				Err:   internalErr,
-				Range: ast.NewRangeFromPositioned(interpreter.statement.Statement),
-			}
-		}
-
-		panic(Error{
-			Err:      internalErr,
-			Location: interpreter.statement.Interpreter.Location,
-		})
+	defer interpreter.recoverErrors(func(internalErr error) {
+		panic(internalErr)
 	})
 
-	var statement *Statement
-	for {
-		var result interface{}
-		result, statement = interpreter.runUntilNextStatement(t)
-		if statement == nil {
-			return result
-		}
+	interpreter.statement = statement
 
-		interpreter.statement = statement
-
-		if interpreter.onStatement != nil {
-			interpreter.onStatement(statement)
-		}
-
-		result = statement.Trampoline.Resume()
-		if continuation, ok := result.(func() trampoline.Trampoline); ok {
-			t = continuation()
-			continue
-		}
-
-		return result
+	if interpreter.onStatement != nil {
+		interpreter.onStatement(interpreter, statement)
 	}
+
+	return statement.Accept(interpreter)
 }
 
-// getStatement goes through the Trampoline chain and find the first StatementTrampoline
-func getStatement(t trampoline.Trampoline) *StatementTrampoline {
-	switch t := t.(type) {
-	case trampoline.FlatMap:
-		// Recurse into the nested trampoline
-		return getStatement(t.Subroutine)
-	case StatementTrampoline:
-		return &t
-	default:
-		return nil
-	}
-}
+func (interpreter *Interpreter) visitStatements(statements []ast.Statement) controlReturn {
 
-func (interpreter *Interpreter) visitStatements(statements []ast.Statement) trampoline.Trampoline {
-	count := len(statements)
-
-	// no statements? stop
-	if count == 0 {
-		// NOTE: no result, so it does *not* act like a return-statement
-		return trampoline.Done{}
-	}
-
-	statement := statements[0]
-
-	// interpret the first statement, then the remaining ones
-	return StatementTrampoline{
-		F: func() trampoline.Trampoline {
-			return statement.Accept(interpreter).(trampoline.Trampoline)
-		},
-		Interpreter: interpreter,
-		Statement:   statement,
-	}.FlatMap(func(returnValue interface{}) trampoline.Trampoline {
-		if _, isReturn := returnValue.(controlReturn); isReturn {
-			return trampoline.Done{
-				Result: returnValue,
-			}
+	for _, statement := range statements {
+		result := interpreter.evalStatement(statement)
+		if ret, ok := result.(controlReturn); ok {
+			return ret
 		}
-		return interpreter.visitStatements(statements[1:])
-	})
+	}
+
+	return nil
 }
 
 func (interpreter *Interpreter) VisitReturnStatement(statement *ast.ReturnStatement) ast.Repr {
@@ -172,21 +68,16 @@ func (interpreter *Interpreter) VisitReturnStatement(statement *ast.ReturnStatem
 		// NOTE: copy on return
 		value = interpreter.copyAndConvert(value, valueType, returnType)
 	}
-	return trampoline.Done{
-		Result: functionReturn{value},
-	}
+
+	return functionReturn{value}
 }
 
 func (interpreter *Interpreter) VisitBreakStatement(_ *ast.BreakStatement) ast.Repr {
-	return trampoline.Done{
-		Result: controlBreak{},
-	}
+	return controlBreak{}
 }
 
 func (interpreter *Interpreter) VisitContinueStatement(_ *ast.ContinueStatement) ast.Repr {
-	return trampoline.Done{
-		Result: controlContinue{},
-	}
+	return controlContinue{}
 }
 
 func (interpreter *Interpreter) VisitIfStatement(statement *ast.IfStatement) ast.Repr {
@@ -203,80 +94,74 @@ func (interpreter *Interpreter) VisitIfStatement(statement *ast.IfStatement) ast
 func (interpreter *Interpreter) visitIfStatementWithTestExpression(
 	test ast.Expression,
 	thenBlock, elseBlock *ast.Block,
-) trampoline.Trampoline {
+) controlReturn {
 
 	value := interpreter.evalExpression(test).(BoolValue)
+	var result interface{}
 	if value {
-		return thenBlock.Accept(interpreter).(trampoline.Trampoline)
+		result = thenBlock.Accept(interpreter)
 	} else if elseBlock != nil {
-		return elseBlock.Accept(interpreter).(trampoline.Trampoline)
+		result = elseBlock.Accept(interpreter)
 	}
 
-	// NOTE: no result, so it does *not* act like a return-statement
-	return trampoline.Done{}
+	if ret, ok := result.(controlReturn); ok {
+		return ret
+	}
+	return nil
 }
 
 func (interpreter *Interpreter) visitIfStatementWithVariableDeclaration(
 	declaration *ast.VariableDeclaration,
 	thenBlock, elseBlock *ast.Block,
-) trampoline.Trampoline {
+) controlReturn {
 
-	result := interpreter.evalExpression(declaration.Value)
-
-	if someValue, ok := result.(*SomeValue); ok {
+	value := interpreter.evalExpression(declaration.Value)
+	var result interface{}
+	if someValue, ok := value.(*SomeValue); ok {
 
 		targetType := interpreter.Program.Elaboration.VariableDeclarationTargetTypes[declaration]
 		valueType := interpreter.Program.Elaboration.VariableDeclarationValueTypes[declaration]
 		unwrappedValueCopy := interpreter.copyAndConvert(someValue.Value, valueType, targetType)
 
 		interpreter.activations.PushNewWithCurrent()
+		defer interpreter.activations.Pop()
+
 		interpreter.declareVariable(
 			declaration.Identifier.Identifier,
 			unwrappedValueCopy,
 		)
 
-		return thenBlock.Accept(interpreter).(trampoline.Trampoline).
-			Then(func(_ interface{}) {
-				interpreter.activations.Pop()
-			})
+		result = thenBlock.Accept(interpreter)
 	} else if elseBlock != nil {
-		return elseBlock.Accept(interpreter).(trampoline.Trampoline)
+		result = elseBlock.Accept(interpreter)
 	}
 
-	// NOTE: ignore result, so it does *not* act like a return-statement
-	return trampoline.Done{}
+	if ret, ok := result.(controlReturn); ok {
+		return ret
+	}
+	return nil
 }
 
 func (interpreter *Interpreter) VisitSwitchStatement(switchStatement *ast.SwitchStatement) ast.Repr {
 
-	var visitCase func(i int, testValue EquatableValue) trampoline.Trampoline
-	visitCase = func(i int, testValue EquatableValue) trampoline.Trampoline {
+	testValue := interpreter.evalExpression(switchStatement.Expression).(EquatableValue)
 
-		// If no cases are left to evaluate, return (base case)
+	for _, switchCase := range switchStatement.Cases {
 
-		if i >= len(switchStatement.Cases) {
-			// NOTE: no result, so it does *not* act like a return-statement
-			return trampoline.Done{}
-		}
-
-		switchCase := switchStatement.Cases[i]
-
-		runStatements := func() trampoline.Trampoline {
-			// NOTE: the new block ensures that a new block is introduced
+		runStatements := func() ast.Repr {
+			// NOTE: the new block ensures that a new scope is introduced
 
 			block := &ast.Block{
 				Statements: switchCase.Statements,
 			}
 
-			return block.Accept(interpreter).(trampoline.Trampoline).
-				FlatMap(func(value interface{}) trampoline.Trampoline {
+			result := block.Accept(interpreter)
 
-					if _, ok := value.(controlBreak); ok {
-						return trampoline.Done{}
-					}
+			if _, ok := result.(controlBreak); ok {
+				return nil
+			}
 
-					return trampoline.Done{Result: value}
-				})
+			return result
 		}
 
 		// If the case has no expression it is the default case.
@@ -301,95 +186,71 @@ func (interpreter *Interpreter) VisitSwitchStatement(switchStatement *ast.Switch
 		}
 
 		// If the test value and the case values are unequal,
-		// try the next case (recurse)
-
-		return visitCase(i+1, testValue)
+		// then try the next case
 	}
 
-	testValue := interpreter.evalExpression(switchStatement.Expression).(EquatableValue)
-	return visitCase(0, testValue)
+	return nil
 }
 
 func (interpreter *Interpreter) VisitWhileStatement(statement *ast.WhileStatement) ast.Repr {
 
-	value := interpreter.evalExpression(statement.Test).(BoolValue)
-	if !value {
-		return trampoline.Done{}
+	for {
+
+		value := interpreter.evalExpression(statement.Test).(BoolValue)
+		if !value {
+			return nil
+		}
+
+		interpreter.reportLoopIteration(statement)
+
+		result := statement.Block.Accept(interpreter)
+
+		switch result.(type) {
+		case controlBreak:
+			return nil
+
+		case controlContinue:
+			// NO-OP
+
+		case functionReturn:
+			return result
+		}
 	}
-
-	interpreter.reportLoopIteration(statement)
-
-	return statement.Block.Accept(interpreter).(trampoline.Trampoline).
-		FlatMap(func(value interface{}) trampoline.Trampoline {
-
-			switch value.(type) {
-			case controlBreak:
-				return trampoline.Done{}
-
-			case controlContinue:
-				// NO-OP
-
-			case functionReturn:
-				return trampoline.Done{
-					Result: value,
-				}
-			}
-
-			// recurse
-			return statement.Accept(interpreter).(trampoline.Trampoline)
-		})
 }
 
 func (interpreter *Interpreter) VisitForStatement(statement *ast.ForStatement) ast.Repr {
+
 	interpreter.activations.PushNewWithCurrent()
+	defer interpreter.activations.Pop()
 
 	variable := interpreter.declareVariable(
 		statement.Identifier.Identifier,
 		nil,
 	)
 
-	var loop func(i, count int, values []Value) trampoline.Trampoline
-	loop = func(i, count int, values []Value) trampoline.Trampoline {
+	values := interpreter.evalExpression(statement.Value).(*ArrayValue).Values[:]
 
-		if i == count {
-			return trampoline.Done{}
-		}
+	for _, value := range values {
 
 		interpreter.reportLoopIteration(statement)
 
-		variable.Value = values[i]
+		variable.Value = value
 
-		return statement.Block.Accept(interpreter).(trampoline.Trampoline).
-			FlatMap(func(value interface{}) trampoline.Trampoline {
+		result := statement.Block.Accept(interpreter)
 
-				switch value.(type) {
-				case controlBreak:
-					return trampoline.Done{}
+		switch result.(type) {
+		case controlBreak:
+			return nil
 
-				case controlContinue:
-					// NO-OP
+		case controlContinue:
+			// NO-OP
 
-				case functionReturn:
-					return trampoline.Done{
-						Result: value,
-					}
-				}
-
-				// recurse
-				if i == count {
-					return trampoline.Done{}
-				}
-				return loop(i+1, count, values)
-			})
+		case functionReturn:
+			return result
+		}
 	}
 
-	values := interpreter.evalExpression(statement.Value).(*ArrayValue).Values[:]
-	count := len(values)
-
-	return loop(0, count, values).
-		Then(func(_ interface{}) {
-			interpreter.activations.Pop()
-		})
+	return nil
 }
 
 func (interpreter *Interpreter) VisitEmitStatement(statement *ast.EmitStatement) ast.Repr {
@@ -408,12 +269,11 @@ func (interpreter *Interpreter) VisitEmitStatement(statement *ast.EmitStatement)
 		panic(err)
 	}
 
-	// NOTE: no result, so it does *not* act like a return-statement
-	return trampoline.Done{}
+	return nil
 }
 
 func (interpreter *Interpreter) VisitPragmaDeclaration(_ *ast.PragmaDeclaration) ast.Repr {
-	return trampoline.Done{}
+	return nil
 }
 
 // VisitVariableDeclaration first visits the declaration's value,
@@ -434,11 +294,10 @@ func (interpreter *Interpreter) VisitVariableDeclaration(declaration *ast.Variab
 	)
 
 	if declaration.SecondValue == nil {
-		// NOTE: ignore result, so it does *not* act like a return-statement
-		return trampoline.Done{}
+		return nil
 	}
 
-	return interpreter.visitAssignment(
+	interpreter.visitAssignment(
 		declaration.Transfer.Operation,
 		declaration.Value,
 		valueType,
@@ -446,6 +305,8 @@ func (interpreter *Interpreter) VisitVariableDeclaration(declaration *ast.Variab
 		secondValueType,
 		declaration,
 	)
+
+	return nil
 }
 
 func (interpreter *Interpreter) VisitAssignmentStatement(assignment *ast.AssignmentStatement) ast.Repr {
@@ -455,12 +316,14 @@ func (interpreter *Interpreter) VisitAssignmentStatement(assignment *ast.Assignm
 	target := assignment.Target
 	value := assignment.Value
 
-	return interpreter.visitAssignment(
+	interpreter.visitAssignment(
 		assignment.Transfer.Operation,
 		target, targetType,
 		value, valueType,
 		assignment,
 	)
+
+	return nil
 }
 
 func (interpreter *Interpreter) VisitSwapStatement(swap *ast.SwapStatement) ast.Repr {
@@ -491,12 +354,10 @@ func (interpreter *Interpreter) VisitSwapStatement(swap *ast.SwapStatement) ast.
 	leftGetterSetter.set(rightValueCopy)
 	rightGetterSetter.set(leftValueCopy)
 
-	return trampoline.Done{}
+	return nil
 }
 
 func (interpreter *Interpreter) VisitExpressionStatement(statement *ast.ExpressionStatement) ast.Repr {
 	result := interpreter.evalExpression(statement.Expression)
-	return trampoline.Done{
-		Result: ExpressionStatementResult{result},
-	}
+	return ExpressionStatementResult{result}
 }

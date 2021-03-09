@@ -35,7 +35,6 @@ import (
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/format"
 	"github.com/onflow/cadence/runtime/sema"
-	"github.com/onflow/cadence/runtime/trampoline"
 )
 
 // Value
@@ -83,7 +82,7 @@ type EquatableValue interface {
 // DestroyableValue
 
 type DestroyableValue interface {
-	Destroy(interpreter *Interpreter, locationRange LocationRange) trampoline.Trampoline
+	Destroy(interpreter *Interpreter, locationRange LocationRange)
 }
 
 // HasKeyString
@@ -579,15 +578,10 @@ func (v *ArrayValue) SetModified(modified bool) {
 	v.modified = modified
 }
 
-func (v *ArrayValue) Destroy(interpreter *Interpreter, locationRange LocationRange) trampoline.Trampoline {
-	var result trampoline.Trampoline = trampoline.Done{Result: NilValue{}}
+func (v *ArrayValue) Destroy(interpreter *Interpreter, locationRange LocationRange) {
 	for _, value := range v.Values {
-		capturedValue := value
-		result = result.FlatMap(func(_ interface{}) trampoline.Trampoline {
-			return capturedValue.(DestroyableValue).Destroy(interpreter, locationRange)
-		})
+		maybeDestroy(interpreter, locationRange, value)
 	}
-	return result
 }
 
 func (v *ArrayValue) Concat(other ConcatenatableValue) Value {
@@ -5317,7 +5311,7 @@ func NewCompositeValue(
 	}
 }
 
-func (v *CompositeValue) Destroy(interpreter *Interpreter, locationRange LocationRange) trampoline.Trampoline {
+func (v *CompositeValue) Destroy(interpreter *Interpreter, locationRange LocationRange) {
 
 	interpreter = v.getInterpreter(interpreter)
 
@@ -5342,8 +5336,6 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, locationRange Locatio
 
 	v.destroyed = true
 	v.modified = true
-
-	return trampoline.Done{Result: VoidValue{}}
 }
 
 func (*CompositeValue) IsValue() {}
@@ -5786,32 +5778,26 @@ func (v *DictionaryValue) SetModified(modified bool) {
 	v.modified = modified
 }
 
-func (v *DictionaryValue) Destroy(inter *Interpreter, locationRange LocationRange) trampoline.Trampoline {
-	var result trampoline.Trampoline = trampoline.Done{Result: NilValue{}}
-
-	maybeDestroy := func(value interface{}) {
-		destroyableValue, ok := value.(DestroyableValue)
-		if !ok {
-			return
-		}
-
-		result = result.
-			FlatMap(func(_ interface{}) trampoline.Trampoline {
-				return destroyableValue.Destroy(inter, locationRange)
-			})
+func maybeDestroy(inter *Interpreter, locationRange LocationRange, value Value) {
+	destroyableValue, ok := value.(DestroyableValue)
+	if !ok {
+		return
 	}
+
+	destroyableValue.Destroy(inter, locationRange)
+}
+
+func (v *DictionaryValue) Destroy(inter *Interpreter, locationRange LocationRange) {
 
 	for _, keyValue := range v.Keys.Values {
 		// Don't use `Entries` here: the value might be deferred and needs to be loaded
 		value := v.Get(inter, locationRange, keyValue)
-		maybeDestroy(keyValue)
-		maybeDestroy(value)
+		maybeDestroy(inter, locationRange, keyValue)
+		maybeDestroy(inter, locationRange, value)
 	}
 
 	writeDeferredKeys(inter, v.DeferredOwner, v.DeferredStorageKeyBase, v.DeferredKeys)
 	writeDeferredKeys(inter, v.DeferredOwner, v.DeferredStorageKeyBase, v.prevDeferredKeys)
-
-	return result
 }
 
 func (v *DictionaryValue) Get(inter *Interpreter, _ LocationRange, keyValue Value) Value {
@@ -6113,8 +6099,8 @@ func (NilValue) SetModified(_ bool) {
 	// NO-OP
 }
 
-func (v NilValue) Destroy(_ *Interpreter, _ LocationRange) trampoline.Trampoline {
-	return trampoline.Done{Result: NilValue{}}
+func (v NilValue) Destroy(_ *Interpreter, _ LocationRange) {
+	// NO-OP
 }
 
 func (NilValue) String() string {
@@ -6211,8 +6197,8 @@ func (v *SomeValue) SetModified(modified bool) {
 	v.Value.SetModified(modified)
 }
 
-func (v *SomeValue) Destroy(interpreter *Interpreter, locationRange LocationRange) trampoline.Trampoline {
-	return v.Value.(DestroyableValue).Destroy(interpreter, locationRange)
+func (v *SomeValue) Destroy(interpreter *Interpreter, locationRange LocationRange) {
+	maybeDestroy(interpreter, locationRange, v.Value)
 }
 
 func (v *SomeValue) String() string {
@@ -6700,8 +6686,8 @@ func (AuthAccountValue) SetModified(_ bool) {
 	// NO-OP
 }
 
-func (v AuthAccountValue) Destroy(_ *Interpreter, _ LocationRange) trampoline.Trampoline {
-	return trampoline.Done{Result: NilValue{}}
+func (v AuthAccountValue) Destroy(_ *Interpreter, _ LocationRange) {
+	// NO-OP
 }
 
 func (v AuthAccountValue) String() string {
@@ -6855,8 +6841,8 @@ func (PublicAccountValue) SetModified(_ bool) {
 	// NO-OP
 }
 
-func (v PublicAccountValue) Destroy(_ *Interpreter, _ LocationRange) trampoline.Trampoline {
-	return trampoline.Done{Result: NilValue{}}
+func (v PublicAccountValue) Destroy(_ *Interpreter, _ LocationRange) {
+	// NO-OP
 }
 
 func (v PublicAccountValue) String() string {
@@ -6948,8 +6934,8 @@ func (PathValue) SetModified(_ bool) {
 	// NO-OP
 }
 
-func (v PathValue) Destroy(_ *Interpreter, _ LocationRange) trampoline.Trampoline {
-	return trampoline.Done{Result: NilValue{}}
+func (v PathValue) Destroy(_ *Interpreter, _ LocationRange) {
+	// NO-OP
 }
 
 func (v PathValue) String() string {
@@ -7019,8 +7005,8 @@ func (CapabilityValue) SetModified(_ bool) {
 	// NO-OP
 }
 
-func (v CapabilityValue) Destroy(_ *Interpreter, _ LocationRange) trampoline.Trampoline {
-	return trampoline.Done{Result: NilValue{}}
+func (v CapabilityValue) Destroy(_ *Interpreter, _ LocationRange) {
+	// NO-OP
 }
 
 func (v CapabilityValue) String() string {
@@ -7102,8 +7088,8 @@ func (LinkValue) SetModified(_ bool) {
 	// NO-OP
 }
 
-func (v LinkValue) Destroy(_ *Interpreter, _ LocationRange) trampoline.Trampoline {
-	return trampoline.Done{Result: NilValue{}}
+func (v LinkValue) Destroy(_ *Interpreter, _ LocationRange) {
+	// NO-OP
 }
 
 func (v LinkValue) String() string {

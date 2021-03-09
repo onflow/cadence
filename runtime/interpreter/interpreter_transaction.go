@@ -21,14 +21,12 @@ package interpreter
 import (
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/sema"
-	"github.com/onflow/cadence/runtime/trampoline"
 )
 
 func (interpreter *Interpreter) VisitTransactionDeclaration(declaration *ast.TransactionDeclaration) ast.Repr {
 	interpreter.declareTransactionEntryPoint(declaration)
 
-	// NOTE: no result, so it does *not* act like a return-statement
-	return trampoline.Done{}
+	return nil
 }
 
 func (interpreter *Interpreter) declareTransactionEntryPoint(declaration *ast.TransactionDeclaration) {
@@ -94,7 +92,7 @@ func (interpreter *Interpreter) declareTransactionEntryPoint(declaration *ast.Tr
 				prepare.Invoke(invocation)
 			}
 
-			var body func() interface{}
+			var body func() controlReturn
 			if executeFunction != nil {
 				execute := interpreter.functionDeclarationValue(
 					executeFunction,
@@ -105,8 +103,11 @@ func (interpreter *Interpreter) declareTransactionEntryPoint(declaration *ast.Tr
 				invocationWithoutArguments := invocation
 				invocationWithoutArguments.Arguments = nil
 
-				body = func() interface{} {
-					return execute.Invoke(invocationWithoutArguments)
+				body = func() controlReturn {
+					value := execute.Invoke(invocationWithoutArguments)
+					return functionReturn{
+						Value: value,
+					}
 				}
 			}
 
@@ -115,7 +116,7 @@ func (interpreter *Interpreter) declareTransactionEntryPoint(declaration *ast.Tr
 				preConditions = *declaration.PreConditions
 			}
 
-			tram := interpreter.visitFunctionBody(
+			result := interpreter.visitFunctionBody(
 				postConditionsRewrite.BeforeStatements,
 				preConditions,
 				body,
@@ -123,7 +124,7 @@ func (interpreter *Interpreter) declareTransactionEntryPoint(declaration *ast.Tr
 				sema.VoidType,
 			)
 
-			return interpreter.runAllStatements(tram).(Value)
+			return result.(functionReturn).Value
 		})
 
 	interpreter.Transactions = append(interpreter.Transactions, &transactionFunction)
