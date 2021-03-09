@@ -19,11 +19,15 @@
 package integration
 
 import (
+	"github.com/onflow/flow-cli/flow/cli"
 	"github.com/onflow/flow-go-sdk"
 	"github.com/onflow/flow-go-sdk/client"
 
 	"github.com/onflow/cadence/languageserver/protocol"
 	"github.com/onflow/cadence/languageserver/server"
+
+	"github.com/onflow/flow-cli/sharedlib/gateway"
+	"github.com/onflow/flow-cli/sharedlib/services"
 )
 
 type EmulatorState byte
@@ -43,6 +47,8 @@ type FlowIntegration struct {
 	serviceAddress flow.Address
 	entryPointInfo map[protocol.DocumentUri]entryPointInfo
 	emulatorState  EmulatorState
+
+	sharedServices *services.Services
 }
 
 func NewFlowIntegration(s *server.Server, enableFlowClient bool) (*FlowIntegration, error) {
