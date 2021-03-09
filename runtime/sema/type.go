@@ -2966,9 +2966,9 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 
 // VariableSizedType is a variable sized array type
 type VariableSizedType struct {
-	Type                      Type
-	cachedMemberResolvers     map[string]MemberResolver
-	cachedMemberResolversOnce sync.Once
+	Type                Type
+	memberResolvers     map[string]MemberResolver
+	memberResolversOnce sync.Once
 }
 
 func (*VariableSizedType) IsType() {}
@@ -2998,12 +2998,12 @@ func (t *VariableSizedType) Equal(other Type) bool {
 
 func (t *VariableSizedType) GetMembers() map[string]MemberResolver {
 	t.initializeMemberResolvers()
-	return t.cachedMemberResolvers
+	return t.memberResolvers
 }
 
 func (t *VariableSizedType) initializeMemberResolvers() {
-	t.cachedMemberResolversOnce.Do(func() {
-		t.cachedMemberResolvers = getArrayMembers(t)
+	t.memberResolversOnce.Do(func() {
+		t.memberResolvers = getArrayMembers(t)
 	})
 }
 
@@ -3087,10 +3087,10 @@ func (t *VariableSizedType) Resolve(typeArguments *TypeParameterTypeOrderedMap) 
 
 // ConstantSizedType is a constant sized array type
 type ConstantSizedType struct {
-	Type                      Type
-	Size                      int64
-	cachedMemberResolvers     map[string]MemberResolver
-	cachedMemberResolversOnce sync.Once
+	Type                Type
+	Size                int64
+	memberResolvers     map[string]MemberResolver
+	memberResolversOnce sync.Once
 }
 
 func (*ConstantSizedType) IsType() {}
@@ -3121,12 +3121,12 @@ func (t *ConstantSizedType) Equal(other Type) bool {
 
 func (t *ConstantSizedType) GetMembers() map[string]MemberResolver {
 	t.initializeMemberResolvers()
-	return t.cachedMemberResolvers
+	return t.memberResolvers
 }
 
 func (t *ConstantSizedType) initializeMemberResolvers() {
-	t.cachedMemberResolversOnce.Do(func() {
-		t.cachedMemberResolvers = getArrayMembers(t)
+	t.memberResolversOnce.Do(func() {
+		t.memberResolvers = getArrayMembers(t)
 	})
 }
 
@@ -4247,39 +4247,34 @@ type CompositeType struct {
 	Identifier string
 	Kind       common.CompositeKind
 	// an internal set of field `ExplicitInterfaceConformances`
-	cachedExplicitInterfaceConformanceSet     *InterfaceSet
-	cachedExplicitInterfaceConformanceSetOnce sync.Once
-	ExplicitInterfaceConformances             []*InterfaceType
-	ImplicitTypeRequirementConformances       []*CompositeType
-	Members                                   *StringMemberOrderedMap
-	cachedMemberResolvers                     map[string]MemberResolver
-	cachedMemberResolversOnce                 sync.Once
-	Fields                                    []string
+	explicitInterfaceConformanceSet     *InterfaceSet
+	explicitInterfaceConformanceSetOnce sync.Once
+	ExplicitInterfaceConformances       []*InterfaceType
+	ImplicitTypeRequirementConformances []*CompositeType
+	Members                             *StringMemberOrderedMap
+	memberResolvers                     map[string]MemberResolver
+	memberResolversOnce                 sync.Once
+	Fields                              []string
 	// TODO: add support for overloaded initializers
 	ConstructorParameters []*Parameter
 	nestedTypes           *StringTypeOrderedMap
 	ContainerType         Type
 	EnumRawType           Type
-	cachedIdentifiers     struct {
-		TypeID              TypeID
-		QualifiedIdentifier string
-	}
-	cachedIdentifiersOnce sync.Once
 }
 
 func (t *CompositeType) ExplicitInterfaceConformanceSet() *InterfaceSet {
 	t.initializeExplicitInterfaceConformanceSet()
-	return t.cachedExplicitInterfaceConformanceSet
+	return t.explicitInterfaceConformanceSet
 }
 
 func (t *CompositeType) initializeExplicitInterfaceConformanceSet() {
-	t.cachedExplicitInterfaceConformanceSetOnce.Do(func() {
+	t.explicitInterfaceConformanceSetOnce.Do(func() {
 		// TODO: also include conformances' conformances recursively
 		//   once interface can have conformances
 
-		t.cachedExplicitInterfaceConformanceSet = NewInterfaceSet()
+		t.explicitInterfaceConformanceSet = NewInterfaceSet()
 		for _, conformance := range t.ExplicitInterfaceConformances {
-			t.cachedExplicitInterfaceConformanceSet.Add(conformance)
+			t.explicitInterfaceConformanceSet.Add(conformance)
 		}
 	})
 }
@@ -4312,20 +4307,11 @@ func (t *CompositeType) GetLocation() common.Location {
 }
 
 func (t *CompositeType) QualifiedIdentifier() string {
-	t.initializeIdentifiers()
-	return t.cachedIdentifiers.QualifiedIdentifier
+	return qualifiedIdentifier(t.Identifier, t.ContainerType)
 }
 
 func (t *CompositeType) ID() TypeID {
-	t.initializeIdentifiers()
-	return t.cachedIdentifiers.TypeID
-}
-
-func (t *CompositeType) initializeIdentifiers() {
-	t.cachedIdentifiersOnce.Do(func() {
-		t.cachedIdentifiers.QualifiedIdentifier = qualifiedIdentifier(t.Identifier, t.ContainerType)
-		t.cachedIdentifiers.TypeID = t.Location.TypeID(t.cachedIdentifiers.QualifiedIdentifier)
-	})
+	return t.Location.TypeID(t.QualifiedIdentifier())
 }
 
 func (t *CompositeType) Equal(other Type) bool {
@@ -4340,7 +4326,7 @@ func (t *CompositeType) Equal(other Type) bool {
 
 func (t *CompositeType) GetMembers() map[string]MemberResolver {
 	t.initializeMemberResolvers()
-	return t.cachedMemberResolvers
+	return t.memberResolvers
 }
 
 func (t *CompositeType) IsResourceType() bool {
@@ -4468,7 +4454,7 @@ func (t *CompositeType) GetNestedTypes() *StringTypeOrderedMap {
 }
 
 func (t *CompositeType) initializeMemberResolvers() {
-	t.cachedMemberResolversOnce.Do(func() {
+	t.memberResolversOnce.Do(func() {
 		members := make(map[string]MemberResolver, t.Members.Len())
 
 		t.Members.Foreach(func(name string, loopMember *Member) {
@@ -4497,7 +4483,7 @@ func (t *CompositeType) initializeMemberResolvers() {
 				}
 			})
 
-		t.cachedMemberResolvers = withBuiltinMembers(t, members)
+		t.memberResolvers = withBuiltinMembers(t, members)
 	})
 }
 
@@ -4615,22 +4601,17 @@ func (m *Member) testType(test func(Type) bool, results map[*Member]bool) (resul
 // InterfaceType
 
 type InterfaceType struct {
-	Location                  common.Location
-	Identifier                string
-	CompositeKind             common.CompositeKind
-	Members                   *StringMemberOrderedMap
-	cachedMemberResolvers     map[string]MemberResolver
-	cachedMemberResolversOnce sync.Once
-	Fields                    []string
+	Location            common.Location
+	Identifier          string
+	CompositeKind       common.CompositeKind
+	Members             *StringMemberOrderedMap
+	memberResolvers     map[string]MemberResolver
+	memberResolversOnce sync.Once
+	Fields              []string
 	// TODO: add support for overloaded initializers
 	InitializerParameters []*Parameter
 	ContainerType         Type
 	nestedTypes           *StringTypeOrderedMap
-	cachedIdentifiers     struct {
-		TypeID              TypeID
-		QualifiedIdentifier string
-	}
-	cachedIdentifiersOnce sync.Once
 }
 
 func (*InterfaceType) IsType() {}
@@ -4656,20 +4637,11 @@ func (t *InterfaceType) GetLocation() common.Location {
 }
 
 func (t *InterfaceType) QualifiedIdentifier() string {
-	t.initializeIdentifiers()
-	return t.cachedIdentifiers.QualifiedIdentifier
+	return qualifiedIdentifier(t.Identifier, t.ContainerType)
 }
 
 func (t *InterfaceType) ID() TypeID {
-	t.initializeIdentifiers()
-	return t.cachedIdentifiers.TypeID
-}
-
-func (t *InterfaceType) initializeIdentifiers() {
-	t.cachedIdentifiersOnce.Do(func() {
-		t.cachedIdentifiers.QualifiedIdentifier = qualifiedIdentifier(t.Identifier, t.ContainerType)
-		t.cachedIdentifiers.TypeID = t.Location.TypeID(t.cachedIdentifiers.QualifiedIdentifier)
-	})
+	return t.Location.TypeID(t.QualifiedIdentifier())
 }
 
 func (t *InterfaceType) Equal(other Type) bool {
@@ -4684,11 +4656,11 @@ func (t *InterfaceType) Equal(other Type) bool {
 
 func (t *InterfaceType) GetMembers() map[string]MemberResolver {
 	t.initializeMemberResolvers()
-	return t.cachedMemberResolvers
+	return t.memberResolvers
 }
 
 func (t *InterfaceType) initializeMemberResolvers() {
-	t.cachedMemberResolversOnce.Do(func() {
+	t.memberResolversOnce.Do(func() {
 		members := make(map[string]MemberResolver, t.Members.Len())
 		t.Members.Foreach(func(name string, loopMember *Member) {
 			// NOTE: don't capture loop variable
@@ -4701,7 +4673,7 @@ func (t *InterfaceType) initializeMemberResolvers() {
 			}
 		})
 
-		t.cachedMemberResolvers = withBuiltinMembers(t, members)
+		t.memberResolvers = withBuiltinMembers(t, members)
 	})
 }
 
@@ -4796,10 +4768,10 @@ func (t *InterfaceType) GetNestedTypes() *StringTypeOrderedMap {
 // and all values have to be a subtype of the value type.
 
 type DictionaryType struct {
-	KeyType                   Type
-	ValueType                 Type
-	cachedMemberResolvers     map[string]MemberResolver
-	cachedMemberResolversOnce sync.Once
+	KeyType             Type
+	ValueType           Type
+	memberResolvers     map[string]MemberResolver
+	memberResolversOnce sync.Once
 }
 
 func (*DictionaryType) IsType() {}
@@ -4917,13 +4889,13 @@ Returns the value as an optional if the dictionary contained the key, or nil if 
 
 func (t *DictionaryType) GetMembers() map[string]MemberResolver {
 	t.initializeMemberResolvers()
-	return t.cachedMemberResolvers
+	return t.memberResolvers
 }
 
 func (t *DictionaryType) initializeMemberResolvers() {
-	t.cachedMemberResolversOnce.Do(func() {
+	t.memberResolversOnce.Do(func() {
 
-		t.cachedMemberResolvers = withBuiltinMembers(t, map[string]MemberResolver{
+		t.memberResolvers = withBuiltinMembers(t, map[string]MemberResolver{
 			"length": {
 				Kind: common.DeclarationKindField,
 				Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
@@ -6069,20 +6041,20 @@ type RestrictedType struct {
 	Type         Type
 	Restrictions []*InterfaceType
 	// an internal set of field `Restrictions`
-	cachedRestrictionSet     *InterfaceSet
-	cachedRestrictionSetOnce sync.Once
+	restrictionSet     *InterfaceSet
+	restrictionSetOnce sync.Once
 }
 
 func (t *RestrictedType) RestrictionSet() *InterfaceSet {
 	t.initializeRestrictionSet()
-	return t.cachedRestrictionSet
+	return t.restrictionSet
 }
 
 func (t *RestrictedType) initializeRestrictionSet() {
-	t.cachedRestrictionSetOnce.Do(func() {
-		t.cachedRestrictionSet = NewInterfaceSet()
+	t.restrictionSetOnce.Do(func() {
+		t.restrictionSet = NewInterfaceSet()
 		for _, restriction := range t.Restrictions {
-			t.cachedRestrictionSet.Add(restriction)
+			t.restrictionSet.Add(restriction)
 		}
 	})
 }
