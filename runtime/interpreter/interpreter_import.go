@@ -23,7 +23,6 @@ import (
 
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/sema"
-	"github.com/onflow/cadence/runtime/trampoline"
 )
 
 func (interpreter *Interpreter) VisitImportDeclaration(declaration *ast.ImportDeclaration) ast.Repr {
@@ -34,7 +33,7 @@ func (interpreter *Interpreter) VisitImportDeclaration(declaration *ast.ImportDe
 		interpreter.importResolvedLocation(resolvedLocation)
 	}
 
-	return trampoline.Done{}
+	return nil
 }
 
 func (interpreter *Interpreter) importResolvedLocation(resolvedLocation sema.ResolvedLocation) {

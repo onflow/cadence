@@ -8321,14 +8321,18 @@ func BenchmarkInterpretRecursionFib(b *testing.B) {
        }
    `)
 
+	expected := interpreter.NewIntValueFromInt64(377)
+
+	b.ReportAllocs()
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
 
-		_, err := inter.Invoke(
+		result, err := inter.Invoke(
 			"fib",
 			interpreter.NewIntValueFromInt64(14),
 		)
 		require.NoError(b, err)
+		require.Equal(b, expected, result)
 	}
 }

@@ -24,6 +24,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
@@ -100,19 +101,17 @@ func TestInterpretStatementHandler(t *testing.T) {
 		interpreter.ProgramFromChecker(importingChecker),
 		importingChecker.Location,
 		interpreter.WithOnStatementHandler(
-			func(statement *interpreter.Statement) {
-				inter := statement.Interpreter
-
-				id, ok := interpreterIDs[inter]
+			func(interpreter *interpreter.Interpreter, statement ast.Statement) {
+				id, ok := interpreterIDs[interpreter]
 				if !ok {
 					id = nextInterpreterID
 					nextInterpreterID++
-					interpreterIDs[inter] = id
+					interpreterIDs[interpreter] = id
 				}
 
 				occurrences = append(occurrences, occurrence{
 					interpreterID: id,
-					line:          statement.Statement.StartPosition().Line,
+					line:          statement.StartPosition().Line,
 				})
 			},
 		),

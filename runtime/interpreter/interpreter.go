@@ -27,8 +27,6 @@ import (
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/sema"
-
-	. "github.com/onflow/cadence/runtime/trampoline"
 )
 
 type controlReturn interface {
@@ -82,7 +80,8 @@ type OnEventEmittedFunc func(
 // OnStatementFunc is a function that is triggered when a statement is about to be executed.
 //
 type OnStatementFunc func(
-	statement *Statement,
+	inter *Interpreter,
+	statement ast.Statement,
 )
 
 // OnLoopIterationFunc is a function that is triggered when a loop iteration is about to be executed.
@@ -237,7 +236,7 @@ type Interpreter struct {
 	importLocationHandler          ImportLocationHandlerFunc
 	uuidHandler                    UUIDHandlerFunc
 	interpreted                    bool
-	statement                      *Statement
+	statement                      ast.Statement
 }
 
 type Option func(*Interpreter) error
@@ -556,21 +555,15 @@ func (interpreter *Interpreter) Interpret() (err error) {
 	}
 
 	// recover internal panics and return them as an error
-	defer recoverErrors(func(internalErr error) {
+	defer interpreter.recoverErrors(func(internalErr error) {
 		err = internalErr
 	})
 
-	interpreter.runAllStatements(interpreter.interpret())
+	interpreter.Program.Program.Accept(interpreter)
 
 	interpreter.interpreted = true
 
 	return nil
-}
-
-// interpret returns a Trampoline that is done when all top-level declarations
-// have been declared and evaluated.
-func (interpreter *Interpreter) interpret() Trampoline {
-	return interpreter.Program.Program.Accept(interpreter).(Trampoline)
 }
 
 func (interpreter *Interpreter) prepareInterpretation() {
@@ -594,29 +587,18 @@ func (interpreter *Interpreter) prepareInterpretation() {
 	// need to be included in conforming composites' functions
 }
 
-func (interpreter *Interpreter) visitGlobalDeclarations(declarations []ast.Declaration) Trampoline {
-	count := len(declarations)
-
-	// no declarations? stop
-	if count == 0 {
-		// NOTE: no result, so it does *not* act like a return-statement
-		return Done{}
+func (interpreter *Interpreter) visitGlobalDeclarations(declarations []ast.Declaration) {
+	for _, declaration := range declarations {
+		interpreter.visitGlobalDeclaration(declaration)
 	}
-
-	// interpret the first declaration, then the remaining ones
-	return interpreter.visitGlobalDeclaration(declarations[0]).
-		FlatMap(func(_ interface{}) Trampoline {
-			return interpreter.visitGlobalDeclarations(declarations[1:])
-		})
 }
 
 // visitGlobalDeclaration firsts interprets the global declaration,
 // then finds the declaration and adds it to the globals
-func (interpreter *Interpreter) visitGlobalDeclaration(declaration ast.Declaration) Trampoline {
-	return declaration.Accept(interpreter).(Trampoline).
-		Then(func(_ interface{}) {
-			interpreter.declareGlobal(declaration)
-		})
+//
+func (interpreter *Interpreter) visitGlobalDeclaration(declaration ast.Declaration) {
+	declaration.Accept(interpreter)
+	interpreter.declareGlobal(declaration)
 }
 
 func (interpreter *Interpreter) declareGlobal(declaration ast.Declaration) {
@@ -629,13 +611,15 @@ func (interpreter *Interpreter) declareGlobal(declaration ast.Declaration) {
 	interpreter.Globals[name] = interpreter.findVariable(name)
 }
 
-// prepareInvokeVariable looks up the function by the given name from global
-// variables, checks the function type, and returns a trampoline which executes
-// the function with the given arguments
-func (interpreter *Interpreter) prepareInvokeVariable(
+// invokeVariable looks up the function by the given name from global variables,
+// checks the function type, and executes the function with the given arguments
+func (interpreter *Interpreter) invokeVariable(
 	functionName string,
 	arguments []Value,
-) (value Value, err error) {
+) (
+	value Value,
+	err error,
+) {
 
 	// function must be defined as a global variable
 	variable, ok := interpreter.Globals[functionName]
@@ -744,17 +728,19 @@ func (interpreter *Interpreter) prepareInvoke(
 
 // Invoke invokes a global function with the given arguments
 func (interpreter *Interpreter) Invoke(functionName string, arguments ...Value) (value Value, err error) {
+
 	// recover internal panics and return them as an error
-	defer recoverErrors(func(internalErr error) {
+	defer interpreter.recoverErrors(func(internalErr error) {
 		err = internalErr
 	})
 
-	return interpreter.prepareInvokeVariable(functionName, arguments)
+	return interpreter.invokeVariable(functionName, arguments)
 }
 
 func (interpreter *Interpreter) InvokeTransaction(index int, arguments ...Value) (err error) {
+
 	// recover internal panics and return them as an error
-	defer recoverErrors(func(internalErr error) {
+	defer interpreter.recoverErrors(func(internalErr error) {
 		err = internalErr
 	})
 
@@ -762,7 +748,7 @@ func (interpreter *Interpreter) InvokeTransaction(index int, arguments ...Value)
 	return err
 }
 
-func recoverErrors(onError func(error)) {
+func (interpreter *Interpreter) recoverErrors(onError func(error)) {
 	if r := recover(); r != nil {
 		var err error
 		switch r := r.(type) {
@@ -775,6 +761,25 @@ func recoverErrors(onError func(error)) {
 			err = fmt.Errorf("%s", r)
 		}
 
+		// if the error is not yet an interpreter error, wrap it
+		if _, ok := err.(Error); !ok {
+
+			// wrap the error with position information if needed
+
+			_, ok := err.(ast.HasPosition)
+			if !ok {
+				err = PositionedError{
+					Err:   err,
+					Range: ast.NewRangeFromPositioned(interpreter.statement),
+				}
+			}
+
+			err = Error{
+				Err:      err,
+				Location: interpreter.Location,
+			}
+		}
+
 		onError(err)
 	}
 }
@@ -782,7 +787,9 @@ func recoverErrors(onError func(error)) {
 func (interpreter *Interpreter) VisitProgram(program *ast.Program) ast.Repr {
 	interpreter.prepareInterpretation()
 
-	return interpreter.visitGlobalDeclarations(program.Declarations())
+	interpreter.visitGlobalDeclarations(program.Declarations())
+
+	return nil
 }
 
 func (interpreter *Interpreter) VisitFunctionDeclaration(declaration *ast.FunctionDeclaration) ast.Repr {
@@ -806,8 +813,7 @@ func (interpreter *Interpreter) VisitFunctionDeclaration(declaration *ast.Functi
 		lexicalScope,
 	)
 
-	// NOTE: no result, so it does *not* act like a return-statement
-	return Done{}
+	return nil
 }
 
 func (interpreter *Interpreter) functionDeclarationValue(
@@ -861,11 +867,9 @@ func (interpreter *Interpreter) ImportValue(name string, value Value) error {
 func (interpreter *Interpreter) VisitBlock(block *ast.Block) ast.Repr {
 	// block scope: each block gets an activation record
 	interpreter.activations.PushNewWithCurrent()
+	defer interpreter.activations.Pop()
 
-	return interpreter.visitStatements(block.Statements).
-		Then(func(_ interface{}) {
-			interpreter.activations.Pop()
-		})
+	return interpreter.visitStatements(block.Statements)
 }
 
 func (interpreter *Interpreter) VisitFunctionBlock(_ *ast.FunctionBlock) ast.Repr {
@@ -876,93 +880,82 @@ func (interpreter *Interpreter) VisitFunctionBlock(_ *ast.FunctionBlock) ast.Rep
 func (interpreter *Interpreter) visitFunctionBody(
 	beforeStatements []ast.Statement,
 	preConditions ast.Conditions,
-	body func() interface{},
+	body func() controlReturn,
 	postConditions ast.Conditions,
 	returnType sema.Type,
-) Trampoline {
+) controlReturn {
 
 	// block scope: each function block gets an activation record
 	interpreter.activations.PushNewWithCurrent()
+	defer interpreter.activations.Pop()
 
-	return interpreter.visitStatements(beforeStatements).
-		FlatMap(func(_ interface{}) Trampoline {
-			return interpreter.visitConditions(preConditions)
-		}).
-		Map(func(_ interface{}) interface{} {
-			if body == nil {
-				return nil
-			}
-
-			return body()
-		}).
-		FlatMap(func(blockResult interface{}) Trampoline {
-			var resultValue Value
-			if _, ok := blockResult.(functionReturn); ok {
-				resultValue = blockResult.(functionReturn).Value
-			} else {
-				resultValue = VoidValue{}
-			}
-
-			// If there is a return type, declare the constant `result`
-			// which has the return value
-
-			if returnType != sema.VoidType {
-				interpreter.declareVariable(sema.ResultIdentifier, resultValue)
-			}
-
-			return interpreter.visitConditions(postConditions).
-				Map(func(_ interface{}) interface{} {
-					return resultValue
-				})
-		}).
-		Then(func(_ interface{}) {
-			interpreter.activations.Pop()
-		})
-}
-
-func (interpreter *Interpreter) visitConditions(conditions []*ast.Condition) Trampoline {
-	count := len(conditions)
-
-	// no conditions? stop
-	if count == 0 {
-		return Done{}
+	result := interpreter.visitStatements(beforeStatements)
+	if ret, ok := result.(functionReturn); ok {
+		return ret
 	}
 
-	// interpret the first condition, then the remaining ones.
-	// treat the condition as a statement, so we get position information in case of an error
-	condition := conditions[0]
-	return StatementTrampoline{
-		F: func() Trampoline {
-			return condition.Accept(interpreter).(Trampoline)
-		},
-		Interpreter: interpreter,
-		Statement: &ast.ExpressionStatement{
-			Expression: condition.Test,
-		},
-	}.FlatMap(func(value interface{}) Trampoline {
-		result := value.(BoolValue)
+	interpreter.visitConditions(preConditions)
 
-		if !result {
-			var message string
-			if condition.Message != nil {
-				messageValue := interpreter.evalExpression(condition.Message)
-				message = messageValue.(*StringValue).Str
-			}
+	var resultValue Value
 
-			panic(ConditionError{
-				ConditionKind: condition.Kind,
-				Message:       message,
-				LocationRange: interpreter.locationRange(condition.Test),
-			})
+	if body != nil {
+		result = body()
+		if ret, ok := result.(functionReturn); ok {
+			resultValue = ret.Value
+		} else {
+			resultValue = VoidValue{}
 		}
+	} else {
+		resultValue = VoidValue{}
+	}
 
-		return interpreter.visitConditions(conditions[1:])
-	})
+	// If there is a return type, declare the constant `result`
+	// which has the return value
+
+	if returnType != sema.VoidType {
+		interpreter.declareVariable(sema.ResultIdentifier, resultValue)
+	}
+
+	interpreter.visitConditions(postConditions)
+
+	return functionReturn{
+		Value: resultValue,
+	}
 }
 
-func (interpreter *Interpreter) VisitCondition(condition *ast.Condition) ast.Repr {
-	result := interpreter.evalExpression(condition.Test)
-	return Done{Result: result}
+func (interpreter *Interpreter) visitConditions(conditions []*ast.Condition) {
+	for _, condition := range conditions {
+		interpreter.visitCondition(condition)
+	}
+}
+
+func (interpreter *Interpreter) visitCondition(condition *ast.Condition) {
+
+	// Evaluate the condition as a statement, so we get position information in case of an error
+
+	statement := &ast.ExpressionStatement{
+		Expression: condition.Test,
+	}
+
+	result := interpreter.evalStatement(statement).(ExpressionStatementResult)
+
+	value := result.Value.(BoolValue)
+
+	if value {
+		return
+	}
+
+	var message string
+	if condition.Message != nil {
+		messageValue := interpreter.evalExpression(condition.Message)
+		message = messageValue.(*StringValue).Str
+	}
+
+	panic(ConditionError{
+		ConditionKind: condition.Kind,
+		Message:       message,
+		LocationRange: interpreter.locationRange(condition.Test),
+	})
 }
 
 func (interpreter *Interpreter) declareValue(declaration ValueDeclaration) *Variable {
@@ -990,7 +983,7 @@ func (interpreter *Interpreter) visitAssignment(
 	target ast.Expression, targetType sema.Type,
 	value ast.Expression, valueType sema.Type,
 	position ast.HasPosition,
-) Trampoline {
+) {
 
 	// First evaluate the target, which results in a getter/setter function pair
 	getterSetter := interpreter.assignmentGetterSetter(target)
@@ -1014,9 +1007,6 @@ func (interpreter *Interpreter) visitAssignment(
 
 	valueCopy := interpreter.copyAndConvert(interpreter.evalExpression(value), valueType, targetType)
 	getterSetter.set(valueCopy)
-
-	// NOTE: no result, so it does *not* act like a return-statement
-	return Done{}
 }
 
 // NOTE: only called for top-level composite declarations
@@ -1027,8 +1017,7 @@ func (interpreter *Interpreter) VisitCompositeDeclaration(declaration *ast.Compo
 
 	_, _ = interpreter.declareCompositeValue(declaration, lexicalScope)
 
-	// NOTE: no result, so it does *not* act like a return-statement
-	return Done{}
+	return nil
 }
 
 // declareCompositeValue creates and declares the value for
@@ -1711,8 +1700,7 @@ func (interpreter *Interpreter) VisitInterfaceDeclaration(declaration *ast.Inter
 
 	interpreter.declareInterface(declaration, lexicalScope)
 
-	// NOTE: no result, so it does *not* act like a return-statement
-	return Done{}
+	return nil
 }
 
 func (interpreter *Interpreter) declareInterface(
@@ -1873,12 +1861,12 @@ func (interpreter *Interpreter) functionConditionsWrapper(
 			// NOTE: The `inner` function might be nil.
 			//   This is the case if the conforming type did not declare a function.
 
-			var body func() interface{}
+			var body func() controlReturn
 			if inner != nil {
 				// NOTE: It is important to wrap the invocation in a trampoline,
 				//  so the inner function isn't invoked here
 
-				body = func() interface{} {
+				body = func() controlReturn {
 
 					// NOTE: It is important to actually return the value returned
 					//   from the inner function, otherwise it is lost
@@ -1888,7 +1876,7 @@ func (interpreter *Interpreter) functionConditionsWrapper(
 				}
 			}
 
-			functionBlockTrampoline := interpreter.visitFunctionBody(
+			result := interpreter.visitFunctionBody(
 				beforeStatements,
 				preConditions,
 				body,
@@ -1896,7 +1884,7 @@ func (interpreter *Interpreter) functionConditionsWrapper(
 				returnType,
 			)
 
-			return interpreter.runAllStatements(functionBlockTrampoline).(Value)
+			return result.(functionReturn).Value
 		})
 	}
 }

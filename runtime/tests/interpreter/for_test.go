@@ -39,7 +39,6 @@ func TestInterpretForStatement(t *testing.T) {
            }
            return sum
        }
-
     `)
 
 	value, err := inter.Invoke("test")

@@ -24,7 +24,6 @@ import (
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/sema"
-	"github.com/onflow/cadence/runtime/trampoline"
 )
 
 // DeployedContractValue
@@ -70,8 +69,8 @@ func (DeployedContractValue) SetModified(_ bool) {
 	// NO-OP
 }
 
-func (v DeployedContractValue) Destroy(_ *Interpreter, _ LocationRange) trampoline.Trampoline {
-	return trampoline.Done{Result: NilValue{}}
+func (v DeployedContractValue) Destroy(_ *Interpreter, _ LocationRange) {
+	// NO-OP
 }
 
 func (v DeployedContractValue) String() string {

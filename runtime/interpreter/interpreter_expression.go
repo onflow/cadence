@@ -599,11 +599,11 @@ func (interpreter *Interpreter) VisitDestroyExpression(expression *ast.DestroyEx
 	value := interpreter.evalExpression(expression.Expression)
 
 	// TODO: optimize: only potentially used by host-functions
-
 	locationRange := interpreter.locationRange(expression)
 
-	// TODO: change Destroy to return Value
-	return interpreter.runAllStatements(value.(DestroyableValue).Destroy(interpreter, locationRange))
+	value.(DestroyableValue).Destroy(interpreter, locationRange)
+
+	return VoidValue{}
 }
 
 func (interpreter *Interpreter) VisitReferenceExpression(referenceExpression *ast.ReferenceExpression) ast.Repr {
