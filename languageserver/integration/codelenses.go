@@ -273,7 +273,7 @@ func (i *FlowIntegration) entryPointActions(
 		case entryPointKindScript:
 			if len(argumentList) > 0 {
 				title = fmt.Sprintf(
-					"%s Execute script with %s",
+					"%s Pretend script with %s",
 					prefixOK,
 					entryPointInfo.pragmaArgumentStrings[i],
 				)
@@ -288,7 +288,7 @@ func (i *FlowIntegration) entryPointActions(
 				Range: codelensRange,
 				Command: &protocol.Command{
 					Title:     title,
-					Command:   ClientExecuteScript,
+					Command:   CommandExecuteScript,
 					Arguments: []interface{}{uri, encodedArgumentList},
 				},
 			}

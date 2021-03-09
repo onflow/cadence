@@ -135,7 +135,12 @@ func (i *FlowIntegration) submitTransaction(conn protocol.Conn, args ...interfac
 //   * the arguments, encoded as JSON-CDC
 func (i *FlowIntegration) executeScript(conn protocol.Conn, args ...interface{}) (interface{}, error) {
 
-	err := server.CheckCommandArgumentCount(args, 2)
+	conn.ShowMessage(&protocol.ShowMessageParams{
+		Type:    protocol.Info,
+		Message: "Execute this messsage",
+	})
+
+/*	err := server.CheckCommandArgumentCount(args, 2)
 	if err != nil {
 		return nil, err
 	}
@@ -163,8 +168,9 @@ func (i *FlowIntegration) executeScript(conn protocol.Conn, args ...interface{})
 
 	// Pass arguments back to extension
 	err = conn.Notify(ClientExecuteScript, scriptArguments)
-
-	return nil, err
+*/
+	//return nil, err
+	return nil, nil
 }
 
 // changeEmulatorState sets current state of the emulator as reported by LSP
