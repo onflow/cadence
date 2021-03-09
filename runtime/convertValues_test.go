@@ -905,3 +905,41 @@ var fooEventType = &cadence.EventType{
 	QualifiedIdentifier: "Foo",
 	Fields:              fooFields,
 }
+
+func TestExportEnumValue(t *testing.T) {
+
+	t.Parallel()
+
+	script := `
+			pub fun main(): Direction {
+				return Direction.RIGHT
+			}
+
+			pub enum Direction: Int {
+				pub case UP
+				pub case DOWN
+				pub case LEFT
+				pub case RIGHT
+			}
+        `
+
+	actual := exportValueFromScript(t, script)
+	expected := cadence.Enum{
+		EnumType: &cadence.EnumType{
+			Location:            utils.TestLocation,
+			QualifiedIdentifier: "Direction",
+			Fields: []cadence.Field{
+				{
+					Identifier: sema.EnumRawValueFieldName,
+					Type:       cadence.IntType{},
+				},
+			},
+			RawType: cadence.IntType{},
+		},
+		Fields: []cadence.Value{
+			cadence.NewInt(3),
+		},
+	}
+
+	assert.Equal(t, expected, actual)
+}

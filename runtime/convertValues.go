@@ -205,6 +205,8 @@ func exportCompositeValue(v *interpreter.CompositeValue, inter *interpreter.Inte
 		return cadence.NewEvent(fields).WithType(t.(*cadence.EventType))
 	case common.CompositeKindContract:
 		return cadence.NewContract(fields).WithType(t.(*cadence.ContractType))
+	case common.CompositeKindEnum:
+		return cadence.NewEnum(fields).WithType(t.(*cadence.EnumType))
 	}
 
 	panic(fmt.Errorf(
