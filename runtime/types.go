@@ -45,7 +45,7 @@ const (
 	// Supported signing algorithms
 	SignatureAlgorithmECDSA_P256 SignatureAlgorithm = iota
 	SignatureAlgorithmECDSA_Secp256k1
-	SignatureAlgorithmBLSBLS12381
+	SignatureAlgorithmBLS_BLS12381
 )
 
 type HashAlgorithm = sema.HashAlgorithm
@@ -56,7 +56,7 @@ const (
 	HashAlgorithmSHA2_384
 	HashAlgorithmSHA3_256
 	HashAlgorithmSHA3_384
-	HashAlgorithmKMAC128
+	HashAlgorithmKMAC_128
 )
 
 type AccountKey struct {

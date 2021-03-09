@@ -612,7 +612,7 @@ func TestHashAlgorithm(t *testing.T) {
 
 	script := []byte(`
 		pub fun main(): [HashAlgorithm?] {
-			var key1: HashAlgorithm? = HashAlgorithm.KMAC128
+			var key1: HashAlgorithm? = HashAlgorithm.KMAC_128
 
 			var key2: HashAlgorithm? = HashAlgorithm(rawValue:4)
 
@@ -647,7 +647,7 @@ func TestHashAlgorithm(t *testing.T) {
 	builtinStruct := optionalValue.Value.(cadence.Struct)
 
 	require.Equal(t, 1, len(builtinStruct.Fields))
-	assert.Equal(t, cadence.NewInt(HashAlgorithmKMAC128.RawValue()), builtinStruct.Fields[0])
+	assert.Equal(t, cadence.NewInt(HashAlgorithmKMAC_128.RawValue()), builtinStruct.Fields[0])
 
 	// Check key2
 	require.IsType(t, cadence.Optional{}, array.Values[1])
@@ -657,7 +657,7 @@ func TestHashAlgorithm(t *testing.T) {
 	builtinStruct = optionalValue.Value.(cadence.Struct)
 
 	require.Equal(t, 1, len(builtinStruct.Fields))
-	assert.Equal(t, cadence.NewInt(HashAlgorithmKMAC128.RawValue()), builtinStruct.Fields[0])
+	assert.Equal(t, cadence.NewInt(HashAlgorithmKMAC_128.RawValue()), builtinStruct.Fields[0])
 
 	// Check key3
 	require.IsType(t, cadence.Optional{}, array.Values[2])
@@ -674,7 +674,7 @@ func TestSignatureAlgorithm(t *testing.T) {
 
 	script := []byte(`
 		pub fun main(): [SignatureAlgorithm?] {
-			var key1: SignatureAlgorithm? = SignatureAlgorithm.BLSBLS12381
+			var key1: SignatureAlgorithm? = SignatureAlgorithm.BLS_BLS12381
 
 			var key2: SignatureAlgorithm? = SignatureAlgorithm(rawValue:2)
 
@@ -709,7 +709,7 @@ func TestSignatureAlgorithm(t *testing.T) {
 	builtinStruct := optionalValue.Value.(cadence.Struct)
 
 	require.Equal(t, 1, len(builtinStruct.Fields))
-	assert.Equal(t, cadence.NewInt(SignatureAlgorithmBLSBLS12381.RawValue()), builtinStruct.Fields[0])
+	assert.Equal(t, cadence.NewInt(SignatureAlgorithmBLS_BLS12381.RawValue()), builtinStruct.Fields[0])
 
 	// Check key2
 	require.IsType(t, cadence.Optional{}, array.Values[1])
@@ -719,7 +719,7 @@ func TestSignatureAlgorithm(t *testing.T) {
 	builtinStruct = optionalValue.Value.(cadence.Struct)
 
 	require.Equal(t, 1, len(builtinStruct.Fields))
-	assert.Equal(t, cadence.NewInt(SignatureAlgorithmBLSBLS12381.RawValue()), builtinStruct.Fields[0])
+	assert.Equal(t, cadence.NewInt(SignatureAlgorithmBLS_BLS12381.RawValue()), builtinStruct.Fields[0])
 
 	// Check key3
 	require.IsType(t, cadence.Optional{}, array.Values[2])
