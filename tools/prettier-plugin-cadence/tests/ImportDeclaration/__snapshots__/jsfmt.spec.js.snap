@@ -1,12 +1,19 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
 exports[`import.cdc 1`] = `
+====================================options=====================================
+parsers: ["cadence"]
+printWidth: 80
+                                                                                | printWidth
+=====================================input======================================
 import Simple    from      0x01
 import      Second from   "./cadence/second.cdc"
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+=====================================output=====================================
 import Simple from 0x1
 import Second from "./cadence/second.cdc"
 
 
 
+================================================================================
 `;
