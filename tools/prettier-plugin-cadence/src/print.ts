@@ -8,11 +8,7 @@ import {
 	ImportDeclaration,
 } from "./nodes"
 import { isAddressLocation } from "./typeCheck"
-import concat = doc.builders.concat
-import hardline = doc.builders.hardline
-import join = doc.builders.join
-import group = doc.builders.group;
-
+const { concat, join, hardline, line } = doc.builders
 const SPACE = " " // single space character
 const COMMA = ", "
 
@@ -74,12 +70,12 @@ function makeParametersList(parameterList: Parameter[]) {
 				})
 		  )
 		: ""
-	return concat(["(", list, ")"])
+	return concat(["(", list , ")"])
 }
 
 export function print(
 	path: FastPath<Node>,
-	options: object,
+	options: any,
 	print: (path: FastPath) => Doc
 ): Doc | null {
 	const n = path.getValue()
@@ -105,14 +101,23 @@ export function print(
 			return importToString(n)
 
 		case "ImportGroup":
-			const result = join(hardline, n.Declarations.map(importToString));
+			const result = join(hardline, n.Declarations.map(importToString))
 			return concat([result, hardline])
 
 		case "FunctionDeclaration":
+			const docStringLines = n.DocString
+				? n.DocString.split("\n").map((item) => {
+						return `/// ${item.replace(/(^ +)/, "")}`
+				  })
+				: []
+			const docStringBlock = join(hardline, docStringLines)
 			const access = concat([accessToString(n.Access), SPACE])
-			let returnType = concat([typeToString(n.ReturnTypeAnnotation), " "])
+			let returnType = concat([
+				typeToString(n.ReturnTypeAnnotation),
+				SPACE,
+			])
 			const parameterList = makeParametersList(n.ParameterList.Parameters)
-			return concat([
+			const content = [
 				access,
 				"fun ",
 				n.Identifier.Identifier,
@@ -120,7 +125,10 @@ export function print(
 				returnType,
 				"{",
 				"}",
-			])
+			]
+			return n.DocString
+				? concat([docStringBlock, hardline, ...content])
+				: concat(content)
 
 		default:
 			const some: { Type: string } = n
