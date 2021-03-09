@@ -72,6 +72,7 @@ export interface FunctionDeclaration {
 	Access: Access
 	ParameterList: ParameterList
 	ReturnTypeAnnotation: TypeAnnotation
+	DocString: string
 }
 
 export interface ImportGroup {
