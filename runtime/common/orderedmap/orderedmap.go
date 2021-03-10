@@ -45,6 +45,14 @@ func NewKeyTypeValueTypeOrderedMap() *KeyTypeValueTypeOrderedMap {
 	}
 }
 
+// Clear removes all entries from this ordered map.
+func (om *KeyTypeValueTypeOrderedMap) Clear() {
+	om.list.Init()
+	for key := range om.pairs {
+		delete(om.pairs, key)
+	}
+}
+
 // Get returns the value associated with the given key.
 // Returns nil if not found.
 // The second return value indicates if the key is present in the map.
