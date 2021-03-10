@@ -220,8 +220,8 @@ func NewChecker(program *ast.Program, location common.Location, options ...Optio
 		return nil, &MissingLocationError{}
 	}
 
-	valueActivations := NewValueActivations(BaseValueActivation)
-	typeActivations := NewValueActivations(BaseTypeActivation)
+	valueActivations := NewVariableActivations(BaseValueActivation)
+	typeActivations := NewVariableActivations(BaseTypeActivation)
 	functionActivations := &FunctionActivations{}
 	functionActivations.EnterFunction(&FunctionType{
 		ReturnTypeAnnotation: NewTypeAnnotation(VoidType)},

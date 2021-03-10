@@ -19,6 +19,8 @@
 package sema
 
 import (
+	"sync"
+
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 )
@@ -37,14 +39,22 @@ type VariableActivation struct {
 // The parent may be nil.
 //
 func NewVariableActivation(parent *VariableActivation) *VariableActivation {
+	activation := &VariableActivation{}
+	activation.SetParent(parent)
+	return activation
+}
+
+// SetParent sets the parent of this activation to the given parent
+// and updates the depth.
+//
+func (a *VariableActivation) SetParent(parent *VariableActivation) {
+	a.Parent = parent
+
 	var depth int
 	if parent != nil {
 		depth = parent.Depth + 1
 	}
-	return &VariableActivation{
-		Depth:  depth,
-		Parent: parent,
-	}
+	a.Depth = depth
 }
 
 // Find returns the variable for a given name in the activation.
@@ -78,6 +88,16 @@ func (a *VariableActivation) Set(name string, variable *Variable) {
 	a.entries.Set(name, variable)
 }
 
+// Clear removes all variables from this activation.
+//
+func (a *VariableActivation) Clear() {
+	if a.entries == nil {
+		return
+	}
+
+	a.entries.Clear()
+}
+
 // ForEach calls the given function for each name-variable pair in the activation.
 // It can be used to iterate over all entries of the activation.
 //
@@ -102,6 +122,18 @@ func (a *VariableActivation) ForEach(cb func(string, *Variable) error) error {
 	return nil
 }
 
+var variableActivationPool = sync.Pool{
+	New: func() interface{} {
+		return &VariableActivation{}
+	},
+}
+
+func getVariableActivation() *VariableActivation {
+	activation := variableActivationPool.Get().(*VariableActivation)
+	activation.Clear()
+	return activation
+}
+
 // VariableActivations is a stack of activation records.
 // Each entry represents a new activation record.
 //
@@ -112,7 +144,7 @@ type VariableActivations struct {
 	activations []*VariableActivation
 }
 
-func NewValueActivations(parent *VariableActivation) *VariableActivations {
+func NewVariableActivations(parent *VariableActivation) *VariableActivations {
 	activations := &VariableActivations{}
 	activations.pushNewWithParent(parent)
 	return activations
@@ -123,7 +155,8 @@ func NewValueActivations(parent *VariableActivation) *VariableActivations {
 // The new activation has the given parent as its parent.
 //
 func (a *VariableActivations) pushNewWithParent(parent *VariableActivation) *VariableActivation {
-	activation := NewVariableActivation(parent)
+	activation := getVariableActivation()
+	activation.SetParent(parent)
 	a.push(activation)
 	return activation
 }
@@ -154,7 +187,10 @@ func (a *VariableActivations) Leave() {
 	if count < 1 {
 		return
 	}
-	a.activations = a.activations[:count-1]
+	lastIndex := count - 1
+	activation := a.activations[lastIndex]
+	a.activations = a.activations[:lastIndex]
+	variableActivationPool.Put(activation)
 }
 
 // Set sets the variable in the current activation.
