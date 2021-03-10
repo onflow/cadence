@@ -28,7 +28,7 @@ func TestActivations(t *testing.T) {
 
 	t.Parallel()
 
-	activations := NewValueActivations(nil)
+	activations := NewVariableActivations(nil)
 
 	one := &Variable{}
 	two := &Variable{}
