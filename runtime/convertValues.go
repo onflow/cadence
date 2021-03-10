@@ -376,6 +376,14 @@ func importValue(value cadence.Value) interpreter.Value {
 			Domain:     common.PathDomainFromIdentifier(v.Domain),
 			Identifier: v.Identifier,
 		}
+	case cadence.Enum:
+		return importCompositeValue(
+			common.CompositeKindStructure,
+			v.EnumType.Location,
+			v.EnumType.QualifiedIdentifier,
+			v.EnumType.Fields,
+			v.Fields,
+		)
 	}
 
 	panic(fmt.Sprintf("cannot import value of type %T", value))
