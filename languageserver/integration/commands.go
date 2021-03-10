@@ -48,12 +48,12 @@ const (
 	CommandCreateAccount         = "cadence.server.flow.createAccount"
 	CommandCreateDefaultAccounts = "cadence.server.flow.createDefaultAccounts"
 	CommandSwitchActiveAccount   = "cadence.server.flow.switchActiveAccount"
-	CommandChangeEmulatorState	 = "cadence.server.flow.changeEmulatorState"
+	CommandChangeEmulatorState   = "cadence.server.flow.changeEmulatorState"
 
-	ClientStartEmulator = "cadence.runEmulator"
-	ClientExecuteScript = "cadence.executeScript"
+	ClientStartEmulator   = "cadence.runEmulator"
+	ClientExecuteScript   = "cadence.executeScript"
 	ClientSendTransaction = "cadence.sendTransaction"
-	ClientDeployContract = "cadence.deployContract"
+	ClientDeployContract  = "cadence.deployContract"
 )
 
 func (i *FlowIntegration) commands() []server.Command {
@@ -135,41 +135,42 @@ func (i *FlowIntegration) submitTransaction(conn protocol.Conn, args ...interfac
 //   * the arguments, encoded as JSON-CDC
 func (i *FlowIntegration) executeScript(conn protocol.Conn, args ...interface{}) (interface{}, error) {
 
-	conn.ShowMessage(&protocol.ShowMessageParams{
-		Type:    protocol.Info,
-		Message: "Execute this messsage",
-	})
+	// TODO: Notify client that we are trying to execute script
 
-/*	err := server.CheckCommandArgumentCount(args, 2)
+	err := server.CheckCommandArgumentCount(args, 2)
 	if err != nil {
 		return nil, err
 	}
 
-	_, ok := args[0].(string)
+	uri, ok := args[0].(string)
 	if !ok {
 		return nil, fmt.Errorf("invalid URI argument: %#+v", args[0])
 	}
 
+	path, pathError := url.Parse(uri)
+	if pathError != nil {
+		return nil, fmt.Errorf("invalid URI arguments: %#+v", uri)
+	}
 
-	rawScriptArguments, ok := args[1].([]interface{})
+	argsJSON, ok := args[1].(string)
 	if !ok {
-		return nil, fmt.Errorf("invalid script arguments: %#+v", args[1])
+		return nil, fmt.Errorf("invalid arguments: %#+v", args[1])
 	}
 
-	var scriptArguments []string
-	for i, rawScriptArgument := range rawScriptArguments {
-		stringArgument, ok := rawScriptArgument.(string)
-		if !ok {
-			return nil, fmt.Errorf("invalid script argument at index %d: %#+v", i, rawScriptArgument)
-		}
+	// Execute script via shared library
+	scriptResult, scriptError := i.sharedServices.Scripts.Execute(path.Path, []string{}, argsJSON)
 
-		scriptArguments = append(scriptArguments, strings.TrimSuffix(stringArgument, "\n"))
+	if scriptError != nil {
+		return nil, fmt.Errorf("execution error: %#+v", scriptError)
 	}
 
-	// Pass arguments back to extension
-	err = conn.Notify(ClientExecuteScript, scriptArguments)
-*/
-	//return nil, err
+	displayResult := fmt.Sprintf("Result: %s", scriptResult.String())
+
+	/// TODO: Notify extension that execution was successful
+	conn.ShowMessage(&protocol.ShowMessageParams{
+		Type:    protocol.Info,
+		Message: displayResult,
+	})
 	return nil, nil
 }
 
@@ -178,7 +179,7 @@ func (i *FlowIntegration) executeScript(conn protocol.Conn, args ...interface{})
 //
 // There should be exactly 1 argument:
 // * current state of the emulator represented as byte
-func (i *FlowIntegration) changeEmulatorState(conn protocol.Conn, args ...interface{})(interface{}, error) {
+func (i *FlowIntegration) changeEmulatorState(conn protocol.Conn, args ...interface{}) (interface{}, error) {
 	err := server.CheckCommandArgumentCount(args, 1)
 	if err != nil {
 		return nil, err
@@ -192,7 +193,6 @@ func (i *FlowIntegration) changeEmulatorState(conn protocol.Conn, args ...interf
 	i.emulatorState = EmulatorState(emulatorState)
 	return nil, nil
 }
-
 
 // switchActiveAccount sets the account that is currently active and should be
 // used when submitting transactions.
