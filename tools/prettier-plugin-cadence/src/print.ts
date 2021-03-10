@@ -8,7 +8,7 @@ import {
 	ImportDeclaration,
 } from "./nodes"
 import { isAddressLocation } from "./typeCheck"
-const { concat, join, hardline, line } = doc.builders
+const { concat, join, hardline, line, group } = doc.builders
 const SPACE = " " // single space character
 const COMMA = ", "
 
@@ -60,8 +60,7 @@ function getParameterName(parameter: Parameter) {
 
 function makeParametersList(parameterList: Parameter[]) {
 	const list = parameterList
-		? join(
-				", ",
+		? concat(
 				parameterList.map((parameter: Parameter) => {
 					return concat([
 						getParameterName(parameter),
@@ -70,7 +69,7 @@ function makeParametersList(parameterList: Parameter[]) {
 				})
 		  )
 		: ""
-	return concat(["(", list , ")"])
+	return group(concat(["(", list, ")"]), { shouldBreak: true })
 }
 
 export function print(
