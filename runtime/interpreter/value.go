@@ -809,7 +809,7 @@ func NewIntValueFromBigInt(value *big.Int) IntValue {
 	return IntValue{BigInt: value}
 }
 
-func ConvertInt(value Value, _ *Interpreter) Value {
+func ConvertInt(value Value) IntValue {
 	switch value := value.(type) {
 	case BigNumberValue:
 		return NewIntValueFromBigInt(value.ToBigInt())
@@ -1180,7 +1180,7 @@ func (v Int8Value) Equal(_ *Interpreter, other Value) BoolValue {
 	return v == otherInt8
 }
 
-func ConvertInt8(value Value, _ *Interpreter) Value {
+func ConvertInt8(value Value) Int8Value {
 	var res int8
 
 	switch value := value.(type) {
@@ -1416,7 +1416,7 @@ func (v Int16Value) Equal(_ *Interpreter, other Value) BoolValue {
 	return v == otherInt16
 }
 
-func ConvertInt16(value Value, _ *Interpreter) Value {
+func ConvertInt16(value Value) Int16Value {
 	var res int16
 
 	switch value := value.(type) {
@@ -1654,7 +1654,7 @@ func (v Int32Value) Equal(_ *Interpreter, other Value) BoolValue {
 	return v == otherInt32
 }
 
-func ConvertInt32(value Value, _ *Interpreter) Value {
+func ConvertInt32(value Value) Int32Value {
 	var res int32
 
 	switch value := value.(type) {
@@ -1896,7 +1896,7 @@ func (v Int64Value) Equal(_ *Interpreter, other Value) BoolValue {
 	return v == otherInt64
 }
 
-func ConvertInt64(value Value, _ *Interpreter) Value {
+func ConvertInt64(value Value) Int64Value {
 	var res int64
 
 	switch value := value.(type) {
@@ -2172,7 +2172,7 @@ func (v Int128Value) Equal(_ *Interpreter, other Value) BoolValue {
 	return cmp == 0
 }
 
-func ConvertInt128(value Value, _ *Interpreter) Value {
+func ConvertInt128(value Value) Int128Value {
 	var v *big.Int
 
 	switch value := value.(type) {
@@ -2468,7 +2468,7 @@ func (v Int256Value) Equal(_ *Interpreter, other Value) BoolValue {
 	return cmp == 0
 }
 
-func ConvertInt256(value Value, _ *Interpreter) Value {
+func ConvertInt256(value Value) Int256Value {
 	var v *big.Int
 
 	switch value := value.(type) {
@@ -2581,7 +2581,7 @@ func NewUIntValueFromBigInt(value *big.Int) UIntValue {
 	return UIntValue{BigInt: value}
 }
 
-func ConvertUInt(value Value, _ *Interpreter) Value {
+func ConvertUInt(value Value) UIntValue {
 	switch value := value.(type) {
 	case BigNumberValue:
 		v := value.ToBigInt()
@@ -2930,7 +2930,7 @@ func (v UInt8Value) Equal(_ *Interpreter, other Value) BoolValue {
 	return v == otherUInt8
 }
 
-func ConvertUInt8(value Value, _ *Interpreter) Value {
+func ConvertUInt8(value Value) UInt8Value {
 	var res uint8
 
 	switch value := value.(type) {
@@ -3132,7 +3132,7 @@ func (v UInt16Value) Equal(_ *Interpreter, other Value) BoolValue {
 	return v == otherUInt16
 }
 
-func ConvertUInt16(value Value, _ *Interpreter) Value {
+func ConvertUInt16(value Value) UInt16Value {
 	var res uint16
 
 	switch value := value.(type) {
@@ -3338,7 +3338,7 @@ func (v UInt32Value) Equal(_ *Interpreter, other Value) BoolValue {
 	return v == otherUInt32
 }
 
-func ConvertUInt32(value Value, _ *Interpreter) Value {
+func ConvertUInt32(value Value) UInt32Value {
 	var res uint32
 
 	switch value := value.(type) {
@@ -3549,7 +3549,7 @@ func (v UInt64Value) Equal(_ *Interpreter, other Value) BoolValue {
 	return v == otherUInt64
 }
 
-func ConvertUInt64(value Value, _ *Interpreter) Value {
+func ConvertUInt64(value Value) UInt64Value {
 	var res uint64
 
 	switch value := value.(type) {
@@ -3799,7 +3799,7 @@ func (v UInt128Value) Equal(_ *Interpreter, other Value) BoolValue {
 	return cmp == 0
 }
 
-func ConvertUInt128(value Value, _ *Interpreter) Value {
+func ConvertUInt128(value Value) UInt128Value {
 	var v *big.Int
 
 	switch value := value.(type) {
@@ -4064,7 +4064,7 @@ func (v UInt256Value) Equal(_ *Interpreter, other Value) BoolValue {
 	return cmp == 0
 }
 
-func ConvertUInt256(value Value, _ *Interpreter) Value {
+func ConvertUInt256(value Value) UInt256Value {
 	var v *big.Int
 
 	switch value := value.(type) {
@@ -4270,8 +4270,8 @@ func (v Word8Value) Equal(_ *Interpreter, other Value) BoolValue {
 	return v == otherWord8
 }
 
-func ConvertWord8(value Value, interpreter *Interpreter) Value {
-	return Word8Value(ConvertUInt8(value, interpreter).(UInt8Value))
+func ConvertWord8(value Value) Word8Value {
+	return Word8Value(ConvertUInt8(value))
 }
 
 func (v Word8Value) BitwiseOr(other IntegerValue) IntegerValue {
@@ -4433,8 +4433,8 @@ func (v Word16Value) Equal(_ *Interpreter, other Value) BoolValue {
 	return v == otherWord16
 }
 
-func ConvertWord16(value Value, interpreter *Interpreter) Value {
-	return Word16Value(ConvertUInt16(value, interpreter).(UInt16Value))
+func ConvertWord16(value Value) Word16Value {
+	return Word16Value(ConvertUInt16(value))
 }
 
 func (v Word16Value) BitwiseOr(other IntegerValue) IntegerValue {
@@ -4600,8 +4600,8 @@ func (v Word32Value) Equal(_ *Interpreter, other Value) BoolValue {
 	return v == otherWord32
 }
 
-func ConvertWord32(value Value, interpreter *Interpreter) Value {
-	return Word32Value(ConvertUInt32(value, interpreter).(UInt32Value))
+func ConvertWord32(value Value) Word32Value {
+	return Word32Value(ConvertUInt32(value))
 }
 
 func (v Word32Value) BitwiseOr(other IntegerValue) IntegerValue {
@@ -4767,8 +4767,8 @@ func (v Word64Value) Equal(_ *Interpreter, other Value) BoolValue {
 	return v == otherWord64
 }
 
-func ConvertWord64(value Value, interpreter *Interpreter) Value {
-	return Word64Value(ConvertUInt64(value, interpreter).(UInt64Value))
+func ConvertWord64(value Value) Word64Value {
+	return Word64Value(ConvertUInt64(value))
 }
 
 func (v Word64Value) BitwiseOr(other IntegerValue) IntegerValue {
@@ -4981,7 +4981,7 @@ func (v Fix64Value) Equal(_ *Interpreter, other Value) BoolValue {
 	return v == otherFix64
 }
 
-func ConvertFix64(value Value, interpreter *Interpreter) Value {
+func ConvertFix64(value Value) Fix64Value {
 	switch value := value.(type) {
 	case Fix64Value:
 		return value
@@ -5012,11 +5012,7 @@ func ConvertFix64(value Value, interpreter *Interpreter) Value {
 		return NewFix64ValueWithInteger(int64(v))
 
 	default:
-		panic(fmt.Sprintf(
-			"can't convert %s to Fix64: %s",
-			value.DynamicType(interpreter),
-			value,
-		))
+		panic(fmt.Sprintf("can't convert Fix64: %s", value))
 	}
 }
 
@@ -5194,7 +5190,7 @@ func (v UFix64Value) Equal(_ *Interpreter, other Value) BoolValue {
 	return v == otherUFix64
 }
 
-func ConvertUFix64(value Value, interpreter *Interpreter) Value {
+func ConvertUFix64(value Value) UFix64Value {
 	switch value := value.(type) {
 	case UFix64Value:
 		return value
@@ -5232,11 +5228,7 @@ func ConvertUFix64(value Value, interpreter *Interpreter) Value {
 		return NewUFix64ValueWithInteger(uint64(v))
 
 	default:
-		panic(fmt.Sprintf(
-			"can't convert %s to UFix64: %s",
-			value.DynamicType(interpreter),
-			value,
-		))
+		panic(fmt.Sprintf("can't convert to UFix64: %s", value))
 	}
 }
 
@@ -6507,7 +6499,7 @@ func NewAddressValueFromBytes(b []byte) AddressValue {
 	return result
 }
 
-func ConvertAddress(value Value, _ *Interpreter) Value {
+func ConvertAddress(value Value) AddressValue {
 	// TODO: https://github.com/dapperlabs/flow-go/issues/2141
 	result := AddressValue{}
 	if intValue, ok := value.(IntValue); ok {

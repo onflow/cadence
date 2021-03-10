@@ -137,56 +137,61 @@ func integerLiteralValue(expression ast.Expression, ty sema.Type) (cadence.Value
 
 	intValue := interpreter.NewIntValueFromBigInt(integerExpression.Value)
 
-	converter := func(value interpreter.Value, _ *interpreter.Interpreter) interpreter.Value {
-		return value
+	convertedValue, err := convertIntValue(intValue, ty)
+	if err != nil {
+		return nil, err
 	}
+
+	result := ExportValue(convertedValue, nil)
+
+	return result, nil
+}
+
+func convertIntValue(intValue interpreter.IntValue, ty sema.Type) (interpreter.Value, error) {
 
 	switch ty.(type) {
 	case *sema.IntType, *sema.IntegerType, *sema.SignedIntegerType:
-		break
+		return intValue, nil
 	case *sema.Int8Type:
-		converter = interpreter.ConvertInt8
+		return interpreter.ConvertInt8(intValue), nil
 	case *sema.Int16Type:
-		converter = interpreter.ConvertInt16
+		return interpreter.ConvertInt16(intValue), nil
 	case *sema.Int32Type:
-		converter = interpreter.ConvertInt32
+		return interpreter.ConvertInt32(intValue), nil
 	case *sema.Int64Type:
-		converter = interpreter.ConvertInt64
+		return interpreter.ConvertInt64(intValue), nil
 	case *sema.Int128Type:
-		converter = interpreter.ConvertInt128
+		return interpreter.ConvertInt128(intValue), nil
 	case *sema.Int256Type:
-		converter = interpreter.ConvertInt256
+		return interpreter.ConvertInt256(intValue), nil
 
 	case *sema.UIntType:
-		converter = interpreter.ConvertUInt
+		return interpreter.ConvertUInt(intValue), nil
 	case *sema.UInt8Type:
-		converter = interpreter.ConvertUInt8
+		return interpreter.ConvertUInt8(intValue), nil
 	case *sema.UInt16Type:
-		converter = interpreter.ConvertUInt16
+		return interpreter.ConvertUInt16(intValue), nil
 	case *sema.UInt32Type:
-		converter = interpreter.ConvertUInt32
+		return interpreter.ConvertUInt32(intValue), nil
 	case *sema.UInt64Type:
-		converter = interpreter.ConvertUInt64
+		return interpreter.ConvertUInt64(intValue), nil
 	case *sema.UInt128Type:
-		converter = interpreter.ConvertUInt128
+		return interpreter.ConvertUInt128(intValue), nil
 	case *sema.UInt256Type:
-		converter = interpreter.ConvertUInt256
+		return interpreter.ConvertUInt256(intValue), nil
 
 	case *sema.Word8Type:
-		converter = interpreter.ConvertWord8
+		return interpreter.ConvertWord8(intValue), nil
 	case *sema.Word16Type:
-		converter = interpreter.ConvertWord16
+		return interpreter.ConvertWord16(intValue), nil
 	case *sema.Word32Type:
-		converter = interpreter.ConvertWord32
+		return interpreter.ConvertWord32(intValue), nil
 	case *sema.Word64Type:
-		converter = interpreter.ConvertWord64
+		return interpreter.ConvertWord64(intValue), nil
 
 	default:
 		return nil, UnsupportedLiteralError
 	}
-
-	result := ExportValue(converter(intValue, nil), nil)
-	return result, nil
 }
 
 func fixedPointLiteralValue(expression ast.Expression, ty sema.Type) (cadence.Value, error) {
