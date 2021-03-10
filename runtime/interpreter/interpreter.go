@@ -1572,82 +1572,119 @@ func (interpreter *Interpreter) convert(value Value, valueType, targetType sema.
 
 	unwrappedTargetType := sema.UnwrapOptionalType(targetType)
 
-	if valueType.Equal(unwrappedTargetType) {
-		return value
-	}
-
 	switch unwrappedTargetType.(type) {
 	case *sema.IntType:
-		return ConvertInt(value, interpreter)
+		if !valueType.Equal(unwrappedTargetType) {
+			return ConvertInt(value)
+		}
 
 	case *sema.UIntType:
-		return ConvertUInt(value, interpreter)
+		if !valueType.Equal(unwrappedTargetType) {
+			return ConvertUInt(value)
+		}
 
 	case *sema.AddressType:
-		return ConvertAddress(value, interpreter)
+		if !valueType.Equal(unwrappedTargetType) {
+			return ConvertAddress(value)
+		}
 
 	// Int*
 	case *sema.Int8Type:
-		return ConvertInt8(value, interpreter)
+		if !valueType.Equal(unwrappedTargetType) {
+			return ConvertInt8(value)
+		}
 
 	case *sema.Int16Type:
-		return ConvertInt16(value, interpreter)
+		if !valueType.Equal(unwrappedTargetType) {
+			return ConvertInt16(value)
+		}
 
 	case *sema.Int32Type:
-		return ConvertInt32(value, interpreter)
+		if !valueType.Equal(unwrappedTargetType) {
+			return ConvertInt32(value)
+		}
 
 	case *sema.Int64Type:
-		return ConvertInt64(value, interpreter)
+		if !valueType.Equal(unwrappedTargetType) {
+			return ConvertInt64(value)
+		}
 
 	case *sema.Int128Type:
-		return ConvertInt128(value, interpreter)
+		if !valueType.Equal(unwrappedTargetType) {
+			return ConvertInt128(value)
+		}
 
 	case *sema.Int256Type:
-		return ConvertInt256(value, interpreter)
+		if !valueType.Equal(unwrappedTargetType) {
+			return ConvertInt256(value)
+		}
 
 	// UInt*
 	case *sema.UInt8Type:
-		return ConvertUInt8(value, interpreter)
+		if !valueType.Equal(unwrappedTargetType) {
+			return ConvertUInt8(value)
+		}
 
 	case *sema.UInt16Type:
-		return ConvertUInt16(value, interpreter)
+		if !valueType.Equal(unwrappedTargetType) {
+			return ConvertUInt16(value)
+		}
 
 	case *sema.UInt32Type:
-		return ConvertUInt32(value, interpreter)
+		if !valueType.Equal(unwrappedTargetType) {
+			return ConvertUInt32(value)
+		}
 
 	case *sema.UInt64Type:
-		return ConvertUInt64(value, interpreter)
+		if !valueType.Equal(unwrappedTargetType) {
+			return ConvertUInt64(value)
+		}
 
 	case *sema.UInt128Type:
-		return ConvertUInt128(value, interpreter)
+		if !valueType.Equal(unwrappedTargetType) {
+			return ConvertUInt128(value)
+		}
 
 	case *sema.UInt256Type:
-		return ConvertUInt256(value, interpreter)
+		if !valueType.Equal(unwrappedTargetType) {
+			return ConvertUInt256(value)
+		}
 
 	// Word*
 	case *sema.Word8Type:
-		return ConvertWord8(value, interpreter)
+		if !valueType.Equal(unwrappedTargetType) {
+			return ConvertWord8(value)
+		}
 
 	case *sema.Word16Type:
-		return ConvertWord16(value, interpreter)
+		if !valueType.Equal(unwrappedTargetType) {
+			return ConvertWord16(value)
+		}
 
 	case *sema.Word32Type:
-		return ConvertWord32(value, interpreter)
+		if !valueType.Equal(unwrappedTargetType) {
+			return ConvertWord32(value)
+		}
 
 	case *sema.Word64Type:
-		return ConvertWord64(value, interpreter)
+		if !valueType.Equal(unwrappedTargetType) {
+			return ConvertWord64(value)
+		}
 
 	// Fix*
 
 	case *sema.Fix64Type:
-		return ConvertFix64(value, interpreter)
+		if !valueType.Equal(unwrappedTargetType) {
+			return ConvertFix64(value)
+		}
 
 	case *sema.UFix64Type:
-		return ConvertUFix64(value, interpreter)
-
-	default:
-		return value
+		if !valueType.Equal(unwrappedTargetType) {
+			return ConvertUFix64(value)
+		}
 	}
+
+	return value
 }
 
 // boxOptional boxes a value in optionals, if necessary
@@ -1995,35 +2032,119 @@ func (interpreter *Interpreter) writeStored(storageAddress common.Address, key s
 	interpreter.storageWriteHandler(interpreter, storageAddress, key, value)
 }
 
-type ValueConverter func(Value, *Interpreter) Value
-
 type valueConverterDeclaration struct {
 	name  string
-	value ValueConverter
+	value FunctionValue
 }
 
+// It would be nice if return types in Go's function types would be covariant
+//
 var converterDeclarations = []valueConverterDeclaration{
-	{"Int", ConvertInt},
-	{"UInt", ConvertUInt},
-	{"Int8", ConvertInt8},
-	{"Int16", ConvertInt16},
-	{"Int32", ConvertInt32},
-	{"Int64", ConvertInt64},
-	{"Int128", ConvertInt128},
-	{"Int256", ConvertInt256},
-	{"UInt8", ConvertUInt8},
-	{"UInt16", ConvertUInt16},
-	{"UInt32", ConvertUInt32},
-	{"UInt64", ConvertUInt64},
-	{"UInt128", ConvertUInt128},
-	{"UInt256", ConvertUInt256},
-	{"Word8", ConvertWord8},
-	{"Word16", ConvertWord16},
-	{"Word32", ConvertWord32},
-	{"Word64", ConvertWord64},
-	{"Fix64", ConvertFix64},
-	{"UFix64", ConvertUFix64},
-	{"Address", ConvertAddress},
+	{"Int", NewHostFunctionValue(
+		func(invocation Invocation) Value {
+			return ConvertInt(invocation.Arguments[0])
+		},
+	)},
+	{"UInt", NewHostFunctionValue(
+		func(invocation Invocation) Value {
+			return ConvertUInt(invocation.Arguments[0])
+		},
+	)},
+	{"Int8", NewHostFunctionValue(
+		func(invocation Invocation) Value {
+			return ConvertInt8(invocation.Arguments[0])
+		},
+	)},
+	{"Int16", NewHostFunctionValue(
+		func(invocation Invocation) Value {
+			return ConvertInt16(invocation.Arguments[0])
+		},
+	)},
+	{"Int32", NewHostFunctionValue(
+		func(invocation Invocation) Value {
+			return ConvertInt32(invocation.Arguments[0])
+		},
+	)},
+	{"Int64", NewHostFunctionValue(
+		func(invocation Invocation) Value {
+			return ConvertInt64(invocation.Arguments[0])
+		},
+	)},
+	{"Int128", NewHostFunctionValue(
+		func(invocation Invocation) Value {
+			return ConvertInt128(invocation.Arguments[0])
+		},
+	)},
+	{"Int256", NewHostFunctionValue(
+		func(invocation Invocation) Value {
+			return ConvertInt256(invocation.Arguments[0])
+		},
+	)},
+	{"UInt8", NewHostFunctionValue(
+		func(invocation Invocation) Value {
+			return ConvertUInt8(invocation.Arguments[0])
+		},
+	)},
+	{"UInt16", NewHostFunctionValue(
+		func(invocation Invocation) Value {
+			return ConvertUInt16(invocation.Arguments[0])
+		},
+	)},
+	{"UInt32", NewHostFunctionValue(
+		func(invocation Invocation) Value {
+			return ConvertUInt32(invocation.Arguments[0])
+		},
+	)},
+	{"UInt64", NewHostFunctionValue(
+		func(invocation Invocation) Value {
+			return ConvertUInt64(invocation.Arguments[0])
+		},
+	)},
+	{"UInt128", NewHostFunctionValue(
+		func(invocation Invocation) Value {
+			return ConvertUInt128(invocation.Arguments[0])
+		},
+	)},
+	{"UInt256", NewHostFunctionValue(
+		func(invocation Invocation) Value {
+			return ConvertUInt256(invocation.Arguments[0])
+		},
+	)},
+	{"Word8", NewHostFunctionValue(
+		func(invocation Invocation) Value {
+			return ConvertWord8(invocation.Arguments[0])
+		},
+	)},
+	{"Word16", NewHostFunctionValue(
+		func(invocation Invocation) Value {
+			return ConvertWord16(invocation.Arguments[0])
+		},
+	)},
+	{"Word32", NewHostFunctionValue(
+		func(invocation Invocation) Value {
+			return ConvertWord32(invocation.Arguments[0])
+		},
+	)},
+	{"Word64", NewHostFunctionValue(
+		func(invocation Invocation) Value {
+			return ConvertWord64(invocation.Arguments[0])
+		},
+	)},
+	{"Fix64", NewHostFunctionValue(
+		func(invocation Invocation) Value {
+			return ConvertFix64(invocation.Arguments[0])
+		},
+	)},
+	{"UFix64", NewHostFunctionValue(
+		func(invocation Invocation) Value {
+			return ConvertUFix64(invocation.Arguments[0])
+		},
+	)},
+	{"Address", NewHostFunctionValue(
+		func(invocation Invocation) Value {
+			return ConvertAddress(invocation.Arguments[0])
+		},
+	)},
 }
 
 func init() {
@@ -2061,7 +2182,7 @@ func (interpreter *Interpreter) defineConverterFunctions() {
 	for _, declaration := range converterDeclarations {
 		err := interpreter.ImportValue(
 			declaration.name,
-			interpreter.newConverterFunction(declaration.value),
+			declaration.value,
 		)
 		if err != nil {
 			panic(errors.NewUnreachableError())
@@ -2091,15 +2212,6 @@ func (interpreter *Interpreter) defineTypeFunction() {
 	if err != nil {
 		panic(errors.NewUnreachableError())
 	}
-}
-
-func (interpreter *Interpreter) newConverterFunction(converter ValueConverter) FunctionValue {
-	return NewHostFunctionValue(
-		func(invocation Invocation) Value {
-			value := invocation.Arguments[0]
-			return converter(value, interpreter)
-		},
-	)
 }
 
 // TODO:
