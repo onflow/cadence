@@ -45,7 +45,8 @@ func NewStringVariableOrderedMap() *StringVariableOrderedMap {
 // Clear removes all entries from this ordered map.
 func (om *StringVariableOrderedMap) Clear() {
 	om.list.Init()
-	for key := range om.pairs {
+	// NOTE: Range over map is safe, as it is only used to delete entries
+	for key := range om.pairs { //nolint:maprangecheck
 		delete(om.pairs, key)
 	}
 }
