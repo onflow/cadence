@@ -19,7 +19,6 @@
 package integration
 
 import (
-	"fmt"
 	"github.com/onflow/flow-cli/flow/cli"
 	"github.com/onflow/flow-cli/sharedlib/gateway"
 	"github.com/onflow/flow-cli/sharedlib/services"
@@ -48,22 +47,23 @@ func (i *FlowIntegration) initialize(initializationOptions interface{}) error {
 
 	i.emulatorState = EmulatorState(emulatorState)
 
-
 	// TODO: get this path from initializationOptions
 	configurationPaths := []string{"/home/max/Desktop/cadence/flow.json"}
 
+
 	// TODO: process error if project could not be initialized from specified config
 	project, _ := cli.LoadProject(configurationPaths)
+	if err != nil {
+		return nil
+	}
 	// TODO: get this value from config file
 	host := conf.EmulatorAddr
 	// TODO: process error here
-	gate, _  := gateway.NewGrpcGateway(host)
-
-	fmt.Print(project, gate)
-
-	 i.sharedServices = services.NewServices(gate, &project)
-
-
+	gate, _ := gateway.NewGrpcGateway(host)
+	if err != nil {
+		return nil
+	}
+	i.sharedServices = services.NewServices(gate, *project)
 	if err != nil {
 		return err
 	}
