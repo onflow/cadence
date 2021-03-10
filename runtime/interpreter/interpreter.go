@@ -22,7 +22,6 @@ import (
 	"fmt"
 	goRuntime "runtime"
 
-	"github.com/onflow/cadence/runtime/activations"
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
@@ -218,7 +217,7 @@ type Interpreter struct {
 	Location                       common.Location
 	PredeclaredValues              []ValueDeclaration
 	effectivePredeclaredValues     map[string]ValueDeclaration
-	activations                    *activations.Activations
+	activations                    *VariableActivations
 	Globals                        map[string]*Variable
 	allInterpreters                map[common.LocationID]*Interpreter
 	typeCodes                      TypeCodes
@@ -406,7 +405,7 @@ func NewInterpreter(program *Program, location common.Location, options ...Optio
 	interpreter := &Interpreter{
 		Program:                    program,
 		Location:                   location,
-		activations:                &activations.Activations{},
+		activations:                &VariableActivations{},
 		Globals:                    map[string]*Variable{},
 		effectivePredeclaredValues: map[string]ValueDeclaration{},
 	}
@@ -530,11 +529,7 @@ func (interpreter *Interpreter) locationRange(hasPosition ast.HasPosition) Locat
 }
 
 func (interpreter *Interpreter) findVariable(name string) *Variable {
-	result := interpreter.activations.Find(name)
-	if result == nil {
-		return nil
-	}
-	return result.(*Variable)
+	return interpreter.activations.Find(name)
 }
 
 func (interpreter *Interpreter) findOrDeclareVariable(name string) *Variable {
@@ -819,7 +814,7 @@ func (interpreter *Interpreter) VisitFunctionDeclaration(declaration *ast.Functi
 func (interpreter *Interpreter) functionDeclarationValue(
 	declaration *ast.FunctionDeclaration,
 	functionType *sema.FunctionType,
-	lexicalScope *activations.Activation,
+	lexicalScope *VariableActivation,
 ) InterpretedFunctionValue {
 
 	var preConditions ast.Conditions
@@ -1037,9 +1032,9 @@ func (interpreter *Interpreter) VisitCompositeDeclaration(declaration *ast.Compo
 //
 func (interpreter *Interpreter) declareCompositeValue(
 	declaration *ast.CompositeDeclaration,
-	lexicalScope *activations.Activation,
+	lexicalScope *VariableActivation,
 ) (
-	scope *activations.Activation,
+	scope *VariableActivation,
 	value Value,
 ) {
 	if declaration.CompositeKind == common.CompositeKindEnum {
@@ -1051,9 +1046,9 @@ func (interpreter *Interpreter) declareCompositeValue(
 
 func (interpreter *Interpreter) declareNonEnumCompositeValue(
 	declaration *ast.CompositeDeclaration,
-	lexicalScope *activations.Activation,
+	lexicalScope *VariableActivation,
 ) (
-	scope *activations.Activation,
+	scope *VariableActivation,
 	value Value,
 ) {
 	identifier := declaration.Identifier.Identifier
@@ -1293,9 +1288,9 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 
 func (interpreter *Interpreter) declareEnumConstructor(
 	declaration *ast.CompositeDeclaration,
-	lexicalScope *activations.Activation,
+	lexicalScope *VariableActivation,
 ) (
-	scope *activations.Activation,
+	scope *VariableActivation,
 	value Value,
 ) {
 	identifier := declaration.Identifier.Identifier
@@ -1369,7 +1364,7 @@ func EnumConstructorFunction(caseValues []*CompositeValue, members *StringValueO
 
 func (interpreter *Interpreter) compositeInitializerFunction(
 	compositeDeclaration *ast.CompositeDeclaration,
-	lexicalScope *activations.Activation,
+	lexicalScope *VariableActivation,
 ) *InterpretedFunctionValue {
 
 	// TODO: support multiple overloaded initializers
@@ -1418,7 +1413,7 @@ func (interpreter *Interpreter) compositeInitializerFunction(
 
 func (interpreter *Interpreter) compositeDestructorFunction(
 	compositeDeclaration *ast.CompositeDeclaration,
-	lexicalScope *activations.Activation,
+	lexicalScope *VariableActivation,
 ) *InterpretedFunctionValue {
 
 	destructor := compositeDeclaration.Members.Destructor()
@@ -1460,7 +1455,7 @@ func (interpreter *Interpreter) compositeDestructorFunction(
 
 func (interpreter *Interpreter) compositeFunctions(
 	compositeDeclaration *ast.CompositeDeclaration,
-	lexicalScope *activations.Activation,
+	lexicalScope *VariableActivation,
 ) map[string]FunctionValue {
 
 	functions := map[string]FunctionValue{}
@@ -1479,7 +1474,7 @@ func (interpreter *Interpreter) compositeFunctions(
 
 func (interpreter *Interpreter) functionWrappers(
 	members *ast.Members,
-	lexicalScope *activations.Activation,
+	lexicalScope *VariableActivation,
 ) map[string]FunctionWrapper {
 
 	functionWrappers := map[string]FunctionWrapper{}
@@ -1505,7 +1500,7 @@ func (interpreter *Interpreter) functionWrappers(
 
 func (interpreter *Interpreter) compositeFunction(
 	functionDeclaration *ast.FunctionDeclaration,
-	lexicalScope *activations.Activation,
+	lexicalScope *VariableActivation,
 ) InterpretedFunctionValue {
 
 	functionType := interpreter.Program.Elaboration.FunctionDeclarationFunctionTypes[functionDeclaration]
@@ -1742,7 +1737,7 @@ func (interpreter *Interpreter) VisitInterfaceDeclaration(declaration *ast.Inter
 
 func (interpreter *Interpreter) declareInterface(
 	declaration *ast.InterfaceDeclaration,
-	lexicalScope *activations.Activation,
+	lexicalScope *VariableActivation,
 ) {
 	// Evaluate nested declarations in a new scope, so values
 	// of nested declarations won't be visible after the containing declaration
@@ -1776,7 +1771,7 @@ func (interpreter *Interpreter) declareInterface(
 
 func (interpreter *Interpreter) declareTypeRequirement(
 	declaration *ast.CompositeDeclaration,
-	lexicalScope *activations.Activation,
+	lexicalScope *VariableActivation,
 ) {
 	// Evaluate nested declarations in a new scope, so values
 	// of nested declarations won't be visible after the containing declaration
@@ -1810,7 +1805,7 @@ func (interpreter *Interpreter) declareTypeRequirement(
 
 func (interpreter *Interpreter) initializerFunctionWrapper(
 	members *ast.Members,
-	lexicalScope *activations.Activation,
+	lexicalScope *VariableActivation,
 ) FunctionWrapper {
 
 	// TODO: support multiple overloaded initializers
@@ -1834,7 +1829,7 @@ func (interpreter *Interpreter) initializerFunctionWrapper(
 
 func (interpreter *Interpreter) destructorFunctionWrapper(
 	members *ast.Members,
-	lexicalScope *activations.Activation,
+	lexicalScope *VariableActivation,
 ) FunctionWrapper {
 
 	destructor := members.Destructor()
@@ -1852,7 +1847,7 @@ func (interpreter *Interpreter) destructorFunctionWrapper(
 func (interpreter *Interpreter) functionConditionsWrapper(
 	declaration *ast.FunctionDeclaration,
 	returnType sema.Type,
-	lexicalScope *activations.Activation,
+	lexicalScope *VariableActivation,
 ) FunctionWrapper {
 
 	if declaration.FunctionBlock == nil {
