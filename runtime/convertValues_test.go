@@ -992,9 +992,7 @@ func TestEnumValue(t *testing.T) {
 
 func importAndExportValuesFromScript(t *testing.T, script string, arg cadence.Value) cadence.Value {
 	encodedArg, err := json.Encode(arg)
-	if err != nil {
-		panic(fmt.Errorf("invalid argument: %w", err))
-	}
+	require.NoError(t, err)
 
 	rt := NewInterpreterRuntime()
 
