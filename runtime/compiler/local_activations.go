@@ -20,12 +20,9 @@
  * limitations under the License.
  */
 
-// Package activations implements data structures that can be used
-// when dealing with program scopes.
-//
 package compiler
 
-// An Activation is a map of strings to values.
+// A LocalActivation is a map of strings to values.
 // It can be used to represent an active scope in a program,
 // i.e. it can be used as a symbol table during semantic analysis,
 // or as an activation record during interpretation or compilation.

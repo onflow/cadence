@@ -22,7 +22,7 @@
 
 package interpreter
 
-// An Activation is a map of strings to values.
+// A VariableActivation is a map of strings to values.
 // It can be used to represent an active scope in a program,
 // i.e. it can be used as a symbol table during semantic analysis,
 // or as an activation record during interpretation or compilation.
