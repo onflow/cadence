@@ -236,6 +236,14 @@ func exportCompositeType(t *sema.CompositeType, results map[sema.TypeID]cadence.
 			Fields:              fields,
 		}
 
+	case common.CompositeKindEnum:
+		result = &cadence.EnumType{
+			Location:            t.Location,
+			QualifiedIdentifier: t.QualifiedIdentifier(),
+			Fields:              fields,
+			RawType:             ExportType(t.EnumRawType, results),
+		}
+
 	default:
 		panic(fmt.Sprintf("cannot export composite type %v of unknown kind %v", t, t.Kind))
 	}
