@@ -20,12 +20,12 @@ package integration
 
 import (
 	"fmt"
-	"github.com/onflow/cadence/runtime/common"
-
 	"github.com/onflow/cadence"
 	jsoncdc "github.com/onflow/cadence/encoding/json"
 	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/sema"
+	"strings"
 
 	"github.com/onflow/cadence/languageserver/conversion"
 	"github.com/onflow/cadence/languageserver/protocol"
@@ -207,6 +207,8 @@ func (i *FlowIntegration) entryPointActions(
 	codelensRange := conversion.ASTToProtocolRange(position, position)
 	var codeLenses []*protocol.CodeLens
 
+	// TODO: DISABLED EMULATOR STATES FOR DEVELOPMENT
+	/*
 	// If emulator is not up, we need to show single codelens proposing to start emulator
 	if i.emulatorState == EmulatorOffline {
 		title := fmt.Sprintf(
@@ -240,6 +242,7 @@ func (i *FlowIntegration) entryPointActions(
 		codeLenses = append(codeLenses, codeLens)
 		return codeLenses, nil
 	}
+	*/
 
 	argumentLists := entryPointInfo.pragmaArguments[:]
 
@@ -267,6 +270,9 @@ func (i *FlowIntegration) entryPointActions(
 			}
 			encodedArgumentList[i] = string(encodedArgument)
 		}
+		tempList := strings.Join(encodedArgumentList, ",")
+		argsJSON := fmt.Sprintf("[%s]", tempList)
+		argsJSON = strings.ReplaceAll(argsJSON, "\n", "")
 
 		switch entryPointInfo.kind {
 
@@ -289,7 +295,7 @@ func (i *FlowIntegration) entryPointActions(
 				Command: &protocol.Command{
 					Title:     title,
 					Command:   CommandExecuteScript,
-					Arguments: []interface{}{uri, encodedArgumentList},
+					Arguments: []interface{}{uri, argsJSON},
 				},
 			}
 			codeLenses = append(codeLenses, codeLens)
