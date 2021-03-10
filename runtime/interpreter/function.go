@@ -21,7 +21,6 @@ package interpreter
 import (
 	"fmt"
 
-	"github.com/onflow/cadence/runtime/activations"
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
@@ -53,7 +52,7 @@ type InterpretedFunctionValue struct {
 	Interpreter      *Interpreter
 	ParameterList    *ast.ParameterList
 	Type             *sema.FunctionType
-	Activation       *activations.Activation
+	Activation       *VariableActivation
 	BeforeStatements []ast.Statement
 	PreConditions    ast.Conditions
 	Statements       []ast.Statement

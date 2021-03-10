@@ -26,7 +26,6 @@ import (
 	"sync"
 
 	"github.com/onflow/cadence/fixedpoint"
-	"github.com/onflow/cadence/runtime/activations"
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
@@ -3848,7 +3847,7 @@ func (t *CheckedFunctionType) CheckArgumentExpressions(
 // BaseTypeActivation is the base activation that contains
 // the types available in programs
 //
-var BaseTypeActivation = activations.NewActivation(nil)
+var BaseTypeActivation = NewVariableActivation(nil)
 
 func init() {
 
@@ -3916,7 +3915,7 @@ func baseTypeVariable(name string, ty Type) *Variable {
 // BaseValueActivation is the base activation that contains
 // the values available in programs
 //
-var BaseValueActivation = activations.NewActivation(nil)
+var BaseValueActivation = NewVariableActivation(nil)
 
 var AllSignedFixedPointTypes = []Type{
 	&Fix64Type{},

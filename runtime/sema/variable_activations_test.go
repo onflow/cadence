@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package activations
+package sema
 
 import (
 	"testing"
@@ -28,44 +28,50 @@ func TestActivations(t *testing.T) {
 
 	t.Parallel()
 
-	activations := &ValueTypeActivations{}
+	activations := NewValueActivations(nil)
 
-	activations.Set("a", 1)
+	one := &Variable{}
+	two := &Variable{}
+	three := &Variable{}
+	four := &Variable{}
+	five := &Variable{}
 
-	assert.Equal(t, activations.Find("a"), 1)
+	activations.Set("a", one)
+
+	assert.Same(t, activations.Find("a"), one)
 	assert.Nil(t, activations.Find("b"))
 
-	activations.PushNewWithCurrent()
+	activations.Enter()
 
-	activations.Set("a", 2)
-	activations.Set("b", 3)
+	activations.Set("a", two)
+	activations.Set("b", three)
 
-	assert.Equal(t, activations.Find("a"), 2)
-	assert.Equal(t, activations.Find("b"), 3)
+	assert.Same(t, activations.Find("a"), two)
+	assert.Same(t, activations.Find("b"), three)
 	assert.Nil(t, activations.Find("c"))
 
-	activations.PushNewWithCurrent()
+	activations.Enter()
 
-	activations.Set("a", 5)
-	activations.Set("c", 4)
+	activations.Set("a", five)
+	activations.Set("c", four)
 
-	assert.Equal(t, activations.Find("a"), 5)
-	assert.Equal(t, activations.Find("b"), 3)
-	assert.Equal(t, activations.Find("c"), 4)
+	assert.Same(t, activations.Find("a"), five)
+	assert.Same(t, activations.Find("b"), three)
+	assert.Same(t, activations.Find("c"), four)
 
-	activations.Pop()
+	activations.Leave()
 
-	assert.Equal(t, activations.Find("a"), 2)
-	assert.Equal(t, activations.Find("b"), 3)
+	assert.Same(t, activations.Find("a"), two)
+	assert.Same(t, activations.Find("b"), three)
 	assert.Nil(t, activations.Find("c"))
 
-	activations.Pop()
+	activations.Leave()
 
-	assert.Equal(t, activations.Find("a"), 1)
+	assert.Same(t, activations.Find("a"), one)
 	assert.Nil(t, activations.Find("b"))
 	assert.Nil(t, activations.Find("c"))
 
-	activations.Pop()
+	activations.Leave()
 
 	assert.Nil(t, activations.Find("a"))
 	assert.Nil(t, activations.Find("b"))
