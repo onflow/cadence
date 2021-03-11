@@ -197,7 +197,7 @@ func exportCompositeValue(v *interpreter.CompositeValue, inter *interpreter.Inte
 	}
 
 	switch staticType.Kind {
-	case common.CompositeKindStructure, common.CompositeKindEnum:
+	case common.CompositeKindStructure:
 		return cadence.NewStruct(fields).WithType(t.(*cadence.StructType))
 	case common.CompositeKindResource:
 		return cadence.NewResource(fields).WithType(t.(*cadence.ResourceType))
@@ -205,6 +205,8 @@ func exportCompositeValue(v *interpreter.CompositeValue, inter *interpreter.Inte
 		return cadence.NewEvent(fields).WithType(t.(*cadence.EventType))
 	case common.CompositeKindContract:
 		return cadence.NewContract(fields).WithType(t.(*cadence.ContractType))
+	case common.CompositeKindEnum:
+		return cadence.NewEnum(fields).WithType(t.(*cadence.EnumType))
 	}
 
 	panic(fmt.Errorf(
@@ -374,6 +376,14 @@ func importValue(value cadence.Value) interpreter.Value {
 			Domain:     common.PathDomainFromIdentifier(v.Domain),
 			Identifier: v.Identifier,
 		}
+	case cadence.Enum:
+		return importCompositeValue(
+			common.CompositeKindStructure,
+			v.EnumType.Location,
+			v.EnumType.QualifiedIdentifier,
+			v.EnumType.Fields,
+			v.Fields,
+		)
 	}
 
 	panic(fmt.Sprintf("cannot import value of type %T", value))

@@ -194,6 +194,8 @@ func decodeJSON(v interface{}) cadence.Value {
 		return decodeTypeValue(valueJSON)
 	case capabilityTypeStr:
 		return decodeCapability(valueJSON)
+	case enumTypeStr:
+		return decodeEnum(valueJSON)
 	}
 
 	panic(ErrInvalidJSONCadence)
@@ -574,6 +576,16 @@ func decodeContract(valueJSON interface{}) cadence.Contract {
 	comp := decodeComposite(valueJSON)
 
 	return cadence.NewContract(comp.fieldValues).WithType(&cadence.ContractType{
+		Location:            comp.location,
+		QualifiedIdentifier: comp.qualifiedIdentifier,
+		Fields:              comp.fieldTypes,
+	})
+}
+
+func decodeEnum(valueJSON interface{}) cadence.Enum {
+	comp := decodeComposite(valueJSON)
+
+	return cadence.NewEnum(comp.fieldValues).WithType(&cadence.EnumType{
 		Location:            comp.location,
 		QualifiedIdentifier: comp.qualifiedIdentifier,
 		Fields:              comp.fieldTypes,

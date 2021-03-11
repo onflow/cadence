@@ -940,3 +940,36 @@ func (PublicAccountType) isType() {}
 func (PublicAccountType) ID() string {
 	return "PublicAccount"
 }
+
+// EnumType
+type EnumType struct {
+	Location            common.Location
+	QualifiedIdentifier string
+	RawType             Type
+	Fields              []Field
+	Initializers        [][]Parameter
+}
+
+func (t *EnumType) isType() {}
+
+func (t *EnumType) ID() string {
+	return string(t.Location.TypeID(t.QualifiedIdentifier))
+}
+
+func (*EnumType) isCompositeType() {}
+
+func (t *EnumType) CompositeTypeLocation() common.Location {
+	return t.Location
+}
+
+func (t *EnumType) CompositeTypeQualifiedIdentifier() string {
+	return t.QualifiedIdentifier
+}
+
+func (t *EnumType) CompositeFields() []Field {
+	return t.Fields
+}
+
+func (t *EnumType) CompositeInitializers() [][]Parameter {
+	return t.Initializers
+}
