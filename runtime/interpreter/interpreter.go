@@ -3601,7 +3601,7 @@ func (interpreter *Interpreter) VisitPathExpression(expression *ast.PathExpressi
 	return Done{
 		Result: PathValue{
 			Domain:     domain,
-			Identifier: expression.Identifier.Identifier,
+			Identifier: expression.Identifier(),
 		},
 	}
 }

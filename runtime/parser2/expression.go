@@ -1058,11 +1058,18 @@ func definePathExpression() {
 		func(p *parser, token lexer.Token) ast.Expression {
 			domain := mustIdentifier(p)
 			p.mustOne(lexer.TokenSlash)
-			identifier := mustIdentifier(p)
+
+			var idents []ast.Identifier
+			idents = append(idents, mustIdentifier(p))
+			for p.current.Is(lexer.TokenDot) {
+				p.next()
+				idents = append(idents, mustIdentifier(p))
+			}
+
 			return &ast.PathExpression{
-				Domain:     domain,
-				Identifier: identifier,
-				StartPos:   token.StartPos,
+				Domain:      domain,
+				Identifiers: idents,
+				StartPos:    token.StartPos,
 			}
 		},
 	)
