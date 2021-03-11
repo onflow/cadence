@@ -38,6 +38,12 @@ const(
 	prefixOffline = "⚠️"
 )
 
+func convertListToCadenceJSON (args []string) string {
+	list := strings.Join(args, ",")
+	cadenceJSON := fmt.Sprintf("[%s]", list)
+	return strings.ReplaceAll(cadenceJSON, "\n", "")
+}
+
 func (i *FlowIntegration) codeLenses(
 	uri protocol.DocumentUri,
 	version float64,
@@ -262,17 +268,15 @@ func (i *FlowIntegration) entryPointActions(
 	for i, argumentList := range argumentLists {
 		var title string
 
-		encodedArgumentList := make([]string, len(argumentList))
-		for i, argument := range argumentList {
+		var encodedArgumentList []string
+		for _, argument := range argumentList {
 			encodedArgument, err := jsoncdc.Encode(argument)
 			if err != nil {
 				return nil, err
 			}
-			encodedArgumentList[i] = string(encodedArgument)
+			noSuffix := strings.TrimSuffix(string(encodedArgument), "\n")
+			encodedArgumentList = append(encodedArgumentList, noSuffix)
 		}
-		tempList := strings.Join(encodedArgumentList, ",")
-		argsJSON := fmt.Sprintf("[%s]", tempList)
-		argsJSON = strings.ReplaceAll(argsJSON, "\n", "")
 
 		switch entryPointInfo.kind {
 
@@ -289,6 +293,8 @@ func (i *FlowIntegration) entryPointActions(
 					prefixOK,
 				)
 			}
+
+			argsJSON := convertListToCadenceJSON(encodedArgumentList)
 
 			codeLens := &protocol.CodeLens{
 				Range: codelensRange,
@@ -321,7 +327,7 @@ func (i *FlowIntegration) entryPointActions(
 					Range: codelensRange,
 					Command: &protocol.Command{
 						Title:     title,
-						Command:   ClientSendTransaction,
+						Command:   CommandSendTransaction,
 						Arguments: []interface{}{uri, encodedArgumentList, signers},
 					},
 				}
