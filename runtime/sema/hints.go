@@ -62,3 +62,41 @@ func (h *RemovalHint) Hint() string {
 }
 
 func (*RemovalHint) isHint() {}
+
+// AlwaysSucceedingFailableCastHint
+
+type AlwaysSucceedingFailableCastHint struct {
+	ValueType  Type
+	TargetType Type
+	ast.Range
+}
+
+func (h *AlwaysSucceedingFailableCastHint) Hint() string {
+	return fmt.Sprintf(
+		"failable cast ('%s') from `%s` to `%s` always succeeds",
+		ast.OperationFailableCast.Symbol(),
+		h.ValueType,
+		h.TargetType,
+	)
+}
+
+func (*AlwaysSucceedingFailableCastHint) isHint() {}
+
+// AlwaysSucceedingForceCastHint
+
+type AlwaysSucceedingForceCastHint struct {
+	ValueType  Type
+	TargetType Type
+	ast.Range
+}
+
+func (h *AlwaysSucceedingForceCastHint) Hint() string {
+	return fmt.Sprintf(
+		"force cast ('%s') from `%s` to `%s` always succeeds",
+		ast.OperationForceCast.Symbol(),
+		h.ValueType,
+		h.TargetType,
+	)
+}
+
+func (*AlwaysSucceedingForceCastHint) isHint() {}
