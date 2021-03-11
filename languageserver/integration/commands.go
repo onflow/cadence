@@ -24,7 +24,6 @@ import (
 	"fmt"
 	"net/url"
 	"path/filepath"
-	"strings"
 	"time"
 
 	"github.com/onflow/flow-go-sdk/crypto"
@@ -42,7 +41,7 @@ import (
 )
 
 const (
-	CommandSubmitTransaction     = "cadence.server.flow.submitTransaction"
+	CommandSendTransaction       = "cadence.server.flow.sendTransaction"
 	CommandExecuteScript         = "cadence.server.flow.executeScript"
 	CommandDeployContract        = "cadence.server.flow.deployContract"
 	CommandCreateAccount         = "cadence.server.flow.createAccount"
@@ -59,8 +58,8 @@ const (
 func (i *FlowIntegration) commands() []server.Command {
 	return []server.Command{
 		{
-			Name:    CommandSubmitTransaction,
-			Handler: i.submitTransaction,
+			Name:    CommandSendTransaction,
+			Handler: i.sendTransaction,
 		},
 		{
 			Name:    CommandExecuteScript,
@@ -89,41 +88,68 @@ func (i *FlowIntegration) commands() []server.Command {
 	}
 }
 
-// submitTransaction handles submitting a transaction defined in the
+// sendTransaction handles submitting a transaction defined in the
 // source document in VS Code.
 //
 // There should be exactly 2 arguments:
 //   * the DocumentURI of the file to submit
 //   * the arguments, encoded as JSON-CDC
-func (i *FlowIntegration) submitTransaction(conn protocol.Conn, args ...interface{}) (interface{}, error) {
+func (i *FlowIntegration) sendTransaction(conn protocol.Conn, args ...interface{}) (interface{}, error) {
 
 	err := server.CheckCommandArgumentCount(args, 3)
 	if err != nil {
 		return nil, err
 	}
 
-	rawTransactionArguments, ok := args[1].([]interface{})
+	uri, ok := args[0].(string)
 	if !ok {
-		return nil, fmt.Errorf("invalid transaction arguments: %#+v", args[1])
+		return nil, fmt.Errorf("invalid URI argument: %#+v", args[0])
 	}
 
-	var transactionArguments []string
-	for i, rawTransactionArgument := range rawTransactionArguments {
-		stringArgument, ok := rawTransactionArgument.(string)
+	path, pathError := url.Parse(uri)
+	if pathError != nil {
+		return nil, fmt.Errorf("invalid URI arguments: %#+v", uri)
+	}
+
+	argsJSON, ok := args[1].(string)
+	if !ok {
+		return nil, fmt.Errorf("invalid arguments: %#+v", args[1])
+	}
+
+	signers, ok := args[2].([]string)
+	if !ok {
+		return nil, fmt.Errorf("invalid signers list: %#+v", args[1])
+	}
+
+	// Execute script via shared library
+	tx, txResult, txError := i.sharedServices.Transactions.Send(path.Path, signers[0], []string{}, argsJSON)
+
+	fmt.Printf("%+v", tx)
+	fmt.Printf("%+v", txResult)
+	fmt.Printf("%+v", txError)
+
+	/*	rawTransactionArguments, ok := args[1].([]interface{})
 		if !ok {
-			return nil, fmt.Errorf("invalid transaction argument at index %d: %#+v", i, rawTransactionArgument)
+			return nil, fmt.Errorf("invalid transaction arguments: %#+v", args[1])
 		}
 
-		transactionArguments = append(transactionArguments, strings.TrimSuffix(stringArgument, "\n"))
-	}
+		var transactionArguments []string
+		for i, rawTransactionArgument := range rawTransactionArguments {
+			stringArgument, ok := rawTransactionArgument.(string)
+			if !ok {
+				return nil, fmt.Errorf("invalid transaction argument at index %d: %#+v", i, rawTransactionArgument)
+			}
 
-	signers, ok := args[2].([]interface{})
-	if !ok {
-		return nil, fmt.Errorf("invalid signers argument: %#+v", args[2])
-	}
+			transactionArguments = append(transactionArguments, strings.TrimSuffix(stringArgument, "\n"))
+		}
 
-	// Pass arguments and signers back to extension
-	err = conn.Notify(ClientSendTransaction, []interface{}{transactionArguments, signers})
+		signers, ok := args[2].([]interface{})
+		if !ok {
+			return nil, fmt.Errorf("invalid signers argument: %#+v", args[2])
+		}
+
+		// Pass arguments and signers back to extension
+		err = conn.Notify(ClientSendTransaction, []interface{}{transactionArguments, signers})*/
 
 	return nil, err
 }
