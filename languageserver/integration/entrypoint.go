@@ -38,7 +38,7 @@ const (
 	entryPointKindContractInterface
 )
 
-var signersRegexp = regexp.MustCompile(`[a-zA-Z]+`)
+var signersRegexp = regexp.MustCompile(`[\w-]+`)
 
 type entryPointInfo struct {
 	documentVersion       float64
