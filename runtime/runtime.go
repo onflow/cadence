@@ -1707,7 +1707,7 @@ func (r *interpreterRuntime) newAuthAccountContractsChangeFunction(
 
 				panic(&InvalidContractDeploymentError{
 					Err:           err,
-					LocationRange: invocation.LocationRange,
+					LocationRange: invocation.GetLocationRange(),
 				})
 			}
 
@@ -1744,7 +1744,7 @@ func (r *interpreterRuntime) newAuthAccountContractsChangeFunction(
 
 				panic(&InvalidContractDeploymentError{
 					Err:           err,
-					LocationRange: invocation.LocationRange,
+					LocationRange: invocation.GetLocationRange(),
 				})
 			}
 

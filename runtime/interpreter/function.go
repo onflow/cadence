@@ -35,7 +35,7 @@ type Invocation struct {
 	Arguments          []Value
 	ArgumentTypes      []sema.Type
 	TypeParameterTypes *sema.TypeParameterTypeOrderedMap
-	LocationRange      LocationRange
+	GetLocationRange   func() LocationRange
 	Interpreter        *Interpreter
 }
 
@@ -170,12 +170,12 @@ func (f HostFunctionValue) Invoke(invocation Invocation) Value {
 	return f.Function(invocation)
 }
 
-func (f HostFunctionValue) GetMember(_ *Interpreter, _ LocationRange, name string) Value {
+func (f HostFunctionValue) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
 	value, _ := f.Members.Get(name)
 	return value
 }
 
-func (f HostFunctionValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+func (f HostFunctionValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
 	panic(errors.NewUnreachableError())
 }
 

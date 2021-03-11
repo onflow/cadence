@@ -70,7 +70,7 @@ func (BlockValue) SetModified(_ bool) {
 	// NO-OP
 }
 
-func (v BlockValue) GetMember(_ *Interpreter, _ LocationRange, name string) Value {
+func (v BlockValue) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
 	switch name {
 	case "height":
 		return v.Height
@@ -88,7 +88,7 @@ func (v BlockValue) GetMember(_ *Interpreter, _ LocationRange, name string) Valu
 	return nil
 }
 
-func (v BlockValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+func (v BlockValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
 	panic(runtimeErrors.NewUnreachableError())
 }
 

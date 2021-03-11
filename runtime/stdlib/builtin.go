@@ -57,7 +57,7 @@ var AssertFunction = NewStandardLibraryFunction(
 			}
 			panic(AssertionError{
 				Message:       message,
-				LocationRange: invocation.LocationRange,
+				LocationRange: invocation.GetLocationRange(),
 			})
 		}
 		return interpreter.VoidValue{}
@@ -95,7 +95,7 @@ var PanicFunction = NewStandardLibraryFunction(
 		message := invocation.Arguments[0].(*interpreter.StringValue)
 		panic(PanicError{
 			Message:       message.Str,
-			LocationRange: invocation.LocationRange,
+			LocationRange: invocation.GetLocationRange(),
 		})
 	},
 )

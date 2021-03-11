@@ -4390,7 +4390,7 @@ func prepareLargeTestValue() Value {
 		for i := 0; i < 100; i++ {
 			key := NewStringValue(fmt.Sprintf("hello world %d", i))
 			value := NewInt256ValueFromInt64(int64(i))
-			dict.Set(nil, LocationRange{}, key, NewSomeValueOwningNonCopying(value))
+			dict.Set(nil, ReturnEmptyLocationRange, key, NewSomeValueOwningNonCopying(value))
 		}
 		values.Append(dict)
 	}

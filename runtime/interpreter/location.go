@@ -42,3 +42,7 @@ type LocationRange struct {
 func (r LocationRange) ImportLocation() common.Location {
 	return r.Location
 }
+
+func ReturnEmptyLocationRange() LocationRange {
+	return LocationRange{}
+}

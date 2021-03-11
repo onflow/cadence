@@ -237,7 +237,7 @@ func exportDictionaryValue(
 		// NOTE: use `Get` instead of accessing `Entries`,
 		// so that the potentially deferred values are loaded from storage
 
-		value := v.Get(inter, interpreter.LocationRange{}, keyValue).(*interpreter.SomeValue).Value
+		value := v.Get(inter, interpreter.ReturnEmptyLocationRange, keyValue).(*interpreter.SomeValue).Value
 
 		convertedKey := exportValueWithInterpreter(keyValue, inter, results)
 		convertedValue := exportValueWithInterpreter(value, inter, results)

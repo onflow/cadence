@@ -1874,7 +1874,7 @@ func TestInterpretStructureInitializesConstant(t *testing.T) {
     `)
 
 	actual := inter.Globals["test"].Value.(*interpreter.CompositeValue).
-		GetMember(inter, interpreter.LocationRange{}, "foo")
+		GetMember(inter, interpreter.ReturnEmptyLocationRange, "foo")
 	assert.Equal(t,
 		interpreter.NewIntValueFromInt64(42),
 		actual,
@@ -4192,7 +4192,7 @@ func TestInterpretDictionaryIndexingAssignmentExisting(t *testing.T) {
 	).Copy().(*interpreter.DictionaryValue)
 	expectedDict.Set(
 		inter,
-		interpreter.LocationRange{},
+		interpreter.ReturnEmptyLocationRange,
 		interpreter.NewStringValue("abc"),
 		interpreter.NewSomeValueOwningNonCopying(
 			interpreter.NewIntValueFromInt64(23),
@@ -4207,7 +4207,7 @@ func TestInterpretDictionaryIndexingAssignmentExisting(t *testing.T) {
 	)
 
 	newValue := actualDict.
-		Get(inter, interpreter.LocationRange{}, interpreter.NewStringValue("abc"))
+		Get(inter, interpreter.ReturnEmptyLocationRange, interpreter.NewStringValue("abc"))
 
 	assert.Equal(t,
 		interpreter.NewSomeValueOwningNonCopying(interpreter.NewIntValueFromInt64(23)),
@@ -4256,7 +4256,7 @@ func TestInterpretDictionaryIndexingAssignmentNew(t *testing.T) {
 	).Copy().(*interpreter.DictionaryValue)
 	expectedDict.Set(
 		inter,
-		interpreter.LocationRange{},
+		interpreter.ReturnEmptyLocationRange,
 		interpreter.NewStringValue("abc"),
 		interpreter.NewSomeValueOwningNonCopying(
 			interpreter.NewIntValueFromInt64(23),
@@ -4271,7 +4271,7 @@ func TestInterpretDictionaryIndexingAssignmentNew(t *testing.T) {
 	)
 
 	newValue := actualDict.
-		Get(inter, interpreter.LocationRange{}, interpreter.NewStringValue("abc"))
+		Get(inter, interpreter.ReturnEmptyLocationRange, interpreter.NewStringValue("abc"))
 
 	assert.Equal(t,
 		interpreter.NewSomeValueOwningNonCopying(interpreter.NewIntValueFromInt64(23)),
@@ -4323,7 +4323,7 @@ func TestInterpretDictionaryIndexingAssignmentNil(t *testing.T) {
 	).Copy().(*interpreter.DictionaryValue)
 	expectedDict.Set(
 		inter,
-		interpreter.LocationRange{},
+		interpreter.ReturnEmptyLocationRange,
 		interpreter.NewStringValue("def"),
 		interpreter.NilValue{},
 	)
@@ -4336,7 +4336,7 @@ func TestInterpretDictionaryIndexingAssignmentNil(t *testing.T) {
 	)
 
 	newValue := actualDict.
-		Get(inter, interpreter.LocationRange{}, interpreter.NewStringValue("def"))
+		Get(inter, interpreter.ReturnEmptyLocationRange, interpreter.NewStringValue("def"))
 
 	assert.Equal(t,
 		interpreter.NilValue{},
@@ -4903,7 +4903,7 @@ func TestInterpretDictionaryRemove(t *testing.T) {
 		interpreter.NewStringValue("abc"), interpreter.NewIntValueFromInt64(1),
 		interpreter.NewStringValue("def"), interpreter.NewIntValueFromInt64(2),
 	).Copy().(*interpreter.DictionaryValue)
-	expectedDict.Remove(nil, interpreter.LocationRange{}, interpreter.NewStringValue("abc"))
+	expectedDict.Remove(nil, interpreter.ReturnEmptyLocationRange, interpreter.NewStringValue("abc"))
 
 	actualDict := inter.Globals["xs"].Value.(*interpreter.DictionaryValue)
 
@@ -4952,7 +4952,7 @@ func TestInterpretDictionaryInsert(t *testing.T) {
 	).Copy().(*interpreter.DictionaryValue)
 	expectedDict.Insert(
 		nil,
-		interpreter.LocationRange{},
+		interpreter.ReturnEmptyLocationRange,
 		interpreter.NewStringValue("abc"),
 		interpreter.NewIntValueFromInt64(3),
 	)
@@ -6037,7 +6037,7 @@ func TestInterpretSwapResourceDictionaryElementReturnDictionary(t *testing.T) {
 	)
 
 	foo := value.(*interpreter.DictionaryValue).
-		Get(inter, interpreter.LocationRange{}, interpreter.NewStringValue("foo"))
+		Get(inter, interpreter.ReturnEmptyLocationRange, interpreter.NewStringValue("foo"))
 
 	require.IsType(t,
 		&interpreter.SomeValue{},
@@ -7044,7 +7044,7 @@ func TestInterpretContractUseInNestedDeclaration(t *testing.T) {
 	)
 
 	i := inter.Globals["C"].Value.(interpreter.MemberAccessibleValue).
-		GetMember(inter, interpreter.LocationRange{}, "i")
+		GetMember(inter, interpreter.ReturnEmptyLocationRange, "i")
 
 	require.IsType(t,
 		interpreter.NewIntValueFromInt64(2),

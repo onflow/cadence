@@ -520,12 +520,15 @@ func (interpreter *Interpreter) setTypeCodes(typeCodes TypeCodes) {
 	interpreter.typeCodes = typeCodes
 }
 
-// locationRange returns a new location range for the given positioned element.
+// locationRangeGetter returns a function that returns the location range
+// for the given location and positioned element.
 //
-func (interpreter *Interpreter) locationRange(hasPosition ast.HasPosition) LocationRange {
-	return LocationRange{
-		Location: interpreter.Location,
-		Range:    ast.NewRangeFromPositioned(hasPosition),
+func locationRangeGetter(location common.Location, hasPosition ast.HasPosition) func() LocationRange {
+	return func() LocationRange {
+		return LocationRange{
+			Location: location,
+			Range:    ast.NewRangeFromPositioned(hasPosition),
+		}
 	}
 }
 
@@ -680,7 +683,10 @@ func (interpreter *Interpreter) prepareInvoke(
 	functionValue FunctionValue,
 	functionType *sema.FunctionType,
 	arguments []Value,
-) (result Value, err error) {
+) (
+	result Value,
+	err error,
+) {
 
 	// ensures the invocation's argument count matches the function's parameter count
 
@@ -720,8 +726,9 @@ func (interpreter *Interpreter) prepareInvoke(
 
 	// NOTE: can't fill argument types, as they are unknown
 	invocation := Invocation{
-		Arguments:   preparedArguments,
-		Interpreter: interpreter,
+		Arguments:        preparedArguments,
+		GetLocationRange: ReturnEmptyLocationRange,
+		Interpreter:      interpreter,
 	}
 	return functionValue.Invoke(invocation), nil
 }
@@ -952,7 +959,7 @@ func (interpreter *Interpreter) visitCondition(condition *ast.Condition) {
 	panic(ConditionError{
 		ConditionKind: condition.Kind,
 		Message:       message,
-		LocationRange: interpreter.locationRange(condition.Test),
+		LocationRange: locationRangeGetter(interpreter.Location, condition.Test)(),
 	})
 }
 
@@ -993,10 +1000,9 @@ func (interpreter *Interpreter) visitAssignment(
 	if transferOperation == ast.TransferOperationMoveForced {
 		target := getterSetter.get()
 		if _, ok := target.(NilValue); !ok {
-			locationRange := interpreter.locationRange(position)
-
+			getLocationRange := locationRangeGetter(interpreter.Location, position)
 			panic(ForceAssignmentToNonNilResourceError{
-				LocationRange: locationRange,
+				LocationRange: getLocationRange(),
 			})
 		}
 	}
@@ -1217,7 +1223,7 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 
 				if interpreter.uuidHandler == nil {
 					panic(UUIDUnavailableError{
-						LocationRange: invocation.LocationRange,
+						LocationRange: invocation.GetLocationRange(),
 					})
 				}
 
@@ -2445,7 +2451,7 @@ func (interpreter *Interpreter) authAccountSaveFunction(addressValue AddressValu
 				OverwriteError{
 					Address:       addressValue,
 					Path:          path,
-					LocationRange: invocation.LocationRange,
+					LocationRange: invocation.GetLocationRange(),
 				},
 			)
 		}
@@ -2688,7 +2694,7 @@ func (interpreter *Interpreter) capabilityBorrowFunction(
 					addressValue,
 					pathValue,
 					borrowType,
-					invocation.LocationRange,
+					invocation.GetLocationRange,
 				)
 
 			if targetStorageKey == "" {
@@ -2735,7 +2741,7 @@ func (interpreter *Interpreter) capabilityCheckFunction(
 					addressValue,
 					pathValue,
 					borrowType,
-					invocation.LocationRange,
+					invocation.GetLocationRange,
 				)
 
 			isValid := targetStorageKey != ""
@@ -2749,7 +2755,7 @@ func (interpreter *Interpreter) getCapabilityFinalTargetStorageKey(
 	addressValue AddressValue,
 	path PathValue,
 	wantedBorrowType *sema.ReferenceType,
-	locationRange LocationRange,
+	getLocationRange func() LocationRange,
 ) (
 	finalStorageKey string,
 	authorized bool,
@@ -2770,7 +2776,7 @@ func (interpreter *Interpreter) getCapabilityFinalTargetStorageKey(
 			panic(CyclicLinkError{
 				Address:       addressValue,
 				Paths:         paths,
-				LocationRange: locationRange,
+				LocationRange: getLocationRange(),
 			})
 		} else {
 			seenKeys[key] = struct{}{}
@@ -2898,7 +2904,7 @@ func (interpreter *Interpreter) reportFunctionInvocation(pos ast.HasPosition) {
 }
 
 // getMember gets the member value by the given identifier from the given Value depending on its type.
-func (interpreter *Interpreter) getMember(self Value, locationRange LocationRange, identifier string) Value {
+func (interpreter *Interpreter) getMember(self Value, getLocationRange func() LocationRange, identifier string) Value {
 	var result Value
 	// When the accessed value has a type that supports the declaration of members
 	// or is a built-in type that has members (`MemberAccessibleValue`),
@@ -2906,7 +2912,7 @@ func (interpreter *Interpreter) getMember(self Value, locationRange LocationRang
 	// For example, the built-in type `String` has a member "length",
 	// and composite declarations may contain member declarations
 	if memberAccessibleValue, ok := self.(MemberAccessibleValue); ok {
-		result = memberAccessibleValue.GetMember(interpreter, locationRange, identifier)
+		result = memberAccessibleValue.GetMember(interpreter, getLocationRange, identifier)
 	}
 	if result == nil {
 		switch identifier {
@@ -2954,6 +2960,6 @@ func (interpreter *Interpreter) getTypeFunction(self Value) HostFunctionValue {
 	)
 }
 
-func (interpreter *Interpreter) setMember(self Value, locationRange LocationRange, identifier string, value Value) {
-	self.(MemberAccessibleValue).SetMember(interpreter, locationRange, identifier, value)
+func (interpreter *Interpreter) setMember(self Value, getLocationRange func() LocationRange, identifier string, value Value) {
+	self.(MemberAccessibleValue).SetMember(interpreter, getLocationRange, identifier, value)
 }

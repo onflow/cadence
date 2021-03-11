@@ -28,7 +28,7 @@ func (interpreter *Interpreter) InvokeFunctionValue(
 	arguments []Value,
 	argumentTypes []sema.Type,
 	parameterTypes []sema.Type,
-	invocationRange ast.Range,
+	invocationPosition ast.HasPosition,
 ) (
 	value Value,
 	err error,
@@ -45,7 +45,7 @@ func (interpreter *Interpreter) InvokeFunctionValue(
 		argumentTypes,
 		parameterTypes,
 		nil,
-		invocationRange,
+		invocationPosition,
 	), nil
 }
 
@@ -55,7 +55,7 @@ func (interpreter *Interpreter) invokeFunctionValue(
 	argumentTypes []sema.Type,
 	parameterTypes []sema.Type,
 	typeParameterTypes *sema.TypeParameterTypeOrderedMap,
-	invocationRange ast.Range,
+	invocationPosition ast.HasPosition,
 ) Value {
 
 	parameterTypeCount := len(parameterTypes)
@@ -71,18 +71,13 @@ func (interpreter *Interpreter) invokeFunctionValue(
 		}
 	}
 
-	// TODO: optimize: only potentially used by host-functions
-
-	locationRange := LocationRange{
-		Location: interpreter.Location,
-		Range:    invocationRange,
-	}
+	getLocationRange := locationRangeGetter(interpreter.Location, invocationPosition)
 
 	invocation := Invocation{
 		Arguments:          argumentCopies,
 		ArgumentTypes:      argumentTypes,
 		TypeParameterTypes: typeParameterTypes,
-		LocationRange:      locationRange,
+		GetLocationRange:   getLocationRange,
 		Interpreter:        interpreter,
 	}
 
