@@ -1738,13 +1738,9 @@ func (interpreter *Interpreter) VisitUnaryExpression(expression *ast.UnaryExpres
 
 func (interpreter *Interpreter) VisitExpressionStatement(statement *ast.ExpressionStatement) ast.Repr {
 	result := interpreter.evalExpression(statement.Expression)
-	var value Value
-	var ok bool
-	value, ok = result.(Value)
-	if !ok {
-		value = nil
+	return Done{
+		Result: ExpressionStatementResult{result},
 	}
-	return Done{Result: ExpressionStatementResult{value}}
 }
 
 func (interpreter *Interpreter) VisitBoolExpression(expression *ast.BoolExpression) ast.Repr {
