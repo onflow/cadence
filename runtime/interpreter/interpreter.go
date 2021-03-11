@@ -1989,7 +1989,7 @@ func (interpreter *Interpreter) functionConditionsWrapper(
 					//   from the inner function, otherwise it is lost
 
 					returnValue := inner.Invoke(invocation)
-					return functionReturn{returnValue.(Value)}
+					return functionReturn{returnValue}
 				}
 			}
 
