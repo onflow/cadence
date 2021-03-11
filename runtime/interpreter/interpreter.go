@@ -1345,7 +1345,7 @@ func (interpreter *Interpreter) VisitVariableDeclaration(declaration *ast.Variab
 
 	result := interpreter.visitPotentialStorageRemoval(declaration.Value)
 
-	valueCopy := interpreter.copyAndConvert(result.(Value), valueType, targetType)
+	valueCopy := interpreter.copyAndConvert(result, valueType, targetType)
 
 	interpreter.declareVariable(
 		declaration.Identifier.Identifier,
