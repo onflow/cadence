@@ -55,15 +55,15 @@ type Value interface {
 // ValueIndexableValue
 
 type ValueIndexableValue interface {
-	Get(interpreter *Interpreter, locationRange LocationRange, key Value) Value
-	Set(interpreter *Interpreter, locationRange LocationRange, key Value, value Value)
+	Get(interpreter *Interpreter, getLocationRange func() LocationRange, key Value) Value
+	Set(interpreter *Interpreter, getLocationRange func() LocationRange, key Value, value Value)
 }
 
 // MemberAccessibleValue
 
 type MemberAccessibleValue interface {
-	GetMember(interpreter *Interpreter, locationRange LocationRange, name string) Value
-	SetMember(interpreter *Interpreter, locationRange LocationRange, name string, value Value)
+	GetMember(interpreter *Interpreter, getLocationRange func() LocationRange, name string) Value
+	SetMember(interpreter *Interpreter, getLocationRange func() LocationRange, name string, value Value)
 }
 
 // ConcatenatableValue
@@ -82,7 +82,7 @@ type EquatableValue interface {
 // DestroyableValue
 
 type DestroyableValue interface {
-	Destroy(interpreter *Interpreter, locationRange LocationRange)
+	Destroy(interpreter *Interpreter, getLocationRange func() LocationRange)
 }
 
 // HasKeyString
@@ -162,7 +162,7 @@ func (v TypeValue) Equal(inter *Interpreter, other Value) BoolValue {
 	return BoolValue(ty.Equal(otherTy))
 }
 
-func (v TypeValue) GetMember(inter *Interpreter, _ LocationRange, name string) Value {
+func (v TypeValue) GetMember(inter *Interpreter, _ func() LocationRange, name string) Value {
 	switch name {
 	case "identifier":
 		var typeID string
@@ -176,7 +176,7 @@ func (v TypeValue) GetMember(inter *Interpreter, _ LocationRange, name string) V
 	return nil
 }
 
-func (v TypeValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+func (v TypeValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
 	panic(errors.NewUnreachableError())
 }
 
@@ -371,7 +371,7 @@ func (v *StringValue) Slice(from IntValue, to IntValue) Value {
 	return NewStringValue(v.Str[fromInt:toInt])
 }
 
-func (v *StringValue) Get(_ *Interpreter, _ LocationRange, key Value) Value {
+func (v *StringValue) Get(_ *Interpreter, _ func() LocationRange, key Value) Value {
 	i := key.(NumberValue).ToInt()
 
 	// TODO: optimize grapheme clusters to prevent unnecessary iteration
@@ -387,7 +387,7 @@ func (v *StringValue) Get(_ *Interpreter, _ LocationRange, key Value) Value {
 	return NewStringValue(char)
 }
 
-func (v *StringValue) Set(_ *Interpreter, _ LocationRange, key Value, value Value) {
+func (v *StringValue) Set(_ *Interpreter, _ func() LocationRange, key Value, value Value) {
 	index := key.(NumberValue).ToInt()
 	char := value.(*StringValue)
 	v.SetIndex(index, char)
@@ -417,7 +417,7 @@ func (v *StringValue) SetIndex(index int, char *StringValue) {
 	v.Str = sb.String()
 }
 
-func (v *StringValue) GetMember(_ *Interpreter, _ LocationRange, name string) Value {
+func (v *StringValue) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
 	switch name {
 	case "length":
 		count := v.Length()
@@ -475,7 +475,7 @@ func (v *StringValue) DecodeHex() *ArrayValue {
 	return NewArrayValueUnownedNonCopying(values...)
 }
 
-func (*StringValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+func (*StringValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
 	panic(errors.NewUnreachableError())
 }
 
@@ -578,9 +578,9 @@ func (v *ArrayValue) SetModified(modified bool) {
 	v.modified = modified
 }
 
-func (v *ArrayValue) Destroy(interpreter *Interpreter, locationRange LocationRange) {
+func (v *ArrayValue) Destroy(interpreter *Interpreter, getLocationRange func() LocationRange) {
 	for _, value := range v.Values {
-		maybeDestroy(interpreter, locationRange, value)
+		maybeDestroy(interpreter, getLocationRange, value)
 	}
 }
 
@@ -590,7 +590,7 @@ func (v *ArrayValue) Concat(other ConcatenatableValue) Value {
 	return NewArrayValueUnownedNonCopying(concatenated...)
 }
 
-func (v *ArrayValue) Get(_ *Interpreter, locationRange LocationRange, key Value) Value {
+func (v *ArrayValue) Get(_ *Interpreter, getLocationRange func() LocationRange, key Value) Value {
 	integerKey := key.(NumberValue).ToInt()
 	count := v.Count()
 
@@ -599,14 +599,14 @@ func (v *ArrayValue) Get(_ *Interpreter, locationRange LocationRange, key Value)
 		panic(ArrayIndexOutOfBoundsError{
 			Index:         integerKey,
 			MaxIndex:      count - 1,
-			LocationRange: locationRange,
+			LocationRange: getLocationRange(),
 		})
 	}
 
 	return v.Values[integerKey]
 }
 
-func (v *ArrayValue) Set(_ *Interpreter, _ LocationRange, key Value, value Value) {
+func (v *ArrayValue) Set(_ *Interpreter, _ func() LocationRange, key Value, value Value) {
 	index := key.(NumberValue).ToInt()
 	v.SetIndex(index, value)
 }
@@ -687,7 +687,7 @@ func (v *ArrayValue) Contains(needleValue Value) BoolValue {
 	return false
 }
 
-func (v *ArrayValue) GetMember(_ *Interpreter, _ LocationRange, name string) Value {
+func (v *ArrayValue) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
 	switch name {
 	case "length":
 		return NewIntValueFromInt64(int64(v.Count()))
@@ -752,7 +752,7 @@ func (v *ArrayValue) GetMember(_ *Interpreter, _ LocationRange, name string) Val
 	return nil
 }
 
-func (v *ArrayValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+func (v *ArrayValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
 	panic(errors.NewUnreachableError())
 }
 
@@ -998,7 +998,7 @@ func (v IntValue) BitwiseRightShift(other IntegerValue) IntegerValue {
 	return IntValue{res}
 }
 
-func (v IntValue) GetMember(_ *Interpreter, _ LocationRange, name string) Value {
+func (v IntValue) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
 	switch name {
 
 	case sema.ToStringFunctionName:
@@ -1019,7 +1019,7 @@ func (v IntValue) GetMember(_ *Interpreter, _ LocationRange, name string) Value 
 	return nil
 }
 
-func (IntValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+func (IntValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
 	panic(errors.NewUnreachableError())
 }
 
@@ -1234,7 +1234,7 @@ func (v Int8Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 	return v >> o
 }
 
-func (v Int8Value) GetMember(_ *Interpreter, _ LocationRange, name string) Value {
+func (v Int8Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
 	switch name {
 
 	case sema.ToStringFunctionName:
@@ -1255,7 +1255,7 @@ func (v Int8Value) GetMember(_ *Interpreter, _ LocationRange, name string) Value
 	return nil
 }
 
-func (Int8Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+func (Int8Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
 	panic(errors.NewUnreachableError())
 }
 
@@ -1470,7 +1470,7 @@ func (v Int16Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 	return v >> o
 }
 
-func (v Int16Value) GetMember(_ *Interpreter, _ LocationRange, name string) Value {
+func (v Int16Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
 	switch name {
 
 	case sema.ToStringFunctionName:
@@ -1491,7 +1491,7 @@ func (v Int16Value) GetMember(_ *Interpreter, _ LocationRange, name string) Valu
 	return nil
 }
 
-func (Int16Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+func (Int16Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
 	panic(errors.NewUnreachableError())
 }
 
@@ -1708,7 +1708,7 @@ func (v Int32Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 	return v >> o
 }
 
-func (v Int32Value) GetMember(_ *Interpreter, _ LocationRange, name string) Value {
+func (v Int32Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
 	switch name {
 
 	case sema.ToStringFunctionName:
@@ -1729,7 +1729,7 @@ func (v Int32Value) GetMember(_ *Interpreter, _ LocationRange, name string) Valu
 	return nil
 }
 
-func (Int32Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+func (Int32Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
 	panic(errors.NewUnreachableError())
 }
 
@@ -1945,7 +1945,7 @@ func (v Int64Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 	return v >> o
 }
 
-func (v Int64Value) GetMember(_ *Interpreter, _ LocationRange, name string) Value {
+func (v Int64Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
 	switch name {
 
 	case sema.ToStringFunctionName:
@@ -1966,7 +1966,7 @@ func (v Int64Value) GetMember(_ *Interpreter, _ LocationRange, name string) Valu
 	return nil
 }
 
-func (Int64Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+func (Int64Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
 	panic(errors.NewUnreachableError())
 }
 
@@ -2242,7 +2242,7 @@ func (v Int128Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 	return Int128Value{res}
 }
 
-func (v Int128Value) GetMember(_ *Interpreter, _ LocationRange, name string) Value {
+func (v Int128Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
 	switch name {
 
 	case sema.ToStringFunctionName:
@@ -2263,7 +2263,7 @@ func (v Int128Value) GetMember(_ *Interpreter, _ LocationRange, name string) Val
 	return nil
 }
 
-func (Int128Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+func (Int128Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
 	panic(errors.NewUnreachableError())
 }
 
@@ -2538,7 +2538,7 @@ func (v Int256Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 	return Int256Value{res}
 }
 
-func (v Int256Value) GetMember(_ *Interpreter, _ LocationRange, name string) Value {
+func (v Int256Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
 	switch name {
 
 	case sema.ToStringFunctionName:
@@ -2559,7 +2559,7 @@ func (v Int256Value) GetMember(_ *Interpreter, _ LocationRange, name string) Val
 	return nil
 }
 
-func (Int256Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+func (Int256Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
 	panic(errors.NewUnreachableError())
 }
 
@@ -2780,7 +2780,7 @@ func (v UIntValue) BitwiseRightShift(other IntegerValue) IntegerValue {
 	return UIntValue{res}
 }
 
-func (v UIntValue) GetMember(_ *Interpreter, _ LocationRange, name string) Value {
+func (v UIntValue) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
 	switch name {
 
 	case sema.ToStringFunctionName:
@@ -2801,7 +2801,7 @@ func (v UIntValue) GetMember(_ *Interpreter, _ LocationRange, name string) Value
 	return nil
 }
 
-func (UIntValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+func (UIntValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
 	panic(errors.NewUnreachableError())
 }
 
@@ -2984,7 +2984,7 @@ func (v UInt8Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 	return v >> o
 }
 
-func (v UInt8Value) GetMember(_ *Interpreter, _ LocationRange, name string) Value {
+func (v UInt8Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
 	switch name {
 
 	case sema.ToStringFunctionName:
@@ -3005,7 +3005,7 @@ func (v UInt8Value) GetMember(_ *Interpreter, _ LocationRange, name string) Valu
 	return nil
 }
 
-func (UInt8Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+func (UInt8Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
 	panic(errors.NewUnreachableError())
 }
 
@@ -3186,7 +3186,7 @@ func (v UInt16Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 	return v >> o
 }
 
-func (v UInt16Value) GetMember(_ *Interpreter, _ LocationRange, name string) Value {
+func (v UInt16Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
 	switch name {
 
 	case sema.ToStringFunctionName:
@@ -3207,7 +3207,7 @@ func (v UInt16Value) GetMember(_ *Interpreter, _ LocationRange, name string) Val
 	return nil
 }
 
-func (UInt16Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+func (UInt16Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
 	panic(errors.NewUnreachableError())
 }
 
@@ -3392,7 +3392,7 @@ func (v UInt32Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 	return v >> o
 }
 
-func (v UInt32Value) GetMember(_ *Interpreter, _ LocationRange, name string) Value {
+func (v UInt32Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
 	switch name {
 
 	case sema.ToStringFunctionName:
@@ -3413,7 +3413,7 @@ func (v UInt32Value) GetMember(_ *Interpreter, _ LocationRange, name string) Val
 	return nil
 }
 
-func (UInt32Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+func (UInt32Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
 	panic(errors.NewUnreachableError())
 }
 
@@ -3601,7 +3601,7 @@ func (v UInt64Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 	return v >> o
 }
 
-func (v UInt64Value) GetMember(_ *Interpreter, _ LocationRange, name string) Value {
+func (v UInt64Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
 	switch name {
 
 	case sema.ToStringFunctionName:
@@ -3622,7 +3622,7 @@ func (v UInt64Value) GetMember(_ *Interpreter, _ LocationRange, name string) Val
 	return nil
 }
 
-func (UInt64Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+func (UInt64Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
 	panic(errors.NewUnreachableError())
 }
 
@@ -3869,7 +3869,7 @@ func (v UInt128Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 	return UInt128Value{res}
 }
 
-func (v UInt128Value) GetMember(_ *Interpreter, _ LocationRange, name string) Value {
+func (v UInt128Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
 	switch name {
 
 	case sema.ToStringFunctionName:
@@ -3889,7 +3889,7 @@ func (v UInt128Value) GetMember(_ *Interpreter, _ LocationRange, name string) Va
 	return nil
 }
 
-func (UInt128Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+func (UInt128Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
 	panic(errors.NewUnreachableError())
 }
 
@@ -4134,7 +4134,7 @@ func (v UInt256Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 	return UInt256Value{res}
 }
 
-func (v UInt256Value) GetMember(_ *Interpreter, _ LocationRange, name string) Value {
+func (v UInt256Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
 	switch name {
 
 	case sema.ToStringFunctionName:
@@ -4155,7 +4155,7 @@ func (v UInt256Value) GetMember(_ *Interpreter, _ LocationRange, name string) Va
 	return nil
 }
 
-func (UInt256Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+func (UInt256Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
 	panic(errors.NewUnreachableError())
 }
 
@@ -4299,7 +4299,7 @@ func (v Word8Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 	return v >> o
 }
 
-func (v Word8Value) GetMember(_ *Interpreter, _ LocationRange, name string) Value {
+func (v Word8Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
 	switch name {
 
 	case sema.ToStringFunctionName:
@@ -4320,7 +4320,7 @@ func (v Word8Value) GetMember(_ *Interpreter, _ LocationRange, name string) Valu
 	return nil
 }
 
-func (Word8Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+func (Word8Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
 	panic(errors.NewUnreachableError())
 }
 
@@ -4462,7 +4462,7 @@ func (v Word16Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 	return v >> o
 }
 
-func (v Word16Value) GetMember(_ *Interpreter, _ LocationRange, name string) Value {
+func (v Word16Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
 	switch name {
 
 	case sema.ToStringFunctionName:
@@ -4483,7 +4483,7 @@ func (v Word16Value) GetMember(_ *Interpreter, _ LocationRange, name string) Val
 	return nil
 }
 
-func (Word16Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+func (Word16Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
 	panic(errors.NewUnreachableError())
 }
 
@@ -4629,7 +4629,7 @@ func (v Word32Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 	return v >> o
 }
 
-func (v Word32Value) GetMember(_ *Interpreter, _ LocationRange, name string) Value {
+func (v Word32Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
 	switch name {
 
 	case sema.ToStringFunctionName:
@@ -4650,7 +4650,7 @@ func (v Word32Value) GetMember(_ *Interpreter, _ LocationRange, name string) Val
 	return nil
 }
 
-func (Word32Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+func (Word32Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
 	panic(errors.NewUnreachableError())
 }
 
@@ -4796,7 +4796,7 @@ func (v Word64Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 	return v >> o
 }
 
-func (v Word64Value) GetMember(_ *Interpreter, _ LocationRange, name string) Value {
+func (v Word64Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
 	switch name {
 
 	case sema.ToStringFunctionName:
@@ -4817,7 +4817,7 @@ func (v Word64Value) GetMember(_ *Interpreter, _ LocationRange, name string) Val
 	return nil
 }
 
-func (Word64Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+func (Word64Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
 	panic(errors.NewUnreachableError())
 }
 
@@ -5016,7 +5016,7 @@ func ConvertFix64(value Value) Fix64Value {
 	}
 }
 
-func (v Fix64Value) GetMember(_ *Interpreter, _ LocationRange, name string) Value {
+func (v Fix64Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
 	switch name {
 
 	case sema.ToStringFunctionName:
@@ -5037,7 +5037,7 @@ func (v Fix64Value) GetMember(_ *Interpreter, _ LocationRange, name string) Valu
 	return nil
 }
 
-func (Fix64Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+func (Fix64Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
 	panic(errors.NewUnreachableError())
 }
 
@@ -5232,7 +5232,7 @@ func ConvertUFix64(value Value) UFix64Value {
 	}
 }
 
-func (v UFix64Value) GetMember(_ *Interpreter, _ LocationRange, name string) Value {
+func (v UFix64Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
 	switch name {
 
 	case sema.ToStringFunctionName:
@@ -5253,7 +5253,7 @@ func (v UFix64Value) GetMember(_ *Interpreter, _ LocationRange, name string) Val
 	return nil
 }
 
-func (UFix64Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+func (UFix64Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
 	panic(errors.NewUnreachableError())
 }
 
@@ -5303,7 +5303,7 @@ func NewCompositeValue(
 	}
 }
 
-func (v *CompositeValue) Destroy(interpreter *Interpreter, locationRange LocationRange) {
+func (v *CompositeValue) Destroy(interpreter *Interpreter, getLocationRange func() LocationRange) {
 
 	interpreter = v.getInterpreter(interpreter)
 
@@ -5316,11 +5316,11 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, locationRange Locatio
 
 	if destructor != nil {
 		invocation := Invocation{
-			Self:          v,
-			Arguments:     nil,
-			ArgumentTypes: nil,
-			LocationRange: locationRange,
-			Interpreter:   interpreter,
+			Self:             v,
+			Arguments:        nil,
+			ArgumentTypes:    nil,
+			GetLocationRange: getLocationRange,
+			Interpreter:      interpreter,
 		}
 
 		destructor.Invoke(invocation)
@@ -5391,11 +5391,11 @@ func (v *CompositeValue) Copy() Value {
 	}
 }
 
-func (v *CompositeValue) checkStatus(locationRange LocationRange) {
+func (v *CompositeValue) checkStatus(getLocationRange func() LocationRange) {
 	if v.destroyed {
 		panic(DestroyedCompositeError{
 			CompositeKind: v.Kind,
-			LocationRange: locationRange,
+			LocationRange: getLocationRange(),
 		})
 	}
 }
@@ -5450,8 +5450,8 @@ func (v *CompositeValue) SetModified(modified bool) {
 	v.modified = modified
 }
 
-func (v *CompositeValue) GetMember(interpreter *Interpreter, locationRange LocationRange, name string) Value {
-	v.checkStatus(locationRange)
+func (v *CompositeValue) GetMember(interpreter *Interpreter, getLocationRange func() LocationRange, name string) Value {
+	v.checkStatus(getLocationRange)
 
 	if v.Kind == common.CompositeKindResource &&
 		name == sema.ResourceOwnerFieldName {
@@ -5548,8 +5548,8 @@ func (v *CompositeValue) OwnerValue() OptionalValue {
 	)
 }
 
-func (v *CompositeValue) SetMember(_ *Interpreter, locationRange LocationRange, name string, value Value) {
-	v.checkStatus(locationRange)
+func (v *CompositeValue) SetMember(_ *Interpreter, getLocationRange func() LocationRange, name string, value Value) {
+	v.checkStatus(getLocationRange)
 
 	v.modified = true
 
@@ -5669,7 +5669,7 @@ func NewDictionaryValueUnownedNonCopying(keysAndValues ...Value) *DictionaryValu
 	}
 
 	for i := 0; i < keysAndValuesCount; i += 2 {
-		_ = result.Insert(nil, LocationRange{}, keysAndValues[i], keysAndValues[i+1])
+		_ = result.Insert(nil, ReturnEmptyLocationRange, keysAndValues[i], keysAndValues[i+1])
 	}
 
 	return result
@@ -5686,7 +5686,7 @@ func (v *DictionaryValue) Accept(interpreter *Interpreter, visitor Visitor) {
 		key.Accept(interpreter, visitor)
 
 		// NOTE: Force unwrap. This is safe because we are iterating over the keys.
-		value := v.Get(interpreter, LocationRange{}, key).(*SomeValue).Value
+		value := v.Get(interpreter, ReturnEmptyLocationRange, key).(*SomeValue).Value
 		value.Accept(interpreter, visitor)
 	}
 }
@@ -5697,7 +5697,7 @@ func (v *DictionaryValue) DynamicType(interpreter *Interpreter) DynamicType {
 	for i, key := range v.Keys.Values {
 		// NOTE: Force unwrap, otherwise dynamic type check is for optional type.
 		// This is safe because we are iterating over the keys.
-		value := v.Get(interpreter, LocationRange{}, key).(*SomeValue).Value
+		value := v.Get(interpreter, ReturnEmptyLocationRange, key).(*SomeValue).Value
 		entryTypes[i] =
 			struct{ KeyType, ValueType DynamicType }{
 				KeyType:   key.DynamicType(interpreter),
@@ -5778,29 +5778,29 @@ func (v *DictionaryValue) SetModified(modified bool) {
 	v.modified = modified
 }
 
-func maybeDestroy(inter *Interpreter, locationRange LocationRange, value Value) {
+func maybeDestroy(inter *Interpreter, getLocationRange func() LocationRange, value Value) {
 	destroyableValue, ok := value.(DestroyableValue)
 	if !ok {
 		return
 	}
 
-	destroyableValue.Destroy(inter, locationRange)
+	destroyableValue.Destroy(inter, getLocationRange)
 }
 
-func (v *DictionaryValue) Destroy(inter *Interpreter, locationRange LocationRange) {
+func (v *DictionaryValue) Destroy(inter *Interpreter, getLocationRange func() LocationRange) {
 
 	for _, keyValue := range v.Keys.Values {
 		// Don't use `Entries` here: the value might be deferred and needs to be loaded
-		value := v.Get(inter, locationRange, keyValue)
-		maybeDestroy(inter, locationRange, keyValue)
-		maybeDestroy(inter, locationRange, value)
+		value := v.Get(inter, getLocationRange, keyValue)
+		maybeDestroy(inter, getLocationRange, keyValue)
+		maybeDestroy(inter, getLocationRange, value)
 	}
 
 	writeDeferredKeys(inter, v.DeferredOwner, v.DeferredStorageKeyBase, v.DeferredKeys)
 	writeDeferredKeys(inter, v.DeferredOwner, v.DeferredStorageKeyBase, v.prevDeferredKeys)
 }
 
-func (v *DictionaryValue) Get(inter *Interpreter, _ LocationRange, keyValue Value) Value {
+func (v *DictionaryValue) Get(inter *Interpreter, _ func() LocationRange, keyValue Value) Value {
 	key := dictionaryKey(keyValue)
 	value, ok := v.Entries.Get(key)
 	if ok {
@@ -5843,15 +5843,15 @@ func dictionaryKey(keyValue Value) string {
 	return hasKeyString.KeyString()
 }
 
-func (v *DictionaryValue) Set(inter *Interpreter, locationRange LocationRange, keyValue Value, value Value) {
+func (v *DictionaryValue) Set(inter *Interpreter, getLocationRange func() LocationRange, keyValue Value, value Value) {
 	v.modified = true
 
 	switch typedValue := value.(type) {
 	case *SomeValue:
-		_ = v.Insert(inter, locationRange, keyValue, typedValue.Value)
+		_ = v.Insert(inter, getLocationRange, keyValue, typedValue.Value)
 
 	case NilValue:
-		_ = v.Remove(inter, locationRange, keyValue)
+		_ = v.Remove(inter, getLocationRange, keyValue)
 		return
 
 	default:
@@ -5891,7 +5891,7 @@ func (v *DictionaryValue) String() string {
 	return format.Dictionary(pairs)
 }
 
-func (v *DictionaryValue) GetMember(interpreter *Interpreter, locationRange LocationRange, name string) Value {
+func (v *DictionaryValue) GetMember(interpreter *Interpreter, getLocationRange func() LocationRange, name string) Value {
 	switch name {
 	case "length":
 		return NewIntValueFromInt64(int64(v.Count()))
@@ -5905,7 +5905,7 @@ func (v *DictionaryValue) GetMember(interpreter *Interpreter, locationRange Loca
 		dictionaryValues := make([]Value, v.Count())
 		i := 0
 		for _, keyValue := range v.Keys.Values {
-			value := v.Get(interpreter, locationRange, keyValue).(*SomeValue).Value
+			value := v.Get(interpreter, getLocationRange, keyValue).(*SomeValue).Value
 			dictionaryValues[i] = value.Copy()
 			i++
 		}
@@ -5918,7 +5918,7 @@ func (v *DictionaryValue) GetMember(interpreter *Interpreter, locationRange Loca
 
 				return v.Remove(
 					invocation.Interpreter,
-					invocation.LocationRange,
+					invocation.GetLocationRange,
 					keyValue,
 				)
 			},
@@ -5932,7 +5932,7 @@ func (v *DictionaryValue) GetMember(interpreter *Interpreter, locationRange Loca
 
 				return v.Insert(
 					invocation.Interpreter,
-					invocation.LocationRange,
+					invocation.GetLocationRange,
 					keyValue,
 					newValue,
 				)
@@ -5943,7 +5943,7 @@ func (v *DictionaryValue) GetMember(interpreter *Interpreter, locationRange Loca
 	return nil
 }
 
-func (v *DictionaryValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+func (v *DictionaryValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
 	// Dictionaries have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
@@ -5953,11 +5953,11 @@ func (v *DictionaryValue) Count() int {
 }
 
 // TODO: unset owner?
-func (v *DictionaryValue) Remove(inter *Interpreter, locationRange LocationRange, keyValue Value) OptionalValue {
+func (v *DictionaryValue) Remove(inter *Interpreter, getLocationRange func() LocationRange, keyValue Value) OptionalValue {
 	v.modified = true
 
 	// Don't use `Entries` here: the value might be deferred and needs to be loaded
-	value := v.Get(inter, locationRange, keyValue)
+	value := v.Get(inter, getLocationRange, keyValue)
 
 	key := dictionaryKey(keyValue)
 
@@ -5996,11 +5996,11 @@ func (v *DictionaryValue) Remove(inter *Interpreter, locationRange LocationRange
 	}
 }
 
-func (v *DictionaryValue) Insert(inter *Interpreter, locationRange LocationRange, keyValue, value Value) OptionalValue {
+func (v *DictionaryValue) Insert(inter *Interpreter, locationRangeGetter func() LocationRange, keyValue, value Value) OptionalValue {
 	v.modified = true
 
 	// Don't use `Entries` here: the value might be deferred and needs to be loaded
-	existingValue := v.Get(inter, locationRange, keyValue)
+	existingValue := v.Get(inter, locationRangeGetter, keyValue)
 
 	key := dictionaryKey(keyValue)
 
@@ -6099,7 +6099,7 @@ func (NilValue) SetModified(_ bool) {
 	// NO-OP
 }
 
-func (v NilValue) Destroy(_ *Interpreter, _ LocationRange) {
+func (v NilValue) Destroy(_ *Interpreter, _ func() LocationRange) {
 	// NO-OP
 }
 
@@ -6113,7 +6113,7 @@ var nilValueMapFunction = NewHostFunctionValue(
 	},
 )
 
-func (v NilValue) GetMember(_ *Interpreter, _ LocationRange, name string) Value {
+func (v NilValue) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
 	switch name {
 	case "map":
 		return nilValueMapFunction
@@ -6122,7 +6122,7 @@ func (v NilValue) GetMember(_ *Interpreter, _ LocationRange, name string) Value 
 	return nil
 }
 
-func (NilValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+func (NilValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
 	panic(errors.NewUnreachableError())
 }
 
@@ -6197,15 +6197,15 @@ func (v *SomeValue) SetModified(modified bool) {
 	v.Value.SetModified(modified)
 }
 
-func (v *SomeValue) Destroy(interpreter *Interpreter, locationRange LocationRange) {
-	maybeDestroy(interpreter, locationRange, v.Value)
+func (v *SomeValue) Destroy(interpreter *Interpreter, getLocationRange func() LocationRange) {
+	maybeDestroy(interpreter, getLocationRange, v.Value)
 }
 
 func (v *SomeValue) String() string {
 	return v.Value.String()
 }
 
-func (v *SomeValue) GetMember(_ *Interpreter, _ LocationRange, name string) Value {
+func (v *SomeValue) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
 	switch name {
 	case "map":
 		return NewHostFunctionValue(
@@ -6216,10 +6216,10 @@ func (v *SomeValue) GetMember(_ *Interpreter, _ LocationRange, name string) Valu
 				valueType := transformFunctionType.Parameters[0].TypeAnnotation.Type
 
 				transformInvocation := Invocation{
-					Arguments:     []Value{v.Value},
-					ArgumentTypes: []sema.Type{valueType},
-					LocationRange: invocation.LocationRange,
-					Interpreter:   invocation.Interpreter,
+					Arguments:        []Value{v.Value},
+					ArgumentTypes:    []sema.Type{valueType},
+					GetLocationRange: invocation.GetLocationRange,
+					Interpreter:      invocation.Interpreter,
 				}
 
 				newValue := transformFunction.Invoke(transformInvocation)
@@ -6232,7 +6232,7 @@ func (v *SomeValue) GetMember(_ *Interpreter, _ LocationRange, name string) Valu
 	return nil
 }
 
-func (*SomeValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+func (*SomeValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
 	panic(errors.NewUnreachableError())
 }
 
@@ -6309,50 +6309,50 @@ func (v *StorageReferenceValue) ReferencedValue(interpreter *Interpreter) *Value
 	}
 }
 
-func (v *StorageReferenceValue) GetMember(interpreter *Interpreter, locationRange LocationRange, name string) Value {
+func (v *StorageReferenceValue) GetMember(interpreter *Interpreter, getLocationRange func() LocationRange, name string) Value {
 	referencedValue := v.ReferencedValue(interpreter)
 	if referencedValue == nil {
 		panic(DereferenceError{
-			LocationRange: locationRange,
+			LocationRange: getLocationRange(),
 		})
 	}
 
-	return interpreter.getMember(*referencedValue, locationRange, name)
+	return interpreter.getMember(*referencedValue, getLocationRange, name)
 }
 
-func (v *StorageReferenceValue) SetMember(interpreter *Interpreter, locationRange LocationRange, name string, value Value) {
+func (v *StorageReferenceValue) SetMember(interpreter *Interpreter, getLocationRange func() LocationRange, name string, value Value) {
 	referencedValue := v.ReferencedValue(interpreter)
 	if referencedValue == nil {
 		panic(DereferenceError{
-			LocationRange: locationRange,
+			LocationRange: getLocationRange(),
 		})
 	}
 
-	interpreter.setMember(*referencedValue, locationRange, name, value)
+	interpreter.setMember(*referencedValue, getLocationRange, name, value)
 }
 
-func (v *StorageReferenceValue) Get(interpreter *Interpreter, locationRange LocationRange, key Value) Value {
+func (v *StorageReferenceValue) Get(interpreter *Interpreter, getLocationRange func() LocationRange, key Value) Value {
 	referencedValue := v.ReferencedValue(interpreter)
 	if referencedValue == nil {
 		panic(DereferenceError{
-			LocationRange: locationRange,
+			LocationRange: getLocationRange(),
 		})
 	}
 
 	return (*referencedValue).(ValueIndexableValue).
-		Get(interpreter, locationRange, key)
+		Get(interpreter, getLocationRange, key)
 }
 
-func (v *StorageReferenceValue) Set(interpreter *Interpreter, locationRange LocationRange, key Value, value Value) {
+func (v *StorageReferenceValue) Set(interpreter *Interpreter, getLocationRange func() LocationRange, key Value, value Value) {
 	referencedValue := v.ReferencedValue(interpreter)
 	if referencedValue == nil {
 		panic(DereferenceError{
-			LocationRange: locationRange,
+			LocationRange: getLocationRange(),
 		})
 	}
 
 	(*referencedValue).(ValueIndexableValue).
-		Set(interpreter, locationRange, key, value)
+		Set(interpreter, getLocationRange, key, value)
 }
 
 func (v *StorageReferenceValue) Equal(_ *Interpreter, other Value) BoolValue {
@@ -6437,50 +6437,50 @@ func (v *EphemeralReferenceValue) ReferencedValue() *Value {
 	}
 }
 
-func (v *EphemeralReferenceValue) GetMember(interpreter *Interpreter, locationRange LocationRange, name string) Value {
+func (v *EphemeralReferenceValue) GetMember(interpreter *Interpreter, getLocationRange func() LocationRange, name string) Value {
 	referencedValue := v.ReferencedValue()
 	if referencedValue == nil {
 		panic(DereferenceError{
-			LocationRange: locationRange,
+			LocationRange: getLocationRange(),
 		})
 	}
 
-	return interpreter.getMember(*referencedValue, locationRange, name)
+	return interpreter.getMember(*referencedValue, getLocationRange, name)
 }
 
-func (v *EphemeralReferenceValue) SetMember(interpreter *Interpreter, locationRange LocationRange, name string, value Value) {
+func (v *EphemeralReferenceValue) SetMember(interpreter *Interpreter, getLocationRange func() LocationRange, name string, value Value) {
 	referencedValue := v.ReferencedValue()
 	if referencedValue == nil {
 		panic(DereferenceError{
-			LocationRange: locationRange,
+			LocationRange: getLocationRange(),
 		})
 	}
 
-	interpreter.setMember(*referencedValue, locationRange, name, value)
+	interpreter.setMember(*referencedValue, getLocationRange, name, value)
 }
 
-func (v *EphemeralReferenceValue) Get(interpreter *Interpreter, locationRange LocationRange, key Value) Value {
+func (v *EphemeralReferenceValue) Get(interpreter *Interpreter, getLocationRange func() LocationRange, key Value) Value {
 	referencedValue := v.ReferencedValue()
 	if referencedValue == nil {
 		panic(DereferenceError{
-			LocationRange: locationRange,
+			LocationRange: getLocationRange(),
 		})
 	}
 
 	return (*referencedValue).(ValueIndexableValue).
-		Get(interpreter, locationRange, key)
+		Get(interpreter, getLocationRange, key)
 }
 
-func (v *EphemeralReferenceValue) Set(interpreter *Interpreter, locationRange LocationRange, key Value, value Value) {
+func (v *EphemeralReferenceValue) Set(interpreter *Interpreter, getLocationRange func() LocationRange, key Value, value Value) {
 	referencedValue := v.ReferencedValue()
 	if referencedValue == nil {
 		panic(DereferenceError{
-			LocationRange: locationRange,
+			LocationRange: getLocationRange(),
 		})
 	}
 
 	(*referencedValue).(ValueIndexableValue).
-		Set(interpreter, locationRange, key, value)
+		Set(interpreter, getLocationRange, key, value)
 }
 
 func (v *EphemeralReferenceValue) Equal(_ *Interpreter, other Value) BoolValue {
@@ -6584,7 +6584,7 @@ func (v AddressValue) ToAddress() common.Address {
 	return common.Address(v)
 }
 
-func (v AddressValue) GetMember(_ *Interpreter, _ LocationRange, name string) Value {
+func (v AddressValue) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
 	switch name {
 
 	case sema.ToStringFunctionName:
@@ -6606,7 +6606,7 @@ func (v AddressValue) GetMember(_ *Interpreter, _ LocationRange, name string) Va
 	return nil
 }
 
-func (AddressValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+func (AddressValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
 	panic(errors.NewUnreachableError())
 }
 
@@ -6689,7 +6689,7 @@ func (AuthAccountValue) SetModified(_ bool) {
 	// NO-OP
 }
 
-func (v AuthAccountValue) Destroy(_ *Interpreter, _ LocationRange) {
+func (v AuthAccountValue) Destroy(_ *Interpreter, _ func() LocationRange) {
 	// NO-OP
 }
 
@@ -6730,7 +6730,7 @@ func accountGetCapabilityFunction(
 	)
 }
 
-func (v AuthAccountValue) GetMember(inter *Interpreter, _ LocationRange, name string) Value {
+func (v AuthAccountValue) GetMember(inter *Interpreter, _ func() LocationRange, name string) Value {
 	switch name {
 	case "address":
 		return v.Address
@@ -6780,7 +6780,7 @@ func (v AuthAccountValue) GetMember(inter *Interpreter, _ LocationRange, name st
 	return nil
 }
 
-func (AuthAccountValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+func (AuthAccountValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
 	panic(errors.NewUnreachableError())
 }
 
@@ -6849,7 +6849,7 @@ func (PublicAccountValue) SetModified(_ bool) {
 	// NO-OP
 }
 
-func (v PublicAccountValue) Destroy(_ *Interpreter, _ LocationRange) {
+func (v PublicAccountValue) Destroy(_ *Interpreter, _ func() LocationRange) {
 	// NO-OP
 }
 
@@ -6857,7 +6857,7 @@ func (v PublicAccountValue) String() string {
 	return fmt.Sprintf("PublicAccount(%s)", v.Address)
 }
 
-func (v PublicAccountValue) GetMember(inter *Interpreter, _ LocationRange, name string) Value {
+func (v PublicAccountValue) GetMember(inter *Interpreter, _ func() LocationRange, name string) Value {
 	switch name {
 	case "address":
 		return v.Address
@@ -6880,7 +6880,7 @@ func (v PublicAccountValue) GetMember(inter *Interpreter, _ LocationRange, name 
 	return nil
 }
 
-func (PublicAccountValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+func (PublicAccountValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
 	panic(errors.NewUnreachableError())
 }
 
@@ -6944,7 +6944,7 @@ func (PathValue) SetModified(_ bool) {
 	// NO-OP
 }
 
-func (v PathValue) Destroy(_ *Interpreter, _ LocationRange) {
+func (v PathValue) Destroy(_ *Interpreter, _ func() LocationRange) {
 	// NO-OP
 }
 
@@ -7015,7 +7015,7 @@ func (CapabilityValue) SetModified(_ bool) {
 	// NO-OP
 }
 
-func (v CapabilityValue) Destroy(_ *Interpreter, _ LocationRange) {
+func (v CapabilityValue) Destroy(_ *Interpreter, _ func() LocationRange) {
 	// NO-OP
 }
 
@@ -7031,7 +7031,7 @@ func (v CapabilityValue) String() string {
 	)
 }
 
-func (v CapabilityValue) GetMember(inter *Interpreter, _ LocationRange, name string) Value {
+func (v CapabilityValue) GetMember(inter *Interpreter, _ func() LocationRange, name string) Value {
 	switch name {
 	case "borrow":
 		var borrowType *sema.ReferenceType
@@ -7052,7 +7052,7 @@ func (v CapabilityValue) GetMember(inter *Interpreter, _ LocationRange, name str
 	return nil
 }
 
-func (CapabilityValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+func (CapabilityValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
 	panic(errors.NewUnreachableError())
 }
 
@@ -7098,7 +7098,7 @@ func (LinkValue) SetModified(_ bool) {
 	// NO-OP
 }
 
-func (v LinkValue) Destroy(_ *Interpreter, _ LocationRange) {
+func (v LinkValue) Destroy(_ *Interpreter, _ func() LocationRange) {
 	// NO-OP
 }
 

@@ -65,13 +65,13 @@ func (interpreter *Interpreter) identifierExpressionGetterSetter(identifierExpre
 func (interpreter *Interpreter) indexExpressionGetterSetter(indexExpression *ast.IndexExpression) getterSetter {
 	typedResult := interpreter.evalExpression(indexExpression.TargetExpression).(ValueIndexableValue)
 	indexingValue := interpreter.evalExpression(indexExpression.IndexingExpression)
-	locationRange := interpreter.locationRange(indexExpression)
+	getLocationRange := locationRangeGetter(interpreter.Location, indexExpression)
 	return getterSetter{
 		get: func() Value {
-			return typedResult.Get(interpreter, locationRange, indexingValue)
+			return typedResult.Get(interpreter, getLocationRange, indexingValue)
 		},
 		set: func(value Value) {
-			typedResult.Set(interpreter, locationRange, indexingValue, value)
+			typedResult.Set(interpreter, getLocationRange, indexingValue, value)
 		},
 	}
 }
@@ -81,14 +81,14 @@ func (interpreter *Interpreter) indexExpressionGetterSetter(indexExpression *ast
 //
 func (interpreter *Interpreter) memberExpressionGetterSetter(memberExpression *ast.MemberExpression) getterSetter {
 	target := interpreter.evalExpression(memberExpression.Expression)
-	locationRange := interpreter.locationRange(memberExpression)
+	getLocationRange := locationRangeGetter(interpreter.Location, memberExpression)
 	identifier := memberExpression.Identifier.Identifier
 	return getterSetter{
 		get: func() Value {
-			return interpreter.getMember(target, locationRange, identifier)
+			return interpreter.getMember(target, getLocationRange, identifier)
 		},
 		set: func(value Value) {
-			interpreter.setMember(target, locationRange, identifier, value)
+			interpreter.setMember(target, getLocationRange, identifier, value)
 		},
 	}
 }
@@ -362,8 +362,9 @@ func (interpreter *Interpreter) VisitDictionaryExpression(expression *ast.Dictio
 		// NOTE: important to convert in optional, as assignment to dictionary
 		// is always considered as an optional
 
-		locationRange := interpreter.locationRange(expression)
-		_ = dictionary.Insert(interpreter, locationRange, key, value)
+		getLocationRange := locationRangeGetter(interpreter.Location, expression)
+
+		_ = dictionary.Insert(interpreter, getLocationRange, key, value)
 	}
 
 	return dictionary
@@ -384,8 +385,8 @@ func (interpreter *Interpreter) VisitMemberExpression(expression *ast.MemberExpr
 		}
 	}
 
-	locationRange := interpreter.locationRange(expression)
-	resultValue := interpreter.getMember(result, locationRange, expression.Identifier.Identifier)
+	getLocationRange := locationRangeGetter(interpreter.Location, expression)
+	resultValue := interpreter.getMember(result, getLocationRange, expression.Identifier.Identifier)
 
 	// If the member access is optional chaining, only wrap the result value
 	// in an optional, if it is not already an optional value
@@ -402,8 +403,8 @@ func (interpreter *Interpreter) VisitMemberExpression(expression *ast.MemberExpr
 func (interpreter *Interpreter) VisitIndexExpression(expression *ast.IndexExpression) ast.Repr {
 	typedResult := interpreter.evalExpression(expression.TargetExpression).(ValueIndexableValue)
 	indexingValue := interpreter.evalExpression(expression.IndexingExpression)
-	locationRange := interpreter.locationRange(expression)
-	return typedResult.Get(interpreter, locationRange, indexingValue)
+	getLocationRange := locationRangeGetter(interpreter.Location, expression)
+	return typedResult.Get(interpreter, getLocationRange, indexingValue)
 }
 
 func (interpreter *Interpreter) VisitConditionalExpression(expression *ast.ConditionalExpression) ast.Repr {
@@ -468,7 +469,7 @@ func (interpreter *Interpreter) VisitInvocationExpression(invocationExpression *
 		argumentTypes,
 		parameterTypes,
 		typeParameterTypes,
-		ast.NewRangeFromPositioned(invocationExpression),
+		invocationExpression,
 	)
 
 	// If this is invocation is optional chaining, wrap the result
@@ -568,10 +569,11 @@ func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingEx
 
 		case ast.OperationForceCast:
 			if !isSubType {
+				getLocationRange := locationRangeGetter(interpreter.Location, expression.Expression)
 				panic(
 					TypeMismatchError{
 						ExpectedType:  expectedType,
-						LocationRange: interpreter.locationRange(expression.Expression),
+						LocationRange: getLocationRange(),
 					},
 				)
 			}
@@ -598,10 +600,9 @@ func (interpreter *Interpreter) VisitCreateExpression(expression *ast.CreateExpr
 func (interpreter *Interpreter) VisitDestroyExpression(expression *ast.DestroyExpression) ast.Repr {
 	value := interpreter.evalExpression(expression.Expression)
 
-	// TODO: optimize: only potentially used by host-functions
-	locationRange := interpreter.locationRange(expression)
+	getLocationRange := locationRangeGetter(interpreter.Location, expression)
 
-	value.(DestroyableValue).Destroy(interpreter, locationRange)
+	value.(DestroyableValue).Destroy(interpreter, getLocationRange)
 
 	return VoidValue{}
 }
@@ -626,9 +627,10 @@ func (interpreter *Interpreter) VisitForceExpression(expression *ast.ForceExpres
 		return result.Value
 
 	case NilValue:
+		getLocationRange := locationRangeGetter(interpreter.Location, expression.Expression)
 		panic(
 			ForceNilError{
-				LocationRange: interpreter.locationRange(expression.Expression),
+				LocationRange: getLocationRange(),
 			},
 		)
 

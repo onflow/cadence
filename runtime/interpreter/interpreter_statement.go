@@ -260,7 +260,7 @@ func (interpreter *Interpreter) VisitEmitStatement(statement *ast.EmitStatement)
 
 	if interpreter.onEventEmitted == nil {
 		panic(EventEmissionUnavailableError{
-			LocationRange: interpreter.locationRange(statement),
+			LocationRange: locationRangeGetter(interpreter.Location, statement)(),
 		})
 	}
 
