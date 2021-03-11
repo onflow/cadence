@@ -152,7 +152,7 @@ func newNativeEnumType(identifier string, rawType Type) *CompositeType {
 	}
 
 	accountKeyType.Members = GetMembersAsMap(members)
-	accountKeyType.Fields = getFields(members)
+	accountKeyType.Fields = getFieldNames(members)
 	return accountKeyType
 }
 

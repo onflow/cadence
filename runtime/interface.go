@@ -183,11 +183,11 @@ func (i *emptyRuntimeInterface) CreateAccount(_ Address) (address Address, err e
 	return Address{}, nil
 }
 
-func (i *emptyRuntimeInterface) AddEncodedAccountKey(address Address, publicKey []byte) error {
+func (i *emptyRuntimeInterface) AddEncodedAccountKey(_ Address, _ []byte) error {
 	return nil
 }
 
-func (i *emptyRuntimeInterface) RemoveEncodedAccountKey(address Address, index int) (publicKey []byte, err error) {
+func (i *emptyRuntimeInterface) RemoveEncodedAccountKey(_ Address, _ int) ([]byte, error) {
 	return nil, nil
 }
 

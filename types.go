@@ -953,6 +953,10 @@ type EnumType struct {
 func (t *EnumType) isType() {}
 
 func (t *EnumType) ID() string {
+	if t.Location == nil {
+		return t.QualifiedIdentifier
+	}
+
 	return string(t.Location.TypeID(t.QualifiedIdentifier))
 }
 

@@ -195,7 +195,7 @@ func (i *testRuntimeInterface) AddEncodedAccountKey(address Address, publicKey [
 	return i.addEncodedAccountKey(address, publicKey)
 }
 
-func (i *testRuntimeInterface) RemoveEncodedAccountKey(address Address, index int) (publicKey []byte, err error) {
+func (i *testRuntimeInterface) RemoveEncodedAccountKey(address Address, index int) ([]byte, error) {
 	return i.removeEncodedAccountKey(address, index)
 }
 

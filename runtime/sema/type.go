@@ -6587,7 +6587,7 @@ var AccountKeyType = func() *CompositeType {
 	}
 
 	accountKeyType.Members = GetMembersAsMap(members)
-	accountKeyType.Fields = getFields(members)
+	accountKeyType.Fields = getFieldNames(members)
 	return accountKeyType
 }()
 
@@ -6622,7 +6622,7 @@ var PublicKeyType = func() *CompositeType {
 	}
 
 	accountKeyType.Members = GetMembersAsMap(members)
-	accountKeyType.Fields = getFields(members)
+	accountKeyType.Fields = getFieldNames(members)
 	return accountKeyType
 }()
 
@@ -6641,7 +6641,7 @@ func GetMembersAsMap(members []*Member) *StringMemberOrderedMap {
 	return membersMap
 }
 
-func getFields(members []*Member) []string {
+func getFieldNames(members []*Member) []string {
 	fields := make([]string, len(members))
 	for index, member := range members {
 		fields[index] = member.Identifier.Identifier

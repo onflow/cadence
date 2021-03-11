@@ -643,8 +643,8 @@ func TestHashAlgorithm(t *testing.T) {
 	require.IsType(t, cadence.Optional{}, array.Values[0])
 	optionalValue := array.Values[0].(cadence.Optional)
 
-	require.IsType(t, cadence.Struct{}, optionalValue.Value)
-	builtinStruct := optionalValue.Value.(cadence.Struct)
+	require.IsType(t, cadence.Enum{}, optionalValue.Value)
+	builtinStruct := optionalValue.Value.(cadence.Enum)
 
 	require.Equal(t, 1, len(builtinStruct.Fields))
 	assert.Equal(t, cadence.NewInt(HashAlgorithmKMAC_128.RawValue()), builtinStruct.Fields[0])
@@ -653,8 +653,8 @@ func TestHashAlgorithm(t *testing.T) {
 	require.IsType(t, cadence.Optional{}, array.Values[1])
 	optionalValue = array.Values[1].(cadence.Optional)
 
-	require.IsType(t, cadence.Struct{}, optionalValue.Value)
-	builtinStruct = optionalValue.Value.(cadence.Struct)
+	require.IsType(t, cadence.Enum{}, optionalValue.Value)
+	builtinStruct = optionalValue.Value.(cadence.Enum)
 
 	require.Equal(t, 1, len(builtinStruct.Fields))
 	assert.Equal(t, cadence.NewInt(HashAlgorithmKMAC_128.RawValue()), builtinStruct.Fields[0])
@@ -705,8 +705,8 @@ func TestSignatureAlgorithm(t *testing.T) {
 	require.IsType(t, cadence.Optional{}, array.Values[0])
 	optionalValue := array.Values[0].(cadence.Optional)
 
-	require.IsType(t, cadence.Struct{}, optionalValue.Value)
-	builtinStruct := optionalValue.Value.(cadence.Struct)
+	require.IsType(t, cadence.Enum{}, optionalValue.Value)
+	builtinStruct := optionalValue.Value.(cadence.Enum)
 
 	require.Equal(t, 1, len(builtinStruct.Fields))
 	assert.Equal(t, cadence.NewInt(SignatureAlgorithmBLS_BLS12381.RawValue()), builtinStruct.Fields[0])
@@ -715,8 +715,8 @@ func TestSignatureAlgorithm(t *testing.T) {
 	require.IsType(t, cadence.Optional{}, array.Values[1])
 	optionalValue = array.Values[1].(cadence.Optional)
 
-	require.IsType(t, cadence.Struct{}, optionalValue.Value)
-	builtinStruct = optionalValue.Value.(cadence.Struct)
+	require.IsType(t, cadence.Enum{}, optionalValue.Value)
+	builtinStruct = optionalValue.Value.(cadence.Enum)
 
 	require.Equal(t, 1, len(builtinStruct.Fields))
 	assert.Equal(t, cadence.NewInt(SignatureAlgorithmBLS_BLS12381.RawValue()), builtinStruct.Fields[0])
@@ -730,13 +730,13 @@ func TestSignatureAlgorithm(t *testing.T) {
 
 // Utility methods and types
 
-var AccountKeyType = ExportedBuiltinType(sema.AccountKeyType)
-var PublicKeyType = ExportedBuiltinType(sema.PublicKeyType)
-var SignAlgoType = ExportedBuiltinType(sema.SignatureAlgorithmType)
-var HashAlgoType = ExportedBuiltinType(sema.HashAlgorithmType)
+var AccountKeyType = ExportedBuiltinType(sema.AccountKeyType).(*cadence.StructType)
+var PublicKeyType = ExportedBuiltinType(sema.PublicKeyType).(*cadence.StructType)
+var SignAlgoType = ExportedBuiltinType(sema.SignatureAlgorithmType).(*cadence.EnumType)
+var HashAlgoType = ExportedBuiltinType(sema.HashAlgorithmType).(*cadence.EnumType)
 
-func ExportedBuiltinType(internalType sema.Type) *cadence.StructType {
-	return ExportType(internalType, map[sema.TypeID]cadence.Type{}).(*cadence.StructType)
+func ExportedBuiltinType(internalType sema.Type) cadence.Type {
+	return ExportType(internalType, map[sema.TypeID]cadence.Type{})
 }
 
 func publicKeyExportedValue(keyBytes []byte, signAlgo sema.SignatureAlgorithm) cadence.Struct {
@@ -745,7 +745,7 @@ func publicKeyExportedValue(keyBytes []byte, signAlgo sema.SignatureAlgorithm) c
 		byteArray[index] = cadence.NewUInt8(value)
 	}
 
-	signAlgoValue := cadence.NewStruct([]cadence.Value{
+	signAlgoValue := cadence.NewEnum([]cadence.Value{
 		cadence.NewInt(signAlgo.RawValue()),
 	}).WithType(SignAlgoType)
 
@@ -782,7 +782,7 @@ func accountKeyExportedValue(
 			publicKeyExportedValue(publicKeyBytes, signAlgo),
 
 			// Hash algo
-			cadence.NewStruct([]cadence.Value{
+			cadence.NewEnum([]cadence.Value{
 				cadence.NewInt(hashAlgo.RawValue()),
 			}).WithType(HashAlgoType),
 
