@@ -321,7 +321,7 @@ func (interpreter *Interpreter) VisitVariableDeclaration(declaration *ast.Variab
 
 	result := interpreter.visitPotentialStorageRemoval(declaration.Value)
 
-	valueCopy := interpreter.copyAndConvert(result.(Value), valueType, targetType)
+	valueCopy := interpreter.copyAndConvert(result, valueType, targetType)
 
 	interpreter.declareVariable(
 		declaration.Identifier.Identifier,
@@ -380,8 +380,8 @@ func (interpreter *Interpreter) VisitSwapStatement(swap *ast.SwapStatement) ast.
 	// Add right value to left target
 	// and left value to right target
 
-	rightValueCopy := interpreter.copyAndConvert(rightValue.(Value), rightType, leftType)
-	leftValueCopy := interpreter.copyAndConvert(leftValue.(Value), leftType, rightType)
+	rightValueCopy := interpreter.copyAndConvert(rightValue, rightType, leftType)
+	leftValueCopy := interpreter.copyAndConvert(leftValue, leftType, rightType)
 
 	leftGetterSetter.set(rightValueCopy)
 	rightGetterSetter.set(leftValueCopy)

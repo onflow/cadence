@@ -384,9 +384,8 @@ func (interpreter *Interpreter) VisitMemberExpression(expression *ast.MemberExpr
 		}
 	}
 
-	value := result.(Value)
 	locationRange := interpreter.locationRange(expression)
-	resultValue := interpreter.getMember(value, locationRange, expression.Identifier.Identifier)
+	resultValue := interpreter.getMember(result, locationRange, expression.Identifier.Identifier)
 
 	// If the member access is optional chaining, only wrap the result value
 	// in an optional, if it is not already an optional value
