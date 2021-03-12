@@ -38,6 +38,7 @@ const(
 	prefixOffline = "⚠️"
 )
 
+
 func convertListToCadenceJSON (args []string) string {
 	list := strings.Join(args, ",")
 	cadenceJSON := fmt.Sprintf("[%s]", list)
@@ -323,12 +324,14 @@ func (i *FlowIntegration) entryPointActions(
 					)
 				}
 
+				argsJSON := convertListToCadenceJSON(encodedArgumentList)
+
 				codeLens := &protocol.CodeLens{
 					Range: codelensRange,
 					Command: &protocol.Command{
 						Title:     title,
 						Command:   CommandSendTransaction,
-						Arguments: []interface{}{uri, encodedArgumentList, signers},
+						Arguments: []interface{}{uri, argsJSON, signers},
 					},
 				}
 				codeLenses = append(codeLenses, codeLens)
