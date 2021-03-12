@@ -73,7 +73,7 @@ func (AuthAccountContractsValue) SetModified(_ bool) {
 }
 
 func (v AuthAccountContractsValue) Destroy(_ *Interpreter, _ LocationRange) trampoline.Trampoline {
-	return trampoline.Done{}
+	return trampoline.Done{Result: NilValue{}}
 }
 
 func (v AuthAccountContractsValue) String() string {
