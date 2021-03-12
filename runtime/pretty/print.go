@@ -253,7 +253,10 @@ func (p ErrorPrettyPrinter) writeCodeExcerpts(
 		}
 
 		// code, if position
-		if excerpt.startPos != nil && excerpt.startPos.Line > 0 && len(code) > 0 {
+		if excerpt.startPos != nil &&
+			excerpt.startPos.Line > 0 &&
+			excerpt.startPos.Line <= len(lines) &&
+			len(code) > 0 {
 
 			if i > 0 && lastLineNumber != 0 && excerpt.startPos.Line-1 > lastLineNumber {
 				p.writeCodeExcerptContinuation(lineNumberLength)
