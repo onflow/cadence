@@ -15,7 +15,7 @@ Every account can be accessed through two types:
       let storageCapacity: UInt64
 
       // Keys
-      let keys: AuthAccount.Keys
+      let keys: PublicAccount.Keys
 
       // Storage operations
 
@@ -23,20 +23,9 @@ Every account can be accessed through two types:
       fun getLinkTarget(_ path: CapabilityPath): Path?
 
       struct Keys {
-          // Adds a new key with the given hashing algorithm and a weight, and returns the added key.
-          fun add(
-              publicKey: PublicKey,
-              hashAlgorithm: HashAlgorithm,
-              weight: UFix64
-          ): AccountKey
-
           // Returns the key at the given index, if it exists.
           // Revoked keys are always returned, but they have \`isRevoked\` field set to true.
           fun get(keyIndex: Int): AccountKey?
-
-          // Marks the key at the given index as revoked, but does not delete it.
-          // Returns the revoked key if exists.
-          fun revoke(keyIndex: Int): AccountKey?
       }
   }
   ```
