@@ -119,7 +119,7 @@ func (interpreter *Interpreter) invokeInterpretedFunctionActivated(
 		interpreter.bindParameterArguments(function.ParameterList, arguments)
 	}
 
-	result := interpreter.visitFunctionBody(
+	return interpreter.visitFunctionBody(
 		function.BeforeStatements,
 		function.PreConditions,
 		func() controlReturn {
@@ -128,8 +128,6 @@ func (interpreter *Interpreter) invokeInterpretedFunctionActivated(
 		function.PostConditions,
 		function.Type.ReturnTypeAnnotation.Type,
 	)
-
-	return result.(functionReturn).Value
 }
 
 // bindParameterArguments binds the argument values to the given parameters
