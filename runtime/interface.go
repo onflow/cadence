@@ -54,14 +54,14 @@ type Interface interface {
 	CreateAccount(payer Address) (address Address, err error)
 	// AddEncodedAccountKey appends an encoded key to an account.
 	AddEncodedAccountKey(address Address, publicKey []byte) error
-	// RemoveEncodedAccountKey removes a key from an account by index, add returns the encoded key.
-	RemoveEncodedAccountKey(address Address, index int) (publicKey []byte, err error)
+	// RevokeEncodedAccountKey removes a key from an account by index, add returns the encoded key.
+	RevokeEncodedAccountKey(address Address, index int) (publicKey []byte, err error)
 	// AddAccountKey appends a key to an account.
 	AddAccountKey(address Address, publicKey *PublicKey, hashAlgo HashAlgorithm, weight int) (*AccountKey, error)
 	// GetAccountKey retrieves a key from an account by index.
 	GetAccountKey(address Address, index int) (*AccountKey, error)
 	// RemoveAccountKey removes a key from an account by index.
-	RemoveAccountKey(address Address, index int) (*AccountKey, error)
+	RevokeAccountKey(address Address, index int) (*AccountKey, error)
 	// UpdateAccountContractCode updates the code associated with an account contract.
 	UpdateAccountContractCode(address Address, name string, code []byte) (err error)
 	// GetAccountContractCode returns the code associated with an account contract.
@@ -187,7 +187,7 @@ func (i *emptyRuntimeInterface) AddEncodedAccountKey(_ Address, _ []byte) error 
 	return nil
 }
 
-func (i *emptyRuntimeInterface) RemoveEncodedAccountKey(_ Address, _ int) ([]byte, error) {
+func (i *emptyRuntimeInterface) RevokeEncodedAccountKey(_ Address, _ int) ([]byte, error) {
 	return nil, nil
 }
 
@@ -195,7 +195,7 @@ func (i *emptyRuntimeInterface) AddAccountKey(_ Address, _ *PublicKey, _ HashAlg
 	return nil, nil
 }
 
-func (i *emptyRuntimeInterface) RemoveAccountKey(_ Address, _ int) (*AccountKey, error) {
+func (i *emptyRuntimeInterface) RevokeAccountKey(_ Address, _ int) (*AccountKey, error) {
 	return nil, nil
 }
 

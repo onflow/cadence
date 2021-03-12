@@ -20,7 +20,6 @@ package stdlib
 
 import (
 	"fmt"
-
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
@@ -155,15 +154,13 @@ var CreatePublicKeyFunction = NewStandardLibraryFunction(
 			},
 		},
 		ReturnTypeAnnotation:  sema.NewTypeAnnotation(sema.PublicKeyType),
-		RequiredArgumentCount: sema.RequiredArgumentCount(2),
 	},
 
-	func(invocation interpreter.Invocation) trampoline.Trampoline {
+	func(invocation interpreter.Invocation) interpreter.Value {
 		publicKey := invocation.Arguments[0].(*interpreter.ArrayValue)
 		signAlgo := invocation.Arguments[1].(*interpreter.CompositeValue)
 
-		value := interpreter.NewPublicKeyValue(publicKey, signAlgo)
-		return trampoline.Done{Result: value}
+		return interpreter.NewPublicKeyValue(publicKey, signAlgo)
 	},
 )
 

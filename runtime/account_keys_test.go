@@ -164,7 +164,7 @@ func TestAccountKeyCreation(t *testing.T) {
 					publicKey: "0102".decodeHex(),
 					signAlgo: "SignatureAlgorithmECDSA_P256"
 				),
-				hashAlgo: "HashAlgorithmSHA3_256",
+				hashAlgorithm: "HashAlgorithmSHA3_256",
 				weight: 1.7
 			)
 
@@ -247,7 +247,7 @@ func TestImportInvalidType(t *testing.T) {
 						"value":[{"type":"UInt8","value":"1"}]}
 				},
 				{
-					"name":"signAlgo",
+					"name":"signatureAlgorithm",
 					"value":{
 						"type":"Struct",
 						"value":{
@@ -407,7 +407,7 @@ func TestAuthAccountAddPublicKey(t *testing.T) {
 						let acct = AuthAccount(payer: signer)	
 						acct.keys.add(
 							publicKey: key,
-							hashAlgo: HashAlgorithm.SHA3_256,
+							hashAlgorithm: HashAlgorithm.SHA3_256,
 							weight: 100.0
 						)
 					}
@@ -428,7 +428,7 @@ func TestAuthAccountAddPublicKey(t *testing.T) {
 						for key in keys {
 							accountKeys.add(
 								publicKey: key,
-								hashAlgo: HashAlgorithm.SHA3_256,
+								hashAlgorithm: HashAlgorithm.SHA3_256,
 								weight: 100.0
 							)
 						}
@@ -857,12 +857,12 @@ func addAuthAccountKey(t *testing.T, runtime Runtime, runtimeInterface *testRunt
 					prepare(signer: AuthAccount) {
 						let key = PublicKey(
 							publicKey: "010203".decodeHex(),
-							signAlgo: SignatureAlgorithm.ECDSA_P256
+							signatureAlgorithm: SignatureAlgorithm.ECDSA_P256
 						)
 
 						var addedKey: AccountKey = signer.keys.add(
 							publicKey: key,
-							hashAlgo: HashAlgorithm.SHA3_256,
+							hashAlgorithm: HashAlgorithm.SHA3_256,
 							weight: 100.0
 						)
 					}

@@ -1258,7 +1258,7 @@ func (r *interpreterRuntime) newRemovePublicKeyFunction(
 			var publicKey []byte
 			var err error
 			wrapPanic(func() {
-				publicKey, err = runtimeInterface.RemoveEncodedAccountKey(addressValue.ToAddress(), index.ToInt())
+				publicKey, err = runtimeInterface.RevokeEncodedAccountKey(addressValue.ToAddress(), index.ToInt())
 			})
 			if err != nil {
 				panic(err)
@@ -2176,30 +2176,18 @@ func (r *interpreterRuntime) newAccountKeysAddFunction(
 	runtimeInterface Interface,
 ) interpreter.HostFunctionValue {
 	return interpreter.NewHostFunctionValue(
-		func(invocation interpreter.Invocation) trampoline.Trampoline {
+		func(invocation interpreter.Invocation) interpreter.Value {
 			publicKeyValue := invocation.Arguments[0].(*interpreter.CompositeValue)
-			if publicKeyValue.QualifiedIdentifier != sema.PublicKeyTypeName {
-				panic(fmt.Sprintf(
-					"add method requires the first argument to be an %s",
-					sema.PublicKeyType,
-				))
-			}
+			publicKey := NewPublicKeyFromValue(publicKeyValue)
 
 			hashAlgo := NewHashAlgorithmFromValue(invocation.Arguments[1])
-
-			weight, ok := invocation.Arguments[2].(interpreter.UFix64Value)
-			if !ok {
-				panic(fmt.Sprintf(
-					"add requires the third argument to be an %s",
-					sema.UFix64Type{},
-				))
-			}
+			address := addressValue.ToAddress()
+			weight := invocation.Arguments[2].(interpreter.UFix64Value).ToInt()
 
 			var err error
 			var accountKey *AccountKey
 			wrapPanic(func() {
-				publicKey := NewPublicKeyFromValue(publicKeyValue)
-				accountKey, err = runtimeInterface.AddAccountKey(addressValue.ToAddress(), publicKey, hashAlgo, weight.ToInt())
+				accountKey, err = runtimeInterface.AddAccountKey(address, publicKey, hashAlgo, weight)
 			})
 			if err != nil {
 				panic(err)
@@ -2214,8 +2202,7 @@ func (r *interpreterRuntime) newAccountKeysAddFunction(
 				},
 			)
 
-			accountKeyValue := NewAccountKeyValue(accountKey)
-			return trampoline.Done{Result: accountKeyValue}
+			return NewAccountKeyValue(accountKey)
 		},
 	)
 }
@@ -2225,16 +2212,14 @@ func (r *interpreterRuntime) newAccountKeysGetFunction(
 	runtimeInterface Interface,
 ) interpreter.HostFunctionValue {
 	return interpreter.NewHostFunctionValue(
-		func(invocation interpreter.Invocation) trampoline.Trampoline {
-			index, ok := invocation.Arguments[0].(interpreter.IntValue)
-			if !ok {
-				panic("get method requires the first argument to be an integer")
-			}
+		func(invocation interpreter.Invocation) interpreter.Value {
+			index := invocation.Arguments[0].(interpreter.IntValue).ToInt()
+			address := addressValue.ToAddress()
 
 			var err error
 			var accountKey *AccountKey
 			wrapPanic(func() {
-				accountKey, err = runtimeInterface.GetAccountKey(addressValue.ToAddress(), index.ToInt())
+				accountKey, err = runtimeInterface.GetAccountKey(address, index)
 			})
 
 			if err != nil {
@@ -2245,11 +2230,10 @@ func (r *interpreterRuntime) newAccountKeysGetFunction(
 			// This is done because, if the host function returns an error when a key is not found, then
 			// currently there's no way to distinguish between a 'key not found error' vs other internal errors.
 			if accountKey == nil {
-				return trampoline.Done{Result: interpreter.NilValue{}}
+				return interpreter.NilValue{}
 			}
 
-			accountKeyValue := NewAccountKeyValue(accountKey)
-			return trampoline.Done{Result: accountKeyValue}
+			return NewAccountKeyValue(accountKey)
 		},
 	)
 }
@@ -2259,32 +2243,30 @@ func (r *interpreterRuntime) newAccountKeysRevokeFunction(
 	runtimeInterface Interface,
 ) interpreter.HostFunctionValue {
 	return interpreter.NewHostFunctionValue(
-		func(invocation interpreter.Invocation) trampoline.Trampoline {
-			index, ok := invocation.Arguments[0].(interpreter.IntValue)
-			if !ok {
-				panic("revoke method requires the first argument to be an integer")
-			}
+		func(invocation interpreter.Invocation) interpreter.Value {
+			indexValue := invocation.Arguments[0].(interpreter.IntValue)
+			index := indexValue.ToInt()
+			address := addressValue.ToAddress()
 
 			var err error
 			var accountKey *AccountKey
 			wrapPanic(func() {
-				accountKey, err = runtimeInterface.RemoveAccountKey(addressValue.ToAddress(), index.ToInt())
+				accountKey, err = runtimeInterface.RevokeAccountKey(address, index)
 			})
 			if err != nil {
 				panic(err)
 			}
 
 			r.emitAccountEvent(
-				stdlib.AccountKeyAddedEventType,
+				stdlib.AccountKeyRemovedEventType,
 				runtimeInterface,
 				[]exportableValue{
 					newExportableValue(addressValue, nil),
-					newExportableValue(index, nil),
+					newExportableValue(indexValue, nil),
 				},
 			)
 
-			accountKeyValue := NewAccountKeyValue(accountKey)
-			return trampoline.Done{Result: accountKeyValue}
+			return NewAccountKeyValue(accountKey)
 		},
 	)
 }
@@ -2317,20 +2299,14 @@ func NewPublicKeyFromValue(publicKey *interpreter.CompositeValue) *PublicKey {
 		panic("sign algorithm is not set")
 	}
 
-	signAlgoValue, ok := signAlgoField.(*interpreter.CompositeValue)
-	if !ok || signAlgoValue.QualifiedIdentifier != sema.SignatureAlgorithmTypeName {
-		panic("sign algorithm needs to be of type `SignAlgorithm`")
-	}
+	signAlgoValue := signAlgoField.(*interpreter.CompositeValue)
 
 	rawValue, ok := signAlgoValue.Fields.Get(sema.EnumRawValueFieldName)
 	if !ok {
 		panic("cannot find sign algorithm raw value")
 	}
 
-	signAlgoRawValue, ok := rawValue.(interpreter.IntValue)
-	if !ok {
-		panic("enum raw value needs to be subtype of integer")
-	}
+	signAlgoRawValue := rawValue.(interpreter.IntValue)
 
 	return &PublicKey{
 		PublicKey: byteArray,
@@ -2356,21 +2332,14 @@ func NewAccountKeyValue(accountKey *AccountKey) *interpreter.CompositeValue {
 }
 
 func NewHashAlgorithmFromValue(value interpreter.Value) HashAlgorithm {
-	hashAlgoValue, ok := value.(*interpreter.CompositeValue)
-	if !ok || hashAlgoValue.QualifiedIdentifier != sema.HashAlgorithmTypeName {
-		panic(fmt.Sprintf("hash algorithm value must be of type %s", sema.HashAlgorithmType))
-	}
+	hashAlgoValue := value.(*interpreter.CompositeValue)
 
 	rawValue, ok := hashAlgoValue.Fields.Get(sema.EnumRawValueFieldName)
 	if !ok {
 		panic("cannot find hash algorithm raw value")
 	}
 
-	hashAlgoRawValue, ok := rawValue.(interpreter.IntValue)
-	if !ok {
-		panic("hash algorithm raw value needs to be subtype of integer")
-	}
+	hashAlgoRawValue := rawValue.(interpreter.IntValue)
 
-	hashAlgo := HashAlgorithm(hashAlgoRawValue.ToInt())
-	return hashAlgo
+	return HashAlgorithm(hashAlgoRawValue.ToInt())
 }

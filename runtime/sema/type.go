@@ -6535,7 +6535,7 @@ func init() {
 const AccountKeyTypeName = "AccountKey"
 const AccountKeyKeyIndexField = "keyIndex"
 const AccountKeyPublicKeyField = "publicKey"
-const AccountKeyHashAlgoField = "hashAlgo"
+const AccountKeyHashAlgoField = "hashAlgorithm"
 const AccountKeyWeightField = "weight"
 const AccountKeyIsRevokedField = "isRevoked"
 
@@ -6593,7 +6593,7 @@ var AccountKeyType = func() *CompositeType {
 
 const PublicKeyTypeName = "PublicKey"
 const PublicKeyPublicKeyField = "publicKey"
-const PublicKeySignAlgoField = "signAlgo"
+const PublicKeySignAlgoField = "signatureAlgorithm"
 
 // PublicKeyType represents the public key associated with an account key.
 var PublicKeyType = func() *CompositeType {

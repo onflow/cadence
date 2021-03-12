@@ -69,7 +69,7 @@ func TestRuntimeCrypto_verify(t *testing.T) {
       pub fun main(): Bool {
           let publicKey = PublicKey(
               publicKey: "0102".decodeHex(),
-              signAlgo: SignatureAlgorithm.ECDSA_P256
+              signatureAlgorithm: SignatureAlgorithm.ECDSA_P256
           )
 
           let keyList = Crypto.KeyList()

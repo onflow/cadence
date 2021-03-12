@@ -144,7 +144,7 @@ pub contract Crypto {
                     tag: Crypto.domainSeparationTagUser,
                     signedData: signedData,
                     publicKey: key.publicKey.publicKey,
-                    signatureAlgorithm: key.publicKey.signAlgo,
+                    signatureAlgorithm: key.publicKey.signatureAlgorithm,
                     hashAlgorithm:key.hashAlgorithm
                 ) {
                     return false
