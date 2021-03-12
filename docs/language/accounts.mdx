@@ -23,8 +23,7 @@ Every account can be accessed through two types:
       fun getLinkTarget(_ path: CapabilityPath): Path?
 
       struct Keys {
-          // Adds a new key with the given hashing algorithm and a weight.
-          // Returns the added key.
+          // Adds a new key with the given hashing algorithm and a weight, and returns the added key.
           fun add(
               publicKey: PublicKey,
               hashAlgorithm: HashAlgorithm,
@@ -35,7 +34,7 @@ Every account can be accessed through two types:
           // Revoked keys are always returned, but they have \`isRevoked\` field set to true.
           fun get(keyIndex: Int): AccountKey?
 
-          // Marks the key at the given index revoked, but does not delete it.
+          // Marks the key at the given index as revoked, but does not delete it.
           // Returns the revoked key if exists.
           fun revoke(keyIndex: Int): AccountKey?
       }
@@ -74,6 +73,19 @@ Every account can be accessed through two types:
 
       let keys: AuthAccount.Keys
 
+      // Key management
+
+      // Adds a public key to the account.
+      // The public key must be encoded together with their signature algorithm, hashing algorithm and weight.
+      // This method is currently deprecated and is available only for the backward compatibility.
+      // `keys.add` method can be use instead.
+      fun addPublicKey(_ publicKey: [UInt8])
+
+      // Revokes the key at the given index.
+      // This method is currently deprecated and is available only for the backward compatibility.
+      // `keys.revoke` method can be use instead.
+      fun removePublicKey(_ index: Int)
+
       // Storage operations
 
       fun save<T>(_ value: T, to: StoragePath)
@@ -102,20 +114,19 @@ Every account can be accessed through two types:
       }
 
       struct Keys {
-          // Adds a new key with the given hashing algorithm and a weight.
-          // Returns the added key.
+          // Adds a new key with the given hashing algorithm and a weight, and returns the added key.
           fun add(
               publicKey: PublicKey,
               hashAlgorithm: HashAlgorithm,
               weight: UFix64
           ): AccountKey
 
-          // Returns the key at the given index, if it exists.
+          // Returns the key at the given index, if it exists, or nil otherwise.
           // Revoked keys are always returned, but they have `isRevoked` field set to true.
           fun get(keyIndex: Int): AccountKey?
 
           // Marks the key at the given index revoked, but does not delete it.
-          // Returns the revoked key if exists.
+          // Returns the revoked key if it exists, or nil otherwise.
           fun revoke(keyIndex: Int): AccountKey?
       }
   }
@@ -143,20 +154,20 @@ transaction() {
 ```
 
 ## Account Keys
-An account (both `PublicAccount` and `AuthAccount`) have keys associated with it. An account key has the
-following structure.
+An account (both `PublicAccount` and `AuthAccount`) have keys associated with it.
+An account key has the following structure.
 ```cadence
 struct AccountKey {
     let keyIndex: Int
     let publicKey: PublicKey
-    let hashAlgo: HashAlgorithm
+    let hashAlgorithm: HashAlgorithm
     let weight: UFix64
     let isRevoked: Bool
 }
 
 struct PublicKey {
-    let publicKey: PublicKey
-    let signAlgo: SignatureAlgorithm
+    let publicKey: [UInt8]
+    let signatureAlgorithm: SignatureAlgorithm
 }
 ```
 
@@ -164,7 +175,7 @@ A `PublicKey` can be constructed using the raw key and the signing algorithm.
 ```cadence
 let publicKey = PublicKey(
     publicKey: "010203".decodeHex(),
-    signAlgo: SignatureAlgorithm.ECDSA_P256
+    signatureAlgorithm: SignatureAlgorithm.ECDSA_P256
 )
 ```
 
@@ -172,11 +183,11 @@ let publicKey = PublicKey(
 Account key API provides a set of functions to manage account keys.
 
 #### Add Account Keys
-To authorize access to the account, keys can be added using the `add()` function. Keys can
-only be added to an `AuthAccount`.
+To authorize access to the account, keys can be added using the `add()` function.
+Keys can only be added to an `AuthAccount`.
 
-For example, to create an account and have the signer of the transaction pay for the account creation,
-and authorize one key to access the account:
+For example, to create an account and have the signer of the transaction pay for the account
+creation, and authorize one key to access the account:
 
 ```cadence
 transaction(key: PublicKey) {
@@ -184,7 +195,7 @@ transaction(key: PublicKey) {
         let account = AuthAccount(payer: signer)
         account.keys.add(
             publicKey: key,
-            hashAlgo: HashAlgorithm.SHA3_256,
+            hashAlgorithm: HashAlgorithm.SHA3_256,
             weight: 10.0
         )
     }
@@ -192,9 +203,10 @@ transaction(key: PublicKey) {
 ```
 
 <Callout type="info">
-⚠️  Note: Keys can be added also using the `addPublicKey` function. However, this method is currently
-deprecated and is available only for the backward compatibility. The `addPublicKey` method accepts
-the public key encoded together with their signature algorithm, hashing algorithm and weight.
+⚠️  Note: Keys can also be added using the `addPublicKey` function.
+However, this method is currently deprecated and is available only for the backward compatibility.
+The `addPublicKey` method accepts the public key encoded together with their signature algorithm,
+hashing algorithm and weight.
 ```cadence
 transaction(key: [UInt8]) {
     prepare(signer: AuthAccount) {
@@ -207,10 +219,10 @@ transaction(key: [UInt8]) {
 
 
 #### Get Account Keys
-Keys that are added to an account can be retrieved using `get()` function, using the index of
-the key. Revoked keys are always returned,  but they have `isRevoked` field set to true.
-Returns `nil` if there is no key available at the given index. Keys can be retrieved from both
-`PublicAccout` and `AuthAccount`.
+Keys that are added to an account can be retrieved using `get()` function, using the index of the key.
+Revoked keys are always returned, but they have `isRevoked` field set to true.
+Returns `nil` if there is no key available at the given index.
+Keys can be retrieved from both `PublicAccout` and `AuthAccount`.
 ```cadence
 transaction() {
     prepare(signer: AuthAccount) {
@@ -225,9 +237,9 @@ transaction() {
 ```
 
 #### Revoke Account Keys
-Keys that have been added to an account can be revoked using `revoke()` function. Revoke
-function only marks the key at the given index as revoked, but never deletes it. Keys can
-only be revoked from an `AuthAccount`.
+Keys that have been added to an account can be revoked using `revoke()` function.
+Revoke function only marks the key at the given index as revoked, but never deletes it.
+Keys can only be revoked from an `AuthAccount`.
 ```cadence
 transaction() {
     prepare(signer: AuthAccount) {
@@ -237,8 +249,8 @@ transaction() {
 }
 ```
 <Callout type="info">
-⚠️  Note: Keys can also be removed using the `removePublicKey` function. However, this method is
-deprecated and is available only for the backward compatibility.
+⚠️  Note: Keys can also be removed using the `removePublicKey` function.
+However, this method is deprecated and is available only for the backward compatibility.
 ```
 </Callout>
 
