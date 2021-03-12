@@ -116,40 +116,31 @@ func (i *FlowIntegration) sendTransaction(conn protocol.Conn, args ...interface{
 		return nil, fmt.Errorf("invalid arguments: %#+v", args[1])
 	}
 
-	signers, ok := args[2].([]string)
-	if !ok {
-		return nil, fmt.Errorf("invalid signers list: %#+v", args[1])
+	// TODO: Add error handling if one of the values is wrong
+	// TODO: Check that every account exists, otherwise show error message
+	signerList := args[2].([]interface{})
+	signers := make([]string, len(signerList))
+	for i, v := range signerList {
+		signers[i] = v.(string)
 	}
 
+	// TODO: Currently only single signer is supported, so we will extractfirst one
 	// Execute script via shared library
-	tx, txResult, txError := i.sharedServices.Transactions.Send(path.Path, signers[0], []string{}, argsJSON)
+	_, txResult, txSendError := i.sharedServices.Transactions.Send(path.Path, signers[0], []string{}, argsJSON)
 
-	fmt.Printf("%+v", tx)
-	fmt.Printf("%+v", txResult)
-	fmt.Printf("%+v", txError)
+	if txSendError != nil {
+		txErrorMessage := fmt.Sprintf("there was an error with your transaction: %#+v", txSendError)
+		conn.ShowMessage(&protocol.ShowMessageParams{
+			Type:    protocol.Error,
+			Message: txErrorMessage,
+		})
+		return nil, fmt.Errorf("%s", txErrorMessage)
+	}
 
-	/*	rawTransactionArguments, ok := args[1].([]interface{})
-		if !ok {
-			return nil, fmt.Errorf("invalid transaction arguments: %#+v", args[1])
-		}
-
-		var transactionArguments []string
-		for i, rawTransactionArgument := range rawTransactionArguments {
-			stringArgument, ok := rawTransactionArgument.(string)
-			if !ok {
-				return nil, fmt.Errorf("invalid transaction argument at index %d: %#+v", i, rawTransactionArgument)
-			}
-
-			transactionArguments = append(transactionArguments, strings.TrimSuffix(stringArgument, "\n"))
-		}
-
-		signers, ok := args[2].([]interface{})
-		if !ok {
-			return nil, fmt.Errorf("invalid signers argument: %#+v", args[2])
-		}
-
-		// Pass arguments and signers back to extension
-		err = conn.Notify(ClientSendTransaction, []interface{}{transactionArguments, signers})*/
+	conn.ShowMessage(&protocol.ShowMessageParams{
+		Type:    protocol.Info,
+		Message: fmt.Sprintf("Transaction status: %s", txResult.Status.String()),
+	})
 
 	return nil, err
 }
@@ -192,7 +183,6 @@ func (i *FlowIntegration) executeScript(conn protocol.Conn, args ...interface{})
 
 	displayResult := fmt.Sprintf("Result: %s", scriptResult.String())
 
-	/// TODO: Notify extension that execution was successful
 	conn.ShowMessage(&protocol.ShowMessageParams{
 		Type:    protocol.Info,
 		Message: displayResult,
