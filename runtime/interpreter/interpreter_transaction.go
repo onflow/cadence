@@ -116,15 +116,13 @@ func (interpreter *Interpreter) declareTransactionEntryPoint(declaration *ast.Tr
 				preConditions = *declaration.PreConditions
 			}
 
-			result := interpreter.visitFunctionBody(
+			return interpreter.visitFunctionBody(
 				postConditionsRewrite.BeforeStatements,
 				preConditions,
 				body,
 				postConditionsRewrite.RewrittenPostConditions,
 				sema.VoidType,
 			)
-
-			return result.(functionReturn).Value
 		})
 
 	interpreter.Transactions = append(interpreter.Transactions, &transactionFunction)

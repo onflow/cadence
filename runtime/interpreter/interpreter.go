@@ -42,13 +42,13 @@ type controlContinue struct{}
 func (controlContinue) isControlReturn() {}
 
 type functionReturn struct {
-	Value
+	Value Value
 }
 
 func (functionReturn) isControlReturn() {}
 
 type ExpressionStatementResult struct {
-	Value
+	Value Value
 }
 
 //
@@ -883,7 +883,7 @@ func (interpreter *Interpreter) visitFunctionBody(
 	body func() controlReturn,
 	postConditions ast.Conditions,
 	returnType sema.Type,
-) controlReturn {
+) Value {
 
 	// block scope: each function block gets an activation record
 	interpreter.activations.PushNewWithCurrent()
@@ -891,7 +891,7 @@ func (interpreter *Interpreter) visitFunctionBody(
 
 	result := interpreter.visitStatements(beforeStatements)
 	if ret, ok := result.(functionReturn); ok {
-		return ret
+		return ret.Value
 	}
 
 	interpreter.visitConditions(preConditions)
@@ -918,9 +918,7 @@ func (interpreter *Interpreter) visitFunctionBody(
 
 	interpreter.visitConditions(postConditions)
 
-	return functionReturn{
-		Value: resultValue,
-	}
+	return resultValue
 }
 
 func (interpreter *Interpreter) visitConditions(conditions []*ast.Condition) {
@@ -1876,15 +1874,13 @@ func (interpreter *Interpreter) functionConditionsWrapper(
 				}
 			}
 
-			result := interpreter.visitFunctionBody(
+			return interpreter.visitFunctionBody(
 				beforeStatements,
 				preConditions,
 				body,
 				rewrittenPostConditions,
 				returnType,
 			)
-
-			return result.(functionReturn).Value
 		})
 	}
 }
