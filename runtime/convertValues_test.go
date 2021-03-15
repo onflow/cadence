@@ -985,12 +985,275 @@ func TestEnumValue(t *testing.T) {
 			}
 		`
 
-		actual := importAndExportValuesFromScript(t, script, enumValue)
+		actual, err := importAndExportValuesFromScript(t, script, enumValue)
+		require.NoError(t, err)
 		assert.Equal(t, enumValue, actual)
 	})
 }
 
-func importAndExportValuesFromScript(t *testing.T, script string, arg cadence.Value) cadence.Value {
+
+type importValueTest struct {
+	label         string
+	typeSignature string
+	value         interpreter.Value
+	exportedValue cadence.Value
+	skipReverse   bool
+}
+
+
+var importValueTests = []importValueTest{
+	{
+		label:         "Void",
+		value:         interpreter.VoidValue{},
+		exportedValue: cadence.NewVoid(),
+	},
+	{
+		label:         "Nil",
+		value:         interpreter.NilValue{},
+		exportedValue: cadence.NewOptional(nil),
+		skipReverse:   true,
+	},
+	{
+		label:         "SomeValue",
+		value:         interpreter.NewSomeValueOwningNonCopying(interpreter.NewIntValueFromInt64(42)),
+		exportedValue: cadence.NewOptional(cadence.NewInt(42)),
+	},
+	{
+		label:         "Bool true",
+		value:         interpreter.BoolValue(true),
+		exportedValue: cadence.NewBool(true),
+	},
+	{
+		label:         "Bool false",
+		value:         interpreter.BoolValue(false),
+		exportedValue: cadence.NewBool(false),
+	},
+	{
+		label:         "String empty",
+		value:         interpreter.NewStringValue(""),
+		exportedValue: cadence.NewString(""),
+	},
+	{
+		label:         "String non-empty",
+		value:         interpreter.NewStringValue("foo"),
+		exportedValue: cadence.NewString("foo"),
+	},
+	{
+		label:         "Array empty",
+		value:         interpreter.NewArrayValueUnownedNonCopying([]interpreter.Value{}...),
+		exportedValue: cadence.NewArray([]cadence.Value{}),
+	},
+	{
+		label: "Array non-empty",
+		value: interpreter.NewArrayValueUnownedNonCopying(
+			[]interpreter.Value{
+				interpreter.NewIntValueFromInt64(42),
+				interpreter.NewStringValue("foo"),
+			}...,
+		),
+		exportedValue: cadence.NewArray([]cadence.Value{
+			cadence.NewInt(42),
+			cadence.NewString("foo"),
+		}),
+	},
+	{
+		label:         "Int",
+		value:         interpreter.NewIntValueFromInt64(42),
+		exportedValue: cadence.NewInt(42),
+	},
+	{
+		label:         "Int8",
+		value:         interpreter.Int8Value(42),
+		exportedValue: cadence.NewInt8(42),
+	},
+	{
+		label:         "Int16",
+		value:         interpreter.Int16Value(42),
+		exportedValue: cadence.NewInt16(42),
+	},
+	{
+		label:         "Int32",
+		value:         interpreter.Int32Value(42),
+		exportedValue: cadence.NewInt32(42),
+	},
+	{
+		label:         "Int64",
+		value:         interpreter.Int64Value(42),
+		exportedValue: cadence.NewInt64(42),
+	},
+	{
+		label:         "Int128",
+		value:         interpreter.NewInt128ValueFromInt64(42),
+		exportedValue: cadence.NewInt128(42),
+	},
+	{
+		label:         "Int256",
+		value:         interpreter.NewInt256ValueFromInt64(42),
+		exportedValue: cadence.NewInt256(42),
+	},
+	{
+		label:         "UInt",
+		value:         interpreter.NewUIntValueFromUint64(42),
+		exportedValue: cadence.NewUInt(42),
+	},
+	{
+		label:         "UInt8",
+		value:         interpreter.UInt8Value(42),
+		exportedValue: cadence.NewUInt8(42),
+	},
+	{
+		label:         "UInt16",
+		value:         interpreter.UInt16Value(42),
+		exportedValue: cadence.NewUInt16(42),
+	},
+	{
+		label:         "UInt32",
+		value:         interpreter.UInt32Value(42),
+		exportedValue: cadence.NewUInt32(42),
+	},
+	{
+		label:         "UInt64",
+		value:         interpreter.UInt64Value(42),
+		exportedValue: cadence.NewUInt64(42),
+	},
+	{
+		label:         "UInt128",
+		value:         interpreter.NewUInt128ValueFromUint64(42),
+		exportedValue: cadence.NewUInt128(42),
+	},
+	{
+		label:         "UInt256",
+		value:         interpreter.NewUInt256ValueFromUint64(42),
+		exportedValue: cadence.NewUInt256(42),
+	},
+	{
+		label:         "Word8",
+		value:         interpreter.Word8Value(42),
+		exportedValue: cadence.NewWord8(42),
+	},
+	{
+		label:         "Word16",
+		value:         interpreter.Word16Value(42),
+		exportedValue: cadence.NewWord16(42),
+	},
+	{
+		label:         "Word32",
+		value:         interpreter.Word32Value(42),
+		exportedValue: cadence.NewWord32(42),
+	},
+	{
+		label:         "Word64",
+		value:         interpreter.Word64Value(42),
+		exportedValue: cadence.NewWord64(42),
+	},
+	{
+		label:         "Fix64",
+		value:         interpreter.Fix64Value(-123000000),
+		exportedValue: cadence.Fix64(-123000000),
+	},
+	{
+		label:         "UFix64",
+		value:         interpreter.UFix64Value(123000000),
+		exportedValue: cadence.UFix64(123000000),
+	},
+	{
+		label: "Path",
+		value: interpreter.PathValue{
+			Domain:     common.PathDomainStorage,
+			Identifier: "foo",
+		},
+		exportedValue: cadence.Path{
+			Domain:     "storage",
+			Identifier: "foo",
+		},
+	},
+}
+
+
+//func TestImportValue(t *testing.T) {
+//
+//	t.Parallel()
+//
+//	rt := NewInterpreterRuntime().(*interpreterRuntime)
+//	rt.newInterpreter()
+//
+//
+//	runtimeInterface := &testRuntimeInterface{
+//		decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+//			return json.Decode(b)
+//		},
+//	}
+//
+//	test := func(test exportTest) {
+//
+//		t.Run(test.label, func(t *testing.T) {
+//
+//			t.Parallel()
+//
+//			//func validateArgumentParams(
+//			//	inter *interpreter.Interpreter,
+//			//	runtimeInterface Interface,
+//			//	arguments [][]byte,
+//			//	parameters []*sema.Parameter,
+//		)
+//
+//			actual := exportValueWithInterpreter(test.value, nil, exportResults{})
+//			assert.Equal(t, test.expected, actual)
+//
+//			if !test.skipReverse {
+//				original := importValue(actual)
+//				assert.Equal(t, test.value, original)
+//			}
+//		})
+//	}
+//
+//	for _, tt := range exportTests {
+//		test(tt)
+//	}
+//}
+
+func TestMalformedStructImport(t *testing.T) {
+
+	t.Parallel()
+
+	value := cadence.Struct{
+		StructType: &cadence.StructType{
+			Location:            utils.TestLocation,
+			QualifiedIdentifier: "Foo",
+			Fields: []cadence.Field{
+				{
+					Identifier: "bar",
+					Type:       cadence.IntType{},
+				},
+			},
+		},
+		Fields: []cadence.Value{
+			cadence.NewInt(3),
+		},
+	}
+
+	t.Run("test export", func(t *testing.T) {
+		script := `
+			pub fun main(f: Foo) {
+
+			}
+
+			pub struct Foo {
+				pub var bar: String
+
+				init() {
+					self.bar = "Hello"
+				}
+			}
+		`
+
+		actual, err := importAndExportValuesFromScript(t, script, value)
+		assert.NoError(t, err)
+		fmt.Println(actual)
+	})
+}
+
+func importAndExportValuesFromScript(t *testing.T, script string, arg cadence.Value) (cadence.Value, error) {
 	encodedArg, err := json.Encode(arg)
 	require.NoError(t, err)
 
@@ -1002,7 +1265,7 @@ func importAndExportValuesFromScript(t *testing.T, script string, arg cadence.Va
 		},
 	}
 
-	value, err := rt.ExecuteScript(
+	return rt.ExecuteScript(
 		Script{
 			Source:    []byte(script),
 			Arguments: [][]byte{encodedArg},
@@ -1012,8 +1275,4 @@ func importAndExportValuesFromScript(t *testing.T, script string, arg cadence.Va
 			Location:  utils.TestLocation,
 		},
 	)
-
-	require.NoError(t, err)
-
-	return value
 }

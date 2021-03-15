@@ -218,6 +218,7 @@ func exportCompositeValue(v *interpreter.CompositeValue, inter *interpreter.Inte
 				common.CompositeKindResource.Name(),
 				common.CompositeKindEvent.Name(),
 				common.CompositeKindContract.Name(),
+				common.CompositeKindEnum.Name(),
 			},
 			"or",
 		),
@@ -378,7 +379,7 @@ func importValue(value cadence.Value) interpreter.Value {
 		}
 	case cadence.Enum:
 		return importCompositeValue(
-			common.CompositeKindStructure,
+			common.CompositeKindEnum,
 			v.EnumType.Location,
 			v.EnumType.QualifiedIdentifier,
 			v.EnumType.Fields,
