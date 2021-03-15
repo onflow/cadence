@@ -296,7 +296,10 @@ func TestRuntimeError(t *testing.T) {
               // import program that has errors
               import A from 0x1
             `,
-			common.AddressLocation{Address: HexToAddress("01"), Name: "A"}.ID(): `
+			common.AddressLocation{
+				Address: common.BytesToAddress([]byte{0x1}),
+				Name:    "A",
+			}.ID(): `
               // import program that has errors
               import B from 0x2
 
@@ -308,8 +311,10 @@ func TestRuntimeError(t *testing.T) {
                   Y
               }
             `,
-			common.AddressLocation{Address: HexToAddress("02"), Name: "B"}.ID(): `
-
+			common.AddressLocation{
+				Address: common.BytesToAddress([]byte{0x2}),
+				Name:    "B",
+			}.ID(): `
               // invalid top-level declaration
               pub fun bar() {
                   // invalid reference to undeclared variable
@@ -338,11 +343,7 @@ func TestRuntimeError(t *testing.T) {
 					Name:    name,
 					Address: address,
 				}
-				locationID := location.ID()
-				code, ok := codes[locationID]
-				if !ok {
-					code = secondaryCodes[locationID]
-				}
+				code := codes[location.ID()]
 				return []byte(code), nil
 			},
 		}
@@ -360,28 +361,28 @@ func TestRuntimeError(t *testing.T) {
 		require.EqualError(t, err,
 			"Execution failed:\n"+
 				"error: function declarations are not valid at the top-level\n"+
-				" --> 0000000000000002.B:2:20\n"+
+				" --> 0000000000000002.B:3:22\n"+
 				"  |\n"+
-				"2 |             pub fun bar() {\n"+
-				"  |                     ^^^\n"+
+				"3 |               pub fun bar() {\n"+
+				"  |                       ^^^\n"+
 				"\n"+
 				"error: cannot find variable in this scope: `X`\n"+
-				" --> 0000000000000002.B:3:16\n"+
+				" --> 0000000000000002.B:5:18\n"+
 				"  |\n"+
-				"3 |                 X\n"+
-				"  |                 ^ not found in this scope\n"+
+				"5 |                   X\n"+
+				"  |                   ^ not found in this scope\n"+
 				"\n"+
 				"error: function declarations are not valid at the top-level\n"+
-				" --> 0000000000000001.A:4:20\n"+
+				" --> 0000000000000001.A:8:22\n"+
 				"  |\n"+
-				"4 |             pub fun foo() {\n"+
-				"  |                     ^^^\n"+
+				"8 |               pub fun foo() {\n"+
+				"  |                       ^^^\n"+
 				"\n"+
 				"error: cannot find variable in this scope: `Y`\n"+
-				" --> 0000000000000001.A:5:16\n"+
-				"  |\n"+
-				"5 |                 Y\n"+
-				"  |                 ^ not found in this scope\n",
+				"  --> 0000000000000001.A:10:18\n"+
+				"   |\n"+
+				"10 |                   Y\n"+
+				"   |                   ^ not found in this scope\n",
 		)
 
 	})
