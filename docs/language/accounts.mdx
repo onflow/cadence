@@ -143,8 +143,10 @@ transaction() {
 ```
 
 ## Account Keys
+
 An account (both `PublicAccount` and `AuthAccount`) have keys associated with it.
 An account key has the following structure.
+
 ```cadence
 struct AccountKey {
     let keyIndex: Int
@@ -196,6 +198,7 @@ transaction(key: PublicKey) {
 However, this method is currently deprecated and is available only for the backward compatibility.
 The `addPublicKey` method accepts the public key encoded together with their signature algorithm,
 hashing algorithm and weight.
+
 ```cadence
 transaction(key: [UInt8]) {
     prepare(signer: AuthAccount) {
@@ -208,10 +211,12 @@ transaction(key: [UInt8]) {
 
 
 #### Get Account Keys
+
 Keys that are added to an account can be retrieved using `get()` function, using the index of the key.
 Revoked keys are always returned, but they have `isRevoked` field set to true.
 Returns `nil` if there is no key available at the given index.
 Keys can be retrieved from both `PublicAccout` and `AuthAccount`.
+
 ```cadence
 transaction() {
     prepare(signer: AuthAccount) {
@@ -226,9 +231,11 @@ transaction() {
 ```
 
 #### Revoke Account Keys
+
 Keys that have been added to an account can be revoked using `revoke()` function.
 Revoke function only marks the key at the given index as revoked, but never deletes it.
 Keys can only be revoked from an `AuthAccount`.
+
 ```cadence
 transaction() {
     prepare(signer: AuthAccount) {
@@ -237,10 +244,10 @@ transaction() {
     }
 }
 ```
+
 <Callout type="info">
 ⚠️  Note: Keys can also be removed using the `removePublicKey` function.
 However, this method is deprecated and is available only for the backward compatibility.
-```
 </Callout>
 
 ## Account Storage
