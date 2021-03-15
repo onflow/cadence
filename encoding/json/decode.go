@@ -31,6 +31,7 @@ import (
 
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/sema"
 )
 
 // A Decoder decodes JSON-encoded representations of Cadence values.
@@ -495,9 +496,13 @@ func decodeComposite(valueJSON interface{}) composite {
 
 	typeID := obj.GetString(idKey)
 	location, qualifiedIdentifier, err := common.DecodeTypeID(typeID)
-	if err != nil {
-		// TODO: improve error
-		panic(ErrInvalidJSONCadence)
+
+	if err != nil ||
+		location == nil && sema.NativeCompositeTypes[typeID] == nil {
+
+		// If the location is nil, and there is no native composite type with this ID, then its an invalid type.
+		// Note: This is moved out from the common.DecodeTypeID() to avoid the circular dependency.
+		panic(fmt.Errorf("%s. invalid type ID: `%s`", ErrInvalidJSONCadence, typeID))
 	}
 
 	fields := obj.GetSlice(fieldsKey)

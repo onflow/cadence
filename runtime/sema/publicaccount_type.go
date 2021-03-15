@@ -91,8 +91,52 @@ var PublicAccountType = &SimpleType{
 					)
 				},
 			},
+			"keys": {
+				Kind: common.DeclarationKindField,
+				Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
+					return NewPublicConstantFieldMember(
+						t,
+						identifier,
+						PublicAccountKeysType,
+						accountTypeKeysFieldDocString,
+					)
+				},
+			},
 		}
 	},
+
+	NestedTypes: func() *StringTypeOrderedMap {
+		nestedTypes := NewStringTypeOrderedMap()
+		nestedTypes.Set(AccountKeysTypeName, PublicAccountKeysType)
+		return nestedTypes
+	}(),
+}
+
+// PublicAccountKeysType represents the keys associated with a public account.
+var PublicAccountKeysType = func() *CompositeType {
+
+	accountKeys := &CompositeType{
+		Identifier: AccountKeysTypeName,
+		Kind:       common.CompositeKindStructure,
+	}
+
+	var members = []*Member{
+		NewPublicFunctionMember(
+			accountKeys,
+			AccountKeysGetFunctionName,
+			accountKeysTypeGetFunctionType,
+			accountKeysTypeGetFunctionDocString,
+		),
+	}
+
+	accountKeys.Members = GetMembersAsMap(members)
+	accountKeys.Fields = getFieldNames(members)
+	return accountKeys
+}()
+
+func init() {
+	// Set the container type after initializing the AccountKeysTypes, to avoid initializing loop.
+	PublicAccountKeysType.ContainerType = PublicAccountType
 }
 
 const publicAccountTypeGetLinkTargetFunctionDocString = `

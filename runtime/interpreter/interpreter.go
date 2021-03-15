@@ -1312,8 +1312,7 @@ func (interpreter *Interpreter) declareEnumConstructor(
 	intType := &sema.IntType{}
 
 	enumCases := declaration.Members.EnumCases()
-	caseCount := len(enumCases)
-	caseValues := make([]*CompositeValue, caseCount)
+	caseValues := make([]*CompositeValue, len(enumCases))
 
 	constructorMembers := NewStringValueOrderedMap()
 
@@ -1341,6 +1340,13 @@ func (interpreter *Interpreter) declareEnumConstructor(
 		constructorMembers.Set(enumCase.Identifier.Identifier, caseValue)
 	}
 
+	value = EnumConstructorFunction(caseValues, constructorMembers)
+	variable.Value = value
+
+	return lexicalScope, value
+}
+
+func EnumConstructorFunction(caseValues []*CompositeValue, members *StringValueOrderedMap) HostFunctionValue {
 	constructor := NewHostFunctionValue(
 		func(invocation Invocation) Value {
 
@@ -1348,7 +1354,7 @@ func (interpreter *Interpreter) declareEnumConstructor(
 
 			var result Value = NilValue{}
 
-			if rawValueArgument >= 0 && rawValueArgument < caseCount {
+			if rawValueArgument >= 0 && rawValueArgument < len(caseValues) {
 				caseValue := caseValues[rawValueArgument]
 				result = NewSomeValueOwningNonCopying(caseValue)
 			}
@@ -1357,12 +1363,8 @@ func (interpreter *Interpreter) declareEnumConstructor(
 		},
 	)
 
-	constructor.Members = constructorMembers
-
-	value = constructor
-	variable.Value = value
-
-	return lexicalScope, value
+	constructor.Members = members
+	return constructor
 }
 
 func (interpreter *Interpreter) compositeInitializerFunction(
@@ -2841,6 +2843,17 @@ func (interpreter *Interpreter) getElaboration(location common.Location) *sema.E
 }
 
 func (interpreter *Interpreter) getCompositeType(location common.Location, qualifiedIdentifier string) *sema.CompositeType {
+	if location == nil {
+		ty := sema.NativeCompositeTypes[qualifiedIdentifier]
+		if ty == nil {
+			panic(TypeLoadingError{
+				TypeID: common.TypeID(qualifiedIdentifier),
+			})
+		}
+
+		return ty
+	}
+
 	typeID := location.TypeID(qualifiedIdentifier)
 
 	elaboration := interpreter.getElaboration(location)

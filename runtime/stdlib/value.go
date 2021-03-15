@@ -74,8 +74,8 @@ type StandardLibraryValues []StandardLibraryValue
 
 func (values StandardLibraryValues) ToSemaValueDeclarations() []sema.ValueDeclaration {
 	valueDeclarations := make([]sema.ValueDeclaration, len(values))
-	for i, function := range values {
-		valueDeclarations[i] = function
+	for i, value := range values {
+		valueDeclarations[i] = value
 	}
 	return valueDeclarations
 }

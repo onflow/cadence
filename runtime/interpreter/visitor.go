@@ -110,6 +110,8 @@ type EmptyVisitor struct {
 	DeployedContractValueVisitor     func(interpreter *Interpreter, value DeployedContractValue)
 }
 
+var _ Visitor = &EmptyVisitor{}
+
 func (v EmptyVisitor) VisitValue(interpreter *Interpreter, value Value) {
 	if v.ValueVisitor == nil {
 		return

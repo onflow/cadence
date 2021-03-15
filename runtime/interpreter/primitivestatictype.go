@@ -287,7 +287,6 @@ func (i PrimitiveStaticType) SemaType() sema.Type {
 		return sema.DeployedContractType
 	case PrimitiveStaticTypeAuthAccountContracts:
 		return sema.AuthAccountContractsType
-
 	default:
 		panic(errors.NewUnreachableError())
 	}

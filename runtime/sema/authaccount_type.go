@@ -192,11 +192,23 @@ var AuthAccountType = &SimpleType{
 					)
 				},
 			},
+			"keys": {
+				Kind: common.DeclarationKindField,
+				Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
+					return NewPublicConstantFieldMember(
+						t,
+						identifier,
+						AuthAccountKeysType,
+						accountTypeKeysFieldDocString,
+					)
+				},
+			},
 		}
 	},
 	NestedTypes: func() *StringTypeOrderedMap {
 		nestedTypes := NewStringTypeOrderedMap()
 		nestedTypes.Set("Contracts", AuthAccountContractsType)
+		nestedTypes.Set(AccountKeysTypeName, AuthAccountKeysType)
 		return nestedTypes
 	}(),
 }
@@ -554,6 +566,91 @@ var accountTypeGetLinkTargetFunctionType = &FunctionType{
 	),
 }
 
+// AuthAccountKeysType represents the keys associated with an auth account.
+var AuthAccountKeysType = func() *CompositeType {
+
+	accountKeys := &CompositeType{
+		Identifier: AccountKeysTypeName,
+		Kind:       common.CompositeKindStructure,
+	}
+
+	var members = []*Member{
+		NewPublicFunctionMember(
+			accountKeys,
+			AccountKeysAddFunctionName,
+			authAccountKeysTypeAddFunctionType,
+			authAccountKeysTypeAddFunctionDocString,
+		),
+		NewPublicFunctionMember(
+			accountKeys,
+			AccountKeysGetFunctionName,
+			accountKeysTypeGetFunctionType,
+			accountKeysTypeGetFunctionDocString,
+		),
+		NewPublicFunctionMember(
+			accountKeys,
+			AccountKeysRevokeFunctionName,
+			authAccountKeysTypeRevokeFunctionType,
+			authAccountKeysTypeRevokeFunctionDocString,
+		),
+	}
+
+	accountKeys.Members = GetMembersAsMap(members)
+	accountKeys.Fields = getFieldNames(members)
+	return accountKeys
+}()
+
+var authAccountKeysTypeAddFunctionType = &FunctionType{
+	Parameters: []*Parameter{
+		{
+			Identifier:     AccountKeyPublicKeyField,
+			TypeAnnotation: NewTypeAnnotation(PublicKeyType),
+		},
+		{
+			Identifier:     AccountKeyHashAlgoField,
+			TypeAnnotation: NewTypeAnnotation(HashAlgorithmType),
+		},
+		{
+			Identifier:     AccountKeyWeightField,
+			TypeAnnotation: NewTypeAnnotation(&UFix64Type{}),
+		},
+	},
+	ReturnTypeAnnotation:  NewTypeAnnotation(AccountKeyType),
+	RequiredArgumentCount: RequiredArgumentCount(3),
+}
+
+var accountKeysTypeGetFunctionType = &FunctionType{
+	Parameters: []*Parameter{
+		{
+			Identifier:     AccountKeyKeyIndexField,
+			TypeAnnotation: NewTypeAnnotation(&IntType{}),
+		},
+	},
+	ReturnTypeAnnotation:  NewTypeAnnotation(&OptionalType{Type: AccountKeyType}),
+	RequiredArgumentCount: RequiredArgumentCount(1),
+}
+
+var authAccountKeysTypeRevokeFunctionType = &FunctionType{
+	Parameters: []*Parameter{
+		{
+			Identifier:     AccountKeyKeyIndexField,
+			TypeAnnotation: NewTypeAnnotation(&IntType{}),
+		},
+	},
+	ReturnTypeAnnotation:  NewTypeAnnotation(&OptionalType{Type: AccountKeyType}),
+	RequiredArgumentCount: RequiredArgumentCount(1),
+}
+
+func init() {
+	// Set the container type after initializing the AccountKeysTypes, to avoid initializing loop.
+	AuthAccountKeysType.ContainerType = AuthAccountType
+}
+
+const AccountKeysTypeName = "Keys"
+const AccountKeysAddFunctionName = "add"
+const AccountKeysGetFunctionName = "get"
+const AccountKeysRevokeFunctionName = "revoke"
+
 const accountTypeGetLinkTargetFunctionDocString = `
 Returns the target path of the capability at the given public or private path, or nil if there exists no capability at the given path.
 `
@@ -572,4 +669,20 @@ The current amount of storage used by the account in bytes
 
 const accountTypeStorageCapacityFieldDocString = `
 The storage capacity of the account in bytes
+`
+
+const accountTypeKeysFieldDocString = `
+The keys associated with the account
+`
+
+const authAccountKeysTypeAddFunctionDocString = `
+Adds the given key to the keys list of the account.
+`
+
+const accountKeysTypeGetFunctionDocString = `
+Retrieves the key at the given index of the account.
+`
+
+const authAccountKeysTypeRevokeFunctionDocString = `
+Revokes the key at the given index of the account.
 `

@@ -516,6 +516,10 @@ type StructType struct {
 func (*StructType) isType() {}
 
 func (t *StructType) ID() string {
+	if t.Location == nil {
+		return t.QualifiedIdentifier
+	}
+
 	return string(t.Location.TypeID(t.QualifiedIdentifier))
 }
 
@@ -549,6 +553,10 @@ type ResourceType struct {
 func (*ResourceType) isType() {}
 
 func (t *ResourceType) ID() string {
+	if t.Location == nil {
+		return t.QualifiedIdentifier
+	}
+
 	return string(t.Location.TypeID(t.QualifiedIdentifier))
 }
 
@@ -582,6 +590,10 @@ type EventType struct {
 func (*EventType) isType() {}
 
 func (t *EventType) ID() string {
+	if t.Location == nil {
+		return t.QualifiedIdentifier
+	}
+
 	return string(t.Location.TypeID(t.QualifiedIdentifier))
 }
 
@@ -615,6 +627,10 @@ type ContractType struct {
 func (*ContractType) isType() {}
 
 func (t *ContractType) ID() string {
+	if t.Location == nil {
+		return t.QualifiedIdentifier
+	}
+
 	return string(t.Location.TypeID(t.QualifiedIdentifier))
 }
 
@@ -659,6 +675,10 @@ type StructInterfaceType struct {
 func (*StructInterfaceType) isType() {}
 
 func (t *StructInterfaceType) ID() string {
+	if t.Location == nil {
+		return t.QualifiedIdentifier
+	}
+
 	return string(t.Location.TypeID(t.QualifiedIdentifier))
 }
 
@@ -692,6 +712,10 @@ type ResourceInterfaceType struct {
 func (*ResourceInterfaceType) isType() {}
 
 func (t *ResourceInterfaceType) ID() string {
+	if t.Location == nil {
+		return t.QualifiedIdentifier
+	}
+
 	return string(t.Location.TypeID(t.QualifiedIdentifier))
 }
 
@@ -725,6 +749,10 @@ type ContractInterfaceType struct {
 func (*ContractInterfaceType) isType() {}
 
 func (t *ContractInterfaceType) ID() string {
+	if t.Location == nil {
+		return t.QualifiedIdentifier
+	}
+
 	return string(t.Location.TypeID(t.QualifiedIdentifier))
 }
 
@@ -949,6 +977,10 @@ type EnumType struct {
 func (t *EnumType) isType() {}
 
 func (t *EnumType) ID() string {
+	if t.Location == nil {
+		return t.QualifiedIdentifier
+	}
+
 	return string(t.Location.TypeID(t.QualifiedIdentifier))
 }
 

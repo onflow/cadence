@@ -58,6 +58,7 @@ func testAccount(t *testing.T, auth bool, code string) (*interpreter.Interpreter
 			panicFunction,
 			panicFunction,
 			interpreter.AuthAccountContractsValue{},
+			&interpreter.CompositeValue{},
 		),
 		Kind: common.DeclarationKindConstant,
 	}
@@ -74,6 +75,9 @@ func testAccount(t *testing.T, auth bool, code string) (*interpreter.Interpreter
 				return 0
 			},
 			returnZero,
+			interpreter.NewPublicAccountKeysValue(
+				nil,
+			),
 		),
 		Kind: common.DeclarationKindConstant,
 	}

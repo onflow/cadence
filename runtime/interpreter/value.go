@@ -5559,13 +5559,17 @@ func (v *CompositeValue) SetMember(_ *Interpreter, locationRange LocationRange, 
 }
 
 func (v *CompositeValue) String() string {
-	fields := make([]struct {
+	return formatComposite(string(v.TypeID()), v.Fields)
+}
+
+func formatComposite(typeId string, fields *StringValueOrderedMap) string {
+	preparedFields := make([]struct {
 		Name  string
 		Value string
-	}, 0, v.Fields.Len())
+	}, 0, fields.Len())
 
-	v.Fields.Foreach(func(fieldName string, value Value) {
-		fields = append(fields,
+	fields.Foreach(func(fieldName string, value Value) {
+		preparedFields = append(preparedFields,
 			struct {
 				Name  string
 				Value string
@@ -5576,7 +5580,7 @@ func (v *CompositeValue) String() string {
 		)
 	})
 
-	return format.Composite(string(v.TypeID()), fields)
+	return format.Composite(typeId, preparedFields)
 }
 
 func (v *CompositeValue) GetField(name string) Value {
@@ -5613,6 +5617,10 @@ func (v *CompositeValue) KeyString() string {
 }
 
 func (v *CompositeValue) TypeID() common.TypeID {
+	if v.Location == nil {
+		return common.TypeID(v.QualifiedIdentifier)
+	}
+
 	return v.Location.TypeID(v.QualifiedIdentifier)
 }
 
@@ -6617,6 +6625,7 @@ type AuthAccountValue struct {
 	addPublicKeyFunction    FunctionValue
 	removePublicKeyFunction FunctionValue
 	contracts               AuthAccountContractsValue
+	keys                    *CompositeValue
 }
 
 func NewAuthAccountValue(
@@ -6626,6 +6635,7 @@ func NewAuthAccountValue(
 	addPublicKeyFunction FunctionValue,
 	removePublicKeyFunction FunctionValue,
 	contracts AuthAccountContractsValue,
+	keys *CompositeValue,
 ) AuthAccountValue {
 	return AuthAccountValue{
 		Address:                 address,
@@ -6634,6 +6644,7 @@ func NewAuthAccountValue(
 		addPublicKeyFunction:    addPublicKeyFunction,
 		removePublicKeyFunction: removePublicKeyFunction,
 		contracts:               contracts,
+		keys:                    keys,
 	}
 }
 
@@ -6762,6 +6773,8 @@ func (v AuthAccountValue) GetMember(inter *Interpreter, _ LocationRange, name st
 
 	case "contracts":
 		return v.contracts
+	case "keys":
+		return v.keys
 	}
 
 	return nil
@@ -6778,17 +6791,20 @@ type PublicAccountValue struct {
 	storageUsedGet     func(interpreter *Interpreter) UInt64Value
 	storageCapacityGet func() UInt64Value
 	Identifier         string
+	keys               *CompositeValue
 }
 
 func NewPublicAccountValue(
 	address AddressValue,
 	storageUsedGet func(interpreter *Interpreter) UInt64Value,
 	storageCapacityGet func() UInt64Value,
+	keys *CompositeValue,
 ) PublicAccountValue {
 	return PublicAccountValue{
 		Address:            address,
 		storageUsedGet:     storageUsedGet,
 		storageCapacityGet: storageCapacityGet,
+		keys:               keys,
 	}
 }
 
@@ -6857,6 +6873,8 @@ func (v PublicAccountValue) GetMember(inter *Interpreter, _ LocationRange, name 
 
 	case "getLinkTarget":
 		return inter.accountGetLinkTargetFunction(v.Address)
+	case "keys":
+		return v.keys
 	}
 
 	return nil
@@ -7089,4 +7107,77 @@ func (v LinkValue) String() string {
 		v.Type.String(),
 		v.TargetPath.String(),
 	)
+}
+
+// NewAccountKeyValue constructs an AccountKey value.
+func NewAccountKeyValue(
+	keyIndex IntValue,
+	publicKey *CompositeValue,
+	hashAlgo *CompositeValue,
+	weight UFix64Value,
+	isRevoked BoolValue,
+) *CompositeValue {
+	fields := NewStringValueOrderedMap()
+	fields.Set(sema.AccountKeyKeyIndexField, keyIndex)
+	fields.Set(sema.AccountKeyPublicKeyField, publicKey)
+	fields.Set(sema.AccountKeyHashAlgoField, hashAlgo)
+	fields.Set(sema.AccountKeyWeightField, weight)
+	fields.Set(sema.AccountKeyIsRevokedField, isRevoked)
+
+	return &CompositeValue{
+		QualifiedIdentifier: sema.AccountKeyType.QualifiedIdentifier(),
+		Kind:                sema.AccountKeyType.Kind,
+		Fields:              fields,
+	}
+}
+
+// NewPublicKeyValue constructs a PublicKey value.
+func NewPublicKeyValue(publicKey *ArrayValue, signAlgo *CompositeValue) *CompositeValue {
+
+	fields := NewStringValueOrderedMap()
+	fields.Set(sema.PublicKeyPublicKeyField, publicKey)
+	fields.Set(sema.PublicKeySignAlgoField, signAlgo)
+
+	return &CompositeValue{
+		QualifiedIdentifier: sema.PublicKeyType.QualifiedIdentifier(),
+		Kind:                sema.PublicKeyType.Kind,
+		Fields:              fields,
+	}
+}
+
+// NewAuthAccountKeysValue constructs a AuthAccount.Keys value.
+func NewAuthAccountKeysValue(addFunction FunctionValue, getFunction FunctionValue, revokeFunction FunctionValue) *CompositeValue {
+	fields := NewStringValueOrderedMap()
+	fields.Set(sema.AccountKeysAddFunctionName, addFunction)
+	fields.Set(sema.AccountKeysGetFunctionName, getFunction)
+	fields.Set(sema.AccountKeysRevokeFunctionName, revokeFunction)
+
+	return &CompositeValue{
+		QualifiedIdentifier: sema.AuthAccountKeysType.QualifiedIdentifier(),
+		Kind:                sema.AuthAccountKeysType.Kind,
+		Fields:              fields,
+	}
+}
+
+// NewPublicAccountKeysValue constructs a PublicAccount.Keys value.
+func NewPublicAccountKeysValue(getFunction FunctionValue) *CompositeValue {
+	fields := NewStringValueOrderedMap()
+	fields.Set(sema.AccountKeysGetFunctionName, getFunction)
+
+	return &CompositeValue{
+		QualifiedIdentifier: sema.PublicAccountKeysType.QualifiedIdentifier(),
+		Kind:                sema.PublicAccountKeysType.Kind,
+		Fields:              fields,
+	}
+}
+
+func NewNativeEnumCaseValue(enumType *sema.CompositeType, rawValue int) *CompositeValue {
+	fields := NewStringValueOrderedMap()
+	fields.Set(sema.EnumRawValueFieldName, NewIntValueFromInt64(int64(rawValue)))
+
+	return &CompositeValue{
+		QualifiedIdentifier: enumType.QualifiedIdentifier(),
+		Kind:                enumType.Kind,
+		Fields:              fields,
+	}
 }
