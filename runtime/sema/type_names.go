@@ -49,4 +49,11 @@ const (
 
 	Fix64TypeName  = "Fix64"
 	UFix64TypeName = "UFix64"
+
+	StringTypeName      = "String"
+	BoolTypeName        = "Bool"
+	AddressTypeName     = "Address"
+	AnyTypeName         = "Any"
+	AnyResourceTypeName = "AnyResource"
+	AnyStructTypeName   = "AnyStruct"
 )

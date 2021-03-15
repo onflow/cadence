@@ -22,9 +22,9 @@ package sema
 // NOTE: This type is only used internally and is not available in programs.
 //
 var AnyType = &SimpleType{
-	Name:          "Any",
-	QualifiedName: "Any",
-	TypeID:        "Any",
+	Name:          AnyTypeName,
+	QualifiedName: AnyTypeName,
+	TypeID:        AnyTypeName,
 	IsInvalid:     false,
 	IsResource:    false,
 	// `Any` is never a valid type in user programs
