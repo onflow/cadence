@@ -596,7 +596,7 @@ var AuthAccountKeysType = func() *CompositeType {
 	}
 
 	accountKeys.Members = GetMembersAsMap(members)
-	accountKeys.Fields = getFields(members)
+	accountKeys.Fields = getFieldNames(members)
 	return accountKeys
 }()
 

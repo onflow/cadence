@@ -208,7 +208,7 @@ func exportCompositeType(t *sema.CompositeType, results map[sema.TypeID]cadence.
 	fields := make([]cadence.Field, len(fieldMembers))
 
 	switch t.Kind {
-	case common.CompositeKindStructure, common.CompositeKindEnum:
+	case common.CompositeKindStructure:
 		result = &cadence.StructType{
 			Location:            t.Location,
 			QualifiedIdentifier: t.QualifiedIdentifier(),
@@ -234,6 +234,14 @@ func exportCompositeType(t *sema.CompositeType, results map[sema.TypeID]cadence.
 			Location:            t.Location,
 			QualifiedIdentifier: t.QualifiedIdentifier(),
 			Fields:              fields,
+		}
+
+	case common.CompositeKindEnum:
+		result = &cadence.EnumType{
+			Location:            t.Location,
+			QualifiedIdentifier: t.QualifiedIdentifier(),
+			Fields:              fields,
+			RawType:             ExportType(t.EnumRawType, results),
 		}
 
 	default:

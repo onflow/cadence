@@ -164,7 +164,7 @@ func TestAccountKeyCreation(t *testing.T) {
 					publicKey: "0102".decodeHex(),
 					signAlgo: "SignatureAlgorithmECDSA_P256"
 				),
-				hashAlgo: "HashAlgorithmSHA3_256",
+				hashAlgorithm: "HashAlgorithmSHA3_256",
 				weight: 1.7
 			)
 
@@ -227,72 +227,6 @@ func TestImportExportKeys(t *testing.T) {
 			assert.Equal(t, expectedValue, value)
 		})
 	}
-}
-
-func TestImportInvalidType(t *testing.T) {
-	t.Parallel()
-
-	runtime := NewInterpreterRuntime()
-
-	// encoded with an invalid type: 'N.PublicKey'
-	encodedArgs := []byte(`{
-		"type":"Struct",
-		"value":{
-			"id":"N.PublicKey",
-			"fields":[
-				{
-					"name":"publicKey",
-					"value":{
-						"type":"Array",
-						"value":[{"type":"UInt8","value":"1"}]}
-				},
-				{
-					"name":"signAlgo",
-					"value":{
-						"type":"Struct",
-						"value":{
-							"id":"SignatureAlgorithm",
-							"fields":[
-								{
-									"name":"rawValue",
-									"value":{"type":"Int","value":"0"}
-								}
-							]
-						}
-					}
-				}
-			]
-		}
-	}`)
-
-	code := `
-		pub fun main(key: PublicKey): PublicKey {
-			return key
-		}`
-
-	storage := newTestAccountKeyStorage()
-	runtimeInterface := getRuntimeInterface(storage)
-
-	_, err := runtime.ExecuteScript(
-		Script{
-			Source:    []byte(code),
-			Arguments: [][]byte{encodedArgs},
-		},
-		Context{
-			Interface: runtimeInterface,
-			Location:  utils.TestLocation,
-		},
-	)
-
-	require.Error(t, err)
-	require.IsType(t, Error{}, err)
-
-	runtimeErr := err.(Error)
-	require.IsType(t, &InvalidEntryPointArgumentError{}, runtimeErr.Err)
-
-	argError := runtimeErr.Err.(*InvalidEntryPointArgumentError)
-	require.Error(t, argError.Err)
-	assert.Equal(t, "failed to decode value: invalid JSON Cadence structure. invalid type ID: N.PublicKey", argError.Err.Error())
 }
 
 var accountKeyA = AccountKey{
@@ -407,7 +341,7 @@ func TestAuthAccountAddPublicKey(t *testing.T) {
 						let acct = AuthAccount(payer: signer)	
 						acct.keys.add(
 							publicKey: key,
-							hashAlgo: HashAlgorithm.SHA3_256,
+							hashAlgorithm: HashAlgorithm.SHA3_256,
 							weight: 100.0
 						)
 					}
@@ -428,7 +362,7 @@ func TestAuthAccountAddPublicKey(t *testing.T) {
 						for key in keys {
 							accountKeys.add(
 								publicKey: key,
-								hashAlgo: HashAlgorithm.SHA3_256,
+								hashAlgorithm: HashAlgorithm.SHA3_256,
 								weight: 100.0
 							)
 						}
@@ -612,7 +546,7 @@ func TestHashAlgorithm(t *testing.T) {
 
 	script := []byte(`
 		pub fun main(): [HashAlgorithm?] {
-			var key1: HashAlgorithm? = HashAlgorithm.KMAC128
+			var key1: HashAlgorithm? = HashAlgorithm.KMAC_128
 
 			var key2: HashAlgorithm? = HashAlgorithm(rawValue:4)
 
@@ -643,21 +577,21 @@ func TestHashAlgorithm(t *testing.T) {
 	require.IsType(t, cadence.Optional{}, array.Values[0])
 	optionalValue := array.Values[0].(cadence.Optional)
 
-	require.IsType(t, cadence.Struct{}, optionalValue.Value)
-	builtinStruct := optionalValue.Value.(cadence.Struct)
+	require.IsType(t, cadence.Enum{}, optionalValue.Value)
+	builtinStruct := optionalValue.Value.(cadence.Enum)
 
 	require.Equal(t, 1, len(builtinStruct.Fields))
-	assert.Equal(t, cadence.NewInt(HashAlgorithmKMAC128.RawValue()), builtinStruct.Fields[0])
+	assert.Equal(t, cadence.NewInt(HashAlgorithmKMAC_128.RawValue()), builtinStruct.Fields[0])
 
 	// Check key2
 	require.IsType(t, cadence.Optional{}, array.Values[1])
 	optionalValue = array.Values[1].(cadence.Optional)
 
-	require.IsType(t, cadence.Struct{}, optionalValue.Value)
-	builtinStruct = optionalValue.Value.(cadence.Struct)
+	require.IsType(t, cadence.Enum{}, optionalValue.Value)
+	builtinStruct = optionalValue.Value.(cadence.Enum)
 
 	require.Equal(t, 1, len(builtinStruct.Fields))
-	assert.Equal(t, cadence.NewInt(HashAlgorithmKMAC128.RawValue()), builtinStruct.Fields[0])
+	assert.Equal(t, cadence.NewInt(HashAlgorithmKMAC_128.RawValue()), builtinStruct.Fields[0])
 
 	// Check key3
 	require.IsType(t, cadence.Optional{}, array.Values[2])
@@ -674,7 +608,7 @@ func TestSignatureAlgorithm(t *testing.T) {
 
 	script := []byte(`
 		pub fun main(): [SignatureAlgorithm?] {
-			var key1: SignatureAlgorithm? = SignatureAlgorithm.BLSBLS12381
+			var key1: SignatureAlgorithm? = SignatureAlgorithm.BLS_BLS12381
 
 			var key2: SignatureAlgorithm? = SignatureAlgorithm(rawValue:2)
 
@@ -705,21 +639,21 @@ func TestSignatureAlgorithm(t *testing.T) {
 	require.IsType(t, cadence.Optional{}, array.Values[0])
 	optionalValue := array.Values[0].(cadence.Optional)
 
-	require.IsType(t, cadence.Struct{}, optionalValue.Value)
-	builtinStruct := optionalValue.Value.(cadence.Struct)
+	require.IsType(t, cadence.Enum{}, optionalValue.Value)
+	builtinStruct := optionalValue.Value.(cadence.Enum)
 
 	require.Equal(t, 1, len(builtinStruct.Fields))
-	assert.Equal(t, cadence.NewInt(SignatureAlgorithmBLSBLS12381.RawValue()), builtinStruct.Fields[0])
+	assert.Equal(t, cadence.NewInt(SignatureAlgorithmBLS_BLS12381.RawValue()), builtinStruct.Fields[0])
 
 	// Check key2
 	require.IsType(t, cadence.Optional{}, array.Values[1])
 	optionalValue = array.Values[1].(cadence.Optional)
 
-	require.IsType(t, cadence.Struct{}, optionalValue.Value)
-	builtinStruct = optionalValue.Value.(cadence.Struct)
+	require.IsType(t, cadence.Enum{}, optionalValue.Value)
+	builtinStruct = optionalValue.Value.(cadence.Enum)
 
 	require.Equal(t, 1, len(builtinStruct.Fields))
-	assert.Equal(t, cadence.NewInt(SignatureAlgorithmBLSBLS12381.RawValue()), builtinStruct.Fields[0])
+	assert.Equal(t, cadence.NewInt(SignatureAlgorithmBLS_BLS12381.RawValue()), builtinStruct.Fields[0])
 
 	// Check key3
 	require.IsType(t, cadence.Optional{}, array.Values[2])
@@ -730,13 +664,13 @@ func TestSignatureAlgorithm(t *testing.T) {
 
 // Utility methods and types
 
-var AccountKeyType = ExportedBuiltinType(sema.AccountKeyType)
-var PublicKeyType = ExportedBuiltinType(sema.PublicKeyType)
-var SignAlgoType = ExportedBuiltinType(sema.SignatureAlgorithmType)
-var HashAlgoType = ExportedBuiltinType(sema.HashAlgorithmType)
+var AccountKeyType = ExportedBuiltinType(sema.AccountKeyType).(*cadence.StructType)
+var PublicKeyType = ExportedBuiltinType(sema.PublicKeyType).(*cadence.StructType)
+var SignAlgoType = ExportedBuiltinType(sema.SignatureAlgorithmType).(*cadence.EnumType)
+var HashAlgoType = ExportedBuiltinType(sema.HashAlgorithmType).(*cadence.EnumType)
 
-func ExportedBuiltinType(internalType sema.Type) *cadence.StructType {
-	return ExportType(internalType, map[sema.TypeID]cadence.Type{}).(*cadence.StructType)
+func ExportedBuiltinType(internalType sema.Type) cadence.Type {
+	return ExportType(internalType, map[sema.TypeID]cadence.Type{})
 }
 
 func publicKeyExportedValue(keyBytes []byte, signAlgo sema.SignatureAlgorithm) cadence.Struct {
@@ -745,7 +679,7 @@ func publicKeyExportedValue(keyBytes []byte, signAlgo sema.SignatureAlgorithm) c
 		byteArray[index] = cadence.NewUInt8(value)
 	}
 
-	signAlgoValue := cadence.NewStruct([]cadence.Value{
+	signAlgoValue := cadence.NewEnum([]cadence.Value{
 		cadence.NewInt(signAlgo.RawValue()),
 	}).WithType(SignAlgoType)
 
@@ -782,7 +716,7 @@ func accountKeyExportedValue(
 			publicKeyExportedValue(publicKeyBytes, signAlgo),
 
 			// Hash algo
-			cadence.NewStruct([]cadence.Value{
+			cadence.NewEnum([]cadence.Value{
 				cadence.NewInt(hashAlgo.RawValue()),
 			}).WithType(HashAlgoType),
 
@@ -857,12 +791,12 @@ func addAuthAccountKey(t *testing.T, runtime Runtime, runtimeInterface *testRunt
 					prepare(signer: AuthAccount) {
 						let key = PublicKey(
 							publicKey: "010203".decodeHex(),
-							signAlgo: SignatureAlgorithm.ECDSA_P256
+							signatureAlgorithm: SignatureAlgorithm.ECDSA_P256
 						)
 
 						var addedKey: AccountKey = signer.keys.add(
 							publicKey: key,
-							hashAlgo: HashAlgorithm.SHA3_256,
+							hashAlgorithm: HashAlgorithm.SHA3_256,
 							weight: 100.0
 						)
 					}

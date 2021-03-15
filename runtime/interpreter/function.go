@@ -26,8 +26,6 @@ import (
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/sema"
-
-	. "github.com/onflow/cadence/runtime/trampoline"
 )
 
 // Invocation
@@ -46,7 +44,7 @@ type Invocation struct {
 type FunctionValue interface {
 	Value
 	isFunctionValue()
-	Invoke(Invocation) Trampoline
+	Invoke(Invocation) Value
 }
 
 // InterpretedFunctionValue
@@ -104,13 +102,13 @@ func (InterpretedFunctionValue) SetModified(_ bool) {
 
 func (InterpretedFunctionValue) isFunctionValue() {}
 
-func (f InterpretedFunctionValue) Invoke(invocation Invocation) Trampoline {
+func (f InterpretedFunctionValue) Invoke(invocation Invocation) Value {
 	return f.Interpreter.invokeInterpretedFunction(f, invocation)
 }
 
 // HostFunctionValue
 
-type HostFunction func(invocation Invocation) Trampoline
+type HostFunction func(invocation Invocation) Value
 
 type HostFunctionValue struct {
 	Function HostFunction
@@ -168,7 +166,7 @@ func (HostFunctionValue) SetModified(_ bool) {
 
 func (HostFunctionValue) isFunctionValue() {}
 
-func (f HostFunctionValue) Invoke(invocation Invocation) Trampoline {
+func (f HostFunctionValue) Invoke(invocation Invocation) Value {
 	return f.Function(invocation)
 }
 
@@ -229,7 +227,7 @@ func (BoundFunctionValue) SetModified(_ bool) {
 
 func (BoundFunctionValue) isFunctionValue() {}
 
-func (f BoundFunctionValue) Invoke(invocation Invocation) Trampoline {
+func (f BoundFunctionValue) Invoke(invocation Invocation) Value {
 	invocation.Self = f.Self
 	return f.Function.Invoke(invocation)
 }

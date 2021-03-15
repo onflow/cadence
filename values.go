@@ -1239,3 +1239,38 @@ func (v Capability) String() string {
 		v.Path.String(),
 	)
 }
+
+// Enum
+type Enum struct {
+	EnumType *EnumType
+	Fields   []Value
+}
+
+func NewEnum(fields []Value) Enum {
+	return Enum{Fields: fields}
+}
+
+func (Enum) isValue() {}
+
+func (v Enum) Type() Type {
+	return v.EnumType
+}
+
+func (v Enum) WithType(typ *EnumType) Enum {
+	v.EnumType = typ
+	return v
+}
+
+func (v Enum) ToGoValue() interface{} {
+	ret := make([]interface{}, len(v.Fields))
+
+	for i, field := range v.Fields {
+		ret[i] = field.ToGoValue()
+	}
+
+	return ret
+}
+
+func (v Enum) String() string {
+	return formatComposite(v.EnumType.ID(), v.EnumType.Fields, v.Fields)
+}

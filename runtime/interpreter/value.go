@@ -35,7 +35,6 @@ import (
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/format"
 	"github.com/onflow/cadence/runtime/sema"
-	"github.com/onflow/cadence/runtime/trampoline"
 )
 
 // Value
@@ -83,7 +82,7 @@ type EquatableValue interface {
 // DestroyableValue
 
 type DestroyableValue interface {
-	Destroy(interpreter *Interpreter, locationRange LocationRange) trampoline.Trampoline
+	Destroy(interpreter *Interpreter, locationRange LocationRange)
 }
 
 // HasKeyString
@@ -426,28 +425,25 @@ func (v *StringValue) GetMember(_ *Interpreter, _ LocationRange, name string) Va
 
 	case "concat":
 		return NewHostFunctionValue(
-			func(invocation Invocation) trampoline.Trampoline {
+			func(invocation Invocation) Value {
 				otherValue := invocation.Arguments[0].(ConcatenatableValue)
-				result := v.Concat(otherValue)
-				return trampoline.Done{Result: result}
+				return v.Concat(otherValue)
 			},
 		)
 
 	case "slice":
 		return NewHostFunctionValue(
-			func(invocation Invocation) trampoline.Trampoline {
+			func(invocation Invocation) Value {
 				from := invocation.Arguments[0].(IntValue)
 				to := invocation.Arguments[1].(IntValue)
-				result := v.Slice(from, to)
-				return trampoline.Done{Result: result}
+				return v.Slice(from, to)
 			},
 		)
 
 	case "decodeHex":
 		return NewHostFunctionValue(
-			func(invocation Invocation) trampoline.Trampoline {
-				result := v.DecodeHex()
-				return trampoline.Done{Result: result}
+			func(invocation Invocation) Value {
+				return v.DecodeHex()
 			},
 		)
 	}
@@ -475,8 +471,8 @@ func (v *StringValue) DecodeHex() *ArrayValue {
 	for i, b := range bs {
 		values[i] = UInt8Value(b)
 	}
-	result := NewArrayValueUnownedNonCopying(values...)
-	return result
+
+	return NewArrayValueUnownedNonCopying(values...)
 }
 
 func (*StringValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
@@ -582,15 +578,10 @@ func (v *ArrayValue) SetModified(modified bool) {
 	v.modified = modified
 }
 
-func (v *ArrayValue) Destroy(interpreter *Interpreter, locationRange LocationRange) trampoline.Trampoline {
-	var result trampoline.Trampoline = trampoline.Done{}
+func (v *ArrayValue) Destroy(interpreter *Interpreter, locationRange LocationRange) {
 	for _, value := range v.Values {
-		capturedValue := value
-		result = result.FlatMap(func(_ interface{}) trampoline.Trampoline {
-			return capturedValue.(DestroyableValue).Destroy(interpreter, locationRange)
-		})
+		maybeDestroy(interpreter, locationRange, value)
 	}
-	return result
 }
 
 func (v *ArrayValue) Concat(other ConcatenatableValue) Value {
@@ -703,61 +694,56 @@ func (v *ArrayValue) GetMember(_ *Interpreter, _ LocationRange, name string) Val
 
 	case "append":
 		return NewHostFunctionValue(
-			func(invocation Invocation) trampoline.Trampoline {
+			func(invocation Invocation) Value {
 				v.Append(invocation.Arguments[0])
-				return trampoline.Done{Result: VoidValue{}}
+				return VoidValue{}
 			},
 		)
 
 	case "concat":
 		return NewHostFunctionValue(
-			func(invocation Invocation) trampoline.Trampoline {
+			func(invocation Invocation) Value {
 				otherArray := invocation.Arguments[0].(ConcatenatableValue)
-				result := v.Concat(otherArray)
-				return trampoline.Done{Result: result}
+				return v.Concat(otherArray)
 			},
 		)
 
 	case "insert":
 		return NewHostFunctionValue(
-			func(invocation Invocation) trampoline.Trampoline {
+			func(invocation Invocation) Value {
 				i := invocation.Arguments[0].(NumberValue).ToInt()
 				element := invocation.Arguments[1]
 				v.Insert(i, element)
-				return trampoline.Done{Result: VoidValue{}}
+				return VoidValue{}
 			},
 		)
 
 	case "remove":
 		return NewHostFunctionValue(
-			func(invocation Invocation) trampoline.Trampoline {
+			func(invocation Invocation) Value {
 				i := invocation.Arguments[0].(NumberValue).ToInt()
-				result := v.Remove(i)
-				return trampoline.Done{Result: result}
+				return v.Remove(i)
 			},
 		)
 
 	case "removeFirst":
 		return NewHostFunctionValue(
-			func(invocation Invocation) trampoline.Trampoline {
-				result := v.RemoveFirst()
-				return trampoline.Done{Result: result}
+			func(invocation Invocation) Value {
+				return v.RemoveFirst()
 			},
 		)
 
 	case "removeLast":
 		return NewHostFunctionValue(
-			func(invocation Invocation) trampoline.Trampoline {
-				result := v.RemoveLast()
-				return trampoline.Done{Result: result}
+			func(invocation Invocation) Value {
+				return v.RemoveLast()
 			},
 		)
 
 	case "contains":
 		return NewHostFunctionValue(
-			func(invocation Invocation) trampoline.Trampoline {
-				result := v.Contains(invocation.Arguments[0])
-				return trampoline.Done{Result: result}
+			func(invocation Invocation) Value {
+				return v.Contains(invocation.Arguments[0])
 			},
 		)
 
@@ -823,7 +809,7 @@ func NewIntValueFromBigInt(value *big.Int) IntValue {
 	return IntValue{BigInt: value}
 }
 
-func ConvertInt(value Value, _ *Interpreter) Value {
+func ConvertInt(value Value) IntValue {
 	switch value := value.(type) {
 	case BigNumberValue:
 		return NewIntValueFromBigInt(value.ToBigInt())
@@ -1017,17 +1003,15 @@ func (v IntValue) GetMember(_ *Interpreter, _ LocationRange, name string) Value 
 
 	case sema.ToStringFunctionName:
 		return NewHostFunctionValue(
-			func(invocation Invocation) trampoline.Trampoline {
-				result := NewStringValue(v.String())
-				return trampoline.Done{Result: result}
+			func(invocation Invocation) Value {
+				return NewStringValue(v.String())
 			},
 		)
 
 	case sema.ToBigEndianBytesFunctionName:
 		return NewHostFunctionValue(
-			func(invocation Invocation) trampoline.Trampoline {
-				result := ByteSliceToByteArrayValue(v.ToBigEndianBytes())
-				return trampoline.Done{Result: result}
+			func(invocation Invocation) Value {
+				return ByteSliceToByteArrayValue(v.ToBigEndianBytes())
 			},
 		)
 	}
@@ -1196,7 +1180,7 @@ func (v Int8Value) Equal(_ *Interpreter, other Value) BoolValue {
 	return v == otherInt8
 }
 
-func ConvertInt8(value Value, _ *Interpreter) Value {
+func ConvertInt8(value Value) Int8Value {
 	var res int8
 
 	switch value := value.(type) {
@@ -1255,17 +1239,15 @@ func (v Int8Value) GetMember(_ *Interpreter, _ LocationRange, name string) Value
 
 	case sema.ToStringFunctionName:
 		return NewHostFunctionValue(
-			func(invocation Invocation) trampoline.Trampoline {
-				result := NewStringValue(v.String())
-				return trampoline.Done{Result: result}
+			func(invocation Invocation) Value {
+				return NewStringValue(v.String())
 			},
 		)
 
 	case sema.ToBigEndianBytesFunctionName:
 		return NewHostFunctionValue(
-			func(invocation Invocation) trampoline.Trampoline {
-				result := ByteSliceToByteArrayValue(v.ToBigEndianBytes())
-				return trampoline.Done{Result: result}
+			func(invocation Invocation) Value {
+				return ByteSliceToByteArrayValue(v.ToBigEndianBytes())
 			},
 		)
 	}
@@ -1434,7 +1416,7 @@ func (v Int16Value) Equal(_ *Interpreter, other Value) BoolValue {
 	return v == otherInt16
 }
 
-func ConvertInt16(value Value, _ *Interpreter) Value {
+func ConvertInt16(value Value) Int16Value {
 	var res int16
 
 	switch value := value.(type) {
@@ -1493,17 +1475,15 @@ func (v Int16Value) GetMember(_ *Interpreter, _ LocationRange, name string) Valu
 
 	case sema.ToStringFunctionName:
 		return NewHostFunctionValue(
-			func(invocation Invocation) trampoline.Trampoline {
-				result := NewStringValue(v.String())
-				return trampoline.Done{Result: result}
+			func(invocation Invocation) Value {
+				return NewStringValue(v.String())
 			},
 		)
 
 	case sema.ToBigEndianBytesFunctionName:
 		return NewHostFunctionValue(
-			func(invocation Invocation) trampoline.Trampoline {
-				result := ByteSliceToByteArrayValue(v.ToBigEndianBytes())
-				return trampoline.Done{Result: result}
+			func(invocation Invocation) Value {
+				return ByteSliceToByteArrayValue(v.ToBigEndianBytes())
 			},
 		)
 	}
@@ -1674,7 +1654,7 @@ func (v Int32Value) Equal(_ *Interpreter, other Value) BoolValue {
 	return v == otherInt32
 }
 
-func ConvertInt32(value Value, _ *Interpreter) Value {
+func ConvertInt32(value Value) Int32Value {
 	var res int32
 
 	switch value := value.(type) {
@@ -1733,17 +1713,15 @@ func (v Int32Value) GetMember(_ *Interpreter, _ LocationRange, name string) Valu
 
 	case sema.ToStringFunctionName:
 		return NewHostFunctionValue(
-			func(invocation Invocation) trampoline.Trampoline {
-				result := NewStringValue(v.String())
-				return trampoline.Done{Result: result}
+			func(invocation Invocation) Value {
+				return NewStringValue(v.String())
 			},
 		)
 
 	case sema.ToBigEndianBytesFunctionName:
 		return NewHostFunctionValue(
-			func(invocation Invocation) trampoline.Trampoline {
-				result := ByteSliceToByteArrayValue(v.ToBigEndianBytes())
-				return trampoline.Done{Result: result}
+			func(invocation Invocation) Value {
+				return ByteSliceToByteArrayValue(v.ToBigEndianBytes())
 			},
 		)
 	}
@@ -1918,7 +1896,7 @@ func (v Int64Value) Equal(_ *Interpreter, other Value) BoolValue {
 	return v == otherInt64
 }
 
-func ConvertInt64(value Value, _ *Interpreter) Value {
+func ConvertInt64(value Value) Int64Value {
 	var res int64
 
 	switch value := value.(type) {
@@ -1972,17 +1950,15 @@ func (v Int64Value) GetMember(_ *Interpreter, _ LocationRange, name string) Valu
 
 	case sema.ToStringFunctionName:
 		return NewHostFunctionValue(
-			func(invocation Invocation) trampoline.Trampoline {
-				result := NewStringValue(v.String())
-				return trampoline.Done{Result: result}
+			func(invocation Invocation) Value {
+				return NewStringValue(v.String())
 			},
 		)
 
 	case sema.ToBigEndianBytesFunctionName:
 		return NewHostFunctionValue(
-			func(invocation Invocation) trampoline.Trampoline {
-				result := ByteSliceToByteArrayValue(v.ToBigEndianBytes())
-				return trampoline.Done{Result: result}
+			func(invocation Invocation) Value {
+				return ByteSliceToByteArrayValue(v.ToBigEndianBytes())
 			},
 		)
 	}
@@ -2196,7 +2172,7 @@ func (v Int128Value) Equal(_ *Interpreter, other Value) BoolValue {
 	return cmp == 0
 }
 
-func ConvertInt128(value Value, _ *Interpreter) Value {
+func ConvertInt128(value Value) Int128Value {
 	var v *big.Int
 
 	switch value := value.(type) {
@@ -2271,17 +2247,15 @@ func (v Int128Value) GetMember(_ *Interpreter, _ LocationRange, name string) Val
 
 	case sema.ToStringFunctionName:
 		return NewHostFunctionValue(
-			func(invocation Invocation) trampoline.Trampoline {
-				result := NewStringValue(v.String())
-				return trampoline.Done{Result: result}
+			func(invocation Invocation) Value {
+				return NewStringValue(v.String())
 			},
 		)
 
 	case sema.ToBigEndianBytesFunctionName:
 		return NewHostFunctionValue(
-			func(invocation Invocation) trampoline.Trampoline {
-				result := ByteSliceToByteArrayValue(v.ToBigEndianBytes())
-				return trampoline.Done{Result: result}
+			func(invocation Invocation) Value {
+				return ByteSliceToByteArrayValue(v.ToBigEndianBytes())
 			},
 		)
 	}
@@ -2494,7 +2468,7 @@ func (v Int256Value) Equal(_ *Interpreter, other Value) BoolValue {
 	return cmp == 0
 }
 
-func ConvertInt256(value Value, _ *Interpreter) Value {
+func ConvertInt256(value Value) Int256Value {
 	var v *big.Int
 
 	switch value := value.(type) {
@@ -2569,17 +2543,15 @@ func (v Int256Value) GetMember(_ *Interpreter, _ LocationRange, name string) Val
 
 	case sema.ToStringFunctionName:
 		return NewHostFunctionValue(
-			func(invocation Invocation) trampoline.Trampoline {
-				result := NewStringValue(v.String())
-				return trampoline.Done{Result: result}
+			func(invocation Invocation) Value {
+				return NewStringValue(v.String())
 			},
 		)
 
 	case sema.ToBigEndianBytesFunctionName:
 		return NewHostFunctionValue(
-			func(invocation Invocation) trampoline.Trampoline {
-				result := ByteSliceToByteArrayValue(v.ToBigEndianBytes())
-				return trampoline.Done{Result: result}
+			func(invocation Invocation) Value {
+				return ByteSliceToByteArrayValue(v.ToBigEndianBytes())
 			},
 		)
 	}
@@ -2609,7 +2581,7 @@ func NewUIntValueFromBigInt(value *big.Int) UIntValue {
 	return UIntValue{BigInt: value}
 }
 
-func ConvertUInt(value Value, _ *Interpreter) Value {
+func ConvertUInt(value Value) UIntValue {
 	switch value := value.(type) {
 	case BigNumberValue:
 		v := value.ToBigInt()
@@ -2813,17 +2785,15 @@ func (v UIntValue) GetMember(_ *Interpreter, _ LocationRange, name string) Value
 
 	case sema.ToStringFunctionName:
 		return NewHostFunctionValue(
-			func(invocation Invocation) trampoline.Trampoline {
-				result := NewStringValue(v.String())
-				return trampoline.Done{Result: result}
+			func(invocation Invocation) Value {
+				return NewStringValue(v.String())
 			},
 		)
 
 	case sema.ToBigEndianBytesFunctionName:
 		return NewHostFunctionValue(
-			func(invocation Invocation) trampoline.Trampoline {
-				result := ByteSliceToByteArrayValue(v.ToBigEndianBytes())
-				return trampoline.Done{Result: result}
+			func(invocation Invocation) Value {
+				return ByteSliceToByteArrayValue(v.ToBigEndianBytes())
 			},
 		)
 	}
@@ -2960,7 +2930,7 @@ func (v UInt8Value) Equal(_ *Interpreter, other Value) BoolValue {
 	return v == otherUInt8
 }
 
-func ConvertUInt8(value Value, _ *Interpreter) Value {
+func ConvertUInt8(value Value) UInt8Value {
 	var res uint8
 
 	switch value := value.(type) {
@@ -3019,17 +2989,15 @@ func (v UInt8Value) GetMember(_ *Interpreter, _ LocationRange, name string) Valu
 
 	case sema.ToStringFunctionName:
 		return NewHostFunctionValue(
-			func(invocation Invocation) trampoline.Trampoline {
-				result := NewStringValue(v.String())
-				return trampoline.Done{Result: result}
+			func(invocation Invocation) Value {
+				return NewStringValue(v.String())
 			},
 		)
 
 	case sema.ToBigEndianBytesFunctionName:
 		return NewHostFunctionValue(
-			func(invocation Invocation) trampoline.Trampoline {
-				result := ByteSliceToByteArrayValue(v.ToBigEndianBytes())
-				return trampoline.Done{Result: result}
+			func(invocation Invocation) Value {
+				return ByteSliceToByteArrayValue(v.ToBigEndianBytes())
 			},
 		)
 	}
@@ -3164,7 +3132,7 @@ func (v UInt16Value) Equal(_ *Interpreter, other Value) BoolValue {
 	return v == otherUInt16
 }
 
-func ConvertUInt16(value Value, _ *Interpreter) Value {
+func ConvertUInt16(value Value) UInt16Value {
 	var res uint16
 
 	switch value := value.(type) {
@@ -3223,17 +3191,15 @@ func (v UInt16Value) GetMember(_ *Interpreter, _ LocationRange, name string) Val
 
 	case sema.ToStringFunctionName:
 		return NewHostFunctionValue(
-			func(invocation Invocation) trampoline.Trampoline {
-				result := NewStringValue(v.String())
-				return trampoline.Done{Result: result}
+			func(invocation Invocation) Value {
+				return NewStringValue(v.String())
 			},
 		)
 
 	case sema.ToBigEndianBytesFunctionName:
 		return NewHostFunctionValue(
-			func(invocation Invocation) trampoline.Trampoline {
-				result := ByteSliceToByteArrayValue(v.ToBigEndianBytes())
-				return trampoline.Done{Result: result}
+			func(invocation Invocation) Value {
+				return ByteSliceToByteArrayValue(v.ToBigEndianBytes())
 			},
 		)
 	}
@@ -3372,7 +3338,7 @@ func (v UInt32Value) Equal(_ *Interpreter, other Value) BoolValue {
 	return v == otherUInt32
 }
 
-func ConvertUInt32(value Value, _ *Interpreter) Value {
+func ConvertUInt32(value Value) UInt32Value {
 	var res uint32
 
 	switch value := value.(type) {
@@ -3431,17 +3397,15 @@ func (v UInt32Value) GetMember(_ *Interpreter, _ LocationRange, name string) Val
 
 	case sema.ToStringFunctionName:
 		return NewHostFunctionValue(
-			func(invocation Invocation) trampoline.Trampoline {
-				result := NewStringValue(v.String())
-				return trampoline.Done{Result: result}
+			func(invocation Invocation) Value {
+				return NewStringValue(v.String())
 			},
 		)
 
 	case sema.ToBigEndianBytesFunctionName:
 		return NewHostFunctionValue(
-			func(invocation Invocation) trampoline.Trampoline {
-				result := ByteSliceToByteArrayValue(v.ToBigEndianBytes())
-				return trampoline.Done{Result: result}
+			func(invocation Invocation) Value {
+				return ByteSliceToByteArrayValue(v.ToBigEndianBytes())
 			},
 		)
 	}
@@ -3585,7 +3549,7 @@ func (v UInt64Value) Equal(_ *Interpreter, other Value) BoolValue {
 	return v == otherUInt64
 }
 
-func ConvertUInt64(value Value, _ *Interpreter) Value {
+func ConvertUInt64(value Value) UInt64Value {
 	var res uint64
 
 	switch value := value.(type) {
@@ -3642,17 +3606,15 @@ func (v UInt64Value) GetMember(_ *Interpreter, _ LocationRange, name string) Val
 
 	case sema.ToStringFunctionName:
 		return NewHostFunctionValue(
-			func(invocation Invocation) trampoline.Trampoline {
-				result := NewStringValue(v.String())
-				return trampoline.Done{Result: result}
+			func(invocation Invocation) Value {
+				return NewStringValue(v.String())
 			},
 		)
 
 	case sema.ToBigEndianBytesFunctionName:
 		return NewHostFunctionValue(
-			func(invocation Invocation) trampoline.Trampoline {
-				result := ByteSliceToByteArrayValue(v.ToBigEndianBytes())
-				return trampoline.Done{Result: result}
+			func(invocation Invocation) Value {
+				return ByteSliceToByteArrayValue(v.ToBigEndianBytes())
 			},
 		)
 	}
@@ -3837,7 +3799,7 @@ func (v UInt128Value) Equal(_ *Interpreter, other Value) BoolValue {
 	return cmp == 0
 }
 
-func ConvertUInt128(value Value, _ *Interpreter) Value {
+func ConvertUInt128(value Value) UInt128Value {
 	var v *big.Int
 
 	switch value := value.(type) {
@@ -3912,16 +3874,14 @@ func (v UInt128Value) GetMember(_ *Interpreter, _ LocationRange, name string) Va
 
 	case sema.ToStringFunctionName:
 		return NewHostFunctionValue(
-			func(invocation Invocation) trampoline.Trampoline {
-				result := NewStringValue(v.String())
-				return trampoline.Done{Result: result}
+			func(invocation Invocation) Value {
+				return NewStringValue(v.String())
 			},
 		)
 	case sema.ToBigEndianBytesFunctionName:
 		return NewHostFunctionValue(
-			func(invocation Invocation) trampoline.Trampoline {
-				result := ByteSliceToByteArrayValue(v.ToBigEndianBytes())
-				return trampoline.Done{Result: result}
+			func(invocation Invocation) Value {
+				return ByteSliceToByteArrayValue(v.ToBigEndianBytes())
 			},
 		)
 	}
@@ -4104,7 +4064,7 @@ func (v UInt256Value) Equal(_ *Interpreter, other Value) BoolValue {
 	return cmp == 0
 }
 
-func ConvertUInt256(value Value, _ *Interpreter) Value {
+func ConvertUInt256(value Value) UInt256Value {
 	var v *big.Int
 
 	switch value := value.(type) {
@@ -4179,17 +4139,15 @@ func (v UInt256Value) GetMember(_ *Interpreter, _ LocationRange, name string) Va
 
 	case sema.ToStringFunctionName:
 		return NewHostFunctionValue(
-			func(invocation Invocation) trampoline.Trampoline {
-				result := NewStringValue(v.String())
-				return trampoline.Done{Result: result}
+			func(invocation Invocation) Value {
+				return NewStringValue(v.String())
 			},
 		)
 
 	case sema.ToBigEndianBytesFunctionName:
 		return NewHostFunctionValue(
-			func(invocation Invocation) trampoline.Trampoline {
-				result := ByteSliceToByteArrayValue(v.ToBigEndianBytes())
-				return trampoline.Done{Result: result}
+			func(invocation Invocation) Value {
+				return ByteSliceToByteArrayValue(v.ToBigEndianBytes())
 			},
 		)
 	}
@@ -4312,8 +4270,8 @@ func (v Word8Value) Equal(_ *Interpreter, other Value) BoolValue {
 	return v == otherWord8
 }
 
-func ConvertWord8(value Value, interpreter *Interpreter) Value {
-	return Word8Value(ConvertUInt8(value, interpreter).(UInt8Value))
+func ConvertWord8(value Value) Word8Value {
+	return Word8Value(ConvertUInt8(value))
 }
 
 func (v Word8Value) BitwiseOr(other IntegerValue) IntegerValue {
@@ -4346,17 +4304,15 @@ func (v Word8Value) GetMember(_ *Interpreter, _ LocationRange, name string) Valu
 
 	case sema.ToStringFunctionName:
 		return NewHostFunctionValue(
-			func(invocation Invocation) trampoline.Trampoline {
-				result := NewStringValue(v.String())
-				return trampoline.Done{Result: result}
+			func(invocation Invocation) Value {
+				return NewStringValue(v.String())
 			},
 		)
 
 	case sema.ToBigEndianBytesFunctionName:
 		return NewHostFunctionValue(
-			func(invocation Invocation) trampoline.Trampoline {
-				result := ByteSliceToByteArrayValue(v.ToBigEndianBytes())
-				return trampoline.Done{Result: result}
+			func(invocation Invocation) Value {
+				return ByteSliceToByteArrayValue(v.ToBigEndianBytes())
 			},
 		)
 	}
@@ -4477,8 +4433,8 @@ func (v Word16Value) Equal(_ *Interpreter, other Value) BoolValue {
 	return v == otherWord16
 }
 
-func ConvertWord16(value Value, interpreter *Interpreter) Value {
-	return Word16Value(ConvertUInt16(value, interpreter).(UInt16Value))
+func ConvertWord16(value Value) Word16Value {
+	return Word16Value(ConvertUInt16(value))
 }
 
 func (v Word16Value) BitwiseOr(other IntegerValue) IntegerValue {
@@ -4511,17 +4467,15 @@ func (v Word16Value) GetMember(_ *Interpreter, _ LocationRange, name string) Val
 
 	case sema.ToStringFunctionName:
 		return NewHostFunctionValue(
-			func(invocation Invocation) trampoline.Trampoline {
-				result := NewStringValue(v.String())
-				return trampoline.Done{Result: result}
+			func(invocation Invocation) Value {
+				return NewStringValue(v.String())
 			},
 		)
 
 	case sema.ToBigEndianBytesFunctionName:
 		return NewHostFunctionValue(
-			func(invocation Invocation) trampoline.Trampoline {
-				result := ByteSliceToByteArrayValue(v.ToBigEndianBytes())
-				return trampoline.Done{Result: result}
+			func(invocation Invocation) Value {
+				return ByteSliceToByteArrayValue(v.ToBigEndianBytes())
 			},
 		)
 	}
@@ -4646,8 +4600,8 @@ func (v Word32Value) Equal(_ *Interpreter, other Value) BoolValue {
 	return v == otherWord32
 }
 
-func ConvertWord32(value Value, interpreter *Interpreter) Value {
-	return Word32Value(ConvertUInt32(value, interpreter).(UInt32Value))
+func ConvertWord32(value Value) Word32Value {
+	return Word32Value(ConvertUInt32(value))
 }
 
 func (v Word32Value) BitwiseOr(other IntegerValue) IntegerValue {
@@ -4680,17 +4634,15 @@ func (v Word32Value) GetMember(_ *Interpreter, _ LocationRange, name string) Val
 
 	case sema.ToStringFunctionName:
 		return NewHostFunctionValue(
-			func(invocation Invocation) trampoline.Trampoline {
-				result := NewStringValue(v.String())
-				return trampoline.Done{Result: result}
+			func(invocation Invocation) Value {
+				return NewStringValue(v.String())
 			},
 		)
 
 	case sema.ToBigEndianBytesFunctionName:
 		return NewHostFunctionValue(
-			func(invocation Invocation) trampoline.Trampoline {
-				result := ByteSliceToByteArrayValue(v.ToBigEndianBytes())
-				return trampoline.Done{Result: result}
+			func(invocation Invocation) Value {
+				return ByteSliceToByteArrayValue(v.ToBigEndianBytes())
 			},
 		)
 	}
@@ -4815,8 +4767,8 @@ func (v Word64Value) Equal(_ *Interpreter, other Value) BoolValue {
 	return v == otherWord64
 }
 
-func ConvertWord64(value Value, interpreter *Interpreter) Value {
-	return Word64Value(ConvertUInt64(value, interpreter).(UInt64Value))
+func ConvertWord64(value Value) Word64Value {
+	return Word64Value(ConvertUInt64(value))
 }
 
 func (v Word64Value) BitwiseOr(other IntegerValue) IntegerValue {
@@ -4849,17 +4801,15 @@ func (v Word64Value) GetMember(_ *Interpreter, _ LocationRange, name string) Val
 
 	case sema.ToStringFunctionName:
 		return NewHostFunctionValue(
-			func(invocation Invocation) trampoline.Trampoline {
-				result := NewStringValue(v.String())
-				return trampoline.Done{Result: result}
+			func(invocation Invocation) Value {
+				return NewStringValue(v.String())
 			},
 		)
 
 	case sema.ToBigEndianBytesFunctionName:
 		return NewHostFunctionValue(
-			func(invocation Invocation) trampoline.Trampoline {
-				result := ByteSliceToByteArrayValue(v.ToBigEndianBytes())
-				return trampoline.Done{Result: result}
+			func(invocation Invocation) Value {
+				return ByteSliceToByteArrayValue(v.ToBigEndianBytes())
 			},
 		)
 	}
@@ -5031,7 +4981,7 @@ func (v Fix64Value) Equal(_ *Interpreter, other Value) BoolValue {
 	return v == otherFix64
 }
 
-func ConvertFix64(value Value, interpreter *Interpreter) Value {
+func ConvertFix64(value Value) Fix64Value {
 	switch value := value.(type) {
 	case Fix64Value:
 		return value
@@ -5062,11 +5012,7 @@ func ConvertFix64(value Value, interpreter *Interpreter) Value {
 		return NewFix64ValueWithInteger(int64(v))
 
 	default:
-		panic(fmt.Sprintf(
-			"can't convert %s to Fix64: %s",
-			value.DynamicType(interpreter),
-			value,
-		))
+		panic(fmt.Sprintf("can't convert Fix64: %s", value))
 	}
 }
 
@@ -5075,17 +5021,15 @@ func (v Fix64Value) GetMember(_ *Interpreter, _ LocationRange, name string) Valu
 
 	case sema.ToStringFunctionName:
 		return NewHostFunctionValue(
-			func(invocation Invocation) trampoline.Trampoline {
-				result := NewStringValue(v.String())
-				return trampoline.Done{Result: result}
+			func(invocation Invocation) Value {
+				return NewStringValue(v.String())
 			},
 		)
 
 	case sema.ToBigEndianBytesFunctionName:
 		return NewHostFunctionValue(
-			func(invocation Invocation) trampoline.Trampoline {
-				result := ByteSliceToByteArrayValue(v.ToBigEndianBytes())
-				return trampoline.Done{Result: result}
+			func(invocation Invocation) Value {
+				return ByteSliceToByteArrayValue(v.ToBigEndianBytes())
 			},
 		)
 	}
@@ -5246,7 +5190,7 @@ func (v UFix64Value) Equal(_ *Interpreter, other Value) BoolValue {
 	return v == otherUFix64
 }
 
-func ConvertUFix64(value Value, interpreter *Interpreter) Value {
+func ConvertUFix64(value Value) UFix64Value {
 	switch value := value.(type) {
 	case UFix64Value:
 		return value
@@ -5284,11 +5228,7 @@ func ConvertUFix64(value Value, interpreter *Interpreter) Value {
 		return NewUFix64ValueWithInteger(uint64(v))
 
 	default:
-		panic(fmt.Sprintf(
-			"can't convert %s to UFix64: %s",
-			value.DynamicType(interpreter),
-			value,
-		))
+		panic(fmt.Sprintf("can't convert to UFix64: %s", value))
 	}
 }
 
@@ -5297,17 +5237,15 @@ func (v UFix64Value) GetMember(_ *Interpreter, _ LocationRange, name string) Val
 
 	case sema.ToStringFunctionName:
 		return NewHostFunctionValue(
-			func(invocation Invocation) trampoline.Trampoline {
-				result := NewStringValue(v.String())
-				return trampoline.Done{Result: result}
+			func(invocation Invocation) Value {
+				return NewStringValue(v.String())
 			},
 		)
 
 	case sema.ToBigEndianBytesFunctionName:
 		return NewHostFunctionValue(
-			func(invocation Invocation) trampoline.Trampoline {
-				result := ByteSliceToByteArrayValue(v.ToBigEndianBytes())
-				return trampoline.Done{Result: result}
+			func(invocation Invocation) Value {
+				return ByteSliceToByteArrayValue(v.ToBigEndianBytes())
 			},
 		)
 	}
@@ -5333,6 +5271,7 @@ type CompositeValue struct {
 	Kind                common.CompositeKind
 	Fields              *StringValueOrderedMap
 	InjectedFields      *StringValueOrderedMap
+	ComputedFields      *StringComputedFieldOrderedMap
 	NestedValues        *StringValueOrderedMap
 	Functions           map[string]FunctionValue
 	Destructor          FunctionValue
@@ -5340,6 +5279,8 @@ type CompositeValue struct {
 	destroyed           bool
 	modified            bool
 }
+
+type ComputedField func(*Interpreter) Value
 
 func NewCompositeValue(
 	location common.Location,
@@ -5362,7 +5303,7 @@ func NewCompositeValue(
 	}
 }
 
-func (v *CompositeValue) Destroy(interpreter *Interpreter, locationRange LocationRange) trampoline.Trampoline {
+func (v *CompositeValue) Destroy(interpreter *Interpreter, locationRange LocationRange) {
 
 	interpreter = v.getInterpreter(interpreter)
 
@@ -5373,11 +5314,7 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, locationRange Locatio
 
 	destructor := v.Destructor
 
-	var tramp trampoline.Trampoline
-
-	if destructor == nil {
-		tramp = trampoline.Done{Result: VoidValue{}}
-	} else {
+	if destructor != nil {
 		invocation := Invocation{
 			Self:          v,
 			Arguments:     nil,
@@ -5386,13 +5323,11 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, locationRange Locatio
 			Interpreter:   interpreter,
 		}
 
-		tramp = destructor.Invoke(invocation)
+		destructor.Invoke(invocation)
 	}
 
-	return tramp.Then(func(_ interface{}) {
-		v.destroyed = true
-		v.modified = true
-	})
+	v.destroyed = true
+	v.modified = true
 }
 
 func (*CompositeValue) IsValue() {}
@@ -5445,6 +5380,7 @@ func (v *CompositeValue) Copy() Value {
 		Kind:                v.Kind,
 		Fields:              newFields,
 		InjectedFields:      v.InjectedFields,
+		ComputedFields:      v.ComputedFields,
 		NestedValues:        v.NestedValues,
 		Functions:           v.Functions,
 		Destructor:          v.Destructor,
@@ -5536,6 +5472,12 @@ func (v *CompositeValue) GetMember(interpreter *Interpreter, locationRange Locat
 	}
 
 	interpreter = v.getInterpreter(interpreter)
+
+	if v.ComputedFields != nil {
+		if computedField, ok := v.ComputedFields.Get(name); ok {
+			return computedField(interpreter)
+		}
+	}
 
 	// If the composite value was deserialized, dynamically link in the functions
 	// and get injected fields
@@ -5675,6 +5617,10 @@ func (v *CompositeValue) KeyString() string {
 }
 
 func (v *CompositeValue) TypeID() common.TypeID {
+	if v.Location == nil {
+		return common.TypeID(v.QualifiedIdentifier)
+	}
+
 	return v.Location.TypeID(v.QualifiedIdentifier)
 }
 
@@ -5832,32 +5778,26 @@ func (v *DictionaryValue) SetModified(modified bool) {
 	v.modified = modified
 }
 
-func (v *DictionaryValue) Destroy(inter *Interpreter, locationRange LocationRange) trampoline.Trampoline {
-	var result trampoline.Trampoline = trampoline.Done{}
-
-	maybeDestroy := func(value interface{}) {
-		destroyableValue, ok := value.(DestroyableValue)
-		if !ok {
-			return
-		}
-
-		result = result.
-			FlatMap(func(_ interface{}) trampoline.Trampoline {
-				return destroyableValue.Destroy(inter, locationRange)
-			})
+func maybeDestroy(inter *Interpreter, locationRange LocationRange, value Value) {
+	destroyableValue, ok := value.(DestroyableValue)
+	if !ok {
+		return
 	}
+
+	destroyableValue.Destroy(inter, locationRange)
+}
+
+func (v *DictionaryValue) Destroy(inter *Interpreter, locationRange LocationRange) {
 
 	for _, keyValue := range v.Keys.Values {
 		// Don't use `Entries` here: the value might be deferred and needs to be loaded
 		value := v.Get(inter, locationRange, keyValue)
-		maybeDestroy(keyValue)
-		maybeDestroy(value)
+		maybeDestroy(inter, locationRange, keyValue)
+		maybeDestroy(inter, locationRange, value)
 	}
 
 	writeDeferredKeys(inter, v.DeferredOwner, v.DeferredStorageKeyBase, v.DeferredKeys)
 	writeDeferredKeys(inter, v.DeferredOwner, v.DeferredStorageKeyBase, v.prevDeferredKeys)
-
-	return result
 }
 
 func (v *DictionaryValue) Get(inter *Interpreter, _ LocationRange, keyValue Value) Value {
@@ -5973,33 +5913,29 @@ func (v *DictionaryValue) GetMember(interpreter *Interpreter, locationRange Loca
 
 	case "remove":
 		return NewHostFunctionValue(
-			func(invocation Invocation) trampoline.Trampoline {
+			func(invocation Invocation) Value {
 				keyValue := invocation.Arguments[0]
 
-				existingValue := v.Remove(
+				return v.Remove(
 					invocation.Interpreter,
 					invocation.LocationRange,
 					keyValue,
 				)
-
-				return trampoline.Done{Result: existingValue}
 			},
 		)
 
 	case "insert":
 		return NewHostFunctionValue(
-			func(invocation Invocation) trampoline.Trampoline {
+			func(invocation Invocation) Value {
 				keyValue := invocation.Arguments[0]
 				newValue := invocation.Arguments[1]
 
-				existingValue := v.Insert(
+				return v.Insert(
 					invocation.Interpreter,
 					invocation.LocationRange,
 					keyValue,
 					newValue,
 				)
-
-				return trampoline.Done{Result: existingValue}
 			},
 		)
 	}
@@ -6163,8 +6099,8 @@ func (NilValue) SetModified(_ bool) {
 	// NO-OP
 }
 
-func (v NilValue) Destroy(_ *Interpreter, _ LocationRange) trampoline.Trampoline {
-	return trampoline.Done{}
+func (v NilValue) Destroy(_ *Interpreter, _ LocationRange) {
+	// NO-OP
 }
 
 func (NilValue) String() string {
@@ -6172,8 +6108,8 @@ func (NilValue) String() string {
 }
 
 var nilValueMapFunction = NewHostFunctionValue(
-	func(invocation Invocation) trampoline.Trampoline {
-		return trampoline.Done{Result: NilValue{}}
+	func(invocation Invocation) Value {
+		return NilValue{}
 	},
 )
 
@@ -6261,8 +6197,8 @@ func (v *SomeValue) SetModified(modified bool) {
 	v.Value.SetModified(modified)
 }
 
-func (v *SomeValue) Destroy(interpreter *Interpreter, locationRange LocationRange) trampoline.Trampoline {
-	return v.Value.(DestroyableValue).Destroy(interpreter, locationRange)
+func (v *SomeValue) Destroy(interpreter *Interpreter, locationRange LocationRange) {
+	maybeDestroy(interpreter, locationRange, v.Value)
 }
 
 func (v *SomeValue) String() string {
@@ -6273,23 +6209,22 @@ func (v *SomeValue) GetMember(_ *Interpreter, _ LocationRange, name string) Valu
 	switch name {
 	case "map":
 		return NewHostFunctionValue(
-			func(invocation Invocation) trampoline.Trampoline {
+			func(invocation Invocation) Value {
 
 				transformFunction := invocation.Arguments[0].(FunctionValue)
 				transformFunctionType := invocation.ArgumentTypes[0].(*sema.FunctionType)
 				valueType := transformFunctionType.Parameters[0].TypeAnnotation.Type
 
-				return transformFunction.
-					Invoke(Invocation{
-						Arguments:     []Value{v.Value},
-						ArgumentTypes: []sema.Type{valueType},
-						LocationRange: invocation.LocationRange,
-						Interpreter:   invocation.Interpreter,
-					}).
-					Map(func(result interface{}) interface{} {
-						newValue := result.(Value)
-						return NewSomeValueOwningNonCopying(newValue)
-					})
+				transformInvocation := Invocation{
+					Arguments:     []Value{v.Value},
+					ArgumentTypes: []sema.Type{valueType},
+					LocationRange: invocation.LocationRange,
+					Interpreter:   invocation.Interpreter,
+				}
+
+				newValue := transformFunction.Invoke(transformInvocation)
+
+				return NewSomeValueOwningNonCopying(newValue)
 			},
 		)
 	}
@@ -6572,7 +6507,7 @@ func NewAddressValueFromBytes(b []byte) AddressValue {
 	return result
 }
 
-func ConvertAddress(value Value, _ *Interpreter) Value {
+func ConvertAddress(value Value) AddressValue {
 	// TODO: https://github.com/dapperlabs/flow-go/issues/2141
 	result := AddressValue{}
 	if intValue, ok := value.(IntValue); ok {
@@ -6654,18 +6589,16 @@ func (v AddressValue) GetMember(_ *Interpreter, _ LocationRange, name string) Va
 
 	case sema.ToStringFunctionName:
 		return NewHostFunctionValue(
-			func(invocation Invocation) trampoline.Trampoline {
-				result := NewStringValue(v.String())
-				return trampoline.Done{Result: result}
+			func(invocation Invocation) Value {
+				return NewStringValue(v.String())
 			},
 		)
 
 	case sema.AddressTypeToBytesFunctionName:
 		return NewHostFunctionValue(
-			func(invocation Invocation) trampoline.Trampoline {
+			func(invocation Invocation) Value {
 				bytes := common.Address(v)
-				result := ByteSliceToByteArrayValue(bytes[:])
-				return trampoline.Done{Result: result}
+				return ByteSliceToByteArrayValue(bytes[:])
 			},
 		)
 	}
@@ -6756,8 +6689,8 @@ func (AuthAccountValue) SetModified(_ bool) {
 	// NO-OP
 }
 
-func (v AuthAccountValue) Destroy(_ *Interpreter, _ LocationRange) trampoline.Trampoline {
-	return trampoline.Done{}
+func (v AuthAccountValue) Destroy(_ *Interpreter, _ LocationRange) {
+	// NO-OP
 }
 
 func (v AuthAccountValue) String() string {
@@ -6770,7 +6703,7 @@ func accountGetCapabilityFunction(
 ) HostFunctionValue {
 
 	return NewHostFunctionValue(
-		func(invocation Invocation) trampoline.Trampoline {
+		func(invocation Invocation) Value {
 
 			path := invocation.Arguments[0].(PathValue)
 
@@ -6788,13 +6721,11 @@ func accountGetCapabilityFunction(
 				borrowStaticType = ConvertSemaToStaticType(borrowType)
 			}
 
-			capability := CapabilityValue{
+			return CapabilityValue{
 				Address:    addressValue,
 				Path:       path,
 				BorrowType: borrowStaticType,
 			}
-
-			return trampoline.Done{Result: capability}
 		},
 	)
 }
@@ -6918,8 +6849,8 @@ func (PublicAccountValue) SetModified(_ bool) {
 	// NO-OP
 }
 
-func (v PublicAccountValue) Destroy(_ *Interpreter, _ LocationRange) trampoline.Trampoline {
-	return trampoline.Done{}
+func (v PublicAccountValue) Destroy(_ *Interpreter, _ LocationRange) {
+	// NO-OP
 }
 
 func (v PublicAccountValue) String() string {
@@ -7013,8 +6944,8 @@ func (PathValue) SetModified(_ bool) {
 	// NO-OP
 }
 
-func (v PathValue) Destroy(_ *Interpreter, _ LocationRange) trampoline.Trampoline {
-	return trampoline.Done{}
+func (v PathValue) Destroy(_ *Interpreter, _ LocationRange) {
+	// NO-OP
 }
 
 func (v PathValue) String() string {
@@ -7084,13 +7015,17 @@ func (CapabilityValue) SetModified(_ bool) {
 	// NO-OP
 }
 
-func (v CapabilityValue) Destroy(_ *Interpreter, _ LocationRange) trampoline.Trampoline {
-	return trampoline.Done{}
+func (v CapabilityValue) Destroy(_ *Interpreter, _ LocationRange) {
+	// NO-OP
 }
 
 func (v CapabilityValue) String() string {
+	var borrowType string
+	if v.BorrowType != nil {
+		borrowType = v.BorrowType.String()
+	}
 	return format.Capability(
-		v.BorrowType.String(),
+		borrowType,
 		v.Address.String(),
 		v.Path.String(),
 	)
@@ -7163,8 +7098,8 @@ func (LinkValue) SetModified(_ bool) {
 	// NO-OP
 }
 
-func (v LinkValue) Destroy(_ *Interpreter, _ LocationRange) trampoline.Trampoline {
-	return trampoline.Done{}
+func (v LinkValue) Destroy(_ *Interpreter, _ LocationRange) {
+	// NO-OP
 }
 
 func (v LinkValue) String() string {

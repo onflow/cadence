@@ -26,6 +26,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence"
+	"github.com/onflow/cadence/encoding/json"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/parser2"
@@ -804,6 +805,27 @@ func TestExportCapabilityValue(t *testing.T) {
 
 		assert.Equal(t, expected, actual)
 	})
+
+	t.Run("no borrow type", func(t *testing.T) {
+
+		capability := interpreter.CapabilityValue{
+			Address: interpreter.AddressValue{0x1},
+			Path: interpreter.PathValue{
+				Domain:     common.PathDomainStorage,
+				Identifier: "foo",
+			},
+		}
+		actual := exportValueWithInterpreter(capability, nil, exportResults{})
+		expected := cadence.Capability{
+			Path: cadence.Path{
+				Domain:     "storage",
+				Identifier: "foo",
+			},
+			Address: cadence.Address{0x1},
+		}
+
+		assert.Equal(t, expected, actual)
+	})
 }
 
 func TestExportLinkValue(t *testing.T) {
@@ -904,4 +926,94 @@ var fooEventType = &cadence.EventType{
 	Location:            utils.TestLocation,
 	QualifiedIdentifier: "Foo",
 	Fields:              fooFields,
+}
+
+func TestEnumValue(t *testing.T) {
+
+	t.Parallel()
+
+	enumValue := cadence.Enum{
+		EnumType: &cadence.EnumType{
+			Location:            utils.TestLocation,
+			QualifiedIdentifier: "Direction",
+			Fields: []cadence.Field{
+				{
+					Identifier: sema.EnumRawValueFieldName,
+					Type:       cadence.IntType{},
+				},
+			},
+			RawType: cadence.IntType{},
+		},
+		Fields: []cadence.Value{
+			cadence.NewInt(3),
+		},
+	}
+
+	t.Run("test export", func(t *testing.T) {
+		script := `
+			pub fun main(): Direction {
+				return Direction.RIGHT
+			}
+
+			pub enum Direction: Int {
+				pub case UP
+				pub case DOWN
+				pub case LEFT
+				pub case RIGHT
+			}
+		`
+
+		actual := exportValueFromScript(t, script)
+		assert.Equal(t, enumValue, actual)
+	})
+
+	t.Run("test import", func(t *testing.T) {
+		script := `
+			pub fun main(dir: Direction): Direction {
+				if !dir.isInstance(Type<Direction>()) {
+					panic("Not a Direction value")
+				}
+
+				return dir
+			}
+
+			pub enum Direction: Int {
+				pub case UP
+				pub case DOWN
+				pub case LEFT
+				pub case RIGHT
+			}
+		`
+
+		actual := importAndExportValuesFromScript(t, script, enumValue)
+		assert.Equal(t, enumValue, actual)
+	})
+}
+
+func importAndExportValuesFromScript(t *testing.T, script string, arg cadence.Value) cadence.Value {
+	encodedArg, err := json.Encode(arg)
+	require.NoError(t, err)
+
+	rt := NewInterpreterRuntime()
+
+	runtimeInterface := &testRuntimeInterface{
+		decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+			return json.Decode(b)
+		},
+	}
+
+	value, err := rt.ExecuteScript(
+		Script{
+			Source:    []byte(script),
+			Arguments: [][]byte{encodedArg},
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  utils.TestLocation,
+		},
+	)
+
+	require.NoError(t, err)
+
+	return value
 }

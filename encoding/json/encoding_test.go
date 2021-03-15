@@ -1314,6 +1314,62 @@ func testAllEncodeAndDecode(t *testing.T, tests ...encodeTest) {
 	}
 }
 
+func TestDecodeInvalidType(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("empty type", func(t *testing.T) {
+		t.Parallel()
+
+		encodedValue := `
+		{
+			"type":"Struct",
+			"value":{
+				"id":"",
+				"fields":[]
+			}
+		}
+	`
+		_, err := json.Decode([]byte(encodedValue))
+		require.Error(t, err)
+		assert.Equal(t, "failed to decode value: invalid JSON Cadence structure. invalid type ID: ``", err.Error())
+	})
+
+	t.Run("undefined type", func(t *testing.T) {
+		t.Parallel()
+
+		encodedValue := `
+		{
+			"type":"Struct",
+			"value":{
+				"id":"I.Foo",
+				"fields":[]
+			}
+		}
+	`
+		_, err := json.Decode([]byte(encodedValue))
+		require.Error(t, err)
+		assert.Equal(t, "failed to decode value: invalid JSON Cadence structure. invalid type ID: `I.Foo`", err.Error())
+	})
+
+	t.Run("unknown location prefix", func(t *testing.T) {
+		t.Parallel()
+
+		encodedValue := `
+		{
+			"type":"Struct",
+			"value":{
+				"id":"N.PublicKey",
+				"fields":[]
+			}
+		}
+	`
+		_, err := json.Decode([]byte(encodedValue))
+		require.Error(t, err)
+		assert.Equal(t, "failed to decode value: invalid JSON Cadence structure. invalid type ID: `N.PublicKey`", err.Error())
+	})
+}
+
 func testEncodeAndDecode(t *testing.T, val cadence.Value, expectedJSON string) {
 	actualJSON := testEncode(t, val, expectedJSON)
 	testDecode(t, actualJSON, val)

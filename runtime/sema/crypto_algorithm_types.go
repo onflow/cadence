@@ -29,7 +29,7 @@ import (
 var SignatureAlgorithms = []NativeEnumCase{
 	SignatureAlgorithmECDSA_P256,
 	SignatureAlgorithmECDSA_Secp256k1,
-	SignatureAlgorithmBLSBLS12381,
+	SignatureAlgorithmBLS_BLS12381,
 }
 
 var HashAlgorithms = []NativeEnumCase{
@@ -37,7 +37,7 @@ var HashAlgorithms = []NativeEnumCase{
 	HashAlgorithmSHA2_384,
 	HashAlgorithmSHA3_256,
 	HashAlgorithmSHA3_384,
-	HashAlgorithmKMAC128,
+	HashAlgorithmKMAC_128,
 }
 
 var SignatureAlgorithmType = newNativeEnumType(SignatureAlgorithmTypeName, &UInt8Type{})
@@ -48,7 +48,7 @@ const (
 	// Supported signing algorithms
 	SignatureAlgorithmECDSA_P256 SignatureAlgorithm = iota
 	SignatureAlgorithmECDSA_Secp256k1
-	SignatureAlgorithmBLSBLS12381
+	SignatureAlgorithmBLS_BLS12381
 )
 
 // Name returns the string representation of this signing algorithm.
@@ -58,8 +58,8 @@ func (algo SignatureAlgorithm) Name() string {
 		return "ECDSA_P256"
 	case SignatureAlgorithmECDSA_Secp256k1:
 		return "ECDSA_Secp256k1"
-	case SignatureAlgorithmBLSBLS12381:
-		return "BLSBLS12381"
+	case SignatureAlgorithmBLS_BLS12381:
+		return "BLS_BLS12381"
 	}
 
 	panic(errors.NewUnreachableError())
@@ -75,8 +75,8 @@ func (algo SignatureAlgorithm) DocString() string {
 		return SignatureAlgorithmDocStringECDSA_P256
 	case SignatureAlgorithmECDSA_Secp256k1:
 		return SignatureAlgorithmDocStringECDSA_Secp256k1
-	case SignatureAlgorithmBLSBLS12381:
-		return SignatureAlgorithmDocStringBLSBLS12381
+	case SignatureAlgorithmBLS_BLS12381:
+		return SignatureAlgorithmDocStringBLS_BLS12381
 	}
 
 	panic(errors.NewUnreachableError())
@@ -92,7 +92,7 @@ const (
 	HashAlgorithmSHA2_384
 	HashAlgorithmSHA3_256
 	HashAlgorithmSHA3_384
-	HashAlgorithmKMAC128
+	HashAlgorithmKMAC_128
 )
 
 func (algo HashAlgorithm) Name() string {
@@ -105,8 +105,8 @@ func (algo HashAlgorithm) Name() string {
 		return "SHA3_256"
 	case HashAlgorithmSHA3_384:
 		return "SHA3_384"
-	case HashAlgorithmKMAC128:
-		return "KMAC128"
+	case HashAlgorithmKMAC_128:
+		return "KMAC_128"
 	}
 
 	panic(errors.NewUnreachableError())
@@ -126,8 +126,8 @@ func (algo HashAlgorithm) DocString() string {
 		return HashAlgorithmDocStringSHA3_256
 	case HashAlgorithmSHA3_384:
 		return HashAlgorithmDocStringSHA3_384
-	case HashAlgorithmKMAC128:
-		return HashAlgorithmDocStringKMAC128
+	case HashAlgorithmKMAC_128:
+		return HashAlgorithmDocStringKMAC_128
 	}
 
 	panic(errors.NewUnreachableError())
@@ -152,7 +152,7 @@ func newNativeEnumType(identifier string, rawType Type) *CompositeType {
 	}
 
 	accountKeyType.Members = GetMembersAsMap(members)
-	accountKeyType.Fields = getFields(members)
+	accountKeyType.Fields = getFieldNames(members)
 	return accountKeyType
 }
 
@@ -164,8 +164,8 @@ SignatureAlgorithmECDSA_P256 is Elliptic Curve Digital Signature Algorithm (ECDS
 const SignatureAlgorithmDocStringECDSA_Secp256k1 = `
 SignatureAlgorithmECDSA_Secp256k1 is Elliptic Curve Digital Signature Algorithm (ECDSA) on the secp256k1 curve
 `
-const SignatureAlgorithmDocStringBLSBLS12381 = `
-SignatureAlgorithmDocStringBLSBLS12381 is BLS Signature algorithm on BLS 12-381 curve
+const SignatureAlgorithmDocStringBLS_BLS12381 = `
+SignatureAlgorithmDocStringBLS_BLS12381 is BLS Signature algorithm on BLS 12-381 curve
 `
 
 const HashAlgorithmTypeName = "HashAlgorithm"
@@ -185,6 +185,6 @@ const HashAlgorithmDocStringSHA3_384 = `
 HashAlgorithmSHA3_384 is Secure Hashing Algorithm 3 (SHA-3) with a 384-bit digest
 `
 
-const HashAlgorithmDocStringKMAC128 = `
-HashAlgorithmKMAC128 is KECCAK Message Authentication Code with a 128-bit digest
+const HashAlgorithmDocStringKMAC_128 = `
+HashAlgorithmKMAC_128 is KECCAK Message Authentication Code with a 128-bit digest
 `

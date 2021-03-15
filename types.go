@@ -553,6 +553,10 @@ type ResourceType struct {
 func (*ResourceType) isType() {}
 
 func (t *ResourceType) ID() string {
+	if t.Location == nil {
+		return t.QualifiedIdentifier
+	}
+
 	return string(t.Location.TypeID(t.QualifiedIdentifier))
 }
 
@@ -586,6 +590,10 @@ type EventType struct {
 func (*EventType) isType() {}
 
 func (t *EventType) ID() string {
+	if t.Location == nil {
+		return t.QualifiedIdentifier
+	}
+
 	return string(t.Location.TypeID(t.QualifiedIdentifier))
 }
 
@@ -619,6 +627,10 @@ type ContractType struct {
 func (*ContractType) isType() {}
 
 func (t *ContractType) ID() string {
+	if t.Location == nil {
+		return t.QualifiedIdentifier
+	}
+
 	return string(t.Location.TypeID(t.QualifiedIdentifier))
 }
 
@@ -663,6 +675,10 @@ type StructInterfaceType struct {
 func (*StructInterfaceType) isType() {}
 
 func (t *StructInterfaceType) ID() string {
+	if t.Location == nil {
+		return t.QualifiedIdentifier
+	}
+
 	return string(t.Location.TypeID(t.QualifiedIdentifier))
 }
 
@@ -696,6 +712,10 @@ type ResourceInterfaceType struct {
 func (*ResourceInterfaceType) isType() {}
 
 func (t *ResourceInterfaceType) ID() string {
+	if t.Location == nil {
+		return t.QualifiedIdentifier
+	}
+
 	return string(t.Location.TypeID(t.QualifiedIdentifier))
 }
 
@@ -729,6 +749,10 @@ type ContractInterfaceType struct {
 func (*ContractInterfaceType) isType() {}
 
 func (t *ContractInterfaceType) ID() string {
+	if t.Location == nil {
+		return t.QualifiedIdentifier
+	}
+
 	return string(t.Location.TypeID(t.QualifiedIdentifier))
 }
 
@@ -939,4 +963,41 @@ func (PublicAccountType) isType() {}
 
 func (PublicAccountType) ID() string {
 	return "PublicAccount"
+}
+
+// EnumType
+type EnumType struct {
+	Location            common.Location
+	QualifiedIdentifier string
+	RawType             Type
+	Fields              []Field
+	Initializers        [][]Parameter
+}
+
+func (t *EnumType) isType() {}
+
+func (t *EnumType) ID() string {
+	if t.Location == nil {
+		return t.QualifiedIdentifier
+	}
+
+	return string(t.Location.TypeID(t.QualifiedIdentifier))
+}
+
+func (*EnumType) isCompositeType() {}
+
+func (t *EnumType) CompositeTypeLocation() common.Location {
+	return t.Location
+}
+
+func (t *EnumType) CompositeTypeQualifiedIdentifier() string {
+	return t.QualifiedIdentifier
+}
+
+func (t *EnumType) CompositeFields() []Field {
+	return t.Fields
+}
+
+func (t *EnumType) CompositeInitializers() [][]Parameter {
+	return t.Initializers
 }

@@ -58,7 +58,7 @@ pub fun test main() {
     let publicKeyA = PublicKey(
         publicKey:
             "db04940e18ec414664ccfd31d5d2d4ece3985acb8cb17a2025b2f1673427267968e52e2bbf3599059649d4b2cce98fdb8a3048e68abf5abe3e710129e90696ca".decodeHex(),
-        signatureAlgorithm: SignatureAlogirthm.ECDSA_P256
+        signatureAlgorithm: SignatureAlgorithm.ECDSA_P256
     )
     keyList.add(
         publicKeyA,
@@ -69,7 +69,7 @@ pub fun test main() {
     let publicKeyB = PublicKey(
         publicKey:
             "df9609ee588dd4a6f7789df8d56f03f545d4516f0c99b200d73b9a3afafc14de5d21a4fc7a2a2015719dc95c9e756cfa44f2a445151aaf42479e7120d83df956".decodeHex(),
-        signatureAlgorithm: SignatureAlogirthm.ECDSA_P256
+        signatureAlgorithm: SignatureAlgorithm.ECDSA_P256
     )
     keyList.add(
         publicKeyB,

@@ -36,11 +36,11 @@ func (checker *Checker) visitConditions(conditions []*ast.Condition) {
 	// and ensure the result is boolean
 
 	for _, condition := range conditions {
-		condition.Accept(checker)
+		checker.checkCondition(condition)
 	}
 }
 
-func (checker *Checker) VisitCondition(condition *ast.Condition) ast.Repr {
+func (checker *Checker) checkCondition(condition *ast.Condition) ast.Repr {
 
 	// check test expression is boolean
 

@@ -20,11 +20,9 @@ package stdlib
 
 import (
 	"fmt"
-
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
-	"github.com/onflow/cadence/runtime/trampoline"
 )
 
 // This file defines functions built-in to Cadence.
@@ -50,7 +48,7 @@ var AssertFunction = NewStandardLibraryFunction(
 		),
 		RequiredArgumentCount: sema.RequiredArgumentCount(1),
 	},
-	func(invocation interpreter.Invocation) trampoline.Trampoline {
+	func(invocation interpreter.Invocation) interpreter.Value {
 		result := invocation.Arguments[0].(interpreter.BoolValue)
 		if !result {
 			var message string
@@ -62,7 +60,7 @@ var AssertFunction = NewStandardLibraryFunction(
 				LocationRange: invocation.LocationRange,
 			})
 		}
-		return trampoline.Done{}
+		return interpreter.VoidValue{}
 	},
 )
 
@@ -93,7 +91,7 @@ var PanicFunction = NewStandardLibraryFunction(
 			sema.NeverType,
 		),
 	},
-	func(invocation interpreter.Invocation) trampoline.Trampoline {
+	func(invocation interpreter.Invocation) interpreter.Value {
 		message := invocation.Arguments[0].(*interpreter.StringValue)
 		panic(PanicError{
 			Message:       message.Str,
@@ -128,10 +126,9 @@ var LogFunction = NewStandardLibraryFunction(
 			sema.VoidType,
 		),
 	},
-	func(invocation interpreter.Invocation) trampoline.Trampoline {
+	func(invocation interpreter.Invocation) interpreter.Value {
 		fmt.Printf("%v\n", invocation.Arguments[0])
-		result := interpreter.VoidValue{}
-		return trampoline.Done{Result: result}
+		return interpreter.VoidValue{}
 	},
 )
 
@@ -157,15 +154,13 @@ var CreatePublicKeyFunction = NewStandardLibraryFunction(
 			},
 		},
 		ReturnTypeAnnotation:  sema.NewTypeAnnotation(sema.PublicKeyType),
-		RequiredArgumentCount: sema.RequiredArgumentCount(2),
 	},
 
-	func(invocation interpreter.Invocation) trampoline.Trampoline {
+	func(invocation interpreter.Invocation) interpreter.Value {
 		publicKey := invocation.Arguments[0].(*interpreter.ArrayValue)
 		signAlgo := invocation.Arguments[1].(*interpreter.CompositeValue)
 
-		value := interpreter.NewPublicKeyValue(publicKey, signAlgo)
-		return trampoline.Done{Result: value}
+		return interpreter.NewPublicKeyValue(publicKey, signAlgo)
 	},
 )
 

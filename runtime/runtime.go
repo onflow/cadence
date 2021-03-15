@@ -35,7 +35,6 @@ import (
 	"github.com/onflow/cadence/runtime/parser2"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
-	"github.com/onflow/cadence/runtime/trampoline"
 )
 
 type Script struct {
@@ -1011,7 +1010,7 @@ func (r *interpreterRuntime) meteringInterpreterOptions(runtimeInterface Interfa
 
 	return []interpreter.Option{
 		interpreter.WithOnStatementHandler(
-			func(_ *interpreter.Statement) {
+			func(_ *interpreter.Interpreter, _ ast.Statement) {
 				checkLimit()
 			},
 		),
@@ -1137,7 +1136,7 @@ func (r *interpreterRuntime) newCreateAccountFunction(
 	interpreterOptions []interpreter.Option,
 	checkerOptions []sema.Option,
 ) interpreter.HostFunction {
-	return func(invocation interpreter.Invocation) trampoline.Trampoline {
+	return func(invocation interpreter.Invocation) interpreter.Value {
 
 		payer, ok := invocation.Arguments[0].(interpreter.AuthAccountValue)
 		if !ok {
@@ -1166,15 +1165,13 @@ func (r *interpreterRuntime) newCreateAccountFunction(
 			},
 		)
 
-		account := r.newAuthAccountValue(
+		return r.newAuthAccountValue(
 			addressValue,
 			context,
 			runtimeStorage,
 			interpreterOptions,
 			checkerOptions,
 		)
-
-		return trampoline.Done{Result: account}
 	}
 }
 func storageUsedGetFunction(
@@ -1221,7 +1218,7 @@ func (r *interpreterRuntime) newAddPublicKeyFunction(
 	runtimeInterface Interface,
 ) interpreter.HostFunctionValue {
 	return interpreter.NewHostFunctionValue(
-		func(invocation interpreter.Invocation) trampoline.Trampoline {
+		func(invocation interpreter.Invocation) interpreter.Value {
 			publicKeyValue := invocation.Arguments[0].(*interpreter.ArrayValue)
 
 			publicKey, err := interpreter.ByteArrayValueToByteSlice(publicKeyValue)
@@ -1245,8 +1242,7 @@ func (r *interpreterRuntime) newAddPublicKeyFunction(
 				},
 			)
 
-			result := interpreter.VoidValue{}
-			return trampoline.Done{Result: result}
+			return interpreter.VoidValue{}
 		},
 	)
 }
@@ -1256,13 +1252,13 @@ func (r *interpreterRuntime) newRemovePublicKeyFunction(
 	runtimeInterface Interface,
 ) interpreter.HostFunctionValue {
 	return interpreter.NewHostFunctionValue(
-		func(invocation interpreter.Invocation) trampoline.Trampoline {
+		func(invocation interpreter.Invocation) interpreter.Value {
 			index := invocation.Arguments[0].(interpreter.IntValue)
 
 			var publicKey []byte
 			var err error
 			wrapPanic(func() {
-				publicKey, err = runtimeInterface.RemoveEncodedAccountKey(addressValue.ToAddress(), index.ToInt())
+				publicKey, err = runtimeInterface.RevokeEncodedAccountKey(addressValue.ToAddress(), index.ToInt())
 			})
 			if err != nil {
 				panic(err)
@@ -1279,8 +1275,7 @@ func (r *interpreterRuntime) newRemovePublicKeyFunction(
 				},
 			)
 
-			result := interpreter.VoidValue{}
-			return trampoline.Done{Result: result}
+			return interpreter.VoidValue{}
 		},
 	)
 }
@@ -1494,20 +1489,19 @@ func (r *interpreterRuntime) instantiateContract(
 }
 
 func (r *interpreterRuntime) newGetAccountFunction(runtimeInterface Interface, runtimeStorage *runtimeStorage) interpreter.HostFunction {
-	return func(invocation interpreter.Invocation) trampoline.Trampoline {
+	return func(invocation interpreter.Invocation) interpreter.Value {
 		accountAddress := invocation.Arguments[0].(interpreter.AddressValue)
-		publicAccount := interpreter.NewPublicAccountValue(
+		return interpreter.NewPublicAccountValue(
 			accountAddress,
 			storageUsedGetFunction(accountAddress, runtimeInterface, runtimeStorage),
 			storageCapacityGetFunction(accountAddress, runtimeInterface),
 			r.newPublicAccountKeys(accountAddress, runtimeInterface),
 		)
-		return trampoline.Done{Result: publicAccount}
 	}
 }
 
 func (r *interpreterRuntime) newLogFunction(runtimeInterface Interface) interpreter.HostFunction {
-	return func(invocation interpreter.Invocation) trampoline.Trampoline {
+	return func(invocation interpreter.Invocation) interpreter.Value {
 		message := fmt.Sprint(invocation.Arguments[0])
 		var err error
 		wrapPanic(func() {
@@ -1516,8 +1510,7 @@ func (r *interpreterRuntime) newLogFunction(runtimeInterface Interface) interpre
 		if err != nil {
 			panic(err)
 		}
-		result := interpreter.VoidValue{}
-		return trampoline.Done{Result: result}
+		return interpreter.VoidValue{}
 	}
 }
 
@@ -1551,7 +1544,7 @@ func (r *interpreterRuntime) getBlockAtHeight(height uint64, runtimeInterface In
 }
 
 func (r *interpreterRuntime) newGetCurrentBlockFunction(runtimeInterface Interface) interpreter.HostFunction {
-	return func(invocation interpreter.Invocation) trampoline.Trampoline {
+	return func(invocation interpreter.Invocation) interpreter.Value {
 		var height uint64
 		var err error
 		wrapPanic(func() {
@@ -1564,29 +1557,28 @@ func (r *interpreterRuntime) newGetCurrentBlockFunction(runtimeInterface Interfa
 		if err != nil {
 			panic(err)
 		}
-		return trampoline.Done{Result: *block}
+		return *block
 	}
 }
 
 func (r *interpreterRuntime) newGetBlockFunction(runtimeInterface Interface) interpreter.HostFunction {
-	return func(invocation interpreter.Invocation) trampoline.Trampoline {
+	return func(invocation interpreter.Invocation) interpreter.Value {
 		height := uint64(invocation.Arguments[0].(interpreter.UInt64Value))
 		block, err := r.getBlockAtHeight(height, runtimeInterface)
 		if err != nil {
 			panic(err)
 		}
-		var result interpreter.Value
+
 		if block == nil {
-			result = interpreter.NilValue{}
-		} else {
-			result = interpreter.NewSomeValueOwningNonCopying(*block)
+			return interpreter.NilValue{}
 		}
-		return trampoline.Done{Result: result}
+
+		return interpreter.NewSomeValueOwningNonCopying(*block)
 	}
 }
 
 func (r *interpreterRuntime) newUnsafeRandomFunction(runtimeInterface Interface) interpreter.HostFunction {
-	return func(invocation interpreter.Invocation) trampoline.Trampoline {
+	return func(invocation interpreter.Invocation) interpreter.Value {
 		var rand uint64
 		var err error
 		wrapPanic(func() {
@@ -1595,7 +1587,7 @@ func (r *interpreterRuntime) newUnsafeRandomFunction(runtimeInterface Interface)
 		if err != nil {
 			panic(err)
 		}
-		return trampoline.Done{Result: interpreter.UInt64Value(rand)}
+		return interpreter.UInt64Value(rand)
 	}
 }
 
@@ -1666,7 +1658,7 @@ func (r *interpreterRuntime) newAuthAccountContractsChangeFunction(
 	isUpdate bool,
 ) interpreter.HostFunctionValue {
 	return interpreter.NewHostFunctionValue(
-		func(invocation interpreter.Invocation) trampoline.Trampoline {
+		func(invocation interpreter.Invocation) interpreter.Value {
 
 			const requiredArgumentCount = 2
 
@@ -1929,13 +1921,11 @@ func (r *interpreterRuntime) newAuthAccountContractsChangeFunction(
 				)
 			}
 
-			result := interpreter.DeployedContractValue{
+			return interpreter.DeployedContractValue{
 				Address: addressValue,
 				Name:    nameValue,
 				Code:    newCodeValue,
 			}
-
-			return trampoline.Done{Result: result}
 		},
 	)
 }
@@ -2036,7 +2026,7 @@ func (r *interpreterRuntime) newAuthAccountContractsGetFunction(
 	runtimeInterface Interface,
 ) interpreter.HostFunctionValue {
 	return interpreter.NewHostFunctionValue(
-		func(invocation interpreter.Invocation) trampoline.Trampoline {
+		func(invocation interpreter.Invocation) interpreter.Value {
 
 			nameValue := invocation.Arguments[0].(*interpreter.StringValue)
 
@@ -2051,19 +2041,17 @@ func (r *interpreterRuntime) newAuthAccountContractsGetFunction(
 				panic(err)
 			}
 
-			var result interpreter.OptionalValue = interpreter.NilValue{}
-
 			if len(code) > 0 {
-				result = interpreter.NewSomeValueOwningNonCopying(
+				return interpreter.NewSomeValueOwningNonCopying(
 					interpreter.DeployedContractValue{
 						Address: addressValue,
 						Name:    nameValue,
 						Code:    interpreter.ByteSliceToByteArrayValue(code),
 					},
 				)
+			} else {
+				return interpreter.NilValue{}
 			}
-
-			return trampoline.Done{Result: result}
 		},
 	)
 }
@@ -2074,7 +2062,7 @@ func (r *interpreterRuntime) newAuthAccountContractsRemoveFunction(
 	runtimeStorage *runtimeStorage,
 ) interpreter.HostFunctionValue {
 	return interpreter.NewHostFunctionValue(
-		func(invocation interpreter.Invocation) trampoline.Trampoline {
+		func(invocation interpreter.Invocation) interpreter.Value {
 
 			nameValue := invocation.Arguments[0].(*interpreter.StringValue)
 
@@ -2094,8 +2082,6 @@ func (r *interpreterRuntime) newAuthAccountContractsRemoveFunction(
 
 			// Only remove the contract code, remove the contract value, and emit an event,
 			// if there is currently code deployed for the given contract name
-
-			var result interpreter.OptionalValue = interpreter.NilValue{}
 
 			if len(code) > 0 {
 
@@ -2132,16 +2118,16 @@ func (r *interpreterRuntime) newAuthAccountContractsRemoveFunction(
 					},
 				)
 
-				result = interpreter.NewSomeValueOwningNonCopying(
+				return interpreter.NewSomeValueOwningNonCopying(
 					interpreter.DeployedContractValue{
 						Address: addressValue,
 						Name:    nameValue,
 						Code:    interpreter.ByteSliceToByteArrayValue(code),
 					},
 				)
+			} else {
+				return interpreter.NilValue{}
 			}
-
-			return trampoline.Done{Result: result}
 		},
 	)
 }
@@ -2151,9 +2137,9 @@ func (r *interpreterRuntime) onStatementHandler() interpreter.OnStatementFunc {
 		return nil
 	}
 
-	return func(statement *interpreter.Statement) {
-		location := statement.Interpreter.Location
-		line := statement.Statement.StartPosition().Line
+	return func(inter *interpreter.Interpreter, statement ast.Statement) {
+		location := inter.Location
+		line := statement.StartPosition().Line
 		r.coverageReport.AddLineHit(location, line)
 	}
 }
@@ -2190,30 +2176,18 @@ func (r *interpreterRuntime) newAccountKeysAddFunction(
 	runtimeInterface Interface,
 ) interpreter.HostFunctionValue {
 	return interpreter.NewHostFunctionValue(
-		func(invocation interpreter.Invocation) trampoline.Trampoline {
+		func(invocation interpreter.Invocation) interpreter.Value {
 			publicKeyValue := invocation.Arguments[0].(*interpreter.CompositeValue)
-			if publicKeyValue.QualifiedIdentifier != sema.PublicKeyTypeName {
-				panic(fmt.Sprintf(
-					"add method requires the first argument to be an %s",
-					sema.PublicKeyType,
-				))
-			}
+			publicKey := NewPublicKeyFromValue(publicKeyValue)
 
 			hashAlgo := NewHashAlgorithmFromValue(invocation.Arguments[1])
-
-			weight, ok := invocation.Arguments[2].(interpreter.UFix64Value)
-			if !ok {
-				panic(fmt.Sprintf(
-					"add requires the third argument to be an %s",
-					sema.UFix64Type{},
-				))
-			}
+			address := addressValue.ToAddress()
+			weight := invocation.Arguments[2].(interpreter.UFix64Value).ToInt()
 
 			var err error
 			var accountKey *AccountKey
 			wrapPanic(func() {
-				publicKey := NewPublicKeyFromValue(publicKeyValue)
-				accountKey, err = runtimeInterface.AddAccountKey(addressValue.ToAddress(), publicKey, hashAlgo, weight.ToInt())
+				accountKey, err = runtimeInterface.AddAccountKey(address, publicKey, hashAlgo, weight)
 			})
 			if err != nil {
 				panic(err)
@@ -2228,8 +2202,7 @@ func (r *interpreterRuntime) newAccountKeysAddFunction(
 				},
 			)
 
-			accountKeyValue := NewAccountKeyValue(accountKey)
-			return trampoline.Done{Result: accountKeyValue}
+			return NewAccountKeyValue(accountKey)
 		},
 	)
 }
@@ -2239,16 +2212,14 @@ func (r *interpreterRuntime) newAccountKeysGetFunction(
 	runtimeInterface Interface,
 ) interpreter.HostFunctionValue {
 	return interpreter.NewHostFunctionValue(
-		func(invocation interpreter.Invocation) trampoline.Trampoline {
-			index, ok := invocation.Arguments[0].(interpreter.IntValue)
-			if !ok {
-				panic("get method requires the first argument to be an integer")
-			}
+		func(invocation interpreter.Invocation) interpreter.Value {
+			index := invocation.Arguments[0].(interpreter.IntValue).ToInt()
+			address := addressValue.ToAddress()
 
 			var err error
 			var accountKey *AccountKey
 			wrapPanic(func() {
-				accountKey, err = runtimeInterface.GetAccountKey(addressValue.ToAddress(), index.ToInt())
+				accountKey, err = runtimeInterface.GetAccountKey(address, index)
 			})
 
 			if err != nil {
@@ -2259,11 +2230,10 @@ func (r *interpreterRuntime) newAccountKeysGetFunction(
 			// This is done because, if the host function returns an error when a key is not found, then
 			// currently there's no way to distinguish between a 'key not found error' vs other internal errors.
 			if accountKey == nil {
-				return trampoline.Done{Result: interpreter.NilValue{}}
+				return interpreter.NilValue{}
 			}
 
-			accountKeyValue := NewAccountKeyValue(accountKey)
-			return trampoline.Done{Result: accountKeyValue}
+			return NewAccountKeyValue(accountKey)
 		},
 	)
 }
@@ -2273,32 +2243,30 @@ func (r *interpreterRuntime) newAccountKeysRevokeFunction(
 	runtimeInterface Interface,
 ) interpreter.HostFunctionValue {
 	return interpreter.NewHostFunctionValue(
-		func(invocation interpreter.Invocation) trampoline.Trampoline {
-			index, ok := invocation.Arguments[0].(interpreter.IntValue)
-			if !ok {
-				panic("revoke method requires the first argument to be an integer")
-			}
+		func(invocation interpreter.Invocation) interpreter.Value {
+			indexValue := invocation.Arguments[0].(interpreter.IntValue)
+			index := indexValue.ToInt()
+			address := addressValue.ToAddress()
 
 			var err error
 			var accountKey *AccountKey
 			wrapPanic(func() {
-				accountKey, err = runtimeInterface.RemoveAccountKey(addressValue.ToAddress(), index.ToInt())
+				accountKey, err = runtimeInterface.RevokeAccountKey(address, index)
 			})
 			if err != nil {
 				panic(err)
 			}
 
 			r.emitAccountEvent(
-				stdlib.AccountKeyAddedEventType,
+				stdlib.AccountKeyRemovedEventType,
 				runtimeInterface,
 				[]exportableValue{
 					newExportableValue(addressValue, nil),
-					newExportableValue(index, nil),
+					newExportableValue(indexValue, nil),
 				},
 			)
 
-			accountKeyValue := NewAccountKeyValue(accountKey)
-			return trampoline.Done{Result: accountKeyValue}
+			return NewAccountKeyValue(accountKey)
 		},
 	)
 }
@@ -2331,20 +2299,14 @@ func NewPublicKeyFromValue(publicKey *interpreter.CompositeValue) *PublicKey {
 		panic("sign algorithm is not set")
 	}
 
-	signAlgoValue, ok := signAlgoField.(*interpreter.CompositeValue)
-	if !ok || signAlgoValue.QualifiedIdentifier != sema.SignatureAlgorithmTypeName {
-		panic("sign algorithm needs to be of type `SignAlgorithm`")
-	}
+	signAlgoValue := signAlgoField.(*interpreter.CompositeValue)
 
 	rawValue, ok := signAlgoValue.Fields.Get(sema.EnumRawValueFieldName)
 	if !ok {
 		panic("cannot find sign algorithm raw value")
 	}
 
-	signAlgoRawValue, ok := rawValue.(interpreter.IntValue)
-	if !ok {
-		panic("enum raw value needs to be subtype of integer")
-	}
+	signAlgoRawValue := rawValue.(interpreter.IntValue)
 
 	return &PublicKey{
 		PublicKey: byteArray,
@@ -2370,21 +2332,14 @@ func NewAccountKeyValue(accountKey *AccountKey) *interpreter.CompositeValue {
 }
 
 func NewHashAlgorithmFromValue(value interpreter.Value) HashAlgorithm {
-	hashAlgoValue, ok := value.(*interpreter.CompositeValue)
-	if !ok || hashAlgoValue.QualifiedIdentifier != sema.HashAlgorithmTypeName {
-		panic(fmt.Sprintf("hash algorithm value must be of type %s", sema.HashAlgorithmType))
-	}
+	hashAlgoValue := value.(*interpreter.CompositeValue)
 
 	rawValue, ok := hashAlgoValue.Fields.Get(sema.EnumRawValueFieldName)
 	if !ok {
 		panic("cannot find hash algorithm raw value")
 	}
 
-	hashAlgoRawValue, ok := rawValue.(interpreter.IntValue)
-	if !ok {
-		panic("hash algorithm raw value needs to be subtype of integer")
-	}
+	hashAlgoRawValue := rawValue.(interpreter.IntValue)
 
-	hashAlgo := HashAlgorithm(hashAlgoRawValue.ToInt())
-	return hashAlgo
+	return HashAlgorithm(hashAlgoRawValue.ToInt())
 }

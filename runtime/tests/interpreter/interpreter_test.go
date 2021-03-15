@@ -39,7 +39,6 @@ import (
 	"github.com/onflow/cadence/runtime/tests/checker"
 	"github.com/onflow/cadence/runtime/tests/examples"
 	. "github.com/onflow/cadence/runtime/tests/utils"
-	"github.com/onflow/cadence/runtime/trampoline"
 )
 
 type ParseCheckAndInterpretOptions struct {
@@ -1425,12 +1424,11 @@ func TestInterpretHostFunction(t *testing.T) {
 				&sema.IntType{},
 			),
 		},
-		func(invocation interpreter.Invocation) trampoline.Trampoline {
+		func(invocation interpreter.Invocation) interpreter.Value {
 			a := invocation.Arguments[0].(interpreter.IntValue).ToBigInt()
 			b := invocation.Arguments[1].(interpreter.IntValue).ToBigInt()
 			value := new(big.Int).Add(a, b)
-			result := interpreter.NewIntValueFromBigInt(value)
-			return trampoline.Done{Result: result}
+			return interpreter.NewIntValueFromBigInt(value)
 		},
 	)
 
@@ -1495,7 +1493,7 @@ func TestInterpretHostFunctionWithVariableArguments(t *testing.T) {
 			),
 			RequiredArgumentCount: sema.RequiredArgumentCount(1),
 		},
-		func(invocation interpreter.Invocation) trampoline.Trampoline {
+		func(invocation interpreter.Invocation) interpreter.Value {
 			called = true
 
 			require.Len(t, invocation.ArgumentTypes, 3)
@@ -1508,7 +1506,7 @@ func TestInterpretHostFunctionWithVariableArguments(t *testing.T) {
 			assert.Equal(t, interpreter.BoolValue(true), invocation.Arguments[1])
 			assert.Equal(t, interpreter.NewStringValue("test"), invocation.Arguments[2])
 
-			return trampoline.Done{Result: interpreter.VoidValue{}}
+			return interpreter.VoidValue{}
 		},
 	)
 
@@ -6756,9 +6754,13 @@ func TestInterpretContractAccountFieldUse(t *testing.T) {
 						_ string,
 						_ common.CompositeKind,
 					) *interpreter.StringValueOrderedMap {
-						panicFunction := interpreter.NewHostFunctionValue(func(invocation interpreter.Invocation) trampoline.Trampoline {
-							panic(errors.NewUnreachableError())
-						})
+
+						panicFunction := interpreter.NewHostFunctionValue(
+							func(invocation interpreter.Invocation) interpreter.Value {
+								panic(errors.NewUnreachableError())
+							},
+						)
+
 						injectedMembers := interpreter.NewStringValueOrderedMap()
 						injectedMembers.Set(
 							"account",
@@ -7574,7 +7576,7 @@ func TestInterpretResourceOwnerFieldUse(t *testing.T) {
       }
     `
 
-	panicFunction := interpreter.NewHostFunctionValue(func(invocation interpreter.Invocation) trampoline.Trampoline {
+	panicFunction := interpreter.NewHostFunctionValue(func(invocation interpreter.Invocation) interpreter.Value {
 		panic(errors.NewUnreachableError())
 	})
 
@@ -8140,11 +8142,10 @@ func TestInterpretNestedDestroy(t *testing.T) {
 				sema.VoidType,
 			),
 		},
-		func(invocation interpreter.Invocation) trampoline.Trampoline {
+		func(invocation interpreter.Invocation) interpreter.Value {
 			message := fmt.Sprintf("%v", invocation.Arguments[0])
 			logs = append(logs, message)
-			result := interpreter.VoidValue{}
-			return trampoline.Done{Result: result}
+			return interpreter.VoidValue{}
 		},
 	)
 
@@ -8309,4 +8310,31 @@ func TestInterpretCopyOnReturn(t *testing.T) {
 		interpreter.NewDictionaryValueUnownedNonCopying(),
 		value,
 	)
+}
+
+func BenchmarkInterpretRecursionFib(b *testing.B) {
+
+	inter := parseCheckAndInterpret(b, `
+       fun fib(_ n: Int): Int {
+           if n < 2 {
+              return n
+           }
+           return fib(n - 1) + fib(n - 2)
+       }
+   `)
+
+	expected := interpreter.NewIntValueFromInt64(377)
+
+	b.ReportAllocs()
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+
+		result, err := inter.Invoke(
+			"fib",
+			interpreter.NewIntValueFromInt64(14),
+		)
+		require.NoError(b, err)
+		require.Equal(b, expected, result)
+	}
 }
