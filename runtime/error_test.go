@@ -19,12 +19,15 @@
 package runtime
 
 import (
+	"encoding/hex"
 	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/sema"
 )
 
 func TestRuntimeError(t *testing.T) {
@@ -276,4 +279,110 @@ func TestRuntimeError(t *testing.T) {
 		)
 	})
 
+	t.Run("nested errors", func(t *testing.T) {
+
+		// Test error pretty printing for the case where a program has errors,
+		// but also imports a program that has errors.
+		//
+		// The location of the nested errors should not effect the location of the outer errors.
+
+		id, err := hex.DecodeString("57717cc72f97494ac90441790352a07b999a39526819e638b5d367e62e43c37a")
+		require.NoError(t, err)
+
+		location := common.TransactionLocation(id)
+
+		codes := map[common.LocationID]string{
+			location.ID(): `
+              // import program that has errors
+              import A from 0x1
+            `,
+			common.AddressLocation{Address: HexToAddress("01"), Name: "A"}.ID(): `
+              // import program that has errors
+              import B from 0x2
+
+              // program itself has more errors:
+
+              // invalid top-level declaration
+              pub fun foo() {
+                  // invalid reference to undeclared variable
+                  Y
+              }
+            `,
+			common.AddressLocation{Address: HexToAddress("02"), Name: "B"}.ID(): `
+
+              // invalid top-level declaration
+              pub fun bar() {
+                  // invalid reference to undeclared variable
+                  X
+              }
+            `,
+		}
+
+		runtimeInterface := &testRuntimeInterface{
+			resolveLocation: func(identifiers []ast.Identifier, location common.Location) (result []sema.ResolvedLocation, err error) {
+				for _, identifier := range identifiers {
+					result = append(result, sema.ResolvedLocation{
+						Location: common.AddressLocation{
+							Address: location.(common.AddressLocation).Address,
+							Name:    identifier.Identifier,
+						},
+						Identifiers: []ast.Identifier{
+							identifier,
+						},
+					})
+				}
+				return
+			},
+			getAccountContractCode: func(address Address, name string) ([]byte, error) {
+				location := common.AddressLocation{
+					Name:    name,
+					Address: address,
+				}
+				locationID := location.ID()
+				code, ok := codes[locationID]
+				if !ok {
+					code = secondaryCodes[locationID]
+				}
+				return []byte(code), nil
+			},
+		}
+
+		rt := NewInterpreterRuntime()
+		err = rt.ExecuteTransaction(
+			Script{
+				Source: []byte(codes[location.ID()]),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  location,
+			},
+		)
+		require.EqualError(t, err,
+			"Execution failed:\n"+
+				"error: function declarations are not valid at the top-level\n"+
+				" --> 0000000000000002.B:2:20\n"+
+				"  |\n"+
+				"2 |             pub fun bar() {\n"+
+				"  |                     ^^^\n"+
+				"\n"+
+				"error: cannot find variable in this scope: `X`\n"+
+				" --> 0000000000000002.B:3:16\n"+
+				"  |\n"+
+				"3 |                 X\n"+
+				"  |                 ^ not found in this scope\n"+
+				"\n"+
+				"error: function declarations are not valid at the top-level\n"+
+				" --> 0000000000000001.A:4:20\n"+
+				"  |\n"+
+				"4 |             pub fun foo() {\n"+
+				"  |                     ^^^\n"+
+				"\n"+
+				"error: cannot find variable in this scope: `Y`\n"+
+				" --> 0000000000000001.A:5:16\n"+
+				"  |\n"+
+				"5 |                 Y\n"+
+				"  |                 ^ not found in this scope\n",
+		)
+
+	})
 }
