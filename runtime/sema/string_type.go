@@ -26,9 +26,9 @@ import (
 // StringType represents the string type
 //
 var StringType = &SimpleType{
-	Name:                 "String",
-	QualifiedName:        "String",
-	TypeID:               "String",
+	Name:                 StringTypeName,
+	QualifiedName:        StringTypeName,
+	TypeID:               StringTypeName,
 	IsInvalid:            false,
 	IsResource:           false,
 	Storable:             true,

@@ -433,7 +433,7 @@ func (d *Decoder) decodeDictionary(v interface{}, path []string) (*DictionaryVal
 		deferredOwner = d.owner
 		deferredStorageKeyBase = joinPath(append(path[:], dictionaryValuePathPrefix))
 		for _, keyValue := range keys.Values {
-			key := dictionaryKey(keyValue)
+			key := DictionaryKey(keyValue)
 			deferred.Set(key, struct{}{})
 		}
 
