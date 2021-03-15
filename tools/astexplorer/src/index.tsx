@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2021 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,18 +23,32 @@ import {CadenceParser} from "@onflow/cadence-parser"
 
 import * as React from "react"
 import * as ReactDOM from "react-dom"
-import ReactJson from "react-json-view"
+import {TreeView} from "./tree"
 
 const code = `
 pub contract C {
-
     pub resource R {}
-
     pub fun createR(): @R {
         return <- create R()
     }
 }
 `
+
+interface Position {
+  Offset: number
+  Line: number
+  Column: number
+}
+
+interface Node {
+  StartPos: Position
+  EndPos: Position
+}
+
+function isNode(something: unknown): something is Node {
+  const node = something as Node
+  return node.StartPos !== undefined && node.EndPos !== undefined
+}
 
 document.addEventListener('DOMContentLoaded', async () => {
 
@@ -68,12 +82,38 @@ document.addEventListener('DOMContentLoaded', async () => {
     const result = parser.parse(code)
     console.log(result)
 
-    ReactDOM.render(
-      <ReactJson
-        src={result}
-        enableClipboard={false}
-        displayDataTypes={false}
+    let decorations: string[];
 
+    let current: unknown;
+
+    ReactDOM.render(
+      <TreeView
+        data={result}
+        onOver={node => {
+          if (!isNode(node)) {
+            return false
+          }
+          current = node
+          decorations = model.deltaDecorations(decorations, [
+            {
+              range: new monaco.Range(
+                node.StartPos.Line,
+                node.StartPos.Column + 1,
+                node.EndPos.Line,
+                node.EndPos.Column + 2
+              ),
+              options: {
+                inlineClassName: 'highlighted'
+              }
+            },
+          ]);
+          return true
+        }}
+        onLeave={node => {
+          if (node === current) {
+            decorations = model.deltaDecorations(decorations, [])
+          }
+        }}
       />,
       astElement
     )
