@@ -1052,26 +1052,29 @@ func (checker *Checker) convertRestrictedType(t *ast.RestrictedType) Type {
 
 	var compositeType *CompositeType
 
-	if typeResult, ok := restrictedType.(*CompositeType); ok {
-		switch typeResult.Kind {
+	if !restrictedType.IsInvalidType() {
 
-		case common.CompositeKindResource,
-			common.CompositeKindStructure:
+		if typeResult, ok := restrictedType.(*CompositeType); ok {
+			switch typeResult.Kind {
 
-			compositeType = typeResult
+			case common.CompositeKindResource,
+				common.CompositeKindStructure:
 
-		default:
-			reportInvalidRestrictedType()
-		}
-	} else {
+				compositeType = typeResult
 
-		switch restrictedType {
-		case AnyResourceType, AnyStructType, AnyType:
-			break
-
-		default:
-			if t.Type != nil {
+			default:
 				reportInvalidRestrictedType()
+			}
+		} else {
+
+			switch restrictedType {
+			case AnyResourceType, AnyStructType, AnyType:
+				break
+
+			default:
+				if t.Type != nil {
+					reportInvalidRestrictedType()
+				}
 			}
 		}
 	}
