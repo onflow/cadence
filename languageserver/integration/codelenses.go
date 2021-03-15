@@ -214,8 +214,7 @@ func (i *FlowIntegration) entryPointActions(
 	codelensRange := conversion.ASTToProtocolRange(position, position)
 	var codeLenses []*protocol.CodeLens
 
-	// TODO: DISABLED EMULATOR STATES FOR DEVELOPMENT
-	/*
+
 	// If emulator is not up, we need to show single codelens proposing to start emulator
 	if i.emulatorState == EmulatorOffline {
 		title := fmt.Sprintf(
@@ -249,7 +248,7 @@ func (i *FlowIntegration) entryPointActions(
 		codeLenses = append(codeLenses, codeLens)
 		return codeLenses, nil
 	}
-	*/
+
 
 	argumentLists := entryPointInfo.pragmaArguments[:]
 
@@ -284,7 +283,7 @@ func (i *FlowIntegration) entryPointActions(
 		case entryPointKindScript:
 			if len(argumentList) > 0 {
 				title = fmt.Sprintf(
-					"%s Pretend script with %s",
+					"%s Execute script with %s",
 					prefixOK,
 					entryPointInfo.pragmaArgumentStrings[i],
 				)
