@@ -22,7 +22,6 @@ package integration
 
 import (
 	"errors"
-
 	"github.com/onflow/flow-go-sdk/crypto"
 )
 
@@ -34,6 +33,8 @@ type Config struct {
 
 	// The service account key information.
 	ServiceAccountKey AccountPrivateKey
+
+	emulatorState EmulatorState
 }
 
 type AccountPrivateKey struct {
@@ -47,30 +48,30 @@ type AccountPrivateKey struct {
 //
 // Returns an error if any fields are missing or malformed.
 //
-func configFromInitializationOptions(opts interface{}) (conf Config, emulatorState EmulatorState, err error) {
+func configFromInitializationOptions(opts interface{}) (conf Config, err error) {
 	optsMap, ok := opts.(map[string]interface{})
 	if !ok {
-		return Config{}, EmulatorOffline, errors.New("invalid initialization options")
+		return Config{}, errors.New("invalid initialization options")
 	}
 
 	emulatorAddr, ok := optsMap["emulatorAddress"].(string)
 	if !ok {
-		return Config{}, 1,  errors.New("initialization options: missing emulatorAddress field")
+		return Config{}, errors.New("initialization options: missing emulatorAddress field")
 	}
 
 	servicePrivateKeyHex, ok := optsMap["servicePrivateKey"].(string)
 	if !ok {
-		return Config{}, 1, errors.New("initialization options: missing servicePrivateKey field")
+		return Config{}, errors.New("initialization options: missing servicePrivateKey field")
 	}
 
 	serviceKeySigAlgoStr, ok := optsMap["serviceKeySignatureAlgorithm"].(string)
 	if !ok {
-		return Config{}, 1, errors.New("initialization options: missing serviceKeySignatureAlgorithm field")
+		return Config{}, errors.New("initialization options: missing serviceKeySignatureAlgorithm field")
 	}
 
 	serviceKeyHashAlgoStr, ok := optsMap["serviceKeyHashAlgorithm"].(string)
 	if !ok {
-		return Config{}, 1, errors.New("initialization options: missing serviceKeyHashAlgorithm field")
+		return Config{}, errors.New("initialization options: missing serviceKeyHashAlgorithm field")
 	}
 
 	serviceAccountKey := AccountPrivateKey{
@@ -83,13 +84,14 @@ func configFromInitializationOptions(opts interface{}) (conf Config, emulatorSta
 		return
 	}
 
-	emulatorState, ok = optsMap["emulatorState"].(EmulatorState)
+	emulatorState, ok := optsMap["emulatorState"].(float64)
 	if !ok {
-		emulatorState = EmulatorOffline
+		return Config{}, errors.New("initialization options: invalid emulator state")
 	}
 
 	conf.EmulatorAddr = emulatorAddr
 	conf.ServiceAccountKey = serviceAccountKey
+	conf.emulatorState = EmulatorState(emulatorState)
 
 	return
 }
