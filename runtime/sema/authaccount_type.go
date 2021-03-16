@@ -46,8 +46,9 @@ const AuthAccountKeysField = "keys"
 var AuthAccountType = func() *CompositeType {
 
 	authAccountType := &CompositeType{
-		Identifier: AuthAccountTypeName,
-		Kind:       common.CompositeKindStructure,
+		Identifier:         AuthAccountTypeName,
+		Kind:               common.CompositeKindStructure,
+		hasComputedMembers: true,
 
 		nestedTypes: func() *StringTypeOrderedMap {
 			nestedTypes := NewStringTypeOrderedMap()
@@ -151,7 +152,7 @@ var AuthAccountType = func() *CompositeType {
 	}
 
 	authAccountType.Members = GetMembersAsMap(members)
-	authAccountType.Fields = getFields(members)
+	authAccountType.Fields = getFieldNames(members)
 	return authAccountType
 }()
 

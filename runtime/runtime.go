@@ -1146,7 +1146,7 @@ func (r *interpreterRuntime) newCreateAccountFunction(
 			))
 		}
 
-		payerAddress, ok := payer.Fields.Get("address")
+		payerAddress, ok := payer.Fields.Get(sema.AuthAccountAddressField)
 		if !ok {
 			panic("address is not set")
 		}
