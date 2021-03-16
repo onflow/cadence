@@ -1348,19 +1348,33 @@ func (interpreter *Interpreter) declareEnumConstructor(
 }
 
 func EnumConstructorFunction(caseValues []*CompositeValue, members *StringValueOrderedMap) HostFunctionValue {
+
+	// Prepare a lookup table based on the big-endian byte representation
+
+	lookupTable := make(map[string]*CompositeValue)
+
+	for _, caseValue := range caseValues {
+		rawValue, ok := caseValue.Fields.Get(sema.EnumRawValueFieldName)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+		rawValueBigEndianBytes := rawValue.(IntegerValue).ToBigEndianBytes()
+		lookupTable[string(rawValueBigEndianBytes)] = caseValue
+	}
+
+	// Prepare the constructor function which performs a lookup in the lookup table
+
 	constructor := NewHostFunctionValue(
 		func(invocation Invocation) Value {
 
-			rawValueArgument := invocation.Arguments[0].(IntegerValue).ToInt()
+			rawValueArgumentBigEndianBytes := invocation.Arguments[0].(IntegerValue).ToBigEndianBytes()
 
-			var result Value = NilValue{}
-
-			if rawValueArgument >= 0 && rawValueArgument < len(caseValues) {
-				caseValue := caseValues[rawValueArgument]
-				result = NewSomeValueOwningNonCopying(caseValue)
+			caseValue, ok := lookupTable[string(rawValueArgumentBigEndianBytes)]
+			if !ok {
+				return NilValue{}
 			}
 
-			return result
+			return NewSomeValueOwningNonCopying(caseValue)
 		},
 	)
 
