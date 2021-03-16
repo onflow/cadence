@@ -120,8 +120,8 @@ func (i *FlowIntegration) showDeployContractAction(
 			Range: codelensRange,
 			Command: &protocol.Command{
 				Title:     title,
-				Command:   ClientDeployContract,
-				Arguments: []interface{}{uri, name, signers[0]},
+				Command:   CommandDeployContract,
+				Arguments: []interface{}{uri, name, signers},
 			},
 		}
 		codeLenses = append(codeLenses, codeLens)
@@ -179,8 +179,8 @@ func (i *FlowIntegration) showDeployContractInterfaceAction(
 			Range: codelensRange,
 			Command: &protocol.Command{
 				Title:     title,
-				Command:   ClientDeployContract,
-				Arguments: []interface{}{uri, name, signers[0]},
+				Command:   CommandDeployContract,
+				Arguments: []interface{}{uri, name, signers},
 			},
 		}
 		codeLenses = append(codeLenses, codeLens)
