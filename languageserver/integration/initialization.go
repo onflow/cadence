@@ -30,7 +30,7 @@ import (
 func (i *FlowIntegration) initialize(initializationOptions interface{}) error {
 
 	// Parse the configuration options sent from the client
-	conf, emulatorState, err := configFromInitializationOptions(initializationOptions)
+	conf, err := configFromInitializationOptions(initializationOptions)
 	if err != nil {
 		return err
 	}
@@ -45,7 +45,7 @@ func (i *FlowIntegration) initialize(initializationOptions interface{}) error {
 		grpc.WithInsecure(),
 	)
 
-	i.emulatorState = EmulatorState(emulatorState)
+	i.emulatorState = conf.emulatorState
 
 	// TODO: get this path from initializationOptions
 	configurationPaths := []string{"/home/max/Desktop/cadence/flow.json"}
