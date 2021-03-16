@@ -30,16 +30,16 @@ The built-in enum `SignatureAlgorithm` provides the set of signing algorithms th
 are supported by the language natively.
 
 ```cadence
-pub enum SignatureAlgorithm: UInt8 (
+pub enum SignatureAlgorithm: UInt8 {
     /// ECDSA_P256 is Elliptic Curve Digital Signature Algorithm (ECDSA) on the NIST P-256 curve.
-    ECDSA_P256 = 1
+    pub case ECDSA_P256 = 1
 
     /// ECDSA_Secp256k1 is Elliptic Curve Digital Signature Algorithm (ECDSA) on the secp256k1 curve.
-    ECDSA_Secp256k1 = 2
+    pub case ECDSA_Secp256k1 = 2
 
     /// BLSBLS12381 is BLS Signature algorithm on BLS 12-381 curve.
-    BLSBLS12381 = 3
-)
+    pub case BLSBLS12381 = 3
+}
 ```
 
 ## Crypto Contract
