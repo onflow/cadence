@@ -129,12 +129,12 @@ func (i *FlowIntegration) sendTransaction(conn protocol.Conn, args ...interface{
 	_, txResult, txSendError := i.sharedServices.Transactions.Send(path.Path, signers[0], []string{}, argsJSON)
 
 	if txSendError != nil {
-		txErrorMessage := fmt.Sprintf("there was an error with your transaction: %#+v", txSendError)
+		errorMessage := fmt.Sprintf("there was an error with your transaction: %#+v", txSendError)
 		conn.ShowMessage(&protocol.ShowMessageParams{
 			Type:    protocol.Error,
-			Message: txErrorMessage,
+			Message: errorMessage,
 		})
-		return nil, fmt.Errorf("%s", txErrorMessage)
+		return nil, fmt.Errorf("%s", errorMessage)
 	}
 
 	conn.ShowMessage(&protocol.ShowMessageParams{
@@ -312,7 +312,7 @@ RetryLoop:
 //
 func (i *FlowIntegration) deployContract(conn protocol.Conn, args ...interface{}) (interface{}, error) {
 
-	err := server.CheckCommandArgumentCount(args, 2)
+	err := server.CheckCommandArgumentCount(args, 3)
 	if err != nil {
 		return nil, err
 	}
@@ -322,27 +322,49 @@ func (i *FlowIntegration) deployContract(conn protocol.Conn, args ...interface{}
 		return nil, fmt.Errorf("invalid URI argument: %#+v", args[0])
 	}
 
-	doc, ok := i.server.GetDocument(protocol.DocumentUri(uri))
-	if !ok {
-		return nil, fmt.Errorf("could not find document for URI %s", uri)
+	path, pathError := url.Parse(uri)
+	if pathError != nil {
+		return nil, fmt.Errorf("invalid URI arguments: %#+v", uri)
 	}
-
-	file := parseFileFromURI(uri)
 
 	name, ok := args[1].(string)
 	if !ok {
 		return nil, errors.New("invalid name argument")
 	}
 
+	// TODO: Add error handling if one of the values is wrong
+	// TODO: Check that every account exists, otherwise show error message
+	signerList := args[2].([]interface{})
+	signers := make([]string, len(signerList))
+	for i, v := range signerList {
+		signers[i] = v.(string)
+	}
+
+	to := signers[0]
+
 	conn.ShowMessage(&protocol.ShowMessageParams{
 		Type:    protocol.Info,
-		Message: fmt.Sprintf("Deploying contract %s (%s) to account 0x%s", name, file, i.activeAddress.Hex()),
+		Message: fmt.Sprintf("Deploying contract %s to account %s", name, to),
 	})
 
-	code := []byte(doc.Text)
-	tx := deployContractTransaction(i.activeAddress, name, code)
 
-	_, err = i.sendTransactionHelper(conn, i.activeAddress, tx)
+	// TODO: add check if the contract exist on specified address
+	account, deployError := i.sharedServices.Accounts.AddContract(to, name, path.Path, false)
+
+	if deployError != nil {
+		errorMessage := fmt.Sprintf("error during deployment: %#+v", deployError)
+		conn.ShowMessage(&protocol.ShowMessageParams{
+			Type:    protocol.Error,
+			Message: errorMessage,
+		})
+		return nil, fmt.Errorf("%s", errorMessage)
+	}
+
+	conn.ShowMessage(&protocol.ShowMessageParams{
+		Type:    protocol.Info,
+		Message: fmt.Sprintf("Status: contract %s has been deployed to %s(%s)", name, to, account.Address.String()),
+	})
+
 	return nil, err
 }
 
