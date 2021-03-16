@@ -65,6 +65,7 @@ func (i *FlowIntegration) updateEntryPointInfoIfNeeded(
 	var parameters []*sema.Parameter
 
 	contractDeclaration := checker.Program.SoleContractDeclaration()
+	contractInterfaceDeclaration := checker.Program.SoleContractInterfaceDeclaration()
 	transactionDeclaration := checker.Program.SoleTransactionDeclaration()
 	functionDeclaration := sema.FunctionEntryPointDeclaration(checker.Program)
 
@@ -74,6 +75,10 @@ func (i *FlowIntegration) updateEntryPointInfoIfNeeded(
 		docString = contractDeclaration.DocString
 		// TODO: We need this thing...
 		// contractType := checker.Elaboration.InterfaceDeclarationTypes[contractDeclaration]
+	} else if contractInterfaceDeclaration != nil {
+		startPos = &contractInterfaceDeclaration.StartPos
+		kind = entryPointKindContract
+		docString = contractInterfaceDeclaration.DocString
 	} else if transactionDeclaration != nil {
 		startPos = &transactionDeclaration.StartPos
 		kind = entryPointKindTransaction
