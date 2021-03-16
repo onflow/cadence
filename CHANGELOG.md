@@ -1,3 +1,159 @@
+
+# v0.14.0 (2021-03-15)
+
+This release introduced a new [high-level Account Key API](https://docs.onflow.org/cadence/language/accounts/) and improves the interpreter performance.
+The current low-level Account Key API is now deprecated and will be removed in a future release. Please switch to the new one.
+
+The following example transaction demonstrates the functionality:
+
+```kotlin
+transaction {
+	prepare(signer: AuthAccount) {
+		let newPublicKey = PublicKey(
+			publicKey: "010203".decodeHex(),
+			signatureAlgorithm: SignatureAlgorithm.ECDSA_P256
+		)
+
+		// Add a key
+		let addedKey = signer.keys.add(
+			publicKey: newPublicKey,
+			hashAlgorithm: HashAlgorithm.SHA3_256,
+			weight: 100.0
+		)
+
+
+		// Retrieve a key
+		let sameKey = signer.keys.get(keyIndex: addedKey.keyIndex)
+
+
+		// Revoke a key
+		signer.keys.revoke(keyIndex: addedKey.keyIndex)
+	}
+}
+```
+
+## ⭐ Features
+
+- Introduce a new [high-level Account Key API](https://docs.onflow.org/cadence/language/accounts/) (#633) @SupunS
+- Allow the Language Server to be debugged (#663) @turbolent
+
+## 💥 Breaking Changes
+
+The `Crypto` contract has changed in a backwards-incompatible way, so the types and values it declared could be used in the new Account Key API:
+
+- The struct `Crypto.PublicKey` was replaced by the new built-in global struct `PublicKey`. 
+  There is no need anymore to import the `Crypto` contract to work with public keys.
+
+- The struct `Crypto.SignatureAlgorithm` was replaced with the new built-in global enum `SignatureAlgorithm`.
+  There is no need anymore to import the `Crypto` contract to work with signature algorithms.
+
+- The struct `Crypto.HashAlgorithm` was replaced with the new built-in global enum `HashAlgorithm`.
+  There is no need anymore to import the `Crypto` contract to work with hash algorithms.
+
+- The signature algorithm value `Crypto.ECDSA_Secp256k1` was replaced with the new built-in enum case `SignatureAlgorithm.ECDSA_Secp256k1`
+
+- The signature algorithm value `Crypto.ECDSA_P256` was replaced with the new built-in enum case `SignatureAlgorithm.ECDSA_P256`
+
+- The hash algorithm `Crypto.SHA3_256` was replaced with the new built-in enum case `HashAlgorithm.SHA3_256`
+
+- The hash algorithm `Crypto.SHA2_256` was replaced with the new built-in enum case `HashAlgorithm.SHA2_256`
+
+## 🛠 Improvements
+
+- Add support for importing enum values (#672) @SupunS
+- Optimize interpreter: Make invocation location ranges lazy (#685) @turbolent
+- Optimize interpreter activations (#673) @turbolent
+- Optimize integer conversion (#677) @turbolent
+- Optimize interpreter: Evaluate statements and declarations directly, remove trampolines (#684) @turbolent
+- Optimize interpreter: Move statement evaluation code  (#683) @turbolent
+- Optimize interpreter: Move evaluation of expressions and statements to separate files (#682) @turbolent
+- Optimize interpreter: Evaluate expressions directly without trampolines (#681) @turbolent
+- Optimize interpreter: Refactor function invocations to return a value instead of a trampoline  (#680) @turbolent
+- Optimize interpreter: Evaluate binary expressions directly (#679) @turbolent
+
+## 🐞 Bug Fixes
+
+- Add support for exporting enums (#669) @SupunS
+- Ensure code is long enough when extracting excerpt (#690) @turbolent
+
+## 📖 Documentation
+
+- Add documentation for the new account key API (#635) @SupunS
+
+
+# v0.13.6 (2021-03-09)
+
+## 🐞 Bug Fixes
+
+- Revert "Cache qualified identifier and type ID for composite types and interface types" (#670) @turbolent
+
+# v0.13.5 (2021-03-05)
+
+## 🛠 Improvements
+
+- Add computed fields to the composite value (#664) @SupunS
+- Improve naming: Rename nominal type to simple type (#659) @turbolent
+- Cache qualified identifier and type ID for composite types and interface types (#658) @turbolent
+
+## 🐞 Bug Fixes
+
+- Fix handling of capability values without borrow type (#666) @turbolent
+- Improve type equality check in the contract update validation (#654) @SupunS
+
+# v0.13.4 (2021-03-04)
+
+## ⭐ Features
+
+- Add parser for pragma signers (#656) @MaxStalker
+
+## 🐞 Bug Fixes
+
+- Fix updating contracts with reference typed fields (#649) @SupunS
+
+## 📖 Documentation
+
+- Move remaining Cadence docs to Cadence repo. (#653) @10thfloor
+
+# v0.13.3 (2021-03-03)
+
+## 🛠 Improvements
+
+- Optimize checker construction (#630) @turbolent
+
+# v0.13.2 (2021-03-03)
+
+## 🛠 Improvements
+
+- Make contract update validation optional and disable it by default (#646) @turbolent
+- Delay contract code and value updates to the end of execution (#636) @turbolent
+- Optimize encoding of positive bigints (#637) @turbolent
+- Optimize deferred dictionary keys (#638) @turbolent
+- Refactor `String`, `AuthAccount.Contracts`, and `DeployedContract` type to singleton (#625) @turbolent
+- Refactor `AuthAccount`, `PublicAccount`, and `Block` type to singleton (#624) @turbolent
+- Only record member accesses when origins and occurrences are enabled (#627) @turbolent
+- Cache members for array and dictionary types (#626) @turbolent
+
+## 🐞 Bug Fixes
+
+- Support nested file imports in LSP (#616) @psiemens
+
+## 📖 Documentation
+
+- Fix code examples and improve documentation in language reference (#634) @jeroenlm
+
+# v0.13.1 (2021-02-24)
+
+## 🛠 Improvements
+
+- Remove prepare and decode callbacks (#622) @turbolent
+- Update language server to Cadence v0.13.0 and Go SDK v0.15.0 (#623) @turbolent
+- Refactor Any type, AnyResource type, and AnyStruct type to singleton (#618) @turbolent
+- Refactor Type, Bool, and Character type to singletons (#617) @turbolent
+
+## 🐞 Bug Fixes
+
+- Fix AuthAccount nested types (#619) @turbolent
+
 # v0.13.0 (2021-02-22)
 
 ## ⭐ Features
