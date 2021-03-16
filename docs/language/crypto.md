@@ -8,20 +8,20 @@ are supported by the language natively.
 
 ```cadence
 pub enum HashAlgorithm: UInt8 {
-    // SHA2_256 is Secure Hashing Algorithm 2 (SHA-2) with a 256-bit digest.
-    pub case SHA2_256
+    /// SHA2_256 is Secure Hashing Algorithm 2 (SHA-2) with a 256-bit digest.
+    pub case SHA2_256 = 1
 
-    // SHA2_384 is Secure Hashing Algorithm 2 (SHA-2) with a 384-bit digest.
-    pub case SHA2_384
+    /// SHA2_384 is Secure Hashing Algorithm 2 (SHA-2) with a 384-bit digest.
+    pub case SHA2_384 = 2
 
-    // SHA3_256 is Secure Hashing Algorithm 3 (SHA-3) with a 256-bit digest.
-    pub case SHA3_256
+    /// SHA3_256 is Secure Hashing Algorithm 3 (SHA-3) with a 256-bit digest.
+    pub case SHA3_256 = 3
 
-    // SHA3_384 is Secure Hashing Algorithm 3 (SHA-3) with a 384-bit digest.
-    pub case SHA3_384
+    /// SHA3_384 is Secure Hashing Algorithm 3 (SHA-3) with a 384-bit digest.
+    pub case SHA3_384 = 4
 
-    // KMAC128 is KECCAK Message Authentication Code with a 128-bit digest.
-    pub case KMAC128
+    /// KMAC128 is KECCAK Message Authentication Code with a 128-bit digest.
+    pub case KMAC128 = 5
 }
 ```
 
@@ -31,14 +31,14 @@ are supported by the language natively.
 
 ```cadence
 pub enum SignatureAlgorithm: UInt8 (
-    // ECDSA_P256 is Elliptic Curve Digital Signature Algorithm (ECDSA) on the NIST P-256 curve.
-    ECDSA_P256
+    /// ECDSA_P256 is Elliptic Curve Digital Signature Algorithm (ECDSA) on the NIST P-256 curve.
+    ECDSA_P256 = 1
 
-    // ECDSA_Secp256k1 is Elliptic Curve Digital Signature Algorithm (ECDSA) on the secp256k1 curve.
-    ECDSA_Secp256k1
+    /// ECDSA_Secp256k1 is Elliptic Curve Digital Signature Algorithm (ECDSA) on the secp256k1 curve.
+    ECDSA_Secp256k1 = 2
 
-    // BLSBLS12381 is BLS Signature algorithm on BLS 12-381 curve.
-    BLSBLS12381
+    /// BLSBLS12381 is BLS Signature algorithm on BLS 12-381 curve.
+    BLSBLS12381 = 3
 )
 ```
 
