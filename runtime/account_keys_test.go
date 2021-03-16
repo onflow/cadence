@@ -586,9 +586,9 @@ func TestHashAlgorithm(t *testing.T) {
 		pub fun main(): [HashAlgorithm?] {
 			var key1: HashAlgorithm? = HashAlgorithm.KMAC_128
 
-			var key2: HashAlgorithm? = HashAlgorithm(rawValue:4)
+			var key2: HashAlgorithm? = HashAlgorithm(rawValue: 5)
 
-			var key3: HashAlgorithm? = HashAlgorithm(rawValue:10)
+			var key3: HashAlgorithm? = HashAlgorithm(rawValue: 100)
 			return [key1, key2, key3]
       	}
 	`)
@@ -609,7 +609,7 @@ func TestHashAlgorithm(t *testing.T) {
 	require.IsType(t, cadence.Array{}, result)
 	array := result.(cadence.Array)
 
-	require.Equal(t, 3, len(array.Values))
+	require.Len(t, array.Values, 3)
 
 	// Check key1
 	require.IsType(t, cadence.Optional{}, array.Values[0])
@@ -618,8 +618,11 @@ func TestHashAlgorithm(t *testing.T) {
 	require.IsType(t, cadence.Enum{}, optionalValue.Value)
 	builtinStruct := optionalValue.Value.(cadence.Enum)
 
-	require.Equal(t, 1, len(builtinStruct.Fields))
-	assert.Equal(t, cadence.NewInt(HashAlgorithmKMAC_128.RawValue()), builtinStruct.Fields[0])
+	require.Len(t, builtinStruct.Fields, 1)
+	assert.Equal(t,
+		cadence.NewInt(HashAlgorithmKMAC_128.RawValue()),
+		builtinStruct.Fields[0],
+	)
 
 	// Check key2
 	require.IsType(t, cadence.Optional{}, array.Values[1])
@@ -628,8 +631,11 @@ func TestHashAlgorithm(t *testing.T) {
 	require.IsType(t, cadence.Enum{}, optionalValue.Value)
 	builtinStruct = optionalValue.Value.(cadence.Enum)
 
-	require.Equal(t, 1, len(builtinStruct.Fields))
-	assert.Equal(t, cadence.NewInt(HashAlgorithmKMAC_128.RawValue()), builtinStruct.Fields[0])
+	require.Len(t, builtinStruct.Fields, 1)
+	assert.Equal(t,
+		cadence.NewInt(HashAlgorithmKMAC_128.RawValue()),
+		builtinStruct.Fields[0],
+	)
 
 	// Check key3
 	require.IsType(t, cadence.Optional{}, array.Values[2])
@@ -648,9 +654,9 @@ func TestSignatureAlgorithm(t *testing.T) {
 		pub fun main(): [SignatureAlgorithm?] {
 			var key1: SignatureAlgorithm? = SignatureAlgorithm.BLS_BLS12381
 
-			var key2: SignatureAlgorithm? = SignatureAlgorithm(rawValue:2)
+			var key2: SignatureAlgorithm? = SignatureAlgorithm(rawValue: 3)
 
-			var key3: SignatureAlgorithm? = SignatureAlgorithm(rawValue:5)
+			var key3: SignatureAlgorithm? = SignatureAlgorithm(rawValue: 100)
 			return [key1, key2, key3]
 		}
 	`)
@@ -671,7 +677,7 @@ func TestSignatureAlgorithm(t *testing.T) {
 	require.IsType(t, cadence.Array{}, result)
 	array := result.(cadence.Array)
 
-	require.Equal(t, 3, len(array.Values))
+	require.Len(t, array.Values, 3)
 
 	// Check key1
 	require.IsType(t, cadence.Optional{}, array.Values[0])
@@ -680,8 +686,11 @@ func TestSignatureAlgorithm(t *testing.T) {
 	require.IsType(t, cadence.Enum{}, optionalValue.Value)
 	builtinStruct := optionalValue.Value.(cadence.Enum)
 
-	require.Equal(t, 1, len(builtinStruct.Fields))
-	assert.Equal(t, cadence.NewInt(SignatureAlgorithmBLS_BLS12381.RawValue()), builtinStruct.Fields[0])
+	require.Len(t, builtinStruct.Fields, 1)
+	assert.Equal(t,
+		cadence.NewInt(SignatureAlgorithmBLS_BLS12381.RawValue()),
+		builtinStruct.Fields[0],
+	)
 
 	// Check key2
 	require.IsType(t, cadence.Optional{}, array.Values[1])
@@ -690,8 +699,11 @@ func TestSignatureAlgorithm(t *testing.T) {
 	require.IsType(t, cadence.Enum{}, optionalValue.Value)
 	builtinStruct = optionalValue.Value.(cadence.Enum)
 
-	require.Equal(t, 1, len(builtinStruct.Fields))
-	assert.Equal(t, cadence.NewInt(SignatureAlgorithmBLS_BLS12381.RawValue()), builtinStruct.Fields[0])
+	require.Len(t, builtinStruct.Fields, 1)
+	assert.Equal(t,
+		cadence.NewInt(SignatureAlgorithmBLS_BLS12381.RawValue()),
+		builtinStruct.Fields[0],
+	)
 
 	// Check key3
 	require.IsType(t, cadence.Optional{}, array.Values[2])
