@@ -46,7 +46,8 @@ type SignatureAlgorithm int
 
 const (
 	// Supported signing algorithms
-	SignatureAlgorithmECDSA_P256 SignatureAlgorithm = iota
+	SignatureAlgorithmUnknown SignatureAlgorithm = iota
+	SignatureAlgorithmECDSA_P256
 	SignatureAlgorithmECDSA_Secp256k1
 	SignatureAlgorithmBLS_BLS12381
 )
@@ -54,6 +55,8 @@ const (
 // Name returns the string representation of this signing algorithm.
 func (algo SignatureAlgorithm) Name() string {
 	switch algo {
+	case SignatureAlgorithmUnknown:
+		return "unknown"
 	case SignatureAlgorithmECDSA_P256:
 		return "ECDSA_P256"
 	case SignatureAlgorithmECDSA_Secp256k1:
@@ -66,11 +69,29 @@ func (algo SignatureAlgorithm) Name() string {
 }
 
 func (algo SignatureAlgorithm) RawValue() int {
-	return int(algo)
+	// NOTE: only add new algorithms, do *NOT* change existing items,
+	// reuse raw values for other items, swap the order, etc.
+	//
+	// Existing stored values use these raw values and should not change
+
+	switch algo {
+	case SignatureAlgorithmUnknown:
+		return 0
+	case SignatureAlgorithmECDSA_P256:
+		return 1
+	case SignatureAlgorithmECDSA_Secp256k1:
+		return 2
+	case SignatureAlgorithmBLS_BLS12381:
+		return 3
+	}
+
+	panic(errors.NewUnreachableError())
 }
 
 func (algo SignatureAlgorithm) DocString() string {
 	switch algo {
+	case SignatureAlgorithmUnknown:
+		return ""
 	case SignatureAlgorithmECDSA_P256:
 		return SignatureAlgorithmDocStringECDSA_P256
 	case SignatureAlgorithmECDSA_Secp256k1:
@@ -88,7 +109,8 @@ type HashAlgorithm int
 
 const (
 	// Supported hashing algorithms
-	HashAlgorithmSHA2_256 HashAlgorithm = iota
+	HashAlgorithmUnknown HashAlgorithm = iota
+	HashAlgorithmSHA2_256
 	HashAlgorithmSHA2_384
 	HashAlgorithmSHA3_256
 	HashAlgorithmSHA3_384
@@ -97,6 +119,8 @@ const (
 
 func (algo HashAlgorithm) Name() string {
 	switch algo {
+	case HashAlgorithmUnknown:
+		return "unknown"
 	case HashAlgorithmSHA2_256:
 		return "SHA2_256"
 	case HashAlgorithmSHA2_384:
@@ -113,11 +137,33 @@ func (algo HashAlgorithm) Name() string {
 }
 
 func (algo HashAlgorithm) RawValue() int {
-	return int(algo)
+	// NOTE: only add new algorithms, do *NOT* change existing items,
+	// reuse raw values for other items, swap the order, etc.
+	//
+	// Existing stored values use these raw values and should not change
+
+	switch algo {
+	case HashAlgorithmUnknown:
+		return 0
+	case HashAlgorithmSHA2_256:
+		return 1
+	case HashAlgorithmSHA2_384:
+		return 2
+	case HashAlgorithmSHA3_256:
+		return 3
+	case HashAlgorithmSHA3_384:
+		return 4
+	case HashAlgorithmKMAC_128:
+		return 5
+	}
+
+	panic(errors.NewUnreachableError())
 }
 
 func (algo HashAlgorithm) DocString() string {
 	switch algo {
+	case HashAlgorithmUnknown:
+		return ""
 	case HashAlgorithmSHA2_256:
 		return HashAlgorithmDocStringSHA2_256
 	case HashAlgorithmSHA2_384:
