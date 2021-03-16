@@ -41,22 +41,30 @@ type Location = common.Location
 
 type SignatureAlgorithm = sema.SignatureAlgorithm
 
+// NOTE: do *NOT* replace with iota or assign literal values,
+// the values should be exactly the same as the ones declared in sema!
+
 const (
 	// Supported signing algorithms
-	SignatureAlgorithmECDSA_P256 SignatureAlgorithm = iota
-	SignatureAlgorithmECDSA_Secp256k1
-	SignatureAlgorithmBLS_BLS12381
+	SignatureAlgorithmUnknown         = sema.SignatureAlgorithmUnknown
+	SignatureAlgorithmECDSA_P256      = sema.SignatureAlgorithmECDSA_P256
+	SignatureAlgorithmECDSA_Secp256k1 = sema.SignatureAlgorithmECDSA_Secp256k1
+	SignatureAlgorithmBLS_BLS12381    = sema.SignatureAlgorithmBLS_BLS12381
 )
 
 type HashAlgorithm = sema.HashAlgorithm
 
+// NOTE: do *NOT* replace with iota or assign literal values,
+// the values should be exactly the same as the ones declared in sema!
+
 const (
 	// Supported hashing algorithms
-	HashAlgorithmSHA2_256 HashAlgorithm = iota
-	HashAlgorithmSHA2_384
-	HashAlgorithmSHA3_256
-	HashAlgorithmSHA3_384
-	HashAlgorithmKMAC_128
+	HashAlgorithmUnknown  = sema.HashAlgorithmUnknown
+	HashAlgorithmSHA2_256 = sema.HashAlgorithmSHA2_256
+	HashAlgorithmSHA2_384 = sema.HashAlgorithmSHA2_384
+	HashAlgorithmSHA3_256 = sema.HashAlgorithmSHA3_256
+	HashAlgorithmSHA3_384 = sema.HashAlgorithmSHA3_384
+	HashAlgorithmKMAC_128 = sema.HashAlgorithmKMAC_128
 )
 
 type AccountKey struct {
