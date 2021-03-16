@@ -240,17 +240,59 @@ func (i *FlowIntegration) switchActiveAccount(_ protocol.Conn, args ...interface
 // createAccount creates a new account and returns its address.
 func (i *FlowIntegration) createAccount(conn protocol.Conn, args ...interface{}) (interface{}, error) {
 
-	err := server.CheckCommandArgumentCount(args, 0)
+	err := server.CheckCommandArgumentCount(args, 1)
 	if err != nil {
-		return nil, err
+		errorMessage := fmt.Sprintf("name is required")
+		conn.ShowMessage(&protocol.ShowMessageParams{
+			Type:    protocol.Error,
+			Message: errorMessage,
+		})
+		return nil, fmt.Errorf("%s", errorMessage)
 	}
 
-	addr, err := i.createAccountHelper(conn)
-	if err != nil {
-		return nil, err
+	name, ok := args[0].(string)
+	if !ok {
+		errorMessage := fmt.Sprintf("invalid name value: %+v", args[0])
+		conn.ShowMessage(&protocol.ShowMessageParams{
+			Type:    protocol.Error,
+			Message: errorMessage,
+		})
+		return nil, fmt.Errorf("%s", errorMessage)
 	}
 
-	return addr, nil
+	// TODO: Check that account with specified name doesn't exist already
+	signatureAlgorithm := "ECDSA_P256"
+	hashingAlgorithm := "SHA3_256"
+
+	privateKey, err := i.sharedServices.Keys.Generate("", signatureAlgorithm)
+
+	if err != nil {
+		errorMessage := fmt.Sprintf("private key generation error: %#+v", err)
+		conn.ShowMessage(&protocol.ShowMessageParams{
+			Type:    protocol.Error,
+			Message: errorMessage,
+		})
+		return nil, fmt.Errorf("%s", errorMessage)
+	}
+
+	keys := []string{privateKey.PublicKey().String()}
+	acc, err := i.sharedServices.Accounts.Create(name, keys, signatureAlgorithm, hashingAlgorithm, []string{})
+
+	if err != nil {
+		errorMessage := fmt.Sprintf("account creation error: %#+v", err)
+		conn.ShowMessage(&protocol.ShowMessageParams{
+			Type:    protocol.Error,
+			Message: errorMessage,
+		})
+		return nil, fmt.Errorf("%s", errorMessage)
+	}
+
+	conn.ShowMessage(&protocol.ShowMessageParams{
+		Type:    protocol.Info,
+		Message: fmt.Sprintf("Account with name %s created at address: 0x%s", name, acc.Address),
+	})
+
+	return nil, nil
 }
 
 // createDefaultAccounts creates a set of default accounts and returns their addresses.
@@ -346,7 +388,6 @@ func (i *FlowIntegration) deployContract(conn protocol.Conn, args ...interface{}
 		Type:    protocol.Info,
 		Message: fmt.Sprintf("Deploying contract %s to account %s", name, to),
 	})
-
 
 	// TODO: add check if the contract exist on specified address
 	account, deployError := i.sharedServices.Accounts.AddContract(to, name, path.Path, false)
