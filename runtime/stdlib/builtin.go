@@ -20,6 +20,7 @@ package stdlib
 
 import (
 	"fmt"
+
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
@@ -153,7 +154,7 @@ var CreatePublicKeyFunction = NewStandardLibraryFunction(
 				TypeAnnotation: sema.NewTypeAnnotation(sema.SignatureAlgorithmType),
 			},
 		},
-		ReturnTypeAnnotation:  sema.NewTypeAnnotation(sema.PublicKeyType),
+		ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.PublicKeyType),
 	},
 
 	func(invocation interpreter.Invocation) interpreter.Value {
@@ -187,8 +188,8 @@ var HashAlgorithmValue = StandardLibraryValue{
 
 func nativeEnumType(enumType *sema.CompositeType, enumCases []sema.NativeEnumCase) *sema.SpecialFunctionType {
 	members := make([]*sema.Member, len(enumCases))
-	for _, algo := range enumCases {
-		members[algo.RawValue()] = sema.NewPublicEnumCaseMember(
+	for i, algo := range enumCases {
+		members[i] = sema.NewPublicEnumCaseMember(
 			enumType,
 			algo.Name(),
 			algo.DocString(),
@@ -220,10 +221,9 @@ func nativeEnumValue(enumType *sema.CompositeType, enumCases []sema.NativeEnumCa
 	caseValues := make([]*interpreter.CompositeValue, caseCount)
 	constructorMembers := interpreter.NewStringValueOrderedMap()
 
-	for _, enumCase := range enumCases {
-		rawValue := enumCase.RawValue()
-		caseValue := interpreter.NewNativeEnumCaseValue(enumType, rawValue)
-		caseValues[rawValue] = caseValue
+	for i, enumCase := range enumCases {
+		caseValue := interpreter.NewNativeEnumCaseValue(enumType, enumCase.RawValue())
+		caseValues[i] = caseValue
 		constructorMembers.Set(enumCase.Name(), caseValue)
 	}
 
