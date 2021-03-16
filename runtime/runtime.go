@@ -2257,6 +2257,13 @@ func (r *interpreterRuntime) newAccountKeysRevokeFunction(
 				panic(err)
 			}
 
+			// Here it is expected the host function to return a nil key, if a key is not found at the given index.
+			// This is done because, if the host function returns an error when a key is not found, then
+			// currently there's no way to distinguish between a 'key not found error' vs other internal errors.
+			if accountKey == nil {
+				return interpreter.NilValue{}
+			}
+
 			r.emitAccountEvent(
 				stdlib.AccountKeyRemovedEventType,
 				runtimeInterface,

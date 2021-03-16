@@ -229,7 +229,7 @@ func TestImportExportKeys(t *testing.T) {
 	}
 }
 
-var accountKeyA = AccountKey{
+var accountKeyA = &AccountKey{
 	KeyIndex: 0,
 	PublicKey: &PublicKey{
 		PublicKey: []byte{1, 2, 3},
@@ -240,7 +240,7 @@ var accountKeyA = AccountKey{
 	IsRevoked: false,
 }
 
-var accountKeyB = AccountKey{
+var accountKeyB = &AccountKey{
 	KeyIndex: 1,
 	PublicKey: &PublicKey{
 		PublicKey: []byte{4, 5, 6},
@@ -251,10 +251,10 @@ var accountKeyB = AccountKey{
 	IsRevoked: false,
 }
 
-var revokedAccountKeyA = func() AccountKey {
-	revokedKey := accountKeyA
+var revokedAccountKeyA = func() *AccountKey {
+	revokedKey := *accountKeyA
 	revokedKey.IsRevoked = true
-	return revokedKey
+	return &revokedKey
 }()
 
 func TestAuthAccountKeys(t *testing.T) {
@@ -268,7 +268,7 @@ func TestAuthAccountKeys(t *testing.T) {
 
 		addAuthAccountKey(t, runtime, runtimeInterface)
 
-		assert.Equal(t, []AccountKey{accountKeyA}, storage.keys)
+		assert.Equal(t, []*AccountKey{accountKeyA}, storage.keys)
 		assert.Equal(t, accountKeyA, storage.returnedKey)
 	})
 
@@ -280,7 +280,6 @@ func TestAuthAccountKeys(t *testing.T) {
 		addAuthAccountKey(t, runtime, runtimeInterface)
 
 		test := accountKeyTestCase{
-			name: "Add key",
 			code: `
 				transaction {
 					prepare(signer: AuthAccount) {
@@ -293,8 +292,30 @@ func TestAuthAccountKeys(t *testing.T) {
 		err := executeTransaction(test, runtime, runtimeInterface)
 		require.NoError(t, err)
 
-		assert.Equal(t, []AccountKey{accountKeyA}, storage.keys)
+		assert.Equal(t, []*AccountKey{accountKeyA}, storage.keys)
 		assert.Equal(t, accountKeyA, storage.returnedKey)
+	})
+
+	t.Run("get non existing key", func(t *testing.T) {
+		storage := newTestAccountKeyStorage()
+		runtime := NewInterpreterRuntime()
+		runtimeInterface := getRuntimeInterface(storage)
+
+		addAuthAccountKey(t, runtime, runtimeInterface)
+
+		test := accountKeyTestCase{
+			code: `
+				transaction {
+					prepare(signer: AuthAccount) {
+						var acc: AccountKey? = signer.keys.get(keyIndex: 5)
+					}
+				}`,
+			args: []cadence.Value{},
+		}
+
+		err := executeTransaction(test, runtime, runtimeInterface)
+		require.NoError(t, err)
+		assert.Nil(t, storage.returnedKey)
 	})
 
 	t.Run("revoke key", func(t *testing.T) {
@@ -305,7 +326,6 @@ func TestAuthAccountKeys(t *testing.T) {
 		addAuthAccountKey(t, runtime, runtimeInterface)
 
 		test := accountKeyTestCase{
-			name: "Add key",
 			code: `
 				transaction {
 					prepare(signer: AuthAccount) {
@@ -318,8 +338,30 @@ func TestAuthAccountKeys(t *testing.T) {
 		err := executeTransaction(test, runtime, runtimeInterface)
 		require.NoError(t, err)
 
-		assert.Equal(t, []AccountKey{revokedAccountKeyA}, storage.keys)
+		assert.Equal(t, []*AccountKey{revokedAccountKeyA}, storage.keys)
 		assert.Equal(t, revokedAccountKeyA, storage.returnedKey)
+	})
+
+	t.Run("revoke non existing key", func(t *testing.T) {
+		storage := newTestAccountKeyStorage()
+		runtime := NewInterpreterRuntime()
+		runtimeInterface := getRuntimeInterface(storage)
+
+		addAuthAccountKey(t, runtime, runtimeInterface)
+
+		test := accountKeyTestCase{
+			code: `
+				transaction {
+					prepare(signer: AuthAccount) {
+						var acc: AccountKey? = signer.keys.revoke(keyIndex: 5)
+					}
+				}`,
+			args: []cadence.Value{},
+		}
+
+		err := executeTransaction(test, runtime, runtimeInterface)
+		require.NoError(t, err)
+		assert.Nil(t, storage.returnedKey)
 	})
 }
 
@@ -347,7 +389,7 @@ func TestAuthAccountAddPublicKey(t *testing.T) {
 					}
 				}`,
 			args: []cadence.Value{keyA},
-			keys: []AccountKey{
+			keys: []*AccountKey{
 				accountKeyA,
 			},
 		},
@@ -370,7 +412,7 @@ func TestAuthAccountAddPublicKey(t *testing.T) {
 				}
 			`,
 			args: []cadence.Value{keys},
-			keys: []AccountKey{
+			keys: []*AccountKey{
 				accountKeyA,
 				accountKeyB,
 			},
@@ -406,7 +448,6 @@ func TestPublicAccountKeys(t *testing.T) {
 		runtimeInterface := getRuntimeInterface(storage)
 
 		test := accountKeyTestCase{
-			name: "Add key",
 			code: `
 				pub fun main(): AccountKey? {
 					let acc = getAccount(0x02)
@@ -443,7 +484,6 @@ func TestPublicAccountKeys(t *testing.T) {
 		runtimeInterface := getRuntimeInterface(storage)
 
 		test := accountKeyTestCase{
-			name: "Add key",
 			code: `
 				pub fun main(): AccountKey? {
 					let acc = getAccount(0x02)
@@ -480,7 +520,6 @@ func TestPublicAccountKeys(t *testing.T) {
 		runtimeInterface := getRuntimeInterface(storage)
 
 		test := accountKeyTestCase{
-			name: "Add key",
 			code: `
 				pub fun main(): AccountKey? {
 					let acc = getAccount(0x02)
@@ -507,7 +546,6 @@ func TestPublicAccountKeys(t *testing.T) {
 		runtimeInterface := getRuntimeInterface(storage)
 
 		test := accountKeyTestCase{
-			name: "Add key",
 			code: `
 				pub fun main(): AccountKey? {
 					let acc = getAccount(0x02)
@@ -740,7 +778,7 @@ func getRuntimeInterface(storage *testAccountKeyStorage) *testRuntimeInterface {
 		},
 		addAccountKey: func(address Address, publicKey *PublicKey, hashAlgo HashAlgorithm, weight int) (*AccountKey, error) {
 			index := len(storage.keys)
-			accountKey := AccountKey{
+			accountKey := &AccountKey{
 				KeyIndex:  index,
 				PublicKey: publicKey,
 				HashAlgo:  hashAlgo,
@@ -750,27 +788,33 @@ func getRuntimeInterface(storage *testAccountKeyStorage) *testRuntimeInterface {
 
 			storage.keys = append(storage.keys, accountKey)
 			storage.returnedKey = accountKey
-			return &accountKey, nil
+			return accountKey, nil
 		},
 
 		getAccountKey: func(address Address, index int) (*AccountKey, error) {
 			if index >= len(storage.keys) {
+				storage.returnedKey = nil
 				return nil, nil
 			}
 
 			accountKey := storage.keys[index]
 			storage.returnedKey = accountKey
-			return &accountKey, nil
+			return accountKey, nil
 		},
 
 		removeAccountKey: func(address Address, index int) (*AccountKey, error) {
+			if index >= len(storage.keys) {
+				storage.returnedKey = nil
+				return nil, nil
+			}
+
 			accountKey := storage.keys[index]
 			accountKey.IsRevoked = true
 
 			storage.keys[index] = accountKey
 			storage.returnedKey = accountKey
 
-			return &accountKey, nil
+			return accountKey, nil
 		},
 
 		emitEvent: func(event cadence.Event) error {
@@ -854,18 +898,18 @@ type accountKeyTestCase struct {
 	name string
 	code string
 	args []cadence.Value
-	keys []AccountKey
+	keys []*AccountKey
 }
 
 func newTestAccountKeyStorage() *testAccountKeyStorage {
 	return &testAccountKeyStorage{
 		events: make([]cadence.Event, 0),
-		keys:   make([]AccountKey, 0),
+		keys:   make([]*AccountKey, 0),
 	}
 }
 
 type testAccountKeyStorage struct {
 	events      []cadence.Event
-	keys        []AccountKey
-	returnedKey AccountKey
+	keys        []*AccountKey
+	returnedKey *AccountKey
 }
