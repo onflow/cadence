@@ -31,7 +31,7 @@
   "dependencies": {
     "react": "^17.0.1",
     "react-dom": "^17.0.1",
-    "@onflow/cadence-parser": "file:../../npm-packages/cadence-parser",
+    "@onflow/cadence-parser": "^0.13.7",
     "monaco-editor": "^0.20.0",
     "react-json-view": "^1.19.1"
   }
