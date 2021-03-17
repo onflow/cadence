@@ -19,9 +19,6 @@ pub enum HashAlgorithm: UInt8 {
 
     /// SHA3_384 is Secure Hashing Algorithm 3 (SHA-3) with a 384-bit digest.
     pub case SHA3_384 = 4
-
-    /// KMAC128 is KECCAK Message Authentication Code with a 128-bit digest.
-    pub case KMAC128 = 5
 }
 ```
 
@@ -36,9 +33,6 @@ pub enum SignatureAlgorithm: UInt8 {
 
     /// ECDSA_Secp256k1 is Elliptic Curve Digital Signature Algorithm (ECDSA) on the secp256k1 curve.
     pub case ECDSA_Secp256k1 = 2
-
-    /// BLSBLS12381 is BLS Signature algorithm on BLS 12-381 curve.
-    pub case BLSBLS12381 = 3
 }
 ```
 

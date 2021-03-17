@@ -49,7 +49,6 @@ const (
 	SignatureAlgorithmUnknown         = sema.SignatureAlgorithmUnknown
 	SignatureAlgorithmECDSA_P256      = sema.SignatureAlgorithmECDSA_P256
 	SignatureAlgorithmECDSA_Secp256k1 = sema.SignatureAlgorithmECDSA_Secp256k1
-	SignatureAlgorithmBLS_BLS12381    = sema.SignatureAlgorithmBLS_BLS12381
 )
 
 type HashAlgorithm = sema.HashAlgorithm
@@ -64,7 +63,6 @@ const (
 	HashAlgorithmSHA2_384 = sema.HashAlgorithmSHA2_384
 	HashAlgorithmSHA3_256 = sema.HashAlgorithmSHA3_256
 	HashAlgorithmSHA3_384 = sema.HashAlgorithmSHA3_384
-	HashAlgorithmKMAC_128 = sema.HashAlgorithmKMAC_128
 )
 
 type AccountKey struct {
