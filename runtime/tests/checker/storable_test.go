@@ -227,7 +227,7 @@ func TestCheckStorable(t *testing.T) {
 
 			if compositeKind == common.CompositeKindEvent &&
 				testCase.Type != nil &&
-				!sema.IsValidEventParameterType(testCase.Type) {
+				!sema.IsValidEventParameterType(testCase.Type, map[*sema.Member]bool{}) {
 
 				continue
 			}

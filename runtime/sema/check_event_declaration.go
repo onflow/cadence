@@ -31,11 +31,13 @@ func (checker *Checker) checkEventParameters(
 	parameters []*Parameter,
 ) {
 
+	parameterTypeValidationResults := map[*Member]bool{}
+
 	for i, parameter := range parameterList.Parameters {
 		parameterType := parameters[i].TypeAnnotation.Type
 
 		if !parameterType.IsInvalidType() &&
-			!IsValidEventParameterType(parameterType) {
+			!IsValidEventParameterType(parameterType, parameterTypeValidationResults) {
 
 			checker.report(
 				&InvalidEventParameterTypeError{
@@ -54,37 +56,58 @@ func (checker *Checker) checkEventParameters(
 //
 // Events currently only support a few simple Cadence types.
 //
-func IsValidEventParameterType(t Type) bool {
+func IsValidEventParameterType(t Type, results map[*Member]bool) bool {
+
 	switch t := t.(type) {
 	case *AddressType:
 		return true
 
 	case *OptionalType:
-		return IsValidEventParameterType(t.Type)
+		return IsValidEventParameterType(t.Type, results)
 
 	case *VariableSizedType:
-		return IsValidEventParameterType(t.ElementType(false))
+		return IsValidEventParameterType(t.ElementType(false), results)
 
 	case *ConstantSizedType:
-		return IsValidEventParameterType(t.ElementType(false))
+		return IsValidEventParameterType(t.ElementType(false), results)
 
 	case *DictionaryType:
-		return IsValidEventParameterType(t.KeyType) &&
-			IsValidEventParameterType(t.ValueType)
+		return IsValidEventParameterType(t.KeyType, results) &&
+			IsValidEventParameterType(t.ValueType, results)
 
 	case *CompositeType:
 		if t.Kind != common.CompositeKindStructure {
 			return false
 		}
+
 		for pair := t.Members.Oldest(); pair != nil; pair = pair.Next() {
 			member := pair.Value
+
+			// Prevent a potential stack overflow due to cyclic declarations
+			// by keeping track of the result for each member
+
+			// If a result for the member is available, return it,
+			// instead of checking the type
+
+			if result, ok := results[member]; ok {
+				return result
+			}
+
+			// Temporarily assume the member passes the test while it's type is tested.
+			// If a recursive call occurs, the check for an existing result will prevent infinite recursion
+
+			results[member] = true
+
 			if member.DeclarationKind == common.DeclarationKindField &&
 				!member.IgnoreInSerialization &&
-				!IsValidEventParameterType(member.TypeAnnotation.Type) {
+				!IsValidEventParameterType(member.TypeAnnotation.Type, results) {
+
+				results[member] = false
 
 				return false
 			}
 		}
+
 		return true
 
 	default:
