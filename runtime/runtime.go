@@ -1138,24 +1138,19 @@ func (r *interpreterRuntime) newCreateAccountFunction(
 ) interpreter.HostFunction {
 	return func(invocation interpreter.Invocation) interpreter.Value {
 
-		payer, ok := invocation.Arguments[0].(*interpreter.CompositeValue)
-		if !ok {
-			panic(fmt.Sprintf(
-				"%[1]s requires the first argument (payer) to be an %[1]s",
-				sema.AuthAccountType,
-			))
-		}
+		payer := invocation.Arguments[0].(*interpreter.CompositeValue)
 
-		payerAddress, ok := payer.Fields.Get(sema.AuthAccountAddressField)
+		payerAddressValue, ok := payer.Fields.Get(sema.AuthAccountAddressField)
 		if !ok {
 			panic("address is not set")
 		}
 
+		payerAddress := payerAddressValue.(interpreter.AddressValue).ToAddress()
+
 		var address Address
 		var err error
 		wrapPanic(func() {
-			payerAddressValue := payerAddress.(interpreter.AddressValue)
-			address, err = context.Interface.CreateAccount(payerAddressValue.ToAddress())
+			address, err = context.Interface.CreateAccount(payerAddress)
 		})
 		if err != nil {
 			panic(err)

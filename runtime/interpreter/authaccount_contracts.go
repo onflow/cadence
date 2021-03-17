@@ -21,7 +21,6 @@ package interpreter
 import (
 	"fmt"
 
-	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/sema"
 )
 
@@ -46,7 +45,7 @@ func NewAuthAccountContractsValue(
 
 	return &CompositeValue{
 		QualifiedIdentifier: sema.AuthAccountContractsType.QualifiedIdentifier(),
-		Kind:                common.CompositeKindStructure,
+		Kind:                sema.AuthAccountContractsType.Kind,
 		Fields:              fields,
 		stringer:            stringer,
 	}

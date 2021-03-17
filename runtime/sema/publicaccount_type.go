@@ -26,7 +26,7 @@ const PublicAccountTypeName = "PublicAccount"
 const PublicAccountAddressField = "address"
 const PublicAccountStorageUsedField = "storageUsed"
 const PublicAccountStorageCapacityField = "storageCapacity"
-const PublicAccountGetCapacityField = "getCapability"
+const PublicAccountGetCapabilityField = "getCapability"
 const PublicAccountGetTargetLinkField = "getLinkTarget"
 const PublicAccountKeysField = "keys"
 
@@ -67,7 +67,7 @@ var PublicAccountType = func() *CompositeType {
 		),
 		NewPublicFunctionMember(
 			publicAccountType,
-			PublicAccountGetCapacityField,
+			PublicAccountGetCapabilityField,
 			publicAccountTypeGetCapabilityFunctionType,
 			publicAccountTypeGetLinkTargetFunctionDocString,
 		),
