@@ -45,7 +45,8 @@ var StoragePathType = &SimpleType{
 	IsResource:    false,
 	Storable:      true,
 	// TODO: implement support for equating paths in the future
-	Equatable: false,
+	Equatable:            false,
+	ExternallyReturnable: true,
 }
 
 // CapabilityPathType
@@ -57,7 +58,8 @@ var CapabilityPathType = &SimpleType{
 	IsResource:    false,
 	Storable:      true,
 	// TODO: implement support for equating paths in the future
-	Equatable: false,
+	Equatable:            false,
+	ExternallyReturnable: true,
 	IsSuperTypeOf: func(subType Type) bool {
 		return IsSubType(subType, PrivatePathType) ||
 			IsSubType(subType, PublicPathType)
@@ -73,7 +75,8 @@ var PublicPathType = &SimpleType{
 	IsResource:    false,
 	Storable:      true,
 	// TODO: implement support for equating paths in the future
-	Equatable: false,
+	Equatable:            false,
+	ExternallyReturnable: true,
 }
 
 // PrivatePathType
@@ -85,5 +88,6 @@ var PrivatePathType = &SimpleType{
 	IsResource:    false,
 	Storable:      true,
 	// TODO: implement support for equating paths in the future
-	Equatable: false,
+	Equatable:            false,
+	ExternallyReturnable: true,
 }
