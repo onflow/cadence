@@ -29,7 +29,6 @@ import (
 var SignatureAlgorithms = []NativeEnumCase{
 	SignatureAlgorithmECDSA_P256,
 	SignatureAlgorithmECDSA_Secp256k1,
-	SignatureAlgorithmBLS_BLS12381,
 }
 
 var HashAlgorithms = []NativeEnumCase{
@@ -37,7 +36,6 @@ var HashAlgorithms = []NativeEnumCase{
 	HashAlgorithmSHA2_384,
 	HashAlgorithmSHA3_256,
 	HashAlgorithmSHA3_384,
-	HashAlgorithmKMAC_128,
 }
 
 var SignatureAlgorithmType = newNativeEnumType(SignatureAlgorithmTypeName, &UInt8Type{})
@@ -49,7 +47,6 @@ const (
 	SignatureAlgorithmUnknown SignatureAlgorithm = iota
 	SignatureAlgorithmECDSA_P256
 	SignatureAlgorithmECDSA_Secp256k1
-	SignatureAlgorithmBLS_BLS12381
 )
 
 // Name returns the string representation of this signing algorithm.
@@ -61,8 +58,6 @@ func (algo SignatureAlgorithm) Name() string {
 		return "ECDSA_P256"
 	case SignatureAlgorithmECDSA_Secp256k1:
 		return "ECDSA_Secp256k1"
-	case SignatureAlgorithmBLS_BLS12381:
-		return "BLS_BLS12381"
 	}
 
 	panic(errors.NewUnreachableError())
@@ -81,8 +76,6 @@ func (algo SignatureAlgorithm) RawValue() int {
 		return 1
 	case SignatureAlgorithmECDSA_Secp256k1:
 		return 2
-	case SignatureAlgorithmBLS_BLS12381:
-		return 3
 	}
 
 	panic(errors.NewUnreachableError())
@@ -96,8 +89,6 @@ func (algo SignatureAlgorithm) DocString() string {
 		return SignatureAlgorithmDocStringECDSA_P256
 	case SignatureAlgorithmECDSA_Secp256k1:
 		return SignatureAlgorithmDocStringECDSA_Secp256k1
-	case SignatureAlgorithmBLS_BLS12381:
-		return SignatureAlgorithmDocStringBLS_BLS12381
 	}
 
 	panic(errors.NewUnreachableError())
@@ -114,7 +105,6 @@ const (
 	HashAlgorithmSHA2_384
 	HashAlgorithmSHA3_256
 	HashAlgorithmSHA3_384
-	HashAlgorithmKMAC_128
 )
 
 func (algo HashAlgorithm) Name() string {
@@ -129,8 +119,6 @@ func (algo HashAlgorithm) Name() string {
 		return "SHA3_256"
 	case HashAlgorithmSHA3_384:
 		return "SHA3_384"
-	case HashAlgorithmKMAC_128:
-		return "KMAC_128"
 	}
 
 	panic(errors.NewUnreachableError())
@@ -153,8 +141,6 @@ func (algo HashAlgorithm) RawValue() int {
 		return 3
 	case HashAlgorithmSHA3_384:
 		return 4
-	case HashAlgorithmKMAC_128:
-		return 5
 	}
 
 	panic(errors.NewUnreachableError())
@@ -172,8 +158,6 @@ func (algo HashAlgorithm) DocString() string {
 		return HashAlgorithmDocStringSHA3_256
 	case HashAlgorithmSHA3_384:
 		return HashAlgorithmDocStringSHA3_384
-	case HashAlgorithmKMAC_128:
-		return HashAlgorithmDocStringKMAC_128
 	}
 
 	panic(errors.NewUnreachableError())
@@ -205,32 +189,27 @@ func newNativeEnumType(identifier string, rawType Type) *CompositeType {
 const SignatureAlgorithmTypeName = "SignatureAlgorithm"
 
 const SignatureAlgorithmDocStringECDSA_P256 = `
-SignatureAlgorithmECDSA_P256 is Elliptic Curve Digital Signature Algorithm (ECDSA) on the NIST P-256 curve
+ECDSA_P256 is Elliptic Curve Digital Signature Algorithm (ECDSA) on the NIST P-256 curve
 `
+
 const SignatureAlgorithmDocStringECDSA_Secp256k1 = `
-SignatureAlgorithmECDSA_Secp256k1 is Elliptic Curve Digital Signature Algorithm (ECDSA) on the secp256k1 curve
-`
-const SignatureAlgorithmDocStringBLS_BLS12381 = `
-SignatureAlgorithmDocStringBLS_BLS12381 is BLS Signature algorithm on BLS 12-381 curve
+ECDSA_Secp256k1 is Elliptic Curve Digital Signature Algorithm (ECDSA) on the secp256k1 curve
 `
 
 const HashAlgorithmTypeName = "HashAlgorithm"
 
 const HashAlgorithmDocStringSHA2_256 = `
-HashAlgorithmSHA2_256 is Secure Hashing Algorithm 2 (SHA-2) with a 256-bit digest
+SHA2_256 is Secure Hashing Algorithm 2 (SHA-2) with a 256-bit digest
 `
+
 const HashAlgorithmDocStringSHA2_384 = `
-HashAlgorithmSHA2_384 is Secure Hashing Algorithm 2 (SHA-2) with a 384-bit digest
+SHA2_384 is Secure Hashing Algorithm 2 (SHA-2) with a 384-bit digest
 `
 
 const HashAlgorithmDocStringSHA3_256 = `
-HashAlgorithmSHA3_256 is Secure Hashing Algorithm 3 (SHA-3) with a 256-bit digest
+SHA3_256 is Secure Hashing Algorithm 3 (SHA-3) with a 256-bit digest
 `
 
 const HashAlgorithmDocStringSHA3_384 = `
-HashAlgorithmSHA3_384 is Secure Hashing Algorithm 3 (SHA-3) with a 384-bit digest
-`
-
-const HashAlgorithmDocStringKMAC_128 = `
-HashAlgorithmKMAC_128 is KECCAK Message Authentication Code with a 128-bit digest
+SHA3_384 is Secure Hashing Algorithm 3 (SHA-3) with a 384-bit digest
 `

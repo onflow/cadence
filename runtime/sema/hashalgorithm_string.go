@@ -13,12 +13,11 @@ func _() {
 	_ = x[HashAlgorithmSHA2_384-2]
 	_ = x[HashAlgorithmSHA3_256-3]
 	_ = x[HashAlgorithmSHA3_384-4]
-	_ = x[HashAlgorithmKMAC_128-5]
 }
 
-const _HashAlgorithm_name = "HashAlgorithmUnknownHashAlgorithmSHA2_256HashAlgorithmSHA2_384HashAlgorithmSHA3_256HashAlgorithmSHA3_384HashAlgorithmKMAC_128"
+const _HashAlgorithm_name = "HashAlgorithmUnknownHashAlgorithmSHA2_256HashAlgorithmSHA2_384HashAlgorithmSHA3_256HashAlgorithmSHA3_384"
 
-var _HashAlgorithm_index = [...]uint8{0, 20, 41, 62, 83, 104, 125}
+var _HashAlgorithm_index = [...]uint8{0, 20, 41, 62, 83, 104}
 
 func (i HashAlgorithm) String() string {
 	if i < 0 || i >= HashAlgorithm(len(_HashAlgorithm_index)-1) {

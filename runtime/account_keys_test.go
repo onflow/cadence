@@ -584,9 +584,9 @@ func TestHashAlgorithm(t *testing.T) {
 
 	script := []byte(`
 		pub fun main(): [HashAlgorithm?] {
-			var key1: HashAlgorithm? = HashAlgorithm.KMAC_128
+			var key1: HashAlgorithm? = HashAlgorithm.SHA3_256
 
-			var key2: HashAlgorithm? = HashAlgorithm(rawValue: 5)
+			var key2: HashAlgorithm? = HashAlgorithm(rawValue: 3)
 
 			var key3: HashAlgorithm? = HashAlgorithm(rawValue: 100)
 			return [key1, key2, key3]
@@ -620,7 +620,7 @@ func TestHashAlgorithm(t *testing.T) {
 
 	require.Len(t, builtinStruct.Fields, 1)
 	assert.Equal(t,
-		cadence.NewInt(HashAlgorithmKMAC_128.RawValue()),
+		cadence.NewInt(HashAlgorithmSHA3_256.RawValue()),
 		builtinStruct.Fields[0],
 	)
 
@@ -633,7 +633,7 @@ func TestHashAlgorithm(t *testing.T) {
 
 	require.Len(t, builtinStruct.Fields, 1)
 	assert.Equal(t,
-		cadence.NewInt(HashAlgorithmKMAC_128.RawValue()),
+		cadence.NewInt(HashAlgorithmSHA3_256.RawValue()),
 		builtinStruct.Fields[0],
 	)
 
@@ -652,9 +652,9 @@ func TestSignatureAlgorithm(t *testing.T) {
 
 	script := []byte(`
 		pub fun main(): [SignatureAlgorithm?] {
-			var key1: SignatureAlgorithm? = SignatureAlgorithm.BLS_BLS12381
+			var key1: SignatureAlgorithm? = SignatureAlgorithm.ECDSA_Secp256k1
 
-			var key2: SignatureAlgorithm? = SignatureAlgorithm(rawValue: 3)
+			var key2: SignatureAlgorithm? = SignatureAlgorithm(rawValue: 2)
 
 			var key3: SignatureAlgorithm? = SignatureAlgorithm(rawValue: 100)
 			return [key1, key2, key3]
@@ -688,7 +688,7 @@ func TestSignatureAlgorithm(t *testing.T) {
 
 	require.Len(t, builtinStruct.Fields, 1)
 	assert.Equal(t,
-		cadence.NewInt(SignatureAlgorithmBLS_BLS12381.RawValue()),
+		cadence.NewInt(SignatureAlgorithmECDSA_Secp256k1.RawValue()),
 		builtinStruct.Fields[0],
 	)
 
@@ -701,7 +701,7 @@ func TestSignatureAlgorithm(t *testing.T) {
 
 	require.Len(t, builtinStruct.Fields, 1)
 	assert.Equal(t,
-		cadence.NewInt(SignatureAlgorithmBLS_BLS12381.RawValue()),
+		cadence.NewInt(SignatureAlgorithmECDSA_Secp256k1.RawValue()),
 		builtinStruct.Fields[0],
 	)
 
