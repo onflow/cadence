@@ -2339,6 +2339,91 @@ func TestScriptReturnTypeNotReturnableError(t *testing.T) {
 			}),
 		)
 	})
+
+	t.Run("storage path", func(t *testing.T) {
+
+		t.Parallel()
+
+		test(
+			`
+              pub fun main(): StoragePath {
+                  return /storage/foo
+              }
+            `,
+			cadence.Path{
+				Domain:     "storage",
+				Identifier: "foo",
+			},
+		)
+	})
+
+	t.Run("public path", func(t *testing.T) {
+
+		t.Parallel()
+
+		test(
+			`
+              pub fun main(): PublicPath {
+                  return /public/foo
+              }
+            `,
+			cadence.Path{
+				Domain:     "public",
+				Identifier: "foo",
+			},
+		)
+	})
+
+	t.Run("private path", func(t *testing.T) {
+
+		t.Parallel()
+
+		test(
+			`
+              pub fun main(): PrivatePath {
+                  return /private/foo
+              }
+            `,
+			cadence.Path{
+				Domain:     "private",
+				Identifier: "foo",
+			},
+		)
+	})
+
+	t.Run("capability path", func(t *testing.T) {
+
+		t.Parallel()
+
+		test(
+			`
+              pub fun main(): CapabilityPath {
+                  return /public/foo
+              }
+            `,
+			cadence.Path{
+				Domain:     "public",
+				Identifier: "foo",
+			},
+		)
+	})
+
+	t.Run("path", func(t *testing.T) {
+
+		t.Parallel()
+
+		test(
+			`
+              pub fun main(): Path {
+                  return /storage/foo
+              }
+            `,
+			cadence.Path{
+				Domain:     "storage",
+				Identifier: "foo",
+			},
+		)
+	})
 }
 
 func TestScriptParameterTypeNotStorableError(t *testing.T) {
