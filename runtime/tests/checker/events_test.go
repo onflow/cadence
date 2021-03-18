@@ -151,6 +151,24 @@ func TestCheckEventDeclaration(t *testing.T) {
 		}
 	})
 
+	t.Run("recursive", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          event E(recursive: Recursive)
+
+          struct Recursive {
+              let children: [Recursive]
+              init() {
+                  self.children = []
+              }
+          }
+		`)
+
+		require.NoError(t, err)
+	})
+
 	t.Run("RedeclaredEvent", func(t *testing.T) {
 
 		t.Parallel()

@@ -31,11 +31,13 @@ func (checker *Checker) checkEventParameters(
 	parameters []*Parameter,
 ) {
 
+	parameterTypeValidationResults := map[*Member]bool{}
+
 	for i, parameter := range parameterList.Parameters {
 		parameterType := parameters[i].TypeAnnotation.Type
 
 		if !parameterType.IsInvalidType() &&
-			!IsValidEventParameterType(parameterType) {
+			!IsValidEventParameterType(parameterType, parameterTypeValidationResults) {
 
 			checker.report(
 				&InvalidEventParameterTypeError{
@@ -50,41 +52,42 @@ func (checker *Checker) checkEventParameters(
 	}
 }
 
-// isValidEventParameterType returns true if the given type is a valid event parameter type.
+// IsValidEventParameterType returns true if the given type is a valid event parameter type.
 //
 // Events currently only support a few simple Cadence types.
 //
-func IsValidEventParameterType(t Type) bool {
+func IsValidEventParameterType(t Type, results map[*Member]bool) bool {
+
 	switch t := t.(type) {
 	case *AddressType:
 		return true
 
 	case *OptionalType:
-		return IsValidEventParameterType(t.Type)
+		return IsValidEventParameterType(t.Type, results)
 
 	case *VariableSizedType:
-		return IsValidEventParameterType(t.ElementType(false))
+		return IsValidEventParameterType(t.ElementType(false), results)
 
 	case *ConstantSizedType:
-		return IsValidEventParameterType(t.ElementType(false))
+		return IsValidEventParameterType(t.ElementType(false), results)
 
 	case *DictionaryType:
-		return IsValidEventParameterType(t.KeyType) &&
-			IsValidEventParameterType(t.ValueType)
+		return IsValidEventParameterType(t.KeyType, results) &&
+			IsValidEventParameterType(t.ValueType, results)
 
 	case *CompositeType:
 		if t.Kind != common.CompositeKindStructure {
 			return false
 		}
+
 		for pair := t.Members.Oldest(); pair != nil; pair = pair.Next() {
 			member := pair.Value
-			if member.DeclarationKind == common.DeclarationKindField &&
-				!member.IgnoreInSerialization &&
-				!IsValidEventParameterType(member.TypeAnnotation.Type) {
 
+			if !member.IsValidEventParameterType(results) {
 				return false
 			}
 		}
+
 		return true
 
 	default:
