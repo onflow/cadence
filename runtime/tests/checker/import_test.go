@@ -411,6 +411,11 @@ func TestCheckInvalidImportedError(t *testing.T) {
 
 	t.Parallel()
 
+	_, importedErr := ParseAndCheck(t, `
+	  let x: Bool = 1
+	`)
+	require.Error(t, importedErr)
+
 	_, err := ParseAndCheckWithOptions(t,
 		`
            import x from "imported"
@@ -419,17 +424,7 @@ func TestCheckInvalidImportedError(t *testing.T) {
 			Options: []sema.Option{
 				sema.WithImportHandler(
 					func(checker *sema.Checker, location common.Location) (sema.Import, error) {
-
-						importedChecker, err := ParseAndCheck(t, `
-                          let x: Bool = 1
-                        `)
-						if err != nil {
-							return nil, err
-						}
-
-						return sema.ElaborationImport{
-							Elaboration: importedChecker.Elaboration,
-						}, nil
+						return nil, importedErr
 					},
 				),
 			},
@@ -714,20 +709,20 @@ func TestCheckImportVirtual(t *testing.T) {
 			"",
 		))
 
+	valueElements := sema.NewStringImportElementOrderedMap()
+
+	valueElements.Set("Foo", sema.ImportElement{
+		DeclarationKind: common.DeclarationKindStructure,
+		Access:          ast.AccessPublic,
+		Type:            fooType,
+	})
+
 	_, err := ParseAndCheckWithOptions(t,
 		code,
 		ParseAndCheckOptions{
 			Options: []sema.Option{
 				sema.WithImportHandler(
 					func(checker *sema.Checker, location common.Location) (sema.Import, error) {
-						valueElements := sema.NewStringImportElementOrderedMap()
-
-						valueElements.Set("Foo", sema.ImportElement{
-							DeclarationKind: common.DeclarationKindStructure,
-							Access:          ast.AccessPublic,
-							Type:            fooType,
-						})
-
 						return sema.VirtualImport{
 							ValueElements: valueElements,
 						}, nil
