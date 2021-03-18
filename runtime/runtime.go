@@ -530,9 +530,9 @@ func validateArgumentParams(
 		arg := importValue(value)
 
 		// Check whether the decoded value conforms to the type associated with the value.
-		semaType := inter.ConvertStaticToSemaType(arg.StaticType())
-		if !valueConformsToType(arg, semaType) {
-			return nil, fmt.Errorf("value `%s` does not conform to type `%s`", value, semaType)
+		dynamicType := arg.DynamicType(inter)
+		if !valueConformsToDynamicType(arg, dynamicType) {
+			return nil, fmt.Errorf("value `%s` does not conform to type `%s`", value, dynamicType)
 			//return nil, &InvalidEntryPointArgumentError{
 			//	Index: i,
 			//	Err: err,
@@ -540,7 +540,7 @@ func validateArgumentParams(
 		}
 
 		// Check that decoded value is a subtype of static parameter type
-		if !interpreter.IsSubType(arg.DynamicType(inter), parameterType) {
+		if !interpreter.IsSubType(dynamicType, parameterType) {
 			return nil, &InvalidEntryPointArgumentError{
 				Index: i,
 				Err: &InvalidTypeAssignmentError{
