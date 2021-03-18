@@ -83,27 +83,18 @@ func IsValidEventParameterType(t Type, results map[*Member]bool) bool {
 		for pair := t.Members.Oldest(); pair != nil; pair = pair.Next() {
 			member := pair.Value
 
-			// Prevent a potential stack overflow due to cyclic declarations
-			// by keeping track of the result for each member
+			test := func(t Type) bool {
+				if member.DeclarationKind == common.DeclarationKindField &&
+					!member.IgnoreInSerialization &&
+					!IsValidEventParameterType(member.TypeAnnotation.Type, results) {
 
-			// If a result for the member is available, return it,
-			// instead of checking the type
+					return false
+				}
 
-			if result, ok := results[member]; ok {
-				return result
+				return true
 			}
 
-			// Temporarily assume the member passes the test while it's type is tested.
-			// If a recursive call occurs, the check for an existing result will prevent infinite recursion
-
-			results[member] = true
-
-			if member.DeclarationKind == common.DeclarationKindField &&
-				!member.IgnoreInSerialization &&
-				!IsValidEventParameterType(member.TypeAnnotation.Type, results) {
-
-				results[member] = false
-
+			if !member.testType(test, results) {
 				return false
 			}
 		}
