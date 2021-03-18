@@ -136,6 +136,19 @@ func (e *InvalidEntryPointArgumentError) Error() string {
 	return fmt.Sprintf("invalid argument at index %d", e.Index)
 }
 
+// MalformedArgumentError
+
+type MalformedArgumentError struct {
+	Value interpreter.Value
+}
+
+func (e *MalformedArgumentError) Error() string {
+	return fmt.Sprintf(
+		"malformed value `%s`",
+		e.Value,
+	)
+}
+
 // InvalidTypeAssignmentError
 
 type InvalidTypeAssignmentError struct {
