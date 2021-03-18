@@ -2284,3 +2284,119 @@ func TestCheckInvalidRestrictiveAccessModifier(t *testing.T) {
 		})
 	}
 }
+
+func TestCheckAccountAccess(t *testing.T) {
+
+	t.Parallel()
+
+	location1A := common.AddressLocation{
+		Address: common.BytesToAddress([]byte{0x1}),
+		Name:    "A",
+	}
+
+	location1B := common.AddressLocation{
+		// NOTE: same address as A
+		Address: common.BytesToAddress([]byte{0x1}),
+		Name:    "B",
+	}
+
+	location2B := common.AddressLocation{
+		// NOTE: different address from A
+		Address: common.BytesToAddress([]byte{0x2}),
+		Name:    "B",
+	}
+
+	const importingCode = `
+	  import A from 0x1
+
+      pub contract B {
+          pub fun use() {
+              let b = A.a
+          }
+      }
+	`
+
+	type testCase struct {
+		location         common.Location
+		accessModeChecks map[sema.AccessCheckMode]func(*testing.T, error)
+	}
+
+	tests := []testCase{
+		{
+			location: location1B,
+			accessModeChecks: map[sema.AccessCheckMode]func(*testing.T, error){
+				sema.AccessCheckModeStrict:                   expectSuccess,
+				sema.AccessCheckModeNotSpecifiedRestricted:   expectSuccess,
+				sema.AccessCheckModeNotSpecifiedUnrestricted: expectSuccess,
+				sema.AccessCheckModeNone:                     expectSuccess,
+			},
+		},
+		{
+			location: location2B,
+			accessModeChecks: map[sema.AccessCheckMode]func(*testing.T, error){
+				sema.AccessCheckModeStrict:                   expectInvalidAccessError,
+				sema.AccessCheckModeNotSpecifiedRestricted:   expectInvalidAccessError,
+				sema.AccessCheckModeNotSpecifiedUnrestricted: expectInvalidAccessError,
+				sema.AccessCheckModeNone:                     expectSuccess,
+			},
+		},
+	}
+
+	for _, variableKind := range ast.VariableKinds {
+
+		t.Run(variableKind.Name(), func(t *testing.T) {
+
+			importedChecker, err := ParseAndCheckWithOptions(t,
+				fmt.Sprintf(
+					`
+			          pub contract A {
+                          access(account) %s a: Int
+
+                          init() {
+                              self.a = 1
+                          }
+                      }
+			        `,
+					variableKind.Keyword(),
+				),
+				ParseAndCheckOptions{
+					Location: location1A,
+				},
+			)
+			require.NoError(t, err)
+
+			for _, test := range tests {
+
+				t.Run(test.location.String(), func(t *testing.T) {
+
+					require.Len(t, test.accessModeChecks, len(sema.AccessCheckModes))
+
+					for checkMode, check := range test.accessModeChecks {
+
+						t.Run(checkMode.String(), func(t *testing.T) {
+
+							_, err = ParseAndCheckWithOptions(t,
+								importingCode,
+								ParseAndCheckOptions{
+									Location: test.location,
+									Options: []sema.Option{
+										sema.WithAccessCheckMode(checkMode),
+										sema.WithImportHandler(
+											func(checker *sema.Checker, location common.Location) (sema.Import, error) {
+												return sema.ElaborationImport{
+													Elaboration: importedChecker.Elaboration,
+												}, nil
+											},
+										),
+									},
+								},
+							)
+
+							check(t, err)
+						})
+					}
+				})
+			}
+		})
+	}
+}
