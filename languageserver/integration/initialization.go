@@ -19,10 +19,10 @@
 package integration
 
 import (
-	"github.com/onflow/flow-cli/flow/cli"
-	"github.com/onflow/flow-cli/sharedlib/gateway"
-	"github.com/onflow/flow-cli/sharedlib/services"
-	"github.com/onflow/flow-go-sdk"
+	"github.com/onflow/flow-cli/flow/gateway"
+	lib "github.com/onflow/flow-cli/flow/lib"
+	"github.com/onflow/flow-cli/flow/services"
+	"github.com/onflow/flow-cli/flow/util"
 	"github.com/onflow/flow-go-sdk/client"
 	"google.golang.org/grpc"
 )
@@ -36,10 +36,6 @@ func (i *FlowIntegration) initialize(initializationOptions interface{}) error {
 	}
 	i.config = conf
 
-	// add the service account as a usable account
-	i.serviceAddress = flow.ServiceAddress(flow.Emulator)
-	i.accounts[i.serviceAddress] = conf.ServiceAccountKey
-
 	i.flowClient, err = client.New(
 		i.config.EmulatorAddr,
 		grpc.WithInsecure(),
@@ -50,20 +46,25 @@ func (i *FlowIntegration) initialize(initializationOptions interface{}) error {
 	// TODO: get this path from initializationOptions
 	configurationPaths := []string{"/home/max/Desktop/cadence/flow.json"}
 
-
 	// TODO: process error if project could not be initialized from specified config
-	project, _ := cli.LoadProject(configurationPaths)
+	project, _ := lib.LoadProject(configurationPaths)
 	if err != nil {
 		return nil
 	}
+
+	i.project = project
+
 	// TODO: get this value from config file
 	host := conf.EmulatorAddr
 	// TODO: process error here
 	gate, _ := gateway.NewGrpcGateway(host)
+
+	logger := util.NewStdoutLogger(util.NoneLog)
+
 	if err != nil {
 		return nil
 	}
-	i.sharedServices = services.NewServices(gate, *project)
+	i.sharedServices = services.NewServices(gate, project, logger)
 	if err != nil {
 		return err
 	}
