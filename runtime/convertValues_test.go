@@ -991,268 +991,6 @@ func TestEnumValue(t *testing.T) {
 	})
 }
 
-
-type importValueTest struct {
-	label         string
-	typeSignature string
-	value         interpreter.Value
-	exportedValue cadence.Value
-	skipReverse   bool
-}
-
-
-var importValueTests = []importValueTest{
-	{
-		label:         "Void",
-		value:         interpreter.VoidValue{},
-		exportedValue: cadence.NewVoid(),
-	},
-	{
-		label:         "Nil",
-		value:         interpreter.NilValue{},
-		exportedValue: cadence.NewOptional(nil),
-		skipReverse:   true,
-	},
-	{
-		label:         "SomeValue",
-		value:         interpreter.NewSomeValueOwningNonCopying(interpreter.NewIntValueFromInt64(42)),
-		exportedValue: cadence.NewOptional(cadence.NewInt(42)),
-	},
-	{
-		label:         "Bool true",
-		value:         interpreter.BoolValue(true),
-		exportedValue: cadence.NewBool(true),
-	},
-	{
-		label:         "Bool false",
-		value:         interpreter.BoolValue(false),
-		exportedValue: cadence.NewBool(false),
-	},
-	{
-		label:         "String empty",
-		value:         interpreter.NewStringValue(""),
-		exportedValue: cadence.NewString(""),
-	},
-	{
-		label:         "String non-empty",
-		value:         interpreter.NewStringValue("foo"),
-		exportedValue: cadence.NewString("foo"),
-	},
-	{
-		label:         "Array empty",
-		value:         interpreter.NewArrayValueUnownedNonCopying([]interpreter.Value{}...),
-		exportedValue: cadence.NewArray([]cadence.Value{}),
-	},
-	{
-		label: "Array non-empty",
-		value: interpreter.NewArrayValueUnownedNonCopying(
-			[]interpreter.Value{
-				interpreter.NewIntValueFromInt64(42),
-				interpreter.NewStringValue("foo"),
-			}...,
-		),
-		exportedValue: cadence.NewArray([]cadence.Value{
-			cadence.NewInt(42),
-			cadence.NewString("foo"),
-		}),
-	},
-	{
-		label:         "Int",
-		value:         interpreter.NewIntValueFromInt64(42),
-		exportedValue: cadence.NewInt(42),
-	},
-	{
-		label:         "Int8",
-		value:         interpreter.Int8Value(42),
-		exportedValue: cadence.NewInt8(42),
-	},
-	{
-		label:         "Int16",
-		value:         interpreter.Int16Value(42),
-		exportedValue: cadence.NewInt16(42),
-	},
-	{
-		label:         "Int32",
-		value:         interpreter.Int32Value(42),
-		exportedValue: cadence.NewInt32(42),
-	},
-	{
-		label:         "Int64",
-		value:         interpreter.Int64Value(42),
-		exportedValue: cadence.NewInt64(42),
-	},
-	{
-		label:         "Int128",
-		value:         interpreter.NewInt128ValueFromInt64(42),
-		exportedValue: cadence.NewInt128(42),
-	},
-	{
-		label:         "Int256",
-		value:         interpreter.NewInt256ValueFromInt64(42),
-		exportedValue: cadence.NewInt256(42),
-	},
-	{
-		label:         "UInt",
-		value:         interpreter.NewUIntValueFromUint64(42),
-		exportedValue: cadence.NewUInt(42),
-	},
-	{
-		label:         "UInt8",
-		value:         interpreter.UInt8Value(42),
-		exportedValue: cadence.NewUInt8(42),
-	},
-	{
-		label:         "UInt16",
-		value:         interpreter.UInt16Value(42),
-		exportedValue: cadence.NewUInt16(42),
-	},
-	{
-		label:         "UInt32",
-		value:         interpreter.UInt32Value(42),
-		exportedValue: cadence.NewUInt32(42),
-	},
-	{
-		label:         "UInt64",
-		value:         interpreter.UInt64Value(42),
-		exportedValue: cadence.NewUInt64(42),
-	},
-	{
-		label:         "UInt128",
-		value:         interpreter.NewUInt128ValueFromUint64(42),
-		exportedValue: cadence.NewUInt128(42),
-	},
-	{
-		label:         "UInt256",
-		value:         interpreter.NewUInt256ValueFromUint64(42),
-		exportedValue: cadence.NewUInt256(42),
-	},
-	{
-		label:         "Word8",
-		value:         interpreter.Word8Value(42),
-		exportedValue: cadence.NewWord8(42),
-	},
-	{
-		label:         "Word16",
-		value:         interpreter.Word16Value(42),
-		exportedValue: cadence.NewWord16(42),
-	},
-	{
-		label:         "Word32",
-		value:         interpreter.Word32Value(42),
-		exportedValue: cadence.NewWord32(42),
-	},
-	{
-		label:         "Word64",
-		value:         interpreter.Word64Value(42),
-		exportedValue: cadence.NewWord64(42),
-	},
-	{
-		label:         "Fix64",
-		value:         interpreter.Fix64Value(-123000000),
-		exportedValue: cadence.Fix64(-123000000),
-	},
-	{
-		label:         "UFix64",
-		value:         interpreter.UFix64Value(123000000),
-		exportedValue: cadence.UFix64(123000000),
-	},
-	{
-		label: "Path",
-		value: interpreter.PathValue{
-			Domain:     common.PathDomainStorage,
-			Identifier: "foo",
-		},
-		exportedValue: cadence.Path{
-			Domain:     "storage",
-			Identifier: "foo",
-		},
-	},
-}
-
-
-//func TestImportValue(t *testing.T) {
-//
-//	t.Parallel()
-//
-//	rt := NewInterpreterRuntime().(*interpreterRuntime)
-//	rt.newInterpreter()
-//
-//
-//	runtimeInterface := &testRuntimeInterface{
-//		decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
-//			return json.Decode(b)
-//		},
-//	}
-//
-//	test := func(test exportTest) {
-//
-//		t.Run(test.label, func(t *testing.T) {
-//
-//			t.Parallel()
-//
-//			//func validateArgumentParams(
-//			//	inter *interpreter.Interpreter,
-//			//	runtimeInterface Interface,
-//			//	arguments [][]byte,
-//			//	parameters []*sema.Parameter,
-//		)
-//
-//			actual := exportValueWithInterpreter(test.value, nil, exportResults{})
-//			assert.Equal(t, test.expected, actual)
-//
-//			if !test.skipReverse {
-//				original := importValue(actual)
-//				assert.Equal(t, test.value, original)
-//			}
-//		})
-//	}
-//
-//	for _, tt := range exportTests {
-//		test(tt)
-//	}
-//}
-
-func TestMalformedStructImport(t *testing.T) {
-
-	t.Parallel()
-
-	value := cadence.Struct{
-		StructType: &cadence.StructType{
-			Location:            utils.TestLocation,
-			QualifiedIdentifier: "Foo",
-			Fields: []cadence.Field{
-				{
-					Identifier: "bar",
-					Type:       cadence.IntType{},
-				},
-			},
-		},
-		Fields: []cadence.Value{
-			cadence.NewInt(3),
-		},
-	}
-
-	t.Run("test export", func(t *testing.T) {
-		script := `
-			pub fun main(f: Foo) {
-
-			}
-
-			pub struct Foo {
-				pub var bar: String
-
-				init() {
-					self.bar = "Hello"
-				}
-			}
-		`
-
-		actual, err := importAndExportValuesFromScript(t, script, value)
-		assert.NoError(t, err)
-		fmt.Println(actual)
-	})
-}
-
 func importAndExportValuesFromScript(t *testing.T, script string, arg cadence.Value) (cadence.Value, error) {
 	encodedArg, err := json.Encode(arg)
 	require.NoError(t, err)
@@ -1275,4 +1013,543 @@ func importAndExportValuesFromScript(t *testing.T, script string, arg cadence.Va
 			Location:  utils.TestLocation,
 		},
 	)
+}
+
+type importValueTest struct {
+	label         string
+	typeSignature string
+	exportedValue cadence.Value
+	skipExport    bool
+}
+
+func TestImportValue(t *testing.T) {
+
+	t.Parallel()
+
+	// Complex struct value
+	fooStructValue := cadence.Struct{
+		StructType: &cadence.StructType{
+			Location:            utils.TestLocation,
+			QualifiedIdentifier: "Foo",
+			Fields: []cadence.Field{
+				{
+					Identifier: "a",
+					Type: cadence.OptionalType{
+						Type: cadence.StringType{},
+					},
+				},
+				{
+					Identifier: "b",
+					Type: cadence.DictionaryType{
+						KeyType:     cadence.StringType{},
+						ElementType: cadence.StringType{},
+					},
+				},
+				{
+					Identifier: "c",
+					Type: cadence.VariableSizedArrayType{
+						ElementType: cadence.StringType{},
+					},
+				},
+				{
+					Identifier: "d",
+					Type: cadence.ConstantSizedArrayType{
+						ElementType: cadence.StringType{},
+						Size:        2,
+					},
+				},
+				{
+					Identifier: "e",
+					Type:       cadence.AddressType{},
+				},
+			},
+		},
+		Fields: []cadence.Value{
+			cadence.NewString("John"),
+			cadence.NewDictionary([]cadence.KeyValuePair{
+				{
+					Key:   cadence.NewString("name"),
+					Value: cadence.NewString("Doe"),
+				},
+			}),
+			cadence.NewArray([]cadence.Value{
+				cadence.NewString("foo"),
+				cadence.NewString("bar"),
+			}),
+			cadence.NewArray([]cadence.Value{
+				cadence.NewString("foo"),
+				cadence.NewString("bar"),
+			}),
+			cadence.NewAddress([8]byte{0, 0, 0, 0, 0, 1, 0, 2}),
+		},
+	}
+
+	var importValueTests = []importValueTest{
+		{
+			label:         "Nil",
+			typeSignature: "String?",
+			exportedValue: cadence.NewOptional(nil),
+		},
+		{
+			label:         "Bool true",
+			typeSignature: "Bool",
+			exportedValue: cadence.NewBool(true),
+		},
+		{
+			label:         "Bool false",
+			typeSignature: "Bool",
+			exportedValue: cadence.NewBool(false),
+		},
+		{
+			label:         "String empty",
+			typeSignature: "String",
+			exportedValue: cadence.NewString(""),
+		},
+		{
+			label:         "String non-empty",
+			typeSignature: "String",
+			exportedValue: cadence.NewString("foo"),
+		},
+		{
+			label:         "Array empty",
+			typeSignature: "[String]",
+			exportedValue: cadence.NewArray([]cadence.Value{}),
+		},
+		{
+			label:         "Array non-empty",
+			typeSignature: "[String]",
+			exportedValue: cadence.NewArray([]cadence.Value{
+				cadence.NewString("foo"),
+				cadence.NewString("bar"),
+			}),
+		},
+		{
+			label:         "Dictionary non-empty",
+			typeSignature: "{String: Foo}",
+			exportedValue: cadence.NewDictionary([]cadence.KeyValuePair{
+				{
+					Key:   cadence.NewString("foo"),
+					Value: fooStructValue,
+				},
+			}),
+		},
+		{
+			label:         "Int",
+			typeSignature: "Int",
+			exportedValue: cadence.NewInt(42),
+		},
+		{
+			label:         "Int8",
+			typeSignature: "Int8",
+			exportedValue: cadence.NewInt8(42),
+		},
+		{
+			label:         "Int16",
+			typeSignature: "Int16",
+			exportedValue: cadence.NewInt16(42),
+		},
+		{
+			label:         "Int32",
+			typeSignature: "Int32",
+			exportedValue: cadence.NewInt32(42),
+		},
+		{
+			label:         "Int64",
+			typeSignature: "Int64",
+			exportedValue: cadence.NewInt64(42),
+		},
+		{
+			label:         "Int128",
+			typeSignature: "Int128",
+			exportedValue: cadence.NewInt128(42),
+		},
+		{
+			label:         "Int256",
+			typeSignature: "Int256",
+			exportedValue: cadence.NewInt256(42),
+		},
+		{
+			label:         "UInt",
+			typeSignature: "UInt",
+			exportedValue: cadence.NewUInt(42),
+		},
+		{
+			label:         "UInt8",
+			typeSignature: "UInt8",
+			exportedValue: cadence.NewUInt8(42),
+		},
+		{
+			label:         "UInt16",
+			typeSignature: "UInt16",
+			exportedValue: cadence.NewUInt16(42),
+		},
+		{
+			label:         "UInt32",
+			typeSignature: "UInt32",
+			exportedValue: cadence.NewUInt32(42),
+		},
+		{
+			label:         "UInt64",
+			typeSignature: "UInt64",
+			exportedValue: cadence.NewUInt64(42),
+		},
+		{
+			label:         "UInt128",
+			typeSignature: "UInt128",
+			exportedValue: cadence.NewUInt128(42),
+		},
+		{
+			label:         "UInt256",
+			typeSignature: "UInt256",
+			exportedValue: cadence.NewUInt256(42),
+		},
+		{
+			label:         "Word8",
+			typeSignature: "Word8",
+			exportedValue: cadence.NewWord8(42),
+		},
+		{
+			label:         "Word16",
+			typeSignature: "Word16",
+			exportedValue: cadence.NewWord16(42),
+		},
+		{
+			label:         "Word32",
+			typeSignature: "Word32",
+			exportedValue: cadence.NewWord32(42),
+		},
+		{
+			label:         "Word64",
+			typeSignature: "Word64",
+			exportedValue: cadence.NewWord64(42),
+		},
+		{
+			label:         "Fix64",
+			typeSignature: "Fix64",
+			exportedValue: cadence.Fix64(-123000000),
+		},
+		{
+			label:         "UFix64",
+			typeSignature: "UFix64",
+			exportedValue: cadence.UFix64(123000000),
+		},
+		{
+			label:         "Struct",
+			typeSignature: "Foo",
+			exportedValue: fooStructValue,
+		},
+		{
+			label:         "StoragePath",
+			typeSignature: "StoragePath",
+			exportedValue: cadence.Path{
+				Domain:     "storage",
+				Identifier: "foo",
+			},
+			skipExport: true,
+		},
+		{
+			label:         "PrivatePath",
+			typeSignature: "PrivatePath",
+			exportedValue: cadence.Path{
+				Domain:     "private",
+				Identifier: "foo",
+			},
+			skipExport: true,
+		},
+		{
+			label:         "PublicPath",
+			typeSignature: "PublicPath",
+			exportedValue: cadence.Path{
+				Domain:     "public",
+				Identifier: "foo",
+			},
+			skipExport: true,
+		},
+		{
+			label:         "Address",
+			typeSignature: "Address",
+			exportedValue: cadence.NewAddress([8]byte{0, 0, 0, 0, 0, 1, 0, 2}),
+		},
+
+		// TODO: Enable once https://github.com/onflow/cadence/issues/712 is fixed.
+		//{
+		//	label:         "Capability",
+		//	typeSignature: "Capability<&Foo>",
+		//	exportedValue: cadence.Capability{
+		//		Path: cadence.Path{
+		//			Domain:     "public",
+		//			Identifier: "bar",
+		//		},
+		//		Address:    cadence.NewAddress([8]byte{0, 0, 0, 0, 0, 1, 0, 2}),
+		//		BorrowType: "Foo",
+		//	},
+		//},
+
+		// TODO: enable once https://github.com/onflow/cadence/issues/491 is fixed.
+		//{
+		//	label:         "Type",
+		//	typeSignature: "Type",
+		//	exportedValue: cadence.TypeValue{
+		//		StaticType: "Foo",
+		//	},
+		//},
+
+	}
+
+	testImport := func(test importValueTest) {
+
+		t.Run(test.label, func(t *testing.T) {
+
+			t.Parallel()
+
+			returnSignature := ""
+			returnStmt := ""
+			if !test.skipExport {
+				returnSignature = fmt.Sprintf(": %[1]s", test.typeSignature)
+				returnStmt = "return arg"
+			}
+
+			script := fmt.Sprintf(
+				`pub fun main(arg: %[1]s)%[2]s {
+
+					if !arg.isInstance(Type<%[1]s>()) {
+						panic("Not a %[1]s value")
+					}
+
+					%[3]s
+				}
+
+				pub struct Foo {
+					pub var a: String?
+					pub var b: {String: String}
+					pub var c: [String]
+					pub var d: [String; 2]
+					pub var e: Address
+
+					init() {
+						self.a = "Hello"
+						self.b = {}
+						self.c = []
+						self.d = ["foo", "bar"]
+						self.e = 0x42
+					}
+				}`,
+				test.typeSignature,
+				returnSignature,
+				returnStmt,
+			)
+
+			actual, err := importAndExportValuesFromScript(t, script, test.exportedValue)
+			require.NoError(t, err)
+			if !test.skipExport {
+				assert.Equal(t, test.exportedValue, actual)
+			}
+		})
+	}
+
+	for _, testCase := range importValueTests {
+		testImport(testCase)
+	}
+}
+
+func TestMalformedImportValue(t *testing.T) {
+
+	t.Parallel()
+
+	// Struct with wrong field type
+
+	malformedStructType1 := &cadence.StructType{
+		Location:            utils.TestLocation,
+		QualifiedIdentifier: "Foo",
+		Fields: []cadence.Field{
+			{
+				Identifier: "a",
+				Type:       cadence.IntType{},
+			},
+		},
+	}
+
+	malformedStruct1 := cadence.Struct{
+		StructType: malformedStructType1,
+		Fields: []cadence.Value{
+			cadence.NewInt(3),
+		},
+	}
+
+	// Struct with wrong field name
+
+	malformedStruct2 := cadence.Struct{
+		StructType: &cadence.StructType{
+			Location:            utils.TestLocation,
+			QualifiedIdentifier: "Foo",
+			Fields: []cadence.Field{
+				{
+					Identifier: "nonExisting",
+					Type:       cadence.StringType{},
+				},
+			},
+		},
+		Fields: []cadence.Value{
+			cadence.NewString("John"),
+		},
+	}
+
+	// Struct with nested malformed array value
+	malformedStruct3 := cadence.Struct{
+		StructType: &cadence.StructType{
+			Location:            utils.TestLocation,
+			QualifiedIdentifier: "Bar",
+			Fields: []cadence.Field{
+				{
+					Identifier: "a",
+					Type: cadence.VariableSizedArrayType{
+						ElementType: malformedStructType1,
+					},
+				},
+			},
+		},
+		Fields: []cadence.Value{
+			cadence.NewArray([]cadence.Value{
+				malformedStruct1,
+			}),
+		},
+	}
+
+	// Struct with nested malformed dictionary value
+	malformedStruct4 := cadence.Struct{
+		StructType: &cadence.StructType{
+			Location:            utils.TestLocation,
+			QualifiedIdentifier: "Baz",
+			Fields: []cadence.Field{
+				{
+					Identifier: "a",
+					Type: cadence.DictionaryType{
+						KeyType:     cadence.StringType{},
+						ElementType: malformedStructType1,
+					},
+				},
+			},
+		},
+		Fields: []cadence.Value{
+			cadence.NewDictionary([]cadence.KeyValuePair{
+				{
+					Key:   cadence.NewString("foo"),
+					Value: malformedStruct1,
+				},
+			}),
+		},
+	}
+
+	var importValueTests = []importValueTest{
+		{
+			label:         "Malformed Struct field type",
+			typeSignature: "Foo",
+			exportedValue: malformedStruct1,
+		},
+		{
+			label:         "Malformed Struct field name",
+			typeSignature: "Foo",
+			exportedValue: malformedStruct2,
+		},
+		{
+			label:         "Malformed AnyStruct",
+			typeSignature: "AnyStruct",
+			exportedValue: malformedStruct1,
+		},
+		{
+			label:         "Malformed nested struct array",
+			typeSignature: "Bar",
+			exportedValue: malformedStruct3,
+		},
+		{
+			label:         "Malformed nested struct dictionary",
+			typeSignature: "Baz",
+			exportedValue: malformedStruct4,
+		},
+		{
+			label:         "Array with malformed member",
+			typeSignature: "[Foo]",
+			exportedValue: cadence.NewArray([]cadence.Value{
+				malformedStruct1,
+			}),
+		},
+		{
+			label:         "Array with wrong size",
+			typeSignature: "[String; 2]",
+			exportedValue: cadence.NewArray([]cadence.Value{
+				malformedStruct1,
+			}),
+		},
+		{
+			label:         "Malformed Optional",
+			typeSignature: "Foo?",
+			exportedValue: cadence.NewOptional(malformedStruct1),
+		},
+		{
+			label:         "Malformed Map",
+			typeSignature: "{String : Foo}",
+			exportedValue: cadence.NewDictionary([]cadence.KeyValuePair{
+				{
+					Key:   cadence.NewString("foo"),
+					Value: malformedStruct1,
+				},
+			}),
+		},
+	}
+
+	testImport := func(test importValueTest) {
+
+		t.Run(test.label, func(t *testing.T) {
+
+			t.Parallel()
+
+			script := fmt.Sprintf(
+				`pub fun main(arg: %[1]s): %[1]s {
+
+					if !arg.isInstance(Type<%[1]s>()) {
+						panic("Not a %[1]s value")
+					}
+
+					return arg
+				}
+
+				pub struct Foo {
+					pub var a: String
+
+					init() {
+						self.a = "Hello"
+					}
+				}
+
+				pub struct Bar {
+					pub var a: [Foo]
+
+					init() {
+						self.a = []
+					}
+				}
+
+				pub struct Baz {
+					pub var a: {String: Foo}
+
+					init() {
+						self.a = {}
+					}
+				}`,
+				test.typeSignature,
+			)
+
+			_, err := importAndExportValuesFromScript(t, script, test.exportedValue)
+			require.Error(t, err)
+			assert.Contains(
+				t,
+				err.Error(),
+				fmt.Sprintf("malformed value `%s`", test.exportedValue.String()),
+			)
+		})
+	}
+
+	for _, testCase := range importValueTests {
+		testImport(testCase)
+	}
 }
