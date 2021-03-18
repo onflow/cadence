@@ -1,7 +1,6 @@
 package runtime
 
 import (
-	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 )
@@ -16,6 +15,14 @@ import (
 // specified in 'Foo', would return `false`.
 //
 func valueConformsToDynamicType(value interpreter.Value, dynamicType interpreter.DynamicType) (ok bool) {
+
+	// Currently the type-vs-value mismatch could only happen for composite types, as
+	// that's the only place where the type is loaded from the runtime based on name,
+	// rather than based on the value structure of the user input.
+	// Hence the possible set of malformed values are:
+	//     - Composite types.
+	//     - Arrays/Dictionaries/Optionals of composite types.
+
 	switch typ := dynamicType.(type) {
 	case interpreter.ArrayDynamicType:
 		ok = valueConfirmsToArrayDynamicType(value, typ)
@@ -25,12 +32,6 @@ func valueConformsToDynamicType(value interpreter.Value, dynamicType interpreter
 		ok = valueConfirmsToDictionaryDynamicType(value, typ)
 	case interpreter.SomeDynamicType:
 		ok = valueConfirmsToSomeDynamicType(value, typ)
-	case interpreter.PrivatePathDynamicType, interpreter.PublicPathDynamicType, interpreter.StoragePathDynamicType:
-		_, ok = value.(interpreter.PathValue)
-	case interpreter.CapabilityDynamicType:
-		_, ok = value.(interpreter.CapabilityValue)
-	case interpreter.BlockDynamicType:
-		_, ok = value.(interpreter.BlockValue)
 
 	// Following types are guaranteed to be decoded correctly by the json.decode().
 	// However, this additional layer is added to protect the Cadence runtime,
@@ -38,7 +39,7 @@ func valueConformsToDynamicType(value interpreter.Value, dynamicType interpreter
 	case interpreter.StringDynamicType:
 		_, ok = value.(*interpreter.StringValue)
 	case interpreter.BoolDynamicType:
-		_, ok = value.(*interpreter.BoolValue)
+		_, ok = value.(interpreter.BoolValue)
 	case interpreter.NumberDynamicType:
 		ok = valueConformsToSemaType(value, typ.StaticType)
 	case interpreter.NilDynamicType:
@@ -47,17 +48,24 @@ func valueConformsToDynamicType(value interpreter.Value, dynamicType interpreter
 		_, ok = value.(interpreter.AddressValue)
 	case interpreter.MetaTypeDynamicType:
 		_, ok = value.(interpreter.TypeValue)
+	case interpreter.CapabilityDynamicType:
+		_, ok = value.(interpreter.CapabilityValue)
+	case interpreter.PrivatePathDynamicType, interpreter.PublicPathDynamicType, interpreter.StoragePathDynamicType:
+		_, ok = value.(interpreter.PathValue)
 
 	// Following types cannot be used as arguments to a script/transaction.
 	// However, still validate and allow wherever possible, so that this validation
 	// is less conservative and would seamlessly cater future changes.
 	case interpreter.FunctionDynamicType:
 		_, ok = value.(interpreter.FunctionValue)
+	case interpreter.BlockDynamicType:
+		_, ok = value.(interpreter.BlockValue)
 	case interpreter.DeployedContractDynamicType:
 		_, ok = value.(interpreter.DeployedContractValue)
 	case interpreter.StorageReferenceDynamicType:
-		// TODO: check for the referenced value conformance, if and when
-		// importing a storage reference value support is added.
+		// Currently this only checks whether the the value is `interpreter.StorageReferenceValue`.
+		// It doesn't check whether the 'referenced' value conforms to the innerType.
+		// TODO: add support for checking the referenced value conformance (if importing is supported).
 		_, ok = value.(*interpreter.StorageReferenceValue)
 	case interpreter.EphemeralReferenceDynamicType:
 		ok = valueConfirmsToEphemeralReferenceDynamicType(value, typ)
@@ -181,11 +189,11 @@ func valueConformsToSemaType(value interpreter.Value, semaType sema.Type) (ok bo
 			ok = valueConformsToSemaType(value, typ.Type)
 		}
 	case *sema.AddressType:
-		_, ok = value.(*interpreter.AddressValue)
+		_, ok = value.(interpreter.AddressValue)
 	case *sema.VariableSizedType:
-		ok = valueConformsToArrayType(value, typ.Type)
+		ok = valueConformsToVariableSizedArrayType(value, typ)
 	case *sema.ConstantSizedType:
-		ok = valueConformsToArrayType(value, typ.Type)
+		ok = valueConformsToConstantSizedArrayType(value, typ)
 	case *sema.DictionaryType:
 		ok = valueConformsToDictionaryType(value, typ)
 	case *sema.CompositeType:
@@ -197,7 +205,7 @@ func valueConformsToSemaType(value interpreter.Value, semaType sema.Type) (ok bo
 	case *sema.FunctionType:
 		_, ok = value.(interpreter.FunctionValue)
 	case *sema.TransactionType:
-		panic(errors.NewUnreachableError())
+		ok = false
 	}
 
 	return
@@ -246,21 +254,34 @@ func valueConformsToSimpleType(value interpreter.Value, simpleType *sema.SimpleT
 		sema.PrivatePathType,
 		sema.StoragePathType:
 		_, ok = value.(*interpreter.PathValue)
-	case sema.VoidType:
-		_, ok = value.(*interpreter.BoolValue)
 	case sema.MetaType:
 		_, ok = value.(interpreter.TypeValue)
+	case sema.VoidType:
+		// false
 	}
 
 	return
 }
 
-func valueConformsToArrayType(value interpreter.Value, memberType sema.Type) bool {
+func valueConformsToVariableSizedArrayType(value interpreter.Value, arrayType *sema.VariableSizedType) bool {
 	arrayValue, ok := value.(*interpreter.ArrayValue)
 	if !ok {
 		return false
 	}
 
+	return checkArrayMembers(arrayValue, arrayType.Type)
+}
+
+func valueConformsToConstantSizedArrayType(value interpreter.Value, arrayType *sema.ConstantSizedType) bool {
+	arrayValue, ok := value.(*interpreter.ArrayValue)
+	if !ok || int64(len(arrayValue.Values)) != arrayType.Size {
+		return false
+	}
+
+	return checkArrayMembers(arrayValue, arrayType.Type)
+}
+
+func checkArrayMembers(arrayValue *interpreter.ArrayValue, memberType sema.Type) bool {
 	for _, member := range arrayValue.Values {
 		if !valueConformsToSemaType(member, memberType) {
 			return false

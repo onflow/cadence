@@ -532,7 +532,9 @@ func validateArgumentParams(
 		// Check whether the decoded value conforms to the type associated with the value.
 		dynamicType := arg.DynamicType(inter)
 		if !valueConformsToDynamicType(arg, dynamicType) {
-			return nil, fmt.Errorf("value `%s` does not conform to type `%s`", value, dynamicType)
+			return nil, &MalformedArgumentError{
+				Value: arg,
+			}
 			//return nil, &InvalidEntryPointArgumentError{
 			//	Index: i,
 			//	Err: err,
