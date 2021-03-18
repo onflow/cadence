@@ -19,13 +19,14 @@
 package integration
 
 import (
+	"github.com/onflow/flow-cli/flow/lib"
 	"github.com/onflow/flow-go-sdk"
 	"github.com/onflow/flow-go-sdk/client"
 
 	"github.com/onflow/cadence/languageserver/protocol"
 	"github.com/onflow/cadence/languageserver/server"
 
-	"github.com/onflow/flow-cli/sharedlib/services"
+	"github.com/onflow/flow-cli/flow/services"
 )
 
 type EmulatorState byte
@@ -36,23 +37,43 @@ const (
 	EmulatorOnline
 )
 
+var addressToName = map[string]string{
+	"0x01": "alice",
+	"0x02": "bob",
+	"0x03": "charlie",
+	"0x04": "dave",
+}
+
+var nameToAddress = map[string]string{
+	"alice": "0x01",
+	"bob": "0x02",
+	"charlie": "0x03",
+	"dave": "0x04",
+}
+
 type FlowIntegration struct {
-	server         *server.Server
-	config         Config
-	flowClient     *client.Client
+	server     *server.Server
+	config     Config
+	flowClient *client.Client
+
 	accounts       map[flow.Address]AccountPrivateKey
+	accountsByName map[string]string
+	activeAccount  string
 	activeAddress  flow.Address
 	serviceAddress flow.Address
-	entryPointInfo map[protocol.DocumentUri]entryPointInfo
-	emulatorState  EmulatorState
 
+	entryPointInfo map[protocol.DocumentUri]entryPointInfo
+
+	emulatorState  EmulatorState
 	sharedServices *services.Services
+	project        *lib.Project
 }
 
 func NewFlowIntegration(s *server.Server, enableFlowClient bool) (*FlowIntegration, error) {
 	integration := &FlowIntegration{
 		server:         s,
 		accounts:       make(map[flow.Address]AccountPrivateKey),
+		accountsByName: make(map[string]AccountPrivateKey),
 		entryPointInfo: map[protocol.DocumentUri]entryPointInfo{},
 	}
 
