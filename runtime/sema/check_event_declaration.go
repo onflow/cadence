@@ -83,18 +83,7 @@ func IsValidEventParameterType(t Type, results map[*Member]bool) bool {
 		for pair := t.Members.Oldest(); pair != nil; pair = pair.Next() {
 			member := pair.Value
 
-			test := func(t Type) bool {
-				if member.DeclarationKind == common.DeclarationKindField &&
-					!member.IgnoreInSerialization &&
-					!IsValidEventParameterType(member.TypeAnnotation.Type, results) {
-
-					return false
-				}
-
-				return true
-			}
-
-			if !member.testType(test, results) {
+			if !member.IsValidParameterType(results) {
 				return false
 			}
 		}
