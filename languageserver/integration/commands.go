@@ -124,8 +124,8 @@ func (i *FlowIntegration) sendTransaction(conn protocol.Conn, args ...interface{
 		signers[i] = v.(string)
 	}
 
-	// TODO: Currently only single signer is supported, so we will extractfirst one
-	// Execute script via shared library
+	// TODO: Currently only single signer is supported, so we will extract first one
+	// Send transaction via shared library
 	_, txResult, txSendError := i.sharedServices.Transactions.Send(path.Path, signers[0], []string{}, argsJSON)
 
 	if txSendError != nil {
@@ -250,17 +250,6 @@ func (i *FlowIntegration) createAccount(conn protocol.Conn, args ...interface{})
 		return nil, fmt.Errorf("%s", errorMessage)
 	}
 
-	name, ok := args[0].(string)
-	if !ok {
-		errorMessage := fmt.Sprintf("invalid name value: %+v", args[0])
-		conn.ShowMessage(&protocol.ShowMessageParams{
-			Type:    protocol.Error,
-			Message: errorMessage,
-		})
-		return nil, fmt.Errorf("%s", errorMessage)
-	}
-
-	// TODO: Check that account with specified name doesn't exist already
 	signatureAlgorithm := "ECDSA_P256"
 	hashingAlgorithm := "SHA3_256"
 
@@ -275,17 +264,29 @@ func (i *FlowIntegration) createAccount(conn protocol.Conn, args ...interface{})
 		return nil, fmt.Errorf("%s", errorMessage)
 	}
 
+	signer := "emulator-account"
 	keys := []string{privateKey.PublicKey().String()}
-	acc, err := i.sharedServices.Accounts.Create(name, keys, signatureAlgorithm, hashingAlgorithm, []string{})
+	acc, err := i.sharedServices.Accounts.Create(signer, keys, signatureAlgorithm, hashingAlgorithm, []string{})
+	for {
+		if err != nil {
+			acc, err = i.sharedServices.Accounts.Create(signer, keys, signatureAlgorithm, hashingAlgorithm, []string{})
+		} else {
+			// TODO: store account
+			break
+		}
+	}
 
-	if err != nil {
+	// TODO: maybe add counter above and bring back this error handling
+/*	if err != nil {
 		errorMessage := fmt.Sprintf("account creation error: %#+v", err)
 		conn.ShowMessage(&protocol.ShowMessageParams{
 			Type:    protocol.Error,
 			Message: errorMessage,
 		})
 		return nil, fmt.Errorf("%s", errorMessage)
-	}
+	}*/
+
+	name := "alice"
 
 	conn.ShowMessage(&protocol.ShowMessageParams{
 		Type:    protocol.Info,
@@ -300,7 +301,22 @@ func (i *FlowIntegration) createAccount(conn protocol.Conn, args ...interface{})
 // This command will wait until the emulator server is started before submitting any transactions.
 func (i *FlowIntegration) createDefaultAccounts(conn protocol.Conn, args ...interface{}) (interface{}, error) {
 
-	err := server.CheckCommandArgumentCount(args, 1)
+	// TODO: Check that this one is working properly
+	for name, address := range nameToAddress {
+		_,err := i.sharedServices.Accounts.Get(address)
+
+		if (err != nil) {
+			i.accountsByName[name] = address
+		} else {
+			newAddress, err := i.createAccountHelper(conn)
+			if (err != nil){
+
+			}
+			i.accountsByName[name] = newAddress
+		}
+	}
+
+/*	err := server.CheckCommandArgumentCount(args, 1)
 	if err != nil {
 		return nil, err
 	}
@@ -342,7 +358,7 @@ RetryLoop:
 		accounts[index] = addr
 	}
 
-	return accounts, nil
+	return accounts, nil*/
 }
 
 // deployContract deploys the contract to the configured account with the code of the given
@@ -549,8 +565,59 @@ func (i *FlowIntegration) sendTransactionHelper(
 }
 
 // createAccountHelper creates a new account and returns its address.
-func (i *FlowIntegration) createAccountHelper(conn protocol.Conn) (addr flow.Address, err error) {
-	accountKey := &flow.AccountKey{
+func (i *FlowIntegration) createAccountHelper(conn protocol.Conn) (addr string, err error) {
+
+	signatureAlgorithm := "ECDSA_P256"
+	hashingAlgorithm := "SHA3_256"
+
+	// Get PrivateKey from emulator account
+	// serviceAccount, _ := i.project.EmulatorServiceAccount()
+	// key := serviceAccount.DefaultKey()
+
+	privateKey, err := i.sharedServices.Keys.Generate("", signatureAlgorithm)
+
+	if err != nil {
+		errorMessage := fmt.Sprintf("private key generation error: %#+v", err)
+		conn.ShowMessage(&protocol.ShowMessageParams{
+			Type:    protocol.Error,
+			Message: errorMessage,
+		})
+		// TODO: check how we will return empty address
+		return "", fmt.Errorf("%s", errorMessage)
+	}
+
+
+	signer := "emulator-account"
+	keys := []string{privateKey.PublicKey().String()}
+
+	tries := 5
+	var acc *flow.Account
+	for {
+		acc, err = i.sharedServices.Accounts.Create(signer, keys, signatureAlgorithm, hashingAlgorithm, []string{})
+		tries -= 1
+		if err == nil || tries <=0 {
+			break
+		}
+	}
+
+	if err != nil{
+		errorMessage := fmt.Sprintf("could not create account after multiple retries: %#+v", err)
+		conn.ShowMessage(&protocol.ShowMessageParams{
+			Type:    protocol.Error,
+			Message: errorMessage,
+		})
+		// TODO: check how we will return empty address
+		return "", fmt.Errorf("%s", errorMessage)
+	}
+
+	conn.LogMessage(&protocol.LogMessageParams{
+		Type:    protocol.Info,
+		Message: fmt.Sprintf("Created account with address: %s", acc.Address.Hex()),
+	})
+
+	return acc.Address.Hex(), nil
+
+/*	accountKey := &flow.AccountKey{
 		PublicKey: i.config.ServiceAccountKey.PrivateKey.PublicKey(),
 		SigAlgo:   i.config.ServiceAccountKey.SigAlgo,
 		HashAlgo:  i.config.ServiceAccountKey.HashAlgo,
@@ -601,6 +668,8 @@ func (i *FlowIntegration) createAccountHelper(conn protocol.Conn) (addr flow.Add
 	})
 
 	return addr, nil
+*/
+ */
 }
 
 func parseFileFromURI(uri string) string {
