@@ -1631,7 +1631,10 @@ func TestCheckAccessImportGlobalValue(t *testing.T) {
 
 			for _, test := range tests {
 
-				_, err := ParseAndCheckWithOptions(t,
+				importedChecker, err := ParseAndCheck(t, test)
+				require.NoError(t, err)
+
+				_, err = ParseAndCheckWithOptions(t,
 					`
                        import a, b, c from "imported"
                     `,
@@ -1640,9 +1643,6 @@ func TestCheckAccessImportGlobalValue(t *testing.T) {
 							sema.WithAccessCheckMode(checkMode),
 							sema.WithImportHandler(
 								func(checker *sema.Checker, location common.Location) (sema.Import, error) {
-									importedChecker, err := ParseAndCheck(t, test)
-									require.NoError(t, err)
-
 									return sema.ElaborationImport{
 										Elaboration: importedChecker.Elaboration,
 									}, nil
@@ -1814,7 +1814,19 @@ func TestCheckAccessImportGlobalValueAssignmentAndSwap(t *testing.T) {
 				lastAccessModifier = "priv"
 			}
 
-			_, err := ParseAndCheckWithOptions(t,
+			imported, err := ParseAndCheck(t,
+				fmt.Sprintf(
+					`
+                       priv var a = 1
+                       pub var b = 2
+                       %s var c = 3
+                    `,
+					lastAccessModifier,
+				),
+			)
+			require.NoError(t, err)
+
+			_, err = ParseAndCheckWithOptions(t,
 				`
                   import a, b, c from "imported"
 
@@ -1838,19 +1850,6 @@ func TestCheckAccessImportGlobalValueAssignmentAndSwap(t *testing.T) {
 						sema.WithAccessCheckMode(checkMode),
 						sema.WithImportHandler(
 							func(checker *sema.Checker, location common.Location) (sema.Import, error) {
-
-								imported, err := ParseAndCheck(t,
-									fmt.Sprintf(
-										`
-                                           priv var a = 1
-                                           pub var b = 2
-                                           %s var c = 3
-                                        `,
-										lastAccessModifier,
-									),
-								)
-								require.NoError(t, err)
-
 								return sema.ElaborationImport{
 									Elaboration: imported.Elaboration,
 								}, nil
@@ -1869,7 +1868,19 @@ func TestCheckAccessImportGlobalValueVariableDeclarationWithSecondValue(t *testi
 
 	t.Parallel()
 
-	_, err := ParseAndCheckWithOptions(t,
+	imported, err := ParseAndCheck(t, `
+       pub resource R {}
+
+       pub fun createR(): @R {
+           return <-create R()
+       }
+
+       priv var x <- createR()
+       pub var y <- createR()
+    `)
+	require.NoError(t, err)
+
+	_, err = ParseAndCheckWithOptions(t,
 		`
            import x, y, createR from "imported"
 
@@ -1885,19 +1896,6 @@ func TestCheckAccessImportGlobalValueVariableDeclarationWithSecondValue(t *testi
 			Options: []sema.Option{
 				sema.WithImportHandler(
 					func(checker *sema.Checker, location common.Location) (sema.Import, error) {
-
-						imported, err := ParseAndCheck(t, `
-                           pub resource R {}
-
-                           pub fun createR(): @R {
-                               return <-create R()
-                           }
-
-                           priv var x <- createR()
-                           pub var y <- createR()
-                        `)
-						require.NoError(t, err)
-
 						return sema.ElaborationImport{
 							Elaboration: imported.Elaboration,
 						}, nil
