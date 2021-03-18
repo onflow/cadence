@@ -4590,6 +4590,14 @@ func (m *Member) IsExternallyReturnable(results map[*Member]bool) (result bool) 
 	return m.testType(test, results)
 }
 
+// IsValidEventParameterType returns whether has a valid event parameter type
+func (m *Member) IsValidEventParameterType(results map[*Member]bool) bool {
+	test := func(t Type) bool {
+		return IsValidEventParameterType(t, results)
+	}
+	return m.testType(test, results)
+}
+
 func (m *Member) testType(test func(Type) bool, results map[*Member]bool) (result bool) {
 
 	// Prevent a potential stack overflow due to cyclic declarations
