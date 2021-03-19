@@ -4366,6 +4366,11 @@ func (t *CompositeType) IsStorable(results map[*Member]bool) bool {
 		return false
 	}
 
+	// Native/built-in types are not storable for now
+	if t.Location == nil {
+		return false
+	}
+
 	// If this composite type has a member which is non-storable,
 	// then the composite type is not storable.
 
@@ -6630,6 +6635,7 @@ var PublicKeyType = func() *CompositeType {
 
 	accountKeyType.Members = GetMembersAsMap(members)
 	accountKeyType.Fields = getFieldNames(members)
+
 	return accountKeyType
 }()
 
