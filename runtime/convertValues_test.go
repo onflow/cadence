@@ -1541,9 +1541,17 @@ func TestMalformedImportValue(t *testing.T) {
 
 			_, err := importAndExportValuesFromScript(t, script, test.exportedValue)
 			require.Error(t, err)
+
+			require.IsType(t, Error{}, err)
+			runtimeError := err.(Error)
+
+			require.IsType(t, &InvalidEntryPointArgumentError{}, runtimeError.Err)
+			argError := runtimeError.Err.(*InvalidEntryPointArgumentError)
+
+			require.IsType(t, &MalformedArgumentError{}, argError.Err)
 			assert.Contains(
 				t,
-				err.Error(),
+				argError.Err.Error(),
 				fmt.Sprintf("malformed value `%s`", test.exportedValue.String()),
 			)
 		})
