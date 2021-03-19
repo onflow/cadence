@@ -27,7 +27,6 @@ import (
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
-	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
 func TestInterpretTransactions(t *testing.T) {
@@ -106,7 +105,7 @@ func TestInterpretTransactions(t *testing.T) {
 		err := inter.InvokeTransaction(0)
 
 		var conditionErr interpreter.ConditionError
-		utils.RequireErrorAs(t, err, &conditionErr)
+		require.ErrorAs(t, err, &conditionErr)
 
 		assert.Equal(t, conditionErr.ConditionKind, ast.ConditionKindPre)
 	})
@@ -158,7 +157,7 @@ func TestInterpretTransactions(t *testing.T) {
 		err := inter.InvokeTransaction(0)
 
 		var conditionErr interpreter.ConditionError
-		utils.RequireErrorAs(t, err, &conditionErr)
+		require.ErrorAs(t, err, &conditionErr)
 
 		assert.Equal(t, conditionErr.ConditionKind, ast.ConditionKindPost)
 	})

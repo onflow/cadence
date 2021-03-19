@@ -31,7 +31,6 @@ import (
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
 	"github.com/onflow/cadence/runtime/tests/checker"
-	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
 func testAccount(t *testing.T, auth bool, code string) (*interpreter.Interpreter, map[string]interpreter.OptionalValue) {
@@ -191,7 +190,7 @@ func TestInterpretAuthAccount_save(t *testing.T) {
 
 			require.Error(t, err)
 
-			utils.RequireErrorAs(t, err, &interpreter.OverwriteError{})
+			require.ErrorAs(t, err, &interpreter.OverwriteError{})
 		})
 	})
 
@@ -239,7 +238,7 @@ func TestInterpretAuthAccount_save(t *testing.T) {
 
 			require.Error(t, err)
 
-			utils.RequireErrorAs(t, err, &interpreter.OverwriteError{})
+			require.ErrorAs(t, err, &interpreter.OverwriteError{})
 		})
 	})
 }

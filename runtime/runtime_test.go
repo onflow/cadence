@@ -1359,7 +1359,7 @@ func TestRuntimeProgramWithNoTransaction(t *testing.T) {
 		},
 	)
 
-	utils.RequireErrorAs(t, err, &InvalidTransactionCountError{})
+	require.ErrorAs(t, err, &InvalidTransactionCountError{})
 }
 
 func TestRuntimeProgramWithMultipleTransaction(t *testing.T) {
@@ -1391,7 +1391,7 @@ func TestRuntimeProgramWithMultipleTransaction(t *testing.T) {
 		},
 	)
 
-	utils.RequireErrorAs(t, err, &InvalidTransactionCountError{})
+	require.ErrorAs(t, err, &InvalidTransactionCountError{})
 }
 
 func TestRuntimeStorage(t *testing.T) {
@@ -2282,7 +2282,7 @@ func TestScriptReturnTypeNotReturnableError(t *testing.T) {
 
 		if expected == nil {
 			var subErr *InvalidScriptReturnTypeError
-			utils.RequireErrorAs(t, err, &subErr)
+			require.ErrorAs(t, err, &subErr)
 		} else {
 			require.NoError(t, err)
 			require.Equal(t, expected, actual)
@@ -2457,7 +2457,7 @@ func TestScriptParameterTypeNotStorableError(t *testing.T) {
 	)
 
 	var subErr *ScriptParameterTypeNotStorableError
-	utils.RequireErrorAs(t, err, &subErr)
+	require.ErrorAs(t, err, &subErr)
 }
 
 func TestRuntimeSyntaxError(t *testing.T) {
@@ -3324,7 +3324,7 @@ func TestRuntimeStorageLoadedDestructionAfterRemoval(t *testing.T) {
 	)
 
 	var typeLoadingErr interpreter.TypeLoadingError
-	utils.RequireErrorAs(t, err, &typeLoadingErr)
+	require.ErrorAs(t, err, &typeLoadingErr)
 
 	require.Equal(t,
 		common.AddressLocation{Address: addressValue}.TypeID("Test.R"),
@@ -3896,7 +3896,7 @@ func TestRuntimeInvokeStoredInterfaceFunction(t *testing.T) {
 				} else {
 					require.Error(t, err)
 
-					utils.RequireErrorAs(t, err, &interpreter.ConditionError{})
+					require.ErrorAs(t, err, &interpreter.ConditionError{})
 				}
 			})
 		}
@@ -4079,7 +4079,7 @@ func TestRuntimeTransactionTopLevelDeclarations(t *testing.T) {
 		require.Error(t, err)
 
 		var checkerErr *sema.CheckerError
-		utils.RequireErrorAs(t, err, &checkerErr)
+		require.ErrorAs(t, err, &checkerErr)
 
 		errs := checker.ExpectCheckerErrors(t, checkerErr, 1)
 
@@ -4784,7 +4784,7 @@ func TestRuntimeComputationLimit(t *testing.T) {
 				require.NoError(t, err)
 			} else {
 				var computationLimitErr ComputationLimitExceededError
-				utils.RequireErrorAs(t, err, &computationLimitErr)
+				require.ErrorAs(t, err, &computationLimitErr)
 
 				assert.Equal(t,
 					ComputationLimitExceededError{
@@ -6109,7 +6109,7 @@ func TestRuntime(t *testing.T) {
 			} else {
 				require.Error(t, err)
 
-				utils.RequireErrorAs(t, err, &InvalidEntryPointParameterCountError{})
+				require.ErrorAs(t, err, &InvalidEntryPointParameterCountError{})
 			}
 		})
 	}
