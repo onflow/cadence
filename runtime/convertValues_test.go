@@ -1026,64 +1026,6 @@ func TestImportValue(t *testing.T) {
 
 	t.Parallel()
 
-	// Complex struct value
-	fooStructValue := cadence.Struct{
-		StructType: &cadence.StructType{
-			Location:            utils.TestLocation,
-			QualifiedIdentifier: "Foo",
-			Fields: []cadence.Field{
-				{
-					Identifier: "a",
-					Type: cadence.OptionalType{
-						Type: cadence.StringType{},
-					},
-				},
-				{
-					Identifier: "b",
-					Type: cadence.DictionaryType{
-						KeyType:     cadence.StringType{},
-						ElementType: cadence.StringType{},
-					},
-				},
-				{
-					Identifier: "c",
-					Type: cadence.VariableSizedArrayType{
-						ElementType: cadence.StringType{},
-					},
-				},
-				{
-					Identifier: "d",
-					Type: cadence.ConstantSizedArrayType{
-						ElementType: cadence.StringType{},
-						Size:        2,
-					},
-				},
-				{
-					Identifier: "e",
-					Type:       cadence.AddressType{},
-				},
-			},
-		},
-		Fields: []cadence.Value{
-			cadence.NewString("John"),
-			cadence.NewDictionary([]cadence.KeyValuePair{
-				{
-					Key:   cadence.NewString("name"),
-					Value: cadence.NewString("Doe"),
-				},
-			}),
-			cadence.NewArray([]cadence.Value{
-				cadence.NewString("foo"),
-				cadence.NewString("bar"),
-			}),
-			cadence.NewArray([]cadence.Value{
-				cadence.NewString("foo"),
-				cadence.NewString("bar"),
-			}),
-			cadence.NewAddress([8]byte{0, 0, 0, 0, 0, 1, 0, 2}),
-		},
-	}
-
 	var importValueTests = []importValueTest{
 		{
 			label:         "Nil",
@@ -1125,11 +1067,11 @@ func TestImportValue(t *testing.T) {
 		},
 		{
 			label:         "Dictionary non-empty",
-			typeSignature: "{String: Foo}",
+			typeSignature: "{String: String}",
 			exportedValue: cadence.NewDictionary([]cadence.KeyValuePair{
 				{
 					Key:   cadence.NewString("foo"),
-					Value: fooStructValue,
+					Value: cadence.NewString("bar"),
 				},
 			}),
 		},
@@ -1234,11 +1176,6 @@ func TestImportValue(t *testing.T) {
 			exportedValue: cadence.UFix64(123000000),
 		},
 		{
-			label:         "Struct",
-			typeSignature: "Foo",
-			exportedValue: fooStructValue,
-		},
-		{
 			label:         "StoragePath",
 			typeSignature: "StoragePath",
 			exportedValue: cadence.Path{
@@ -1317,22 +1254,6 @@ func TestImportValue(t *testing.T) {
 					}
 
 					%[3]s
-				}
-
-				pub struct Foo {
-					pub var a: String?
-					pub var b: {String: String}
-					pub var c: [String]
-					pub var d: [String; 2]
-					pub var e: Address
-
-					init() {
-						self.a = "Hello"
-						self.b = {}
-						self.c = []
-						self.d = ["foo", "bar"]
-						self.e = 0x42
-					}
 				}`,
 				test.typeSignature,
 				returnSignature,
@@ -1350,6 +1271,156 @@ func TestImportValue(t *testing.T) {
 	for _, testCase := range importValueTests {
 		testImport(testCase)
 	}
+}
+
+func TestImportComplexStruct(t *testing.T) {
+
+	t.Parallel()
+
+	// Complex struct value
+	fooStructValue := cadence.Struct{
+		StructType: &cadence.StructType{
+			Location:            utils.TestLocation,
+			QualifiedIdentifier: "Foo",
+			Fields: []cadence.Field{
+				{
+					Identifier: "a",
+					Type: cadence.OptionalType{
+						Type: cadence.StringType{},
+					},
+				},
+				{
+					Identifier: "b",
+					Type: cadence.DictionaryType{
+						KeyType:     cadence.StringType{},
+						ElementType: cadence.StringType{},
+					},
+				},
+				{
+					Identifier: "c",
+					Type: cadence.VariableSizedArrayType{
+						ElementType: cadence.StringType{},
+					},
+				},
+				{
+					Identifier: "d",
+					Type: cadence.ConstantSizedArrayType{
+						ElementType: cadence.StringType{},
+						Size:        2,
+					},
+				},
+				{
+					Identifier: "e",
+					Type:       cadence.AddressType{},
+				},
+				{
+					Identifier: "f",
+					Type:       cadence.BoolType{},
+				},
+				{
+					Identifier: "g",
+					Type:       cadence.StoragePathType{},
+				},
+				{
+					Identifier: "h",
+					Type:       cadence.PublicPathType{},
+				},
+				{
+					Identifier: "i",
+					Type:       cadence.PrivatePathType{},
+				},
+			},
+		},
+		Fields: []cadence.Value{
+			cadence.NewString("John"),
+			cadence.NewDictionary([]cadence.KeyValuePair{
+				{
+					Key:   cadence.NewString("name"),
+					Value: cadence.NewString("Doe"),
+				},
+			}),
+			cadence.NewArray([]cadence.Value{
+				cadence.NewString("foo"),
+				cadence.NewString("bar"),
+			}),
+			cadence.NewArray([]cadence.Value{
+				cadence.NewString("foo"),
+				cadence.NewString("bar"),
+			}),
+			cadence.NewAddress([8]byte{0, 0, 0, 0, 0, 1, 0, 2}),
+			cadence.NewBool(true),
+			cadence.Path{
+				Domain:     "storage",
+				Identifier: "foo",
+			},
+			cadence.Path{
+				Domain:     "public",
+				Identifier: "foo",
+			},
+			cadence.Path{
+				Domain:     "private",
+				Identifier: "foo",
+			},
+		},
+	}
+
+	testImport := func(test importValueTest) {
+
+		t.Run(test.label, func(t *testing.T) {
+
+			t.Parallel()
+
+			script := fmt.Sprintf(
+				`pub fun main(arg: %[1]s): %[1]s {
+
+					if !arg.isInstance(Type<%[1]s>()) {
+						panic("Not a %[1]s value")
+					}
+
+					return arg
+				}
+
+				pub struct Foo {
+					pub var a: String?
+					pub var b: {String: String}
+					pub var c: [String]
+					pub var d: [String; 2]
+					pub var e: Address
+					pub var f: Bool
+					pub var g: StoragePath
+					pub var h: PublicPath
+					pub var i: PrivatePath
+
+					init() {
+						self.a = "Hello"
+						self.b = {}
+						self.c = []
+						self.d = ["foo", "bar"]
+						self.e = 0x42
+						self.f = true
+						self.g = /storage/foo
+						self.h = /public/foo
+						self.i = /private/foo
+					}
+				}`,
+				test.typeSignature,
+			)
+
+			actual, err := importAndExportValuesFromScript(t, script, test.exportedValue)
+			require.NoError(t, err)
+			if !test.skipExport {
+				assert.Equal(t, test.exportedValue, actual)
+			}
+		})
+	}
+
+	testImport(
+		importValueTest{
+			label:         "Struct",
+			typeSignature: "Foo",
+			exportedValue: fooStructValue,
+		},
+	)
 }
 
 func TestMalformedImportValue(t *testing.T) {

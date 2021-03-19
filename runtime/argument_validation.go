@@ -19,6 +19,7 @@
 package runtime
 
 import (
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 )
@@ -35,7 +36,7 @@ import (
 func valueConformsToDynamicType(value interpreter.Value, dynamicType interpreter.DynamicType) (ok bool) {
 
 	// Currently the type-vs-value mismatch could only happen for composite types, as
-	// that's the only place where the type is loaded from the runtime based on name,
+	// that's the only place where the type is loaded from the runtime, based on the name,
 	// rather than based on the value structure of the user input.
 	// Hence the possible set of malformed values are:
 	//     - Composite types.
@@ -265,13 +266,15 @@ func valueConformsToSimpleType(value interpreter.Value, simpleType *sema.SimpleT
 	case sema.StringType:
 		_, ok = value.(*interpreter.StringValue)
 	case sema.BoolType:
-		_, ok = value.(*interpreter.BoolValue)
-	case sema.PathType,
-		sema.PublicPathType,
-		sema.CapabilityPathType,
-		sema.PrivatePathType,
-		sema.StoragePathType:
-		_, ok = value.(*interpreter.PathValue)
+		_, ok = value.(interpreter.BoolValue)
+	case sema.PublicPathType:
+		ok = valueConformsToPathType(value, common.PathDomainPublic)
+	case sema.PrivatePathType:
+		ok = valueConformsToPathType(value, common.PathDomainPrivate)
+	case sema.StoragePathType:
+		ok = valueConformsToPathType(value, common.PathDomainStorage)
+	case sema.PathType, sema.CapabilityPathType:
+		_, ok = value.(interpreter.PathValue)
 	case sema.MetaType:
 		_, ok = value.(interpreter.TypeValue)
 	case sema.VoidType:
@@ -279,6 +282,15 @@ func valueConformsToSimpleType(value interpreter.Value, simpleType *sema.SimpleT
 	}
 
 	return
+}
+
+func valueConformsToPathType(value interpreter.Value, domain common.PathDomain) bool {
+	path, ok := value.(interpreter.PathValue)
+	if !ok {
+		return false
+	}
+
+	return path.Domain == domain
 }
 
 func valueConformsToVariableSizedArrayType(value interpreter.Value, arrayType *sema.VariableSizedType) bool {
