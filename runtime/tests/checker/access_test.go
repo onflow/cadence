@@ -2309,7 +2309,7 @@ func TestCheckAccountAccess(t *testing.T) {
 	}
 
 	const importingCode = `
-	  import A from 0x1
+      import A from 0x1
 
       pub contract B {
           pub fun use() {
@@ -2351,7 +2351,7 @@ func TestCheckAccountAccess(t *testing.T) {
 			importedChecker, err := ParseAndCheckWithOptions(t,
 				fmt.Sprintf(
 					`
-			          pub contract A {
+                      pub contract A {
                           access(account) %s a: Int
 
                           init() {
