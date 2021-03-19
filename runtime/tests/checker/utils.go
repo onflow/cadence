@@ -161,7 +161,7 @@ func ExpectCheckerErrors(t *testing.T, err error, count int) []error {
 	require.Error(t, err)
 
 	var checkerErr *sema.CheckerError
-	utils.RequireErrorAs(t, err, &checkerErr)
+	require.ErrorAs(t, err, &checkerErr)
 
 	errs := checkerErr.Errors
 

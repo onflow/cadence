@@ -158,7 +158,7 @@ func TestInterpretDynamicCastingNumber(t *testing.T) {
 										result,
 									)
 								} else {
-									utils.RequireErrorAs(t, err, &interpreter.TypeMismatchError{})
+									require.ErrorAs(t, err, &interpreter.TypeMismatchError{})
 								}
 							})
 						}
@@ -248,7 +248,7 @@ func TestInterpretDynamicCastingVoid(t *testing.T) {
 								result,
 							)
 						} else {
-							utils.RequireErrorAs(t, err, &interpreter.TypeMismatchError{})
+							require.ErrorAs(t, err, &interpreter.TypeMismatchError{})
 						}
 					})
 				}
@@ -333,7 +333,7 @@ func TestInterpretDynamicCastingString(t *testing.T) {
 								result,
 							)
 						} else {
-							utils.RequireErrorAs(t, err, &interpreter.TypeMismatchError{})
+							require.ErrorAs(t, err, &interpreter.TypeMismatchError{})
 						}
 					})
 				}
@@ -418,7 +418,7 @@ func TestInterpretDynamicCastingBool(t *testing.T) {
 								result,
 							)
 						} else {
-							utils.RequireErrorAs(t, err, &interpreter.TypeMismatchError{})
+							require.ErrorAs(t, err, &interpreter.TypeMismatchError{})
 						}
 					})
 				}
@@ -508,7 +508,7 @@ func TestInterpretDynamicCastingAddress(t *testing.T) {
 								result,
 							)
 						} else {
-							utils.RequireErrorAs(t, err, &interpreter.TypeMismatchError{})
+							require.ErrorAs(t, err, &interpreter.TypeMismatchError{})
 						}
 					})
 				}
@@ -595,7 +595,7 @@ func TestInterpretDynamicCastingStruct(t *testing.T) {
 							result,
 						)
 					} else {
-						utils.RequireErrorAs(t, err, &interpreter.TypeMismatchError{})
+						require.ErrorAs(t, err, &interpreter.TypeMismatchError{})
 					}
 				})
 
@@ -634,7 +634,7 @@ func TestInterpretDynamicCastingStruct(t *testing.T) {
 								result,
 							)
 						} else {
-							utils.RequireErrorAs(t, err, &interpreter.TypeMismatchError{})
+							require.ErrorAs(t, err, &interpreter.TypeMismatchError{})
 						}
 					})
 				}
@@ -741,7 +741,7 @@ func testResourceCastInvalid(t *testing.T, types, fromType, targetType string, o
 		)
 
 	case ast.OperationForceCast:
-		utils.RequireErrorAs(t, err, &interpreter.TypeMismatchError{})
+		require.ErrorAs(t, err, &interpreter.TypeMismatchError{})
 
 	default:
 		panic(errors.NewUnreachableError())
@@ -888,7 +888,7 @@ func testStructCastInvalid(t *testing.T, types, fromType, targetType string, ope
 		)
 
 	case ast.OperationForceCast:
-		utils.RequireErrorAs(t, err, &interpreter.TypeMismatchError{})
+		require.ErrorAs(t, err, &interpreter.TypeMismatchError{})
 
 	default:
 		panic(errors.NewUnreachableError())
@@ -1090,7 +1090,7 @@ func TestInterpretDynamicCastingSome(t *testing.T) {
 								result,
 							)
 						} else {
-							utils.RequireErrorAs(t, err, &interpreter.TypeMismatchError{})
+							require.ErrorAs(t, err, &interpreter.TypeMismatchError{})
 						}
 					})
 				}
@@ -1179,7 +1179,7 @@ func TestInterpretDynamicCastingArray(t *testing.T) {
 								result,
 							)
 						} else {
-							utils.RequireErrorAs(t, err, &interpreter.TypeMismatchError{})
+							require.ErrorAs(t, err, &interpreter.TypeMismatchError{})
 						}
 					})
 				}
@@ -1275,7 +1275,7 @@ func TestInterpretDynamicCastingDictionary(t *testing.T) {
 								result,
 							)
 						} else {
-							utils.RequireErrorAs(t, err, &interpreter.TypeMismatchError{})
+							require.ErrorAs(t, err, &interpreter.TypeMismatchError{})
 						}
 					})
 				}
@@ -2182,7 +2182,7 @@ func testReferenceCastInvalid(t *testing.T, types, fromType, targetType string, 
 		)
 
 	case ast.OperationForceCast:
-		utils.RequireErrorAs(t, err, &interpreter.TypeMismatchError{})
+		require.ErrorAs(t, err, &interpreter.TypeMismatchError{})
 
 	default:
 		panic(errors.NewUnreachableError())
@@ -3428,7 +3428,7 @@ func TestInterpretDynamicCastingCapability(t *testing.T) {
 								result,
 							)
 						} else {
-							utils.RequireErrorAs(t, err, &interpreter.TypeMismatchError{})
+							require.ErrorAs(t, err, &interpreter.TypeMismatchError{})
 						}
 					})
 				}

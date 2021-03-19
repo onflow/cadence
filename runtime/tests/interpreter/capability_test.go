@@ -24,7 +24,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/runtime/interpreter"
-	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
 func TestInterpretCapability_borrow(t *testing.T) {
@@ -159,7 +158,7 @@ func TestInterpretCapability_borrow(t *testing.T) {
 			_, err := inter.Invoke("nonExistent")
 			require.Error(t, err)
 
-			utils.RequireErrorAs(t, err, &interpreter.ForceNilError{})
+			require.ErrorAs(t, err, &interpreter.ForceNilError{})
 		})
 
 		t.Run("loop", func(t *testing.T) {
@@ -168,7 +167,7 @@ func TestInterpretCapability_borrow(t *testing.T) {
 			require.Error(t, err)
 
 			var cyclicLinkErr interpreter.CyclicLinkError
-			utils.RequireErrorAs(t, err, &cyclicLinkErr)
+			require.ErrorAs(t, err, &cyclicLinkErr)
 
 			require.Equal(t,
 				cyclicLinkErr.Error(),
@@ -319,7 +318,7 @@ func TestInterpretCapability_borrow(t *testing.T) {
 			_, err := inter.Invoke("nonExistent")
 			require.Error(t, err)
 
-			utils.RequireErrorAs(t, err, &interpreter.ForceNilError{})
+			require.ErrorAs(t, err, &interpreter.ForceNilError{})
 		})
 
 		t.Run("loop", func(t *testing.T) {
@@ -328,7 +327,7 @@ func TestInterpretCapability_borrow(t *testing.T) {
 			require.Error(t, err)
 
 			var cyclicLinkErr interpreter.CyclicLinkError
-			utils.RequireErrorAs(t, err, &cyclicLinkErr)
+			require.ErrorAs(t, err, &cyclicLinkErr)
 
 			require.Equal(t,
 				cyclicLinkErr.Error(),
@@ -487,7 +486,7 @@ func TestInterpretCapability_check(t *testing.T) {
 			require.Error(t, err)
 
 			var cyclicLinkErr interpreter.CyclicLinkError
-			utils.RequireErrorAs(t, err, &cyclicLinkErr)
+			require.ErrorAs(t, err, &cyclicLinkErr)
 
 			require.Equal(t,
 				cyclicLinkErr.Error(),
@@ -641,7 +640,7 @@ func TestInterpretCapability_check(t *testing.T) {
 			require.Error(t, err)
 
 			var cyclicLinkErr interpreter.CyclicLinkError
-			utils.RequireErrorAs(t, err, &cyclicLinkErr)
+			require.ErrorAs(t, err, &cyclicLinkErr)
 
 			require.Equal(t,
 				cyclicLinkErr.Error(),

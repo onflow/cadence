@@ -28,7 +28,6 @@ import (
 
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
-	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
 func TestInterpretNegativeZeroFixedPoint(t *testing.T) {
@@ -297,7 +296,7 @@ func TestInterpretFixedPointConversions(t *testing.T) {
 
 		_, err := inter.Invoke("test")
 
-		utils.RequireErrorAs(t, err, &interpreter.UnderflowError{})
+		require.ErrorAs(t, err, &interpreter.UnderflowError{})
 	})
 
 	t.Run("invalid UFix64 > max Fix64 int to Fix64", func(t *testing.T) {
@@ -316,7 +315,7 @@ func TestInterpretFixedPointConversions(t *testing.T) {
 
 		_, err := inter.Invoke("test")
 
-		utils.RequireErrorAs(t, err, &interpreter.OverflowError{})
+		require.ErrorAs(t, err, &interpreter.OverflowError{})
 	})
 
 	t.Run("invalid negative integer to UFix64", func(t *testing.T) {
@@ -345,7 +344,7 @@ func TestInterpretFixedPointConversions(t *testing.T) {
 					err,
 				)
 
-				utils.RequireErrorAs(t, err, &interpreter.UnderflowError{})
+				require.ErrorAs(t, err, &interpreter.UnderflowError{})
 			})
 		}
 	})
@@ -380,7 +379,7 @@ func TestInterpretFixedPointConversions(t *testing.T) {
 
 				_, err := inter.Invoke("test")
 
-				utils.RequireErrorAs(t, err, &interpreter.OverflowError{})
+				require.ErrorAs(t, err, &interpreter.OverflowError{})
 			})
 		}
 	})
@@ -416,7 +415,7 @@ func TestInterpretFixedPointConversions(t *testing.T) {
 
 				_, err := inter.Invoke("test")
 
-				utils.RequireErrorAs(t, err, &interpreter.OverflowError{})
+				require.ErrorAs(t, err, &interpreter.OverflowError{})
 			})
 		}
 	})
@@ -453,7 +452,7 @@ func TestInterpretFixedPointConversions(t *testing.T) {
 				_, err := inter.Invoke("test")
 				require.Error(t, err)
 
-				utils.RequireErrorAs(t, err, &interpreter.OverflowError{})
+				require.ErrorAs(t, err, &interpreter.OverflowError{})
 			})
 		}
 	})
@@ -490,7 +489,7 @@ func TestInterpretFixedPointConversions(t *testing.T) {
 				_, err := inter.Invoke("test")
 				require.Error(t, err)
 
-				utils.RequireErrorAs(t, err, &interpreter.UnderflowError{})
+				require.ErrorAs(t, err, &interpreter.UnderflowError{})
 			})
 		}
 	})

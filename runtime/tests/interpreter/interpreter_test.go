@@ -498,7 +498,7 @@ func TestInterpretInvalidArrayIndexing(t *testing.T) {
 	_, err := inter.Invoke("test")
 
 	var indexErr interpreter.ArrayIndexOutOfBoundsError
-	RequireErrorAs(t, err, &indexErr)
+	require.ErrorAs(t, err, &indexErr)
 
 	require.Equal(t,
 		interpreter.ArrayIndexOutOfBoundsError{
@@ -1933,7 +1933,7 @@ func TestInterpretFunctionPreCondition(t *testing.T) {
 		interpreter.NewIntValueFromInt64(42),
 	)
 	var conditionErr interpreter.ConditionError
-	RequireErrorAs(t, err, &conditionErr)
+	require.ErrorAs(t, err, &conditionErr)
 
 	zero := interpreter.NewIntValueFromInt64(0)
 	value, err := inter.Invoke("test", zero)
@@ -1961,7 +1961,7 @@ func TestInterpretFunctionPostCondition(t *testing.T) {
 		interpreter.NewIntValueFromInt64(42),
 	)
 	var conditionErr interpreter.ConditionError
-	RequireErrorAs(t, err, &conditionErr)
+	require.ErrorAs(t, err, &conditionErr)
 
 	zero := interpreter.NewIntValueFromInt64(0)
 	value, err := inter.Invoke("test", zero)
@@ -1989,7 +1989,7 @@ func TestInterpretFunctionWithResultAndPostConditionWithResult(t *testing.T) {
 	)
 
 	var conditionErr interpreter.ConditionError
-	RequireErrorAs(t, err, &conditionErr)
+	require.ErrorAs(t, err, &conditionErr)
 
 	zero := interpreter.NewIntValueFromInt64(0)
 	value, err := inter.Invoke("test", zero)
@@ -2068,7 +2068,7 @@ func TestInterpretFunctionPostConditionWithBeforeFailingPreCondition(t *testing.
 	_, err := inter.Invoke("test")
 
 	var conditionErr interpreter.ConditionError
-	RequireErrorAs(t, err, &conditionErr)
+	require.ErrorAs(t, err, &conditionErr)
 
 	assert.Equal(t,
 		ast.ConditionKindPre,
@@ -2097,7 +2097,7 @@ func TestInterpretFunctionPostConditionWithBeforeFailingPostCondition(t *testing
 	_, err := inter.Invoke("test")
 
 	var conditionErr interpreter.ConditionError
-	RequireErrorAs(t, err, &conditionErr)
+	require.ErrorAs(t, err, &conditionErr)
 
 	assert.Equal(t,
 		ast.ConditionKindPost,
@@ -2125,7 +2125,7 @@ func TestInterpretFunctionPostConditionWithMessageUsingStringLiteral(t *testing.
 	)
 
 	var conditionErr interpreter.ConditionError
-	RequireErrorAs(t, err, &conditionErr)
+	require.ErrorAs(t, err, &conditionErr)
 
 	assert.Equal(t,
 		"y should be zero",
@@ -2158,7 +2158,7 @@ func TestInterpretFunctionPostConditionWithMessageUsingResult(t *testing.T) {
 		interpreter.NewIntValueFromInt64(42),
 	)
 	var conditionErr interpreter.ConditionError
-	RequireErrorAs(t, err, &conditionErr)
+	require.ErrorAs(t, err, &conditionErr)
 
 	assert.Equal(t,
 		"return value",
@@ -2191,7 +2191,7 @@ func TestInterpretFunctionPostConditionWithMessageUsingBefore(t *testing.T) {
 	_, err := inter.Invoke("test", interpreter.NewStringValue("parameter value"))
 
 	var conditionErr interpreter.ConditionError
-	RequireErrorAs(t, err, &conditionErr)
+	require.ErrorAs(t, err, &conditionErr)
 
 	assert.Equal(t,
 		"parameter value",
@@ -2215,7 +2215,7 @@ func TestInterpretFunctionPostConditionWithMessageUsingParameter(t *testing.T) {
 	_, err := inter.Invoke("test", interpreter.NewStringValue("parameter value"))
 
 	var conditionErr interpreter.ConditionError
-	RequireErrorAs(t, err, &conditionErr)
+	require.ErrorAs(t, err, &conditionErr)
 
 	assert.Equal(t,
 		"parameter value",
@@ -3618,7 +3618,7 @@ func TestInterpretInterfaceFunctionUseWithPreCondition(t *testing.T) {
 			_, err := inter.Invoke("callTest", interpreter.NewIntValueFromInt64(0))
 
 			var conditionErr interpreter.ConditionError
-			RequireErrorAs(t, err, &conditionErr)
+			require.ErrorAs(t, err, &conditionErr)
 
 			value, err := inter.Invoke("callTest", interpreter.NewIntValueFromInt64(1))
 			require.NoError(t, err)
@@ -3630,7 +3630,7 @@ func TestInterpretInterfaceFunctionUseWithPreCondition(t *testing.T) {
 
 			_, err = inter.Invoke("callTest", interpreter.NewIntValueFromInt64(2))
 
-			RequireErrorAs(t, err, &conditionErr)
+			require.ErrorAs(t, err, &conditionErr)
 		})
 	}
 }
@@ -3819,7 +3819,7 @@ func TestInterpretTypeRequirementWithPreCondition(t *testing.T) {
 		_, err := inter.Invoke("test", interpreter.NewIntValueFromInt64(-1))
 
 		var conditionErr interpreter.ConditionError
-		RequireErrorAs(t, err, &conditionErr)
+		require.ErrorAs(t, err, &conditionErr)
 
 		// NOTE: The type requirement condition (`Test.Nested`) is evaluated first,
 		//  before the type's conformances (`Also`)
@@ -3831,7 +3831,7 @@ func TestInterpretTypeRequirementWithPreCondition(t *testing.T) {
 		_, err := inter.Invoke("test", interpreter.NewIntValueFromInt64(0))
 
 		var conditionErr interpreter.ConditionError
-		RequireErrorAs(t, err, &conditionErr)
+		require.ErrorAs(t, err, &conditionErr)
 
 		assert.Equal(t, "x >= 1", conditionErr.Message)
 	})
@@ -4026,7 +4026,7 @@ func TestInterpretImportError(t *testing.T) {
 	_, err = inter.Invoke("test")
 
 	var panicErr stdlib.PanicError
-	RequireErrorAs(t, err, &panicErr)
+	require.ErrorAs(t, err, &panicErr)
 
 	assert.Equal(t,
 		"?!",
@@ -6215,7 +6215,7 @@ func TestInterpretReferenceDereferenceFailure(t *testing.T) {
 
 	_, err := inter.Invoke("test")
 
-	RequireErrorAs(t, err, &interpreter.DestroyedCompositeError{})
+	require.ErrorAs(t, err, &interpreter.DestroyedCompositeError{})
 }
 
 func TestInterpretInvalidForwardReferenceCall(t *testing.T) {
@@ -7291,7 +7291,7 @@ func TestInterpretNonStorageReferenceAfterDestruction(t *testing.T) {
 	_, err := inter.Invoke("test")
 	require.Error(t, err)
 
-	RequireErrorAs(t, err, &interpreter.DestroyedCompositeError{})
+	require.ErrorAs(t, err, &interpreter.DestroyedCompositeError{})
 }
 
 func TestInterpretNonStorageReferenceToOptional(t *testing.T) {
@@ -7338,7 +7338,7 @@ func TestInterpretNonStorageReferenceToOptional(t *testing.T) {
 		_, err := inter.Invoke("testNil")
 		require.Error(t, err)
 
-		RequireErrorAs(t, err, &interpreter.DereferenceError{})
+		require.ErrorAs(t, err, &interpreter.DereferenceError{})
 	})
 }
 
@@ -7670,7 +7670,7 @@ func TestInterpretResourceAssignmentForceTransfer(t *testing.T) {
 		_, err := inter.Invoke("test")
 		require.Error(t, err)
 
-		RequireErrorAs(t, err, &interpreter.ForceAssignmentToNonNilResourceError{})
+		require.ErrorAs(t, err, &interpreter.ForceAssignmentToNonNilResourceError{})
 	})
 
 	t.Run("existing to nil", func(t *testing.T) {
@@ -7706,7 +7706,7 @@ func TestInterpretResourceAssignmentForceTransfer(t *testing.T) {
 		_, err := inter.Invoke("test")
 		require.Error(t, err)
 
-		RequireErrorAs(t, err, &interpreter.ForceAssignmentToNonNilResourceError{})
+		require.ErrorAs(t, err, &interpreter.ForceAssignmentToNonNilResourceError{})
 	})
 }
 
@@ -7747,7 +7747,7 @@ func TestInterpretForce(t *testing.T) {
 		_, err := inter.Invoke("test")
 		require.Error(t, err)
 
-		RequireErrorAs(t, err, &interpreter.ForceNilError{})
+		require.ErrorAs(t, err, &interpreter.ForceNilError{})
 	})
 
 	t.Run("non-optional", func(t *testing.T) {
