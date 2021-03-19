@@ -3784,15 +3784,15 @@ type AddressType struct{}
 func (*AddressType) IsType() {}
 
 func (*AddressType) String() string {
-	return AddressTypeName
+	return "Address"
 }
 
 func (*AddressType) QualifiedString() string {
-	return AddressTypeName
+	return "Address"
 }
 
 func (*AddressType) ID() TypeID {
-	return AddressTypeName
+	return "Address"
 }
 
 func (*AddressType) Equal(other Type) bool {

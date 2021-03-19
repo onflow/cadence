@@ -21,9 +21,9 @@ package sema
 // AnyResourceType represents the top type of all resource types
 //
 var AnyResourceType = &SimpleType{
-	Name:          AnyResourceTypeName,
-	QualifiedName: AnyResourceTypeName,
-	TypeID:        AnyResourceTypeName,
+	Name:          "AnyResource",
+	QualifiedName: "AnyResource",
+	TypeID:        "AnyResource",
 	IsInvalid:     false,
 	IsResource:    true,
 	// The actual storability of a value is checked at run-time
