@@ -913,7 +913,6 @@ type accountKeyTestCase struct {
 	name string
 	code string
 	args []cadence.Value
-	keys []*AccountKey
 }
 
 func (test accountKeyTestCase) executeTransaction(
