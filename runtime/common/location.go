@@ -40,11 +40,12 @@ type Location interface {
 // LocationsMatch returns true if both locations are nil or their IDs are the same.
 //
 func LocationsMatch(first, second Location) bool {
-	if first == nil && second == nil {
-		return true
+
+	if first == nil {
+		return second == nil
 	}
 
-	if (first == nil && second != nil) || (first != nil && second == nil) {
+	if second == nil {
 		return false
 	}
 
@@ -56,11 +57,12 @@ func LocationsMatch(first, second Location) bool {
 // or otherwise if their IDs are the same.
 //
 func LocationsInSameAccount(first, second Location) bool {
-	if first == nil && second == nil {
-		return true
+
+	if first == nil {
+		return second == nil
 	}
 
-	if (first == nil && second != nil) || (first != nil && second == nil) {
+	if second == nil {
 		return false
 	}
 
