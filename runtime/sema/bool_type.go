@@ -21,9 +21,9 @@ package sema
 // BoolType represents the boolean type
 //
 var BoolType = &SimpleType{
-	Name:                 BoolTypeName,
-	QualifiedName:        BoolTypeName,
-	TypeID:               BoolTypeName,
+	Name:                 "Bool",
+	QualifiedName:        "Bool",
+	TypeID:               "Bool",
 	IsInvalid:            false,
 	IsResource:           false,
 	Storable:             true,

@@ -21,9 +21,9 @@ package sema
 // AnyStructType represents the top type of all non-resource types
 //
 var AnyStructType = &SimpleType{
-	Name:          AnyStructTypeName,
-	QualifiedName: AnyStructTypeName,
-	TypeID:        AnyStructTypeName,
+	Name:          "AnyStruct",
+	QualifiedName: "AnyStruct",
+	TypeID:        "AnyStruct",
 	IsInvalid:     false,
 	IsResource:    false,
 	// The actual storability of a value is checked at run-time
