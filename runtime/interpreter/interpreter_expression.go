@@ -51,10 +51,10 @@ func (interpreter *Interpreter) identifierExpressionGetterSetter(identifierExpre
 	variable := interpreter.findVariable(identifierExpression.Identifier.Identifier)
 	return getterSetter{
 		get: func() Value {
-			return variable.Value
+			return variable.GetValue()
 		},
 		set: func(value Value) {
-			variable.Value = value
+			variable.SetValue(value)
 		},
 	}
 }
@@ -96,7 +96,7 @@ func (interpreter *Interpreter) memberExpressionGetterSetter(memberExpression *a
 func (interpreter *Interpreter) VisitIdentifierExpression(expression *ast.IdentifierExpression) ast.Repr {
 	name := expression.Identifier.Identifier
 	variable := interpreter.findVariable(name)
-	return variable.Value
+	return variable.GetValue()
 }
 
 func (interpreter *Interpreter) evalExpression(expression ast.Expression) Value {

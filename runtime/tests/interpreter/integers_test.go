@@ -88,17 +88,17 @@ func TestInterpretIntegerConversions(t *testing.T) {
 
 			assert.Equal(t,
 				value,
-				inter.Globals["x"].Value,
+				inter.Globals["x"].GetValue(),
 			)
 
 			assert.Equal(t,
 				value,
-				inter.Globals["y"].Value,
+				inter.Globals["y"].GetValue(),
 			)
 
 			assert.Equal(t,
 				interpreter.BoolValue(true),
-				inter.Globals["z"].Value,
+				inter.Globals["z"].GetValue(),
 			)
 
 		})
@@ -118,14 +118,14 @@ func TestInterpretAddressConversion(t *testing.T) {
 		interpreter.AddressValue{
 			0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
 		},
-		inter.Globals["x"].Value,
+		inter.Globals["x"].GetValue(),
 	)
 
 	assert.Equal(t,
 		interpreter.AddressValue{
 			0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2,
 		},
-		inter.Globals["y"].Value,
+		inter.Globals["y"].GetValue(),
 	)
 }
 
@@ -148,7 +148,7 @@ func TestInterpretIntegerLiteralTypeConversionInVariableDeclaration(t *testing.T
 
 			assert.Equal(t,
 				value,
-				inter.Globals["x"].Value,
+				inter.Globals["x"].GetValue(),
 			)
 
 		})
@@ -174,7 +174,7 @@ func TestInterpretIntegerLiteralTypeConversionInVariableDeclarationOptional(t *t
 
 			assert.Equal(t,
 				interpreter.NewSomeValueOwningNonCopying(value),
-				inter.Globals["x"].Value,
+				inter.Globals["x"].GetValue(),
 			)
 		})
 	}
@@ -202,7 +202,7 @@ func TestInterpretIntegerLiteralTypeConversionInAssignment(t *testing.T) {
 
 			assert.Equal(t,
 				value,
-				inter.Globals["x"].Value,
+				inter.Globals["x"].GetValue(),
 			)
 
 			_, err := inter.Invoke("test")
@@ -211,7 +211,7 @@ func TestInterpretIntegerLiteralTypeConversionInAssignment(t *testing.T) {
 			numberValue := value.(interpreter.NumberValue)
 			assert.Equal(t,
 				numberValue.Plus(numberValue),
-				inter.Globals["x"].Value,
+				inter.Globals["x"].GetValue(),
 			)
 		})
 	}
@@ -239,7 +239,7 @@ func TestInterpretIntegerLiteralTypeConversionInAssignmentOptional(t *testing.T)
 
 			assert.Equal(t,
 				interpreter.NewSomeValueOwningNonCopying(value),
-				inter.Globals["x"].Value,
+				inter.Globals["x"].GetValue(),
 			)
 
 			_, err := inter.Invoke("test")
@@ -251,7 +251,7 @@ func TestInterpretIntegerLiteralTypeConversionInAssignmentOptional(t *testing.T)
 				interpreter.NewSomeValueOwningNonCopying(
 					numberValue.Plus(numberValue),
 				),
-				inter.Globals["x"].Value,
+				inter.Globals["x"].GetValue(),
 			)
 		})
 	}
@@ -279,7 +279,7 @@ func TestInterpretIntegerLiteralTypeConversionInFunctionCallArgument(t *testing.
 
 			assert.Equal(t,
 				value,
-				inter.Globals["x"].Value,
+				inter.Globals["x"].GetValue(),
 			)
 		})
 	}
@@ -307,7 +307,7 @@ func TestInterpretIntegerLiteralTypeConversionInFunctionCallArgumentOptional(t *
 
 			assert.Equal(t,
 				interpreter.NewSomeValueOwningNonCopying(value),
-				inter.Globals["x"].Value,
+				inter.Globals["x"].GetValue(),
 			)
 		})
 	}

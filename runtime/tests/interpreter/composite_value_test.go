@@ -49,9 +49,15 @@ func TestCompositeValue(t *testing.T) {
 			`,
 		)
 
-		require.Equal(t, interpreter.NewStringValue("Apple"), inter.Globals["name"].Value)
+		require.Equal(t,
+			interpreter.NewStringValue("Apple"),
+			inter.Globals["name"].GetValue(),
+		)
 
-		require.Equal(t, interpreter.NewStringValue("Red"), inter.Globals["color"].Value)
+		require.Equal(t,
+			interpreter.NewStringValue("Red"),
+			inter.Globals["color"].GetValue(),
+		)
 	})
 }
 

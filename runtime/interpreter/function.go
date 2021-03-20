@@ -110,8 +110,8 @@ func (f InterpretedFunctionValue) Invoke(invocation Invocation) Value {
 type HostFunction func(invocation Invocation) Value
 
 type HostFunctionValue struct {
-	Function HostFunction
-	Members  *StringValueOrderedMap
+	Function        HostFunction
+	NestedVariables *StringVariableOrderedMap
 }
 
 func (f HostFunctionValue) String() string {
@@ -170,8 +170,10 @@ func (f HostFunctionValue) Invoke(invocation Invocation) Value {
 }
 
 func (f HostFunctionValue) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	value, _ := f.Members.Get(name)
-	return value
+	if variable, ok := f.NestedVariables.Get(name); ok {
+		return variable.GetValue()
+	}
+	return nil
 }
 
 func (f HostFunctionValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {

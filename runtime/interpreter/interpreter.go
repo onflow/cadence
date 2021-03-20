@@ -628,7 +628,7 @@ func (interpreter *Interpreter) invokeVariable(
 		}
 	}
 
-	variableValue := variable.Value
+	variableValue := variable.GetValue()
 
 	// the global variable must be declared as a function
 	functionValue, ok := variableValue.(FunctionValue)
@@ -809,10 +809,12 @@ func (interpreter *Interpreter) VisitFunctionDeclaration(declaration *ast.Functi
 	// make the function itself available inside the function
 	lexicalScope.Set(identifier, variable)
 
-	variable.Value = interpreter.functionDeclarationValue(
-		declaration,
-		functionType,
-		lexicalScope,
+	variable.SetValue(
+		interpreter.functionDeclarationValue(
+			declaration,
+			functionType,
+			lexicalScope,
+		),
 	)
 
 	return nil
@@ -973,7 +975,7 @@ func (interpreter *Interpreter) declareValue(declaration ValueDeclaration) *Vari
 // declareVariable declares a variable in the latest scope
 func (interpreter *Interpreter) declareVariable(identifier string, value Value) *Variable {
 	// NOTE: semantic analysis already checked possible invalid redeclaration
-	variable := NewVariable(value)
+	variable := NewVariable(value, nil)
 	interpreter.setVariable(identifier, variable)
 	return variable
 }
@@ -1041,7 +1043,7 @@ func (interpreter *Interpreter) declareCompositeValue(
 	lexicalScope *VariableActivation,
 ) (
 	scope *VariableActivation,
-	value Value,
+	variable *Variable,
 ) {
 	if declaration.CompositeKind == common.CompositeKindEnum {
 		return interpreter.declareEnumConstructor(declaration, lexicalScope)
@@ -1055,11 +1057,11 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 	lexicalScope *VariableActivation,
 ) (
 	scope *VariableActivation,
-	value Value,
+	variable *Variable,
 ) {
 	identifier := declaration.Identifier.Identifier
 	// NOTE: find *or* declare, as the function might have not been pre-declared (e.g. in the REPL)
-	variable := interpreter.findOrDeclareVariable(identifier)
+	variable = interpreter.findOrDeclareVariable(identifier)
 
 	// Make the value available in the initializer
 	lexicalScope.Set(identifier, variable)
@@ -1067,7 +1069,7 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 	// Evaluate nested declarations in a new scope, so values
 	// of nested declarations won't be visible after the containing declaration
 
-	members := NewStringValueOrderedMap()
+	nestedVariables := NewStringVariableOrderedMap()
 
 	(func() {
 		interpreter.activations.PushNewWithCurrent()
@@ -1100,12 +1102,12 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 			// to the nested declarations so they can refer to it, and update the lexical scope
 			// so the container's functions can refer to the nested composite's value
 
-			var nestedValue Value
-			lexicalScope, nestedValue =
+			var nestedVariable *Variable
+			lexicalScope, nestedVariable =
 				interpreter.declareCompositeValue(nestedCompositeDeclaration, lexicalScope)
 
 			memberIdentifier := nestedCompositeDeclaration.Identifier.Identifier
-			members.Set(memberIdentifier, nestedValue)
+			nestedVariables.Set(memberIdentifier, nestedVariable)
 		}
 	})()
 
@@ -1249,12 +1251,12 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 				// NOTE: set the variable value immediately, as the contract value
 				// needs to be available for nested declarations
 
-				variable.Value = value
+				variable.SetValue(value)
 
 				// Also, immediately set the nested values,
 				// as the initializer of the contract may use nested declarations
 
-				value.NestedValues = members
+				value.NestedVariables = nestedVariables
 			}
 
 			if initializerFunction != nil {
@@ -1271,25 +1273,23 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 	// for all other composite kinds, the constructor is declared
 
 	if declaration.CompositeKind == common.CompositeKindContract {
-		positioned := ast.NewRangeFromPositioned(declaration.Identifier)
-		contract := interpreter.contractValueHandler(
-			interpreter,
-			compositeType,
-			constructor,
-			positioned,
-		)
-		contract.NestedValues = members
-		value = contract
-		// NOTE: variable value is also set in the constructor function: it needs to be available
-		// for nested declarations, which might be invoked when the constructor is invoked
-		variable.Value = value
+		variable.getter = func() Value {
+			positioned := ast.NewRangeFromPositioned(declaration.Identifier)
+			contract := interpreter.contractValueHandler(
+				interpreter,
+				compositeType,
+				constructor,
+				positioned,
+			)
+			contract.NestedVariables = nestedVariables
+			return contract
+		}
 	} else {
-		constructor.Members = members
-		value = constructor
-		variable.Value = value
+		constructor.NestedVariables = nestedVariables
+		variable.SetValue(constructor)
 	}
 
-	return lexicalScope, value
+	return lexicalScope, variable
 }
 
 func (interpreter *Interpreter) declareEnumConstructor(
@@ -1297,11 +1297,11 @@ func (interpreter *Interpreter) declareEnumConstructor(
 	lexicalScope *VariableActivation,
 ) (
 	scope *VariableActivation,
-	value Value,
+	variable *Variable,
 ) {
 	identifier := declaration.Identifier.Identifier
 	// NOTE: find *or* declare, as the function might have not been pre-declared (e.g. in the REPL)
-	variable := interpreter.findOrDeclareVariable(identifier)
+	variable = interpreter.findOrDeclareVariable(identifier)
 
 	lexicalScope.Set(identifier, variable)
 
@@ -1315,7 +1315,7 @@ func (interpreter *Interpreter) declareEnumConstructor(
 	enumCases := declaration.Members.EnumCases()
 	caseValues := make([]*CompositeValue, len(enumCases))
 
-	constructorMembers := NewStringValueOrderedMap()
+	constructorNestedVariables := NewStringVariableOrderedMap()
 
 	for i, enumCase := range enumCases {
 
@@ -1338,16 +1338,18 @@ func (interpreter *Interpreter) declareEnumConstructor(
 			modified: true,
 		}
 		caseValues[i] = caseValue
-		constructorMembers.Set(enumCase.Identifier.Identifier, caseValue)
+
+		enumCaseIdentifier := enumCase.Identifier.Identifier
+		constructorNestedVariables.Set(enumCaseIdentifier, NewVariable(caseValue, nil))
 	}
 
-	value = EnumConstructorFunction(caseValues, constructorMembers)
-	variable.Value = value
+	value := EnumConstructorFunction(caseValues, constructorNestedVariables)
+	variable.SetValue(value)
 
-	return lexicalScope, value
+	return lexicalScope, variable
 }
 
-func EnumConstructorFunction(caseValues []*CompositeValue, members *StringValueOrderedMap) HostFunctionValue {
+func EnumConstructorFunction(caseValues []*CompositeValue, nestedVariables *StringVariableOrderedMap) HostFunctionValue {
 
 	// Prepare a lookup table based on the big-endian byte representation
 
@@ -1378,7 +1380,7 @@ func EnumConstructorFunction(caseValues []*CompositeValue, members *StringValueO
 		},
 	)
 
-	constructor.Members = members
+	constructor.NestedVariables = nestedVariables
 	return constructor
 }
 
@@ -1983,7 +1985,7 @@ func (interpreter *Interpreter) ensureLoaded(
 		// prepare the interpreter
 
 		for _, global := range virtualImport.Globals {
-			variable := NewVariable(global.Value)
+			variable := NewVariable(global.Value, nil)
 			subInterpreter.setVariable(global.Name, variable)
 			subInterpreter.Globals[global.Name] = variable
 		}
