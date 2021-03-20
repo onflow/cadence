@@ -113,8 +113,8 @@ func (f InterpretedFunctionValue) Invoke(invocation Invocation) Trampoline {
 type HostFunction func(invocation Invocation) Trampoline
 
 type HostFunctionValue struct {
-	Function HostFunction
-	Members  *StringValueOrderedMap
+	Function        HostFunction
+	NestedVariables *StringVariableOrderedMap
 }
 
 func (f HostFunctionValue) String() string {
@@ -173,8 +173,10 @@ func (f HostFunctionValue) Invoke(invocation Invocation) Trampoline {
 }
 
 func (f HostFunctionValue) GetMember(_ *Interpreter, _ LocationRange, name string) Value {
-	value, _ := f.Members.Get(name)
-	return value
+	if variable, ok := f.NestedVariables.Get(name); ok {
+		return variable.GetValue()
+	}
+	return nil
 }
 
 func (f HostFunctionValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
