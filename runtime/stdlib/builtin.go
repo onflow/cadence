@@ -219,13 +219,16 @@ func nativeEnumType(enumType *sema.CompositeType, enumCases []sema.NativeEnumCas
 func nativeEnumValue(enumType *sema.CompositeType, enumCases []sema.NativeEnumCase) (value interpreter.Value) {
 	caseCount := len(enumCases)
 	caseValues := make([]*interpreter.CompositeValue, caseCount)
-	constructorMembers := interpreter.NewStringValueOrderedMap()
+	constructorNestedVariables := interpreter.NewStringVariableOrderedMap()
 
 	for i, enumCase := range enumCases {
 		caseValue := interpreter.NewNativeEnumCaseValue(enumType, enumCase.RawValue())
 		caseValues[i] = caseValue
-		constructorMembers.Set(enumCase.Name(), caseValue)
+		constructorNestedVariables.Set(
+			enumCase.Name(),
+			interpreter.NewVariable(caseValue, nil),
+		)
 	}
 
-	return interpreter.EnumConstructorFunction(caseValues, constructorMembers)
+	return interpreter.EnumConstructorFunction(caseValues, constructorNestedVariables)
 }

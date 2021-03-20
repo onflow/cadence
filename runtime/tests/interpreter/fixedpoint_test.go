@@ -40,7 +40,7 @@ func TestInterpretNegativeZeroFixedPoint(t *testing.T) {
 
 	assert.Equal(t,
 		interpreter.Fix64Value(-42000000),
-		inter.Globals["x"].Value,
+		inter.Globals["x"].GetValue(),
 	)
 }
 
@@ -83,17 +83,17 @@ func TestInterpretFixedPointConversionAndAddition(t *testing.T) {
 
 			assert.Equal(t,
 				value,
-				inter.Globals["x"].Value,
+				inter.Globals["x"].GetValue(),
 			)
 
 			assert.Equal(t,
 				value,
-				inter.Globals["y"].Value,
+				inter.Globals["y"].GetValue(),
 			)
 
 			assert.Equal(t,
 				interpreter.BoolValue(true),
-				inter.Globals["z"].Value,
+				inter.Globals["z"].GetValue(),
 			)
 
 		})
@@ -145,12 +145,12 @@ func TestInterpretFixedPointConversions(t *testing.T) {
 
 				assert.Equal(t,
 					fixedPointValue,
-					inter.Globals["x"].Value,
+					inter.Globals["x"].GetValue(),
 				)
 
 				assert.Equal(t,
 					integerValue,
-					inter.Globals["y"].Value,
+					inter.Globals["y"].GetValue(),
 				)
 			})
 		}
@@ -180,12 +180,12 @@ func TestInterpretFixedPointConversions(t *testing.T) {
 
 				assert.Equal(t,
 					expected,
-					inter.Globals["x"].Value,
+					inter.Globals["x"].GetValue(),
 				)
 
 				assert.Equal(t,
 					expected,
-					inter.Globals["y"].Value,
+					inter.Globals["y"].GetValue(),
 				)
 			})
 		}
@@ -216,12 +216,12 @@ func TestInterpretFixedPointConversions(t *testing.T) {
 
 				assert.Equal(t,
 					expected,
-					inter.Globals["x"].Value,
+					inter.Globals["x"].GetValue(),
 				)
 
 				assert.Equal(t,
 					expected,
-					inter.Globals["y"].Value,
+					inter.Globals["y"].GetValue(),
 				)
 			})
 		}
@@ -245,12 +245,12 @@ func TestInterpretFixedPointConversions(t *testing.T) {
 
 				assert.Equal(t,
 					interpreter.Fix64Value(value*sema.Fix64Factor),
-					inter.Globals["x"].Value,
+					inter.Globals["x"].GetValue(),
 				)
 
 				assert.Equal(t,
 					interpreter.UFix64Value(value*sema.Fix64Factor),
-					inter.Globals["y"].Value,
+					inter.Globals["y"].GetValue(),
 				)
 			})
 		}
@@ -274,12 +274,12 @@ func TestInterpretFixedPointConversions(t *testing.T) {
 
 				assert.Equal(t,
 					interpreter.UFix64Value(value*sema.Fix64Factor),
-					inter.Globals["x"].Value,
+					inter.Globals["x"].GetValue(),
 				)
 
 				assert.Equal(t,
 					interpreter.Fix64Value(value*sema.Fix64Factor),
-					inter.Globals["y"].Value,
+					inter.Globals["y"].GetValue(),
 				)
 			})
 		}
