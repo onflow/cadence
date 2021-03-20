@@ -5334,7 +5334,7 @@ type CompositeValue struct {
 	Fields              *StringValueOrderedMap
 	InjectedFields      *StringValueOrderedMap
 	ComputedFields      *StringComputedFieldOrderedMap
-	NestedValues        *StringValueOrderedMap
+	NestedVariables     *StringVariableOrderedMap
 	Functions           map[string]FunctionValue
 	Destructor          FunctionValue
 	Owner               *common.Address
@@ -5449,7 +5449,7 @@ func (v *CompositeValue) Copy() Value {
 		Fields:              newFields,
 		InjectedFields:      v.InjectedFields,
 		ComputedFields:      v.ComputedFields,
-		NestedValues:        v.NestedValues,
+		NestedVariables:     v.NestedVariables,
 		Functions:           v.Functions,
 		Destructor:          v.Destructor,
 		destroyed:           v.destroyed,
@@ -5503,9 +5503,9 @@ func (v *CompositeValue) IsModified() bool {
 		}
 	}
 
-	if v.NestedValues != nil {
-		for pair := v.NestedValues.Oldest(); pair != nil; pair = pair.Next() {
-			if pair.Value.IsModified() {
+	if v.NestedVariables != nil {
+		for pair := v.NestedVariables.Oldest(); pair != nil; pair = pair.Next() {
+			if pair.Value.GetValue().IsModified() {
 				return true
 			}
 		}
@@ -5532,10 +5532,10 @@ func (v *CompositeValue) GetMember(interpreter *Interpreter, locationRange Locat
 		return value
 	}
 
-	if v.NestedValues != nil {
-		value, ok = v.NestedValues.Get(name)
+	if v.NestedVariables != nil {
+		variable, ok := v.NestedVariables.Get(name)
 		if ok {
-			return value
+			return variable.GetValue()
 		}
 	}
 

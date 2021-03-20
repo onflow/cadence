@@ -1425,7 +1425,8 @@ func (r *interpreterRuntime) instantiateContract(
 				if common.LocationsMatch(compositeType.Location, contractType.Location) &&
 					compositeType.Identifier == contractType.Identifier {
 
-					value, err := inter.InvokeFunctionValue(constructor,
+					value, err := inter.InvokeFunctionValue(
+						constructor,
 						constructorArguments,
 						argumentTypes,
 						parameterTypes,
@@ -1435,9 +1436,7 @@ func (r *interpreterRuntime) instantiateContract(
 						panic(err)
 					}
 
-					contract = value.(*interpreter.CompositeValue)
-
-					return contract
+					return value.(*interpreter.CompositeValue)
 				}
 
 				// The contract is not the deployed contract, load it from storage
@@ -1466,6 +1465,8 @@ func (r *interpreterRuntime) instantiateContract(
 	if err != nil {
 		return nil, nil, err
 	}
+
+	contract = interpeter.Globals[contractType.Identifier].GetValue().(*interpreter.CompositeValue)
 
 	var exportedContract cadence.Value
 	if runtimeStorage.highLevelStorageEnabled {

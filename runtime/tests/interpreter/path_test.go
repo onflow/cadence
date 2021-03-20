@@ -50,7 +50,7 @@ func TestInterpretPath(t *testing.T) {
 					Domain:     domain,
 					Identifier: "random",
 				},
-				inter.Globals["x"].Value,
+				inter.Globals["x"].GetValue(),
 			)
 		})
 	}
