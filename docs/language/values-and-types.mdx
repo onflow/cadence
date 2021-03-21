@@ -1352,6 +1352,28 @@ booleans[0] = true
 
   // `values` has type [Int] and is `[42, 23]`
   ```
+  
+- `cadence•fun contains(key: K): Bool`
+
+  Returns true if the given key of type `K` is in the dictionary.
+
+  ```cadence
+  // Declare a dictionary mapping strings to integers.
+  let numbers = {"fortyTwo": 42, "twentyThree": 23}
+
+  // Check if the dictionary contains "twentyFive".
+  let containsTwentyFive = numbers.contains("twentyFive")
+  // `containsTwentyFive` is `false`
+
+  // Check if the array contains "fortyTwo".
+  let containsFortyTwo = numbers.contains("fortyTwo")
+  // `containsFortyTwo` is `true`
+
+  // Invalid: Check if the dictionary contains the integer 42.
+  // This results in a type error, as they key type of the dictionary is string.
+  //
+  let contains42 = numbers.contains(42)
+  ```
 
 ### Dictionary Keys
 

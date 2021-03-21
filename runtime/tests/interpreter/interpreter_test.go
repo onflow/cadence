@@ -4858,6 +4858,45 @@ func TestInterpretArrayContains(t *testing.T) {
 	)
 }
 
+func TestInterpretDictionaryContains(t *testing.T) {
+
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+      fun doesContain(): Bool {
+		  let a = {
+			  1: "one",
+			  2: "two"
+		  }
+          return a.contains(1)
+      }
+
+      fun doesNotContain(): Bool {
+		  let a = {
+			  1: "one",
+			  2: "two"
+		  }
+          return a.contains(3)
+      }
+    `)
+
+	value, err := inter.Invoke("doesContain")
+	require.NoError(t, err)
+
+	assert.Equal(t,
+		interpreter.BoolValue(true),
+		value,
+	)
+
+	value, err = inter.Invoke("doesNotContain")
+	require.NoError(t, err)
+
+	assert.Equal(t,
+		interpreter.BoolValue(false),
+		value,
+	)
+}
+
 func TestInterpretStringConcat(t *testing.T) {
 
 	t.Parallel()

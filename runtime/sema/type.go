@@ -2752,7 +2752,7 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 
 				elementType := arrayType.ElementType(false)
 
-				// It impossible for an array of resources to have a `contains` function:
+				// It is impossible for an array of resources to have a `contains` function:
 				// if the resource is passed as an argument, it cannot be inside the array
 
 				if elementType.IsResourceType() {
@@ -4909,6 +4909,10 @@ func (t *DictionaryType) RewriteWithRestrictedTypes() (Type, bool) {
 	}
 }
 
+const dictionaryTypeContainsFunctionDocString = `
+Returns true if the given object is in the dictionary
+`
+
 const dictionaryTypeLengthFieldDocString = `
 The number of entries in the dictionary
 `
@@ -4942,6 +4946,29 @@ func (t *DictionaryType) initializeMemberResolvers() {
 	t.memberResolversOnce.Do(func() {
 
 		t.memberResolvers = withBuiltinMembers(t, map[string]MemberResolver{
+			"contains": {
+				Kind: common.DeclarationKindFunction,
+				Resolve: func(identifier string, targetRange ast.Range, report func(error)) *Member {
+
+					return NewPublicFunctionMember(
+						t,
+						identifier,
+						&FunctionType{
+							Parameters: []*Parameter{
+								{
+									Label:          ArgumentLabelNotRequired,
+									Identifier:     "key",
+									TypeAnnotation: NewTypeAnnotation(t.KeyType),
+								},
+							},
+							ReturnTypeAnnotation: NewTypeAnnotation(
+								BoolType,
+							),
+						},
+						dictionaryTypeContainsFunctionDocString,
+					)
+				},
+			},
 			"length": {
 				Kind: common.DeclarationKindField,
 				Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
