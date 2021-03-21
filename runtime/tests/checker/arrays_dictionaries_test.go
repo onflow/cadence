@@ -686,6 +686,36 @@ func TestCheckEmptyArrayCall(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestCheckDictionaryContains(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+      fun test(): Bool {
+          let x = {1: "One", 2: "Two", 3: "Three"}
+          return x.contains(2)
+      }
+    `)
+
+	require.NoError(t, err)
+}
+
+func TestCheckInvalidDictionaryContains(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+      fun test(): Bool {
+          let x = {1: "One", 2: "Two", 3: "Three"}
+          return x.contains("abc")
+      }
+    `)
+
+	errs := ExpectCheckerErrors(t, err, 1)
+
+	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+}
+
 func TestCheckEmptyDictionary(t *testing.T) {
 
 	t.Parallel()
