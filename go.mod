@@ -1,6 +1,6 @@
 module github.com/onflow/cadence
 
-go 1.13
+go 1.15
 
 require (
 	github.com/bytecodealliance/wasmtime-go v0.22.0

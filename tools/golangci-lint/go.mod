@@ -1,5 +1,5 @@
 module github.com/filecoin-project/tools/golangci-lint
 
-go 1.14
+go 1.15
 
 require github.com/golangci/golangci-lint v1.36.0
