@@ -36,9 +36,14 @@ func (v *Variable) SetValue(value Value) {
 	v.value = value
 }
 
-func NewVariable(value Value, getter func() Value) *Variable {
+func NewVariableWithValue(value Value) *Variable {
 	return &Variable{
-		value:  value,
+		value: value,
+	}
+}
+
+func NewVariableWithGetter(getter func() Value) *Variable {
+	return &Variable{
 		getter: getter,
 	}
 }
