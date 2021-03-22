@@ -60,12 +60,23 @@ func (checker *Checker) VisitReferenceExpression(referenceExpression *ast.Refere
 
 	// Check that the references expression's type is not optional
 
+	getReferencedExpressionRange := func() ast.Range {
+		if isIndexExpression {
+			return ast.Range{
+				StartPos: indexExpression.TargetExpression.StartPosition(),
+				EndPos:   referencedExpression.EndPosition(),
+			}
+		} else {
+			return ast.NewRangeFromPositioned(referencedExpression)
+		}
+	}
+
 	if _, ok := referencedType.(*OptionalType); ok {
 
 		checker.report(
 			&OptionalTypeReferenceError{
 				ActualType: referencedType,
-				Range:      ast.NewRangeFromPositioned(referencedExpression),
+				Range:      getReferencedExpressionRange(),
 			},
 		)
 	}
@@ -100,7 +111,7 @@ func (checker *Checker) VisitReferenceExpression(referenceExpression *ast.Refere
 			&TypeMismatchError{
 				ExpectedType: referenceType.Type,
 				ActualType:   referencedType,
-				Range:        ast.NewRangeFromPositioned(referencedExpression),
+				Range:        getReferencedExpressionRange(),
 			},
 		)
 	}
