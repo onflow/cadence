@@ -170,8 +170,10 @@ func (f HostFunctionValue) Invoke(invocation Invocation) Value {
 }
 
 func (f HostFunctionValue) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	if variable, ok := f.NestedVariables.Get(name); ok {
-		return variable.GetValue()
+	if f.NestedVariables != nil {
+		if variable, ok := f.NestedVariables.Get(name); ok {
+			return variable.GetValue()
+		}
 	}
 	return nil
 }
