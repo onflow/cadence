@@ -288,14 +288,14 @@ Addresses have multiple built-in functions you can use.
   someAddress.toString()  // is "0x436164656E636521"
   ```
 
-- `cadence•fun toBigEndianBytes(): [UInt8]`
+- `cadence•fun toBytes(): [UInt8]`
 
   Returns the byte array representation (`[UInt8]`) of the address.
 
   ```cadence
   let someAddress: Address = 0x436164656E636521
 
-  someAddress.toString()  // is `[67, 97, 100, 101, 110, 99, 101, 33]`
+  someAddress.toBytes()  // is `[67, 97, 100, 101, 110, 99, 101, 33]`
   ```
 
 ## AnyStruct and AnyResource
