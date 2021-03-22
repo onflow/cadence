@@ -975,7 +975,7 @@ func (interpreter *Interpreter) declareValue(declaration ValueDeclaration) *Vari
 // declareVariable declares a variable in the latest scope
 func (interpreter *Interpreter) declareVariable(identifier string, value Value) *Variable {
 	// NOTE: semantic analysis already checked possible invalid redeclaration
-	variable := NewVariable(value, nil)
+	variable := NewVariableWithValue(value)
 	interpreter.setVariable(identifier, variable)
 	return variable
 }
@@ -1339,8 +1339,10 @@ func (interpreter *Interpreter) declareEnumConstructor(
 		}
 		caseValues[i] = caseValue
 
-		enumCaseIdentifier := enumCase.Identifier.Identifier
-		constructorNestedVariables.Set(enumCaseIdentifier, NewVariable(caseValue, nil))
+		constructorNestedVariables.Set(
+			enumCase.Identifier.Identifier,
+			NewVariableWithValue(caseValue),
+		)
 	}
 
 	value := EnumConstructorFunction(caseValues, constructorNestedVariables)
@@ -1985,7 +1987,7 @@ func (interpreter *Interpreter) ensureLoaded(
 		// prepare the interpreter
 
 		for _, global := range virtualImport.Globals {
-			variable := NewVariable(global.Value, nil)
+			variable := NewVariableWithValue(global.Value)
 			subInterpreter.setVariable(global.Name, variable)
 			subInterpreter.Globals[global.Name] = variable
 		}
