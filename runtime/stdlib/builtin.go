@@ -226,7 +226,7 @@ func nativeEnumValue(enumType *sema.CompositeType, enumCases []sema.NativeEnumCa
 		caseValues[i] = caseValue
 		constructorNestedVariables.Set(
 			enumCase.Name(),
-			interpreter.NewVariable(caseValue, nil),
+			interpreter.NewVariableWithValue(caseValue),
 		)
 	}
 
