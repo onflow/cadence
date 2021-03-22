@@ -1045,3 +1045,21 @@ func TestCheckInvalidReferenceExpressionNonReferenceAnyStruct(t *testing.T) {
 	assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
 	assert.IsType(t, &sema.NonReferenceTypeReferenceError{}, errs[1])
 }
+
+func TestCheckInvalidDictionaryAccessReference(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+      let xs: {Int: Int} = {}
+      let ref = &xs[1] as &String
+    `)
+
+	errs := ExpectCheckerErrors(t, err, 1)
+
+	require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+
+	typeMismatchError := errs[0].(*sema.TypeMismatchError)
+	assert.Equal(t, 17, typeMismatchError.StartPos.Column)
+	assert.Equal(t, 21, typeMismatchError.EndPos.Column)
+}
