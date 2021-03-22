@@ -65,3 +65,10 @@ check-tidy: generate
 	go mod tidy
 	cd languageserver; go mod tidy
 	git diff --exit-code
+
+.PHONY: release
+release:
+	@(VERSIONED_FILES="version.go \
+	npm-packages/cadence-parser/package.json \
+	npm-packages/cadence-language-server/package.json" \
+	./bump-version.sh $(bump))
