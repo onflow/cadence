@@ -173,8 +173,10 @@ func (f HostFunctionValue) Invoke(invocation Invocation) Trampoline {
 }
 
 func (f HostFunctionValue) GetMember(_ *Interpreter, _ LocationRange, name string) Value {
-	if variable, ok := f.NestedVariables.Get(name); ok {
-		return variable.GetValue()
+	if f.NestedVariables != nil {
+		if variable, ok := f.NestedVariables.Get(name); ok {
+			return variable.GetValue()
+		}
 	}
 	return nil
 }
