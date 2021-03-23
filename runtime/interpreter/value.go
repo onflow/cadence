@@ -5800,7 +5800,7 @@ func (v *DictionaryValue) Destroy(inter *Interpreter, getLocationRange func() Lo
 	writeDeferredKeys(inter, v.DeferredOwner, v.DeferredStorageKeyBase, v.prevDeferredKeys)
 }
 
-func (v *DictionaryValue) Contains(keyValue Value) BoolValue {
+func (v *DictionaryValue) ContainsKey(keyValue Value) BoolValue {
 	key := dictionaryKey(keyValue)
 	_, ok := v.Entries.Get(key)
 	if ok {
@@ -5954,10 +5954,10 @@ func (v *DictionaryValue) GetMember(interpreter *Interpreter, getLocationRange f
 			},
 		)
 
-	case "contains":
+	case "containsKey":
 		return NewHostFunctionValue(
 			func(invocation Invocation) Value {
-				return v.Contains(invocation.Arguments[0])
+				return v.ContainsKey(invocation.Arguments[0])
 			},
 		)
 

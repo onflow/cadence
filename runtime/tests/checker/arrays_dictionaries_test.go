@@ -686,28 +686,28 @@ func TestCheckEmptyArrayCall(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestCheckDictionaryContains(t *testing.T) {
+func TestCheckDictionaryContainsKey(t *testing.T) {
 
 	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       fun test(): Bool {
           let x = {1: "One", 2: "Two", 3: "Three"}
-          return x.contains(2)
+          return x.containsKey(2)
       }
     `)
 
 	require.NoError(t, err)
 }
 
-func TestCheckInvalidDictionaryContains(t *testing.T) {
+func TestCheckInvalidDictionaryContainsKey(t *testing.T) {
 
 	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       fun test(): Bool {
           let x = {1: "One", 2: "Two", 3: "Three"}
-          return x.contains("abc")
+          return x.containsKey("abc")
       }
     `)
 
