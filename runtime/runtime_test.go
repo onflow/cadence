@@ -3487,15 +3487,14 @@ func TestRuntimeFungibleTokenUpdateAccountCode(t *testing.T) {
       }
     `)
 
-	accountCodes := map[string][]byte{}
+	accountCodes := map[common.LocationID][]byte{}
 	var events []cadence.Event
 
 	signerAccount := address1Value
 
 	runtimeInterface := &testRuntimeInterface{
 		getCode: func(location Location) (bytes []byte, err error) {
-			key := string(location.(common.AddressLocation).ID())
-			return accountCodes[key], nil
+			return accountCodes[location.ID()], nil
 		},
 		storage: newTestStorage(nil, nil),
 		getSigningAccounts: func() ([]Address, error) {
@@ -3507,16 +3506,14 @@ func TestRuntimeFungibleTokenUpdateAccountCode(t *testing.T) {
 				Address: address,
 				Name:    name,
 			}
-			key := string(location.ID())
-			return accountCodes[key], nil
+			return accountCodes[location.ID()], nil
 		},
 		updateAccountContractCode: func(address Address, name string, code []byte) (err error) {
 			location := common.AddressLocation{
 				Address: address,
 				Name:    name,
 			}
-			key := string(location.ID())
-			accountCodes[key] = code
+			accountCodes[location.ID()] = code
 			return nil
 		},
 		emitEvent: func(event cadence.Event) error {
@@ -3632,15 +3629,14 @@ func TestRuntimeFungibleTokenCreateAccount(t *testing.T) {
       }
     `)
 
-	accountCodes := map[string][]byte{}
+	accountCodes := map[common.LocationID][]byte{}
 	var events []cadence.Event
 
 	signerAccount := address1Value
 
 	runtimeInterface := &testRuntimeInterface{
 		getCode: func(location Location) (bytes []byte, err error) {
-			key := string(location.(common.AddressLocation).ID())
-			return accountCodes[key], nil
+			return accountCodes[location.ID()], nil
 		},
 		storage: newTestStorage(nil, nil),
 		createAccount: func(payer Address) (address Address, err error) {
@@ -3655,16 +3651,14 @@ func TestRuntimeFungibleTokenCreateAccount(t *testing.T) {
 				Address: address,
 				Name:    name,
 			}
-			key := string(location.ID())
-			return accountCodes[key], nil
+			return accountCodes[location.ID()], nil
 		},
 		updateAccountContractCode: func(address Address, name string, code []byte) (err error) {
 			location := common.AddressLocation{
 				Address: address,
 				Name:    name,
 			}
-			key := string(location.ID())
-			accountCodes[key] = code
+			accountCodes[location.ID()] = code
 			return nil
 		},
 		emitEvent: func(event cadence.Event) error {
@@ -3796,15 +3790,14 @@ func TestRuntimeInvokeStoredInterfaceFunction(t *testing.T) {
 		)
 	}
 
-	accountCodes := map[string][]byte{}
+	accountCodes := map[common.LocationID][]byte{}
 	var events []cadence.Event
 
 	var nextAccount byte = 0x2
 
 	runtimeInterface := &testRuntimeInterface{
 		getCode: func(location Location) (bytes []byte, err error) {
-			key := string(location.(common.AddressLocation).ID())
-			return accountCodes[key], nil
+			return accountCodes[location.ID()], nil
 		},
 		storage: newTestStorage(nil, nil),
 		createAccount: func(payer Address) (address Address, err error) {
@@ -3821,16 +3814,14 @@ func TestRuntimeInvokeStoredInterfaceFunction(t *testing.T) {
 				Address: address,
 				Name:    name,
 			}
-			key := string(location.ID())
-			return accountCodes[key], nil
+			return accountCodes[location.ID()], nil
 		},
 		updateAccountContractCode: func(address Address, name string, code []byte) error {
 			location := common.AddressLocation{
 				Address: address,
 				Name:    name,
 			}
-			key := string(location.ID())
-			accountCodes[key] = code
+			accountCodes[location.ID()] = code
 			return nil
 		},
 		emitEvent: func(event cadence.Event) error {
@@ -4235,14 +4226,13 @@ func TestInterpretResourceOwnerFieldUseComposite(t *testing.T) {
       }
     `)
 
-	accountCodes := map[string][]byte{}
+	accountCodes := map[common.LocationID][]byte{}
 	var events []cadence.Event
 	var loggedMessages []string
 
 	runtimeInterface := &testRuntimeInterface{
 		getCode: func(location Location) (bytes []byte, err error) {
-			key := string(location.(common.AddressLocation).ID())
-			return accountCodes[key], nil
+			return accountCodes[location.ID()], nil
 		},
 		storage: newTestStorage(nil, nil),
 		getSigningAccounts: func() ([]Address, error) {
@@ -4254,16 +4244,14 @@ func TestInterpretResourceOwnerFieldUseComposite(t *testing.T) {
 				Address: address,
 				Name:    name,
 			}
-			key := string(location.ID())
-			return accountCodes[key], nil
+			return accountCodes[location.ID()], nil
 		},
 		updateAccountContractCode: func(address Address, name string, code []byte) error {
 			location := common.AddressLocation{
 				Address: address,
 				Name:    name,
 			}
-			key := string(location.ID())
-			accountCodes[key] = code
+			accountCodes[location.ID()] = code
 			return nil
 		},
 		emitEvent: func(event cadence.Event) error {
@@ -4414,14 +4402,13 @@ func TestInterpretResourceOwnerFieldUseArray(t *testing.T) {
       }
     `)
 
-	accountCodes := map[string][]byte{}
+	accountCodes := map[common.LocationID][]byte{}
 	var events []cadence.Event
 	var loggedMessages []string
 
 	runtimeInterface := &testRuntimeInterface{
 		getCode: func(location Location) (bytes []byte, err error) {
-			key := string(location.(common.AddressLocation).ID())
-			return accountCodes[key], nil
+			return accountCodes[location.ID()], nil
 		},
 		storage: newTestStorage(nil, nil),
 		getSigningAccounts: func() ([]Address, error) {
@@ -4432,8 +4419,7 @@ func TestInterpretResourceOwnerFieldUseArray(t *testing.T) {
 				Address: address,
 				Name:    name,
 			}
-			key := string(location.ID())
-			return accountCodes[key], nil
+			return accountCodes[location.ID()], nil
 		},
 		resolveLocation: singleIdentifierLocationResolver(t),
 		updateAccountContractCode: func(address Address, name string, code []byte) error {
@@ -4441,8 +4427,7 @@ func TestInterpretResourceOwnerFieldUseArray(t *testing.T) {
 				Address: address,
 				Name:    name,
 			}
-			key := string(location.ID())
-			accountCodes[key] = code
+			accountCodes[location.ID()] = code
 			return nil
 		},
 		emitEvent: func(event cadence.Event) error {
@@ -4598,14 +4583,13 @@ func TestInterpretResourceOwnerFieldUseDictionary(t *testing.T) {
       }
     `)
 
-	accountCodes := map[string][]byte{}
+	accountCodes := map[common.LocationID][]byte{}
 	var events []cadence.Event
 	var loggedMessages []string
 
 	runtimeInterface := &testRuntimeInterface{
 		getCode: func(location Location) (bytes []byte, err error) {
-			key := string(location.(common.AddressLocation).ID())
-			return accountCodes[key], nil
+			return accountCodes[location.ID()], nil
 		},
 		storage: newTestStorage(nil, nil),
 		getSigningAccounts: func() ([]Address, error) {
@@ -4617,16 +4601,14 @@ func TestInterpretResourceOwnerFieldUseDictionary(t *testing.T) {
 				Address: address,
 				Name:    name,
 			}
-			key := string(location.ID())
-			return accountCodes[key], nil
+			return accountCodes[location.ID()], nil
 		},
 		updateAccountContractCode: func(address Address, name string, code []byte) error {
 			location := common.AddressLocation{
 				Address: address,
 				Name:    name,
 			}
-			key := string(location.ID())
-			accountCodes[key] = code
+			accountCodes[location.ID()] = code
 			return nil
 		},
 		emitEvent: func(event cadence.Event) error {
@@ -5357,7 +5339,7 @@ func TestRuntimeDeployCodeCaching(t *testing.T) {
 
 	runtime := NewInterpreterRuntime()
 
-	accountCodes := map[string][]byte{}
+	accountCodes := map[common.LocationID][]byte{}
 	var events []cadence.Event
 
 	var accountCounter uint8 = 0
@@ -5370,8 +5352,7 @@ func TestRuntimeDeployCodeCaching(t *testing.T) {
 			return Address{accountCounter}, nil
 		},
 		getCode: func(location Location) (bytes []byte, err error) {
-			key := string(location.(common.AddressLocation).ID())
-			return accountCodes[key], nil
+			return accountCodes[location.ID()], nil
 		},
 		storage: newTestStorage(nil, nil),
 		getSigningAccounts: func() ([]Address, error) {
@@ -5383,16 +5364,14 @@ func TestRuntimeDeployCodeCaching(t *testing.T) {
 				Address: address,
 				Name:    name,
 			}
-			key := string(location.ID())
-			return accountCodes[key], nil
+			return accountCodes[location.ID()], nil
 		},
 		updateAccountContractCode: func(address Address, name string, code []byte) error {
 			location := common.AddressLocation{
 				Address: address,
 				Name:    name,
 			}
-			key := string(location.ID())
-			accountCodes[key] = code
+			accountCodes[location.ID()] = code
 			return nil
 		},
 		emitEvent: func(event cadence.Event) error {
@@ -5492,7 +5471,7 @@ func TestRuntimeUpdateCodeCaching(t *testing.T) {
 
 	runtime := NewInterpreterRuntime()
 
-	accountCodes := map[string][]byte{}
+	accountCodes := map[common.LocationID][]byte{}
 	var events []cadence.Event
 
 	var accountCounter uint8 = 0
@@ -5509,8 +5488,7 @@ func TestRuntimeUpdateCodeCaching(t *testing.T) {
 			return Address{accountCounter}, nil
 		},
 		getCode: func(location Location) (bytes []byte, err error) {
-			key := string(location.(common.AddressLocation).ID())
-			return accountCodes[key], nil
+			return accountCodes[location.ID()], nil
 		},
 		storage: newTestStorage(nil, nil),
 		getSigningAccounts: func() ([]Address, error) {
@@ -5522,8 +5500,7 @@ func TestRuntimeUpdateCodeCaching(t *testing.T) {
 				Address: address,
 				Name:    name,
 			}
-			key := string(location.ID())
-			return accountCodes[key], nil
+			return accountCodes[location.ID()], nil
 		},
 		updateAccountContractCode: func(address Address, name string, code []byte) error {
 			codeChanged = true
@@ -5532,8 +5509,7 @@ func TestRuntimeUpdateCodeCaching(t *testing.T) {
 				Address: address,
 				Name:    name,
 			}
-			key := string(location.ID())
-			accountCodes[key] = code
+			accountCodes[location.ID()] = code
 			return nil
 		},
 		emitEvent: func(event cadence.Event) error {
@@ -5710,7 +5686,7 @@ func TestRuntimeNoProgramsHitForToplevelPrograms(t *testing.T) {
 
 	runtime := NewInterpreterRuntime()
 
-	accountCodes := map[string][]byte{}
+	accountCodes := map[common.LocationID][]byte{}
 	var events []cadence.Event
 
 	programs := map[common.LocationID]*interpreter.Program{}
@@ -5727,8 +5703,7 @@ func TestRuntimeNoProgramsHitForToplevelPrograms(t *testing.T) {
 			return Address{accountCounter}, nil
 		},
 		getCode: func(location Location) (bytes []byte, err error) {
-			key := string(location.(common.AddressLocation).ID())
-			return accountCodes[key], nil
+			return accountCodes[location.ID()], nil
 		},
 		setProgram: func(location Location, program *interpreter.Program) error {
 			programs[location.ID()] = program
@@ -5748,16 +5723,14 @@ func TestRuntimeNoProgramsHitForToplevelPrograms(t *testing.T) {
 				Address: address,
 				Name:    name,
 			}
-			key := string(location.ID())
-			return accountCodes[key], nil
+			return accountCodes[location.ID()], nil
 		},
 		updateAccountContractCode: func(address Address, name string, code []byte) error {
 			location := common.AddressLocation{
 				Address: address,
 				Name:    name,
 			}
-			key := string(location.ID())
-			accountCodes[key] = code
+			accountCodes[location.ID()] = code
 			return nil
 		},
 		emitEvent: func(event cadence.Event) error {

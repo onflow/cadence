@@ -492,12 +492,7 @@ func TestRuntimeImportMultipleContracts(t *testing.T) {
 		)
 	}
 
-	type contractKey struct {
-		address [common.AddressLength]byte
-		name    string
-	}
-
-	deployedContracts := map[contractKey][]byte{}
+	accountCodes := map[common.LocationID][]byte{}
 
 	var events []cadence.Event
 	var loggedMessages []string
@@ -508,27 +503,27 @@ func TestRuntimeImportMultipleContracts(t *testing.T) {
 			return []Address{common.BytesToAddress([]byte{0x1})}, nil
 		},
 		updateAccountContractCode: func(address Address, name string, code []byte) error {
-			key := contractKey{
-				address: address,
-				name:    name,
+			location := common.AddressLocation{
+				Address: address,
+				Name:    name,
 			}
-			deployedContracts[key] = code
+			accountCodes[location.ID()] = code
 			return nil
 		},
 		getAccountContractCode: func(address Address, name string) (code []byte, err error) {
-			key := contractKey{
-				address: address,
-				name:    name,
+			location := common.AddressLocation{
+				Address: address,
+				Name:    name,
 			}
-			code = deployedContracts[key]
+			code = accountCodes[location.ID()]
 			return code, nil
 		},
 		removeAccountContractCode: func(address Address, name string) error {
-			key := contractKey{
-				address: address,
-				name:    name,
+			location := common.AddressLocation{
+				Address: address,
+				Name:    name,
 			}
-			delete(deployedContracts, key)
+			delete(accountCodes, location.ID())
 			return nil
 		},
 		resolveLocation: func(identifiers []ast.Identifier, location common.Location) (result []sema.ResolvedLocation, err error) {
