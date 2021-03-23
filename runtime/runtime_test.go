@@ -3332,7 +3332,7 @@ func TestRuntimeStorageLoadedDestructionAfterRemoval(t *testing.T) {
 	)
 }
 
-const fungibleTokenContract = `
+const basicFungibleTokenContract = `
 pub contract FungibleToken {
 
     pub resource interface Provider {
@@ -3441,7 +3441,7 @@ func TestRuntimeFungibleTokenUpdateAccountCode(t *testing.T) {
 		0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2,
 	}
 
-	deploy := utils.DeploymentTransaction("FungibleToken", []byte(fungibleTokenContract))
+	deploy := utils.DeploymentTransaction("FungibleToken", []byte(basicFungibleTokenContract))
 
 	setup1Transaction := []byte(`
       import FungibleToken from 0x01
@@ -3586,7 +3586,7 @@ func TestRuntimeFungibleTokenCreateAccount(t *testing.T) {
             }
           }
         `,
-		hex.EncodeToString([]byte(fungibleTokenContract)),
+		hex.EncodeToString([]byte(basicFungibleTokenContract)),
 	))
 
 	setup1Transaction := []byte(`
