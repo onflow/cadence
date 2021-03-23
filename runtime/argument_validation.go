@@ -44,13 +44,13 @@ func valueConformsToDynamicType(value interpreter.Value, dynamicType interpreter
 
 	switch typ := dynamicType.(type) {
 	case interpreter.ArrayDynamicType:
-		ok = valueConfirmsToArrayDynamicType(value, typ)
+		ok = valueConformsToArrayDynamicType(value, typ)
 	case interpreter.CompositeDynamicType:
 		ok = valueConformsToSemaType(value, typ.StaticType)
 	case interpreter.DictionaryDynamicType:
-		ok = valueConfirmsToDictionaryDynamicType(value, typ)
+		ok = valueConformsToDictionaryDynamicType(value, typ)
 	case interpreter.SomeDynamicType:
-		ok = valueConfirmsToSomeDynamicType(value, typ)
+		ok = valueConformsToSomeDynamicType(value, typ)
 
 	// Following types are guaranteed to be decoded correctly by the json.decode().
 	// However, this additional layer is added to protect the Cadence runtime,
@@ -87,7 +87,7 @@ func valueConformsToDynamicType(value interpreter.Value, dynamicType interpreter
 		// TODO: add support for checking the referenced value conformance (if importing is supported).
 		_, ok = value.(*interpreter.StorageReferenceValue)
 	case interpreter.EphemeralReferenceDynamicType:
-		ok = valueConfirmsToEphemeralReferenceDynamicType(value, typ)
+		ok = valueConformsToEphemeralReferenceDynamicType(value, typ)
 	case interpreter.VoidDynamicType:
 		// Void type cannot have a value.
 		ok = false
@@ -96,7 +96,7 @@ func valueConformsToDynamicType(value interpreter.Value, dynamicType interpreter
 	return
 }
 
-func valueConfirmsToArrayDynamicType(value interpreter.Value, arrayType interpreter.ArrayDynamicType) bool {
+func valueConformsToArrayDynamicType(value interpreter.Value, arrayType interpreter.ArrayDynamicType) bool {
 	arrayValue, ok := value.(*interpreter.ArrayValue)
 	if !ok || len(arrayValue.Values) != len(arrayType.ElementTypes) {
 		return false
@@ -111,7 +111,11 @@ func valueConfirmsToArrayDynamicType(value interpreter.Value, arrayType interpre
 	return true
 }
 
-func valueConfirmsToDictionaryDynamicType(value interpreter.Value, dictionaryType interpreter.DictionaryDynamicType) bool {
+func valueConformsToDictionaryDynamicType(
+	value interpreter.Value,
+	dictionaryType interpreter.DictionaryDynamicType,
+) bool {
+
 	dictionaryValue, ok := value.(*interpreter.DictionaryValue)
 	if !ok || len(dictionaryValue.Keys.Values) != len(dictionaryType.EntryTypes) {
 		return false
@@ -137,7 +141,7 @@ func valueConfirmsToDictionaryDynamicType(value interpreter.Value, dictionaryTyp
 	return true
 }
 
-func valueConfirmsToSomeDynamicType(value interpreter.Value, someType interpreter.SomeDynamicType) bool {
+func valueConformsToSomeDynamicType(value interpreter.Value, someType interpreter.SomeDynamicType) bool {
 	someValue, ok := value.(*interpreter.SomeValue)
 	if !ok {
 		return false
@@ -146,7 +150,11 @@ func valueConfirmsToSomeDynamicType(value interpreter.Value, someType interprete
 	return valueConformsToDynamicType(someValue.Value, someType.InnerType)
 }
 
-func valueConfirmsToEphemeralReferenceDynamicType(value interpreter.Value, refType interpreter.EphemeralReferenceDynamicType) bool {
+func valueConformsToEphemeralReferenceDynamicType(
+	value interpreter.Value,
+	refType interpreter.EphemeralReferenceDynamicType,
+) bool {
+
 	referenceValue, ok := value.(*interpreter.EphemeralReferenceValue)
 	if !ok {
 		return false
@@ -224,7 +232,7 @@ func valueConformsToSemaType(value interpreter.Value, semaType sema.Type) (ok bo
 	case *sema.FunctionType:
 		_, ok = value.(interpreter.FunctionValue)
 	case *sema.TransactionType:
-		ok = false
+		// false
 	}
 
 	return
@@ -327,16 +335,16 @@ func valueConformsToDictionaryType(value interpreter.Value, dictionaryType *sema
 		return false
 	}
 
-	for _, entryKey := range dictionaryValue.Keys.Values {
+	for _, key := range dictionaryValue.Keys.Values {
 		// Check the key
-		if !valueConformsToSemaType(entryKey, dictionaryType.KeyType) {
+		if !valueConformsToSemaType(key, dictionaryType.KeyType) {
 			return false
 		}
 
 		// Check the value. Here it is assumed an imported value can only have
 		// static entries, but not deferred keys/values.
-		key := interpreter.DictionaryKey(entryKey)
-		entryValue, ok := dictionaryValue.Entries.Get(key)
+		dictionaryKey := interpreter.DictionaryKey(key)
+		entryValue, ok := dictionaryValue.Entries.Get(dictionaryKey)
 		if !ok || !valueConformsToSemaType(entryValue, dictionaryType.ValueType) {
 			return false
 		}
