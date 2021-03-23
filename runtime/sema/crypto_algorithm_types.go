@@ -26,12 +26,12 @@ import (
 //go:generate go run golang.org/x/tools/cmd/stringer -type=SignatureAlgorithm
 //go:generate go run golang.org/x/tools/cmd/stringer -type=HashAlgorithm
 
-var SignatureAlgorithms = []NativeEnumCase{
+var SignatureAlgorithms = []CryptoAlgorithm{
 	SignatureAlgorithmECDSA_P256,
 	SignatureAlgorithmECDSA_Secp256k1,
 }
 
-var HashAlgorithms = []NativeEnumCase{
+var HashAlgorithms = []CryptoAlgorithm{
 	HashAlgorithmSHA2_256,
 	HashAlgorithmSHA2_384,
 	HashAlgorithmSHA3_256,
@@ -40,7 +40,7 @@ var HashAlgorithms = []NativeEnumCase{
 
 var SignatureAlgorithmType = newNativeEnumType(SignatureAlgorithmTypeName, &UInt8Type{})
 
-type SignatureAlgorithm int
+type SignatureAlgorithm uint8
 
 const (
 	// Supported signing algorithms
@@ -63,7 +63,7 @@ func (algo SignatureAlgorithm) Name() string {
 	panic(errors.NewUnreachableError())
 }
 
-func (algo SignatureAlgorithm) RawValue() int {
+func (algo SignatureAlgorithm) RawValue() uint8 {
 	// NOTE: only add new algorithms, do *NOT* change existing items,
 	// reuse raw values for other items, swap the order, etc.
 	//
@@ -96,7 +96,7 @@ func (algo SignatureAlgorithm) DocString() string {
 
 var HashAlgorithmType = newNativeEnumType(HashAlgorithmTypeName, &UInt8Type{})
 
-type HashAlgorithm int
+type HashAlgorithm uint8
 
 const (
 	// Supported hashing algorithms
@@ -124,7 +124,7 @@ func (algo HashAlgorithm) Name() string {
 	panic(errors.NewUnreachableError())
 }
 
-func (algo HashAlgorithm) RawValue() int {
+func (algo HashAlgorithm) RawValue() uint8 {
 	// NOTE: only add new algorithms, do *NOT* change existing items,
 	// reuse raw values for other items, swap the order, etc.
 	//

@@ -18,7 +18,7 @@ const _SignatureAlgorithm_name = "SignatureAlgorithmUnknownSignatureAlgorithmECD
 var _SignatureAlgorithm_index = [...]uint8{0, 25, 53, 86}
 
 func (i SignatureAlgorithm) String() string {
-	if i < 0 || i >= SignatureAlgorithm(len(_SignatureAlgorithm_index)-1) {
+	if i >= SignatureAlgorithm(len(_SignatureAlgorithm_index)-1) {
 		return "SignatureAlgorithm(" + strconv.FormatInt(int64(i), 10) + ")"
 	}
 	return _SignatureAlgorithm_name[_SignatureAlgorithm_index[i]:_SignatureAlgorithm_index[i+1]]

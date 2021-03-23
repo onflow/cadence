@@ -641,7 +641,7 @@ func TestRuntimeHashAlgorithm(t *testing.T) {
 
 	require.Len(t, builtinStruct.Fields, 1)
 	assert.Equal(t,
-		cadence.NewInt(HashAlgorithmSHA3_256.RawValue()),
+		cadence.NewUInt8(HashAlgorithmSHA3_256.RawValue()),
 		builtinStruct.Fields[0],
 	)
 
@@ -654,7 +654,7 @@ func TestRuntimeHashAlgorithm(t *testing.T) {
 
 	require.Len(t, builtinStruct.Fields, 1)
 	assert.Equal(t,
-		cadence.NewInt(HashAlgorithmSHA3_256.RawValue()),
+		cadence.NewUInt8(HashAlgorithmSHA3_256.RawValue()),
 		builtinStruct.Fields[0],
 	)
 
@@ -711,7 +711,7 @@ func TestRuntimeSignatureAlgorithm(t *testing.T) {
 
 	require.Len(t, builtinStruct.Fields, 1)
 	assert.Equal(t,
-		cadence.NewInt(SignatureAlgorithmECDSA_Secp256k1.RawValue()),
+		cadence.NewUInt8(SignatureAlgorithmECDSA_Secp256k1.RawValue()),
 		builtinStruct.Fields[0],
 	)
 
@@ -724,7 +724,7 @@ func TestRuntimeSignatureAlgorithm(t *testing.T) {
 
 	require.Len(t, builtinStruct.Fields, 1)
 	assert.Equal(t,
-		cadence.NewInt(SignatureAlgorithmECDSA_Secp256k1.RawValue()),
+		cadence.NewUInt8(SignatureAlgorithmECDSA_Secp256k1.RawValue()),
 		builtinStruct.Fields[0],
 	)
 
@@ -756,13 +756,13 @@ func newBytesValue(bytes []byte) cadence.Array {
 
 func newSignAlgoValue(signAlgo sema.SignatureAlgorithm) cadence.Enum {
 	return cadence.NewEnum([]cadence.Value{
-		cadence.NewInt(signAlgo.RawValue()),
+		cadence.NewUInt8(signAlgo.RawValue()),
 	}).WithType(SignAlgoType)
 }
 
 func newHashAlgoValue(hashAlgo sema.HashAlgorithm) cadence.Enum {
 	return cadence.NewEnum([]cadence.Value{
-		cadence.NewInt(hashAlgo.RawValue()),
+		cadence.NewUInt8(hashAlgo.RawValue()),
 	}).WithType(HashAlgoType)
 }
 
@@ -800,7 +800,7 @@ func accountKeyExportedValue(
 
 			// Hash algo
 			cadence.NewEnum([]cadence.Value{
-				cadence.NewInt(hashAlgo.RawValue()),
+				cadence.NewUInt8(hashAlgo.RawValue()),
 			}).WithType(HashAlgoType),
 
 			// Weight

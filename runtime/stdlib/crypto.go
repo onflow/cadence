@@ -247,7 +247,7 @@ func getHashAlgorithmFromValue(value interpreter.Value) HashAlgorithm {
 		panic("cannot find hash algorithm raw value")
 	}
 
-	hashAlgoRawValue, ok := rawValue.(interpreter.IntValue)
+	hashAlgoRawValue, ok := rawValue.(interpreter.UInt8Value)
 	if !ok {
 		panic("hash algorithm raw value needs to be subtype of integer")
 	}
@@ -266,7 +266,7 @@ func getSignatureAlgorithmFromValue(value interpreter.Value) SignatureAlgorithm 
 		panic("cannot find signature algorithm raw value")
 	}
 
-	hashAlgoRawValue, ok := rawValue.(interpreter.IntValue)
+	hashAlgoRawValue, ok := rawValue.(interpreter.UInt8Value)
 	if !ok {
 		panic("signature algorithm raw value needs to be subtype of integer")
 	}

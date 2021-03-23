@@ -2314,7 +2314,7 @@ func NewPublicKeyFromValue(publicKey *interpreter.CompositeValue) *PublicKey {
 		panic("cannot find sign algorithm raw value")
 	}
 
-	signAlgoRawValue := rawValue.(interpreter.IntValue)
+	signAlgoRawValue := rawValue.(interpreter.UInt8Value)
 
 	return &PublicKey{
 		PublicKey: byteArray,
@@ -2325,7 +2325,7 @@ func NewPublicKeyFromValue(publicKey *interpreter.CompositeValue) *PublicKey {
 func NewPublicKeyValue(publicKey *PublicKey) *interpreter.CompositeValue {
 	return interpreter.NewPublicKeyValue(
 		interpreter.ByteSliceToByteArrayValue(publicKey.PublicKey),
-		interpreter.NewNativeEnumCaseValue(sema.SignatureAlgorithmType, int(publicKey.SignAlgo)),
+		interpreter.NewCryptoAlgorithmEnumCaseValue(sema.SignatureAlgorithmType, publicKey.SignAlgo.RawValue()),
 	)
 }
 
@@ -2333,7 +2333,7 @@ func NewAccountKeyValue(accountKey *AccountKey) *interpreter.CompositeValue {
 	return interpreter.NewAccountKeyValue(
 		interpreter.NewIntValueFromInt64(int64(accountKey.KeyIndex)),
 		NewPublicKeyValue(accountKey.PublicKey),
-		interpreter.NewNativeEnumCaseValue(sema.HashAlgorithmType, int(accountKey.HashAlgo)),
+		interpreter.NewCryptoAlgorithmEnumCaseValue(sema.HashAlgorithmType, accountKey.HashAlgo.RawValue()),
 		interpreter.NewUFix64ValueWithInteger(uint64(accountKey.Weight)),
 		interpreter.BoolValue(accountKey.IsRevoked),
 	)
@@ -2347,7 +2347,7 @@ func NewHashAlgorithmFromValue(value interpreter.Value) HashAlgorithm {
 		panic("cannot find hash algorithm raw value")
 	}
 
-	hashAlgoRawValue := rawValue.(interpreter.IntValue)
+	hashAlgoRawValue := rawValue.(interpreter.UInt8Value)
 
 	return HashAlgorithm(hashAlgoRawValue.ToInt())
 }
