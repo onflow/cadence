@@ -53,7 +53,7 @@ func TestContractUpdateValidation(t *testing.T) {
 		))
 	}
 
-	accountCode := map[string][]byte{}
+	accountCode := map[common.LocationID][]byte{}
 	var events []cadence.Event
 	runtimeInterface := getMockedRuntimeInterfaceForTxUpdate(t, accountCode, events)
 	nextTransactionLocation := newTransactionLocationGenerator()
@@ -1431,14 +1431,13 @@ func getContractUpdateError(t *testing.T, err error) *ContractUpdateError {
 
 func getMockedRuntimeInterfaceForTxUpdate(
 	t *testing.T,
-	accountStorage map[string][]byte,
+	accountCodes map[common.LocationID][]byte,
 	events []cadence.Event,
 ) *testRuntimeInterface {
 
 	return &testRuntimeInterface{
 		getCode: func(location Location) (bytes []byte, err error) {
-			key := string(location.(common.AddressLocation).ID())
-			return accountStorage[key], nil
+			return accountCodes[location.ID()], nil
 		},
 		storage: newTestStorage(nil, nil),
 		getSigningAccounts: func() ([]Address, error) {
@@ -1450,16 +1449,14 @@ func getMockedRuntimeInterfaceForTxUpdate(
 				Address: address,
 				Name:    name,
 			}
-			key := string(location.ID())
-			return accountStorage[key], nil
+			return accountCodes[location.ID()], nil
 		},
 		updateAccountContractCode: func(address Address, name string, code []byte) (err error) {
 			location := common.AddressLocation{
 				Address: address,
 				Name:    name,
 			}
-			key := string(location.ID())
-			accountStorage[key] = code
+			accountCodes[location.ID()] = code
 			return nil
 		},
 		emitEvent: func(event cadence.Event) error {
@@ -1490,7 +1487,7 @@ func TestContractUpdateValidationDisabled(t *testing.T) {
 		))
 	}
 
-	accountCode := map[string][]byte{}
+	accountCode := map[common.LocationID][]byte{}
 	var events []cadence.Event
 	runtimeInterface := getMockedRuntimeInterfaceForTxUpdate(t, accountCode, events)
 	nextTransactionLocation := newTransactionLocationGenerator()
