@@ -4864,19 +4864,19 @@ func TestInterpretDictionaryContainsKey(t *testing.T) {
 
 	inter := parseCheckAndInterpret(t, `
       fun doesContainKey(): Bool {
-		  let a = {
+		  let x = {
 			  1: "one",
 			  2: "two"
 		  }
-          return a.containsKey(1)
+          return x.containsKey(1)
       }
 
       fun doesNotContainKey(): Bool {
-		  let a = {
+		  let x = {
 			  1: "one",
 			  2: "two"
 		  }
-          return a.containsKey(3)
+          return x.containsKey(3)
       }
     `)
 
