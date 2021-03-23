@@ -4909,8 +4909,8 @@ func (t *DictionaryType) RewriteWithRestrictedTypes() (Type, bool) {
 	}
 }
 
-const dictionaryTypeContainsFunctionDocString = `
-Returns true if the given object is in the dictionary
+const dictionaryTypeContainsKeyFunctionDocString = `
+Returns true if the given key is in the dictionary
 `
 
 const dictionaryTypeLengthFieldDocString = `
@@ -4946,7 +4946,7 @@ func (t *DictionaryType) initializeMemberResolvers() {
 	t.memberResolversOnce.Do(func() {
 
 		t.memberResolvers = withBuiltinMembers(t, map[string]MemberResolver{
-			"contains": {
+			"containsKey": {
 				Kind: common.DeclarationKindFunction,
 				Resolve: func(identifier string, targetRange ast.Range, report func(error)) *Member {
 
@@ -4965,7 +4965,7 @@ func (t *DictionaryType) initializeMemberResolvers() {
 								BoolType,
 							),
 						},
-						dictionaryTypeContainsFunctionDocString,
+						dictionaryTypeContainsKeyFunctionDocString,
 					)
 				},
 			},
