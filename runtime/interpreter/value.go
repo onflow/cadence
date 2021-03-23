@@ -5846,7 +5846,7 @@ func (v *DictionaryValue) Destroy(inter *Interpreter, getLocationRange func() Lo
 }
 
 func (v *DictionaryValue) ContainsKey(keyValue Value) BoolValue {
-	key := dictionaryKey(keyValue)
+	key := DictionaryKey(keyValue)
 	_, ok := v.Entries.Get(key)
 	if ok {
 		return true

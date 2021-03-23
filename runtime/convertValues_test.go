@@ -1015,18 +1015,18 @@ func importAndExportValuesFromScript(t *testing.T, script string, arg cadence.Va
 	)
 }
 
-type importValueTest struct {
+type argumentPassingTest struct {
 	label         string
 	typeSignature string
 	exportedValue cadence.Value
 	skipExport    bool
 }
 
-func TestImportValue(t *testing.T) {
+func TestArgumentPassing(t *testing.T) {
 
 	t.Parallel()
 
-	var importValueTests = []importValueTest{
+	var argumentPassingTests = []argumentPassingTest{
 		{
 			label:         "Nil",
 			typeSignature: "String?",
@@ -1208,7 +1208,8 @@ func TestImportValue(t *testing.T) {
 			exportedValue: cadence.NewAddress([8]byte{0, 0, 0, 0, 0, 1, 0, 2}),
 		},
 
-		// TODO: Enable once https://github.com/onflow/cadence/issues/712 is fixed.
+		// TODO: Enable below once https://github.com/onflow/cadence/issues/712 is fixed.
+		// TODO: Add a malformed argument test for capabilities
 		//{
 		//	label:         "Capability",
 		//	typeSignature: "Capability<&Foo>",
@@ -1233,7 +1234,7 @@ func TestImportValue(t *testing.T) {
 
 	}
 
-	testImport := func(test importValueTest) {
+	testArgumentPassing := func(test argumentPassingTest) {
 
 		t.Run(test.label, func(t *testing.T) {
 
@@ -1241,6 +1242,7 @@ func TestImportValue(t *testing.T) {
 
 			returnSignature := ""
 			returnStmt := ""
+
 			if !test.skipExport {
 				returnSignature = fmt.Sprintf(": %[1]s", test.typeSignature)
 				returnStmt = "return arg"
@@ -1262,23 +1264,24 @@ func TestImportValue(t *testing.T) {
 
 			actual, err := importAndExportValuesFromScript(t, script, test.exportedValue)
 			require.NoError(t, err)
+
 			if !test.skipExport {
 				assert.Equal(t, test.exportedValue, actual)
 			}
 		})
 	}
 
-	for _, testCase := range importValueTests {
-		testImport(testCase)
+	for _, testCase := range argumentPassingTests {
+		testArgumentPassing(testCase)
 	}
 }
 
-func TestImportComplexStruct(t *testing.T) {
+func TestComplexStructArgumentPassing(t *testing.T) {
 
 	t.Parallel()
 
 	// Complex struct value
-	fooStructValue := cadence.Struct{
+	complexStructValue := cadence.Struct{
 		StructType: &cadence.StructType{
 			Location:            utils.TestLocation,
 			QualifiedIdentifier: "Foo",
@@ -1331,6 +1334,7 @@ func TestImportComplexStruct(t *testing.T) {
 				},
 			},
 		},
+
 		Fields: []cadence.Value{
 			cadence.NewString("John"),
 			cadence.NewDictionary([]cadence.KeyValuePair{
@@ -1364,66 +1368,49 @@ func TestImportComplexStruct(t *testing.T) {
 		},
 	}
 
-	testImport := func(test importValueTest) {
+	script := fmt.Sprintf(
+		`pub fun main(arg: %[1]s): %[1]s {
 
-		t.Run(test.label, func(t *testing.T) {
-
-			t.Parallel()
-
-			script := fmt.Sprintf(
-				`pub fun main(arg: %[1]s): %[1]s {
-
-					if !arg.isInstance(Type<%[1]s>()) {
-						panic("Not a %[1]s value")
-					}
-
-					return arg
-				}
-
-				pub struct Foo {
-					pub var a: String?
-					pub var b: {String: String}
-					pub var c: [String]
-					pub var d: [String; 2]
-					pub var e: Address
-					pub var f: Bool
-					pub var g: StoragePath
-					pub var h: PublicPath
-					pub var i: PrivatePath
-
-					init() {
-						self.a = "Hello"
-						self.b = {}
-						self.c = []
-						self.d = ["foo", "bar"]
-						self.e = 0x42
-						self.f = true
-						self.g = /storage/foo
-						self.h = /public/foo
-						self.i = /private/foo
-					}
-				}`,
-				test.typeSignature,
-			)
-
-			actual, err := importAndExportValuesFromScript(t, script, test.exportedValue)
-			require.NoError(t, err)
-			if !test.skipExport {
-				assert.Equal(t, test.exportedValue, actual)
+			if !arg.isInstance(Type<%[1]s>()) {
+				panic("Not a %[1]s value")
 			}
-		})
-	}
 
-	testImport(
-		importValueTest{
-			label:         "Struct",
-			typeSignature: "Foo",
-			exportedValue: fooStructValue,
-		},
+			return arg
+		}
+
+		pub struct Foo {
+			pub var a: String?
+			pub var b: {String: String}
+			pub var c: [String]
+			pub var d: [String; 2]
+			pub var e: Address
+			pub var f: Bool
+			pub var g: StoragePath
+			pub var h: PublicPath
+			pub var i: PrivatePath
+
+			init() {
+				self.a = "Hello"
+				self.b = {}
+				self.c = []
+				self.d = ["foo", "bar"]
+				self.e = 0x42
+				self.f = true
+				self.g = /storage/foo
+				self.h = /public/foo
+				self.i = /private/foo
+			}
+		}`,
+		"Foo",
 	)
+
+	actual, err := importAndExportValuesFromScript(t, script, complexStructValue)
+	require.NoError(t, err)
+	assert.Equal(t, complexStructValue, actual)
+
 }
 
-func TestMalformedImportValue(t *testing.T) {
+func TestMalformedArgumentPassing(t *testing.T) {
 
 	t.Parallel()
 
@@ -1511,7 +1498,7 @@ func TestMalformedImportValue(t *testing.T) {
 		},
 	}
 
-	var importValueTests = []importValueTest{
+	var argumentPassingTests = []argumentPassingTest{
 		{
 			label:         "Malformed Struct field type",
 			typeSignature: "Foo",
@@ -1568,7 +1555,7 @@ func TestMalformedImportValue(t *testing.T) {
 		},
 	}
 
-	testImport := func(test importValueTest) {
+	testArgumentPassing := func(test argumentPassingTest) {
 
 		t.Run(test.label, func(t *testing.T) {
 
@@ -1623,12 +1610,12 @@ func TestMalformedImportValue(t *testing.T) {
 			assert.Contains(
 				t,
 				argError.Err.Error(),
-				fmt.Sprintf("malformed value `%s`", test.exportedValue.String()),
+				fmt.Sprintf("malformed argument `%s`", test.exportedValue.String()),
 			)
 		})
 	}
 
-	for _, testCase := range importValueTests {
-		testImport(testCase)
+	for _, testCase := range argumentPassingTests {
+		testArgumentPassing(testCase)
 	}
 }

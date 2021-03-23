@@ -144,7 +144,7 @@ type MalformedArgumentError struct {
 
 func (e *MalformedArgumentError) Error() string {
 	return fmt.Sprintf(
-		"malformed value `%s`",
+		"malformed argument `%s`",
 		e.Value,
 	)
 }
