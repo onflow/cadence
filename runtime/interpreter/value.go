@@ -7194,9 +7194,9 @@ func NewPublicAccountKeysValue(getFunction FunctionValue) *CompositeValue {
 	}
 }
 
-func NewNativeEnumCaseValue(enumType *sema.CompositeType, rawValue int) *CompositeValue {
+func NewCryptoAlgorithmEnumCaseValue(enumType *sema.CompositeType, rawValue uint8) *CompositeValue {
 	fields := NewStringValueOrderedMap()
-	fields.Set(sema.EnumRawValueFieldName, NewIntValueFromInt64(int64(rawValue)))
+	fields.Set(sema.EnumRawValueFieldName, UInt8Value(rawValue))
 
 	return &CompositeValue{
 		QualifiedIdentifier: enumType.QualifiedIdentifier(),

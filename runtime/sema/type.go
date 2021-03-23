@@ -6666,8 +6666,8 @@ var PublicKeyType = func() *CompositeType {
 	return accountKeyType
 }()
 
-type NativeEnumCase interface {
-	RawValue() int
+type CryptoAlgorithm interface {
+	RawValue() uint8
 	Name() string
 	DocString() string
 }

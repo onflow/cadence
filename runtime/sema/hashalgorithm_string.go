@@ -20,7 +20,7 @@ const _HashAlgorithm_name = "HashAlgorithmUnknownHashAlgorithmSHA2_256HashAlgori
 var _HashAlgorithm_index = [...]uint8{0, 20, 41, 62, 83, 104}
 
 func (i HashAlgorithm) String() string {
-	if i < 0 || i >= HashAlgorithm(len(_HashAlgorithm_index)-1) {
+	if i >= HashAlgorithm(len(_HashAlgorithm_index)-1) {
 		return "HashAlgorithm(" + strconv.FormatInt(int64(i), 10) + ")"
 	}
 	return _HashAlgorithm_name[_HashAlgorithm_index[i]:_HashAlgorithm_index[i+1]]

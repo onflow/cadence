@@ -174,19 +174,19 @@ var BuiltinValues = StandardLibraryValues{
 
 var SignatureAlgorithmValue = StandardLibraryValue{
 	Name:  sema.SignatureAlgorithmTypeName,
-	Type:  nativeEnumType(sema.SignatureAlgorithmType, sema.SignatureAlgorithms),
-	Value: nativeEnumValue(sema.SignatureAlgorithmType, sema.SignatureAlgorithms),
+	Type:  cryptoAlgorithmEnumType(sema.SignatureAlgorithmType, sema.SignatureAlgorithms),
+	Value: cryptoAlgorithmEnumValue(sema.SignatureAlgorithmType, sema.SignatureAlgorithms),
 	Kind:  common.DeclarationKindEnum,
 }
 
 var HashAlgorithmValue = StandardLibraryValue{
 	Name:  sema.HashAlgorithmTypeName,
-	Type:  nativeEnumType(sema.HashAlgorithmType, sema.HashAlgorithms),
-	Value: nativeEnumValue(sema.HashAlgorithmType, sema.HashAlgorithms),
+	Type:  cryptoAlgorithmEnumType(sema.HashAlgorithmType, sema.HashAlgorithms),
+	Value: cryptoAlgorithmEnumValue(sema.HashAlgorithmType, sema.HashAlgorithms),
 	Kind:  common.DeclarationKindEnum,
 }
 
-func nativeEnumType(enumType *sema.CompositeType, enumCases []sema.NativeEnumCase) *sema.SpecialFunctionType {
+func cryptoAlgorithmEnumType(enumType *sema.CompositeType, enumCases []sema.CryptoAlgorithm) *sema.SpecialFunctionType {
 	members := make([]*sema.Member, len(enumCases))
 	for i, algo := range enumCases {
 		members[i] = sema.NewPublicEnumCaseMember(
@@ -216,13 +216,13 @@ func nativeEnumType(enumType *sema.CompositeType, enumCases []sema.NativeEnumCas
 	return constructorType
 }
 
-func nativeEnumValue(enumType *sema.CompositeType, enumCases []sema.NativeEnumCase) (value interpreter.Value) {
+func cryptoAlgorithmEnumValue(enumType *sema.CompositeType, enumCases []sema.CryptoAlgorithm) (value interpreter.Value) {
 	caseCount := len(enumCases)
 	caseValues := make([]*interpreter.CompositeValue, caseCount)
 	constructorNestedVariables := interpreter.NewStringVariableOrderedMap()
 
 	for i, enumCase := range enumCases {
-		caseValue := interpreter.NewNativeEnumCaseValue(enumType, enumCase.RawValue())
+		caseValue := interpreter.NewCryptoAlgorithmEnumCaseValue(enumType, enumCase.RawValue())
 		caseValues[i] = caseValue
 		constructorNestedVariables.Set(
 			enumCase.Name(),
