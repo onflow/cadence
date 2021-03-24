@@ -19,10 +19,10 @@
 package integration
 
 import (
-	"github.com/onflow/flow-cli/flow/gateway"
-	lib "github.com/onflow/flow-cli/flow/lib"
-	"github.com/onflow/flow-cli/flow/services"
-	"github.com/onflow/flow-cli/flow/util"
+	"github.com/onflow/flow-cli/pkg/flowcli/gateway"
+	"github.com/onflow/flow-cli/pkg/flowcli/output"
+	project "github.com/onflow/flow-cli/pkg/flowcli/project"
+	"github.com/onflow/flow-cli/pkg/flowcli/services"
 	"github.com/onflow/flow-go-sdk/client"
 	"google.golang.org/grpc"
 )
@@ -47,7 +47,7 @@ func (i *FlowIntegration) initialize(initializationOptions interface{}) error {
 	configurationPaths := []string{"/home/max/Desktop/cadence/flow.json"}
 
 	// TODO: process error if project could not be initialized from specified config
-	project, _ := lib.LoadProject(configurationPaths)
+	project, _ := project.Load(configurationPaths)
 	if err != nil {
 		return nil
 	}
@@ -59,7 +59,7 @@ func (i *FlowIntegration) initialize(initializationOptions interface{}) error {
 	// TODO: process error here
 	gate, _ := gateway.NewGrpcGateway(host)
 
-	logger := util.NewStdoutLogger(util.NoneLog)
+	logger := output.NewStdoutLogger(output.NoneLog)
 
 	if err != nil {
 		return nil
