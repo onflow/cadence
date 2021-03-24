@@ -6265,6 +6265,7 @@ type StorageReferenceValue struct {
 	Authorized           bool
 	TargetStorageAddress common.Address
 	TargetKey            string
+	BorrowedType         sema.Type
 }
 
 func (*StorageReferenceValue) IsValue() {}
@@ -6301,6 +6302,7 @@ func (v *StorageReferenceValue) Copy() Value {
 		Authorized:           v.Authorized,
 		TargetStorageAddress: v.TargetStorageAddress,
 		TargetKey:            v.TargetKey,
+		BorrowedType:         v.BorrowedType,
 	}
 }
 
@@ -6324,9 +6326,20 @@ func (*StorageReferenceValue) SetModified(_ bool) {
 func (v *StorageReferenceValue) ReferencedValue(interpreter *Interpreter) *Value {
 	switch referenced := interpreter.readStored(v.TargetStorageAddress, v.TargetKey, false).(type) {
 	case *SomeValue:
-		return &referenced.Value
+		value := referenced.Value
+
+		if v.BorrowedType != nil {
+			dynamicType := value.DynamicType(interpreter)
+			if !IsSubType(dynamicType, v.BorrowedType) {
+				return nil
+			}
+		}
+
+		return &value
+
 	case NilValue:
 		return nil
+
 	default:
 		panic(errors.NewUnreachableError())
 	}

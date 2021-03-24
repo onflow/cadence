@@ -515,7 +515,13 @@ func TestInterpretAuthAccount_borrow(t *testing.T) {
                   }
               }
 
-              resource R2 {}
+              resource R2 {
+                  let foo: Int
+
+                  init() {
+                      self.foo = 42
+                  }
+              }
 
               fun save() {
                   let r <- create R()
@@ -532,6 +538,18 @@ func TestInterpretAuthAccount_borrow(t *testing.T) {
 
               fun borrowR2(): &R2? {
                   return account.borrow<&R2>(from: /storage/r)
+              }
+
+              fun changeAfterBorrow(): Int {
+                 let ref = account.borrow<&R>(from: /storage/r)!
+
+                 let r <- account.load<@R>(from: /storage/r)
+                 destroy r
+
+                 let r2 <- create R2()
+                 account.save(<-r2, to: /storage/r)
+
+                 return ref.foo
               }
             `,
 		)
@@ -597,6 +615,12 @@ func TestInterpretAuthAccount_borrow(t *testing.T) {
 			require.Len(t, storedValues, 1)
 		})
 
+		t.Run("change after borrow", func(t *testing.T) {
+
+			_, err := inter.Invoke("changeAfterBorrow")
+
+			require.ErrorAs(t, err, &interpreter.DereferenceError{})
+		})
 	})
 
 	t.Run("struct", func(t *testing.T) {
@@ -615,7 +639,13 @@ func TestInterpretAuthAccount_borrow(t *testing.T) {
                   }
               }
 
-              struct S2 {}
+              struct S2 {
+                  let foo: Int
+
+                  init() {
+                      self.foo = 42
+                  }
+              }
 
               fun save() {
                   let s = S()
@@ -632,6 +662,18 @@ func TestInterpretAuthAccount_borrow(t *testing.T) {
 
               fun borrowS2(): &S2? {
                   return account.borrow<&S2>(from: /storage/s)
+              }
+
+              fun changeAfterBorrow(): Int {
+                 let ref = account.borrow<&S>(from: /storage/s)!
+
+                 // remove stored value
+                 account.load<S>(from: /storage/s)
+
+                 let s2 = S2()
+                 account.save(s2, to: /storage/s)
+
+                 return ref.foo
               }
             `,
 		)
@@ -697,6 +739,12 @@ func TestInterpretAuthAccount_borrow(t *testing.T) {
 			require.Len(t, storedValues, 1)
 		})
 
+		t.Run("change after borrow", func(t *testing.T) {
+
+			_, err := inter.Invoke("changeAfterBorrow")
+
+			require.ErrorAs(t, err, &interpreter.DereferenceError{})
+		})
 	})
 }
 
