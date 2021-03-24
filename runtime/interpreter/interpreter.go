@@ -2546,42 +2546,31 @@ func (interpreter *Interpreter) authAccountBorrowFunction(addressValue AddressVa
 		path := invocation.Arguments[0].(PathValue)
 		key := storageKey(path)
 
-		value := interpreter.readStored(address, key, false)
-
-		switch value := value.(type) {
-		case NilValue:
-			return value
-
-		case *SomeValue:
-
-			// If there is value stored for the given path,
-			// check that it satisfies the type given as the type argument.
-
-			typeParameterPair := invocation.TypeParameterTypes.Oldest()
-			if typeParameterPair == nil {
-				panic(errors.NewUnreachableError())
-			}
-
-			ty := typeParameterPair.Value
-
-			referenceType := ty.(*sema.ReferenceType)
-
-			dynamicType := value.Value.DynamicType(interpreter)
-			if !IsSubType(dynamicType, referenceType.Type) {
-				return NilValue{}
-			}
-
-			reference := &StorageReferenceValue{
-				Authorized:           referenceType.Authorized,
-				TargetStorageAddress: address,
-				TargetKey:            key,
-			}
-
-			return NewSomeValueOwningNonCopying(reference)
-
-		default:
+		typeParameterPair := invocation.TypeParameterTypes.Oldest()
+		if typeParameterPair == nil {
 			panic(errors.NewUnreachableError())
 		}
+
+		ty := typeParameterPair.Value
+
+		referenceType := ty.(*sema.ReferenceType)
+
+		reference := &StorageReferenceValue{
+			Authorized:           referenceType.Authorized,
+			TargetStorageAddress: address,
+			TargetKey:            key,
+			BorrowedType:         referenceType.Type,
+		}
+
+		// Attempt to dereference,
+		// which reads the stored value
+		// and performs a dynamic type check
+
+		if reference.ReferencedValue(interpreter) == nil {
+			return NilValue{}
+		}
+
+		return NewSomeValueOwningNonCopying(reference)
 	})
 }
 
@@ -2722,6 +2711,15 @@ func (interpreter *Interpreter) capabilityBorrowFunction(
 				Authorized:           authorized,
 				TargetStorageAddress: address,
 				TargetKey:            targetStorageKey,
+				BorrowedType:         borrowType.Type,
+			}
+
+			// Attempt to dereference,
+			// which reads the stored value
+			// and performs a dynamic type check
+
+			if reference.ReferencedValue(interpreter) == nil {
+				return NilValue{}
 			}
 
 			return NewSomeValueOwningNonCopying(reference)
@@ -2751,7 +2749,7 @@ func (interpreter *Interpreter) capabilityCheckFunction(
 				panic(errors.NewUnreachableError())
 			}
 
-			targetStorageKey, _ :=
+			targetStorageKey, authorized :=
 				interpreter.getCapabilityFinalTargetStorageKey(
 					addressValue,
 					pathValue,
@@ -2759,9 +2757,28 @@ func (interpreter *Interpreter) capabilityCheckFunction(
 					invocation.GetLocationRange,
 				)
 
-			isValid := targetStorageKey != ""
+			if targetStorageKey == "" {
+				return BoolValue(false)
+			}
 
-			return BoolValue(isValid)
+			address := addressValue.ToAddress()
+
+			reference := &StorageReferenceValue{
+				Authorized:           authorized,
+				TargetStorageAddress: address,
+				TargetKey:            targetStorageKey,
+				BorrowedType:         borrowType.Type,
+			}
+
+			// Attempt to dereference,
+			// which reads the stored value
+			// and performs a dynamic type check
+
+			if reference.ReferencedValue(interpreter) == nil {
+				return BoolValue(false)
+			}
+
+			return BoolValue(true)
 		},
 	)
 }
