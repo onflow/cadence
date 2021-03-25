@@ -8197,7 +8197,7 @@ func TestInterpretCountDigits256(t *testing.T) {
 			36,
 		},
 		{
-			sema.UInt64Type,
+			sema.UInt128Type,
 			"676983016644359394637212096269997871",
 			36,
 		},
