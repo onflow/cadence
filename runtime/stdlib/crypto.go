@@ -144,13 +144,9 @@ func newCryptoContractVerifySignatureFunction(signatureVerifier CryptoSignatureV
 }
 
 func newCryptoContractSignatureVerifier(signatureVerifier CryptoSignatureVerifier) *interpreter.CompositeValue {
-	implIdentifier := CryptoChecker.Location.
-		QualifiedIdentifier(cryptoContractInitializerTypes[0].ID()) +
-		"Impl"
-
 	result := interpreter.NewCompositeValue(
 		CryptoChecker.Location,
-		implIdentifier,
+		"Crypto.SignatureVerifierImpl",
 		common.CompositeKindStructure,
 		nil,
 		nil,
@@ -185,13 +181,10 @@ func newCryptoContractHashFunction(hasher CryptoHasher) interpreter.FunctionValu
 }
 
 func newCryptoContractHasher(hasher CryptoHasher) *interpreter.CompositeValue {
-	implIdentifier := CryptoChecker.Location.
-		QualifiedIdentifier(cryptoContractInitializerTypes[1].ID()) +
-		"Impl"
 
 	result := interpreter.NewCompositeValue(
 		CryptoChecker.Location,
-		implIdentifier,
+		"Crypto.HasherImpl",
 		common.CompositeKindStructure,
 		nil,
 		nil,
