@@ -725,6 +725,7 @@ func (interpreter *Interpreter) prepareInvoke(
 		GetLocationRange: ReturnEmptyLocationRange,
 		Interpreter:      interpreter,
 	}
+
 	return functionValue.Invoke(invocation), nil
 }
 
@@ -769,10 +770,12 @@ func (interpreter *Interpreter) recoverErrors(onError func(error)) {
 			// wrap the error with position information if needed
 
 			_, ok := err.(ast.HasPosition)
-			if !ok {
+			if !ok && interpreter.statement != nil {
+				r := ast.NewRangeFromPositioned(interpreter.statement)
+
 				err = PositionedError{
 					Err:   err,
-					Range: ast.NewRangeFromPositioned(interpreter.statement),
+					Range: r,
 				}
 			}
 
