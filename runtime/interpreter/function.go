@@ -105,12 +105,7 @@ func (f InterpretedFunctionValue) Invoke(invocation Invocation) Value {
 
 	// Check arguments' dynamic types match parameter types
 
-	parameterCount := len(f.Type.Parameters)
-
 	for i, argument := range invocation.Arguments {
-		if i >= parameterCount {
-			break
-		}
 		parameterType := f.Type.Parameters[i].TypeAnnotation.Type
 
 		argumentDynamicType := argument.DynamicType(f.Interpreter)
