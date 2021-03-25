@@ -809,24 +809,29 @@ import DapperUtilityCoin from 0xaad3e26e406987c2
 transaction {
   prepare(acct: AuthAccount) {
 
-    var tokens <- DapperUtilityCoin.createEmptyVault()
-
     let rc <- TestContract.createConverter()
     acct.save(<-rc, to: /storage/rc)
 
     acct.link<&TestContract.resourceConverter2>(/public/rc, target: /storage/rc)
 
-    var cap=getAccount(0xaad3e26e406987c2).getCapability(/public/rc).borrow<&TestContract.resourceConverter2>()!
+    let optRef = getAccount(0xaad3e26e406987c2).getCapability(/public/rc).borrow<&TestContract.resourceConverter2>()
 
-    var vaultx = cap.convert(b: <-tokens)
+    if let ref = optRef {
 
-    acct.save(vaultx, to: /storage/v1)
+      var tokens <- DapperUtilityCoin.createEmptyVault()
 
-    acct.link<&DapperUtilityCoin.Vault>(/public/v1, target: /storage/v1)
+      var vaultx = ref.convert(b: <-tokens)
 
-    var cap3=getAccount(0xaad3e26e406987c2).getCapability(/public/v1).borrow<&DapperUtilityCoin.Vault>()!
+      acct.save(vaultx, to: /storage/v1)
 
-    log(cap3.balance)
+      acct.link<&DapperUtilityCoin.Vault>(/public/v1, target: /storage/v1)
+
+      var cap3 = getAccount(0xaad3e26e406987c2).getCapability(/public/v1).borrow<&DapperUtilityCoin.Vault>()!
+
+      log(cap3.balance)
+    } else {
+      panic("failed to borrow resource converter")
+    }
   }
 }
 `
@@ -843,5 +848,5 @@ transaction {
 
 	require.Error(t, err)
 
-	require.Contains(t, err.Error(), "unexpectedly found nil while forcing an Optional value")
+	require.Contains(t, err.Error(), "failed to borrow resource converter")
 }
