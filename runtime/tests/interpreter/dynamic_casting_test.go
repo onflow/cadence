@@ -51,26 +51,26 @@ func TestInterpretDynamicCastingNumber(t *testing.T) {
 	}
 
 	tests := []test{
-		{&sema.IntType{}, "42", interpreter.NewIntValueFromInt64(42)},
-		{&sema.UIntType{}, "42", interpreter.NewUIntValueFromUint64(42)},
-		{&sema.Int8Type{}, "42", interpreter.Int8Value(42)},
-		{&sema.Int16Type{}, "42", interpreter.Int16Value(42)},
-		{&sema.Int32Type{}, "42", interpreter.Int32Value(42)},
-		{&sema.Int64Type{}, "42", interpreter.Int64Value(42)},
-		{&sema.Int128Type{}, "42", interpreter.NewInt128ValueFromInt64(42)},
-		{&sema.Int256Type{}, "42", interpreter.NewInt256ValueFromInt64(42)},
-		{&sema.UInt8Type{}, "42", interpreter.UInt8Value(42)},
-		{&sema.UInt16Type{}, "42", interpreter.UInt16Value(42)},
-		{&sema.UInt32Type{}, "42", interpreter.UInt32Value(42)},
-		{&sema.UInt64Type{}, "42", interpreter.UInt64Value(42)},
-		{&sema.UInt128Type{}, "42", interpreter.NewUInt128ValueFromUint64(42)},
-		{&sema.UInt256Type{}, "42", interpreter.NewUInt256ValueFromUint64(42)},
-		{&sema.Word8Type{}, "42", interpreter.Word8Value(42)},
-		{&sema.Word16Type{}, "42", interpreter.Word16Value(42)},
-		{&sema.Word32Type{}, "42", interpreter.Word32Value(42)},
-		{&sema.Word64Type{}, "42", interpreter.Word64Value(42)},
-		{&sema.Fix64Type{}, "1.23", interpreter.Fix64Value(123000000)},
-		{&sema.UFix64Type{}, "1.23", interpreter.UFix64Value(123000000)},
+		{sema.IntType, "42", interpreter.NewIntValueFromInt64(42)},
+		{sema.UIntType, "42", interpreter.NewUIntValueFromUint64(42)},
+		{sema.Int8Type, "42", interpreter.Int8Value(42)},
+		{sema.Int16Type, "42", interpreter.Int16Value(42)},
+		{sema.Int32Type, "42", interpreter.Int32Value(42)},
+		{sema.Int64Type, "42", interpreter.Int64Value(42)},
+		{sema.Int128Type, "42", interpreter.NewInt128ValueFromInt64(42)},
+		{sema.Int256Type, "42", interpreter.NewInt256ValueFromInt64(42)},
+		{sema.UInt8Type, "42", interpreter.UInt8Value(42)},
+		{sema.UInt16Type, "42", interpreter.UInt16Value(42)},
+		{sema.UInt32Type, "42", interpreter.UInt32Value(42)},
+		{sema.UInt64Type, "42", interpreter.UInt64Value(42)},
+		{sema.UInt128Type, "42", interpreter.NewUInt128ValueFromUint64(42)},
+		{sema.UInt256Type, "42", interpreter.NewUInt256ValueFromUint64(42)},
+		{sema.Word8Type, "42", interpreter.Word8Value(42)},
+		{sema.Word16Type, "42", interpreter.Word16Value(42)},
+		{sema.Word32Type, "42", interpreter.Word32Value(42)},
+		{sema.Word64Type, "42", interpreter.Word64Value(42)},
+		{sema.Fix64Type, "1.23", interpreter.Fix64Value(123000000)},
+		{sema.UFix64Type, "1.23", interpreter.UFix64Value(123000000)},
 	}
 
 	for operation, returnsOptional := range dynamicCastingOperations {
@@ -218,7 +218,7 @@ func TestInterpretDynamicCastingVoid(t *testing.T) {
 				for _, otherType := range []sema.Type{
 					sema.BoolType,
 					sema.StringType,
-					&sema.IntType{},
+					sema.IntType,
 				} {
 
 					t.Run(fmt.Sprintf("invalid: from %s to %s", fromType, otherType), func(t *testing.T) {
@@ -304,7 +304,7 @@ func TestInterpretDynamicCastingString(t *testing.T) {
 				for _, otherType := range []sema.Type{
 					sema.BoolType,
 					sema.VoidType,
-					&sema.IntType{},
+					sema.IntType,
 				} {
 
 					t.Run(fmt.Sprintf("invalid: from %s to %s", fromType, otherType), func(t *testing.T) {
@@ -389,7 +389,7 @@ func TestInterpretDynamicCastingBool(t *testing.T) {
 				for _, otherType := range []sema.Type{
 					sema.StringType,
 					sema.VoidType,
-					&sema.IntType{},
+					sema.IntType,
 				} {
 
 					t.Run(fmt.Sprintf("invalid: from %s to %s", fromType, otherType), func(t *testing.T) {
@@ -478,7 +478,7 @@ func TestInterpretDynamicCastingAddress(t *testing.T) {
 				for _, otherType := range []sema.Type{
 					sema.StringType,
 					sema.VoidType,
-					&sema.IntType{},
+					sema.IntType,
 					sema.BoolType,
 				} {
 
@@ -602,7 +602,7 @@ func TestInterpretDynamicCastingStruct(t *testing.T) {
 				for _, otherType := range []sema.Type{
 					sema.StringType,
 					sema.VoidType,
-					&sema.IntType{},
+					sema.IntType,
 					sema.BoolType,
 				} {
 
@@ -1004,7 +1004,7 @@ func TestInterpretDynamicCastingSome(t *testing.T) {
 	t.Parallel()
 
 	types := []sema.Type{
-		&sema.OptionalType{Type: &sema.IntType{}},
+		&sema.OptionalType{Type: sema.IntType},
 		&sema.OptionalType{Type: sema.AnyStructType},
 		sema.AnyStructType,
 	}
@@ -1104,7 +1104,7 @@ func TestInterpretDynamicCastingArray(t *testing.T) {
 	t.Parallel()
 
 	types := []sema.Type{
-		&sema.VariableSizedType{Type: &sema.IntType{}},
+		&sema.VariableSizedType{Type: sema.IntType},
 		&sema.VariableSizedType{Type: sema.AnyStructType},
 		sema.AnyStructType,
 	}
@@ -1195,7 +1195,7 @@ func TestInterpretDynamicCastingDictionary(t *testing.T) {
 	types := []sema.Type{
 		&sema.DictionaryType{
 			KeyType:   sema.StringType,
-			ValueType: &sema.IntType{},
+			ValueType: sema.IntType,
 		},
 		&sema.DictionaryType{
 			KeyType:   sema.StringType,

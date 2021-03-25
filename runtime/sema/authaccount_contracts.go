@@ -103,7 +103,7 @@ var authAccountContractsTypeAddFunctionType = &FunctionType{
 			Identifier: "code",
 			TypeAnnotation: NewTypeAnnotation(
 				&VariableSizedType{
-					Type: &UInt8Type{},
+					Type: UInt8Type,
 				},
 			),
 		},
@@ -146,7 +146,7 @@ var authAccountContractsTypeUpdateExperimentalFunctionType = &FunctionType{
 			Identifier: "code",
 			TypeAnnotation: NewTypeAnnotation(
 				&VariableSizedType{
-					Type: &UInt8Type{},
+					Type: UInt8Type,
 				},
 			),
 		},

@@ -33,8 +33,8 @@ func TestOptionalSubtyping(t *testing.T) {
 	t.Run("Int? <: Int?", func(t *testing.T) {
 		assert.True(t,
 			IsSubType(
-				&OptionalType{Type: &IntType{}},
-				&OptionalType{Type: &IntType{}},
+				&OptionalType{Type: IntType},
+				&OptionalType{Type: IntType},
 			),
 		)
 	})
@@ -42,7 +42,7 @@ func TestOptionalSubtyping(t *testing.T) {
 	t.Run("Int? <: Bool?", func(t *testing.T) {
 		assert.False(t,
 			IsSubType(
-				&OptionalType{Type: &IntType{}},
+				&OptionalType{Type: IntType},
 				&OptionalType{Type: BoolType},
 			),
 		)
@@ -51,8 +51,8 @@ func TestOptionalSubtyping(t *testing.T) {
 	t.Run("Int8? <: Integer?", func(t *testing.T) {
 		assert.True(t,
 			IsSubType(
-				&OptionalType{Type: &Int8Type{}},
-				&OptionalType{Type: &IntegerType{}},
+				&OptionalType{Type: Int8Type},
+				&OptionalType{Type: IntegerType},
 			),
 		)
 	})
@@ -170,7 +170,7 @@ func TestFunctionSubtyping(t *testing.T) {
 				&FunctionType{
 					Parameters: []*Parameter{
 						{
-							TypeAnnotation: NewTypeAnnotation(&IntType{}),
+							TypeAnnotation: NewTypeAnnotation(IntType),
 						},
 					},
 				},
@@ -198,7 +198,7 @@ func TestFunctionSubtyping(t *testing.T) {
 				&FunctionType{
 					Parameters: []*Parameter{
 						{
-							TypeAnnotation: NewTypeAnnotation(&IntType{}),
+							TypeAnnotation: NewTypeAnnotation(IntType),
 						},
 					},
 				},
@@ -210,7 +210,7 @@ func TestFunctionSubtyping(t *testing.T) {
 		assert.True(t,
 			IsSubType(
 				&FunctionType{
-					ReturnTypeAnnotation: NewTypeAnnotation(&IntType{}),
+					ReturnTypeAnnotation: NewTypeAnnotation(IntType),
 				},
 				&FunctionType{
 					ReturnTypeAnnotation: NewTypeAnnotation(AnyStructType),
@@ -226,7 +226,7 @@ func TestFunctionSubtyping(t *testing.T) {
 					ReturnTypeAnnotation: NewTypeAnnotation(AnyStructType),
 				},
 				&FunctionType{
-					ReturnTypeAnnotation: NewTypeAnnotation(&IntType{}),
+					ReturnTypeAnnotation: NewTypeAnnotation(IntType),
 				},
 			),
 		)

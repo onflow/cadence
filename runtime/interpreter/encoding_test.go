@@ -4274,7 +4274,7 @@ func TestEncodeDecodeTypeValue(t *testing.T) {
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				value: TypeValue{
-					Type: ConvertSemaToPrimitiveStaticType(&sema.IntType{}),
+					Type: ConvertSemaToPrimitiveStaticType(sema.IntType),
 				},
 				encoded: []byte{
 					// tag

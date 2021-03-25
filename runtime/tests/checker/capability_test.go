@@ -64,7 +64,7 @@ func TestCheckCapability(t *testing.T) {
 
 		assert.IsType(t,
 			&sema.CapabilityType{
-				BorrowType: &sema.IntType{},
+				BorrowType: sema.IntType,
 			},
 			capType,
 		)

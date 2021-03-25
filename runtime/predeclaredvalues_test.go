@@ -67,7 +67,7 @@ func TestRuntimePredeclaredValues(t *testing.T) {
 				{
 					Label:          sema.ArgumentLabelNotRequired,
 					Identifier:     "n",
-					TypeAnnotation: sema.NewTypeAnnotation(&sema.IntType{}),
+					TypeAnnotation: sema.NewTypeAnnotation(sema.IntType),
 				},
 			},
 			ReturnTypeAnnotation: &sema.TypeAnnotation{

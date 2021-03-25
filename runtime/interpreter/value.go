@@ -855,7 +855,7 @@ func (v IntValue) Accept(interpreter *Interpreter, visitor Visitor) {
 }
 
 func (IntValue) DynamicType(_ *Interpreter) DynamicType {
-	return NumberDynamicType{&sema.IntType{}}
+	return NumberDynamicType{sema.IntType}
 }
 
 func (IntValue) StaticType() StaticType {
@@ -1063,7 +1063,7 @@ func (v Int8Value) Accept(interpreter *Interpreter, visitor Visitor) {
 }
 
 func (Int8Value) DynamicType(_ *Interpreter) DynamicType {
-	return NumberDynamicType{&sema.Int8Type{}}
+	return NumberDynamicType{sema.Int8Type}
 }
 
 func (Int8Value) StaticType() StaticType {
@@ -1299,7 +1299,7 @@ func (v Int16Value) Accept(interpreter *Interpreter, visitor Visitor) {
 }
 
 func (Int16Value) DynamicType(_ *Interpreter) DynamicType {
-	return NumberDynamicType{&sema.Int16Type{}}
+	return NumberDynamicType{sema.Int16Type}
 }
 
 func (Int16Value) StaticType() StaticType {
@@ -1537,7 +1537,7 @@ func (v Int32Value) Accept(interpreter *Interpreter, visitor Visitor) {
 }
 
 func (Int32Value) DynamicType(_ *Interpreter) DynamicType {
-	return NumberDynamicType{&sema.Int32Type{}}
+	return NumberDynamicType{sema.Int32Type}
 }
 
 func (Int32Value) StaticType() StaticType {
@@ -1775,7 +1775,7 @@ func (v Int64Value) Accept(interpreter *Interpreter, visitor Visitor) {
 }
 
 func (Int64Value) DynamicType(_ *Interpreter) DynamicType {
-	return NumberDynamicType{&sema.Int64Type{}}
+	return NumberDynamicType{sema.Int64Type}
 }
 
 func (Int64Value) StaticType() StaticType {
@@ -2021,7 +2021,7 @@ func (v Int128Value) Accept(interpreter *Interpreter, visitor Visitor) {
 }
 
 func (Int128Value) DynamicType(_ *Interpreter) DynamicType {
-	return NumberDynamicType{&sema.Int128Type{}}
+	return NumberDynamicType{sema.Int128Type}
 }
 
 func (Int128Value) StaticType() StaticType {
@@ -2317,7 +2317,7 @@ func (v Int256Value) Accept(interpreter *Interpreter, visitor Visitor) {
 }
 
 func (Int256Value) DynamicType(_ *Interpreter) DynamicType {
-	return NumberDynamicType{&sema.Int256Type{}}
+	return NumberDynamicType{sema.Int256Type}
 }
 
 func (Int256Value) StaticType() StaticType {
@@ -2634,7 +2634,7 @@ func (v UIntValue) Accept(interpreter *Interpreter, visitor Visitor) {
 }
 
 func (UIntValue) DynamicType(_ *Interpreter) DynamicType {
-	return NumberDynamicType{&sema.UIntType{}}
+	return NumberDynamicType{sema.UIntType}
 }
 
 func (UIntValue) StaticType() StaticType {
@@ -2845,7 +2845,7 @@ func (v UInt8Value) Accept(interpreter *Interpreter, visitor Visitor) {
 }
 
 func (UInt8Value) DynamicType(_ *Interpreter) DynamicType {
-	return NumberDynamicType{&sema.UInt8Type{}}
+	return NumberDynamicType{sema.UInt8Type}
 }
 
 func (UInt8Value) StaticType() StaticType {
@@ -3049,7 +3049,7 @@ func (v UInt16Value) Accept(interpreter *Interpreter, visitor Visitor) {
 }
 
 func (UInt16Value) DynamicType(_ *Interpreter) DynamicType {
-	return NumberDynamicType{&sema.UInt16Type{}}
+	return NumberDynamicType{sema.UInt16Type}
 }
 
 func (UInt16Value) StaticType() StaticType {
@@ -3253,7 +3253,7 @@ func (v UInt32Value) Accept(interpreter *Interpreter, visitor Visitor) {
 }
 
 func (UInt32Value) DynamicType(_ *Interpreter) DynamicType {
-	return NumberDynamicType{&sema.UInt32Type{}}
+	return NumberDynamicType{sema.UInt32Type}
 }
 
 func (UInt32Value) StaticType() StaticType {
@@ -3459,7 +3459,7 @@ func (v UInt64Value) Accept(interpreter *Interpreter, visitor Visitor) {
 }
 
 func (UInt64Value) DynamicType(_ *Interpreter) DynamicType {
-	return NumberDynamicType{&sema.UInt64Type{}}
+	return NumberDynamicType{sema.UInt64Type}
 }
 
 func (UInt64Value) StaticType() StaticType {
@@ -3678,7 +3678,7 @@ func (v UInt128Value) Accept(interpreter *Interpreter, visitor Visitor) {
 }
 
 func (UInt128Value) DynamicType(_ *Interpreter) DynamicType {
-	return NumberDynamicType{&sema.UInt128Type{}}
+	return NumberDynamicType{sema.UInt128Type}
 }
 
 func (UInt128Value) StaticType() StaticType {
@@ -3943,7 +3943,7 @@ func (v UInt256Value) Accept(interpreter *Interpreter, visitor Visitor) {
 }
 
 func (UInt256Value) DynamicType(_ *Interpreter) DynamicType {
-	return NumberDynamicType{&sema.UInt256Type{}}
+	return NumberDynamicType{sema.UInt256Type}
 }
 
 func (UInt256Value) StaticType() StaticType {
@@ -4199,7 +4199,7 @@ func (v Word8Value) Accept(interpreter *Interpreter, visitor Visitor) {
 }
 
 func (Word8Value) DynamicType(_ *Interpreter) DynamicType {
-	return NumberDynamicType{&sema.Word8Type{}}
+	return NumberDynamicType{sema.Word8Type}
 }
 
 func (Word8Value) StaticType() StaticType {
@@ -4364,7 +4364,7 @@ func (v Word16Value) Accept(interpreter *Interpreter, visitor Visitor) {
 }
 
 func (Word16Value) DynamicType(_ *Interpreter) DynamicType {
-	return NumberDynamicType{&sema.Word16Type{}}
+	return NumberDynamicType{sema.Word16Type}
 }
 
 func (Word16Value) StaticType() StaticType {
@@ -4529,7 +4529,7 @@ func (v Word32Value) Accept(interpreter *Interpreter, visitor Visitor) {
 }
 
 func (Word32Value) DynamicType(_ *Interpreter) DynamicType {
-	return NumberDynamicType{&sema.Word32Type{}}
+	return NumberDynamicType{sema.Word32Type}
 }
 
 func (Word32Value) StaticType() StaticType {
@@ -4696,7 +4696,7 @@ func (v Word64Value) Accept(interpreter *Interpreter, visitor Visitor) {
 }
 
 func (Word64Value) DynamicType(_ *Interpreter) DynamicType {
-	return NumberDynamicType{&sema.Word64Type{}}
+	return NumberDynamicType{sema.Word64Type}
 }
 
 func (Word64Value) StaticType() StaticType {
@@ -4878,7 +4878,7 @@ func (v Fix64Value) Accept(interpreter *Interpreter, visitor Visitor) {
 }
 
 func (Fix64Value) DynamicType(_ *Interpreter) DynamicType {
-	return NumberDynamicType{&sema.Fix64Type{}}
+	return NumberDynamicType{sema.Fix64Type}
 }
 
 func (Fix64Value) StaticType() StaticType {
@@ -5093,7 +5093,7 @@ func (v UFix64Value) Accept(interpreter *Interpreter, visitor Visitor) {
 }
 
 func (UFix64Value) DynamicType(_ *Interpreter) DynamicType {
-	return NumberDynamicType{&sema.UFix64Type{}}
+	return NumberDynamicType{sema.UFix64Type}
 }
 
 func (UFix64Value) StaticType() StaticType {

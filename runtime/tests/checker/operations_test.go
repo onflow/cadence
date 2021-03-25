@@ -103,34 +103,34 @@ func TestCheckIntegerBinaryOperations(t *testing.T) {
 				ast.OperationDiv,
 			},
 			tests: []operationTest{
-				{&sema.IntType{}, "1", "2", nil},
-				{&sema.UFix64Type{}, "1.2", "3.4", nil},
-				{&sema.Fix64Type{}, "-1.2", "-3.4", nil},
-				{&sema.UFix64Type{}, "1.2", "3", []error{
+				{sema.IntType, "1", "2", nil},
+				{sema.UFix64Type, "1.2", "3.4", nil},
+				{sema.Fix64Type, "-1.2", "-3.4", nil},
+				{sema.UFix64Type, "1.2", "3", []error{
 					&sema.InvalidBinaryOperandsError{},
 				}},
-				{&sema.IntType{}, "1", "2.3", []error{
+				{sema.IntType, "1", "2.3", []error{
 					&sema.InvalidBinaryOperandsError{},
 				}},
-				{&sema.IntType{}, "true", "2", []error{
+				{sema.IntType, "true", "2", []error{
 					&sema.InvalidBinaryOperandError{},
 					&sema.InvalidBinaryOperandsError{},
 					&sema.TypeMismatchError{},
 				}},
-				{&sema.Fix64Type{}, "true", "1.2", []error{
+				{sema.Fix64Type, "true", "1.2", []error{
 					&sema.InvalidBinaryOperandError{},
 					&sema.InvalidBinaryOperandsError{},
 					&sema.TypeMismatchError{},
 				}},
-				{&sema.IntType{}, "1", "true", []error{
+				{sema.IntType, "1", "true", []error{
 					&sema.InvalidBinaryOperandError{},
 					&sema.InvalidBinaryOperandsError{},
 				}},
-				{&sema.UFix64Type{}, "1.2", "true", []error{
+				{sema.UFix64Type, "1.2", "true", []error{
 					&sema.InvalidBinaryOperandError{},
 					&sema.InvalidBinaryOperandsError{},
 				}},
-				{&sema.IntType{}, "true", "false", []error{
+				{sema.IntType, "true", "false", []error{
 					&sema.InvalidBinaryOperandsError{},
 					&sema.TypeMismatchError{},
 				}},
@@ -224,35 +224,35 @@ func TestCheckIntegerBinaryOperations(t *testing.T) {
 				ast.OperationBitwiseRightShift,
 			},
 			tests: []operationTest{
-				{&sema.IntType{}, "1", "2", nil},
-				{&sema.UFix64Type{}, "1.2", "3.4", []error{
+				{sema.IntType, "1", "2", nil},
+				{sema.UFix64Type, "1.2", "3.4", []error{
 					&sema.InvalidBinaryOperandsError{},
 				}},
-				{&sema.UFix64Type{}, "1.2", "3", []error{
+				{sema.UFix64Type, "1.2", "3", []error{
 					&sema.InvalidBinaryOperandError{},
 					&sema.InvalidBinaryOperandsError{},
 				}},
-				{&sema.IntType{}, "1", "2.3", []error{
+				{sema.IntType, "1", "2.3", []error{
 					&sema.InvalidBinaryOperandError{},
 					&sema.InvalidBinaryOperandsError{},
 				}},
-				{&sema.IntType{}, "true", "2", []error{
+				{sema.IntType, "true", "2", []error{
 					&sema.InvalidBinaryOperandError{},
 					&sema.InvalidBinaryOperandsError{},
 					&sema.TypeMismatchError{},
 				}},
-				{&sema.UFix64Type{}, "true", "1.2", []error{
+				{sema.UFix64Type, "true", "1.2", []error{
 					&sema.InvalidBinaryOperandsError{},
 					&sema.TypeMismatchError{},
 				}},
-				{&sema.IntType{}, "1", "true", []error{
+				{sema.IntType, "1", "true", []error{
 					&sema.InvalidBinaryOperandError{},
 					&sema.InvalidBinaryOperandsError{},
 				}},
-				{&sema.UFix64Type{}, "1.2", "true", []error{
+				{sema.UFix64Type, "1.2", "true", []error{
 					&sema.InvalidBinaryOperandsError{},
 				}},
-				{&sema.IntType{}, "true", "false", []error{
+				{sema.IntType, "true", "false", []error{
 					&sema.InvalidBinaryOperandsError{},
 					&sema.TypeMismatchError{},
 				}},

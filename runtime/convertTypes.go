@@ -39,58 +39,6 @@ func ExportType(t sema.Type, results map[sema.TypeID]cadence.Type) cadence.Type 
 		switch t := t.(type) {
 		case *sema.OptionalType:
 			return exportOptionalType(t, results)
-		case *sema.NumberType:
-			return cadence.NumberType{}
-		case *sema.SignedNumberType:
-			return cadence.SignedNumberType{}
-		case *sema.IntegerType:
-			return cadence.IntegerType{}
-		case *sema.SignedIntegerType:
-			return cadence.SignedIntegerType{}
-		case *sema.FixedPointType:
-			return cadence.FixedPointType{}
-		case *sema.SignedFixedPointType:
-			return cadence.SignedFixedPointType{}
-		case *sema.IntType:
-			return cadence.IntType{}
-		case *sema.Int8Type:
-			return cadence.Int8Type{}
-		case *sema.Int16Type:
-			return cadence.Int16Type{}
-		case *sema.Int32Type:
-			return cadence.Int32Type{}
-		case *sema.Int64Type:
-			return cadence.Int64Type{}
-		case *sema.Int128Type:
-			return cadence.Int128Type{}
-		case *sema.Int256Type:
-			return cadence.Int256Type{}
-		case *sema.UIntType:
-			return cadence.UIntType{}
-		case *sema.UInt8Type:
-			return cadence.UInt8Type{}
-		case *sema.UInt16Type:
-			return cadence.UInt16Type{}
-		case *sema.UInt32Type:
-			return cadence.UInt32Type{}
-		case *sema.UInt64Type:
-			return cadence.UInt64Type{}
-		case *sema.UInt128Type:
-			return cadence.UInt128Type{}
-		case *sema.UInt256Type:
-			return cadence.UInt256Type{}
-		case *sema.Word8Type:
-			return cadence.Word8Type{}
-		case *sema.Word16Type:
-			return cadence.Word16Type{}
-		case *sema.Word32Type:
-			return cadence.Word32Type{}
-		case *sema.Word64Type:
-			return cadence.Word64Type{}
-		case *sema.Fix64Type:
-			return cadence.Fix64Type{}
-		case *sema.UFix64Type:
-			return cadence.UFix64Type{}
 		case *sema.VariableSizedType:
 			return exportVariableSizedType(t, results)
 		case *sema.ConstantSizedType:
@@ -116,6 +64,58 @@ func ExportType(t sema.Type, results map[sema.TypeID]cadence.Type) cadence.Type 
 		}
 
 		switch t {
+		case sema.NumberType:
+			return cadence.NumberType{}
+		case sema.SignedNumberType:
+			return cadence.SignedNumberType{}
+		case sema.IntegerType:
+			return cadence.IntegerType{}
+		case sema.SignedIntegerType:
+			return cadence.SignedIntegerType{}
+		case sema.FixedPointType:
+			return cadence.FixedPointType{}
+		case sema.SignedFixedPointType:
+			return cadence.SignedFixedPointType{}
+		case sema.IntType:
+			return cadence.IntType{}
+		case sema.Int8Type:
+			return cadence.Int8Type{}
+		case sema.Int16Type:
+			return cadence.Int16Type{}
+		case sema.Int32Type:
+			return cadence.Int32Type{}
+		case sema.Int64Type:
+			return cadence.Int64Type{}
+		case sema.Int128Type:
+			return cadence.Int128Type{}
+		case sema.Int256Type:
+			return cadence.Int256Type{}
+		case sema.UIntType:
+			return cadence.UIntType{}
+		case sema.UInt8Type:
+			return cadence.UInt8Type{}
+		case sema.UInt16Type:
+			return cadence.UInt16Type{}
+		case sema.UInt32Type:
+			return cadence.UInt32Type{}
+		case sema.UInt64Type:
+			return cadence.UInt64Type{}
+		case sema.UInt128Type:
+			return cadence.UInt128Type{}
+		case sema.UInt256Type:
+			return cadence.UInt256Type{}
+		case sema.Word8Type:
+			return cadence.Word8Type{}
+		case sema.Word16Type:
+			return cadence.Word16Type{}
+		case sema.Word32Type:
+			return cadence.Word32Type{}
+		case sema.Word64Type:
+			return cadence.Word64Type{}
+		case sema.Fix64Type:
+			return cadence.Fix64Type{}
+		case sema.UFix64Type:
+			return cadence.UFix64Type{}
 		case sema.PathType:
 			return cadence.PathType{}
 		case sema.StoragePathType:

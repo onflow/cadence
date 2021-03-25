@@ -304,7 +304,7 @@ func TestCheckDynamicCastingVoid(t *testing.T) {
 				for _, otherType := range []sema.Type{
 					sema.BoolType,
 					sema.StringType,
-					&sema.IntType{},
+					sema.IntType,
 				} {
 
 					t.Run(fmt.Sprintf("invalid: from %s to %s", fromType, otherType), func(t *testing.T) {
@@ -368,7 +368,7 @@ func TestCheckDynamicCastingString(t *testing.T) {
 				for _, otherType := range []sema.Type{
 					sema.BoolType,
 					sema.VoidType,
-					&sema.IntType{},
+					sema.IntType,
 				} {
 
 					t.Run(fmt.Sprintf("invalid: from %s to %s", fromType, otherType), func(t *testing.T) {
@@ -431,7 +431,7 @@ func TestCheckDynamicCastingBool(t *testing.T) {
 				for _, otherType := range []sema.Type{
 					sema.StringType,
 					sema.VoidType,
-					&sema.IntType{},
+					sema.IntType,
 				} {
 
 					t.Run(fmt.Sprintf("invalid: from %s to %s", fromType, otherType), func(t *testing.T) {
@@ -495,7 +495,7 @@ func TestCheckDynamicCastingAddress(t *testing.T) {
 				for _, otherType := range []sema.Type{
 					sema.StringType,
 					sema.VoidType,
-					&sema.IntType{},
+					sema.IntType,
 					sema.BoolType,
 				} {
 
@@ -581,7 +581,7 @@ func TestCheckDynamicCastingStruct(t *testing.T) {
 				for _, otherType := range []sema.Type{
 					sema.StringType,
 					sema.VoidType,
-					&sema.IntType{},
+					sema.IntType,
 					sema.BoolType,
 				} {
 
@@ -1014,7 +1014,7 @@ func TestCheckDynamicCastingSome(t *testing.T) {
 	t.Parallel()
 
 	types := []sema.Type{
-		&sema.OptionalType{Type: &sema.IntType{}},
+		&sema.OptionalType{Type: sema.IntType},
 		&sema.OptionalType{Type: sema.AnyStructType},
 		sema.AnyStructType,
 	}
@@ -1076,7 +1076,7 @@ func TestCheckDynamicCastingArray(t *testing.T) {
 	t.Parallel()
 
 	types := []sema.Type{
-		&sema.VariableSizedType{Type: &sema.IntType{}},
+		&sema.VariableSizedType{Type: sema.IntType},
 		&sema.VariableSizedType{Type: sema.AnyStructType},
 		sema.AnyStructType,
 	}
@@ -1140,7 +1140,7 @@ func TestCheckDynamicCastingDictionary(t *testing.T) {
 	types := []sema.Type{
 		&sema.DictionaryType{
 			KeyType:   sema.StringType,
-			ValueType: &sema.IntType{},
+			ValueType: sema.IntType,
 		},
 		&sema.DictionaryType{
 			KeyType:   sema.StringType,

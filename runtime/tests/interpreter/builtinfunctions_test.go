@@ -274,10 +274,10 @@ func TestInterpretToBigEndianBytes(t *testing.T) {
 	// Ensure the test cases are complete
 
 	for _, integerType := range sema.AllNumberTypes {
-		switch integerType.(type) {
-		case *sema.NumberType, *sema.SignedNumberType,
-			*sema.IntegerType, *sema.SignedIntegerType,
-			*sema.FixedPointType, *sema.SignedFixedPointType:
+		switch integerType {
+		case sema.NumberType, sema.SignedNumberType,
+			sema.IntegerType, sema.SignedIntegerType,
+			sema.FixedPointType, sema.SignedFixedPointType:
 			continue
 		}
 

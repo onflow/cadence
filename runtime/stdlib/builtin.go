@@ -146,7 +146,7 @@ var CreatePublicKeyFunction = NewStandardLibraryFunction(
 			{
 				Label:          sema.PublicKeyPublicKeyField,
 				Identifier:     sema.PublicKeyPublicKeyField,
-				TypeAnnotation: sema.NewTypeAnnotation(&sema.VariableSizedType{Type: &sema.UInt8Type{}}),
+				TypeAnnotation: sema.NewTypeAnnotation(&sema.VariableSizedType{Type: sema.UInt8Type}),
 			},
 			{
 				Label:          sema.PublicKeySignAlgoField,

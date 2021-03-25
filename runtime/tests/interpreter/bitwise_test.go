@@ -91,8 +91,8 @@ var bitwiseTestValueFunctions = map[string]func(int) interpreter.NumberValue{
 func init() {
 
 	for _, integerType := range sema.AllIntegerTypes {
-		switch integerType.(type) {
-		case *sema.IntegerType, *sema.SignedIntegerType:
+		switch integerType {
+		case sema.IntegerType, sema.SignedIntegerType:
 			continue
 		}
 

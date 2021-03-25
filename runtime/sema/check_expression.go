@@ -180,16 +180,16 @@ func (checker *Checker) VisitNilExpression(_ *ast.NilExpression) ast.Repr {
 }
 
 func (checker *Checker) VisitIntegerExpression(_ *ast.IntegerExpression) ast.Repr {
-	return &IntType{}
+	return IntType
 }
 
 func (checker *Checker) VisitFixedPointExpression(expression *ast.FixedPointExpression) ast.Repr {
 	// TODO: adjust once/if we support more fixed point types
 
 	if expression.Negative {
-		return &Fix64Type{}
+		return Fix64Type
 	} else {
-		return &UFix64Type{}
+		return UFix64Type
 	}
 }
 
