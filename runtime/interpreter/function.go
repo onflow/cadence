@@ -102,6 +102,28 @@ func (InterpretedFunctionValue) SetModified(_ bool) {
 func (InterpretedFunctionValue) isFunctionValue() {}
 
 func (f InterpretedFunctionValue) Invoke(invocation Invocation) Value {
+
+	// Check arguments' dynamic types match parameter types
+
+	parameterCount := len(f.Type.Parameters)
+
+	for i, argument := range invocation.Arguments {
+		if i >= parameterCount {
+			break
+		}
+		parameterType := f.Type.Parameters[i].TypeAnnotation.Type
+
+		argumentDynamicType := argument.DynamicType(f.Interpreter)
+
+		if !IsSubType(argumentDynamicType, parameterType) {
+			panic(InvocationArgumentTypeError{
+				Index:         i,
+				ParameterType: parameterType,
+				LocationRange: invocation.GetLocationRange(),
+			})
+		}
+	}
+
 	return f.Interpreter.invokeInterpretedFunction(f, invocation)
 }
 
