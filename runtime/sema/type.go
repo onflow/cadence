@@ -726,6 +726,8 @@ type NumericType struct {
 	maxInt *big.Int
 }
 
+var _ IntegerRangedType = &NumericType{}
+
 func NewNumericType(typeName string) *NumericType {
 	return &NumericType{name: typeName}
 }
@@ -812,33 +814,25 @@ func (t *NumericType) GetMembers() map[string]MemberResolver {
 // FixedPointNumericType represent all the types in the fixedpoint range.
 //
 type FixedPointNumericType struct {
-	NumericType
+	name          string
 	scale         uint
+	minInt        *big.Int
+	maxInt        *big.Int
 	minFractional *big.Int
 	maxFractional *big.Int
 }
 
-func (t *FixedPointNumericType) MinFractional() *big.Int {
-	return t.minFractional
-}
-
-func (t *FixedPointNumericType) MaxFractional() *big.Int {
-	return t.maxFractional
-}
-func (t *FixedPointNumericType) Scale() uint {
-	return t.scale
-}
+var _ FractionalRangedType = &FixedPointNumericType{}
 
 func NewFixedPointNumericType(typeName string) *FixedPointNumericType {
 	return &FixedPointNumericType{
-		NumericType: NumericType{
-			name: typeName,
-		},
+		name: typeName,
 	}
 }
 
 func (t *FixedPointNumericType) WithIntRange(minInt *big.Int, maxInt *big.Int) *FixedPointNumericType {
-	t.NumericType.WithIntRange(minInt, maxInt)
+	t.minInt = minInt
+	t.maxInt = maxInt
 	return t
 }
 
@@ -855,6 +849,91 @@ func (t *FixedPointNumericType) WithFractionalRange(
 func (t *FixedPointNumericType) WithScale(scale uint) *FixedPointNumericType {
 	t.scale = scale
 	return t
+}
+
+func (*FixedPointNumericType) IsType() {}
+
+func (t *FixedPointNumericType) String() string {
+	return t.name
+}
+
+func (t *FixedPointNumericType) QualifiedString() string {
+	return t.name
+}
+
+func (t *FixedPointNumericType) ID() TypeID {
+	return TypeID(t.name)
+}
+
+func (t *FixedPointNumericType) Equal(other Type) bool {
+	// Numeric types are singletons. Hence their pointers should be equal.
+	if t == other {
+		return true
+	}
+
+	// Check for the value equality as well, as a backup strategy.
+	otherNumericType, ok := other.(*FixedPointNumericType)
+	return ok && t.ID() == otherNumericType.ID()
+}
+
+func (*FixedPointNumericType) IsResourceType() bool {
+	return false
+}
+
+func (*FixedPointNumericType) IsInvalidType() bool {
+	return false
+}
+
+func (*FixedPointNumericType) IsStorable(_ map[*Member]bool) bool {
+	return true
+}
+
+func (*FixedPointNumericType) IsExternallyReturnable(_ map[*Member]bool) bool {
+	return true
+}
+
+func (*FixedPointNumericType) IsEquatable() bool {
+	return true
+}
+
+func (*FixedPointNumericType) TypeAnnotationState() TypeAnnotationState {
+	return TypeAnnotationStateValid
+}
+
+func (t *FixedPointNumericType) RewriteWithRestrictedTypes() (result Type, rewritten bool) {
+	return t, false
+}
+
+func (t *FixedPointNumericType) MinInt() *big.Int {
+	return t.minInt
+}
+
+func (t *FixedPointNumericType) MaxInt() *big.Int {
+	return t.maxInt
+}
+
+func (t *FixedPointNumericType) MinFractional() *big.Int {
+	return t.minFractional
+}
+
+func (t *FixedPointNumericType) MaxFractional() *big.Int {
+	return t.maxFractional
+}
+
+func (t *FixedPointNumericType) Scale() uint {
+	return t.scale
+}
+
+func (*FixedPointNumericType) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
+	return false
+}
+
+func (t *FixedPointNumericType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
+	return t
+}
+
+func (t *FixedPointNumericType) GetMembers() map[string]MemberResolver {
+	return withBuiltinMembers(t, nil)
 }
 
 // Numeric types
@@ -938,10 +1017,10 @@ var (
 	Word64Type = NewNumericType(Word64TypeName).WithIntRange(Word64TypeMinInt, Word64TypeMaxInt)
 
 	// FixedPointType represents the super-type of all fixed-point types
-	FixedPointType = NewFixedPointNumericType(FixedPointTypeName)
+	FixedPointType = NewNumericType(FixedPointTypeName)
 
 	// SignedFixedPointType represents the super-type of all signed fixed-point types
-	SignedFixedPointType = NewFixedPointNumericType(SignedFixedPointTypeName)
+	SignedFixedPointType = NewNumericType(SignedFixedPointTypeName)
 
 	// Fix64Type represents the 64-bit signed decimal fixed-point type `Fix64`
 	// which has a scale of Fix64Scale, and checks for overflow and underflow
