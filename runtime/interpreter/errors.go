@@ -391,3 +391,19 @@ type MissingMemberValueError struct {
 func (e MissingMemberValueError) Error() string {
 	return fmt.Sprintf("missing value for member `%s`", e.Name)
 }
+
+// InvocationArgumentTypeError
+
+type InvocationArgumentTypeError struct {
+	Index         int
+	ParameterType sema.Type
+	LocationRange
+}
+
+func (e InvocationArgumentTypeError) Error() string {
+	return fmt.Sprintf(
+		"invalid invocation with argument at index %d: expected %s",
+		e.Index,
+		e.ParameterType.QualifiedString(),
+	)
+}
