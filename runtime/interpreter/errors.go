@@ -380,3 +380,19 @@ func (e EncodingUnsupportedValueError) Error() string {
 		e.Value,
 	)
 }
+
+// InvocationArgumentTypeError
+
+type InvocationArgumentTypeError struct {
+	Index         int
+	ParameterType sema.Type
+	LocationRange
+}
+
+func (e InvocationArgumentTypeError) Error() string {
+	return fmt.Sprintf(
+		"invalid invocation with argument at index %d: expected %s",
+		e.Index,
+		e.ParameterType.QualifiedString(),
+	)
+}
