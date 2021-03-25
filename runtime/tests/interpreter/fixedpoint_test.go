@@ -56,8 +56,8 @@ func TestInterpretFixedPointConversionAndAddition(t *testing.T) {
 	}
 
 	for _, fixedPointType := range sema.AllFixedPointTypes {
-		switch fixedPointType.(type) {
-		case *sema.FixedPointType, *sema.SignedFixedPointType:
+		switch fixedPointType {
+		case sema.FixedPointType, sema.SignedFixedPointType:
 			continue
 		}
 
@@ -107,8 +107,8 @@ var testFixedPointValues = map[string]interpreter.Value{
 
 func init() {
 	for _, fixedPointType := range sema.AllFixedPointTypes {
-		switch fixedPointType.(type) {
-		case *sema.FixedPointType, *sema.SignedFixedPointType:
+		switch fixedPointType {
+		case sema.FixedPointType, sema.SignedFixedPointType:
 			continue
 		}
 
@@ -352,12 +352,12 @@ func TestInterpretFixedPointConversions(t *testing.T) {
 	t.Run("invalid big integer (>uint64) to UFix64", func(t *testing.T) {
 
 		bigIntegerTypes := []sema.Type{
-			&sema.Word64Type{},
-			&sema.UInt64Type{},
-			&sema.UInt128Type{},
-			&sema.UInt256Type{},
-			&sema.Int256Type{},
-			&sema.Int128Type{},
+			sema.Word64Type,
+			sema.UInt64Type,
+			sema.UInt128Type,
+			sema.UInt256Type,
+			sema.Int256Type,
+			sema.Int128Type,
 		}
 
 		for _, integerType := range bigIntegerTypes {

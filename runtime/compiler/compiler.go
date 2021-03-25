@@ -389,14 +389,12 @@ func compileBinaryOperation(operation ast.Operation) ir.BinOp {
 
 func compileValueType(ty sema.Type) ir.ValType {
 	// TODO: add remaining types
-	switch ty.(type) {
-	case *sema.IntType:
-		return ir.ValTypeInt
-	}
 
 	switch ty {
 	case sema.StringType:
 		return ir.ValTypeString
+	case sema.IntType:
+		return ir.ValTypeInt
 	}
 
 	panic(errors.NewUnreachableError())

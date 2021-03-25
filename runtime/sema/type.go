@@ -813,7 +813,7 @@ func (t *NumericType) GetMembers() map[string]MemberResolver {
 //
 type FixedPointNumericType struct {
 	NumericType
-	uint
+	scale         uint
 	minFractional *big.Int
 	maxFractional *big.Int
 }
@@ -826,7 +826,7 @@ func (t *FixedPointNumericType) MaxFractional() *big.Int {
 	return t.maxFractional
 }
 func (t *FixedPointNumericType) Scale() uint {
-	return t.Scale()
+	return t.scale
 }
 
 func NewFixedPointNumericType(typeName string) *FixedPointNumericType {
@@ -852,12 +852,17 @@ func (t *FixedPointNumericType) WithFractionalRange(
 	return t
 }
 
+func (t *FixedPointNumericType) WithScale(scale uint) *FixedPointNumericType {
+	t.scale = scale
+	return t
+}
+
 // Numeric types
 
 var (
 
 	// NumberType represents the super-type of all number types
-	NumberType = NewNumericType(SignedNumberTypeName)
+	NumberType = NewNumericType(NumberTypeName)
 
 	// SignedNumberType represents the super-type of all signed number types
 	SignedNumberType = NewNumericType(SignedNumberTypeName)
@@ -942,13 +947,15 @@ var (
 	// which has a scale of Fix64Scale, and checks for overflow and underflow
 	Fix64Type = NewFixedPointNumericType(Fix64TypeName).
 			WithIntRange(Fix64TypeMinIntBig, Fix64TypeMaxIntBig).
-			WithFractionalRange(Fix64TypeMinFractionalBig, Fix64TypeMaxFractionalBig)
+			WithFractionalRange(Fix64TypeMinFractionalBig, Fix64TypeMaxFractionalBig).
+			WithScale(Fix64Scale)
 
 	// UFix64Type represents the 64-bit unsigned decimal fixed-point type `UFix64`
 	// which has a scale of 1E9, and checks for overflow and underflow
 	UFix64Type = NewFixedPointNumericType(UFix64TypeName).
 			WithIntRange(UFix64TypeMinIntBig, UFix64TypeMaxIntBig).
-			WithFractionalRange(UFix64TypeMinFractionalBig, UFix64TypeMaxFractionalBig)
+			WithFractionalRange(UFix64TypeMinFractionalBig, UFix64TypeMaxFractionalBig).
+			WithScale(Fix64Scale)
 )
 
 // Numeric type ranges

@@ -123,8 +123,8 @@ func TestCheckFixedPointLiteralRanges(t *testing.T) {
 	}
 
 	for _, ty := range sema.AllFixedPointTypes {
-		switch ty.(type) {
-		case *sema.FixedPointType, *sema.SignedFixedPointType:
+		switch ty {
+		case sema.FixedPointType, sema.SignedFixedPointType:
 			continue
 		}
 
@@ -625,8 +625,8 @@ func TestCheckFixedPointLiteralScales(t *testing.T) {
 
 	for _, ty := range sema.AllFixedPointTypes {
 
-		switch ty.(type) {
-		case *sema.FixedPointType, *sema.SignedFixedPointType:
+		switch ty {
+		case sema.FixedPointType, sema.SignedFixedPointType:
 			continue
 		}
 

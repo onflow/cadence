@@ -198,72 +198,72 @@ func (i PrimitiveStaticType) SemaType() sema.Type {
 	// Number
 
 	case PrimitiveStaticTypeNumber:
-		return &sema.NumberType{}
+		return sema.NumberType
 	case PrimitiveStaticTypeSignedNumber:
-		return &sema.SignedNumberType{}
+		return sema.SignedNumberType
 
 	// Integer
 	case PrimitiveStaticTypeInteger:
-		return &sema.IntegerType{}
+		return sema.IntegerType
 	case PrimitiveStaticTypeSignedInteger:
-		return &sema.SignedIntegerType{}
+		return sema.SignedIntegerType
 
 	// FixedPoint
 	case PrimitiveStaticTypeFixedPoint:
-		return &sema.FixedPointType{}
+		return sema.FixedPointType
 	case PrimitiveStaticTypeSignedFixedPoint:
-		return &sema.SignedFixedPointType{}
+		return sema.SignedFixedPointType
 
 	// Int*
 	case PrimitiveStaticTypeInt:
-		return &sema.IntType{}
+		return sema.IntType
 	case PrimitiveStaticTypeInt8:
-		return &sema.Int8Type{}
+		return sema.Int8Type
 	case PrimitiveStaticTypeInt16:
-		return &sema.Int16Type{}
+		return sema.Int16Type
 	case PrimitiveStaticTypeInt32:
-		return &sema.Int32Type{}
+		return sema.Int32Type
 	case PrimitiveStaticTypeInt64:
-		return &sema.Int64Type{}
+		return sema.Int64Type
 	case PrimitiveStaticTypeInt128:
-		return &sema.Int128Type{}
+		return sema.Int128Type
 	case PrimitiveStaticTypeInt256:
-		return &sema.Int256Type{}
+		return sema.Int256Type
 
 	// UInt*
 	case PrimitiveStaticTypeUInt:
-		return &sema.UIntType{}
+		return sema.UIntType
 	case PrimitiveStaticTypeUInt8:
-		return &sema.UInt8Type{}
+		return sema.UInt8Type
 	case PrimitiveStaticTypeUInt16:
-		return &sema.UInt16Type{}
+		return sema.UInt16Type
 	case PrimitiveStaticTypeUInt32:
-		return &sema.UInt32Type{}
+		return sema.UInt32Type
 	case PrimitiveStaticTypeUInt64:
-		return &sema.UInt64Type{}
+		return sema.UInt64Type
 	case PrimitiveStaticTypeUInt128:
-		return &sema.UInt128Type{}
+		return sema.UInt128Type
 	case PrimitiveStaticTypeUInt256:
-		return &sema.UInt256Type{}
+		return sema.UInt256Type
 
 	// Word *
 
 	case PrimitiveStaticTypeWord8:
-		return &sema.Word8Type{}
+		return sema.Word8Type
 	case PrimitiveStaticTypeWord16:
-		return &sema.Word16Type{}
+		return sema.Word16Type
 	case PrimitiveStaticTypeWord32:
-		return &sema.Word32Type{}
+		return sema.Word32Type
 	case PrimitiveStaticTypeWord64:
-		return &sema.Word64Type{}
+		return sema.Word64Type
 
 	// Fix*
 	case PrimitiveStaticTypeFix64:
-		return &sema.Fix64Type{}
+		return sema.Fix64Type
 
 	// UFix*
 	case PrimitiveStaticTypeUFix64:
-		return &sema.UFix64Type{}
+		return sema.UFix64Type
 
 	// Storage
 
@@ -297,87 +297,76 @@ func (i PrimitiveStaticType) SemaType() sema.Type {
 // Returns `PrimitiveStaticTypeUnknown` if the given type is not a primitive type.
 //
 func ConvertSemaToPrimitiveStaticType(t sema.Type) PrimitiveStaticType {
-	switch t.(type) {
-	case *sema.AddressType:
-		return PrimitiveStaticTypeAddress
+	switch t {
 
 	// Number
-
-	case *sema.NumberType:
+	case sema.NumberType:
 		return PrimitiveStaticTypeNumber
-	case *sema.SignedNumberType:
+	case sema.SignedNumberType:
 		return PrimitiveStaticTypeSignedNumber
 
-	// Integer
-	case *sema.IntegerType:
-		return PrimitiveStaticTypeInteger
-	case *sema.SignedIntegerType:
-		return PrimitiveStaticTypeSignedInteger
-
 	// FixedPoint
-	case *sema.FixedPointType:
+	case sema.FixedPointType:
 		return PrimitiveStaticTypeFixedPoint
-	case *sema.SignedFixedPointType:
+	case sema.SignedFixedPointType:
 		return PrimitiveStaticTypeSignedFixedPoint
 
+	// Integer
+	case sema.IntegerType:
+		return PrimitiveStaticTypeInteger
+	case sema.SignedIntegerType:
+		return PrimitiveStaticTypeSignedInteger
+
 	// Int*
-	case *sema.IntType:
+	case sema.IntType:
 		return PrimitiveStaticTypeInt
-	case *sema.Int8Type:
+	case sema.Int8Type:
 		return PrimitiveStaticTypeInt8
-	case *sema.Int16Type:
+	case sema.Int16Type:
 		return PrimitiveStaticTypeInt16
-	case *sema.Int32Type:
+	case sema.Int32Type:
 		return PrimitiveStaticTypeInt32
-	case *sema.Int64Type:
+	case sema.Int64Type:
 		return PrimitiveStaticTypeInt64
-	case *sema.Int128Type:
+	case sema.Int128Type:
 		return PrimitiveStaticTypeInt128
-	case *sema.Int256Type:
+	case sema.Int256Type:
 		return PrimitiveStaticTypeInt256
 
 	// UInt*
-	case *sema.UIntType:
+	case sema.UIntType:
 		return PrimitiveStaticTypeUInt
-	case *sema.UInt8Type:
+	case sema.UInt8Type:
 		return PrimitiveStaticTypeUInt8
-	case *sema.UInt16Type:
+	case sema.UInt16Type:
 		return PrimitiveStaticTypeUInt16
-	case *sema.UInt32Type:
+	case sema.UInt32Type:
 		return PrimitiveStaticTypeUInt32
-	case *sema.UInt64Type:
+	case sema.UInt64Type:
 		return PrimitiveStaticTypeUInt64
-	case *sema.UInt128Type:
+	case sema.UInt128Type:
 		return PrimitiveStaticTypeUInt128
-	case *sema.UInt256Type:
+	case sema.UInt256Type:
 		return PrimitiveStaticTypeUInt256
 
 	// Word*
-
-	case *sema.Word8Type:
+	case sema.Word8Type:
 		return PrimitiveStaticTypeWord8
-	case *sema.Word16Type:
+	case sema.Word16Type:
 		return PrimitiveStaticTypeWord16
-	case *sema.Word32Type:
+	case sema.Word32Type:
 		return PrimitiveStaticTypeWord32
-	case *sema.Word64Type:
+	case sema.Word64Type:
 		return PrimitiveStaticTypeWord64
 
 	// Fix*
-	case *sema.Fix64Type:
+	case sema.Fix64Type:
 		return PrimitiveStaticTypeFix64
 
 	// UFix*
-	case *sema.UFix64Type:
+	case sema.UFix64Type:
 		return PrimitiveStaticTypeUFix64
 
-	// Storage
-
-	case *sema.CapabilityType:
-		return PrimitiveStaticTypeCapability
-	}
-
-	switch t {
 	case sema.PathType:
 		return PrimitiveStaticTypePath
 	case sema.StoragePathType:
@@ -416,6 +405,15 @@ func ConvertSemaToPrimitiveStaticType(t sema.Type) PrimitiveStaticType {
 		return PrimitiveStaticTypeAuthAccountContracts
 	case sema.StringType:
 		return PrimitiveStaticTypeString
+	}
+
+	switch t.(type) {
+	case *sema.AddressType:
+		return PrimitiveStaticTypeAddress
+
+	// Storage
+	case *sema.CapabilityType:
+		return PrimitiveStaticTypeCapability
 	}
 
 	return PrimitiveStaticTypeUnknown

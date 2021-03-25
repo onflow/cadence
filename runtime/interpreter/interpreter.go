@@ -1315,7 +1315,7 @@ func (interpreter *Interpreter) declareEnumConstructor(
 
 	location := interpreter.Location
 
-	intType := &sema.IntType{}
+	intType := sema.IntType
 
 	enumCases := declaration.Members.EnumCases()
 	caseValues := make([]*CompositeValue, len(enumCases))
@@ -1598,115 +1598,117 @@ func (interpreter *Interpreter) convert(value Value, valueType, targetType sema.
 
 	unwrappedTargetType := sema.UnwrapOptionalType(targetType)
 
-	switch unwrappedTargetType.(type) {
-	case *sema.IntType:
+	switch unwrappedTargetType {
+	case sema.IntType:
 		if !valueType.Equal(unwrappedTargetType) {
 			return ConvertInt(value)
 		}
 
-	case *sema.UIntType:
+	case sema.UIntType:
 		if !valueType.Equal(unwrappedTargetType) {
 			return ConvertUInt(value)
 		}
 
-	case *sema.AddressType:
-		if !valueType.Equal(unwrappedTargetType) {
-			return ConvertAddress(value)
-		}
-
 	// Int*
-	case *sema.Int8Type:
+	case sema.Int8Type:
 		if !valueType.Equal(unwrappedTargetType) {
 			return ConvertInt8(value)
 		}
 
-	case *sema.Int16Type:
+	case sema.Int16Type:
 		if !valueType.Equal(unwrappedTargetType) {
 			return ConvertInt16(value)
 		}
 
-	case *sema.Int32Type:
+	case sema.Int32Type:
 		if !valueType.Equal(unwrappedTargetType) {
 			return ConvertInt32(value)
 		}
 
-	case *sema.Int64Type:
+	case sema.Int64Type:
 		if !valueType.Equal(unwrappedTargetType) {
 			return ConvertInt64(value)
 		}
 
-	case *sema.Int128Type:
+	case sema.Int128Type:
 		if !valueType.Equal(unwrappedTargetType) {
 			return ConvertInt128(value)
 		}
 
-	case *sema.Int256Type:
+	case sema.Int256Type:
 		if !valueType.Equal(unwrappedTargetType) {
 			return ConvertInt256(value)
 		}
 
 	// UInt*
-	case *sema.UInt8Type:
+	case sema.UInt8Type:
 		if !valueType.Equal(unwrappedTargetType) {
 			return ConvertUInt8(value)
 		}
 
-	case *sema.UInt16Type:
+	case sema.UInt16Type:
 		if !valueType.Equal(unwrappedTargetType) {
 			return ConvertUInt16(value)
 		}
 
-	case *sema.UInt32Type:
+	case sema.UInt32Type:
 		if !valueType.Equal(unwrappedTargetType) {
 			return ConvertUInt32(value)
 		}
 
-	case *sema.UInt64Type:
+	case sema.UInt64Type:
 		if !valueType.Equal(unwrappedTargetType) {
 			return ConvertUInt64(value)
 		}
 
-	case *sema.UInt128Type:
+	case sema.UInt128Type:
 		if !valueType.Equal(unwrappedTargetType) {
 			return ConvertUInt128(value)
 		}
 
-	case *sema.UInt256Type:
+	case sema.UInt256Type:
 		if !valueType.Equal(unwrappedTargetType) {
 			return ConvertUInt256(value)
 		}
 
 	// Word*
-	case *sema.Word8Type:
+	case sema.Word8Type:
 		if !valueType.Equal(unwrappedTargetType) {
 			return ConvertWord8(value)
 		}
 
-	case *sema.Word16Type:
+	case sema.Word16Type:
 		if !valueType.Equal(unwrappedTargetType) {
 			return ConvertWord16(value)
 		}
 
-	case *sema.Word32Type:
+	case sema.Word32Type:
 		if !valueType.Equal(unwrappedTargetType) {
 			return ConvertWord32(value)
 		}
 
-	case *sema.Word64Type:
+	case sema.Word64Type:
 		if !valueType.Equal(unwrappedTargetType) {
 			return ConvertWord64(value)
 		}
 
 	// Fix*
 
-	case *sema.Fix64Type:
+	case sema.Fix64Type:
 		if !valueType.Equal(unwrappedTargetType) {
 			return ConvertFix64(value)
 		}
 
-	case *sema.UFix64Type:
+	case sema.UFix64Type:
 		if !valueType.Equal(unwrappedTargetType) {
 			return ConvertUFix64(value)
+		}
+	}
+
+	switch unwrappedTargetType.(type) {
+	case *sema.AddressType:
+		if !valueType.Equal(unwrappedTargetType) {
+			return ConvertAddress(value)
 		}
 	}
 
@@ -2186,10 +2188,10 @@ func init() {
 		// Only leaf number types require a converter,
 		// "hierarchy" number types don't need one
 
-		switch numberType.(type) {
-		case *sema.NumberType, *sema.SignedNumberType,
-			*sema.IntegerType, *sema.SignedIntegerType,
-			*sema.FixedPointType, *sema.SignedFixedPointType:
+		switch numberType {
+		case sema.NumberType, sema.SignedNumberType,
+			sema.IntegerType, sema.SignedIntegerType,
+			sema.FixedPointType, sema.SignedFixedPointType:
 			continue
 		}
 

@@ -1225,7 +1225,7 @@ func TestCheckAccount_getCapability(t *testing.T) {
 			var expectedBorrowType sema.Type
 			if typed {
 				expectedBorrowType = &sema.ReferenceType{
-					Type: &sema.IntType{},
+					Type: sema.IntType,
 				}
 			}
 
@@ -1296,7 +1296,7 @@ func TestCheckAccount_StorageFields(t *testing.T) {
 
 				amountType := RequireGlobalValue(t, checker.Elaboration, "amount")
 
-				assert.Equal(t, &sema.UInt64Type{}, amountType)
+				assert.Equal(t, sema.UInt64Type, amountType)
 			})
 		}
 	}

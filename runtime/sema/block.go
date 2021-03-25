@@ -42,7 +42,7 @@ var BlockType = &SimpleType{
 					return NewPublicConstantFieldMember(
 						t,
 						identifier,
-						&UInt64Type{},
+						UInt64Type,
 						blockTypeHeightFieldDocString,
 					)
 				},
@@ -53,7 +53,7 @@ var BlockType = &SimpleType{
 					return NewPublicConstantFieldMember(
 						t,
 						identifier,
-						&UInt64Type{},
+						UInt64Type,
 						blockTypeViewFieldDocString,
 					)
 				},
@@ -64,7 +64,7 @@ var BlockType = &SimpleType{
 					return NewPublicConstantFieldMember(
 						t,
 						identifier,
-						&UFix64Type{},
+						UFix64Type,
 						blockTypeTimestampFieldDocString,
 					)
 				},
@@ -87,7 +87,7 @@ var BlockType = &SimpleType{
 const BlockIDSize = 32
 
 var blockIDFieldType = &ConstantSizedType{
-	Type: &UInt8Type{},
+	Type: UInt8Type,
 	Size: BlockIDSize,
 }
 

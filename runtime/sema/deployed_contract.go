@@ -65,7 +65,7 @@ var DeployedContractType = &SimpleType{
 						t,
 						identifier,
 						&VariableSizedType{
-							Type: &UInt8Type{},
+							Type: UInt8Type,
 						},
 						deployedContractTypeCodeFieldDocString,
 					)

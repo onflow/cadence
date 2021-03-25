@@ -186,7 +186,7 @@ func TestCheckReferenceExpressionWithNonCompositeResultType(t *testing.T) {
 
 	assert.Equal(t,
 		&sema.ReferenceType{
-			Type: &sema.IntType{},
+			Type: sema.IntType,
 		},
 		refValueType,
 	)

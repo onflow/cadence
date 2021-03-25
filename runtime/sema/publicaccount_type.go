@@ -56,13 +56,13 @@ var PublicAccountType = func() *CompositeType {
 		NewPublicConstantFieldMember(
 			publicAccountType,
 			PublicAccountStorageUsedField,
-			&UInt64Type{},
+			UInt64Type,
 			accountTypeStorageUsedFieldDocString,
 		),
 		NewPublicConstantFieldMember(
 			publicAccountType,
 			PublicAccountStorageCapacityField,
-			&UInt64Type{},
+			UInt64Type,
 			accountTypeStorageCapacityFieldDocString,
 		),
 		NewPublicFunctionMember(

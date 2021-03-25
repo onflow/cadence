@@ -28,7 +28,7 @@ type ValueIndexingInfo struct {
 	IsValueIndexableType          bool
 	AllowsValueIndexingAssignment bool
 	ElementType                   func(_ bool) Type
-	IndexingType                  *IntegerType
+	IndexingType                  *NumericType
 }
 
 // SimpleType represents a simple nominal type.

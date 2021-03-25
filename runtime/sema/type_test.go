@@ -33,7 +33,7 @@ func TestConstantSizedType_String(t *testing.T) {
 	t.Parallel()
 
 	ty := &ConstantSizedType{
-		Type: &VariableSizedType{Type: &IntType{}},
+		Type: &VariableSizedType{Type: IntType},
 		Size: 2,
 	}
 
@@ -51,11 +51,11 @@ func TestConstantSizedType_String_OfFunctionType(t *testing.T) {
 		Type: &FunctionType{
 			Parameters: []*Parameter{
 				{
-					TypeAnnotation: NewTypeAnnotation(&Int8Type{}),
+					TypeAnnotation: NewTypeAnnotation(Int8Type),
 				},
 			},
 			ReturnTypeAnnotation: NewTypeAnnotation(
-				&Int16Type{},
+				Int16Type,
 			),
 		},
 		Size: 2,
@@ -73,7 +73,7 @@ func TestVariableSizedType_String(t *testing.T) {
 
 	ty := &VariableSizedType{
 		Type: &ConstantSizedType{
-			Type: &IntType{},
+			Type: IntType,
 			Size: 2,
 		},
 	}
@@ -92,11 +92,11 @@ func TestVariableSizedType_String_OfFunctionType(t *testing.T) {
 		Type: &FunctionType{
 			Parameters: []*Parameter{
 				{
-					TypeAnnotation: NewTypeAnnotation(&Int8Type{}),
+					TypeAnnotation: NewTypeAnnotation(Int8Type),
 				},
 			},
 			ReturnTypeAnnotation: NewTypeAnnotation(
-				&Int16Type{},
+				Int16Type,
 			),
 		},
 	}
@@ -445,7 +445,7 @@ func TestRestrictedType_GetMember(t *testing.T) {
 		resourceType.Members.Set(fieldName, NewPublicConstantFieldMember(
 			ty.Type,
 			fieldName,
-			&IntType{},
+			IntType,
 			"",
 		))
 
@@ -491,14 +491,14 @@ func TestRestrictedType_GetMember(t *testing.T) {
 		resourceType.Members.Set(fieldName, NewPublicConstantFieldMember(
 			restrictedType.Type,
 			fieldName,
-			&IntType{},
+			IntType,
 			"",
 		))
 
 		interfaceMember := NewPublicConstantFieldMember(
 			restrictedType.Type,
 			fieldName,
-			&IntType{},
+			IntType,
 			"",
 		)
 		interfaceType.Members.Set(fieldName, interfaceMember)

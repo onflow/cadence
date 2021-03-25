@@ -68,13 +68,13 @@ var AuthAccountType = func() *CompositeType {
 		NewPublicConstantFieldMember(
 			authAccountType,
 			AuthAccountStorageUsedField,
-			&UInt64Type{},
+			UInt64Type,
 			accountTypeStorageUsedFieldDocString,
 		),
 		NewPublicConstantFieldMember(
 			authAccountType,
 			AuthAccountStorageCapacityField,
-			&UInt64Type{},
+			UInt64Type,
 			accountTypeStorageCapacityFieldDocString,
 		),
 		NewPublicFunctionMember(
@@ -163,7 +163,7 @@ var authAccountTypeAddPublicKeyFunctionType = &FunctionType{
 			Identifier: "key",
 			TypeAnnotation: NewTypeAnnotation(
 				&VariableSizedType{
-					Type: &UInt8Type{},
+					Type: UInt8Type,
 				},
 			),
 		},
@@ -183,7 +183,7 @@ var authAccountTypeRemovePublicKeyFunctionType = &FunctionType{
 			Label:      ArgumentLabelNotRequired,
 			Identifier: "index",
 			TypeAnnotation: NewTypeAnnotation(
-				&IntType{},
+				IntType,
 			),
 		},
 	},
@@ -555,7 +555,7 @@ var authAccountKeysTypeAddFunctionType = &FunctionType{
 		},
 		{
 			Identifier:     AccountKeyWeightField,
-			TypeAnnotation: NewTypeAnnotation(&UFix64Type{}),
+			TypeAnnotation: NewTypeAnnotation(UFix64Type),
 		},
 	},
 	ReturnTypeAnnotation:  NewTypeAnnotation(AccountKeyType),
@@ -566,7 +566,7 @@ var accountKeysTypeGetFunctionType = &FunctionType{
 	Parameters: []*Parameter{
 		{
 			Identifier:     AccountKeyKeyIndexField,
-			TypeAnnotation: NewTypeAnnotation(&IntType{}),
+			TypeAnnotation: NewTypeAnnotation(IntType),
 		},
 	},
 	ReturnTypeAnnotation:  NewTypeAnnotation(&OptionalType{Type: AccountKeyType}),
@@ -577,7 +577,7 @@ var authAccountKeysTypeRevokeFunctionType = &FunctionType{
 	Parameters: []*Parameter{
 		{
 			Identifier:     AccountKeyKeyIndexField,
-			TypeAnnotation: NewTypeAnnotation(&IntType{}),
+			TypeAnnotation: NewTypeAnnotation(IntType),
 		},
 	},
 	ReturnTypeAnnotation:  NewTypeAnnotation(&OptionalType{Type: AccountKeyType}),

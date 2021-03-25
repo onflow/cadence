@@ -148,45 +148,44 @@ func integerLiteralValue(expression ast.Expression, ty sema.Type) (cadence.Value
 }
 
 func convertIntValue(intValue interpreter.IntValue, ty sema.Type) (interpreter.Value, error) {
-
-	switch ty.(type) {
-	case *sema.IntType, *sema.IntegerType, *sema.SignedIntegerType:
+	switch ty {
+	case sema.IntType, sema.IntegerType, sema.SignedIntegerType:
 		return intValue, nil
-	case *sema.Int8Type:
+	case sema.Int8Type:
 		return interpreter.ConvertInt8(intValue), nil
-	case *sema.Int16Type:
+	case sema.Int16Type:
 		return interpreter.ConvertInt16(intValue), nil
-	case *sema.Int32Type:
+	case sema.Int32Type:
 		return interpreter.ConvertInt32(intValue), nil
-	case *sema.Int64Type:
+	case sema.Int64Type:
 		return interpreter.ConvertInt64(intValue), nil
-	case *sema.Int128Type:
+	case sema.Int128Type:
 		return interpreter.ConvertInt128(intValue), nil
-	case *sema.Int256Type:
+	case sema.Int256Type:
 		return interpreter.ConvertInt256(intValue), nil
 
-	case *sema.UIntType:
+	case sema.UIntType:
 		return interpreter.ConvertUInt(intValue), nil
-	case *sema.UInt8Type:
+	case sema.UInt8Type:
 		return interpreter.ConvertUInt8(intValue), nil
-	case *sema.UInt16Type:
+	case sema.UInt16Type:
 		return interpreter.ConvertUInt16(intValue), nil
-	case *sema.UInt32Type:
+	case sema.UInt32Type:
 		return interpreter.ConvertUInt32(intValue), nil
-	case *sema.UInt64Type:
+	case sema.UInt64Type:
 		return interpreter.ConvertUInt64(intValue), nil
-	case *sema.UInt128Type:
+	case sema.UInt128Type:
 		return interpreter.ConvertUInt128(intValue), nil
-	case *sema.UInt256Type:
+	case sema.UInt256Type:
 		return interpreter.ConvertUInt256(intValue), nil
 
-	case *sema.Word8Type:
+	case sema.Word8Type:
 		return interpreter.ConvertWord8(intValue), nil
-	case *sema.Word16Type:
+	case sema.Word16Type:
 		return interpreter.ConvertWord16(intValue), nil
-	case *sema.Word32Type:
+	case sema.Word32Type:
 		return interpreter.ConvertWord32(intValue), nil
-	case *sema.Word64Type:
+	case sema.Word64Type:
 		return interpreter.ConvertWord64(intValue), nil
 
 	default:
@@ -214,10 +213,10 @@ func fixedPointLiteralValue(expression ast.Expression, ty sema.Type) (cadence.Va
 		sema.Fix64Scale,
 	)
 
-	switch ty.(type) {
-	case *sema.Fix64Type, *sema.FixedPointType, *sema.SignedFixedPointType:
+	switch ty {
+	case sema.Fix64Type, sema.FixedPointType, sema.SignedFixedPointType:
 		return cadence.Fix64(value.Int64()), nil
-	case *sema.UFix64Type:
+	case sema.UFix64Type:
 		return cadence.UFix64(value.Uint64()), nil
 	}
 
@@ -311,10 +310,10 @@ func LiteralValue(expression ast.Expression, ty sema.Type) (cadence.Value, error
 	}
 
 	switch {
-	case sema.IsSubType(ty, &sema.IntegerType{}):
+	case sema.IsSubType(ty, sema.IntegerType):
 		return integerLiteralValue(expression, ty)
 
-	case sema.IsSubType(ty, &sema.FixedPointType{}):
+	case sema.IsSubType(ty, sema.FixedPointType):
 		return fixedPointLiteralValue(expression, ty)
 
 	case sema.IsSubType(ty, sema.PathType):
