@@ -36,11 +36,6 @@ func (i *FlowIntegration) initialize(initializationOptions interface{}) error {
 	}
 	i.config = conf
 
-	i.flowClient, err = client.New(
-		i.config.EmulatorAddr,
-		grpc.WithInsecure(),
-	)
-
 	i.emulatorState = conf.emulatorState
 
 	// TODO: get this path from initializationOptions
@@ -68,6 +63,19 @@ func (i *FlowIntegration) initialize(initializationOptions interface{}) error {
 	if err != nil {
 		return err
 	}
+
+
+	serviceAccount, err := project.EmulatorServiceAccount()
+	if err != nil {
+		// TODO: process error for getting service account
+		return nil
+	}
+	// pk := serviceAccount.DefaultKey().ToConfig().Context["privateKey"]
+	serviceAddress := serviceAccount.Address().String()
+	i.flowClient, err = client.New(
+		serviceAddress,
+		grpc.WithInsecure(),
+	)
 
 	return nil
 }

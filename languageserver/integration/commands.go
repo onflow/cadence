@@ -24,14 +24,12 @@ import (
 	"fmt"
 	"net/url"
 	"path/filepath"
-	"time"
 
 	"github.com/onflow/flow-go-sdk/crypto"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
 	"github.com/onflow/flow-go-sdk"
-	"github.com/onflow/flow-go-sdk/templates"
 
 	"github.com/onflow/cadence"
 	jsoncdc "github.com/onflow/cadence/encoding/json"
@@ -240,6 +238,12 @@ func (i *FlowIntegration) switchActiveAccount(_ protocol.Conn, args ...interface
 // createAccount creates a new account and returns its address.
 func (i *FlowIntegration) createAccount(conn protocol.Conn, args ...interface{}) (interface{}, error) {
 
+	// signatureAlgorithm := "ECDSA_P256"
+	// hashingAlgorithm := "SHA3_256"
+
+	// serviceAccount := i.project.EmulatorServiceAccount()
+
+	/*
 	err := server.CheckCommandArgumentCount(args, 1)
 	if err != nil {
 		errorMessage := fmt.Sprintf("name is required")
@@ -286,13 +290,14 @@ func (i *FlowIntegration) createAccount(conn protocol.Conn, args ...interface{})
 		return nil, fmt.Errorf("%s", errorMessage)
 	}*/
 
+	/*
 	name := "alice"
 
 	conn.ShowMessage(&protocol.ShowMessageParams{
 		Type:    protocol.Info,
 		Message: fmt.Sprintf("Account with name %s created at address: 0x%s", name, acc.Address),
 	})
-
+	*/
 	return nil, nil
 }
 
@@ -300,21 +305,6 @@ func (i *FlowIntegration) createAccount(conn protocol.Conn, args ...interface{})
 //
 // This command will wait until the emulator server is started before submitting any transactions.
 func (i *FlowIntegration) createDefaultAccounts(conn protocol.Conn, args ...interface{}) (interface{}, error) {
-
-	// TODO: Check that this one is working properly
-	for name, address := range nameToAddress {
-		_,err := i.sharedServices.Accounts.Get(address)
-
-		if (err != nil) {
-			i.accountsByName[name] = address
-		} else {
-			newAddress, err := i.createAccountHelper(conn)
-			if (err != nil){
-
-			}
-			i.accountsByName[name] = newAddress
-		}
-	}
 
 /*	err := server.CheckCommandArgumentCount(args, 1)
 	if err != nil {
@@ -359,6 +349,7 @@ RetryLoop:
 	}
 
 	return accounts, nil*/
+	return nil, nil
 }
 
 // deployContract deploys the contract to the configured account with the code of the given
@@ -669,7 +660,6 @@ func (i *FlowIntegration) createAccountHelper(conn protocol.Conn) (addr string, 
 
 	return addr, nil
 */
- */
 }
 
 func parseFileFromURI(uri string) string {
