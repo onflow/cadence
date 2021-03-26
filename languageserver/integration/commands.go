@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"net/url"
 	"path/filepath"
+	"strings"
 
 	"github.com/onflow/flow-go-sdk/crypto"
 	"google.golang.org/grpc/codes"
@@ -46,6 +47,7 @@ const (
 	CommandCreateDefaultAccounts = "cadence.server.flow.createDefaultAccounts"
 	CommandSwitchActiveAccount   = "cadence.server.flow.switchActiveAccount"
 	CommandChangeEmulatorState   = "cadence.server.flow.changeEmulatorState"
+	CommandInitAccountManager = "cadence.server.flow.initAccountManager"
 
 	ClientStartEmulator   = "cadence.runEmulator"
 	ClientExecuteScript   = "cadence.executeScript"
@@ -83,7 +85,126 @@ func (i *FlowIntegration) commands() []server.Command {
 			Name:    CommandCreateDefaultAccounts,
 			Handler: i.createDefaultAccounts,
 		},
+		{
+			Name:    CommandInitAccountManager,
+			Handler: i.initAccountManager,
+		},
 	}
+}
+
+const contractAccountManager = `
+pub contract AccountManager{
+    pub let accounts: {String: Address}
+    pub let names: [String]
+    
+    init(){
+        self.accounts = {}
+        self.names = [
+            "alice", "bob", "charlie",
+            "dave", "eve", "faythe",
+            "grace", "heidi", "ivan",
+            "judy", "michael", "niaj",
+            "olivia", "oscar", "peggy",
+            "rupert", "sybil", "ted",
+            "victor", "walter"
+        ]
+    }
+
+    pub fun addAccount(_ address: Address){
+        let name = self.names[self.accounts.keys.length]
+        self.accounts[name] = address
+    }
+
+    pub fun getAddress(_ name: String): Address?{
+        return self.accounts[name]
+    }
+
+    pub fun getAccounts():[String]{
+        return self.accounts.keys
+    }
+}
+`
+
+const transactionAddAccount = `
+import AccountManager from 0xSERVICE_ACCOUNT_ADDRESS
+
+transaction(address: Address){
+  prepare() {
+    AccountManager.addAccount(address)
+  }
+}
+`
+
+const scriptGetAddress = `
+import AccountManager from 0xSERVICE_ACCOUNT_ADDRESS
+
+pub fun main(name: String): Address {
+    return AccountManager.getAddress(name)!
+}
+`
+
+func makeManagerCode(script string, serviceAddress string) []byte {
+	injected := strings.ReplaceAll(script, "0xSERVICE_ACCOUNT_ADDRESS", serviceAddress)
+	return []byte(injected)
+}
+
+
+// initAccountManager initializes Account manager on service account
+func (i *FlowIntegration) initAccountManager(conn protocol.Conn, args ...interface{}) (interface{}, error) {
+
+	serviceAccount, err := i.project.EmulatorServiceAccount()
+	if err != nil {
+		return nil, err
+	}
+
+	serviceAddress := serviceAccount.Address()
+	accountManagerContract := makeManagerCode(contractAccountManager, serviceAddress.String())
+	deployTx := deployContractTransaction(serviceAddress, "AccountManager", accountManagerContract)
+
+	_, err = i.sendTransactionHelper(conn, serviceAddress, deployTx)
+
+
+	if err != nil {
+		conn.ShowMessage(&protocol.ShowMessageParams{
+			Type:    protocol.Error,
+			Message: err.Error(),
+		})
+		return nil, err
+	}
+
+
+	return nil, err
+
+	// name, err := jsoncdc.Encode(cadence.NewString("AccountManager"))
+	// contract, err := jsoncdc.Encode(cadence.NewBytes([]byte(accountManagerContract)))
+
+	//rawArgs := []string{string(name), string(contract)}
+
+/*	emptyArgs := []string{"String:AccountManager", fmt.Sprintf("[]byte:&+v", accountManagerContract)}
+	argsJSON := "" // convertListToCadenceJSON(rawArgs)
+
+	conn.ShowMessage(&protocol.ShowMessageParams{
+		Type:    protocol.Info,
+		Message: argsJSON,
+	})
+
+	_, txResult, err := i.sharedServices.Transactions.SendForAddressWithCode(deployCode, serviceAddress, serviceKey, emptyArgs, argsJSON)
+
+	if err != nil{
+		conn.ShowMessage(&protocol.ShowMessageParams{
+			Type:    protocol.Error,
+			Message: err.Error(),
+		})
+		return nil, err
+	}
+
+
+	conn.ShowMessage(&protocol.ShowMessageParams{
+		Type:    protocol.Info,
+		Message: txResult.Status.String(),
+	})
+*/
+	return nil, nil
 }
 
 // sendTransaction handles submitting a transaction defined in the
@@ -478,6 +599,45 @@ func (i *FlowIntegration) getAccountKey(address flow.Address) (*flow.AccountKey,
 	return accountKey, signer, nil
 }
 
+// getServiceKey returns the service account key and signer
+func (i *FlowIntegration) getServiceKey() (*flow.AccountKey, crypto.Signer, error) {
+
+	serviceAccount, err := i.project.EmulatorServiceAccount()
+	if err != nil {
+		return nil, nil, err
+	}
+	address := serviceAccount.Address()
+
+	rawKey := serviceAccount.DefaultKey().ToConfig().Context["privateKey"]
+
+	privateKey := AccountPrivateKey{
+		SigAlgo:  crypto.StringToSignatureAlgorithm(serviceAccount.DefaultKey().SigAlgo().String()),
+		HashAlgo: crypto.StringToHashAlgorithm(serviceAccount.DefaultKey().HashAlgo().String()),
+	}
+
+	privateKey.PrivateKey, err = crypto.DecodePrivateKeyHex(privateKey.SigAlgo, rawKey)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	account, err := i.flowClient.GetAccount(context.Background(), address)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if len(account.Keys) == 0 {
+		return nil, nil, fmt.Errorf(
+			"cannot sign transaction: account %s has no keys",
+			address.Hex(),
+		)
+	}
+
+	accountKey := account.Keys[0]
+	signer := crypto.NewNaiveSigner(privateKey.PrivateKey, privateKey.HashAlgo)
+
+	return accountKey, signer, nil
+}
+
 // sendTransactionHelper sends a transaction with the given script, from the
 // currently active account. Returns the hash of the transaction if it is
 // successfully submitted.
@@ -489,7 +649,7 @@ func (i *FlowIntegration) sendTransactionHelper(
 	address flow.Address,
 	tx *flow.Transaction,
 ) (flow.Identifier, error) {
-	accountKey, signer, err := i.getAccountKey(address)
+	accountKey, signer, err := i.getServiceKey()
 	if err != nil {
 		return flow.EmptyID, err
 	}
