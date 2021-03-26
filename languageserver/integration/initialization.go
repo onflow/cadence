@@ -65,15 +65,15 @@ func (i *FlowIntegration) initialize(initializationOptions interface{}) error {
 	}
 
 
-	serviceAccount, err := project.EmulatorServiceAccount()
+	// serviceAccount, err := project.EmulatorServiceAccount()
 	if err != nil {
 		// TODO: process error for getting service account
 		return nil
 	}
 	// pk := serviceAccount.DefaultKey().ToConfig().Context["privateKey"]
-	serviceAddress := serviceAccount.Address().String()
+	// serviceAddress := serviceAccount.Address().String()
 	i.flowClient, err = client.New(
-		serviceAddress,
+		host,
 		grpc.WithInsecure(),
 	)
 
