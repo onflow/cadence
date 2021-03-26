@@ -300,22 +300,23 @@ func ConvertSemaToPrimitiveStaticType(t sema.Type) PrimitiveStaticType {
 	switch t {
 
 	// Number
+
 	case sema.NumberType:
 		return PrimitiveStaticTypeNumber
 	case sema.SignedNumberType:
 		return PrimitiveStaticTypeSignedNumber
-
-	// FixedPoint
-	case sema.FixedPointType:
-		return PrimitiveStaticTypeFixedPoint
-	case sema.SignedFixedPointType:
-		return PrimitiveStaticTypeSignedFixedPoint
 
 	// Integer
 	case sema.IntegerType:
 		return PrimitiveStaticTypeInteger
 	case sema.SignedIntegerType:
 		return PrimitiveStaticTypeSignedInteger
+
+	// FixedPoint
+	case sema.FixedPointType:
+		return PrimitiveStaticTypeFixedPoint
+	case sema.SignedFixedPointType:
+		return PrimitiveStaticTypeSignedFixedPoint
 
 	// Int*
 	case sema.IntType:

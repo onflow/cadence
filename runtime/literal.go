@@ -148,6 +148,7 @@ func integerLiteralValue(expression ast.Expression, ty sema.Type) (cadence.Value
 }
 
 func convertIntValue(intValue interpreter.IntValue, ty sema.Type) (interpreter.Value, error) {
+
 	switch ty {
 	case sema.IntType, sema.IntegerType, sema.SignedIntegerType:
 		return intValue, nil
