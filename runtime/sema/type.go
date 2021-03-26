@@ -718,7 +718,8 @@ type FractionalRangedType interface {
 	MaxFractional() *big.Int
 }
 
-// NumericType represent all the types in the interger range.
+// NumericType represent all the types in the integer range
+// and non-fractional ranged types.
 //
 type NumericType struct {
 	name   string
@@ -811,7 +812,7 @@ func (t *NumericType) GetMembers() map[string]MemberResolver {
 	return withBuiltinMembers(t, nil)
 }
 
-// FixedPointNumericType represent all the types in the fixedpoint range.
+// FixedPointNumericType represents all the types in the fixed-point range.
 //
 type FixedPointNumericType struct {
 	name          string
@@ -3903,6 +3904,23 @@ func IsSubType(subType Type, superType Type) bool {
 	case AnyResourceType:
 		return subType.IsResourceType()
 
+	case NumberType:
+		switch subType {
+		case NumberType, SignedNumberType:
+			return true
+		}
+
+		return IsSubType(subType, IntegerType) ||
+			IsSubType(subType, FixedPointType)
+
+	case SignedNumberType:
+		if subType == SignedNumberType {
+			return true
+		}
+
+		return IsSubType(subType, SignedIntegerType) ||
+			IsSubType(subType, SignedFixedPointType)
+
 	case IntegerType:
 		switch subType {
 		case IntegerType, SignedIntegerType,
@@ -3928,23 +3946,6 @@ func IsSubType(subType Type, superType Type) bool {
 		default:
 			return false
 		}
-
-	case NumberType:
-		switch subType {
-		case NumberType, SignedNumberType:
-			return true
-		}
-
-		return IsSubType(subType, IntegerType) ||
-			IsSubType(subType, FixedPointType)
-
-	case SignedNumberType:
-		if subType == SignedNumberType {
-			return true
-		}
-
-		return IsSubType(subType, SignedIntegerType) ||
-			IsSubType(subType, SignedFixedPointType)
 
 	case FixedPointType:
 		switch subType {
