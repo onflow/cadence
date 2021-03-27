@@ -669,7 +669,7 @@ let noValue: Value? = nil
 // Access the `number` field using optional chaining
 let twoOpt = value?.number
 // Because `value` is an optional, `twoOpt` has type `Int?`
-let two = zeroOpt ?? 0
+let two = twoOpt ?? 0
 // `two` is `2`
 
 // Try to access the `number` field of `noValue`, which has type `Value?`
