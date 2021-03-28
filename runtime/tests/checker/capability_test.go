@@ -434,3 +434,20 @@ func TestCheckCapability_check(t *testing.T) {
 		})
 	})
 }
+
+func TestCheckCapability_address(t *testing.T) {
+
+	t.Parallel()
+	t.Run("check address", func(t *testing.T) {
+		checker, err := ParseAndCheckWithPanic(t,
+			`		  			
+				let capability: Capability = panic("")
+				let addr = capability.address
+			`,
+		)
+		require.NoError(t, err)
+
+		addrType := RequireGlobalType(t, checker.Elaboration, "addr")
+		require.Equal(t, sema.AddressType{}, addrType)
+	})
+}

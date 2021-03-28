@@ -6527,6 +6527,10 @@ const capabilityTypeCheckFunctionDocString = `
 Returns true if the capability currently targets an object that satisfies the given type, i.e. could be borrowed using the given type
 `
 
+const addressTypeCheckFunctionDocString = `
+Returns the address for a capability
+`
+
 func (t *CapabilityType) GetMembers() map[string]MemberResolver {
 	return withBuiltinMembers(t, map[string]MemberResolver{
 		"borrow": {
@@ -6548,6 +6552,17 @@ func (t *CapabilityType) GetMembers() map[string]MemberResolver {
 					identifier,
 					capabilityTypeCheckFunctionType(t.BorrowType),
 					capabilityTypeCheckFunctionDocString,
+				)
+			},
+		},
+		"address": {
+			Kind: common.DeclarationKindField,
+			Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
+				return NewPublicConstantFieldMember(
+					t,
+					identifier,
+					&AddressType{},
+					addressTypeCheckFunctionDocString,
 				)
 			},
 		},
