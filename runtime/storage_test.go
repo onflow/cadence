@@ -19,6 +19,7 @@
 package runtime
 
 import (
+	"strconv"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -26,6 +27,7 @@ import (
 
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
@@ -258,6 +260,57 @@ func TestRuntimeHighLevelStorage(t *testing.T) {
 		},
 		writes,
 	)
+}
+
+func BenchmarkRuntimeStorageWriteCached(b *testing.B) {
+
+	var writes []testWrite
+
+	onWrite := func(owner, key, value []byte) {
+		writes = append(writes, testWrite{
+			owner: owner,
+			key:   key,
+			value: value,
+		})
+	}
+
+	runtimeInterface := &testRuntimeInterface{
+		storage: newTestStorage(nil, onWrite),
+	}
+
+	runtimeStorage := newRuntimeStorage(runtimeInterface)
+
+	array := interpreter.NewArrayValueUnownedNonCopying()
+
+	const arrayElementCount = 100
+
+	for i := 0; i < arrayElementCount; i++ {
+		array.Append(interpreter.NewIntValueFromInt64(int64(i)))
+	}
+
+	address := common.BytesToAddress([]byte{0x1})
+
+	const storageItemCount = 100
+
+	for i := 0; i < storageItemCount; i++ {
+		runtimeStorage.cache[StorageKey{
+			Address: address,
+			Key:     strconv.Itoa(i),
+		}] = CacheEntry{
+			MustWrite: true,
+			Value:     array,
+		}
+	}
+
+	b.ReportAllocs()
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		writes = nil
+		runtimeStorage.writeCached(nil)
+
+		require.Len(b, writes, storageItemCount)
+	}
 }
 
 func TestRuntimeMagic(t *testing.T) {
