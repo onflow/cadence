@@ -392,6 +392,9 @@ func (s *runtimeStorage) encodeWriteItems(nWorker int, batch []writeItem) ([]*en
 			if item.value == nil {
 				results <- nil
 			} else {
+				// TODO: encode value with a context, so that if there 10 jobs to work on,
+				// and one job failed, we could cancel the context and skip the rest of
+				// unprocssed jobs without processing them.
 				newData, deferrals, err := s.encodeValue(item.value, item.storageKey.Key)
 				results <- &encodedResult{
 					newData:   newData,
