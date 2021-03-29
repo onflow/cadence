@@ -262,18 +262,7 @@ func TestRuntimeHighLevelStorage(t *testing.T) {
 	)
 }
 
-func BenchmarkRuntimeStorageWriteCached(b *testing.B) {
-
-	var writes []testWrite
-
-	onWrite := func(owner, key, value []byte) {
-		writes = append(writes, testWrite{
-			owner: owner,
-			key:   key,
-			value: value,
-		})
-	}
-
+func withWritesToStorage(arrayElementCount int, storageItemCount int, onWrite func(owner, key, value []byte), handler func(runtimeStorage *runtimeStorage)) {
 	runtimeInterface := &testRuntimeInterface{
 		storage: newTestStorage(nil, onWrite),
 	}
@@ -282,15 +271,11 @@ func BenchmarkRuntimeStorageWriteCached(b *testing.B) {
 
 	array := interpreter.NewArrayValueUnownedNonCopying()
 
-	const arrayElementCount = 100
-
 	for i := 0; i < arrayElementCount; i++ {
 		array.Append(interpreter.NewIntValueFromInt64(int64(i)))
 	}
 
 	address := common.BytesToAddress([]byte{0x1})
-
-	const storageItemCount = 100
 
 	for i := 0; i < storageItemCount; i++ {
 		runtimeStorage.cache[StorageKey{
@@ -302,15 +287,86 @@ func BenchmarkRuntimeStorageWriteCached(b *testing.B) {
 		}
 	}
 
-	b.ReportAllocs()
-	b.ResetTimer()
+	handler(runtimeStorage)
+}
 
-	for i := 0; i < b.N; i++ {
-		writes = nil
-		runtimeStorage.writeCached(nil)
+func TestRuntimeStorageWriteCached(t *testing.T) {
+	var writes []testWrite
 
-		require.Len(b, writes, storageItemCount)
+	onWrite := func(owner, key, value []byte) {
+		writes = append(writes, testWrite{
+			owner: owner,
+			key:   key,
+			value: value,
+		})
 	}
+
+	const arrayElementCount = 100
+	const storageItemCount = 100
+	withWritesToStorage(arrayElementCount, storageItemCount, onWrite, func(runtimeStorage *runtimeStorage) {
+		runtimeStorage.writeCached(nil)
+		require.Len(t, writes, storageItemCount)
+	})
+}
+
+func TestRuntimeStorageWriteCachedIsDeterministic(t *testing.T) {
+	var writes []testWrite
+
+	onWrite := func(owner, key, value []byte) {
+		writes = append(writes, testWrite{
+			owner: owner,
+			key:   key,
+			value: value,
+		})
+	}
+
+	const arrayElementCount = 100
+	const storageItemCount = 100
+	withWritesToStorage(arrayElementCount, storageItemCount, onWrite, func(runtimeStorage *runtimeStorage) {
+		runtimeStorage.writeCached(nil)
+		previousWrites := make([]testWrite, len(writes))
+		copy(previousWrites, writes)
+
+		// verify for 10 times and check the writes are always determinsitic
+		for i := 0; i < 10; i++ {
+			// test that writing again should produce the same result
+			writes = nil
+			runtimeStorage.writeCached(nil)
+			for i, previousWrite := range previousWrites {
+				// compare the new write with the old write
+				require.Equal(t, previousWrite, writes[i])
+			}
+
+			// no additional items
+			require.Len(t, writes, len(previousWrites))
+		}
+	})
+}
+
+func BenchmarkRuntimeStorageWriteCached(b *testing.B) {
+	var writes []testWrite
+
+	onWrite := func(owner, key, value []byte) {
+		writes = append(writes, testWrite{
+			owner: owner,
+			key:   key,
+			value: value,
+		})
+	}
+
+	const arrayElementCount = 100
+	const storageItemCount = 100
+	withWritesToStorage(arrayElementCount, storageItemCount, onWrite, func(runtimeStorage *runtimeStorage) {
+		b.ReportAllocs()
+		b.ResetTimer()
+
+		for i := 0; i < b.N; i++ {
+			writes = nil
+			runtimeStorage.writeCached(nil)
+
+			require.Len(b, writes, storageItemCount)
+		}
+	})
 }
 
 func TestRuntimeMagic(t *testing.T) {
