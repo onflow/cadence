@@ -2709,6 +2709,10 @@ const arrayTypeAppendFunctionDocString = `
 Adds the given element to the end of the array
 `
 
+const arrayTypeAppendAllFunctionDocString = `
+Adds all the elements from the given array to the end of the array
+`
+
 const arrayTypeConcatFunctionDocString = `
 Returns a new array which contains the given array concatenated to the end of the original array, but does not modify the original array
 `
@@ -2832,6 +2836,40 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 						),
 					},
 					arrayTypeAppendFunctionDocString,
+				)
+			},
+		}
+
+		members["appendAll"] = MemberResolver{
+			Kind: common.DeclarationKindFunction,
+			Resolve: func(identifier string, targetRange ast.Range, report func(error)) *Member {
+
+				elementType := arrayType.ElementType(false)
+
+				if elementType.IsResourceType() {
+					report(
+						&InvalidResourceArrayMemberError{
+							Name:            identifier,
+							DeclarationKind: common.DeclarationKindFunction,
+							Range:           targetRange,
+						},
+					)
+				}
+
+				return NewPublicFunctionMember(
+					arrayType,
+					identifier,
+					&FunctionType{
+						Parameters: []*Parameter{
+							{
+								Label:          ArgumentLabelNotRequired,
+								Identifier:     "other",
+								TypeAnnotation: NewTypeAnnotation(arrayType),
+							},
+						},
+						ReturnTypeAnnotation: NewTypeAnnotation(VoidType),
+					},
+					arrayTypeAppendAllFunctionDocString,
 				)
 			},
 		}
