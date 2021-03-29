@@ -35,9 +35,10 @@ Type<Int>() != Type<String>()
 The method `fun getType(): Type` can be used to get the runtime type of a value.
 
 ```cadence
-let something: String = "hello"
+let something = "hello"
 
-var type :Type = something.getType()  // `type` is `Type<String>()`
+let type: Type = something.getType()
+// `type` is `Type<String>()`
 ```
 
 This method returns the **concrete run-time type** of the object, **not** the static type.
@@ -50,7 +51,8 @@ let something: @AnyResource <- create Collectible()
 
 // The resource's concrete run-time type is `Collectible`
 //
-var type :Type = something.getType()  // `type` is `Type<@Collectible>()`
+let type: Type = something.getType()
+// `type` is `Type<@Collectible>()`
 ```
 
 ### Asserting the Type of a Value
