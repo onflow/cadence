@@ -72,6 +72,12 @@ type ConcatenatableValue interface {
 	Concat(other ConcatenatableValue) Value
 }
 
+// AllAppendableValue
+
+type AllAppendableValue interface {
+	AppendAll(other AllAppendableValue)
+}
+
 // EquatableValue
 
 type EquatableValue interface {
@@ -632,6 +638,16 @@ func (v *ArrayValue) Append(element Value) {
 	v.Values = append(v.Values, element)
 }
 
+func (v *ArrayValue) AppendAll(other AllAppendableValue) {
+	v.modified = true
+
+	otherArray := other.(*ArrayValue)
+	for _, element := range otherArray.Values {
+		element.SetOwner(v.Owner)
+	}
+	v.Values = append(v.Values, otherArray.Values...)
+}
+
 func (v *ArrayValue) Insert(i int, element Value) {
 	v.modified = true
 
@@ -696,6 +712,15 @@ func (v *ArrayValue) GetMember(_ *Interpreter, _ func() LocationRange, name stri
 		return NewHostFunctionValue(
 			func(invocation Invocation) Value {
 				v.Append(invocation.Arguments[0])
+				return VoidValue{}
+			},
+		)
+
+	case "appendAll":
+		return NewHostFunctionValue(
+			func(invocation Invocation) Value {
+				otherArray := invocation.Arguments[0].(AllAppendableValue)
+				v.AppendAll(otherArray)
 				return VoidValue{}
 			},
 		)

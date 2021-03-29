@@ -1025,6 +1025,25 @@ It is invalid to use one of these functions on a fixed-sized array.
   numbers.append("SneakyString")
   ```
 
+- `cadence•fun appendAll(_ array: T): Void`
+
+  Adds all the elements from `array` to the end of the array
+  the function is called on.
+
+  Both arrays must be the same type `T`.
+
+  ```cadence
+  // Declare an array of integers.
+  let numbers = [42, 23]
+
+  // Add new elements to the array.
+  numbers.appendAll([31, 12, 20])
+  // `numbers` is now `[42, 23, 31, 12, 20]`
+
+  // Invalid: The parameter has the wrong type `[String]`.
+  numbers.appendAll(["Sneaky", "String"])
+  ```
+
 - `cadence•fun insert(at index: Int, _ element: T): Void`
 
   Inserts the new element `element` of type `T`

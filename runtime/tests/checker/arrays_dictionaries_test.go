@@ -369,6 +369,70 @@ func TestCheckInvalidArrayAppendToConstantSize(t *testing.T) {
 	assert.IsType(t, &sema.NotDeclaredMemberError{}, errs[0])
 }
 
+func TestCheckArrayAppendAll(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+	  fun test(): [Int] {
+	 	  let a = [1, 2]
+		  let b = [3, 4]
+		  a.appendAll(b)
+		  return a
+      }
+    `)
+
+	require.NoError(t, err)
+}
+
+func TestCheckInvalidArrayAppendAll(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+	  fun test(): [Int] {
+	 	  let a = [1, 2]
+		  let b = ["a", "b"]
+		  a.appendAll(b)
+		  return a
+      }
+    `)
+
+	errs := ExpectCheckerErrors(t, err, 1)
+
+	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+
+	_, err = ParseAndCheck(t, `
+	  fun test(): [Int] {
+	 	  let a = [1, 2]
+		  let b = 3
+		  a.appendAll(b)
+		  return a
+      }
+    `)
+
+	errs = ExpectCheckerErrors(t, err, 1)
+
+	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+}
+
+func TestCheckInvalidArrayAppendAllOnConstantSize(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+      fun test(): [Int; 3] {
+          let x: [Int; 3] = [1, 2, 3]
+          x.appendAll([4, 5])
+          return x
+      }
+    `)
+
+	errs := ExpectCheckerErrors(t, err, 1)
+
+	assert.IsType(t, &sema.NotDeclaredMemberError{}, errs[0])
+}
+
 func TestCheckArrayConcat(t *testing.T) {
 
 	t.Parallel()

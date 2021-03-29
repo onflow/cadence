@@ -4615,6 +4615,59 @@ func TestInterpretArrayAppendBound(t *testing.T) {
 	)
 }
 
+func TestInterpretArrayAppendAll(t *testing.T) {
+
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+      fun test(): [Int] {
+          let a = [1, 2]
+		  a.appendAll([3, 4])
+		  return a
+      }
+    `)
+
+	value, err := inter.Invoke("test")
+	require.NoError(t, err)
+
+	assert.Equal(t,
+		interpreter.NewArrayValueUnownedNonCopying(
+			interpreter.NewIntValueFromInt64(1),
+			interpreter.NewIntValueFromInt64(2),
+			interpreter.NewIntValueFromInt64(3),
+			interpreter.NewIntValueFromInt64(4),
+		),
+		value,
+	)
+}
+
+func TestInterpretArrayAppendAllBound(t *testing.T) {
+
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+      fun test(): [Int] {
+          let a = [1, 2]
+          let b = a.appendAll
+		  b([3, 4])
+		  return a
+      }
+    `)
+
+	value, err := inter.Invoke("test")
+	require.NoError(t, err)
+
+	assert.Equal(t,
+		interpreter.NewArrayValueUnownedNonCopying(
+			interpreter.NewIntValueFromInt64(1),
+			interpreter.NewIntValueFromInt64(2),
+			interpreter.NewIntValueFromInt64(3),
+			interpreter.NewIntValueFromInt64(4),
+		),
+		value,
+	)
+}
+
 func TestInterpretArrayConcat(t *testing.T) {
 
 	t.Parallel()
@@ -4661,6 +4714,30 @@ func TestInterpretArrayConcatBound(t *testing.T) {
 			interpreter.NewIntValueFromInt64(2),
 			interpreter.NewIntValueFromInt64(3),
 			interpreter.NewIntValueFromInt64(4),
+		),
+		value,
+	)
+}
+
+func TestInterpretArrayConcatDoesNotModifyOriginalArray(t *testing.T) {
+
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+      fun test(): [Int] {
+          let a = [1, 2]
+		  a.concat([3, 4])
+		  return a
+      }
+    `)
+
+	value, err := inter.Invoke("test")
+	require.NoError(t, err)
+
+	assert.Equal(t,
+		interpreter.NewArrayValueUnownedNonCopying(
+			interpreter.NewIntValueFromInt64(1),
+			interpreter.NewIntValueFromInt64(2),
 		),
 		value,
 	)
