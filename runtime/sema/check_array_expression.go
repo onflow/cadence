@@ -22,14 +22,42 @@ import "github.com/onflow/cadence/runtime/ast"
 
 func (checker *Checker) VisitArrayExpression(expression *ast.ArrayExpression) ast.Repr {
 
+	errored := false
+
 	// visit all elements, ensure they are all the same type
 
 	var elementType Type
+	if checker.expectedType != nil {
+
+		switch typ := checker.expectedType.(type) {
+
+		case *ConstantSizedType:
+			elementType = typ.ElementType(true)
+
+			literalCount := int64(len(expression.Values))
+
+			if typ.Size != literalCount {
+				checker.report(
+					&ConstantSizedArrayLiteralSizeError{
+						ExpectedSize: typ.Size,
+						ActualSize:   literalCount,
+						Range:        expression.Range,
+					},
+				)
+			}
+
+		case *VariableSizedType:
+			elementType = typ.ElementType(true)
+
+		default:
+			errored = true
+		}
+	}
 
 	argumentTypes := make([]Type, len(expression.Values))
 
 	for i, value := range expression.Values {
-		valueType := value.Accept(checker).(Type)
+		valueType := checker.VisitExpression(value, elementType)
 
 		argumentTypes[i] = valueType
 
@@ -40,28 +68,23 @@ func (checker *Checker) VisitArrayExpression(expression *ast.ArrayExpression) as
 		// TODO: find common super type?
 		if elementType == nil {
 			elementType = valueType
-		} else if !valueType.IsInvalidType() &&
-			!IsSubType(valueType, elementType) {
-
-			checker.report(
-				&TypeMismatchError{
-					ExpectedType: elementType,
-					ActualType:   valueType,
-					Range:        ast.NewRangeFromPositioned(value),
-				},
-			)
 		}
 	}
 
 	checker.Elaboration.ArrayExpressionArgumentTypes[expression] = argumentTypes
 
 	if elementType == nil {
+		// i.e: contextually expected type is not available and array has zero elements.
 		elementType = NeverType
 	}
 
 	checker.Elaboration.ArrayExpressionElementType[expression] = elementType
 
-	return &VariableSizedType{
-		Type: elementType,
+	if checker.expectedType == nil || errored {
+		return &VariableSizedType{
+			Type: elementType,
+		}
 	}
+
+	return checker.expectedType
 }

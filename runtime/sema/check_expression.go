@@ -179,7 +179,30 @@ func (checker *Checker) VisitNilExpression(_ *ast.NilExpression) ast.Repr {
 	return TypeOfNil
 }
 
-func (checker *Checker) VisitIntegerExpression(_ *ast.IntegerExpression) ast.Repr {
+func (checker *Checker) VisitIntegerExpression(expr *ast.IntegerExpression) ast.Repr {
+	expectedType := checker.expectedType
+	if expectedType == nil {
+		return IntType
+	}
+
+	// If the target type is `Never`, the checks below will be performed
+	// (as `Never` is the subtype of all types), but the checks are not valid
+
+	if IsSubType(checker.expectedType, NeverType) {
+		return expectedType
+	}
+
+	if IsSubType(expectedType, IntegerType) {
+		CheckIntegerLiteral(expr, expectedType, checker.report)
+
+		return expectedType
+
+	} else if IsSubType(expectedType, &AddressType{}) {
+		CheckAddressLiteral(expr, checker.report)
+
+		return expectedType
+	}
+
 	return IntType
 }
 

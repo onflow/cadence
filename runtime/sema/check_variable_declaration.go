@@ -40,7 +40,16 @@ func (checker *Checker) visitVariableDeclaration(declaration *ast.VariableDeclar
 	// Determine the type of the initial value of the variable declaration
 	// and save it in the elaboration
 
-	valueType := declaration.Value.Accept(checker).(Type)
+	var expectedType Type
+	if declaration.TypeAnnotation != nil {
+
+		typeAnnotation := checker.ConvertTypeAnnotation(declaration.TypeAnnotation)
+		checker.checkTypeAnnotation(typeAnnotation, declaration.TypeAnnotation)
+
+		expectedType = typeAnnotation.Type
+	}
+
+	valueType := checker.VisitExpression(declaration.Value, expectedType)
 
 	checker.Elaboration.VariableDeclarationValueTypes[declaration] = valueType
 
@@ -71,6 +80,7 @@ func (checker *Checker) visitVariableDeclaration(declaration *ast.VariableDeclar
 	// If the declaration has an explicit type annotation, take it into account:
 	// Check it and ensure the value type is *compatible* with the type annotation
 
+	// TODO: Remove this check
 	if declaration.TypeAnnotation != nil {
 
 		typeAnnotation := checker.ConvertTypeAnnotation(declaration.TypeAnnotation)

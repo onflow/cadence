@@ -109,6 +109,7 @@ type Checker struct {
 	locationHandler                    LocationHandlerFunc
 	importHandler                      ImportHandlerFunc
 	checkHandler                       CheckHandlerFunc
+	expectedType                       Type
 }
 
 type Option func(*Checker) error
@@ -546,6 +547,7 @@ func (checker *Checker) checkTransfer(transfer *ast.Transfer, valueType Type) {
 	}
 }
 
+// TODO: Use this only for casting operation, eventually
 func (checker *Checker) checkTypeCompatibility(expression ast.Expression, valueType Type, targetType Type) bool {
 	switch typedExpression := expression.(type) {
 	case *ast.IntegerExpression:
@@ -2296,4 +2298,47 @@ func (checker *Checker) convertInstantiationType(t *ast.InstantiationType) Type 
 
 func (checker *Checker) Hints() []Hint {
 	return checker.hints
+}
+
+func (checker *Checker) VisitExpression(expr ast.Expression, expectedType Type) Type {
+
+	// This is a code optimization, so that we dont have to do this check for every expression.
+	if _, ok := expr.(*ast.NilExpression); !ok {
+		expectedType = UnwrapOptionalType(expectedType)
+	}
+
+	// Cache the current contextually expected type, and set the `expectedType`
+	// as the new contextually expected type.
+	prevExpectedType := checker.expectedType
+	checker.expectedType = expectedType
+
+	actualType := expr.Accept(checker).(Type)
+
+	if isMigrated(expr) &&
+		expectedType != nil &&
+		!expectedType.Equal(actualType) {
+
+		checker.report(
+			&TypeMismatchError{
+				ExpectedType: expectedType,
+				ActualType:   actualType,
+				Range:        ast.NewRangeFromPositioned(expr),
+			},
+		)
+	}
+
+	// Restore the prev contextually expected type
+	checker.expectedType = prevExpectedType
+
+	return actualType
+}
+
+func isMigrated(expr ast.Expression) bool {
+	switch expr.(type) {
+	case *ast.ArrayExpression,
+		*ast.IntegerExpression:
+		return true
+	default:
+		return false
+	}
 }
