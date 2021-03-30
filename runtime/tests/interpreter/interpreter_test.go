@@ -7756,6 +7756,35 @@ func TestInterpretResourceAssignmentForceTransfer(t *testing.T) {
 
 		require.ErrorAs(t, err, &interpreter.ForceAssignmentToNonNilResourceError{})
 	})
+
+	t.Run("new to non-nil", func(t *testing.T) {
+
+		inter := parseCheckAndInterpret(t, `
+	     resource X {}
+
+	     resource Y {
+
+             var x: @X?
+
+             init() {
+                 self.x <-! create X()
+             }
+
+             destroy() {
+                 destroy self.x
+             }
+         }
+
+	     fun test() {
+	         let y <- create Y()
+	         destroy y
+	     }
+	   `)
+
+		_, err := inter.Invoke("test")
+		require.NoError(t, err)
+	})
+
 }
 
 func TestInterpretForce(t *testing.T) {

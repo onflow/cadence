@@ -996,7 +996,12 @@ func (interpreter *Interpreter) visitAssignment(
 
 	if transferOperation == ast.TransferOperationMoveForced {
 		target := getterSetter.get()
-		if _, ok := target.(NilValue); !ok {
+
+		// The value may be a NilValue or nil.
+		// The latter case exists when the force-move assignment is the initialization of a field
+		// in an initializer, in which case there is no prior value for the field.
+
+		if _, ok := target.(NilValue); !ok && target != nil {
 			getLocationRange := locationRangeGetter(interpreter.Location, position)
 			panic(ForceAssignmentToNonNilResourceError{
 				LocationRange: getLocationRange(),
@@ -2947,9 +2952,6 @@ func (interpreter *Interpreter) getMember(self Value, getLocationRange func() Lo
 		case sema.GetTypeFunctionName:
 			return interpreter.getTypeFunction(self)
 		}
-	}
-	if result == nil {
-		panic(errors.NewUnreachableError())
 	}
 	return result
 }

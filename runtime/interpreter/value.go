@@ -6340,7 +6340,11 @@ func (v *StorageReferenceValue) GetMember(interpreter *Interpreter, getLocationR
 		})
 	}
 
-	return interpreter.getMember(*referencedValue, getLocationRange, name)
+	value := interpreter.getMember(*referencedValue, getLocationRange, name)
+	if value == nil {
+		panic(errors.NewUnreachableError())
+	}
+	return value
 }
 
 func (v *StorageReferenceValue) SetMember(interpreter *Interpreter, getLocationRange func() LocationRange, name string, value Value) {
@@ -6468,7 +6472,11 @@ func (v *EphemeralReferenceValue) GetMember(interpreter *Interpreter, getLocatio
 		})
 	}
 
-	return interpreter.getMember(*referencedValue, getLocationRange, name)
+	value := interpreter.getMember(*referencedValue, getLocationRange, name)
+	if value == nil {
+		panic(errors.NewUnreachableError())
+	}
+	return value
 }
 
 func (v *EphemeralReferenceValue) SetMember(interpreter *Interpreter, getLocationRange func() LocationRange, name string, value Value) {
