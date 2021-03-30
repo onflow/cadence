@@ -334,6 +334,9 @@ func (interpreter *Interpreter) VisitSwapStatement(swap *ast.SwapStatement) ast.
 	// Evaluate the left expression
 	leftGetterSetter := interpreter.assignmentGetterSetter(swap.Left)
 	leftValue := leftGetterSetter.get()
+	if leftValue == nil {
+		panic(errors.NewUnreachableError())
+	}
 	if interpreter.movingStorageIndexExpression(swap.Left) != nil {
 		leftGetterSetter.set(NilValue{})
 	}
@@ -341,6 +344,9 @@ func (interpreter *Interpreter) VisitSwapStatement(swap *ast.SwapStatement) ast.
 	// Evaluate the right expression
 	rightGetterSetter := interpreter.assignmentGetterSetter(swap.Right)
 	rightValue := rightGetterSetter.get()
+	if rightValue == nil {
+		panic(errors.NewUnreachableError())
+	}
 	if interpreter.movingStorageIndexExpression(swap.Right) != nil {
 		rightGetterSetter.set(NilValue{})
 	}
