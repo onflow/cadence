@@ -447,7 +447,7 @@ func TestCheckCapability_address(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		addrType := RequireGlobalType(t, checker.Elaboration, "addr")
-		require.Equal(t, sema.AddressType{}, addrType)
+		addrType := RequireGlobalValue(t, checker.Elaboration, "addr")
+		require.Equal(t, &sema.AddressType{}, addrType)
 	})
 }
