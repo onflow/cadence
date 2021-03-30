@@ -342,13 +342,26 @@ func (s *runtimeStorage) writeCached(inter *interpreter.Interpreter) {
 	// to be run again, until the batch is empty.
 	batch := items
 	for len(batch) > 0 {
+
+		// a batch might contain lots of items, whereas
+		// a bundle only contains up to ENCODING_NUM_WORKER number of items,
+		// so that we could ensure the memory usage is O(K), instead of O(N).
+		// K being ENCODING_NUM_WORKER, N being the size of the batch
+		var bundleSize int
+		if len(batch) < ENCODING_NUM_WORKER {
+			bundleSize = len(batch)
+		} else {
+			bundleSize = ENCODING_NUM_WORKER
+		}
+		bundle, newBatch := batch[:bundleSize], batch[bundleSize:]
+
 		// parallelize the encoding for items within the same batch
 		// the encoding has no side effect
-		encodedResults, err := s.encodeWriteItems(ENCODING_NUM_WORKER, batch)
+		encodedResults, err := s.encodeWriteItems(ENCODING_NUM_WORKER, bundle)
 		if err != nil {
 			panic(err)
 		}
-		var newBatch []writeItem
+
 		// process encoded items of the batch, play side effect for
 		// each item
 		for i, result := range encodedResults {
