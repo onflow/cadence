@@ -1082,3 +1082,19 @@ func TestCheckDictionaryKeyTypesExpressions(t *testing.T) {
 		})
 	}
 }
+
+func TestCheckArrayMemberTypeInference(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+		fun test(): [Int8] {
+			//var x: Int8 = 6
+			var x: [Int8] = [1, 2, 3]
+			var y: [Int8]? = [1, 2, 3]
+			return x
+		}
+	`)
+
+	require.NoError(t, err)
+}
