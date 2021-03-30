@@ -657,3 +657,46 @@ func TestInterpretCapability_check(t *testing.T) {
 		})
 	})
 }
+
+func TestInterpretCapability_address(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("check address", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter, _ := testAccount(
+			t,
+			true,
+			`
+				fun single(): Address {
+					return account.getCapability(/public/single).address
+				}
+
+				fun double(): Address {
+					return account.getCapability(/public/double).address
+				}
+
+				fun nonExistent() : Address {
+					return account.getCapability(/public/nonExistent).address
+				}				
+			`,
+		)
+
+		t.Run("single", func(t *testing.T) {
+			_, err := inter.Invoke("single")
+			require.NoError(t, err)
+		})
+
+		t.Run("double", func(t *testing.T) {
+			_, err := inter.Invoke("double")
+			require.NoError(t, err)
+		})
+
+		t.Run("nonExistent", func(t *testing.T) {
+			_, err := inter.Invoke("nonExistent")
+			require.NoError(t, err)
+		})
+	})
+}
