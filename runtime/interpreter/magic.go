@@ -28,7 +28,7 @@ import (
 var Magic = []byte{0x0, 0xCA, 0xDE}
 var MagicLength = len(Magic)
 
-const CurrentEncodingVersion uint16 = 3
+const CurrentEncodingVersion uint16 = 4
 const VersionEncodingLength = 2
 
 var fullPrefixLength = MagicLength + VersionEncodingLength
