@@ -94,7 +94,7 @@ func TestInterpretVirtualImport(t *testing.T) {
 										Functions: map[string]interpreter.FunctionValue{
 											"bar": interpreter.NewHostFunctionValue(
 												func(invocation interpreter.Invocation) interpreter.Value {
-													return interpreter.NewIntValueFromInt64(42)
+													return interpreter.UInt64Value(42)
 												},
 											),
 										},
@@ -122,7 +122,7 @@ func TestInterpretVirtualImport(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Equal(t,
-		interpreter.NewIntValueFromInt64(42),
+		interpreter.UInt64Value(42),
 		value,
 	)
 }
