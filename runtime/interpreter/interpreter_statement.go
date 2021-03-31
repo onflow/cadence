@@ -65,8 +65,10 @@ func (interpreter *Interpreter) VisitReturnStatement(statement *ast.ReturnStatem
 		valueType := interpreter.Program.Elaboration.ReturnStatementValueTypes[statement]
 		returnType := interpreter.Program.Elaboration.ReturnStatementReturnTypes[statement]
 
+		getLocationRange := locationRangeGetter(interpreter.Location, statement.Expression)
+
 		// NOTE: copy on return
-		value = interpreter.copyAndConvert(value, valueType, returnType)
+		value = interpreter.copyAndConvert(value, valueType, returnType, getLocationRange)
 	}
 
 	return functionReturn{value}
@@ -121,7 +123,8 @@ func (interpreter *Interpreter) visitIfStatementWithVariableDeclaration(
 
 		targetType := interpreter.Program.Elaboration.VariableDeclarationTargetTypes[declaration]
 		valueType := interpreter.Program.Elaboration.VariableDeclarationValueTypes[declaration]
-		unwrappedValueCopy := interpreter.copyAndConvert(someValue.Value, valueType, targetType)
+		getLocationRange := locationRangeGetter(interpreter.Location, declaration.Value)
+		unwrappedValueCopy := interpreter.copyAndConvert(someValue.Value, valueType, targetType, getLocationRange)
 
 		interpreter.activations.PushNewWithCurrent()
 		defer interpreter.activations.Pop()
@@ -286,7 +289,9 @@ func (interpreter *Interpreter) VisitVariableDeclaration(declaration *ast.Variab
 
 	result := interpreter.visitPotentialStorageRemoval(declaration.Value)
 
-	valueCopy := interpreter.copyAndConvert(result, valueType, targetType)
+	getLocationRange := locationRangeGetter(interpreter.Location, declaration.Value)
+
+	valueCopy := interpreter.copyAndConvert(result, valueType, targetType, getLocationRange)
 
 	interpreter.declareVariable(
 		declaration.Identifier.Identifier,
@@ -354,8 +359,11 @@ func (interpreter *Interpreter) VisitSwapStatement(swap *ast.SwapStatement) ast.
 	// Add right value to left target
 	// and left value to right target
 
-	rightValueCopy := interpreter.copyAndConvert(rightValue, rightType, leftType)
-	leftValueCopy := interpreter.copyAndConvert(leftValue, leftType, rightType)
+	getLocationRange := locationRangeGetter(interpreter.Location, swap.Right)
+	rightValueCopy := interpreter.copyAndConvert(rightValue, rightType, leftType, getLocationRange)
+
+	getLocationRange = locationRangeGetter(interpreter.Location, swap.Left)
+	leftValueCopy := interpreter.copyAndConvert(leftValue, leftType, rightType, getLocationRange)
 
 	leftGetterSetter.set(rightValueCopy)
 	rightGetterSetter.set(leftValueCopy)

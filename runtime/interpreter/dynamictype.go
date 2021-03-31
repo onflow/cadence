@@ -190,3 +190,16 @@ func (DeployedContractDynamicType) IsDynamicType() {}
 type BlockDynamicType struct{}
 
 func (BlockDynamicType) IsDynamicType() {}
+
+// UnwrapOptionalDynamicType returns the type if it is not an optional type,
+// or the inner-most type if it is (optional types are repeatedly unwrapped)
+//
+func UnwrapOptionalDynamicType(ty DynamicType) DynamicType {
+	for {
+		someDynamicType, ok := ty.(SomeDynamicType)
+		if !ok {
+			return ty
+		}
+		ty = someDynamicType.InnerType
+	}
+}

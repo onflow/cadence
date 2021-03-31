@@ -1009,13 +1009,15 @@ func (interpreter *Interpreter) declareVariable(identifier string, value Value) 
 
 func (interpreter *Interpreter) visitAssignment(
 	transferOperation ast.TransferOperation,
-	target ast.Expression, targetType sema.Type,
-	value ast.Expression, valueType sema.Type,
+	targetExpression ast.Expression, targetType sema.Type,
+	valueExpression ast.Expression, valueType sema.Type,
 	position ast.HasPosition,
 ) {
 
 	// First evaluate the target, which results in a getter/setter function pair
-	getterSetter := interpreter.assignmentGetterSetter(target)
+	getterSetter := interpreter.assignmentGetterSetter(targetExpression)
+
+	getLocationRange := locationRangeGetter(interpreter.Location, position)
 
 	// If the assignment is a forced move,
 	// ensure that the target is nil,
@@ -1028,7 +1030,7 @@ func (interpreter *Interpreter) visitAssignment(
 		// The latter case exists when the force-move assignment is the initialization of a field
 		// in an initializer, in which case there is no prior value for the field.
 
-		if _, ok := target.(NilValue); !ok && target != nil {
+		if _, ok := target.(NilValue); !ok {
 			getLocationRange := locationRangeGetter(interpreter.Location, position)
 			panic(ForceAssignmentToNonNilResourceError{
 				LocationRange: getLocationRange(),
@@ -1038,7 +1040,10 @@ func (interpreter *Interpreter) visitAssignment(
 
 	// Finally, evaluate the value, and assign it using the setter function
 
-	valueCopy := interpreter.copyAndConvert(interpreter.evalExpression(value), valueType, targetType)
+	value := interpreter.evalExpression(valueExpression)
+
+	valueCopy := interpreter.copyAndConvert(value, valueType, targetType, getLocationRange)
+
 	getterSetter.set(valueCopy)
 }
 
@@ -1604,8 +1609,58 @@ func (interpreter *Interpreter) VisitEnumCaseDeclaration(_ *ast.EnumCaseDeclarat
 	panic(errors.NewUnreachableError())
 }
 
-func (interpreter *Interpreter) copyAndConvert(value Value, valueType, targetType sema.Type) Value {
-	return interpreter.convertAndBox(value.Copy(), valueType, targetType)
+func (interpreter *Interpreter) checkValueTransferTargetType(value Value, targetType sema.Type) bool {
+
+	if targetType == nil {
+		return true
+	}
+
+	valueDynamicType := value.DynamicType(interpreter)
+	if IsSubType(valueDynamicType, targetType) {
+		return true
+	}
+
+	// Handle function types:
+	//
+	// Static function types have parameter and return type information.
+	// Dynamic function types do not (yet) have parameter and return types information.
+	// Therefore, IsSubType currently returns false even in cases where
+	// the function value is valid.
+	//
+	// For now, make this check more lenient and accept any function type (or Any/AnyStruct)
+
+	unwrappedValueDynamicType := UnwrapOptionalDynamicType(valueDynamicType)
+	if _, ok := unwrappedValueDynamicType.(FunctionDynamicType); ok {
+		unwrappedTargetType := sema.UnwrapOptionalType(targetType)
+		if _, ok := unwrappedTargetType.(*sema.FunctionType); ok {
+			return true
+		}
+
+		switch unwrappedTargetType {
+		case sema.AnyStructType, sema.AnyType:
+			return true
+		}
+	}
+
+	return false
+}
+
+func (interpreter *Interpreter) copyAndConvert(
+	value Value,
+	valueType, targetType sema.Type,
+	getLocationRange func() LocationRange,
+) Value {
+
+	result := interpreter.convertAndBox(value.Copy(), valueType, targetType)
+
+	if !interpreter.checkValueTransferTargetType(result, targetType) {
+		panic(ValueTransferTypeError{
+			TargetType:    targetType,
+			LocationRange: getLocationRange(),
+		})
+	}
+
+	return result
 }
 
 // convertAndBox converts a value to a target type, and boxes in optionals and any value, if necessary
@@ -2292,7 +2347,7 @@ func IsSubType(subType DynamicType, superType sema.Type) bool {
 
 	case StringDynamicType:
 		switch superType {
-		case sema.AnyStructType, sema.StringType:
+		case sema.AnyStructType, sema.StringType, sema.CharacterType:
 			return true
 		}
 
@@ -2311,6 +2366,9 @@ func IsSubType(subType DynamicType, superType sema.Type) bool {
 
 	case NumberDynamicType:
 		return sema.IsSubType(typedSubType.StaticType, superType)
+
+	case FunctionDynamicType:
+		return superType == sema.AnyStructType
 
 	case CompositeDynamicType:
 		return sema.IsSubType(typedSubType.StaticType, superType)

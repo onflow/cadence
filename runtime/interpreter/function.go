@@ -108,9 +108,7 @@ func (f InterpretedFunctionValue) Invoke(invocation Invocation) Value {
 	for i, argument := range invocation.Arguments {
 		parameterType := f.Type.Parameters[i].TypeAnnotation.Type
 
-		argumentDynamicType := argument.DynamicType(f.Interpreter)
-
-		if !IsSubType(argumentDynamicType, parameterType) {
+		if !f.Interpreter.checkValueTransferTargetType(argument, parameterType) {
 			panic(InvocationArgumentTypeError{
 				Index:         i,
 				ParameterType: parameterType,
