@@ -268,7 +268,7 @@ func TestExportFixedPointValuesFromScript(t *testing.T) {
 
 	t.Parallel()
 
-	test := func(fixedPointType sema.Type) {
+	test := func(fixedPointType sema.Type, literal string) {
 
 		t.Run(fixedPointType.String(), func(t *testing.T) {
 
@@ -277,10 +277,11 @@ func TestExportFixedPointValuesFromScript(t *testing.T) {
 			script := fmt.Sprintf(
 				`
                   pub fun main(): %s {
-                      return 1.23
+                      return %s
                   }
                 `,
 				fixedPointType,
+				literal,
 			)
 
 			assert.NotPanics(t, func() {
@@ -290,7 +291,15 @@ func TestExportFixedPointValuesFromScript(t *testing.T) {
 	}
 
 	for _, fixedPointType := range sema.AllFixedPointTypes {
-		test(fixedPointType)
+
+		var literal string
+		if sema.IsSubType(fixedPointType, &sema.SignedFixedPointType{}) {
+			literal = "-1.23"
+		} else {
+			literal = "1.23"
+		}
+
+		test(fixedPointType, literal)
 	}
 }
 
