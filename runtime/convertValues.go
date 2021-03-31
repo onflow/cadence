@@ -180,7 +180,9 @@ func exportArrayValue(v *interpreter.ArrayValue, inter *interpreter.Interpreter,
 
 func exportCompositeValue(v *interpreter.CompositeValue, inter *interpreter.Interpreter, results exportResults) cadence.Value {
 
-	dynamicType := v.DynamicType(inter).(interpreter.CompositeDynamicType)
+	dynamicTypeResults := interpreter.DynamicTypeResults{}
+
+	dynamicType := v.DynamicType(inter, dynamicTypeResults).(interpreter.CompositeDynamicType)
 	staticType := dynamicType.StaticType.(*sema.CompositeType)
 	// TODO: consider making the results map "global", by moving it up to exportValueWithInterpreter
 	t := exportCompositeType(staticType, map[sema.TypeID]cadence.Type{})

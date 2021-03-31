@@ -1615,7 +1615,9 @@ func (interpreter *Interpreter) checkValueTransferTargetType(value Value, target
 		return true
 	}
 
-	valueDynamicType := value.DynamicType(interpreter)
+	dynamicTypeResults := DynamicTypeResults{}
+
+	valueDynamicType := value.DynamicType(interpreter, dynamicTypeResults)
 	if IsSubType(valueDynamicType, targetType) {
 		return true
 	}
@@ -2593,7 +2595,9 @@ func (interpreter *Interpreter) authAccountReadFunction(addressValue AddressValu
 
 			ty := typeParameterPair.Value
 
-			dynamicType := value.Value.DynamicType(interpreter)
+			dynamicTypeResults := DynamicTypeResults{}
+
+			dynamicType := value.Value.DynamicType(interpreter, dynamicTypeResults)
 			if !IsSubType(dynamicType, ty) {
 				return NilValue{}
 			}
@@ -3063,7 +3067,8 @@ func (interpreter *Interpreter) isInstanceFunction(self Value) HostFunctionValue
 
 			semaType := interpreter.ConvertStaticToSemaType(staticType)
 			// NOTE: not invocation.Self, as that is only set for composite values
-			dynamicType := self.DynamicType(interpreter)
+			dynamicTypeResults := DynamicTypeResults{}
+			dynamicType := self.DynamicType(interpreter, dynamicTypeResults)
 			result := IsSubType(dynamicType, semaType)
 			return BoolValue(result)
 		},

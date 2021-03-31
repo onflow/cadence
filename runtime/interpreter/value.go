@@ -37,13 +37,15 @@ import (
 	"github.com/onflow/cadence/runtime/sema"
 )
 
+type DynamicTypeResults map[Value]DynamicType
+
 // Value
 
 type Value interface {
 	fmt.Stringer
 	IsValue()
 	Accept(interpreter *Interpreter, visitor Visitor)
-	DynamicType(interpreter *Interpreter) DynamicType
+	DynamicType(interpreter *Interpreter, results DynamicTypeResults) DynamicType
 	Copy() Value
 	GetOwner() *common.Address
 	SetOwner(address *common.Address)
@@ -110,7 +112,7 @@ func (v TypeValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitTypeValue(interpreter, v)
 }
 
-func (TypeValue) DynamicType(_ *Interpreter) DynamicType {
+func (TypeValue) DynamicType(_ *Interpreter, _ DynamicTypeResults) DynamicType {
 	return MetaTypeDynamicType{}
 }
 
@@ -203,7 +205,7 @@ func (v VoidValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitVoidValue(interpreter, v)
 }
 
-func (VoidValue) DynamicType(_ *Interpreter) DynamicType {
+func (VoidValue) DynamicType(_ *Interpreter, _ DynamicTypeResults) DynamicType {
 	return VoidDynamicType{}
 }
 
@@ -251,7 +253,7 @@ func (v BoolValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitBoolValue(interpreter, v)
 }
 
-func (BoolValue) DynamicType(_ *Interpreter) DynamicType {
+func (BoolValue) DynamicType(_ *Interpreter, _ DynamicTypeResults) DynamicType {
 	return BoolDynamicType{}
 }
 
@@ -328,7 +330,7 @@ func (v *StringValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitStringValue(interpreter, v)
 }
 
-func (*StringValue) DynamicType(_ *Interpreter) DynamicType {
+func (*StringValue) DynamicType(_ *Interpreter, _ DynamicTypeResults) DynamicType {
 	return StringDynamicType{}
 }
 
@@ -546,11 +548,11 @@ func (v *ArrayValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	}
 }
 
-func (v *ArrayValue) DynamicType(interpreter *Interpreter) DynamicType {
+func (v *ArrayValue) DynamicType(interpreter *Interpreter, results DynamicTypeResults) DynamicType {
 	elementTypes := make([]DynamicType, len(v.Values))
 
 	for i, value := range v.Values {
-		elementTypes[i] = value.DynamicType(interpreter)
+		elementTypes[i] = value.DynamicType(interpreter, results)
 	}
 
 	return ArrayDynamicType{
@@ -891,7 +893,7 @@ func (v IntValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitIntValue(interpreter, v)
 }
 
-func (IntValue) DynamicType(_ *Interpreter) DynamicType {
+func (IntValue) DynamicType(_ *Interpreter, _ DynamicTypeResults) DynamicType {
 	return NumberDynamicType{sema.IntType}
 }
 
@@ -1104,7 +1106,7 @@ func (v Int8Value) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitInt8Value(interpreter, v)
 }
 
-func (Int8Value) DynamicType(_ *Interpreter) DynamicType {
+func (Int8Value) DynamicType(_ *Interpreter, _ DynamicTypeResults) DynamicType {
 	return NumberDynamicType{sema.Int8Type}
 }
 
@@ -1345,7 +1347,7 @@ func (v Int16Value) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitInt16Value(interpreter, v)
 }
 
-func (Int16Value) DynamicType(_ *Interpreter) DynamicType {
+func (Int16Value) DynamicType(_ *Interpreter, _ DynamicTypeResults) DynamicType {
 	return NumberDynamicType{sema.Int16Type}
 }
 
@@ -1588,7 +1590,7 @@ func (v Int32Value) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitInt32Value(interpreter, v)
 }
 
-func (Int32Value) DynamicType(_ *Interpreter) DynamicType {
+func (Int32Value) DynamicType(_ *Interpreter, _ DynamicTypeResults) DynamicType {
 	return NumberDynamicType{sema.Int32Type}
 }
 
@@ -1831,7 +1833,7 @@ func (v Int64Value) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitInt64Value(interpreter, v)
 }
 
-func (Int64Value) DynamicType(_ *Interpreter) DynamicType {
+func (Int64Value) DynamicType(_ *Interpreter, _ DynamicTypeResults) DynamicType {
 	return NumberDynamicType{sema.Int64Type}
 }
 
@@ -2082,7 +2084,7 @@ func (v Int128Value) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitInt128Value(interpreter, v)
 }
 
-func (Int128Value) DynamicType(_ *Interpreter) DynamicType {
+func (Int128Value) DynamicType(_ *Interpreter, _ DynamicTypeResults) DynamicType {
 	return NumberDynamicType{sema.Int128Type}
 }
 
@@ -2383,7 +2385,7 @@ func (v Int256Value) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitInt256Value(interpreter, v)
 }
 
-func (Int256Value) DynamicType(_ *Interpreter) DynamicType {
+func (Int256Value) DynamicType(_ *Interpreter, _ DynamicTypeResults) DynamicType {
 	return NumberDynamicType{sema.Int256Type}
 }
 
@@ -2705,7 +2707,7 @@ func (v UIntValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitUIntValue(interpreter, v)
 }
 
-func (UIntValue) DynamicType(_ *Interpreter) DynamicType {
+func (UIntValue) DynamicType(_ *Interpreter, _ DynamicTypeResults) DynamicType {
 	return NumberDynamicType{sema.UIntType}
 }
 
@@ -2921,7 +2923,7 @@ func (v UInt8Value) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitUInt8Value(interpreter, v)
 }
 
-func (UInt8Value) DynamicType(_ *Interpreter) DynamicType {
+func (UInt8Value) DynamicType(_ *Interpreter, _ DynamicTypeResults) DynamicType {
 	return NumberDynamicType{sema.UInt8Type}
 }
 
@@ -3130,7 +3132,7 @@ func (v UInt16Value) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitUInt16Value(interpreter, v)
 }
 
-func (UInt16Value) DynamicType(_ *Interpreter) DynamicType {
+func (UInt16Value) DynamicType(_ *Interpreter, _ DynamicTypeResults) DynamicType {
 	return NumberDynamicType{sema.UInt16Type}
 }
 
@@ -3339,7 +3341,7 @@ func (v UInt32Value) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitUInt32Value(interpreter, v)
 }
 
-func (UInt32Value) DynamicType(_ *Interpreter) DynamicType {
+func (UInt32Value) DynamicType(_ *Interpreter, _ DynamicTypeResults) DynamicType {
 	return NumberDynamicType{sema.UInt32Type}
 }
 
@@ -3550,7 +3552,7 @@ func (v UInt64Value) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitUInt64Value(interpreter, v)
 }
 
-func (UInt64Value) DynamicType(_ *Interpreter) DynamicType {
+func (UInt64Value) DynamicType(_ *Interpreter, _ DynamicTypeResults) DynamicType {
 	return NumberDynamicType{sema.UInt64Type}
 }
 
@@ -3774,7 +3776,7 @@ func (v UInt128Value) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitUInt128Value(interpreter, v)
 }
 
-func (UInt128Value) DynamicType(_ *Interpreter) DynamicType {
+func (UInt128Value) DynamicType(_ *Interpreter, _ DynamicTypeResults) DynamicType {
 	return NumberDynamicType{sema.UInt128Type}
 }
 
@@ -4044,7 +4046,7 @@ func (v UInt256Value) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitUInt256Value(interpreter, v)
 }
 
-func (UInt256Value) DynamicType(_ *Interpreter) DynamicType {
+func (UInt256Value) DynamicType(_ *Interpreter, _ DynamicTypeResults) DynamicType {
 	return NumberDynamicType{sema.UInt256Type}
 }
 
@@ -4305,7 +4307,7 @@ func (v Word8Value) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitWord8Value(interpreter, v)
 }
 
-func (Word8Value) DynamicType(_ *Interpreter) DynamicType {
+func (Word8Value) DynamicType(_ *Interpreter, _ DynamicTypeResults) DynamicType {
 	return NumberDynamicType{sema.Word8Type}
 }
 
@@ -4475,7 +4477,7 @@ func (v Word16Value) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitWord16Value(interpreter, v)
 }
 
-func (Word16Value) DynamicType(_ *Interpreter) DynamicType {
+func (Word16Value) DynamicType(_ *Interpreter, _ DynamicTypeResults) DynamicType {
 	return NumberDynamicType{sema.Word16Type}
 }
 
@@ -4645,7 +4647,7 @@ func (v Word32Value) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitWord32Value(interpreter, v)
 }
 
-func (Word32Value) DynamicType(_ *Interpreter) DynamicType {
+func (Word32Value) DynamicType(_ *Interpreter, _ DynamicTypeResults) DynamicType {
 	return NumberDynamicType{sema.Word32Type}
 }
 
@@ -4817,7 +4819,7 @@ func (v Word64Value) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitWord64Value(interpreter, v)
 }
 
-func (Word64Value) DynamicType(_ *Interpreter) DynamicType {
+func (Word64Value) DynamicType(_ *Interpreter, _ DynamicTypeResults) DynamicType {
 	return NumberDynamicType{sema.Word64Type}
 }
 
@@ -5004,7 +5006,7 @@ func (v Fix64Value) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitFix64Value(interpreter, v)
 }
 
-func (Fix64Value) DynamicType(_ *Interpreter) DynamicType {
+func (Fix64Value) DynamicType(_ *Interpreter, _ DynamicTypeResults) DynamicType {
 	return NumberDynamicType{sema.Fix64Type}
 }
 
@@ -5224,7 +5226,7 @@ func (v UFix64Value) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitUFix64Value(interpreter, v)
 }
 
-func (UFix64Value) DynamicType(_ *Interpreter) DynamicType {
+func (UFix64Value) DynamicType(_ *Interpreter, _ DynamicTypeResults) DynamicType {
 	return NumberDynamicType{sema.UFix64Type}
 }
 
@@ -5506,7 +5508,7 @@ func (v *CompositeValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	})
 }
 
-func (v *CompositeValue) DynamicType(interpreter *Interpreter) DynamicType {
+func (v *CompositeValue) DynamicType(interpreter *Interpreter, _ DynamicTypeResults) DynamicType {
 	staticType := interpreter.getCompositeType(v.Location, v.QualifiedIdentifier)
 	return CompositeDynamicType{
 		StaticType: staticType,
@@ -5708,7 +5710,11 @@ func (v *CompositeValue) OwnerValue(interpreter *Interpreter) OptionalValue {
 	ownerAccount := interpreter.accountHandler(address)
 
 	// Owner must be of `PublicAccount` type.
-	compositeDynamicType, ok := ownerAccount.DynamicType(interpreter).(CompositeDynamicType)
+
+	dynamicTypeResults := DynamicTypeResults{}
+	dynamicType := ownerAccount.DynamicType(interpreter, dynamicTypeResults)
+
+	compositeDynamicType, ok := dynamicType.(CompositeDynamicType)
 
 	if !ok || !sema.PublicAccountType.Equal(compositeDynamicType.StaticType) {
 		panic(&TypeMismatchError{
@@ -5831,7 +5837,8 @@ func (v *CompositeValue) ConformsToDynamicType(interpreter *Interpreter, dynamic
 			return false
 		}
 
-		fieldDynamicType := field.DynamicType(interpreter)
+		dynamicTypeResults := DynamicTypeResults{}
+		fieldDynamicType := field.DynamicType(interpreter, dynamicTypeResults)
 
 		if !IsSubType(fieldDynamicType, member.TypeAnnotation.Type) {
 			return false
@@ -5912,7 +5919,7 @@ func (v *DictionaryValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	}
 }
 
-func (v *DictionaryValue) DynamicType(interpreter *Interpreter) DynamicType {
+func (v *DictionaryValue) DynamicType(interpreter *Interpreter, results DynamicTypeResults) DynamicType {
 	entryTypes := make([]struct{ KeyType, ValueType DynamicType }, len(v.Keys.Values))
 
 	for i, key := range v.Keys.Values {
@@ -5921,8 +5928,8 @@ func (v *DictionaryValue) DynamicType(interpreter *Interpreter) DynamicType {
 		value := v.Get(interpreter, ReturnEmptyLocationRange, key).(*SomeValue).Value
 		entryTypes[i] =
 			struct{ KeyType, ValueType DynamicType }{
-				KeyType:   key.DynamicType(interpreter),
-				ValueType: value.DynamicType(interpreter),
+				KeyType:   key.DynamicType(interpreter, results),
+				ValueType: value.DynamicType(interpreter, results),
 			}
 	}
 
@@ -6336,7 +6343,7 @@ func (v NilValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitNilValue(interpreter, v)
 }
 
-func (NilValue) DynamicType(_ *Interpreter) DynamicType {
+func (NilValue) DynamicType(_ *Interpreter, _ DynamicTypeResults) DynamicType {
 	return NilDynamicType{}
 }
 
@@ -6425,8 +6432,8 @@ func (v *SomeValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	v.Value.Accept(interpreter, visitor)
 }
 
-func (v *SomeValue) DynamicType(interpreter *Interpreter) DynamicType {
-	innerType := v.Value.DynamicType(interpreter)
+func (v *SomeValue) DynamicType(interpreter *Interpreter, results DynamicTypeResults) DynamicType {
+	innerType := v.Value.DynamicType(interpreter, results)
 	return SomeDynamicType{InnerType: innerType}
 }
 
@@ -6535,13 +6542,13 @@ func (v *StorageReferenceValue) String() string {
 	return "StorageReference()"
 }
 
-func (v *StorageReferenceValue) DynamicType(interpreter *Interpreter) DynamicType {
+func (v *StorageReferenceValue) DynamicType(interpreter *Interpreter, results DynamicTypeResults) DynamicType {
 	referencedValue := v.ReferencedValue(interpreter)
 	if referencedValue == nil {
 		panic(DereferenceError{})
 	}
 
-	innerType := (*referencedValue).DynamicType(interpreter)
+	innerType := (*referencedValue).DynamicType(interpreter, results)
 
 	return StorageReferenceDynamicType{
 		authorized: v.Authorized,
@@ -6586,7 +6593,8 @@ func (v *StorageReferenceValue) ReferencedValue(interpreter *Interpreter) *Value
 		value := referenced.Value
 
 		if v.BorrowedType != nil {
-			dynamicType := value.DynamicType(interpreter)
+			dynamicTypeResults := DynamicTypeResults{}
+			dynamicType := value.DynamicType(interpreter, dynamicTypeResults)
 			if !IsSubType(dynamicType, v.BorrowedType) {
 				return nil
 			}
@@ -6681,18 +6689,28 @@ func (v *EphemeralReferenceValue) String() string {
 	return v.Value.String()
 }
 
-func (v *EphemeralReferenceValue) DynamicType(interpreter *Interpreter) DynamicType {
+func (v *EphemeralReferenceValue) DynamicType(interpreter *Interpreter, results DynamicTypeResults) DynamicType {
 	referencedValue := v.ReferencedValue()
 	if referencedValue == nil {
 		panic(DereferenceError{})
 	}
 
-	innerType := (*referencedValue).DynamicType(interpreter)
+	if result, ok := results[v]; ok {
+		return result
+	}
 
-	return EphemeralReferenceDynamicType{
+	results[v] = nil
+
+	innerType := (*referencedValue).DynamicType(interpreter, results)
+
+	result := EphemeralReferenceDynamicType{
 		authorized: v.Authorized,
 		innerType:  innerType,
 	}
+
+	results[v] = result
+
+	return result
 }
 
 func (v *EphemeralReferenceValue) StaticType() StaticType {
@@ -6843,7 +6861,7 @@ func (v AddressValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitAddressValue(interpreter, v)
 }
 
-func (AddressValue) DynamicType(_ *Interpreter) DynamicType {
+func (AddressValue) DynamicType(_ *Interpreter, _ DynamicTypeResults) DynamicType {
 	return AddressDynamicType{}
 }
 
@@ -7085,7 +7103,7 @@ func (v PathValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitPathValue(interpreter, v)
 }
 
-func (v PathValue) DynamicType(_ *Interpreter) DynamicType {
+func (v PathValue) DynamicType(_ *Interpreter, _ DynamicTypeResults) DynamicType {
 	switch v.Domain {
 	case common.PathDomainStorage:
 		return StoragePathDynamicType{}
@@ -7178,7 +7196,7 @@ func (v CapabilityValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitCapabilityValue(interpreter, v)
 }
 
-func (v CapabilityValue) DynamicType(inter *Interpreter) DynamicType {
+func (v CapabilityValue) DynamicType(inter *Interpreter, _ DynamicTypeResults) DynamicType {
 	var borrowType *sema.ReferenceType
 	if v.BorrowType != nil {
 		borrowType = inter.ConvertStaticToSemaType(v.BorrowType).(*sema.ReferenceType)
@@ -7277,7 +7295,7 @@ func (v LinkValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitLinkValue(interpreter, v)
 }
 
-func (LinkValue) DynamicType(_ *Interpreter) DynamicType {
+func (LinkValue) DynamicType(_ *Interpreter, _ DynamicTypeResults) DynamicType {
 	return nil
 }
 

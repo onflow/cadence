@@ -529,7 +529,9 @@ func validateArgumentParams(
 
 		arg := importValue(value)
 
-		dynamicType := arg.DynamicType(inter)
+		dynamicTypeResults := interpreter.DynamicTypeResults{}
+
+		dynamicType := arg.DynamicType(inter, dynamicTypeResults)
 
 		// Check that decoded value is a subtype of static parameter type
 		if !interpreter.IsSubType(dynamicType, parameterType) {
