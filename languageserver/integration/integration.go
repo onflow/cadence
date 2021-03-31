@@ -19,8 +19,7 @@
 package integration
 
 import (
-	project "github.com/onflow/flow-cli/pkg/flowcli/project"
-	"github.com/onflow/flow-go-sdk"
+	"github.com/onflow/flow-cli/pkg/flowcli/project"
 	"github.com/onflow/flow-go-sdk/client"
 
 	"github.com/onflow/cadence/languageserver/protocol"
@@ -34,36 +33,18 @@ type EmulatorState byte
 const (
 	EmulatorOffline EmulatorState = iota
 	EmulatorStarting
-	EmulatorOnline
 )
-
-var addressToName = map[string]string{
-	"0x01": "alice",
-	"0x02": "bob",
-	"0x03": "charlie",
-	"0x04": "dave",
-}
-
-var nameToAddress = map[string]string{
-	"alice": "0x01",
-	"bob": "0x02",
-	"charlie": "0x03",
-	"dave": "0x04",
-}
 
 type FlowIntegration struct {
 	server     *server.Server
 	config     Config
 	flowClient *client.Client
 
-	accounts       map[flow.Address]AccountPrivateKey
-	activeAccount  string
-	activeAddress  flow.Address
-	serviceAddress flow.Address
-
 	entryPointInfo map[protocol.DocumentUri]entryPointInfo
 
+	activeAccount  ClientAccount
 	emulatorState  EmulatorState
+
 	sharedServices *services.Services
 	project        *project.Project
 }
@@ -71,7 +52,6 @@ type FlowIntegration struct {
 func NewFlowIntegration(s *server.Server, enableFlowClient bool) (*FlowIntegration, error) {
 	integration := &FlowIntegration{
 		server:         s,
-		accounts:       make(map[flow.Address]AccountPrivateKey),
 		entryPointInfo: map[protocol.DocumentUri]entryPointInfo{},
 	}
 
