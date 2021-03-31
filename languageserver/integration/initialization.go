@@ -21,7 +21,7 @@ package integration
 import (
 	"github.com/onflow/flow-cli/pkg/flowcli/gateway"
 	"github.com/onflow/flow-cli/pkg/flowcli/output"
-	project "github.com/onflow/flow-cli/pkg/flowcli/project"
+	"github.com/onflow/flow-cli/pkg/flowcli/project"
 	"github.com/onflow/flow-cli/pkg/flowcli/services"
 	"github.com/onflow/flow-go-sdk/client"
 	"google.golang.org/grpc"
@@ -35,43 +35,23 @@ func (i *FlowIntegration) initialize(initializationOptions interface{}) error {
 		return err
 	}
 	i.config = conf
-
 	i.emulatorState = conf.emulatorState
+	i.activeAccount = conf.activeAccount
 
-	// TODO: get this path from initializationOptions
-	configurationPaths := []string{"/home/max/Desktop/cadence/flow.json"}
+	configurationPaths := []string{conf.configPath}
 
-	// TODO: process error if project could not be initialized from specified config
-	project, _ := project.Load(configurationPaths)
-	if err != nil {
-		return nil
-	}
-
-	i.project = project
-
-	// TODO: get this value from config file
-	host := conf.EmulatorAddr
-	// TODO: process error here
-	gate, _ := gateway.NewGrpcGateway(host)
-
-	logger := output.NewStdoutLogger(output.NoneLog)
-
-	if err != nil {
-		return nil
-	}
-	i.sharedServices = services.NewServices(gate, project, logger)
+	flowProject, err := project.Load(configurationPaths)
 	if err != nil {
 		return err
 	}
 
+	i.project = flowProject
+	host := flowProject.NetworkByName("emulator").Host
+	gate, _ := gateway.NewGrpcGateway(host)
+	logger := output.NewStdoutLogger(output.NoneLog)
+	i.sharedServices = services.NewServices(gate, flowProject, logger)
 
-	// serviceAccount, err := project.EmulatorServiceAccount()
-	if err != nil {
-		// TODO: process error for getting service account
-		return nil
-	}
-	// pk := serviceAccount.DefaultKey().ToConfig().Context["privateKey"]
-	// serviceAddress := serviceAccount.Address().String()
+	// TODO: we only need this to deploy AccountManager contract. Once sharedLib supports this we can remove it
 	i.flowClient, err = client.New(
 		host,
 		grpc.WithInsecure(),
