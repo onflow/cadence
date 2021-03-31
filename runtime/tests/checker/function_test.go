@@ -162,14 +162,29 @@ func TestCheckReturnWithoutExpression(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestCheckAnyReturnType(t *testing.T) {
+func TestCheckFunctionUseInsideFunction(t *testing.T) {
 
 	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
-      fun foo(): AnyStruct {
-          return foo
+      fun foo() {
+          foo()
       }
+    `)
+
+	require.NoError(t, err)
+}
+
+func TestCheckFunctionReturnFunction(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+      fun foo(): ((Int): Void) {
+          return bar
+      }
+
+      fun bar(_ n: Int) {}
     `)
 
 	require.NoError(t, err)
