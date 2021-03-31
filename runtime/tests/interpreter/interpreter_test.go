@@ -1489,7 +1489,7 @@ func TestInterpretHostFunctionWithVariableArguments(t *testing.T) {
 				},
 			},
 			ReturnTypeAnnotation: sema.NewTypeAnnotation(
-				sema.IntType,
+				sema.VoidType,
 			),
 			RequiredArgumentCount: sema.RequiredArgumentCount(1),
 		},
