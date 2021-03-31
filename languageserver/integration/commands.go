@@ -22,13 +22,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net/url"
-	"path/filepath"
-	"strings"
-
+	"github.com/onflow/flow-cli/pkg/flowcli"
 	"github.com/onflow/flow-go-sdk/crypto"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"net/url"
+	"path/filepath"
+	"strings"
 
 	"github.com/onflow/flow-go-sdk"
 
@@ -47,12 +47,9 @@ const (
 	CommandCreateDefaultAccounts = "cadence.server.flow.createDefaultAccounts"
 	CommandSwitchActiveAccount   = "cadence.server.flow.switchActiveAccount"
 	CommandChangeEmulatorState   = "cadence.server.flow.changeEmulatorState"
-	CommandInitAccountManager = "cadence.server.flow.initAccountManager"
+	CommandInitAccountManager    = "cadence.server.flow.initAccountManager"
 
-	ClientStartEmulator   = "cadence.runEmulator"
-	ClientExecuteScript   = "cadence.executeScript"
-	ClientSendTransaction = "cadence.sendTransaction"
-	ClientDeployContract  = "cadence.deployContract"
+	ClientStartEmulator = "cadence.runEmulator"
 )
 
 func (i *FlowIntegration) commands() []server.Command {
@@ -92,35 +89,73 @@ func (i *FlowIntegration) commands() []server.Command {
 	}
 }
 
+// ClientAccount will be used to
+// * store active account on language server to sign transactions and deploy contracts
+// * return newly created accounts to client
+type ClientAccount struct {
+	Name    string       `json:"name"`
+	Address flow.Address `json:"address"`
+}
+
+// Cadence Templates
+const deployContractTemplate = `
+transaction(name: String, code: [UInt8]) {
+  prepare(signer: AuthAccount) {
+    if signer.contracts.get(name: name) == nil {
+      signer.contracts.add(name: name, code: code)
+    } else {
+      signer.contracts.update__experimental(name: name, code: code)
+    }
+  }
+}
+`
+
 const contractAccountManager = `
 pub contract AccountManager{
-    pub let accounts: {String: Address}
+    pub event AliasAdded(_ name: String, _ address: Address)
+
+    pub let accountsByName: {String: Address}
+    pub let accountsByAddress: {Address: String}
     pub let names: [String]
     
     init(){
-        self.accounts = {}
+        self.accountsByName = {}
+		self.accountsByAddress = {}
         self.names = [
-            "alice", "bob", "charlie",
-            "dave", "eve", "faythe",
-            "grace", "heidi", "ivan",
-            "judy", "michael", "niaj",
-            "olivia", "oscar", "peggy",
-            "rupert", "sybil", "ted",
-            "victor", "walter"
+            "Alice", "Bob", "Charlie",
+            "Dave", "Eve", "Faythe",
+            "Grace", "Heidi", "Ivan",
+            "Judy", "Michael", "Niaj",
+            "Olivia", "Oscar", "Peggy",
+            "Rupert", "Sybil", "Ted",
+            "Victor", "Walter"
         ]
     }
 
     pub fun addAccount(_ address: Address){
-        let name = self.names[self.accounts.keys.length]
-        self.accounts[name] = address
+        let name = self.names[self.accountsByName.keys.length]
+        self.accountsByName[name] = address
+        self.accountsByAddress[address] = name
+        emit AliasAdded(name, address)
     }
 
     pub fun getAddress(_ name: String): Address?{
-        return self.accounts[name]
+        return self.accountsByName[name]
+    }
+
+    pub fun getName(_ address: Address): String?{
+        return self.accountsByAddress[address]
     }
 
     pub fun getAccounts():[String]{
-        return self.accounts.keys
+        let accounts: [String] = []
+        for name in self.accountsByName.keys {
+            let address = self.accountsByName[name]!
+            let account = name.concat(":")
+                            .concat(address.toString())
+            accounts.append(account)
+        }
+        return accounts
     }
 }
 `
@@ -129,31 +164,33 @@ const transactionAddAccount = `
 import AccountManager from 0xSERVICE_ACCOUNT_ADDRESS
 
 transaction(address: Address){
-  prepare() {
+  prepare(signer: AuthAccount) {
     AccountManager.addAccount(address)
+	log("Account added to ledger")
   }
 }
 `
 
-const scriptGetAddress = `
-import AccountManager from 0xSERVICE_ACCOUNT_ADDRESS
-
-pub fun main(name: String): Address {
-    return AccountManager.getAddress(name)!
-}
-`
-
+// makeManagerCode replaces service account placeholder with actual address and returns byte array
+//
+// There should be exactly 2 arguments:
+//   * Cadence script template
+//   * service account address represented as string sans 0x prefix
 func makeManagerCode(script string, serviceAddress string) []byte {
-	injected := strings.ReplaceAll(script, "0xSERVICE_ACCOUNT_ADDRESS", serviceAddress)
+	injected := strings.ReplaceAll(script, "SERVICE_ACCOUNT_ADDRESS", serviceAddress)
 	return []byte(injected)
 }
 
-
 // initAccountManager initializes Account manager on service account
+//
+// No arguments are expected
 func (i *FlowIntegration) initAccountManager(conn protocol.Conn, args ...interface{}) (interface{}, error) {
-
 	serviceAccount, err := i.project.EmulatorServiceAccount()
 	if err != nil {
+		conn.ShowMessage(&protocol.ShowMessageParams{
+			Type:    protocol.Error,
+			Message: err.Error(),
+		})
 		return nil, err
 	}
 
@@ -163,7 +200,6 @@ func (i *FlowIntegration) initAccountManager(conn protocol.Conn, args ...interfa
 
 	_, err = i.sendTransactionHelper(conn, serviceAddress, deployTx)
 
-
 	if err != nil {
 		conn.ShowMessage(&protocol.ShowMessageParams{
 			Type:    protocol.Error,
@@ -172,39 +208,7 @@ func (i *FlowIntegration) initAccountManager(conn protocol.Conn, args ...interfa
 		return nil, err
 	}
 
-
 	return nil, err
-
-	// name, err := jsoncdc.Encode(cadence.NewString("AccountManager"))
-	// contract, err := jsoncdc.Encode(cadence.NewBytes([]byte(accountManagerContract)))
-
-	//rawArgs := []string{string(name), string(contract)}
-
-/*	emptyArgs := []string{"String:AccountManager", fmt.Sprintf("[]byte:&+v", accountManagerContract)}
-	argsJSON := "" // convertListToCadenceJSON(rawArgs)
-
-	conn.ShowMessage(&protocol.ShowMessageParams{
-		Type:    protocol.Info,
-		Message: argsJSON,
-	})
-
-	_, txResult, err := i.sharedServices.Transactions.SendForAddressWithCode(deployCode, serviceAddress, serviceKey, emptyArgs, argsJSON)
-
-	if err != nil{
-		conn.ShowMessage(&protocol.ShowMessageParams{
-			Type:    protocol.Error,
-			Message: err.Error(),
-		})
-		return nil, err
-	}
-
-
-	conn.ShowMessage(&protocol.ShowMessageParams{
-		Type:    protocol.Info,
-		Message: txResult.Status.String(),
-	})
-*/
-	return nil, nil
 }
 
 // sendTransaction handles submitting a transaction defined in the
@@ -214,7 +218,6 @@ func (i *FlowIntegration) initAccountManager(conn protocol.Conn, args ...interfa
 //   * the DocumentURI of the file to submit
 //   * the arguments, encoded as JSON-CDC
 func (i *FlowIntegration) sendTransaction(conn protocol.Conn, args ...interface{}) (interface{}, error) {
-
 	err := server.CheckCommandArgumentCount(args, 3)
 	if err != nil {
 		return nil, err
@@ -235,8 +238,6 @@ func (i *FlowIntegration) sendTransaction(conn protocol.Conn, args ...interface{
 		return nil, fmt.Errorf("invalid arguments: %#+v", args[1])
 	}
 
-	// TODO: Add error handling if one of the values is wrong
-	// TODO: Check that every account exists, otherwise show error message
 	signerList := args[2].([]interface{})
 	signers := make([]string, len(signerList))
 	for i, v := range signerList {
@@ -245,7 +246,22 @@ func (i *FlowIntegration) sendTransaction(conn protocol.Conn, args ...interface{
 
 	// TODO: Currently only single signer is supported, so we will extract first one
 	// Send transaction via shared library
-	_, txResult, txSendError := i.sharedServices.Transactions.Send(path.Path, signers[0], []string{}, argsJSON)
+	privateKey, err := i.getServicePrivateKey()
+	if err != nil {
+		errorMessage := fmt.Sprintf("language server error: %#+v", err)
+		conn.ShowMessage(&protocol.ShowMessageParams{
+			Type:    protocol.Error,
+			Message: errorMessage,
+		})
+		return nil, fmt.Errorf("%s", errorMessage)
+	}
+
+	conn.ShowMessage(&protocol.ShowMessageParams{
+		Type:    protocol.Info,
+		Message: fmt.Sprintln(privateKey, signers[0]),
+	})
+
+	_, txResult, txSendError := i.sharedServices.Transactions.SendForAddress(path.Path, signers[0], privateKey, []string{}, argsJSON)
 
 	if txSendError != nil {
 		errorMessage := fmt.Sprintf("there was an error with your transaction: %#+v", txSendError)
@@ -270,9 +286,6 @@ func (i *FlowIntegration) sendTransaction(conn protocol.Conn, args ...interface{
 //   * the DocumentURI of the file to submit
 //   * the arguments, encoded as JSON-CDC
 func (i *FlowIntegration) executeScript(conn protocol.Conn, args ...interface{}) (interface{}, error) {
-
-	// TODO: Notify client that we are trying to execute script
-
 	err := server.CheckCommandArgumentCount(args, 2)
 	if err != nil {
 		return nil, err
@@ -335,91 +348,41 @@ func (i *FlowIntegration) changeEmulatorState(conn protocol.Conn, args ...interf
 // There should be exactly 1 argument:
 //   * the address of the new active account
 func (i *FlowIntegration) switchActiveAccount(_ protocol.Conn, args ...interface{}) (interface{}, error) {
-
-	err := server.CheckCommandArgumentCount(args, 1)
+	err := server.CheckCommandArgumentCount(args, 2)
 	if err != nil {
 		return nil, err
 	}
 
-	addrHex, ok := args[0].(string)
+	name, ok := args[0].(string)
 	if !ok {
-		return nil, errors.New("invalid argument")
-	}
-	addr := flow.HexToAddress(addrHex)
-
-	_, ok = i.accounts[addr]
-	if !ok {
-		return nil, errors.New("cannot set active account that does not exist")
+		return nil, errors.New("invalid name argument")
 	}
 
-	i.activeAddress = addr
+	addressHex, ok := args[1].(string)
+	if !ok {
+		return nil, errors.New("invalid address argument")
+	}
+	address := flow.HexToAddress(addressHex)
+
+	i.activeAccount = ClientAccount{
+		Name:    name,
+		Address: address,
+	}
 	return nil, nil
 }
 
 // createAccount creates a new account and returns its address.
 func (i *FlowIntegration) createAccount(conn protocol.Conn, args ...interface{}) (interface{}, error) {
 
-	// signatureAlgorithm := "ECDSA_P256"
-	// hashingAlgorithm := "SHA3_256"
-
-	// serviceAccount := i.project.EmulatorServiceAccount()
-
-	/*
-	err := server.CheckCommandArgumentCount(args, 1)
-	if err != nil {
-		errorMessage := fmt.Sprintf("name is required")
-		conn.ShowMessage(&protocol.ShowMessageParams{
-			Type:    protocol.Error,
-			Message: errorMessage,
-		})
-		return nil, fmt.Errorf("%s", errorMessage)
-	}
-
-	signatureAlgorithm := "ECDSA_P256"
-	hashingAlgorithm := "SHA3_256"
-
-	privateKey, err := i.sharedServices.Keys.Generate("", signatureAlgorithm)
-
-	if err != nil {
-		errorMessage := fmt.Sprintf("private key generation error: %#+v", err)
-		conn.ShowMessage(&protocol.ShowMessageParams{
-			Type:    protocol.Error,
-			Message: errorMessage,
-		})
-		return nil, fmt.Errorf("%s", errorMessage)
-	}
-
-	signer := "emulator-account"
-	keys := []string{privateKey.PublicKey().String()}
-	acc, err := i.sharedServices.Accounts.Create(signer, keys, signatureAlgorithm, hashingAlgorithm, []string{})
-	for {
-		if err != nil {
-			acc, err = i.sharedServices.Accounts.Create(signer, keys, signatureAlgorithm, hashingAlgorithm, []string{})
-		} else {
-			// TODO: store account
-			break
-		}
-	}
-
-	// TODO: maybe add counter above and bring back this error handling
-/*	if err != nil {
-		errorMessage := fmt.Sprintf("account creation error: %#+v", err)
-		conn.ShowMessage(&protocol.ShowMessageParams{
-			Type:    protocol.Error,
-			Message: errorMessage,
-		})
-		return nil, fmt.Errorf("%s", errorMessage)
-	}*/
-
-	/*
-	name := "alice"
+	address, err := i.createAccountHelper(conn)
+	clientAccount, err := i.storeAccountHelper(conn, address)
 
 	conn.ShowMessage(&protocol.ShowMessageParams{
 		Type:    protocol.Info,
-		Message: fmt.Sprintf("Account with name %s created at address: 0x%s", name, acc.Address),
+		Message: fmt.Sprintf("New account %s(0x%s) created", clientAccount.Name, address.String()),
 	})
-	*/
-	return nil, nil
+
+	return clientAccount, err
 }
 
 // createDefaultAccounts creates a set of default accounts and returns their addresses.
@@ -427,7 +390,7 @@ func (i *FlowIntegration) createAccount(conn protocol.Conn, args ...interface{})
 // This command will wait until the emulator server is started before submitting any transactions.
 func (i *FlowIntegration) createDefaultAccounts(conn protocol.Conn, args ...interface{}) (interface{}, error) {
 
-/*	err := server.CheckCommandArgumentCount(args, 1)
+	err := server.CheckCommandArgumentCount(args, 1)
 	if err != nil {
 		return nil, err
 	}
@@ -444,33 +407,17 @@ func (i *FlowIntegration) createDefaultAccounts(conn protocol.Conn, args ...inte
 		Message: fmt.Sprintf("Creating %d default accounts", count),
 	})
 
-	// Ping the emulator server for 30 seconds until it is available
-	timer := time.NewTimer(30 * time.Second)
-RetryLoop:
-	for {
-		select {
-		case <-timer.C:
-			return nil, errors.New("emulator server timed out")
-		default:
-			err := i.flowClient.Ping(context.Background())
-			if err == nil {
-				break RetryLoop
-			}
-		}
-	}
-
-	accounts := make([]flow.Address, count)
+	accounts := make([]ClientAccount, count)
 
 	for index := 0; index < count; index++ {
-		addr, err := i.createAccountHelper(conn)
+		account, err := i.createAccount(conn)
 		if err != nil {
 			return nil, err
 		}
-		accounts[index] = addr
+		accounts[index] = account.(ClientAccount)
 	}
 
-	return accounts, nil*/
-	return nil, nil
+	return accounts, nil
 }
 
 // deployContract deploys the contract to the configured account with the code of the given
@@ -503,7 +450,6 @@ func (i *FlowIntegration) deployContract(conn protocol.Conn, args ...interface{}
 	}
 
 	// TODO: Add error handling if one of the values is wrong
-	// TODO: Check that every account exists, otherwise show error message
 	signerList := args[2].([]interface{})
 	signers := make([]string, len(signerList))
 	for i, v := range signerList {
@@ -537,18 +483,6 @@ func (i *FlowIntegration) deployContract(conn protocol.Conn, args ...interface{}
 	return nil, err
 }
 
-const deployContractTemplate = `
-transaction(name: String, code: [UInt8]) {
-  prepare(signer: AuthAccount) {
-    if signer.contracts.get(name: name) == nil {
-      signer.contracts.add(name: name, code: code)
-    } else {
-      signer.contracts.update__experimental(name: name, code: code)
-    }
-  }
-}
-`
-
 func bytesToCadenceArray(b []byte) cadence.Array {
 	values := make([]cadence.Value, len(b))
 
@@ -571,32 +505,25 @@ func deployContractTransaction(address flow.Address, name string, code []byte) *
 		AddAuthorizer(address)
 }
 
-// getAccountKey returns the first account key and signer for the given address.
-func (i *FlowIntegration) getAccountKey(address flow.Address) (*flow.AccountKey, crypto.Signer, error) {
-	privateKey, ok := i.accounts[address]
-	if !ok {
-		return nil, nil, fmt.Errorf(
-			"cannot sign transaction: unknown account %s",
-			address,
-		)
-	}
-
-	account, err := i.flowClient.GetAccount(context.Background(), address)
+// getServicePrivateKey returns private key for service account
+func (i *FlowIntegration) getServicePrivateKey() (string, error) {
+	serviceAccount, err := i.project.EmulatorServiceAccount()
 	if err != nil {
-		return nil, nil, err
+		return "", err
 	}
 
-	if len(account.Keys) == 0 {
-		return nil, nil, fmt.Errorf(
-			"cannot sign transaction: account %s has no keys",
-			address.Hex(),
-		)
+	rawKey := serviceAccount.DefaultKey().ToConfig().Context["privateKey"]
+	return rawKey,nil
+}
+
+// getServiceAddress returns address for service account
+func (i *FlowIntegration) getServiceAddress() (flow.Address, error) {
+	serviceAccount, err := i.project.EmulatorServiceAccount()
+	if err != nil {
+		return flow.Address{}, err
 	}
 
-	accountKey := account.Keys[0]
-	signer := crypto.NewNaiveSigner(privateKey.PrivateKey, privateKey.HashAlgo)
-
-	return accountKey, signer, nil
+	return serviceAccount.Address(), nil
 }
 
 // getServiceKey returns the service account key and signer
@@ -716,110 +643,73 @@ func (i *FlowIntegration) sendTransactionHelper(
 }
 
 // createAccountHelper creates a new account and returns its address.
-func (i *FlowIntegration) createAccountHelper(conn protocol.Conn) (addr string, err error) {
-
-	signatureAlgorithm := "ECDSA_P256"
-	hashingAlgorithm := "SHA3_256"
-
-	// Get PrivateKey from emulator account
-	// serviceAccount, _ := i.project.EmulatorServiceAccount()
-	// key := serviceAccount.DefaultKey()
-
-	privateKey, err := i.sharedServices.Keys.Generate("", signatureAlgorithm)
-
+func (i *FlowIntegration) createAccountHelper(conn protocol.Conn) (address flow.Address, err error) {
+	serviceAccount, err := i.project.EmulatorServiceAccount()
 	if err != nil {
-		errorMessage := fmt.Sprintf("private key generation error: %#+v", err)
 		conn.ShowMessage(&protocol.ShowMessageParams{
 			Type:    protocol.Error,
-			Message: errorMessage,
+			Message: err.Error(),
 		})
-		// TODO: check how we will return empty address
-		return "", fmt.Errorf("%s", errorMessage)
+		return flow.Address{}, err
 	}
 
+	defaultKey := serviceAccount.DefaultKey()
+	signatureAlgorithm := defaultKey.SigAlgo().String()
+	hashAlgorithm := defaultKey.HashAlgo().String()
+	signer := serviceAccount.Name()
 
-	signer := "emulator-account"
-	keys := []string{privateKey.PublicKey().String()}
+	var _empty []string
 
-	tries := 5
-	var acc *flow.Account
-	for {
-		acc, err = i.sharedServices.Accounts.Create(signer, keys, signatureAlgorithm, hashingAlgorithm, []string{})
-		tries -= 1
-		if err == nil || tries <=0 {
-			break
-		}
-	}
-
-	if err != nil{
-		errorMessage := fmt.Sprintf("could not create account after multiple retries: %#+v", err)
+	newAccount, err := i.sharedServices.Accounts.Create(signer, _empty, signatureAlgorithm, hashAlgorithm, _empty)
+	if err != nil {
 		conn.ShowMessage(&protocol.ShowMessageParams{
 			Type:    protocol.Error,
-			Message: errorMessage,
+			Message: err.Error(),
 		})
-		// TODO: check how we will return empty address
-		return "", fmt.Errorf("%s", errorMessage)
+		return flow.Address{}, err
 	}
 
-	conn.LogMessage(&protocol.LogMessageParams{
-		Type:    protocol.Info,
-		Message: fmt.Sprintf("Created account with address: %s", acc.Address.Hex()),
-	})
+	return newAccount.Address, nil
+}
 
-	return acc.Address.Hex(), nil
+func (i *FlowIntegration) storeAccountHelper(conn protocol.Conn, address flow.Address) (newAccount ClientAccount, err error) {
 
-/*	accountKey := &flow.AccountKey{
-		PublicKey: i.config.ServiceAccountKey.PrivateKey.PublicKey(),
-		SigAlgo:   i.config.ServiceAccountKey.SigAlgo,
-		HashAlgo:  i.config.ServiceAccountKey.HashAlgo,
-		Weight:    flow.AccountKeyWeightThreshold,
-	}
-
-	tx := templates.CreateAccount([]*flow.AccountKey{accountKey}, nil, i.serviceAddress)
-
-	txID, err := i.sendTransactionHelper(conn, i.serviceAddress, tx)
+	serviceAccount, err := i.project.EmulatorServiceAccount()
 	if err != nil {
-		return addr, err
+		conn.ShowMessage(&protocol.ShowMessageParams{
+			Type:    protocol.Error,
+			Message: err.Error(),
+		})
+		return
 	}
 
-	// TODO: replace this for loop with a synchronous GetTransaction in SDK
-	// that handles waiting for it to be mined
-	var txResult *flow.TransactionResult
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
-	defer cancel()
-	for {
-		txResult, err = i.flowClient.GetTransactionResult(ctx, txID)
-		if err != nil {
-			return addr, err
-		}
-		if txResult.Status == flow.TransactionStatusFinalized ||
-			txResult.Status == flow.TransactionStatusSealed {
+	defaultKey := serviceAccount.DefaultKey()
+	serviceAddress := serviceAccount.Address().String()
+	privateKey := defaultKey.ToConfig().Context["privateKey"]
 
-			break
-		}
+	// Store new account
+	code := makeManagerCode(transactionAddAccount, serviceAddress)
+	accountAddress := fmt.Sprintf("Address:0x%v", address)
+	txArgs := []string{accountAddress}
+	_, txResult, err := i.sharedServices.Transactions.SendForAddressWithCode(code, serviceAddress, privateKey, txArgs, "")
+
+	if err != nil {
+		conn.ShowMessage(&protocol.ShowMessageParams{
+			Type:    protocol.Error,
+			Message: err.Error(),
+		})
+		return
 	}
 
-	for _, event := range txResult.Events {
-		if event.Type == flow.EventAccountCreated {
-			accountCreatedEvent := flow.AccountCreatedEvent(event)
-			addr = accountCreatedEvent.Address()
-			break
-		}
+	events := flowcli.EventsFromTransaction(txResult)
+	name := strings.ReplaceAll(events[0].Values["name"], `"`, "")
+
+	newAccount = ClientAccount{
+		Name:    name,
+		Address: address,
 	}
 
-	if addr == flow.EmptyAddress {
-		return addr, fmt.Errorf("failed to get new account address for tx %s", txID.Hex())
-	}
-
-	i.accounts[addr] = i.config.ServiceAccountKey
-
-	conn.LogMessage(&protocol.LogMessageParams{
-		Type:    protocol.Info,
-		Message: fmt.Sprintf("Created account with address: %s", addr.Hex()),
-	})
-
-	return addr, nil
-*/
+	return
 }
 
 func parseFileFromURI(uri string) string {
