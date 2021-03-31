@@ -22,6 +22,7 @@ package integration
 
 import (
 	"errors"
+	"github.com/onflow/flow-go-sdk"
 	"github.com/onflow/flow-go-sdk/crypto"
 )
 
@@ -31,10 +32,14 @@ type Config struct {
 	// The address where the emulator is running.
 	EmulatorAddr string
 
-	// The service account key information.
-	ServiceAccountKey AccountPrivateKey
-
+	// Current emulator state
 	emulatorState EmulatorState
+
+	// Active account
+	activeAccount ClientAccount
+
+	// path to flow.json
+	configPath	string
 }
 
 type AccountPrivateKey struct {
@@ -54,44 +59,33 @@ func configFromInitializationOptions(opts interface{}) (conf Config, err error) 
 		return Config{}, errors.New("invalid initialization options")
 	}
 
-	emulatorAddr, ok := optsMap["emulatorAddress"].(string)
-	if !ok {
-		return Config{}, errors.New("initialization options: missing emulatorAddress field")
-	}
-
-	servicePrivateKeyHex, ok := optsMap["servicePrivateKey"].(string)
-	if !ok {
-		return Config{}, errors.New("initialization options: missing servicePrivateKey field")
-	}
-
-	serviceKeySigAlgoStr, ok := optsMap["serviceKeySignatureAlgorithm"].(string)
-	if !ok {
-		return Config{}, errors.New("initialization options: missing serviceKeySignatureAlgorithm field")
-	}
-
-	serviceKeyHashAlgoStr, ok := optsMap["serviceKeyHashAlgorithm"].(string)
-	if !ok {
-		return Config{}, errors.New("initialization options: missing serviceKeyHashAlgorithm field")
-	}
-
-	serviceAccountKey := AccountPrivateKey{
-		SigAlgo:  crypto.StringToSignatureAlgorithm(serviceKeySigAlgoStr),
-		HashAlgo: crypto.StringToHashAlgorithm(serviceKeyHashAlgoStr),
-	}
-
-	serviceAccountKey.PrivateKey, err = crypto.DecodePrivateKeyHex(serviceAccountKey.SigAlgo, servicePrivateKeyHex)
-	if err != nil {
-		return
-	}
-
 	emulatorState, ok := optsMap["emulatorState"].(float64)
 	if !ok {
 		return Config{}, errors.New("initialization options: invalid emulator state")
 	}
-
-	conf.EmulatorAddr = emulatorAddr
-	conf.ServiceAccountKey = serviceAccountKey
 	conf.emulatorState = EmulatorState(emulatorState)
+
+
+	activeAccountName, ok := optsMap["activeAccountName"].(string)
+	if !ok {
+		return Config{}, errors.New("initialization options: invalid active account name")
+	}
+	activeAccountAddress, ok := optsMap["activeAccountAddress"].(string)
+	if !ok {
+		return Config{}, errors.New("initialization options: invalid active account address")
+	}
+
+	conf.activeAccount = ClientAccount{
+		Name:    activeAccountName,
+		Address: flow.HexToAddress(activeAccountAddress),
+	}
+
+	configPath, ok := optsMap["configPath"].(string)
+	if !ok || configPath == "" {
+		return Config{}, errors.New("initialization options: invalid config path")
+	}
+
+	conf.configPath = configPath
 
 	return
 }
