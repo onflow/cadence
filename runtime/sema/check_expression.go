@@ -188,7 +188,7 @@ func (checker *Checker) VisitIntegerExpression(expr *ast.IntegerExpression) ast.
 	// If the target type is `Never`, the checks below will be performed
 	// (as `Never` is the subtype of all types), but the checks are not valid
 
-	if IsSubType(checker.expectedType, NeverType) {
+	if IsSubType(expectedType, NeverType) {
 		return expectedType
 	}
 

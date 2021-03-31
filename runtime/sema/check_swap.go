@@ -30,8 +30,8 @@ func (checker *Checker) VisitSwapStatement(swap *ast.SwapStatement) ast.Repr {
 	//
 	// This is checked through the two `visitAssignmentValueType` calls.
 
-	leftType := swap.Left.Accept(checker).(Type)
-	rightType := swap.Right.Accept(checker).(Type)
+	leftType := checker.VisitExpression(swap.Left, nil)
+	rightType := checker.VisitExpression(swap.Right, nil)
 
 	checker.Elaboration.SwapStatementLeftTypes[swap] = leftType
 	checker.Elaboration.SwapStatementRightTypes[swap] = rightType
@@ -55,7 +55,10 @@ func (checker *Checker) VisitSwapStatement(swap *ast.SwapStatement) ast.Repr {
 
 		errorCountBefore := len(checker.errors)
 
-		checker.visitAssignmentValueType(swap.Left, swap.Right, rightType)
+		checker.visitAssignmentValueType(swap.Left)
+
+		// check value type is subtype of variable type
+		checker.validateTypeCompatibility(swap.Left, rightType, leftType)
 
 		errorCountAfter := len(checker.errors)
 		if errorCountAfter != errorCountBefore {
@@ -76,7 +79,10 @@ func (checker *Checker) VisitSwapStatement(swap *ast.SwapStatement) ast.Repr {
 		// duplicate errors
 
 		if checkRight {
-			checker.visitAssignmentValueType(swap.Right, swap.Left, leftType)
+			checker.visitAssignmentValueType(swap.Right)
+
+			// check value type is subtype of variable type
+			checker.validateTypeCompatibility(swap.Right, leftType, rightType)
 		}
 	}
 
@@ -89,4 +95,21 @@ func (checker *Checker) VisitSwapStatement(swap *ast.SwapStatement) ast.Repr {
 	}
 
 	return nil
+}
+
+func (checker *Checker) validateTypeCompatibility(expr ast.Expression, actualType Type, expectedType Type) {
+	if actualType.IsInvalidType() || expectedType.IsInvalidType() {
+		return
+	}
+
+	if !checker.checkTypeCompatibility(expr, actualType, expectedType) {
+
+		checker.report(
+			&TypeMismatchError{
+				ExpectedType: expectedType,
+				ActualType:   actualType,
+				Range:        ast.NewRangeFromPositioned(expr),
+			},
+		)
+	}
 }
