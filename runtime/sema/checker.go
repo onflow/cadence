@@ -2310,6 +2310,13 @@ func (checker *Checker) VisitExpression(expr ast.Expression, expectedType Type) 
 	// Cache the current contextually expected type, and set the `expectedType`
 	// as the new contextually expected type.
 	prevExpectedType := checker.expectedType
+
+	// If the expected type is invalid, treat it in the same manner as
+	// expected type is unknown.
+	if expectedType != nil && expectedType.IsInvalidType() {
+		expectedType = nil
+	}
+
 	checker.expectedType = expectedType
 
 	actualType := expr.Accept(checker).(Type)

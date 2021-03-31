@@ -44,11 +44,11 @@ func (checker *Checker) checkAssignment(
 	isSecondaryAssignment bool,
 ) (targetType, valueType Type) {
 
-	valueType = value.Accept(checker).(Type)
+	targetType = checker.visitAssignmentValueType(target)
 
-	targetType = checker.visitAssignmentValueType(target, value, valueType)
+	valueType = checker.VisitExpression(value, targetType)
 
-	// NOTE: `visitAssignmentValueType` checked compatibility between value and target types.
+	// NOTE: Visiting the `value` checks the compatibility between value and target types.
 	// Check for the *target* type, so that assignment using non-resource typed value (e.g. `nil`)
 	// is possible
 
@@ -146,8 +146,6 @@ func (checker *Checker) accessedSelfMember(expression ast.Expression) *Member {
 
 func (checker *Checker) visitAssignmentValueType(
 	targetExpression ast.Expression,
-	valueExpression ast.Expression,
-	valueType Type,
 ) (targetType Type) {
 
 	inAssignment := checker.inAssignment
@@ -171,13 +169,13 @@ func (checker *Checker) visitAssignmentValueType(
 
 	switch target := targetExpression.(type) {
 	case *ast.IdentifierExpression:
-		return checker.visitIdentifierExpressionAssignment(valueExpression, target, valueType)
+		return checker.visitIdentifierExpressionAssignment(target)
 
 	case *ast.IndexExpression:
-		return checker.visitIndexExpressionAssignment(valueExpression, target, valueType)
+		return checker.visitIndexExpressionAssignment(target)
 
 	case *ast.MemberExpression:
-		return checker.visitMemberExpressionAssignment(valueExpression, target, valueType)
+		return checker.visitMemberExpressionAssignment(target)
 
 	default:
 		panic(errors.NewUnreachableError())
@@ -185,9 +183,7 @@ func (checker *Checker) visitAssignmentValueType(
 }
 
 func (checker *Checker) visitIdentifierExpressionAssignment(
-	valueExpression ast.Expression,
 	target *ast.IdentifierExpression,
-	valueType Type,
 ) (targetType Type) {
 	identifier := target.Identifier.Identifier
 
@@ -207,27 +203,11 @@ func (checker *Checker) visitIdentifierExpressionAssignment(
 		)
 	}
 
-	// check value type is subtype of variable type
-	if !valueType.IsInvalidType() &&
-		!variable.Type.IsInvalidType() &&
-		!checker.checkTypeCompatibility(valueExpression, valueType, variable.Type) {
-
-		checker.report(
-			&TypeMismatchError{
-				ExpectedType: variable.Type,
-				ActualType:   valueType,
-				Range:        ast.NewRangeFromPositioned(valueExpression),
-			},
-		)
-	}
-
 	return variable.Type
 }
 
 func (checker *Checker) visitIndexExpressionAssignment(
-	valueExpression ast.Expression,
 	target *ast.IndexExpression,
-	valueType Type,
 ) (elementType Type) {
 
 	elementType = checker.visitIndexExpression(target, true)
@@ -236,26 +216,11 @@ func (checker *Checker) visitIndexExpressionAssignment(
 		return InvalidType
 	}
 
-	if !valueType.IsInvalidType() &&
-		!elementType.IsInvalidType() &&
-		!checker.checkTypeCompatibility(valueExpression, valueType, elementType) {
-
-		checker.report(
-			&TypeMismatchError{
-				ExpectedType: elementType,
-				ActualType:   valueType,
-				Range:        ast.NewRangeFromPositioned(valueExpression),
-			},
-		)
-	}
-
 	return elementType
 }
 
 func (checker *Checker) visitMemberExpressionAssignment(
-	valueExpression ast.Expression,
 	target *ast.MemberExpression,
-	valueType Type,
 ) (memberType Type) {
 
 	_, member, isOptional := checker.visitMember(target)
@@ -268,21 +233,6 @@ func (checker *Checker) visitMemberExpressionAssignment(
 		checker.report(
 			&UnsupportedOptionalChainingAssignmentError{
 				Range: ast.NewRangeFromPositioned(target),
-			},
-		)
-	}
-
-	// If the value type is valid, check that the value can be assigned to the member type
-
-	if !valueType.IsInvalidType() &&
-		!member.TypeAnnotation.Type.IsInvalidType() &&
-		!checker.checkTypeCompatibility(valueExpression, valueType, member.TypeAnnotation.Type) {
-
-		checker.report(
-			&TypeMismatchError{
-				ExpectedType: member.TypeAnnotation.Type,
-				ActualType:   valueType,
-				Range:        ast.NewRangeFromPositioned(valueExpression),
 			},
 		)
 	}
@@ -302,7 +252,7 @@ func (checker *Checker) visitMemberExpressionAssignment(
 		checker.report(
 			&AssignmentToConstantMemberError{
 				Name:  target.Identifier.Identifier,
-				Range: ast.NewRangeFromPositioned(valueExpression),
+				Range: ast.NewRangeFromPositioned(target.Identifier),
 			},
 		)
 	}

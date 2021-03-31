@@ -1092,6 +1092,10 @@ func TestCheckArrayMemberTypeInference(t *testing.T) {
 			//var x: Int8 = 6
 			var x: [Int8] = [1, 2, 3]
 			var y: [Int8]? = [1, 2, 3]
+
+			var z: Int8 = 7
+			z = 8
+
 			return x
 		}
 	`)
