@@ -25,24 +25,30 @@ import (
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/sema"
+	"github.com/onflow/flow-go-sdk"
 	"strings"
 
 	"github.com/onflow/cadence/languageserver/conversion"
 	"github.com/onflow/cadence/languageserver/protocol"
 )
 
-const(
+const (
 	// Codelens message prefixes
-	prefixOK = "💡"
+	prefixOK       = "💡"
 	prefixStarting = "⏲"
-	prefixOffline = "⚠️"
+	prefixOffline  = "⚠️"
+	prefixError    = "🚫"
 )
 
-
-func convertListToCadenceJSON (args []string) string {
+func convertListToCadenceJSON(args []string) string {
 	list := strings.Join(args, ",")
 	cadenceJSON := fmt.Sprintf("[%s]", list)
 	return strings.ReplaceAll(cadenceJSON, "\n", "")
+}
+
+func addressNotExist(address flow.Address) bool {
+	emptyAddress := flow.Address{0}
+	return address.String() == emptyAddress.String()
 }
 
 func (i *FlowIntegration) codeLenses(
@@ -80,7 +86,7 @@ func (i *FlowIntegration) showDeployContractAction(
 	program *ast.Program,
 	version float64,
 	checker *sema.Checker,
-) 	[]*protocol.CodeLens {
+) []*protocol.CodeLens {
 
 	i.updateEntryPointInfoIfNeeded(uri, version, checker)
 	entryPointInfo := i.entryPointInfo[uri]
@@ -104,29 +110,50 @@ func (i *FlowIntegration) showDeployContractAction(
 	signersList := entryPointInfo.pragmaSignersStrings[:]
 	// TODO: resolve check for amount of signers equals to provided by pragma
 	if len(signersList) == 0 {
-		activeAccount := [][]string{[]string{"active account"}}
+		activeAccount := [][]string{[]string{"no-signers"}}
 		signersList = append(signersList, activeAccount...)
 	}
 
 	for _, signers := range signersList {
-		title := fmt.Sprintf(
-			"%s Deploy contract %s to %s",
-			prefixOK,
-			name,
-			signers[0],
-		)
-
-		codeLens := &protocol.CodeLens{
-			Range: codelensRange,
-			Command: &protocol.Command{
-				Title:     title,
-				Command:   CommandDeployContract,
-				Arguments: []interface{}{uri, name, signers},
-			},
+		signer := signers[0]
+		if signer == "no-signers" {
+			signer = i.activeAccount.Name
 		}
+
+		var codeLens *protocol.CodeLens
+		var title string
+		resolvedAddress, _ := i.getAccountAddress(signer)
+		if addressNotExist(resolvedAddress) {
+			title = fmt.Sprintf("%s Specified account %s does not exist",
+				prefixError,
+				signer,
+			)
+			codeLens = &protocol.CodeLens{
+				Range: codelensRange,
+				Command: &protocol.Command{
+					Title: title,
+				},
+			}
+		} else {
+			title = fmt.Sprintf(
+				"%s Deploy contract %s to %s",
+				prefixOK,
+				name,
+				signer,
+			)
+
+			codeLens = &protocol.CodeLens{
+				Range: codelensRange,
+				Command: &protocol.Command{
+					Title:     title,
+					Command:   CommandDeployContract,
+					Arguments: []interface{}{uri, name, resolvedAddress},
+				},
+			}
+		}
+
 		codeLenses = append(codeLenses, codeLens)
 	}
-
 
 	return codeLenses
 }
@@ -139,7 +166,7 @@ func (i *FlowIntegration) showDeployContractInterfaceAction(
 	program *ast.Program,
 	version float64,
 	checker *sema.Checker,
-) 	[]*protocol.CodeLens {
+) []*protocol.CodeLens {
 
 	i.updateEntryPointInfoIfNeeded(uri, version, checker)
 	entryPointInfo := i.entryPointInfo[uri]
@@ -163,29 +190,50 @@ func (i *FlowIntegration) showDeployContractInterfaceAction(
 	signersList := entryPointInfo.pragmaSignersStrings[:]
 	// TODO: resolve check for amount of signers equals to provided by pragma
 	if len(signersList) == 0 {
-		activeAccount := [][]string{[]string{"active account"}}
+		activeAccount := [][]string{[]string{"no-signers"}}
 		signersList = append(signersList, activeAccount...)
 	}
 
 	for _, signers := range signersList {
-		title := fmt.Sprintf(
-			"%s Deploy contract interface %s to %s",
-			prefixOK,
-			name,
-			signers[0],
-		)
-
-		codeLens := &protocol.CodeLens{
-			Range: codelensRange,
-			Command: &protocol.Command{
-				Title:     title,
-				Command:   CommandDeployContract,
-				Arguments: []interface{}{uri, name, signers},
-			},
+		signer := signers[0]
+		if signer == "no-signers" {
+			signer = i.activeAccount.Name
 		}
+
+		var codeLens *protocol.CodeLens
+		var title string
+		resolvedAddress, _ := i.getAccountAddress(signer)
+		if addressNotExist(resolvedAddress) {
+			title = fmt.Sprintf("%s Specified account %s does not exist",
+				prefixError,
+				signer,
+			)
+			codeLens = &protocol.CodeLens{
+				Range: codelensRange,
+				Command: &protocol.Command{
+					Title: title,
+				},
+			}
+		} else {
+			title = fmt.Sprintf(
+				"%s Deploy contract interface %s to %s",
+				prefixOK,
+				name,
+				signer,
+			)
+
+			codeLens = &protocol.CodeLens{
+				Range: codelensRange,
+				Command: &protocol.Command{
+					Title:     title,
+					Command:   CommandDeployContract,
+					Arguments: []interface{}{uri, name, resolvedAddress},
+				},
+			}
+		}
+
 		codeLenses = append(codeLenses, codeLens)
 	}
-
 
 	return codeLenses
 }
@@ -213,7 +261,6 @@ func (i *FlowIntegration) entryPointActions(
 	position := *entryPointInfo.startPos
 	codelensRange := conversion.ASTToProtocolRange(position, position)
 	var codeLenses []*protocol.CodeLens
-
 
 	// If emulator is not up, we need to show single codelens proposing to start emulator
 	if i.emulatorState == EmulatorOffline {
@@ -249,23 +296,22 @@ func (i *FlowIntegration) entryPointActions(
 		return codeLenses, nil
 	}
 
-
 	argumentLists := entryPointInfo.pragmaArguments[:]
 
 	// If there are no parameters and no pragma argument declarations,
 	// offer execution using no arguments
-	if len(entryPointInfo.parameters) == 0{
+	if len(entryPointInfo.parameters) == 0 {
 		argumentLists = append(argumentLists, []cadence.Value{})
 	}
 
 	signersList := entryPointInfo.pragmaSignersStrings[:]
 	// TODO: resolve check for amount of signers equals to provided by pragma
 	if len(signersList) == 0 {
-		activeAccount := [][]string{[]string{"active account"}}
+		activeAccount := [][]string{[]string{"no-signers"}}
 		signersList = append(signersList, activeAccount...)
 	}
 
-	for i, argumentList := range argumentLists {
+	for index, argumentList := range argumentLists {
 		var title string
 
 		var encodedArgumentList []string
@@ -285,7 +331,7 @@ func (i *FlowIntegration) entryPointActions(
 				title = fmt.Sprintf(
 					"%s Execute script with %s",
 					prefixOK,
-					entryPointInfo.pragmaArgumentStrings[i],
+					entryPointInfo.pragmaArgumentStrings[index],
 				)
 			} else {
 				title = fmt.Sprintf(
@@ -308,30 +354,62 @@ func (i *FlowIntegration) entryPointActions(
 
 		case entryPointKindTransaction:
 			for _, signers := range signersList {
-				if len(argumentList) > 0 {
-					title = fmt.Sprintf(
-						"%s Send with %s signed by %s",
-						prefixOK,
-						entryPointInfo.pragmaArgumentStrings[i],
-						common.EnumerateWords(signers, "and"),
-					)
-				} else {
-					title = fmt.Sprintf(
-						"%s Send signed by %s",
-						prefixOK,
-						common.EnumerateWords(signers, "and"),
-					)
+				if signers[0] == "no-signers" {
+					signers = []string{i.activeAccount.Name}
 				}
 
-				argsJSON := convertListToCadenceJSON(encodedArgumentList)
+				var emptyAccounts []string
+				var resolvedAccounts []flow.Address
+				for _, signer := range signers {
+					resolvedAddress, _ := i.getAccountAddress(signer)
+					resolvedAccounts = append(resolvedAccounts, resolvedAddress)
+					if addressNotExist(resolvedAddress) {
+						emptyAccounts = append(emptyAccounts, signer)
+					}
+				}
+				var codeLens *protocol.CodeLens
+				if len(emptyAccounts) > 0 {
+					accountsNumeric := "account"
+					if len(emptyAccounts) > 1 {
+						accountsNumeric = "accounts"
+					}
+					title = fmt.Sprintf("%s Specified %s %s does not exist",
+						prefixError,
+						accountsNumeric,
+						common.EnumerateWords(emptyAccounts, "and"),
+					)
+					codeLens = &protocol.CodeLens{
+						Range: codelensRange,
+						Command: &protocol.Command{
+							Title: title,
+						},
+					}
+				} else {
+					if len(argumentList) > 0 {
+						title = fmt.Sprintf(
+							"%s Send with %s signed by %s",
+							prefixOK,
+							entryPointInfo.pragmaArgumentStrings[index],
+							common.EnumerateWords(signers, "and"),
+						)
+					} else {
+						title = fmt.Sprintf(
+							"%s Send signed by %s",
+							prefixOK,
+							common.EnumerateWords(signers, "and"),
+						)
+					}
 
-				codeLens := &protocol.CodeLens{
-					Range: codelensRange,
-					Command: &protocol.Command{
-						Title:     title,
-						Command:   CommandSendTransaction,
-						Arguments: []interface{}{uri, argsJSON, signers},
-					},
+					argsJSON := convertListToCadenceJSON(encodedArgumentList)
+
+					codeLens = &protocol.CodeLens{
+						Range: codelensRange,
+						Command: &protocol.Command{
+							Title:     title,
+							Command:   CommandSendTransaction,
+							Arguments: []interface{}{uri, argsJSON, resolvedAccounts},
+						},
+					}
 				}
 				codeLenses = append(codeLenses, codeLens)
 			}
