@@ -82,3 +82,22 @@ func (i *FlowIntegration) getAccount(address common.Address) (*flow.Account, err
 
 	return account, nil
 }
+
+const scriptGetAddress = `
+import AccountManager from 0xSERVICE_ACCOUNT_ADDRESS
+
+pub fun main(name: String): Address {
+    return AccountManager.getAddress(name)!
+}
+`
+
+func (i *FlowIntegration) getAccountAddress (name string) (flow.Address, error) {
+	serviceAccount, err := i.project.EmulatorServiceAccount()
+	code := makeManagerCode(scriptGetAddress, serviceAccount.Address().String())
+	args := []string{fmt.Sprintf("String:%s", name)}
+	result,err := i.sharedServices.Scripts.ExecuteWithCode(code,args, "")
+	if err != nil {
+		return flow.Address{}, err
+	}
+	return flow.HexToAddress(result.String()),nil
+}
