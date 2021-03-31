@@ -327,7 +327,7 @@ func TestRuntimeStorageWriteCachedIsDeterministic(t *testing.T) {
 		previousWrites := make([]testWrite, len(writes))
 		copy(previousWrites, writes)
 
-		// verify for 10 times and check the writes are always determinsitic
+		// verify for 10 times and check the writes are always deterministic
 		for i := 0; i < 10; i++ {
 			// test that writing again should produce the same result
 			writes = nil
