@@ -329,7 +329,9 @@ func (interpreter *Interpreter) VisitArrayExpression(expression *ast.ArrayExpres
 	copies := make([]Value, len(values))
 	for i, argument := range values {
 		argumentType := argumentTypes[i]
-		copies[i] = interpreter.copyAndConvert(argument, argumentType, elementType)
+		argumentExpression := expression.Values[i]
+		getLocationRange := locationRangeGetter(interpreter.Location, argumentExpression)
+		copies[i] = interpreter.copyAndConvert(argument, argumentType, elementType, getLocationRange)
 	}
 
 	return NewArrayValueUnownedNonCopying(copies...)
@@ -344,17 +346,20 @@ func (interpreter *Interpreter) VisitDictionaryExpression(expression *ast.Dictio
 	dictionary := NewDictionaryValueUnownedNonCopying()
 	for i, dictionaryEntryValues := range values {
 		entryType := entryTypes[i]
+		entry := expression.Entries[i]
 
 		key := interpreter.copyAndConvert(
 			dictionaryEntryValues.Key,
 			entryType.KeyType,
 			dictionaryType.KeyType,
+			locationRangeGetter(interpreter.Location, entry.Key),
 		)
 
 		value := interpreter.copyAndConvert(
 			dictionaryEntryValues.Value,
 			entryType.ValueType,
 			dictionaryType.ValueType,
+			locationRangeGetter(interpreter.Location, entry.Value),
 		)
 
 		// TODO: panic for duplicate keys?
@@ -473,6 +478,7 @@ func (interpreter *Interpreter) VisitInvocationExpression(invocationExpression *
 	resultValue := interpreter.invokeFunctionValue(
 		function,
 		arguments,
+		argumentExpressions,
 		argumentTypes,
 		parameterTypes,
 		typeParameterTypes,

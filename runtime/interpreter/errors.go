@@ -407,3 +407,17 @@ func (e InvocationArgumentTypeError) Error() string {
 		e.ParameterType.QualifiedString(),
 	)
 }
+
+// ValueTransferTypeError
+
+type ValueTransferTypeError struct {
+	TargetType sema.Type
+	LocationRange
+}
+
+func (e ValueTransferTypeError) Error() string {
+	return fmt.Sprintf(
+		"invalid transfer of value: expected %s",
+		e.TargetType.QualifiedString(),
+	)
+}
