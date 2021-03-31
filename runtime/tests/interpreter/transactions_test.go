@@ -291,7 +291,7 @@ func TestInterpretTransactions(t *testing.T) {
 
 		values := inter.Globals["values"].GetValue()
 
-		require.IsType(t, values, &interpreter.ArrayValue{})
+		require.IsType(t, &interpreter.ArrayValue{}, values)
 
 		assert.Equal(t,
 			[]interpreter.Value{
