@@ -73,8 +73,6 @@ func (i *FlowIntegration) updateEntryPointInfoIfNeeded(
 		startPos = &contractDeclaration.StartPos
 		kind = entryPointKindContract
 		docString = contractDeclaration.DocString
-		// TODO: We need this thing...
-		// contractType := checker.Elaboration.InterfaceDeclarationTypes[contractDeclaration]
 	} else if contractInterfaceDeclaration != nil {
 		startPos = &contractInterfaceDeclaration.StartPos
 		kind = entryPointKindContract
