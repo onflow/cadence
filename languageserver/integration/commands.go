@@ -718,6 +718,16 @@ func (i *FlowIntegration) storeAccountHelper(conn protocol.Conn, address flow.Ad
 	return
 }
 
+func (i *FlowIntegration) isContractDeployed(address string, name string) (bool,error) {
+	account, err := i.gateway.GetAccount(flow.HexToAddress(address))
+
+	if err != nil {
+		return false, err
+	}
+
+	return account.Contracts[name] != nil, nil
+}
+
 func parseFileFromURI(uri string) string {
 	u, err := url.Parse(uri)
 	if err != nil {
