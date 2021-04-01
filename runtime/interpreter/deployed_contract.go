@@ -100,3 +100,13 @@ func (v DeployedContractValue) GetMember(_ *Interpreter, _ func() LocationRange,
 func (DeployedContractValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
 	panic(errors.NewUnreachableError())
 }
+
+func (v DeployedContractValue) ConformsToDynamicType(dynamicType DynamicType) bool {
+	_, ok := dynamicType.(DeployedContractDynamicType)
+	return ok
+}
+
+func (v DeployedContractValue) conformsToSemaType(semaType sema.Type) bool {
+	// No need to check deep equivalency, since these are not importable.
+	return sema.DeployedContractType.Equal(semaType)
+}
