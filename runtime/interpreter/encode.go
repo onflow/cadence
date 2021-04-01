@@ -31,6 +31,8 @@ import (
 	"github.com/onflow/cadence/runtime/common"
 )
 
+type cborArray = []interface{}
+
 type cborMap = map[uint64]interface{}
 
 // Cadence needs to encode different kinds of objects in CBOR, for instance,
@@ -667,7 +669,6 @@ const (
 const dictionaryKeyPathPrefix = "k"
 const dictionaryValuePathPrefix = "v"
 
-// TODO: optimize: use CBOR map, but unclear how to preserve ordering
 func (e *Encoder) prepareDictionaryValue(
 	v *DictionaryValue,
 	path []string,
@@ -683,7 +684,8 @@ func (e *Encoder) prepareDictionaryValue(
 		return nil, err
 	}
 
-	entries := make(map[string]interface{}, v.Entries.Len())
+	// Use CBOR array for entry value to preserve ordering and improve speed.
+	entries := make([]interface{}, 0, v.Entries.Len())
 
 	// Deferring the encoding of values is only supported if all
 	// values are resources: resource typed dictionaries are moved
@@ -755,13 +757,13 @@ func (e *Encoder) prepareDictionaryValue(
 			if err != nil {
 				return nil, err
 			}
-			entries[key] = prepared
+			entries = append(entries, prepared)
 		}
 	}
 
 	return cbor.Tag{
 		Number: cborTagDictionaryValue,
-		Content: cborMap{
+		Content: cborArray{
 			encodedDictionaryValueKeysFieldKey:    keys,
 			encodedDictionaryValueEntriesFieldKey: entries,
 		},
