@@ -304,7 +304,7 @@ func (d *DecoderV4) decodeArray(v []interface{}, path []string) (*ArrayValue, er
 }
 
 func (d *DecoderV4) decodeDictionary(v interface{}, path []string) (*DictionaryValue, error) {
-	encoded, ok := v.([]interface{})
+	encoded, ok := v.(cborArray)
 	if !ok {
 		return nil, fmt.Errorf(
 			"invalid dictionary encoding (@ %s): %T",
@@ -313,8 +313,17 @@ func (d *DecoderV4) decodeDictionary(v interface{}, path []string) (*DictionaryV
 		)
 	}
 
+	if len(encoded) != encodedDictionaryValueLength {
+		return nil, fmt.Errorf(
+			"invalid dictionary encoding (@ %s): invalid size: expected %d, got %d",
+			strings.Join(path, "."),
+			encodedDictionaryValueLength,
+			len(encoded),
+		)
+	}
+
 	keysField := encoded[encodedDictionaryValueKeysFieldKey]
-	encodedKeys, ok := keysField.([]interface{})
+	encodedKeys, ok := keysField.(cborArray)
 	if !ok {
 		return nil, fmt.Errorf(
 			"invalid dictionary keys encoding (@ %s): %T",
@@ -334,7 +343,7 @@ func (d *DecoderV4) decodeDictionary(v interface{}, path []string) (*DictionaryV
 	}
 
 	entriesField := encoded[encodedDictionaryValueEntriesFieldKey]
-	encodedEntries, ok := entriesField.([]interface{})
+	encodedEntries, ok := entriesField.(cborArray)
 	if !ok {
 		return nil, fmt.Errorf(
 			"invalid dictionary entries encoding (@ %s): %T",
