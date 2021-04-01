@@ -73,7 +73,14 @@ func testEncodeDecode(t *testing.T, test encodeDecodeTest) {
 		version = test.decodeVersion
 	}
 
-	decoded, err := DecodeValue(encoded, &testOwner, nil, version, nil)
+	var decoded Value
+	var err error
+	if version <= 3 {
+		decoded, err = DecodeValueV3(encoded, &testOwner, nil, version, nil)
+	} else {
+		decoded, err = DecodeValue(encoded, &testOwner, nil, version, nil)
+	}
+
 	if test.invalid {
 		require.Error(t, err)
 	} else {
@@ -96,6 +103,37 @@ func testEncodeDecode(t *testing.T, test encodeDecodeTest) {
 			require.Empty(t, deferrals.Values)
 			require.Empty(t, deferrals.Moves)
 		}
+	}
+}
+
+func testEncodeDecodeOldFormat(t *testing.T, test encodeDecodeTest, oldFormatVersion uint16, oldFormatEncoded []byte) {
+
+	if oldFormatVersion > 3 {
+		require.FailNow(t, "oldFormatVersion must be <= 3 to test encode/decode backwards compatibility")
+		return
+	}
+
+	test.value.SetOwner(&testOwner)
+
+	// Decode oldFormatEncoded and compare decoded value with test.value or test.decodedValue
+	decoded, err := DecodeValueV3(oldFormatEncoded, &testOwner, nil, oldFormatVersion, nil)
+	require.NoError(t, err)
+
+	if !test.deferred || (test.deferred && test.decodedValue != nil) {
+		expectedValue := test.value
+		if test.decodedValue != nil {
+			test.decodedValue.SetOwner(&testOwner)
+			expectedValue = test.decodedValue
+		}
+		utils.AssertEqualWithDiff(t, expectedValue, decoded)
+	}
+
+	// Encode decoded value to new format and compare data to test.encoded
+	encoded, _, err := EncodeValue(decoded, nil, test.deferred, nil)
+	require.NoError(t, err)
+
+	if test.encoded != nil {
+		utils.AssertEqualWithDiff(t, test.encoded, encoded)
 	}
 }
 
@@ -247,24 +285,46 @@ func TestEncodeDecodeDictionary(t *testing.T) {
 		expected.modified = false
 		expected.Keys.modified = false
 
+		encoded := []byte{
+			// tag
+			0xd8, cborTagDictionaryValue,
+			// array, 2 items follow
+			0x82,
+			// array, 0 items follow
+			0x80,
+			// array, 0 items follow
+			0x80,
+		}
+
+		version3Encoded := []byte{
+			// tag
+			0xd8, cborTagDictionaryValue,
+			// map, 2 pairs of items follow
+			0xa2,
+			// key 0
+			0x00,
+			// array, 0 items follow
+			0x80,
+			// key 1
+			0x01,
+			// map, 0 pairs of items follow
+			0xa0,
+		}
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
-				value: expected,
-				encoded: []byte{
-					// tag
-					0xd8, cborTagDictionaryValue,
-					// map, 2 pairs of items follow
-					0xa2,
-					// key 0
-					0x00,
-					// array, 0 items follow
-					0x80,
-					// key 1
-					0x01,
-					// map, 0 pairs of items follow
-					0xa0,
-				},
+				value:   expected,
+				encoded: encoded,
 			},
+		)
+
+		testEncodeDecodeOldFormat(t,
+			encodeDecodeTest{
+				value:   expected,
+				encoded: encoded,
+			},
+			3,
+			version3Encoded,
 		)
 	})
 
@@ -293,54 +353,96 @@ func TestEncodeDecodeDictionary(t *testing.T) {
 		key3.modified = false
 		value3.modified = false
 
+		encoded := []byte{
+			// tag
+			0xd8, cborTagDictionaryValue,
+			// array, 2 items follow
+			0x82,
+
+			// array, 3 items follow
+			0x83,
+			// UTF-8 string, length 4
+			0x64,
+			// t, e, s, t
+			0x74, 0x65, 0x73, 0x74,
+			// true
+			0xf5,
+			// UTF-8 string, length 3
+			0x63,
+			// f, o, o
+			0x66, 0x6f, 0x6f,
+
+			// array, 3 items follow
+			0x83,
+			// array, 0 items follow
+			0x80,
+			// false
+			0xf4,
+			// UTF-8 string, length 3
+			0x63,
+			// b, a, r
+			0x62, 0x61, 0x72,
+		}
+
+		version3Encoded := []byte{
+			// tag
+			0xd8, cborTagDictionaryValue,
+			// map, 2 pairs of items follow
+			0xa2,
+			// key 0
+			0x0,
+			// array, 3 items follow
+			0x83,
+			// UTF-8 string, length 4
+			0x64,
+			// t, e, s, t
+			0x74, 0x65, 0x73, 0x74,
+			// true
+			0xf5,
+			// UTF-8 string, length 3
+			0x63,
+			// f, o, o
+			0x66, 0x6f, 0x6f,
+			// key 1
+			0x1,
+			// map, 3 pairs of items follow
+			0xa3,
+			// UTF-8 string, length 3
+			0x63,
+			// f, o, o
+			0x66, 0x6f, 0x6f,
+			// UTF-8 string, length 3
+			0x63,
+			// b, a, r
+			0x62, 0x61, 0x72,
+			// UTF-8 string, length 4
+			0x64,
+			// t, e, s, t
+			0x74, 0x65, 0x73, 0x74,
+			// array, 0 items follow
+			0x80,
+			// UTF-8 string, length 4
+			0x64,
+			// t, r, u, e
+			0x74, 0x72, 0x75, 0x65,
+			// false
+			0xf4,
+		}
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
-				value: expected,
-				encoded: []byte{
-					// tag
-					0xd8, cborTagDictionaryValue,
-					// map, 2 pairs of items follow
-					0xa2,
-					// key 0
-					0x0,
-					// array, 3 items follow
-					0x83,
-					// UTF-8 string, length 4
-					0x64,
-					// t, e, s, t
-					0x74, 0x65, 0x73, 0x74,
-					// true
-					0xf5,
-					// UTF-8 string, length 3
-					0x63,
-					// f, o, o
-					0x66, 0x6f, 0x6f,
-					// key 1
-					0x1,
-					// map, 3 pairs of items follow
-					0xa3,
-					// UTF-8 string, length 3
-					0x63,
-					// f, o, o
-					0x66, 0x6f, 0x6f,
-					// UTF-8 string, length 3
-					0x63,
-					// b, a, r
-					0x62, 0x61, 0x72,
-					// UTF-8 string, length 4
-					0x64,
-					// t, e, s, t
-					0x74, 0x65, 0x73, 0x74,
-					// array, 0 items follow
-					0x80,
-					// UTF-8 string, length 4
-					0x64,
-					// t, r, u, e
-					0x74, 0x72, 0x75, 0x65,
-					// false
-					0xf4,
-				},
+				value:   expected,
+				encoded: encoded,
 			},
+		)
+
+		testEncodeDecodeOldFormat(t,
+			encodeDecodeTest{
+				value:   expected,
+				encoded: encoded,
+			},
+			3,
+			version3Encoded,
 		)
 	})
 
@@ -4084,50 +4186,85 @@ func TestEncodeDecodeDictionaryDeferred(t *testing.T) {
 		deferredKeys.Set("test", struct{}{})
 		deferredKeys.Set("true", struct{}{})
 
-		testEncodeDecode(t,
-			encodeDecodeTest{
-				deferred: true,
-				value:    expected,
-				encoded: []byte{
-					// tag
-					0xd8, cborTagDictionaryValue,
-					// map, 2 pairs of items follow
-					0xa2,
-					// key 0
-					0x0,
-					// array, 2 items follow
-					0x82,
-					// UTF-8 string, length 4
-					0x64,
-					// t, e, s, t
-					0x74, 0x65, 0x73, 0x74,
-					// true
-					0xf5,
-					// key 1
-					0x1,
-					// map, 0 pairs of items follow
-					0xa0,
+		deferrals := &EncodingDeferrals{
+			Values: []EncodingDeferralValue{
+				{
+					Key:   "v\x1ftest",
+					Value: value1,
 				},
-				deferrals: &EncodingDeferrals{
-					Values: []EncodingDeferralValue{
-						{
-							Key:   "v\x1ftest",
-							Value: value1,
-						},
-						{
-							Key:   "v\x1ftrue",
-							Value: value2,
-						},
-					},
-				},
-				decodedValue: &DictionaryValue{
-					Keys:                   expected.Keys,
-					Entries:                NewStringValueOrderedMap(),
-					DeferredOwner:          &testOwner,
-					DeferredKeys:           deferredKeys,
-					DeferredStorageKeyBase: "v",
+				{
+					Key:   "v\x1ftrue",
+					Value: value2,
 				},
 			},
+		}
+
+		decodedValue := &DictionaryValue{
+			Keys:                   expected.Keys,
+			Entries:                NewStringValueOrderedMap(),
+			DeferredOwner:          &testOwner,
+			DeferredKeys:           deferredKeys,
+			DeferredStorageKeyBase: "v",
+		}
+
+		encoded := []byte{
+			// tag
+			0xd8, cborTagDictionaryValue,
+			// array, 2 items follow
+			0x82,
+			// array, 2 items follow
+			0x82,
+			// UTF-8 string, length 4
+			0x64,
+			// t, e, s, t
+			0x74, 0x65, 0x73, 0x74,
+			// true
+			0xf5,
+			// array, 0 items follow
+			0x80,
+		}
+
+		version3Encoded := []byte{
+			// tag
+			0xd8, cborTagDictionaryValue,
+			// map, 2 pairs of items follow
+			0xa2,
+			// key 0
+			0x0,
+			// array, 2 items follow
+			0x82,
+			// UTF-8 string, length 4
+			0x64,
+			// t, e, s, t
+			0x74, 0x65, 0x73, 0x74,
+			// true
+			0xf5,
+			// key 1
+			0x1,
+			// map, 0 pairs of items follow
+			0xa0,
+		}
+
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				deferred:     true,
+				value:        expected,
+				encoded:      encoded,
+				deferrals:    deferrals,
+				decodedValue: decodedValue,
+			},
+		)
+
+		testEncodeDecodeOldFormat(t,
+			encodeDecodeTest{
+				deferred:     true,
+				value:        expected,
+				encoded:      encoded,
+				deferrals:    deferrals,
+				decodedValue: decodedValue,
+			},
+			3,
+			version3Encoded,
 		)
 	})
 
@@ -4148,46 +4285,83 @@ func TestEncodeDecodeDictionaryDeferred(t *testing.T) {
 		expected.modified = false
 		expected.Keys.modified = false
 
+		deferrals := &EncodingDeferrals{}
+
+		encoded := []byte{
+			// tag
+			0xd8, cborTagDictionaryValue,
+			// array, 2 items follow
+			0x82,
+			// array, 2 items follow
+			0x82,
+			// UTF-8 string, length 4
+			0x64,
+			// t, e, s, t
+			0x74, 0x65, 0x73, 0x74,
+			// true
+			0xf5,
+			// array, 2 items follow
+			0x82,
+			// UTF-8 string, length 3
+			0x63,
+			// x, y, z
+			0x78, 0x79, 0x7a,
+			// false
+			0xf4,
+		}
+
+		version3Encoded := []byte{
+			// tag
+			0xd8, cborTagDictionaryValue,
+			// map, 2 pairs of items follow
+			0xa2,
+			// key 0
+			0x0,
+			// array, 2 items follow
+			0x82,
+			// UTF-8 string, length 4
+			0x64,
+			// t, e, s, t
+			0x74, 0x65, 0x73, 0x74,
+			// true
+			0xf5,
+			// key 1
+			0x1,
+			// map, 2 pairs of items follow
+			0xa2,
+			// UTF-8 string, length 4
+			0x64,
+			// t, e, s, t
+			0x74, 0x65, 0x73, 0x74,
+			// UTF-8 string, length 3
+			0x63,
+			// x, y, z
+			0x78, 0x79, 0x7a,
+			// UTF-8 string, length 4
+			0x64,
+			// t, r, u, e
+			0x74, 0x72, 0x75, 0x65,
+			// false
+			0xf4,
+		}
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
-				deferred: true,
-				value:    expected,
-				encoded: []byte{
-					// tag
-					0xd8, cborTagDictionaryValue,
-					// map, 2 pairs of items follow
-					0xa2,
-					// key 0
-					0x0,
-					// array, 2 items follow
-					0x82,
-					// UTF-8 string, length 4
-					0x64,
-					// t, e, s, t
-					0x74, 0x65, 0x73, 0x74,
-					// true
-					0xf5,
-					// key 1
-					0x1,
-					// map, 2 pairs of items follow
-					0xa2,
-					// UTF-8 string, length 4
-					0x64,
-					// t, e, s, t
-					0x74, 0x65, 0x73, 0x74,
-					// UTF-8 string, length 3
-					0x63,
-					// x, y, z
-					0x78, 0x79, 0x7a,
-					// UTF-8 string, length 4
-					0x64,
-					// t, r, u, e
-					0x74, 0x72, 0x75, 0x65,
-					// false
-					0xf4,
-				},
-				deferrals: &EncodingDeferrals{},
+				deferred:  true,
+				value:     expected,
+				deferrals: deferrals,
+				encoded:   encoded,
 			},
+		)
+		testEncodeDecodeOldFormat(t,
+			encodeDecodeTest{
+				deferred:  true,
+				value:     expected,
+				deferrals: deferrals,
+				encoded:   encoded,
+			},
+			3,
+			version3Encoded,
 		)
 	})
 }
