@@ -664,6 +664,12 @@ func (e *Encoder) prepareArray(
 const (
 	encodedDictionaryValueKeysFieldKey    uint64 = 0
 	encodedDictionaryValueEntriesFieldKey uint64 = 1
+
+	// !!! *WARNING* !!!
+	//
+	// encodedDictionaryValueLength MUST be updated when new element is added.
+	// It is used to verify encoded dictionaries length during decoding.
+	encodedDictionaryValueLength int = 2
 )
 
 const dictionaryKeyPathPrefix = "k"
@@ -684,9 +690,6 @@ func (e *Encoder) prepareDictionaryValue(
 		return nil, err
 	}
 
-	// Use CBOR array for entry value to preserve ordering and improve speed.
-	entries := make([]interface{}, 0, v.Entries.Len())
-
 	// Deferring the encoding of values is only supported if all
 	// values are resources: resource typed dictionaries are moved
 
@@ -705,7 +708,18 @@ func (e *Encoder) prepareDictionaryValue(
 		}
 	}
 
-	for _, keyValue := range v.Keys.Values {
+	// entries is empty if encoding of values is deferred,
+	// otherwise entries size is the same as keys size.
+	entriesLength := len(v.Keys.Values)
+	if deferred {
+		entriesLength = 0
+	}
+
+	// entries is a CBOR array (not CBOR map) to improve speed and
+	// preserve ordering.
+	entries := make(cborArray, entriesLength)
+
+	for i, keyValue := range v.Keys.Values {
 		key := dictionaryKey(keyValue)
 		entryValue, _ := v.Entries.Get(key)
 		valuePath := append(path[:], dictionaryValuePathPrefix, key)
@@ -757,7 +771,7 @@ func (e *Encoder) prepareDictionaryValue(
 			if err != nil {
 				return nil, err
 			}
-			entries = append(entries, prepared)
+			entries[i] = prepared
 		}
 	}
 
