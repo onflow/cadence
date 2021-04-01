@@ -288,14 +288,14 @@ Addresses have multiple built-in functions you can use.
   someAddress.toString()  // is "0x436164656E636521"
   ```
 
-- `cadence•fun toBigEndianBytes(): [UInt8]`
+- `cadence•fun toBytes(): [UInt8]`
 
   Returns the byte array representation (`[UInt8]`) of the address.
 
   ```cadence
   let someAddress: Address = 0x436164656E636521
 
-  someAddress.toString()  // is `[67, 97, 100, 101, 110, 99, 101, 33]`
+  someAddress.toBytes()  // is `[67, 97, 100, 101, 110, 99, 101, 33]`
   ```
 
 ## AnyStruct and AnyResource
@@ -1025,6 +1025,25 @@ It is invalid to use one of these functions on a fixed-sized array.
   numbers.append("SneakyString")
   ```
 
+- `cadence•fun appendAll(_ array: T): Void`
+
+  Adds all the elements from `array` to the end of the array
+  the function is called on.
+
+  Both arrays must be the same type `T`.
+
+  ```cadence
+  // Declare an array of integers.
+  let numbers = [42, 23]
+
+  // Add new elements to the array.
+  numbers.appendAll([31, 12, 20])
+  // `numbers` is now `[42, 23, 31, 12, 20]`
+
+  // Invalid: The parameter has the wrong type `[String]`.
+  numbers.appendAll(["Sneaky", "String"])
+  ```
+
 - `cadence•fun insert(at index: Int, _ element: T): Void`
 
   Inserts the new element `element` of type `T`
@@ -1351,6 +1370,28 @@ booleans[0] = true
   let values = numbers.values
 
   // `values` has type [Int] and is `[42, 23]`
+  ```
+  
+- `cadence•fun containsKey(key: K): Bool`
+
+  Returns true if the given key of type `K` is in the dictionary.
+
+  ```cadence
+  // Declare a dictionary mapping strings to integers.
+  let numbers = {"fortyTwo": 42, "twentyThree": 23}
+
+  // Check if the dictionary contains the key "twentyFive".
+  let containsKeyTwentyFive = numbers.containsKey("twentyFive")
+  // `containsKeyTwentyFive` is `false`
+
+  // Check if the dictionary contains the key "fortyTwo".
+  let containsKeyFortyTwo = numbers.containsKey("fortyTwo")
+  // `containsKeyFortyTwo` is `true`
+
+  // Invalid: Check if the dictionary contains the key 42.
+  // This results in a type error, as the key type of the dictionary is `String`.
+  //
+  let containsKey42 = numbers.containsKey(42)
   ```
 
 ### Dictionary Keys

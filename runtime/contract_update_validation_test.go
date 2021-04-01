@@ -36,7 +36,9 @@ func TestContractUpdateValidation(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := NewInterpreterRuntime()
+	runtime := NewInterpreterRuntime(
+		WithContractUpdateValidationEnabled(true),
+	)
 
 	newDeployTransaction := func(function, name, code string) []byte {
 		return []byte(fmt.Sprintf(`
@@ -51,7 +53,7 @@ func TestContractUpdateValidation(t *testing.T) {
 		))
 	}
 
-	accountCode := map[string][]byte{}
+	accountCode := map[common.LocationID][]byte{}
 	var events []cadence.Event
 	runtimeInterface := getMockedRuntimeInterfaceForTxUpdate(t, accountCode, events)
 	nextTransactionLocation := newTransactionLocationGenerator()
@@ -430,7 +432,11 @@ func TestContractUpdateValidation(t *testing.T) {
 				}
 			}`
 
-		deployTx1 := newDeployTransaction("add", "Test9Import", importCode)
+		deployTx1 := newDeployTransaction(
+			sema.AuthAccountContractsTypeAddFunctionName,
+			"Test9Import",
+			importCode,
+		)
 		err := runtime.ExecuteTransaction(
 			Script{
 				Source: deployTx1,
@@ -936,6 +942,390 @@ func TestContractUpdateValidation(t *testing.T) {
 
 		require.Contains(t, err.Error(), expectedError)
 	})
+
+	t.Run("Test reference types", func(t *testing.T) {
+		const oldCode = `
+			pub contract Test22 {
+
+				pub var vault: Capability<&TestStruct>?
+
+				init() {
+					self.vault = nil
+				}
+
+				pub struct TestStruct {
+					pub let a: Int
+
+					init() {
+						self.a = 123
+					}
+				}
+			}`
+
+		const newCode = `
+			pub contract Test22 {
+
+				pub var vault: Capability<&TestStruct>?
+
+				init() {
+					self.vault = nil
+				}
+
+				pub struct TestStruct {
+					pub let a: Int
+
+					init() {
+						self.a = 123
+					}
+				}
+			}`
+
+		err := deployAndUpdate("Test22", oldCode, newCode)
+		require.NoError(t, err)
+	})
+
+	t.Run("Test function type", func(t *testing.T) {
+		const oldCode = `
+			pub contract Test23 {
+
+				pub struct TestStruct {
+					pub let a: Int
+
+					init() {
+						self.a = 123
+					}
+				}
+			}`
+
+		const newCode = `
+			pub contract Test23 {
+
+				pub var add: ((Int, Int): Int)
+
+				init() {
+					self.add = fun (a: Int, b: Int): Int {
+						return a + b
+					}
+				}
+
+				pub struct TestStruct {
+					pub let a: Int
+
+					init() {
+						self.a = 123
+					}
+				}
+			}`
+
+		err := deployAndUpdate("Test23", oldCode, newCode)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "error: field add has non-storable type: ((Int, Int): Int)")
+	})
+
+	t.Run("Test conformance", func(t *testing.T) {
+		const importCode = `
+			pub contract Test24Import {
+				pub struct interface AnInterface {
+					pub a: Int
+				}
+			}`
+
+		deployTx1 := newDeployTransaction("add", "Test24Import", importCode)
+		err := runtime.ExecuteTransaction(
+			Script{
+				Source: deployTx1,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+		require.NoError(t, err)
+
+		const oldCode = `
+			import Test24Import from 0x42
+
+			pub contract Test24 {
+				pub struct TestStruct1 {
+					pub let a: Int
+					init() {
+						self.a = 123
+					}
+				}
+
+				pub struct TestStruct2: Test24Import.AnInterface {
+					pub let a: Int
+
+					init() {
+						self.a = 123
+					}
+				}
+			}`
+
+		const newCode = `
+			import Test24Import from 0x42
+
+			pub contract Test24 {
+
+				pub struct TestStruct2: Test24Import.AnInterface {
+					pub let a: Int
+
+					init() {
+						self.a = 123
+					}
+				}
+
+				pub struct TestStruct1 {
+					pub let a: Int
+					init() {
+						self.a = 123
+					}
+				}
+			}`
+
+		err = deployAndUpdate("Test24", oldCode, newCode)
+		require.NoError(t, err)
+	})
+
+	t.Run("Test all types", func(t *testing.T) {
+
+		const oldCode = `
+			pub contract Test25 {
+				// simple nominal type
+				pub var a: TestStruct
+
+				// qualified nominal type
+				pub var b: Test25.TestStruct
+
+				// optional type
+				pub var c: Int?
+
+				// variable sized type
+				pub var d: [Int]
+
+				// constant sized type
+				pub var e: [Int; 2]
+
+				// dictionary type
+				pub var f: {Int: String}
+
+				// restricted type
+				pub var g: {TestInterface}
+
+				// instantiation and reference types
+				pub var h:  Capability<&TestStruct>?
+
+				// function type
+				pub var i: Capability<&((Int, Int): Int)>?
+
+				init() {
+					var count: Int = 567
+					self.a = TestStruct()
+					self.b = Test25.TestStruct()
+					self.c = 123
+					self.d = [123]
+					self.e = [123, 456]
+					self.f = {1: "Hello"}
+					self.g = TestStruct()
+					self.h = nil
+					self.i = nil
+				}
+
+				pub struct TestStruct:TestInterface {
+					pub let a: Int
+					init() {
+						self.a = 123
+					}
+				}
+
+				pub struct interface TestInterface {
+					pub let a: Int
+				}
+			}`
+
+		const newCode = `
+			pub contract Test25 {
+
+
+				// function type
+				pub var i: Capability<&((Int, Int): Int)>?
+
+				// instantiation and reference types
+				pub var h:  Capability<&TestStruct>?
+
+				// restricted type
+				pub var g: {TestInterface}
+
+				// dictionary type
+				pub var f: {Int: String}
+
+				// constant sized type
+				pub var e: [Int; 2]
+
+				// variable sized type
+				pub var d: [Int]
+
+				// optional type
+				pub var c: Int?
+
+				// qualified nominal type
+				pub var b: Test25.TestStruct
+
+				// simple nominal type
+				pub var a: TestStruct
+
+				init() {
+					var count: Int = 567
+					self.a = TestStruct()
+					self.b = Test25.TestStruct()
+					self.c = 123
+					self.d = [123]
+					self.e = [123, 456]
+					self.f = {1: "Hello"}
+					self.g = TestStruct()
+					self.h = nil
+					self.i = nil
+				}
+
+				pub struct TestStruct:TestInterface {
+					pub let a: Int
+					init() {
+						self.a = 123
+					}
+				}
+
+				pub struct interface TestInterface {
+					pub let a: Int
+				}
+			}`
+
+		err := deployAndUpdate("Test25", oldCode, newCode)
+		require.NoError(t, err)
+	})
+
+	t.Run("Test restricted types", func(t *testing.T) {
+
+		const oldCode = `
+			pub contract Test26 {
+
+				// restricted type
+				pub var a: {TestInterface}
+				pub var b: {TestInterface}
+				pub var c: AnyStruct{TestInterface}
+				pub var d: AnyStruct{TestInterface}
+
+				init() {
+					var count: Int = 567
+					self.a = TestStruct()
+					self.b = TestStruct()
+					self.c = TestStruct()
+					self.d = TestStruct()
+				}
+
+				pub struct TestStruct:TestInterface {
+					pub let a: Int
+					init() {
+						self.a = 123
+					}
+				}
+
+				pub struct interface TestInterface {
+					pub let a: Int
+				}
+			}`
+
+		const newCode = `
+			pub contract Test26 {
+				pub var a: {TestInterface}
+				pub var b: AnyStruct{TestInterface}
+				pub var c: {TestInterface}
+				pub var d: AnyStruct{TestInterface}
+
+				init() {
+					var count: Int = 567
+					self.a = TestStruct()
+					self.b = TestStruct()
+					self.c = TestStruct()
+					self.d = TestStruct()
+				}
+
+				pub struct TestStruct:TestInterface {
+					pub let a: Int
+					init() {
+						self.a = 123
+					}
+				}
+
+				pub struct interface TestInterface {
+					pub let a: Int
+				}
+			}`
+
+		err := deployAndUpdate("Test26", oldCode, newCode)
+		require.NoError(t, err)
+	})
+
+	t.Run("Test invalid restricted types change", func(t *testing.T) {
+
+		const oldCode = `
+			pub contract Test27 {
+
+				// restricted type
+				pub var a: TestStruct{TestInterface}
+				pub var b: {TestInterface}
+
+				init() {
+					var count: Int = 567
+					self.a = TestStruct()
+					self.b = TestStruct()
+				}
+
+				pub struct TestStruct:TestInterface {
+					pub let a: Int
+					init() {
+						self.a = 123
+					}
+				}
+
+				pub struct interface TestInterface {
+					pub let a: Int
+				}
+			}`
+
+		const newCode = `
+			pub contract Test27 {
+				pub var a: {TestInterface}
+				pub var b: TestStruct{TestInterface}
+
+				init() {
+					var count: Int = 567
+					self.a = TestStruct()
+					self.b = TestStruct()
+				}
+
+				pub struct TestStruct:TestInterface {
+					pub let a: Int
+					init() {
+						self.a = 123
+					}
+				}
+
+				pub struct interface TestInterface {
+					pub let a: Int
+				}
+			}`
+
+		err := deployAndUpdate("Test27", oldCode, newCode)
+		require.Error(t, err)
+
+		assert.Contains(t, err.Error(), "pub var a: {TestInterface}"+
+			"\n  |                ^^^^^^^^^^^^^^^ "+
+			"incompatible type annotations. expected `TestStruct{TestInterface}`, found `{TestInterface}`")
+
+		assert.Contains(t, err.Error(), "pub var b: TestStruct{TestInterface}"+
+			"\n  |                ^^^^^^^^^^^^^^^^^^^^^^^^^ "+
+			"incompatible type annotations. expected `{TestInterface}`, found `TestStruct{TestInterface}`")
+	})
 }
 
 func assertDeclTypeChangeError(
@@ -1041,13 +1431,13 @@ func getContractUpdateError(t *testing.T, err error) *ContractUpdateError {
 
 func getMockedRuntimeInterfaceForTxUpdate(
 	t *testing.T,
-	accountStorage map[string][]byte,
-	events []cadence.Event) *testRuntimeInterface {
+	accountCodes map[common.LocationID][]byte,
+	events []cadence.Event,
+) *testRuntimeInterface {
 
 	return &testRuntimeInterface{
 		getCode: func(location Location) (bytes []byte, err error) {
-			key := string(location.(common.AddressLocation).ID())
-			return accountStorage[key], nil
+			return accountCodes[location.ID()], nil
 		},
 		storage: newTestStorage(nil, nil),
 		getSigningAccounts: func() ([]Address, error) {
@@ -1059,16 +1449,14 @@ func getMockedRuntimeInterfaceForTxUpdate(
 				Address: address,
 				Name:    name,
 			}
-			key := string(location.ID())
-			return accountStorage[key], nil
+			return accountCodes[location.ID()], nil
 		},
 		updateAccountContractCode: func(address Address, name string, code []byte) (err error) {
 			location := common.AddressLocation{
 				Address: address,
 				Name:    name,
 			}
-			key := string(location.ID())
-			accountStorage[key] = code
+			accountCodes[location.ID()] = code
 			return nil
 		},
 		emitEvent: func(event cadence.Event) error {
@@ -1076,4 +1464,78 @@ func getMockedRuntimeInterfaceForTxUpdate(
 			return nil
 		},
 	}
+}
+
+func TestContractUpdateValidationDisabled(t *testing.T) {
+
+	t.Parallel()
+
+	runtime := NewInterpreterRuntime(
+		WithContractUpdateValidationEnabled(false),
+	)
+
+	newDeployTransaction := func(function, name, code string) []byte {
+		return []byte(fmt.Sprintf(`
+			transaction {
+				prepare(signer: AuthAccount) {
+					signer.contracts.%s(name: "%s", code: "%s".decodeHex())
+				}
+			}`,
+			function,
+			name,
+			hex.EncodeToString([]byte(code)),
+		))
+	}
+
+	accountCode := map[common.LocationID][]byte{}
+	var events []cadence.Event
+	runtimeInterface := getMockedRuntimeInterfaceForTxUpdate(t, accountCode, events)
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	deployAndUpdate := func(name string, oldCode string, newCode string) error {
+		deployTx1 := newDeployTransaction(sema.AuthAccountContractsTypeAddFunctionName, name, oldCode)
+		err := runtime.ExecuteTransaction(
+			Script{
+				Source: deployTx1,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+		require.NoError(t, err)
+
+		deployTx2 := newDeployTransaction(sema.AuthAccountContractsTypeUpdateExperimentalFunctionName, name, newCode)
+		err = runtime.ExecuteTransaction(
+			Script{
+				Source: deployTx2,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+		return err
+	}
+
+	t.Run("change field type", func(t *testing.T) {
+		const oldCode = `
+			pub contract Test1 {
+				pub var a: String
+				init() {
+					self.a = "hello"
+				}
+      		}`
+
+		const newCode = `
+			pub contract Test1 {
+				pub var a: Int
+				init() {
+					self.a = 0
+				}
+			}`
+
+		err := deployAndUpdate("Test1", oldCode, newCode)
+		require.NoError(t, err)
+	})
 }

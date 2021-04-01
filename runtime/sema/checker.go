@@ -203,6 +203,13 @@ func WithImportHandler(handler ImportHandlerFunc) Option {
 func WithOriginsAndOccurrencesEnabled(enabled bool) Option {
 	return func(checker *Checker) error {
 		checker.originsAndOccurrencesEnabled = enabled
+		if enabled {
+			checker.memberOrigins = map[Type]map[string]*Origin{}
+			checker.variableOrigins = map[*Variable]*Origin{}
+			checker.Occurrences = NewOccurrences()
+			checker.MemberAccesses = NewMemberAccesses()
+		}
+
 		return nil
 	}
 }
@@ -213,44 +220,26 @@ func NewChecker(program *ast.Program, location common.Location, options ...Optio
 		return nil, &MissingLocationError{}
 	}
 
+	valueActivations := NewVariableActivations(BaseValueActivation)
+	typeActivations := NewVariableActivations(BaseTypeActivation)
 	functionActivations := &FunctionActivations{}
 	functionActivations.EnterFunction(&FunctionType{
 		ReturnTypeAnnotation: NewTypeAnnotation(VoidType)},
 		0,
 	)
 
-	typeActivations := NewValueActivations()
-	baseTypes.Foreach(func(name string, baseType Type) {
-		_, err := typeActivations.DeclareType(typeDeclaration{
-			identifier:               ast.Identifier{Identifier: name},
-			ty:                       baseType,
-			declarationKind:          common.DeclarationKindType,
-			access:                   ast.AccessPublic,
-			allowOuterScopeShadowing: false,
-		})
-		if err != nil {
-			panic(err)
-		}
-	})
-
 	checker := &Checker{
 		Program:             program,
 		Location:            location,
-		valueActivations:    NewValueActivations(),
+		valueActivations:    valueActivations,
 		resources:           NewResources(),
 		typeActivations:     typeActivations,
 		functionActivations: functionActivations,
-		Occurrences:         NewOccurrences(),
-		variableOrigins:     map[*Variable]*Origin{},
-		memberOrigins:       map[Type]map[string]*Origin{},
-		MemberAccesses:      NewMemberAccesses(),
 		containerTypes:      map[Type]bool{},
 		Elaboration:         NewElaboration(),
 	}
 
 	checker.beforeExtractor = NewBeforeExtractor(checker.report)
-
-	checker.declareBaseValues()
 
 	for _, option := range options {
 		err := option(checker)
@@ -279,17 +268,6 @@ func (checker *Checker) SubChecker(program *ast.Program, location common.Locatio
 		WithImportHandler(checker.importHandler),
 		WithLocationHandler(checker.locationHandler),
 	)
-}
-
-func (checker *Checker) declareBaseValues() {
-	BaseValues.Foreach(func(_ string, declaration ValueDeclaration) {
-		variable := checker.declareValue(declaration)
-		if variable == nil {
-			return
-		}
-		variable.IsBaseValue = true
-		checker.Elaboration.GlobalValues.Set(variable.Identifier, variable)
-	})
 }
 
 func (checker *Checker) declareValue(declaration ValueDeclaration) *Variable {
@@ -442,7 +420,7 @@ func (checker *Checker) VisitProgram(program *ast.Program) ast.Repr {
 		// NOTE: register types in elaboration
 		// *after* the full container chain is fully set up
 
-		VisitContainerAndNested(interfaceType, registerInElaboration)
+		VisitThisAndNested(interfaceType, registerInElaboration)
 	}
 
 	for _, declaration := range program.CompositeDeclarations() {
@@ -451,7 +429,7 @@ func (checker *Checker) VisitProgram(program *ast.Program) ast.Repr {
 		// NOTE: register types in elaboration
 		// *after* the full container chain is fully set up
 
-		VisitContainerAndNested(compositeType, registerInElaboration)
+		VisitThisAndNested(compositeType, registerInElaboration)
 	}
 
 	// Declare interfaces' and composites' members
@@ -1074,26 +1052,29 @@ func (checker *Checker) convertRestrictedType(t *ast.RestrictedType) Type {
 
 	var compositeType *CompositeType
 
-	if typeResult, ok := restrictedType.(*CompositeType); ok {
-		switch typeResult.Kind {
+	if !restrictedType.IsInvalidType() {
 
-		case common.CompositeKindResource,
-			common.CompositeKindStructure:
+		if typeResult, ok := restrictedType.(*CompositeType); ok {
+			switch typeResult.Kind {
 
-			compositeType = typeResult
+			case common.CompositeKindResource,
+				common.CompositeKindStructure:
 
-		default:
-			reportInvalidRestrictedType()
-		}
-	} else {
+				compositeType = typeResult
 
-		switch restrictedType {
-		case AnyResourceType, AnyStructType, AnyType:
-			break
-
-		default:
-			if t.Type != nil {
+			default:
 				reportInvalidRestrictedType()
+			}
+		} else {
+
+			switch restrictedType {
+			case AnyResourceType, AnyStructType, AnyType:
+				break
+
+			default:
+				if t.Type != nil {
+					reportInvalidRestrictedType()
+				}
 			}
 		}
 	}
@@ -1276,11 +1257,10 @@ func (checker *Checker) convertNominalType(t *ast.NominalType) Type {
 	var resolvedIdentifiers []ast.Identifier
 
 	for _, identifier := range t.NestedIdentifiers {
-		switch typedResult := ty.(type) {
-		case ContainerType:
-			ty, _ = typedResult.NestedTypes().Get(identifier.Identifier)
-		default:
-			if !typedResult.IsInvalidType() {
+		if containerType, ok := ty.(ContainerType); ok && containerType.isContainerType() {
+			ty, _ = containerType.GetNestedTypes().Get(identifier.Identifier)
+		} else {
+			if !ty.IsInvalidType() {
 				checker.report(
 					&InvalidNestedTypeError{
 						Type: &ast.NominalType{
@@ -2024,7 +2004,7 @@ func (checker *Checker) predeclaredMembers(containerType Type) []*Member {
 
 			addPredeclaredMember(
 				"account",
-				&AuthAccountType{},
+				AuthAccountType,
 				common.DeclarationKindField,
 				ast.AccessPrivate,
 				true,
@@ -2041,7 +2021,7 @@ func (checker *Checker) predeclaredMembers(containerType Type) []*Member {
 			addPredeclaredMember(
 				ResourceOwnerFieldName,
 				&OptionalType{
-					Type: &PublicAccountType{},
+					Type: PublicAccountType,
 				},
 				common.DeclarationKindField,
 				ast.AccessPublic,

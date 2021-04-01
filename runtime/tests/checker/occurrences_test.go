@@ -30,7 +30,7 @@ import (
 )
 
 // TODO: implement occurrences for type references
-//  (e.g. conformances, conditional casting expression)
+//  (e.g. conformances, failable casting expression)
 
 func TestCheckOccurrencesVariableDeclarations(t *testing.T) {
 

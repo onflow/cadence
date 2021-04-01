@@ -70,7 +70,7 @@ func TestCheckString(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Equal(t,
-		&sema.StringType{},
+		sema.StringType,
 		RequireGlobalValue(t, checker.Elaboration, "x"),
 	)
 }

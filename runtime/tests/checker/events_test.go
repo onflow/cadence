@@ -96,7 +96,7 @@ func TestCheckEventDeclaration(t *testing.T) {
 
 		validTypes := append(
 			[]sema.Type{
-				&sema.StringType{},
+				sema.StringType,
 				sema.CharacterType,
 				sema.BoolType,
 				&sema.AddressType{},
@@ -118,7 +118,7 @@ func TestCheckEventDeclaration(t *testing.T) {
 				&sema.VariableSizedType{Type: ty},
 				&sema.ConstantSizedType{Type: ty},
 				&sema.DictionaryType{
-					KeyType:   &sema.StringType{},
+					KeyType:   sema.StringType,
 					ValueType: ty,
 				},
 			)
@@ -127,7 +127,7 @@ func TestCheckEventDeclaration(t *testing.T) {
 				tests = append(tests,
 					&sema.DictionaryType{
 						KeyType:   ty,
-						ValueType: &sema.StringType{},
+						ValueType: sema.StringType,
 					},
 				)
 			}
@@ -149,6 +149,24 @@ func TestCheckEventDeclaration(t *testing.T) {
 				require.NoError(t, err)
 			})
 		}
+	})
+
+	t.Run("recursive", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          event E(recursive: Recursive)
+
+          struct Recursive {
+              let children: [Recursive]
+              init() {
+                  self.children = []
+              }
+          }
+		`)
+
+		require.NoError(t, err)
 	})
 
 	t.Run("RedeclaredEvent", func(t *testing.T) {

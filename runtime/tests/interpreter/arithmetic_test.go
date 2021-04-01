@@ -87,7 +87,7 @@ func TestInterpretPlusOperator(t *testing.T) {
 
 			assert.Equal(t,
 				value,
-				inter.Globals["c"].Value,
+				inter.Globals["c"].GetValue(),
 			)
 		})
 	}
@@ -114,7 +114,7 @@ func TestInterpretMinusOperator(t *testing.T) {
 
 			assert.Equal(t,
 				value,
-				inter.Globals["c"].Value,
+				inter.Globals["c"].GetValue(),
 			)
 		})
 	}
@@ -141,7 +141,7 @@ func TestInterpretMulOperator(t *testing.T) {
 
 			assert.Equal(t,
 				value,
-				inter.Globals["c"].Value,
+				inter.Globals["c"].GetValue(),
 			)
 		})
 	}
@@ -168,7 +168,7 @@ func TestInterpretDivOperator(t *testing.T) {
 
 			assert.Equal(t,
 				value,
-				inter.Globals["c"].Value,
+				inter.Globals["c"].GetValue(),
 			)
 		})
 	}
@@ -195,7 +195,7 @@ func TestInterpretModOperator(t *testing.T) {
 
 			assert.Equal(t,
 				value,
-				inter.Globals["c"].Value,
+				inter.Globals["c"].GetValue(),
 			)
 		})
 	}

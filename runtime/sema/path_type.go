@@ -20,7 +20,7 @@ package sema
 
 // PathType
 //
-var PathType = &NominalType{
+var PathType = &SimpleType{
 	Name:          "Path",
 	QualifiedName: "Path",
 	TypeID:        "Path",
@@ -38,26 +38,28 @@ var PathType = &NominalType{
 
 // StoragePathType
 //
-var StoragePathType = &NominalType{
+var StoragePathType = &SimpleType{
 	Name:          "StoragePath",
 	QualifiedName: "StoragePath",
 	TypeID:        "StoragePath",
 	IsResource:    false,
 	Storable:      true,
 	// TODO: implement support for equating paths in the future
-	Equatable: false,
+	Equatable:            false,
+	ExternallyReturnable: true,
 }
 
 // CapabilityPathType
 //
-var CapabilityPathType = &NominalType{
+var CapabilityPathType = &SimpleType{
 	Name:          "CapabilityPath",
 	QualifiedName: "CapabilityPath",
 	TypeID:        "CapabilityPath",
 	IsResource:    false,
 	Storable:      true,
 	// TODO: implement support for equating paths in the future
-	Equatable: false,
+	Equatable:            false,
+	ExternallyReturnable: true,
 	IsSuperTypeOf: func(subType Type) bool {
 		return IsSubType(subType, PrivatePathType) ||
 			IsSubType(subType, PublicPathType)
@@ -66,24 +68,26 @@ var CapabilityPathType = &NominalType{
 
 // PublicPathType
 //
-var PublicPathType = &NominalType{
+var PublicPathType = &SimpleType{
 	Name:          "PublicPath",
 	QualifiedName: "PublicPath",
 	TypeID:        "PublicPath",
 	IsResource:    false,
 	Storable:      true,
 	// TODO: implement support for equating paths in the future
-	Equatable: false,
+	Equatable:            false,
+	ExternallyReturnable: true,
 }
 
 // PrivatePathType
 //
-var PrivatePathType = &NominalType{
+var PrivatePathType = &SimpleType{
 	Name:          "PrivatePath",
 	QualifiedName: "PrivatePath",
 	TypeID:        "PrivatePath",
 	IsResource:    false,
 	Storable:      true,
 	// TODO: implement support for equating paths in the future
-	Equatable: false,
+	Equatable:            false,
+	ExternallyReturnable: true,
 }

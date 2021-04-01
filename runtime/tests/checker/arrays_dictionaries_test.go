@@ -269,7 +269,7 @@ func TestCheckDictionaryKeys(t *testing.T) {
 	keysType := RequireGlobalValue(t, checker.Elaboration, "keys")
 
 	assert.Equal(t,
-		&sema.VariableSizedType{Type: &sema.StringType{}},
+		&sema.VariableSizedType{Type: sema.StringType},
 		keysType,
 	)
 }
@@ -360,6 +360,70 @@ func TestCheckInvalidArrayAppendToConstantSize(t *testing.T) {
       fun test(): [Int; 3] {
           let x: [Int; 3] = [1, 2, 3]
           x.append(4)
+          return x
+      }
+    `)
+
+	errs := ExpectCheckerErrors(t, err, 1)
+
+	assert.IsType(t, &sema.NotDeclaredMemberError{}, errs[0])
+}
+
+func TestCheckArrayAppendAll(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+	  fun test(): [Int] {
+	 	  let a = [1, 2]
+		  let b = [3, 4]
+		  a.appendAll(b)
+		  return a
+      }
+    `)
+
+	require.NoError(t, err)
+}
+
+func TestCheckInvalidArrayAppendAll(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+	  fun test(): [Int] {
+	 	  let a = [1, 2]
+		  let b = ["a", "b"]
+		  a.appendAll(b)
+		  return a
+      }
+    `)
+
+	errs := ExpectCheckerErrors(t, err, 1)
+
+	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+
+	_, err = ParseAndCheck(t, `
+	  fun test(): [Int] {
+	 	  let a = [1, 2]
+		  let b = 3
+		  a.appendAll(b)
+		  return a
+      }
+    `)
+
+	errs = ExpectCheckerErrors(t, err, 1)
+
+	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+}
+
+func TestCheckInvalidArrayAppendAllOnConstantSize(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+      fun test(): [Int; 3] {
+          let x: [Int; 3] = [1, 2, 3]
+          x.appendAll([4, 5])
           return x
       }
     `)
@@ -684,6 +748,36 @@ func TestCheckEmptyArrayCall(t *testing.T) {
 	`)
 
 	require.NoError(t, err)
+}
+
+func TestCheckDictionaryContainsKey(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+      fun test(): Bool {
+          let x = {1: "One", 2: "Two", 3: "Three"}
+          return x.containsKey(2)
+      }
+    `)
+
+	require.NoError(t, err)
+}
+
+func TestCheckInvalidDictionaryContainsKey(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+      fun test(): Bool {
+          let x = {1: "One", 2: "Two", 3: "Three"}
+          return x.containsKey("abc")
+      }
+    `)
+
+	errs := ExpectCheckerErrors(t, err, 1)
+
+	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 }
 
 func TestCheckEmptyDictionary(t *testing.T) {

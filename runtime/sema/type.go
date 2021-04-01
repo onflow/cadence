@@ -46,7 +46,16 @@ func qualifiedIdentifier(identifier string, containerType Type) string {
 			identifiers = append(identifiers, typedContainerType.Identifier)
 			containerType = typedContainerType.ContainerType
 		default:
-			panic(errors.NewUnreachableError())
+			switch containerType {
+			case PublicAccountType:
+				identifiers = append(identifiers, string(typedContainerType.ID()))
+				containerType = nil
+			case AuthAccountType:
+				identifiers = append(identifiers, string(typedContainerType.ID()))
+				containerType = nil
+			default:
+				panic(errors.NewUnreachableError())
+			}
 		}
 	}
 
@@ -167,19 +176,20 @@ type ContainedType interface {
 //
 type ContainerType interface {
 	Type
-	NestedTypes() *StringTypeOrderedMap
+	isContainerType() bool
+	GetNestedTypes() *StringTypeOrderedMap
 }
 
-func VisitContainerAndNested(t ContainerType, visit func(ty Type)) {
+func VisitThisAndNested(t Type, visit func(ty Type)) {
 	visit(t)
 
-	t.NestedTypes().Foreach(func(_ string, nestedType Type) {
+	containerType, ok := t.(ContainerType)
+	if !ok || !containerType.isContainerType() {
+		return
+	}
 
-		if nestedContainerType, ok := nestedType.(ContainerType); ok {
-			VisitContainerAndNested(nestedContainerType, visit)
-		} else {
-			visit(nestedType)
-		}
+	containerType.GetNestedTypes().Foreach(func(_ string, nestedType Type) {
+		VisitThisAndNested(nestedType, visit)
 	})
 }
 
@@ -315,7 +325,7 @@ const ToStringFunctionName = "toString"
 
 var toStringFunctionType = &FunctionType{
 	ReturnTypeAnnotation: NewTypeAnnotation(
-		&StringType{},
+		StringType,
 	),
 }
 
@@ -691,189 +701,6 @@ func (t *GenericType) Resolve(typeArguments *TypeParameterTypeOrderedMap) Type {
 
 func (t *GenericType) GetMembers() map[string]MemberResolver {
 	return withBuiltinMembers(t, nil)
-}
-
-// StringType represents the string type
-type StringType struct{}
-
-func (*StringType) IsType() {}
-
-func (*StringType) String() string {
-	return "String"
-}
-
-func (*StringType) QualifiedString() string {
-	return "String"
-}
-
-func (*StringType) ID() TypeID {
-	return "String"
-}
-
-func (*StringType) Equal(other Type) bool {
-	_, ok := other.(*StringType)
-	return ok
-}
-
-func (*StringType) IsResourceType() bool {
-	return false
-}
-
-func (*StringType) IsInvalidType() bool {
-	return false
-}
-
-func (*StringType) IsStorable(_ map[*Member]bool) bool {
-	return true
-}
-
-func (*StringType) IsExternallyReturnable(_ map[*Member]bool) bool {
-	return true
-}
-
-func (*StringType) IsEquatable() bool {
-	return true
-}
-
-func (*StringType) TypeAnnotationState() TypeAnnotationState {
-	return TypeAnnotationStateValid
-}
-
-func (t *StringType) RewriteWithRestrictedTypes() (result Type, rewritten bool) {
-	return t, false
-}
-
-var stringTypeConcatFunctionType = &FunctionType{
-	Parameters: []*Parameter{
-		{
-			Label:          ArgumentLabelNotRequired,
-			Identifier:     "other",
-			TypeAnnotation: NewTypeAnnotation(&StringType{}),
-		},
-	},
-	ReturnTypeAnnotation: NewTypeAnnotation(
-		&StringType{},
-	),
-}
-
-const stringTypeConcatFunctionDocString = `
-Returns a new string which contains the given string concatenated to the end of the original string, but does not modify the original string
-`
-
-var stringTypeSliceFunctionType = &FunctionType{
-	Parameters: []*Parameter{
-		{
-			Identifier:     "from",
-			TypeAnnotation: NewTypeAnnotation(&IntType{}),
-		},
-		{
-			Identifier:     "upTo",
-			TypeAnnotation: NewTypeAnnotation(&IntType{}),
-		},
-	},
-	ReturnTypeAnnotation: NewTypeAnnotation(
-		&StringType{},
-	),
-}
-
-const stringTypeSliceFunctionDocString = `
-Returns a new string containing the slice of the characters in the given string from start index ` + "`from`" + ` up to, but not including, the end index ` + "`upTo`" + `.
-
-This function creates a new string whose length is ` + "`upTo - from`" + `.
-It does not modify the original string.
-If either of the parameters are out of the bounds of the string, the function will fail
-`
-
-var stringTypeDecodeHexFunctionType = &FunctionType{
-	ReturnTypeAnnotation: NewTypeAnnotation(
-		&VariableSizedType{
-			Type: &UInt8Type{},
-		},
-	),
-}
-
-const stringTypeDecodeHexFunctionDocString = `
-Returns an array containing the bytes represented by the given hexadecimal string.
-
-The given string must only contain hexadecimal characters and must have an even length.
-If the string is malformed, the program aborts
-`
-
-const stringTypeLengthFieldDocString = `
-The number of characters in the string
-`
-
-func (t *StringType) GetMembers() map[string]MemberResolver {
-	return withBuiltinMembers(t, map[string]MemberResolver{
-		"concat": {
-			Kind: common.DeclarationKindFunction,
-			Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
-				return NewPublicFunctionMember(
-					t,
-					identifier,
-					stringTypeConcatFunctionType,
-					stringTypeConcatFunctionDocString,
-				)
-			},
-		},
-		"slice": {
-			Kind: common.DeclarationKindFunction,
-			Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
-				return NewPublicFunctionMember(
-					t,
-					identifier,
-					stringTypeSliceFunctionType,
-					stringTypeSliceFunctionDocString,
-				)
-			},
-		},
-		"decodeHex": {
-			Kind: common.DeclarationKindFunction,
-			Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
-				return NewPublicFunctionMember(
-					t,
-					identifier,
-					stringTypeDecodeHexFunctionType,
-					stringTypeDecodeHexFunctionDocString,
-				)
-			},
-		},
-		"length": {
-			Kind: common.DeclarationKindField,
-			Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
-				return NewPublicConstantFieldMember(
-					t,
-					identifier,
-					&IntType{},
-					stringTypeLengthFieldDocString,
-				)
-			},
-		},
-	})
-}
-
-func (*StringType) isValueIndexableType() bool {
-	return true
-}
-
-func (*StringType) AllowsValueIndexingAssignment() bool {
-	return false
-}
-
-func (t *StringType) ElementType(_ bool) Type {
-	return CharacterType
-}
-
-func (t *StringType) IndexingType() Type {
-	return &IntegerType{}
-}
-
-func (*StringType) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
-	return false
-}
-
-func (t *StringType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
-	return t
 }
 
 // NumberType represents the super-type of all signed number types
@@ -2882,6 +2709,10 @@ const arrayTypeAppendFunctionDocString = `
 Adds the given element to the end of the array
 `
 
+const arrayTypeAppendAllFunctionDocString = `
+Adds all the elements from the given array to the end of the array
+`
+
 const arrayTypeConcatFunctionDocString = `
 Returns a new array which contains the given array concatenated to the end of the original array, but does not modify the original array
 `
@@ -2925,7 +2756,7 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 
 				elementType := arrayType.ElementType(false)
 
-				// It impossible for an array of resources to have a `contains` function:
+				// It is impossible for an array of resources to have a `contains` function:
 				// if the resource is passed as an argument, it cannot be inside the array
 
 				if elementType.IsResourceType() {
@@ -3005,6 +2836,40 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 						),
 					},
 					arrayTypeAppendFunctionDocString,
+				)
+			},
+		}
+
+		members["appendAll"] = MemberResolver{
+			Kind: common.DeclarationKindFunction,
+			Resolve: func(identifier string, targetRange ast.Range, report func(error)) *Member {
+
+				elementType := arrayType.ElementType(false)
+
+				if elementType.IsResourceType() {
+					report(
+						&InvalidResourceArrayMemberError{
+							Name:            identifier,
+							DeclarationKind: common.DeclarationKindFunction,
+							Range:           targetRange,
+						},
+					)
+				}
+
+				return NewPublicFunctionMember(
+					arrayType,
+					identifier,
+					&FunctionType{
+						Parameters: []*Parameter{
+							{
+								Label:          ArgumentLabelNotRequired,
+								Identifier:     "other",
+								TypeAnnotation: NewTypeAnnotation(arrayType),
+							},
+						},
+						ReturnTypeAnnotation: NewTypeAnnotation(VoidType),
+					},
+					arrayTypeAppendAllFunctionDocString,
 				)
 			},
 		}
@@ -3147,7 +3012,9 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 
 // VariableSizedType is a variable sized array type
 type VariableSizedType struct {
-	Type Type
+	Type                Type
+	memberResolvers     map[string]MemberResolver
+	memberResolversOnce sync.Once
 }
 
 func (*VariableSizedType) IsType() {}
@@ -3176,7 +3043,14 @@ func (t *VariableSizedType) Equal(other Type) bool {
 }
 
 func (t *VariableSizedType) GetMembers() map[string]MemberResolver {
-	return getArrayMembers(t)
+	t.initializeMemberResolvers()
+	return t.memberResolvers
+}
+
+func (t *VariableSizedType) initializeMemberResolvers() {
+	t.memberResolversOnce.Do(func() {
+		t.memberResolvers = getArrayMembers(t)
+	})
 }
 
 func (t *VariableSizedType) IsResourceType() bool {
@@ -3259,8 +3133,10 @@ func (t *VariableSizedType) Resolve(typeArguments *TypeParameterTypeOrderedMap) 
 
 // ConstantSizedType is a constant sized array type
 type ConstantSizedType struct {
-	Type Type
-	Size int64
+	Type                Type
+	Size                int64
+	memberResolvers     map[string]MemberResolver
+	memberResolversOnce sync.Once
 }
 
 func (*ConstantSizedType) IsType() {}
@@ -3290,7 +3166,14 @@ func (t *ConstantSizedType) Equal(other Type) bool {
 }
 
 func (t *ConstantSizedType) GetMembers() map[string]MemberResolver {
-	return getArrayMembers(t)
+	t.initializeMemberResolvers()
+	return t.memberResolvers
+}
+
+func (t *ConstantSizedType) initializeMemberResolvers() {
+	t.memberResolversOnce.Do(func() {
+		t.memberResolvers = getArrayMembers(t)
+	})
 }
 
 func (t *ConstantSizedType) IsResourceType() bool {
@@ -4008,14 +3891,12 @@ func (t *CheckedFunctionType) CheckArgumentExpressions(
 	t.ArgumentExpressionsCheck(checker, argumentExpressions, invocationRange)
 }
 
-// baseTypes are the nominal types available in programs
+// BaseTypeActivation is the base activation that contains
+// the types available in programs
 //
-var baseTypes = NewStringTypeOrderedMap()
+var BaseTypeActivation = NewVariableActivation(nil)
 
 func init() {
-
-	baseTypes = NewStringTypeOrderedMap()
-	baseTypes.Set("", VoidType)
 
 	otherTypes := []Type{
 		MetaType,
@@ -4025,18 +3906,22 @@ func init() {
 		NeverType,
 		BoolType,
 		CharacterType,
-		&StringType{},
+		StringType,
 		&AddressType{},
-		&AuthAccountType{},
-		&PublicAccountType{},
+		AuthAccountType,
+		PublicAccountType,
 		PathType,
 		StoragePathType,
 		CapabilityPathType,
 		PrivatePathType,
 		PublicPathType,
 		&CapabilityType{},
-		&DeployedContractType{},
-		&BlockType{},
+		DeployedContractType,
+		BlockType,
+		AccountKeyType,
+		PublicKeyType,
+		SignatureAlgorithmType,
+		HashAlgorithmType,
 	}
 
 	types := append(
@@ -4047,18 +3932,41 @@ func init() {
 	for _, ty := range types {
 		typeName := ty.String()
 
-		// check type is not accidentally redeclared
-		if _, ok := baseTypes.Get(typeName); ok {
+		// Check that the type is not accidentally redeclared
+
+		if BaseTypeActivation.Find(typeName) != nil {
 			panic(errors.NewUnreachableError())
 		}
 
-		baseTypes.Set(typeName, ty)
+		BaseTypeActivation.Set(
+			typeName,
+			baseTypeVariable(typeName, ty),
+		)
+	}
+
+	// The AST contains empty type annotations, resolve them to Void
+
+	BaseTypeActivation.Set(
+		"",
+		BaseTypeActivation.Find("Void"),
+	)
+}
+
+func baseTypeVariable(name string, ty Type) *Variable {
+	return &Variable{
+		Identifier:      name,
+		Type:            ty,
+		DeclarationKind: common.DeclarationKindType,
+		IsConstant:      true,
+		IsBaseValue:     true,
+		Access:          ast.AccessPublic,
 	}
 }
 
-// BaseValues are the values available in programs
+// BaseValueActivation is the base activation that contains
+// the values available in programs
 //
-var BaseValues = NewStringValueDeclarationOrderedMap()
+var BaseValueActivation = NewVariableActivation(nil)
 
 var AllSignedFixedPointTypes = []Type{
 	&Fix64Type{},
@@ -4136,29 +4044,43 @@ func init() {
 		default:
 			typeName := numberType.String()
 
-			// Check that the type is not accidentally redeclared
+			// Check that the function is not accidentally redeclared
 
-			if _, ok := BaseValues.Get(typeName); ok {
+			if BaseValueActivation.Find(typeName) != nil {
 				panic(errors.NewUnreachableError())
 			}
 
-			BaseValues.Set(typeName, baseFunction{
-				name: typeName,
-				invokableType: &CheckedFunctionType{
-					FunctionType: &FunctionType{
-						Parameters: []*Parameter{
-							{
-								Label:          ArgumentLabelNotRequired,
-								Identifier:     "value",
-								TypeAnnotation: NewTypeAnnotation(&NumberType{}),
+			BaseValueActivation.Set(
+				typeName,
+				baseFunctionVariable(
+					typeName,
+					&CheckedFunctionType{
+						FunctionType: &FunctionType{
+							Parameters: []*Parameter{
+								{
+									Label:          ArgumentLabelNotRequired,
+									Identifier:     "value",
+									TypeAnnotation: NewTypeAnnotation(&NumberType{}),
+								},
 							},
+							ReturnTypeAnnotation: NewTypeAnnotation(numberType),
 						},
-						ReturnTypeAnnotation: NewTypeAnnotation(numberType),
+						ArgumentExpressionsCheck: numberFunctionArgumentExpressionsChecker(numberType),
 					},
-					ArgumentExpressionsCheck: numberFunctionArgumentExpressionsChecker(numberType),
-				},
-			})
+				),
+			)
 		}
+	}
+}
+
+func baseFunctionVariable(name string, ty InvokableType) *Variable {
+	return &Variable{
+		Identifier:      name,
+		DeclarationKind: common.DeclarationKindFunction,
+		IsConstant:      true,
+		IsBaseValue:     true,
+		Type:            ty,
+		Access:          ast.AccessPublic,
 	}
 }
 
@@ -4169,38 +4091,42 @@ func init() {
 	addressType := &AddressType{}
 	typeName := addressType.String()
 
-	// check type is not accidentally redeclared
-	if _, ok := BaseValues.Get(typeName); ok {
+	// Check that the function is not accidentally redeclared
+
+	if BaseValueActivation.Find(typeName) != nil {
 		panic(errors.NewUnreachableError())
 	}
 
-	BaseValues.Set(typeName, baseFunction{
-		name: typeName,
-		invokableType: &CheckedFunctionType{
-			FunctionType: &FunctionType{
-				Parameters: []*Parameter{
-					{
-						Label:          ArgumentLabelNotRequired,
-						Identifier:     "value",
-						TypeAnnotation: NewTypeAnnotation(&IntegerType{}),
+	BaseValueActivation.Set(
+		typeName,
+		baseFunctionVariable(
+			typeName,
+			&CheckedFunctionType{
+				FunctionType: &FunctionType{
+					Parameters: []*Parameter{
+						{
+							Label:          ArgumentLabelNotRequired,
+							Identifier:     "value",
+							TypeAnnotation: NewTypeAnnotation(&IntegerType{}),
+						},
 					},
+					ReturnTypeAnnotation: NewTypeAnnotation(addressType),
 				},
-				ReturnTypeAnnotation: NewTypeAnnotation(addressType),
-			},
-			ArgumentExpressionsCheck: func(checker *Checker, argumentExpressions []ast.Expression, _ ast.Range) {
-				if len(argumentExpressions) < 1 {
-					return
-				}
+				ArgumentExpressionsCheck: func(checker *Checker, argumentExpressions []ast.Expression, _ ast.Range) {
+					if len(argumentExpressions) < 1 {
+						return
+					}
 
-				intExpression, ok := argumentExpressions[0].(*ast.IntegerExpression)
-				if !ok {
-					return
-				}
+					intExpression, ok := argumentExpressions[0].(*ast.IntegerExpression)
+					if !ok {
+						return
+					}
 
-				CheckAddressLiteral(intExpression, checker.report)
+					CheckAddressLiteral(intExpression, checker.report)
+				},
 			},
-		},
-	})
+		),
+	)
 }
 
 func numberFunctionArgumentExpressionsChecker(targetType Type) ArgumentExpressionsCheck {
@@ -4341,18 +4267,22 @@ func init() {
 
 	typeName := MetaType.String()
 
-	// check type is not accidentally redeclared
-	if _, ok := BaseValues.Get(typeName); ok {
+	// Check that the function is not accidentally redeclared
+
+	if BaseValueActivation.Find(typeName) != nil {
 		panic(errors.NewUnreachableError())
 	}
 
-	BaseValues.Set(typeName, baseFunction{
-		name: typeName,
-		invokableType: &FunctionType{
-			TypeParameters:       []*TypeParameter{{Name: "T"}},
-			ReturnTypeAnnotation: NewTypeAnnotation(MetaType),
-		},
-	})
+	BaseValueActivation.Set(
+		typeName,
+		baseFunctionVariable(
+			typeName,
+			&FunctionType{
+				TypeParameters:       []*TypeParameter{{Name: "T"}},
+				ReturnTypeAnnotation: NewTypeAnnotation(MetaType),
+			},
+		),
+	)
 }
 
 // CompositeType
@@ -4372,8 +4302,8 @@ type CompositeType struct {
 	ExplicitInterfaceConformances       []*InterfaceType
 	ImplicitTypeRequirementConformances []*CompositeType
 	Members                             *StringMemberOrderedMap
-	memberResolversOnce                 sync.Once
 	memberResolvers                     map[string]MemberResolver
+	memberResolversOnce                 sync.Once
 	Fields                              []string
 	// TODO: add support for overloaded initializers
 	ConstructorParameters []*Parameter
@@ -4431,6 +4361,10 @@ func (t *CompositeType) QualifiedIdentifier() string {
 }
 
 func (t *CompositeType) ID() TypeID {
+	if t.Location == nil {
+		return TypeID(t.QualifiedIdentifier())
+	}
+
 	return t.Location.TypeID(t.QualifiedIdentifier())
 }
 
@@ -4467,6 +4401,11 @@ func (t *CompositeType) IsStorable(results map[*Member]bool) bool {
 		common.CompositeKindEnum:
 		break
 	default:
+		return false
+	}
+
+	// Native/built-in types are not storable for now
+	if t.Location == nil {
 		return false
 	}
 
@@ -4565,7 +4504,11 @@ func (t *CompositeType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
 	return t
 }
 
-func (t *CompositeType) NestedTypes() *StringTypeOrderedMap {
+func (*CompositeType) isContainerType() bool {
+	return true
+}
+
+func (t *CompositeType) GetNestedTypes() *StringTypeOrderedMap {
 	return t.nestedTypes
 }
 
@@ -4601,732 +4544,6 @@ func (t *CompositeType) initializeMemberResolvers() {
 
 		t.memberResolvers = withBuiltinMembers(t, members)
 	})
-}
-
-// AuthAccountType represents the authorized access to an account.
-// Access to an AuthAccount means having full access to its storage, public keys, and code.
-// Only signed transactions can get the AuthAccount for an account.
-
-type AuthAccountType struct{}
-
-func (*AuthAccountType) IsType() {}
-
-func (*AuthAccountType) String() string {
-	return "AuthAccount"
-}
-
-func (*AuthAccountType) QualifiedString() string {
-	return "AuthAccount"
-}
-
-func (*AuthAccountType) ID() TypeID {
-	return "AuthAccount"
-}
-
-func (*AuthAccountType) Equal(other Type) bool {
-	_, ok := other.(*AuthAccountType)
-	return ok
-}
-
-func (*AuthAccountType) IsResourceType() bool {
-	return false
-}
-
-func (*AuthAccountType) IsInvalidType() bool {
-	return false
-}
-
-func (*AuthAccountType) IsStorable(_ map[*Member]bool) bool {
-	return false
-}
-
-func (*AuthAccountType) IsExternallyReturnable(_ map[*Member]bool) bool {
-	return false
-}
-
-func (*AuthAccountType) IsEquatable() bool {
-	return false
-}
-
-func (*AuthAccountType) TypeAnnotationState() TypeAnnotationState {
-	return TypeAnnotationStateValid
-}
-
-func (t *AuthAccountType) RewriteWithRestrictedTypes() (result Type, rewritten bool) {
-	return t, false
-}
-
-var authAccountTypeAddPublicKeyFunctionType = &FunctionType{
-	Parameters: []*Parameter{
-		{
-			Label:      ArgumentLabelNotRequired,
-			Identifier: "key",
-			TypeAnnotation: NewTypeAnnotation(
-				&VariableSizedType{
-					Type: &UInt8Type{},
-				},
-			),
-		},
-	},
-	ReturnTypeAnnotation: NewTypeAnnotation(
-		VoidType,
-	),
-}
-
-const authAccountTypeAddPublicKeyFunctionDocString = `
-Adds the given byte representation of a public key to the account's keys
-`
-
-var authAccountTypeRemovePublicKeyFunctionType = &FunctionType{
-	Parameters: []*Parameter{
-		{
-			Label:      ArgumentLabelNotRequired,
-			Identifier: "index",
-			TypeAnnotation: NewTypeAnnotation(
-				&IntType{},
-			),
-		},
-	},
-	ReturnTypeAnnotation: NewTypeAnnotation(
-		VoidType,
-	),
-}
-
-const authAccountTypeRemovePublicKeyFunctionDocString = `
-Removes the public key at the given index from the account's keys
-`
-
-var authAccountTypeSaveFunctionType = func() *FunctionType {
-
-	typeParameter := &TypeParameter{
-		Name:      "T",
-		TypeBound: StorableType,
-	}
-
-	return &FunctionType{
-		TypeParameters: []*TypeParameter{
-			typeParameter,
-		},
-		Parameters: []*Parameter{
-			{
-				Label:      ArgumentLabelNotRequired,
-				Identifier: "value",
-				TypeAnnotation: NewTypeAnnotation(
-					&GenericType{
-						TypeParameter: typeParameter,
-					},
-				),
-			},
-			{
-				Label:          "to",
-				Identifier:     "path",
-				TypeAnnotation: NewTypeAnnotation(StoragePathType),
-			},
-		},
-		ReturnTypeAnnotation: NewTypeAnnotation(VoidType),
-	}
-}()
-
-const authAccountTypeSaveFunctionDocString = `
-Saves the given object into the account's storage at the given path.
-Resources are moved into storage, and structures are copied.
-
-If there is already an object stored under the given path, the program aborts.
-
-The path must be a storage path, i.e., only the domain ` + "`storage`" + ` is allowed
-`
-
-var authAccountTypeLoadFunctionType = func() *FunctionType {
-
-	typeParameter := &TypeParameter{
-		Name:      "T",
-		TypeBound: StorableType,
-	}
-
-	return &FunctionType{
-		TypeParameters: []*TypeParameter{
-			typeParameter,
-		},
-		Parameters: []*Parameter{
-			{
-				Label:          "from",
-				Identifier:     "path",
-				TypeAnnotation: NewTypeAnnotation(StoragePathType),
-			},
-		},
-		ReturnTypeAnnotation: NewTypeAnnotation(
-			&OptionalType{
-				Type: &GenericType{
-					TypeParameter: typeParameter,
-				},
-			},
-		),
-	}
-}()
-
-const authAccountTypeLoadFunctionDocString = `
-Loads an object from the account's storage which is stored under the given path, or nil if no object is stored under the given path.
-
-If there is an object stored, the stored resource or structure is moved out of storage and returned as an optional.
-
-When the function returns, the storage no longer contains an object under the given path.
-
-The given type must be a supertype of the type of the loaded object.
-If it is not, the function returns nil.
-The given type must not necessarily be exactly the same as the type of the loaded object.
-
-The path must be a storage path, i.e., only the domain ` + "`storage`" + ` is allowed
-`
-
-var authAccountTypeCopyFunctionType = func() *FunctionType {
-
-	typeParameter := &TypeParameter{
-		Name:      "T",
-		TypeBound: AnyStructType,
-	}
-
-	return &FunctionType{
-		TypeParameters: []*TypeParameter{
-			typeParameter,
-		},
-		Parameters: []*Parameter{
-			{
-				Label:          "from",
-				Identifier:     "path",
-				TypeAnnotation: NewTypeAnnotation(StoragePathType),
-			},
-		},
-		ReturnTypeAnnotation: NewTypeAnnotation(
-			&OptionalType{
-				Type: &GenericType{
-					TypeParameter: typeParameter,
-				},
-			},
-		),
-	}
-}()
-
-const authAccountTypeCopyFunctionDocString = `
-Returns a copy of a structure stored in account storage under the given path, without removing it from storage, or nil if no object is stored under the given path.
-
-If there is a structure stored, it is copied.
-The structure stays stored in storage after the function returns.
-
-The given type must be a supertype of the type of the copied structure.
-If it is not, the function returns nil.
-The given type must not necessarily be exactly the same as the type of the copied structure.
-
-The path must be a storage path, i.e., only the domain ` + "`storage`" + ` is allowed
-`
-
-var authAccountTypeBorrowFunctionType = func() *FunctionType {
-
-	typeParameter := &TypeParameter{
-		TypeBound: &ReferenceType{
-			Type: AnyType,
-		},
-		Name: "T",
-	}
-
-	return &FunctionType{
-		TypeParameters: []*TypeParameter{
-			typeParameter,
-		},
-		Parameters: []*Parameter{
-			{
-				Label:          "from",
-				Identifier:     "path",
-				TypeAnnotation: NewTypeAnnotation(StoragePathType),
-			},
-		},
-		ReturnTypeAnnotation: NewTypeAnnotation(
-			&OptionalType{
-				Type: &GenericType{
-					TypeParameter: typeParameter,
-				},
-			},
-		),
-	}
-}()
-
-const authAccountTypeBorrowFunctionDocString = `
-Returns a reference to an object in storage without removing it from storage.
-
-If no object is stored under the given path, the function returns nil.
-If there is an object stored, a reference is returned as an optional.
-
-The given type must be a reference type.
-It must be possible to create the given reference type for the borrowed object.
-If it is not, the function returns nil.
-
-The given type must not necessarily be exactly the same as the type of the borrowed object.
-
-The path must be a storage path, i.e., only the domain ` + "`storage`" + ` is allowed
-`
-
-var authAccountTypeLinkFunctionType = func() *FunctionType {
-
-	typeParameter := &TypeParameter{
-		TypeBound: &ReferenceType{
-			Type: AnyType,
-		},
-		Name: "T",
-	}
-
-	return &FunctionType{
-		TypeParameters: []*TypeParameter{
-			typeParameter,
-		},
-		Parameters: []*Parameter{
-			{
-				Label:          ArgumentLabelNotRequired,
-				Identifier:     "newCapabilityPath",
-				TypeAnnotation: NewTypeAnnotation(CapabilityPathType),
-			},
-			{
-				Identifier:     "target",
-				TypeAnnotation: NewTypeAnnotation(PathType),
-			},
-		},
-		ReturnTypeAnnotation: NewTypeAnnotation(
-			&OptionalType{
-				Type: &CapabilityType{
-					BorrowType: &GenericType{
-						TypeParameter: typeParameter,
-					},
-				},
-			},
-		),
-	}
-}()
-
-const authAccountTypeLinkFunctionDocString = `
-Creates a capability at the given public or private path which targets the given public, private, or storage path.
-The target path leads to the object that will provide the functionality defined by this capability.
-
-The given type defines how the capability can be borrowed, i.e., how the stored value can be accessed.
-
-Returns nil if a link for the given capability path already exists, or the newly created capability if not.
-
-It is not necessary for the target path to lead to a valid object; the target path could be empty, or could lead to an object which does not provide the necessary type interface:
-The link function does **not** check if the target path is valid/exists at the time the capability is created and does **not** check if the target value conforms to the given type.
-The link is latent. The target value might be stored after the link is created, and the target value might be moved out after the link has been created.
-`
-
-var authAccountTypeUnlinkFunctionType = &FunctionType{
-	Parameters: []*Parameter{
-		{
-			Label:          ArgumentLabelNotRequired,
-			Identifier:     "capabilityPath",
-			TypeAnnotation: NewTypeAnnotation(CapabilityPathType),
-		},
-	},
-	ReturnTypeAnnotation: NewTypeAnnotation(VoidType),
-}
-
-const authAccountTypeUnlinkFunctionDocString = `
-Removes the capability at the given public or private path
-`
-
-var authAccountTypeGetCapabilityFunctionType = func() *FunctionType {
-
-	typeParameter := &TypeParameter{
-		TypeBound: &ReferenceType{
-			Type: AnyType,
-		},
-		Name:     "T",
-		Optional: true,
-	}
-
-	return &FunctionType{
-		TypeParameters: []*TypeParameter{
-			typeParameter,
-		},
-		Parameters: []*Parameter{
-			{
-				Label:          ArgumentLabelNotRequired,
-				Identifier:     "capabilityPath",
-				TypeAnnotation: NewTypeAnnotation(CapabilityPathType),
-			},
-		},
-		ReturnTypeAnnotation: NewTypeAnnotation(
-			&CapabilityType{
-				BorrowType: &GenericType{
-					TypeParameter: typeParameter,
-				},
-			},
-		),
-	}
-}()
-
-var publicAccountTypeGetCapabilityFunctionType = func() *FunctionType {
-
-	typeParameter := &TypeParameter{
-		TypeBound: &ReferenceType{
-			Type: AnyType,
-		},
-		Name:     "T",
-		Optional: true,
-	}
-
-	return &FunctionType{
-		TypeParameters: []*TypeParameter{
-			typeParameter,
-		},
-		Parameters: []*Parameter{
-			{
-				Label:          ArgumentLabelNotRequired,
-				Identifier:     "capabilityPath",
-				TypeAnnotation: NewTypeAnnotation(PublicPathType),
-			},
-		},
-		ReturnTypeAnnotation: NewTypeAnnotation(
-			&CapabilityType{
-				BorrowType: &GenericType{
-					TypeParameter: typeParameter,
-				},
-			},
-		),
-	}
-}()
-
-const authAccountTypeGetCapabilityFunctionDocString = `
-Returns the capability at the given private or public path, or nil if it does not exist
-`
-
-var accountTypeGetLinkTargetFunctionType = &FunctionType{
-	Parameters: []*Parameter{
-		{
-			Label:          ArgumentLabelNotRequired,
-			Identifier:     "capabilityPath",
-			TypeAnnotation: NewTypeAnnotation(CapabilityPathType),
-		},
-	},
-	ReturnTypeAnnotation: NewTypeAnnotation(
-		&OptionalType{
-			Type: PathType,
-		},
-	),
-}
-
-const accountTypeGetLinkTargetFunctionDocString = `
-Returns the target path of the capability at the given public or private path, or nil if there exists no capability at the given path.
-`
-
-const accountTypeAddressFieldDocString = `
-The address of the account
-`
-
-const accountTypeContractsFieldDocString = `
-The contracts of the account
-`
-
-const accountTypeStorageUsedFieldDocString = `
-The current amount of storage used by the account in bytes
-`
-
-const accountTypeStorageCapacityFieldDocString = `
-The storage capacity of the account in bytes
-`
-
-func (t *AuthAccountType) GetMembers() map[string]MemberResolver {
-	return withBuiltinMembers(t, map[string]MemberResolver{
-		"address": {
-			Kind: common.DeclarationKindField,
-			Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
-				return NewPublicConstantFieldMember(
-					t,
-					identifier,
-					&AddressType{},
-					accountTypeAddressFieldDocString,
-				)
-			},
-		},
-		"storageUsed": {
-			Kind: common.DeclarationKindField,
-			Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
-				return NewPublicConstantFieldMember(
-					t,
-					identifier,
-					&UInt64Type{},
-					accountTypeStorageUsedFieldDocString,
-				)
-			},
-		},
-		"storageCapacity": {
-			Kind: common.DeclarationKindField,
-			Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
-				return NewPublicConstantFieldMember(
-					t,
-					identifier,
-					&UInt64Type{},
-					accountTypeStorageCapacityFieldDocString,
-				)
-			},
-		},
-		"addPublicKey": {
-			Kind: common.DeclarationKindFunction,
-			Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
-				return NewPublicFunctionMember(
-					t,
-					identifier,
-					authAccountTypeAddPublicKeyFunctionType,
-					authAccountTypeAddPublicKeyFunctionDocString,
-				)
-			},
-		},
-		"removePublicKey": {
-			Kind: common.DeclarationKindFunction,
-			Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
-				return NewPublicFunctionMember(
-					t,
-					identifier,
-					authAccountTypeRemovePublicKeyFunctionType,
-					authAccountTypeRemovePublicKeyFunctionDocString,
-				)
-			},
-		},
-		"save": {
-			Kind: common.DeclarationKindFunction,
-			Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
-				return NewPublicFunctionMember(
-					t,
-					identifier,
-					authAccountTypeSaveFunctionType,
-					authAccountTypeSaveFunctionDocString,
-				)
-			},
-		},
-		"load": {
-			Kind: common.DeclarationKindFunction,
-			Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
-				return NewPublicFunctionMember(
-					t,
-					identifier,
-					authAccountTypeLoadFunctionType,
-					authAccountTypeLoadFunctionDocString,
-				)
-			},
-		},
-		"copy": {
-			Kind: common.DeclarationKindFunction,
-			Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
-				return NewPublicFunctionMember(
-					t,
-					identifier,
-					authAccountTypeCopyFunctionType,
-					authAccountTypeCopyFunctionDocString,
-				)
-			},
-		},
-		"borrow": {
-			Kind: common.DeclarationKindFunction,
-			Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
-				return NewPublicFunctionMember(
-					t,
-					identifier,
-					authAccountTypeBorrowFunctionType,
-					authAccountTypeBorrowFunctionDocString,
-				)
-			},
-		},
-		"link": {
-			Kind: common.DeclarationKindFunction,
-			Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
-				return NewPublicFunctionMember(
-					t,
-					identifier,
-					authAccountTypeLinkFunctionType,
-					authAccountTypeLinkFunctionDocString,
-				)
-			},
-		},
-		"unlink": {
-			Kind: common.DeclarationKindFunction,
-			Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
-				return NewPublicFunctionMember(
-					t,
-					identifier,
-					authAccountTypeUnlinkFunctionType,
-					authAccountTypeUnlinkFunctionDocString,
-				)
-			},
-		},
-		"getCapability": {
-			Kind: common.DeclarationKindFunction,
-			Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
-				return NewPublicFunctionMember(
-					t,
-					identifier,
-					authAccountTypeGetCapabilityFunctionType,
-					authAccountTypeGetCapabilityFunctionDocString,
-				)
-			},
-		},
-		"getLinkTarget": {
-			Kind: common.DeclarationKindFunction,
-			Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
-				return NewPublicFunctionMember(
-					t,
-					identifier,
-					accountTypeGetLinkTargetFunctionType,
-					accountTypeGetLinkTargetFunctionDocString,
-				)
-			},
-		},
-		"contracts": {
-			Kind: common.DeclarationKindField,
-			Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
-				return NewPublicConstantFieldMember(
-					t,
-					identifier,
-					&AuthAccountContractsType{},
-					accountTypeContractsFieldDocString,
-				)
-			},
-		},
-	})
-}
-
-var authAccountTypeNestedTypes = func() *StringTypeOrderedMap {
-	nestedTypes := NewStringTypeOrderedMap()
-	nestedTypes.Set("Contracts", &AuthAccountContractsType{})
-	return nestedTypes
-}()
-
-func (*AuthAccountType) NestedTypes() *StringTypeOrderedMap {
-	return authAccountTypeNestedTypes
-}
-
-func (*AuthAccountType) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
-	return false
-}
-
-func (t *AuthAccountType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
-	return t
-}
-
-// PublicAccountType represents the publicly accessible portion of an account.
-
-type PublicAccountType struct{}
-
-func (*PublicAccountType) IsType() {}
-
-func (*PublicAccountType) String() string {
-	return "PublicAccount"
-}
-
-func (*PublicAccountType) QualifiedString() string {
-	return "PublicAccount"
-}
-
-func (*PublicAccountType) ID() TypeID {
-	return "PublicAccount"
-}
-
-func (*PublicAccountType) Equal(other Type) bool {
-	_, ok := other.(*PublicAccountType)
-	return ok
-}
-
-func (*PublicAccountType) IsResourceType() bool {
-	return false
-}
-
-func (*PublicAccountType) IsInvalidType() bool {
-	return false
-}
-
-func (*PublicAccountType) IsStorable(_ map[*Member]bool) bool {
-	return false
-}
-
-func (*PublicAccountType) IsExternallyReturnable(_ map[*Member]bool) bool {
-	return false
-}
-
-func (*PublicAccountType) IsEquatable() bool {
-	return false
-}
-
-func (*PublicAccountType) TypeAnnotationState() TypeAnnotationState {
-	return TypeAnnotationStateValid
-}
-
-func (t *PublicAccountType) RewriteWithRestrictedTypes() (result Type, rewritten bool) {
-	return t, false
-}
-
-const publicAccountTypeGetLinkTargetFunctionDocString = `
-Returns the capability at the given public path, or nil if it does not exist
-`
-
-func (t *PublicAccountType) GetMembers() map[string]MemberResolver {
-	return withBuiltinMembers(t, map[string]MemberResolver{
-		"address": {
-			Kind: common.DeclarationKindField,
-			Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
-				return NewPublicConstantFieldMember(
-					t,
-					identifier,
-					&AddressType{},
-					accountTypeAddressFieldDocString,
-				)
-			},
-		},
-		"storageUsed": {
-			Kind: common.DeclarationKindField,
-			Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
-				return NewPublicConstantFieldMember(
-					t,
-					identifier,
-					&UInt64Type{},
-					accountTypeStorageUsedFieldDocString,
-				)
-			},
-		},
-		"storageCapacity": {
-			Kind: common.DeclarationKindField,
-			Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
-				return NewPublicConstantFieldMember(
-					t,
-					identifier,
-					&UInt64Type{},
-					accountTypeStorageCapacityFieldDocString,
-				)
-			},
-		},
-		"getCapability": {
-			Kind: common.DeclarationKindFunction,
-			Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
-				return NewPublicFunctionMember(
-					t,
-					identifier,
-					publicAccountTypeGetCapabilityFunctionType,
-					publicAccountTypeGetLinkTargetFunctionDocString,
-				)
-			},
-		},
-		"getLinkTarget": {
-			Kind: common.DeclarationKindFunction,
-			Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
-				return NewPublicFunctionMember(
-					t,
-					identifier,
-					accountTypeGetLinkTargetFunctionType,
-					accountTypeGetLinkTargetFunctionDocString,
-				)
-			},
-		},
-	})
-}
-
-func (*PublicAccountType) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
-	return false
-}
-
-func (t *PublicAccountType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
-	return t
 }
 
 // Member
@@ -5383,6 +4600,23 @@ func NewPublicConstantFieldMember(
 	}
 }
 
+func NewPublicEnumCaseMember(
+	caseType Type,
+	identifier string,
+	docString string,
+) *Member {
+	return &Member{
+		Access: ast.AccessPublic,
+		Identifier: ast.Identifier{
+			Identifier: identifier,
+		},
+		DeclarationKind: common.DeclarationKindField,
+		TypeAnnotation:  NewTypeAnnotation(caseType),
+		VariableKind:    ast.VariableKindConstant,
+		DocString:       docString,
+	}
+}
+
 // IsStorable returns whether a member is a storable field
 func (m *Member) IsStorable(results map[*Member]bool) (result bool) {
 	test := func(t Type) bool {
@@ -5395,6 +4629,14 @@ func (m *Member) IsStorable(results map[*Member]bool) (result bool) {
 func (m *Member) IsExternallyReturnable(results map[*Member]bool) (result bool) {
 	test := func(t Type) bool {
 		return t.IsExternallyReturnable(results)
+	}
+	return m.testType(test, results)
+}
+
+// IsValidEventParameterType returns whether has a valid event parameter type
+func (m *Member) IsValidEventParameterType(results map[*Member]bool) bool {
+	test := func(t Type) bool {
+		return IsValidEventParameterType(t, results)
 	}
 	return m.testType(test, results)
 }
@@ -5447,8 +4689,8 @@ type InterfaceType struct {
 	Identifier          string
 	CompositeKind       common.CompositeKind
 	Members             *StringMemberOrderedMap
-	memberResolversOnce sync.Once
 	memberResolvers     map[string]MemberResolver
+	memberResolversOnce sync.Once
 	Fields              []string
 	// TODO: add support for overloaded initializers
 	InitializerParameters []*Parameter
@@ -5596,7 +4838,11 @@ func (t *InterfaceType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
 	return t
 }
 
-func (t *InterfaceType) NestedTypes() *StringTypeOrderedMap {
+func (*InterfaceType) isContainerType() bool {
+	return true
+}
+
+func (t *InterfaceType) GetNestedTypes() *StringTypeOrderedMap {
 	return t.nestedTypes
 }
 
@@ -5606,8 +4852,10 @@ func (t *InterfaceType) NestedTypes() *StringTypeOrderedMap {
 // and all values have to be a subtype of the value type.
 
 type DictionaryType struct {
-	KeyType   Type
-	ValueType Type
+	KeyType             Type
+	ValueType           Type
+	memberResolvers     map[string]MemberResolver
+	memberResolversOnce sync.Once
 }
 
 func (*DictionaryType) IsType() {}
@@ -5699,6 +4947,10 @@ func (t *DictionaryType) RewriteWithRestrictedTypes() (Type, bool) {
 	}
 }
 
+const dictionaryTypeContainsKeyFunctionDocString = `
+Returns true if the given key is in the dictionary
+`
+
 const dictionaryTypeLengthFieldDocString = `
 The number of entries in the dictionary
 `
@@ -5724,113 +4976,144 @@ Returns the value as an optional if the dictionary contained the key, or nil if 
 `
 
 func (t *DictionaryType) GetMembers() map[string]MemberResolver {
-	return withBuiltinMembers(t, map[string]MemberResolver{
-		"length": {
-			Kind: common.DeclarationKindField,
-			Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
-				return NewPublicConstantFieldMember(
-					t,
-					identifier,
-					&IntType{},
-					dictionaryTypeLengthFieldDocString,
-				)
-			},
-		},
-		"keys": {
-			Kind: common.DeclarationKindField,
-			Resolve: func(identifier string, targetRange ast.Range, report func(error)) *Member {
-				// TODO: maybe allow for resource key type
+	t.initializeMemberResolvers()
+	return t.memberResolvers
+}
 
-				if t.KeyType.IsResourceType() {
-					report(
-						&InvalidResourceDictionaryMemberError{
-							Name:            identifier,
-							DeclarationKind: common.DeclarationKindField,
-							Range:           targetRange,
+func (t *DictionaryType) initializeMemberResolvers() {
+	t.memberResolversOnce.Do(func() {
+
+		t.memberResolvers = withBuiltinMembers(t, map[string]MemberResolver{
+			"containsKey": {
+				Kind: common.DeclarationKindFunction,
+				Resolve: func(identifier string, targetRange ast.Range, report func(error)) *Member {
+
+					return NewPublicFunctionMember(
+						t,
+						identifier,
+						&FunctionType{
+							Parameters: []*Parameter{
+								{
+									Label:          ArgumentLabelNotRequired,
+									Identifier:     "key",
+									TypeAnnotation: NewTypeAnnotation(t.KeyType),
+								},
+							},
+							ReturnTypeAnnotation: NewTypeAnnotation(
+								BoolType,
+							),
 						},
+						dictionaryTypeContainsKeyFunctionDocString,
 					)
-				}
-
-				return NewPublicConstantFieldMember(
-					t,
-					identifier,
-					&VariableSizedType{Type: t.KeyType},
-					dictionaryTypeKeysFieldDocString,
-				)
+				},
 			},
-		},
-		"values": {
-			Kind: common.DeclarationKindField,
-			Resolve: func(identifier string, targetRange ast.Range, report func(error)) *Member {
-				// TODO: maybe allow for resource value type
-
-				if t.ValueType.IsResourceType() {
-					report(
-						&InvalidResourceDictionaryMemberError{
-							Name:            identifier,
-							DeclarationKind: common.DeclarationKindField,
-							Range:           targetRange,
-						},
+			"length": {
+				Kind: common.DeclarationKindField,
+				Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
+					return NewPublicConstantFieldMember(
+						t,
+						identifier,
+						&IntType{},
+						dictionaryTypeLengthFieldDocString,
 					)
-				}
+				},
+			},
+			"keys": {
+				Kind: common.DeclarationKindField,
+				Resolve: func(identifier string, targetRange ast.Range, report func(error)) *Member {
+					// TODO: maybe allow for resource key type
 
-				return NewPublicConstantFieldMember(
-					t,
-					identifier,
-					&VariableSizedType{Type: t.ValueType},
-					dictionaryTypeValuesFieldDocString,
-				)
+					if t.KeyType.IsResourceType() {
+						report(
+							&InvalidResourceDictionaryMemberError{
+								Name:            identifier,
+								DeclarationKind: common.DeclarationKindField,
+								Range:           targetRange,
+							},
+						)
+					}
+
+					return NewPublicConstantFieldMember(
+						t,
+						identifier,
+						&VariableSizedType{Type: t.KeyType},
+						dictionaryTypeKeysFieldDocString,
+					)
+				},
 			},
-		},
-		"insert": {
-			Kind: common.DeclarationKindFunction,
-			Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
-				return NewPublicFunctionMember(t,
-					identifier,
-					&FunctionType{
-						Parameters: []*Parameter{
-							{
-								Identifier:     "key",
-								TypeAnnotation: NewTypeAnnotation(t.KeyType),
+			"values": {
+				Kind: common.DeclarationKindField,
+				Resolve: func(identifier string, targetRange ast.Range, report func(error)) *Member {
+					// TODO: maybe allow for resource value type
+
+					if t.ValueType.IsResourceType() {
+						report(
+							&InvalidResourceDictionaryMemberError{
+								Name:            identifier,
+								DeclarationKind: common.DeclarationKindField,
+								Range:           targetRange,
 							},
-							{
-								Label:          ArgumentLabelNotRequired,
-								Identifier:     "value",
-								TypeAnnotation: NewTypeAnnotation(t.ValueType),
+						)
+					}
+
+					return NewPublicConstantFieldMember(
+						t,
+						identifier,
+						&VariableSizedType{Type: t.ValueType},
+						dictionaryTypeValuesFieldDocString,
+					)
+				},
+			},
+			"insert": {
+				Kind: common.DeclarationKindFunction,
+				Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
+					return NewPublicFunctionMember(t,
+						identifier,
+						&FunctionType{
+							Parameters: []*Parameter{
+								{
+									Identifier:     "key",
+									TypeAnnotation: NewTypeAnnotation(t.KeyType),
+								},
+								{
+									Label:          ArgumentLabelNotRequired,
+									Identifier:     "value",
+									TypeAnnotation: NewTypeAnnotation(t.ValueType),
+								},
 							},
+							ReturnTypeAnnotation: NewTypeAnnotation(
+								&OptionalType{
+									Type: t.ValueType,
+								},
+							),
 						},
-						ReturnTypeAnnotation: NewTypeAnnotation(
-							&OptionalType{
-								Type: t.ValueType,
-							},
-						),
-					},
-					dictionaryTypeInsertFunctionDocString,
-				)
+						dictionaryTypeInsertFunctionDocString,
+					)
+				},
 			},
-		},
-		"remove": {
-			Kind: common.DeclarationKindFunction,
-			Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
-				return NewPublicFunctionMember(t,
-					identifier,
-					&FunctionType{
-						Parameters: []*Parameter{
-							{
-								Identifier:     "key",
-								TypeAnnotation: NewTypeAnnotation(t.KeyType),
+			"remove": {
+				Kind: common.DeclarationKindFunction,
+				Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
+					return NewPublicFunctionMember(t,
+						identifier,
+						&FunctionType{
+							Parameters: []*Parameter{
+								{
+									Identifier:     "key",
+									TypeAnnotation: NewTypeAnnotation(t.KeyType),
+								},
 							},
+							ReturnTypeAnnotation: NewTypeAnnotation(
+								&OptionalType{
+									Type: t.ValueType,
+								},
+							),
 						},
-						ReturnTypeAnnotation: NewTypeAnnotation(
-							&OptionalType{
-								Type: t.ValueType,
-							},
-						),
-					},
-					dictionaryTypeRemoveFunctionDocString,
-				)
+						dictionaryTypeRemoveFunctionDocString,
+					)
+				},
 			},
-		},
+		})
 	})
 }
 
@@ -6685,7 +5968,7 @@ func IsSubType(subType Type, superType Type) bool {
 			}
 		}
 
-	case *NominalType:
+	case *SimpleType:
 		if typedSuperType.IsSuperTypeOf == nil {
 			return false
 		}
@@ -7307,4 +6590,140 @@ func (t *CapabilityType) GetMembers() map[string]MemberResolver {
 			},
 		},
 	})
+}
+
+var NativeCompositeTypes = map[string]*CompositeType{}
+
+func init() {
+	types := []*CompositeType{
+		AccountKeyType,
+		PublicKeyType,
+		HashAlgorithmType,
+		SignatureAlgorithmType,
+		AuthAccountKeysType,
+		PublicAccountKeysType,
+	}
+
+	for _, semaType := range types {
+		NativeCompositeTypes[semaType.QualifiedIdentifier()] = semaType
+	}
+}
+
+const AccountKeyTypeName = "AccountKey"
+const AccountKeyKeyIndexField = "keyIndex"
+const AccountKeyPublicKeyField = "publicKey"
+const AccountKeyHashAlgoField = "hashAlgorithm"
+const AccountKeyWeightField = "weight"
+const AccountKeyIsRevokedField = "isRevoked"
+
+// AccountKeyType represents the key associated with an account.
+var AccountKeyType = func() *CompositeType {
+
+	accountKeyType := &CompositeType{
+		Identifier: AccountKeyTypeName,
+		Kind:       common.CompositeKindStructure,
+	}
+
+	const accountKeyIndexFieldDocString = `The index of the account key`
+	const accountKeyPublicKeyFieldDocString = `The public key of the account`
+	const accountKeyHashAlgorithmFieldDocString = `The hash algorithm used by the public key`
+	const accountKeyWeightFieldDocString = `The weight assigned to the public key`
+	const accountKeyIsRevokedFieldDocString = `Flag indicating whether the key is revoked`
+
+	var members = []*Member{
+		NewPublicConstantFieldMember(
+			accountKeyType,
+			AccountKeyKeyIndexField,
+			&IntType{},
+			accountKeyIndexFieldDocString,
+		),
+		NewPublicConstantFieldMember(
+			accountKeyType,
+			AccountKeyPublicKeyField,
+			PublicKeyType,
+			accountKeyPublicKeyFieldDocString,
+		),
+		NewPublicConstantFieldMember(
+			accountKeyType,
+			AccountKeyHashAlgoField,
+			HashAlgorithmType,
+			accountKeyHashAlgorithmFieldDocString,
+		),
+		NewPublicConstantFieldMember(
+			accountKeyType,
+			AccountKeyWeightField,
+			&UFix64Type{},
+			accountKeyWeightFieldDocString,
+		),
+		NewPublicConstantFieldMember(
+			accountKeyType,
+			AccountKeyIsRevokedField,
+			BoolType,
+			accountKeyIsRevokedFieldDocString,
+		),
+	}
+
+	accountKeyType.Members = GetMembersAsMap(members)
+	accountKeyType.Fields = getFieldNames(members)
+	return accountKeyType
+}()
+
+const PublicKeyTypeName = "PublicKey"
+const PublicKeyPublicKeyField = "publicKey"
+const PublicKeySignAlgoField = "signatureAlgorithm"
+
+// PublicKeyType represents the public key associated with an account key.
+var PublicKeyType = func() *CompositeType {
+
+	accountKeyType := &CompositeType{
+		Identifier: PublicKeyTypeName,
+		Kind:       common.CompositeKindStructure,
+	}
+
+	const publicKeyKeyFieldDocString = `The public key`
+	const publicKeySignAlgoFieldDocString = `The signature algorithm to be used with the key`
+
+	var members = []*Member{
+		NewPublicConstantFieldMember(
+			accountKeyType,
+			PublicKeyPublicKeyField,
+			&VariableSizedType{Type: &UInt8Type{}},
+			publicKeyKeyFieldDocString,
+		),
+		NewPublicConstantFieldMember(
+			accountKeyType,
+			PublicKeySignAlgoField,
+			SignatureAlgorithmType,
+			publicKeySignAlgoFieldDocString,
+		),
+	}
+
+	accountKeyType.Members = GetMembersAsMap(members)
+	accountKeyType.Fields = getFieldNames(members)
+
+	return accountKeyType
+}()
+
+type CryptoAlgorithm interface {
+	RawValue() uint8
+	Name() string
+	DocString() string
+}
+
+func GetMembersAsMap(members []*Member) *StringMemberOrderedMap {
+	membersMap := NewStringMemberOrderedMap()
+	for _, member := range members {
+		membersMap.Set(member.Identifier.Identifier, member)
+	}
+
+	return membersMap
+}
+
+func getFieldNames(members []*Member) []string {
+	fields := make([]string, len(members))
+	for index, member := range members {
+		fields[index] = member.Identifier.Identifier
+	}
+
+	return fields
 }

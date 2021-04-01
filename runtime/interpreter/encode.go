@@ -22,6 +22,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"math/big"
 	"strconv"
 	"strings"
 
@@ -457,7 +458,7 @@ func (e *Encoder) prepareBool(v BoolValue) bool {
 func (e *Encoder) prepareInt(v IntValue) cbor.Tag {
 	return cbor.Tag{
 		Number:  cborTagIntValue,
-		Content: v.BigInt,
+		Content: prepareBigInt(v.BigInt),
 	}
 }
 
@@ -488,24 +489,25 @@ func (e *Encoder) prepareInt64(v Int64Value) cbor.Tag {
 		Content: v,
 	}
 }
+
 func (e *Encoder) prepareInt128(v Int128Value) cbor.Tag {
 	return cbor.Tag{
 		Number:  cborTagInt128Value,
-		Content: v.BigInt,
+		Content: prepareBigInt(v.BigInt),
 	}
 }
 
 func (e *Encoder) prepareInt256(v Int256Value) cbor.Tag {
 	return cbor.Tag{
 		Number:  cborTagInt256Value,
-		Content: v.BigInt,
+		Content: prepareBigInt(v.BigInt),
 	}
 }
 
 func (e *Encoder) prepareUInt(v UIntValue) cbor.Tag {
 	return cbor.Tag{
 		Number:  cborTagUIntValue,
-		Content: v.BigInt,
+		Content: prepareBigInt(v.BigInt),
 	}
 }
 
@@ -540,14 +542,33 @@ func (e *Encoder) prepareUInt64(v UInt64Value) cbor.Tag {
 func (e *Encoder) prepareUInt128(v UInt128Value) cbor.Tag {
 	return cbor.Tag{
 		Number:  cborTagUInt128Value,
-		Content: v.BigInt,
+		Content: prepareBigInt(v.BigInt),
 	}
 }
 
 func (e *Encoder) prepareUInt256(v UInt256Value) cbor.Tag {
 	return cbor.Tag{
 		Number:  cborTagUInt256Value,
-		Content: v.BigInt,
+		Content: prepareBigInt(v.BigInt),
+	}
+}
+
+func prepareBigInt(v *big.Int) cbor.Tag {
+	sign := v.Sign()
+
+	var tagNum uint64 = 2
+
+	if sign < 0 {
+		tagNum = 3
+
+		// For negative number, convert to CBOR encoded number (-v-1).
+		v = new(big.Int).Abs(v)
+		v.Sub(v, bigOne)
+	}
+
+	return cbor.Tag{
+		Number:  tagNum,
+		Content: v.Bytes(),
 	}
 }
 
@@ -597,13 +618,22 @@ func (e *Encoder) prepareString(v *StringValue) string {
 	return v.Str
 }
 
+// \x1F = Information Separator One
+//
+const pathSeparator = "\x1F"
+
 // joinPath returns the path for a nested item, for example the index of an array,
 // the key of a dictionary, or the field name of a composite.
 //
-// \x1F = Information Separator One
-//
 func joinPath(elements []string) string {
-	return strings.Join(elements, "\x1F")
+	return strings.Join(elements, pathSeparator)
+}
+
+// joinPathElements returns the path for a nested item, for example the index of an array,
+// the key of a dictionary, or the field name of a composite.
+//
+func joinPathElements(elements ...string) string {
+	return strings.Join(elements, pathSeparator)
 }
 
 func (e *Encoder) prepareArray(
@@ -680,10 +710,9 @@ func (e *Encoder) prepareDictionaryValue(
 
 		if deferred {
 
-			var deferredStorageKey string
 			var isDeferred bool
 			if v.DeferredKeys != nil {
-				deferredStorageKey, isDeferred = v.DeferredKeys.Get(key)
+				_, isDeferred = v.DeferredKeys.Get(key)
 			}
 
 			// If the value is not deferred, i.e. it is in memory,
@@ -707,6 +736,8 @@ func (e *Encoder) prepareDictionaryValue(
 				owner := *v.Owner
 
 				if deferredOwner != owner {
+
+					deferredStorageKey := joinPathElements(v.DeferredStorageKeyBase, key)
 
 					deferrals.Moves = append(deferrals.Moves,
 						EncodingDeferralMove{

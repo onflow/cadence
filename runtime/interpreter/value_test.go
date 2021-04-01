@@ -109,7 +109,7 @@ func TestSetOwnerArraySetIndex(t *testing.T) {
 	assert.Equal(t, &newOwner, value1.GetOwner())
 	assert.Equal(t, &oldOwner, value2.GetOwner())
 
-	array.Set(nil, LocationRange{}, NewIntValueFromInt64(0), value2)
+	array.Set(nil, ReturnEmptyLocationRange, NewIntValueFromInt64(0), value2)
 
 	assert.Equal(t, &newOwner, array.GetOwner())
 	assert.Equal(t, &newOwner, value1.GetOwner())
@@ -233,7 +233,7 @@ func TestSetOwnerDictionarySetIndex(t *testing.T) {
 
 	dictionary.Set(
 		nil,
-		LocationRange{},
+		ReturnEmptyLocationRange,
 		keyValue,
 		NewSomeValueOwningNonCopying(value),
 	)
@@ -258,7 +258,7 @@ func TestSetOwnerDictionaryInsert(t *testing.T) {
 	assert.Equal(t, &newOwner, dictionary.GetOwner())
 	assert.Equal(t, &oldOwner, value.GetOwner())
 
-	dictionary.Insert(nil, LocationRange{}, keyValue, value)
+	dictionary.Insert(nil, ReturnEmptyLocationRange, keyValue, value)
 
 	assert.Equal(t, &newOwner, dictionary.GetOwner())
 	assert.Equal(t, &newOwner, value.GetOwner())
@@ -392,7 +392,7 @@ func TestSetOwnerCompositeSetMember(t *testing.T) {
 
 	composite.SetMember(
 		nil,
-		LocationRange{},
+		ReturnEmptyLocationRange,
 		fieldName,
 		value,
 	)
@@ -565,7 +565,7 @@ func TestStringer(t *testing.T) {
 			value:    TypeValue{Type: PrimitiveStaticTypeInt},
 			expected: "Type<Int>()",
 		},
-		"Capability": {
+		"Capability with borrow type": {
 			value: CapabilityValue{
 				Path: PathValue{
 					Domain:     common.PathDomainStorage,
@@ -575,6 +575,16 @@ func TestStringer(t *testing.T) {
 				BorrowType: PrimitiveStaticTypeInt,
 			},
 			expected: "Capability<Int>(address: 0x102030405, path: /storage/foo)",
+		},
+		"Capability without borrow type": {
+			value: CapabilityValue{
+				Path: PathValue{
+					Domain:     common.PathDomainStorage,
+					Identifier: "foo",
+				},
+				Address: NewAddressValueFromBytes([]byte{1, 2, 3, 4, 5}),
+			},
+			expected: "Capability(address: 0x102030405, path: /storage/foo)",
 		},
 		"Dictionary with non-deferred values": {
 			value: NewDictionaryValueUnownedNonCopying(

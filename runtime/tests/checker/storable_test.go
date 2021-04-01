@@ -97,7 +97,7 @@ func TestCheckStorable(t *testing.T) {
 		&sema.AddressType{},
 		sema.PathType,
 		&sema.CapabilityType{},
-		&sema.StringType{},
+		sema.StringType,
 		sema.BoolType,
 		sema.MetaType,
 		sema.CharacterType,
@@ -118,8 +118,8 @@ func TestCheckStorable(t *testing.T) {
 		},
 		sema.NeverType,
 		sema.VoidType,
-		&sema.AuthAccountType{},
-		&sema.PublicAccountType{},
+		sema.AuthAccountType,
+		sema.PublicAccountType,
 	}
 
 	// Capabilities of non-storable types are storable
@@ -227,7 +227,7 @@ func TestCheckStorable(t *testing.T) {
 
 			if compositeKind == common.CompositeKindEvent &&
 				testCase.Type != nil &&
-				!sema.IsValidEventParameterType(testCase.Type) {
+				!sema.IsValidEventParameterType(testCase.Type, map[*sema.Member]bool{}) {
 
 				continue
 			}

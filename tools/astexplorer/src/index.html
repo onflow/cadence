@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Cadence AST Explorer</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: monospace;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        #panels {
+            display: grid;
+            height: 100%;
+            grid-template-rows: 1fr;
+            grid-template-columns: 50% 50%;
+            grid-template-areas: "editor ast";
+        }
+
+        #editor {
+            grid-area: editor;
+            border: 1px solid #ccc;
+        }
+
+        #ast {
+            grid-area: ast;
+            overflow: auto;
+        }
+
+        .highlighted {
+            background: #ffe500;
+        }
+
+        .tree-element {
+            margin: 2px 0 2px 4px;
+            position: relative;
+        }
+
+        .tree-element.is-child {
+            margin-left: 16px;
+        }
+
+        div.tree-element:before {
+            content: '';
+            position: absolute;
+            top: 18px;
+            left: 2px;
+            height: calc(100% - 38px);
+            border-left: 1px solid #ddd;
+        }
+
+        p.tree-element {
+            margin-left: 32px;
+        }
+
+        .toggler {
+            padding: 7px;
+            cursor: pointer;
+            margin-left: -8px;
+        }
+
+        .toggler::before {
+            display: inline-block;
+            content: '\25BE';
+            transform: rotate(0deg);
+            transition: transform 200ms;
+        }
+
+        .toggler.closed::before {
+            transform: rotate(-90deg);
+        }
+
+        .collapsed {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+<div id="panels">
+    <div id="editor"></div>
+    <div id="ast"></div>
+</div>
+
+</body>
+</html>

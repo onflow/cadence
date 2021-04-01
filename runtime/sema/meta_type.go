@@ -29,7 +29,7 @@ The fully-qualified identifier of the type
 
 // MetaType represents the type of a type.
 //
-var MetaType = &NominalType{
+var MetaType = &SimpleType{
 	Name:                 "Type",
 	QualifiedName:        "Type",
 	TypeID:               "Type",
@@ -38,7 +38,7 @@ var MetaType = &NominalType{
 	Storable:             true,
 	Equatable:            true,
 	ExternallyReturnable: true,
-	Members: func(t *NominalType) map[string]MemberResolver {
+	Members: func(t *SimpleType) map[string]MemberResolver {
 		return map[string]MemberResolver{
 			"identifier": {
 				Kind: common.DeclarationKindField,
@@ -46,7 +46,7 @@ var MetaType = &NominalType{
 					return NewPublicConstantFieldMember(
 						t,
 						identifier,
-						&StringType{},
+						StringType,
 						typeIdentifierDocString,
 					)
 				},

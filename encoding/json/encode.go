@@ -181,6 +181,7 @@ const (
 	pathTypeStr       = "Path"
 	typeTypeStr       = "Type"
 	capabilityTypeStr = "Capability"
+	enumTypeStr       = "Enum"
 )
 
 // prepare traverses the object graph of the provided value and constructs
@@ -257,6 +258,8 @@ func Prepare(v cadence.Value) jsonValue {
 		return prepareTypeValue(x)
 	case cadence.Capability:
 		return prepareCapability(x)
+	case cadence.Enum:
+		return prepareEnum(x)
 	default:
 		panic(fmt.Errorf("unsupported value: %T, %v", v, v))
 	}
@@ -483,6 +486,10 @@ func prepareEvent(v cadence.Event) jsonValue {
 
 func prepareContract(v cadence.Contract) jsonValue {
 	return prepareComposite(contractTypeStr, v.ContractType.ID(), v.ContractType.Fields, v.Fields)
+}
+
+func prepareEnum(v cadence.Enum) jsonValue {
+	return prepareComposite(enumTypeStr, v.EnumType.ID(), v.EnumType.Fields, v.Fields)
 }
 
 func prepareComposite(kind, id string, fieldTypes []cadence.Field, fields []cadence.Value) jsonValue {

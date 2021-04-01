@@ -28,7 +28,7 @@ func TestActivations(t *testing.T) {
 
 	t.Parallel()
 
-	activations := &Activations{}
+	activations := &ValueTypeActivations{}
 
 	activations.Set("a", 1)
 

@@ -44,7 +44,7 @@ func TestRuntimeCrypto_import(t *testing.T) {
 
 	runtimeInterface := &testRuntimeInterface{}
 
-	result, err := runtime.ExecuteScript(
+	_, err := runtime.ExecuteScript(
 		Script{
 			Source: script,
 		},
@@ -53,12 +53,8 @@ func TestRuntimeCrypto_import(t *testing.T) {
 			Location:  utils.TestLocation,
 		},
 	)
-	require.NoError(t, err)
-
-	assert.Equal(t,
-		cadence.NewString("ECDSA_P256"),
-		result,
-	)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "value of type `Crypto` has no member `ECDSA_P256`")
 }
 
 func TestRuntimeCrypto_verify(t *testing.T) {
@@ -71,15 +67,15 @@ func TestRuntimeCrypto_verify(t *testing.T) {
       import Crypto
 
       pub fun main(): Bool {
-          let publicKey = Crypto.PublicKey(
+          let publicKey = PublicKey(
               publicKey: "0102".decodeHex(),
-              signatureAlgorithm: Crypto.ECDSA_P256
+              signatureAlgorithm: SignatureAlgorithm.ECDSA_P256
           )
 
           let keyList = Crypto.KeyList()
           keyList.add(
               publicKey,
-              hashAlgorithm: Crypto.SHA3_256,
+              hashAlgorithm: HashAlgorithm.SHA3_256,
               weight: 1.0
           )
 
@@ -105,16 +101,16 @@ func TestRuntimeCrypto_verify(t *testing.T) {
 			tag string,
 			signedData []byte,
 			publicKey []byte,
-			signatureAlgorithm string,
-			hashAlgorithm string,
+			signatureAlgorithm SignatureAlgorithm,
+			hashAlgorithm HashAlgorithm,
 		) (bool, error) {
 			called = true
 			assert.Equal(t, []byte{3, 4}, signature)
 			assert.Equal(t, "user", tag)
 			assert.Equal(t, []byte{5, 6}, signedData)
 			assert.Equal(t, []byte{1, 2}, publicKey)
-			assert.Equal(t, "ECDSA_P256", signatureAlgorithm)
-			assert.Equal(t, "SHA3_256", hashAlgorithm)
+			assert.Equal(t, SignatureAlgorithmECDSA_P256, signatureAlgorithm)
+			assert.Equal(t, HashAlgorithmSHA3_256, hashAlgorithm)
 			return true, nil
 		},
 	}
@@ -148,8 +144,7 @@ func TestRuntimeCrypto_hash(t *testing.T) {
       import Crypto
 
       pub fun main() {
-          log(Crypto.SHA3_256.hash("01020304".decodeHex()))
-          log(Crypto.hash("01020304".decodeHex(), algorithm: Crypto.SHA3_256))
+          log(Crypto.hash("01020304".decodeHex(), algorithm: HashAlgorithm.SHA3_256))
       }
     `)
 
@@ -160,11 +155,11 @@ func TestRuntimeCrypto_hash(t *testing.T) {
 	runtimeInterface := &testRuntimeInterface{
 		hash: func(
 			data []byte,
-			hashAlgorithm string,
+			hashAlgorithm HashAlgorithm,
 		) ([]byte, error) {
 			called = true
 			assert.Equal(t, []byte{1, 2, 3, 4}, data)
-			assert.Equal(t, "SHA3_256", hashAlgorithm)
+			assert.Equal(t, HashAlgorithmSHA3_256, hashAlgorithm)
 			return []byte{5, 6, 7, 8}, nil
 		},
 		log: func(message string) {
@@ -185,7 +180,6 @@ func TestRuntimeCrypto_hash(t *testing.T) {
 
 	assert.Equal(t,
 		[]string{
-			"[5, 6, 7, 8]",
 			"[5, 6, 7, 8]",
 		},
 		loggedMessages,

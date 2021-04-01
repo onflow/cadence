@@ -134,7 +134,7 @@ systemctl stop polkit.service
 ### Install dependencies
 
 
-- Install Go 1.14
+- Install Go 1.15
 
   1. Enable Buster backports
 

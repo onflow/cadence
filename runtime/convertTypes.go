@@ -39,8 +39,6 @@ func ExportType(t sema.Type, results map[sema.TypeID]cadence.Type) cadence.Type 
 		switch t := t.(type) {
 		case *sema.OptionalType:
 			return exportOptionalType(t, results)
-		case *sema.StringType:
-			return cadence.StringType{}
 		case *sema.NumberType:
 			return cadence.NumberType{}
 		case *sema.SignedNumberType:
@@ -111,16 +109,10 @@ func ExportType(t sema.Type, results map[sema.TypeID]cadence.Type) cadence.Type 
 			return exportReferenceType(t, results)
 		case *sema.RestrictedType:
 			return exportRestrictedType(t, results)
-		case *sema.BlockType:
-			return cadence.BlockType{}
 		case *sema.CheckedFunctionType:
 			return exportFunctionType(t.FunctionType, results)
 		case *sema.CapabilityType:
 			return exportCapabilityType(t, results)
-		case *sema.AuthAccountType:
-			return cadence.AuthAccountType{}
-		case *sema.PublicAccountType:
-			return cadence.PublicAccountType{}
 		}
 
 		switch t {
@@ -152,6 +144,14 @@ func ExportType(t sema.Type, results map[sema.TypeID]cadence.Type) cadence.Type 
 			return cadence.AnyStructType{}
 		case sema.AnyResourceType:
 			return cadence.AnyResourceType{}
+		case sema.AuthAccountType:
+			return cadence.AuthAccountType{}
+		case sema.PublicAccountType:
+			return cadence.PublicAccountType{}
+		case sema.BlockType:
+			return cadence.BlockType{}
+		case sema.StringType:
+			return cadence.StringType{}
 		}
 
 		panic(fmt.Sprintf("cannot export type of type %T", t))
@@ -234,6 +234,14 @@ func exportCompositeType(t *sema.CompositeType, results map[sema.TypeID]cadence.
 			Location:            t.Location,
 			QualifiedIdentifier: t.QualifiedIdentifier(),
 			Fields:              fields,
+		}
+
+	case common.CompositeKindEnum:
+		result = &cadence.EnumType{
+			Location:            t.Location,
+			QualifiedIdentifier: t.QualifiedIdentifier(),
+			Fields:              fields,
+			RawType:             ExportType(t.EnumRawType, results),
 		}
 
 	default:

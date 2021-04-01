@@ -21,13 +21,10 @@ package interpreter
 import (
 	"fmt"
 
-	"github.com/onflow/cadence/runtime/activations"
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/sema"
-
-	. "github.com/onflow/cadence/runtime/trampoline"
 )
 
 // Invocation
@@ -37,7 +34,7 @@ type Invocation struct {
 	Arguments          []Value
 	ArgumentTypes      []sema.Type
 	TypeParameterTypes *sema.TypeParameterTypeOrderedMap
-	LocationRange      LocationRange
+	GetLocationRange   func() LocationRange
 	Interpreter        *Interpreter
 }
 
@@ -46,7 +43,7 @@ type Invocation struct {
 type FunctionValue interface {
 	Value
 	isFunctionValue()
-	Invoke(Invocation) Trampoline
+	Invoke(Invocation) Value
 }
 
 // InterpretedFunctionValue
@@ -55,7 +52,7 @@ type InterpretedFunctionValue struct {
 	Interpreter      *Interpreter
 	ParameterList    *ast.ParameterList
 	Type             *sema.FunctionType
-	Activation       *activations.Activation
+	Activation       *VariableActivation
 	BeforeStatements []ast.Statement
 	PreConditions    ast.Conditions
 	Statements       []ast.Statement
@@ -104,17 +101,17 @@ func (InterpretedFunctionValue) SetModified(_ bool) {
 
 func (InterpretedFunctionValue) isFunctionValue() {}
 
-func (f InterpretedFunctionValue) Invoke(invocation Invocation) Trampoline {
+func (f InterpretedFunctionValue) Invoke(invocation Invocation) Value {
 	return f.Interpreter.invokeInterpretedFunction(f, invocation)
 }
 
 // HostFunctionValue
 
-type HostFunction func(invocation Invocation) Trampoline
+type HostFunction func(invocation Invocation) Value
 
 type HostFunctionValue struct {
-	Function HostFunction
-	Members  *StringValueOrderedMap
+	Function        HostFunction
+	NestedVariables *StringVariableOrderedMap
 }
 
 func (f HostFunctionValue) String() string {
@@ -168,16 +165,20 @@ func (HostFunctionValue) SetModified(_ bool) {
 
 func (HostFunctionValue) isFunctionValue() {}
 
-func (f HostFunctionValue) Invoke(invocation Invocation) Trampoline {
+func (f HostFunctionValue) Invoke(invocation Invocation) Value {
 	return f.Function(invocation)
 }
 
-func (f HostFunctionValue) GetMember(_ *Interpreter, _ LocationRange, name string) Value {
-	value, _ := f.Members.Get(name)
-	return value
+func (f HostFunctionValue) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
+	if f.NestedVariables != nil {
+		if variable, ok := f.NestedVariables.Get(name); ok {
+			return variable.GetValue()
+		}
+	}
+	return nil
 }
 
-func (f HostFunctionValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+func (f HostFunctionValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
 	panic(errors.NewUnreachableError())
 }
 
@@ -229,7 +230,7 @@ func (BoundFunctionValue) SetModified(_ bool) {
 
 func (BoundFunctionValue) isFunctionValue() {}
 
-func (f BoundFunctionValue) Invoke(invocation Invocation) Trampoline {
+func (f BoundFunctionValue) Invoke(invocation Invocation) Value {
 	invocation.Self = f.Self
 	return f.Function.Invoke(invocation)
 }

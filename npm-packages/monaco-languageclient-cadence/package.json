@@ -1,6 +1,6 @@
 {
   "name": "@onflow/monaco-languageclient-cadence",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "An integration of the Cadence Language Server into the Monaco editor",
   "homepage": "https://github.com/onflow/cadence",
   "repository": {
@@ -16,7 +16,7 @@
     "typescript": "^4.0.2"
   },
   "dependencies": {
-    "@onflow/cadence-language-server": "^0.12.4",
+    "@onflow/cadence-language-server": "^0.14.0",
     "monaco-languageclient": "^0.13.0",
     "vscode-jsonrpc": "^5.0.1"
   },

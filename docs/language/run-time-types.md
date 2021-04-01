@@ -31,9 +31,33 @@ Type<Int>() == Type<Int>()
 
 Type<Int>() != Type<String>()
 ```
+### Getting the Type from a Value
+The method `fun getType(): Type` can be used to get the runtime type of a value.
 
+```cadence
+let something = "hello"
+
+let type: Type = something.getType()
+// `type` is `Type<String>()`
+```
+
+This method returns the **concrete run-time type** of the object, **not** the static type.
+
+```cadence
+// Declare a variable named `something` that has the *static* type `AnyResource`
+// and has a resource of type `Collectible`
+//
+let something: @AnyResource <- create Collectible()
+
+// The resource's concrete run-time type is `Collectible`
+//
+let type: Type = something.getType()
+// `type` is `Type<@Collectible>()`
+```
+
+### Asserting the Type of a Value
 The method `fun isInstance(_ type: Type): Bool` can be used to check if a value has a certain type,
-using the concrete run-time type,  and considering subtyping rules,
+using the concrete run-time type, and considering subtyping rules,
 
 ```cadence
 // Declare a variable named `collectible` that has the *static* type `Collectible`

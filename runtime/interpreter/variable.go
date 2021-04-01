@@ -19,11 +19,31 @@
 package interpreter
 
 type Variable struct {
-	Value Value
+	value  Value
+	getter func() Value
 }
 
-func NewVariable(value Value) *Variable {
+func (v *Variable) GetValue() Value {
+	if v.getter != nil {
+		v.value = v.getter()
+		v.getter = nil
+	}
+	return v.value
+}
+
+func (v *Variable) SetValue(value Value) {
+	v.getter = nil
+	v.value = value
+}
+
+func NewVariableWithValue(value Value) *Variable {
 	return &Variable{
-		Value: value,
+		value: value,
+	}
+}
+
+func NewVariableWithGetter(getter func() Value) *Variable {
+	return &Variable{
+		getter: getter,
 	}
 }

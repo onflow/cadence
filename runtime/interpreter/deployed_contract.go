@@ -24,7 +24,6 @@ import (
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/sema"
-	"github.com/onflow/cadence/runtime/trampoline"
 )
 
 // DeployedContractValue
@@ -70,8 +69,8 @@ func (DeployedContractValue) SetModified(_ bool) {
 	// NO-OP
 }
 
-func (v DeployedContractValue) Destroy(_ *Interpreter, _ LocationRange) trampoline.Trampoline {
-	return trampoline.Done{}
+func (v DeployedContractValue) Destroy(_ *Interpreter, _ func() LocationRange) {
+	// NO-OP
 }
 
 func (v DeployedContractValue) String() string {
@@ -83,7 +82,7 @@ func (v DeployedContractValue) String() string {
 	)
 }
 
-func (v DeployedContractValue) GetMember(_ *Interpreter, _ LocationRange, name string) Value {
+func (v DeployedContractValue) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
 	switch name {
 	case sema.DeployedContractTypeAddressFieldName:
 		return v.Address
@@ -98,6 +97,6 @@ func (v DeployedContractValue) GetMember(_ *Interpreter, _ LocationRange, name s
 	return nil
 }
 
-func (DeployedContractValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+func (DeployedContractValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
 	panic(errors.NewUnreachableError())
 }

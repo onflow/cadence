@@ -24,7 +24,6 @@ import (
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/sema"
-	"github.com/onflow/cadence/runtime/trampoline"
 )
 
 // AuthAccountContractsValue
@@ -72,15 +71,15 @@ func (AuthAccountContractsValue) SetModified(_ bool) {
 	// NO-OP
 }
 
-func (v AuthAccountContractsValue) Destroy(_ *Interpreter, _ LocationRange) trampoline.Trampoline {
-	return trampoline.Done{}
+func (v AuthAccountContractsValue) Destroy(_ *Interpreter, _ func() LocationRange) {
+	// NO-OP
 }
 
 func (v AuthAccountContractsValue) String() string {
 	return fmt.Sprintf("AuthAccount.Contracts(%s)", v.Address)
 }
 
-func (v AuthAccountContractsValue) GetMember(_ *Interpreter, _ LocationRange, name string) Value {
+func (v AuthAccountContractsValue) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
 	switch name {
 	case sema.AuthAccountContractsTypeAddFunctionName:
 		return v.AddFunction
@@ -95,6 +94,6 @@ func (v AuthAccountContractsValue) GetMember(_ *Interpreter, _ LocationRange, na
 	return nil
 }
 
-func (AuthAccountContractsValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+func (AuthAccountContractsValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
 	panic(errors.NewUnreachableError())
 }

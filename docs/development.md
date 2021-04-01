@@ -14,6 +14,16 @@
 
 This will automatically recompile the language server every time it is started.
 
+## Debugging the Language Server
+
+- Follow the instructions above (see "Running the latest version of the Language Server in the Visual Studio Code Extension")
+
+- Attach to the process of the language server started by Visual Studio Code.
+
+  For example, in Goland, choose Run -> Attach to Process.
+
+  This requires gops to be installed, which can be done using `go get github.com/google/gops`.
+
 ## Tools
 
 The [`runtime/cmd` directory](https://github.com/onflow/cadence/tree/master/runtime/cmd)

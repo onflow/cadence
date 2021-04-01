@@ -22,26 +22,9 @@ import (
 	"time"
 
 	"github.com/onflow/cadence"
-	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
-	"github.com/onflow/cadence/runtime/sema"
 )
-
-const BlockHashLength = 32
-
-type BlockHash [BlockHashLength]byte
-
-type Block struct {
-	Height    uint64
-	View      uint64
-	Hash      BlockHash
-	Timestamp int64
-}
-
-type ResolvedLocation = sema.ResolvedLocation
-type Identifier = ast.Identifier
-type Location = common.Location
 
 type Interface interface {
 	// ResolveLocation resolves an import location.
@@ -69,10 +52,16 @@ type Interface interface {
 	SetValue(owner, key, value []byte) (err error)
 	// CreateAccount creates a new account.
 	CreateAccount(payer Address) (address Address, err error)
+	// AddEncodedAccountKey appends an encoded key to an account.
+	AddEncodedAccountKey(address Address, publicKey []byte) error
+	// RevokeEncodedAccountKey removes a key from an account by index, add returns the encoded key.
+	RevokeEncodedAccountKey(address Address, index int) (publicKey []byte, err error)
 	// AddAccountKey appends a key to an account.
-	AddAccountKey(address Address, publicKey []byte) error
+	AddAccountKey(address Address, publicKey *PublicKey, hashAlgo HashAlgorithm, weight int) (*AccountKey, error)
+	// GetAccountKey retrieves a key from an account by index.
+	GetAccountKey(address Address, index int) (*AccountKey, error)
 	// RemoveAccountKey removes a key from an account by index.
-	RemoveAccountKey(address Address, index int) (publicKey []byte, err error)
+	RevokeAccountKey(address Address, index int) (*AccountKey, error)
 	// UpdateAccountContractCode updates the code associated with an account contract.
 	UpdateAccountContractCode(address Address, name string, code []byte) (err error)
 	// GetAccountContractCode returns the code associated with an account contract.
@@ -109,11 +98,11 @@ type Interface interface {
 		tag string,
 		signedData []byte,
 		publicKey []byte,
-		signatureAlgorithm string,
-		hashAlgorithm string,
+		signatureAlgorithm SignatureAlgorithm,
+		hashAlgorithm HashAlgorithm,
 	) (bool, error)
 	// Hash returns the digest of hashing the given data with using the given hash algorithm
-	Hash(data []byte, hashAlgorithm string) ([]byte, error)
+	Hash(data []byte, hashAlgorithm HashAlgorithm) ([]byte, error)
 	// GetStorageUsed gets storage used in bytes by the address at the moment of the function call.
 	GetStorageUsed(address Address) (value uint64, err error)
 	// GetStorageCapacity gets storage capacity in bytes on the address.
@@ -194,16 +183,24 @@ func (i *emptyRuntimeInterface) CreateAccount(_ Address) (address Address, err e
 	return Address{}, nil
 }
 
-func (i *emptyRuntimeInterface) AddAccountKey(_ Address, _ []byte) error {
+func (i *emptyRuntimeInterface) AddEncodedAccountKey(_ Address, _ []byte) error {
 	return nil
 }
 
-func (i *emptyRuntimeInterface) RemoveAccountKey(_ Address, _ int) (publicKey []byte, err error) {
+func (i *emptyRuntimeInterface) RevokeEncodedAccountKey(_ Address, _ int) ([]byte, error) {
 	return nil, nil
 }
 
-func (i *emptyRuntimeInterface) UpdateAccountCode(_ Address, _ []byte) error {
-	return nil
+func (i *emptyRuntimeInterface) AddAccountKey(_ Address, _ *PublicKey, _ HashAlgorithm, _ int) (*AccountKey, error) {
+	return nil, nil
+}
+
+func (i *emptyRuntimeInterface) RevokeAccountKey(_ Address, _ int) (*AccountKey, error) {
+	return nil, nil
+}
+
+func (i *emptyRuntimeInterface) GetAccountKey(_ Address, _ int) (*AccountKey, error) {
+	return nil, nil
 }
 
 func (i *emptyRuntimeInterface) UpdateAccountContractCode(_ Address, _ string, _ []byte) (err error) {
@@ -267,15 +264,15 @@ func (i *emptyRuntimeInterface) VerifySignature(
 	_ string,
 	_ []byte,
 	_ []byte,
-	_ string,
-	_ string,
+	_ SignatureAlgorithm,
+	_ HashAlgorithm,
 ) (bool, error) {
 	return false, nil
 }
 
 func (i *emptyRuntimeInterface) Hash(
 	_ []byte,
-	_ string,
+	_ HashAlgorithm,
 ) ([]byte, error) {
 	return nil, nil
 }

@@ -29,7 +29,6 @@ import (
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/tests/checker"
-	"github.com/onflow/cadence/runtime/trampoline"
 )
 
 func TestInterpretVirtualImport(t *testing.T) {
@@ -60,6 +59,14 @@ func TestInterpretVirtualImport(t *testing.T) {
        }
     `
 
+	valueElements := sema.NewStringImportElementOrderedMap()
+
+	valueElements.Set("Foo", sema.ImportElement{
+		DeclarationKind: common.DeclarationKindStructure,
+		Access:          ast.AccessPublic,
+		Type:            fooType,
+	})
+
 	inter := parseCheckAndInterpretWithOptions(t,
 		code,
 		ParseCheckAndInterpretOptions{
@@ -86,10 +93,8 @@ func TestInterpretVirtualImport(t *testing.T) {
 										Fields:              interpreter.NewStringValueOrderedMap(),
 										Functions: map[string]interpreter.FunctionValue{
 											"bar": interpreter.NewHostFunctionValue(
-												func(invocation interpreter.Invocation) trampoline.Trampoline {
-													return trampoline.Done{
-														Result: interpreter.NewIntValueFromInt64(42),
-													}
+												func(invocation interpreter.Invocation) interpreter.Value {
+													return interpreter.NewIntValueFromInt64(42)
 												},
 											),
 										},
@@ -103,14 +108,6 @@ func TestInterpretVirtualImport(t *testing.T) {
 			CheckerOptions: []sema.Option{
 				sema.WithImportHandler(
 					func(checker *sema.Checker, location common.Location) (sema.Import, error) {
-
-						valueElements := sema.NewStringImportElementOrderedMap()
-
-						valueElements.Set("Foo", sema.ImportElement{
-							DeclarationKind: common.DeclarationKindStructure,
-							Access:          ast.AccessPublic,
-							Type:            fooType,
-						})
 
 						return sema.VirtualImport{
 							ValueElements: valueElements,

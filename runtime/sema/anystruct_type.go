@@ -20,7 +20,7 @@ package sema
 
 // AnyStructType represents the top type of all non-resource types
 //
-var AnyStructType = &NominalType{
+var AnyStructType = &SimpleType{
 	Name:          "AnyStruct",
 	QualifiedName: "AnyStruct",
 	TypeID:        "AnyStruct",

@@ -35,7 +35,6 @@ import (
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/format"
 	"github.com/onflow/cadence/runtime/sema"
-	"github.com/onflow/cadence/runtime/trampoline"
 )
 
 // Value
@@ -56,21 +55,27 @@ type Value interface {
 // ValueIndexableValue
 
 type ValueIndexableValue interface {
-	Get(interpreter *Interpreter, locationRange LocationRange, key Value) Value
-	Set(interpreter *Interpreter, locationRange LocationRange, key Value, value Value)
+	Get(interpreter *Interpreter, getLocationRange func() LocationRange, key Value) Value
+	Set(interpreter *Interpreter, getLocationRange func() LocationRange, key Value, value Value)
 }
 
 // MemberAccessibleValue
 
 type MemberAccessibleValue interface {
-	GetMember(interpreter *Interpreter, locationRange LocationRange, name string) Value
-	SetMember(interpreter *Interpreter, locationRange LocationRange, name string, value Value)
+	GetMember(interpreter *Interpreter, getLocationRange func() LocationRange, name string) Value
+	SetMember(interpreter *Interpreter, getLocationRange func() LocationRange, name string, value Value)
 }
 
 // ConcatenatableValue
 
 type ConcatenatableValue interface {
 	Concat(other ConcatenatableValue) Value
+}
+
+// AllAppendableValue
+
+type AllAppendableValue interface {
+	AppendAll(other AllAppendableValue)
 }
 
 // EquatableValue
@@ -83,7 +88,7 @@ type EquatableValue interface {
 // DestroyableValue
 
 type DestroyableValue interface {
-	Destroy(interpreter *Interpreter, locationRange LocationRange) trampoline.Trampoline
+	Destroy(interpreter *Interpreter, getLocationRange func() LocationRange)
 }
 
 // HasKeyString
@@ -163,7 +168,7 @@ func (v TypeValue) Equal(inter *Interpreter, other Value) BoolValue {
 	return BoolValue(ty.Equal(otherTy))
 }
 
-func (v TypeValue) GetMember(inter *Interpreter, _ LocationRange, name string) Value {
+func (v TypeValue) GetMember(inter *Interpreter, _ func() LocationRange, name string) Value {
 	switch name {
 	case "identifier":
 		var typeID string
@@ -177,7 +182,7 @@ func (v TypeValue) GetMember(inter *Interpreter, _ LocationRange, name string) V
 	return nil
 }
 
-func (v TypeValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+func (v TypeValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
 	panic(errors.NewUnreachableError())
 }
 
@@ -372,7 +377,7 @@ func (v *StringValue) Slice(from IntValue, to IntValue) Value {
 	return NewStringValue(v.Str[fromInt:toInt])
 }
 
-func (v *StringValue) Get(_ *Interpreter, _ LocationRange, key Value) Value {
+func (v *StringValue) Get(_ *Interpreter, _ func() LocationRange, key Value) Value {
 	i := key.(NumberValue).ToInt()
 
 	// TODO: optimize grapheme clusters to prevent unnecessary iteration
@@ -388,7 +393,7 @@ func (v *StringValue) Get(_ *Interpreter, _ LocationRange, key Value) Value {
 	return NewStringValue(char)
 }
 
-func (v *StringValue) Set(_ *Interpreter, _ LocationRange, key Value, value Value) {
+func (v *StringValue) Set(_ *Interpreter, _ func() LocationRange, key Value, value Value) {
 	index := key.(NumberValue).ToInt()
 	char := value.(*StringValue)
 	v.SetIndex(index, char)
@@ -418,7 +423,7 @@ func (v *StringValue) SetIndex(index int, char *StringValue) {
 	v.Str = sb.String()
 }
 
-func (v *StringValue) GetMember(_ *Interpreter, _ LocationRange, name string) Value {
+func (v *StringValue) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
 	switch name {
 	case "length":
 		count := v.Length()
@@ -426,28 +431,25 @@ func (v *StringValue) GetMember(_ *Interpreter, _ LocationRange, name string) Va
 
 	case "concat":
 		return NewHostFunctionValue(
-			func(invocation Invocation) trampoline.Trampoline {
+			func(invocation Invocation) Value {
 				otherValue := invocation.Arguments[0].(ConcatenatableValue)
-				result := v.Concat(otherValue)
-				return trampoline.Done{Result: result}
+				return v.Concat(otherValue)
 			},
 		)
 
 	case "slice":
 		return NewHostFunctionValue(
-			func(invocation Invocation) trampoline.Trampoline {
+			func(invocation Invocation) Value {
 				from := invocation.Arguments[0].(IntValue)
 				to := invocation.Arguments[1].(IntValue)
-				result := v.Slice(from, to)
-				return trampoline.Done{Result: result}
+				return v.Slice(from, to)
 			},
 		)
 
 	case "decodeHex":
 		return NewHostFunctionValue(
-			func(invocation Invocation) trampoline.Trampoline {
-				result := v.DecodeHex()
-				return trampoline.Done{Result: result}
+			func(invocation Invocation) Value {
+				return v.DecodeHex()
 			},
 		)
 	}
@@ -475,11 +477,11 @@ func (v *StringValue) DecodeHex() *ArrayValue {
 	for i, b := range bs {
 		values[i] = UInt8Value(b)
 	}
-	result := NewArrayValueUnownedNonCopying(values...)
-	return result
+
+	return NewArrayValueUnownedNonCopying(values...)
 }
 
-func (*StringValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+func (*StringValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
 	panic(errors.NewUnreachableError())
 }
 
@@ -582,15 +584,10 @@ func (v *ArrayValue) SetModified(modified bool) {
 	v.modified = modified
 }
 
-func (v *ArrayValue) Destroy(interpreter *Interpreter, locationRange LocationRange) trampoline.Trampoline {
-	var result trampoline.Trampoline = trampoline.Done{}
+func (v *ArrayValue) Destroy(interpreter *Interpreter, getLocationRange func() LocationRange) {
 	for _, value := range v.Values {
-		capturedValue := value
-		result = result.FlatMap(func(_ interface{}) trampoline.Trampoline {
-			return capturedValue.(DestroyableValue).Destroy(interpreter, locationRange)
-		})
+		maybeDestroy(interpreter, getLocationRange, value)
 	}
-	return result
 }
 
 func (v *ArrayValue) Concat(other ConcatenatableValue) Value {
@@ -599,7 +596,7 @@ func (v *ArrayValue) Concat(other ConcatenatableValue) Value {
 	return NewArrayValueUnownedNonCopying(concatenated...)
 }
 
-func (v *ArrayValue) Get(_ *Interpreter, locationRange LocationRange, key Value) Value {
+func (v *ArrayValue) Get(_ *Interpreter, getLocationRange func() LocationRange, key Value) Value {
 	integerKey := key.(NumberValue).ToInt()
 	count := v.Count()
 
@@ -608,14 +605,14 @@ func (v *ArrayValue) Get(_ *Interpreter, locationRange LocationRange, key Value)
 		panic(ArrayIndexOutOfBoundsError{
 			Index:         integerKey,
 			MaxIndex:      count - 1,
-			LocationRange: locationRange,
+			LocationRange: getLocationRange(),
 		})
 	}
 
 	return v.Values[integerKey]
 }
 
-func (v *ArrayValue) Set(_ *Interpreter, _ LocationRange, key Value, value Value) {
+func (v *ArrayValue) Set(_ *Interpreter, _ func() LocationRange, key Value, value Value) {
 	index := key.(NumberValue).ToInt()
 	v.SetIndex(index, value)
 }
@@ -639,6 +636,16 @@ func (v *ArrayValue) Append(element Value) {
 
 	element.SetOwner(v.Owner)
 	v.Values = append(v.Values, element)
+}
+
+func (v *ArrayValue) AppendAll(other AllAppendableValue) {
+	v.modified = true
+
+	otherArray := other.(*ArrayValue)
+	for _, element := range otherArray.Values {
+		element.SetOwner(v.Owner)
+	}
+	v.Values = append(v.Values, otherArray.Values...)
 }
 
 func (v *ArrayValue) Insert(i int, element Value) {
@@ -696,68 +703,72 @@ func (v *ArrayValue) Contains(needleValue Value) BoolValue {
 	return false
 }
 
-func (v *ArrayValue) GetMember(_ *Interpreter, _ LocationRange, name string) Value {
+func (v *ArrayValue) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
 	switch name {
 	case "length":
 		return NewIntValueFromInt64(int64(v.Count()))
 
 	case "append":
 		return NewHostFunctionValue(
-			func(invocation Invocation) trampoline.Trampoline {
+			func(invocation Invocation) Value {
 				v.Append(invocation.Arguments[0])
-				return trampoline.Done{Result: VoidValue{}}
+				return VoidValue{}
+			},
+		)
+
+	case "appendAll":
+		return NewHostFunctionValue(
+			func(invocation Invocation) Value {
+				otherArray := invocation.Arguments[0].(AllAppendableValue)
+				v.AppendAll(otherArray)
+				return VoidValue{}
 			},
 		)
 
 	case "concat":
 		return NewHostFunctionValue(
-			func(invocation Invocation) trampoline.Trampoline {
+			func(invocation Invocation) Value {
 				otherArray := invocation.Arguments[0].(ConcatenatableValue)
-				result := v.Concat(otherArray)
-				return trampoline.Done{Result: result}
+				return v.Concat(otherArray)
 			},
 		)
 
 	case "insert":
 		return NewHostFunctionValue(
-			func(invocation Invocation) trampoline.Trampoline {
+			func(invocation Invocation) Value {
 				i := invocation.Arguments[0].(NumberValue).ToInt()
 				element := invocation.Arguments[1]
 				v.Insert(i, element)
-				return trampoline.Done{Result: VoidValue{}}
+				return VoidValue{}
 			},
 		)
 
 	case "remove":
 		return NewHostFunctionValue(
-			func(invocation Invocation) trampoline.Trampoline {
+			func(invocation Invocation) Value {
 				i := invocation.Arguments[0].(NumberValue).ToInt()
-				result := v.Remove(i)
-				return trampoline.Done{Result: result}
+				return v.Remove(i)
 			},
 		)
 
 	case "removeFirst":
 		return NewHostFunctionValue(
-			func(invocation Invocation) trampoline.Trampoline {
-				result := v.RemoveFirst()
-				return trampoline.Done{Result: result}
+			func(invocation Invocation) Value {
+				return v.RemoveFirst()
 			},
 		)
 
 	case "removeLast":
 		return NewHostFunctionValue(
-			func(invocation Invocation) trampoline.Trampoline {
-				result := v.RemoveLast()
-				return trampoline.Done{Result: result}
+			func(invocation Invocation) Value {
+				return v.RemoveLast()
 			},
 		)
 
 	case "contains":
 		return NewHostFunctionValue(
-			func(invocation Invocation) trampoline.Trampoline {
-				result := v.Contains(invocation.Arguments[0])
-				return trampoline.Done{Result: result}
+			func(invocation Invocation) Value {
+				return v.Contains(invocation.Arguments[0])
 			},
 		)
 
@@ -766,7 +777,7 @@ func (v *ArrayValue) GetMember(_ *Interpreter, _ LocationRange, name string) Val
 	return nil
 }
 
-func (v *ArrayValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+func (v *ArrayValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
 	panic(errors.NewUnreachableError())
 }
 
@@ -823,7 +834,7 @@ func NewIntValueFromBigInt(value *big.Int) IntValue {
 	return IntValue{BigInt: value}
 }
 
-func ConvertInt(value Value, _ *Interpreter) Value {
+func ConvertInt(value Value) IntValue {
 	switch value := value.(type) {
 	case BigNumberValue:
 		return NewIntValueFromBigInt(value.ToBigInt())
@@ -1012,22 +1023,20 @@ func (v IntValue) BitwiseRightShift(other IntegerValue) IntegerValue {
 	return IntValue{res}
 }
 
-func (v IntValue) GetMember(_ *Interpreter, _ LocationRange, name string) Value {
+func (v IntValue) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
 	switch name {
 
 	case sema.ToStringFunctionName:
 		return NewHostFunctionValue(
-			func(invocation Invocation) trampoline.Trampoline {
-				result := NewStringValue(v.String())
-				return trampoline.Done{Result: result}
+			func(invocation Invocation) Value {
+				return NewStringValue(v.String())
 			},
 		)
 
 	case sema.ToBigEndianBytesFunctionName:
 		return NewHostFunctionValue(
-			func(invocation Invocation) trampoline.Trampoline {
-				result := ByteSliceToByteArrayValue(v.ToBigEndianBytes())
-				return trampoline.Done{Result: result}
+			func(invocation Invocation) Value {
+				return ByteSliceToByteArrayValue(v.ToBigEndianBytes())
 			},
 		)
 	}
@@ -1035,7 +1044,7 @@ func (v IntValue) GetMember(_ *Interpreter, _ LocationRange, name string) Value 
 	return nil
 }
 
-func (IntValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+func (IntValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
 	panic(errors.NewUnreachableError())
 }
 
@@ -1196,7 +1205,7 @@ func (v Int8Value) Equal(_ *Interpreter, other Value) BoolValue {
 	return v == otherInt8
 }
 
-func ConvertInt8(value Value, _ *Interpreter) Value {
+func ConvertInt8(value Value) Int8Value {
 	var res int8
 
 	switch value := value.(type) {
@@ -1250,22 +1259,20 @@ func (v Int8Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 	return v >> o
 }
 
-func (v Int8Value) GetMember(_ *Interpreter, _ LocationRange, name string) Value {
+func (v Int8Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
 	switch name {
 
 	case sema.ToStringFunctionName:
 		return NewHostFunctionValue(
-			func(invocation Invocation) trampoline.Trampoline {
-				result := NewStringValue(v.String())
-				return trampoline.Done{Result: result}
+			func(invocation Invocation) Value {
+				return NewStringValue(v.String())
 			},
 		)
 
 	case sema.ToBigEndianBytesFunctionName:
 		return NewHostFunctionValue(
-			func(invocation Invocation) trampoline.Trampoline {
-				result := ByteSliceToByteArrayValue(v.ToBigEndianBytes())
-				return trampoline.Done{Result: result}
+			func(invocation Invocation) Value {
+				return ByteSliceToByteArrayValue(v.ToBigEndianBytes())
 			},
 		)
 	}
@@ -1273,7 +1280,7 @@ func (v Int8Value) GetMember(_ *Interpreter, _ LocationRange, name string) Value
 	return nil
 }
 
-func (Int8Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+func (Int8Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
 	panic(errors.NewUnreachableError())
 }
 
@@ -1434,7 +1441,7 @@ func (v Int16Value) Equal(_ *Interpreter, other Value) BoolValue {
 	return v == otherInt16
 }
 
-func ConvertInt16(value Value, _ *Interpreter) Value {
+func ConvertInt16(value Value) Int16Value {
 	var res int16
 
 	switch value := value.(type) {
@@ -1488,22 +1495,20 @@ func (v Int16Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 	return v >> o
 }
 
-func (v Int16Value) GetMember(_ *Interpreter, _ LocationRange, name string) Value {
+func (v Int16Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
 	switch name {
 
 	case sema.ToStringFunctionName:
 		return NewHostFunctionValue(
-			func(invocation Invocation) trampoline.Trampoline {
-				result := NewStringValue(v.String())
-				return trampoline.Done{Result: result}
+			func(invocation Invocation) Value {
+				return NewStringValue(v.String())
 			},
 		)
 
 	case sema.ToBigEndianBytesFunctionName:
 		return NewHostFunctionValue(
-			func(invocation Invocation) trampoline.Trampoline {
-				result := ByteSliceToByteArrayValue(v.ToBigEndianBytes())
-				return trampoline.Done{Result: result}
+			func(invocation Invocation) Value {
+				return ByteSliceToByteArrayValue(v.ToBigEndianBytes())
 			},
 		)
 	}
@@ -1511,7 +1516,7 @@ func (v Int16Value) GetMember(_ *Interpreter, _ LocationRange, name string) Valu
 	return nil
 }
 
-func (Int16Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+func (Int16Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
 	panic(errors.NewUnreachableError())
 }
 
@@ -1674,7 +1679,7 @@ func (v Int32Value) Equal(_ *Interpreter, other Value) BoolValue {
 	return v == otherInt32
 }
 
-func ConvertInt32(value Value, _ *Interpreter) Value {
+func ConvertInt32(value Value) Int32Value {
 	var res int32
 
 	switch value := value.(type) {
@@ -1728,22 +1733,20 @@ func (v Int32Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 	return v >> o
 }
 
-func (v Int32Value) GetMember(_ *Interpreter, _ LocationRange, name string) Value {
+func (v Int32Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
 	switch name {
 
 	case sema.ToStringFunctionName:
 		return NewHostFunctionValue(
-			func(invocation Invocation) trampoline.Trampoline {
-				result := NewStringValue(v.String())
-				return trampoline.Done{Result: result}
+			func(invocation Invocation) Value {
+				return NewStringValue(v.String())
 			},
 		)
 
 	case sema.ToBigEndianBytesFunctionName:
 		return NewHostFunctionValue(
-			func(invocation Invocation) trampoline.Trampoline {
-				result := ByteSliceToByteArrayValue(v.ToBigEndianBytes())
-				return trampoline.Done{Result: result}
+			func(invocation Invocation) Value {
+				return ByteSliceToByteArrayValue(v.ToBigEndianBytes())
 			},
 		)
 	}
@@ -1751,7 +1754,7 @@ func (v Int32Value) GetMember(_ *Interpreter, _ LocationRange, name string) Valu
 	return nil
 }
 
-func (Int32Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+func (Int32Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
 	panic(errors.NewUnreachableError())
 }
 
@@ -1918,7 +1921,7 @@ func (v Int64Value) Equal(_ *Interpreter, other Value) BoolValue {
 	return v == otherInt64
 }
 
-func ConvertInt64(value Value, _ *Interpreter) Value {
+func ConvertInt64(value Value) Int64Value {
 	var res int64
 
 	switch value := value.(type) {
@@ -1967,22 +1970,20 @@ func (v Int64Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 	return v >> o
 }
 
-func (v Int64Value) GetMember(_ *Interpreter, _ LocationRange, name string) Value {
+func (v Int64Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
 	switch name {
 
 	case sema.ToStringFunctionName:
 		return NewHostFunctionValue(
-			func(invocation Invocation) trampoline.Trampoline {
-				result := NewStringValue(v.String())
-				return trampoline.Done{Result: result}
+			func(invocation Invocation) Value {
+				return NewStringValue(v.String())
 			},
 		)
 
 	case sema.ToBigEndianBytesFunctionName:
 		return NewHostFunctionValue(
-			func(invocation Invocation) trampoline.Trampoline {
-				result := ByteSliceToByteArrayValue(v.ToBigEndianBytes())
-				return trampoline.Done{Result: result}
+			func(invocation Invocation) Value {
+				return ByteSliceToByteArrayValue(v.ToBigEndianBytes())
 			},
 		)
 	}
@@ -1990,7 +1991,7 @@ func (v Int64Value) GetMember(_ *Interpreter, _ LocationRange, name string) Valu
 	return nil
 }
 
-func (Int64Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+func (Int64Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
 	panic(errors.NewUnreachableError())
 }
 
@@ -2196,7 +2197,7 @@ func (v Int128Value) Equal(_ *Interpreter, other Value) BoolValue {
 	return cmp == 0
 }
 
-func ConvertInt128(value Value, _ *Interpreter) Value {
+func ConvertInt128(value Value) Int128Value {
 	var v *big.Int
 
 	switch value := value.(type) {
@@ -2266,22 +2267,20 @@ func (v Int128Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 	return Int128Value{res}
 }
 
-func (v Int128Value) GetMember(_ *Interpreter, _ LocationRange, name string) Value {
+func (v Int128Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
 	switch name {
 
 	case sema.ToStringFunctionName:
 		return NewHostFunctionValue(
-			func(invocation Invocation) trampoline.Trampoline {
-				result := NewStringValue(v.String())
-				return trampoline.Done{Result: result}
+			func(invocation Invocation) Value {
+				return NewStringValue(v.String())
 			},
 		)
 
 	case sema.ToBigEndianBytesFunctionName:
 		return NewHostFunctionValue(
-			func(invocation Invocation) trampoline.Trampoline {
-				result := ByteSliceToByteArrayValue(v.ToBigEndianBytes())
-				return trampoline.Done{Result: result}
+			func(invocation Invocation) Value {
+				return ByteSliceToByteArrayValue(v.ToBigEndianBytes())
 			},
 		)
 	}
@@ -2289,7 +2288,7 @@ func (v Int128Value) GetMember(_ *Interpreter, _ LocationRange, name string) Val
 	return nil
 }
 
-func (Int128Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+func (Int128Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
 	panic(errors.NewUnreachableError())
 }
 
@@ -2494,7 +2493,7 @@ func (v Int256Value) Equal(_ *Interpreter, other Value) BoolValue {
 	return cmp == 0
 }
 
-func ConvertInt256(value Value, _ *Interpreter) Value {
+func ConvertInt256(value Value) Int256Value {
 	var v *big.Int
 
 	switch value := value.(type) {
@@ -2564,22 +2563,20 @@ func (v Int256Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 	return Int256Value{res}
 }
 
-func (v Int256Value) GetMember(_ *Interpreter, _ LocationRange, name string) Value {
+func (v Int256Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
 	switch name {
 
 	case sema.ToStringFunctionName:
 		return NewHostFunctionValue(
-			func(invocation Invocation) trampoline.Trampoline {
-				result := NewStringValue(v.String())
-				return trampoline.Done{Result: result}
+			func(invocation Invocation) Value {
+				return NewStringValue(v.String())
 			},
 		)
 
 	case sema.ToBigEndianBytesFunctionName:
 		return NewHostFunctionValue(
-			func(invocation Invocation) trampoline.Trampoline {
-				result := ByteSliceToByteArrayValue(v.ToBigEndianBytes())
-				return trampoline.Done{Result: result}
+			func(invocation Invocation) Value {
+				return ByteSliceToByteArrayValue(v.ToBigEndianBytes())
 			},
 		)
 	}
@@ -2587,7 +2584,7 @@ func (v Int256Value) GetMember(_ *Interpreter, _ LocationRange, name string) Val
 	return nil
 }
 
-func (Int256Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+func (Int256Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
 	panic(errors.NewUnreachableError())
 }
 
@@ -2609,7 +2606,7 @@ func NewUIntValueFromBigInt(value *big.Int) UIntValue {
 	return UIntValue{BigInt: value}
 }
 
-func ConvertUInt(value Value, _ *Interpreter) Value {
+func ConvertUInt(value Value) UIntValue {
 	switch value := value.(type) {
 	case BigNumberValue:
 		v := value.ToBigInt()
@@ -2808,22 +2805,20 @@ func (v UIntValue) BitwiseRightShift(other IntegerValue) IntegerValue {
 	return UIntValue{res}
 }
 
-func (v UIntValue) GetMember(_ *Interpreter, _ LocationRange, name string) Value {
+func (v UIntValue) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
 	switch name {
 
 	case sema.ToStringFunctionName:
 		return NewHostFunctionValue(
-			func(invocation Invocation) trampoline.Trampoline {
-				result := NewStringValue(v.String())
-				return trampoline.Done{Result: result}
+			func(invocation Invocation) Value {
+				return NewStringValue(v.String())
 			},
 		)
 
 	case sema.ToBigEndianBytesFunctionName:
 		return NewHostFunctionValue(
-			func(invocation Invocation) trampoline.Trampoline {
-				result := ByteSliceToByteArrayValue(v.ToBigEndianBytes())
-				return trampoline.Done{Result: result}
+			func(invocation Invocation) Value {
+				return ByteSliceToByteArrayValue(v.ToBigEndianBytes())
 			},
 		)
 	}
@@ -2831,7 +2826,7 @@ func (v UIntValue) GetMember(_ *Interpreter, _ LocationRange, name string) Value
 	return nil
 }
 
-func (UIntValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+func (UIntValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
 	panic(errors.NewUnreachableError())
 }
 
@@ -2960,7 +2955,7 @@ func (v UInt8Value) Equal(_ *Interpreter, other Value) BoolValue {
 	return v == otherUInt8
 }
 
-func ConvertUInt8(value Value, _ *Interpreter) Value {
+func ConvertUInt8(value Value) UInt8Value {
 	var res uint8
 
 	switch value := value.(type) {
@@ -3014,22 +3009,20 @@ func (v UInt8Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 	return v >> o
 }
 
-func (v UInt8Value) GetMember(_ *Interpreter, _ LocationRange, name string) Value {
+func (v UInt8Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
 	switch name {
 
 	case sema.ToStringFunctionName:
 		return NewHostFunctionValue(
-			func(invocation Invocation) trampoline.Trampoline {
-				result := NewStringValue(v.String())
-				return trampoline.Done{Result: result}
+			func(invocation Invocation) Value {
+				return NewStringValue(v.String())
 			},
 		)
 
 	case sema.ToBigEndianBytesFunctionName:
 		return NewHostFunctionValue(
-			func(invocation Invocation) trampoline.Trampoline {
-				result := ByteSliceToByteArrayValue(v.ToBigEndianBytes())
-				return trampoline.Done{Result: result}
+			func(invocation Invocation) Value {
+				return ByteSliceToByteArrayValue(v.ToBigEndianBytes())
 			},
 		)
 	}
@@ -3037,7 +3030,7 @@ func (v UInt8Value) GetMember(_ *Interpreter, _ LocationRange, name string) Valu
 	return nil
 }
 
-func (UInt8Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+func (UInt8Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
 	panic(errors.NewUnreachableError())
 }
 
@@ -3164,7 +3157,7 @@ func (v UInt16Value) Equal(_ *Interpreter, other Value) BoolValue {
 	return v == otherUInt16
 }
 
-func ConvertUInt16(value Value, _ *Interpreter) Value {
+func ConvertUInt16(value Value) UInt16Value {
 	var res uint16
 
 	switch value := value.(type) {
@@ -3218,22 +3211,20 @@ func (v UInt16Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 	return v >> o
 }
 
-func (v UInt16Value) GetMember(_ *Interpreter, _ LocationRange, name string) Value {
+func (v UInt16Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
 	switch name {
 
 	case sema.ToStringFunctionName:
 		return NewHostFunctionValue(
-			func(invocation Invocation) trampoline.Trampoline {
-				result := NewStringValue(v.String())
-				return trampoline.Done{Result: result}
+			func(invocation Invocation) Value {
+				return NewStringValue(v.String())
 			},
 		)
 
 	case sema.ToBigEndianBytesFunctionName:
 		return NewHostFunctionValue(
-			func(invocation Invocation) trampoline.Trampoline {
-				result := ByteSliceToByteArrayValue(v.ToBigEndianBytes())
-				return trampoline.Done{Result: result}
+			func(invocation Invocation) Value {
+				return ByteSliceToByteArrayValue(v.ToBigEndianBytes())
 			},
 		)
 	}
@@ -3241,7 +3232,7 @@ func (v UInt16Value) GetMember(_ *Interpreter, _ LocationRange, name string) Val
 	return nil
 }
 
-func (UInt16Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+func (UInt16Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
 	panic(errors.NewUnreachableError())
 }
 
@@ -3372,7 +3363,7 @@ func (v UInt32Value) Equal(_ *Interpreter, other Value) BoolValue {
 	return v == otherUInt32
 }
 
-func ConvertUInt32(value Value, _ *Interpreter) Value {
+func ConvertUInt32(value Value) UInt32Value {
 	var res uint32
 
 	switch value := value.(type) {
@@ -3426,22 +3417,20 @@ func (v UInt32Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 	return v >> o
 }
 
-func (v UInt32Value) GetMember(_ *Interpreter, _ LocationRange, name string) Value {
+func (v UInt32Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
 	switch name {
 
 	case sema.ToStringFunctionName:
 		return NewHostFunctionValue(
-			func(invocation Invocation) trampoline.Trampoline {
-				result := NewStringValue(v.String())
-				return trampoline.Done{Result: result}
+			func(invocation Invocation) Value {
+				return NewStringValue(v.String())
 			},
 		)
 
 	case sema.ToBigEndianBytesFunctionName:
 		return NewHostFunctionValue(
-			func(invocation Invocation) trampoline.Trampoline {
-				result := ByteSliceToByteArrayValue(v.ToBigEndianBytes())
-				return trampoline.Done{Result: result}
+			func(invocation Invocation) Value {
+				return ByteSliceToByteArrayValue(v.ToBigEndianBytes())
 			},
 		)
 	}
@@ -3449,7 +3438,7 @@ func (v UInt32Value) GetMember(_ *Interpreter, _ LocationRange, name string) Val
 	return nil
 }
 
-func (UInt32Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+func (UInt32Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
 	panic(errors.NewUnreachableError())
 }
 
@@ -3585,7 +3574,7 @@ func (v UInt64Value) Equal(_ *Interpreter, other Value) BoolValue {
 	return v == otherUInt64
 }
 
-func ConvertUInt64(value Value, _ *Interpreter) Value {
+func ConvertUInt64(value Value) UInt64Value {
 	var res uint64
 
 	switch value := value.(type) {
@@ -3637,22 +3626,20 @@ func (v UInt64Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 	return v >> o
 }
 
-func (v UInt64Value) GetMember(_ *Interpreter, _ LocationRange, name string) Value {
+func (v UInt64Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
 	switch name {
 
 	case sema.ToStringFunctionName:
 		return NewHostFunctionValue(
-			func(invocation Invocation) trampoline.Trampoline {
-				result := NewStringValue(v.String())
-				return trampoline.Done{Result: result}
+			func(invocation Invocation) Value {
+				return NewStringValue(v.String())
 			},
 		)
 
 	case sema.ToBigEndianBytesFunctionName:
 		return NewHostFunctionValue(
-			func(invocation Invocation) trampoline.Trampoline {
-				result := ByteSliceToByteArrayValue(v.ToBigEndianBytes())
-				return trampoline.Done{Result: result}
+			func(invocation Invocation) Value {
+				return ByteSliceToByteArrayValue(v.ToBigEndianBytes())
 			},
 		)
 	}
@@ -3660,7 +3647,7 @@ func (v UInt64Value) GetMember(_ *Interpreter, _ LocationRange, name string) Val
 	return nil
 }
 
-func (UInt64Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+func (UInt64Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
 	panic(errors.NewUnreachableError())
 }
 
@@ -3837,7 +3824,7 @@ func (v UInt128Value) Equal(_ *Interpreter, other Value) BoolValue {
 	return cmp == 0
 }
 
-func ConvertUInt128(value Value, _ *Interpreter) Value {
+func ConvertUInt128(value Value) UInt128Value {
 	var v *big.Int
 
 	switch value := value.(type) {
@@ -3907,21 +3894,19 @@ func (v UInt128Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 	return UInt128Value{res}
 }
 
-func (v UInt128Value) GetMember(_ *Interpreter, _ LocationRange, name string) Value {
+func (v UInt128Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
 	switch name {
 
 	case sema.ToStringFunctionName:
 		return NewHostFunctionValue(
-			func(invocation Invocation) trampoline.Trampoline {
-				result := NewStringValue(v.String())
-				return trampoline.Done{Result: result}
+			func(invocation Invocation) Value {
+				return NewStringValue(v.String())
 			},
 		)
 	case sema.ToBigEndianBytesFunctionName:
 		return NewHostFunctionValue(
-			func(invocation Invocation) trampoline.Trampoline {
-				result := ByteSliceToByteArrayValue(v.ToBigEndianBytes())
-				return trampoline.Done{Result: result}
+			func(invocation Invocation) Value {
+				return ByteSliceToByteArrayValue(v.ToBigEndianBytes())
 			},
 		)
 	}
@@ -3929,7 +3914,7 @@ func (v UInt128Value) GetMember(_ *Interpreter, _ LocationRange, name string) Va
 	return nil
 }
 
-func (UInt128Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+func (UInt128Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
 	panic(errors.NewUnreachableError())
 }
 
@@ -4104,7 +4089,7 @@ func (v UInt256Value) Equal(_ *Interpreter, other Value) BoolValue {
 	return cmp == 0
 }
 
-func ConvertUInt256(value Value, _ *Interpreter) Value {
+func ConvertUInt256(value Value) UInt256Value {
 	var v *big.Int
 
 	switch value := value.(type) {
@@ -4174,22 +4159,20 @@ func (v UInt256Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 	return UInt256Value{res}
 }
 
-func (v UInt256Value) GetMember(_ *Interpreter, _ LocationRange, name string) Value {
+func (v UInt256Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
 	switch name {
 
 	case sema.ToStringFunctionName:
 		return NewHostFunctionValue(
-			func(invocation Invocation) trampoline.Trampoline {
-				result := NewStringValue(v.String())
-				return trampoline.Done{Result: result}
+			func(invocation Invocation) Value {
+				return NewStringValue(v.String())
 			},
 		)
 
 	case sema.ToBigEndianBytesFunctionName:
 		return NewHostFunctionValue(
-			func(invocation Invocation) trampoline.Trampoline {
-				result := ByteSliceToByteArrayValue(v.ToBigEndianBytes())
-				return trampoline.Done{Result: result}
+			func(invocation Invocation) Value {
+				return ByteSliceToByteArrayValue(v.ToBigEndianBytes())
 			},
 		)
 	}
@@ -4197,7 +4180,7 @@ func (v UInt256Value) GetMember(_ *Interpreter, _ LocationRange, name string) Va
 	return nil
 }
 
-func (UInt256Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+func (UInt256Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
 	panic(errors.NewUnreachableError())
 }
 
@@ -4312,8 +4295,8 @@ func (v Word8Value) Equal(_ *Interpreter, other Value) BoolValue {
 	return v == otherWord8
 }
 
-func ConvertWord8(value Value, interpreter *Interpreter) Value {
-	return Word8Value(ConvertUInt8(value, interpreter).(UInt8Value))
+func ConvertWord8(value Value) Word8Value {
+	return Word8Value(ConvertUInt8(value))
 }
 
 func (v Word8Value) BitwiseOr(other IntegerValue) IntegerValue {
@@ -4341,22 +4324,20 @@ func (v Word8Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 	return v >> o
 }
 
-func (v Word8Value) GetMember(_ *Interpreter, _ LocationRange, name string) Value {
+func (v Word8Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
 	switch name {
 
 	case sema.ToStringFunctionName:
 		return NewHostFunctionValue(
-			func(invocation Invocation) trampoline.Trampoline {
-				result := NewStringValue(v.String())
-				return trampoline.Done{Result: result}
+			func(invocation Invocation) Value {
+				return NewStringValue(v.String())
 			},
 		)
 
 	case sema.ToBigEndianBytesFunctionName:
 		return NewHostFunctionValue(
-			func(invocation Invocation) trampoline.Trampoline {
-				result := ByteSliceToByteArrayValue(v.ToBigEndianBytes())
-				return trampoline.Done{Result: result}
+			func(invocation Invocation) Value {
+				return ByteSliceToByteArrayValue(v.ToBigEndianBytes())
 			},
 		)
 	}
@@ -4364,7 +4345,7 @@ func (v Word8Value) GetMember(_ *Interpreter, _ LocationRange, name string) Valu
 	return nil
 }
 
-func (Word8Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+func (Word8Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
 	panic(errors.NewUnreachableError())
 }
 
@@ -4477,8 +4458,8 @@ func (v Word16Value) Equal(_ *Interpreter, other Value) BoolValue {
 	return v == otherWord16
 }
 
-func ConvertWord16(value Value, interpreter *Interpreter) Value {
-	return Word16Value(ConvertUInt16(value, interpreter).(UInt16Value))
+func ConvertWord16(value Value) Word16Value {
+	return Word16Value(ConvertUInt16(value))
 }
 
 func (v Word16Value) BitwiseOr(other IntegerValue) IntegerValue {
@@ -4506,22 +4487,20 @@ func (v Word16Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 	return v >> o
 }
 
-func (v Word16Value) GetMember(_ *Interpreter, _ LocationRange, name string) Value {
+func (v Word16Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
 	switch name {
 
 	case sema.ToStringFunctionName:
 		return NewHostFunctionValue(
-			func(invocation Invocation) trampoline.Trampoline {
-				result := NewStringValue(v.String())
-				return trampoline.Done{Result: result}
+			func(invocation Invocation) Value {
+				return NewStringValue(v.String())
 			},
 		)
 
 	case sema.ToBigEndianBytesFunctionName:
 		return NewHostFunctionValue(
-			func(invocation Invocation) trampoline.Trampoline {
-				result := ByteSliceToByteArrayValue(v.ToBigEndianBytes())
-				return trampoline.Done{Result: result}
+			func(invocation Invocation) Value {
+				return ByteSliceToByteArrayValue(v.ToBigEndianBytes())
 			},
 		)
 	}
@@ -4529,7 +4508,7 @@ func (v Word16Value) GetMember(_ *Interpreter, _ LocationRange, name string) Val
 	return nil
 }
 
-func (Word16Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+func (Word16Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
 	panic(errors.NewUnreachableError())
 }
 
@@ -4646,8 +4625,8 @@ func (v Word32Value) Equal(_ *Interpreter, other Value) BoolValue {
 	return v == otherWord32
 }
 
-func ConvertWord32(value Value, interpreter *Interpreter) Value {
-	return Word32Value(ConvertUInt32(value, interpreter).(UInt32Value))
+func ConvertWord32(value Value) Word32Value {
+	return Word32Value(ConvertUInt32(value))
 }
 
 func (v Word32Value) BitwiseOr(other IntegerValue) IntegerValue {
@@ -4675,22 +4654,20 @@ func (v Word32Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 	return v >> o
 }
 
-func (v Word32Value) GetMember(_ *Interpreter, _ LocationRange, name string) Value {
+func (v Word32Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
 	switch name {
 
 	case sema.ToStringFunctionName:
 		return NewHostFunctionValue(
-			func(invocation Invocation) trampoline.Trampoline {
-				result := NewStringValue(v.String())
-				return trampoline.Done{Result: result}
+			func(invocation Invocation) Value {
+				return NewStringValue(v.String())
 			},
 		)
 
 	case sema.ToBigEndianBytesFunctionName:
 		return NewHostFunctionValue(
-			func(invocation Invocation) trampoline.Trampoline {
-				result := ByteSliceToByteArrayValue(v.ToBigEndianBytes())
-				return trampoline.Done{Result: result}
+			func(invocation Invocation) Value {
+				return ByteSliceToByteArrayValue(v.ToBigEndianBytes())
 			},
 		)
 	}
@@ -4698,7 +4675,7 @@ func (v Word32Value) GetMember(_ *Interpreter, _ LocationRange, name string) Val
 	return nil
 }
 
-func (Word32Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+func (Word32Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
 	panic(errors.NewUnreachableError())
 }
 
@@ -4815,8 +4792,8 @@ func (v Word64Value) Equal(_ *Interpreter, other Value) BoolValue {
 	return v == otherWord64
 }
 
-func ConvertWord64(value Value, interpreter *Interpreter) Value {
-	return Word64Value(ConvertUInt64(value, interpreter).(UInt64Value))
+func ConvertWord64(value Value) Word64Value {
+	return Word64Value(ConvertUInt64(value))
 }
 
 func (v Word64Value) BitwiseOr(other IntegerValue) IntegerValue {
@@ -4844,22 +4821,20 @@ func (v Word64Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 	return v >> o
 }
 
-func (v Word64Value) GetMember(_ *Interpreter, _ LocationRange, name string) Value {
+func (v Word64Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
 	switch name {
 
 	case sema.ToStringFunctionName:
 		return NewHostFunctionValue(
-			func(invocation Invocation) trampoline.Trampoline {
-				result := NewStringValue(v.String())
-				return trampoline.Done{Result: result}
+			func(invocation Invocation) Value {
+				return NewStringValue(v.String())
 			},
 		)
 
 	case sema.ToBigEndianBytesFunctionName:
 		return NewHostFunctionValue(
-			func(invocation Invocation) trampoline.Trampoline {
-				result := ByteSliceToByteArrayValue(v.ToBigEndianBytes())
-				return trampoline.Done{Result: result}
+			func(invocation Invocation) Value {
+				return ByteSliceToByteArrayValue(v.ToBigEndianBytes())
 			},
 		)
 	}
@@ -4867,7 +4842,7 @@ func (v Word64Value) GetMember(_ *Interpreter, _ LocationRange, name string) Val
 	return nil
 }
 
-func (Word64Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+func (Word64Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
 	panic(errors.NewUnreachableError())
 }
 
@@ -5031,7 +5006,7 @@ func (v Fix64Value) Equal(_ *Interpreter, other Value) BoolValue {
 	return v == otherFix64
 }
 
-func ConvertFix64(value Value, interpreter *Interpreter) Value {
+func ConvertFix64(value Value) Fix64Value {
 	switch value := value.(type) {
 	case Fix64Value:
 		return value
@@ -5062,30 +5037,24 @@ func ConvertFix64(value Value, interpreter *Interpreter) Value {
 		return NewFix64ValueWithInteger(int64(v))
 
 	default:
-		panic(fmt.Sprintf(
-			"can't convert %s to Fix64: %s",
-			value.DynamicType(interpreter),
-			value,
-		))
+		panic(fmt.Sprintf("can't convert Fix64: %s", value))
 	}
 }
 
-func (v Fix64Value) GetMember(_ *Interpreter, _ LocationRange, name string) Value {
+func (v Fix64Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
 	switch name {
 
 	case sema.ToStringFunctionName:
 		return NewHostFunctionValue(
-			func(invocation Invocation) trampoline.Trampoline {
-				result := NewStringValue(v.String())
-				return trampoline.Done{Result: result}
+			func(invocation Invocation) Value {
+				return NewStringValue(v.String())
 			},
 		)
 
 	case sema.ToBigEndianBytesFunctionName:
 		return NewHostFunctionValue(
-			func(invocation Invocation) trampoline.Trampoline {
-				result := ByteSliceToByteArrayValue(v.ToBigEndianBytes())
-				return trampoline.Done{Result: result}
+			func(invocation Invocation) Value {
+				return ByteSliceToByteArrayValue(v.ToBigEndianBytes())
 			},
 		)
 	}
@@ -5093,7 +5062,7 @@ func (v Fix64Value) GetMember(_ *Interpreter, _ LocationRange, name string) Valu
 	return nil
 }
 
-func (Fix64Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+func (Fix64Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
 	panic(errors.NewUnreachableError())
 }
 
@@ -5246,7 +5215,7 @@ func (v UFix64Value) Equal(_ *Interpreter, other Value) BoolValue {
 	return v == otherUFix64
 }
 
-func ConvertUFix64(value Value, interpreter *Interpreter) Value {
+func ConvertUFix64(value Value) UFix64Value {
 	switch value := value.(type) {
 	case UFix64Value:
 		return value
@@ -5284,30 +5253,24 @@ func ConvertUFix64(value Value, interpreter *Interpreter) Value {
 		return NewUFix64ValueWithInteger(uint64(v))
 
 	default:
-		panic(fmt.Sprintf(
-			"can't convert %s to UFix64: %s",
-			value.DynamicType(interpreter),
-			value,
-		))
+		panic(fmt.Sprintf("can't convert to UFix64: %s", value))
 	}
 }
 
-func (v UFix64Value) GetMember(_ *Interpreter, _ LocationRange, name string) Value {
+func (v UFix64Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
 	switch name {
 
 	case sema.ToStringFunctionName:
 		return NewHostFunctionValue(
-			func(invocation Invocation) trampoline.Trampoline {
-				result := NewStringValue(v.String())
-				return trampoline.Done{Result: result}
+			func(invocation Invocation) Value {
+				return NewStringValue(v.String())
 			},
 		)
 
 	case sema.ToBigEndianBytesFunctionName:
 		return NewHostFunctionValue(
-			func(invocation Invocation) trampoline.Trampoline {
-				result := ByteSliceToByteArrayValue(v.ToBigEndianBytes())
-				return trampoline.Done{Result: result}
+			func(invocation Invocation) Value {
+				return ByteSliceToByteArrayValue(v.ToBigEndianBytes())
 			},
 		)
 	}
@@ -5315,7 +5278,7 @@ func (v UFix64Value) GetMember(_ *Interpreter, _ LocationRange, name string) Val
 	return nil
 }
 
-func (UFix64Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+func (UFix64Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
 	panic(errors.NewUnreachableError())
 }
 
@@ -5333,13 +5296,16 @@ type CompositeValue struct {
 	Kind                common.CompositeKind
 	Fields              *StringValueOrderedMap
 	InjectedFields      *StringValueOrderedMap
-	NestedValues        *StringValueOrderedMap
+	ComputedFields      *StringComputedFieldOrderedMap
+	NestedVariables     *StringVariableOrderedMap
 	Functions           map[string]FunctionValue
 	Destructor          FunctionValue
 	Owner               *common.Address
 	destroyed           bool
 	modified            bool
 }
+
+type ComputedField func(*Interpreter) Value
 
 func NewCompositeValue(
 	location common.Location,
@@ -5362,7 +5328,7 @@ func NewCompositeValue(
 	}
 }
 
-func (v *CompositeValue) Destroy(interpreter *Interpreter, locationRange LocationRange) trampoline.Trampoline {
+func (v *CompositeValue) Destroy(interpreter *Interpreter, getLocationRange func() LocationRange) {
 
 	interpreter = v.getInterpreter(interpreter)
 
@@ -5373,26 +5339,20 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, locationRange Locatio
 
 	destructor := v.Destructor
 
-	var tramp trampoline.Trampoline
-
-	if destructor == nil {
-		tramp = trampoline.Done{Result: VoidValue{}}
-	} else {
+	if destructor != nil {
 		invocation := Invocation{
-			Self:          v,
-			Arguments:     nil,
-			ArgumentTypes: nil,
-			LocationRange: locationRange,
-			Interpreter:   interpreter,
+			Self:             v,
+			Arguments:        nil,
+			ArgumentTypes:    nil,
+			GetLocationRange: getLocationRange,
+			Interpreter:      interpreter,
 		}
 
-		tramp = destructor.Invoke(invocation)
+		destructor.Invoke(invocation)
 	}
 
-	return tramp.Then(func(_ interface{}) {
-		v.destroyed = true
-		v.modified = true
-	})
+	v.destroyed = true
+	v.modified = true
 }
 
 func (*CompositeValue) IsValue() {}
@@ -5445,7 +5405,8 @@ func (v *CompositeValue) Copy() Value {
 		Kind:                v.Kind,
 		Fields:              newFields,
 		InjectedFields:      v.InjectedFields,
-		NestedValues:        v.NestedValues,
+		ComputedFields:      v.ComputedFields,
+		NestedVariables:     v.NestedVariables,
 		Functions:           v.Functions,
 		Destructor:          v.Destructor,
 		destroyed:           v.destroyed,
@@ -5455,11 +5416,11 @@ func (v *CompositeValue) Copy() Value {
 	}
 }
 
-func (v *CompositeValue) checkStatus(locationRange LocationRange) {
+func (v *CompositeValue) checkStatus(getLocationRange func() LocationRange) {
 	if v.destroyed {
 		panic(DestroyedCompositeError{
 			CompositeKind: v.Kind,
-			LocationRange: locationRange,
+			LocationRange: getLocationRange(),
 		})
 	}
 }
@@ -5499,9 +5460,9 @@ func (v *CompositeValue) IsModified() bool {
 		}
 	}
 
-	if v.NestedValues != nil {
-		for pair := v.NestedValues.Oldest(); pair != nil; pair = pair.Next() {
-			if pair.Value.IsModified() {
+	if v.NestedVariables != nil {
+		for pair := v.NestedVariables.Oldest(); pair != nil; pair = pair.Next() {
+			if pair.Value.GetValue().IsModified() {
 				return true
 			}
 		}
@@ -5514,8 +5475,8 @@ func (v *CompositeValue) SetModified(modified bool) {
 	v.modified = modified
 }
 
-func (v *CompositeValue) GetMember(interpreter *Interpreter, locationRange LocationRange, name string) Value {
-	v.checkStatus(locationRange)
+func (v *CompositeValue) GetMember(interpreter *Interpreter, getLocationRange func() LocationRange, name string) Value {
+	v.checkStatus(getLocationRange)
 
 	if v.Kind == common.CompositeKindResource &&
 		name == sema.ResourceOwnerFieldName {
@@ -5528,14 +5489,20 @@ func (v *CompositeValue) GetMember(interpreter *Interpreter, locationRange Locat
 		return value
 	}
 
-	if v.NestedValues != nil {
-		value, ok = v.NestedValues.Get(name)
+	if v.NestedVariables != nil {
+		variable, ok := v.NestedVariables.Get(name)
 		if ok {
-			return value
+			return variable.GetValue()
 		}
 	}
 
 	interpreter = v.getInterpreter(interpreter)
+
+	if v.ComputedFields != nil {
+		if computedField, ok := v.ComputedFields.Get(name); ok {
+			return computedField(interpreter)
+		}
+	}
 
 	// If the composite value was deserialized, dynamically link in the functions
 	// and get injected fields
@@ -5606,8 +5573,8 @@ func (v *CompositeValue) OwnerValue() OptionalValue {
 	)
 }
 
-func (v *CompositeValue) SetMember(_ *Interpreter, locationRange LocationRange, name string, value Value) {
-	v.checkStatus(locationRange)
+func (v *CompositeValue) SetMember(_ *Interpreter, getLocationRange func() LocationRange, name string, value Value) {
+	v.checkStatus(getLocationRange)
 
 	v.modified = true
 
@@ -5617,13 +5584,17 @@ func (v *CompositeValue) SetMember(_ *Interpreter, locationRange LocationRange, 
 }
 
 func (v *CompositeValue) String() string {
-	fields := make([]struct {
+	return formatComposite(string(v.TypeID()), v.Fields)
+}
+
+func formatComposite(typeId string, fields *StringValueOrderedMap) string {
+	preparedFields := make([]struct {
 		Name  string
 		Value string
-	}, 0, v.Fields.Len())
+	}, 0, fields.Len())
 
-	v.Fields.Foreach(func(fieldName string, value Value) {
-		fields = append(fields,
+	fields.Foreach(func(fieldName string, value Value) {
+		preparedFields = append(preparedFields,
 			struct {
 				Name  string
 				Value string
@@ -5634,7 +5605,7 @@ func (v *CompositeValue) String() string {
 		)
 	})
 
-	return format.Composite(string(v.TypeID()), fields)
+	return format.Composite(typeId, preparedFields)
 }
 
 func (v *CompositeValue) GetField(name string) Value {
@@ -5671,6 +5642,10 @@ func (v *CompositeValue) KeyString() string {
 }
 
 func (v *CompositeValue) TypeID() common.TypeID {
+	if v.Location == nil {
+		return common.TypeID(v.QualifiedIdentifier)
+	}
+
 	return v.Location.TypeID(v.QualifiedIdentifier)
 }
 
@@ -5692,10 +5667,12 @@ type DictionaryValue struct {
 	// stay stored in the deferred owner's account until the end of the transaction.
 	DeferredOwner *common.Address
 	// DeferredKeys are the keys which are deferred and have not been loaded from storage yet.
-	DeferredKeys *orderedmap.StringStringOrderedMap
+	DeferredKeys *orderedmap.StringStructOrderedMap
+	// DeferredStorageKeyBase is the storage key prefix for all deferred keys
+	DeferredStorageKeyBase string
 	// prevDeferredKeys are the keys which are deferred and have been loaded from storage,
 	// i.e. they are keys that were previously in DeferredKeys.
-	prevDeferredKeys *orderedmap.StringStringOrderedMap
+	prevDeferredKeys *orderedmap.StringStructOrderedMap
 }
 
 func NewDictionaryValueUnownedNonCopying(keysAndValues ...Value) *DictionaryValue {
@@ -5708,15 +5685,16 @@ func NewDictionaryValueUnownedNonCopying(keysAndValues ...Value) *DictionaryValu
 		Keys:    NewArrayValueUnownedNonCopying(),
 		Entries: NewStringValueOrderedMap(),
 		// NOTE: new value has no owner
-		Owner:            nil,
-		modified:         true,
-		DeferredOwner:    nil,
-		DeferredKeys:     nil,
-		prevDeferredKeys: nil,
+		Owner:                  nil,
+		modified:               true,
+		DeferredOwner:          nil,
+		DeferredKeys:           nil,
+		DeferredStorageKeyBase: "",
+		prevDeferredKeys:       nil,
 	}
 
 	for i := 0; i < keysAndValuesCount; i += 2 {
-		_ = result.Insert(nil, LocationRange{}, keysAndValues[i], keysAndValues[i+1])
+		_ = result.Insert(nil, ReturnEmptyLocationRange, keysAndValues[i], keysAndValues[i+1])
 	}
 
 	return result
@@ -5733,7 +5711,7 @@ func (v *DictionaryValue) Accept(interpreter *Interpreter, visitor Visitor) {
 		key.Accept(interpreter, visitor)
 
 		// NOTE: Force unwrap. This is safe because we are iterating over the keys.
-		value := v.Get(interpreter, LocationRange{}, key).(*SomeValue).Value
+		value := v.Get(interpreter, ReturnEmptyLocationRange, key).(*SomeValue).Value
 		value.Accept(interpreter, visitor)
 	}
 }
@@ -5744,7 +5722,7 @@ func (v *DictionaryValue) DynamicType(interpreter *Interpreter) DynamicType {
 	for i, key := range v.Keys.Values {
 		// NOTE: Force unwrap, otherwise dynamic type check is for optional type.
 		// This is safe because we are iterating over the keys.
-		value := v.Get(interpreter, LocationRange{}, key).(*SomeValue).Value
+		value := v.Get(interpreter, ReturnEmptyLocationRange, key).(*SomeValue).Value
 		entryTypes[i] =
 			struct{ KeyType, ValueType DynamicType }{
 				KeyType:   key.DynamicType(interpreter),
@@ -5772,11 +5750,12 @@ func (v *DictionaryValue) Copy() Value {
 	})
 
 	return &DictionaryValue{
-		Keys:             newKeys,
-		Entries:          newEntries,
-		DeferredOwner:    v.DeferredOwner,
-		DeferredKeys:     v.DeferredKeys,
-		prevDeferredKeys: v.prevDeferredKeys,
+		Keys:                   newKeys,
+		Entries:                newEntries,
+		DeferredOwner:          v.DeferredOwner,
+		DeferredKeys:           v.DeferredKeys,
+		DeferredStorageKeyBase: v.DeferredStorageKeyBase,
+		prevDeferredKeys:       v.prevDeferredKeys,
 		// NOTE: new value has no owner
 		Owner:    nil,
 		modified: true,
@@ -5824,35 +5803,44 @@ func (v *DictionaryValue) SetModified(modified bool) {
 	v.modified = modified
 }
 
-func (v *DictionaryValue) Destroy(inter *Interpreter, locationRange LocationRange) trampoline.Trampoline {
-	var result trampoline.Trampoline = trampoline.Done{}
-
-	maybeDestroy := func(value interface{}) {
-		destroyableValue, ok := value.(DestroyableValue)
-		if !ok {
-			return
-		}
-
-		result = result.
-			FlatMap(func(_ interface{}) trampoline.Trampoline {
-				return destroyableValue.Destroy(inter, locationRange)
-			})
+func maybeDestroy(inter *Interpreter, getLocationRange func() LocationRange, value Value) {
+	destroyableValue, ok := value.(DestroyableValue)
+	if !ok {
+		return
 	}
+
+	destroyableValue.Destroy(inter, getLocationRange)
+}
+
+func (v *DictionaryValue) Destroy(inter *Interpreter, getLocationRange func() LocationRange) {
 
 	for _, keyValue := range v.Keys.Values {
 		// Don't use `Entries` here: the value might be deferred and needs to be loaded
-		value := v.Get(inter, locationRange, keyValue)
-		maybeDestroy(keyValue)
-		maybeDestroy(value)
+		value := v.Get(inter, getLocationRange, keyValue)
+		maybeDestroy(inter, getLocationRange, keyValue)
+		maybeDestroy(inter, getLocationRange, value)
 	}
 
-	writeDeferredKeys(inter, v.DeferredOwner, v.DeferredKeys)
-	writeDeferredKeys(inter, v.DeferredOwner, v.prevDeferredKeys)
-
-	return result
+	writeDeferredKeys(inter, v.DeferredOwner, v.DeferredStorageKeyBase, v.DeferredKeys)
+	writeDeferredKeys(inter, v.DeferredOwner, v.DeferredStorageKeyBase, v.prevDeferredKeys)
 }
 
-func (v *DictionaryValue) Get(inter *Interpreter, _ LocationRange, keyValue Value) Value {
+func (v *DictionaryValue) ContainsKey(keyValue Value) BoolValue {
+	key := dictionaryKey(keyValue)
+	_, ok := v.Entries.Get(key)
+	if ok {
+		return true
+	}
+	if v.DeferredKeys != nil {
+		_, ok := v.DeferredKeys.Get(key)
+		if ok {
+			return true
+		}
+	}
+	return false
+}
+
+func (v *DictionaryValue) Get(inter *Interpreter, _ func() LocationRange, keyValue Value) Value {
 	key := dictionaryKey(keyValue)
 	value, ok := v.Entries.Get(key)
 	if ok {
@@ -5863,12 +5851,13 @@ func (v *DictionaryValue) Get(inter *Interpreter, _ LocationRange, keyValue Valu
 	// and keep it as an entry in memory
 
 	if v.DeferredKeys != nil {
-		storageKey, ok := v.DeferredKeys.Delete(key)
+		_, ok := v.DeferredKeys.Delete(key)
 		if ok {
+			storageKey := joinPathElements(v.DeferredStorageKeyBase, key)
 			if v.prevDeferredKeys == nil {
-				v.prevDeferredKeys = orderedmap.NewStringStringOrderedMap()
+				v.prevDeferredKeys = orderedmap.NewStringStructOrderedMap()
 			}
-			v.prevDeferredKeys.Set(key, storageKey)
+			v.prevDeferredKeys.Set(key, struct{}{})
 
 			storedValue := inter.readStored(*v.DeferredOwner, storageKey, true)
 			v.Entries.Set(key, storedValue.(*SomeValue).Value)
@@ -5894,15 +5883,15 @@ func dictionaryKey(keyValue Value) string {
 	return hasKeyString.KeyString()
 }
 
-func (v *DictionaryValue) Set(inter *Interpreter, locationRange LocationRange, keyValue Value, value Value) {
+func (v *DictionaryValue) Set(inter *Interpreter, getLocationRange func() LocationRange, keyValue Value, value Value) {
 	v.modified = true
 
 	switch typedValue := value.(type) {
 	case *SomeValue:
-		_ = v.Insert(inter, locationRange, keyValue, typedValue.Value)
+		_ = v.Insert(inter, getLocationRange, keyValue, typedValue.Value)
 
 	case NilValue:
-		_ = v.Remove(inter, locationRange, keyValue)
+		_ = v.Remove(inter, getLocationRange, keyValue)
 		return
 
 	default:
@@ -5942,7 +5931,7 @@ func (v *DictionaryValue) String() string {
 	return format.Dictionary(pairs)
 }
 
-func (v *DictionaryValue) GetMember(interpreter *Interpreter, locationRange LocationRange, name string) Value {
+func (v *DictionaryValue) GetMember(interpreter *Interpreter, getLocationRange func() LocationRange, name string) Value {
 	switch name {
 	case "length":
 		return NewIntValueFromInt64(int64(v.Count()))
@@ -5956,7 +5945,7 @@ func (v *DictionaryValue) GetMember(interpreter *Interpreter, locationRange Loca
 		dictionaryValues := make([]Value, v.Count())
 		i := 0
 		for _, keyValue := range v.Keys.Values {
-			value := v.Get(interpreter, locationRange, keyValue).(*SomeValue).Value
+			value := v.Get(interpreter, getLocationRange, keyValue).(*SomeValue).Value
 			dictionaryValues[i] = value.Copy()
 			i++
 		}
@@ -5964,41 +5953,45 @@ func (v *DictionaryValue) GetMember(interpreter *Interpreter, locationRange Loca
 
 	case "remove":
 		return NewHostFunctionValue(
-			func(invocation Invocation) trampoline.Trampoline {
+			func(invocation Invocation) Value {
 				keyValue := invocation.Arguments[0]
 
-				existingValue := v.Remove(
+				return v.Remove(
 					invocation.Interpreter,
-					invocation.LocationRange,
+					invocation.GetLocationRange,
 					keyValue,
 				)
-
-				return trampoline.Done{Result: existingValue}
 			},
 		)
 
 	case "insert":
 		return NewHostFunctionValue(
-			func(invocation Invocation) trampoline.Trampoline {
+			func(invocation Invocation) Value {
 				keyValue := invocation.Arguments[0]
 				newValue := invocation.Arguments[1]
 
-				existingValue := v.Insert(
+				return v.Insert(
 					invocation.Interpreter,
-					invocation.LocationRange,
+					invocation.GetLocationRange,
 					keyValue,
 					newValue,
 				)
-
-				return trampoline.Done{Result: existingValue}
 			},
 		)
+
+	case "containsKey":
+		return NewHostFunctionValue(
+			func(invocation Invocation) Value {
+				return v.ContainsKey(invocation.Arguments[0])
+			},
+		)
+
 	}
 
 	return nil
 }
 
-func (v *DictionaryValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+func (v *DictionaryValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
 	// Dictionaries have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
@@ -6008,11 +6001,11 @@ func (v *DictionaryValue) Count() int {
 }
 
 // TODO: unset owner?
-func (v *DictionaryValue) Remove(inter *Interpreter, locationRange LocationRange, keyValue Value) OptionalValue {
+func (v *DictionaryValue) Remove(inter *Interpreter, getLocationRange func() LocationRange, keyValue Value) OptionalValue {
 	v.modified = true
 
 	// Don't use `Entries` here: the value might be deferred and needs to be loaded
-	value := v.Get(inter, locationRange, keyValue)
+	value := v.Get(inter, getLocationRange, keyValue)
 
 	key := dictionaryKey(keyValue)
 
@@ -6021,7 +6014,8 @@ func (v *DictionaryValue) Remove(inter *Interpreter, locationRange LocationRange
 	// to make sure it is stored or destroyed later
 
 	if v.prevDeferredKeys != nil {
-		if storageKey, ok := v.prevDeferredKeys.Get(key); ok {
+		if _, ok := v.prevDeferredKeys.Get(key); ok {
+			storageKey := joinPathElements(v.DeferredStorageKeyBase, key)
 			inter.writeStored(*v.DeferredOwner, storageKey, NilValue{})
 		}
 	}
@@ -6050,11 +6044,11 @@ func (v *DictionaryValue) Remove(inter *Interpreter, locationRange LocationRange
 	}
 }
 
-func (v *DictionaryValue) Insert(inter *Interpreter, locationRange LocationRange, keyValue, value Value) OptionalValue {
+func (v *DictionaryValue) Insert(inter *Interpreter, locationRangeGetter func() LocationRange, keyValue, value Value) OptionalValue {
 	v.modified = true
 
 	// Don't use `Entries` here: the value might be deferred and needs to be loaded
-	existingValue := v.Get(inter, locationRange, keyValue)
+	existingValue := v.Get(inter, locationRangeGetter, keyValue)
 
 	key := dictionaryKey(keyValue)
 
@@ -6082,13 +6076,19 @@ func (v *DictionaryValue) Insert(inter *Interpreter, locationRange LocationRange
 	}
 }
 
-func writeDeferredKeys(inter *Interpreter, owner *common.Address, keysToStorageKeys *orderedmap.StringStringOrderedMap) {
-	if keysToStorageKeys == nil {
+func writeDeferredKeys(
+	inter *Interpreter,
+	owner *common.Address,
+	storageKeyBase string,
+	keys *orderedmap.StringStructOrderedMap,
+) {
+	if keys == nil {
 		return
 	}
 
-	for pair := keysToStorageKeys.Oldest(); pair != nil; pair = pair.Next() {
-		inter.writeStored(*owner, pair.Value, NilValue{})
+	for pair := keys.Oldest(); pair != nil; pair = pair.Next() {
+		storageKey := joinPathElements(storageKeyBase, pair.Key)
+		inter.writeStored(*owner, storageKey, NilValue{})
 	}
 }
 
@@ -6147,8 +6147,8 @@ func (NilValue) SetModified(_ bool) {
 	// NO-OP
 }
 
-func (v NilValue) Destroy(_ *Interpreter, _ LocationRange) trampoline.Trampoline {
-	return trampoline.Done{}
+func (v NilValue) Destroy(_ *Interpreter, _ func() LocationRange) {
+	// NO-OP
 }
 
 func (NilValue) String() string {
@@ -6156,12 +6156,12 @@ func (NilValue) String() string {
 }
 
 var nilValueMapFunction = NewHostFunctionValue(
-	func(invocation Invocation) trampoline.Trampoline {
-		return trampoline.Done{Result: NilValue{}}
+	func(invocation Invocation) Value {
+		return NilValue{}
 	},
 )
 
-func (v NilValue) GetMember(_ *Interpreter, _ LocationRange, name string) Value {
+func (v NilValue) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
 	switch name {
 	case "map":
 		return nilValueMapFunction
@@ -6170,7 +6170,7 @@ func (v NilValue) GetMember(_ *Interpreter, _ LocationRange, name string) Value 
 	return nil
 }
 
-func (NilValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+func (NilValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
 	panic(errors.NewUnreachableError())
 }
 
@@ -6245,35 +6245,34 @@ func (v *SomeValue) SetModified(modified bool) {
 	v.Value.SetModified(modified)
 }
 
-func (v *SomeValue) Destroy(interpreter *Interpreter, locationRange LocationRange) trampoline.Trampoline {
-	return v.Value.(DestroyableValue).Destroy(interpreter, locationRange)
+func (v *SomeValue) Destroy(interpreter *Interpreter, getLocationRange func() LocationRange) {
+	maybeDestroy(interpreter, getLocationRange, v.Value)
 }
 
 func (v *SomeValue) String() string {
 	return v.Value.String()
 }
 
-func (v *SomeValue) GetMember(_ *Interpreter, _ LocationRange, name string) Value {
+func (v *SomeValue) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
 	switch name {
 	case "map":
 		return NewHostFunctionValue(
-			func(invocation Invocation) trampoline.Trampoline {
+			func(invocation Invocation) Value {
 
 				transformFunction := invocation.Arguments[0].(FunctionValue)
 				transformFunctionType := invocation.ArgumentTypes[0].(*sema.FunctionType)
 				valueType := transformFunctionType.Parameters[0].TypeAnnotation.Type
 
-				return transformFunction.
-					Invoke(Invocation{
-						Arguments:     []Value{v.Value},
-						ArgumentTypes: []sema.Type{valueType},
-						LocationRange: invocation.LocationRange,
-						Interpreter:   invocation.Interpreter,
-					}).
-					Map(func(result interface{}) interface{} {
-						newValue := result.(Value)
-						return NewSomeValueOwningNonCopying(newValue)
-					})
+				transformInvocation := Invocation{
+					Arguments:        []Value{v.Value},
+					ArgumentTypes:    []sema.Type{valueType},
+					GetLocationRange: invocation.GetLocationRange,
+					Interpreter:      invocation.Interpreter,
+				}
+
+				newValue := transformFunction.Invoke(transformInvocation)
+
+				return NewSomeValueOwningNonCopying(newValue)
 			},
 		)
 	}
@@ -6281,7 +6280,7 @@ func (v *SomeValue) GetMember(_ *Interpreter, _ LocationRange, name string) Valu
 	return nil
 }
 
-func (*SomeValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+func (*SomeValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
 	panic(errors.NewUnreachableError())
 }
 
@@ -6358,50 +6357,54 @@ func (v *StorageReferenceValue) ReferencedValue(interpreter *Interpreter) *Value
 	}
 }
 
-func (v *StorageReferenceValue) GetMember(interpreter *Interpreter, locationRange LocationRange, name string) Value {
+func (v *StorageReferenceValue) GetMember(interpreter *Interpreter, getLocationRange func() LocationRange, name string) Value {
 	referencedValue := v.ReferencedValue(interpreter)
 	if referencedValue == nil {
 		panic(DereferenceError{
-			LocationRange: locationRange,
+			LocationRange: getLocationRange(),
 		})
 	}
 
-	return interpreter.getMember(*referencedValue, locationRange, name)
+	value := interpreter.getMember(*referencedValue, getLocationRange, name)
+	if value == nil {
+		panic(errors.NewUnreachableError())
+	}
+	return value
 }
 
-func (v *StorageReferenceValue) SetMember(interpreter *Interpreter, locationRange LocationRange, name string, value Value) {
+func (v *StorageReferenceValue) SetMember(interpreter *Interpreter, getLocationRange func() LocationRange, name string, value Value) {
 	referencedValue := v.ReferencedValue(interpreter)
 	if referencedValue == nil {
 		panic(DereferenceError{
-			LocationRange: locationRange,
+			LocationRange: getLocationRange(),
 		})
 	}
 
-	interpreter.setMember(*referencedValue, locationRange, name, value)
+	interpreter.setMember(*referencedValue, getLocationRange, name, value)
 }
 
-func (v *StorageReferenceValue) Get(interpreter *Interpreter, locationRange LocationRange, key Value) Value {
+func (v *StorageReferenceValue) Get(interpreter *Interpreter, getLocationRange func() LocationRange, key Value) Value {
 	referencedValue := v.ReferencedValue(interpreter)
 	if referencedValue == nil {
 		panic(DereferenceError{
-			LocationRange: locationRange,
+			LocationRange: getLocationRange(),
 		})
 	}
 
 	return (*referencedValue).(ValueIndexableValue).
-		Get(interpreter, locationRange, key)
+		Get(interpreter, getLocationRange, key)
 }
 
-func (v *StorageReferenceValue) Set(interpreter *Interpreter, locationRange LocationRange, key Value, value Value) {
+func (v *StorageReferenceValue) Set(interpreter *Interpreter, getLocationRange func() LocationRange, key Value, value Value) {
 	referencedValue := v.ReferencedValue(interpreter)
 	if referencedValue == nil {
 		panic(DereferenceError{
-			LocationRange: locationRange,
+			LocationRange: getLocationRange(),
 		})
 	}
 
 	(*referencedValue).(ValueIndexableValue).
-		Set(interpreter, locationRange, key, value)
+		Set(interpreter, getLocationRange, key, value)
 }
 
 func (v *StorageReferenceValue) Equal(_ *Interpreter, other Value) BoolValue {
@@ -6486,50 +6489,54 @@ func (v *EphemeralReferenceValue) ReferencedValue() *Value {
 	}
 }
 
-func (v *EphemeralReferenceValue) GetMember(interpreter *Interpreter, locationRange LocationRange, name string) Value {
+func (v *EphemeralReferenceValue) GetMember(interpreter *Interpreter, getLocationRange func() LocationRange, name string) Value {
 	referencedValue := v.ReferencedValue()
 	if referencedValue == nil {
 		panic(DereferenceError{
-			LocationRange: locationRange,
+			LocationRange: getLocationRange(),
 		})
 	}
 
-	return interpreter.getMember(*referencedValue, locationRange, name)
+	value := interpreter.getMember(*referencedValue, getLocationRange, name)
+	if value == nil {
+		panic(errors.NewUnreachableError())
+	}
+	return value
 }
 
-func (v *EphemeralReferenceValue) SetMember(interpreter *Interpreter, locationRange LocationRange, name string, value Value) {
+func (v *EphemeralReferenceValue) SetMember(interpreter *Interpreter, getLocationRange func() LocationRange, name string, value Value) {
 	referencedValue := v.ReferencedValue()
 	if referencedValue == nil {
 		panic(DereferenceError{
-			LocationRange: locationRange,
+			LocationRange: getLocationRange(),
 		})
 	}
 
-	interpreter.setMember(*referencedValue, locationRange, name, value)
+	interpreter.setMember(*referencedValue, getLocationRange, name, value)
 }
 
-func (v *EphemeralReferenceValue) Get(interpreter *Interpreter, locationRange LocationRange, key Value) Value {
+func (v *EphemeralReferenceValue) Get(interpreter *Interpreter, getLocationRange func() LocationRange, key Value) Value {
 	referencedValue := v.ReferencedValue()
 	if referencedValue == nil {
 		panic(DereferenceError{
-			LocationRange: locationRange,
+			LocationRange: getLocationRange(),
 		})
 	}
 
 	return (*referencedValue).(ValueIndexableValue).
-		Get(interpreter, locationRange, key)
+		Get(interpreter, getLocationRange, key)
 }
 
-func (v *EphemeralReferenceValue) Set(interpreter *Interpreter, locationRange LocationRange, key Value, value Value) {
+func (v *EphemeralReferenceValue) Set(interpreter *Interpreter, getLocationRange func() LocationRange, key Value, value Value) {
 	referencedValue := v.ReferencedValue()
 	if referencedValue == nil {
 		panic(DereferenceError{
-			LocationRange: locationRange,
+			LocationRange: getLocationRange(),
 		})
 	}
 
 	(*referencedValue).(ValueIndexableValue).
-		Set(interpreter, locationRange, key, value)
+		Set(interpreter, getLocationRange, key, value)
 }
 
 func (v *EphemeralReferenceValue) Equal(_ *Interpreter, other Value) BoolValue {
@@ -6556,7 +6563,7 @@ func NewAddressValueFromBytes(b []byte) AddressValue {
 	return result
 }
 
-func ConvertAddress(value Value, _ *Interpreter) Value {
+func ConvertAddress(value Value) AddressValue {
 	// TODO: https://github.com/dapperlabs/flow-go/issues/2141
 	result := AddressValue{}
 	if intValue, ok := value.(IntValue); ok {
@@ -6633,23 +6640,21 @@ func (v AddressValue) ToAddress() common.Address {
 	return common.Address(v)
 }
 
-func (v AddressValue) GetMember(_ *Interpreter, _ LocationRange, name string) Value {
+func (v AddressValue) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
 	switch name {
 
 	case sema.ToStringFunctionName:
 		return NewHostFunctionValue(
-			func(invocation Invocation) trampoline.Trampoline {
-				result := NewStringValue(v.String())
-				return trampoline.Done{Result: result}
+			func(invocation Invocation) Value {
+				return NewStringValue(v.String())
 			},
 		)
 
 	case sema.AddressTypeToBytesFunctionName:
 		return NewHostFunctionValue(
-			func(invocation Invocation) trampoline.Trampoline {
+			func(invocation Invocation) Value {
 				bytes := common.Address(v)
-				result := ByteSliceToByteArrayValue(bytes[:])
-				return trampoline.Done{Result: result}
+				return ByteSliceToByteArrayValue(bytes[:])
 			},
 		)
 	}
@@ -6657,7 +6662,7 @@ func (v AddressValue) GetMember(_ *Interpreter, _ LocationRange, name string) Va
 	return nil
 }
 
-func (AddressValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+func (AddressValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
 	panic(errors.NewUnreachableError())
 }
 
@@ -6676,6 +6681,7 @@ type AuthAccountValue struct {
 	addPublicKeyFunction    FunctionValue
 	removePublicKeyFunction FunctionValue
 	contracts               AuthAccountContractsValue
+	keys                    *CompositeValue
 }
 
 func NewAuthAccountValue(
@@ -6685,6 +6691,7 @@ func NewAuthAccountValue(
 	addPublicKeyFunction FunctionValue,
 	removePublicKeyFunction FunctionValue,
 	contracts AuthAccountContractsValue,
+	keys *CompositeValue,
 ) AuthAccountValue {
 	return AuthAccountValue{
 		Address:                 address,
@@ -6693,6 +6700,7 @@ func NewAuthAccountValue(
 		addPublicKeyFunction:    addPublicKeyFunction,
 		removePublicKeyFunction: removePublicKeyFunction,
 		contracts:               contracts,
+		keys:                    keys,
 	}
 }
 
@@ -6737,8 +6745,8 @@ func (AuthAccountValue) SetModified(_ bool) {
 	// NO-OP
 }
 
-func (v AuthAccountValue) Destroy(_ *Interpreter, _ LocationRange) trampoline.Trampoline {
-	return trampoline.Done{}
+func (v AuthAccountValue) Destroy(_ *Interpreter, _ func() LocationRange) {
+	// NO-OP
 }
 
 func (v AuthAccountValue) String() string {
@@ -6751,7 +6759,7 @@ func accountGetCapabilityFunction(
 ) HostFunctionValue {
 
 	return NewHostFunctionValue(
-		func(invocation Invocation) trampoline.Trampoline {
+		func(invocation Invocation) Value {
 
 			path := invocation.Arguments[0].(PathValue)
 
@@ -6769,18 +6777,16 @@ func accountGetCapabilityFunction(
 				borrowStaticType = ConvertSemaToStaticType(borrowType)
 			}
 
-			capability := CapabilityValue{
+			return CapabilityValue{
 				Address:    addressValue,
 				Path:       path,
 				BorrowType: borrowStaticType,
 			}
-
-			return trampoline.Done{Result: capability}
 		},
 	)
 }
 
-func (v AuthAccountValue) GetMember(inter *Interpreter, _ LocationRange, name string) Value {
+func (v AuthAccountValue) GetMember(inter *Interpreter, _ func() LocationRange, name string) Value {
 	switch name {
 	case "address":
 		return v.Address
@@ -6823,12 +6829,14 @@ func (v AuthAccountValue) GetMember(inter *Interpreter, _ LocationRange, name st
 
 	case "contracts":
 		return v.contracts
+	case "keys":
+		return v.keys
 	}
 
 	return nil
 }
 
-func (AuthAccountValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+func (AuthAccountValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
 	panic(errors.NewUnreachableError())
 }
 
@@ -6839,17 +6847,20 @@ type PublicAccountValue struct {
 	storageUsedGet     func(interpreter *Interpreter) UInt64Value
 	storageCapacityGet func() UInt64Value
 	Identifier         string
+	keys               *CompositeValue
 }
 
 func NewPublicAccountValue(
 	address AddressValue,
 	storageUsedGet func(interpreter *Interpreter) UInt64Value,
 	storageCapacityGet func() UInt64Value,
+	keys *CompositeValue,
 ) PublicAccountValue {
 	return PublicAccountValue{
 		Address:            address,
 		storageUsedGet:     storageUsedGet,
 		storageCapacityGet: storageCapacityGet,
+		keys:               keys,
 	}
 }
 
@@ -6894,15 +6905,15 @@ func (PublicAccountValue) SetModified(_ bool) {
 	// NO-OP
 }
 
-func (v PublicAccountValue) Destroy(_ *Interpreter, _ LocationRange) trampoline.Trampoline {
-	return trampoline.Done{}
+func (v PublicAccountValue) Destroy(_ *Interpreter, _ func() LocationRange) {
+	// NO-OP
 }
 
 func (v PublicAccountValue) String() string {
 	return fmt.Sprintf("PublicAccount(%s)", v.Address)
 }
 
-func (v PublicAccountValue) GetMember(inter *Interpreter, _ LocationRange, name string) Value {
+func (v PublicAccountValue) GetMember(inter *Interpreter, _ func() LocationRange, name string) Value {
 	switch name {
 	case "address":
 		return v.Address
@@ -6918,12 +6929,14 @@ func (v PublicAccountValue) GetMember(inter *Interpreter, _ LocationRange, name 
 
 	case "getLinkTarget":
 		return inter.accountGetLinkTargetFunction(v.Address)
+	case "keys":
+		return v.keys
 	}
 
 	return nil
 }
 
-func (PublicAccountValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+func (PublicAccountValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
 	panic(errors.NewUnreachableError())
 }
 
@@ -6987,8 +7000,8 @@ func (PathValue) SetModified(_ bool) {
 	// NO-OP
 }
 
-func (v PathValue) Destroy(_ *Interpreter, _ LocationRange) trampoline.Trampoline {
-	return trampoline.Done{}
+func (v PathValue) Destroy(_ *Interpreter, _ func() LocationRange) {
+	// NO-OP
 }
 
 func (v PathValue) String() string {
@@ -7058,19 +7071,23 @@ func (CapabilityValue) SetModified(_ bool) {
 	// NO-OP
 }
 
-func (v CapabilityValue) Destroy(_ *Interpreter, _ LocationRange) trampoline.Trampoline {
-	return trampoline.Done{}
+func (v CapabilityValue) Destroy(_ *Interpreter, _ func() LocationRange) {
+	// NO-OP
 }
 
 func (v CapabilityValue) String() string {
+	var borrowType string
+	if v.BorrowType != nil {
+		borrowType = v.BorrowType.String()
+	}
 	return format.Capability(
-		v.BorrowType.String(),
+		borrowType,
 		v.Address.String(),
 		v.Path.String(),
 	)
 }
 
-func (v CapabilityValue) GetMember(inter *Interpreter, _ LocationRange, name string) Value {
+func (v CapabilityValue) GetMember(inter *Interpreter, _ func() LocationRange, name string) Value {
 	switch name {
 	case "borrow":
 		var borrowType *sema.ReferenceType
@@ -7091,7 +7108,7 @@ func (v CapabilityValue) GetMember(inter *Interpreter, _ LocationRange, name str
 	return nil
 }
 
-func (CapabilityValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+func (CapabilityValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
 	panic(errors.NewUnreachableError())
 }
 
@@ -7137,8 +7154,8 @@ func (LinkValue) SetModified(_ bool) {
 	// NO-OP
 }
 
-func (v LinkValue) Destroy(_ *Interpreter, _ LocationRange) trampoline.Trampoline {
-	return trampoline.Done{}
+func (v LinkValue) Destroy(_ *Interpreter, _ func() LocationRange) {
+	// NO-OP
 }
 
 func (v LinkValue) String() string {
@@ -7146,4 +7163,77 @@ func (v LinkValue) String() string {
 		v.Type.String(),
 		v.TargetPath.String(),
 	)
+}
+
+// NewAccountKeyValue constructs an AccountKey value.
+func NewAccountKeyValue(
+	keyIndex IntValue,
+	publicKey *CompositeValue,
+	hashAlgo *CompositeValue,
+	weight UFix64Value,
+	isRevoked BoolValue,
+) *CompositeValue {
+	fields := NewStringValueOrderedMap()
+	fields.Set(sema.AccountKeyKeyIndexField, keyIndex)
+	fields.Set(sema.AccountKeyPublicKeyField, publicKey)
+	fields.Set(sema.AccountKeyHashAlgoField, hashAlgo)
+	fields.Set(sema.AccountKeyWeightField, weight)
+	fields.Set(sema.AccountKeyIsRevokedField, isRevoked)
+
+	return &CompositeValue{
+		QualifiedIdentifier: sema.AccountKeyType.QualifiedIdentifier(),
+		Kind:                sema.AccountKeyType.Kind,
+		Fields:              fields,
+	}
+}
+
+// NewPublicKeyValue constructs a PublicKey value.
+func NewPublicKeyValue(publicKey *ArrayValue, signAlgo *CompositeValue) *CompositeValue {
+
+	fields := NewStringValueOrderedMap()
+	fields.Set(sema.PublicKeyPublicKeyField, publicKey)
+	fields.Set(sema.PublicKeySignAlgoField, signAlgo)
+
+	return &CompositeValue{
+		QualifiedIdentifier: sema.PublicKeyType.QualifiedIdentifier(),
+		Kind:                sema.PublicKeyType.Kind,
+		Fields:              fields,
+	}
+}
+
+// NewAuthAccountKeysValue constructs a AuthAccount.Keys value.
+func NewAuthAccountKeysValue(addFunction FunctionValue, getFunction FunctionValue, revokeFunction FunctionValue) *CompositeValue {
+	fields := NewStringValueOrderedMap()
+	fields.Set(sema.AccountKeysAddFunctionName, addFunction)
+	fields.Set(sema.AccountKeysGetFunctionName, getFunction)
+	fields.Set(sema.AccountKeysRevokeFunctionName, revokeFunction)
+
+	return &CompositeValue{
+		QualifiedIdentifier: sema.AuthAccountKeysType.QualifiedIdentifier(),
+		Kind:                sema.AuthAccountKeysType.Kind,
+		Fields:              fields,
+	}
+}
+
+// NewPublicAccountKeysValue constructs a PublicAccount.Keys value.
+func NewPublicAccountKeysValue(getFunction FunctionValue) *CompositeValue {
+	fields := NewStringValueOrderedMap()
+	fields.Set(sema.AccountKeysGetFunctionName, getFunction)
+
+	return &CompositeValue{
+		QualifiedIdentifier: sema.PublicAccountKeysType.QualifiedIdentifier(),
+		Kind:                sema.PublicAccountKeysType.Kind,
+		Fields:              fields,
+	}
+}
+
+func NewCryptoAlgorithmEnumCaseValue(enumType *sema.CompositeType, rawValue uint8) *CompositeValue {
+	fields := NewStringValueOrderedMap()
+	fields.Set(sema.EnumRawValueFieldName, UInt8Value(rawValue))
+
+	return &CompositeValue{
+		QualifiedIdentifier: enumType.QualifiedIdentifier(),
+		Kind:                enumType.Kind,
+		Fields:              fields,
+	}
 }

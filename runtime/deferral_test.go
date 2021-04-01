@@ -262,18 +262,14 @@ func TestRuntimeStorageDeferredResourceDictionaryValues(t *testing.T) {
 	assert.Equal(t, []string{"2", "2"}, loggedMessages)
 
 	assert.Len(t, writes, 0)
-	require.Len(t, reads, 3)
+	require.Len(t, reads, 2)
 	assert.Equal(t,
-		[]byte(formatContractKey("Test")),
+		cStorageKey,
 		reads[0].key,
 	)
 	assert.Equal(t,
-		cStorageKey,
-		reads[1].key,
-	)
-	assert.Equal(t,
 		bStorageKey,
-		reads[2].key,
+		reads[1].key,
 	)
 
 	// Updating a value of a single key should only update
@@ -323,18 +319,14 @@ func TestRuntimeStorageDeferredResourceDictionaryValues(t *testing.T) {
 		},
 	)
 
-	require.Len(t, reads, 3)
+	require.Len(t, reads, 2)
 	assert.Equal(t,
-		[]byte(formatContractKey("Test")),
+		cStorageKey,
 		reads[0].key,
 	)
 	assert.Equal(t,
-		cStorageKey,
-		reads[1].key,
-	)
-	assert.Equal(t,
 		bStorageKey,
-		reads[2].key,
+		reads[1].key,
 	)
 
 	// Replace the key with a different resource
@@ -394,15 +386,15 @@ func TestRuntimeStorageDeferredResourceDictionaryValues(t *testing.T) {
 
 	require.Len(t, reads, 3)
 	assert.Equal(t,
-		[]byte(formatContractKey("Test")),
+		cStorageKey,
 		reads[0].key,
 	)
 	assert.Equal(t,
-		cStorageKey,
+		bStorageKey,
 		reads[1].key,
 	)
 	assert.Equal(t,
-		bStorageKey,
+		[]byte(formatContractKey("Test")),
 		reads[2].key,
 	)
 
@@ -461,18 +453,14 @@ func TestRuntimeStorageDeferredResourceDictionaryValues(t *testing.T) {
 		},
 	)
 
-	require.Len(t, reads, 3)
+	require.Len(t, reads, 2)
 	assert.Equal(t,
-		[]byte(formatContractKey("Test")),
+		cStorageKey,
 		reads[0].key,
 	)
 	assert.Equal(t,
-		cStorageKey,
-		reads[1].key,
-	)
-	assert.Equal(t,
 		bStorageKey,
-		reads[2].key,
+		reads[1].key,
 	)
 
 	// Read the deleted key
@@ -494,14 +482,10 @@ func TestRuntimeStorageDeferredResourceDictionaryValues(t *testing.T) {
 	assert.Equal(t, []string{"nil", "nil"}, loggedMessages)
 
 	assert.Len(t, writes, 0)
-	require.Len(t, reads, 2)
-	assert.Equal(t,
-		[]byte(formatContractKey("Test")),
-		reads[0].key,
-	)
+	require.Len(t, reads, 1)
 	assert.Equal(t,
 		cStorageKey,
-		reads[1].key,
+		reads[0].key,
 	)
 
 	// Replace the collection
@@ -567,15 +551,15 @@ func TestRuntimeStorageDeferredResourceDictionaryValues(t *testing.T) {
 
 	require.Len(t, reads, 3)
 	assert.Equal(t,
-		[]byte(formatContractKey("Test")),
+		cStorageKey,
 		reads[0].key,
 	)
 	assert.Equal(t,
-		cStorageKey,
+		aStorageKey,
 		reads[1].key,
 	)
 	assert.Equal(t,
-		aStorageKey,
+		[]byte(formatContractKey("Test")),
 		reads[2].key,
 	)
 }
@@ -824,22 +808,18 @@ func TestRuntimeStorageDeferredResourceDictionaryValues_Nested(t *testing.T) {
 	assert.Equal(t, []string{"2"}, loggedMessages)
 
 	assert.Len(t, writes, 0)
-	require.Len(t, reads, 4)
+	require.Len(t, reads, 3)
 	assert.Equal(t,
-		[]byte(formatContractKey("Test")),
+		cStorageKey,
 		reads[0].key,
 	)
 	assert.Equal(t,
-		cStorageKey,
+		xStorageKey,
 		reads[1].key,
 	)
 	assert.Equal(t,
-		xStorageKey,
-		reads[2].key,
-	)
-	assert.Equal(t,
 		bStorageKey,
-		reads[3].key,
+		reads[2].key,
 	)
 }
 
@@ -1639,4 +1619,120 @@ func TestRuntimeStorageDeferredResourceDictionaryValues_ValueTransferAndDestroy(
 		},
 	)
 	require.NoError(t, err)
+}
+
+func BenchmarkRuntimeStorageDeferredResourceDictionaryValues(b *testing.B) {
+
+	runtime := NewInterpreterRuntime()
+
+	addressValue := cadence.BytesToAddress([]byte{0xCA, 0xDE})
+
+	contract := []byte(`
+	  pub contract Test {
+
+          pub resource R {}
+
+          pub fun createR(): @R {
+              return <-create R()
+          }
+      }
+    `)
+
+	deploy := utils.DeploymentTransaction("Test", contract)
+
+	setupTx := []byte(`
+      import Test from 0xCADE
+
+      transaction {
+
+          prepare(signer: AuthAccount) {
+              let data: @{Int: Test.R} <- {}
+              var i = 0
+              while i < 1000 {
+                  data[i] <-! Test.createR()
+                  i = i + 1
+              }
+              signer.save(<-data, to: /storage/data)
+          }
+       }
+    `)
+
+	var accountCode []byte
+	var events []cadence.Event
+
+	storage := newTestStorage(nil, nil)
+
+	runtimeInterface := &testRuntimeInterface{
+		resolveLocation: singleIdentifierLocationResolver(b),
+		getAccountContractCode: func(_ Address, _ string) (bytes []byte, err error) {
+			return accountCode, nil
+		},
+		storage: storage,
+		getSigningAccounts: func() ([]Address, error) {
+			return []Address{common.BytesToAddress(addressValue.Bytes())}, nil
+		},
+		updateAccountContractCode: func(_ Address, _ string, code []byte) error {
+			accountCode = code
+			return nil
+		},
+		emitEvent: func(event cadence.Event) error {
+			events = append(events, event)
+			return nil
+		},
+	}
+
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	err := runtime.ExecuteTransaction(
+		Script{
+			Source: deploy,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(b, err)
+
+	assert.NotNil(b, accountCode)
+
+	err = runtime.ExecuteTransaction(
+		Script{
+			Source: setupTx,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(b, err)
+
+	readTx := []byte(`
+      import Test from 0xCADE
+
+      transaction {
+
+          prepare(signer: AuthAccount) {
+              let ref = signer.borrow<&{Int: Test.R}>(from: /storage/data)!
+              assert(ref[50] != nil)
+         }
+      }
+    `)
+
+	b.ReportAllocs()
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+
+		err = runtime.ExecuteTransaction(
+			Script{
+				Source: readTx,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+		require.NoError(b, err)
+	}
 }

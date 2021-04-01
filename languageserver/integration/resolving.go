@@ -22,18 +22,14 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
-	"path"
+
+	"github.com/onflow/flow-go-sdk"
 
 	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/flow-go-sdk"
 )
 
-func resolveFileImport(mainPath string, location common.StringLocation) (string, error) {
-	filename := path.Join(path.Dir(mainPath), string(location))
-
-	if filename == mainPath {
-		return "", fmt.Errorf("cannot import current file: %s", filename)
-	}
+func resolveFileImport(location common.StringLocation) (string, error) {
+	filename := string(location)
 
 	data, err := ioutil.ReadFile(filename)
 	if err != nil {

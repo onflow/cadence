@@ -31,6 +31,7 @@ import (
 
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/sema"
 )
 
 // A Decoder decodes JSON-encoded representations of Cadence values.
@@ -193,6 +194,8 @@ func decodeJSON(v interface{}) cadence.Value {
 		return decodeTypeValue(valueJSON)
 	case capabilityTypeStr:
 		return decodeCapability(valueJSON)
+	case enumTypeStr:
+		return decodeEnum(valueJSON)
 	}
 
 	panic(ErrInvalidJSONCadence)
@@ -493,9 +496,13 @@ func decodeComposite(valueJSON interface{}) composite {
 
 	typeID := obj.GetString(idKey)
 	location, qualifiedIdentifier, err := common.DecodeTypeID(typeID)
-	if err != nil {
-		// TODO: improve error
-		panic(ErrInvalidJSONCadence)
+
+	if err != nil ||
+		location == nil && sema.NativeCompositeTypes[typeID] == nil {
+
+		// If the location is nil, and there is no native composite type with this ID, then its an invalid type.
+		// Note: This is moved out from the common.DecodeTypeID() to avoid the circular dependency.
+		panic(fmt.Errorf("%s. invalid type ID: `%s`", ErrInvalidJSONCadence, typeID))
 	}
 
 	fields := obj.GetSlice(fieldsKey)
@@ -566,6 +573,16 @@ func decodeContract(valueJSON interface{}) cadence.Contract {
 	comp := decodeComposite(valueJSON)
 
 	return cadence.NewContract(comp.fieldValues).WithType(&cadence.ContractType{
+		Location:            comp.location,
+		QualifiedIdentifier: comp.qualifiedIdentifier,
+		Fields:              comp.fieldTypes,
+	})
+}
+
+func decodeEnum(valueJSON interface{}) cadence.Enum {
+	comp := decodeComposite(valueJSON)
+
+	return cadence.NewEnum(comp.fieldValues).WithType(&cadence.EnumType{
 		Location:            comp.location,
 		QualifiedIdentifier: comp.qualifiedIdentifier,
 		Fields:              comp.fieldTypes,

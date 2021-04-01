@@ -32,7 +32,6 @@ import (
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
-	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
 func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
@@ -77,17 +76,17 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 		require.Equal(t, expectedCodeHash[:], actualCodeHash)
 	}
 
-	expectFailure := func(expectedProgramCount int, expectedErrorMessage string) expectation {
+	expectFailure := func(expectedErrorMessage string) expectation {
 		return func(t *testing.T, err error, accountCode []byte, events []cadence.Event, _ cadence.Type) {
 			var runtimeErr Error
-			utils.RequireErrorAs(t, err, &runtimeErr)
+			require.ErrorAs(t, err, &runtimeErr)
 
 			println(runtimeErr.Error())
 
 			assert.EqualError(t, runtimeErr, expectedErrorMessage)
 
 			assert.Len(t, runtimeErr.Codes, 2)
-			assert.Len(t, runtimeErr.Programs, expectedProgramCount)
+			assert.Len(t, runtimeErr.Programs, 1)
 
 			assert.Nil(t, accountCode)
 			assert.Len(t, events, 0)
@@ -213,12 +212,11 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 				interpreter.BoolValue(true),
 			},
 			check: expectFailure(
-				2,
-				"Execution failed:\n"+
-					"error: invalid argument 0: expected type `Int`, got `Bool`\n"+
-					" --> 00:5:22\n"+
-					"  |\n"+
-					"5 |                       signer.contracts.add(name: \"Test\", code: \"0a202020202020202020202020202070756220636f6e74726163742054657374207b0a202020202020202020202020202020202020696e6974285f20783a20496e7429207b7d0a20202020202020202020202020207d0a202020202020202020202020\".decodeHex(), true)\n"+
+				"Execution failed:\n" +
+					"error: invalid argument 0: expected type `Int`, got `Bool`\n" +
+					" --> 00:5:22\n" +
+					"  |\n" +
+					"5 |                       signer.contracts.add(name: \"Test\", code: \"0a202020202020202020202020202070756220636f6e74726163742054657374207b0a202020202020202020202020202020202020696e6974285f20783a20496e7429207b7d0a20202020202020202020202020207d0a202020202020202020202020\".decodeHex(), true)\n" +
 					"  |                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n",
 			),
 		})
@@ -233,12 +231,11 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 				interpreter.NewIntValueFromInt64(1),
 			},
 			check: expectFailure(
-				2,
-				"Execution failed:\n"+
-					"error: invalid argument count, too many arguments: expected 0, got 1\n"+
-					" --> 00:5:22\n"+
-					"  |\n"+
-					"5 |                       signer.contracts.add(name: \"Test\", code: \"0a202020202020202020202020202070756220636f6e74726163742054657374207b7d0a202020202020202020202020\".decodeHex(), 1)\n"+
+				"Execution failed:\n" +
+					"error: invalid argument count, too many arguments: expected 0, got 1\n" +
+					" --> 00:5:22\n" +
+					"  |\n" +
+					"5 |                       signer.contracts.add(name: \"Test\", code: \"0a202020202020202020202020202070756220636f6e74726163742054657374207b7d0a202020202020202020202020\".decodeHex(), 1)\n" +
 					"  |                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n",
 			),
 		})
@@ -253,24 +250,23 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
             `,
 			arguments: []argument{},
 			check: expectFailure(
-				2,
-				"Execution failed:\n"+
-					"error: cannot deploy invalid contract\n"+
-					" --> 00:5:22\n"+
-					"  |\n"+
-					"5 |                       signer.contracts.add(name: \"Test\", code: \"0a202020202020202020202020202070756220636f6e74726163742054657374207b7d0a0a202020202020202020202020202066756e2074657374436173652829207b7d0a202020202020202020202020\".decodeHex())\n"+
-					"  |                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n"+
-					"\n"+
-					"error: function declarations are not valid at the top-level\n"+
-					" --> 2a00000000000000.Test:4:18\n"+
-					"  |\n"+
-					"4 |               fun testCase() {}\n"+
-					"  |                   ^^^^^^^^\n"+
-					"\n"+
-					"error: missing access modifier for function\n"+
-					" --> 2a00000000000000.Test:4:14\n"+
-					"  |\n"+
-					"4 |               fun testCase() {}\n"+
+				"Execution failed:\n" +
+					"error: cannot deploy invalid contract\n" +
+					" --> 00:5:22\n" +
+					"  |\n" +
+					"5 |                       signer.contracts.add(name: \"Test\", code: \"0a202020202020202020202020202070756220636f6e74726163742054657374207b7d0a0a202020202020202020202020202066756e2074657374436173652829207b7d0a202020202020202020202020\".decodeHex())\n" +
+					"  |                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n" +
+					"\n" +
+					"error: function declarations are not valid at the top-level\n" +
+					" --> 2a00000000000000.Test:4:18\n" +
+					"  |\n" +
+					"4 |               fun testCase() {}\n" +
+					"  |                   ^^^^^^^^\n" +
+					"\n" +
+					"error: missing access modifier for function\n" +
+					" --> 2a00000000000000.Test:4:14\n" +
+					"  |\n" +
+					"4 |               fun testCase() {}\n" +
 					"  |               ^\n",
 			),
 		})
@@ -283,18 +279,17 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
             `,
 			arguments: []argument{},
 			check: expectFailure(
-				1,
-				"Execution failed:\n"+
-					"error: cannot deploy invalid contract\n"+
-					" --> 00:5:22\n"+
-					"  |\n"+
-					"5 |                       signer.contracts.add(name: \"Test\", code: \"0a2020202020202020202020202020580a202020202020202020202020\".decodeHex())\n"+
-					"  |                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n"+
-					"\n"+
-					"error: unexpected token: identifier\n"+
-					" --> 2a00000000000000.Test:2:14\n"+
-					"  |\n"+
-					"2 |               X\n"+
+				"Execution failed:\n" +
+					"error: cannot deploy invalid contract\n" +
+					" --> 00:5:22\n" +
+					"  |\n" +
+					"5 |                       signer.contracts.add(name: \"Test\", code: \"0a2020202020202020202020202020580a202020202020202020202020\".decodeHex())\n" +
+					"  |                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n" +
+					"\n" +
+					"error: unexpected token: identifier\n" +
+					" --> 2a00000000000000.Test:2:14\n" +
+					"  |\n" +
+					"2 |               X\n" +
 					"  |               ^\n",
 			),
 		})
@@ -309,18 +304,17 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
             `,
 			arguments: []argument{},
 			check: expectFailure(
-				2,
-				"Execution failed:\n"+
-					"error: cannot deploy invalid contract\n"+
-					" --> 00:5:22\n"+
-					"  |\n"+
-					"5 |                       signer.contracts.add(name: \"Test\", code: \"0a202020202020202020202020202070756220636f6e74726163742054657374207b0a2020202020202020202020202020202020207075622066756e20746573742829207b2058207d0a20202020202020202020202020207d0a202020202020202020202020\".decodeHex())\n"+
-					"  |                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n"+
-					"\n"+
-					"error: cannot find variable in this scope: `X`\n"+
-					" --> 2a00000000000000.Test:3:35\n"+
-					"  |\n"+
-					"3 |                   pub fun test() { X }\n"+
+				"Execution failed:\n" +
+					"error: cannot deploy invalid contract\n" +
+					" --> 00:5:22\n" +
+					"  |\n" +
+					"5 |                       signer.contracts.add(name: \"Test\", code: \"0a202020202020202020202020202070756220636f6e74726163742054657374207b0a2020202020202020202020202020202020207075622066756e20746573742829207b2058207d0a20202020202020202020202020207d0a202020202020202020202020\".decodeHex())\n" +
+					"  |                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n" +
+					"\n" +
+					"error: cannot find variable in this scope: `X`\n" +
+					" --> 2a00000000000000.Test:3:35\n" +
+					"  |\n" +
+					"3 |                   pub fun test() { X }\n" +
 					"  |                                    ^ not found in this scope\n",
 			),
 		})

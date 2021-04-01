@@ -31,8 +31,6 @@ import (
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
 	"github.com/onflow/cadence/runtime/tests/checker"
-	"github.com/onflow/cadence/runtime/tests/utils"
-	"github.com/onflow/cadence/runtime/trampoline"
 )
 
 func testAccount(t *testing.T, auth bool, code string) (*interpreter.Interpreter, map[string]interpreter.OptionalValue) {
@@ -41,7 +39,7 @@ func testAccount(t *testing.T, auth bool, code string) (*interpreter.Interpreter
 
 	var valueDeclarations stdlib.StandardLibraryValues
 
-	panicFunction := interpreter.NewHostFunctionValue(func(invocation interpreter.Invocation) trampoline.Trampoline {
+	panicFunction := interpreter.NewHostFunctionValue(func(invocation interpreter.Invocation) interpreter.Value {
 		panic(errors.NewUnreachableError())
 	})
 
@@ -49,7 +47,7 @@ func testAccount(t *testing.T, auth bool, code string) (*interpreter.Interpreter
 
 	authAccountValueDeclaration := stdlib.StandardLibraryValue{
 		Name: "authAccount",
-		Type: &sema.AuthAccountType{},
+		Type: sema.AuthAccountType,
 		Value: interpreter.NewAuthAccountValue(
 			address,
 			func(interpreter *interpreter.Interpreter) interpreter.UInt64Value {
@@ -59,6 +57,7 @@ func testAccount(t *testing.T, auth bool, code string) (*interpreter.Interpreter
 			panicFunction,
 			panicFunction,
 			interpreter.AuthAccountContractsValue{},
+			&interpreter.CompositeValue{},
 		),
 		Kind: common.DeclarationKindConstant,
 	}
@@ -68,13 +67,16 @@ func testAccount(t *testing.T, auth bool, code string) (*interpreter.Interpreter
 
 	pubAccountValueDeclaration := stdlib.StandardLibraryValue{
 		Name: "pubAccount",
-		Type: &sema.PublicAccountType{},
+		Type: sema.PublicAccountType,
 		Value: interpreter.NewPublicAccountValue(
 			address,
 			func(interpreter *interpreter.Interpreter) interpreter.UInt64Value {
 				return 0
 			},
 			returnZero,
+			interpreter.NewPublicAccountKeysValue(
+				nil,
+			),
 		),
 		Kind: common.DeclarationKindConstant,
 	}
@@ -188,7 +190,7 @@ func TestInterpretAuthAccount_save(t *testing.T) {
 
 			require.Error(t, err)
 
-			utils.RequireErrorAs(t, err, &interpreter.OverwriteError{})
+			require.ErrorAs(t, err, &interpreter.OverwriteError{})
 		})
 	})
 
@@ -236,7 +238,7 @@ func TestInterpretAuthAccount_save(t *testing.T) {
 
 			require.Error(t, err)
 
-			utils.RequireErrorAs(t, err, &interpreter.OverwriteError{})
+			require.ErrorAs(t, err, &interpreter.OverwriteError{})
 		})
 	})
 }

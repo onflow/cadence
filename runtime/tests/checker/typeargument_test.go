@@ -242,7 +242,7 @@ func TestCheckTypeArgumentSubtyping(t *testing.T) {
             `,
 			&sema.CapabilityType{
 				BorrowType: &sema.ReferenceType{
-					Type: &sema.StringType{},
+					Type: sema.StringType,
 				},
 			},
 		)
@@ -252,7 +252,7 @@ func TestCheckTypeArgumentSubtyping(t *testing.T) {
 		assert.Equal(t,
 			&sema.CapabilityType{
 				BorrowType: &sema.ReferenceType{
-					Type: &sema.StringType{},
+					Type: sema.StringType,
 				},
 			},
 			RequireGlobalValue(t, checker.Elaboration, "cap"),

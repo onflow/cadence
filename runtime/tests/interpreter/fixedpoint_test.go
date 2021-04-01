@@ -28,7 +28,6 @@ import (
 
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
-	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
 func TestInterpretNegativeZeroFixedPoint(t *testing.T) {
@@ -41,7 +40,7 @@ func TestInterpretNegativeZeroFixedPoint(t *testing.T) {
 
 	assert.Equal(t,
 		interpreter.Fix64Value(-42000000),
-		inter.Globals["x"].Value,
+		inter.Globals["x"].GetValue(),
 	)
 }
 
@@ -84,17 +83,17 @@ func TestInterpretFixedPointConversionAndAddition(t *testing.T) {
 
 			assert.Equal(t,
 				value,
-				inter.Globals["x"].Value,
+				inter.Globals["x"].GetValue(),
 			)
 
 			assert.Equal(t,
 				value,
-				inter.Globals["y"].Value,
+				inter.Globals["y"].GetValue(),
 			)
 
 			assert.Equal(t,
 				interpreter.BoolValue(true),
-				inter.Globals["z"].Value,
+				inter.Globals["z"].GetValue(),
 			)
 
 		})
@@ -146,12 +145,12 @@ func TestInterpretFixedPointConversions(t *testing.T) {
 
 				assert.Equal(t,
 					fixedPointValue,
-					inter.Globals["x"].Value,
+					inter.Globals["x"].GetValue(),
 				)
 
 				assert.Equal(t,
 					integerValue,
-					inter.Globals["y"].Value,
+					inter.Globals["y"].GetValue(),
 				)
 			})
 		}
@@ -181,12 +180,12 @@ func TestInterpretFixedPointConversions(t *testing.T) {
 
 				assert.Equal(t,
 					expected,
-					inter.Globals["x"].Value,
+					inter.Globals["x"].GetValue(),
 				)
 
 				assert.Equal(t,
 					expected,
-					inter.Globals["y"].Value,
+					inter.Globals["y"].GetValue(),
 				)
 			})
 		}
@@ -217,12 +216,12 @@ func TestInterpretFixedPointConversions(t *testing.T) {
 
 				assert.Equal(t,
 					expected,
-					inter.Globals["x"].Value,
+					inter.Globals["x"].GetValue(),
 				)
 
 				assert.Equal(t,
 					expected,
-					inter.Globals["y"].Value,
+					inter.Globals["y"].GetValue(),
 				)
 			})
 		}
@@ -246,12 +245,12 @@ func TestInterpretFixedPointConversions(t *testing.T) {
 
 				assert.Equal(t,
 					interpreter.Fix64Value(value*sema.Fix64Factor),
-					inter.Globals["x"].Value,
+					inter.Globals["x"].GetValue(),
 				)
 
 				assert.Equal(t,
 					interpreter.UFix64Value(value*sema.Fix64Factor),
-					inter.Globals["y"].Value,
+					inter.Globals["y"].GetValue(),
 				)
 			})
 		}
@@ -275,12 +274,12 @@ func TestInterpretFixedPointConversions(t *testing.T) {
 
 				assert.Equal(t,
 					interpreter.UFix64Value(value*sema.Fix64Factor),
-					inter.Globals["x"].Value,
+					inter.Globals["x"].GetValue(),
 				)
 
 				assert.Equal(t,
 					interpreter.Fix64Value(value*sema.Fix64Factor),
-					inter.Globals["y"].Value,
+					inter.Globals["y"].GetValue(),
 				)
 			})
 		}
@@ -297,7 +296,7 @@ func TestInterpretFixedPointConversions(t *testing.T) {
 
 		_, err := inter.Invoke("test")
 
-		utils.RequireErrorAs(t, err, &interpreter.UnderflowError{})
+		require.ErrorAs(t, err, &interpreter.UnderflowError{})
 	})
 
 	t.Run("invalid UFix64 > max Fix64 int to Fix64", func(t *testing.T) {
@@ -316,7 +315,7 @@ func TestInterpretFixedPointConversions(t *testing.T) {
 
 		_, err := inter.Invoke("test")
 
-		utils.RequireErrorAs(t, err, &interpreter.OverflowError{})
+		require.ErrorAs(t, err, &interpreter.OverflowError{})
 	})
 
 	t.Run("invalid negative integer to UFix64", func(t *testing.T) {
@@ -345,7 +344,7 @@ func TestInterpretFixedPointConversions(t *testing.T) {
 					err,
 				)
 
-				utils.RequireErrorAs(t, err, &interpreter.UnderflowError{})
+				require.ErrorAs(t, err, &interpreter.UnderflowError{})
 			})
 		}
 	})
@@ -380,7 +379,7 @@ func TestInterpretFixedPointConversions(t *testing.T) {
 
 				_, err := inter.Invoke("test")
 
-				utils.RequireErrorAs(t, err, &interpreter.OverflowError{})
+				require.ErrorAs(t, err, &interpreter.OverflowError{})
 			})
 		}
 	})
@@ -416,7 +415,7 @@ func TestInterpretFixedPointConversions(t *testing.T) {
 
 				_, err := inter.Invoke("test")
 
-				utils.RequireErrorAs(t, err, &interpreter.OverflowError{})
+				require.ErrorAs(t, err, &interpreter.OverflowError{})
 			})
 		}
 	})
@@ -453,7 +452,7 @@ func TestInterpretFixedPointConversions(t *testing.T) {
 				_, err := inter.Invoke("test")
 				require.Error(t, err)
 
-				utils.RequireErrorAs(t, err, &interpreter.OverflowError{})
+				require.ErrorAs(t, err, &interpreter.OverflowError{})
 			})
 		}
 	})
@@ -490,7 +489,7 @@ func TestInterpretFixedPointConversions(t *testing.T) {
 				_, err := inter.Invoke("test")
 				require.Error(t, err)
 
-				utils.RequireErrorAs(t, err, &interpreter.UnderflowError{})
+				require.ErrorAs(t, err, &interpreter.UnderflowError{})
 			})
 		}
 	})

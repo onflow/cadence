@@ -26,7 +26,6 @@ import (
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
-	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
 func TestCheckPredeclaredValues(t *testing.T) {
@@ -207,7 +206,7 @@ func TestCheckPredeclaredValues(t *testing.T) {
 		// The illegal use of 'foo' in 0x3 should be reported
 
 		var importedProgramError *sema.ImportedProgramError
-		utils.RequireErrorAs(t, errs[0], &importedProgramError)
+		require.ErrorAs(t, errs[0], &importedProgramError)
 		require.Equal(t, location3, importedProgramError.Location)
 		importedErrs := ExpectCheckerErrors(t, importedProgramError.Err, 1)
 		require.IsType(t, &sema.NotDeclaredError{}, importedErrs[0])

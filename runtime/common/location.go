@@ -37,13 +37,44 @@ type Location interface {
 	QualifiedIdentifier(typeID TypeID) string
 }
 
+// LocationsMatch returns true if both locations are nil or their IDs are the same.
+//
 func LocationsMatch(first, second Location) bool {
-	if first == nil && second == nil {
-		return true
+
+	if first == nil {
+		return second == nil
 	}
 
-	if (first == nil && second != nil) || (first != nil && second == nil) {
+	if second == nil {
 		return false
+	}
+
+	return first.ID() == second.ID()
+}
+
+// LocationsInSameAccount returns true if both locations are nil,
+// if both locations are address locations when both locations have the same address,
+// or otherwise if their IDs are the same.
+//
+func LocationsInSameAccount(first, second Location) bool {
+
+	if first == nil {
+		return second == nil
+	}
+
+	if second == nil {
+		return false
+	}
+
+	if firstAddressLocation, ok := first.(AddressLocation); ok {
+
+		secondAddressLocation, ok := second.(AddressLocation)
+		if !ok {
+			return false
+		}
+
+		// NOTE: only check address, ignore name
+		return firstAddressLocation.Address == secondAddressLocation.Address
 	}
 
 	return first.ID() == second.ID()
@@ -80,14 +111,20 @@ func DecodeTypeID(typeID string) (location Location, qualifiedIdentifier string,
 	pieces := strings.Split(typeID, ".")
 
 	if len(pieces) < 1 {
-		return nil, "", errors.New("invalid type ID: missing prefix")
+		return nil, "", errors.New("invalid type ID: missing type name")
 	}
 
 	prefix := pieces[0]
 
 	decoder, ok := typeIDDecoders[prefix]
 	if !ok {
-		return nil, "", fmt.Errorf("invalid type ID: cannot decode prefix %q", prefix)
+		// If there are no decoders registered under the first piece if ID, then it could be:
+		//    (1) A native composite type
+		//    (2) An invalid type/prefix
+		// Either way, return the typeID as the identifier with a nil location. Then, if it is case (1),
+		// it will correctly continue at the downstream code. If it is (2), downstream code will throw
+		// an invalid type error.
+		return nil, typeID, nil
 	}
 
 	return decoder(typeID)

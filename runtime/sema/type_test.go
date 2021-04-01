@@ -147,7 +147,7 @@ func TestIsResourceType_ResourceNestedInDictionary(t *testing.T) {
 	t.Parallel()
 
 	ty := &DictionaryType{
-		KeyType: &StringType{},
+		KeyType: StringType,
 		ValueType: &VariableSizedType{
 			Type: &CompositeType{
 				Kind: common.CompositeKindResource,
@@ -163,7 +163,7 @@ func TestIsResourceType_StructNestedInDictionary(t *testing.T) {
 	t.Parallel()
 
 	ty := &DictionaryType{
-		KeyType: &StringType{},
+		KeyType: StringType,
 		ValueType: &VariableSizedType{
 			Type: &CompositeType{
 				Kind: common.CompositeKindStructure,

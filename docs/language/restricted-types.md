@@ -45,11 +45,11 @@ pub resource Counter: HasCount {
 // Create an instance of the resource `Counter`
 let counter: @Counter <- create Counter(count: 42)
 
-counterRef.count  // is `42`
+counter.count  // is `42`
 
-counterRef.increment()
+counter.increment()
 
-counterRef.count  // is `43`
+counter.count  // is `43`
 
 // Move the resource in variable `counter` to a new variable `restrictedCounter`,
 // but typed with the restricted type `Counter{HasCount}`:

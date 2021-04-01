@@ -205,6 +205,8 @@ func exportCompositeValue(v *interpreter.CompositeValue, inter *interpreter.Inte
 		return cadence.NewEvent(fields).WithType(t.(*cadence.EventType))
 	case common.CompositeKindContract:
 		return cadence.NewContract(fields).WithType(t.(*cadence.ContractType))
+	case common.CompositeKindEnum:
+		return cadence.NewEnum(fields).WithType(t.(*cadence.EnumType))
 	}
 
 	panic(fmt.Errorf(
@@ -235,7 +237,7 @@ func exportDictionaryValue(
 		// NOTE: use `Get` instead of accessing `Entries`,
 		// so that the potentially deferred values are loaded from storage
 
-		value := v.Get(inter, interpreter.LocationRange{}, keyValue).(*interpreter.SomeValue).Value
+		value := v.Get(inter, interpreter.ReturnEmptyLocationRange, keyValue).(*interpreter.SomeValue).Value
 
 		convertedKey := exportValueWithInterpreter(keyValue, inter, results)
 		convertedValue := exportValueWithInterpreter(value, inter, results)
@@ -274,7 +276,11 @@ func exportTypeValue(v interpreter.TypeValue, inter *interpreter.Interpreter) ca
 }
 
 func exportCapabilityValue(v interpreter.CapabilityValue, inter *interpreter.Interpreter) cadence.Capability {
-	borrowType := string(inter.ConvertStaticToSemaType(v.BorrowType).ID())
+	var borrowType string
+	if v.BorrowType != nil {
+		borrowType = string(inter.ConvertStaticToSemaType(v.BorrowType).ID())
+	}
+
 	return cadence.Capability{
 		Path:       exportPathValue(v.Path),
 		Address:    cadence.NewAddress(v.Address),
@@ -370,6 +376,14 @@ func importValue(value cadence.Value) interpreter.Value {
 			Domain:     common.PathDomainFromIdentifier(v.Domain),
 			Identifier: v.Identifier,
 		}
+	case cadence.Enum:
+		return importCompositeValue(
+			common.CompositeKindStructure,
+			v.EnumType.Location,
+			v.EnumType.QualifiedIdentifier,
+			v.EnumType.Fields,
+			v.Fields,
+		)
 	}
 
 	panic(fmt.Sprintf("cannot import value of type %T", value))

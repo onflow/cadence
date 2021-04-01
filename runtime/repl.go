@@ -30,7 +30,6 @@ import (
 	"github.com/onflow/cadence/runtime/parser2"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
-	"github.com/onflow/cadence/runtime/trampoline"
 )
 
 type REPL struct {
@@ -132,7 +131,7 @@ func NewREPL(
 	return repl, nil
 }
 
-func (r *REPL) handleCheckerError(code string) bool {
+func (r *REPL) handleCheckerError() bool {
 	err := r.checker.CheckerError()
 	if err == nil {
 		return true
@@ -144,7 +143,7 @@ func (r *REPL) handleCheckerError(code string) bool {
 }
 
 func (r *REPL) execute(element ast.Element) {
-	result := trampoline.Run(element.Accept(r.inter).(trampoline.Trampoline))
+	result := element.Accept(r.inter)
 	expStatementRes, ok := result.(interpreter.ExpressionStatementResult)
 	if !ok {
 		return
@@ -158,7 +157,7 @@ func (r *REPL) execute(element ast.Element) {
 func (r *REPL) check(element ast.Element, code string) bool {
 	element.Accept(r.checker)
 	r.codes[r.checker.Location.ID()] = code
-	return r.handleCheckerError(code)
+	return r.handleCheckerError()
 }
 
 func (r *REPL) Accept(code string) (inputIsComplete bool) {

@@ -18,7 +18,7 @@ and also in the [Flow Playground](https://play.onflow.org/)
 
 ### Main functionality
 
-The main functionality of the language server, such as providing reporting diagnostics (e.g. errors), auto completion, etc. is implemented in the [[`server` package](https://github.com/onflow/cadence/tree/master/languageserver/server).]
+The main functionality of the language server, such as providing reporting diagnostics (e.g. errors), auto completion, etc. is implemented in the [`server` package](https://github.com/onflow/cadence/tree/master/languageserver/server).
 
 ### Integration with the Flow network
 
