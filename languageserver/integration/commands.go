@@ -244,7 +244,6 @@ func (i *FlowIntegration) sendTransaction(conn protocol.Conn, args ...interface{
 		signers[i] = v.(string)
 	}
 
-	// TODO: Currently only single signer is supported, so we will extract first one
 	// Send transaction via shared library
 	privateKey, err := i.getServicePrivateKey()
 	if err != nil {
@@ -255,11 +254,6 @@ func (i *FlowIntegration) sendTransaction(conn protocol.Conn, args ...interface{
 		})
 		return nil, fmt.Errorf("%s", errorMessage)
 	}
-
-	conn.ShowMessage(&protocol.ShowMessageParams{
-		Type:    protocol.Info,
-		Message: fmt.Sprintln(privateKey, signers[0]),
-	})
 
 	_, txResult, txSendError := i.sharedServices.Transactions.SendForAddress(path.Path, signers[0], privateKey, []string{}, argsJSON)
 
@@ -449,22 +443,30 @@ func (i *FlowIntegration) deployContract(conn protocol.Conn, args ...interface{}
 		return nil, errors.New("invalid name argument")
 	}
 
-	// TODO: Add error handling if one of the values is wrong
-	signerList := args[2].([]interface{})
-	signers := make([]string, len(signerList))
-	for i, v := range signerList {
-		signers[i] = v.(string)
+	to := args[2].(string)
+	if !ok {
+		return nil, errors.New("invalid address argument")
 	}
-
-	to := signers[0]
 
 	conn.ShowMessage(&protocol.ShowMessageParams{
 		Type:    protocol.Info,
 		Message: fmt.Sprintf("Deploying contract %s to account %s", name, to),
 	})
 
+	// Send transaction via shared library
+	privateKey, err := i.getServicePrivateKey()
+	if err != nil {
+		errorMessage := fmt.Sprintf("language server error: %#+v", err)
+		conn.ShowMessage(&protocol.ShowMessageParams{
+			Type:    protocol.Error,
+			Message: errorMessage,
+		})
+		return nil, fmt.Errorf("%s", errorMessage)
+	}
+
 	// TODO: add check if the contract exist on specified address
-	account, deployError := i.sharedServices.Accounts.AddContract(to, name, path.Path, false)
+	update, err := i.isContractDeployed(to, name)
+	account, deployError := i.sharedServices.Accounts.AddContractForAddress(to, privateKey,name, path.Path, update)
 
 	if deployError != nil {
 		errorMessage := fmt.Sprintf("error during deployment: %#+v", deployError)
@@ -653,14 +655,18 @@ func (i *FlowIntegration) createAccountHelper(conn protocol.Conn) (address flow.
 		return flow.Address{}, err
 	}
 
-	defaultKey := serviceAccount.DefaultKey()
-	signatureAlgorithm := defaultKey.SigAlgo().String()
-	hashAlgorithm := defaultKey.HashAlgo().String()
 	signer := serviceAccount.Name()
 
-	var _empty []string
+	defaultKey := serviceAccount.DefaultKey()
+	serviceAccountPrivateKey, _ := i.getServicePrivateKey()
+	cryptoKey, err := crypto.DecodePrivateKeyHex(defaultKey.SigAlgo(), serviceAccountPrivateKey)
+	keys := []string{cryptoKey.PublicKey().String()}
 
-	newAccount, err := i.sharedServices.Accounts.Create(signer, _empty, signatureAlgorithm, hashAlgorithm, _empty)
+	signatureAlgorithm := defaultKey.SigAlgo().String()
+	hashAlgorithm := defaultKey.HashAlgo().String()
+	var contracts []string
+
+	newAccount, err := i.sharedServices.Accounts.Create(signer, keys, signatureAlgorithm, hashAlgorithm, contracts)
 	if err != nil {
 		conn.ShowMessage(&protocol.ShowMessageParams{
 			Type:    protocol.Error,
