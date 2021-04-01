@@ -105,6 +105,17 @@ func (f InterpretedFunctionValue) Invoke(invocation Invocation) Value {
 	return f.Interpreter.invokeInterpretedFunction(f, invocation)
 }
 
+func (f InterpretedFunctionValue) ConformsToDynamicType(dynamicType DynamicType) bool {
+	_, ok := dynamicType.(FunctionDynamicType)
+	return ok
+}
+
+func (f InterpretedFunctionValue) conformsToSemaType(semaType sema.Type) bool {
+	// No need to check deep equivalency, since these are not importable.
+	_, ok := semaType.(*sema.FunctionType)
+	return ok
+}
+
 // HostFunctionValue
 
 type HostFunction func(invocation Invocation) Value
@@ -182,6 +193,17 @@ func (f HostFunctionValue) SetMember(_ *Interpreter, _ func() LocationRange, _ s
 	panic(errors.NewUnreachableError())
 }
 
+func (f HostFunctionValue) ConformsToDynamicType(dynamicType DynamicType) bool {
+	_, ok := dynamicType.(FunctionDynamicType)
+	return ok
+}
+
+func (f HostFunctionValue) conformsToSemaType(semaType sema.Type) bool {
+	// No need to check deep equivalency, since these are not importable.
+	_, ok := semaType.(*sema.FunctionType)
+	return ok
+}
+
 // BoundFunctionValue
 
 type BoundFunctionValue struct {
@@ -233,4 +255,15 @@ func (BoundFunctionValue) isFunctionValue() {}
 func (f BoundFunctionValue) Invoke(invocation Invocation) Value {
 	invocation.Self = f.Self
 	return f.Function.Invoke(invocation)
+}
+
+func (f BoundFunctionValue) ConformsToDynamicType(dynamicType DynamicType) bool {
+	_, ok := dynamicType.(FunctionDynamicType)
+	return ok
+}
+
+func (f BoundFunctionValue) conformsToSemaType(semaType sema.Type) bool {
+	// No need to check deep equivalency, since these are not importable.
+	_, ok := semaType.(*sema.FunctionType)
+	return ok
 }

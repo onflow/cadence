@@ -1332,6 +1332,10 @@ func TestComplexStructArgumentPassing(t *testing.T) {
 					Identifier: "i",
 					Type:       cadence.PrivatePathType{},
 				},
+				{
+					Identifier: "j",
+					Type: cadence.AnyStructType{},
+				},
 			},
 		},
 
@@ -1365,6 +1369,7 @@ func TestComplexStructArgumentPassing(t *testing.T) {
 				Domain:     "private",
 				Identifier: "foo",
 			},
+			cadence.NewString("foo"),
 		},
 	}
 
@@ -1388,6 +1393,7 @@ func TestComplexStructArgumentPassing(t *testing.T) {
 			pub var g: StoragePath
 			pub var h: PublicPath
 			pub var i: PrivatePath
+			pub var j: AnyStruct
 
 			init() {
 				self.a = "Hello"
@@ -1399,6 +1405,107 @@ func TestComplexStructArgumentPassing(t *testing.T) {
 				self.g = /storage/foo
 				self.h = /public/foo
 				self.i = /private/foo
+				self.j = nil
+			}
+		}`,
+		"Foo",
+	)
+
+	actual, err := importAndExportValuesFromScript(t, script, complexStructValue)
+	require.NoError(t, err)
+	assert.Equal(t, complexStructValue, actual)
+
+}
+
+func TestComplexStructWithAnyStructFields(t *testing.T) {
+
+	t.Parallel()
+
+	// Complex struct value
+	complexStructValue := cadence.Struct{
+		StructType: &cadence.StructType{
+			Location:            utils.TestLocation,
+			QualifiedIdentifier: "Foo",
+			Fields: []cadence.Field{
+				{
+					Identifier: "a",
+					Type: cadence.OptionalType{
+						Type: cadence.AnyStructType{},
+					},
+				},
+				{
+					Identifier: "b",
+					Type: cadence.DictionaryType{
+						KeyType:     cadence.StringType{},
+						ElementType: cadence.AnyStructType{},
+					},
+				},
+				{
+					Identifier: "c",
+					Type: cadence.VariableSizedArrayType{
+						ElementType: cadence.AnyStructType{},
+					},
+				},
+				{
+					Identifier: "d",
+					Type: cadence.ConstantSizedArrayType{
+						ElementType: cadence.AnyStructType{},
+						Size:        2,
+					},
+				},
+				{
+					Identifier: "e",
+					Type: cadence.AnyStructType{},
+				},
+			},
+		},
+
+		Fields: []cadence.Value{
+			cadence.NewString("John"),
+			cadence.NewDictionary([]cadence.KeyValuePair{
+				{
+					Key:   cadence.NewString("name"),
+					Value: cadence.NewString("Doe"),
+				},
+			}),
+			cadence.NewArray([]cadence.Value{
+				cadence.NewString("foo"),
+				cadence.NewString("bar"),
+			}),
+			cadence.NewArray([]cadence.Value{
+				cadence.NewString("foo"),
+				cadence.NewString("bar"),
+			}),
+			cadence.Path{
+				Domain:     "storage",
+				Identifier: "foo",
+			},
+		},
+	}
+
+	script := fmt.Sprintf(
+		`pub fun main(arg: %[1]s): %[1]s {
+
+			if !arg.isInstance(Type<%[1]s>()) {
+				panic("Not a %[1]s value")
+			}
+
+			return arg
+		}
+
+		pub struct Foo {
+			pub var a: AnyStruct?
+			pub var b: {String: AnyStruct}
+			pub var c: [AnyStruct]
+			pub var d: [AnyStruct; 2]
+			pub var e: AnyStruct
+
+			init() {
+				self.a = "Hello"
+				self.b = {}
+				self.c = []
+				self.d = ["foo", "bar"]
+				self.e = /storage/foo
 			}
 		}`,
 		"Foo",

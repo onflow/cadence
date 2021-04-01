@@ -50,6 +50,11 @@ type Value interface {
 	IsModified() bool
 	SetModified(modified bool)
 	StaticType() StaticType
+	ConformsToDynamicType(dynamicType DynamicType) bool
+
+	// This method is for internal use only.
+	// Use `ValueConformsToSemaType` to check the type conformance of a value.
+	conformsToSemaType(semaType sema.Type) bool
 }
 
 // ValueIndexableValue
@@ -144,6 +149,7 @@ func (v TypeValue) String() string {
 	if staticType != nil {
 		typeString = staticType.String()
 	}
+
 	return format.TypeValue(typeString)
 }
 
@@ -184,6 +190,15 @@ func (v TypeValue) GetMember(inter *Interpreter, _ func() LocationRange, name st
 
 func (v TypeValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
 	panic(errors.NewUnreachableError())
+}
+
+func (v TypeValue) ConformsToDynamicType(dynamicType DynamicType) bool {
+	_, ok := dynamicType.(MetaTypeDynamicType)
+	return ok
+}
+
+func (v TypeValue) conformsToSemaType(semaType sema.Type) bool {
+	return sema.MetaType.Equal(semaType)
 }
 
 // VoidValue
@@ -227,6 +242,15 @@ func (VoidValue) SetModified(_ bool) {
 
 func (VoidValue) String() string {
 	return format.Void
+}
+
+func (v VoidValue) ConformsToDynamicType(dynamicType DynamicType) bool {
+	_, ok := dynamicType.(VoidDynamicType)
+	return ok
+}
+
+func (v VoidValue) conformsToSemaType(semaType sema.Type) bool {
+	return sema.VoidType.Equal(semaType)
 }
 
 // BoolValue
@@ -289,6 +313,15 @@ func (v BoolValue) KeyString() string {
 		return "true"
 	}
 	return "false"
+}
+
+func (v BoolValue) ConformsToDynamicType(dynamicType DynamicType) bool {
+	_, ok := dynamicType.(BoolDynamicType)
+	return ok
+}
+
+func (v BoolValue) conformsToSemaType(semaType sema.Type) bool {
+	return sema.BoolType.Equal(semaType)
 }
 
 // StringValue
@@ -483,6 +516,15 @@ func (v *StringValue) DecodeHex() *ArrayValue {
 
 func (*StringValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
 	panic(errors.NewUnreachableError())
+}
+
+func (v *StringValue) ConformsToDynamicType(dynamicType DynamicType) bool {
+	_, ok := dynamicType.(StringDynamicType)
+	return ok
+}
+
+func (v *StringValue) conformsToSemaType(semaType sema.Type) bool {
+	return sema.StringType.Equal(semaType)
 }
 
 // ArrayValue
@@ -785,6 +827,45 @@ func (v *ArrayValue) Count() int {
 	return len(v.Values)
 }
 
+func (v *ArrayValue) ConformsToDynamicType(dynamicType DynamicType) bool {
+	arrayType, ok := dynamicType.(ArrayDynamicType)
+	if !ok || len(v.Values) != len(arrayType.ElementTypes) {
+		return false
+	}
+
+	for index, item := range v.Values {
+		if !item.ConformsToDynamicType(arrayType.ElementTypes[index]) {
+			return false
+		}
+	}
+
+	return true
+}
+
+func (v *ArrayValue) conformsToSemaType(semaType sema.Type) bool {
+	var memberType sema.Type
+
+	switch arrayType := semaType.(type) {
+	case *sema.VariableSizedType:
+		memberType = arrayType.Type
+	case *sema.ConstantSizedType:
+		if int64(len(v.Values)) != arrayType.Size {
+			return false
+		}
+		memberType = arrayType.Type
+	default:
+		return false
+	}
+
+	for _, member := range v.Values {
+		if !ValueConformsToSemaType(member, memberType) {
+			return false
+		}
+	}
+
+	return true
+}
+
 // NumberValue
 
 type NumberValue interface {
@@ -1052,6 +1133,15 @@ func (v IntValue) ToBigEndianBytes() []byte {
 	return SignedBigIntToBigEndianBytes(v.BigInt)
 }
 
+func (v IntValue) ConformsToDynamicType(dynamicType DynamicType) bool {
+	numberType, ok := dynamicType.(NumberDynamicType)
+	return ok && ValueConformsToSemaType(v, numberType.StaticType)
+}
+
+func (v IntValue) conformsToSemaType(semaType sema.Type) bool {
+	return (sema.IntType).Equal(semaType)
+}
+
 // Int8Value
 
 type Int8Value int8
@@ -1286,6 +1376,15 @@ func (Int8Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ V
 
 func (v Int8Value) ToBigEndianBytes() []byte {
 	return []byte{byte(v)}
+}
+
+func (v Int8Value) ConformsToDynamicType(dynamicType DynamicType) bool {
+	numberType, ok := dynamicType.(NumberDynamicType)
+	return ok && ValueConformsToSemaType(v, numberType.StaticType)
+}
+
+func (v Int8Value) conformsToSemaType(semaType sema.Type) bool {
+	return sema.Int8Type.Equal(semaType)
 }
 
 // Int16Value
@@ -1526,6 +1625,15 @@ func (v Int16Value) ToBigEndianBytes() []byte {
 	return b
 }
 
+func (v Int16Value) ConformsToDynamicType(dynamicType DynamicType) bool {
+	numberType, ok := dynamicType.(NumberDynamicType)
+	return ok && ValueConformsToSemaType(v, numberType.StaticType)
+}
+
+func (v Int16Value) conformsToSemaType(semaType sema.Type) bool {
+	return sema.Int16Type.Equal(semaType)
+}
+
 // Int32Value
 
 type Int32Value int32
@@ -1764,6 +1872,15 @@ func (v Int32Value) ToBigEndianBytes() []byte {
 	return b
 }
 
+func (v Int32Value) ConformsToDynamicType(dynamicType DynamicType) bool {
+	numberType, ok := dynamicType.(NumberDynamicType)
+	return ok && ValueConformsToSemaType(v, numberType.StaticType)
+}
+
+func (v Int32Value) conformsToSemaType(semaType sema.Type) bool {
+	return sema.Int32Type.Equal(semaType)
+}
+
 // Int64Value
 
 type Int64Value int64
@@ -1999,6 +2116,15 @@ func (v Int64Value) ToBigEndianBytes() []byte {
 	b := make([]byte, 8)
 	binary.BigEndian.PutUint64(b, uint64(v))
 	return b
+}
+
+func (v Int64Value) ConformsToDynamicType(dynamicType DynamicType) bool {
+	numberType, ok := dynamicType.(NumberDynamicType)
+	return ok && ValueConformsToSemaType(v, numberType.StaticType)
+}
+
+func (v Int64Value) conformsToSemaType(semaType sema.Type) bool {
+	return sema.Int64Type.Equal(semaType)
 }
 
 // Int128Value
@@ -2294,6 +2420,15 @@ func (Int128Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _
 
 func (v Int128Value) ToBigEndianBytes() []byte {
 	return SignedBigIntToBigEndianBytes(v.BigInt)
+}
+
+func (v Int128Value) ConformsToDynamicType(dynamicType DynamicType) bool {
+	numberType, ok := dynamicType.(NumberDynamicType)
+	return ok && ValueConformsToSemaType(v, numberType.StaticType)
+}
+
+func (v Int128Value) conformsToSemaType(semaType sema.Type) bool {
+	return sema.Int128Type.Equal(semaType)
 }
 
 // Int256Value
@@ -2592,6 +2727,15 @@ func (v Int256Value) ToBigEndianBytes() []byte {
 	return SignedBigIntToBigEndianBytes(v.BigInt)
 }
 
+func (v Int256Value) ConformsToDynamicType(dynamicType DynamicType) bool {
+	numberType, ok := dynamicType.(NumberDynamicType)
+	return ok && ValueConformsToSemaType(v, numberType.StaticType)
+}
+
+func (v Int256Value) conformsToSemaType(semaType sema.Type) bool {
+	return sema.Int256Type.Equal(semaType)
+}
+
 // UIntValue
 
 type UIntValue struct {
@@ -2834,6 +2978,15 @@ func (v UIntValue) ToBigEndianBytes() []byte {
 	return UnsignedBigIntToBigEndianBytes(v.BigInt)
 }
 
+func (v UIntValue) ConformsToDynamicType(dynamicType DynamicType) bool {
+	numberType, ok := dynamicType.(NumberDynamicType)
+	return ok && ValueConformsToSemaType(v, numberType.StaticType)
+}
+
+func (v UIntValue) conformsToSemaType(semaType sema.Type) bool {
+	return sema.UIntType.Equal(semaType)
+}
+
 // UInt8Value
 
 type UInt8Value uint8
@@ -3036,6 +3189,15 @@ func (UInt8Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ 
 
 func (v UInt8Value) ToBigEndianBytes() []byte {
 	return []byte{byte(v)}
+}
+
+func (v UInt8Value) ConformsToDynamicType(dynamicType DynamicType) bool {
+	numberType, ok := dynamicType.(NumberDynamicType)
+	return ok && ValueConformsToSemaType(v, numberType.StaticType)
+}
+
+func (v UInt8Value) conformsToSemaType(semaType sema.Type) bool {
+	return sema.UInt8Type.Equal(semaType)
 }
 
 // UInt16Value
@@ -3242,6 +3404,15 @@ func (v UInt16Value) ToBigEndianBytes() []byte {
 	return b
 }
 
+func (v UInt16Value) ConformsToDynamicType(dynamicType DynamicType) bool {
+	numberType, ok := dynamicType.(NumberDynamicType)
+	return ok && ValueConformsToSemaType(v, numberType.StaticType)
+}
+
+func (v UInt16Value) conformsToSemaType(semaType sema.Type) bool {
+	return sema.UInt16Type.Equal(semaType)
+}
+
 // UInt32Value
 
 type UInt32Value uint32
@@ -3446,6 +3617,15 @@ func (v UInt32Value) ToBigEndianBytes() []byte {
 	b := make([]byte, 4)
 	binary.BigEndian.PutUint32(b, uint32(v))
 	return b
+}
+
+func (v UInt32Value) ConformsToDynamicType(dynamicType DynamicType) bool {
+	numberType, ok := dynamicType.(NumberDynamicType)
+	return ok && ValueConformsToSemaType(v, numberType.StaticType)
+}
+
+func (v UInt32Value) conformsToSemaType(semaType sema.Type) bool {
+	return sema.UInt32Type.Equal(semaType)
 }
 
 // UInt64Value
@@ -3655,6 +3835,15 @@ func (v UInt64Value) ToBigEndianBytes() []byte {
 	b := make([]byte, 8)
 	binary.BigEndian.PutUint64(b, uint64(v))
 	return b
+}
+
+func (v UInt64Value) ConformsToDynamicType(dynamicType DynamicType) bool {
+	numberType, ok := dynamicType.(NumberDynamicType)
+	return ok && ValueConformsToSemaType(v, numberType.StaticType)
+}
+
+func (v UInt64Value) conformsToSemaType(semaType sema.Type) bool {
+	return sema.UInt64Type.Equal(semaType)
 }
 
 // UInt128Value
@@ -3920,6 +4109,15 @@ func (UInt128Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, 
 
 func (v UInt128Value) ToBigEndianBytes() []byte {
 	return UnsignedBigIntToBigEndianBytes(v.BigInt)
+}
+
+func (v UInt128Value) ConformsToDynamicType(dynamicType DynamicType) bool {
+	numberType, ok := dynamicType.(NumberDynamicType)
+	return ok && ValueConformsToSemaType(v, numberType.StaticType)
+}
+
+func (v UInt128Value) conformsToSemaType(semaType sema.Type) bool {
+	return sema.UInt128Type.Equal(semaType)
 }
 
 // UInt256Value
@@ -4188,6 +4386,15 @@ func (v UInt256Value) ToBigEndianBytes() []byte {
 	return UnsignedBigIntToBigEndianBytes(v.BigInt)
 }
 
+func (v UInt256Value) ConformsToDynamicType(dynamicType DynamicType) bool {
+	numberType, ok := dynamicType.(NumberDynamicType)
+	return ok && ValueConformsToSemaType(v, numberType.StaticType)
+}
+
+func (v UInt256Value) conformsToSemaType(semaType sema.Type) bool {
+	return sema.UInt256Type.Equal(semaType)
+}
+
 // Word8Value
 
 type Word8Value uint8
@@ -4353,6 +4560,15 @@ func (v Word8Value) ToBigEndianBytes() []byte {
 	return []byte{byte(v)}
 }
 
+func (v Word8Value) ConformsToDynamicType(dynamicType DynamicType) bool {
+	numberType, ok := dynamicType.(NumberDynamicType)
+	return ok && ValueConformsToSemaType(v, numberType.StaticType)
+}
+
+func (v Word8Value) conformsToSemaType(semaType sema.Type) bool {
+	return sema.Word8Type.Equal(semaType)
+}
+
 // Word16Value
 
 type Word16Value uint16
@@ -4516,6 +4732,15 @@ func (v Word16Value) ToBigEndianBytes() []byte {
 	b := make([]byte, 2)
 	binary.BigEndian.PutUint16(b, uint16(v))
 	return b
+}
+
+func (v Word16Value) ConformsToDynamicType(dynamicType DynamicType) bool {
+	numberType, ok := dynamicType.(NumberDynamicType)
+	return ok && ValueConformsToSemaType(v, numberType.StaticType)
+}
+
+func (v Word16Value) conformsToSemaType(semaType sema.Type) bool {
+	return sema.Word16Type.Equal(semaType)
 }
 
 // Word32Value
@@ -4685,6 +4910,15 @@ func (v Word32Value) ToBigEndianBytes() []byte {
 	return b
 }
 
+func (v Word32Value) ConformsToDynamicType(dynamicType DynamicType) bool {
+	numberType, ok := dynamicType.(NumberDynamicType)
+	return ok && ValueConformsToSemaType(v, numberType.StaticType)
+}
+
+func (v Word32Value) conformsToSemaType(semaType sema.Type) bool {
+	return sema.Word32Type.Equal(semaType)
+}
+
 // Word64Value
 
 type Word64Value uint64
@@ -4850,6 +5084,15 @@ func (v Word64Value) ToBigEndianBytes() []byte {
 	b := make([]byte, 8)
 	binary.BigEndian.PutUint64(b, uint64(v))
 	return b
+}
+
+func (v Word64Value) ConformsToDynamicType(dynamicType DynamicType) bool {
+	numberType, ok := dynamicType.(NumberDynamicType)
+	return ok && ValueConformsToSemaType(v, numberType.StaticType)
+}
+
+func (v Word64Value) conformsToSemaType(semaType sema.Type) bool {
+	return sema.Word64Type.Equal(semaType)
 }
 
 // Fix64Value
@@ -5072,6 +5315,15 @@ func (v Fix64Value) ToBigEndianBytes() []byte {
 	return b
 }
 
+func (v Fix64Value) ConformsToDynamicType(dynamicType DynamicType) bool {
+	numberType, ok := dynamicType.(NumberDynamicType)
+	return ok && ValueConformsToSemaType(v, numberType.StaticType)
+}
+
+func (v Fix64Value) conformsToSemaType(semaType sema.Type) bool {
+	return sema.Fix64Type.Equal(semaType)
+}
+
 // UFix64Value
 //
 type UFix64Value uint64
@@ -5286,6 +5538,15 @@ func (v UFix64Value) ToBigEndianBytes() []byte {
 	b := make([]byte, 8)
 	binary.BigEndian.PutUint64(b, uint64(v))
 	return b
+}
+
+func (v UFix64Value) ConformsToDynamicType(dynamicType DynamicType) bool {
+	numberType, ok := dynamicType.(NumberDynamicType)
+	return ok && ValueConformsToSemaType(v, numberType.StaticType)
+}
+
+func (v UFix64Value) conformsToSemaType(semaType sema.Type) bool {
+	return sema.UFix64Type.Equal(semaType)
 }
 
 // CompositeValue
@@ -5669,6 +5930,47 @@ func (v *CompositeValue) TypeID() common.TypeID {
 	return v.Location.TypeID(v.QualifiedIdentifier)
 }
 
+func (v *CompositeValue) ConformsToDynamicType(dynamicType DynamicType) bool {
+	compositeType, ok := dynamicType.(CompositeDynamicType)
+	return ok && ValueConformsToSemaType(v, compositeType.StaticType)
+}
+
+func (v *CompositeValue) conformsToSemaType(semaType sema.Type) bool {
+	compositeType, ok := semaType.(*sema.CompositeType)
+
+	if !ok ||
+		v.Kind != compositeType.Kind ||
+		v.QualifiedIdentifier != compositeType.QualifiedIdentifier() ||
+		v.Location.ID() != compositeType.Location.ID() {
+
+		return false
+	}
+
+	// Here it is assumed that imported values can only have static fields values,
+	// but not computed field values.
+	if v.Fields.Len() != len(compositeType.Fields) {
+		return false
+	}
+
+	for _, fieldName := range compositeType.Fields {
+		field, ok := v.Fields.Get(fieldName)
+		if !ok {
+			return false
+		}
+
+		member, ok := compositeType.Members.Get(fieldName)
+		if !ok {
+			return false
+		}
+
+		if !ValueConformsToSemaType(field, member.TypeAnnotation.Type) {
+			return false
+		}
+	}
+
+	return true
+}
+
 // DictionaryValue
 
 type DictionaryValue struct {
@@ -5846,7 +6148,7 @@ func (v *DictionaryValue) Destroy(inter *Interpreter, getLocationRange func() Lo
 }
 
 func (v *DictionaryValue) ContainsKey(keyValue Value) BoolValue {
-	key := DictionaryKey(keyValue)
+	key := dictionaryKey(keyValue)
 	_, ok := v.Entries.Get(key)
 	if ok {
 		return true
@@ -5861,7 +6163,7 @@ func (v *DictionaryValue) ContainsKey(keyValue Value) BoolValue {
 }
 
 func (v *DictionaryValue) Get(inter *Interpreter, _ func() LocationRange, keyValue Value) Value {
-	key := DictionaryKey(keyValue)
+	key := dictionaryKey(keyValue)
 	value, ok := v.Entries.Get(key)
 	if ok {
 		return NewSomeValueOwningNonCopying(value)
@@ -5895,7 +6197,7 @@ func (v *DictionaryValue) Get(inter *Interpreter, _ func() LocationRange, keyVal
 
 }
 
-func DictionaryKey(keyValue Value) string {
+func dictionaryKey(keyValue Value) string {
 	hasKeyString, ok := keyValue.(HasKeyString)
 	if !ok {
 		panic(errors.NewUnreachableError())
@@ -5926,7 +6228,7 @@ func (v *DictionaryValue) String() string {
 	}, len(v.Keys.Values))
 
 	for i, keyValue := range v.Keys.Values {
-		key := DictionaryKey(keyValue)
+		key := dictionaryKey(keyValue)
 		value, _ := v.Entries.Get(key)
 
 		// Value is potentially deferred,
@@ -6027,7 +6329,7 @@ func (v *DictionaryValue) Remove(inter *Interpreter, getLocationRange func() Loc
 	// Don't use `Entries` here: the value might be deferred and needs to be loaded
 	value := v.Get(inter, getLocationRange, keyValue)
 
-	key := DictionaryKey(keyValue)
+	key := dictionaryKey(keyValue)
 
 	// If a resource that was previously deferred is removed from the dictionary,
 	// we delete its old key in storage, and then rely on resource semantics
@@ -6047,7 +6349,7 @@ func (v *DictionaryValue) Remove(inter *Interpreter, getLocationRange func() Loc
 
 		// TODO: optimize linear scan
 		for i, keyValue := range v.Keys.Values {
-			if DictionaryKey(keyValue) == key {
+			if dictionaryKey(keyValue) == key {
 				v.Keys.Remove(i)
 				return value
 			}
@@ -6070,7 +6372,7 @@ func (v *DictionaryValue) Insert(inter *Interpreter, locationRangeGetter func() 
 	// Don't use `Entries` here: the value might be deferred and needs to be loaded
 	existingValue := v.Get(inter, locationRangeGetter, keyValue)
 
-	key := DictionaryKey(keyValue)
+	key := dictionaryKey(keyValue)
 
 	value.SetOwner(v.Owner)
 
@@ -6115,6 +6417,56 @@ func writeDeferredKeys(
 type DictionaryEntryValues struct {
 	Key   Value
 	Value Value
+}
+
+func (v *DictionaryValue) ConformsToDynamicType(dynamicType DynamicType) bool {
+	dictionaryType, ok := dynamicType.(DictionaryDynamicType)
+	if !ok || v.Count() != len(dictionaryType.EntryTypes) {
+		return false
+	}
+
+	for index, entryKey := range v.Keys.Values {
+		entryType := dictionaryType.EntryTypes[index]
+
+		// Check the key
+		if !entryKey.ConformsToDynamicType(entryType.KeyType) {
+			return false
+		}
+
+		// Check the value. Here it is assumed an imported value can only have
+		// static entries, but not deferred keys/values.
+		key := dictionaryKey(entryKey)
+		entryValue, ok := v.Entries.Get(key)
+		if !ok || !entryValue.ConformsToDynamicType(entryType.ValueType) {
+			return false
+		}
+	}
+
+	return true
+}
+
+func (v *DictionaryValue) conformsToSemaType(semaType sema.Type) bool {
+	dictionaryType, ok := semaType.(*sema.DictionaryType)
+	if !ok {
+		return false
+	}
+
+	for _, key := range v.Keys.Values {
+		// Check the key
+		if !ValueConformsToSemaType(key, dictionaryType.KeyType) {
+			return false
+		}
+
+		// Check the value. Here it is assumed an imported value can only have
+		// static entries, but not deferred keys/values.
+		dictionaryKey := dictionaryKey(key)
+		entryValue, ok := v.Entries.Get(dictionaryKey)
+		if !ok || !ValueConformsToSemaType(entryValue, dictionaryType.ValueType) {
+			return false
+		}
+	}
+
+	return true
 }
 
 // OptionalValue
@@ -6192,6 +6544,16 @@ func (v NilValue) GetMember(_ *Interpreter, _ func() LocationRange, name string)
 
 func (NilValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
 	panic(errors.NewUnreachableError())
+}
+
+func (v NilValue) ConformsToDynamicType(dynamicType DynamicType) bool {
+	_, ok := dynamicType.(NilDynamicType)
+	return ok
+}
+
+func (v NilValue) conformsToSemaType(semaType sema.Type) bool {
+	_, ok := semaType.(*sema.OptionalType)
+	return ok
 }
 
 // SomeValue
@@ -6302,6 +6664,16 @@ func (v *SomeValue) GetMember(_ *Interpreter, _ func() LocationRange, name strin
 
 func (*SomeValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
 	panic(errors.NewUnreachableError())
+}
+
+func (v SomeValue) ConformsToDynamicType(dynamicType DynamicType) bool {
+	someType, ok := dynamicType.(SomeDynamicType)
+	return ok && v.Value.ConformsToDynamicType(someType.InnerType)
+}
+
+func (v SomeValue) conformsToSemaType(semaType sema.Type) bool {
+	someType, ok := semaType.(*sema.OptionalType)
+	return ok && ValueConformsToSemaType(v.Value, someType.Type)
 }
 
 // StorageReferenceValue
@@ -6438,6 +6810,16 @@ func (v *StorageReferenceValue) Equal(_ *Interpreter, other Value) BoolValue {
 		v.Authorized == otherReference.Authorized
 }
 
+func (v *StorageReferenceValue) ConformsToDynamicType(dynamicType DynamicType) bool {
+	_, ok := dynamicType.(StorageReferenceDynamicType)
+	return ok
+}
+
+func (v *StorageReferenceValue) conformsToSemaType(semaType sema.Type) bool {
+	_, ok := semaType.(*sema.ReferenceType)
+	return ok
+}
+
 // EphemeralReferenceValue
 
 type EphemeralReferenceValue struct {
@@ -6569,6 +6951,34 @@ func (v *EphemeralReferenceValue) Equal(_ *Interpreter, other Value) BoolValue {
 		v.Authorized == otherReference.Authorized
 }
 
+func (v *EphemeralReferenceValue) ConformsToDynamicType(dynamicType DynamicType) bool {
+	refType, ok := dynamicType.(*EphemeralReferenceDynamicType)
+	if !ok {
+		return false
+	}
+
+	referencedValue := v.ReferencedValue()
+	if referencedValue == nil {
+		return false
+	}
+
+	return (*referencedValue).ConformsToDynamicType(refType.InnerType())
+}
+
+func (v *EphemeralReferenceValue) conformsToSemaType(semaType sema.Type) bool {
+	refType, ok := semaType.(*sema.ReferenceType)
+	if !ok {
+		return false
+	}
+
+	referencedValue := v.ReferencedValue()
+	if referencedValue == nil {
+		return false
+	}
+
+	return ValueConformsToSemaType(*referencedValue, refType.Type)
+}
+
 // AddressValue
 
 type AddressValue common.Address
@@ -6684,6 +7094,16 @@ func (v AddressValue) GetMember(_ *Interpreter, _ func() LocationRange, name str
 
 func (AddressValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
 	panic(errors.NewUnreachableError())
+}
+
+func (v AddressValue) ConformsToDynamicType(dynamicType DynamicType) bool {
+	_, ok := dynamicType.(AddressDynamicType)
+	return ok
+}
+
+func (v AddressValue) conformsToSemaType(semaType sema.Type) bool {
+	_, ok := semaType.(*sema.AddressType)
+	return ok
 }
 
 // NewAuthAccountValue constructs an auth account value.
@@ -6910,6 +7330,42 @@ func (v PathValue) KeyString() string {
 	)
 }
 
+func (v PathValue) ConformsToDynamicType(dynamicType DynamicType) bool {
+	switch dynamicType.(type) {
+	case PublicPathDynamicType:
+		return v.Domain == common.PathDomainPublic
+	case PrivatePathDynamicType:
+		return v.Domain == common.PathDomainPrivate
+	case StoragePathDynamicType:
+		return v.Domain == common.PathDomainStorage
+	default:
+		return false
+	}
+}
+
+func (v PathValue) conformsToSemaType(semaType sema.Type) bool {
+	switch semaType {
+	case sema.PublicPathType:
+		return v.Domain == common.PathDomainPublic
+	case sema.PrivatePathType:
+		return v.Domain == common.PathDomainPrivate
+	case sema.StoragePathType:
+		return v.Domain == common.PathDomainStorage
+	case sema.CapabilityPathType:
+		return v.Domain == common.PathDomainPrivate ||
+			v.Domain == common.PathDomainPublic
+	case sema.PathType:
+		for _, domain := range common.AllPathDomains {
+			if v.Domain == domain {
+				return true
+			}
+		}
+		return false
+	default:
+		return false
+	}
+}
+
 // CapabilityValue
 
 type CapabilityValue struct {
@@ -7006,6 +7462,16 @@ func (CapabilityValue) SetMember(_ *Interpreter, _ func() LocationRange, _ strin
 	panic(errors.NewUnreachableError())
 }
 
+func (v CapabilityValue) ConformsToDynamicType(dynamicType DynamicType) bool {
+	_, ok := dynamicType.(CapabilityDynamicType)
+	return ok
+}
+
+func (v CapabilityValue) conformsToSemaType(semaType sema.Type) bool {
+	_, ok := semaType.(*sema.CapabilityType)
+	return ok
+}
+
 // LinkValue
 
 type LinkValue struct {
@@ -7057,6 +7523,14 @@ func (v LinkValue) String() string {
 		v.Type.String(),
 		v.TargetPath.String(),
 	)
+}
+
+func (v LinkValue) ConformsToDynamicType(DynamicType) bool {
+	return false
+}
+
+func (v LinkValue) conformsToSemaType(sema.Type) bool {
+	return false
 }
 
 // NewAccountKeyValue constructs an AccountKey value.
@@ -7130,4 +7604,33 @@ func NewCryptoAlgorithmEnumCaseValue(enumType *sema.CompositeType, rawValue uint
 		Kind:                enumType.Kind,
 		Fields:              fields,
 	}
+}
+
+// ValueConformsToSemaType checks whether the shape of a value conforms to given a semantic type.
+//
+func ValueConformsToSemaType(value Value, semaType sema.Type) bool {
+	// Get the optional type out of the way, so we don't have to repeat this check every where.
+	if _, isOptional := semaType.(*sema.OptionalType); isOptional {
+		if _, isNil := value.(NilValue); isNil {
+			return true
+		}
+
+		semaType = sema.UnwrapOptionalType(semaType)
+	}
+
+	// Get the super types out of the way.
+	// This check should always be done after handling optionals.
+	switch semaType {
+	case sema.AnyType:
+		return true
+	case sema.AnyStructType:
+		// Currently this method is only used during validating input arguments of scripts/transactions.
+		// Resources are currently not allowed to be passed in as arguments. Hence this is always true.
+		return true
+	case sema.AnyResourceType:
+		// Similar to above, this is always false.
+		return false
+	}
+
+	return value.conformsToSemaType(semaType)
 }

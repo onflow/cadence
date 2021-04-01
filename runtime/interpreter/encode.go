@@ -704,7 +704,7 @@ func (e *Encoder) prepareDictionaryValue(
 	}
 
 	for _, keyValue := range v.Keys.Values {
-		key := DictionaryKey(keyValue)
+		key := dictionaryKey(keyValue)
 		entryValue, _ := v.Entries.Get(key)
 		valuePath := append(path[:], dictionaryValuePathPrefix, key)
 
