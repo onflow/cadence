@@ -39,6 +39,15 @@ let type = Type<Int>()
 type.identifier  // is "Int"
 ```
 
+```cadence
+// in account 0x1
+
+struct Test {}
+
+let type = Type<Test>()
+type.identifier  // is "A.0000000000000001.Test"
+```
+
 ### Getting the Type from a Value
 
 The method `fun getType(): Type` can be used to get the runtime type of a value.
