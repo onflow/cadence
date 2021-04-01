@@ -45,11 +45,12 @@ func (i *FlowIntegration) initialize(initializationOptions interface{}) error {
 		return err
 	}
 
-	i.project = flowProject
 	host := flowProject.NetworkByName("emulator").Host
-	gate, _ := gateway.NewGrpcGateway(host)
+	gateway, _ := gateway.NewGrpcGateway(host)
 	logger := output.NewStdoutLogger(output.NoneLog)
-	i.sharedServices = services.NewServices(gate, flowProject, logger)
+	i.sharedServices = services.NewServices(gateway, flowProject, logger)
+	i.project = flowProject
+	i.gateway = gateway
 
 	// TODO: we only need this to deploy AccountManager contract. Once sharedLib supports this we can remove it
 	i.flowClient, err = client.New(
