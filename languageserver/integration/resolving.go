@@ -86,8 +86,8 @@ func (i *FlowIntegration) getAccount(address common.Address) (*flow.Account, err
 const scriptGetAddress = `
 import AccountManager from 0xSERVICE_ACCOUNT_ADDRESS
 
-pub fun main(name: String): Address {
-    return AccountManager.getAddress(name)!
+pub fun main(name: String): Address? {
+    return AccountManager.getAddress(name)
 }
 `
 
