@@ -3469,6 +3469,58 @@ func TestEncodeDecodeCapabilityValue(t *testing.T) {
 			},
 		)
 	})
+
+	// For testing backward compatibility for native composite types
+	t.Run("public path, public account typed capability", func(t *testing.T) {
+
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				value: CapabilityValue{
+					Address:    NewAddressValueFromBytes([]byte{0x3}),
+					Path:       publicPathValue,
+					BorrowType: PrimitiveStaticTypePublicAccount,
+				},
+				encoded: []byte{
+					// tag
+					0xd8, cborTagCapabilityValue,
+					// map, 3 pairs of items follow
+					0xa3,
+					// key 0
+					0x0,
+					// tag for address
+					0xd8, cborTagAddressValue,
+					// byte sequence, length 1
+					0x41,
+					// address
+					0x03,
+					// key 1
+					0x1,
+					// tag for address
+					0xd8, cborTagPathValue,
+					// map, 2 pairs of items follow
+					0xa2,
+					// key 0
+					0x0,
+					// positive integer 3
+					0x3,
+					// key 1
+					0x1,
+					// UTF-8 string, length 3
+					0x63,
+					// b, a, r
+					0x62, 0x61, 0x72,
+					// key 2
+					0x2,
+					// tag
+					0xd8, cborTagPrimitiveStaticType,
+					// positive integer to follow
+					0x18,
+					// public account (tag)
+					0x5b,
+				},
+			},
+		)
+	})
 }
 
 func TestEncodeDecodeLinkValue(t *testing.T) {
