@@ -14,6 +14,5 @@ require (
 )
 
 replace (
-	github.com/onflow/cadence => ../
 	github.com/onflow/flow-cli => ../../flow-cli
 )
