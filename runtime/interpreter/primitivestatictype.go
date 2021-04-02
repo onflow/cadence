@@ -151,10 +151,10 @@ const (
 	_
 	_
 	_
-	_
-	_
+	PrimitiveStaticTypeAuthAccount
+	PrimitiveStaticTypePublicAccount
 	PrimitiveStaticTypeDeployedContract
-	_
+	PrimitiveStaticTypeAuthAccountContracts
 	_
 )
 
@@ -279,8 +279,14 @@ func (i PrimitiveStaticType) SemaType() sema.Type {
 		return sema.PrivatePathType
 	case PrimitiveStaticTypeCapability:
 		return &sema.CapabilityType{}
+	case PrimitiveStaticTypeAuthAccount:
+		return sema.AuthAccountType
+	case PrimitiveStaticTypePublicAccount:
+		return sema.PublicAccountType
 	case PrimitiveStaticTypeDeployedContract:
 		return sema.DeployedContractType
+	case PrimitiveStaticTypeAuthAccountContracts:
+		return sema.AuthAccountContractsType
 	default:
 		panic(errors.NewUnreachableError())
 	}
@@ -398,10 +404,16 @@ func ConvertSemaToPrimitiveStaticType(t sema.Type) PrimitiveStaticType {
 		return PrimitiveStaticTypeAnyStruct
 	case sema.AnyResourceType:
 		return PrimitiveStaticTypeAnyResource
+	case sema.AuthAccountType:
+		return PrimitiveStaticTypeAuthAccount
+	case sema.PublicAccountType:
+		return PrimitiveStaticTypePublicAccount
 	case sema.BlockType:
 		return PrimitiveStaticTypeBlock
 	case sema.DeployedContractType:
 		return PrimitiveStaticTypeDeployedContract
+	case sema.AuthAccountContractsType:
+		return PrimitiveStaticTypeAuthAccountContracts
 	case sema.StringType:
 		return PrimitiveStaticTypeString
 	}
