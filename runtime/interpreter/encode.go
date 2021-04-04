@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"io"
 	"math/big"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -791,6 +792,12 @@ const (
 	encodedCompositeValueKindFieldKey                uint64 = 2
 	encodedCompositeValueFieldsFieldKey              uint64 = 3
 	encodedCompositeValueQualifiedIdentifierFieldKey uint64 = 4
+
+	// !!! *WARNING* !!!
+	//
+	// encodedCompositeValueLength MUST be updated when new element is added.
+	// It is used to verify encoded composites length during decoding.
+	encodedCompositeValueLength int = 5
 )
 
 func (e *Encoder) prepareCompositeValue(
@@ -801,11 +808,25 @@ func (e *Encoder) prepareCompositeValue(
 	interface{},
 	error,
 ) {
-	fields := make(map[string]interface{}, v.Fields.Len())
+	fieldPairs := v.Fields.pairs
+	fieldLen := len(fieldPairs)
 
-	for pair := v.Fields.Oldest(); pair != nil; pair = pair.Next() {
-		fieldName := pair.Key
-		value := pair.Value
+	// Sort field names lexicographically.
+	fieldNames := make([]string, fieldLen)
+
+	index := 0
+	for name := range fieldPairs {
+		fieldNames[index] = name
+		index++
+	}
+
+	sort.Strings(fieldNames)
+
+	// Create fields (key and value) array, sorted by field name.
+	fields := make(cborArray, fieldLen*2)
+
+	for i, fieldName := range fieldNames {
+		value := fieldPairs[fieldName].Value
 
 		valuePath := append(path[:], fieldName)
 
@@ -813,7 +834,8 @@ func (e *Encoder) prepareCompositeValue(
 		if err != nil {
 			return nil, err
 		}
-		fields[fieldName] = prepared
+
+		fields[i*2], fields[i*2+1] = fieldName, prepared
 	}
 
 	location, err := e.prepareLocation(v.Location)
@@ -823,7 +845,7 @@ func (e *Encoder) prepareCompositeValue(
 
 	return cbor.Tag{
 		Number: cborTagCompositeValue,
-		Content: cborMap{
+		Content: cborArray{
 			encodedCompositeValueLocationFieldKey:            location,
 			encodedCompositeValueKindFieldKey:                uint(v.Kind),
 			encodedCompositeValueFieldsFieldKey:              fields,

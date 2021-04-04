@@ -25,7 +25,6 @@ import (
 	"io"
 	"math"
 	"math/big"
-	"sort"
 	"strconv"
 	"strings"
 
@@ -528,13 +527,21 @@ func (d *DecoderV4) decodeAddressLocation(v interface{}) (common.Location, error
 }
 
 func (d *DecoderV4) decodeComposite(v interface{}, path []string) (*CompositeValue, error) {
-
-	encoded, ok := v.(map[interface{}]interface{})
+	encoded, ok := v.(cborArray)
 	if !ok {
 		return nil, fmt.Errorf(
 			"invalid composite encoding (@ %s): %T",
 			strings.Join(path, "."),
 			v,
+		)
+	}
+
+	if len(encoded) != encodedCompositeValueLength {
+		return nil, fmt.Errorf(
+			"invalid composite encoding (@ %s): invalid size: expected %d, got %d",
+			strings.Join(path, "."),
+			encodedCompositeValueLength,
+			len(encoded),
 		)
 	}
 
@@ -549,55 +556,16 @@ func (d *DecoderV4) decodeComposite(v interface{}, path []string) (*CompositeVal
 		)
 	}
 
-	// Qualified identifier or Type ID.
-	//
-	// An earlier version of the format stored the whole type ID.
-	// However, the composite already stores the location,
-	// so the current version of the format only stores the qualified identifier.
-
-	var qualifiedIdentifier string
+	// Qualified identifier
 
 	qualifiedIdentifierField := encoded[encodedCompositeValueQualifiedIdentifierFieldKey]
-	if qualifiedIdentifierField != nil {
-		qualifiedIdentifier, ok = qualifiedIdentifierField.(string)
-		if !ok {
-			return nil, fmt.Errorf(
-				"invalid composite qualified identifier encoding (@ %s): %T",
-				strings.Join(path, "."),
-				qualifiedIdentifierField,
-			)
-		}
-	} else {
-		typeIDField := encoded[encodedCompositeValueTypeIDFieldKey]
-		if typeIDField != nil {
-
-			encodedTypeID, ok := typeIDField.(string)
-			if !ok {
-				return nil, fmt.Errorf(
-					"invalid composite type ID encoding (@ %s): %T",
-					strings.Join(path, "."),
-					typeIDField,
-				)
-			}
-
-			_, qualifiedIdentifier, err = common.DecodeTypeID(encodedTypeID)
-			if err != nil {
-				return nil, fmt.Errorf(
-					"invalid composite type ID (@ %s): %w",
-					strings.Join(path, "."),
-					err,
-				)
-			}
-
-			// Special case: The decoded location might be an address location which has no name
-
-			location = d.inferAddressLocationName(location, qualifiedIdentifier)
-		} else {
-			return nil, fmt.Errorf(
-				"missing composite qualified identifier or type ID (@ %s)",
-				strings.Join(path, "."),
-			)
-		}
+	qualifiedIdentifier, ok := qualifiedIdentifierField.(string)
+	if !ok {
+		return nil, fmt.Errorf(
+			"invalid composite qualified identifier encoding (@ %s): %T",
+			strings.Join(path, "."),
+			qualifiedIdentifierField,
+		)
 	}
 
 	// Kind
@@ -616,7 +584,7 @@ func (d *DecoderV4) decodeComposite(v interface{}, path []string) (*CompositeVal
 	// Fields
 
 	fieldsField := encoded[encodedCompositeValueFieldsFieldKey]
-	encodedFields, ok := fieldsField.(map[interface{}]interface{})
+	encodedFields, ok := fieldsField.(cborArray)
 	if !ok {
 		return nil, fmt.Errorf(
 			"invalid composite fields encoding (@ %s): %T",
@@ -625,37 +593,31 @@ func (d *DecoderV4) decodeComposite(v interface{}, path []string) (*CompositeVal
 		)
 	}
 
-	// Gather all field names and sort them lexicographically
+	if len(encodedFields)%2 == 1 {
+		return nil, fmt.Errorf(
+			"invalid composite fields encoding (@ %s): fields should have even number of elements: got %d",
+			strings.Join(path, "."),
+			len(encodedFields),
+		)
+	}
 
-	var fieldNames []string
+	fields := NewStringValueOrderedMap()
 
-	index := 0
+	for i := 0; i < len(encodedFields); i += 2 {
 
-	for fieldName := range encodedFields { //nolint:maprangecheck
-		nameString, ok := fieldName.(string)
+		// field name
+		fieldName, ok := encodedFields[i].(string)
 		if !ok {
 			return nil, fmt.Errorf(
 				"invalid composite field name encoding (@ %s, %d): %T",
 				strings.Join(path, "."),
-				index,
-				fieldName,
+				i/2,
+				encodedFields[i],
 			)
 		}
 
-		fieldNames = append(fieldNames, nameString)
-
-		index++
-	}
-
-	// Decode all fields in lexicographic order
-
-	sort.Strings(fieldNames)
-
-	fields := NewStringValueOrderedMap()
-
-	for _, fieldName := range fieldNames {
-
-		value := encodedFields[fieldName]
+		// field value
+		value := encodedFields[i+1]
 
 		valuePath := append(path[:], fieldName)
 		decodedValue, err := d.decodeValue(value, valuePath)

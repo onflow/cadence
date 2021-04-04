@@ -508,41 +508,79 @@ func TestEncodeDecodeComposite(t *testing.T) {
 		)
 		expected.modified = false
 
+		encoded := []byte{
+			// tag
+			0xd8, cborTagCompositeValue,
+			// array, 5 items follow
+			0x85,
+
+			// tag
+			0xd8, cborTagStringLocation,
+			// UTF-8 string, length 4
+			0x64,
+			// t, e, s, t
+			0x74, 0x65, 0x73, 0x74,
+
+			// nil
+			0xf6,
+
+			// positive integer 1
+			0x1,
+
+			// array, 0 items follow
+			0x80,
+
+			// UTF-8 string, length 10
+			0x6a,
+			0x54, 0x65, 0x73, 0x74, 0x53, 0x74, 0x72, 0x75, 0x63, 0x74,
+		}
+
+		version3Encoded := []byte{
+			// tag
+			0xd8, cborTagCompositeValue,
+			// map, 4 pairs of items follow
+			0xa4,
+			// key 0
+			0x0,
+			// tag
+			0xd8, cborTagStringLocation,
+			// UTF-8 string, length 4
+			0x64,
+			// t, e, s, t
+			0x74, 0x65, 0x73, 0x74,
+			// key 2
+			0x2,
+			// positive integer 1
+			0x1,
+			// key 3
+			0x3,
+			// map, 0 pairs of items follow
+			0xa0,
+			// key 4
+			0x4,
+			// UTF-8 string, length 10
+			0x6a,
+			0x54, 0x65, 0x73, 0x74, 0x53, 0x74, 0x72, 0x75, 0x63, 0x74,
+		}
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
-				value: expected,
-				encoded: []byte{
-					// tag
-					0xd8, cborTagCompositeValue,
-					// map, 4 pairs of items follow
-					0xa4,
-					// key 0
-					0x0,
-					// tag
-					0xd8, cborTagStringLocation,
-					// UTF-8 string, length 4
-					0x64,
-					// t, e, s, t
-					0x74, 0x65, 0x73, 0x74,
-					// key 2
-					0x2,
-					// positive integer 1
-					0x1,
-					// key 3
-					0x3,
-					// map, 0 pairs of items follow
-					0xa0,
-					// key 4
-					0x4,
-					// UTF-8 string, length 10
-					0x6a,
-					0x54, 0x65, 0x73, 0x74, 0x53, 0x74, 0x72, 0x75, 0x63, 0x74,
-				},
+				value:   expected,
+				encoded: encoded,
 			},
+		)
+
+		testEncodeDecodeOldFormat(t,
+			encodeDecodeTest{
+				value:   expected,
+				encoded: encoded,
+			},
+			3,
+			version3Encoded,
 		)
 	})
 
-	t.Run("empty structure, string location, type ID", func(t *testing.T) {
+	t.Run("empty structure, string location, type ID, version <= 3", func(t *testing.T) {
 		expected := NewCompositeValue(
 			utils.TestLocation,
 			"TestStruct",
@@ -554,8 +592,10 @@ func TestEncodeDecodeComposite(t *testing.T) {
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
-				decodeOnly:   true,
-				decodedValue: expected,
+				decodeVersionOverride: true,
+				decodeVersion:         3,
+				decodeOnly:            true,
+				decodedValue:          expected,
 				encoded: []byte{
 					// tag
 					0xd8, cborTagCompositeValue,
@@ -591,7 +631,7 @@ func TestEncodeDecodeComposite(t *testing.T) {
 		)
 	})
 
-	t.Run("empty structure, address location without name", func(t *testing.T) {
+	t.Run("empty structure, address location without name, version <= 3", func(t *testing.T) {
 		expected := NewCompositeValue(
 			common.AddressLocation{
 				Address: common.BytesToAddress([]byte{0x1}),
@@ -606,8 +646,10 @@ func TestEncodeDecodeComposite(t *testing.T) {
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
-				decodeOnly:   true,
-				decodedValue: expected,
+				decodeOnly:            true,
+				decodedValue:          expected,
+				decodeVersionOverride: true,
+				decodeVersion:         3,
 				encoded: []byte{
 					// tag
 					0xd8, cborTagCompositeValue,
@@ -662,55 +704,107 @@ func TestEncodeDecodeComposite(t *testing.T) {
 		)
 		expected.modified = false
 
+		encoded := []byte{
+			// tag
+			0xd8, cborTagCompositeValue,
+			// array, 5 items follow
+			0x85,
+
+			// tag
+			0xd8, cborTagStringLocation,
+			// UTF-8 string, length 4
+			0x64,
+			// t, e, s, t
+			0x74, 0x65, 0x73, 0x74,
+
+			// nil
+			0xf6,
+
+			// positive integer 2
+			0x2,
+
+			// array, 4 items follow
+			0x84,
+			// UTF-8 string, length 6
+			0x66,
+			// s, t, r, i, n, g
+			0x73, 0x74, 0x72, 0x69, 0x6e, 0x67,
+			// UTF-8 string, length 4
+			0x64,
+			// t, e, s, t
+			0x74, 0x65, 0x73, 0x74,
+			// UTF-8 string, length 4
+			0x64,
+			// t, r, u, e
+			0x74, 0x72, 0x75, 0x65,
+			// true
+			0xf5,
+
+			// UTF-8 string, length 12
+			0x6c,
+			0x54, 0x65, 0x73, 0x74, 0x52, 0x65, 0x73, 0x6f, 0x75, 0x72, 0x63, 0x65,
+		}
+
+		version3Encoded := []byte{
+			// tag
+			0xd8, cborTagCompositeValue,
+			// map, 4 pairs of items follow
+			0xa4,
+			// key 0
+			0x0,
+			// tag
+			0xd8, cborTagStringLocation,
+			// UTF-8 string, length 4
+			0x64,
+			// t, e, s, t
+			0x74, 0x65, 0x73, 0x74,
+			// key 2
+			0x2,
+			// positive integer 2
+			0x2,
+			// key 3
+			0x3,
+			// map, 2 pairs of items follow
+			0xa2,
+			// UTF-8 string, length 4
+			0x64,
+			// t, r, u, e
+			0x74, 0x72, 0x75, 0x65,
+			// true
+			0xf5,
+			// UTF-8 string, length 6
+			0x66,
+			// s, t, r, i, n, g
+			0x73, 0x74, 0x72, 0x69, 0x6e, 0x67,
+			// UTF-8 string, length 4
+			0x64,
+			// t, e, s, t
+			0x74, 0x65, 0x73, 0x74,
+			// key 4
+			0x4,
+			// UTF-8 string, length 12
+			0x6c,
+			0x54, 0x65, 0x73, 0x74, 0x52, 0x65, 0x73, 0x6f, 0x75, 0x72, 0x63, 0x65,
+		}
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
-				value: expected,
-				encoded: []byte{
-					// tag
-					0xd8, cborTagCompositeValue,
-					// map, 4 pairs of items follow
-					0xa4,
-					// key 0
-					0x0,
-					// tag
-					0xd8, cborTagStringLocation,
-					// UTF-8 string, length 4
-					0x64,
-					// t, e, s, t
-					0x74, 0x65, 0x73, 0x74,
-					// key 2
-					0x2,
-					// positive integer 2
-					0x2,
-					// key 3
-					0x3,
-					// map, 2 pairs of items follow
-					0xa2,
-					// UTF-8 string, length 4
-					0x64,
-					// t, r, u, e
-					0x74, 0x72, 0x75, 0x65,
-					// true
-					0xf5,
-					// UTF-8 string, length 6
-					0x66,
-					// s, t, r, i, n, g
-					0x73, 0x74, 0x72, 0x69, 0x6e, 0x67,
-					// UTF-8 string, length 4
-					0x64,
-					// t, e, s, t
-					0x74, 0x65, 0x73, 0x74,
-					// key 4
-					0x4,
-					// UTF-8 string, length 12
-					0x6c,
-					0x54, 0x65, 0x73, 0x74, 0x52, 0x65, 0x73, 0x6f, 0x75, 0x72, 0x63, 0x65,
-				},
+				value:   expected,
+				encoded: encoded,
 			},
+		)
+
+		testEncodeDecodeOldFormat(t,
+			encodeDecodeTest{
+				value:   expected,
+				encoded: encoded,
+			},
+			3,
+			version3Encoded,
 		)
 	})
 
-	t.Run("non-empty resource, type ID", func(t *testing.T) {
+	t.Run("non-empty resource, type ID, version <= 3", func(t *testing.T) {
 		stringValue := NewStringValue("test")
 		stringValue.modified = false
 
@@ -729,8 +823,10 @@ func TestEncodeDecodeComposite(t *testing.T) {
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
-				decodeOnly:   true,
-				decodedValue: expected,
+				decodeVersionOverride: true,
+				decodeVersion:         3,
+				decodeOnly:            true,
+				decodedValue:          expected,
 				encoded: []byte{
 					// tag
 					0xd8, cborTagCompositeValue,
@@ -778,7 +874,7 @@ func TestEncodeDecodeComposite(t *testing.T) {
 		)
 	})
 
-	t.Run("empty, address location, nested", func(t *testing.T) {
+	t.Run("empty, address location, nested, version <= 3", func(t *testing.T) {
 
 		expected := NewCompositeValue(
 			common.AddressLocation{
@@ -795,7 +891,9 @@ func TestEncodeDecodeComposite(t *testing.T) {
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
-				decodedValue: expected,
+				decodeVersionOverride: true,
+				decodeVersion:         3,
+				decodedValue:          expected,
 				encoded: []byte{
 					// tag
 					0xd8, cborTagCompositeValue,
@@ -835,9 +933,11 @@ func TestEncodeDecodeComposite(t *testing.T) {
 		)
 	})
 
-	t.Run("empty, address location, address too long", func(t *testing.T) {
+	t.Run("empty, address location, address too long, version <= 3", func(t *testing.T) {
 		testEncodeDecode(t,
 			encodeDecodeTest{
+				decodeVersionOverride: true,
+				decodeVersion:         3,
 				encoded: []byte{
 					// tag
 					0xd8, cborTagCompositeValue,
@@ -886,52 +986,101 @@ func TestEncodeDecodeComposite(t *testing.T) {
 		)
 		expected.modified = false
 
+		encoded := []byte{
+			// tag
+			0xd8, cborTagCompositeValue,
+			// array, 5 items follow
+			0x85,
+
+			// tag
+			0xd8, cborTagAddressLocation,
+			// map, 2 pairs of items follow
+			0xa2,
+			// key 0
+			0x0,
+			// byte sequence, length 1
+			0x41,
+			// positive integer 1
+			0x1,
+			// key 1
+			0x1,
+			// UTF-8 string, length 10
+			0x6a,
+			0x54, 0x65, 0x73, 0x74, 0x53, 0x74, 0x72, 0x75,
+			0x63, 0x74,
+
+			// nil
+			0xf6,
+
+			// positive integer 1
+			0x1,
+
+			// array, 0 items follow
+			0x80,
+
+			// UTF-8 string, length 10
+			0x6a,
+			0x54, 0x65, 0x73, 0x74, 0x53, 0x74, 0x72, 0x75,
+			0x63, 0x74,
+		}
+
+		version3Encoded := []byte{
+			// tag
+			0xd8, cborTagCompositeValue,
+			// map, 4 pairs of items follow
+			0xa4,
+			// key 0
+			0x0,
+			// tag
+			0xd8, cborTagAddressLocation,
+			// map, 4 pairs of items follow
+			0xa2,
+			// key 0
+			0x0,
+			// byte sequence, length 1
+			0x41,
+			// positive integer 1
+			0x1,
+			// key 1
+			0x1,
+			// UTF-8 string, length 10
+			0x6a,
+			0x54, 0x65, 0x73, 0x74, 0x53, 0x74, 0x72, 0x75,
+			0x63, 0x74,
+			// key 2
+			0x2,
+			// positive integer 1
+			0x1,
+			// key 3
+			0x3,
+			// map, 0 pairs of items follow
+			0xa0,
+			// key 4
+			0x4,
+			// UTF-8 string, length 10
+			0x6a,
+			0x54, 0x65, 0x73, 0x74, 0x53, 0x74, 0x72, 0x75,
+			0x63, 0x74,
+		}
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
-				value: expected,
-				encoded: []byte{
-					// tag
-					0xd8, cborTagCompositeValue,
-					// map, 4 pairs of items follow
-					0xa4,
-					// key 0
-					0x0,
-					// tag
-					0xd8, cborTagAddressLocation,
-					// map, 4 pairs of items follow
-					0xa2,
-					// key 0
-					0x0,
-					// byte sequence, length 1
-					0x41,
-					// positive integer 1
-					0x1,
-					// key 1
-					0x1,
-					// UTF-8 string, length 10
-					0x6a,
-					0x54, 0x65, 0x73, 0x74, 0x53, 0x74, 0x72, 0x75,
-					0x63, 0x74,
-					// key 2
-					0x2,
-					// positive integer 1
-					0x1,
-					// key 3
-					0x3,
-					// map, 0 pairs of items follow
-					0xa0,
-					// key 4
-					0x4,
-					// UTF-8 string, length 10
-					0x6a,
-					0x54, 0x65, 0x73, 0x74, 0x53, 0x74, 0x72, 0x75,
-					0x63, 0x74,
-				},
+				value:   expected,
+				encoded: encoded,
 			},
+		)
+
+		testEncodeDecodeOldFormat(t,
+			encodeDecodeTest{
+				value:   expected,
+				encoded: encoded,
+			},
+			3,
+			version3Encoded,
 		)
 	})
 
-	t.Run("empty, address location, address too long", func(t *testing.T) {
+	t.Run("empty, address location, address too long, version <= 3", func(t *testing.T) {
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				encoded: []byte{
@@ -943,7 +1092,7 @@ func TestEncodeDecodeComposite(t *testing.T) {
 					0x0,
 					// tag
 					0xd8, cborTagAddressLocation,
-					// map, 4 pairs of items follow
+					// map, 2 pairs of items follow
 					0xa2,
 					// key 0
 					0x0,
@@ -974,7 +1123,9 @@ func TestEncodeDecodeComposite(t *testing.T) {
 					// map, 0 pairs of items follow
 					0xa0,
 				},
-				invalid: true,
+				invalid:               true,
+				decodeVersionOverride: true,
+				decodeVersion:         3,
 			},
 		)
 	})
