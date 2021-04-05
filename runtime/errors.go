@@ -386,3 +386,21 @@ func (e *EnumCaseMismatchError) Error() string {
 		e.foundName,
 	)
 }
+
+// MissingEnumCasesError is reported during an enum update, if any enum cases are removed
+// from an existing enum.
+type MissingEnumCasesError struct {
+	declName string
+	expected int
+	found    int
+	ast.Range
+}
+
+func (e *MissingEnumCasesError) Error() string {
+	return fmt.Sprintf(
+		"missing enum cases in `%s`: expected %d or more, found %d",
+		e.declName,
+		e.expected,
+		e.found,
+	)
+}

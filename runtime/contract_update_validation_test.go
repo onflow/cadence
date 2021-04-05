@@ -1365,7 +1365,10 @@ func TestContractUpdateValidation(t *testing.T) {
 			}`
 
 		err := deployAndUpdate("Test29", oldCode, newCode)
-		require.NoError(t, err)
+		require.Error(t, err)
+
+		cause := getErrorCause(t, err, "Test29")
+		assertMissingEnumCasesError(t, cause, "Foo", 2, 1)
 	})
 
 	t.Run("enum add case", func(t *testing.T) {
@@ -1387,10 +1390,7 @@ func TestContractUpdateValidation(t *testing.T) {
 			}`
 
 		err := deployAndUpdate("Test30", oldCode, newCode)
-		require.Error(t, err)
-
-		cause := getErrorCause(t, err, "Test30")
-		assertExtraneousFieldError(t, cause, "Foo", "left")
+		require.NoError(t, err)
 	})
 
 	t.Run("enum swap cases", func(t *testing.T) {
@@ -1517,6 +1517,22 @@ func assertEnumCaseMismatchError(t *testing.T, err error, expectedEnumCase strin
 			foundEnumCase,
 		),
 		enumMismatchError.Error(),
+	)
+}
+
+func assertMissingEnumCasesError(t *testing.T, err error, declName string, expectedCaes int, foundCases int) {
+	require.Error(t, err)
+	require.IsType(t, &MissingEnumCasesError{}, err)
+	extraFieldError := err.(*MissingEnumCasesError)
+	assert.Equal(
+		t,
+		fmt.Sprintf(
+			"missing enum cases in `%s`: expected %d or more, found %d",
+			declName,
+			expectedCaes,
+			foundCases,
+		),
+		extraFieldError.Error(),
 	)
 }
 
