@@ -398,7 +398,7 @@ type MissingEnumCasesError struct {
 
 func (e *MissingEnumCasesError) Error() string {
 	return fmt.Sprintf(
-		"missing enum cases in `%s`: expected %d or more, found %d",
+		"missing cases in enum `%s`: expected %d or more, found %d",
 		e.declName,
 		e.expected,
 		e.found,
