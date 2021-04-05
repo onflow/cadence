@@ -662,21 +662,21 @@ func (interpreter *Interpreter) VisitPathExpression(expression *ast.PathExpressi
 	}
 }
 
-func (interpreter *Interpreter) visitPotentialStorageRemoval(expression ast.Expression) Value {
-	movingStorageIndexExpression := interpreter.movingStorageIndexExpression(expression)
-	if movingStorageIndexExpression == nil {
+func (interpreter *Interpreter) evalPotentialResourceMoveIndexExpression(expression ast.Expression) Value {
+	resourceMoveIndexExpression := interpreter.resourceMoveIndexExpression(expression)
+	if resourceMoveIndexExpression == nil {
 		return interpreter.evalExpression(expression)
 	}
 
-	getterSetter := interpreter.indexExpressionGetterSetter(movingStorageIndexExpression)
+	getterSetter := interpreter.indexExpressionGetterSetter(resourceMoveIndexExpression)
 	value := getterSetter.get()
 	getterSetter.set(NilValue{})
 	return value
 }
 
-func (interpreter *Interpreter) movingStorageIndexExpression(expression ast.Expression) *ast.IndexExpression {
+func (interpreter *Interpreter) resourceMoveIndexExpression(expression ast.Expression) *ast.IndexExpression {
 	indexExpression, ok := expression.(*ast.IndexExpression)
-	if !ok || !interpreter.Program.Elaboration.IsResourceMovingStorageIndexExpression[indexExpression] {
+	if !ok || !interpreter.Program.Elaboration.IsResourceMoveIndexExpression[indexExpression] {
 		return nil
 	}
 
