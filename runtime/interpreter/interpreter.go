@@ -2944,6 +2944,7 @@ func (interpreter *Interpreter) reportFunctionInvocation(pos ast.HasPosition) {
 }
 
 // getMember gets the member value by the given identifier from the given Value depending on its type.
+// May return nil if the member does not exist.
 func (interpreter *Interpreter) getMember(self Value, getLocationRange func() LocationRange, identifier string) Value {
 	var result Value
 	// When the accessed value has a type that supports the declaration of members
@@ -2962,6 +2963,10 @@ func (interpreter *Interpreter) getMember(self Value, getLocationRange func() Lo
 			return interpreter.getTypeFunction(self)
 		}
 	}
+
+	// NOTE: do not panic if the member is nil. This is a valid state.
+	// For example, when a composite field is initialized with a force-assignment, the field's value is read.
+
 	return result
 }
 

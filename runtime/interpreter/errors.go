@@ -380,3 +380,14 @@ func (e EncodingUnsupportedValueError) Error() string {
 		e.Value,
 	)
 }
+
+// MissingMemberValueError
+
+type MissingMemberValueError struct {
+	Name string
+	LocationRange
+}
+
+func (e MissingMemberValueError) Error() string {
+	return fmt.Sprintf("missing value for member `%s`", e.Name)
+}

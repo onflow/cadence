@@ -8508,3 +8508,75 @@ func BenchmarkInterpretRecursionFib(b *testing.B) {
 		require.Equal(b, expected, result)
 	}
 }
+
+func TestInterpretMissingMember(t *testing.T) {
+
+	// prepare type `struct X { let y: Int }`
+
+	const typeName = "X"
+	ty := &sema.CompositeType{
+		Location:   TestLocation,
+		Identifier: typeName,
+	}
+
+	members := sema.NewStringMemberOrderedMap()
+	ty.Members = members
+
+	const fieldName = "y"
+	fieldMember := sema.NewPublicConstantFieldMember(
+		ty,
+		fieldName,
+		&sema.IntType{},
+		"",
+	)
+	members.Set(fieldName, fieldMember)
+
+	// prepare value of type X,
+	// which is missing field `y`!
+
+	value := interpreter.NewCompositeValue(
+		TestLocation,
+		typeName,
+		common.CompositeKindStructure,
+		interpreter.NewStringValueOrderedMap(),
+		nil,
+	)
+
+	predeclaredValues :=
+		stdlib.StandardLibraryValues{
+			{
+				Name:  "x",
+				Type:  ty,
+				Value: value,
+				Kind:  common.DeclarationKindStructure,
+			},
+		}
+
+	valueDeclarations := predeclaredValues.ToSemaValueDeclarations()
+	values := predeclaredValues.ToInterpreterValueDeclarations()
+
+	inter := parseCheckAndInterpretWithOptions(t,
+		`
+          fun test() {
+              // access missing field y
+              x.y
+          }
+        `,
+		ParseCheckAndInterpretOptions{
+			CheckerOptions: []sema.Option{
+				sema.WithPredeclaredValues(valueDeclarations),
+			},
+			Options: []interpreter.Option{
+				interpreter.WithPredeclaredValues(values),
+			},
+		},
+	)
+
+	_, err := inter.Invoke("test")
+	require.Error(t, err)
+
+	var missingMemberError interpreter.MissingMemberValueError
+	require.ErrorAs(t, err, &missingMemberError)
+
+	require.Equal(t, "y", missingMemberError.Name)
+}
