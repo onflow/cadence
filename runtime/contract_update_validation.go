@@ -193,6 +193,7 @@ func (validator *ContractUpdateValidator) checkNestedDeclarations(
 		return nil, false
 	}
 
+	// Check nested structs, enums, etc.
 	newNestedCompositeDecls := newDeclaration.DeclarationMembers().Composites()
 	for _, newNestedDecl := range newNestedCompositeDecls {
 		oldNestedDecl, found := getOldCompositeOrInterfaceDecl(newNestedDecl.Identifier.Identifier)
@@ -204,6 +205,7 @@ func (validator *ContractUpdateValidator) checkNestedDeclarations(
 		validator.checkDeclarationUpdatability(oldNestedDecl, newNestedDecl)
 	}
 
+	// Check nested interfaces.
 	newNestedInterfaces := newDeclaration.DeclarationMembers().Interfaces()
 	for _, newNestedDecl := range newNestedInterfaces {
 		oldNestedDecl, found := getOldCompositeOrInterfaceDecl(newNestedDecl.Identifier.Identifier)
@@ -213,6 +215,43 @@ func (validator *ContractUpdateValidator) checkNestedDeclarations(
 		}
 
 		validator.checkDeclarationUpdatability(oldNestedDecl, newNestedDecl)
+	}
+
+	// Check enum-cases, if theres any.
+	validator.checkEnumCases(oldDeclaration, newDeclaration)
+}
+
+// checkEnumCases validates updating enum cases. Updated enum must:
+//   - Have at-most the same number of enum-cases as the old enum (Removing is allowed, but no additions).
+//   - Preserve the order of the old enum-cases (Removals from middle is not allowed, swapping is not allowed).
+func (validator *ContractUpdateValidator) checkEnumCases(oldDeclaration ast.Declaration, newDeclaration ast.Declaration) {
+	newEnumCases := newDeclaration.DeclarationMembers().EnumCases()
+	oldEnumCases := oldDeclaration.DeclarationMembers().EnumCases()
+
+	oldEnumCaseCount := len(oldEnumCases)
+
+	// Validate the the new enum cases.
+	for index, newEnumCase := range newEnumCases {
+		// If there are no more old enum-cases, then these are newly added enum-cases.
+		// Thus report an error.
+		if index >= oldEnumCaseCount {
+			validator.report(&ExtraneousFieldError{
+				declName:  newDeclaration.DeclarationIdentifier().Identifier,
+				fieldName: newEnumCase.Identifier.Identifier,
+				Range:     ast.NewRangeFromPositioned(newEnumCase),
+			})
+
+			continue
+		}
+
+		oldEnumCase := oldEnumCases[index]
+		if oldEnumCase.Identifier.Identifier != newEnumCase.Identifier.Identifier {
+			validator.report(&EnumCaseMismatchError{
+				expectedName: oldEnumCase.Identifier.Identifier,
+				foundName:    newEnumCase.Identifier.Identifier,
+				Range:        ast.NewRangeFromPositioned(newEnumCase),
+			})
+		}
 	}
 }
 

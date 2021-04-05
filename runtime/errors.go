@@ -306,8 +306,8 @@ func (e *TypeMismatchError) Error() string {
 	)
 }
 
-// ExtraneousFieldError is reported during a contract update, when the new contract
-// has more fields than the existing contract.
+// ExtraneousFieldError is reported during a contract update, when an updated composite
+// declaration has more fields than the existing declaration.
 type ExtraneousFieldError struct {
 	declName  string
 	fieldName string
@@ -370,4 +370,19 @@ type ConformanceCountMismatchError struct {
 
 func (e *ConformanceCountMismatchError) Error() string {
 	return fmt.Sprintf("conformances count does not match: expected %d, found %d", e.expected, e.found)
+}
+
+// EnumCaseMismatchError is reported during an enum update, when an updated enum case
+// does not match the existing enum case.
+type EnumCaseMismatchError struct {
+	expectedName string
+	foundName    string
+	ast.Range
+}
+
+func (e *EnumCaseMismatchError) Error() string {
+	return fmt.Sprintf("mismatching enum case: expected `%s`, found `%s`",
+		e.expectedName,
+		e.foundName,
+	)
 }
