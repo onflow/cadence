@@ -386,9 +386,13 @@ func (interpreter *Interpreter) VisitMemberExpression(expression *ast.MemberExpr
 	}
 
 	getLocationRange := locationRangeGetter(interpreter.Location, expression)
-	resultValue := interpreter.getMember(result, getLocationRange, expression.Identifier.Identifier)
+	identifier := expression.Identifier.Identifier
+	resultValue := interpreter.getMember(result, getLocationRange, identifier)
 	if resultValue == nil {
-		panic(errors.NewUnreachableError())
+		panic(MissingMemberValueError{
+			Name:          identifier,
+			LocationRange: getLocationRange(),
+		})
 	}
 
 	// If the member access is optional chaining, only wrap the result value
@@ -659,9 +663,6 @@ func (interpreter *Interpreter) visitPotentialStorageRemoval(expression ast.Expr
 
 	getterSetter := interpreter.indexExpressionGetterSetter(movingStorageIndexExpression)
 	value := getterSetter.get()
-	if value == nil {
-		panic(errors.NewUnreachableError())
-	}
 	getterSetter.set(NilValue{})
 	return value
 }
