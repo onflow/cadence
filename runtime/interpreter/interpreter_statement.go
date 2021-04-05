@@ -287,7 +287,10 @@ func (interpreter *Interpreter) VisitVariableDeclaration(declaration *ast.Variab
 	valueType := interpreter.Program.Elaboration.VariableDeclarationValueTypes[declaration]
 	secondValueType := interpreter.Program.Elaboration.VariableDeclarationSecondValueTypes[declaration]
 
-	result := interpreter.visitPotentialStorageRemoval(declaration.Value)
+	result := interpreter.evalPotentialResourceMoveIndexExpression(declaration.Value)
+	if result == nil {
+		panic(errors.NewUnreachableError())
+	}
 
 	getLocationRange := locationRangeGetter(interpreter.Location, declaration.Value)
 
@@ -339,20 +342,16 @@ func (interpreter *Interpreter) VisitSwapStatement(swap *ast.SwapStatement) ast.
 	// Evaluate the left expression
 	leftGetterSetter := interpreter.assignmentGetterSetter(swap.Left)
 	leftValue := leftGetterSetter.get()
-	if leftValue == nil {
-		panic(errors.NewUnreachableError())
-	}
-	if interpreter.movingStorageIndexExpression(swap.Left) != nil {
+	interpreter.checkSwapValue(leftValue, swap.Left)
+	if interpreter.resourceMoveIndexExpression(swap.Left) != nil {
 		leftGetterSetter.set(NilValue{})
 	}
 
 	// Evaluate the right expression
 	rightGetterSetter := interpreter.assignmentGetterSetter(swap.Right)
 	rightValue := rightGetterSetter.get()
-	if rightValue == nil {
-		panic(errors.NewUnreachableError())
-	}
-	if interpreter.movingStorageIndexExpression(swap.Right) != nil {
+	interpreter.checkSwapValue(rightValue, swap.Right)
+	if interpreter.resourceMoveIndexExpression(swap.Right) != nil {
 		rightGetterSetter.set(NilValue{})
 	}
 
@@ -369,6 +368,21 @@ func (interpreter *Interpreter) VisitSwapStatement(swap *ast.SwapStatement) ast.
 	rightGetterSetter.set(leftValueCopy)
 
 	return nil
+}
+
+func (interpreter *Interpreter) checkSwapValue(value Value, expression ast.Expression) {
+	if value != nil {
+		return
+	}
+
+	if expression, ok := expression.(*ast.MemberExpression); ok {
+		panic(MissingMemberValueError{
+			Name:          expression.Identifier.Identifier,
+			LocationRange: locationRangeGetter(interpreter.Location, expression)(),
+		})
+	}
+
+	panic(errors.NewUnreachableError())
 }
 
 func (interpreter *Interpreter) VisitExpressionStatement(statement *ast.ExpressionStatement) ast.Repr {
