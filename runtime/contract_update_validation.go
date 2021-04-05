@@ -222,25 +222,33 @@ func (validator *ContractUpdateValidator) checkNestedDeclarations(
 }
 
 // checkEnumCases validates updating enum cases. Updated enum must:
-//   - Have at-most the same number of enum-cases as the old enum (Removing is allowed, but no additions).
-//   - Preserve the order of the old enum-cases (Removals from middle is not allowed, swapping is not allowed).
+//   - Have at-least the same number of enum-cases as the old enum (Adding is allowed, but no removals).
+//   - Preserve the order of the old enum-cases (Adding to top/middle is not allowed, swapping is not allowed).
 func (validator *ContractUpdateValidator) checkEnumCases(oldDeclaration ast.Declaration, newDeclaration ast.Declaration) {
 	newEnumCases := newDeclaration.DeclarationMembers().EnumCases()
 	oldEnumCases := oldDeclaration.DeclarationMembers().EnumCases()
 
+	newEnumCaseCount := len(newEnumCases)
 	oldEnumCaseCount := len(oldEnumCases)
+
+	if newEnumCaseCount < oldEnumCaseCount {
+		validator.report(&MissingEnumCasesError{
+			declName: newDeclaration.DeclarationIdentifier().Identifier,
+			expected: oldEnumCaseCount,
+			found:    newEnumCaseCount,
+			Range:    ast.NewRangeFromPositioned(newDeclaration.DeclarationIdentifier()),
+		})
+
+		// If some enum cases are removed, trying to match each enum case
+		// may result in too many regression errors. hence return.
+		return
+	}
 
 	// Validate the the new enum cases.
 	for index, newEnumCase := range newEnumCases {
-		// If there are no more old enum-cases, then these are newly added enum-cases.
-		// Thus report an error.
+		// If there are no more old enum-cases, then these are newly added enum-cases,
+		// which should be fine.
 		if index >= oldEnumCaseCount {
-			validator.report(&ExtraneousFieldError{
-				declName:  newDeclaration.DeclarationIdentifier().Identifier,
-				fieldName: newEnumCase.Identifier.Identifier,
-				Range:     ast.NewRangeFromPositioned(newEnumCase),
-			})
-
 			continue
 		}
 
