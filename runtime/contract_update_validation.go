@@ -107,9 +107,9 @@ func (validator *ContractUpdateValidator) checkDeclarationUpdatability(
 	//      - 'structs' and 'enums'
 	if oldDeclaration.DeclarationKind() != newDeclaration.DeclarationKind() {
 		validator.report(&InvalidDeclarationKindChangeError{
-			name:    oldDeclaration.DeclarationIdentifier().Identifier,
-			oldKind: oldDeclaration.DeclarationKind(),
-			newKind: newDeclaration.DeclarationKind(),
+			Name:    oldDeclaration.DeclarationIdentifier().Identifier,
+			OldKind: oldDeclaration.DeclarationKind(),
+			NewKind: newDeclaration.DeclarationKind(),
 			Range:   ast.NewRangeFromPositioned(newDeclaration.DeclarationIdentifier()),
 		})
 
@@ -147,8 +147,8 @@ func (validator *ContractUpdateValidator) checkFields(oldDeclaration ast.Declara
 		oldField := oldFields[newField.Identifier.Identifier]
 		if oldField == nil {
 			validator.report(&ExtraneousFieldError{
-				declName:  newDeclaration.DeclarationIdentifier().Identifier,
-				fieldName: newField.Identifier.Identifier,
+				DeclName:  newDeclaration.DeclarationIdentifier().Identifier,
+				FieldName: newField.Identifier.Identifier,
 				Range:     ast.NewRangeFromPositioned(newField.Identifier),
 			})
 
@@ -163,9 +163,9 @@ func (validator *ContractUpdateValidator) checkField(oldField *ast.FieldDeclarat
 	err := oldField.TypeAnnotation.Type.CheckEqual(newField.TypeAnnotation.Type, validator)
 	if err != nil {
 		validator.report(&FieldMismatchError{
-			declName:  validator.currentDecl.DeclarationIdentifier().Identifier,
-			fieldName: newField.Identifier.Identifier,
-			err:       err,
+			DeclName:  validator.currentDecl.DeclarationIdentifier().Identifier,
+			FieldName: newField.Identifier.Identifier,
+			Err:       err,
 			Range:     ast.NewRangeFromPositioned(newField.TypeAnnotation),
 		})
 	}
@@ -233,9 +233,9 @@ func (validator *ContractUpdateValidator) checkEnumCases(oldDeclaration ast.Decl
 
 	if newEnumCaseCount < oldEnumCaseCount {
 		validator.report(&MissingEnumCasesError{
-			declName: newDeclaration.DeclarationIdentifier().Identifier,
-			expected: oldEnumCaseCount,
-			found:    newEnumCaseCount,
+			DeclName: newDeclaration.DeclarationIdentifier().Identifier,
+			Expected: oldEnumCaseCount,
+			Found:    newEnumCaseCount,
 			Range:    ast.NewRangeFromPositioned(newDeclaration.DeclarationIdentifier()),
 		})
 
@@ -244,7 +244,7 @@ func (validator *ContractUpdateValidator) checkEnumCases(oldDeclaration ast.Decl
 		return
 	}
 
-	// Validate the the new enum cases.
+	// Check whether the enum cases matches the old enum cases.
 	for index, newEnumCase := range newEnumCases {
 		// If there are no more old enum-cases, then these are newly added enum-cases,
 		// which should be fine.
@@ -255,8 +255,8 @@ func (validator *ContractUpdateValidator) checkEnumCases(oldDeclaration ast.Decl
 		oldEnumCase := oldEnumCases[index]
 		if oldEnumCase.Identifier.Identifier != newEnumCase.Identifier.Identifier {
 			validator.report(&EnumCaseMismatchError{
-				expectedName: oldEnumCase.Identifier.Identifier,
-				foundName:    newEnumCase.Identifier.Identifier,
+				ExpectedName: oldEnumCase.Identifier.Identifier,
+				FoundName:    newEnumCase.Identifier.Identifier,
 				Range:        ast.NewRangeFromPositioned(newEnumCase),
 			})
 		}
@@ -470,8 +470,8 @@ func (validator *ContractUpdateValidator) checkConformances(
 
 	if len(oldConformances) != len(newConformances) {
 		validator.report(&ConformanceCountMismatchError{
-			expected: len(oldConformances),
-			found:    len(newConformances),
+			Expected: len(oldConformances),
+			Found:    len(newConformances),
 			Range:    ast.NewRangeFromPositioned(newDecl.Identifier),
 		})
 
@@ -485,8 +485,8 @@ func (validator *ContractUpdateValidator) checkConformances(
 		err := oldConformance.CheckEqual(newConformance, validator)
 		if err != nil {
 			validator.report(&ConformanceMismatchError{
-				declName: newDecl.Identifier.Identifier,
-				err:      err,
+				DeclName: newDecl.Identifier.Identifier,
+				Err:      err,
 				Range:    ast.NewRangeFromPositioned(newConformance),
 			})
 		}
@@ -502,16 +502,16 @@ func (validator *ContractUpdateValidator) report(err error) {
 
 func (validator *ContractUpdateValidator) getContractUpdateError() error {
 	return &ContractUpdateError{
-		contractName: validator.contractName,
-		errors:       validator.errors,
-		location:     validator.location,
+		ContractName: validator.contractName,
+		Errors:       validator.errors,
+		Location:     validator.location,
 	}
 }
 
 func getTypeMismatchError(expectedType ast.Type, foundType ast.Type) *TypeMismatchError {
 	return &TypeMismatchError{
-		expectedType: expectedType,
-		foundType:    foundType,
+		ExpectedType: expectedType,
+		FoundType:    foundType,
 		Range:        ast.NewRangeFromPositioned(foundType),
 	}
 }
