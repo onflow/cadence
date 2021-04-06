@@ -29,11 +29,12 @@ import (
 	"github.com/onflow/flow-cli/pkg/flowcli/services"
 )
 
-type EmulatorState byte
+type EmulatorState int
 
 const (
 	EmulatorOffline EmulatorState = iota
 	EmulatorStarting
+	EmulatorStarted
 )
 
 type FlowIntegration struct {
