@@ -23,7 +23,6 @@ import (
 	"fmt"
 	"io"
 	"math/big"
-	"sort"
 	"strconv"
 	"strings"
 
@@ -808,25 +807,12 @@ func (e *Encoder) prepareCompositeValue(
 	interface{},
 	error,
 ) {
-	fieldPairs := v.Fields.pairs
-	fieldLen := len(fieldPairs)
+	fields := make(cborArray, v.Fields.Len()*2)
 
-	// Sort field names lexicographically.
-	fieldNames := make([]string, fieldLen)
-
-	index := 0
-	for name := range fieldPairs {
-		fieldNames[index] = name
-		index++
-	}
-
-	sort.Strings(fieldNames)
-
-	// Create fields (key and value) array, sorted by field name.
-	fields := make(cborArray, fieldLen*2)
-
-	for i, fieldName := range fieldNames {
-		value := fieldPairs[fieldName].Value
+	i := 0
+	for pair := v.Fields.Oldest(); pair != nil; pair = pair.Next() {
+		fieldName := pair.Key
+		value := pair.Value
 
 		valuePath := append(path[:], fieldName)
 
@@ -835,7 +821,8 @@ func (e *Encoder) prepareCompositeValue(
 			return nil, err
 		}
 
-		fields[i*2], fields[i*2+1] = fieldName, prepared
+		fields[i], fields[i+1] = fieldName, prepared
+		i += 2
 	}
 
 	location, err := e.prepareLocation(v.Location)

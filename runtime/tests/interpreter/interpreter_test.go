@@ -7918,11 +7918,11 @@ func TestInterpretForce(t *testing.T) {
 	})
 }
 
-func permutations(xs []string) (res [][]string) {
-	var f func([]string, int)
-	f = func(a []string, k int) {
+func permutations(xs [][]byte) (res [][][]byte) {
+	var f func([][]byte, int)
+	f = func(a [][]byte, k int) {
 		if k == len(a) {
-			res = append(res, append([]string{}, a...))
+			res = append(res, append([][]byte{}, a...))
 		} else {
 			for i := k; i < len(xs); i++ {
 				a[k], a[i] = a[i], a[k]
@@ -7941,43 +7941,92 @@ func TestInterpretCompositeValueFieldEncodingOrder(t *testing.T) {
 
 	t.Parallel()
 
-	fieldValues := map[string]int{
-		"a": 1,
-		"b": 2,
-		"c": 3,
+	fieldValues := map[byte]byte{
+		'a': 1,
+		'b': 2,
+		'c': 3,
 	}
 
-	initializations := make([]string, 0, len(fieldValues))
+	// prepare initialization statements
+
+	initializations := make([][]byte, 0, len(fieldValues))
+	expectedEncodings := make([][]byte, 0, len(fieldValues))
 
 	for name, value := range fieldValues {
-		initialization := fmt.Sprintf("self.%s = %d", name, value)
-		initializations = append(initializations, initialization)
+		initialization := fmt.Sprintf("self.%c = %d", name, value)
+		initializations = append(initializations, []byte(initialization))
+
+		expectedEncodings = append(expectedEncodings, []byte{
+			// UTF-8 string, length 1
+			0x61,
+			name,
+			// tag
+			0xD8, 0x98,
+			// - positive bignum
+			0xc2,
+			// - byte string, length 1
+			0x41,
+			value,
+		})
 	}
 
 	allInitializations := permutations(initializations)
+	allExpectedEncodings := permutations(expectedEncodings)
 
-	encodings := make([][]byte, len(allInitializations))
+	expectedPrefix := []byte{
+		// tag
+		0xd8, 0x84,
+		// array, 5 items follow
+		0x85,
+
+		// tag
+		0xd8, 0xc1,
+		// UTF-8 string, length 4
+		0x64,
+		// t, e, s, t
+		0x74, 0x65, 0x73, 0x74,
+
+		// nil
+		0xf6,
+
+		// positive integer 1
+		0x1,
+
+		// array, 6 items follow
+		0x86,
+	}
+
+	expectedSuffix := []byte{
+		// UTF-8 string, length 4
+		0x64,
+		0x54, 0x65, 0x73, 0x74,
+	}
 
 	for i, initialization := range allInitializations {
 
-		inter := parseCheckAndInterpret(t,
-			fmt.Sprintf(
-				`
-                  struct Test {
-                      let a: Int
-                      let b: Int
-                      let c: Int
+		var codeBuilder strings.Builder
+		codeBuilder.WriteString(`
+          struct Test {
+              let a: Int
+              let b: Int
+              let c: Int
 
-                      init() {
-                          %s
-                      }
-                  }
+              init() {
+        `)
 
-                  let test = Test()
-                `,
-				strings.Join(initialization, "\n"),
-			),
-		)
+		for _, statement := range initialization {
+			codeBuilder.Write(statement)
+			codeBuilder.WriteRune('\n')
+		}
+
+		codeBuilder.WriteString(`
+              }
+          }
+
+          let test = Test()
+        `)
+
+		inter := parseCheckAndInterpret(t, codeBuilder.String())
 
 		test := inter.Globals["test"].GetValue().(*interpreter.CompositeValue)
 
@@ -7988,13 +8037,15 @@ func TestInterpretCompositeValueFieldEncodingOrder(t *testing.T) {
 		encoded, _, err := interpreter.EncodeValue(test, nil, false, nil)
 		require.NoError(t, err)
 
-		encodings[i] = encoded
-	}
+		expected := expectedPrefix[:]
 
-	expected := encodings[0]
+		for _, expectedEncoding := range allExpectedEncodings[i] {
+			expected = append(expected, expectedEncoding...)
+		}
 
-	for _, actual := range encodings[1:] {
-		require.Equal(t, expected, actual)
+		expected = append(expected, expectedSuffix...)
+
+		assert.Equal(t, expected, encoded)
 	}
 }
 
@@ -8008,29 +8059,34 @@ func TestInterpretDictionaryValueEncodingOrder(t *testing.T) {
 		"c": 3,
 	}
 
-	initializations := make([]string, 0, len(fieldValues))
+	initializations := make([][]byte, 0, len(fieldValues))
 
 	for name, value := range fieldValues {
 		initialization := fmt.Sprintf(`xs["%s"] = %d`, name, value)
-		initializations = append(initializations, initialization)
+		initializations = append(initializations, []byte(initialization))
 	}
 
 	for _, initialization := range permutations(initializations) {
 
-		inter := parseCheckAndInterpret(t,
-			fmt.Sprintf(
-				`
-                  fun construct(): {String: Int} {
-                      let xs: {String: Int} = {}
-                      %s
-                      return xs
-                  }
+		var codeBuilder strings.Builder
+		codeBuilder.WriteString(`
+          fun construct(): {String: Int} {
+              let xs: {String: Int} = {}
+        `)
 
-                  let test = construct()
-                `,
-				strings.Join(initialization, "\n"),
-			),
-		)
+		for _, statement := range initialization {
+			codeBuilder.Write(statement)
+			codeBuilder.WriteRune('\n')
+		}
+
+		codeBuilder.WriteString(`
+              return xs
+          }
+
+          let test = construct()
+        `)
+
+		inter := parseCheckAndInterpret(t, codeBuilder.String())
 
 		test := inter.Globals["test"].GetValue().(*interpreter.DictionaryValue)
 
