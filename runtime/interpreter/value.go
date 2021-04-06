@@ -7070,6 +7070,7 @@ func (v CapabilityValue) GetMember(inter *Interpreter, _ func() LocationRange, n
 		}
 		return inter.capabilityCheckFunction(v.Address, v.Path, borrowType)
 
+
 	case "address":
 		return v.Address
 	}
