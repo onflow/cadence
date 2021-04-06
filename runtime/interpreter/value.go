@@ -6993,7 +6993,8 @@ func (v CapabilityValue) GetMember(inter *Interpreter, _ func() LocationRange, n
 			borrowType = inter.ConvertStaticToSemaType(v.BorrowType).(*sema.ReferenceType)
 		}
 		return inter.capabilityCheckFunction(v.Address, v.Path, borrowType)
-
+	case "address":
+		return v.Address
 	}
 
 	return nil

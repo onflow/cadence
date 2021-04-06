@@ -35,19 +35,9 @@ func (checker *Checker) VisitForStatement(statement *ast.ForStatement) ast.Repr 
 
 	if !valueType.IsInvalidType() {
 
-		// Only get the element type if the array is not a resource array.
-		// Otherwise, in addition to the `UnsupportedResourceForLoopError`,
-		// the loop variable will be declared with the resource-typed element type,
-		// leading to an additional `ResourceLossError`.
-
-		if valueType.IsResourceType() {
-			checker.report(
-				&UnsupportedResourceForLoopError{
-					Range: ast.NewRangeFromPositioned(valueExpression),
-				},
-			)
-		} else if arrayType, ok := valueType.(ArrayType); ok {
+		if arrayType, ok := valueType.(ArrayType); ok {
 			elementType = arrayType.ElementType(false)
+			checker.checkUnusedExpressionResourceLoss(elementType, valueExpression)
 		} else {
 			checker.report(
 				&TypeMismatchWithDescriptionError{
