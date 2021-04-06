@@ -404,3 +404,17 @@ func (e *MissingEnumCasesError) Error() string {
 		e.Found,
 	)
 }
+
+// MissingCompositeDeclarationError is reported during an contract update, if an existing
+// composite declaration (struct or struct interface) is removed.
+type MissingCompositeDeclarationError struct {
+	DeclName string
+	ast.Range
+}
+
+func (e *MissingCompositeDeclarationError) Error() string {
+	return fmt.Sprintf(
+		"missing composite declaration `%s`",
+		e.DeclName,
+	)
+}
