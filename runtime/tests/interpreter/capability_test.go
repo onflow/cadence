@@ -685,18 +685,24 @@ func TestInterpretCapability_address(t *testing.T) {
 		)
 
 		t.Run("single", func(t *testing.T) {
-			_, err := inter.Invoke("single")
+			value, err := inter.Invoke("single")
 			require.NoError(t, err)
+
+			require.IsType(t, interpreter.AddressValue{}, value)
 		})
 
 		t.Run("double", func(t *testing.T) {
-			_, err := inter.Invoke("double")
+			value, err := inter.Invoke("double")
 			require.NoError(t, err)
+
+			require.IsType(t, interpreter.AddressValue{}, value)
 		})
 
 		t.Run("nonExistent", func(t *testing.T) {
-			_, err := inter.Invoke("nonExistent")
+			value, err := inter.Invoke("nonExistent")
 			require.NoError(t, err)
+
+			require.IsType(t, interpreter.AddressValue{}, value)
 		})
 	})
 }
