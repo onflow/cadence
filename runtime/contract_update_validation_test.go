@@ -1471,11 +1471,11 @@ func assertFieldTypeMismatchError(
 		fieldMismatchError.Error(),
 	)
 
-	assert.IsType(t, &TypeMismatchError{}, fieldMismatchError.err)
+	assert.IsType(t, &TypeMismatchError{}, fieldMismatchError.Err)
 	assert.Equal(
 		t,
 		fmt.Sprintf("incompatible type annotations. expected `%s`, found `%s`", expectedType, foundType),
-		fieldMismatchError.err.Error(),
+		fieldMismatchError.Err.Error(),
 	)
 }
 
@@ -1496,11 +1496,11 @@ func assertConformanceMismatchError(
 		conformanceMismatchError.Error(),
 	)
 
-	assert.IsType(t, &TypeMismatchError{}, conformanceMismatchError.err)
+	assert.IsType(t, &TypeMismatchError{}, conformanceMismatchError.Err)
 	assert.Equal(
 		t,
 		fmt.Sprintf("incompatible type annotations. expected `%s`, found `%s`", expectedType, foundType),
-		conformanceMismatchError.err.Error(),
+		conformanceMismatchError.Err.Error(),
 	)
 }
 
@@ -1520,7 +1520,7 @@ func assertEnumCaseMismatchError(t *testing.T, err error, expectedEnumCase strin
 	)
 }
 
-func assertMissingEnumCasesError(t *testing.T, err error, declName string, expectedCaes int, foundCases int) {
+func assertMissingEnumCasesError(t *testing.T, err error, declName string, expectedCases int, foundCases int) {
 	require.Error(t, err)
 	require.IsType(t, &MissingEnumCasesError{}, err)
 	extraFieldError := err.(*MissingEnumCasesError)
@@ -1529,7 +1529,7 @@ func assertMissingEnumCasesError(t *testing.T, err error, declName string, expec
 		fmt.Sprintf(
 			"missing cases in enum `%s`: expected %d or more, found %d",
 			declName,
-			expectedCaes,
+			expectedCases,
 			foundCases,
 		),
 		extraFieldError.Error(),
