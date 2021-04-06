@@ -27,7 +27,6 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"net/url"
-	"path/filepath"
 	"strings"
 
 	"github.com/onflow/flow-go-sdk"
@@ -50,6 +49,13 @@ const (
 	CommandInitAccountManager    = "cadence.server.flow.initAccountManager"
 
 	ClientStartEmulator = "cadence.runEmulator"
+
+	ErrorMessageServiceAccount =			"service account error"
+	ErrorMessageTransactionError =			"transaction error"
+	ErrorMessageServiceAccountKey = 		"service account private key error"
+	ErrorMessageAccountCreate = 			"create account error"
+	ErrorMessageAccountStore = 				"store account error"
+	ErrorMessagePrivateKeyDecoder = 		"private key decoder error"
 )
 
 func (i *FlowIntegration) commands() []server.Command {
@@ -97,80 +103,6 @@ type ClientAccount struct {
 	Address flow.Address `json:"address"`
 }
 
-// Cadence Templates
-const deployContractTemplate = `
-transaction(name: String, code: [UInt8]) {
-  prepare(signer: AuthAccount) {
-    if signer.contracts.get(name: name) == nil {
-      signer.contracts.add(name: name, code: code)
-    } else {
-      signer.contracts.update__experimental(name: name, code: code)
-    }
-  }
-}
-`
-
-const contractAccountManager = `
-pub contract AccountManager{
-    pub event AliasAdded(_ name: String, _ address: Address)
-
-    pub let accountsByName: {String: Address}
-    pub let accountsByAddress: {Address: String}
-    pub let names: [String]
-    
-    init(){
-        self.accountsByName = {}
-		self.accountsByAddress = {}
-        self.names = [
-            "Alice", "Bob", "Charlie",
-            "Dave", "Eve", "Faythe",
-            "Grace", "Heidi", "Ivan",
-            "Judy", "Michael", "Niaj",
-            "Olivia", "Oscar", "Peggy",
-            "Rupert", "Sybil", "Ted",
-            "Victor", "Walter"
-        ]
-    }
-
-    pub fun addAccount(_ address: Address){
-        let name = self.names[self.accountsByName.keys.length]
-        self.accountsByName[name] = address
-        self.accountsByAddress[address] = name
-        emit AliasAdded(name, address)
-    }
-
-    pub fun getAddress(_ name: String): Address?{
-        return self.accountsByName[name]
-    }
-
-    pub fun getName(_ address: Address): String?{
-        return self.accountsByAddress[address]
-    }
-
-    pub fun getAccounts():[String]{
-        let accounts: [String] = []
-        for name in self.accountsByName.keys {
-            let address = self.accountsByName[name]!
-            let account = name.concat(":")
-                            .concat(address.toString())
-            accounts.append(account)
-        }
-        return accounts
-    }
-}
-`
-
-const transactionAddAccount = `
-import AccountManager from 0xSERVICE_ACCOUNT_ADDRESS
-
-transaction(address: Address){
-  prepare(signer: AuthAccount) {
-    AccountManager.addAccount(address)
-	log("Account added to ledger")
-  }
-}
-`
-
 // makeManagerCode replaces service account placeholder with actual address and returns byte array
 //
 // There should be exactly 2 arguments:
@@ -187,11 +119,7 @@ func makeManagerCode(script string, serviceAddress string) []byte {
 func (i *FlowIntegration) initAccountManager(conn protocol.Conn, args ...interface{}) (interface{}, error) {
 	serviceAccount, err := i.project.EmulatorServiceAccount()
 	if err != nil {
-		conn.ShowMessage(&protocol.ShowMessageParams{
-			Type:    protocol.Error,
-			Message: err.Error(),
-		})
-		return nil, err
+		return nil, throwErrorWithMessage(conn, ErrorMessageServiceAccount, err)
 	}
 
 	serviceAddress := serviceAccount.Address()
@@ -199,13 +127,8 @@ func (i *FlowIntegration) initAccountManager(conn protocol.Conn, args ...interfa
 	deployTx := deployContractTransaction(serviceAddress, "AccountManager", accountManagerContract)
 
 	_, err = i.sendTransactionHelper(conn, serviceAddress, deployTx)
-
 	if err != nil {
-		conn.ShowMessage(&protocol.ShowMessageParams{
-			Type:    protocol.Error,
-			Message: err.Error(),
-		})
-		return nil, err
+		return nil, throwErrorWithMessage(conn, ErrorMessageTransactionError, err)
 	}
 
 	return nil, err
@@ -247,23 +170,13 @@ func (i *FlowIntegration) sendTransaction(conn protocol.Conn, args ...interface{
 	// Send transaction via shared library
 	privateKey, err := i.getServicePrivateKey()
 	if err != nil {
-		errorMessage := fmt.Sprintf("language server error: %#+v", err)
-		conn.ShowMessage(&protocol.ShowMessageParams{
-			Type:    protocol.Error,
-			Message: errorMessage,
-		})
-		return nil, fmt.Errorf("%s", errorMessage)
+		return nil, throwErrorWithMessage(conn, ErrorMessageServiceAccountKey, err)
 	}
 
-	_, txResult, txSendError := i.sharedServices.Transactions.SendForAddress(path.Path, signers[0], privateKey, []string{}, argsJSON)
+	_, txResult, err := i.sharedServices.Transactions.SendForAddress(path.Path, signers[0], privateKey, []string{}, argsJSON)
 
-	if txSendError != nil {
-		errorMessage := fmt.Sprintf("there was an error with your transaction: %#+v", txSendError)
-		conn.ShowMessage(&protocol.ShowMessageParams{
-			Type:    protocol.Error,
-			Message: errorMessage,
-		})
-		return nil, fmt.Errorf("%s", errorMessage)
+	if err != nil {
+		return nil, throwErrorWithMessage(conn, ErrorMessageTransactionError, err)
 	}
 
 	conn.ShowMessage(&protocol.ShowMessageParams{
@@ -317,7 +230,7 @@ func (i *FlowIntegration) executeScript(conn protocol.Conn, args ...interface{})
 }
 
 // changeEmulatorState sets current state of the emulator as reported by LSP
-// used to update codelenses with proper title
+// used to update Code Lenses with proper title
 //
 // There should be exactly 1 argument:
 // * current state of the emulator represented as byte
@@ -369,14 +282,21 @@ func (i *FlowIntegration) switchActiveAccount(_ protocol.Conn, args ...interface
 func (i *FlowIntegration) createAccount(conn protocol.Conn, args ...interface{}) (interface{}, error) {
 
 	address, err := i.createAccountHelper(conn)
+	if err != nil {
+		return nil, throwErrorWithMessage(conn, ErrorMessageAccountCreate, err)
+	}
+
 	clientAccount, err := i.storeAccountHelper(conn, address)
+	if err != nil {
+		return nil, throwErrorWithMessage(conn, ErrorMessageAccountCreate, err)
+	}
 
 	conn.ShowMessage(&protocol.ShowMessageParams{
 		Type:    protocol.Info,
 		Message: fmt.Sprintf("New account %s(0x%s) created", clientAccount.Name, address.String()),
 	})
 
-	return clientAccount, err
+	return clientAccount, nil
 }
 
 // createDefaultAccounts creates a set of default accounts and returns their addresses.
@@ -456,7 +376,7 @@ func (i *FlowIntegration) deployContract(conn protocol.Conn, args ...interface{}
 	// Send transaction via shared library
 	privateKey, err := i.getServicePrivateKey()
 	if err != nil {
-		errorMessage := fmt.Sprintf("language server error: %#+v", err)
+		errorMessage := fmt.Sprintf("Error with Servie Account private key : %#+v", err)
 		conn.ShowMessage(&protocol.ShowMessageParams{
 			Type:    protocol.Error,
 			Message: errorMessage,
@@ -466,6 +386,15 @@ func (i *FlowIntegration) deployContract(conn protocol.Conn, args ...interface{}
 
 	// TODO: add check if the contract exist on specified address
 	update, err := i.isContractDeployed(to, name)
+	if err != nil {
+		errorMessage := fmt.Sprintf("can't read contract from account %s: %#+v",to, err)
+		conn.ShowMessage(&protocol.ShowMessageParams{
+			Type:    protocol.Error,
+			Message: errorMessage,
+		})
+		return nil, fmt.Errorf("%s", errorMessage)
+	}
+
 	account, deployError := i.sharedServices.Accounts.AddContractForAddress(to, privateKey,name, path.Path, update)
 
 	if deployError != nil {
@@ -516,16 +445,6 @@ func (i *FlowIntegration) getServicePrivateKey() (string, error) {
 
 	rawKey := serviceAccount.DefaultKey().ToConfig().Context["privateKey"]
 	return rawKey,nil
-}
-
-// getServiceAddress returns address for service account
-func (i *FlowIntegration) getServiceAddress() (flow.Address, error) {
-	serviceAccount, err := i.project.EmulatorServiceAccount()
-	if err != nil {
-		return flow.Address{}, err
-	}
-
-	return serviceAccount.Address(), nil
 }
 
 // getServiceKey returns the service account key and signer
@@ -648,18 +567,22 @@ func (i *FlowIntegration) sendTransactionHelper(
 func (i *FlowIntegration) createAccountHelper(conn protocol.Conn) (address flow.Address, err error) {
 	serviceAccount, err := i.project.EmulatorServiceAccount()
 	if err != nil {
-		conn.ShowMessage(&protocol.ShowMessageParams{
-			Type:    protocol.Error,
-			Message: err.Error(),
-		})
-		return flow.Address{}, err
+		return flow.Address{}, throwErrorWithMessage(conn, ErrorMessageServiceAccount, err)
 	}
 
 	signer := serviceAccount.Name()
 
 	defaultKey := serviceAccount.DefaultKey()
-	serviceAccountPrivateKey, _ := i.getServicePrivateKey()
+	serviceAccountPrivateKey, err := i.getServicePrivateKey()
+	if err != nil{
+		return flow.Address{}, throwErrorWithMessage(conn, ErrorMessageServiceAccountKey, err)
+	}
+
 	cryptoKey, err := crypto.DecodePrivateKeyHex(defaultKey.SigAlgo(), serviceAccountPrivateKey)
+	if err != nil{
+		return flow.Address{}, throwErrorWithMessage(conn, ErrorMessagePrivateKeyDecoder, err)
+	}
+
 	keys := []string{cryptoKey.PublicKey().String()}
 
 	signatureAlgorithm := defaultKey.SigAlgo().String()
@@ -668,25 +591,18 @@ func (i *FlowIntegration) createAccountHelper(conn protocol.Conn) (address flow.
 
 	newAccount, err := i.sharedServices.Accounts.Create(signer, keys, signatureAlgorithm, hashAlgorithm, contracts)
 	if err != nil {
-		conn.ShowMessage(&protocol.ShowMessageParams{
-			Type:    protocol.Error,
-			Message: err.Error(),
-		})
-		return flow.Address{}, err
+		return flow.Address{}, throwErrorWithMessage(conn, ErrorMessageAccountCreate, err)
 	}
 
 	return newAccount.Address, nil
 }
 
+// storeAccountHelper sends transaction to store account on chain
 func (i *FlowIntegration) storeAccountHelper(conn protocol.Conn, address flow.Address) (newAccount ClientAccount, err error) {
 
 	serviceAccount, err := i.project.EmulatorServiceAccount()
 	if err != nil {
-		conn.ShowMessage(&protocol.ShowMessageParams{
-			Type:    protocol.Error,
-			Message: err.Error(),
-		})
-		return
+		return ClientAccount{}, throwErrorWithMessage(conn, ErrorMessageServiceAccount, err)
 	}
 
 	defaultKey := serviceAccount.DefaultKey()
@@ -697,14 +613,10 @@ func (i *FlowIntegration) storeAccountHelper(conn protocol.Conn, address flow.Ad
 	code := makeManagerCode(transactionAddAccount, serviceAddress)
 	accountAddress := fmt.Sprintf("Address:0x%v", address)
 	txArgs := []string{accountAddress}
-	_, txResult, err := i.sharedServices.Transactions.SendForAddressWithCode(code, serviceAddress, privateKey, txArgs, "")
 
+	_, txResult, err := i.sharedServices.Transactions.SendForAddressWithCode(code, serviceAddress, privateKey, txArgs, "")
 	if err != nil {
-		conn.ShowMessage(&protocol.ShowMessageParams{
-			Type:    protocol.Error,
-			Message: err.Error(),
-		})
-		return
+		return ClientAccount{}, throwErrorWithMessage(conn, ErrorMessageAccountStore, err)
 	}
 
 	events := flowcli.EventsFromTransaction(txResult)
@@ -719,7 +631,7 @@ func (i *FlowIntegration) storeAccountHelper(conn protocol.Conn, address flow.Ad
 }
 
 func (i *FlowIntegration) isContractDeployed(address string, name string) (bool,error) {
-	account, err := i.gateway.GetAccount(flow.HexToAddress(address))
+	account, err := i.sharedServices.Accounts.Get(address)
 
 	if err != nil {
 		return false, err
@@ -728,11 +640,11 @@ func (i *FlowIntegration) isContractDeployed(address string, name string) (bool,
 	return account.Contracts[name] != nil, nil
 }
 
-func parseFileFromURI(uri string) string {
-	u, err := url.Parse(uri)
-	if err != nil {
-		return uri
-	}
-
-	return filepath.Base(u.Path)
+func throwErrorWithMessage(conn protocol.Conn, prefix string, err error) error {
+	errorMessage := fmt.Sprintf("%s: %#+v", prefix, err)
+	conn.ShowMessage(&protocol.ShowMessageParams{
+		Type:    protocol.Error,
+		Message: errorMessage,
+	})
+	return fmt.Errorf("%s", errorMessage)
 }
