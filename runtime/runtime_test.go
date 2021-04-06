@@ -4216,11 +4216,15 @@ func TestInterpretResourceOwnerFieldUseComposite(t *testing.T) {
           prepare(signer: AuthAccount) {
               let ref1 = signer.borrow<&Test.R>(from: /storage/r)!
               log(ref1.owner?.address)
+              log(ref1.owner?.storageUsed)
+              log(ref1.owner?.storageCapacity)
               ref1.logOwnerAddress()
 
               let publicAccount = getAccount(0x01)
               let ref2 = publicAccount.getCapability(/public/r).borrow<&Test.R>()!
               log(ref2.owner?.address)
+              log(ref2.owner?.storageUsed)
+              log(ref2.owner?.storageCapacity)
               ref2.logOwnerAddress()
           }
       }
@@ -4230,11 +4234,13 @@ func TestInterpretResourceOwnerFieldUseComposite(t *testing.T) {
 	var events []cadence.Event
 	var loggedMessages []string
 
+	storage := newTestStorage(nil, nil)
+
 	runtimeInterface := &testRuntimeInterface{
 		getCode: func(location Location) (bytes []byte, err error) {
 			return accountCodes[location.ID()], nil
 		},
-		storage: newTestStorage(nil, nil),
+		storage: storage,
 		getSigningAccounts: func() ([]Address, error) {
 			return []Address{address}, nil
 		},
@@ -4260,6 +4266,19 @@ func TestInterpretResourceOwnerFieldUseComposite(t *testing.T) {
 		},
 		log: func(message string) {
 			loggedMessages = append(loggedMessages, message)
+		},
+		getStorageUsed: func(_ Address) (uint64, error) {
+			var amount uint64 = 0
+
+			for _, data := range storage.storedValues {
+				amount += uint64(len(data))
+			}
+
+			return amount, nil
+		},
+		getStorageCapacity: func(_ Address) (uint64, error) {
+			// return a dummy value
+			return 1245, nil
 		},
 	}
 
@@ -4310,8 +4329,17 @@ func TestInterpretResourceOwnerFieldUseComposite(t *testing.T) {
 
 	assert.Equal(t,
 		[]string{
-			"0x1", "0x1",
-			"0x1", "0x1",
+			"0x1",  // ref1.owner?.address
+			"120",  // ref1.owner?.storageUsed
+			"1245", // ref1.owner?.storageCapacity
+
+			"0x1",
+
+			"0x1",  // ref2.owner?.address
+			"120",  // ref2.owner?.storageUsed
+			"1245", // ref2.owner?.storageCapacity
+
+			"0x1",
 		},
 		loggedMessages,
 	)

@@ -5619,7 +5619,7 @@ func (v *CompositeValue) GetMember(interpreter *Interpreter, getLocationRange fu
 	if v.Kind == common.CompositeKindResource &&
 		name == sema.ResourceOwnerFieldName {
 
-		return v.OwnerValue()
+		return v.OwnerValue(interpreter)
 	}
 
 	value, ok := v.Fields.Get(name)
@@ -5699,31 +5699,33 @@ func (v *CompositeValue) InitializeFunctions(interpreter *Interpreter) {
 	v.Functions = interpreter.typeCodes.CompositeCodes[v.TypeID()].CompositeFunctions
 }
 
-func (v *CompositeValue) OwnerValue() OptionalValue {
+func (v *CompositeValue) OwnerValue(interpreter *Interpreter) OptionalValue {
 	if v.Owner == nil {
 		return NilValue{}
 	}
 
+	// There's no direct access to the host environment at this point.
+	// Therefore, load and invoke the `getAccount` host function.
+	getAccountValue, ok := interpreter.effectivePredeclaredValues["getAccount"]
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	getAccountHostFunc := getAccountValue.ValueDeclarationValue().(HostFunctionValue)
+
 	address := AddressValue(*v.Owner)
 
-	return NewSomeValueOwningNonCopying(
-		NewPublicAccountValue(
+	invocation := Invocation{
+		Arguments: []Value{
 			address,
-			func(interpreter *Interpreter) UInt64Value {
-				panic(errors.NewUnreachableError())
-			},
-			func() UInt64Value {
-				panic(errors.NewUnreachableError())
-			},
-			NewPublicAccountKeysValue(
-				NewHostFunctionValue(
-					func(invocation Invocation) Value {
-						panic(errors.NewUnreachableError())
-					},
-				),
-			),
-		),
-	)
+		},
+		GetLocationRange: ReturnEmptyLocationRange,
+		Interpreter:      interpreter,
+	}
+
+	ownerAccount := getAccountHostFunc.Function(invocation)
+
+	return NewSomeValueOwningNonCopying(ownerAccount)
 }
 
 func (v *CompositeValue) SetMember(_ *Interpreter, getLocationRange func() LocationRange, name string, value Value) {
