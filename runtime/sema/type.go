@@ -6528,7 +6528,7 @@ Returns true if the capability currently targets an object that satisfies the gi
 `
 
 const addressTypeCheckFunctionDocString = `
-Returns the address for a capability
+The address of the capability
 `
 
 func (t *CapabilityType) GetMembers() map[string]MemberResolver {
