@@ -19,20 +19,14 @@
 package integration
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"github.com/onflow/flow-cli/pkg/flowcli"
 	"github.com/onflow/flow-go-sdk/crypto"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 	"net/url"
 	"strings"
 
 	"github.com/onflow/flow-go-sdk"
-
-	"github.com/onflow/cadence"
-	jsoncdc "github.com/onflow/cadence/encoding/json"
 
 	"github.com/onflow/cadence/languageserver/protocol"
 	"github.com/onflow/cadence/languageserver/server"
@@ -56,6 +50,8 @@ const (
 	ErrorMessageAccountCreate = 			"create account error"
 	ErrorMessageAccountStore = 				"store account error"
 	ErrorMessagePrivateKeyDecoder = 		"private key decoder error"
+	ErrorMessageDeploy	=					"deployment error"
+	ErrorScriptExecution =					"script error"
 )
 
 func (i *FlowIntegration) commands() []server.Command {
@@ -122,13 +118,25 @@ func (i *FlowIntegration) initAccountManager(conn protocol.Conn, args ...interfa
 		return nil, throwErrorWithMessage(conn, ErrorMessageServiceAccount, err)
 	}
 
-	serviceAddress := serviceAccount.Address()
-	accountManagerContract := makeManagerCode(contractAccountManager, serviceAddress.String())
-	deployTx := deployContractTransaction(serviceAddress, "AccountManager", accountManagerContract)
+	serviceAddress := serviceAccount.Address().String()
 
-	_, err = i.sendTransactionHelper(conn, serviceAddress, deployTx)
+	privateKey, err := i.getServicePrivateKey()
 	if err != nil {
-		return nil, throwErrorWithMessage(conn, ErrorMessageTransactionError, err)
+		return nil, throwErrorWithMessage(conn, ErrorMessageServiceAccountKey,err)
+	}
+
+
+	name := "AccountManager"
+	code := []byte(contractAccountManager)
+	update, err := i.isContractDeployed(serviceAddress, name)
+	if err != nil {
+		return nil, throwErrorWithMessage(conn, fmt.Sprintf("can't read contract from account %s",serviceAddress),err)
+	}
+
+	_, deployError := i.sharedServices.Accounts.AddContractForAddressWithCode(serviceAddress, privateKey, name, code, update)
+
+	if deployError != nil {
+		return nil, throwErrorWithMessage(conn,ErrorMessageDeploy ,err)
 	}
 
 	return nil, err
@@ -214,10 +222,10 @@ func (i *FlowIntegration) executeScript(conn protocol.Conn, args ...interface{})
 	}
 
 	// Execute script via shared library
-	scriptResult, scriptError := i.sharedServices.Scripts.Execute(path.Path, []string{}, argsJSON)
+	scriptResult, err := i.sharedServices.Scripts.Execute(path.Path, []string{}, argsJSON)
 
-	if scriptError != nil {
-		return nil, fmt.Errorf("execution error: %#+v", scriptError)
+	if err != nil {
+		return nil, throwErrorWithMessage(conn, ErrorScriptExecution, err)
 	}
 
 	displayResult := fmt.Sprintf("Result: %s", scriptResult.String())
@@ -249,11 +257,12 @@ func (i *FlowIntegration) changeEmulatorState(conn protocol.Conn, args ...interf
 	return nil, nil
 }
 
-// switchActiveAccount sets the account that is currently active and should be
-// used when submitting transactions.
+// switchActiveAccount sets the account that is currently active and could be used
+// when submitting transactions.
 //
-// There should be exactly 1 argument:
-//   * the address of the new active account
+// There should be 2 arguments:
+//	 * name of the new active acount
+//   * address of the new active account
 func (i *FlowIntegration) switchActiveAccount(_ protocol.Conn, args ...interface{}) (interface{}, error) {
 	err := server.CheckCommandArgumentCount(args, 2)
 	if err != nil {
@@ -384,7 +393,6 @@ func (i *FlowIntegration) deployContract(conn protocol.Conn, args ...interface{}
 		return nil, fmt.Errorf("%s", errorMessage)
 	}
 
-	// TODO: add check if the contract exist on specified address
 	update, err := i.isContractDeployed(to, name)
 	if err != nil {
 		errorMessage := fmt.Sprintf("can't read contract from account %s: %#+v",to, err)
@@ -395,7 +403,7 @@ func (i *FlowIntegration) deployContract(conn protocol.Conn, args ...interface{}
 		return nil, fmt.Errorf("%s", errorMessage)
 	}
 
-	account, deployError := i.sharedServices.Accounts.AddContractForAddress(to, privateKey,name, path.Path, update)
+	_, deployError := i.sharedServices.Accounts.AddContractForAddress(to, privateKey,name, path.Path, update)
 
 	if deployError != nil {
 		errorMessage := fmt.Sprintf("error during deployment: %#+v", deployError)
@@ -408,33 +416,12 @@ func (i *FlowIntegration) deployContract(conn protocol.Conn, args ...interface{}
 
 	conn.ShowMessage(&protocol.ShowMessageParams{
 		Type:    protocol.Info,
-		Message: fmt.Sprintf("Status: contract %s has been deployed to %s(%s)", name, to, account.Address.String()),
+		Message: fmt.Sprintf("Status: contract %s has been deployed to %s", name, to),
 	})
 
 	return nil, err
 }
 
-func bytesToCadenceArray(b []byte) cadence.Array {
-	values := make([]cadence.Value, len(b))
-
-	for i, v := range b {
-		values[i] = cadence.NewUInt8(v)
-	}
-
-	return cadence.NewArray(values)
-}
-
-// deployContractTransaction generates a transaction that deploys the given contract to an account.
-func deployContractTransaction(address flow.Address, name string, code []byte) *flow.Transaction {
-	cadenceName := cadence.NewString(name)
-	cadenceCode := bytesToCadenceArray(code)
-
-	return flow.NewTransaction().
-		SetScript([]byte(deployContractTemplate)).
-		AddRawArgument(jsoncdc.MustEncode(cadenceName)).
-		AddRawArgument(jsoncdc.MustEncode(cadenceCode)).
-		AddAuthorizer(address)
-}
 
 // getServicePrivateKey returns private key for service account
 func (i *FlowIntegration) getServicePrivateKey() (string, error) {
@@ -445,122 +432,6 @@ func (i *FlowIntegration) getServicePrivateKey() (string, error) {
 
 	rawKey := serviceAccount.DefaultKey().ToConfig().Context["privateKey"]
 	return rawKey,nil
-}
-
-// getServiceKey returns the service account key and signer
-func (i *FlowIntegration) getServiceKey() (*flow.AccountKey, crypto.Signer, error) {
-
-	serviceAccount, err := i.project.EmulatorServiceAccount()
-	if err != nil {
-		return nil, nil, err
-	}
-	address := serviceAccount.Address()
-
-	rawKey := serviceAccount.DefaultKey().ToConfig().Context["privateKey"]
-
-	privateKey := AccountPrivateKey{
-		SigAlgo:  crypto.StringToSignatureAlgorithm(serviceAccount.DefaultKey().SigAlgo().String()),
-		HashAlgo: crypto.StringToHashAlgorithm(serviceAccount.DefaultKey().HashAlgo().String()),
-	}
-
-	privateKey.PrivateKey, err = crypto.DecodePrivateKeyHex(privateKey.SigAlgo, rawKey)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	account, err := i.flowClient.GetAccount(context.Background(), address)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	if len(account.Keys) == 0 {
-		return nil, nil, fmt.Errorf(
-			"cannot sign transaction: account %s has no keys",
-			address.Hex(),
-		)
-	}
-
-	accountKey := account.Keys[0]
-	signer := crypto.NewNaiveSigner(privateKey.PrivateKey, privateKey.HashAlgo)
-
-	return accountKey, signer, nil
-}
-
-// sendTransactionHelper sends a transaction with the given script, from the
-// currently active account. Returns the hash of the transaction if it is
-// successfully submitted.
-//
-// If an error occurs, attempts to show an appropriate message (either via logs
-// or UI popups in the client).
-func (i *FlowIntegration) sendTransactionHelper(
-	conn protocol.Conn,
-	address flow.Address,
-	tx *flow.Transaction,
-) (flow.Identifier, error) {
-	accountKey, signer, err := i.getServiceKey()
-	if err != nil {
-		return flow.EmptyID, err
-	}
-
-	tx.SetProposalKey(address, accountKey.Index, accountKey.SequenceNumber)
-	tx.SetPayer(address)
-
-	block, err := i.flowClient.GetLatestBlock(context.Background(), true)
-	if err != nil {
-		return flow.EmptyID, err
-	}
-
-	tx.SetReferenceBlockID(block.ID)
-
-	err = tx.SignEnvelope(address, accountKey.Index, signer)
-	if err != nil {
-		return flow.EmptyID, err
-	}
-
-	conn.LogMessage(&protocol.LogMessageParams{
-		Type:    protocol.Info,
-		Message: fmt.Sprintf("submitting transaction %s", tx.ID().Hex()),
-	})
-
-	err = i.flowClient.SendTransaction(context.Background(), *tx)
-	if err != nil {
-		grpcErr, ok := status.FromError(err)
-		if ok {
-			if grpcErr.Code() == codes.Unavailable {
-				// The emulator server isn't running
-				conn.ShowMessage(&protocol.ShowMessageParams{
-					Type:    protocol.Warning,
-					Message: "The emulator server is unavailable. Please start the emulator (`cadence.runEmulator`) first.",
-				})
-				return flow.EmptyID, err
-			} else if grpcErr.Code() == codes.InvalidArgument {
-				// The request was invalid
-				conn.ShowMessage(&protocol.ShowMessageParams{
-					Type:    protocol.Warning,
-					Message: "The transaction could not be submitted.",
-				})
-				conn.LogMessage(&protocol.LogMessageParams{
-					Type:    protocol.Warning,
-					Message: fmt.Sprintf("Failed to submit transaction: %s", grpcErr.Message()),
-				})
-				return flow.EmptyID, err
-			}
-		} else {
-			conn.LogMessage(&protocol.LogMessageParams{
-				Type:    protocol.Warning,
-				Message: fmt.Sprintf("Failed to submit transaction: %s", err.Error()),
-			})
-		}
-
-		return flow.EmptyID, err
-	}
-
-	conn.LogMessage(&protocol.LogMessageParams{
-		Type:    protocol.Info,
-		Message: fmt.Sprintf("Submitted transaction id=%s", tx.ID().Hex()),
-	})
-
-	return tx.ID(), nil
 }
 
 // createAccountHelper creates a new account and returns its address.
