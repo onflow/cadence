@@ -833,8 +833,8 @@ func (v *ArrayValue) ConformsToDynamicType(dynamicType DynamicType) bool {
 		return false
 	}
 
-	for index, item := range v.Values {
-		if !item.ConformsToDynamicType(arrayType.ElementTypes[index]) {
+	for index, element := range v.Values {
+		if !element.ConformsToDynamicType(arrayType.ElementTypes[index]) {
 			return false
 		}
 	}
@@ -843,22 +843,22 @@ func (v *ArrayValue) ConformsToDynamicType(dynamicType DynamicType) bool {
 }
 
 func (v *ArrayValue) conformsToSemaType(semaType sema.Type) bool {
-	var memberType sema.Type
+	var elementType sema.Type
 
 	switch arrayType := semaType.(type) {
 	case *sema.VariableSizedType:
-		memberType = arrayType.Type
+		elementType = arrayType.Type
 	case *sema.ConstantSizedType:
 		if int64(len(v.Values)) != arrayType.Size {
 			return false
 		}
-		memberType = arrayType.Type
+		elementType = arrayType.Type
 	default:
 		return false
 	}
 
-	for _, member := range v.Values {
-		if !ValueConformsToSemaType(member, memberType) {
+	for _, element := range v.Values {
+		if !ValueConformsToSemaType(element, elementType) {
 			return false
 		}
 	}
