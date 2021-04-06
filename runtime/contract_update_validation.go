@@ -176,49 +176,66 @@ func (validator *ContractUpdateValidator) checkNestedDeclarations(
 	newDeclaration ast.Declaration,
 ) {
 
-	oldNestedCompositeDecls := oldDeclaration.DeclarationMembers().CompositesByIdentifier()
-	oldNestedInterfaceDecls := oldDeclaration.DeclarationMembers().InterfacesByIdentifier()
-
-	getOldCompositeOrInterfaceDecl := func(name string) (ast.Declaration, bool) {
-		oldCompositeDecl := oldNestedCompositeDecls[name]
-		if oldCompositeDecl != nil {
-			return oldCompositeDecl, true
-		}
-
-		oldInterfaceDecl := oldNestedInterfaceDecls[name]
-		if oldInterfaceDecl != nil {
-			return oldInterfaceDecl, true
-		}
-
-		return nil, false
-	}
+	oldCompositeAndInterfaceDecls := getNestedCompositeAndInterfaceDecls(oldDeclaration)
 
 	// Check nested structs, enums, etc.
 	newNestedCompositeDecls := newDeclaration.DeclarationMembers().Composites()
 	for _, newNestedDecl := range newNestedCompositeDecls {
-		oldNestedDecl, found := getOldCompositeOrInterfaceDecl(newNestedDecl.Identifier.Identifier)
+		oldNestedDecl, found := oldCompositeAndInterfaceDecls[newNestedDecl.Identifier.Identifier]
 		if !found {
 			// Then its a new declaration
 			continue
 		}
 
 		validator.checkDeclarationUpdatability(oldNestedDecl, newNestedDecl)
+
+		// If theres a matching new decl, then remove the old one from the map.
+		delete(oldCompositeAndInterfaceDecls, newNestedDecl.Identifier.Identifier)
 	}
 
 	// Check nested interfaces.
 	newNestedInterfaces := newDeclaration.DeclarationMembers().Interfaces()
 	for _, newNestedDecl := range newNestedInterfaces {
-		oldNestedDecl, found := getOldCompositeOrInterfaceDecl(newNestedDecl.Identifier.Identifier)
+		oldNestedDecl, found := oldCompositeAndInterfaceDecls[newNestedDecl.Identifier.Identifier]
 		if !found {
 			// Then this is a new declaration.
 			continue
 		}
 
 		validator.checkDeclarationUpdatability(oldNestedDecl, newNestedDecl)
+
+		// If theres a matching new decl, then remove the old one from the map.
+		delete(oldCompositeAndInterfaceDecls, newNestedDecl.Identifier.Identifier)
+	}
+
+	// The remaining old declarations doesn't have a corresponding new declaration.
+	// i.e: An existing declaration is removed.
+	// Hence report an error.
+	for name := range oldCompositeAndInterfaceDecls { //nolint:maprangecheck
+		validator.report(&MissingCompositeDeclarationError{
+			DeclName: name,
+			Range:    ast.NewRangeFromPositioned(newDeclaration.DeclarationIdentifier()),
+		})
 	}
 
 	// Check enum-cases, if theres any.
 	validator.checkEnumCases(oldDeclaration, newDeclaration)
+}
+
+func getNestedCompositeAndInterfaceDecls(declaration ast.Declaration) map[string]ast.Declaration {
+	compositeAndInterfaceDecls := map[string]ast.Declaration{}
+
+	nestedCompositeDecls := declaration.DeclarationMembers().CompositesByIdentifier()
+	for identifier, nestedDecl := range nestedCompositeDecls { //nolint:maprangecheck
+		compositeAndInterfaceDecls[identifier] = nestedDecl
+	}
+
+	nestedInterfaceDecls := declaration.DeclarationMembers().InterfacesByIdentifier()
+	for identifier, nestedDecl := range nestedInterfaceDecls { //nolint:maprangecheck
+		compositeAndInterfaceDecls[identifier] = nestedDecl
+	}
+
+	return compositeAndInterfaceDecls
 }
 
 // checkEnumCases validates updating enum cases. Updated enum must:

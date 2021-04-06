@@ -803,7 +803,10 @@ func TestContractUpdateValidation(t *testing.T) {
 			}`
 
 		err := deployAndUpdate("Test18", oldCode, newCode)
-		require.NoError(t, err)
+		require.Error(t, err)
+
+		cause := getErrorCause(t, err, "Test18")
+		assertMissingCompositeDeclarationError(t, cause, "TestStruct")
 	})
 
 	t.Run("add and remove field", func(t *testing.T) {
@@ -1426,6 +1429,65 @@ func TestContractUpdateValidation(t *testing.T) {
 		assertEnumCaseMismatchError(t, childErrors[1], "down", "left")
 		assertEnumCaseMismatchError(t, childErrors[2], "left", "up")
 	})
+
+	t.Run("Remove and add struct", func(t *testing.T) {
+		const oldCode = `
+			pub contract Test32 {
+
+				pub struct TestStruct {
+					pub let a: Int
+					pub var b: Int
+
+					init() {
+						self.a = 123
+						self.b = 456
+					}
+				}
+			}`
+
+		const updateCode1 = `
+			pub contract Test32 {
+			}`
+
+		err := deployAndUpdate("Test32", oldCode, updateCode1)
+		require.Error(t, err)
+
+		cause := getErrorCause(t, err, "Test32")
+		assertMissingCompositeDeclarationError(t, cause, "TestStruct")
+
+		const updateCode2 = `
+			pub contract Test32 {
+
+				pub struct TestStruct {
+					pub let a: String
+
+					init() {
+						self.a = "hello123"
+					}
+				}
+			}`
+
+		updateTx := newDeployTransaction(
+			sema.AuthAccountContractsTypeUpdateExperimentalFunctionName,
+			"Test32",
+			updateCode2,
+		)
+
+		err = runtime.ExecuteTransaction(
+			Script{
+				Source: updateTx,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+
+		require.Error(t, err)
+		cause = getErrorCause(t, err, "Test32")
+
+		assertFieldTypeMismatchError(t, cause, "TestStruct", "a", "Int", "String")
+	})
 }
 
 func assertDeclTypeChangeError(
@@ -1523,7 +1585,7 @@ func assertEnumCaseMismatchError(t *testing.T, err error, expectedEnumCase strin
 func assertMissingEnumCasesError(t *testing.T, err error, declName string, expectedCases int, foundCases int) {
 	require.Error(t, err)
 	require.IsType(t, &MissingEnumCasesError{}, err)
-	extraFieldError := err.(*MissingEnumCasesError)
+	missingEnumCasesError := err.(*MissingEnumCasesError)
 	assert.Equal(
 		t,
 		fmt.Sprintf(
@@ -1532,7 +1594,20 @@ func assertMissingEnumCasesError(t *testing.T, err error, declName string, expec
 			expectedCases,
 			foundCases,
 		),
-		extraFieldError.Error(),
+		missingEnumCasesError.Error(),
+	)
+}
+
+func assertMissingCompositeDeclarationError(t *testing.T, err error, declName string) {
+	require.Error(t, err)
+
+	require.IsType(t, &MissingCompositeDeclarationError{}, err)
+	missingDeclError := err.(*MissingCompositeDeclarationError)
+
+	assert.Equal(
+		t,
+		fmt.Sprintf("missing composite declaration `%s`", declName),
+		missingDeclError.Error(),
 	)
 }
 
