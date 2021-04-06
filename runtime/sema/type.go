@@ -3960,7 +3960,7 @@ func IsSubType(subType Type, superType Type) bool {
 
 	case SignedFixedPointType:
 		switch subType {
-		case SignedNumberType, Fix64Type:
+		case SignedFixedPointType, Fix64Type:
 
 			return true
 
