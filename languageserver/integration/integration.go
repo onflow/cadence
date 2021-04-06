@@ -19,7 +19,6 @@
 package integration
 
 import (
-	"github.com/onflow/flow-cli/pkg/flowcli/gateway"
 	"github.com/onflow/flow-cli/pkg/flowcli/project"
 	"github.com/onflow/flow-go-sdk/client"
 
@@ -49,7 +48,6 @@ type FlowIntegration struct {
 
 	sharedServices *services.Services
 	project        *project.Project
-	gateway        *gateway.GrpcGateway
 }
 
 func NewFlowIntegration(s *server.Server, enableFlowClient bool) (*FlowIntegration, error) {

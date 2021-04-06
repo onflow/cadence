@@ -28,7 +28,6 @@ import (
 )
 
 func (i *FlowIntegration) initialize(initializationOptions interface{}) error {
-
 	// Parse the configuration options sent from the client
 	conf, err := configFromInitializationOptions(initializationOptions)
 	if err != nil {
@@ -46,11 +45,15 @@ func (i *FlowIntegration) initialize(initializationOptions interface{}) error {
 	}
 
 	host := flowProject.NetworkByName("emulator").Host
-	gateway, _ := gateway.NewGrpcGateway(host)
 	logger := output.NewStdoutLogger(output.NoneLog)
-	i.sharedServices = services.NewServices(gateway, flowProject, logger)
+
+	grpcGateway, err := gateway.NewGrpcGateway(host)
+	if err != nil {
+		return err
+	}
+
+	i.sharedServices = services.NewServices(grpcGateway, flowProject, logger)
 	i.project = flowProject
-	i.gateway = gateway
 
 	// TODO: we only need this to deploy AccountManager contract. Once sharedLib supports this we can remove it
 	i.flowClient, err = client.New(
