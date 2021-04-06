@@ -662,47 +662,43 @@ func TestInterpretCapability_address(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("check address", func(t *testing.T) {
+	inter, _ := testAccount(
+		t,
+		true,
+		`
+			fun single(): Address {
+				return account.getCapability(/public/single).address
+			}
 
-		t.Parallel()
+			fun double(): Address {
+				return account.getCapability(/public/double).address
+			}
 
-		inter, _ := testAccount(
-			t,
-			true,
-			`
-				fun single(): Address {
-					return account.getCapability(/public/single).address
-				}
+			fun nonExistent() : Address {
+				return account.getCapability(/public/nonExistent).address
+			}				
+		`,
+	)
 
-				fun double(): Address {
-					return account.getCapability(/public/double).address
-				}
+	t.Run("single", func(t *testing.T) {
+		value, err := inter.Invoke("single")
+		require.NoError(t, err)
 
-				fun nonExistent() : Address {
-					return account.getCapability(/public/nonExistent).address
-				}				
-			`,
-		)
-
-		t.Run("single", func(t *testing.T) {
-			value, err := inter.Invoke("single")
-			require.NoError(t, err)
-
-			require.IsType(t, interpreter.AddressValue{}, value)
-		})
-
-		t.Run("double", func(t *testing.T) {
-			value, err := inter.Invoke("double")
-			require.NoError(t, err)
-
-			require.IsType(t, interpreter.AddressValue{}, value)
-		})
-
-		t.Run("nonExistent", func(t *testing.T) {
-			value, err := inter.Invoke("nonExistent")
-			require.NoError(t, err)
-
-			require.IsType(t, interpreter.AddressValue{}, value)
-		})
+		require.IsType(t, interpreter.AddressValue{}, value)
 	})
+
+	t.Run("double", func(t *testing.T) {
+		value, err := inter.Invoke("double")
+		require.NoError(t, err)
+
+		require.IsType(t, interpreter.AddressValue{}, value)
+	})
+
+	t.Run("nonExistent", func(t *testing.T) {
+		value, err := inter.Invoke("nonExistent")
+		require.NoError(t, err)
+
+		require.IsType(t, interpreter.AddressValue{}, value)
+	})
+
 }
