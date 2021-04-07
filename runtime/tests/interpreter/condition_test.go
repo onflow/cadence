@@ -968,3 +968,53 @@ func TestInterpretFunctionPostConditionWithBeforeInInterface(t *testing.T) {
 		interpreterErr.Err,
 	)
 }
+
+func TestInterpretIsInstanceCheckInPreCondition(t *testing.T) {
+
+	t.Parallel()
+
+	inter := parseCheckAndInterpretWithOptions(t,
+		`
+           contract interface CI {
+               struct X {
+                    fun use(_ x: X) {
+                        pre {
+                            x.isInstance(self.getType())
+                        }
+                    }
+               }
+           }
+
+           contract C1: CI {
+               struct X {
+                   fun use(_ x: CI.X) {}
+               }
+           }
+
+           contract C2: CI {
+               struct X {
+                   fun use(_ x: CI.X) {}
+               }
+           }
+
+           fun test1() {
+               C1.X().use(C1.X())
+           }
+
+           fun test2() {
+                C1.X().use(C2.X())
+           }
+        `,
+		ParseCheckAndInterpretOptions{
+			Options: []interpreter.Option{
+				makeContractValueHandler(nil, nil, nil),
+			},
+		},
+	)
+
+	_, err := inter.Invoke("test1")
+	require.NoError(t, err)
+
+	_, err = inter.Invoke("test2")
+	require.Error(t, err)
+}
