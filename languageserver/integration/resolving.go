@@ -78,13 +78,6 @@ func (i *FlowIntegration) getAccount(address common.Address) (*flow.Account, err
 	return account, nil
 }
 
-const scriptGetAddress = `
-import AccountManager from 0xSERVICE_ACCOUNT_ADDRESS
-
-pub fun main(name: String): Address? {
-    return AccountManager.getAddress(name)
-}
-`
 
 func (i *FlowIntegration) getAccountAddress (name string) (flow.Address, error) {
 	serviceAccount, err := i.project.EmulatorServiceAccount()

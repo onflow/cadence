@@ -73,3 +73,11 @@ transaction(address: Address){
   }
 }
 `
+
+const scriptGetAddress = `
+import AccountManager from 0xSERVICE_ACCOUNT_ADDRESS
+
+pub fun main(name: String): Address? {
+    return AccountManager.getAddress(name)
+}
+`
