@@ -25,6 +25,7 @@ import (
 	"github.com/onflow/flow-go-sdk/crypto"
 	"net/url"
 	"strings"
+	"time"
 
 	"github.com/onflow/flow-go-sdk"
 
@@ -44,6 +45,7 @@ const (
 
 	ClientStartEmulator = "cadence.runEmulator"
 
+	ErrorMessageEmulator          = "emulator error"
 	ErrorMessageServiceAccount    = "service account error"
 	ErrorMessageTransactionError  = "transaction error"
 	ErrorMessageServiceAccountKey = "service account private key error"
@@ -124,6 +126,12 @@ func (i *FlowIntegration) initAccountManager(conn protocol.Conn, args ...interfa
 	privateKey, err := i.getServicePrivateKey()
 	if err != nil {
 		return nil, throwErrorWithMessage(conn, ErrorMessageServiceAccountKey, err)
+	}
+
+	// Check if emulator is up
+	err = i.waitForNetwork()
+	if err != nil {
+		return nil, throwErrorWithMessage(conn, ErrorMessageEmulator, err)
 	}
 
 	name := "AccountManager"
@@ -345,10 +353,17 @@ func (i *FlowIntegration) createDefaultAccounts(conn protocol.Conn, args ...inte
 
 	showMessage(conn,fmt.Sprintf("Creating %d default accounts", count) )
 
+
+	// Check if emulator is up
+	err = i.waitForNetwork()
+	if err != nil {
+		return nil, throwErrorWithMessage(conn, ErrorMessageEmulator, err)
+	}
+
 	accounts := make([]ClientAccount, count)
 
 	for index := 0; index < count; index++ {
-		account, err := i.createAccount(conn)
+		account, err := i.createAccount(conn, false)
 		if err != nil {
 			return nil, throwErrorWithMessage(conn, ErrorMessageAccountCreate, err)
 		}
@@ -513,6 +528,24 @@ func (i *FlowIntegration) isContractDeployed(address string, name string) (bool,
 	}
 
 	return account.Contracts[name] != nil, nil
+}
+
+func (i *FlowIntegration) waitForNetwork() error {
+	// Ping the emulator server for 30 seconds until it is available
+	timer := time.NewTimer(30 * time.Second)
+RetryLoop:
+	for {
+		select {
+		case <-timer.C:
+			return errors.New("emulator server timed out")
+		default:
+			err := i.sharedServices.Status.Ping()
+			if err == nil {
+				break RetryLoop
+			}
+		}
+	}
+	return nil
 }
 
 // showMessage will send noti
