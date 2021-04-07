@@ -7724,25 +7724,6 @@ func TestInterpretResourceOwnerFieldUse(t *testing.T) {
 		Kind: common.DeclarationKindConstant,
 	}
 
-	getAccountHostFunc := stdlib.NewStandardLibraryFunction(
-		"getAccount",
-		stdlib.GetAccountFunctionType,
-		func(invocation interpreter.Invocation) interpreter.Value {
-			return interpreter.NewPublicAccountValue(
-				addressValue,
-				func(interpreter *interpreter.Interpreter) interpreter.UInt64Value {
-					panic(errors.NewUnreachableError())
-				},
-				func() interpreter.UInt64Value {
-					panic(errors.NewUnreachableError())
-				},
-				interpreter.NewPublicAccountKeysValue(
-					panicFunction,
-				),
-			)
-		},
-	)
-
 	inter := parseCheckAndInterpretWithOptions(t,
 		code,
 		ParseCheckAndInterpretOptions{
@@ -7754,7 +7735,6 @@ func TestInterpretResourceOwnerFieldUse(t *testing.T) {
 			Options: []interpreter.Option{
 				interpreter.WithPredeclaredValues([]interpreter.ValueDeclaration{
 					valueDeclaration,
-					getAccountHostFunc,
 				}),
 				interpreter.WithStorageExistenceHandler(checker),
 				interpreter.WithStorageReadHandler(getter),
@@ -7762,6 +7742,22 @@ func TestInterpretResourceOwnerFieldUse(t *testing.T) {
 				interpreter.WithStorageKeyHandler(
 					func(_ *interpreter.Interpreter, _ common.Address, indexingType sema.Type) string {
 						return string(indexingType.ID())
+					},
+				),
+				interpreter.WithAccountHandlerFunc(
+					func(address interpreter.AddressValue) *interpreter.CompositeValue {
+						return interpreter.NewPublicAccountValue(
+							address,
+							func(interpreter *interpreter.Interpreter) interpreter.UInt64Value {
+								panic(errors.NewUnreachableError())
+							},
+							func() interpreter.UInt64Value {
+								panic(errors.NewUnreachableError())
+							},
+							interpreter.NewPublicAccountKeysValue(
+								panicFunction,
+							),
+						)
 					},
 				),
 			},

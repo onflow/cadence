@@ -156,6 +156,12 @@ type ImportLocationHandlerFunc func(
 	location common.Location,
 ) Import
 
+// AccountHandlerFunc is a function that handles retrieving a public account at a given address.
+//
+type AccountHandlerFunc func(
+	address AddressValue,
+) *CompositeValue
+
 // UUIDHandlerFunc is a function that handles the generation of UUIDs.
 type UUIDHandlerFunc func() (uint64, error)
 
@@ -233,6 +239,7 @@ type Interpreter struct {
 	injectedCompositeFieldsHandler InjectedCompositeFieldsHandlerFunc
 	contractValueHandler           ContractValueHandlerFunc
 	importLocationHandler          ImportLocationHandlerFunc
+	accountHandler                 AccountHandlerFunc
 	uuidHandler                    UUIDHandlerFunc
 	interpreted                    bool
 	statement                      ast.Statement
@@ -371,6 +378,16 @@ func WithImportLocationHandler(handler ImportLocationHandlerFunc) Option {
 	}
 }
 
+// WithAccountHandlerFunc returns an interpreter option which sets the given function
+// as the function that is used to handle public accounts.
+//
+func WithAccountHandlerFunc(handler AccountHandlerFunc) Option {
+	return func(interpreter *Interpreter) error {
+		interpreter.SetAccountHandler(handler)
+		return nil
+	}
+}
+
 // WithUUIDHandler returns an interpreter option which sets the given function
 // as the function that is used to generate UUIDs.
 //
@@ -496,6 +513,12 @@ func (interpreter *Interpreter) SetContractValueHandler(function ContractValueHa
 //
 func (interpreter *Interpreter) SetImportLocationHandler(function ImportLocationHandlerFunc) {
 	interpreter.importLocationHandler = function
+}
+
+// SetAccountHandler sets the function that is used to handle accounts.
+//
+func (interpreter *Interpreter) SetAccountHandler(function AccountHandlerFunc) {
+	interpreter.accountHandler = function
 }
 
 // SetUUIDHandler sets the function that is used to handle the generation of UUIDs.
@@ -2034,6 +2057,7 @@ func (interpreter *Interpreter) NewSubInterpreter(
 		WithUUIDHandler(interpreter.uuidHandler),
 		WithAllInterpreters(interpreter.allInterpreters),
 		withTypeCodes(interpreter.typeCodes),
+		WithAccountHandlerFunc(interpreter.accountHandler),
 	}
 
 	return NewInterpreter(
