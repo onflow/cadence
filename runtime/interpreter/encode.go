@@ -33,8 +33,6 @@ import (
 
 type cborArray = []interface{}
 
-type cborMap = map[uint64]interface{}
-
 // Cadence needs to encode different kinds of objects in CBOR, for instance,
 // dictionaries, structs, resources, etc.
 //
@@ -865,12 +863,18 @@ const (
 	encodedStorageReferenceValueAuthorizedFieldKey           uint64 = 0
 	encodedStorageReferenceValueTargetStorageAddressFieldKey uint64 = 1
 	encodedStorageReferenceValueTargetKeyFieldKey            uint64 = 2
+
+	// !!! *WARNING* !!!
+	//
+	// encodedStorageReferenceValueLength MUST be updated when new element is added.
+	// It is used to verify encoded storage reference length during decoding.
+	encodedStorageReferenceValueLength int = 3
 )
 
 func (e *Encoder) prepareStorageReferenceValue(v *StorageReferenceValue) interface{} {
 	return cbor.Tag{
 		Number: cborTagStorageReferenceValue,
-		Content: cborMap{
+		Content: cborArray{
 			encodedStorageReferenceValueAuthorizedFieldKey:           v.Authorized,
 			encodedStorageReferenceValueTargetStorageAddressFieldKey: v.TargetStorageAddress.Bytes(),
 			encodedStorageReferenceValueTargetKeyFieldKey:            v.TargetKey,
@@ -889,12 +893,18 @@ func (e *Encoder) prepareAddressValue(v AddressValue) cbor.Tag {
 const (
 	encodedPathValueDomainFieldKey     uint64 = 0
 	encodedPathValueIdentifierFieldKey uint64 = 1
+
+	// !!! *WARNING* !!!
+	//
+	// encodedPathValueLength MUST be updated when new element is added.
+	// It is used to verify encoded path length during decoding.
+	encodedPathValueLength int = 2
 )
 
 func (e *Encoder) preparePathValue(v PathValue) cbor.Tag {
 	return cbor.Tag{
 		Number: cborTagPathValue,
-		Content: cborMap{
+		Content: cborArray{
 			encodedPathValueDomainFieldKey:     uint(v.Domain),
 			encodedPathValueIdentifierFieldKey: v.Identifier,
 		},
@@ -906,6 +916,12 @@ const (
 	encodedCapabilityValueAddressFieldKey    uint64 = 0
 	encodedCapabilityValuePathFieldKey       uint64 = 1
 	encodedCapabilityValueBorrowTypeFieldKey uint64 = 2
+
+	// !!! *WARNING* !!!
+	//
+	// encodedCapabilityValueLength MUST be updated when new element is added.
+	// It is used to verify encoded capability length during decoding.
+	encodedCapabilityValueLength int = 3
 )
 
 func (e *Encoder) prepareCapabilityValue(v CapabilityValue) (interface{}, error) {
@@ -922,7 +938,7 @@ func (e *Encoder) prepareCapabilityValue(v CapabilityValue) (interface{}, error)
 
 	return cbor.Tag{
 		Number: cborTagCapabilityValue,
-		Content: cborMap{
+		Content: cborArray{
 			encodedCapabilityValueAddressFieldKey:    e.prepareAddressValue(v.Address),
 			encodedCapabilityValuePathFieldKey:       e.preparePathValue(v.Path),
 			encodedCapabilityValueBorrowTypeFieldKey: preparedBorrowType,
@@ -934,6 +950,12 @@ func (e *Encoder) prepareCapabilityValue(v CapabilityValue) (interface{}, error)
 const (
 	encodedAddressLocationAddressFieldKey uint64 = 0
 	encodedAddressLocationNameFieldKey    uint64 = 1
+
+	// !!! *WARNING* !!!
+	//
+	// encodedAddressLocationLength MUST be updated when new element is added.
+	// It is used to verify encoded address location length during decoding.
+	encodedAddressLocationLength int = 2
 )
 
 func (e *Encoder) prepareLocation(l common.Location) (interface{}, error) {
@@ -957,7 +979,7 @@ func (e *Encoder) prepareLocation(l common.Location) (interface{}, error) {
 		if l.Name == "" {
 			content = l.Address.Bytes()
 		} else {
-			content = cborMap{
+			content = cborArray{
 				encodedAddressLocationAddressFieldKey: l.Address.Bytes(),
 				encodedAddressLocationNameFieldKey:    l.Name,
 			}
@@ -977,6 +999,12 @@ func (e *Encoder) prepareLocation(l common.Location) (interface{}, error) {
 const (
 	encodedLinkValueTargetPathFieldKey uint64 = 0
 	encodedLinkValueTypeFieldKey       uint64 = 1
+
+	// !!! *WARNING* !!!
+	//
+	// encodedLinkValueLength MUST be updated when new element is added.
+	// It is used to verify encoded link length during decoding.
+	encodedLinkValueLength int = 2
 )
 
 func (e *Encoder) prepareLinkValue(v LinkValue) (interface{}, error) {
@@ -986,7 +1014,7 @@ func (e *Encoder) prepareLinkValue(v LinkValue) (interface{}, error) {
 	}
 	return cbor.Tag{
 		Number: cborTagLinkValue,
-		Content: cborMap{
+		Content: cborArray{
 			encodedLinkValueTargetPathFieldKey: e.preparePathValue(v.TargetPath),
 			encodedLinkValueTypeFieldKey:       staticType,
 		},
@@ -1054,6 +1082,12 @@ const (
 	encodedCompositeStaticTypeLocationFieldKey            uint64 = 0
 	encodedCompositeStaticTypeTypeIDFieldKey              uint64 = 1
 	encodedCompositeStaticTypeQualifiedIdentifierFieldKey uint64 = 2
+
+	// !!! *WARNING* !!!
+	//
+	// encodedCompositeStaticTypeLength MUST be updated when new element is added.
+	// It is used to verify encoded composite static type length during decoding.
+	encodedCompositeStaticTypeLength int = 3
 )
 
 func (e *Encoder) prepareCompositeStaticType(v CompositeStaticType) (interface{}, error) {
@@ -1064,7 +1098,7 @@ func (e *Encoder) prepareCompositeStaticType(v CompositeStaticType) (interface{}
 
 	return cbor.Tag{
 		Number: cborTagCompositeStaticType,
-		Content: cborMap{
+		Content: cborArray{
 			encodedCompositeStaticTypeLocationFieldKey:            location,
 			encodedCompositeStaticTypeQualifiedIdentifierFieldKey: v.QualifiedIdentifier,
 		},
@@ -1076,6 +1110,12 @@ const (
 	encodedInterfaceStaticTypeLocationFieldKey            uint64 = 0
 	encodedInterfaceStaticTypeTypeIDFieldKey              uint64 = 1
 	encodedInterfaceStaticTypeQualifiedIdentifierFieldKey uint64 = 2
+
+	// !!! *WARNING* !!!
+	//
+	// encodedInterfaceStaticTypeLength MUST be updated when new element is added.
+	// It is used to verify encoded interface static type length during decoding.
+	encodedInterfaceStaticTypeLength int = 3
 )
 
 func (e *Encoder) prepareInterfaceStaticType(v InterfaceStaticType) (interface{}, error) {
@@ -1086,7 +1126,7 @@ func (e *Encoder) prepareInterfaceStaticType(v InterfaceStaticType) (interface{}
 
 	return cbor.Tag{
 		Number: cborTagInterfaceStaticType,
-		Content: cborMap{
+		Content: cborArray{
 			encodedInterfaceStaticTypeLocationFieldKey:            location,
 			encodedInterfaceStaticTypeQualifiedIdentifierFieldKey: v.QualifiedIdentifier,
 		},
@@ -1109,6 +1149,12 @@ func (e *Encoder) prepareVariableSizedStaticType(v VariableSizedStaticType) (int
 const (
 	encodedConstantSizedStaticTypeSizeFieldKey uint64 = 0
 	encodedConstantSizedStaticTypeTypeFieldKey uint64 = 1
+
+	// !!! *WARNING* !!!
+	//
+	// encodedConstantSizedStaticTypeLength MUST be updated when new element is added.
+	// It is used to verify encoded constant sized static type length during decoding.
+	encodedConstantSizedStaticTypeLength int = 2
 )
 
 func (e *Encoder) prepareConstantSizedStaticType(v ConstantSizedStaticType) (interface{}, error) {
@@ -1119,7 +1165,7 @@ func (e *Encoder) prepareConstantSizedStaticType(v ConstantSizedStaticType) (int
 
 	return cbor.Tag{
 		Number: cborTagConstantSizedStaticType,
-		Content: cborMap{
+		Content: cborArray{
 			encodedConstantSizedStaticTypeSizeFieldKey: v.Size,
 			encodedConstantSizedStaticTypeTypeFieldKey: staticType,
 		},
@@ -1130,6 +1176,12 @@ func (e *Encoder) prepareConstantSizedStaticType(v ConstantSizedStaticType) (int
 const (
 	encodedReferenceStaticTypeAuthorizedFieldKey uint64 = 0
 	encodedReferenceStaticTypeTypeFieldKey       uint64 = 1
+
+	// !!! *WARNING* !!!
+	//
+	// encodedReferenceStaticTypeLength MUST be updated when new element is added.
+	// It is used to verify encoded reference static type length during decoding.
+	encodedReferenceStaticTypeLength int = 2
 )
 
 func (e *Encoder) prepareReferenceStaticType(v ReferenceStaticType) (interface{}, error) {
@@ -1140,7 +1192,7 @@ func (e *Encoder) prepareReferenceStaticType(v ReferenceStaticType) (interface{}
 
 	return cbor.Tag{
 		Number: cborTagReferenceStaticType,
-		Content: cborMap{
+		Content: cborArray{
 			encodedReferenceStaticTypeAuthorizedFieldKey: v.Authorized,
 			encodedReferenceStaticTypeTypeFieldKey:       staticType,
 		},
@@ -1151,6 +1203,12 @@ func (e *Encoder) prepareReferenceStaticType(v ReferenceStaticType) (interface{}
 const (
 	encodedDictionaryStaticTypeKeyTypeFieldKey   uint64 = 0
 	encodedDictionaryStaticTypeValueTypeFieldKey uint64 = 1
+
+	// !!! *WARNING* !!!
+	//
+	// encodedDictionaryStaticTypeLength MUST be updated when new element is added.
+	// It is used to verify encoded dictionary static type length during decoding.
+	encodedDictionaryStaticTypeLength int = 2
 )
 
 func (e *Encoder) prepareDictionaryStaticType(v DictionaryStaticType) (interface{}, error) {
@@ -1166,7 +1224,7 @@ func (e *Encoder) prepareDictionaryStaticType(v DictionaryStaticType) (interface
 
 	return cbor.Tag{
 		Number: cborTagDictionaryStaticType,
-		Content: cborMap{
+		Content: cborArray{
 			encodedDictionaryStaticTypeKeyTypeFieldKey:   keyType,
 			encodedDictionaryStaticTypeValueTypeFieldKey: valueType,
 		},
@@ -1177,6 +1235,12 @@ func (e *Encoder) prepareDictionaryStaticType(v DictionaryStaticType) (interface
 const (
 	encodedRestrictedStaticTypeTypeFieldKey         uint64 = 0
 	encodedRestrictedStaticTypeRestrictionsFieldKey uint64 = 1
+
+	// !!! *WARNING* !!!
+	//
+	// encodedRestrictedStaticTypeLength MUST be updated when new element is added.
+	// It is used to verify encoded restricted static type length during decoding.
+	encodedRestrictedStaticTypeLength int = 2
 )
 
 func (e *Encoder) prepareRestrictedStaticType(v *RestrictedStaticType) (interface{}, error) {
@@ -1197,7 +1261,7 @@ func (e *Encoder) prepareRestrictedStaticType(v *RestrictedStaticType) (interfac
 
 	return cbor.Tag{
 		Number: cborTagRestrictedStaticType,
-		Content: cborMap{
+		Content: cborArray{
 			encodedRestrictedStaticTypeTypeFieldKey:         restrictedType,
 			encodedRestrictedStaticTypeRestrictionsFieldKey: encodedRestrictions,
 		},
@@ -1207,25 +1271,33 @@ func (e *Encoder) prepareRestrictedStaticType(v *RestrictedStaticType) (interfac
 // NOTE: NEVER change, only add/increment; ensure uint64
 const (
 	encodedTypeValueTypeFieldKey uint64 = 0
+
+	// !!! *WARNING* !!!
+	//
+	// encodedTypeValueTypeLength MUST be updated when new element is added.
+	// It is used to verify encoded type length during decoding.
+	encodedTypeValueTypeLength int = 1
 )
 
 func (e *Encoder) prepareTypeValue(v TypeValue) (interface{}, error) {
 
-	content := cborMap{}
+	var preparedStaticType interface{}
 
-	staticType := v.Type
-	if staticType != nil {
-		preparedStaticType, err := e.prepareStaticType(staticType)
+	if v.Type != nil {
+		staticType := v.Type
+
+		var err error
+		preparedStaticType, err = e.prepareStaticType(staticType)
 		if err != nil {
 			return nil, err
 		}
-
-		content[encodedTypeValueTypeFieldKey] = preparedStaticType
 	}
 
 	return cbor.Tag{
-		Number:  cborTagTypeValue,
-		Content: content,
+		Number: cborTagTypeValue,
+		Content: cborArray{
+			encodedTypeValueTypeFieldKey: preparedStaticType,
+		},
 	}, nil
 }
 
