@@ -832,7 +832,7 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
 			check: func(t *testing.T, err error) {
 				assert.Error(t, err)
 				assert.IsType(t, &InvalidEntryPointArgumentError{}, errors.Unwrap(err))
-				assert.IsType(t, &InvalidTypeAssignmentError{}, errors.Unwrap(errors.Unwrap(err)))
+				assert.IsType(t, &InvalidValueTypeError{}, errors.Unwrap(errors.Unwrap(err)))
 			},
 		},
 		{
@@ -926,7 +926,7 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
 			check: func(t *testing.T, err error) {
 				assert.Error(t, err)
 				assert.IsType(t, &InvalidEntryPointArgumentError{}, errors.Unwrap(err))
-				assert.IsType(t, &InvalidTypeAssignmentError{}, errors.Unwrap(errors.Unwrap(err)))
+				assert.IsType(t, &InvalidValueTypeError{}, errors.Unwrap(errors.Unwrap(err)))
 			},
 		},
 		{
@@ -1128,7 +1128,7 @@ func TestRuntimeScriptArguments(t *testing.T) {
 			check: func(t *testing.T, err error) {
 				assert.Error(t, err)
 				assert.IsType(t, &InvalidEntryPointArgumentError{}, errors.Unwrap(err))
-				assert.IsType(t, &InvalidTypeAssignmentError{}, errors.Unwrap(errors.Unwrap(err)))
+				assert.IsType(t, &InvalidValueTypeError{}, errors.Unwrap(errors.Unwrap(err)))
 			},
 		},
 		{
@@ -1213,7 +1213,7 @@ func TestRuntimeScriptArguments(t *testing.T) {
 			check: func(t *testing.T, err error) {
 				assert.Error(t, err)
 				assert.IsType(t, &InvalidEntryPointArgumentError{}, errors.Unwrap(err))
-				assert.IsType(t, &InvalidTypeAssignmentError{}, errors.Unwrap(errors.Unwrap(err)))
+				assert.IsType(t, &InvalidValueTypeError{}, errors.Unwrap(errors.Unwrap(err)))
 			},
 		},
 		{
