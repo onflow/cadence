@@ -19,7 +19,6 @@
 package integration
 
 import (
-	"context"
 	"fmt"
 	"io/ioutil"
 
@@ -66,8 +65,8 @@ func (i *FlowIntegration) resolveAddressImport(location common.AddressLocation) 
 }
 
 func (i *FlowIntegration) getAccount(address common.Address) (*flow.Account, error) {
+	account, err := i.sharedServices.Accounts.Get(address.String())
 
-	account, err := i.flowClient.GetAccount(context.Background(), flow.BytesToAddress(address[:]))
 	if err != nil {
 		return nil, fmt.Errorf(
 			"cannot get account with address %s: %w",

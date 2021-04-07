@@ -23,8 +23,6 @@ import (
 	"github.com/onflow/flow-cli/pkg/flowcli/output"
 	"github.com/onflow/flow-cli/pkg/flowcli/project"
 	"github.com/onflow/flow-cli/pkg/flowcli/services"
-	"github.com/onflow/flow-go-sdk/client"
-	"google.golang.org/grpc"
 )
 
 func (i *FlowIntegration) initialize(initializationOptions interface{}) error {
@@ -54,12 +52,6 @@ func (i *FlowIntegration) initialize(initializationOptions interface{}) error {
 
 	i.sharedServices = services.NewServices(grpcGateway, flowProject, logger)
 	i.project = flowProject
-
-	// TODO: we only need this to deploy AccountManager contract. Once sharedLib supports this we can remove it
-	i.flowClient, err = client.New(
-		host,
-		grpc.WithInsecure(),
-	)
 
 	return nil
 }

@@ -19,11 +19,9 @@
 package integration
 
 import (
-	"github.com/onflow/flow-cli/pkg/flowcli/project"
-	"github.com/onflow/flow-go-sdk/client"
-
 	"github.com/onflow/cadence/languageserver/protocol"
 	"github.com/onflow/cadence/languageserver/server"
+	"github.com/onflow/flow-cli/pkg/flowcli/project"
 
 	"github.com/onflow/flow-cli/pkg/flowcli/services"
 )
@@ -39,7 +37,6 @@ const (
 type FlowIntegration struct {
 	server     *server.Server
 	config     Config
-	flowClient *client.Client
 
 	entryPointInfo map[protocol.DocumentUri]entryPointInfo
 
