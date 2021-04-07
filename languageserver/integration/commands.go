@@ -326,11 +326,6 @@ func (i *FlowIntegration) createAccount(conn protocol.Conn, args ...interface{})
 		return nil, throwErrorWithMessage(conn, ErrorMessageAccountCreate, err)
 	}
 
-	showMessage(conn, fmt.Sprintf(
-		"New account %s(0x%s) created",
-		clientAccount.Name,
-		address.String()),
-	)
 	return clientAccount, nil
 }
 
@@ -351,8 +346,7 @@ func (i *FlowIntegration) createDefaultAccounts(conn protocol.Conn, args ...inte
 	}
 	count := int(n)
 
-	showMessage(conn,fmt.Sprintf("Creating %d default accounts", count) )
-
+	showMessage(conn, fmt.Sprintf("Creating %d default accounts", count))
 
 	// Check if emulator is up
 	err = i.waitForNetwork()
@@ -363,7 +357,7 @@ func (i *FlowIntegration) createDefaultAccounts(conn protocol.Conn, args ...inte
 	accounts := make([]ClientAccount, count)
 
 	for index := 0; index < count; index++ {
-		account, err := i.createAccount(conn, false)
+		account, err := i.createAccount(conn)
 		if err != nil {
 			return nil, throwErrorWithMessage(conn, ErrorMessageAccountCreate, err)
 		}
