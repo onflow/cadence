@@ -303,10 +303,11 @@ func (d *DecoderV4) decodeArray(v []interface{}, path []string) (*ArrayValue, er
 
 func (d *DecoderV4) decodeDictionary(v interface{}, path []string) (*DictionaryValue, error) {
 	encoded, ok := v.(cborArray)
-	if !ok || len(encoded) != encodedDictionaryValueLength {
+	const expectedLength = encodedDictionaryValueLength
+	if !ok || len(encoded) != expectedLength {
 		return nil, fmt.Errorf("invalid dictionary encoding (@ %s): expected [%d]interface{}, got %T",
 			strings.Join(path, "."),
-			encodedDictionaryValueLength,
+			expectedLength,
 			v,
 		)
 	}
@@ -485,9 +486,10 @@ func (d *DecoderV4) decodeAddressLocation(v interface{}) (common.Location, error
 	// which includes both address and name
 
 	encoded, ok := v.(cborArray)
-	if !ok || len(encoded) != encodedAddressLocationLength {
+	const expectedLength = encodedAddressLocationLength
+	if !ok || len(encoded) != expectedLength {
 		return nil, fmt.Errorf("invalid address location encoding: expected [%d]interface{}, got %T",
-			encodedAddressLocationLength,
+			expectedLength,
 			v,
 		)
 	}
@@ -521,10 +523,11 @@ func (d *DecoderV4) decodeAddressLocation(v interface{}) (common.Location, error
 
 func (d *DecoderV4) decodeComposite(v interface{}, path []string) (*CompositeValue, error) {
 	encoded, ok := v.(cborArray)
-	if !ok || len(encoded) != encodedCompositeValueLength {
+	const expectedLength = encodedCompositeValueLength
+	if !ok || len(encoded) != expectedLength {
 		return nil, fmt.Errorf("invalid composite encoding (@ %s): expected [%d]interface{}, got %T",
 			strings.Join(path, "."),
-			encodedCompositeValueLength,
+			expectedLength,
 			v,
 		)
 	}
@@ -965,9 +968,10 @@ func (d *DecoderV4) decodeSome(v interface{}, path []string) (*SomeValue, error)
 
 func (d *DecoderV4) decodeStorageReference(v interface{}) (*StorageReferenceValue, error) {
 	encoded, ok := v.(cborArray)
-	if !ok || len(encoded) != encodedStorageReferenceValueLength {
+	const expectedLength = encodedStorageReferenceValueLength
+	if !ok || len(encoded) != expectedLength {
 		return nil, fmt.Errorf("invalid storage reference encoding: expected [%d]interface{}, got %T",
-			encodedStorageReferenceValueLength,
+			expectedLength,
 			v,
 		)
 	}
@@ -1026,9 +1030,10 @@ func (d *DecoderV4) decodeAddress(v interface{}) (AddressValue, error) {
 
 func (d *DecoderV4) decodePath(v interface{}) (PathValue, error) {
 	encoded, ok := v.(cborArray)
-	if !ok || len(encoded) != encodedPathValueLength {
+	const expectedLength = encodedPathValueLength
+	if !ok || len(encoded) != expectedLength {
 		return PathValue{}, fmt.Errorf("invalid path encoding: expected [%d]interface{}, got %T",
-			encodedPathValueLength,
+			expectedLength,
 			v,
 		)
 	}
@@ -1053,9 +1058,10 @@ func (d *DecoderV4) decodePath(v interface{}) (PathValue, error) {
 
 func (d *DecoderV4) decodeCapability(v interface{}) (CapabilityValue, error) {
 	encoded, ok := v.(cborArray)
-	if !ok || len(encoded) != encodedCapabilityValueLength {
+	const expectedLength = encodedCapabilityValueLength
+	if !ok || len(encoded) != expectedLength {
 		return CapabilityValue{}, fmt.Errorf("invalid path encoding: expected [%d]interface{}, got %T",
-			encodedCapabilityValueLength,
+			expectedLength,
 			v,
 		)
 	}
@@ -1112,9 +1118,10 @@ func (d *DecoderV4) decodeCapability(v interface{}) (CapabilityValue, error) {
 
 func (d *DecoderV4) decodeLink(v interface{}) (LinkValue, error) {
 	encoded, ok := v.(cborArray)
-	if !ok || len(encoded) != encodedLinkValueLength {
+	const expectedLength = encodedLinkValueLength
+	if !ok || len(encoded) != expectedLength {
 		return LinkValue{}, fmt.Errorf("invalid link encoding: expected [%d]interface{}, got %T",
-			encodedLinkValueLength,
+			expectedLength,
 			v,
 		)
 	}
@@ -1236,9 +1243,10 @@ func (d *DecoderV4) decodeStaticTypeLocationAndQualifiedIdentifier(
 
 func (d *DecoderV4) decodeCompositeStaticType(v interface{}) (StaticType, error) {
 	encoded, ok := v.(cborArray)
-	if !ok || len(encoded) != encodedCompositeStaticTypeLength {
+	const expectedLength = encodedCompositeStaticTypeLength
+	if !ok || len(encoded) != expectedLength {
 		return nil, fmt.Errorf("invalid composite static type encoding: expected [%d]interface{}, got %T",
-			encodedCompositeStaticTypeLength,
+			expectedLength,
 			v,
 		)
 	}
@@ -1260,9 +1268,10 @@ func (d *DecoderV4) decodeCompositeStaticType(v interface{}) (StaticType, error)
 
 func (d *DecoderV4) decodeInterfaceStaticType(v interface{}) (StaticType, error) {
 	encoded, ok := v.(cborArray)
-	if !ok || len(encoded) != encodedInterfaceStaticTypeLength {
+	const expectedLength = encodedInterfaceStaticTypeLength
+	if !ok || len(encoded) != expectedLength {
 		return nil, fmt.Errorf("invalid interface static type encoding: expected [%d]interface{}, got %T",
-			encodedInterfaceStaticTypeLength,
+			expectedLength,
 			v,
 		)
 	}
@@ -1294,9 +1303,10 @@ func (d *DecoderV4) decodeVariableSizedStaticType(v interface{}) (StaticType, er
 
 func (d *DecoderV4) decodeConstantSizedStaticType(v interface{}) (StaticType, error) {
 	encoded, ok := v.(cborArray)
-	if !ok || len(encoded) != encodedConstantSizedStaticTypeLength {
+	const expectedLength = encodedConstantSizedStaticTypeLength
+	if !ok || len(encoded) != expectedLength {
 		return nil, fmt.Errorf("invalid constant-sized static type encoding: expected [%d]interface{}, got %T",
-			encodedConstantSizedStaticTypeLength,
+			expectedLength,
 			v,
 		)
 	}
@@ -1329,9 +1339,10 @@ func (d *DecoderV4) decodeConstantSizedStaticType(v interface{}) (StaticType, er
 
 func (d *DecoderV4) decodeReferenceStaticType(v interface{}) (StaticType, error) {
 	encoded, ok := v.(cborArray)
-	if !ok || len(encoded) != encodedReferenceStaticTypeLength {
+	const expectedLength = encodedReferenceStaticTypeLength
+	if !ok || len(encoded) != expectedLength {
 		return nil, fmt.Errorf("invalid reference static type encoding: expected [%d]interface{}, got %T",
-			encodedReferenceStaticTypeLength,
+			expectedLength,
 			v,
 		)
 	}
@@ -1355,9 +1366,10 @@ func (d *DecoderV4) decodeReferenceStaticType(v interface{}) (StaticType, error)
 
 func (d *DecoderV4) decodeDictionaryStaticType(v interface{}) (StaticType, error) {
 	encoded, ok := v.(cborArray)
-	if !ok || len(encoded) != encodedDictionaryStaticTypeLength {
+	const expectedLength = encodedDictionaryStaticTypeLength
+	if !ok || len(encoded) != expectedLength {
 		return nil, fmt.Errorf("invalid dictionary static type encoding: expected [%d]interface{}, got %T",
-			encodedDictionaryStaticTypeLength,
+			expectedLength,
 			v,
 		)
 	}
@@ -1380,9 +1392,10 @@ func (d *DecoderV4) decodeDictionaryStaticType(v interface{}) (StaticType, error
 
 func (d *DecoderV4) decodeRestrictedStaticType(v interface{}) (StaticType, error) {
 	encoded, ok := v.(cborArray)
-	if !ok || len(encoded) != encodedRestrictedStaticTypeLength {
+	const expectedLength = encodedRestrictedStaticTypeLength
+	if !ok || len(encoded) != expectedLength {
 		return nil, fmt.Errorf("invalid restricted static type encoding: expected [%d]interface{}, got %T",
-			encodedRestrictedStaticTypeLength,
+			expectedLength,
 			v,
 		)
 	}
@@ -1419,9 +1432,10 @@ func (d *DecoderV4) decodeRestrictedStaticType(v interface{}) (StaticType, error
 
 func (d *DecoderV4) decodeType(v interface{}) (TypeValue, error) {
 	encoded, ok := v.(cborArray)
-	if !ok || len(encoded) != encodedTypeValueTypeLength {
+	const expectedLength = encodedTypeValueTypeLength
+	if !ok || len(encoded) != expectedLength {
 		return TypeValue{}, fmt.Errorf("invalid type encoding: expected [%d]interface{}, got %T",
-			encodedTypeValueTypeLength,
+			expectedLength,
 			v,
 		)
 	}
