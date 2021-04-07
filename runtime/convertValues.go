@@ -196,6 +196,9 @@ func exportCompositeValue(v *interpreter.CompositeValue, inter *interpreter.Inte
 		fields[i] = exportValueWithInterpreter(fieldValue, inter, results)
 	}
 
+	// NOTE: when modifying the cases below,
+	// also update error message below!
+
 	switch staticType.Kind {
 	case common.CompositeKindStructure:
 		return cadence.NewStruct(fields).WithType(t.(*cadence.StructType))
