@@ -105,15 +105,10 @@ func (f InterpretedFunctionValue) Invoke(invocation Invocation) Value {
 	return f.Interpreter.invokeInterpretedFunction(f, invocation)
 }
 
-func (f InterpretedFunctionValue) ConformsToDynamicType(dynamicType DynamicType) bool {
-	_, ok := dynamicType.(FunctionDynamicType)
-	return ok
-}
-
-func (f InterpretedFunctionValue) conformsToSemaType(semaType sema.Type) bool {
-	// No need to check deep equivalency, since these are not importable.
-	_, ok := semaType.(*sema.FunctionType)
-	return ok
+func (f InterpretedFunctionValue) ConformsToDynamicType(_ *Interpreter, _ DynamicType) bool {
+	// TODO: once FunctionDynamicType has parameter and return type info,
+	//   check it matches InterpretedFunctionValue's static function type
+	return false
 }
 
 // HostFunctionValue
@@ -193,15 +188,11 @@ func (f HostFunctionValue) SetMember(_ *Interpreter, _ func() LocationRange, _ s
 	panic(errors.NewUnreachableError())
 }
 
-func (f HostFunctionValue) ConformsToDynamicType(dynamicType DynamicType) bool {
-	_, ok := dynamicType.(FunctionDynamicType)
-	return ok
-}
-
-func (f HostFunctionValue) conformsToSemaType(semaType sema.Type) bool {
-	// No need to check deep equivalency, since these are not importable.
-	_, ok := semaType.(*sema.FunctionType)
-	return ok
+func (f HostFunctionValue) ConformsToDynamicType(_ *Interpreter, _ DynamicType) bool {
+	// TODO: once HostFunctionValue has static function type,
+	//   and FunctionDynamicType has parameter and return type info,
+	//   check they match
+	return false
 }
 
 // BoundFunctionValue
@@ -257,13 +248,6 @@ func (f BoundFunctionValue) Invoke(invocation Invocation) Value {
 	return f.Function.Invoke(invocation)
 }
 
-func (f BoundFunctionValue) ConformsToDynamicType(dynamicType DynamicType) bool {
-	_, ok := dynamicType.(FunctionDynamicType)
-	return ok
-}
-
-func (f BoundFunctionValue) conformsToSemaType(semaType sema.Type) bool {
-	// No need to check deep equivalency, since these are not importable.
-	_, ok := semaType.(*sema.FunctionType)
-	return ok
+func (f BoundFunctionValue) ConformsToDynamicType(interpreter *Interpreter, dynamicType DynamicType) bool {
+	return f.Function.ConformsToDynamicType(interpreter, dynamicType)
 }
