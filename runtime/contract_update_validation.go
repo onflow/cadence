@@ -213,7 +213,7 @@ func (validator *ContractUpdateValidator) checkNestedDeclarations(
 	// Hence report an error.
 	for name := range oldCompositeAndInterfaceDecls { //nolint:maprangecheck
 		validator.report(&MissingCompositeDeclarationError{
-			DeclName: name,
+			Name: name,
 			Range:    ast.NewRangeFromPositioned(newDeclaration.DeclarationIdentifier()),
 		})
 	}
