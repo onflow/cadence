@@ -1091,7 +1091,7 @@ func (v IntValue) ToBigEndianBytes() []byte {
 
 func (v IntValue) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType) bool {
 	numberType, ok := dynamicType.(NumberDynamicType)
-	return ok && numberType.StaticType == sema.IntType
+	return ok && sema.IntType.Equal(numberType.StaticType)
 }
 
 // Int8Value
@@ -1332,7 +1332,7 @@ func (v Int8Value) ToBigEndianBytes() []byte {
 
 func (v Int8Value) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType) bool {
 	numberType, ok := dynamicType.(NumberDynamicType)
-	return ok && numberType.StaticType == sema.Int8Type
+	return ok && sema.Int8Type.Equal(numberType.StaticType)
 }
 
 // Int16Value
@@ -1575,7 +1575,7 @@ func (v Int16Value) ToBigEndianBytes() []byte {
 
 func (v Int16Value) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType) bool {
 	numberType, ok := dynamicType.(NumberDynamicType)
-	return ok && numberType.StaticType == sema.Int16Type
+	return ok && sema.Int16Type.Equal(numberType.StaticType)
 }
 
 // Int32Value
@@ -1818,7 +1818,7 @@ func (v Int32Value) ToBigEndianBytes() []byte {
 
 func (v Int32Value) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType) bool {
 	numberType, ok := dynamicType.(NumberDynamicType)
-	return ok && numberType.StaticType == sema.Int32Type
+	return ok && sema.Int32Type.Equal(numberType.StaticType)
 }
 
 // Int64Value
@@ -2060,7 +2060,7 @@ func (v Int64Value) ToBigEndianBytes() []byte {
 
 func (v Int64Value) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType) bool {
 	numberType, ok := dynamicType.(NumberDynamicType)
-	return ok && numberType.StaticType == sema.Int64Type
+	return ok && sema.Int64Type.Equal(numberType.StaticType)
 }
 
 // Int128Value
@@ -2360,7 +2360,7 @@ func (v Int128Value) ToBigEndianBytes() []byte {
 
 func (v Int128Value) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType) bool {
 	numberType, ok := dynamicType.(NumberDynamicType)
-	return ok && numberType.StaticType == sema.Int128Type
+	return ok && sema.Int128Type.Equal(numberType.StaticType)
 }
 
 // Int256Value
@@ -2661,7 +2661,7 @@ func (v Int256Value) ToBigEndianBytes() []byte {
 
 func (v Int256Value) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType) bool {
 	numberType, ok := dynamicType.(NumberDynamicType)
-	return ok && numberType.StaticType == sema.Int256Type
+	return ok && sema.Int256Type.Equal(numberType.StaticType)
 }
 
 // UIntValue
@@ -2908,7 +2908,7 @@ func (v UIntValue) ToBigEndianBytes() []byte {
 
 func (v UIntValue) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType) bool {
 	numberType, ok := dynamicType.(NumberDynamicType)
-	return ok && numberType.StaticType == sema.UIntType
+	return ok && sema.UIntType.Equal(numberType.StaticType)
 }
 
 // UInt8Value
@@ -3117,7 +3117,7 @@ func (v UInt8Value) ToBigEndianBytes() []byte {
 
 func (v UInt8Value) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType) bool {
 	numberType, ok := dynamicType.(NumberDynamicType)
-	return ok && numberType.StaticType == sema.UInt8Type
+	return ok && sema.UInt8Type.Equal(numberType.StaticType)
 }
 
 // UInt16Value
@@ -3326,7 +3326,7 @@ func (v UInt16Value) ToBigEndianBytes() []byte {
 
 func (v UInt16Value) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType) bool {
 	numberType, ok := dynamicType.(NumberDynamicType)
-	return ok && numberType.StaticType == sema.UInt16Type
+	return ok && sema.UInt16Type.Equal(numberType.StaticType)
 }
 
 // UInt32Value
@@ -3537,7 +3537,7 @@ func (v UInt32Value) ToBigEndianBytes() []byte {
 
 func (v UInt32Value) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType) bool {
 	numberType, ok := dynamicType.(NumberDynamicType)
-	return ok && numberType.StaticType == sema.UInt32Type
+	return ok && sema.UInt32Type.Equal(numberType.StaticType)
 }
 
 // UInt64Value
@@ -3751,7 +3751,7 @@ func (v UInt64Value) ToBigEndianBytes() []byte {
 
 func (v UInt64Value) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType) bool {
 	numberType, ok := dynamicType.(NumberDynamicType)
-	return ok && numberType.StaticType == sema.UInt64Type
+	return ok && sema.UInt64Type.Equal(numberType.StaticType)
 }
 
 // UInt128Value
@@ -4021,7 +4021,7 @@ func (v UInt128Value) ToBigEndianBytes() []byte {
 
 func (v UInt128Value) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType) bool {
 	numberType, ok := dynamicType.(NumberDynamicType)
-	return ok && numberType.StaticType == sema.UInt128Type
+	return ok && sema.UInt128Type.Equal(numberType.StaticType)
 }
 
 // UInt256Value
@@ -4292,7 +4292,7 @@ func (v UInt256Value) ToBigEndianBytes() []byte {
 
 func (v UInt256Value) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType) bool {
 	numberType, ok := dynamicType.(NumberDynamicType)
-	return ok && numberType.StaticType == sema.UInt256Type
+	return ok && sema.UInt256Type.Equal(numberType.StaticType)
 }
 
 // Word8Value
@@ -4462,7 +4462,7 @@ func (v Word8Value) ToBigEndianBytes() []byte {
 
 func (v Word8Value) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType) bool {
 	numberType, ok := dynamicType.(NumberDynamicType)
-	return ok && numberType.StaticType == sema.Word8Type
+	return ok && sema.Word8Type.Equal(numberType.StaticType)
 }
 
 // Word16Value
@@ -4632,7 +4632,7 @@ func (v Word16Value) ToBigEndianBytes() []byte {
 
 func (v Word16Value) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType) bool {
 	numberType, ok := dynamicType.(NumberDynamicType)
-	return ok && numberType.StaticType == sema.Word16Type
+	return ok && sema.Word16Type.Equal(numberType.StaticType)
 }
 
 // Word32Value
@@ -4804,7 +4804,7 @@ func (v Word32Value) ToBigEndianBytes() []byte {
 
 func (v Word32Value) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType) bool {
 	numberType, ok := dynamicType.(NumberDynamicType)
-	return ok && numberType.StaticType == sema.Word32Type
+	return ok && sema.Word32Type.Equal(numberType.StaticType)
 }
 
 // Word64Value
@@ -4976,7 +4976,7 @@ func (v Word64Value) ToBigEndianBytes() []byte {
 
 func (v Word64Value) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType) bool {
 	numberType, ok := dynamicType.(NumberDynamicType)
-	return ok && numberType.StaticType == sema.Word64Type
+	return ok && sema.Word64Type.Equal(numberType.StaticType)
 }
 
 // Fix64Value
@@ -5201,7 +5201,7 @@ func (v Fix64Value) ToBigEndianBytes() []byte {
 
 func (v Fix64Value) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType) bool {
 	numberType, ok := dynamicType.(NumberDynamicType)
-	return ok && numberType.StaticType == sema.Fix64Type
+	return ok && sema.Fix64Type.Equal(numberType.StaticType)
 }
 
 // UFix64Value
@@ -5422,7 +5422,7 @@ func (v UFix64Value) ToBigEndianBytes() []byte {
 
 func (v UFix64Value) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType) bool {
 	numberType, ok := dynamicType.(NumberDynamicType)
-	return ok && numberType.StaticType == sema.UFix64Type
+	return ok && sema.UFix64Type.Equal(numberType.StaticType)
 }
 
 // CompositeValue
