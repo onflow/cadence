@@ -197,7 +197,7 @@ func exportCompositeValue(v *interpreter.CompositeValue, inter *interpreter.Inte
 	}
 
 	// NOTE: when modifying the cases below,
-	// also update error message below!
+	// also update the error message below!
 
 	switch staticType.Kind {
 	case common.CompositeKindStructure:
