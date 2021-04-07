@@ -529,24 +529,24 @@ func validateArgumentParams(
 
 		arg := importValue(value)
 
-		// Check whether the decoded value conforms to the type associated with the value.
 		dynamicType := arg.DynamicType(inter)
-		if !arg.ConformsToDynamicType(dynamicType) {
-			return nil, &InvalidEntryPointArgumentError{
-				Index: i,
-				Err: &MalformedArgumentError{
-					Value: arg,
-				},
-			}
-		}
 
 		// Check that decoded value is a subtype of static parameter type
 		if !interpreter.IsSubType(dynamicType, parameterType) {
 			return nil, &InvalidEntryPointArgumentError{
 				Index: i,
-				Err: &InvalidTypeAssignmentError{
-					Value: arg,
-					Type:  parameterType,
+				Err: &InvalidValueTypeError{
+					ExpectedType: parameterType,
+				},
+			}
+		}
+
+		// Check whether the decoded value conforms to the type associated with the value
+		if !arg.ConformsToDynamicType(inter, dynamicType) {
+			return nil, &InvalidEntryPointArgumentError{
+				Index: i,
+				Err: &MalformedValueError{
+					ExpectedType: parameterType,
 				},
 			}
 		}

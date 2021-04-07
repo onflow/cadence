@@ -951,17 +951,17 @@ func TestEnumValue(t *testing.T) {
 
 	t.Run("test export", func(t *testing.T) {
 		script := `
-			pub fun main(): Direction {
-				return Direction.RIGHT
-			}
+            pub fun main(): Direction {
+                return Direction.RIGHT
+            }
 
-			pub enum Direction: Int {
-				pub case UP
-				pub case DOWN
-				pub case LEFT
-				pub case RIGHT
-			}
-		`
+            pub enum Direction: Int {
+                pub case UP
+                pub case DOWN
+                pub case LEFT
+                pub case RIGHT
+            }
+        `
 
 		actual := exportValueFromScript(t, script)
 		assert.Equal(t, enumValue, actual)
@@ -969,21 +969,21 @@ func TestEnumValue(t *testing.T) {
 
 	t.Run("test import", func(t *testing.T) {
 		script := `
-			pub fun main(dir: Direction): Direction {
-				if !dir.isInstance(Type<Direction>()) {
-					panic("Not a Direction value")
-				}
+            pub fun main(dir: Direction): Direction {
+                if !dir.isInstance(Type<Direction>()) {
+                    panic("Not a Direction value")
+                }
 
-				return dir
-			}
+                return dir
+            }
 
-			pub enum Direction: Int {
-				pub case UP
-				pub case DOWN
-				pub case LEFT
-				pub case RIGHT
-			}
-		`
+            pub enum Direction: Int {
+                pub case UP
+                pub case DOWN
+                pub case LEFT
+                pub case RIGHT
+            }
+        `
 
 		actual, err := importAndExportValuesFromScript(t, script, enumValue)
 		require.NoError(t, err)
@@ -1015,16 +1015,16 @@ func importAndExportValuesFromScript(t *testing.T, script string, arg cadence.Va
 	)
 }
 
-type argumentPassingTest struct {
-	label         string
-	typeSignature string
-	exportedValue cadence.Value
-	skipExport    bool
-}
-
 func TestArgumentPassing(t *testing.T) {
 
 	t.Parallel()
+
+	type argumentPassingTest struct {
+		label         string
+		typeSignature string
+		exportedValue cadence.Value
+		skipExport    bool
+	}
 
 	var argumentPassingTests = []argumentPassingTest{
 		{
@@ -1211,25 +1211,25 @@ func TestArgumentPassing(t *testing.T) {
 		// TODO: Enable below once https://github.com/onflow/cadence/issues/712 is fixed.
 		// TODO: Add a malformed argument test for capabilities
 		//{
-		//	label:         "Capability",
-		//	typeSignature: "Capability<&Foo>",
-		//	exportedValue: cadence.Capability{
-		//		Path: cadence.Path{
-		//			Domain:     "public",
-		//			Identifier: "bar",
-		//		},
-		//		Address:    cadence.NewAddress([8]byte{0, 0, 0, 0, 0, 1, 0, 2}),
-		//		BorrowType: "Foo",
-		//	},
+		//    label:         "Capability",
+		//    typeSignature: "Capability<&Foo>",
+		//    exportedValue: cadence.Capability{
+		//        Path: cadence.Path{
+		//            Domain:     "public",
+		//            Identifier: "bar",
+		//        },
+		//        Address:    cadence.NewAddress([8]byte{0, 0, 0, 0, 0, 1, 0, 2}),
+		//        BorrowType: "Foo",
+		//    },
 		//},
 
 		// TODO: enable once https://github.com/onflow/cadence/issues/491 is fixed.
 		//{
-		//	label:         "Type",
-		//	typeSignature: "Type",
-		//	exportedValue: cadence.TypeValue{
-		//		StaticType: "Foo",
-		//	},
+		//    label:         "Type",
+		//    typeSignature: "Type",
+		//    exportedValue: cadence.TypeValue{
+		//        StaticType: "Foo",
+		//    },
 		//},
 
 	}
@@ -1251,12 +1251,12 @@ func TestArgumentPassing(t *testing.T) {
 			script := fmt.Sprintf(
 				`pub fun main(arg: %[1]s)%[2]s {
 
-					if !arg.isInstance(Type<%[1]s>()) {
-						panic("Not a %[1]s value")
-					}
+                    if !arg.isInstance(Type<%[1]s>()) {
+                        panic("Not a %[1]s value")
+                    }
 
-					%[3]s
-				}`,
+                    %[3]s
+                }`,
 				test.typeSignature,
 				returnSignature,
 				returnStmt,
@@ -1334,13 +1334,15 @@ func TestComplexStructArgumentPassing(t *testing.T) {
 				},
 				{
 					Identifier: "j",
-					Type: cadence.AnyStructType{},
+					Type:       cadence.AnyStructType{},
 				},
 			},
 		},
 
 		Fields: []cadence.Value{
-			cadence.NewString("John"),
+			cadence.NewOptional(
+				cadence.NewString("John"),
+			),
 			cadence.NewDictionary([]cadence.KeyValuePair{
 				{
 					Key:   cadence.NewString("name"),
@@ -1374,40 +1376,42 @@ func TestComplexStructArgumentPassing(t *testing.T) {
 	}
 
 	script := fmt.Sprintf(
-		`pub fun main(arg: %[1]s): %[1]s {
+		`
+          pub fun main(arg: %[1]s): %[1]s {
 
-			if !arg.isInstance(Type<%[1]s>()) {
-				panic("Not a %[1]s value")
-			}
+              if !arg.isInstance(Type<%[1]s>()) {
+                  panic("Not a %[1]s value")
+              }
 
-			return arg
-		}
+              return arg
+          }
 
-		pub struct Foo {
-			pub var a: String?
-			pub var b: {String: String}
-			pub var c: [String]
-			pub var d: [String; 2]
-			pub var e: Address
-			pub var f: Bool
-			pub var g: StoragePath
-			pub var h: PublicPath
-			pub var i: PrivatePath
-			pub var j: AnyStruct
+          pub struct Foo {
+              pub var a: String?
+              pub var b: {String: String}
+              pub var c: [String]
+              pub var d: [String; 2]
+              pub var e: Address
+              pub var f: Bool
+              pub var g: StoragePath
+              pub var h: PublicPath
+              pub var i: PrivatePath
+              pub var j: AnyStruct
 
-			init() {
-				self.a = "Hello"
-				self.b = {}
-				self.c = []
-				self.d = ["foo", "bar"]
-				self.e = 0x42
-				self.f = true
-				self.g = /storage/foo
-				self.h = /public/foo
-				self.i = /private/foo
-				self.j = nil
-			}
-		}`,
+              init() {
+                  self.a = "Hello"
+                  self.b = {}
+                  self.c = []
+                  self.d = ["foo", "bar"]
+                  self.e = 0x42
+                  self.f = true
+                  self.g = /storage/foo
+                  self.h = /public/foo
+                  self.i = /private/foo
+                  self.j = nil
+              }
+          }
+        `,
 		"Foo",
 	)
 
@@ -1455,13 +1459,13 @@ func TestComplexStructWithAnyStructFields(t *testing.T) {
 				},
 				{
 					Identifier: "e",
-					Type: cadence.AnyStructType{},
+					Type:       cadence.AnyStructType{},
 				},
 			},
 		},
 
 		Fields: []cadence.Value{
-			cadence.NewString("John"),
+			cadence.NewOptional(cadence.NewString("John")),
 			cadence.NewDictionary([]cadence.KeyValuePair{
 				{
 					Key:   cadence.NewString("name"),
@@ -1484,37 +1488,38 @@ func TestComplexStructWithAnyStructFields(t *testing.T) {
 	}
 
 	script := fmt.Sprintf(
-		`pub fun main(arg: %[1]s): %[1]s {
+		`
+          pub fun main(arg: %[1]s): %[1]s {
 
-			if !arg.isInstance(Type<%[1]s>()) {
-				panic("Not a %[1]s value")
-			}
+              if !arg.isInstance(Type<%[1]s>()) {
+                  panic("Not a %[1]s value")
+              }
 
-			return arg
-		}
+              return arg
+          }
 
-		pub struct Foo {
-			pub var a: AnyStruct?
-			pub var b: {String: AnyStruct}
-			pub var c: [AnyStruct]
-			pub var d: [AnyStruct; 2]
-			pub var e: AnyStruct
+          pub struct Foo {
+              pub var a: AnyStruct?
+              pub var b: {String: AnyStruct}
+              pub var c: [AnyStruct]
+              pub var d: [AnyStruct; 2]
+              pub var e: AnyStruct
 
-			init() {
-				self.a = "Hello"
-				self.b = {}
-				self.c = []
-				self.d = ["foo", "bar"]
-				self.e = /storage/foo
-			}
-		}`,
+              init() {
+                  self.a = "Hello"
+                  self.b = {}
+                  self.c = []
+                  self.d = ["foo", "bar"]
+                  self.e = /storage/foo
+              }
+        }
+        `,
 		"Foo",
 	)
 
 	actual, err := importAndExportValuesFromScript(t, script, complexStructValue)
 	require.NoError(t, err)
 	assert.Equal(t, complexStructValue, actual)
-
 }
 
 func TestMalformedArgumentPassing(t *testing.T) {
@@ -1605,31 +1610,43 @@ func TestMalformedArgumentPassing(t *testing.T) {
 		},
 	}
 
+	type argumentPassingTest struct {
+		label           string
+		typeSignature   string
+		exportedValue   cadence.Value
+		expectedErrType error
+	}
+
 	var argumentPassingTests = []argumentPassingTest{
 		{
-			label:         "Malformed Struct field type",
-			typeSignature: "Foo",
-			exportedValue: malformedStruct1,
+			label:           "Malformed Struct field type",
+			typeSignature:   "Foo",
+			exportedValue:   malformedStruct1,
+			expectedErrType: &MalformedValueError{},
 		},
 		{
-			label:         "Malformed Struct field name",
-			typeSignature: "Foo",
-			exportedValue: malformedStruct2,
+			label:           "Malformed Struct field name",
+			typeSignature:   "Foo",
+			exportedValue:   malformedStruct2,
+			expectedErrType: &MalformedValueError{},
 		},
 		{
-			label:         "Malformed AnyStruct",
-			typeSignature: "AnyStruct",
-			exportedValue: malformedStruct1,
+			label:           "Malformed AnyStruct",
+			typeSignature:   "AnyStruct",
+			exportedValue:   malformedStruct1,
+			expectedErrType: &MalformedValueError{},
 		},
 		{
-			label:         "Malformed nested struct array",
-			typeSignature: "Bar",
-			exportedValue: malformedStruct3,
+			label:           "Malformed nested struct array",
+			typeSignature:   "Bar",
+			exportedValue:   malformedStruct3,
+			expectedErrType: &MalformedValueError{},
 		},
 		{
-			label:         "Malformed nested struct dictionary",
-			typeSignature: "Baz",
-			exportedValue: malformedStruct4,
+			label:           "Malformed nested struct dictionary",
+			typeSignature:   "Baz",
+			exportedValue:   malformedStruct4,
+			expectedErrType: &MalformedValueError{},
 		},
 		{
 			label:         "Array with malformed member",
@@ -1637,6 +1654,7 @@ func TestMalformedArgumentPassing(t *testing.T) {
 			exportedValue: cadence.NewArray([]cadence.Value{
 				malformedStruct1,
 			}),
+			expectedErrType: &MalformedValueError{},
 		},
 		{
 			label:         "Array with wrong size",
@@ -1644,21 +1662,24 @@ func TestMalformedArgumentPassing(t *testing.T) {
 			exportedValue: cadence.NewArray([]cadence.Value{
 				malformedStruct1,
 			}),
+			expectedErrType: &InvalidValueTypeError{},
 		},
 		{
-			label:         "Malformed Optional",
-			typeSignature: "Foo?",
-			exportedValue: cadence.NewOptional(malformedStruct1),
+			label:           "Malformed Optional",
+			typeSignature:   "Foo?",
+			exportedValue:   cadence.NewOptional(malformedStruct1),
+			expectedErrType: &MalformedValueError{},
 		},
 		{
 			label:         "Malformed Map",
-			typeSignature: "{String : Foo}",
+			typeSignature: "{String: Foo}",
 			exportedValue: cadence.NewDictionary([]cadence.KeyValuePair{
 				{
 					Key:   cadence.NewString("foo"),
 					Value: malformedStruct1,
 				},
 			}),
+			expectedErrType: &MalformedValueError{},
 		},
 	}
 
@@ -1671,36 +1692,36 @@ func TestMalformedArgumentPassing(t *testing.T) {
 			script := fmt.Sprintf(
 				`pub fun main(arg: %[1]s): %[1]s {
 
-					if !arg.isInstance(Type<%[1]s>()) {
-						panic("Not a %[1]s value")
-					}
+                    if !arg.isInstance(Type<%[1]s>()) {
+                        panic("Not a %[1]s value")
+                    }
 
-					return arg
-				}
+                    return arg
+                }
 
-				pub struct Foo {
-					pub var a: String
+                pub struct Foo {
+                    pub var a: String
 
-					init() {
-						self.a = "Hello"
-					}
-				}
+                    init() {
+                        self.a = "Hello"
+                    }
+                }
 
-				pub struct Bar {
-					pub var a: [Foo]
+                pub struct Bar {
+                    pub var a: [Foo]
 
-					init() {
-						self.a = []
-					}
-				}
+                    init() {
+                        self.a = []
+                    }
+                }
 
-				pub struct Baz {
-					pub var a: {String: Foo}
+                pub struct Baz {
+                    pub var a: {String: Foo}
 
-					init() {
-						self.a = {}
-					}
-				}`,
+                    init() {
+                        self.a = {}
+                    }
+                }`,
 				test.typeSignature,
 			)
 
@@ -1713,12 +1734,7 @@ func TestMalformedArgumentPassing(t *testing.T) {
 			require.IsType(t, &InvalidEntryPointArgumentError{}, runtimeError.Err)
 			argError := runtimeError.Err.(*InvalidEntryPointArgumentError)
 
-			require.IsType(t, &MalformedArgumentError{}, argError.Err)
-			assert.Contains(
-				t,
-				argError.Err.Error(),
-				fmt.Sprintf("malformed argument `%s`", test.exportedValue.String()),
-			)
+			require.IsType(t, test.expectedErrType, argError.Err)
 		})
 	}
 

@@ -110,12 +110,7 @@ func (v BlockValue) String() string {
 	)
 }
 
-func (v BlockValue) ConformsToDynamicType(dynamicType DynamicType) bool {
+func (v BlockValue) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType) bool {
 	_, ok := dynamicType.(BlockDynamicType)
 	return ok
-}
-
-func (v BlockValue) conformsToSemaType(semaType sema.Type) bool {
-	// No need to check deep equivalency, since these are not importable.
-	return sema.BlockType.Equal(semaType)
 }
