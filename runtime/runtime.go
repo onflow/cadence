@@ -811,6 +811,11 @@ func (r *interpreterRuntime) newInterpreter(
 		interpreter.WithOnStatementHandler(
 			r.onStatementHandler(),
 		),
+		interpreter.WithAccountHandlerFunc(
+			func(address interpreter.AddressValue) *interpreter.CompositeValue {
+				return r.getPublicAccount(address, context.Interface, runtimeStorage)
+			},
+		),
 	}
 
 	defaultOptions = append(defaultOptions,
@@ -1511,13 +1516,22 @@ func (r *interpreterRuntime) instantiateContract(
 func (r *interpreterRuntime) newGetAccountFunction(runtimeInterface Interface, runtimeStorage *runtimeStorage) interpreter.HostFunction {
 	return func(invocation interpreter.Invocation) interpreter.Value {
 		accountAddress := invocation.Arguments[0].(interpreter.AddressValue)
-		return interpreter.NewPublicAccountValue(
-			accountAddress,
-			storageUsedGetFunction(accountAddress, runtimeInterface, runtimeStorage),
-			storageCapacityGetFunction(accountAddress, runtimeInterface),
-			r.newPublicAccountKeys(accountAddress, runtimeInterface),
-		)
+		return r.getPublicAccount(accountAddress, runtimeInterface, runtimeStorage)
 	}
+}
+
+func (r *interpreterRuntime) getPublicAccount(
+	accountAddress interpreter.AddressValue,
+	runtimeInterface Interface,
+	runtimeStorage *runtimeStorage,
+) *interpreter.CompositeValue {
+
+	return interpreter.NewPublicAccountValue(
+		accountAddress,
+		storageUsedGetFunction(accountAddress, runtimeInterface, runtimeStorage),
+		storageCapacityGetFunction(accountAddress, runtimeInterface),
+		r.newPublicAccountKeys(accountAddress, runtimeInterface),
+	)
 }
 
 func (r *interpreterRuntime) newLogFunction(runtimeInterface Interface) interpreter.HostFunction {

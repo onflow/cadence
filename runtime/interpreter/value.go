@@ -5704,26 +5704,8 @@ func (v *CompositeValue) OwnerValue(interpreter *Interpreter) OptionalValue {
 		return NilValue{}
 	}
 
-	// There's no direct access to the host environment at this point.
-	// Therefore, load and invoke the `getAccount` host function.
-	getAccountValue, ok := interpreter.effectivePredeclaredValues["getAccount"]
-	if !ok {
-		panic(errors.NewUnreachableError())
-	}
-
-	getAccountHostFunc := getAccountValue.ValueDeclarationValue().(HostFunctionValue)
-
 	address := AddressValue(*v.Owner)
-
-	invocation := Invocation{
-		Arguments: []Value{
-			address,
-		},
-		GetLocationRange: ReturnEmptyLocationRange,
-		Interpreter:      interpreter,
-	}
-
-	ownerAccount := getAccountHostFunc.Function(invocation)
+	ownerAccount := interpreter.accountHandler(address)
 
 	return NewSomeValueOwningNonCopying(ownerAccount)
 }
