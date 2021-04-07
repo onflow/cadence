@@ -974,20 +974,12 @@ func (e *Encoder) prepareLocation(l common.Location) (interface{}, error) {
 		}, nil
 
 	case common.AddressLocation:
-		var content interface{}
-
-		if l.Name == "" {
-			content = l.Address.Bytes()
-		} else {
-			content = cborArray{
+		return cbor.Tag{
+			Number: cborTagAddressLocation,
+			Content: cborArray{
 				encodedAddressLocationAddressFieldKey: l.Address.Bytes(),
 				encodedAddressLocationNameFieldKey:    l.Name,
-			}
-		}
-
-		return cbor.Tag{
-			Number:  cborTagAddressLocation,
-			Content: content,
+			},
 		}, nil
 
 	default:
