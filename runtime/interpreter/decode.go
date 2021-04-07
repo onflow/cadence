@@ -466,25 +466,6 @@ func (d *DecoderV4) decodeIdentifierLocation(v interface{}) (common.Location, er
 }
 
 func (d *DecoderV4) decodeAddressLocation(v interface{}) (common.Location, error) {
-
-	// If the encoded location is just a byte slice,
-	// it is the address and no name is provided
-
-	encodedAddress, ok := v.([]byte)
-	if ok {
-		err := d.checkAddressLength(encodedAddress)
-		if err != nil {
-			return nil, err
-		}
-
-		return common.AddressLocation{
-			Address: common.BytesToAddress(encodedAddress),
-		}, nil
-	}
-
-	// Otherwise, the encoded location is expected to be an array,
-	// which includes both address and name
-
 	encoded, ok := v.(cborArray)
 	const expectedLength = encodedAddressLocationLength
 	if !ok || len(encoded) != expectedLength {
@@ -497,7 +478,7 @@ func (d *DecoderV4) decodeAddressLocation(v interface{}) (common.Location, error
 	// Address
 
 	field1 := encoded[encodedAddressLocationAddressFieldKey]
-	encodedAddress, ok = field1.([]byte)
+	encodedAddress, ok := field1.([]byte)
 	if !ok {
 		return nil, fmt.Errorf("invalid address location address encoding: %T", field1)
 	}
