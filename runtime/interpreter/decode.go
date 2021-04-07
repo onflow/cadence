@@ -1074,7 +1074,12 @@ func (d *DecoderV4) decodeCapability(v interface{}) (CapabilityValue, error) {
 	}
 
 	// borrow type (optional, for backwards compatibility)
-
+	// Capabilities used to be untyped, i.e. they didn't have a borrow type.
+	// Later an optional type paramater, the borrow type, was added to it,
+	// which specifies as what type the capability should be borrowed.
+	//
+	// The decoding must be backwards-compatible and support both capability values
+	// with a borrow type and ones without
 	var borrowType StaticType
 
 	if field3 := encoded[encodedCapabilityValueBorrowTypeFieldKey]; field3 != nil {
