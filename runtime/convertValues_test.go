@@ -293,7 +293,7 @@ func TestExportFixedPointValuesFromScript(t *testing.T) {
 	for _, fixedPointType := range sema.AllFixedPointTypes {
 
 		var literal string
-		if sema.IsSubType(fixedPointType, &sema.SignedFixedPointType{}) {
+		if sema.IsSubType(fixedPointType, sema.SignedFixedPointType) {
 			literal = "-1.23"
 		} else {
 			literal = "1.23"

@@ -4554,7 +4554,7 @@ func TestInterpretDictionaryKeyTypes(t *testing.T) {
 
 		var literal string
 
-		if sema.IsSubType(fixedPointType, &sema.SignedFixedPointType{}) {
+		if sema.IsSubType(fixedPointType, sema.SignedFixedPointType) {
 			literal = "-1.23"
 		} else {
 			literal = "1.23"
@@ -6923,7 +6923,7 @@ func TestInterpretResourceAssignmentForceTransfer(t *testing.T) {
 		require.ErrorAs(t, err, &interpreter.ForceAssignmentToNonNilResourceError{})
 	})
 
-	t.Run("new to non-nil", func(t *testing.T) {
+	t.Run("force-assignment initialization", func(t *testing.T) {
 
 		inter := parseCheckAndInterpret(t, `
 	     resource X {}

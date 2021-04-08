@@ -1030,7 +1030,7 @@ func (interpreter *Interpreter) visitAssignment(
 		// The latter case exists when the force-move assignment is the initialization of a field
 		// in an initializer, in which case there is no prior value for the field.
 
-		if _, ok := target.(NilValue); !ok {
+		if _, ok := target.(NilValue); !ok && target != nil {
 			getLocationRange := locationRangeGetter(interpreter.Location, position)
 			panic(ForceAssignmentToNonNilResourceError{
 				LocationRange: getLocationRange(),
