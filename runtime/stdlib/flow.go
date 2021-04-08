@@ -47,7 +47,7 @@ var accountFunctionType = &sema.FunctionType{
 	),
 }
 
-var GetAccountFunctionType = &sema.FunctionType{
+var getAccountFunctionType = &sema.FunctionType{
 	Parameters: []*sema.Parameter{
 		{
 			Label:      sema.ArgumentLabelNotRequired,
@@ -128,7 +128,7 @@ func FlowBuiltInFunctions(impls FlowBuiltinImpls) StandardLibraryFunctions {
 		),
 		NewStandardLibraryFunction(
 			"getAccount",
-			GetAccountFunctionType,
+			getAccountFunctionType,
 			impls.GetAccount,
 		),
 		NewStandardLibraryFunction(

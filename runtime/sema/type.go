@@ -5085,7 +5085,9 @@ func init() {
 		PublicKeyType,
 		HashAlgorithmType,
 		SignatureAlgorithmType,
+		AuthAccountType,
 		AuthAccountKeysType,
+		PublicAccountType,
 		PublicAccountKeysType,
 	}
 

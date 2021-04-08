@@ -4268,13 +4268,8 @@ func TestInterpretResourceOwnerFieldUseComposite(t *testing.T) {
 			loggedMessages = append(loggedMessages, message)
 		},
 		getStorageUsed: func(_ Address) (uint64, error) {
-			var amount uint64 = 0
-
-			for _, data := range storage.storedValues {
-				amount += uint64(len(data))
-			}
-
-			return amount, nil
+			// return a dummy value
+			return 120, nil
 		},
 		getStorageCapacity: func(_ Address) (uint64, error) {
 			// return a dummy value
