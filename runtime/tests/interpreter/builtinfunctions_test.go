@@ -70,7 +70,7 @@ func TestInterpretToString(t *testing.T) {
 
 			var literal string
 
-			isSigned := sema.IsSubType(ty, &sema.SignedFixedPointType{})
+			isSigned := sema.IsSubType(ty, sema.SignedFixedPointType)
 
 			if isSigned {
 				literal = "-12.34"
