@@ -7590,7 +7590,7 @@ func TestInterpretMissingMember(t *testing.T) {
 	fieldMember := sema.NewPublicConstantFieldMember(
 		ty,
 		fieldName,
-		&sema.IntType{},
+		sema.IntType,
 		"",
 	)
 	members.Set(fieldName, fieldMember)
