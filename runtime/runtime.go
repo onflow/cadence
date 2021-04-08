@@ -318,7 +318,7 @@ func (r *interpreterRuntime) newAuthAccountValue(
 	runtimeStorage *runtimeStorage,
 	interpreterOptions []interpreter.Option,
 	checkerOptions []sema.Option,
-) interpreter.AuthAccountValue {
+) *interpreter.CompositeValue {
 	return interpreter.NewAuthAccountValue(
 		addressValue,
 		storageUsedGetFunction(addressValue, context.Interface, runtimeStorage),
@@ -1138,18 +1138,26 @@ func (r *interpreterRuntime) newCreateAccountFunction(
 ) interpreter.HostFunction {
 	return func(invocation interpreter.Invocation) interpreter.Value {
 
-		payer, ok := invocation.Arguments[0].(interpreter.AuthAccountValue)
-		if !ok {
+		payer := invocation.Arguments[0].(*interpreter.CompositeValue)
+
+		if payer.QualifiedIdentifier != sema.AuthAccountType.QualifiedIdentifier() {
 			panic(fmt.Sprintf(
 				"%[1]s requires the first argument (payer) to be an %[1]s",
 				sema.AuthAccountType,
 			))
 		}
 
+		payerAddressValue, ok := payer.Fields.Get(sema.AuthAccountAddressField)
+		if !ok {
+			panic("address is not set")
+		}
+
+		payerAddress := payerAddressValue.(interpreter.AddressValue).ToAddress()
+
 		var address Address
 		var err error
 		wrapPanic(func() {
-			address, err = context.Interface.CreateAccount(payer.AddressValue().ToAddress())
+			address, err = context.Interface.CreateAccount(payerAddress)
 		})
 		if err != nil {
 			panic(err)
@@ -1598,10 +1606,10 @@ func (r *interpreterRuntime) newAuthAccountContracts(
 	runtimeStorage *runtimeStorage,
 	interpreterOptions []interpreter.Option,
 	checkerOptions []sema.Option,
-) interpreter.AuthAccountContractsValue {
-	return interpreter.AuthAccountContractsValue{
-		Address: addressValue,
-		AddFunction: r.newAuthAccountContractsChangeFunction(
+) *interpreter.CompositeValue {
+	return interpreter.NewAuthAccountContractsValue(
+		addressValue,
+		r.newAuthAccountContractsChangeFunction(
 			addressValue,
 			context,
 			runtimeStorage,
@@ -1609,7 +1617,7 @@ func (r *interpreterRuntime) newAuthAccountContracts(
 			checkerOptions,
 			false,
 		),
-		UpdateFunction: r.newAuthAccountContractsChangeFunction(
+		r.newAuthAccountContractsChangeFunction(
 			addressValue,
 			context,
 			runtimeStorage,
@@ -1617,16 +1625,16 @@ func (r *interpreterRuntime) newAuthAccountContracts(
 			checkerOptions,
 			true,
 		),
-		GetFunction: r.newAuthAccountContractsGetFunction(
+		r.newAuthAccountContractsGetFunction(
 			addressValue,
 			context.Interface,
 		),
-		RemoveFunction: r.newAuthAccountContractsRemoveFunction(
+		r.newAuthAccountContractsRemoveFunction(
 			addressValue,
 			context.Interface,
 			runtimeStorage,
 		),
-	}
+	)
 }
 
 func (r *interpreterRuntime) newAuthAccountKeys(addressValue interpreter.AddressValue, runtimeInterface Interface) *interpreter.CompositeValue {

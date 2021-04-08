@@ -64,7 +64,7 @@ func TestCheckCapability(t *testing.T) {
 
 		assert.IsType(t,
 			&sema.CapabilityType{
-				BorrowType: &sema.IntType{},
+				BorrowType: sema.IntType,
 			},
 			capType,
 		)
@@ -432,5 +432,22 @@ func TestCheckCapability_check(t *testing.T) {
 
 			require.IsType(t, &sema.TypeMismatchError{}, errs[0])
 		})
+	})
+}
+
+func TestCheckCapability_address(t *testing.T) {
+
+	t.Parallel()
+	t.Run("check address", func(t *testing.T) {
+		checker, err := ParseAndCheckWithPanic(t,
+			`		  			
+				let capability: Capability = panic("")
+				let addr = capability.address
+			`,
+		)
+		require.NoError(t, err)
+
+		addrType := RequireGlobalValue(t, checker.Elaboration, "addr")
+		require.Equal(t, &sema.AddressType{}, addrType)
 	})
 }

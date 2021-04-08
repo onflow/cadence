@@ -19,6 +19,7 @@
 package runtime
 
 import (
+	"strconv"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -26,6 +27,7 @@ import (
 
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
@@ -258,6 +260,113 @@ func TestRuntimeHighLevelStorage(t *testing.T) {
 		},
 		writes,
 	)
+}
+
+func withWritesToStorage(arrayElementCount int, storageItemCount int, onWrite func(owner, key, value []byte), handler func(runtimeStorage *runtimeStorage)) {
+	runtimeInterface := &testRuntimeInterface{
+		storage: newTestStorage(nil, onWrite),
+	}
+
+	runtimeStorage := newRuntimeStorage(runtimeInterface)
+
+	array := interpreter.NewArrayValueUnownedNonCopying()
+
+	for i := 0; i < arrayElementCount; i++ {
+		array.Append(interpreter.NewIntValueFromInt64(int64(i)))
+	}
+
+	address := common.BytesToAddress([]byte{0x1})
+
+	for i := 0; i < storageItemCount; i++ {
+		runtimeStorage.cache[StorageKey{
+			Address: address,
+			Key:     strconv.Itoa(i),
+		}] = CacheEntry{
+			MustWrite: true,
+			Value:     array,
+		}
+	}
+
+	handler(runtimeStorage)
+}
+
+func TestRuntimeStorageWriteCached(t *testing.T) {
+	var writes []testWrite
+
+	onWrite := func(owner, key, value []byte) {
+		writes = append(writes, testWrite{
+			owner: owner,
+			key:   key,
+			value: value,
+		})
+	}
+
+	const arrayElementCount = 100
+	const storageItemCount = 100
+	withWritesToStorage(arrayElementCount, storageItemCount, onWrite, func(runtimeStorage *runtimeStorage) {
+		runtimeStorage.writeCached(nil)
+		require.Len(t, writes, storageItemCount)
+	})
+}
+
+func TestRuntimeStorageWriteCachedIsDeterministic(t *testing.T) {
+	var writes []testWrite
+
+	onWrite := func(owner, key, value []byte) {
+		writes = append(writes, testWrite{
+			owner: owner,
+			key:   key,
+			value: value,
+		})
+	}
+
+	const arrayElementCount = 100
+	const storageItemCount = 100
+	withWritesToStorage(arrayElementCount, storageItemCount, onWrite, func(runtimeStorage *runtimeStorage) {
+		runtimeStorage.writeCached(nil)
+		previousWrites := make([]testWrite, len(writes))
+		copy(previousWrites, writes)
+
+		// verify for 10 times and check the writes are always deterministic
+		for i := 0; i < 10; i++ {
+			// test that writing again should produce the same result
+			writes = nil
+			runtimeStorage.writeCached(nil)
+			for i, previousWrite := range previousWrites {
+				// compare the new write with the old write
+				require.Equal(t, previousWrite, writes[i])
+			}
+
+			// no additional items
+			require.Len(t, writes, len(previousWrites))
+		}
+	})
+}
+
+func BenchmarkRuntimeStorageWriteCached(b *testing.B) {
+	var writes []testWrite
+
+	onWrite := func(owner, key, value []byte) {
+		writes = append(writes, testWrite{
+			owner: owner,
+			key:   key,
+			value: value,
+		})
+	}
+
+	const arrayElementCount = 100
+	const storageItemCount = 100
+	withWritesToStorage(arrayElementCount, storageItemCount, onWrite, func(runtimeStorage *runtimeStorage) {
+		b.ReportAllocs()
+		b.ResetTimer()
+
+		for i := 0; i < b.N; i++ {
+			writes = nil
+			runtimeStorage.writeCached(nil)
+
+			require.Len(b, writes, storageItemCount)
+		}
+	})
 }
 
 func TestRuntimeMagic(t *testing.T) {

@@ -137,10 +137,10 @@ func (checker *Checker) checkBinaryExpressionArithmeticOrNonEqualityComparisonOr
 	case BinaryOperationKindArithmetic,
 		BinaryOperationKindNonEqualityComparison:
 
-		expectedSuperType = &NumberType{}
+		expectedSuperType = NumberType
 
 	case BinaryOperationKindBitwise:
-		expectedSuperType = &IntegerType{}
+		expectedSuperType = IntegerType
 
 	default:
 		panic(errors.NewUnreachableError())

@@ -340,7 +340,7 @@ const ToBigEndianBytesFunctionName = "toBigEndianBytes"
 var toBigEndianBytesFunctionType = &FunctionType{
 	ReturnTypeAnnotation: NewTypeAnnotation(
 		&VariableSizedType{
-			Type: &UInt8Type{},
+			Type: UInt8Type,
 		},
 	),
 }
@@ -384,7 +384,7 @@ func withBuiltinMembers(ty Type, members map[string]MemberResolver) map[string]M
 
 	// All number types and addresses have a `toString` function
 
-	if IsSubType(ty, &NumberType{}) || IsSubType(ty, &AddressType{}) {
+	if IsSubType(ty, NumberType) || IsSubType(ty, &AddressType{}) {
 
 		members[ToStringFunctionName] = MemberResolver{
 			Kind: common.DeclarationKindFunction,
@@ -401,7 +401,7 @@ func withBuiltinMembers(ty Type, members map[string]MemberResolver) map[string]M
 
 	// All number types have a `toBigEndianBytes` function
 
-	if IsSubType(ty, &NumberType{}) {
+	if IsSubType(ty, NumberType) {
 
 		members[ToBigEndianBytesFunctionName] = MemberResolver{
 			Kind: common.DeclarationKindFunction,
@@ -703,146 +703,6 @@ func (t *GenericType) GetMembers() map[string]MemberResolver {
 	return withBuiltinMembers(t, nil)
 }
 
-// NumberType represents the super-type of all signed number types
-type NumberType struct{}
-
-func (*NumberType) IsType() {}
-
-func (*NumberType) String() string {
-	return "Number"
-}
-
-func (*NumberType) QualifiedString() string {
-	return "Number"
-}
-
-func (*NumberType) ID() TypeID {
-	return "Number"
-}
-
-func (*NumberType) Equal(other Type) bool {
-	_, ok := other.(*NumberType)
-	return ok
-}
-
-func (*NumberType) IsResourceType() bool {
-	return false
-}
-
-func (*NumberType) IsInvalidType() bool {
-	return false
-}
-
-func (*NumberType) IsStorable(_ map[*Member]bool) bool {
-	return true
-}
-
-func (*NumberType) IsExternallyReturnable(_ map[*Member]bool) bool {
-	return true
-}
-
-func (*NumberType) IsEquatable() bool {
-	return true
-}
-
-func (*NumberType) TypeAnnotationState() TypeAnnotationState {
-	return TypeAnnotationStateValid
-}
-
-func (t *NumberType) RewriteWithRestrictedTypes() (result Type, rewritten bool) {
-	return t, false
-}
-
-func (*NumberType) MinInt() *big.Int {
-	return nil
-}
-
-func (*NumberType) MaxInt() *big.Int {
-	return nil
-}
-
-func (*NumberType) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
-	return false
-}
-
-func (t *NumberType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
-	return t
-}
-
-func (t *NumberType) GetMembers() map[string]MemberResolver {
-	return withBuiltinMembers(t, nil)
-}
-
-// SignedNumberType represents the super-type of all signed number types
-type SignedNumberType struct{}
-
-func (*SignedNumberType) IsType() {}
-
-func (*SignedNumberType) String() string {
-	return "SignedNumber"
-}
-
-func (*SignedNumberType) QualifiedString() string {
-	return "SignedNumber"
-}
-
-func (*SignedNumberType) ID() TypeID {
-	return "SignedNumber"
-}
-
-func (*SignedNumberType) Equal(other Type) bool {
-	_, ok := other.(*SignedNumberType)
-	return ok
-}
-
-func (*SignedNumberType) IsResourceType() bool {
-	return false
-}
-
-func (*SignedNumberType) IsInvalidType() bool {
-	return false
-}
-
-func (*SignedNumberType) IsStorable(_ map[*Member]bool) bool {
-	return true
-}
-
-func (*SignedNumberType) IsExternallyReturnable(_ map[*Member]bool) bool {
-	return true
-}
-
-func (*SignedNumberType) IsEquatable() bool {
-	return true
-}
-
-func (*SignedNumberType) TypeAnnotationState() TypeAnnotationState {
-	return TypeAnnotationStateValid
-}
-
-func (t *SignedNumberType) RewriteWithRestrictedTypes() (result Type, rewritten bool) {
-	return t, false
-}
-
-func (*SignedNumberType) MinInt() *big.Int {
-	return nil
-}
-
-func (*SignedNumberType) MaxInt() *big.Int {
-	return nil
-}
-
-func (*SignedNumberType) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
-	return false
-}
-
-func (t *SignedNumberType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
-	return t
-}
-
-func (t *SignedNumberType) GetMembers() map[string]MemberResolver {
-	return withBuiltinMembers(t, nil)
-}
-
 // IntegerRangedType
 
 type IntegerRangedType interface {
@@ -858,1837 +718,440 @@ type FractionalRangedType interface {
 	MaxFractional() *big.Int
 }
 
-// IntegerType represents the super-type of all integer types
-type IntegerType struct{}
-
-func (*IntegerType) IsType() {}
-
-func (*IntegerType) String() string {
-	return "Integer"
+// NumericType represent all the types in the integer range
+// and non-fractional ranged types.
+//
+type NumericType struct {
+	name   string
+	minInt *big.Int
+	maxInt *big.Int
 }
 
-func (*IntegerType) QualifiedString() string {
-	return "Integer"
+var _ IntegerRangedType = &NumericType{}
+
+func NewNumericType(typeName string) *NumericType {
+	return &NumericType{name: typeName}
 }
 
-func (*IntegerType) ID() TypeID {
-	return "Integer"
-}
-
-func (*IntegerType) Equal(other Type) bool {
-	_, ok := other.(*IntegerType)
-	return ok
-}
-
-func (*IntegerType) IsResourceType() bool {
-	return false
-}
-
-func (*IntegerType) IsInvalidType() bool {
-	return false
-}
-
-func (*IntegerType) IsStorable(_ map[*Member]bool) bool {
-	return true
-}
-
-func (*IntegerType) IsExternallyReturnable(_ map[*Member]bool) bool {
-	return true
-}
-
-func (*IntegerType) IsEquatable() bool {
-	return true
-}
-
-func (*IntegerType) TypeAnnotationState() TypeAnnotationState {
-	return TypeAnnotationStateValid
-}
-
-func (t *IntegerType) RewriteWithRestrictedTypes() (result Type, rewritten bool) {
-	return t, false
-}
-
-func (*IntegerType) MinInt() *big.Int {
-	return nil
-}
-
-func (*IntegerType) MaxInt() *big.Int {
-	return nil
-}
-
-func (*IntegerType) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
-	return false
-}
-
-func (t *IntegerType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
+func (t *NumericType) WithIntRange(min *big.Int, max *big.Int) *NumericType {
+	t.minInt = min
+	t.maxInt = max
 	return t
 }
 
-func (t *IntegerType) GetMembers() map[string]MemberResolver {
-	return withBuiltinMembers(t, nil)
+func (*NumericType) IsType() {}
+
+func (t *NumericType) String() string {
+	return t.name
 }
 
-// SignedIntegerType represents the super-type of all signed integer types
-type SignedIntegerType struct{}
-
-func (*SignedIntegerType) IsType() {}
-
-func (*SignedIntegerType) String() string {
-	return "SignedInteger"
+func (t *NumericType) QualifiedString() string {
+	return t.name
 }
 
-func (*SignedIntegerType) QualifiedString() string {
-	return "SignedInteger"
+func (t *NumericType) ID() TypeID {
+	return TypeID(t.name)
 }
 
-func (*SignedIntegerType) ID() TypeID {
-	return "SignedInteger"
+func (t *NumericType) Equal(other Type) bool {
+	// Numeric types are singletons. Hence their pointers should be equal.
+	if t == other {
+		return true
+	}
+
+	// Check for the value equality as well, as a backup strategy.
+	otherNumericType, ok := other.(*NumericType)
+	return ok && t.ID() == otherNumericType.ID()
 }
 
-func (*SignedIntegerType) Equal(other Type) bool {
-	_, ok := other.(*SignedIntegerType)
-	return ok
-}
-
-func (*SignedIntegerType) IsResourceType() bool {
+func (*NumericType) IsResourceType() bool {
 	return false
 }
 
-func (*SignedIntegerType) IsInvalidType() bool {
+func (*NumericType) IsInvalidType() bool {
 	return false
 }
 
-func (*SignedIntegerType) IsStorable(_ map[*Member]bool) bool {
+func (*NumericType) IsStorable(_ map[*Member]bool) bool {
 	return true
 }
 
-func (*SignedIntegerType) IsExternallyReturnable(_ map[*Member]bool) bool {
+func (*NumericType) IsExternallyReturnable(_ map[*Member]bool) bool {
 	return true
 }
 
-func (*SignedIntegerType) IsEquatable() bool {
+func (*NumericType) IsEquatable() bool {
 	return true
 }
 
-func (*SignedIntegerType) TypeAnnotationState() TypeAnnotationState {
+func (*NumericType) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
 
-func (t *SignedIntegerType) RewriteWithRestrictedTypes() (result Type, rewritten bool) {
+func (t *NumericType) RewriteWithRestrictedTypes() (result Type, rewritten bool) {
 	return t, false
 }
 
-func (*SignedIntegerType) MinInt() *big.Int {
-	return nil
+func (t *NumericType) MinInt() *big.Int {
+	return t.minInt
 }
 
-func (*SignedIntegerType) MaxInt() *big.Int {
-	return nil
+func (t *NumericType) MaxInt() *big.Int {
+	return t.maxInt
 }
 
-func (*SignedIntegerType) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
+func (*NumericType) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
 	return false
 }
 
-func (t *SignedIntegerType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
+func (t *NumericType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
 	return t
 }
 
-func (t *SignedIntegerType) GetMembers() map[string]MemberResolver {
+func (t *NumericType) GetMembers() map[string]MemberResolver {
 	return withBuiltinMembers(t, nil)
 }
 
-// IntType represents the arbitrary-precision integer type `Int`
-type IntType struct{}
-
-func (*IntType) IsType() {}
-
-func (*IntType) String() string {
-	return "Int"
+// FixedPointNumericType represents all the types in the fixed-point range.
+//
+type FixedPointNumericType struct {
+	name          string
+	scale         uint
+	minInt        *big.Int
+	maxInt        *big.Int
+	minFractional *big.Int
+	maxFractional *big.Int
 }
 
-func (*IntType) QualifiedString() string {
-	return "Int"
+var _ FractionalRangedType = &FixedPointNumericType{}
+
+func NewFixedPointNumericType(typeName string) *FixedPointNumericType {
+	return &FixedPointNumericType{
+		name: typeName,
+	}
 }
 
-func (*IntType) ID() TypeID {
-	return "Int"
+func (t *FixedPointNumericType) WithIntRange(minInt *big.Int, maxInt *big.Int) *FixedPointNumericType {
+	t.minInt = minInt
+	t.maxInt = maxInt
+	return t
 }
 
-func (*IntType) Equal(other Type) bool {
-	_, ok := other.(*IntType)
-	return ok
+func (t *FixedPointNumericType) WithFractionalRange(
+	minFractional *big.Int,
+	maxFractional *big.Int,
+) *FixedPointNumericType {
+
+	t.minFractional = minFractional
+	t.maxFractional = maxFractional
+	return t
 }
 
-func (*IntType) IsResourceType() bool {
+func (t *FixedPointNumericType) WithScale(scale uint) *FixedPointNumericType {
+	t.scale = scale
+	return t
+}
+
+func (*FixedPointNumericType) IsType() {}
+
+func (t *FixedPointNumericType) String() string {
+	return t.name
+}
+
+func (t *FixedPointNumericType) QualifiedString() string {
+	return t.name
+}
+
+func (t *FixedPointNumericType) ID() TypeID {
+	return TypeID(t.name)
+}
+
+func (t *FixedPointNumericType) Equal(other Type) bool {
+	// Numeric types are singletons. Hence their pointers should be equal.
+	if t == other {
+		return true
+	}
+
+	// Check for the value equality as well, as a backup strategy.
+	otherNumericType, ok := other.(*FixedPointNumericType)
+	return ok && t.ID() == otherNumericType.ID()
+}
+
+func (*FixedPointNumericType) IsResourceType() bool {
 	return false
 }
 
-func (*IntType) IsInvalidType() bool {
+func (*FixedPointNumericType) IsInvalidType() bool {
 	return false
 }
 
-func (*IntType) IsStorable(_ map[*Member]bool) bool {
+func (*FixedPointNumericType) IsStorable(_ map[*Member]bool) bool {
 	return true
 }
 
-func (*IntType) IsExternallyReturnable(_ map[*Member]bool) bool {
+func (*FixedPointNumericType) IsExternallyReturnable(_ map[*Member]bool) bool {
 	return true
 }
 
-func (*IntType) IsEquatable() bool {
+func (*FixedPointNumericType) IsEquatable() bool {
 	return true
 }
 
-func (*IntType) TypeAnnotationState() TypeAnnotationState {
+func (*FixedPointNumericType) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
 
-func (t *IntType) RewriteWithRestrictedTypes() (result Type, rewritten bool) {
+func (t *FixedPointNumericType) RewriteWithRestrictedTypes() (result Type, rewritten bool) {
 	return t, false
 }
 
-func (*IntType) MinInt() *big.Int {
-	return nil
+func (t *FixedPointNumericType) MinInt() *big.Int {
+	return t.minInt
 }
 
-func (*IntType) MaxInt() *big.Int {
-	return nil
+func (t *FixedPointNumericType) MaxInt() *big.Int {
+	return t.maxInt
 }
 
-func (*IntType) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
+func (t *FixedPointNumericType) MinFractional() *big.Int {
+	return t.minFractional
+}
+
+func (t *FixedPointNumericType) MaxFractional() *big.Int {
+	return t.maxFractional
+}
+
+func (t *FixedPointNumericType) Scale() uint {
+	return t.scale
+}
+
+func (*FixedPointNumericType) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
 	return false
 }
 
-func (t *IntType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
+func (t *FixedPointNumericType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
 	return t
 }
 
-func (t *IntType) GetMembers() map[string]MemberResolver {
+func (t *FixedPointNumericType) GetMembers() map[string]MemberResolver {
 	return withBuiltinMembers(t, nil)
 }
 
-// Int8Type represents the 8-bit signed integer type `Int8`
+// Numeric types
 
-type Int8Type struct{}
+var (
 
-func (*Int8Type) IsType() {}
+	// NumberType represents the super-type of all number types
+	NumberType = NewNumericType(NumberTypeName)
 
-func (*Int8Type) String() string {
-	return "Int8"
-}
+	// SignedNumberType represents the super-type of all signed number types
+	SignedNumberType = NewNumericType(SignedNumberTypeName)
 
-func (*Int8Type) QualifiedString() string {
-	return "Int8"
-}
+	// IntegerType represents the super-type of all integer types
+	IntegerType = NewNumericType(IntegerTypeName)
 
-func (*Int8Type) ID() TypeID {
-	return "Int8"
-}
+	// SignedIntegerType represents the super-type of all signed integer types
+	SignedIntegerType = NewNumericType(SignedIntegerTypeName)
 
-func (*Int8Type) Equal(other Type) bool {
-	_, ok := other.(*Int8Type)
-	return ok
-}
+	// IntType represents the arbitrary-precision integer type `Int`
+	IntType = NewNumericType(IntTypeName)
 
-func (*Int8Type) IsResourceType() bool {
-	return false
-}
+	// Int8Type represents the 8-bit signed integer type `Int8`
+	Int8Type = NewNumericType(Int8TypeName).WithIntRange(Int8TypeMinInt, Int8TypeMaxInt)
 
-func (*Int8Type) IsInvalidType() bool {
-	return false
-}
+	// Int16Type represents the 16-bit signed integer type `Int16`
+	Int16Type = NewNumericType(Int16TypeName).WithIntRange(Int16TypeMinInt, Int16TypeMaxInt)
 
-func (*Int8Type) IsStorable(_ map[*Member]bool) bool {
-	return true
-}
+	// Int32Type represents the 32-bit signed integer type `Int32`
+	Int32Type = NewNumericType(Int32TypeName).WithIntRange(Int32TypeMinInt, Int32TypeMaxInt)
 
-func (*Int8Type) IsExternallyReturnable(_ map[*Member]bool) bool {
-	return true
-}
+	// Int64Type represents the 64-bit signed integer type `Int64`
+	Int64Type = NewNumericType(Int64TypeName).WithIntRange(Int64TypeMinInt, Int64TypeMaxInt)
 
-func (*Int8Type) IsEquatable() bool {
-	return true
-}
+	// Int128Type represents the 128-bit signed integer type `Int128`
+	Int128Type = NewNumericType(Int128TypeName).WithIntRange(Int128TypeMinIntBig, Int128TypeMaxIntBig)
 
-func (*Int8Type) TypeAnnotationState() TypeAnnotationState {
-	return TypeAnnotationStateValid
-}
+	// Int256Type represents the 256-bit signed integer type `Int256`
+	Int256Type = NewNumericType(Int256TypeName).WithIntRange(Int256TypeMinIntBig, Int256TypeMaxIntBig)
 
-func (t *Int8Type) RewriteWithRestrictedTypes() (result Type, rewritten bool) {
-	return t, false
-}
+	// UIntType represents the arbitrary-precision unsigned integer type `UInt`
+	UIntType = NewNumericType(UIntTypeName).WithIntRange(UIntTypeMin, nil)
 
-var Int8TypeMinInt = new(big.Int).SetInt64(math.MinInt8)
-var Int8TypeMaxInt = new(big.Int).SetInt64(math.MaxInt8)
+	// UInt8Type represents the 8-bit unsigned integer type `UInt8`
+	// which checks for overflow and underflow
+	UInt8Type = NewNumericType(UInt8TypeName).WithIntRange(UInt8TypeMinInt, UInt8TypeMaxInt)
 
-func (*Int8Type) MinInt() *big.Int {
-	return Int8TypeMinInt
-}
+	// UInt16Type represents the 16-bit unsigned integer type `UInt16`
+	// which checks for overflow and underflow
+	UInt16Type = NewNumericType(UInt16TypeName).WithIntRange(UInt16TypeMinInt, UInt16TypeMaxInt)
 
-func (*Int8Type) MaxInt() *big.Int {
-	return Int8TypeMaxInt
-}
+	// UInt32Type represents the 32-bit unsigned integer type `UInt32`
+	// which checks for overflow and underflow
+	UInt32Type = NewNumericType(UInt32TypeName).WithIntRange(UInt32TypeMinInt, UInt32TypeMaxInt)
 
-func (*Int8Type) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
-	return false
-}
+	// UInt64Type represents the 64-bit unsigned integer type `UInt64`
+	// which checks for overflow and underflow
+	UInt64Type = NewNumericType(UInt64TypeName).WithIntRange(UInt64TypeMinInt, UInt64TypeMaxInt)
 
-func (t *Int8Type) Resolve(_ *TypeParameterTypeOrderedMap) Type {
-	return t
-}
+	// UInt128Type represents the 128-bit unsigned integer type `UInt128`
+	// which checks for overflow and underflow
+	UInt128Type = NewNumericType(UInt128TypeName).WithIntRange(UInt128TypeMinIntBig, UInt128TypeMaxIntBig)
 
-func (t *Int8Type) GetMembers() map[string]MemberResolver {
-	return withBuiltinMembers(t, nil)
-}
+	// UInt256Type represents the 256-bit unsigned integer type `UInt256`
+	// which checks for overflow and underflow
+	UInt256Type = NewNumericType(UInt256TypeName).WithIntRange(UInt256TypeMinIntBig, UInt256TypeMaxIntBig)
 
-// Int16Type represents the 16-bit signed integer type `Int16`
-type Int16Type struct{}
+	// Word8Type represents the 8-bit unsigned integer type `Word8`
+	// which does NOT check for overflow and underflow
+	Word8Type = NewNumericType(Word8TypeName).WithIntRange(Word8TypeMinInt, Word8TypeMaxInt)
 
-func (*Int16Type) IsType() {}
+	// Word16Type represents the 16-bit unsigned integer type `Word16`
+	// which does NOT check for overflow and underflow
+	Word16Type = NewNumericType(Word16TypeName).WithIntRange(Word16TypeMinInt, Word16TypeMaxInt)
 
-func (*Int16Type) String() string {
-	return "Int16"
-}
+	// Word32Type represents the 32-bit unsigned integer type `Word32`
+	// which does NOT check for overflow and underflow
+	Word32Type = NewNumericType(Word32TypeName).WithIntRange(Word32TypeMinInt, Word32TypeMaxInt)
 
-func (*Int16Type) QualifiedString() string {
-	return "Int16"
-}
+	// Word64Type represents the 64-bit unsigned integer type `Word64`
+	// which does NOT check for overflow and underflow
+	Word64Type = NewNumericType(Word64TypeName).WithIntRange(Word64TypeMinInt, Word64TypeMaxInt)
 
-func (*Int16Type) ID() TypeID {
-	return "Int16"
-}
+	// FixedPointType represents the super-type of all fixed-point types
+	FixedPointType = NewNumericType(FixedPointTypeName)
 
-func (*Int16Type) Equal(other Type) bool {
-	_, ok := other.(*Int16Type)
-	return ok
-}
+	// SignedFixedPointType represents the super-type of all signed fixed-point types
+	SignedFixedPointType = NewNumericType(SignedFixedPointTypeName)
 
-func (*Int16Type) IsResourceType() bool {
-	return false
-}
+	// Fix64Type represents the 64-bit signed decimal fixed-point type `Fix64`
+	// which has a scale of Fix64Scale, and checks for overflow and underflow
+	Fix64Type = NewFixedPointNumericType(Fix64TypeName).
+			WithIntRange(Fix64TypeMinIntBig, Fix64TypeMaxIntBig).
+			WithFractionalRange(Fix64TypeMinFractionalBig, Fix64TypeMaxFractionalBig).
+			WithScale(Fix64Scale)
 
-func (*Int16Type) IsInvalidType() bool {
-	return false
-}
+	// UFix64Type represents the 64-bit unsigned decimal fixed-point type `UFix64`
+	// which has a scale of 1E9, and checks for overflow and underflow
+	UFix64Type = NewFixedPointNumericType(UFix64TypeName).
+			WithIntRange(UFix64TypeMinIntBig, UFix64TypeMaxIntBig).
+			WithFractionalRange(UFix64TypeMinFractionalBig, UFix64TypeMaxFractionalBig).
+			WithScale(Fix64Scale)
+)
 
-func (*Int16Type) IsStorable(_ map[*Member]bool) bool {
-	return true
-}
+// Numeric type ranges
+var (
+	Int8TypeMinInt = new(big.Int).SetInt64(math.MinInt8)
+	Int8TypeMaxInt = new(big.Int).SetInt64(math.MaxInt8)
 
-func (*Int16Type) IsExternallyReturnable(_ map[*Member]bool) bool {
-	return true
-}
+	Int16TypeMinInt = new(big.Int).SetInt64(math.MinInt16)
+	Int16TypeMaxInt = new(big.Int).SetInt64(math.MaxInt16)
 
-func (*Int16Type) IsEquatable() bool {
-	return true
-}
+	Int32TypeMinInt = new(big.Int).SetInt64(math.MinInt32)
+	Int32TypeMaxInt = new(big.Int).SetInt64(math.MaxInt32)
 
-func (*Int16Type) TypeAnnotationState() TypeAnnotationState {
-	return TypeAnnotationStateValid
-}
+	Int64TypeMinInt = new(big.Int).SetInt64(math.MinInt64)
+	Int64TypeMaxInt = new(big.Int).SetInt64(math.MaxInt64)
 
-func (t *Int16Type) RewriteWithRestrictedTypes() (result Type, rewritten bool) {
-	return t, false
-}
+	Int128TypeMinIntBig = func() *big.Int {
+		int128TypeMin := big.NewInt(-1)
+		int128TypeMin.Lsh(int128TypeMin, 127)
+		return int128TypeMin
+	}()
 
-var Int16TypeMinInt = new(big.Int).SetInt64(math.MinInt16)
-var Int16TypeMaxInt = new(big.Int).SetInt64(math.MaxInt16)
+	Int128TypeMaxIntBig = func() *big.Int {
+		int128TypeMax := big.NewInt(1)
+		int128TypeMax.Lsh(int128TypeMax, 127)
+		int128TypeMax.Sub(int128TypeMax, big.NewInt(1))
+		return int128TypeMax
+	}()
 
-func (*Int16Type) MinInt() *big.Int {
-	return Int16TypeMinInt
-}
+	Int256TypeMinIntBig = func() *big.Int {
+		int256TypeMin := big.NewInt(-1)
+		int256TypeMin.Lsh(int256TypeMin, 255)
+		return int256TypeMin
+	}()
 
-func (*Int16Type) MaxInt() *big.Int {
-	return Int16TypeMaxInt
-}
+	Int256TypeMaxIntBig = func() *big.Int {
+		int256TypeMax := big.NewInt(1)
+		int256TypeMax.Lsh(int256TypeMax, 255)
+		int256TypeMax.Sub(int256TypeMax, big.NewInt(1))
+		return int256TypeMax
+	}()
 
-func (*Int16Type) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
-	return false
-}
+	UIntTypeMin = new(big.Int)
 
-func (t *Int16Type) Resolve(_ *TypeParameterTypeOrderedMap) Type {
-	return t
-}
+	UInt8TypeMinInt = new(big.Int)
+	UInt8TypeMaxInt = new(big.Int).SetUint64(math.MaxUint8)
 
-func (t *Int16Type) GetMembers() map[string]MemberResolver {
-	return withBuiltinMembers(t, nil)
-}
+	UInt16TypeMinInt = new(big.Int)
+	UInt16TypeMaxInt = new(big.Int).SetUint64(math.MaxUint16)
 
-// Int32Type represents the 32-bit signed integer type `Int32`
-type Int32Type struct{}
+	UInt32TypeMinInt = new(big.Int)
+	UInt32TypeMaxInt = new(big.Int).SetUint64(math.MaxUint32)
 
-func (*Int32Type) IsType() {}
+	UInt64TypeMinInt = new(big.Int)
+	UInt64TypeMaxInt = new(big.Int).SetUint64(math.MaxUint64)
 
-func (*Int32Type) String() string {
-	return "Int32"
-}
+	UInt128TypeMinIntBig = new(big.Int)
 
-func (*Int32Type) QualifiedString() string {
-	return "Int32"
-}
+	UInt128TypeMaxIntBig = func() *big.Int {
+		uInt128TypeMax := big.NewInt(1)
+		uInt128TypeMax.Lsh(uInt128TypeMax, 128)
+		uInt128TypeMax.Sub(uInt128TypeMax, big.NewInt(1))
+		return uInt128TypeMax
 
-func (*Int32Type) ID() TypeID {
-	return "Int32"
-}
+	}()
 
-func (*Int32Type) Equal(other Type) bool {
-	_, ok := other.(*Int32Type)
-	return ok
-}
+	UInt256TypeMinIntBig = new(big.Int)
 
-func (*Int32Type) IsResourceType() bool {
-	return false
-}
+	UInt256TypeMaxIntBig = func() *big.Int {
+		uInt256TypeMax := big.NewInt(1)
+		uInt256TypeMax.Lsh(uInt256TypeMax, 256)
+		uInt256TypeMax.Sub(uInt256TypeMax, big.NewInt(1))
+		return uInt256TypeMax
+	}()
 
-func (*Int32Type) IsInvalidType() bool {
-	return false
-}
+	Word8TypeMinInt = new(big.Int)
+	Word8TypeMaxInt = new(big.Int).SetUint64(math.MaxUint8)
 
-func (*Int32Type) IsStorable(_ map[*Member]bool) bool {
-	return true
-}
+	Word16TypeMinInt = new(big.Int)
+	Word16TypeMaxInt = new(big.Int).SetUint64(math.MaxUint16)
 
-func (*Int32Type) IsExternallyReturnable(_ map[*Member]bool) bool {
-	return true
-}
+	Word32TypeMinInt = new(big.Int)
+	Word32TypeMaxInt = new(big.Int).SetUint64(math.MaxUint32)
 
-func (*Int32Type) IsEquatable() bool {
-	return true
-}
+	Word64TypeMinInt = new(big.Int)
+	Word64TypeMaxInt = new(big.Int).SetUint64(math.MaxUint64)
 
-func (*Int32Type) TypeAnnotationState() TypeAnnotationState {
-	return TypeAnnotationStateValid
-}
+	Fix64FactorBig = new(big.Int).SetUint64(uint64(Fix64Factor))
 
-func (t *Int32Type) RewriteWithRestrictedTypes() (result Type, rewritten bool) {
-	return t, false
-}
+	Fix64TypeMinIntBig = fixedpoint.Fix64TypeMinIntBig
+	Fix64TypeMaxIntBig = fixedpoint.Fix64TypeMaxIntBig
 
-var Int32TypeMinInt = new(big.Int).SetInt64(math.MinInt32)
-var Int32TypeMaxInt = new(big.Int).SetInt64(math.MaxInt32)
+	Fix64TypeMinFractionalBig = fixedpoint.Fix64TypeMinFractionalBig
+	Fix64TypeMaxFractionalBig = fixedpoint.Fix64TypeMaxFractionalBig
 
-func (*Int32Type) MinInt() *big.Int {
-	return Int32TypeMinInt
-}
+	UFix64TypeMinIntBig = fixedpoint.UFix64TypeMinIntBig
+	UFix64TypeMaxIntBig = fixedpoint.UFix64TypeMaxIntBig
 
-func (*Int32Type) MaxInt() *big.Int {
-	return Int32TypeMaxInt
-}
-
-func (*Int32Type) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
-	return false
-}
-
-func (t *Int32Type) Resolve(_ *TypeParameterTypeOrderedMap) Type {
-	return t
-}
-
-func (t *Int32Type) GetMembers() map[string]MemberResolver {
-	return withBuiltinMembers(t, nil)
-}
-
-// Int64Type represents the 64-bit signed integer type `Int64`
-type Int64Type struct{}
-
-func (*Int64Type) IsType() {}
-
-func (*Int64Type) String() string {
-	return "Int64"
-}
-
-func (*Int64Type) QualifiedString() string {
-	return "Int64"
-}
-
-func (*Int64Type) ID() TypeID {
-	return "Int64"
-}
-
-func (*Int64Type) Equal(other Type) bool {
-	_, ok := other.(*Int64Type)
-	return ok
-}
-
-func (*Int64Type) IsResourceType() bool {
-	return false
-}
-
-func (*Int64Type) IsInvalidType() bool {
-	return false
-}
-
-func (*Int64Type) IsStorable(_ map[*Member]bool) bool {
-	return true
-}
-
-func (*Int64Type) IsExternallyReturnable(_ map[*Member]bool) bool {
-	return true
-}
-
-func (*Int64Type) IsEquatable() bool {
-	return true
-}
-
-func (*Int64Type) TypeAnnotationState() TypeAnnotationState {
-	return TypeAnnotationStateValid
-}
-
-func (t *Int64Type) RewriteWithRestrictedTypes() (result Type, rewritten bool) {
-	return t, false
-}
-
-var Int64TypeMinInt = new(big.Int).SetInt64(math.MinInt64)
-var Int64TypeMaxInt = new(big.Int).SetInt64(math.MaxInt64)
-
-func (*Int64Type) MinInt() *big.Int {
-	return Int64TypeMinInt
-}
-
-func (*Int64Type) MaxInt() *big.Int {
-	return Int64TypeMaxInt
-}
-
-func (*Int64Type) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
-	return false
-}
-
-func (t *Int64Type) Resolve(_ *TypeParameterTypeOrderedMap) Type {
-	return t
-}
-
-func (t *Int64Type) GetMembers() map[string]MemberResolver {
-	return withBuiltinMembers(t, nil)
-}
-
-// Int128Type represents the 128-bit signed integer type `Int128`
-type Int128Type struct{}
-
-func (*Int128Type) IsType() {}
-
-func (*Int128Type) String() string {
-	return "Int128"
-}
-
-func (*Int128Type) QualifiedString() string {
-	return "Int128"
-}
-
-func (*Int128Type) ID() TypeID {
-	return "Int128"
-}
-
-func (*Int128Type) Equal(other Type) bool {
-	_, ok := other.(*Int128Type)
-	return ok
-}
-
-func (*Int128Type) IsResourceType() bool {
-	return false
-}
-
-func (*Int128Type) IsInvalidType() bool {
-	return false
-}
-
-func (*Int128Type) IsStorable(_ map[*Member]bool) bool {
-	return true
-}
-
-func (*Int128Type) IsExternallyReturnable(_ map[*Member]bool) bool {
-	return true
-}
-
-func (*Int128Type) IsEquatable() bool {
-	return true
-}
-
-func (*Int128Type) TypeAnnotationState() TypeAnnotationState {
-	return TypeAnnotationStateValid
-}
-
-func (t *Int128Type) RewriteWithRestrictedTypes() (result Type, rewritten bool) {
-	return t, false
-}
-
-var Int128TypeMinIntBig *big.Int
-
-func init() {
-	Int128TypeMinIntBig = big.NewInt(-1)
-	Int128TypeMinIntBig.Lsh(Int128TypeMinIntBig, 127)
-}
-
-var Int128TypeMaxIntBig *big.Int
-
-func init() {
-	Int128TypeMaxIntBig = big.NewInt(1)
-	Int128TypeMaxIntBig.Lsh(Int128TypeMaxIntBig, 127)
-	Int128TypeMaxIntBig.Sub(Int128TypeMaxIntBig, big.NewInt(1))
-}
-
-func (*Int128Type) MinInt() *big.Int {
-	return Int128TypeMinIntBig
-}
-
-func (*Int128Type) MaxInt() *big.Int {
-	return Int128TypeMaxIntBig
-}
-
-func (*Int128Type) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
-	return false
-}
-
-func (t *Int128Type) Resolve(_ *TypeParameterTypeOrderedMap) Type {
-	return t
-}
-
-func (t *Int128Type) GetMembers() map[string]MemberResolver {
-	return withBuiltinMembers(t, nil)
-}
-
-// Int256Type represents the 256-bit signed integer type `Int256`
-type Int256Type struct{}
-
-func (*Int256Type) IsType() {}
-
-func (*Int256Type) String() string {
-	return "Int256"
-}
-
-func (*Int256Type) QualifiedString() string {
-	return "Int256"
-}
-
-func (*Int256Type) ID() TypeID {
-	return "Int256"
-}
-
-func (*Int256Type) Equal(other Type) bool {
-	_, ok := other.(*Int256Type)
-	return ok
-}
-
-func (*Int256Type) IsResourceType() bool {
-	return false
-}
-
-func (*Int256Type) IsInvalidType() bool {
-	return false
-}
-
-func (*Int256Type) IsStorable(_ map[*Member]bool) bool {
-	return true
-}
-
-func (*Int256Type) IsExternallyReturnable(_ map[*Member]bool) bool {
-	return true
-}
-
-func (*Int256Type) IsEquatable() bool {
-	return true
-}
-
-func (*Int256Type) TypeAnnotationState() TypeAnnotationState {
-	return TypeAnnotationStateValid
-}
-
-func (t *Int256Type) RewriteWithRestrictedTypes() (result Type, rewritten bool) {
-	return t, false
-}
-
-var Int256TypeMinIntBig *big.Int
-
-func init() {
-	Int256TypeMinIntBig = big.NewInt(-1)
-	Int256TypeMinIntBig.Lsh(Int256TypeMinIntBig, 255)
-}
-
-var Int256TypeMaxIntBig *big.Int
-
-func init() {
-	Int256TypeMaxIntBig = big.NewInt(1)
-	Int256TypeMaxIntBig.Lsh(Int256TypeMaxIntBig, 255)
-	Int256TypeMaxIntBig.Sub(Int256TypeMaxIntBig, big.NewInt(1))
-}
-
-func (*Int256Type) MinInt() *big.Int {
-	return Int256TypeMinIntBig
-}
-
-func (*Int256Type) MaxInt() *big.Int {
-	return Int256TypeMaxIntBig
-}
-
-func (*Int256Type) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
-	return false
-}
-
-func (t *Int256Type) Resolve(_ *TypeParameterTypeOrderedMap) Type {
-	return t
-}
-
-func (t *Int256Type) GetMembers() map[string]MemberResolver {
-	return withBuiltinMembers(t, nil)
-}
-
-// UIntType represents the arbitrary-precision unsigned integer type `UInt`
-type UIntType struct{}
-
-func (*UIntType) IsType() {}
-
-func (*UIntType) String() string {
-	return "UInt"
-}
-
-func (*UIntType) QualifiedString() string {
-	return "UInt"
-}
-
-func (*UIntType) ID() TypeID {
-	return "UInt"
-}
-
-func (*UIntType) Equal(other Type) bool {
-	_, ok := other.(*UIntType)
-	return ok
-}
-
-func (*UIntType) IsResourceType() bool {
-	return false
-}
-
-func (*UIntType) IsInvalidType() bool {
-	return false
-}
-
-func (*UIntType) IsStorable(_ map[*Member]bool) bool {
-	return true
-}
-
-func (*UIntType) IsExternallyReturnable(_ map[*Member]bool) bool {
-	return true
-}
-
-func (*UIntType) IsEquatable() bool {
-	return true
-}
-
-func (*UIntType) TypeAnnotationState() TypeAnnotationState {
-	return TypeAnnotationStateValid
-}
-
-func (t *UIntType) RewriteWithRestrictedTypes() (result Type, rewritten bool) {
-	return t, false
-}
-
-var UIntTypeMin = new(big.Int)
-
-func (*UIntType) MinInt() *big.Int {
-	return UIntTypeMin
-}
-
-func (*UIntType) MaxInt() *big.Int {
-	return nil
-}
-
-func (*UIntType) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
-	return false
-}
-
-func (t *UIntType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
-	return t
-}
-
-func (t *UIntType) GetMembers() map[string]MemberResolver {
-	return withBuiltinMembers(t, nil)
-}
-
-// UInt8Type represents the 8-bit unsigned integer type `UInt8`
-// which checks for overflow and underflow
-type UInt8Type struct{}
-
-func (*UInt8Type) IsType() {}
-
-func (*UInt8Type) String() string {
-	return "UInt8"
-}
-
-func (*UInt8Type) QualifiedString() string {
-	return "UInt8"
-}
-
-func (*UInt8Type) ID() TypeID {
-	return "UInt8"
-}
-
-func (*UInt8Type) Equal(other Type) bool {
-	_, ok := other.(*UInt8Type)
-	return ok
-}
-
-func (*UInt8Type) IsResourceType() bool {
-	return false
-}
-
-func (*UInt8Type) IsInvalidType() bool {
-	return false
-}
-
-func (*UInt8Type) IsStorable(_ map[*Member]bool) bool {
-	return true
-}
-
-func (*UInt8Type) IsExternallyReturnable(_ map[*Member]bool) bool {
-	return true
-}
-
-func (*UInt8Type) IsEquatable() bool {
-	return true
-}
-
-func (*UInt8Type) TypeAnnotationState() TypeAnnotationState {
-	return TypeAnnotationStateValid
-}
-
-func (t *UInt8Type) RewriteWithRestrictedTypes() (result Type, rewritten bool) {
-	return t, false
-}
-
-var UInt8TypeMinInt = new(big.Int)
-var UInt8TypeMaxInt = new(big.Int).SetUint64(math.MaxUint8)
-
-func (*UInt8Type) MinInt() *big.Int {
-	return UInt8TypeMinInt
-}
-
-func (*UInt8Type) MaxInt() *big.Int {
-	return UInt8TypeMaxInt
-}
-
-func (*UInt8Type) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
-	return false
-}
-
-func (t *UInt8Type) Resolve(_ *TypeParameterTypeOrderedMap) Type {
-	return t
-}
-
-func (t *UInt8Type) GetMembers() map[string]MemberResolver {
-	return withBuiltinMembers(t, nil)
-}
-
-// UInt16Type represents the 16-bit unsigned integer type `UInt16`
-// which checks for overflow and underflow
-type UInt16Type struct{}
-
-func (*UInt16Type) IsType() {}
-
-func (*UInt16Type) String() string {
-	return "UInt16"
-}
-
-func (*UInt16Type) QualifiedString() string {
-	return "UInt16"
-}
-
-func (*UInt16Type) ID() TypeID {
-	return "UInt16"
-}
-
-func (*UInt16Type) Equal(other Type) bool {
-	_, ok := other.(*UInt16Type)
-	return ok
-}
-
-func (*UInt16Type) IsResourceType() bool {
-	return false
-}
-
-func (*UInt16Type) IsInvalidType() bool {
-	return false
-}
-
-func (*UInt16Type) IsStorable(_ map[*Member]bool) bool {
-	return true
-}
-
-func (*UInt16Type) IsExternallyReturnable(_ map[*Member]bool) bool {
-	return true
-}
-
-func (*UInt16Type) IsEquatable() bool {
-	return true
-}
-
-func (*UInt16Type) TypeAnnotationState() TypeAnnotationState {
-	return TypeAnnotationStateValid
-}
-
-func (t *UInt16Type) RewriteWithRestrictedTypes() (result Type, rewritten bool) {
-	return t, false
-}
-
-var UInt16TypeMinInt = new(big.Int)
-var UInt16TypeMaxInt = new(big.Int).SetUint64(math.MaxUint16)
-
-func (*UInt16Type) MinInt() *big.Int {
-	return UInt16TypeMinInt
-}
-
-func (*UInt16Type) MaxInt() *big.Int {
-	return UInt16TypeMaxInt
-}
-
-func (*UInt16Type) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
-	return false
-}
-
-func (t *UInt16Type) Resolve(_ *TypeParameterTypeOrderedMap) Type {
-	return t
-}
-
-func (t *UInt16Type) GetMembers() map[string]MemberResolver {
-	return withBuiltinMembers(t, nil)
-}
-
-// UInt32Type represents the 32-bit unsigned integer type `UInt32`
-// which checks for overflow and underflow
-type UInt32Type struct{}
-
-func (*UInt32Type) IsType() {}
-
-func (*UInt32Type) String() string {
-	return "UInt32"
-}
-
-func (*UInt32Type) QualifiedString() string {
-	return "UInt32"
-}
-
-func (*UInt32Type) ID() TypeID {
-	return "UInt32"
-}
-
-func (*UInt32Type) Equal(other Type) bool {
-	_, ok := other.(*UInt32Type)
-	return ok
-}
-
-func (*UInt32Type) IsResourceType() bool {
-	return false
-}
-
-func (*UInt32Type) IsInvalidType() bool {
-	return false
-}
-
-func (*UInt32Type) IsStorable(_ map[*Member]bool) bool {
-	return true
-}
-
-func (*UInt32Type) IsExternallyReturnable(_ map[*Member]bool) bool {
-	return true
-}
-
-func (*UInt32Type) IsEquatable() bool {
-	return true
-}
-
-func (*UInt32Type) TypeAnnotationState() TypeAnnotationState {
-	return TypeAnnotationStateValid
-}
-
-func (t *UInt32Type) RewriteWithRestrictedTypes() (result Type, rewritten bool) {
-	return t, false
-}
-
-var UInt32TypeMinInt = new(big.Int)
-var UInt32TypeMaxInt = new(big.Int).SetUint64(math.MaxUint32)
-
-func (*UInt32Type) MinInt() *big.Int {
-	return UInt32TypeMinInt
-}
-
-func (*UInt32Type) MaxInt() *big.Int {
-	return UInt32TypeMaxInt
-}
-
-func (*UInt32Type) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
-	return false
-}
-
-func (t *UInt32Type) Resolve(_ *TypeParameterTypeOrderedMap) Type {
-	return t
-}
-
-func (t *UInt32Type) GetMembers() map[string]MemberResolver {
-	return withBuiltinMembers(t, nil)
-}
-
-// UInt64Type represents the 64-bit unsigned integer type `UInt64`
-// which checks for overflow and underflow
-type UInt64Type struct{}
-
-func (*UInt64Type) IsType() {}
-
-func (*UInt64Type) String() string {
-	return "UInt64"
-}
-
-func (*UInt64Type) QualifiedString() string {
-	return "UInt64"
-}
-
-func (*UInt64Type) ID() TypeID {
-	return "UInt64"
-}
-
-func (*UInt64Type) Equal(other Type) bool {
-	_, ok := other.(*UInt64Type)
-	return ok
-}
-
-func (*UInt64Type) IsResourceType() bool {
-	return false
-}
-
-func (*UInt64Type) IsInvalidType() bool {
-	return false
-}
-
-func (*UInt64Type) IsStorable(_ map[*Member]bool) bool {
-	return true
-}
-
-func (*UInt64Type) IsExternallyReturnable(_ map[*Member]bool) bool {
-	return true
-}
-
-func (*UInt64Type) IsEquatable() bool {
-	return true
-}
-
-func (*UInt64Type) TypeAnnotationState() TypeAnnotationState {
-	return TypeAnnotationStateValid
-}
-
-func (t *UInt64Type) RewriteWithRestrictedTypes() (result Type, rewritten bool) {
-	return t, false
-}
-
-var UInt64TypeMinInt = new(big.Int)
-var UInt64TypeMaxInt = new(big.Int).SetUint64(math.MaxUint64)
-
-func (*UInt64Type) MinInt() *big.Int {
-	return UInt64TypeMinInt
-}
-
-func (*UInt64Type) MaxInt() *big.Int {
-	return UInt64TypeMaxInt
-}
-
-func (*UInt64Type) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
-	return false
-}
-
-func (t *UInt64Type) Resolve(_ *TypeParameterTypeOrderedMap) Type {
-	return t
-}
-
-func (t *UInt64Type) GetMembers() map[string]MemberResolver {
-	return withBuiltinMembers(t, nil)
-}
-
-// UInt128Type represents the 128-bit unsigned integer type `UInt128`
-// which checks for overflow and underflow
-type UInt128Type struct{}
-
-func (*UInt128Type) IsType() {}
-
-func (*UInt128Type) String() string {
-	return "UInt128"
-}
-
-func (*UInt128Type) QualifiedString() string {
-	return "UInt128"
-}
-
-func (*UInt128Type) ID() TypeID {
-	return "UInt128"
-}
-
-func (*UInt128Type) Equal(other Type) bool {
-	_, ok := other.(*UInt128Type)
-	return ok
-}
-
-func (*UInt128Type) IsResourceType() bool {
-	return false
-}
-
-func (*UInt128Type) IsInvalidType() bool {
-	return false
-}
-
-func (*UInt128Type) IsStorable(_ map[*Member]bool) bool {
-	return true
-}
-
-func (*UInt128Type) IsExternallyReturnable(_ map[*Member]bool) bool {
-	return true
-}
-
-func (*UInt128Type) IsEquatable() bool {
-	return true
-}
-
-func (*UInt128Type) TypeAnnotationState() TypeAnnotationState {
-	return TypeAnnotationStateValid
-}
-
-func (t *UInt128Type) RewriteWithRestrictedTypes() (result Type, rewritten bool) {
-	return t, false
-}
-
-var UInt128TypeMinIntBig = new(big.Int)
-var UInt128TypeMaxIntBig *big.Int
-
-func init() {
-	UInt128TypeMaxIntBig = big.NewInt(1)
-	UInt128TypeMaxIntBig.Lsh(UInt128TypeMaxIntBig, 128)
-	UInt128TypeMaxIntBig.Sub(UInt128TypeMaxIntBig, big.NewInt(1))
-}
-
-func (*UInt128Type) MinInt() *big.Int {
-	return UInt128TypeMinIntBig
-}
-
-func (*UInt128Type) MaxInt() *big.Int {
-	return UInt128TypeMaxIntBig
-}
-
-func (*UInt128Type) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
-	return false
-}
-
-func (t *UInt128Type) Resolve(_ *TypeParameterTypeOrderedMap) Type {
-	return t
-}
-
-func (t *UInt128Type) GetMembers() map[string]MemberResolver {
-	return withBuiltinMembers(t, nil)
-}
-
-// UInt256Type represents the 256-bit unsigned integer type `UInt256`
-// which checks for overflow and underflow
-type UInt256Type struct{}
-
-func (*UInt256Type) IsType() {}
-
-func (*UInt256Type) String() string {
-	return "UInt256"
-}
-
-func (*UInt256Type) QualifiedString() string {
-	return "UInt256"
-}
-
-func (*UInt256Type) ID() TypeID {
-	return "UInt256"
-}
-
-func (*UInt256Type) Equal(other Type) bool {
-	_, ok := other.(*UInt256Type)
-	return ok
-}
-
-func (*UInt256Type) IsResourceType() bool {
-	return false
-}
-
-func (*UInt256Type) IsInvalidType() bool {
-	return false
-}
-
-func (*UInt256Type) IsStorable(_ map[*Member]bool) bool {
-	return true
-}
-
-func (*UInt256Type) IsExternallyReturnable(_ map[*Member]bool) bool {
-	return true
-}
-
-func (*UInt256Type) IsEquatable() bool {
-	return true
-}
-
-func (*UInt256Type) TypeAnnotationState() TypeAnnotationState {
-	return TypeAnnotationStateValid
-}
-
-func (t *UInt256Type) RewriteWithRestrictedTypes() (result Type, rewritten bool) {
-	return t, false
-}
-
-var UInt256TypeMinIntBig = new(big.Int)
-var UInt256TypeMaxIntBig *big.Int
-
-func init() {
-	UInt256TypeMaxIntBig = big.NewInt(1)
-	UInt256TypeMaxIntBig.Lsh(UInt256TypeMaxIntBig, 256)
-	UInt256TypeMaxIntBig.Sub(UInt256TypeMaxIntBig, big.NewInt(1))
-}
-
-func (*UInt256Type) MinInt() *big.Int {
-	return UInt256TypeMinIntBig
-}
-
-func (*UInt256Type) MaxInt() *big.Int {
-	return UInt256TypeMaxIntBig
-}
-
-func (*UInt256Type) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
-	return false
-}
-
-func (t *UInt256Type) Resolve(_ *TypeParameterTypeOrderedMap) Type {
-	return t
-}
-
-func (t *UInt256Type) GetMembers() map[string]MemberResolver {
-	return withBuiltinMembers(t, nil)
-}
-
-// Word8Type represents the 8-bit unsigned integer type `Word8`
-// which does NOT check for overflow and underflow
-type Word8Type struct{}
-
-func (*Word8Type) IsType() {}
-
-func (*Word8Type) String() string {
-	return "Word8"
-}
-
-func (*Word8Type) QualifiedString() string {
-	return "Word8"
-}
-
-func (*Word8Type) ID() TypeID {
-	return "Word8"
-}
-
-func (*Word8Type) Equal(other Type) bool {
-	_, ok := other.(*Word8Type)
-	return ok
-}
-
-func (*Word8Type) IsResourceType() bool {
-	return false
-}
-
-func (*Word8Type) IsInvalidType() bool {
-	return false
-}
-
-func (*Word8Type) IsStorable(_ map[*Member]bool) bool {
-	return true
-}
-
-func (*Word8Type) IsExternallyReturnable(_ map[*Member]bool) bool {
-	return true
-}
-
-func (*Word8Type) IsEquatable() bool {
-	return true
-}
-
-func (*Word8Type) TypeAnnotationState() TypeAnnotationState {
-	return TypeAnnotationStateValid
-}
-
-func (t *Word8Type) RewriteWithRestrictedTypes() (result Type, rewritten bool) {
-	return t, false
-}
-
-var Word8TypeMinInt = new(big.Int)
-var Word8TypeMaxInt = new(big.Int).SetUint64(math.MaxUint8)
-
-func (*Word8Type) MinInt() *big.Int {
-	return Word8TypeMinInt
-}
-
-func (*Word8Type) MaxInt() *big.Int {
-	return Word8TypeMaxInt
-}
-
-func (*Word8Type) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
-	return false
-}
-
-func (t *Word8Type) Resolve(_ *TypeParameterTypeOrderedMap) Type {
-	return t
-}
-
-func (t *Word8Type) GetMembers() map[string]MemberResolver {
-	return withBuiltinMembers(t, nil)
-}
-
-// Word16Type represents the 16-bit unsigned integer type `Word16`
-// which does NOT check for overflow and underflow
-type Word16Type struct{}
-
-func (*Word16Type) IsType() {}
-
-func (*Word16Type) String() string {
-	return "Word16"
-}
-
-func (*Word16Type) QualifiedString() string {
-	return "Word16"
-}
-
-func (*Word16Type) ID() TypeID {
-	return "Word16"
-}
-
-func (*Word16Type) Equal(other Type) bool {
-	_, ok := other.(*Word16Type)
-	return ok
-}
-
-func (*Word16Type) IsResourceType() bool {
-	return false
-}
-
-func (*Word16Type) IsInvalidType() bool {
-	return false
-}
-
-func (*Word16Type) IsStorable(_ map[*Member]bool) bool {
-	return true
-}
-
-func (*Word16Type) IsExternallyReturnable(_ map[*Member]bool) bool {
-	return true
-}
-
-func (*Word16Type) IsEquatable() bool {
-	return true
-}
-
-func (*Word16Type) TypeAnnotationState() TypeAnnotationState {
-	return TypeAnnotationStateValid
-}
-
-func (t *Word16Type) RewriteWithRestrictedTypes() (result Type, rewritten bool) {
-	return t, false
-}
-
-var Word16TypeMinInt = new(big.Int)
-var Word16TypeMaxInt = new(big.Int).SetUint64(math.MaxUint16)
-
-func (*Word16Type) MinInt() *big.Int {
-	return Word16TypeMinInt
-}
-
-func (*Word16Type) MaxInt() *big.Int {
-	return Word16TypeMaxInt
-}
-
-func (*Word16Type) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
-	return false
-}
-
-func (t *Word16Type) Resolve(_ *TypeParameterTypeOrderedMap) Type {
-	return t
-}
-
-func (t *Word16Type) GetMembers() map[string]MemberResolver {
-	return withBuiltinMembers(t, nil)
-}
-
-// Word32Type represents the 32-bit unsigned integer type `Word32`
-// which does NOT check for overflow and underflow
-type Word32Type struct{}
-
-func (*Word32Type) IsType() {}
-
-func (*Word32Type) String() string {
-	return "Word32"
-}
-
-func (*Word32Type) QualifiedString() string {
-	return "Word32"
-}
-
-func (*Word32Type) ID() TypeID {
-	return "Word32"
-}
-
-func (*Word32Type) Equal(other Type) bool {
-	_, ok := other.(*Word32Type)
-	return ok
-}
-
-func (*Word32Type) IsResourceType() bool {
-	return false
-}
-
-func (*Word32Type) IsInvalidType() bool {
-	return false
-}
-
-func (*Word32Type) IsStorable(_ map[*Member]bool) bool {
-	return true
-}
-
-func (*Word32Type) IsExternallyReturnable(_ map[*Member]bool) bool {
-	return true
-}
-
-func (*Word32Type) IsEquatable() bool {
-	return true
-}
-
-func (*Word32Type) TypeAnnotationState() TypeAnnotationState {
-	return TypeAnnotationStateValid
-}
-
-func (t *Word32Type) RewriteWithRestrictedTypes() (result Type, rewritten bool) {
-	return t, false
-}
-
-var Word32TypeMinInt = new(big.Int)
-var Word32TypeMaxInt = new(big.Int).SetUint64(math.MaxUint32)
-
-func (*Word32Type) MinInt() *big.Int {
-	return Word32TypeMinInt
-}
-
-func (*Word32Type) MaxInt() *big.Int {
-	return Word32TypeMaxInt
-}
-
-func (*Word32Type) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
-	return false
-}
-
-func (t *Word32Type) Resolve(_ *TypeParameterTypeOrderedMap) Type {
-	return t
-}
-
-func (t *Word32Type) GetMembers() map[string]MemberResolver {
-	return withBuiltinMembers(t, nil)
-}
-
-// Word64Type represents the 64-bit unsigned integer type `Word64`
-// which does NOT check for overflow and underflow
-type Word64Type struct{}
-
-func (*Word64Type) IsType() {}
-
-func (*Word64Type) String() string {
-	return "Word64"
-}
-
-func (*Word64Type) QualifiedString() string {
-	return "Word64"
-}
-
-func (*Word64Type) ID() TypeID {
-	return "Word64"
-}
-
-func (*Word64Type) Equal(other Type) bool {
-	_, ok := other.(*Word64Type)
-	return ok
-}
-
-func (*Word64Type) IsResourceType() bool {
-	return false
-}
-
-func (*Word64Type) IsInvalidType() bool {
-	return false
-}
-
-func (*Word64Type) IsStorable(_ map[*Member]bool) bool {
-	return true
-}
-
-func (*Word64Type) IsExternallyReturnable(_ map[*Member]bool) bool {
-	return true
-}
-
-func (*Word64Type) IsEquatable() bool {
-	return true
-}
-
-func (*Word64Type) TypeAnnotationState() TypeAnnotationState {
-	return TypeAnnotationStateValid
-}
-
-func (t *Word64Type) RewriteWithRestrictedTypes() (result Type, rewritten bool) {
-	return t, false
-}
-
-var Word64TypeMinInt = new(big.Int)
-var Word64TypeMaxInt = new(big.Int).SetUint64(math.MaxUint64)
-
-func (*Word64Type) MinInt() *big.Int {
-	return Word64TypeMinInt
-}
-
-func (*Word64Type) MaxInt() *big.Int {
-	return Word64TypeMaxInt
-}
-
-func (*Word64Type) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
-	return false
-}
-
-func (t *Word64Type) Resolve(_ *TypeParameterTypeOrderedMap) Type {
-	return t
-}
-
-func (t *Word64Type) GetMembers() map[string]MemberResolver {
-	return withBuiltinMembers(t, nil)
-}
-
-// FixedPointType represents the super-type of all fixed-point types
-type FixedPointType struct{}
-
-func (*FixedPointType) IsType() {}
-
-func (*FixedPointType) String() string {
-	return "FixedPoint"
-}
-
-func (*FixedPointType) QualifiedString() string {
-	return "FixedPoint"
-}
-
-func (*FixedPointType) ID() TypeID {
-	return "FixedPoint"
-}
-
-func (*FixedPointType) Equal(other Type) bool {
-	_, ok := other.(*FixedPointType)
-	return ok
-}
-
-func (*FixedPointType) IsResourceType() bool {
-	return false
-}
-
-func (*FixedPointType) IsInvalidType() bool {
-	return false
-}
-
-func (*FixedPointType) IsStorable(_ map[*Member]bool) bool {
-	return true
-}
-
-func (*FixedPointType) IsExternallyReturnable(_ map[*Member]bool) bool {
-	return true
-}
-
-func (*FixedPointType) IsEquatable() bool {
-	return true
-}
-
-func (*FixedPointType) TypeAnnotationState() TypeAnnotationState {
-	return TypeAnnotationStateValid
-}
-
-func (t *FixedPointType) RewriteWithRestrictedTypes() (result Type, rewritten bool) {
-	return t, false
-}
-
-func (*FixedPointType) MinInt() *big.Int {
-	return nil
-}
-
-func (*FixedPointType) MaxInt() *big.Int {
-	return nil
-}
-
-func (*FixedPointType) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
-	return false
-}
-
-func (t *FixedPointType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
-	return t
-}
-
-func (t *FixedPointType) GetMembers() map[string]MemberResolver {
-	return withBuiltinMembers(t, nil)
-}
-
-// SignedFixedPointType represents the super-type of all signed fixed-point types
-type SignedFixedPointType struct{}
-
-func (*SignedFixedPointType) IsType() {}
-
-func (*SignedFixedPointType) String() string {
-	return "SignedFixedPoint"
-}
-
-func (*SignedFixedPointType) QualifiedString() string {
-	return "SignedFixedPoint"
-}
-
-func (*SignedFixedPointType) ID() TypeID {
-	return "SignedFixedPoint"
-}
-
-func (*SignedFixedPointType) Equal(other Type) bool {
-	_, ok := other.(*SignedFixedPointType)
-	return ok
-}
-
-func (*SignedFixedPointType) IsResourceType() bool {
-	return false
-}
-
-func (*SignedFixedPointType) IsInvalidType() bool {
-	return false
-}
-
-func (*SignedFixedPointType) IsStorable(_ map[*Member]bool) bool {
-	return true
-}
-
-func (*SignedFixedPointType) IsExternallyReturnable(_ map[*Member]bool) bool {
-	return true
-}
-
-func (*SignedFixedPointType) IsEquatable() bool {
-	return true
-}
-
-func (*SignedFixedPointType) TypeAnnotationState() TypeAnnotationState {
-	return TypeAnnotationStateValid
-}
-
-func (t *SignedFixedPointType) RewriteWithRestrictedTypes() (result Type, rewritten bool) {
-	return t, false
-}
-
-func (*SignedFixedPointType) MinInt() *big.Int {
-	return nil
-}
-
-func (*SignedFixedPointType) MaxInt() *big.Int {
-	return nil
-}
-
-func (*SignedFixedPointType) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
-	return false
-}
-
-func (t *SignedFixedPointType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
-	return t
-}
-
-func (t *SignedFixedPointType) GetMembers() map[string]MemberResolver {
-	return withBuiltinMembers(t, nil)
-}
+	UFix64TypeMinFractionalBig = fixedpoint.UFix64TypeMinFractionalBig
+	UFix64TypeMaxFractionalBig = fixedpoint.UFix64TypeMaxFractionalBig
+)
 
 const Fix64Scale = fixedpoint.Fix64Scale
 const Fix64Factor = fixedpoint.Fix64Factor
 
-var Fix64FactorBig = new(big.Int).SetUint64(uint64(Fix64Factor))
-
-// Fix64Type represents the 64-bit signed decimal fixed-point type `Fix64`
-// which has a scale of Fix64Scale, and checks for overflow and underflow
-type Fix64Type struct{}
-
-func (*Fix64Type) IsType() {}
-
-func (*Fix64Type) String() string {
-	return "Fix64"
-}
-
-func (*Fix64Type) QualifiedString() string {
-	return "Fix64"
-}
-
-func (*Fix64Type) ID() TypeID {
-	return "Fix64"
-}
-
-func (*Fix64Type) Equal(other Type) bool {
-	_, ok := other.(*Fix64Type)
-	return ok
-}
-
-func (*Fix64Type) IsResourceType() bool {
-	return false
-}
-
-func (*Fix64Type) IsInvalidType() bool {
-	return false
-}
-
-func (*Fix64Type) IsStorable(_ map[*Member]bool) bool {
-	return true
-}
-
-func (*Fix64Type) IsExternallyReturnable(_ map[*Member]bool) bool {
-	return true
-}
-
-func (*Fix64Type) IsEquatable() bool {
-	return true
-}
-
-func (*Fix64Type) TypeAnnotationState() TypeAnnotationState {
-	return TypeAnnotationStateValid
-}
-
-func (t *Fix64Type) RewriteWithRestrictedTypes() (result Type, rewritten bool) {
-	return t, false
-}
-
 const Fix64TypeMinInt = fixedpoint.Fix64TypeMinInt
 const Fix64TypeMaxInt = fixedpoint.Fix64TypeMaxInt
-
-var Fix64TypeMinIntBig = fixedpoint.Fix64TypeMinIntBig
-var Fix64TypeMaxIntBig = fixedpoint.Fix64TypeMaxIntBig
 
 const Fix64TypeMinFractional = fixedpoint.Fix64TypeMinFractional
 const Fix64TypeMaxFractional = fixedpoint.Fix64TypeMaxFractional
 
-var Fix64TypeMinFractionalBig = fixedpoint.Fix64TypeMinFractionalBig
-var Fix64TypeMaxFractionalBig = fixedpoint.Fix64TypeMaxFractionalBig
-
-func (*Fix64Type) MinInt() *big.Int {
-	return Fix64TypeMinIntBig
-}
-
-func (*Fix64Type) MaxInt() *big.Int {
-	return Fix64TypeMaxIntBig
-}
-
-func (*Fix64Type) Scale() uint {
-	return Fix64Scale
-}
-
-func (*Fix64Type) MinFractional() *big.Int {
-	return Fix64TypeMinFractionalBig
-}
-
-func (*Fix64Type) MaxFractional() *big.Int {
-	return Fix64TypeMaxFractionalBig
-}
-
-func (*Fix64Type) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
-	return false
-}
-
-func (t *Fix64Type) Resolve(_ *TypeParameterTypeOrderedMap) Type {
-	return t
-}
-
-func (t *Fix64Type) GetMembers() map[string]MemberResolver {
-	return withBuiltinMembers(t, nil)
-}
-
-// UFix64Type represents the 64-bit unsigned decimal fixed-point type `UFix64`
-// which has a scale of 1E9, and checks for overflow and underflow
-type UFix64Type struct{}
-
-func (*UFix64Type) IsType() {}
-
-func (*UFix64Type) String() string {
-	return "UFix64"
-}
-
-func (*UFix64Type) QualifiedString() string {
-	return "UFix64"
-}
-
-func (*UFix64Type) ID() TypeID {
-	return "UFix64"
-}
-
-func (*UFix64Type) Equal(other Type) bool {
-	_, ok := other.(*UFix64Type)
-	return ok
-}
-
-func (*UFix64Type) IsResourceType() bool {
-	return false
-}
-
-func (*UFix64Type) IsInvalidType() bool {
-	return false
-}
-
-func (*UFix64Type) IsStorable(_ map[*Member]bool) bool {
-	return true
-}
-
-func (*UFix64Type) IsExternallyReturnable(_ map[*Member]bool) bool {
-	return true
-}
-
-func (*UFix64Type) IsEquatable() bool {
-	return true
-}
-
-func (*UFix64Type) TypeAnnotationState() TypeAnnotationState {
-	return TypeAnnotationStateValid
-}
-
-func (t *UFix64Type) RewriteWithRestrictedTypes() (result Type, rewritten bool) {
-	return t, false
-}
-
 const UFix64TypeMinInt = fixedpoint.UFix64TypeMinInt
 const UFix64TypeMaxInt = fixedpoint.UFix64TypeMaxInt
 
-var UFix64TypeMinIntBig = fixedpoint.UFix64TypeMinIntBig
-var UFix64TypeMaxIntBig = fixedpoint.UFix64TypeMaxIntBig
-
 const UFix64TypeMinFractional = fixedpoint.UFix64TypeMinFractional
 const UFix64TypeMaxFractional = fixedpoint.UFix64TypeMaxFractional
-
-var UFix64TypeMinFractionalBig = fixedpoint.UFix64TypeMinFractionalBig
-var UFix64TypeMaxFractionalBig = fixedpoint.UFix64TypeMaxFractionalBig
-
-func (*UFix64Type) MinInt() *big.Int {
-	return UFix64TypeMinIntBig
-}
-
-func (*UFix64Type) MaxInt() *big.Int {
-	return UFix64TypeMaxIntBig
-}
-
-func (*UFix64Type) Scale() uint {
-	return Fix64Scale
-}
-
-func (*UFix64Type) MinFractional() *big.Int {
-	return UFix64TypeMinFractionalBig
-}
-
-func (*UFix64Type) MaxFractional() *big.Int {
-	return UFix64TypeMaxFractionalBig
-}
-
-func (*UFix64Type) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
-	return false
-}
-
-func (t *UFix64Type) Resolve(_ *TypeParameterTypeOrderedMap) Type {
-	return t
-}
-
-func (t *UFix64Type) GetMembers() map[string]MemberResolver {
-	return withBuiltinMembers(t, nil)
-}
 
 // ArrayType
 
@@ -2805,7 +1268,7 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 				return NewPublicConstantFieldMember(
 					arrayType,
 					identifier,
-					&IntType{},
+					IntType,
 					arrayTypeLengthFieldDocString,
 				)
 			},
@@ -2925,7 +1388,7 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 						Parameters: []*Parameter{
 							{
 								Identifier:     "at",
-								TypeAnnotation: NewTypeAnnotation(&IntegerType{}),
+								TypeAnnotation: NewTypeAnnotation(IntegerType),
 							},
 							{
 								Label:          ArgumentLabelNotRequired,
@@ -2955,7 +1418,7 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 						Parameters: []*Parameter{
 							{
 								Identifier:     "at",
-								TypeAnnotation: NewTypeAnnotation(&IntegerType{}),
+								TypeAnnotation: NewTypeAnnotation(IntegerType),
 							},
 						},
 						ReturnTypeAnnotation: NewTypeAnnotation(
@@ -3102,7 +1565,7 @@ func (t *VariableSizedType) ElementType(_ bool) Type {
 }
 
 func (t *VariableSizedType) IndexingType() Type {
-	return &IntegerType{}
+	return IntegerType
 }
 
 func (t *VariableSizedType) Unify(
@@ -3226,7 +1689,7 @@ func (t *ConstantSizedType) ElementType(_ bool) Type {
 }
 
 func (t *ConstantSizedType) IndexingType() Type {
-	return &IntegerType{}
+	return IntegerType
 }
 
 func (t *ConstantSizedType) Unify(
@@ -3969,11 +2432,11 @@ func baseTypeVariable(name string, ty Type) *Variable {
 var BaseValueActivation = NewVariableActivation(nil)
 
 var AllSignedFixedPointTypes = []Type{
-	&Fix64Type{},
+	Fix64Type,
 }
 
 var AllUnsignedFixedPointTypes = []Type{
-	&UFix64Type{},
+	UFix64Type,
 }
 
 var AllFixedPointTypes = append(
@@ -3981,34 +2444,34 @@ var AllFixedPointTypes = append(
 		AllUnsignedFixedPointTypes[:],
 		AllSignedFixedPointTypes...,
 	),
-	&FixedPointType{},
-	&SignedFixedPointType{},
+	FixedPointType,
+	SignedFixedPointType,
 )
 
 var AllSignedIntegerTypes = []Type{
-	&IntType{},
-	&Int8Type{},
-	&Int16Type{},
-	&Int32Type{},
-	&Int64Type{},
-	&Int128Type{},
-	&Int256Type{},
+	IntType,
+	Int8Type,
+	Int16Type,
+	Int32Type,
+	Int64Type,
+	Int128Type,
+	Int256Type,
 }
 
 var AllUnsignedIntegerTypes = []Type{
 	// UInt*
-	&UIntType{},
-	&UInt8Type{},
-	&UInt16Type{},
-	&UInt32Type{},
-	&UInt64Type{},
-	&UInt128Type{},
-	&UInt256Type{},
+	UIntType,
+	UInt8Type,
+	UInt16Type,
+	UInt32Type,
+	UInt64Type,
+	UInt128Type,
+	UInt256Type,
 	// Word*
-	&Word8Type{},
-	&Word16Type{},
-	&Word32Type{},
-	&Word64Type{},
+	Word8Type,
+	Word16Type,
+	Word32Type,
+	Word64Type,
 }
 
 var AllIntegerTypes = append(
@@ -4016,8 +2479,8 @@ var AllIntegerTypes = append(
 		AllUnsignedIntegerTypes[:],
 		AllSignedIntegerTypes...,
 	),
-	&IntegerType{},
-	&SignedIntegerType{},
+	IntegerType,
+	SignedIntegerType,
 )
 
 var AllNumberTypes = append(
@@ -4025,8 +2488,8 @@ var AllNumberTypes = append(
 		AllIntegerTypes[:],
 		AllFixedPointTypes...,
 	),
-	&NumberType{},
-	&SignedNumberType{},
+	NumberType,
+	SignedNumberType,
 )
 
 func init() {
@@ -4035,10 +2498,10 @@ func init() {
 
 	for _, numberType := range AllNumberTypes {
 
-		switch numberType.(type) {
-		case *NumberType, *SignedNumberType,
-			*IntegerType, *SignedIntegerType,
-			*FixedPointType, *SignedFixedPointType:
+		switch numberType {
+		case NumberType, SignedNumberType,
+			IntegerType, SignedIntegerType,
+			FixedPointType, SignedFixedPointType:
 			continue
 
 		default:
@@ -4060,7 +2523,7 @@ func init() {
 								{
 									Label:          ArgumentLabelNotRequired,
 									Identifier:     "value",
-									TypeAnnotation: NewTypeAnnotation(&NumberType{}),
+									TypeAnnotation: NewTypeAnnotation(NumberType),
 								},
 							},
 							ReturnTypeAnnotation: NewTypeAnnotation(numberType),
@@ -4107,7 +2570,7 @@ func init() {
 						{
 							Label:          ArgumentLabelNotRequired,
 							Identifier:     "value",
-							TypeAnnotation: NewTypeAnnotation(&IntegerType{}),
+							TypeAnnotation: NewTypeAnnotation(IntegerType),
 						},
 					},
 					ReturnTypeAnnotation: NewTypeAnnotation(addressType),
@@ -4161,12 +2624,12 @@ func suggestIntegerLiteralConversionReplacement(
 ) {
 	negative := argument.Value.Sign() < 0
 
-	if IsSubType(targetType, &FixedPointType{}) {
+	if IsSubType(targetType, FixedPointType) {
 
 		// If the integer literal is converted to a fixed-point type,
 		// suggest replacing it with a fixed-point literal
 
-		signed := IsSubType(targetType, &SignedFixedPointType{})
+		signed := IsSubType(targetType, SignedFixedPointType)
 
 		var hintExpression ast.Expression = &ast.FixedPointExpression{
 			Negative:        negative,
@@ -4201,7 +2664,7 @@ func suggestIntegerLiteralConversionReplacement(
 			},
 		)
 
-	} else if IsSubType(targetType, &IntegerType{}) {
+	} else if IsSubType(targetType, IntegerType) {
 
 		// If the integer literal is converted to an integer type,
 		// suggest replacing it with a fixed-point literal
@@ -4213,7 +2676,7 @@ func suggestIntegerLiteralConversionReplacement(
 		// as all integer literals (positive and negative)
 		// are inferred to be of type `Int`
 
-		if !IsSubType(targetType, &IntType{}) {
+		if !IsSubType(targetType, IntType) {
 			hintExpression = &ast.CastingExpression{
 				Expression: hintExpression,
 				Operation:  ast.OperationCast,
@@ -4246,12 +2709,12 @@ func suggestFixedPointLiteralConversionReplacement(
 	// If the fixed-point literal is converted to a fixed-point type,
 	// suggest replacing it with a fixed-point literal
 
-	if !IsSubType(targetType, &FixedPointType{}) {
+	if !IsSubType(targetType, FixedPointType) {
 		return
 	}
 
 	negative := argument.Negative
-	signed := IsSubType(targetType, &SignedFixedPointType{})
+	signed := IsSubType(targetType, SignedFixedPointType)
 
 	if (!negative && !signed) || (negative && signed) {
 		checker.hint(
@@ -4310,6 +2773,7 @@ type CompositeType struct {
 	nestedTypes           *StringTypeOrderedMap
 	ContainerType         Type
 	EnumRawType           Type
+	hasComputedMembers    bool
 }
 
 func (t *CompositeType) ExplicitInterfaceConformanceSet() *InterfaceSet {
@@ -4392,6 +2856,9 @@ func (*CompositeType) IsInvalidType() bool {
 }
 
 func (t *CompositeType) IsStorable(results map[*Member]bool) bool {
+	if t.hasComputedMembers {
+		return false
+	}
 
 	// Only structures, resources, and enums can be stored
 
@@ -4422,6 +2889,9 @@ func (t *CompositeType) IsStorable(results map[*Member]bool) bool {
 }
 
 func (t *CompositeType) IsExternallyReturnable(results map[*Member]bool) bool {
+	if t.hasComputedMembers {
+		return false
+	}
 
 	// Only structures, resources, and enums can be stored
 
@@ -5013,7 +3483,7 @@ func (t *DictionaryType) initializeMemberResolvers() {
 					return NewPublicConstantFieldMember(
 						t,
 						identifier,
-						&IntType{},
+						IntType,
 						dictionaryTypeLengthFieldDocString,
 					)
 				},
@@ -5382,7 +3852,7 @@ const AddressTypeToBytesFunctionName = `toBytes`
 var arrayTypeToBytesFunctionType = &FunctionType{
 	ReturnTypeAnnotation: NewTypeAnnotation(
 		&VariableSizedType{
-			Type: &UInt8Type{},
+			Type: UInt8Type,
 		},
 	),
 }
@@ -5433,73 +3903,73 @@ func IsSubType(subType Type, superType Type) bool {
 
 	case AnyResourceType:
 		return subType.IsResourceType()
+
+	case NumberType:
+		switch subType {
+		case NumberType, SignedNumberType:
+			return true
+		}
+
+		return IsSubType(subType, IntegerType) ||
+			IsSubType(subType, FixedPointType)
+
+	case SignedNumberType:
+		if subType == SignedNumberType {
+			return true
+		}
+
+		return IsSubType(subType, SignedIntegerType) ||
+			IsSubType(subType, SignedFixedPointType)
+
+	case IntegerType:
+		switch subType {
+		case IntegerType, SignedIntegerType,
+			IntType, UIntType,
+			Int8Type, Int16Type, Int32Type, Int64Type, Int128Type, Int256Type,
+			UInt8Type, UInt16Type, UInt32Type, UInt64Type, UInt128Type, UInt256Type,
+			Word8Type, Word16Type, Word32Type, Word64Type:
+
+			return true
+
+		default:
+			return false
+		}
+
+	case SignedIntegerType:
+		switch subType {
+		case SignedIntegerType,
+			IntType,
+			Int8Type, Int16Type, Int32Type, Int64Type, Int128Type, Int256Type:
+
+			return true
+
+		default:
+			return false
+		}
+
+	case FixedPointType:
+		switch subType {
+		case FixedPointType, SignedFixedPointType,
+			Fix64Type, UFix64Type:
+
+			return true
+
+		default:
+			return false
+		}
+
+	case SignedFixedPointType:
+		switch subType {
+		case SignedFixedPointType, Fix64Type:
+
+			return true
+
+		default:
+			return false
+		}
 	}
 
 	switch typedSuperType := superType.(type) {
-	case *NumberType:
-		switch subType.(type) {
-		case *NumberType, *SignedNumberType:
-			return true
-		}
-
-		return IsSubType(subType, &IntegerType{}) ||
-			IsSubType(subType, &FixedPointType{})
-
-	case *SignedNumberType:
-		if _, ok := subType.(*SignedNumberType); ok {
-			return true
-		}
-
-		return IsSubType(subType, &SignedIntegerType{}) ||
-			IsSubType(subType, &SignedFixedPointType{})
-
-	case *IntegerType:
-		switch subType.(type) {
-		case *IntegerType, *SignedIntegerType,
-			*IntType, *UIntType,
-			*Int8Type, *Int16Type, *Int32Type, *Int64Type, *Int128Type, *Int256Type,
-			*UInt8Type, *UInt16Type, *UInt32Type, *UInt64Type, *UInt128Type, *UInt256Type,
-			*Word8Type, *Word16Type, *Word32Type, *Word64Type:
-
-			return true
-
-		default:
-			return false
-		}
-
-	case *SignedIntegerType:
-		switch subType.(type) {
-		case *SignedIntegerType,
-			*IntType,
-			*Int8Type, *Int16Type, *Int32Type, *Int64Type, *Int128Type, *Int256Type:
-
-			return true
-
-		default:
-			return false
-		}
-
-	case *FixedPointType:
-		switch subType.(type) {
-		case *FixedPointType, *SignedFixedPointType,
-			*Fix64Type, *UFix64Type:
-
-			return true
-
-		default:
-			return false
-		}
-
-	case *SignedFixedPointType:
-		switch subType.(type) {
-		case *SignedNumberType, *Fix64Type:
-
-			return true
-
-		default:
-			return false
-		}
-
 	case *OptionalType:
 		optionalSubType, ok := subType.(*OptionalType)
 		if !ok {
@@ -6565,6 +5035,10 @@ const capabilityTypeCheckFunctionDocString = `
 Returns true if the capability currently targets an object that satisfies the given type, i.e. could be borrowed using the given type
 `
 
+const addressTypeCheckFunctionDocString = `
+The address of the capability
+`
+
 func (t *CapabilityType) GetMembers() map[string]MemberResolver {
 	return withBuiltinMembers(t, map[string]MemberResolver{
 		"borrow": {
@@ -6586,6 +5060,17 @@ func (t *CapabilityType) GetMembers() map[string]MemberResolver {
 					identifier,
 					capabilityTypeCheckFunctionType(t.BorrowType),
 					capabilityTypeCheckFunctionDocString,
+				)
+			},
+		},
+		"address": {
+			Kind: common.DeclarationKindField,
+			Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
+				return NewPublicConstantFieldMember(
+					t,
+					identifier,
+					&AddressType{},
+					addressTypeCheckFunctionDocString,
 				)
 			},
 		},
@@ -6634,7 +5119,7 @@ var AccountKeyType = func() *CompositeType {
 		NewPublicConstantFieldMember(
 			accountKeyType,
 			AccountKeyKeyIndexField,
-			&IntType{},
+			IntType,
 			accountKeyIndexFieldDocString,
 		),
 		NewPublicConstantFieldMember(
@@ -6652,7 +5137,7 @@ var AccountKeyType = func() *CompositeType {
 		NewPublicConstantFieldMember(
 			accountKeyType,
 			AccountKeyWeightField,
-			&UFix64Type{},
+			UFix64Type,
 			accountKeyWeightFieldDocString,
 		),
 		NewPublicConstantFieldMember(
@@ -6687,7 +5172,7 @@ var PublicKeyType = func() *CompositeType {
 		NewPublicConstantFieldMember(
 			accountKeyType,
 			PublicKeyPublicKeyField,
-			&VariableSizedType{Type: &UInt8Type{}},
+			&VariableSizedType{Type: UInt8Type},
 			publicKeyKeyFieldDocString,
 		),
 		NewPublicConstantFieldMember(

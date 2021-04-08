@@ -41,12 +41,12 @@ func TestCheckForce(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t,
-			&sema.OptionalType{Type: &sema.IntType{}},
+			&sema.OptionalType{Type: sema.IntType},
 			RequireGlobalValue(t, checker.Elaboration, "x"),
 		)
 
 		assert.Equal(t,
-			&sema.IntType{},
+			sema.IntType,
 			RequireGlobalValue(t, checker.Elaboration, "y"),
 		)
 
@@ -62,12 +62,12 @@ func TestCheckForce(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t,
-			&sema.IntType{},
+			sema.IntType,
 			RequireGlobalValue(t, checker.Elaboration, "x"),
 		)
 
 		assert.Equal(t,
-			&sema.IntType{},
+			sema.IntType,
 			RequireGlobalValue(t, checker.Elaboration, "y"),
 		)
 

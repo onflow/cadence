@@ -56,7 +56,7 @@ func testAccount(t *testing.T, auth bool, code string) (*interpreter.Interpreter
 			returnZero,
 			panicFunction,
 			panicFunction,
-			interpreter.AuthAccountContractsValue{},
+			&interpreter.CompositeValue{},
 			&interpreter.CompositeValue{},
 		),
 		Kind: common.DeclarationKindConstant,
@@ -1346,7 +1346,7 @@ func TestInterpretAccount_getCapability(t *testing.T) {
 						expectedBorrowType := interpreter.ConvertSemaToStaticType(
 							&sema.ReferenceType{
 								Authorized: false,
-								Type:       &sema.IntType{},
+								Type:       sema.IntType,
 							},
 						)
 						require.Equal(t,

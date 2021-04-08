@@ -855,7 +855,7 @@ func (v IntValue) Accept(interpreter *Interpreter, visitor Visitor) {
 }
 
 func (IntValue) DynamicType(_ *Interpreter) DynamicType {
-	return NumberDynamicType{&sema.IntType{}}
+	return NumberDynamicType{sema.IntType}
 }
 
 func (IntValue) StaticType() StaticType {
@@ -1063,7 +1063,7 @@ func (v Int8Value) Accept(interpreter *Interpreter, visitor Visitor) {
 }
 
 func (Int8Value) DynamicType(_ *Interpreter) DynamicType {
-	return NumberDynamicType{&sema.Int8Type{}}
+	return NumberDynamicType{sema.Int8Type}
 }
 
 func (Int8Value) StaticType() StaticType {
@@ -1299,7 +1299,7 @@ func (v Int16Value) Accept(interpreter *Interpreter, visitor Visitor) {
 }
 
 func (Int16Value) DynamicType(_ *Interpreter) DynamicType {
-	return NumberDynamicType{&sema.Int16Type{}}
+	return NumberDynamicType{sema.Int16Type}
 }
 
 func (Int16Value) StaticType() StaticType {
@@ -1537,7 +1537,7 @@ func (v Int32Value) Accept(interpreter *Interpreter, visitor Visitor) {
 }
 
 func (Int32Value) DynamicType(_ *Interpreter) DynamicType {
-	return NumberDynamicType{&sema.Int32Type{}}
+	return NumberDynamicType{sema.Int32Type}
 }
 
 func (Int32Value) StaticType() StaticType {
@@ -1775,7 +1775,7 @@ func (v Int64Value) Accept(interpreter *Interpreter, visitor Visitor) {
 }
 
 func (Int64Value) DynamicType(_ *Interpreter) DynamicType {
-	return NumberDynamicType{&sema.Int64Type{}}
+	return NumberDynamicType{sema.Int64Type}
 }
 
 func (Int64Value) StaticType() StaticType {
@@ -2021,7 +2021,7 @@ func (v Int128Value) Accept(interpreter *Interpreter, visitor Visitor) {
 }
 
 func (Int128Value) DynamicType(_ *Interpreter) DynamicType {
-	return NumberDynamicType{&sema.Int128Type{}}
+	return NumberDynamicType{sema.Int128Type}
 }
 
 func (Int128Value) StaticType() StaticType {
@@ -2317,7 +2317,7 @@ func (v Int256Value) Accept(interpreter *Interpreter, visitor Visitor) {
 }
 
 func (Int256Value) DynamicType(_ *Interpreter) DynamicType {
-	return NumberDynamicType{&sema.Int256Type{}}
+	return NumberDynamicType{sema.Int256Type}
 }
 
 func (Int256Value) StaticType() StaticType {
@@ -2634,7 +2634,7 @@ func (v UIntValue) Accept(interpreter *Interpreter, visitor Visitor) {
 }
 
 func (UIntValue) DynamicType(_ *Interpreter) DynamicType {
-	return NumberDynamicType{&sema.UIntType{}}
+	return NumberDynamicType{sema.UIntType}
 }
 
 func (UIntValue) StaticType() StaticType {
@@ -2845,7 +2845,7 @@ func (v UInt8Value) Accept(interpreter *Interpreter, visitor Visitor) {
 }
 
 func (UInt8Value) DynamicType(_ *Interpreter) DynamicType {
-	return NumberDynamicType{&sema.UInt8Type{}}
+	return NumberDynamicType{sema.UInt8Type}
 }
 
 func (UInt8Value) StaticType() StaticType {
@@ -3049,7 +3049,7 @@ func (v UInt16Value) Accept(interpreter *Interpreter, visitor Visitor) {
 }
 
 func (UInt16Value) DynamicType(_ *Interpreter) DynamicType {
-	return NumberDynamicType{&sema.UInt16Type{}}
+	return NumberDynamicType{sema.UInt16Type}
 }
 
 func (UInt16Value) StaticType() StaticType {
@@ -3253,7 +3253,7 @@ func (v UInt32Value) Accept(interpreter *Interpreter, visitor Visitor) {
 }
 
 func (UInt32Value) DynamicType(_ *Interpreter) DynamicType {
-	return NumberDynamicType{&sema.UInt32Type{}}
+	return NumberDynamicType{sema.UInt32Type}
 }
 
 func (UInt32Value) StaticType() StaticType {
@@ -3459,7 +3459,7 @@ func (v UInt64Value) Accept(interpreter *Interpreter, visitor Visitor) {
 }
 
 func (UInt64Value) DynamicType(_ *Interpreter) DynamicType {
-	return NumberDynamicType{&sema.UInt64Type{}}
+	return NumberDynamicType{sema.UInt64Type}
 }
 
 func (UInt64Value) StaticType() StaticType {
@@ -3678,7 +3678,7 @@ func (v UInt128Value) Accept(interpreter *Interpreter, visitor Visitor) {
 }
 
 func (UInt128Value) DynamicType(_ *Interpreter) DynamicType {
-	return NumberDynamicType{&sema.UInt128Type{}}
+	return NumberDynamicType{sema.UInt128Type}
 }
 
 func (UInt128Value) StaticType() StaticType {
@@ -3943,7 +3943,7 @@ func (v UInt256Value) Accept(interpreter *Interpreter, visitor Visitor) {
 }
 
 func (UInt256Value) DynamicType(_ *Interpreter) DynamicType {
-	return NumberDynamicType{&sema.UInt256Type{}}
+	return NumberDynamicType{sema.UInt256Type}
 }
 
 func (UInt256Value) StaticType() StaticType {
@@ -4199,7 +4199,7 @@ func (v Word8Value) Accept(interpreter *Interpreter, visitor Visitor) {
 }
 
 func (Word8Value) DynamicType(_ *Interpreter) DynamicType {
-	return NumberDynamicType{&sema.Word8Type{}}
+	return NumberDynamicType{sema.Word8Type}
 }
 
 func (Word8Value) StaticType() StaticType {
@@ -4364,7 +4364,7 @@ func (v Word16Value) Accept(interpreter *Interpreter, visitor Visitor) {
 }
 
 func (Word16Value) DynamicType(_ *Interpreter) DynamicType {
-	return NumberDynamicType{&sema.Word16Type{}}
+	return NumberDynamicType{sema.Word16Type}
 }
 
 func (Word16Value) StaticType() StaticType {
@@ -4529,7 +4529,7 @@ func (v Word32Value) Accept(interpreter *Interpreter, visitor Visitor) {
 }
 
 func (Word32Value) DynamicType(_ *Interpreter) DynamicType {
-	return NumberDynamicType{&sema.Word32Type{}}
+	return NumberDynamicType{sema.Word32Type}
 }
 
 func (Word32Value) StaticType() StaticType {
@@ -4696,7 +4696,7 @@ func (v Word64Value) Accept(interpreter *Interpreter, visitor Visitor) {
 }
 
 func (Word64Value) DynamicType(_ *Interpreter) DynamicType {
-	return NumberDynamicType{&sema.Word64Type{}}
+	return NumberDynamicType{sema.Word64Type}
 }
 
 func (Word64Value) StaticType() StaticType {
@@ -4878,7 +4878,7 @@ func (v Fix64Value) Accept(interpreter *Interpreter, visitor Visitor) {
 }
 
 func (Fix64Value) DynamicType(_ *Interpreter) DynamicType {
-	return NumberDynamicType{&sema.Fix64Type{}}
+	return NumberDynamicType{sema.Fix64Type}
 }
 
 func (Fix64Value) StaticType() StaticType {
@@ -5093,7 +5093,7 @@ func (v UFix64Value) Accept(interpreter *Interpreter, visitor Visitor) {
 }
 
 func (UFix64Value) DynamicType(_ *Interpreter) DynamicType {
-	return NumberDynamicType{&sema.UFix64Type{}}
+	return NumberDynamicType{sema.UFix64Type}
 }
 
 func (UFix64Value) StaticType() StaticType {
@@ -5303,6 +5303,7 @@ type CompositeValue struct {
 	Owner               *common.Address
 	destroyed           bool
 	modified            bool
+	stringer            func() string
 }
 
 type ComputedField func(*Interpreter) Value
@@ -5569,7 +5570,22 @@ func (v *CompositeValue) OwnerValue() OptionalValue {
 	address := AddressValue(*v.Owner)
 
 	return NewSomeValueOwningNonCopying(
-		PublicAccountValue{Address: address},
+		NewPublicAccountValue(
+			address,
+			func(interpreter *Interpreter) UInt64Value {
+				panic(errors.NewUnreachableError())
+			},
+			func() UInt64Value {
+				panic(errors.NewUnreachableError())
+			},
+			NewPublicAccountKeysValue(
+				NewHostFunctionValue(
+					func(invocation Invocation) Value {
+						panic(errors.NewUnreachableError())
+					},
+				),
+			),
+		),
 	)
 }
 
@@ -5584,6 +5600,10 @@ func (v *CompositeValue) SetMember(_ *Interpreter, getLocationRange func() Locat
 }
 
 func (v *CompositeValue) String() string {
+	if v.stringer != nil {
+		return v.stringer()
+	}
+
 	return formatComposite(string(v.TypeID()), v.Fields)
 }
 
@@ -6666,96 +6686,79 @@ func (AddressValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, 
 	panic(errors.NewUnreachableError())
 }
 
-// AccountValue
-
-type AccountValue interface {
-	isAccountValue()
-	AddressValue() AddressValue
-}
-
-// AuthAccountValue
-type AuthAccountValue struct {
-	Address                 AddressValue
-	storageUsedGet          func(interpreter *Interpreter) UInt64Value
-	storageCapacityGet      func() UInt64Value
-	addPublicKeyFunction    FunctionValue
-	removePublicKeyFunction FunctionValue
-	contracts               AuthAccountContractsValue
-	keys                    *CompositeValue
-}
-
+// NewAuthAccountValue constructs an auth account value.
 func NewAuthAccountValue(
 	address AddressValue,
 	storageUsedGet func(interpreter *Interpreter) UInt64Value,
 	storageCapacityGet func() UInt64Value,
 	addPublicKeyFunction FunctionValue,
 	removePublicKeyFunction FunctionValue,
-	contracts AuthAccountContractsValue,
+	contracts *CompositeValue,
 	keys *CompositeValue,
-) AuthAccountValue {
-	return AuthAccountValue{
-		Address:                 address,
-		storageUsedGet:          storageUsedGet,
-		storageCapacityGet:      storageCapacityGet,
-		addPublicKeyFunction:    addPublicKeyFunction,
-		removePublicKeyFunction: removePublicKeyFunction,
-		contracts:               contracts,
-		keys:                    keys,
+) *CompositeValue {
+
+	fields := NewStringValueOrderedMap()
+	fields.Set(sema.AuthAccountAddressField, address)
+	fields.Set(sema.AuthAccountAddPublicKeyField, addPublicKeyFunction)
+	fields.Set(sema.AuthAccountRemovePublicKeyField, removePublicKeyFunction)
+	fields.Set(sema.AuthAccountGetCapabilityField, accountGetCapabilityFunction(address))
+	fields.Set(sema.AuthAccountContractsField, contracts)
+	fields.Set(sema.AuthAccountKeysField, keys)
+
+	// Computed fields
+	computedFields := NewStringComputedFieldOrderedMap()
+
+	computedFields.Set(sema.AuthAccountStorageUsedField, func(inter *Interpreter) Value {
+		return storageUsedGet(inter)
+	})
+
+	computedFields.Set(sema.AuthAccountStorageCapacityField, func(*Interpreter) Value {
+		return storageCapacityGet()
+	})
+
+	computedFields.Set(sema.AuthAccountLoadField, func(inter *Interpreter) Value {
+		return inter.authAccountLoadFunction(address)
+	})
+
+	computedFields.Set(sema.AuthAccountCopyField, func(inter *Interpreter) Value {
+		return inter.authAccountCopyFunction(address)
+	})
+
+	computedFields.Set(sema.AuthAccountSaveField, func(inter *Interpreter) Value {
+		return inter.authAccountSaveFunction(address)
+	})
+
+	computedFields.Set(sema.AuthAccountBorrowField, func(inter *Interpreter) Value {
+		return inter.authAccountBorrowFunction(address)
+	})
+
+	computedFields.Set(sema.AuthAccountLinkField, func(inter *Interpreter) Value {
+		return inter.authAccountLinkFunction(address)
+	})
+
+	computedFields.Set(sema.AuthAccountUnlinkField, func(inter *Interpreter) Value {
+		return inter.authAccountUnlinkFunction(address)
+	})
+
+	computedFields.Set(sema.AuthAccountGetLinkTargetField, func(inter *Interpreter) Value {
+		return inter.accountGetLinkTargetFunction(address)
+	})
+
+	stringer := func() string {
+		return fmt.Sprintf("AuthAccount(%s)", address)
 	}
-}
 
-func (AuthAccountValue) IsValue() {}
-
-func (v AuthAccountValue) Accept(interpreter *Interpreter, visitor Visitor) {
-	visitor.VisitAuthAccountValue(interpreter, v)
-}
-
-func (AuthAccountValue) isAccountValue() {}
-
-func (v AuthAccountValue) AddressValue() AddressValue {
-	return v.Address
-}
-
-func (AuthAccountValue) DynamicType(_ *Interpreter) DynamicType {
-	return AuthAccountDynamicType{}
-}
-
-func (AuthAccountValue) StaticType() StaticType {
-	return PrimitiveStaticTypeAuthAccount
-}
-
-func (v AuthAccountValue) Copy() Value {
-	return v
-}
-
-func (AuthAccountValue) GetOwner() *common.Address {
-	// value is never owned
-	return nil
-}
-
-func (AuthAccountValue) SetOwner(_ *common.Address) {
-	// NO-OP: value cannot be owned
-}
-
-func (AuthAccountValue) IsModified() bool {
-	return false
-}
-
-func (AuthAccountValue) SetModified(_ bool) {
-	// NO-OP
-}
-
-func (v AuthAccountValue) Destroy(_ *Interpreter, _ func() LocationRange) {
-	// NO-OP
-}
-
-func (v AuthAccountValue) String() string {
-	return fmt.Sprintf("AuthAccount(%s)", v.Address)
+	return &CompositeValue{
+		QualifiedIdentifier: sema.AuthAccountType.QualifiedIdentifier(),
+		Kind:                sema.AuthAccountType.Kind,
+		Fields:              fields,
+		ComputedFields:      computedFields,
+		stringer:            stringer,
+	}
 }
 
 func accountGetCapabilityFunction(
 	addressValue AddressValue,
-	authorized bool,
 ) HostFunctionValue {
 
 	return NewHostFunctionValue(
@@ -6786,158 +6789,46 @@ func accountGetCapabilityFunction(
 	)
 }
 
-func (v AuthAccountValue) GetMember(inter *Interpreter, _ func() LocationRange, name string) Value {
-	switch name {
-	case "address":
-		return v.Address
-
-	case "storageUsed":
-		return v.storageUsedGet(inter)
-
-	case "storageCapacity":
-		return v.storageCapacityGet()
-
-	case "addPublicKey":
-		return v.addPublicKeyFunction
-
-	case "removePublicKey":
-		return v.removePublicKeyFunction
-
-	case "load":
-		return inter.authAccountLoadFunction(v.Address)
-
-	case "copy":
-		return inter.authAccountCopyFunction(v.Address)
-
-	case "save":
-		return inter.authAccountSaveFunction(v.Address)
-
-	case "borrow":
-		return inter.authAccountBorrowFunction(v.Address)
-
-	case "link":
-		return inter.authAccountLinkFunction(v.Address)
-
-	case "unlink":
-		return inter.authAccountUnlinkFunction(v.Address)
-
-	case "getLinkTarget":
-		return inter.accountGetLinkTargetFunction(v.Address)
-
-	case "getCapability":
-		return accountGetCapabilityFunction(v.Address, true)
-
-	case "contracts":
-		return v.contracts
-	case "keys":
-		return v.keys
-	}
-
-	return nil
-}
-
-func (AuthAccountValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
-	panic(errors.NewUnreachableError())
-}
-
-// PublicAccountValue
-
-type PublicAccountValue struct {
-	Address            AddressValue
-	storageUsedGet     func(interpreter *Interpreter) UInt64Value
-	storageCapacityGet func() UInt64Value
-	Identifier         string
-	keys               *CompositeValue
-}
-
+// NewPublicAccountValue constructs a public account value.
 func NewPublicAccountValue(
 	address AddressValue,
 	storageUsedGet func(interpreter *Interpreter) UInt64Value,
 	storageCapacityGet func() UInt64Value,
 	keys *CompositeValue,
-) PublicAccountValue {
-	return PublicAccountValue{
-		Address:            address,
-		storageUsedGet:     storageUsedGet,
-		storageCapacityGet: storageCapacityGet,
-		keys:               keys,
-	}
-}
+) *CompositeValue {
 
-func (PublicAccountValue) IsValue() {}
+	fields := NewStringValueOrderedMap()
+	fields.Set(sema.PublicAccountAddressField, address)
+	fields.Set(sema.PublicAccountGetCapabilityField, accountGetCapabilityFunction(address))
+	fields.Set(sema.PublicAccountKeysField, keys)
 
-func (v PublicAccountValue) Accept(interpreter *Interpreter, visitor Visitor) {
-	visitor.VisitPublicAccountValue(interpreter, v)
-}
+	// Computed fields
+	computedFields := NewStringComputedFieldOrderedMap()
 
-func (PublicAccountValue) isAccountValue() {}
+	computedFields.Set(sema.PublicAccountStorageUsedField, func(inter *Interpreter) Value {
+		return storageUsedGet(inter)
+	})
 
-func (v PublicAccountValue) AddressValue() AddressValue {
-	return v.Address
-}
+	computedFields.Set(sema.PublicAccountStorageCapacityField, func(*Interpreter) Value {
+		return storageCapacityGet()
+	})
 
-func (PublicAccountValue) DynamicType(_ *Interpreter) DynamicType {
-	return PublicAccountDynamicType{}
-}
+	computedFields.Set(sema.PublicAccountGetTargetLinkField, func(inter *Interpreter) Value {
+		return inter.accountGetLinkTargetFunction(address)
+	})
 
-func (PublicAccountValue) StaticType() StaticType {
-	return PrimitiveStaticTypePublicAccount
-}
-
-func (v PublicAccountValue) Copy() Value {
-	return v
-}
-
-func (PublicAccountValue) GetOwner() *common.Address {
-	// value is never owned
-	return nil
-}
-
-func (PublicAccountValue) SetOwner(_ *common.Address) {
-	// NO-OP: value cannot be owned
-}
-
-func (PublicAccountValue) IsModified() bool {
-	return false
-}
-
-func (PublicAccountValue) SetModified(_ bool) {
-	// NO-OP
-}
-
-func (v PublicAccountValue) Destroy(_ *Interpreter, _ func() LocationRange) {
-	// NO-OP
-}
-
-func (v PublicAccountValue) String() string {
-	return fmt.Sprintf("PublicAccount(%s)", v.Address)
-}
-
-func (v PublicAccountValue) GetMember(inter *Interpreter, _ func() LocationRange, name string) Value {
-	switch name {
-	case "address":
-		return v.Address
-
-	case "storageUsed":
-		return v.storageUsedGet(inter)
-
-	case "storageCapacity":
-		return v.storageCapacityGet()
-
-	case "getCapability":
-		return accountGetCapabilityFunction(v.Address, false)
-
-	case "getLinkTarget":
-		return inter.accountGetLinkTargetFunction(v.Address)
-	case "keys":
-		return v.keys
+	// Stringer function
+	stringer := func() string {
+		return fmt.Sprintf("PublicAccount(%s)", address)
 	}
 
-	return nil
-}
-
-func (PublicAccountValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
-	panic(errors.NewUnreachableError())
+	return &CompositeValue{
+		QualifiedIdentifier: sema.PublicAccountType.QualifiedIdentifier(),
+		Kind:                sema.PublicAccountType.Kind,
+		Fields:              fields,
+		ComputedFields:      computedFields,
+		stringer:            stringer,
+	}
 }
 
 // PathValue
@@ -7103,6 +6994,9 @@ func (v CapabilityValue) GetMember(inter *Interpreter, _ func() LocationRange, n
 		}
 		return inter.capabilityCheckFunction(v.Address, v.Path, borrowType)
 
+
+	case "address":
+		return v.Address
 	}
 
 	return nil

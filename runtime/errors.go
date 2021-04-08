@@ -254,70 +254,70 @@ func (*InvalidContractDeploymentOriginError) Error() string {
 // ContractUpdateError is reported upon any invalid update to a contract or contract interface.
 // It contains all the errors reported during the update validation.
 type ContractUpdateError struct {
-	contractName string
-	errors       []error
-	location     common.Location
+	ContractName string
+	Errors       []error
+	Location     common.Location
 }
 
 func (e *ContractUpdateError) Error() string {
-	return fmt.Sprintf("cannot update contract `%s`", e.contractName)
+	return fmt.Sprintf("cannot update contract `%s`", e.ContractName)
 }
 
 func (e *ContractUpdateError) ChildErrors() []error {
-	return e.errors
+	return e.Errors
 }
 
 func (e *ContractUpdateError) ImportLocation() common.Location {
-	return e.location
+	return e.Location
 }
 
 // FieldMismatchError is reported during a contract update, when a type of a field
 // does not match the existing type of the same field.
 type FieldMismatchError struct {
-	declName  string
-	fieldName string
-	err       error
+	DeclName  string
+	FieldName string
+	Err       error
 	ast.Range
 }
 
 func (e *FieldMismatchError) Error() string {
 	return fmt.Sprintf("mismatching field `%s` in `%s`",
-		e.fieldName,
-		e.declName,
+		e.FieldName,
+		e.DeclName,
 	)
 }
 
 func (e *FieldMismatchError) SecondaryError() string {
-	return e.err.Error()
+	return e.Err.Error()
 }
 
 // TypeMismatchError is reported during a contract update, when a type of the new program
 // does not match the existing type.
 type TypeMismatchError struct {
-	expectedType ast.Type
-	foundType    ast.Type
+	ExpectedType ast.Type
+	FoundType    ast.Type
 	ast.Range
 }
 
 func (e *TypeMismatchError) Error() string {
 	return fmt.Sprintf("incompatible type annotations. expected `%s`, found `%s`",
-		e.expectedType,
-		e.foundType,
+		e.ExpectedType,
+		e.FoundType,
 	)
 }
 
-// ExtraneousFieldError is reported during a contract update, when the new contract
-// has more fields than the existing contract.
+// ExtraneousFieldError is reported during a contract update, when an updated composite
+// declaration has more fields than the existing declaration.
 type ExtraneousFieldError struct {
-	declName  string
-	fieldName string
+	DeclName  string
+	FieldName string
 	ast.Range
 }
 
 func (e *ExtraneousFieldError) Error() string {
 	return fmt.Sprintf("found new field `%s` in `%s`",
-		e.fieldName,
-		e.declName,
+		e.FieldName,
+		e.DeclName,
 	)
 }
 
@@ -334,40 +334,87 @@ func (e *ContractNotFoundError) Error() string {
 // InvalidDeclarationKindChangeError is reported during a contract update, when an attempt is made
 // to convert an existing contract to a contract interface, or vise versa.
 type InvalidDeclarationKindChangeError struct {
-	name    string
-	oldKind common.DeclarationKind
-	newKind common.DeclarationKind
+	Name    string
+	OldKind common.DeclarationKind
+	NewKind common.DeclarationKind
 	ast.Range
 }
 
 func (e *InvalidDeclarationKindChangeError) Error() string {
-	return fmt.Sprintf("trying to convert %s `%s` to a %s", e.oldKind.Name(), e.name, e.newKind.Name())
+	return fmt.Sprintf("trying to convert %s `%s` to a %s", e.OldKind.Name(), e.Name, e.NewKind.Name())
 }
 
 // ConformanceMismatchError is reported during a contract update, when the enum conformance of the new program
 // does not match the existing one.
 type ConformanceMismatchError struct {
-	declName string
-	err      error
+	DeclName string
+	Err      error
 	ast.Range
 }
 
 func (e *ConformanceMismatchError) Error() string {
-	return fmt.Sprintf("conformances does not match in `%s`", e.declName)
+	return fmt.Sprintf("conformances does not match in `%s`", e.DeclName)
 }
 
 func (e *ConformanceMismatchError) SecondaryError() string {
-	return e.err.Error()
+	return e.Err.Error()
 }
 
 // ConformanceCountMismatchError is reported during a contract update, when the conformance count
 // does not match the existing conformance count.
 type ConformanceCountMismatchError struct {
-	expected int
-	found    int
+	Expected int
+	Found    int
 	ast.Range
 }
 
 func (e *ConformanceCountMismatchError) Error() string {
-	return fmt.Sprintf("conformances count does not match: expected %d, found %d", e.expected, e.found)
+	return fmt.Sprintf("conformances count does not match: expected %d, found %d", e.Expected, e.Found)
+}
+
+// EnumCaseMismatchError is reported during an enum update, when an updated enum case
+// does not match the existing enum case.
+type EnumCaseMismatchError struct {
+	ExpectedName string
+	FoundName    string
+	ast.Range
+}
+
+func (e *EnumCaseMismatchError) Error() string {
+	return fmt.Sprintf("mismatching enum case: expected `%s`, found `%s`",
+		e.ExpectedName,
+		e.FoundName,
+	)
+}
+
+// MissingEnumCasesError is reported during an enum update, if any enum cases are removed
+// from an existing enum.
+type MissingEnumCasesError struct {
+	DeclName string
+	Expected int
+	Found    int
+	ast.Range
+}
+
+func (e *MissingEnumCasesError) Error() string {
+	return fmt.Sprintf(
+		"missing cases in enum `%s`: expected %d or more, found %d",
+		e.DeclName,
+		e.Expected,
+		e.Found,
+	)
+}
+
+// MissingCompositeDeclarationError is reported during an contract update, if an existing
+// composite declaration (struct or struct interface) is removed.
+type MissingCompositeDeclarationError struct {
+	Name string
+	ast.Range
+}
+
+func (e *MissingCompositeDeclarationError) Error() string {
+	return fmt.Sprintf(
+		"missing composite declaration `%s`",
+		e.Name,
+	)
 }

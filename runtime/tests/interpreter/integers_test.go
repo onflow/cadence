@@ -56,8 +56,8 @@ var testIntegerTypesAndValues = map[string]interpreter.Value{
 func init() {
 	for _, integerType := range sema.AllIntegerTypes {
 
-		switch integerType.(type) {
-		case *sema.IntegerType, *sema.SignedIntegerType:
+		switch integerType {
+		case sema.IntegerType, sema.SignedIntegerType:
 			continue
 		}
 

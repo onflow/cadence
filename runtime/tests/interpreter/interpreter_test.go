@@ -1412,16 +1412,16 @@ func TestInterpretHostFunction(t *testing.T) {
 				{
 					Label:          sema.ArgumentLabelNotRequired,
 					Identifier:     "a",
-					TypeAnnotation: sema.NewTypeAnnotation(&sema.IntType{}),
+					TypeAnnotation: sema.NewTypeAnnotation(sema.IntType),
 				},
 				{
 					Label:          sema.ArgumentLabelNotRequired,
 					Identifier:     "b",
-					TypeAnnotation: sema.NewTypeAnnotation(&sema.IntType{}),
+					TypeAnnotation: sema.NewTypeAnnotation(sema.IntType),
 				},
 			},
 			ReturnTypeAnnotation: sema.NewTypeAnnotation(
-				&sema.IntType{},
+				sema.IntType,
 			),
 		},
 		func(invocation interpreter.Invocation) interpreter.Value {
@@ -1485,11 +1485,11 @@ func TestInterpretHostFunctionWithVariableArguments(t *testing.T) {
 				{
 					Label:          sema.ArgumentLabelNotRequired,
 					Identifier:     "value",
-					TypeAnnotation: sema.NewTypeAnnotation(&sema.IntType{}),
+					TypeAnnotation: sema.NewTypeAnnotation(sema.IntType),
 				},
 			},
 			ReturnTypeAnnotation: sema.NewTypeAnnotation(
-				&sema.IntType{},
+				sema.IntType,
 			),
 			RequiredArgumentCount: sema.RequiredArgumentCount(1),
 		},
@@ -1497,7 +1497,7 @@ func TestInterpretHostFunctionWithVariableArguments(t *testing.T) {
 			called = true
 
 			require.Len(t, invocation.ArgumentTypes, 3)
-			assert.IsType(t, &sema.IntType{}, invocation.ArgumentTypes[0])
+			assert.IsType(t, sema.IntType, invocation.ArgumentTypes[0])
 			assert.IsType(t, sema.BoolType, invocation.ArgumentTypes[1])
 			assert.IsType(t, sema.StringType, invocation.ArgumentTypes[2])
 
@@ -3459,10 +3459,10 @@ func TestInterpretInterfaceFieldUse(t *testing.T) {
 								interpreter.NewIntValueFromInt64(1),
 							},
 							[]sema.Type{
-								&sema.IntType{},
+								sema.IntType,
 							},
 							[]sema.Type{
-								&sema.IntType{},
+								sema.IntType,
 							},
 						),
 					},
@@ -3741,10 +3741,10 @@ func TestInterpretInitializerWithInterfacePreCondition(t *testing.T) {
 									interpreter.NewIntValueFromInt64(value),
 								},
 								[]sema.Type{
-									&sema.IntType{},
+									sema.IntType,
 								},
 								[]sema.Type{
-									&sema.IntType{},
+									sema.IntType,
 								},
 							),
 							uuidHandler,
@@ -5998,8 +5998,8 @@ func TestInterpretEmitEventParameterTypes(t *testing.T) {
 
 	for _, integerType := range sema.AllIntegerTypes {
 
-		switch integerType.(type) {
-		case *sema.IntegerType, *sema.SignedIntegerType:
+		switch integerType {
+		case sema.IntegerType, sema.SignedIntegerType:
 			continue
 		}
 
@@ -6010,8 +6010,8 @@ func TestInterpretEmitEventParameterTypes(t *testing.T) {
 
 	for _, fixedPointType := range sema.AllFixedPointTypes {
 
-		switch fixedPointType.(type) {
-		case *sema.FixedPointType, *sema.SignedFixedPointType:
+		switch fixedPointType {
+		case sema.FixedPointType, sema.SignedFixedPointType:
 			continue
 		}
 
@@ -6897,7 +6897,7 @@ func TestInterpretContractAccountFieldUse(t *testing.T) {
 								returnZero,
 								panicFunction,
 								panicFunction,
-								interpreter.AuthAccountContractsValue{},
+								&interpreter.CompositeValue{},
 								&interpreter.CompositeValue{},
 							),
 						)
@@ -7718,7 +7718,7 @@ func TestInterpretResourceOwnerFieldUse(t *testing.T) {
 			returnZero,
 			panicFunction,
 			panicFunction,
-			interpreter.AuthAccountContractsValue{},
+			&interpreter.CompositeValue{},
 			&interpreter.CompositeValue{},
 		),
 		Kind: common.DeclarationKindConstant,
@@ -8238,22 +8238,22 @@ func TestInterpretCountDigits256(t *testing.T) {
 
 	for _, test := range []test{
 		{
-			&sema.Int256Type{},
+			sema.Int256Type,
 			"676983016644359394637212096269997871684197836659065544033845082275068334",
 			72,
 		},
 		{
-			&sema.UInt256Type{},
+			sema.UInt256Type,
 			"676983016644359394637212096269997871684197836659065544033845082275068334",
 			72,
 		},
 		{
-			&sema.Int128Type{},
+			sema.Int128Type,
 			"676983016644359394637212096269997871",
 			36,
 		},
 		{
-			&sema.UInt128Type{},
+			sema.UInt128Type,
 			"676983016644359394637212096269997871",
 			36,
 		},

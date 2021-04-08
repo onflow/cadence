@@ -558,7 +558,7 @@ func (checker *Checker) checkTypeCompatibility(expression ast.Expression, valueT
 			break
 		}
 
-		if IsSubType(unwrappedTargetType, &IntegerType{}) {
+		if IsSubType(unwrappedTargetType, IntegerType) {
 			CheckIntegerLiteral(typedExpression, unwrappedTargetType, checker.report)
 
 			return true
@@ -581,7 +581,7 @@ func (checker *Checker) checkTypeCompatibility(expression ast.Expression, valueT
 
 		valueTypeOK := CheckFixedPointLiteral(typedExpression, valueType, checker.report)
 
-		if IsSubType(unwrappedTargetType, &FixedPointType{}) {
+		if IsSubType(unwrappedTargetType, FixedPointType) {
 			if valueTypeOK {
 				CheckFixedPointLiteral(typedExpression, unwrappedTargetType, checker.report)
 			}
@@ -2034,7 +2034,7 @@ func (checker *Checker) predeclaredMembers(containerType Type) []*Member {
 
 			addPredeclaredMember(
 				ResourceUUIDFieldName,
-				&UInt64Type{},
+				UInt64Type,
 				common.DeclarationKindField,
 				ast.AccessPublic,
 				false,

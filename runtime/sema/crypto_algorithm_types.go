@@ -38,7 +38,7 @@ var HashAlgorithms = []CryptoAlgorithm{
 	HashAlgorithmSHA3_384,
 }
 
-var SignatureAlgorithmType = newNativeEnumType(SignatureAlgorithmTypeName, &UInt8Type{})
+var SignatureAlgorithmType = newNativeEnumType(SignatureAlgorithmTypeName, UInt8Type)
 
 type SignatureAlgorithm uint8
 
@@ -94,7 +94,7 @@ func (algo SignatureAlgorithm) DocString() string {
 	panic(errors.NewUnreachableError())
 }
 
-var HashAlgorithmType = newNativeEnumType(HashAlgorithmTypeName, &UInt8Type{})
+var HashAlgorithmType = newNativeEnumType(HashAlgorithmTypeName, UInt8Type)
 
 type HashAlgorithm uint8
 

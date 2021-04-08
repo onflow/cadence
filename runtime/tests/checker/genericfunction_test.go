@@ -166,7 +166,7 @@ func TestCheckGenericFunction(t *testing.T) {
 
 		ty, present := typeArguments.Get(typeParameter)
 		require.True(t, present, "could not find type argument for parameter %#+v", typeParameter)
-		assert.IsType(t, &sema.IntType{}, ty)
+		assert.IsType(t, sema.IntType, ty)
 	})
 
 	t.Run("valid: one type parameter, no type argument, one parameter, one arguments", func(t *testing.T) {
@@ -216,7 +216,7 @@ func TestCheckGenericFunction(t *testing.T) {
 
 		ty, present := typeArguments.Get(typeParameter)
 		require.True(t, present, "could not find type argument for type parameter %#+v", typeParameter)
-		assert.IsType(t, &sema.IntType{}, ty)
+		assert.IsType(t, sema.IntType, ty)
 	})
 
 	t.Run("invalid: one type parameter, no type argument, one parameter, no argument", func(t *testing.T) {
@@ -389,7 +389,7 @@ func TestCheckGenericFunction(t *testing.T) {
 
 		ty, present := typeParameterTypes.Get(typeParameter)
 		require.True(t, present, "could not find type argument for type parameter %#+v", typeParameter)
-		assert.IsType(t, &sema.IntType{}, ty)
+		assert.IsType(t, sema.IntType, ty)
 	})
 
 	t.Run("invalid: one type parameter, no type argument, two parameters, two argument: not matching argument types", func(t *testing.T) {
@@ -513,10 +513,10 @@ func TestCheckGenericFunction(t *testing.T) {
 
 		ty, present := typeArguments.Get(typeParameter)
 		require.True(t, present, "could not find type argument for type parameter %#+v", typeParameter)
-		assert.IsType(t, &sema.IntType{}, ty)
+		assert.IsType(t, sema.IntType, ty)
 
 		assert.IsType(t,
-			&sema.IntType{},
+			sema.IntType,
 			RequireGlobalValue(t, checker.Elaboration, "res"),
 		)
 	})
@@ -572,10 +572,10 @@ func TestCheckGenericFunction(t *testing.T) {
 
 		ty, present := typeArguments.Get(typeParameter)
 		require.True(t, present, "could not find type argument for type parameter %#+v", typeParameter)
-		assert.IsType(t, &sema.IntType{}, ty)
+		assert.IsType(t, sema.IntType, ty)
 
 		assert.IsType(t,
-			&sema.IntType{},
+			sema.IntType,
 			RequireGlobalValue(t, checker.Elaboration, "res"),
 		)
 	})
@@ -586,7 +586,7 @@ func TestCheckGenericFunction(t *testing.T) {
 
 		typeParameter := &sema.TypeParameter{
 			Name:      "T",
-			TypeBound: &sema.NumberType{},
+			TypeBound: sema.NumberType,
 		}
 
 		checker, err := parseAndCheckWithTestValue(t,
@@ -617,7 +617,7 @@ func TestCheckGenericFunction(t *testing.T) {
 
 		ty, present := typeArguments.Get(typeParameter)
 		require.True(t, present, "could not find type argument for type parameter %#+v", typeParameter)
-		assert.IsType(t, &sema.IntType{}, ty)
+		assert.IsType(t, sema.IntType, ty)
 	})
 
 	t.Run("invalid: one type parameter with type bound, one type argument, no parameters, no arguments: bound not satisfied", func(t *testing.T) {
@@ -626,7 +626,7 @@ func TestCheckGenericFunction(t *testing.T) {
 
 		typeParameter := &sema.TypeParameter{
 			Name:      "T",
-			TypeBound: &sema.NumberType{},
+			TypeBound: sema.NumberType,
 		}
 
 		_, err := parseAndCheckWithTestValue(t,
@@ -654,7 +654,7 @@ func TestCheckGenericFunction(t *testing.T) {
 
 		typeParameter := &sema.TypeParameter{
 			Name:      "T",
-			TypeBound: &sema.NumberType{},
+			TypeBound: sema.NumberType,
 		}
 
 		_, err := parseAndCheckWithTestValue(t,
@@ -736,7 +736,7 @@ func TestCheckGenericFunction(t *testing.T) {
 
 				typeParameter := &sema.TypeParameter{
 					Name:      "T",
-					TypeBound: &sema.NumberType{},
+					TypeBound: sema.NumberType,
 				}
 
 				checker, err := parseAndCheckWithTestValue(t,
@@ -762,7 +762,7 @@ func TestCheckGenericFunction(t *testing.T) {
 				require.NoError(t, err)
 
 				assert.Equal(t,
-					test.generateType(&sema.IntType{}),
+					test.generateType(sema.IntType),
 					RequireGlobalValue(t, checker.Elaboration, "res"),
 				)
 			})
@@ -827,7 +827,7 @@ func TestCheckGenericFunction(t *testing.T) {
 
 				typeParameter := &sema.TypeParameter{
 					Name:      "T",
-					TypeBound: &sema.NumberType{},
+					TypeBound: sema.NumberType,
 				}
 
 				checker, err := parseAndCheckWithTestValue(t,
@@ -870,7 +870,7 @@ func TestCheckGenericFunction(t *testing.T) {
 				require.NoError(t, err)
 
 				assert.Equal(t,
-					test.generateType(&sema.IntType{}),
+					test.generateType(sema.IntType),
 					RequireGlobalValue(t, checker.Elaboration, "res"),
 				)
 			})
