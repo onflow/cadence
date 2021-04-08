@@ -157,6 +157,7 @@ type ImportLocationHandlerFunc func(
 ) Import
 
 // AccountHandlerFunc is a function that handles retrieving a public account at a given address.
+// The account returned must be of type `PublicAccount`.
 //
 type AccountHandlerFunc func(
 	address AddressValue,

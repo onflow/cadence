@@ -5707,6 +5707,15 @@ func (v *CompositeValue) OwnerValue(interpreter *Interpreter) OptionalValue {
 	address := AddressValue(*v.Owner)
 	ownerAccount := interpreter.accountHandler(address)
 
+	// Owner must be of `PublicAccount` type.
+	compositeDynamicType, ok := ownerAccount.DynamicType(interpreter).(CompositeDynamicType)
+
+	if !ok || !sema.PublicAccountType.Equal(compositeDynamicType.StaticType) {
+		panic(&TypeMismatchError{
+			ExpectedType: sema.PublicAccountType,
+		})
+	}
+
 	return NewSomeValueOwningNonCopying(ownerAccount)
 }
 
@@ -7233,7 +7242,6 @@ func (v CapabilityValue) GetMember(inter *Interpreter, _ func() LocationRange, n
 			borrowType = inter.ConvertStaticToSemaType(v.BorrowType).(*sema.ReferenceType)
 		}
 		return inter.capabilityCheckFunction(v.Address, v.Path, borrowType)
-
 
 	case "address":
 		return v.Address
