@@ -101,7 +101,7 @@ func (DeployedContractValue) SetMember(_ *Interpreter, _ func() LocationRange, _
 	panic(errors.NewUnreachableError())
 }
 
-func (v DeployedContractValue) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType) bool {
+func (v DeployedContractValue) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType, _ TypeConformanceResults) bool {
 	_, ok := dynamicType.(DeployedContractDynamicType)
 	return ok
 }

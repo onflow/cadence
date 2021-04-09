@@ -120,7 +120,7 @@ func (f InterpretedFunctionValue) Invoke(invocation Invocation) Value {
 	return f.Interpreter.invokeInterpretedFunction(f, invocation)
 }
 
-func (f InterpretedFunctionValue) ConformsToDynamicType(_ *Interpreter, _ DynamicType) bool {
+func (f InterpretedFunctionValue) ConformsToDynamicType(_ *Interpreter, _ DynamicType, _ TypeConformanceResults) bool {
 	// TODO: once FunctionDynamicType has parameter and return type info,
 	//   check it matches InterpretedFunctionValue's static function type
 	return false
@@ -203,7 +203,7 @@ func (f HostFunctionValue) SetMember(_ *Interpreter, _ func() LocationRange, _ s
 	panic(errors.NewUnreachableError())
 }
 
-func (f HostFunctionValue) ConformsToDynamicType(_ *Interpreter, _ DynamicType) bool {
+func (f HostFunctionValue) ConformsToDynamicType(_ *Interpreter, _ DynamicType, _ TypeConformanceResults) bool {
 	// TODO: once HostFunctionValue has static function type,
 	//   and FunctionDynamicType has parameter and return type info,
 	//   check they match
@@ -263,6 +263,10 @@ func (f BoundFunctionValue) Invoke(invocation Invocation) Value {
 	return f.Function.Invoke(invocation)
 }
 
-func (f BoundFunctionValue) ConformsToDynamicType(interpreter *Interpreter, dynamicType DynamicType) bool {
-	return f.Function.ConformsToDynamicType(interpreter, dynamicType)
+func (f BoundFunctionValue) ConformsToDynamicType(
+	interpreter *Interpreter,
+	dynamicType DynamicType,
+	results TypeConformanceResults,
+) bool {
+	return f.Function.ConformsToDynamicType(interpreter, dynamicType, results)
 }

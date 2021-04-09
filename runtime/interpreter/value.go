@@ -39,6 +39,13 @@ import (
 
 type DynamicTypeResults map[Value]DynamicType
 
+type TypeConformanceResults map[valueDynamicTypePair]bool
+
+type valueDynamicTypePair struct {
+	value       Value
+	dynamicType DynamicType
+}
+
 // Value
 
 type Value interface {
@@ -52,7 +59,7 @@ type Value interface {
 	IsModified() bool
 	SetModified(modified bool)
 	StaticType() StaticType
-	ConformsToDynamicType(interpreter *Interpreter, dynamicType DynamicType) bool
+	ConformsToDynamicType(interpreter *Interpreter, dynamicType DynamicType, results TypeConformanceResults) bool
 }
 
 // ValueIndexableValue
@@ -190,7 +197,7 @@ func (v TypeValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _
 	panic(errors.NewUnreachableError())
 }
 
-func (v TypeValue) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType) bool {
+func (v TypeValue) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType, _ TypeConformanceResults) bool {
 	_, ok := dynamicType.(MetaTypeDynamicType)
 	return ok
 }
@@ -238,7 +245,7 @@ func (VoidValue) String() string {
 	return format.Void
 }
 
-func (v VoidValue) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType) bool {
+func (v VoidValue) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType, _ TypeConformanceResults) bool {
 	_, ok := dynamicType.(VoidDynamicType)
 	return ok
 }
@@ -305,7 +312,7 @@ func (v BoolValue) KeyString() string {
 	return "false"
 }
 
-func (v BoolValue) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType) bool {
+func (v BoolValue) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType, _ TypeConformanceResults) bool {
 	_, ok := dynamicType.(BoolDynamicType)
 	return ok
 }
@@ -504,7 +511,7 @@ func (*StringValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, 
 	panic(errors.NewUnreachableError())
 }
 
-func (v *StringValue) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType) bool {
+func (v *StringValue) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType, _ TypeConformanceResults) bool {
 	_, ok := dynamicType.(StringDynamicType)
 	return ok
 }
@@ -809,14 +816,19 @@ func (v *ArrayValue) Count() int {
 	return len(v.Values)
 }
 
-func (v *ArrayValue) ConformsToDynamicType(interpreter *Interpreter, dynamicType DynamicType) bool {
+func (v *ArrayValue) ConformsToDynamicType(
+	interpreter *Interpreter,
+	dynamicType DynamicType,
+	results TypeConformanceResults,
+) bool {
+
 	arrayType, ok := dynamicType.(ArrayDynamicType)
 	if !ok || len(v.Values) != len(arrayType.ElementTypes) {
 		return false
 	}
 
 	for index, element := range v.Values {
-		if !element.ConformsToDynamicType(interpreter, arrayType.ElementTypes[index]) {
+		if !element.ConformsToDynamicType(interpreter, arrayType.ElementTypes[index], results) {
 			return false
 		}
 	}
@@ -1091,7 +1103,7 @@ func (v IntValue) ToBigEndianBytes() []byte {
 	return SignedBigIntToBigEndianBytes(v.BigInt)
 }
 
-func (v IntValue) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType) bool {
+func (v IntValue) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType, _ TypeConformanceResults) bool {
 	numberType, ok := dynamicType.(NumberDynamicType)
 	return ok && sema.IntType.Equal(numberType.StaticType)
 }
@@ -1332,7 +1344,7 @@ func (v Int8Value) ToBigEndianBytes() []byte {
 	return []byte{byte(v)}
 }
 
-func (v Int8Value) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType) bool {
+func (v Int8Value) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType, _ TypeConformanceResults) bool {
 	numberType, ok := dynamicType.(NumberDynamicType)
 	return ok && sema.Int8Type.Equal(numberType.StaticType)
 }
@@ -1575,7 +1587,7 @@ func (v Int16Value) ToBigEndianBytes() []byte {
 	return b
 }
 
-func (v Int16Value) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType) bool {
+func (v Int16Value) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType, _ TypeConformanceResults) bool {
 	numberType, ok := dynamicType.(NumberDynamicType)
 	return ok && sema.Int16Type.Equal(numberType.StaticType)
 }
@@ -1818,7 +1830,7 @@ func (v Int32Value) ToBigEndianBytes() []byte {
 	return b
 }
 
-func (v Int32Value) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType) bool {
+func (v Int32Value) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType, _ TypeConformanceResults) bool {
 	numberType, ok := dynamicType.(NumberDynamicType)
 	return ok && sema.Int32Type.Equal(numberType.StaticType)
 }
@@ -2060,7 +2072,7 @@ func (v Int64Value) ToBigEndianBytes() []byte {
 	return b
 }
 
-func (v Int64Value) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType) bool {
+func (v Int64Value) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType, _ TypeConformanceResults) bool {
 	numberType, ok := dynamicType.(NumberDynamicType)
 	return ok && sema.Int64Type.Equal(numberType.StaticType)
 }
@@ -2360,7 +2372,7 @@ func (v Int128Value) ToBigEndianBytes() []byte {
 	return SignedBigIntToBigEndianBytes(v.BigInt)
 }
 
-func (v Int128Value) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType) bool {
+func (v Int128Value) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType, _ TypeConformanceResults) bool {
 	numberType, ok := dynamicType.(NumberDynamicType)
 	return ok && sema.Int128Type.Equal(numberType.StaticType)
 }
@@ -2661,7 +2673,7 @@ func (v Int256Value) ToBigEndianBytes() []byte {
 	return SignedBigIntToBigEndianBytes(v.BigInt)
 }
 
-func (v Int256Value) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType) bool {
+func (v Int256Value) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType, _ TypeConformanceResults) bool {
 	numberType, ok := dynamicType.(NumberDynamicType)
 	return ok && sema.Int256Type.Equal(numberType.StaticType)
 }
@@ -2908,7 +2920,7 @@ func (v UIntValue) ToBigEndianBytes() []byte {
 	return UnsignedBigIntToBigEndianBytes(v.BigInt)
 }
 
-func (v UIntValue) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType) bool {
+func (v UIntValue) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType, _ TypeConformanceResults) bool {
 	numberType, ok := dynamicType.(NumberDynamicType)
 	return ok && sema.UIntType.Equal(numberType.StaticType)
 }
@@ -3117,7 +3129,7 @@ func (v UInt8Value) ToBigEndianBytes() []byte {
 	return []byte{byte(v)}
 }
 
-func (v UInt8Value) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType) bool {
+func (v UInt8Value) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType, _ TypeConformanceResults) bool {
 	numberType, ok := dynamicType.(NumberDynamicType)
 	return ok && sema.UInt8Type.Equal(numberType.StaticType)
 }
@@ -3326,7 +3338,7 @@ func (v UInt16Value) ToBigEndianBytes() []byte {
 	return b
 }
 
-func (v UInt16Value) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType) bool {
+func (v UInt16Value) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType, _ TypeConformanceResults) bool {
 	numberType, ok := dynamicType.(NumberDynamicType)
 	return ok && sema.UInt16Type.Equal(numberType.StaticType)
 }
@@ -3537,7 +3549,7 @@ func (v UInt32Value) ToBigEndianBytes() []byte {
 	return b
 }
 
-func (v UInt32Value) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType) bool {
+func (v UInt32Value) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType, _ TypeConformanceResults) bool {
 	numberType, ok := dynamicType.(NumberDynamicType)
 	return ok && sema.UInt32Type.Equal(numberType.StaticType)
 }
@@ -3751,7 +3763,7 @@ func (v UInt64Value) ToBigEndianBytes() []byte {
 	return b
 }
 
-func (v UInt64Value) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType) bool {
+func (v UInt64Value) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType, _ TypeConformanceResults) bool {
 	numberType, ok := dynamicType.(NumberDynamicType)
 	return ok && sema.UInt64Type.Equal(numberType.StaticType)
 }
@@ -4021,7 +4033,7 @@ func (v UInt128Value) ToBigEndianBytes() []byte {
 	return UnsignedBigIntToBigEndianBytes(v.BigInt)
 }
 
-func (v UInt128Value) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType) bool {
+func (v UInt128Value) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType, _ TypeConformanceResults) bool {
 	numberType, ok := dynamicType.(NumberDynamicType)
 	return ok && sema.UInt128Type.Equal(numberType.StaticType)
 }
@@ -4292,7 +4304,7 @@ func (v UInt256Value) ToBigEndianBytes() []byte {
 	return UnsignedBigIntToBigEndianBytes(v.BigInt)
 }
 
-func (v UInt256Value) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType) bool {
+func (v UInt256Value) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType, _ TypeConformanceResults) bool {
 	numberType, ok := dynamicType.(NumberDynamicType)
 	return ok && sema.UInt256Type.Equal(numberType.StaticType)
 }
@@ -4462,7 +4474,7 @@ func (v Word8Value) ToBigEndianBytes() []byte {
 	return []byte{byte(v)}
 }
 
-func (v Word8Value) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType) bool {
+func (v Word8Value) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType, _ TypeConformanceResults) bool {
 	numberType, ok := dynamicType.(NumberDynamicType)
 	return ok && sema.Word8Type.Equal(numberType.StaticType)
 }
@@ -4632,7 +4644,7 @@ func (v Word16Value) ToBigEndianBytes() []byte {
 	return b
 }
 
-func (v Word16Value) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType) bool {
+func (v Word16Value) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType, _ TypeConformanceResults) bool {
 	numberType, ok := dynamicType.(NumberDynamicType)
 	return ok && sema.Word16Type.Equal(numberType.StaticType)
 }
@@ -4804,7 +4816,7 @@ func (v Word32Value) ToBigEndianBytes() []byte {
 	return b
 }
 
-func (v Word32Value) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType) bool {
+func (v Word32Value) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType, _ TypeConformanceResults) bool {
 	numberType, ok := dynamicType.(NumberDynamicType)
 	return ok && sema.Word32Type.Equal(numberType.StaticType)
 }
@@ -4976,7 +4988,7 @@ func (v Word64Value) ToBigEndianBytes() []byte {
 	return b
 }
 
-func (v Word64Value) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType) bool {
+func (v Word64Value) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType, _ TypeConformanceResults) bool {
 	numberType, ok := dynamicType.(NumberDynamicType)
 	return ok && sema.Word64Type.Equal(numberType.StaticType)
 }
@@ -5201,7 +5213,7 @@ func (v Fix64Value) ToBigEndianBytes() []byte {
 	return b
 }
 
-func (v Fix64Value) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType) bool {
+func (v Fix64Value) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType, _ TypeConformanceResults) bool {
 	numberType, ok := dynamicType.(NumberDynamicType)
 	return ok && sema.Fix64Type.Equal(numberType.StaticType)
 }
@@ -5422,7 +5434,7 @@ func (v UFix64Value) ToBigEndianBytes() []byte {
 	return b
 }
 
-func (v UFix64Value) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType) bool {
+func (v UFix64Value) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType, _ TypeConformanceResults) bool {
 	numberType, ok := dynamicType.(NumberDynamicType)
 	return ok && sema.UFix64Type.Equal(numberType.StaticType)
 }
@@ -5805,7 +5817,11 @@ func (v *CompositeValue) TypeID() common.TypeID {
 	return v.Location.TypeID(v.QualifiedIdentifier)
 }
 
-func (v *CompositeValue) ConformsToDynamicType(interpreter *Interpreter, dynamicType DynamicType) bool {
+func (v *CompositeValue) ConformsToDynamicType(
+	interpreter *Interpreter,
+	dynamicType DynamicType,
+	results TypeConformanceResults,
+) bool {
 	compositeDynamicType, ok := dynamicType.(CompositeDynamicType)
 	if !ok {
 		return false
@@ -5844,7 +5860,7 @@ func (v *CompositeValue) ConformsToDynamicType(interpreter *Interpreter, dynamic
 			return false
 		}
 
-		if !field.ConformsToDynamicType(interpreter, fieldDynamicType) {
+		if !field.ConformsToDynamicType(interpreter, fieldDynamicType, results) {
 			return false
 		}
 	}
@@ -6300,7 +6316,12 @@ type DictionaryEntryValues struct {
 	Value Value
 }
 
-func (v *DictionaryValue) ConformsToDynamicType(interpreter *Interpreter, dynamicType DynamicType) bool {
+func (v *DictionaryValue) ConformsToDynamicType(
+	interpreter *Interpreter,
+	dynamicType DynamicType,
+	results TypeConformanceResults,
+) bool {
+
 	dictionaryType, ok := dynamicType.(DictionaryDynamicType)
 	if !ok || v.Count() != len(dictionaryType.EntryTypes) {
 		return false
@@ -6310,7 +6331,7 @@ func (v *DictionaryValue) ConformsToDynamicType(interpreter *Interpreter, dynami
 		entryType := dictionaryType.EntryTypes[index]
 
 		// Check the key
-		if !entryKey.ConformsToDynamicType(interpreter, entryType.KeyType) {
+		if !entryKey.ConformsToDynamicType(interpreter, entryType.KeyType, results) {
 			return false
 		}
 
@@ -6318,7 +6339,7 @@ func (v *DictionaryValue) ConformsToDynamicType(interpreter *Interpreter, dynami
 		// static entries, but not deferred keys/values.
 		key := dictionaryKey(entryKey)
 		entryValue, ok := v.Entries.Get(key)
-		if !ok || !entryValue.ConformsToDynamicType(interpreter, entryType.ValueType) {
+		if !ok || !entryValue.ConformsToDynamicType(interpreter, entryType.ValueType, results) {
 			return false
 		}
 	}
@@ -6403,7 +6424,7 @@ func (NilValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Va
 	panic(errors.NewUnreachableError())
 }
 
-func (v NilValue) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType) bool {
+func (v NilValue) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType, _ TypeConformanceResults) bool {
 	_, ok := dynamicType.(NilDynamicType)
 	return ok
 }
@@ -6518,9 +6539,13 @@ func (*SomeValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ 
 	panic(errors.NewUnreachableError())
 }
 
-func (v SomeValue) ConformsToDynamicType(interpreter *Interpreter, dynamicType DynamicType) bool {
+func (v SomeValue) ConformsToDynamicType(
+	interpreter *Interpreter,
+	dynamicType DynamicType,
+	results TypeConformanceResults,
+) bool {
 	someType, ok := dynamicType.(SomeDynamicType)
-	return ok && v.Value.ConformsToDynamicType(interpreter, someType.InnerType)
+	return ok && v.Value.ConformsToDynamicType(interpreter, someType.InnerType, results)
 }
 
 // StorageReferenceValue
@@ -6667,7 +6692,7 @@ func (v *StorageReferenceValue) Equal(_ *Interpreter, other Value) BoolValue {
 		v.Authorized == otherReference.Authorized
 }
 
-func (v *StorageReferenceValue) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType) bool {
+func (v *StorageReferenceValue) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType, _ TypeConformanceResults) bool {
 	_, ok := dynamicType.(StorageReferenceDynamicType)
 	return ok
 }
@@ -6809,8 +6834,13 @@ func (v *EphemeralReferenceValue) Equal(_ *Interpreter, other Value) BoolValue {
 		v.Authorized == otherReference.Authorized
 }
 
-func (v *EphemeralReferenceValue) ConformsToDynamicType(interpreter *Interpreter, dynamicType DynamicType) bool {
-	refType, ok := dynamicType.(*EphemeralReferenceDynamicType)
+func (v *EphemeralReferenceValue) ConformsToDynamicType(
+	interpreter *Interpreter,
+	dynamicType DynamicType,
+	results TypeConformanceResults,
+) bool {
+
+	refType, ok := dynamicType.(EphemeralReferenceDynamicType)
 	if !ok {
 		return false
 	}
@@ -6820,7 +6850,24 @@ func (v *EphemeralReferenceValue) ConformsToDynamicType(interpreter *Interpreter
 		return false
 	}
 
-	return (*referencedValue).ConformsToDynamicType(interpreter, refType.InnerType())
+	valueTypePair := valueDynamicTypePair{
+		value:       v,
+		dynamicType: dynamicType,
+	}
+
+	if result, contains := results[valueTypePair]; contains {
+		return result
+	}
+
+	// It is safe to set 'true' here even this is not checked yet, because the final result
+	// doesn't depend on this. It depends on the rest of values of the object tree.
+	results[valueTypePair] = true
+
+	result := (*referencedValue).ConformsToDynamicType(interpreter, refType.InnerType(), results)
+
+	results[valueTypePair] = result
+
+	return result
 }
 
 // AddressValue
@@ -6940,7 +6987,7 @@ func (AddressValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, 
 	panic(errors.NewUnreachableError())
 }
 
-func (v AddressValue) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType) bool {
+func (v AddressValue) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType, _ TypeConformanceResults) bool {
 	_, ok := dynamicType.(AddressDynamicType)
 	return ok
 }
@@ -7169,7 +7216,7 @@ func (v PathValue) KeyString() string {
 	)
 }
 
-func (v PathValue) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType) bool {
+func (v PathValue) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType, _ TypeConformanceResults) bool {
 	switch dynamicType.(type) {
 	case PublicPathDynamicType:
 		return v.Domain == common.PathDomainPublic
@@ -7277,7 +7324,7 @@ func (CapabilityValue) SetMember(_ *Interpreter, _ func() LocationRange, _ strin
 	panic(errors.NewUnreachableError())
 }
 
-func (v CapabilityValue) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType) bool {
+func (v CapabilityValue) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType, _ TypeConformanceResults) bool {
 	_, ok := dynamicType.(CapabilityDynamicType)
 	return ok
 }
@@ -7335,7 +7382,7 @@ func (v LinkValue) String() string {
 	)
 }
 
-func (v LinkValue) ConformsToDynamicType(_ *Interpreter, _ DynamicType) bool {
+func (v LinkValue) ConformsToDynamicType(_ *Interpreter, _ DynamicType, _ TypeConformanceResults) bool {
 	return false
 }
 
