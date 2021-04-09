@@ -614,19 +614,6 @@ func (d *DecoderV4) decodeBig(v interface{}) (*big.Int, error) {
 		return nil, fmt.Errorf("invalid bignum encoding: %T", v)
 	}
 
-	// The encoding of negative bignums is specified in
-	// https://tools.ietf.org/html/rfc7049#section-2.4.2:
-	// "For tag value 3, the value of the bignum is -1 - n."
-	//
-	// Negative bignums were encoded incorrectly in version < 2,
-	// as just -n.
-	//
-	// Fix this by adjusting by one.
-
-	if bigInt.Sign() < 0 && d.version < 2 {
-		bigInt.Add(&bigInt, bigOne)
-	}
-
 	return &bigInt, nil
 }
 
@@ -1084,14 +1071,9 @@ func (d *DecoderV4) decodeCapability(v interface{}) (CapabilityValue, error) {
 
 	if field3 := encoded[encodedCapabilityValueBorrowTypeFieldKey]; field3 != nil {
 
-		decodedStaticType, err := d.decodeStaticType(field3)
+		borrowType, err = d.decodeStaticType(field3)
 		if err != nil {
 			return CapabilityValue{}, fmt.Errorf("invalid capability borrow type encoding: %w", err)
-		}
-
-		borrowType, ok = decodedStaticType.(StaticType)
-		if !ok {
-			return CapabilityValue{}, fmt.Errorf("invalid capability borrow encoding: %T", decodedStaticType)
 		}
 	}
 
@@ -1122,14 +1104,9 @@ func (d *DecoderV4) decodeLink(v interface{}) (LinkValue, error) {
 		return LinkValue{}, fmt.Errorf("invalid link target path encoding: %T", decodedPath)
 	}
 
-	decodedStaticType, err := d.decodeStaticType(encoded[encodedLinkValueTypeFieldKey])
+	staticType, err := d.decodeStaticType(encoded[encodedLinkValueTypeFieldKey])
 	if err != nil {
 		return LinkValue{}, fmt.Errorf("invalid link type encoding: %w", err)
-	}
-
-	staticType, ok := decodedStaticType.(StaticType)
-	if !ok {
-		return LinkValue{}, fmt.Errorf("invalid link type encoding: %T", decodedStaticType)
 	}
 
 	return LinkValue{
@@ -1430,15 +1407,10 @@ func (d *DecoderV4) decodeType(v interface{}) (TypeValue, error) {
 
 	staticTypeField := encoded[encodedTypeValueTypeFieldKey]
 	if staticTypeField != nil {
-		decodedStaticType, err := d.decodeStaticType(staticTypeField)
+		var err error
+		staticType, err = d.decodeStaticType(staticTypeField)
 		if err != nil {
 			return TypeValue{}, fmt.Errorf("invalid type encoding: %w", err)
-		}
-
-		var ok bool
-		staticType, ok = decodedStaticType.(StaticType)
-		if !ok {
-			return TypeValue{}, fmt.Errorf("invalid type encoding: %T", decodedStaticType)
 		}
 	}
 
