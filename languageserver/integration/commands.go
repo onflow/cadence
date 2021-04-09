@@ -533,7 +533,7 @@ RetryLoop:
 		case <-timer.C:
 			return errors.New("emulator server timed out")
 		default:
-			err := i.sharedServices.Status.Ping()
+			_, err := i.sharedServices.Status.Ping("emulator")
 			if err == nil {
 				break RetryLoop
 			}
