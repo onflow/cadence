@@ -110,7 +110,7 @@ func (v BlockValue) String() string {
 	)
 }
 
-func (v BlockValue) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType) bool {
+func (v BlockValue) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType, _ TypeConformanceResults) bool {
 	_, ok := dynamicType.(BlockDynamicType)
 	return ok
 }
