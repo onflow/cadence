@@ -69,13 +69,16 @@ func TestInterpretToString(t *testing.T) {
 		t.Run(ty.String(), func(t *testing.T) {
 
 			var literal string
-
+ 			var expected interpreter.Value
+ 			
 			isSigned := sema.IsSubType(ty, sema.SignedFixedPointType)
 
 			if isSigned {
 				literal = "-12.34"
+				expected = interpreter.NewStringValue("-12.34000000")
 			} else {
 				literal = "12.34"
+				expected = interpreter.NewStringValue("12.34000000")
 			}
 
 			inter := parseCheckAndInterpret(t,
@@ -88,13 +91,6 @@ func TestInterpretToString(t *testing.T) {
 					literal,
 				),
 			)
-
-			var expected interpreter.Value
-			if isSigned {
-				expected = interpreter.NewStringValue("-12.34000000")
-			} else {
-				expected = interpreter.NewStringValue("12.34000000")
-			}
 
 			assert.Equal(t,
 				expected,
