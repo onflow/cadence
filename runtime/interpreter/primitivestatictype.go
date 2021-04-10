@@ -29,6 +29,15 @@ import (
 
 type PrimitiveStaticType uint
 
+func (t PrimitiveStaticType) Equal(other StaticType) bool {
+	otherPrimitiveType, ok := other.(PrimitiveStaticType)
+	if !ok {
+		return false
+	}
+
+	return t == otherPrimitiveType
+}
+
 // !!! *WARNING* !!!
 //
 // Only add new types by:

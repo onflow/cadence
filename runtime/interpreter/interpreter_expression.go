@@ -251,7 +251,7 @@ func (interpreter *Interpreter) testEqual(left, right Value) BoolValue {
 		if !ok {
 			return false
 		}
-		return left.Equal(interpreter, right)
+		return BoolValue(left.Equal(right, interpreter, true))
 
 	case *ArrayValue,
 		*DictionaryValue:
