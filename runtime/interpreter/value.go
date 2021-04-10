@@ -92,7 +92,7 @@ type AllAppendableValue interface {
 
 type EquatableValue interface {
 	Value
-	Equal(interpreter *Interpreter, other Value) BoolValue
+	Equal(other Value, interpreter *Interpreter, deferred bool) bool
 }
 
 // DestroyableValue
@@ -158,7 +158,7 @@ func (v TypeValue) String() string {
 	return format.TypeValue(typeString)
 }
 
-func (v TypeValue) Equal(inter *Interpreter, other Value) BoolValue {
+func (v TypeValue) Equal(other Value, _ *Interpreter, _ bool) bool {
 	otherTypeValue, ok := other.(TypeValue)
 	if !ok {
 		return false
@@ -173,10 +173,7 @@ func (v TypeValue) Equal(inter *Interpreter, other Value) BoolValue {
 		return false
 	}
 
-	ty := inter.ConvertStaticToSemaType(staticType)
-	otherTy := inter.ConvertStaticToSemaType(otherStaticType)
-
-	return BoolValue(ty.Equal(otherTy))
+	return staticType.Equal(otherStaticType)
 }
 
 func (v TypeValue) GetMember(inter *Interpreter, _ func() LocationRange, name string) Value {
@@ -293,7 +290,7 @@ func (v BoolValue) Negate() BoolValue {
 	return !v
 }
 
-func (v BoolValue) Equal(_ *Interpreter, other Value) BoolValue {
+func (v BoolValue) Equal(other Value, _ *Interpreter, _ bool) bool {
 	otherBool, ok := other.(BoolValue)
 	if !ok {
 		return false
@@ -374,7 +371,7 @@ func (v *StringValue) KeyString() string {
 	return v.Str
 }
 
-func (v *StringValue) Equal(_ *Interpreter, other Value) BoolValue {
+func (v *StringValue) Equal(other Value, _ *Interpreter, _ bool) bool {
 	otherString, ok := other.(*StringValue)
 	if !ok {
 		return false
@@ -726,7 +723,7 @@ func (v *ArrayValue) Contains(needleValue Value) BoolValue {
 	needleEquatable := needleValue.(EquatableValue)
 
 	for _, arrayValue := range v.Values {
-		if needleEquatable.Equal(nil, arrayValue) {
+		if needleEquatable.Equal(arrayValue, nil, true) {
 			return true
 		}
 	}
@@ -829,6 +826,28 @@ func (v *ArrayValue) ConformsToDynamicType(
 
 	for index, element := range v.Values {
 		if !element.ConformsToDynamicType(interpreter, arrayType.ElementTypes[index], results) {
+			return false
+		}
+	}
+
+	return true
+}
+
+func (v *ArrayValue) Equal(other Value, interpreter *Interpreter, deferred bool) bool {
+	otherArray, ok := other.(*ArrayValue)
+	if !ok {
+		return false
+	}
+
+	if len(v.Values) != len(otherArray.Values) {
+		return false
+	}
+
+	for i, value := range v.Values {
+		otherValue := otherArray.Values[i]
+
+		equatableValue, ok := value.(EquatableValue)
+		if !ok || !equatableValue.Equal(otherValue, interpreter, deferred) {
 			return false
 		}
 	}
@@ -1018,7 +1037,7 @@ func (v IntValue) GreaterEqual(other NumberValue) BoolValue {
 	return cmp >= 0
 }
 
-func (v IntValue) Equal(_ *Interpreter, other Value) BoolValue {
+func (v IntValue) Equal(other Value, _ *Interpreter, _ bool) bool {
 	otherInt, ok := other.(IntValue)
 	if !ok {
 		return false
@@ -1253,7 +1272,7 @@ func (v Int8Value) GreaterEqual(other NumberValue) BoolValue {
 	return v >= other.(Int8Value)
 }
 
-func (v Int8Value) Equal(_ *Interpreter, other Value) BoolValue {
+func (v Int8Value) Equal(other Value, _ *Interpreter, _ bool) bool {
 	otherInt8, ok := other.(Int8Value)
 	if !ok {
 		return false
@@ -1494,7 +1513,7 @@ func (v Int16Value) GreaterEqual(other NumberValue) BoolValue {
 	return v >= other.(Int16Value)
 }
 
-func (v Int16Value) Equal(_ *Interpreter, other Value) BoolValue {
+func (v Int16Value) Equal(other Value, _ *Interpreter, _ bool) bool {
 	otherInt16, ok := other.(Int16Value)
 	if !ok {
 		return false
@@ -1737,7 +1756,7 @@ func (v Int32Value) GreaterEqual(other NumberValue) BoolValue {
 	return v >= other.(Int32Value)
 }
 
-func (v Int32Value) Equal(_ *Interpreter, other Value) BoolValue {
+func (v Int32Value) Equal(other Value, _ *Interpreter, _ bool) bool {
 	otherInt32, ok := other.(Int32Value)
 	if !ok {
 		return false
@@ -1984,7 +2003,7 @@ func (v Int64Value) GreaterEqual(other NumberValue) BoolValue {
 	return v >= other.(Int64Value)
 }
 
-func (v Int64Value) Equal(_ *Interpreter, other Value) BoolValue {
+func (v Int64Value) Equal(other Value, _ *Interpreter, _ bool) bool {
 	otherInt64, ok := other.(Int64Value)
 	if !ok {
 		return false
@@ -2264,7 +2283,7 @@ func (v Int128Value) GreaterEqual(other NumberValue) BoolValue {
 	return cmp >= 0
 }
 
-func (v Int128Value) Equal(_ *Interpreter, other Value) BoolValue {
+func (v Int128Value) Equal(other Value, _ *Interpreter, _ bool) bool {
 	otherInt, ok := other.(Int128Value)
 	if !ok {
 		return false
@@ -2565,7 +2584,7 @@ func (v Int256Value) GreaterEqual(other NumberValue) BoolValue {
 	return cmp >= 0
 }
 
-func (v Int256Value) Equal(_ *Interpreter, other Value) BoolValue {
+func (v Int256Value) Equal(other Value, _ *Interpreter, _ bool) bool {
 	otherInt, ok := other.(Int256Value)
 	if !ok {
 		return false
@@ -2835,7 +2854,7 @@ func (v UIntValue) GreaterEqual(other NumberValue) BoolValue {
 	return cmp >= 0
 }
 
-func (v UIntValue) Equal(_ *Interpreter, other Value) BoolValue {
+func (v UIntValue) Equal(other Value, _ *Interpreter, _ bool) bool {
 	otherUInt, ok := other.(UIntValue)
 	if !ok {
 		return false
@@ -3038,7 +3057,7 @@ func (v UInt8Value) GreaterEqual(other NumberValue) BoolValue {
 	return v >= other.(UInt8Value)
 }
 
-func (v UInt8Value) Equal(_ *Interpreter, other Value) BoolValue {
+func (v UInt8Value) Equal(other Value, _ *Interpreter, _ bool) bool {
 	otherUInt8, ok := other.(UInt8Value)
 	if !ok {
 		return false
@@ -3245,7 +3264,7 @@ func (v UInt16Value) GreaterEqual(other NumberValue) BoolValue {
 	return v >= other.(UInt16Value)
 }
 
-func (v UInt16Value) Equal(_ *Interpreter, other Value) BoolValue {
+func (v UInt16Value) Equal(other Value, _ *Interpreter, _ bool) bool {
 	otherUInt16, ok := other.(UInt16Value)
 	if !ok {
 		return false
@@ -3456,7 +3475,7 @@ func (v UInt32Value) GreaterEqual(other NumberValue) BoolValue {
 	return v >= other.(UInt32Value)
 }
 
-func (v UInt32Value) Equal(_ *Interpreter, other Value) BoolValue {
+func (v UInt32Value) Equal(other Value, _ *Interpreter, _ bool) bool {
 	otherUInt32, ok := other.(UInt32Value)
 	if !ok {
 		return false
@@ -3672,7 +3691,7 @@ func (v UInt64Value) GreaterEqual(other NumberValue) BoolValue {
 	return v >= other.(UInt64Value)
 }
 
-func (v UInt64Value) Equal(_ *Interpreter, other Value) BoolValue {
+func (v UInt64Value) Equal(other Value, _ *Interpreter, _ bool) bool {
 	otherUInt64, ok := other.(UInt64Value)
 	if !ok {
 		return false
@@ -3926,7 +3945,7 @@ func (v UInt128Value) GreaterEqual(other NumberValue) BoolValue {
 	return cmp >= 0
 }
 
-func (v UInt128Value) Equal(_ *Interpreter, other Value) BoolValue {
+func (v UInt128Value) Equal(other Value, _ *Interpreter, _ bool) bool {
 	otherInt, ok := other.(UInt128Value)
 	if !ok {
 		return false
@@ -4196,7 +4215,7 @@ func (v UInt256Value) GreaterEqual(other NumberValue) BoolValue {
 	return cmp >= 0
 }
 
-func (v UInt256Value) Equal(_ *Interpreter, other Value) BoolValue {
+func (v UInt256Value) Equal(other Value, _ *Interpreter, _ bool) bool {
 	otherInt, ok := other.(UInt256Value)
 	if !ok {
 		return false
@@ -4408,7 +4427,7 @@ func (v Word8Value) GreaterEqual(other NumberValue) BoolValue {
 	return v >= other.(Word8Value)
 }
 
-func (v Word8Value) Equal(_ *Interpreter, other Value) BoolValue {
+func (v Word8Value) Equal(other Value, _ *Interpreter, _ bool) bool {
 	otherWord8, ok := other.(Word8Value)
 	if !ok {
 		return false
@@ -4576,7 +4595,7 @@ func (v Word16Value) GreaterEqual(other NumberValue) BoolValue {
 	return v >= other.(Word16Value)
 }
 
-func (v Word16Value) Equal(_ *Interpreter, other Value) BoolValue {
+func (v Word16Value) Equal(other Value, _ *Interpreter, _ bool) bool {
 	otherWord16, ok := other.(Word16Value)
 	if !ok {
 		return false
@@ -4748,7 +4767,7 @@ func (v Word32Value) GreaterEqual(other NumberValue) BoolValue {
 	return v >= other.(Word32Value)
 }
 
-func (v Word32Value) Equal(_ *Interpreter, other Value) BoolValue {
+func (v Word32Value) Equal(other Value, _ *Interpreter, _ bool) bool {
 	otherWord32, ok := other.(Word32Value)
 	if !ok {
 		return false
@@ -4920,7 +4939,7 @@ func (v Word64Value) GreaterEqual(other NumberValue) BoolValue {
 	return v >= other.(Word64Value)
 }
 
-func (v Word64Value) Equal(_ *Interpreter, other Value) BoolValue {
+func (v Word64Value) Equal(other Value, _ *Interpreter, _ bool) bool {
 	otherWord64, ok := other.(Word64Value)
 	if !ok {
 		return false
@@ -5139,7 +5158,7 @@ func (v Fix64Value) GreaterEqual(other NumberValue) BoolValue {
 	return v >= other.(Fix64Value)
 }
 
-func (v Fix64Value) Equal(_ *Interpreter, other Value) BoolValue {
+func (v Fix64Value) Equal(other Value, _ *Interpreter, _ bool) bool {
 	otherFix64, ok := other.(Fix64Value)
 	if !ok {
 		return false
@@ -5353,7 +5372,7 @@ func (v UFix64Value) GreaterEqual(other NumberValue) BoolValue {
 	return v >= other.(UFix64Value)
 }
 
-func (v UFix64Value) Equal(_ *Interpreter, other Value) BoolValue {
+func (v UFix64Value) Equal(other Value, _ *Interpreter, _ bool) bool {
 	otherUFix64, ok := other.(UFix64Value)
 	if !ok {
 		return false
@@ -5781,23 +5800,35 @@ func (v *CompositeValue) GetField(name string) Value {
 	return value
 }
 
-func (v *CompositeValue) Equal(interpreter *Interpreter, other Value) BoolValue {
-	// TODO: add support for other composite kinds
-
-	if v.Kind != common.CompositeKindEnum {
-		return false
-	}
-
+func (v *CompositeValue) Equal(other Value, interpreter *Interpreter, deferred bool) bool {
 	otherComposite, ok := other.(*CompositeValue)
 	if !ok {
 		return false
 	}
 
-	rawValue, _ := v.Fields.Get(sema.EnumRawValueFieldName)
-	otherRawValue, _ := otherComposite.Fields.Get(sema.EnumRawValueFieldName)
+	if !v.StaticType().Equal(otherComposite.StaticType()) ||
+		v.Kind != otherComposite.Kind ||
+		v.Fields.Len() != otherComposite.Fields.Len() {
 
-	return rawValue.(NumberValue).
-		Equal(interpreter, otherRawValue)
+		return false
+	}
+
+	for pair := v.Fields.Oldest(); pair != nil; pair = pair.Next() {
+		key := pair.Key
+		value := pair.Value
+
+		otherValue, ok := otherComposite.Fields.Get(key)
+		if !ok {
+			return false
+		}
+
+		equatableValue, ok := value.(EquatableValue)
+		if !ok || !equatableValue.Equal(otherValue, interpreter, deferred) {
+			return false
+		}
+	}
+
+	return true
 }
 
 func (v *CompositeValue) KeyString() string {
@@ -6347,6 +6378,46 @@ func (v *DictionaryValue) ConformsToDynamicType(
 	return true
 }
 
+func (v *DictionaryValue) Equal(other Value, interpreter *Interpreter, deferred bool) bool {
+	otherDictionary, ok := other.(*DictionaryValue)
+	if !ok {
+		return false
+	}
+
+	if !v.Keys.Equal(otherDictionary.Keys, interpreter, deferred) {
+		return false
+	}
+
+	for i, keyValue := range v.Keys.Values {
+		otherKeyValue := otherDictionary.Keys.Values[i]
+
+		var value, otherValue Value
+		var valueExists, otherValueExists bool
+
+		if deferred {
+			value = v.Get(interpreter, nil, keyValue)
+			valueExists = true
+
+			otherValue = otherDictionary.Get(interpreter, nil, otherKeyValue)
+			otherValueExists = true
+		} else {
+			value, valueExists = v.Entries.Get(dictionaryKey(keyValue))
+			otherValue, otherValueExists = otherDictionary.Entries.Get(dictionaryKey(otherKeyValue))
+		}
+
+		if valueExists {
+			equatableValue, ok := value.(EquatableValue)
+			if !ok || !equatableValue.Equal(otherValue, interpreter, deferred) {
+				return false
+			}
+		} else if otherValueExists {
+			return false
+		}
+	}
+
+	return true
+}
+
 // OptionalValue
 
 type OptionalValue interface {
@@ -6426,6 +6497,11 @@ func (NilValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Va
 
 func (v NilValue) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType, _ TypeConformanceResults) bool {
 	_, ok := dynamicType.(NilDynamicType)
+	return ok
+}
+
+func (v NilValue) Equal(other Value, _ *Interpreter, _ bool) bool {
+	_, ok := other.(NilValue)
 	return ok
 }
 
@@ -6546,6 +6622,20 @@ func (v SomeValue) ConformsToDynamicType(
 ) bool {
 	someType, ok := dynamicType.(SomeDynamicType)
 	return ok && v.Value.ConformsToDynamicType(interpreter, someType.InnerType, results)
+}
+
+func (v *SomeValue) Equal(other Value, interpreter *Interpreter, deferred bool) bool {
+	otherSome, ok := other.(*SomeValue)
+	if !ok {
+		return false
+	}
+
+	equatableValue, ok := v.Value.(EquatableValue)
+	if !ok {
+		return false
+	}
+
+	return equatableValue.Equal(otherSome.Value, interpreter, deferred)
 }
 
 // StorageReferenceValue
@@ -6681,7 +6771,7 @@ func (v *StorageReferenceValue) Set(interpreter *Interpreter, getLocationRange f
 		Set(interpreter, getLocationRange, key, value)
 }
 
-func (v *StorageReferenceValue) Equal(_ *Interpreter, other Value) BoolValue {
+func (v *StorageReferenceValue) Equal(other Value, _ *Interpreter, _ bool) bool {
 	otherReference, ok := other.(*StorageReferenceValue)
 	if !ok {
 		return false
@@ -6824,7 +6914,7 @@ func (v *EphemeralReferenceValue) Set(interpreter *Interpreter, getLocationRange
 		Set(interpreter, getLocationRange, key, value)
 }
 
-func (v *EphemeralReferenceValue) Equal(_ *Interpreter, other Value) BoolValue {
+func (v *EphemeralReferenceValue) Equal(other Value, _ *Interpreter, _ bool) bool {
 	otherReference, ok := other.(*EphemeralReferenceValue)
 	if !ok {
 		return false
@@ -6945,7 +7035,7 @@ func (AddressValue) SetModified(_ bool) {
 	// NO-OP
 }
 
-func (v AddressValue) Equal(_ *Interpreter, other Value) BoolValue {
+func (v AddressValue) Equal(other Value, _ *Interpreter, _ bool) bool {
 	otherAddress, ok := other.(AddressValue)
 	if !ok {
 		return false
@@ -7229,6 +7319,16 @@ func (v PathValue) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType
 	}
 }
 
+func (v PathValue) Equal(other Value, _ *Interpreter, _ bool) bool {
+	otherPath, ok := other.(PathValue)
+	if !ok {
+		return false
+	}
+
+	return otherPath.Identifier == v.Identifier &&
+		otherPath.Domain == v.Domain
+}
+
 // CapabilityValue
 
 type CapabilityValue struct {
@@ -7329,6 +7429,26 @@ func (v CapabilityValue) ConformsToDynamicType(_ *Interpreter, dynamicType Dynam
 	return ok
 }
 
+func (v CapabilityValue) Equal(other Value, interpreter *Interpreter, deferred bool) bool {
+	otherCapability, ok := other.(CapabilityValue)
+	if !ok {
+		return false
+	}
+
+	// BorrowType is optional
+
+	if v.BorrowType == nil {
+		if otherCapability.BorrowType != nil {
+			return false
+		}
+	} else if !v.BorrowType.Equal(otherCapability.BorrowType) {
+		return false
+	}
+
+	return otherCapability.Address.Equal(v.Address, interpreter, deferred) &&
+		otherCapability.Path.Equal(v.Path, interpreter, deferred)
+}
+
 // LinkValue
 
 type LinkValue struct {
@@ -7383,7 +7503,20 @@ func (v LinkValue) String() string {
 }
 
 func (v LinkValue) ConformsToDynamicType(_ *Interpreter, _ DynamicType, _ TypeConformanceResults) bool {
+	// There is no dynamic type for links,
+	// as they are not first-class values in programs,
+	// but only stored
 	return false
+}
+
+func (v LinkValue) Equal(other Value, interpreter *Interpreter, deferred bool) bool {
+	otherLink, ok := other.(LinkValue)
+	if !ok {
+		return false
+	}
+
+	return otherLink.TargetPath.Equal(v.TargetPath, interpreter, deferred) &&
+		otherLink.Type.Equal(v.Type)
 }
 
 // NewAccountKeyValue constructs an AccountKey value.
