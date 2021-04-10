@@ -634,10 +634,15 @@ func (interpreter *Interpreter) VisitForceExpression(expression *ast.ForceExpres
 		return result.Value
 
 	case NilValue:
-		getLocationRange := locationRangeGetter(interpreter.Location, expression.Expression)
 		panic(
 			ForceNilError{
-				LocationRange: getLocationRange(),
+				LocationRange: LocationRange{
+					Location: interpreter.Location,
+					Range: ast.Range{
+						StartPos: expression.EndPosition(),
+						EndPos:   expression.EndPosition(),
+					},
+				},
 			},
 		)
 
