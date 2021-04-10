@@ -238,29 +238,12 @@ func (interpreter *Interpreter) testEqual(left, right Value) BoolValue {
 	left = interpreter.unbox(left)
 	right = interpreter.unbox(right)
 
-	// TODO: add support for arrays and dictionaries
-
-	switch left := left.(type) {
-	case NilValue:
-		_, ok := right.(NilValue)
-		return BoolValue(ok)
-
-	case EquatableValue:
-		// NOTE: might be NilValue
-		right, ok := right.(EquatableValue)
-		if !ok {
-			return false
-		}
-		return BoolValue(left.Equal(right, interpreter, true))
-
-	case *ArrayValue,
-		*DictionaryValue:
-		// TODO:
-		return false
-
-	default:
+	leftEquatable, ok := left.(EquatableValue)
+	if !ok {
 		return false
 	}
+
+	return BoolValue(leftEquatable.Equal(right, interpreter, true))
 }
 
 func (interpreter *Interpreter) VisitUnaryExpression(expression *ast.UnaryExpression) ast.Repr {
