@@ -206,11 +206,20 @@ func (t *RestrictedStaticType) String() string {
 
 func (t *RestrictedStaticType) Equal(other StaticType) bool {
 	otherRestrictedType, ok := other.(*RestrictedStaticType)
-	if !ok {
+	if !ok || len(t.Restrictions) != len(otherRestrictedType.Restrictions) {
 		return false
 	}
 
-	// TODO: restrictions
+outer:
+	for _, restriction := range t.Restrictions {
+		for _, otherRestriction := range t.Restrictions {
+			if restriction.Equal(otherRestriction) {
+				continue outer
+			}
+		}
+
+		return false
+	}
 
 	return t.Type.Equal(otherRestrictedType.Type)
 }
