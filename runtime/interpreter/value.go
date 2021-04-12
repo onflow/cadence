@@ -92,7 +92,7 @@ type AllAppendableValue interface {
 
 type EquatableValue interface {
 	Value
-	Equal(other Value, interpreter *Interpreter, deferred bool) bool
+	Equal(other Value, interpreter *Interpreter, loadDeferred bool) bool
 }
 
 // DestroyableValue
@@ -833,7 +833,7 @@ func (v *ArrayValue) ConformsToDynamicType(
 	return true
 }
 
-func (v *ArrayValue) Equal(other Value, interpreter *Interpreter, deferred bool) bool {
+func (v *ArrayValue) Equal(other Value, interpreter *Interpreter, loadDeferred bool) bool {
 	otherArray, ok := other.(*ArrayValue)
 	if !ok {
 		return false
@@ -847,7 +847,7 @@ func (v *ArrayValue) Equal(other Value, interpreter *Interpreter, deferred bool)
 		otherValue := otherArray.Values[i]
 
 		equatableValue, ok := value.(EquatableValue)
-		if !ok || !equatableValue.Equal(otherValue, interpreter, deferred) {
+		if !ok || !equatableValue.Equal(otherValue, interpreter, loadDeferred) {
 			return false
 		}
 	}
@@ -5800,7 +5800,7 @@ func (v *CompositeValue) GetField(name string) Value {
 	return value
 }
 
-func (v *CompositeValue) Equal(other Value, interpreter *Interpreter, deferred bool) bool {
+func (v *CompositeValue) Equal(other Value, interpreter *Interpreter, loadDeferred bool) bool {
 	otherComposite, ok := other.(*CompositeValue)
 	if !ok {
 		return false
@@ -5823,7 +5823,7 @@ func (v *CompositeValue) Equal(other Value, interpreter *Interpreter, deferred b
 		}
 
 		equatableValue, ok := value.(EquatableValue)
-		if !ok || !equatableValue.Equal(otherValue, interpreter, deferred) {
+		if !ok || !equatableValue.Equal(otherValue, interpreter, loadDeferred) {
 			return false
 		}
 	}
@@ -6378,13 +6378,13 @@ func (v *DictionaryValue) ConformsToDynamicType(
 	return true
 }
 
-func (v *DictionaryValue) Equal(other Value, interpreter *Interpreter, deferred bool) bool {
+func (v *DictionaryValue) Equal(other Value, interpreter *Interpreter, loadDeferred bool) bool {
 	otherDictionary, ok := other.(*DictionaryValue)
 	if !ok {
 		return false
 	}
 
-	if !v.Keys.Equal(otherDictionary.Keys, interpreter, deferred) {
+	if !v.Keys.Equal(otherDictionary.Keys, interpreter, loadDeferred) {
 		return false
 	}
 
@@ -6394,7 +6394,7 @@ func (v *DictionaryValue) Equal(other Value, interpreter *Interpreter, deferred 
 		var value, otherValue Value
 		var valueExists, otherValueExists bool
 
-		if deferred {
+		if loadDeferred {
 			value = v.Get(interpreter, nil, keyValue)
 			valueExists = true
 
@@ -6407,7 +6407,7 @@ func (v *DictionaryValue) Equal(other Value, interpreter *Interpreter, deferred 
 
 		if valueExists {
 			equatableValue, ok := value.(EquatableValue)
-			if !ok || !equatableValue.Equal(otherValue, interpreter, deferred) {
+			if !ok || !equatableValue.Equal(otherValue, interpreter, loadDeferred) {
 				return false
 			}
 		} else if otherValueExists {
@@ -6624,7 +6624,7 @@ func (v SomeValue) ConformsToDynamicType(
 	return ok && v.Value.ConformsToDynamicType(interpreter, someType.InnerType, results)
 }
 
-func (v *SomeValue) Equal(other Value, interpreter *Interpreter, deferred bool) bool {
+func (v *SomeValue) Equal(other Value, interpreter *Interpreter, loadDeferred bool) bool {
 	otherSome, ok := other.(*SomeValue)
 	if !ok {
 		return false
@@ -6635,7 +6635,7 @@ func (v *SomeValue) Equal(other Value, interpreter *Interpreter, deferred bool) 
 		return false
 	}
 
-	return equatableValue.Equal(otherSome.Value, interpreter, deferred)
+	return equatableValue.Equal(otherSome.Value, interpreter, loadDeferred)
 }
 
 // StorageReferenceValue
@@ -7429,7 +7429,7 @@ func (v CapabilityValue) ConformsToDynamicType(_ *Interpreter, dynamicType Dynam
 	return ok
 }
 
-func (v CapabilityValue) Equal(other Value, interpreter *Interpreter, deferred bool) bool {
+func (v CapabilityValue) Equal(other Value, interpreter *Interpreter, loadDeferred bool) bool {
 	otherCapability, ok := other.(CapabilityValue)
 	if !ok {
 		return false
@@ -7445,8 +7445,8 @@ func (v CapabilityValue) Equal(other Value, interpreter *Interpreter, deferred b
 		return false
 	}
 
-	return otherCapability.Address.Equal(v.Address, interpreter, deferred) &&
-		otherCapability.Path.Equal(v.Path, interpreter, deferred)
+	return otherCapability.Address.Equal(v.Address, interpreter, loadDeferred) &&
+		otherCapability.Path.Equal(v.Path, interpreter, loadDeferred)
 }
 
 // LinkValue
@@ -7509,13 +7509,13 @@ func (v LinkValue) ConformsToDynamicType(_ *Interpreter, _ DynamicType, _ TypeCo
 	return false
 }
 
-func (v LinkValue) Equal(other Value, interpreter *Interpreter, deferred bool) bool {
+func (v LinkValue) Equal(other Value, interpreter *Interpreter, loadDeferred bool) bool {
 	otherLink, ok := other.(LinkValue)
 	if !ok {
 		return false
 	}
 
-	return otherLink.TargetPath.Equal(v.TargetPath, interpreter, deferred) &&
+	return otherLink.TargetPath.Equal(v.TargetPath, interpreter, loadDeferred) &&
 		otherLink.Type.Equal(v.Type)
 }
 

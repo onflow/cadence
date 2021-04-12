@@ -6738,7 +6738,7 @@ func TestInterpretResourceOwnerFieldUse(t *testing.T) {
 		return ok
 	}
 
-	getter := func(_ *interpreter.Interpreter, _ common.Address, key string, deferred bool) interpreter.OptionalValue {
+	getter := func(_ *interpreter.Interpreter, _ common.Address, key string, _ bool) interpreter.OptionalValue {
 		value, ok := storedValues[key]
 		if !ok {
 			return interpreter.NilValue{}
