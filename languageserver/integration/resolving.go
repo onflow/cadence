@@ -81,8 +81,13 @@ func (i *FlowIntegration) getAccount(address common.Address) (*flow.Account, err
 
 func (i *FlowIntegration) getAccountAddress (name string) (flow.Address, error) {
 	serviceAccount, err := i.project.EmulatorServiceAccount()
+	if err != nil {
+		return flow.Address{}, err
+	}
+
 	code := makeManagerCode(scriptGetAddress, serviceAccount.Address().String())
 	args := []string{fmt.Sprintf("String:%s", name)}
+
 	result,err := i.sharedServices.Scripts.ExecuteWithCode(code,args, "")
 	if err != nil {
 		return flow.Address{}, err
