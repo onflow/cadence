@@ -39,7 +39,7 @@ const (
 	prefixError    = "🚫"
 )
 
-func encodeArguments(args []cadence.Value)  string {
+func encodeArguments(args []cadence.Value) string {
 	var list []string
 	for _, arg := range args {
 		encoded, _ := jsoncdc.Encode(arg)
@@ -49,7 +49,6 @@ func encodeArguments(args []cadence.Value)  string {
 	joined := strings.Join(list, ",")
 	return fmt.Sprintf("[%s]", joined)
 }
-
 
 func (i *FlowIntegration) codeLenses(
 	uri protocol.DocumentUri,
@@ -260,14 +259,7 @@ func (i *FlowIntegration) entryPointActions(
 			"%s Emulator is Offline. Click here to start it",
 			prefixOffline,
 		)
-		codeLens := &protocol.CodeLens{
-			Range: codelensRange,
-			Command: &protocol.Command{
-				Title:     title,
-				Command:   ClientStartEmulator,
-				Arguments: []interface{}{uri, "Offline"},
-			},
-		}
+		codeLens := makeCodeLens(ClientStartEmulator, title, codelensRange, []interface{}{uri, "Offline"})
 		codeLenses = append(codeLenses, codeLens)
 		return codeLenses, nil
 	}
@@ -278,13 +270,7 @@ func (i *FlowIntegration) entryPointActions(
 			"%s Emulator is starting up. Please wait \u2026",
 			prefixStarting,
 		)
-		codeLens := &protocol.CodeLens{
-			Range: codelensRange,
-			Command: &protocol.Command{
-				Title: title,
-			},
-		}
-		codeLenses = append(codeLenses, codeLens)
+		codeLenses = append(codeLenses, makeActionlessCodelens(title, codelensRange))
 		return codeLenses, nil
 	}
 
@@ -303,97 +289,136 @@ func (i *FlowIntegration) entryPointActions(
 	}
 
 	for index, argumentList := range argumentLists {
-		var title string
+		pragmaArguments := entryPointInfo.pragmaArgumentStrings[index]
 
 		switch entryPointInfo.kind {
-
 		case entryPointKindScript:
-			if len(argumentList) > 0 {
-				title = fmt.Sprintf(
-					"%s Execute script with %s",
-					prefixOK,
-					entryPointInfo.pragmaArgumentStrings[index],
-				)
-			} else {
-				title = fmt.Sprintf(
-					"%s Execute script",
-					prefixOK,
-				)
-			}
-
-			argsJSON := encodeArguments(argumentList)
-
-			codeLens := &protocol.CodeLens{
-				Range: codelensRange,
-				Command: &protocol.Command{
-					Title:     title,
-					Command:   CommandExecuteScript,
-					Arguments: []interface{}{uri, argsJSON},
-				},
-			}
-			codeLenses = append(codeLenses, codeLens)
+			codeLenses = append(codeLenses, i.scriptCodeLenses(uri, codelensRange, pragmaArguments, argumentList))
 
 		case entryPointKindTransaction:
 			for _, signers := range signersList {
-
-				var absentAccounts []string
-				var resolvedAccounts []flow.Address
-				for _, signer := range signers {
-					resolvedAddress, _ := i.getAccountAddress(signer)
-					resolvedAccounts = append(resolvedAccounts, resolvedAddress)
-					if resolvedAddress == flow.EmptyAddress {
-						absentAccounts = append(absentAccounts, signer)
-					}
-				}
 				var codeLens *protocol.CodeLens
+				accounts, absentAccounts := i.resolveAccounts(signers)
+
 				if len(absentAccounts) > 0 {
-					accountsNumeric := "account"
-					if len(absentAccounts) > 1 {
-						accountsNumeric = "accounts"
-					}
-					title = fmt.Sprintf("%s Specified %s %s does not exist",
-						prefixError,
-						accountsNumeric,
-						common.EnumerateWords(absentAccounts, "and"),
-					)
-					codeLens = &protocol.CodeLens{
-						Range: codelensRange,
-						Command: &protocol.Command{
-							Title: title,
-						},
-					}
+					codeLens = i.showAbsentAccounts(absentAccounts, codelensRange)
 				} else {
-					if len(argumentList) > 0 {
-						title = fmt.Sprintf(
-							"%s Send with %s signed by %s",
-							prefixOK,
-							entryPointInfo.pragmaArgumentStrings[index],
-							common.EnumerateWords(signers, "and"),
-						)
-					} else {
-						title = fmt.Sprintf(
-							"%s Send signed by %s",
-							prefixOK,
-							common.EnumerateWords(signers, "and"),
-						)
-					}
-
-					argsJSON := encodeArguments(argumentList)
-
-
-					codeLens = &protocol.CodeLens{
-						Range: codelensRange,
-						Command: &protocol.Command{
-							Title:     title,
-							Command:   CommandSendTransaction,
-							Arguments: []interface{}{uri, argsJSON, resolvedAccounts},
-						},
-					}
+					pragmaArguments := entryPointInfo.pragmaArgumentStrings[index]
+					codeLens = i.transactionCodeLenses(uri, codelensRange, pragmaArguments, argumentList, signers, accounts)
 				}
+
 				codeLenses = append(codeLenses, codeLens)
 			}
 		}
 	}
 
 	return codeLenses, nil
+}
+
+func makeActionlessCodelens(title string, lensRange protocol.Range) *protocol.CodeLens {
+	return &protocol.CodeLens{
+		Range: lensRange,
+		Command: &protocol.Command{
+			Title: title,
+		},
+	}
+}
+
+func makeCodeLens(command string, title string, lensRange protocol.Range, arguments []interface{}) *protocol.CodeLens {
+	return &protocol.CodeLens{
+		Range: lensRange,
+		Command: &protocol.Command{
+			Title:     title,
+			Command:   command,
+			Arguments: arguments,
+		},
+	}
+}
+
+func (i *FlowIntegration) resolveAccounts(signers []string) ([]flow.Address, []string) {
+	var absentAccounts []string
+	var resolvedAccounts []flow.Address
+	for _, signer := range signers {
+		resolvedAddress, _ := i.getAccountAddress(signer)
+		if resolvedAddress == flow.EmptyAddress {
+			absentAccounts = append(absentAccounts, signer)
+		} else {
+			resolvedAccounts = append(resolvedAccounts, resolvedAddress)
+		}
+	}
+	return resolvedAccounts, absentAccounts
+}
+
+func (i *FlowIntegration) showAbsentAccounts(accounts []string, codelensRange protocol.Range) *protocol.CodeLens {
+	var title string
+	accountsNumeric := "account"
+
+	if len(accounts) > 1 {
+		accountsNumeric = "accounts"
+	}
+
+	title = fmt.Sprintf("%s Specified %s %s does not exist",
+		prefixError,
+		accountsNumeric,
+		common.EnumerateWords(accounts, "and"),
+	)
+	return makeActionlessCodelens(title, codelensRange)
+}
+
+func (i *FlowIntegration) scriptCodeLenses(
+	uri protocol.DocumentUri,
+	codelensRange protocol.Range,
+	pragmaArguments string,
+	argumentList []cadence.Value,
+) *protocol.CodeLens {
+
+	title := fmt.Sprintf(
+		"%s Execute script",
+		prefixOK,
+	)
+
+	if len(argumentList) > 0 {
+		title = fmt.Sprintf(
+			"%s with %s",
+			title,
+			pragmaArguments,
+		)
+	}
+
+	argsJSON := encodeArguments(argumentList)
+	return makeCodeLens(CommandExecuteScript, title, codelensRange, []interface{}{uri, argsJSON})
+}
+
+func (i *FlowIntegration) transactionCodeLenses(
+	uri protocol.DocumentUri,
+	codelensRange protocol.Range,
+	pragmaArguments string,
+	argumentList []cadence.Value,
+	signers []string,
+	accounts []flow.Address,
+) *protocol.CodeLens {
+	var title string
+
+	if len(argumentList) > 0 {
+		title = fmt.Sprintf(
+			"%s Send with %s signed by %s",
+			prefixOK,
+			pragmaArguments,
+			common.EnumerateWords(signers, "and"),
+		)
+	} else {
+		title = fmt.Sprintf(
+			"%s Send signed by %s",
+			prefixOK,
+			common.EnumerateWords(signers, "and"),
+		)
+	}
+
+	argsJSON := encodeArguments(argumentList)
+	return makeCodeLens(
+		CommandSendTransaction,
+		title,
+		codelensRange,
+		[]interface{}{uri, argsJSON, accounts},
+	)
 }
