@@ -1,3 +1,90 @@
+# v0.14.5 (2021-04-08)
+
+## 🐞 Bug Fixes
+
+- Fix borrowing (#785) @turbolent
+
+# v0.14.4 (2021-03-25)
+
+## ⭐ Features
+
+- Add dictionary contains function (#716) @lkadian
+
+## 🐞 Bug Fixes
+
+- Fix runtime representation of native HashAlgorithm/SignAlgorithm enums (#725) @SupunS
+- Fix error range when reporting a type error for an indexing reference expression (#719) @turbolent
+
+## 🧪 Tests
+
+- Benchmark real fungible token transfers (#722) @turbolent
+- Use location ID as key for maps holding account codes (#723) @turbolent
+
+
+# v0.13.10 (2021-03-25)
+
+## 🐞 Bug Fixes
+
+- Add support for access(account) and multiple contracts per account (#730) @turbolent
+
+# v0.13.9 (2021-03-22)
+
+## 🛠 Improvements
+
+- Lazily load contract values (#720) @turbolent
+
+# v0.14.3 (2021-03-22)
+
+## 🛠 Improvements
+
+- Lazily load contract values (#715) @turbolent
+- Make native composite types non-storable (#713) @turbolent
+- Ensure imported checkers/elaborations are reused in tests' import handlers (#711) @turbolent
+- Use require.ErrorAs (#714) @turbolent
+
+## 🐞 Bug Fixes
+
+- Add support for access(account) and multiple contracts per account (#710) @turbolent
+
+# v0.14.2 (2021-03-18)
+
+## ⭐ Features
+
+- Replace parser demo with AST explorer (#693) @turbolent
+- Report a hint when a dynamic cast is statically known to always succeed (#688) @turbolent
+
+## 🛠 Improvements
+
+- Revert the addition of the unsupported signing and hash algorithms (#705) @turbolent
+
+## 🐞 Bug Fixes
+
+- Fix cadence-parser NPM package, update versions (#694) @turbolent
+- Properly handle recursive types when checking validity of event parameter types (#709) @turbolent
+- Make all path sub-types externally returnable (#707) @turbolent
+
+## 📖 Documentation
+
+- Fix the syntax of the signature algorithm enum in docs (#701) @SupunS
+
+
+# v0.13.8 (2021-03-18)
+
+## 🐞 Bug Fixes
+
+- Properly handle recursive types when checking validity of event parameter types (#708) @turbolent
+
+# v0.14.1 (2021-03-16)
+
+## 🛠 Improvements
+
+- Add unknown constants for signature algorithm and hash algorithm (#699) @turbolent
+- Optimize checker activations (#674) @turbolent
+- Return nil when revoking a non-existing key (#697) @SupunS
+
+## 🐞 Bug Fixes
+
+- Fix nested error pretty printing (#695) @turbolent
 
 # v0.14.0 (2021-03-15)
 
@@ -80,6 +167,11 @@ The `Crypto` contract has changed in a backwards-incompatible way, so the types 
 
 - Add documentation for the new account key API (#635) @SupunS
 
+# v0.13.7 (2021-03-12)
+
+## 🐞 Bug Fixes
+
+- Ensure code is long enough when extracting excerpt (#690) @turbolent
 
 # v0.13.6 (2021-03-09)
 
