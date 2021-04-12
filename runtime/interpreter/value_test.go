@@ -19,6 +19,7 @@
 package interpreter
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -847,4 +848,1176 @@ func TestBlockValue(t *testing.T) {
 	var actualTs = block.Timestamp
 	const expectedTs UFix64Value = 5.0
 	assert.Equal(t, expectedTs, actualTs)
+}
+
+func TestCapabilityValue_Equal(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("equal, borrow type", func(t *testing.T) {
+
+		t.Parallel()
+
+		require.True(t,
+			CapabilityValue{
+				Address: AddressValue{0x1},
+				Path: PathValue{
+					Domain:     common.PathDomainStorage,
+					Identifier: "test",
+				},
+				BorrowType: PrimitiveStaticTypeInt,
+			}.Equal(
+				CapabilityValue{
+					Address: AddressValue{0x1},
+					Path: PathValue{
+						Domain:     common.PathDomainStorage,
+						Identifier: "test",
+					},
+					BorrowType: PrimitiveStaticTypeInt,
+				},
+				nil,
+				true,
+			),
+		)
+	})
+
+	t.Run("equal, no borrow type", func(t *testing.T) {
+
+		t.Parallel()
+
+		require.True(t,
+			CapabilityValue{
+				Address: AddressValue{0x1},
+				Path: PathValue{
+					Domain:     common.PathDomainStorage,
+					Identifier: "test",
+				},
+			}.Equal(
+				CapabilityValue{
+					Address: AddressValue{0x1},
+					Path: PathValue{
+						Domain:     common.PathDomainStorage,
+						Identifier: "test",
+					},
+				},
+				nil,
+				true,
+			),
+		)
+	})
+
+	t.Run("different paths", func(t *testing.T) {
+
+		t.Parallel()
+
+		require.False(t,
+			CapabilityValue{
+				Address: AddressValue{0x1},
+				Path: PathValue{
+					Domain:     common.PathDomainStorage,
+					Identifier: "test1",
+				},
+				BorrowType: PrimitiveStaticTypeInt,
+			}.Equal(
+				CapabilityValue{
+					Address: AddressValue{0x1},
+					Path: PathValue{
+						Domain:     common.PathDomainStorage,
+						Identifier: "test2",
+					},
+					BorrowType: PrimitiveStaticTypeInt,
+				},
+				nil,
+				true,
+			),
+		)
+	})
+
+	t.Run("different addresses", func(t *testing.T) {
+
+		t.Parallel()
+
+		require.False(t,
+			CapabilityValue{
+				Address: AddressValue{0x1},
+				Path: PathValue{
+					Domain:     common.PathDomainStorage,
+					Identifier: "test",
+				},
+				BorrowType: PrimitiveStaticTypeInt,
+			}.Equal(
+				CapabilityValue{
+					Address: AddressValue{0x2},
+					Path: PathValue{
+						Domain:     common.PathDomainStorage,
+						Identifier: "test",
+					},
+					BorrowType: PrimitiveStaticTypeInt,
+				},
+				nil,
+				true,
+			),
+		)
+	})
+
+	t.Run("different borrow types", func(t *testing.T) {
+
+		t.Parallel()
+
+		require.False(t,
+			CapabilityValue{
+				Address: AddressValue{0x1},
+				Path: PathValue{
+					Domain:     common.PathDomainStorage,
+					Identifier: "test",
+				},
+				BorrowType: PrimitiveStaticTypeInt,
+			}.Equal(
+				CapabilityValue{
+					Address: AddressValue{0x1},
+					Path: PathValue{
+						Domain:     common.PathDomainStorage,
+						Identifier: "test",
+					},
+					BorrowType: PrimitiveStaticTypeString,
+				},
+				nil,
+				true,
+			),
+		)
+	})
+
+	t.Run("different kind", func(t *testing.T) {
+
+		t.Parallel()
+
+		require.False(t,
+			CapabilityValue{
+				Address: AddressValue{0x1},
+				Path: PathValue{
+					Domain:     common.PathDomainStorage,
+					Identifier: "test",
+				},
+				BorrowType: PrimitiveStaticTypeInt,
+			}.Equal(
+				NewStringValue("test"),
+				nil,
+				true,
+			),
+		)
+	})
+}
+
+func TestAddressValue_Equal(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("equal", func(t *testing.T) {
+
+		t.Parallel()
+
+		require.True(t,
+			AddressValue{0x1}.Equal(
+				AddressValue{0x1},
+				nil,
+				true,
+			),
+		)
+	})
+
+	t.Run("different", func(t *testing.T) {
+
+		t.Parallel()
+
+		require.False(t,
+			AddressValue{0x1}.Equal(
+				AddressValue{0x2},
+				nil,
+				true,
+			),
+		)
+	})
+
+	t.Run("different kind", func(t *testing.T) {
+
+		t.Parallel()
+
+		require.False(t,
+			AddressValue{0x1}.Equal(
+				UInt8Value(1),
+				nil,
+				true,
+			),
+		)
+	})
+}
+
+func TestBoolValue_Equal(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("equal true", func(t *testing.T) {
+
+		t.Parallel()
+
+		require.True(t,
+			BoolValue(true).Equal(
+				BoolValue(true),
+				nil,
+				true,
+			),
+		)
+	})
+
+	t.Run("equal false", func(t *testing.T) {
+
+		t.Parallel()
+
+		require.True(t,
+			BoolValue(false).Equal(
+				BoolValue(false),
+				nil,
+				true,
+			),
+		)
+	})
+
+	t.Run("different", func(t *testing.T) {
+
+		t.Parallel()
+
+		require.False(t,
+			BoolValue(true).Equal(
+				BoolValue(false),
+				nil,
+				true,
+			),
+		)
+	})
+
+	t.Run("different kind", func(t *testing.T) {
+
+		t.Parallel()
+
+		require.False(t,
+			BoolValue(true).Equal(
+				UInt8Value(1),
+				nil,
+				true,
+			),
+		)
+	})
+}
+
+func TestStringValue_Equal(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("equal", func(t *testing.T) {
+
+		t.Parallel()
+
+		require.True(t,
+			NewStringValue("test").Equal(
+				NewStringValue("test"),
+				nil,
+				true,
+			),
+		)
+	})
+
+	t.Run("different", func(t *testing.T) {
+
+		t.Parallel()
+
+		require.False(t,
+			NewStringValue("test").Equal(
+				NewStringValue("foo"),
+				nil,
+				true,
+			),
+		)
+	})
+
+	t.Run("different kind", func(t *testing.T) {
+
+		t.Parallel()
+
+		require.False(t,
+			NewStringValue("1").Equal(
+				UInt8Value(1),
+				nil,
+				true,
+			),
+		)
+	})
+}
+
+func TestNilValue_Equal(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("equal", func(t *testing.T) {
+
+		t.Parallel()
+
+		require.True(t,
+			NilValue{}.Equal(
+				NilValue{},
+				nil,
+				true,
+			),
+		)
+	})
+
+	t.Run("different kind", func(t *testing.T) {
+
+		t.Parallel()
+
+		require.False(t,
+			NilValue{}.Equal(
+				UInt8Value(0),
+				nil,
+				true,
+			),
+		)
+	})
+}
+
+func TestSomeValue_Equal(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("equal", func(t *testing.T) {
+
+		t.Parallel()
+
+		require.True(t,
+			NewSomeValueOwningNonCopying(NewStringValue("test")).Equal(
+				NewSomeValueOwningNonCopying(NewStringValue("test")),
+				nil,
+				true,
+			),
+		)
+	})
+
+	t.Run("different", func(t *testing.T) {
+
+		t.Parallel()
+
+		require.False(t,
+			NewSomeValueOwningNonCopying(NewStringValue("test")).Equal(
+				NewSomeValueOwningNonCopying(NewStringValue("foo")),
+				nil,
+				true,
+			),
+		)
+	})
+
+	t.Run("different kind", func(t *testing.T) {
+
+		t.Parallel()
+
+		require.False(t,
+			NewSomeValueOwningNonCopying(NewStringValue("1")).Equal(
+				UInt8Value(1),
+				nil,
+				true,
+			),
+		)
+	})
+}
+
+func TestTypeValue_Equal(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("equal", func(t *testing.T) {
+
+		t.Parallel()
+
+		require.True(t,
+			TypeValue{
+				Type: PrimitiveStaticTypeString,
+			}.Equal(
+				TypeValue{
+					Type: PrimitiveStaticTypeString,
+				},
+				nil,
+				true,
+			),
+		)
+	})
+
+	t.Run("different", func(t *testing.T) {
+
+		t.Parallel()
+
+		require.False(t,
+			TypeValue{
+				Type: PrimitiveStaticTypeString,
+			}.Equal(
+				TypeValue{
+					Type: PrimitiveStaticTypeInt,
+				},
+				nil,
+				true,
+			),
+		)
+	})
+
+	t.Run("different kind", func(t *testing.T) {
+
+		t.Parallel()
+
+		require.False(t,
+			TypeValue{
+				Type: PrimitiveStaticTypeString,
+			}.Equal(
+				NewStringValue("String"),
+				nil,
+				true,
+			),
+		)
+	})
+}
+
+func TestPathValue_Equal(t *testing.T) {
+
+	t.Parallel()
+
+	for _, domain := range common.AllPathDomains {
+
+		t.Run(fmt.Sprintf("equal, %s", domain), func(t *testing.T) {
+
+			require.True(t,
+				PathValue{
+					Domain:     domain,
+					Identifier: "test",
+				}.Equal(
+					PathValue{
+						Domain:     domain,
+						Identifier: "test",
+					},
+					nil,
+					true,
+				),
+			)
+		})
+	}
+
+	for _, domain := range common.AllPathDomains {
+		for _, otherDomain := range common.AllPathDomains {
+
+			if domain == otherDomain {
+				continue
+			}
+
+			t.Run(fmt.Sprintf("different domains %s %s", domain, otherDomain), func(t *testing.T) {
+
+				require.False(t,
+					PathValue{
+						Domain:     domain,
+						Identifier: "test",
+					}.Equal(
+						PathValue{
+							Domain:     otherDomain,
+							Identifier: "test",
+						},
+						nil,
+						true,
+					),
+				)
+			})
+		}
+	}
+
+	for _, domain := range common.AllPathDomains {
+
+		t.Run(fmt.Sprintf("different identifiers, %s", domain), func(t *testing.T) {
+
+			require.False(t,
+				PathValue{
+					Domain:     domain,
+					Identifier: "test1",
+				}.Equal(
+					PathValue{
+						Domain:     domain,
+						Identifier: "test2",
+					},
+					nil,
+					true,
+				),
+			)
+		})
+	}
+
+	t.Run("different kind", func(t *testing.T) {
+
+		t.Parallel()
+
+		require.False(t,
+			PathValue{
+				Domain:     common.PathDomainStorage,
+				Identifier: "test",
+			}.Equal(
+				NewStringValue("/storage/test"),
+				nil,
+				true,
+			),
+		)
+	})
+}
+
+func TestLinkValue_Equal(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("equal, borrow type", func(t *testing.T) {
+
+		t.Parallel()
+
+		require.True(t,
+			LinkValue{
+				TargetPath: PathValue{
+					Domain:     common.PathDomainStorage,
+					Identifier: "test",
+				},
+				Type: PrimitiveStaticTypeInt,
+			}.Equal(
+				LinkValue{
+					TargetPath: PathValue{
+						Domain:     common.PathDomainStorage,
+						Identifier: "test",
+					},
+					Type: PrimitiveStaticTypeInt,
+				},
+				nil,
+				true,
+			),
+		)
+	})
+
+	t.Run("different paths", func(t *testing.T) {
+
+		t.Parallel()
+
+		require.False(t,
+			LinkValue{
+				TargetPath: PathValue{
+					Domain:     common.PathDomainStorage,
+					Identifier: "test1",
+				},
+				Type: PrimitiveStaticTypeInt,
+			}.Equal(
+				LinkValue{
+					TargetPath: PathValue{
+						Domain:     common.PathDomainStorage,
+						Identifier: "test2",
+					},
+					Type: PrimitiveStaticTypeInt,
+				},
+				nil,
+				true,
+			),
+		)
+	})
+
+	t.Run("different types", func(t *testing.T) {
+
+		t.Parallel()
+
+		require.False(t,
+			LinkValue{
+				TargetPath: PathValue{
+					Domain:     common.PathDomainStorage,
+					Identifier: "test",
+				},
+				Type: PrimitiveStaticTypeInt,
+			}.Equal(
+				LinkValue{
+					TargetPath: PathValue{
+						Domain:     common.PathDomainStorage,
+						Identifier: "test",
+					},
+					Type: PrimitiveStaticTypeString,
+				},
+				nil,
+				true,
+			),
+		)
+	})
+
+	t.Run("different kind", func(t *testing.T) {
+
+		t.Parallel()
+
+		require.False(t,
+			LinkValue{
+				TargetPath: PathValue{
+					Domain:     common.PathDomainStorage,
+					Identifier: "test",
+				},
+				Type: PrimitiveStaticTypeInt,
+			}.Equal(
+				NewStringValue("test"),
+				nil,
+				true,
+			),
+		)
+	})
+}
+
+func TestArrayValue_Equal(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("equal", func(t *testing.T) {
+
+		t.Parallel()
+
+		require.True(t,
+			NewArrayValueUnownedNonCopying(
+				UInt8Value(1),
+				UInt8Value(2),
+			).Equal(
+				NewArrayValueUnownedNonCopying(
+					UInt8Value(1),
+					UInt8Value(2),
+				),
+				nil,
+				true,
+			),
+		)
+	})
+
+	t.Run("different elements", func(t *testing.T) {
+
+		t.Parallel()
+
+		require.False(t,
+			NewArrayValueUnownedNonCopying(
+				UInt8Value(1),
+				UInt8Value(2),
+			).Equal(
+				NewArrayValueUnownedNonCopying(
+					UInt8Value(2),
+					UInt8Value(3),
+				),
+				nil,
+				true,
+			),
+		)
+	})
+
+	t.Run("more elements", func(t *testing.T) {
+
+		t.Parallel()
+
+		require.False(t,
+			NewArrayValueUnownedNonCopying(
+				UInt8Value(1),
+			).Equal(
+				NewArrayValueUnownedNonCopying(
+					UInt8Value(1),
+					UInt8Value(2),
+				),
+				nil,
+				true,
+			),
+		)
+	})
+
+	t.Run("fewer elements", func(t *testing.T) {
+
+		t.Parallel()
+
+		require.False(t,
+			NewArrayValueUnownedNonCopying(
+				UInt8Value(1),
+				UInt8Value(2),
+			).Equal(
+				NewArrayValueUnownedNonCopying(
+					UInt8Value(1),
+				),
+				nil,
+				true,
+			),
+		)
+	})
+
+	t.Run("different kind", func(t *testing.T) {
+
+		t.Parallel()
+
+		require.False(t,
+			NewArrayValueUnownedNonCopying(
+				UInt8Value(1),
+			).Equal(
+				UInt8Value(1),
+				nil,
+				true,
+			),
+		)
+	})
+}
+
+func TestDictionaryValue_Equal(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("equal", func(t *testing.T) {
+
+		t.Parallel()
+
+		require.True(t,
+			NewDictionaryValueUnownedNonCopying(
+				UInt8Value(1),
+				NewStringValue("1"),
+				UInt8Value(2),
+				NewStringValue("2"),
+			).Equal(
+				NewDictionaryValueUnownedNonCopying(
+					UInt8Value(1),
+					NewStringValue("1"),
+					UInt8Value(2),
+					NewStringValue("2"),
+				),
+				nil,
+				true,
+			),
+		)
+	})
+
+	t.Run("different keys", func(t *testing.T) {
+
+		t.Parallel()
+
+		require.False(t,
+			NewDictionaryValueUnownedNonCopying(
+				UInt8Value(1),
+				NewStringValue("1"),
+				UInt8Value(2),
+				NewStringValue("2"),
+			).Equal(
+				NewDictionaryValueUnownedNonCopying(
+					UInt8Value(2),
+					NewStringValue("1"),
+					UInt8Value(3),
+					NewStringValue("2"),
+				),
+				nil,
+				true,
+			),
+		)
+	})
+
+	t.Run("different values", func(t *testing.T) {
+
+		t.Parallel()
+
+		require.False(t,
+			NewDictionaryValueUnownedNonCopying(
+				UInt8Value(1),
+				NewStringValue("1"),
+				UInt8Value(2),
+				NewStringValue("2"),
+			).Equal(
+				NewDictionaryValueUnownedNonCopying(
+					UInt8Value(1),
+					NewStringValue("2"),
+					UInt8Value(2),
+					NewStringValue("3"),
+				),
+				nil,
+				true,
+			),
+		)
+	})
+
+	t.Run("more elements", func(t *testing.T) {
+
+		t.Parallel()
+
+		require.False(t,
+			NewDictionaryValueUnownedNonCopying(
+				UInt8Value(1),
+				NewStringValue("1"),
+			).Equal(
+				NewDictionaryValueUnownedNonCopying(
+					UInt8Value(1),
+					NewStringValue("1"),
+					UInt8Value(2),
+					NewStringValue("2"),
+				),
+				nil,
+				true,
+			),
+		)
+	})
+
+	t.Run("fewer elements", func(t *testing.T) {
+
+		t.Parallel()
+
+		require.False(t,
+			NewDictionaryValueUnownedNonCopying(
+				UInt8Value(1),
+				NewStringValue("1"),
+				UInt8Value(2),
+				NewStringValue("2"),
+			).Equal(
+				NewDictionaryValueUnownedNonCopying(
+					UInt8Value(1),
+					NewStringValue("1"),
+				),
+				nil,
+				true,
+			),
+		)
+	})
+
+	t.Run("different kind", func(t *testing.T) {
+
+		t.Parallel()
+
+		require.False(t,
+			NewDictionaryValueUnownedNonCopying(
+				UInt8Value(1),
+				NewStringValue("1"),
+				UInt8Value(2),
+				NewStringValue("2"),
+			).Equal(
+				NewArrayValueUnownedNonCopying(
+					UInt8Value(1),
+					UInt8Value(2),
+				),
+				nil,
+				true,
+			),
+		)
+	})
+}
+
+func TestCompositeValue_Equal(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("equal", func(t *testing.T) {
+
+		t.Parallel()
+
+		fields1 := NewStringValueOrderedMap()
+		fields1.Set("a", NewStringValue("a"))
+
+		fields2 := NewStringValueOrderedMap()
+		fields2.Set("a", NewStringValue("a"))
+
+		require.True(t,
+			NewCompositeValue(
+				utils.TestLocation,
+				"X",
+				common.CompositeKindStructure,
+				fields1,
+				nil,
+			).Equal(
+				NewCompositeValue(
+					utils.TestLocation,
+					"X",
+					common.CompositeKindStructure,
+					fields2,
+					nil,
+				),
+				nil,
+				true,
+			),
+		)
+	})
+
+	t.Run("different location", func(t *testing.T) {
+
+		t.Parallel()
+
+		fields1 := NewStringValueOrderedMap()
+		fields1.Set("a", NewStringValue("a"))
+
+		fields2 := NewStringValueOrderedMap()
+		fields2.Set("a", NewStringValue("a"))
+
+		require.False(t,
+			NewCompositeValue(
+				common.IdentifierLocation("A"),
+				"X",
+				common.CompositeKindStructure,
+				fields1,
+				nil,
+			).Equal(
+				NewCompositeValue(
+					common.IdentifierLocation("B"),
+					"X",
+					common.CompositeKindStructure,
+					fields2,
+					nil,
+				),
+				nil,
+				true,
+			),
+		)
+	})
+
+	t.Run("different identifier", func(t *testing.T) {
+
+		t.Parallel()
+
+		fields1 := NewStringValueOrderedMap()
+		fields1.Set("a", NewStringValue("a"))
+
+		fields2 := NewStringValueOrderedMap()
+		fields2.Set("a", NewStringValue("a"))
+
+		require.False(t,
+			NewCompositeValue(
+				common.IdentifierLocation("A"),
+				"X",
+				common.CompositeKindStructure,
+				fields1,
+				nil,
+			).Equal(
+				NewCompositeValue(
+					common.IdentifierLocation("A"),
+					"Y",
+					common.CompositeKindStructure,
+					fields2,
+					nil,
+				),
+				nil,
+				true,
+			),
+		)
+	})
+
+	t.Run("different fields", func(t *testing.T) {
+
+		t.Parallel()
+
+		fields1 := NewStringValueOrderedMap()
+		fields1.Set("a", NewStringValue("a"))
+
+		fields2 := NewStringValueOrderedMap()
+		fields2.Set("a", NewStringValue("b"))
+
+		require.False(t,
+			NewCompositeValue(
+				common.IdentifierLocation("A"),
+				"X",
+				common.CompositeKindStructure,
+				fields1,
+				nil,
+			).Equal(
+				NewCompositeValue(
+					common.IdentifierLocation("A"),
+					"X",
+					common.CompositeKindStructure,
+					fields2,
+					nil,
+				),
+				nil,
+				true,
+			),
+		)
+	})
+
+	t.Run("more fields", func(t *testing.T) {
+
+		t.Parallel()
+
+		fields1 := NewStringValueOrderedMap()
+		fields1.Set("a", NewStringValue("a"))
+
+		fields2 := NewStringValueOrderedMap()
+		fields2.Set("a", NewStringValue("a"))
+		fields2.Set("b", NewStringValue("b"))
+
+		require.False(t,
+			NewCompositeValue(
+				common.IdentifierLocation("A"),
+				"X",
+				common.CompositeKindStructure,
+				fields1,
+				nil,
+			).Equal(
+				NewCompositeValue(
+					common.IdentifierLocation("A"),
+					"X",
+					common.CompositeKindStructure,
+					fields2,
+					nil,
+				),
+				nil,
+				true,
+			),
+		)
+	})
+
+	t.Run("fewer fields", func(t *testing.T) {
+
+		t.Parallel()
+
+		fields1 := NewStringValueOrderedMap()
+		fields1.Set("a", NewStringValue("a"))
+		fields1.Set("b", NewStringValue("b"))
+
+		fields2 := NewStringValueOrderedMap()
+		fields2.Set("a", NewStringValue("a"))
+
+		require.False(t,
+			NewCompositeValue(
+				common.IdentifierLocation("A"),
+				"X",
+				common.CompositeKindStructure,
+				fields1,
+				nil,
+			).Equal(
+				NewCompositeValue(
+					common.IdentifierLocation("A"),
+					"X",
+					common.CompositeKindStructure,
+					fields2,
+					nil,
+				),
+				nil,
+				true,
+			),
+		)
+	})
+
+	t.Run("different composite kind", func(t *testing.T) {
+
+		t.Parallel()
+
+		fields1 := NewStringValueOrderedMap()
+		fields1.Set("a", NewStringValue("a"))
+
+		fields2 := NewStringValueOrderedMap()
+		fields2.Set("a", NewStringValue("a"))
+
+		require.False(t,
+			NewCompositeValue(
+				common.IdentifierLocation("A"),
+				"X",
+				common.CompositeKindStructure,
+				fields1,
+				nil,
+			).Equal(
+				NewCompositeValue(
+					common.IdentifierLocation("A"),
+					"X",
+					common.CompositeKindResource,
+					fields2,
+					nil,
+				),
+				nil,
+				true,
+			),
+		)
+	})
+
+	t.Run("different composite kind", func(t *testing.T) {
+
+		t.Parallel()
+
+		fields1 := NewStringValueOrderedMap()
+		fields1.Set("a", NewStringValue("a"))
+
+		require.False(t,
+			NewCompositeValue(
+				common.IdentifierLocation("A"),
+				"X",
+				common.CompositeKindStructure,
+				fields1,
+				nil,
+			).Equal(
+				NewStringValue("test"),
+				nil,
+				true,
+			),
+		)
+	})
+}
+
+func TestNumberValue_Equal(t *testing.T) {
+
+	t.Parallel()
+
+	testValues := map[string]EquatableValue{
+		"UInt":    NewUIntValueFromUint64(10),
+		"UInt8":   UInt8Value(8),
+		"UInt16":  UInt16Value(16),
+		"UInt32":  UInt32Value(32),
+		"UInt64":  UInt64Value(64),
+		"UInt128": NewUInt128ValueFromUint64(128),
+		"UInt256": NewUInt256ValueFromUint64(256),
+		"Int8":    Int8Value(-8),
+		"Int16":   Int16Value(-16),
+		"Int32":   Int32Value(-32),
+		"Int64":   Int64Value(-64),
+		"Int128":  NewInt128ValueFromInt64(-128),
+		"Int256":  NewInt256ValueFromInt64(-256),
+		"Word8":   Word8Value(8),
+		"Word16":  Word16Value(16),
+		"Word32":  Word32Value(32),
+		"Word64":  Word64Value(64),
+		"UFix64":  NewUFix64ValueWithInteger(64),
+		"Fix64":   NewFix64ValueWithInteger(-32),
+	}
+
+	for name, value := range testValues {
+
+		t.Run(fmt.Sprintf("equal, %s", name), func(t *testing.T) {
+
+			require.True(t,
+				value.Equal(
+					value,
+					nil,
+					true,
+				),
+			)
+		})
+	}
+
+	for name, value := range testValues {
+		for otherName, otherValue := range testValues {
+
+			if name == otherName {
+				continue
+			}
+
+			t.Run(fmt.Sprintf("unequal, %s %s", name, otherName), func(t *testing.T) {
+
+				require.False(t,
+					value.Equal(
+						otherValue,
+						nil,
+						true,
+					),
+				)
+			})
+		}
+	}
+
+	for name, value := range testValues {
+
+		t.Run(fmt.Sprintf("different kind, %s", name), func(t *testing.T) {
+
+			t.Parallel()
+
+			require.False(t,
+				value.Equal(
+					AddressValue{0x1},
+					nil,
+					true,
+				),
+			)
+		})
+	}
 }
