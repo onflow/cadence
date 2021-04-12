@@ -50,11 +50,10 @@ type CompositeStaticType struct {
 func (CompositeStaticType) IsStaticType() {}
 
 func (t CompositeStaticType) String() string {
-	return fmt.Sprintf(
-		"CompositeStaticType(Location: %s, QualifiedIdentifier: %s)",
-		t.Location,
-		t.QualifiedIdentifier,
-	)
+	if t.Location == nil {
+		return t.QualifiedIdentifier
+	}
+	return string(t.Location.TypeID(t.QualifiedIdentifier))
 }
 
 func (t CompositeStaticType) Equal(other StaticType) bool {
@@ -77,11 +76,10 @@ type InterfaceStaticType struct {
 func (InterfaceStaticType) IsStaticType() {}
 
 func (t InterfaceStaticType) String() string {
-	return fmt.Sprintf(
-		"InterfaceStaticType(Location: %s, QualifiedIdentifier: %s)",
-		t.Location,
-		t.QualifiedIdentifier,
-	)
+	if t.Location == nil {
+		return t.QualifiedIdentifier
+	}
+	return string(t.Location.TypeID(t.QualifiedIdentifier))
 }
 
 func (t InterfaceStaticType) Equal(other StaticType) bool {
