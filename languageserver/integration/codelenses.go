@@ -22,14 +22,13 @@ import (
 	"fmt"
 	"github.com/onflow/cadence"
 	jsoncdc "github.com/onflow/cadence/encoding/json"
+	"github.com/onflow/cadence/languageserver/conversion"
+	"github.com/onflow/cadence/languageserver/protocol"
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/flow-go-sdk"
 	"strings"
-
-	"github.com/onflow/cadence/languageserver/conversion"
-	"github.com/onflow/cadence/languageserver/protocol"
 )
 
 const (
@@ -40,16 +39,17 @@ const (
 	prefixError    = "🚫"
 )
 
-func convertListToCadenceJSON(args []string) string {
-	list := strings.Join(args, ",")
-	cadenceJSON := fmt.Sprintf("[%s]", list)
-	return strings.ReplaceAll(cadenceJSON, "\n", "")
+func encodeArguments(args []cadence.Value)  string {
+	var list []string
+	for _, arg := range args {
+		encoded, _ := jsoncdc.Encode(arg)
+		list = append(list, string(encoded))
+	}
+
+	joined := strings.Join(list, ",")
+	return fmt.Sprintf("[%s]", joined)
 }
 
-func addressNotExist(address flow.Address) bool {
-	emptyAddress := flow.Address{0}
-	return address.String() == emptyAddress.String()
-}
 
 func (i *FlowIntegration) codeLenses(
 	uri protocol.DocumentUri,
@@ -110,20 +110,16 @@ func (i *FlowIntegration) showDeployContractAction(
 	signersList := entryPointInfo.pragmaSignersStrings[:]
 	// TODO: resolve check for amount of signers equals to provided by pragma
 	if len(signersList) == 0 {
-		activeAccount := [][]string{[]string{"no-signers"}}
-		signersList = append(signersList, activeAccount...)
+		signersList = append(signersList, []string{i.activeAccount.Name})
 	}
 
 	for _, signers := range signersList {
 		signer := signers[0]
-		if signer == "no-signers" {
-			signer = i.activeAccount.Name
-		}
 
 		var codeLens *protocol.CodeLens
 		var title string
 		resolvedAddress, _ := i.getAccountAddress(signer)
-		if addressNotExist(resolvedAddress) {
+		if resolvedAddress == flow.EmptyAddress {
 			title = fmt.Sprintf("%s Specified account %s does not exist",
 				prefixError,
 				signer,
@@ -190,20 +186,16 @@ func (i *FlowIntegration) showDeployContractInterfaceAction(
 	signersList := entryPointInfo.pragmaSignersStrings[:]
 	// TODO: resolve check for amount of signers equals to provided by pragma
 	if len(signersList) == 0 {
-		activeAccount := [][]string{[]string{"no-signers"}}
-		signersList = append(signersList, activeAccount...)
+		signersList = append(signersList, []string{i.activeAccount.Name})
 	}
 
 	for _, signers := range signersList {
 		signer := signers[0]
-		if signer == "no-signers" {
-			signer = i.activeAccount.Name
-		}
 
 		var codeLens *protocol.CodeLens
 		var title string
 		resolvedAddress, _ := i.getAccountAddress(signer)
-		if addressNotExist(resolvedAddress) {
+		if resolvedAddress == flow.EmptyAddress {
 			title = fmt.Sprintf("%s Specified account %s does not exist",
 				prefixError,
 				signer,
@@ -307,22 +299,11 @@ func (i *FlowIntegration) entryPointActions(
 	signersList := entryPointInfo.pragmaSignersStrings[:]
 	// TODO: resolve check for amount of signers equals to provided by pragma
 	if len(signersList) == 0 {
-		activeAccount := [][]string{[]string{"no-signers"}}
-		signersList = append(signersList, activeAccount...)
+		signersList = append(signersList, []string{i.activeAccount.Name})
 	}
 
 	for index, argumentList := range argumentLists {
 		var title string
-
-		var encodedArgumentList []string
-		for _, argument := range argumentList {
-			encodedArgument, err := jsoncdc.Encode(argument)
-			if err != nil {
-				return nil, err
-			}
-			noSuffix := strings.TrimSuffix(string(encodedArgument), "\n")
-			encodedArgumentList = append(encodedArgumentList, noSuffix)
-		}
 
 		switch entryPointInfo.kind {
 
@@ -340,7 +321,7 @@ func (i *FlowIntegration) entryPointActions(
 				)
 			}
 
-			argsJSON := convertListToCadenceJSON(encodedArgumentList)
+			argsJSON := encodeArguments(argumentList)
 
 			codeLens := &protocol.CodeLens{
 				Range: codelensRange,
@@ -354,29 +335,26 @@ func (i *FlowIntegration) entryPointActions(
 
 		case entryPointKindTransaction:
 			for _, signers := range signersList {
-				if signers[0] == "no-signers" {
-					signers = []string{i.activeAccount.Name}
-				}
 
-				var emptyAccounts []string
+				var absentAccounts []string
 				var resolvedAccounts []flow.Address
 				for _, signer := range signers {
 					resolvedAddress, _ := i.getAccountAddress(signer)
 					resolvedAccounts = append(resolvedAccounts, resolvedAddress)
-					if addressNotExist(resolvedAddress) {
-						emptyAccounts = append(emptyAccounts, signer)
+					if resolvedAddress == flow.EmptyAddress {
+						absentAccounts = append(absentAccounts, signer)
 					}
 				}
 				var codeLens *protocol.CodeLens
-				if len(emptyAccounts) > 0 {
+				if len(absentAccounts) > 0 {
 					accountsNumeric := "account"
-					if len(emptyAccounts) > 1 {
+					if len(absentAccounts) > 1 {
 						accountsNumeric = "accounts"
 					}
 					title = fmt.Sprintf("%s Specified %s %s does not exist",
 						prefixError,
 						accountsNumeric,
-						common.EnumerateWords(emptyAccounts, "and"),
+						common.EnumerateWords(absentAccounts, "and"),
 					)
 					codeLens = &protocol.CodeLens{
 						Range: codelensRange,
@@ -400,7 +378,8 @@ func (i *FlowIntegration) entryPointActions(
 						)
 					}
 
-					argsJSON := convertListToCadenceJSON(encodedArgumentList)
+					argsJSON := encodeArguments(argumentList)
+
 
 					codeLens = &protocol.CodeLens{
 						Range: codelensRange,
