@@ -259,7 +259,7 @@ func (t CapabilityStaticType) String() string {
 }
 
 func (t CapabilityStaticType) Equal(other StaticType) bool {
-	otherCapabilityType, ok := other.(*CapabilityStaticType)
+	otherCapabilityType, ok := other.(CapabilityStaticType)
 	if !ok {
 		return false
 	}
