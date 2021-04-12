@@ -2166,6 +2166,14 @@ func (r *interpreterRuntime) newAuthAccountContractsRemoveFunction(
 				// NOTE: *DO NOT* call SetProgram – the program removal
 				// should not be effective during the execution, only after
 
+				// Deny removing a contract, if the contract validation is enabled.
+				if r.contractUpdateValidationEnabled {
+					panic(&ContractRemovalError{
+						Name:          nameArgument,
+						LocationRange: invocation.GetLocationRange(),
+					})
+				}
+
 				wrapPanic(func() {
 					err = runtimeInterface.RemoveAccountContractCode(address, nameArgument)
 				})

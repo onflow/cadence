@@ -250,6 +250,17 @@ func (e *InvalidContractDeploymentError) Unwrap() error {
 	return e.Err
 }
 
+// ContractRemovalError
+//
+type ContractRemovalError struct {
+	Name string
+	interpreter.LocationRange
+}
+
+func (e *ContractRemovalError) Error() string {
+	return fmt.Sprintf("cannot remove contract `%s`", e.Name)
+}
+
 // InvalidContractDeploymentOriginError
 //
 type InvalidContractDeploymentOriginError struct {
