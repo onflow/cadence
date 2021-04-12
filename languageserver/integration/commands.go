@@ -118,33 +118,33 @@ func makeManagerCode(script string, serviceAddress string) []byte {
 func (i *FlowIntegration) initAccountManager(conn protocol.Conn, args ...interface{}) (interface{}, error) {
 	serviceAccount, err := i.project.EmulatorServiceAccount()
 	if err != nil {
-		return nil, throwErrorWithMessage(conn, ErrorMessageServiceAccount, err)
+		return nil, errorWithMessage(conn, ErrorMessageServiceAccount, err)
 	}
 
 	serviceAddress := serviceAccount.Address().String()
 
 	privateKey, err := i.getServicePrivateKey()
 	if err != nil {
-		return nil, throwErrorWithMessage(conn, ErrorMessageServiceAccountKey, err)
+		return nil, errorWithMessage(conn, ErrorMessageServiceAccountKey, err)
 	}
 
 	// Check if emulator is up
 	err = i.waitForNetwork()
 	if err != nil {
-		return nil, throwErrorWithMessage(conn, ErrorMessageEmulator, err)
+		return nil, errorWithMessage(conn, ErrorMessageEmulator, err)
 	}
 
 	name := "AccountManager"
 	code := []byte(contractAccountManager)
 	update, err := i.isContractDeployed(serviceAddress, name)
 	if err != nil {
-		return nil, throwErrorWithMessage(conn, fmt.Sprintf("can't read contract from account %s", serviceAddress), err)
+		return nil, errorWithMessage(conn, fmt.Sprintf("can't read contract from account %s", serviceAddress), err)
 	}
 
 	_, deployError := i.sharedServices.Accounts.AddContractForAddressWithCode(serviceAddress, privateKey, name, code, update)
 
 	if deployError != nil {
-		return nil, throwErrorWithMessage(conn, ErrorMessageDeploy, err)
+		return nil, errorWithMessage(conn, ErrorMessageDeploy, err)
 	}
 
 	return nil, err
@@ -159,12 +159,12 @@ func (i *FlowIntegration) initAccountManager(conn protocol.Conn, args ...interfa
 func (i *FlowIntegration) sendTransaction(conn protocol.Conn, args ...interface{}) (interface{}, error) {
 	err := server.CheckCommandArgumentCount(args, 3)
 	if err != nil {
-		return nil, throwErrorWithMessage(conn, ErrorMessageArguments, err)
+		return nil, errorWithMessage(conn, ErrorMessageArguments, err)
 	}
 
 	uri, ok := args[0].(string)
 	if !ok {
-		return nil, throwErrorWithMessage(
+		return nil, errorWithMessage(
 			conn,
 			ErrorMessageArguments,
 			fmt.Errorf("invalid URI argument: %#+v", args[0]),
@@ -173,7 +173,7 @@ func (i *FlowIntegration) sendTransaction(conn protocol.Conn, args ...interface{
 
 	path, pathError := url.Parse(uri)
 	if pathError != nil {
-		return nil, throwErrorWithMessage(
+		return nil, errorWithMessage(
 			conn,
 			ErrorMessageArguments,
 			fmt.Errorf("invalid path argument: %#+v", uri),
@@ -182,7 +182,7 @@ func (i *FlowIntegration) sendTransaction(conn protocol.Conn, args ...interface{
 
 	argsJSON, ok := args[1].(string)
 	if !ok {
-		return nil, throwErrorWithMessage(
+		return nil, errorWithMessage(
 			conn,
 			ErrorMessageArguments,
 			fmt.Errorf("invalid arguments: %#+v", args[1]),
@@ -198,13 +198,13 @@ func (i *FlowIntegration) sendTransaction(conn protocol.Conn, args ...interface{
 	// Send transaction via shared library
 	privateKey, err := i.getServicePrivateKey()
 	if err != nil {
-		return nil, throwErrorWithMessage(conn, ErrorMessageServiceAccountKey, err)
+		return nil, errorWithMessage(conn, ErrorMessageServiceAccountKey, err)
 	}
 
 	_, txResult, err := i.sharedServices.Transactions.SendForAddress(path.Path, signers[0], privateKey, []string{}, argsJSON)
 
 	if err != nil {
-		return nil, throwErrorWithMessage(conn, ErrorMessageTransactionError, err)
+		return nil, errorWithMessage(conn, ErrorMessageTransactionError, err)
 	}
 
 	showMessage(conn, fmt.Sprintf("Transaction status: %s", txResult.Status.String()))
@@ -219,12 +219,12 @@ func (i *FlowIntegration) sendTransaction(conn protocol.Conn, args ...interface{
 func (i *FlowIntegration) executeScript(conn protocol.Conn, args ...interface{}) (interface{}, error) {
 	err := server.CheckCommandArgumentCount(args, 2)
 	if err != nil {
-		return nil, throwErrorWithMessage(conn, ErrorMessageArguments, err)
+		return nil, errorWithMessage(conn, ErrorMessageArguments, err)
 	}
 
 	uri, ok := args[0].(string)
 	if !ok {
-		return nil, throwErrorWithMessage(
+		return nil, errorWithMessage(
 			conn,
 			ErrorMessageArguments,
 			fmt.Errorf("invalid URI argument: %#+v", args[0]),
@@ -233,7 +233,7 @@ func (i *FlowIntegration) executeScript(conn protocol.Conn, args ...interface{})
 
 	path, pathError := url.Parse(uri)
 	if pathError != nil {
-		return nil, throwErrorWithMessage(
+		return nil, errorWithMessage(
 			conn,
 			ErrorMessageArguments,
 			fmt.Errorf("invalid path argument: %#+v", uri),
@@ -242,7 +242,7 @@ func (i *FlowIntegration) executeScript(conn protocol.Conn, args ...interface{})
 
 	argsJSON, ok := args[1].(string)
 	if !ok {
-		return nil, throwErrorWithMessage(
+		return nil, errorWithMessage(
 			conn,
 			ErrorMessageArguments,
 			fmt.Errorf("invalid arguments: %#+v", args[1]),
@@ -253,7 +253,7 @@ func (i *FlowIntegration) executeScript(conn protocol.Conn, args ...interface{})
 	scriptResult, err := i.sharedServices.Scripts.Execute(path.Path, []string{}, argsJSON)
 
 	if err != nil {
-		return nil, throwErrorWithMessage(conn, ErrorMessageScriptExecution, err)
+		return nil, errorWithMessage(conn, ErrorMessageScriptExecution, err)
 	}
 
 	showMessage(conn, fmt.Sprintf("Result: %s", scriptResult.String()))
@@ -268,12 +268,12 @@ func (i *FlowIntegration) executeScript(conn protocol.Conn, args ...interface{})
 func (i *FlowIntegration) changeEmulatorState(conn protocol.Conn, args ...interface{}) (interface{}, error) {
 	err := server.CheckCommandArgumentCount(args, 1)
 	if err != nil {
-		return nil, throwErrorWithMessage(conn, ErrorMessageArguments, err)
+		return nil, errorWithMessage(conn, ErrorMessageArguments, err)
 	}
 
 	emulatorState, ok := args[0].(float64)
 	if !ok {
-		return nil, throwErrorWithMessage(
+		return nil, errorWithMessage(
 			conn,
 			ErrorMessageArguments,
 			fmt.Errorf("invalid emulator state argument: %#+v", args[0]),
@@ -293,17 +293,17 @@ func (i *FlowIntegration) changeEmulatorState(conn protocol.Conn, args ...interf
 func (i *FlowIntegration) switchActiveAccount(conn protocol.Conn, args ...interface{}) (interface{}, error) {
 	err := server.CheckCommandArgumentCount(args, 2)
 	if err != nil {
-		return nil, throwErrorWithMessage(conn, ErrorMessageArguments, err)
+		return nil, errorWithMessage(conn, ErrorMessageArguments, err)
 	}
 
 	name, ok := args[0].(string)
 	if !ok {
-		return nil, throwErrorWithMessage(conn, ErrorMessageArguments, errors.New("invalid name argument"))
+		return nil, errorWithMessage(conn, ErrorMessageArguments, errors.New("invalid name argument"))
 	}
 
 	addressHex, ok := args[1].(string)
 	if !ok {
-		return nil, throwErrorWithMessage(conn, ErrorMessageArguments, errors.New("invalid address argument"))
+		return nil, errorWithMessage(conn, ErrorMessageArguments, errors.New("invalid address argument"))
 	}
 	address := flow.HexToAddress(addressHex)
 
@@ -318,12 +318,12 @@ func (i *FlowIntegration) switchActiveAccount(conn protocol.Conn, args ...interf
 func (i *FlowIntegration) createAccount(conn protocol.Conn, args ...interface{}) (interface{}, error) {
 	address, err := i.createAccountHelper(conn)
 	if err != nil {
-		return nil, throwErrorWithMessage(conn, ErrorMessageAccountCreate, err)
+		return nil, errorWithMessage(conn, ErrorMessageAccountCreate, err)
 	}
 
 	clientAccount, err := i.storeAccountHelper(conn, address)
 	if err != nil {
-		return nil, throwErrorWithMessage(conn, ErrorMessageAccountCreate, err)
+		return nil, errorWithMessage(conn, ErrorMessageAccountCreate, err)
 	}
 
 	return clientAccount, nil
@@ -336,13 +336,13 @@ func (i *FlowIntegration) createAccount(conn protocol.Conn, args ...interface{})
 func (i *FlowIntegration) createDefaultAccounts(conn protocol.Conn, args ...interface{}) (interface{}, error) {
 	err := server.CheckCommandArgumentCount(args, 1)
 	if err != nil {
-		return nil, throwErrorWithMessage(conn, ErrorMessageArguments, err)
+		return nil, errorWithMessage(conn, ErrorMessageArguments, err)
 	}
 
 	// Note that extension will send this value as float64 and not int
 	n, ok := args[0].(float64)
 	if !ok {
-		return nil, throwErrorWithMessage(conn, ErrorMessageArguments, errors.New("invalid count argument"))
+		return nil, errorWithMessage(conn, ErrorMessageArguments, errors.New("invalid count argument"))
 	}
 	count := int(n)
 
@@ -351,7 +351,7 @@ func (i *FlowIntegration) createDefaultAccounts(conn protocol.Conn, args ...inte
 	// Check if emulator is up
 	err = i.waitForNetwork()
 	if err != nil {
-		return nil, throwErrorWithMessage(conn, ErrorMessageEmulator, err)
+		return nil, errorWithMessage(conn, ErrorMessageEmulator, err)
 	}
 
 	accounts := make([]ClientAccount, count)
@@ -359,7 +359,7 @@ func (i *FlowIntegration) createDefaultAccounts(conn protocol.Conn, args ...inte
 	for index := 0; index < count; index++ {
 		account, err := i.createAccount(conn)
 		if err != nil {
-			return nil, throwErrorWithMessage(conn, ErrorMessageAccountCreate, err)
+			return nil, errorWithMessage(conn, ErrorMessageAccountCreate, err)
 		}
 		accounts[index] = account.(ClientAccount)
 	}
@@ -376,12 +376,12 @@ func (i *FlowIntegration) createDefaultAccounts(conn protocol.Conn, args ...inte
 func (i *FlowIntegration) deployContract(conn protocol.Conn, args ...interface{}) (interface{}, error) {
 	err := server.CheckCommandArgumentCount(args, 3)
 	if err != nil {
-		return flow.Address{}, throwErrorWithMessage(conn, ErrorMessageServiceAccount, err)
+		return flow.Address{}, errorWithMessage(conn, ErrorMessageServiceAccount, err)
 	}
 
 	uri, ok := args[0].(string)
 	if !ok {
-		return nil, throwErrorWithMessage(
+		return nil, errorWithMessage(
 			conn,
 			ErrorMessageArguments,
 			fmt.Errorf("invalid URI argument: %#+v", args[0]),
@@ -390,7 +390,7 @@ func (i *FlowIntegration) deployContract(conn protocol.Conn, args ...interface{}
 
 	path, pathError := url.Parse(uri)
 	if pathError != nil {
-		return nil, throwErrorWithMessage(
+		return nil, errorWithMessage(
 			conn,
 			ErrorMessageArguments,
 			fmt.Errorf("invalid path argument: %#+v", uri),
@@ -399,7 +399,7 @@ func (i *FlowIntegration) deployContract(conn protocol.Conn, args ...interface{}
 
 	name, ok := args[1].(string)
 	if !ok {
-		return nil, throwErrorWithMessage(
+		return nil, errorWithMessage(
 			conn, ErrorMessageArguments,
 			fmt.Errorf("invalid name argument: %#+v", name),
 		)
@@ -407,7 +407,7 @@ func (i *FlowIntegration) deployContract(conn protocol.Conn, args ...interface{}
 
 	to := args[2].(string)
 	if !ok {
-		return nil, throwErrorWithMessage(
+		return nil, errorWithMessage(
 			conn, ErrorMessageArguments,
 			fmt.Errorf("invalid address argument: %#+v", to),
 		)
@@ -418,18 +418,18 @@ func (i *FlowIntegration) deployContract(conn protocol.Conn, args ...interface{}
 	// Send transaction via shared library
 	privateKey, err := i.getServicePrivateKey()
 	if err != nil {
-		return nil, throwErrorWithMessage(conn, ErrorMessageServiceAccount, err)
+		return nil, errorWithMessage(conn, ErrorMessageServiceAccount, err)
 	}
 
 	update, err := i.isContractDeployed(to, name)
 	if err != nil {
-		return nil, throwErrorWithMessage(conn, fmt.Sprintf("can't read contract from account %s", to), err)
+		return nil, errorWithMessage(conn, fmt.Sprintf("can't read contract from account %s", to), err)
 	}
 
 	_, deployError := i.sharedServices.Accounts.AddContractForAddress(to, privateKey, name, path.Path, update)
 
 	if deployError != nil {
-		return nil, throwErrorWithMessage(conn, ErrorMessageDeploy, deployError)
+		return nil, errorWithMessage(conn, ErrorMessageDeploy, deployError)
 	}
 
 	showMessage(conn, fmt.Sprintf("Status: contract %s has been deployed to %s", name, to))
@@ -451,7 +451,7 @@ func (i *FlowIntegration) getServicePrivateKey() (string, error) {
 func (i *FlowIntegration) createAccountHelper(conn protocol.Conn) (address flow.Address, err error) {
 	serviceAccount, err := i.project.EmulatorServiceAccount()
 	if err != nil {
-		return flow.Address{}, throwErrorWithMessage(conn, ErrorMessageServiceAccount, err)
+		return flow.Address{}, errorWithMessage(conn, ErrorMessageServiceAccount, err)
 	}
 
 	signer := serviceAccount.Name()
@@ -459,12 +459,12 @@ func (i *FlowIntegration) createAccountHelper(conn protocol.Conn) (address flow.
 	defaultKey := serviceAccount.DefaultKey()
 	serviceAccountPrivateKey, err := i.getServicePrivateKey()
 	if err != nil {
-		return flow.Address{}, throwErrorWithMessage(conn, ErrorMessageServiceAccountKey, err)
+		return flow.Address{}, errorWithMessage(conn, ErrorMessageServiceAccountKey, err)
 	}
 
 	cryptoKey, err := crypto.DecodePrivateKeyHex(defaultKey.SigAlgo(), serviceAccountPrivateKey)
 	if err != nil {
-		return flow.Address{}, throwErrorWithMessage(conn, ErrorMessagePrivateKeyDecoder, err)
+		return flow.Address{}, errorWithMessage(conn, ErrorMessagePrivateKeyDecoder, err)
 	}
 
 	keys := []string{cryptoKey.PublicKey().String()}
@@ -475,7 +475,7 @@ func (i *FlowIntegration) createAccountHelper(conn protocol.Conn) (address flow.
 
 	newAccount, err := i.sharedServices.Accounts.Create(signer, keys, signatureAlgorithm, hashAlgorithm, contracts)
 	if err != nil {
-		return flow.Address{}, throwErrorWithMessage(conn, ErrorMessageAccountCreate, err)
+		return flow.Address{}, errorWithMessage(conn, ErrorMessageAccountCreate, err)
 	}
 
 	return newAccount.Address, nil
@@ -486,7 +486,7 @@ func (i *FlowIntegration) storeAccountHelper(conn protocol.Conn, address flow.Ad
 
 	serviceAccount, err := i.project.EmulatorServiceAccount()
 	if err != nil {
-		return ClientAccount{}, throwErrorWithMessage(conn, ErrorMessageServiceAccount, err)
+		return ClientAccount{}, errorWithMessage(conn, ErrorMessageServiceAccount, err)
 	}
 
 	defaultKey := serviceAccount.DefaultKey()
@@ -500,7 +500,7 @@ func (i *FlowIntegration) storeAccountHelper(conn protocol.Conn, address flow.Ad
 
 	_, txResult, err := i.sharedServices.Transactions.SendForAddressWithCode(code, serviceAddress, privateKey, txArgs, "")
 	if err != nil {
-		return ClientAccount{}, throwErrorWithMessage(conn, ErrorMessageAccountStore, err)
+		return ClientAccount{}, errorWithMessage(conn, ErrorMessageAccountStore, err)
 	}
 
 	events := flowcli.EventsFromTransaction(txResult)
@@ -523,7 +523,6 @@ func (i *FlowIntegration) isContractDeployed(address string, name string) (bool,
 
 	return account.Contracts[name] != nil, nil
 }
-
 func (i *FlowIntegration) waitForNetwork() error {
 	// Ping the emulator server for 30 seconds until it is available
 	timer := time.NewTimer(30 * time.Second)
@@ -542,7 +541,7 @@ RetryLoop:
 	return nil
 }
 
-// showMessage will send noti
+// showMessage sends a "show message" notification
 func showMessage(conn protocol.Conn, message string) {
 	conn.ShowMessage(&protocol.ShowMessageParams{
 		Type:    protocol.Info,
@@ -550,6 +549,7 @@ func showMessage(conn protocol.Conn, message string) {
 	})
 }
 
+// showMessage sends a "show error" notification
 func showError(conn protocol.Conn, errorMessage string) {
 	conn.ShowMessage(&protocol.ShowMessageParams{
 		Type:    protocol.Error,
@@ -557,7 +557,7 @@ func showError(conn protocol.Conn, errorMessage string) {
 	})
 }
 
-func throwErrorWithMessage(conn protocol.Conn, prefix string, err error) error {
+func errorWithMessage(conn protocol.Conn, prefix string, err error) error {
 	errorMessage := fmt.Sprintf("%s: %#+v", prefix, err)
 	showError(conn, errorMessage)
 	return fmt.Errorf("%s", errorMessage)
