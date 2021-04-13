@@ -37,6 +37,7 @@ import (
 type StaticType interface {
 	fmt.Stringer
 	IsStaticType()
+	Equal(other StaticType) bool
 }
 
 // CompositeStaticType
@@ -49,11 +50,20 @@ type CompositeStaticType struct {
 func (CompositeStaticType) IsStaticType() {}
 
 func (t CompositeStaticType) String() string {
-	return fmt.Sprintf(
-		"CompositeStaticType(Location: %s, QualifiedIdentifier: %s)",
-		t.Location,
-		t.QualifiedIdentifier,
-	)
+	if t.Location == nil {
+		return t.QualifiedIdentifier
+	}
+	return string(t.Location.TypeID(t.QualifiedIdentifier))
+}
+
+func (t CompositeStaticType) Equal(other StaticType) bool {
+	otherCompositeType, ok := other.(CompositeStaticType)
+	if !ok {
+		return false
+	}
+
+	return common.LocationsMatch(otherCompositeType.Location, t.Location) &&
+		otherCompositeType.QualifiedIdentifier == t.QualifiedIdentifier
 }
 
 // InterfaceStaticType
@@ -66,11 +76,20 @@ type InterfaceStaticType struct {
 func (InterfaceStaticType) IsStaticType() {}
 
 func (t InterfaceStaticType) String() string {
-	return fmt.Sprintf(
-		"InterfaceStaticType(Location: %s, QualifiedIdentifier: %s)",
-		t.Location,
-		t.QualifiedIdentifier,
-	)
+	if t.Location == nil {
+		return t.QualifiedIdentifier
+	}
+	return string(t.Location.TypeID(t.QualifiedIdentifier))
+}
+
+func (t InterfaceStaticType) Equal(other StaticType) bool {
+	otherInterfaceType, ok := other.(InterfaceStaticType)
+	if !ok {
+		return false
+	}
+
+	return common.LocationsMatch(otherInterfaceType.Location, t.Location) &&
+		otherInterfaceType.QualifiedIdentifier == t.QualifiedIdentifier
 }
 
 // VariableSizedStaticType
@@ -83,6 +102,15 @@ func (VariableSizedStaticType) IsStaticType() {}
 
 func (t VariableSizedStaticType) String() string {
 	return fmt.Sprintf("[%s]", t.Type)
+}
+
+func (t VariableSizedStaticType) Equal(other StaticType) bool {
+	otherVariableSizedType, ok := other.(VariableSizedStaticType)
+	if !ok {
+		return false
+	}
+
+	return t.Type.Equal(otherVariableSizedType.Type)
 }
 
 // ConstantSizedStaticType
@@ -98,6 +126,16 @@ func (t ConstantSizedStaticType) String() string {
 	return fmt.Sprintf("[%s; %d]", t.Type, t.Size)
 }
 
+func (t ConstantSizedStaticType) Equal(other StaticType) bool {
+	otherConstantSizedType, ok := other.(ConstantSizedStaticType)
+	if !ok {
+		return false
+	}
+
+	return t.Size == otherConstantSizedType.Size &&
+		t.Type.Equal(otherConstantSizedType.Type)
+}
+
 // DictionaryStaticType
 
 type DictionaryStaticType struct {
@@ -111,6 +149,16 @@ func (t DictionaryStaticType) String() string {
 	return fmt.Sprintf("{%s: %s}", t.KeyType, t.ValueType)
 }
 
+func (t DictionaryStaticType) Equal(other StaticType) bool {
+	otherDictionaryType, ok := other.(DictionaryStaticType)
+	if !ok {
+		return false
+	}
+
+	return t.KeyType.Equal(otherDictionaryType.KeyType) &&
+		t.ValueType.Equal(otherDictionaryType.ValueType)
+}
+
 // OptionalStaticType
 
 type OptionalStaticType struct {
@@ -121,6 +169,15 @@ func (OptionalStaticType) IsStaticType() {}
 
 func (t OptionalStaticType) String() string {
 	return fmt.Sprintf("%s?", t.Type)
+}
+
+func (t OptionalStaticType) Equal(other StaticType) bool {
+	otherOptionalType, ok := other.(OptionalStaticType)
+	if !ok {
+		return false
+	}
+
+	return t.Type.Equal(otherOptionalType.Type)
 }
 
 // RestrictedStaticType
@@ -147,6 +204,26 @@ func (t *RestrictedStaticType) String() string {
 	return fmt.Sprintf("%s{%s}", t.Type, strings.Join(restrictions, ", "))
 }
 
+func (t *RestrictedStaticType) Equal(other StaticType) bool {
+	otherRestrictedType, ok := other.(*RestrictedStaticType)
+	if !ok || len(t.Restrictions) != len(otherRestrictedType.Restrictions) {
+		return false
+	}
+
+outer:
+	for _, restriction := range t.Restrictions {
+		for _, otherRestriction := range t.Restrictions {
+			if restriction.Equal(otherRestriction) {
+				continue outer
+			}
+		}
+
+		return false
+	}
+
+	return t.Type.Equal(otherRestrictedType.Type)
+}
+
 // ReferenceStaticType
 
 type ReferenceStaticType struct {
@@ -165,6 +242,16 @@ func (t ReferenceStaticType) String() string {
 	return fmt.Sprintf("%s&%s", auth, t.Type)
 }
 
+func (t ReferenceStaticType) Equal(other StaticType) bool {
+	otherReferenceType, ok := other.(ReferenceStaticType)
+	if !ok {
+		return false
+	}
+
+	return t.Authorized == otherReferenceType.Authorized &&
+		t.Type.Equal(otherReferenceType.Type)
+}
+
 // CapabilityStaticType
 
 type CapabilityStaticType struct {
@@ -178,6 +265,22 @@ func (t CapabilityStaticType) String() string {
 		return fmt.Sprintf("Capability<%s>", t.BorrowType)
 	}
 	return "Capability"
+}
+
+func (t CapabilityStaticType) Equal(other StaticType) bool {
+	otherCapabilityType, ok := other.(CapabilityStaticType)
+	if !ok {
+		return false
+	}
+
+	// The borrow types must either be both nil,
+	// or they must be equal
+
+	if t.BorrowType == nil {
+		return otherCapabilityType.BorrowType == nil
+	}
+
+	return t.BorrowType.Equal(otherCapabilityType.BorrowType)
 }
 
 // Conversion
