@@ -33,11 +33,9 @@ const (
 	entryPointKindUnknown entryPointKind = iota
 	entryPointKindScript
 	entryPointKindTransaction
-	entryPointKindContract
-	entryPointKindContractInterface
 )
 
-var signersRegexp = regexp.MustCompile(`[\w-]+`)
+var SignersRegexp = regexp.MustCompile(`[\w-]+`)
 
 type entryPointInfo struct {
 	documentVersion       float64
@@ -63,20 +61,10 @@ func (i *FlowIntegration) updateEntryPointInfoIfNeeded(
 	var docString string
 	var parameters []*sema.Parameter
 
-	contractDeclaration := checker.Program.SoleContractDeclaration()
-	contractInterfaceDeclaration := checker.Program.SoleContractInterfaceDeclaration()
 	transactionDeclaration := checker.Program.SoleTransactionDeclaration()
 	functionDeclaration := sema.FunctionEntryPointDeclaration(checker.Program)
 
-	if contractDeclaration != nil {
-		startPos = &contractDeclaration.StartPos
-		kind = entryPointKindContract
-		docString = contractDeclaration.DocString
-	} else if contractInterfaceDeclaration != nil {
-		startPos = &contractInterfaceDeclaration.StartPos
-		kind = entryPointKindContract
-		docString = contractInterfaceDeclaration.DocString
-	} else if transactionDeclaration != nil {
+	if transactionDeclaration != nil {
 		startPos = &transactionDeclaration.StartPos
 		kind = entryPointKindTransaction
 		docString = transactionDeclaration.DocString
@@ -123,7 +111,7 @@ func (i *FlowIntegration) updateEntryPointInfoIfNeeded(
 		}
 
 		for _, pragmaSignerString := range parser2.ParseDocstringPragmaSigners(docString) {
-			signers := signersRegexp.FindAllString(pragmaSignerString, -1)
+			signers := SignersRegexp.FindAllString(pragmaSignerString, -1)
 			pragmaSigners = append(pragmaSigners, signers)
 		}
 	}
