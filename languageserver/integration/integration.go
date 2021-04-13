@@ -39,6 +39,7 @@ type FlowIntegration struct {
 	config     Config
 
 	entryPointInfo map[protocol.DocumentUri]entryPointInfo
+	contractInfo map[protocol.DocumentUri]contractInfo
 
 	activeAccount ClientAccount
 	emulatorState EmulatorState
@@ -51,6 +52,7 @@ func NewFlowIntegration(s *server.Server, enableFlowClient bool) (*FlowIntegrati
 	integration := &FlowIntegration{
 		server:         s,
 		entryPointInfo: map[protocol.DocumentUri]entryPointInfo{},
+		contractInfo: map[protocol.DocumentUri]contractInfo{},
 	}
 
 	options := []server.Option{
