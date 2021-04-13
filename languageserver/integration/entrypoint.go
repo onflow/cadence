@@ -19,7 +19,6 @@
 package integration
 
 import (
-	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/languageserver/protocol"
 	"github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/ast"
@@ -46,7 +45,7 @@ type entryPointInfo struct {
 	kind                  entryPointKind
 	parameters            []*sema.Parameter
 	pragmaArgumentStrings []string
-	pragmaArguments       [][]cadence.Value
+	pragmaArguments       [][]Argument
 	pragmaSignersStrings  [][]string
 }
 
@@ -95,7 +94,7 @@ func (i *FlowIntegration) updateEntryPointInfoIfNeeded(
 
 	var pragmaSigners [][]string
 	var pragmaArgumentStrings []string
-	var pragmaArguments [][]cadence.Value
+	var pragmaArguments [][]Argument
 
 	if startPos != nil {
 
@@ -113,8 +112,13 @@ func (i *FlowIntegration) updateEntryPointInfoIfNeeded(
 					continue
 				}
 
+				convertedArguments := make([]Argument, len(arguments))
+				for i, arg := range arguments {
+					convertedArguments[i] = Argument{arg}
+				}
+
 				pragmaArgumentStrings = append(pragmaArgumentStrings, pragmaArgumentString)
-				pragmaArguments = append(pragmaArguments, arguments)
+				pragmaArguments = append(pragmaArguments, convertedArguments)
 			}
 		}
 
