@@ -136,23 +136,34 @@ func (e *InvalidEntryPointArgumentError) Error() string {
 	return fmt.Sprintf("invalid argument at index %d", e.Index)
 }
 
-// InvalidTypeAssignmentError
+// MalformedValueError
 
-type InvalidTypeAssignmentError struct {
-	Value interpreter.Value
-	Type  sema.Type
-	Err   error
+type MalformedValueError struct {
+	ExpectedType sema.Type
 }
 
-func (e *InvalidTypeAssignmentError) Unwrap() error {
+func (e *MalformedValueError) Error() string {
+	return fmt.Sprintf(
+		"value does not conform to expected type `%s`",
+		e.ExpectedType.QualifiedString(),
+	)
+}
+
+// InvalidValueTypeError
+//
+type InvalidValueTypeError struct {
+	ExpectedType sema.Type
+	Err          error
+}
+
+func (e *InvalidValueTypeError) Unwrap() error {
 	return e.Err
 }
 
-func (e *InvalidTypeAssignmentError) Error() string {
+func (e *InvalidValueTypeError) Error() string {
 	return fmt.Sprintf(
-		"cannot assign type `%s` to %s",
-		e.Type.QualifiedString(),
-		e.Value,
+		"expected value of type `%s`",
+		e.ExpectedType.QualifiedString(),
 	)
 }
 

@@ -40,7 +40,7 @@ func (v DeployedContractValue) Accept(interpreter *Interpreter, visitor Visitor)
 	visitor.VisitDeployedContractValue(interpreter, v)
 }
 
-func (DeployedContractValue) DynamicType(_ *Interpreter) DynamicType {
+func (DeployedContractValue) DynamicType(_ *Interpreter, _ DynamicTypeResults) DynamicType {
 	return DeployedContractDynamicType{}
 }
 
@@ -99,4 +99,9 @@ func (v DeployedContractValue) GetMember(_ *Interpreter, _ func() LocationRange,
 
 func (DeployedContractValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
 	panic(errors.NewUnreachableError())
+}
+
+func (v DeployedContractValue) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType, _ TypeConformanceResults) bool {
+	_, ok := dynamicType.(DeployedContractDynamicType)
+	return ok
 }

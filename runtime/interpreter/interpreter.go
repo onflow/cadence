@@ -156,6 +156,13 @@ type ImportLocationHandlerFunc func(
 	location common.Location,
 ) Import
 
+// AccountHandlerFunc is a function that handles retrieving a public account at a given address.
+// The account returned must be of type `PublicAccount`.
+//
+type AccountHandlerFunc func(
+	address AddressValue,
+) *CompositeValue
+
 // UUIDHandlerFunc is a function that handles the generation of UUIDs.
 type UUIDHandlerFunc func() (uint64, error)
 
@@ -233,6 +240,7 @@ type Interpreter struct {
 	injectedCompositeFieldsHandler InjectedCompositeFieldsHandlerFunc
 	contractValueHandler           ContractValueHandlerFunc
 	importLocationHandler          ImportLocationHandlerFunc
+	accountHandler                 AccountHandlerFunc
 	uuidHandler                    UUIDHandlerFunc
 	interpreted                    bool
 	statement                      ast.Statement
@@ -371,6 +379,16 @@ func WithImportLocationHandler(handler ImportLocationHandlerFunc) Option {
 	}
 }
 
+// WithAccountHandlerFunc returns an interpreter option which sets the given function
+// as the function that is used to handle public accounts.
+//
+func WithAccountHandlerFunc(handler AccountHandlerFunc) Option {
+	return func(interpreter *Interpreter) error {
+		interpreter.SetAccountHandler(handler)
+		return nil
+	}
+}
+
 // WithUUIDHandler returns an interpreter option which sets the given function
 // as the function that is used to generate UUIDs.
 //
@@ -496,6 +514,12 @@ func (interpreter *Interpreter) SetContractValueHandler(function ContractValueHa
 //
 func (interpreter *Interpreter) SetImportLocationHandler(function ImportLocationHandlerFunc) {
 	interpreter.importLocationHandler = function
+}
+
+// SetAccountHandler sets the function that is used to handle accounts.
+//
+func (interpreter *Interpreter) SetAccountHandler(function AccountHandlerFunc) {
+	interpreter.accountHandler = function
 }
 
 // SetUUIDHandler sets the function that is used to handle the generation of UUIDs.
@@ -725,6 +749,7 @@ func (interpreter *Interpreter) prepareInvoke(
 		GetLocationRange: ReturnEmptyLocationRange,
 		Interpreter:      interpreter,
 	}
+
 	return functionValue.Invoke(invocation), nil
 }
 
@@ -769,10 +794,12 @@ func (interpreter *Interpreter) recoverErrors(onError func(error)) {
 			// wrap the error with position information if needed
 
 			_, ok := err.(ast.HasPosition)
-			if !ok {
+			if !ok && interpreter.statement != nil {
+				r := ast.NewRangeFromPositioned(interpreter.statement)
+
 				err = PositionedError{
 					Err:   err,
-					Range: ast.NewRangeFromPositioned(interpreter.statement),
+					Range: r,
 				}
 			}
 
@@ -982,13 +1009,15 @@ func (interpreter *Interpreter) declareVariable(identifier string, value Value) 
 
 func (interpreter *Interpreter) visitAssignment(
 	transferOperation ast.TransferOperation,
-	target ast.Expression, targetType sema.Type,
-	value ast.Expression, valueType sema.Type,
+	targetExpression ast.Expression, targetType sema.Type,
+	valueExpression ast.Expression, valueType sema.Type,
 	position ast.HasPosition,
 ) {
 
 	// First evaluate the target, which results in a getter/setter function pair
-	getterSetter := interpreter.assignmentGetterSetter(target)
+	getterSetter := interpreter.assignmentGetterSetter(targetExpression)
+
+	getLocationRange := locationRangeGetter(interpreter.Location, position)
 
 	// If the assignment is a forced move,
 	// ensure that the target is nil,
@@ -1011,7 +1040,10 @@ func (interpreter *Interpreter) visitAssignment(
 
 	// Finally, evaluate the value, and assign it using the setter function
 
-	valueCopy := interpreter.copyAndConvert(interpreter.evalExpression(value), valueType, targetType)
+	value := interpreter.evalExpression(valueExpression)
+
+	valueCopy := interpreter.copyAndConvert(value, valueType, targetType, getLocationRange)
+
 	getterSetter.set(valueCopy)
 }
 
@@ -1577,8 +1609,60 @@ func (interpreter *Interpreter) VisitEnumCaseDeclaration(_ *ast.EnumCaseDeclarat
 	panic(errors.NewUnreachableError())
 }
 
-func (interpreter *Interpreter) copyAndConvert(value Value, valueType, targetType sema.Type) Value {
-	return interpreter.convertAndBox(value.Copy(), valueType, targetType)
+func (interpreter *Interpreter) checkValueTransferTargetType(value Value, targetType sema.Type) bool {
+
+	if targetType == nil {
+		return true
+	}
+
+	dynamicTypeResults := DynamicTypeResults{}
+
+	valueDynamicType := value.DynamicType(interpreter, dynamicTypeResults)
+	if IsSubType(valueDynamicType, targetType) {
+		return true
+	}
+
+	// Handle function types:
+	//
+	// Static function types have parameter and return type information.
+	// Dynamic function types do not (yet) have parameter and return types information.
+	// Therefore, IsSubType currently returns false even in cases where
+	// the function value is valid.
+	//
+	// For now, make this check more lenient and accept any function type (or Any/AnyStruct)
+
+	unwrappedValueDynamicType := UnwrapOptionalDynamicType(valueDynamicType)
+	if _, ok := unwrappedValueDynamicType.(FunctionDynamicType); ok {
+		unwrappedTargetType := sema.UnwrapOptionalType(targetType)
+		if _, ok := unwrappedTargetType.(*sema.FunctionType); ok {
+			return true
+		}
+
+		switch unwrappedTargetType {
+		case sema.AnyStructType, sema.AnyType:
+			return true
+		}
+	}
+
+	return false
+}
+
+func (interpreter *Interpreter) copyAndConvert(
+	value Value,
+	valueType, targetType sema.Type,
+	getLocationRange func() LocationRange,
+) Value {
+
+	result := interpreter.convertAndBox(value.Copy(), valueType, targetType)
+
+	if !interpreter.checkValueTransferTargetType(result, targetType) {
+		panic(ValueTransferTypeError{
+			TargetType:    targetType,
+			LocationRange: getLocationRange(),
+		})
+	}
+
+	return result
 }
 
 // convertAndBox converts a value to a target type, and boxes in optionals and any value, if necessary
@@ -2034,6 +2118,7 @@ func (interpreter *Interpreter) NewSubInterpreter(
 		WithUUIDHandler(interpreter.uuidHandler),
 		WithAllInterpreters(interpreter.allInterpreters),
 		withTypeCodes(interpreter.typeCodes),
+		WithAccountHandlerFunc(interpreter.accountHandler),
 	}
 
 	return NewInterpreter(
@@ -2264,7 +2349,7 @@ func IsSubType(subType DynamicType, superType sema.Type) bool {
 
 	case StringDynamicType:
 		switch superType {
-		case sema.AnyStructType, sema.StringType:
+		case sema.AnyStructType, sema.StringType, sema.CharacterType:
 			return true
 		}
 
@@ -2283,6 +2368,9 @@ func IsSubType(subType DynamicType, superType sema.Type) bool {
 
 	case NumberDynamicType:
 		return sema.IsSubType(typedSubType.StaticType, superType)
+
+	case FunctionDynamicType:
+		return superType == sema.AnyStructType
 
 	case CompositeDynamicType:
 		return sema.IsSubType(typedSubType.StaticType, superType)
@@ -2507,7 +2595,9 @@ func (interpreter *Interpreter) authAccountReadFunction(addressValue AddressValu
 
 			ty := typeParameterPair.Value
 
-			dynamicType := value.Value.DynamicType(interpreter)
+			dynamicTypeResults := DynamicTypeResults{}
+
+			dynamicType := value.Value.DynamicType(interpreter, dynamicTypeResults)
 			if !IsSubType(dynamicType, ty) {
 				return NilValue{}
 			}
@@ -2535,42 +2625,31 @@ func (interpreter *Interpreter) authAccountBorrowFunction(addressValue AddressVa
 		path := invocation.Arguments[0].(PathValue)
 		key := storageKey(path)
 
-		value := interpreter.readStored(address, key, false)
-
-		switch value := value.(type) {
-		case NilValue:
-			return value
-
-		case *SomeValue:
-
-			// If there is value stored for the given path,
-			// check that it satisfies the type given as the type argument.
-
-			typeParameterPair := invocation.TypeParameterTypes.Oldest()
-			if typeParameterPair == nil {
-				panic(errors.NewUnreachableError())
-			}
-
-			ty := typeParameterPair.Value
-
-			referenceType := ty.(*sema.ReferenceType)
-
-			dynamicType := value.Value.DynamicType(interpreter)
-			if !IsSubType(dynamicType, referenceType.Type) {
-				return NilValue{}
-			}
-
-			reference := &StorageReferenceValue{
-				Authorized:           referenceType.Authorized,
-				TargetStorageAddress: address,
-				TargetKey:            key,
-			}
-
-			return NewSomeValueOwningNonCopying(reference)
-
-		default:
+		typeParameterPair := invocation.TypeParameterTypes.Oldest()
+		if typeParameterPair == nil {
 			panic(errors.NewUnreachableError())
 		}
+
+		ty := typeParameterPair.Value
+
+		referenceType := ty.(*sema.ReferenceType)
+
+		reference := &StorageReferenceValue{
+			Authorized:           referenceType.Authorized,
+			TargetStorageAddress: address,
+			TargetKey:            key,
+			BorrowedType:         referenceType.Type,
+		}
+
+		// Attempt to dereference,
+		// which reads the stored value
+		// and performs a dynamic type check
+
+		if reference.ReferencedValue(interpreter) == nil {
+			return NilValue{}
+		}
+
+		return NewSomeValueOwningNonCopying(reference)
 	})
 }
 
@@ -2711,6 +2790,15 @@ func (interpreter *Interpreter) capabilityBorrowFunction(
 				Authorized:           authorized,
 				TargetStorageAddress: address,
 				TargetKey:            targetStorageKey,
+				BorrowedType:         borrowType.Type,
+			}
+
+			// Attempt to dereference,
+			// which reads the stored value
+			// and performs a dynamic type check
+
+			if reference.ReferencedValue(interpreter) == nil {
+				return NilValue{}
 			}
 
 			return NewSomeValueOwningNonCopying(reference)
@@ -2740,7 +2828,7 @@ func (interpreter *Interpreter) capabilityCheckFunction(
 				panic(errors.NewUnreachableError())
 			}
 
-			targetStorageKey, _ :=
+			targetStorageKey, authorized :=
 				interpreter.getCapabilityFinalTargetStorageKey(
 					addressValue,
 					pathValue,
@@ -2748,9 +2836,28 @@ func (interpreter *Interpreter) capabilityCheckFunction(
 					invocation.GetLocationRange,
 				)
 
-			isValid := targetStorageKey != ""
+			if targetStorageKey == "" {
+				return BoolValue(false)
+			}
 
-			return BoolValue(isValid)
+			address := addressValue.ToAddress()
+
+			reference := &StorageReferenceValue{
+				Authorized:           authorized,
+				TargetStorageAddress: address,
+				TargetKey:            targetStorageKey,
+				BorrowedType:         borrowType.Type,
+			}
+
+			// Attempt to dereference,
+			// which reads the stored value
+			// and performs a dynamic type check
+
+			if reference.ReferencedValue(interpreter) == nil {
+				return BoolValue(false)
+			}
+
+			return BoolValue(true)
 		},
 	)
 }
@@ -2919,6 +3026,7 @@ func (interpreter *Interpreter) reportFunctionInvocation(pos ast.HasPosition) {
 }
 
 // getMember gets the member value by the given identifier from the given Value depending on its type.
+// May return nil if the member does not exist.
 func (interpreter *Interpreter) getMember(self Value, getLocationRange func() LocationRange, identifier string) Value {
 	var result Value
 	// When the accessed value has a type that supports the declaration of members
@@ -2937,6 +3045,10 @@ func (interpreter *Interpreter) getMember(self Value, getLocationRange func() Lo
 			return interpreter.getTypeFunction(self)
 		}
 	}
+
+	// NOTE: do not panic if the member is nil. This is a valid state.
+	// For example, when a composite field is initialized with a force-assignment, the field's value is read.
+
 	return result
 }
 
@@ -2955,7 +3067,8 @@ func (interpreter *Interpreter) isInstanceFunction(self Value) HostFunctionValue
 
 			semaType := interpreter.ConvertStaticToSemaType(staticType)
 			// NOTE: not invocation.Self, as that is only set for composite values
-			dynamicType := self.DynamicType(interpreter)
+			dynamicTypeResults := DynamicTypeResults{}
+			dynamicType := self.DynamicType(interpreter, dynamicTypeResults)
 			result := IsSubType(dynamicType, semaType)
 			return BoolValue(result)
 		},

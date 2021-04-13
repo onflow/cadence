@@ -42,6 +42,7 @@ func (interpreter *Interpreter) InvokeFunctionValue(
 	return interpreter.invokeFunctionValue(
 		function,
 		arguments,
+		nil,
 		argumentTypes,
 		parameterTypes,
 		nil,
@@ -52,6 +53,7 @@ func (interpreter *Interpreter) InvokeFunctionValue(
 func (interpreter *Interpreter) invokeFunctionValue(
 	function FunctionValue,
 	arguments []Value,
+	expressions []ast.Expression,
 	argumentTypes []sema.Type,
 	parameterTypes []sema.Type,
 	typeParameterTypes *sema.TypeParameterTypeOrderedMap,
@@ -65,7 +67,16 @@ func (interpreter *Interpreter) invokeFunctionValue(
 		argumentType := argumentTypes[i]
 		if i < parameterTypeCount {
 			parameterType := parameterTypes[i]
-			argumentCopies[i] = interpreter.copyAndConvert(argument, argumentType, parameterType)
+
+			var locationPos ast.HasPosition
+			if i < len(expressions) {
+				locationPos = expressions[i]
+			} else {
+				locationPos = invocationPosition
+			}
+
+			getLocationRange := locationRangeGetter(interpreter.Location, locationPos)
+			argumentCopies[i] = interpreter.copyAndConvert(argument, argumentType, parameterType, getLocationRange)
 		} else {
 			argumentCopies[i] = argument.Copy()
 		}

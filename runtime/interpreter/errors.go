@@ -380,3 +380,44 @@ func (e EncodingUnsupportedValueError) Error() string {
 		e.Value,
 	)
 }
+
+// MissingMemberValueError
+
+type MissingMemberValueError struct {
+	Name string
+	LocationRange
+}
+
+func (e MissingMemberValueError) Error() string {
+	return fmt.Sprintf("missing value for member `%s`", e.Name)
+}
+
+// InvocationArgumentTypeError
+
+type InvocationArgumentTypeError struct {
+	Index         int
+	ParameterType sema.Type
+	LocationRange
+}
+
+func (e InvocationArgumentTypeError) Error() string {
+	return fmt.Sprintf(
+		"invalid invocation with argument at index %d: expected %s",
+		e.Index,
+		e.ParameterType.QualifiedString(),
+	)
+}
+
+// ValueTransferTypeError
+
+type ValueTransferTypeError struct {
+	TargetType sema.Type
+	LocationRange
+}
+
+func (e ValueTransferTypeError) Error() string {
+	return fmt.Sprintf(
+		"invalid transfer of value: expected %s",
+		e.TargetType.QualifiedString(),
+	)
+}

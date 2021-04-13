@@ -3924,15 +3924,14 @@ func IsSubType(subType Type, superType Type) bool {
 	case IntegerType:
 		switch subType {
 		case IntegerType, SignedIntegerType,
-			IntType, UIntType,
-			Int8Type, Int16Type, Int32Type, Int64Type, Int128Type, Int256Type,
+			UIntType,
 			UInt8Type, UInt16Type, UInt32Type, UInt64Type, UInt128Type, UInt256Type,
 			Word8Type, Word16Type, Word32Type, Word64Type:
 
 			return true
 
 		default:
-			return false
+			return IsSubType(subType, SignedIntegerType)
 		}
 
 	case SignedIntegerType:
@@ -3950,18 +3949,17 @@ func IsSubType(subType Type, superType Type) bool {
 	case FixedPointType:
 		switch subType {
 		case FixedPointType, SignedFixedPointType,
-			Fix64Type, UFix64Type:
+			UFix64Type:
 
 			return true
 
 		default:
-			return false
+			return IsSubType(subType, SignedFixedPointType)
 		}
 
 	case SignedFixedPointType:
 		switch subType {
 		case SignedFixedPointType, Fix64Type:
-
 			return true
 
 		default:
@@ -5085,7 +5083,9 @@ func init() {
 		PublicKeyType,
 		HashAlgorithmType,
 		SignatureAlgorithmType,
+		AuthAccountType,
 		AuthAccountKeysType,
+		PublicAccountType,
 		PublicAccountKeysType,
 	}
 

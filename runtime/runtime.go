@@ -529,13 +529,27 @@ func validateArgumentParams(
 
 		arg := importValue(value)
 
+		dynamicTypeResults := interpreter.DynamicTypeResults{}
+
+		dynamicType := arg.DynamicType(inter, dynamicTypeResults)
+
 		// Check that decoded value is a subtype of static parameter type
-		if !interpreter.IsSubType(arg.DynamicType(inter), parameterType) {
+		if !interpreter.IsSubType(dynamicType, parameterType) {
 			return nil, &InvalidEntryPointArgumentError{
 				Index: i,
-				Err: &InvalidTypeAssignmentError{
-					Value: arg,
-					Type:  parameterType,
+				Err: &InvalidValueTypeError{
+					ExpectedType: parameterType,
+				},
+			}
+		}
+
+		// Check whether the decoded value conforms to the type associated with the value
+		conformanceResults := interpreter.TypeConformanceResults{}
+		if !arg.ConformsToDynamicType(inter, dynamicType, conformanceResults) {
+			return nil, &InvalidEntryPointArgumentError{
+				Index: i,
+				Err: &MalformedValueError{
+					ExpectedType: parameterType,
 				},
 			}
 		}
@@ -799,6 +813,11 @@ func (r *interpreterRuntime) newInterpreter(
 		),
 		interpreter.WithOnStatementHandler(
 			r.onStatementHandler(),
+		),
+		interpreter.WithAccountHandlerFunc(
+			func(address interpreter.AddressValue) *interpreter.CompositeValue {
+				return r.getPublicAccount(address, context.Interface, runtimeStorage)
+			},
 		),
 	}
 
@@ -1500,13 +1519,22 @@ func (r *interpreterRuntime) instantiateContract(
 func (r *interpreterRuntime) newGetAccountFunction(runtimeInterface Interface, runtimeStorage *runtimeStorage) interpreter.HostFunction {
 	return func(invocation interpreter.Invocation) interpreter.Value {
 		accountAddress := invocation.Arguments[0].(interpreter.AddressValue)
-		return interpreter.NewPublicAccountValue(
-			accountAddress,
-			storageUsedGetFunction(accountAddress, runtimeInterface, runtimeStorage),
-			storageCapacityGetFunction(accountAddress, runtimeInterface),
-			r.newPublicAccountKeys(accountAddress, runtimeInterface),
-		)
+		return r.getPublicAccount(accountAddress, runtimeInterface, runtimeStorage)
 	}
+}
+
+func (r *interpreterRuntime) getPublicAccount(
+	accountAddress interpreter.AddressValue,
+	runtimeInterface Interface,
+	runtimeStorage *runtimeStorage,
+) *interpreter.CompositeValue {
+
+	return interpreter.NewPublicAccountValue(
+		accountAddress,
+		storageUsedGetFunction(accountAddress, runtimeInterface, runtimeStorage),
+		storageCapacityGetFunction(accountAddress, runtimeInterface),
+		r.newPublicAccountKeys(accountAddress, runtimeInterface),
+	)
 }
 
 func (r *interpreterRuntime) newLogFunction(runtimeInterface Interface) interpreter.HostFunction {

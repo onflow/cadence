@@ -25,6 +25,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/runtime/common"
+	checkerUtils "github.com/onflow/cadence/runtime/tests/checker"
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
@@ -847,4 +848,62 @@ func TestBlockValue(t *testing.T) {
 	var actualTs = block.Timestamp
 	const expectedTs UFix64Value = 5.0
 	assert.Equal(t, expectedTs, actualTs)
+}
+
+func TestEphemeralReferenceTypeConformance(t *testing.T) {
+
+	t.Parallel()
+
+	// Obtain a self referencing (cyclic) ephemeral reference value.
+
+	code := `
+        pub fun getEphemeralRef(): &Foo {
+            var foo = Foo()
+            var foo_ref = &foo as &Foo
+
+            // Create the cyclic reference
+            foo_ref.bar = foo_ref
+
+            return foo_ref
+        }
+
+        pub struct Foo {
+
+            pub(set) var bar: &Foo?
+
+            init() {
+                self.bar = nil
+            }
+        }`
+
+	checker, err := checkerUtils.ParseAndCheckWithOptions(t,
+		code,
+		checkerUtils.ParseAndCheckOptions{},
+	)
+
+	require.NoError(t, err)
+
+	inter, err := NewInterpreter(
+		ProgramFromChecker(checker),
+		checker.Location,
+	)
+
+	require.NoError(t, err)
+
+	err = inter.Interpret()
+	require.NoError(t, err)
+
+	value, err := inter.Invoke("getEphemeralRef")
+	require.NoError(t, err)
+	require.IsType(t, &EphemeralReferenceValue{}, value)
+
+	dynamicType := value.DynamicType(inter, DynamicTypeResults{})
+
+	// Check the dynamic type conformance on a cyclic value.
+	conforms := value.ConformsToDynamicType(inter, dynamicType, TypeConformanceResults{})
+	assert.True(t, conforms)
+
+	// Check against a non-conforming type
+	conforms = value.ConformsToDynamicType(inter, EphemeralReferenceDynamicType{}, TypeConformanceResults{})
+	assert.False(t, conforms)
 }
