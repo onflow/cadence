@@ -19,16 +19,14 @@
 package integration
 
 import (
+	"encoding/json"
 	"fmt"
-	"github.com/onflow/cadence"
-	jsoncdc "github.com/onflow/cadence/encoding/json"
 	"github.com/onflow/cadence/languageserver/conversion"
 	"github.com/onflow/cadence/languageserver/protocol"
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/flow-go-sdk"
-	"strings"
 )
 
 const (
@@ -38,17 +36,6 @@ const (
 	prefixOffline  = "⚠️"
 	prefixError    = "🚫"
 )
-
-func encodeArguments(args []cadence.Value) string {
-	var list []string
-	for _, arg := range args {
-		encoded, _ := jsoncdc.Encode(arg)
-		list = append(list, string(encoded))
-	}
-
-	joined := strings.Join(list, ",")
-	return fmt.Sprintf("[%s]", joined)
-}
 
 func (i *FlowIntegration) codeLenses(
 	uri protocol.DocumentUri,
@@ -192,7 +179,7 @@ func (i *FlowIntegration) entryPointActions(
 	// If there are no parameters and no pragma argument declarations,
 	// offer execution using no arguments
 	if len(entryPointInfo.parameters) == 0 {
-		argumentLists = append(argumentLists, []cadence.Value{})
+		argumentLists = append(argumentLists, []Argument{})
 	}
 
 	signersList := entryPointInfo.pragmaSignersStrings[:]
@@ -205,7 +192,8 @@ func (i *FlowIntegration) entryPointActions(
 		switch entryPointInfo.kind {
 		case entryPointKindScript:
 			pragmaArguments := entryPointInfo.pragmaArgumentStrings[index]
-			codeLenses = append(codeLenses, i.scriptCodeLenses(uri, codelensRange, pragmaArguments, argumentList))
+			codeLens := i.scriptCodeLenses(uri, codelensRange, pragmaArguments, argumentList)
+			codeLenses = append(codeLenses, codeLens)
 
 		case entryPointKindTransaction:
 			for _, signers := range signersList {
@@ -305,7 +293,7 @@ func (i *FlowIntegration) scriptCodeLenses(
 	uri protocol.DocumentUri,
 	codelensRange protocol.Range,
 	pragmaArguments string,
-	argumentList []cadence.Value,
+	argumentList []Argument,
 ) *protocol.CodeLens {
 
 	title := fmt.Sprintf(
@@ -321,15 +309,15 @@ func (i *FlowIntegration) scriptCodeLenses(
 		)
 	}
 
-	argsJSON := encodeArguments(argumentList)
-	return makeCodeLens(CommandExecuteScript, title, codelensRange, []interface{}{uri, argsJSON})
+	argsJSON,_ := json.Marshal(argumentList)
+	return makeCodeLens(CommandExecuteScript, title, codelensRange, []interface{}{uri, string(argsJSON)})
 }
 
 func (i *FlowIntegration) transactionCodeLenses(
 	uri protocol.DocumentUri,
 	codelensRange protocol.Range,
 	pragmaArguments string,
-	argumentList []cadence.Value,
+	argumentList []Argument,
 	signers []string,
 	accounts []flow.Address,
 ) *protocol.CodeLens {
@@ -350,14 +338,16 @@ func (i *FlowIntegration) transactionCodeLenses(
 		)
 	}
 
-	argsJSON := encodeArguments(argumentList)
+	argsJSON,_ := json.Marshal(argumentList)
+
 	return makeCodeLens(
 		CommandSendTransaction,
 		title,
 		codelensRange,
-		[]interface{}{uri, argsJSON, accounts},
+		[]interface{}{uri, string(argsJSON), accounts},
 	)
 }
+
 func (i *FlowIntegration) contractCodeLenses(
 	uri protocol.DocumentUri,
 	codelensRange protocol.Range,
