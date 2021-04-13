@@ -58,11 +58,9 @@ func (i *FlowIntegration) codeLenses(
 	[]*protocol.CodeLens,
 	error,
 ) {
-
 	var actions []*protocol.CodeLens
 
 	program := checker.Program
-
 	deployContractLenses := i.showDeployContractAction(uri, program, version, checker)
 	deployContractInterfaceLenses := i.showDeployContractInterfaceAction(uri, program, version, checker)
 	actions = append(actions, deployContractLenses...)
@@ -86,12 +84,9 @@ func (i *FlowIntegration) showDeployContractAction(
 	version float64,
 	checker *sema.Checker,
 ) []*protocol.CodeLens {
-
 	i.updateEntryPointInfoIfNeeded(uri, version, checker)
-	entryPointInfo := i.entryPointInfo[uri]
 
 	contract := program.SoleContractDeclaration()
-
 	if contract == nil {
 		return nil
 	}
@@ -101,11 +96,13 @@ func (i *FlowIntegration) showDeployContractAction(
 	codelensRange := conversion.ASTToProtocolRange(position, position)
 	var codeLenses []*protocol.CodeLens
 
-	// If emulator is not up, we need to provide actionless codelens
-	if i.emulatorState == EmulatorStarting || i.emulatorState == EmulatorOffline {
-		return codeLenses
+	// Check emulator state
+	emulatorStateLens := i.checkEmulatorState(codelensRange)
+	if emulatorStateLens != nil {
+		return []*protocol.CodeLens{emulatorStateLens}
 	}
 
+	entryPointInfo := i.entryPointInfo[uri]
 	signersList := entryPointInfo.pragmaSignersStrings[:]
 	// TODO: resolve check for amount of signers equals to provided by pragma
 	if len(signersList) == 0 {
@@ -113,41 +110,7 @@ func (i *FlowIntegration) showDeployContractAction(
 	}
 
 	for _, signers := range signersList {
-		signer := signers[0]
-
-		var codeLens *protocol.CodeLens
-		var title string
-		resolvedAddress, _ := i.getAccountAddress(signer)
-		if resolvedAddress == flow.EmptyAddress {
-			title = fmt.Sprintf("%s Specified account %s does not exist",
-				prefixError,
-				signer,
-			)
-			codeLens = &protocol.CodeLens{
-				Range: codelensRange,
-				Command: &protocol.Command{
-					Title: title,
-				},
-			}
-		} else {
-			title = fmt.Sprintf(
-				"%s Deploy contract %s to %s",
-				prefixOK,
-				name,
-				signer,
-			)
-
-			codeLens = &protocol.CodeLens{
-				Range: codelensRange,
-				Command: &protocol.Command{
-					Title:     title,
-					Command:   CommandDeployContract,
-					Arguments: []interface{}{uri, name, resolvedAddress},
-				},
-			}
-		}
-
-		codeLenses = append(codeLenses, codeLens)
+		codeLenses = append(codeLenses, i.contractCodeLenses(uri, codelensRange, name, signers[0]))
 	}
 
 	return codeLenses
@@ -162,12 +125,9 @@ func (i *FlowIntegration) showDeployContractInterfaceAction(
 	version float64,
 	checker *sema.Checker,
 ) []*protocol.CodeLens {
-
 	i.updateEntryPointInfoIfNeeded(uri, version, checker)
-	entryPointInfo := i.entryPointInfo[uri]
 
 	contract := program.SoleContractInterfaceDeclaration()
-
 	if contract == nil {
 		return nil
 	}
@@ -177,53 +137,20 @@ func (i *FlowIntegration) showDeployContractInterfaceAction(
 	codelensRange := conversion.ASTToProtocolRange(position, position)
 	var codeLenses []*protocol.CodeLens
 
-	// If emulator is not up, we need to provide actionless codelens
-	if i.emulatorState == EmulatorStarting || i.emulatorState == EmulatorOffline {
-		return codeLenses
+	// Check emulator state
+	emulatorStateLens := i.checkEmulatorState(codelensRange)
+	if emulatorStateLens != nil {
+		return []*protocol.CodeLens{emulatorStateLens}
 	}
 
+	entryPointInfo := i.entryPointInfo[uri]
 	signersList := entryPointInfo.pragmaSignersStrings[:]
-	// TODO: resolve check for amount of signers equals to provided by pragma
 	if len(signersList) == 0 {
 		signersList = append(signersList, []string{i.activeAccount.Name})
 	}
 
 	for _, signers := range signersList {
-		signer := signers[0]
-
-		var codeLens *protocol.CodeLens
-		var title string
-		resolvedAddress, _ := i.getAccountAddress(signer)
-		if resolvedAddress == flow.EmptyAddress {
-			title = fmt.Sprintf("%s Specified account %s does not exist",
-				prefixError,
-				signer,
-			)
-			codeLens = &protocol.CodeLens{
-				Range: codelensRange,
-				Command: &protocol.Command{
-					Title: title,
-				},
-			}
-		} else {
-			title = fmt.Sprintf(
-				"%s Deploy contract interface %s to %s",
-				prefixOK,
-				name,
-				signer,
-			)
-
-			codeLens = &protocol.CodeLens{
-				Range: codelensRange,
-				Command: &protocol.Command{
-					Title:     title,
-					Command:   CommandDeployContract,
-					Arguments: []interface{}{uri, name, resolvedAddress},
-				},
-			}
-		}
-
-		codeLenses = append(codeLenses, codeLens)
+		codeLenses = append(codeLenses, i.contractCodeLenses(uri, codelensRange, name, signers[0]))
 	}
 
 	return codeLenses
@@ -241,9 +168,7 @@ func (i *FlowIntegration) entryPointActions(
 	[]*protocol.CodeLens,
 	error,
 ) {
-
 	i.updateEntryPointInfoIfNeeded(uri, version, checker)
-
 	entryPointInfo := i.entryPointInfo[uri]
 	if entryPointInfo.kind == entryPointKindUnknown || entryPointInfo.startPos == nil {
 		return nil, nil
@@ -253,24 +178,12 @@ func (i *FlowIntegration) entryPointActions(
 	codelensRange := conversion.ASTToProtocolRange(position, position)
 	var codeLenses []*protocol.CodeLens
 
-	// If emulator is not up, we need to show single codelens proposing to start emulator
-	if i.emulatorState == EmulatorOffline {
-		title := fmt.Sprintf(
-			"%s Emulator is Offline. Click here to start it",
-			prefixOffline,
-		)
-		codeLens := makeCodeLens(ClientStartEmulator, title, codelensRange, []interface{}{uri, "Offline"})
-		codeLenses = append(codeLenses, codeLens)
-		return codeLenses, nil
-	}
 
-	// If emulator is not up, we need to provide actionless codelens
-	if i.emulatorState == EmulatorStarting {
-		title := fmt.Sprintf(
-			"%s Emulator is starting up. Please wait \u2026",
-			prefixStarting,
-		)
-		codeLenses = append(codeLenses, makeActionlessCodelens(title, codelensRange))
+	// Check emulator state
+	emulatorStateLens := i.checkEmulatorState(codelensRange)
+
+	if emulatorStateLens != nil {
+		codeLenses = append(codeLenses, emulatorStateLens)
 		return codeLenses, nil
 	}
 
@@ -289,10 +202,9 @@ func (i *FlowIntegration) entryPointActions(
 	}
 
 	for index, argumentList := range argumentLists {
-		pragmaArguments := entryPointInfo.pragmaArgumentStrings[index]
-
 		switch entryPointInfo.kind {
 		case entryPointKindScript:
+			pragmaArguments := entryPointInfo.pragmaArgumentStrings[index]
 			codeLenses = append(codeLenses, i.scriptCodeLenses(uri, codelensRange, pragmaArguments, argumentList))
 
 		case entryPointKindTransaction:
@@ -365,6 +277,30 @@ func (i *FlowIntegration) showAbsentAccounts(accounts []string, codelensRange pr
 	return makeActionlessCodelens(title, codelensRange)
 }
 
+func (i *FlowIntegration) checkEmulatorState(codelensRange protocol.Range) *protocol.CodeLens {
+	var title string
+	var codeLens *protocol.CodeLens
+
+	if i.emulatorState == EmulatorOffline {
+		title = fmt.Sprintf(
+			"%s Emulator is Offline. Click here to start it",
+			prefixOffline,
+		)
+		// TODO: Check if arguments are needed
+		codeLens = makeCodeLens(ClientStartEmulator, title, codelensRange, nil)
+	}
+
+	if i.emulatorState == EmulatorStarting {
+		title = fmt.Sprintf(
+			"%s Emulator is starting up. Please wait \u2026",
+			prefixStarting,
+		)
+		codeLens = makeActionlessCodelens(title, codelensRange)
+	}
+
+	return codeLens
+}
+
 func (i *FlowIntegration) scriptCodeLenses(
 	uri protocol.DocumentUri,
 	codelensRange protocol.Range,
@@ -421,4 +357,29 @@ func (i *FlowIntegration) transactionCodeLenses(
 		codelensRange,
 		[]interface{}{uri, argsJSON, accounts},
 	)
+}
+func (i *FlowIntegration) contractCodeLenses(
+	uri protocol.DocumentUri,
+	codelensRange protocol.Range,
+	name string,
+	signer string,
+) *protocol.CodeLens {
+	var title string
+	resolvedAddress, _ := i.getAccountAddress(signer)
+	if resolvedAddress == flow.EmptyAddress {
+		title = fmt.Sprintf("%s Specified account %s does not exist",
+			prefixError,
+			signer,
+		)
+		return makeActionlessCodelens(title, codelensRange)
+	} else {
+		title = fmt.Sprintf(
+			"%s Deploy contract interface %s to %s",
+			prefixOK,
+			name,
+			signer,
+		)
+
+		return makeCodeLens(CommandDeployContract, title, codelensRange,[]interface{}{uri, name, resolvedAddress})
+	}
 }
