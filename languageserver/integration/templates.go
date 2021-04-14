@@ -13,7 +13,7 @@ transaction(name: String, code: [UInt8]) {
 }
 `
 
-const serviceAccountName = "service-account"
+const serviceAccountName = "ServiceAccount"
 
 const contractAccountManager = `
 pub contract AccountManager{
