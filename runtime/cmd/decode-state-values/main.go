@@ -38,7 +38,6 @@ import (
 	"github.com/onflow/cadence/runtime/interpreter"
 )
 
-var oldFlag = flag.Bool("old", false, "decode using the old pre-v4 decoder")
 var roundtripFlag = flag.Bool("roundtrip", false, "encode and decode the decoded value and ensure equality")
 
 type keyPart struct {
@@ -60,11 +59,6 @@ func worker(jobs <-chan entry, wg *sync.WaitGroup, decoded *uint64) {
 	var err error
 	var data []byte
 
-	decodeFunction := interpreter.DecodeValue
-	if *oldFlag {
-		decodeFunction = interpreter.DecodeValueV3
-	}
-
 	for e := range jobs {
 
 		data, err = hex.DecodeString(e.Value)
@@ -84,6 +78,11 @@ func worker(jobs <-chan entry, wg *sync.WaitGroup, decoded *uint64) {
 		}
 
 		owner := common.BytesToAddress(rawOwner)
+
+		decodeFunction := interpreter.DecodeValue
+		if version <= 3 {
+			decodeFunction = interpreter.DecodeValueV3
+		}
 
 		var value interpreter.Value
 		value, err = decodeFunction(data, &owner, nil, version, nil)
