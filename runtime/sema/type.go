@@ -2499,8 +2499,8 @@ var AllNumberTypes = append(
 	SignedNumberType,
 )
 
-const numberTypeMinFieldName = "min"
-const numberTypeMaxFieldName = "max"
+const NumberTypeMinFieldName = "min"
+const NumberTypeMaxFieldName = "max"
 
 const numberTypeMinFieldDocString = `The minimum integer of this type`
 const numberTypeMaxFieldDocString = `The maximum integer of this type`
@@ -2558,7 +2558,7 @@ func init() {
 				if numberType.minInt != nil {
 					addMember(NewPublicConstantFieldMember(
 						functionType,
-						numberTypeMinFieldName,
+						NumberTypeMinFieldName,
 						numberType,
 						numberTypeMinFieldDocString,
 					))
@@ -2567,7 +2567,7 @@ func init() {
 				if numberType.maxInt != nil {
 					addMember(NewPublicConstantFieldMember(
 						functionType,
-						numberTypeMaxFieldName,
+						NumberTypeMaxFieldName,
 						numberType,
 						numberTypeMaxFieldDocString,
 					))
@@ -2582,7 +2582,7 @@ func init() {
 
 					addMember(NewPublicConstantFieldMember(
 						functionType,
-						numberTypeMinFieldName,
+						NumberTypeMinFieldName,
 						numberType,
 						fixedPointNumberTypeMinFieldDocString,
 					))
@@ -2596,7 +2596,7 @@ func init() {
 
 					addMember(NewPublicConstantFieldMember(
 						functionType,
-						numberTypeMaxFieldName,
+						NumberTypeMaxFieldName,
 						numberType,
 						fixedPointNumberTypeMaxFieldDocString,
 					))

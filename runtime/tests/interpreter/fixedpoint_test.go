@@ -20,6 +20,7 @@ package interpreter_test
 
 import (
 	"fmt"
+	"math"
 	"math/big"
 	"testing"
 
@@ -56,6 +57,7 @@ func TestInterpretFixedPointConversionAndAddition(t *testing.T) {
 	}
 
 	for _, fixedPointType := range sema.AllFixedPointTypes {
+		// Only test leaf types
 		switch fixedPointType {
 		case sema.FixedPointType, sema.SignedFixedPointType:
 			continue
@@ -107,6 +109,7 @@ var testFixedPointValues = map[string]interpreter.Value{
 
 func init() {
 	for _, fixedPointType := range sema.AllFixedPointTypes {
+		// Only test leaf types
 		switch fixedPointType {
 		case sema.FixedPointType, sema.SignedFixedPointType:
 			continue
@@ -493,4 +496,66 @@ func TestInterpretFixedPointConversions(t *testing.T) {
 			})
 		}
 	})
+}
+
+func TestInterpretFixedPointMinMax(t *testing.T) {
+
+	t.Parallel()
+
+	type testCase struct {
+		min interpreter.Value
+		max interpreter.Value
+	}
+
+	test := func(t *testing.T, ty sema.Type, test testCase) {
+
+		inter := parseCheckAndInterpret(t,
+			fmt.Sprintf(
+				`
+				  let min = %[1]s.min
+				  let max = %[1]s.max
+				`,
+				ty,
+			),
+		)
+
+		require.Equal(t,
+			test.min,
+			inter.Globals["min"].GetValue(),
+		)
+		require.Equal(t,
+			test.max,
+			inter.Globals["max"].GetValue(),
+		)
+	}
+
+	testCases := map[sema.Type]testCase{
+		sema.Fix64Type: {
+			min: interpreter.Fix64Value(math.MinInt64),
+			max: interpreter.Fix64Value(math.MaxInt64),
+		},
+		sema.UFix64Type: {
+			min: interpreter.UFix64Value(0),
+			max: interpreter.UFix64Value(math.MaxUint64),
+		},
+	}
+
+	for _, ty := range sema.AllFixedPointTypes {
+		// Only test leaf types
+		switch ty {
+		case sema.FixedPointType, sema.SignedFixedPointType:
+			continue
+		}
+
+		if _, ok := testCases[ty]; !ok {
+			require.Fail(t, "missing type: %s", ty.String())
+		}
+	}
+
+	for ty, testCase := range testCases {
+
+		t.Run(ty.String(), func(t *testing.T) {
+			test(t, ty, testCase)
+		})
+	}
 }
