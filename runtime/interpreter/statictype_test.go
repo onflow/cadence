@@ -881,6 +881,41 @@ func TestRestrictedStaticType_Equal(t *testing.T) {
 		)
 	})
 
+	t.Run("different restrictions", func(t *testing.T) {
+
+		t.Parallel()
+
+		require.False(t,
+			(&RestrictedStaticType{
+				Type: PrimitiveStaticTypeInt,
+				Restrictions: []InterfaceStaticType{
+					{
+						Location:            utils.TestLocation,
+						QualifiedIdentifier: "X",
+					},
+					{
+						Location:            utils.TestLocation,
+						QualifiedIdentifier: "Y",
+					},
+				},
+			}).Equal(
+				&RestrictedStaticType{
+					Type: PrimitiveStaticTypeInt,
+					Restrictions: []InterfaceStaticType{
+						{
+							Location:            utils.TestLocation,
+							QualifiedIdentifier: "X",
+						},
+						{
+							Location:            utils.TestLocation,
+							QualifiedIdentifier: "Z",
+						},
+					},
+				},
+			),
+		)
+	})
+
 	t.Run("different kind", func(t *testing.T) {
 
 		t.Parallel()
