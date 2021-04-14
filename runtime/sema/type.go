@@ -1913,6 +1913,7 @@ type FunctionType struct {
 	ReturnTypeAnnotation     *TypeAnnotation
 	RequiredArgumentCount    *int
 	ArgumentExpressionsCheck ArgumentExpressionsCheck
+	Members                  *StringMemberOrderedMap
 }
 
 func RequiredArgumentCount(count int) *int {
@@ -2312,18 +2313,6 @@ func (t *FunctionType) Resolve(typeArguments *TypeParameterTypeOrderedMap) Type 
 }
 
 func (t *FunctionType) GetMembers() map[string]MemberResolver {
-	return withBuiltinMembers(t, nil)
-}
-
-// SpecialFunctionType is the the type representing a special function,
-// i.e., a constructor or destructor
-
-type SpecialFunctionType struct {
-	*FunctionType
-	Members *StringMemberOrderedMap
-}
-
-func (t *SpecialFunctionType) GetMembers() map[string]MemberResolver {
 	// TODO: optimize
 	members := make(map[string]MemberResolver, t.Members.Len())
 	t.Members.Foreach(func(name string, loopMember *Member) {
@@ -2338,6 +2327,12 @@ func (t *SpecialFunctionType) GetMembers() map[string]MemberResolver {
 	})
 
 	return withBuiltinMembers(t, members)
+}
+
+// ConstructorFunctionType is the the type representing a constructor function
+
+type ConstructorFunctionType struct {
+	*FunctionType
 }
 
 // CheckedFunctionType is the the type representing a function that checks the arguments,
@@ -4516,8 +4511,8 @@ func (t *TransactionType) EntryPointFunctionType() *FunctionType {
 	}
 }
 
-func (t *TransactionType) PrepareFunctionType() *SpecialFunctionType {
-	return &SpecialFunctionType{
+func (t *TransactionType) PrepareFunctionType() *ConstructorFunctionType {
+	return &ConstructorFunctionType{
 		FunctionType: &FunctionType{
 			Parameters:           t.PrepareParameters,
 			ReturnTypeAnnotation: NewTypeAnnotation(VoidType),
@@ -4525,8 +4520,8 @@ func (t *TransactionType) PrepareFunctionType() *SpecialFunctionType {
 	}
 }
 
-func (*TransactionType) ExecuteFunctionType() *SpecialFunctionType {
-	return &SpecialFunctionType{
+func (*TransactionType) ExecuteFunctionType() *ConstructorFunctionType {
+	return &ConstructorFunctionType{
 		FunctionType: &FunctionType{
 			Parameters:           []*Parameter{},
 			ReturnTypeAnnotation: NewTypeAnnotation(VoidType),

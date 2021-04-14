@@ -1437,7 +1437,7 @@ func (interpreter *Interpreter) compositeInitializerFunction(
 	}
 
 	initializer = initializers[0]
-	functionType := interpreter.Program.Elaboration.SpecialFunctionTypes[initializer].FunctionType
+	functionType := interpreter.Program.Elaboration.ConstructorFunctionTypes[initializer].FunctionType
 
 	parameterList := initializer.FunctionDeclaration.ParameterList
 
