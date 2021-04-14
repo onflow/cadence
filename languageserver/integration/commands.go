@@ -135,7 +135,7 @@ func (i *FlowIntegration) initAccountManager(conn protocol.Conn, args ...interfa
 	}
 
 	name := "AccountManager"
-	code := []byte(contractAccountManager)
+	code := makeManagerCode(fmt.Sprintf(contractAccountManager, serviceAccountName), serviceAddress)
 	update, err := i.isContractDeployed(serviceAddress, name)
 	if err != nil {
 		return nil, errorWithMessage(conn, fmt.Sprintf("can't read contract from account %s", serviceAddress), err)
