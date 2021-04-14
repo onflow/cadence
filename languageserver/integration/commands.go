@@ -354,9 +354,21 @@ func (i *FlowIntegration) createDefaultAccounts(conn protocol.Conn, args ...inte
 		return nil, errorWithMessage(conn, ErrorMessageEmulator, err)
 	}
 
-	accounts := make([]ClientAccount, count)
+	accounts := make([]ClientAccount, count + 1)
 
-	for index := 0; index < count; index++ {
+	// Get service account
+	serviceAccount, err := i.project.EmulatorServiceAccount()
+	if err != nil {
+		return nil, errorWithMessage(conn, ErrorMessageServiceAccount, err)
+	}
+
+	// Add service account to a list of accounts
+	accounts[0] = ClientAccount{
+		Name:    serviceAccountName,
+		Address: serviceAccount.Address(),
+	}
+
+	for index := 1; index < count + 1; index++ {
 		account, err := i.createAccount(conn)
 		if err != nil {
 			return nil, errorWithMessage(conn, ErrorMessageAccountCreate, err)
