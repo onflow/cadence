@@ -4825,7 +4825,9 @@ func (t *RestrictedType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
 // CapabilityType
 
 type CapabilityType struct {
-	BorrowType Type
+	BorrowType          Type
+	memberResolvers     map[string]MemberResolver
+	memberResolversOnce sync.Once
 }
 
 func (*CapabilityType) IsType() {}
@@ -5038,40 +5040,47 @@ The address of the capability
 `
 
 func (t *CapabilityType) GetMembers() map[string]MemberResolver {
-	return withBuiltinMembers(t, map[string]MemberResolver{
-		"borrow": {
-			Kind: common.DeclarationKindFunction,
-			Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
-				return NewPublicFunctionMember(
-					t,
-					identifier,
-					capabilityTypeBorrowFunctionType(t.BorrowType),
-					capabilityTypeBorrowFunctionDocString,
-				)
+	t.initializeMemberResolvers()
+	return t.memberResolvers
+}
+
+func (t *CapabilityType) initializeMemberResolvers() {
+	t.memberResolversOnce.Do(func() {
+		t.memberResolvers = withBuiltinMembers(t, map[string]MemberResolver{
+			"borrow": {
+				Kind: common.DeclarationKindFunction,
+				Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
+					return NewPublicFunctionMember(
+						t,
+						identifier,
+						capabilityTypeBorrowFunctionType(t.BorrowType),
+						capabilityTypeBorrowFunctionDocString,
+					)
+				},
 			},
-		},
-		"check": {
-			Kind: common.DeclarationKindFunction,
-			Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
-				return NewPublicFunctionMember(
-					t,
-					identifier,
-					capabilityTypeCheckFunctionType(t.BorrowType),
-					capabilityTypeCheckFunctionDocString,
-				)
+			"check": {
+				Kind: common.DeclarationKindFunction,
+				Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
+					return NewPublicFunctionMember(
+						t,
+						identifier,
+						capabilityTypeCheckFunctionType(t.BorrowType),
+						capabilityTypeCheckFunctionDocString,
+					)
+				},
 			},
-		},
-		"address": {
-			Kind: common.DeclarationKindField,
-			Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
-				return NewPublicConstantFieldMember(
-					t,
-					identifier,
-					&AddressType{},
-					addressTypeCheckFunctionDocString,
-				)
+			"address": {
+				Kind: common.DeclarationKindField,
+				Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
+					return NewPublicConstantFieldMember(
+						t,
+						identifier,
+						&AddressType{},
+						addressTypeCheckFunctionDocString,
+					)
+				},
 			},
-		},
+		})
 	})
 }
 
