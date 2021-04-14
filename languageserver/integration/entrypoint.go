@@ -45,6 +45,7 @@ type entryPointInfo struct {
 	pragmaArgumentStrings []string
 	pragmaArguments       [][]Argument
 	pragmaSignersStrings  [][]string
+	numberOfSigners       int
 }
 
 func (i *FlowIntegration) updateEntryPointInfoIfNeeded(
@@ -60,6 +61,7 @@ func (i *FlowIntegration) updateEntryPointInfoIfNeeded(
 	var kind entryPointKind
 	var docString string
 	var parameters []*sema.Parameter
+	var numberOfSigners int
 
 	transactionDeclaration := checker.Program.SoleTransactionDeclaration()
 	functionDeclaration := sema.FunctionEntryPointDeclaration(checker.Program)
@@ -70,6 +72,7 @@ func (i *FlowIntegration) updateEntryPointInfoIfNeeded(
 		docString = transactionDeclaration.DocString
 		transactionType := checker.Elaboration.TransactionDeclarationTypes[transactionDeclaration]
 		parameters = transactionType.Parameters
+		numberOfSigners = len(transactionType.PrepareParameters)
 	} else {
 		if functionDeclaration != nil {
 			startPos = &functionDeclaration.StartPos
@@ -124,5 +127,6 @@ func (i *FlowIntegration) updateEntryPointInfoIfNeeded(
 		pragmaArgumentStrings: pragmaArgumentStrings,
 		pragmaArguments:       pragmaArguments,
 		pragmaSignersStrings:  pragmaSigners,
+		numberOfSigners:       numberOfSigners,
 	}
 }
