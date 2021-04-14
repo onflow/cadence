@@ -13,17 +13,27 @@ transaction(name: String, code: [UInt8]) {
 }
 `
 
+const serviceAccountName = "service-account"
+
 const contractAccountManager = `
 pub contract AccountManager{
-    pub event AliasAdded(_ name: String, _ address: Address)
+    pub event AccountAdded(_ name: String, _ address: Address)
 
     pub let accountsByName: {String: Address}
     pub let accountsByAddress: {Address: String}
     pub let names: [String]
+	pub let superUser: String
     
     init(){
-        self.accountsByName = {}
-		self.accountsByAddress = {}
+		let superUser = "%s"
+		let serviceAddress = Address(0xSERVICE_ACCOUNT_ADDRESS)
+
+        self.accountsByName = {
+			superUser: serviceAddress
+		}
+		self.accountsByAddress = {
+			serviceAddress: superUser
+		}
         self.names = [
             "Alice", "Bob", "Charlie",
             "Dave", "Eve", "Faythe",
@@ -33,13 +43,27 @@ pub contract AccountManager{
             "Rupert", "Sybil", "Ted",
             "Victor", "Walter"
         ]
+		self.superUser = superUser
     }
 
     pub fun addAccount(_ address: Address){
-        let name = self.names[self.accountsByName.keys.length]
-        self.accountsByName[name] = address
+        var name: String = ""
+
+        let numberOfAccounts = self.accountsByName.keys.length - 1
+        let numberOfNames = self.names.length
+
+		if (numberOfAccounts >= numberOfNames){
+			// At this point user have created too many accounts, 
+			// so he probably don't care about their names anymore
+			let index = (numberOfAccounts - numberOfNames).toString()
+			name = "zombie-".concat(index)
+		} else {
+        	name = self.names[numberOfAccounts]
+		}
+        
+		self.accountsByName[name] = address
         self.accountsByAddress[address] = name
-        emit AliasAdded(name, address)
+        emit AccountAdded(name, address)
     }
 
     pub fun getAddress(_ name: String): Address?{
