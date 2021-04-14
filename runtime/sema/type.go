@@ -1908,10 +1908,11 @@ func formatFunctionType(
 // FunctionType
 //
 type FunctionType struct {
-	TypeParameters        []*TypeParameter
-	Parameters            []*Parameter
-	ReturnTypeAnnotation  *TypeAnnotation
-	RequiredArgumentCount *int
+	TypeParameters           []*TypeParameter
+	Parameters               []*Parameter
+	ReturnTypeAnnotation     *TypeAnnotation
+	RequiredArgumentCount    *int
+	ArgumentExpressionsCheck ArgumentExpressionsCheck
 }
 
 func RequiredArgumentCount(count int) *int {
@@ -1924,8 +1925,15 @@ func (t *FunctionType) InvocationFunctionType() *FunctionType {
 	return t
 }
 
-func (*FunctionType) CheckArgumentExpressions(_ *Checker, _ []ast.Expression, _ ast.Range) {
-	// NO-OP: no checks for normal functions
+func (t *FunctionType) CheckArgumentExpressions(
+	checker *Checker,
+	argumentExpressions []ast.Expression,
+	invocationRange ast.Range,
+) {
+	if t.ArgumentExpressionsCheck == nil {
+		return
+	}
+	t.ArgumentExpressionsCheck(checker, argumentExpressions, invocationRange)
 }
 
 func (t *FunctionType) String() string {
@@ -2341,19 +2349,6 @@ type ArgumentExpressionsCheck func(
 	invocationRange ast.Range,
 )
 
-type CheckedFunctionType struct {
-	*FunctionType
-	ArgumentExpressionsCheck ArgumentExpressionsCheck
-}
-
-func (t *CheckedFunctionType) CheckArgumentExpressions(
-	checker *Checker,
-	argumentExpressions []ast.Expression,
-	invocationRange ast.Range,
-) {
-	t.ArgumentExpressionsCheck(checker, argumentExpressions, invocationRange)
-}
-
 // BaseTypeActivation is the base activation that contains
 // the types available in programs
 //
@@ -2513,23 +2508,23 @@ func init() {
 				panic(errors.NewUnreachableError())
 			}
 
+			functionType := &FunctionType{
+				Parameters: []*Parameter{
+					{
+						Label:          ArgumentLabelNotRequired,
+						Identifier:     "value",
+						TypeAnnotation: NewTypeAnnotation(NumberType),
+					},
+				},
+				ReturnTypeAnnotation:     NewTypeAnnotation(numberType),
+				ArgumentExpressionsCheck: numberFunctionArgumentExpressionsChecker(numberType),
+			}
+
 			BaseValueActivation.Set(
 				typeName,
 				baseFunctionVariable(
 					typeName,
-					&CheckedFunctionType{
-						FunctionType: &FunctionType{
-							Parameters: []*Parameter{
-								{
-									Label:          ArgumentLabelNotRequired,
-									Identifier:     "value",
-									TypeAnnotation: NewTypeAnnotation(NumberType),
-								},
-							},
-							ReturnTypeAnnotation: NewTypeAnnotation(numberType),
-						},
-						ArgumentExpressionsCheck: numberFunctionArgumentExpressionsChecker(numberType),
-					},
+					functionType,
 				),
 			)
 		}
@@ -2560,34 +2555,33 @@ func init() {
 		panic(errors.NewUnreachableError())
 	}
 
+	functionType := &FunctionType{
+		Parameters: []*Parameter{
+			{
+				Label:          ArgumentLabelNotRequired,
+				Identifier:     "value",
+				TypeAnnotation: NewTypeAnnotation(IntegerType),
+			},
+		},
+		ReturnTypeAnnotation: NewTypeAnnotation(addressType),
+		ArgumentExpressionsCheck: func(checker *Checker, argumentExpressions []ast.Expression, _ ast.Range) {
+			if len(argumentExpressions) < 1 {
+				return
+			}
+
+			intExpression, ok := argumentExpressions[0].(*ast.IntegerExpression)
+			if !ok {
+				return
+			}
+
+			CheckAddressLiteral(intExpression, checker.report)
+		},
+	}
 	BaseValueActivation.Set(
 		typeName,
 		baseFunctionVariable(
 			typeName,
-			&CheckedFunctionType{
-				FunctionType: &FunctionType{
-					Parameters: []*Parameter{
-						{
-							Label:          ArgumentLabelNotRequired,
-							Identifier:     "value",
-							TypeAnnotation: NewTypeAnnotation(IntegerType),
-						},
-					},
-					ReturnTypeAnnotation: NewTypeAnnotation(addressType),
-				},
-				ArgumentExpressionsCheck: func(checker *Checker, argumentExpressions []ast.Expression, _ ast.Range) {
-					if len(argumentExpressions) < 1 {
-						return
-					}
-
-					intExpression, ok := argumentExpressions[0].(*ast.IntegerExpression)
-					if !ok {
-						return
-					}
-
-					CheckAddressLiteral(intExpression, checker.report)
-				},
-			},
+			functionType,
 		),
 	)
 }

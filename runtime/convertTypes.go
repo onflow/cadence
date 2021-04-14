@@ -57,8 +57,6 @@ func ExportType(t sema.Type, results map[sema.TypeID]cadence.Type) cadence.Type 
 			return exportReferenceType(t, results)
 		case *sema.RestrictedType:
 			return exportRestrictedType(t, results)
-		case *sema.CheckedFunctionType:
-			return exportFunctionType(t.FunctionType, results)
 		case *sema.CapabilityType:
 			return exportCapabilityType(t, results)
 		}
