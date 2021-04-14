@@ -63,10 +63,6 @@ func (i FlowIntegration) updateContractInfoIfNeeded(
 	contractDeclaration := checker.Program.SoleContractDeclaration()
 	contractInterfaceDeclaration := checker.Program.SoleContractInterfaceDeclaration()
 
-	// initializer := initializers[0]
-	// functionType := interpreter.Program.Elaboration.SpecialFunctionTypes[initializer].FunctionType
-	//parameterList := initializer.FunctionDeclaration.ParameterList
-
 	if contractDeclaration != nil {
 		name = contractDeclaration.Identifier.Identifier
 		startPos = &contractDeclaration.StartPos
