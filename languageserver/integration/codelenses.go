@@ -97,7 +97,6 @@ func (i *FlowIntegration) showDeployContractAction(
 		return []*protocol.CodeLens{emulatorStateLens}, nil
 	}
 
-	// TODO: resolve check for amount of signers equals to provided by pragma
 	if len(signersList) == 0 {
 		signersList = append(signersList, []string{i.activeAccount.Name})
 	}
@@ -124,14 +123,15 @@ func (i *FlowIntegration) entryPointActions(
 	i.updateEntryPointInfoIfNeeded(uri, version, checker)
 
 	entryPointInfo := i.entryPointInfo[uri]
-	kind := entryPointInfo.kind
-
-	if kind == entryPointKindUnknown || entryPointInfo.startPos == nil {
+	if entryPointInfo.kind == entryPointKindUnknown || entryPointInfo.startPos == nil {
 		return nil, nil
 	}
 
+	kind := entryPointInfo.kind
 	position := *entryPointInfo.startPos
 	argumentLists := entryPointInfo.pragmaArguments[:]
+	signersList := entryPointInfo.pragmaSignersStrings[:]
+	requiredNumberOfSigners := entryPointInfo.numberOfSigners
 
 	codelensRange := conversion.ASTToProtocolRange(position, position)
 	var codeLenses []*protocol.CodeLens
@@ -150,28 +150,39 @@ func (i *FlowIntegration) entryPointActions(
 		argumentLists = append(argumentLists, []Argument{})
 	}
 
-	signersList := entryPointInfo.pragmaSignersStrings[:]
-	// TODO: resolve check for amount of signers equals to provided by pragma
 	if len(signersList) == 0 {
 		signersList = append(signersList, []string{i.activeAccount.Name})
 	}
 
 	for index, argumentList := range argumentLists {
-		switch entryPointInfo.kind {
+		pragmaArguments := entryPointInfo.pragmaArgumentStrings[index]
+
+		switch kind {
 		case entryPointKindScript:
-			pragmaArguments := entryPointInfo.pragmaArgumentStrings[index]
 			codeLens := i.scriptCodeLenses(uri, codelensRange, pragmaArguments, argumentList)
 			codeLenses = append(codeLenses, codeLens)
 
 		case entryPointKindTransaction:
 			for _, signers := range signersList {
+
+				numberOfSigners := len(signers)
+				if requiredNumberOfSigners > numberOfSigners{
+					title := fmt.Sprintf(
+						"%s Not enough signers. Required: %v, passed: %v",
+						prefixError,
+						requiredNumberOfSigners,
+						numberOfSigners,
+					)
+					codeLenses = append(codeLenses, makeActionlessCodelens(title, codelensRange))
+					continue
+				}
+
 				var codeLens *protocol.CodeLens
 				accounts, absentAccounts := i.resolveAccounts(signers)
 
 				if len(absentAccounts) > 0 {
 					codeLens = i.showAbsentAccounts(absentAccounts, codelensRange)
 				} else {
-					pragmaArguments := entryPointInfo.pragmaArgumentStrings[index]
 					codeLens = i.transactionCodeLenses(uri, codelensRange, pragmaArguments, argumentList, signers, accounts)
 				}
 
@@ -242,7 +253,6 @@ func (i *FlowIntegration) checkEmulatorState(codelensRange protocol.Range) *prot
 			"%s Emulator is Offline. Click here to start it",
 			prefixOffline,
 		)
-		// TODO: Check if arguments are needed
 		codeLens = makeCodeLens(ClientStartEmulator, title, codelensRange, nil)
 	}
 
