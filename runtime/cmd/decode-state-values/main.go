@@ -22,6 +22,7 @@ package main
 
 import (
 	"bufio"
+	"compress/gzip"
 	"encoding/hex"
 	"encoding/json"
 	"flag"
@@ -39,6 +40,7 @@ import (
 )
 
 var roundtripFlag = flag.Bool("roundtrip", false, "encode and decode the decoded value and ensure equality")
+var gzipFlag = flag.Bool("gzip", false, "set true if input file is gzipped")
 
 type keyPart struct {
 	Value string
@@ -164,7 +166,18 @@ func main() {
 	bar := progressbar.DefaultBytes(fileSize, "(processed JSON bytes)")
 
 	progressReader := progressbar.NewReader(file, bar)
-	reader := bufio.NewReader(&progressReader)
+
+	var inputReader io.Reader = &progressReader
+	if *gzipFlag {
+		gzipReader, err := gzip.NewReader(inputReader)
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer gzipReader.Close()
+		inputReader = gzipReader
+	}
+
+	reader := bufio.NewReader(inputReader)
 
 	decoder := json.NewDecoder(reader)
 	for {
