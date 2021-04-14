@@ -212,7 +212,7 @@ func (t *RestrictedStaticType) Equal(other StaticType) bool {
 
 outer:
 	for _, restriction := range t.Restrictions {
-		for _, otherRestriction := range t.Restrictions {
+		for _, otherRestriction := range otherRestrictedType.Restrictions {
 			if restriction.Equal(otherRestriction) {
 				continue outer
 			}
