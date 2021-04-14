@@ -957,65 +957,82 @@ var (
 	IntType = NewNumericType(IntTypeName)
 
 	// Int8Type represents the 8-bit signed integer type `Int8`
-	Int8Type = NewNumericType(Int8TypeName).WithIntRange(Int8TypeMinInt, Int8TypeMaxInt)
+	Int8Type = NewNumericType(Int8TypeName).
+			WithIntRange(Int8TypeMinInt, Int8TypeMaxInt)
 
 	// Int16Type represents the 16-bit signed integer type `Int16`
-	Int16Type = NewNumericType(Int16TypeName).WithIntRange(Int16TypeMinInt, Int16TypeMaxInt)
+	Int16Type = NewNumericType(Int16TypeName).
+			WithIntRange(Int16TypeMinInt, Int16TypeMaxInt)
 
 	// Int32Type represents the 32-bit signed integer type `Int32`
-	Int32Type = NewNumericType(Int32TypeName).WithIntRange(Int32TypeMinInt, Int32TypeMaxInt)
+	Int32Type = NewNumericType(Int32TypeName).
+			WithIntRange(Int32TypeMinInt, Int32TypeMaxInt)
 
 	// Int64Type represents the 64-bit signed integer type `Int64`
-	Int64Type = NewNumericType(Int64TypeName).WithIntRange(Int64TypeMinInt, Int64TypeMaxInt)
+	Int64Type = NewNumericType(Int64TypeName).
+			WithIntRange(Int64TypeMinInt, Int64TypeMaxInt)
 
 	// Int128Type represents the 128-bit signed integer type `Int128`
-	Int128Type = NewNumericType(Int128TypeName).WithIntRange(Int128TypeMinIntBig, Int128TypeMaxIntBig)
+	Int128Type = NewNumericType(Int128TypeName).
+			WithIntRange(Int128TypeMinIntBig, Int128TypeMaxIntBig)
 
 	// Int256Type represents the 256-bit signed integer type `Int256`
-	Int256Type = NewNumericType(Int256TypeName).WithIntRange(Int256TypeMinIntBig, Int256TypeMaxIntBig)
+	Int256Type = NewNumericType(Int256TypeName).
+			WithIntRange(Int256TypeMinIntBig, Int256TypeMaxIntBig)
 
 	// UIntType represents the arbitrary-precision unsigned integer type `UInt`
-	UIntType = NewNumericType(UIntTypeName).WithIntRange(UIntTypeMin, nil)
+	UIntType = NewNumericType(UIntTypeName).
+			WithIntRange(UIntTypeMin, nil)
 
 	// UInt8Type represents the 8-bit unsigned integer type `UInt8`
 	// which checks for overflow and underflow
-	UInt8Type = NewNumericType(UInt8TypeName).WithIntRange(UInt8TypeMinInt, UInt8TypeMaxInt)
+	UInt8Type = NewNumericType(UInt8TypeName).
+			WithIntRange(UInt8TypeMinInt, UInt8TypeMaxInt)
 
 	// UInt16Type represents the 16-bit unsigned integer type `UInt16`
 	// which checks for overflow and underflow
-	UInt16Type = NewNumericType(UInt16TypeName).WithIntRange(UInt16TypeMinInt, UInt16TypeMaxInt)
+	UInt16Type = NewNumericType(UInt16TypeName).
+			WithIntRange(UInt16TypeMinInt, UInt16TypeMaxInt)
 
 	// UInt32Type represents the 32-bit unsigned integer type `UInt32`
 	// which checks for overflow and underflow
-	UInt32Type = NewNumericType(UInt32TypeName).WithIntRange(UInt32TypeMinInt, UInt32TypeMaxInt)
+	UInt32Type = NewNumericType(UInt32TypeName).
+			WithIntRange(UInt32TypeMinInt, UInt32TypeMaxInt)
 
 	// UInt64Type represents the 64-bit unsigned integer type `UInt64`
 	// which checks for overflow and underflow
-	UInt64Type = NewNumericType(UInt64TypeName).WithIntRange(UInt64TypeMinInt, UInt64TypeMaxInt)
+	UInt64Type = NewNumericType(UInt64TypeName).
+			WithIntRange(UInt64TypeMinInt, UInt64TypeMaxInt)
 
 	// UInt128Type represents the 128-bit unsigned integer type `UInt128`
 	// which checks for overflow and underflow
-	UInt128Type = NewNumericType(UInt128TypeName).WithIntRange(UInt128TypeMinIntBig, UInt128TypeMaxIntBig)
+	UInt128Type = NewNumericType(UInt128TypeName).
+			WithIntRange(UInt128TypeMinIntBig, UInt128TypeMaxIntBig)
 
 	// UInt256Type represents the 256-bit unsigned integer type `UInt256`
 	// which checks for overflow and underflow
-	UInt256Type = NewNumericType(UInt256TypeName).WithIntRange(UInt256TypeMinIntBig, UInt256TypeMaxIntBig)
+	UInt256Type = NewNumericType(UInt256TypeName).
+			WithIntRange(UInt256TypeMinIntBig, UInt256TypeMaxIntBig)
 
 	// Word8Type represents the 8-bit unsigned integer type `Word8`
 	// which does NOT check for overflow and underflow
-	Word8Type = NewNumericType(Word8TypeName).WithIntRange(Word8TypeMinInt, Word8TypeMaxInt)
+	Word8Type = NewNumericType(Word8TypeName).
+			WithIntRange(Word8TypeMinInt, Word8TypeMaxInt)
 
 	// Word16Type represents the 16-bit unsigned integer type `Word16`
 	// which does NOT check for overflow and underflow
-	Word16Type = NewNumericType(Word16TypeName).WithIntRange(Word16TypeMinInt, Word16TypeMaxInt)
+	Word16Type = NewNumericType(Word16TypeName).
+			WithIntRange(Word16TypeMinInt, Word16TypeMaxInt)
 
 	// Word32Type represents the 32-bit unsigned integer type `Word32`
 	// which does NOT check for overflow and underflow
-	Word32Type = NewNumericType(Word32TypeName).WithIntRange(Word32TypeMinInt, Word32TypeMaxInt)
+	Word32Type = NewNumericType(Word32TypeName).
+			WithIntRange(Word32TypeMinInt, Word32TypeMaxInt)
 
 	// Word64Type represents the 64-bit unsigned integer type `Word64`
 	// which does NOT check for overflow and underflow
-	Word64Type = NewNumericType(Word64TypeName).WithIntRange(Word64TypeMinInt, Word64TypeMaxInt)
+	Word64Type = NewNumericType(Word64TypeName).
+			WithIntRange(Word64TypeMinInt, Word64TypeMaxInt)
 
 	// FixedPointType represents the super-type of all fixed-point types
 	FixedPointType = NewNumericType(FixedPointTypeName)
@@ -2482,6 +2499,15 @@ var AllNumberTypes = append(
 	SignedNumberType,
 )
 
+const numberTypeMinFieldName = "min"
+const numberTypeMaxFieldName = "max"
+
+const numberTypeMinFieldDocString = `The minimum integer of this type`
+const numberTypeMaxFieldDocString = `The maximum integer of this type`
+
+const fixedPointNumberTypeMinFieldDocString = `The minimum fixed-point value of this type`
+const fixedPointNumberTypeMaxFieldDocString = `The maximum fixed-point value of this type`
+
 func init() {
 
 	// Declare a conversion function for all (leaf) number types
@@ -2513,6 +2539,68 @@ func init() {
 				},
 				ReturnTypeAnnotation:     NewTypeAnnotation(numberType),
 				ArgumentExpressionsCheck: numberFunctionArgumentExpressionsChecker(numberType),
+			}
+
+			addMember := func(member *Member) {
+				if functionType.Members == nil {
+					functionType.Members = NewStringMemberOrderedMap()
+				}
+				name := member.Identifier.Identifier
+				_, exists := functionType.Members.Get(name)
+				if exists {
+					panic(errors.NewUnreachableError())
+				}
+				functionType.Members.Set(name, member)
+			}
+
+			switch numberType := numberType.(type) {
+			case *NumericType:
+				if numberType.minInt != nil {
+					addMember(NewPublicConstantFieldMember(
+						functionType,
+						numberTypeMinFieldName,
+						numberType,
+						numberTypeMinFieldDocString,
+					))
+				}
+
+				if numberType.maxInt != nil {
+					addMember(NewPublicConstantFieldMember(
+						functionType,
+						numberTypeMaxFieldName,
+						numberType,
+						numberTypeMaxFieldDocString,
+					))
+				}
+
+			case *FixedPointNumericType:
+				if numberType.minInt != nil {
+					// If a minimum integer is set, a minimum fractional must be set
+					if numberType.minFractional == nil {
+						panic(errors.NewUnreachableError())
+					}
+
+					addMember(NewPublicConstantFieldMember(
+						functionType,
+						numberTypeMinFieldName,
+						numberType,
+						fixedPointNumberTypeMinFieldDocString,
+					))
+				}
+
+				if numberType.maxInt != nil {
+					// If a maximum integer is set, a maximum fractional must be set
+					if numberType.maxFractional == nil {
+						panic(errors.NewUnreachableError())
+					}
+
+					addMember(NewPublicConstantFieldMember(
+						functionType,
+						numberTypeMaxFieldName,
+						numberType,
+						fixedPointNumberTypeMaxFieldDocString,
+					))
+				}
 			}
 
 			BaseValueActivation.Set(
