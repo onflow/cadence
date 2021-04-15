@@ -2351,7 +2351,9 @@ func isMigrated(expr ast.Expression) bool {
 	case *ast.ArrayExpression,
 		*ast.IntegerExpression,
 		*ast.BoolExpression,
-		*ast.BinaryExpression:
+		*ast.BinaryExpression,
+		*ast.StringExpression,
+		*ast.DictionaryExpression:
 		return true
 	default:
 		return false
