@@ -20,6 +20,7 @@ package checker
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -286,6 +287,109 @@ func TestCheckIntegerBinaryOperations(t *testing.T) {
 				})
 			}
 		}
+	}
+}
+
+func TestCheckSaturatedArithmeticFunctions(t *testing.T) {
+
+	t.Parallel()
+
+	type testCase struct {
+		ty                              sema.Type
+		add, subtract, multiply, divide bool
+	}
+
+	testCases := []testCase{
+		{
+			ty:       sema.IntType,
+			add:      false,
+			subtract: false,
+			multiply: false,
+			divide:   false,
+		},
+		{
+			ty:       sema.UIntType,
+			add:      false,
+			subtract: true,
+			multiply: false,
+			divide:   false,
+		},
+	}
+
+	for _, ty := range append(
+		sema.AllSignedIntegerTypes[:],
+		sema.AllSignedFixedPointTypes...,
+	) {
+
+		if ty == sema.IntType {
+			continue
+		}
+
+		testCases = append(testCases, testCase{
+			ty:       ty,
+			add:      true,
+			subtract: true,
+			multiply: true,
+			divide:   true,
+		})
+	}
+
+	for _, ty := range append(
+		sema.AllUnsignedIntegerTypes[:],
+		sema.AllUnsignedFixedPointTypes...,
+	) {
+
+		if ty == sema.UIntType || strings.HasPrefix(ty.String(), "Word") {
+			continue
+		}
+
+		testCases = append(testCases, testCase{
+			ty:       ty,
+			add:      true,
+			subtract: true,
+			multiply: true,
+			divide:   false,
+		})
+	}
+
+	test := func(ty sema.Type, method string, expected bool) {
+
+		method = fmt.Sprintf("saturating%s", method)
+
+		t.Run(fmt.Sprintf("%s %s", ty, method), func(t *testing.T) {
+
+			_, err := ParseAndCheckWithPanic(t,
+				fmt.Sprintf(
+					`
+                      fun test(): %[1]s {
+                          let a: %[1]s = panic("")
+                          let b: %[1]s = panic("")
+                          return a.%[2]s(b)
+                      }
+                    `,
+					ty,
+					method,
+				),
+			)
+
+			if expected {
+				errs := ExpectCheckerErrors(t, err, 1)
+
+				assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
+			} else {
+				errs := ExpectCheckerErrors(t, err, 2)
+
+				assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
+				assert.IsType(t, &sema.NotDeclaredMemberError{}, errs[1])
+			}
+		})
+	}
+
+	for _, testCase := range testCases {
+		test(testCase.ty, "Add", testCase.add)
+		test(testCase.ty, "Subtract", testCase.subtract)
+		test(testCase.ty, "Multiply", testCase.multiply)
+		test(testCase.ty, "Divide", testCase.divide)
 	}
 }
 
