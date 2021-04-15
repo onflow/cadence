@@ -1419,6 +1419,38 @@ func (v Int8Value) GetMember(_ *Interpreter, _ func() LocationRange, name string
 				return ByteSliceToByteArrayValue(v.ToBigEndianBytes())
 			},
 		)
+
+	case sema.NumericTypeSaturatingAddFunctionName:
+		return NewHostFunctionValue(
+			func(invocation Invocation) Value {
+				other := invocation.Arguments[0].(NumberValue)
+				return v.SaturatingPlus(other)
+			},
+		)
+
+	case sema.NumericTypeSaturatingSubtractFunctionName:
+		return NewHostFunctionValue(
+			func(invocation Invocation) Value {
+				other := invocation.Arguments[0].(NumberValue)
+				return v.SaturatingMinus(other)
+			},
+		)
+
+	case sema.NumericTypeSaturatingMultiplyFunctionName:
+		return NewHostFunctionValue(
+			func(invocation Invocation) Value {
+				other := invocation.Arguments[0].(NumberValue)
+				return v.SaturatingMul(other)
+			},
+		)
+
+	case sema.NumericTypeSaturatingDivideFunctionName:
+		return NewHostFunctionValue(
+			func(invocation Invocation) Value {
+				other := invocation.Arguments[0].(NumberValue)
+				return v.SaturatingDiv(other)
+			},
+		)
 	}
 
 	return nil
@@ -1727,6 +1759,38 @@ func (v Int16Value) GetMember(_ *Interpreter, _ func() LocationRange, name strin
 		return NewHostFunctionValue(
 			func(invocation Invocation) Value {
 				return ByteSliceToByteArrayValue(v.ToBigEndianBytes())
+			},
+		)
+
+	case sema.NumericTypeSaturatingAddFunctionName:
+		return NewHostFunctionValue(
+			func(invocation Invocation) Value {
+				other := invocation.Arguments[0].(NumberValue)
+				return v.SaturatingPlus(other)
+			},
+		)
+
+	case sema.NumericTypeSaturatingSubtractFunctionName:
+		return NewHostFunctionValue(
+			func(invocation Invocation) Value {
+				other := invocation.Arguments[0].(NumberValue)
+				return v.SaturatingMinus(other)
+			},
+		)
+
+	case sema.NumericTypeSaturatingMultiplyFunctionName:
+		return NewHostFunctionValue(
+			func(invocation Invocation) Value {
+				other := invocation.Arguments[0].(NumberValue)
+				return v.SaturatingMul(other)
+			},
+		)
+
+	case sema.NumericTypeSaturatingDivideFunctionName:
+		return NewHostFunctionValue(
+			func(invocation Invocation) Value {
+				other := invocation.Arguments[0].(NumberValue)
+				return v.SaturatingDiv(other)
 			},
 		)
 	}
@@ -2041,6 +2105,38 @@ func (v Int32Value) GetMember(_ *Interpreter, _ func() LocationRange, name strin
 				return ByteSliceToByteArrayValue(v.ToBigEndianBytes())
 			},
 		)
+
+	case sema.NumericTypeSaturatingAddFunctionName:
+		return NewHostFunctionValue(
+			func(invocation Invocation) Value {
+				other := invocation.Arguments[0].(NumberValue)
+				return v.SaturatingPlus(other)
+			},
+		)
+
+	case sema.NumericTypeSaturatingSubtractFunctionName:
+		return NewHostFunctionValue(
+			func(invocation Invocation) Value {
+				other := invocation.Arguments[0].(NumberValue)
+				return v.SaturatingMinus(other)
+			},
+		)
+
+	case sema.NumericTypeSaturatingMultiplyFunctionName:
+		return NewHostFunctionValue(
+			func(invocation Invocation) Value {
+				other := invocation.Arguments[0].(NumberValue)
+				return v.SaturatingMul(other)
+			},
+		)
+
+	case sema.NumericTypeSaturatingDivideFunctionName:
+		return NewHostFunctionValue(
+			func(invocation Invocation) Value {
+				other := invocation.Arguments[0].(NumberValue)
+				return v.SaturatingDiv(other)
+			},
+		)
 	}
 
 	return nil
@@ -2350,6 +2446,38 @@ func (v Int64Value) GetMember(_ *Interpreter, _ func() LocationRange, name strin
 		return NewHostFunctionValue(
 			func(invocation Invocation) Value {
 				return ByteSliceToByteArrayValue(v.ToBigEndianBytes())
+			},
+		)
+
+	case sema.NumericTypeSaturatingAddFunctionName:
+		return NewHostFunctionValue(
+			func(invocation Invocation) Value {
+				other := invocation.Arguments[0].(NumberValue)
+				return v.SaturatingPlus(other)
+			},
+		)
+
+	case sema.NumericTypeSaturatingSubtractFunctionName:
+		return NewHostFunctionValue(
+			func(invocation Invocation) Value {
+				other := invocation.Arguments[0].(NumberValue)
+				return v.SaturatingMinus(other)
+			},
+		)
+
+	case sema.NumericTypeSaturatingMultiplyFunctionName:
+		return NewHostFunctionValue(
+			func(invocation Invocation) Value {
+				other := invocation.Arguments[0].(NumberValue)
+				return v.SaturatingMul(other)
+			},
+		)
+
+	case sema.NumericTypeSaturatingDivideFunctionName:
+		return NewHostFunctionValue(
+			func(invocation Invocation) Value {
+				other := invocation.Arguments[0].(NumberValue)
+				return v.SaturatingDiv(other)
 			},
 		)
 	}
@@ -2734,6 +2862,38 @@ func (v Int128Value) GetMember(_ *Interpreter, _ func() LocationRange, name stri
 				return ByteSliceToByteArrayValue(v.ToBigEndianBytes())
 			},
 		)
+
+	case sema.NumericTypeSaturatingAddFunctionName:
+		return NewHostFunctionValue(
+			func(invocation Invocation) Value {
+				other := invocation.Arguments[0].(NumberValue)
+				return v.SaturatingPlus(other)
+			},
+		)
+
+	case sema.NumericTypeSaturatingSubtractFunctionName:
+		return NewHostFunctionValue(
+			func(invocation Invocation) Value {
+				other := invocation.Arguments[0].(NumberValue)
+				return v.SaturatingMinus(other)
+			},
+		)
+
+	case sema.NumericTypeSaturatingMultiplyFunctionName:
+		return NewHostFunctionValue(
+			func(invocation Invocation) Value {
+				other := invocation.Arguments[0].(NumberValue)
+				return v.SaturatingMul(other)
+			},
+		)
+
+	case sema.NumericTypeSaturatingDivideFunctionName:
+		return NewHostFunctionValue(
+			func(invocation Invocation) Value {
+				other := invocation.Arguments[0].(NumberValue)
+				return v.SaturatingDiv(other)
+			},
+		)
 	}
 
 	return nil
@@ -3115,6 +3275,38 @@ func (v Int256Value) GetMember(_ *Interpreter, _ func() LocationRange, name stri
 				return ByteSliceToByteArrayValue(v.ToBigEndianBytes())
 			},
 		)
+
+	case sema.NumericTypeSaturatingAddFunctionName:
+		return NewHostFunctionValue(
+			func(invocation Invocation) Value {
+				other := invocation.Arguments[0].(NumberValue)
+				return v.SaturatingPlus(other)
+			},
+		)
+
+	case sema.NumericTypeSaturatingSubtractFunctionName:
+		return NewHostFunctionValue(
+			func(invocation Invocation) Value {
+				other := invocation.Arguments[0].(NumberValue)
+				return v.SaturatingMinus(other)
+			},
+		)
+
+	case sema.NumericTypeSaturatingMultiplyFunctionName:
+		return NewHostFunctionValue(
+			func(invocation Invocation) Value {
+				other := invocation.Arguments[0].(NumberValue)
+				return v.SaturatingMul(other)
+			},
+		)
+
+	case sema.NumericTypeSaturatingDivideFunctionName:
+		return NewHostFunctionValue(
+			func(invocation Invocation) Value {
+				other := invocation.Arguments[0].(NumberValue)
+				return v.SaturatingDiv(other)
+			},
+		)
 	}
 
 	return nil
@@ -3374,6 +3566,14 @@ func (v UIntValue) GetMember(_ *Interpreter, _ func() LocationRange, name string
 				return ByteSliceToByteArrayValue(v.ToBigEndianBytes())
 			},
 		)
+
+	case sema.NumericTypeSaturatingSubtractFunctionName:
+		return NewHostFunctionValue(
+			func(invocation Invocation) Value {
+				other := invocation.Arguments[0].(NumberValue)
+				return v.SaturatingMinus(other)
+			},
+		)
 	}
 
 	return nil
@@ -3611,6 +3811,30 @@ func (v UInt8Value) GetMember(_ *Interpreter, _ func() LocationRange, name strin
 				return ByteSliceToByteArrayValue(v.ToBigEndianBytes())
 			},
 		)
+
+	case sema.NumericTypeSaturatingAddFunctionName:
+		return NewHostFunctionValue(
+			func(invocation Invocation) Value {
+				other := invocation.Arguments[0].(NumberValue)
+				return v.SaturatingPlus(other)
+			},
+		)
+
+	case sema.NumericTypeSaturatingSubtractFunctionName:
+		return NewHostFunctionValue(
+			func(invocation Invocation) Value {
+				other := invocation.Arguments[0].(NumberValue)
+				return v.SaturatingMinus(other)
+			},
+		)
+
+	case sema.NumericTypeSaturatingMultiplyFunctionName:
+		return NewHostFunctionValue(
+			func(invocation Invocation) Value {
+				other := invocation.Arguments[0].(NumberValue)
+				return v.SaturatingMul(other)
+			},
+		)
 	}
 
 	return nil
@@ -3844,6 +4068,30 @@ func (v UInt16Value) GetMember(_ *Interpreter, _ func() LocationRange, name stri
 		return NewHostFunctionValue(
 			func(invocation Invocation) Value {
 				return ByteSliceToByteArrayValue(v.ToBigEndianBytes())
+			},
+		)
+
+	case sema.NumericTypeSaturatingAddFunctionName:
+		return NewHostFunctionValue(
+			func(invocation Invocation) Value {
+				other := invocation.Arguments[0].(NumberValue)
+				return v.SaturatingPlus(other)
+			},
+		)
+
+	case sema.NumericTypeSaturatingSubtractFunctionName:
+		return NewHostFunctionValue(
+			func(invocation Invocation) Value {
+				other := invocation.Arguments[0].(NumberValue)
+				return v.SaturatingMinus(other)
+			},
+		)
+
+	case sema.NumericTypeSaturatingMultiplyFunctionName:
+		return NewHostFunctionValue(
+			func(invocation Invocation) Value {
+				other := invocation.Arguments[0].(NumberValue)
+				return v.SaturatingMul(other)
 			},
 		)
 	}
@@ -4082,6 +4330,30 @@ func (v UInt32Value) GetMember(_ *Interpreter, _ func() LocationRange, name stri
 		return NewHostFunctionValue(
 			func(invocation Invocation) Value {
 				return ByteSliceToByteArrayValue(v.ToBigEndianBytes())
+			},
+		)
+
+	case sema.NumericTypeSaturatingAddFunctionName:
+		return NewHostFunctionValue(
+			func(invocation Invocation) Value {
+				other := invocation.Arguments[0].(NumberValue)
+				return v.SaturatingPlus(other)
+			},
+		)
+
+	case sema.NumericTypeSaturatingSubtractFunctionName:
+		return NewHostFunctionValue(
+			func(invocation Invocation) Value {
+				other := invocation.Arguments[0].(NumberValue)
+				return v.SaturatingMinus(other)
+			},
+		)
+
+	case sema.NumericTypeSaturatingMultiplyFunctionName:
+		return NewHostFunctionValue(
+			func(invocation Invocation) Value {
+				other := invocation.Arguments[0].(NumberValue)
+				return v.SaturatingMul(other)
 			},
 		)
 	}
@@ -4323,6 +4595,30 @@ func (v UInt64Value) GetMember(_ *Interpreter, _ func() LocationRange, name stri
 		return NewHostFunctionValue(
 			func(invocation Invocation) Value {
 				return ByteSliceToByteArrayValue(v.ToBigEndianBytes())
+			},
+		)
+
+	case sema.NumericTypeSaturatingAddFunctionName:
+		return NewHostFunctionValue(
+			func(invocation Invocation) Value {
+				other := invocation.Arguments[0].(NumberValue)
+				return v.SaturatingPlus(other)
+			},
+		)
+
+	case sema.NumericTypeSaturatingSubtractFunctionName:
+		return NewHostFunctionValue(
+			func(invocation Invocation) Value {
+				other := invocation.Arguments[0].(NumberValue)
+				return v.SaturatingMinus(other)
+			},
+		)
+
+	case sema.NumericTypeSaturatingMultiplyFunctionName:
+		return NewHostFunctionValue(
+			func(invocation Invocation) Value {
+				other := invocation.Arguments[0].(NumberValue)
+				return v.SaturatingMul(other)
 			},
 		)
 	}
@@ -4645,6 +4941,30 @@ func (v UInt128Value) GetMember(_ *Interpreter, _ func() LocationRange, name str
 				return ByteSliceToByteArrayValue(v.ToBigEndianBytes())
 			},
 		)
+
+	case sema.NumericTypeSaturatingAddFunctionName:
+		return NewHostFunctionValue(
+			func(invocation Invocation) Value {
+				other := invocation.Arguments[0].(NumberValue)
+				return v.SaturatingPlus(other)
+			},
+		)
+
+	case sema.NumericTypeSaturatingSubtractFunctionName:
+		return NewHostFunctionValue(
+			func(invocation Invocation) Value {
+				other := invocation.Arguments[0].(NumberValue)
+				return v.SaturatingMinus(other)
+			},
+		)
+
+	case sema.NumericTypeSaturatingMultiplyFunctionName:
+		return NewHostFunctionValue(
+			func(invocation Invocation) Value {
+				other := invocation.Arguments[0].(NumberValue)
+				return v.SaturatingMul(other)
+			},
+		)
 	}
 
 	return nil
@@ -4962,6 +5282,30 @@ func (v UInt256Value) GetMember(_ *Interpreter, _ func() LocationRange, name str
 		return NewHostFunctionValue(
 			func(invocation Invocation) Value {
 				return ByteSliceToByteArrayValue(v.ToBigEndianBytes())
+			},
+		)
+
+	case sema.NumericTypeSaturatingAddFunctionName:
+		return NewHostFunctionValue(
+			func(invocation Invocation) Value {
+				other := invocation.Arguments[0].(NumberValue)
+				return v.SaturatingPlus(other)
+			},
+		)
+
+	case sema.NumericTypeSaturatingSubtractFunctionName:
+		return NewHostFunctionValue(
+			func(invocation Invocation) Value {
+				other := invocation.Arguments[0].(NumberValue)
+				return v.SaturatingMinus(other)
+			},
+		)
+
+	case sema.NumericTypeSaturatingMultiplyFunctionName:
+		return NewHostFunctionValue(
+			func(invocation Invocation) Value {
+				other := invocation.Arguments[0].(NumberValue)
+				return v.SaturatingMul(other)
 			},
 		)
 	}
@@ -5936,6 +6280,38 @@ func (v Fix64Value) GetMember(_ *Interpreter, _ func() LocationRange, name strin
 				return ByteSliceToByteArrayValue(v.ToBigEndianBytes())
 			},
 		)
+
+	case sema.NumericTypeSaturatingAddFunctionName:
+		return NewHostFunctionValue(
+			func(invocation Invocation) Value {
+				other := invocation.Arguments[0].(NumberValue)
+				return v.SaturatingPlus(other)
+			},
+		)
+
+	case sema.NumericTypeSaturatingSubtractFunctionName:
+		return NewHostFunctionValue(
+			func(invocation Invocation) Value {
+				other := invocation.Arguments[0].(NumberValue)
+				return v.SaturatingMinus(other)
+			},
+		)
+
+	case sema.NumericTypeSaturatingMultiplyFunctionName:
+		return NewHostFunctionValue(
+			func(invocation Invocation) Value {
+				other := invocation.Arguments[0].(NumberValue)
+				return v.SaturatingMul(other)
+			},
+		)
+
+	case sema.NumericTypeSaturatingDivideFunctionName:
+		return NewHostFunctionValue(
+			func(invocation Invocation) Value {
+				other := invocation.Arguments[0].(NumberValue)
+				return v.SaturatingDiv(other)
+			},
+		)
 	}
 
 	return nil
@@ -6186,6 +6562,30 @@ func (v UFix64Value) GetMember(_ *Interpreter, _ func() LocationRange, name stri
 		return NewHostFunctionValue(
 			func(invocation Invocation) Value {
 				return ByteSliceToByteArrayValue(v.ToBigEndianBytes())
+			},
+		)
+
+	case sema.NumericTypeSaturatingAddFunctionName:
+		return NewHostFunctionValue(
+			func(invocation Invocation) Value {
+				other := invocation.Arguments[0].(NumberValue)
+				return v.SaturatingPlus(other)
+			},
+		)
+
+	case sema.NumericTypeSaturatingSubtractFunctionName:
+		return NewHostFunctionValue(
+			func(invocation Invocation) Value {
+				other := invocation.Arguments[0].(NumberValue)
+				return v.SaturatingMinus(other)
+			},
+		)
+
+	case sema.NumericTypeSaturatingMultiplyFunctionName:
+		return NewHostFunctionValue(
+			func(invocation Invocation) Value {
+				other := invocation.Arguments[0].(NumberValue)
+				return v.SaturatingMul(other)
 			},
 		)
 	}
