@@ -2323,7 +2323,8 @@ func (checker *Checker) VisitExpression(expr ast.Expression, expectedType Type) 
 
 	if isMigrated(expr) &&
 		expectedType != nil &&
-		!expectedType.Equal(actualType) {
+		!expectedType.Equal(actualType) &&
+		!IsSubType(actualType, expectedType) {
 
 		checker.report(
 			&TypeMismatchError{
@@ -2343,7 +2344,9 @@ func (checker *Checker) VisitExpression(expr ast.Expression, expectedType Type) 
 func isMigrated(expr ast.Expression) bool {
 	switch expr.(type) {
 	case *ast.ArrayExpression,
-		*ast.IntegerExpression:
+		*ast.IntegerExpression,
+		*ast.BoolExpression,
+		*ast.BinaryExpression:
 		return true
 	default:
 		return false
