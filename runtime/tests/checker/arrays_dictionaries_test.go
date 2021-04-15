@@ -62,9 +62,17 @@ func TestCheckInvalidDictionaryTypeKey(t *testing.T) {
       let z: {Int: Int} = {"a": 1, "b": 2}
 	`)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := ExpectCheckerErrors(t, err, 2)
 
 	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	typeMismatchError := errs[0].(*sema.TypeMismatchError)
+	assert.Equal(t, sema.IntType, typeMismatchError.ExpectedType)
+	assert.Equal(t, sema.StringType, typeMismatchError.ActualType)
+
+	assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
+	typeMismatchError = errs[1].(*sema.TypeMismatchError)
+	assert.Equal(t, sema.IntType, typeMismatchError.ExpectedType)
+	assert.Equal(t, sema.StringType, typeMismatchError.ActualType)
 }
 
 func TestCheckInvalidDictionaryTypeValue(t *testing.T) {
@@ -75,9 +83,17 @@ func TestCheckInvalidDictionaryTypeValue(t *testing.T) {
       let z: {String: String} = {"a": 1, "b": 2}
 	`)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := ExpectCheckerErrors(t, err, 2)
 
 	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	typeMisMatchError := errs[0].(*sema.TypeMismatchError)
+	assert.Equal(t, sema.StringType, typeMisMatchError.ExpectedType)
+	assert.Equal(t, sema.IntType, typeMisMatchError.ActualType)
+
+	assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
+	typeMisMatchError = errs[1].(*sema.TypeMismatchError)
+	assert.Equal(t, sema.StringType, typeMisMatchError.ExpectedType)
+	assert.Equal(t, sema.IntType, typeMisMatchError.ActualType)
 }
 
 func TestCheckInvalidDictionaryTypeSwapped(t *testing.T) {
@@ -88,9 +104,27 @@ func TestCheckInvalidDictionaryTypeSwapped(t *testing.T) {
       let z: {Int: String} = {"a": 1, "b": 2}
 	`)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	errs := ExpectCheckerErrors(t, err, 4)
 
 	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	typeMisMatchError := errs[0].(*sema.TypeMismatchError)
+	assert.Equal(t, sema.IntType, typeMisMatchError.ExpectedType)
+	assert.Equal(t, sema.StringType, typeMisMatchError.ActualType)
+
+	assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
+	typeMisMatchError = errs[1].(*sema.TypeMismatchError)
+	assert.Equal(t, sema.StringType, typeMisMatchError.ExpectedType)
+	assert.Equal(t, sema.IntType, typeMisMatchError.ActualType)
+
+	assert.IsType(t, &sema.TypeMismatchError{}, errs[2])
+	typeMisMatchError = errs[2].(*sema.TypeMismatchError)
+	assert.Equal(t, sema.IntType, typeMisMatchError.ExpectedType)
+	assert.Equal(t, sema.StringType, typeMisMatchError.ActualType)
+
+	assert.IsType(t, &sema.TypeMismatchError{}, errs[3])
+	typeMisMatchError = errs[3].(*sema.TypeMismatchError)
+	assert.Equal(t, sema.StringType, typeMisMatchError.ExpectedType)
+	assert.Equal(t, sema.IntType, typeMisMatchError.ActualType)
 }
 
 func TestCheckInvalidDictionaryKeys(t *testing.T) {

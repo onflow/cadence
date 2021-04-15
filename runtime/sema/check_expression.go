@@ -187,12 +187,11 @@ func (checker *Checker) VisitIntegerExpression(expr *ast.IntegerExpression) ast.
 
 	if IsSubType(expectedType, IntegerType) {
 		CheckIntegerLiteral(expr, expectedType, checker.report)
-
 		return expectedType
+	}
 
-	} else if IsSubType(expectedType, &AddressType{}) {
+	if IsSubType(expectedType, &AddressType{}) {
 		CheckAddressLiteral(expr, checker.report)
-
 		return expectedType
 	}
 
@@ -209,7 +208,14 @@ func (checker *Checker) VisitFixedPointExpression(expression *ast.FixedPointExpr
 	}
 }
 
-func (checker *Checker) VisitStringExpression(_ *ast.StringExpression) ast.Repr {
+func (checker *Checker) VisitStringExpression(expression *ast.StringExpression) ast.Repr {
+	expectedType := checker.expectedType
+
+	if expectedType != nil && IsSubType(expectedType, CharacterType) {
+		checker.checkCharacterLiteral(expression)
+		return expectedType
+	}
+
 	return StringType
 }
 

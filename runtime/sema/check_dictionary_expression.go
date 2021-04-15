@@ -30,17 +30,22 @@ func (checker *Checker) VisitDictionaryExpression(expression *ast.DictionaryExpr
 
 	var keyType, valueType Type
 
+	if expectedMapType, ok := checker.expectedType.(*DictionaryType); ok {
+		keyType = expectedMapType.KeyType
+		valueType = expectedMapType.ValueType
+	}
+
 	entryTypes := make([]DictionaryEntryType, len(expression.Entries))
 
 	for i, entry := range expression.Entries {
 		// NOTE: important to check move after each type check,
 		// not combined after both type checks!
 
-		entryKeyType := entry.Key.Accept(checker).(Type)
+		entryKeyType := checker.VisitExpression(entry.Key, keyType)
 		checker.checkVariableMove(entry.Key)
 		checker.checkResourceMoveOperation(entry.Key, entryKeyType)
 
-		entryValueType := entry.Value.Accept(checker).(Type)
+		entryValueType := checker.VisitExpression(entry.Value, valueType)
 		checker.checkVariableMove(entry.Value)
 		checker.checkResourceMoveOperation(entry.Value, entryValueType)
 
@@ -53,32 +58,12 @@ func (checker *Checker) VisitDictionaryExpression(expression *ast.DictionaryExpr
 		// TODO: find common super type?
 		if keyType == nil {
 			keyType = entryKeyType
-		} else if !entryKeyType.IsInvalidType() &&
-			!IsSubType(entryKeyType, keyType) {
-
-			checker.report(
-				&TypeMismatchError{
-					ExpectedType: keyType,
-					ActualType:   entryKeyType,
-					Range:        ast.NewRangeFromPositioned(entry.Key),
-				},
-			)
 		}
 
 		// infer value type from first entry's value
 		// TODO: find common super type?
 		if valueType == nil {
 			valueType = entryValueType
-		} else if !entryValueType.IsInvalidType() &&
-			!IsSubType(entryValueType, valueType) {
-
-			checker.report(
-				&TypeMismatchError{
-					ExpectedType: valueType,
-					ActualType:   entryValueType,
-					Range:        ast.NewRangeFromPositioned(entry.Value),
-				},
-			)
 		}
 	}
 
