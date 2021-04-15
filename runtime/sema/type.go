@@ -722,9 +722,15 @@ type FractionalRangedType interface {
 // and non-fractional ranged types.
 //
 type NumericType struct {
-	name   string
-	minInt *big.Int
-	maxInt *big.Int
+	name                string
+	minInt              *big.Int
+	maxInt              *big.Int
+	saturatingAdd       bool
+	saturatingSubtract  bool
+	saturatingMultiply  bool
+	saturatingDivide    bool
+	memberResolvers     map[string]MemberResolver
+	memberResolversOnce sync.Once
 }
 
 var _ IntegerRangedType = &NumericType{}
@@ -736,6 +742,26 @@ func NewNumericType(typeName string) *NumericType {
 func (t *NumericType) WithIntRange(min *big.Int, max *big.Int) *NumericType {
 	t.minInt = min
 	t.maxInt = max
+	return t
+}
+
+func (t *NumericType) WithSaturatingAdd() *NumericType {
+	t.saturatingAdd = true
+	return t
+}
+
+func (t *NumericType) WithSaturatingSubtract() *NumericType {
+	t.saturatingSubtract = true
+	return t
+}
+
+func (t *NumericType) WithSaturatingMultiply() *NumericType {
+	t.saturatingMultiply = true
+	return t
+}
+
+func (t *NumericType) WithSaturatingDivide() *NumericType {
+	t.saturatingDivide = true
 	return t
 }
 
@@ -809,18 +835,100 @@ func (t *NumericType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
 }
 
 func (t *NumericType) GetMembers() map[string]MemberResolver {
-	return withBuiltinMembers(t, nil)
+	t.initializeMemberResolvers()
+	return t.memberResolvers
+}
+
+const NumericTypeSaturatingAddFunctionName = "saturatingAdd"
+const numericTypeSaturatingAddFunctionDocString = `
+self + other, saturating at the numeric bounds instead of overflowing.
+`
+
+const NumericTypeSaturatingSubtractFunctionName = "saturatingSubtract"
+const numericTypeSaturatingSubtractFunctionDocString = `
+self - other, saturating at the numeric bounds instead of overflowing.
+`
+const NumericTypeSaturatingMultiplyFunctionName = "saturatingMultiply"
+const numericTypeSaturatingMultiplyFunctionDocString = `
+self * other, saturating at the numeric bounds instead of overflowing.
+`
+
+const NumericTypeSaturatingDivideFunctionName = "saturatingDivide"
+const numericTypeSaturatingDivideFunctionDocString = `
+self / other, saturating at the numeric bounds instead of overflowing.
+`
+
+func (t *NumericType) initializeMemberResolvers() {
+	t.memberResolversOnce.Do(func() {
+		members := map[string]MemberResolver{}
+
+		arithmeticFunctionType := &FunctionType{
+			Parameters: []*Parameter{
+				{
+					Label:          ArgumentLabelNotRequired,
+					Identifier:     "other",
+					TypeAnnotation: NewTypeAnnotation(t),
+				},
+			},
+			ReturnTypeAnnotation: NewTypeAnnotation(t),
+		}
+
+		addArithmeticFunction := func(name string, docString string) {
+			members[name] = MemberResolver{
+				Kind: common.DeclarationKindFunction,
+				Resolve: func(identifier string, targetRange ast.Range, report func(error)) *Member {
+					return NewPublicFunctionMember(t, name, arithmeticFunctionType, docString)
+				},
+			}
+		}
+
+		if t.saturatingAdd {
+			addArithmeticFunction(
+				NumericTypeSaturatingAddFunctionName,
+				numericTypeSaturatingAddFunctionDocString,
+			)
+		}
+
+		if t.saturatingSubtract {
+			addArithmeticFunction(
+				NumericTypeSaturatingSubtractFunctionName,
+				numericTypeSaturatingSubtractFunctionDocString,
+			)
+		}
+
+		if t.saturatingMultiply {
+			addArithmeticFunction(
+				NumericTypeSaturatingMultiplyFunctionName,
+				numericTypeSaturatingMultiplyFunctionDocString,
+			)
+		}
+
+		if t.saturatingDivide {
+			addArithmeticFunction(
+				NumericTypeSaturatingDivideFunctionName,
+				numericTypeSaturatingDivideFunctionDocString,
+			)
+		}
+
+		t.memberResolvers = withBuiltinMembers(t, members)
+	})
 }
 
 // FixedPointNumericType represents all the types in the fixed-point range.
 //
 type FixedPointNumericType struct {
-	name          string
-	scale         uint
-	minInt        *big.Int
-	maxInt        *big.Int
-	minFractional *big.Int
-	maxFractional *big.Int
+	name                string
+	scale               uint
+	minInt              *big.Int
+	maxInt              *big.Int
+	minFractional       *big.Int
+	maxFractional       *big.Int
+	saturatingAdd       bool
+	saturatingSubtract  bool
+	saturatingMultiply  bool
+	saturatingDivide    bool
+	memberResolvers     map[string]MemberResolver
+	memberResolversOnce sync.Once
 }
 
 var _ FractionalRangedType = &FixedPointNumericType{}
@@ -849,6 +957,26 @@ func (t *FixedPointNumericType) WithFractionalRange(
 
 func (t *FixedPointNumericType) WithScale(scale uint) *FixedPointNumericType {
 	t.scale = scale
+	return t
+}
+
+func (t *FixedPointNumericType) WithSaturatingAdd() *FixedPointNumericType {
+	t.saturatingAdd = true
+	return t
+}
+
+func (t *FixedPointNumericType) WithSaturatingSubtract() *FixedPointNumericType {
+	t.saturatingSubtract = true
+	return t
+}
+
+func (t *FixedPointNumericType) WithSaturatingMultiply() *FixedPointNumericType {
+	t.saturatingMultiply = true
+	return t
+}
+
+func (t *FixedPointNumericType) WithSaturatingDivide() *FixedPointNumericType {
+	t.saturatingDivide = true
 	return t
 }
 
@@ -934,7 +1062,64 @@ func (t *FixedPointNumericType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
 }
 
 func (t *FixedPointNumericType) GetMembers() map[string]MemberResolver {
-	return withBuiltinMembers(t, nil)
+	t.initializeMemberResolvers()
+	return t.memberResolvers
+}
+
+func (t *FixedPointNumericType) initializeMemberResolvers() {
+	t.memberResolversOnce.Do(func() {
+		members := map[string]MemberResolver{}
+
+		arithmeticFunctionType := &FunctionType{
+			Parameters: []*Parameter{
+				{
+					Label:          ArgumentLabelNotRequired,
+					Identifier:     "other",
+					TypeAnnotation: NewTypeAnnotation(t),
+				},
+			},
+			ReturnTypeAnnotation: NewTypeAnnotation(t),
+		}
+
+		addArithmeticFunction := func(name string, docString string) {
+			members[name] = MemberResolver{
+				Kind: common.DeclarationKindFunction,
+				Resolve: func(identifier string, targetRange ast.Range, report func(error)) *Member {
+					return NewPublicFunctionMember(t, name, arithmeticFunctionType, docString)
+				},
+			}
+		}
+
+		if t.saturatingAdd {
+			addArithmeticFunction(
+				NumericTypeSaturatingAddFunctionName,
+				numericTypeSaturatingAddFunctionDocString,
+			)
+		}
+
+		if t.saturatingSubtract {
+			addArithmeticFunction(
+				NumericTypeSaturatingSubtractFunctionName,
+				numericTypeSaturatingSubtractFunctionDocString,
+			)
+		}
+
+		if t.saturatingMultiply {
+			addArithmeticFunction(
+				NumericTypeSaturatingMultiplyFunctionName,
+				numericTypeSaturatingMultiplyFunctionDocString,
+			)
+		}
+
+		if t.saturatingDivide {
+			addArithmeticFunction(
+				NumericTypeSaturatingDivideFunctionName,
+				numericTypeSaturatingDivideFunctionDocString,
+			)
+		}
+
+		t.memberResolvers = withBuiltinMembers(t, members)
+	})
 }
 
 // Numeric types
@@ -958,61 +1143,104 @@ var (
 
 	// Int8Type represents the 8-bit signed integer type `Int8`
 	Int8Type = NewNumericType(Int8TypeName).
-			WithIntRange(Int8TypeMinInt, Int8TypeMaxInt)
+			WithIntRange(Int8TypeMinInt, Int8TypeMaxInt).
+			WithSaturatingAdd().
+			WithSaturatingSubtract().
+			WithSaturatingMultiply().
+			WithSaturatingDivide()
 
 	// Int16Type represents the 16-bit signed integer type `Int16`
 	Int16Type = NewNumericType(Int16TypeName).
-			WithIntRange(Int16TypeMinInt, Int16TypeMaxInt)
+			WithIntRange(Int16TypeMinInt, Int16TypeMaxInt).
+			WithSaturatingAdd().
+			WithSaturatingSubtract().
+			WithSaturatingMultiply().
+			WithSaturatingDivide()
 
 	// Int32Type represents the 32-bit signed integer type `Int32`
 	Int32Type = NewNumericType(Int32TypeName).
-			WithIntRange(Int32TypeMinInt, Int32TypeMaxInt)
+			WithIntRange(Int32TypeMinInt, Int32TypeMaxInt).
+			WithSaturatingAdd().
+			WithSaturatingSubtract().
+			WithSaturatingMultiply().
+			WithSaturatingDivide()
 
 	// Int64Type represents the 64-bit signed integer type `Int64`
 	Int64Type = NewNumericType(Int64TypeName).
-			WithIntRange(Int64TypeMinInt, Int64TypeMaxInt)
+			WithIntRange(Int64TypeMinInt, Int64TypeMaxInt).
+			WithSaturatingAdd().
+			WithSaturatingSubtract().
+			WithSaturatingMultiply().
+			WithSaturatingDivide()
 
 	// Int128Type represents the 128-bit signed integer type `Int128`
 	Int128Type = NewNumericType(Int128TypeName).
-			WithIntRange(Int128TypeMinIntBig, Int128TypeMaxIntBig)
+			WithIntRange(Int128TypeMinIntBig, Int128TypeMaxIntBig).
+			WithSaturatingAdd().
+			WithSaturatingSubtract().
+			WithSaturatingMultiply().
+			WithSaturatingDivide()
 
 	// Int256Type represents the 256-bit signed integer type `Int256`
 	Int256Type = NewNumericType(Int256TypeName).
-			WithIntRange(Int256TypeMinIntBig, Int256TypeMaxIntBig)
+			WithIntRange(Int256TypeMinIntBig, Int256TypeMaxIntBig).
+			WithSaturatingAdd().
+			WithSaturatingSubtract().
+			WithSaturatingMultiply().
+			WithSaturatingDivide()
 
 	// UIntType represents the arbitrary-precision unsigned integer type `UInt`
 	UIntType = NewNumericType(UIntTypeName).
-			WithIntRange(UIntTypeMin, nil)
+			WithIntRange(UIntTypeMin, nil).
+			WithSaturatingSubtract()
 
 	// UInt8Type represents the 8-bit unsigned integer type `UInt8`
 	// which checks for overflow and underflow
 	UInt8Type = NewNumericType(UInt8TypeName).
-			WithIntRange(UInt8TypeMinInt, UInt8TypeMaxInt)
+			WithIntRange(UInt8TypeMinInt, UInt8TypeMaxInt).
+			WithSaturatingAdd().
+			WithSaturatingSubtract().
+			WithSaturatingMultiply()
 
 	// UInt16Type represents the 16-bit unsigned integer type `UInt16`
 	// which checks for overflow and underflow
 	UInt16Type = NewNumericType(UInt16TypeName).
-			WithIntRange(UInt16TypeMinInt, UInt16TypeMaxInt)
+			WithIntRange(UInt16TypeMinInt, UInt16TypeMaxInt).
+			WithSaturatingAdd().
+			WithSaturatingSubtract().
+			WithSaturatingMultiply()
 
 	// UInt32Type represents the 32-bit unsigned integer type `UInt32`
 	// which checks for overflow and underflow
 	UInt32Type = NewNumericType(UInt32TypeName).
-			WithIntRange(UInt32TypeMinInt, UInt32TypeMaxInt)
+			WithIntRange(UInt32TypeMinInt, UInt32TypeMaxInt).
+			WithSaturatingAdd().
+			WithSaturatingSubtract().
+			WithSaturatingMultiply()
 
 	// UInt64Type represents the 64-bit unsigned integer type `UInt64`
 	// which checks for overflow and underflow
 	UInt64Type = NewNumericType(UInt64TypeName).
-			WithIntRange(UInt64TypeMinInt, UInt64TypeMaxInt)
+			WithIntRange(UInt64TypeMinInt, UInt64TypeMaxInt).
+			WithSaturatingAdd().
+			WithSaturatingSubtract().
+			WithSaturatingMultiply()
 
 	// UInt128Type represents the 128-bit unsigned integer type `UInt128`
 	// which checks for overflow and underflow
 	UInt128Type = NewNumericType(UInt128TypeName).
-			WithIntRange(UInt128TypeMinIntBig, UInt128TypeMaxIntBig)
+			WithIntRange(UInt128TypeMinIntBig, UInt128TypeMaxIntBig).
+			WithSaturatingAdd().
+			WithSaturatingSubtract().
+			WithSaturatingMultiply()
 
 	// UInt256Type represents the 256-bit unsigned integer type `UInt256`
 	// which checks for overflow and underflow
 	UInt256Type = NewNumericType(UInt256TypeName).
-			WithIntRange(UInt256TypeMinIntBig, UInt256TypeMaxIntBig)
+			WithIntRange(UInt256TypeMinIntBig, UInt256TypeMaxIntBig).
+			WithSaturatingAdd().
+			WithSaturatingSubtract().
+			WithSaturatingMultiply()
 
 	// Word8Type represents the 8-bit unsigned integer type `Word8`
 	// which does NOT check for overflow and underflow
@@ -1045,14 +1273,21 @@ var (
 	Fix64Type = NewFixedPointNumericType(Fix64TypeName).
 			WithIntRange(Fix64TypeMinIntBig, Fix64TypeMaxIntBig).
 			WithFractionalRange(Fix64TypeMinFractionalBig, Fix64TypeMaxFractionalBig).
-			WithScale(Fix64Scale)
+			WithScale(Fix64Scale).
+			WithSaturatingAdd().
+			WithSaturatingSubtract().
+			WithSaturatingMultiply().
+			WithSaturatingDivide()
 
 	// UFix64Type represents the 64-bit unsigned decimal fixed-point type `UFix64`
 	// which has a scale of 1E9, and checks for overflow and underflow
 	UFix64Type = NewFixedPointNumericType(UFix64TypeName).
 			WithIntRange(UFix64TypeMinIntBig, UFix64TypeMaxIntBig).
 			WithFractionalRange(UFix64TypeMinFractionalBig, UFix64TypeMaxFractionalBig).
-			WithScale(Fix64Scale)
+			WithScale(Fix64Scale).
+			WithSaturatingAdd().
+			WithSaturatingSubtract().
+			WithSaturatingMultiply()
 )
 
 // Numeric type ranges
