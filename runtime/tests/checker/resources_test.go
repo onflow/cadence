@@ -4843,3 +4843,80 @@ func TestCheckResourceMoveMemberInvocation(t *testing.T) {
 		assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
 	})
 }
+
+func TestCheckInvalidationInPreCondition(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+      resource R {}
+
+      fun duplicate(_ r: @R): Bool {
+          destroy r
+          return true
+      }
+
+      fun duplicatePre(_ r: @R): @R {
+          pre {
+              duplicate(<-r)
+          }
+          return <- r
+      }
+    `)
+
+	errs := ExpectCheckerErrors(t, err, 1)
+
+	assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
+}
+
+func TestCheckInvalidationInPostConditionBefore(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+      resource R {}
+
+      fun duplicate(_ r: @R): Bool {
+          destroy r
+          return true
+      }
+
+      fun duplicatePostBefore(_ r: @R): @R {
+          post {
+              before(duplicate(<-r))
+          }
+          return <- r
+      }
+    `)
+
+	errs := ExpectCheckerErrors(t, err, 1)
+
+	assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
+}
+
+
+func TestCheckInvalidationInPostCondition(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+      resource R {}
+
+      fun duplicate(_ r: @R): Bool {
+          destroy r
+          return true
+      }
+
+      fun duplicatePostBefore(_ r: @R): @R {
+          post {
+              duplicate(<-r)
+          }
+          return <- r
+      }
+    `)
+
+	errs := ExpectCheckerErrors(t, err, 1)
+
+	assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
+}
+
