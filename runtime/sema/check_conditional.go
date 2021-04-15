@@ -95,19 +95,8 @@ func (checker *Checker) visitConditional(
 ) (
 	thenType, elseType Type,
 ) {
-	testType := test.Accept(checker).(Type)
 
-	if !testType.IsInvalidType() &&
-		!IsSubType(testType, BoolType) {
-
-		checker.report(
-			&TypeMismatchError{
-				ExpectedType: BoolType,
-				ActualType:   testType,
-				Range:        ast.NewRangeFromPositioned(test),
-			},
-		)
-	}
+	checker.VisitExpression(test, BoolType)
 
 	return checker.checkConditionalBranches(
 		func() Type {

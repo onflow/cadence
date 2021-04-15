@@ -25,7 +25,7 @@ import (
 func (checker *Checker) VisitDestroyExpression(expression *ast.DestroyExpression) (resultType ast.Repr) {
 	resultType = VoidType
 
-	valueType := expression.Expression.Accept(checker).(Type)
+	valueType := checker.VisitExpression(expression.Expression, nil)
 
 	checker.recordResourceInvalidation(
 		expression.Expression,

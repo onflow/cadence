@@ -2323,7 +2323,6 @@ func (checker *Checker) VisitExpression(expr ast.Expression, expectedType Type) 
 
 	if isMigrated(expr) &&
 		expectedType != nil &&
-		!expectedType.Equal(actualType) &&
 		!IsSubType(actualType, expectedType) {
 
 		checker.report(
