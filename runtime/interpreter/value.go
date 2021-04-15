@@ -1222,20 +1222,24 @@ func (v Int8Value) Mul(other NumberValue) NumberValue {
 	// INT32-C
 	if v > 0 {
 		if o > 0 {
+			// positive * positive = positive. overflow?
 			if v > (math.MaxInt8 / o) {
 				panic(OverflowError{})
 			}
 		} else {
+			// positive * negative = negative. underflow?
 			if o < (math.MinInt8 / v) {
-				panic(OverflowError{})
+				panic(UnderflowError{})
 			}
 		}
 	} else {
 		if o > 0 {
+			// negative * positive = negative. underflow?
 			if v < (math.MinInt8 / o) {
-				panic(OverflowError{})
+				panic(UnderflowError{})
 			}
 		} else {
+			// negative * negative = positive. overflow?
 			if (v != 0) && (o < (math.MaxInt8 / v)) {
 				panic(OverflowError{})
 			}
@@ -1463,20 +1467,24 @@ func (v Int16Value) Mul(other NumberValue) NumberValue {
 	// INT32-C
 	if v > 0 {
 		if o > 0 {
+			// positive * positive = positive. overflow?
 			if v > (math.MaxInt16 / o) {
 				panic(OverflowError{})
 			}
 		} else {
+			// positive * negative = negative. underflow?
 			if o < (math.MinInt16 / v) {
-				panic(OverflowError{})
+				panic(UnderflowError{})
 			}
 		}
 	} else {
 		if o > 0 {
+			// negative * positive = negative. underflow?
 			if v < (math.MinInt16 / o) {
-				panic(OverflowError{})
+				panic(UnderflowError{})
 			}
 		} else {
+			// negative * negative = positive. overflow?
 			if (v != 0) && (o < (math.MaxInt16 / v)) {
 				panic(OverflowError{})
 			}
@@ -1706,20 +1714,24 @@ func (v Int32Value) Mul(other NumberValue) NumberValue {
 	// INT32-C
 	if v > 0 {
 		if o > 0 {
+			// positive * positive = positive. overflow?
 			if v > (math.MaxInt32 / o) {
 				panic(OverflowError{})
 			}
 		} else {
+			// positive * negative = negative. underflow?
 			if o < (math.MinInt32 / v) {
-				panic(OverflowError{})
+				panic(UnderflowError{})
 			}
 		}
 	} else {
 		if o > 0 {
+			// negative * positive = negative. underflow?
 			if v < (math.MinInt32 / o) {
-				panic(OverflowError{})
+				panic(UnderflowError{})
 			}
 		} else {
+			// negative * negative = positive. overflow?
 			if (v != 0) && (o < (math.MaxInt32 / v)) {
 				panic(OverflowError{})
 			}
@@ -1953,20 +1965,24 @@ func (v Int64Value) Mul(other NumberValue) NumberValue {
 	// INT32-C
 	if v > 0 {
 		if o > 0 {
+			// positive * positive = positive. overflow?
 			if v > (math.MaxInt64 / o) {
 				panic(OverflowError{})
 			}
 		} else {
+			// positive * negative = negative. underflow?
 			if o < (math.MinInt64 / v) {
-				panic(OverflowError{})
+				panic(UnderflowError{})
 			}
 		}
 	} else {
 		if o > 0 {
+			// negative * positive = negative. underflow?
 			if v < (math.MinInt64 / o) {
-				panic(OverflowError{})
+				panic(UnderflowError{})
 			}
 		} else {
+			// negative * negative = positive. overflow?
 			if (v != 0) && (o < (math.MaxInt64 / v)) {
 				panic(OverflowError{})
 			}
@@ -5111,7 +5127,9 @@ func (v Fix64Value) Mul(other NumberValue) NumberValue {
 	result := new(big.Int).Mul(a, b)
 	result.Div(result, sema.Fix64FactorBig)
 
-	if !result.IsInt64() {
+	if result.Cmp(minInt64Big) < 0 {
+		panic(UnderflowError{})
+	} else if result.Cmp(maxInt64Big) > 0 {
 		panic(OverflowError{})
 	}
 
@@ -5127,7 +5145,9 @@ func (v Fix64Value) Div(other NumberValue) NumberValue {
 	result := new(big.Int).Mul(a, sema.Fix64FactorBig)
 	result.Div(result, b)
 
-	if !result.IsInt64() {
+	if result.Cmp(minInt64Big) < 0 {
+		panic(UnderflowError{})
+	} else if result.Cmp(maxInt64Big) > 0 {
 		panic(OverflowError{})
 	}
 
