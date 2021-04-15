@@ -361,9 +361,7 @@ func TestCheckSaturatedArithmeticFunctions(t *testing.T) {
 			_, err := ParseAndCheckWithPanic(t,
 				fmt.Sprintf(
 					`
-                      fun test(): %[1]s {
-                          let a: %[1]s = panic("")
-                          let b: %[1]s = panic("")
+                      fun test(a: %[1]s, b: %[1]s): %[1]s {
                           return a.%[2]s(b)
                       }
                     `,
@@ -373,14 +371,11 @@ func TestCheckSaturatedArithmeticFunctions(t *testing.T) {
 			)
 
 			if expected {
+				require.NoError(t, err)
+			} else {
 				errs := ExpectCheckerErrors(t, err, 1)
 
-				assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
-			} else {
-				errs := ExpectCheckerErrors(t, err, 2)
-
-				assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
-				assert.IsType(t, &sema.NotDeclaredMemberError{}, errs[1])
+				assert.IsType(t, &sema.NotDeclaredMemberError{}, errs[0])
 			}
 		})
 	}
