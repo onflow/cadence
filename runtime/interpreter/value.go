@@ -1197,6 +1197,17 @@ func (v Int8Value) Plus(other NumberValue) NumberValue {
 	return v + o
 }
 
+func (v Int8Value) SaturatingPlus(other NumberValue) NumberValue {
+	o := other.(Int8Value)
+	// INT32-C
+	if (o > 0) && (v > (math.MaxInt8 - o)) {
+		return Int8Value(math.MaxInt8)
+	} else if (o < 0) && (v < (math.MinInt8 - o)) {
+		return Int8Value(math.MinInt8)
+	}
+	return v + o
+}
+
 func (v Int8Value) Minus(other NumberValue) NumberValue {
 	o := other.(Int8Value)
 	// INT32-C
@@ -1204,6 +1215,17 @@ func (v Int8Value) Minus(other NumberValue) NumberValue {
 		panic(OverflowError{})
 	} else if (o < 0) && (v > (math.MaxInt8 + o)) {
 		panic(UnderflowError{})
+	}
+	return v - o
+}
+
+func (v Int8Value) SaturatingMinus(other NumberValue) NumberValue {
+	o := other.(Int8Value)
+	// INT32-C
+	if (o > 0) && (v < (math.MinInt8 + o)) {
+		return Int8Value(math.MaxInt8)
+	} else if (o < 0) && (v > (math.MaxInt8 + o)) {
+		return Int8Value(math.MinInt8)
 	}
 	return v - o
 }
@@ -1248,6 +1270,37 @@ func (v Int8Value) Mul(other NumberValue) NumberValue {
 	return v * o
 }
 
+func (v Int8Value) SaturatingMul(other NumberValue) NumberValue {
+	o := other.(Int8Value)
+	// INT32-C
+	if v > 0 {
+		if o > 0 {
+			// positive * positive = positive. overflow?
+			if v > (math.MaxInt8 / o) {
+				return Int8Value(math.MaxInt8)
+			}
+		} else {
+			// positive * negative = negative. underflow?
+			if o < (math.MinInt8 / v) {
+				return Int8Value(math.MinInt8)
+			}
+		}
+	} else {
+		if o > 0 {
+			// negative * positive = negative. underflow?
+			if v < (math.MinInt8 / o) {
+				return Int8Value(math.MinInt8)
+			}
+		} else {
+			// negative * negative = positive. overflow?
+			if (v != 0) && (o < (math.MaxInt8 / v)) {
+				return Int8Value(math.MaxInt8)
+			}
+		}
+	}
+	return v * o
+}
+
 func (v Int8Value) Div(other NumberValue) NumberValue {
 	o := other.(Int8Value)
 	// INT33-C
@@ -1256,6 +1309,18 @@ func (v Int8Value) Div(other NumberValue) NumberValue {
 		panic(DivisionByZeroError{})
 	} else if (v == math.MinInt8) && (o == -1) {
 		panic(OverflowError{})
+	}
+	return v / o
+}
+
+func (v Int8Value) SaturatingDiv(other NumberValue) NumberValue {
+	o := other.(Int8Value)
+	// INT33-C
+	// https://golang.org/ref/spec#Integer_operators
+	if o == 0 {
+		panic(DivisionByZeroError{})
+	} else if (v == math.MinInt8) && (o == -1) {
+		return Int8Value(math.MaxInt8)
 	}
 	return v / o
 }
@@ -1442,6 +1507,17 @@ func (v Int16Value) Plus(other NumberValue) NumberValue {
 	return v + o
 }
 
+func (v Int16Value) SaturatingPlus(other NumberValue) NumberValue {
+	o := other.(Int16Value)
+	// INT32-C
+	if (o > 0) && (v > (math.MaxInt16 - o)) {
+		return Int16Value(math.MaxInt16)
+	} else if (o < 0) && (v < (math.MinInt16 - o)) {
+		return Int16Value(math.MinInt16)
+	}
+	return v + o
+}
+
 func (v Int16Value) Minus(other NumberValue) NumberValue {
 	o := other.(Int16Value)
 	// INT32-C
@@ -1449,6 +1525,17 @@ func (v Int16Value) Minus(other NumberValue) NumberValue {
 		panic(OverflowError{})
 	} else if (o < 0) && (v > (math.MaxInt16 + o)) {
 		panic(UnderflowError{})
+	}
+	return v - o
+}
+
+func (v Int16Value) SaturatingMinus(other NumberValue) NumberValue {
+	o := other.(Int16Value)
+	// INT32-C
+	if (o > 0) && (v < (math.MinInt16 + o)) {
+		return Int16Value(math.MaxInt16)
+	} else if (o < 0) && (v > (math.MaxInt16 + o)) {
+		return Int16Value(math.MinInt16)
 	}
 	return v - o
 }
@@ -1493,6 +1580,37 @@ func (v Int16Value) Mul(other NumberValue) NumberValue {
 	return v * o
 }
 
+func (v Int16Value) SaturatingMul(other NumberValue) NumberValue {
+	o := other.(Int16Value)
+	// INT32-C
+	if v > 0 {
+		if o > 0 {
+			// positive * positive = positive. overflow?
+			if v > (math.MaxInt16 / o) {
+				return Int16Value(math.MaxInt16)
+			}
+		} else {
+			// positive * negative = negative. underflow?
+			if o < (math.MinInt16 / v) {
+				return Int16Value(math.MinInt16)
+			}
+		}
+	} else {
+		if o > 0 {
+			// negative * positive = negative. underflow?
+			if v < (math.MinInt16 / o) {
+				return Int16Value(math.MinInt16)
+			}
+		} else {
+			// negative * negative = positive. overflow?
+			if (v != 0) && (o < (math.MaxInt16 / v)) {
+				return Int16Value(math.MaxInt16)
+			}
+		}
+	}
+	return v * o
+}
+
 func (v Int16Value) Div(other NumberValue) NumberValue {
 	o := other.(Int16Value)
 	// INT33-C
@@ -1501,6 +1619,18 @@ func (v Int16Value) Div(other NumberValue) NumberValue {
 		panic(DivisionByZeroError{})
 	} else if (v == math.MinInt16) && (o == -1) {
 		panic(OverflowError{})
+	}
+	return v / o
+}
+
+func (v Int16Value) SaturatingDiv(other NumberValue) NumberValue {
+	o := other.(Int16Value)
+	// INT33-C
+	// https://golang.org/ref/spec#Integer_operators
+	if o == 0 {
+		panic(DivisionByZeroError{})
+	} else if (v == math.MinInt16) && (o == -1) {
+		return Int16Value(math.MaxInt16)
 	}
 	return v / o
 }
@@ -1689,6 +1819,17 @@ func (v Int32Value) Plus(other NumberValue) NumberValue {
 	return v + o
 }
 
+func (v Int32Value) SaturatingPlus(other NumberValue) NumberValue {
+	o := other.(Int32Value)
+	// INT32-C
+	if (o > 0) && (v > (math.MaxInt32 - o)) {
+		return Int32Value(math.MaxInt32)
+	} else if (o < 0) && (v < (math.MinInt32 - o)) {
+		return Int32Value(math.MinInt32)
+	}
+	return v + o
+}
+
 func (v Int32Value) Minus(other NumberValue) NumberValue {
 	o := other.(Int32Value)
 	// INT32-C
@@ -1696,6 +1837,17 @@ func (v Int32Value) Minus(other NumberValue) NumberValue {
 		panic(OverflowError{})
 	} else if (o < 0) && (v > (math.MaxInt32 + o)) {
 		panic(UnderflowError{})
+	}
+	return v - o
+}
+
+func (v Int32Value) SaturatingMinus(other NumberValue) NumberValue {
+	o := other.(Int32Value)
+	// INT32-C
+	if (o > 0) && (v < (math.MinInt32 + o)) {
+		return Int32Value(math.MaxInt32)
+	} else if (o < 0) && (v > (math.MaxInt32 + o)) {
+		return Int32Value(math.MinInt32)
 	}
 	return v - o
 }
@@ -1740,6 +1892,37 @@ func (v Int32Value) Mul(other NumberValue) NumberValue {
 	return v * o
 }
 
+func (v Int32Value) SaturatingMul(other NumberValue) NumberValue {
+	o := other.(Int32Value)
+	// INT32-C
+	if v > 0 {
+		if o > 0 {
+			// positive * positive = positive. overflow?
+			if v > (math.MaxInt32 / o) {
+				return Int32Value(math.MaxInt32)
+			}
+		} else {
+			// positive * negative = negative. underflow?
+			if o < (math.MinInt32 / v) {
+				return Int32Value(math.MinInt32)
+			}
+		}
+	} else {
+		if o > 0 {
+			// negative * positive = negative. underflow?
+			if v < (math.MinInt32 / o) {
+				return Int32Value(math.MinInt32)
+			}
+		} else {
+			// negative * negative = positive. overflow?
+			if (v != 0) && (o < (math.MaxInt32 / v)) {
+				return Int32Value(math.MaxInt32)
+			}
+		}
+	}
+	return v * o
+}
+
 func (v Int32Value) Div(other NumberValue) NumberValue {
 	o := other.(Int32Value)
 	// INT33-C
@@ -1748,6 +1931,18 @@ func (v Int32Value) Div(other NumberValue) NumberValue {
 		panic(DivisionByZeroError{})
 	} else if (v == math.MinInt32) && (o == -1) {
 		panic(OverflowError{})
+	}
+	return v / o
+}
+
+func (v Int32Value) SaturatingDiv(other NumberValue) NumberValue {
+	o := other.(Int32Value)
+	// INT33-C
+	// https://golang.org/ref/spec#Integer_operators
+	if o == 0 {
+		panic(DivisionByZeroError{})
+	} else if (v == math.MinInt32) && (o == -1) {
+		return Int32Value(math.MaxInt32)
 	}
 	return v / o
 }
@@ -1940,6 +2135,17 @@ func (v Int64Value) Plus(other NumberValue) NumberValue {
 	return Int64Value(safeAddInt64(int64(v), int64(o)))
 }
 
+func (v Int64Value) SaturatingPlus(other NumberValue) NumberValue {
+	o := other.(Int64Value)
+	// INT32-C
+	if (o > 0) && (v > (math.MaxInt64 - o)) {
+		return Int64Value(math.MaxInt64)
+	} else if (o < 0) && (v < (math.MinInt64 - o)) {
+		return Int64Value(math.MinInt64)
+	}
+	return v + o
+}
+
 func (v Int64Value) Minus(other NumberValue) NumberValue {
 	o := other.(Int64Value)
 	// INT32-C
@@ -1947,6 +2153,17 @@ func (v Int64Value) Minus(other NumberValue) NumberValue {
 		panic(OverflowError{})
 	} else if (o < 0) && (v > (math.MaxInt64 + o)) {
 		panic(UnderflowError{})
+	}
+	return v - o
+}
+
+func (v Int64Value) SaturatingMinus(other NumberValue) NumberValue {
+	o := other.(Int64Value)
+	// INT32-C
+	if (o > 0) && (v < (math.MinInt64 + o)) {
+		return Int64Value(math.MaxInt64)
+	} else if (o < 0) && (v > (math.MaxInt64 + o)) {
+		return Int64Value(math.MinInt64)
 	}
 	return v - o
 }
@@ -1991,6 +2208,37 @@ func (v Int64Value) Mul(other NumberValue) NumberValue {
 	return v * o
 }
 
+func (v Int64Value) SaturatingMul(other NumberValue) NumberValue {
+	o := other.(Int64Value)
+	// INT32-C
+	if v > 0 {
+		if o > 0 {
+			// positive * positive = positive. overflow?
+			if v > (math.MaxInt64 / o) {
+				return Int64Value(math.MaxInt64)
+			}
+		} else {
+			// positive * negative = negative. underflow?
+			if o < (math.MinInt64 / v) {
+				return Int64Value(math.MinInt64)
+			}
+		}
+	} else {
+		if o > 0 {
+			// negative * positive = negative. underflow?
+			if v < (math.MinInt64 / o) {
+				return Int64Value(math.MinInt64)
+			}
+		} else {
+			// negative * negative = positive. overflow?
+			if (v != 0) && (o < (math.MaxInt64 / v)) {
+				return Int64Value(math.MaxInt64)
+			}
+		}
+	}
+	return v * o
+}
+
 func (v Int64Value) Div(other NumberValue) NumberValue {
 	o := other.(Int64Value)
 	// INT33-C
@@ -1999,6 +2247,18 @@ func (v Int64Value) Div(other NumberValue) NumberValue {
 		panic(DivisionByZeroError{})
 	} else if (v == math.MinInt64) && (o == -1) {
 		panic(OverflowError{})
+	}
+	return v / o
+}
+
+func (v Int64Value) SaturatingDiv(other NumberValue) NumberValue {
+	o := other.(Int64Value)
+	// INT33-C
+	// https://golang.org/ref/spec#Integer_operators
+	if o == 0 {
+		panic(DivisionByZeroError{})
+	} else if (v == math.MinInt64) && (o == -1) {
+		return Int64Value(math.MaxInt64)
 	}
 	return v / o
 }
@@ -2212,6 +2472,30 @@ func (v Int128Value) Plus(other NumberValue) NumberValue {
 	return Int128Value{res}
 }
 
+func (v Int128Value) SaturatingPlus(other NumberValue) NumberValue {
+	o := other.(Int128Value)
+	// Given that this value is backed by an arbitrary size integer,
+	// we can just add and check the range of the result.
+	//
+	// If Go gains a native int128 type and we switch this value
+	// to be based on it, then we need to follow INT32-C:
+	//
+	//   if (o > 0) && (v > (Int128TypeMaxIntBig - o)) {
+	//       ...
+	//   } else if (o < 0) && (v < (Int128TypeMinIntBig - o)) {
+	//       ...
+	//   }
+	//
+	res := new(big.Int)
+	res.Add(v.BigInt, o.BigInt)
+	if res.Cmp(sema.Int128TypeMinIntBig) < 0 {
+		return Int128Value{sema.Int128TypeMinIntBig}
+	} else if res.Cmp(sema.Int128TypeMaxIntBig) > 0 {
+		return Int128Value{sema.Int128TypeMaxIntBig}
+	}
+	return Int128Value{res}
+}
+
 func (v Int128Value) Minus(other NumberValue) NumberValue {
 	o := other.(Int128Value)
 	// Given that this value is backed by an arbitrary size integer,
@@ -2232,6 +2516,30 @@ func (v Int128Value) Minus(other NumberValue) NumberValue {
 		panic(UnderflowError{})
 	} else if res.Cmp(sema.Int128TypeMaxIntBig) > 0 {
 		panic(OverflowError{})
+	}
+	return Int128Value{res}
+}
+
+func (v Int128Value) SaturatingMinus(other NumberValue) NumberValue {
+	o := other.(Int128Value)
+	// Given that this value is backed by an arbitrary size integer,
+	// we can just subtract and check the range of the result.
+	//
+	// If Go gains a native int128 type and we switch this value
+	// to be based on it, then we need to follow INT32-C:
+	//
+	//   if (o > 0) && (v < (Int128TypeMinIntBig + o)) {
+	// 	     ...
+	//   } else if (o < 0) && (v > (Int128TypeMaxIntBig + o)) {
+	//       ...
+	//   }
+	//
+	res := new(big.Int)
+	res.Sub(v.BigInt, o.BigInt)
+	if res.Cmp(sema.Int128TypeMinIntBig) < 0 {
+		return Int128Value{sema.Int128TypeMinIntBig}
+	} else if res.Cmp(sema.Int128TypeMaxIntBig) > 0 {
+		return Int128Value{sema.Int128TypeMaxIntBig}
 	}
 	return Int128Value{res}
 }
@@ -2259,6 +2567,18 @@ func (v Int128Value) Mul(other NumberValue) NumberValue {
 	return Int128Value{res}
 }
 
+func (v Int128Value) SaturatingMul(other NumberValue) NumberValue {
+	o := other.(Int128Value)
+	res := new(big.Int)
+	res.Mul(v.BigInt, o.BigInt)
+	if res.Cmp(sema.Int128TypeMinIntBig) < 0 {
+		return Int128Value{sema.Int128TypeMinIntBig}
+	} else if res.Cmp(sema.Int128TypeMaxIntBig) > 0 {
+		return Int128Value{sema.Int128TypeMaxIntBig}
+	}
+	return Int128Value{res}
+}
+
 func (v Int128Value) Div(other NumberValue) NumberValue {
 	o := other.(Int128Value)
 	res := new(big.Int)
@@ -2274,6 +2594,26 @@ func (v Int128Value) Div(other NumberValue) NumberValue {
 	res.SetInt64(-1)
 	if (v.BigInt.Cmp(sema.Int128TypeMinIntBig) == 0) && (o.BigInt.Cmp(res) == 0) {
 		panic(OverflowError{})
+	}
+	res.Div(v.BigInt, o.BigInt)
+	return Int128Value{res}
+}
+
+func (v Int128Value) SaturatingDiv(other NumberValue) NumberValue {
+	o := other.(Int128Value)
+	res := new(big.Int)
+	// INT33-C:
+	//   if o == 0 {
+	//       ...
+	//   } else if (v == Int128TypeMinIntBig) && (o == -1) {
+	//       ...
+	//   }
+	if o.BigInt.Cmp(res) == 0 {
+		panic(DivisionByZeroError{})
+	}
+	res.SetInt64(-1)
+	if (v.BigInt.Cmp(sema.Int128TypeMinIntBig) == 0) && (o.BigInt.Cmp(res) == 0) {
+		return Int128Value{sema.Int128TypeMaxIntBig}
 	}
 	res.Div(v.BigInt, o.BigInt)
 	return Int128Value{res}
@@ -2513,6 +2853,30 @@ func (v Int256Value) Plus(other NumberValue) NumberValue {
 	return Int256Value{res}
 }
 
+func (v Int256Value) SaturatingPlus(other NumberValue) NumberValue {
+	o := other.(Int256Value)
+	// Given that this value is backed by an arbitrary size integer,
+	// we can just add and check the range of the result.
+	//
+	// If Go gains a native int256 type and we switch this value
+	// to be based on it, then we need to follow INT32-C:
+	//
+	//   if (o > 0) && (v > (Int256TypeMaxIntBig - o)) {
+	//       ...
+	//   } else if (o < 0) && (v < (Int256TypeMinIntBig - o)) {
+	//       ...
+	//   }
+	//
+	res := new(big.Int)
+	res.Add(v.BigInt, o.BigInt)
+	if res.Cmp(sema.Int256TypeMinIntBig) < 0 {
+		return Int256Value{sema.Int256TypeMinIntBig}
+	} else if res.Cmp(sema.Int256TypeMaxIntBig) > 0 {
+		return Int256Value{sema.Int256TypeMaxIntBig}
+	}
+	return Int256Value{res}
+}
+
 func (v Int256Value) Minus(other NumberValue) NumberValue {
 	o := other.(Int256Value)
 	// Given that this value is backed by an arbitrary size integer,
@@ -2533,6 +2897,30 @@ func (v Int256Value) Minus(other NumberValue) NumberValue {
 		panic(UnderflowError{})
 	} else if res.Cmp(sema.Int256TypeMaxIntBig) > 0 {
 		panic(OverflowError{})
+	}
+	return Int256Value{res}
+}
+
+func (v Int256Value) SaturatingMinus(other NumberValue) NumberValue {
+	o := other.(Int256Value)
+	// Given that this value is backed by an arbitrary size integer,
+	// we can just subtract and check the range of the result.
+	//
+	// If Go gains a native int256 type and we switch this value
+	// to be based on it, then we need to follow INT32-C:
+	//
+	//   if (o > 0) && (v < (Int256TypeMinIntBig + o)) {
+	// 	     ...
+	//   } else if (o < 0) && (v > (Int256TypeMaxIntBig + o)) {
+	//       ...
+	//   }
+	//
+	res := new(big.Int)
+	res.Sub(v.BigInt, o.BigInt)
+	if res.Cmp(sema.Int256TypeMinIntBig) < 0 {
+		return Int256Value{sema.Int256TypeMinIntBig}
+	} else if res.Cmp(sema.Int256TypeMaxIntBig) > 0 {
+		return Int256Value{sema.Int256TypeMaxIntBig}
 	}
 	return Int256Value{res}
 }
@@ -2560,6 +2948,18 @@ func (v Int256Value) Mul(other NumberValue) NumberValue {
 	return Int256Value{res}
 }
 
+func (v Int256Value) SaturatingMul(other NumberValue) NumberValue {
+	o := other.(Int256Value)
+	res := new(big.Int)
+	res.Mul(v.BigInt, o.BigInt)
+	if res.Cmp(sema.Int256TypeMinIntBig) < 0 {
+		return Int256Value{sema.Int256TypeMinIntBig}
+	} else if res.Cmp(sema.Int256TypeMaxIntBig) > 0 {
+		return Int256Value{sema.Int256TypeMaxIntBig}
+	}
+	return Int256Value{res}
+}
+
 func (v Int256Value) Div(other NumberValue) NumberValue {
 	o := other.(Int256Value)
 	res := new(big.Int)
@@ -2575,6 +2975,26 @@ func (v Int256Value) Div(other NumberValue) NumberValue {
 	res.SetInt64(-1)
 	if (v.BigInt.Cmp(sema.Int256TypeMinIntBig) == 0) && (o.BigInt.Cmp(res) == 0) {
 		panic(OverflowError{})
+	}
+	res.Div(v.BigInt, o.BigInt)
+	return Int256Value{res}
+}
+
+func (v Int256Value) SaturatingDiv(other NumberValue) NumberValue {
+	o := other.(Int256Value)
+	res := new(big.Int)
+	// INT33-C:
+	//   if o == 0 {
+	//       ...
+	//   } else if (v == Int256TypeMinIntBig) && (o == -1) {
+	//       ...
+	//   }
+	if o.BigInt.Cmp(res) == 0 {
+		panic(DivisionByZeroError{})
+	}
+	res.SetInt64(-1)
+	if (v.BigInt.Cmp(sema.Int256TypeMinIntBig) == 0) && (o.BigInt.Cmp(res) == 0) {
+		return Int256Value{sema.Int256TypeMaxIntBig}
 	}
 	res.Div(v.BigInt, o.BigInt)
 	return Int256Value{res}
@@ -2815,8 +3235,20 @@ func (v UIntValue) Minus(other NumberValue) NumberValue {
 	o := other.(UIntValue)
 	res := new(big.Int)
 	res.Sub(v.BigInt, o.BigInt)
+	// INT30-C
 	if res.Sign() < 0 {
 		panic(UnderflowError{})
+	}
+	return UIntValue{res}
+}
+
+func (v UIntValue) SaturatingMinus(other NumberValue) NumberValue {
+	o := other.(UIntValue)
+	res := new(big.Int)
+	res.Sub(v.BigInt, o.BigInt)
+	// INT30-C
+	if res.Sign() < 0 {
+		return UIntValue{sema.UIntTypeMin}
 	}
 	return UIntValue{res}
 }
@@ -3024,11 +3456,29 @@ func (v UInt8Value) Plus(other NumberValue) NumberValue {
 	return sum
 }
 
+func (v UInt8Value) SaturatingPlus(other NumberValue) NumberValue {
+	sum := v + other.(UInt8Value)
+	// INT30-C
+	if sum < v {
+		return UInt8Value(math.MaxUint8)
+	}
+	return sum
+}
+
 func (v UInt8Value) Minus(other NumberValue) NumberValue {
 	diff := v - other.(UInt8Value)
 	// INT30-C
 	if diff > v {
 		panic(UnderflowError{})
+	}
+	return diff
+}
+
+func (v UInt8Value) SaturatingMinus(other NumberValue) NumberValue {
+	diff := v - other.(UInt8Value)
+	// INT30-C
+	if diff > v {
+		return UInt8Value(0)
 	}
 	return diff
 }
@@ -3043,8 +3493,18 @@ func (v UInt8Value) Mod(other NumberValue) NumberValue {
 
 func (v UInt8Value) Mul(other NumberValue) NumberValue {
 	o := other.(UInt8Value)
+	// INT30-C
 	if (v > 0) && (o > 0) && (v > (math.MaxUint8 / o)) {
 		panic(OverflowError{})
+	}
+	return v * o
+}
+
+func (v UInt8Value) SaturatingMul(other NumberValue) NumberValue {
+	o := other.(UInt8Value)
+	// INT30-C
+	if (v > 0) && (o > 0) && (v > (math.MaxUint8 / o)) {
+		return UInt8Value(math.MaxUint8)
 	}
 	return v * o
 }
@@ -3231,11 +3691,29 @@ func (v UInt16Value) Plus(other NumberValue) NumberValue {
 	return sum
 }
 
+func (v UInt16Value) SaturatingPlus(other NumberValue) NumberValue {
+	sum := v + other.(UInt16Value)
+	// INT30-C
+	if sum < v {
+		return UInt16Value(math.MaxUint16)
+	}
+	return sum
+}
+
 func (v UInt16Value) Minus(other NumberValue) NumberValue {
 	diff := v - other.(UInt16Value)
 	// INT30-C
 	if diff > v {
 		panic(UnderflowError{})
+	}
+	return diff
+}
+
+func (v UInt16Value) SaturatingMinus(other NumberValue) NumberValue {
+	diff := v - other.(UInt16Value)
+	// INT30-C
+	if diff > v {
+		return UInt16Value(0)
 	}
 	return diff
 }
@@ -3250,8 +3728,18 @@ func (v UInt16Value) Mod(other NumberValue) NumberValue {
 
 func (v UInt16Value) Mul(other NumberValue) NumberValue {
 	o := other.(UInt16Value)
+	// INT30-C
 	if (v > 0) && (o > 0) && (v > (math.MaxUint16 / o)) {
 		panic(OverflowError{})
+	}
+	return v * o
+}
+
+func (v UInt16Value) SaturatingMul(other NumberValue) NumberValue {
+	o := other.(UInt16Value)
+	// INT30-C
+	if (v > 0) && (o > 0) && (v > (math.MaxUint16 / o)) {
+		return UInt16Value(math.MaxUint16)
 	}
 	return v * o
 }
@@ -3442,11 +3930,29 @@ func (v UInt32Value) Plus(other NumberValue) NumberValue {
 	return sum
 }
 
+func (v UInt32Value) SaturatingPlus(other NumberValue) NumberValue {
+	sum := v + other.(UInt32Value)
+	// INT30-C
+	if sum < v {
+		return UInt32Value(math.MaxUint32)
+	}
+	return sum
+}
+
 func (v UInt32Value) Minus(other NumberValue) NumberValue {
 	diff := v - other.(UInt32Value)
 	// INT30-C
 	if diff > v {
 		panic(UnderflowError{})
+	}
+	return diff
+}
+
+func (v UInt32Value) SaturatingMinus(other NumberValue) NumberValue {
+	diff := v - other.(UInt32Value)
+	// INT30-C
+	if diff > v {
+		return UInt32Value(0)
 	}
 	return diff
 }
@@ -3463,6 +3969,15 @@ func (v UInt32Value) Mul(other NumberValue) NumberValue {
 	o := other.(UInt32Value)
 	if (v > 0) && (o > 0) && (v > (math.MaxUint32 / o)) {
 		panic(OverflowError{})
+	}
+	return v * o
+}
+
+func (v UInt32Value) SaturatingMul(other NumberValue) NumberValue {
+	o := other.(UInt32Value)
+	// INT30-C
+	if (v > 0) && (o > 0) && (v > (math.MaxUint32 / o)) {
+		return UInt32Value(math.MaxUint32)
 	}
 	return v * o
 }
@@ -3658,11 +4173,29 @@ func (v UInt64Value) Plus(other NumberValue) NumberValue {
 	return UInt64Value(safeAddUint64(uint64(v), uint64(o)))
 }
 
+func (v UInt64Value) SaturatingPlus(other NumberValue) NumberValue {
+	sum := v + other.(UInt64Value)
+	// INT30-C
+	if sum < v {
+		return UInt64Value(math.MaxUint64)
+	}
+	return sum
+}
+
 func (v UInt64Value) Minus(other NumberValue) NumberValue {
 	diff := v - other.(UInt64Value)
 	// INT30-C
 	if diff > v {
 		panic(UnderflowError{})
+	}
+	return diff
+}
+
+func (v UInt64Value) SaturatingMinus(other NumberValue) NumberValue {
+	diff := v - other.(UInt64Value)
+	// INT30-C
+	if diff > v {
+		return UInt64Value(0)
 	}
 	return diff
 }
@@ -3679,6 +4212,15 @@ func (v UInt64Value) Mul(other NumberValue) NumberValue {
 	o := other.(UInt64Value)
 	if (v > 0) && (o > 0) && (v > (math.MaxUint64 / o)) {
 		panic(OverflowError{})
+	}
+	return v * o
+}
+
+func (v UInt64Value) SaturatingMul(other NumberValue) NumberValue {
+	o := other.(UInt64Value)
+	// INT30-C
+	if (v > 0) && (o > 0) && (v > (math.MaxUint64 / o)) {
+		return UInt64Value(math.MaxUint64)
 	}
 	return v * o
 }
@@ -3892,6 +4434,25 @@ func (v UInt128Value) Plus(other NumberValue) NumberValue {
 	return UInt128Value{sum}
 }
 
+func (v UInt128Value) SaturatingPlus(other NumberValue) NumberValue {
+	sum := new(big.Int)
+	sum.Add(v.BigInt, other.(UInt128Value).BigInt)
+	// Given that this value is backed by an arbitrary size integer,
+	// we can just add and check the range of the result.
+	//
+	// If Go gains a native uint128 type and we switch this value
+	// to be based on it, then we need to follow INT30-C:
+	//
+	//  if sum < v {
+	//      ...
+	//  }
+	//
+	if sum.Cmp(sema.UInt128TypeMaxIntBig) > 0 {
+		return UInt128Value{sema.UInt128TypeMaxIntBig}
+	}
+	return UInt128Value{sum}
+}
+
 func (v UInt128Value) Minus(other NumberValue) NumberValue {
 	diff := new(big.Int)
 	diff.Sub(v.BigInt, other.(UInt128Value).BigInt)
@@ -3907,6 +4468,25 @@ func (v UInt128Value) Minus(other NumberValue) NumberValue {
 	//
 	if diff.Cmp(sema.UInt128TypeMinIntBig) < 0 {
 		panic(UnderflowError{})
+	}
+	return UInt128Value{diff}
+}
+
+func (v UInt128Value) SaturatingMinus(other NumberValue) NumberValue {
+	diff := new(big.Int)
+	diff.Sub(v.BigInt, other.(UInt128Value).BigInt)
+	// Given that this value is backed by an arbitrary size integer,
+	// we can just subtract and check the range of the result.
+	//
+	// If Go gains a native uint128 type and we switch this value
+	// to be based on it, then we need to follow INT30-C:
+	//
+	//   if diff > v {
+	// 	     ...
+	//   }
+	//
+	if diff.Cmp(sema.UInt128TypeMinIntBig) < 0 {
+		return UInt128Value{sema.UInt128TypeMinIntBig}
 	}
 	return UInt128Value{diff}
 }
@@ -3927,6 +4507,16 @@ func (v UInt128Value) Mul(other NumberValue) NumberValue {
 	res.Mul(v.BigInt, o.BigInt)
 	if res.Cmp(sema.UInt128TypeMaxIntBig) > 0 {
 		panic(OverflowError{})
+	}
+	return UInt128Value{res}
+}
+
+func (v UInt128Value) SaturatingMul(other NumberValue) NumberValue {
+	o := other.(UInt128Value)
+	res := new(big.Int)
+	res.Mul(v.BigInt, o.BigInt)
+	if res.Cmp(sema.UInt128TypeMaxIntBig) > 0 {
+		return UInt128Value{sema.UInt128TypeMaxIntBig}
 	}
 	return UInt128Value{res}
 }
@@ -4162,6 +4752,25 @@ func (v UInt256Value) Plus(other NumberValue) NumberValue {
 	return UInt256Value{sum}
 }
 
+func (v UInt256Value) SaturatingPlus(other NumberValue) NumberValue {
+	sum := new(big.Int)
+	sum.Add(v.BigInt, other.(UInt256Value).BigInt)
+	// Given that this value is backed by an arbitrary size integer,
+	// we can just add and check the range of the result.
+	//
+	// If Go gains a native uint256 type and we switch this value
+	// to be based on it, then we need to follow INT30-C:
+	//
+	//  if sum < v {
+	//      ...
+	//  }
+	//
+	if sum.Cmp(sema.UInt256TypeMaxIntBig) > 0 {
+		return UInt256Value{sema.UInt256TypeMaxIntBig}
+	}
+	return UInt256Value{sum}
+}
+
 func (v UInt256Value) Minus(other NumberValue) NumberValue {
 	diff := new(big.Int)
 	diff.Sub(v.BigInt, other.(UInt256Value).BigInt)
@@ -4177,6 +4786,25 @@ func (v UInt256Value) Minus(other NumberValue) NumberValue {
 	//
 	if diff.Cmp(sema.UInt256TypeMinIntBig) < 0 {
 		panic(UnderflowError{})
+	}
+	return UInt256Value{diff}
+}
+
+func (v UInt256Value) SaturatingMinus(other NumberValue) NumberValue {
+	diff := new(big.Int)
+	diff.Sub(v.BigInt, other.(UInt256Value).BigInt)
+	// Given that this value is backed by an arbitrary size integer,
+	// we can just subtract and check the range of the result.
+	//
+	// If Go gains a native uint256 type and we switch this value
+	// to be based on it, then we need to follow INT30-C:
+	//
+	//   if diff > v {
+	// 	     ...
+	//   }
+	//
+	if diff.Cmp(sema.UInt256TypeMinIntBig) < 0 {
+		return UInt256Value{sema.UInt256TypeMinIntBig}
 	}
 	return UInt256Value{diff}
 }
@@ -4197,6 +4825,16 @@ func (v UInt256Value) Mul(other NumberValue) NumberValue {
 	res.Mul(v.BigInt, o.BigInt)
 	if res.Cmp(sema.UInt256TypeMaxIntBig) > 0 {
 		panic(OverflowError{})
+	}
+	return UInt256Value{res}
+}
+
+func (v UInt256Value) SaturatingMul(other NumberValue) NumberValue {
+	o := other.(UInt256Value)
+	res := new(big.Int)
+	res.Mul(v.BigInt, o.BigInt)
+	if res.Cmp(sema.UInt256TypeMaxIntBig) > 0 {
+		return UInt256Value{sema.UInt256TypeMaxIntBig}
 	}
 	return UInt256Value{res}
 }
@@ -5107,6 +5745,17 @@ func (v Fix64Value) Plus(other NumberValue) NumberValue {
 	return Fix64Value(safeAddInt64(int64(v), int64(o)))
 }
 
+func (v Fix64Value) SaturatingPlus(other NumberValue) NumberValue {
+	o := other.(Fix64Value)
+	// INT32-C
+	if (o > 0) && (v > (math.MaxInt64 - o)) {
+		return Fix64Value(math.MaxInt64)
+	} else if (o < 0) && (v < (math.MinInt64 - o)) {
+		return Fix64Value(math.MinInt64)
+	}
+	return v + o
+}
+
 func (v Fix64Value) Minus(other NumberValue) NumberValue {
 	o := other.(Fix64Value)
 	// INT32-C
@@ -5117,6 +5766,20 @@ func (v Fix64Value) Minus(other NumberValue) NumberValue {
 	}
 	return v - o
 }
+
+func (v Fix64Value) SaturatingMinus(other NumberValue) NumberValue {
+	o := other.(Fix64Value)
+	// INT32-C
+	if (o > 0) && (v < (math.MinInt64 + o)) {
+		return Fix64Value(math.MaxInt64)
+	} else if (o < 0) && (v > (math.MaxInt64 + o)) {
+		return Fix64Value(math.MinInt64)
+	}
+	return v - o
+}
+
+var minInt64Big = big.NewInt(math.MinInt64)
+var maxInt64Big = big.NewInt(math.MaxInt64)
 
 func (v Fix64Value) Mul(other NumberValue) NumberValue {
 	o := other.(Fix64Value)
@@ -5136,6 +5799,24 @@ func (v Fix64Value) Mul(other NumberValue) NumberValue {
 	return Fix64Value(result.Int64())
 }
 
+func (v Fix64Value) SaturatingMul(other NumberValue) NumberValue {
+	o := other.(Fix64Value)
+
+	a := new(big.Int).SetInt64(int64(v))
+	b := new(big.Int).SetInt64(int64(o))
+
+	result := new(big.Int).Mul(a, b)
+	result.Div(result, sema.Fix64FactorBig)
+
+	if result.Cmp(minInt64Big) < 0 {
+		return Fix64Value(math.MinInt64)
+	} else if result.Cmp(maxInt64Big) > 0 {
+		return Fix64Value(math.MaxInt64)
+	}
+
+	return Fix64Value(result.Int64())
+}
+
 func (v Fix64Value) Div(other NumberValue) NumberValue {
 	o := other.(Fix64Value)
 
@@ -5149,6 +5830,24 @@ func (v Fix64Value) Div(other NumberValue) NumberValue {
 		panic(UnderflowError{})
 	} else if result.Cmp(maxInt64Big) > 0 {
 		panic(OverflowError{})
+	}
+
+	return Fix64Value(result.Int64())
+}
+
+func (v Fix64Value) SaturatingDiv(other NumberValue) NumberValue {
+	o := other.(Fix64Value)
+
+	a := new(big.Int).SetInt64(int64(v))
+	b := new(big.Int).SetInt64(int64(o))
+
+	result := new(big.Int).Mul(a, sema.Fix64FactorBig)
+	result.Div(result, b)
+
+	if result.Cmp(minInt64Big) < 0 {
+		return Fix64Value(math.MinInt64)
+	} else if result.Cmp(maxInt64Big) > 0 {
+		return Fix64Value(math.MaxInt64)
 	}
 
 	return Fix64Value(result.Int64())
@@ -5327,11 +6026,30 @@ func (v UFix64Value) Plus(other NumberValue) NumberValue {
 	return UFix64Value(safeAddUint64(uint64(v), uint64(o)))
 }
 
+func (v UFix64Value) SaturatingPlus(other NumberValue) NumberValue {
+	o := other.(UFix64Value)
+	sum := v + o
+	// INT30-C
+	if sum < v {
+		return UFix64Value(math.MaxUint64)
+	}
+	return sum
+}
+
 func (v UFix64Value) Minus(other NumberValue) NumberValue {
 	diff := v - other.(UFix64Value)
 	// INT30-C
 	if diff > v {
 		panic(UnderflowError{})
+	}
+	return diff
+}
+
+func (v UFix64Value) SaturatingMinus(other NumberValue) NumberValue {
+	diff := v - other.(UFix64Value)
+	// INT30-C
+	if diff > v {
+		return UFix64Value(0)
 	}
 	return diff
 }
@@ -5352,6 +6070,22 @@ func (v UFix64Value) Mul(other NumberValue) NumberValue {
 	return UFix64Value(result.Uint64())
 }
 
+func (v UFix64Value) SaturatingMul(other NumberValue) NumberValue {
+	o := other.(UFix64Value)
+
+	a := new(big.Int).SetUint64(uint64(v))
+	b := new(big.Int).SetUint64(uint64(o))
+
+	result := new(big.Int).Mul(a, b)
+	result.Div(result, sema.Fix64FactorBig)
+
+	if !result.IsUint64() {
+		return UFix64Value(math.MaxUint64)
+	}
+
+	return UFix64Value(result.Uint64())
+}
+
 func (v UFix64Value) Div(other NumberValue) NumberValue {
 	o := other.(UFix64Value)
 
@@ -5360,10 +6094,6 @@ func (v UFix64Value) Div(other NumberValue) NumberValue {
 
 	result := new(big.Int).Mul(a, sema.Fix64FactorBig)
 	result.Div(result, b)
-
-	if !result.IsUint64() {
-		panic(OverflowError{})
-	}
 
 	return UFix64Value(result.Uint64())
 }
