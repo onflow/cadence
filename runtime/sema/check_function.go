@@ -327,10 +327,20 @@ func (checker *Checker) visitWithPostConditions(postConditions *ast.Conditions, 
 		checker.declareBefore()
 	}
 
-	// If there is a return type, declare the constant `result` which has the return type
+	// If there is a return type, declare the constant `result`.
+	// If it is a resource type, the constant has the same type as a referecne to the return type.
+	// If it is not a resource type, the constant has the same type as the return type.
 
 	if returnType != VoidType {
-		checker.declareResult(returnType)
+		var resultType Type
+		if returnType.IsResourceType() {
+			resultType = &ReferenceType{
+				Type: returnType,
+			}
+		} else {
+			resultType = returnType
+		}
+		checker.declareResult(resultType)
 	}
 
 	if rewrittenPostConditions != nil {

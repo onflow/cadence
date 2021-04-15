@@ -457,3 +457,43 @@ func TestCheckFunctionPostConditionWithMessageUsingParameter(t *testing.T) {
 
 	require.NoError(t, err)
 }
+
+func TestInterpretFunctionWithPostConditionAndResourceResult(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+
+        resource R {}
+
+        resource Container {
+
+            let resources: @{String: R}
+
+            init() {
+                self.resources <- {"original": <-create R()}
+            }
+
+            fun withdraw(): @R {
+                post {
+                    self.add(<-result)
+                }
+                return <- self.resources.remove(key: "original")!
+            }
+
+            fun add(_ r: @R): Bool {
+                self.resources["duplicate"] <-! r
+                return true
+            }
+
+            destroy() {
+                destroy self.resources
+            }
+        }
+    `)
+
+	errs := ExpectCheckerErrors(t, err, 2)
+
+	require.IsType(t, &sema.InvalidMoveOperationError{}, errs[0])
+	require.IsType(t, &sema.TypeMismatchError{}, errs[1])
+}
