@@ -458,7 +458,7 @@ func TestCheckFunctionPostConditionWithMessageUsingParameter(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestInterpretFunctionWithPostConditionAndResourceResult(t *testing.T) {
+func TestCheckFunctionWithPostConditionAndResourceResult(t *testing.T) {
 
 	t.Parallel()
 
