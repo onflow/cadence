@@ -963,29 +963,41 @@ func (interpreter *Interpreter) visitFunctionBody(
 
 	interpreter.visitConditions(preConditions)
 
-	var resultValue Value
+	var returnValue Value
 
 	if body != nil {
 		result = body()
 		if ret, ok := result.(functionReturn); ok {
-			resultValue = ret.Value
+			returnValue = ret.Value
 		} else {
-			resultValue = VoidValue{}
+			returnValue = VoidValue{}
 		}
 	} else {
-		resultValue = VoidValue{}
+		returnValue = VoidValue{}
 	}
 
-	// If there is a return type, declare the constant `result`
-	// which has the return value
+	// If there is a return type, declare the constant `result`.
+	// If it is a resource type, the constant has the same type as a referecne to the return type.
+	// If it is not a resource type, the constant has the same type as the return type.
 
 	if returnType != sema.VoidType {
-		interpreter.declareVariable(sema.ResultIdentifier, resultValue)
+		var resultValue Value
+		if returnType.IsResourceType() {
+			resultValue = &EphemeralReferenceValue{
+				Value: returnValue,
+			}
+		} else {
+			resultValue = returnValue
+		}
+		interpreter.declareVariable(
+			sema.ResultIdentifier,
+			resultValue,
+		)
 	}
 
 	interpreter.visitConditions(postConditions)
 
-	return resultValue
+	return returnValue
 }
 
 func (interpreter *Interpreter) visitConditions(conditions []*ast.Condition) {
