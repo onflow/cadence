@@ -1094,7 +1094,9 @@ func TestCheckArrayMemberTypeInference(t *testing.T) {
 			var y: [Int8]? = [1, 2, 3]
 
 			var z: Int8 = 7
-			z = 8
+			z = 8 + 6
+
+			var a: AnyStruct = 8 + 6
 
 			return x
 		}
