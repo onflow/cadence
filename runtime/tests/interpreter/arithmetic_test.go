@@ -808,7 +808,7 @@ func TestInterpretSaturatedArithmeticFunctions(t *testing.T) {
 				require.NoError(t, err)
 
 				require.True(t,
-					bool(call.expected.Equal(inter, result)),
+					bool(call.expected.Equal(result, inter, false)),
 					fmt.Sprintf(
 						"%s(%s, %s) = %s != %s",
 						method, call.left, call.right, result, call.expected,
