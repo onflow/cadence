@@ -1538,7 +1538,7 @@ func (s *Server) getContractInitializerParameters(_ protocol.Conn, args ...inter
 
 // parseEntryPointArguments returns the values for the given arguments (literals) for the entry point.
 //
-// There should be exactly 1 argument:
+// There should be exactly 2 arguments:
 //   * the DocumentURI of the file to submit
 //   * the array of arguments
 func (s *Server) parseEntryPointArguments(_ protocol.Conn, args ...interface{}) (interface{}, error) {
