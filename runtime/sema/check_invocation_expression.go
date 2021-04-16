@@ -58,7 +58,7 @@ func (checker *Checker) checkInvocationExpression(invocationExpression *ast.Invo
 	// check the invoked expression can be invoked
 
 	invokedExpression := invocationExpression.InvokedExpression
-	expressionType := invokedExpression.Accept(checker).(Type)
+	expressionType := checker.VisitExpression(invokedExpression, nil)
 
 	isOptionalChainingResult := false
 	if memberExpression, ok := invokedExpression.(*ast.MemberExpression); ok {
@@ -405,8 +405,8 @@ func (checker *Checker) checkInvocation(
 
 	for i := minCount; i < argumentCount; i++ {
 		argument := invocationExpression.Arguments[i]
-
-		argumentTypes[i] = argument.Expression.Accept(checker).(Type)
+		// TODO: pass the expected type to support type inferring for parameters
+		argumentTypes[i] = checker.VisitExpression(argument.Expression, nil)
 	}
 
 	// The invokable type might have special checks for the arguments
@@ -484,7 +484,9 @@ func (checker *Checker) checkInvocationRequiredArgument(
 	parameterType Type,
 ) {
 	argument := arguments[argumentIndex]
-	argumentType := argument.Expression.Accept(checker).(Type)
+
+	// TODO: pass the expected type to support type inferring for parameters
+	argumentType := checker.VisitExpression(argument.Expression, nil)
 	argumentTypes[argumentIndex] = argumentType
 
 	checker.checkInvocationArgumentMove(argument.Expression, argumentType)

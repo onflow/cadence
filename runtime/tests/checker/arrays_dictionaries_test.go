@@ -197,7 +197,10 @@ func TestCheckInvalidDictionaryIndexing(t *testing.T) {
 
 	errs := ExpectCheckerErrors(t, err, 1)
 
-	assert.IsType(t, &sema.NotIndexingTypeError{}, errs[0])
+	require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	typeMismatchError := errs[0].(*sema.TypeMismatchError)
+	assert.Equal(t, sema.StringType, typeMismatchError.ExpectedType)
+	assert.Equal(t, sema.BoolType, typeMismatchError.ActualType)
 }
 
 func TestCheckDictionaryIndexingAssignment(t *testing.T) {

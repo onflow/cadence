@@ -68,7 +68,7 @@ func TestCheckInvalidArrayIndexingWithBool(t *testing.T) {
 
 	errs := ExpectCheckerErrors(t, err, 1)
 
-	assert.IsType(t, &sema.NotIndexingTypeError{}, errs[0])
+	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 }
 
 func TestCheckInvalidArrayIndexingIntoBool(t *testing.T) {
@@ -114,7 +114,7 @@ func TestCheckInvalidArrayIndexingAssignmentWithBool(t *testing.T) {
 
 	errs := ExpectCheckerErrors(t, err, 1)
 
-	assert.IsType(t, &sema.NotIndexingTypeError{}, errs[0])
+	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 }
 
 func TestCheckArrayIndexingAssignmentWithInteger(t *testing.T) {
@@ -160,7 +160,7 @@ func TestCheckInvalidStringIndexingWithBool(t *testing.T) {
 
 	errs := ExpectCheckerErrors(t, err, 1)
 
-	assert.IsType(t, &sema.NotIndexingTypeError{}, errs[0])
+	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 }
 
 func TestCheckInvalidUnknownDeclarationIndexing(t *testing.T) {

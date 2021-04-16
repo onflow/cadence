@@ -35,12 +35,11 @@ func (checker *Checker) VisitBinaryExpression(expression *ast.BinaryExpression) 
 
 	var expectedType Type
 	if operationKind == BinaryOperationKindArithmetic {
-		expectedType = checker.expectedType
+		expectedType = UnwrapOptionalType(checker.expectedType)
 	}
 
 	leftType := checker.VisitExpression(expression.Left, expectedType)
 	leftIsInvalid := leftType.IsInvalidType()
-
 
 	unsupportedOperation := func() Type {
 		panic(&unsupportedOperation{
@@ -58,7 +57,7 @@ func (checker *Checker) VisitBinaryExpression(expression *ast.BinaryExpression) 
 
 		// Right hand side will always be evaluated
 
-		rightType := checker.VisitExpression(expression.Right, checker.expectedType)
+		rightType := checker.VisitExpression(expression.Right, expectedType)
 		rightIsInvalid := rightType.IsInvalidType()
 
 		anyInvalid := leftIsInvalid || rightIsInvalid
