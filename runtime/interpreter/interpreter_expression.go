@@ -278,11 +278,18 @@ func (interpreter *Interpreter) VisitNilExpression(_ *ast.NilExpression) ast.Rep
 }
 
 func (interpreter *Interpreter) VisitIntegerExpression(expression *ast.IntegerExpression) ast.Repr {
-	return IntValue{expression.Value}
+	intSubType := interpreter.Program.Elaboration.IntegerExpressionType[expression]
+
+	// TODO: This can be optimized to directly create the value of the integer-subtype,
+	// rather than creating an int value and then converting to the subtype.
+	intValue := IntValue{expression.Value}
+	return interpreter.convert(intValue, sema.IntType, intSubType)
 }
 
 func (interpreter *Interpreter) VisitFixedPointExpression(expression *ast.FixedPointExpression) ast.Repr {
 	// TODO: adjust once/if we support more fixed point types
+
+	fixedPointSubType := interpreter.Program.Elaboration.FixedPointExpression[expression]
 
 	value := fixedpoint.ConvertToFixedPointBigInt(
 		expression.Negative,
@@ -291,11 +298,19 @@ func (interpreter *Interpreter) VisitFixedPointExpression(expression *ast.FixedP
 		expression.Scale,
 		sema.Fix64Scale,
 	)
-
-	if expression.Negative {
+	switch fixedPointSubType {
+	case sema.Fix64Type, sema.SignedFixedPointType:
 		return Fix64Value(value.Int64())
-	} else {
+	case sema.UFix64Type:
 		return UFix64Value(value.Uint64())
+	case sema.FixedPointType:
+		if expression.Negative {
+			return Fix64Value(value.Int64())
+		} else {
+			return UFix64Value(value.Uint64())
+		}
+	default:
+		panic(errors.NewUnreachableError())
 	}
 }
 
