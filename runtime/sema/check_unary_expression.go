@@ -25,7 +25,7 @@ import (
 
 func (checker *Checker) VisitUnaryExpression(expression *ast.UnaryExpression) ast.Repr {
 
-	valueType := expression.Expression.Accept(checker).(Type)
+	valueType := checker.VisitExpression(expression.Expression, nil)
 
 	reportInvalidUnaryOperator := func(expectedType Type) {
 		checker.report(
@@ -43,6 +43,7 @@ func (checker *Checker) VisitUnaryExpression(expression *ast.UnaryExpression) as
 		expectedType := BoolType
 		if !IsSubType(valueType, expectedType) {
 			reportInvalidUnaryOperator(expectedType)
+			return InvalidType
 		}
 		return valueType
 
@@ -50,6 +51,7 @@ func (checker *Checker) VisitUnaryExpression(expression *ast.UnaryExpression) as
 		expectedType := SignedNumberType
 		if !IsSubType(valueType, expectedType) {
 			reportInvalidUnaryOperator(expectedType)
+			return InvalidType
 		}
 
 		return valueType
@@ -66,6 +68,7 @@ func (checker *Checker) VisitUnaryExpression(expression *ast.UnaryExpression) as
 					},
 				},
 			)
+			return InvalidType
 		}
 
 		return valueType

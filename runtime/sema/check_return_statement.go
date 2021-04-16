@@ -53,7 +53,7 @@ func (checker *Checker) VisitReturnStatement(statement *ast.ReturnStatement) ast
 	// If the return statement has a return value,
 	// check that the value's type matches the enclosing function's return type
 
-	valueType := statement.Expression.Accept(checker).(Type)
+	valueType := checker.VisitExpression(statement.Expression, returnType)
 
 	checker.Elaboration.ReturnStatementValueTypes[statement] = valueType
 	checker.Elaboration.ReturnStatementReturnTypes[statement] = returnType
@@ -69,23 +69,6 @@ func (checker *Checker) VisitReturnStatement(statement *ast.ReturnStatement) ast
 		)
 
 		return nil
-	}
-
-	// The return statement has a return value,
-	// and the enclosing function has a non-Void return type.
-	// Check that the types are compatible
-
-	if !valueType.IsInvalidType() &&
-		!returnType.IsInvalidType() &&
-		!checker.checkTypeCompatibility(statement.Expression, valueType, returnType) {
-
-		checker.report(
-			&TypeMismatchError{
-				ExpectedType: returnType,
-				ActualType:   valueType,
-				Range:        ast.NewRangeFromPositioned(statement.Expression),
-			},
-		)
 	}
 
 	checker.checkVariableMove(statement.Expression)
