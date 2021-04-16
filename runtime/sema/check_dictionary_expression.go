@@ -30,7 +30,9 @@ func (checker *Checker) VisitDictionaryExpression(expression *ast.DictionaryExpr
 
 	var keyType, valueType Type
 
-	if expectedMapType, ok := checker.expectedType.(*DictionaryType); ok {
+	expectedType := UnwrapOptionalType(checker.expectedType)
+
+	if expectedMapType, ok := expectedType.(*DictionaryType); ok {
 		keyType = expectedMapType.KeyType
 		valueType = expectedMapType.ValueType
 	}

@@ -26,10 +26,12 @@ func (checker *Checker) VisitArrayExpression(expression *ast.ArrayExpression) as
 
 	// visit all elements, ensure they are all the same type
 
-	var elementType Type
-	if checker.expectedType != nil {
+	expectedType := UnwrapOptionalType(checker.expectedType)
 
-		switch typ := checker.expectedType.(type) {
+	var elementType Type
+	if expectedType != nil {
+
+		switch typ := expectedType.(type) {
 
 		case *ConstantSizedType:
 			elementType = typ.ElementType(true)
@@ -90,5 +92,5 @@ func (checker *Checker) VisitArrayExpression(expression *ast.ArrayExpression) as
 		}
 	}
 
-	return checker.expectedType
+	return expectedType
 }

@@ -119,7 +119,7 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression) (accessedT
 			checker.currentMemberExpression = previousMemberExpression
 		}()
 
-		accessedType = accessedExpression.Accept(checker).(Type)
+		accessedType = checker.VisitExpression(accessedExpression, nil)
 	}()
 
 	checker.checkUnusedExpressionResourceLoss(accessedType, accessedExpression)

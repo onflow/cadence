@@ -169,6 +169,8 @@ func (checker *Checker) VisitIntegerExpression(expr *ast.IntegerExpression) ast.
 		return IntType
 	}
 
+	expectedType = UnwrapOptionalType(expectedType)
+
 	// If the contextually expected type is a subtype of Integer or Address, then take that.
 	if IsSubType(expectedType, IntegerType) {
 		CheckIntegerLiteral(expr, expectedType, checker.report)
@@ -188,7 +190,8 @@ func (checker *Checker) VisitFixedPointExpression(expression *ast.FixedPointExpr
 	// TODO: adjust once/if we support more fixed point types
 
 	// If the contextually expected type is a subtype of FixedPoint, then take that.
-	expectedType := checker.expectedType
+	expectedType := UnwrapOptionalType(checker.expectedType)
+
 	if expectedType != nil && IsSubType(expectedType, FixedPointType) {
 		CheckFixedPointLiteral(expression, expectedType, checker.report)
 		return expectedType
@@ -207,7 +210,7 @@ func (checker *Checker) VisitFixedPointExpression(expression *ast.FixedPointExpr
 }
 
 func (checker *Checker) VisitStringExpression(expression *ast.StringExpression) ast.Repr {
-	expectedType := checker.expectedType
+	expectedType := UnwrapOptionalType(checker.expectedType)
 
 	if expectedType != nil && IsSubType(expectedType, CharacterType) {
 		checker.checkCharacterLiteral(expression)
@@ -231,7 +234,7 @@ func (checker *Checker) visitIndexExpression(
 ) Type {
 
 	targetExpression := indexExpression.TargetExpression
-	targetType := targetExpression.Accept(checker).(Type)
+	targetType := checker.VisitExpression(targetExpression, nil)
 
 	// NOTE: check indexed type first for UX reasons
 
@@ -284,23 +287,23 @@ func (checker *Checker) visitValueIndexingExpression(
 	indexingExpression ast.Expression,
 	isAssignment bool,
 ) Type {
-	indexingType := indexingExpression.Accept(checker).(Type)
+	checker.VisitExpression(indexingExpression, indexedType.IndexingType())
 
 	elementType := indexedType.ElementType(isAssignment)
 
 	// check indexing expression's type can be used to index
 	// into indexed expression's type
 
-	if !indexingType.IsInvalidType() &&
-		!IsSubType(indexingType, indexedType.IndexingType()) {
-
-		checker.report(
-			&NotIndexingTypeError{
-				Type:  indexingType,
-				Range: ast.NewRangeFromPositioned(indexingExpression),
-			},
-		)
-	}
+	//if !indexingType.IsInvalidType() &&
+	//	!IsSubType(indexingType, indexedType.IndexingType()) {
+	//
+	//	checker.report(
+	//		&NotIndexingTypeError{
+	//			Type:  indexingType,
+	//			Range: ast.NewRangeFromPositioned(indexingExpression),
+	//		},
+	//	)
+	//}
 
 	return elementType
 }
