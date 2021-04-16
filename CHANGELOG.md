@@ -34,6 +34,7 @@
 - Validate arguments passed into cadence programs (#724) @SupunS
 - Use location ID as key for maps holding account codes (#723) @turbolent
 - Make native composite types non-storable (#713) @turbolent
+- Improve state decoding tool (#798) @turbolent
 
 ## 🐞 Bug Fixes
 
