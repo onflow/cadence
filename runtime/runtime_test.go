@@ -122,12 +122,14 @@ type testRuntimeInterface struct {
 		signatureAlgorithm SignatureAlgorithm,
 		hashAlgorithm HashAlgorithm,
 	) (bool, error)
-	hash                   func(data []byte, hashAlgorithm HashAlgorithm) ([]byte, error)
-	setCadenceValue        func(owner Address, key string, value cadence.Value) (err error)
-	getStorageUsed         func(_ Address) (uint64, error)
-	getStorageCapacity     func(_ Address) (uint64, error)
-	programs               map[common.LocationID]*interpreter.Program
-	implementationDebugLog func(message string) error
+	hash                       func(data []byte, hashAlgorithm HashAlgorithm) ([]byte, error)
+	setCadenceValue            func(owner Address, key string, value cadence.Value) (err error)
+	getAccountBalance          func(_ Address) (uint64, error)
+	getAccountAvailableBalance func(_ Address) (uint64, error)
+	getStorageUsed             func(_ Address) (uint64, error)
+	getStorageCapacity         func(_ Address) (uint64, error)
+	programs                   map[common.LocationID]*interpreter.Program
+	implementationDebugLog     func(message string) error
 }
 
 // testRuntimeInterface should implement Interface
@@ -359,6 +361,14 @@ func (i *testRuntimeInterface) HighLevelStorageEnabled() bool {
 
 func (i *testRuntimeInterface) SetCadenceValue(owner common.Address, key string, value cadence.Value) (err error) {
 	return i.setCadenceValue(owner, key, value)
+}
+
+func (i *testRuntimeInterface) GetAccountBalance(address Address) (uint64, error) {
+	return i.getAccountBalance(address)
+}
+
+func (i *testRuntimeInterface) GetAccountAvailableBalance(address Address) (uint64, error) {
+	return i.getAccountAvailableBalance(address)
 }
 
 func (i *testRuntimeInterface) GetStorageUsed(address Address) (uint64, error) {
@@ -4216,6 +4226,8 @@ func TestInterpretResourceOwnerFieldUseComposite(t *testing.T) {
           prepare(signer: AuthAccount) {
               let ref1 = signer.borrow<&Test.R>(from: /storage/r)!
               log(ref1.owner?.address)
+              log(ref1.owner?.balance)
+              log(ref1.owner?.availableBalance)
               log(ref1.owner?.storageUsed)
               log(ref1.owner?.storageCapacity)
               ref1.logOwnerAddress()
@@ -4223,6 +4235,8 @@ func TestInterpretResourceOwnerFieldUseComposite(t *testing.T) {
               let publicAccount = getAccount(0x01)
               let ref2 = publicAccount.getCapability(/public/r).borrow<&Test.R>()!
               log(ref2.owner?.address)
+              log(ref2.owner?.balance)
+              log(ref2.owner?.availableBalance)
               log(ref2.owner?.storageUsed)
               log(ref2.owner?.storageCapacity)
               ref2.logOwnerAddress()
@@ -4266,6 +4280,14 @@ func TestInterpretResourceOwnerFieldUseComposite(t *testing.T) {
 		},
 		log: func(message string) {
 			loggedMessages = append(loggedMessages, message)
+		},
+		getAccountBalance: func(_ Address) (uint64, error) {
+			// return a dummy value
+			return 12300000000, nil
+		},
+		getAccountAvailableBalance: func(_ Address) (uint64, error) {
+			// return a dummy value
+			return 152300000000, nil
 		},
 		getStorageUsed: func(_ Address) (uint64, error) {
 			// return a dummy value
@@ -4324,15 +4346,19 @@ func TestInterpretResourceOwnerFieldUseComposite(t *testing.T) {
 
 	assert.Equal(t,
 		[]string{
-			"0x1",  // ref1.owner?.address
-			"120",  // ref1.owner?.storageUsed
-			"1245", // ref1.owner?.storageCapacity
+			"0x1",    // ref1.owner?.address
+			"123.00000000",  // ref2.owner?.balance
+			"1523.00000000", // ref2.owner?.availableBalance
+			"120",    // ref1.owner?.storageUsed
+			"1245",   // ref1.owner?.storageCapacity
 
 			"0x1",
 
-			"0x1",  // ref2.owner?.address
-			"120",  // ref2.owner?.storageUsed
-			"1245", // ref2.owner?.storageCapacity
+			"0x1",     // ref2.owner?.address
+			"123.00000000",  // ref2.owner?.balance
+			"1523.00000000", // ref2.owner?.availableBalance
+			"120",    // ref2.owner?.storageUsed
+			"1245",   // ref2.owner?.storageCapacity
 
 			"0x1",
 		},

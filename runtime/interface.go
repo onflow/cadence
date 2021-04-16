@@ -103,6 +103,10 @@ type Interface interface {
 	) (bool, error)
 	// Hash returns the digest of hashing the given data with using the given hash algorithm
 	Hash(data []byte, hashAlgorithm HashAlgorithm) ([]byte, error)
+	// GetAccountBalance gets accounts default flow token balance.
+	GetAccountBalance(address common.Address) (value uint64, err error)
+	// GetAccountAvailableBalance gets accounts default flow token balance - balance that is reserved for storage.
+	GetAccountAvailableBalance(address common.Address) (value uint64, err error)
 	// GetStorageUsed gets storage used in bytes by the address at the moment of the function call.
 	GetStorageUsed(address Address) (value uint64, err error)
 	// GetStorageCapacity gets storage capacity in bytes on the address.
@@ -275,6 +279,14 @@ func (i *emptyRuntimeInterface) Hash(
 	_ HashAlgorithm,
 ) ([]byte, error) {
 	return nil, nil
+}
+
+func (i emptyRuntimeInterface) GetAccountBalance(_ Address) (uint64, error) {
+	return 0, nil
+}
+
+func (i emptyRuntimeInterface) GetAccountAvailableBalance(_ Address) (uint64, error) {
+	return 0, nil
 }
 
 func (i emptyRuntimeInterface) GetStorageUsed(_ Address) (uint64, error) {

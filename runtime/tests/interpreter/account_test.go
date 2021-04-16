@@ -50,10 +50,12 @@ func testAccount(t *testing.T, auth bool, code string) (*interpreter.Interpreter
 		Type: sema.AuthAccountType,
 		Value: interpreter.NewAuthAccountValue(
 			address,
+			returnZeroUFix64,
+			returnZeroUFix64,
 			func(interpreter *interpreter.Interpreter) interpreter.UInt64Value {
 				return 0
 			},
-			returnZero,
+			returnZeroUInt64,
 			panicFunction,
 			panicFunction,
 			&interpreter.CompositeValue{},
@@ -70,10 +72,12 @@ func testAccount(t *testing.T, auth bool, code string) (*interpreter.Interpreter
 		Type: sema.PublicAccountType,
 		Value: interpreter.NewPublicAccountValue(
 			address,
+			returnZeroUFix64,
+			returnZeroUFix64,
 			func(interpreter *interpreter.Interpreter) interpreter.UInt64Value {
 				return 0
 			},
-			returnZero,
+			returnZeroUInt64,
 			interpreter.NewPublicAccountKeysValue(
 				nil,
 			),
@@ -138,8 +142,12 @@ func testAccount(t *testing.T, auth bool, code string) (*interpreter.Interpreter
 	return inter, storedValues
 }
 
-func returnZero() interpreter.UInt64Value {
+func returnZeroUInt64() interpreter.UInt64Value {
 	return interpreter.UInt64Value(0)
+}
+
+func returnZeroUFix64() interpreter.UFix64Value {
+	return interpreter.UFix64Value(0)
 }
 
 func TestInterpretAuthAccount_save(t *testing.T) {
@@ -1407,6 +1415,50 @@ func TestInterpretAccount_getCapability(t *testing.T) {
 					}
 				})
 			}
+		}
+	}
+}
+
+func TestCheckAccount_BalanceFields(t *testing.T) {
+	t.Parallel()
+
+	for accountType, auth := range map[string]bool{
+		"AuthAccount":   true,
+		"PublicAccount": false,
+	} {
+
+		for _, fieldName := range []string{
+			"balance",
+			"availableBalance",
+		} {
+
+			testName := fmt.Sprintf(
+				"%s.%s",
+				accountType,
+				fieldName,
+			)
+
+			t.Run(testName, func(t *testing.T) {
+
+				code := fmt.Sprintf(
+					`
+	                      fun test(): UFix64 {
+	                          return account.%s
+	                      }
+	                    `,
+					fieldName,
+				)
+				inter, _ := testAccount(
+					t,
+					auth,
+					code,
+				)
+
+				value, err := inter.Invoke("test")
+				require.NoError(t, err)
+
+				assert.Equal(t, interpreter.UFix64Value(0), value)
+			})
 		}
 	}
 }

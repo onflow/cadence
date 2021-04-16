@@ -321,6 +321,8 @@ func (r *interpreterRuntime) newAuthAccountValue(
 ) *interpreter.CompositeValue {
 	return interpreter.NewAuthAccountValue(
 		addressValue,
+		accountBalanceGetFunction(addressValue, context.Interface),
+		accountAvailableBalanceGetFunction(addressValue, context.Interface),
 		storageUsedGetFunction(addressValue, context.Interface, runtimeStorage),
 		storageCapacityGetFunction(addressValue, context.Interface),
 		r.newAddPublicKeyFunction(addressValue, context.Interface),
@@ -1201,6 +1203,43 @@ func (r *interpreterRuntime) newCreateAccountFunction(
 		)
 	}
 }
+
+func accountBalanceGetFunction(
+	addressValue interpreter.AddressValue,
+	runtimeInterface Interface,
+) func() interpreter.UFix64Value {
+	address := addressValue.ToAddress()
+	return func() interpreter.UFix64Value {
+		var balance uint64
+		var err error
+		wrapPanic(func() {
+			balance, err = runtimeInterface.GetAccountBalance(address)
+		})
+		if err != nil {
+			panic(err)
+		}
+		return interpreter.UFix64Value(balance)
+	}
+}
+
+func accountAvailableBalanceGetFunction(
+	addressValue interpreter.AddressValue,
+	runtimeInterface Interface,
+) func() interpreter.UFix64Value {
+	address := addressValue.ToAddress()
+	return func() interpreter.UFix64Value {
+		var balance uint64
+		var err error
+		wrapPanic(func() {
+			balance, err = runtimeInterface.GetAccountAvailableBalance(address)
+		})
+		if err != nil {
+			panic(err)
+		}
+		return interpreter.UFix64Value(balance)
+	}
+}
+
 func storageUsedGetFunction(
 	addressValue interpreter.AddressValue,
 	runtimeInterface Interface,
@@ -1531,6 +1570,8 @@ func (r *interpreterRuntime) getPublicAccount(
 
 	return interpreter.NewPublicAccountValue(
 		accountAddress,
+		accountBalanceGetFunction(accountAddress, runtimeInterface),
+		accountAvailableBalanceGetFunction(accountAddress, runtimeInterface),
 		storageUsedGetFunction(accountAddress, runtimeInterface, runtimeStorage),
 		storageCapacityGetFunction(accountAddress, runtimeInterface),
 		r.newPublicAccountKeys(accountAddress, runtimeInterface),

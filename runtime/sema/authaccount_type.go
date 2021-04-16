@@ -24,6 +24,8 @@ import (
 
 const AuthAccountTypeName = "AuthAccount"
 const AuthAccountAddressField = "address"
+const AuthAccountBalanceField = "balance"
+const AuthAccountAvailableBalanceField = "availableBalance"
 const AuthAccountStorageUsedField = "storageUsed"
 const AuthAccountStorageCapacityField = "storageCapacity"
 const AuthAccountAddPublicKeyField = "addPublicKey"
@@ -64,6 +66,18 @@ var AuthAccountType = func() *CompositeType {
 			AuthAccountAddressField,
 			&AddressType{},
 			accountTypeAddressFieldDocString,
+		),
+		NewPublicConstantFieldMember(
+			authAccountType,
+			AuthAccountBalanceField,
+			UFix64Type,
+			accountTypeAccountBalanceFieldDocString,
+		),
+		NewPublicConstantFieldMember(
+			authAccountType,
+			AuthAccountAvailableBalanceField,
+			UFix64Type,
+			accountTypeAccountAvailableBalanceFieldDocString,
 		),
 		NewPublicConstantFieldMember(
 			authAccountType,
@@ -604,6 +618,14 @@ The address of the account
 
 const accountTypeContractsFieldDocString = `
 The contracts of the account
+`
+
+const accountTypeAccountBalanceFieldDocString = `
+The FLOW balance of the default vault of this account
+`
+
+const accountTypeAccountAvailableBalanceFieldDocString = `
+The FLOW balance of the default vault of this account that is available to be moved
 `
 
 const accountTypeStorageUsedFieldDocString = `
