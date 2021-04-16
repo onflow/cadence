@@ -219,3 +219,10 @@ let counterRef = countCap.borrow()
 //
 let counterRef2 = publicAccount.borrow<&Counter>(/storage/counter)
 ```
+
+The address of a capability can be obtained from the `address` field of the capability:
+
+- `cadence•let address: Address`
+
+  The address of the capability.
+

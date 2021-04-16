@@ -20,6 +20,7 @@ package interpreter
 
 import (
 	"fmt"
+	"math"
 	goRuntime "runtime"
 
 	"github.com/onflow/cadence/runtime/ast"
@@ -1437,7 +1438,7 @@ func (interpreter *Interpreter) compositeInitializerFunction(
 	}
 
 	initializer = initializers[0]
-	functionType := interpreter.Program.Elaboration.SpecialFunctionTypes[initializer].FunctionType
+	functionType := interpreter.Program.Elaboration.ConstructorFunctionTypes[initializer].FunctionType
 
 	parameterList := initializer.FunctionDeclaration.ParameterList
 
@@ -2146,118 +2147,178 @@ func (interpreter *Interpreter) writeStored(storageAddress common.Address, key s
 }
 
 type valueConverterDeclaration struct {
-	name  string
-	value FunctionValue
+	name    string
+	convert func(Value) Value
+	min     Value
+	max     Value
 }
 
 // It would be nice if return types in Go's function types would be covariant
 //
 var converterDeclarations = []valueConverterDeclaration{
-	{"Int", NewHostFunctionValue(
-		func(invocation Invocation) Value {
-			return ConvertInt(invocation.Arguments[0])
+	{
+		name: sema.IntTypeName,
+		convert: func(value Value) Value {
+			return ConvertInt(value)
 		},
-	)},
-	{"UInt", NewHostFunctionValue(
-		func(invocation Invocation) Value {
-			return ConvertUInt(invocation.Arguments[0])
+	},
+	{
+		name: sema.UIntTypeName,
+		convert: func(value Value) Value {
+			return ConvertUInt(value)
 		},
-	)},
-	{"Int8", NewHostFunctionValue(
-		func(invocation Invocation) Value {
-			return ConvertInt8(invocation.Arguments[0])
+		min: NewUIntValueFromBigInt(sema.UIntTypeMin),
+	},
+	{
+		name: sema.Int8TypeName,
+		convert: func(value Value) Value {
+			return ConvertInt8(value)
 		},
-	)},
-	{"Int16", NewHostFunctionValue(
-		func(invocation Invocation) Value {
-			return ConvertInt16(invocation.Arguments[0])
+		min: Int8Value(math.MinInt8),
+		max: Int8Value(math.MaxInt8),
+	},
+	{
+		name: sema.Int16TypeName,
+		convert: func(value Value) Value {
+			return ConvertInt16(value)
 		},
-	)},
-	{"Int32", NewHostFunctionValue(
-		func(invocation Invocation) Value {
-			return ConvertInt32(invocation.Arguments[0])
+		min: Int16Value(math.MinInt16),
+		max: Int16Value(math.MaxInt16),
+	},
+	{
+		name: sema.Int32TypeName,
+		convert: func(value Value) Value {
+			return ConvertInt32(value)
 		},
-	)},
-	{"Int64", NewHostFunctionValue(
-		func(invocation Invocation) Value {
-			return ConvertInt64(invocation.Arguments[0])
+		min: Int32Value(math.MinInt32),
+		max: Int32Value(math.MaxInt32),
+	},
+	{
+		name: sema.Int64TypeName,
+		convert: func(value Value) Value {
+			return ConvertInt64(value)
 		},
-	)},
-	{"Int128", NewHostFunctionValue(
-		func(invocation Invocation) Value {
-			return ConvertInt128(invocation.Arguments[0])
+		min: Int64Value(math.MinInt64),
+		max: Int64Value(math.MaxInt64),
+	},
+	{
+		name: sema.Int128TypeName,
+		convert: func(value Value) Value {
+			return ConvertInt128(value)
 		},
-	)},
-	{"Int256", NewHostFunctionValue(
-		func(invocation Invocation) Value {
-			return ConvertInt256(invocation.Arguments[0])
+		min: NewInt128ValueFromBigInt(sema.Int128TypeMinIntBig),
+		max: NewInt128ValueFromBigInt(sema.Int128TypeMaxIntBig),
+	},
+	{
+		name: sema.Int256TypeName,
+		convert: func(value Value) Value {
+			return ConvertInt256(value)
 		},
-	)},
-	{"UInt8", NewHostFunctionValue(
-		func(invocation Invocation) Value {
-			return ConvertUInt8(invocation.Arguments[0])
+		min: NewInt256ValueFromBigInt(sema.Int256TypeMinIntBig),
+		max: NewInt256ValueFromBigInt(sema.Int256TypeMaxIntBig),
+	},
+	{
+		name: sema.UInt8TypeName,
+		convert: func(value Value) Value {
+			return ConvertUInt8(value)
 		},
-	)},
-	{"UInt16", NewHostFunctionValue(
-		func(invocation Invocation) Value {
-			return ConvertUInt16(invocation.Arguments[0])
+		min: UInt8Value(0),
+		max: UInt8Value(math.MaxUint8),
+	},
+	{
+		name: sema.UInt16TypeName,
+		convert: func(value Value) Value {
+			return ConvertUInt16(value)
 		},
-	)},
-	{"UInt32", NewHostFunctionValue(
-		func(invocation Invocation) Value {
-			return ConvertUInt32(invocation.Arguments[0])
+		min: UInt16Value(0),
+		max: UInt16Value(math.MaxUint16),
+	},
+	{
+		name: sema.UInt32TypeName,
+		convert: func(value Value) Value {
+			return ConvertUInt32(value)
 		},
-	)},
-	{"UInt64", NewHostFunctionValue(
-		func(invocation Invocation) Value {
-			return ConvertUInt64(invocation.Arguments[0])
+		min: UInt32Value(0),
+		max: UInt32Value(math.MaxUint32),
+	},
+	{
+		name: sema.UInt64TypeName,
+		convert: func(value Value) Value {
+			return ConvertUInt64(value)
 		},
-	)},
-	{"UInt128", NewHostFunctionValue(
-		func(invocation Invocation) Value {
-			return ConvertUInt128(invocation.Arguments[0])
+		min: UInt64Value(0),
+		max: UInt64Value(math.MaxUint64),
+	},
+	{
+		name: sema.UInt128TypeName,
+		convert: func(value Value) Value {
+			return ConvertUInt128(value)
 		},
-	)},
-	{"UInt256", NewHostFunctionValue(
-		func(invocation Invocation) Value {
-			return ConvertUInt256(invocation.Arguments[0])
+		min: NewUInt128ValueFromUint64(0),
+		max: NewUInt128ValueFromBigInt(sema.UInt128TypeMaxIntBig),
+	},
+	{
+		name: sema.UInt256TypeName,
+		convert: func(value Value) Value {
+			return ConvertUInt256(value)
 		},
-	)},
-	{"Word8", NewHostFunctionValue(
-		func(invocation Invocation) Value {
-			return ConvertWord8(invocation.Arguments[0])
+		min: NewUInt256ValueFromUint64(0),
+		max: NewUInt256ValueFromBigInt(sema.UInt256TypeMaxIntBig),
+	},
+	{
+		name: sema.Word8TypeName,
+		convert: func(value Value) Value {
+			return ConvertWord8(value)
 		},
-	)},
-	{"Word16", NewHostFunctionValue(
-		func(invocation Invocation) Value {
-			return ConvertWord16(invocation.Arguments[0])
+		min: Word8Value(0),
+		max: Word8Value(math.MaxUint8),
+	},
+	{
+		name: sema.Word16TypeName,
+		convert: func(value Value) Value {
+			return ConvertWord16(value)
 		},
-	)},
-	{"Word32", NewHostFunctionValue(
-		func(invocation Invocation) Value {
-			return ConvertWord32(invocation.Arguments[0])
+		min: Word16Value(0),
+		max: Word16Value(math.MaxUint16),
+	},
+	{
+		name: sema.Word32TypeName,
+		convert: func(value Value) Value {
+			return ConvertWord32(value)
 		},
-	)},
-	{"Word64", NewHostFunctionValue(
-		func(invocation Invocation) Value {
-			return ConvertWord64(invocation.Arguments[0])
+		min: Word32Value(0),
+		max: Word32Value(math.MaxUint32),
+	},
+	{
+		name: sema.Word64TypeName,
+		convert: func(value Value) Value {
+			return ConvertWord64(value)
 		},
-	)},
-	{"Fix64", NewHostFunctionValue(
-		func(invocation Invocation) Value {
-			return ConvertFix64(invocation.Arguments[0])
+		min: Word64Value(0),
+		max: Word64Value(math.MaxUint64),
+	},
+	{
+		name: sema.Fix64TypeName,
+		convert: func(value Value) Value {
+			return ConvertFix64(value)
 		},
-	)},
-	{"UFix64", NewHostFunctionValue(
-		func(invocation Invocation) Value {
-			return ConvertUFix64(invocation.Arguments[0])
+		min: Fix64Value(math.MinInt64),
+		max: Fix64Value(math.MaxInt64),
+	},
+	{
+		name: sema.UFix64TypeName,
+		convert: func(value Value) Value {
+			return ConvertUFix64(value)
 		},
-	)},
-	{"Address", NewHostFunctionValue(
-		func(invocation Invocation) Value {
-			return ConvertAddress(invocation.Arguments[0])
+		min: UFix64Value(0),
+		max: UFix64Value(math.MaxUint64),
+	},
+	{
+		name: "Address",
+		convert: func(value Value) Value {
+			return ConvertAddress(value)
 		},
-	)},
+	},
 }
 
 func init() {
@@ -2293,10 +2354,30 @@ func (interpreter *Interpreter) defineBaseFunctions() {
 
 func (interpreter *Interpreter) defineConverterFunctions() {
 	for _, declaration := range converterDeclarations {
-		err := interpreter.ImportValue(
-			declaration.name,
-			declaration.value,
+		// NOTE: declare in loop, as captured in closure below
+		convert := declaration.convert
+		converterFunctionValue := NewHostFunctionValue(
+			func(invocation Invocation) Value {
+				return convert(invocation.Arguments[0])
+			},
 		)
+
+		addMember := func(name string, value Value) {
+			if converterFunctionValue.NestedVariables == nil {
+				converterFunctionValue.NestedVariables = NewStringVariableOrderedMap()
+			}
+			converterFunctionValue.NestedVariables.Set(name, NewVariableWithValue(value))
+		}
+
+		if declaration.min != nil {
+			addMember(sema.NumberTypeMinFieldName, declaration.min)
+		}
+
+		if declaration.max != nil {
+			addMember(sema.NumberTypeMaxFieldName, declaration.max)
+		}
+
+		err := interpreter.ImportValue(declaration.name, converterFunctionValue)
 		if err != nil {
 			panic(errors.NewUnreachableError())
 		}

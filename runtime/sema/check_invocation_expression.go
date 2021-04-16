@@ -207,7 +207,7 @@ func (checker *Checker) checkConstructorInvocationWithResourceResult(
 	returnType Type,
 	inCreate bool,
 ) {
-	if _, ok := invokableType.(*SpecialFunctionType); !ok {
+	if _, ok := invokableType.(*ConstructorFunctionType); !ok {
 		return
 	}
 

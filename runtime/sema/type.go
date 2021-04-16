@@ -957,65 +957,82 @@ var (
 	IntType = NewNumericType(IntTypeName)
 
 	// Int8Type represents the 8-bit signed integer type `Int8`
-	Int8Type = NewNumericType(Int8TypeName).WithIntRange(Int8TypeMinInt, Int8TypeMaxInt)
+	Int8Type = NewNumericType(Int8TypeName).
+			WithIntRange(Int8TypeMinInt, Int8TypeMaxInt)
 
 	// Int16Type represents the 16-bit signed integer type `Int16`
-	Int16Type = NewNumericType(Int16TypeName).WithIntRange(Int16TypeMinInt, Int16TypeMaxInt)
+	Int16Type = NewNumericType(Int16TypeName).
+			WithIntRange(Int16TypeMinInt, Int16TypeMaxInt)
 
 	// Int32Type represents the 32-bit signed integer type `Int32`
-	Int32Type = NewNumericType(Int32TypeName).WithIntRange(Int32TypeMinInt, Int32TypeMaxInt)
+	Int32Type = NewNumericType(Int32TypeName).
+			WithIntRange(Int32TypeMinInt, Int32TypeMaxInt)
 
 	// Int64Type represents the 64-bit signed integer type `Int64`
-	Int64Type = NewNumericType(Int64TypeName).WithIntRange(Int64TypeMinInt, Int64TypeMaxInt)
+	Int64Type = NewNumericType(Int64TypeName).
+			WithIntRange(Int64TypeMinInt, Int64TypeMaxInt)
 
 	// Int128Type represents the 128-bit signed integer type `Int128`
-	Int128Type = NewNumericType(Int128TypeName).WithIntRange(Int128TypeMinIntBig, Int128TypeMaxIntBig)
+	Int128Type = NewNumericType(Int128TypeName).
+			WithIntRange(Int128TypeMinIntBig, Int128TypeMaxIntBig)
 
 	// Int256Type represents the 256-bit signed integer type `Int256`
-	Int256Type = NewNumericType(Int256TypeName).WithIntRange(Int256TypeMinIntBig, Int256TypeMaxIntBig)
+	Int256Type = NewNumericType(Int256TypeName).
+			WithIntRange(Int256TypeMinIntBig, Int256TypeMaxIntBig)
 
 	// UIntType represents the arbitrary-precision unsigned integer type `UInt`
-	UIntType = NewNumericType(UIntTypeName).WithIntRange(UIntTypeMin, nil)
+	UIntType = NewNumericType(UIntTypeName).
+			WithIntRange(UIntTypeMin, nil)
 
 	// UInt8Type represents the 8-bit unsigned integer type `UInt8`
 	// which checks for overflow and underflow
-	UInt8Type = NewNumericType(UInt8TypeName).WithIntRange(UInt8TypeMinInt, UInt8TypeMaxInt)
+	UInt8Type = NewNumericType(UInt8TypeName).
+			WithIntRange(UInt8TypeMinInt, UInt8TypeMaxInt)
 
 	// UInt16Type represents the 16-bit unsigned integer type `UInt16`
 	// which checks for overflow and underflow
-	UInt16Type = NewNumericType(UInt16TypeName).WithIntRange(UInt16TypeMinInt, UInt16TypeMaxInt)
+	UInt16Type = NewNumericType(UInt16TypeName).
+			WithIntRange(UInt16TypeMinInt, UInt16TypeMaxInt)
 
 	// UInt32Type represents the 32-bit unsigned integer type `UInt32`
 	// which checks for overflow and underflow
-	UInt32Type = NewNumericType(UInt32TypeName).WithIntRange(UInt32TypeMinInt, UInt32TypeMaxInt)
+	UInt32Type = NewNumericType(UInt32TypeName).
+			WithIntRange(UInt32TypeMinInt, UInt32TypeMaxInt)
 
 	// UInt64Type represents the 64-bit unsigned integer type `UInt64`
 	// which checks for overflow and underflow
-	UInt64Type = NewNumericType(UInt64TypeName).WithIntRange(UInt64TypeMinInt, UInt64TypeMaxInt)
+	UInt64Type = NewNumericType(UInt64TypeName).
+			WithIntRange(UInt64TypeMinInt, UInt64TypeMaxInt)
 
 	// UInt128Type represents the 128-bit unsigned integer type `UInt128`
 	// which checks for overflow and underflow
-	UInt128Type = NewNumericType(UInt128TypeName).WithIntRange(UInt128TypeMinIntBig, UInt128TypeMaxIntBig)
+	UInt128Type = NewNumericType(UInt128TypeName).
+			WithIntRange(UInt128TypeMinIntBig, UInt128TypeMaxIntBig)
 
 	// UInt256Type represents the 256-bit unsigned integer type `UInt256`
 	// which checks for overflow and underflow
-	UInt256Type = NewNumericType(UInt256TypeName).WithIntRange(UInt256TypeMinIntBig, UInt256TypeMaxIntBig)
+	UInt256Type = NewNumericType(UInt256TypeName).
+			WithIntRange(UInt256TypeMinIntBig, UInt256TypeMaxIntBig)
 
 	// Word8Type represents the 8-bit unsigned integer type `Word8`
 	// which does NOT check for overflow and underflow
-	Word8Type = NewNumericType(Word8TypeName).WithIntRange(Word8TypeMinInt, Word8TypeMaxInt)
+	Word8Type = NewNumericType(Word8TypeName).
+			WithIntRange(Word8TypeMinInt, Word8TypeMaxInt)
 
 	// Word16Type represents the 16-bit unsigned integer type `Word16`
 	// which does NOT check for overflow and underflow
-	Word16Type = NewNumericType(Word16TypeName).WithIntRange(Word16TypeMinInt, Word16TypeMaxInt)
+	Word16Type = NewNumericType(Word16TypeName).
+			WithIntRange(Word16TypeMinInt, Word16TypeMaxInt)
 
 	// Word32Type represents the 32-bit unsigned integer type `Word32`
 	// which does NOT check for overflow and underflow
-	Word32Type = NewNumericType(Word32TypeName).WithIntRange(Word32TypeMinInt, Word32TypeMaxInt)
+	Word32Type = NewNumericType(Word32TypeName).
+			WithIntRange(Word32TypeMinInt, Word32TypeMaxInt)
 
 	// Word64Type represents the 64-bit unsigned integer type `Word64`
 	// which does NOT check for overflow and underflow
-	Word64Type = NewNumericType(Word64TypeName).WithIntRange(Word64TypeMinInt, Word64TypeMaxInt)
+	Word64Type = NewNumericType(Word64TypeName).
+			WithIntRange(Word64TypeMinInt, Word64TypeMaxInt)
 
 	// FixedPointType represents the super-type of all fixed-point types
 	FixedPointType = NewNumericType(FixedPointTypeName)
@@ -1908,10 +1925,12 @@ func formatFunctionType(
 // FunctionType
 //
 type FunctionType struct {
-	TypeParameters        []*TypeParameter
-	Parameters            []*Parameter
-	ReturnTypeAnnotation  *TypeAnnotation
-	RequiredArgumentCount *int
+	TypeParameters           []*TypeParameter
+	Parameters               []*Parameter
+	ReturnTypeAnnotation     *TypeAnnotation
+	RequiredArgumentCount    *int
+	ArgumentExpressionsCheck ArgumentExpressionsCheck
+	Members                  *StringMemberOrderedMap
 }
 
 func RequiredArgumentCount(count int) *int {
@@ -1924,8 +1943,15 @@ func (t *FunctionType) InvocationFunctionType() *FunctionType {
 	return t
 }
 
-func (*FunctionType) CheckArgumentExpressions(_ *Checker, _ []ast.Expression, _ ast.Range) {
-	// NO-OP: no checks for normal functions
+func (t *FunctionType) CheckArgumentExpressions(
+	checker *Checker,
+	argumentExpressions []ast.Expression,
+	invocationRange ast.Range,
+) {
+	if t.ArgumentExpressionsCheck == nil {
+		return
+	}
+	t.ArgumentExpressionsCheck(checker, argumentExpressions, invocationRange)
 }
 
 func (t *FunctionType) String() string {
@@ -2304,18 +2330,6 @@ func (t *FunctionType) Resolve(typeArguments *TypeParameterTypeOrderedMap) Type 
 }
 
 func (t *FunctionType) GetMembers() map[string]MemberResolver {
-	return withBuiltinMembers(t, nil)
-}
-
-// SpecialFunctionType is the the type representing a special function,
-// i.e., a constructor or destructor
-
-type SpecialFunctionType struct {
-	*FunctionType
-	Members *StringMemberOrderedMap
-}
-
-func (t *SpecialFunctionType) GetMembers() map[string]MemberResolver {
 	// TODO: optimize
 	members := make(map[string]MemberResolver, t.Members.Len())
 	t.Members.Foreach(func(name string, loopMember *Member) {
@@ -2332,6 +2346,12 @@ func (t *SpecialFunctionType) GetMembers() map[string]MemberResolver {
 	return withBuiltinMembers(t, members)
 }
 
+// ConstructorFunctionType is the the type representing a constructor function
+
+type ConstructorFunctionType struct {
+	*FunctionType
+}
+
 // CheckedFunctionType is the the type representing a function that checks the arguments,
 // e.g., integer functions
 
@@ -2340,19 +2360,6 @@ type ArgumentExpressionsCheck func(
 	argumentExpressions []ast.Expression,
 	invocationRange ast.Range,
 )
-
-type CheckedFunctionType struct {
-	*FunctionType
-	ArgumentExpressionsCheck ArgumentExpressionsCheck
-}
-
-func (t *CheckedFunctionType) CheckArgumentExpressions(
-	checker *Checker,
-	argumentExpressions []ast.Expression,
-	invocationRange ast.Range,
-) {
-	t.ArgumentExpressionsCheck(checker, argumentExpressions, invocationRange)
-}
 
 // BaseTypeActivation is the base activation that contains
 // the types available in programs
@@ -2492,6 +2499,15 @@ var AllNumberTypes = append(
 	SignedNumberType,
 )
 
+const NumberTypeMinFieldName = "min"
+const NumberTypeMaxFieldName = "max"
+
+const numberTypeMinFieldDocString = `The minimum integer of this type`
+const numberTypeMaxFieldDocString = `The maximum integer of this type`
+
+const fixedPointNumberTypeMinFieldDocString = `The minimum fixed-point value of this type`
+const fixedPointNumberTypeMaxFieldDocString = `The maximum fixed-point value of this type`
+
 func init() {
 
 	// Declare a conversion function for all (leaf) number types
@@ -2513,23 +2529,85 @@ func init() {
 				panic(errors.NewUnreachableError())
 			}
 
+			functionType := &FunctionType{
+				Parameters: []*Parameter{
+					{
+						Label:          ArgumentLabelNotRequired,
+						Identifier:     "value",
+						TypeAnnotation: NewTypeAnnotation(NumberType),
+					},
+				},
+				ReturnTypeAnnotation:     NewTypeAnnotation(numberType),
+				ArgumentExpressionsCheck: numberFunctionArgumentExpressionsChecker(numberType),
+			}
+
+			addMember := func(member *Member) {
+				if functionType.Members == nil {
+					functionType.Members = NewStringMemberOrderedMap()
+				}
+				name := member.Identifier.Identifier
+				_, exists := functionType.Members.Get(name)
+				if exists {
+					panic(errors.NewUnreachableError())
+				}
+				functionType.Members.Set(name, member)
+			}
+
+			switch numberType := numberType.(type) {
+			case *NumericType:
+				if numberType.minInt != nil {
+					addMember(NewPublicConstantFieldMember(
+						functionType,
+						NumberTypeMinFieldName,
+						numberType,
+						numberTypeMinFieldDocString,
+					))
+				}
+
+				if numberType.maxInt != nil {
+					addMember(NewPublicConstantFieldMember(
+						functionType,
+						NumberTypeMaxFieldName,
+						numberType,
+						numberTypeMaxFieldDocString,
+					))
+				}
+
+			case *FixedPointNumericType:
+				if numberType.minInt != nil {
+					// If a minimum integer is set, a minimum fractional must be set
+					if numberType.minFractional == nil {
+						panic(errors.NewUnreachableError())
+					}
+
+					addMember(NewPublicConstantFieldMember(
+						functionType,
+						NumberTypeMinFieldName,
+						numberType,
+						fixedPointNumberTypeMinFieldDocString,
+					))
+				}
+
+				if numberType.maxInt != nil {
+					// If a maximum integer is set, a maximum fractional must be set
+					if numberType.maxFractional == nil {
+						panic(errors.NewUnreachableError())
+					}
+
+					addMember(NewPublicConstantFieldMember(
+						functionType,
+						NumberTypeMaxFieldName,
+						numberType,
+						fixedPointNumberTypeMaxFieldDocString,
+					))
+				}
+			}
+
 			BaseValueActivation.Set(
 				typeName,
 				baseFunctionVariable(
 					typeName,
-					&CheckedFunctionType{
-						FunctionType: &FunctionType{
-							Parameters: []*Parameter{
-								{
-									Label:          ArgumentLabelNotRequired,
-									Identifier:     "value",
-									TypeAnnotation: NewTypeAnnotation(NumberType),
-								},
-							},
-							ReturnTypeAnnotation: NewTypeAnnotation(numberType),
-						},
-						ArgumentExpressionsCheck: numberFunctionArgumentExpressionsChecker(numberType),
-					},
+					functionType,
 				),
 			)
 		}
@@ -2560,34 +2638,33 @@ func init() {
 		panic(errors.NewUnreachableError())
 	}
 
+	functionType := &FunctionType{
+		Parameters: []*Parameter{
+			{
+				Label:          ArgumentLabelNotRequired,
+				Identifier:     "value",
+				TypeAnnotation: NewTypeAnnotation(IntegerType),
+			},
+		},
+		ReturnTypeAnnotation: NewTypeAnnotation(addressType),
+		ArgumentExpressionsCheck: func(checker *Checker, argumentExpressions []ast.Expression, _ ast.Range) {
+			if len(argumentExpressions) < 1 {
+				return
+			}
+
+			intExpression, ok := argumentExpressions[0].(*ast.IntegerExpression)
+			if !ok {
+				return
+			}
+
+			CheckAddressLiteral(intExpression, checker.report)
+		},
+	}
 	BaseValueActivation.Set(
 		typeName,
 		baseFunctionVariable(
 			typeName,
-			&CheckedFunctionType{
-				FunctionType: &FunctionType{
-					Parameters: []*Parameter{
-						{
-							Label:          ArgumentLabelNotRequired,
-							Identifier:     "value",
-							TypeAnnotation: NewTypeAnnotation(IntegerType),
-						},
-					},
-					ReturnTypeAnnotation: NewTypeAnnotation(addressType),
-				},
-				ArgumentExpressionsCheck: func(checker *Checker, argumentExpressions []ast.Expression, _ ast.Range) {
-					if len(argumentExpressions) < 1 {
-						return
-					}
-
-					intExpression, ok := argumentExpressions[0].(*ast.IntegerExpression)
-					if !ok {
-						return
-					}
-
-					CheckAddressLiteral(intExpression, checker.report)
-				},
-			},
+			functionType,
 		),
 	)
 }
@@ -4522,8 +4599,8 @@ func (t *TransactionType) EntryPointFunctionType() *FunctionType {
 	}
 }
 
-func (t *TransactionType) PrepareFunctionType() *SpecialFunctionType {
-	return &SpecialFunctionType{
+func (t *TransactionType) PrepareFunctionType() *ConstructorFunctionType {
+	return &ConstructorFunctionType{
 		FunctionType: &FunctionType{
 			Parameters:           t.PrepareParameters,
 			ReturnTypeAnnotation: NewTypeAnnotation(VoidType),
@@ -4531,8 +4608,8 @@ func (t *TransactionType) PrepareFunctionType() *SpecialFunctionType {
 	}
 }
 
-func (*TransactionType) ExecuteFunctionType() *SpecialFunctionType {
-	return &SpecialFunctionType{
+func (*TransactionType) ExecuteFunctionType() *ConstructorFunctionType {
+	return &ConstructorFunctionType{
 		FunctionType: &FunctionType{
 			Parameters:           []*Parameter{},
 			ReturnTypeAnnotation: NewTypeAnnotation(VoidType),
@@ -4825,7 +4902,9 @@ func (t *RestrictedType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
 // CapabilityType
 
 type CapabilityType struct {
-	BorrowType Type
+	BorrowType          Type
+	memberResolvers     map[string]MemberResolver
+	memberResolversOnce sync.Once
 }
 
 func (*CapabilityType) IsType() {}
@@ -5038,40 +5117,47 @@ The address of the capability
 `
 
 func (t *CapabilityType) GetMembers() map[string]MemberResolver {
-	return withBuiltinMembers(t, map[string]MemberResolver{
-		"borrow": {
-			Kind: common.DeclarationKindFunction,
-			Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
-				return NewPublicFunctionMember(
-					t,
-					identifier,
-					capabilityTypeBorrowFunctionType(t.BorrowType),
-					capabilityTypeBorrowFunctionDocString,
-				)
+	t.initializeMemberResolvers()
+	return t.memberResolvers
+}
+
+func (t *CapabilityType) initializeMemberResolvers() {
+	t.memberResolversOnce.Do(func() {
+		t.memberResolvers = withBuiltinMembers(t, map[string]MemberResolver{
+			"borrow": {
+				Kind: common.DeclarationKindFunction,
+				Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
+					return NewPublicFunctionMember(
+						t,
+						identifier,
+						capabilityTypeBorrowFunctionType(t.BorrowType),
+						capabilityTypeBorrowFunctionDocString,
+					)
+				},
 			},
-		},
-		"check": {
-			Kind: common.DeclarationKindFunction,
-			Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
-				return NewPublicFunctionMember(
-					t,
-					identifier,
-					capabilityTypeCheckFunctionType(t.BorrowType),
-					capabilityTypeCheckFunctionDocString,
-				)
+			"check": {
+				Kind: common.DeclarationKindFunction,
+				Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
+					return NewPublicFunctionMember(
+						t,
+						identifier,
+						capabilityTypeCheckFunctionType(t.BorrowType),
+						capabilityTypeCheckFunctionDocString,
+					)
+				},
 			},
-		},
-		"address": {
-			Kind: common.DeclarationKindField,
-			Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
-				return NewPublicConstantFieldMember(
-					t,
-					identifier,
-					&AddressType{},
-					addressTypeCheckFunctionDocString,
-				)
+			"address": {
+				Kind: common.DeclarationKindField,
+				Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
+					return NewPublicConstantFieldMember(
+						t,
+						identifier,
+						&AddressType{},
+						addressTypeCheckFunctionDocString,
+					)
+				},
 			},
-		},
+		})
 	})
 }
 
