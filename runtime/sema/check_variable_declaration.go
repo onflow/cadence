@@ -52,7 +52,21 @@ func (checker *Checker) visitVariableDeclaration(declaration *ast.VariableDeclar
 	checker.Elaboration.VariableDeclarationValueTypes[declaration] = valueType
 
 	if declarationType == nil {
-		declarationType = valueType
+		if isOptionalBinding {
+			if optionalType, isOptional := valueType.(*OptionalType); isOptional {
+				declarationType = optionalType.Type
+			} else {
+				checker.report(
+					&TypeMismatchError{
+						ExpectedType: &OptionalType{},
+						ActualType:   valueType,
+						Range:        ast.NewRangeFromPositioned(declaration.Value),
+					},
+				)
+			}
+		} else {
+			declarationType = valueType
+		}
 	}
 
 	//valueIsInvalid := valueType.IsInvalidType()
