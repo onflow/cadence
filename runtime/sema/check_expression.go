@@ -182,6 +182,8 @@ func (checker *Checker) VisitIntegerExpression(expression *ast.IntegerExpression
 		actualType = IntType
 	}
 
+	checker.Elaboration.IntegerExpressionType[expression] = actualType
+
 	return actualType
 }
 
@@ -189,6 +191,8 @@ func (checker *Checker) VisitFixedPointExpression(expression *ast.FixedPointExpr
 	// TODO: adjust once/if we support more fixed point types
 
 	// If the contextually expected type is a subtype of FixedPoint, then take that.
+	// Otherwise, infer the type from the expression itself.
+
 	expectedType := UnwrapOptionalType(checker.expectedType)
 
 	var actualType Type
@@ -204,6 +208,9 @@ func (checker *Checker) VisitFixedPointExpression(expression *ast.FixedPointExpr
 	}
 
 	CheckFixedPointLiteral(expression, actualType, checker.report)
+
+	checker.Elaboration.FixedPointExpression[expression] = actualType
+
 	return actualType
 }
 

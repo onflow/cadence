@@ -56,6 +56,8 @@ type Elaboration struct {
 	ArrayExpressionElementType          map[*ast.ArrayExpression]Type
 	DictionaryExpressionType            map[*ast.DictionaryExpression]*DictionaryType
 	DictionaryExpressionEntryTypes      map[*ast.DictionaryExpression][]DictionaryEntryType
+	IntegerExpressionType               map[*ast.IntegerExpression]Type
+	FixedPointExpression                map[*ast.FixedPointExpression]Type
 	TransactionDeclarationTypes         map[*ast.TransactionDeclaration]*TransactionType
 	SwapStatementLeftTypes              map[*ast.SwapStatement]Type
 	SwapStatementRightTypes             map[*ast.SwapStatement]Type
@@ -105,6 +107,8 @@ func NewElaboration() *Elaboration {
 		ArrayExpressionElementType:          map[*ast.ArrayExpression]Type{},
 		DictionaryExpressionType:            map[*ast.DictionaryExpression]*DictionaryType{},
 		DictionaryExpressionEntryTypes:      map[*ast.DictionaryExpression][]DictionaryEntryType{},
+		IntegerExpressionType:               map[*ast.IntegerExpression]Type{},
+		FixedPointExpression:                map[*ast.FixedPointExpression]Type{},
 		TransactionDeclarationTypes:         map[*ast.TransactionDeclaration]*TransactionType{},
 		SwapStatementLeftTypes:              map[*ast.SwapStatement]Type{},
 		SwapStatementRightTypes:             map[*ast.SwapStatement]Type{},
