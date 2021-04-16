@@ -51,9 +51,7 @@ func testAccount(t *testing.T, auth bool, code string) (*interpreter.Interpreter
 		Value: interpreter.NewAuthAccountValue(
 			address,
 			returnZeroUFix64,
-			func(interpreter *interpreter.Interpreter) interpreter.UFix64Value {
-				return 0
-			},
+			returnZeroUFix64,
 			func(interpreter *interpreter.Interpreter) interpreter.UInt64Value {
 				return 0
 			},
@@ -75,9 +73,7 @@ func testAccount(t *testing.T, auth bool, code string) (*interpreter.Interpreter
 		Value: interpreter.NewPublicAccountValue(
 			address,
 			returnZeroUFix64,
-			func(interpreter *interpreter.Interpreter) interpreter.UFix64Value {
-				return 0
-			},
+			returnZeroUFix64,
 			func(interpreter *interpreter.Interpreter) interpreter.UInt64Value {
 				return 0
 			},

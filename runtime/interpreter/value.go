@@ -7086,7 +7086,7 @@ func (v AddressValue) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicT
 func NewAuthAccountValue(
 	address AddressValue,
 	accountBalanceGet func() UFix64Value,
-	accountAvailableBalanceGet func(interpreter *Interpreter) UFix64Value,
+	accountAvailableBalanceGet func() UFix64Value,
 	storageUsedGet func(interpreter *Interpreter) UInt64Value,
 	storageCapacityGet func() UInt64Value,
 	addPublicKeyFunction FunctionValue,
@@ -7110,8 +7110,8 @@ func NewAuthAccountValue(
 		return accountBalanceGet()
 	})
 
-	computedFields.Set(sema.AuthAccountAvailableBalanceField, func(inter *Interpreter) Value {
-		return accountAvailableBalanceGet(inter)
+	computedFields.Set(sema.AuthAccountAvailableBalanceField, func(*Interpreter) Value {
+		return accountAvailableBalanceGet()
 	})
 
 	computedFields.Set(sema.AuthAccountStorageUsedField, func(inter *Interpreter) Value {
@@ -7199,7 +7199,7 @@ func accountGetCapabilityFunction(
 func NewPublicAccountValue(
 	address AddressValue,
 	accountBalanceGet func() UFix64Value,
-	accountAvailableBalanceGet func(interpreter *Interpreter) UFix64Value,
+	accountAvailableBalanceGet func() UFix64Value,
 	storageUsedGet func(interpreter *Interpreter) UInt64Value,
 	storageCapacityGet func() UInt64Value,
 	keys *CompositeValue,
@@ -7217,8 +7217,8 @@ func NewPublicAccountValue(
 		return accountBalanceGet()
 	})
 
-	computedFields.Set(sema.PublicAccountAvailableBalanceField, func(inter *Interpreter) Value {
-		return accountAvailableBalanceGet(inter)
+	computedFields.Set(sema.PublicAccountAvailableBalanceField, func(*Interpreter) Value {
+		return accountAvailableBalanceGet()
 	})
 
 	computedFields.Set(sema.PublicAccountStorageUsedField, func(inter *Interpreter) Value {

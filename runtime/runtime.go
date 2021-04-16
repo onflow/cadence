@@ -322,7 +322,7 @@ func (r *interpreterRuntime) newAuthAccountValue(
 	return interpreter.NewAuthAccountValue(
 		addressValue,
 		accountBalanceGetFunction(addressValue, context.Interface),
-		accountAvailableBalanceGetFunction(addressValue, context.Interface, runtimeStorage),
+		accountAvailableBalanceGetFunction(addressValue, context.Interface),
 		storageUsedGetFunction(addressValue, context.Interface, runtimeStorage),
 		storageCapacityGetFunction(addressValue, context.Interface),
 		r.newAddPublicKeyFunction(addressValue, context.Interface),
@@ -1225,15 +1225,9 @@ func accountBalanceGetFunction(
 func accountAvailableBalanceGetFunction(
 	addressValue interpreter.AddressValue,
 	runtimeInterface Interface,
-	runtimeStorage *runtimeStorage,
-) func(inter *interpreter.Interpreter) interpreter.UFix64Value {
+) func() interpreter.UFix64Value {
 	address := addressValue.ToAddress()
-	return func(inter *interpreter.Interpreter) interpreter.UFix64Value {
-
-		// NOTE: flush the cached values, so the host environment
-		// can properly calculate the amount of storage used by the account and thus the available balance
-		runtimeStorage.writeCached(inter)
-
+	return func() interpreter.UFix64Value {
 		var balance uint64
 		var err error
 		wrapPanic(func() {
@@ -1577,7 +1571,7 @@ func (r *interpreterRuntime) getPublicAccount(
 	return interpreter.NewPublicAccountValue(
 		accountAddress,
 		accountBalanceGetFunction(accountAddress, runtimeInterface),
-		accountAvailableBalanceGetFunction(accountAddress, runtimeInterface, runtimeStorage),
+		accountAvailableBalanceGetFunction(accountAddress, runtimeInterface),
 		storageUsedGetFunction(accountAddress, runtimeInterface, runtimeStorage),
 		storageCapacityGetFunction(accountAddress, runtimeInterface),
 		r.newPublicAccountKeys(accountAddress, runtimeInterface),
