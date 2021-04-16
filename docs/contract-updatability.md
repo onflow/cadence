@@ -55,15 +55,15 @@ A field may belong to a contract, struct, resource, or interface.
   // Existing contract
 
   pub contract Foo {
-      var a: String
-      var b: Int
+      pub var a: String
+      pub var b: Int
   }
 
 
   // Updated contract
 
   pub contract Foo {
-      var a: String
+      pub var a: String
   }
   ```
   - It leaves data for the removed field unused at the storage, as it is no longer accessible.
@@ -74,16 +74,16 @@ A field may belong to a contract, struct, resource, or interface.
   // Existing contract
 
   pub contract Foo {
-      var a: String
-      var b: Int
+      pub var a: String
+      pub var b: Int
   }
 
 
   // Updated contract
 
   pub contract Foo {
-      var b: Int
-      var a: String
+      pub var b: Int
+      pub var a: String
   }
   ```
 
@@ -99,7 +99,7 @@ A field may belong to a contract, struct, resource, or interface.
   // Updated contract
 
   pub contract Foo {
-      priv var a: Int   // access modifier changed
+      priv var a: Int   // access modifier changed to 'priv'
   }
   ```
 
@@ -109,15 +109,15 @@ A field may belong to a contract, struct, resource, or interface.
   // Existing contract
 
   pub contract Foo {
-      var a: String
+      pub var a: String
   }
 
 
   // Updated contract
 
   pub contract Foo {
-      var a: String
-      var b: Int      // Invalid new field
+      pub var a: String
+      pub var b: Int      // Invalid new field
   }
   ```
     - Existing stored data won't have the new field.
@@ -128,14 +128,14 @@ A field may belong to a contract, struct, resource, or interface.
   // Existing contract
   
   pub contract Foo {
-      var a: String
+      pub var a: String
   }
 
 
   // Updated contract
 
   pub contract Foo {
-      var a: Int      // Invalid type change
+      pub var a: Int      // Invalid type change
   }
   ```
     - In an already stored contract, the field `a` would have a value of type `String`.
