@@ -1223,9 +1223,9 @@ func (v Int8Value) SaturatingMinus(other NumberValue) NumberValue {
 	o := other.(Int8Value)
 	// INT32-C
 	if (o > 0) && (v < (math.MinInt8 + o)) {
-		return Int8Value(math.MaxInt8)
-	} else if (o < 0) && (v > (math.MaxInt8 + o)) {
 		return Int8Value(math.MinInt8)
+	} else if (o < 0) && (v > (math.MaxInt8 + o)) {
+		return Int8Value(math.MaxInt8)
 	}
 	return v - o
 }
@@ -1565,9 +1565,9 @@ func (v Int16Value) SaturatingMinus(other NumberValue) NumberValue {
 	o := other.(Int16Value)
 	// INT32-C
 	if (o > 0) && (v < (math.MinInt16 + o)) {
-		return Int16Value(math.MaxInt16)
-	} else if (o < 0) && (v > (math.MaxInt16 + o)) {
 		return Int16Value(math.MinInt16)
+	} else if (o < 0) && (v > (math.MaxInt16 + o)) {
+		return Int16Value(math.MaxInt16)
 	}
 	return v - o
 }
@@ -1909,9 +1909,9 @@ func (v Int32Value) SaturatingMinus(other NumberValue) NumberValue {
 	o := other.(Int32Value)
 	// INT32-C
 	if (o > 0) && (v < (math.MinInt32 + o)) {
-		return Int32Value(math.MaxInt32)
-	} else if (o < 0) && (v > (math.MaxInt32 + o)) {
 		return Int32Value(math.MinInt32)
+	} else if (o < 0) && (v > (math.MaxInt32 + o)) {
+		return Int32Value(math.MaxInt32)
 	}
 	return v - o
 }
@@ -2257,9 +2257,9 @@ func (v Int64Value) SaturatingMinus(other NumberValue) NumberValue {
 	o := other.(Int64Value)
 	// INT32-C
 	if (o > 0) && (v < (math.MinInt64 + o)) {
-		return Int64Value(math.MaxInt64)
-	} else if (o < 0) && (v > (math.MaxInt64 + o)) {
 		return Int64Value(math.MinInt64)
+	} else if (o < 0) && (v > (math.MaxInt64 + o)) {
+		return Int64Value(math.MaxInt64)
 	}
 	return v - o
 }
@@ -6115,9 +6115,9 @@ func (v Fix64Value) SaturatingMinus(other NumberValue) NumberValue {
 	o := other.(Fix64Value)
 	// INT32-C
 	if (o > 0) && (v < (math.MinInt64 + o)) {
-		return Fix64Value(math.MaxInt64)
-	} else if (o < 0) && (v > (math.MaxInt64 + o)) {
 		return Fix64Value(math.MinInt64)
+	} else if (o < 0) && (v > (math.MaxInt64 + o)) {
+		return Fix64Value(math.MaxInt64)
 	}
 	return v - o
 }
