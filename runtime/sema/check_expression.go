@@ -289,21 +289,5 @@ func (checker *Checker) visitValueIndexingExpression(
 ) Type {
 	checker.VisitExpression(indexingExpression, indexedType.IndexingType())
 
-	elementType := indexedType.ElementType(isAssignment)
-
-	// check indexing expression's type can be used to index
-	// into indexed expression's type
-
-	//if !indexingType.IsInvalidType() &&
-	//	!IsSubType(indexingType, indexedType.IndexingType()) {
-	//
-	//	checker.report(
-	//		&NotIndexingTypeError{
-	//			Type:  indexingType,
-	//			Range: ast.NewRangeFromPositioned(indexingExpression),
-	//		},
-	//	)
-	//}
-
-	return elementType
+	return indexedType.ElementType(isAssignment)
 }
