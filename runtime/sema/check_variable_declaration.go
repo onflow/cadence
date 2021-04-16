@@ -113,21 +113,21 @@ func (checker *Checker) visitVariableDeclaration(declaration *ast.VariableDeclar
 
 	checker.Elaboration.VariableDeclarationTargetTypes[declaration] = declarationType
 
-	if declarationType != nil &&
-		valueType != nil &&
-		!valueIsInvalid &&
-		!declarationType.IsInvalidType() &&
-		!isOptionalBinding &&
-		!checker.checkTypeCompatibility(declaration.Value, valueType, declarationType) {
-
-		checker.report(
-			&TypeMismatchError{
-				ExpectedType: declarationType,
-				ActualType:   valueType,
-				Range:        ast.NewRangeFromPositioned(declaration.Value),
-			},
-		)
-	}
+	//if declarationType != nil &&
+	//	valueType != nil &&
+	//	!valueIsInvalid &&
+	//	!declarationType.IsInvalidType() &&
+	//	!isOptionalBinding &&
+	//	!checker.checkTypeCompatibility(declaration.Value, valueType, declarationType) {
+	//
+	//	checker.report(
+	//		&TypeMismatchError{
+	//			ExpectedType: declarationType,
+	//			ActualType:   valueType,
+	//			Range:        ast.NewRangeFromPositioned(declaration.Value),
+	//		},
+	//	)
+	//}
 
 	checker.checkVariableDeclarationUsability(declaration)
 

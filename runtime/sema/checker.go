@@ -2347,7 +2347,8 @@ func isMigrated(expr ast.Expression) bool {
 		*ast.BoolExpression,
 		*ast.BinaryExpression,
 		*ast.StringExpression,
-		*ast.DictionaryExpression:
+		*ast.DictionaryExpression,
+		*ast.FixedPointExpression:
 		return true
 	default:
 		return false

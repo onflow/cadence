@@ -148,22 +148,6 @@ func (checker *Checker) VisitExpressionStatement(statement *ast.ExpressionStatem
 		)
 	}
 
-	// Ensure that a self-standing expression can be converted to its own type.
-	//
-	// For example, the expression might be a fixed-point expression,
-	// which is inferred to have type Fix64, and the check ensures the literal
-	// fits into the type's range.
-	//
-	// This check is already performed for e.g. variable declarations
-	// and function function arguments.
-	//
-	// It might seem odd that the target type is the value type,
-	// but this is exactly the case for an expression that is a separate statement.
-
-	if !ty.IsInvalidType() {
-		checker.checkTypeCompatibility(expression, ty, ty)
-	}
-
 	return nil
 }
 
@@ -185,6 +169,7 @@ func (checker *Checker) VisitIntegerExpression(expr *ast.IntegerExpression) ast.
 		return IntType
 	}
 
+	// If the contextually expected type is a subtype of Integer or Address, then take that.
 	if IsSubType(expectedType, IntegerType) {
 		CheckIntegerLiteral(expr, expectedType, checker.report)
 		return expectedType
@@ -195,17 +180,30 @@ func (checker *Checker) VisitIntegerExpression(expr *ast.IntegerExpression) ast.
 		return expectedType
 	}
 
+	// Otherwise infer the type as `Int` which can represent any integer.
 	return IntType
 }
 
 func (checker *Checker) VisitFixedPointExpression(expression *ast.FixedPointExpression) ast.Repr {
 	// TODO: adjust once/if we support more fixed point types
 
-	if expression.Negative {
-		return Fix64Type
-	} else {
-		return UFix64Type
+	// If the contextually expected type is a subtype of FixedPoint, then take that.
+	expectedType := checker.expectedType
+	if expectedType != nil && IsSubType(expectedType, FixedPointType) {
+		CheckFixedPointLiteral(expression, expectedType, checker.report)
+		return expectedType
 	}
+
+	// Otherwise, infer the type from the expression itself.
+	var actualType Type
+	if expression.Negative {
+		actualType = Fix64Type
+	} else {
+		actualType = UFix64Type
+	}
+
+	CheckFixedPointLiteral(expression, actualType, checker.report)
+	return actualType
 }
 
 func (checker *Checker) VisitStringExpression(expression *ast.StringExpression) ast.Repr {
