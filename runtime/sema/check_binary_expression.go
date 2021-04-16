@@ -30,11 +30,17 @@ func (checker *Checker) VisitBinaryExpression(expression *ast.BinaryExpression) 
 	// However, the right-hand side might not necessarily be evaluated,
 	// e.g. in boolean logic or in nil-coalescing
 
-	leftType := checker.VisitExpression(expression.Left, checker.expectedType)
-	leftIsInvalid := leftType.IsInvalidType()
-
 	operation := expression.Operation
 	operationKind := binaryOperationKind(operation)
+
+	var expectedType Type
+	if operationKind == BinaryOperationKindArithmetic {
+		expectedType = checker.expectedType
+	}
+
+	leftType := checker.VisitExpression(expression.Left, expectedType)
+	leftIsInvalid := leftType.IsInvalidType()
+
 
 	unsupportedOperation := func() Type {
 		panic(&unsupportedOperation{

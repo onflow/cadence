@@ -40,76 +40,78 @@ func (checker *Checker) visitVariableDeclaration(declaration *ast.VariableDeclar
 	// Determine the type of the initial value of the variable declaration
 	// and save it in the elaboration
 
-	var expectedType Type
+	var declarationType Type
 	if declaration.TypeAnnotation != nil {
-
 		typeAnnotation := checker.ConvertTypeAnnotation(declaration.TypeAnnotation)
 		checker.checkTypeAnnotation(typeAnnotation, declaration.TypeAnnotation)
-
-		expectedType = typeAnnotation.Type
+		declarationType = typeAnnotation.Type
 	}
 
-	valueType := checker.VisitExpression(declaration.Value, expectedType)
+	valueType := checker.VisitExpression(declaration.Value, declarationType)
 
 	checker.Elaboration.VariableDeclarationValueTypes[declaration] = valueType
 
-	valueIsInvalid := valueType.IsInvalidType()
+	if declarationType == nil {
+		declarationType = valueType
+	}
+
+	//valueIsInvalid := valueType.IsInvalidType()
 
 	// If the variable declaration is an optional binding, the value must be optional
 
-	var valueIsOptional bool
-	var optionalValueType *OptionalType
-
-	if isOptionalBinding && !valueIsInvalid {
-		optionalValueType, valueIsOptional = valueType.(*OptionalType)
-		if !valueIsOptional {
-			checker.report(
-				&TypeMismatchError{
-					ExpectedType: &OptionalType{},
-					ActualType:   valueType,
-					Range:        ast.NewRangeFromPositioned(declaration.Value),
-				},
-			)
-		}
-	}
+	//var valueIsOptional bool
+	//var optionalValueType *OptionalType
+	//
+	//if isOptionalBinding && !valueIsInvalid {
+	//	optionalValueType, valueIsOptional = valueType.(*OptionalType)
+	//	if !valueIsOptional {
+	//		checker.report(
+	//			&TypeMismatchError{
+	//				ExpectedType: &OptionalType{},
+	//				ActualType:   valueType,
+	//				Range:        ast.NewRangeFromPositioned(declaration.Value),
+	//			},
+	//		)
+	//	}
+	//}
 
 	// Determine the declaration type based on the value type and the optional type annotation
 
-	declarationType := valueType
+	//declarationType := valueType
 
 	// If the declaration has an explicit type annotation, take it into account:
 	// Check it and ensure the value type is *compatible* with the type annotation
 
 	// TODO: Remove this check
-	if declaration.TypeAnnotation != nil {
-
-		typeAnnotation := checker.ConvertTypeAnnotation(declaration.TypeAnnotation)
-		checker.checkTypeAnnotation(typeAnnotation, declaration.TypeAnnotation)
-
-		declarationType = typeAnnotation.Type
-
-		// check the value type is a subtype of the declaration type
-		if declarationType != nil && valueType != nil && !valueIsInvalid && !declarationType.IsInvalidType() {
-
-			if isOptionalBinding {
-				if optionalValueType != nil &&
-					(optionalValueType.Equal(declarationType) ||
-						!IsSubType(optionalValueType.Type, declarationType)) {
-
-					checker.report(
-						&TypeMismatchError{
-							ExpectedType: declarationType,
-							ActualType:   optionalValueType.Type,
-							Range:        ast.NewRangeFromPositioned(declaration.Value),
-						},
-					)
-				}
-
-			}
-		}
-	} else if isOptionalBinding && optionalValueType != nil {
-		declarationType = optionalValueType.Type
-	}
+	//if declaration.TypeAnnotation != nil {
+	//
+	//	typeAnnotation := checker.ConvertTypeAnnotation(declaration.TypeAnnotation)
+	//	checker.checkTypeAnnotation(typeAnnotation, declaration.TypeAnnotation)
+	//
+	//	declarationType = typeAnnotation.Type
+	//
+	//	// check the value type is a subtype of the declaration type
+	//	if declarationType != nil && valueType != nil && !valueIsInvalid && !declarationType.IsInvalidType() {
+	//
+	//		if isOptionalBinding {
+	//			if optionalValueType != nil &&
+	//				(optionalValueType.Equal(declarationType) ||
+	//					!IsSubType(optionalValueType.Type, declarationType)) {
+	//
+	//				checker.report(
+	//					&TypeMismatchError{
+	//						ExpectedType: declarationType,
+	//						ActualType:   optionalValueType.Type,
+	//						Range:        ast.NewRangeFromPositioned(declaration.Value),
+	//					},
+	//				)
+	//			}
+	//
+	//		}
+	//	}
+	//} else if isOptionalBinding && optionalValueType != nil {
+	//	declarationType = optionalValueType.Type
+	//}
 
 	checker.Elaboration.VariableDeclarationTargetTypes[declaration] = declarationType
 
