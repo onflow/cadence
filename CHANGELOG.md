@@ -1,3 +1,56 @@
+# Next
+
+## ⭐ Features
+
+- Added balance fields on accounts (#808) @janezpodhostnik
+- Add address field to capabilities (#736) @ceelo777
+- Add array appendAll function (#727) @lkadian
+- Validate arguments passed into cadence programs (#724) @SupunS
+- Implement equality for storable values and static types (#790) @turbolent
+- Declare min/max fields for integer and fixed-point types (#803) @turbolent
+
+## 🛠 Improvements
+
+- Optimize storage format (#797) @fxamacker
+- Paralleize encoding (#731) @zhangchiqing
+- Simplify function types (#802) @turbolent
+- Cache capability type members (#799) @turbolent
+- Use force expression's end position in force nil error (#789) @turbolent
+- Handle cyclic references in dynamic type conformance check (#787) @SupunS
+- Benchmark CBOR encoding/decoding using mainnet data (#783) @fxamacker
+- Extend defensive run-time checking to all value transfers (#784) @turbolent
+- Remove obsolete code in decode.go (#788) @fxamacker
+- Optimize encoding of 12 types still using CBOR map (#778) @fxamacker
+- Reject indirect incompatible updates to composite declarations (#772) @SupunS
+- Panic with a dedicated error when a member access results in no value (#768) @turbolent
+- Update language server to Cadence v0.14.4 (#767) @turbolent
+- Improve value type conformance check (#776) @turbolent
+- Add validation for enum cases during contract updates (#762) @SupunS
+- Optimize encoding of composites (#761) @fxamacker
+- Improve state decoding tool (#759) @turbolent
+- Optimize encoding of dictionaries (#752) @fxamacker
+- Prepare Decoder for storage format v4 (#746) @fxamacker
+- Make numeric types singleton (#732) @SupunS
+- Validate arguments passed into cadence programs (#724) @SupunS
+- Use location ID as key for maps holding account codes (#723) @turbolent
+- Make native composite types non-storable (#713) @turbolent
+
+## 🐞 Bug Fixes
+
+- Extend defensive run-time checking to all value transfers (#784) @turbolent
+- Fix borrowing (#782) @turbolent
+- Clean up "storage removal" index expression (#769) @turbolent
+- Get resource owner from host environment (#770) @SupunS
+- Handle field initialization using force-move assignment (#741) @turbolent
+- Fix error range when reporting a type error for an indexing reference expression (#719) @turbolent
+
+## 📖 Documentation
+
+- Improve documentation for block timestamp (#775) @turbolent
+- Document run-time type identifiers (#750) @turbolent
+- Add documentation for the getType() builtin method  (#737) @SupunS
+
+
 # v0.14.5 (2021-04-08)
 
 ## 🐞 Bug Fixes
