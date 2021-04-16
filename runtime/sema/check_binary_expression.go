@@ -38,7 +38,11 @@ func (checker *Checker) VisitBinaryExpression(expression *ast.BinaryExpression) 
 		expectedType = UnwrapOptionalType(checker.expectedType)
 	}
 
-	leftType := checker.VisitExpression(expression.Left, expectedType)
+	// Visit the expression, with contextually expected type. Use the expected type
+	// only for inferring wherever possible, but do not check for compatibility.
+	// Compatibility is checked separately for each operand kind.
+	leftType := checker.visitExpression(expression.Left, expectedType, false)
+
 	leftIsInvalid := leftType.IsInvalidType()
 
 	unsupportedOperation := func() Type {
@@ -57,7 +61,11 @@ func (checker *Checker) VisitBinaryExpression(expression *ast.BinaryExpression) 
 
 		// Right hand side will always be evaluated
 
-		rightType := checker.VisitExpression(expression.Right, expectedType)
+		// Visit the expression, with contextually expected type. Use the expected type
+		// only for inferring wherever possible, but do not check for compatibility.
+		// Compatibility is checked separately for each operand kind.
+		rightType := checker.visitExpression(expression.Right, leftType, false)
+
 		rightIsInvalid := rightType.IsInvalidType()
 
 		anyInvalid := leftIsInvalid || rightIsInvalid

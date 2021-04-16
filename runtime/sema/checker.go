@@ -2307,6 +2307,10 @@ func (checker *Checker) Hints() []Hint {
 }
 
 func (checker *Checker) VisitExpression(expr ast.Expression, expectedType Type) Type {
+	return checker.visitExpression(expr, expectedType, true)
+}
+
+func (checker *Checker) visitExpression(expr ast.Expression, expectedType Type, forceTypes bool) Type {
 
 	// Cache the current contextually expected type, and set the `expectedType`
 	// as the new contextually expected type.
@@ -2323,7 +2327,8 @@ func (checker *Checker) VisitExpression(expr ast.Expression, expectedType Type) 
 
 	actualType := expr.Accept(checker).(Type)
 
-	if expectedType != nil &&
+	if forceTypes &&
+		expectedType != nil &&
 		actualType != InvalidType &&
 		!IsSubType(actualType, expectedType) {
 
