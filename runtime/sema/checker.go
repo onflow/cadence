@@ -2306,9 +2306,10 @@ func (checker *Checker) VisitExpression(expr ast.Expression, expectedType Type) 
 	// as the new contextually expected type.
 	prevExpectedType := checker.expectedType
 
-	// If the expected type is invalid, treat it in the same manner as
+	// If the expected type is invalid or void, treat it in the same manner as
 	// expected type is unknown.
-	if expectedType != nil && expectedType.IsInvalidType() {
+	if expectedType == VoidType ||
+		expectedType != nil && expectedType.IsInvalidType() {
 		expectedType = nil
 	}
 
@@ -2316,8 +2317,7 @@ func (checker *Checker) VisitExpression(expr ast.Expression, expectedType Type) 
 
 	actualType := expr.Accept(checker).(Type)
 
-	if isMigrated(expr) &&
-		expectedType != nil &&
+	if expectedType != nil &&
 		actualType != InvalidType &&
 		!IsSubType(actualType, expectedType) {
 
@@ -2334,32 +2334,6 @@ func (checker *Checker) VisitExpression(expr ast.Expression, expectedType Type) 
 	checker.expectedType = prevExpectedType
 
 	return actualType
-}
-
-func isMigrated(expr ast.Expression) bool {
-	switch expr.(type) {
-	case *ast.ArrayExpression,
-		*ast.IntegerExpression,
-		*ast.BoolExpression,
-		*ast.BinaryExpression,
-		*ast.StringExpression,
-		*ast.ConditionalExpression,
-		*ast.CreateExpression,
-		*ast.DestroyExpression,
-		*ast.DictionaryExpression,
-		*ast.FixedPointExpression,
-		*ast.ForceExpression,
-		*ast.IdentifierExpression,
-		*ast.IndexExpression,
-		*ast.MemberExpression,
-		*ast.InvocationExpression,
-		*ast.NilExpression,
-		*ast.PathExpression,
-		*ast.ReferenceExpression:
-		return true
-	default:
-		return false
-	}
 }
 
 func getPosition(expression ast.Expression) ast.Range {

@@ -26,7 +26,7 @@ import (
 func (checker *Checker) VisitCastingExpression(expression *ast.CastingExpression) ast.Repr {
 
 	leftHandExpression := expression.Expression
-	leftHandType := leftHandExpression.Accept(checker).(Type)
+	leftHandType := checker.VisitExpression(leftHandExpression, nil)
 
 	checker.Elaboration.CastingStaticValueTypes[expression] = leftHandType
 
