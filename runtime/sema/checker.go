@@ -2302,28 +2302,30 @@ func (checker *Checker) Hints() []Hint {
 
 func (checker *Checker) VisitExpression(expr ast.Expression, expectedType Type) Type {
 
+	unwrappedExpectedType := expectedType
+
 	// This is a code optimization, so that we dont have to do this check for every expression.
 	if _, ok := expr.(*ast.NilExpression); !ok {
-		expectedType = UnwrapOptionalType(expectedType)
+		unwrappedExpectedType = UnwrapOptionalType(unwrappedExpectedType)
 	}
 
-	// Cache the current contextually expected type, and set the `expectedType`
+	// Cache the current contextually expected type, and set the `unwrappedExpectedType`
 	// as the new contextually expected type.
 	prevExpectedType := checker.expectedType
 
 	// If the expected type is invalid, treat it in the same manner as
 	// expected type is unknown.
-	if expectedType != nil && expectedType.IsInvalidType() {
-		expectedType = nil
+	if unwrappedExpectedType != nil && unwrappedExpectedType.IsInvalidType() {
+		unwrappedExpectedType = nil
 	}
 
-	checker.expectedType = expectedType
+	checker.expectedType = unwrappedExpectedType
 
 	actualType := expr.Accept(checker).(Type)
 
 	if isMigrated(expr) &&
-		expectedType != nil &&
-		!IsSubType(actualType, expectedType) {
+		unwrappedExpectedType != nil &&
+		!IsSubType(actualType, unwrappedExpectedType) {
 
 		checker.report(
 			&TypeMismatchError{
@@ -2348,7 +2350,8 @@ func isMigrated(expr ast.Expression) bool {
 		*ast.BinaryExpression,
 		*ast.StringExpression,
 		*ast.DictionaryExpression,
-		*ast.FixedPointExpression:
+		*ast.FixedPointExpression,
+		*ast.IdentifierExpression:
 		return true
 	default:
 		return false

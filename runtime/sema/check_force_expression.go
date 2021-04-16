@@ -24,7 +24,14 @@ import (
 
 func (checker *Checker) VisitForceExpression(expression *ast.ForceExpression) ast.Repr {
 
-	valueType := expression.Expression.Accept(checker).(Type)
+	// Expected type of the `expression.Expression` is the optional of expected type of current context.
+	// i.e: if `x!` is `string, then `x` is expected to be `string?`.
+	expectedType := checker.expectedType
+	if expectedType != nil {
+		expectedType = &OptionalType{Type: expectedType}
+	}
+
+	valueType := checker.VisitExpression(expression.Expression, expectedType)
 
 	if valueType.IsInvalidType() {
 		return valueType

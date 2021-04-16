@@ -979,10 +979,9 @@ func TestCheckInvalidConstantSizedArrayDeclarationCountMismatchTooMany(t *testin
       let x: [Int; 2] = [1, 2, 3]
     `)
 
-	errs := ExpectCheckerErrors(t, err, 2)
+	errs := ExpectCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.ConstantSizedArrayLiteralSizeError{}, errs[0])
-	assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
 }
 
 func TestCheckInvalidConstantSizedArrayDeclarationOutOfRangeSize(t *testing.T) {
@@ -1014,11 +1013,10 @@ func TestCheckInvalidConstantSizedArrayDeclarationOutOfRangeSize(t *testing.T) {
 			),
 		)
 
-		errs := ExpectCheckerErrors(t, err, 3)
+		errs := ExpectCheckerErrors(t, err, 2)
 
 		assert.IsType(t, &sema.InvalidConstantSizedTypeSizeError{}, errs[0])
 		assert.IsType(t, &sema.ConstantSizedArrayLiteralSizeError{}, errs[1])
-		assert.IsType(t, &sema.TypeMismatchError{}, errs[2])
 	})
 }
 
@@ -1039,11 +1037,10 @@ func TestCheckInvalidConstantSizedArrayDeclarationBase(t *testing.T) {
 				),
 			)
 
-			errs := ExpectCheckerErrors(t, err, 3)
+			errs := ExpectCheckerErrors(t, err, 2)
 
 			assert.IsType(t, &sema.InvalidConstantSizedTypeBaseError{}, errs[0])
 			assert.IsType(t, &sema.ConstantSizedArrayLiteralSizeError{}, errs[1])
-			assert.IsType(t, &sema.TypeMismatchError{}, errs[2])
 		})
 	}
 }

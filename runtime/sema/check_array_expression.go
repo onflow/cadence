@@ -22,7 +22,7 @@ import "github.com/onflow/cadence/runtime/ast"
 
 func (checker *Checker) VisitArrayExpression(expression *ast.ArrayExpression) ast.Repr {
 
-	errored := false
+	inferType := false
 
 	// visit all elements, ensure they are all the same type
 
@@ -50,8 +50,12 @@ func (checker *Checker) VisitArrayExpression(expression *ast.ArrayExpression) as
 			elementType = typ.ElementType(true)
 
 		default:
-			errored = true
+			// If the expected type is not an array type, then it could either be an invalid type, or a super type
+			// (like: AnyStruct, etc.). Either case, infer the type from the expression.
+			inferType = true
 		}
+	} else {
+		inferType = true
 	}
 
 	argumentTypes := make([]Type, len(expression.Values))
@@ -80,7 +84,7 @@ func (checker *Checker) VisitArrayExpression(expression *ast.ArrayExpression) as
 
 	checker.Elaboration.ArrayExpressionElementType[expression] = elementType
 
-	if checker.expectedType == nil || errored {
+	if inferType {
 		return &VariableSizedType{
 			Type: elementType,
 		}
