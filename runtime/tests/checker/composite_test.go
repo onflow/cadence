@@ -1193,13 +1193,13 @@ func TestCheckInvalidCompositeFunctionAssignment(t *testing.T) {
 
 			errs := ExpectCheckerErrors(t, err, 2)
 
-			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
-
-			require.IsType(t, &sema.AssignmentToConstantMemberError{}, errs[1])
+			require.IsType(t, &sema.AssignmentToConstantMemberError{}, errs[0])
 			assert.Equal(t,
 				"foo",
-				errs[1].(*sema.AssignmentToConstantMemberError).Name,
+				errs[0].(*sema.AssignmentToConstantMemberError).Name,
 			)
+
+			assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
 		})
 	}
 }

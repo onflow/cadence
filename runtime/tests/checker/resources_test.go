@@ -439,8 +439,8 @@ func TestCheckVariableDeclarationWithResourceAnnotation(t *testing.T) {
 			case common.CompositeKindEvent:
 				errs := ExpectCheckerErrors(t, err, 2)
 
-				assert.IsType(t, &sema.InvalidEventUsageError{}, errs[0])
-				assert.IsType(t, &sema.InvalidResourceAnnotationError{}, errs[1])
+				assert.IsType(t, &sema.InvalidResourceAnnotationError{}, errs[0])
+				assert.IsType(t, &sema.InvalidEventUsageError{}, errs[1])
 
 			default:
 				panic(errors.NewUnreachableError())
@@ -1122,8 +1122,8 @@ func TestCheckFunctionTypeReturnTypeWithResourceAnnotation(t *testing.T) {
 				errs := ExpectCheckerErrors(t, err, 3)
 
 				assert.IsType(t, &sema.InvalidResourceAnnotationError{}, errs[0])
-				assert.IsType(t, &sema.InvalidEventUsageError{}, errs[1])
-				assert.IsType(t, &sema.InvalidResourceAnnotationError{}, errs[2])
+				assert.IsType(t, &sema.InvalidResourceAnnotationError{}, errs[1])
+				assert.IsType(t, &sema.InvalidEventUsageError{}, errs[2])
 
 			default:
 				panic(errors.NewUnreachableError())

@@ -2333,6 +2333,10 @@ func (checker *Checker) visitExpression(expr ast.Expression, expectedType Type, 
 				Range:        getPosition(expr),
 			},
 		)
+
+		// If there are type mismatch errors, return the expected type as the type of the expression.
+		// This is done to avoid the same error getting delegated up.
+		actualType = expectedType
 	}
 
 	// Restore the prev contextually expected type

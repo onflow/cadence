@@ -158,21 +158,21 @@ func TestCheckInvalidUnknownDeclarationInGlobalAndUnknownType(t *testing.T) {
 
 	assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
 	assert.Equal(t,
-		"y",
+		"X",
 		errs[0].(*sema.NotDeclaredError).Name,
 	)
 	assert.Equal(t,
-		common.DeclarationKindVariable,
+		common.DeclarationKindType,
 		errs[0].(*sema.NotDeclaredError).ExpectedKind,
 	)
 
 	assert.IsType(t, &sema.NotDeclaredError{}, errs[1])
 	assert.Equal(t,
-		"X",
+		"y",
 		errs[1].(*sema.NotDeclaredError).Name,
 	)
 	assert.Equal(t,
-		common.DeclarationKindType,
+		common.DeclarationKindVariable,
 		errs[1].(*sema.NotDeclaredError).ExpectedKind,
 	)
 }
