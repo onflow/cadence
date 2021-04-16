@@ -87,6 +87,22 @@ A field may belong to a contract, struct, resource, or interface.
   }
   ```
 
+- Changing the access modifier of a field is valid.
+  ```cadence
+  // Existing contract
+
+  pub contract Foo {
+      pub var a: String
+  }
+
+
+  // Updated contract
+
+  pub contract Foo {
+      priv var a: Int   // access modifier changed
+  }
+  ```
+
 #### Invalid Changes
 - Adding a new field is not valid.
   ```cadence
@@ -326,6 +342,7 @@ Updating a function definition is always valid, as function definitions are neve
 i.e: Function definition is a part of the code, but not data.
 - Changing a function signature (parameters, return types) is valid.
 - Changing a function body is also valid.
+- Changing the access modifier is valid.
 
 However, changing a `function type` may or may not be valid, depending on where it is used.
 i.e: If a function type is used in the type annotation of a composite type field (direct or indirect), then changing
