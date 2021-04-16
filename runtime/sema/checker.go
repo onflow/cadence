@@ -2318,13 +2318,14 @@ func (checker *Checker) VisitExpression(expr ast.Expression, expectedType Type) 
 
 	if isMigrated(expr) &&
 		expectedType != nil &&
+		actualType != InvalidType &&
 		!IsSubType(actualType, expectedType) {
 
 		checker.report(
 			&TypeMismatchError{
 				ExpectedType: expectedType,
 				ActualType:   actualType,
-				Range:        ast.NewRangeFromPositioned(expr),
+				Range:        getPosition(expr),
 			},
 		)
 	}
@@ -2353,9 +2354,21 @@ func isMigrated(expr ast.Expression) bool {
 		*ast.MemberExpression,
 		*ast.InvocationExpression,
 		*ast.NilExpression,
-		*ast.PathExpression:
+		*ast.PathExpression,
+		*ast.ReferenceExpression:
 		return true
 	default:
 		return false
+	}
+}
+
+func getPosition(expression ast.Expression) ast.Range {
+	if indexExpr, ok := expression.(*ast.IndexExpression); ok {
+		return ast.Range{
+			StartPos: indexExpr.TargetExpression.StartPosition(),
+			EndPos:   indexExpr.EndPosition(),
+		}
+	} else {
+		return ast.NewRangeFromPositioned(expression)
 	}
 }

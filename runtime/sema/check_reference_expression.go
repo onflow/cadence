@@ -27,6 +27,28 @@ import (
 //
 func (checker *Checker) VisitReferenceExpression(referenceExpression *ast.ReferenceExpression) ast.Repr {
 
+	// Check the result type and ensure it is a reference type
+
+	resultType := checker.ConvertType(referenceExpression.Type)
+
+	var referenceType *ReferenceType
+	var targetType Type
+
+	if !resultType.IsInvalidType() {
+		var ok bool
+		referenceType, ok = resultType.(*ReferenceType)
+		if !ok {
+			checker.report(
+				&NonReferenceTypeReferenceError{
+					ActualType: resultType,
+					Range:      ast.NewRangeFromPositioned(referenceExpression.Type),
+				},
+			)
+		} else {
+			targetType = referenceType.Type
+		}
+	}
+
 	// Type-check the referenced expression
 
 	referencedExpression := referenceExpression.Expression
@@ -39,7 +61,7 @@ func (checker *Checker) VisitReferenceExpression(referenceExpression *ast.Refere
 
 	indexExpression, isIndexExpression := referencedExpression.(*ast.IndexExpression)
 	if isIndexExpression {
-		referencedType = checker.visitIndexExpression(indexExpression, false)
+		referencedType = checker.VisitExpression(indexExpression, targetType)
 
 		// The referenced expression will evaluate to an optional type if it is indexing into storage:
 		// the result of the storage access is an optional.
@@ -55,7 +77,7 @@ func (checker *Checker) VisitReferenceExpression(referenceExpression *ast.Refere
 	} else {
 		// If the referenced expression is not an index expression, check it normally
 
-		referencedType = referencedExpression.Accept(checker).(Type)
+		referencedType = checker.VisitExpression(referencedExpression, targetType)
 	}
 
 	// Check that the references expression's type is not optional
@@ -77,41 +99,6 @@ func (checker *Checker) VisitReferenceExpression(referenceExpression *ast.Refere
 			&OptionalTypeReferenceError{
 				ActualType: referencedType,
 				Range:      getReferencedExpressionRange(),
-			},
-		)
-	}
-
-	// Check the result type and ensure it is a reference type
-
-	resultType := checker.ConvertType(referenceExpression.Type)
-
-	var referenceType *ReferenceType
-
-	if !resultType.IsInvalidType() {
-		var ok bool
-		referenceType, ok = resultType.(*ReferenceType)
-		if !ok {
-			checker.report(
-				&NonReferenceTypeReferenceError{
-					ActualType: resultType,
-					Range:      ast.NewRangeFromPositioned(referenceExpression.Type),
-				},
-			)
-		}
-	}
-
-	// Check that the referenced expression's type is a subtype of the result type
-
-	if !referencedType.IsInvalidType() &&
-		referenceType != nil &&
-		!referenceType.Type.IsInvalidType() &&
-		!IsSubType(referencedType, referenceType.Type) {
-
-		checker.report(
-			&TypeMismatchError{
-				ExpectedType: referenceType.Type,
-				ActualType:   referencedType,
-				Range:        getReferencedExpressionRange(),
 			},
 		)
 	}

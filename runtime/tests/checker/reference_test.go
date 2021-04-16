@@ -967,8 +967,8 @@ func TestCheckReferenceExpressionOfOptional(t *testing.T) {
 
 		errs := ExpectCheckerErrors(t, err, 2)
 
-		assert.IsType(t, &sema.OptionalTypeReferenceError{}, errs[0])
-		assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		assert.IsType(t, &sema.OptionalTypeReferenceError{}, errs[1])
 	})
 
 	t.Run("struct", func(t *testing.T) {
@@ -984,8 +984,8 @@ func TestCheckReferenceExpressionOfOptional(t *testing.T) {
 
 		errs := ExpectCheckerErrors(t, err, 2)
 
-		assert.IsType(t, &sema.OptionalTypeReferenceError{}, errs[0])
-		assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		assert.IsType(t, &sema.OptionalTypeReferenceError{}, errs[1])
 	})
 
 	t.Run("non-composite", func(t *testing.T) {
@@ -999,8 +999,8 @@ func TestCheckReferenceExpressionOfOptional(t *testing.T) {
 
 		errs := ExpectCheckerErrors(t, err, 2)
 
-		assert.IsType(t, &sema.OptionalTypeReferenceError{}, errs[0])
-		assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		assert.IsType(t, &sema.OptionalTypeReferenceError{}, errs[1])
 	})
 }
 
@@ -1014,8 +1014,8 @@ func TestCheckInvalidReferenceExpressionNonReferenceAmbiguous(t *testing.T) {
 
 	errs := ExpectCheckerErrors(t, err, 2)
 
-	assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
-	assert.IsType(t, &sema.AmbiguousRestrictedTypeError{}, errs[1])
+	assert.IsType(t, &sema.AmbiguousRestrictedTypeError{}, errs[0])
+	assert.IsType(t, &sema.NotDeclaredError{}, errs[1])
 }
 
 func TestCheckInvalidReferenceExpressionNonReferenceAnyResource(t *testing.T) {
@@ -1028,8 +1028,8 @@ func TestCheckInvalidReferenceExpressionNonReferenceAnyResource(t *testing.T) {
 
 	errs := ExpectCheckerErrors(t, err, 2)
 
-	assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
-	assert.IsType(t, &sema.NonReferenceTypeReferenceError{}, errs[1])
+	assert.IsType(t, &sema.NonReferenceTypeReferenceError{}, errs[0])
+	assert.IsType(t, &sema.NotDeclaredError{}, errs[1])
 }
 
 func TestCheckInvalidReferenceExpressionNonReferenceAnyStruct(t *testing.T) {
@@ -1042,8 +1042,8 @@ func TestCheckInvalidReferenceExpressionNonReferenceAnyStruct(t *testing.T) {
 
 	errs := ExpectCheckerErrors(t, err, 2)
 
-	assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
-	assert.IsType(t, &sema.NonReferenceTypeReferenceError{}, errs[1])
+	assert.IsType(t, &sema.NonReferenceTypeReferenceError{}, errs[0])
+	assert.IsType(t, &sema.NotDeclaredError{}, errs[1])
 }
 
 func TestCheckInvalidDictionaryAccessReference(t *testing.T) {
