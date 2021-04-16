@@ -163,27 +163,26 @@ func (checker *Checker) VisitNilExpression(_ *ast.NilExpression) ast.Repr {
 	return TypeOfNil
 }
 
-func (checker *Checker) VisitIntegerExpression(expr *ast.IntegerExpression) ast.Repr {
-	expectedType := checker.expectedType
-	if expectedType == nil {
-		return IntType
-	}
+func (checker *Checker) VisitIntegerExpression(expression *ast.IntegerExpression) ast.Repr {
+	expectedType := UnwrapOptionalType(checker.expectedType)
 
-	expectedType = UnwrapOptionalType(expectedType)
+	var actualType Type
 
 	// If the contextually expected type is a subtype of Integer or Address, then take that.
-	if IsSubType(expectedType, IntegerType) {
-		CheckIntegerLiteral(expr, expectedType, checker.report)
-		return expectedType
+	if expectedType == nil || IsSubType(expectedType, NeverType) {
+		actualType = IntType
+	} else if IsSubType(expectedType, IntegerType) {
+		CheckIntegerLiteral(expression, expectedType, checker.report)
+		actualType = expectedType
+	} else if IsSubType(expectedType, &AddressType{}) {
+		CheckAddressLiteral(expression, checker.report)
+		actualType = expectedType
+	} else {
+		// Otherwise infer the type as `Int` which can represent any integer.
+		actualType = IntType
 	}
 
-	if IsSubType(expectedType, &AddressType{}) {
-		CheckAddressLiteral(expr, checker.report)
-		return expectedType
-	}
-
-	// Otherwise infer the type as `Int` which can represent any integer.
-	return IntType
+	return actualType
 }
 
 func (checker *Checker) VisitFixedPointExpression(expression *ast.FixedPointExpression) ast.Repr {
@@ -192,14 +191,13 @@ func (checker *Checker) VisitFixedPointExpression(expression *ast.FixedPointExpr
 	// If the contextually expected type is a subtype of FixedPoint, then take that.
 	expectedType := UnwrapOptionalType(checker.expectedType)
 
-	if expectedType != nil && IsSubType(expectedType, FixedPointType) {
-		CheckFixedPointLiteral(expression, expectedType, checker.report)
-		return expectedType
-	}
-
-	// Otherwise, infer the type from the expression itself.
 	var actualType Type
-	if expression.Negative {
+
+	if expectedType != nil &&
+		!IsSubType(expectedType, NeverType) &&
+		IsSubType(expectedType, FixedPointType) {
+		actualType = expectedType
+	} else if expression.Negative {
 		actualType = Fix64Type
 	} else {
 		actualType = UFix64Type

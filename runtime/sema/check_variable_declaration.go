@@ -41,32 +41,48 @@ func (checker *Checker) visitVariableDeclaration(declaration *ast.VariableDeclar
 	// and save it in the elaboration
 
 	var declarationType Type
+	var expectedValueType Type
+
 	if declaration.TypeAnnotation != nil {
 		typeAnnotation := checker.ConvertTypeAnnotation(declaration.TypeAnnotation)
 		checker.checkTypeAnnotation(typeAnnotation, declaration.TypeAnnotation)
 		declarationType = typeAnnotation.Type
+
+		// If the optional binding is possible, then then value can have an optional
+		// of the declaration's type.
+		if isOptionalBinding {
+			expectedValueType = &OptionalType{
+				Type: declarationType,
+			}
+		} else {
+			expectedValueType = declarationType
+		}
 	}
 
-	valueType := checker.VisitExpression(declaration.Value, declarationType)
+	valueType := checker.VisitExpression(declaration.Value, expectedValueType)
 
 	checker.Elaboration.VariableDeclarationValueTypes[declaration] = valueType
 
-	if declarationType == nil {
-		if isOptionalBinding {
-			if optionalType, isOptional := valueType.(*OptionalType); isOptional {
-				declarationType = optionalType.Type
-			} else {
-				checker.report(
-					&TypeMismatchError{
-						ExpectedType: &OptionalType{},
-						ActualType:   valueType,
-						Range:        ast.NewRangeFromPositioned(declaration.Value),
-					},
-				)
-			}
+	if isOptionalBinding {
+		optionalType, isOptional := valueType.(*OptionalType)
+
+		if !isOptional || optionalType.Equal(declarationType) {
+			checker.report(
+				&TypeMismatchError{
+					ExpectedType: &OptionalType{},
+					ActualType:   valueType,
+					Range:        ast.NewRangeFromPositioned(declaration.Value),
+				},
+			)
 		} else {
-			declarationType = valueType
+			if declarationType == nil {
+				declarationType = optionalType.Type
+			}
 		}
+	}
+
+	if declarationType == nil {
+		declarationType = valueType
 	}
 
 	//valueIsInvalid := valueType.IsInvalidType()
