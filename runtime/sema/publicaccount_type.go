@@ -24,6 +24,8 @@ import (
 
 const PublicAccountTypeName = "PublicAccount"
 const PublicAccountAddressField = "address"
+const PublicAccountBalanceField = "balance"
+const PublicAccountAvailableBalanceField = "availableBalance"
 const PublicAccountStorageUsedField = "storageUsed"
 const PublicAccountStorageCapacityField = "storageCapacity"
 const PublicAccountGetCapabilityField = "getCapability"
@@ -52,6 +54,18 @@ var PublicAccountType = func() *CompositeType {
 			PublicAccountAddressField,
 			&AddressType{},
 			accountTypeAddressFieldDocString,
+		),
+		NewPublicConstantFieldMember(
+			publicAccountType,
+			PublicAccountBalanceField,
+			UFix64Type,
+			accountTypeAccountBalanceFieldDocString,
+		),
+		NewPublicConstantFieldMember(
+			publicAccountType,
+			PublicAccountAvailableBalanceField,
+			UFix64Type,
+			accountTypeAccountAvailableBalanceFieldDocString,
 		),
 		NewPublicConstantFieldMember(
 			publicAccountType,

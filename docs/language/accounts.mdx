@@ -11,6 +11,10 @@ Every account can be accessed through two types:
   struct PublicAccount {
 
       let address: Address
+      // The FLOW balance of the default vault of this account
+      let balance: UFix64
+      // The FLOW balance of the default vault of this account that is available to be moved
+      let availableBalance: UFix64
       let storageUsed: UInt64
       let storageCapacity: UInt64
 
@@ -51,6 +55,10 @@ Every account can be accessed through two types:
   struct AuthAccount {
 
       let address: Address
+      // The FLOW balance of the default vault of this account
+      let balance: UFix64
+      // The FLOW balance of the default vault of this account that is available to be moved
+      let availableBalance: UFix64
       let storageUsed: UInt64
       let storageCapacity: UInt64
 

@@ -1255,6 +1255,53 @@ func TestCheckAccount_getCapability(t *testing.T) {
 	}
 }
 
+func TestCheckAccount_BalanceFields(t *testing.T) {
+	t.Parallel()
+
+	for accountType, accountVariable := range map[string]string{
+		"AuthAccount":   "authAccount",
+		"PublicAccount": "publicAccount",
+	} {
+
+		for _, fieldName := range []string{
+			"balance",
+			"availableBalance",
+		} {
+
+			testName := fmt.Sprintf(
+				"%s.%s",
+				accountType,
+				fieldName,
+			)
+
+			t.Run(testName, func(t *testing.T) {
+
+				code := fmt.Sprintf(
+					`
+	                      fun test(): UFix64 {
+	                          return %s.%s
+	                      }
+
+                          let amount = test()
+	                    `,
+					accountVariable,
+					fieldName,
+				)
+				checker, err := ParseAndCheckAccount(
+					t,
+					code,
+				)
+
+				require.NoError(t, err)
+
+				amountType := RequireGlobalValue(t, checker.Elaboration, "amount")
+
+				assert.Equal(t, sema.UFix64Type, amountType)
+			})
+		}
+	}
+}
+
 func TestCheckAccount_StorageFields(t *testing.T) {
 	t.Parallel()
 

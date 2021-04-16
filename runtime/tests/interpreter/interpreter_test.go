@@ -6264,10 +6264,14 @@ func TestInterpretContractAccountFieldUse(t *testing.T) {
 							"account",
 							interpreter.NewAuthAccountValue(
 								addressValue,
+								returnZeroUFix64,
+								func(interpreter *interpreter.Interpreter) interpreter.UFix64Value {
+									return 0
+								},
 								func(interpreter *interpreter.Interpreter) interpreter.UInt64Value {
 									return 0
 								},
-								returnZero,
+								returnZeroUInt64,
 								panicFunction,
 								panicFunction,
 								&interpreter.CompositeValue{},
@@ -6785,10 +6789,14 @@ func TestInterpretResourceOwnerFieldUse(t *testing.T) {
 		Type: sema.AuthAccountType,
 		Value: interpreter.NewAuthAccountValue(
 			addressValue,
+			returnZeroUFix64,
+			func(interpreter *interpreter.Interpreter) interpreter.UFix64Value {
+				return 0
+			},
 			func(interpreter *interpreter.Interpreter) interpreter.UInt64Value {
 				return 0
 			},
-			returnZero,
+			returnZeroUInt64,
 			panicFunction,
 			panicFunction,
 			&interpreter.CompositeValue{},
@@ -6821,6 +6829,10 @@ func TestInterpretResourceOwnerFieldUse(t *testing.T) {
 					func(address interpreter.AddressValue) *interpreter.CompositeValue {
 						return interpreter.NewPublicAccountValue(
 							address,
+							returnZeroUFix64,
+							func(interpreter *interpreter.Interpreter) interpreter.UFix64Value {
+								return 0
+							},
 							func(interpreter *interpreter.Interpreter) interpreter.UInt64Value {
 								panic(errors.NewUnreachableError())
 							},
