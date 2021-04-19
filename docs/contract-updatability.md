@@ -3,10 +3,10 @@ title: Contract Updatability
 ---
 
 ## Introduction
-A [contract](https://docs.onflow.org/cadence/language/contracts/) in Cadence is a collection of data (its state) and
+A [contract](../contracts) in Cadence is a collection of data (its state) and
 code (its functions) that lives in the contract storage area of an account.
-When a contract is updated, it is important to make sure that the changes introduced does not lead to runtime
-inconsistencies for already persisted data.
+When a contract is updated, it is important to make sure that the changes introduced do not lead to runtime
+inconsistencies for already stored data.
 Cadence maintains this state consistency by validating the contracts and all their components before an update.
 
 ## Validation Goals
@@ -34,7 +34,7 @@ When a contract is deployed, the fields of the contract are stored in an account
 Changing the fields of a contract only changes the way the program treats the data, but does not change the already
 stored data itself, which could potentially result in runtime inconsistencies as mentioned in the previous section.
 
-See the [Fields](#fields) section for the possible updates that can be done to the fields, and the restrictions
+See the [section about fields below](#fields) for the possible updates that can be done to the fields, and the restrictions
 imposed on changing fields of a contract.
 
 ### Nested Declarations
@@ -43,7 +43,7 @@ When a contract is updated, its nested declarations are checked, because:
  - They can be used as type annotation for the fields of the same contract, directly or indirectly.
  - Any third-party contract can import the types defined in this contract and use them as type annotations.
  - Hence, changing the type definition is the same as changing the type annotation of such a field (which is also invalid,
-   as in the [Fields](#fields) section).
+   as described in the [section about fields fields](#fields) below).
 
 Changes that can be done to the nested declarations, and the update restrictions are described in following sections:
  - [Structs, resources and interface](#structs-resources-and-interfaces)
@@ -353,7 +353,7 @@ i.e: Function definition is a part of the code, but not data.
 - Changing a function body is also valid.
 - Changing the access modifier is valid.
 
-However, changing a `function type` may or may not be valid, depending on where it is used.
+However, changing a *function type* may or may not be valid, depending on where it is used.
 i.e: If a function type is used in the type annotation of a composite type field (direct or indirect), then changing
 the function type signature is the same as changing the type annotation of that field (which is again invalid).
 
