@@ -718,19 +718,99 @@ type FractionalRangedType interface {
 	MaxFractional() *big.Int
 }
 
+// SaturatingArithmeticType is a type that supports saturating arithmetic functions
+//
+type SaturatingArithmeticType interface {
+	Type
+	SupportsSaturatingAdd() bool
+	SupportsSaturatingSubtract() bool
+	SupportsSaturatingMultiply() bool
+	SupportsSaturatingDivide() bool
+}
+
+const NumericTypeSaturatingAddFunctionName = "saturatingAdd"
+const numericTypeSaturatingAddFunctionDocString = `
+self + other, saturating at the numeric bounds instead of overflowing.
+`
+
+const NumericTypeSaturatingSubtractFunctionName = "saturatingSubtract"
+const numericTypeSaturatingSubtractFunctionDocString = `
+self - other, saturating at the numeric bounds instead of overflowing.
+`
+const NumericTypeSaturatingMultiplyFunctionName = "saturatingMultiply"
+const numericTypeSaturatingMultiplyFunctionDocString = `
+self * other, saturating at the numeric bounds instead of overflowing.
+`
+
+const NumericTypeSaturatingDivideFunctionName = "saturatingDivide"
+const numericTypeSaturatingDivideFunctionDocString = `
+self / other, saturating at the numeric bounds instead of overflowing.
+`
+
+func addSaturatingArithmeticFunctions(t SaturatingArithmeticType, members map[string]MemberResolver) {
+
+	arithmeticFunctionType := &FunctionType{
+		Parameters: []*Parameter{
+			{
+				Label:          ArgumentLabelNotRequired,
+				Identifier:     "other",
+				TypeAnnotation: NewTypeAnnotation(t),
+			},
+		},
+		ReturnTypeAnnotation: NewTypeAnnotation(t),
+	}
+
+	addArithmeticFunction := func(name string, docString string) {
+		members[name] = MemberResolver{
+			Kind: common.DeclarationKindFunction,
+			Resolve: func(identifier string, targetRange ast.Range, report func(error)) *Member {
+				return NewPublicFunctionMember(t, name, arithmeticFunctionType, docString)
+			},
+		}
+	}
+
+	if t.SupportsSaturatingAdd() {
+		addArithmeticFunction(
+			NumericTypeSaturatingAddFunctionName,
+			numericTypeSaturatingAddFunctionDocString,
+		)
+	}
+
+	if t.SupportsSaturatingSubtract() {
+		addArithmeticFunction(
+			NumericTypeSaturatingSubtractFunctionName,
+			numericTypeSaturatingSubtractFunctionDocString,
+		)
+	}
+
+	if t.SupportsSaturatingMultiply() {
+		addArithmeticFunction(
+			NumericTypeSaturatingMultiplyFunctionName,
+			numericTypeSaturatingMultiplyFunctionDocString,
+		)
+	}
+
+	if t.SupportsSaturatingDivide() {
+		addArithmeticFunction(
+			NumericTypeSaturatingDivideFunctionName,
+			numericTypeSaturatingDivideFunctionDocString,
+		)
+	}
+}
+
 // NumericType represent all the types in the integer range
 // and non-fractional ranged types.
 //
 type NumericType struct {
-	name                string
-	minInt              *big.Int
-	maxInt              *big.Int
-	saturatingAdd       bool
-	saturatingSubtract  bool
-	saturatingMultiply  bool
-	saturatingDivide    bool
-	memberResolvers     map[string]MemberResolver
-	memberResolversOnce sync.Once
+	name                       string
+	minInt                     *big.Int
+	maxInt                     *big.Int
+	supportsSaturatingAdd      bool
+	supportsSaturatingSubtract bool
+	supportsSaturatingMultiply bool
+	supportsSaturatingDivide   bool
+	memberResolvers            map[string]MemberResolver
+	memberResolversOnce        sync.Once
 }
 
 var _ IntegerRangedType = &NumericType{}
@@ -746,23 +826,39 @@ func (t *NumericType) WithIntRange(min *big.Int, max *big.Int) *NumericType {
 }
 
 func (t *NumericType) WithSaturatingAdd() *NumericType {
-	t.saturatingAdd = true
+	t.supportsSaturatingAdd = true
 	return t
 }
 
 func (t *NumericType) WithSaturatingSubtract() *NumericType {
-	t.saturatingSubtract = true
+	t.supportsSaturatingSubtract = true
 	return t
 }
 
 func (t *NumericType) WithSaturatingMultiply() *NumericType {
-	t.saturatingMultiply = true
+	t.supportsSaturatingMultiply = true
 	return t
 }
 
 func (t *NumericType) WithSaturatingDivide() *NumericType {
-	t.saturatingDivide = true
+	t.supportsSaturatingDivide = true
 	return t
+}
+
+func (t *NumericType) SupportsSaturatingAdd() bool {
+	return t.supportsSaturatingAdd
+}
+
+func (t *NumericType) SupportsSaturatingSubtract() bool {
+	return t.supportsSaturatingSubtract
+}
+
+func (t *NumericType) SupportsSaturatingMultiply() bool {
+	return t.supportsSaturatingMultiply
+}
+
+func (t *NumericType) SupportsSaturatingDivide() bool {
+	return t.supportsSaturatingDivide
 }
 
 func (*NumericType) IsType() {}
@@ -839,76 +935,11 @@ func (t *NumericType) GetMembers() map[string]MemberResolver {
 	return t.memberResolvers
 }
 
-const NumericTypeSaturatingAddFunctionName = "saturatingAdd"
-const numericTypeSaturatingAddFunctionDocString = `
-self + other, saturating at the numeric bounds instead of overflowing.
-`
-
-const NumericTypeSaturatingSubtractFunctionName = "saturatingSubtract"
-const numericTypeSaturatingSubtractFunctionDocString = `
-self - other, saturating at the numeric bounds instead of overflowing.
-`
-const NumericTypeSaturatingMultiplyFunctionName = "saturatingMultiply"
-const numericTypeSaturatingMultiplyFunctionDocString = `
-self * other, saturating at the numeric bounds instead of overflowing.
-`
-
-const NumericTypeSaturatingDivideFunctionName = "saturatingDivide"
-const numericTypeSaturatingDivideFunctionDocString = `
-self / other, saturating at the numeric bounds instead of overflowing.
-`
-
 func (t *NumericType) initializeMemberResolvers() {
 	t.memberResolversOnce.Do(func() {
 		members := map[string]MemberResolver{}
 
-		arithmeticFunctionType := &FunctionType{
-			Parameters: []*Parameter{
-				{
-					Label:          ArgumentLabelNotRequired,
-					Identifier:     "other",
-					TypeAnnotation: NewTypeAnnotation(t),
-				},
-			},
-			ReturnTypeAnnotation: NewTypeAnnotation(t),
-		}
-
-		addArithmeticFunction := func(name string, docString string) {
-			members[name] = MemberResolver{
-				Kind: common.DeclarationKindFunction,
-				Resolve: func(identifier string, targetRange ast.Range, report func(error)) *Member {
-					return NewPublicFunctionMember(t, name, arithmeticFunctionType, docString)
-				},
-			}
-		}
-
-		if t.saturatingAdd {
-			addArithmeticFunction(
-				NumericTypeSaturatingAddFunctionName,
-				numericTypeSaturatingAddFunctionDocString,
-			)
-		}
-
-		if t.saturatingSubtract {
-			addArithmeticFunction(
-				NumericTypeSaturatingSubtractFunctionName,
-				numericTypeSaturatingSubtractFunctionDocString,
-			)
-		}
-
-		if t.saturatingMultiply {
-			addArithmeticFunction(
-				NumericTypeSaturatingMultiplyFunctionName,
-				numericTypeSaturatingMultiplyFunctionDocString,
-			)
-		}
-
-		if t.saturatingDivide {
-			addArithmeticFunction(
-				NumericTypeSaturatingDivideFunctionName,
-				numericTypeSaturatingDivideFunctionDocString,
-			)
-		}
+		addSaturatingArithmeticFunctions(t, members)
 
 		t.memberResolvers = withBuiltinMembers(t, members)
 	})
@@ -917,18 +948,18 @@ func (t *NumericType) initializeMemberResolvers() {
 // FixedPointNumericType represents all the types in the fixed-point range.
 //
 type FixedPointNumericType struct {
-	name                string
-	scale               uint
-	minInt              *big.Int
-	maxInt              *big.Int
-	minFractional       *big.Int
-	maxFractional       *big.Int
-	saturatingAdd       bool
-	saturatingSubtract  bool
-	saturatingMultiply  bool
-	saturatingDivide    bool
-	memberResolvers     map[string]MemberResolver
-	memberResolversOnce sync.Once
+	name                       string
+	scale                      uint
+	minInt                     *big.Int
+	maxInt                     *big.Int
+	minFractional              *big.Int
+	maxFractional              *big.Int
+	supportsSaturatingAdd      bool
+	supportsSaturatingSubtract bool
+	supportsSaturatingMultiply bool
+	supportsSaturatingDivide   bool
+	memberResolvers            map[string]MemberResolver
+	memberResolversOnce        sync.Once
 }
 
 var _ FractionalRangedType = &FixedPointNumericType{}
@@ -961,23 +992,39 @@ func (t *FixedPointNumericType) WithScale(scale uint) *FixedPointNumericType {
 }
 
 func (t *FixedPointNumericType) WithSaturatingAdd() *FixedPointNumericType {
-	t.saturatingAdd = true
+	t.supportsSaturatingAdd = true
 	return t
 }
 
 func (t *FixedPointNumericType) WithSaturatingSubtract() *FixedPointNumericType {
-	t.saturatingSubtract = true
+	t.supportsSaturatingSubtract = true
 	return t
 }
 
 func (t *FixedPointNumericType) WithSaturatingMultiply() *FixedPointNumericType {
-	t.saturatingMultiply = true
+	t.supportsSaturatingMultiply = true
 	return t
 }
 
 func (t *FixedPointNumericType) WithSaturatingDivide() *FixedPointNumericType {
-	t.saturatingDivide = true
+	t.supportsSaturatingDivide = true
 	return t
+}
+
+func (t *FixedPointNumericType) SupportsSaturatingAdd() bool {
+	return t.supportsSaturatingAdd
+}
+
+func (t *FixedPointNumericType) SupportsSaturatingSubtract() bool {
+	return t.supportsSaturatingSubtract
+}
+
+func (t *FixedPointNumericType) SupportsSaturatingMultiply() bool {
+	return t.supportsSaturatingMultiply
+}
+
+func (t *FixedPointNumericType) SupportsSaturatingDivide() bool {
+	return t.supportsSaturatingDivide
 }
 
 func (*FixedPointNumericType) IsType() {}
@@ -1070,53 +1117,7 @@ func (t *FixedPointNumericType) initializeMemberResolvers() {
 	t.memberResolversOnce.Do(func() {
 		members := map[string]MemberResolver{}
 
-		arithmeticFunctionType := &FunctionType{
-			Parameters: []*Parameter{
-				{
-					Label:          ArgumentLabelNotRequired,
-					Identifier:     "other",
-					TypeAnnotation: NewTypeAnnotation(t),
-				},
-			},
-			ReturnTypeAnnotation: NewTypeAnnotation(t),
-		}
-
-		addArithmeticFunction := func(name string, docString string) {
-			members[name] = MemberResolver{
-				Kind: common.DeclarationKindFunction,
-				Resolve: func(identifier string, targetRange ast.Range, report func(error)) *Member {
-					return NewPublicFunctionMember(t, name, arithmeticFunctionType, docString)
-				},
-			}
-		}
-
-		if t.saturatingAdd {
-			addArithmeticFunction(
-				NumericTypeSaturatingAddFunctionName,
-				numericTypeSaturatingAddFunctionDocString,
-			)
-		}
-
-		if t.saturatingSubtract {
-			addArithmeticFunction(
-				NumericTypeSaturatingSubtractFunctionName,
-				numericTypeSaturatingSubtractFunctionDocString,
-			)
-		}
-
-		if t.saturatingMultiply {
-			addArithmeticFunction(
-				NumericTypeSaturatingMultiplyFunctionName,
-				numericTypeSaturatingMultiplyFunctionDocString,
-			)
-		}
-
-		if t.saturatingDivide {
-			addArithmeticFunction(
-				NumericTypeSaturatingDivideFunctionName,
-				numericTypeSaturatingDivideFunctionDocString,
-			)
-		}
+		addSaturatingArithmeticFunctions(t, members)
 
 		t.memberResolvers = withBuiltinMembers(t, members)
 	})
