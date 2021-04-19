@@ -6816,11 +6816,6 @@ func TestInterpretResourceOwnerFieldUse(t *testing.T) {
 				interpreter.WithStorageExistenceHandler(checker),
 				interpreter.WithStorageReadHandler(getter),
 				interpreter.WithStorageWriteHandler(setter),
-				interpreter.WithStorageKeyHandler(
-					func(_ *interpreter.Interpreter, _ common.Address, indexingType sema.Type) string {
-						return string(indexingType.ID())
-					},
-				),
 				interpreter.WithAccountHandlerFunc(
 					func(address interpreter.AddressValue) *interpreter.CompositeValue {
 						return interpreter.NewPublicAccountValue(

@@ -778,11 +778,6 @@ func (r *interpreterRuntime) newInterpreter(
 				return r.emitEvent(inter, context.Interface, eventValue, eventType)
 			},
 		),
-		interpreter.WithStorageKeyHandler(
-			func(_ *interpreter.Interpreter, _ common.Address, indexingType sema.Type) string {
-				return string(indexingType.ID())
-			},
-		),
 		interpreter.WithInjectedCompositeFieldsHandler(
 			r.injectedCompositeFieldsHandler(context, runtimeStorage, interpreterOptions, checkerOptions),
 		),
