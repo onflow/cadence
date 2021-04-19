@@ -72,10 +72,10 @@ func TestInterpretStatementHandler(t *testing.T) {
 		checker.ParseAndCheckOptions{
 			Options: []sema.Option{
 				sema.WithImportHandler(
-					func(checker *sema.Checker, location common.Location) (sema.Import, error) {
+					func(_ *sema.Checker, importedLocation common.Location, _ ast.Range) (sema.Import, error) {
 						assert.Equal(t,
 							utils.ImportedLocation,
-							location,
+							importedLocation,
 						)
 
 						return sema.ElaborationImport{
@@ -198,10 +198,10 @@ func TestInterpretLoopIterationHandler(t *testing.T) {
 		checker.ParseAndCheckOptions{
 			Options: []sema.Option{
 				sema.WithImportHandler(
-					func(checker *sema.Checker, location common.Location) (sema.Import, error) {
+					func(_ *sema.Checker, importedLocation common.Location, _ ast.Range) (sema.Import, error) {
 						assert.Equal(t,
 							utils.ImportedLocation,
-							location,
+							importedLocation,
 						)
 
 						return sema.ElaborationImport{
@@ -335,10 +335,10 @@ func TestInterpretFunctionInvocationHandler(t *testing.T) {
 		checker.ParseAndCheckOptions{
 			Options: []sema.Option{
 				sema.WithImportHandler(
-					func(checker *sema.Checker, location common.Location) (sema.Import, error) {
+					func(_ *sema.Checker, importedLocation common.Location, _ ast.Range) (sema.Import, error) {
 						assert.Equal(t,
 							utils.ImportedLocation,
-							location,
+							importedLocation,
 						)
 
 						return sema.ElaborationImport{
