@@ -1642,7 +1642,7 @@ func TestCheckAccessImportGlobalValue(t *testing.T) {
 						Options: []sema.Option{
 							sema.WithAccessCheckMode(checkMode),
 							sema.WithImportHandler(
-								func(checker *sema.Checker, location common.Location) (sema.Import, error) {
+								func(_ *sema.Checker, _ common.Location, _ ast.Range) (sema.Import, error) {
 									return sema.ElaborationImport{
 										Elaboration: importedChecker.Elaboration,
 									}, nil
@@ -1849,7 +1849,7 @@ func TestCheckAccessImportGlobalValueAssignmentAndSwap(t *testing.T) {
 					Options: []sema.Option{
 						sema.WithAccessCheckMode(checkMode),
 						sema.WithImportHandler(
-							func(checker *sema.Checker, location common.Location) (sema.Import, error) {
+							func(_ *sema.Checker, _ common.Location, _ ast.Range) (sema.Import, error) {
 								return sema.ElaborationImport{
 									Elaboration: imported.Elaboration,
 								}, nil
@@ -1895,7 +1895,7 @@ func TestCheckAccessImportGlobalValueVariableDeclarationWithSecondValue(t *testi
 		ParseAndCheckOptions{
 			Options: []sema.Option{
 				sema.WithImportHandler(
-					func(checker *sema.Checker, location common.Location) (sema.Import, error) {
+					func(_ *sema.Checker, _ common.Location, _ ast.Range) (sema.Import, error) {
 						return sema.ElaborationImport{
 							Elaboration: imported.Elaboration,
 						}, nil
@@ -2382,7 +2382,7 @@ func TestCheckAccountAccess(t *testing.T) {
 									Options: []sema.Option{
 										sema.WithAccessCheckMode(checkMode),
 										sema.WithImportHandler(
-											func(checker *sema.Checker, location common.Location) (sema.Import, error) {
+											func(_ *sema.Checker, _ common.Location, _ ast.Range) (sema.Import, error) {
 												return sema.ElaborationImport{
 													Elaboration: importedChecker.Elaboration,
 												}, nil

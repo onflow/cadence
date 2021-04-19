@@ -23,6 +23,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
@@ -185,9 +186,9 @@ func TestCheckPredeclaredValues(t *testing.T) {
 				Options: []sema.Option{
 					predeclaredValuesOption,
 					sema.WithImportHandler(
-						func(checker *sema.Checker, location common.Location) (sema.Import, error) {
+						func(checker *sema.Checker, importedLocation common.Location, _ ast.Range) (sema.Import, error) {
 
-							importedChecker, importErr := getChecker(location)
+							importedChecker, importErr := getChecker(importedLocation)
 							if importErr != nil {
 								return nil, importErr
 							}

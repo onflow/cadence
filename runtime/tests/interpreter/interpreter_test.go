@@ -3261,10 +3261,10 @@ func TestInterpretImport(t *testing.T) {
 		checker.ParseAndCheckOptions{
 			Options: []sema.Option{
 				sema.WithImportHandler(
-					func(checker *sema.Checker, location common.Location) (sema.Import, error) {
+					func(_ *sema.Checker, importedLocation common.Location, _ ast.Range) (sema.Import, error) {
 						assert.Equal(t,
 							ImportedLocation,
-							location,
+							importedLocation,
 						)
 
 						return sema.ElaborationImport{
@@ -3348,10 +3348,10 @@ func TestInterpretImportError(t *testing.T) {
 			Options: []sema.Option{
 				sema.WithPredeclaredValues(valueDeclarations),
 				sema.WithImportHandler(
-					func(checker *sema.Checker, location common.Location) (sema.Import, error) {
+					func(_ *sema.Checker, importedLocation common.Location, _ ast.Range) (sema.Import, error) {
 						assert.Equal(t,
 							ImportedLocation,
-							location,
+							importedLocation,
 						)
 
 						return sema.ElaborationImport{
@@ -4808,10 +4808,10 @@ func TestInterpretCompositeFunctionInvocationFromImportingProgram(t *testing.T) 
 		checker.ParseAndCheckOptions{
 			Options: []sema.Option{
 				sema.WithImportHandler(
-					func(checker *sema.Checker, location common.Location) (sema.Import, error) {
+					func(_ *sema.Checker, importedLocation common.Location, _ ast.Range) (sema.Import, error) {
 						assert.Equal(t,
 							ImportedLocation,
-							location,
+							importedLocation,
 						)
 
 						return sema.ElaborationImport{
@@ -6330,10 +6330,10 @@ func TestInterpretConformToImportedInterface(t *testing.T) {
 		checker.ParseAndCheckOptions{
 			Options: []sema.Option{
 				sema.WithImportHandler(
-					func(checker *sema.Checker, location common.Location) (sema.Import, error) {
+					func(_ *sema.Checker, importedLocation common.Location, _ ast.Range) (sema.Import, error) {
 						assert.Equal(t,
 							ImportedLocation,
-							location,
+							importedLocation,
 						)
 
 						return sema.ElaborationImport{

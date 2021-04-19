@@ -27,6 +27,7 @@ import (
 
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/sema"
+	"github.com/onflow/cadence/runtime/tests/checker"
 )
 
 func TestRuntimeCyclicImport(t *testing.T) {
@@ -70,50 +71,45 @@ func TestRuntimeCyclicImport(t *testing.T) {
 	nextTransactionLocation := newTransactionLocationGenerator()
 
 	location := nextTransactionLocation()
-	context := Context{
-		Interface: runtimeInterface,
-		Location:  location,
-	}
 	_, err := runtime.ExecuteScript(
 		Script{
 			Source: script,
 		},
-		context,
+		Context{
+			Interface: runtimeInterface,
+			Location:  location,
+		},
 	)
 	require.Error(t, err)
+
+	require.Contains(t, err.Error(), "cyclic import of `p1`")
 
 	// Script
 
 	var checkerErr *sema.CheckerError
 	require.ErrorAs(t, err, &checkerErr)
 
-	require.Len(t, checkerErr.ChildErrors(), 1)
-	childErr := checkerErr.ChildErrors()[0]
+	errs := checker.ExpectCheckerErrors(t, checkerErr, 1)
 
 	var importedProgramErr *sema.ImportedProgramError
-	require.ErrorAs(t, childErr, &importedProgramErr)
+	require.ErrorAs(t, errs[0], &importedProgramErr)
 
 	// P1
 
 	var checkerErr2 *sema.CheckerError
 	require.ErrorAs(t, importedProgramErr.Err, &checkerErr2)
 
-	require.Len(t, checkerErr2.ChildErrors(), 1)
-	childErr2 := checkerErr2.ChildErrors()[0]
+	errs = checker.ExpectCheckerErrors(t, checkerErr2, 1)
 
 	var importedProgramErr2 *sema.ImportedProgramError
-	require.ErrorAs(t, childErr2, &importedProgramErr2)
+	require.ErrorAs(t, errs[0], &importedProgramErr2)
 
 	// P2
 
 	var checkerErr3 *sema.CheckerError
 	require.ErrorAs(t, importedProgramErr2.Err, &checkerErr3)
 
-	require.Len(t, checkerErr3.ChildErrors(), 1)
-	childErr3 := checkerErr3.ChildErrors()[0]
+	errs = checker.ExpectCheckerErrors(t, checkerErr3, 1)
 
-	var importedProgramErr3 *sema.ImportedProgramError
-	require.ErrorAs(t, childErr3, &importedProgramErr3)
-
-	require.IsType(t, importedProgramErr3.Err, &sema.CyclicImportsError{})
+	require.IsType(t, &sema.CyclicImportsError{}, errs[0])
 }

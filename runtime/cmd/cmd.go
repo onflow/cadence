@@ -95,7 +95,7 @@ func PrepareChecker(
 		sema.WithPredeclaredValues(valueDeclarations.ToSemaValueDeclarations()),
 		sema.WithPredeclaredTypes(typeDeclarations),
 		sema.WithImportHandler(
-			func(checker *sema.Checker, importedLocation common.Location) (sema.Import, error) {
+			func(checker *sema.Checker, importedLocation common.Location, importRange ast.Range) (sema.Import, error) {
 				stringLocation, ok := importedLocation.(common.StringLocation)
 
 				if !ok {

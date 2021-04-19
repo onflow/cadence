@@ -713,23 +713,25 @@ func (r *interpreterRuntime) check(
 					},
 				),
 				sema.WithImportHandler(
-					func(checker *sema.Checker, location common.Location) (sema.Import, error) {
+					func(checker *sema.Checker, importedLocation common.Location, importRange ast.Range) (sema.Import, error) {
+
 						var elaboration *sema.Elaboration
-						switch location {
+						switch importedLocation {
 						case stdlib.CryptoChecker.Location:
 							elaboration = stdlib.CryptoChecker.Elaboration
 
 						default:
-							context := startContext.WithLocation(location)
+							context := startContext.WithLocation(importedLocation)
 
 							// Check for cyclic imports
-							if checkedImports[location.ID()] {
+							if checkedImports[importedLocation.ID()] {
 								return nil, &sema.CyclicImportsError{
-									Location: location,
+									Location: importedLocation,
+									Range:    importRange,
 								}
 							} else {
-								checkedImports[location.ID()] = true
-								defer delete(checkedImports, location.ID())
+								checkedImports[importedLocation.ID()] = true
+								defer delete(checkedImports, importedLocation.ID())
 							}
 
 							program, err := r.getProgram(context, functions, values, checkerOptions, checkedImports)
@@ -761,9 +763,6 @@ func (r *interpreterRuntime) check(
 	if err != nil {
 		return nil, err
 	}
-
-	// TODO: set elaboration *before* checking,
-	// so it is returned when there is a cyclic import
 
 	elaboration = checker.Elaboration
 

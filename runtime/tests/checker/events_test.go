@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/tests/utils"
@@ -266,7 +267,7 @@ func TestCheckEmitEvent(t *testing.T) {
 			ParseAndCheckOptions{
 				Options: []sema.Option{
 					sema.WithImportHandler(
-						func(checker *sema.Checker, location common.Location) (sema.Import, error) {
+						func(_ *sema.Checker, _ common.Location, _ ast.Range) (sema.Import, error) {
 							return sema.ElaborationImport{
 								Elaboration: importedChecker.Elaboration,
 							}, nil

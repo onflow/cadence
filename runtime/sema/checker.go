@@ -74,7 +74,7 @@ type ResolvedLocation struct {
 
 type LocationHandlerFunc func(identifiers []ast.Identifier, location common.Location) ([]ResolvedLocation, error)
 
-type ImportHandlerFunc func(checker *Checker, location common.Location) (Import, error)
+type ImportHandlerFunc func(checker *Checker, importedLocation common.Location, importRange ast.Range) (Import, error)
 
 // Checker
 
