@@ -856,21 +856,78 @@ func (v *ArrayValue) Equal(other Value, interpreter *Interpreter, loadDeferred b
 }
 
 // NumberValue
-
+//
 type NumberValue interface {
 	EquatableValue
 	ToInt() int
 	Negate() NumberValue
 	Plus(other NumberValue) NumberValue
+	SaturatingPlus(other NumberValue) NumberValue
 	Minus(other NumberValue) NumberValue
+	SaturatingMinus(other NumberValue) NumberValue
 	Mod(other NumberValue) NumberValue
 	Mul(other NumberValue) NumberValue
+	SaturatingMul(other NumberValue) NumberValue
 	Div(other NumberValue) NumberValue
+	SaturatingDiv(other NumberValue) NumberValue
 	Less(other NumberValue) BoolValue
 	LessEqual(other NumberValue) BoolValue
 	Greater(other NumberValue) BoolValue
 	GreaterEqual(other NumberValue) BoolValue
 	ToBigEndianBytes() []byte
+}
+
+func getNumberValueMember(v NumberValue, name string) Value {
+	switch name {
+
+	case sema.ToStringFunctionName:
+		return NewHostFunctionValue(
+			func(invocation Invocation) Value {
+				return NewStringValue(v.String())
+			},
+		)
+
+	case sema.ToBigEndianBytesFunctionName:
+		return NewHostFunctionValue(
+			func(invocation Invocation) Value {
+				return ByteSliceToByteArrayValue(v.ToBigEndianBytes())
+			},
+		)
+
+	case sema.NumericTypeSaturatingAddFunctionName:
+		return NewHostFunctionValue(
+			func(invocation Invocation) Value {
+				other := invocation.Arguments[0].(NumberValue)
+				return v.SaturatingPlus(other)
+			},
+		)
+
+	case sema.NumericTypeSaturatingSubtractFunctionName:
+		return NewHostFunctionValue(
+			func(invocation Invocation) Value {
+				other := invocation.Arguments[0].(NumberValue)
+				return v.SaturatingMinus(other)
+			},
+		)
+
+	case sema.NumericTypeSaturatingMultiplyFunctionName:
+		return NewHostFunctionValue(
+			func(invocation Invocation) Value {
+				other := invocation.Arguments[0].(NumberValue)
+				return v.SaturatingMul(other)
+			},
+		)
+
+	case sema.NumericTypeSaturatingDivideFunctionName:
+		return NewHostFunctionValue(
+			func(invocation Invocation) Value {
+				other := invocation.Arguments[0].(NumberValue)
+				return v.SaturatingDiv(other)
+			},
+		)
+	}
+
+	return nil
 }
 
 type IntegerValue interface {
@@ -884,7 +941,7 @@ type IntegerValue interface {
 
 // BigNumberValue.
 // Implemented by values with an integer value outside the range of int64
-
+//
 type BigNumberValue interface {
 	NumberValue
 	ToBigInt() *big.Int
@@ -981,11 +1038,19 @@ func (v IntValue) Plus(other NumberValue) NumberValue {
 	return IntValue{res}
 }
 
+func (v IntValue) SaturatingPlus(other NumberValue) NumberValue {
+	return v.Plus(other)
+}
+
 func (v IntValue) Minus(other NumberValue) NumberValue {
 	o := other.(IntValue)
 	res := new(big.Int)
 	res.Sub(v.BigInt, o.BigInt)
 	return IntValue{res}
+}
+
+func (v IntValue) SaturatingMinus(other NumberValue) NumberValue {
+	return v.Minus(other)
 }
 
 func (v IntValue) Mod(other NumberValue) NumberValue {
@@ -1006,6 +1071,10 @@ func (v IntValue) Mul(other NumberValue) NumberValue {
 	return IntValue{res}
 }
 
+func (v IntValue) SaturatingMul(other NumberValue) NumberValue {
+	return v.Mul(other)
+}
+
 func (v IntValue) Div(other NumberValue) NumberValue {
 	o := other.(IntValue)
 	res := new(big.Int)
@@ -1015,6 +1084,10 @@ func (v IntValue) Div(other NumberValue) NumberValue {
 	}
 	res.Div(v.BigInt, o.BigInt)
 	return IntValue{res}
+}
+
+func (v IntValue) SaturatingDiv(other NumberValue) NumberValue {
+	return v.Div(other)
 }
 
 func (v IntValue) Less(other NumberValue) BoolValue {
@@ -1094,24 +1167,7 @@ func (v IntValue) BitwiseRightShift(other IntegerValue) IntegerValue {
 }
 
 func (v IntValue) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	switch name {
-
-	case sema.ToStringFunctionName:
-		return NewHostFunctionValue(
-			func(invocation Invocation) Value {
-				return NewStringValue(v.String())
-			},
-		)
-
-	case sema.ToBigEndianBytesFunctionName:
-		return NewHostFunctionValue(
-			func(invocation Invocation) Value {
-				return ByteSliceToByteArrayValue(v.ToBigEndianBytes())
-			},
-		)
-	}
-
-	return nil
+	return getNumberValueMember(v, name)
 }
 
 func (IntValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -1404,56 +1460,7 @@ func (v Int8Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 }
 
 func (v Int8Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	switch name {
-
-	case sema.ToStringFunctionName:
-		return NewHostFunctionValue(
-			func(invocation Invocation) Value {
-				return NewStringValue(v.String())
-			},
-		)
-
-	case sema.ToBigEndianBytesFunctionName:
-		return NewHostFunctionValue(
-			func(invocation Invocation) Value {
-				return ByteSliceToByteArrayValue(v.ToBigEndianBytes())
-			},
-		)
-
-	case sema.NumericTypeSaturatingAddFunctionName:
-		return NewHostFunctionValue(
-			func(invocation Invocation) Value {
-				other := invocation.Arguments[0].(NumberValue)
-				return v.SaturatingPlus(other)
-			},
-		)
-
-	case sema.NumericTypeSaturatingSubtractFunctionName:
-		return NewHostFunctionValue(
-			func(invocation Invocation) Value {
-				other := invocation.Arguments[0].(NumberValue)
-				return v.SaturatingMinus(other)
-			},
-		)
-
-	case sema.NumericTypeSaturatingMultiplyFunctionName:
-		return NewHostFunctionValue(
-			func(invocation Invocation) Value {
-				other := invocation.Arguments[0].(NumberValue)
-				return v.SaturatingMul(other)
-			},
-		)
-
-	case sema.NumericTypeSaturatingDivideFunctionName:
-		return NewHostFunctionValue(
-			func(invocation Invocation) Value {
-				other := invocation.Arguments[0].(NumberValue)
-				return v.SaturatingDiv(other)
-			},
-		)
-	}
-
-	return nil
+	return getNumberValueMember(v, name)
 }
 
 func (Int8Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -1746,56 +1753,7 @@ func (v Int16Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 }
 
 func (v Int16Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	switch name {
-
-	case sema.ToStringFunctionName:
-		return NewHostFunctionValue(
-			func(invocation Invocation) Value {
-				return NewStringValue(v.String())
-			},
-		)
-
-	case sema.ToBigEndianBytesFunctionName:
-		return NewHostFunctionValue(
-			func(invocation Invocation) Value {
-				return ByteSliceToByteArrayValue(v.ToBigEndianBytes())
-			},
-		)
-
-	case sema.NumericTypeSaturatingAddFunctionName:
-		return NewHostFunctionValue(
-			func(invocation Invocation) Value {
-				other := invocation.Arguments[0].(NumberValue)
-				return v.SaturatingPlus(other)
-			},
-		)
-
-	case sema.NumericTypeSaturatingSubtractFunctionName:
-		return NewHostFunctionValue(
-			func(invocation Invocation) Value {
-				other := invocation.Arguments[0].(NumberValue)
-				return v.SaturatingMinus(other)
-			},
-		)
-
-	case sema.NumericTypeSaturatingMultiplyFunctionName:
-		return NewHostFunctionValue(
-			func(invocation Invocation) Value {
-				other := invocation.Arguments[0].(NumberValue)
-				return v.SaturatingMul(other)
-			},
-		)
-
-	case sema.NumericTypeSaturatingDivideFunctionName:
-		return NewHostFunctionValue(
-			func(invocation Invocation) Value {
-				other := invocation.Arguments[0].(NumberValue)
-				return v.SaturatingDiv(other)
-			},
-		)
-	}
-
-	return nil
+	return getNumberValueMember(v, name)
 }
 
 func (Int16Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -2090,56 +2048,7 @@ func (v Int32Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 }
 
 func (v Int32Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	switch name {
-
-	case sema.ToStringFunctionName:
-		return NewHostFunctionValue(
-			func(invocation Invocation) Value {
-				return NewStringValue(v.String())
-			},
-		)
-
-	case sema.ToBigEndianBytesFunctionName:
-		return NewHostFunctionValue(
-			func(invocation Invocation) Value {
-				return ByteSliceToByteArrayValue(v.ToBigEndianBytes())
-			},
-		)
-
-	case sema.NumericTypeSaturatingAddFunctionName:
-		return NewHostFunctionValue(
-			func(invocation Invocation) Value {
-				other := invocation.Arguments[0].(NumberValue)
-				return v.SaturatingPlus(other)
-			},
-		)
-
-	case sema.NumericTypeSaturatingSubtractFunctionName:
-		return NewHostFunctionValue(
-			func(invocation Invocation) Value {
-				other := invocation.Arguments[0].(NumberValue)
-				return v.SaturatingMinus(other)
-			},
-		)
-
-	case sema.NumericTypeSaturatingMultiplyFunctionName:
-		return NewHostFunctionValue(
-			func(invocation Invocation) Value {
-				other := invocation.Arguments[0].(NumberValue)
-				return v.SaturatingMul(other)
-			},
-		)
-
-	case sema.NumericTypeSaturatingDivideFunctionName:
-		return NewHostFunctionValue(
-			func(invocation Invocation) Value {
-				other := invocation.Arguments[0].(NumberValue)
-				return v.SaturatingDiv(other)
-			},
-		)
-	}
-
-	return nil
+	return getNumberValueMember(v, name)
 }
 
 func (Int32Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -2433,56 +2342,7 @@ func (v Int64Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 }
 
 func (v Int64Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	switch name {
-
-	case sema.ToStringFunctionName:
-		return NewHostFunctionValue(
-			func(invocation Invocation) Value {
-				return NewStringValue(v.String())
-			},
-		)
-
-	case sema.ToBigEndianBytesFunctionName:
-		return NewHostFunctionValue(
-			func(invocation Invocation) Value {
-				return ByteSliceToByteArrayValue(v.ToBigEndianBytes())
-			},
-		)
-
-	case sema.NumericTypeSaturatingAddFunctionName:
-		return NewHostFunctionValue(
-			func(invocation Invocation) Value {
-				other := invocation.Arguments[0].(NumberValue)
-				return v.SaturatingPlus(other)
-			},
-		)
-
-	case sema.NumericTypeSaturatingSubtractFunctionName:
-		return NewHostFunctionValue(
-			func(invocation Invocation) Value {
-				other := invocation.Arguments[0].(NumberValue)
-				return v.SaturatingMinus(other)
-			},
-		)
-
-	case sema.NumericTypeSaturatingMultiplyFunctionName:
-		return NewHostFunctionValue(
-			func(invocation Invocation) Value {
-				other := invocation.Arguments[0].(NumberValue)
-				return v.SaturatingMul(other)
-			},
-		)
-
-	case sema.NumericTypeSaturatingDivideFunctionName:
-		return NewHostFunctionValue(
-			func(invocation Invocation) Value {
-				other := invocation.Arguments[0].(NumberValue)
-				return v.SaturatingDiv(other)
-			},
-		)
-	}
-
-	return nil
+	return getNumberValueMember(v, name)
 }
 
 func (Int64Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -2847,56 +2707,7 @@ func (v Int128Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 }
 
 func (v Int128Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	switch name {
-
-	case sema.ToStringFunctionName:
-		return NewHostFunctionValue(
-			func(invocation Invocation) Value {
-				return NewStringValue(v.String())
-			},
-		)
-
-	case sema.ToBigEndianBytesFunctionName:
-		return NewHostFunctionValue(
-			func(invocation Invocation) Value {
-				return ByteSliceToByteArrayValue(v.ToBigEndianBytes())
-			},
-		)
-
-	case sema.NumericTypeSaturatingAddFunctionName:
-		return NewHostFunctionValue(
-			func(invocation Invocation) Value {
-				other := invocation.Arguments[0].(NumberValue)
-				return v.SaturatingPlus(other)
-			},
-		)
-
-	case sema.NumericTypeSaturatingSubtractFunctionName:
-		return NewHostFunctionValue(
-			func(invocation Invocation) Value {
-				other := invocation.Arguments[0].(NumberValue)
-				return v.SaturatingMinus(other)
-			},
-		)
-
-	case sema.NumericTypeSaturatingMultiplyFunctionName:
-		return NewHostFunctionValue(
-			func(invocation Invocation) Value {
-				other := invocation.Arguments[0].(NumberValue)
-				return v.SaturatingMul(other)
-			},
-		)
-
-	case sema.NumericTypeSaturatingDivideFunctionName:
-		return NewHostFunctionValue(
-			func(invocation Invocation) Value {
-				other := invocation.Arguments[0].(NumberValue)
-				return v.SaturatingDiv(other)
-			},
-		)
-	}
-
-	return nil
+	return getNumberValueMember(v, name)
 }
 
 func (Int128Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -3260,56 +3071,7 @@ func (v Int256Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 }
 
 func (v Int256Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	switch name {
-
-	case sema.ToStringFunctionName:
-		return NewHostFunctionValue(
-			func(invocation Invocation) Value {
-				return NewStringValue(v.String())
-			},
-		)
-
-	case sema.ToBigEndianBytesFunctionName:
-		return NewHostFunctionValue(
-			func(invocation Invocation) Value {
-				return ByteSliceToByteArrayValue(v.ToBigEndianBytes())
-			},
-		)
-
-	case sema.NumericTypeSaturatingAddFunctionName:
-		return NewHostFunctionValue(
-			func(invocation Invocation) Value {
-				other := invocation.Arguments[0].(NumberValue)
-				return v.SaturatingPlus(other)
-			},
-		)
-
-	case sema.NumericTypeSaturatingSubtractFunctionName:
-		return NewHostFunctionValue(
-			func(invocation Invocation) Value {
-				other := invocation.Arguments[0].(NumberValue)
-				return v.SaturatingMinus(other)
-			},
-		)
-
-	case sema.NumericTypeSaturatingMultiplyFunctionName:
-		return NewHostFunctionValue(
-			func(invocation Invocation) Value {
-				other := invocation.Arguments[0].(NumberValue)
-				return v.SaturatingMul(other)
-			},
-		)
-
-	case sema.NumericTypeSaturatingDivideFunctionName:
-		return NewHostFunctionValue(
-			func(invocation Invocation) Value {
-				other := invocation.Arguments[0].(NumberValue)
-				return v.SaturatingDiv(other)
-			},
-		)
-	}
-
-	return nil
+	return getNumberValueMember(v, name)
 }
 
 func (Int256Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -3423,6 +3185,10 @@ func (v UIntValue) Plus(other NumberValue) NumberValue {
 	return UIntValue{res}
 }
 
+func (v UIntValue) SaturatingPlus(other NumberValue) NumberValue {
+	return v.Plus(other)
+}
+
 func (v UIntValue) Minus(other NumberValue) NumberValue {
 	o := other.(UIntValue)
 	res := new(big.Int)
@@ -3463,6 +3229,10 @@ func (v UIntValue) Mul(other NumberValue) NumberValue {
 	return UIntValue{res}
 }
 
+func (v UIntValue) SaturatingMul(other NumberValue) NumberValue {
+	return v.Mul(other)
+}
+
 func (v UIntValue) Div(other NumberValue) NumberValue {
 	o := other.(UIntValue)
 	res := new(big.Int)
@@ -3472,6 +3242,10 @@ func (v UIntValue) Div(other NumberValue) NumberValue {
 	}
 	res.Div(v.BigInt, o.BigInt)
 	return UIntValue{res}
+}
+
+func (v UIntValue) SaturatingDiv(other NumberValue) NumberValue {
+	return v.Div(other)
 }
 
 func (v UIntValue) Less(other NumberValue) BoolValue {
@@ -3551,32 +3325,7 @@ func (v UIntValue) BitwiseRightShift(other IntegerValue) IntegerValue {
 }
 
 func (v UIntValue) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	switch name {
-
-	case sema.ToStringFunctionName:
-		return NewHostFunctionValue(
-			func(invocation Invocation) Value {
-				return NewStringValue(v.String())
-			},
-		)
-
-	case sema.ToBigEndianBytesFunctionName:
-		return NewHostFunctionValue(
-			func(invocation Invocation) Value {
-				return ByteSliceToByteArrayValue(v.ToBigEndianBytes())
-			},
-		)
-
-	case sema.NumericTypeSaturatingSubtractFunctionName:
-		return NewHostFunctionValue(
-			func(invocation Invocation) Value {
-				other := invocation.Arguments[0].(NumberValue)
-				return v.SaturatingMinus(other)
-			},
-		)
-	}
-
-	return nil
+	return getNumberValueMember(v, name)
 }
 
 func (UIntValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -3717,6 +3466,10 @@ func (v UInt8Value) Div(other NumberValue) NumberValue {
 	return v / o
 }
 
+func (v UInt8Value) SaturatingDiv(other NumberValue) NumberValue {
+	return v.Div(other)
+}
+
 func (v UInt8Value) Less(other NumberValue) BoolValue {
 	return v < other.(UInt8Value)
 }
@@ -3796,48 +3549,7 @@ func (v UInt8Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 }
 
 func (v UInt8Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	switch name {
-
-	case sema.ToStringFunctionName:
-		return NewHostFunctionValue(
-			func(invocation Invocation) Value {
-				return NewStringValue(v.String())
-			},
-		)
-
-	case sema.ToBigEndianBytesFunctionName:
-		return NewHostFunctionValue(
-			func(invocation Invocation) Value {
-				return ByteSliceToByteArrayValue(v.ToBigEndianBytes())
-			},
-		)
-
-	case sema.NumericTypeSaturatingAddFunctionName:
-		return NewHostFunctionValue(
-			func(invocation Invocation) Value {
-				other := invocation.Arguments[0].(NumberValue)
-				return v.SaturatingPlus(other)
-			},
-		)
-
-	case sema.NumericTypeSaturatingSubtractFunctionName:
-		return NewHostFunctionValue(
-			func(invocation Invocation) Value {
-				other := invocation.Arguments[0].(NumberValue)
-				return v.SaturatingMinus(other)
-			},
-		)
-
-	case sema.NumericTypeSaturatingMultiplyFunctionName:
-		return NewHostFunctionValue(
-			func(invocation Invocation) Value {
-				other := invocation.Arguments[0].(NumberValue)
-				return v.SaturatingMul(other)
-			},
-		)
-	}
-
-	return nil
+	return getNumberValueMember(v, name)
 }
 
 func (UInt8Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -3976,6 +3688,10 @@ func (v UInt16Value) Div(other NumberValue) NumberValue {
 	return v / o
 }
 
+func (v UInt16Value) SaturatingDiv(other NumberValue) NumberValue {
+	return v.Div(other)
+}
+
 func (v UInt16Value) Less(other NumberValue) BoolValue {
 	return v < other.(UInt16Value)
 }
@@ -4055,48 +3771,7 @@ func (v UInt16Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 }
 
 func (v UInt16Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	switch name {
-
-	case sema.ToStringFunctionName:
-		return NewHostFunctionValue(
-			func(invocation Invocation) Value {
-				return NewStringValue(v.String())
-			},
-		)
-
-	case sema.ToBigEndianBytesFunctionName:
-		return NewHostFunctionValue(
-			func(invocation Invocation) Value {
-				return ByteSliceToByteArrayValue(v.ToBigEndianBytes())
-			},
-		)
-
-	case sema.NumericTypeSaturatingAddFunctionName:
-		return NewHostFunctionValue(
-			func(invocation Invocation) Value {
-				other := invocation.Arguments[0].(NumberValue)
-				return v.SaturatingPlus(other)
-			},
-		)
-
-	case sema.NumericTypeSaturatingSubtractFunctionName:
-		return NewHostFunctionValue(
-			func(invocation Invocation) Value {
-				other := invocation.Arguments[0].(NumberValue)
-				return v.SaturatingMinus(other)
-			},
-		)
-
-	case sema.NumericTypeSaturatingMultiplyFunctionName:
-		return NewHostFunctionValue(
-			func(invocation Invocation) Value {
-				other := invocation.Arguments[0].(NumberValue)
-				return v.SaturatingMul(other)
-			},
-		)
-	}
-
-	return nil
+	return getNumberValueMember(v, name)
 }
 
 func (UInt16Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -4238,6 +3913,10 @@ func (v UInt32Value) Div(other NumberValue) NumberValue {
 	return v / o
 }
 
+func (v UInt32Value) SaturatingDiv(other NumberValue) NumberValue {
+	return v.Div(other)
+}
+
 func (v UInt32Value) Less(other NumberValue) BoolValue {
 	return v < other.(UInt32Value)
 }
@@ -4317,48 +3996,7 @@ func (v UInt32Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 }
 
 func (v UInt32Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	switch name {
-
-	case sema.ToStringFunctionName:
-		return NewHostFunctionValue(
-			func(invocation Invocation) Value {
-				return NewStringValue(v.String())
-			},
-		)
-
-	case sema.ToBigEndianBytesFunctionName:
-		return NewHostFunctionValue(
-			func(invocation Invocation) Value {
-				return ByteSliceToByteArrayValue(v.ToBigEndianBytes())
-			},
-		)
-
-	case sema.NumericTypeSaturatingAddFunctionName:
-		return NewHostFunctionValue(
-			func(invocation Invocation) Value {
-				other := invocation.Arguments[0].(NumberValue)
-				return v.SaturatingPlus(other)
-			},
-		)
-
-	case sema.NumericTypeSaturatingSubtractFunctionName:
-		return NewHostFunctionValue(
-			func(invocation Invocation) Value {
-				other := invocation.Arguments[0].(NumberValue)
-				return v.SaturatingMinus(other)
-			},
-		)
-
-	case sema.NumericTypeSaturatingMultiplyFunctionName:
-		return NewHostFunctionValue(
-			func(invocation Invocation) Value {
-				other := invocation.Arguments[0].(NumberValue)
-				return v.SaturatingMul(other)
-			},
-		)
-	}
-
-	return nil
+	return getNumberValueMember(v, name)
 }
 
 func (UInt32Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -4505,6 +4143,10 @@ func (v UInt64Value) Div(other NumberValue) NumberValue {
 	return v / o
 }
 
+func (v UInt64Value) SaturatingDiv(other NumberValue) NumberValue {
+	return v.Div(other)
+}
+
 func (v UInt64Value) Less(other NumberValue) BoolValue {
 	return v < other.(UInt64Value)
 }
@@ -4582,48 +4224,7 @@ func (v UInt64Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 }
 
 func (v UInt64Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	switch name {
-
-	case sema.ToStringFunctionName:
-		return NewHostFunctionValue(
-			func(invocation Invocation) Value {
-				return NewStringValue(v.String())
-			},
-		)
-
-	case sema.ToBigEndianBytesFunctionName:
-		return NewHostFunctionValue(
-			func(invocation Invocation) Value {
-				return ByteSliceToByteArrayValue(v.ToBigEndianBytes())
-			},
-		)
-
-	case sema.NumericTypeSaturatingAddFunctionName:
-		return NewHostFunctionValue(
-			func(invocation Invocation) Value {
-				other := invocation.Arguments[0].(NumberValue)
-				return v.SaturatingPlus(other)
-			},
-		)
-
-	case sema.NumericTypeSaturatingSubtractFunctionName:
-		return NewHostFunctionValue(
-			func(invocation Invocation) Value {
-				other := invocation.Arguments[0].(NumberValue)
-				return v.SaturatingMinus(other)
-			},
-		)
-
-	case sema.NumericTypeSaturatingMultiplyFunctionName:
-		return NewHostFunctionValue(
-			func(invocation Invocation) Value {
-				other := invocation.Arguments[0].(NumberValue)
-				return v.SaturatingMul(other)
-			},
-		)
-	}
-
-	return nil
+	return getNumberValueMember(v, name)
 }
 
 func (UInt64Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -4827,6 +4428,10 @@ func (v UInt128Value) Div(other NumberValue) NumberValue {
 	return UInt128Value{res}
 }
 
+func (v UInt128Value) SaturatingDiv(other NumberValue) NumberValue {
+	return v.Div(other)
+}
+
 func (v UInt128Value) Less(other NumberValue) BoolValue {
 	cmp := v.BigInt.Cmp(other.(UInt128Value).BigInt)
 	return cmp == -1
@@ -4927,47 +4532,7 @@ func (v UInt128Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 }
 
 func (v UInt128Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	switch name {
-
-	case sema.ToStringFunctionName:
-		return NewHostFunctionValue(
-			func(invocation Invocation) Value {
-				return NewStringValue(v.String())
-			},
-		)
-	case sema.ToBigEndianBytesFunctionName:
-		return NewHostFunctionValue(
-			func(invocation Invocation) Value {
-				return ByteSliceToByteArrayValue(v.ToBigEndianBytes())
-			},
-		)
-
-	case sema.NumericTypeSaturatingAddFunctionName:
-		return NewHostFunctionValue(
-			func(invocation Invocation) Value {
-				other := invocation.Arguments[0].(NumberValue)
-				return v.SaturatingPlus(other)
-			},
-		)
-
-	case sema.NumericTypeSaturatingSubtractFunctionName:
-		return NewHostFunctionValue(
-			func(invocation Invocation) Value {
-				other := invocation.Arguments[0].(NumberValue)
-				return v.SaturatingMinus(other)
-			},
-		)
-
-	case sema.NumericTypeSaturatingMultiplyFunctionName:
-		return NewHostFunctionValue(
-			func(invocation Invocation) Value {
-				other := invocation.Arguments[0].(NumberValue)
-				return v.SaturatingMul(other)
-			},
-		)
-	}
-
-	return nil
+	return getNumberValueMember(v, name)
 }
 
 func (UInt128Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -5169,6 +4734,10 @@ func (v UInt256Value) Div(other NumberValue) NumberValue {
 	return UInt256Value{res}
 }
 
+func (v UInt256Value) SaturatingDiv(other NumberValue) NumberValue {
+	return v.Div(other)
+}
+
 func (v UInt256Value) Less(other NumberValue) BoolValue {
 	cmp := v.BigInt.Cmp(other.(UInt256Value).BigInt)
 	return cmp == -1
@@ -5269,48 +4838,7 @@ func (v UInt256Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 }
 
 func (v UInt256Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	switch name {
-
-	case sema.ToStringFunctionName:
-		return NewHostFunctionValue(
-			func(invocation Invocation) Value {
-				return NewStringValue(v.String())
-			},
-		)
-
-	case sema.ToBigEndianBytesFunctionName:
-		return NewHostFunctionValue(
-			func(invocation Invocation) Value {
-				return ByteSliceToByteArrayValue(v.ToBigEndianBytes())
-			},
-		)
-
-	case sema.NumericTypeSaturatingAddFunctionName:
-		return NewHostFunctionValue(
-			func(invocation Invocation) Value {
-				other := invocation.Arguments[0].(NumberValue)
-				return v.SaturatingPlus(other)
-			},
-		)
-
-	case sema.NumericTypeSaturatingSubtractFunctionName:
-		return NewHostFunctionValue(
-			func(invocation Invocation) Value {
-				other := invocation.Arguments[0].(NumberValue)
-				return v.SaturatingMinus(other)
-			},
-		)
-
-	case sema.NumericTypeSaturatingMultiplyFunctionName:
-		return NewHostFunctionValue(
-			func(invocation Invocation) Value {
-				other := invocation.Arguments[0].(NumberValue)
-				return v.SaturatingMul(other)
-			},
-		)
-	}
-
-	return nil
+	return getNumberValueMember(v, name)
 }
 
 func (UInt256Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -5385,8 +4913,16 @@ func (v Word8Value) Plus(other NumberValue) NumberValue {
 	return v + other.(Word8Value)
 }
 
+func (v Word8Value) SaturatingPlus(_ NumberValue) NumberValue {
+	panic(errors.UnreachableError{})
+}
+
 func (v Word8Value) Minus(other NumberValue) NumberValue {
 	return v - other.(Word8Value)
+}
+
+func (v Word8Value) SaturatingMinus(_ NumberValue) NumberValue {
+	panic(errors.UnreachableError{})
 }
 
 func (v Word8Value) Mod(other NumberValue) NumberValue {
@@ -5401,12 +4937,20 @@ func (v Word8Value) Mul(other NumberValue) NumberValue {
 	return v * other.(Word8Value)
 }
 
+func (v Word8Value) SaturatingMul(_ NumberValue) NumberValue {
+	panic(errors.UnreachableError{})
+}
+
 func (v Word8Value) Div(other NumberValue) NumberValue {
 	o := other.(Word8Value)
 	if o == 0 {
 		panic(DivisionByZeroError{})
 	}
 	return v / o
+}
+
+func (v Word8Value) SaturatingDiv(_ NumberValue) NumberValue {
+	panic(errors.UnreachableError{})
 }
 
 func (v Word8Value) Less(other NumberValue) BoolValue {
@@ -5463,24 +5007,7 @@ func (v Word8Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 }
 
 func (v Word8Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	switch name {
-
-	case sema.ToStringFunctionName:
-		return NewHostFunctionValue(
-			func(invocation Invocation) Value {
-				return NewStringValue(v.String())
-			},
-		)
-
-	case sema.ToBigEndianBytesFunctionName:
-		return NewHostFunctionValue(
-			func(invocation Invocation) Value {
-				return ByteSliceToByteArrayValue(v.ToBigEndianBytes())
-			},
-		)
-	}
-
-	return nil
+	return getNumberValueMember(v, name)
 }
 
 func (Word8Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -5553,8 +5080,16 @@ func (v Word16Value) Plus(other NumberValue) NumberValue {
 	return v + other.(Word16Value)
 }
 
+func (v Word16Value) SaturatingPlus(_ NumberValue) NumberValue {
+	panic(errors.UnreachableError{})
+}
+
 func (v Word16Value) Minus(other NumberValue) NumberValue {
 	return v - other.(Word16Value)
+}
+
+func (v Word16Value) SaturatingMinus(_ NumberValue) NumberValue {
+	panic(errors.UnreachableError{})
 }
 
 func (v Word16Value) Mod(other NumberValue) NumberValue {
@@ -5569,12 +5104,20 @@ func (v Word16Value) Mul(other NumberValue) NumberValue {
 	return v * other.(Word16Value)
 }
 
+func (v Word16Value) SaturatingMul(_ NumberValue) NumberValue {
+	panic(errors.UnreachableError{})
+}
+
 func (v Word16Value) Div(other NumberValue) NumberValue {
 	o := other.(Word16Value)
 	if o == 0 {
 		panic(DivisionByZeroError{})
 	}
 	return v / o
+}
+
+func (v Word16Value) SaturatingDiv(_ NumberValue) NumberValue {
+	panic(errors.UnreachableError{})
 }
 
 func (v Word16Value) Less(other NumberValue) BoolValue {
@@ -5631,24 +5174,7 @@ func (v Word16Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 }
 
 func (v Word16Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	switch name {
-
-	case sema.ToStringFunctionName:
-		return NewHostFunctionValue(
-			func(invocation Invocation) Value {
-				return NewStringValue(v.String())
-			},
-		)
-
-	case sema.ToBigEndianBytesFunctionName:
-		return NewHostFunctionValue(
-			func(invocation Invocation) Value {
-				return ByteSliceToByteArrayValue(v.ToBigEndianBytes())
-			},
-		)
-	}
-
-	return nil
+	return getNumberValueMember(v, name)
 }
 
 func (Word16Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -5725,8 +5251,16 @@ func (v Word32Value) Plus(other NumberValue) NumberValue {
 	return v + other.(Word32Value)
 }
 
+func (v Word32Value) SaturatingPlus(_ NumberValue) NumberValue {
+	panic(errors.UnreachableError{})
+}
+
 func (v Word32Value) Minus(other NumberValue) NumberValue {
 	return v - other.(Word32Value)
+}
+
+func (v Word32Value) SaturatingMinus(_ NumberValue) NumberValue {
+	panic(errors.UnreachableError{})
 }
 
 func (v Word32Value) Mod(other NumberValue) NumberValue {
@@ -5741,12 +5275,20 @@ func (v Word32Value) Mul(other NumberValue) NumberValue {
 	return v * other.(Word32Value)
 }
 
+func (v Word32Value) SaturatingMul(_ NumberValue) NumberValue {
+	panic(errors.UnreachableError{})
+}
+
 func (v Word32Value) Div(other NumberValue) NumberValue {
 	o := other.(Word32Value)
 	if o == 0 {
 		panic(DivisionByZeroError{})
 	}
 	return v / o
+}
+
+func (v Word32Value) SaturatingDiv(_ NumberValue) NumberValue {
+	panic(errors.UnreachableError{})
 }
 
 func (v Word32Value) Less(other NumberValue) BoolValue {
@@ -5803,24 +5345,7 @@ func (v Word32Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 }
 
 func (v Word32Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	switch name {
-
-	case sema.ToStringFunctionName:
-		return NewHostFunctionValue(
-			func(invocation Invocation) Value {
-				return NewStringValue(v.String())
-			},
-		)
-
-	case sema.ToBigEndianBytesFunctionName:
-		return NewHostFunctionValue(
-			func(invocation Invocation) Value {
-				return ByteSliceToByteArrayValue(v.ToBigEndianBytes())
-			},
-		)
-	}
-
-	return nil
+	return getNumberValueMember(v, name)
 }
 
 func (Word32Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -5897,8 +5422,16 @@ func (v Word64Value) Plus(other NumberValue) NumberValue {
 	return v + other.(Word64Value)
 }
 
+func (v Word64Value) SaturatingPlus(_ NumberValue) NumberValue {
+	panic(errors.UnreachableError{})
+}
+
 func (v Word64Value) Minus(other NumberValue) NumberValue {
 	return v - other.(Word64Value)
+}
+
+func (v Word64Value) SaturatingMinus(_ NumberValue) NumberValue {
+	panic(errors.UnreachableError{})
 }
 
 func (v Word64Value) Mod(other NumberValue) NumberValue {
@@ -5913,12 +5446,20 @@ func (v Word64Value) Mul(other NumberValue) NumberValue {
 	return v * other.(Word64Value)
 }
 
+func (v Word64Value) SaturatingMul(_ NumberValue) NumberValue {
+	panic(errors.UnreachableError{})
+}
+
 func (v Word64Value) Div(other NumberValue) NumberValue {
 	o := other.(Word64Value)
 	if o == 0 {
 		panic(DivisionByZeroError{})
 	}
 	return v / o
+}
+
+func (v Word64Value) SaturatingDiv(_ NumberValue) NumberValue {
+	panic(errors.UnreachableError{})
 }
 
 func (v Word64Value) Less(other NumberValue) BoolValue {
@@ -5975,24 +5516,7 @@ func (v Word64Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 }
 
 func (v Word64Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	switch name {
-
-	case sema.ToStringFunctionName:
-		return NewHostFunctionValue(
-			func(invocation Invocation) Value {
-				return NewStringValue(v.String())
-			},
-		)
-
-	case sema.ToBigEndianBytesFunctionName:
-		return NewHostFunctionValue(
-			func(invocation Invocation) Value {
-				return ByteSliceToByteArrayValue(v.ToBigEndianBytes())
-			},
-		)
-	}
-
-	return nil
+	return getNumberValueMember(v, name)
 }
 
 func (Word64Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -6265,56 +5789,7 @@ func ConvertFix64(value Value) Fix64Value {
 }
 
 func (v Fix64Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	switch name {
-
-	case sema.ToStringFunctionName:
-		return NewHostFunctionValue(
-			func(invocation Invocation) Value {
-				return NewStringValue(v.String())
-			},
-		)
-
-	case sema.ToBigEndianBytesFunctionName:
-		return NewHostFunctionValue(
-			func(invocation Invocation) Value {
-				return ByteSliceToByteArrayValue(v.ToBigEndianBytes())
-			},
-		)
-
-	case sema.NumericTypeSaturatingAddFunctionName:
-		return NewHostFunctionValue(
-			func(invocation Invocation) Value {
-				other := invocation.Arguments[0].(NumberValue)
-				return v.SaturatingPlus(other)
-			},
-		)
-
-	case sema.NumericTypeSaturatingSubtractFunctionName:
-		return NewHostFunctionValue(
-			func(invocation Invocation) Value {
-				other := invocation.Arguments[0].(NumberValue)
-				return v.SaturatingMinus(other)
-			},
-		)
-
-	case sema.NumericTypeSaturatingMultiplyFunctionName:
-		return NewHostFunctionValue(
-			func(invocation Invocation) Value {
-				other := invocation.Arguments[0].(NumberValue)
-				return v.SaturatingMul(other)
-			},
-		)
-
-	case sema.NumericTypeSaturatingDivideFunctionName:
-		return NewHostFunctionValue(
-			func(invocation Invocation) Value {
-				other := invocation.Arguments[0].(NumberValue)
-				return v.SaturatingDiv(other)
-			},
-		)
-	}
-
-	return nil
+	return getNumberValueMember(v, name)
 }
 
 func (Fix64Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -6474,6 +5949,10 @@ func (v UFix64Value) Div(other NumberValue) NumberValue {
 	return UFix64Value(result.Uint64())
 }
 
+func (v UFix64Value) SaturatingDiv(other NumberValue) NumberValue {
+	return v.Div(other)
+}
+
 func (v UFix64Value) Mod(other NumberValue) NumberValue {
 	o := other.(UFix64Value)
 	// v - int(v/o) * o
@@ -6549,48 +6028,7 @@ func ConvertUFix64(value Value) UFix64Value {
 }
 
 func (v UFix64Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	switch name {
-
-	case sema.ToStringFunctionName:
-		return NewHostFunctionValue(
-			func(invocation Invocation) Value {
-				return NewStringValue(v.String())
-			},
-		)
-
-	case sema.ToBigEndianBytesFunctionName:
-		return NewHostFunctionValue(
-			func(invocation Invocation) Value {
-				return ByteSliceToByteArrayValue(v.ToBigEndianBytes())
-			},
-		)
-
-	case sema.NumericTypeSaturatingAddFunctionName:
-		return NewHostFunctionValue(
-			func(invocation Invocation) Value {
-				other := invocation.Arguments[0].(NumberValue)
-				return v.SaturatingPlus(other)
-			},
-		)
-
-	case sema.NumericTypeSaturatingSubtractFunctionName:
-		return NewHostFunctionValue(
-			func(invocation Invocation) Value {
-				other := invocation.Arguments[0].(NumberValue)
-				return v.SaturatingMinus(other)
-			},
-		)
-
-	case sema.NumericTypeSaturatingMultiplyFunctionName:
-		return NewHostFunctionValue(
-			func(invocation Invocation) Value {
-				other := invocation.Arguments[0].(NumberValue)
-				return v.SaturatingMul(other)
-			},
-		)
-	}
-
-	return nil
+	return getNumberValueMember(v, name)
 }
 
 func (UFix64Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
