@@ -130,23 +130,17 @@ pub contract MojoAsset {}
 
 	t.Run("Mojo", func(t *testing.T) {
 		const oldCode = `
-import NonFungibleToken from 0x631e88ae7f1d7c20
-import FungibleToken from 0x9a0766d93b6608b7
 import MojoAssetdefinition from 0x73dd87ae00edff1e
 import  MojoToken from 0x73dd87ae00edff1e
-import MojoCommunityVault from 0x73dd87ae00edff1e
-import FlowToken from 0x7e60df042a9c0868
 
 pub contract MojoAsset {}
 `
 
 		const newCode = `
 
-import NonFungibleToken from 0x631e88ae7f1d7c20
-import FungibleToken from 0x9a0766d93b6608b7
 import MojoAssetdefinition from 0x73dd87ae00edff1e
 import  MojoToken from 0x73dd87ae00edff1e
-import FlowToken from 0x7e60df042a9c0868
+import MojoCommunityVault from 0x73dd87ae00edff1e
 
 pub contract MojoAsset {}
 }
