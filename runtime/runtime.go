@@ -42,6 +42,8 @@ type Script struct {
 	Arguments [][]byte
 }
 
+type importResolutionResults map[common.LocationID]bool
+
 // Runtime is a runtime capable of executing Cadence.
 type Runtime interface {
 	// ExecuteScript executes the given script.
@@ -184,6 +186,7 @@ func (r *interpreterRuntime) ExecuteScript(script Script, context Context) (cade
 		stdlib.BuiltinValues,
 		checkerOptions,
 		true,
+		importResolutionResults{},
 	)
 	if err != nil {
 		return nil, newError(err, context)
@@ -368,6 +371,7 @@ func (r *interpreterRuntime) ExecuteTransaction(script Script, context Context) 
 		stdlib.BuiltinValues,
 		checkerOptions,
 		true,
+		importResolutionResults{},
 	)
 	if err != nil {
 		return newError(err, context)
@@ -595,6 +599,7 @@ func (r *interpreterRuntime) ParseAndCheckProgram(code []byte, context Context) 
 		stdlib.BuiltinValues,
 		checkerOptions,
 		true,
+		importResolutionResults{},
 	)
 	if err != nil {
 		return nil, newError(err, context)
@@ -610,6 +615,7 @@ func (r *interpreterRuntime) parseAndCheckProgram(
 	values stdlib.StandardLibraryValues,
 	checkerOptions []sema.Option,
 	storeProgram bool,
+	checkedImports importResolutionResults,
 ) (
 	program *interpreter.Program,
 	err error,
@@ -647,7 +653,7 @@ func (r *interpreterRuntime) parseAndCheckProgram(
 
 	// Check
 
-	elaboration, err := r.check(parse, context, functions, values, checkerOptions)
+	elaboration, err := r.check(parse, context, functions, values, checkerOptions, checkedImports)
 	if err != nil {
 		return nil, wrapError(err)
 	}
@@ -677,6 +683,7 @@ func (r *interpreterRuntime) check(
 	functions stdlib.StandardLibraryFunctions,
 	values stdlib.StandardLibraryValues,
 	checkerOptions []sema.Option,
+	checkedImports importResolutionResults,
 ) (
 	elaboration *sema.Elaboration,
 	err error,
@@ -715,7 +722,17 @@ func (r *interpreterRuntime) check(
 						default:
 							context := startContext.WithLocation(location)
 
-							program, err := r.getProgram(context, functions, values, checkerOptions)
+							// Check for cyclic imports
+							if checkedImports[location.ID()] {
+								return nil, &sema.CyclicImportsError{
+									Location: location,
+								}
+							} else {
+								checkedImports[location.ID()] = true
+								defer delete(checkedImports, location.ID())
+							}
+
+							program, err := r.getProgram(context, functions, values, checkerOptions, checkedImports)
 							if err != nil {
 								return nil, err
 							}
@@ -866,7 +883,7 @@ func (r *interpreterRuntime) importLocationHandler(
 		default:
 			context := startContext.WithLocation(location)
 
-			program, err := r.getProgram(context, functions, values, checkerOptions)
+			program, err := r.getProgram(context, functions, values, checkerOptions, importResolutionResults{})
 			if err != nil {
 				panic(err)
 			}
@@ -890,6 +907,7 @@ func (r *interpreterRuntime) getProgram(
 	functions stdlib.StandardLibraryFunctions,
 	values stdlib.StandardLibraryValues,
 	checkerOptions []sema.Option,
+	checkedImports importResolutionResults,
 ) (
 	program *interpreter.Program,
 	err error,
@@ -917,6 +935,7 @@ func (r *interpreterRuntime) getProgram(
 			values,
 			checkerOptions,
 			true,
+			checkedImports,
 		)
 		if err != nil {
 			return nil, err
@@ -1853,6 +1872,7 @@ func (r *interpreterRuntime) newAuthAccountContractsChangeFunction(
 				stdlib.BuiltinValues,
 				checkerOptions,
 				storeProgram,
+				importResolutionResults{},
 			)
 			if err != nil {
 				// Update the code for the error pretty printing
