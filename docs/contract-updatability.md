@@ -19,6 +19,11 @@ The contract update validation ensures that:
   - A static check of the access of the field would be valid, but the interpreter would crash when accessing the field,
     because the field has a missing/garbage value.
 
+However, it **does not** ensure:
+- Any program that imports the updated contract stays valid. e.g:
+  - Updated contract may remove an existing field or may change a function signature.
+  - Then any program that uses that field/function will get semantic errors.
+
 ## Updating a Contract
 
 A contract may consist of fields and other declarations such as composite types, functions, constructors, etc.
@@ -120,7 +125,10 @@ A field may belong to a contract, struct, resource, or interface.
       pub var b: Int      // Invalid new field
   }
   ```
-    - Existing stored data won't have the new field.
+    - Initializer of a contract only run once, when the contract is deployed for the first time. It does not rerun
+      when the contract is updated.
+    - Thus, the stored data won't have the new field, as the initializations for the newly added fields do not get
+      executed.
     - Decoding stored data will result in garbage or missing values for such fields.
 
 - Changing the type of existing field is not valid.
@@ -143,9 +151,10 @@ A field may belong to a contract, struct, resource, or interface.
       value as an `Int`, which will result in deserialization errors.
     - Changing the field type to a subtype/supertype of the existing type is also not valid, as it would also
       potentially cause issues while decoding/encoding.
-      e.g:
-      - Changing an `Int64` field to `Int8` - Stored value could be number `624` which exceeds the value space
+      - e.g: Changing an `Int64` field to `Int8` - Stored field could have a numeric value`624`, which exceeds the value space
         for `Int8`.
+      - However, this is a limitation in the current implementation, and the future versions of Cadence may support
+        changing the type of field to a subtype, by providing means to migrate existing fields.
 
 ## Structs, Resources and Interfaces
 
