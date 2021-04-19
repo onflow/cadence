@@ -124,14 +124,6 @@ type StorageWriteHandlerFunc func(
 	value OptionalValue,
 )
 
-// StorageKeyHandlerFunc is a function that handles storage indexing types.
-//
-type StorageKeyHandlerFunc func(
-	inter *Interpreter,
-	storageAddress common.Address,
-	indexingType sema.Type,
-) string
-
 // InjectedCompositeFieldsHandlerFunc is a function that handles storage reads.
 //
 type InjectedCompositeFieldsHandlerFunc func(
@@ -237,7 +229,6 @@ type Interpreter struct {
 	storageExistenceHandler        StorageExistenceHandlerFunc
 	storageReadHandler             StorageReadHandlerFunc
 	storageWriteHandler            StorageWriteHandlerFunc
-	storageKeyHandler              StorageKeyHandlerFunc
 	injectedCompositeFieldsHandler InjectedCompositeFieldsHandlerFunc
 	contractValueHandler           ContractValueHandlerFunc
 	importLocationHandler          ImportLocationHandlerFunc
@@ -336,16 +327,6 @@ func WithStorageReadHandler(handler StorageReadHandlerFunc) Option {
 func WithStorageWriteHandler(handler StorageWriteHandlerFunc) Option {
 	return func(interpreter *Interpreter) error {
 		interpreter.SetStorageWriteHandler(handler)
-		return nil
-	}
-}
-
-// WithStorageKeyHandler returns an interpreter option which sets the given function
-// as the function that is used when a stored value is written.
-//
-func WithStorageKeyHandler(handler StorageKeyHandlerFunc) Option {
-	return func(interpreter *Interpreter) error {
-		interpreter.SetStorageKeyHandler(handler)
 		return nil
 	}
 }
@@ -490,12 +471,6 @@ func (interpreter *Interpreter) SetStorageReadHandler(function StorageReadHandle
 //
 func (interpreter *Interpreter) SetStorageWriteHandler(function StorageWriteHandlerFunc) {
 	interpreter.storageWriteHandler = function
-}
-
-// SetStorageKeyHandler sets the function that is used when a storage is indexed.
-//
-func (interpreter *Interpreter) SetStorageKeyHandler(function StorageKeyHandlerFunc) {
-	interpreter.storageKeyHandler = function
 }
 
 // SetInjectedCompositeFieldsHandler sets the function that is used to initialize
@@ -2112,7 +2087,6 @@ func (interpreter *Interpreter) NewSubInterpreter(
 		WithStorageExistenceHandler(interpreter.storageExistenceHandler),
 		WithStorageReadHandler(interpreter.storageReadHandler),
 		WithStorageWriteHandler(interpreter.storageWriteHandler),
-		WithStorageKeyHandler(interpreter.storageKeyHandler),
 		WithInjectedCompositeFieldsHandler(interpreter.injectedCompositeFieldsHandler),
 		WithContractValueHandler(interpreter.contractValueHandler),
 		WithImportLocationHandler(interpreter.importLocationHandler),
