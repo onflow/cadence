@@ -306,9 +306,9 @@ signer.contracts.add(
 
 > 🚧 Status: Updating contracts is **experimental**.
 >
-> Updating contracts currently have limited support to maintain data consistency.
-> Read more details on possible changes and restrictions imposed on updating contracts in the
-> [contract updatability](../contract-updatability.md) section.
+> Updating contracts is currently limited to maintain data consistency.
+> Read more details on valid changes and restrictions imposed on updating contracts in the
+> [contract updatability](../contract-updatability) section.
 
 A deployed contract can be updated using the `update__experimental` function:
 
