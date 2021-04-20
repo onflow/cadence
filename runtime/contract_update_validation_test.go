@@ -53,6 +53,18 @@ func TestContractUpdateValidation(t *testing.T) {
 		))
 	}
 
+	newContractRemovalTransaction := func(contractName string) []byte {
+		return []byte(fmt.Sprintf(`
+			transaction {
+				prepare(signer: AuthAccount) {
+					signer.contracts.%s(name: "%s")
+				}
+			}`,
+			sema.AuthAccountContractsTypeRemoveFunctionName,
+			contractName,
+		))
+	}
+
 	accountCode := map[common.LocationID][]byte{}
 	var events []cadence.Event
 	runtimeInterface := getMockedRuntimeInterfaceForTxUpdate(t, accountCode, events)
@@ -1488,6 +1500,220 @@ func TestContractUpdateValidation(t *testing.T) {
 
 		assertFieldTypeMismatchError(t, cause, "TestStruct", "a", "Int", "String")
 	})
+
+	t.Run("Rename struct", func(t *testing.T) {
+		const oldCode = `
+			pub contract Test33 {
+
+				pub struct TestStruct {
+					pub let a: Int
+					pub var b: Int
+
+					init() {
+						self.a = 123
+						self.b = 456
+					}
+				}
+			}`
+
+		err := runtime.ExecuteTransaction(
+			Script{
+				Source: newDeployTransaction(
+					sema.AuthAccountContractsTypeAddFunctionName,
+					"Test33",
+					oldCode),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+
+		require.NoError(t, err)
+
+		// Rename the struct
+
+		const newCode = `
+			pub contract Test33 {
+
+				pub struct TestStructRenamed {
+					pub let a: Int
+					pub var b: Int
+
+					init() {
+						self.a = 123
+						self.b = 456
+					}
+				}
+			}`
+
+		err = runtime.ExecuteTransaction(
+			Script{
+				Source: newDeployTransaction(
+					sema.AuthAccountContractsTypeUpdateExperimentalFunctionName,
+					"Test33",
+					newCode,
+				),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+
+		require.Error(t, err)
+		cause := getErrorCause(t, err, "Test33")
+		assertMissingCompositeDeclarationError(t, cause, "TestStruct")
+	})
+
+	t.Run("Remove contract with enum", func(t *testing.T) {
+		// Add contract
+		const oldCode = `
+			pub contract Test34 {
+				pub enum TestEnum: Int {
+				}
+			}`
+
+		err := runtime.ExecuteTransaction(
+			Script{
+				Source: newDeployTransaction(
+					sema.AuthAccountContractsTypeAddFunctionName,
+					"Test34",
+					oldCode,
+				),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+
+		require.NoError(t, err)
+
+		// Remove the added contract.
+		err = runtime.ExecuteTransaction(
+			Script{
+				Source: newContractRemovalTransaction("Test34"),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+
+		require.Error(t, err)
+		require.IsType(t, Error{}, err)
+		runtimeError := err.(Error)
+
+		require.IsType(t, interpreter.Error{}, runtimeError.Err)
+		interpreterError := runtimeError.Err.(interpreter.Error)
+		cause := interpreterError.Err
+
+		require.IsType(t, &ContractRemovalError{}, cause)
+		contractRemovalError := cause.(*ContractRemovalError)
+
+		assert.Equal(
+			t,
+			fmt.Sprintf("cannot remove contract `%s`", "Test34"),
+			contractRemovalError.Error(),
+		)
+	})
+
+	t.Run("Remove contract interface with enum", func(t *testing.T) {
+		// Add contract
+		const oldCode = `
+			pub contract interface Test35 {
+				pub enum TestEnum: Int {
+				}
+			}`
+
+		err := runtime.ExecuteTransaction(
+			Script{
+				Source: newDeployTransaction(
+					sema.AuthAccountContractsTypeAddFunctionName,
+					"Test35",
+					oldCode,
+				),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+
+		require.NoError(t, err)
+
+		// Remove the added contract.
+		err = runtime.ExecuteTransaction(
+			Script{
+				Source: newContractRemovalTransaction("Test35"),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+
+		require.Error(t, err)
+		require.IsType(t, Error{}, err)
+		runtimeError := err.(Error)
+
+		require.IsType(t, interpreter.Error{}, runtimeError.Err)
+		interpreterError := runtimeError.Err.(interpreter.Error)
+		cause := interpreterError.Err
+
+		require.IsType(t, &ContractRemovalError{}, cause)
+		contractRemovalError := cause.(*ContractRemovalError)
+
+		assert.Equal(
+			t,
+			fmt.Sprintf("cannot remove contract `%s`", "Test35"),
+			contractRemovalError.Error(),
+		)
+	})
+
+	t.Run("Remove contract without enum", func(t *testing.T) {
+		// Add contract
+		const oldCode = `
+			pub contract Test36 {
+				pub struct TestStruct {
+					pub let a: Int
+
+					init() {
+						self.a = 123
+					}
+				}
+			}`
+
+		err := runtime.ExecuteTransaction(
+			Script{
+				Source: newDeployTransaction(
+					sema.AuthAccountContractsTypeAddFunctionName,
+					"Test36",
+					oldCode,
+				),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+
+		require.NoError(t, err)
+
+		// Remove the added contract.
+		err = runtime.ExecuteTransaction(
+			Script{
+				Source: newContractRemovalTransaction("Test36"),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+
+		assert.NoError(t, err)
+	})
 }
 
 func assertDeclTypeChangeError(
@@ -1658,12 +1884,20 @@ func getMockedRuntimeInterfaceForTxUpdate(
 			}
 			return accountCodes[location.ID()], nil
 		},
-		updateAccountContractCode: func(address Address, name string, code []byte) (err error) {
+		updateAccountContractCode: func(address Address, name string, code []byte) error {
 			location := common.AddressLocation{
 				Address: address,
 				Name:    name,
 			}
 			accountCodes[location.ID()] = code
+			return nil
+		},
+		removeAccountContractCode: func(address Address, name string) error {
+			location := common.AddressLocation{
+				Address: address,
+				Name:    name,
+			}
+			delete(accountCodes, location.ID())
 			return nil
 		},
 		emitEvent: func(event cadence.Event) error {

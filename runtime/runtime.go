@@ -2188,6 +2188,22 @@ func (r *interpreterRuntime) newAuthAccountContractsRemoveFunction(
 				// NOTE: *DO NOT* call SetProgram – the program removal
 				// should not be effective during the execution, only after
 
+				// Deny removing a contract, if the contract validation is enabled, and
+				// the existing code contains enums.
+				if r.contractUpdateValidationEnabled {
+
+					existingProgram, err := parser2.ParseProgram(string(code))
+
+					// If the existing code is not parsable (i.e: `err != nil`), that shouldn't be a reason to
+					// fail the contract removal. Therefore, validate only if the code is a valid one.
+					if err == nil && containsEnumsInProgram(existingProgram) {
+						panic(&ContractRemovalError{
+							Name:          nameArgument,
+							LocationRange: invocation.GetLocationRange(),
+						})
+					}
+				}
+
 				wrapPanic(func() {
 					err = runtimeInterface.RemoveAccountContractCode(address, nameArgument)
 				})

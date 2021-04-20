@@ -20,6 +20,7 @@ package runtime
 
 import (
 	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/sema"
 )
 
@@ -76,21 +77,32 @@ func (validator *ContractUpdateValidator) Validate() error {
 }
 
 func (validator *ContractUpdateValidator) getRootDeclaration(program *ast.Program) ast.Declaration {
+	decl, err := getRootDeclaration(program)
+
+	if err != nil {
+		validator.report(&ContractNotFoundError{
+			Range: ast.NewRangeFromPositioned(program),
+		})
+	}
+
+	return decl
+}
+
+func getRootDeclaration(program *ast.Program) (ast.Declaration, error) {
 	compositeDecl := program.SoleContractDeclaration()
 	if compositeDecl != nil {
-		return compositeDecl
+		return compositeDecl, nil
 	}
 
 	interfaceDecl := program.SoleContractInterfaceDeclaration()
 	if interfaceDecl != nil {
-		return interfaceDecl
+		return interfaceDecl, nil
 	}
 
-	validator.report(&ContractNotFoundError{
+	return nil, &ContractNotFoundError{
 		Range: ast.NewRangeFromPositioned(program),
-	})
+	}
 
-	return nil
 }
 
 func (validator *ContractUpdateValidator) hasErrors() bool {
@@ -213,8 +225,8 @@ func (validator *ContractUpdateValidator) checkNestedDeclarations(
 	// Hence report an error.
 	for name := range oldCompositeAndInterfaceDecls { //nolint:maprangecheck
 		validator.report(&MissingCompositeDeclarationError{
-			Name: name,
-			Range:    ast.NewRangeFromPositioned(newDeclaration.DeclarationIdentifier()),
+			Name:  name,
+			Range: ast.NewRangeFromPositioned(newDeclaration.DeclarationIdentifier()),
 		})
 	}
 
@@ -563,4 +575,29 @@ func isAnyStructOrAnyResourceType(astType ast.Type) bool {
 	default:
 		return false
 	}
+}
+
+func containsEnumsInProgram(program *ast.Program) bool {
+	declaration, err := getRootDeclaration(program)
+
+	if err != nil {
+		return false
+	}
+
+	return containsEnums(declaration)
+}
+
+func containsEnums(declaration ast.Declaration) bool {
+	if declaration.DeclarationKind() == common.DeclarationKindEnum {
+		return true
+	}
+
+	nestedCompositeDecls := declaration.DeclarationMembers().Composites()
+	for _, nestedDecl := range nestedCompositeDecls {
+		if containsEnums(nestedDecl) {
+			return true
+		}
+	}
+
+	return false
 }
