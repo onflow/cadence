@@ -298,7 +298,7 @@ func (e OverwriteError) Error() string {
 // CyclicLinkError
 //
 type CyclicLinkError struct {
-	Address AddressValue
+	Address common.Address
 	Paths   []PathValue
 	LocationRange
 }
@@ -315,7 +315,7 @@ func (e CyclicLinkError) Error() string {
 
 	return fmt.Sprintf(
 		"cyclic link in account %s: %s",
-		e.Address,
+		e.Address.ShortHexWithPrefix(),
 		paths,
 	)
 }

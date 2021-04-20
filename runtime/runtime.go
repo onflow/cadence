@@ -69,6 +69,14 @@ type Runtime interface {
 	// SetContractUpdateValidationEnabled configures if contract update validation is enabled.
 	//
 	SetContractUpdateValidationEnabled(enabled bool)
+
+	// ReadStored reads the value stored at the given path
+	//
+	ReadStored(address common.Address, path cadence.Path, context Context) (cadence.Value, error)
+
+	// ReadLinked dereferences the path and returns the value stored at the target
+	//
+	ReadLinked(address common.Address, path cadence.Path, context Context) (cadence.Value, error)
 }
 
 var typeDeclarations = append(
@@ -2220,6 +2228,69 @@ func (r *interpreterRuntime) onStatementHandler() interpreter.OnStatementFunc {
 		line := statement.StartPosition().Line
 		r.coverageReport.AddLineHit(location, line)
 	}
+}
+
+func (r *interpreterRuntime) executeNonProgram(interpret interpretFunc, context Context) (cadence.Value, error) {
+	context.InitializeCodesAndPrograms()
+
+	var program *interpreter.Program
+
+	runtimeStorage := newRuntimeStorage(context.Interface)
+
+	var functions stdlib.StandardLibraryFunctions
+	var values stdlib.StandardLibraryValues
+	var interpreterOptions []interpreter.Option
+	var checkerOptions []sema.Option
+
+	value, _, err := r.interpret(
+		program,
+		context,
+		runtimeStorage,
+		functions,
+		values,
+		interpreterOptions,
+		checkerOptions,
+		interpret,
+	)
+	if err != nil {
+		return nil, newError(err, context)
+	}
+
+	return exportValue(value), nil
+}
+
+func (r *interpreterRuntime) ReadStored(address common.Address, path cadence.Path, context Context) (cadence.Value, error) {
+	return r.executeNonProgram(
+		func(inter *interpreter.Interpreter) (interpreter.Value, error) {
+			key := interpreter.StorageKey(importPathValue(path))
+			value := inter.ReadStored(address, key, false)
+			return value, nil
+		},
+		context,
+	)
+}
+
+func (r *interpreterRuntime) ReadLinked(address common.Address, path cadence.Path, context Context) (cadence.Value, error) {
+	return r.executeNonProgram(
+		func(inter *interpreter.Interpreter) (interpreter.Value, error) {
+			key, _, err := inter.GetCapabilityFinalTargetStorageKey(
+				address,
+				importPathValue(path),
+				&sema.ReferenceType{
+					Type: sema.AnyType,
+				},
+				func() interpreter.LocationRange {
+					return interpreter.LocationRange{}
+				},
+			)
+			if err != nil {
+				return nil, err
+			}
+			value := inter.ReadStored(address, key, false)
+			return value, nil
+		},
+		context,
+	)
 }
 
 func NewBlockValue(block Block) interpreter.BlockValue {

@@ -6109,7 +6109,7 @@ func (v *DictionaryValue) Get(inter *Interpreter, _ func() LocationRange, keyVal
 			}
 			v.prevDeferredKeys.Set(key, struct{}{})
 
-			storedValue := inter.readStored(*v.DeferredOwner, storageKey, true)
+			storedValue := inter.ReadStored(*v.DeferredOwner, storageKey, true)
 			v.Entries.Set(key, storedValue.(*SomeValue).Value)
 
 			// NOTE: *not* writing nil to the storage key,
@@ -6703,7 +6703,7 @@ func (*StorageReferenceValue) SetModified(_ bool) {
 }
 
 func (v *StorageReferenceValue) ReferencedValue(interpreter *Interpreter) *Value {
-	switch referenced := interpreter.readStored(v.TargetStorageAddress, v.TargetKey, false).(type) {
+	switch referenced := interpreter.ReadStored(v.TargetStorageAddress, v.TargetKey, false).(type) {
 	case *SomeValue:
 		value := referenced.Value
 

@@ -378,10 +378,7 @@ func importValue(value cadence.Value) interpreter.Value {
 			v.Fields,
 		)
 	case cadence.Path:
-		return interpreter.PathValue{
-			Domain:     common.PathDomainFromIdentifier(v.Domain),
-			Identifier: v.Identifier,
-		}
+		return importPathValue(v)
 	case cadence.Enum:
 		return importCompositeValue(
 			common.CompositeKindEnum,
@@ -393,6 +390,13 @@ func importValue(value cadence.Value) interpreter.Value {
 	}
 
 	panic(fmt.Sprintf("cannot import value of type %T", value))
+}
+
+func importPathValue(v cadence.Path) interpreter.PathValue {
+	return interpreter.PathValue{
+		Domain:     common.PathDomainFromIdentifier(v.Domain),
+		Identifier: v.Identifier,
+	}
 }
 
 func importOptionalValue(v cadence.Optional) interpreter.Value {
