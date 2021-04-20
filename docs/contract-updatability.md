@@ -25,6 +25,20 @@ However, it **does not** ensure:
   - Then any program that uses that field/function will get semantic errors.
 
 ## Updating a Contract
+Changes to contracts can be introduced by adding new contracts, removing existing contracts, or updating existing
+contracts. However, some of these changes may lead to data inconsistencies as stated above.
+
+#### Valid Changes
+- Adding a new contract is valid.
+- Removing a contract/contract-interface that doesn't have enum declarations is valid.
+- Updating a contract is valid, under the restrictions described in the below sections.
+
+#### Invalid Changes
+- Removing a contract/contract-interface that contains enum declarations is not valid.
+  - Removing a contract allows adding a new contract with the same name.
+  - The new contract could potentially have enum declarations with the same names as in the old contract, but with
+    different structures.
+  - This could change the meaning of the already stored values of those enum types.
 
 A contract may consist of fields and other declarations such as composite types, functions, constructors, etc.
 When an existing contract is updated, all its inner declarations are also validated.
