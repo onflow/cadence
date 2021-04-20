@@ -36,6 +36,7 @@ var HashAlgorithms = []CryptoAlgorithm{
 	HashAlgorithmSHA2_384,
 	HashAlgorithmSHA3_256,
 	HashAlgorithmSHA3_384,
+	HashAlgorithmKMAC_128_BLS_BLS12381,
 }
 
 var SignatureAlgorithmType = newNativeEnumType(SignatureAlgorithmTypeName, UInt8Type)
@@ -105,6 +106,7 @@ const (
 	HashAlgorithmSHA2_384
 	HashAlgorithmSHA3_256
 	HashAlgorithmSHA3_384
+	HashAlgorithmKMAC_128_BLS_BLS12381
 )
 
 func (algo HashAlgorithm) Name() string {
@@ -119,6 +121,8 @@ func (algo HashAlgorithm) Name() string {
 		return "SHA3_256"
 	case HashAlgorithmSHA3_384:
 		return "SHA3_384"
+	case HashAlgorithmKMAC_128_BLS_BLS12381:
+		return "KMAC_128_BLS_BLS12381"
 	}
 
 	panic(errors.NewUnreachableError())
@@ -141,6 +145,8 @@ func (algo HashAlgorithm) RawValue() uint8 {
 		return 3
 	case HashAlgorithmSHA3_384:
 		return 4
+	case HashAlgorithmKMAC_128_BLS_BLS12381:
+		return 5
 	}
 
 	panic(errors.NewUnreachableError())
@@ -158,6 +164,8 @@ func (algo HashAlgorithm) DocString() string {
 		return HashAlgorithmDocStringSHA3_256
 	case HashAlgorithmSHA3_384:
 		return HashAlgorithmDocStringSHA3_384
+	case HashAlgorithmKMAC_128_BLS_BLS12381:
+		return HashAlgorithmDocStringKMAC_128_BLS_BLS12381
 	}
 
 	panic(errors.NewUnreachableError())
@@ -212,4 +220,9 @@ SHA3_256 is Secure Hashing Algorithm 3 (SHA-3) with a 256-bit digest
 
 const HashAlgorithmDocStringSHA3_384 = `
 SHA3_384 is Secure Hashing Algorithm 3 (SHA-3) with a 384-bit digest
+`
+
+const HashAlgorithmDocStringKMAC_128_BLS_BLS12381 = `
+KMAC_128_BLS_BLS12381 is a variant of KMAC_128 hashing algorithm, that
+is customized to be used with BLS and the curve BLS12381
 `

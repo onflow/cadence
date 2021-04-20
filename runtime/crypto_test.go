@@ -19,12 +19,14 @@
 package runtime
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence"
+	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
@@ -186,4 +188,44 @@ func TestRuntimeCrypto_hash(t *testing.T) {
 	)
 
 	assert.True(t, called)
+}
+
+func TestHashingAlgorithms(t *testing.T) {
+
+	t.Parallel()
+
+	runtime := NewInterpreterRuntime()
+	runtimeInterface := &testRuntimeInterface{}
+
+	testHashAlgorithm := func(algo sema.CryptoAlgorithm) {
+		script := fmt.Sprintf(`
+			pub fun main(): HashAlgorithm {
+				return HashAlgorithm.%s
+			}
+			`,
+			algo.Name(),
+		)
+
+		value, err := runtime.ExecuteScript(
+			Script{
+				Source: []byte(script),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  utils.TestLocation,
+			},
+		)
+
+		require.NoError(t, err)
+
+		require.IsType(t, cadence.Enum{}, value)
+		enumValue := value.(cadence.Enum)
+
+		require.Len(t, enumValue.Fields, 1)
+		assert.Equal(t, cadence.NewUInt8(algo.RawValue()), enumValue.Fields[0])
+	}
+
+	for _, algo := range sema.HashAlgorithms {
+		testHashAlgorithm(algo)
+	}
 }
