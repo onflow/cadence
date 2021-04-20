@@ -1,4 +1,4 @@
-# Next
+# v0.15.0  (2021-04-20)
 
 ## ⭐ Features
 
@@ -8,11 +8,14 @@
 - Validate arguments passed into cadence programs (#724) @SupunS
 - Implement equality for storable values and static types (#790) @turbolent
 - Declare min/max fields for integer and fixed-point types (#803) @turbolent
+- Add saturation arithmetic (#804) @turbolent
+- Add functions to read stored and linked values (#812) @turbolent
 
 ## 🛠 Improvements
 
 - Optimize storage format (#797) @fxamacker
 - Paralleize encoding (#731) @zhangchiqing
+- Deny removing contracts if contract update validation is enabled (#792) @SupunS
 - Simplify function types (#802) @turbolent
 - Cache capability type members (#799) @turbolent
 - Use force expression's end position in force nil error (#789) @turbolent
@@ -35,11 +38,13 @@
 - Use location ID as key for maps holding account codes (#723) @turbolent
 - Make native composite types non-storable (#713) @turbolent
 - Improve state decoding tool (#798) @turbolent
+- Remove unused storage key handler (#811) @turbolent
 
 ## 🐞 Bug Fixes
 
 - Extend defensive run-time checking to all value transfers (#784) @turbolent
 - Fix borrowing (#782) @turbolent
+- Prevent cyclic imports (#809) @turbolent
 - Clean up "storage removal" index expression (#769) @turbolent
 - Get resource owner from host environment (#770) @SupunS
 - Handle field initialization using force-move assignment (#741) @turbolent
