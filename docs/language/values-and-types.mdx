@@ -232,6 +232,49 @@ Fixed-Point numbers have multiple built-in functions you can use.
   fix.toBigEndianBytes()  // is `[0, 0, 0, 0, 7, 84, 212, 192]`
   ```
 
+## Minimum and maximum values
+
+The minimum and maximum values for integer and fixed-point number types are available through the fields `min` and `max`.
+
+```cadence
+let max = UInt8.max
+// `max` is 255, the maximum value of the type `UInt8`
+```
+
+## Saturation Arithmetic
+
+Integers and fixed-point numbers support saturation arithmetic:
+Arithmetic operations, such as addition or multiplications, are saturating at the numeric bounds instead of overflowing.
+
+If the result of an operation is greater than the maximum value of the operands' type, the maximum is returned.
+If the result is lower than the minimum of the operands' type, the minimum is returned.
+
+Saturating addition, subtraction, multiplication, and division are provided as functions with the prefix `saturating`:
+
+- `Int8`, `Int16`, `Int32`, `Int64`, `Int128`, `Int256`, `Fix64`:
+  - `saturatingAdd`
+  - `saturatingSubtract`
+  - `saturatingMultiply`
+  - `saturatingDivide`
+
+- `Int`:
+  - none
+
+- `UInt8`, `UInt16`, `UInt32`, `UInt64`, `UInt128`, `UInt256`, `UFix64`:
+  - `saturatingAdd`
+  - `saturatingSubtract`
+  - `saturatingMultiply`
+
+- `UInt`:
+  - `saturatingSubtract`
+
+```cadence
+let a: UInt8 = 200
+let b: UInt8 = 100
+let result = a.saturatingAdd(b)
+// `result` is 255, the maximum value of the type `UInt8`
+```
+
 ## Floating-Point Numbers
 
 There is **no** support for floating point numbers.
