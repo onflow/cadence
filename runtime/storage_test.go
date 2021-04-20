@@ -850,3 +850,112 @@ transaction {
 
 	require.Contains(t, err.Error(), "failed to borrow resource converter")
 }
+
+func TestRuntimeStorageReadAndBorrow(t *testing.T) {
+
+	runtime := NewInterpreterRuntime()
+
+	storage := newTestStorage(nil, nil)
+
+	signer := common.BytesToAddress([]byte{0x42})
+
+	runtimeInterface := &testRuntimeInterface{
+		storage: storage,
+		getSigningAccounts: func() ([]Address, error) {
+			return []Address{signer}, nil
+		},
+	}
+
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	// Store a value and link a capability
+
+	err := runtime.ExecuteTransaction(
+		Script{
+			Source: []byte(`
+              transaction {
+                 prepare(signer: AuthAccount) {
+                     signer.save(42, to: /storage/test)
+                     signer.link<&Int>(
+                         /private/test,
+                         target: /storage/test
+                     )
+                 }
+              }
+            `),
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	t.Run("read stored, existing", func(t *testing.T) {
+
+		value, err := runtime.ReadStored(
+			signer,
+			cadence.Path{
+				Domain:     "storage",
+				Identifier: "test",
+			},
+			Context{
+				Location:  utils.TestLocation,
+				Interface: runtimeInterface,
+			},
+		)
+		require.NoError(t, err)
+		require.Equal(t, cadence.NewOptional(cadence.NewInt(42)), value)
+	})
+
+	t.Run("read stored, non-existing", func(t *testing.T) {
+
+		value, err := runtime.ReadStored(
+			signer,
+			cadence.Path{
+				Domain:     "storage",
+				Identifier: "other",
+			},
+			Context{
+				Location:  utils.TestLocation,
+				Interface: runtimeInterface,
+			},
+		)
+		require.NoError(t, err)
+		require.Equal(t, cadence.NewOptional(nil), value)
+	})
+
+	t.Run("read linked, existing", func(t *testing.T) {
+
+		value, err := runtime.ReadLinked(
+			signer,
+			cadence.Path{
+				Domain:     "private",
+				Identifier: "test",
+			},
+			Context{
+				Location:  utils.TestLocation,
+				Interface: runtimeInterface,
+			},
+		)
+		require.NoError(t, err)
+		require.Equal(t, cadence.NewOptional(cadence.NewInt(42)), value)
+	})
+
+	t.Run("read linked, non-existing", func(t *testing.T) {
+
+		value, err := runtime.ReadLinked(
+			signer,
+			cadence.Path{
+				Domain:     "private",
+				Identifier: "other",
+			},
+			Context{
+				Location:  utils.TestLocation,
+				Interface: runtimeInterface,
+			},
+		)
+		require.NoError(t, err)
+		require.Equal(t, cadence.NewOptional(nil), value)
+	})
+}
