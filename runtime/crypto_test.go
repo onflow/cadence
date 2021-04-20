@@ -229,3 +229,43 @@ func TestHashingAlgorithms(t *testing.T) {
 		testHashAlgorithm(algo)
 	}
 }
+
+func TestSignatureAlgorithms(t *testing.T) {
+
+	t.Parallel()
+
+	runtime := NewInterpreterRuntime()
+	runtimeInterface := &testRuntimeInterface{}
+
+	testSignatureAlgorithm := func(algo sema.CryptoAlgorithm) {
+		script := fmt.Sprintf(`
+			pub fun main(): SignatureAlgorithm {
+				return SignatureAlgorithm.%s
+			}
+			`,
+			algo.Name(),
+		)
+
+		value, err := runtime.ExecuteScript(
+			Script{
+				Source: []byte(script),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  utils.TestLocation,
+			},
+		)
+
+		require.NoError(t, err)
+
+		require.IsType(t, cadence.Enum{}, value)
+		enumValue := value.(cadence.Enum)
+
+		require.Len(t, enumValue.Fields, 1)
+		assert.Equal(t, cadence.NewUInt8(algo.RawValue()), enumValue.Fields[0])
+	}
+
+	for _, algo := range sema.SignatureAlgorithms {
+		testSignatureAlgorithm(algo)
+	}
+}
