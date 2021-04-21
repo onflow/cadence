@@ -255,7 +255,10 @@ func (r *interpreterRuntime) ExecuteScript(script Script, context Context) (cade
 	// Even though this function is `ExecuteScript`, that doesn't imply the changes
 	// to storage will be actually persisted
 
-	runtimeStorage.writeCached(inter)
+	err = runtimeStorage.writeCached(inter)
+	if err != nil {
+		return nil, newError(err, context)
+	}
 
 	return exportValue(value), nil
 }
@@ -580,7 +583,10 @@ func (r *interpreterRuntime) ExecuteTransaction(script Script, context Context) 
 	}
 
 	// Write back all stored values, which were actually just cached, back into storage
-	runtimeStorage.writeCached(inter)
+	err = runtimeStorage.writeCached(inter)
+	if err != nil {
+		return newError(err, context)
+	}
 
 	return nil
 }
@@ -1423,10 +1429,12 @@ func storageUsedGetFunction(
 
 		// NOTE: flush the cached values, so the host environment
 		// can properly calculate the amount of storage used by the account
-		runtimeStorage.writeCached(inter)
+		err := runtimeStorage.writeCached(inter)
+		if err != nil {
+			panic(err)
+		}
 
 		var capacity uint64
-		var err error
 		wrapPanic(func() {
 			capacity, err = runtimeInterface.GetStorageUsed(address)
 		})

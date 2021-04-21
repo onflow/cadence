@@ -105,3 +105,7 @@ func (v DeployedContractValue) ConformsToDynamicType(_ *Interpreter, dynamicType
 	_, ok := dynamicType.(DeployedContractDynamicType)
 	return ok
 }
+
+func (DeployedContractValue) IsStorable() bool {
+	return false
+}

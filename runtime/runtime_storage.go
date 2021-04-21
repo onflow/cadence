@@ -246,7 +246,7 @@ type writeItem struct {
 
 // writeCached serializes/saves all values in the cache in storage (through the runtime interface).
 //
-func (s *runtimeStorage) writeCached(inter *interpreter.Interpreter) {
+func (s *runtimeStorage) writeCached(inter *interpreter.Interpreter) error {
 
 	var items []writeItem
 
@@ -327,6 +327,8 @@ func (s *runtimeStorage) writeCached(inter *interpreter.Interpreter) {
 		}
 		batch = newBatch
 	}
+
+	return nil
 }
 
 type encodedResult struct {
@@ -441,6 +443,12 @@ func (s *runtimeStorage) processEncodedItem(item writeItem, encoded *encodedResu
 	var newData []byte
 	if encoded != nil && len(encoded.newData) > 0 {
 		newData = interpreter.PrependMagic(encoded.newData, interpreter.CurrentEncodingVersion)
+	}
+
+	if item.value != nil && !item.value.IsStorable() {
+		return nil, NonStorableValueWriteError{
+			Value: item.value,
+		}
 	}
 
 	var err error

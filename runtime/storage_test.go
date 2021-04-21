@@ -2124,3 +2124,65 @@ func TestRuntimeStorageReferenceCast(t *testing.T) {
 
 	require.Contains(t, err.Error(), "unexpectedly found non-`&Test.R` while force-casting value")
 }
+
+func TestRuntimeStorageNonStorable(t *testing.T) {
+
+	t.Parallel()
+
+	runtime := NewInterpreterRuntime()
+
+	address := common.BytesToAddress([]byte{0x1})
+
+	for name, code := range map[string]string{
+		"ephemeral reference": `
+            let value = &1 as &Int
+        `,
+		"storage reference": `
+            signer.save("test", to: /storage/string)
+            let value = signer.borrow<&String>(from: /storage/string)!
+        `,
+		"function": `
+            let value = fun () {}
+        `,
+	} {
+
+		t.Run(name, func(t *testing.T) {
+
+			tx := []byte(
+				fmt.Sprintf(
+					`
+	                  transaction {
+	                      prepare(signer: AuthAccount) {
+                              %s
+	                          signer.save((value as AnyStruct), to: /storage/value)
+	                      }
+	                   }
+	                `,
+					code,
+				),
+			)
+
+			runtimeInterface := &testRuntimeInterface{
+				storage: newTestStorage(nil, nil),
+				getSigningAccounts: func() ([]Address, error) {
+					return []Address{address}, nil
+				},
+			}
+
+			nextTransactionLocation := newTransactionLocationGenerator()
+
+			err := runtime.ExecuteTransaction(
+				Script{
+					Source: tx,
+				},
+				Context{
+					Interface: runtimeInterface,
+					Location:  nextTransactionLocation(),
+				},
+			)
+			require.Error(t, err)
+
+			require.Contains(t, err.Error(), "cannot write non-storable value")
+		})
+	}
+}
