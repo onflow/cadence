@@ -62,6 +62,7 @@ type Value interface {
 	StaticType() StaticType
 	ConformsToDynamicType(interpreter *Interpreter, dynamicType DynamicType, results TypeConformanceResults) bool
 	String(results StringResults) string
+	IsStorable() bool
 }
 
 // ValueIndexableValue
@@ -192,13 +193,17 @@ func (v TypeValue) GetMember(inter *Interpreter, _ func() LocationRange, name st
 	return nil
 }
 
-func (v TypeValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
+func (TypeValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
 	panic(errors.NewUnreachableError())
 }
 
 func (v TypeValue) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType, _ TypeConformanceResults) bool {
 	_, ok := dynamicType.(MetaTypeDynamicType)
 	return ok
+}
+
+func (TypeValue) IsStorable() bool {
+	return true
 }
 
 // VoidValue
@@ -247,6 +252,10 @@ func (VoidValue) String(_ StringResults) string {
 func (v VoidValue) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType, _ TypeConformanceResults) bool {
 	_, ok := dynamicType.(VoidDynamicType)
 	return ok
+}
+
+func (VoidValue) IsStorable() bool {
+	return true
 }
 
 // BoolValue
@@ -314,6 +323,10 @@ func (v BoolValue) KeyString() string {
 func (v BoolValue) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType, _ TypeConformanceResults) bool {
 	_, ok := dynamicType.(BoolDynamicType)
 	return ok
+}
+
+func (BoolValue) IsStorable() bool {
+	return true
 }
 
 // StringValue
@@ -486,6 +499,10 @@ func (v *StringValue) GetMember(_ *Interpreter, _ func() LocationRange, name str
 //
 func (v *StringValue) Length() int {
 	return uniseg.GraphemeClusterCount(v.Str)
+}
+
+func (*StringValue) IsStorable() bool {
+	return true
 }
 
 // DecodeHex hex-decodes this string and returns an array of UInt8 values
@@ -913,6 +930,20 @@ func (v *ArrayValue) ConformsToDynamicType(
 	return true
 }
 
+func (v *ArrayValue) IsStorable() bool {
+
+	// TODO: only check decoded values
+	//   and assume still encoded values are storable?
+
+	for _, value := range v.Elements() {
+		if !value.IsStorable() {
+			return false
+		}
+	}
+
+	return true
+}
+
 func (v *ArrayValue) Equal(other Value, interpreter *Interpreter, loadDeferred bool) bool {
 	otherArray, ok := other.(*ArrayValue)
 	if !ok {
@@ -1289,6 +1320,10 @@ func (v IntValue) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType,
 	return ok && sema.IntType.Equal(numberType.StaticType)
 }
 
+func (IntValue) IsStorable() bool {
+	return true
+}
+
 // Int8Value
 
 type Int8Value int8
@@ -1580,6 +1615,10 @@ func (v Int8Value) ToBigEndianBytes() []byte {
 func (v Int8Value) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType, _ TypeConformanceResults) bool {
 	numberType, ok := dynamicType.(NumberDynamicType)
 	return ok && sema.Int8Type.Equal(numberType.StaticType)
+}
+
+func (Int8Value) IsStorable() bool {
+	return true
 }
 
 // Int16Value
@@ -1877,6 +1916,10 @@ func (v Int16Value) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicTyp
 	return ok && sema.Int16Type.Equal(numberType.StaticType)
 }
 
+func (Int16Value) IsStorable() bool {
+	return true
+}
+
 // Int32Value
 
 type Int32Value int32
@@ -2172,6 +2215,10 @@ func (v Int32Value) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicTyp
 	return ok && sema.Int32Type.Equal(numberType.StaticType)
 }
 
+func (Int32Value) IsStorable() bool {
+	return true
+}
+
 // Int64Value
 
 type Int64Value int64
@@ -2464,6 +2511,10 @@ func (v Int64Value) ToBigEndianBytes() []byte {
 func (v Int64Value) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType, _ TypeConformanceResults) bool {
 	numberType, ok := dynamicType.(NumberDynamicType)
 	return ok && sema.Int64Type.Equal(numberType.StaticType)
+}
+
+func (Int64Value) IsStorable() bool {
+	return true
 }
 
 // Int128Value
@@ -2827,6 +2878,10 @@ func (v Int128Value) ToBigEndianBytes() []byte {
 func (v Int128Value) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType, _ TypeConformanceResults) bool {
 	numberType, ok := dynamicType.(NumberDynamicType)
 	return ok && sema.Int128Type.Equal(numberType.StaticType)
+}
+
+func (Int128Value) IsStorable() bool {
+	return true
 }
 
 // Int256Value
@@ -3193,6 +3248,10 @@ func (v Int256Value) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicTy
 	return ok && sema.Int256Type.Equal(numberType.StaticType)
 }
 
+func (Int256Value) IsStorable() bool {
+	return true
+}
+
 // UIntValue
 
 type UIntValue struct {
@@ -3447,6 +3506,10 @@ func (v UIntValue) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType
 	return ok && sema.UIntType.Equal(numberType.StaticType)
 }
 
+func (UIntValue) IsStorable() bool {
+	return true
+}
+
 // UInt8Value
 
 type UInt8Value uint8
@@ -3669,6 +3732,10 @@ func (v UInt8Value) ToBigEndianBytes() []byte {
 func (v UInt8Value) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType, _ TypeConformanceResults) bool {
 	numberType, ok := dynamicType.(NumberDynamicType)
 	return ok && sema.UInt8Type.Equal(numberType.StaticType)
+}
+
+func (UInt8Value) IsStorable() bool {
+	return true
 }
 
 // UInt16Value
@@ -3895,6 +3962,10 @@ func (v UInt16Value) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicTy
 	return ok && sema.UInt16Type.Equal(numberType.StaticType)
 }
 
+func (UInt16Value) IsStorable() bool {
+	return true
+}
+
 // UInt32Value
 
 type UInt32Value uint32
@@ -4118,6 +4189,10 @@ func (v UInt32Value) ToBigEndianBytes() []byte {
 func (v UInt32Value) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType, _ TypeConformanceResults) bool {
 	numberType, ok := dynamicType.(NumberDynamicType)
 	return ok && sema.UInt32Type.Equal(numberType.StaticType)
+}
+
+func (UInt32Value) IsStorable() bool {
+	return true
 }
 
 // UInt64Value
@@ -4346,6 +4421,10 @@ func (v UInt64Value) ToBigEndianBytes() []byte {
 func (v UInt64Value) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType, _ TypeConformanceResults) bool {
 	numberType, ok := dynamicType.(NumberDynamicType)
 	return ok && sema.UInt64Type.Equal(numberType.StaticType)
+}
+
+func (UInt64Value) IsStorable() bool {
+	return true
 }
 
 // UInt128Value
@@ -4654,6 +4733,10 @@ func (v UInt128Value) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicT
 	return ok && sema.UInt128Type.Equal(numberType.StaticType)
 }
 
+func (UInt128Value) IsStorable() bool {
+	return true
+}
+
 // UInt256Value
 
 type UInt256Value struct {
@@ -4960,6 +5043,10 @@ func (v UInt256Value) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicT
 	return ok && sema.UInt256Type.Equal(numberType.StaticType)
 }
 
+func (UInt256Value) IsStorable() bool {
+	return true
+}
+
 // Word8Value
 
 type Word8Value uint8
@@ -5129,6 +5216,10 @@ func (v Word8Value) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicTyp
 	return ok && sema.Word8Type.Equal(numberType.StaticType)
 }
 
+func (Word8Value) IsStorable() bool {
+	return true
+}
+
 // Word16Value
 
 type Word16Value uint16
@@ -5296,6 +5387,10 @@ func (v Word16Value) ToBigEndianBytes() []byte {
 func (v Word16Value) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType, _ TypeConformanceResults) bool {
 	numberType, ok := dynamicType.(NumberDynamicType)
 	return ok && sema.Word16Type.Equal(numberType.StaticType)
+}
+
+func (Word16Value) IsStorable() bool {
+	return true
 }
 
 // Word32Value
@@ -5469,6 +5564,10 @@ func (v Word32Value) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicTy
 	return ok && sema.Word32Type.Equal(numberType.StaticType)
 }
 
+func (Word32Value) IsStorable() bool {
+	return true
+}
+
 // Word64Value
 
 type Word64Value uint64
@@ -5638,6 +5737,10 @@ func (v Word64Value) ToBigEndianBytes() []byte {
 func (v Word64Value) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType, _ TypeConformanceResults) bool {
 	numberType, ok := dynamicType.(NumberDynamicType)
 	return ok && sema.Word64Type.Equal(numberType.StaticType)
+}
+
+func (Word64Value) IsStorable() bool {
+	return true
 }
 
 // Fix64Value
@@ -5913,6 +6016,10 @@ func (v Fix64Value) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicTyp
 	return ok && sema.Fix64Type.Equal(numberType.StaticType)
 }
 
+func (Fix64Value) IsStorable() bool {
+	return true
+}
+
 // UFix64Value
 //
 type UFix64Value uint64
@@ -6150,6 +6257,10 @@ func (v UFix64Value) ToBigEndianBytes() []byte {
 func (v UFix64Value) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType, _ TypeConformanceResults) bool {
 	numberType, ok := dynamicType.(NumberDynamicType)
 	return ok && sema.UFix64Type.Equal(numberType.StaticType)
+}
+
+func (UFix64Value) IsStorable() bool {
+	return true
 }
 
 // CompositeValue
@@ -6661,6 +6772,20 @@ func (v *CompositeValue) ConformsToDynamicType(
 		}
 
 		if !field.ConformsToDynamicType(interpreter, fieldDynamicType, results) {
+			return false
+		}
+	}
+
+	return true
+}
+
+func (v *CompositeValue) IsStorable() bool {
+
+	// TODO: only check decoded fields
+	//   and assume still encoded fields are storable?
+
+	for pair := v.Fields().Oldest(); pair != nil; pair = pair.Next() {
+		if !pair.Value.IsStorable() {
 			return false
 		}
 	}
@@ -7182,6 +7307,26 @@ func writeDeferredKeys(
 	}
 }
 
+func (v *DictionaryValue) IsStorable() bool {
+
+	// TODO: only check decoded keys
+	//   and assume still encoded keys are storable?
+
+	for _, keyValue := range v.Keys.Elements() {
+		if !keyValue.IsStorable() {
+			return false
+		}
+	}
+
+	for pair := v.Entries.Oldest(); pair != nil; pair = pair.Next() {
+		if !pair.Value.IsStorable() {
+			return false
+		}
+	}
+
+	return true
+}
+
 type DictionaryEntryValues struct {
 	Key   Value
 	Value Value
@@ -7348,6 +7493,10 @@ func (v NilValue) Equal(other Value, _ *Interpreter, _ bool) bool {
 	return ok
 }
 
+func (NilValue) IsStorable() bool {
+	return true
+}
+
 // SomeValue
 
 type SomeValue struct {
@@ -7479,6 +7628,10 @@ func (v *SomeValue) Equal(other Value, interpreter *Interpreter, loadDeferred bo
 	}
 
 	return equatableValue.Equal(otherSome.Value, interpreter, loadDeferred)
+}
+
+func (v *SomeValue) IsStorable() bool {
+	return v.Value.IsStorable()
 }
 
 // StorageReferenceValue
@@ -7622,12 +7775,17 @@ func (v *StorageReferenceValue) Equal(other Value, _ *Interpreter, _ bool) bool 
 
 	return v.TargetStorageAddress == otherReference.TargetStorageAddress &&
 		v.TargetKey == otherReference.TargetKey &&
-		v.Authorized == otherReference.Authorized
+		v.Authorized == otherReference.Authorized &&
+		v.BorrowedType.Equal(otherReference.BorrowedType)
 }
 
 func (v *StorageReferenceValue) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType, _ TypeConformanceResults) bool {
 	_, ok := dynamicType.(StorageReferenceDynamicType)
 	return ok
+}
+
+func (*StorageReferenceValue) IsStorable() bool {
+	return false
 }
 
 // EphemeralReferenceValue
@@ -7808,6 +7966,10 @@ func (v *EphemeralReferenceValue) ConformsToDynamicType(
 	return result
 }
 
+func (*EphemeralReferenceValue) IsStorable() bool {
+	return false
+}
+
 // AddressValue
 
 type AddressValue common.Address
@@ -7928,6 +8090,10 @@ func (AddressValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, 
 func (v AddressValue) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType, _ TypeConformanceResults) bool {
 	_, ok := dynamicType.(AddressDynamicType)
 	return ok
+}
+
+func (AddressValue) IsStorable() bool {
+	return true
 }
 
 // NewAuthAccountValue constructs an auth account value.
@@ -8197,6 +8363,10 @@ func (v PathValue) Equal(other Value, _ *Interpreter, _ bool) bool {
 		otherPath.Domain == v.Domain
 }
 
+func (PathValue) IsStorable() bool {
+	return true
+}
+
 // CapabilityValue
 
 type CapabilityValue struct {
@@ -8317,6 +8487,10 @@ func (v CapabilityValue) Equal(other Value, interpreter *Interpreter, loadDeferr
 		otherCapability.Path.Equal(v.Path, interpreter, loadDeferred)
 }
 
+func (CapabilityValue) IsStorable() bool {
+	return true
+}
+
 // LinkValue
 
 type LinkValue struct {
@@ -8385,6 +8559,10 @@ func (v LinkValue) Equal(other Value, interpreter *Interpreter, loadDeferred boo
 
 	return otherLink.TargetPath.Equal(v.TargetPath, interpreter, loadDeferred) &&
 		otherLink.Type.Equal(v.Type)
+}
+
+func (LinkValue) IsStorable() bool {
+	return true
 }
 
 // NewAccountKeyValue constructs an AccountKey value.

@@ -50,3 +50,7 @@ func NewAuthAccountContractsValue(
 		stringer:            stringer,
 	}
 }
+
+func (AuthAccountContractsValue) IsStorable() bool {
+	return false
+}
