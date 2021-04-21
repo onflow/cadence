@@ -5478,37 +5478,51 @@ var AccountKeyType = func() *CompositeType {
 const PublicKeyTypeName = "PublicKey"
 const PublicKeyPublicKeyField = "publicKey"
 const PublicKeySignAlgoField = "signatureAlgorithm"
+const PublicKeyValidateFunction = "validate"
 
 // PublicKeyType represents the public key associated with an account key.
 var PublicKeyType = func() *CompositeType {
 
-	accountKeyType := &CompositeType{
+	publicKeyType := &CompositeType{
 		Identifier: PublicKeyTypeName,
 		Kind:       common.CompositeKindStructure,
 	}
 
+	var publicKeyValidateFunctionType = &FunctionType{
+		TypeParameters:       []*TypeParameter{},
+		Parameters:           []*Parameter{},
+		ReturnTypeAnnotation: NewTypeAnnotation(BoolType),
+	}
+
 	const publicKeyKeyFieldDocString = `The public key`
 	const publicKeySignAlgoFieldDocString = `The signature algorithm to be used with the key`
+	const publicKeyValidateFunctionDocString = `Validates the public key`
 
 	var members = []*Member{
 		NewPublicConstantFieldMember(
-			accountKeyType,
+			publicKeyType,
 			PublicKeyPublicKeyField,
 			&VariableSizedType{Type: UInt8Type},
 			publicKeyKeyFieldDocString,
 		),
 		NewPublicConstantFieldMember(
-			accountKeyType,
+			publicKeyType,
 			PublicKeySignAlgoField,
 			SignatureAlgorithmType,
 			publicKeySignAlgoFieldDocString,
 		),
+		NewPublicFunctionMember(
+			publicKeyType,
+			PublicKeyValidateFunction,
+			publicKeyValidateFunctionType,
+			publicKeyValidateFunctionDocString,
+		),
 	}
 
-	accountKeyType.Members = GetMembersAsMap(members)
-	accountKeyType.Fields = getFieldNames(members)
+	publicKeyType.Members = GetMembersAsMap(members)
+	publicKeyType.Fields = getFieldNames(members)
 
-	return accountKeyType
+	return publicKeyType
 }()
 
 type CryptoAlgorithm interface {
@@ -5527,9 +5541,11 @@ func GetMembersAsMap(members []*Member) *StringMemberOrderedMap {
 }
 
 func getFieldNames(members []*Member) []string {
-	fields := make([]string, len(members))
-	for index, member := range members {
-		fields[index] = member.Identifier.Identifier
+	fields := make([]string, 0)
+	for _, member := range members {
+		if member.DeclarationKind == common.DeclarationKindField {
+			fields = append(fields, member.Identifier.Identifier)
+		}
 	}
 
 	return fields
