@@ -19,8 +19,8 @@
 package runtime
 
 import (
+	"bytes"
 	"encoding/hex"
-	"fmt"
 	"strconv"
 	"testing"
 
@@ -1189,7 +1189,7 @@ pub contract TopShot: NonFungibleToken {
         }
     }
 
-    // A Set is a grouping of plays that have occured in the real world
+    // A Set is a grouping of plays that have occurred in the real world
     // that make up a related group of collectibles, like sets of baseball
     // or Magic cards.
     //
@@ -1870,10 +1870,12 @@ pub contract TopShot: NonFungibleToken {
 
 	var signerAddress common.Address
 
+	var contractValueReads = 0
+
 	onRead := func(owner, key, value []byte) {
-		//if bytes.HasSuffix(key, []byte("TopShot")) {
-		fmt.Printf("READ: %s | %s\n", owner, key)
-		//}
+		if bytes.Equal(key, []byte(formatContractKey("TopShot"))) {
+			contractValueReads++
+		}
 	}
 
 	runtimeInterface := &testRuntimeInterface{
@@ -1929,6 +1931,8 @@ pub contract TopShot: NonFungibleToken {
 
 	// Mint moments
 
+	contractValueReads = 0
+
 	err = runtime.ExecuteTransaction(
 		Script{
 			Source: []byte(`
@@ -1959,6 +1963,7 @@ pub contract TopShot: NonFungibleToken {
 		},
 	)
 	require.NoError(t, err)
+	require.Equal(t, 1, contractValueReads)
 
 	// Set up receiver
 
@@ -1983,6 +1988,8 @@ pub contract TopShot: NonFungibleToken {
 
 	signerAddress = common.BytesToAddress([]byte{0x42})
 
+	contractValueReads = 0
+
 	err = runtime.ExecuteTransaction(
 		Script{
 			Source: []byte(setupTx),
@@ -1994,6 +2001,7 @@ pub contract TopShot: NonFungibleToken {
 	)
 
 	require.NoError(t, err)
+	require.Equal(t, 1, contractValueReads)
 
 	// Transfer
 
@@ -2032,6 +2040,8 @@ pub contract TopShot: NonFungibleToken {
 	)
 	require.NoError(t, err)
 
+	contractValueReads = 0
+
 	err = runtime.ExecuteTransaction(
 		Script{
 			Source:    []byte(transferTx),
@@ -2044,4 +2054,6 @@ pub contract TopShot: NonFungibleToken {
 	)
 
 	require.NoError(t, err)
+
+	require.Equal(t, 0, contractValueReads)
 }
