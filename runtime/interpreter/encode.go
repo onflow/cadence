@@ -153,7 +153,7 @@ const (
 
 	cborTagPathValue
 	cborTagCapabilityValue
-	cborTagStorageReferenceValue
+	cborTagStorageReferenceValue // deprecated
 	cborTagLinkValue
 	_
 	_
@@ -411,9 +411,6 @@ func (e *Encoder) prepare(
 		return e.prepareSomeValue(v, path, deferrals)
 
 	// Storage
-
-	case *StorageReferenceValue:
-		return e.prepareStorageReferenceValue(v), nil
 
 	case PathValue:
 		return e.preparePathValue(v), nil
@@ -856,30 +853,6 @@ func (e *Encoder) prepareSomeValue(
 		Number:  cborTagSomeValue,
 		Content: prepared,
 	}, nil
-}
-
-// NOTE: NEVER change, only add/increment; ensure uint64
-const (
-	encodedStorageReferenceValueAuthorizedFieldKey           uint64 = 0
-	encodedStorageReferenceValueTargetStorageAddressFieldKey uint64 = 1
-	encodedStorageReferenceValueTargetKeyFieldKey            uint64 = 2
-
-	// !!! *WARNING* !!!
-	//
-	// encodedStorageReferenceValueLength MUST be updated when new element is added.
-	// It is used to verify encoded storage reference length during decoding.
-	encodedStorageReferenceValueLength int = 3
-)
-
-func (e *Encoder) prepareStorageReferenceValue(v *StorageReferenceValue) interface{} {
-	return cbor.Tag{
-		Number: cborTagStorageReferenceValue,
-		Content: cborArray{
-			encodedStorageReferenceValueAuthorizedFieldKey:           v.Authorized,
-			encodedStorageReferenceValueTargetStorageAddressFieldKey: v.TargetStorageAddress.Bytes(),
-			encodedStorageReferenceValueTargetKeyFieldKey:            v.TargetKey,
-		},
-	}
 }
 
 func (e *Encoder) prepareAddressValue(v AddressValue) cbor.Tag {
