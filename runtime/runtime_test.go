@@ -130,6 +130,7 @@ type testRuntimeInterface struct {
 	getStorageCapacity         func(_ Address) (uint64, error)
 	programs                   map[common.LocationID]*interpreter.Program
 	implementationDebugLog     func(message string) error
+	validatePublicKey          func(publicKey *PublicKey) (bool, error)
 }
 
 // testRuntimeInterface should implement Interface
@@ -384,6 +385,14 @@ func (i *testRuntimeInterface) ImplementationDebugLog(message string) error {
 		return nil
 	}
 	return i.implementationDebugLog(message)
+}
+
+func (i *testRuntimeInterface) ValidatePublicKey(key *PublicKey) (bool, error) {
+	if i.validatePublicKey == nil {
+		return false, nil
+	}
+
+	return i.validatePublicKey(key)
 }
 
 func TestRuntimeImport(t *testing.T) {
@@ -4346,19 +4355,19 @@ func TestInterpretResourceOwnerFieldUseComposite(t *testing.T) {
 
 	assert.Equal(t,
 		[]string{
-			"0x1",    // ref1.owner?.address
+			"0x1",           // ref1.owner?.address
 			"123.00000000",  // ref2.owner?.balance
 			"1523.00000000", // ref2.owner?.availableBalance
-			"120",    // ref1.owner?.storageUsed
-			"1245",   // ref1.owner?.storageCapacity
+			"120",           // ref1.owner?.storageUsed
+			"1245",          // ref1.owner?.storageCapacity
 
 			"0x1",
 
-			"0x1",     // ref2.owner?.address
+			"0x1",           // ref2.owner?.address
 			"123.00000000",  // ref2.owner?.balance
 			"1523.00000000", // ref2.owner?.availableBalance
-			"120",    // ref2.owner?.storageUsed
-			"1245",   // ref2.owner?.storageCapacity
+			"120",           // ref2.owner?.storageUsed
+			"1245",          // ref2.owner?.storageCapacity
 
 			"0x1",
 		},

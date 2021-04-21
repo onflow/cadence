@@ -840,6 +840,11 @@ func (r *interpreterRuntime) newInterpreter(
 				return r.getPublicAccount(address, context.Interface, runtimeStorage)
 			},
 		),
+		interpreter.WithPublicKeyValidationHandler(
+			func(publicKey *interpreter.CompositeValue) bool {
+				return validatePublicKey(publicKey, context.Interface)
+			},
+		),
 	}
 
 	defaultOptions = append(defaultOptions,
@@ -2381,7 +2386,7 @@ func (r *interpreterRuntime) newAccountKeysAddFunction(
 				},
 			)
 
-			return NewAccountKeyValue(accountKey)
+			return NewAccountKeyValue(accountKey, runtimeInterface)
 		},
 	)
 }
@@ -2412,7 +2417,7 @@ func (r *interpreterRuntime) newAccountKeysGetFunction(
 				return interpreter.NilValue{}
 			}
 
-			return NewAccountKeyValue(accountKey)
+			return NewAccountKeyValue(accountKey, runtimeInterface)
 		},
 	)
 }
@@ -2452,7 +2457,7 @@ func (r *interpreterRuntime) newAccountKeysRevokeFunction(
 				},
 			)
 
-			return NewAccountKeyValue(accountKey)
+			return NewAccountKeyValue(accountKey, runtimeInterface)
 		},
 	)
 }
@@ -2500,17 +2505,18 @@ func NewPublicKeyFromValue(publicKey *interpreter.CompositeValue) *PublicKey {
 	}
 }
 
-func NewPublicKeyValue(publicKey *PublicKey) *interpreter.CompositeValue {
+func NewPublicKeyValue(publicKey *PublicKey, runtimeInterface Interface) *interpreter.CompositeValue {
 	return interpreter.NewPublicKeyValue(
 		interpreter.ByteSliceToByteArrayValue(publicKey.PublicKey),
 		interpreter.NewCryptoAlgorithmEnumCaseValue(sema.SignatureAlgorithmType, publicKey.SignAlgo.RawValue()),
+		newPublicKeyValidateFunction(runtimeInterface),
 	)
 }
 
-func NewAccountKeyValue(accountKey *AccountKey) *interpreter.CompositeValue {
+func NewAccountKeyValue(accountKey *AccountKey, runtimeInterface Interface) *interpreter.CompositeValue {
 	return interpreter.NewAccountKeyValue(
 		interpreter.NewIntValueFromInt64(int64(accountKey.KeyIndex)),
-		NewPublicKeyValue(accountKey.PublicKey),
+		NewPublicKeyValue(accountKey.PublicKey, runtimeInterface),
 		interpreter.NewCryptoAlgorithmEnumCaseValue(sema.HashAlgorithmType, accountKey.HashAlgo.RawValue()),
 		interpreter.NewUFix64ValueWithInteger(uint64(accountKey.Weight)),
 		interpreter.BoolValue(accountKey.IsRevoked),
@@ -2528,4 +2534,29 @@ func NewHashAlgorithmFromValue(value interpreter.Value) HashAlgorithm {
 	hashAlgoRawValue := rawValue.(interpreter.UInt8Value)
 
 	return HashAlgorithm(hashAlgoRawValue.ToInt())
+}
+
+func newPublicKeyValidateFunction(runtimeInterface Interface) interpreter.HostFunctionValue {
+	return interpreter.NewHostFunctionValue(
+		func(invocation interpreter.Invocation) interpreter.Value {
+			valid := validatePublicKey(invocation.Self, runtimeInterface)
+			return interpreter.BoolValue(valid)
+		},
+	)
+}
+
+func validatePublicKey(publicKeyValue *interpreter.CompositeValue, runtimeInterface Interface) bool {
+	publicKey := NewPublicKeyFromValue(publicKeyValue)
+
+	var err error
+	var valid bool
+	wrapPanic(func() {
+		valid, err = runtimeInterface.ValidatePublicKey(publicKey)
+	})
+
+	if err != nil {
+		panic(err)
+	}
+
+	return valid
 }

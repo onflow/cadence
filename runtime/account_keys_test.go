@@ -30,6 +30,7 @@ import (
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
+	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
 func TestRuntimeTransaction_AddPublicKey(t *testing.T) {
@@ -965,4 +966,96 @@ type testAccountKeyStorage struct {
 	events      []cadence.Event
 	keys        []*AccountKey
 	returnedKey *AccountKey
+}
+
+func TestPublicKey(t *testing.T) {
+
+	t.Parallel()
+
+	rt := NewInterpreterRuntime()
+
+	runtimeInterface := &testRuntimeInterface{
+		validatePublicKey: func(publicKey *PublicKey) (bool, error) {
+			if len(publicKey.PublicKey) == 0 {
+				return false, nil
+			}
+
+			return true, nil
+		},
+	}
+
+	executeScript := func(code string) (cadence.Value, error) {
+		return rt.ExecuteScript(
+			Script{
+				Source: []byte(code),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  utils.TestLocation,
+			},
+		)
+	}
+
+	t.Run("Constructor", func(t *testing.T) {
+		script := `
+			pub fun main(): PublicKey {
+				let publicKey =  PublicKey(
+					publicKey: "0102".decodeHex(),
+					signatureAlgorithm: SignatureAlgorithm.ECDSA_P256
+				)
+
+				return publicKey
+			}
+		`
+
+		value, err := executeScript(script)
+		require.NoError(t, err)
+
+		expected := cadence.Struct{
+			StructType: PublicKeyType,
+			Fields: []cadence.Value{
+				// Public key (bytes)
+				newBytesValue([]byte{1, 2}),
+
+				// Signature Algo
+				newSignAlgoValue(sema.SignatureAlgorithmECDSA_P256),
+			},
+		}
+
+		assert.Equal(t, expected, value)
+	})
+
+	t.Run("Validate-success", func(t *testing.T) {
+		script := `
+			pub fun main(): Bool {
+				let publicKey =  PublicKey(
+					publicKey: "0102".decodeHex(),
+					signatureAlgorithm: SignatureAlgorithm.ECDSA_P256
+				)
+
+				return publicKey.validate()
+			}
+		`
+
+		value, err := executeScript(script)
+		require.NoError(t, err)
+		assert.Equal(t, cadence.Bool(true), value)
+	})
+
+	t.Run("Validate-fail", func(t *testing.T) {
+		script := `
+			pub fun main(): Bool {
+				let publicKey =  PublicKey(
+					publicKey: "".decodeHex(),
+					signatureAlgorithm: SignatureAlgorithm.ECDSA_P256
+				)
+
+				return publicKey.validate()
+			}
+		`
+
+		value, err := executeScript(script)
+		require.NoError(t, err)
+		assert.Equal(t, cadence.Bool(false), value)
+	})
 }

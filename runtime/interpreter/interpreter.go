@@ -159,6 +159,9 @@ type AccountHandlerFunc func(
 // UUIDHandlerFunc is a function that handles the generation of UUIDs.
 type UUIDHandlerFunc func() (uint64, error)
 
+// PublicKeyValidationHandlerFunc is a function that validates a given public key.
+type PublicKeyValidationHandlerFunc func(publicKey *CompositeValue) bool
+
 // CompositeTypeCode contains the the "prepared" / "callable" "code"
 // for the functions and the destructor of a composite
 // (contract, struct, resource, event).
@@ -234,6 +237,7 @@ type Interpreter struct {
 	importLocationHandler          ImportLocationHandlerFunc
 	accountHandler                 AccountHandlerFunc
 	uuidHandler                    UUIDHandlerFunc
+	PublicKeyValidationHandler     PublicKeyValidationHandlerFunc
 	interpreted                    bool
 	statement                      ast.Statement
 }
@@ -381,6 +385,16 @@ func WithUUIDHandler(handler UUIDHandlerFunc) Option {
 	}
 }
 
+// WithPublicKeyValidationHandler returns an interpreter option which sets the given
+// function as the function that is used to handle public key validation.
+//
+func WithPublicKeyValidationHandler(handler PublicKeyValidationHandlerFunc) Option {
+	return func(interpreter *Interpreter) error {
+		interpreter.SetPublicKeyValidationHandler(handler)
+		return nil
+	}
+}
+
 // WithAllInterpreters returns an interpreter option which sets
 // the given map of interpreters as the map of all interpreters.
 //
@@ -502,6 +516,12 @@ func (interpreter *Interpreter) SetAccountHandler(function AccountHandlerFunc) {
 //
 func (interpreter *Interpreter) SetUUIDHandler(function UUIDHandlerFunc) {
 	interpreter.uuidHandler = function
+}
+
+// SetPublicKeyValidationHandler sets the function that is used to handle public key validation.
+//
+func (interpreter *Interpreter) SetPublicKeyValidationHandler(function PublicKeyValidationHandlerFunc) {
+	interpreter.PublicKeyValidationHandler = function
 }
 
 // SetAllInterpreters sets the given map of interpreters as the map of all interpreters.
@@ -2096,6 +2116,7 @@ func (interpreter *Interpreter) NewSubInterpreter(
 		WithAllInterpreters(interpreter.allInterpreters),
 		withTypeCodes(interpreter.typeCodes),
 		WithAccountHandlerFunc(interpreter.accountHandler),
+		WithPublicKeyValidationHandler(interpreter.PublicKeyValidationHandler),
 	}
 
 	return NewInterpreter(
