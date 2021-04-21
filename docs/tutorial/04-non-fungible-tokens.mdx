@@ -379,7 +379,7 @@ init () {
 }
 ```
 
-Another feature for dictionaries is the ability to get an array of the keys of the dictionary using the build-in `keys` function.
+Another feature for dictionaries is the ability to get an array of the keys of the dictionary using the built-in `keys` function.
 
 ```cadence
 // getIDs returns an array of the IDs that are in the collection
@@ -435,7 +435,7 @@ pub resource interface NFTReceiver {
 
 Then, using that interface, they would create a link to the object in storage, specifying that the link only contains the functions in the `NFTReceiver` interface. This link is called a capability. From there, the owner can then do whatever they want with that capability: they could pass it as a parameter to a function for one-time-use, or they could put in the `/public/` domain of their account so that anyone can access it. If a user tried to use this capability to call the `withdraw` function, it wouldn't work because it doesn't exist in the interface or reference.
 
-The creation of the link and capability is seen in line 132 of `NFTv2.cdc` in the init function:
+The creation of the link and capability is seen in the `NFTv2.cdc` contract init() function
 
 ```cadence
 // publish a reference to the Collection in storage
