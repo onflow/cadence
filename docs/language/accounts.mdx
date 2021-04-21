@@ -167,6 +167,9 @@ struct AccountKey {
 struct PublicKey {
     let publicKey: [UInt8]
     let signatureAlgorithm: SignatureAlgorithm
+
+    // Verifies the validity of this public key.
+    pub fun validate(): Bool
 }
 ```
 
