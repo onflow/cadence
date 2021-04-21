@@ -122,7 +122,7 @@ func (e InvalidTransactionAuthorizerCountError) Error() string {
 }
 
 // InvalidEntryPointArgumentError
-
+//
 type InvalidEntryPointArgumentError struct {
 	Index int
 	Err   error
@@ -133,7 +133,11 @@ func (e *InvalidEntryPointArgumentError) Unwrap() error {
 }
 
 func (e *InvalidEntryPointArgumentError) Error() string {
-	return fmt.Sprintf("invalid argument at index %d: %v", e.Index, e.Err)
+	return fmt.Sprintf(
+		"invalid argument at index %d: %s",
+		e.Index,
+		e.Err.Error(),
+	)
 }
 
 // MalformedValueError
