@@ -28,7 +28,7 @@ import (
 
 var SignatureAlgorithms = []CryptoAlgorithm{
 	SignatureAlgorithmECDSA_P256,
-	SignatureAlgorithmECDSA_Secp256k1,
+	SignatureAlgorithmECDSA_secp256k1,
 }
 
 var HashAlgorithms = []CryptoAlgorithm{
@@ -47,7 +47,7 @@ const (
 	// Supported signing algorithms
 	SignatureAlgorithmUnknown SignatureAlgorithm = iota
 	SignatureAlgorithmECDSA_P256
-	SignatureAlgorithmECDSA_Secp256k1
+	SignatureAlgorithmECDSA_secp256k1
 )
 
 // Name returns the string representation of this signing algorithm.
@@ -57,8 +57,8 @@ func (algo SignatureAlgorithm) Name() string {
 		return "unknown"
 	case SignatureAlgorithmECDSA_P256:
 		return "ECDSA_P256"
-	case SignatureAlgorithmECDSA_Secp256k1:
-		return "ECDSA_Secp256k1"
+	case SignatureAlgorithmECDSA_secp256k1:
+		return "ECDSA_secp256k1"
 	}
 
 	panic(errors.NewUnreachableError())
@@ -75,7 +75,7 @@ func (algo SignatureAlgorithm) RawValue() uint8 {
 		return 0
 	case SignatureAlgorithmECDSA_P256:
 		return 1
-	case SignatureAlgorithmECDSA_Secp256k1:
+	case SignatureAlgorithmECDSA_secp256k1:
 		return 2
 	}
 
@@ -88,8 +88,8 @@ func (algo SignatureAlgorithm) DocString() string {
 		return ""
 	case SignatureAlgorithmECDSA_P256:
 		return SignatureAlgorithmDocStringECDSA_P256
-	case SignatureAlgorithmECDSA_Secp256k1:
-		return SignatureAlgorithmDocStringECDSA_Secp256k1
+	case SignatureAlgorithmECDSA_secp256k1:
+		return SignatureAlgorithmDocStringECDSA_secp256k1
 	}
 
 	panic(errors.NewUnreachableError())
@@ -200,8 +200,8 @@ const SignatureAlgorithmDocStringECDSA_P256 = `
 ECDSA_P256 is Elliptic Curve Digital Signature Algorithm (ECDSA) on the NIST P-256 curve
 `
 
-const SignatureAlgorithmDocStringECDSA_Secp256k1 = `
-ECDSA_Secp256k1 is Elliptic Curve Digital Signature Algorithm (ECDSA) on the secp256k1 curve
+const SignatureAlgorithmDocStringECDSA_secp256k1 = `
+ECDSA_secp256k1 is Elliptic Curve Digital Signature Algorithm (ECDSA) on the secp256k1 curve
 `
 
 const HashAlgorithmTypeName = "HashAlgorithm"

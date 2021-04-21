@@ -35,8 +35,8 @@ pub enum SignatureAlgorithm: UInt8 {
     /// ECDSA_P256 is Elliptic Curve Digital Signature Algorithm (ECDSA) on the NIST P-256 curve.
     pub case ECDSA_P256 = 1
 
-    /// ECDSA_Secp256k1 is Elliptic Curve Digital Signature Algorithm (ECDSA) on the secp256k1 curve.
-    pub case ECDSA_Secp256k1 = 2
+    /// ECDSA_secp256k1 is Elliptic Curve Digital Signature Algorithm (ECDSA) on the secp256k1 curve.
+    pub case ECDSA_secp256k1 = 2
 }
 ```
 
