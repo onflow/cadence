@@ -7509,8 +7509,9 @@ func (v *StorageReferenceValue) DynamicType(interpreter *Interpreter, results Dy
 	innerType := (*referencedValue).DynamicType(interpreter, results)
 
 	return StorageReferenceDynamicType{
-		authorized: v.Authorized,
-		innerType:  innerType,
+		authorized:   v.Authorized,
+		innerType:    innerType,
+		borrowedType: v.BorrowedType,
 	}
 }
 
@@ -7622,7 +7623,8 @@ func (v *StorageReferenceValue) Equal(other Value, _ *Interpreter, _ bool) bool 
 
 	return v.TargetStorageAddress == otherReference.TargetStorageAddress &&
 		v.TargetKey == otherReference.TargetKey &&
-		v.Authorized == otherReference.Authorized
+		v.Authorized == otherReference.Authorized &&
+		v.BorrowedType.Equal(otherReference.BorrowedType)
 }
 
 func (v *StorageReferenceValue) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType, _ TypeConformanceResults) bool {
@@ -7633,8 +7635,9 @@ func (v *StorageReferenceValue) ConformsToDynamicType(_ *Interpreter, dynamicTyp
 // EphemeralReferenceValue
 
 type EphemeralReferenceValue struct {
-	Authorized bool
-	Value      Value
+	Authorized   bool
+	Value        Value
+	BorrowedType sema.Type
 }
 
 func (*EphemeralReferenceValue) IsValue() {}
@@ -7667,8 +7670,9 @@ func (v *EphemeralReferenceValue) DynamicType(interpreter *Interpreter, results 
 	innerType := (*referencedValue).DynamicType(interpreter, results)
 
 	result := EphemeralReferenceDynamicType{
-		authorized: v.Authorized,
-		innerType:  innerType,
+		authorized:   v.Authorized,
+		innerType:    innerType,
+		borrowedType: v.BorrowedType,
 	}
 
 	results[v] = result
@@ -7769,7 +7773,8 @@ func (v *EphemeralReferenceValue) Equal(other Value, _ *Interpreter, _ bool) boo
 	}
 
 	return v.Value == otherReference.Value &&
-		v.Authorized == otherReference.Authorized
+		v.Authorized == otherReference.Authorized &&
+		v.BorrowedType.Equal(otherReference.BorrowedType)
 }
 
 func (v *EphemeralReferenceValue) ConformsToDynamicType(
