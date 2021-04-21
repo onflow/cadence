@@ -236,9 +236,16 @@ Fixed-Point numbers have multiple built-in functions you can use.
 
 The minimum and maximum values for all integer and fixed-point number types are available through the fields `min` and `max`.
 
+For example:
+
 ```cadence
 let max = UInt8.max
 // `max` is 255, the maximum value of the type `UInt8`
+```
+
+```cadence
+let max = UFix64.max
+// `max` is 184467440737.09551615, the maximum value of the type `UFix64`
 ```
 
 ## Saturation Arithmetic
