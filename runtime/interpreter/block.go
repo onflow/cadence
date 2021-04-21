@@ -114,3 +114,7 @@ func (v BlockValue) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicTyp
 	_, ok := dynamicType.(BlockDynamicType)
 	return ok
 }
+
+func (BlockValue) IsStorable() bool {
+	return false
+}

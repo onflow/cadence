@@ -126,6 +126,10 @@ func (f InterpretedFunctionValue) ConformsToDynamicType(_ *Interpreter, _ Dynami
 	return false
 }
 
+func (InterpretedFunctionValue) IsStorable() bool {
+	return false
+}
+
 // HostFunctionValue
 
 type HostFunction func(invocation Invocation) Value
@@ -199,7 +203,7 @@ func (f HostFunctionValue) GetMember(_ *Interpreter, _ func() LocationRange, nam
 	return nil
 }
 
-func (f HostFunctionValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
+func (HostFunctionValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
 	panic(errors.NewUnreachableError())
 }
 
@@ -207,6 +211,11 @@ func (f HostFunctionValue) ConformsToDynamicType(_ *Interpreter, _ DynamicType, 
 	// TODO: once HostFunctionValue has static function type,
 	//   and FunctionDynamicType has parameter and return type info,
 	//   check they match
+
+	return false
+}
+
+func (HostFunctionValue) IsStorable() bool {
 	return false
 }
 
@@ -269,4 +278,8 @@ func (f BoundFunctionValue) ConformsToDynamicType(
 	results TypeConformanceResults,
 ) bool {
 	return f.Function.ConformsToDynamicType(interpreter, dynamicType, results)
+}
+
+func (BoundFunctionValue) IsStorable() bool {
+	return false
 }
