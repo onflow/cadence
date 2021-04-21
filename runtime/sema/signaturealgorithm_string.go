@@ -10,10 +10,10 @@ func _() {
 	var x [1]struct{}
 	_ = x[SignatureAlgorithmUnknown-0]
 	_ = x[SignatureAlgorithmECDSA_P256-1]
-	_ = x[SignatureAlgorithmECDSA_Secp256k1-2]
+	_ = x[SignatureAlgorithmECDSA_secp256k1-2]
 }
 
-const _SignatureAlgorithm_name = "SignatureAlgorithmUnknownSignatureAlgorithmECDSA_P256SignatureAlgorithmECDSA_Secp256k1"
+const _SignatureAlgorithm_name = "SignatureAlgorithmUnknownSignatureAlgorithmECDSA_P256SignatureAlgorithmECDSA_secp256k1"
 
 var _SignatureAlgorithm_index = [...]uint8{0, 25, 53, 86}
 

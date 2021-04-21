@@ -280,7 +280,7 @@ var accountKeyB = &AccountKey{
 	KeyIndex: 1,
 	PublicKey: &PublicKey{
 		PublicKey: []byte{4, 5, 6},
-		SignAlgo:  sema.SignatureAlgorithmECDSA_Secp256k1,
+		SignAlgo:  sema.SignatureAlgorithmECDSA_secp256k1,
 	},
 	HashAlgo:  sema.HashAlgorithmSHA3_256,
 	Weight:    100,
@@ -521,7 +521,7 @@ func TestRuntimePublicAccountKeys(t *testing.T) {
 
 		expectedValue := accountKeyExportedValue(1,
 			[]byte{4, 5, 6},
-			sema.SignatureAlgorithmECDSA_Secp256k1,
+			sema.SignatureAlgorithmECDSA_secp256k1,
 			sema.HashAlgorithmSHA3_256,
 			"100.0",
 			false,
@@ -673,7 +673,7 @@ func TestRuntimeSignatureAlgorithm(t *testing.T) {
 
 	script := []byte(`
 		pub fun main(): [SignatureAlgorithm?] {
-			var key1: SignatureAlgorithm? = SignatureAlgorithm.ECDSA_Secp256k1
+			var key1: SignatureAlgorithm? = SignatureAlgorithm.ECDSA_secp256k1
 
 			var key2: SignatureAlgorithm? = SignatureAlgorithm(rawValue: 2)
 
@@ -711,7 +711,7 @@ func TestRuntimeSignatureAlgorithm(t *testing.T) {
 
 	require.Len(t, builtinStruct.Fields, 1)
 	assert.Equal(t,
-		cadence.NewUInt8(SignatureAlgorithmECDSA_Secp256k1.RawValue()),
+		cadence.NewUInt8(SignatureAlgorithmECDSA_secp256k1.RawValue()),
 		builtinStruct.Fields[0],
 	)
 
@@ -724,7 +724,7 @@ func TestRuntimeSignatureAlgorithm(t *testing.T) {
 
 	require.Len(t, builtinStruct.Fields, 1)
 	assert.Equal(t,
-		cadence.NewUInt8(SignatureAlgorithmECDSA_Secp256k1.RawValue()),
+		cadence.NewUInt8(SignatureAlgorithmECDSA_secp256k1.RawValue()),
 		builtinStruct.Fields[0],
 	)
 

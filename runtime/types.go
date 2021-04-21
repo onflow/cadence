@@ -48,7 +48,7 @@ const (
 	// Supported signing algorithms
 	SignatureAlgorithmUnknown         = sema.SignatureAlgorithmUnknown
 	SignatureAlgorithmECDSA_P256      = sema.SignatureAlgorithmECDSA_P256
-	SignatureAlgorithmECDSA_Secp256k1 = sema.SignatureAlgorithmECDSA_Secp256k1
+	SignatureAlgorithmECDSA_secp256k1 = sema.SignatureAlgorithmECDSA_secp256k1
 )
 
 type HashAlgorithm = sema.HashAlgorithm
