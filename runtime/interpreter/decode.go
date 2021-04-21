@@ -244,9 +244,6 @@ func (d *DecoderV4) decodeValue(v interface{}, path []string) (Value, error) {
 		case cborTagCapabilityValue:
 			return d.decodeCapability(v.Content)
 
-		case cborTagStorageReferenceValue:
-			return d.decodeStorageReference(v.Content)
-
 		case cborTagLinkValue:
 			return d.decodeLink(v.Content)
 
@@ -931,40 +928,6 @@ func (d *DecoderV4) decodeSome(v interface{}, path []string) (*SomeValue, error)
 	return &SomeValue{
 		Value: value,
 		Owner: d.owner,
-	}, nil
-}
-
-func (d *DecoderV4) decodeStorageReference(v interface{}) (*StorageReferenceValue, error) {
-	encoded, ok := v.(cborArray)
-	const expectedLength = encodedStorageReferenceValueLength
-	if !ok || len(encoded) != expectedLength {
-		return nil, fmt.Errorf("invalid storage reference encoding: expected [%d]interface{}, got %T",
-			expectedLength,
-			v,
-		)
-	}
-
-	authorized, ok := encoded[encodedStorageReferenceValueAuthorizedFieldKey].(bool)
-	if !ok {
-		return nil, fmt.Errorf("invalid storage reference authorized encoding: %T", authorized)
-	}
-
-	targetStorageAddressBytes, ok := encoded[encodedStorageReferenceValueTargetStorageAddressFieldKey].([]byte)
-	if !ok {
-		return nil, fmt.Errorf("invalid storage reference target storage address encoding: %T", authorized)
-	}
-
-	targetStorageAddress := common.BytesToAddress(targetStorageAddressBytes)
-
-	targetKey, ok := encoded[encodedStorageReferenceValueTargetKeyFieldKey].(string)
-	if !ok {
-		return nil, fmt.Errorf("invalid storage reference target key encoding: %T", targetKey)
-	}
-
-	return &StorageReferenceValue{
-		Authorized:           authorized,
-		TargetStorageAddress: targetStorageAddress,
-		TargetKey:            targetKey,
 	}, nil
 }
 

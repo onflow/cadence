@@ -1076,6 +1076,13 @@ func (d *DecoderV3) decodeSome(v interface{}, path []string) (*SomeValue, error)
 	}, nil
 }
 
+// NOTE: NEVER change, only add/increment; ensure uint64
+const (
+	encodedStorageReferenceValueAuthorizedFieldKey           uint64 = 0
+	encodedStorageReferenceValueTargetStorageAddressFieldKey uint64 = 1
+	encodedStorageReferenceValueTargetKeyFieldKey            uint64 = 2
+)
+
 func (d *DecoderV3) decodeStorageReference(v interface{}) (*StorageReferenceValue, error) {
 	encoded, ok := v.(map[interface{}]interface{})
 	if !ok {
