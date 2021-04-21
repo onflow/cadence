@@ -133,7 +133,7 @@ func (e *InvalidEntryPointArgumentError) Unwrap() error {
 }
 
 func (e *InvalidEntryPointArgumentError) Error() string {
-	return fmt.Sprintf("invalid argument at index %d", e.Index)
+	return fmt.Sprintf("invalid argument at index %d: %v", e.Index, e.Err)
 }
 
 // MalformedValueError
