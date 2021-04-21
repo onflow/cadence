@@ -2017,3 +2017,110 @@ func TestRuntimeStorageSaveCapability(t *testing.T) {
 		}
 	}
 }
+
+func TestRuntimeStorageReferenceCast(t *testing.T) {
+
+	t.Parallel()
+
+	runtime := NewInterpreterRuntime()
+
+	signerAddress := common.BytesToAddress([]byte{0x42})
+
+	deployTx := utils.DeploymentTransaction("Test", []byte(`
+      pub contract Test {
+
+          pub resource interface RI {}
+
+          pub resource R: RI {}
+
+          pub fun createR(): @R {
+              return <-create R()
+          }
+      }
+    `))
+
+	accountCodes := map[common.LocationID][]byte{}
+	var events []cadence.Event
+	var loggedMessages []string
+
+	runtimeInterface := &testRuntimeInterface{
+		storage: newTestStorage(nil, nil),
+		getSigningAccounts: func() ([]Address, error) {
+			return []Address{signerAddress}, nil
+		},
+		resolveLocation: singleIdentifierLocationResolver(t),
+		updateAccountContractCode: func(address Address, name string, code []byte) error {
+			location := common.AddressLocation{
+				Address: address,
+				Name:    name,
+			}
+			accountCodes[location.ID()] = code
+			return nil
+		},
+		getAccountContractCode: func(address Address, name string) (code []byte, err error) {
+			location := common.AddressLocation{
+				Address: address,
+				Name:    name,
+			}
+			code = accountCodes[location.ID()]
+			return code, nil
+		},
+		emitEvent: func(event cadence.Event) error {
+			events = append(events, event)
+			return nil
+		},
+		log: func(message string) {
+			loggedMessages = append(loggedMessages, message)
+		},
+	}
+
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	// Deploy contract
+
+	err := runtime.ExecuteTransaction(
+		Script{
+			Source: deployTx,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	// Run test transaction
+
+	const testTx = `
+      import Test from 0x42
+
+      transaction {
+          prepare(signer: AuthAccount) {
+              signer.save(<-Test.createR(), to: /storage/r)
+
+              signer.link<&Test.R{Test.RI}>(
+                 /public/r,
+                 target: /storage/r
+              )
+
+              let ref = signer.getCapability<&Test.R{Test.RI}>(/public/r).borrow()!
+
+              let casted = (ref as AnyStruct) as! &Test.R
+          }
+      }
+    `
+
+	err = runtime.ExecuteTransaction(
+		Script{
+			Source: []byte(testTx),
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+
+	require.Error(t, err)
+
+	require.Contains(t, err.Error(), "unexpectedly found non-`&Test.R` while force-casting value")
+}
