@@ -157,11 +157,6 @@ func (e *MalformedValueError) Error() string {
 //
 type InvalidValueTypeError struct {
 	ExpectedType sema.Type
-	Err          error
-}
-
-func (e *InvalidValueTypeError) Unwrap() error {
-	return e.Err
 }
 
 func (e *InvalidValueTypeError) Error() string {
