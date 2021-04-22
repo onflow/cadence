@@ -20,9 +20,9 @@ pub enum HashAlgorithm: UInt8 {
     /// SHA3_384 is Secure Hashing Algorithm 3 (SHA-3) with a 384-bit digest.
     pub case SHA3_384 = 4
 
-    /// KMAC128_BLS_BLS12381 is an instance of KMAC128 mac algorithm, that can be used
+    /// KMAC128_BLS_BLS12_381 is an instance of KMAC128 mac algorithm, that can be used
     /// as the hashing algorithm for BLS signature scheme on the curve BLS12-381.
-    pub case KMAC_128_BLS_BLS12381 = 5
+    pub case KMAC128_BLS_BLS12_381 = 5
 }
 ```
 

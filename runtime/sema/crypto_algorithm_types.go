@@ -37,7 +37,7 @@ var HashAlgorithms = []CryptoAlgorithm{
 	HashAlgorithmSHA2_384,
 	HashAlgorithmSHA3_256,
 	HashAlgorithmSHA3_384,
-	HashAlgorithmKMAC128_BLS_BLS12381,
+	HashAlgorithmKMAC128_BLS_BLS12_381,
 }
 
 var SignatureAlgorithmType = newNativeEnumType(SignatureAlgorithmTypeName, UInt8Type)
@@ -114,7 +114,7 @@ const (
 	HashAlgorithmSHA2_384
 	HashAlgorithmSHA3_256
 	HashAlgorithmSHA3_384
-	HashAlgorithmKMAC128_BLS_BLS12381
+	HashAlgorithmKMAC128_BLS_BLS12_381
 )
 
 func (algo HashAlgorithm) Name() string {
@@ -129,8 +129,8 @@ func (algo HashAlgorithm) Name() string {
 		return "SHA3_256"
 	case HashAlgorithmSHA3_384:
 		return "SHA3_384"
-	case HashAlgorithmKMAC128_BLS_BLS12381:
-		return "KMAC128_BLS_BLS12381"
+	case HashAlgorithmKMAC128_BLS_BLS12_381:
+		return "KMAC128_BLS_BLS12_381"
 	}
 
 	panic(errors.NewUnreachableError())
@@ -153,7 +153,7 @@ func (algo HashAlgorithm) RawValue() uint8 {
 		return 3
 	case HashAlgorithmSHA3_384:
 		return 4
-	case HashAlgorithmKMAC128_BLS_BLS12381:
+	case HashAlgorithmKMAC128_BLS_BLS12_381:
 		return 5
 	}
 
@@ -172,8 +172,8 @@ func (algo HashAlgorithm) DocString() string {
 		return HashAlgorithmDocStringSHA3_256
 	case HashAlgorithmSHA3_384:
 		return HashAlgorithmDocStringSHA3_384
-	case HashAlgorithmKMAC128_BLS_BLS12381:
-		return HashAlgorithmDocStringKMAC128_BLS_BLS12381
+	case HashAlgorithmKMAC128_BLS_BLS12_381:
+		return HashAlgorithmDocStringKMAC128_BLS_BLS12_381
 	}
 
 	panic(errors.NewUnreachableError())
@@ -234,7 +234,7 @@ const HashAlgorithmDocStringSHA3_384 = `
 SHA3_384 is Secure Hashing Algorithm 3 (SHA-3) with a 384-bit digest
 `
 
-const HashAlgorithmDocStringKMAC128_BLS_BLS12381 = `
-KMAC128_BLS_BLS12381 is an instance of KMAC128 mac algorithm, that can be used
+const HashAlgorithmDocStringKMAC128_BLS_BLS12_381 = `
+KMAC128_BLS_BLS12_381 is an instance of KMAC128 mac algorithm, that can be used
 as the hashing algorithm for BLS signature scheme on the curve BLS12-381.
 `
