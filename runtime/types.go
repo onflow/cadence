@@ -59,12 +59,12 @@ type HashAlgorithm = sema.HashAlgorithm
 
 const (
 	// Supported hashing algorithms
-	HashAlgorithmUnknown              = sema.HashAlgorithmUnknown
-	HashAlgorithmSHA2_256             = sema.HashAlgorithmSHA2_256
-	HashAlgorithmSHA2_384             = sema.HashAlgorithmSHA2_384
-	HashAlgorithmSHA3_256             = sema.HashAlgorithmSHA3_256
-	HashAlgorithmSHA3_384             = sema.HashAlgorithmSHA3_384
-	HashAlgorithmKMAC128_BLS_BLS12381 = sema.HashAlgorithmKMAC128_BLS_BLS12381
+	HashAlgorithmUnknown               = sema.HashAlgorithmUnknown
+	HashAlgorithmSHA2_256              = sema.HashAlgorithmSHA2_256
+	HashAlgorithmSHA2_384              = sema.HashAlgorithmSHA2_384
+	HashAlgorithmSHA3_256              = sema.HashAlgorithmSHA3_256
+	HashAlgorithmSHA3_384              = sema.HashAlgorithmSHA3_384
+	HashAlgorithmKMAC128_BLS_BLS12_381 = sema.HashAlgorithmKMAC128_BLS_BLS12_381
 )
 
 type AccountKey struct {
