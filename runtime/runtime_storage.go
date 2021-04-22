@@ -308,6 +308,16 @@ func (s *runtimeStorage) writeCached(inter *interpreter.Interpreter) error {
 		}
 		bundle, newBatch := batch[:bundleSize], batch[bundleSize:]
 
+		// Ensure all items (values) are storable before encoding them
+
+		for _, item := range bundle {
+			if item.value != nil && !item.value.IsStorable() {
+				return NonStorableValueWriteError{
+					Value: item.value,
+				}
+			}
+		}
+
 		// parallelize the encoding for items within the same batch
 		// the encoding has no side effect
 		encodedResults, err := s.encodeWriteItems(ENCODING_NUM_WORKER, bundle)
@@ -443,12 +453,6 @@ func (s *runtimeStorage) processEncodedItem(item writeItem, encoded *encodedResu
 	var newData []byte
 	if encoded != nil && len(encoded.newData) > 0 {
 		newData = interpreter.PrependMagic(encoded.newData, interpreter.CurrentEncodingVersion)
-	}
-
-	if item.value != nil && !item.value.IsStorable() {
-		return nil, NonStorableValueWriteError{
-			Value: item.value,
-		}
 	}
 
 	var err error
