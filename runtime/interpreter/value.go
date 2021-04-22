@@ -6851,6 +6851,14 @@ func (v *CompositeValue) ConformsToDynamicType(
 
 func (v *CompositeValue) IsStorable() bool {
 
+	// Composite value's of native/built-in types are not storable for now
+	if v.Location() == nil {
+		return false
+	}
+
+	// If this composite value has a field which is non-storable,
+	// then the composite value is not storable.
+
 	// TODO: only check decoded fields
 	//   and assume still encoded fields are storable?
 
