@@ -80,7 +80,9 @@ func TestRuntimeStorageWriteCached(t *testing.T) {
 	const arrayElementCount = 100
 	const storageItemCount = 100
 	withWritesToStorage(arrayElementCount, storageItemCount, onWrite, func(runtimeStorage *runtimeStorage) {
-		runtimeStorage.writeCached(nil)
+		err := runtimeStorage.writeCached(nil)
+		require.NoError(t, err)
+
 		require.Len(t, writes, storageItemCount)
 	})
 }
@@ -102,7 +104,9 @@ func TestRuntimeStorageWriteCachedIsDeterministic(t *testing.T) {
 	const arrayElementCount = 100
 	const storageItemCount = 100
 	withWritesToStorage(arrayElementCount, storageItemCount, onWrite, func(runtimeStorage *runtimeStorage) {
-		runtimeStorage.writeCached(nil)
+		err := runtimeStorage.writeCached(nil)
+		require.NoError(t, err)
+
 		previousWrites := make([]testWrite, len(writes))
 		copy(previousWrites, writes)
 
@@ -110,7 +114,9 @@ func TestRuntimeStorageWriteCachedIsDeterministic(t *testing.T) {
 		for i := 0; i < 10; i++ {
 			// test that writing again should produce the same result
 			writes = nil
-			runtimeStorage.writeCached(nil)
+			err := runtimeStorage.writeCached(nil)
+			require.NoError(t, err)
+
 			for i, previousWrite := range previousWrites {
 				// compare the new write with the old write
 				require.Equal(t, previousWrite, writes[i])
@@ -141,7 +147,8 @@ func BenchmarkRuntimeStorageWriteCached(b *testing.B) {
 
 		for i := 0; i < b.N; i++ {
 			writes = nil
-			runtimeStorage.writeCached(nil)
+			err := runtimeStorage.writeCached(nil)
+			require.NoError(b, err)
 
 			require.Len(b, writes, storageItemCount)
 		}
