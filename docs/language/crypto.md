@@ -38,8 +38,8 @@ pub enum SignatureAlgorithm: UInt8 {
     /// ECDSA_secp256k1 is Elliptic Curve Digital Signature Algorithm (ECDSA) on the secp256k1 curve.
     pub case ECDSA_secp256k1 = 2
 
-    /// BLS_BLS12381 is BLS signature scheme on the BLS12-381 curve.
-    pub case BLS_BLS12381 = 3
+    /// BLS_BLS12_381 is BLS signature scheme on the BLS12-381 curve.
+    pub case BLS_BLS12_381 = 3
 }
 ```
 
