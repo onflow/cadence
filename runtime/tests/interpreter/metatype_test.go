@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
@@ -450,4 +451,59 @@ func TestInterpretGetType(t *testing.T) {
 			)
 		})
 	}
+}
+
+func TestInterpretResourceReferenceInstanceOf(t *testing.T) {
+
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+        resource R {}
+
+        fun test(): Bool {
+            let r <- create R()
+            let ref = &r as &R
+            let isInstance = ref.isInstance(Type<@R>())
+            destroy r
+            return isInstance
+        }
+    `)
+
+	value, err := inter.Invoke("test")
+	require.NoError(t, err)
+
+	assert.Equal(t,
+		interpreter.BoolValue(true),
+		value,
+	)
+}
+
+func TestInterpretResourceReferenceFieldComparison(t *testing.T) {
+
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+        resource R {
+            let n: Int
+            init() {
+                self.n = 1
+            }
+        }
+
+        fun test(): Bool {
+            let r <- create R()
+            let ref = &r as &R
+            let isOne = ref.n == 1
+            destroy r
+            return isOne
+        }
+    `)
+
+	value, err := inter.Invoke("test")
+	require.NoError(t, err)
+
+	assert.Equal(t,
+		interpreter.BoolValue(true),
+		value,
+	)
 }
