@@ -5479,6 +5479,7 @@ const PublicKeyTypeName = "PublicKey"
 const PublicKeyPublicKeyField = "publicKey"
 const PublicKeySignAlgoField = "signatureAlgorithm"
 const PublicKeyValidateFunction = "validate"
+const PublicKeyIsValidFunction = "isValid"
 
 // PublicKeyType represents the public key associated with an account key.
 var PublicKeyType = func() *CompositeType {
@@ -5488,15 +5489,10 @@ var PublicKeyType = func() *CompositeType {
 		Kind:       common.CompositeKindStructure,
 	}
 
-	var publicKeyValidateFunctionType = &FunctionType{
-		TypeParameters:       []*TypeParameter{},
-		Parameters:           []*Parameter{},
-		ReturnTypeAnnotation: NewTypeAnnotation(BoolType),
-	}
-
 	const publicKeyKeyFieldDocString = `The public key`
 	const publicKeySignAlgoFieldDocString = `The signature algorithm to be used with the key`
 	const publicKeyValidateFunctionDocString = `Validates the public key`
+	const publicKeyIsValidFunctionDocString = `TODO`
 
 	var members = []*Member{
 		NewPublicConstantFieldMember(
@@ -5517,6 +5513,12 @@ var PublicKeyType = func() *CompositeType {
 			publicKeyValidateFunctionType,
 			publicKeyValidateFunctionDocString,
 		),
+		NewPublicFunctionMember(
+			publicKeyType,
+			PublicKeyIsValidFunction,
+			publicKeyIsValidFunctionType,
+			publicKeyIsValidFunctionDocString,
+		),
 	}
 
 	publicKeyType.Members = GetMembersAsMap(members)
@@ -5524,6 +5526,43 @@ var PublicKeyType = func() *CompositeType {
 
 	return publicKeyType
 }()
+
+var publicKeyValidateFunctionType = &FunctionType{
+	TypeParameters:       []*TypeParameter{},
+	Parameters:           []*Parameter{},
+	ReturnTypeAnnotation: NewTypeAnnotation(BoolType),
+}
+
+var publicKeyIsValidFunctionType = &FunctionType{
+	TypeParameters: []*TypeParameter{},
+	Parameters: []*Parameter{
+		{
+			Identifier: "signature",
+			TypeAnnotation: NewTypeAnnotation(
+				&VariableSizedType{
+					Type: UInt8Type,
+				},
+			),
+		},
+		{
+			Identifier: "signedData",
+			TypeAnnotation: NewTypeAnnotation(
+				&VariableSizedType{
+					Type: UInt8Type,
+				},
+			),
+		},
+		{
+			Identifier:     "domainSeparationTag",
+			TypeAnnotation: NewTypeAnnotation(StringType),
+		},
+		{
+			Identifier:     "hashAlgorithm",
+			TypeAnnotation: NewTypeAnnotation(HashAlgorithmType),
+		},
+	},
+	ReturnTypeAnnotation: NewTypeAnnotation(BoolType),
+}
 
 type CryptoAlgorithm interface {
 	RawValue() uint8
