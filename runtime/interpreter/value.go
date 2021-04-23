@@ -8150,7 +8150,12 @@ func NewAccountKeyValue(
 }
 
 // NewPublicKeyValue constructs a PublicKey value.
-func NewPublicKeyValue(publicKey *ArrayValue, signAlgo *CompositeValue, validateFunction FunctionValue) *CompositeValue {
+func NewPublicKeyValue(
+	publicKey *ArrayValue,
+	signAlgo *CompositeValue,
+	validateFunction FunctionValue,
+	isValidFunction FunctionValue,
+) *CompositeValue {
 
 	fields := NewStringValueOrderedMap()
 	fields.Set(sema.PublicKeyPublicKeyField, publicKey)
@@ -8158,6 +8163,7 @@ func NewPublicKeyValue(publicKey *ArrayValue, signAlgo *CompositeValue, validate
 
 	functions := map[string]FunctionValue{
 		sema.PublicKeyValidateFunction: validateFunction,
+		sema.PublicKeyIsValidFunction:  isValidFunction,
 	}
 
 	return &CompositeValue{
