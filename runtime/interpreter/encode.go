@@ -446,7 +446,10 @@ func (e *Encoder) encodeVoid() error {
 //		Content: *big.Int(v.BigInt),
 // }
 func (e *Encoder) encodeInt(v IntValue) error {
-	err := e.enc.EncodeTagHead(cborTagIntValue)
+	err := e.enc.EncodeRawBytes([]byte{
+		// tag number
+		0xd8, cborTagIntValue,
+	})
 	if err != nil {
 		return err
 	}
@@ -459,7 +462,10 @@ func (e *Encoder) encodeInt(v IntValue) error {
 //		Content: int8(v),
 // }
 func (e *Encoder) encodeInt8(v Int8Value) error {
-	err := e.enc.EncodeTagHead(cborTagInt8Value)
+	err := e.enc.EncodeRawBytes([]byte{
+		// tag number
+		0xd8, cborTagInt8Value,
+	})
 	if err != nil {
 		return err
 	}
@@ -472,7 +478,10 @@ func (e *Encoder) encodeInt8(v Int8Value) error {
 //		Content: int16(v),
 // }
 func (e *Encoder) encodeInt16(v Int16Value) error {
-	err := e.enc.EncodeTagHead(cborTagInt16Value)
+	err := e.enc.EncodeRawBytes([]byte{
+		// tag number
+		0xd8, cborTagInt16Value,
+	})
 	if err != nil {
 		return err
 	}
@@ -485,7 +494,10 @@ func (e *Encoder) encodeInt16(v Int16Value) error {
 //		Content: int32(v),
 // }
 func (e *Encoder) encodeInt32(v Int32Value) error {
-	err := e.enc.EncodeTagHead(cborTagInt32Value)
+	err := e.enc.EncodeRawBytes([]byte{
+		// tag number
+		0xd8, cborTagInt32Value,
+	})
 	if err != nil {
 		return err
 	}
@@ -498,7 +510,10 @@ func (e *Encoder) encodeInt32(v Int32Value) error {
 //		Content: int64(v),
 // }
 func (e *Encoder) encodeInt64(v Int64Value) error {
-	err := e.enc.EncodeTagHead(cborTagInt64Value)
+	err := e.enc.EncodeRawBytes([]byte{
+		// tag number
+		0xd8, cborTagInt64Value,
+	})
 	if err != nil {
 		return err
 	}
@@ -511,7 +526,10 @@ func (e *Encoder) encodeInt64(v Int64Value) error {
 //		Content: *big.Int(v.BigInt),
 // }
 func (e *Encoder) encodeInt128(v Int128Value) error {
-	err := e.enc.EncodeTagHead(cborTagInt128Value)
+	err := e.enc.EncodeRawBytes([]byte{
+		// tag number
+		0xd8, cborTagInt128Value,
+	})
 	if err != nil {
 		return err
 	}
@@ -524,7 +542,10 @@ func (e *Encoder) encodeInt128(v Int128Value) error {
 //		Content: *big.Int(v.BigInt),
 // }
 func (e *Encoder) encodeInt256(v Int256Value) error {
-	err := e.enc.EncodeTagHead(cborTagInt256Value)
+	err := e.enc.EncodeRawBytes([]byte{
+		// tag number
+		0xd8, cborTagInt256Value,
+	})
 	if err != nil {
 		return err
 	}
@@ -537,7 +558,10 @@ func (e *Encoder) encodeInt256(v Int256Value) error {
 //		Content: *big.Int(v.BigInt),
 // }
 func (e *Encoder) encodeUInt(v UIntValue) error {
-	err := e.enc.EncodeTagHead(cborTagUIntValue)
+	err := e.enc.EncodeRawBytes([]byte{
+		// tag number
+		0xd8, cborTagUIntValue,
+	})
 	if err != nil {
 		return err
 	}
@@ -550,7 +574,10 @@ func (e *Encoder) encodeUInt(v UIntValue) error {
 //		Content: uint8(v),
 // }
 func (e *Encoder) encodeUInt8(v UInt8Value) error {
-	err := e.enc.EncodeTagHead(cborTagUInt8Value)
+	err := e.enc.EncodeRawBytes([]byte{
+		// tag number
+		0xd8, cborTagUInt8Value,
+	})
 	if err != nil {
 		return err
 	}
@@ -563,7 +590,10 @@ func (e *Encoder) encodeUInt8(v UInt8Value) error {
 //		Content: uint16(v),
 // }
 func (e *Encoder) encodeUInt16(v UInt16Value) error {
-	err := e.enc.EncodeTagHead(cborTagUInt16Value)
+	err := e.enc.EncodeRawBytes([]byte{
+		// tag number
+		0xd8, cborTagUInt16Value,
+	})
 	if err != nil {
 		return err
 	}
@@ -576,7 +606,10 @@ func (e *Encoder) encodeUInt16(v UInt16Value) error {
 //		Content: uint32(v),
 // }
 func (e *Encoder) encodeUInt32(v UInt32Value) error {
-	err := e.enc.EncodeTagHead(cborTagUInt32Value)
+	err := e.enc.EncodeRawBytes([]byte{
+		// tag number
+		0xd8, cborTagUInt32Value,
+	})
 	if err != nil {
 		return err
 	}
@@ -589,7 +622,10 @@ func (e *Encoder) encodeUInt32(v UInt32Value) error {
 //		Content: uint64(v),
 // }
 func (e *Encoder) encodeUInt64(v UInt64Value) error {
-	err := e.enc.EncodeTagHead(cborTagUInt64Value)
+	err := e.enc.EncodeRawBytes([]byte{
+		// tag number
+		0xd8, cborTagUInt64Value,
+	})
 	if err != nil {
 		return err
 	}
@@ -602,7 +638,10 @@ func (e *Encoder) encodeUInt64(v UInt64Value) error {
 //		Content: *big.Int(v.BigInt),
 // }
 func (e *Encoder) encodeUInt128(v UInt128Value) error {
-	err := e.enc.EncodeTagHead(cborTagUInt128Value)
+	err := e.enc.EncodeRawBytes([]byte{
+		// tag number
+		0xd8, cborTagUInt128Value,
+	})
 	if err != nil {
 		return err
 	}
@@ -615,7 +654,10 @@ func (e *Encoder) encodeUInt128(v UInt128Value) error {
 //		Content: *big.Int(v.BigInt),
 // }
 func (e *Encoder) encodeUInt256(v UInt256Value) error {
-	err := e.enc.EncodeTagHead(cborTagUInt256Value)
+	err := e.enc.EncodeRawBytes([]byte{
+		// tag number
+		0xd8, cborTagUInt256Value,
+	})
 	if err != nil {
 		return err
 	}
@@ -628,7 +670,10 @@ func (e *Encoder) encodeUInt256(v UInt256Value) error {
 //		Content: uint8(v),
 // }
 func (e *Encoder) encodeWord8(v Word8Value) error {
-	err := e.enc.EncodeTagHead(cborTagWord8Value)
+	err := e.enc.EncodeRawBytes([]byte{
+		// tag number
+		0xd8, cborTagWord8Value,
+	})
 	if err != nil {
 		return err
 	}
@@ -641,7 +686,10 @@ func (e *Encoder) encodeWord8(v Word8Value) error {
 //		Content: uint16(v),
 // }
 func (e *Encoder) encodeWord16(v Word16Value) error {
-	err := e.enc.EncodeTagHead(cborTagWord16Value)
+	err := e.enc.EncodeRawBytes([]byte{
+		// tag number
+		0xd8, cborTagWord16Value,
+	})
 	if err != nil {
 		return err
 	}
@@ -654,7 +702,10 @@ func (e *Encoder) encodeWord16(v Word16Value) error {
 //		Content: uint32(v),
 // }
 func (e *Encoder) encodeWord32(v Word32Value) error {
-	err := e.enc.EncodeTagHead(cborTagWord32Value)
+	err := e.enc.EncodeRawBytes([]byte{
+		// tag number
+		0xd8, cborTagWord32Value,
+	})
 	if err != nil {
 		return err
 	}
@@ -667,7 +718,10 @@ func (e *Encoder) encodeWord32(v Word32Value) error {
 //		Content: uint64(v),
 // }
 func (e *Encoder) encodeWord64(v Word64Value) error {
-	err := e.enc.EncodeTagHead(cborTagWord64Value)
+	err := e.enc.EncodeRawBytes([]byte{
+		// tag number
+		0xd8, cborTagWord64Value,
+	})
 	if err != nil {
 		return err
 	}
@@ -680,7 +734,10 @@ func (e *Encoder) encodeWord64(v Word64Value) error {
 //		Content: int64(v),
 // }
 func (e *Encoder) encodeFix64(v Fix64Value) error {
-	err := e.enc.EncodeTagHead(cborTagFix64Value)
+	err := e.enc.EncodeRawBytes([]byte{
+		// tag number
+		0xd8, cborTagFix64Value,
+	})
 	if err != nil {
 		return err
 	}
@@ -693,7 +750,10 @@ func (e *Encoder) encodeFix64(v Fix64Value) error {
 //		Content: uint64(v),
 // }
 func (e *Encoder) encodeUFix64(v UFix64Value) error {
-	err := e.enc.EncodeTagHead(cborTagUFix64Value)
+	err := e.enc.EncodeRawBytes([]byte{
+		// tag number
+		0xd8, cborTagUFix64Value,
+	})
 	if err != nil {
 		return err
 	}
@@ -768,14 +828,13 @@ func (e *Encoder) encodeDictionaryValue(
 	path []string,
 	deferrals *EncodingDeferrals,
 ) error {
-	// Encode CBOR tag head
-	err := e.enc.EncodeTagHead(cborTagDictionaryValue)
-	if err != nil {
-		return err
-	}
-
-	// Encode CBOR array head with 2 elements
-	err = e.enc.EncodeArrayHead(encodedDictionaryValueLength)
+	// Encode CBOR tag head and array head
+	err := e.enc.EncodeRawBytes([]byte{
+		// tag number
+		0xd8, cborTagDictionaryValue,
+		// array, 2 items follow
+		0x82,
+	})
 	if err != nil {
 		return err
 	}
@@ -911,13 +970,12 @@ func (e *Encoder) encodeCompositeValue(
 	deferrals *EncodingDeferrals,
 ) error {
 	// Encode CBOR tag head
-	err := e.enc.EncodeTagHead(cborTagCompositeValue)
-	if err != nil {
-		return err
-	}
-
-	// Encode CBOR array head with 5 elements
-	err = e.enc.EncodeArrayHead(encodedCompositeValueLength)
+	err := e.enc.EncodeRawBytes([]byte{
+		// tag number
+		0xd8, cborTagCompositeValue,
+		// array, 5 items follow
+		0x85,
+	})
 	if err != nil {
 		return err
 	}
@@ -983,7 +1041,10 @@ func (e *Encoder) encodeSomeValue(
 	path []string,
 	deferrals *EncodingDeferrals,
 ) error {
-	err := e.enc.EncodeTagHead(cborTagSomeValue)
+	err := e.enc.EncodeRawBytes([]byte{
+		// tag number
+		0xd8, cborTagSomeValue,
+	})
 	if err != nil {
 		return err
 	}
@@ -996,7 +1057,10 @@ func (e *Encoder) encodeSomeValue(
 //		Content: []byte(v.ToAddress().Bytes()),
 // }
 func (e *Encoder) encodeAddressValue(v AddressValue) error {
-	err := e.enc.EncodeTagHead(cborTagAddressValue)
+	err := e.enc.EncodeRawBytes([]byte{
+		// tag number
+		0xd8, cborTagAddressValue,
+	})
 	if err != nil {
 		return err
 	}
@@ -1024,12 +1088,12 @@ const (
 //			},
 // }
 func (e *Encoder) encodePathValue(v PathValue) error {
-	err := e.enc.EncodeTagHead(cborTagPathValue)
-	if err != nil {
-		return err
-	}
-
-	err = e.enc.EncodeArrayHead(encodedPathValueLength)
+	err := e.enc.EncodeRawBytes([]byte{
+		// tag number
+		0xd8, cborTagPathValue,
+		// array, 2 items follow
+		0x82,
+	})
 	if err != nil {
 		return err
 	}
@@ -1065,12 +1129,12 @@ const (
 // 				},
 // }
 func (e *Encoder) encodeCapabilityValue(v CapabilityValue) error {
-	err := e.enc.EncodeTagHead(cborTagCapabilityValue)
-	if err != nil {
-		return err
-	}
-
-	err = e.enc.EncodeArrayHead(encodedCapabilityValueLength)
+	err := e.enc.EncodeRawBytes([]byte{
+		// tag number
+		0xd8, cborTagCapabilityValue,
+		// array, 3 items follow
+		0x83,
+	})
 	if err != nil {
 		return err
 	}
@@ -1109,7 +1173,10 @@ func (e *Encoder) encodeLocation(l common.Location) error {
 		//		Number:  cborTagStringLocation,
 		//		Content: string(l),
 		// }
-		err := e.enc.EncodeTagHead(cborTagStringLocation)
+		err := e.enc.EncodeRawBytes([]byte{
+			// tag number
+			0xd8, cborTagStringLocation,
+		})
 		if err != nil {
 			return err
 		}
@@ -1121,7 +1188,10 @@ func (e *Encoder) encodeLocation(l common.Location) error {
 		//		Number:  cborTagIdentifierLocation,
 		//		Content: string(l),
 		// }
-		err := e.enc.EncodeTagHead(cborTagIdentifierLocation)
+		err := e.enc.EncodeRawBytes([]byte{
+			// tag number
+			0xd8, cborTagIdentifierLocation,
+		})
 		if err != nil {
 			return err
 		}
@@ -1136,11 +1206,12 @@ func (e *Encoder) encodeLocation(l common.Location) error {
 		//			encodedAddressLocationNameFieldKey:    string(l.Name),
 		//		},
 		// }
-		err := e.enc.EncodeTagHead(cborTagAddressLocation)
-		if err != nil {
-			return err
-		}
-		err = e.enc.EncodeArrayHead(2)
+		err := e.enc.EncodeRawBytes([]byte{
+			// tag number
+			0xd8, cborTagAddressLocation,
+			// array, 2 items follow
+			0x82,
+		})
 		if err != nil {
 			return err
 		}
@@ -1175,11 +1246,12 @@ const (
 //			},
 // }
 func (e *Encoder) encodeLinkValue(v LinkValue) error {
-	err := e.enc.EncodeTagHead(cborTagLinkValue)
-	if err != nil {
-		return err
-	}
-	err = e.enc.EncodeArrayHead(encodedLinkValueLength)
+	err := e.enc.EncodeRawBytes([]byte{
+		// tag number
+		0xd8, cborTagLinkValue,
+		// array, 2 items follow
+		0x82,
+	})
 	if err != nil {
 		return err
 	}
@@ -1237,7 +1309,10 @@ func (e *Encoder) encodeStaticType(t StaticType) error {
 //		Content: uint(v),
 // }
 func (e *Encoder) encodePrimitiveStaticType(v PrimitiveStaticType) error {
-	err := e.enc.EncodeTagHead(cborTagPrimitiveStaticType)
+	err := e.enc.EncodeRawBytes([]byte{
+		// tag number
+		0xd8, cborTagPrimitiveStaticType,
+	})
 	if err != nil {
 		return err
 	}
@@ -1250,7 +1325,10 @@ func (e *Encoder) encodePrimitiveStaticType(v PrimitiveStaticType) error {
 //		Content: StaticType(v.Type),
 // }
 func (e *Encoder) encodeOptionalStaticType(v OptionalStaticType) error {
-	err := e.enc.EncodeTagHead(cborTagOptionalStaticType)
+	err := e.enc.EncodeRawBytes([]byte{
+		// tag number
+		0xd8, cborTagOptionalStaticType,
+	})
 	if err != nil {
 		return err
 	}
@@ -1280,11 +1358,12 @@ const (
 //		},
 // }
 func (e *Encoder) encodeCompositeStaticType(v CompositeStaticType) error {
-	err := e.enc.EncodeTagHead(cborTagCompositeStaticType)
-	if err != nil {
-		return err
-	}
-	err = e.enc.EncodeArrayHead(encodedCompositeStaticTypeLength)
+	err := e.enc.EncodeRawBytes([]byte{
+		// tag number
+		0xd8, cborTagCompositeStaticType,
+		// array, 3 items follow
+		0x83,
+	})
 	if err != nil {
 		return err
 	}
@@ -1322,11 +1401,12 @@ const (
 //		},
 // }
 func (e *Encoder) encodeInterfaceStaticType(v InterfaceStaticType) error {
-	err := e.enc.EncodeTagHead(cborTagInterfaceStaticType)
-	if err != nil {
-		return err
-	}
-	err = e.enc.EncodeArrayHead(encodedInterfaceStaticTypeLength)
+	err := e.enc.EncodeRawBytes([]byte{
+		// tag number
+		0xd8, cborTagInterfaceStaticType,
+		// array, 3 items follow
+		0x83,
+	})
 	if err != nil {
 		return err
 	}
@@ -1347,7 +1427,10 @@ func (e *Encoder) encodeInterfaceStaticType(v InterfaceStaticType) error {
 //		Content: StaticType(v.Type),
 // }
 func (e *Encoder) encodeVariableSizedStaticType(v VariableSizedStaticType) error {
-	err := e.enc.EncodeTagHead(cborTagVariableSizedStaticType)
+	err := e.enc.EncodeRawBytes([]byte{
+		// tag number
+		0xd8, cborTagVariableSizedStaticType,
+	})
 	if err != nil {
 		return err
 	}
@@ -1375,11 +1458,12 @@ const (
 //		},
 // }
 func (e *Encoder) encodeConstantSizedStaticType(v ConstantSizedStaticType) error {
-	err := e.enc.EncodeTagHead(cborTagConstantSizedStaticType)
-	if err != nil {
-		return err
-	}
-	err = e.enc.EncodeArrayHead(encodedConstantSizedStaticTypeLength)
+	err := e.enc.EncodeRawBytes([]byte{
+		// tag number
+		0xd8, cborTagConstantSizedStaticType,
+		// array, 2 items follow
+		0x82,
+	})
 	if err != nil {
 		return err
 	}
@@ -1411,11 +1495,12 @@ const (
 //		},
 //	}
 func (e *Encoder) encodeReferenceStaticType(v ReferenceStaticType) error {
-	err := e.enc.EncodeTagHead(cborTagReferenceStaticType)
-	if err != nil {
-		return err
-	}
-	err = e.enc.EncodeArrayHead(encodedReferenceStaticTypeLength)
+	err := e.enc.EncodeRawBytes([]byte{
+		// tag number
+		0xd8, cborTagReferenceStaticType,
+		// array, 2 items follow
+		0x82,
+	})
 	if err != nil {
 		return err
 	}
@@ -1447,11 +1532,12 @@ const (
 //		},
 // }
 func (e *Encoder) encodeDictionaryStaticType(v DictionaryStaticType) error {
-	err := e.enc.EncodeTagHead(cborTagDictionaryStaticType)
-	if err != nil {
-		return err
-	}
-	err = e.enc.EncodeArrayHead(encodedDictionaryStaticTypeLength)
+	err := e.enc.EncodeRawBytes([]byte{
+		// tag number
+		0xd8, cborTagDictionaryStaticType,
+		// array, 2 items follow
+		0x82,
+	})
 	if err != nil {
 		return err
 	}
@@ -1483,11 +1569,12 @@ const (
 //		},
 // }
 func (e *Encoder) encodeRestrictedStaticType(v *RestrictedStaticType) error {
-	err := e.enc.EncodeTagHead(cborTagRestrictedStaticType)
-	if err != nil {
-		return err
-	}
-	err = e.enc.EncodeArrayHead(encodedRestrictedStaticTypeLength)
+	err := e.enc.EncodeRawBytes([]byte{
+		// tag number
+		0xd8, cborTagRestrictedStaticType,
+		// array, 2 items follow
+		0x82,
+	})
 	if err != nil {
 		return err
 	}
@@ -1527,11 +1614,12 @@ const (
 //			},
 //	}
 func (e *Encoder) encodeTypeValue(v TypeValue) error {
-	err := e.enc.EncodeTagHead(cborTagTypeValue)
-	if err != nil {
-		return err
-	}
-	err = e.enc.EncodeArrayHead(encodedTypeValueTypeLength)
+	err := e.enc.EncodeRawBytes([]byte{
+		// tag number
+		0xd8, cborTagTypeValue,
+		// array, 1 item follow
+		0x81,
+	})
 	if err != nil {
 		return err
 	}
@@ -1544,7 +1632,10 @@ func (e *Encoder) encodeTypeValue(v TypeValue) error {
 //		Content: StaticType(v.BorrowType),
 // }
 func (e *Encoder) encodeCapabilityStaticType(v CapabilityStaticType) error {
-	err := e.enc.EncodeTagHead(cborTagCapabilityStaticType)
+	err := e.enc.EncodeRawBytes([]byte{
+		// tag number
+		0xd8, cborTagCapabilityStaticType,
+	})
 	if err != nil {
 		return err
 	}
