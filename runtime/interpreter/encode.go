@@ -420,6 +420,13 @@ func (e *Encoder) Encode(
 	}
 }
 
+// cborVoidValue represents the CBOR value:
+//
+// 	cbor.Tag{
+// 		Number: cborTagVoidValue,
+// 		Content: nil
+// 	}
+//
 var cborVoidValue = []byte{
 	// tag
 	0xd8, cborTagVoidValue,
@@ -427,11 +434,8 @@ var cborVoidValue = []byte{
 	0xf6,
 }
 
-// encodeVoid returns
-// cbor.Tag{
-//		Number: cborTagVoidValue,
-// 		Content: nil
-// }
+// encodeVoid writes a value of type Void to the encoder
+//
 func (e *Encoder) encodeVoid() error {
 
 	// TODO: optimize: use 0xf7, but decoded by github.com/fxamacker/cbor/v2 as Go `nil`:
