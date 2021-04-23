@@ -170,6 +170,15 @@ struct PublicKey {
 
     /// Verifies the validity of this public key
     pub fun validate(): Bool
+
+    /// Verifies a signature. Checks whether the signature was produced by signing
+    /// the given tag and data, using this public key and the given hash algorithm
+    pub fun isValid(
+        signature: [UInt8],
+        signedData: [UInt8],
+        domainSeparationTag: String,
+        hashAlgorithm: HashAlgorithm
+    ): Bool
 }
 ```
 

@@ -5481,6 +5481,23 @@ const PublicKeySignAlgoField = "signatureAlgorithm"
 const PublicKeyValidateFunction = "validate"
 const PublicKeyIsValidFunction = "isValid"
 
+const publicKeyKeyFieldDocString = `
+The public key
+`
+
+const publicKeySignAlgoFieldDocString = `
+The signature algorithm to be used with the key
+`
+
+const publicKeyValidateFunctionDocString = `
+Validates the public key
+`
+
+const publicKeyIsValidFunctionDocString = `
+Verifies a signature. Checks whether the signature was produced by signing
+the given tag and data, using this public key and the given hash algorithm
+`
+
 // PublicKeyType represents the public key associated with an account key.
 var PublicKeyType = func() *CompositeType {
 
@@ -5488,11 +5505,6 @@ var PublicKeyType = func() *CompositeType {
 		Identifier: PublicKeyTypeName,
 		Kind:       common.CompositeKindStructure,
 	}
-
-	const publicKeyKeyFieldDocString = `The public key`
-	const publicKeySignAlgoFieldDocString = `The signature algorithm to be used with the key`
-	const publicKeyValidateFunctionDocString = `Validates the public key`
-	const publicKeyIsValidFunctionDocString = `TODO`
 
 	var members = []*Member{
 		NewPublicConstantFieldMember(
