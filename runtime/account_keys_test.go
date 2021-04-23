@@ -973,18 +973,9 @@ func TestPublicKey(t *testing.T) {
 	t.Parallel()
 
 	rt := NewInterpreterRuntime()
+	runtimeInterface := &testRuntimeInterface{}
 
-	runtimeInterface := &testRuntimeInterface{
-		validatePublicKey: func(publicKey *PublicKey) (bool, error) {
-			if len(publicKey.PublicKey) == 0 {
-				return false, nil
-			}
-
-			return true, nil
-		},
-	}
-
-	executeScript := func(code string) (cadence.Value, error) {
+	executeScript := func(code string, runtimeInterface Interface) (cadence.Value, error) {
 		return rt.ExecuteScript(
 			Script{
 				Source: []byte(code),
@@ -1008,7 +999,7 @@ func TestPublicKey(t *testing.T) {
 			}
 		`
 
-		value, err := executeScript(script)
+		value, err := executeScript(script, runtimeInterface)
 		require.NoError(t, err)
 
 		expected := cadence.Struct{
@@ -1037,8 +1028,19 @@ func TestPublicKey(t *testing.T) {
 			}
 		`
 
-		value, err := executeScript(script)
+		invoked := false
+
+		runtimeInterface := &testRuntimeInterface{
+			validatePublicKey: func(publicKey *PublicKey) (bool, error) {
+				invoked = true
+				return true, nil
+			},
+		}
+
+		value, err := executeScript(script, runtimeInterface)
 		require.NoError(t, err)
+
+		assert.True(t, invoked)
 		assert.Equal(t, cadence.Bool(true), value)
 	})
 
@@ -1053,9 +1055,19 @@ func TestPublicKey(t *testing.T) {
 				return publicKey.validate()
 			}
 		`
+		invoked := false
 
-		value, err := executeScript(script)
+		runtimeInterface := &testRuntimeInterface{
+			validatePublicKey: func(publicKey *PublicKey) (bool, error) {
+				invoked = true
+				return false, nil
+			},
+		}
+
+		value, err := executeScript(script, runtimeInterface)
 		require.NoError(t, err)
+
+		assert.True(t, invoked)
 		assert.Equal(t, cadence.Bool(false), value)
 	})
 }
