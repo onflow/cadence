@@ -1070,4 +1070,84 @@ func TestPublicKey(t *testing.T) {
 		assert.True(t, invoked)
 		assert.Equal(t, cadence.Bool(false), value)
 	})
+
+	t.Run("isValid func", func(t *testing.T) {
+		script := `
+			pub fun main(): Bool {
+				let publicKey =  PublicKey(
+					publicKey: "0102".decodeHex(),
+					signatureAlgorithm: SignatureAlgorithm.ECDSA_P256
+				)
+
+				return publicKey.isValid(
+					signature: [],
+					signedData: [],
+					domainSeparationTag: "something",
+					hashAlgorithm: HashAlgorithm.SHA2_256
+				)
+			}
+		`
+		invoked := false
+
+		runtimeInterface := &testRuntimeInterface{
+			verifySignature: func(
+				_ []byte,
+				_ string,
+				_ []byte,
+				_ []byte,
+				_ SignatureAlgorithm,
+				_ HashAlgorithm,
+			) (bool, error) {
+				invoked = true
+				return true, nil
+			},
+		}
+
+		value, err := executeScript(script, runtimeInterface)
+		require.NoError(t, err)
+
+		assert.True(t, invoked)
+		assert.Equal(t, cadence.Bool(true), value)
+	})
+
+	t.Run("isValid func - publicKey from host env", func(t *testing.T) {
+
+		storage := newTestAccountKeyStorage()
+		storage.keys = append(storage.keys, accountKeyA, accountKeyB)
+
+		script := `
+			pub fun main(): Bool {
+				// Get a public key from host env
+				let acc = getAccount(0x02)
+				let publicKey = acc.keys.get(keyIndex: 0)!.publicKey
+
+				return publicKey.isValid(
+					signature: [],
+					signedData: [],
+					domainSeparationTag: "something",
+					hashAlgorithm: HashAlgorithm.SHA2_256
+				)
+			}
+		`
+		invoked := false
+
+		runtimeInterface := getAccountKeyTestRuntimeInterface(storage)
+		runtimeInterface.verifySignature = func(
+			_ []byte,
+			_ string,
+			_ []byte,
+			_ []byte,
+			_ SignatureAlgorithm,
+			_ HashAlgorithm,
+		) (bool, error) {
+			invoked = true
+			return true, nil
+		}
+
+		value, err := executeScript(script, runtimeInterface)
+		require.NoError(t, err)
+
+		assert.True(t, invoked)
+		assert.Equal(t, cadence.Bool(true), value)
+	})
 }

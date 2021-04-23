@@ -160,7 +160,16 @@ type AccountHandlerFunc func(
 type UUIDHandlerFunc func() (uint64, error)
 
 // PublicKeyValidationHandlerFunc is a function that validates a given public key.
-type PublicKeyValidationHandlerFunc func(publicKey *CompositeValue) bool
+type PublicKeyValidationHandlerFunc func(publicKey *CompositeValue) BoolValue
+
+// SignatureValidationHandlerFunc is a function that validates a signature.
+type SignatureValidationHandlerFunc func(
+	signature *ArrayValue,
+	signedData *ArrayValue,
+	domainSeparationTag *StringValue,
+	hashAlgorithm *CompositeValue,
+	key *CompositeValue,
+) BoolValue
 
 // CompositeTypeCode contains the the "prepared" / "callable" "code"
 // for the functions and the destructor of a composite
@@ -238,6 +247,7 @@ type Interpreter struct {
 	accountHandler                 AccountHandlerFunc
 	uuidHandler                    UUIDHandlerFunc
 	PublicKeyValidationHandler     PublicKeyValidationHandlerFunc
+	SignatureValidationHandler     SignatureValidationHandlerFunc
 	interpreted                    bool
 	statement                      ast.Statement
 }
@@ -395,6 +405,16 @@ func WithPublicKeyValidationHandler(handler PublicKeyValidationHandlerFunc) Opti
 	}
 }
 
+// WithSignatureValidationHandler returns an interpreter option which sets the given
+// function as the function that is used to handle signature validation.
+//
+func WithSignatureValidationHandler(handler SignatureValidationHandlerFunc) Option {
+	return func(interpreter *Interpreter) error {
+		interpreter.SetSignatureValidationHandler(handler)
+		return nil
+	}
+}
+
 // WithAllInterpreters returns an interpreter option which sets
 // the given map of interpreters as the map of all interpreters.
 //
@@ -522,6 +542,12 @@ func (interpreter *Interpreter) SetUUIDHandler(function UUIDHandlerFunc) {
 //
 func (interpreter *Interpreter) SetPublicKeyValidationHandler(function PublicKeyValidationHandlerFunc) {
 	interpreter.PublicKeyValidationHandler = function
+}
+
+// SetSignatureValidationHandler sets the function that is used to handle signature validation.
+//
+func (interpreter *Interpreter) SetSignatureValidationHandler(function SignatureValidationHandlerFunc) {
+	interpreter.SignatureValidationHandler = function
 }
 
 // SetAllInterpreters sets the given map of interpreters as the map of all interpreters.
