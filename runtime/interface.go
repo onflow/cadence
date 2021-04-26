@@ -102,7 +102,7 @@ type Interface interface {
 		hashAlgorithm HashAlgorithm,
 	) (bool, error)
 	// Hash returns the digest of hashing the given data with using the given hash algorithm
-	Hash(data []byte, hashAlgorithm HashAlgorithm) ([]byte, error)
+	Hash(data []byte, tag string, hashAlgorithm HashAlgorithm) ([]byte, error)
 	// GetAccountBalance gets accounts default flow token balance.
 	GetAccountBalance(address common.Address) (value uint64, err error)
 	// GetAccountAvailableBalance gets accounts default flow token balance - balance that is reserved for storage.
@@ -278,6 +278,7 @@ func (i *emptyRuntimeInterface) VerifySignature(
 
 func (i *emptyRuntimeInterface) Hash(
 	_ []byte,
+	_ string,
 	_ HashAlgorithm,
 ) ([]byte, error) {
 	return nil, nil
