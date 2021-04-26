@@ -142,52 +142,139 @@ func TestRuntimeCrypto_hash(t *testing.T) {
 
 	runtime := NewInterpreterRuntime()
 
-	script := []byte(`
-      import Crypto
-
-      pub fun main() {
-          log(Crypto.hash("01020304".decodeHex(), algorithm: HashAlgorithm.SHA3_256))
-      }
-    `)
-
-	called := false
-
-	var loggedMessages []string
-
-	runtimeInterface := &testRuntimeInterface{
-		hash: func(
-			data []byte,
-			hashAlgorithm HashAlgorithm,
-		) ([]byte, error) {
-			called = true
-			assert.Equal(t, []byte{1, 2, 3, 4}, data)
-			assert.Equal(t, HashAlgorithmSHA3_256, hashAlgorithm)
-			return []byte{5, 6, 7, 8}, nil
-		},
-		log: func(message string) {
-			loggedMessages = append(loggedMessages, message)
-		},
+	executeScript := func(code string, inter Interface) (cadence.Value, error) {
+		return runtime.ExecuteScript(
+			Script{
+				Source: []byte(code),
+			},
+			Context{
+				Interface: inter,
+				Location:  utils.TestLocation,
+			},
+		)
 	}
 
-	_, err := runtime.ExecuteScript(
-		Script{
-			Source: script,
-		},
-		Context{
-			Interface: runtimeInterface,
-			Location:  utils.TestLocation,
-		},
-	)
-	require.NoError(t, err)
+	t.Run("hash", func(t *testing.T) {
+		script := `
+            import Crypto
 
-	assert.Equal(t,
-		[]string{
-			"[5, 6, 7, 8]",
-		},
-		loggedMessages,
-	)
+            pub fun main() {
+                log(Crypto.hash(data: "01020304".decodeHex(), algorithm: HashAlgorithm.SHA3_256))
+            }
+        `
 
-	assert.True(t, called)
+		called := false
+
+		var loggedMessages []string
+
+		runtimeInterface := &testRuntimeInterface{
+			hash: func(
+				data []byte,
+				tag string,
+				hashAlgorithm HashAlgorithm,
+			) ([]byte, error) {
+				called = true
+				assert.Equal(t, []byte{1, 2, 3, 4}, data)
+				assert.Equal(t, HashAlgorithmSHA3_256, hashAlgorithm)
+				return []byte{5, 6, 7, 8}, nil
+			},
+			log: func(message string) {
+				loggedMessages = append(loggedMessages, message)
+			},
+		}
+
+		_, err := executeScript(script, runtimeInterface)
+		require.NoError(t, err)
+
+		assert.Equal(t,
+			[]string{
+				"[5, 6, 7, 8]",
+			},
+			loggedMessages,
+		)
+
+		assert.True(t, called)
+	})
+
+	t.Run("hash - check tag", func(t *testing.T) {
+		script := `
+            import Crypto
+
+            pub fun main() {
+                Crypto.hash(
+                    data: "01020304".decodeHex(),
+                    algorithm: HashAlgorithm.SHA3_256
+                )
+            }
+        `
+
+		called := false
+		hashTag := "non-empty-string"
+
+		runtimeInterface := &testRuntimeInterface{
+			hash: func(data []byte, tag string, hashAlgorithm HashAlgorithm) ([]byte, error) {
+				called = true
+				hashTag = tag
+				return nil, nil
+			},
+		}
+
+		_, err := executeScript(script, runtimeInterface)
+		require.NoError(t, err)
+
+		assert.True(t, called)
+		assert.Empty(t, hashTag)
+	})
+
+	t.Run("hashWithTag - check tag", func(t *testing.T) {
+		script := `
+            import Crypto
+
+            pub fun main() {
+                Crypto.hashWithTag(
+                    data: "01020304".decodeHex(),
+                    tag: "some-tag",
+                    algorithm: HashAlgorithm.SHA3_256
+                )
+            }
+        `
+
+		called := false
+		hashTag := ""
+
+		runtimeInterface := &testRuntimeInterface{
+			hash: func(data []byte, tag string, hashAlgorithm HashAlgorithm) ([]byte, error) {
+				called = true
+				hashTag = tag
+				return nil, nil
+			},
+		}
+
+		_, err := executeScript(script, runtimeInterface)
+		require.NoError(t, err)
+
+		assert.True(t, called)
+		assert.Equal(t, "some-tag", hashTag)
+	})
+
+	t.Run("hashWithTag - without tag", func(t *testing.T) {
+		script := `
+            import Crypto
+
+            pub fun main() {
+                Crypto.hashWithTag(
+                    data: "01020304".decodeHex(),
+                    algorithm: HashAlgorithm.SHA3_256
+                )
+            }
+        `
+
+		runtimeInterface := &testRuntimeInterface{}
+
+		_, err := executeScript(script, runtimeInterface)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "incorrect number of arguments")
+	})
 }
 
 func TestHashingAlgorithms(t *testing.T) {
