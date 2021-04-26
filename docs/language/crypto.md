@@ -107,7 +107,10 @@ The API of the Crypto contract is:
 pub contract Crypto {
 
     // Hash the data using the given hashing algorithm and returns the hashed data.
-    pub fun hash(_ data: [UInt8], algorithm: HashAlgorithm): [UInt8]
+    pub fun hash(data: [UInt8], algorithm: HashAlgorithm): [UInt8]
+
+    // Hash the data using the given hashing algorithm and the tag. Returns the hashed data.
+    pub fun hashWithTag(data: [UInt8], tag: string, algorithm: HashAlgorithm): [UInt8]
 
     pub struct KeyListEntry {
         pub let keyIndex: Int
