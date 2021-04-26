@@ -106,10 +106,6 @@ The API of the Crypto contract is:
 ```cadence
 pub contract Crypto {
 
-    pub struct SignatureAlgorithm {
-        pub let name: String
-    }
-
     // Hash the data using the given hashing algorithm and returns the hashed data.
     pub fun hash(_ data: [UInt8], algorithm: HashAlgorithm): [UInt8]
 
