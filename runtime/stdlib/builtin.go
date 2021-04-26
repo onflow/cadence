@@ -161,13 +161,6 @@ var CreatePublicKeyFunction = NewStandardLibraryFunction(
 		publicKey := invocation.Arguments[0].(*interpreter.ArrayValue)
 		signAlgo := invocation.Arguments[1].(*interpreter.CompositeValue)
 
-		validateFunc := interpreter.NewHostFunctionValue(
-			func(invocation interpreter.Invocation) interpreter.Value {
-				publicKeyValue := invocation.Self
-				return invocation.Interpreter.PublicKeyValidationHandler(publicKeyValue)
-			},
-		)
-
 		verifyFunc := interpreter.NewHostFunctionValue(
 			func(invocation interpreter.Invocation) interpreter.Value {
 				signature := invocation.Arguments[0].(*interpreter.ArrayValue)
@@ -186,7 +179,9 @@ var CreatePublicKeyFunction = NewStandardLibraryFunction(
 			},
 		)
 
-		return interpreter.NewPublicKeyValue(publicKey, signAlgo, validateFunc, verifyFunc)
+		validationFunc := invocation.Interpreter.PublicKeyValidationHandler
+
+		return interpreter.NewPublicKeyValue(publicKey, signAlgo, validationFunc, verifyFunc)
 	},
 )
 

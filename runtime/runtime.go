@@ -2517,9 +2517,18 @@ func NewPublicKeyFromValue(publicKey *interpreter.CompositeValue) *PublicKey {
 
 	signAlgoRawValue := rawValue.(interpreter.UInt8Value)
 
+	// `valid` and `validated` fields
+	var valid, validated bool
+	validField, validated := publicKey.Fields.Get(sema.PublicKeyValidField)
+	if validated {
+		valid = bool(validField.(interpreter.BoolValue))
+	}
+
 	return &PublicKey{
 		PublicKey: byteArray,
 		SignAlgo:  SignatureAlgorithm(signAlgoRawValue.ToInt()),
+		Valid:     valid,
+		Validated: validated,
 	}
 }
 
@@ -2527,7 +2536,7 @@ func NewPublicKeyValue(publicKey *PublicKey, runtimeInterface Interface) *interp
 	return interpreter.NewPublicKeyValue(
 		interpreter.ByteSliceToByteArrayValue(publicKey.PublicKey),
 		interpreter.NewCryptoAlgorithmEnumCaseValue(sema.SignatureAlgorithmType, publicKey.SignAlgo.RawValue()),
-		newPublicKeyValidateFunction(runtimeInterface),
+		newPublicKeyValidationFunction(publicKey, runtimeInterface),
 		newPublicKeyVerifyFunction(runtimeInterface),
 	)
 }
@@ -2555,12 +2564,19 @@ func NewHashAlgorithmFromValue(value interpreter.Value) HashAlgorithm {
 	return HashAlgorithm(hashAlgoRawValue.ToInt())
 }
 
-func newPublicKeyValidateFunction(runtimeInterface Interface) interpreter.HostFunctionValue {
-	return interpreter.NewHostFunctionValue(
-		func(invocation interpreter.Invocation) interpreter.Value {
-			return validatePublicKey(invocation.Self, runtimeInterface)
-		},
-	)
+func newPublicKeyValidationFunction(
+	publicKey *PublicKey,
+	runtimeInterface Interface,
+) interpreter.PublicKeyValidationHandlerFunc {
+
+	return func(publicKeyValue *interpreter.CompositeValue) interpreter.BoolValue {
+		// If the public key is already validated, avoid re-validating, and return the cached result.
+		if publicKey.Validated {
+			return interpreter.BoolValue(publicKey.Valid)
+		}
+
+		return validatePublicKey(publicKeyValue, runtimeInterface)
+	}
 }
 
 func validatePublicKey(publicKeyValue *interpreter.CompositeValue, runtimeInterface Interface) interpreter.BoolValue {
