@@ -49,6 +49,7 @@ type CryptoSignatureVerifier interface {
 type CryptoHasher interface {
 	Hash(
 		data []byte,
+		tag string,
 		hashAlgorithm HashAlgorithm,
 	) ([]byte, error)
 }
@@ -209,9 +210,15 @@ func newCryptoContractHashFunction(hasher CryptoHasher) interpreter.FunctionValu
 				panic(fmt.Errorf("hash: invalid data argument: %w", err))
 			}
 
-			hashAlgorithm := getHashAlgorithmFromValue(invocation.Arguments[1])
+			tagStringValue, ok := invocation.Arguments[1].(*interpreter.StringValue)
+			if !ok {
+				panic(errors.New("hash: invalid tag argument: not a string"))
+			}
+			tag := tagStringValue.Str
 
-			digest, err := hasher.Hash(data, hashAlgorithm)
+			hashAlgorithm := getHashAlgorithmFromValue(invocation.Arguments[2])
+
+			digest, err := hasher.Hash(data, tag, hashAlgorithm)
 			if err != nil {
 				panic(err)
 

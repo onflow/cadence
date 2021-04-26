@@ -15,14 +15,19 @@ pub struct interface Hasher  {
 
     pub fun hash(
         data: [UInt8],
+        tag: String,
         algorithm: HashAlgorithm
     ): [UInt8]
 }
 
 pub contract Crypto {
 
-    pub fun hash(_ data: [UInt8], algorithm: HashAlgorithm): [UInt8] {
-        return self.hasher.hash(data: data, algorithm: algorithm)
+    pub fun hash(data: [UInt8], algorithm: HashAlgorithm): [UInt8] {
+        return self.hashWithTag(data: data, tag: "", algorithm: algorithm)
+    }
+
+    pub fun hashWithTag(data: [UInt8], tag: String, algorithm: HashAlgorithm): [UInt8] {
+        return self.hasher.hash(data: data, tag: tag, algorithm: algorithm)
     }
 
     pub struct KeyListEntry {
