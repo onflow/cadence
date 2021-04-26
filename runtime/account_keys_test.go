@@ -271,6 +271,8 @@ var accountKeyA = &AccountKey{
 	PublicKey: &PublicKey{
 		PublicKey: []byte{1, 2, 3},
 		SignAlgo:  sema.SignatureAlgorithmECDSA_P256,
+		Valid:     false,
+		Validated: true,
 	},
 	HashAlgo:  sema.HashAlgorithmSHA3_256,
 	Weight:    100,
@@ -282,6 +284,8 @@ var accountKeyB = &AccountKey{
 	PublicKey: &PublicKey{
 		PublicKey: []byte{4, 5, 6},
 		SignAlgo:  sema.SignatureAlgorithmECDSA_secp256k1,
+		Valid:     false,
+		Validated: false,
 	},
 	HashAlgo:  sema.HashAlgorithmSHA3_256,
 	Weight:    100,
@@ -796,6 +800,9 @@ func accountKeyExportedValue(
 
 					// Signature Algo
 					newSignAlgoValue(signAlgo),
+
+					// valid
+					cadence.Bool(false),
 				},
 			},
 
@@ -1010,13 +1017,16 @@ func TestPublicKey(t *testing.T) {
 
 				// Signature Algo
 				newSignAlgoValue(sema.SignatureAlgorithmECDSA_P256),
+
+				// valid
+				cadence.Bool(false),
 			},
 		}
 
 		assert.Equal(t, expected, value)
 	})
 
-	t.Run("Validate-success", func(t *testing.T) {
+	t.Run("Validate func", func(t *testing.T) {
 		script := `
 			pub fun main(): Bool {
 				let publicKey =  PublicKey(
@@ -1028,47 +1038,87 @@ func TestPublicKey(t *testing.T) {
 			}
 		`
 
-		invoked := false
-
 		runtimeInterface := &testRuntimeInterface{
 			validatePublicKey: func(publicKey *PublicKey) (bool, error) {
-				invoked = true
 				return true, nil
 			},
 		}
 
-		value, err := executeScript(script, runtimeInterface)
-		require.NoError(t, err)
-
-		assert.True(t, invoked)
-		assert.Equal(t, cadence.Bool(true), value)
+		_, err := executeScript(script, runtimeInterface)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "value of type `PublicKey` has no member `validate`")
 	})
 
-	t.Run("Validate-fail", func(t *testing.T) {
-		script := `
+	t.Run("valid field", func(t *testing.T) {
+		for _, validity := range []bool{true, false} {
+			script := `
 			pub fun main(): Bool {
 				let publicKey =  PublicKey(
-					publicKey: "".decodeHex(),
+					publicKey: "0102".decodeHex(),
 					signatureAlgorithm: SignatureAlgorithm.ECDSA_P256
 				)
 
-				return publicKey.validate()
+				return publicKey.valid
 			}
 		`
-		invoked := false
+			invoked := false
+			validateMethodReturnValue := validity
 
-		runtimeInterface := &testRuntimeInterface{
-			validatePublicKey: func(publicKey *PublicKey) (bool, error) {
-				invoked = true
-				return false, nil
-			},
+			runtimeInterface := &testRuntimeInterface{
+				validatePublicKey: func(publicKey *PublicKey) (bool, error) {
+					invoked = true
+					return validateMethodReturnValue, nil
+				},
+			}
+
+			value, err := executeScript(script, runtimeInterface)
+			require.NoError(t, err)
+
+			assert.True(t, invoked)
+			assert.Equal(t, cadence.Bool(validateMethodReturnValue), value)
+
 		}
+	})
 
-		value, err := executeScript(script, runtimeInterface)
-		require.NoError(t, err)
+	t.Run("valid - publicKey from host env", func(t *testing.T) {
 
-		assert.True(t, invoked)
-		assert.Equal(t, cadence.Bool(false), value)
+		storage := newTestAccountKeyStorage()
+		storage.keys = append(storage.keys, accountKeyA, accountKeyB)
+
+		for index, key := range storage.keys {
+			script := fmt.Sprintf(`
+				pub fun main(): Bool {
+					// Get a public key from host env
+					let acc = getAccount(0x02)
+					let publicKey = acc.keys.get(keyIndex: %d)!.publicKey
+					return publicKey.valid
+				}
+			`, index)
+
+			invoked := false
+			validateMethodReturnValue := true
+
+			runtimeInterface := getAccountKeyTestRuntimeInterface(storage)
+			runtimeInterface.validatePublicKey = func(publicKey *PublicKey) (bool, error) {
+				invoked = true
+				return validateMethodReturnValue, nil
+			}
+
+			value, err := executeScript(script, runtimeInterface)
+			require.NoError(t, err)
+
+			// If already validated, then the validation func shouldn't get re-invoked
+			assert.NotEqual(t, key.PublicKey.Validated, invoked)
+
+			// If validated, `isValid` should have the same value as `publicKey.Valid`.
+			// Otherwise, it should give the value returned by the `validate()` func.
+			isValid := validateMethodReturnValue
+			if key.PublicKey.Validated {
+				isValid = key.PublicKey.Valid
+			}
+
+			assert.Equal(t, cadence.Bool(isValid), value)
+		}
 	})
 
 	t.Run("Verify", func(t *testing.T) {

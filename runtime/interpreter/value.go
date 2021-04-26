@@ -8153,7 +8153,7 @@ func NewAccountKeyValue(
 func NewPublicKeyValue(
 	publicKey *ArrayValue,
 	signAlgo *CompositeValue,
-	validateFunction FunctionValue,
+	validationFunction PublicKeyValidationHandlerFunc,
 	verifyFunction FunctionValue,
 ) *CompositeValue {
 
@@ -8162,16 +8162,20 @@ func NewPublicKeyValue(
 	fields.Set(sema.PublicKeySignAlgoField, signAlgo)
 
 	functions := map[string]FunctionValue{
-		sema.PublicKeyValidateFunction: validateFunction,
-		sema.PublicKeyVerifyFunction:   verifyFunction,
+		sema.PublicKeyVerifyFunction: verifyFunction,
 	}
 
-	return &CompositeValue{
+	publicKeyValue := &CompositeValue{
 		QualifiedIdentifier: sema.PublicKeyType.QualifiedIdentifier(),
 		Kind:                sema.PublicKeyType.Kind,
 		Fields:              fields,
 		Functions:           functions,
 	}
+
+	// Validate the public key, and initialize 'valid' field.
+	publicKeyValue.Fields.Set(sema.PublicKeyValidField, validationFunction(publicKeyValue))
+
+	return publicKeyValue
 
 }
 
