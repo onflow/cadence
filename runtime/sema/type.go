@@ -5479,7 +5479,7 @@ const PublicKeyTypeName = "PublicKey"
 const PublicKeyPublicKeyField = "publicKey"
 const PublicKeySignAlgoField = "signatureAlgorithm"
 const PublicKeyValidateFunction = "validate"
-const PublicKeyIsValidFunction = "isValid"
+const PublicKeyVerifyFunction = "verify"
 
 const publicKeyKeyFieldDocString = `
 The public key
@@ -5493,7 +5493,7 @@ const publicKeyValidateFunctionDocString = `
 Validates the public key
 `
 
-const publicKeyIsValidFunctionDocString = `
+const publicKeyVerifyFunctionDocString = `
 Verifies a signature. Checks whether the signature was produced by signing
 the given tag and data, using this public key and the given hash algorithm
 `
@@ -5527,9 +5527,9 @@ var PublicKeyType = func() *CompositeType {
 		),
 		NewPublicFunctionMember(
 			publicKeyType,
-			PublicKeyIsValidFunction,
-			publicKeyIsValidFunctionType,
-			publicKeyIsValidFunctionDocString,
+			PublicKeyVerifyFunction,
+			publicKeyVerifyFunctionType,
+			publicKeyVerifyFunctionDocString,
 		),
 	}
 
@@ -5545,7 +5545,7 @@ var publicKeyValidateFunctionType = &FunctionType{
 	ReturnTypeAnnotation: NewTypeAnnotation(BoolType),
 }
 
-var publicKeyIsValidFunctionType = &FunctionType{
+var publicKeyVerifyFunctionType = &FunctionType{
 	TypeParameters: []*TypeParameter{},
 	Parameters: []*Parameter{
 		{
