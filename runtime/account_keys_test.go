@@ -271,7 +271,7 @@ var accountKeyA = &AccountKey{
 	PublicKey: &PublicKey{
 		PublicKey: []byte{1, 2, 3},
 		SignAlgo:  sema.SignatureAlgorithmECDSA_P256,
-		Valid:     false,
+		IsValid:   false,
 		Validated: true,
 	},
 	HashAlgo:  sema.HashAlgorithmSHA3_256,
@@ -284,7 +284,7 @@ var accountKeyB = &AccountKey{
 	PublicKey: &PublicKey{
 		PublicKey: []byte{4, 5, 6},
 		SignAlgo:  sema.SignatureAlgorithmECDSA_secp256k1,
-		Valid:     false,
+		IsValid:   false,
 		Validated: false,
 	},
 	HashAlgo:  sema.HashAlgorithmSHA3_256,
@@ -1049,7 +1049,7 @@ func TestPublicKey(t *testing.T) {
 		assert.Contains(t, err.Error(), "value of type `PublicKey` has no member `validate`")
 	})
 
-	t.Run("valid field", func(t *testing.T) {
+	t.Run("IsValid", func(t *testing.T) {
 		for _, validity := range []bool{true, false} {
 			script := `
 			pub fun main(): Bool {
@@ -1058,7 +1058,7 @@ func TestPublicKey(t *testing.T) {
 					signatureAlgorithm: SignatureAlgorithm.ECDSA_P256
 				)
 
-				return publicKey.valid
+				return publicKey.isValid
 			}
 		`
 			invoked := false
@@ -1080,7 +1080,7 @@ func TestPublicKey(t *testing.T) {
 		}
 	})
 
-	t.Run("valid - publicKey from host env", func(t *testing.T) {
+	t.Run("IsValid - publicKey from host env", func(t *testing.T) {
 
 		storage := newTestAccountKeyStorage()
 		storage.keys = append(storage.keys, accountKeyA, accountKeyB)
@@ -1091,7 +1091,7 @@ func TestPublicKey(t *testing.T) {
 					// Get a public key from host env
 					let acc = getAccount(0x02)
 					let publicKey = acc.keys.get(keyIndex: %d)!.publicKey
-					return publicKey.valid
+					return publicKey.isValid
 				}
 			`, index)
 
@@ -1110,11 +1110,11 @@ func TestPublicKey(t *testing.T) {
 			// If already validated, then the validation func shouldn't get re-invoked
 			assert.NotEqual(t, key.PublicKey.Validated, invoked)
 
-			// If validated, `isValid` should have the same value as `publicKey.Valid`.
+			// If validated, `isValid` should have the same value as `publicKey.IsValid`.
 			// Otherwise, it should give the value returned by the `validate()` func.
 			isValid := validateMethodReturnValue
 			if key.PublicKey.Validated {
-				isValid = key.PublicKey.Valid
+				isValid = key.PublicKey.IsValid
 			}
 
 			assert.Equal(t, cadence.Bool(isValid), value)
