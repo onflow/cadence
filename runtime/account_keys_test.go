@@ -1071,7 +1071,7 @@ func TestPublicKey(t *testing.T) {
 		assert.Equal(t, cadence.Bool(false), value)
 	})
 
-	t.Run("isValid func", func(t *testing.T) {
+	t.Run("Verify", func(t *testing.T) {
 		script := `
 			pub fun main(): Bool {
 				let publicKey =  PublicKey(
@@ -1079,7 +1079,7 @@ func TestPublicKey(t *testing.T) {
 					signatureAlgorithm: SignatureAlgorithm.ECDSA_P256
 				)
 
-				return publicKey.isValid(
+				return publicKey.verify(
 					signature: [],
 					signedData: [],
 					domainSeparationTag: "something",
@@ -1110,7 +1110,7 @@ func TestPublicKey(t *testing.T) {
 		assert.Equal(t, cadence.Bool(true), value)
 	})
 
-	t.Run("isValid func - publicKey from host env", func(t *testing.T) {
+	t.Run("Verify - publicKey from host env", func(t *testing.T) {
 
 		storage := newTestAccountKeyStorage()
 		storage.keys = append(storage.keys, accountKeyA, accountKeyB)
@@ -1121,7 +1121,7 @@ func TestPublicKey(t *testing.T) {
 				let acc = getAccount(0x02)
 				let publicKey = acc.keys.get(keyIndex: 0)!.publicKey
 
-				return publicKey.isValid(
+				return publicKey.verify(
 					signature: [],
 					signedData: [],
 					domainSeparationTag: "something",

@@ -2528,7 +2528,7 @@ func NewPublicKeyValue(publicKey *PublicKey, runtimeInterface Interface) *interp
 		interpreter.ByteSliceToByteArrayValue(publicKey.PublicKey),
 		interpreter.NewCryptoAlgorithmEnumCaseValue(sema.SignatureAlgorithmType, publicKey.SignAlgo.RawValue()),
 		newPublicKeyValidateFunction(runtimeInterface),
-		newPublicKeyIsValidFunction(runtimeInterface),
+		newPublicKeyVerifyFunction(runtimeInterface),
 	)
 }
 
@@ -2579,7 +2579,7 @@ func validatePublicKey(publicKeyValue *interpreter.CompositeValue, runtimeInterf
 	return interpreter.BoolValue(valid)
 }
 
-func newPublicKeyIsValidFunction(runtimeInterface Interface) interpreter.HostFunctionValue {
+func newPublicKeyVerifyFunction(runtimeInterface Interface) interpreter.HostFunctionValue {
 	return interpreter.NewHostFunctionValue(
 		func(invocation interpreter.Invocation) interpreter.Value {
 			signatureValue := invocation.Arguments[0].(*interpreter.ArrayValue)
