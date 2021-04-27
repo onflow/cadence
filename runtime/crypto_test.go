@@ -159,7 +159,7 @@ func TestRuntimeCrypto_hash(t *testing.T) {
             import Crypto
 
             pub fun main() {
-                log(Crypto.hash(data: "01020304".decodeHex(), algorithm: HashAlgorithm.SHA3_256))
+                log(Crypto.hash("01020304".decodeHex(), algorithm: HashAlgorithm.SHA3_256))
             }
         `
 
@@ -201,10 +201,7 @@ func TestRuntimeCrypto_hash(t *testing.T) {
             import Crypto
 
             pub fun main() {
-                Crypto.hash(
-                    data: "01020304".decodeHex(),
-                    algorithm: HashAlgorithm.SHA3_256
-                )
+                Crypto.hash("01020304".decodeHex(), algorithm: HashAlgorithm.SHA3_256)
             }
         `
 
@@ -232,7 +229,7 @@ func TestRuntimeCrypto_hash(t *testing.T) {
 
             pub fun main() {
                 Crypto.hashWithTag(
-                    data: "01020304".decodeHex(),
+                    "01020304".decodeHex(),
                     tag: "some-tag",
                     algorithm: HashAlgorithm.SHA3_256
                 )
