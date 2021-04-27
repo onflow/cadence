@@ -8172,8 +8172,8 @@ func NewPublicKeyValue(
 		Functions:           functions,
 	}
 
-	// Validate the public key, and initialize 'valid' field.
-	publicKeyValue.Fields.Set(sema.PublicKeyValidField, validationFunction(publicKeyValue))
+	// Validate the public key, and initialize 'isValid' field.
+	publicKeyValue.Fields.Set(sema.PublicKeyIsValidField, validationFunction(publicKeyValue))
 
 	return publicKeyValue
 

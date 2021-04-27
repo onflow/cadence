@@ -167,7 +167,7 @@ struct AccountKey {
 struct PublicKey {
     let publicKey: [UInt8]
     let signatureAlgorithm: SignatureAlgorithm
-    let valid: Bool
+    let isValid: Bool
 
     /// Verifies a signature. Checks whether the signature was produced by signing
     /// the given tag and data, using this public key and the given hash algorithm
