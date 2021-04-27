@@ -8154,7 +8154,7 @@ func NewPublicKeyValue(
 	publicKey *ArrayValue,
 	signAlgo *CompositeValue,
 	validateFunction FunctionValue,
-	isValidFunction FunctionValue,
+	verifyFunction FunctionValue,
 ) *CompositeValue {
 
 	fields := NewStringValueOrderedMap()
@@ -8163,7 +8163,7 @@ func NewPublicKeyValue(
 
 	functions := map[string]FunctionValue{
 		sema.PublicKeyValidateFunction: validateFunction,
-		sema.PublicKeyIsValidFunction:  isValidFunction,
+		sema.PublicKeyVerifyFunction:   verifyFunction,
 	}
 
 	return &CompositeValue{
