@@ -2143,6 +2143,7 @@ func (interpreter *Interpreter) NewSubInterpreter(
 		withTypeCodes(interpreter.typeCodes),
 		WithAccountHandlerFunc(interpreter.accountHandler),
 		WithPublicKeyValidationHandler(interpreter.PublicKeyValidationHandler),
+		WithSignatureValidationHandler(interpreter.SignatureValidationHandler),
 	}
 
 	return NewInterpreter(
