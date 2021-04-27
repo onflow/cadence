@@ -2519,7 +2519,7 @@ func NewPublicKeyFromValue(publicKey *interpreter.CompositeValue) *PublicKey {
 
 	// `valid` and `validated` fields
 	var valid, validated bool
-	validField, validated := publicKey.Fields.Get(sema.PublicKeyValidField)
+	validField, validated := publicKey.Fields.Get(sema.PublicKeyIsValidField)
 	if validated {
 		valid = bool(validField.(interpreter.BoolValue))
 	}
@@ -2527,7 +2527,7 @@ func NewPublicKeyFromValue(publicKey *interpreter.CompositeValue) *PublicKey {
 	return &PublicKey{
 		PublicKey: byteArray,
 		SignAlgo:  SignatureAlgorithm(signAlgoRawValue.ToInt()),
-		Valid:     valid,
+		IsValid:   valid,
 		Validated: validated,
 	}
 }
@@ -2572,7 +2572,7 @@ func newPublicKeyValidationFunction(
 	return func(publicKeyValue *interpreter.CompositeValue) interpreter.BoolValue {
 		// If the public key is already validated, avoid re-validating, and return the cached result.
 		if publicKey.Validated {
-			return interpreter.BoolValue(publicKey.Valid)
+			return interpreter.BoolValue(publicKey.IsValid)
 		}
 
 		return validatePublicKey(publicKeyValue, runtimeInterface)
