@@ -469,7 +469,15 @@ func (s *Server) checkAndPublishDiagnostics(
 		Diagnostics: diagnostics,
 	})
 
-	valid := len(diagnostics) == 0
+	valid := true
+
+	for _, diagnostic := range diagnostics {
+		if diagnostic.Severity == protocol.SeverityError {
+			valid = false
+			break
+		}
+	}
+
 	_ = conn.Notify(cadenceCheckCompletedMethodName, &CadenceCheckCompletedParams{
 		URI:   uri,
 		Valid: valid,
