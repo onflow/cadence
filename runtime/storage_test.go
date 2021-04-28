@@ -2057,3 +2057,87 @@ pub contract TopShot: NonFungibleToken {
 
 	require.Equal(t, 0, contractValueReads)
 }
+
+func TestRuntimeStorageUnlink(t *testing.T) {
+
+	runtime := NewInterpreterRuntime()
+
+	storage := newTestStorage(nil, nil)
+
+	signer := common.BytesToAddress([]byte{0x42})
+
+	runtimeInterface := &testRuntimeInterface{
+		storage: storage,
+		getSigningAccounts: func() ([]Address, error) {
+			return []Address{signer}, nil
+		},
+	}
+
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	// Store a value and link a capability
+
+	err := runtime.ExecuteTransaction(
+		Script{
+			Source: []byte(`
+              transaction {
+                  prepare(signer: AuthAccount) {
+                      signer.save(42, to: /storage/test)
+
+                      signer.link<&Int>(
+                          /public/test,
+                          target: /storage/test
+                      )
+
+                      assert(signer.getCapability<&Int>(/public/test).borrow() != nil)
+                  }
+              }
+			`),
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	// Unlink the capability
+
+	err = runtime.ExecuteTransaction(
+		Script{
+			Source: []byte(`
+            transaction {
+                prepare(signer: AuthAccount) {
+                    signer.unlink(/public/test)
+
+                    assert(signer.getCapability<&Int>(/public/test).borrow() == nil)
+                }
+            }
+            `),
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	// Get the capability after unlink
+
+	err = runtime.ExecuteTransaction(
+		Script{
+			Source: []byte(`
+              transaction {
+                  prepare(signer: AuthAccount) {
+                      assert(signer.getCapability<&Int>(/public/test).borrow() == nil)
+                  }
+              }
+            `),
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+}
