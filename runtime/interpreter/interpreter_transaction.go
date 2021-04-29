@@ -53,7 +53,7 @@ func (interpreter *Interpreter) declareTransactionEntryPoint(declaration *ast.Tr
 
 	self := &CompositeValue{
 		Location: interpreter.Location,
-		Fields:   NewStringValueOrderedMap(),
+		fields:   NewStringValueOrderedMap(),
 		modified: true,
 	}
 

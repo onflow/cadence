@@ -93,11 +93,13 @@ func testCompositeValue(t *testing.T, code string) *interpreter.Interpreter {
 		Location:            utils.TestLocation,
 		QualifiedIdentifier: fruitType.Identifier,
 		Kind:                common.CompositeKindStructure,
-		Fields:              interpreter.NewStringValueOrderedMap(),
 		ComputedFields:      interpreter.NewStringComputedFieldOrderedMap(),
 	}
 
-	value.Fields.Set("name", interpreter.NewStringValue("Apple"))
+	fields := interpreter.NewStringValueOrderedMap()
+	fields.Set("name", interpreter.NewStringValue("Apple"))
+	value = value.WithFields(fields)
+
 	value.ComputedFields.Set("color", func(*interpreter.Interpreter) interpreter.Value {
 		return interpreter.NewStringValue("Red")
 	})

@@ -79,26 +79,29 @@ func TestInterpretVirtualImport(t *testing.T) {
 							location,
 						)
 
+						value := &interpreter.CompositeValue{
+							Location:            location,
+							QualifiedIdentifier: "Foo",
+							Kind:                common.CompositeKindContract,
+							Functions: map[string]interpreter.FunctionValue{
+								"bar": interpreter.NewHostFunctionValue(
+									func(invocation interpreter.Invocation) interpreter.Value {
+										return interpreter.UInt64Value(42)
+									},
+								),
+							},
+						}
+
+						value = value.WithFields(interpreter.NewStringValueOrderedMap())
+
 						return interpreter.VirtualImport{
 							Globals: []struct {
 								Name  string
 								Value interpreter.Value
 							}{
 								{
-									Name: "Foo",
-									Value: &interpreter.CompositeValue{
-										Location:            location,
-										QualifiedIdentifier: "Foo",
-										Kind:                common.CompositeKindContract,
-										Fields:              interpreter.NewStringValueOrderedMap(),
-										Functions: map[string]interpreter.FunctionValue{
-											"bar": interpreter.NewHostFunctionValue(
-												func(invocation interpreter.Invocation) interpreter.Value {
-													return interpreter.UInt64Value(42)
-												},
-											),
-										},
-									},
+									Name:  "Foo",
+									Value: value,
 								},
 							},
 						}
