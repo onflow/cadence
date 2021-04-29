@@ -1296,7 +1296,7 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 			value := &CompositeValue{
 				location:            location,
 				qualifiedIdentifier: qualifiedIdentifier,
-				Kind:                declaration.CompositeKind,
+				kind:                declaration.CompositeKind,
 				fields:              fields,
 				InjectedFields:      injectedFields,
 				Functions:           functions,
@@ -1392,7 +1392,7 @@ func (interpreter *Interpreter) declareEnumConstructor(
 		caseValue := &CompositeValue{
 			location:            location,
 			qualifiedIdentifier: qualifiedIdentifier,
-			Kind:                declaration.CompositeKind,
+			kind:                declaration.CompositeKind,
 			fields:              caseValueFields,
 			// NOTE: new value has no owner
 			Owner:    nil,

@@ -6049,21 +6049,23 @@ func (v UFix64Value) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicTy
 // CompositeValue
 
 type CompositeValue struct {
+	// Storable properties
 	location            common.Location
 	qualifiedIdentifier string
-	Kind                common.CompositeKind
+	kind                common.CompositeKind
 	fields              *StringValueOrderedMap
-	InjectedFields      *StringValueOrderedMap
-	ComputedFields      *StringComputedFieldOrderedMap
-	NestedVariables     *StringVariableOrderedMap
-	Functions           map[string]FunctionValue
-	Destructor          FunctionValue
-	Owner               *common.Address
-	destroyed           bool
-	modified            bool
-	stringer            func() string
 
-	// Key the meta info and field content separately
+	InjectedFields  *StringValueOrderedMap
+	ComputedFields  *StringComputedFieldOrderedMap
+	NestedVariables *StringVariableOrderedMap
+	Functions       map[string]FunctionValue
+	Destructor      FunctionValue
+	Owner           *common.Address
+	destroyed       bool
+	modified        bool
+	stringer        func() string
+
+	// Raw-content cache for decoded values. Maintains the meta info and field content separately.
 	metaContent  []byte
 	fieldContent []byte
 }
@@ -6085,7 +6087,7 @@ func NewCompositeValue(
 	return &CompositeValue{
 		location:            location,
 		qualifiedIdentifier: qualifiedIdentifier,
-		Kind:                kind,
+		kind:                kind,
 		fields:              fields,
 		Owner:               owner,
 		modified:            true,
@@ -6163,7 +6165,7 @@ func (v *CompositeValue) Copy() Value {
 	v.loadMeta()
 
 	// Resources and contracts are not copied
-	switch v.Kind {
+	switch v.kind {
 	case common.CompositeKindResource, common.CompositeKindContract:
 		return v
 
@@ -6183,7 +6185,7 @@ func (v *CompositeValue) Copy() Value {
 	return &CompositeValue{
 		location:            v.location,
 		qualifiedIdentifier: v.qualifiedIdentifier,
-		Kind:                v.Kind,
+		kind:                v.kind,
 		fields:              newFields,
 		InjectedFields:      v.InjectedFields,
 		ComputedFields:      v.ComputedFields,
@@ -6202,7 +6204,7 @@ func (v *CompositeValue) Copy() Value {
 func (v *CompositeValue) checkStatus(getLocationRange func() LocationRange) {
 	if v.destroyed {
 		panic(DestroyedCompositeError{
-			CompositeKind: v.Kind,
+			CompositeKind: v.kind,
 			LocationRange: getLocationRange(),
 		})
 	}
@@ -6266,7 +6268,7 @@ func (v *CompositeValue) GetMember(interpreter *Interpreter, getLocationRange fu
 	v.loadMeta()
 	v.checkStatus(getLocationRange)
 
-	if v.Kind == common.CompositeKindResource &&
+	if v.kind == common.CompositeKindResource &&
 		name == sema.ResourceOwnerFieldName {
 
 		return v.OwnerValue(interpreter)
@@ -6304,7 +6306,7 @@ func (v *CompositeValue) GetMember(interpreter *Interpreter, getLocationRange fu
 			interpreter,
 			v.location,
 			v.qualifiedIdentifier,
-			v.Kind,
+			v.kind,
 		)
 	}
 
@@ -6438,7 +6440,7 @@ func (v *CompositeValue) Equal(other Value, interpreter *Interpreter, loadDeferr
 	otherFields := otherComposite.Fields()
 
 	if !v.StaticType().Equal(otherComposite.StaticType()) ||
-		v.Kind != otherComposite.Kind ||
+		v.kind != otherComposite.kind ||
 		v.fields.Len() != otherFields.Len() {
 
 		return false
@@ -6466,7 +6468,7 @@ func (v *CompositeValue) KeyString() string {
 	v.loadMeta()
 	v.loadFields()
 
-	if v.Kind == common.CompositeKindEnum {
+	if v.kind == common.CompositeKindEnum {
 		rawValue, _ := v.fields.Get(sema.EnumRawValueFieldName)
 		return rawValue.String()
 	}
@@ -6501,7 +6503,7 @@ func (v *CompositeValue) ConformsToDynamicType(
 
 	v.loadMeta()
 
-	if v.Kind != compositeType.Kind ||
+	if v.kind != compositeType.Kind ||
 		v.qualifiedIdentifier != compositeType.QualifiedIdentifier() ||
 		v.location.ID() != compositeType.Location.ID() {
 
@@ -6555,6 +6557,11 @@ func (v *CompositeValue) Location() common.Location {
 func (v *CompositeValue) QualifiedIdentifier() string {
 	v.loadMeta()
 	return v.qualifiedIdentifier
+}
+
+func (v *CompositeValue) Kind() common.CompositeKind {
+	v.loadMeta()
+	return v.kind
 }
 
 // Ensures the fields of this composite value are loaded.
@@ -7843,7 +7850,7 @@ func NewAuthAccountValue(
 
 	return &CompositeValue{
 		qualifiedIdentifier: sema.AuthAccountType.QualifiedIdentifier(),
-		Kind:                sema.AuthAccountType.Kind,
+		kind:                sema.AuthAccountType.Kind,
 		fields:              fields,
 		ComputedFields:      computedFields,
 		stringer:            stringer,
@@ -7927,7 +7934,7 @@ func NewPublicAccountValue(
 
 	return &CompositeValue{
 		qualifiedIdentifier: sema.PublicAccountType.QualifiedIdentifier(),
-		Kind:                sema.PublicAccountType.Kind,
+		kind:                sema.PublicAccountType.Kind,
 		fields:              fields,
 		ComputedFields:      computedFields,
 		stringer:            stringer,
@@ -8243,7 +8250,7 @@ func NewAccountKeyValue(
 
 	return &CompositeValue{
 		qualifiedIdentifier: sema.AccountKeyType.QualifiedIdentifier(),
-		Kind:                sema.AccountKeyType.Kind,
+		kind:                sema.AccountKeyType.Kind,
 		fields:              fields,
 	}
 }
@@ -8266,7 +8273,7 @@ func NewPublicKeyValue(
 
 	publicKeyValue := &CompositeValue{
 		qualifiedIdentifier: sema.PublicKeyType.QualifiedIdentifier(),
-		Kind:                sema.PublicKeyType.Kind,
+		kind:                sema.PublicKeyType.Kind,
 		fields:              fields,
 		Functions:           functions,
 	}
@@ -8287,7 +8294,7 @@ func NewAuthAccountKeysValue(addFunction FunctionValue, getFunction FunctionValu
 
 	return &CompositeValue{
 		qualifiedIdentifier: sema.AuthAccountKeysType.QualifiedIdentifier(),
-		Kind:                sema.AuthAccountKeysType.Kind,
+		kind:                sema.AuthAccountKeysType.Kind,
 		fields:              fields,
 	}
 }
@@ -8299,7 +8306,7 @@ func NewPublicAccountKeysValue(getFunction FunctionValue) *CompositeValue {
 
 	return &CompositeValue{
 		qualifiedIdentifier: sema.PublicAccountKeysType.QualifiedIdentifier(),
-		Kind:                sema.PublicAccountKeysType.Kind,
+		kind:                sema.PublicAccountKeysType.Kind,
 		fields:              fields,
 	}
 }
@@ -8310,7 +8317,7 @@ func NewCryptoAlgorithmEnumCaseValue(enumType *sema.CompositeType, rawValue uint
 
 	return &CompositeValue{
 		qualifiedIdentifier: enumType.QualifiedIdentifier(),
-		Kind:                enumType.Kind,
+		kind:                enumType.Kind,
 		fields:              fields,
 	}
 }
