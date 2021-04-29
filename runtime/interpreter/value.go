@@ -6049,7 +6049,7 @@ func (v UFix64Value) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicTy
 // CompositeValue
 
 type CompositeValue struct {
-	Location            common.Location
+	location            common.Location
 	QualifiedIdentifier string
 	Kind                common.CompositeKind
 	fields              *StringValueOrderedMap
@@ -6062,28 +6062,10 @@ type CompositeValue struct {
 	destroyed           bool
 	modified            bool
 	stringer            func() string
-	rawContent          []byte
-}
 
-func (v *CompositeValue) Fields() *StringValueOrderedMap {
-	v.ensureLoaded()
-	return v.fields
-}
-
-func (v *CompositeValue) WithFields(fields *StringValueOrderedMap) *CompositeValue {
-	v.fields = fields
-	return v
-}
-
-func (v *CompositeValue) ensureLoaded() {
-	if v.rawContent == nil {
-		return
-	}
-
-	// TODO: otherwise decode
-
-	// Clear the byte cache
-	v.rawContent = nil
+	// Key the meta info and field content separately
+	metaContent  []byte
+	fieldContent []byte
 }
 
 type ComputedField func(*Interpreter) Value
@@ -6100,7 +6082,7 @@ func NewCompositeValue(
 		fields = NewStringValueOrderedMap()
 	}
 	return &CompositeValue{
-		Location:            location,
+		location:            location,
 		QualifiedIdentifier: qualifiedIdentifier,
 		Kind:                kind,
 		fields:              fields,
@@ -6109,13 +6091,15 @@ func NewCompositeValue(
 	}
 }
 
-func NewDeferredCompositeValue(content []byte) *CompositeValue {
+func NewDeferredCompositeValue(fieldContent, metaContent []byte) *CompositeValue {
 	return &CompositeValue{
-		rawContent: content,
+		fieldContent: fieldContent,
+		metaContent:  metaContent,
 	}
 }
 
 func (v *CompositeValue) Destroy(interpreter *Interpreter, getLocationRange func() LocationRange) {
+	v.loadMeta()
 
 	interpreter = v.getInterpreter(interpreter)
 
@@ -6145,33 +6129,37 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, getLocationRange func
 func (*CompositeValue) IsValue() {}
 
 func (v *CompositeValue) Accept(interpreter *Interpreter, visitor Visitor) {
-	v.ensureLoaded()
 	descend := visitor.VisitCompositeValue(interpreter, v)
 	if !descend {
 		return
 	}
 
+	v.loadFields()
 	v.fields.Foreach(func(_ string, value Value) {
 		value.Accept(interpreter, visitor)
 	})
 }
 
 func (v *CompositeValue) DynamicType(interpreter *Interpreter, _ DynamicTypeResults) DynamicType {
-	staticType := interpreter.getCompositeType(v.Location, v.QualifiedIdentifier)
+	v.loadMeta()
+
+	staticType := interpreter.getCompositeType(v.location, v.QualifiedIdentifier)
 	return CompositeDynamicType{
 		StaticType: staticType,
 	}
 }
 
 func (v *CompositeValue) StaticType() StaticType {
+	v.loadMeta()
+
 	return CompositeStaticType{
-		Location:            v.Location,
+		Location:            v.location,
 		QualifiedIdentifier: v.QualifiedIdentifier,
 	}
 }
 
 func (v *CompositeValue) Copy() Value {
-	v.ensureLoaded()
+	v.loadMeta()
 
 	// Resources and contracts are not copied
 	switch v.Kind {
@@ -6182,6 +6170,8 @@ func (v *CompositeValue) Copy() Value {
 		break
 	}
 
+	v.loadFields()
+
 	newFields := NewStringValueOrderedMap()
 	v.fields.Foreach(func(fieldName string, value Value) {
 		newFields.Set(fieldName, value.Copy())
@@ -6190,7 +6180,7 @@ func (v *CompositeValue) Copy() Value {
 	// NOTE: not copying functions or destructor – they are linked in
 
 	return &CompositeValue{
-		Location:            v.Location,
+		location:            v.location,
 		QualifiedIdentifier: v.QualifiedIdentifier,
 		Kind:                v.Kind,
 		fields:              newFields,
@@ -6206,8 +6196,8 @@ func (v *CompositeValue) Copy() Value {
 	}
 }
 
-// NOTE: This method is assumed to be used for local uses only, and doesnt ensure the value is loaded.
-// Make sure to call `v.ensureLoaded()` before calling this method.
+// NOTE: This method is assumed to be used for local uses only, and doesnt ensure the meta-info
+// of the value is loaded. Make sure to call `v.loadMeta()` before calling this method.
 func (v *CompositeValue) checkStatus(getLocationRange func() LocationRange) {
 	if v.destroyed {
 		panic(DestroyedCompositeError{
@@ -6222,7 +6212,7 @@ func (v *CompositeValue) GetOwner() *common.Address {
 }
 
 func (v *CompositeValue) SetOwner(owner *common.Address) {
-	v.ensureLoaded()
+	v.loadFields()
 
 	if v.Owner == owner {
 		return
@@ -6240,7 +6230,7 @@ func (v *CompositeValue) IsModified() bool {
 		return true
 	}
 
-	v.ensureLoaded()
+	v.loadFields()
 
 	for pair := v.fields.Oldest(); pair != nil; pair = pair.Next() {
 		if pair.Value.IsModified() {
@@ -6272,7 +6262,7 @@ func (v *CompositeValue) SetModified(modified bool) {
 }
 
 func (v *CompositeValue) GetMember(interpreter *Interpreter, getLocationRange func() LocationRange, name string) Value {
-	v.ensureLoaded()
+	v.loadMeta()
 	v.checkStatus(getLocationRange)
 
 	if v.Kind == common.CompositeKindResource &&
@@ -6280,6 +6270,8 @@ func (v *CompositeValue) GetMember(interpreter *Interpreter, getLocationRange fu
 
 		return v.OwnerValue(interpreter)
 	}
+
+	v.loadFields()
 
 	value, ok := v.fields.Get(name)
 	if ok {
@@ -6309,7 +6301,7 @@ func (v *CompositeValue) GetMember(interpreter *Interpreter, getLocationRange fu
 	if v.InjectedFields == nil && interpreter.injectedCompositeFieldsHandler != nil {
 		v.InjectedFields = interpreter.injectedCompositeFieldsHandler(
 			interpreter,
-			v.Location,
+			v.location,
 			v.QualifiedIdentifier,
 			v.Kind,
 		)
@@ -6333,19 +6325,21 @@ func (v *CompositeValue) GetMember(interpreter *Interpreter, getLocationRange fu
 	return nil
 }
 
+// NOTE: This method is assumed to be used for local uses only, and doesnt ensure the meta-info
+// of the value is loaded. Make sure to call `v.loadMeta()` before calling this method.
 func (v *CompositeValue) getInterpreter(interpreter *Interpreter) *Interpreter {
 
 	// Get the correct interpreter. The program code might need to be loaded.
 	// NOTE: standard library values have no location
 
-	if v.Location == nil || common.LocationsMatch(interpreter.Location, v.Location) {
+	if v.location == nil || common.LocationsMatch(interpreter.Location, v.location) {
 		return interpreter
 	}
 
 	return interpreter.ensureLoaded(
-		v.Location,
+		v.location,
 		func() Import {
-			return interpreter.importLocationHandler(interpreter, v.Location)
+			return interpreter.importLocationHandler(interpreter, v.location)
 		},
 	)
 }
@@ -6383,7 +6377,9 @@ func (v *CompositeValue) OwnerValue(interpreter *Interpreter) OptionalValue {
 }
 
 func (v *CompositeValue) SetMember(_ *Interpreter, getLocationRange func() LocationRange, name string, value Value) {
-	v.ensureLoaded()
+	v.loadMeta()
+	v.loadFields()
+
 	v.checkStatus(getLocationRange)
 
 	v.modified = true
@@ -6398,7 +6394,7 @@ func (v *CompositeValue) String() string {
 		return v.stringer()
 	}
 
-	v.ensureLoaded()
+	v.loadFields()
 	return formatComposite(string(v.TypeID()), v.fields)
 }
 
@@ -6424,7 +6420,7 @@ func formatComposite(typeId string, fields *StringValueOrderedMap) string {
 }
 
 func (v *CompositeValue) GetField(name string) Value {
-	v.ensureLoaded()
+	v.loadFields()
 	value, _ := v.fields.Get(name)
 	return value
 }
@@ -6435,7 +6431,8 @@ func (v *CompositeValue) Equal(other Value, interpreter *Interpreter, loadDeferr
 		return false
 	}
 
-	v.ensureLoaded()
+	v.loadMeta()
+	v.loadFields()
 
 	otherFields := otherComposite.Fields()
 
@@ -6465,7 +6462,8 @@ func (v *CompositeValue) Equal(other Value, interpreter *Interpreter, loadDeferr
 }
 
 func (v *CompositeValue) KeyString() string {
-	v.ensureLoaded()
+	v.loadMeta()
+	v.loadFields()
 
 	if v.Kind == common.CompositeKindEnum {
 		rawValue, _ := v.fields.Get(sema.EnumRawValueFieldName)
@@ -6476,11 +6474,13 @@ func (v *CompositeValue) KeyString() string {
 }
 
 func (v *CompositeValue) TypeID() common.TypeID {
-	if v.Location == nil {
+	v.loadMeta()
+
+	if v.location == nil {
 		return common.TypeID(v.QualifiedIdentifier)
 	}
 
-	return v.Location.TypeID(v.QualifiedIdentifier)
+	return v.location.TypeID(v.QualifiedIdentifier)
 }
 
 func (v *CompositeValue) ConformsToDynamicType(
@@ -6498,13 +6498,16 @@ func (v *CompositeValue) ConformsToDynamicType(
 		return false
 	}
 
-	v.ensureLoaded()
+	v.loadMeta()
+
 	if v.Kind != compositeType.Kind ||
 		v.QualifiedIdentifier != compositeType.QualifiedIdentifier() ||
-		v.Location.ID() != compositeType.Location.ID() {
+		v.location.ID() != compositeType.Location.ID() {
 
 		return false
 	}
+
+	v.loadFields()
 
 	// Here it is assumed that imported values can only have static fields values,
 	// but not computed field values.
@@ -6536,6 +6539,50 @@ func (v *CompositeValue) ConformsToDynamicType(
 	}
 
 	return true
+}
+
+func (v *CompositeValue) Fields() *StringValueOrderedMap {
+	v.loadFields()
+	return v.fields
+}
+
+func (v *CompositeValue) Location() common.Location {
+	v.loadMeta()
+	return v.location
+}
+
+func (v *CompositeValue) WithFields(fields *StringValueOrderedMap) *CompositeValue {
+	v.fields = fields
+	return v
+}
+
+// Ensures the fields of this composite value are loaded.
+func (v *CompositeValue) loadFields() {
+	if v.fieldContent == nil {
+		return
+	}
+
+	// TODO: otherwise decode
+
+	// Clear the byte cache
+	v.fieldContent = nil
+}
+
+// Ensures the meta information about the composite value is loaded.
+// Meta info includes:
+//  - location
+//	- qualifiedIdentifier
+//	- kind
+//
+func (v *CompositeValue) loadMeta() {
+	if v.metaContent == nil {
+		return
+	}
+
+	// TODO: otherwise decode
+
+	// Clear the byte cache
+	v.metaContent = nil
 }
 
 // DictionaryValue

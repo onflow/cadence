@@ -80,7 +80,7 @@ func TestInterpretVirtualImport(t *testing.T) {
 						)
 
 						value := &interpreter.CompositeValue{
-							Location:            location,
+							location:            location,
 							QualifiedIdentifier: "Foo",
 							Kind:                common.CompositeKindContract,
 							Functions: map[string]interpreter.FunctionValue{

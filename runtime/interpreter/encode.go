@@ -979,7 +979,7 @@ func (e *Encoder) encodeCompositeValue(
 	}
 
 	// Encode location at array index encodedCompositeValueLocationFieldKey
-	err = e.encodeLocation(v.Location)
+	err = e.encodeLocation(v.location)
 	if err != nil {
 		return err
 	}
