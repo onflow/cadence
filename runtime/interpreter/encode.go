@@ -241,10 +241,6 @@ func EncodeValue(value Value, path []string, deferred bool, prepareCallback Enco
 	}
 
 	data := w.Bytes()
-	err = decMode.Valid(data)
-	if err != nil {
-		return nil, nil, fmt.Errorf("encoder produced invalid data: %w", err)
-	}
 
 	return data, deferrals, nil
 }
