@@ -24,6 +24,7 @@ import (
 	"io"
 	"math"
 	"math/big"
+	"math/bits"
 	"strconv"
 	"strings"
 
@@ -45,6 +46,9 @@ type DecoderV4 struct {
 	version        uint16
 	decodeCallback DecodingCallback
 }
+
+// maxInt is math.MaxInt32 or math.MaxInt64 depending on arch.
+const maxInt = 1<<(bits.UintSize-1) - 1
 
 // DecodeValue returns a value decoded from its CBOR-encoded representation,
 // for the given owner (can be `nil`).  It can decode storage format
@@ -104,9 +108,9 @@ func NewDecoder(
 var decMode = func() cbor.DecMode {
 	decMode, err := cbor.DecOptions{
 		IntDec:           cbor.IntDecConvertNone,
-		MaxArrayElements: 512 * 1024,
-		MaxMapPairs:      512 * 1024,
-		MaxNestedLevels:  256,
+		MaxArrayElements: maxInt,
+		MaxMapPairs:      maxInt,
+		MaxNestedLevels:  math.MaxInt16,
 	}.DecMode()
 	if err != nil {
 		panic(err)
