@@ -63,7 +63,7 @@ func TestInterpretEnumCaseUse(t *testing.T) {
 
 	assert.Equal(t,
 		common.CompositeKindEnum,
-		a.(*interpreter.CompositeValue).Kind,
+		a.(*interpreter.CompositeValue).Kind(),
 	)
 
 	b := inter.Globals["b"].GetValue()
@@ -74,7 +74,7 @@ func TestInterpretEnumCaseUse(t *testing.T) {
 
 	assert.Equal(t,
 		common.CompositeKindEnum,
-		b.(*interpreter.CompositeValue).Kind,
+		b.(*interpreter.CompositeValue).Kind(),
 	)
 }
 

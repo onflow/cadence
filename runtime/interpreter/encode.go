@@ -864,7 +864,7 @@ func (e *Encoder) encodeDictionaryValue(
 
 		for pair := v.Entries.Oldest(); pair != nil; pair = pair.Next() {
 			compositeValue, ok := pair.Value.(*CompositeValue)
-			if !ok || compositeValue.Kind != common.CompositeKindResource {
+			if !ok || compositeValue.Kind() != common.CompositeKindResource {
 				deferred = false
 				break
 			}
@@ -1003,7 +1003,7 @@ func (e *Encoder) encodeCompositeValue(
 	}
 
 	// Encode kind at array index encodedCompositeValueKindFieldKey
-	err = e.enc.EncodeUint(uint(v.Kind))
+	err = e.enc.EncodeUint(uint(v.kind))
 	if err != nil {
 		return err
 	}
