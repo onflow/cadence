@@ -2182,12 +2182,31 @@ func TestRuntimeStorageSaveCapability(t *testing.T) {
 		common.PathDomainPublic,
 	} {
 
-		for typeDescription, typeArgument := range map[string]string{
+		for typeDescription, ty := range map[string]string{
 			"Untyped": "",
-			"Typed":   "<&Int>",
+			"Typed":   "&Int",
 		} {
 
 			t.Run(fmt.Sprintf("%s %s", domain.Identifier(), typeDescription), func(t *testing.T) {
+
+				storagePath := cadence.Path{
+					Domain: "storage",
+					Identifier: fmt.Sprintf(
+						"test%s%s",
+						typeDescription,
+						domain.Identifier(),
+					),
+				}
+
+				context := Context{
+					Interface: runtimeInterface,
+					Location:  nextTransactionLocation(),
+				}
+
+				var typeArgument string
+				if len(ty) > 0 {
+					typeArgument = fmt.Sprintf("<%s>", ty)
+				}
 
 				err := runtime.ExecuteTransaction(
 					Script{
@@ -2195,23 +2214,36 @@ func TestRuntimeStorageSaveCapability(t *testing.T) {
 							`
                               transaction {
                                   prepare(signer: AuthAccount) {
-                                      let cap = signer.getCapability%[1]s(/%[2]s/test)
-                                      signer.save(cap, to: /storage/test%[3]s%[2]s)
+                                      let cap = signer.getCapability%s(/%s/test)
+                                      signer.save(cap, to: %s)
                                   }
                               }
 			                `,
 							typeArgument,
 							domain.Identifier(),
-							typeDescription,
+							storagePath,
 						)),
 					},
-					Context{
-						Interface: runtimeInterface,
-						Location:  nextTransactionLocation(),
-					},
+					context,
 				)
 				require.NoError(t, err)
 
+				value, err := runtime.ReadStored(signer, storagePath, context)
+				require.NoError(t, err)
+
+				require.Equal(t,
+					cadence.Optional{
+						Value: cadence.Capability{
+							Path: cadence.Path{
+								Domain:     domain.Identifier(),
+								Identifier: "test",
+							},
+							Address:    cadence.Address(signer),
+							BorrowType: ty,
+						},
+					},
+					value,
+				)
 			})
 		}
 	}
