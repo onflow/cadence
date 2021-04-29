@@ -1206,7 +1206,7 @@ func (r *interpreterRuntime) newCreateAccountFunction(
 
 		payer := invocation.Arguments[0].(*interpreter.CompositeValue)
 
-		if payer.QualifiedIdentifier != sema.AuthAccountType.QualifiedIdentifier() {
+		if payer.QualifiedIdentifier() != sema.AuthAccountType.QualifiedIdentifier() {
 			panic(fmt.Sprintf(
 				"%[1]s requires the first argument (payer) to be an %[1]s",
 				sema.AuthAccountType,

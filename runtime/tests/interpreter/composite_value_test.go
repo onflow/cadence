@@ -89,23 +89,24 @@ func testCompositeValue(t *testing.T, code string) *interpreter.Interpreter {
 		"This is the color",
 	))
 
-	value := &interpreter.CompositeValue{
-		location:            utils.TestLocation,
-		QualifiedIdentifier: fruitType.Identifier,
-		Kind:                common.CompositeKindStructure,
-		ComputedFields:      interpreter.NewStringComputedFieldOrderedMap(),
-	}
-
 	fields := interpreter.NewStringValueOrderedMap()
 	fields.Set("name", interpreter.NewStringValue("Apple"))
-	value = value.WithFields(fields)
 
+	value := interpreter.NewCompositeValue(
+		utils.TestLocation,
+		fruitType.Identifier,
+		common.CompositeKindStructure,
+		fields,
+		nil,
+	)
+
+	value.ComputedFields = interpreter.NewStringComputedFieldOrderedMap()
 	value.ComputedFields.Set("color", func(*interpreter.Interpreter) interpreter.Value {
 		return interpreter.NewStringValue("Red")
 	})
 
 	customStructValue := stdlib.StandardLibraryValue{
-		Name:  value.QualifiedIdentifier,
+		Name:  value.QualifiedIdentifier(),
 		Type:  fruitType,
 		Value: value,
 		Kind:  common.DeclarationKindConstant,
