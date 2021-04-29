@@ -308,6 +308,11 @@ func (s *Server) Stop() error {
 	return s.protocolServer.Stop()
 }
 
+func (s *Server) checkerForDocument(uri protocol.DocumentUri) *sema.Checker {
+	location := uriToLocation(uri)
+	return s.checkers[location.ID()]
+}
+
 func (s *Server) Initialize(
 	conn protocol.Conn,
 	params *protocol.InitializeParams,
@@ -492,9 +497,8 @@ func (s *Server) Hover(
 ) (*protocol.Hover, error) {
 
 	uri := params.TextDocument.URI
-	location := uriToLocation(uri)
-	checker, ok := s.checkers[location.ID()]
-	if !ok {
+	checker := s.checkerForDocument(uri)
+	if checker == nil {
 		return nil, nil
 	}
 
@@ -523,9 +527,8 @@ func (s *Server) Definition(
 ) (*protocol.Location, error) {
 
 	uri := params.TextDocument.URI
-	location := uriToLocation(uri)
-	checker, ok := s.checkers[location.ID()]
-	if !ok {
+	checker := s.checkerForDocument(uri)
+	if checker == nil {
 		return nil, nil
 	}
 
@@ -572,9 +575,8 @@ func (s *Server) CodeLens(
 	codeLenses = []*protocol.CodeLens{}
 
 	uri := params.TextDocument.URI
-	location := uriToLocation(uri)
-	checker, ok := s.checkers[location.ID()]
-	if !ok {
+	checker := s.checkerForDocument(uri)
+	if checker == nil {
 		// Can we ensure this doesn't happen?
 		return
 	}
@@ -842,10 +844,8 @@ func (s *Server) Completion(
 	items = []*protocol.CompletionItem{}
 
 	uri := params.TextDocument.URI
-	location := uriToLocation(uri)
-	checker, ok := s.checkers[location.ID()]
-
-	if !ok {
+	checker := s.checkerForDocument(uri)
+	if checker == nil {
 		return
 	}
 
@@ -1490,9 +1490,8 @@ func (s *Server) getEntryPointParameters(_ protocol.Conn, args ...interface{}) (
 	}
 
 	uri := protocol.DocumentUri(uriArg)
-	location := uriToLocation(uri)
-	checker, ok := s.checkers[location.ID()]
-	if !ok {
+	checker := s.checkerForDocument(uri)
+	if checker == nil {
 		return nil, fmt.Errorf("could not find document for URI %s", uri)
 	}
 
@@ -1521,9 +1520,8 @@ func (s *Server) getContractInitializerParameters(_ protocol.Conn, args ...inter
 	}
 
 	uri := protocol.DocumentUri(uriArg)
-	location := uriToLocation(uri)
-	checker, ok := s.checkers[location.ID()]
-	if !ok {
+	checker := s.checkerForDocument(uri)
+	if checker == nil {
 		return nil, fmt.Errorf("could not find document for URI %s", uri)
 	}
 
@@ -1564,9 +1562,8 @@ func (s *Server) parseEntryPointArguments(_ protocol.Conn, args ...interface{}) 
 	}
 
 	uri := protocol.DocumentUri(uriArg)
-	location := uriToLocation(uri)
-	checker, ok := s.checkers[location.ID()]
-	if !ok {
+	checker := s.checkerForDocument(uri)
+	if checker == nil {
 		return nil, fmt.Errorf("could not find document for URI %s", uri)
 	}
 
