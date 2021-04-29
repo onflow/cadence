@@ -991,7 +991,7 @@ func (e *Encoder) encodeCompositeValue(
 	}
 
 	// Encode location at array index encodedCompositeValueLocationFieldKey
-	err = e.encodeLocation(v.location)
+	err = e.encodeLocation(v.Location())
 	if err != nil {
 		return err
 	}
@@ -1003,7 +1003,7 @@ func (e *Encoder) encodeCompositeValue(
 	}
 
 	// Encode kind at array index encodedCompositeValueKindFieldKey
-	err = e.enc.EncodeUint(uint(v.kind))
+	err = e.enc.EncodeUint(uint(v.Kind()))
 	if err != nil {
 		return err
 	}
@@ -1042,7 +1042,7 @@ func (e *Encoder) encodeCompositeValue(
 	}
 
 	// Encode qualified identifier at array index encodedCompositeValueQualifiedIdentifierFieldKey
-	err = e.enc.EncodeString(v.qualifiedIdentifier)
+	err = e.enc.EncodeString(v.QualifiedIdentifier())
 	if err != nil {
 		return err
 	}

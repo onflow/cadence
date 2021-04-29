@@ -2611,6 +2611,8 @@ func (r *interpreterRuntime) newPublicAccountKeys(addressValue interpreter.Addre
 
 func NewPublicKeyFromValue(publicKey *interpreter.CompositeValue) *PublicKey {
 
+	fields := publicKey.Fields()
+
 	// publicKey field
 	publicKeyFieldGetter, ok := publicKey.ComputedFields.Get(sema.PublicKeyPublicKeyField)
 	if !ok {
@@ -2627,7 +2629,7 @@ func NewPublicKeyFromValue(publicKey *interpreter.CompositeValue) *PublicKey {
 	}
 
 	// sign algo field
-	signAlgoField, ok := publicKey.Fields().Get(sema.PublicKeySignAlgoField)
+	signAlgoField, ok := fields.Get(sema.PublicKeySignAlgoField)
 	if !ok {
 		panic("sign algorithm is not set")
 	}
@@ -2643,7 +2645,7 @@ func NewPublicKeyFromValue(publicKey *interpreter.CompositeValue) *PublicKey {
 
 	// `valid` and `validated` fields
 	var valid, validated bool
-	validField, validated := publicKey.Fields.Get(sema.PublicKeyIsValidField)
+	validField, validated := fields.Get(sema.PublicKeyIsValidField)
 	if validated {
 		valid = bool(validField.(interpreter.BoolValue))
 	}
