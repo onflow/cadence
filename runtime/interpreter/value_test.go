@@ -346,7 +346,7 @@ func TestSetOwnerComposite(t *testing.T) {
 
 	const fieldName = "test"
 
-	composite.Fields.Set(fieldName, value)
+	composite.fields.Set(fieldName, value)
 
 	composite.SetOwner(&newOwner)
 
@@ -365,10 +365,10 @@ func TestSetOwnerCompositeCopy(t *testing.T) {
 
 	const fieldName = "test"
 
-	composite.Fields.Set(fieldName, value)
+	composite.fields.Set(fieldName, value)
 
 	compositeCopy := composite.Copy().(*CompositeValue)
-	valueCopy, _ := compositeCopy.Fields.Get(fieldName)
+	valueCopy, _ := compositeCopy.fields.Get(fieldName)
 
 	assert.Nil(t, compositeCopy.GetOwner())
 	assert.Nil(t, valueCopy.GetOwner())

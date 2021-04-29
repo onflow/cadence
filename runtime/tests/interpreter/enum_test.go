@@ -206,13 +206,13 @@ func TestInterpretEnumInContract(t *testing.T) {
 	require.IsType(t, &interpreter.CompositeValue{}, c)
 	contract := c.(*interpreter.CompositeValue)
 
-	eValue, present := contract.Fields.Get("e")
+	eValue, present := contract.Fields().Get("e")
 	require.True(t, present)
 
 	require.IsType(t, &interpreter.CompositeValue{}, eValue)
 	enumCase := eValue.(*interpreter.CompositeValue)
 
-	rawValue, present := enumCase.Fields.Get("rawValue")
+	rawValue, present := enumCase.Fields().Get("rawValue")
 	require.True(t, present)
 
 	require.Equal(t,

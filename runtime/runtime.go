@@ -1140,8 +1140,9 @@ func (r *interpreterRuntime) emitEvent(
 ) error {
 	fields := make([]exportableValue, len(eventType.ConstructorParameters))
 
+	eventFields := event.Fields()
 	for i, parameter := range eventType.ConstructorParameters {
-		value, _ := event.Fields.Get(parameter.Identifier)
+		value, _ := eventFields.Get(parameter.Identifier)
 		fields[i] = newExportableValue(value, inter)
 	}
 
@@ -1212,7 +1213,7 @@ func (r *interpreterRuntime) newCreateAccountFunction(
 			))
 		}
 
-		payerAddressValue, ok := payer.Fields.Get(sema.AuthAccountAddressField)
+		payerAddressValue, ok := payer.Fields().Get(sema.AuthAccountAddressField)
 		if !ok {
 			panic("address is not set")
 		}
@@ -2492,7 +2493,7 @@ func (r *interpreterRuntime) newPublicAccountKeys(addressValue interpreter.Addre
 func NewPublicKeyFromValue(publicKey *interpreter.CompositeValue) *PublicKey {
 
 	// publicKey field
-	key, ok := publicKey.Fields.Get(sema.PublicKeyPublicKeyField)
+	key, ok := publicKey.Fields().Get(sema.PublicKeyPublicKeyField)
 	if !ok {
 		panic("public key value is not set")
 	}
@@ -2503,14 +2504,14 @@ func NewPublicKeyFromValue(publicKey *interpreter.CompositeValue) *PublicKey {
 	}
 
 	// sign algo field
-	signAlgoField, ok := publicKey.Fields.Get(sema.PublicKeySignAlgoField)
+	signAlgoField, ok := publicKey.Fields().Get(sema.PublicKeySignAlgoField)
 	if !ok {
 		panic("sign algorithm is not set")
 	}
 
 	signAlgoValue := signAlgoField.(*interpreter.CompositeValue)
 
-	rawValue, ok := signAlgoValue.Fields.Get(sema.EnumRawValueFieldName)
+	rawValue, ok := signAlgoValue.Fields().Get(sema.EnumRawValueFieldName)
 	if !ok {
 		panic("cannot find sign algorithm raw value")
 	}
@@ -2554,7 +2555,7 @@ func NewAccountKeyValue(accountKey *AccountKey, runtimeInterface Interface) *int
 func NewHashAlgorithmFromValue(value interpreter.Value) HashAlgorithm {
 	hashAlgoValue := value.(*interpreter.CompositeValue)
 
-	rawValue, ok := hashAlgoValue.Fields.Get(sema.EnumRawValueFieldName)
+	rawValue, ok := hashAlgoValue.Fields().Get(sema.EnumRawValueFieldName)
 	if !ok {
 		panic("cannot find hash algorithm raw value")
 	}
