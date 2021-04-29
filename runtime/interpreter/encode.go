@@ -1042,7 +1042,7 @@ func (e *Encoder) encodeCompositeValue(
 	}
 
 	// Encode qualified identifier at array index encodedCompositeValueQualifiedIdentifierFieldKey
-	err = e.enc.EncodeString(v.QualifiedIdentifier)
+	err = e.enc.EncodeString(v.qualifiedIdentifier)
 	if err != nil {
 		return err
 	}
