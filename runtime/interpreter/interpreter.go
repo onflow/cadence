@@ -1306,7 +1306,7 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 			}
 
 			value := &CompositeValue{
-				Location:            location,
+				location:            location,
 				QualifiedIdentifier: qualifiedIdentifier,
 				Kind:                declaration.CompositeKind,
 				fields:              fields,
@@ -1402,7 +1402,7 @@ func (interpreter *Interpreter) declareEnumConstructor(
 		caseValueFields.Set(sema.EnumRawValueFieldName, rawValue)
 
 		caseValue := &CompositeValue{
-			Location:            location,
+			location:            location,
 			QualifiedIdentifier: qualifiedIdentifier,
 			Kind:                declaration.CompositeKind,
 			fields:              caseValueFields,

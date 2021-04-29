@@ -52,7 +52,7 @@ func (interpreter *Interpreter) declareTransactionEntryPoint(declaration *ast.Tr
 		interpreter.Program.Elaboration.PostConditionsRewrite[declaration.PostConditions]
 
 	self := &CompositeValue{
-		Location: interpreter.Location,
+		location: interpreter.Location,
 		fields:   NewStringValueOrderedMap(),
 		modified: true,
 	}

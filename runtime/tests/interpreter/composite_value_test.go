@@ -90,7 +90,7 @@ func testCompositeValue(t *testing.T, code string) *interpreter.Interpreter {
 	))
 
 	value := &interpreter.CompositeValue{
-		Location:            utils.TestLocation,
+		location:            utils.TestLocation,
 		QualifiedIdentifier: fruitType.Identifier,
 		Kind:                common.CompositeKindStructure,
 		ComputedFields:      interpreter.NewStringComputedFieldOrderedMap(),
