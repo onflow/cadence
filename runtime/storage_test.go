@@ -21,6 +21,7 @@ package runtime
 import (
 	"bytes"
 	"encoding/hex"
+	"fmt"
 	"strconv"
 	"testing"
 
@@ -294,6 +295,9 @@ func withWritesToStorage(arrayElementCount int, storageItemCount int, onWrite fu
 }
 
 func TestRuntimeStorageWriteCached(t *testing.T) {
+
+	t.Parallel()
+
 	var writes []testWrite
 
 	onWrite := func(owner, key, value []byte) {
@@ -313,6 +317,9 @@ func TestRuntimeStorageWriteCached(t *testing.T) {
 }
 
 func TestRuntimeStorageWriteCachedIsDeterministic(t *testing.T) {
+
+	t.Parallel()
+
 	var writes []testWrite
 
 	onWrite := func(owner, key, value []byte) {
@@ -442,6 +449,9 @@ func TestRuntimeMagic(t *testing.T) {
 }
 
 func TestRuntimeAccountStorage(t *testing.T) {
+
+	t.Parallel()
+
 	runtime := NewInterpreterRuntime()
 
 	script := []byte(`
@@ -854,6 +864,8 @@ transaction {
 }
 
 func TestRuntimeStorageReadAndBorrow(t *testing.T) {
+
+	t.Parallel()
 
 	runtime := NewInterpreterRuntime()
 
@@ -2060,6 +2072,8 @@ pub contract TopShot: NonFungibleToken {
 
 func TestRuntimeStorageUnlink(t *testing.T) {
 
+	t.Parallel()
+
 	runtime := NewInterpreterRuntime()
 
 	storage := newTestStorage(nil, nil)
@@ -2140,4 +2154,65 @@ func TestRuntimeStorageUnlink(t *testing.T) {
 		},
 	)
 	require.NoError(t, err)
+}
+
+func TestRuntimeStorageSaveCapability(t *testing.T) {
+
+	t.Parallel()
+
+	runtime := NewInterpreterRuntime()
+
+	storage := newTestStorage(nil, nil)
+
+	signer := common.BytesToAddress([]byte{0x42})
+
+	runtimeInterface := &testRuntimeInterface{
+		storage: storage,
+		getSigningAccounts: func() ([]Address, error) {
+			return []Address{signer}, nil
+		},
+	}
+
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	// Store a capability
+
+	for _, domain := range []common.PathDomain{
+		common.PathDomainPrivate,
+		common.PathDomainPublic,
+	} {
+
+		for typeDescription, typeArgument := range map[string]string{
+			"Untyped": "",
+			"Typed":   "<&Int>",
+		} {
+
+			t.Run(fmt.Sprintf("%s %s", domain.Identifier(), typeDescription), func(t *testing.T) {
+
+				err := runtime.ExecuteTransaction(
+					Script{
+						Source: []byte(fmt.Sprintf(
+							`
+                              transaction {
+                                  prepare(signer: AuthAccount) {
+                                      let cap = signer.getCapability%[1]s(/%[2]s/test)
+                                      signer.save(cap, to: /storage/test%[3]s%[2]s)
+                                  }
+                              }
+			                `,
+							typeArgument,
+							domain.Identifier(),
+							typeDescription,
+						)),
+					},
+					Context{
+						Interface: runtimeInterface,
+						Location:  nextTransactionLocation(),
+					},
+				)
+				require.NoError(t, err)
+
+			})
+		}
+	}
 }
