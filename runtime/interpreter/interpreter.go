@@ -2799,7 +2799,7 @@ func (interpreter *Interpreter) authAccountLinkFunction(addressValue AddressValu
 		return NewSomeValueOwningNonCopying(
 			CapabilityValue{
 				Address:    addressValue,
-				Path:       targetPath,
+				Path:       newCapabilityPath,
 				BorrowType: borrowStaticType(borrowType),
 			},
 		)
