@@ -68,7 +68,7 @@ type OptionalType struct {
 func (OptionalType) isType() {}
 
 func (t OptionalType) ID() string {
-	return fmt.Sprintf("%s?", t.Type)
+	return fmt.Sprintf("%s?", t.Type.ID())
 }
 
 // Variable
