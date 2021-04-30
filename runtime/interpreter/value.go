@@ -7586,8 +7586,10 @@ func (v *StorageReferenceValue) DynamicType(interpreter *Interpreter, results Dy
 }
 
 func (v *StorageReferenceValue) StaticType() StaticType {
-	// TODO:
-	return nil
+	return ReferenceStaticType{
+		Authorized: v.Authorized,
+		Type:       ConvertSemaToStaticType(v.BorrowedType),
+	}
 }
 
 func (v *StorageReferenceValue) Copy() Value {
@@ -7751,8 +7753,10 @@ func (v *EphemeralReferenceValue) DynamicType(interpreter *Interpreter, results 
 }
 
 func (v *EphemeralReferenceValue) StaticType() StaticType {
-	// TODO:
-	return nil
+	return ReferenceStaticType{
+		Authorized: v.Authorized,
+		Type:       ConvertSemaToStaticType(v.BorrowedType),
+	}
 }
 
 func (v *EphemeralReferenceValue) Copy() Value {
