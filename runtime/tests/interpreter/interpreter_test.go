@@ -4035,7 +4035,7 @@ func TestInterpretReferenceFailableDowncasting(t *testing.T) {
 			return variable.Type
 		}
 
-		// Inject a function that return a storage reference value,
+		// Inject a function that returns a storage reference value,
 		// which is borrowed as:
 		// - `&R{RI}` (unauthorized, if argument for parameter `authorized` == false)
 		// - `auth &R{RI}` (authorized, if argument for parameter `authorized` == true)

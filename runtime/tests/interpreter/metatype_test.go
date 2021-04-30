@@ -429,6 +429,45 @@ func TestInterpretGetType(t *testing.T) {
 			},
 		},
 		{
+			// wrapping the ephemeral reference in an optional
+			// ensures getType doesn't dereference the value,
+			// i.e. EphemeralReferenceValue.StaticType is tested
+			name: "optional ephemeral reference",
+			code: `
+              let value = 1
+              let ref = &value as auth &Int
+              let optRef: &Int? = ref
+              let result = optRef.getType()
+            `,
+			result: interpreter.TypeValue{
+				Type: interpreter.OptionalStaticType{
+					Type: interpreter.ReferenceStaticType{
+						Authorized: true,
+						Type:       interpreter.PrimitiveStaticTypeInt,
+					},
+				},
+			},
+		},
+		{
+			// wrapping the storage reference in an optional
+			// ensures getType doesn't dereference the value,
+			// i.e. StorageReferenceValue.StaticType is tested
+			name: "optional storage reference",
+			code: `
+              let ref = getStorageReference()
+              let optRef: &Int? = ref
+              let result = optRef.getType()
+            `,
+			result: interpreter.TypeValue{
+				Type: interpreter.OptionalStaticType{
+					Type: interpreter.ReferenceStaticType{
+						Authorized: true,
+						Type:       interpreter.PrimitiveStaticTypeInt,
+					},
+				},
+			},
+		},
+		{
 			name: "array",
 			code: `
               let result = [].getType()
@@ -442,7 +481,72 @@ func TestInterpretGetType(t *testing.T) {
 
 	for _, testCase := range cases {
 		t.Run(testCase.name, func(t *testing.T) {
-			inter := parseCheckAndInterpret(t, testCase.code)
+
+			// Inject a function that returns a storage reference value,
+			// which is borrowed as: `auth &Int`
+
+			storageAddress := common.BytesToAddress([]byte{0x42})
+			const storageKey = "test storage key"
+
+			standardLibraryFunctions :=
+				stdlib.StandardLibraryFunctions{
+					{
+						Name: "getStorageReference",
+						Type: &sema.FunctionType{
+							ReturnTypeAnnotation: sema.NewTypeAnnotation(
+								&sema.ReferenceType{
+									Authorized: true,
+									Type:       sema.IntType,
+								},
+							),
+						},
+						Function: interpreter.NewHostFunctionValue(
+							func(invocation interpreter.Invocation) interpreter.Value {
+
+								return &interpreter.StorageReferenceValue{
+									Authorized:           true,
+									TargetStorageAddress: storageAddress,
+									TargetKey:            storageKey,
+									BorrowedType:         sema.IntType,
+								}
+							},
+						),
+					},
+				}
+
+			valueDeclarations := standardLibraryFunctions.ToSemaValueDeclarations()
+			values := standardLibraryFunctions.ToInterpreterValueDeclarations()
+
+			inter := parseCheckAndInterpretWithOptions(t,
+				testCase.code,
+				ParseCheckAndInterpretOptions{
+					CheckerOptions: []sema.Option{
+						sema.WithPredeclaredValues(valueDeclarations),
+					},
+					Options: []interpreter.Option{
+						interpreter.WithPredeclaredValues(values),
+						interpreter.WithStorageReadHandler(
+							func(
+								inter *interpreter.Interpreter,
+								address common.Address,
+								key string,
+								deferred bool,
+							) interpreter.OptionalValue {
+
+								if address != storageAddress || key != storageKey {
+									return interpreter.NilValue{}
+								}
+
+								// When the storage reference is dereferenced,
+
+								return interpreter.NewSomeValueOwningNonCopying(
+									interpreter.NewIntValueFromInt64(2),
+								)
+							},
+						),
+					},
+				},
+			)
 
 			assert.Equal(t,
 				testCase.result,
