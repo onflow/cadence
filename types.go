@@ -805,30 +805,6 @@ func (t ResourcePointer) ID() string {
 	return t.TypeName
 }
 
-// StructPointer
-
-type StructPointer struct {
-	TypeName string
-}
-
-func (StructPointer) isType() {}
-
-func (t StructPointer) ID() string {
-	return t.TypeName
-}
-
-// EventPointer
-
-type EventPointer struct {
-	TypeName string
-}
-
-func (EventPointer) isType() {}
-
-func (t EventPointer) ID() string {
-	return t.TypeName
-}
-
 // ReferenceType
 
 type ReferenceType struct {
