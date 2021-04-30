@@ -70,6 +70,10 @@ func TestStringer(t *testing.T) {
 			value:    NewUInt256(256),
 			expected: "256",
 		},
+		"Int": {
+			value:    NewInt(1000000),
+			expected: "1000000",
+		},
 		"Int8": {
 			value:    NewInt8(-8),
 			expected: "-8",
