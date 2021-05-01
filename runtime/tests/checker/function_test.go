@@ -400,3 +400,18 @@ func TestCheckInvalidFunctionWithResult(t *testing.T) {
 
 	assert.IsType(t, &sema.RedeclarationError{}, errs[0])
 }
+
+func TestCheckFunctionNonExistingField(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+      fun f() {}
+
+      let x = f.y
+    `)
+
+	errs := ExpectCheckerErrors(t, err, 1)
+
+	assert.IsType(t, &sema.NotDeclaredMemberError{}, errs[0])
+}
