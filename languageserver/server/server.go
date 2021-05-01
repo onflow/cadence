@@ -181,6 +181,7 @@ type Server struct {
 	diagnosticProviders []DiagnosticProvider
 	// initializationOptionsHandlers are the functions that are used to handle initialization options sent by the client
 	initializationOptionsHandlers []InitializationOptionsHandler
+	accessCheckMode               sema.AccessCheckMode
 }
 
 type Option func(*Server) error
@@ -335,8 +336,12 @@ func (s *Server) Initialize(
 		},
 	}
 
+	options := params.InitializationOptions
+
+	s.configure(options)
+
 	for _, handler := range s.initializationOptionsHandlers {
-		err := handler(params.InitializationOptions)
+		err := handler(options)
 		if err != nil {
 			return nil, err
 		}
@@ -346,6 +351,40 @@ func (s *Server) Initialize(
 	go s.registerCommands(conn)
 
 	return result, nil
+}
+
+const accessCheckModeOption = "accessCheckMode"
+
+func accessCheckModeFromName(name string) sema.AccessCheckMode {
+	switch name {
+	case "strict":
+		return sema.AccessCheckModeStrict
+
+	case "notSpecifiedRestricted":
+		return sema.AccessCheckModeNotSpecifiedRestricted
+
+	case "notSpecifiedUnrestricted":
+		return sema.AccessCheckModeNotSpecifiedUnrestricted
+
+	case "none":
+		return sema.AccessCheckModeNone
+
+	default:
+		return sema.AccessCheckModeStrict
+	}
+}
+
+func (s *Server) configure(opts interface{}) {
+	optsMap, ok := opts.(map[string]interface{})
+	if !ok {
+		return
+	}
+
+	if accessCheckModeName, ok := optsMap[accessCheckModeOption].(string); ok {
+		s.accessCheckMode = accessCheckModeFromName(accessCheckModeName)
+	} else {
+		s.accessCheckMode = sema.AccessCheckModeStrict
+	}
 }
 
 // Registers the commands that the server is able to handle.
@@ -1314,6 +1353,7 @@ func (s *Server) getDiagnostics(
 				}
 			},
 		),
+		sema.WithAccessCheckMode(s.accessCheckMode),
 	)
 	if diagnosticsErr != nil {
 		return
