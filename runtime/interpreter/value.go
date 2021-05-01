@@ -7576,19 +7576,33 @@ func (v *StorageReferenceValue) DynamicType(interpreter *Interpreter, results Dy
 		panic(DereferenceError{})
 	}
 
+	if result, ok := results[v]; ok {
+		return result
+	}
+
+	results[v] = nil
+
 	innerType := (*referencedValue).DynamicType(interpreter, results)
 
-	return StorageReferenceDynamicType{
+	result := StorageReferenceDynamicType{
 		authorized:   v.Authorized,
 		innerType:    innerType,
 		borrowedType: v.BorrowedType,
 	}
+
+	results[v] = result
+
+	return result
 }
 
 func (v *StorageReferenceValue) StaticType() StaticType {
+	var borrowedType StaticType
+	if v.BorrowedType != nil {
+		borrowedType = ConvertSemaToStaticType(v.BorrowedType)
+	}
 	return ReferenceStaticType{
 		Authorized: v.Authorized,
-		Type:       ConvertSemaToStaticType(v.BorrowedType),
+		Type:       borrowedType,
 	}
 }
 
@@ -7689,19 +7703,65 @@ func (v *StorageReferenceValue) Set(interpreter *Interpreter, getLocationRange f
 
 func (v *StorageReferenceValue) Equal(other Value, _ *Interpreter, _ bool) bool {
 	otherReference, ok := other.(*StorageReferenceValue)
-	if !ok {
+	if !ok ||
+		v.TargetStorageAddress != otherReference.TargetStorageAddress ||
+		v.TargetKey != otherReference.TargetKey ||
+		v.Authorized != otherReference.Authorized {
+
 		return false
 	}
 
-	return v.TargetStorageAddress == otherReference.TargetStorageAddress &&
-		v.TargetKey == otherReference.TargetKey &&
-		v.Authorized == otherReference.Authorized &&
-		v.BorrowedType.Equal(otherReference.BorrowedType)
+	if v.BorrowedType == nil {
+		return otherReference.BorrowedType == nil
+	} else {
+		return v.BorrowedType.Equal(otherReference.BorrowedType)
+	}
 }
 
-func (v *StorageReferenceValue) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType, _ TypeConformanceResults) bool {
-	_, ok := dynamicType.(StorageReferenceDynamicType)
-	return ok
+func (v *StorageReferenceValue) ConformsToDynamicType(
+	interpreter *Interpreter,
+	dynamicType DynamicType,
+	results TypeConformanceResults,
+) bool {
+
+	refType, ok := dynamicType.(StorageReferenceDynamicType)
+	if !ok ||
+		refType.authorized != v.Authorized {
+
+		return false
+	}
+
+	if refType.borrowedType == nil {
+		if v.BorrowedType != nil {
+			return false
+		}
+	} else if !refType.borrowedType.Equal(v.BorrowedType) {
+		return false
+	}
+
+	referencedValue := v.ReferencedValue(interpreter)
+	if referencedValue == nil {
+		return false
+	}
+
+	valueTypePair := valueDynamicTypePair{
+		value:       v,
+		dynamicType: dynamicType,
+	}
+
+	if result, contains := results[valueTypePair]; contains {
+		return result
+	}
+
+	// It is safe to set 'true' here even this is not checked yet, because the final result
+	// doesn't depend on this. It depends on the rest of values of the object tree.
+	results[valueTypePair] = true
+
+	result := (*referencedValue).ConformsToDynamicType(interpreter, refType.InnerType(), results)
+
+	results[valueTypePair] = result
+
+	return result
 }
 
 // EphemeralReferenceValue
@@ -7753,14 +7813,22 @@ func (v *EphemeralReferenceValue) DynamicType(interpreter *Interpreter, results 
 }
 
 func (v *EphemeralReferenceValue) StaticType() StaticType {
+	var borrowedType StaticType
+	if v.BorrowedType != nil {
+		borrowedType = ConvertSemaToStaticType(v.BorrowedType)
+	}
 	return ReferenceStaticType{
 		Authorized: v.Authorized,
-		Type:       ConvertSemaToStaticType(v.BorrowedType),
+		Type:       borrowedType,
 	}
 }
 
 func (v *EphemeralReferenceValue) Copy() Value {
-	return v
+	return &EphemeralReferenceValue{
+		Authorized:   v.Authorized,
+		Value:        v.Value,
+		BorrowedType: v.BorrowedType,
+	}
 }
 
 func (v *EphemeralReferenceValue) GetOwner() *common.Address {
@@ -7842,13 +7910,18 @@ func (v *EphemeralReferenceValue) Set(interpreter *Interpreter, getLocationRange
 
 func (v *EphemeralReferenceValue) Equal(other Value, _ *Interpreter, _ bool) bool {
 	otherReference, ok := other.(*EphemeralReferenceValue)
-	if !ok {
+	if !ok ||
+		v.Value != otherReference.Value ||
+		v.Authorized != otherReference.Authorized {
+
 		return false
 	}
 
-	return v.Value == otherReference.Value &&
-		v.Authorized == otherReference.Authorized &&
-		v.BorrowedType.Equal(otherReference.BorrowedType)
+	if v.BorrowedType == nil {
+		return otherReference.BorrowedType == nil
+	} else {
+		return v.BorrowedType.Equal(otherReference.BorrowedType)
+	}
 }
 
 func (v *EphemeralReferenceValue) ConformsToDynamicType(
@@ -7858,7 +7931,17 @@ func (v *EphemeralReferenceValue) ConformsToDynamicType(
 ) bool {
 
 	refType, ok := dynamicType.(EphemeralReferenceDynamicType)
-	if !ok {
+	if !ok ||
+		refType.authorized != v.Authorized {
+
+		return false
+	}
+
+	if refType.borrowedType == nil {
+		if v.BorrowedType != nil {
+			return false
+		}
+	} else if !refType.borrowedType.Equal(v.BorrowedType) {
 		return false
 	}
 
