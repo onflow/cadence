@@ -2567,18 +2567,20 @@ func (t *FunctionType) Resolve(typeArguments *TypeParameterTypeOrderedMap) Type 
 
 func (t *FunctionType) GetMembers() map[string]MemberResolver {
 	// TODO: optimize
-	members := make(map[string]MemberResolver, t.Members.Len())
-	t.Members.Foreach(func(name string, loopMember *Member) {
-		// NOTE: don't capture loop variable
-		member := loopMember
-		members[name] = MemberResolver{
-			Kind: member.DeclarationKind,
-			Resolve: func(_ string, _ ast.Range, _ func(error)) *Member {
-				return member
-			},
-		}
-	})
-
+	var members map[string]MemberResolver
+	if t.Members != nil {
+		members = make(map[string]MemberResolver, t.Members.Len())
+		t.Members.Foreach(func(name string, loopMember *Member) {
+			// NOTE: don't capture loop variable
+			member := loopMember
+			members[name] = MemberResolver{
+				Kind: member.DeclarationKind,
+				Resolve: func(_ string, _ ast.Range, _ func(error)) *Member {
+					return member
+				},
+			}
+		})
+	}
 	return withBuiltinMembers(t, members)
 }
 
@@ -4902,17 +4904,20 @@ func (t *TransactionType) RewriteWithRestrictedTypes() (Type, bool) {
 
 func (t *TransactionType) GetMembers() map[string]MemberResolver {
 	// TODO: optimize
-	members := make(map[string]MemberResolver, t.Members.Len())
-	t.Members.Foreach(func(name string, loopMember *Member) {
-		// NOTE: don't capture loop variable
-		member := loopMember
-		members[name] = MemberResolver{
-			Kind: member.DeclarationKind,
-			Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
-				return member
-			},
-		}
-	})
+	var members map[string]MemberResolver
+	if t.Members != nil {
+		members = make(map[string]MemberResolver, t.Members.Len())
+		t.Members.Foreach(func(name string, loopMember *Member) {
+			// NOTE: don't capture loop variable
+			member := loopMember
+			members[name] = MemberResolver{
+				Kind: member.DeclarationKind,
+				Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
+					return member
+				},
+			}
+		})
+	}
 	return withBuiltinMembers(t, members)
 }
 
