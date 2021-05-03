@@ -284,10 +284,10 @@ func (d *DecoderV4) decodeArray(v []interface{}, path []string) (*ArrayValue, er
 	// Pre-allocate and reuse valuePath.
 	valuePath := append(path, "")
 
-	lastIndex := len(path)
+	lastValuePathIndex := len(path)
 
 	for i, value := range v {
-		valuePath[lastIndex] = strconv.Itoa(i)
+		valuePath[lastValuePathIndex] = strconv.Itoa(i)
 
 		res, err := d.decodeValue(value, valuePath)
 		if err != nil {
@@ -391,7 +391,7 @@ func (d *DecoderV4) decodeDictionary(v interface{}, path []string) (*DictionaryV
 		// Pre-allocate and reuse valuePath.
 		valuePath := append(path, dictionaryValuePathPrefix, "")
 
-		lastIndex := len(path) + 1
+		lastValuePathIndex := len(path) + 1
 
 		keyIndex := 0
 
@@ -407,7 +407,7 @@ func (d *DecoderV4) decodeDictionary(v interface{}, path []string) (*DictionaryV
 			}
 
 			keyString := keyStringValue.KeyString()
-			valuePath[lastIndex] = keyString
+			valuePath[lastValuePathIndex] = keyString
 
 			value := encodedEntries[keyIndex]
 
@@ -586,7 +586,7 @@ func (d *DecoderV4) decodeComposite(v interface{}, path []string) (*CompositeVal
 	// Pre-allocate and reuse valuePath.
 	valuePath := append(path, "")
 
-	lastIndex := len(path)
+	lastValuePathIndex := len(path)
 
 	for i := 0; i < len(encodedFields); i += 2 {
 
@@ -604,7 +604,7 @@ func (d *DecoderV4) decodeComposite(v interface{}, path []string) (*CompositeVal
 		// field value
 		value := encodedFields[i+1]
 
-		valuePath[lastIndex] = fieldName
+		valuePath[lastValuePathIndex] = fieldName
 
 		decodedValue, err := d.decodeValue(value, valuePath)
 		if err != nil {
