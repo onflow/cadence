@@ -789,8 +789,13 @@ func (e *Encoder) encodeArray(
 		return err
 	}
 
+	// Pre-allocate and reuse valuePath.
+	valuePath := append(path, "")
+
+	lastIndex := len(path)
+
 	for i, value := range v.Values {
-		valuePath := append(path[:], strconv.Itoa(i))
+		valuePath[lastIndex] = strconv.Itoa(i)
 		err := e.Encode(value, valuePath, deferrals)
 		if err != nil {
 			return err
@@ -839,7 +844,7 @@ func (e *Encoder) encodeDictionaryValue(
 		return err
 	}
 
-	keysPath := append(path[:], dictionaryKeyPathPrefix)
+	keysPath := append(path, dictionaryKeyPathPrefix)
 
 	// Encode keys (as array) at array index encodedDictionaryValueKeysFieldKey
 	err = e.encodeArray(v.Keys, keysPath, deferrals)
@@ -878,10 +883,15 @@ func (e *Encoder) encodeDictionaryValue(
 		return err
 	}
 
+	// Pre-allocate and reuse valuePath.
+	valuePath := append(path, dictionaryValuePathPrefix, "")
+
+	lastIndex := len(path) + 1
+
 	for _, keyValue := range v.Keys.Values {
 		key := dictionaryKey(keyValue)
 		entryValue, _ := v.Entries.Get(key)
-		valuePath := append(path[:], dictionaryValuePathPrefix, key)
+		valuePath[lastIndex] = key
 
 		if deferred {
 
@@ -1002,6 +1012,11 @@ func (e *Encoder) encodeCompositeValue(
 		return err
 	}
 
+	// Pre-allocate and reuse valuePath.
+	valuePath := append(path, "")
+
+	lastIndex := len(path)
+
 	for pair := v.Fields.Oldest(); pair != nil; pair = pair.Next() {
 		fieldName := pair.Key
 
@@ -1013,7 +1028,7 @@ func (e *Encoder) encodeCompositeValue(
 
 		value := pair.Value
 
-		valuePath := append(path[:], fieldName)
+		valuePath[lastIndex] = fieldName
 
 		// Encode value as fields array element
 		err = e.Encode(value, valuePath, deferrals)
