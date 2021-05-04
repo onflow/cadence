@@ -87,7 +87,7 @@ func TestSetOwnerArrayCopy(t *testing.T) {
 	array.SetOwner(&newOwner)
 
 	arrayCopy := array.Copy().(*ArrayValue)
-	valueCopy := arrayCopy.Values[0]
+	valueCopy := arrayCopy.Elements()[0]
 
 	assert.Nil(t, arrayCopy.GetOwner())
 	assert.Nil(t, valueCopy.GetOwner())

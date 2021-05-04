@@ -359,7 +359,7 @@ func (d *DecoderV4) decodeArray(path []string) (*ArrayValue, error) {
 	}
 
 	return &ArrayValue{
-		Values:   values,
+		values:   values,
 		Owner:    d.owner,
 		modified: false,
 	}, nil
@@ -445,7 +445,7 @@ func (d *DecoderV4) decodeDictionary(path []string) (*DictionaryValue, error) {
 		deferred = orderedmap.NewStringStructOrderedMap()
 		deferredOwner = d.owner
 		deferredStorageKeyBase = joinPath(append(path, dictionaryValuePathPrefix))
-		for _, keyValue := range keys.Values {
+		for _, keyValue := range keys.Elements() {
 			key := dictionaryKey(keyValue)
 			deferred.Set(key, struct{}{})
 		}
@@ -460,7 +460,7 @@ func (d *DecoderV4) decodeDictionary(path []string) (*DictionaryValue, error) {
 
 		keyIndex := 0
 
-		for _, keyValue := range keys.Values {
+		for _, keyValue := range keys.Elements() {
 			keyStringValue, ok := keyValue.(HasKeyString)
 			if !ok {
 				return nil, fmt.Errorf(

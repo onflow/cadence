@@ -551,7 +551,7 @@ func TestInterpretArrayIndexingAssignment(t *testing.T) {
 			interpreter.NewIntValueFromInt64(0),
 			interpreter.NewIntValueFromInt64(2),
 		},
-		actualArray.(*interpreter.ArrayValue).Values,
+		actualArray.(*interpreter.ArrayValue).Elements(),
 	)
 }
 
@@ -3599,7 +3599,7 @@ func TestInterpretDictionaryIndexingAssignmentExisting(t *testing.T) {
 		[]interpreter.Value{
 			interpreter.NewStringValue("abc"),
 		},
-		actualDict.Keys.Values,
+		actualDict.Keys.Elements(),
 	)
 
 	assert.True(t, actualDict.IsModified())
@@ -3665,7 +3665,7 @@ func TestInterpretDictionaryIndexingAssignmentNew(t *testing.T) {
 			interpreter.NewStringValue("def"),
 			interpreter.NewStringValue("abc"),
 		},
-		actualDict.Keys.Values,
+		actualDict.Keys.Elements(),
 	)
 
 	assert.True(t, actualDict.IsModified())
@@ -3728,7 +3728,7 @@ func TestInterpretDictionaryIndexingAssignmentNil(t *testing.T) {
 		[]interpreter.Value{
 			interpreter.NewStringValue("abc"),
 		},
-		actualDict.Keys.Values,
+		actualDict.Keys.Elements(),
 	)
 
 	assert.True(t, actualDict.IsModified())
@@ -3948,7 +3948,7 @@ func TestInterpretArrayAppend(t *testing.T) {
 			interpreter.NewIntValueFromInt64(3),
 			interpreter.NewIntValueFromInt64(4),
 		},
-		actualArray.(*interpreter.ArrayValue).Values,
+		actualArray.(*interpreter.ArrayValue).Elements(),
 	)
 }
 
@@ -4145,7 +4145,7 @@ func TestInterpretArrayInsert(t *testing.T) {
 			interpreter.NewIntValueFromInt64(2),
 			interpreter.NewIntValueFromInt64(3),
 		},
-		actualArray.(*interpreter.ArrayValue).Values,
+		actualArray.(*interpreter.ArrayValue).Elements(),
 	)
 }
 
@@ -4179,7 +4179,7 @@ func TestInterpretArrayRemove(t *testing.T) {
 			interpreter.NewIntValueFromInt64(1),
 			interpreter.NewIntValueFromInt64(3),
 		},
-		actualArray.(*interpreter.ArrayValue).Values,
+		actualArray.(*interpreter.ArrayValue).Elements(),
 	)
 
 	assert.Equal(t,
@@ -4218,7 +4218,7 @@ func TestInterpretArrayRemoveFirst(t *testing.T) {
 			interpreter.NewIntValueFromInt64(2),
 			interpreter.NewIntValueFromInt64(3),
 		},
-		actualArray.(*interpreter.ArrayValue).Values,
+		actualArray.(*interpreter.ArrayValue).Elements(),
 	)
 
 	assert.Equal(t,
@@ -4257,7 +4257,7 @@ func TestInterpretArrayRemoveLast(t *testing.T) {
 			interpreter.NewIntValueFromInt64(1),
 			interpreter.NewIntValueFromInt64(2),
 		},
-		actualArray.(*interpreter.ArrayValue).Values,
+		actualArray.(*interpreter.ArrayValue).Elements(),
 	)
 
 	assert.Equal(t,
@@ -4413,7 +4413,7 @@ func TestInterpretDictionaryRemove(t *testing.T) {
 		[]interpreter.Value{
 			interpreter.NewStringValue("def"),
 		},
-		actualDict.Keys.Values,
+		actualDict.Keys.Elements(),
 	)
 
 	assert.True(t, actualDict.IsModified())
@@ -4467,7 +4467,7 @@ func TestInterpretDictionaryInsert(t *testing.T) {
 			interpreter.NewStringValue("abc"),
 			interpreter.NewStringValue("def"),
 		},
-		actualDict.Keys.Values,
+		actualDict.Keys.Elements(),
 	)
 
 	assert.True(t, actualDict.IsModified())
@@ -5775,7 +5775,7 @@ func TestInterpretVariableDeclarationSecondValue(t *testing.T) {
 		value,
 	)
 
-	values := value.(*interpreter.ArrayValue).Values
+	values := value.(*interpreter.ArrayValue).Elements()
 
 	require.IsType(t,
 		&interpreter.SomeValue{},
@@ -7203,7 +7203,7 @@ func TestInterpretDictionaryValueEncodingOrder(t *testing.T) {
 
 		test.SetModified(false)
 		test.Keys.SetModified(false)
-		for _, key := range test.Keys.Values {
+		for _, key := range test.Keys.Elements() {
 			stringKey := key.(*interpreter.StringValue)
 			stringKey.SetModified(false)
 		}

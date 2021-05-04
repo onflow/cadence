@@ -231,7 +231,7 @@ func (interpreter *Interpreter) VisitForStatement(statement *ast.ForStatement) a
 		nil,
 	)
 
-	values := interpreter.evalExpression(statement.Value).(*ArrayValue).Values[:]
+	values := interpreter.evalExpression(statement.Value).(*ArrayValue).Elements()[:]
 
 	for _, value := range values {
 

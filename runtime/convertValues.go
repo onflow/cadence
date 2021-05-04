@@ -169,9 +169,10 @@ func exportSomeValue(v *interpreter.SomeValue, inter *interpreter.Interpreter, r
 }
 
 func exportArrayValue(v *interpreter.ArrayValue, inter *interpreter.Interpreter, results exportResults) cadence.Array {
-	values := make([]cadence.Value, len(v.Values))
+	elements := v.Elements()
+	values := make([]cadence.Value, len(elements))
 
-	for i, value := range v.Values {
+	for i, value := range elements {
 		values[i] = exportValueWithInterpreter(value, inter, results)
 	}
 
@@ -247,7 +248,7 @@ func exportDictionaryValue(
 
 	pairs := make([]cadence.KeyValuePair, v.Count())
 
-	for i, keyValue := range v.Keys.Values {
+	for i, keyValue := range v.Keys.Elements() {
 
 		// NOTE: use `Get` instead of accessing `Entries`,
 		// so that the potentially deferred values are loaded from storage
