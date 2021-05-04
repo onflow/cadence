@@ -305,7 +305,7 @@ func TestInterpretTransactions(t *testing.T) {
 				interpreter.BoolValue(true),
 				interpreter.NewIntValueFromInt64(1),
 			},
-			values.(*interpreter.ArrayValue).Values,
+			values.(*interpreter.ArrayValue).Elements(),
 		)
 	})
 

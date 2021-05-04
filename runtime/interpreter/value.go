@@ -518,9 +518,18 @@ func (v *StringValue) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicT
 // ArrayValue
 
 type ArrayValue struct {
-	Values   []Value
+	values   []Value
 	Owner    *common.Address
 	modified bool
+
+	// Raw element content cache for decoded values.
+	elementsContent []byte
+}
+
+func NewArrayValue(values []Value) *ArrayValue {
+	return &ArrayValue{
+		values: values,
+	}
 }
 
 func NewArrayValueUnownedNonCopying(values ...Value) *ArrayValue {
@@ -535,7 +544,7 @@ func NewArrayValueUnownedNonCopying(values ...Value) *ArrayValue {
 	}
 
 	return &ArrayValue{
-		Values:   values,
+		values:   values,
 		modified: true,
 		Owner:    nil,
 	}
@@ -549,15 +558,16 @@ func (v *ArrayValue) Accept(interpreter *Interpreter, visitor Visitor) {
 		return
 	}
 
-	for _, value := range v.Values {
+	for _, value := range v.Elements() {
 		value.Accept(interpreter, visitor)
 	}
 }
 
 func (v *ArrayValue) DynamicType(interpreter *Interpreter, results DynamicTypeResults) DynamicType {
-	elementTypes := make([]DynamicType, len(v.Values))
+	elements := v.Elements()
+	elementTypes := make([]DynamicType, len(elements))
 
-	for i, value := range v.Values {
+	for i, value := range elements {
 		elementTypes[i] = value.DynamicType(interpreter, results)
 	}
 
@@ -573,8 +583,20 @@ func (v *ArrayValue) StaticType() StaticType {
 
 func (v *ArrayValue) Copy() Value {
 	// TODO: optimize, use copy-on-write
-	copies := make([]Value, len(v.Values))
-	for i, value := range v.Values {
+
+	if v.elementsContent != nil {
+		value := &ArrayValue{
+			values:          nil,
+			modified:        true,
+			Owner:           nil,
+			elementsContent: v.elementsContent,
+		}
+
+		return value
+	}
+
+	copies := make([]Value, len(v.values))
+	for i, value := range v.values {
 		copies[i] = value.Copy()
 	}
 	return NewArrayValueUnownedNonCopying(copies...)
@@ -591,7 +613,7 @@ func (v *ArrayValue) SetOwner(owner *common.Address) {
 
 	v.Owner = owner
 
-	for _, value := range v.Values {
+	for _, value := range v.Elements() {
 		value.SetOwner(owner)
 	}
 }
@@ -601,7 +623,7 @@ func (v *ArrayValue) IsModified() bool {
 		return true
 	}
 
-	for _, value := range v.Values {
+	for _, value := range v.Elements() {
 		if value.IsModified() {
 			return true
 		}
@@ -615,7 +637,7 @@ func (v *ArrayValue) SetModified(modified bool) {
 }
 
 func (v *ArrayValue) Destroy(interpreter *Interpreter, getLocationRange func() LocationRange) {
-	for _, value := range v.Values {
+	for _, value := range v.Elements() {
 		maybeDestroy(interpreter, getLocationRange, value)
 	}
 }
@@ -623,7 +645,7 @@ func (v *ArrayValue) Destroy(interpreter *Interpreter, getLocationRange func() L
 func (v *ArrayValue) Concat(other ConcatenatableValue) Value {
 	otherArray := other.(*ArrayValue)
 	newArray := v.Copy().(*ArrayValue)
-	newArray.Values = append(newArray.Values, otherArray.Values...)
+	newArray.values = append(newArray.Elements(), otherArray.Elements()...)
 	return newArray
 }
 
@@ -640,7 +662,7 @@ func (v *ArrayValue) Get(_ *Interpreter, getLocationRange func() LocationRange, 
 		})
 	}
 
-	return v.Values[integerKey]
+	return v.Elements()[integerKey]
 }
 
 func (v *ArrayValue) Set(_ *Interpreter, _ func() LocationRange, key Value, value Value) {
@@ -651,12 +673,16 @@ func (v *ArrayValue) Set(_ *Interpreter, _ func() LocationRange, key Value, valu
 func (v *ArrayValue) SetIndex(index int, value Value) {
 	v.modified = true
 	value.SetOwner(v.Owner)
-	v.Values[index] = value
+
+	v.ensureElementsLoaded()
+	v.values[index] = value
 }
 
 func (v *ArrayValue) String(results StringResults) string {
-	values := make([]string, len(v.Values))
-	for i, value := range v.Values {
+	elements := v.Elements()
+	values := make([]string, len(elements))
+
+	for i, value := range elements {
 		values[i] = value.String(results)
 	}
 	return format.Array(values)
@@ -666,39 +692,48 @@ func (v *ArrayValue) Append(element Value) {
 	v.modified = true
 
 	element.SetOwner(v.Owner)
-	v.Values = append(v.Values, element)
+
+	elements := v.Elements()
+	v.values = append(elements, element)
 }
 
 func (v *ArrayValue) AppendAll(other AllAppendableValue) {
 	v.modified = true
 
 	otherArray := other.(*ArrayValue)
-	for _, element := range otherArray.Values {
+	otherElements := otherArray.Elements()
+
+	for _, element := range otherElements {
 		element.SetOwner(v.Owner)
 	}
-	v.Values = append(v.Values, otherArray.Values...)
+
+	elements := v.Elements()
+	v.values = append(elements, otherElements...)
 }
 
 func (v *ArrayValue) Insert(i int, element Value) {
 	v.modified = true
 
 	element.SetOwner(v.Owner)
-	v.Values = append(v.Values[:i], append([]Value{element}, v.Values[i:]...)...)
+
+	elements := v.Elements()
+	v.values = append(elements[:i], append([]Value{element}, elements[i:]...)...)
 }
 
 // TODO: unset owner?
 func (v *ArrayValue) Remove(i int) Value {
 	v.modified = true
 
-	result := v.Values[i]
+	elements := v.Elements()
+	result := elements[i]
 
-	lastIndex := len(v.Values) - 1
-	copy(v.Values[i:], v.Values[i+1:])
+	lastIndex := len(elements) - 1
+	copy(elements[i:], elements[i+1:])
 
 	// avoid memory leaks by explicitly setting value to nil
-	v.Values[lastIndex] = nil
+	elements[lastIndex] = nil
 
-	v.Values = v.Values[:lastIndex]
+	v.values = elements[:lastIndex]
 
 	return result
 }
@@ -707,8 +742,10 @@ func (v *ArrayValue) Remove(i int) Value {
 func (v *ArrayValue) RemoveFirst() Value {
 	v.modified = true
 
+	elements := v.Elements()
+
 	var firstElement Value
-	firstElement, v.Values = v.Values[0], v.Values[1:]
+	firstElement, v.values = elements[0], elements[1:]
 	return firstElement
 }
 
@@ -716,16 +753,18 @@ func (v *ArrayValue) RemoveFirst() Value {
 func (v *ArrayValue) RemoveLast() Value {
 	v.modified = true
 
+	elements := v.Elements()
 	var lastElement Value
-	lastIndex := len(v.Values) - 1
-	lastElement, v.Values = v.Values[lastIndex], v.Values[:lastIndex]
+	lastIndex := len(elements) - 1
+
+	lastElement, v.values = elements[lastIndex], elements[:lastIndex]
 	return lastElement
 }
 
 func (v *ArrayValue) Contains(needleValue Value) BoolValue {
 	needleEquatable := needleValue.(EquatableValue)
 
-	for _, arrayValue := range v.Values {
+	for _, arrayValue := range v.Elements() {
 		if needleEquatable.Equal(arrayValue, nil, true) {
 			return true
 		}
@@ -813,7 +852,7 @@ func (v *ArrayValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string,
 }
 
 func (v *ArrayValue) Count() int {
-	return len(v.Values)
+	return len(v.Elements())
 }
 
 func (v *ArrayValue) ConformsToDynamicType(
@@ -823,11 +862,14 @@ func (v *ArrayValue) ConformsToDynamicType(
 ) bool {
 
 	arrayType, ok := dynamicType.(ArrayDynamicType)
-	if !ok || len(v.Values) != len(arrayType.ElementTypes) {
+
+	elements := v.Elements()
+
+	if !ok || len(elements) != len(arrayType.ElementTypes) {
 		return false
 	}
 
-	for index, element := range v.Values {
+	for index, element := range elements {
 		if !element.ConformsToDynamicType(interpreter, arrayType.ElementTypes[index], results) {
 			return false
 		}
@@ -842,12 +884,15 @@ func (v *ArrayValue) Equal(other Value, interpreter *Interpreter, loadDeferred b
 		return false
 	}
 
-	if len(v.Values) != len(otherArray.Values) {
+	elements := v.Elements()
+	otherElements := otherArray.Elements()
+
+	if len(elements) != len(otherElements) {
 		return false
 	}
 
-	for i, value := range v.Values {
-		otherValue := otherArray.Values[i]
+	for i, value := range elements {
+		otherValue := otherElements[i]
 
 		equatableValue, ok := value.(EquatableValue)
 		if !ok || !equatableValue.Equal(otherValue, interpreter, loadDeferred) {
@@ -856,6 +901,23 @@ func (v *ArrayValue) Equal(other Value, interpreter *Interpreter, loadDeferred b
 	}
 
 	return true
+}
+
+func (v *ArrayValue) Elements() []Value {
+	v.ensureElementsLoaded()
+	return v.values
+}
+
+// Ensures the elements of this array value are loaded.
+func (v *ArrayValue) ensureElementsLoaded() {
+	if v.elementsContent == nil {
+		return
+	}
+
+	// TODO: decode the content and update the elements
+
+	// Clear the byte cache
+	v.elementsContent = nil
 }
 
 // NumberValue
@@ -6690,7 +6752,7 @@ func (v *DictionaryValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	if !descend {
 		return
 	}
-	for _, key := range v.Keys.Values {
+	for _, key := range v.Keys.Elements() {
 		key.Accept(interpreter, visitor)
 
 		// NOTE: Force unwrap. This is safe because we are iterating over the keys.
@@ -6700,9 +6762,10 @@ func (v *DictionaryValue) Accept(interpreter *Interpreter, visitor Visitor) {
 }
 
 func (v *DictionaryValue) DynamicType(interpreter *Interpreter, results DynamicTypeResults) DynamicType {
-	entryTypes := make([]struct{ KeyType, ValueType DynamicType }, len(v.Keys.Values))
+	keys := v.Keys.Elements()
+	entryTypes := make([]struct{ KeyType, ValueType DynamicType }, len(keys))
 
-	for i, key := range v.Keys.Values {
+	for i, key := range keys {
 		// NOTE: Force unwrap, otherwise dynamic type check is for optional type.
 		// This is safe because we are iterating over the keys.
 		value := v.Get(interpreter, ReturnEmptyLocationRange, key).(*SomeValue).Value
@@ -6797,7 +6860,7 @@ func maybeDestroy(inter *Interpreter, getLocationRange func() LocationRange, val
 
 func (v *DictionaryValue) Destroy(inter *Interpreter, getLocationRange func() LocationRange) {
 
-	for _, keyValue := range v.Keys.Values {
+	for _, keyValue := range v.Keys.Elements() {
 		// Don't use `Entries` here: the value might be deferred and needs to be loaded
 		value := v.Get(inter, getLocationRange, keyValue)
 		maybeDestroy(inter, getLocationRange, keyValue)
@@ -6883,12 +6946,14 @@ func (v *DictionaryValue) Set(inter *Interpreter, getLocationRange func() Locati
 }
 
 func (v *DictionaryValue) String(results StringResults) string {
+	keys := v.Keys.Elements()
+
 	pairs := make([]struct {
 		Key   string
 		Value string
-	}, len(v.Keys.Values))
+	}, len(keys))
 
-	for i, keyValue := range v.Keys.Values {
+	for i, keyValue := range keys {
 		key := dictionaryKey(keyValue)
 		value, _ := v.Entries.Get(key)
 
@@ -6927,7 +6992,7 @@ func (v *DictionaryValue) GetMember(interpreter *Interpreter, getLocationRange f
 	case "values":
 		dictionaryValues := make([]Value, v.Count())
 		i := 0
-		for _, keyValue := range v.Keys.Values {
+		for _, keyValue := range v.Keys.Elements() {
 			value := v.Get(interpreter, getLocationRange, keyValue).(*SomeValue).Value
 			dictionaryValues[i] = value.Copy()
 			i++
@@ -7009,7 +7074,7 @@ func (v *DictionaryValue) Remove(inter *Interpreter, getLocationRange func() Loc
 		v.Entries.Delete(key)
 
 		// TODO: optimize linear scan
-		for i, keyValue := range v.Keys.Values {
+		for i, keyValue := range v.Keys.Elements() {
 			if dictionaryKey(keyValue) == key {
 				v.Keys.Remove(i)
 				return value
@@ -7091,7 +7156,7 @@ func (v *DictionaryValue) ConformsToDynamicType(
 		return false
 	}
 
-	for index, entryKey := range v.Keys.Values {
+	for index, entryKey := range v.Keys.Elements() {
 		entryType := dictionaryType.EntryTypes[index]
 
 		// Check the key
@@ -7121,8 +7186,11 @@ func (v *DictionaryValue) Equal(other Value, interpreter *Interpreter, loadDefer
 		return false
 	}
 
-	for i, keyValue := range v.Keys.Values {
-		otherKeyValue := otherDictionary.Keys.Values[i]
+	keys := v.Keys.Elements()
+	otherKeys := otherDictionary.Keys.Elements()
+
+	for i, keyValue := range keys {
+		otherKeyValue := otherKeys[i]
 
 		var value, otherValue Value
 		var valueExists, otherValueExists bool

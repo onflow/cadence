@@ -782,7 +782,8 @@ func (e *Encoder) encodeArray(
 	path []string,
 	deferrals *EncodingDeferrals,
 ) error {
-	err := e.enc.EncodeArrayHead(uint64(len(v.Values)))
+	elements := v.Elements()
+	err := e.enc.EncodeArrayHead(uint64(len(elements)))
 	if err != nil {
 		return err
 	}
@@ -793,7 +794,7 @@ func (e *Encoder) encodeArray(
 
 	lastValuePathIndex := len(path)
 
-	for i, value := range v.Values {
+	for i, value := range elements {
 		valuePath[lastValuePathIndex] = strconv.Itoa(i)
 
 		err := e.Encode(value, valuePath, deferrals)
@@ -873,7 +874,8 @@ func (e *Encoder) encodeDictionaryValue(
 
 	// entries is empty if encoding of values is deferred,
 	// otherwise entries size is the same as keys size.
-	entriesLength := len(v.Keys.Values)
+	keys := v.Keys.Elements()
+	entriesLength := len(keys)
 	if deferred {
 		entriesLength = 0
 	}
@@ -890,7 +892,7 @@ func (e *Encoder) encodeDictionaryValue(
 
 	lastValuePathIndex := len(path) + 1
 
-	for _, keyValue := range v.Keys.Values {
+	for _, keyValue := range keys {
 		key := dictionaryKey(keyValue)
 		entryValue, _ := v.Entries.Get(key)
 		valuePath[lastValuePathIndex] = key

@@ -300,7 +300,7 @@ func (d *DecoderV3) decodeArray(v []interface{}, path []string) (*ArrayValue, er
 	}
 
 	return &ArrayValue{
-		Values:   values,
+		values:   values,
 		Owner:    d.owner,
 		modified: false,
 	}, nil
@@ -364,7 +364,7 @@ func (d *DecoderV3) decodeDictionary(v interface{}, path []string) (*DictionaryV
 	var hasAddressValueKeyInWrongPre3Format bool
 
 	if d.version <= 2 {
-		for _, keyValue := range keys.Values {
+		for _, keyValue := range keys.Elements() {
 			keyAddressValue, ok := keyValue.(AddressValue)
 			if !ok {
 				continue
@@ -437,7 +437,7 @@ func (d *DecoderV3) decodeDictionary(v interface{}, path []string) (*DictionaryV
 		deferred = orderedmap.NewStringStructOrderedMap()
 		deferredOwner = d.owner
 		deferredStorageKeyBase = joinPath(append(path[:], dictionaryValuePathPrefix))
-		for _, keyValue := range keys.Values {
+		for _, keyValue := range keys.Elements() {
 			key := dictionaryKey(keyValue)
 			deferred.Set(key, struct{}{})
 		}
@@ -446,7 +446,7 @@ func (d *DecoderV3) decodeDictionary(v interface{}, path []string) (*DictionaryV
 
 		index := 0
 
-		for _, keyValue := range keys.Values {
+		for _, keyValue := range keys.Elements() {
 			keyStringValue, ok := keyValue.(HasKeyString)
 			if !ok {
 				return nil, fmt.Errorf(

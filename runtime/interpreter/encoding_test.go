@@ -5291,7 +5291,7 @@ func TestEncodePrepareCallback(t *testing.T) {
 				path:  nil,
 			},
 			{
-				value: value.Values[0],
+				value: value.Elements()[0],
 				path:  []string{"0"},
 			},
 		},

@@ -29,8 +29,10 @@ func ByteArrayValueToByteSlice(value Value) ([]byte, error) {
 		return nil, errors.New("value is not an array")
 	}
 
-	result := make([]byte, len(array.Values))
-	for i, element := range array.Values {
+	elements := array.Elements()
+	result := make([]byte, len(elements))
+
+	for i, element := range elements {
 
 		b, err := ByteValueToByte(element)
 		if err != nil {

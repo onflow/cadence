@@ -125,10 +125,12 @@ func TestInterpretResourceUUID(t *testing.T) {
 	array := value.(*interpreter.ArrayValue)
 
 	const length = 2
-	require.Len(t, array.Values, length)
+
+	elements := array.Elements()
+	require.Len(t, elements, length)
 
 	for i := 0; i < length; i++ {
-		element := array.Values[i]
+		element := elements[i]
 
 		require.IsType(t, &interpreter.CompositeValue{}, element)
 		res := element.(*interpreter.CompositeValue)
