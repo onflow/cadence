@@ -266,15 +266,10 @@ func newFlowEventType(identifier string, parameters ...*sema.Parameter) *sema.Co
 		Kind:       common.CompositeKindEvent,
 		Location:   FlowLocation{},
 		Identifier: identifier,
-		Fields:     []string{},
 		Members:    sema.NewStringMemberOrderedMap(),
 	}
 
 	for _, parameter := range parameters {
-
-		eventType.Fields = append(eventType.Fields,
-			parameter.Identifier,
-		)
 
 		eventType.Members.Set(
 			parameter.Identifier,

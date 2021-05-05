@@ -229,7 +229,7 @@ func cryptoAlgorithmEnumType(enumType *sema.CompositeType, enumCases []sema.Cryp
 					Type: enumType,
 				},
 			),
-			Members: sema.GetMembersAsMap(members),
+			Members: sema.MembersAsMap(members...),
 		},
 	}
 

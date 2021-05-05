@@ -2234,23 +2234,33 @@ func TestCheckCompositeFieldOrder(t *testing.T) {
 
 			testType := RequireGlobalType(t, checker.Elaboration, "Test").(*sema.CompositeType)
 
+			fieldNames := make([]string, 0, testType.Members.Len())
+
+			testType.Members.Foreach(func(name string, member *sema.Member) {
+				if member.DeclarationKind != common.DeclarationKindField {
+					return
+				}
+
+				fieldNames = append(fieldNames, member.Identifier.Identifier)
+			})
+
 			switch kind {
 			case common.CompositeKindContract:
 				assert.Equal(t,
 					[]string{"account", "b", "a"},
-					testType.Fields,
+					fieldNames,
 				)
 
 			case common.CompositeKindResource:
 				assert.Equal(t,
 					[]string{"owner", "uuid", "b", "a"},
-					testType.Fields,
+					fieldNames,
 				)
 
 			default:
 				assert.Equal(t,
 					[]string{"b", "a"},
-					testType.Fields,
+					fieldNames,
 				)
 			}
 		})

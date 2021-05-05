@@ -3082,7 +3082,8 @@ type CompositeType struct {
 	Members                             *StringMemberOrderedMap
 	memberResolvers                     map[string]MemberResolver
 	memberResolversOnce                 sync.Once
-	Fields                              []string
+	serializedFieldMembers              []*Member
+	serializedFieldMembersOnce          sync.Once
 	// TODO: add support for overloaded initializers
 	ConstructorParameters []*Parameter
 	nestedTypes           *StringTypeOrderedMap
@@ -3160,6 +3161,28 @@ func (t *CompositeType) Equal(other Type) bool {
 func (t *CompositeType) GetMembers() map[string]MemberResolver {
 	t.initializeMemberResolvers()
 	return t.memberResolvers
+}
+
+func (t *CompositeType) SerializedFieldMembers() []*Member {
+	t.initializeSerializedFieldMembers()
+	return t.serializedFieldMembers
+}
+
+func (t *CompositeType) initializeSerializedFieldMembers() {
+	t.serializedFieldMembersOnce.Do(func() {
+		t.serializedFieldMembers = make([]*Member, 0)
+
+		t.Members.Foreach(func(identifier string, member *Member) {
+
+			if member.IgnoreInSerialization ||
+				member.DeclarationKind != common.DeclarationKindField {
+
+				return
+			}
+
+			t.serializedFieldMembers = append(t.serializedFieldMembers, member)
+		})
+	})
 }
 
 func (t *CompositeType) IsResourceType() bool {
@@ -3250,7 +3273,6 @@ func (t *CompositeType) InterfaceType() *InterfaceType {
 		Identifier:            t.Identifier,
 		CompositeKind:         t.Kind,
 		Members:               t.Members,
-		Fields:                t.Fields,
 		InitializerParameters: t.ConstructorParameters,
 		ContainerType:         t.ContainerType,
 		nestedTypes:           t.nestedTypes,
@@ -3476,7 +3498,6 @@ type InterfaceType struct {
 	Members             *StringMemberOrderedMap
 	memberResolvers     map[string]MemberResolver
 	memberResolversOnce sync.Once
-	Fields              []string
 	// TODO: add support for overloaded initializers
 	InitializerParameters []*Parameter
 	ContainerType         Type
@@ -4825,7 +4846,6 @@ func IsNilType(ty Type) bool {
 
 type TransactionType struct {
 	Members           *StringMemberOrderedMap
-	Fields            []string
 	PrepareParameters []*Parameter
 	Parameters        []*Parameter
 }
@@ -5442,7 +5462,7 @@ var AccountKeyType = func() *CompositeType {
 	const accountKeyWeightFieldDocString = `The weight assigned to the public key`
 	const accountKeyIsRevokedFieldDocString = `Flag indicating whether the key is revoked`
 
-	var members = []*Member{
+	accountKeyType.Members = MembersAsMap(
 		NewPublicConstantFieldMember(
 			accountKeyType,
 			AccountKeyKeyIndexField,
@@ -5473,10 +5493,8 @@ var AccountKeyType = func() *CompositeType {
 			BoolType,
 			accountKeyIsRevokedFieldDocString,
 		),
-	}
+	)
 
-	accountKeyType.Members = GetMembersAsMap(members)
-	accountKeyType.Fields = getFieldNames(members)
 	return accountKeyType
 }()
 
@@ -5511,7 +5529,7 @@ var PublicKeyType = func() *CompositeType {
 		Kind:       common.CompositeKindStructure,
 	}
 
-	var members = []*Member{
+	publicKeyType.Members = MembersAsMap(
 		NewPublicConstantFieldMember(
 			publicKeyType,
 			PublicKeyPublicKeyField,
@@ -5536,10 +5554,7 @@ var PublicKeyType = func() *CompositeType {
 			publicKeyVerifyFunctionType,
 			publicKeyVerifyFunctionDocString,
 		),
-	}
-
-	publicKeyType.Members = GetMembersAsMap(members)
-	publicKeyType.Fields = getFieldNames(members)
+	)
 
 	return publicKeyType
 }()
@@ -5581,22 +5596,11 @@ type CryptoAlgorithm interface {
 	DocString() string
 }
 
-func GetMembersAsMap(members []*Member) *StringMemberOrderedMap {
+func MembersAsMap(members ...*Member) *StringMemberOrderedMap {
 	membersMap := NewStringMemberOrderedMap()
 	for _, member := range members {
 		membersMap.Set(member.Identifier.Identifier, member)
 	}
 
 	return membersMap
-}
-
-func getFieldNames(members []*Member) []string {
-	fields := make([]string, 0)
-	for _, member := range members {
-		if member.DeclarationKind == common.DeclarationKindField {
-			fields = append(fields, member.Identifier.Identifier)
-		}
-	}
-
-	return fields
 }

@@ -37,7 +37,7 @@ var AuthAccountContractsType = func() *CompositeType {
 		Kind:       common.CompositeKindStructure,
 	}
 
-	var members = []*Member{
+	authAccountContractsType.Members = MembersAsMap(
 		NewPublicFunctionMember(
 			authAccountContractsType,
 			AuthAccountContractsTypeAddFunctionName,
@@ -62,10 +62,8 @@ var AuthAccountContractsType = func() *CompositeType {
 			authAccountContractsTypeRemoveFunctionType,
 			authAccountContractsTypeRemoveFunctionDocString,
 		),
-	}
+	)
 
-	authAccountContractsType.Members = GetMembersAsMap(members)
-	authAccountContractsType.Fields = getFieldNames(members)
 	return authAccountContractsType
 }()
 

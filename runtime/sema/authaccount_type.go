@@ -60,7 +60,7 @@ var AuthAccountType = func() *CompositeType {
 		}(),
 	}
 
-	var members = []*Member{
+	authAccountType.Members = MembersAsMap(
 		NewPublicConstantFieldMember(
 			authAccountType,
 			AuthAccountAddressField,
@@ -163,10 +163,8 @@ var AuthAccountType = func() *CompositeType {
 			AuthAccountKeysType,
 			accountTypeKeysFieldDocString,
 		),
-	}
+	)
 
-	authAccountType.Members = GetMembersAsMap(members)
-	authAccountType.Fields = getFieldNames(members)
 	return authAccountType
 }()
 
@@ -531,7 +529,7 @@ var AuthAccountKeysType = func() *CompositeType {
 		Kind:       common.CompositeKindStructure,
 	}
 
-	var members = []*Member{
+	accountKeys.Members = MembersAsMap(
 		NewPublicFunctionMember(
 			accountKeys,
 			AccountKeysAddFunctionName,
@@ -550,10 +548,8 @@ var AuthAccountKeysType = func() *CompositeType {
 			authAccountKeysTypeRevokeFunctionType,
 			authAccountKeysTypeRevokeFunctionDocString,
 		),
-	}
+	)
 
-	accountKeys.Members = GetMembersAsMap(members)
-	accountKeys.Fields = getFieldNames(members)
 	return accountKeys
 }()
 

@@ -433,7 +433,6 @@ func TestRestrictedType_GetMember(t *testing.T) {
 			Kind:       common.CompositeKindResource,
 			Identifier: "R",
 			Location:   common.StringLocation("a"),
-			Fields:     []string{},
 			Members:    NewStringMemberOrderedMap(),
 		}
 		ty := &RestrictedType{
@@ -476,7 +475,6 @@ func TestRestrictedType_GetMember(t *testing.T) {
 			Kind:       common.CompositeKindResource,
 			Identifier: "R",
 			Location:   common.StringLocation("a"),
-			Fields:     []string{},
 			Members:    NewStringMemberOrderedMap(),
 		}
 		restrictedType := &RestrictedType{

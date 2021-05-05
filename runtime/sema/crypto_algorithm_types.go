@@ -189,16 +189,14 @@ func newNativeEnumType(identifier string, rawType Type) *CompositeType {
 	// Members of the enum type are *not* the enum cases!
 	// Each individual enum case is an instance of the enum type,
 	// so only has a single member, the raw value field
-	var members = []*Member{
+	accountKeyType.Members = MembersAsMap(
 		NewPublicEnumCaseMember(
 			rawType,
 			EnumRawValueFieldName,
 			enumRawValueFieldDocString,
 		),
-	}
+	)
 
-	accountKeyType.Members = GetMembersAsMap(members)
-	accountKeyType.Fields = getFieldNames(members)
 	return accountKeyType
 }
 

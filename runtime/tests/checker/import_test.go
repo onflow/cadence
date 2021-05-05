@@ -697,8 +697,6 @@ func TestCheckImportVirtual(t *testing.T) {
 		Kind:       common.CompositeKindStructure,
 	}
 
-	fooType.Fields = []string{"bar"}
-
 	fooType.Members = sema.NewStringMemberOrderedMap()
 	fooType.Members.Set(
 		"bar",

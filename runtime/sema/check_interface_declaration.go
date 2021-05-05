@@ -298,7 +298,7 @@ func (checker *Checker) declareInterfaceMembers(declaration *ast.InterfaceDeclar
 
 	// Declare members
 
-	members, fields, origins := checker.defaultMembersAndOrigins(
+	members, origins := checker.defaultMembersAndOrigins(
 		declaration.Members,
 		interfaceType,
 		ContainerKindInterface,
@@ -310,7 +310,6 @@ func (checker *Checker) declareInterfaceMembers(declaration *ast.InterfaceDeclar
 	}
 
 	interfaceType.Members = members
-	interfaceType.Fields = fields
 	if checker.originsAndOccurrencesEnabled {
 		checker.memberOrigins[interfaceType] = origins
 	}

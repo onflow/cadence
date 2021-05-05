@@ -592,27 +592,26 @@ func (checker *Checker) declareCompositeMembersAndValue(
 		// NOTE: *After* declaring nested composite and interface declarations
 
 		var members *StringMemberOrderedMap
-		var fields []string
 		var origins map[string]*Origin
 
 		switch declaration.CompositeKind {
 		case common.CompositeKindEvent:
 			// Event members are derived from the initializer's parameter list
-			members, fields, origins = checker.eventMembersAndOrigins(
+			members, origins = checker.eventMembersAndOrigins(
 				initializers[0],
 				compositeType,
 			)
 
 		case common.CompositeKindEnum:
 			// Enum members are derived from the cases
-			members, fields, origins = checker.enumMembersAndOrigins(
+			members, origins = checker.enumMembersAndOrigins(
 				declaration.Members,
 				compositeType,
 				declaration.DeclarationKind(),
 			)
 
 		default:
-			members, fields, origins = checker.defaultMembersAndOrigins(
+			members, origins = checker.defaultMembersAndOrigins(
 				declaration.Members,
 				compositeType,
 				kind,
@@ -625,7 +624,6 @@ func (checker *Checker) declareCompositeMembersAndValue(
 		}
 
 		compositeType.Members = members
-		compositeType.Fields = fields
 		if checker.originsAndOccurrencesEnabled {
 			checker.memberOrigins[compositeType] = origins
 		}
@@ -1316,7 +1314,6 @@ func (checker *Checker) defaultMembersAndOrigins(
 	containerDeclarationKind common.DeclarationKind,
 ) (
 	members *StringMemberOrderedMap,
-	fieldNames []string,
 	origins map[string]*Origin,
 ) {
 	fields := allMembers.Fields()
@@ -1349,10 +1346,6 @@ func (checker *Checker) defaultMembersAndOrigins(
 		name := predeclaredMember.Identifier.Identifier
 		members.Set(name, predeclaredMember)
 		invalidIdentifiers[name] = true
-
-		if predeclaredMember.DeclarationKind == common.DeclarationKindField {
-			fieldNames = append(fieldNames, name)
-		}
 	}
 
 	checkInvalidIdentifier := func(declaration ast.Declaration) bool {
@@ -1380,8 +1373,6 @@ func (checker *Checker) defaultMembersAndOrigins(
 		}
 
 		identifier := field.Identifier.Identifier
-
-		fieldNames = append(fieldNames, identifier)
 
 		fieldTypeAnnotation := checker.ConvertTypeAnnotation(field.TypeAnnotation)
 		checker.checkTypeAnnotation(fieldTypeAnnotation, field.TypeAnnotation)
@@ -1487,7 +1478,7 @@ func (checker *Checker) defaultMembersAndOrigins(
 		}
 	}
 
-	return members, fieldNames, origins
+	return members, origins
 }
 
 func (checker *Checker) eventMembersAndOrigins(
@@ -1495,7 +1486,6 @@ func (checker *Checker) eventMembersAndOrigins(
 	containerType *CompositeType,
 ) (
 	members *StringMemberOrderedMap,
-	fieldNames []string,
 	origins map[string]*Origin,
 ) {
 	parameters := initializer.FunctionDeclaration.ParameterList.Parameters
@@ -1509,8 +1499,6 @@ func (checker *Checker) eventMembersAndOrigins(
 		typeAnnotation := containerType.ConstructorParameters[i].TypeAnnotation
 
 		identifier := parameter.Identifier
-
-		fieldNames = append(fieldNames, identifier.Identifier)
 
 		members.Set(
 			identifier.Identifier,
@@ -1548,7 +1536,6 @@ func (checker *Checker) enumMembersAndOrigins(
 	containerDeclarationKind common.DeclarationKind,
 ) (
 	members *StringMemberOrderedMap,
-	fieldNames []string,
 	origins map[string]*Origin,
 ) {
 	for _, declaration := range allMembers.Declarations() {
@@ -1602,14 +1589,6 @@ func (checker *Checker) enumMembersAndOrigins(
 	// No origins available for the only member which was declared above
 
 	origins = map[string]*Origin{}
-
-	// Gather the field names from the members declared above
-
-	members.Foreach(func(name string, member *Member) {
-		if member.DeclarationKind == common.DeclarationKindField {
-			fieldNames = append(fieldNames, name)
-		}
-	})
 
 	return
 }
