@@ -1398,13 +1398,11 @@ func (r *interpreterRuntime) recordContractValue(
 	addressValue interpreter.AddressValue,
 	name string,
 	contractValue interpreter.Value,
-	exportedContractValue cadence.Value,
 ) {
 	runtimeStorage.recordContractUpdate(
 		addressValue.ToAddress(),
 		formatContractKey(name),
 		contractValue,
-		exportedContractValue,
 	)
 }
 
@@ -1476,7 +1474,6 @@ func (r *interpreterRuntime) instantiateContract(
 	checkerOptions []sema.Option,
 ) (
 	interpreter.Value,
-	cadence.Value,
 	error,
 ) {
 	parameterTypes := make([]sema.Type, len(contractType.ConstructorParameters))
@@ -1491,13 +1488,13 @@ func (r *interpreterRuntime) instantiateContract(
 	parameterCount := len(parameterTypes)
 
 	if argumentCount < parameterCount {
-		return nil, nil, fmt.Errorf(
+		return nil, fmt.Errorf(
 			"invalid argument count, too few arguments: expected %d, got %d, next missing argument: `%s`",
 			parameterCount, argumentCount,
 			parameterTypes[argumentCount],
 		)
 	} else if argumentCount > parameterCount {
-		return nil, nil, fmt.Errorf(
+		return nil, fmt.Errorf(
 			"invalid argument count, too many arguments: expected %d, got %d",
 			parameterCount,
 			argumentCount,
@@ -1512,7 +1509,7 @@ func (r *interpreterRuntime) instantiateContract(
 		argumentType := argumentTypes[i]
 		parameterTye := parameterTypes[i]
 		if !sema.IsSubType(argumentType, parameterTye) {
-			return nil, nil, fmt.Errorf(
+			return nil, fmt.Errorf(
 				"invalid argument %d: expected type `%s`, got `%s`",
 				i,
 				parameterTye,
@@ -1586,17 +1583,12 @@ func (r *interpreterRuntime) instantiateContract(
 	)
 
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	contract = interpeter.Globals[contractType.Identifier].GetValue().(*interpreter.CompositeValue)
 
-	var exportedContract cadence.Value
-	if runtimeStorage.highLevelStorageEnabled {
-		exportedContract = exportCompositeValue(contract, interpeter, exportResults{})
-	}
-
-	return contract, exportedContract, err
+	return contract, err
 }
 
 func (r *interpreterRuntime) newGetAccountFunction(runtimeInterface Interface, runtimeStorage *runtimeStorage) interpreter.HostFunction {
@@ -2087,7 +2079,6 @@ func (r *interpreterRuntime) updateAccountContractCode(
 	// the new contract will NOT be deployed (options.createContract is false).
 
 	var contractValue interpreter.Value
-	var exportedContractValue cadence.Value
 
 	createContract := contractType != nil && options.createContract
 
@@ -2100,7 +2091,7 @@ func (r *interpreterRuntime) updateAccountContractCode(
 		functions := r.standardLibraryFunctions(context, runtimeStorage, interpreterOptions, checkerOptions)
 		values := stdlib.BuiltinValues
 
-		contractValue, exportedContractValue, err = r.instantiateContract(
+		contractValue, err = r.instantiateContract(
 			program,
 			context,
 			contractType,
@@ -2137,7 +2128,6 @@ func (r *interpreterRuntime) updateAccountContractCode(
 			addressValue,
 			name,
 			contractValue,
-			exportedContractValue,
 		)
 	}
 
@@ -2241,7 +2231,6 @@ func (r *interpreterRuntime) newAuthAccountContractsRemoveFunction(
 					runtimeStorage,
 					addressValue,
 					nameArgument,
-					nil,
 					nil,
 				)
 

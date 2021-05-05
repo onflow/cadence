@@ -117,18 +117,6 @@ type Interface interface {
 	ValidatePublicKey(key *PublicKey) (bool, error)
 }
 
-type HighLevelStorage interface {
-	Interface
-
-	// HighLevelStorageEnabled should return true
-	// if the functions of HighLevelStorage should be called,
-	// e.g. SetCadenceValue
-	HighLevelStorageEnabled() bool
-
-	// SetCadenceValue sets a value for the given key in the storage, owned by the given account.
-	SetCadenceValue(owner Address, key string, value cadence.Value) (err error)
-}
-
 type Metrics interface {
 	ProgramParsed(location common.Location, duration time.Duration)
 	ProgramChecked(location common.Location, duration time.Duration)
