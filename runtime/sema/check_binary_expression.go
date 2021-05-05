@@ -100,7 +100,7 @@ func (checker *Checker) VisitBinaryExpression(expression *ast.BinaryExpression) 
 		// are not definite, but only potential.
 
 		rightType := checker.checkPotentiallyUnevaluated(func() Type {
-			return expression.Right.Accept(checker).(Type)
+			return checker.VisitExpression(expression.Right, nil)
 		})
 
 		rightIsInvalid := rightType.IsInvalidType()

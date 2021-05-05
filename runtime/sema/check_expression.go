@@ -138,7 +138,7 @@ func (checker *Checker) checkResourceVariableCapturingInFunction(variable *Varia
 func (checker *Checker) VisitExpressionStatement(statement *ast.ExpressionStatement) ast.Repr {
 	expression := statement.Expression
 
-	ty := expression.Accept(checker).(Type)
+	ty := checker.VisitExpression(expression, nil)
 
 	if ty.IsResourceType() {
 		checker.report(

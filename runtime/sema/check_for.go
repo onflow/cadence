@@ -29,7 +29,7 @@ func (checker *Checker) VisitForStatement(statement *ast.ForStatement) ast.Repr 
 	defer checker.leaveValueScope(statement.EndPosition, true)
 
 	valueExpression := statement.Value
-	valueType := valueExpression.Accept(checker).(Type)
+	valueType := checker.VisitExpression(valueExpression, nil)
 
 	var elementType Type = InvalidType
 

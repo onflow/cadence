@@ -26,7 +26,7 @@ import (
 func (checker *Checker) VisitWhileStatement(statement *ast.WhileStatement) ast.Repr {
 
 	testExpression := statement.Test
-	testType := testExpression.Accept(checker).(Type)
+	testType := checker.VisitExpression(testExpression, nil)
 
 	if !testType.IsInvalidType() &&
 		!IsSubType(testType, BoolType) {
