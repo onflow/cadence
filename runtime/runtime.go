@@ -1027,8 +1027,13 @@ func (r *interpreterRuntime) storageInterpreterOptions(runtimeStorage *runtimeSt
 			},
 		),
 		interpreter.WithStorageReadHandler(
-			func(_ *interpreter.Interpreter, address common.Address, key string, deferred bool) interpreter.OptionalValue {
-				return runtimeStorage.readValue(address, key, deferred)
+			func(interpreter *interpreter.Interpreter, address common.Address, key string, deferred bool) interpreter.OptionalValue {
+				return runtimeStorage.readValue(
+					address,
+					key,
+					deferred,
+					interpreter.CompositeSerializedFieldMembers,
+				)
 			},
 		),
 		interpreter.WithStorageWriteHandler(
@@ -1449,6 +1454,7 @@ func (r *interpreterRuntime) loadContract(
 				location.Address,
 				formatContractKey(location.Name),
 				false,
+				inter.CompositeSerializedFieldMembers,
 			)
 		}
 

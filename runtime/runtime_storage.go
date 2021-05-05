@@ -134,6 +134,7 @@ func (s *runtimeStorage) readValue(
 	address common.Address,
 	key string,
 	deferred bool,
+	serializedFieldMembersGetter interpreter.CompositeSerializedFieldMembersGetter,
 ) interpreter.OptionalValue {
 
 	fullKey := StorageKey{
@@ -183,6 +184,7 @@ func (s *runtimeStorage) readValue(
 				&address,
 				[]string{key},
 				version,
+				serializedFieldMembersGetter,
 				nil,
 			)
 		},

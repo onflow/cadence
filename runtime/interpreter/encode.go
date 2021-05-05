@@ -1008,7 +1008,7 @@ func (e *Encoder) encodeCompositeValue(
 	}
 
 	// Encode fields (as array) at array index encodedCompositeValueFieldsFieldKey
-	err = e.enc.EncodeArrayHead(uint64(v.Fields.Len() * 2))
+	err = e.enc.EncodeArrayHead(uint64(v.Fields.Len()))
 	if err != nil {
 		return err
 	}
@@ -1020,13 +1020,6 @@ func (e *Encoder) encodeCompositeValue(
 
 	for pair := v.Fields.Oldest(); pair != nil; pair = pair.Next() {
 		fieldName := pair.Key
-
-		// Encode field name as fields array element
-		err := e.enc.EncodeString(fieldName)
-		if err != nil {
-			return err
-		}
-
 		value := pair.Value
 
 		valuePath[lastValuePathIndex] = fieldName

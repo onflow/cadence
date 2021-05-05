@@ -25,6 +25,7 @@ import (
 	"testing"
 
 	"github.com/fxamacker/cbor/v2"
+	"github.com/onflow/cadence/runtime/ast"
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/runtime/common"
@@ -34,15 +35,16 @@ import (
 )
 
 type encodeDecodeTest struct {
-	value                 Value
-	encoded               []byte
-	invalid               bool
-	deferred              bool
-	deferrals             *EncodingDeferrals
-	decodedValue          Value
-	decodeOnly            bool
-	decodeVersionOverride bool
-	decodeVersion         uint16
+	value                                 Value
+	encoded                               []byte
+	invalid                               bool
+	deferred                              bool
+	deferrals                             *EncodingDeferrals
+	decodedValue                          Value
+	decodeOnly                            bool
+	decodeVersionOverride                 bool
+	decodeVersion                         uint16
+	compositeSerializedFieldMembersGetter CompositeSerializedFieldMembersGetter
 }
 
 var testOwner = common.BytesToAddress([]byte{0x42})
@@ -78,7 +80,7 @@ func testEncodeDecode(t *testing.T, test encodeDecodeTest) {
 	if version <= 3 {
 		decoded, err = DecodeValueV3(encoded, &testOwner, nil, version, nil)
 	} else {
-		decoded, err = DecodeValue(encoded, &testOwner, nil, version, nil)
+		decoded, err = DecodeValue(encoded, &testOwner, nil, version, test.compositeSerializedFieldMembersGetter, nil)
 	}
 
 	if test.invalid {
@@ -567,6 +569,11 @@ func TestEncodeDecodeComposite(t *testing.T) {
 			encodeDecodeTest{
 				value:   expected,
 				encoded: encoded,
+				compositeSerializedFieldMembersGetter: func(location common.Location, qualifiedIdentifier string) []*sema.Member {
+					require.Equal(t, expected.Location, location)
+					require.Equal(t, expected.QualifiedIdentifier, qualifiedIdentifier)
+					return nil
+				},
 			},
 		)
 
@@ -695,6 +702,17 @@ func TestEncodeDecodeComposite(t *testing.T) {
 		members.Set("string", stringValue)
 		members.Set("true", BoolValue(true))
 
+		serializedFieldMembers := []*sema.Member{
+			{
+				Identifier:     ast.Identifier{Identifier: "string"},
+				TypeAnnotation: sema.NewTypeAnnotation(sema.StringType),
+			},
+			{
+				Identifier:     ast.Identifier{Identifier: "true"},
+				TypeAnnotation: sema.NewTypeAnnotation(sema.BoolType),
+			},
+		}
+
 		expected := NewCompositeValue(
 			utils.TestLocation,
 			"TestResource",
@@ -723,20 +741,14 @@ func TestEncodeDecodeComposite(t *testing.T) {
 			// positive integer 2
 			0x2,
 
-			// array, 4 items follow
-			0x84,
-			// UTF-8 string, length 6
-			0x66,
-			// s, t, r, i, n, g
-			0x73, 0x74, 0x72, 0x69, 0x6e, 0x67,
+			// array, 2 items follow
+			0x82,
+
 			// UTF-8 string, length 4
 			0x64,
 			// t, e, s, t
 			0x74, 0x65, 0x73, 0x74,
-			// UTF-8 string, length 4
-			0x64,
-			// t, r, u, e
-			0x74, 0x72, 0x75, 0x65,
+
 			// true
 			0xf5,
 
@@ -791,6 +803,11 @@ func TestEncodeDecodeComposite(t *testing.T) {
 			encodeDecodeTest{
 				value:   expected,
 				encoded: encoded,
+				compositeSerializedFieldMembersGetter: func(location common.Location, qualifiedIdentifier string) []*sema.Member {
+					require.Equal(t, expected.Location, location)
+					require.Equal(t, expected.QualifiedIdentifier, qualifiedIdentifier)
+					return serializedFieldMembers
+				},
 			},
 		)
 
@@ -1063,6 +1080,11 @@ func TestEncodeDecodeComposite(t *testing.T) {
 			encodeDecodeTest{
 				value:   expected,
 				encoded: encoded,
+				compositeSerializedFieldMembersGetter: func(location common.Location, qualifiedIdentifier string) []*sema.Member {
+					require.Equal(t, expected.Location, location)
+					require.Equal(t, expected.QualifiedIdentifier, qualifiedIdentifier)
+					return nil
+				},
 			},
 		)
 
@@ -5258,12 +5280,19 @@ func TestDecodeCallback(t *testing.T) {
 
 	var decodeCallbacks []decodeCallback
 
-	_, err := DecodeValue(data, nil, nil, CurrentEncodingVersion, func(value interface{}, path []string) {
-		decodeCallbacks = append(decodeCallbacks, decodeCallback{
-			value: value,
-			path:  path,
-		})
-	})
+	_, err := DecodeValue(
+		data,
+		nil,
+		nil,
+		CurrentEncodingVersion,
+		nil,
+		func(value interface{}, path []string) {
+			decodeCallbacks = append(decodeCallbacks, decodeCallback{
+				value: value,
+				path:  path,
+			})
+		},
+	)
 	require.NoError(t, err)
 
 	require.Equal(t,

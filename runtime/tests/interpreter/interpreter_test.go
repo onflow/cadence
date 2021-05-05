@@ -7047,9 +7047,6 @@ func TestInterpretCompositeValueFieldEncodingOrder(t *testing.T) {
 		initializations = append(initializations, []byte(initialization))
 
 		expectedEncodings = append(expectedEncodings, []byte{
-			// UTF-8 string, length 1
-			0x61,
-			name,
 			// tag
 			0xD8, 0x98,
 			// - positive bignum
@@ -7082,8 +7079,8 @@ func TestInterpretCompositeValueFieldEncodingOrder(t *testing.T) {
 		// positive integer 1
 		0x1,
 
-		// array, 6 items follow
-		0x86,
+		// array, 3 items follow
+		0x83,
 	}
 
 	expectedSuffix := []byte{
@@ -7190,10 +7187,16 @@ func TestInterpretDictionaryValueEncodingOrder(t *testing.T) {
 		encoded, _, err := interpreter.EncodeValue(test, path, false, nil)
 		require.NoError(t, err)
 
+		serializedFieldMembersGetter := func(location common.Location, qualifiedIdentifier string) []*sema.Member {
+			require.FailNow(t, "unexpected call to field name getter")
+			return nil
+		}
+
 		decoder, err := interpreter.NewDecoder(
 			bytes.NewReader(encoded),
 			owner,
 			interpreter.CurrentEncodingVersion,
+			serializedFieldMembersGetter,
 			nil,
 		)
 		require.NoError(t, err)
