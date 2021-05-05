@@ -64,7 +64,7 @@ func (checker *Checker) VisitBinaryExpression(expression *ast.BinaryExpression) 
 		// Visit the expression, with contextually expected type. Use the expected type
 		// only for inferring wherever possible, but do not check for compatibility.
 		// Compatibility is checked separately for each operand kind.
-		rightType := checker.visitExpression(expression.Right, leftType, false)
+		rightType := checker.visitExpression(expression.Right, expectedType, false)
 
 		rightIsInvalid := rightType.IsInvalidType()
 

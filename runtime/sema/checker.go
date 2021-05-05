@@ -2308,6 +2308,9 @@ func (checker *Checker) VisitExpression(expr ast.Expression, expectedType Type) 
 
 func (checker *Checker) visitExpression(expr ast.Expression, expectedType Type, forceTypes bool) Type {
 
+	// forceTypes - flag indicating whether to use the expected type as a hard requirement (forceTypes = true)
+	// or whether to use the expected type for type inferring only (forceTypes = false)
+
 	// Cache the current contextually expected type, and set the `expectedType`
 	// as the new contextually expected type.
 	prevExpectedType := checker.expectedType
@@ -2320,6 +2323,10 @@ func (checker *Checker) visitExpression(expr ast.Expression, expectedType Type, 
 	}
 
 	checker.expectedType = expectedType
+	defer func() {
+		// Restore the prev contextually expected type
+		checker.expectedType = prevExpectedType
+	}()
 
 	actualType := expr.Accept(checker).(Type)
 
@@ -2338,11 +2345,8 @@ func (checker *Checker) visitExpression(expr ast.Expression, expectedType Type, 
 
 		// If there are type mismatch errors, return the expected type as the type of the expression.
 		// This is done to avoid the same error getting delegated up.
-		actualType = expectedType
+		return expectedType
 	}
-
-	// Restore the prev contextually expected type
-	checker.expectedType = prevExpectedType
 
 	return actualType
 }

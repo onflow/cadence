@@ -38,7 +38,7 @@ func (checker *Checker) VisitCastingExpression(expression *ast.CastingExpression
 
 	leftHandExpression := expression.Expression
 
-	// In simple casting expression the type annotation is used to infer the type for the expression.
+	// In simple casting expression, type annotation is used to infer the type for the expression.
 	var expectedType Type
 	if expression.Operation == ast.OperationCast {
 		expectedType = rightHandType
