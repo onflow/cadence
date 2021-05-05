@@ -25,10 +25,7 @@ import (
 
 func (checker *Checker) VisitCastingExpression(expression *ast.CastingExpression) ast.Repr {
 
-	leftHandExpression := expression.Expression
-	leftHandType := checker.VisitExpression(leftHandExpression, nil)
-
-	checker.Elaboration.CastingStaticValueTypes[expression] = leftHandType
+	// Visit type annotation
 
 	rightHandTypeAnnotation := checker.ConvertTypeAnnotation(expression.TypeAnnotation)
 	checker.checkTypeAnnotation(rightHandTypeAnnotation, expression.TypeAnnotation)
@@ -36,6 +33,20 @@ func (checker *Checker) VisitCastingExpression(expression *ast.CastingExpression
 	rightHandType := rightHandTypeAnnotation.Type
 
 	checker.Elaboration.CastingTargetTypes[expression] = rightHandType
+
+	// visit the expression
+
+	leftHandExpression := expression.Expression
+
+	// In simple casting expression the type annotation is used to infer the type for the expression.
+	var expectedType Type
+	if expression.Operation == ast.OperationCast {
+		expectedType = rightHandType
+	}
+
+	leftHandType := checker.VisitExpression(leftHandExpression, expectedType)
+
+	checker.Elaboration.CastingStaticValueTypes[expression] = leftHandType
 
 	if leftHandType.IsResourceType() {
 		checker.recordResourceInvalidation(
@@ -143,18 +154,6 @@ func (checker *Checker) VisitCastingExpression(expression *ast.CastingExpression
 		return rightHandType
 
 	case ast.OperationCast:
-		if bothValid &&
-			!checker.checkTypeCompatibility(leftHandExpression, leftHandType, rightHandType) {
-
-			checker.report(
-				&TypeMismatchError{
-					ActualType:   leftHandType,
-					ExpectedType: rightHandType,
-					Range:        ast.NewRangeFromPositioned(leftHandExpression),
-				},
-			)
-		}
-
 		return rightHandType
 
 	default:
