@@ -1268,7 +1268,7 @@ func (s *Server) getDiagnostics(
 		),
 		sema.WithOriginsAndOccurrencesEnabled(true),
 		sema.WithImportHandler(
-			func(checker *sema.Checker, importedLocation common.Location) (sema.Import, error) {
+			func(checker *sema.Checker, importedLocation common.Location, importRange ast.Range) (sema.Import, error) {
 				switch importedLocation {
 				case stdlib.CryptoChecker.Location:
 					return sema.ElaborationImport{
