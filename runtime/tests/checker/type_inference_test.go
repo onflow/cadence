@@ -246,3 +246,48 @@ func TestForceExpressionTypeInference(t *testing.T) {
 		require.NoError(t, err)
 	})
 }
+
+func TestCastExpressionTypeInference(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("array", func(t *testing.T) {
+		_, err := ParseAndCheck(t, `
+			fun test() {
+				var x = [1, 3] as [Int8]
+			}
+		`)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("number out of range", func(t *testing.T) {
+		_, err := ParseAndCheck(t, `
+			fun test() {
+				var x = [1, 764] as [Int8]
+			}
+		`)
+
+		require.Error(t, err)
+		assert.IsType(t, &sema.CheckerError{}, err)
+		checkerErr := err.(*sema.CheckerError)
+
+		require.Len(t, checkerErr.Errors, 1)
+		assert.IsType(t, &sema.InvalidIntegerLiteralRangeError{}, checkerErr.Errors[0])
+	})
+
+	t.Run("mismatching types", func(t *testing.T) {
+		_, err := ParseAndCheck(t, `
+			fun test() {
+				var x = [1, "hello"] as [Int8]
+			}
+		`)
+
+		require.Error(t, err)
+		assert.IsType(t, &sema.CheckerError{}, err)
+		checkerErr := err.(*sema.CheckerError)
+
+		require.Len(t, checkerErr.Errors, 1)
+		assert.IsType(t, &sema.TypeMismatchError{}, checkerErr.Errors[0])
+	})
+}

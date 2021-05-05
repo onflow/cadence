@@ -547,7 +547,9 @@ func (checker *Checker) checkTransfer(transfer *ast.Transfer, valueType Type) {
 	}
 }
 
-// TODO: Use this only for casting operation, eventually
+// This method is only used for checking invocation-expression.
+// This is also temporary, until the type inferring support is added for func arguments
+// TODO: Remove this method
 func (checker *Checker) checkTypeCompatibility(expression ast.Expression, valueType Type, targetType Type) bool {
 	switch typedExpression := expression.(type) {
 	case *ast.IntegerExpression:
