@@ -5338,11 +5338,23 @@ func BenchmarkDecoding(b *testing.B) {
 	encoded, _, err := EncodeValue(value, nil, false, nil)
 	require.NoError(b, err)
 
+	serializedFieldMembersGetter := func(location common.Location, qualifiedIdentifier string) []*sema.Member {
+		require.FailNow(b, "unexpected request for serialized field members")
+		return nil
+	}
+
 	b.ReportAllocs()
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		_, err = DecodeValue(encoded, nil, nil, CurrentEncodingVersion, nil)
+		_, err = DecodeValue(
+			encoded,
+			nil,
+			nil,
+			CurrentEncodingVersion,
+			serializedFieldMembersGetter,
+			nil,
+		)
 		require.NoError(b, err)
 	}
 }
