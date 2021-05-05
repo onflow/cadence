@@ -25,65 +25,26 @@ import (
 
 func (checker *Checker) VisitSwapStatement(swap *ast.SwapStatement) ast.Repr {
 
-	// The types of both sides must be subtypes of each other,
-	// so that assignment can be performed in both directions.
-	//
-	// This is checked through the two `visitAssignmentValueType` calls.
-
 	leftType := checker.VisitExpression(swap.Left, nil)
 	rightType := checker.VisitExpression(swap.Right, nil)
 
 	checker.Elaboration.SwapStatementLeftTypes[swap] = leftType
 	checker.Elaboration.SwapStatementRightTypes[swap] = rightType
 
-	// Both sides must be a target expression (e.g. identifier expression,
-	// indexing expression, or member access expression)
+	lhsChecked := checker.checkSwapStatementExpression(swap.Left, leftType, common.OperandSideLeft)
+	rhsChecked := checker.checkSwapStatementExpression(swap.Right, rightType, common.OperandSideRight)
 
-	checkRight := true
-
-	if !IsValidAssignmentTargetExpression(swap.Left) {
+	// The types of both sides must be subtypes of each other,
+	// so that assignment can be performed in both directions.
+	// i.e: The two types have to be equal.
+	if lhsChecked && rhsChecked && !leftType.Equal(rightType) {
 		checker.report(
-			&InvalidSwapExpressionError{
-				Side:  common.OperandSideLeft,
-				Range: ast.NewRangeFromPositioned(swap.Left),
+			&TypeMismatchError{
+				ExpectedType: leftType,
+				ActualType:   rightType,
+				Range:        ast.NewRangeFromPositioned(swap.Right),
 			},
 		)
-	} else if !leftType.IsInvalidType() {
-		// Only check the right-hand side if checking the left-hand side
-		// doesn't produce errors. This prevents potentially confusing
-		// duplicate errors
-
-		errorCountBefore := len(checker.errors)
-
-		checker.visitAssignmentValueType(swap.Left)
-
-		// check value type is subtype of variable type
-		checker.validateTypeCompatibility(swap.Left, rightType, leftType)
-
-		errorCountAfter := len(checker.errors)
-		if errorCountAfter != errorCountBefore {
-			checkRight = false
-		}
-	}
-
-	if !IsValidAssignmentTargetExpression(swap.Right) {
-		checker.report(
-			&InvalidSwapExpressionError{
-				Side:  common.OperandSideRight,
-				Range: ast.NewRangeFromPositioned(swap.Right),
-			},
-		)
-	} else if !rightType.IsInvalidType() {
-		// Only check the right-hand side if checking the left-hand side
-		// doesn't produce errors. This prevents potentially confusing
-		// duplicate errors
-
-		if checkRight {
-			checker.visitAssignmentValueType(swap.Right)
-
-			// check value type is subtype of variable type
-			checker.validateTypeCompatibility(swap.Right, leftType, rightType)
-		}
 	}
 
 	if leftType.IsResourceType() {
@@ -97,19 +58,25 @@ func (checker *Checker) VisitSwapStatement(swap *ast.SwapStatement) ast.Repr {
 	return nil
 }
 
-func (checker *Checker) validateTypeCompatibility(expr ast.Expression, actualType Type, expectedType Type) {
-	if actualType.IsInvalidType() || expectedType.IsInvalidType() {
-		return
-	}
+func (checker *Checker) checkSwapStatementExpression(
+	expression ast.Expression,
+	exprType Type,
+	opSide common.OperandSide,
+) (checked bool) {
 
-	if !checker.checkTypeCompatibility(expr, actualType, expectedType) {
-
+	// Expression in either side of the swap statement must be a target expression.
+	// (e.g. identifier expression, indexing expression, or member access expression)
+	if !IsValidAssignmentTargetExpression(expression) {
 		checker.report(
-			&TypeMismatchError{
-				ExpectedType: expectedType,
-				ActualType:   actualType,
-				Range:        ast.NewRangeFromPositioned(expr),
+			&InvalidSwapExpressionError{
+				Side:  opSide,
+				Range: ast.NewRangeFromPositioned(expression),
 			},
 		)
+	} else if !exprType.IsInvalidType() {
+		checker.visitAssignmentValueType(expression)
+		checked = true
 	}
+
+	return
 }

@@ -508,6 +508,7 @@ func (checker *Checker) checkInvocationRequiredArgument(
 
 	// Check that the type of the argument matches the type of the parameter.
 
+	// TODO: remove this once type inferring support for parameters is added
 	checker.checkInvocationArgumentParameterTypeCompatibility(
 		argument.Expression,
 		argumentType,
