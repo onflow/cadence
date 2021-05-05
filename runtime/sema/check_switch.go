@@ -24,7 +24,7 @@ import (
 
 func (checker *Checker) VisitSwitchStatement(statement *ast.SwitchStatement) ast.Repr {
 
-	testType := statement.Expression.Accept(checker).(Type)
+	testType := checker.VisitExpression(statement.Expression, nil)
 
 	testTypeIsValid := !testType.IsInvalidType()
 
@@ -87,7 +87,7 @@ func (checker *Checker) checkSwitchCaseExpression(
 	testTypeIsValid bool,
 ) {
 
-	caseType := caseExpression.Accept(checker).(Type)
+	caseType := checker.VisitExpression(caseExpression, nil)
 
 	if caseType.IsInvalidType() {
 		return
@@ -111,7 +111,7 @@ func (checker *Checker) checkSwitchCaseExpression(
 			)
 		}
 	} else {
-		// If the text type is invalid,
+		// If the test type is invalid,
 		// at least the case type can be checked to be equatable
 
 		if !caseType.IsEquatable() {
