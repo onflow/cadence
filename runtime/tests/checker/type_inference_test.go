@@ -221,7 +221,7 @@ func TestUnaryExpressionTypeInference(t *testing.T) {
 		`)
 
 		require.Error(t, err)
-		assert.IsType(t, &sema.CheckerError{}, err)
+		require.IsType(t, &sema.CheckerError{}, err)
 
 		checkerErr := err.(*sema.CheckerError)
 
@@ -269,7 +269,7 @@ func TestCastExpressionTypeInference(t *testing.T) {
 		`)
 
 		require.Error(t, err)
-		assert.IsType(t, &sema.CheckerError{}, err)
+		require.IsType(t, &sema.CheckerError{}, err)
 		checkerErr := err.(*sema.CheckerError)
 
 		require.Len(t, checkerErr.Errors, 1)
@@ -284,7 +284,7 @@ func TestCastExpressionTypeInference(t *testing.T) {
 		`)
 
 		require.Error(t, err)
-		assert.IsType(t, &sema.CheckerError{}, err)
+		require.IsType(t, &sema.CheckerError{}, err)
 		checkerErr := err.(*sema.CheckerError)
 
 		require.Len(t, checkerErr.Errors, 1)
