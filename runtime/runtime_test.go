@@ -356,10 +356,6 @@ func (i *testRuntimeInterface) Hash(data []byte, tag string, hashAlgorithm HashA
 	return i.hash(data, tag, hashAlgorithm)
 }
 
-func (i *testRuntimeInterface) HighLevelStorageEnabled() bool {
-	return i.setCadenceValue != nil
-}
-
 func (i *testRuntimeInterface) SetCadenceValue(owner common.Address, key string, value cadence.Value) (err error) {
 	return i.setCadenceValue(owner, key, value)
 }
