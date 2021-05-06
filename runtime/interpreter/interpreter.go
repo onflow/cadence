@@ -2012,7 +2012,18 @@ func (interpreter *Interpreter) functionConditionsWrapper(
 	}
 }
 
-func (interpreter *Interpreter) ensureLoaded(
+func (interpreter *Interpreter) EnsureLoadedWithLocationHandler(
+	location common.Location,
+) *Interpreter {
+	return interpreter.EnsureLoaded(
+		location,
+		func() Import {
+			return interpreter.importLocationHandler(interpreter, location)
+		},
+	)
+}
+
+func (interpreter *Interpreter) EnsureLoaded(
 	location common.Location,
 	loadLocation func() Import,
 ) *Interpreter {
@@ -3002,12 +3013,7 @@ func (interpreter *Interpreter) getElaboration(location common.Location) *sema.E
 	// Ensure the program for this location is loaded,
 	// so its checker is available
 
-	inter := interpreter.ensureLoaded(
-		location,
-		func() Import {
-			return interpreter.importLocationHandler(interpreter, location)
-		},
-	)
+	inter := interpreter.EnsureLoadedWithLocationHandler(location)
 
 	locationID := location.ID()
 

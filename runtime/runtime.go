@@ -58,6 +58,14 @@ type Runtime interface {
 	// or if the execution fails.
 	ExecuteTransaction(Script, Context) error
 
+	InvokeContractFunction(
+		contractLocation common.AddressLocation,
+		functionName string,
+		arguments []interpreter.Value,
+		argumentTypes []sema.Type,
+		context Context,
+	) error
+
 	// ParseAndCheckProgram parses and checks the given code without executing the program.
 	//
 	// This function returns an error if the program contains any syntax or semantic errors.
@@ -347,6 +355,86 @@ func (r *interpreterRuntime) newAuthAccountValue(
 		),
 		r.newAuthAccountKeys(addressValue, context.Interface),
 	)
+}
+
+func (r *interpreterRuntime) InvokeContractFunction(
+	contractLocation common.AddressLocation,
+	functionName string,
+	arguments []interpreter.Value,
+	argumentTypes []sema.Type,
+	context Context,
+) error {
+	context.InitializeCodesAndPrograms()
+	runtimeStorage := newRuntimeStorage(context.Interface)
+
+	var interpreterOptions []interpreter.Option
+	var checkerOptions []sema.Option
+
+	functions := r.standardLibraryFunctions(
+		context,
+		runtimeStorage,
+		interpreterOptions,
+		checkerOptions,
+	)
+
+	// create interpreter
+	_, inter, err := r.interpret(
+		nil,
+		context,
+		runtimeStorage,
+		functions,
+		stdlib.BuiltinValues,
+		interpreterOptions,
+		checkerOptions,
+		nil,
+	)
+
+	if err != nil {
+		panic(err)
+	}
+
+	inter = inter.EnsureLoadedWithLocationHandler(contractLocation)
+
+	// convert addresses to auth accounts
+	for i, argumentType := range argumentTypes {
+		if argumentType != sema.AuthAccountType {
+			continue
+		}
+		if a, ok := arguments[i].(interpreter.AddressValue); ok {
+			arguments[i] = r.newAuthAccountValue(
+				interpreter.NewAddressValue(a.ToAddress()),
+				context,
+				runtimeStorage,
+				interpreterOptions,
+				checkerOptions,
+			)
+		}
+	}
+
+	contractValue := inter.Globals[contractLocation.Name].GetValue().(*interpreter.CompositeValue)
+	invocation := interpreter.Invocation{
+		Self:          contractValue,
+		Arguments:     arguments,
+		ArgumentTypes: argumentTypes,
+		// TODO: do I need to fill TypeParameterTypes?
+		TypeParameterTypes: nil,
+		GetLocationRange: func() interpreter.LocationRange {
+			return interpreter.LocationRange{
+				// TODO: should this be a custom contractLocation type that includes the contract and the functionName name called?
+				Location: context.Location,
+			}
+		},
+		Interpreter: inter,
+	}
+
+	contractValue.GetMember(inter, func() interpreter.LocationRange {
+		return interpreter.LocationRange{
+			// TODO: should this be a custom contractLocation type that includes the contract and the functionName name called?
+			Location: context.Location,
+		}
+	}, functionName).(interpreter.FunctionValue).Invoke(invocation)
+
+	return nil
 }
 
 func (r *interpreterRuntime) ExecuteTransaction(script Script, context Context) error {
