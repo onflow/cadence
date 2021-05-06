@@ -167,19 +167,24 @@ func (checker *Checker) VisitIntegerExpression(expression *ast.IntegerExpression
 	expectedType := UnwrapOptionalType(checker.expectedType)
 
 	var actualType Type
+	isAddress := false
 
 	// If the contextually expected type is a subtype of Integer or Address, then take that.
 	if expectedType == nil || IsSubType(expectedType, NeverType) {
 		actualType = IntType
 	} else if IsSubType(expectedType, IntegerType) {
-		CheckIntegerLiteral(expression, expectedType, checker.report)
 		actualType = expectedType
 	} else if IsSubType(expectedType, &AddressType{}) {
+		isAddress = true
 		CheckAddressLiteral(expression, checker.report)
 		actualType = expectedType
 	} else {
 		// Otherwise infer the type as `Int` which can represent any integer.
 		actualType = IntType
+	}
+
+	if !isAddress {
+		CheckIntegerLiteral(expression, actualType, checker.report)
 	}
 
 	checker.Elaboration.IntegerExpressionType[expression] = actualType
