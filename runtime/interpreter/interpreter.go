@@ -742,6 +742,19 @@ func (interpreter *Interpreter) Invoke(functionName string, arguments ...Value) 
 	return interpreter.invokeVariable(functionName, arguments)
 }
 
+// InvokeFunction invokes a function value with the given invocation
+func (interpreter *Interpreter) InvokeFunction(function FunctionValue, invocation Invocation) (value Value, err error) {
+
+	// recover internal panics and return them as an error
+	defer interpreter.recoverErrors(func(internalErr error) {
+		err = internalErr
+	})
+
+	value = function.Invoke(invocation)
+	return
+}
+
+
 func (interpreter *Interpreter) InvokeTransaction(index int, arguments ...Value) (err error) {
 
 	// recover internal panics and return them as an error
@@ -2012,10 +2025,10 @@ func (interpreter *Interpreter) functionConditionsWrapper(
 	}
 }
 
-func (interpreter *Interpreter) EnsureLoadedWithLocationHandler(
+func (interpreter *Interpreter) EnsureLoaded(
 	location common.Location,
 ) *Interpreter {
-	return interpreter.EnsureLoaded(
+	return interpreter.EnsureLoadedWithLocationHandler(
 		location,
 		func() Import {
 			return interpreter.importLocationHandler(interpreter, location)
@@ -2023,7 +2036,7 @@ func (interpreter *Interpreter) EnsureLoadedWithLocationHandler(
 	)
 }
 
-func (interpreter *Interpreter) EnsureLoaded(
+func (interpreter *Interpreter) EnsureLoadedWithLocationHandler(
 	location common.Location,
 	loadLocation func() Import,
 ) *Interpreter {
@@ -3013,7 +3026,7 @@ func (interpreter *Interpreter) getElaboration(location common.Location) *sema.E
 	// Ensure the program for this location is loaded,
 	// so its checker is available
 
-	inter := interpreter.EnsureLoadedWithLocationHandler(location)
+	inter := interpreter.EnsureLoaded(location)
 
 	locationID := location.ID()
 

@@ -365,6 +365,7 @@ func (r *interpreterRuntime) InvokeContractFunction(
 	context Context,
 ) error {
 	context.InitializeCodesAndPrograms()
+
 	runtimeStorage := newRuntimeStorage(context.Interface)
 
 	var interpreterOptions []interpreter.Option
@@ -388,19 +389,22 @@ func (r *interpreterRuntime) InvokeContractFunction(
 		checkerOptions,
 		nil,
 	)
-
 	if err != nil {
-		panic(err)
+		return newError(err, context)
 	}
 
-	inter = inter.EnsureLoadedWithLocationHandler(contractLocation)
+	// ensure the contract is loaded
+	inter = inter.EnsureLoaded(contractLocation)
 
 	// convert addresses to auth accounts
+	// this is here so there is no need to construct an auth account value for the caller of this function
 	for i, argumentType := range argumentTypes {
 		if argumentType != sema.AuthAccountType {
+			// only convert arguments that are supposed to be an auth account
 			continue
 		}
 		if a, ok := arguments[i].(interpreter.AddressValue); ok {
+			// only convert them if they are an address
 			arguments[i] = r.newAuthAccountValue(
 				interpreter.NewAddressValue(a.ToAddress()),
 				context,
@@ -411,28 +415,54 @@ func (r *interpreterRuntime) InvokeContractFunction(
 		}
 	}
 
-	contractValue := inter.Globals[contractLocation.Name].GetValue().(*interpreter.CompositeValue)
+	contractGlobal, ok := inter.Globals[contractLocation.Name]
+	if !ok {
+		return interpreter.NotDeclaredError{
+			ExpectedKind: common.DeclarationKindContract,
+			Name:         contractLocation.Name,
+		}
+	}
+
+	// get contract value
+	contractValue, ok := contractGlobal.GetValue().(*interpreter.CompositeValue)
+	if !ok {
+		return interpreter.NotDeclaredError{
+			ExpectedKind: common.DeclarationKindContract,
+			Name:         contractLocation.Name,
+		}
+	}
+
+	// prepare invocation
 	invocation := interpreter.Invocation{
 		Self:          contractValue,
 		Arguments:     arguments,
 		ArgumentTypes: argumentTypes,
-		// TODO: do I need to fill TypeParameterTypes?
 		TypeParameterTypes: nil,
 		GetLocationRange: func() interpreter.LocationRange {
 			return interpreter.LocationRange{
-				// TODO: should this be a custom contractLocation type that includes the contract and the functionName name called?
 				Location: context.Location,
 			}
 		},
 		Interpreter: inter,
 	}
 
-	contractValue.GetMember(inter, func() interpreter.LocationRange {
+	contractMember := contractValue.GetMember(inter, func() interpreter.LocationRange {
 		return interpreter.LocationRange{
-			// TODO: should this be a custom contractLocation type that includes the contract and the functionName name called?
 			Location: context.Location,
 		}
-	}, functionName).(interpreter.FunctionValue).Invoke(invocation)
+	}, functionName)
+
+	contractFunction, ok := contractMember.(interpreter.FunctionValue)
+	if !ok {
+		return interpreter.NotInvokableError{
+			Value: contractFunction,
+		}
+	}
+
+	_, err = inter.InvokeFunction(contractFunction, invocation)
+	if err != nil {
+		return newError(err, context)
+	}
 
 	return nil
 }

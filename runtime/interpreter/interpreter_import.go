@@ -38,7 +38,7 @@ func (interpreter *Interpreter) VisitImportDeclaration(declaration *ast.ImportDe
 
 func (interpreter *Interpreter) importResolvedLocation(resolvedLocation sema.ResolvedLocation) {
 
-	subInterpreter := interpreter.EnsureLoadedWithLocationHandler(resolvedLocation.Location)
+	subInterpreter := interpreter.EnsureLoaded(resolvedLocation.Location)
 
 	// determine which identifiers are imported /
 	// which variables need to be declared

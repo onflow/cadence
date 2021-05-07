@@ -6304,7 +6304,7 @@ func (v *CompositeValue) getInterpreter(interpreter *Interpreter) *Interpreter {
 		return interpreter
 	}
 
-	return interpreter.EnsureLoadedWithLocationHandler(v.Location)
+	return interpreter.EnsureLoaded(v.Location)
 }
 
 func (v *CompositeValue) InitializeFunctions(interpreter *Interpreter) {

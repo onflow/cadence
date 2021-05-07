@@ -24,6 +24,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"math/big"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -2932,6 +2933,238 @@ func TestRuntimeContractAccount(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t, addressValue, value)
+	})
+}
+
+func TestInvokeContractFunction(t *testing.T) {
+
+	t.Parallel()
+
+	runtime := NewInterpreterRuntime()
+
+	addressValue := Address{
+		0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
+	}
+
+	contract := []byte(`
+        pub contract Test {
+			pub fun hello() {
+				log("Hello World!")
+			}
+			pub fun helloArg(_ arg: String) {
+				log("Hello ".concat(arg))
+			}
+			pub fun helloMultiArg(arg1: String, arg2: Int, arg3: Address) {
+				log("Hello ".concat(arg1).concat(" ").concat(arg2.toString()).concat(" from ").concat(arg3.toString()))
+			}
+			pub fun helloReturn(_ arg: String): String {
+				log("Hello return!")
+				return arg
+			}
+			pub fun helloAuthAcc(account: AuthAccount) {
+				log("Hello ".concat(account.address.toString()))
+			}
+        }
+    `)
+
+	deploy := utils.DeploymentTransaction("Test", contract)
+
+	var accountCode []byte
+	var loggedMessage string
+
+	runtimeInterface := &testRuntimeInterface{
+		getCode: func(_ Location) (bytes []byte, err error) {
+			return accountCode, nil
+		},
+		storage: newTestStorage(nil, nil),
+		getSigningAccounts: func() ([]Address, error) {
+			return []Address{addressValue}, nil
+		},
+		resolveLocation: singleIdentifierLocationResolver(t),
+		getAccountContractCode: func(_ Address, _ string) (code []byte, err error) {
+			return accountCode, nil
+		},
+		updateAccountContractCode: func(addess Address, _ string, code []byte) error {
+			accountCode = code
+			return nil
+		},
+		emitEvent: func(event cadence.Event) error {
+			return nil
+		},
+		log: func(message string) {
+			loggedMessage = message
+		},
+	}
+
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	err := runtime.ExecuteTransaction(
+		Script{
+			Source: deploy,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	assert.NotNil(t, accountCode)
+
+	t.Run("simple function", func(tt *testing.T) {
+		err = runtime.InvokeContractFunction(
+			common.AddressLocation{
+				Address: addressValue,
+				Name:    "Test",
+			},
+			"hello",
+			nil,
+			nil,
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+		require.NoError(tt, err)
+
+		assert.Equal(tt, `"Hello World!"`, loggedMessage)
+	})
+
+	t.Run("function with parameter", func(tt *testing.T) {
+		err = runtime.InvokeContractFunction(
+			common.AddressLocation{
+				Address: addressValue,
+				Name:    "Test",
+			},
+			"helloArg",
+			[]interpreter.Value{
+				&interpreter.StringValue{Str: "there!"},
+			},
+			[]sema.Type{
+				sema.StringType,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+		require.NoError(tt, err)
+
+		assert.Equal(tt, `"Hello there!"`, loggedMessage)
+	})
+	t.Run("function with return type", func(tt *testing.T) {
+		err = runtime.InvokeContractFunction(
+			common.AddressLocation{
+				Address: addressValue,
+				Name:    "Test",
+			},
+			"helloReturn",
+			[]interpreter.Value{
+				&interpreter.StringValue{Str: "there!"},
+			},
+			[]sema.Type{
+				sema.StringType,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+		require.NoError(tt, err)
+
+		assert.Equal(tt, `"Hello return!"`, loggedMessage)
+	})
+	t.Run("function with multiple arguments", func(tt *testing.T) {
+
+		err = runtime.InvokeContractFunction(
+			common.AddressLocation{
+				Address: addressValue,
+				Name:    "Test",
+			},
+			"helloMultiArg",
+			[]interpreter.Value{
+				&interpreter.StringValue{Str: "number"},
+				&interpreter.IntValue{BigInt: big.NewInt(42)},
+				interpreter.AddressValue(addressValue),
+			},
+			[]sema.Type{
+				sema.StringType,
+				sema.IntType,
+				&sema.AddressType{},
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+		require.NoError(tt, err)
+
+		assert.Equal(tt, `"Hello number 42 from 0x1"`, loggedMessage)
+	})
+	t.Run("function with not enough arguments panics", func(tt *testing.T) {
+		assert.Panics(tt, func (){
+			_ = runtime.InvokeContractFunction(
+				common.AddressLocation{
+					Address: addressValue,
+					Name:    "Test",
+				},
+				"helloMultiArg",
+				[]interpreter.Value{
+					&interpreter.StringValue{Str: "number"},
+					&interpreter.IntValue{BigInt: big.NewInt(42)},
+				},
+				[]sema.Type{
+					sema.StringType,
+					sema.IntType,
+				},
+				Context{
+					Interface: runtimeInterface,
+					Location:  nextTransactionLocation(),
+				},
+			)
+		})
+	})
+	t.Run("function with incorrect argument type errors", func(tt *testing.T) {
+		err = runtime.InvokeContractFunction(
+			common.AddressLocation{
+				Address: addressValue,
+				Name:    "Test",
+			},
+			"helloArg",
+			[]interpreter.Value{
+				&interpreter.IntValue{BigInt: big.NewInt(42)},
+			},
+			[]sema.Type{
+				sema.IntType,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+		require.ErrorAs(tt, err, &interpreter.InvocationArgumentTypeError{})
+	})
+	t.Run("function with auth account works", func(tt *testing.T) {
+		err = runtime.InvokeContractFunction(
+			common.AddressLocation{
+				Address: addressValue,
+				Name:    "Test",
+			},
+			"helloAuthAcc",
+			[]interpreter.Value{
+				interpreter.AddressValue(addressValue),
+			},
+			[]sema.Type{
+				sema.AuthAccountType,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+		require.NoError(tt, err)
+
+		assert.Equal(tt, `"Hello 0x1"`, loggedMessage)
 	})
 }
 
