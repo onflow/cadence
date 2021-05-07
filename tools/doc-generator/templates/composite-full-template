@@ -1,0 +1,14 @@
+# {{declKeyword .}} `{{.DeclarationIdentifier}}`
+
+```
+{{declKeyword .}} {{.DeclarationIdentifier}} {
+{{- range .Members.Fields -}}
+    {{template "field" . -}}
+{{end}}
+}
+```
+
+{{if .DocString}}{{.DocString}}{{end}}
+
+## Members:
+{{template "declarations" .Members.Declarations}}

@@ -36,6 +36,8 @@ func TestDocGen(t *testing.T) {
 	//`
 
 	code := `
+	/// This is a dummy NFT contract. It has several members of different types.
+	/// Each member has their own documentation. 
 	contract NFT {
 		/// This is a foo function
 		fun foo(a: Int, b: String) {
@@ -68,5 +70,5 @@ func TestDocGen(t *testing.T) {
 	`
 
 	gen := NewDocGenerator()
-	gen.generate(code, "generated.md")
+	gen.generate(code, "generated")
 }

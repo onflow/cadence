@@ -1,0 +1,15 @@
+{{define "composite"}}
+### {{declKeyword .}} `{{.DeclarationIdentifier}}`
+
+```
+{{declKeyword .}} {{.DeclarationIdentifier}} {
+{{- range .Members.Fields -}}
+    {{template "field" . -}}
+{{end}}
+}
+```
+
+{{if .DocString}}{{.DocString}}{{end}}
+
+[More...]({{fileName .}})
+{{end}}
