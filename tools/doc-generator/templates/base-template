@@ -1,0 +1,12 @@
+{{range .Declarations}}
+{{- if isFunction . -}}
+    {{template "function" .}}
+{{else if isStruct . -}}
+    {{template "struct" .}}
+{{else if isEnum . -}}
+    {{template "enum" .}}
+{{else -}}
+// do nothing
+{{end -}}
+---
+{{end}}

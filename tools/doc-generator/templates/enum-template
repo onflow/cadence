@@ -1,0 +1,17 @@
+{{define "enum"}}
+## enum `{{.DeclarationIdentifier}}`
+
+```
+enum {{.DeclarationIdentifier}}
+{{- if eq (len .Conformances) 1 -}}
+: {{index .Conformances 0}} {
+{{- end -}}
+
+{{- range .Members.EnumCases -}}
+    {{template "enum-case" . -}}
+{{end}}
+}
+```
+
+{{if .DocString}}{{.DocString}}{{end}}
+{{end}}

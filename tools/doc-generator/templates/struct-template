@@ -1,0 +1,13 @@
+{{define "struct"}}
+## struct `{{.DeclarationIdentifier}}`
+
+```
+struct {{.DeclarationIdentifier}} {
+{{- range .Members.Fields -}}
+    {{template "field" . -}}
+{{end}}
+}
+```
+
+{{if .DocString}}{{.DocString}}{{end}}
+{{end}}

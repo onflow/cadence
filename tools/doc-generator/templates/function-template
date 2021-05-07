@@ -1,0 +1,16 @@
+{{define "function"}}
+## fun `{{.DeclarationIdentifier}}()`
+
+```
+func {{.DeclarationIdentifier}}(
+{{- range $index, $param := .ParameterList.Parameters}}
+    {{- if $index}}, {{end -}}
+    {{.EffectiveArgumentLabel}} {{.TypeAnnotation.Type.String -}}
+{{end -}}
+)
+{{- $returnType := .ReturnTypeAnnotation.Type.String}}
+{{- if $returnType}}: {{$returnType}} {{end}}
+```
+
+{{if .DocString}}{{.DocString}}{{end}}
+{{end}}
