@@ -2028,7 +2028,7 @@ func (interpreter *Interpreter) functionConditionsWrapper(
 func (interpreter *Interpreter) EnsureLoaded(
 	location common.Location,
 ) *Interpreter {
-	return interpreter.EnsureLoadedWithLocationHandler(
+	return interpreter.ensureLoadedWithLocationHandler(
 		location,
 		func() Import {
 			return interpreter.importLocationHandler(interpreter, location)
@@ -2036,7 +2036,7 @@ func (interpreter *Interpreter) EnsureLoaded(
 	)
 }
 
-func (interpreter *Interpreter) EnsureLoadedWithLocationHandler(
+func (interpreter *Interpreter) ensureLoadedWithLocationHandler(
 	location common.Location,
 	loadLocation func() Import,
 ) *Interpreter {

@@ -357,6 +357,8 @@ func (r *interpreterRuntime) newAuthAccountValue(
 	)
 }
 
+// InvokeContractFunction invokes a contract function with the given arguments
+// If the contract function accepts an AuthAccount as a parameter the corresponding 
 func (r *interpreterRuntime) InvokeContractFunction(
 	contractLocation common.AddressLocation,
 	functionName string,
