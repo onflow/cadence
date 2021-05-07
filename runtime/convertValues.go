@@ -194,7 +194,15 @@ func exportCompositeValue(v *interpreter.CompositeValue, inter *interpreter.Inte
 	fields := make([]cadence.Value, len(fieldNames))
 
 	for i, field := range fieldNames {
-		fieldValue, _ := v.Fields.Get(field.Identifier)
+		fieldName := field.Identifier
+		fieldValue, ok := v.Fields.Get(fieldName)
+
+		if !ok && v.ComputedFields != nil {
+			if computedField, ok := v.ComputedFields.Get(fieldName); ok {
+				fieldValue = computedField(inter)
+			}
+		}
+
 		fields[i] = exportValueWithInterpreter(fieldValue, inter, results)
 	}
 

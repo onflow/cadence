@@ -3204,10 +3204,6 @@ func (t *CompositeType) IsStorable(results map[*Member]bool) bool {
 }
 
 func (t *CompositeType) IsExternallyReturnable(results map[*Member]bool) bool {
-	if t.hasComputedMembers {
-		return false
-	}
-
 	// Only structures, resources, and enums can be stored
 
 	switch t.Kind {
@@ -5507,8 +5503,9 @@ the given tag and data, using this public key and the given hash algorithm
 var PublicKeyType = func() *CompositeType {
 
 	publicKeyType := &CompositeType{
-		Identifier: PublicKeyTypeName,
-		Kind:       common.CompositeKindStructure,
+		Identifier:         PublicKeyTypeName,
+		Kind:               common.CompositeKindStructure,
+		hasComputedMembers: true,
 	}
 
 	var members = []*Member{

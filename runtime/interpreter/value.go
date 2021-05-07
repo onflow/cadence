@@ -8158,8 +8158,15 @@ func NewPublicKeyValue(
 ) *CompositeValue {
 
 	fields := NewStringValueOrderedMap()
-	fields.Set(sema.PublicKeyPublicKeyField, publicKey)
 	fields.Set(sema.PublicKeySignAlgoField, signAlgo)
+
+	computedFields := NewStringComputedFieldOrderedMap()
+	computedFields.Set(
+		sema.PublicKeyPublicKeyField,
+		func(interpreter *Interpreter) Value {
+			return publicKey.Copy()
+		},
+	)
 
 	functions := map[string]FunctionValue{
 		sema.PublicKeyVerifyFunction: verifyFunction,
@@ -8169,6 +8176,7 @@ func NewPublicKeyValue(
 		QualifiedIdentifier: sema.PublicKeyType.QualifiedIdentifier(),
 		Kind:                sema.PublicKeyType.Kind,
 		Fields:              fields,
+		ComputedFields:      computedFields,
 		Functions:           functions,
 	}
 

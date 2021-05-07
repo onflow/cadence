@@ -1200,4 +1200,72 @@ func TestPublicKey(t *testing.T) {
 		assert.True(t, invoked)
 		assert.Equal(t, cadence.Bool(true), value)
 	})
+
+	t.Run("field mutability", func(t *testing.T) {
+		script := `
+			pub fun main(): PublicKey {
+				let publicKey =  PublicKey(
+					publicKey: "0102".decodeHex(),
+					signatureAlgorithm: SignatureAlgorithm.ECDSA_P256
+				)
+
+				publicKey.publicKey = []
+				publicKey.signatureAlgorithm = SignatureAlgorithm.ECDSA_secp256k1
+				publicKey.isValid = true
+
+				return publicKey
+			}
+		`
+
+		_, err := executeScript(script, runtimeInterface)
+		require.Error(t, err)
+
+		var checkerErr *sema.CheckerError
+		require.ErrorAs(t, err, &checkerErr)
+
+		errs := checkerErr.Errors
+		require.Len(t, errs, 6)
+
+		assert.IsType(t, &sema.InvalidAssignmentAccessError{}, errs[0])
+		assert.IsType(t, &sema.AssignmentToConstantMemberError{}, errs[1])
+		assert.IsType(t, &sema.InvalidAssignmentAccessError{}, errs[2])
+		assert.IsType(t, &sema.AssignmentToConstantMemberError{}, errs[3])
+		assert.IsType(t, &sema.InvalidAssignmentAccessError{}, errs[4])
+		assert.IsType(t, &sema.AssignmentToConstantMemberError{}, errs[5])
+	})
+
+	t.Run("raw-key mutability", func(t *testing.T) {
+		script := `
+			pub fun main(): PublicKey {
+				let publicKey =  PublicKey(
+					publicKey: "0102".decodeHex(),
+					signatureAlgorithm: SignatureAlgorithm.ECDSA_P256
+				)
+
+				publicKey.publicKey[0] = 5
+
+				return publicKey
+			}
+		`
+
+		value, err := executeScript(script, runtimeInterface)
+		require.NoError(t, err)
+
+		expected := cadence.Struct{
+			StructType: PublicKeyType,
+			Fields: []cadence.Value{
+				// Public key (bytes)
+				newBytesValue([]byte{1, 2}),
+
+				// Signature Algo
+				newSignAlgoValue(sema.SignatureAlgorithmECDSA_P256),
+
+				// valid
+				cadence.Bool(false),
+			},
+		}
+
+		assert.Equal(t, expected, value)
+	})
+
 }
