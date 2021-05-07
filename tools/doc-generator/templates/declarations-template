@@ -3,14 +3,18 @@
 {{range .}}
 {{- if isFunction . -}}
     {{template "function" .}}
+---
 {{else if isStruct . -}}
     {{template "composite" .}}
+---
 {{else if isEnum . -}}
     {{template "enum" .}}
+---
 {{else if isContract . -}}
     {{template "composite" .}}
-{{end -}}
 ---
+{{end -}}
+
 {{end}}
 
 {{end}}

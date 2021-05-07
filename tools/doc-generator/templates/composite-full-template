@@ -10,5 +10,17 @@
 
 {{if .DocString}}{{.DocString}}{{end}}
 
-## Members:
-{{template "declarations" .Members.Declarations}}
+{{if gt (len .Members.Functions) 0 -}}
+## Functions:
+{{- template "declarations" .Members.Functions -}}
+{{- end -}}
+
+{{- if gt (len .Members.Composites) 0 -}}
+## Structs & Resources:
+{{- template "declarations" .Members.Composites -}}
+{{- end -}}
+
+{{- if gt (len .Members.Interfaces) 0 -}}
+## Interfaces:
+{{- template "declarations" .Members.Interfaces -}}
+{{- end -}}

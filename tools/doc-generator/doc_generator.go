@@ -1,8 +1,8 @@
 package doc_generator
 
 import (
-	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 	"text/template"
@@ -70,13 +70,6 @@ type DocGenerator struct {
 }
 
 func NewDocGenerator() *DocGenerator {
-	wd, err := os.Getwd()
-	if err != nil {
-		panic(err)
-	}
-
-	fmt.Println(filepath.Dir(wd))
-
 	gen := &DocGenerator{}
 
 	functions["fileName"] = func(decl ast.Declaration) string {
@@ -105,7 +98,7 @@ func NewDocGenerator() *DocGenerator {
 func registerTemplates(tmpl *template.Template) *template.Template {
 	for _, templateFile := range templateFiles {
 		var err error
-		tmpl, err = tmpl.ParseFiles(ROOT_DIR + "/templates/" + templateFile)
+		tmpl, err = tmpl.ParseFiles(path.Join(ROOT_DIR, "templates", templateFile))
 		if err != nil {
 			panic(err)
 		}
@@ -128,15 +121,25 @@ func (gen *DocGenerator) Generate(source string, outputDir string) {
 var _ ast.Visitor = NewDocGenerator()
 
 func (gen *DocGenerator) VisitProgram(program *ast.Program) ast.Repr {
-	// Generate entry page
-	f, err := os.Create(gen.outputDir + "/index.md")
-	if err != nil {
-		panic(err)
+
+	var soleDecl ast.Declaration = program.SoleContractDeclaration()
+	if soleDecl == nil {
+		soleDecl = program.SoleContractInterfaceDeclaration()
 	}
 
-	err = gen.entryPageGen.Execute(f, program)
-	if err != nil {
-		panic(err)
+	// If its not a sole-declaration, and has multiple top level declarations
+	// then generated an entry page.
+	if soleDecl == nil {
+		// Generate entry page
+		f, err := os.Create(gen.outputDir + "/index.md")
+		if err != nil {
+			panic(err)
+		}
+
+		err = gen.entryPageGen.Execute(f, program)
+		if err != nil {
+			panic(err)
+		}
 	}
 
 	// Generate dedicated pages for all the nested composite declarations
@@ -152,7 +155,12 @@ func (gen *DocGenerator) VisitFunctionDeclaration(declaration *ast.FunctionDecla
 	return nil
 }
 func (gen *DocGenerator) VisitCompositeDeclaration(declaration *ast.CompositeDeclaration) ast.Repr {
-	gen.typeNames = append(gen.typeNames, declaration.DeclarationIdentifier().String())
+	declName := declaration.DeclarationIdentifier().String()
+	return gen.genCompositeDecl(declName, declaration.Members, declaration)
+}
+
+func (gen *DocGenerator) genCompositeDecl(name string, members *ast.Members, decl ast.Declaration) ast.Repr {
+	gen.typeNames = append(gen.typeNames, name)
 
 	defer func() {
 		gen.typeNames = gen.typeNames[:len(gen.typeNames)-1]
@@ -164,12 +172,12 @@ func (gen *DocGenerator) VisitCompositeDeclaration(declaration *ast.CompositeDec
 		panic(err)
 	}
 
-	err = gen.compositePageGen.Execute(f, declaration)
+	err = gen.compositePageGen.Execute(f, decl)
 	if err != nil {
 		panic(err)
 	}
 
-	for _, decl := range declaration.Members.Declarations() {
+	for _, decl := range members.Declarations() {
 		decl.Accept(gen)
 	}
 
@@ -189,7 +197,8 @@ func (gen *DocGenerator) fileName() string {
 }
 
 func (gen *DocGenerator) VisitInterfaceDeclaration(declaration *ast.InterfaceDeclaration) ast.Repr {
-	return nil
+	declName := declaration.DeclarationIdentifier().String()
+	return gen.genCompositeDecl(declName, declaration.Members, declaration)
 }
 
 func (gen *DocGenerator) VisitFieldDeclaration(declaration *ast.FieldDeclaration) ast.Repr {
