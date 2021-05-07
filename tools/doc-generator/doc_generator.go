@@ -1,7 +1,9 @@
 package doc_generator
 
 import (
+	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"text/template"
 
@@ -11,14 +13,14 @@ import (
 )
 
 var templateFiles = []string{
-	"templates/base-template",
-	"templates/declarations-template",
-	"templates/function-template",
-	"templates/composite-template",
-	"templates/field-template",
-	"templates/enum-template",
-	"templates/enum-case-template",
-	"templates/composite-full-template",
+	"base-template",
+	"declarations-template",
+	"function-template",
+	"composite-template",
+	"field-template",
+	"enum-template",
+	"enum-case-template",
+	"composite-full-template",
 }
 
 var functions = template.FuncMap{
@@ -51,6 +53,15 @@ var functions = template.FuncMap{
 	},
 }
 
+var ROOT_DIR = func() string {
+	wd, err := os.Getwd()
+	if err != nil {
+		panic(err)
+	}
+
+	return filepath.Dir(wd)
+}()
+
 type DocGenerator struct {
 	entryPageGen     *template.Template
 	compositePageGen *template.Template
@@ -59,6 +70,13 @@ type DocGenerator struct {
 }
 
 func NewDocGenerator() *DocGenerator {
+	wd, err := os.Getwd()
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Println(filepath.Dir(wd))
+
 	gen := &DocGenerator{}
 
 	functions["fileName"] = func(decl ast.Declaration) string {
@@ -87,7 +105,7 @@ func NewDocGenerator() *DocGenerator {
 func registerTemplates(tmpl *template.Template) *template.Template {
 	for _, templateFile := range templateFiles {
 		var err error
-		tmpl, err = tmpl.ParseFiles(templateFile)
+		tmpl, err = tmpl.ParseFiles(ROOT_DIR + "/templates/" + templateFile)
 		if err != nil {
 			panic(err)
 		}
@@ -96,7 +114,7 @@ func registerTemplates(tmpl *template.Template) *template.Template {
 	return tmpl
 }
 
-func (gen *DocGenerator) generate(source string, outputDir string) {
+func (gen *DocGenerator) Generate(source string, outputDir string) {
 	gen.outputDir = outputDir
 
 	program, err := parser2.ParseProgram(source)
