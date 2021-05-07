@@ -2481,10 +2481,14 @@ func (r *interpreterRuntime) newPublicAccountKeys(addressValue interpreter.Addre
 func NewPublicKeyFromValue(publicKey *interpreter.CompositeValue) *PublicKey {
 
 	// publicKey field
-	key, ok := publicKey.Fields.Get(sema.PublicKeyPublicKeyField)
+	publicKeyFieldGetter, ok := publicKey.ComputedFields.Get(sema.PublicKeyPublicKeyField)
 	if !ok {
 		panic("public key value is not set")
 	}
+
+	// Interpreter is not available at this point.
+	// For now its safe to pass a nil interpreter here, as the publicKey field doesn't use it.
+	key := publicKeyFieldGetter(nil).(*interpreter.ArrayValue)
 
 	byteArray, err := interpreter.ByteArrayValueToByteSlice(key)
 	if err != nil {
