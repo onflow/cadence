@@ -11,7 +11,6 @@ require (
 	github.com/logrusorgru/aurora v0.0.0-20200102142835-e9ef32dff381
 	github.com/rivo/uniseg v0.2.0
 	github.com/schollz/progressbar/v3 v3.7.6
-	github.com/segmentio/fasthash v1.0.2
 	github.com/stretchr/testify v1.7.0
 	go.uber.org/goleak v1.0.0
 	golang.org/x/crypto v0.0.0-20210220033148-5ea612d1eb83
