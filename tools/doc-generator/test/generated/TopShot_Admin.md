@@ -1,6 +1,6 @@
-# resource `Admin`
+# Resource `Admin`
 
-```
+```cadence
 resource Admin {
 }
 ```
@@ -15,7 +15,7 @@ resource Admin {
 
 ### fun `createPlay()`
 
-```
+```cadence
 func createPlay(metadata {String: String}): UInt32 
 ```
 
@@ -33,8 +33,8 @@ func createPlay(metadata {String: String}): UInt32
 
 ### fun `createSet()`
 
-```
-func createSet(name String)
+```cadence
+func createSet(name String):  
 ```
 
  createSet creates a new Set resource and stores it
@@ -47,7 +47,7 @@ func createSet(name String)
 
 ### fun `borrowSet()`
 
-```
+```cadence
 func borrowSet(setID UInt32): &Set 
 ```
 
@@ -65,7 +65,7 @@ func borrowSet(setID UInt32): &Set
 
 ### fun `startNewSeries()`
 
-```
+```cadence
 func startNewSeries(): UInt32 
 ```
 
@@ -80,7 +80,7 @@ func startNewSeries(): UInt32
 
 ### fun `createNewAdmin()`
 
-```
+```cadence
 func createNewAdmin(): Admin 
 ```
 

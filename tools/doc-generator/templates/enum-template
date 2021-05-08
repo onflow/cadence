@@ -1,7 +1,7 @@
 {{define "enum"}}
 ### enum `{{.DeclarationIdentifier}}`
 
-```
+```cadence
 enum {{.DeclarationIdentifier}}
 {{- if eq (len .Conformances) 1 -}}
 : {{index .Conformances 0}} {

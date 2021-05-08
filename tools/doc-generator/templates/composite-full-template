@@ -1,6 +1,6 @@
-# {{declKeyword .}} `{{.DeclarationIdentifier}}`
+# {{declTypeTitle .}} `{{.DeclarationIdentifier}}`
 
-```
+```cadence
 {{declKeyword .}} {{.DeclarationIdentifier}} {
 {{- range .Members.Fields -}}
     {{template "field" . -}}
@@ -15,12 +15,20 @@
 {{if isInterface . -}}
 {{- else -}}
 {{if gt (len .Conformances) 0}}
-Interfaces implement:
+Implemented Interfaces:
     {{- range $index, $conformance := .Conformances}}
  - `{{$conformance -}}`
     {{- end -}}
 {{- end -}}
 {{- end}}
+
+{{if genInitializer . -}}
+{{if gt (len .Members.Initializers) 0}}
+### Initializer
+{{$init := index .Members.Initializers  0}}
+{{- template "initializer" $init.FunctionDeclaration -}}
+{{- end -}}
+{{- end -}}
 
 {{if gt (len .Members.Functions) 0 -}}
 ## Functions

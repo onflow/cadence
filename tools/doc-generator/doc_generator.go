@@ -21,6 +21,7 @@ var templateFiles = []string{
 	"enum-template",
 	"enum-case-template",
 	"composite-full-template",
+	"initializer-template",
 }
 
 var functions = template.FuncMap{
@@ -57,6 +58,20 @@ var functions = template.FuncMap{
 
 	"declKeyword": func(declaration ast.Declaration) string {
 		return declaration.DeclarationKind().Keywords()
+	},
+
+	"declTypeTitle": func(declaration ast.Declaration) string {
+		return strings.Title(declaration.DeclarationKind().Keywords())
+	},
+
+	"genInitializer": func(declaration ast.Declaration) bool {
+		switch declaration.DeclarationKind() {
+		case common.DeclarationKindStructure,
+			common.DeclarationKindResource:
+			return true
+		default:
+			return false
+		}
 	},
 }
 

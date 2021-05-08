@@ -1,6 +1,6 @@
-# resource interface `MomentCollectionPublic`
+# Resource Interface `MomentCollectionPublic`
 
-```
+```cadence
 resource interface MomentCollectionPublic {
 }
 ```
@@ -14,8 +14,8 @@ resource interface MomentCollectionPublic {
 
 ### fun `deposit()`
 
-```
-func deposit(token NonFungibleToken.NFT)
+```cadence
+func deposit(token NonFungibleToken.NFT):  
 ```
 
 
@@ -24,8 +24,8 @@ func deposit(token NonFungibleToken.NFT)
 
 ### fun `batchDeposit()`
 
-```
-func batchDeposit(tokens NonFungibleToken.Collection)
+```cadence
+func batchDeposit(tokens NonFungibleToken.Collection):  
 ```
 
 
@@ -34,7 +34,7 @@ func batchDeposit(tokens NonFungibleToken.Collection)
 
 ### fun `getIDs()`
 
-```
+```cadence
 func getIDs(): [UInt64] 
 ```
 
@@ -44,7 +44,7 @@ func getIDs(): [UInt64]
 
 ### fun `borrowNFT()`
 
-```
+```cadence
 func borrowNFT(id UInt64): &NonFungibleToken.NFT 
 ```
 
@@ -54,7 +54,7 @@ func borrowNFT(id UInt64): &NonFungibleToken.NFT
 
 ### fun `borrowMoment()`
 
-```
+```cadence
 func borrowMoment(id UInt64): &TopShot.NFT? 
 ```
 

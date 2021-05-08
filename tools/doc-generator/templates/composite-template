@@ -1,7 +1,7 @@
 {{define "composite"}}
 ### {{declKeyword .}} `{{.DeclarationIdentifier}}`
 
-```
+```cadence
 {{declKeyword .}} {{.DeclarationIdentifier}} {
 {{- range .Members.Fields -}}
     {{template "field" . -}}

@@ -1,6 +1,6 @@
-# resource `Collection`
+# Resource `Collection`
 
-```
+```cadence
 resource Collection {
 
     ownedNFTs:  {UInt64: NonFungibleToken.NFT}
@@ -10,18 +10,26 @@ resource Collection {
  Collection is a resource that every user who owns NFTs
  will store in their account to manage their NFTS
 
-Interfaces implement:
+Implemented Interfaces:
  - `MomentCollectionPublic`
  - `NonFungibleToken.Provider`
  - `NonFungibleToken.Receiver`
  - `NonFungibleToken.CollectionPublic`
+
+
+### Initializer
+
+```cadence
+func init()
+```
+
 
 ## Functions
 
 
 ### fun `withdraw()`
 
-```
+```cadence
 func withdraw(withdrawID UInt64): NonFungibleToken.NFT 
 ```
 
@@ -36,7 +44,7 @@ func withdraw(withdrawID UInt64): NonFungibleToken.NFT
 
 ### fun `batchWithdraw()`
 
-```
+```cadence
 func batchWithdraw(ids [UInt64]): NonFungibleToken.Collection 
 ```
 
@@ -52,8 +60,8 @@ func batchWithdraw(ids [UInt64]): NonFungibleToken.Collection
 
 ### fun `deposit()`
 
-```
-func deposit(token NonFungibleToken.NFT)
+```cadence
+func deposit(token NonFungibleToken.NFT):  
 ```
 
  deposit takes a Moment and adds it to the Collections dictionary
@@ -65,8 +73,8 @@ func deposit(token NonFungibleToken.NFT)
 
 ### fun `batchDeposit()`
 
-```
-func batchDeposit(tokens NonFungibleToken.Collection)
+```cadence
+func batchDeposit(tokens NonFungibleToken.Collection):  
 ```
 
  batchDeposit takes a Collection object as an argument
@@ -76,7 +84,7 @@ func batchDeposit(tokens NonFungibleToken.Collection)
 
 ### fun `getIDs()`
 
-```
+```cadence
 func getIDs(): [UInt64] 
 ```
 
@@ -86,7 +94,7 @@ func getIDs(): [UInt64]
 
 ### fun `borrowNFT()`
 
-```
+```cadence
 func borrowNFT(id UInt64): &NonFungibleToken.NFT 
 ```
 
@@ -106,7 +114,7 @@ func borrowNFT(id UInt64): &NonFungibleToken.NFT
 
 ### fun `borrowMoment()`
 
-```
+```cadence
 func borrowMoment(id UInt64): &TopShot.NFT? 
 ```
 

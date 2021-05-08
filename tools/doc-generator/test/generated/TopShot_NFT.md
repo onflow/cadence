@@ -1,6 +1,6 @@
-# resource `NFT`
+# Resource `NFT`
 
-```
+```cadence
 resource NFT {
 
     id:  UInt64
@@ -11,6 +11,14 @@ resource NFT {
 
  The resource that represents the Moment NFTs
 
-Interfaces implement:
+Implemented Interfaces:
  - `NonFungibleToken.INFT`
+
+
+### Initializer
+
+```cadence
+func init(serialNumber UInt32, playID UInt32, setID UInt32)
+```
+
 

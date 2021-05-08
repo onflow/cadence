@@ -1,6 +1,6 @@
-# struct `Play`
+# Struct `Play`
 
-```
+```cadence
 struct Play {
 
     playID:  UInt32
@@ -17,5 +17,13 @@ struct Play {
  Moment NFTs will all reference a single play as the owner of
  its metadata. The plays are publicly accessible, so anyone can
  read the metadata associated with a specific play ID
+
+
+
+### Initializer
+
+```cadence
+func init(metadata {String: String})
+```
 
 

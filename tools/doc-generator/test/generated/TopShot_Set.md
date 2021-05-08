@@ -1,6 +1,6 @@
-# resource `Set`
+# Resource `Set`
 
-```
+```cadence
 resource Set {
 
     setID:  UInt32
@@ -35,13 +35,21 @@ resource Set {
  If retireAll() and lock() are called back-to-back,
  the Set is closed off forever and nothing more can be done with it.
 
+
+### Initializer
+
+```cadence
+func init(name String)
+```
+
+
 ## Functions
 
 
 ### fun `addPlay()`
 
-```
-func addPlay(playID UInt32)
+```cadence
+func addPlay(playID UInt32):  
 ```
 
  addPlay adds a play to the set
@@ -58,8 +66,8 @@ func addPlay(playID UInt32)
 
 ### fun `addPlays()`
 
-```
-func addPlays(playIDs [UInt32])
+```cadence
+func addPlays(playIDs [UInt32]):  
 ```
 
  addPlays adds multiple Plays to the Set
@@ -72,8 +80,8 @@ func addPlays(playIDs [UInt32])
 
 ### fun `retirePlay()`
 
-```
-func retirePlay(playID UInt32)
+```cadence
+func retirePlay(playID UInt32):  
 ```
 
  retirePlay retires a Play from the Set so that it can't mint new Moments
@@ -88,8 +96,8 @@ func retirePlay(playID UInt32)
 
 ### fun `retireAll()`
 
-```
-func retireAll()
+```cadence
+func retireAll():  
 ```
 
  retireAll retires all the plays in the Set
@@ -100,8 +108,8 @@ func retireAll()
 
 ### fun `lock()`
 
-```
-func lock()
+```cadence
+func lock():  
 ```
 
  lock() locks the Set so that no more Plays can be added to it
@@ -113,7 +121,7 @@ func lock()
 
 ### fun `mintMoment()`
 
-```
+```cadence
 func mintMoment(playID UInt32): NFT 
 ```
 
@@ -131,7 +139,7 @@ func mintMoment(playID UInt32): NFT
 
 ### fun `batchMintMoment()`
 
-```
+```cadence
 func batchMintMoment(playID UInt32, quantity UInt64): Collection 
 ```
 

@@ -1,6 +1,6 @@
-# contract `TopShot`
+# Contract `TopShot`
 
-```
+```cadence
 contract TopShot {
 
     currentSeries:  UInt32
@@ -20,7 +20,7 @@ contract TopShot {
 ```
 
 
-Interfaces implement:
+Implemented Interfaces:
  - `NonFungibleToken`
 
 ## Functions
@@ -28,7 +28,7 @@ Interfaces implement:
 
 ### fun `createEmptyCollection()`
 
-```
+```cadence
 func createEmptyCollection(): NonFungibleToken.Collection 
 ```
 
@@ -42,7 +42,7 @@ func createEmptyCollection(): NonFungibleToken.Collection
 
 ### fun `getAllPlays()`
 
-```
+```cadence
 func getAllPlays(): [TopShot.Play] 
 ```
 
@@ -54,7 +54,7 @@ func getAllPlays(): [TopShot.Play]
 
 ### fun `getPlayMetaData()`
 
-```
+```cadence
 func getPlayMetaData(playID UInt32): {String: String}? 
 ```
 
@@ -68,7 +68,7 @@ func getPlayMetaData(playID UInt32): {String: String}?
 
 ### fun `getPlayMetaDataByField()`
 
-```
+```cadence
 func getPlayMetaDataByField(playID UInt32, field String): String? 
 ```
 
@@ -86,7 +86,7 @@ func getPlayMetaDataByField(playID UInt32, field String): String?
 
 ### fun `getSetName()`
 
-```
+```cadence
 func getSetName(setID UInt32): String? 
 ```
 
@@ -101,7 +101,7 @@ func getSetName(setID UInt32): String?
 
 ### fun `getSetSeries()`
 
-```
+```cadence
 func getSetSeries(setID UInt32): UInt32? 
 ```
 
@@ -116,7 +116,7 @@ func getSetSeries(setID UInt32): UInt32?
 
 ### fun `getSetIDsByName()`
 
-```
+```cadence
 func getSetIDsByName(setName String): [UInt32]? 
 ```
 
@@ -131,7 +131,7 @@ func getSetIDsByName(setName String): [UInt32]?
 
 ### fun `getPlaysInSet()`
 
-```
+```cadence
 func getPlaysInSet(setID UInt32): [UInt32]? 
 ```
 
@@ -145,7 +145,7 @@ func getPlaysInSet(setID UInt32): [UInt32]?
 
 ### fun `isEditionRetired()`
 
-```
+```cadence
 func isEditionRetired(setID UInt32, playID UInt32): Bool? 
 ```
 
@@ -163,7 +163,7 @@ func isEditionRetired(setID UInt32, playID UInt32): Bool?
 
 ### fun `isSetLocked()`
 
-```
+```cadence
 func isSetLocked(setID UInt32): Bool? 
 ```
 
@@ -180,7 +180,7 @@ func isSetLocked(setID UInt32): Bool?
 
 ### fun `getNumMomentsInEdition()`
 
-```
+```cadence
 func getNumMomentsInEdition(setID UInt32, playID UInt32): UInt32? 
 ```
 
@@ -201,7 +201,7 @@ func getNumMomentsInEdition(setID UInt32, playID UInt32): UInt32?
 
 ### struct `Play`
 
-```
+```cadence
 struct Play {
 
     playID:  UInt32
@@ -226,7 +226,7 @@ struct Play {
 
 ### struct `SetData`
 
-```
+```cadence
 struct SetData {
 
     setID:  UInt32
@@ -254,7 +254,7 @@ struct SetData {
 
 ### resource `Set`
 
-```
+```cadence
 resource Set {
 
     setID:  UInt32
@@ -295,7 +295,7 @@ resource Set {
 
 ### struct `MomentData`
 
-```
+```cadence
 struct MomentData {
 
     setID:  UInt32
@@ -314,7 +314,7 @@ struct MomentData {
 
 ### resource `NFT`
 
-```
+```cadence
 resource NFT {
 
     id:  UInt64
@@ -332,7 +332,7 @@ resource NFT {
 
 ### resource `Admin`
 
-```
+```cadence
 resource Admin {
 }
 ```
@@ -348,7 +348,7 @@ resource Admin {
 
 ### resource `Collection`
 
-```
+```cadence
 resource Collection {
 
     ownedNFTs:  {UInt64: NonFungibleToken.NFT}
@@ -369,7 +369,7 @@ resource Collection {
 
 ### resource interface `MomentCollectionPublic`
 
-```
+```cadence
 resource interface MomentCollectionPublic {
 }
 ```

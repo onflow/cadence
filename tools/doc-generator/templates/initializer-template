@@ -1,6 +1,4 @@
-{{define "function"}}
-### fun `{{.DeclarationIdentifier}}()`
-
+{{define "initializer"}}
 ```cadence
 func {{.DeclarationIdentifier}}(
 {{- range $index, $param := .ParameterList.Parameters}}

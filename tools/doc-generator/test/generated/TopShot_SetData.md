@@ -1,6 +1,6 @@
-# struct `SetData`
+# Struct `SetData`
 
-```
+```cadence
 struct SetData {
 
     setID:  UInt32
@@ -20,5 +20,13 @@ struct SetData {
  about a set by calling various getters located
  at the end of the contract. Only the admin has the ability
  to modify any data in the private Set resource.
+
+
+
+### Initializer
+
+```cadence
+func init(name String)
+```
 
 
