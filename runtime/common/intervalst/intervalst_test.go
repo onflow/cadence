@@ -55,7 +55,7 @@ func (l lineAndColumn) Compare(other Position) int {
 	return 0
 }
 
-func TestIntervalST(t *testing.T) {
+func TestIntervalST_Search(t *testing.T) {
 
 	t.Parallel()
 
@@ -138,7 +138,7 @@ func TestIntervalST(t *testing.T) {
 	}
 }
 
-func TestIntervalST2(t *testing.T) {
+func TestIntervalST_check(t *testing.T) {
 
 	t.Parallel()
 
@@ -240,5 +240,135 @@ func TestIntervalST2(t *testing.T) {
 		assert.NotNil(t, res)
 		res, _ = st.Search(interval.Max)
 		assert.NotNil(t, res)
+	}
+}
+
+func TestIntervalST_SearchAll(t *testing.T) {
+
+	t.Parallel()
+
+	st := &IntervalST{}
+
+	st.Put(
+		NewInterval(
+			lineAndColumn{1, 1},
+			lineAndColumn{1, 2},
+		),
+		100,
+	)
+
+	st.Put(
+		NewInterval(
+			lineAndColumn{2, 4},
+			lineAndColumn{2, 5},
+		),
+		200,
+	)
+
+	st.Put(
+		NewInterval(
+			lineAndColumn{3, 7},
+			lineAndColumn{3, 10},
+		),
+		300,
+	)
+
+	st.Put(
+		NewInterval(
+			lineAndColumn{3, 8},
+			lineAndColumn{3, 9},
+		),
+		400,
+	)
+
+	// Check line 2 (one interval)
+
+	for i := 0; i <= 3; i++ {
+		entries := st.SearchAll(lineAndColumn{2, i})
+		assert.Empty(t, entries)
+	}
+
+	for i := 4; i <= 5; i++ {
+		entries := st.SearchAll(lineAndColumn{2, i})
+		assert.Equal(t,
+			[]Entry{
+				{
+					Interval: NewInterval(
+						lineAndColumn{2, 4},
+						lineAndColumn{2, 5},
+					),
+					Value: 200,
+				},
+			},
+			entries,
+		)
+	}
+
+	for i := 6; i <= 10; i++ {
+		entries := st.SearchAll(lineAndColumn{2, i})
+		assert.Empty(t, entries)
+	}
+
+	// Check line 3 (two overlapping intervals)
+
+	for i := 0; i <= 6; i++ {
+		entries := st.SearchAll(lineAndColumn{3, i})
+		assert.Empty(t, entries)
+	}
+
+	entries := st.SearchAll(lineAndColumn{3, 7})
+	assert.Equal(t,
+		[]Entry{
+			{
+				Interval: NewInterval(
+					lineAndColumn{3, 7},
+					lineAndColumn{3, 10},
+				),
+				Value: 300,
+			},
+		},
+		entries,
+	)
+
+	for i := 8; i <= 9; i++ {
+		entries = st.SearchAll(lineAndColumn{3, i})
+		assert.ElementsMatch(t,
+			[]Entry{
+				{
+					Interval: NewInterval(
+						lineAndColumn{3, 8},
+						lineAndColumn{3, 9},
+					),
+					Value: 400,
+				},
+				{
+					Interval: NewInterval(
+						lineAndColumn{3, 7},
+						lineAndColumn{3, 10},
+					),
+					Value: 300,
+				},
+			},
+			entries,
+		)
+	}
+
+	entries = st.SearchAll(lineAndColumn{3, 10})
+	assert.Equal(t,
+		[]Entry{
+			{
+				Interval: NewInterval(
+					lineAndColumn{3, 7},
+					lineAndColumn{3, 10},
+				),
+				Value: 300,
+			},
+		},
+		entries,
+	)
+
+	for i := 11; i <= 20; i++ {
+		entries = st.SearchAll(lineAndColumn{3, i})
+		assert.Empty(t, entries)
 	}
 }
