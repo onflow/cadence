@@ -40,7 +40,7 @@ func (checker *Checker) VisitIfStatement(statement *ast.IfStatement) ast.Repr {
 		checker.checkConditionalBranches(
 			func() Type {
 				checker.enterValueScope()
-				defer checker.leaveValueScope(true)
+				defer checker.leaveValueScope(thenElement.EndPosition, true)
 
 				checker.visitVariableDeclaration(test, true)
 				thenElement.Accept(checker)

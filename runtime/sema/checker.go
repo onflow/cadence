@@ -92,11 +92,12 @@ type Checker struct {
 	containerTypes                     map[Type]bool
 	functionActivations                *FunctionActivations
 	inCondition                        bool
-	originsAndOccurrencesEnabled       bool
+	positionInfoEnabled                bool
 	Occurrences                        *Occurrences
 	variableOrigins                    map[*Variable]*Origin
 	memberOrigins                      map[Type]map[string]*Origin
 	MemberAccesses                     *MemberAccesses
+	Ranges                             *Ranges
 	isChecked                          bool
 	inCreate                           bool
 	inInvocation                       bool
@@ -197,17 +198,20 @@ func WithImportHandler(handler ImportHandlerFunc) Option {
 	}
 }
 
-// WithOriginsAndOccurrencesEnabled returns a checker option which enables/disables
-// if origins and occurrences are recorded.
+// WithPositionInfoEnabled returns a checker option which enables/disables
+// if position info recoding is enabled.
 //
-func WithOriginsAndOccurrencesEnabled(enabled bool) Option {
+// Position info includes origins, occurrences, member accesses, and ranges.
+//
+func WithPositionInfoEnabled(enabled bool) Option {
 	return func(checker *Checker) error {
-		checker.originsAndOccurrencesEnabled = enabled
+		checker.positionInfoEnabled = enabled
 		if enabled {
 			checker.memberOrigins = map[Type]map[string]*Origin{}
 			checker.variableOrigins = map[*Variable]*Origin{}
 			checker.Occurrences = NewOccurrences()
 			checker.MemberAccesses = NewMemberAccesses()
+			checker.Ranges = NewRanges()
 		}
 
 		return nil
@@ -289,7 +293,7 @@ func (checker *Checker) declareValue(declaration ValueDeclaration) *Variable {
 		allowOuterScopeShadowing: false,
 	})
 	checker.report(err)
-	if checker.originsAndOccurrencesEnabled {
+	if checker.positionInfoEnabled {
 		checker.recordVariableDeclarationOccurrence(name, variable)
 	}
 	return variable
@@ -315,7 +319,7 @@ func (checker *Checker) declareTypeDeclaration(declaration TypeDeclaration) {
 		},
 	)
 	checker.report(err)
-	if checker.originsAndOccurrencesEnabled {
+	if checker.positionInfoEnabled {
 		checker.recordVariableDeclarationOccurrence(identifier.Identifier, variable)
 	}
 }
@@ -851,7 +855,7 @@ func (checker *Checker) findAndCheckValueVariable(identifier ast.Identifier, rec
 		return nil
 	}
 
-	if checker.originsAndOccurrencesEnabled && recordOccurrence && identifier.Identifier != "" {
+	if checker.positionInfoEnabled && recordOccurrence && identifier.Identifier != "" {
 		checker.recordVariableReferenceOccurrence(
 			identifier.StartPosition(),
 			identifier.EndPosition(),
@@ -1235,7 +1239,7 @@ func (checker *Checker) findAndCheckTypeVariable(identifier ast.Identifier, reco
 		return nil
 	}
 
-	if checker.originsAndOccurrencesEnabled && recordOccurrence && identifier.Identifier != "" {
+	if checker.positionInfoEnabled && recordOccurrence && identifier.Identifier != "" {
 		checker.recordVariableReferenceOccurrence(
 			identifier.StartPosition(),
 			identifier.EndPosition(),
@@ -1347,7 +1351,7 @@ func (checker *Checker) parameters(parameterList *ast.ParameterList) []*Paramete
 }
 
 func (checker *Checker) recordVariableReferenceOccurrence(startPos, endPos ast.Position, variable *Variable) {
-	if !checker.originsAndOccurrencesEnabled {
+	if !checker.positionInfoEnabled {
 		return
 	}
 
@@ -1384,7 +1388,7 @@ func (checker *Checker) recordFieldDeclarationOrigin(
 	startPos, endPos ast.Position,
 	fieldType Type,
 ) *Origin {
-	if !checker.originsAndOccurrencesEnabled {
+	if !checker.positionInfoEnabled {
 		return nil
 	}
 
@@ -1411,7 +1415,7 @@ func (checker *Checker) recordFunctionDeclarationOrigin(
 	function *ast.FunctionDeclaration,
 	functionType *FunctionType,
 ) *Origin {
-	if !checker.originsAndOccurrencesEnabled {
+	if !checker.positionInfoEnabled {
 		return nil
 	}
 
@@ -1434,14 +1438,16 @@ func (checker *Checker) recordFunctionDeclarationOrigin(
 }
 
 func (checker *Checker) enterValueScope() {
+	//fmt.Printf("ENTER: %d\n", checker.valueActivations.Depth())
 	checker.valueActivations.Enter()
 }
 
-func (checker *Checker) leaveValueScope(checkResourceLoss bool) {
+func (checker *Checker) leaveValueScope(getEndPosition func() ast.Position, checkResourceLoss bool) {
 	if checkResourceLoss {
 		checker.checkResourceLoss(checker.valueActivations.Depth())
 	}
-	checker.valueActivations.Leave()
+
+	checker.valueActivations.Leave(getEndPosition)
 }
 
 // TODO: prune resource variables declared in function's scope
@@ -1453,7 +1459,7 @@ func (checker *Checker) leaveValueScope(checkResourceLoss bool) {
 //
 func (checker *Checker) checkResourceLoss(depth int) {
 
-	checker.valueActivations.ForEachVariablesDeclaredInAndBelow(depth, func(name string, variable *Variable) {
+	checker.valueActivations.ForEachVariableDeclaredInAndBelow(depth, func(name string, variable *Variable) {
 
 		// TODO: handle `self` and `result` properly
 

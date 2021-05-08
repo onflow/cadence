@@ -222,9 +222,47 @@ func (checker *Checker) visitVariableDeclaration(declaration *ast.VariableDeclar
 		allowOuterScopeShadowing: true,
 	})
 	checker.report(err)
-	if checker.originsAndOccurrencesEnabled {
+
+	if checker.positionInfoEnabled {
 		checker.recordVariableDeclarationOccurrence(identifier, variable)
+		checker.recordVariableDeclarationRange(declaration, identifier, declarationType)
 	}
+}
+
+func (checker *Checker) recordVariableDeclarationRange(
+	declaration *ast.VariableDeclaration,
+	identifier string,
+	declarationType Type,
+) {
+	activation := checker.valueActivations.Current()
+	activation.LeaveCallbacks = append(
+		activation.LeaveCallbacks,
+		func(getEndPosition func() ast.Position) {
+			if getEndPosition == nil {
+				return
+			}
+
+			// TODO: use the start position of the next statement
+			//   after this variable declaration instead
+
+			var startPosition ast.Position
+			if declaration.SecondValue != nil {
+				startPosition = declaration.SecondValue.EndPosition()
+			} else {
+				startPosition = declaration.Value.EndPosition()
+			}
+
+			checker.Ranges.Put(
+				startPosition,
+				getEndPosition(),
+				Range{
+					Identifier:      identifier,
+					DeclarationKind: declaration.DeclarationKind(),
+					Type:            declarationType,
+				},
+			)
+		},
+	)
 }
 
 func (checker *Checker) checkVariableDeclarationUsability(declaration *ast.VariableDeclaration) {
