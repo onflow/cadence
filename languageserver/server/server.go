@@ -165,6 +165,7 @@ type Server struct {
 	checkers        map[common.LocationID]*sema.Checker
 	documents       map[protocol.DocumentUri]Document
 	memberResolvers map[protocol.DocumentUri]map[string]sema.MemberResolver
+	ranges          map[protocol.DocumentUri]map[string]sema.Range
 	// commands is the registry of custom commands we support
 	commands map[string]CommandHandler
 	// resolveAddressImport is the optional function that is used to resolve address imports
@@ -273,6 +274,7 @@ func NewServer() (*Server, error) {
 		checkers:        make(map[common.LocationID]*sema.Checker),
 		documents:       make(map[protocol.DocumentUri]Document),
 		memberResolvers: make(map[protocol.DocumentUri]map[string]sema.MemberResolver),
+		ranges:          make(map[protocol.DocumentUri]map[string]sema.Range),
 		commands:        make(map[string]CommandHandler),
 	}
 	server.protocolServer = protocol.NewServer(server)
@@ -870,7 +872,7 @@ var containerCompletionItems = []*protocol.CompletionItem{
 // Completion is called to compute completion items at a given cursor position.
 //
 func (s *Server) Completion(
-	_ protocol.Conn,
+	conn protocol.Conn,
 	params *protocol.CompletionParams,
 ) (
 	items []*protocol.CompletionItem,
@@ -894,13 +896,16 @@ func (s *Server) Completion(
 	position := conversion.ProtocolToSemaPosition(params.Position)
 
 	memberCompletions := s.memberCompletions(position, checker, uri)
-
-	// prioritize member completion items over other items
-	for _, item := range memberCompletions {
-		item.SortText = fmt.Sprintf("1" + item.Label)
+	if len(memberCompletions) > 0 {
+		return memberCompletions, nil
 	}
 
-	items = append(items, memberCompletions...)
+	// prioritize range completion items over other items
+	rangeCompletions := s.rangeCompletions(position, checker, uri)
+	for _, item := range rangeCompletions {
+		item.SortText = fmt.Sprintf("1" + item.Label)
+	}
+	items = append(items, rangeCompletions...)
 
 	// TODO: make conditional on position being inside a function declaration
 	items = append(items, statementCompletionItems...)
@@ -991,6 +996,44 @@ func (s *Server) memberCompletions(
 	return items
 }
 
+func (s *Server) rangeCompletions(
+	position sema.Position,
+	checker *sema.Checker,
+	uri protocol.DocumentUri,
+) (items []*protocol.CompletionItem) {
+
+	// The client asks for the column after the identifier,
+	// query the member accesses for the preceding position
+
+	ranges := checker.Ranges.Find(position)
+
+	delete(s.ranges, uri)
+
+	if ranges == nil {
+		return
+	}
+
+	resolvers := make(map[string]sema.Range, len(ranges))
+	s.ranges[uri] = resolvers
+
+	for _, r := range ranges {
+		kind := convertDeclarationKindToCompletionItemType(r.DeclarationKind)
+		item := &protocol.CompletionItem{
+			Label: r.Identifier,
+			Kind:  kind,
+			Data: CompletionItemData{
+				URI: uri,
+			},
+		}
+
+		resolvers[r.Identifier] = r
+
+		items = append(items, item)
+	}
+
+	return items
+}
+
 func (s *Server) prepareFunctionMemberCompletionItem(
 	item *protocol.CompletionItem,
 	resolver sema.MemberResolver,
@@ -1047,6 +1090,12 @@ func convertDeclarationKindToCompletionItemType(kind common.DeclarationKind) pro
 		common.DeclarationKindContractInterface:
 		return protocol.InterfaceCompletion
 
+	case common.DeclarationKindVariable:
+		return protocol.VariableCompletion
+
+	case common.DeclarationKindConstant:
+		return protocol.ConstantCompletion
+
 	default:
 		return protocol.TextCompletion
 	}
@@ -1062,7 +1111,7 @@ func declarationKindCommitCharacters(kind common.DeclarationKind) []string {
 	}
 }
 
-// Completion is called to compute completion items at a given cursor position.
+// ResolveCompletionItem is called to compute completion items at a given cursor position.
 //
 func (s *Server) ResolveCompletionItem(
 	_ protocol.Conn,
@@ -1085,17 +1134,31 @@ func (s *Server) ResolveCompletionItem(
 		return
 	}
 
-	memberResolvers, ok := s.memberResolvers[data.URI]
-	if !ok {
+	resolved := s.maybeResolveMember(data.URI, result)
+	if resolved {
 		return
 	}
 
-	resolver, ok := memberResolvers[item.Label]
-	if !ok {
+	resolved = s.maybeResolveRange(data.URI, result)
+	if resolved {
 		return
 	}
 
-	member := resolver.Resolve(item.Label, ast.Range{}, func(err error) { /* NO-OP */ })
+	return
+}
+
+func (s *Server) maybeResolveMember(uri protocol.DocumentUri, result *protocol.CompletionItem) bool {
+	memberResolvers, ok := s.memberResolvers[uri]
+	if !ok {
+		return false
+	}
+
+	resolver, ok := memberResolvers[result.Label]
+	if !ok {
+		return false
+	}
+
+	member := resolver.Resolve(result.Label, ast.Range{}, func(err error) { /* NO-OP */ })
 
 	result.Documentation = protocol.MarkupContent{
 		Kind:  "markdown",
@@ -1147,7 +1210,27 @@ func (s *Server) ResolveCompletionItem(
 		)
 	}
 
-	return
+	return true
+}
+
+func (s *Server) maybeResolveRange(uri protocol.DocumentUri, result *protocol.CompletionItem) bool {
+	ranges, ok := s.ranges[uri]
+	if !ok {
+		return false
+	}
+
+	r, ok := ranges[result.Label]
+	if !ok {
+		return false
+	}
+
+	result.Detail = fmt.Sprintf(
+		"(%s) %s",
+		r.DeclarationKind.Name(),
+		r.Type.String(),
+	)
+
+	return true
 }
 
 // ExecuteCommand is called to execute a custom, server-defined command.
