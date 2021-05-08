@@ -1310,6 +1310,44 @@ func (s *Server) rangeCompletions(
 	return items
 }
 
+func (s *Server) rangeCompletions(
+	position sema.Position,
+	checker *sema.Checker,
+	uri protocol.DocumentUri,
+) (items []*protocol.CompletionItem) {
+
+	// The client asks for the column after the identifier,
+	// query the member accesses for the preceding position
+
+	ranges := checker.Ranges.Find(position)
+
+	delete(s.ranges, uri)
+
+	if ranges == nil {
+		return
+	}
+
+	resolvers := make(map[string]sema.Range, len(ranges))
+	s.ranges[uri] = resolvers
+
+	for _, r := range ranges {
+		kind := convertDeclarationKindToCompletionItemType(r.DeclarationKind)
+		item := &protocol.CompletionItem{
+			Label: r.Identifier,
+			Kind:  kind,
+			Data: CompletionItemData{
+				URI: uri,
+			},
+		}
+
+		resolvers[r.Identifier] = r
+
+		items = append(items, item)
+	}
+
+	return items
+}
+
 func (s *Server) prepareFunctionMemberCompletionItem(
 	item *protocol.CompletionItem,
 	resolver sema.MemberResolver,
