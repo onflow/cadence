@@ -2,8 +2,10 @@
 
 ```
 struct Play {
-    playID UInt32
-    metadata {String: String}
+
+    playID:  UInt32
+
+    metadata:  {String: String}
 }
 ```
 

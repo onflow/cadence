@@ -2,9 +2,12 @@
 
 ```
 struct SetData {
-    setID UInt32
-    name String
-    series UInt32
+
+    setID:  UInt32
+
+    name:  String
+
+    series:  UInt32
 }
 ```
 

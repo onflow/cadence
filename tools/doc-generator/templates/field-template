@@ -1,3 +1,4 @@
 {{define "field"}}
-    {{.DeclarationIdentifier}} {{.TypeAnnotation.Type.String -}}
+
+    {{.DeclarationIdentifier}}:  {{.TypeAnnotation.Type.String -}}
 {{end -}}

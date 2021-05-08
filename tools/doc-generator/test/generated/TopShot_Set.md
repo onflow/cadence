@@ -2,11 +2,16 @@
 
 ```
 resource Set {
-    setID UInt32
-    plays [UInt32]
-    retired {UInt32: Bool}
-    locked Bool
-    numberMintedPerPlay {UInt32: UInt32}
+
+    setID:  UInt32
+
+    plays:  [UInt32]
+
+    retired:  {UInt32: Bool}
+
+    locked:  Bool
+
+    numberMintedPerPlay:  {UInt32: UInt32}
 }
 ```
 
@@ -30,7 +35,7 @@ resource Set {
  If retireAll() and lock() are called back-to-back,
  the Set is closed off forever and nothing more can be done with it.
 
-## Functions:
+## Functions
 
 
 ### fun `addPlay()`

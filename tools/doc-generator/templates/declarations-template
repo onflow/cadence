@@ -4,14 +4,11 @@
 {{- if isFunction . -}}
     {{template "function" .}}
 ---
-{{else if isStruct . -}}
+{{else if isComposite . -}}
     {{template "composite" .}}
 ---
 {{else if isEnum . -}}
     {{template "enum" .}}
----
-{{else if isContract . -}}
-    {{template "composite" .}}
 ---
 {{end -}}
 

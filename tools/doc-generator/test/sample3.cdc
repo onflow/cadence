@@ -670,10 +670,6 @@ pub contract TopShot: NonFungibleToken {
         }
     }
 
-    /// -----------------------------------------------------------------------
-    /// TopShot contract-level function definitions
-    /// -----------------------------------------------------------------------
-
     /// createEmptyCollection creates a new, empty Collection object so that
     /// a user can store it in their account storage.
     /// Once they have a Collection in their storage, they are able to receive

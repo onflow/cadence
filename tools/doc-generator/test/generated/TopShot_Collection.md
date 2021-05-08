@@ -2,15 +2,21 @@
 
 ```
 resource Collection {
-    ownedNFTs {UInt64: NonFungibleToken.NFT}
+
+    ownedNFTs:  {UInt64: NonFungibleToken.NFT}
 }
 ```
 
  Collection is a resource that every user who owns NFTs
  will store in their account to manage their NFTS
 
+Interfaces implement:
+ - `MomentCollectionPublic`
+ - `NonFungibleToken.Provider`
+ - `NonFungibleToken.Receiver`
+ - `NonFungibleToken.CollectionPublic`
 
-## Functions:
+## Functions
 
 
 ### fun `withdraw()`

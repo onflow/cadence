@@ -28,12 +28,13 @@ var functions = template.FuncMap{
 		return declaration.DeclarationKind() == common.DeclarationKindFunction
 	},
 
-	"isStruct": func(declaration ast.Declaration) bool {
+	"isComposite": func(declaration ast.Declaration) bool {
 		switch declaration.DeclarationKind() {
 		case common.DeclarationKindStructure,
 			common.DeclarationKindStructureInterface,
 			common.DeclarationKindResource,
-			common.DeclarationKindResourceInterface:
+			common.DeclarationKindResourceInterface,
+			common.DeclarationKindContract:
 			return true
 		default:
 			return false
@@ -44,8 +45,14 @@ var functions = template.FuncMap{
 		return declaration.DeclarationKind() == common.DeclarationKindEnum
 	},
 
-	"isContract": func(declaration ast.Declaration) bool {
-		return declaration.DeclarationKind() == common.DeclarationKindContract
+	"isInterface": func(declaration ast.Declaration) bool {
+		switch declaration.DeclarationKind() {
+		case common.DeclarationKindStructureInterface,
+			common.DeclarationKindResourceInterface:
+			return true
+		default:
+			return false
+		}
 	},
 
 	"declKeyword": func(declaration ast.Declaration) string {
@@ -155,6 +162,10 @@ func (gen *DocGenerator) VisitFunctionDeclaration(declaration *ast.FunctionDecla
 	return nil
 }
 func (gen *DocGenerator) VisitCompositeDeclaration(declaration *ast.CompositeDeclaration) ast.Repr {
+	if declaration.DeclarationKind() == common.DeclarationKindEvent {
+		return nil
+	}
+
 	declName := declaration.DeclarationIdentifier().String()
 	return gen.genCompositeDecl(declName, declaration.Members, declaration)
 }

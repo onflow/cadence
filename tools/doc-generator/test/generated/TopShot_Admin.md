@@ -10,7 +10,7 @@ resource Admin {
  various aspects of the Plays, Sets, and Moments
 
 
-## Functions:
+## Functions
 
 
 ### fun `createPlay()`

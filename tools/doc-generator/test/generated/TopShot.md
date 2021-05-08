@@ -2,19 +2,28 @@
 
 ```
 contract TopShot {
-    currentSeries UInt32
-    playDatas {UInt32: Play}
-    setDatas {UInt32: SetData}
-    sets {UInt32: Set}
-    nextPlayID UInt32
-    nextSetID UInt32
-    totalSupply UInt64
+
+    currentSeries:  UInt32
+
+    playDatas:  {UInt32: Play}
+
+    setDatas:  {UInt32: SetData}
+
+    sets:  {UInt32: Set}
+
+    nextPlayID:  UInt32
+
+    nextSetID:  UInt32
+
+    totalSupply:  UInt64
 }
 ```
 
 
+Interfaces implement:
+ - `NonFungibleToken`
 
-## Functions:
+## Functions
 
 
 ### fun `createEmptyCollection()`
@@ -23,9 +32,6 @@ contract TopShot {
 func createEmptyCollection(): NonFungibleToken.Collection 
 ```
 
- -----------------------------------------------------------------------
- TopShot contract-level function definitions
- -----------------------------------------------------------------------
  createEmptyCollection creates a new, empty Collection object so that
  a user can store it in their account storage.
  Once they have a Collection in their storage, they are able to receive
@@ -190,15 +196,17 @@ func getNumMomentsInEdition(setID UInt32, playID UInt32): UInt32?
 ---
 
 
-## Structs & Resources:
+## Structs & Resources
 
 
 ### struct `Play`
 
 ```
 struct Play {
-    playID UInt32
-    metadata {String: String}
+
+    playID:  UInt32
+
+    metadata:  {String: String}
 }
 ```
 
@@ -220,9 +228,12 @@ struct Play {
 
 ```
 struct SetData {
-    setID UInt32
-    name String
-    series UInt32
+
+    setID:  UInt32
+
+    name:  String
+
+    series:  UInt32
 }
 ```
 
@@ -245,11 +256,16 @@ struct SetData {
 
 ```
 resource Set {
-    setID UInt32
-    plays [UInt32]
-    retired {UInt32: Bool}
-    locked Bool
-    numberMintedPerPlay {UInt32: UInt32}
+
+    setID:  UInt32
+
+    plays:  [UInt32]
+
+    retired:  {UInt32: Bool}
+
+    locked:  Bool
+
+    numberMintedPerPlay:  {UInt32: UInt32}
 }
 ```
 
@@ -281,9 +297,12 @@ resource Set {
 
 ```
 struct MomentData {
-    setID UInt32
-    playID UInt32
-    serialNumber UInt32
+
+    setID:  UInt32
+
+    playID:  UInt32
+
+    serialNumber:  UInt32
 }
 ```
 
@@ -297,8 +316,10 @@ struct MomentData {
 
 ```
 resource NFT {
-    id UInt64
-    data MomentData
+
+    id:  UInt64
+
+    data:  MomentData
 }
 ```
 
@@ -329,7 +350,8 @@ resource Admin {
 
 ```
 resource Collection {
-    ownedNFTs {UInt64: NonFungibleToken.NFT}
+
+    ownedNFTs:  {UInt64: NonFungibleToken.NFT}
 }
 ```
 
@@ -342,7 +364,7 @@ resource Collection {
 ---
 
 
-## Interfaces:
+## Interfaces
 
 
 ### resource interface `MomentCollectionPublic`

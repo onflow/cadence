@@ -9,7 +9,7 @@ resource interface MomentCollectionPublic {
  to allow others to deposit Moments into their Collection. It also allows for reading
  the IDs of Moments in the Collection.
 
-## Functions:
+## Functions
 
 
 ### fun `deposit()`

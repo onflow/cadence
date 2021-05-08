@@ -8,19 +8,31 @@
 }
 ```
 
-{{if .DocString}}{{.DocString}}{{end}}
+{{if .DocString}}
+{{- .DocString -}}
+{{end -}}
+
+{{if isInterface . -}}
+{{- else -}}
+{{if gt (len .Conformances) 0}}
+Interfaces implement:
+    {{- range $index, $conformance := .Conformances}}
+ - `{{$conformance -}}`
+    {{- end -}}
+{{- end -}}
+{{- end}}
 
 {{if gt (len .Members.Functions) 0 -}}
-## Functions:
+## Functions
 {{- template "declarations" .Members.Functions -}}
 {{- end -}}
 
 {{- if gt (len .Members.Composites) 0 -}}
-## Structs & Resources:
+## Structs & Resources
 {{- template "declarations" .Members.Composites -}}
 {{- end -}}
 
 {{- if gt (len .Members.Interfaces) 0 -}}
-## Interfaces:
+## Interfaces
 {{- template "declarations" .Members.Interfaces -}}
 {{- end -}}
