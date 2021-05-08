@@ -128,6 +128,48 @@ func (t *IntervalST) search(x *node, p Position) (*Interval, interface{}) {
 	return nil, nil
 }
 
+type Entry struct {
+	Interval Interval
+	Value    interface{}
+}
+
+func (t *IntervalST) SearchAll(p Position) []Entry {
+	_, entries := t.searchAll(t.root, p, nil)
+	return entries
+}
+
+func (t *IntervalST) searchAll(n *node, p Position, entries []Entry) (bool, []Entry) {
+	found1 := false
+	found2 := false
+	found3 := false
+
+	if n == nil {
+		return false, entries
+	}
+
+	if n.interval.Contains(p) {
+		found1 = true
+		entries = append(entries,
+			Entry{
+				Interval: n.interval,
+				Value:    n.value,
+			},
+		)
+	}
+
+	if n.left != nil && n.left.max.Compare(p) >= 0 {
+		found2, entries = t.searchAll(n.left, p, entries)
+	}
+
+	if found2 || n.left == nil || n.left.max.Compare(p) < 0 {
+		found3, entries = t.searchAll(n.right, p, entries)
+	}
+
+	found := found1 || found2 || found3
+
+	return found, entries
+}
+
 func (t *IntervalST) Values() []interface{} {
 	return t.root.Values()
 }
