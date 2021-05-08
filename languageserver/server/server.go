@@ -1002,7 +1002,6 @@ func (s *Server) rangeCompletions(
 	uri protocol.DocumentUri,
 ) (items []*protocol.CompletionItem) {
 
-
 	ranges := checker.Ranges.Find(position)
 
 	delete(s.ranges, uri)
