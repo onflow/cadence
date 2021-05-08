@@ -42,7 +42,7 @@ func TestCheckOccurrencesVariableDeclarations(t *testing.T) {
         `,
 		ParseAndCheckOptions{
 			Options: []sema.Option{
-				sema.WithOriginsAndOccurrencesEnabled(true),
+				sema.WithPositionInfoEnabled(true),
 			},
 		},
 	)
@@ -114,7 +114,7 @@ func TestCheckOccurrencesFunction(t *testing.T) {
 		`,
 		ParseAndCheckOptions{
 			Options: []sema.Option{
-				sema.WithOriginsAndOccurrencesEnabled(true),
+				sema.WithPositionInfoEnabled(true),
 			},
 		},
 	)
@@ -255,7 +255,7 @@ func TestCheckOccurrencesStructAndInterface(t *testing.T) {
 		`,
 		ParseAndCheckOptions{
 			Options: []sema.Option{
-				sema.WithOriginsAndOccurrencesEnabled(true),
+				sema.WithPositionInfoEnabled(true),
 			},
 		},
 	)

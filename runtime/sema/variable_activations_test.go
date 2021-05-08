@@ -59,19 +59,19 @@ func TestActivations(t *testing.T) {
 	assert.Same(t, activations.Find("b"), three)
 	assert.Same(t, activations.Find("c"), four)
 
-	activations.Leave()
+	activations.Leave(nil)
 
 	assert.Same(t, activations.Find("a"), two)
 	assert.Same(t, activations.Find("b"), three)
 	assert.Nil(t, activations.Find("c"))
 
-	activations.Leave()
+	activations.Leave(nil)
 
 	assert.Same(t, activations.Find("a"), one)
 	assert.Nil(t, activations.Find("b"))
 	assert.Nil(t, activations.Find("c"))
 
-	activations.Leave()
+	activations.Leave(nil)
 
 	assert.Nil(t, activations.Find("a"))
 	assert.Nil(t, activations.Find("b"))

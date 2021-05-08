@@ -30,9 +30,10 @@ import (
 // i.e. it is used as a symbol table during semantic analysis.
 //
 type VariableActivation struct {
-	entries *StringVariableOrderedMap
-	Depth   int
-	Parent  *VariableActivation
+	entries        *StringVariableOrderedMap
+	Depth          int
+	Parent         *VariableActivation
+	LeaveCallbacks []func(getEndPosition func() ast.Position)
 }
 
 // NewVariableActivation returns as new activation with the given parent.
@@ -91,6 +92,8 @@ func (a *VariableActivation) Set(name string, variable *Variable) {
 // Clear removes all variables from this activation.
 //
 func (a *VariableActivation) Clear() {
+	a.LeaveCallbacks = nil
+
 	if a.entries == nil {
 		return
 	}
@@ -182,7 +185,7 @@ func (a *VariableActivations) Enter() {
 // Leave pops the top-most (current) activation
 // from the top of the activation stack.
 //
-func (a *VariableActivations) Leave() {
+func (a *VariableActivations) Leave(getEndPosition func() ast.Position) {
 	count := len(a.activations)
 	if count < 1 {
 		return
@@ -190,6 +193,9 @@ func (a *VariableActivations) Leave() {
 	lastIndex := count - 1
 	activation := a.activations[lastIndex]
 	a.activations = a.activations[:lastIndex]
+	for _, callback := range activation.LeaveCallbacks {
+		callback(getEndPosition)
+	}
 	variableActivationPool.Put(activation)
 }
 
@@ -316,7 +322,7 @@ func (a *VariableActivations) DeclareImplicitConstant(
 	)
 }
 
-func (a *VariableActivations) ForEachVariablesDeclaredInAndBelow(depth int, f func(name string, value *Variable)) {
+func (a *VariableActivations) ForEachVariableDeclaredInAndBelow(depth int, f func(name string, value *Variable)) {
 
 	activation := a.Current()
 

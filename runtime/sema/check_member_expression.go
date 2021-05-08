@@ -37,7 +37,7 @@ func (checker *Checker) VisitMemberExpression(expression *ast.MemberExpression) 
 			}
 		}
 
-		if checker.originsAndOccurrencesEnabled {
+		if checker.positionInfoEnabled {
 			checker.MemberAccesses.Put(
 				expression.AccessPos,
 				expression.EndPosition(),
@@ -218,7 +218,7 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression) (accessedT
 		}
 	} else {
 
-		if checker.originsAndOccurrencesEnabled {
+		if checker.positionInfoEnabled {
 			origins := checker.memberOrigins[accessedType]
 			origin := origins[identifier]
 			checker.Occurrences.Put(

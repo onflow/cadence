@@ -53,7 +53,7 @@ func (checker *Checker) VisitTransactionDeclaration(declaration *ast.Transaction
 
 	// enter a new scope for this transaction
 	checker.enterValueScope()
-	defer checker.leaveValueScope(true)
+	defer checker.leaveValueScope(declaration.EndPosition, true)
 
 	checker.declareSelfValue(transactionType)
 
@@ -280,7 +280,7 @@ func (checker *Checker) declareTransactionDeclaration(declaration *ast.Transacti
 
 	transactionType.Members = members
 	transactionType.Fields = fields
-	if checker.originsAndOccurrencesEnabled {
+	if checker.positionInfoEnabled {
 		checker.memberOrigins[transactionType] = origins
 	}
 
