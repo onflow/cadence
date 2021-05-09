@@ -69,7 +69,24 @@ func TestCheckRange(t *testing.T) {
 	)
 	assert.NoError(t, err)
 
-	ranges := checker.Ranges.All()
+	var ranges []sema.Range
+
+	isLess := func(a, b sema.Range) bool {
+		res := strings.Compare(a.Identifier, b.Identifier)
+		switch res {
+		case -1:
+			return true
+		case 1:
+			return false
+		default:
+			if a.DeclarationKind < b.DeclarationKind {
+				return true
+			} else if a.DeclarationKind > b.DeclarationKind {
+				return false
+			}
+			return strings.Compare(string(a.Type.ID()), string(b.Type.ID())) < 0
+		}
+	}
 
 	sortAndFilterRanges := func() {
 		filteredRanges := make([]sema.Range, 0, len(ranges))
@@ -85,22 +102,12 @@ func TestCheckRange(t *testing.T) {
 		sort.SliceStable(ranges, func(i, j int) bool {
 			a := ranges[i]
 			b := ranges[j]
-			res := strings.Compare(a.Identifier, b.Identifier)
-			switch res {
-			case -1:
-				return true
-			case 1:
-				return false
-			default:
-				if a.DeclarationKind < b.DeclarationKind {
-					return true
-				} else if a.DeclarationKind > b.DeclarationKind {
-					return false
-				}
-				return strings.Compare(string(a.Type.ID()), string(b.Type.ID())) < 0
-			}
+			return isLess(a, b)
 		})
 	}
+
+	ranges = checker.Ranges.All()
+	sortAndFilterRanges()
 
 	barTypeVariable, ok := checker.Elaboration.GlobalTypes.Get("_TEST_Bar")
 	require.True(t, ok, "missing global type _TEST_Bar")
@@ -117,7 +124,6 @@ func TestCheckRange(t *testing.T) {
 	fooValueVariable, ok := checker.Elaboration.GlobalValues.Get("_TEST_foo")
 	require.True(t, ok, "missing global value _TEST_foo")
 
-	sortAndFilterRanges()
 	assert.Equal(t,
 		[]sema.Range{
 			{
@@ -139,6 +145,11 @@ func TestCheckRange(t *testing.T) {
 				Identifier:      "_TEST_Baz",
 				Type:            bazTypeVariable.Type,
 				DeclarationKind: common.DeclarationKindResource,
+			},
+			{
+				Identifier:      "_TEST_a",
+				Type:            sema.IntType,
+				DeclarationKind: common.DeclarationKindParameter,
 			},
 			{
 				Identifier:      "_TEST_b",
@@ -194,6 +205,11 @@ func TestCheckRange(t *testing.T) {
 				DeclarationKind: common.DeclarationKindResource,
 			},
 			{
+				Identifier:      "_TEST_a",
+				Type:            sema.IntType,
+				DeclarationKind: common.DeclarationKindParameter,
+			},
+			{
 				Identifier:      "_TEST_b",
 				Type:            sema.IntType,
 				DeclarationKind: common.DeclarationKindConstant,
@@ -235,6 +251,11 @@ func TestCheckRange(t *testing.T) {
 				Identifier:      "_TEST_Baz",
 				Type:            bazTypeVariable.Type,
 				DeclarationKind: common.DeclarationKindResource,
+			},
+			{
+				Identifier:      "_TEST_a",
+				Type:            sema.IntType,
+				DeclarationKind: common.DeclarationKindParameter,
 			},
 			{
 				Identifier:      "_TEST_b",

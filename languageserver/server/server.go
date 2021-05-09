@@ -1130,7 +1130,8 @@ func convertDeclarationKindToCompletionItemType(kind common.DeclarationKind) pro
 	case common.DeclarationKindVariable:
 		return protocol.VariableCompletion
 
-	case common.DeclarationKindConstant:
+	case common.DeclarationKindConstant,
+		common.DeclarationKindParameter:
 		return protocol.ConstantCompletion
 
 	default:
