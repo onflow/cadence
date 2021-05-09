@@ -179,6 +179,23 @@ func (checker *Checker) checkFunction(
 			}
 		},
 	)
+
+	if checker.positionInfoEnabled && functionBlock != nil {
+		startPos := functionBlock.StartPosition()
+		endPos := functionBlock.EndPosition()
+
+		for _, parameter := range functionType.Parameters {
+			checker.Ranges.Put(
+				startPos,
+				endPos,
+				Range{
+					Identifier:      parameter.Identifier,
+					Type:            parameter.TypeAnnotation.Type,
+					DeclarationKind: common.DeclarationKindParameter,
+				},
+			)
+		}
+	}
 }
 
 // checkFunctionExits checks that the given function block exits
