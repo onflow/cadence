@@ -1330,17 +1330,46 @@ func (s *Server) rangeCompletions(
 	resolvers := make(map[string]sema.Range, len(ranges))
 	s.ranges[uri] = resolvers
 
-	for _, r := range ranges {
+	for index, r := range ranges {
+		id := strconv.Itoa(index)
 		kind := convertDeclarationKindToCompletionItemType(r.DeclarationKind)
 		item := &protocol.CompletionItem{
 			Label: r.Identifier,
 			Kind:  kind,
 			Data: CompletionItemData{
 				URI: uri,
+				ID:  id,
 			},
 		}
 
-		resolvers[r.Identifier] = r
+		resolvers[id] = r
+
+		// If the range is for a function, also prepare the argument list
+		// with placeholders and suggest it
+
+		switch r.DeclarationKind {
+		case common.DeclarationKindFunction:
+			functionType := r.Type.(*sema.FunctionType)
+			s.prepareParametersCompletionItem(
+				item,
+				r.Identifier,
+				functionType.Parameters,
+			)
+
+		case common.DeclarationKindStructure,
+			common.DeclarationKindResource,
+			common.DeclarationKindEvent:
+
+			if constructorFunctionType, ok := r.Type.(*sema.ConstructorFunctionType); ok {
+				item.Kind = protocol.ConstructorCompletion
+
+				s.prepareParametersCompletionItem(
+					item,
+					r.Identifier,
+					constructorFunctionType.Parameters,
+				)
+			}
+		}
 
 		items = append(items, item)
 	}
