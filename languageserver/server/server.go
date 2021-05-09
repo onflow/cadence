@@ -637,6 +637,7 @@ func (s *Server) CodeLens(
 
 type CompletionItemData struct {
 	URI protocol.DocumentUri `json:"uri"`
+	ID  string               `json:"id"`
 }
 
 var statementCompletionItems = []*protocol.CompletionItem{
@@ -980,6 +981,7 @@ func (s *Server) memberCompletions(
 			CommitCharacters: commitCharacters,
 			Data: CompletionItemData{
 				URI: uri,
+				ID:  name,
 			},
 		}
 
@@ -1013,17 +1015,46 @@ func (s *Server) rangeCompletions(
 	resolvers := make(map[string]sema.Range, len(ranges))
 	s.ranges[uri] = resolvers
 
-	for _, r := range ranges {
+	for index, r := range ranges {
+		id := strconv.Itoa(index)
 		kind := convertDeclarationKindToCompletionItemType(r.DeclarationKind)
 		item := &protocol.CompletionItem{
 			Label: r.Identifier,
 			Kind:  kind,
 			Data: CompletionItemData{
 				URI: uri,
+				ID:  id,
 			},
 		}
 
-		resolvers[r.Identifier] = r
+		resolvers[id] = r
+
+		// If the range is for a function, also prepare the argument list
+		// with placeholders and suggest it
+
+		switch r.DeclarationKind {
+		case common.DeclarationKindFunction:
+			functionType := r.Type.(*sema.FunctionType)
+			s.prepareParametersCompletionItem(
+				item,
+				r.Identifier,
+				functionType.Parameters,
+			)
+
+		case common.DeclarationKindStructure,
+			common.DeclarationKindResource,
+			common.DeclarationKindEvent:
+
+			if constructorFunctionType, ok := r.Type.(*sema.ConstructorFunctionType); ok {
+				item.Kind = protocol.ConstructorCompletion
+
+				s.prepareParametersCompletionItem(
+					item,
+					r.Identifier,
+					constructorFunctionType.Parameters,
+				)
+			}
+		}
 
 		items = append(items, item)
 	}
@@ -1042,13 +1073,21 @@ func (s *Server) prepareFunctionMemberCompletionItem(
 		return
 	}
 
+	s.prepareParametersCompletionItem(item, name, functionType.Parameters)
+}
+
+func (s *Server) prepareParametersCompletionItem(
+	item *protocol.CompletionItem,
+	name string,
+	parameters []*sema.Parameter,
+) {
 	item.InsertTextFormat = protocol.SnippetTextFormat
 
 	var builder strings.Builder
 	builder.WriteString(name)
 	builder.WriteRune('(')
 
-	for i, parameter := range functionType.Parameters {
+	for i, parameter := range parameters {
 		if i > 0 {
 			builder.WriteString(", ")
 		}
@@ -1079,7 +1118,8 @@ func convertDeclarationKindToCompletionItemType(kind common.DeclarationKind) pro
 	case common.DeclarationKindStructure,
 		common.DeclarationKindResource,
 		common.DeclarationKindEvent,
-		common.DeclarationKindContract:
+		common.DeclarationKindContract,
+		common.DeclarationKindType:
 		return protocol.ClassCompletion
 
 	case common.DeclarationKindStructureInterface,
@@ -1131,12 +1171,12 @@ func (s *Server) ResolveCompletionItem(
 		return
 	}
 
-	resolved := s.maybeResolveMember(data.URI, result)
+	resolved := s.maybeResolveMember(data.URI, data.ID, result)
 	if resolved {
 		return
 	}
 
-	resolved = s.maybeResolveRange(data.URI, result)
+	resolved = s.maybeResolveRange(data.URI, data.ID, result)
 	if resolved {
 		return
 	}
@@ -1144,13 +1184,13 @@ func (s *Server) ResolveCompletionItem(
 	return
 }
 
-func (s *Server) maybeResolveMember(uri protocol.DocumentUri, result *protocol.CompletionItem) bool {
+func (s *Server) maybeResolveMember(uri protocol.DocumentUri, id string, result *protocol.CompletionItem) bool {
 	memberResolvers, ok := s.memberResolvers[uri]
 	if !ok {
 		return false
 	}
 
-	resolver, ok := memberResolvers[result.Label]
+	resolver, ok := memberResolvers[id]
 	if !ok {
 		return false
 	}
@@ -1210,22 +1250,32 @@ func (s *Server) maybeResolveMember(uri protocol.DocumentUri, result *protocol.C
 	return true
 }
 
-func (s *Server) maybeResolveRange(uri protocol.DocumentUri, result *protocol.CompletionItem) bool {
+func (s *Server) maybeResolveRange(uri protocol.DocumentUri, id string, result *protocol.CompletionItem) bool {
 	ranges, ok := s.ranges[uri]
 	if !ok {
 		return false
 	}
 
-	r, ok := ranges[result.Label]
+	r, ok := ranges[id]
 	if !ok {
 		return false
 	}
 
-	result.Detail = fmt.Sprintf(
-		"(%s) %s",
-		r.DeclarationKind.Name(),
-		r.Type.String(),
-	)
+	if constructorFunctionType, ok := r.Type.(*sema.ConstructorFunctionType); ok {
+		typeString := constructorFunctionType.QualifiedString()
+
+		result.Detail = fmt.Sprintf(
+			"(constructor) %s",
+			typeString[1:len(typeString)-1],
+		)
+
+	} else {
+		result.Detail = fmt.Sprintf(
+			"(%s) %s",
+			r.DeclarationKind.Name(),
+			r.Type.String(),
+		)
+	}
 
 	return true
 }

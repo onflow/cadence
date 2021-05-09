@@ -341,6 +341,9 @@ func (checker *Checker) Check() error {
 		} else {
 			check()
 		}
+
+		checker.declareGlobalRanges()
+
 		checker.Elaboration.setIsChecking(false)
 		checker.isChecked = true
 	}
@@ -2389,4 +2392,36 @@ func expressionRange(expression ast.Expression) ast.Range {
 	} else {
 		return ast.NewRangeFromPositioned(expression)
 	}
+}
+
+func (checker *Checker) declareGlobalRanges() {
+	if !checker.positionInfoEnabled {
+		return
+	}
+
+	addRange := func(name string, variable *Variable) {
+		checker.Ranges.Put(
+			ast.Position{Line: 1, Column: 0},
+			ast.Position{Line: math.MaxInt32, Column: 0},
+			Range{
+				Identifier:      name,
+				Type:            variable.Type,
+				DeclarationKind: variable.DeclarationKind,
+			},
+		)
+	}
+
+	_ = BaseTypeActivation.ForEach(func(name string, variable *Variable) error {
+		addRange(name, variable)
+		return nil
+	})
+
+	_ = BaseValueActivation.ForEach(func(name string, variable *Variable) error {
+		addRange(name, variable)
+		return nil
+	})
+
+	checker.Elaboration.GlobalTypes.Foreach(addRange)
+
+	checker.Elaboration.GlobalValues.Foreach(addRange)
 }
