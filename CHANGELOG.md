@@ -1,3 +1,149 @@
+# v0.15.0  (2021-04-20)
+
+## ⭐ Features
+
+- Added balance fields on accounts (#808) @janezpodhostnik
+- Add address field to capabilities (#736) @ceelo777
+- Add array appendAll function (#727) @lkadian
+- Validate arguments passed into cadence programs (#724) @SupunS
+- Implement equality for storable values and static types (#790) @turbolent
+- Declare min/max fields for integer and fixed-point types (#803) @turbolent
+- Add saturation arithmetic (#804) @turbolent
+- Add functions to read stored and linked values (#812) @turbolent
+
+## 🛠 Improvements
+
+- Optimize storage format (#797) @fxamacker
+- Paralleize encoding (#731) @zhangchiqing
+- Deny removing contracts if contract update validation is enabled (#792) @SupunS
+- Simplify function types (#802) @turbolent
+- Cache capability type members (#799) @turbolent
+- Use force expression's end position in force nil error (#789) @turbolent
+- Handle cyclic references in dynamic type conformance check (#787) @SupunS
+- Benchmark CBOR encoding/decoding using mainnet data (#783) @fxamacker
+- Extend defensive run-time checking to all value transfers (#784) @turbolent
+- Remove obsolete code in decode.go (#788) @fxamacker
+- Optimize encoding of 12 types still using CBOR map (#778) @fxamacker
+- Reject indirect incompatible updates to composite declarations (#772) @SupunS
+- Panic with a dedicated error when a member access results in no value (#768) @turbolent
+- Update language server to Cadence v0.14.4 (#767) @turbolent
+- Improve value type conformance check (#776) @turbolent
+- Add validation for enum cases during contract updates (#762) @SupunS
+- Optimize encoding of composites (#761) @fxamacker
+- Improve state decoding tool (#759) @turbolent
+- Optimize encoding of dictionaries (#752) @fxamacker
+- Prepare Decoder for storage format v4 (#746) @fxamacker
+- Make numeric types singleton (#732) @SupunS
+- Validate arguments passed into cadence programs (#724) @SupunS
+- Use location ID as key for maps holding account codes (#723) @turbolent
+- Make native composite types non-storable (#713) @turbolent
+- Improve state decoding tool (#798) @turbolent
+- Remove unused storage key handler (#811) @turbolent
+
+## 🐞 Bug Fixes
+
+- Extend defensive run-time checking to all value transfers (#784) @turbolent
+- Fix borrowing (#782) @turbolent
+- Prevent cyclic imports (#809) @turbolent
+- Clean up "storage removal" index expression (#769) @turbolent
+- Get resource owner from host environment (#770) @SupunS
+- Handle field initialization using force-move assignment (#741) @turbolent
+- Fix error range when reporting a type error for an indexing reference expression (#719) @turbolent
+
+## 📖 Documentation
+
+- Improve documentation for block timestamp (#775) @turbolent
+- Document run-time type identifiers (#750) @turbolent
+- Add documentation for the getType() builtin method  (#737) @SupunS
+
+
+# v0.14.5 (2021-04-08)
+
+## 🐞 Bug Fixes
+
+- Fix borrowing (#785) @turbolent
+
+# v0.14.4 (2021-03-25)
+
+## ⭐ Features
+
+- Add dictionary contains function (#716) @lkadian
+
+## 🐞 Bug Fixes
+
+- Fix runtime representation of native HashAlgorithm/SignAlgorithm enums (#725) @SupunS
+- Fix error range when reporting a type error for an indexing reference expression (#719) @turbolent
+
+## 🧪 Tests
+
+- Benchmark real fungible token transfers (#722) @turbolent
+- Use location ID as key for maps holding account codes (#723) @turbolent
+
+
+# v0.13.10 (2021-03-25)
+
+## 🐞 Bug Fixes
+
+- Add support for access(account) and multiple contracts per account (#730) @turbolent
+
+# v0.13.9 (2021-03-22)
+
+## 🛠 Improvements
+
+- Lazily load contract values (#720) @turbolent
+
+# v0.14.3 (2021-03-22)
+
+## 🛠 Improvements
+
+- Lazily load contract values (#715) @turbolent
+- Make native composite types non-storable (#713) @turbolent
+- Ensure imported checkers/elaborations are reused in tests' import handlers (#711) @turbolent
+- Use require.ErrorAs (#714) @turbolent
+
+## 🐞 Bug Fixes
+
+- Add support for access(account) and multiple contracts per account (#710) @turbolent
+
+# v0.14.2 (2021-03-18)
+
+## ⭐ Features
+
+- Replace parser demo with AST explorer (#693) @turbolent
+- Report a hint when a dynamic cast is statically known to always succeed (#688) @turbolent
+
+## 🛠 Improvements
+
+- Revert the addition of the unsupported signing and hash algorithms (#705) @turbolent
+
+## 🐞 Bug Fixes
+
+- Fix cadence-parser NPM package, update versions (#694) @turbolent
+- Properly handle recursive types when checking validity of event parameter types (#709) @turbolent
+- Make all path sub-types externally returnable (#707) @turbolent
+
+## 📖 Documentation
+
+- Fix the syntax of the signature algorithm enum in docs (#701) @SupunS
+
+
+# v0.13.8 (2021-03-18)
+
+## 🐞 Bug Fixes
+
+- Properly handle recursive types when checking validity of event parameter types (#708) @turbolent
+
+# v0.14.1 (2021-03-16)
+
+## 🛠 Improvements
+
+- Add unknown constants for signature algorithm and hash algorithm (#699) @turbolent
+- Optimize checker activations (#674) @turbolent
+- Return nil when revoking a non-existing key (#697) @SupunS
+
+## 🐞 Bug Fixes
+
+- Fix nested error pretty printing (#695) @turbolent
 
 # v0.14.0 (2021-03-15)
 
@@ -80,6 +226,11 @@ The `Crypto` contract has changed in a backwards-incompatible way, so the types 
 
 - Add documentation for the new account key API (#635) @SupunS
 
+# v0.13.7 (2021-03-12)
+
+## 🐞 Bug Fixes
+
+- Ensure code is long enough when extracting excerpt (#690) @turbolent
 
 # v0.13.6 (2021-03-09)
 

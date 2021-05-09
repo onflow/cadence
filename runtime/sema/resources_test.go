@@ -34,17 +34,17 @@ func TestResources_Add(t *testing.T) {
 
 	varX := &Variable{
 		Identifier: "x",
-		Type:       &IntType{},
+		Type:       IntType,
 	}
 
 	varY := &Variable{
 		Identifier: "y",
-		Type:       &IntType{},
+		Type:       IntType,
 	}
 
 	varZ := &Variable{
 		Identifier: "z",
-		Type:       &IntType{},
+		Type:       IntType,
 	}
 
 	assert.Empty(t, resources.Get(varX).Invalidations.All())
@@ -142,12 +142,12 @@ func TestResourceResources_ForEach(t *testing.T) {
 
 	varX := &Variable{
 		Identifier: "x",
-		Type:       &IntType{},
+		Type:       IntType,
 	}
 
 	varY := &Variable{
 		Identifier: "y",
-		Type:       &IntType{},
+		Type:       IntType,
 	}
 
 	// add resources for X and Y
@@ -216,17 +216,17 @@ func TestResources_MergeBranches(t *testing.T) {
 
 	varX := &Variable{
 		Identifier: "x",
-		Type:       &IntType{},
+		Type:       IntType,
 	}
 
 	varY := &Variable{
 		Identifier: "y",
-		Type:       &IntType{},
+		Type:       IntType,
 	}
 
 	varZ := &Variable{
 		Identifier: "z",
-		Type:       &IntType{},
+		Type:       IntType,
 	}
 
 	// invalidate X and Y in then branch

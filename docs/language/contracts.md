@@ -306,10 +306,9 @@ signer.contracts.add(
 
 > 🚧 Status: Updating contracts is **experimental**.
 >
-> This function only works for updates of function bodies, conditions, access modifiers, and comments.
->
-> This function does **not** support other changes, e.g. changes of function signatures (parameters, return type);
-> adding, removing, or updating the name or type of fields; updating type declarations, etc.
+> Updating contracts is currently limited to maintain data consistency.
+> Read more details on valid changes and restrictions imposed on updating contracts in the
+> [contract updatability](../contract-updatability) section.
 
 A deployed contract can be updated using the `update__experimental` function:
 

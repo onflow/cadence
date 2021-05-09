@@ -53,6 +53,18 @@ func TestContractUpdateValidation(t *testing.T) {
 		))
 	}
 
+	newContractRemovalTransaction := func(contractName string) []byte {
+		return []byte(fmt.Sprintf(`
+			transaction {
+				prepare(signer: AuthAccount) {
+					signer.contracts.%s(name: "%s")
+				}
+			}`,
+			sema.AuthAccountContractsTypeRemoveFunctionName,
+			contractName,
+		))
+	}
+
 	accountCode := map[common.LocationID][]byte{}
 	var events []cadence.Event
 	runtimeInterface := getMockedRuntimeInterfaceForTxUpdate(t, accountCode, events)
@@ -803,7 +815,10 @@ func TestContractUpdateValidation(t *testing.T) {
 			}`
 
 		err := deployAndUpdate("Test18", oldCode, newCode)
-		require.NoError(t, err)
+		require.Error(t, err)
+
+		cause := getErrorCause(t, err, "Test18")
+		assertMissingCompositeDeclarationError(t, cause, "TestStruct")
 	})
 
 	t.Run("add and remove field", func(t *testing.T) {
@@ -1326,6 +1341,379 @@ func TestContractUpdateValidation(t *testing.T) {
 			"\n  |                ^^^^^^^^^^^^^^^^^^^^^^^^^ "+
 			"incompatible type annotations. expected `{TestInterface}`, found `TestStruct{TestInterface}`")
 	})
+
+	t.Run("enum valid", func(t *testing.T) {
+		const oldCode = `
+			pub contract Test28 {
+				pub enum Foo: UInt8 {
+					pub case up
+					pub case down
+				}
+			}`
+
+		const newCode = `
+			pub contract Test28 {
+				pub enum Foo: UInt8 {
+					pub case up
+					pub case down
+				}
+			}`
+
+		err := deployAndUpdate("Test28", oldCode, newCode)
+		require.NoError(t, err)
+	})
+
+	t.Run("enum remove case", func(t *testing.T) {
+		const oldCode = `
+			pub contract Test29 {
+				pub enum Foo: UInt8 {
+					pub case up
+					pub case down
+				}
+			}`
+
+		const newCode = `
+			pub contract Test29 {
+				pub enum Foo: UInt8 {
+					pub case up
+				}
+			}`
+
+		err := deployAndUpdate("Test29", oldCode, newCode)
+		require.Error(t, err)
+
+		cause := getErrorCause(t, err, "Test29")
+		assertMissingEnumCasesError(t, cause, "Foo", 2, 1)
+	})
+
+	t.Run("enum add case", func(t *testing.T) {
+		const oldCode = `
+			pub contract Test30 {
+				pub enum Foo: UInt8 {
+					pub case up
+					pub case down
+				}
+			}`
+
+		const newCode = `
+			pub contract Test30 {
+				pub enum Foo: UInt8 {
+					pub case up
+					pub case down
+					pub case left
+				}
+			}`
+
+		err := deployAndUpdate("Test30", oldCode, newCode)
+		require.NoError(t, err)
+	})
+
+	t.Run("enum swap cases", func(t *testing.T) {
+		const oldCode = `
+			pub contract Test31 {
+				pub enum Foo: UInt8 {
+					pub case up
+					pub case down
+					pub case left
+				}
+			}`
+
+		const newCode = `
+			pub contract Test31 {
+				pub enum Foo: UInt8 {
+					pub case down
+					pub case left
+					pub case up
+				}
+			}`
+
+		err := deployAndUpdate("Test31", oldCode, newCode)
+		require.Error(t, err)
+
+		updateErr := getContractUpdateError(t, err)
+		require.NotNil(t, updateErr)
+		assert.Equal(t, fmt.Sprintf("cannot update contract `%s`", "Test31"), updateErr.Error())
+
+		childErrors := updateErr.ChildErrors()
+		require.Equal(t, 3, len(childErrors))
+
+		assertEnumCaseMismatchError(t, childErrors[0], "up", "down")
+		assertEnumCaseMismatchError(t, childErrors[1], "down", "left")
+		assertEnumCaseMismatchError(t, childErrors[2], "left", "up")
+	})
+
+	t.Run("Remove and add struct", func(t *testing.T) {
+		const oldCode = `
+			pub contract Test32 {
+
+				pub struct TestStruct {
+					pub let a: Int
+					pub var b: Int
+
+					init() {
+						self.a = 123
+						self.b = 456
+					}
+				}
+			}`
+
+		const updateCode1 = `
+			pub contract Test32 {
+			}`
+
+		err := deployAndUpdate("Test32", oldCode, updateCode1)
+		require.Error(t, err)
+
+		cause := getErrorCause(t, err, "Test32")
+		assertMissingCompositeDeclarationError(t, cause, "TestStruct")
+
+		const updateCode2 = `
+			pub contract Test32 {
+
+				pub struct TestStruct {
+					pub let a: String
+
+					init() {
+						self.a = "hello123"
+					}
+				}
+			}`
+
+		updateTx := newDeployTransaction(
+			sema.AuthAccountContractsTypeUpdateExperimentalFunctionName,
+			"Test32",
+			updateCode2,
+		)
+
+		err = runtime.ExecuteTransaction(
+			Script{
+				Source: updateTx,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+
+		require.Error(t, err)
+		cause = getErrorCause(t, err, "Test32")
+
+		assertFieldTypeMismatchError(t, cause, "TestStruct", "a", "Int", "String")
+	})
+
+	t.Run("Rename struct", func(t *testing.T) {
+		const oldCode = `
+			pub contract Test33 {
+
+				pub struct TestStruct {
+					pub let a: Int
+					pub var b: Int
+
+					init() {
+						self.a = 123
+						self.b = 456
+					}
+				}
+			}`
+
+		err := runtime.ExecuteTransaction(
+			Script{
+				Source: newDeployTransaction(
+					sema.AuthAccountContractsTypeAddFunctionName,
+					"Test33",
+					oldCode),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+
+		require.NoError(t, err)
+
+		// Rename the struct
+
+		const newCode = `
+			pub contract Test33 {
+
+				pub struct TestStructRenamed {
+					pub let a: Int
+					pub var b: Int
+
+					init() {
+						self.a = 123
+						self.b = 456
+					}
+				}
+			}`
+
+		err = runtime.ExecuteTransaction(
+			Script{
+				Source: newDeployTransaction(
+					sema.AuthAccountContractsTypeUpdateExperimentalFunctionName,
+					"Test33",
+					newCode,
+				),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+
+		require.Error(t, err)
+		cause := getErrorCause(t, err, "Test33")
+		assertMissingCompositeDeclarationError(t, cause, "TestStruct")
+	})
+
+	t.Run("Remove contract with enum", func(t *testing.T) {
+		// Add contract
+		const oldCode = `
+			pub contract Test34 {
+				pub enum TestEnum: Int {
+				}
+			}`
+
+		err := runtime.ExecuteTransaction(
+			Script{
+				Source: newDeployTransaction(
+					sema.AuthAccountContractsTypeAddFunctionName,
+					"Test34",
+					oldCode,
+				),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+
+		require.NoError(t, err)
+
+		// Remove the added contract.
+		err = runtime.ExecuteTransaction(
+			Script{
+				Source: newContractRemovalTransaction("Test34"),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+
+		require.Error(t, err)
+		require.IsType(t, Error{}, err)
+		runtimeError := err.(Error)
+
+		require.IsType(t, interpreter.Error{}, runtimeError.Err)
+		interpreterError := runtimeError.Err.(interpreter.Error)
+		cause := interpreterError.Err
+
+		require.IsType(t, &ContractRemovalError{}, cause)
+		contractRemovalError := cause.(*ContractRemovalError)
+
+		assert.Equal(
+			t,
+			fmt.Sprintf("cannot remove contract `%s`", "Test34"),
+			contractRemovalError.Error(),
+		)
+	})
+
+	t.Run("Remove contract interface with enum", func(t *testing.T) {
+		// Add contract
+		const oldCode = `
+			pub contract interface Test35 {
+				pub enum TestEnum: Int {
+				}
+			}`
+
+		err := runtime.ExecuteTransaction(
+			Script{
+				Source: newDeployTransaction(
+					sema.AuthAccountContractsTypeAddFunctionName,
+					"Test35",
+					oldCode,
+				),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+
+		require.NoError(t, err)
+
+		// Remove the added contract.
+		err = runtime.ExecuteTransaction(
+			Script{
+				Source: newContractRemovalTransaction("Test35"),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+
+		require.Error(t, err)
+		require.IsType(t, Error{}, err)
+		runtimeError := err.(Error)
+
+		require.IsType(t, interpreter.Error{}, runtimeError.Err)
+		interpreterError := runtimeError.Err.(interpreter.Error)
+		cause := interpreterError.Err
+
+		require.IsType(t, &ContractRemovalError{}, cause)
+		contractRemovalError := cause.(*ContractRemovalError)
+
+		assert.Equal(
+			t,
+			fmt.Sprintf("cannot remove contract `%s`", "Test35"),
+			contractRemovalError.Error(),
+		)
+	})
+
+	t.Run("Remove contract without enum", func(t *testing.T) {
+		// Add contract
+		const oldCode = `
+			pub contract Test36 {
+				pub struct TestStruct {
+					pub let a: Int
+
+					init() {
+						self.a = 123
+					}
+				}
+			}`
+
+		err := runtime.ExecuteTransaction(
+			Script{
+				Source: newDeployTransaction(
+					sema.AuthAccountContractsTypeAddFunctionName,
+					"Test36",
+					oldCode,
+				),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+
+		require.NoError(t, err)
+
+		// Remove the added contract.
+		err = runtime.ExecuteTransaction(
+			Script{
+				Source: newContractRemovalTransaction("Test36"),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+
+		assert.NoError(t, err)
+	})
 }
 
 func assertDeclTypeChangeError(
@@ -1371,11 +1759,11 @@ func assertFieldTypeMismatchError(
 		fieldMismatchError.Error(),
 	)
 
-	assert.IsType(t, &TypeMismatchError{}, fieldMismatchError.err)
+	assert.IsType(t, &TypeMismatchError{}, fieldMismatchError.Err)
 	assert.Equal(
 		t,
 		fmt.Sprintf("incompatible type annotations. expected `%s`, found `%s`", expectedType, foundType),
-		fieldMismatchError.err.Error(),
+		fieldMismatchError.Err.Error(),
 	)
 }
 
@@ -1396,11 +1784,56 @@ func assertConformanceMismatchError(
 		conformanceMismatchError.Error(),
 	)
 
-	assert.IsType(t, &TypeMismatchError{}, conformanceMismatchError.err)
+	assert.IsType(t, &TypeMismatchError{}, conformanceMismatchError.Err)
 	assert.Equal(
 		t,
 		fmt.Sprintf("incompatible type annotations. expected `%s`, found `%s`", expectedType, foundType),
-		conformanceMismatchError.err.Error(),
+		conformanceMismatchError.Err.Error(),
+	)
+}
+
+func assertEnumCaseMismatchError(t *testing.T, err error, expectedEnumCase string, foundEnumCase string) {
+	require.Error(t, err)
+	require.IsType(t, &EnumCaseMismatchError{}, err)
+	enumMismatchError := err.(*EnumCaseMismatchError)
+
+	assert.Equal(
+		t,
+		fmt.Sprintf(
+			"mismatching enum case: expected `%s`, found `%s`",
+			expectedEnumCase,
+			foundEnumCase,
+		),
+		enumMismatchError.Error(),
+	)
+}
+
+func assertMissingEnumCasesError(t *testing.T, err error, declName string, expectedCases int, foundCases int) {
+	require.Error(t, err)
+	require.IsType(t, &MissingEnumCasesError{}, err)
+	missingEnumCasesError := err.(*MissingEnumCasesError)
+	assert.Equal(
+		t,
+		fmt.Sprintf(
+			"missing cases in enum `%s`: expected %d or more, found %d",
+			declName,
+			expectedCases,
+			foundCases,
+		),
+		missingEnumCasesError.Error(),
+	)
+}
+
+func assertMissingCompositeDeclarationError(t *testing.T, err error, declName string) {
+	require.Error(t, err)
+
+	require.IsType(t, &MissingCompositeDeclarationError{}, err)
+	missingDeclError := err.(*MissingCompositeDeclarationError)
+
+	assert.Equal(
+		t,
+		fmt.Sprintf("missing composite declaration `%s`", declName),
+		missingDeclError.Error(),
 	)
 }
 
@@ -1451,12 +1884,20 @@ func getMockedRuntimeInterfaceForTxUpdate(
 			}
 			return accountCodes[location.ID()], nil
 		},
-		updateAccountContractCode: func(address Address, name string, code []byte) (err error) {
+		updateAccountContractCode: func(address Address, name string, code []byte) error {
 			location := common.AddressLocation{
 				Address: address,
 				Name:    name,
 			}
 			accountCodes[location.ID()] = code
+			return nil
+		},
+		removeAccountContractCode: func(address Address, name string) error {
+			location := common.AddressLocation{
+				Address: address,
+				Name:    name,
+			}
+			delete(accountCodes, location.ID())
 			return nil
 		},
 		emitEvent: func(event cadence.Event) error {

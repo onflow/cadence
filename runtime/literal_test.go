@@ -362,7 +362,7 @@ func TestLiteralValue(t *testing.T) {
 		expected, err := cadence.NewFix64FromParts(false, 1, 0)
 		require.NoError(t, err)
 
-		value, err := ParseLiteral(`1.0`, &sema.Fix64Type{})
+		value, err := ParseLiteral(`1.0`, sema.Fix64Type)
 		require.NoError(t, err)
 		require.Equal(t, expected, value)
 	})
@@ -371,13 +371,13 @@ func TestLiteralValue(t *testing.T) {
 		expected, err := cadence.NewFix64FromParts(true, 1, 0)
 		require.NoError(t, err)
 
-		value, err := ParseLiteral(`-1.0`, &sema.Fix64Type{})
+		value, err := ParseLiteral(`-1.0`, sema.Fix64Type)
 		require.NoError(t, err)
 		require.Equal(t, expected, value)
 	})
 
 	t.Run("Fix64, invalid literal", func(t *testing.T) {
-		value, err := ParseLiteral(`1`, &sema.Fix64Type{})
+		value, err := ParseLiteral(`1`, sema.Fix64Type)
 		require.Error(t, err)
 		require.Nil(t, value)
 	})
@@ -386,19 +386,19 @@ func TestLiteralValue(t *testing.T) {
 		expected, err := cadence.NewUFix64FromParts(1, 0)
 		require.NoError(t, err)
 
-		value, err := ParseLiteral(`1.0`, &sema.UFix64Type{})
+		value, err := ParseLiteral(`1.0`, sema.UFix64Type)
 		require.NoError(t, err)
 		require.Equal(t, expected, value)
 	})
 
 	t.Run("UFix64, invalid literal, negative", func(t *testing.T) {
-		value, err := ParseLiteral(`-1.0`, &sema.UFix64Type{})
+		value, err := ParseLiteral(`-1.0`, sema.UFix64Type)
 		require.Error(t, err)
 		require.Nil(t, value)
 	})
 
 	t.Run("UFix64, invalid literal, invalid expression", func(t *testing.T) {
-		value, err := ParseLiteral(`1`, &sema.UFix64Type{})
+		value, err := ParseLiteral(`1`, sema.UFix64Type)
 		require.Error(t, err)
 		require.Nil(t, value)
 	})
@@ -407,7 +407,7 @@ func TestLiteralValue(t *testing.T) {
 		expected, err := cadence.NewFix64FromParts(false, 1, 0)
 		require.NoError(t, err)
 
-		value, err := ParseLiteral(`1.0`, &sema.FixedPointType{})
+		value, err := ParseLiteral(`1.0`, sema.FixedPointType)
 		require.NoError(t, err)
 		require.Equal(t, expected, value)
 	})
@@ -416,13 +416,13 @@ func TestLiteralValue(t *testing.T) {
 		expected, err := cadence.NewFix64FromParts(true, 1, 0)
 		require.NoError(t, err)
 
-		value, err := ParseLiteral(`-1.0`, &sema.FixedPointType{})
+		value, err := ParseLiteral(`-1.0`, sema.FixedPointType)
 		require.NoError(t, err)
 		require.Equal(t, expected, value)
 	})
 
 	t.Run("FixedPoint, invalid literal", func(t *testing.T) {
-		value, err := ParseLiteral(`1`, &sema.FixedPointType{})
+		value, err := ParseLiteral(`1`, sema.FixedPointType)
 		require.Error(t, err)
 		require.Nil(t, value)
 	})
@@ -431,7 +431,7 @@ func TestLiteralValue(t *testing.T) {
 		expected, err := cadence.NewFix64FromParts(false, 1, 0)
 		require.NoError(t, err)
 
-		value, err := ParseLiteral(`1.0`, &sema.SignedFixedPointType{})
+		value, err := ParseLiteral(`1.0`, sema.SignedFixedPointType)
 		require.NoError(t, err)
 		require.Equal(t, expected, value)
 	})
@@ -440,13 +440,13 @@ func TestLiteralValue(t *testing.T) {
 		expected, err := cadence.NewFix64FromParts(true, 1, 0)
 		require.NoError(t, err)
 
-		value, err := ParseLiteral(`-1.0`, &sema.SignedFixedPointType{})
+		value, err := ParseLiteral(`-1.0`, sema.SignedFixedPointType)
 		require.NoError(t, err)
 		require.Equal(t, expected, value)
 	})
 
 	t.Run("SignedFixedPoint, invalid literal", func(t *testing.T) {
-		value, err := ParseLiteral(`1`, &sema.SignedFixedPointType{})
+		value, err := ParseLiteral(`1`, sema.SignedFixedPointType)
 		require.Error(t, err)
 		require.Nil(t, value)
 	})
@@ -492,8 +492,8 @@ func TestLiteralValue(t *testing.T) {
 
 	for _, signedIntegerType := range append(
 		sema.AllSignedIntegerTypes[:],
-		&sema.IntegerType{},
-		&sema.SignedIntegerType{},
+		sema.IntegerType,
+		sema.SignedIntegerType,
 	) {
 
 		t.Run(
@@ -551,7 +551,7 @@ func TestParseLiteralArgumentList(t *testing.T) {
 		arguments, err := ParseLiteralArgumentList(
 			`(a: 1)`,
 			[]sema.Type{
-				&sema.IntType{},
+				sema.IntType,
 			},
 		)
 		require.NoError(t, err)
@@ -567,8 +567,8 @@ func TestParseLiteralArgumentList(t *testing.T) {
 		arguments, err := ParseLiteralArgumentList(
 			`(a: 1, 2)`,
 			[]sema.Type{
-				&sema.IntType{},
-				&sema.IntType{},
+				sema.IntType,
+				sema.IntType,
 			},
 		)
 		require.NoError(t, err)
@@ -585,7 +585,7 @@ func TestParseLiteralArgumentList(t *testing.T) {
 		_, err := ParseLiteralArgumentList(
 			`(a: 1, 2)`,
 			[]sema.Type{
-				&sema.IntType{},
+				sema.IntType,
 				sema.BoolType,
 			},
 		)
@@ -596,7 +596,7 @@ func TestParseLiteralArgumentList(t *testing.T) {
 		_, err := ParseLiteralArgumentList(
 			`(a: 1, 2)`,
 			[]sema.Type{
-				&sema.IntType{},
+				sema.IntType,
 			},
 		)
 		require.Error(t, err)
@@ -606,8 +606,8 @@ func TestParseLiteralArgumentList(t *testing.T) {
 		_, err := ParseLiteralArgumentList(
 			`(a: 1)`,
 			[]sema.Type{
-				&sema.IntType{},
-				&sema.IntType{},
+				sema.IntType,
+				sema.IntType,
 			},
 		)
 		require.Error(t, err)
@@ -617,7 +617,7 @@ func TestParseLiteralArgumentList(t *testing.T) {
 		_, err := ParseLiteralArgumentList(
 			`(a: b)`,
 			[]sema.Type{
-				&sema.IntType{},
+				sema.IntType,
 			},
 		)
 		require.Error(t, err)

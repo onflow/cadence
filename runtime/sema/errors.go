@@ -1131,11 +1131,7 @@ func (e *ImportedProgramError) ImportLocation() common.Location {
 }
 
 func (e *ImportedProgramError) ChildErrors() []error {
-	parentErr, ok := e.Err.(errors.ParentError)
-	if !ok {
-		return nil
-	}
-	return parentErr.ChildErrors()
+	return []error{e.Err}
 }
 
 func (*ImportedProgramError) isSemanticError() {}

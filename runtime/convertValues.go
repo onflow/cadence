@@ -180,7 +180,9 @@ func exportArrayValue(v *interpreter.ArrayValue, inter *interpreter.Interpreter,
 
 func exportCompositeValue(v *interpreter.CompositeValue, inter *interpreter.Interpreter, results exportResults) cadence.Value {
 
-	dynamicType := v.DynamicType(inter).(interpreter.CompositeDynamicType)
+	dynamicTypeResults := interpreter.DynamicTypeResults{}
+
+	dynamicType := v.DynamicType(inter, dynamicTypeResults).(interpreter.CompositeDynamicType)
 	staticType := dynamicType.StaticType.(*sema.CompositeType)
 	// TODO: consider making the results map "global", by moving it up to exportValueWithInterpreter
 	t := exportCompositeType(staticType, map[sema.TypeID]cadence.Type{})
@@ -195,6 +197,9 @@ func exportCompositeValue(v *interpreter.CompositeValue, inter *interpreter.Inte
 		fieldValue, _ := v.Fields.Get(field.Identifier)
 		fields[i] = exportValueWithInterpreter(fieldValue, inter, results)
 	}
+
+	// NOTE: when modifying the cases below,
+	// also update the error message below!
 
 	switch staticType.Kind {
 	case common.CompositeKindStructure:
@@ -218,6 +223,7 @@ func exportCompositeValue(v *interpreter.CompositeValue, inter *interpreter.Inte
 				common.CompositeKindResource.Name(),
 				common.CompositeKindEvent.Name(),
 				common.CompositeKindContract.Name(),
+				common.CompositeKindEnum.Name(),
 			},
 			"or",
 		),
@@ -372,13 +378,10 @@ func importValue(value cadence.Value) interpreter.Value {
 			v.Fields,
 		)
 	case cadence.Path:
-		return interpreter.PathValue{
-			Domain:     common.PathDomainFromIdentifier(v.Domain),
-			Identifier: v.Identifier,
-		}
+		return importPathValue(v)
 	case cadence.Enum:
 		return importCompositeValue(
-			common.CompositeKindStructure,
+			common.CompositeKindEnum,
 			v.EnumType.Location,
 			v.EnumType.QualifiedIdentifier,
 			v.EnumType.Fields,
@@ -387,6 +390,13 @@ func importValue(value cadence.Value) interpreter.Value {
 	}
 
 	panic(fmt.Sprintf("cannot import value of type %T", value))
+}
+
+func importPathValue(v cadence.Path) interpreter.PathValue {
+	return interpreter.PathValue{
+		Domain:     common.PathDomainFromIdentifier(v.Domain),
+		Identifier: v.Identifier,
+	}
 }
 
 func importOptionalValue(v cadence.Optional) interpreter.Value {

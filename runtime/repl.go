@@ -62,7 +62,7 @@ func NewREPL(
 			sema.WithPredeclaredTypes(typeDeclarations),
 			sema.WithAccessCheckMode(sema.AccessCheckModeNotSpecifiedUnrestricted),
 			sema.WithImportHandler(
-				func(checker *sema.Checker, importedLocation common.Location) (sema.Import, error) {
+				func(checker *sema.Checker, importedLocation common.Location, _ ast.Range) (sema.Import, error) {
 					stringLocation, ok := importedLocation.(common.StringLocation)
 
 					if !ok {

@@ -672,7 +672,7 @@ func (checker *Checker) declareCompositeMembersAndValue(
 
 func (checker *Checker) declareCompositeConstructor(
 	declaration *ast.CompositeDeclaration,
-	constructorType *SpecialFunctionType,
+	constructorType *ConstructorFunctionType,
 	constructorArgumentLabels []string,
 ) {
 	// Resource and event constructors are effectively always private,
@@ -738,7 +738,7 @@ func (checker *Checker) declareEnumConstructor(
 		constructorOrigins = make(map[string]*Origin, len(enumCases))
 	}
 
-	constructorType := &SpecialFunctionType{
+	constructorType := &ConstructorFunctionType{
 		FunctionType: &FunctionType{
 			Parameters: []*Parameter{
 				{
@@ -751,8 +751,8 @@ func (checker *Checker) declareEnumConstructor(
 					Type: compositeType,
 				},
 			),
+			Members: constructorMembers,
 		},
-		Members: constructorMembers,
 	}
 
 	memberCaseTypeAnnotation := NewTypeAnnotation(compositeType)
@@ -933,7 +933,7 @@ func (checker *Checker) enumRawType(declaration *ast.CompositeDeclaration) Type 
 	rawType := checker.ConvertType(conformance)
 
 	if !rawType.IsInvalidType() &&
-		!IsSubType(rawType, &IntegerType{}) {
+		!IsSubType(rawType, IntegerType) {
 
 		checker.report(
 			&InvalidEnumRawTypeError{
@@ -1271,11 +1271,11 @@ func (checker *Checker) compositeConstructorType(
 	compositeDeclaration *ast.CompositeDeclaration,
 	compositeType *CompositeType,
 ) (
-	constructorFunctionType *SpecialFunctionType,
+	constructorFunctionType *ConstructorFunctionType,
 	argumentLabels []string,
 ) {
 
-	constructorFunctionType = &SpecialFunctionType{
+	constructorFunctionType = &ConstructorFunctionType{
 		FunctionType: &FunctionType{
 			ReturnTypeAnnotation: NewTypeAnnotation(compositeType),
 		},
@@ -1297,8 +1297,8 @@ func (checker *Checker) compositeConstructorType(
 		// NOTE: Don't use `constructorFunctionType`, as it has a return type.
 		//   The initializer itself has a `Void` return type.
 
-		checker.Elaboration.SpecialFunctionTypes[firstInitializer] =
-			&SpecialFunctionType{
+		checker.Elaboration.ConstructorFunctionTypes[firstInitializer] =
+			&ConstructorFunctionType{
 				FunctionType: &FunctionType{
 					Parameters:           constructorFunctionType.Parameters,
 					ReturnTypeAnnotation: NewTypeAnnotation(VoidType),

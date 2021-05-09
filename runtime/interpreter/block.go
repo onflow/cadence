@@ -41,7 +41,7 @@ func (v BlockValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitValue(interpreter, v)
 }
 
-func (BlockValue) DynamicType(_ *Interpreter) DynamicType {
+func (BlockValue) DynamicType(_ *Interpreter, _ DynamicTypeResults) DynamicType {
 	return BlockDynamicType{}
 }
 
@@ -108,4 +108,9 @@ func (v BlockValue) String() string {
 		v.IDAsByteArray(),
 		v.Timestamp,
 	)
+}
+
+func (v BlockValue) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType, _ TypeConformanceResults) bool {
+	_, ok := dynamicType.(BlockDynamicType)
+	return ok
 }

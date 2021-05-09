@@ -34,3 +34,5 @@ language/tools/vscode-extension/out/*
 crashers
 corpus
 suppressions
+
+languageserver/test/languageserver

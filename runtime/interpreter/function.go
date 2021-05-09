@@ -69,7 +69,7 @@ func (f InterpretedFunctionValue) Accept(interpreter *Interpreter, visitor Visit
 	visitor.VisitInterpretedFunctionValue(interpreter, f)
 }
 
-func (InterpretedFunctionValue) DynamicType(_ *Interpreter) DynamicType {
+func (InterpretedFunctionValue) DynamicType(_ *Interpreter, _ DynamicTypeResults) DynamicType {
 	return FunctionDynamicType{}
 }
 
@@ -102,7 +102,28 @@ func (InterpretedFunctionValue) SetModified(_ bool) {
 func (InterpretedFunctionValue) isFunctionValue() {}
 
 func (f InterpretedFunctionValue) Invoke(invocation Invocation) Value {
+
+	// Check arguments' dynamic types match parameter types
+
+	for i, argument := range invocation.Arguments {
+		parameterType := f.Type.Parameters[i].TypeAnnotation.Type
+
+		if !f.Interpreter.checkValueTransferTargetType(argument, parameterType) {
+			panic(InvocationArgumentTypeError{
+				Index:         i,
+				ParameterType: parameterType,
+				LocationRange: invocation.GetLocationRange(),
+			})
+		}
+	}
+
 	return f.Interpreter.invokeInterpretedFunction(f, invocation)
+}
+
+func (f InterpretedFunctionValue) ConformsToDynamicType(_ *Interpreter, _ DynamicType, _ TypeConformanceResults) bool {
+	// TODO: once FunctionDynamicType has parameter and return type info,
+	//   check it matches InterpretedFunctionValue's static function type
+	return false
 }
 
 // HostFunctionValue
@@ -133,7 +154,7 @@ func (f HostFunctionValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitHostFunctionValue(interpreter, f)
 }
 
-func (HostFunctionValue) DynamicType(_ *Interpreter) DynamicType {
+func (HostFunctionValue) DynamicType(_ *Interpreter, _ DynamicTypeResults) DynamicType {
 	return FunctionDynamicType{}
 }
 
@@ -182,6 +203,13 @@ func (f HostFunctionValue) SetMember(_ *Interpreter, _ func() LocationRange, _ s
 	panic(errors.NewUnreachableError())
 }
 
+func (f HostFunctionValue) ConformsToDynamicType(_ *Interpreter, _ DynamicType, _ TypeConformanceResults) bool {
+	// TODO: once HostFunctionValue has static function type,
+	//   and FunctionDynamicType has parameter and return type info,
+	//   check they match
+	return false
+}
+
 // BoundFunctionValue
 
 type BoundFunctionValue struct {
@@ -199,7 +227,7 @@ func (f BoundFunctionValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitBoundFunctionValue(interpreter, f)
 }
 
-func (BoundFunctionValue) DynamicType(_ *Interpreter) DynamicType {
+func (BoundFunctionValue) DynamicType(_ *Interpreter, _ DynamicTypeResults) DynamicType {
 	return FunctionDynamicType{}
 }
 
@@ -233,4 +261,12 @@ func (BoundFunctionValue) isFunctionValue() {}
 func (f BoundFunctionValue) Invoke(invocation Invocation) Value {
 	invocation.Self = f.Self
 	return f.Function.Invoke(invocation)
+}
+
+func (f BoundFunctionValue) ConformsToDynamicType(
+	interpreter *Interpreter,
+	dynamicType DynamicType,
+	results TypeConformanceResults,
+) bool {
+	return f.Function.ConformsToDynamicType(interpreter, dynamicType, results)
 }

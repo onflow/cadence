@@ -238,29 +238,12 @@ func (interpreter *Interpreter) testEqual(left, right Value) BoolValue {
 	left = interpreter.unbox(left)
 	right = interpreter.unbox(right)
 
-	// TODO: add support for arrays and dictionaries
-
-	switch left := left.(type) {
-	case NilValue:
-		_, ok := right.(NilValue)
-		return BoolValue(ok)
-
-	case EquatableValue:
-		// NOTE: might be NilValue
-		right, ok := right.(EquatableValue)
-		if !ok {
-			return false
-		}
-		return left.Equal(interpreter, right)
-
-	case *ArrayValue,
-		*DictionaryValue:
-		// TODO:
-		return false
-
-	default:
+	leftEquatable, ok := left.(EquatableValue)
+	if !ok {
 		return false
 	}
+
+	return BoolValue(leftEquatable.Equal(right, interpreter, true))
 }
 
 func (interpreter *Interpreter) VisitUnaryExpression(expression *ast.UnaryExpression) ast.Repr {
@@ -329,7 +312,9 @@ func (interpreter *Interpreter) VisitArrayExpression(expression *ast.ArrayExpres
 	copies := make([]Value, len(values))
 	for i, argument := range values {
 		argumentType := argumentTypes[i]
-		copies[i] = interpreter.copyAndConvert(argument, argumentType, elementType)
+		argumentExpression := expression.Values[i]
+		getLocationRange := locationRangeGetter(interpreter.Location, argumentExpression)
+		copies[i] = interpreter.copyAndConvert(argument, argumentType, elementType, getLocationRange)
 	}
 
 	return NewArrayValueUnownedNonCopying(copies...)
@@ -344,17 +329,20 @@ func (interpreter *Interpreter) VisitDictionaryExpression(expression *ast.Dictio
 	dictionary := NewDictionaryValueUnownedNonCopying()
 	for i, dictionaryEntryValues := range values {
 		entryType := entryTypes[i]
+		entry := expression.Entries[i]
 
 		key := interpreter.copyAndConvert(
 			dictionaryEntryValues.Key,
 			entryType.KeyType,
 			dictionaryType.KeyType,
+			locationRangeGetter(interpreter.Location, entry.Key),
 		)
 
 		value := interpreter.copyAndConvert(
 			dictionaryEntryValues.Value,
 			entryType.ValueType,
 			dictionaryType.ValueType,
+			locationRangeGetter(interpreter.Location, entry.Value),
 		)
 
 		// TODO: panic for duplicate keys?
@@ -386,9 +374,13 @@ func (interpreter *Interpreter) VisitMemberExpression(expression *ast.MemberExpr
 	}
 
 	getLocationRange := locationRangeGetter(interpreter.Location, expression)
-	resultValue := interpreter.getMember(result, getLocationRange, expression.Identifier.Identifier)
+	identifier := expression.Identifier.Identifier
+	resultValue := interpreter.getMember(result, getLocationRange, identifier)
 	if resultValue == nil {
-		panic(errors.NewUnreachableError())
+		panic(MissingMemberValueError{
+			Name:          identifier,
+			LocationRange: getLocationRange(),
+		})
 	}
 
 	// If the member access is optional chaining, only wrap the result value
@@ -469,6 +461,7 @@ func (interpreter *Interpreter) VisitInvocationExpression(invocationExpression *
 	resultValue := interpreter.invokeFunctionValue(
 		function,
 		arguments,
+		argumentExpressions,
 		argumentTypes,
 		parameterTypes,
 		typeParameterTypes,
@@ -559,7 +552,8 @@ func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingEx
 
 	switch expression.Operation {
 	case ast.OperationFailableCast, ast.OperationForceCast:
-		dynamicType := value.DynamicType(interpreter)
+		dynamicTypeResults := DynamicTypeResults{}
+		dynamicType := value.DynamicType(interpreter, dynamicTypeResults)
 		isSubType := IsSubType(dynamicType, expectedType)
 
 		switch expression.Operation {
@@ -630,10 +624,15 @@ func (interpreter *Interpreter) VisitForceExpression(expression *ast.ForceExpres
 		return result.Value
 
 	case NilValue:
-		getLocationRange := locationRangeGetter(interpreter.Location, expression.Expression)
 		panic(
 			ForceNilError{
-				LocationRange: getLocationRange(),
+				LocationRange: LocationRange{
+					Location: interpreter.Location,
+					Range: ast.Range{
+						StartPos: expression.EndPosition(),
+						EndPos:   expression.EndPosition(),
+					},
+				},
 			},
 		)
 
@@ -651,24 +650,21 @@ func (interpreter *Interpreter) VisitPathExpression(expression *ast.PathExpressi
 	}
 }
 
-func (interpreter *Interpreter) visitPotentialStorageRemoval(expression ast.Expression) Value {
-	movingStorageIndexExpression := interpreter.movingStorageIndexExpression(expression)
-	if movingStorageIndexExpression == nil {
+func (interpreter *Interpreter) evalPotentialResourceMoveIndexExpression(expression ast.Expression) Value {
+	resourceMoveIndexExpression := interpreter.resourceMoveIndexExpression(expression)
+	if resourceMoveIndexExpression == nil {
 		return interpreter.evalExpression(expression)
 	}
 
-	getterSetter := interpreter.indexExpressionGetterSetter(movingStorageIndexExpression)
+	getterSetter := interpreter.indexExpressionGetterSetter(resourceMoveIndexExpression)
 	value := getterSetter.get()
-	if value == nil {
-		panic(errors.NewUnreachableError())
-	}
 	getterSetter.set(NilValue{})
 	return value
 }
 
-func (interpreter *Interpreter) movingStorageIndexExpression(expression ast.Expression) *ast.IndexExpression {
+func (interpreter *Interpreter) resourceMoveIndexExpression(expression ast.Expression) *ast.IndexExpression {
 	indexExpression, ok := expression.(*ast.IndexExpression)
-	if !ok || !interpreter.Program.Elaboration.IsResourceMovingStorageIndexExpression[indexExpression] {
+	if !ok || !interpreter.Program.Elaboration.IsResourceMoveIndexExpression[indexExpression] {
 		return nil
 	}
 

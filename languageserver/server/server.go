@@ -164,7 +164,7 @@ type InitializationOptionsHandler func(initializationOptions interface{}) error
 
 type Server struct {
 	protocolServer  *protocol.Server
-	checkers        map[protocol.DocumentUri]*sema.Checker
+	checkers        map[common.LocationID]*sema.Checker
 	documents       map[protocol.DocumentUri]Document
 	memberResolvers map[protocol.DocumentUri]map[string]sema.MemberResolver
 	// commands is the registry of custom commands we support
@@ -181,6 +181,7 @@ type Server struct {
 	diagnosticProviders []DiagnosticProvider
 	// initializationOptionsHandlers are the functions that are used to handle initialization options sent by the client
 	initializationOptionsHandlers []InitializationOptionsHandler
+	accessCheckMode               sema.AccessCheckMode
 }
 
 type Option func(*Server) error
@@ -271,7 +272,7 @@ const ParseEntryPointArgumentsCommand = "cadence.server.parseEntryPointArguments
 
 func NewServer() (*Server, error) {
 	server := &Server{
-		checkers:        make(map[protocol.DocumentUri]*sema.Checker),
+		checkers:        make(map[common.LocationID]*sema.Checker),
 		documents:       make(map[protocol.DocumentUri]Document),
 		memberResolvers: make(map[protocol.DocumentUri]map[string]sema.MemberResolver),
 		commands:        make(map[string]CommandHandler),
@@ -308,6 +309,11 @@ func (s *Server) Stop() error {
 	return s.protocolServer.Stop()
 }
 
+func (s *Server) checkerForDocument(uri protocol.DocumentUri) *sema.Checker {
+	location := uriToLocation(uri)
+	return s.checkers[location.ID()]
+}
+
 func (s *Server) Initialize(
 	conn protocol.Conn,
 	params *protocol.InitializeParams,
@@ -330,8 +336,12 @@ func (s *Server) Initialize(
 		},
 	}
 
+	options := params.InitializationOptions
+
+	s.configure(options)
+
 	for _, handler := range s.initializationOptionsHandlers {
-		err := handler(params.InitializationOptions)
+		err := handler(options)
 		if err != nil {
 			return nil, err
 		}
@@ -341,6 +351,40 @@ func (s *Server) Initialize(
 	go s.registerCommands(conn)
 
 	return result, nil
+}
+
+const accessCheckModeOption = "accessCheckMode"
+
+func accessCheckModeFromName(name string) sema.AccessCheckMode {
+	switch name {
+	case "strict":
+		return sema.AccessCheckModeStrict
+
+	case "notSpecifiedRestricted":
+		return sema.AccessCheckModeNotSpecifiedRestricted
+
+	case "notSpecifiedUnrestricted":
+		return sema.AccessCheckModeNotSpecifiedUnrestricted
+
+	case "none":
+		return sema.AccessCheckModeNone
+
+	default:
+		return sema.AccessCheckModeStrict
+	}
+}
+
+func (s *Server) configure(opts interface{}) {
+	optsMap, ok := opts.(map[string]interface{})
+	if !ok {
+		return
+	}
+
+	if accessCheckModeName, ok := optsMap[accessCheckModeOption].(string); ok {
+		s.accessCheckMode = accessCheckModeFromName(accessCheckModeName)
+	} else {
+		s.accessCheckMode = sema.AccessCheckModeStrict
+	}
 }
 
 // Registers the commands that the server is able to handle.
@@ -469,7 +513,15 @@ func (s *Server) checkAndPublishDiagnostics(
 		Diagnostics: diagnostics,
 	})
 
-	valid := len(diagnostics) == 0
+	valid := true
+
+	for _, diagnostic := range diagnostics {
+		if diagnostic.Severity == protocol.SeverityError {
+			valid = false
+			break
+		}
+	}
+
 	_ = conn.Notify(cadenceCheckCompletedMethodName, &CadenceCheckCompletedParams{
 		URI:   uri,
 		Valid: valid,
@@ -484,8 +536,8 @@ func (s *Server) Hover(
 ) (*protocol.Hover, error) {
 
 	uri := params.TextDocument.URI
-	checker, ok := s.checkers[uri]
-	if !ok {
+	checker := s.checkerForDocument(uri)
+	if checker == nil {
 		return nil, nil
 	}
 
@@ -514,8 +566,8 @@ func (s *Server) Definition(
 ) (*protocol.Location, error) {
 
 	uri := params.TextDocument.URI
-	checker, ok := s.checkers[uri]
-	if !ok {
+	checker := s.checkerForDocument(uri)
+	if checker == nil {
 		return nil, nil
 	}
 
@@ -562,8 +614,8 @@ func (s *Server) CodeLens(
 	codeLenses = []*protocol.CodeLens{}
 
 	uri := params.TextDocument.URI
-	checker, ok := s.checkers[uri]
-	if !ok {
+	checker := s.checkerForDocument(uri)
+	if checker == nil {
 		// Can we ensure this doesn't happen?
 		return
 	}
@@ -831,8 +883,8 @@ func (s *Server) Completion(
 	items = []*protocol.CompletionItem{}
 
 	uri := params.TextDocument.URI
-	checker, ok := s.checkers[uri]
-	if !ok {
+	checker := s.checkerForDocument(uri)
+	if checker == nil {
 		return
 	}
 
@@ -1173,23 +1225,17 @@ func (s *Server) getDiagnostics(
 	// If there is a parse result succeeded proceed with resolving imports and checking the parsed program,
 	// even if there there might have been parsing errors.
 
+	location := uriToLocation(uri)
+
 	if program == nil {
-		delete(s.checkers, uri)
+		delete(s.checkers, location.ID())
 		return
-	}
-
-	mainPath := string(uri)
-
-	if strings.HasPrefix(mainPath, filePrefix) {
-		mainPath = mainPath[len(filePrefix):]
-	} else if strings.HasPrefix(mainPath, inMemoryPrefix) {
-		mainPath = mainPath[len(inMemoryPrefix):]
 	}
 
 	var checker *sema.Checker
 	checker, diagnosticsErr = sema.NewChecker(
 		program,
-		uriToLocation(uri),
+		location,
 		sema.WithPredeclaredValues(valueDeclarations),
 		sema.WithPredeclaredTypes(typeDeclarations),
 		sema.WithLocationHandler(
@@ -1261,8 +1307,7 @@ func (s *Server) getDiagnostics(
 		),
 		sema.WithOriginsAndOccurrencesEnabled(true),
 		sema.WithImportHandler(
-			func(checker *sema.Checker, importedLocation common.Location) (sema.Import, error) {
-
+			func(checker *sema.Checker, importedLocation common.Location, importRange ast.Range) (sema.Import, error) {
 				switch importedLocation {
 				case stdlib.CryptoChecker.Location:
 					return sema.ElaborationImport{
@@ -1270,7 +1315,6 @@ func (s *Server) getDiagnostics(
 					}, nil
 
 				default:
-
 					if isPathLocation(importedLocation) {
 						// import may be a relative path and therefore should be normalized
 						// against the current location
@@ -1283,23 +1327,24 @@ func (s *Server) getDiagnostics(
 						}
 					}
 
-					importedProgram, err := s.resolveImport(importedLocation)
-					if err != nil {
-						return nil, &sema.CheckerError{
-							Errors: []error{err},
-						}
-					}
+					importedLocationID := importedLocation.ID()
 
-					importedChecker, err := checker.SubChecker(importedProgram, importedLocation)
-					if err != nil {
-						return nil, &sema.CheckerError{
-							Errors: []error{err},
+					importedChecker, ok := s.checkers[importedLocationID]
+					if !ok {
+						importedProgram, err := s.resolveImport(importedLocation)
+						if err != nil {
+							return nil, err
 						}
-					}
 
-					err = importedChecker.Check()
-					if err != nil {
-						return nil, err
+						importedChecker, err = checker.SubChecker(importedProgram, importedLocation)
+						if err != nil {
+							return nil, err
+						}
+						s.checkers[importedLocationID] = importedChecker
+						err = importedChecker.Check()
+						if err != nil {
+							return nil, err
+						}
 					}
 
 					return sema.ElaborationImport{
@@ -1308,6 +1353,7 @@ func (s *Server) getDiagnostics(
 				}
 			},
 		),
+		sema.WithAccessCheckMode(s.accessCheckMode),
 	)
 	if diagnosticsErr != nil {
 		return
@@ -1323,7 +1369,7 @@ func (s *Server) getDiagnostics(
 		Message: fmt.Sprintf("checking %s took %s", string(uri), elapsed),
 	})
 
-	s.checkers[uri] = checker
+	s.checkers[location.ID()] = checker
 
 	if checkError != nil {
 		if parentErr, ok := checkError.(errors.ParentError); ok {
@@ -1478,13 +1524,14 @@ func (s *Server) getEntryPointParameters(_ protocol.Conn, args ...interface{}) (
 		return nil, err
 	}
 
-	uri, ok := args[0].(string)
+	uriArg, ok := args[0].(string)
 	if !ok {
 		return nil, fmt.Errorf("invalid URI argument: %#+v", args[0])
 	}
 
-	checker, ok := s.checkers[protocol.DocumentUri(uri)]
-	if !ok {
+	uri := protocol.DocumentUri(uriArg)
+	checker := s.checkerForDocument(uri)
+	if checker == nil {
 		return nil, fmt.Errorf("could not find document for URI %s", uri)
 	}
 
@@ -1507,13 +1554,14 @@ func (s *Server) getContractInitializerParameters(_ protocol.Conn, args ...inter
 		return nil, err
 	}
 
-	uri, ok := args[0].(string)
+	uriArg, ok := args[0].(string)
 	if !ok {
 		return nil, fmt.Errorf("invalid URI argument: %#+v", args[0])
 	}
 
-	checker, ok := s.checkers[protocol.DocumentUri(uri)]
-	if !ok {
+	uri := protocol.DocumentUri(uriArg)
+	checker := s.checkerForDocument(uri)
+	if checker == nil {
 		return nil, fmt.Errorf("could not find document for URI %s", uri)
 	}
 
@@ -1538,7 +1586,7 @@ func (s *Server) getContractInitializerParameters(_ protocol.Conn, args ...inter
 
 // parseEntryPointArguments returns the values for the given arguments (literals) for the entry point.
 //
-// There should be exactly 1 argument:
+// There should be exactly 2 arguments:
 //   * the DocumentURI of the file to submit
 //   * the array of arguments
 func (s *Server) parseEntryPointArguments(_ protocol.Conn, args ...interface{}) (interface{}, error) {
@@ -1548,13 +1596,14 @@ func (s *Server) parseEntryPointArguments(_ protocol.Conn, args ...interface{}) 
 		return nil, err
 	}
 
-	uri, ok := args[0].(string)
+	uriArg, ok := args[0].(string)
 	if !ok {
 		return nil, fmt.Errorf("invalid URI argument: %#+v", args[0])
 	}
 
-	checker, ok := s.checkers[protocol.DocumentUri(uri)]
-	if !ok {
+	uri := protocol.DocumentUri(uriArg)
+	checker := s.checkerForDocument(uri)
+	if checker == nil {
 		return nil, fmt.Errorf("could not find document for URI %s", uri)
 	}
 

@@ -33,9 +33,15 @@ import (
 	"github.com/onflow/cadence/runtime/tests/checker"
 )
 
-func testAccount(t *testing.T, auth bool, code string) (*interpreter.Interpreter, map[string]interpreter.OptionalValue) {
-
-	address := interpreter.NewAddressValueFromBytes([]byte{42})
+func testAccount(
+	t *testing.T,
+	address interpreter.AddressValue,
+	auth bool,
+	code string,
+) (
+	*interpreter.Interpreter,
+	map[string]interpreter.OptionalValue,
+) {
 
 	var valueDeclarations stdlib.StandardLibraryValues
 
@@ -50,13 +56,15 @@ func testAccount(t *testing.T, auth bool, code string) (*interpreter.Interpreter
 		Type: sema.AuthAccountType,
 		Value: interpreter.NewAuthAccountValue(
 			address,
+			returnZeroUFix64,
+			returnZeroUFix64,
 			func(interpreter *interpreter.Interpreter) interpreter.UInt64Value {
 				return 0
 			},
-			returnZero,
+			returnZeroUInt64,
 			panicFunction,
 			panicFunction,
-			interpreter.AuthAccountContractsValue{},
+			&interpreter.CompositeValue{},
 			&interpreter.CompositeValue{},
 		),
 		Kind: common.DeclarationKindConstant,
@@ -70,10 +78,12 @@ func testAccount(t *testing.T, auth bool, code string) (*interpreter.Interpreter
 		Type: sema.PublicAccountType,
 		Value: interpreter.NewPublicAccountValue(
 			address,
+			returnZeroUFix64,
+			returnZeroUFix64,
 			func(interpreter *interpreter.Interpreter) interpreter.UInt64Value {
 				return 0
 			},
-			returnZero,
+			returnZeroUInt64,
 			interpreter.NewPublicAccountKeysValue(
 				nil,
 			),
@@ -112,7 +122,7 @@ func testAccount(t *testing.T, auth bool, code string) (*interpreter.Interpreter
 		}
 	}
 
-	storageGetter := func(_ *interpreter.Interpreter, _ common.Address, key string, deferred bool) interpreter.OptionalValue {
+	storageGetter := func(_ *interpreter.Interpreter, _ common.Address, key string, _ bool) interpreter.OptionalValue {
 		value := storedValues[key]
 		if value == nil {
 			return interpreter.NilValue{}
@@ -138,8 +148,12 @@ func testAccount(t *testing.T, auth bool, code string) (*interpreter.Interpreter
 	return inter, storedValues
 }
 
-func returnZero() interpreter.UInt64Value {
+func returnZeroUInt64() interpreter.UInt64Value {
 	return interpreter.UInt64Value(0)
+}
+
+func returnZeroUFix64() interpreter.UFix64Value {
+	return interpreter.UFix64Value(0)
 }
 
 func TestInterpretAuthAccount_save(t *testing.T) {
@@ -150,8 +164,11 @@ func TestInterpretAuthAccount_save(t *testing.T) {
 
 		t.Parallel()
 
+		address := interpreter.NewAddressValueFromBytes([]byte{42})
+
 		inter, storedValues := testAccount(
 			t,
+			address,
 			true,
 			`
               resource R {}
@@ -198,8 +215,11 @@ func TestInterpretAuthAccount_save(t *testing.T) {
 
 		t.Parallel()
 
+		address := interpreter.NewAddressValueFromBytes([]byte{42})
+
 		inter, storedValues := testAccount(
 			t,
+			address,
 			true,
 			`
               struct S {}
@@ -251,8 +271,11 @@ func TestInterpretAuthAccount_load(t *testing.T) {
 
 		t.Parallel()
 
+		address := interpreter.NewAddressValueFromBytes([]byte{42})
+
 		inter, storedValues := testAccount(
 			t,
+			address,
 			true,
 			`
               resource R {}
@@ -330,8 +353,11 @@ func TestInterpretAuthAccount_load(t *testing.T) {
 
 		t.Parallel()
 
+		address := interpreter.NewAddressValueFromBytes([]byte{42})
+
 		inter, storedValues := testAccount(
 			t,
+			address,
 			true,
 			`
               struct S {}
@@ -433,8 +459,11 @@ func TestInterpretAuthAccount_copy(t *testing.T) {
 
 		t.Parallel()
 
+		address := interpreter.NewAddressValueFromBytes([]byte{42})
+
 		inter, storedValues := testAccount(
 			t,
+			address,
 			true,
 			code,
 		)
@@ -470,8 +499,11 @@ func TestInterpretAuthAccount_copy(t *testing.T) {
 
 		t.Parallel()
 
+		address := interpreter.NewAddressValueFromBytes([]byte{42})
+
 		inter, storedValues := testAccount(
 			t,
+			address,
 			true,
 			code,
 		)
@@ -503,8 +535,11 @@ func TestInterpretAuthAccount_borrow(t *testing.T) {
 
 		t.Parallel()
 
+		address := interpreter.NewAddressValueFromBytes([]byte{42})
+
 		inter, storedValues := testAccount(
 			t,
+			address,
 			true,
 			`
               resource R {
@@ -515,7 +550,13 @@ func TestInterpretAuthAccount_borrow(t *testing.T) {
                   }
               }
 
-              resource R2 {}
+              resource R2 {
+                  let foo: Int
+
+                  init() {
+                      self.foo = 42
+                  }
+              }
 
               fun save() {
                   let r <- create R()
@@ -532,6 +573,18 @@ func TestInterpretAuthAccount_borrow(t *testing.T) {
 
               fun borrowR2(): &R2? {
                   return account.borrow<&R2>(from: /storage/r)
+              }
+
+              fun changeAfterBorrow(): Int {
+                 let ref = account.borrow<&R>(from: /storage/r)!
+
+                 let r <- account.load<@R>(from: /storage/r)
+                 destroy r
+
+                 let r2 <- create R2()
+                 account.save(<-r2, to: /storage/r)
+
+                 return ref.foo
               }
             `,
 		)
@@ -597,14 +650,23 @@ func TestInterpretAuthAccount_borrow(t *testing.T) {
 			require.Len(t, storedValues, 1)
 		})
 
+		t.Run("change after borrow", func(t *testing.T) {
+
+			_, err := inter.Invoke("changeAfterBorrow")
+
+			require.ErrorAs(t, err, &interpreter.DereferenceError{})
+		})
 	})
 
 	t.Run("struct", func(t *testing.T) {
 
 		t.Parallel()
 
+		address := interpreter.NewAddressValueFromBytes([]byte{42})
+
 		inter, storedValues := testAccount(
 			t,
+			address,
 			true,
 			`
               struct S {
@@ -615,7 +677,13 @@ func TestInterpretAuthAccount_borrow(t *testing.T) {
                   }
               }
 
-              struct S2 {}
+              struct S2 {
+                  let foo: Int
+
+                  init() {
+                      self.foo = 42
+                  }
+              }
 
               fun save() {
                   let s = S()
@@ -632,6 +700,18 @@ func TestInterpretAuthAccount_borrow(t *testing.T) {
 
               fun borrowS2(): &S2? {
                   return account.borrow<&S2>(from: /storage/s)
+              }
+
+              fun changeAfterBorrow(): Int {
+                 let ref = account.borrow<&S>(from: /storage/s)!
+
+                 // remove stored value
+                 account.load<S>(from: /storage/s)
+
+                 let s2 = S2()
+                 account.save(s2, to: /storage/s)
+
+                 return ref.foo
               }
             `,
 		)
@@ -697,6 +777,12 @@ func TestInterpretAuthAccount_borrow(t *testing.T) {
 			require.Len(t, storedValues, 1)
 		})
 
+		t.Run("change after borrow", func(t *testing.T) {
+
+			_, err := inter.Invoke("changeAfterBorrow")
+
+			require.ErrorAs(t, err, &interpreter.DereferenceError{})
+		})
 	})
 }
 
@@ -712,8 +798,11 @@ func TestInterpretAuthAccount_link(t *testing.T) {
 
 				t.Parallel()
 
+				address := interpreter.NewAddressValueFromBytes([]byte{42})
+
 				inter, storedValues := testAccount(
 					t,
+					address,
 					true,
 					fmt.Sprintf(
 						`
@@ -727,11 +816,11 @@ func TestInterpretAuthAccount_link(t *testing.T) {
 	                      }
 
 	                      fun linkR(): Capability? {
-	                          return account.link<&R>(/%[1]s/r, target: /storage/r)
+	                          return account.link<&R>(/%[1]s/rCap, target: /storage/r)
 	                      }
 
 	                      fun linkR2(): Capability? {
-	                          return account.link<&R2>(/%[1]s/r2, target: /storage/r)
+	                          return account.link<&R2>(/%[1]s/rCap2, target: /storage/r)
 	                      }
 	                    `,
 						capabilityDomain.Identifier(),
@@ -755,9 +844,6 @@ func TestInterpretAuthAccount_link(t *testing.T) {
 					require.IsType(t, &interpreter.SomeValue{}, value)
 
 					capability := value.(*interpreter.SomeValue).Value
-					require.IsType(t, interpreter.CapabilityValue{}, capability)
-
-					actualBorrowType := capability.(interpreter.CapabilityValue).BorrowType
 
 					rType := checker.RequireGlobalType(t, inter.Program.Elaboration, "R")
 
@@ -769,8 +855,15 @@ func TestInterpretAuthAccount_link(t *testing.T) {
 					)
 
 					require.Equal(t,
-						expectedBorrowType,
-						actualBorrowType,
+						interpreter.CapabilityValue{
+							Address: address,
+							Path: interpreter.PathValue{
+								Domain:     capabilityDomain,
+								Identifier: "rCap",
+							},
+							BorrowType: expectedBorrowType,
+						},
+						capability,
 					)
 
 					// stored value + link
@@ -797,9 +890,6 @@ func TestInterpretAuthAccount_link(t *testing.T) {
 					require.IsType(t, &interpreter.SomeValue{}, value)
 
 					capability := value.(*interpreter.SomeValue).Value
-					require.IsType(t, interpreter.CapabilityValue{}, capability)
-
-					actualBorrowType := capability.(interpreter.CapabilityValue).BorrowType
 
 					r2Type := checker.RequireGlobalType(t, inter.Program.Elaboration, "R2")
 
@@ -811,8 +901,15 @@ func TestInterpretAuthAccount_link(t *testing.T) {
 					)
 
 					require.Equal(t,
-						expectedBorrowType,
-						actualBorrowType,
+						interpreter.CapabilityValue{
+							Address: address,
+							Path: interpreter.PathValue{
+								Domain:     capabilityDomain,
+								Identifier: "rCap2",
+							},
+							BorrowType: expectedBorrowType,
+						},
+						capability,
 					)
 
 					// stored value + link
@@ -847,8 +944,11 @@ func TestInterpretAuthAccount_link(t *testing.T) {
 
 				t.Parallel()
 
+				address := interpreter.NewAddressValueFromBytes([]byte{42})
+
 				inter, storedValues := testAccount(
 					t,
+					address,
 					true,
 					fmt.Sprintf(
 						`
@@ -862,11 +962,11 @@ func TestInterpretAuthAccount_link(t *testing.T) {
 	                      }
 
 	                      fun linkS(): Capability? {
-	                          return account.link<&S>(/%[1]s/s, target: /storage/s)
+	                          return account.link<&S>(/%[1]s/sCap, target: /storage/s)
 	                      }
 
 	                      fun linkS2(): Capability? {
-	                          return account.link<&S2>(/%[1]s/s2, target: /storage/s)
+	                          return account.link<&S2>(/%[1]s/sCap2, target: /storage/s)
 	                      }
 	                    `,
 						capabilityDomain.Identifier(),
@@ -890,9 +990,6 @@ func TestInterpretAuthAccount_link(t *testing.T) {
 					require.IsType(t, &interpreter.SomeValue{}, value)
 
 					capability := value.(*interpreter.SomeValue).Value
-					require.IsType(t, interpreter.CapabilityValue{}, capability)
-
-					actualBorrowType := capability.(interpreter.CapabilityValue).BorrowType
 
 					sType := checker.RequireGlobalType(t, inter.Program.Elaboration, "S")
 
@@ -904,8 +1001,15 @@ func TestInterpretAuthAccount_link(t *testing.T) {
 					)
 
 					require.Equal(t,
-						expectedBorrowType,
-						actualBorrowType,
+						interpreter.CapabilityValue{
+							Address: address,
+							Path: interpreter.PathValue{
+								Domain:     capabilityDomain,
+								Identifier: "sCap",
+							},
+							BorrowType: expectedBorrowType,
+						},
+						capability,
 					)
 
 					// stored value + link
@@ -934,8 +1038,6 @@ func TestInterpretAuthAccount_link(t *testing.T) {
 					capability := value.(*interpreter.SomeValue).Value
 					require.IsType(t, interpreter.CapabilityValue{}, capability)
 
-					actualBorrowType := capability.(interpreter.CapabilityValue).BorrowType
-
 					s2Type := checker.RequireGlobalType(t, inter.Program.Elaboration, "S2")
 
 					expectedBorrowType := interpreter.ConvertSemaToStaticType(
@@ -946,8 +1048,15 @@ func TestInterpretAuthAccount_link(t *testing.T) {
 					)
 
 					require.Equal(t,
-						expectedBorrowType,
-						actualBorrowType,
+						interpreter.CapabilityValue{
+							Address: address,
+							Path: interpreter.PathValue{
+								Domain:     capabilityDomain,
+								Identifier: "sCap2",
+							},
+							BorrowType: expectedBorrowType,
+						},
+						capability,
 					)
 
 					// stored value + link
@@ -988,8 +1097,11 @@ func TestInterpretAuthAccount_unlink(t *testing.T) {
 
 				t.Parallel()
 
+				address := interpreter.NewAddressValueFromBytes([]byte{42})
+
 				inter, storedValues := testAccount(
 					t,
+					address,
 					true,
 					fmt.Sprintf(
 						`
@@ -1056,8 +1168,11 @@ func TestInterpretAuthAccount_unlink(t *testing.T) {
 
 				t.Parallel()
 
+				address := interpreter.NewAddressValueFromBytes([]byte{42})
+
 				inter, storedValues := testAccount(
 					t,
+					address,
 					true,
 					fmt.Sprintf(
 						`
@@ -1127,8 +1242,11 @@ func TestInterpretAccount_getLinkTarget(t *testing.T) {
 
 			t.Parallel()
 
+			address := interpreter.NewAddressValueFromBytes([]byte{42})
+
 			inter, storedValues := testAccount(
 				t,
+				address,
 				auth,
 				fmt.Sprintf(
 					`
@@ -1195,8 +1313,11 @@ func TestInterpretAccount_getLinkTarget(t *testing.T) {
 
 			t.Parallel()
 
+			address := interpreter.NewAddressValueFromBytes([]byte{42})
+
 			inter, storedValues := testAccount(
 				t,
+				address,
 				auth,
 				fmt.Sprintf(
 					`
@@ -1320,8 +1441,11 @@ func TestInterpretAccount_getCapability(t *testing.T) {
 
 				t.Run(testName, func(t *testing.T) {
 
+					address := interpreter.NewAddressValueFromBytes([]byte{42})
+
 					inter, _ := testAccount(
 						t,
+						address,
 						auth,
 						fmt.Sprintf(
 							`
@@ -1346,7 +1470,7 @@ func TestInterpretAccount_getCapability(t *testing.T) {
 						expectedBorrowType := interpreter.ConvertSemaToStaticType(
 							&sema.ReferenceType{
 								Authorized: false,
-								Type:       &sema.IntType{},
+								Type:       sema.IntType,
 							},
 						)
 						require.Equal(t,
@@ -1359,6 +1483,53 @@ func TestInterpretAccount_getCapability(t *testing.T) {
 					}
 				})
 			}
+		}
+	}
+}
+
+func TestCheckAccount_BalanceFields(t *testing.T) {
+	t.Parallel()
+
+	for accountType, auth := range map[string]bool{
+		"AuthAccount":   true,
+		"PublicAccount": false,
+	} {
+
+		for _, fieldName := range []string{
+			"balance",
+			"availableBalance",
+		} {
+
+			testName := fmt.Sprintf(
+				"%s.%s",
+				accountType,
+				fieldName,
+			)
+
+			t.Run(testName, func(t *testing.T) {
+
+				address := interpreter.NewAddressValueFromBytes([]byte{42})
+
+				code := fmt.Sprintf(
+					`
+	                      fun test(): UFix64 {
+	                          return account.%s
+	                      }
+	                    `,
+					fieldName,
+				)
+				inter, _ := testAccount(
+					t,
+					address,
+					auth,
+					code,
+				)
+
+				value, err := inter.Invoke("test")
+				require.NoError(t, err)
+
+				assert.Equal(t, interpreter.UFix64Value(0), value)
+			})
 		}
 	}
 }
@@ -1392,8 +1563,12 @@ func TestCheckAccount_StorageFields(t *testing.T) {
 	                    `,
 					fieldName,
 				)
+
+				address := interpreter.NewAddressValueFromBytes([]byte{42})
+
 				inter, _ := testAccount(
 					t,
+					address,
 					auth,
 					code,
 				)

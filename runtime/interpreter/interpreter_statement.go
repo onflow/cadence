@@ -65,8 +65,10 @@ func (interpreter *Interpreter) VisitReturnStatement(statement *ast.ReturnStatem
 		valueType := interpreter.Program.Elaboration.ReturnStatementValueTypes[statement]
 		returnType := interpreter.Program.Elaboration.ReturnStatementReturnTypes[statement]
 
+		getLocationRange := locationRangeGetter(interpreter.Location, statement.Expression)
+
 		// NOTE: copy on return
-		value = interpreter.copyAndConvert(value, valueType, returnType)
+		value = interpreter.copyAndConvert(value, valueType, returnType, getLocationRange)
 	}
 
 	return functionReturn{value}
@@ -121,7 +123,8 @@ func (interpreter *Interpreter) visitIfStatementWithVariableDeclaration(
 
 		targetType := interpreter.Program.Elaboration.VariableDeclarationTargetTypes[declaration]
 		valueType := interpreter.Program.Elaboration.VariableDeclarationValueTypes[declaration]
-		unwrappedValueCopy := interpreter.copyAndConvert(someValue.Value, valueType, targetType)
+		getLocationRange := locationRangeGetter(interpreter.Location, declaration.Value)
+		unwrappedValueCopy := interpreter.copyAndConvert(someValue.Value, valueType, targetType, getLocationRange)
 
 		interpreter.activations.PushNewWithCurrent()
 		defer interpreter.activations.Pop()
@@ -181,7 +184,7 @@ func (interpreter *Interpreter) VisitSwitchStatement(switchStatement *ast.Switch
 		// If the test value and case values are equal,
 		// evaluate the case's statements
 
-		if testValue.Equal(interpreter, caseValue) {
+		if testValue.Equal(caseValue, interpreter, true) {
 			return runStatements()
 		}
 
@@ -284,9 +287,14 @@ func (interpreter *Interpreter) VisitVariableDeclaration(declaration *ast.Variab
 	valueType := interpreter.Program.Elaboration.VariableDeclarationValueTypes[declaration]
 	secondValueType := interpreter.Program.Elaboration.VariableDeclarationSecondValueTypes[declaration]
 
-	result := interpreter.visitPotentialStorageRemoval(declaration.Value)
+	result := interpreter.evalPotentialResourceMoveIndexExpression(declaration.Value)
+	if result == nil {
+		panic(errors.NewUnreachableError())
+	}
 
-	valueCopy := interpreter.copyAndConvert(result, valueType, targetType)
+	getLocationRange := locationRangeGetter(interpreter.Location, declaration.Value)
+
+	valueCopy := interpreter.copyAndConvert(result, valueType, targetType, getLocationRange)
 
 	interpreter.declareVariable(
 		declaration.Identifier.Identifier,
@@ -334,33 +342,47 @@ func (interpreter *Interpreter) VisitSwapStatement(swap *ast.SwapStatement) ast.
 	// Evaluate the left expression
 	leftGetterSetter := interpreter.assignmentGetterSetter(swap.Left)
 	leftValue := leftGetterSetter.get()
-	if leftValue == nil {
-		panic(errors.NewUnreachableError())
-	}
-	if interpreter.movingStorageIndexExpression(swap.Left) != nil {
+	interpreter.checkSwapValue(leftValue, swap.Left)
+	if interpreter.resourceMoveIndexExpression(swap.Left) != nil {
 		leftGetterSetter.set(NilValue{})
 	}
 
 	// Evaluate the right expression
 	rightGetterSetter := interpreter.assignmentGetterSetter(swap.Right)
 	rightValue := rightGetterSetter.get()
-	if rightValue == nil {
-		panic(errors.NewUnreachableError())
-	}
-	if interpreter.movingStorageIndexExpression(swap.Right) != nil {
+	interpreter.checkSwapValue(rightValue, swap.Right)
+	if interpreter.resourceMoveIndexExpression(swap.Right) != nil {
 		rightGetterSetter.set(NilValue{})
 	}
 
 	// Add right value to left target
 	// and left value to right target
 
-	rightValueCopy := interpreter.copyAndConvert(rightValue, rightType, leftType)
-	leftValueCopy := interpreter.copyAndConvert(leftValue, leftType, rightType)
+	getLocationRange := locationRangeGetter(interpreter.Location, swap.Right)
+	rightValueCopy := interpreter.copyAndConvert(rightValue, rightType, leftType, getLocationRange)
+
+	getLocationRange = locationRangeGetter(interpreter.Location, swap.Left)
+	leftValueCopy := interpreter.copyAndConvert(leftValue, leftType, rightType, getLocationRange)
 
 	leftGetterSetter.set(rightValueCopy)
 	rightGetterSetter.set(leftValueCopy)
 
 	return nil
+}
+
+func (interpreter *Interpreter) checkSwapValue(value Value, expression ast.Expression) {
+	if value != nil {
+		return
+	}
+
+	if expression, ok := expression.(*ast.MemberExpression); ok {
+		panic(MissingMemberValueError{
+			Name:          expression.Identifier.Identifier,
+			LocationRange: locationRangeGetter(interpreter.Location, expression)(),
+		})
+	}
+
+	panic(errors.NewUnreachableError())
 }
 
 func (interpreter *Interpreter) VisitExpressionStatement(statement *ast.ExpressionStatement) ast.Repr {

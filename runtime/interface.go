@@ -102,25 +102,19 @@ type Interface interface {
 		hashAlgorithm HashAlgorithm,
 	) (bool, error)
 	// Hash returns the digest of hashing the given data with using the given hash algorithm
-	Hash(data []byte, hashAlgorithm HashAlgorithm) ([]byte, error)
+	Hash(data []byte, tag string, hashAlgorithm HashAlgorithm) ([]byte, error)
+	// GetAccountBalance gets accounts default flow token balance.
+	GetAccountBalance(address common.Address) (value uint64, err error)
+	// GetAccountAvailableBalance gets accounts default flow token balance - balance that is reserved for storage.
+	GetAccountAvailableBalance(address common.Address) (value uint64, err error)
 	// GetStorageUsed gets storage used in bytes by the address at the moment of the function call.
 	GetStorageUsed(address Address) (value uint64, err error)
 	// GetStorageCapacity gets storage capacity in bytes on the address.
 	GetStorageCapacity(address Address) (value uint64, err error)
 	// ImplementationDebugLog logs implementation log statements on a debug-level
 	ImplementationDebugLog(message string) error
-}
-
-type HighLevelStorage interface {
-	Interface
-
-	// HighLevelStorageEnabled should return true
-	// if the functions of HighLevelStorage should be called,
-	// e.g. SetCadenceValue
-	HighLevelStorageEnabled() bool
-
-	// SetCadenceValue sets a value for the given key in the storage, owned by the given account.
-	SetCadenceValue(owner Address, key string, value cadence.Value) (err error)
+	// ValidatePublicKey verifies the validity of a public key.
+	ValidatePublicKey(key *PublicKey) (bool, error)
 }
 
 type Metrics interface {
@@ -272,9 +266,18 @@ func (i *emptyRuntimeInterface) VerifySignature(
 
 func (i *emptyRuntimeInterface) Hash(
 	_ []byte,
+	_ string,
 	_ HashAlgorithm,
 ) ([]byte, error) {
 	return nil, nil
+}
+
+func (i emptyRuntimeInterface) GetAccountBalance(_ Address) (uint64, error) {
+	return 0, nil
+}
+
+func (i emptyRuntimeInterface) GetAccountAvailableBalance(_ Address) (uint64, error) {
+	return 0, nil
 }
 
 func (i emptyRuntimeInterface) GetStorageUsed(_ Address) (uint64, error) {
@@ -283,4 +286,18 @@ func (i emptyRuntimeInterface) GetStorageUsed(_ Address) (uint64, error) {
 
 func (i emptyRuntimeInterface) GetStorageCapacity(_ Address) (uint64, error) {
 	return 0, nil
+}
+
+func (i *emptyRuntimeInterface) ValidatePublicKey(_ *PublicKey) (bool, error) {
+	return false, nil
+}
+
+func (i emptyRuntimeInterface) ValidateSignature(
+	_ []byte,
+	_ []byte,
+	_ string,
+	_ HashAlgorithm,
+	_ *PublicKey,
+) (bool, error) {
+	return false, nil
 }

@@ -49,6 +49,7 @@ type CryptoSignatureVerifier interface {
 type CryptoHasher interface {
 	Hash(
 		data []byte,
+		tag string,
 		hashAlgorithm HashAlgorithm,
 	) ([]byte, error)
 }
@@ -90,6 +91,48 @@ var cryptoContractType = func() *sema.CompositeType {
 	}
 	return variable.Type.(*sema.CompositeType)
 }()
+
+const cryptoSignatureVerifierImplIdentifier = "SignatureVerifierImpl"
+
+const cryptoHasherImplIdentifier = "HasherImpl"
+
+func registerCheckerElaborationCompositeType(
+	identifier string,
+	explicitConformances []*sema.InterfaceType,
+) {
+	typeID := CryptoChecker.Location.TypeID(identifier)
+	CryptoChecker.Elaboration.CompositeTypes[typeID] = &sema.CompositeType{
+		Location:                      CryptoChecker.Location,
+		Identifier:                    identifier,
+		Kind:                          common.CompositeKindStructure,
+		ExplicitInterfaceConformances: explicitConformances,
+	}
+}
+
+func init() {
+	signatureVerifierVariable, ok := CryptoChecker.Elaboration.GlobalTypes.Get("SignatureVerifier")
+	if !ok {
+		panic(errors2.NewUnreachableError())
+	}
+
+	registerCheckerElaborationCompositeType(
+		cryptoSignatureVerifierImplIdentifier,
+		[]*sema.InterfaceType{
+			signatureVerifierVariable.Type.(*sema.InterfaceType),
+		},
+	)
+
+	hasherVariable, ok := CryptoChecker.Elaboration.GlobalTypes.Get("Hasher")
+	if !ok {
+		panic(errors2.NewUnreachableError())
+	}
+	registerCheckerElaborationCompositeType(
+		cryptoHasherImplIdentifier,
+		[]*sema.InterfaceType{
+			hasherVariable.Type.(*sema.InterfaceType),
+		},
+	)
+}
 
 var cryptoContractInitializerTypes = func() (result []sema.Type) {
 	result = make([]sema.Type, len(cryptoContractType.ConstructorParameters))
@@ -144,13 +187,9 @@ func newCryptoContractVerifySignatureFunction(signatureVerifier CryptoSignatureV
 }
 
 func newCryptoContractSignatureVerifier(signatureVerifier CryptoSignatureVerifier) *interpreter.CompositeValue {
-	implIdentifier := CryptoChecker.Location.
-		QualifiedIdentifier(cryptoContractInitializerTypes[0].ID()) +
-		"Impl"
-
 	result := interpreter.NewCompositeValue(
 		CryptoChecker.Location,
-		implIdentifier,
+		cryptoSignatureVerifierImplIdentifier,
 		common.CompositeKindStructure,
 		nil,
 		nil,
@@ -171,9 +210,15 @@ func newCryptoContractHashFunction(hasher CryptoHasher) interpreter.FunctionValu
 				panic(fmt.Errorf("hash: invalid data argument: %w", err))
 			}
 
-			hashAlgorithm := getHashAlgorithmFromValue(invocation.Arguments[1])
+			tagStringValue, ok := invocation.Arguments[1].(*interpreter.StringValue)
+			if !ok {
+				panic(errors.New("hash: invalid tag argument: not a string"))
+			}
+			tag := tagStringValue.Str
 
-			digest, err := hasher.Hash(data, hashAlgorithm)
+			hashAlgorithm := getHashAlgorithmFromValue(invocation.Arguments[2])
+
+			digest, err := hasher.Hash(data, tag, hashAlgorithm)
 			if err != nil {
 				panic(err)
 
@@ -185,13 +230,10 @@ func newCryptoContractHashFunction(hasher CryptoHasher) interpreter.FunctionValu
 }
 
 func newCryptoContractHasher(hasher CryptoHasher) *interpreter.CompositeValue {
-	implIdentifier := CryptoChecker.Location.
-		QualifiedIdentifier(cryptoContractInitializerTypes[1].ID()) +
-		"Impl"
 
 	result := interpreter.NewCompositeValue(
 		CryptoChecker.Location,
-		implIdentifier,
+		cryptoHasherImplIdentifier,
 		common.CompositeKindStructure,
 		nil,
 		nil,

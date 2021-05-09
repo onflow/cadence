@@ -28,7 +28,8 @@ import (
 
 var SignatureAlgorithms = []CryptoAlgorithm{
 	SignatureAlgorithmECDSA_P256,
-	SignatureAlgorithmECDSA_Secp256k1,
+	SignatureAlgorithmECDSA_secp256k1,
+	SignatureAlgorithmBLS_BLS12_381,
 }
 
 var HashAlgorithms = []CryptoAlgorithm{
@@ -36,9 +37,10 @@ var HashAlgorithms = []CryptoAlgorithm{
 	HashAlgorithmSHA2_384,
 	HashAlgorithmSHA3_256,
 	HashAlgorithmSHA3_384,
+	HashAlgorithmKMAC128_BLS_BLS12_381,
 }
 
-var SignatureAlgorithmType = newNativeEnumType(SignatureAlgorithmTypeName, &UInt8Type{})
+var SignatureAlgorithmType = newNativeEnumType(SignatureAlgorithmTypeName, UInt8Type)
 
 type SignatureAlgorithm uint8
 
@@ -46,7 +48,8 @@ const (
 	// Supported signing algorithms
 	SignatureAlgorithmUnknown SignatureAlgorithm = iota
 	SignatureAlgorithmECDSA_P256
-	SignatureAlgorithmECDSA_Secp256k1
+	SignatureAlgorithmECDSA_secp256k1
+	SignatureAlgorithmBLS_BLS12_381
 )
 
 // Name returns the string representation of this signing algorithm.
@@ -56,8 +59,10 @@ func (algo SignatureAlgorithm) Name() string {
 		return "unknown"
 	case SignatureAlgorithmECDSA_P256:
 		return "ECDSA_P256"
-	case SignatureAlgorithmECDSA_Secp256k1:
-		return "ECDSA_Secp256k1"
+	case SignatureAlgorithmECDSA_secp256k1:
+		return "ECDSA_secp256k1"
+	case SignatureAlgorithmBLS_BLS12_381:
+		return "BLS_BLS12_381"
 	}
 
 	panic(errors.NewUnreachableError())
@@ -74,8 +79,10 @@ func (algo SignatureAlgorithm) RawValue() uint8 {
 		return 0
 	case SignatureAlgorithmECDSA_P256:
 		return 1
-	case SignatureAlgorithmECDSA_Secp256k1:
+	case SignatureAlgorithmECDSA_secp256k1:
 		return 2
+	case SignatureAlgorithmBLS_BLS12_381:
+		return 3
 	}
 
 	panic(errors.NewUnreachableError())
@@ -87,14 +94,16 @@ func (algo SignatureAlgorithm) DocString() string {
 		return ""
 	case SignatureAlgorithmECDSA_P256:
 		return SignatureAlgorithmDocStringECDSA_P256
-	case SignatureAlgorithmECDSA_Secp256k1:
-		return SignatureAlgorithmDocStringECDSA_Secp256k1
+	case SignatureAlgorithmECDSA_secp256k1:
+		return SignatureAlgorithmDocStringECDSA_secp256k1
+	case SignatureAlgorithmBLS_BLS12_381:
+		return SignatureAlgorithmDocStringBLS_BLS12_381
 	}
 
 	panic(errors.NewUnreachableError())
 }
 
-var HashAlgorithmType = newNativeEnumType(HashAlgorithmTypeName, &UInt8Type{})
+var HashAlgorithmType = newNativeEnumType(HashAlgorithmTypeName, UInt8Type)
 
 type HashAlgorithm uint8
 
@@ -105,6 +114,7 @@ const (
 	HashAlgorithmSHA2_384
 	HashAlgorithmSHA3_256
 	HashAlgorithmSHA3_384
+	HashAlgorithmKMAC128_BLS_BLS12_381
 )
 
 func (algo HashAlgorithm) Name() string {
@@ -119,6 +129,8 @@ func (algo HashAlgorithm) Name() string {
 		return "SHA3_256"
 	case HashAlgorithmSHA3_384:
 		return "SHA3_384"
+	case HashAlgorithmKMAC128_BLS_BLS12_381:
+		return "KMAC128_BLS_BLS12_381"
 	}
 
 	panic(errors.NewUnreachableError())
@@ -141,6 +153,8 @@ func (algo HashAlgorithm) RawValue() uint8 {
 		return 3
 	case HashAlgorithmSHA3_384:
 		return 4
+	case HashAlgorithmKMAC128_BLS_BLS12_381:
+		return 5
 	}
 
 	panic(errors.NewUnreachableError())
@@ -158,6 +172,8 @@ func (algo HashAlgorithm) DocString() string {
 		return HashAlgorithmDocStringSHA3_256
 	case HashAlgorithmSHA3_384:
 		return HashAlgorithmDocStringSHA3_384
+	case HashAlgorithmKMAC128_BLS_BLS12_381:
+		return HashAlgorithmDocStringKMAC128_BLS_BLS12_381
 	}
 
 	panic(errors.NewUnreachableError())
@@ -192,8 +208,12 @@ const SignatureAlgorithmDocStringECDSA_P256 = `
 ECDSA_P256 is Elliptic Curve Digital Signature Algorithm (ECDSA) on the NIST P-256 curve
 `
 
-const SignatureAlgorithmDocStringECDSA_Secp256k1 = `
-ECDSA_Secp256k1 is Elliptic Curve Digital Signature Algorithm (ECDSA) on the secp256k1 curve
+const SignatureAlgorithmDocStringECDSA_secp256k1 = `
+ECDSA_secp256k1 is Elliptic Curve Digital Signature Algorithm (ECDSA) on the secp256k1 curve
+`
+
+const SignatureAlgorithmDocStringBLS_BLS12_381 = `
+BLS_BLS12_381 is BLS signature scheme on the BLS12-381 curve
 `
 
 const HashAlgorithmTypeName = "HashAlgorithm"
@@ -212,4 +232,9 @@ SHA3_256 is Secure Hashing Algorithm 3 (SHA-3) with a 256-bit digest
 
 const HashAlgorithmDocStringSHA3_384 = `
 SHA3_384 is Secure Hashing Algorithm 3 (SHA-3) with a 384-bit digest
+`
+
+const HashAlgorithmDocStringKMAC128_BLS_BLS12_381 = `
+KMAC128_BLS_BLS12_381 is an instance of KMAC128 mac algorithm, that can be used
+as the hashing algorithm for BLS signature scheme on the curve BLS12-381.
 `

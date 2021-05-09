@@ -146,7 +146,7 @@ var CreatePublicKeyFunction = NewStandardLibraryFunction(
 			{
 				Label:          sema.PublicKeyPublicKeyField,
 				Identifier:     sema.PublicKeyPublicKeyField,
-				TypeAnnotation: sema.NewTypeAnnotation(&sema.VariableSizedType{Type: &sema.UInt8Type{}}),
+				TypeAnnotation: sema.NewTypeAnnotation(&sema.VariableSizedType{Type: sema.UInt8Type}),
 			},
 			{
 				Label:          sema.PublicKeySignAlgoField,
@@ -161,7 +161,27 @@ var CreatePublicKeyFunction = NewStandardLibraryFunction(
 		publicKey := invocation.Arguments[0].(*interpreter.ArrayValue)
 		signAlgo := invocation.Arguments[1].(*interpreter.CompositeValue)
 
-		return interpreter.NewPublicKeyValue(publicKey, signAlgo)
+		verifyFunc := interpreter.NewHostFunctionValue(
+			func(invocation interpreter.Invocation) interpreter.Value {
+				signature := invocation.Arguments[0].(*interpreter.ArrayValue)
+				signedData := invocation.Arguments[1].(*interpreter.ArrayValue)
+				domainSeparationTag := invocation.Arguments[2].(*interpreter.StringValue)
+				hashAlgo := invocation.Arguments[3].(*interpreter.CompositeValue)
+				publicKey := invocation.Self
+
+				return invocation.Interpreter.SignatureValidationHandler(
+					signature,
+					signedData,
+					domainSeparationTag,
+					hashAlgo,
+					publicKey,
+				)
+			},
+		)
+
+		validationFunc := invocation.Interpreter.PublicKeyValidationHandler
+
+		return interpreter.NewPublicKeyValue(publicKey, signAlgo, validationFunc, verifyFunc)
 	},
 )
 
@@ -186,7 +206,7 @@ var HashAlgorithmValue = StandardLibraryValue{
 	Kind:  common.DeclarationKindEnum,
 }
 
-func cryptoAlgorithmEnumType(enumType *sema.CompositeType, enumCases []sema.CryptoAlgorithm) *sema.SpecialFunctionType {
+func cryptoAlgorithmEnumType(enumType *sema.CompositeType, enumCases []sema.CryptoAlgorithm) *sema.ConstructorFunctionType {
 	members := make([]*sema.Member, len(enumCases))
 	for i, algo := range enumCases {
 		members[i] = sema.NewPublicEnumCaseMember(
@@ -196,7 +216,7 @@ func cryptoAlgorithmEnumType(enumType *sema.CompositeType, enumCases []sema.Cryp
 		)
 	}
 
-	constructorType := &sema.SpecialFunctionType{
+	constructorType := &sema.ConstructorFunctionType{
 		FunctionType: &sema.FunctionType{
 			Parameters: []*sema.Parameter{
 				{
@@ -209,8 +229,8 @@ func cryptoAlgorithmEnumType(enumType *sema.CompositeType, enumCases []sema.Cryp
 					Type: enumType,
 				},
 			),
+			Members: sema.GetMembersAsMap(members),
 		},
-		Members: sema.GetMembersAsMap(members),
 	}
 
 	return constructorType

@@ -122,12 +122,15 @@ type testRuntimeInterface struct {
 		signatureAlgorithm SignatureAlgorithm,
 		hashAlgorithm HashAlgorithm,
 	) (bool, error)
-	hash                   func(data []byte, hashAlgorithm HashAlgorithm) ([]byte, error)
-	setCadenceValue        func(owner Address, key string, value cadence.Value) (err error)
-	getStorageUsed         func(_ Address) (uint64, error)
-	getStorageCapacity     func(_ Address) (uint64, error)
-	programs               map[common.LocationID]*interpreter.Program
-	implementationDebugLog func(message string) error
+	hash                       func(data []byte, tag string, hashAlgorithm HashAlgorithm) ([]byte, error)
+	setCadenceValue            func(owner Address, key string, value cadence.Value) (err error)
+	getAccountBalance          func(_ Address) (uint64, error)
+	getAccountAvailableBalance func(_ Address) (uint64, error)
+	getStorageUsed             func(_ Address) (uint64, error)
+	getStorageCapacity         func(_ Address) (uint64, error)
+	programs                   map[common.LocationID]*interpreter.Program
+	implementationDebugLog     func(message string) error
+	validatePublicKey          func(publicKey *PublicKey) (bool, error)
 }
 
 // testRuntimeInterface should implement Interface
@@ -346,19 +349,23 @@ func (i *testRuntimeInterface) VerifySignature(
 	)
 }
 
-func (i *testRuntimeInterface) Hash(data []byte, hashAlgorithm HashAlgorithm) ([]byte, error) {
+func (i *testRuntimeInterface) Hash(data []byte, tag string, hashAlgorithm HashAlgorithm) ([]byte, error) {
 	if i.hash == nil {
 		return nil, nil
 	}
-	return i.hash(data, hashAlgorithm)
-}
-
-func (i *testRuntimeInterface) HighLevelStorageEnabled() bool {
-	return i.setCadenceValue != nil
+	return i.hash(data, tag, hashAlgorithm)
 }
 
 func (i *testRuntimeInterface) SetCadenceValue(owner common.Address, key string, value cadence.Value) (err error) {
 	return i.setCadenceValue(owner, key, value)
+}
+
+func (i *testRuntimeInterface) GetAccountBalance(address Address) (uint64, error) {
+	return i.getAccountBalance(address)
+}
+
+func (i *testRuntimeInterface) GetAccountAvailableBalance(address Address) (uint64, error) {
+	return i.getAccountAvailableBalance(address)
 }
 
 func (i *testRuntimeInterface) GetStorageUsed(address Address) (uint64, error) {
@@ -374,6 +381,14 @@ func (i *testRuntimeInterface) ImplementationDebugLog(message string) error {
 		return nil
 	}
 	return i.implementationDebugLog(message)
+}
+
+func (i *testRuntimeInterface) ValidatePublicKey(key *PublicKey) (bool, error) {
+	if i.validatePublicKey == nil {
+		return false, nil
+	}
+
+	return i.validatePublicKey(key)
 }
 
 func TestRuntimeImport(t *testing.T) {
@@ -832,7 +847,7 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
 			check: func(t *testing.T, err error) {
 				assert.Error(t, err)
 				assert.IsType(t, &InvalidEntryPointArgumentError{}, errors.Unwrap(err))
-				assert.IsType(t, &InvalidTypeAssignmentError{}, errors.Unwrap(errors.Unwrap(err)))
+				assert.IsType(t, &InvalidValueTypeError{}, errors.Unwrap(errors.Unwrap(err)))
 			},
 		},
 		{
@@ -926,7 +941,7 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
 			check: func(t *testing.T, err error) {
 				assert.Error(t, err)
 				assert.IsType(t, &InvalidEntryPointArgumentError{}, errors.Unwrap(err))
-				assert.IsType(t, &InvalidTypeAssignmentError{}, errors.Unwrap(errors.Unwrap(err)))
+				assert.IsType(t, &InvalidValueTypeError{}, errors.Unwrap(errors.Unwrap(err)))
 			},
 		},
 		{
@@ -1128,7 +1143,7 @@ func TestRuntimeScriptArguments(t *testing.T) {
 			check: func(t *testing.T, err error) {
 				assert.Error(t, err)
 				assert.IsType(t, &InvalidEntryPointArgumentError{}, errors.Unwrap(err))
-				assert.IsType(t, &InvalidTypeAssignmentError{}, errors.Unwrap(errors.Unwrap(err)))
+				assert.IsType(t, &InvalidValueTypeError{}, errors.Unwrap(errors.Unwrap(err)))
 			},
 		},
 		{
@@ -1213,7 +1228,7 @@ func TestRuntimeScriptArguments(t *testing.T) {
 			check: func(t *testing.T, err error) {
 				assert.Error(t, err)
 				assert.IsType(t, &InvalidEntryPointArgumentError{}, errors.Unwrap(err))
-				assert.IsType(t, &InvalidTypeAssignmentError{}, errors.Unwrap(errors.Unwrap(err)))
+				assert.IsType(t, &InvalidValueTypeError{}, errors.Unwrap(errors.Unwrap(err)))
 			},
 		},
 		{
@@ -4216,11 +4231,19 @@ func TestInterpretResourceOwnerFieldUseComposite(t *testing.T) {
           prepare(signer: AuthAccount) {
               let ref1 = signer.borrow<&Test.R>(from: /storage/r)!
               log(ref1.owner?.address)
+              log(ref1.owner?.balance)
+              log(ref1.owner?.availableBalance)
+              log(ref1.owner?.storageUsed)
+              log(ref1.owner?.storageCapacity)
               ref1.logOwnerAddress()
 
               let publicAccount = getAccount(0x01)
               let ref2 = publicAccount.getCapability(/public/r).borrow<&Test.R>()!
               log(ref2.owner?.address)
+              log(ref2.owner?.balance)
+              log(ref2.owner?.availableBalance)
+              log(ref2.owner?.storageUsed)
+              log(ref2.owner?.storageCapacity)
               ref2.logOwnerAddress()
           }
       }
@@ -4230,11 +4253,13 @@ func TestInterpretResourceOwnerFieldUseComposite(t *testing.T) {
 	var events []cadence.Event
 	var loggedMessages []string
 
+	storage := newTestStorage(nil, nil)
+
 	runtimeInterface := &testRuntimeInterface{
 		getCode: func(location Location) (bytes []byte, err error) {
 			return accountCodes[location.ID()], nil
 		},
-		storage: newTestStorage(nil, nil),
+		storage: storage,
 		getSigningAccounts: func() ([]Address, error) {
 			return []Address{address}, nil
 		},
@@ -4260,6 +4285,22 @@ func TestInterpretResourceOwnerFieldUseComposite(t *testing.T) {
 		},
 		log: func(message string) {
 			loggedMessages = append(loggedMessages, message)
+		},
+		getAccountBalance: func(_ Address) (uint64, error) {
+			// return a dummy value
+			return 12300000000, nil
+		},
+		getAccountAvailableBalance: func(_ Address) (uint64, error) {
+			// return a dummy value
+			return 152300000000, nil
+		},
+		getStorageUsed: func(_ Address) (uint64, error) {
+			// return a dummy value
+			return 120, nil
+		},
+		getStorageCapacity: func(_ Address) (uint64, error) {
+			// return a dummy value
+			return 1245, nil
 		},
 	}
 
@@ -4310,8 +4351,21 @@ func TestInterpretResourceOwnerFieldUseComposite(t *testing.T) {
 
 	assert.Equal(t,
 		[]string{
-			"0x1", "0x1",
-			"0x1", "0x1",
+			"0x1",           // ref1.owner?.address
+			"123.00000000",  // ref2.owner?.balance
+			"1523.00000000", // ref2.owner?.availableBalance
+			"120",           // ref1.owner?.storageUsed
+			"1245",          // ref1.owner?.storageCapacity
+
+			"0x1",
+
+			"0x1",           // ref2.owner?.address
+			"123.00000000",  // ref2.owner?.balance
+			"1523.00000000", // ref2.owner?.availableBalance
+			"120",           // ref2.owner?.storageUsed
+			"1245",          // ref2.owner?.storageCapacity
+
+			"0x1",
 		},
 		loggedMessages,
 	)

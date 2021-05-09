@@ -20,6 +20,7 @@ package interpreter
 
 import (
 	"fmt"
+	"math"
 	goRuntime "runtime"
 
 	"github.com/onflow/cadence/runtime/ast"
@@ -123,14 +124,6 @@ type StorageWriteHandlerFunc func(
 	value OptionalValue,
 )
 
-// StorageKeyHandlerFunc is a function that handles storage indexing types.
-//
-type StorageKeyHandlerFunc func(
-	inter *Interpreter,
-	storageAddress common.Address,
-	indexingType sema.Type,
-) string
-
 // InjectedCompositeFieldsHandlerFunc is a function that handles storage reads.
 //
 type InjectedCompositeFieldsHandlerFunc func(
@@ -156,8 +149,27 @@ type ImportLocationHandlerFunc func(
 	location common.Location,
 ) Import
 
+// AccountHandlerFunc is a function that handles retrieving a public account at a given address.
+// The account returned must be of type `PublicAccount`.
+//
+type AccountHandlerFunc func(
+	address AddressValue,
+) *CompositeValue
+
 // UUIDHandlerFunc is a function that handles the generation of UUIDs.
 type UUIDHandlerFunc func() (uint64, error)
+
+// PublicKeyValidationHandlerFunc is a function that validates a given public key.
+type PublicKeyValidationHandlerFunc func(publicKey *CompositeValue) BoolValue
+
+// SignatureValidationHandlerFunc is a function that validates a signature.
+type SignatureValidationHandlerFunc func(
+	signature *ArrayValue,
+	signedData *ArrayValue,
+	domainSeparationTag *StringValue,
+	hashAlgorithm *CompositeValue,
+	key *CompositeValue,
+) BoolValue
 
 // CompositeTypeCode contains the the "prepared" / "callable" "code"
 // for the functions and the destructor of a composite
@@ -229,11 +241,13 @@ type Interpreter struct {
 	storageExistenceHandler        StorageExistenceHandlerFunc
 	storageReadHandler             StorageReadHandlerFunc
 	storageWriteHandler            StorageWriteHandlerFunc
-	storageKeyHandler              StorageKeyHandlerFunc
 	injectedCompositeFieldsHandler InjectedCompositeFieldsHandlerFunc
 	contractValueHandler           ContractValueHandlerFunc
 	importLocationHandler          ImportLocationHandlerFunc
+	accountHandler                 AccountHandlerFunc
 	uuidHandler                    UUIDHandlerFunc
+	PublicKeyValidationHandler     PublicKeyValidationHandlerFunc
+	SignatureValidationHandler     SignatureValidationHandlerFunc
 	interpreted                    bool
 	statement                      ast.Statement
 }
@@ -331,16 +345,6 @@ func WithStorageWriteHandler(handler StorageWriteHandlerFunc) Option {
 	}
 }
 
-// WithStorageKeyHandler returns an interpreter option which sets the given function
-// as the function that is used when a stored value is written.
-//
-func WithStorageKeyHandler(handler StorageKeyHandlerFunc) Option {
-	return func(interpreter *Interpreter) error {
-		interpreter.SetStorageKeyHandler(handler)
-		return nil
-	}
-}
-
 // WithInjectedCompositeFieldsHandler returns an interpreter option which sets the given function
 // as the function that is used to initialize new composite values' fields
 //
@@ -371,12 +375,42 @@ func WithImportLocationHandler(handler ImportLocationHandlerFunc) Option {
 	}
 }
 
+// WithAccountHandlerFunc returns an interpreter option which sets the given function
+// as the function that is used to handle public accounts.
+//
+func WithAccountHandlerFunc(handler AccountHandlerFunc) Option {
+	return func(interpreter *Interpreter) error {
+		interpreter.SetAccountHandler(handler)
+		return nil
+	}
+}
+
 // WithUUIDHandler returns an interpreter option which sets the given function
 // as the function that is used to generate UUIDs.
 //
 func WithUUIDHandler(handler UUIDHandlerFunc) Option {
 	return func(interpreter *Interpreter) error {
 		interpreter.SetUUIDHandler(handler)
+		return nil
+	}
+}
+
+// WithPublicKeyValidationHandler returns an interpreter option which sets the given
+// function as the function that is used to handle public key validation.
+//
+func WithPublicKeyValidationHandler(handler PublicKeyValidationHandlerFunc) Option {
+	return func(interpreter *Interpreter) error {
+		interpreter.SetPublicKeyValidationHandler(handler)
+		return nil
+	}
+}
+
+// WithSignatureValidationHandler returns an interpreter option which sets the given
+// function as the function that is used to handle signature validation.
+//
+func WithSignatureValidationHandler(handler SignatureValidationHandlerFunc) Option {
+	return func(interpreter *Interpreter) error {
+		interpreter.SetSignatureValidationHandler(handler)
 		return nil
 	}
 }
@@ -473,12 +507,6 @@ func (interpreter *Interpreter) SetStorageWriteHandler(function StorageWriteHand
 	interpreter.storageWriteHandler = function
 }
 
-// SetStorageKeyHandler sets the function that is used when a storage is indexed.
-//
-func (interpreter *Interpreter) SetStorageKeyHandler(function StorageKeyHandlerFunc) {
-	interpreter.storageKeyHandler = function
-}
-
 // SetInjectedCompositeFieldsHandler sets the function that is used to initialize
 // new composite values' fields
 //
@@ -498,10 +526,28 @@ func (interpreter *Interpreter) SetImportLocationHandler(function ImportLocation
 	interpreter.importLocationHandler = function
 }
 
+// SetAccountHandler sets the function that is used to handle accounts.
+//
+func (interpreter *Interpreter) SetAccountHandler(function AccountHandlerFunc) {
+	interpreter.accountHandler = function
+}
+
 // SetUUIDHandler sets the function that is used to handle the generation of UUIDs.
 //
 func (interpreter *Interpreter) SetUUIDHandler(function UUIDHandlerFunc) {
 	interpreter.uuidHandler = function
+}
+
+// SetPublicKeyValidationHandler sets the function that is used to handle public key validation.
+//
+func (interpreter *Interpreter) SetPublicKeyValidationHandler(function PublicKeyValidationHandlerFunc) {
+	interpreter.PublicKeyValidationHandler = function
+}
+
+// SetSignatureValidationHandler sets the function that is used to handle signature validation.
+//
+func (interpreter *Interpreter) SetSignatureValidationHandler(function SignatureValidationHandlerFunc) {
+	interpreter.SignatureValidationHandler = function
 }
 
 // SetAllInterpreters sets the given map of interpreters as the map of all interpreters.
@@ -557,7 +603,9 @@ func (interpreter *Interpreter) Interpret() (err error) {
 		err = internalErr
 	})
 
-	interpreter.Program.Program.Accept(interpreter)
+	if interpreter.Program != nil {
+		interpreter.Program.Program.Accept(interpreter)
+	}
 
 	interpreter.interpreted = true
 
@@ -725,6 +773,7 @@ func (interpreter *Interpreter) prepareInvoke(
 		GetLocationRange: ReturnEmptyLocationRange,
 		Interpreter:      interpreter,
 	}
+
 	return functionValue.Invoke(invocation), nil
 }
 
@@ -769,10 +818,12 @@ func (interpreter *Interpreter) recoverErrors(onError func(error)) {
 			// wrap the error with position information if needed
 
 			_, ok := err.(ast.HasPosition)
-			if !ok {
+			if !ok && interpreter.statement != nil {
+				r := ast.NewRangeFromPositioned(interpreter.statement)
+
 				err = PositionedError{
 					Err:   err,
-					Range: ast.NewRangeFromPositioned(interpreter.statement),
+					Range: r,
 				}
 			}
 
@@ -982,13 +1033,15 @@ func (interpreter *Interpreter) declareVariable(identifier string, value Value) 
 
 func (interpreter *Interpreter) visitAssignment(
 	transferOperation ast.TransferOperation,
-	target ast.Expression, targetType sema.Type,
-	value ast.Expression, valueType sema.Type,
+	targetExpression ast.Expression, targetType sema.Type,
+	valueExpression ast.Expression, valueType sema.Type,
 	position ast.HasPosition,
 ) {
 
 	// First evaluate the target, which results in a getter/setter function pair
-	getterSetter := interpreter.assignmentGetterSetter(target)
+	getterSetter := interpreter.assignmentGetterSetter(targetExpression)
+
+	getLocationRange := locationRangeGetter(interpreter.Location, position)
 
 	// If the assignment is a forced move,
 	// ensure that the target is nil,
@@ -1011,7 +1064,10 @@ func (interpreter *Interpreter) visitAssignment(
 
 	// Finally, evaluate the value, and assign it using the setter function
 
-	valueCopy := interpreter.copyAndConvert(interpreter.evalExpression(value), valueType, targetType)
+	value := interpreter.evalExpression(valueExpression)
+
+	valueCopy := interpreter.copyAndConvert(value, valueType, targetType, getLocationRange)
+
 	getterSetter.set(valueCopy)
 }
 
@@ -1315,7 +1371,7 @@ func (interpreter *Interpreter) declareEnumConstructor(
 
 	location := interpreter.Location
 
-	intType := &sema.IntType{}
+	intType := sema.IntType
 
 	enumCases := declaration.Members.EnumCases()
 	caseValues := make([]*CompositeValue, len(enumCases))
@@ -1405,7 +1461,7 @@ func (interpreter *Interpreter) compositeInitializerFunction(
 	}
 
 	initializer = initializers[0]
-	functionType := interpreter.Program.Elaboration.SpecialFunctionTypes[initializer].FunctionType
+	functionType := interpreter.Program.Elaboration.ConstructorFunctionTypes[initializer].FunctionType
 
 	parameterList := initializer.FunctionDeclaration.ParameterList
 
@@ -1577,8 +1633,60 @@ func (interpreter *Interpreter) VisitEnumCaseDeclaration(_ *ast.EnumCaseDeclarat
 	panic(errors.NewUnreachableError())
 }
 
-func (interpreter *Interpreter) copyAndConvert(value Value, valueType, targetType sema.Type) Value {
-	return interpreter.convertAndBox(value.Copy(), valueType, targetType)
+func (interpreter *Interpreter) checkValueTransferTargetType(value Value, targetType sema.Type) bool {
+
+	if targetType == nil {
+		return true
+	}
+
+	dynamicTypeResults := DynamicTypeResults{}
+
+	valueDynamicType := value.DynamicType(interpreter, dynamicTypeResults)
+	if IsSubType(valueDynamicType, targetType) {
+		return true
+	}
+
+	// Handle function types:
+	//
+	// Static function types have parameter and return type information.
+	// Dynamic function types do not (yet) have parameter and return types information.
+	// Therefore, IsSubType currently returns false even in cases where
+	// the function value is valid.
+	//
+	// For now, make this check more lenient and accept any function type (or Any/AnyStruct)
+
+	unwrappedValueDynamicType := UnwrapOptionalDynamicType(valueDynamicType)
+	if _, ok := unwrappedValueDynamicType.(FunctionDynamicType); ok {
+		unwrappedTargetType := sema.UnwrapOptionalType(targetType)
+		if _, ok := unwrappedTargetType.(*sema.FunctionType); ok {
+			return true
+		}
+
+		switch unwrappedTargetType {
+		case sema.AnyStructType, sema.AnyType:
+			return true
+		}
+	}
+
+	return false
+}
+
+func (interpreter *Interpreter) copyAndConvert(
+	value Value,
+	valueType, targetType sema.Type,
+	getLocationRange func() LocationRange,
+) Value {
+
+	result := interpreter.convertAndBox(value.Copy(), valueType, targetType)
+
+	if !interpreter.checkValueTransferTargetType(result, targetType) {
+		panic(ValueTransferTypeError{
+			TargetType:    targetType,
+			LocationRange: getLocationRange(),
+		})
+	}
+
+	return result
 }
 
 // convertAndBox converts a value to a target type, and boxes in optionals and any value, if necessary
@@ -1598,115 +1706,117 @@ func (interpreter *Interpreter) convert(value Value, valueType, targetType sema.
 
 	unwrappedTargetType := sema.UnwrapOptionalType(targetType)
 
-	switch unwrappedTargetType.(type) {
-	case *sema.IntType:
+	switch unwrappedTargetType {
+	case sema.IntType:
 		if !valueType.Equal(unwrappedTargetType) {
 			return ConvertInt(value)
 		}
 
-	case *sema.UIntType:
+	case sema.UIntType:
 		if !valueType.Equal(unwrappedTargetType) {
 			return ConvertUInt(value)
 		}
 
-	case *sema.AddressType:
-		if !valueType.Equal(unwrappedTargetType) {
-			return ConvertAddress(value)
-		}
-
 	// Int*
-	case *sema.Int8Type:
+	case sema.Int8Type:
 		if !valueType.Equal(unwrappedTargetType) {
 			return ConvertInt8(value)
 		}
 
-	case *sema.Int16Type:
+	case sema.Int16Type:
 		if !valueType.Equal(unwrappedTargetType) {
 			return ConvertInt16(value)
 		}
 
-	case *sema.Int32Type:
+	case sema.Int32Type:
 		if !valueType.Equal(unwrappedTargetType) {
 			return ConvertInt32(value)
 		}
 
-	case *sema.Int64Type:
+	case sema.Int64Type:
 		if !valueType.Equal(unwrappedTargetType) {
 			return ConvertInt64(value)
 		}
 
-	case *sema.Int128Type:
+	case sema.Int128Type:
 		if !valueType.Equal(unwrappedTargetType) {
 			return ConvertInt128(value)
 		}
 
-	case *sema.Int256Type:
+	case sema.Int256Type:
 		if !valueType.Equal(unwrappedTargetType) {
 			return ConvertInt256(value)
 		}
 
 	// UInt*
-	case *sema.UInt8Type:
+	case sema.UInt8Type:
 		if !valueType.Equal(unwrappedTargetType) {
 			return ConvertUInt8(value)
 		}
 
-	case *sema.UInt16Type:
+	case sema.UInt16Type:
 		if !valueType.Equal(unwrappedTargetType) {
 			return ConvertUInt16(value)
 		}
 
-	case *sema.UInt32Type:
+	case sema.UInt32Type:
 		if !valueType.Equal(unwrappedTargetType) {
 			return ConvertUInt32(value)
 		}
 
-	case *sema.UInt64Type:
+	case sema.UInt64Type:
 		if !valueType.Equal(unwrappedTargetType) {
 			return ConvertUInt64(value)
 		}
 
-	case *sema.UInt128Type:
+	case sema.UInt128Type:
 		if !valueType.Equal(unwrappedTargetType) {
 			return ConvertUInt128(value)
 		}
 
-	case *sema.UInt256Type:
+	case sema.UInt256Type:
 		if !valueType.Equal(unwrappedTargetType) {
 			return ConvertUInt256(value)
 		}
 
 	// Word*
-	case *sema.Word8Type:
+	case sema.Word8Type:
 		if !valueType.Equal(unwrappedTargetType) {
 			return ConvertWord8(value)
 		}
 
-	case *sema.Word16Type:
+	case sema.Word16Type:
 		if !valueType.Equal(unwrappedTargetType) {
 			return ConvertWord16(value)
 		}
 
-	case *sema.Word32Type:
+	case sema.Word32Type:
 		if !valueType.Equal(unwrappedTargetType) {
 			return ConvertWord32(value)
 		}
 
-	case *sema.Word64Type:
+	case sema.Word64Type:
 		if !valueType.Equal(unwrappedTargetType) {
 			return ConvertWord64(value)
 		}
 
 	// Fix*
 
-	case *sema.Fix64Type:
+	case sema.Fix64Type:
 		if !valueType.Equal(unwrappedTargetType) {
 			return ConvertFix64(value)
 		}
 
-	case *sema.UFix64Type:
+	case sema.UFix64Type:
 		if !valueType.Equal(unwrappedTargetType) {
 			return ConvertUFix64(value)
+		}
+	}
+
+	switch unwrappedTargetType.(type) {
+	case *sema.AddressType:
+		if !valueType.Equal(unwrappedTargetType) {
+			return ConvertAddress(value)
 		}
 	}
 
@@ -2025,13 +2135,15 @@ func (interpreter *Interpreter) NewSubInterpreter(
 		WithStorageExistenceHandler(interpreter.storageExistenceHandler),
 		WithStorageReadHandler(interpreter.storageReadHandler),
 		WithStorageWriteHandler(interpreter.storageWriteHandler),
-		WithStorageKeyHandler(interpreter.storageKeyHandler),
 		WithInjectedCompositeFieldsHandler(interpreter.injectedCompositeFieldsHandler),
 		WithContractValueHandler(interpreter.contractValueHandler),
 		WithImportLocationHandler(interpreter.importLocationHandler),
 		WithUUIDHandler(interpreter.uuidHandler),
 		WithAllInterpreters(interpreter.allInterpreters),
 		withTypeCodes(interpreter.typeCodes),
+		WithAccountHandlerFunc(interpreter.accountHandler),
+		WithPublicKeyValidationHandler(interpreter.PublicKeyValidationHandler),
+		WithSignatureValidationHandler(interpreter.SignatureValidationHandler),
 	}
 
 	return NewInterpreter(
@@ -2048,7 +2160,7 @@ func (interpreter *Interpreter) storedValueExists(storageAddress common.Address,
 	return interpreter.storageExistenceHandler(interpreter, storageAddress, key)
 }
 
-func (interpreter *Interpreter) readStored(storageAddress common.Address, key string, deferred bool) OptionalValue {
+func (interpreter *Interpreter) ReadStored(storageAddress common.Address, key string, deferred bool) OptionalValue {
 	return interpreter.storageReadHandler(interpreter, storageAddress, key, deferred)
 }
 
@@ -2059,118 +2171,178 @@ func (interpreter *Interpreter) writeStored(storageAddress common.Address, key s
 }
 
 type valueConverterDeclaration struct {
-	name  string
-	value FunctionValue
+	name    string
+	convert func(Value) Value
+	min     Value
+	max     Value
 }
 
 // It would be nice if return types in Go's function types would be covariant
 //
 var converterDeclarations = []valueConverterDeclaration{
-	{"Int", NewHostFunctionValue(
-		func(invocation Invocation) Value {
-			return ConvertInt(invocation.Arguments[0])
+	{
+		name: sema.IntTypeName,
+		convert: func(value Value) Value {
+			return ConvertInt(value)
 		},
-	)},
-	{"UInt", NewHostFunctionValue(
-		func(invocation Invocation) Value {
-			return ConvertUInt(invocation.Arguments[0])
+	},
+	{
+		name: sema.UIntTypeName,
+		convert: func(value Value) Value {
+			return ConvertUInt(value)
 		},
-	)},
-	{"Int8", NewHostFunctionValue(
-		func(invocation Invocation) Value {
-			return ConvertInt8(invocation.Arguments[0])
+		min: NewUIntValueFromBigInt(sema.UIntTypeMin),
+	},
+	{
+		name: sema.Int8TypeName,
+		convert: func(value Value) Value {
+			return ConvertInt8(value)
 		},
-	)},
-	{"Int16", NewHostFunctionValue(
-		func(invocation Invocation) Value {
-			return ConvertInt16(invocation.Arguments[0])
+		min: Int8Value(math.MinInt8),
+		max: Int8Value(math.MaxInt8),
+	},
+	{
+		name: sema.Int16TypeName,
+		convert: func(value Value) Value {
+			return ConvertInt16(value)
 		},
-	)},
-	{"Int32", NewHostFunctionValue(
-		func(invocation Invocation) Value {
-			return ConvertInt32(invocation.Arguments[0])
+		min: Int16Value(math.MinInt16),
+		max: Int16Value(math.MaxInt16),
+	},
+	{
+		name: sema.Int32TypeName,
+		convert: func(value Value) Value {
+			return ConvertInt32(value)
 		},
-	)},
-	{"Int64", NewHostFunctionValue(
-		func(invocation Invocation) Value {
-			return ConvertInt64(invocation.Arguments[0])
+		min: Int32Value(math.MinInt32),
+		max: Int32Value(math.MaxInt32),
+	},
+	{
+		name: sema.Int64TypeName,
+		convert: func(value Value) Value {
+			return ConvertInt64(value)
 		},
-	)},
-	{"Int128", NewHostFunctionValue(
-		func(invocation Invocation) Value {
-			return ConvertInt128(invocation.Arguments[0])
+		min: Int64Value(math.MinInt64),
+		max: Int64Value(math.MaxInt64),
+	},
+	{
+		name: sema.Int128TypeName,
+		convert: func(value Value) Value {
+			return ConvertInt128(value)
 		},
-	)},
-	{"Int256", NewHostFunctionValue(
-		func(invocation Invocation) Value {
-			return ConvertInt256(invocation.Arguments[0])
+		min: NewInt128ValueFromBigInt(sema.Int128TypeMinIntBig),
+		max: NewInt128ValueFromBigInt(sema.Int128TypeMaxIntBig),
+	},
+	{
+		name: sema.Int256TypeName,
+		convert: func(value Value) Value {
+			return ConvertInt256(value)
 		},
-	)},
-	{"UInt8", NewHostFunctionValue(
-		func(invocation Invocation) Value {
-			return ConvertUInt8(invocation.Arguments[0])
+		min: NewInt256ValueFromBigInt(sema.Int256TypeMinIntBig),
+		max: NewInt256ValueFromBigInt(sema.Int256TypeMaxIntBig),
+	},
+	{
+		name: sema.UInt8TypeName,
+		convert: func(value Value) Value {
+			return ConvertUInt8(value)
 		},
-	)},
-	{"UInt16", NewHostFunctionValue(
-		func(invocation Invocation) Value {
-			return ConvertUInt16(invocation.Arguments[0])
+		min: UInt8Value(0),
+		max: UInt8Value(math.MaxUint8),
+	},
+	{
+		name: sema.UInt16TypeName,
+		convert: func(value Value) Value {
+			return ConvertUInt16(value)
 		},
-	)},
-	{"UInt32", NewHostFunctionValue(
-		func(invocation Invocation) Value {
-			return ConvertUInt32(invocation.Arguments[0])
+		min: UInt16Value(0),
+		max: UInt16Value(math.MaxUint16),
+	},
+	{
+		name: sema.UInt32TypeName,
+		convert: func(value Value) Value {
+			return ConvertUInt32(value)
 		},
-	)},
-	{"UInt64", NewHostFunctionValue(
-		func(invocation Invocation) Value {
-			return ConvertUInt64(invocation.Arguments[0])
+		min: UInt32Value(0),
+		max: UInt32Value(math.MaxUint32),
+	},
+	{
+		name: sema.UInt64TypeName,
+		convert: func(value Value) Value {
+			return ConvertUInt64(value)
 		},
-	)},
-	{"UInt128", NewHostFunctionValue(
-		func(invocation Invocation) Value {
-			return ConvertUInt128(invocation.Arguments[0])
+		min: UInt64Value(0),
+		max: UInt64Value(math.MaxUint64),
+	},
+	{
+		name: sema.UInt128TypeName,
+		convert: func(value Value) Value {
+			return ConvertUInt128(value)
 		},
-	)},
-	{"UInt256", NewHostFunctionValue(
-		func(invocation Invocation) Value {
-			return ConvertUInt256(invocation.Arguments[0])
+		min: NewUInt128ValueFromUint64(0),
+		max: NewUInt128ValueFromBigInt(sema.UInt128TypeMaxIntBig),
+	},
+	{
+		name: sema.UInt256TypeName,
+		convert: func(value Value) Value {
+			return ConvertUInt256(value)
 		},
-	)},
-	{"Word8", NewHostFunctionValue(
-		func(invocation Invocation) Value {
-			return ConvertWord8(invocation.Arguments[0])
+		min: NewUInt256ValueFromUint64(0),
+		max: NewUInt256ValueFromBigInt(sema.UInt256TypeMaxIntBig),
+	},
+	{
+		name: sema.Word8TypeName,
+		convert: func(value Value) Value {
+			return ConvertWord8(value)
 		},
-	)},
-	{"Word16", NewHostFunctionValue(
-		func(invocation Invocation) Value {
-			return ConvertWord16(invocation.Arguments[0])
+		min: Word8Value(0),
+		max: Word8Value(math.MaxUint8),
+	},
+	{
+		name: sema.Word16TypeName,
+		convert: func(value Value) Value {
+			return ConvertWord16(value)
 		},
-	)},
-	{"Word32", NewHostFunctionValue(
-		func(invocation Invocation) Value {
-			return ConvertWord32(invocation.Arguments[0])
+		min: Word16Value(0),
+		max: Word16Value(math.MaxUint16),
+	},
+	{
+		name: sema.Word32TypeName,
+		convert: func(value Value) Value {
+			return ConvertWord32(value)
 		},
-	)},
-	{"Word64", NewHostFunctionValue(
-		func(invocation Invocation) Value {
-			return ConvertWord64(invocation.Arguments[0])
+		min: Word32Value(0),
+		max: Word32Value(math.MaxUint32),
+	},
+	{
+		name: sema.Word64TypeName,
+		convert: func(value Value) Value {
+			return ConvertWord64(value)
 		},
-	)},
-	{"Fix64", NewHostFunctionValue(
-		func(invocation Invocation) Value {
-			return ConvertFix64(invocation.Arguments[0])
+		min: Word64Value(0),
+		max: Word64Value(math.MaxUint64),
+	},
+	{
+		name: sema.Fix64TypeName,
+		convert: func(value Value) Value {
+			return ConvertFix64(value)
 		},
-	)},
-	{"UFix64", NewHostFunctionValue(
-		func(invocation Invocation) Value {
-			return ConvertUFix64(invocation.Arguments[0])
+		min: Fix64Value(math.MinInt64),
+		max: Fix64Value(math.MaxInt64),
+	},
+	{
+		name: sema.UFix64TypeName,
+		convert: func(value Value) Value {
+			return ConvertUFix64(value)
 		},
-	)},
-	{"Address", NewHostFunctionValue(
-		func(invocation Invocation) Value {
-			return ConvertAddress(invocation.Arguments[0])
+		min: UFix64Value(0),
+		max: UFix64Value(math.MaxUint64),
+	},
+	{
+		name: "Address",
+		convert: func(value Value) Value {
+			return ConvertAddress(value)
 		},
-	)},
+	},
 }
 
 func init() {
@@ -2186,10 +2358,10 @@ func init() {
 		// Only leaf number types require a converter,
 		// "hierarchy" number types don't need one
 
-		switch numberType.(type) {
-		case *sema.NumberType, *sema.SignedNumberType,
-			*sema.IntegerType, *sema.SignedIntegerType,
-			*sema.FixedPointType, *sema.SignedFixedPointType:
+		switch numberType {
+		case sema.NumberType, sema.SignedNumberType,
+			sema.IntegerType, sema.SignedIntegerType,
+			sema.FixedPointType, sema.SignedFixedPointType:
 			continue
 		}
 
@@ -2206,10 +2378,30 @@ func (interpreter *Interpreter) defineBaseFunctions() {
 
 func (interpreter *Interpreter) defineConverterFunctions() {
 	for _, declaration := range converterDeclarations {
-		err := interpreter.ImportValue(
-			declaration.name,
-			declaration.value,
+		// NOTE: declare in loop, as captured in closure below
+		convert := declaration.convert
+		converterFunctionValue := NewHostFunctionValue(
+			func(invocation Invocation) Value {
+				return convert(invocation.Arguments[0])
+			},
 		)
+
+		addMember := func(name string, value Value) {
+			if converterFunctionValue.NestedVariables == nil {
+				converterFunctionValue.NestedVariables = NewStringVariableOrderedMap()
+			}
+			converterFunctionValue.NestedVariables.Set(name, NewVariableWithValue(value))
+		}
+
+		if declaration.min != nil {
+			addMember(sema.NumberTypeMinFieldName, declaration.min)
+		}
+
+		if declaration.max != nil {
+			addMember(sema.NumberTypeMaxFieldName, declaration.max)
+		}
+
+		err := interpreter.ImportValue(declaration.name, converterFunctionValue)
 		if err != nil {
 			panic(errors.NewUnreachableError())
 		}
@@ -2262,7 +2454,7 @@ func IsSubType(subType DynamicType, superType sema.Type) bool {
 
 	case StringDynamicType:
 		switch superType {
-		case sema.AnyStructType, sema.StringType:
+		case sema.AnyStructType, sema.StringType, sema.CharacterType:
 			return true
 		}
 
@@ -2281,6 +2473,9 @@ func IsSubType(subType DynamicType, superType sema.Type) bool {
 
 	case NumberDynamicType:
 		return sema.IsSubType(typedSubType.StaticType, superType)
+
+	case FunctionDynamicType:
+		return superType == sema.AnyStructType
 
 	case CompositeDynamicType:
 		return sema.IsSubType(typedSubType.StaticType, superType)
@@ -2412,27 +2607,9 @@ func IsSubType(subType DynamicType, superType sema.Type) bool {
 			return true
 		}
 
-	case PublicAccountDynamicType:
-		switch superType {
-		case sema.AnyStructType, sema.PublicAccountType:
-			return true
-		}
-
-	case AuthAccountDynamicType:
-		switch superType {
-		case sema.AnyStructType, sema.AuthAccountType:
-			return true
-		}
-
 	case DeployedContractDynamicType:
 		switch superType {
 		case sema.AnyStructType, sema.DeployedContractType:
-			return true
-		}
-
-	case AuthAccountContractsDynamicType:
-		switch superType {
-		case sema.AnyStructType, sema.AuthAccountContractsType:
 			return true
 		}
 
@@ -2446,12 +2623,12 @@ func IsSubType(subType DynamicType, superType sema.Type) bool {
 	return false
 }
 
-// storageKey returns the storage identifier with the proper prefix
+// StorageKey returns the storage identifier with the proper prefix
 // for the given path.
 //
 // \x1F = Information Separator One
 //
-func storageKey(path PathValue) string {
+func StorageKey(path PathValue) string {
 	return fmt.Sprintf("%s\x1F%s", path.Domain.Identifier(), path.Identifier)
 }
 
@@ -2462,7 +2639,7 @@ func (interpreter *Interpreter) authAccountSaveFunction(addressValue AddressValu
 		path := invocation.Arguments[1].(PathValue)
 
 		address := addressValue.ToAddress()
-		key := storageKey(path)
+		key := StorageKey(path)
 
 		// Prevent an overwrite
 
@@ -2503,9 +2680,9 @@ func (interpreter *Interpreter) authAccountReadFunction(addressValue AddressValu
 		address := addressValue.ToAddress()
 
 		path := invocation.Arguments[0].(PathValue)
-		key := storageKey(path)
+		key := StorageKey(path)
 
-		value := interpreter.readStored(address, key, false)
+		value := interpreter.ReadStored(address, key, false)
 
 		switch value := value.(type) {
 		case NilValue:
@@ -2523,7 +2700,9 @@ func (interpreter *Interpreter) authAccountReadFunction(addressValue AddressValu
 
 			ty := typeParameterPair.Value
 
-			dynamicType := value.Value.DynamicType(interpreter)
+			dynamicTypeResults := DynamicTypeResults{}
+
+			dynamicType := value.Value.DynamicType(interpreter, dynamicTypeResults)
 			if !IsSubType(dynamicType, ty) {
 				return NilValue{}
 			}
@@ -2549,44 +2728,33 @@ func (interpreter *Interpreter) authAccountBorrowFunction(addressValue AddressVa
 		address := addressValue.ToAddress()
 
 		path := invocation.Arguments[0].(PathValue)
-		key := storageKey(path)
+		key := StorageKey(path)
 
-		value := interpreter.readStored(address, key, false)
-
-		switch value := value.(type) {
-		case NilValue:
-			return value
-
-		case *SomeValue:
-
-			// If there is value stored for the given path,
-			// check that it satisfies the type given as the type argument.
-
-			typeParameterPair := invocation.TypeParameterTypes.Oldest()
-			if typeParameterPair == nil {
-				panic(errors.NewUnreachableError())
-			}
-
-			ty := typeParameterPair.Value
-
-			referenceType := ty.(*sema.ReferenceType)
-
-			dynamicType := value.Value.DynamicType(interpreter)
-			if !IsSubType(dynamicType, referenceType.Type) {
-				return NilValue{}
-			}
-
-			reference := &StorageReferenceValue{
-				Authorized:           referenceType.Authorized,
-				TargetStorageAddress: address,
-				TargetKey:            key,
-			}
-
-			return NewSomeValueOwningNonCopying(reference)
-
-		default:
+		typeParameterPair := invocation.TypeParameterTypes.Oldest()
+		if typeParameterPair == nil {
 			panic(errors.NewUnreachableError())
 		}
+
+		ty := typeParameterPair.Value
+
+		referenceType := ty.(*sema.ReferenceType)
+
+		reference := &StorageReferenceValue{
+			Authorized:           referenceType.Authorized,
+			TargetStorageAddress: address,
+			TargetKey:            key,
+			BorrowedType:         referenceType.Type,
+		}
+
+		// Attempt to dereference,
+		// which reads the stored value
+		// and performs a dynamic type check
+
+		if reference.ReferencedValue(interpreter) == nil {
+			return NilValue{}
+		}
+
+		return NewSomeValueOwningNonCopying(reference)
 	})
 }
 
@@ -2605,7 +2773,7 @@ func (interpreter *Interpreter) authAccountLinkFunction(addressValue AddressValu
 		newCapabilityPath := invocation.Arguments[0].(PathValue)
 		targetPath := invocation.Arguments[1].(PathValue)
 
-		newCapabilityKey := storageKey(newCapabilityPath)
+		newCapabilityKey := StorageKey(newCapabilityPath)
 
 		if interpreter.storedValueExists(address, newCapabilityKey) {
 			return NilValue{}
@@ -2631,7 +2799,7 @@ func (interpreter *Interpreter) authAccountLinkFunction(addressValue AddressValu
 		return NewSomeValueOwningNonCopying(
 			CapabilityValue{
 				Address:    addressValue,
-				Path:       targetPath,
+				Path:       newCapabilityPath,
 				BorrowType: borrowStaticType(borrowType),
 			},
 		)
@@ -2645,9 +2813,9 @@ func (interpreter *Interpreter) accountGetLinkTargetFunction(addressValue Addres
 
 		capabilityPath := invocation.Arguments[0].(PathValue)
 
-		capabilityKey := storageKey(capabilityPath)
+		capabilityKey := StorageKey(capabilityPath)
 
-		value := interpreter.readStored(address, capabilityKey, false)
+		value := interpreter.ReadStored(address, capabilityKey, false)
 
 		switch value := value.(type) {
 		case NilValue:
@@ -2674,7 +2842,7 @@ func (interpreter *Interpreter) authAccountUnlinkFunction(addressValue AddressVa
 		address := addressValue.ToAddress()
 
 		capabilityPath := invocation.Arguments[0].(PathValue)
-		capabilityKey := storageKey(capabilityPath)
+		capabilityKey := StorageKey(capabilityPath)
 
 		// Write new value
 
@@ -2709,24 +2877,36 @@ func (interpreter *Interpreter) capabilityBorrowFunction(
 				panic(errors.NewUnreachableError())
 			}
 
-			targetStorageKey, authorized :=
-				interpreter.getCapabilityFinalTargetStorageKey(
-					addressValue,
+			address := addressValue.ToAddress()
+
+			targetStorageKey, authorized, err :=
+				interpreter.GetCapabilityFinalTargetStorageKey(
+					address,
 					pathValue,
 					borrowType,
 					invocation.GetLocationRange,
 				)
+			if err != nil {
+				panic(err)
+			}
 
 			if targetStorageKey == "" {
 				return NilValue{}
 			}
 
-			address := addressValue.ToAddress()
-
 			reference := &StorageReferenceValue{
 				Authorized:           authorized,
 				TargetStorageAddress: address,
 				TargetKey:            targetStorageKey,
+				BorrowedType:         borrowType.Type,
+			}
+
+			// Attempt to dereference,
+			// which reads the stored value
+			// and performs a dynamic type check
+
+			if reference.ReferencedValue(interpreter) == nil {
+				return NilValue{}
 			}
 
 			return NewSomeValueOwningNonCopying(reference)
@@ -2756,33 +2936,54 @@ func (interpreter *Interpreter) capabilityCheckFunction(
 				panic(errors.NewUnreachableError())
 			}
 
-			targetStorageKey, _ :=
-				interpreter.getCapabilityFinalTargetStorageKey(
-					addressValue,
+			address := addressValue.ToAddress()
+
+			targetStorageKey, authorized, err :=
+				interpreter.GetCapabilityFinalTargetStorageKey(
+					address,
 					pathValue,
 					borrowType,
 					invocation.GetLocationRange,
 				)
+			if err != nil {
+				panic(err)
+			}
 
-			isValid := targetStorageKey != ""
+			if targetStorageKey == "" {
+				return BoolValue(false)
+			}
 
-			return BoolValue(isValid)
+			reference := &StorageReferenceValue{
+				Authorized:           authorized,
+				TargetStorageAddress: address,
+				TargetKey:            targetStorageKey,
+				BorrowedType:         borrowType.Type,
+			}
+
+			// Attempt to dereference,
+			// which reads the stored value
+			// and performs a dynamic type check
+
+			if reference.ReferencedValue(interpreter) == nil {
+				return BoolValue(false)
+			}
+
+			return BoolValue(true)
 		},
 	)
 }
 
-func (interpreter *Interpreter) getCapabilityFinalTargetStorageKey(
-	addressValue AddressValue,
+func (interpreter *Interpreter) GetCapabilityFinalTargetStorageKey(
+	address common.Address,
 	path PathValue,
 	wantedBorrowType *sema.ReferenceType,
 	getLocationRange func() LocationRange,
 ) (
 	finalStorageKey string,
 	authorized bool,
+	err error,
 ) {
-	address := addressValue.ToAddress()
-
-	key := storageKey(path)
+	key := StorageKey(path)
 
 	wantedReferenceType := wantedBorrowType
 
@@ -2793,20 +2994,20 @@ func (interpreter *Interpreter) getCapabilityFinalTargetStorageKey(
 		// Detect cyclic links
 
 		if _, ok := seenKeys[key]; ok {
-			panic(CyclicLinkError{
-				Address:       addressValue,
+			return "", false, CyclicLinkError{
+				Address:       address,
 				Paths:         paths,
 				LocationRange: getLocationRange(),
-			})
+			}
 		} else {
 			seenKeys[key] = struct{}{}
 		}
 
-		value := interpreter.readStored(address, key, false)
+		value := interpreter.ReadStored(address, key, false)
 
 		switch value := value.(type) {
 		case NilValue:
-			return "", false
+			return "", false, nil
 
 		case *SomeValue:
 
@@ -2815,15 +3016,15 @@ func (interpreter *Interpreter) getCapabilityFinalTargetStorageKey(
 				allowedType := interpreter.ConvertStaticToSemaType(link.Type)
 
 				if !sema.IsSubType(allowedType, wantedBorrowType) {
-					return "", false
+					return "", false, nil
 				}
 
 				targetPath := link.TargetPath
 				paths = append(paths, targetPath)
-				key = storageKey(targetPath)
+				key = StorageKey(targetPath)
 
 			} else {
-				return key, wantedReferenceType.Authorized
+				return key, wantedReferenceType.Authorized, nil
 			}
 
 		default:
@@ -2935,6 +3136,7 @@ func (interpreter *Interpreter) reportFunctionInvocation(pos ast.HasPosition) {
 }
 
 // getMember gets the member value by the given identifier from the given Value depending on its type.
+// May return nil if the member does not exist.
 func (interpreter *Interpreter) getMember(self Value, getLocationRange func() LocationRange, identifier string) Value {
 	var result Value
 	// When the accessed value has a type that supports the declaration of members
@@ -2953,6 +3155,10 @@ func (interpreter *Interpreter) getMember(self Value, getLocationRange func() Lo
 			return interpreter.getTypeFunction(self)
 		}
 	}
+
+	// NOTE: do not panic if the member is nil. This is a valid state.
+	// For example, when a composite field is initialized with a force-assignment, the field's value is read.
+
 	return result
 }
 
@@ -2971,7 +3177,8 @@ func (interpreter *Interpreter) isInstanceFunction(self Value) HostFunctionValue
 
 			semaType := interpreter.ConvertStaticToSemaType(staticType)
 			// NOTE: not invocation.Self, as that is only set for composite values
-			dynamicType := self.DynamicType(interpreter)
+			dynamicTypeResults := DynamicTypeResults{}
+			dynamicType := self.DynamicType(interpreter, dynamicTypeResults)
 			result := IsSubType(dynamicType, semaType)
 			return BoolValue(result)
 		},

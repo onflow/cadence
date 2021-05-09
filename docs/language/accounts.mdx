@@ -11,6 +11,10 @@ Every account can be accessed through two types:
   struct PublicAccount {
 
       let address: Address
+      // The FLOW balance of the default vault of this account
+      let balance: UFix64
+      // The FLOW balance of the default vault of this account that is available to be moved
+      let availableBalance: UFix64
       let storageUsed: UInt64
       let storageCapacity: UInt64
 
@@ -51,6 +55,10 @@ Every account can be accessed through two types:
   struct AuthAccount {
 
       let address: Address
+      // The FLOW balance of the default vault of this account
+      let balance: UFix64
+      // The FLOW balance of the default vault of this account that is available to be moved
+      let availableBalance: UFix64
       let storageUsed: UInt64
       let storageCapacity: UInt64
 
@@ -159,6 +167,16 @@ struct AccountKey {
 struct PublicKey {
     let publicKey: [UInt8]
     let signatureAlgorithm: SignatureAlgorithm
+    let isValid: Bool
+
+    /// Verifies a signature. Checks whether the signature was produced by signing
+    /// the given tag and data, using this public key and the given hash algorithm
+    pub fun verify(
+        signature: [UInt8],
+        signedData: [UInt8],
+        domainSeparationTag: String,
+        hashAlgorithm: HashAlgorithm
+    ): Bool
 }
 ```
 

@@ -41,12 +41,12 @@ func TestCheckConstantAndVariableDeclarations(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.IsType(t,
-		&sema.IntType{},
+		sema.IntType,
 		RequireGlobalValue(t, checker.Elaboration, "x"),
 	)
 
 	assert.IsType(t,
-		&sema.IntType{},
+		sema.IntType,
 		RequireGlobalValue(t, checker.Elaboration, "y"),
 	)
 }

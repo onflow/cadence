@@ -42,6 +42,8 @@ type Script struct {
 	Arguments [][]byte
 }
 
+type importResolutionResults map[common.LocationID]bool
+
 // Runtime is a runtime capable of executing Cadence.
 type Runtime interface {
 	// ExecuteScript executes the given script.
@@ -69,6 +71,14 @@ type Runtime interface {
 	// SetContractUpdateValidationEnabled configures if contract update validation is enabled.
 	//
 	SetContractUpdateValidationEnabled(enabled bool)
+
+	// ReadStored reads the value stored at the given path
+	//
+	ReadStored(address common.Address, path cadence.Path, context Context) (cadence.Value, error)
+
+	// ReadLinked dereferences the path and returns the value stored at the target
+	//
+	ReadLinked(address common.Address, path cadence.Path, context Context) (cadence.Value, error)
 }
 
 var typeDeclarations = append(
@@ -176,6 +186,7 @@ func (r *interpreterRuntime) ExecuteScript(script Script, context Context) (cade
 		stdlib.BuiltinValues,
 		checkerOptions,
 		true,
+		importResolutionResults{},
 	)
 	if err != nil {
 		return nil, newError(err, context)
@@ -318,9 +329,11 @@ func (r *interpreterRuntime) newAuthAccountValue(
 	runtimeStorage *runtimeStorage,
 	interpreterOptions []interpreter.Option,
 	checkerOptions []sema.Option,
-) interpreter.AuthAccountValue {
+) *interpreter.CompositeValue {
 	return interpreter.NewAuthAccountValue(
 		addressValue,
+		accountBalanceGetFunction(addressValue, context.Interface),
+		accountAvailableBalanceGetFunction(addressValue, context.Interface),
 		storageUsedGetFunction(addressValue, context.Interface, runtimeStorage),
 		storageCapacityGetFunction(addressValue, context.Interface),
 		r.newAddPublicKeyFunction(addressValue, context.Interface),
@@ -358,6 +371,7 @@ func (r *interpreterRuntime) ExecuteTransaction(script Script, context Context) 
 		stdlib.BuiltinValues,
 		checkerOptions,
 		true,
+		importResolutionResults{},
 	)
 	if err != nil {
 		return newError(err, context)
@@ -529,13 +543,27 @@ func validateArgumentParams(
 
 		arg := importValue(value)
 
+		dynamicTypeResults := interpreter.DynamicTypeResults{}
+
+		dynamicType := arg.DynamicType(inter, dynamicTypeResults)
+
 		// Check that decoded value is a subtype of static parameter type
-		if !interpreter.IsSubType(arg.DynamicType(inter), parameterType) {
+		if !interpreter.IsSubType(dynamicType, parameterType) {
 			return nil, &InvalidEntryPointArgumentError{
 				Index: i,
-				Err: &InvalidTypeAssignmentError{
-					Value: arg,
-					Type:  parameterType,
+				Err: &InvalidValueTypeError{
+					ExpectedType: parameterType,
+				},
+			}
+		}
+
+		// Check whether the decoded value conforms to the type associated with the value
+		conformanceResults := interpreter.TypeConformanceResults{}
+		if !arg.ConformsToDynamicType(inter, dynamicType, conformanceResults) {
+			return nil, &InvalidEntryPointArgumentError{
+				Index: i,
+				Err: &MalformedValueError{
+					ExpectedType: parameterType,
 				},
 			}
 		}
@@ -571,6 +599,7 @@ func (r *interpreterRuntime) ParseAndCheckProgram(code []byte, context Context) 
 		stdlib.BuiltinValues,
 		checkerOptions,
 		true,
+		importResolutionResults{},
 	)
 	if err != nil {
 		return nil, newError(err, context)
@@ -586,6 +615,7 @@ func (r *interpreterRuntime) parseAndCheckProgram(
 	values stdlib.StandardLibraryValues,
 	checkerOptions []sema.Option,
 	storeProgram bool,
+	checkedImports importResolutionResults,
 ) (
 	program *interpreter.Program,
 	err error,
@@ -623,7 +653,7 @@ func (r *interpreterRuntime) parseAndCheckProgram(
 
 	// Check
 
-	elaboration, err := r.check(parse, context, functions, values, checkerOptions)
+	elaboration, err := r.check(parse, context, functions, values, checkerOptions, checkedImports)
 	if err != nil {
 		return nil, wrapError(err)
 	}
@@ -653,6 +683,7 @@ func (r *interpreterRuntime) check(
 	functions stdlib.StandardLibraryFunctions,
 	values stdlib.StandardLibraryValues,
 	checkerOptions []sema.Option,
+	checkedImports importResolutionResults,
 ) (
 	elaboration *sema.Elaboration,
 	err error,
@@ -682,16 +713,28 @@ func (r *interpreterRuntime) check(
 					},
 				),
 				sema.WithImportHandler(
-					func(checker *sema.Checker, location common.Location) (sema.Import, error) {
+					func(checker *sema.Checker, importedLocation common.Location, importRange ast.Range) (sema.Import, error) {
+
 						var elaboration *sema.Elaboration
-						switch location {
+						switch importedLocation {
 						case stdlib.CryptoChecker.Location:
 							elaboration = stdlib.CryptoChecker.Elaboration
 
 						default:
-							context := startContext.WithLocation(location)
+							context := startContext.WithLocation(importedLocation)
 
-							program, err := r.getProgram(context, functions, values, checkerOptions)
+							// Check for cyclic imports
+							if checkedImports[importedLocation.ID()] {
+								return nil, &sema.CyclicImportsError{
+									Location: importedLocation,
+									Range:    importRange,
+								}
+							} else {
+								checkedImports[importedLocation.ID()] = true
+								defer delete(checkedImports, importedLocation.ID())
+							}
+
+							program, err := r.getProgram(context, functions, values, checkerOptions, checkedImports)
 							if err != nil {
 								return nil, err
 							}
@@ -720,9 +763,6 @@ func (r *interpreterRuntime) check(
 	if err != nil {
 		return nil, err
 	}
-
-	// TODO: set elaboration *before* checking,
-	// so it is returned when there is a cyclic import
 
 	elaboration = checker.Elaboration
 
@@ -762,11 +802,6 @@ func (r *interpreterRuntime) newInterpreter(
 				return r.emitEvent(inter, context.Interface, eventValue, eventType)
 			},
 		),
-		interpreter.WithStorageKeyHandler(
-			func(_ *interpreter.Interpreter, _ common.Address, indexingType sema.Type) string {
-				return string(indexingType.ID())
-			},
-		),
 		interpreter.WithInjectedCompositeFieldsHandler(
 			r.injectedCompositeFieldsHandler(context, runtimeStorage, interpreterOptions, checkerOptions),
 		),
@@ -799,6 +834,34 @@ func (r *interpreterRuntime) newInterpreter(
 		),
 		interpreter.WithOnStatementHandler(
 			r.onStatementHandler(),
+		),
+		interpreter.WithAccountHandlerFunc(
+			func(address interpreter.AddressValue) *interpreter.CompositeValue {
+				return r.getPublicAccount(address, context.Interface, runtimeStorage)
+			},
+		),
+		interpreter.WithPublicKeyValidationHandler(
+			func(publicKey *interpreter.CompositeValue) interpreter.BoolValue {
+				return validatePublicKey(publicKey, context.Interface)
+			},
+		),
+		interpreter.WithSignatureValidationHandler(
+			func(
+				signature *interpreter.ArrayValue,
+				signedData *interpreter.ArrayValue,
+				domainSeparationTag *interpreter.StringValue,
+				hashAlgorithm *interpreter.CompositeValue,
+				publicKey *interpreter.CompositeValue,
+			) interpreter.BoolValue {
+				return validateSignature(
+					signature,
+					signedData,
+					domainSeparationTag,
+					hashAlgorithm,
+					publicKey,
+					context.Interface,
+				)
+			},
 		),
 	}
 
@@ -842,7 +905,7 @@ func (r *interpreterRuntime) importLocationHandler(
 		default:
 			context := startContext.WithLocation(location)
 
-			program, err := r.getProgram(context, functions, values, checkerOptions)
+			program, err := r.getProgram(context, functions, values, checkerOptions, importResolutionResults{})
 			if err != nil {
 				panic(err)
 			}
@@ -866,6 +929,7 @@ func (r *interpreterRuntime) getProgram(
 	functions stdlib.StandardLibraryFunctions,
 	values stdlib.StandardLibraryValues,
 	checkerOptions []sema.Option,
+	checkedImports importResolutionResults,
 ) (
 	program *interpreter.Program,
 	err error,
@@ -893,6 +957,7 @@ func (r *interpreterRuntime) getProgram(
 			values,
 			checkerOptions,
 			true,
+			checkedImports,
 		)
 		if err != nil {
 			return nil, err
@@ -1138,18 +1203,26 @@ func (r *interpreterRuntime) newCreateAccountFunction(
 ) interpreter.HostFunction {
 	return func(invocation interpreter.Invocation) interpreter.Value {
 
-		payer, ok := invocation.Arguments[0].(interpreter.AuthAccountValue)
-		if !ok {
+		payer := invocation.Arguments[0].(*interpreter.CompositeValue)
+
+		if payer.QualifiedIdentifier != sema.AuthAccountType.QualifiedIdentifier() {
 			panic(fmt.Sprintf(
 				"%[1]s requires the first argument (payer) to be an %[1]s",
 				sema.AuthAccountType,
 			))
 		}
 
+		payerAddressValue, ok := payer.Fields.Get(sema.AuthAccountAddressField)
+		if !ok {
+			panic("address is not set")
+		}
+
+		payerAddress := payerAddressValue.(interpreter.AddressValue).ToAddress()
+
 		var address Address
 		var err error
 		wrapPanic(func() {
-			address, err = context.Interface.CreateAccount(payer.AddressValue().ToAddress())
+			address, err = context.Interface.CreateAccount(payerAddress)
 		})
 		if err != nil {
 			panic(err)
@@ -1174,6 +1247,43 @@ func (r *interpreterRuntime) newCreateAccountFunction(
 		)
 	}
 }
+
+func accountBalanceGetFunction(
+	addressValue interpreter.AddressValue,
+	runtimeInterface Interface,
+) func() interpreter.UFix64Value {
+	address := addressValue.ToAddress()
+	return func() interpreter.UFix64Value {
+		var balance uint64
+		var err error
+		wrapPanic(func() {
+			balance, err = runtimeInterface.GetAccountBalance(address)
+		})
+		if err != nil {
+			panic(err)
+		}
+		return interpreter.UFix64Value(balance)
+	}
+}
+
+func accountAvailableBalanceGetFunction(
+	addressValue interpreter.AddressValue,
+	runtimeInterface Interface,
+) func() interpreter.UFix64Value {
+	address := addressValue.ToAddress()
+	return func() interpreter.UFix64Value {
+		var balance uint64
+		var err error
+		wrapPanic(func() {
+			balance, err = runtimeInterface.GetAccountAvailableBalance(address)
+		})
+		if err != nil {
+			panic(err)
+		}
+		return interpreter.UFix64Value(balance)
+	}
+}
+
 func storageUsedGetFunction(
 	addressValue interpreter.AddressValue,
 	runtimeInterface Interface,
@@ -1288,13 +1398,11 @@ func (r *interpreterRuntime) recordContractValue(
 	addressValue interpreter.AddressValue,
 	name string,
 	contractValue interpreter.Value,
-	exportedContractValue cadence.Value,
 ) {
 	runtimeStorage.recordContractUpdate(
 		addressValue.ToAddress(),
 		formatContractKey(name),
 		contractValue,
-		exportedContractValue,
 	)
 }
 
@@ -1366,7 +1474,6 @@ func (r *interpreterRuntime) instantiateContract(
 	checkerOptions []sema.Option,
 ) (
 	interpreter.Value,
-	cadence.Value,
 	error,
 ) {
 	parameterTypes := make([]sema.Type, len(contractType.ConstructorParameters))
@@ -1381,13 +1488,13 @@ func (r *interpreterRuntime) instantiateContract(
 	parameterCount := len(parameterTypes)
 
 	if argumentCount < parameterCount {
-		return nil, nil, fmt.Errorf(
+		return nil, fmt.Errorf(
 			"invalid argument count, too few arguments: expected %d, got %d, next missing argument: `%s`",
 			parameterCount, argumentCount,
 			parameterTypes[argumentCount],
 		)
 	} else if argumentCount > parameterCount {
-		return nil, nil, fmt.Errorf(
+		return nil, fmt.Errorf(
 			"invalid argument count, too many arguments: expected %d, got %d",
 			parameterCount,
 			argumentCount,
@@ -1402,7 +1509,7 @@ func (r *interpreterRuntime) instantiateContract(
 		argumentType := argumentTypes[i]
 		parameterTye := parameterTypes[i]
 		if !sema.IsSubType(argumentType, parameterTye) {
-			return nil, nil, fmt.Errorf(
+			return nil, fmt.Errorf(
 				"invalid argument %d: expected type `%s`, got `%s`",
 				i,
 				parameterTye,
@@ -1476,29 +1583,35 @@ func (r *interpreterRuntime) instantiateContract(
 	)
 
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	contract = interpeter.Globals[contractType.Identifier].GetValue().(*interpreter.CompositeValue)
 
-	var exportedContract cadence.Value
-	if runtimeStorage.highLevelStorageEnabled {
-		exportedContract = exportCompositeValue(contract, interpeter, exportResults{})
-	}
-
-	return contract, exportedContract, err
+	return contract, err
 }
 
 func (r *interpreterRuntime) newGetAccountFunction(runtimeInterface Interface, runtimeStorage *runtimeStorage) interpreter.HostFunction {
 	return func(invocation interpreter.Invocation) interpreter.Value {
 		accountAddress := invocation.Arguments[0].(interpreter.AddressValue)
-		return interpreter.NewPublicAccountValue(
-			accountAddress,
-			storageUsedGetFunction(accountAddress, runtimeInterface, runtimeStorage),
-			storageCapacityGetFunction(accountAddress, runtimeInterface),
-			r.newPublicAccountKeys(accountAddress, runtimeInterface),
-		)
+		return r.getPublicAccount(accountAddress, runtimeInterface, runtimeStorage)
 	}
+}
+
+func (r *interpreterRuntime) getPublicAccount(
+	accountAddress interpreter.AddressValue,
+	runtimeInterface Interface,
+	runtimeStorage *runtimeStorage,
+) *interpreter.CompositeValue {
+
+	return interpreter.NewPublicAccountValue(
+		accountAddress,
+		accountBalanceGetFunction(accountAddress, runtimeInterface),
+		accountAvailableBalanceGetFunction(accountAddress, runtimeInterface),
+		storageUsedGetFunction(accountAddress, runtimeInterface, runtimeStorage),
+		storageCapacityGetFunction(accountAddress, runtimeInterface),
+		r.newPublicAccountKeys(accountAddress, runtimeInterface),
+	)
 }
 
 func (r *interpreterRuntime) newLogFunction(runtimeInterface Interface) interpreter.HostFunction {
@@ -1598,10 +1711,10 @@ func (r *interpreterRuntime) newAuthAccountContracts(
 	runtimeStorage *runtimeStorage,
 	interpreterOptions []interpreter.Option,
 	checkerOptions []sema.Option,
-) interpreter.AuthAccountContractsValue {
-	return interpreter.AuthAccountContractsValue{
-		Address: addressValue,
-		AddFunction: r.newAuthAccountContractsChangeFunction(
+) *interpreter.CompositeValue {
+	return interpreter.NewAuthAccountContractsValue(
+		addressValue,
+		r.newAuthAccountContractsChangeFunction(
 			addressValue,
 			context,
 			runtimeStorage,
@@ -1609,7 +1722,7 @@ func (r *interpreterRuntime) newAuthAccountContracts(
 			checkerOptions,
 			false,
 		),
-		UpdateFunction: r.newAuthAccountContractsChangeFunction(
+		r.newAuthAccountContractsChangeFunction(
 			addressValue,
 			context,
 			runtimeStorage,
@@ -1617,16 +1730,16 @@ func (r *interpreterRuntime) newAuthAccountContracts(
 			checkerOptions,
 			true,
 		),
-		GetFunction: r.newAuthAccountContractsGetFunction(
+		r.newAuthAccountContractsGetFunction(
 			addressValue,
 			context.Interface,
 		),
-		RemoveFunction: r.newAuthAccountContractsRemoveFunction(
+		r.newAuthAccountContractsRemoveFunction(
 			addressValue,
 			context.Interface,
 			runtimeStorage,
 		),
-	}
+	)
 }
 
 func (r *interpreterRuntime) newAuthAccountKeys(addressValue interpreter.AddressValue, runtimeInterface Interface) *interpreter.CompositeValue {
@@ -1773,6 +1886,7 @@ func (r *interpreterRuntime) newAuthAccountContractsChangeFunction(
 				stdlib.BuiltinValues,
 				checkerOptions,
 				storeProgram,
+				importResolutionResults{},
 			)
 			if err != nil {
 				// Update the code for the error pretty printing
@@ -1965,7 +2079,6 @@ func (r *interpreterRuntime) updateAccountContractCode(
 	// the new contract will NOT be deployed (options.createContract is false).
 
 	var contractValue interpreter.Value
-	var exportedContractValue cadence.Value
 
 	createContract := contractType != nil && options.createContract
 
@@ -1978,7 +2091,7 @@ func (r *interpreterRuntime) updateAccountContractCode(
 		functions := r.standardLibraryFunctions(context, runtimeStorage, interpreterOptions, checkerOptions)
 		values := stdlib.BuiltinValues
 
-		contractValue, exportedContractValue, err = r.instantiateContract(
+		contractValue, err = r.instantiateContract(
 			program,
 			context,
 			contractType,
@@ -2015,7 +2128,6 @@ func (r *interpreterRuntime) updateAccountContractCode(
 			addressValue,
 			name,
 			contractValue,
-			exportedContractValue,
 		)
 	}
 
@@ -2089,6 +2201,22 @@ func (r *interpreterRuntime) newAuthAccountContractsRemoveFunction(
 				// NOTE: *DO NOT* call SetProgram – the program removal
 				// should not be effective during the execution, only after
 
+				// Deny removing a contract, if the contract validation is enabled, and
+				// the existing code contains enums.
+				if r.contractUpdateValidationEnabled {
+
+					existingProgram, err := parser2.ParseProgram(string(code))
+
+					// If the existing code is not parsable (i.e: `err != nil`), that shouldn't be a reason to
+					// fail the contract removal. Therefore, validate only if the code is a valid one.
+					if err == nil && containsEnumsInProgram(existingProgram) {
+						panic(&ContractRemovalError{
+							Name:          nameArgument,
+							LocationRange: invocation.GetLocationRange(),
+						})
+					}
+				}
+
 				wrapPanic(func() {
 					err = runtimeInterface.RemoveAccountContractCode(address, nameArgument)
 				})
@@ -2103,7 +2231,6 @@ func (r *interpreterRuntime) newAuthAccountContractsRemoveFunction(
 					runtimeStorage,
 					addressValue,
 					nameArgument,
-					nil,
 					nil,
 				)
 
@@ -2143,6 +2270,69 @@ func (r *interpreterRuntime) onStatementHandler() interpreter.OnStatementFunc {
 		line := statement.StartPosition().Line
 		r.coverageReport.AddLineHit(location, line)
 	}
+}
+
+func (r *interpreterRuntime) executeNonProgram(interpret interpretFunc, context Context) (cadence.Value, error) {
+	context.InitializeCodesAndPrograms()
+
+	var program *interpreter.Program
+
+	runtimeStorage := newRuntimeStorage(context.Interface)
+
+	var functions stdlib.StandardLibraryFunctions
+	var values stdlib.StandardLibraryValues
+	var interpreterOptions []interpreter.Option
+	var checkerOptions []sema.Option
+
+	value, _, err := r.interpret(
+		program,
+		context,
+		runtimeStorage,
+		functions,
+		values,
+		interpreterOptions,
+		checkerOptions,
+		interpret,
+	)
+	if err != nil {
+		return nil, newError(err, context)
+	}
+
+	return exportValue(value), nil
+}
+
+func (r *interpreterRuntime) ReadStored(address common.Address, path cadence.Path, context Context) (cadence.Value, error) {
+	return r.executeNonProgram(
+		func(inter *interpreter.Interpreter) (interpreter.Value, error) {
+			key := interpreter.StorageKey(importPathValue(path))
+			value := inter.ReadStored(address, key, false)
+			return value, nil
+		},
+		context,
+	)
+}
+
+func (r *interpreterRuntime) ReadLinked(address common.Address, path cadence.Path, context Context) (cadence.Value, error) {
+	return r.executeNonProgram(
+		func(inter *interpreter.Interpreter) (interpreter.Value, error) {
+			key, _, err := inter.GetCapabilityFinalTargetStorageKey(
+				address,
+				importPathValue(path),
+				&sema.ReferenceType{
+					Type: sema.AnyType,
+				},
+				func() interpreter.LocationRange {
+					return interpreter.LocationRange{}
+				},
+			)
+			if err != nil {
+				return nil, err
+			}
+			value := inter.ReadStored(address, key, false)
+			return value, nil
+		},
+		context,
+	)
 }
 
 func NewBlockValue(block Block) interpreter.BlockValue {
@@ -2203,7 +2393,7 @@ func (r *interpreterRuntime) newAccountKeysAddFunction(
 				},
 			)
 
-			return NewAccountKeyValue(accountKey)
+			return NewAccountKeyValue(accountKey, runtimeInterface)
 		},
 	)
 }
@@ -2234,7 +2424,7 @@ func (r *interpreterRuntime) newAccountKeysGetFunction(
 				return interpreter.NilValue{}
 			}
 
-			return NewAccountKeyValue(accountKey)
+			return NewAccountKeyValue(accountKey, runtimeInterface)
 		},
 	)
 }
@@ -2274,7 +2464,7 @@ func (r *interpreterRuntime) newAccountKeysRevokeFunction(
 				},
 			)
 
-			return NewAccountKeyValue(accountKey)
+			return NewAccountKeyValue(accountKey, runtimeInterface)
 		},
 	)
 }
@@ -2316,23 +2506,34 @@ func NewPublicKeyFromValue(publicKey *interpreter.CompositeValue) *PublicKey {
 
 	signAlgoRawValue := rawValue.(interpreter.UInt8Value)
 
+	// `valid` and `validated` fields
+	var valid, validated bool
+	validField, validated := publicKey.Fields.Get(sema.PublicKeyIsValidField)
+	if validated {
+		valid = bool(validField.(interpreter.BoolValue))
+	}
+
 	return &PublicKey{
 		PublicKey: byteArray,
 		SignAlgo:  SignatureAlgorithm(signAlgoRawValue.ToInt()),
+		IsValid:   valid,
+		Validated: validated,
 	}
 }
 
-func NewPublicKeyValue(publicKey *PublicKey) *interpreter.CompositeValue {
+func NewPublicKeyValue(publicKey *PublicKey, runtimeInterface Interface) *interpreter.CompositeValue {
 	return interpreter.NewPublicKeyValue(
 		interpreter.ByteSliceToByteArrayValue(publicKey.PublicKey),
 		interpreter.NewCryptoAlgorithmEnumCaseValue(sema.SignatureAlgorithmType, publicKey.SignAlgo.RawValue()),
+		newPublicKeyValidationFunction(publicKey, runtimeInterface),
+		newPublicKeyVerifyFunction(runtimeInterface),
 	)
 }
 
-func NewAccountKeyValue(accountKey *AccountKey) *interpreter.CompositeValue {
+func NewAccountKeyValue(accountKey *AccountKey, runtimeInterface Interface) *interpreter.CompositeValue {
 	return interpreter.NewAccountKeyValue(
 		interpreter.NewIntValueFromInt64(int64(accountKey.KeyIndex)),
-		NewPublicKeyValue(accountKey.PublicKey),
+		NewPublicKeyValue(accountKey.PublicKey, runtimeInterface),
 		interpreter.NewCryptoAlgorithmEnumCaseValue(sema.HashAlgorithmType, accountKey.HashAlgo.RawValue()),
 		interpreter.NewUFix64ValueWithInteger(uint64(accountKey.Weight)),
 		interpreter.BoolValue(accountKey.IsRevoked),
@@ -2350,4 +2551,100 @@ func NewHashAlgorithmFromValue(value interpreter.Value) HashAlgorithm {
 	hashAlgoRawValue := rawValue.(interpreter.UInt8Value)
 
 	return HashAlgorithm(hashAlgoRawValue.ToInt())
+}
+
+func newPublicKeyValidationFunction(
+	publicKey *PublicKey,
+	runtimeInterface Interface,
+) interpreter.PublicKeyValidationHandlerFunc {
+
+	return func(publicKeyValue *interpreter.CompositeValue) interpreter.BoolValue {
+		// If the public key is already validated, avoid re-validating, and return the cached result.
+		if publicKey.Validated {
+			return interpreter.BoolValue(publicKey.IsValid)
+		}
+
+		return validatePublicKey(publicKeyValue, runtimeInterface)
+	}
+}
+
+func validatePublicKey(publicKeyValue *interpreter.CompositeValue, runtimeInterface Interface) interpreter.BoolValue {
+	publicKey := NewPublicKeyFromValue(publicKeyValue)
+
+	var err error
+	var valid bool
+	wrapPanic(func() {
+		valid, err = runtimeInterface.ValidatePublicKey(publicKey)
+	})
+
+	if err != nil {
+		panic(err)
+	}
+
+	return interpreter.BoolValue(valid)
+}
+
+func newPublicKeyVerifyFunction(runtimeInterface Interface) interpreter.HostFunctionValue {
+	return interpreter.NewHostFunctionValue(
+		func(invocation interpreter.Invocation) interpreter.Value {
+			signatureValue := invocation.Arguments[0].(*interpreter.ArrayValue)
+			signedDataValue := invocation.Arguments[1].(*interpreter.ArrayValue)
+			domainSeparationTag := invocation.Arguments[2].(*interpreter.StringValue)
+			hashAlgo := invocation.Arguments[3].(*interpreter.CompositeValue)
+			publicKey := invocation.Self
+
+			return validateSignature(
+				signatureValue,
+				signedDataValue,
+				domainSeparationTag,
+				hashAlgo,
+				publicKey,
+				runtimeInterface,
+			)
+		},
+	)
+}
+
+func validateSignature(
+	signatureValue *interpreter.ArrayValue,
+	signedDataValue *interpreter.ArrayValue,
+	domainSeparationTagValue *interpreter.StringValue,
+	hashAlgorithmValue *interpreter.CompositeValue,
+	publicKeyValue *interpreter.CompositeValue,
+	runtimeInterface Interface,
+) interpreter.BoolValue {
+
+	signature, err := interpreter.ByteArrayValueToByteSlice(signatureValue)
+	if err != nil {
+		panic(fmt.Errorf("failed to get signature. %w", err))
+	}
+
+	signedData, err := interpreter.ByteArrayValueToByteSlice(signedDataValue)
+	if err != nil {
+		panic(fmt.Errorf("failed to get signed data. %w", err))
+	}
+
+	domainSeparationTag := domainSeparationTagValue.Str
+
+	hashAlgorithm := NewHashAlgorithmFromValue(hashAlgorithmValue)
+
+	publicKey := NewPublicKeyFromValue(publicKeyValue)
+
+	var valid bool
+	wrapPanic(func() {
+		valid, err = runtimeInterface.VerifySignature(
+			signature,
+			domainSeparationTag,
+			signedData,
+			publicKey.PublicKey,
+			publicKey.SignAlgo,
+			hashAlgorithm,
+		)
+	})
+
+	if err != nil {
+		panic(err)
+	}
+
+	return interpreter.BoolValue(valid)
 }

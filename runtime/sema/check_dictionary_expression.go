@@ -122,7 +122,7 @@ func IsValidDictionaryKeyType(keyType Type) bool {
 		case NeverType, BoolType, CharacterType, StringType:
 			return true
 		default:
-			return IsSubType(keyType, &NumberType{}) ||
+			return IsSubType(keyType, NumberType) ||
 				IsSubType(keyType, PathType)
 		}
 	}

@@ -220,24 +220,28 @@ func TestInterpretTransactions(t *testing.T) {
 
 		signer1 := interpreter.NewAuthAccountValue(
 			interpreter.AddressValue{0, 0, 0, 0, 0, 0, 0, 1},
+			returnZeroUFix64,
+			returnZeroUFix64,
 			func(interpreter *interpreter.Interpreter) interpreter.UInt64Value {
 				return 0
 			},
-			returnZero,
+			returnZeroUInt64,
 			panicFunction,
 			panicFunction,
-			interpreter.AuthAccountContractsValue{},
+			&interpreter.CompositeValue{},
 			&interpreter.CompositeValue{},
 		)
 		signer2 := interpreter.NewAuthAccountValue(
 			interpreter.AddressValue{0, 0, 0, 0, 0, 0, 0, 2},
+			returnZeroUFix64,
+			returnZeroUFix64,
 			func(interpreter *interpreter.Interpreter) interpreter.UInt64Value {
 				return 0
 			},
-			returnZero,
+			returnZeroUInt64,
 			panicFunction,
 			panicFunction,
-			interpreter.AuthAccountContractsValue{},
+			&interpreter.CompositeValue{},
 			&interpreter.CompositeValue{},
 		)
 
@@ -273,13 +277,15 @@ func TestInterpretTransactions(t *testing.T) {
 		prepareArguments := []interpreter.Value{
 			interpreter.NewAuthAccountValue(
 				interpreter.AddressValue{},
+				returnZeroUFix64,
+				returnZeroUFix64,
 				func(interpreter *interpreter.Interpreter) interpreter.UInt64Value {
 					return 0
 				},
-				returnZero,
+				returnZeroUInt64,
 				panicFunction,
 				panicFunction,
-				interpreter.AuthAccountContractsValue{},
+				&interpreter.CompositeValue{},
 				&interpreter.CompositeValue{},
 			),
 		}
@@ -291,7 +297,7 @@ func TestInterpretTransactions(t *testing.T) {
 
 		values := inter.Globals["values"].GetValue()
 
-		require.IsType(t, values, &interpreter.ArrayValue{})
+		require.IsType(t, &interpreter.ArrayValue{}, values)
 
 		assert.Equal(t,
 			[]interpreter.Value{

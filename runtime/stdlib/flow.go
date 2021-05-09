@@ -89,7 +89,7 @@ var getBlockFunctionType = &sema.FunctionType{
 			Label:      "at",
 			Identifier: "height",
 			TypeAnnotation: sema.NewTypeAnnotation(
-				&sema.UInt64Type{},
+				sema.UInt64Type,
 			),
 		},
 	},
@@ -102,7 +102,7 @@ var getBlockFunctionType = &sema.FunctionType{
 
 var unsafeRandomFunctionType = &sema.FunctionType{
 	ReturnTypeAnnotation: sema.NewTypeAnnotation(
-		&sema.UInt64Type{},
+		sema.UInt64Type,
 	),
 }
 
@@ -299,7 +299,7 @@ const HashSize = 32
 
 var HashType = &sema.ConstantSizedType{
 	Size: HashSize,
-	Type: &sema.UInt8Type{},
+	Type: sema.UInt8Type,
 }
 
 var TypeIDsType = &sema.VariableSizedType{
@@ -320,7 +320,7 @@ var AccountEventPublicKeyParameter = &sema.Parameter{
 	Identifier: "publicKey",
 	TypeAnnotation: sema.NewTypeAnnotation(
 		&sema.VariableSizedType{
-			Type: &sema.UInt8Type{},
+			Type: sema.UInt8Type,
 		},
 	),
 }

@@ -46,7 +46,7 @@ func TestInterpretVirtualImport(t *testing.T) {
 			fooType,
 			"bar",
 			&sema.FunctionType{
-				ReturnTypeAnnotation: sema.NewTypeAnnotation(&sema.UInt64Type{}),
+				ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.UInt64Type),
 			},
 			"",
 		))
@@ -94,7 +94,7 @@ func TestInterpretVirtualImport(t *testing.T) {
 										Functions: map[string]interpreter.FunctionValue{
 											"bar": interpreter.NewHostFunctionValue(
 												func(invocation interpreter.Invocation) interpreter.Value {
-													return interpreter.NewIntValueFromInt64(42)
+													return interpreter.UInt64Value(42)
 												},
 											),
 										},
@@ -107,7 +107,7 @@ func TestInterpretVirtualImport(t *testing.T) {
 			},
 			CheckerOptions: []sema.Option{
 				sema.WithImportHandler(
-					func(checker *sema.Checker, location common.Location) (sema.Import, error) {
+					func(_ *sema.Checker, _ common.Location, _ ast.Range) (sema.Import, error) {
 
 						return sema.VirtualImport{
 							ValueElements: valueElements,
@@ -122,7 +122,7 @@ func TestInterpretVirtualImport(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Equal(t,
-		interpreter.NewIntValueFromInt64(42),
+		interpreter.UInt64Value(42),
 		value,
 	)
 }
@@ -216,9 +216,9 @@ func TestInterpretImportMultipleProgramsFromLocation(t *testing.T) {
 					},
 				),
 				sema.WithImportHandler(
-					func(checker *sema.Checker, location common.Location) (sema.Import, error) {
-						require.IsType(t, common.AddressLocation{}, location)
-						addressLocation := location.(common.AddressLocation)
+					func(checker *sema.Checker, importedLocation common.Location, _ ast.Range) (sema.Import, error) {
+						require.IsType(t, common.AddressLocation{}, importedLocation)
+						addressLocation := importedLocation.(common.AddressLocation)
 
 						assert.Equal(t, address, addressLocation.Address)
 

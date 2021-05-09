@@ -134,7 +134,7 @@ func TestCheckDictionaryIndexingString(t *testing.T) {
 
 	assert.Equal(t,
 		&sema.OptionalType{
-			Type: &sema.IntType{},
+			Type: sema.IntType,
 		},
 		yType,
 	)
@@ -287,7 +287,7 @@ func TestCheckDictionaryValues(t *testing.T) {
 	valuesType := RequireGlobalValue(t, checker.Elaboration, "values")
 
 	assert.Equal(t,
-		&sema.VariableSizedType{Type: &sema.IntType{}},
+		&sema.VariableSizedType{Type: sema.IntType},
 		valuesType,
 	)
 }

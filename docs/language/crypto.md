@@ -19,6 +19,10 @@ pub enum HashAlgorithm: UInt8 {
 
     /// SHA3_384 is Secure Hashing Algorithm 3 (SHA-3) with a 384-bit digest.
     pub case SHA3_384 = 4
+
+    /// KMAC128_BLS_BLS12_381 is an instance of KMAC128 mac algorithm, that can be used
+    /// as the hashing algorithm for BLS signature scheme on the curve BLS12-381.
+    pub case KMAC128_BLS_BLS12_381 = 5
 }
 ```
 
@@ -31,8 +35,11 @@ pub enum SignatureAlgorithm: UInt8 {
     /// ECDSA_P256 is Elliptic Curve Digital Signature Algorithm (ECDSA) on the NIST P-256 curve.
     pub case ECDSA_P256 = 1
 
-    /// ECDSA_Secp256k1 is Elliptic Curve Digital Signature Algorithm (ECDSA) on the secp256k1 curve.
-    pub case ECDSA_Secp256k1 = 2
+    /// ECDSA_secp256k1 is Elliptic Curve Digital Signature Algorithm (ECDSA) on the secp256k1 curve.
+    pub case ECDSA_secp256k1 = 2
+
+    /// BLS_BLS12_381 is BLS signature scheme on the BLS12-381 curve.
+    pub case BLS_BLS12_381 = 3
 }
 ```
 
@@ -99,12 +106,11 @@ The API of the Crypto contract is:
 ```cadence
 pub contract Crypto {
 
-    pub struct SignatureAlgorithm {
-        pub let name: String
-    }
-
     // Hash the data using the given hashing algorithm and returns the hashed data.
     pub fun hash(_ data: [UInt8], algorithm: HashAlgorithm): [UInt8]
+
+    // Hash the data using the given hashing algorithm and the tag. Returns the hashed data.
+    pub fun hashWithTag(_ data: [UInt8], tag: string, algorithm: HashAlgorithm): [UInt8]
 
     pub struct KeyListEntry {
         pub let keyIndex: Int

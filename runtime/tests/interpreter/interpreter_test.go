@@ -1412,16 +1412,16 @@ func TestInterpretHostFunction(t *testing.T) {
 				{
 					Label:          sema.ArgumentLabelNotRequired,
 					Identifier:     "a",
-					TypeAnnotation: sema.NewTypeAnnotation(&sema.IntType{}),
+					TypeAnnotation: sema.NewTypeAnnotation(sema.IntType),
 				},
 				{
 					Label:          sema.ArgumentLabelNotRequired,
 					Identifier:     "b",
-					TypeAnnotation: sema.NewTypeAnnotation(&sema.IntType{}),
+					TypeAnnotation: sema.NewTypeAnnotation(sema.IntType),
 				},
 			},
 			ReturnTypeAnnotation: sema.NewTypeAnnotation(
-				&sema.IntType{},
+				sema.IntType,
 			),
 		},
 		func(invocation interpreter.Invocation) interpreter.Value {
@@ -1485,11 +1485,11 @@ func TestInterpretHostFunctionWithVariableArguments(t *testing.T) {
 				{
 					Label:          sema.ArgumentLabelNotRequired,
 					Identifier:     "value",
-					TypeAnnotation: sema.NewTypeAnnotation(&sema.IntType{}),
+					TypeAnnotation: sema.NewTypeAnnotation(sema.IntType),
 				},
 			},
 			ReturnTypeAnnotation: sema.NewTypeAnnotation(
-				&sema.IntType{},
+				sema.VoidType,
 			),
 			RequiredArgumentCount: sema.RequiredArgumentCount(1),
 		},
@@ -1497,7 +1497,7 @@ func TestInterpretHostFunctionWithVariableArguments(t *testing.T) {
 			called = true
 
 			require.Len(t, invocation.ArgumentTypes, 3)
-			assert.IsType(t, &sema.IntType{}, invocation.ArgumentTypes[0])
+			assert.IsType(t, sema.IntType, invocation.ArgumentTypes[0])
 			assert.IsType(t, sema.BoolType, invocation.ArgumentTypes[1])
 			assert.IsType(t, sema.StringType, invocation.ArgumentTypes[2])
 
@@ -1912,314 +1912,6 @@ func TestInterpretStructureFunctionMutatesSelf(t *testing.T) {
 	assert.Equal(t,
 		interpreter.NewIntValueFromInt64(2),
 		value,
-	)
-}
-
-func TestInterpretFunctionPreCondition(t *testing.T) {
-
-	t.Parallel()
-
-	inter := parseCheckAndInterpret(t, `
-      fun test(x: Int): Int {
-          pre {
-              x == 0
-          }
-          return x
-      }
-    `)
-
-	_, err := inter.Invoke(
-		"test",
-		interpreter.NewIntValueFromInt64(42),
-	)
-	var conditionErr interpreter.ConditionError
-	require.ErrorAs(t, err, &conditionErr)
-
-	zero := interpreter.NewIntValueFromInt64(0)
-	value, err := inter.Invoke("test", zero)
-	require.NoError(t, err)
-
-	assert.Equal(t, zero, value)
-}
-
-func TestInterpretFunctionPostCondition(t *testing.T) {
-
-	t.Parallel()
-
-	inter := parseCheckAndInterpret(t, `
-      fun test(x: Int): Int {
-          post {
-              y == 0
-          }
-          let y = x
-          return y
-      }
-    `)
-
-	_, err := inter.Invoke(
-		"test",
-		interpreter.NewIntValueFromInt64(42),
-	)
-	var conditionErr interpreter.ConditionError
-	require.ErrorAs(t, err, &conditionErr)
-
-	zero := interpreter.NewIntValueFromInt64(0)
-	value, err := inter.Invoke("test", zero)
-	require.NoError(t, err)
-
-	assert.Equal(t, zero, value)
-}
-
-func TestInterpretFunctionWithResultAndPostConditionWithResult(t *testing.T) {
-
-	t.Parallel()
-
-	inter := parseCheckAndInterpret(t, `
-      fun test(x: Int): Int {
-          post {
-              result == 0
-          }
-          return x
-      }
-    `)
-
-	_, err := inter.Invoke(
-		"test",
-		interpreter.NewIntValueFromInt64(42),
-	)
-
-	var conditionErr interpreter.ConditionError
-	require.ErrorAs(t, err, &conditionErr)
-
-	zero := interpreter.NewIntValueFromInt64(0)
-	value, err := inter.Invoke("test", zero)
-	require.NoError(t, err)
-
-	assert.Equal(t, zero, value)
-}
-
-func TestInterpretFunctionWithoutResultAndPostConditionWithResult(t *testing.T) {
-
-	t.Parallel()
-
-	inter := parseCheckAndInterpret(t, `
-      fun test() {
-          post {
-              result == 0
-          }
-          let result = 0
-      }
-    `)
-
-	value, err := inter.Invoke("test")
-	require.NoError(t, err)
-
-	assert.Equal(t,
-		interpreter.VoidValue{},
-		value,
-	)
-}
-
-func TestInterpretFunctionPostConditionWithBefore(t *testing.T) {
-
-	t.Parallel()
-
-	inter := parseCheckAndInterpret(t, `
-      var x = 0
-
-      fun test() {
-          pre {
-              x == 0
-          }
-          post {
-              x == before(x) + 1
-          }
-          x = x + 1
-      }
-    `)
-
-	value, err := inter.Invoke("test")
-	require.NoError(t, err)
-
-	assert.Equal(t,
-		interpreter.VoidValue{},
-		value,
-	)
-}
-
-func TestInterpretFunctionPostConditionWithBeforeFailingPreCondition(t *testing.T) {
-
-	t.Parallel()
-
-	inter := parseCheckAndInterpret(t, `
-      var x = 0
-
-      fun test() {
-          pre {
-              x == 1
-          }
-          post {
-              x == before(x) + 1
-          }
-          x = x + 1
-      }
-    `)
-
-	_, err := inter.Invoke("test")
-
-	var conditionErr interpreter.ConditionError
-	require.ErrorAs(t, err, &conditionErr)
-
-	assert.Equal(t,
-		ast.ConditionKindPre,
-		conditionErr.ConditionKind,
-	)
-}
-
-func TestInterpretFunctionPostConditionWithBeforeFailingPostCondition(t *testing.T) {
-
-	t.Parallel()
-
-	inter := parseCheckAndInterpret(t, `
-      var x = 0
-
-      fun test() {
-          pre {
-              x == 0
-          }
-          post {
-              x == before(x) + 2
-          }
-          x = x + 1
-      }
-    `)
-
-	_, err := inter.Invoke("test")
-
-	var conditionErr interpreter.ConditionError
-	require.ErrorAs(t, err, &conditionErr)
-
-	assert.Equal(t,
-		ast.ConditionKindPost,
-		conditionErr.ConditionKind,
-	)
-}
-
-func TestInterpretFunctionPostConditionWithMessageUsingStringLiteral(t *testing.T) {
-
-	t.Parallel()
-
-	inter := parseCheckAndInterpret(t, `
-      fun test(x: Int): Int {
-          post {
-              y == 0: "y should be zero"
-          }
-          let y = x
-          return y
-      }
-    `)
-
-	_, err := inter.Invoke(
-		"test",
-		interpreter.NewIntValueFromInt64(42),
-	)
-
-	var conditionErr interpreter.ConditionError
-	require.ErrorAs(t, err, &conditionErr)
-
-	assert.Equal(t,
-		"y should be zero",
-		conditionErr.Message,
-	)
-
-	zero := interpreter.NewIntValueFromInt64(0)
-	value, err := inter.Invoke("test", zero)
-	require.NoError(t, err)
-
-	assert.Equal(t, zero, value)
-}
-
-func TestInterpretFunctionPostConditionWithMessageUsingResult(t *testing.T) {
-
-	t.Parallel()
-
-	inter := parseCheckAndInterpret(t, `
-      fun test(x: Int): String {
-          post {
-              y == 0: result
-          }
-          let y = x
-          return "return value"
-      }
-    `)
-
-	_, err := inter.Invoke(
-		"test",
-		interpreter.NewIntValueFromInt64(42),
-	)
-	var conditionErr interpreter.ConditionError
-	require.ErrorAs(t, err, &conditionErr)
-
-	assert.Equal(t,
-		"return value",
-		conditionErr.Message,
-	)
-
-	zero := interpreter.NewIntValueFromInt64(0)
-	value, err := inter.Invoke("test", zero)
-	require.NoError(t, err)
-
-	assert.Equal(t,
-		interpreter.NewStringValue("return value"),
-		value,
-	)
-}
-
-func TestInterpretFunctionPostConditionWithMessageUsingBefore(t *testing.T) {
-
-	t.Parallel()
-
-	inter := parseCheckAndInterpret(t, `
-      fun test(x: String): String {
-          post {
-              1 == 2: before(x)
-          }
-          return "return value"
-      }
-    `)
-
-	_, err := inter.Invoke("test", interpreter.NewStringValue("parameter value"))
-
-	var conditionErr interpreter.ConditionError
-	require.ErrorAs(t, err, &conditionErr)
-
-	assert.Equal(t,
-		"parameter value",
-		conditionErr.Message,
-	)
-}
-
-func TestInterpretFunctionPostConditionWithMessageUsingParameter(t *testing.T) {
-
-	t.Parallel()
-
-	inter := parseCheckAndInterpret(t, `
-      fun test(x: String): String {
-          post {
-              1 == 2: x
-          }
-          return "return value"
-      }
-    `)
-
-	_, err := inter.Invoke("test", interpreter.NewStringValue("parameter value"))
-
-	var conditionErr interpreter.ConditionError
-	require.ErrorAs(t, err, &conditionErr)
-
-	assert.Equal(t,
-		"parameter value",
-		conditionErr.Message,
 	)
 }
 
@@ -3459,10 +3151,10 @@ func TestInterpretInterfaceFieldUse(t *testing.T) {
 								interpreter.NewIntValueFromInt64(1),
 							},
 							[]sema.Type{
-								&sema.IntType{},
+								sema.IntType,
 							},
 							[]sema.Type{
-								&sema.IntType{},
+								sema.IntType,
 							},
 						),
 					},
@@ -3542,334 +3234,6 @@ func TestInterpretInterfaceFunctionUse(t *testing.T) {
 	}
 }
 
-func TestInterpretInterfaceFunctionUseWithPreCondition(t *testing.T) {
-
-	t.Parallel()
-
-	for _, compositeKind := range common.CompositeKindsWithFieldsAndFunctions {
-
-		if !compositeKind.SupportsInterfaces() {
-			continue
-		}
-
-		var setupCode, tearDownCode, identifier string
-
-		if compositeKind == common.CompositeKindContract {
-			identifier = "TestImpl"
-		} else {
-			interfaceType := AsInterfaceType("Test", compositeKind)
-
-			setupCode = fmt.Sprintf(
-				`let test: %[1]s%[2]s %[3]s %[4]s TestImpl%[5]s`,
-				compositeKind.Annotation(),
-				interfaceType,
-				compositeKind.TransferOperator(),
-				compositeKind.ConstructionKeyword(),
-				constructorArguments(compositeKind, ""),
-			)
-			identifier = "test"
-		}
-
-		if compositeKind == common.CompositeKindResource {
-			tearDownCode = `destroy test`
-		}
-
-		t.Run(compositeKind.Keyword(), func(t *testing.T) {
-
-			inter := parseCheckAndInterpretWithOptions(t,
-				fmt.Sprintf(
-					`
-                      pub %[1]s interface Test {
-                          pub fun test(x: Int): Int {
-                              pre {
-                                  x > 0: "x must be positive"
-                              }
-                          }
-                      }
-
-                      pub %[1]s TestImpl: Test {
-                          pub fun test(x: Int): Int {
-                              pre {
-                                  x < 2: "x must be smaller than 2"
-                              }
-                              return x
-                          }
-                      }
-
-                      pub fun callTest(x: Int): Int {
-                          %[2]s
-                          let res = %[3]s.test(x: x)
-                          %[4]s
-                          return res
-                      }
-                    `,
-					compositeKind.Keyword(),
-					setupCode,
-					identifier,
-					tearDownCode,
-				),
-				ParseCheckAndInterpretOptions{
-					Options: []interpreter.Option{
-						makeContractValueHandler(nil, nil, nil),
-					},
-				},
-			)
-
-			_, err := inter.Invoke("callTest", interpreter.NewIntValueFromInt64(0))
-
-			var conditionErr interpreter.ConditionError
-			require.ErrorAs(t, err, &conditionErr)
-
-			value, err := inter.Invoke("callTest", interpreter.NewIntValueFromInt64(1))
-			require.NoError(t, err)
-
-			assert.Equal(t,
-				interpreter.NewIntValueFromInt64(1),
-				value,
-			)
-
-			_, err = inter.Invoke("callTest", interpreter.NewIntValueFromInt64(2))
-
-			require.ErrorAs(t, err, &conditionErr)
-		})
-	}
-}
-
-func TestInterpretInitializerWithInterfacePreCondition(t *testing.T) {
-
-	t.Parallel()
-
-	tests := map[int64]error{
-		0: interpreter.ConditionError{},
-		1: nil,
-		2: interpreter.ConditionError{},
-	}
-
-	for _, compositeKind := range common.CompositeKindsWithFieldsAndFunctions {
-
-		if !compositeKind.SupportsInterfaces() {
-			continue
-		}
-
-		t.Run(compositeKind.Keyword(), func(t *testing.T) {
-
-			for value, expectedError := range tests {
-
-				t.Run(fmt.Sprint(value), func(t *testing.T) {
-
-					var testFunction string
-					if compositeKind == common.CompositeKindContract {
-						// use the contract singleton, so it is loaded
-						testFunction = `
-					       pub fun test() {
-					            TestImpl
-					       }
-                        `
-					} else {
-						interfaceType := AsInterfaceType("Test", compositeKind)
-
-						testFunction =
-							fmt.Sprintf(
-								`
-					               pub fun test(x: Int): %[1]s%[2]s {
-					                   return %[3]s %[4]s TestImpl%[5]s
-					               }
-                                `,
-								compositeKind.Annotation(),
-								interfaceType,
-								compositeKind.MoveOperator(),
-								compositeKind.ConstructionKeyword(),
-								constructorArguments(compositeKind, "x: x"),
-							)
-					}
-
-					checker, err := checker.ParseAndCheck(t,
-						fmt.Sprintf(
-							`
-					             pub %[1]s interface Test {
-					                 init(x: Int) {
-					                     pre {
-					                         x > 0: "x must be positive"
-					                     }
-					                 }
-					             }
-
-					             pub %[1]s TestImpl: Test {
-					                 init(x: Int) {
-					                     pre {
-					                         x < 2: "x must be smaller than 2"
-					                     }
-					                 }
-					             }
-
-					             %[2]s
-					           `,
-							compositeKind.Keyword(),
-							testFunction,
-						),
-					)
-					require.NoError(t, err)
-
-					check := func(err error) {
-						if expectedError == nil {
-							require.NoError(t, err)
-						} else {
-							require.IsType(t,
-								interpreter.Error{},
-								err,
-							)
-							err = err.(interpreter.Error).Unwrap()
-
-							require.IsType(t,
-								expectedError,
-								err,
-							)
-						}
-					}
-
-					uuidHandler := interpreter.WithUUIDHandler(func() (uint64, error) {
-						return 0, nil
-					})
-
-					if compositeKind == common.CompositeKindContract {
-
-						inter, err := interpreter.NewInterpreter(
-							interpreter.ProgramFromChecker(checker),
-							checker.Location,
-							makeContractValueHandler(
-								[]interpreter.Value{
-									interpreter.NewIntValueFromInt64(value),
-								},
-								[]sema.Type{
-									&sema.IntType{},
-								},
-								[]sema.Type{
-									&sema.IntType{},
-								},
-							),
-							uuidHandler,
-						)
-						require.NoError(t, err)
-
-						err = inter.Interpret()
-						require.NoError(t, err)
-
-						_, err = inter.Invoke("test")
-						check(err)
-					} else {
-						inter, err := interpreter.NewInterpreter(
-							interpreter.ProgramFromChecker(checker),
-							checker.Location,
-							uuidHandler,
-						)
-						require.NoError(t, err)
-
-						err = inter.Interpret()
-						require.NoError(t, err)
-
-						_, err = inter.Invoke("test", interpreter.NewIntValueFromInt64(value))
-						check(err)
-					}
-				})
-			}
-		})
-	}
-}
-
-func TestInterpretTypeRequirementWithPreCondition(t *testing.T) {
-
-	t.Parallel()
-
-	inter := parseCheckAndInterpretWithOptions(t,
-		`
-
-          pub struct interface Also {
-             pub fun test(x: Int) {
-                 pre {
-                     x >= 0: "x >= 0"
-                 }
-             }
-          }
-
-          pub contract interface Test {
-
-              pub struct Nested {
-                  pub fun test(x: Int) {
-                      pre {
-                          x >= 1: "x >= 1"
-                      }
-                  }
-              }
-          }
-
-          pub contract TestImpl: Test {
-
-              pub struct Nested: Also {
-                  pub fun test(x: Int) {
-                      pre {
-                          x < 2: "x < 2"
-                      }
-                  }
-              }
-          }
-
-          pub fun test(x: Int) {
-              TestImpl.Nested().test(x: x)
-          }
-        `,
-		ParseCheckAndInterpretOptions{
-			Options: []interpreter.Option{
-				makeContractValueHandler(nil, nil, nil),
-			},
-		},
-	)
-
-	t.Run("-1", func(t *testing.T) {
-		_, err := inter.Invoke("test", interpreter.NewIntValueFromInt64(-1))
-
-		var conditionErr interpreter.ConditionError
-		require.ErrorAs(t, err, &conditionErr)
-
-		// NOTE: The type requirement condition (`Test.Nested`) is evaluated first,
-		//  before the type's conformances (`Also`)
-
-		assert.Equal(t, "x >= 1", conditionErr.Message)
-	})
-
-	t.Run("0", func(t *testing.T) {
-		_, err := inter.Invoke("test", interpreter.NewIntValueFromInt64(0))
-
-		var conditionErr interpreter.ConditionError
-		require.ErrorAs(t, err, &conditionErr)
-
-		assert.Equal(t, "x >= 1", conditionErr.Message)
-	})
-
-	t.Run("1", func(t *testing.T) {
-		value, err := inter.Invoke("test", interpreter.NewIntValueFromInt64(1))
-		require.NoError(t, err)
-
-		assert.IsType(t,
-			interpreter.VoidValue{},
-			value,
-		)
-	})
-
-	t.Run("2", func(t *testing.T) {
-		_, err := inter.Invoke("test", interpreter.NewIntValueFromInt64(2))
-		require.IsType(t,
-			interpreter.Error{},
-			err,
-		)
-		interpreterErr := err.(interpreter.Error)
-
-		require.IsType(t,
-			interpreter.ConditionError{},
-			interpreterErr.Err,
-		)
-	})
-}
-
 func TestInterpretImport(t *testing.T) {
 
 	t.Parallel()
@@ -3897,10 +3261,10 @@ func TestInterpretImport(t *testing.T) {
 		checker.ParseAndCheckOptions{
 			Options: []sema.Option{
 				sema.WithImportHandler(
-					func(checker *sema.Checker, location common.Location) (sema.Import, error) {
+					func(_ *sema.Checker, importedLocation common.Location, _ ast.Range) (sema.Import, error) {
 						assert.Equal(t,
 							ImportedLocation,
-							location,
+							importedLocation,
 						)
 
 						return sema.ElaborationImport{
@@ -3984,10 +3348,10 @@ func TestInterpretImportError(t *testing.T) {
 			Options: []sema.Option{
 				sema.WithPredeclaredValues(valueDeclarations),
 				sema.WithImportHandler(
-					func(checker *sema.Checker, location common.Location) (sema.Import, error) {
+					func(_ *sema.Checker, importedLocation common.Location, _ ast.Range) (sema.Import, error) {
 						assert.Equal(t,
 							ImportedLocation,
-							location,
+							importedLocation,
 						)
 
 						return sema.ElaborationImport{
@@ -5187,7 +4551,16 @@ func TestInterpretDictionaryKeyTypes(t *testing.T) {
 	}
 
 	for _, fixedPointType := range sema.AllFixedPointTypes {
-		tests[fixedPointType.String()] = `1.23`
+
+		var literal string
+
+		if sema.IsSubType(fixedPointType, sema.SignedFixedPointType) {
+			literal = "-1.23"
+		} else {
+			literal = "1.23"
+		}
+
+		tests[fixedPointType.String()] = literal
 	}
 
 	for ty, code := range tests {
@@ -5435,10 +4808,10 @@ func TestInterpretCompositeFunctionInvocationFromImportingProgram(t *testing.T) 
 		checker.ParseAndCheckOptions{
 			Options: []sema.Option{
 				sema.WithImportHandler(
-					func(checker *sema.Checker, location common.Location) (sema.Import, error) {
+					func(_ *sema.Checker, importedLocation common.Location, _ ast.Range) (sema.Import, error) {
 						assert.Equal(t,
 							ImportedLocation,
-							location,
+							importedLocation,
 						)
 
 						return sema.ElaborationImport{
@@ -5998,8 +5371,8 @@ func TestInterpretEmitEventParameterTypes(t *testing.T) {
 
 	for _, integerType := range sema.AllIntegerTypes {
 
-		switch integerType.(type) {
-		case *sema.IntegerType, *sema.SignedIntegerType:
+		switch integerType {
+		case sema.IntegerType, sema.SignedIntegerType:
 			continue
 		}
 
@@ -6010,8 +5383,8 @@ func TestInterpretEmitEventParameterTypes(t *testing.T) {
 
 	for _, fixedPointType := range sema.AllFixedPointTypes {
 
-		switch fixedPointType.(type) {
-		case *sema.FixedPointType, *sema.SignedFixedPointType:
+		switch fixedPointType {
+		case sema.FixedPointType, sema.SignedFixedPointType:
 			continue
 		}
 
@@ -6891,13 +6264,15 @@ func TestInterpretContractAccountFieldUse(t *testing.T) {
 							"account",
 							interpreter.NewAuthAccountValue(
 								addressValue,
+								returnZeroUFix64,
+								returnZeroUFix64,
 								func(interpreter *interpreter.Interpreter) interpreter.UInt64Value {
 									return 0
 								},
-								returnZero,
+								returnZeroUInt64,
 								panicFunction,
 								panicFunction,
-								interpreter.AuthAccountContractsValue{},
+								&interpreter.CompositeValue{},
 								&interpreter.CompositeValue{},
 							),
 						)
@@ -6955,10 +6330,10 @@ func TestInterpretConformToImportedInterface(t *testing.T) {
 		checker.ParseAndCheckOptions{
 			Options: []sema.Option{
 				sema.WithImportHandler(
-					func(checker *sema.Checker, location common.Location) (sema.Import, error) {
+					func(_ *sema.Checker, importedLocation common.Location, _ ast.Range) (sema.Import, error) {
 						assert.Equal(t,
 							ImportedLocation,
-							location,
+							importedLocation,
 						)
 
 						return sema.ElaborationImport{
@@ -7011,134 +6386,6 @@ func TestInterpretConformToImportedInterface(t *testing.T) {
 	)
 }
 
-func TestInterpretFunctionPostConditionInInterface(t *testing.T) {
-
-	t.Parallel()
-
-	inter := parseCheckAndInterpret(t, `
-      struct interface SI {
-          on: Bool
-
-          fun turnOn() {
-              post {
-                  self.on
-              }
-          }
-      }
-
-      struct S: SI {
-          var on: Bool
-
-          init() {
-              self.on = false
-          }
-
-          fun turnOn() {
-              self.on = true
-          }
-      }
-
-      struct S2: SI {
-          var on: Bool
-
-          init() {
-              self.on = false
-          }
-
-          fun turnOn() {
-              // incorrect
-          }
-      }
-
-      fun test() {
-          S().turnOn()
-      }
-
-      fun test2() {
-          S2().turnOn()
-      }
-    `)
-
-	_, err := inter.Invoke("test")
-	require.NoError(t, err)
-
-	_, err = inter.Invoke("test2")
-	require.IsType(t,
-		interpreter.Error{},
-		err,
-	)
-	interpreterErr := err.(interpreter.Error)
-
-	require.IsType(t,
-		interpreter.ConditionError{},
-		interpreterErr.Err,
-	)
-}
-
-func TestInterpretFunctionPostConditionWithBeforeInInterface(t *testing.T) {
-
-	t.Parallel()
-
-	inter := parseCheckAndInterpret(t, `
-      struct interface SI {
-          on: Bool
-
-          fun toggle() {
-              post {
-                  self.on != before(self.on)
-              }
-          }
-      }
-
-      struct S: SI {
-          var on: Bool
-
-          init() {
-              self.on = false
-          }
-
-          fun toggle() {
-              self.on = !self.on
-          }
-      }
-
-      struct S2: SI {
-          var on: Bool
-
-          init() {
-              self.on = false
-          }
-
-          fun toggle() {
-              // incorrect
-          }
-      }
-
-      fun test() {
-          S().toggle()
-      }
-
-      fun test2() {
-          S2().toggle()
-      }
-    `)
-
-	_, err := inter.Invoke("test")
-	require.NoError(t, err)
-
-	_, err = inter.Invoke("test2")
-	require.IsType(t,
-		interpreter.Error{},
-		err,
-	)
-	interpreterErr := err.(interpreter.Error)
-
-	require.IsType(t,
-		interpreter.ConditionError{},
-		interpreterErr.Err,
-	)
-}
-
 func TestInterpretContractUseInNestedDeclaration(t *testing.T) {
 
 	t.Parallel()
@@ -7176,178 +6423,6 @@ func TestInterpretContractUseInNestedDeclaration(t *testing.T) {
 		interpreter.NewIntValueFromInt64(2),
 		i,
 	)
-}
-
-func TestInterpretResourceInterfaceInitializerAndDestructorPreConditions(t *testing.T) {
-
-	t.Parallel()
-
-	inter := parseCheckAndInterpret(t, `
-
-      resource interface RI {
-
-          x: Int
-
-          init(_ x: Int) {
-              pre { x > 1: "invalid init" }
-          }
-
-          destroy() {
-              pre { self.x < 3: "invalid destroy" }
-          }
-      }
-
-      resource R: RI {
-
-          let x: Int
-
-          init(_ x: Int) {
-              self.x = x
-          }
-      }
-
-      fun test(_ x: Int) {
-          let r <- create R(x)
-          destroy r
-      }
-    `)
-
-	t.Run("1", func(t *testing.T) {
-		_, err := inter.Invoke("test", interpreter.NewIntValueFromInt64(1))
-		require.Error(t, err)
-
-		require.IsType(t,
-			interpreter.Error{},
-			err,
-		)
-		interpreterErr := err.(interpreter.Error)
-
-		require.IsType(t,
-			interpreter.ConditionError{},
-			interpreterErr.Err,
-		)
-		conditionError := interpreterErr.Err.(interpreter.ConditionError)
-
-		assert.Equal(t, "invalid init", conditionError.Message)
-	})
-
-	t.Run("2", func(t *testing.T) {
-		_, err := inter.Invoke("test", interpreter.NewIntValueFromInt64(2))
-		require.NoError(t, err)
-	})
-
-	t.Run("3", func(t *testing.T) {
-		_, err := inter.Invoke("test", interpreter.NewIntValueFromInt64(3))
-		require.Error(t, err)
-
-		require.IsType(t,
-			interpreter.Error{},
-			err,
-		)
-		interpreterErr := err.(interpreter.Error)
-
-		require.IsType(t,
-			interpreter.ConditionError{},
-			interpreterErr.Err,
-		)
-		conditionError := interpreterErr.Err.(interpreter.ConditionError)
-
-		assert.Equal(t, "invalid destroy", conditionError.Message)
-	})
-}
-
-func TestInterpretResourceTypeRequirementInitializerAndDestructorPreConditions(t *testing.T) {
-
-	t.Parallel()
-
-	inter := parseCheckAndInterpretWithOptions(t,
-		`
-          pub contract interface CI {
-
-              pub resource R {
-
-                  pub x: Int
-
-                  init(_ x: Int) {
-                      pre { x > 1: "invalid init" }
-                  }
-
-                  destroy() {
-                      pre { self.x < 3: "invalid destroy" }
-                  }
-              }
-          }
-
-          pub contract C: CI {
-
-              pub resource R {
-
-                  pub let x: Int
-
-                  init(_ x: Int) {
-                      self.x = x
-                  }
-              }
-
-              pub fun test(_ x: Int) {
-                  let r <- create C.R(x)
-                  destroy r
-              }
-          }
-
-          fun test(_ x: Int) {
-              C.test(x)
-          }
-        `,
-		ParseCheckAndInterpretOptions{
-			Options: []interpreter.Option{
-				makeContractValueHandler(nil, nil, nil),
-			},
-		},
-	)
-
-	t.Run("1", func(t *testing.T) {
-		_, err := inter.Invoke("test", interpreter.NewIntValueFromInt64(1))
-		require.Error(t, err)
-
-		require.IsType(t,
-			interpreter.Error{},
-			err,
-		)
-		interpreterErr := err.(interpreter.Error)
-
-		require.IsType(t,
-			interpreter.ConditionError{},
-			interpreterErr.Err,
-		)
-		conditionError := interpreterErr.Err.(interpreter.ConditionError)
-
-		assert.Equal(t, "invalid init", conditionError.Message)
-	})
-
-	t.Run("2", func(t *testing.T) {
-		_, err := inter.Invoke("test", interpreter.NewIntValueFromInt64(2))
-		require.NoError(t, err)
-	})
-
-	t.Run("3", func(t *testing.T) {
-		_, err := inter.Invoke("test", interpreter.NewIntValueFromInt64(3))
-		require.Error(t, err)
-
-		require.IsType(t,
-			interpreter.Error{},
-			err,
-		)
-		interpreterErr := err.(interpreter.Error)
-
-		require.IsType(t,
-			interpreter.ConditionError{},
-			interpreterErr.Err,
-		)
-		conditionError := interpreterErr.Err.(interpreter.ConditionError)
-
-		assert.Equal(t, "invalid destroy", conditionError.Message)
-	})
 }
 
 func TestInterpretNonStorageReference(t *testing.T) {
@@ -7665,7 +6740,7 @@ func TestInterpretResourceOwnerFieldUse(t *testing.T) {
 		return ok
 	}
 
-	getter := func(_ *interpreter.Interpreter, _ common.Address, key string, deferred bool) interpreter.OptionalValue {
+	getter := func(_ *interpreter.Interpreter, _ common.Address, key string, _ bool) interpreter.OptionalValue {
 		value, ok := storedValues[key]
 		if !ok {
 			return interpreter.NilValue{}
@@ -7712,13 +6787,15 @@ func TestInterpretResourceOwnerFieldUse(t *testing.T) {
 		Type: sema.AuthAccountType,
 		Value: interpreter.NewAuthAccountValue(
 			addressValue,
+			returnZeroUFix64,
+			returnZeroUFix64,
 			func(interpreter *interpreter.Interpreter) interpreter.UInt64Value {
 				return 0
 			},
-			returnZero,
+			returnZeroUInt64,
 			panicFunction,
 			panicFunction,
-			interpreter.AuthAccountContractsValue{},
+			&interpreter.CompositeValue{},
 			&interpreter.CompositeValue{},
 		),
 		Kind: common.DeclarationKindConstant,
@@ -7739,9 +6816,22 @@ func TestInterpretResourceOwnerFieldUse(t *testing.T) {
 				interpreter.WithStorageExistenceHandler(checker),
 				interpreter.WithStorageReadHandler(getter),
 				interpreter.WithStorageWriteHandler(setter),
-				interpreter.WithStorageKeyHandler(
-					func(_ *interpreter.Interpreter, _ common.Address, indexingType sema.Type) string {
-						return string(indexingType.ID())
+				interpreter.WithAccountHandlerFunc(
+					func(address interpreter.AddressValue) *interpreter.CompositeValue {
+						return interpreter.NewPublicAccountValue(
+							address,
+							returnZeroUFix64,
+							returnZeroUFix64,
+							func(interpreter *interpreter.Interpreter) interpreter.UInt64Value {
+								panic(errors.NewUnreachableError())
+							},
+							func() interpreter.UInt64Value {
+								panic(errors.NewUnreachableError())
+							},
+							interpreter.NewPublicAccountKeysValue(
+								panicFunction,
+							),
+						)
 					},
 				),
 			},
@@ -7834,7 +6924,7 @@ func TestInterpretResourceAssignmentForceTransfer(t *testing.T) {
 		require.ErrorAs(t, err, &interpreter.ForceAssignmentToNonNilResourceError{})
 	})
 
-	t.Run("new to non-nil", func(t *testing.T) {
+	t.Run("force-assignment initialization", func(t *testing.T) {
 
 		inter := parseCheckAndInterpret(t, `
 	     resource X {}
@@ -7918,11 +7008,11 @@ func TestInterpretForce(t *testing.T) {
 	})
 }
 
-func permutations(xs []string) (res [][]string) {
-	var f func([]string, int)
-	f = func(a []string, k int) {
+func permutations(xs [][]byte) (res [][][]byte) {
+	var f func([][]byte, int)
+	f = func(a [][]byte, k int) {
 		if k == len(a) {
-			res = append(res, append([]string{}, a...))
+			res = append(res, append([][]byte{}, a...))
 		} else {
 			for i := k; i < len(xs); i++ {
 				a[k], a[i] = a[i], a[k]
@@ -7941,43 +7031,92 @@ func TestInterpretCompositeValueFieldEncodingOrder(t *testing.T) {
 
 	t.Parallel()
 
-	fieldValues := map[string]int{
-		"a": 1,
-		"b": 2,
-		"c": 3,
+	fieldValues := map[byte]byte{
+		'a': 1,
+		'b': 2,
+		'c': 3,
 	}
 
-	initializations := make([]string, 0, len(fieldValues))
+	// prepare initialization statements
+
+	initializations := make([][]byte, 0, len(fieldValues))
+	expectedEncodings := make([][]byte, 0, len(fieldValues))
 
 	for name, value := range fieldValues {
-		initialization := fmt.Sprintf("self.%s = %d", name, value)
-		initializations = append(initializations, initialization)
+		initialization := fmt.Sprintf("self.%c = %d", name, value)
+		initializations = append(initializations, []byte(initialization))
+
+		expectedEncodings = append(expectedEncodings, []byte{
+			// UTF-8 string, length 1
+			0x61,
+			name,
+			// tag
+			0xD8, 0x98,
+			// - positive bignum
+			0xc2,
+			// - byte string, length 1
+			0x41,
+			value,
+		})
 	}
 
 	allInitializations := permutations(initializations)
+	allExpectedEncodings := permutations(expectedEncodings)
 
-	encodings := make([][]byte, len(allInitializations))
+	expectedPrefix := []byte{
+		// tag
+		0xd8, 0x84,
+		// array, 5 items follow
+		0x85,
+
+		// tag
+		0xd8, 0xc1,
+		// UTF-8 string, length 4
+		0x64,
+		// t, e, s, t
+		0x74, 0x65, 0x73, 0x74,
+
+		// nil
+		0xf6,
+
+		// positive integer 1
+		0x1,
+
+		// array, 6 items follow
+		0x86,
+	}
+
+	expectedSuffix := []byte{
+		// UTF-8 string, length 4
+		0x64,
+		0x54, 0x65, 0x73, 0x74,
+	}
 
 	for i, initialization := range allInitializations {
 
-		inter := parseCheckAndInterpret(t,
-			fmt.Sprintf(
-				`
-                  struct Test {
-                      let a: Int
-                      let b: Int
-                      let c: Int
+		var codeBuilder strings.Builder
+		codeBuilder.WriteString(`
+          struct Test {
+              let a: Int
+              let b: Int
+              let c: Int
 
-                      init() {
-                          %s
-                      }
-                  }
+              init() {
+        `)
 
-                  let test = Test()
-                `,
-				strings.Join(initialization, "\n"),
-			),
-		)
+		for _, statement := range initialization {
+			codeBuilder.Write(statement)
+			codeBuilder.WriteRune('\n')
+		}
+
+		codeBuilder.WriteString(`
+              }
+          }
+
+          let test = Test()
+        `)
+
+		inter := parseCheckAndInterpret(t, codeBuilder.String())
 
 		test := inter.Globals["test"].GetValue().(*interpreter.CompositeValue)
 
@@ -7988,13 +7127,15 @@ func TestInterpretCompositeValueFieldEncodingOrder(t *testing.T) {
 		encoded, _, err := interpreter.EncodeValue(test, nil, false, nil)
 		require.NoError(t, err)
 
-		encodings[i] = encoded
-	}
+		expected := expectedPrefix[:]
 
-	expected := encodings[0]
+		for _, expectedEncoding := range allExpectedEncodings[i] {
+			expected = append(expected, expectedEncoding...)
+		}
 
-	for _, actual := range encodings[1:] {
-		require.Equal(t, expected, actual)
+		expected = append(expected, expectedSuffix...)
+
+		assert.Equal(t, expected, encoded)
 	}
 }
 
@@ -8008,29 +7149,34 @@ func TestInterpretDictionaryValueEncodingOrder(t *testing.T) {
 		"c": 3,
 	}
 
-	initializations := make([]string, 0, len(fieldValues))
+	initializations := make([][]byte, 0, len(fieldValues))
 
 	for name, value := range fieldValues {
 		initialization := fmt.Sprintf(`xs["%s"] = %d`, name, value)
-		initializations = append(initializations, initialization)
+		initializations = append(initializations, []byte(initialization))
 	}
 
 	for _, initialization := range permutations(initializations) {
 
-		inter := parseCheckAndInterpret(t,
-			fmt.Sprintf(
-				`
-                  fun construct(): {String: Int} {
-                      let xs: {String: Int} = {}
-                      %s
-                      return xs
-                  }
+		var codeBuilder strings.Builder
+		codeBuilder.WriteString(`
+          fun construct(): {String: Int} {
+              let xs: {String: Int} = {}
+        `)
 
-                  let test = construct()
-                `,
-				strings.Join(initialization, "\n"),
-			),
-		)
+		for _, statement := range initialization {
+			codeBuilder.Write(statement)
+			codeBuilder.WriteRune('\n')
+		}
+
+		codeBuilder.WriteString(`
+              return xs
+          }
+
+          let test = construct()
+        `)
+
+		inter := parseCheckAndInterpret(t, codeBuilder.String())
 
 		test := inter.Globals["test"].GetValue().(*interpreter.DictionaryValue)
 
@@ -8182,22 +7328,22 @@ func TestInterpretCountDigits256(t *testing.T) {
 
 	for _, test := range []test{
 		{
-			&sema.Int256Type{},
+			sema.Int256Type,
 			"676983016644359394637212096269997871684197836659065544033845082275068334",
 			72,
 		},
 		{
-			&sema.UInt256Type{},
+			sema.UInt256Type,
 			"676983016644359394637212096269997871684197836659065544033845082275068334",
 			72,
 		},
 		{
-			&sema.Int128Type{},
+			sema.Int128Type,
 			"676983016644359394637212096269997871",
 			36,
 		},
 		{
-			&sema.UInt128Type{},
+			sema.UInt128Type,
 			"676983016644359394637212096269997871",
 			36,
 		},
@@ -8491,4 +7637,76 @@ func BenchmarkInterpretRecursionFib(b *testing.B) {
 		require.NoError(b, err)
 		require.Equal(b, expected, result)
 	}
+}
+
+func TestInterpretMissingMember(t *testing.T) {
+
+	// prepare type `struct X { let y: Int }`
+
+	const typeName = "X"
+	ty := &sema.CompositeType{
+		Location:   TestLocation,
+		Identifier: typeName,
+	}
+
+	members := sema.NewStringMemberOrderedMap()
+	ty.Members = members
+
+	const fieldName = "y"
+	fieldMember := sema.NewPublicConstantFieldMember(
+		ty,
+		fieldName,
+		sema.IntType,
+		"",
+	)
+	members.Set(fieldName, fieldMember)
+
+	// prepare value of type X,
+	// which is missing field `y`!
+
+	value := interpreter.NewCompositeValue(
+		TestLocation,
+		typeName,
+		common.CompositeKindStructure,
+		interpreter.NewStringValueOrderedMap(),
+		nil,
+	)
+
+	predeclaredValues :=
+		stdlib.StandardLibraryValues{
+			{
+				Name:  "x",
+				Type:  ty,
+				Value: value,
+				Kind:  common.DeclarationKindStructure,
+			},
+		}
+
+	valueDeclarations := predeclaredValues.ToSemaValueDeclarations()
+	values := predeclaredValues.ToInterpreterValueDeclarations()
+
+	inter := parseCheckAndInterpretWithOptions(t,
+		`
+          fun test() {
+              // access missing field y
+              x.y
+          }
+        `,
+		ParseCheckAndInterpretOptions{
+			CheckerOptions: []sema.Option{
+				sema.WithPredeclaredValues(valueDeclarations),
+			},
+			Options: []interpreter.Option{
+				interpreter.WithPredeclaredValues(values),
+			},
+		},
+	)
+
+	_, err := inter.Invoke("test")
+	require.Error(t, err)
+
+	var missingMemberError interpreter.MissingMemberValueError
+	require.ErrorAs(t, err, &missingMemberError)
+
+	require.Equal(t, "y", missingMemberError.Name)
 }

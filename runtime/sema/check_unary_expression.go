@@ -47,7 +47,7 @@ func (checker *Checker) VisitUnaryExpression(expression *ast.UnaryExpression) as
 		return valueType
 
 	case ast.OperationMinus:
-		expectedType := &SignedNumberType{}
+		expectedType := SignedNumberType
 		if !IsSubType(valueType, expectedType) {
 			reportInvalidUnaryOperator(expectedType)
 		}
