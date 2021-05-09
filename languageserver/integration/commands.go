@@ -201,8 +201,16 @@ func (i *FlowIntegration) sendTransaction(conn protocol.Conn, args ...interface{
 		return nil, errorWithMessage(conn, ErrorMessageServiceAccountKey, err)
 	}
 
-	_, txResult, err := i.sharedServices.Transactions.SendForAddress(path.Path, signers[0], privateKey, []string{}, argsJSON)
+	code, err := ioutil.ReadFile(path.Path)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load transaction file: %s", path.Path)
+	}
 
+	_, txResult, err := i.sharedServices.Transactions.SendForAddressWithCode(
+		code,
+		signers[0],
+		privateKey,
+		[]string{}, argsJSON)
 	if err != nil {
 		return nil, errorWithMessage(conn, ErrorMessageTransactionError, err)
 	}
@@ -250,8 +258,12 @@ func (i *FlowIntegration) executeScript(conn protocol.Conn, args ...interface{})
 	}
 
 	// Execute script via shared library
-	scriptResult, err := i.sharedServices.Scripts.Execute(path.Path, []string{}, argsJSON)
-
+	scriptResult, err := i.sharedServices.Scripts.Execute(
+		path.Path,
+		[]string{},
+		argsJSON,
+		"emulator",
+	)
 	if err != nil {
 		return nil, errorWithMessage(conn, ErrorMessageScriptExecution, err)
 	}
@@ -480,12 +492,20 @@ func (i *FlowIntegration) createAccountHelper(conn protocol.Conn) (address flow.
 	}
 
 	keys := []string{cryptoKey.PublicKey().String()}
+	weights := []int{1000}
 
 	signatureAlgorithm := defaultKey.SigAlgo().String()
 	hashAlgorithm := defaultKey.HashAlgo().String()
 	var contracts []string
 
-	newAccount, err := i.sharedServices.Accounts.Create(signer, keys, signatureAlgorithm, hashAlgorithm, contracts)
+	newAccount, err := i.sharedServices.Accounts.Create(
+		signer,
+		keys,
+		weights,
+		signatureAlgorithm,
+		hashAlgorithm,
+		contracts,
+	)
 	if err != nil {
 		return flow.Address{}, errorWithMessage(conn, ErrorMessageAccountCreate, err)
 	}
