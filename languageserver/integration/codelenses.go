@@ -19,17 +19,24 @@
 package integration
 
 import (
+	"encoding/json"
 	"fmt"
 
-	"github.com/onflow/flow-go-sdk"
-
-	"github.com/onflow/cadence"
-	jsoncdc "github.com/onflow/cadence/encoding/json"
 	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/sema"
+	"github.com/onflow/flow-go-sdk"
 
 	"github.com/onflow/cadence/languageserver/conversion"
 	"github.com/onflow/cadence/languageserver/protocol"
+)
+
+const (
+	// Codelens message prefixes
+	prefixOK       = "💡"
+	prefixStarting = "⏲"
+	prefixOffline  = "⚠️"
+	prefixError    = "🚫"
 )
 
 func (i *FlowIntegration) codeLenses(
@@ -40,20 +47,18 @@ func (i *FlowIntegration) codeLenses(
 	[]*protocol.CodeLens,
 	error,
 ) {
-
 	var actions []*protocol.CodeLens
-
-	addAction := func(lens *protocol.CodeLens) {
-		if lens != nil {
-			actions = append(actions, lens)
-		}
-	}
 
 	program := checker.Program
 
-	addAction(i.showDeployContractAction(uri, program))
-	addAction(i.showDeployContractInterfaceAction(uri, program))
+	// Add code lenses for contracts and contract interfaces
+	deployContractLenses, err := i.showDeployContractAction(uri, program, version, checker)
+	if err != nil {
+		return nil, err
+	}
+	actions = append(actions, deployContractLenses...)
 
+	// Add code lenses for scripts and transactions
 	entryPointCodeLenses, err := i.entryPointActions(uri, version, checker)
 	if err != nil {
 		return nil, err
@@ -69,75 +74,40 @@ func (i *FlowIntegration) codeLenses(
 func (i *FlowIntegration) showDeployContractAction(
 	uri protocol.DocumentUri,
 	program *ast.Program,
-) *protocol.CodeLens {
+	version float64,
+	checker *sema.Checker,
+) ([]*protocol.CodeLens, error) {
+	i.updateContractInfoIfNeeded(uri, version, checker)
 
-	// Do not show deploy button when no active account exists
-	if i.activeAddress == flow.EmptyAddress {
-		return nil
+	contractInfo := i.contractInfo[uri]
+	kind := contractInfo.kind
+
+	if kind == contractTypeUnknown || contractInfo.startPos == nil {
+		return nil, nil
 	}
 
-	contract := program.SoleContractDeclaration()
+	name := contractInfo.name
+	position := *contractInfo.startPos
+	signersList := contractInfo.pragmaSignersStrings[:]
 
-	if contract == nil {
-		return nil
+	codelensRange := conversion.ASTToProtocolRange(position, position)
+	var codeLenses []*protocol.CodeLens
+
+	// Check emulator state
+	emulatorStateLens := i.checkEmulatorState(codelensRange)
+	if emulatorStateLens != nil {
+		return []*protocol.CodeLens{emulatorStateLens}, nil
 	}
 
-	name := contract.Identifier.Identifier
-
-	position := contract.StartPosition()
-
-	return &protocol.CodeLens{
-		Range: conversion.ASTToProtocolRange(
-			position,
-			position,
-		),
-		Command: &protocol.Command{
-			Title: fmt.Sprintf(
-				"deploy to account 0x%s",
-				i.activeAddress.Hex(),
-			),
-			Command:   CommandDeployContract,
-			Arguments: []interface{}{uri, name},
-		},
-	}
-}
-
-// showDeployContractInterfaceAction shows a deploy button when there is exactly one contract interface declaration,
-// and no other actionable declarations
-//
-func (i *FlowIntegration) showDeployContractInterfaceAction(
-	uri protocol.DocumentUri,
-	program *ast.Program,
-) *protocol.CodeLens {
-
-	// Do not show deploy button when no active account exists
-	if i.activeAddress == flow.EmptyAddress {
-		return nil
+	if len(signersList) == 0 {
+		signersList = append(signersList, []string{i.activeAccount.Name})
 	}
 
-	contractInterface := program.SoleContractInterfaceDeclaration()
-	if contractInterface == nil {
-		return nil
+	for _, signers := range signersList {
+		codeLenses = append(codeLenses, i.contractCodeLenses(uri, codelensRange, name, kind, signers[0]))
 	}
 
-	name := contractInterface.Identifier.Identifier
-
-	position := contractInterface.StartPosition()
-
-	return &protocol.CodeLens{
-		Range: conversion.ASTToProtocolRange(
-			position,
-			position,
-		),
-		Command: &protocol.Command{
-			Title: fmt.Sprintf(
-				"deploy to account 0x%s",
-				i.activeAddress.Hex(),
-			),
-			Command:   CommandDeployContract,
-			Arguments: []interface{}{uri, name},
-		},
-	}
+	return codeLenses, nil
 }
 
 // entryPointActions shows an execute button when there is exactly one valid entry point
@@ -152,81 +122,240 @@ func (i *FlowIntegration) entryPointActions(
 	[]*protocol.CodeLens,
 	error,
 ) {
-
 	i.updateEntryPointInfoIfNeeded(uri, version, checker)
 
 	entryPointInfo := i.entryPointInfo[uri]
 	if entryPointInfo.kind == entryPointKindUnknown || entryPointInfo.startPos == nil {
 		return nil, nil
 	}
+
+	kind := entryPointInfo.kind
 	position := *entryPointInfo.startPos
-
-	var title string
-	var argumentListConjunction string
-	var command string
-
-	switch entryPointInfo.kind {
-	case entryPointKindScript:
-		title = "execute"
-		argumentListConjunction = "with"
-		command = CommandExecuteScript
-
-	case entryPointKindTransaction:
-		// Do not show submit button when no active account exists
-		if i.activeAddress == flow.EmptyAddress {
-			return nil, nil
-		}
-
-		title = fmt.Sprintf(
-			"submit with account 0x%s",
-			i.activeAddress.Hex(),
-		)
-		argumentListConjunction = "and"
-		command = CommandSubmitTransaction
-	}
-
 	argumentLists := entryPointInfo.pragmaArguments[:]
+	signersList := entryPointInfo.pragmaSignersStrings[:]
+	requiredNumberOfSigners := entryPointInfo.numberOfSigners
+
+	codelensRange := conversion.ASTToProtocolRange(position, position)
+	var codeLenses []*protocol.CodeLens
+
+	// Check emulator state
+	emulatorStateLens := i.checkEmulatorState(codelensRange)
+	if emulatorStateLens != nil {
+		codeLenses = append(codeLenses, emulatorStateLens)
+		return codeLenses, nil
+	}
 
 	// If there are no parameters and no pragma argument declarations,
 	// offer execution using no arguments
-	if len(entryPointInfo.parameters) == 0 && len(argumentLists) == 0 {
-		argumentLists = append(argumentLists, []cadence.Value{})
+	if len(entryPointInfo.parameters) == 0 {
+		argumentLists = append(argumentLists, []Argument{})
 	}
 
-	codeLenses := make([]*protocol.CodeLens, len(argumentLists))
+	if len(signersList) == 0 {
+		signersList = append(signersList, []string{i.activeAccount.Name})
+	}
 
-	for i, argumentList := range argumentLists {
-		formattedTitle := title
-		if len(argumentList) > 0 {
-			formattedTitle = fmt.Sprintf(
-				"%s %s %s",
-				title,
-				argumentListConjunction,
-				entryPointInfo.pragmaArgumentStrings[i],
-			)
-		}
+	for index, argumentList := range argumentLists {
+		pragmaArguments := entryPointInfo.pragmaArgumentStrings[index]
 
-		encodedArgumentList := make([]string, len(argumentList))
-		for i, argument := range argumentList {
-			encodedArgument, err := jsoncdc.Encode(argument)
-			if err != nil {
-				return nil, err
+		switch kind {
+		case entryPointKindScript:
+			codeLens := i.scriptCodeLenses(uri, codelensRange, pragmaArguments, argumentList)
+			codeLenses = append(codeLenses, codeLens)
+
+		case entryPointKindTransaction:
+			for _, signers := range signersList {
+
+				numberOfSigners := len(signers)
+				if requiredNumberOfSigners > numberOfSigners {
+					title := fmt.Sprintf(
+						"%s Not enough signers. Required: %v, passed: %v",
+						prefixError,
+						requiredNumberOfSigners,
+						numberOfSigners,
+					)
+					codeLenses = append(codeLenses, makeActionlessCodelens(title, codelensRange))
+					continue
+				}
+
+				var codeLens *protocol.CodeLens
+				accounts, absentAccounts := i.resolveAccounts(signers)
+
+				if len(absentAccounts) > 0 {
+					codeLens = i.showAbsentAccounts(absentAccounts, codelensRange)
+				} else {
+					codeLens = i.transactionCodeLenses(uri, codelensRange, pragmaArguments, argumentList, signers, accounts)
+				}
+
+				codeLenses = append(codeLenses, codeLens)
 			}
-			encodedArgumentList[i] = string(encodedArgument)
-		}
-
-		codeLenses[i] = &protocol.CodeLens{
-			Range: conversion.ASTToProtocolRange(
-				position,
-				position,
-			),
-			Command: &protocol.Command{
-				Title:     formattedTitle,
-				Command:   command,
-				Arguments: []interface{}{uri, encodedArgumentList},
-			},
 		}
 	}
 
 	return codeLenses, nil
+}
+
+func makeActionlessCodelens(title string, lensRange protocol.Range) *protocol.CodeLens {
+	return &protocol.CodeLens{
+		Range: lensRange,
+		Command: &protocol.Command{
+			Title: title,
+		},
+	}
+}
+
+func makeCodeLens(command string, title string, lensRange protocol.Range, arguments []interface{}) *protocol.CodeLens {
+	return &protocol.CodeLens{
+		Range: lensRange,
+		Command: &protocol.Command{
+			Title:     title,
+			Command:   command,
+			Arguments: arguments,
+		},
+	}
+}
+
+func (i *FlowIntegration) resolveAccounts(signers []string) ([]flow.Address, []string) {
+	var absentAccounts []string
+	var resolvedAccounts []flow.Address
+	for _, signer := range signers {
+		resolvedAddress, _ := i.getAccountAddress(signer)
+		if resolvedAddress == flow.EmptyAddress {
+			absentAccounts = append(absentAccounts, signer)
+		} else {
+			resolvedAccounts = append(resolvedAccounts, resolvedAddress)
+		}
+	}
+	return resolvedAccounts, absentAccounts
+}
+
+func (i *FlowIntegration) showAbsentAccounts(accounts []string, codelensRange protocol.Range) *protocol.CodeLens {
+	var title string
+	accountsNumeric := "account"
+
+	if len(accounts) > 1 {
+		accountsNumeric = "accounts"
+	}
+
+	title = fmt.Sprintf("%s Specified %s %s does not exist",
+		prefixError,
+		accountsNumeric,
+		common.EnumerateWords(accounts, "and"),
+	)
+	return makeActionlessCodelens(title, codelensRange)
+}
+
+func (i *FlowIntegration) checkEmulatorState(codelensRange protocol.Range) *protocol.CodeLens {
+	var title string
+	var codeLens *protocol.CodeLens
+
+	if i.emulatorState == EmulatorOffline {
+		title = fmt.Sprintf(
+			"%s Emulator is Offline. Click here to start it",
+			prefixOffline,
+		)
+		codeLens = makeCodeLens(ClientStartEmulator, title, codelensRange, nil)
+	}
+
+	if i.emulatorState == EmulatorStarting {
+		title = fmt.Sprintf(
+			"%s Emulator is starting up. Please wait \u2026",
+			prefixStarting,
+		)
+		codeLens = makeActionlessCodelens(title, codelensRange)
+	}
+
+	return codeLens
+}
+
+func (i *FlowIntegration) scriptCodeLenses(
+	uri protocol.DocumentUri,
+	codelensRange protocol.Range,
+	pragmaArguments string,
+	argumentList []Argument,
+) *protocol.CodeLens {
+
+	title := fmt.Sprintf(
+		"%s Execute script",
+		prefixOK,
+	)
+
+	if len(argumentList) > 0 {
+		title = fmt.Sprintf(
+			"%s with %s",
+			title,
+			pragmaArguments,
+		)
+	}
+
+	argsJSON, _ := json.Marshal(argumentList)
+	return makeCodeLens(CommandExecuteScript, title, codelensRange, []interface{}{uri, string(argsJSON)})
+}
+
+func (i *FlowIntegration) transactionCodeLenses(
+	uri protocol.DocumentUri,
+	codelensRange protocol.Range,
+	pragmaArguments string,
+	argumentList []Argument,
+	signers []string,
+	accounts []flow.Address,
+) *protocol.CodeLens {
+	var title string
+
+	if len(argumentList) > 0 {
+		title = fmt.Sprintf(
+			"%s Send with %s signed by %s",
+			prefixOK,
+			pragmaArguments,
+			common.EnumerateWords(signers, "and"),
+		)
+	} else {
+		title = fmt.Sprintf(
+			"%s Send signed by %s",
+			prefixOK,
+			common.EnumerateWords(signers, "and"),
+		)
+	}
+
+	argsJSON, _ := json.Marshal(argumentList)
+
+	return makeCodeLens(
+		CommandSendTransaction,
+		title,
+		codelensRange,
+		[]interface{}{uri, string(argsJSON), accounts},
+	)
+}
+
+func (i *FlowIntegration) contractCodeLenses(
+	uri protocol.DocumentUri,
+	codelensRange protocol.Range,
+	name string,
+	kind contractKind,
+	signer string,
+) *protocol.CodeLens {
+	var title string
+	resolvedAddress, _ := i.getAccountAddress(signer)
+
+	if resolvedAddress == flow.EmptyAddress {
+		title = fmt.Sprintf("%s Specified account %s does not exist",
+			prefixError,
+			signer,
+		)
+		return makeActionlessCodelens(title, codelensRange)
+	}
+
+	titleBody := "Deploy contract"
+	if kind == contractTypeInterface {
+		titleBody = "Deploy contract interface"
+	}
+
+	title = fmt.Sprintf("%s %s %s to %s",
+		prefixOK,
+		titleBody,
+		name,
+		signer,
+	)
+
+	return makeCodeLens(CommandDeployContract, title, codelensRange, []interface{}{uri, name, resolvedAddress})
 }
