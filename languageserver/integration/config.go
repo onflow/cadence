@@ -22,6 +22,7 @@ package integration
 
 import (
 	"errors"
+
 	"github.com/onflow/flow-go-sdk"
 	"github.com/onflow/flow-go-sdk/crypto"
 )
@@ -39,7 +40,7 @@ type Config struct {
 	activeAccount ClientAccount
 
 	// path to flow.json
-	configPath	string
+	configPath string
 }
 
 type AccountPrivateKey struct {
@@ -64,7 +65,6 @@ func configFromInitializationOptions(opts interface{}) (conf Config, err error) 
 		return Config{}, errors.New("initialization options: invalid emulator state")
 	}
 	conf.emulatorState = EmulatorState(emulatorState)
-
 
 	activeAccountName, ok := optsMap["activeAccountName"].(string)
 	if !ok {

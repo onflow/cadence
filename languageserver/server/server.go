@@ -28,7 +28,6 @@ import (
 	"time"
 
 	"github.com/mitchellh/mapstructure"
-
 	"github.com/onflow/cadence/encoding/json"
 	"github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/ast"
@@ -40,7 +39,6 @@ import (
 
 	"github.com/onflow/cadence/languageserver/conversion"
 	"github.com/onflow/cadence/languageserver/jsonrpc2"
-
 	"github.com/onflow/cadence/languageserver/protocol"
 )
 

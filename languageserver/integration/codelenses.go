@@ -21,12 +21,14 @@ package integration
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/onflow/cadence/languageserver/conversion"
-	"github.com/onflow/cadence/languageserver/protocol"
+
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/flow-go-sdk"
+
+	"github.com/onflow/cadence/languageserver/conversion"
+	"github.com/onflow/cadence/languageserver/protocol"
 )
 
 const (
@@ -136,7 +138,6 @@ func (i *FlowIntegration) entryPointActions(
 	codelensRange := conversion.ASTToProtocolRange(position, position)
 	var codeLenses []*protocol.CodeLens
 
-
 	// Check emulator state
 	emulatorStateLens := i.checkEmulatorState(codelensRange)
 	if emulatorStateLens != nil {
@@ -166,7 +167,7 @@ func (i *FlowIntegration) entryPointActions(
 			for _, signers := range signersList {
 
 				numberOfSigners := len(signers)
-				if requiredNumberOfSigners > numberOfSigners{
+				if requiredNumberOfSigners > numberOfSigners {
 					title := fmt.Sprintf(
 						"%s Not enough signers. Required: %v, passed: %v",
 						prefixError,
@@ -287,7 +288,7 @@ func (i *FlowIntegration) scriptCodeLenses(
 		)
 	}
 
-	argsJSON,_ := json.Marshal(argumentList)
+	argsJSON, _ := json.Marshal(argumentList)
 	return makeCodeLens(CommandExecuteScript, title, codelensRange, []interface{}{uri, string(argsJSON)})
 }
 
@@ -316,7 +317,7 @@ func (i *FlowIntegration) transactionCodeLenses(
 		)
 	}
 
-	argsJSON,_ := json.Marshal(argumentList)
+	argsJSON, _ := json.Marshal(argumentList)
 
 	return makeCodeLens(
 		CommandSendTransaction,
@@ -356,5 +357,5 @@ func (i *FlowIntegration) contractCodeLenses(
 		signer,
 	)
 
-	return makeCodeLens(CommandDeployContract, title, codelensRange,[]interface{}{uri, name, resolvedAddress})
+	return makeCodeLens(CommandDeployContract, title, codelensRange, []interface{}{uri, name, resolvedAddress})
 }

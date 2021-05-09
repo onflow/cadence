@@ -21,13 +21,14 @@ package integration
 import (
 	"errors"
 	"fmt"
-	"github.com/onflow/flow-cli/pkg/flowcli"
-	"github.com/onflow/flow-go-sdk/crypto"
+	"io/ioutil"
 	"net/url"
 	"strings"
 	"time"
 
+	"github.com/onflow/flow-cli/pkg/flowcli"
 	"github.com/onflow/flow-go-sdk"
+	"github.com/onflow/flow-go-sdk/crypto"
 
 	"github.com/onflow/cadence/languageserver/protocol"
 	"github.com/onflow/cadence/languageserver/server"
@@ -366,7 +367,7 @@ func (i *FlowIntegration) createDefaultAccounts(conn protocol.Conn, args ...inte
 		return nil, errorWithMessage(conn, ErrorMessageEmulator, err)
 	}
 
-	accounts := make([]ClientAccount, count + 1)
+	accounts := make([]ClientAccount, count+1)
 
 	// Get service account
 	serviceAccount, err := i.project.EmulatorServiceAccount()
@@ -380,7 +381,7 @@ func (i *FlowIntegration) createDefaultAccounts(conn protocol.Conn, args ...inte
 		Address: serviceAccount.Address(),
 	}
 
-	for index := 1; index < count + 1; index++ {
+	for index := 1; index < count+1; index++ {
 		account, err := i.createAccount(conn)
 		if err != nil {
 			return nil, errorWithMessage(conn, ErrorMessageAccountCreate, err)
