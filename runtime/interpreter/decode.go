@@ -37,14 +37,17 @@ import (
 
 type DecodingCallback func(value interface{}, path []string)
 
+type CompositeSerializedFieldMembersGetter func(location common.Location, qualifiedIdentifier string) []*sema.Member
+
 // A DecoderV4 decodes CBOR-encoded representations of values.
 // It can decode storage format version 4 and later.
 //
 type DecoderV4 struct {
-	decoder        *cbor.Decoder
-	owner          *common.Address
-	version        uint16
-	decodeCallback DecodingCallback
+	decoder                               *cbor.Decoder
+	owner                                 *common.Address
+	version                               uint16
+	compositeSerializedFieldMembersGetter CompositeSerializedFieldMembersGetter
+	decodeCallback                        DecodingCallback
 }
 
 // maxInt is math.MaxInt32 or math.MaxInt64 depending on arch.
@@ -63,6 +66,7 @@ func DecodeValue(
 	owner *common.Address,
 	path []string,
 	version uint16,
+	serializedFieldMembersGetter CompositeSerializedFieldMembersGetter,
 	decodeCallback DecodingCallback,
 ) (
 	Value,
@@ -70,7 +74,7 @@ func DecodeValue(
 ) {
 	reader := bytes.NewReader(data)
 
-	decoder, err := NewDecoder(reader, owner, version, decodeCallback)
+	decoder, err := NewDecoder(reader, owner, version, serializedFieldMembersGetter, decodeCallback)
 	if err != nil {
 		return nil, err
 	}
@@ -92,16 +96,18 @@ func NewDecoder(
 	reader io.Reader,
 	owner *common.Address,
 	version uint16,
+	serializedFieldMembersGetter CompositeSerializedFieldMembersGetter,
 	decodeCallback DecodingCallback,
 ) (
 	*DecoderV4,
 	error,
 ) {
 	return &DecoderV4{
-		decoder:        decMode.NewDecoder(reader),
-		owner:          owner,
-		version:        version,
-		decodeCallback: decodeCallback,
+		decoder:                               decMode.NewDecoder(reader),
+		owner:                                 owner,
+		version:                               version,
+		compositeSerializedFieldMembersGetter: serializedFieldMembersGetter,
+		decodeCallback:                        decodeCallback,
 	}, nil
 }
 
@@ -573,13 +579,7 @@ func (d *DecoderV4) decodeComposite(v interface{}, path []string) (*CompositeVal
 		)
 	}
 
-	if len(encodedFields)%2 == 1 {
-		return nil, fmt.Errorf(
-			"invalid composite fields encoding (@ %s): fields should have even number of elements: got %d",
-			strings.Join(path, "."),
-			len(encodedFields),
-		)
-	}
+	// Fields
 
 	fields := NewStringValueOrderedMap()
 
@@ -588,35 +588,82 @@ func (d *DecoderV4) decodeComposite(v interface{}, path []string) (*CompositeVal
 
 	lastValuePathIndex := len(path)
 
-	for i := 0; i < len(encodedFields); i += 2 {
+	if d.version <= 4 {
 
-		// field name
-		fieldName, ok := encodedFields[i].(string)
-		if !ok {
+		// Version 4 stored both field names and field values
+
+		if len(encodedFields)%2 == 1 {
 			return nil, fmt.Errorf(
-				"invalid composite field name encoding (@ %s, %d): %T",
+				"invalid composite fields encoding (@ %s): fields should have even number of elements: got %d",
 				strings.Join(path, "."),
-				i/2,
-				encodedFields[i],
+				len(encodedFields),
 			)
 		}
 
-		// field value
-		value := encodedFields[i+1]
+		for i := 0; i < len(encodedFields); i += 2 {
 
-		valuePath[lastValuePathIndex] = fieldName
+			// field name
+			fieldName, ok := encodedFields[i].(string)
+			if !ok {
+				return nil, fmt.Errorf(
+					"invalid composite field name encoding (@ %s, %d): %T",
+					strings.Join(path, "."),
+					i/2,
+					encodedFields[i],
+				)
+			}
 
-		decodedValue, err := d.decodeValue(value, valuePath)
-		if err != nil {
+			// field value
+			value := encodedFields[i+1]
+
+			valuePath[lastValuePathIndex] = fieldName
+
+			decodedValue, err := d.decodeValue(value, valuePath)
+			if err != nil {
+				return nil, fmt.Errorf(
+					"invalid composite field value encoding (@ %s, %s): %w",
+					strings.Join(path, "."),
+					fieldName,
+					err,
+				)
+			}
+
+			fields.Set(fieldName, decodedValue)
+		}
+	} else {
+
+		// Version >4 only stores field values
+
+		serializedFieldMembers := d.compositeSerializedFieldMembersGetter(location, qualifiedIdentifier)
+
+		if len(encodedFields) != len(serializedFieldMembers) {
 			return nil, fmt.Errorf(
-				"invalid composite field value encoding (@ %s, %s): %w",
+				"invalid composite field values encoding (@ %s): expected %d, got %d",
 				strings.Join(path, "."),
-				fieldName,
-				err,
+				len(serializedFieldMembers),
+				len(encodedFields),
 			)
 		}
 
-		fields.Set(fieldName, decodedValue)
+		for fieldIndex, value := range encodedFields {
+
+			serializedFieldMember := serializedFieldMembers[fieldIndex]
+			fieldName := serializedFieldMember.Identifier.Identifier
+
+			valuePath[lastValuePathIndex] = fieldName
+
+			decodedValue, err := d.decodeValue(value, valuePath)
+			if err != nil {
+				return nil, fmt.Errorf(
+					"invalid composite field value encoding (@ %s, %s): %w",
+					strings.Join(path, "."),
+					fieldName,
+					err,
+				)
+			}
+
+			fields.Set(fieldName, decodedValue)
+		}
 	}
 
 	compositeValue := NewCompositeValue(location, qualifiedIdentifier, kind, fields, d.owner)

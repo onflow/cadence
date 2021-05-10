@@ -6457,17 +6457,20 @@ func (v *CompositeValue) ConformsToDynamicType(
 
 	// Here it is assumed that imported values can only have static fields values,
 	// but not computed field values.
-	if v.Fields.Len() != len(compositeType.Fields) {
-		return false
-	}
 
-	for _, fieldName := range compositeType.Fields {
-		field, ok := v.Fields.Get(fieldName)
-		if !ok {
-			return false
+	// The value must have all fields declared in the type,
+	// but may have additional fields
+
+	for pair := compositeType.Members.Oldest(); pair != nil; pair = pair.Next() {
+
+		fieldName := pair.Key
+		member := pair.Value
+
+		if member.DeclarationKind != common.DeclarationKindField {
+			continue
 		}
 
-		member, ok := compositeType.Members.Get(fieldName)
+		field, ok := v.Fields.Get(fieldName)
 		if !ok {
 			return false
 		}

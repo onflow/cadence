@@ -31,10 +31,11 @@ import (
 	"testing"
 
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/sema"
 	"github.com/stretchr/testify/require"
 )
 
-type benchmark struct {
+type cborBenchmark struct {
 	name  string
 	value Value
 }
@@ -56,6 +57,83 @@ func BenchmarkEncodeCBOR(b *testing.B) {
 	}
 }
 
+func newTestMembersWithoutTypes(fieldNames ...string) *sema.StringMemberOrderedMap {
+	members := sema.NewStringMemberOrderedMap()
+	for _, fieldName := range fieldNames {
+		members.Set(
+			fieldName,
+			sema.NewPublicConstantFieldMember(
+				// container type is not used
+				nil,
+				fieldName,
+				// type is not used
+				sema.NeverType,
+				"",
+			))
+	}
+	return members
+}
+
+var cborBenchmarkTypes = map[common.TypeID]*sema.CompositeType{
+	"A.ac98da57ce4dd4ef.MessageBoard": {
+		Members: newTestMembersWithoutTypes(
+			"adminStoragePath",
+			"posts",
+		),
+	},
+	"A.ac98da57ce4dd4ef.MessageBoard.Post": {
+		Members: newTestMembersWithoutTypes(
+			"timestamp",
+			"message",
+			"from",
+		),
+	},
+	"A.0b2a3299cc857e29.TopShot": {
+		Members: newTestMembersWithoutTypes(
+			"currentSeries",
+			"playDatas",
+			"setDatas",
+			"sets",
+			"nextPlayID",
+			"nextSetID",
+			"totalSupply",
+		),
+	},
+	"A.0b2a3299cc857e29.TopShot.NFT": {
+		Members: newTestMembersWithoutTypes(
+			"uuid",
+			"id",
+			"data",
+		),
+	},
+	"A.0b2a3299cc857e29.TopShot.Play": {
+		Members: newTestMembersWithoutTypes(
+			"playID",
+			"metadata",
+		),
+	},
+	"A.0b2a3299cc857e29.TopShot.SetData": {
+		Members: newTestMembersWithoutTypes(
+			"setID",
+			"name",
+			"series",
+		),
+	},
+	"A.0b2a3299cc857e29.TopShot.MomentData": {
+		Members: newTestMembersWithoutTypes(
+			"setID",
+			"playID",
+			"serialNumber",
+		),
+	},
+	"A.e544175ee0461c4b.TokenForwarding.Forwarder": {
+		Members: newTestMembersWithoutTypes(
+			"uuid",
+			"recipient",
+		),
+	},
+}
+
 func BenchmarkDecodeCBOR(b *testing.B) {
 	benchmarks := prepareCBORTestData()
 
@@ -65,11 +143,28 @@ func BenchmarkDecodeCBOR(b *testing.B) {
 			encoded, _, err := EncodeValue(bm.value, nil, true, nil)
 			require.NoError(b, err)
 
+			serializedFieldMembersGetter := func(location common.Location, qualifiedIdentifier string) []*sema.Member {
+				typeID := location.TypeID(qualifiedIdentifier)
+				compositeType := cborBenchmarkTypes[typeID]
+				if compositeType == nil {
+					require.FailNow(b, "missing composite type for "+string(typeID))
+					return nil
+				}
+				return compositeType.SerializedFieldMembers()
+			}
+
 			b.ReportAllocs()
 			b.ResetTimer()
 
 			for i := 0; i < b.N; i++ {
-				_, err = DecodeValue(encoded, nil, nil, CurrentEncodingVersion, nil)
+				_, err = DecodeValue(
+					encoded,
+					nil,
+					nil,
+					CurrentEncodingVersion,
+					serializedFieldMembersGetter,
+					nil,
+				)
 				require.NoError(b, err)
 			}
 		})
@@ -77,10 +172,10 @@ func BenchmarkDecodeCBOR(b *testing.B) {
 }
 
 // prepareCBORTestData processes testdata/*.cbor.gz files and
-// returns a []benchmark including each benchmark name and Value.
+// returns a []cborBenchmark including each benchmark name and Value.
 // For safety, the number of *.cbor.gz files processed is limited and
 // io.LimitReader is used to limit uncompressed CBOR data size.
-func prepareCBORTestData() []benchmark {
+func prepareCBORTestData() []cborBenchmark {
 	// maxNumFiles limits the number of files processed in testdata folder.
 	const maxNumFiles = 100
 
@@ -104,7 +199,7 @@ func prepareCBORTestData() []benchmark {
 			maxNumFiles)
 	}
 
-	var benchmarks []benchmark
+	var benchmarks []cborBenchmark
 	for _, fileName := range fileNames[:numFiles] {
 
 		// Read cbor.gz file
@@ -142,7 +237,7 @@ func prepareCBORTestData() []benchmark {
 			}
 		}
 
-		// Construct benchmark name
+		// Construct cborBenchmark name
 		name = name + fmt.Sprintf("_%dbytes", fileSize)
 
 		// Decode test data to value
@@ -152,14 +247,27 @@ func prepareCBORTestData() []benchmark {
 		if version <= 3 {
 			value, err = DecodeValueV3(buf.Bytes(), &owner, nil, version, nil)
 		} else {
-			value, err = DecodeValue(buf.Bytes(), &owner, nil, version, nil)
+
+			serializedFieldMembersGetter := func(location common.Location, qualifiedIdentifier string) []*sema.Member {
+				panic("unexpected request for serialized field members")
+				return nil
+			}
+
+			value, err = DecodeValue(
+				buf.Bytes(),
+				&owner,
+				nil,
+				version,
+				serializedFieldMembersGetter,
+				nil,
+			)
 		}
 		if err != nil {
 			panic(fmt.Sprintf("failed to decode value in file %s: %s\n", fileName, err))
 		}
 
 		// Add to benchmarks
-		benchmarks = append(benchmarks, benchmark{name: name, value: value})
+		benchmarks = append(benchmarks, cborBenchmark{name: name, value: value})
 	}
 
 	return benchmarks

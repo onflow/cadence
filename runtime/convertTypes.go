@@ -23,7 +23,6 @@ import (
 
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/sema"
 )
 
@@ -183,21 +182,7 @@ func exportConstantSizedType(t *sema.ConstantSizedType, results map[sema.TypeID]
 
 func exportCompositeType(t *sema.CompositeType, results map[sema.TypeID]cadence.Type) (result cadence.CompositeType) {
 
-	fieldMembers := make([]*sema.Member, 0, len(t.Fields))
-
-	for _, identifier := range t.Fields {
-		member, ok := t.Members.Get(identifier)
-
-		if !ok {
-			panic(errors.NewUnreachableError())
-		}
-
-		if member.IgnoreInSerialization {
-			continue
-		}
-
-		fieldMembers = append(fieldMembers, member)
-	}
+	fieldMembers := t.SerializedFieldMembers()
 
 	fields := make([]cadence.Field, len(fieldMembers))
 
@@ -260,21 +245,18 @@ func exportCompositeType(t *sema.CompositeType, results map[sema.TypeID]cadence.
 
 func exportInterfaceType(t *sema.InterfaceType, results map[sema.TypeID]cadence.Type) (result cadence.InterfaceType) {
 
-	fieldMembers := make([]*sema.Member, 0, len(t.Fields))
+	fieldMembers := make([]*sema.Member, 0, t.Members.Len())
 
-	for _, identifier := range t.Fields {
-		member, ok := t.Members.Get(identifier)
+	t.Members.Foreach(func(identifier string, member *sema.Member) {
 
-		if !ok {
-			panic(errors.NewUnreachableError())
-		}
+		if member.IgnoreInSerialization ||
+			member.DeclarationKind != common.DeclarationKindField {
 
-		if member.IgnoreInSerialization {
-			continue
+			return
 		}
 
 		fieldMembers = append(fieldMembers, member)
-	}
+	})
 
 	fields := make([]cadence.Field, len(fieldMembers))
 

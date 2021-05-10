@@ -190,12 +190,12 @@ func exportCompositeValue(v *interpreter.CompositeValue, inter *interpreter.Inte
 	// NOTE: use the exported type's fields to ensure fields in type
 	// and value are in sync
 
-	fieldNames := t.CompositeFields()
-	fields := make([]cadence.Value, len(fieldNames))
+	fields := t.CompositeFields()
+	fieldValues := make([]cadence.Value, len(fields))
 
-	for i, field := range fieldNames {
+	for i, field := range fields {
 		fieldValue, _ := v.Fields.Get(field.Identifier)
-		fields[i] = exportValueWithInterpreter(fieldValue, inter, results)
+		fieldValues[i] = exportValueWithInterpreter(fieldValue, inter, results)
 	}
 
 	// NOTE: when modifying the cases below,
@@ -203,15 +203,24 @@ func exportCompositeValue(v *interpreter.CompositeValue, inter *interpreter.Inte
 
 	switch staticType.Kind {
 	case common.CompositeKindStructure:
-		return cadence.NewStruct(fields).WithType(t.(*cadence.StructType))
+		return cadence.NewStruct(fieldValues).
+			WithType(t.(*cadence.StructType))
+
 	case common.CompositeKindResource:
-		return cadence.NewResource(fields).WithType(t.(*cadence.ResourceType))
+		return cadence.NewResource(fieldValues).
+			WithType(t.(*cadence.ResourceType))
+
 	case common.CompositeKindEvent:
-		return cadence.NewEvent(fields).WithType(t.(*cadence.EventType))
+		return cadence.NewEvent(fieldValues).
+			WithType(t.(*cadence.EventType))
+
 	case common.CompositeKindContract:
-		return cadence.NewContract(fields).WithType(t.(*cadence.ContractType))
+		return cadence.NewContract(fieldValues).
+			WithType(t.(*cadence.ContractType))
+
 	case common.CompositeKindEnum:
-		return cadence.NewEnum(fields).WithType(t.(*cadence.EnumType))
+		return cadence.NewEnum(fieldValues).
+			WithType(t.(*cadence.EnumType))
 	}
 
 	panic(fmt.Errorf(

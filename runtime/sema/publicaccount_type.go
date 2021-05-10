@@ -48,7 +48,7 @@ var PublicAccountType = func() *CompositeType {
 		}(),
 	}
 
-	var members = []*Member{
+	publicAccountType.Members = MembersAsMap(
 		NewPublicConstantFieldMember(
 			publicAccountType,
 			PublicAccountAddressField,
@@ -97,10 +97,8 @@ var PublicAccountType = func() *CompositeType {
 			PublicAccountKeysType,
 			accountTypeKeysFieldDocString,
 		),
-	}
+	)
 
-	publicAccountType.Members = GetMembersAsMap(members)
-	publicAccountType.Fields = getFieldNames(members)
 	return publicAccountType
 }()
 
@@ -112,17 +110,15 @@ var PublicAccountKeysType = func() *CompositeType {
 		Kind:       common.CompositeKindStructure,
 	}
 
-	var members = []*Member{
+	accountKeys.Members = MembersAsMap(
 		NewPublicFunctionMember(
 			accountKeys,
 			AccountKeysGetFunctionName,
 			accountKeysTypeGetFunctionType,
 			accountKeysTypeGetFunctionDocString,
 		),
-	}
+	)
 
-	accountKeys.Members = GetMembersAsMap(members)
-	accountKeys.Fields = getFieldNames(members)
 	return accountKeys
 }()
 

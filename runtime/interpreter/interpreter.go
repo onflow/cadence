@@ -3198,3 +3198,8 @@ func (interpreter *Interpreter) getTypeFunction(self Value) HostFunctionValue {
 func (interpreter *Interpreter) setMember(self Value, getLocationRange func() LocationRange, identifier string, value Value) {
 	self.(MemberAccessibleValue).SetMember(interpreter, getLocationRange, identifier, value)
 }
+
+func (interpreter *Interpreter) CompositeSerializedFieldMembers(location common.Location, qualifiedIdentifier string) []*sema.Member {
+	return interpreter.getCompositeType(location, qualifiedIdentifier).
+		SerializedFieldMembers()
+}

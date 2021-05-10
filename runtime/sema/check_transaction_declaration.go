@@ -271,7 +271,7 @@ func (checker *Checker) declareTransactionDeclaration(declaration *ast.Transacti
 
 	allMembers := ast.NewMembers(declarations)
 
-	members, fields, origins := checker.defaultMembersAndOrigins(
+	members, origins := checker.defaultMembersAndOrigins(
 		allMembers,
 		transactionType,
 		ContainerKindComposite,
@@ -279,7 +279,6 @@ func (checker *Checker) declareTransactionDeclaration(declaration *ast.Transacti
 	)
 
 	transactionType.Members = members
-	transactionType.Fields = fields
 	if checker.originsAndOccurrencesEnabled {
 		checker.memberOrigins[transactionType] = origins
 	}
