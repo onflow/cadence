@@ -8,7 +8,7 @@ listed in no particular order.
 
 - Reliability
 
- Cadence should run deterministically, and should not have crashers, stack overflows, or security issues.
+  Cadence should run deterministically, and should not have crashers, stack overflows, or security issues.
 
 - Performance
 
