@@ -58,6 +58,11 @@ type Runtime interface {
 	// or if the execution fails.
 	ExecuteTransaction(Script, Context) error
 
+	// InvokeContractFunction invokes a contract function with the given arguments.
+	//
+	// This function returns an error if the execution fails.
+	// If the contract function accepts an AuthAccount as a parameter the corresponding argument can be an interpreter.Address.
+	// returns a cadence.Value
 	InvokeContractFunction(
 		contractLocation common.AddressLocation,
 		functionName string,
@@ -357,8 +362,6 @@ func (r *interpreterRuntime) newAuthAccountValue(
 	)
 }
 
-// InvokeContractFunction invokes a contract function with the given arguments.
-// returns a cadence.Value
 func (r *interpreterRuntime) InvokeContractFunction(
 	contractLocation common.AddressLocation,
 	functionName string,
@@ -398,23 +401,16 @@ func (r *interpreterRuntime) InvokeContractFunction(
 	// ensure the contract is loaded
 	inter = inter.EnsureLoaded(contractLocation)
 
-	// convert addresses to auth accounts
-	// this is here so there is no need to construct an auth account value for the caller of this function
+
 	for i, argumentType := range argumentTypes {
-		if argumentType != sema.AuthAccountType {
-			// only convert arguments that are supposed to be an auth account
-			continue
-		}
-		if addressValue, ok := arguments[i].(interpreter.AddressValue); ok {
-			// only convert them if they are an address
-			arguments[i] = r.newAuthAccountValue(
-				interpreter.NewAddressValue(addressValue.ToAddress()),
-				context,
-				runtimeStorage,
-				interpreterOptions,
-				checkerOptions,
-			)
-		}
+		arguments[i] = r.convertArgument(
+			arguments[i],
+			argumentType,
+			context,
+			runtimeStorage,
+			interpreterOptions,
+			checkerOptions,
+		)
 	}
 
 	contractValue, err := inter.GetContractComposite(contractLocation)
@@ -453,6 +449,30 @@ func (r *interpreterRuntime) InvokeContractFunction(
 	}
 
 	return ExportValue(value, inter), nil
+}
+
+func (r *interpreterRuntime) convertArgument(
+	argument interpreter.Value,
+	argumentType sema.Type,
+	context Context,
+	runtimeStorage *runtimeStorage,
+	interpreterOptions []interpreter.Option,
+	checkerOptions []sema.Option,
+) interpreter.Value {
+	switch argumentType {
+	case sema.AuthAccountType:
+		// convert addresses to auth accounts so there is no need to construct an auth account value for the caller
+		if addressValue, ok := argument.(interpreter.AddressValue); ok {
+			return r.newAuthAccountValue(
+				interpreter.NewAddressValue(addressValue.ToAddress()),
+				context,
+				runtimeStorage,
+				interpreterOptions,
+				checkerOptions,
+			)
+		}
+	}
+	return argument
 }
 
 func (r *interpreterRuntime) ExecuteTransaction(script Script, context Context) error {
