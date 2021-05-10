@@ -1,11 +1,15 @@
-package doc_generator
+package gen
 
 import (
 	"os"
 	"path"
-	"path/filepath"
 	"strings"
+
+	"path/filepath"
+
 	"text/template"
+
+	"github.com/markbates/pkger"
 
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
@@ -119,8 +123,14 @@ func NewDocGenerator() *DocGenerator {
 
 func registerTemplates(tmpl *template.Template) *template.Template {
 	for _, templateFile := range templateFiles {
-		var err error
-		tmpl, err = tmpl.ParseFiles(path.Join(ROOT_DIR, "templates", templateFile))
+		info, err := pkger.Current()
+		if err != nil {
+			panic(err)
+		}
+
+		filePath := path.Join(info.Dir, "gen", "templates", templateFile)
+
+		tmpl, err = tmpl.ParseFiles(filePath)
 		if err != nil {
 			panic(err)
 		}
@@ -129,18 +139,19 @@ func registerTemplates(tmpl *template.Template) *template.Template {
 	return tmpl
 }
 
-func (gen *DocGenerator) Generate(source string, outputDir string) {
+func (gen *DocGenerator) Generate(source string, outputDir string) error {
 	gen.outputDir = outputDir
 
 	program, err := parser2.ParseProgram(source)
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	program.Accept(gen)
+	return nil
 }
 
-var _ ast.Visitor = NewDocGenerator()
+var _ ast.Visitor = &DocGenerator{}
 
 func (gen *DocGenerator) VisitProgram(program *ast.Program) ast.Repr {
 
@@ -155,19 +166,18 @@ func (gen *DocGenerator) VisitProgram(program *ast.Program) ast.Repr {
 		// Generate entry page
 		f, err := os.Create(gen.outputDir + "/index.md")
 		if err != nil {
-			panic(err)
+			return err
 		}
 
 		err = gen.entryPageGen.Execute(f, program)
 		if err != nil {
-			panic(err)
+			return err
 		}
 	}
 
 	// Generate dedicated pages for all the nested composite declarations
 	for _, decl := range program.Declarations() {
 		decl.Accept(gen)
-
 	}
 
 	return nil
@@ -176,6 +186,7 @@ func (gen *DocGenerator) VisitProgram(program *ast.Program) ast.Repr {
 func (gen *DocGenerator) VisitFunctionDeclaration(declaration *ast.FunctionDeclaration) ast.Repr {
 	return nil
 }
+
 func (gen *DocGenerator) VisitCompositeDeclaration(declaration *ast.CompositeDeclaration) ast.Repr {
 	if declaration.DeclarationKind() == common.DeclarationKindEvent {
 		return nil
@@ -227,6 +238,8 @@ func (gen *DocGenerator) VisitInterfaceDeclaration(declaration *ast.InterfaceDec
 	return gen.genCompositeDecl(declName, declaration.Members, declaration)
 }
 
+// Unused methods
+
 func (gen *DocGenerator) VisitFieldDeclaration(declaration *ast.FieldDeclaration) ast.Repr {
 	return nil
 }
@@ -246,8 +259,6 @@ func (gen *DocGenerator) VisitImportDeclaration(declaration *ast.ImportDeclarati
 func (gen *DocGenerator) VisitTransactionDeclaration(declaration *ast.TransactionDeclaration) ast.Repr {
 	return nil
 }
-
-// Unused methods
 
 func (gen *DocGenerator) VisitReturnStatement(statement *ast.ReturnStatement) ast.Repr {
 	return nil
