@@ -64,7 +64,7 @@ type Runtime interface {
 		arguments []interpreter.Value,
 		argumentTypes []sema.Type,
 		context Context,
-	) error
+	) (cadence.Value, error)
 
 	// ParseAndCheckProgram parses and checks the given code without executing the program.
 	//
@@ -357,15 +357,15 @@ func (r *interpreterRuntime) newAuthAccountValue(
 	)
 }
 
-// InvokeContractFunction invokes a contract function with the given arguments
-// If the contract function accepts an AuthAccount as a parameter the corresponding 
+// InvokeContractFunction invokes a contract function with the given arguments.
+// returns a cadence.Value
 func (r *interpreterRuntime) InvokeContractFunction(
 	contractLocation common.AddressLocation,
 	functionName string,
 	arguments []interpreter.Value,
 	argumentTypes []sema.Type,
 	context Context,
-) error {
+) (cadence.Value, error) {
 	context.InitializeCodesAndPrograms()
 
 	runtimeStorage := newRuntimeStorage(context.Interface)
@@ -392,7 +392,7 @@ func (r *interpreterRuntime) InvokeContractFunction(
 		nil,
 	)
 	if err != nil {
-		return newError(err, context)
+		return nil, newError(err, context)
 	}
 
 	// ensure the contract is loaded
@@ -405,10 +405,10 @@ func (r *interpreterRuntime) InvokeContractFunction(
 			// only convert arguments that are supposed to be an auth account
 			continue
 		}
-		if a, ok := arguments[i].(interpreter.AddressValue); ok {
+		if addressValue, ok := arguments[i].(interpreter.AddressValue); ok {
 			// only convert them if they are an address
 			arguments[i] = r.newAuthAccountValue(
-				interpreter.NewAddressValue(a.ToAddress()),
+				interpreter.NewAddressValue(addressValue.ToAddress()),
 				context,
 				runtimeStorage,
 				interpreterOptions,
@@ -417,28 +417,16 @@ func (r *interpreterRuntime) InvokeContractFunction(
 		}
 	}
 
-	contractGlobal, ok := inter.Globals[contractLocation.Name]
-	if !ok {
-		return interpreter.NotDeclaredError{
-			ExpectedKind: common.DeclarationKindContract,
-			Name:         contractLocation.Name,
-		}
-	}
-
-	// get contract value
-	contractValue, ok := contractGlobal.GetValue().(*interpreter.CompositeValue)
-	if !ok {
-		return interpreter.NotDeclaredError{
-			ExpectedKind: common.DeclarationKindContract,
-			Name:         contractLocation.Name,
-		}
+	contractValue, err := inter.GetContractComposite(contractLocation)
+	if err != nil {
+		return nil, newError(err, context)
 	}
 
 	// prepare invocation
 	invocation := interpreter.Invocation{
-		Self:          contractValue,
-		Arguments:     arguments,
-		ArgumentTypes: argumentTypes,
+		Self:               contractValue,
+		Arguments:          arguments,
+		ArgumentTypes:      argumentTypes,
 		TypeParameterTypes: nil,
 		GetLocationRange: func() interpreter.LocationRange {
 			return interpreter.LocationRange{
@@ -448,25 +436,23 @@ func (r *interpreterRuntime) InvokeContractFunction(
 		Interpreter: inter,
 	}
 
-	contractMember := contractValue.GetMember(inter, func() interpreter.LocationRange {
-		return interpreter.LocationRange{
-			Location: context.Location,
-		}
-	}, functionName)
+	contractMember := contractValue.GetMember(inter, invocation.GetLocationRange, functionName)
 
 	contractFunction, ok := contractMember.(interpreter.FunctionValue)
 	if !ok {
-		return interpreter.NotInvokableError{
-			Value: contractFunction,
-		}
+		return nil, newError(
+			interpreter.NotInvokableError{
+				Value: contractFunction,
+			},
+			context)
 	}
 
-	_, err = inter.InvokeFunction(contractFunction, invocation)
+	value, err := inter.InvokeFunction(contractFunction, invocation)
 	if err != nil {
-		return newError(err, context)
+		return nil, newError(err, context)
 	}
 
-	return nil
+	return ExportValue(value, inter), nil
 }
 
 func (r *interpreterRuntime) ExecuteTransaction(script Script, context Context) error {

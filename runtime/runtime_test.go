@@ -24,7 +24,6 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"math/big"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -3012,7 +3011,7 @@ func TestInvokeContractFunction(t *testing.T) {
 	assert.NotNil(t, accountCode)
 
 	t.Run("simple function", func(tt *testing.T) {
-		err = runtime.InvokeContractFunction(
+		_, err = runtime.InvokeContractFunction(
 			common.AddressLocation{
 				Address: addressValue,
 				Name:    "Test",
@@ -3031,14 +3030,14 @@ func TestInvokeContractFunction(t *testing.T) {
 	})
 
 	t.Run("function with parameter", func(tt *testing.T) {
-		err = runtime.InvokeContractFunction(
+		_, err = runtime.InvokeContractFunction(
 			common.AddressLocation{
 				Address: addressValue,
 				Name:    "Test",
 			},
 			"helloArg",
 			[]interpreter.Value{
-				&interpreter.StringValue{Str: "there!"},
+				interpreter.NewStringValue("there!"),
 			},
 			[]sema.Type{
 				sema.StringType,
@@ -3053,14 +3052,14 @@ func TestInvokeContractFunction(t *testing.T) {
 		assert.Equal(tt, `"Hello there!"`, loggedMessage)
 	})
 	t.Run("function with return type", func(tt *testing.T) {
-		err = runtime.InvokeContractFunction(
+		_, err = runtime.InvokeContractFunction(
 			common.AddressLocation{
 				Address: addressValue,
 				Name:    "Test",
 			},
 			"helloReturn",
 			[]interpreter.Value{
-				&interpreter.StringValue{Str: "there!"},
+				interpreter.NewStringValue("there!"),
 			},
 			[]sema.Type{
 				sema.StringType,
@@ -3076,15 +3075,15 @@ func TestInvokeContractFunction(t *testing.T) {
 	})
 	t.Run("function with multiple arguments", func(tt *testing.T) {
 
-		err = runtime.InvokeContractFunction(
+		_, err = runtime.InvokeContractFunction(
 			common.AddressLocation{
 				Address: addressValue,
 				Name:    "Test",
 			},
 			"helloMultiArg",
 			[]interpreter.Value{
-				&interpreter.StringValue{Str: "number"},
-				&interpreter.IntValue{BigInt: big.NewInt(42)},
+				interpreter.NewStringValue("number"),
+				interpreter.NewIntValueFromInt64(42),
 				interpreter.AddressValue(addressValue),
 			},
 			[]sema.Type{
@@ -3103,15 +3102,15 @@ func TestInvokeContractFunction(t *testing.T) {
 	})
 	t.Run("function with not enough arguments panics", func(tt *testing.T) {
 		assert.Panics(tt, func (){
-			_ = runtime.InvokeContractFunction(
+			_, _ = runtime.InvokeContractFunction(
 				common.AddressLocation{
 					Address: addressValue,
 					Name:    "Test",
 				},
 				"helloMultiArg",
 				[]interpreter.Value{
-					&interpreter.StringValue{Str: "number"},
-					&interpreter.IntValue{BigInt: big.NewInt(42)},
+					interpreter.NewStringValue("number"),
+					interpreter.NewIntValueFromInt64(42),
 				},
 				[]sema.Type{
 					sema.StringType,
@@ -3125,14 +3124,14 @@ func TestInvokeContractFunction(t *testing.T) {
 		})
 	})
 	t.Run("function with incorrect argument type errors", func(tt *testing.T) {
-		err = runtime.InvokeContractFunction(
+		_, err = runtime.InvokeContractFunction(
 			common.AddressLocation{
 				Address: addressValue,
 				Name:    "Test",
 			},
 			"helloArg",
 			[]interpreter.Value{
-				&interpreter.IntValue{BigInt: big.NewInt(42)},
+				interpreter.NewIntValueFromInt64(42),
 			},
 			[]sema.Type{
 				sema.IntType,
@@ -3145,7 +3144,7 @@ func TestInvokeContractFunction(t *testing.T) {
 		require.ErrorAs(tt, err, &interpreter.InvocationArgumentTypeError{})
 	})
 	t.Run("function with auth account works", func(tt *testing.T) {
-		err = runtime.InvokeContractFunction(
+		_, err = runtime.InvokeContractFunction(
 			common.AddressLocation{
 				Address: addressValue,
 				Name:    "Test",

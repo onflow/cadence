@@ -3038,6 +3038,28 @@ func (interpreter *Interpreter) getElaboration(location common.Location) *sema.E
 	return subInterpreter.Program.Elaboration
 }
 
+func (interpreter *Interpreter) GetContractComposite(contractLocation common.AddressLocation) (*CompositeValue, error) {
+	contractGlobal, ok := interpreter.Globals[contractLocation.Name]
+	if !ok {
+		return nil, NotDeclaredError{
+				ExpectedKind: common.DeclarationKindContract,
+				Name:         contractLocation.Name,
+			}
+	}
+
+	// get contract value
+	contractValue, ok := contractGlobal.GetValue().(*CompositeValue)
+	if !ok {
+		return nil, NotDeclaredError{
+				ExpectedKind: common.DeclarationKindContract,
+				Name:         contractLocation.Name,
+			}
+	}
+
+	return contractValue, nil
+}
+
+
 func (interpreter *Interpreter) getCompositeType(location common.Location, qualifiedIdentifier string) *sema.CompositeType {
 	if location == nil {
 		ty := sema.NativeCompositeTypes[qualifiedIdentifier]
