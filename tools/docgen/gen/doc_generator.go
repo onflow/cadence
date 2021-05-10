@@ -1,6 +1,7 @@
 package gen
 
 import (
+	"fmt"
 	"os"
 	"path"
 	"strings"
@@ -14,6 +15,21 @@ import (
 	"github.com/onflow/cadence/runtime/parser2"
 )
 
+const nameSeparator = "_"
+const mdFileExt = ".md"
+
+var templateFiles = []string{
+	"base-template",
+	"declarations-template",
+	"function-template",
+	"composite-template",
+	"field-template",
+	"enum-template",
+	"enum-case-template",
+	"composite-full-template",
+	"initializer-template",
+}
+
 type DocGenerator struct {
 	entryPageGen     *template.Template
 	compositePageGen *template.Template
@@ -25,41 +41,41 @@ func NewDocGenerator() *DocGenerator {
 	gen := &DocGenerator{}
 
 	functions["fileName"] = func(decl ast.Declaration) string {
-		pathPrefix := gen.fileName()
-		if len(pathPrefix) == 0 {
-			return decl.DeclarationIdentifier().String() + ".md"
+		fileNamePrefix := gen.currentFileName()
+		if len(fileNamePrefix) == 0 {
+			return fmt.Sprint(decl.DeclarationIdentifier().String(), mdFileExt)
 		}
 
-		return gen.fileName() + "_" + decl.DeclarationIdentifier().String() + ".md"
+		return fmt.Sprint(fileNamePrefix, nameSeparator, decl.DeclarationIdentifier().String(), mdFileExt)
 	}
 
-	entryPageGen := template.New("base-template")
-	entryPageGen.Funcs(functions)
-	entryPageGen = registerTemplates(entryPageGen)
-
-	compositePageGen := template.New("composite-full-template")
-	compositePageGen.Funcs(functions)
-	compositePageGen = registerTemplates(compositePageGen)
-
-	gen.compositePageGen = compositePageGen
-	gen.entryPageGen = entryPageGen
+	gen.entryPageGen = newTemplate("base-template")
+	gen.compositePageGen = newTemplate("composite-full-template")
 
 	return gen
 }
 
+func newTemplate(name string) *template.Template {
+	tmpl := template.New(name).Funcs(functions)
+	tmpl = registerTemplates(tmpl)
+	return tmpl
+}
+
 func registerTemplates(tmpl *template.Template) *template.Template {
-	for _, templateFile := range templateFiles {
-		info, err := pkger.Current()
-		if err != nil {
-			panic(err)
-		}
+	info, err := pkger.Current()
+	if err != nil {
+		panic(err)
+	}
 
-		filePath := path.Join(info.Dir, "gen", "templates", templateFile)
+	var filePaths = make([]string, len(templateFiles))
 
-		tmpl, err = tmpl.ParseFiles(filePath)
-		if err != nil {
-			panic(err)
-		}
+	for i, templateFile := range templateFiles {
+		filePaths[i] = path.Join(info.Dir, "gen", "templates", templateFile)
+	}
+
+	tmpl, err = tmpl.ParseFiles(filePaths...)
+	if err != nil {
+		panic(err)
 	}
 
 	return tmpl
@@ -77,17 +93,16 @@ func (gen *DocGenerator) Generate(source string, outputDir string) error {
 }
 
 func (gen *DocGenerator) genProgram(program *ast.Program) error {
+	gen.typeNames = make([]string, 0)
 
-	var soleDecl ast.Declaration = program.SoleContractDeclaration()
-	if soleDecl == nil {
-		soleDecl = program.SoleContractInterfaceDeclaration()
-	}
-
-	// If its not a sole-declaration, and has multiple top level declarations
+	// If its not a sole-declaration, i.e: has multiple top level declarations,
 	// then generated an entry page.
-	if soleDecl == nil {
+	if program.SoleContractDeclaration() == nil &&
+		program.SoleContractInterfaceDeclaration() == nil {
+
 		// Generate entry page
-		f, err := os.Create(gen.outputDir + "/index.md")
+		// TODO: file name 'index' can conflict with struct names, resulting an overwrite.
+		f, err := os.Create(path.Join(gen.outputDir, "index.md"))
 		if err != nil {
 			return err
 		}
@@ -143,8 +158,8 @@ func (gen *DocGenerator) genCompositeDecl(name string, members *ast.Members, dec
 		gen.typeNames = gen.typeNames[:len(gen.typeNames)-1]
 	}()
 
-	output := gen.outputDir + "/" + gen.fileName() + ".md"
-	f, err := os.Create(output)
+	fileName := fmt.Sprint(gen.currentFileName(), mdFileExt)
+	f, err := os.Create(path.Join(gen.outputDir, fileName))
 	if err != nil {
 		panic(err)
 	}
@@ -157,28 +172,8 @@ func (gen *DocGenerator) genCompositeDecl(name string, members *ast.Members, dec
 	return gen.genDeclarations(members.Declarations())
 }
 
-func (gen *DocGenerator) fileName() string {
-	builder := strings.Builder{}
-	for index, name := range gen.typeNames {
-		if index > 0 {
-			builder.WriteString("_")
-		}
-		builder.WriteString(name)
-	}
-
-	return builder.String()
-}
-
-var templateFiles = []string{
-	"base-template",
-	"declarations-template",
-	"function-template",
-	"composite-template",
-	"field-template",
-	"enum-template",
-	"enum-case-template",
-	"composite-full-template",
-	"initializer-template",
+func (gen *DocGenerator) currentFileName() string {
+	return strings.Join(gen.typeNames, nameSeparator)
 }
 
 var functions = template.FuncMap{

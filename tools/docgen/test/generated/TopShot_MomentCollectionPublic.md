@@ -11,7 +11,6 @@ resource interface MomentCollectionPublic {
 
 ## Functions
 
-
 ### fun `deposit()`
 
 ```cadence
@@ -61,5 +60,4 @@ func borrowMoment(id UInt64): &TopShot.NFT?
 
 
 ---
-
 

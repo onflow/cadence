@@ -12,7 +12,6 @@ resource Admin {
 
 ## Functions
 
-
 ### fun `createPlay()`
 
 ```cadence
@@ -88,5 +87,4 @@ func createNewAdmin(): Admin
 
 
 ---
-
 

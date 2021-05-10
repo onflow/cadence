@@ -25,7 +25,6 @@ Implemented Interfaces:
 
 ## Functions
 
-
 ### fun `createEmptyCollection()`
 
 ```cadence
@@ -195,9 +194,7 @@ func getNumMomentsInEdition(setID UInt32, playID UInt32): UInt32?
 
 ---
 
-
 ## Structs & Resources
-
 
 ### struct `Play`
 
@@ -363,9 +360,7 @@ resource Collection {
 
 ---
 
-
 ## Interfaces
-
 
 ### resource interface `MomentCollectionPublic`
 
@@ -381,5 +376,4 @@ resource interface MomentCollectionPublic {
 [More...](TopShot_MomentCollectionPublic.md)
 
 ---
-
 

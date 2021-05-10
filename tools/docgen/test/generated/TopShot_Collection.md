@@ -26,7 +26,6 @@ func init()
 
 ## Functions
 
-
 ### fun `withdraw()`
 
 ```cadence
@@ -130,5 +129,4 @@ func borrowMoment(id UInt64): &TopShot.NFT?
  Returns: A reference to the NFT
 
 ---
-
 

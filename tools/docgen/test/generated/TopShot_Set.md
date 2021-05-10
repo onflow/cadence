@@ -45,7 +45,6 @@ func init(name String)
 
 ## Functions
 
-
 ### fun `addPlay()`
 
 ```cadence
@@ -153,5 +152,4 @@ func batchMintMoment(playID UInt32, quantity UInt64): Collection
 
 
 ---
-
 
