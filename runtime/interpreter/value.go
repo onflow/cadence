@@ -8145,17 +8145,33 @@ func NewAccountKeyValue(
 }
 
 // NewPublicKeyValue constructs a PublicKey value.
-func NewPublicKeyValue(publicKey *ArrayValue, signAlgo *CompositeValue) *CompositeValue {
+func NewPublicKeyValue(
+	publicKey *ArrayValue,
+	signAlgo *CompositeValue,
+	validationFunction PublicKeyValidationHandlerFunc,
+	verifyFunction FunctionValue,
+) *CompositeValue {
 
 	fields := NewStringValueOrderedMap()
 	fields.Set(sema.PublicKeyPublicKeyField, publicKey)
 	fields.Set(sema.PublicKeySignAlgoField, signAlgo)
 
-	return &CompositeValue{
+	functions := map[string]FunctionValue{
+		sema.PublicKeyVerifyFunction: verifyFunction,
+	}
+
+	publicKeyValue := &CompositeValue{
 		QualifiedIdentifier: sema.PublicKeyType.QualifiedIdentifier(),
 		Kind:                sema.PublicKeyType.Kind,
 		Fields:              fields,
+		Functions:           functions,
 	}
+
+	// Validate the public key, and initialize 'isValid' field.
+	publicKeyValue.Fields.Set(sema.PublicKeyIsValidField, validationFunction(publicKeyValue))
+
+	return publicKeyValue
+
 }
 
 // NewAuthAccountKeysValue constructs a AuthAccount.Keys value.

@@ -68,7 +68,7 @@ type OptionalType struct {
 func (OptionalType) isType() {}
 
 func (t OptionalType) ID() string {
-	return fmt.Sprintf("%s?", t.Type)
+	return fmt.Sprintf("%s?", t.Type.ID())
 }
 
 // Variable
@@ -802,30 +802,6 @@ type ResourcePointer struct {
 func (ResourcePointer) isType() {}
 
 func (t ResourcePointer) ID() string {
-	return t.TypeName
-}
-
-// StructPointer
-
-type StructPointer struct {
-	TypeName string
-}
-
-func (StructPointer) isType() {}
-
-func (t StructPointer) ID() string {
-	return t.TypeName
-}
-
-// EventPointer
-
-type EventPointer struct {
-	TypeName string
-}
-
-func (EventPointer) isType() {}
-
-func (t EventPointer) ID() string {
 	return t.TypeName
 }
 

@@ -48,7 +48,8 @@ const (
 	// Supported signing algorithms
 	SignatureAlgorithmUnknown         = sema.SignatureAlgorithmUnknown
 	SignatureAlgorithmECDSA_P256      = sema.SignatureAlgorithmECDSA_P256
-	SignatureAlgorithmECDSA_Secp256k1 = sema.SignatureAlgorithmECDSA_Secp256k1
+	SignatureAlgorithmECDSA_secp256k1 = sema.SignatureAlgorithmECDSA_secp256k1
+	SignatureAlgorithmBLS_BLS12_381   = sema.SignatureAlgorithmBLS_BLS12_381
 )
 
 type HashAlgorithm = sema.HashAlgorithm
@@ -58,11 +59,12 @@ type HashAlgorithm = sema.HashAlgorithm
 
 const (
 	// Supported hashing algorithms
-	HashAlgorithmUnknown  = sema.HashAlgorithmUnknown
-	HashAlgorithmSHA2_256 = sema.HashAlgorithmSHA2_256
-	HashAlgorithmSHA2_384 = sema.HashAlgorithmSHA2_384
-	HashAlgorithmSHA3_256 = sema.HashAlgorithmSHA3_256
-	HashAlgorithmSHA3_384 = sema.HashAlgorithmSHA3_384
+	HashAlgorithmUnknown               = sema.HashAlgorithmUnknown
+	HashAlgorithmSHA2_256              = sema.HashAlgorithmSHA2_256
+	HashAlgorithmSHA2_384              = sema.HashAlgorithmSHA2_384
+	HashAlgorithmSHA3_256              = sema.HashAlgorithmSHA3_256
+	HashAlgorithmSHA3_384              = sema.HashAlgorithmSHA3_384
+	HashAlgorithmKMAC128_BLS_BLS12_381 = sema.HashAlgorithmKMAC128_BLS_BLS12_381
 )
 
 type AccountKey struct {
@@ -76,4 +78,6 @@ type AccountKey struct {
 type PublicKey struct {
 	PublicKey []byte
 	SignAlgo  SignatureAlgorithm
+	IsValid   bool
+	Validated bool
 }

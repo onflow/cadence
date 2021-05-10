@@ -23,6 +23,7 @@ package integration
 import (
 	"errors"
 
+	"github.com/onflow/flow-go-sdk"
 	"github.com/onflow/flow-go-sdk/crypto"
 )
 
@@ -32,8 +33,14 @@ type Config struct {
 	// The address where the emulator is running.
 	EmulatorAddr string
 
-	// The service account key information.
-	ServiceAccountKey AccountPrivateKey
+	// Current emulator state
+	emulatorState EmulatorState
+
+	// Active account
+	activeAccount ClientAccount
+
+	// path to flow.json
+	configPath string
 }
 
 type AccountPrivateKey struct {
@@ -53,38 +60,32 @@ func configFromInitializationOptions(opts interface{}) (conf Config, err error) 
 		return Config{}, errors.New("invalid initialization options")
 	}
 
-	emulatorAddr, ok := optsMap["emulatorAddress"].(string)
+	emulatorState, ok := optsMap["emulatorState"].(float64)
 	if !ok {
-		return Config{}, errors.New("initialization options: missing emulatorAddress field")
+		return Config{}, errors.New("initialization options: invalid emulator state")
 	}
+	conf.emulatorState = EmulatorState(emulatorState)
 
-	servicePrivateKeyHex, ok := optsMap["servicePrivateKey"].(string)
+	activeAccountName, ok := optsMap["activeAccountName"].(string)
 	if !ok {
-		return Config{}, errors.New("initialization options: missing servicePrivateKey field")
+		return Config{}, errors.New("initialization options: invalid active account name")
 	}
-
-	serviceKeySigAlgoStr, ok := optsMap["serviceKeySignatureAlgorithm"].(string)
+	activeAccountAddress, ok := optsMap["activeAccountAddress"].(string)
 	if !ok {
-		return Config{}, errors.New("initialization options: missing serviceKeySignatureAlgorithm field")
+		return Config{}, errors.New("initialization options: invalid active account address")
 	}
 
-	serviceKeyHashAlgoStr, ok := optsMap["serviceKeyHashAlgorithm"].(string)
-	if !ok {
-		return Config{}, errors.New("initialization options: missing serviceKeyHashAlgorithm field")
+	conf.activeAccount = ClientAccount{
+		Name:    activeAccountName,
+		Address: flow.HexToAddress(activeAccountAddress),
 	}
 
-	serviceAccountKey := AccountPrivateKey{
-		SigAlgo:  crypto.StringToSignatureAlgorithm(serviceKeySigAlgoStr),
-		HashAlgo: crypto.StringToHashAlgorithm(serviceKeyHashAlgoStr),
+	configPath, ok := optsMap["configPath"].(string)
+	if !ok || configPath == "" {
+		return Config{}, errors.New("initialization options: invalid config path")
 	}
 
-	serviceAccountKey.PrivateKey, err = crypto.DecodePrivateKeyHex(serviceAccountKey.SigAlgo, servicePrivateKeyHex)
-	if err != nil {
-		return
-	}
-
-	conf.EmulatorAddr = emulatorAddr
-	conf.ServiceAccountKey = serviceAccountKey
+	conf.configPath = configPath
 
 	return
 }

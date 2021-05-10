@@ -30,6 +30,7 @@ import (
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
+	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
 func TestRuntimeTransaction_AddPublicKey(t *testing.T) {
@@ -270,6 +271,8 @@ var accountKeyA = &AccountKey{
 	PublicKey: &PublicKey{
 		PublicKey: []byte{1, 2, 3},
 		SignAlgo:  sema.SignatureAlgorithmECDSA_P256,
+		IsValid:   false,
+		Validated: true,
 	},
 	HashAlgo:  sema.HashAlgorithmSHA3_256,
 	Weight:    100,
@@ -280,7 +283,9 @@ var accountKeyB = &AccountKey{
 	KeyIndex: 1,
 	PublicKey: &PublicKey{
 		PublicKey: []byte{4, 5, 6},
-		SignAlgo:  sema.SignatureAlgorithmECDSA_Secp256k1,
+		SignAlgo:  sema.SignatureAlgorithmECDSA_secp256k1,
+		IsValid:   false,
+		Validated: false,
 	},
 	HashAlgo:  sema.HashAlgorithmSHA3_256,
 	Weight:    100,
@@ -521,7 +526,7 @@ func TestRuntimePublicAccountKeys(t *testing.T) {
 
 		expectedValue := accountKeyExportedValue(1,
 			[]byte{4, 5, 6},
-			sema.SignatureAlgorithmECDSA_Secp256k1,
+			sema.SignatureAlgorithmECDSA_secp256k1,
 			sema.HashAlgorithmSHA3_256,
 			"100.0",
 			false,
@@ -673,7 +678,7 @@ func TestRuntimeSignatureAlgorithm(t *testing.T) {
 
 	script := []byte(`
 		pub fun main(): [SignatureAlgorithm?] {
-			var key1: SignatureAlgorithm? = SignatureAlgorithm.ECDSA_Secp256k1
+			var key1: SignatureAlgorithm? = SignatureAlgorithm.ECDSA_secp256k1
 
 			var key2: SignatureAlgorithm? = SignatureAlgorithm(rawValue: 2)
 
@@ -711,7 +716,7 @@ func TestRuntimeSignatureAlgorithm(t *testing.T) {
 
 	require.Len(t, builtinStruct.Fields, 1)
 	assert.Equal(t,
-		cadence.NewUInt8(SignatureAlgorithmECDSA_Secp256k1.RawValue()),
+		cadence.NewUInt8(SignatureAlgorithmECDSA_secp256k1.RawValue()),
 		builtinStruct.Fields[0],
 	)
 
@@ -724,7 +729,7 @@ func TestRuntimeSignatureAlgorithm(t *testing.T) {
 
 	require.Len(t, builtinStruct.Fields, 1)
 	assert.Equal(t,
-		cadence.NewUInt8(SignatureAlgorithmECDSA_Secp256k1.RawValue()),
+		cadence.NewUInt8(SignatureAlgorithmECDSA_secp256k1.RawValue()),
 		builtinStruct.Fields[0],
 	)
 
@@ -795,6 +800,9 @@ func accountKeyExportedValue(
 
 					// Signature Algo
 					newSignAlgoValue(signAlgo),
+
+					// valid
+					cadence.Bool(false),
 				},
 			},
 
@@ -965,4 +973,231 @@ type testAccountKeyStorage struct {
 	events      []cadence.Event
 	keys        []*AccountKey
 	returnedKey *AccountKey
+}
+
+func TestPublicKey(t *testing.T) {
+
+	t.Parallel()
+
+	rt := NewInterpreterRuntime()
+	runtimeInterface := &testRuntimeInterface{}
+
+	executeScript := func(code string, runtimeInterface Interface) (cadence.Value, error) {
+		return rt.ExecuteScript(
+			Script{
+				Source: []byte(code),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  utils.TestLocation,
+			},
+		)
+	}
+
+	t.Run("Constructor", func(t *testing.T) {
+		script := `
+			pub fun main(): PublicKey {
+				let publicKey =  PublicKey(
+					publicKey: "0102".decodeHex(),
+					signatureAlgorithm: SignatureAlgorithm.ECDSA_P256
+				)
+
+				return publicKey
+			}
+		`
+
+		value, err := executeScript(script, runtimeInterface)
+		require.NoError(t, err)
+
+		expected := cadence.Struct{
+			StructType: PublicKeyType,
+			Fields: []cadence.Value{
+				// Public key (bytes)
+				newBytesValue([]byte{1, 2}),
+
+				// Signature Algo
+				newSignAlgoValue(sema.SignatureAlgorithmECDSA_P256),
+
+				// valid
+				cadence.Bool(false),
+			},
+		}
+
+		assert.Equal(t, expected, value)
+	})
+
+	t.Run("Validate func", func(t *testing.T) {
+		script := `
+			pub fun main(): Bool {
+				let publicKey =  PublicKey(
+					publicKey: "0102".decodeHex(),
+					signatureAlgorithm: SignatureAlgorithm.ECDSA_P256
+				)
+
+				return publicKey.validate()
+			}
+		`
+
+		runtimeInterface := &testRuntimeInterface{
+			validatePublicKey: func(publicKey *PublicKey) (bool, error) {
+				return true, nil
+			},
+		}
+
+		_, err := executeScript(script, runtimeInterface)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "value of type `PublicKey` has no member `validate`")
+	})
+
+	t.Run("IsValid", func(t *testing.T) {
+		for _, validity := range []bool{true, false} {
+			script := `
+			pub fun main(): Bool {
+				let publicKey =  PublicKey(
+					publicKey: "0102".decodeHex(),
+					signatureAlgorithm: SignatureAlgorithm.ECDSA_P256
+				)
+
+				return publicKey.isValid
+			}
+		`
+			invoked := false
+			validateMethodReturnValue := validity
+
+			runtimeInterface := &testRuntimeInterface{
+				validatePublicKey: func(publicKey *PublicKey) (bool, error) {
+					invoked = true
+					return validateMethodReturnValue, nil
+				},
+			}
+
+			value, err := executeScript(script, runtimeInterface)
+			require.NoError(t, err)
+
+			assert.True(t, invoked)
+			assert.Equal(t, cadence.Bool(validateMethodReturnValue), value)
+
+		}
+	})
+
+	t.Run("IsValid - publicKey from host env", func(t *testing.T) {
+
+		storage := newTestAccountKeyStorage()
+		storage.keys = append(storage.keys, accountKeyA, accountKeyB)
+
+		for index, key := range storage.keys {
+			script := fmt.Sprintf(`
+				pub fun main(): Bool {
+					// Get a public key from host env
+					let acc = getAccount(0x02)
+					let publicKey = acc.keys.get(keyIndex: %d)!.publicKey
+					return publicKey.isValid
+				}
+			`, index)
+
+			invoked := false
+			validateMethodReturnValue := true
+
+			runtimeInterface := getAccountKeyTestRuntimeInterface(storage)
+			runtimeInterface.validatePublicKey = func(publicKey *PublicKey) (bool, error) {
+				invoked = true
+				return validateMethodReturnValue, nil
+			}
+
+			value, err := executeScript(script, runtimeInterface)
+			require.NoError(t, err)
+
+			// If already validated, then the validation func shouldn't get re-invoked
+			assert.NotEqual(t, key.PublicKey.Validated, invoked)
+
+			// If validated, `isValid` should have the same value as `publicKey.IsValid`.
+			// Otherwise, it should give the value returned by the `validate()` func.
+			isValid := validateMethodReturnValue
+			if key.PublicKey.Validated {
+				isValid = key.PublicKey.IsValid
+			}
+
+			assert.Equal(t, cadence.Bool(isValid), value)
+		}
+	})
+
+	t.Run("Verify", func(t *testing.T) {
+		script := `
+			pub fun main(): Bool {
+				let publicKey =  PublicKey(
+					publicKey: "0102".decodeHex(),
+					signatureAlgorithm: SignatureAlgorithm.ECDSA_P256
+				)
+
+				return publicKey.verify(
+					signature: [],
+					signedData: [],
+					domainSeparationTag: "something",
+					hashAlgorithm: HashAlgorithm.SHA2_256
+				)
+			}
+		`
+		invoked := false
+
+		runtimeInterface := &testRuntimeInterface{
+			verifySignature: func(
+				_ []byte,
+				_ string,
+				_ []byte,
+				_ []byte,
+				_ SignatureAlgorithm,
+				_ HashAlgorithm,
+			) (bool, error) {
+				invoked = true
+				return true, nil
+			},
+		}
+
+		value, err := executeScript(script, runtimeInterface)
+		require.NoError(t, err)
+
+		assert.True(t, invoked)
+		assert.Equal(t, cadence.Bool(true), value)
+	})
+
+	t.Run("Verify - publicKey from host env", func(t *testing.T) {
+
+		storage := newTestAccountKeyStorage()
+		storage.keys = append(storage.keys, accountKeyA, accountKeyB)
+
+		script := `
+			pub fun main(): Bool {
+				// Get a public key from host env
+				let acc = getAccount(0x02)
+				let publicKey = acc.keys.get(keyIndex: 0)!.publicKey
+
+				return publicKey.verify(
+					signature: [],
+					signedData: [],
+					domainSeparationTag: "something",
+					hashAlgorithm: HashAlgorithm.SHA2_256
+				)
+			}
+		`
+		invoked := false
+
+		runtimeInterface := getAccountKeyTestRuntimeInterface(storage)
+		runtimeInterface.verifySignature = func(
+			_ []byte,
+			_ string,
+			_ []byte,
+			_ []byte,
+			_ SignatureAlgorithm,
+			_ HashAlgorithm,
+		) (bool, error) {
+			invoked = true
+			return true, nil
+		}
+
+		value, err := executeScript(script, runtimeInterface)
+		require.NoError(t, err)
+
+		assert.True(t, invoked)
+		assert.Equal(t, cadence.Bool(true), value)
+	})
 }

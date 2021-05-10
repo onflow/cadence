@@ -19,8 +19,6 @@
 package integration
 
 import (
-	"regexp"
-
 	"github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/parser2"
@@ -29,60 +27,55 @@ import (
 	"github.com/onflow/cadence/languageserver/protocol"
 )
 
-type entryPointKind uint8
+type contractKind uint8
 
 const (
-	entryPointKindUnknown entryPointKind = iota
-	entryPointKindScript
-	entryPointKindTransaction
+	contractTypeUnknown contractKind = iota
+	contractTypeDeclaration
+	contractTypeInterface
 )
 
-var SignersRegexp = regexp.MustCompile(`[\w-]+`)
-
-type entryPointInfo struct {
+type contractInfo struct {
 	documentVersion       float64
 	startPos              *ast.Position
-	kind                  entryPointKind
+	kind                  contractKind
+	name                  string
 	parameters            []*sema.Parameter
 	pragmaArgumentStrings []string
 	pragmaArguments       [][]Argument
 	pragmaSignersStrings  [][]string
-	numberOfSigners       int
 }
 
-func (i *FlowIntegration) updateEntryPointInfoIfNeeded(
+func (i FlowIntegration) updateContractInfoIfNeeded(
 	uri protocol.DocumentUri,
 	version float64,
 	checker *sema.Checker,
 ) {
-	if i.entryPointInfo[uri].documentVersion == version {
+	if i.contractInfo[uri].documentVersion == version {
 		return
 	}
 
+	var name string
 	var startPos *ast.Position
-	var kind entryPointKind
+	var kind contractKind
 	var docString string
 	var parameters []*sema.Parameter
-	var numberOfSigners int
 
-	transactionDeclaration := checker.Program.SoleTransactionDeclaration()
-	functionDeclaration := sema.FunctionEntryPointDeclaration(checker.Program)
+	contractDeclaration := checker.Program.SoleContractDeclaration()
+	contractInterfaceDeclaration := checker.Program.SoleContractInterfaceDeclaration()
 
-	if transactionDeclaration != nil {
-		startPos = &transactionDeclaration.StartPos
-		kind = entryPointKindTransaction
-		docString = transactionDeclaration.DocString
-		transactionType := checker.Elaboration.TransactionDeclarationTypes[transactionDeclaration]
-		parameters = transactionType.Parameters
-		numberOfSigners = len(transactionType.PrepareParameters)
-	} else {
-		if functionDeclaration != nil {
-			startPos = &functionDeclaration.StartPos
-			kind = entryPointKindScript
-			docString = functionDeclaration.DocString
-			functionType := checker.Elaboration.FunctionDeclarationFunctionTypes[functionDeclaration]
-			parameters = functionType.Parameters
-		}
+	if contractDeclaration != nil {
+		name = contractDeclaration.Identifier.Identifier
+		startPos = &contractDeclaration.StartPos
+		kind = contractTypeDeclaration
+		docString = contractDeclaration.DocString
+		contractType := checker.Elaboration.CompositeDeclarationTypes[contractDeclaration]
+		parameters = contractType.ConstructorParameters
+	} else if contractInterfaceDeclaration != nil {
+		name = contractInterfaceDeclaration.Identifier.Identifier
+		startPos = &contractInterfaceDeclaration.StartPos
+		kind = contractTypeInterface
+		docString = contractInterfaceDeclaration.DocString
 	}
 
 	var pragmaSigners [][]string
@@ -121,14 +114,14 @@ func (i *FlowIntegration) updateEntryPointInfoIfNeeded(
 		}
 	}
 
-	i.entryPointInfo[uri] = entryPointInfo{
+	i.contractInfo[uri] = contractInfo{
 		documentVersion:       version,
 		startPos:              startPos,
 		kind:                  kind,
+		name:                  name,
 		parameters:            parameters,
 		pragmaArgumentStrings: pragmaArgumentStrings,
 		pragmaArguments:       pragmaArguments,
 		pragmaSignersStrings:  pragmaSigners,
-		numberOfSigners:       numberOfSigners,
 	}
 }

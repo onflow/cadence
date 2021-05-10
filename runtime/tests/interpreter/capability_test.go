@@ -34,8 +34,11 @@ func TestInterpretCapability_borrow(t *testing.T) {
 
 		t.Parallel()
 
+		address := interpreter.NewAddressValueFromBytes([]byte{42})
+
 		inter, _ := testAccount(
 			t,
+			address,
 			true,
 			`
               resource R {
@@ -226,8 +229,11 @@ func TestInterpretCapability_borrow(t *testing.T) {
 
 		t.Parallel()
 
+		address := interpreter.NewAddressValueFromBytes([]byte{42})
+
 		inter, _ := testAccount(
 			t,
+			address,
 			true,
 			`
               struct S {
@@ -429,8 +435,11 @@ func TestInterpretCapability_check(t *testing.T) {
 
 		t.Parallel()
 
+		address := interpreter.NewAddressValueFromBytes([]byte{42})
+
 		inter, _ := testAccount(
 			t,
+			address,
 			true,
 			`
               resource R {
@@ -603,8 +612,11 @@ func TestInterpretCapability_check(t *testing.T) {
 
 		t.Parallel()
 
+		address := interpreter.NewAddressValueFromBytes([]byte{42})
+
 		inter, _ := testAccount(
 			t,
+			address,
 			true,
 			`
               struct S {
@@ -778,8 +790,11 @@ func TestInterpretCapability_address(t *testing.T) {
 
 	t.Parallel()
 
+	address := interpreter.NewAddressValueFromBytes([]byte{42})
+
 	inter, _ := testAccount(
 		t,
+		address,
 		true,
 		`
 			fun single(): Address {

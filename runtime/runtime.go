@@ -966,6 +966,29 @@ func (r *interpreterRuntime) newInterpreter(
 				return r.getPublicAccount(address, context.Interface, runtimeStorage)
 			},
 		),
+		interpreter.WithPublicKeyValidationHandler(
+			func(publicKey *interpreter.CompositeValue) interpreter.BoolValue {
+				return validatePublicKey(publicKey, context.Interface)
+			},
+		),
+		interpreter.WithSignatureValidationHandler(
+			func(
+				signature *interpreter.ArrayValue,
+				signedData *interpreter.ArrayValue,
+				domainSeparationTag *interpreter.StringValue,
+				hashAlgorithm *interpreter.CompositeValue,
+				publicKey *interpreter.CompositeValue,
+			) interpreter.BoolValue {
+				return validateSignature(
+					signature,
+					signedData,
+					domainSeparationTag,
+					hashAlgorithm,
+					publicKey,
+					context.Interface,
+				)
+			},
+		),
 	}
 
 	defaultOptions = append(defaultOptions,
@@ -1501,13 +1524,11 @@ func (r *interpreterRuntime) recordContractValue(
 	addressValue interpreter.AddressValue,
 	name string,
 	contractValue interpreter.Value,
-	exportedContractValue cadence.Value,
 ) {
 	runtimeStorage.recordContractUpdate(
 		addressValue.ToAddress(),
 		formatContractKey(name),
 		contractValue,
-		exportedContractValue,
 	)
 }
 
@@ -1579,7 +1600,6 @@ func (r *interpreterRuntime) instantiateContract(
 	checkerOptions []sema.Option,
 ) (
 	interpreter.Value,
-	cadence.Value,
 	error,
 ) {
 	parameterTypes := make([]sema.Type, len(contractType.ConstructorParameters))
@@ -1594,13 +1614,13 @@ func (r *interpreterRuntime) instantiateContract(
 	parameterCount := len(parameterTypes)
 
 	if argumentCount < parameterCount {
-		return nil, nil, fmt.Errorf(
+		return nil, fmt.Errorf(
 			"invalid argument count, too few arguments: expected %d, got %d, next missing argument: `%s`",
 			parameterCount, argumentCount,
 			parameterTypes[argumentCount],
 		)
 	} else if argumentCount > parameterCount {
-		return nil, nil, fmt.Errorf(
+		return nil, fmt.Errorf(
 			"invalid argument count, too many arguments: expected %d, got %d",
 			parameterCount,
 			argumentCount,
@@ -1615,7 +1635,7 @@ func (r *interpreterRuntime) instantiateContract(
 		argumentType := argumentTypes[i]
 		parameterTye := parameterTypes[i]
 		if !sema.IsSubType(argumentType, parameterTye) {
-			return nil, nil, fmt.Errorf(
+			return nil, fmt.Errorf(
 				"invalid argument %d: expected type `%s`, got `%s`",
 				i,
 				parameterTye,
@@ -1689,17 +1709,12 @@ func (r *interpreterRuntime) instantiateContract(
 	)
 
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	contract = interpeter.Globals[contractType.Identifier].GetValue().(*interpreter.CompositeValue)
 
-	var exportedContract cadence.Value
-	if runtimeStorage.highLevelStorageEnabled {
-		exportedContract = exportCompositeValue(contract, interpeter, exportResults{})
-	}
-
-	return contract, exportedContract, err
+	return contract, err
 }
 
 func (r *interpreterRuntime) newGetAccountFunction(runtimeInterface Interface, runtimeStorage *runtimeStorage) interpreter.HostFunction {
@@ -2190,7 +2205,6 @@ func (r *interpreterRuntime) updateAccountContractCode(
 	// the new contract will NOT be deployed (options.createContract is false).
 
 	var contractValue interpreter.Value
-	var exportedContractValue cadence.Value
 
 	createContract := contractType != nil && options.createContract
 
@@ -2203,7 +2217,7 @@ func (r *interpreterRuntime) updateAccountContractCode(
 		functions := r.standardLibraryFunctions(context, runtimeStorage, interpreterOptions, checkerOptions)
 		values := stdlib.BuiltinValues
 
-		contractValue, exportedContractValue, err = r.instantiateContract(
+		contractValue, err = r.instantiateContract(
 			program,
 			context,
 			contractType,
@@ -2240,7 +2254,6 @@ func (r *interpreterRuntime) updateAccountContractCode(
 			addressValue,
 			name,
 			contractValue,
-			exportedContractValue,
 		)
 	}
 
@@ -2344,7 +2357,6 @@ func (r *interpreterRuntime) newAuthAccountContractsRemoveFunction(
 					runtimeStorage,
 					addressValue,
 					nameArgument,
-					nil,
 					nil,
 				)
 
@@ -2507,7 +2519,7 @@ func (r *interpreterRuntime) newAccountKeysAddFunction(
 				},
 			)
 
-			return NewAccountKeyValue(accountKey)
+			return NewAccountKeyValue(accountKey, runtimeInterface)
 		},
 	)
 }
@@ -2538,7 +2550,7 @@ func (r *interpreterRuntime) newAccountKeysGetFunction(
 				return interpreter.NilValue{}
 			}
 
-			return NewAccountKeyValue(accountKey)
+			return NewAccountKeyValue(accountKey, runtimeInterface)
 		},
 	)
 }
@@ -2578,7 +2590,7 @@ func (r *interpreterRuntime) newAccountKeysRevokeFunction(
 				},
 			)
 
-			return NewAccountKeyValue(accountKey)
+			return NewAccountKeyValue(accountKey, runtimeInterface)
 		},
 	)
 }
@@ -2620,23 +2632,34 @@ func NewPublicKeyFromValue(publicKey *interpreter.CompositeValue) *PublicKey {
 
 	signAlgoRawValue := rawValue.(interpreter.UInt8Value)
 
+	// `valid` and `validated` fields
+	var valid, validated bool
+	validField, validated := publicKey.Fields.Get(sema.PublicKeyIsValidField)
+	if validated {
+		valid = bool(validField.(interpreter.BoolValue))
+	}
+
 	return &PublicKey{
 		PublicKey: byteArray,
 		SignAlgo:  SignatureAlgorithm(signAlgoRawValue.ToInt()),
+		IsValid:   valid,
+		Validated: validated,
 	}
 }
 
-func NewPublicKeyValue(publicKey *PublicKey) *interpreter.CompositeValue {
+func NewPublicKeyValue(publicKey *PublicKey, runtimeInterface Interface) *interpreter.CompositeValue {
 	return interpreter.NewPublicKeyValue(
 		interpreter.ByteSliceToByteArrayValue(publicKey.PublicKey),
 		interpreter.NewCryptoAlgorithmEnumCaseValue(sema.SignatureAlgorithmType, publicKey.SignAlgo.RawValue()),
+		newPublicKeyValidationFunction(publicKey, runtimeInterface),
+		newPublicKeyVerifyFunction(runtimeInterface),
 	)
 }
 
-func NewAccountKeyValue(accountKey *AccountKey) *interpreter.CompositeValue {
+func NewAccountKeyValue(accountKey *AccountKey, runtimeInterface Interface) *interpreter.CompositeValue {
 	return interpreter.NewAccountKeyValue(
 		interpreter.NewIntValueFromInt64(int64(accountKey.KeyIndex)),
-		NewPublicKeyValue(accountKey.PublicKey),
+		NewPublicKeyValue(accountKey.PublicKey, runtimeInterface),
 		interpreter.NewCryptoAlgorithmEnumCaseValue(sema.HashAlgorithmType, accountKey.HashAlgo.RawValue()),
 		interpreter.NewUFix64ValueWithInteger(uint64(accountKey.Weight)),
 		interpreter.BoolValue(accountKey.IsRevoked),
@@ -2654,4 +2677,100 @@ func NewHashAlgorithmFromValue(value interpreter.Value) HashAlgorithm {
 	hashAlgoRawValue := rawValue.(interpreter.UInt8Value)
 
 	return HashAlgorithm(hashAlgoRawValue.ToInt())
+}
+
+func newPublicKeyValidationFunction(
+	publicKey *PublicKey,
+	runtimeInterface Interface,
+) interpreter.PublicKeyValidationHandlerFunc {
+
+	return func(publicKeyValue *interpreter.CompositeValue) interpreter.BoolValue {
+		// If the public key is already validated, avoid re-validating, and return the cached result.
+		if publicKey.Validated {
+			return interpreter.BoolValue(publicKey.IsValid)
+		}
+
+		return validatePublicKey(publicKeyValue, runtimeInterface)
+	}
+}
+
+func validatePublicKey(publicKeyValue *interpreter.CompositeValue, runtimeInterface Interface) interpreter.BoolValue {
+	publicKey := NewPublicKeyFromValue(publicKeyValue)
+
+	var err error
+	var valid bool
+	wrapPanic(func() {
+		valid, err = runtimeInterface.ValidatePublicKey(publicKey)
+	})
+
+	if err != nil {
+		panic(err)
+	}
+
+	return interpreter.BoolValue(valid)
+}
+
+func newPublicKeyVerifyFunction(runtimeInterface Interface) interpreter.HostFunctionValue {
+	return interpreter.NewHostFunctionValue(
+		func(invocation interpreter.Invocation) interpreter.Value {
+			signatureValue := invocation.Arguments[0].(*interpreter.ArrayValue)
+			signedDataValue := invocation.Arguments[1].(*interpreter.ArrayValue)
+			domainSeparationTag := invocation.Arguments[2].(*interpreter.StringValue)
+			hashAlgo := invocation.Arguments[3].(*interpreter.CompositeValue)
+			publicKey := invocation.Self
+
+			return validateSignature(
+				signatureValue,
+				signedDataValue,
+				domainSeparationTag,
+				hashAlgo,
+				publicKey,
+				runtimeInterface,
+			)
+		},
+	)
+}
+
+func validateSignature(
+	signatureValue *interpreter.ArrayValue,
+	signedDataValue *interpreter.ArrayValue,
+	domainSeparationTagValue *interpreter.StringValue,
+	hashAlgorithmValue *interpreter.CompositeValue,
+	publicKeyValue *interpreter.CompositeValue,
+	runtimeInterface Interface,
+) interpreter.BoolValue {
+
+	signature, err := interpreter.ByteArrayValueToByteSlice(signatureValue)
+	if err != nil {
+		panic(fmt.Errorf("failed to get signature. %w", err))
+	}
+
+	signedData, err := interpreter.ByteArrayValueToByteSlice(signedDataValue)
+	if err != nil {
+		panic(fmt.Errorf("failed to get signed data. %w", err))
+	}
+
+	domainSeparationTag := domainSeparationTagValue.Str
+
+	hashAlgorithm := NewHashAlgorithmFromValue(hashAlgorithmValue)
+
+	publicKey := NewPublicKeyFromValue(publicKeyValue)
+
+	var valid bool
+	wrapPanic(func() {
+		valid, err = runtimeInterface.VerifySignature(
+			signature,
+			domainSeparationTag,
+			signedData,
+			publicKey.PublicKey,
+			publicKey.SignAlgo,
+			hashAlgorithm,
+		)
+	})
+
+	if err != nil {
+		panic(err)
+	}
+
+	return interpreter.BoolValue(valid)
 }

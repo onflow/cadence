@@ -19,31 +19,39 @@
 package integration
 
 import (
-	"github.com/onflow/flow-go-sdk"
-	"github.com/onflow/flow-go-sdk/client"
-	"google.golang.org/grpc"
+	"github.com/onflow/flow-cli/pkg/flowcli/gateway"
+	"github.com/onflow/flow-cli/pkg/flowcli/output"
+	"github.com/onflow/flow-cli/pkg/flowcli/project"
+	"github.com/onflow/flow-cli/pkg/flowcli/services"
 )
 
 func (i *FlowIntegration) initialize(initializationOptions interface{}) error {
-
 	// Parse the configuration options sent from the client
 	conf, err := configFromInitializationOptions(initializationOptions)
 	if err != nil {
 		return err
 	}
 	i.config = conf
+	i.emulatorState = conf.emulatorState
+	i.activeAccount = conf.activeAccount
 
-	// add the service account as a usable account
-	i.serviceAddress = flow.ServiceAddress(flow.Emulator)
-	i.accounts[i.serviceAddress] = conf.ServiceAccountKey
+	configurationPaths := []string{conf.configPath}
 
-	i.flowClient, err = client.New(
-		i.config.EmulatorAddr,
-		grpc.WithInsecure(),
-	)
+	flowProject, err := project.Load(configurationPaths)
 	if err != nil {
 		return err
 	}
+
+	host := flowProject.NetworkByName("emulator").Host
+	logger := output.NewStdoutLogger(output.NoneLog)
+
+	grpcGateway, err := gateway.NewGrpcGateway(host)
+	if err != nil {
+		return err
+	}
+
+	i.sharedServices = services.NewServices(grpcGateway, flowProject, logger)
+	i.project = flowProject
 
 	return nil
 }

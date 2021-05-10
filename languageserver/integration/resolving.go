@@ -19,7 +19,6 @@
 package integration
 
 import (
-	"context"
 	"fmt"
 	"io/ioutil"
 
@@ -66,8 +65,8 @@ func (i *FlowIntegration) resolveAddressImport(location common.AddressLocation) 
 }
 
 func (i *FlowIntegration) getAccount(address common.Address) (*flow.Account, error) {
+	account, err := i.sharedServices.Accounts.Get(address.String())
 
-	account, err := i.flowClient.GetAccount(context.Background(), flow.BytesToAddress(address[:]))
 	if err != nil {
 		return nil, fmt.Errorf(
 			"cannot get account with address %s: %w",
@@ -77,4 +76,21 @@ func (i *FlowIntegration) getAccount(address common.Address) (*flow.Account, err
 	}
 
 	return account, nil
+}
+
+
+func (i *FlowIntegration) getAccountAddress (name string) (flow.Address, error) {
+	serviceAccount, err := i.project.EmulatorServiceAccount()
+	if err != nil {
+		return flow.Address{}, err
+	}
+
+	code := makeManagerCode(scriptGetAddress, serviceAccount.Address().String())
+	args := []string{fmt.Sprintf("String:%s", name)}
+
+	result,err := i.sharedServices.Scripts.ExecuteWithCode(code,args, "")
+	if err != nil {
+		return flow.Address{}, err
+	}
+	return flow.HexToAddress(result.String()),nil
 }

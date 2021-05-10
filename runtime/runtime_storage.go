@@ -24,7 +24,6 @@ import (
 	"sort"
 	"time"
 
-	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
@@ -46,34 +45,19 @@ type CacheEntry struct {
 	Value     interpreter.Value
 }
 
-type ContractUpdates map[StorageKey]ContractUpdate
-
-type ContractUpdate struct {
-	Contract         interpreter.Value
-	ExportedContract cadence.Value
-}
+type ContractUpdates map[StorageKey]interpreter.Value
 
 type runtimeStorage struct {
-	runtimeInterface        Interface
-	highLevelStorageEnabled bool
-	highLevelStorage        HighLevelStorage
-	cache                   Cache
-	contractUpdates         ContractUpdates
+	runtimeInterface Interface
+	cache            Cache
+	contractUpdates  ContractUpdates
 }
 
 func newRuntimeStorage(runtimeInterface Interface) *runtimeStorage {
-	highLevelStorageEnabled := false
-	highLevelStorage, ok := runtimeInterface.(HighLevelStorage)
-	if ok {
-		highLevelStorageEnabled = highLevelStorage.HighLevelStorageEnabled()
-	}
-
 	return &runtimeStorage{
-		runtimeInterface:        runtimeInterface,
-		cache:                   Cache{},
-		contractUpdates:         ContractUpdates{},
-		highLevelStorage:        highLevelStorage,
-		highLevelStorageEnabled: highLevelStorageEnabled,
+		runtimeInterface: runtimeInterface,
+		cache:            Cache{},
+		contractUpdates:  ContractUpdates{},
 	}
 }
 
@@ -246,23 +230,18 @@ func (s *runtimeStorage) recordContractUpdate(
 	address common.Address,
 	key string,
 	contract interpreter.Value,
-	exportedContract cadence.Value,
 ) {
 	fullKey := StorageKey{
 		Address: address,
 		Key:     key,
 	}
 
-	s.contractUpdates[fullKey] = ContractUpdate{
-		Contract:         contract,
-		ExportedContract: exportedContract,
-	}
+	s.contractUpdates[fullKey] = contract
 }
 
 type writeItem struct {
-	storageKey    StorageKey
-	value         interpreter.Value
-	exportedValue cadence.Value
+	storageKey StorageKey
+	value      interpreter.Value
 }
 
 // writeCached serializes/saves all values in the cache in storage (through the runtime interface).
@@ -286,11 +265,10 @@ func (s *runtimeStorage) writeCached(inter *interpreter.Interpreter) {
 		})
 	}
 
-	for fullKey, contractUpdate := range s.contractUpdates { //nolint:maprangecheck
+	for fullKey, value := range s.contractUpdates { //nolint:maprangecheck
 		items = append(items, writeItem{
-			storageKey:    fullKey,
-			value:         contractUpdate.Contract,
-			exportedValue: contractUpdate.ExportedContract,
+			storageKey: fullKey,
+			value:      value,
 		})
 	}
 
@@ -312,31 +290,6 @@ func (s *runtimeStorage) writeCached(inter *interpreter.Interpreter) {
 	})
 
 	// Write cache entries in order
-
-	if s.highLevelStorageEnabled {
-		for _, item := range items {
-
-			var value cadence.Value
-			switch {
-			case item.exportedValue != nil:
-				value = item.exportedValue
-			case item.value != nil:
-				value = exportValueWithInterpreter(item.value, inter, exportResults{})
-			}
-
-			var err error
-			wrapPanic(func() {
-				err = s.highLevelStorage.SetCadenceValue(
-					item.storageKey.Address,
-					item.storageKey.Key,
-					value,
-				)
-			})
-			if err != nil {
-				panic(err)
-			}
-		}
-	}
 
 	// run batch in a for loop, each batch will create a new batch
 	// to be run again, until the batch is empty.

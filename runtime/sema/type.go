@@ -2567,18 +2567,20 @@ func (t *FunctionType) Resolve(typeArguments *TypeParameterTypeOrderedMap) Type 
 
 func (t *FunctionType) GetMembers() map[string]MemberResolver {
 	// TODO: optimize
-	members := make(map[string]MemberResolver, t.Members.Len())
-	t.Members.Foreach(func(name string, loopMember *Member) {
-		// NOTE: don't capture loop variable
-		member := loopMember
-		members[name] = MemberResolver{
-			Kind: member.DeclarationKind,
-			Resolve: func(_ string, _ ast.Range, _ func(error)) *Member {
-				return member
-			},
-		}
-	})
-
+	var members map[string]MemberResolver
+	if t.Members != nil {
+		members = make(map[string]MemberResolver, t.Members.Len())
+		t.Members.Foreach(func(name string, loopMember *Member) {
+			// NOTE: don't capture loop variable
+			member := loopMember
+			members[name] = MemberResolver{
+				Kind: member.DeclarationKind,
+				Resolve: func(_ string, _ ast.Range, _ func(error)) *Member {
+					return member
+				},
+			}
+		})
+	}
 	return withBuiltinMembers(t, members)
 }
 
@@ -4902,17 +4904,20 @@ func (t *TransactionType) RewriteWithRestrictedTypes() (Type, bool) {
 
 func (t *TransactionType) GetMembers() map[string]MemberResolver {
 	// TODO: optimize
-	members := make(map[string]MemberResolver, t.Members.Len())
-	t.Members.Foreach(func(name string, loopMember *Member) {
-		// NOTE: don't capture loop variable
-		member := loopMember
-		members[name] = MemberResolver{
-			Kind: member.DeclarationKind,
-			Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
-				return member
-			},
-		}
-	})
+	var members map[string]MemberResolver
+	if t.Members != nil {
+		members = make(map[string]MemberResolver, t.Members.Len())
+		t.Members.Foreach(func(name string, loopMember *Member) {
+			// NOTE: don't capture loop variable
+			member := loopMember
+			members[name] = MemberResolver{
+				Kind: member.DeclarationKind,
+				Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
+					return member
+				},
+			}
+		})
+	}
 	return withBuiltinMembers(t, members)
 }
 
@@ -5478,38 +5483,97 @@ var AccountKeyType = func() *CompositeType {
 const PublicKeyTypeName = "PublicKey"
 const PublicKeyPublicKeyField = "publicKey"
 const PublicKeySignAlgoField = "signatureAlgorithm"
+const PublicKeyIsValidField = "isValid"
+const PublicKeyVerifyFunction = "verify"
+
+const publicKeyKeyFieldDocString = `
+The public key
+`
+
+const publicKeySignAlgoFieldDocString = `
+The signature algorithm to be used with the key
+`
+
+const publicKeyIsValidFieldDocString = `
+Flag indicating whether the key is valid
+`
+
+const publicKeyVerifyFunctionDocString = `
+Verifies a signature. Checks whether the signature was produced by signing
+the given tag and data, using this public key and the given hash algorithm
+`
 
 // PublicKeyType represents the public key associated with an account key.
 var PublicKeyType = func() *CompositeType {
 
-	accountKeyType := &CompositeType{
+	publicKeyType := &CompositeType{
 		Identifier: PublicKeyTypeName,
 		Kind:       common.CompositeKindStructure,
 	}
 
-	const publicKeyKeyFieldDocString = `The public key`
-	const publicKeySignAlgoFieldDocString = `The signature algorithm to be used with the key`
-
 	var members = []*Member{
 		NewPublicConstantFieldMember(
-			accountKeyType,
+			publicKeyType,
 			PublicKeyPublicKeyField,
 			&VariableSizedType{Type: UInt8Type},
 			publicKeyKeyFieldDocString,
 		),
 		NewPublicConstantFieldMember(
-			accountKeyType,
+			publicKeyType,
 			PublicKeySignAlgoField,
 			SignatureAlgorithmType,
 			publicKeySignAlgoFieldDocString,
 		),
+		NewPublicConstantFieldMember(
+			publicKeyType,
+			PublicKeyIsValidField,
+			BoolType,
+			publicKeyIsValidFieldDocString,
+		),
+		NewPublicFunctionMember(
+			publicKeyType,
+			PublicKeyVerifyFunction,
+			publicKeyVerifyFunctionType,
+			publicKeyVerifyFunctionDocString,
+		),
 	}
 
-	accountKeyType.Members = GetMembersAsMap(members)
-	accountKeyType.Fields = getFieldNames(members)
+	publicKeyType.Members = GetMembersAsMap(members)
+	publicKeyType.Fields = getFieldNames(members)
 
-	return accountKeyType
+	return publicKeyType
 }()
+
+var publicKeyVerifyFunctionType = &FunctionType{
+	TypeParameters: []*TypeParameter{},
+	Parameters: []*Parameter{
+		{
+			Identifier: "signature",
+			TypeAnnotation: NewTypeAnnotation(
+				&VariableSizedType{
+					Type: UInt8Type,
+				},
+			),
+		},
+		{
+			Identifier: "signedData",
+			TypeAnnotation: NewTypeAnnotation(
+				&VariableSizedType{
+					Type: UInt8Type,
+				},
+			),
+		},
+		{
+			Identifier:     "domainSeparationTag",
+			TypeAnnotation: NewTypeAnnotation(StringType),
+		},
+		{
+			Identifier:     "hashAlgorithm",
+			TypeAnnotation: NewTypeAnnotation(HashAlgorithmType),
+		},
+	},
+	ReturnTypeAnnotation: NewTypeAnnotation(BoolType),
+}
 
 type CryptoAlgorithm interface {
 	RawValue() uint8
@@ -5527,9 +5591,11 @@ func GetMembersAsMap(members []*Member) *StringMemberOrderedMap {
 }
 
 func getFieldNames(members []*Member) []string {
-	fields := make([]string, len(members))
-	for index, member := range members {
-		fields[index] = member.Identifier.Identifier
+	fields := make([]string, 0)
+	for _, member := range members {
+		if member.DeclarationKind == common.DeclarationKindField {
+			fields = append(fields, member.Identifier.Identifier)
+		}
 	}
 
 	return fields

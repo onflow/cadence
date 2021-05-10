@@ -24,6 +24,7 @@ import (
 	"io"
 	"math"
 	"math/big"
+	"math/bits"
 	"strconv"
 	"strings"
 
@@ -45,6 +46,9 @@ type DecoderV4 struct {
 	version        uint16
 	decodeCallback DecodingCallback
 }
+
+// maxInt is math.MaxInt32 or math.MaxInt64 depending on arch.
+const maxInt = 1<<(bits.UintSize-1) - 1
 
 // DecodeValue returns a value decoded from its CBOR-encoded representation,
 // for the given owner (can be `nil`).  It can decode storage format
@@ -104,9 +108,9 @@ func NewDecoder(
 var decMode = func() cbor.DecMode {
 	decMode, err := cbor.DecOptions{
 		IntDec:           cbor.IntDecConvertNone,
-		MaxArrayElements: 512 * 1024,
-		MaxMapPairs:      512 * 1024,
-		MaxNestedLevels:  256,
+		MaxArrayElements: maxInt,
+		MaxMapPairs:      maxInt,
+		MaxNestedLevels:  math.MaxInt16,
 	}.DecMode()
 	if err != nil {
 		panic(err)
@@ -277,8 +281,14 @@ func (d *DecoderV4) decodeString(v string) Value {
 func (d *DecoderV4) decodeArray(v []interface{}, path []string) (*ArrayValue, error) {
 	values := make([]Value, len(v))
 
+	// Pre-allocate and reuse valuePath.
+	valuePath := append(path, "")
+
+	lastValuePathIndex := len(path)
+
 	for i, value := range v {
-		valuePath := append(path[:], strconv.Itoa(i))
+		valuePath[lastValuePathIndex] = strconv.Itoa(i)
+
 		res, err := d.decodeValue(value, valuePath)
 		if err != nil {
 			return nil, fmt.Errorf(
@@ -319,7 +329,7 @@ func (d *DecoderV4) decodeDictionary(v interface{}, path []string) (*DictionaryV
 		)
 	}
 
-	keysPath := append(path[:], dictionaryKeyPathPrefix)
+	keysPath := append(path, dictionaryKeyPathPrefix)
 	keys, err := d.decodeArray(encodedKeys, keysPath)
 	if err != nil {
 		return nil, fmt.Errorf(
@@ -370,7 +380,7 @@ func (d *DecoderV4) decodeDictionary(v interface{}, path []string) (*DictionaryV
 
 		deferred = orderedmap.NewStringStructOrderedMap()
 		deferredOwner = d.owner
-		deferredStorageKeyBase = joinPath(append(path[:], dictionaryValuePathPrefix))
+		deferredStorageKeyBase = joinPath(append(path, dictionaryValuePathPrefix))
 		for _, keyValue := range keys.Values {
 			key := dictionaryKey(keyValue)
 			deferred.Set(key, struct{}{})
@@ -378,7 +388,12 @@ func (d *DecoderV4) decodeDictionary(v interface{}, path []string) (*DictionaryV
 
 	} else {
 
-		index := 0
+		// Pre-allocate and reuse valuePath.
+		valuePath := append(path, dictionaryValuePathPrefix, "")
+
+		lastValuePathIndex := len(path) + 1
+
+		keyIndex := 0
 
 		for _, keyValue := range keys.Values {
 			keyStringValue, ok := keyValue.(HasKeyString)
@@ -386,16 +401,16 @@ func (d *DecoderV4) decodeDictionary(v interface{}, path []string) (*DictionaryV
 				return nil, fmt.Errorf(
 					"invalid dictionary key encoding (@ %s, %d): %T",
 					strings.Join(path, "."),
-					index,
+					keyIndex,
 					keyValue,
 				)
 			}
 
 			keyString := keyStringValue.KeyString()
+			valuePath[lastValuePathIndex] = keyString
 
-			value := encodedEntries[index]
+			value := encodedEntries[keyIndex]
 
-			valuePath := append(path[:], dictionaryValuePathPrefix, keyString)
 			decodedValue, err := d.decodeValue(value, valuePath)
 			if err != nil {
 				return nil, fmt.Errorf(
@@ -408,7 +423,7 @@ func (d *DecoderV4) decodeDictionary(v interface{}, path []string) (*DictionaryV
 
 			entries.Set(keyString, decodedValue)
 
-			index++
+			keyIndex++
 		}
 	}
 
@@ -568,6 +583,11 @@ func (d *DecoderV4) decodeComposite(v interface{}, path []string) (*CompositeVal
 
 	fields := NewStringValueOrderedMap()
 
+	// Pre-allocate and reuse valuePath.
+	valuePath := append(path, "")
+
+	lastValuePathIndex := len(path)
+
 	for i := 0; i < len(encodedFields); i += 2 {
 
 		// field name
@@ -584,7 +604,8 @@ func (d *DecoderV4) decodeComposite(v interface{}, path []string) (*CompositeVal
 		// field value
 		value := encodedFields[i+1]
 
-		valuePath := append(path[:], fieldName)
+		valuePath[lastValuePathIndex] = fieldName
+
 		decodedValue, err := d.decodeValue(value, valuePath)
 		if err != nil {
 			return nil, fmt.Errorf(
