@@ -145,9 +145,11 @@ func (i *FlowIntegration) entryPointActions(
 		return codeLenses, nil
 	}
 
+	emptyEntryPoints := len(entryPointInfo.parameters) == 0
+
 	// If there are no parameters and no pragma argument declarations,
 	// offer execution using no arguments
-	if len(entryPointInfo.parameters) == 0 {
+	if emptyEntryPoints {
 		argumentLists = append(argumentLists, []Argument{})
 	}
 
@@ -156,7 +158,10 @@ func (i *FlowIntegration) entryPointActions(
 	}
 
 	for index, argumentList := range argumentLists {
-		pragmaArguments := entryPointInfo.pragmaArgumentStrings[index]
+		var pragmaArguments string
+		if !emptyEntryPoints {
+			pragmaArguments = entryPointInfo.pragmaArgumentStrings[index]
+		}
 
 		switch kind {
 		case entryPointKindScript:
