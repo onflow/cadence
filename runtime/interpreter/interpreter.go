@@ -3086,6 +3086,7 @@ func (interpreter *Interpreter) getElaboration(location common.Location) *sema.E
 	return subInterpreter.Program.Elaboration
 }
 
+// GetContractComposite gets the composite value of the contract at the address location.
 func (interpreter *Interpreter) GetContractComposite(contractLocation common.AddressLocation) (*CompositeValue, error) {
 	contractGlobal, ok := interpreter.Globals[contractLocation.Name]
 	if !ok {
