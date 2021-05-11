@@ -1284,7 +1284,9 @@ func (d *DecoderV4) decodeStaticType() (StaticType, error) {
 
 			// CBOR nil is interpreted as nil static type.
 			if e.ActualType == cbor.NilType {
-				d.decoder.Skip()
+				if err := d.decoder.Skip(); err != nil {
+					return nil, err
+				}
 				return nil, nil
 			}
 
