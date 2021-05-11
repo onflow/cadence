@@ -872,7 +872,7 @@ var containerCompletionItems = []*protocol.CompletionItem{
 // Completion is called to compute completion items at a given cursor position.
 //
 func (s *Server) Completion(
-	conn protocol.Conn,
+	_ protocol.Conn,
 	params *protocol.CompletionParams,
 ) (
 	items []*protocol.CompletionItem,
