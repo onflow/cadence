@@ -59,8 +59,13 @@ func TestArrayElementTypeInference(t *testing.T) {
 			}
 		`)
 
-		require.Error(t, err)
-		assert.IsType(t, &sema.CheckerError{}, err)
+		errs := ExpectCheckerErrors(t, err, 1)
+		require.IsType(t, &sema.InvalidIntegerLiteralRangeError{}, errs[0])
+
+		intRangeErr := errs[0].(*sema.InvalidIntegerLiteralRangeError)
+		assert.Equal(t, intRangeErr.ExpectedType, sema.Int8Type)
+		assert.Equal(t, intRangeErr.ExpectedMinInt, sema.Int8Type.MinInt())
+		assert.Equal(t, intRangeErr.ExpectedMaxInt, sema.Int8Type.MaxInt())
 	})
 
 	t.Run("anystruct", func(t *testing.T) {
@@ -137,8 +142,13 @@ func TestDictionaryTypeInference(t *testing.T) {
 			}
 		`)
 
-		require.Error(t, err)
-		assert.IsType(t, &sema.CheckerError{}, err)
+		errs := ExpectCheckerErrors(t, err, 1)
+		require.IsType(t, &sema.InvalidIntegerLiteralRangeError{}, errs[0])
+
+		intRangeErr := errs[0].(*sema.InvalidIntegerLiteralRangeError)
+		assert.Equal(t, intRangeErr.ExpectedType, sema.Int8Type)
+		assert.Equal(t, intRangeErr.ExpectedMinInt, sema.Int8Type.MinInt())
+		assert.Equal(t, intRangeErr.ExpectedMaxInt, sema.Int8Type.MaxInt())
 	})
 
 	t.Run("nested invalid", func(t *testing.T) {
@@ -148,8 +158,12 @@ func TestDictionaryTypeInference(t *testing.T) {
 			}
 		`)
 
-		require.Error(t, err)
-		assert.IsType(t, &sema.CheckerError{}, err)
+		errs := ExpectCheckerErrors(t, err, 1)
+		require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+
+		typeMismatchErr := errs[0].(*sema.TypeMismatchError)
+		assert.Equal(t, typeMismatchErr.ExpectedType, sema.Int8Type)
+		assert.Equal(t, typeMismatchErr.ActualType, sema.StringType)
 	})
 }
 
@@ -180,8 +194,24 @@ func TestFunctionArgumentTypeInference(t *testing.T) {
 	`)
 
 	// Type inferring for function arguments is not supported yet.
-	require.Error(t, err)
-	assert.IsType(t, &sema.CheckerError{}, err)
+	errs := ExpectCheckerErrors(t, err, 1)
+	require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+
+	typeMismatchErr := errs[0].(*sema.TypeMismatchError)
+
+	assert.Equal(t,
+		typeMismatchErr.ExpectedType,
+		&sema.VariableSizedType{
+			Type: sema.Int8Type,
+		},
+	)
+
+	assert.Equal(t,
+		typeMismatchErr.ActualType,
+		&sema.VariableSizedType{
+			Type: sema.IntType,
+		},
+	)
 }
 
 func TestBinaryExpressionTypeInference(t *testing.T) {
@@ -220,15 +250,13 @@ func TestUnaryExpressionTypeInference(t *testing.T) {
 			}
 		`)
 
-		require.Error(t, err)
-		require.IsType(t, &sema.CheckerError{}, err)
+		errs := ExpectCheckerErrors(t, err, 1)
 
-		checkerErr := err.(*sema.CheckerError)
+		require.IsType(t, &sema.InvalidUnaryOperandError{}, errs[0])
+		invalidUnaryOpKindErr := errs[0].(*sema.InvalidUnaryOperandError)
 
-		// Should only give a single error
-		require.Len(t, checkerErr.Errors, 1)
-
-		assert.IsType(t, &sema.InvalidUnaryOperandError{}, checkerErr.Errors[0])
+		assert.Equal(t, invalidUnaryOpKindErr.ExpectedType, sema.BoolType)
+		assert.Equal(t, invalidUnaryOpKindErr.ActualType, sema.StringType)
 	})
 }
 
@@ -240,6 +268,17 @@ func TestForceExpressionTypeInference(t *testing.T) {
 		_, err := ParseAndCheck(t, `
 			fun test() {
 				var x: [Int8] = [5, 7, 2]!
+			}
+		`)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("array forced", func(t *testing.T) {
+		_, err := ParseAndCheck(t, `
+			fun test() {
+				var x: Int?? = 4
+				var y: Int = x!!
 			}
 		`)
 
@@ -268,12 +307,13 @@ func TestCastExpressionTypeInference(t *testing.T) {
 			}
 		`)
 
-		require.Error(t, err)
-		require.IsType(t, &sema.CheckerError{}, err)
-		checkerErr := err.(*sema.CheckerError)
+		errs := ExpectCheckerErrors(t, err, 1)
+		require.IsType(t, &sema.InvalidIntegerLiteralRangeError{}, errs[0])
 
-		require.Len(t, checkerErr.Errors, 1)
-		assert.IsType(t, &sema.InvalidIntegerLiteralRangeError{}, checkerErr.Errors[0])
+		intRangeErr := errs[0].(*sema.InvalidIntegerLiteralRangeError)
+		assert.Equal(t, intRangeErr.ExpectedType, sema.Int8Type)
+		assert.Equal(t, intRangeErr.ExpectedMinInt, sema.Int8Type.MinInt())
+		assert.Equal(t, intRangeErr.ExpectedMaxInt, sema.Int8Type.MaxInt())
 	})
 
 	t.Run("mismatching types", func(t *testing.T) {
@@ -283,11 +323,11 @@ func TestCastExpressionTypeInference(t *testing.T) {
 			}
 		`)
 
-		require.Error(t, err)
-		require.IsType(t, &sema.CheckerError{}, err)
-		checkerErr := err.(*sema.CheckerError)
+		errs := ExpectCheckerErrors(t, err, 1)
+		require.IsType(t, &sema.TypeMismatchError{}, errs[0])
 
-		require.Len(t, checkerErr.Errors, 1)
-		assert.IsType(t, &sema.TypeMismatchError{}, checkerErr.Errors[0])
+		typeMismatchErr := errs[0].(*sema.TypeMismatchError)
+		assert.Equal(t, typeMismatchErr.ExpectedType, sema.Int8Type)
+		assert.Equal(t, typeMismatchErr.ActualType, sema.StringType)
 	})
 }

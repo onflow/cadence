@@ -34,7 +34,7 @@ func (checker *Checker) VisitArrayExpression(expression *ast.ArrayExpression) as
 		switch typ := expectedType.(type) {
 
 		case *ConstantSizedType:
-			elementType = typ.ElementType(true)
+			elementType = typ.ElementType(false)
 
 			literalCount := int64(len(expression.Values))
 
@@ -49,7 +49,7 @@ func (checker *Checker) VisitArrayExpression(expression *ast.ArrayExpression) as
 			}
 
 		case *VariableSizedType:
-			elementType = typ.ElementType(true)
+			elementType = typ.ElementType(false)
 
 		default:
 			// If the expected type is not an array type, then it could either be an invalid type, or a super type

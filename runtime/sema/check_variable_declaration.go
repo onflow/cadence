@@ -48,8 +48,8 @@ func (checker *Checker) visitVariableDeclaration(declaration *ast.VariableDeclar
 		checker.checkTypeAnnotation(typeAnnotation, declaration.TypeAnnotation)
 		declarationType = typeAnnotation.Type
 
-		// If the optional binding is possible, then then value can have an optional
-		// of the declaration's type.
+		// If the variable declaration is an optional binding (`if let`),
+		// then the value is expected to be an optional of the declaration's type.
 		if isOptionalBinding {
 			expectedValueType = &OptionalType{
 				Type: declarationType,
@@ -74,10 +74,8 @@ func (checker *Checker) visitVariableDeclaration(declaration *ast.VariableDeclar
 					Range:        ast.NewRangeFromPositioned(declaration.Value),
 				},
 			)
-		} else {
-			if declarationType == nil {
-				declarationType = optionalType.Type
-			}
+		} else if declarationType == nil {
+			declarationType = optionalType.Type
 		}
 	}
 
