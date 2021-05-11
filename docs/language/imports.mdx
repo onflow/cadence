@@ -11,12 +11,7 @@ or it can be followed by the names of the declarations that should be imported,
 followed by the `from` keyword, and then followed by the location.
 
 If importing a local file, the location is a string literal, and the path to the file.
-
-<Callout type="info">
-
-🚧 Status: Imports from local files are not currently implemented.
-
-</Callout>
+Deployment of code with file imports requires the usage for the [Flow CLI](https://docs.onflow.org/flow-cli).
 
 If importing an external type in a different account,
 the location is an address literal, and the address
@@ -25,7 +20,7 @@ of the account where the declarations are deployed to and published.
 ```cadence
 // Import the type `Counter` from a local file.
 //
-import Counter from "examples/counter.cdc"
+import Counter from "./examples/counter.cdc"
 
 // Import the type `Counter` from an external account.
 //
