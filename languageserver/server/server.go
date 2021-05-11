@@ -1002,8 +1002,6 @@ func (s *Server) rangeCompletions(
 	uri protocol.DocumentUri,
 ) (items []*protocol.CompletionItem) {
 
-	// The client asks for the column after the identifier,
-	// query the member accesses for the preceding position
 
 	ranges := checker.Ranges.Find(position)
 
