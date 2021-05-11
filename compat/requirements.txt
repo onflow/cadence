@@ -1,6 +1,6 @@
 click==7.1.2
 coloredlogs==14.0
 dacite==1.5.1
-PyYAML==5.3.1
+PyYAML==5.4
 typing-extensions==3.7.4.3
 tabulate==0.8.7
