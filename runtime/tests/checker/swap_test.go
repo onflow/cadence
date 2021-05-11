@@ -391,21 +391,13 @@ func TestCheckInvalidTwoConstantsSwap(t *testing.T) {
         }
     `)
 
-	require.Error(t, err)
-	assert.IsType(t, &sema.CheckerError{}, err)
+	errs := ExpectCheckerErrors(t, err, 2)
 
-	checkerErr := err.(*sema.CheckerError)
-
-	// Should give two errors for the two constants
-	require.Len(t, checkerErr.Errors, 2)
-
-	checkerError := checkerErr.Errors[0]
-	require.IsType(t, &sema.AssignmentToConstantError{}, checkerError)
-	assignmentError := checkerError.(*sema.AssignmentToConstantError)
+	require.IsType(t, &sema.AssignmentToConstantError{}, errs[0])
+	assignmentError := errs[0].(*sema.AssignmentToConstantError)
 	assert.Equal(t, "x", assignmentError.Name)
 
-	checkerError = checkerErr.Errors[1]
-	require.IsType(t, &sema.AssignmentToConstantError{}, checkerError)
-	assignmentError = checkerError.(*sema.AssignmentToConstantError)
+	require.IsType(t, &sema.AssignmentToConstantError{}, errs[1])
+	assignmentError = errs[1].(*sema.AssignmentToConstantError)
 	assert.Equal(t, "y", assignmentError.Name)
 }

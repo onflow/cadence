@@ -2312,10 +2312,12 @@ func (checker *Checker) VisitExpression(expr ast.Expression, expectedType Type) 
 	return checker.visitExpression(expr, expectedType, true)
 }
 
-func (checker *Checker) visitExpression(expr ast.Expression, expectedType Type, forceTypes bool) Type {
-
-	// forceTypes - flag indicating whether to use the expected type as a hard requirement (forceTypes = true)
-	// or whether to use the expected type for type inferring only (forceTypes = false)
+// visitExpression
+//
+// forceTypes specifies whether to use the expected type as a hard requirement (forceTypes = true)
+// or whether to use the expected type for type inferring only (forceTypes = false)
+//
+func (checker *Checker) visitExpression(expr ast.Expression, expectedType Type, forceType bool) Type {
 
 	// Cache the current contextually expected type, and set the `expectedType`
 	// as the new contextually expected type.
@@ -2336,7 +2338,7 @@ func (checker *Checker) visitExpression(expr ast.Expression, expectedType Type, 
 
 	actualType := expr.Accept(checker).(Type)
 
-	if forceTypes &&
+	if forceType &&
 		expectedType != nil &&
 		actualType != InvalidType &&
 		!IsSubType(actualType, expectedType) {
@@ -2345,7 +2347,7 @@ func (checker *Checker) visitExpression(expr ast.Expression, expectedType Type, 
 			&TypeMismatchError{
 				ExpectedType: expectedType,
 				ActualType:   actualType,
-				Range:        getPosition(expr),
+				Range:        expressionRange(expr),
 			},
 		)
 
@@ -2357,7 +2359,7 @@ func (checker *Checker) visitExpression(expr ast.Expression, expectedType Type, 
 	return actualType
 }
 
-func getPosition(expression ast.Expression) ast.Range {
+func expressionRange(expression ast.Expression) ast.Range {
 	if indexExpr, ok := expression.(*ast.IndexExpression); ok {
 		return ast.Range{
 			StartPos: indexExpr.TargetExpression.StartPosition(),
