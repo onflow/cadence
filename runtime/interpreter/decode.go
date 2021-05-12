@@ -1203,14 +1203,16 @@ func (d *DecoderV4) decodeCapability() (CapabilityValue, error) {
 	// path
 
 	// Decode path at array index encodedCapabilityValuePathFieldKey
-	field2Value, err := d.decodeValue(nil)
+	num, err = d.decoder.DecodeTagNumber()
 	if err != nil {
 		return CapabilityValue{}, fmt.Errorf("invalid capability path: %w", err)
 	}
-
-	path, ok := field2Value.(PathValue)
-	if !ok {
-		return CapabilityValue{}, fmt.Errorf("invalid capability path: %T", path)
+	if num != cborTagPathValue {
+		return CapabilityValue{}, fmt.Errorf("invalid capability path: wrong tag %d", num)
+	}
+	path, err := d.decodePath()
+	if err != nil {
+		return CapabilityValue{}, fmt.Errorf("invalid capability path: %w", err)
 	}
 
 	// Decode borrow type at array index encodedCapabilityValueBorrowTypeFieldKey
