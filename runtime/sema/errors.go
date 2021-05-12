@@ -292,22 +292,6 @@ func (e *NotIndexingAssignableTypeError) Error() string {
 
 func (*NotIndexingAssignableTypeError) isSemanticError() {}
 
-// NotIndexingTypeError
-
-type NotIndexingTypeError struct {
-	Type Type
-	ast.Range
-}
-
-func (e *NotIndexingTypeError) Error() string {
-	return fmt.Sprintf(
-		"cannot index with value which has type: `%s`",
-		e.Type.QualifiedString(),
-	)
-}
-
-func (*NotIndexingTypeError) isSemanticError() {}
-
 // NotEquatableTypeError
 
 type NotEquatableTypeError struct {
@@ -808,21 +792,6 @@ func (e *FunctionExpressionInConditionError) Error() string {
 }
 
 func (*FunctionExpressionInConditionError) isSemanticError() {}
-
-// InvalidReturnValueError
-
-type InvalidReturnValueError struct {
-	ast.Range
-}
-
-func (e *InvalidReturnValueError) Error() string {
-	return fmt.Sprintf(
-		"invalid return with value from function with `%s` return type",
-		VoidType,
-	)
-}
-
-func (*InvalidReturnValueError) isSemanticError() {}
 
 // MissingReturnValueError
 

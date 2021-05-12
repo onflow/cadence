@@ -58,16 +58,7 @@ func (checker *Checker) VisitReturnStatement(statement *ast.ReturnStatement) ast
 	checker.Elaboration.ReturnStatementValueTypes[statement] = valueType
 	checker.Elaboration.ReturnStatementReturnTypes[statement] = returnType
 
-	// If the enclosing function's return type is Void,
-	// then the return statement should not have a return value
-
 	if returnType == VoidType {
-		checker.report(
-			&InvalidReturnValueError{
-				Range: ast.NewRangeFromPositioned(statement.Expression),
-			},
-		)
-
 		return nil
 	}
 

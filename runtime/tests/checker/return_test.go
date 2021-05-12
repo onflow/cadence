@@ -41,7 +41,11 @@ func TestCheckInvalidReturnValue(t *testing.T) {
 
 	errs := ExpectCheckerErrors(t, err, 1)
 
-	assert.IsType(t, &sema.InvalidReturnValueError{}, errs[0])
+	require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	typeMismatchErr := errs[0].(*sema.TypeMismatchError)
+
+	assert.Equal(t, sema.VoidType, typeMismatchErr.ExpectedType)
+	assert.Equal(t, sema.IntType, typeMismatchErr.ActualType)
 }
 
 func TestCheckMissingReturnStatement(t *testing.T) {

@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/runtime/sema"
 )
@@ -432,7 +433,11 @@ func TestCheckInvalidTransactionSelfMoveReturnFromFunction(t *testing.T) {
 
 	errs := ExpectCheckerErrors(t, err, 1)
 
-	assert.IsType(t, &sema.InvalidReturnValueError{}, errs[0])
+	require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	typeMismatchErr := errs[0].(*sema.TypeMismatchError)
+
+	assert.Equal(t, sema.VoidType, typeMismatchErr.ExpectedType)
+	assert.IsType(t, &sema.TransactionType{}, typeMismatchErr.ActualType)
 }
 
 func TestCheckInvalidTransactionSelfMoveIntoArrayLiteral(t *testing.T) {
