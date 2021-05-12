@@ -33,6 +33,18 @@ func (checker *Checker) VisitBinaryExpression(expression *ast.BinaryExpression) 
 	operation := expression.Operation
 	operationKind := binaryOperationKind(operation)
 
+	// Of all binary expressions, only arithmetic expressions require the
+	// rhsExpr and lhsExpr to be in the same type as the parent expression.
+	// i.e: `var x: Int8 = a + b`. Here both `a` and `b` needs to be of the type `Int8`.
+	//
+	// This is also true, even if the expected type is `Int8?` e.g: `var x: Int8? = a + b`
+	// So here we take the 'optional-type' out of the way.
+	//
+	// For the rest of the binary-expressions, this is not the case. e.g: logical-expressions.
+	// i.e: `var x: Bool = a > b`. Here `a` and `b` can be anything, and doesn't have to be `Bool`.
+	// For them, the type is inferred from the expressions themselves, and the compatibility check
+	// is done based on the operation kind.
+
 	var expectedType Type
 	if operationKind == BinaryOperationKindArithmetic {
 		expectedType = UnwrapOptionalType(checker.expectedType)

@@ -2323,10 +2323,9 @@ func (checker *Checker) visitExpression(expr ast.Expression, expectedType Type, 
 	// as the new contextually expected type.
 	prevExpectedType := checker.expectedType
 
-	// If the expected type is invalid or void, treat it in the same manner as
+	// If the expected type is invalid, treat it in the same manner as
 	// expected type is unknown.
-	if expectedType == VoidType ||
-		expectedType != nil && expectedType.IsInvalidType() {
+	if expectedType != nil && expectedType.IsInvalidType() {
 		expectedType = nil
 	}
 

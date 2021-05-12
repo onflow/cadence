@@ -127,10 +127,9 @@ func TestCheckInvalidUnknownDeclaration(t *testing.T) {
        }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 2)
+	errs := ExpectCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
-	assert.IsType(t, &sema.InvalidReturnValueError{}, errs[1])
 }
 
 func TestCheckInvalidUnknownDeclarationInGlobal(t *testing.T) {
