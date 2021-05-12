@@ -2309,15 +2309,37 @@ func (checker *Checker) Hints() []Hint {
 }
 
 func (checker *Checker) VisitExpression(expr ast.Expression, expectedType Type) Type {
-	return checker.visitExpression(expr, expectedType, true)
+	actualType, _ := checker.visitExpression(expr, expectedType)
+	return actualType
 }
 
-// visitExpression
+func (checker *Checker) visitExpression(expr ast.Expression, expectedType Type) (visibleType Type, actualType Type) {
+	return checker.visitExpressionWithForceType(expr, expectedType, true)
+}
+
+func (checker *Checker) VisitExpressionWithForceType(expr ast.Expression, expectedType Type, forceType bool) Type {
+	actualType, _ := checker.visitExpressionWithForceType(expr, expectedType, forceType)
+	return actualType
+}
+
+// visitExpressionWithForceType
 //
-// forceTypes specifies whether to use the expected type as a hard requirement (forceTypes = true)
-// or whether to use the expected type for type inferring only (forceTypes = false)
+// Parameters:
+// expr         - Expression to check
+// expectedType - Contextually expected type of the expression
+// forceType    - Specifies whether to use the expected type as a hard requirement (forceType = true)
+//                or whether to use the expected type for type inferring only (forceType = false)
 //
-func (checker *Checker) visitExpression(expr ast.Expression, expectedType Type, forceType bool) Type {
+// Return types:
+// visibleType - The type that others should 'see' as the type of this expression. This could be
+//               used as the type of the expression to avoid the type errors being delegated up.
+// actualType  - The actual type of the expression.
+//
+func (checker *Checker) visitExpressionWithForceType(
+	expr ast.Expression,
+	expectedType Type,
+	forceType bool,
+) (visibleType Type, actualType Type) {
 
 	// Cache the current contextually expected type, and set the `expectedType`
 	// as the new contextually expected type.
@@ -2335,7 +2357,7 @@ func (checker *Checker) visitExpression(expr ast.Expression, expectedType Type, 
 		checker.expectedType = prevExpectedType
 	}()
 
-	actualType := expr.Accept(checker).(Type)
+	actualType = expr.Accept(checker).(Type)
 
 	if forceType &&
 		expectedType != nil &&
@@ -2350,12 +2372,12 @@ func (checker *Checker) visitExpression(expr ast.Expression, expectedType Type, 
 			},
 		)
 
-		// If there are type mismatch errors, return the expected type as the type of the expression.
+		// If there are type mismatch errors, return the expected type as the visible-type of the expression.
 		// This is done to avoid the same error getting delegated up.
-		return expectedType
+		return expectedType, actualType
 	}
 
-	return actualType
+	return actualType, actualType
 }
 
 func expressionRange(expression ast.Expression) ast.Range {
