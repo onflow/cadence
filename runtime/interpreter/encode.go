@@ -990,6 +990,16 @@ func (e *Encoder) encodeCompositeValue(
 		return err
 	}
 
+	// If the value is not loaded, dump the raw content as it is.
+	if v.content != nil {
+		err := e.enc.EncodeRawBytes(v.content)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	}
+
 	// Encode location at array index encodedCompositeValueLocationFieldKey
 	err = e.encodeLocation(v.Location())
 	if err != nil {
@@ -1009,35 +1019,44 @@ func (e *Encoder) encodeCompositeValue(
 	}
 
 	// Encode fields (as array) at array index encodedCompositeValueFieldsFieldKey
-	fields := v.Fields()
-	err = e.enc.EncodeArrayHead(uint64(fields.Len() * 2))
-	if err != nil {
-		return err
-	}
+
+	// If the fields are not loaded, dump the raw fields content as it is.
+	if v.content != nil {
+		err := e.enc.EncodeRawBytes(v.fieldsContent)
+		if err != nil {
+			return err
+		}
+	} else {
+		fields := v.Fields()
+		err = e.enc.EncodeArrayHead(uint64(fields.Len() * 2))
+		if err != nil {
+			return err
+		}
 
 	// Pre-allocate and reuse valuePath.
 	//nolint:gocritic
 	valuePath := append(path, "")
 
-	lastValuePathIndex := len(path)
+		lastValuePathIndex := len(path)
 
-	for pair := fields.Oldest(); pair != nil; pair = pair.Next() {
-		fieldName := pair.Key
+		for pair := fields.Oldest(); pair != nil; pair = pair.Next() {
+			fieldName := pair.Key
 
-		// Encode field name as fields array element
-		err := e.enc.EncodeString(fieldName)
-		if err != nil {
-			return err
-		}
+			// Encode field name as fields array element
+			err := e.enc.EncodeString(fieldName)
+			if err != nil {
+				return err
+			}
 
-		value := pair.Value
+			value := pair.Value
 
-		valuePath[lastValuePathIndex] = fieldName
+			valuePath[lastValuePathIndex] = fieldName
 
-		// Encode value as fields array element
-		err = e.Encode(value, valuePath, deferrals)
-		if err != nil {
-			return err
+			// Encode value as fields array element
+			err = e.Encode(value, valuePath, deferrals)
+			if err != nil {
+				return err
+			}
 		}
 	}
 

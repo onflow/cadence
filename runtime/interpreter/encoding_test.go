@@ -85,6 +85,9 @@ func testEncodeDecode(t *testing.T, test encodeDecodeTest) {
 	} else {
 		require.NoError(t, err)
 
+		// Just to make sure the content is built.
+		decoded.String()
+
 		if !test.deferred || (test.deferred && test.decodedValue != nil) {
 			expectedValue := test.value
 			if test.decodedValue != nil {
