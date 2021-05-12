@@ -965,9 +965,10 @@ func TestCheckReferenceExpressionOfOptional(t *testing.T) {
           let ref = &r as &R
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := ExpectCheckerErrors(t, err, 2)
 
-		require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		assert.IsType(t, &sema.OptionalTypeReferenceError{}, errs[1])
 	})
 
 	t.Run("struct", func(t *testing.T) {
@@ -981,9 +982,10 @@ func TestCheckReferenceExpressionOfOptional(t *testing.T) {
           let ref = &s as &S
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := ExpectCheckerErrors(t, err, 2)
 
 		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		assert.IsType(t, &sema.OptionalTypeReferenceError{}, errs[1])
 	})
 
 	t.Run("non-composite", func(t *testing.T) {
@@ -995,9 +997,25 @@ func TestCheckReferenceExpressionOfOptional(t *testing.T) {
           let ref = &i as &Int
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := ExpectCheckerErrors(t, err, 2)
 
 		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		assert.IsType(t, &sema.OptionalTypeReferenceError{}, errs[1])
+	})
+
+	t.Run("as optional", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          let i: Int? = 1
+          let ref = &i as &Int?
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 2)
+
+		assert.IsType(t, &sema.NonReferenceTypeReferenceError{}, errs[0])
+		assert.IsType(t, &sema.OptionalTypeReferenceError{}, errs[1])
 	})
 }
 
