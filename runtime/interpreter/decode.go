@@ -303,11 +303,15 @@ func (d *DecoderV4) decodeValue(path []string) (Value, error) {
 		)
 	}
 
+	if err != nil {
+		return value, err
+	}
+
 	if d.decodeCallback != nil {
 		d.decodeCallback(value, path)
 	}
 
-	return value, err
+	return value, nil
 }
 
 func (d *DecoderV4) decodeString(v string) Value {
@@ -951,7 +955,7 @@ func (d *DecoderV4) decodeUInt128() (UInt128Value, error) {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
 			return UInt128Value{}, fmt.Errorf("invalid UInt128 encoding: %s", e.ActualType.String())
 		}
-		return UInt128Value{}, nil
+		return UInt128Value{}, err
 	}
 
 	if bigInt.Sign() < 0 {
@@ -972,7 +976,7 @@ func (d *DecoderV4) decodeUInt256() (UInt256Value, error) {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
 			return UInt256Value{}, fmt.Errorf("invalid UInt256 encoding: %s", e.ActualType.String())
 		}
-		return UInt256Value{}, nil
+		return UInt256Value{}, err
 	}
 
 	if bigInt.Sign() < 0 {
@@ -1100,7 +1104,7 @@ func (d *DecoderV4) decodeAddress() (AddressValue, error) {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
 			return AddressValue{}, fmt.Errorf("invalid address encoding: %s", e.ActualType.String())
 		}
-		return AddressValue{}, nil
+		return AddressValue{}, err
 	}
 
 	err = d.checkAddressLength(addressBytes)
