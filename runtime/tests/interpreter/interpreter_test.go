@@ -4340,7 +4340,7 @@ func TestInterpretArrayRemoveFirst(t *testing.T) {
 		interpreter.NewIntValueFromInt64(2),
 		interpreter.NewIntValueFromInt64(3),
 	).Copy().(*interpreter.ArrayValue)
-	expectedArray.RemoveFirst()
+	expectedArray.RemoveFirst(nil)
 
 	actualArray := inter.Globals["x"].GetValue()
 
@@ -4362,6 +4362,39 @@ func TestInterpretArrayRemoveFirst(t *testing.T) {
 	assert.Equal(t,
 		interpreter.NewIntValueFromInt64(1),
 		inter.Globals["y"].GetValue(),
+	)
+}
+
+func TestInterpretInvalidArrayRemoveFirst(t *testing.T) {
+
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+       let x: [Int] = []
+
+       fun test() {
+           x.removeFirst()
+       }
+    `)
+
+	_, err := inter.Invoke("test")
+
+	var indexErr interpreter.ArrayIndexOutOfBoundsError
+	require.ErrorAs(t, err, &indexErr)
+
+	require.Equal(t,
+		interpreter.ArrayIndexOutOfBoundsError{
+			Index: 0,
+			Size:  0,
+			LocationRange: interpreter.LocationRange{
+				Location: TestLocation,
+				Range: ast.Range{
+					StartPos: ast.Position{Offset: 58, Line: 5, Column: 11},
+					EndPos:   ast.Position{Offset: 72, Line: 5, Column: 25},
+				},
+			},
+		},
+		indexErr,
 	)
 }
 

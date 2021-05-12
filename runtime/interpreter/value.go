@@ -790,7 +790,9 @@ func (v *ArrayValue) Remove(index int, getLocationRange func() LocationRange) Va
 }
 
 // TODO: unset owner?
-func (v *ArrayValue) RemoveFirst() Value {
+func (v *ArrayValue) RemoveFirst(getLocationRange func() LocationRange) Value {
+	v.checkBounds(0, getLocationRange)
+
 	v.modified = true
 
 	elements := v.Elements()
@@ -875,7 +877,7 @@ func (v *ArrayValue) GetMember(_ *Interpreter, _ func() LocationRange, name stri
 	case "removeFirst":
 		return NewHostFunctionValue(
 			func(invocation Invocation) Value {
-				return v.RemoveFirst()
+				return v.RemoveFirst(invocation.GetLocationRange)
 			},
 		)
 
