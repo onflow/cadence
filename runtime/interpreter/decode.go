@@ -1187,14 +1187,17 @@ func (d *DecoderV4) decodeCapability() (CapabilityValue, error) {
 	// address
 
 	// Decode address at array index encodedCapabilityValueAddressFieldKey
-	field1Value, err := d.decodeValue(nil)
+	var num uint64
+	num, err = d.decoder.DecodeTagNumber()
 	if err != nil {
 		return CapabilityValue{}, fmt.Errorf("invalid capability address: %w", err)
 	}
-
-	address, ok := field1Value.(AddressValue)
-	if !ok {
-		return CapabilityValue{}, fmt.Errorf("invalid capability address: %T", address)
+	if num != cborTagAddressValue {
+		return CapabilityValue{}, fmt.Errorf("invalid capability address: wrong tag %d", num)
+	}
+	address, err := d.decodeAddress()
+	if err != nil {
+		return CapabilityValue{}, fmt.Errorf("invalid capability address: %w", err)
 	}
 
 	// path
