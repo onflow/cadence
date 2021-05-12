@@ -803,12 +803,14 @@ func (v *ArrayValue) RemoveFirst(getLocationRange func() LocationRange) Value {
 }
 
 // TODO: unset owner?
-func (v *ArrayValue) RemoveLast() Value {
+func (v *ArrayValue) RemoveLast(getLocationRange func() LocationRange) Value {
+	lastIndex := v.Count() - 1
+	v.checkBounds(lastIndex, getLocationRange)
+
 	v.modified = true
 
 	elements := v.Elements()
 	var lastElement Value
-	lastIndex := len(elements) - 1
 
 	lastElement, v.values = elements[lastIndex], elements[:lastIndex]
 	return lastElement
@@ -884,7 +886,7 @@ func (v *ArrayValue) GetMember(_ *Interpreter, _ func() LocationRange, name stri
 	case "removeLast":
 		return NewHostFunctionValue(
 			func(invocation Invocation) Value {
-				return v.RemoveLast()
+				return v.RemoveLast(invocation.GetLocationRange)
 			},
 		)
 
