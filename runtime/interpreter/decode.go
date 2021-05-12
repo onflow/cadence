@@ -1219,7 +1219,15 @@ func (d *DecoderV4) decodeCapability() (CapabilityValue, error) {
 	//
 	// The decoding must be backwards-compatible and support both capability values
 	// with a borrow type and ones without
-	borrowType, err := d.decodeStaticType()
+
+	var borrowType StaticType
+
+	// Optional borrow type can be CBOR nil.
+	err = d.decoder.DecodeNil()
+	if _, ok := err.(*cbor.WrongTypeError); ok {
+		borrowType, err = d.decodeStaticType()
+	}
+
 	if err != nil {
 		return CapabilityValue{}, fmt.Errorf("invalid capability borrow type encoding: %w", err)
 	}
@@ -1280,15 +1288,6 @@ func (d *DecoderV4) decodeStaticType() (StaticType, error) {
 	number, err := d.decoder.DecodeTagNumber()
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
-
-			// CBOR nil is interpreted as nil static type.
-			if e.ActualType == cbor.NilType {
-				if err := d.decoder.Skip(); err != nil {
-					return nil, err
-				}
-				return nil, nil
-			}
-
 			return nil, fmt.Errorf("invalid static type encoding: %s", e.ActualType.String())
 		}
 		return nil, err
@@ -1683,7 +1682,14 @@ func (d *DecoderV4) decodeType() (TypeValue, error) {
 	}
 
 	// Decode type at array index encodedTypeValueTypeFieldKey
-	staticType, err := d.decodeStaticType()
+	var staticType StaticType
+
+	// Optional type can be CBOR nil.
+	err = d.decoder.DecodeNil()
+	if _, ok := err.(*cbor.WrongTypeError); ok {
+		staticType, err = d.decodeStaticType()
+	}
+
 	if err != nil {
 		return TypeValue{}, fmt.Errorf("invalid type encoding: %w", err)
 	}
@@ -1694,7 +1700,14 @@ func (d *DecoderV4) decodeType() (TypeValue, error) {
 }
 
 func (d *DecoderV4) decodeCapabilityStaticType() (StaticType, error) {
-	borrowStaticType, err := d.decodeStaticType()
+	var borrowStaticType StaticType
+
+	// Optional borrow type can be CBOR nil.
+	err := d.decoder.DecodeNil()
+	if _, ok := err.(*cbor.WrongTypeError); ok {
+		borrowStaticType, err = d.decodeStaticType()
+	}
+
 	if err != nil {
 		return nil, fmt.Errorf("invalid capability static type borrow type encoding: %w", err)
 	}
