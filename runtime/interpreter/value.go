@@ -751,7 +751,16 @@ func (v *ArrayValue) AppendAll(other AllAppendableValue) {
 }
 
 func (v *ArrayValue) Insert(index int, element Value, getLocationRange func() LocationRange) {
-	v.checkBounds(index, getLocationRange)
+	count := v.Count()
+
+	// NOTE: index may be equal to count
+	if index < 0 || index > count {
+		panic(ArrayIndexOutOfBoundsError{
+			Index:         index,
+			Size:          count,
+			LocationRange: getLocationRange(),
+		})
+	}
 
 	v.modified = true
 
