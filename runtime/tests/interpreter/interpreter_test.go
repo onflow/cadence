@@ -488,32 +488,42 @@ func TestInterpretInvalidArrayIndexing(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
-       fun test(): Int {
-           let z = [0, 3]
-           return z[2]
-       }
-    `)
+	for name, index := range map[string]int{
+		"negative":          -1,
+		"larger than count": 2,
+	} {
 
-	_, err := inter.Invoke("test")
+		t.Run(name, func(t *testing.T) {
 
-	var indexErr interpreter.ArrayIndexOutOfBoundsError
-	require.ErrorAs(t, err, &indexErr)
+			inter := parseCheckAndInterpret(t, `
+               fun test(_ index: Int): Int {
+                   let z = [0, 3]
+                   return z[index]
+               }
+            `)
 
-	require.Equal(t,
-		interpreter.ArrayIndexOutOfBoundsError{
-			Index:    2,
-			MaxIndex: 1,
-			LocationRange: interpreter.LocationRange{
-				Location: TestLocation,
-				Range: ast.Range{
-					StartPos: ast.Position{Offset: 71, Line: 4, Column: 19},
-					EndPos:   ast.Position{Offset: 73, Line: 4, Column: 21},
+			indexValue := interpreter.NewIntValueFromInt64(int64(index))
+			_, err := inter.Invoke("test", indexValue)
+
+			var indexErr interpreter.ArrayIndexOutOfBoundsError
+			require.ErrorAs(t, err, &indexErr)
+
+			require.Equal(t,
+				interpreter.ArrayIndexOutOfBoundsError{
+					Index: index,
+					Size:  2,
+					LocationRange: interpreter.LocationRange{
+						Location: TestLocation,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 107, Line: 4, Column: 27},
+							EndPos:   ast.Position{Offset: 113, Line: 4, Column: 33},
+						},
+					},
 				},
-			},
-		},
-		indexErr,
-	)
+				indexErr,
+			)
+		})
+	}
 }
 
 func TestInterpretArrayIndexingAssignment(t *testing.T) {
@@ -537,7 +547,7 @@ func TestInterpretArrayIndexingAssignment(t *testing.T) {
 		interpreter.NewIntValueFromInt64(0),
 		interpreter.NewIntValueFromInt64(3),
 	).Copy().(*interpreter.ArrayValue)
-	expectedArray.SetIndex(1, interpreter.NewIntValueFromInt64(2))
+	expectedArray.SetIndex(1, interpreter.NewIntValueFromInt64(2), nil)
 
 	require.Equal(t,
 		expectedArray,
@@ -553,6 +563,48 @@ func TestInterpretArrayIndexingAssignment(t *testing.T) {
 		},
 		actualArray.(*interpreter.ArrayValue).Elements(),
 	)
+}
+
+func TestInterpretInvalidArrayIndexingAssignment(t *testing.T) {
+
+	t.Parallel()
+
+	for name, index := range map[string]int{
+		"negative":          -1,
+		"larger than count": 2,
+	} {
+
+		t.Run(name, func(t *testing.T) {
+
+			inter := parseCheckAndInterpret(t, `
+               fun test(_ index: Int) {
+                   let z = [0, 3]
+                   z[index] = 1
+               }
+            `)
+
+			indexValue := interpreter.NewIntValueFromInt64(int64(index))
+			_, err := inter.Invoke("test", indexValue)
+
+			var indexErr interpreter.ArrayIndexOutOfBoundsError
+			require.ErrorAs(t, err, &indexErr)
+
+			require.Equal(t,
+				interpreter.ArrayIndexOutOfBoundsError{
+					Index: index,
+					Size:  2,
+					LocationRange: interpreter.LocationRange{
+						Location: TestLocation,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 95, Line: 4, Column: 20},
+							EndPos:   ast.Position{Offset: 101, Line: 4, Column: 26},
+						},
+					},
+				},
+				indexErr,
+			)
+		})
+	}
 }
 
 func TestInterpretStringIndexing(t *testing.T) {
