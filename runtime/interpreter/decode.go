@@ -1408,50 +1408,53 @@ func (d *DecoderV4) decodeCompositeStaticType() (StaticType, error) {
 	}, nil
 }
 
-func (d *DecoderV4) decodeInterfaceStaticType() (StaticType, error) {
+func (d *DecoderV4) decodeInterfaceStaticType() (InterfaceStaticType, error) {
 	const expectedLength = encodedInterfaceStaticTypeLength
 
 	size, err := d.decoder.DecodeArrayHead()
 
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
-			return nil, fmt.Errorf("invalid interface static type encoding: expected [%d]interface{}, got %s",
-				expectedLength,
-				e.ActualType.String(),
-			)
+			return InterfaceStaticType{},
+				fmt.Errorf("invalid interface static type encoding: expected [%d]interface{}, got %s",
+					expectedLength,
+					e.ActualType.String(),
+				)
 		}
-		return nil, err
+		return InterfaceStaticType{}, err
 	}
 
 	if size != expectedLength {
-		return nil, fmt.Errorf("invalid interface static type encoding: expected [%d]interface{}, got [%d]interface{}",
-			expectedLength,
-			size,
-		)
+		return InterfaceStaticType{},
+			fmt.Errorf("invalid interface static type encoding: expected [%d]interface{}, got [%d]interface{}",
+				expectedLength,
+				size,
+			)
 	}
 
 	// Decode location at array index encodedInterfaceStaticTypeLocationFieldKey
 	location, err := d.decodeLocation()
 	if err != nil {
-		return nil, fmt.Errorf("invalid interface static type location encoding: %w", err)
+		return InterfaceStaticType{}, fmt.Errorf("invalid interface static type location encoding: %w", err)
 	}
 
 	// Skip obsolete element at array index encodedInterfaceStaticTypeTypeIDFieldKey
 	err = d.decoder.Skip()
 	if err != nil {
-		return nil, err
+		return InterfaceStaticType{}, err
 	}
 
 	// Decode qualified identifier at array index encodedInterfaceStaticTypeQualifiedIdentifierFieldKey
 	qualifiedIdentifier, err := d.decoder.DecodeString()
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
-			return nil, fmt.Errorf(
-				"invalid interface static type qualified identifier encoding: %s",
-				e.ActualType.String(),
-			)
+			return InterfaceStaticType{},
+				fmt.Errorf(
+					"invalid interface static type qualified identifier encoding: %s",
+					e.ActualType.String(),
+				)
 		}
-		return nil, err
+		return InterfaceStaticType{}, err
 	}
 
 	return InterfaceStaticType{
@@ -1647,14 +1650,24 @@ func (d *DecoderV4) decodeRestrictedStaticType() (StaticType, error) {
 
 	restrictions := make([]InterfaceStaticType, restrictionSize)
 	for i := 0; i < int(restrictionSize); i++ {
-		r, err := d.decodeStaticType()
+
+		number, err := d.decoder.DecodeTagNumber()
 		if err != nil {
-			return nil, err
+			if e, ok := err.(*cbor.WrongTypeError); ok {
+				return nil, fmt.Errorf("invalid restricted static type restriction encoding: expected CBOR tag, got %s", e.ActualType.String())
+			}
+			return nil, fmt.Errorf("invalid restricted static type restriction encoding: %w", err)
 		}
-		restriction, ok := r.(InterfaceStaticType)
-		if !ok {
-			return nil, fmt.Errorf("invalid restricted static type restriction encoding: %T", r)
+
+		if number != cborTagInterfaceStaticType {
+			return nil, fmt.Errorf("invalid restricted static type restriction encoding: expected CBOR tag %d, got %d", cborTagInterfaceStaticType, number)
 		}
+
+		restriction, err := d.decodeInterfaceStaticType()
+		if err != nil {
+			return nil, fmt.Errorf("invalid restricted static type restriction encoding: %w", err)
+		}
+
 		restrictions[i] = restriction
 	}
 
