@@ -39,9 +39,7 @@ func TestInterfaceDeclaration_MarshalJSON(t *testing.T) {
 			Identifier: "AB",
 			Pos:        Position{Offset: 1, Line: 2, Column: 3},
 		},
-		Members: &Members{
-			Declarations: []Declaration{},
-		},
+		Members:   NewMembers([]Declaration{}),
 		DocString: "test",
 		Range: Range{
 			StartPos: Position{Offset: 7, Line: 8, Column: 9},

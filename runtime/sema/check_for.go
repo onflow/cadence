@@ -26,7 +26,7 @@ import (
 func (checker *Checker) VisitForStatement(statement *ast.ForStatement) ast.Repr {
 
 	checker.enterValueScope()
-	defer checker.leaveValueScope(true)
+	defer checker.leaveValueScope(statement.EndPosition, true)
 
 	valueExpression := statement.Value
 	valueType := valueExpression.Accept(checker).(Type)
@@ -71,7 +71,9 @@ func (checker *Checker) VisitForStatement(statement *ast.ForStatement) ast.Repr 
 		allowOuterScopeShadowing: false,
 	})
 	checker.report(err)
-	checker.recordVariableDeclarationOccurrence(identifier, variable)
+	if checker.positionInfoEnabled {
+		checker.recordVariableDeclarationOccurrence(identifier, variable)
+	}
 
 	// The body of the loop will maybe be evaluated.
 	// That means that resource invalidations and

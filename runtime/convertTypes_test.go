@@ -38,11 +38,11 @@ func TestExportRecursiveType(t *testing.T) {
 		Location:   utils.TestLocation,
 		Identifier: "Foo",
 		Kind:       common.CompositeKindResource,
-		Members:    map[string]*sema.Member{},
+		Members:    sema.NewStringMemberOrderedMap(),
 		Fields:     []string{"foo"},
 	}
 
-	ty.Members["foo"] = &sema.Member{
+	ty.Members.Set("foo", &sema.Member{
 		ContainerType: ty,
 		Access:        ast.AccessNotSpecified,
 		Identifier:    ast.Identifier{Identifier: "foo"},
@@ -50,11 +50,11 @@ func TestExportRecursiveType(t *testing.T) {
 		TypeAnnotation:  sema.NewTypeAnnotation(ty),
 		DeclarationKind: common.DeclarationKindField,
 		VariableKind:    ast.VariableKindVariable,
-	}
+	})
 
 	expected := &cadence.ResourceType{
-		TypeID:     "S.test.Foo",
-		Identifier: "Foo",
+		Location:            utils.TestLocation,
+		QualifiedIdentifier: "Foo",
 		Fields: []cadence.Field{
 			{
 				Identifier: "foo",

@@ -21,9 +21,12 @@ package wasm
 // Module represents a module
 //
 type Module struct {
-	Types []*FunctionType
-	// The type IDs of all functions
-	functionTypeIDs []uint32
-	// The bodies of all functions
-	functionBodies []*Code
+	Name               string
+	Types              []*FunctionType
+	Imports            []*Import
+	Functions          []*Function
+	Memories           []*Memory
+	Exports            []*Export
+	StartFunctionIndex *uint32
+	Data               []*Data
 }

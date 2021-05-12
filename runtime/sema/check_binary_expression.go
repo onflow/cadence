@@ -137,10 +137,10 @@ func (checker *Checker) checkBinaryExpressionArithmeticOrNonEqualityComparisonOr
 	case BinaryOperationKindArithmetic,
 		BinaryOperationKindNonEqualityComparison:
 
-		expectedSuperType = &NumberType{}
+		expectedSuperType = NumberType
 
 	case BinaryOperationKindBitwise:
-		expectedSuperType = &IntegerType{}
+		expectedSuperType = IntegerType
 
 	default:
 		panic(errors.NewUnreachableError())
@@ -212,7 +212,7 @@ func (checker *Checker) checkBinaryExpressionArithmeticOrNonEqualityComparisonOr
 		return leftType
 
 	case BinaryOperationKindNonEqualityComparison:
-		return &BoolType{}
+		return BoolType
 
 	default:
 		panic(errors.NewUnreachableError())
@@ -227,7 +227,7 @@ func (checker *Checker) checkBinaryExpressionEquality(
 	leftIsInvalid, rightIsInvalid, anyInvalid bool,
 ) (resultType Type) {
 
-	resultType = &BoolType{}
+	resultType = BoolType
 
 	if anyInvalid {
 		return
@@ -259,8 +259,8 @@ func (checker *Checker) checkBinaryExpressionBooleanLogic(
 ) Type {
 	// check both types are boolean subtypes
 
-	leftIsBool := IsSubType(leftType, &BoolType{})
-	rightIsBool := IsSubType(rightType, &BoolType{})
+	leftIsBool := IsSubType(leftType, BoolType)
+	rightIsBool := IsSubType(rightType, BoolType)
 
 	if !leftIsBool && !rightIsBool {
 		if !anyInvalid {
@@ -279,7 +279,7 @@ func (checker *Checker) checkBinaryExpressionBooleanLogic(
 				&InvalidBinaryOperandError{
 					Operation:    operation,
 					Side:         common.OperandSideLeft,
-					ExpectedType: &BoolType{},
+					ExpectedType: BoolType,
 					ActualType:   leftType,
 					Range:        ast.NewRangeFromPositioned(expression.Left),
 				},
@@ -291,7 +291,7 @@ func (checker *Checker) checkBinaryExpressionBooleanLogic(
 				&InvalidBinaryOperandError{
 					Operation:    operation,
 					Side:         common.OperandSideRight,
-					ExpectedType: &BoolType{},
+					ExpectedType: BoolType,
 					ActualType:   rightType,
 					Range:        ast.NewRangeFromPositioned(expression.Right),
 				},
@@ -299,7 +299,7 @@ func (checker *Checker) checkBinaryExpressionBooleanLogic(
 		}
 	}
 
-	return &BoolType{}
+	return BoolType
 }
 
 func (checker *Checker) checkBinaryExpressionNilCoalescing(

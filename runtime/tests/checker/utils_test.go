@@ -34,7 +34,7 @@ func ParseAndCheckWithPanic(t *testing.T, code string) (*sema.Checker, error) {
 				sema.WithPredeclaredValues(
 					stdlib.StandardLibraryFunctions{
 						stdlib.PanicFunction,
-					}.ToValueDeclarations(),
+					}.ToSemaValueDeclarations(),
 				),
 			},
 		},
@@ -45,10 +45,10 @@ func ParseAndCheckWithAny(t *testing.T, code string) (*sema.Checker, error) {
 		code,
 		ParseAndCheckOptions{
 			Options: []sema.Option{
-				sema.WithPredeclaredTypes(map[string]sema.TypeDeclaration{
-					"Any": stdlib.StandardLibraryType{
+				sema.WithPredeclaredTypes([]sema.TypeDeclaration{
+					stdlib.StandardLibraryType{
 						Name: "Any",
-						Type: &sema.AnyType{},
+						Type: sema.AnyType,
 						Kind: common.DeclarationKindType,
 					},
 				}),

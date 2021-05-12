@@ -1,4 +1,642 @@
-# v0.11.0 (2012-10-13)
+# v0.15.0  (2021-04-20)
+
+## ⭐ Features
+
+- Added balance fields on accounts (#808) @janezpodhostnik
+- Add address field to capabilities (#736) @ceelo777
+- Add array appendAll function (#727) @lkadian
+- Validate arguments passed into cadence programs (#724) @SupunS
+- Implement equality for storable values and static types (#790) @turbolent
+- Declare min/max fields for integer and fixed-point types (#803) @turbolent
+- Add saturation arithmetic (#804) @turbolent
+- Add functions to read stored and linked values (#812) @turbolent
+
+## 🛠 Improvements
+
+- Optimize storage format (#797) @fxamacker
+- Paralleize encoding (#731) @zhangchiqing
+- Deny removing contracts if contract update validation is enabled (#792) @SupunS
+- Simplify function types (#802) @turbolent
+- Cache capability type members (#799) @turbolent
+- Use force expression's end position in force nil error (#789) @turbolent
+- Handle cyclic references in dynamic type conformance check (#787) @SupunS
+- Benchmark CBOR encoding/decoding using mainnet data (#783) @fxamacker
+- Extend defensive run-time checking to all value transfers (#784) @turbolent
+- Remove obsolete code in decode.go (#788) @fxamacker
+- Optimize encoding of 12 types still using CBOR map (#778) @fxamacker
+- Reject indirect incompatible updates to composite declarations (#772) @SupunS
+- Panic with a dedicated error when a member access results in no value (#768) @turbolent
+- Update language server to Cadence v0.14.4 (#767) @turbolent
+- Improve value type conformance check (#776) @turbolent
+- Add validation for enum cases during contract updates (#762) @SupunS
+- Optimize encoding of composites (#761) @fxamacker
+- Improve state decoding tool (#759) @turbolent
+- Optimize encoding of dictionaries (#752) @fxamacker
+- Prepare Decoder for storage format v4 (#746) @fxamacker
+- Make numeric types singleton (#732) @SupunS
+- Validate arguments passed into cadence programs (#724) @SupunS
+- Use location ID as key for maps holding account codes (#723) @turbolent
+- Make native composite types non-storable (#713) @turbolent
+- Improve state decoding tool (#798) @turbolent
+- Remove unused storage key handler (#811) @turbolent
+
+## 🐞 Bug Fixes
+
+- Extend defensive run-time checking to all value transfers (#784) @turbolent
+- Fix borrowing (#782) @turbolent
+- Prevent cyclic imports (#809) @turbolent
+- Clean up "storage removal" index expression (#769) @turbolent
+- Get resource owner from host environment (#770) @SupunS
+- Handle field initialization using force-move assignment (#741) @turbolent
+- Fix error range when reporting a type error for an indexing reference expression (#719) @turbolent
+
+## 📖 Documentation
+
+- Improve documentation for block timestamp (#775) @turbolent
+- Document run-time type identifiers (#750) @turbolent
+- Add documentation for the getType() builtin method  (#737) @SupunS
+
+
+# v0.14.5 (2021-04-08)
+
+## 🐞 Bug Fixes
+
+- Fix borrowing (#785) @turbolent
+
+# v0.14.4 (2021-03-25)
+
+## ⭐ Features
+
+- Add dictionary contains function (#716) @lkadian
+
+## 🐞 Bug Fixes
+
+- Fix runtime representation of native HashAlgorithm/SignAlgorithm enums (#725) @SupunS
+- Fix error range when reporting a type error for an indexing reference expression (#719) @turbolent
+
+## 🧪 Tests
+
+- Benchmark real fungible token transfers (#722) @turbolent
+- Use location ID as key for maps holding account codes (#723) @turbolent
+
+
+# v0.13.10 (2021-03-25)
+
+## 🐞 Bug Fixes
+
+- Add support for access(account) and multiple contracts per account (#730) @turbolent
+
+# v0.13.9 (2021-03-22)
+
+## 🛠 Improvements
+
+- Lazily load contract values (#720) @turbolent
+
+# v0.14.3 (2021-03-22)
+
+## 🛠 Improvements
+
+- Lazily load contract values (#715) @turbolent
+- Make native composite types non-storable (#713) @turbolent
+- Ensure imported checkers/elaborations are reused in tests' import handlers (#711) @turbolent
+- Use require.ErrorAs (#714) @turbolent
+
+## 🐞 Bug Fixes
+
+- Add support for access(account) and multiple contracts per account (#710) @turbolent
+
+# v0.14.2 (2021-03-18)
+
+## ⭐ Features
+
+- Replace parser demo with AST explorer (#693) @turbolent
+- Report a hint when a dynamic cast is statically known to always succeed (#688) @turbolent
+
+## 🛠 Improvements
+
+- Revert the addition of the unsupported signing and hash algorithms (#705) @turbolent
+
+## 🐞 Bug Fixes
+
+- Fix cadence-parser NPM package, update versions (#694) @turbolent
+- Properly handle recursive types when checking validity of event parameter types (#709) @turbolent
+- Make all path sub-types externally returnable (#707) @turbolent
+
+## 📖 Documentation
+
+- Fix the syntax of the signature algorithm enum in docs (#701) @SupunS
+
+
+# v0.13.8 (2021-03-18)
+
+## 🐞 Bug Fixes
+
+- Properly handle recursive types when checking validity of event parameter types (#708) @turbolent
+
+# v0.14.1 (2021-03-16)
+
+## 🛠 Improvements
+
+- Add unknown constants for signature algorithm and hash algorithm (#699) @turbolent
+- Optimize checker activations (#674) @turbolent
+- Return nil when revoking a non-existing key (#697) @SupunS
+
+## 🐞 Bug Fixes
+
+- Fix nested error pretty printing (#695) @turbolent
+
+# v0.14.0 (2021-03-15)
+
+This release introduced a new [high-level Account Key API](https://docs.onflow.org/cadence/language/accounts/) and improves the interpreter performance.
+The current low-level Account Key API is now deprecated and will be removed in a future release. Please switch to the new one.
+
+The following example transaction demonstrates the functionality:
+
+```kotlin
+transaction {
+	prepare(signer: AuthAccount) {
+		let newPublicKey = PublicKey(
+			publicKey: "010203".decodeHex(),
+			signatureAlgorithm: SignatureAlgorithm.ECDSA_P256
+		)
+
+		// Add a key
+		let addedKey = signer.keys.add(
+			publicKey: newPublicKey,
+			hashAlgorithm: HashAlgorithm.SHA3_256,
+			weight: 100.0
+		)
+
+
+		// Retrieve a key
+		let sameKey = signer.keys.get(keyIndex: addedKey.keyIndex)
+
+
+		// Revoke a key
+		signer.keys.revoke(keyIndex: addedKey.keyIndex)
+	}
+}
+```
+
+## ⭐ Features
+
+- Introduce a new [high-level Account Key API](https://docs.onflow.org/cadence/language/accounts/) (#633) @SupunS
+- Allow the Language Server to be debugged (#663) @turbolent
+
+## 💥 Breaking Changes
+
+The `Crypto` contract has changed in a backwards-incompatible way, so the types and values it declared could be used in the new Account Key API:
+
+- The struct `Crypto.PublicKey` was replaced by the new built-in global struct `PublicKey`. 
+  There is no need anymore to import the `Crypto` contract to work with public keys.
+
+- The struct `Crypto.SignatureAlgorithm` was replaced with the new built-in global enum `SignatureAlgorithm`.
+  There is no need anymore to import the `Crypto` contract to work with signature algorithms.
+
+- The struct `Crypto.HashAlgorithm` was replaced with the new built-in global enum `HashAlgorithm`.
+  There is no need anymore to import the `Crypto` contract to work with hash algorithms.
+
+- The signature algorithm value `Crypto.ECDSA_Secp256k1` was replaced with the new built-in enum case `SignatureAlgorithm.ECDSA_Secp256k1`
+
+- The signature algorithm value `Crypto.ECDSA_P256` was replaced with the new built-in enum case `SignatureAlgorithm.ECDSA_P256`
+
+- The hash algorithm `Crypto.SHA3_256` was replaced with the new built-in enum case `HashAlgorithm.SHA3_256`
+
+- The hash algorithm `Crypto.SHA2_256` was replaced with the new built-in enum case `HashAlgorithm.SHA2_256`
+
+## 🛠 Improvements
+
+- Add support for importing enum values (#672) @SupunS
+- Optimize interpreter: Make invocation location ranges lazy (#685) @turbolent
+- Optimize interpreter activations (#673) @turbolent
+- Optimize integer conversion (#677) @turbolent
+- Optimize interpreter: Evaluate statements and declarations directly, remove trampolines (#684) @turbolent
+- Optimize interpreter: Move statement evaluation code  (#683) @turbolent
+- Optimize interpreter: Move evaluation of expressions and statements to separate files (#682) @turbolent
+- Optimize interpreter: Evaluate expressions directly without trampolines (#681) @turbolent
+- Optimize interpreter: Refactor function invocations to return a value instead of a trampoline  (#680) @turbolent
+- Optimize interpreter: Evaluate binary expressions directly (#679) @turbolent
+
+## 🐞 Bug Fixes
+
+- Add support for exporting enums (#669) @SupunS
+- Ensure code is long enough when extracting excerpt (#690) @turbolent
+
+## 📖 Documentation
+
+- Add documentation for the new account key API (#635) @SupunS
+
+# v0.13.7 (2021-03-12)
+
+## 🐞 Bug Fixes
+
+- Ensure code is long enough when extracting excerpt (#690) @turbolent
+
+# v0.13.6 (2021-03-09)
+
+## 🐞 Bug Fixes
+
+- Revert "Cache qualified identifier and type ID for composite types and interface types" (#670) @turbolent
+
+# v0.13.5 (2021-03-05)
+
+## 🛠 Improvements
+
+- Add computed fields to the composite value (#664) @SupunS
+- Improve naming: Rename nominal type to simple type (#659) @turbolent
+- Cache qualified identifier and type ID for composite types and interface types (#658) @turbolent
+
+## 🐞 Bug Fixes
+
+- Fix handling of capability values without borrow type (#666) @turbolent
+- Improve type equality check in the contract update validation (#654) @SupunS
+
+# v0.13.4 (2021-03-04)
+
+## ⭐ Features
+
+- Add parser for pragma signers (#656) @MaxStalker
+
+## 🐞 Bug Fixes
+
+- Fix updating contracts with reference typed fields (#649) @SupunS
+
+## 📖 Documentation
+
+- Move remaining Cadence docs to Cadence repo. (#653) @10thfloor
+
+# v0.13.3 (2021-03-03)
+
+## 🛠 Improvements
+
+- Optimize checker construction (#630) @turbolent
+
+# v0.13.2 (2021-03-03)
+
+## 🛠 Improvements
+
+- Make contract update validation optional and disable it by default (#646) @turbolent
+- Delay contract code and value updates to the end of execution (#636) @turbolent
+- Optimize encoding of positive bigints (#637) @turbolent
+- Optimize deferred dictionary keys (#638) @turbolent
+- Refactor `String`, `AuthAccount.Contracts`, and `DeployedContract` type to singleton (#625) @turbolent
+- Refactor `AuthAccount`, `PublicAccount`, and `Block` type to singleton (#624) @turbolent
+- Only record member accesses when origins and occurrences are enabled (#627) @turbolent
+- Cache members for array and dictionary types (#626) @turbolent
+
+## 🐞 Bug Fixes
+
+- Support nested file imports in LSP (#616) @psiemens
+
+## 📖 Documentation
+
+- Fix code examples and improve documentation in language reference (#634) @jeroenlm
+
+# v0.13.1 (2021-02-24)
+
+## 🛠 Improvements
+
+- Remove prepare and decode callbacks (#622) @turbolent
+- Update language server to Cadence v0.13.0 and Go SDK v0.15.0 (#623) @turbolent
+- Refactor Any type, AnyResource type, and AnyStruct type to singleton (#618) @turbolent
+- Refactor Type, Bool, and Character type to singletons (#617) @turbolent
+
+## 🐞 Bug Fixes
+
+- Fix AuthAccount nested types (#619) @turbolent
+
+# v0.13.0 (2021-02-22)
+
+## ⭐ Features
+
+- Validate contract updates (#593) @SupunS
+- WebAssembly: Use reference types (#448) @turbolent
+- Debug log decode calls (#585) @turbolent
+
+## 🛠 Improvements
+
+- Make CompositeType.Members field an ordered map (#581) @SupunS
+- Add ordered map for nested types in the checker (#580) @SupunS
+- Use elaborations instead of checkers (#576) @turbolent
+- Check ranges over maps (#450) @turbolent
+- Improve resource info merging (#606) @turbolent
+- Make dictionary entries and composite fields deterministic (#614) @turbolent
+- Write cached items in deterministic order (#613) @turbolent
+- Add tests for KeyString function (#612) @turbolent
+- Use ordered map for field initialization check (#609) @turbolent
+- Use ordered maps for type parameters  (#608) @turbolent
+- Use ordered maps for imported values and types (#607) @turbolent
+- Cache members of composite types and interface types (#611) @turbolent
+- Reuse enc mode and dec mode (#610) @turbolent
+- Make resource tracking deterministic  (#603) @turbolent
+- Make base values and base types deterministic (#604) @turbolent
+- Make elaboration globals deterministic (#605) @turbolent
+- Make activations deterministic (#601) @turbolent
+- Make member set deterministic (#602) @turbolent
+- Make interface sets ordered and thread-safe (#600) @turbolent
+- Improve error reporting in contract update validation (#597) @SupunS
+- Optimize resource tracking (#592) @turbolent
+- Make iteration deterministic (#596) @turbolent
+- Optimize member set by using plain Go maps and parent-child chaining (#589) @turbolent
+
+## 🐞 Bug Fixes
+
+- Improve Virtual Machine (#598) @turbolent
+- Fix parsing 'from' keyword in imported-identifiers (#577) @SupunS
+
+## 📖 Documentation
+
+- Minor additions to the docs (#594) @janezpodhostnik
+- Add compilation to runtime diagram (#591) @turbolent
+
+# v0.12.11 (2021-02-15)
+
+## 🐞 Bug Fixes
+
+- Fix `String()` function of `DicitonaryValue` when values are deferred (#587)
+
+# v0.12.10 (2021-02-15)
+
+## 🐞 Bug Fixes
+
+- Revert dictionary key string format for address values (#586)
+
+# v0.12.9 (2021-02-15)
+
+## 🐞 Bug Fixes
+
+- Fix log statement ([1328925](https://github.com/onflow/cadence/commit/1328925a8221d76c41e51f1df81424566262f10c))
+
+# v0.12.8 (2021-02-15)
+
+## ⭐ Features
+
+- Add an optional callback for encoding prepare function calls and debug log them to the runtime interface (#584)
+
+# v0.12.7 (2021-02-04)
+
+## ⭐ Features
+
+- WebAssembly: Add support for start section (#430)
+- WebAssembly: Add support for memory exports (#427)
+
+## 🛠 Improvements
+
+- Return a dedicated error for encoding an unsupported value (#583)
+- Update language server to Cadence v0.12.6 and Go SDK v0.14.3 (#579)
+
+
+# v0.12.6 (2021-02-02)
+
+## 🛠 Improvements
+
+- Optimize activations (#571)
+- Make occurrences and origins optional (#570)
+- Update to hamt 37930cf9f7d8, which contains ForEach, optimize activations (#569)
+- Move global values, global types, and transaction types to elaboration (#558)
+- Improve AST indices (#556)
+- Cache programs before checking succeeded, properly wrap returned error (#557)
+
+Performance of checking and interpretation has been improved, 
+e.g. for `BenchmarkCheckContractInterfaceFungibleTokenConformance`:
+
+| Commit   | Description                                    |  Ops |          Time |
+|----------|------------------------------------------------|------:|--------------:|
+| 21764d89 | Baseline, v0.12.5                              |   595 | 2018162 ns/op |
+| df2ba05d | Update hamt, use ForEach everywhere            |  1821 |  658515 ns/op |
+| 6088ce01 | Optional occurrences and origins recording     |  2258 |  530121 ns/op |
+| 429a7796 | Optimize activations, replace use of HAMT map  |  3667 |  327368 ns/op |
+
+
+## ⭐ Features
+
+- Optionally run checker tests concurrently (#554)
+
+## 🐞 Bug Fixes
+
+- Fix runtime type of Block.timestamp (#575)
+- Use correct CommandSubmitTransaction command in entrypoint code lens (#568)
+- Revert "always find the declared variable (#408)" (#561)
+- Make parameter list thread-safe (#555)
+
+## 📖 Documentation
+
+- More developer documentation (#535)
+- Update the roadmap (#553)
+- Document how to inject value declarations (#547)
+
+
+
+# v0.10.6 (2021-01-30)
+
+## 🛠 Improvements
+
+- Update to hamt 37930cf9f7d8, use `ForEach` instead of `FirstRest` (#566)
+- Make checker occurrences and origins optional (#567)
+
+# v0.12.5 (2021-01-22)
+
+## ⭐ Features
+
+- WebAssembly: Add support for memory and data sections (#425)
+- Start of a compiler, with IR and WASM code generator (#409)
+- Language Server: Parse pragma arguments declarations and show codelenses (#432)
+
+## 🛠 Improvements
+
+- Update the parser NPM package (#544)
+- Update the language server and Monaco client NPM packages (#545)
+- Interpreter: Always find the declared variable (#408)
+
+## 🐞 Bug Fixes
+
+- Fix the export of type values with restricted static types (#551)
+- Fix nested enum declarations (#549)
+- Language Server: Don't panic when notifications fail (#543)
+
+# v0.12.4 (2021-01-20)
+
+## ⭐ Features
+
+- Argument list parsing and transaction declaration docstrings (#528)
+- Add support for name section in WASM binary (#388)
+- Add more WASM instructions (#381)
+- Add support for export section in WASM binary writer and reader (#377)
+- Generate code for instructions (#372)
+
+## 🛠 Improvements
+
+- WebAssembly package improvements (#542)
+- Generate code for instructions (#372)
+
+## 🐞 Bug Fixes
+
+- Add support for multiple contracts per account to the language server (#540)
+
+
+# v0.12.3 (2021-01-13)
+
+## 🛠 Improvements
+
+- Improve the parsing / checking error (#525)
+
+# v0.12.2 (2021-01-13)
+
+## 🛠 Improvements
+
+- Export all checkers (#524)
+
+## 📖 Documentation
+
+- Add grammar for Cadence  (#522)
+- Add developer documentation (#523)
+- Fix typos in documentation (#519)
+
+
+# v0.12.1 (2021-01-07)
+
+## 🛠 Improvements
+
+- Improve the contract deployment error message (#507)
+
+## 🐞 Bug Fixes
+
+- Gracefully handle type loading failure (#510)
+
+## 📖 Documentation
+
+- Remove completed items from roadmap (#515)
+- Add presentation about implementation (#506)
+
+
+# v0.10.5 (2021-01-07)
+
+## 🛠 Improvements
+
+- Improve fixed-point multiplication and division (#508)
+- Make AST thread-safe (#440)
+
+## 🐞 Bug Fixes
+
+- Gracefully handle type loading failure (#511)
+
+
+# v0.12.0 (2020-12-15)
+
+## ⭐ Features
+
+- Add `getType` function (#493): It is now possible to get the [run-time type](https://docs.onflow.org/cadence/language/run-time-types/) of a value
+- Flush the cache of the storage before querying the used storage amount (#480)
+- Structured type identifiers (#477)
+- Allow host environment to predeclare values, predicated on location (#472)
+- Add a visitor for interpreter values (#449)
+- Add support for imports in WASM writer and reader (#368)
+- Add support for coverage reports (#465)
+- Add storage fields to accounts (#439)
+- Implement `fmt.Stringer` for `cadence.Value` (#434)
+- Add a function to parse a literal with a given target type (#417)
+
+## 🛠 Improvements
+
+- Extend event parameter types and dictionary key types (#497)
+- Optimize composite and interface static types (#489)
+- Optimize composite values (#488)
+- Fix the export of static types (#487)
+- Improve error pretty printing (#481)
+- Improve fixed-point multiplication and division (#490)
+- Improve error messages for contract deployment name argument checks (#475)
+- Add a test for decoding a struct with an address location without name (#469)
+- Refactor address locations, make composite decoding backwards-compatible (#457)
+- Improve error message when there are constructor argument (#455)
+- Make AST thread-safe (#440)
+- Add position information to interpreter errors (#424)
+
+## 🐞 Bug Fixes
+
+- Declare new contract's nested values before evaluating initializer (#504)
+- Infer address location name from type ID for static types (#468)
+- Fix optional value's type function (#458)
+- Don't use the cache when deploying or updating account code (#447)
+- Properly handle unspecified variable kind (#441)
+- Prevent resource loss in failable downcasts (#426)
+
+## 💥 Breaking Changes
+
+This release contains no source-breaking changes for Cadence programs, but the following breaking changes when embedding Cadence:
+
+- Structured type identifiers (#477)
+- Add error return value to all interface methods (#470)
+
+## 📖 Documentation
+
+- Document that references are not storable and suggest using capabilities (#478)
+- Update the diagram illustrating the architecture of the runtime (#476)
+- Document the current options for syntax highlighting (#444)
+
+
+# v0.10.4 (2020-12-09)
+
+## 🛠 Improvements
+
+- Allow non-fatal errors for all interface functions (#494, #495)
+- Panic with array index out of bounds error (#496)
+
+
+# v0.10.3 (2020-12-04)
+
+## ⭐ Features
+
+- Add storage fields to accounts (#485)
+
+## 🛠 Improvements
+
+- Flush the cache of the storage before querying the used storage amount (#486)
+
+
+# v0.11.2 (2020-11-30)
+
+## ⭐ Features
+
+- Extended debug (#464)
+
+## 🛠 Improvements
+
+- Refactor address locations, make composite decoding backwards-compatible (#461)
+
+
+# v0.10.2 (2020-11-23)
+
+## ⭐ Features
+
+- Extended debug (#463)
+
+## 🛠 Improvements
+
+- Refactor address locations, make composite decoding backwards-compatible (#460)
+
+
+# v0.9.3 (2020-11-19)
+
+## ⭐ Features
+
+- Wrap errors to provide additional information (#451)
+
+
+# v0.11.1 (2020-11-09)
+
+## 🐞 Bug Fixes
+
+- Don't use the cache when deploying or updating account code (#447)
+
+
+# v0.10.1 (2020-11-06)
+
+## 🐞 Bug Fixes
+
+- Don't use the cache when deploying or updating account code (#447)
+
+
+# v0.11.0 (2020-10-13)
 
 ## 💥 Breaking Changes
 

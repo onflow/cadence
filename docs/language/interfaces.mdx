@@ -250,7 +250,7 @@ pub resource ExampleToken: FungibleToken {
     // in the interface have to be repeated here in the implementation.
     //
     pub fun deposit(_ token: @{FungibleToken}) {
-        if let exampleToken = token as? ExampleToken {
+        if let exampleToken <- token as? ExampleToken {
             self.balance = self.balance + exampleToken.balance
             destroy exampleToken
         } else {

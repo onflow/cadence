@@ -40,7 +40,7 @@ func (checker *Checker) VisitIfStatement(statement *ast.IfStatement) ast.Repr {
 		checker.checkConditionalBranches(
 			func() Type {
 				checker.enterValueScope()
-				defer checker.leaveValueScope(true)
+				defer checker.leaveValueScope(thenElement.EndPosition, true)
 
 				checker.visitVariableDeclaration(test, true)
 				thenElement.Accept(checker)
@@ -98,11 +98,11 @@ func (checker *Checker) visitConditional(
 	testType := test.Accept(checker).(Type)
 
 	if !testType.IsInvalidType() &&
-		!IsSubType(testType, &BoolType{}) {
+		!IsSubType(testType, BoolType) {
 
 		checker.report(
 			&TypeMismatchError{
-				ExpectedType: &BoolType{},
+				ExpectedType: BoolType,
 				ActualType:   testType,
 				Range:        ast.NewRangeFromPositioned(test),
 			},

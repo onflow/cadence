@@ -22,13 +22,11 @@ import (
 	"fmt"
 	"math"
 	"math/big"
-	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/onflow/cadence/runtime/cmd"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/sema"
 	. "github.com/onflow/cadence/runtime/tests/utils"
@@ -132,9 +130,13 @@ func TestCheckDictionaryIndexingString(t *testing.T) {
 
 	require.NoError(t, err)
 
+	yType := RequireGlobalValue(t, checker.Elaboration, "y")
+
 	assert.Equal(t,
-		&sema.OptionalType{Type: &sema.IntType{}},
-		checker.GlobalValues["y"].Type,
+		&sema.OptionalType{
+			Type: sema.IntType,
+		},
+		yType,
 	)
 }
 
@@ -264,9 +266,11 @@ func TestCheckDictionaryKeys(t *testing.T) {
 
 	require.NoError(t, err)
 
+	keysType := RequireGlobalValue(t, checker.Elaboration, "keys")
+
 	assert.Equal(t,
-		&sema.VariableSizedType{Type: &sema.StringType{}},
-		checker.GlobalValues["keys"].Type,
+		&sema.VariableSizedType{Type: sema.StringType},
+		keysType,
 	)
 }
 
@@ -280,9 +284,11 @@ func TestCheckDictionaryValues(t *testing.T) {
 
 	require.NoError(t, err)
 
+	valuesType := RequireGlobalValue(t, checker.Elaboration, "values")
+
 	assert.Equal(t,
-		&sema.VariableSizedType{Type: &sema.IntType{}},
-		checker.GlobalValues["values"].Type,
+		&sema.VariableSizedType{Type: sema.IntType},
+		valuesType,
 	)
 }
 
@@ -354,6 +360,70 @@ func TestCheckInvalidArrayAppendToConstantSize(t *testing.T) {
       fun test(): [Int; 3] {
           let x: [Int; 3] = [1, 2, 3]
           x.append(4)
+          return x
+      }
+    `)
+
+	errs := ExpectCheckerErrors(t, err, 1)
+
+	assert.IsType(t, &sema.NotDeclaredMemberError{}, errs[0])
+}
+
+func TestCheckArrayAppendAll(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+	  fun test(): [Int] {
+	 	  let a = [1, 2]
+		  let b = [3, 4]
+		  a.appendAll(b)
+		  return a
+      }
+    `)
+
+	require.NoError(t, err)
+}
+
+func TestCheckInvalidArrayAppendAll(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+	  fun test(): [Int] {
+	 	  let a = [1, 2]
+		  let b = ["a", "b"]
+		  a.appendAll(b)
+		  return a
+      }
+    `)
+
+	errs := ExpectCheckerErrors(t, err, 1)
+
+	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+
+	_, err = ParseAndCheck(t, `
+	  fun test(): [Int] {
+	 	  let a = [1, 2]
+		  let b = 3
+		  a.appendAll(b)
+		  return a
+      }
+    `)
+
+	errs = ExpectCheckerErrors(t, err, 1)
+
+	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+}
+
+func TestCheckInvalidArrayAppendAllOnConstantSize(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+      fun test(): [Int; 3] {
+          let x: [Int; 3] = [1, 2, 3]
+          x.appendAll([4, 5])
           return x
       }
     `)
@@ -680,6 +750,36 @@ func TestCheckEmptyArrayCall(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestCheckDictionaryContainsKey(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+      fun test(): Bool {
+          let x = {1: "One", 2: "Two", 3: "Three"}
+          return x.containsKey(2)
+      }
+    `)
+
+	require.NoError(t, err)
+}
+
+func TestCheckInvalidDictionaryContainsKey(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+      fun test(): Bool {
+          let x = {1: "One", 2: "Two", 3: "Three"}
+          return x.containsKey("abc")
+      }
+    `)
+
+	errs := ExpectCheckerErrors(t, err, 1)
+
+	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+}
+
 func TestCheckEmptyDictionary(t *testing.T) {
 
 	t.Parallel()
@@ -739,10 +839,7 @@ func TestCheckArraySubtyping(t *testing.T) {
 					interfaceType,
 				),
 			)
-
-			if !assert.NoError(t, err) {
-				cmd.PrettyPrintError(os.Stdout, err, "", map[string]string{"": ""})
-			}
+			require.NoError(t, err)
 		})
 	}
 }
@@ -922,10 +1019,15 @@ func TestCheckDictionaryKeyTypesExpressions(t *testing.T) {
 	t.Parallel()
 
 	tests := map[string]string{
-		"String":    `"abc"`,
-		"Character": `"X"`,
-		"Address":   `0x1`,
-		"Bool":      `true`,
+		"String":         `"abc"`,
+		"Character":      `"X"`,
+		"Address":        `0x1`,
+		"Bool":           `true`,
+		"Path":           `/storage/a`,
+		"StoragePath":    `/storage/a`,
+		"PublicPath":     `/public/a`,
+		"PrivatePath":    `/private/a`,
+		"CapabilityPath": `/private/a`,
 	}
 
 	for _, integerType := range sema.AllIntegerTypes {

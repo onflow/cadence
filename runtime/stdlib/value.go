@@ -21,14 +21,24 @@ package stdlib
 import (
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 )
 
 type StandardLibraryValue struct {
-	Name       string
-	Type       sema.Type
-	Kind       common.DeclarationKind
-	IsConstant bool
+	Name      string
+	Type      sema.Type
+	Value     interpreter.Value
+	Kind      common.DeclarationKind
+	Available func(common.Location) bool
+}
+
+func (v StandardLibraryValue) ValueDeclarationName() string {
+	return v.Name
+}
+
+func (v StandardLibraryValue) ValueDeclarationValue() interpreter.Value {
+	return v.Value
 }
 
 func (v StandardLibraryValue) ValueDeclarationType() sema.Type {
@@ -36,10 +46,7 @@ func (v StandardLibraryValue) ValueDeclarationType() sema.Type {
 }
 
 func (v StandardLibraryValue) ValueDeclarationKind() common.DeclarationKind {
-	if v.IsConstant {
-		return common.DeclarationKindConstant
-	}
-	return common.DeclarationKindVariable
+	return v.Kind
 }
 
 func (StandardLibraryValue) ValueDeclarationPosition() ast.Position {
@@ -47,7 +54,14 @@ func (StandardLibraryValue) ValueDeclarationPosition() ast.Position {
 }
 
 func (v StandardLibraryValue) ValueDeclarationIsConstant() bool {
-	return v.IsConstant
+	return v.Kind != common.DeclarationKindVariable
+}
+
+func (v StandardLibraryValue) ValueDeclarationAvailable(location common.Location) bool {
+	if v.Available == nil {
+		return true
+	}
+	return v.Available(location)
 }
 
 func (StandardLibraryValue) ValueDeclarationArgumentLabels() []string {
@@ -58,10 +72,18 @@ func (StandardLibraryValue) ValueDeclarationArgumentLabels() []string {
 
 type StandardLibraryValues []StandardLibraryValue
 
-func (functions StandardLibraryValues) ToValueDeclarations() map[string]sema.ValueDeclaration {
-	valueDeclarations := make(map[string]sema.ValueDeclaration, len(functions))
-	for _, function := range functions {
-		valueDeclarations[function.Name] = function
+func (values StandardLibraryValues) ToSemaValueDeclarations() []sema.ValueDeclaration {
+	valueDeclarations := make([]sema.ValueDeclaration, len(values))
+	for i, value := range values {
+		valueDeclarations[i] = value
+	}
+	return valueDeclarations
+}
+
+func (values StandardLibraryValues) ToInterpreterValueDeclarations() []interpreter.ValueDeclaration {
+	valueDeclarations := make([]interpreter.ValueDeclaration, len(values))
+	for i, function := range values {
+		valueDeclarations[i] = function
 	}
 	return valueDeclarations
 }

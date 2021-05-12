@@ -19,14 +19,13 @@
 package interpreter
 
 import (
-	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/runtime/ast"
-	"github.com/onflow/cadence/runtime/cmd"
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/tests/checker"
@@ -67,45 +66,48 @@ func TestInterpretResourceUUID(t *testing.T) {
 		checker.ParseAndCheckOptions{
 			Options: []sema.Option{
 				sema.WithImportHandler(
-					func(checker *sema.Checker, location ast.Location) (sema.Import, *sema.CheckerError) {
+					func(_ *sema.Checker, importedLocation common.Location, _ ast.Range) (sema.Import, error) {
 						assert.Equal(t,
 							ImportedLocation,
-							location,
+							importedLocation,
 						)
 
-						return sema.CheckerImport{
-							Checker: importedChecker,
+						return sema.ElaborationImport{
+							Elaboration: importedChecker.Elaboration,
 						}, nil
 					},
 				),
 			},
 		},
 	)
-
-	if err != nil {
-		cmd.PrettyPrintError(os.Stdout, err, "", map[string]string{"": ""})
-	}
-
 	require.NoError(t, err)
 
 	var uuid uint64
 
 	inter, err := interpreter.NewInterpreter(
-		importingChecker,
+		interpreter.ProgramFromChecker(importingChecker),
+		importingChecker.Location,
 		interpreter.WithUUIDHandler(
-			func() uint64 {
+			func() (uint64, error) {
 				defer func() { uuid++ }()
-				return uuid
+				return uuid, nil
 			},
 		),
 		interpreter.WithImportLocationHandler(
-			func(inter *interpreter.Interpreter, location ast.Location) interpreter.Import {
+			func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
 				assert.Equal(t,
 					ImportedLocation,
 					location,
 				)
-				return interpreter.ProgramImport{
-					Program: importedChecker.Program,
+
+				program := interpreter.ProgramFromChecker(importedChecker)
+				subInterpreter, err := inter.NewSubInterpreter(program, location)
+				if err != nil {
+					panic(err)
+				}
+
+				return interpreter.InterpreterImport{
+					Interpreter: subInterpreter,
 				}
 			},
 		),
@@ -131,9 +133,11 @@ func TestInterpretResourceUUID(t *testing.T) {
 		require.IsType(t, &interpreter.CompositeValue{}, element)
 		res := element.(*interpreter.CompositeValue)
 
+		uuidValue, present := res.Fields.Get(sema.ResourceUUIDFieldName)
+		require.True(t, present)
 		require.Equal(t,
 			interpreter.UInt64Value(i),
-			res.Fields[sema.ResourceUUIDFieldName],
+			uuidValue,
 		)
 	}
 }

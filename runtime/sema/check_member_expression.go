@@ -37,11 +37,13 @@ func (checker *Checker) VisitMemberExpression(expression *ast.MemberExpression) 
 			}
 		}
 
-		checker.MemberAccesses.Put(
-			expression.AccessPos,
-			expression.EndPosition(),
-			memberAccessType,
-		)
+		if checker.positionInfoEnabled {
+			checker.MemberAccesses.Put(
+				expression.AccessPos,
+				expression.EndPosition(),
+				memberAccessType,
+			)
+		}
 	}
 
 	if member == nil {
@@ -67,7 +69,7 @@ func (checker *Checker) VisitMemberExpression(expression *ast.MemberExpression) 
 		if isInInitializer {
 			fieldInitialized := info.InitializedFieldMembers.Contains(accessedSelfMember)
 
-			field := info.FieldMembers[accessedSelfMember]
+			field, _ := info.FieldMembers.Get(accessedSelfMember)
 			if field != nil && !fieldInitialized {
 
 				checker.report(
@@ -144,8 +146,6 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression) (accessedT
 		checker.resources.AddUse(accessedSelfMember, expression.Identifier.Pos)
 	}
 
-	origins := checker.memberOrigins[accessedType]
-
 	identifier := expression.Identifier.Identifier
 	identifierStartPosition := expression.Identifier.StartPosition()
 	identifierEndPosition := expression.Identifier.EndPosition()
@@ -217,12 +217,16 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression) (accessedT
 			)
 		}
 	} else {
-		origin := origins[identifier]
-		checker.Occurrences.Put(
-			identifierStartPosition,
-			identifierEndPosition,
-			origin,
-		)
+
+		if checker.positionInfoEnabled {
+			origins := checker.memberOrigins[accessedType]
+			origin := origins[identifier]
+			checker.Occurrences.Put(
+				identifierStartPosition,
+				identifierEndPosition,
+				origin,
+			)
+		}
 
 		// Check access and report if inaccessible
 
@@ -283,7 +287,7 @@ func (checker *Checker) isReadableMember(member *Member) bool {
 		// check if the current location is the same as the member's container location
 
 		location := member.ContainerType.(LocatedType).GetLocation()
-		if ast.LocationsMatch(checker.Location, location) {
+		if common.LocationsInSameAccount(checker.Location, location) {
 			return true
 		}
 	}

@@ -44,9 +44,9 @@ func TestCheckIncompleteDictionaryType(t *testing.T) {
 
 	assert.IsType(t,
 		&sema.DictionaryType{
-			KeyType:   &sema.IntType{},
+			KeyType:   sema.IntType,
 			ValueType: sema.InvalidType,
 		},
-		checker.GlobalValues["dict"].Type,
+		RequireGlobalValue(t, checker.Elaboration, "dict"),
 	)
 }

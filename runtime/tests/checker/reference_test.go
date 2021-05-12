@@ -182,11 +182,11 @@ func TestCheckReferenceExpressionWithNonCompositeResultType(t *testing.T) {
 
 	require.NoError(t, err)
 
-	refValueType := checker.GlobalValues["ref"].Type
+	refValueType := RequireGlobalValue(t, checker.Elaboration, "ref")
 
 	assert.Equal(t,
 		&sema.ReferenceType{
-			Type: &sema.IntType{},
+			Type: sema.IntType,
 		},
 		refValueType,
 	)
@@ -209,9 +209,9 @@ func TestCheckReferenceExpressionWithCompositeResultType(t *testing.T) {
 
 		require.NoError(t, err)
 
-		rType := checker.GlobalTypes["R"].Type
+		rType := RequireGlobalType(t, checker.Elaboration, "R")
 
-		refValueType := checker.GlobalValues["ref"].Type
+		refValueType := RequireGlobalValue(t, checker.Elaboration, "ref")
 
 		assert.Equal(t,
 			&sema.ReferenceType{
@@ -234,9 +234,9 @@ func TestCheckReferenceExpressionWithCompositeResultType(t *testing.T) {
 
 		require.NoError(t, err)
 
-		sType := checker.GlobalTypes["S"].Type
+		sType := RequireGlobalType(t, checker.Elaboration, "S")
 
-		refValueType := checker.GlobalValues["ref"].Type
+		refValueType := RequireGlobalValue(t, checker.Elaboration, "ref")
 
 		assert.Equal(t,
 			&sema.ReferenceType{
@@ -926,9 +926,9 @@ func TestCheckReferenceExpressionReferenceType(t *testing.T) {
 
 			require.NoError(t, err)
 
-			tType := checker.GlobalTypes["T"].Type
+			tType := RequireGlobalType(t, checker.Elaboration, "T")
 
-			refValueType := checker.GlobalValues["ref"].Type
+			refValueType := RequireGlobalValue(t, checker.Elaboration, "ref")
 
 			require.Equal(t,
 				&sema.ReferenceType{
@@ -1044,4 +1044,22 @@ func TestCheckInvalidReferenceExpressionNonReferenceAnyStruct(t *testing.T) {
 
 	assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
 	assert.IsType(t, &sema.NonReferenceTypeReferenceError{}, errs[1])
+}
+
+func TestCheckInvalidDictionaryAccessReference(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+      let xs: {Int: Int} = {}
+      let ref = &xs[1] as &String
+    `)
+
+	errs := ExpectCheckerErrors(t, err, 1)
+
+	require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+
+	typeMismatchError := errs[0].(*sema.TypeMismatchError)
+	assert.Equal(t, 17, typeMismatchError.StartPos.Column)
+	assert.Equal(t, 21, typeMismatchError.EndPos.Column)
 }

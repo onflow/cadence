@@ -79,7 +79,7 @@ of the composite type requires them.
 
 Composite types can only be declared within [contracts](../contracts)
 and not locally in functions.
-They can also not be nested.
+
 
 Resource must be created (instantiated) by using the `create` keyword
 and calling the type like a function.
@@ -152,8 +152,10 @@ that is to be initialized.
 Field types must be storable. Non-storable types are:
 
 - Functions
-- [Accounts (`AuthAccount` / `PublicAccount`)(../accounts)
+- [Accounts (`AuthAccount` / `PublicAccount`)](../accounts)
 - [Transactions](../transactions)
+- [References](../references): References are ephemeral.
+  Consider [storing a capability and borrowing it](../capability-based-access-control) when needed instead.
 
 Fields can be read (if they are constant or variable) and set (if they are variable),
 using the access syntax: the composite value is followed by a dot (`.`)
@@ -667,7 +669,7 @@ let noValue: Value? = nil
 // Access the `number` field using optional chaining
 let twoOpt = value?.number
 // Because `value` is an optional, `twoOpt` has type `Int?`
-let two = zeroOpt ?? 0
+let two = twoOpt ?? 0
 // `two` is `2`
 
 // Try to access the `number` field of `noValue`, which has type `Value?`
@@ -922,7 +924,7 @@ res.value
 // This function is invalid, because it does not always use the resource parameter,
 // which would cause a loss of the resource.
 //
-pub fun sometimesDestroy(resource: @SomeResource, destroy: Bool) {
+pub fun sometimesDestroy(resource: @SomeResource, destroyResource: Bool) {
     if destroyResource {
         destroy resource
     }
@@ -1075,8 +1077,8 @@ Instead, use a swap statement to replace the resource with another resource.
 let child <- create Child(name: "Child 1")
 let parent <- create Parent(name: "Parent", child: <-child)
 
-child.name  // is "Child"
-parent.child.name  // is "Child"
+child.name  // is "Child 1"
+parent.child.name  // is "Child 1"
 
 // Invalid: Cannot move resource out of variable resource field.
 let childAgain <- parent.child
@@ -1123,6 +1125,7 @@ resource R {}
 
 // Declare a constant for an array of resources.
 // Create two resources and move them into the array.
+// `resources` has type `@[R]`
 //
 let resources <- [
     <-create R(),
@@ -1159,6 +1162,7 @@ The same applies to dictionaries.
 ```cadence
 // Declare a constant for a dictionary of resources.
 // Create two resources and move them into the dictionary.
+// `resources` has type `@{String: R}`
 //
 let resources <- {
     "r1": <-create R(),
@@ -1287,7 +1291,7 @@ let old <- resources.insert(key: "r1", <-create R())
 
 let old2 <- resources.insert(key: "r1", <-create R())
 // `old2` is the old value for the key "r1"
-// `resources.length` is `2`
+// `resources.length` is `1`
 
 destroy old
 destroy old2
@@ -1299,7 +1303,8 @@ destroy resources
 Resources have an implicit unique identifier associated with them,
 implemented by a predeclared public field `let uuid: UInt64` on each resource.
 
-This identifier will be automatically set when the resource is created,
+This identifier will be automatically set when the resource is created, before the resource's initializer is called
+(i.e. the identifier can be used in the initializer),
 and will be unique even after the resource is destroyed,
 i.e. no two resources will ever have the same identifier.
 
@@ -1311,7 +1316,7 @@ resource R {}
 let r1 <- create R()
 let r2 <- create R()
 
-// Get each resource's unique identifiier
+// Get each resource's unique identifier
 let id1 = r1.uuid
 let id2 = r2.uuid
 

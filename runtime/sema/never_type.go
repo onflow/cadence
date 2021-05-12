@@ -19,7 +19,7 @@
 package sema
 
 // NeverType represents the bottom type
-var NeverType = &NominalType{
+var NeverType = &SimpleType{
 	Name:                 "Never",
 	QualifiedName:        "Never",
 	TypeID:               "Never",
@@ -28,5 +28,4 @@ var NeverType = &NominalType{
 	Storable:             false,
 	Equatable:            false,
 	ExternallyReturnable: false,
-	IsSuperTypeOf:        nil,
 }

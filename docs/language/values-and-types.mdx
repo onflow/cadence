@@ -232,6 +232,56 @@ Fixed-Point numbers have multiple built-in functions you can use.
   fix.toBigEndianBytes()  // is `[0, 0, 0, 0, 7, 84, 212, 192]`
   ```
 
+## Minimum and maximum values
+
+The minimum and maximum values for all integer and fixed-point number types are available through the fields `min` and `max`.
+
+For example:
+
+```cadence
+let max = UInt8.max
+// `max` is 255, the maximum value of the type `UInt8`
+```
+
+```cadence
+let max = UFix64.max
+// `max` is 184467440737.09551615, the maximum value of the type `UFix64`
+```
+
+## Saturation Arithmetic
+
+Integers and fixed-point numbers support saturation arithmetic:
+Arithmetic operations, such as addition or multiplications, are saturating at the numeric bounds instead of overflowing.
+
+If the result of an operation is greater than the maximum value of the operands' type, the maximum is returned.
+If the result is lower than the minimum of the operands' type, the minimum is returned.
+
+Saturating addition, subtraction, multiplication, and division are provided as functions with the prefix `saturating`:
+
+- `Int8`, `Int16`, `Int32`, `Int64`, `Int128`, `Int256`, `Fix64`:
+  - `saturatingAdd`
+  - `saturatingSubtract`
+  - `saturatingMultiply`
+  - `saturatingDivide`
+
+- `Int`:
+  - none
+
+- `UInt8`, `UInt16`, `UInt32`, `UInt64`, `UInt128`, `UInt256`, `UFix64`:
+  - `saturatingAdd`
+  - `saturatingSubtract`
+  - `saturatingMultiply`
+
+- `UInt`:
+  - `saturatingSubtract`
+
+```cadence
+let a: UInt8 = 200
+let b: UInt8 = 100
+let result = a.saturatingAdd(b)
+// `result` is 255, the maximum value of the type `UInt8`
+```
+
 ## Floating-Point Numbers
 
 There is **no** support for floating point numbers.
@@ -288,14 +338,14 @@ Addresses have multiple built-in functions you can use.
   someAddress.toString()  // is "0x436164656E636521"
   ```
 
-- `cadence•fun toBigEndianBytes(): [UInt8]`
+- `cadence•fun toBytes(): [UInt8]`
 
   Returns the byte array representation (`[UInt8]`) of the address.
 
   ```cadence
   let someAddress: Address = 0x436164656E636521
 
-  someAddress.toString()  // is `[67, 97, 100, 101, 110, 99, 101, 33]`
+  someAddress.toBytes()  // is `[67, 97, 100, 101, 110, 99, 101, 33]`
   ```
 
 ## AnyStruct and AnyResource
@@ -1025,6 +1075,25 @@ It is invalid to use one of these functions on a fixed-sized array.
   numbers.append("SneakyString")
   ```
 
+- `cadence•fun appendAll(_ array: T): Void`
+
+  Adds all the elements from `array` to the end of the array
+  the function is called on.
+
+  Both arrays must be the same type `T`.
+
+  ```cadence
+  // Declare an array of integers.
+  let numbers = [42, 23]
+
+  // Add new elements to the array.
+  numbers.appendAll([31, 12, 20])
+  // `numbers` is now `[42, 23, 31, 12, 20]`
+
+  // Invalid: The parameter has the wrong type `[String]`.
+  numbers.appendAll(["Sneaky", "String"])
+  ```
+
 - `cadence•fun insert(at index: Int, _ element: T): Void`
 
   Inserts the new element `element` of type `T`
@@ -1198,7 +1267,7 @@ If the key is found in the dictionary, the value for the given key is returned,
 and if the key is not found, `nil` is returned.
 
 ```cadence
-// Declare a constant that has type `{Bool: Int}`,
+// Declare a constant that has type `{Int: Bool}`,
 // a dictionary mapping integers to booleans.
 //
 let booleans = {
@@ -1351,6 +1420,28 @@ booleans[0] = true
   let values = numbers.values
 
   // `values` has type [Int] and is `[42, 23]`
+  ```
+  
+- `cadence•fun containsKey(key: K): Bool`
+
+  Returns true if the given key of type `K` is in the dictionary.
+
+  ```cadence
+  // Declare a dictionary mapping strings to integers.
+  let numbers = {"fortyTwo": 42, "twentyThree": 23}
+
+  // Check if the dictionary contains the key "twentyFive".
+  let containsKeyTwentyFive = numbers.containsKey("twentyFive")
+  // `containsKeyTwentyFive` is `false`
+
+  // Check if the dictionary contains the key "fortyTwo".
+  let containsKeyFortyTwo = numbers.containsKey("fortyTwo")
+  // `containsKeyFortyTwo` is `true`
+
+  // Invalid: Check if the dictionary contains the key 42.
+  // This results in a type error, as the key type of the dictionary is `String`.
+  //
+  let containsKey42 = numbers.containsKey(42)
   ```
 
 ### Dictionary Keys

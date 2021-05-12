@@ -35,12 +35,17 @@ func (checker *Checker) VisitTransactionDeclaration(declaration *ast.Transaction
 		checker.containerTypes[transactionType] = false
 	}()
 
-	fieldMembers := map[*Member]*ast.FieldDeclaration{}
+	fieldMembers := NewMemberAstFieldDeclarationOrderedMap()
 
 	for _, field := range declaration.Fields {
 		fieldName := field.Identifier.Identifier
-		member := transactionType.Members[fieldName]
-		fieldMembers[member] = field
+		member, ok := transactionType.Members.Get(fieldName)
+
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+
+		fieldMembers.Set(member, field)
 	}
 
 	checker.checkTransactionFields(declaration)
@@ -48,7 +53,7 @@ func (checker *Checker) VisitTransactionDeclaration(declaration *ast.Transaction
 
 	// enter a new scope for this transaction
 	checker.enterValueScope()
-	defer checker.leaveValueScope(true)
+	defer checker.leaveValueScope(declaration.EndPosition, true)
 
 	checker.declareSelfValue(transactionType)
 
@@ -181,7 +186,7 @@ func (checker *Checker) checkTransactionBlocks(declaration *ast.TransactionDecla
 func (checker *Checker) visitTransactionPrepareFunction(
 	prepareFunction *ast.SpecialFunctionDeclaration,
 	transactionType *TransactionType,
-	fieldMembers map[*Member]*ast.FieldDeclaration,
+	fieldMembers *MemberAstFieldDeclarationOrderedMap,
 ) {
 	if prepareFunction == nil {
 		return
@@ -217,7 +222,7 @@ func (checker *Checker) checkTransactionPrepareFunctionParameters(
 		parameterType := parameters[i].TypeAnnotation.Type
 
 		if !parameterType.IsInvalidType() &&
-			!IsSubType(parameterType, &AuthAccountType{}) {
+			!IsSubType(parameterType, AuthAccountType) {
 
 			checker.report(
 				&InvalidTransactionPrepareParameterTypeError{
@@ -264,9 +269,7 @@ func (checker *Checker) declareTransactionDeclaration(declaration *ast.Transacti
 		declarations[i] = field
 	}
 
-	allMembers := &ast.Members{
-		Declarations: declarations,
-	}
+	allMembers := ast.NewMembers(declarations)
 
 	members, fields, origins := checker.defaultMembersAndOrigins(
 		allMembers,
@@ -277,7 +280,9 @@ func (checker *Checker) declareTransactionDeclaration(declaration *ast.Transacti
 
 	transactionType.Members = members
 	transactionType.Fields = fields
-	checker.memberOrigins[transactionType] = origins
+	if checker.positionInfoEnabled {
+		checker.memberOrigins[transactionType] = origins
+	}
 
 	if declaration.Prepare != nil {
 		parameterList := declaration.Prepare.FunctionDeclaration.ParameterList
@@ -285,5 +290,5 @@ func (checker *Checker) declareTransactionDeclaration(declaration *ast.Transacti
 	}
 
 	checker.Elaboration.TransactionDeclarationTypes[declaration] = transactionType
-	checker.TransactionTypes = append(checker.TransactionTypes, transactionType)
+	checker.Elaboration.TransactionTypes = append(checker.Elaboration.TransactionTypes, transactionType)
 }

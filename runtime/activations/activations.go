@@ -19,97 +19,143 @@
 package activations
 
 import (
-	"github.com/raviqqe/hamt"
-
-	"github.com/onflow/cadence/runtime/common"
+	"github.com/cheekybits/genny/generic"
 )
 
-type Activation hamt.Map
+type ValueType generic.Type
 
-func NewActivation() Activation {
-	return Activation(hamt.NewMap())
+// A ValueTypeActivation is a map of strings to values.
+// It can be used to represent an active scope in a program,
+// i.e. it can be used as a symbol table during semantic analysis,
+// or as an activation record during interpretation or compilation.
+//
+type ValueTypeActivation struct {
+	entries map[string]ValueType
+	Depth   int
+	Parent  *ValueTypeActivation
 }
 
-func (a Activation) FirstRest() (string, interface{}, Activation) {
-	entry, value, rest := hamt.Map(a).FirstRest()
-	if entry == nil {
-		return "", nil, Activation{}
+func NewValueTypeActivation(parent *ValueTypeActivation) *ValueTypeActivation {
+	var depth int
+	if parent != nil {
+		depth = parent.Depth + 1
+	}
+	return &ValueTypeActivation{
+		Depth:  depth,
+		Parent: parent,
+	}
+}
+
+// Find returns the value for a given name in the activation.
+// It returns nil if no value is found.
+//
+func (a *ValueTypeActivation) Find(name string) ValueType {
+
+	current := a
+
+	for current != nil {
+
+		if current.entries != nil {
+			result, ok := current.entries[name]
+			if ok {
+				return result
+			}
+		}
+
+		current = current.Parent
 	}
 
-	name := string(entry.(common.StringEntry))
-	return name, value, Activation(rest)
+	return nil
 }
 
-func (a Activation) Find(name string) interface{} {
-	return hamt.Map(a).Find(common.StringEntry(name))
-}
+// Set sets the given name-value pair in the activation.
+//
+func (a *ValueTypeActivation) Set(name string, value ValueType) {
+	if a.entries == nil {
+		a.entries = make(map[string]ValueType)
+	}
 
-func (a Activation) Insert(name string, value interface{}) Activation {
-	return Activation(hamt.Map(a).Insert(common.StringEntry(name), value))
+	a.entries[name] = value
 }
 
 // Activations is a stack of activation records.
-// Each entry represents a new scope.
+// Each entry represents a new activation record.
 //
-type Activations struct {
-	activations []Activation
+// The current / most nested activation record can be found
+// at the top of the stack (see function `Current`).
+//
+type ValueTypeActivations struct {
+	activations []*ValueTypeActivation
 }
 
-func (a *Activations) current() *Activation {
+// Current returns the current / most nested activation,
+// which can be found at the top of the stack.
+// It returns nil if there is no active activation.
+//
+func (a *ValueTypeActivations) Current() *ValueTypeActivation {
 	count := len(a.activations)
 	if count < 1 {
 		return nil
 	}
-	current := a.activations[count-1]
-	return &current
+	return a.activations[count-1]
 }
 
-func (a *Activations) Find(key string) interface{} {
-	current := a.current()
+// Find returns the value for a given key in the current activation.
+// It returns nil if no value is found
+// or if there is no current activation.
+//
+func (a *ValueTypeActivations) Find(name string) ValueType {
+	current := a.Current()
 	if current == nil {
 		return nil
 	}
-	return current.Find(key)
+	return current.Find(name)
 }
 
-// Set adds the new key value pair to the current scope.
-// The current scope is updated in an immutable way.
-func (a *Activations) Set(name string, value interface{}) {
-	current := a.current()
+// Set sets the name-value pair in the current scope.
+//
+func (a *ValueTypeActivations) Set(name string, value ValueType) {
+	current := a.Current()
 	// create the first scope if there is no scope
 	if current == nil {
-		a.PushCurrent()
-		current = &a.activations[0]
+		current = a.PushNewWithParent(nil)
 	}
 
-	count := len(a.activations)
-	// update the current scope in an immutable way,
-	// which builds on top of the old "current" activation value
-	// without mutating it.
-	a.activations[count-1] = current.Insert(name, value)
+	current.Set(name, value)
 }
 
-// PushCurrent makes a copy of the current activation, and pushes it to
-// the top of the activation stack, so that the `Find` method only needs to
-// look up a certain record by name from the current activation record
-// without having to go through each activation in the stack.
-func (a *Activations) PushCurrent() {
-	current := a.current()
-	if current == nil {
-		first := NewActivation()
-		current = &first
-	}
-	a.Push(*current)
+// PushNewWithParent pushes a new empty activation
+// to the top of the activation stack.
+// The new activation has the given parent as its parent.
+//
+func (a *ValueTypeActivations) PushNewWithParent(parent *ValueTypeActivation) *ValueTypeActivation {
+	activation := NewValueTypeActivation(parent)
+	a.Push(activation)
+	return activation
 }
 
-func (a *Activations) Push(activation Activation) {
+// PushNewWithCurrent pushes a new empty activation
+// to the top of the activation stack.
+// The new activation has the current activation as its parent.
+//
+func (a *ValueTypeActivations) PushNewWithCurrent() {
+	a.PushNewWithParent(a.Current())
+}
+
+// Push pushes the given activation
+// onto the top of the activation stack.
+//
+func (a *ValueTypeActivations) Push(activation *ValueTypeActivation) {
 	a.activations = append(
 		a.activations,
 		activation,
 	)
 }
 
-func (a *Activations) Pop() {
+// Pop pops the top-most (current) activation
+// from the top of the activation stack.
+//
+func (a *ValueTypeActivations) Pop() {
 	count := len(a.activations)
 	if count < 1 {
 		return
@@ -117,15 +163,20 @@ func (a *Activations) Pop() {
 	a.activations = a.activations[:count-1]
 }
 
-func (a *Activations) CurrentOrNew() Activation {
-	current := a.current()
+// CurrentOrNew returns the current activation,
+// or if it does not exists, a new activation
+//
+func (a *ValueTypeActivations) CurrentOrNew() *ValueTypeActivation {
+	current := a.Current()
 	if current == nil {
-		return NewActivation()
+		return NewValueTypeActivation(nil)
 	}
 
-	return *current
+	return current
 }
 
-func (a *Activations) Depth() int {
+// Depth returns the depth (size) of the activation stack.
+//
+func (a *ValueTypeActivations) Depth() int {
 	return len(a.activations)
 }

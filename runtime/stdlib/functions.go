@@ -34,6 +34,15 @@ type StandardLibraryFunction struct {
 	Type           sema.InvokableType
 	Function       interpreter.HostFunctionValue
 	ArgumentLabels []string
+	Available      func(common.Location) bool
+}
+
+func (f StandardLibraryFunction) ValueDeclarationName() string {
+	return f.Name
+}
+
+func (f StandardLibraryFunction) ValueDeclarationValue() interpreter.Value {
+	return f.Function
 }
 
 func (f StandardLibraryFunction) ValueDeclarationType() sema.Type {
@@ -50,6 +59,13 @@ func (StandardLibraryFunction) ValueDeclarationPosition() ast.Position {
 
 func (StandardLibraryFunction) ValueDeclarationIsConstant() bool {
 	return true
+}
+
+func (f StandardLibraryFunction) ValueDeclarationAvailable(location common.Location) bool {
+	if f.Available == nil {
+		return true
+	}
+	return f.Available(location)
 }
 
 func (f StandardLibraryFunction) ValueDeclarationArgumentLabels() []string {
@@ -83,20 +99,20 @@ func NewStandardLibraryFunction(
 
 type StandardLibraryFunctions []StandardLibraryFunction
 
-func (functions StandardLibraryFunctions) ToValueDeclarations() map[string]sema.ValueDeclaration {
-	valueDeclarations := make(map[string]sema.ValueDeclaration, len(functions))
-	for _, function := range functions {
-		valueDeclarations[function.Name] = function
+func (functions StandardLibraryFunctions) ToSemaValueDeclarations() []sema.ValueDeclaration {
+	valueDeclarations := make([]sema.ValueDeclaration, len(functions))
+	for i, function := range functions {
+		valueDeclarations[i] = function
 	}
 	return valueDeclarations
 }
 
-func (functions StandardLibraryFunctions) ToValues() map[string]interpreter.Value {
-	values := make(map[string]interpreter.Value, len(functions))
-	for _, function := range functions {
-		values[function.Name] = function.Function
+func (functions StandardLibraryFunctions) ToInterpreterValueDeclarations() []interpreter.ValueDeclaration {
+	valueDeclarations := make([]interpreter.ValueDeclaration, len(functions))
+	for i, function := range functions {
+		valueDeclarations[i] = function
 	}
-	return values
+	return valueDeclarations
 }
 
 // AssertionError

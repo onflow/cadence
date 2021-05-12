@@ -190,7 +190,7 @@ func (checker *Checker) checkMemberInvocationResourceInvalidation(invokedExpress
 		return
 	}
 
-	checker.resources.RemoveTemporaryInvalidation(
+	checker.resources.RemoveTemporaryMoveInvalidation(
 		invalidation.resource,
 		invalidation.invalidation,
 	)
@@ -207,7 +207,7 @@ func (checker *Checker) checkConstructorInvocationWithResourceResult(
 	returnType Type,
 	inCreate bool,
 ) {
-	if _, ok := invokableType.(*SpecialFunctionType); !ok {
+	if _, ok := invokableType.(*ConstructorFunctionType); !ok {
 		return
 	}
 
@@ -335,7 +335,7 @@ func (checker *Checker) checkInvocation(
 
 	typeArgumentCount := len(invocationExpression.TypeArguments)
 
-	typeArguments := make(map[*TypeParameter]Type, typeParameterCount)
+	typeArguments := NewTypeParameterTypeOrderedMap()
 
 	// If the function type is generic, the invocation might provide
 	// explicit type arguments for the type parameters.
@@ -450,12 +450,12 @@ func (checker *Checker) checkInvocation(
 //
 func (checker *Checker) checkTypeParameterInference(
 	functionType *FunctionType,
-	typeArguments map[*TypeParameter]Type,
+	typeArguments *TypeParameterTypeOrderedMap,
 	invocationExpression *ast.InvocationExpression,
 ) {
 	for _, typeParameter := range functionType.TypeParameters {
 
-		if typeArguments[typeParameter] != nil {
+		if ty, ok := typeArguments.Get(typeParameter); ok && ty != nil {
 			continue
 		}
 
@@ -479,7 +479,7 @@ func (checker *Checker) checkInvocationRequiredArgument(
 	argumentIndex int,
 	functionType *FunctionType,
 	argumentTypes []Type,
-	typeParameters map[*TypeParameter]Type,
+	typeParameters *TypeParameterTypeOrderedMap,
 ) (
 	parameterType Type,
 ) {
@@ -568,7 +568,7 @@ func (checker *Checker) reportInvalidTypeArgumentCount(
 func (checker *Checker) checkAndBindGenericTypeParameterTypeArguments(
 	typeArguments []*ast.TypeAnnotation,
 	typeParameters []*TypeParameter,
-	typeParameterTypes map[*TypeParameter]Type,
+	typeParameterTypes *TypeParameterTypeOrderedMap,
 ) {
 	for i := 0; i < len(typeArguments); i++ {
 		rawTypeArgument := typeArguments[i]
@@ -594,7 +594,7 @@ func (checker *Checker) checkAndBindGenericTypeParameterTypeArguments(
 
 		// Bind the type argument to the type parameter
 
-		typeParameterTypes[typeParameter] = ty
+		typeParameterTypes.Set(typeParameter, ty)
 	}
 }
 

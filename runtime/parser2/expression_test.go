@@ -3555,7 +3555,7 @@ func TestParseBoolExpression(t *testing.T) {
 				StartPos: ast.Position{Offset: 6, Line: 2, Column: 5},
 			},
 		},
-		result.Declarations,
+		result.Declarations(),
 	)
 }
 
@@ -3589,7 +3589,7 @@ func TestParseIdentifierExpression(t *testing.T) {
 				StartPos: ast.Position{Offset: 6, Line: 2, Column: 5},
 			},
 		},
-		result.Declarations,
+		result.Declarations(),
 	)
 }
 
@@ -3640,7 +3640,7 @@ func TestParseArrayExpressionInVariableDeclaration(t *testing.T) {
 				StartPos: ast.Position{Offset: 6, Line: 2, Column: 5},
 			},
 		},
-		result.Declarations,
+		result.Declarations(),
 	)
 }
 
@@ -3709,7 +3709,7 @@ func TestParseDictionaryExpressionInVariableDeclaration(t *testing.T) {
 				StartPos: ast.Position{Offset: 6, Line: 2, Column: 5},
 			},
 		},
-		result.Declarations,
+		result.Declarations(),
 	)
 }
 
@@ -3770,7 +3770,7 @@ func TestParseInvocationExpressionWithoutLabels(t *testing.T) {
 				StartPos: ast.Position{Offset: 6, Line: 2, Column: 5},
 			},
 		},
-		result.Declarations,
+		result.Declarations(),
 	)
 }
 
@@ -3835,7 +3835,7 @@ func TestParseInvocationExpressionWithLabels(t *testing.T) {
 				StartPos: ast.Position{Offset: 6, Line: 2, Column: 5},
 			},
 		},
-		result.Declarations,
+		result.Declarations(),
 	)
 }
 
@@ -3876,7 +3876,7 @@ func TestParseMemberExpression(t *testing.T) {
 				StartPos: ast.Position{Offset: 6, Line: 2, Column: 5},
 			},
 		},
-		result.Declarations,
+		result.Declarations(),
 	)
 }
 
@@ -3918,7 +3918,7 @@ func TestParseOptionalMemberExpression(t *testing.T) {
 				StartPos: ast.Position{Offset: 6, Line: 2, Column: 5},
 			},
 		},
-		result.Declarations,
+		result.Declarations(),
 	)
 }
 
@@ -3966,7 +3966,7 @@ func TestParseIndexExpressionInVariableDeclaration(t *testing.T) {
 				StartPos: ast.Position{Offset: 6, Line: 2, Column: 5},
 			},
 		},
-		result.Declarations,
+		result.Declarations(),
 	)
 }
 
@@ -4004,7 +4004,7 @@ func TestParseUnaryExpression(t *testing.T) {
 				StartPos: ast.Position{Offset: 6, Line: 2, Column: 5},
 			},
 		},
-		result.Declarations,
+		result.Declarations(),
 	)
 }
 
@@ -4049,7 +4049,7 @@ func TestParseOrExpression(t *testing.T) {
 				StartPos: ast.Position{Offset: 9, Line: 2, Column: 8},
 			},
 		},
-		result.Declarations,
+		result.Declarations(),
 	)
 }
 
@@ -4094,7 +4094,7 @@ func TestParseAndExpression(t *testing.T) {
 				StartPos: ast.Position{Offset: 9, Line: 2, Column: 8},
 			},
 		},
-		result.Declarations,
+		result.Declarations(),
 	)
 }
 
@@ -4139,7 +4139,7 @@ func TestParseEqualityExpression(t *testing.T) {
 				StartPos: ast.Position{Offset: 9, Line: 2, Column: 8},
 			},
 		},
-		result.Declarations,
+		result.Declarations(),
 	)
 }
 
@@ -4186,7 +4186,7 @@ func TestParseRelationalExpression(t *testing.T) {
 				StartPos: ast.Position{Offset: 9, Line: 2, Column: 8},
 			},
 		},
-		result.Declarations,
+		result.Declarations(),
 	)
 }
 
@@ -4233,7 +4233,7 @@ func TestParseAdditiveExpression(t *testing.T) {
 				StartPos: ast.Position{Offset: 9, Line: 2, Column: 8},
 			},
 		},
-		result.Declarations,
+		result.Declarations(),
 	)
 }
 
@@ -4280,7 +4280,7 @@ func TestParseMultiplicativeExpression(t *testing.T) {
 				StartPos: ast.Position{Offset: 9, Line: 2, Column: 8},
 			},
 		},
-		result.Declarations,
+		result.Declarations(),
 	)
 }
 
@@ -4351,7 +4351,7 @@ func TestParseFunctionExpressionAndReturn(t *testing.T) {
 				StartPos: ast.Position{Offset: 6, Line: 2, Column: 5},
 			},
 		},
-		result.Declarations,
+		result.Declarations(),
 	)
 }
 
@@ -4409,7 +4409,7 @@ func TestParseLeftAssociativity(t *testing.T) {
 				StartPos: ast.Position{Offset: 9, Line: 2, Column: 8},
 			},
 		},
-		result.Declarations,
+		result.Declarations(),
 	)
 }
 
@@ -4445,7 +4445,7 @@ func TestParseNegativeInteger(t *testing.T) {
 				StartPos: ast.Position{Offset: 7, Line: 2, Column: 6},
 			},
 		},
-		result.Declarations,
+		result.Declarations(),
 	)
 }
 
@@ -4483,7 +4483,7 @@ func TestParseNegativeFixedPoint(t *testing.T) {
 				StartPos: ast.Position{Offset: 7, Line: 2, Column: 6},
 			},
 		},
-		result.Declarations,
+		result.Declarations(),
 	)
 }
 
@@ -4579,7 +4579,7 @@ func TestParseTernaryRightAssociativity(t *testing.T) {
 				StartPos: ast.Position{Offset: 9, Line: 2, Column: 8},
 			},
 		},
-		result.Declarations,
+		result.Declarations(),
 	)
 }
 
@@ -4663,7 +4663,7 @@ func TestParseMissingReturnType(t *testing.T) {
 				StartPos: ast.Position{Offset: 3, Line: 2, Column: 2},
 			},
 		},
-		result.Declarations,
+		result.Declarations(),
 	)
 }
 
@@ -4680,7 +4680,6 @@ func TestParseExpression(t *testing.T) {
 			Errors: errs,
 		}
 	}
-
 	require.NoError(t, err)
 
 	expected := &ast.BinaryExpression{
@@ -4837,7 +4836,7 @@ func TestParseNilCoalescing(t *testing.T) {
 				StartPos: ast.Position{Offset: 8, Line: 2, Column: 7},
 			},
 		},
-		result.Declarations,
+		result.Declarations(),
 	)
 }
 
@@ -4896,7 +4895,7 @@ func TestParseNilCoalescingRightAssociativity(t *testing.T) {
 				StartPos: ast.Position{Offset: 8, Line: 2, Column: 7},
 			},
 		},
-		result.Declarations,
+		result.Declarations(),
 	)
 }
 
@@ -4951,7 +4950,7 @@ func TestParseFailableCasting(t *testing.T) {
 		[]ast.Declaration{
 			variableDeclaration,
 		},
-		result.Declarations,
+		result.Declarations(),
 	)
 }
 
@@ -5005,7 +5004,7 @@ func TestParseMoveOperator(t *testing.T) {
 				StartPos: ast.Position{Offset: 7, Line: 2, Column: 6},
 			},
 		},
-		result.Declarations,
+		result.Declarations(),
 	)
 }
 
@@ -5075,7 +5074,7 @@ func TestParseFunctionExpressionWithResourceTypeAnnotation(t *testing.T) {
 				StartPos: ast.Position{Offset: 9, Line: 2, Column: 8},
 			},
 		},
-		result.Declarations,
+		result.Declarations(),
 	)
 }
 
@@ -5128,7 +5127,7 @@ func TestParseFailableCastingResourceTypeAnnotation(t *testing.T) {
 		[]ast.Declaration{
 			variableDeclaration,
 		},
-		result.Declarations,
+		result.Declarations(),
 	)
 }
 
@@ -5180,7 +5179,7 @@ func TestParseCasting(t *testing.T) {
 		[]ast.Declaration{
 			variableDeclaration,
 		},
-		result.Declarations,
+		result.Declarations(),
 	)
 }
 
@@ -5258,7 +5257,7 @@ func TestParseReferenceInVariableDeclaration(t *testing.T) {
 				StartPos: ast.Position{Offset: 8, Line: 2, Column: 7},
 			},
 		},
-		result.Declarations,
+		result.Declarations(),
 	)
 }
 
@@ -5295,7 +5294,7 @@ func TestParseFixedPointExpression(t *testing.T) {
 				StartPos: ast.Position{Offset: 6, Line: 2, Column: 5},
 			},
 		},
-		result.Declarations,
+		result.Declarations(),
 	)
 }
 
@@ -5332,7 +5331,7 @@ func TestParseFixedPointExpressionZeroInteger(t *testing.T) {
 				StartPos: ast.Position{Offset: 6, Line: 2, Column: 5},
 			},
 		},
-		result.Declarations,
+		result.Declarations(),
 	)
 }
 
@@ -5370,7 +5369,7 @@ func TestParsePathLiteral(t *testing.T) {
 				StartPos: ast.Position{Offset: 6, Line: 2, Column: 5},
 			},
 		},
-		result.Declarations,
+		result.Declarations(),
 	)
 }
 
@@ -5461,7 +5460,7 @@ func TestParseBitwiseExpression(t *testing.T) {
 				StartPos: ast.Position{Offset: 7, Line: 2, Column: 6},
 			},
 		},
-		result.Declarations,
+		result.Declarations(),
 	)
 }
 

@@ -33,6 +33,8 @@ import (
 
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/cmd"
+	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/pretty"
 	"github.com/onflow/cadence/runtime/sema"
 )
 
@@ -145,8 +147,10 @@ func run(paths []string, bench bool, json bool) {
 		out = newStdoutOutput()
 	}
 
+	useColor := !json
+
 	for _, path := range paths {
-		res, runSucceeded := runPath(path, bench)
+		res, runSucceeded := runPath(path, bench, useColor)
 		if !runSucceeded {
 			allSucceeded = false
 		}
@@ -161,7 +165,7 @@ func run(paths []string, bench bool, json bool) {
 	}
 }
 
-func runPath(path string, bench bool) (res result, succeeded bool) {
+func runPath(path string, bench bool, useColor bool) (res result, succeeded bool) {
 	res = result{
 		Path: path,
 	}
@@ -174,7 +178,9 @@ func runPath(path string, bench bool) (res result, succeeded bool) {
 	var program *ast.Program
 	var must func(error)
 
-	codes := map[string]string{}
+	codes := map[common.LocationID]string{}
+
+	location := common.StringLocation(path)
 
 	func() {
 		defer func() {
@@ -184,14 +190,18 @@ func runPath(path string, bench bool) (res result, succeeded bool) {
 			}
 		}()
 
-		program, must = cmd.PrepareProgram(code, path, codes)
+		program, must = cmd.PrepareProgram(code, location, codes)
 
-		checker, _ = cmd.PrepareChecker(program, path, codes, must)
+		checker, _ = cmd.PrepareChecker(program, location, codes, must)
 
 		err = checker.Check()
 		if err != nil {
 			var builder strings.Builder
-			cmd.PrettyPrintError(&builder, err, path, codes)
+			printErr := pretty.NewErrorPrettyPrinter(&builder, useColor).
+				PrettyPrintError(err, location, codes)
+			if printErr != nil {
+				panic(printErr)
+			}
 			res.Error = builder.String()
 		}
 	}()
@@ -203,7 +213,7 @@ func runPath(path string, bench bool) (res result, succeeded bool) {
 	if bench && err == nil {
 		benchRes := testing.Benchmark(func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				checker, must = cmd.PrepareChecker(program, path, codes, must)
+				checker, must = cmd.PrepareChecker(program, location, codes, must)
 				must(checker.Check())
 				if err != nil {
 					panic(err)

@@ -23,5 +23,8 @@ import (
 )
 
 func TypeValue(ty string) string {
+	if ty == "" {
+		return "Type()"
+	}
 	return fmt.Sprintf("Type<%s>()", ty)
 }

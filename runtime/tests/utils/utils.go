@@ -20,24 +20,21 @@ package utils
 
 import (
 	"encoding/hex"
-	errors2 "errors"
 	"fmt"
 	"strings"
 	"testing"
 
 	"github.com/go-test/deep"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 
-	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 )
 
 // TestLocation is used as the default location for programs in tests.
-const TestLocation = ast.StringLocation("test")
+const TestLocation = common.StringLocation("test")
 
 // ImportedLocation is used as the default location for imported programs in tests.
-const ImportedLocation = ast.StringLocation("imported")
+const ImportedLocation = common.StringLocation("imported")
 
 // AssertEqualWithDiff asserts that two objects are equal.
 //
@@ -97,15 +94,18 @@ func DeploymentTransaction(name string, contract []byte) []byte {
 	))
 }
 
-// TODO: switch to require.ErrorAs once released:
-// https://github.com/stretchr/testify/commit/95a9d909e98735cd8211dfc5cbbb6b8b0b665915
-func RequireErrorAs(t *testing.T, err error, target interface{}) {
-	require.True(
-		t,
-		errors2.As(err, target),
-		"error chain must contain a %T",
-		target,
-	)
+func RemovalTransaction(name string) []byte {
+	return []byte(fmt.Sprintf(
+		`
+          transaction {
+
+              prepare(signer: AuthAccount) {
+                  signer.contracts.remove(name: "%s")
+              }
+          }
+        `,
+		name,
+	))
 }
 
 func UpdateTransaction(name string, contract []byte) []byte {

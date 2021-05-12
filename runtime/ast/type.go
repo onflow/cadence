@@ -64,6 +64,7 @@ type Type interface {
 	HasPosition
 	fmt.Stringer
 	isType()
+	CheckEqual(other Type, checker TypeEqualityChecker) error
 }
 
 // NominalType represents a named type
@@ -111,6 +112,14 @@ func (t *NominalType) MarshalJSON() ([]byte, error) {
 	})
 }
 
+func (t *NominalType) IsQualifiedName() bool {
+	return len(t.NestedIdentifiers) > 0
+}
+
+func (t *NominalType) CheckEqual(other Type, checker TypeEqualityChecker) error {
+	return checker.CheckNominalTypeEquality(t, other)
+}
+
 // OptionalType represents am optional variant of another type
 
 type OptionalType struct {
@@ -145,6 +154,10 @@ func (t *OptionalType) MarshalJSON() ([]byte, error) {
 	})
 }
 
+func (t *OptionalType) CheckEqual(other Type, checker TypeEqualityChecker) error {
+	return checker.CheckOptionalTypeEquality(t, other)
+}
+
 // VariableSizedType is a variable sized array type
 
 type VariableSizedType struct {
@@ -167,6 +180,10 @@ func (t *VariableSizedType) MarshalJSON() ([]byte, error) {
 		Type:  "VariableSizedType",
 		Alias: (*Alias)(t),
 	})
+}
+
+func (t *VariableSizedType) CheckEqual(other Type, checker TypeEqualityChecker) error {
+	return checker.CheckVariableSizedTypeEquality(t, other)
 }
 
 // ConstantSizedType is a constant sized array type
@@ -194,6 +211,10 @@ func (t *ConstantSizedType) MarshalJSON() ([]byte, error) {
 	})
 }
 
+func (t *ConstantSizedType) CheckEqual(other Type, checker TypeEqualityChecker) error {
+	return checker.CheckConstantSizedTypeEquality(t, other)
+}
+
 // DictionaryType
 
 type DictionaryType struct {
@@ -217,6 +238,10 @@ func (t *DictionaryType) MarshalJSON() ([]byte, error) {
 		Type:  "DictionaryType",
 		Alias: (*Alias)(t),
 	})
+}
+
+func (t *DictionaryType) CheckEqual(other Type, checker TypeEqualityChecker) error {
+	return checker.CheckDictionaryTypeEquality(t, other)
 }
 
 // FunctionType
@@ -250,6 +275,10 @@ func (t *FunctionType) MarshalJSON() ([]byte, error) {
 		Type:  "FunctionType",
 		Alias: (*Alias)(t),
 	})
+}
+
+func (t *FunctionType) CheckEqual(other Type, checker TypeEqualityChecker) error {
+	return checker.CheckFunctionTypeEquality(t, other)
 }
 
 // ReferenceType
@@ -293,6 +322,10 @@ func (t *ReferenceType) MarshalJSON() ([]byte, error) {
 	})
 }
 
+func (t *ReferenceType) CheckEqual(other Type, checker TypeEqualityChecker) error {
+	return checker.CheckReferenceTypeEquality(t, other)
+}
+
 // RestrictedType
 
 type RestrictedType struct {
@@ -328,6 +361,10 @@ func (t *RestrictedType) MarshalJSON() ([]byte, error) {
 		Type:  "RestrictedType",
 		Alias: (*Alias)(t),
 	})
+}
+
+func (t *RestrictedType) CheckEqual(other Type, checker TypeEqualityChecker) error {
+	return checker.CheckRestrictedTypeEquality(t, other)
 }
 
 // InstantiationType represents an instantiation of a generic (nominal) type
@@ -374,4 +411,20 @@ func (t *InstantiationType) MarshalJSON() ([]byte, error) {
 		Range: NewRangeFromPositioned(t),
 		Alias: (*Alias)(t),
 	})
+}
+
+func (t *InstantiationType) CheckEqual(other Type, checker TypeEqualityChecker) error {
+	return checker.CheckInstantiationTypeEquality(t, other)
+}
+
+type TypeEqualityChecker interface {
+	CheckNominalTypeEquality(*NominalType, Type) error
+	CheckOptionalTypeEquality(*OptionalType, Type) error
+	CheckVariableSizedTypeEquality(*VariableSizedType, Type) error
+	CheckConstantSizedTypeEquality(*ConstantSizedType, Type) error
+	CheckDictionaryTypeEquality(*DictionaryType, Type) error
+	CheckFunctionTypeEquality(*FunctionType, Type) error
+	CheckReferenceTypeEquality(*ReferenceType, Type) error
+	CheckRestrictedTypeEquality(*RestrictedType, Type) error
+	CheckInstantiationTypeEquality(*InstantiationType, Type) error
 }

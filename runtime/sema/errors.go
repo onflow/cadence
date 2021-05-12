@@ -26,6 +26,7 @@ import (
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
+	"github.com/onflow/cadence/runtime/pretty"
 )
 
 // astTypeConversionError
@@ -78,15 +79,32 @@ func (e *MissingLocationError) Error() string {
 // CheckerError
 
 type CheckerError struct {
-	Errors []error
+	Location common.Location
+	Codes    map[common.LocationID]string
+	Errors   []error
 }
 
 func (e CheckerError) Error() string {
-	return "Checking failed"
+	var sb strings.Builder
+	sb.WriteString("Checking failed:\n")
+	codes := e.Codes
+	if codes == nil {
+		codes = map[common.LocationID]string{}
+	}
+	printErr := pretty.NewErrorPrettyPrinter(&sb, false).
+		PrettyPrintError(e, e.Location, codes)
+	if printErr != nil {
+		panic(printErr)
+	}
+	return sb.String()
 }
 
 func (e CheckerError) ChildErrors() []error {
 	return e.Errors
+}
+
+func (e CheckerError) ImportLocation() common.Location {
+	return e.Location
 }
 
 // SemanticError
@@ -126,7 +144,7 @@ func (e *RedeclarationError) EndPosition() ast.Position {
 }
 
 func (e *RedeclarationError) ErrorNotes() []errors.ErrorNote {
-	if e.PreviousPos == nil {
+	if e.PreviousPos == nil || e.PreviousPos.Line < 1 {
 		return nil
 	}
 
@@ -1044,7 +1062,7 @@ func (*MissingConformanceError) isSemanticError() {}
 // UnresolvedImportError
 
 type UnresolvedImportError struct {
-	ImportLocation ast.Location
+	ImportLocation common.Location
 	ast.Range
 }
 
@@ -1058,7 +1076,7 @@ func (*UnresolvedImportError) isSemanticError() {}
 
 type NotExportedError struct {
 	Name           string
-	ImportLocation ast.Location
+	ImportLocation common.Location
 	Available      []string
 	Pos            ast.Position
 }
@@ -1096,20 +1114,24 @@ func (e *NotExportedError) EndPosition() ast.Position {
 // ImportedProgramError
 
 type ImportedProgramError struct {
-	CheckerError   *CheckerError
-	ImportLocation ast.Location
+	Err      error
+	Location common.Location
 	ast.Range
 }
 
 func (e *ImportedProgramError) Error() string {
 	return fmt.Sprintf(
 		"checking of imported program `%s` failed",
-		e.ImportLocation,
+		e.Location,
 	)
 }
 
+func (e *ImportedProgramError) ImportLocation() common.Location {
+	return e.Location
+}
+
 func (e *ImportedProgramError) ChildErrors() []error {
-	return e.CheckerError.Errors
+	return []error{e.Err}
 }
 
 func (*ImportedProgramError) isSemanticError() {}
@@ -2372,7 +2394,7 @@ type InvalidTransactionPrepareParameterTypeError struct {
 func (e *InvalidTransactionPrepareParameterTypeError) Error() string {
 	return fmt.Sprintf(
 		"prepare parameter must be of type `%s`, not `%s`",
-		&AuthAccountType{},
+		AuthAccountType,
 		e.Type.QualifiedString(),
 	)
 }
@@ -2711,9 +2733,9 @@ func (e *InvalidPathDomainError) Error() string {
 func (*InvalidPathDomainError) isSemanticError() {}
 
 var validPathDomainDescription = func() string {
-	words := make([]string, 0, len(common.AllPathDomainsByIdentifier))
+	words := make([]string, 0, len(common.AllPathDomains))
 
-	for domain := range common.AllPathDomainsByIdentifier {
+	for _, domain := range common.AllPathDomains {
 		words = append(words, fmt.Sprintf("`%s`", domain))
 	}
 
@@ -2898,7 +2920,7 @@ func (e *TypeAnnotationRequiredError) EndPosition() ast.Position {
 // CyclicImportsError
 
 type CyclicImportsError struct {
-	Location ast.Location
+	Location common.Location
 	ast.Range
 }
 

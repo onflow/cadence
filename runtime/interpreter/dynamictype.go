@@ -179,26 +179,27 @@ type CapabilityDynamicType struct {
 
 func (CapabilityDynamicType) IsDynamicType() {}
 
-// AuthAccountDynamicType
-
-type AuthAccountDynamicType struct{}
-
-func (AuthAccountDynamicType) IsDynamicType() {}
-
-// PublicAccountDynamicType
-
-type PublicAccountDynamicType struct{}
-
-func (PublicAccountDynamicType) IsDynamicType() {}
-
 // DeployedContractDynamicType
 
 type DeployedContractDynamicType struct{}
 
 func (DeployedContractDynamicType) IsDynamicType() {}
 
-// AuthAccountContractsDynamicType
+// BlockDynamicType
 
-type AuthAccountContractsDynamicType struct{}
+type BlockDynamicType struct{}
 
-func (AuthAccountContractsDynamicType) IsDynamicType() {}
+func (BlockDynamicType) IsDynamicType() {}
+
+// UnwrapOptionalDynamicType returns the type if it is not an optional type,
+// or the inner-most type if it is (optional types are repeatedly unwrapped)
+//
+func UnwrapOptionalDynamicType(ty DynamicType) DynamicType {
+	for {
+		someDynamicType, ok := ty.(SomeDynamicType)
+		if !ok {
+			return ty
+		}
+		ty = someDynamicType.InnerType
+	}
+}

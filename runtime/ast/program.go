@@ -26,24 +26,34 @@ import (
 
 type Program struct {
 	// all declarations, in the order they are defined
-	Declarations []Declaration
+	declarations []Declaration
 	indices      programIndices
 }
 
+func NewProgram(declarations []Declaration) *Program {
+	return &Program{
+		declarations: declarations,
+	}
+}
+
+func (p *Program) Declarations() []Declaration {
+	return p.declarations
+}
+
 func (p *Program) StartPosition() Position {
-	if len(p.Declarations) == 0 {
+	if len(p.declarations) == 0 {
 		return Position{}
 	}
-	firstDeclaration := p.Declarations[0]
+	firstDeclaration := p.declarations[0]
 	return firstDeclaration.StartPosition()
 }
 
 func (p *Program) EndPosition() Position {
-	count := len(p.Declarations)
+	count := len(p.declarations)
 	if count == 0 {
 		return Position{}
 	}
-	lastDeclaration := p.Declarations[count-1]
+	lastDeclaration := p.declarations[count-1]
 	return lastDeclaration.EndPosition()
 }
 
@@ -52,27 +62,27 @@ func (p *Program) Accept(visitor Visitor) Repr {
 }
 
 func (p *Program) PragmaDeclarations() []*PragmaDeclaration {
-	return p.indices.pragmaDeclarations(p.Declarations)
+	return p.indices.pragmaDeclarations(p.declarations)
 }
 
 func (p *Program) ImportDeclarations() []*ImportDeclaration {
-	return p.indices.importDeclarations(p.Declarations)
+	return p.indices.importDeclarations(p.declarations)
 }
 
 func (p *Program) InterfaceDeclarations() []*InterfaceDeclaration {
-	return p.indices.interfaceDeclarations(p.Declarations)
+	return p.indices.interfaceDeclarations(p.declarations)
 }
 
 func (p *Program) CompositeDeclarations() []*CompositeDeclaration {
-	return p.indices.compositeDeclarations(p.Declarations)
+	return p.indices.compositeDeclarations(p.declarations)
 }
 
 func (p *Program) FunctionDeclarations() []*FunctionDeclaration {
-	return p.indices.functionDeclarations(p.Declarations)
+	return p.indices.functionDeclarations(p.declarations)
 }
 
 func (p *Program) TransactionDeclarations() []*TransactionDeclaration {
-	return p.indices.transactionDeclarations(p.Declarations)
+	return p.indices.transactionDeclarations(p.declarations)
 }
 
 // SoleContractDeclaration returns the sole contract declaration, if any,
@@ -144,10 +154,12 @@ func (p *Program) SoleTransactionDeclaration() *TransactionDeclaration {
 func (p *Program) MarshalJSON() ([]byte, error) {
 	type Alias Program
 	return json.Marshal(&struct {
-		Type string
+		Type         string
+		Declarations []Declaration
 		*Alias
 	}{
-		Type:  "Program",
-		Alias: (*Alias)(p),
+		Type:         "Program",
+		Declarations: p.declarations,
+		Alias:        (*Alias)(p),
 	})
 }

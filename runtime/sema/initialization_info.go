@@ -18,24 +18,20 @@
 
 package sema
 
-import (
-	"github.com/onflow/cadence/runtime/ast"
-)
-
 type InitializationInfo struct {
 	ContainerType           Type
-	FieldMembers            map[*Member]*ast.FieldDeclaration
+	FieldMembers            *MemberAstFieldDeclarationOrderedMap
 	InitializedFieldMembers *MemberSet
 }
 
 func NewInitializationInfo(
 	containerType Type,
-	fieldMembers map[*Member]*ast.FieldDeclaration,
+	fieldMembers *MemberAstFieldDeclarationOrderedMap,
 ) *InitializationInfo {
 	return &InitializationInfo{
 		ContainerType:           containerType,
 		FieldMembers:            fieldMembers,
-		InitializedFieldMembers: &MemberSet{},
+		InitializedFieldMembers: NewMemberSet(nil),
 	}
 }
 
@@ -43,7 +39,9 @@ func NewInitializationInfo(
 // were initialized, false if some fields are uninitialized
 //
 func (info *InitializationInfo) InitializationComplete() bool {
-	for member := range info.FieldMembers {
+	for pair := info.FieldMembers.Oldest(); pair != nil; pair = pair.Next() {
+		member := pair.Key
+
 		if !info.InitializedFieldMembers.Contains(member) {
 			return false
 		}

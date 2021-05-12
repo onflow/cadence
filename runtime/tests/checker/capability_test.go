@@ -42,9 +42,11 @@ func TestCheckCapability(t *testing.T) {
 
 		require.NoError(t, err)
 
+		capType := RequireGlobalValue(t, checker.Elaboration, "cap")
+
 		assert.IsType(t,
 			&sema.CapabilityType{},
-			checker.GlobalValues["cap"].Type,
+			capType,
 		)
 	})
 
@@ -58,11 +60,13 @@ func TestCheckCapability(t *testing.T) {
 
 		require.NoError(t, err)
 
+		capType := RequireGlobalValue(t, checker.Elaboration, "cap")
+
 		assert.IsType(t,
 			&sema.CapabilityType{
-				BorrowType: &sema.IntType{},
+				BorrowType: sema.IntType,
 			},
-			checker.GlobalValues["cap"].Type,
+			capType,
 		)
 	})
 }
@@ -116,9 +120,8 @@ func TestCheckCapability_borrow(t *testing.T) {
 
 				require.NoError(t, err)
 
-				rType := checker.GlobalTypes["R"].Type
-
-				rValueType := checker.GlobalValues["r"].Type
+				rType := RequireGlobalType(t, checker.Elaboration, "R")
+				rValueType := RequireGlobalValue(t, checker.Elaboration, "r")
 
 				require.Equal(t,
 					&sema.OptionalType{
@@ -148,9 +151,8 @@ func TestCheckCapability_borrow(t *testing.T) {
 
 				require.NoError(t, err)
 
-				rType := checker.GlobalTypes["R"].Type
-
-				rValueType := checker.GlobalValues["r"].Type
+				rType := RequireGlobalType(t, checker.Elaboration, "R")
+				rValueType := RequireGlobalValue(t, checker.Elaboration, "r")
 
 				require.Equal(t,
 					&sema.OptionalType{
@@ -180,9 +182,8 @@ func TestCheckCapability_borrow(t *testing.T) {
 
 				require.NoError(t, err)
 
-				sType := checker.GlobalTypes["S"].Type
-
-				sValueType := checker.GlobalValues["s"].Type
+				sType := RequireGlobalType(t, checker.Elaboration, "S")
+				sValueType := RequireGlobalValue(t, checker.Elaboration, "s")
 
 				require.Equal(t,
 					&sema.OptionalType{
@@ -212,9 +213,8 @@ func TestCheckCapability_borrow(t *testing.T) {
 
 				require.NoError(t, err)
 
-				sType := checker.GlobalTypes["S"].Type
-
-				sValueType := checker.GlobalValues["s"].Type
+				sType := RequireGlobalType(t, checker.Elaboration, "S")
+				sValueType := RequireGlobalValue(t, checker.Elaboration, "s")
 
 				require.Equal(t,
 					&sema.OptionalType{
@@ -314,9 +314,11 @@ func TestCheckCapability_check(t *testing.T) {
 
 				require.NoError(t, err)
 
+				okType := RequireGlobalValue(t, checker.Elaboration, "ok")
+
 				require.Equal(t,
-					&sema.BoolType{},
-					checker.GlobalValues["ok"].Type,
+					sema.BoolType,
+					okType,
 				)
 			})
 
@@ -337,9 +339,11 @@ func TestCheckCapability_check(t *testing.T) {
 
 				require.NoError(t, err)
 
+				okType := RequireGlobalValue(t, checker.Elaboration, "ok")
+
 				require.Equal(t,
-					&sema.BoolType{},
-					checker.GlobalValues["ok"].Type,
+					sema.BoolType,
+					okType,
 				)
 			})
 
@@ -360,9 +364,11 @@ func TestCheckCapability_check(t *testing.T) {
 
 				require.NoError(t, err)
 
+				okType := RequireGlobalValue(t, checker.Elaboration, "ok")
+
 				require.Equal(t,
-					&sema.BoolType{},
-					checker.GlobalValues["ok"].Type,
+					sema.BoolType,
+					okType,
 				)
 			})
 
@@ -383,9 +389,11 @@ func TestCheckCapability_check(t *testing.T) {
 
 				require.NoError(t, err)
 
+				okType := RequireGlobalValue(t, checker.Elaboration, "ok")
+
 				require.Equal(t,
-					&sema.BoolType{},
-					checker.GlobalValues["ok"].Type,
+					sema.BoolType,
+					okType,
 				)
 			})
 		})
@@ -424,5 +432,22 @@ func TestCheckCapability_check(t *testing.T) {
 
 			require.IsType(t, &sema.TypeMismatchError{}, errs[0])
 		})
+	})
+}
+
+func TestCheckCapability_address(t *testing.T) {
+
+	t.Parallel()
+	t.Run("check address", func(t *testing.T) {
+		checker, err := ParseAndCheckWithPanic(t,
+			`		  			
+				let capability: Capability = panic("")
+				let addr = capability.address
+			`,
+		)
+		require.NoError(t, err)
+
+		addrType := RequireGlobalValue(t, checker.Elaboration, "addr")
+		require.Equal(t, &sema.AddressType{}, addrType)
 	})
 }

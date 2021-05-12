@@ -45,8 +45,8 @@ func (e *unsupportedOperation) Error() string {
 
 // Error is the containing type for all errors produced by the interpreter.
 type Error struct {
-	Err error
-	LocationRange
+	Err      error
+	Location common.Location
 }
 
 func (e Error) Unwrap() error {
@@ -54,6 +54,29 @@ func (e Error) Unwrap() error {
 }
 
 func (e Error) Error() string {
+	return e.Err.Error()
+}
+
+func (e Error) ChildErrors() []error {
+	return []error{e.Err}
+}
+
+func (e Error) ImportLocation() common.Location {
+	return e.Location
+}
+
+// PositionedError wraps an unpositioned error with position info
+//
+type PositionedError struct {
+	Err error
+	ast.Range
+}
+
+func (e PositionedError) Unwrap() error {
+	return e.Err
+}
+
+func (e PositionedError) Error() string {
 	return e.Err.Error()
 }
 
@@ -196,7 +219,7 @@ func (e DestroyedCompositeError) Error() string {
 }
 
 // ForceAssignmentToNonNilResourceError
-
+//
 type ForceAssignmentToNonNilResourceError struct {
 	LocationRange
 }
@@ -206,7 +229,7 @@ func (e ForceAssignmentToNonNilResourceError) Error() string {
 }
 
 // ForceNilError
-
+//
 type ForceNilError struct {
 	LocationRange
 }
@@ -216,7 +239,7 @@ func (e ForceNilError) Error() string {
 }
 
 // TypeMismatchError
-
+//
 type TypeMismatchError struct {
 	ExpectedType sema.Type
 	LocationRange
@@ -230,7 +253,7 @@ func (e TypeMismatchError) Error() string {
 }
 
 // InvalidPathDomainError
-
+//
 type InvalidPathDomainError struct {
 	ActualDomain    common.PathDomain
 	ExpectedDomains []common.PathDomain
@@ -257,7 +280,7 @@ func (e InvalidPathDomainError) SecondaryError() string {
 }
 
 // OverwriteError
-
+//
 type OverwriteError struct {
 	Address AddressValue
 	Path    PathValue
@@ -273,9 +296,9 @@ func (e OverwriteError) Error() string {
 }
 
 // CyclicLinkError
-
+//
 type CyclicLinkError struct {
-	Address AddressValue
+	Address common.Address
 	Paths   []PathValue
 	LocationRange
 }
@@ -292,13 +315,13 @@ func (e CyclicLinkError) Error() string {
 
 	return fmt.Sprintf(
 		"cyclic link in account %s: %s",
-		e.Address,
+		e.Address.ShortHexWithPrefix(),
 		paths,
 	)
 }
 
 // ArrayIndexOutOfBoundsError
-
+//
 type ArrayIndexOutOfBoundsError struct {
 	Index    int
 	MaxIndex int
@@ -310,5 +333,91 @@ func (e ArrayIndexOutOfBoundsError) Error() string {
 		"array index out of bounds: got %d, expected max %d",
 		e.Index,
 		e.MaxIndex,
+	)
+}
+
+// EventEmissionUnavailableError
+//
+type EventEmissionUnavailableError struct {
+	LocationRange
+}
+
+func (e EventEmissionUnavailableError) Error() string {
+	return "cannot emit event: unavailable"
+}
+
+// UUIDUnavailableError
+//
+type UUIDUnavailableError struct {
+	LocationRange
+}
+
+func (e UUIDUnavailableError) Error() string {
+	return "cannot get UUID: unavailable"
+}
+
+// TypeLoadingError
+//
+type TypeLoadingError struct {
+	TypeID common.TypeID
+}
+
+func (e TypeLoadingError) Error() string {
+	return fmt.Sprintf("failed to load type: %s", e.TypeID)
+}
+
+// EncodingUnsupportedValueError
+//
+type EncodingUnsupportedValueError struct {
+	Value Value
+	Path  []string
+}
+
+func (e EncodingUnsupportedValueError) Error() string {
+	return fmt.Sprintf(
+		"encoding unsupported value to path [%s]: %[2]T, %[2]v",
+		strings.Join(e.Path, ","),
+		e.Value,
+	)
+}
+
+// MissingMemberValueError
+
+type MissingMemberValueError struct {
+	Name string
+	LocationRange
+}
+
+func (e MissingMemberValueError) Error() string {
+	return fmt.Sprintf("missing value for member `%s`", e.Name)
+}
+
+// InvocationArgumentTypeError
+
+type InvocationArgumentTypeError struct {
+	Index         int
+	ParameterType sema.Type
+	LocationRange
+}
+
+func (e InvocationArgumentTypeError) Error() string {
+	return fmt.Sprintf(
+		"invalid invocation with argument at index %d: expected %s",
+		e.Index,
+		e.ParameterType.QualifiedString(),
+	)
+}
+
+// ValueTransferTypeError
+
+type ValueTransferTypeError struct {
+	TargetType sema.Type
+	LocationRange
+}
+
+func (e ValueTransferTypeError) Error() string {
+	return fmt.Sprintf(
+		"invalid transfer of value: expected %s",
+		e.TargetType.QualifiedString(),
 	)
 }

@@ -39,7 +39,7 @@ var beforeType = func() *FunctionType {
 
 	typeParameter := &TypeParameter{
 		Name:      "T",
-		TypeBound: &AnyStructType{},
+		TypeBound: AnyStructType,
 	}
 
 	typeAnnotation := NewTypeAnnotation(
@@ -63,27 +63,26 @@ var beforeType = func() *FunctionType {
 	}
 }()
 
-type ValidTopLevelDeclarationsHandlerFunc = func(ast.Location) []common.DeclarationKind
+type ValidTopLevelDeclarationsHandlerFunc = func(common.Location) []common.DeclarationKind
 
-type CheckHandlerFunc func(location ast.Location, check func())
+type CheckHandlerFunc func(location common.Location, check func())
 
 type ResolvedLocation struct {
-	Location    ast.Location
+	Location    common.Location
 	Identifiers []ast.Identifier
 }
 
-type LocationHandlerFunc func(identifiers []ast.Identifier, location ast.Location) []ResolvedLocation
+type LocationHandlerFunc func(identifiers []ast.Identifier, location common.Location) ([]ResolvedLocation, error)
 
-type ImportHandlerFunc func(checker *Checker, location ast.Location) (Import, *CheckerError)
+type ImportHandlerFunc func(checker *Checker, importedLocation common.Location, importRange ast.Range) (Import, error)
 
 // Checker
 
 type Checker struct {
 	Program                            *ast.Program
-	Location                           ast.Location
-	PredeclaredValues                  map[string]ValueDeclaration
-	PredeclaredTypes                   map[string]TypeDeclaration
-	allCheckers                        map[ast.LocationID]*Checker
+	Location                           common.Location
+	PredeclaredValues                  []ValueDeclaration
+	PredeclaredTypes                   []TypeDeclaration
 	accessCheckMode                    AccessCheckMode
 	errors                             []error
 	hints                              []Hint
@@ -92,14 +91,13 @@ type Checker struct {
 	typeActivations                    *VariableActivations
 	containerTypes                     map[Type]bool
 	functionActivations                *FunctionActivations
-	GlobalValues                       map[string]*Variable
-	GlobalTypes                        map[string]*Variable
-	TransactionTypes                   []*TransactionType
 	inCondition                        bool
+	positionInfoEnabled                bool
 	Occurrences                        *Occurrences
-	MemberAccesses                     *MemberAccesses
 	variableOrigins                    map[*Variable]*Origin
 	memberOrigins                      map[Type]map[string]*Origin
+	MemberAccesses                     *MemberAccesses
+	Ranges                             *Ranges
 	isChecked                          bool
 	inCreate                           bool
 	inInvocation                       bool
@@ -112,30 +110,36 @@ type Checker struct {
 	locationHandler                    LocationHandlerFunc
 	importHandler                      ImportHandlerFunc
 	checkHandler                       CheckHandlerFunc
-	isChecking                         bool
 }
 
 type Option func(*Checker) error
 
-func WithPredeclaredValues(predeclaredValues map[string]ValueDeclaration) Option {
+func WithPredeclaredValues(predeclaredValues []ValueDeclaration) Option {
 	return func(checker *Checker) error {
 		checker.PredeclaredValues = predeclaredValues
 
-		for name, declaration := range predeclaredValues {
-			checker.declareValue(name, declaration)
-			checker.declareGlobalValue(name)
+		for _, declaration := range predeclaredValues {
+			variable := checker.declareValue(declaration)
+			if variable == nil {
+				continue
+			}
+			checker.Elaboration.GlobalValues.Set(variable.Identifier, variable)
+			checker.Elaboration.EffectivePredeclaredValues[variable.Identifier] = declaration
 		}
 
 		return nil
 	}
 }
 
-func WithPredeclaredTypes(predeclaredTypes map[string]TypeDeclaration) Option {
+func WithPredeclaredTypes(predeclaredTypes []TypeDeclaration) Option {
 	return func(checker *Checker) error {
 		checker.PredeclaredTypes = predeclaredTypes
 
-		for name, declaration := range predeclaredTypes {
-			checker.declareTypeDeclaration(name, declaration)
+		for _, declaration := range predeclaredTypes {
+			checker.declareTypeDeclaration(declaration)
+
+			name := declaration.TypeDeclarationName()
+			checker.Elaboration.EffectivePredeclaredTypes[name] = declaration
 		}
 
 		return nil
@@ -160,16 +164,6 @@ func WithAccessCheckMode(mode AccessCheckMode) Option {
 func WithValidTopLevelDeclarationsHandler(handler ValidTopLevelDeclarationsHandlerFunc) Option {
 	return func(checker *Checker) error {
 		checker.validTopLevelDeclarationsHandler = handler
-		return nil
-	}
-}
-
-// WithAllCheckers returns a checker option which sets
-// the given map of checkers as the map of all checkers.
-//
-func WithAllCheckers(allCheckers map[ast.LocationID]*Checker) Option {
-	return func(checker *Checker) error {
-		checker.SetAllCheckers(allCheckers)
 		return nil
 	}
 }
@@ -204,58 +198,54 @@ func WithImportHandler(handler ImportHandlerFunc) Option {
 	}
 }
 
-func NewChecker(program *ast.Program, location ast.Location, options ...Option) (*Checker, error) {
+// WithPositionInfoEnabled returns a checker option which enables/disables
+// if position info recoding is enabled.
+//
+// Position info includes origins, occurrences, member accesses, and ranges.
+//
+func WithPositionInfoEnabled(enabled bool) Option {
+	return func(checker *Checker) error {
+		checker.positionInfoEnabled = enabled
+		if enabled {
+			checker.memberOrigins = map[Type]map[string]*Origin{}
+			checker.variableOrigins = map[*Variable]*Origin{}
+			checker.Occurrences = NewOccurrences()
+			checker.MemberAccesses = NewMemberAccesses()
+			checker.Ranges = NewRanges()
+		}
+
+		return nil
+	}
+}
+
+func NewChecker(program *ast.Program, location common.Location, options ...Option) (*Checker, error) {
 
 	if location == nil {
 		return nil, &MissingLocationError{}
 	}
 
+	valueActivations := NewVariableActivations(BaseValueActivation)
+	typeActivations := NewVariableActivations(BaseTypeActivation)
 	functionActivations := &FunctionActivations{}
 	functionActivations.EnterFunction(&FunctionType{
 		ReturnTypeAnnotation: NewTypeAnnotation(VoidType)},
 		0,
 	)
 
-	typeActivations := NewValueActivations()
-	for name, baseType := range baseTypes {
-		_, err := typeActivations.DeclareType(typeDeclaration{
-			identifier:               ast.Identifier{Identifier: name},
-			ty:                       baseType,
-			declarationKind:          common.DeclarationKindType,
-			access:                   ast.AccessPublic,
-			allowOuterScopeShadowing: false,
-		})
-		if err != nil {
-			panic(err)
-		}
-	}
-
 	checker := &Checker{
 		Program:             program,
 		Location:            location,
-		valueActivations:    NewValueActivations(),
-		resources:           &Resources{},
+		valueActivations:    valueActivations,
+		resources:           NewResources(),
 		typeActivations:     typeActivations,
 		functionActivations: functionActivations,
-		GlobalValues:        map[string]*Variable{},
-		GlobalTypes:         map[string]*Variable{},
-		Occurrences:         NewOccurrences(),
-		MemberAccesses:      NewMemberAccesses(),
 		containerTypes:      map[Type]bool{},
-		variableOrigins:     map[*Variable]*Origin{},
-		memberOrigins:       map[Type]map[string]*Origin{},
 		Elaboration:         NewElaboration(),
 	}
 
 	checker.beforeExtractor = NewBeforeExtractor(checker.report)
 
-	checker.declareBaseValues()
-
-	defaultOptions := []Option{
-		WithAllCheckers(map[ast.LocationID]*Checker{}),
-	}
-
-	for _, option := range append(defaultOptions, options...) {
+	for _, option := range options {
 		err := option(checker)
 		if err != nil {
 			return nil, err
@@ -270,24 +260,27 @@ func NewChecker(program *ast.Program, location ast.Location, options ...Option) 
 	return checker, nil
 }
 
-// SetAllCheckers sets the given map of checkers as the map of all checkers.
-//
-func (checker *Checker) SetAllCheckers(allCheckers map[ast.LocationID]*Checker) {
-	checker.allCheckers = allCheckers
-
-	// Register self
-	checker.allCheckers[checker.Location.ID()] = checker
+func (checker *Checker) SubChecker(program *ast.Program, location common.Location) (*Checker, error) {
+	return NewChecker(
+		program,
+		location,
+		WithPredeclaredValues(checker.PredeclaredValues),
+		WithPredeclaredTypes(checker.PredeclaredTypes),
+		WithAccessCheckMode(checker.accessCheckMode),
+		WithValidTopLevelDeclarationsHandler(checker.validTopLevelDeclarationsHandler),
+		WithCheckHandler(checker.checkHandler),
+		WithImportHandler(checker.importHandler),
+		WithLocationHandler(checker.locationHandler),
+	)
 }
 
-func (checker *Checker) declareBaseValues() {
-	for name, declaration := range BaseValues {
-		variable := checker.declareValue(name, declaration)
-		variable.IsBaseValue = true
-		checker.declareGlobalValue(name)
+func (checker *Checker) declareValue(declaration ValueDeclaration) *Variable {
+
+	if !declaration.ValueDeclarationAvailable(checker.Location) {
+		return nil
 	}
-}
 
-func (checker *Checker) declareValue(name string, declaration ValueDeclaration) *Variable {
+	name := declaration.ValueDeclarationName()
 	variable, err := checker.valueActivations.Declare(variableDeclaration{
 		identifier: name,
 		ty:         declaration.ValueDeclarationType(),
@@ -300,13 +293,15 @@ func (checker *Checker) declareValue(name string, declaration ValueDeclaration) 
 		allowOuterScopeShadowing: false,
 	})
 	checker.report(err)
-	checker.recordVariableDeclarationOccurrence(name, variable)
+	if checker.positionInfoEnabled {
+		checker.recordVariableDeclarationOccurrence(name, variable)
+	}
 	return variable
 }
 
-func (checker *Checker) declareTypeDeclaration(name string, declaration TypeDeclaration) {
+func (checker *Checker) declareTypeDeclaration(declaration TypeDeclaration) {
 	identifier := ast.Identifier{
-		Identifier: name,
+		Identifier: declaration.TypeDeclarationName(),
 		Pos:        declaration.TypeDeclarationPosition(),
 	}
 
@@ -324,7 +319,9 @@ func (checker *Checker) declareTypeDeclaration(name string, declaration TypeDecl
 		},
 	)
 	checker.report(err)
-	checker.recordVariableDeclarationOccurrence(identifier.Identifier, variable)
+	if checker.positionInfoEnabled {
+		checker.recordVariableDeclarationOccurrence(identifier.Identifier, variable)
+	}
 }
 
 func (checker *Checker) IsChecked() bool {
@@ -333,7 +330,7 @@ func (checker *Checker) IsChecked() bool {
 
 func (checker *Checker) Check() error {
 	if !checker.IsChecked() {
-		checker.isChecking = true
+		checker.Elaboration.setIsChecking(true)
 		checker.errors = nil
 		check := func() {
 			checker.Program.Accept(checker)
@@ -343,7 +340,7 @@ func (checker *Checker) Check() error {
 		} else {
 			check()
 		}
-		checker.isChecking = false
+		checker.Elaboration.setIsChecking(false)
 		checker.isChecked = true
 	}
 	err := checker.CheckerError()
@@ -356,7 +353,8 @@ func (checker *Checker) Check() error {
 func (checker *Checker) CheckerError() *CheckerError {
 	if len(checker.errors) > 0 {
 		return &CheckerError{
-			Errors: checker.errors,
+			Location: checker.Location,
+			Errors:   checker.errors,
 		}
 	}
 	return nil
@@ -376,26 +374,27 @@ func (checker *Checker) hint(hint Hint) {
 func (checker *Checker) UserDefinedValues() map[string]*Variable {
 	variables := map[string]*Variable{}
 
-	for key, value := range checker.GlobalValues {
+	checker.Elaboration.GlobalValues.Foreach(func(key string, value *Variable) {
+
 		if value.IsBaseValue {
-			continue
+			return
 		}
 
-		if _, ok := checker.PredeclaredValues[key]; ok {
-			continue
+		if _, ok := checker.Elaboration.EffectivePredeclaredValues[key]; ok {
+			return
 		}
 
-		if _, ok := checker.PredeclaredTypes[key]; ok {
-			continue
+		if _, ok := checker.Elaboration.EffectivePredeclaredTypes[key]; ok {
+			return
 		}
 
-		if typeValue, ok := checker.GlobalTypes[key]; ok {
+		if typeValue, ok := checker.Elaboration.GlobalTypes.Get(key); ok {
 			variables[key] = typeValue
-			continue
+			return
 		}
 
 		variables[key] = value
-	}
+	})
 
 	return variables
 }
@@ -425,7 +424,7 @@ func (checker *Checker) VisitProgram(program *ast.Program) ast.Repr {
 		// NOTE: register types in elaboration
 		// *after* the full container chain is fully set up
 
-		VisitContainerAndNested(interfaceType, registerInElaboration)
+		VisitThisAndNested(interfaceType, registerInElaboration)
 	}
 
 	for _, declaration := range program.CompositeDeclarations() {
@@ -434,7 +433,7 @@ func (checker *Checker) VisitProgram(program *ast.Program) ast.Repr {
 		// NOTE: register types in elaboration
 		// *after* the full container chain is fully set up
 
-		VisitContainerAndNested(compositeType, registerInElaboration)
+		VisitThisAndNested(compositeType, registerInElaboration)
 	}
 
 	// Declare interfaces' and composites' members
@@ -459,9 +458,11 @@ func (checker *Checker) VisitProgram(program *ast.Program) ast.Repr {
 
 	// Check all declarations
 
-	checker.checkTopLevelDeclarationValidity(program.Declarations)
+	declarations := program.Declarations()
 
-	for _, declaration := range program.Declarations {
+	checker.checkTopLevelDeclarationValidity(declarations)
+
+	for _, declaration := range declarations {
 
 		// Skip import declarations, they are already handled above
 		if _, isImport := declaration.(*ast.ImportDeclaration); isImport {
@@ -561,7 +562,7 @@ func (checker *Checker) checkTypeCompatibility(expression ast.Expression, valueT
 			break
 		}
 
-		if IsSubType(unwrappedTargetType, &IntegerType{}) {
+		if IsSubType(unwrappedTargetType, IntegerType) {
 			CheckIntegerLiteral(typedExpression, unwrappedTargetType, checker.report)
 
 			return true
@@ -584,7 +585,7 @@ func (checker *Checker) checkTypeCompatibility(expression ast.Expression, valueT
 
 		valueTypeOK := CheckFixedPointLiteral(typedExpression, valueType, checker.report)
 
-		if IsSubType(unwrappedTargetType, &FixedPointType{}) {
+		if IsSubType(unwrappedTargetType, FixedPointType) {
 			if valueTypeOK {
 				CheckFixedPointLiteral(typedExpression, unwrappedTargetType, checker.report)
 			}
@@ -629,7 +630,7 @@ func (checker *Checker) checkTypeCompatibility(expression ast.Expression, valueT
 	case *ast.StringExpression:
 		unwrappedTargetType := UnwrapOptionalType(targetType)
 
-		if IsSubType(unwrappedTargetType, &CharacterType{}) {
+		if IsSubType(unwrappedTargetType, CharacterType) {
 			checker.checkCharacterLiteral(typedExpression)
 
 			return true
@@ -794,7 +795,7 @@ func (checker *Checker) declareGlobalValue(name string) {
 	if variable == nil {
 		return
 	}
-	checker.GlobalValues[name] = variable
+	checker.Elaboration.GlobalValues.Set(name, variable)
 }
 
 func (checker *Checker) declareGlobalType(name string) {
@@ -802,7 +803,7 @@ func (checker *Checker) declareGlobalType(name string) {
 	if ty == nil {
 		return
 	}
-	checker.GlobalTypes[name] = ty
+	checker.Elaboration.GlobalTypes.Set(name, ty)
 }
 
 func (checker *Checker) checkResourceMoveOperation(valueExpression ast.Expression, valueType Type) {
@@ -854,7 +855,7 @@ func (checker *Checker) findAndCheckValueVariable(identifier ast.Identifier, rec
 		return nil
 	}
 
-	if recordOccurrence && identifier.Identifier != "" {
+	if checker.positionInfoEnabled && recordOccurrence && identifier.Identifier != "" {
 		checker.recordVariableReferenceOccurrence(
 			identifier.StartPosition(),
 			identifier.EndPosition(),
@@ -977,16 +978,22 @@ func (checker *Checker) convertRestrictedType(t *ast.RestrictedType) Type {
 
 		// The restrictions may not have clashing members
 
-		// TODO: also include interface conformances's members
+		// TODO: also include interface conformances' members
 		//   once interfaces can have conformances
 
-		for name := range restrictionInterfaceType.Members {
+		restrictionInterfaceType.Members.Foreach(func(name string, member *Member) {
 			if previousDeclaringInterfaceType, ok := memberSet[name]; ok {
 
 				// If there is an overlap in members, ensure the members have the same type
 
-				memberType := restrictionInterfaceType.Members[name].TypeAnnotation.Type
-				previousMemberType := previousDeclaringInterfaceType.Members[name].TypeAnnotation.Type
+				memberType := member.TypeAnnotation.Type
+
+				prevMemberType, ok := previousDeclaringInterfaceType.Members.Get(name)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
+				previousMemberType := prevMemberType.TypeAnnotation.Type
 
 				if !memberType.IsInvalidType() &&
 					!previousMemberType.IsInvalidType() &&
@@ -1004,7 +1011,7 @@ func (checker *Checker) convertRestrictedType(t *ast.RestrictedType) Type {
 			} else {
 				memberSet[name] = restrictionInterfaceType
 			}
-		}
+		})
 	}
 
 	if restrictedType == nil {
@@ -1025,10 +1032,10 @@ func (checker *Checker) convertRestrictedType(t *ast.RestrictedType) Type {
 			)
 
 		case common.CompositeKindResource:
-			restrictedType = &AnyResourceType{}
+			restrictedType = AnyResourceType
 
 		case common.CompositeKindStructure:
-			restrictedType = &AnyStructType{}
+			restrictedType = AnyStructType
 
 		default:
 			panic(errors.NewUnreachableError())
@@ -1049,26 +1056,30 @@ func (checker *Checker) convertRestrictedType(t *ast.RestrictedType) Type {
 
 	var compositeType *CompositeType
 
-	switch typeResult := restrictedType.(type) {
-	case *CompositeType:
+	if !restrictedType.IsInvalidType() {
 
-		switch typeResult.Kind {
+		if typeResult, ok := restrictedType.(*CompositeType); ok {
+			switch typeResult.Kind {
 
-		case common.CompositeKindResource,
-			common.CompositeKindStructure:
+			case common.CompositeKindResource,
+				common.CompositeKindStructure:
 
-			compositeType = typeResult
+				compositeType = typeResult
 
-		default:
-			reportInvalidRestrictedType()
-		}
+			default:
+				reportInvalidRestrictedType()
+			}
+		} else {
 
-	case *AnyResourceType, *AnyStructType, *AnyType:
-		break
+			switch restrictedType {
+			case AnyResourceType, AnyStructType, AnyType:
+				break
 
-	default:
-		if t.Type != nil {
-			reportInvalidRestrictedType()
+			default:
+				if t.Type != nil {
+					reportInvalidRestrictedType()
+				}
+			}
 		}
 	}
 
@@ -1228,7 +1239,7 @@ func (checker *Checker) findAndCheckTypeVariable(identifier ast.Identifier, reco
 		return nil
 	}
 
-	if recordOccurrence && identifier.Identifier != "" {
+	if checker.positionInfoEnabled && recordOccurrence && identifier.Identifier != "" {
 		checker.recordVariableReferenceOccurrence(
 			identifier.StartPosition(),
 			identifier.EndPosition(),
@@ -1250,12 +1261,10 @@ func (checker *Checker) convertNominalType(t *ast.NominalType) Type {
 	var resolvedIdentifiers []ast.Identifier
 
 	for _, identifier := range t.NestedIdentifiers {
-		switch typedResult := ty.(type) {
-		case ContainerType:
-			ty = typedResult.NestedTypes()[identifier.Identifier]
-
-		default:
-			if !typedResult.IsInvalidType() {
+		if containerType, ok := ty.(ContainerType); ok && containerType.isContainerType() {
+			ty, _ = containerType.GetNestedTypes().Get(identifier.Identifier)
+		} else {
+			if !ty.IsInvalidType() {
 				checker.report(
 					&InvalidNestedTypeError{
 						Type: &ast.NominalType{
@@ -1342,6 +1351,10 @@ func (checker *Checker) parameters(parameterList *ast.ParameterList) []*Paramete
 }
 
 func (checker *Checker) recordVariableReferenceOccurrence(startPos, endPos ast.Position, variable *Variable) {
+	if !checker.positionInfoEnabled {
+		return
+	}
+
 	origin, ok := checker.variableOrigins[variable]
 	if !ok {
 		startPos2 := variable.Pos
@@ -1375,6 +1388,10 @@ func (checker *Checker) recordFieldDeclarationOrigin(
 	startPos, endPos ast.Position,
 	fieldType Type,
 ) *Origin {
+	if !checker.positionInfoEnabled {
+		return nil
+	}
+
 	startPosition := identifier.StartPosition()
 	endPosition := identifier.EndPosition()
 
@@ -1398,6 +1415,10 @@ func (checker *Checker) recordFunctionDeclarationOrigin(
 	function *ast.FunctionDeclaration,
 	functionType *FunctionType,
 ) *Origin {
+	if !checker.positionInfoEnabled {
+		return nil
+	}
+
 	startPosition := function.Identifier.StartPosition()
 	endPosition := function.Identifier.EndPosition()
 
@@ -1417,14 +1438,16 @@ func (checker *Checker) recordFunctionDeclarationOrigin(
 }
 
 func (checker *Checker) enterValueScope() {
+	//fmt.Printf("ENTER: %d\n", checker.valueActivations.Depth())
 	checker.valueActivations.Enter()
 }
 
-func (checker *Checker) leaveValueScope(checkResourceLoss bool) {
+func (checker *Checker) leaveValueScope(getEndPosition func() ast.Position, checkResourceLoss bool) {
 	if checkResourceLoss {
 		checker.checkResourceLoss(checker.valueActivations.Depth())
 	}
-	checker.valueActivations.Leave()
+
+	checker.valueActivations.Leave(getEndPosition)
 }
 
 // TODO: prune resource variables declared in function's scope
@@ -1436,7 +1459,7 @@ func (checker *Checker) leaveValueScope(checkResourceLoss bool) {
 //
 func (checker *Checker) checkResourceLoss(depth int) {
 
-	for name, variable := range checker.valueActivations.VariablesDeclaredInAndBelow(depth) {
+	checker.valueActivations.ForEachVariableDeclaredInAndBelow(depth, func(name string, variable *Variable) {
 
 		// TODO: handle `self` and `result` properly
 
@@ -1453,9 +1476,8 @@ func (checker *Checker) checkResourceLoss(depth int) {
 					},
 				},
 			)
-
 		}
-	}
+	})
 }
 
 type recordedResourceInvalidation struct {
@@ -1642,7 +1664,7 @@ func (checker *Checker) checkUnusedExpressionResourceLoss(expressionType Type, e
 // in non resource composites (concrete or interface)
 //
 func (checker *Checker) checkResourceFieldNesting(
-	members map[string]*Member,
+	members *StringMemberOrderedMap,
 	compositeKind common.CompositeKind,
 	fieldPositionGetter func(name string) ast.Position,
 ) {
@@ -1658,13 +1680,12 @@ func (checker *Checker) checkResourceFieldNesting(
 	// The field is not a resource or contract, check if there are
 	// any fields that have a resource type  and report them
 
-	for name, member := range members {
-
+	members.Foreach(func(name string, member *Member) {
 		// NOTE: check type, not resource annotation:
 		// the field could have a wrong annotation
 
 		if !member.TypeAnnotation.Type.IsResourceType() {
-			continue
+			return
 		}
 
 		pos := fieldPositionGetter(name)
@@ -1676,7 +1697,7 @@ func (checker *Checker) checkResourceFieldNesting(
 				Pos:           pos,
 			},
 		)
-	}
+	})
 }
 
 // checkPotentiallyUnevaluated runs the given type checking function
@@ -1967,6 +1988,17 @@ func (checker *Checker) predeclaredMembers(containerType Type) []*Member {
 		isInstanceFunctionDocString,
 	)
 
+	// All types have a predeclared member `fun getType(): Type`
+
+	addPredeclaredMember(
+		GetTypeFunctionName,
+		getTypeFunctionType,
+		common.DeclarationKindFunction,
+		ast.AccessPublic,
+		true,
+		getTypeFunctionDocString,
+	)
+
 	if compositeKindedType, ok := containerType.(CompositeKindedType); ok {
 
 		switch compositeKindedType.GetCompositeKind() {
@@ -1978,7 +2010,7 @@ func (checker *Checker) predeclaredMembers(containerType Type) []*Member {
 
 			addPredeclaredMember(
 				"account",
-				&AuthAccountType{},
+				AuthAccountType,
 				common.DeclarationKindField,
 				ast.AccessPrivate,
 				true,
@@ -1995,7 +2027,7 @@ func (checker *Checker) predeclaredMembers(containerType Type) []*Member {
 			addPredeclaredMember(
 				ResourceOwnerFieldName,
 				&OptionalType{
-					Type: &PublicAccountType{},
+					Type: PublicAccountType,
 				},
 				common.DeclarationKindField,
 				ast.AccessPublic,
@@ -2008,7 +2040,7 @@ func (checker *Checker) predeclaredMembers(containerType Type) []*Member {
 
 			addPredeclaredMember(
 				ResourceUUIDFieldName,
-				&UInt64Type{},
+				UInt64Type,
 				common.DeclarationKindField,
 				ast.AccessPublic,
 				false,

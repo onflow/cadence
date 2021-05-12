@@ -22,7 +22,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/sema"
 )
@@ -36,41 +36,60 @@ import (
 //
 type StaticType interface {
 	fmt.Stringer
-	isStaticType()
+	IsStaticType()
+	Equal(other StaticType) bool
 }
 
 // CompositeStaticType
 
 type CompositeStaticType struct {
-	Location ast.Location
-	TypeID   sema.TypeID
+	Location            common.Location
+	QualifiedIdentifier string
 }
 
-func (CompositeStaticType) isStaticType() {}
+func (CompositeStaticType) IsStaticType() {}
 
 func (t CompositeStaticType) String() string {
-	return fmt.Sprintf(
-		"CompositeStaticType(Location: %s, TypeID: %s)",
-		t.Location,
-		t.TypeID,
-	)
+	if t.Location == nil {
+		return t.QualifiedIdentifier
+	}
+	return string(t.Location.TypeID(t.QualifiedIdentifier))
+}
+
+func (t CompositeStaticType) Equal(other StaticType) bool {
+	otherCompositeType, ok := other.(CompositeStaticType)
+	if !ok {
+		return false
+	}
+
+	return common.LocationsMatch(otherCompositeType.Location, t.Location) &&
+		otherCompositeType.QualifiedIdentifier == t.QualifiedIdentifier
 }
 
 // InterfaceStaticType
 
 type InterfaceStaticType struct {
-	Location ast.Location
-	TypeID   sema.TypeID
+	Location            common.Location
+	QualifiedIdentifier string
 }
 
-func (InterfaceStaticType) isStaticType() {}
+func (InterfaceStaticType) IsStaticType() {}
 
 func (t InterfaceStaticType) String() string {
-	return fmt.Sprintf(
-		"InterfaceStaticType(Location: %s, TypeID: %s)",
-		t.Location,
-		t.TypeID,
-	)
+	if t.Location == nil {
+		return t.QualifiedIdentifier
+	}
+	return string(t.Location.TypeID(t.QualifiedIdentifier))
+}
+
+func (t InterfaceStaticType) Equal(other StaticType) bool {
+	otherInterfaceType, ok := other.(InterfaceStaticType)
+	if !ok {
+		return false
+	}
+
+	return common.LocationsMatch(otherInterfaceType.Location, t.Location) &&
+		otherInterfaceType.QualifiedIdentifier == t.QualifiedIdentifier
 }
 
 // VariableSizedStaticType
@@ -79,10 +98,19 @@ type VariableSizedStaticType struct {
 	Type StaticType
 }
 
-func (VariableSizedStaticType) isStaticType() {}
+func (VariableSizedStaticType) IsStaticType() {}
 
 func (t VariableSizedStaticType) String() string {
 	return fmt.Sprintf("[%s]", t.Type)
+}
+
+func (t VariableSizedStaticType) Equal(other StaticType) bool {
+	otherVariableSizedType, ok := other.(VariableSizedStaticType)
+	if !ok {
+		return false
+	}
+
+	return t.Type.Equal(otherVariableSizedType.Type)
 }
 
 // ConstantSizedStaticType
@@ -92,10 +120,20 @@ type ConstantSizedStaticType struct {
 	Size int64
 }
 
-func (ConstantSizedStaticType) isStaticType() {}
+func (ConstantSizedStaticType) IsStaticType() {}
 
 func (t ConstantSizedStaticType) String() string {
 	return fmt.Sprintf("[%s; %d]", t.Type, t.Size)
+}
+
+func (t ConstantSizedStaticType) Equal(other StaticType) bool {
+	otherConstantSizedType, ok := other.(ConstantSizedStaticType)
+	if !ok {
+		return false
+	}
+
+	return t.Size == otherConstantSizedType.Size &&
+		t.Type.Equal(otherConstantSizedType.Type)
 }
 
 // DictionaryStaticType
@@ -105,10 +143,20 @@ type DictionaryStaticType struct {
 	ValueType StaticType
 }
 
-func (DictionaryStaticType) isStaticType() {}
+func (DictionaryStaticType) IsStaticType() {}
 
 func (t DictionaryStaticType) String() string {
 	return fmt.Sprintf("{%s: %s}", t.KeyType, t.ValueType)
+}
+
+func (t DictionaryStaticType) Equal(other StaticType) bool {
+	otherDictionaryType, ok := other.(DictionaryStaticType)
+	if !ok {
+		return false
+	}
+
+	return t.KeyType.Equal(otherDictionaryType.KeyType) &&
+		t.ValueType.Equal(otherDictionaryType.ValueType)
 }
 
 // OptionalStaticType
@@ -117,10 +165,19 @@ type OptionalStaticType struct {
 	Type StaticType
 }
 
-func (OptionalStaticType) isStaticType() {}
+func (OptionalStaticType) IsStaticType() {}
 
 func (t OptionalStaticType) String() string {
 	return fmt.Sprintf("%s?", t.Type)
+}
+
+func (t OptionalStaticType) Equal(other StaticType) bool {
+	otherOptionalType, ok := other.(OptionalStaticType)
+	if !ok {
+		return false
+	}
+
+	return t.Type.Equal(otherOptionalType.Type)
 }
 
 // RestrictedStaticType
@@ -130,9 +187,14 @@ type RestrictedStaticType struct {
 	Restrictions []InterfaceStaticType
 }
 
-func (RestrictedStaticType) isStaticType() {}
+// NOTE: must be pointer receiver, as static types get used in type values,
+// which are used as keys in maps when exporting.
+// Key types in Go maps must be (transitively) hashable types,
+// and slices are not, but `Restrictions` is one.
+//
+func (*RestrictedStaticType) IsStaticType() {}
 
-func (t RestrictedStaticType) String() string {
+func (t *RestrictedStaticType) String() string {
 	restrictions := make([]string, len(t.Restrictions))
 
 	for i, restriction := range t.Restrictions {
@@ -142,6 +204,26 @@ func (t RestrictedStaticType) String() string {
 	return fmt.Sprintf("%s{%s}", t.Type, strings.Join(restrictions, ", "))
 }
 
+func (t *RestrictedStaticType) Equal(other StaticType) bool {
+	otherRestrictedType, ok := other.(*RestrictedStaticType)
+	if !ok || len(t.Restrictions) != len(otherRestrictedType.Restrictions) {
+		return false
+	}
+
+outer:
+	for _, restriction := range t.Restrictions {
+		for _, otherRestriction := range otherRestrictedType.Restrictions {
+			if restriction.Equal(otherRestriction) {
+				continue outer
+			}
+		}
+
+		return false
+	}
+
+	return t.Type.Equal(otherRestrictedType.Type)
+}
+
 // ReferenceStaticType
 
 type ReferenceStaticType struct {
@@ -149,7 +231,7 @@ type ReferenceStaticType struct {
 	Type       StaticType
 }
 
-func (ReferenceStaticType) isStaticType() {}
+func (ReferenceStaticType) IsStaticType() {}
 
 func (t ReferenceStaticType) String() string {
 	auth := ""
@@ -160,13 +242,23 @@ func (t ReferenceStaticType) String() string {
 	return fmt.Sprintf("%s&%s", auth, t.Type)
 }
 
+func (t ReferenceStaticType) Equal(other StaticType) bool {
+	otherReferenceType, ok := other.(ReferenceStaticType)
+	if !ok {
+		return false
+	}
+
+	return t.Authorized == otherReferenceType.Authorized &&
+		t.Type.Equal(otherReferenceType.Type)
+}
+
 // CapabilityStaticType
 
 type CapabilityStaticType struct {
 	BorrowType StaticType
 }
 
-func (CapabilityStaticType) isStaticType() {}
+func (CapabilityStaticType) IsStaticType() {}
 
 func (t CapabilityStaticType) String() string {
 	if t.BorrowType != nil {
@@ -175,14 +267,30 @@ func (t CapabilityStaticType) String() string {
 	return "Capability"
 }
 
+func (t CapabilityStaticType) Equal(other StaticType) bool {
+	otherCapabilityType, ok := other.(CapabilityStaticType)
+	if !ok {
+		return false
+	}
+
+	// The borrow types must either be both nil,
+	// or they must be equal
+
+	if t.BorrowType == nil {
+		return otherCapabilityType.BorrowType == nil
+	}
+
+	return t.BorrowType.Equal(otherCapabilityType.BorrowType)
+}
+
 // Conversion
 
 func ConvertSemaToStaticType(t sema.Type) StaticType {
 	switch t := t.(type) {
 	case *sema.CompositeType:
 		return CompositeStaticType{
-			Location: t.Location,
-			TypeID:   t.ID(),
+			Location:            t.Location,
+			QualifiedIdentifier: t.QualifiedIdentifier(),
 		}
 
 	case *sema.InterfaceType:
@@ -217,7 +325,7 @@ func ConvertSemaToStaticType(t sema.Type) StaticType {
 			restrictions[i] = convertToInterfaceStaticType(restriction)
 		}
 
-		return RestrictedStaticType{
+		return &RestrictedStaticType{
 			Type:         ConvertSemaToStaticType(t.Type),
 			Restrictions: restrictions,
 		}
@@ -249,22 +357,22 @@ func convertSemaReferenceToStaticReferenceType(t *sema.ReferenceType) ReferenceS
 
 func convertToInterfaceStaticType(t *sema.InterfaceType) InterfaceStaticType {
 	return InterfaceStaticType{
-		Location: t.Location,
-		TypeID:   t.ID(),
+		Location:            t.Location,
+		QualifiedIdentifier: t.QualifiedIdentifier(),
 	}
 }
 
 func ConvertStaticToSemaType(
 	typ StaticType,
-	getInterface func(location ast.Location, id sema.TypeID) *sema.InterfaceType,
-	getComposite func(location ast.Location, id sema.TypeID) *sema.CompositeType,
+	getInterface func(location common.Location, qualifiedIdentifier string) *sema.InterfaceType,
+	getComposite func(location common.Location, qualifiedIdentifier string) *sema.CompositeType,
 ) sema.Type {
 	switch t := typ.(type) {
 	case CompositeStaticType:
-		return getComposite(t.Location, t.TypeID)
+		return getComposite(t.Location, t.QualifiedIdentifier)
 
 	case InterfaceStaticType:
-		return getInterface(t.Location, t.TypeID)
+		return getInterface(t.Location, t.QualifiedIdentifier)
 
 	case VariableSizedStaticType:
 		return &sema.VariableSizedType{
@@ -288,11 +396,11 @@ func ConvertStaticToSemaType(
 			Type: ConvertStaticToSemaType(t.Type, getInterface, getComposite),
 		}
 
-	case RestrictedStaticType:
+	case *RestrictedStaticType:
 		restrictions := make([]*sema.InterfaceType, len(t.Restrictions))
 
 		for i, restriction := range t.Restrictions {
-			restrictions[i] = getInterface(restriction.Location, restriction.TypeID)
+			restrictions[i] = getInterface(restriction.Location, restriction.QualifiedIdentifier)
 		}
 
 		return &sema.RestrictedType{

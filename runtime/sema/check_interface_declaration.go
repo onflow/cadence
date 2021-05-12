@@ -60,7 +60,7 @@ func (checker *Checker) VisitInterfaceDeclaration(declaration *ast.InterfaceDecl
 	// Activate new scope for nested types
 
 	checker.typeActivations.Enter()
-	defer checker.typeActivations.Leave()
+	defer checker.typeActivations.Leave(declaration.EndPosition)
 
 	// Declare nested types
 
@@ -134,7 +134,7 @@ func (checker *Checker) declareInterfaceNestedTypes(
 	interfaceType := checker.Elaboration.InterfaceDeclarationTypes[declaration]
 	nestedDeclarations := checker.Elaboration.InterfaceNestedDeclarations[declaration]
 
-	for name, nestedType := range interfaceType.nestedTypes {
+	interfaceType.nestedTypes.Foreach(func(name string, nestedType Type) {
 		nestedDeclaration := nestedDeclarations[name]
 
 		identifier := nestedDeclaration.DeclarationIdentifier()
@@ -153,7 +153,7 @@ func (checker *Checker) declareInterfaceNestedTypes(
 			allowOuterScopeShadowing: false,
 		})
 		checker.report(err)
-	}
+	})
 }
 
 func (checker *Checker) checkInterfaceFunctions(
@@ -168,7 +168,7 @@ func (checker *Checker) checkInterfaceFunctions(
 
 		func() {
 			checker.enterValueScope()
-			defer checker.leaveValueScope(false)
+			defer checker.leaveValueScope(function.EndPosition, false)
 
 			checker.declareSelfValue(selfType)
 
@@ -209,7 +209,8 @@ func (checker *Checker) declareInterfaceType(declaration *ast.InterfaceDeclarati
 		Location:      checker.Location,
 		Identifier:    identifier.Identifier,
 		CompositeKind: declaration.CompositeKind,
-		nestedTypes:   map[string]Type{},
+		nestedTypes:   NewStringTypeOrderedMap(),
+		Members:       NewStringMemberOrderedMap(),
 	}
 
 	variable, err := checker.typeActivations.DeclareType(typeDeclaration{
@@ -239,10 +240,10 @@ func (checker *Checker) declareInterfaceType(declaration *ast.InterfaceDeclarati
 	// Activate new scope for nested declarations
 
 	checker.typeActivations.Enter()
-	defer checker.typeActivations.Leave()
+	defer checker.typeActivations.Leave(declaration.EndPosition)
 
-	checker.valueActivations.Enter()
-	defer checker.valueActivations.Leave()
+	checker.enterValueScope()
+	defer checker.leaveValueScope(declaration.EndPosition, false)
 
 	// Check and declare nested types
 
@@ -257,12 +258,12 @@ func (checker *Checker) declareInterfaceType(declaration *ast.InterfaceDeclarati
 	checker.Elaboration.InterfaceNestedDeclarations[declaration] = nestedDeclarations
 
 	for _, nestedInterfaceType := range nestedInterfaceTypes {
-		interfaceType.nestedTypes[nestedInterfaceType.Identifier] = nestedInterfaceType
+		interfaceType.nestedTypes.Set(nestedInterfaceType.Identifier, nestedInterfaceType)
 		nestedInterfaceType.ContainerType = interfaceType
 	}
 
 	for _, nestedCompositeType := range nestedCompositeTypes {
-		interfaceType.nestedTypes[nestedCompositeType.Identifier] = nestedCompositeType
+		interfaceType.nestedTypes.Set(nestedCompositeType.Identifier, nestedCompositeType)
 		nestedCompositeType.ContainerType = interfaceType
 	}
 
@@ -286,10 +287,10 @@ func (checker *Checker) declareInterfaceMembers(declaration *ast.InterfaceDeclar
 	// Activate new scope for nested declarations
 
 	checker.typeActivations.Enter()
-	defer checker.typeActivations.Leave()
+	defer checker.typeActivations.Leave(declaration.EndPosition)
 
-	checker.valueActivations.Enter()
-	defer checker.valueActivations.Leave()
+	checker.enterValueScope()
+	defer checker.leaveValueScope(declaration.EndPosition, false)
 
 	// Declare nested types
 
@@ -310,7 +311,9 @@ func (checker *Checker) declareInterfaceMembers(declaration *ast.InterfaceDeclar
 
 	interfaceType.Members = members
 	interfaceType.Fields = fields
-	checker.memberOrigins[interfaceType] = origins
+	if checker.positionInfoEnabled {
+		checker.memberOrigins[interfaceType] = origins
+	}
 
 	// NOTE: determine initializer parameter types while nested types are in scope,
 	// and after declaring nested types as the initializer may use nested type in parameters

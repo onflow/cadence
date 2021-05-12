@@ -31,6 +31,7 @@ import (
 	"github.com/onflow/cadence/encoding/json"
 	"github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/sema"
+	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
 type encodeTest struct {
@@ -677,15 +678,15 @@ func TestEncodeResource(t *testing.T) {
 		t.Parallel()
 
 		script := `
-			access(all) resource Foo {
-				access(all) let bar: Int
+			pub resource Foo {
+				pub let bar: Int
 	
 				init(bar: Int) {
 					self.bar = bar
 				}
 			}
 	
-			access(all) fun main(): @Foo {
+			pub fun main(): @Foo {
 				return <- create Foo(bar: 42)
 			}
 		`
@@ -702,8 +703,8 @@ func TestEncodeResource(t *testing.T) {
 		t.Parallel()
 
 		script := `
-			access(all) resource Foo {
-				access(all) let bar: Int
+			pub resource Foo {
+				pub let bar: Int
 	
 				pub fun foo(): String {
 					return "foo"
@@ -714,7 +715,7 @@ func TestEncodeResource(t *testing.T) {
 				}
 			}
 	
-			access(all) fun main(): @Foo {
+			pub fun main(): @Foo {
 				return <- create Foo(bar: 42)
 			}
 		`
@@ -735,16 +736,16 @@ func TestEncodeResource(t *testing.T) {
 		t.Parallel()
 
 		script := `
-			access(all) resource Bar {
-				access(all) let x: Int
+			pub resource Bar {
+				pub let x: Int
 	
 				init(x: Int) {
 					self.x = x
 				}
 			}
 	
-			access(all) resource Foo {
-				access(all) let bar: @Bar
+			pub resource Foo {
+				pub let bar: @Bar
 	
 				init(bar: @Bar) {
 					self.bar <- bar
@@ -755,7 +756,7 @@ func TestEncodeResource(t *testing.T) {
 				}
 			}
 	
-			access(all) fun main(): @Foo {
+			pub fun main(): @Foo {
 				return <- create Foo(bar: <- create Bar(x: 42))
 			}
 		`
@@ -773,8 +774,8 @@ func TestEncodeStruct(t *testing.T) {
 	t.Parallel()
 
 	simpleStructType := &cadence.StructType{
-		TypeID:     "S.test.FooStruct",
-		Identifier: "FooStruct",
+		Location:            utils.TestLocation,
+		QualifiedIdentifier: "FooStruct",
 		Fields: []cadence.Field{
 			{
 				Identifier: "a",
@@ -799,8 +800,8 @@ func TestEncodeStruct(t *testing.T) {
 	}
 
 	resourceStructType := &cadence.StructType{
-		TypeID:     "S.test.FooStruct",
-		Identifier: "FooStruct",
+		Location:            utils.TestLocation,
+		QualifiedIdentifier: "FooStruct",
 		Fields: []cadence.Field{
 			{
 				Identifier: "a",
@@ -836,8 +837,8 @@ func TestEncodeEvent(t *testing.T) {
 	t.Parallel()
 
 	simpleEventType := &cadence.EventType{
-		TypeID:     "S.test.FooEvent",
-		Identifier: "FooEvent",
+		Location:            utils.TestLocation,
+		QualifiedIdentifier: "FooEvent",
 		Fields: []cadence.Field{
 			{
 				Identifier: "a",
@@ -862,8 +863,8 @@ func TestEncodeEvent(t *testing.T) {
 	}
 
 	resourceEventType := &cadence.EventType{
-		TypeID:     "S.test.FooEvent",
-		Identifier: "FooEvent",
+		Location:            utils.TestLocation,
+		QualifiedIdentifier: "FooEvent",
 		Fields: []cadence.Field{
 			{
 				Identifier: "a",
@@ -899,8 +900,8 @@ func TestEncodeContract(t *testing.T) {
 	t.Parallel()
 
 	simpleContractType := &cadence.ContractType{
-		TypeID:     "S.test.FooContract",
-		Identifier: "FooContract",
+		Location:            utils.TestLocation,
+		QualifiedIdentifier: "FooContract",
 		Fields: []cadence.Field{
 			{
 				Identifier: "a",
@@ -925,8 +926,8 @@ func TestEncodeContract(t *testing.T) {
 	}
 
 	resourceContractType := &cadence.ContractType{
-		TypeID:     "S.test.FooContract",
-		Identifier: "FooContract",
+		Location:            utils.TestLocation,
+		QualifiedIdentifier: "FooContract",
 		Fields: []cadence.Field{
 			{
 				Identifier: "a",
@@ -975,13 +976,29 @@ func TestEncodeType(t *testing.T) {
 
 	t.Parallel()
 
-	testEncodeAndDecode(
-		t,
-		cadence.TypeValue{
-			StaticType: "Int",
-		},
-		`{"type":"Type","value":{"staticType":"Int"}}`,
-	)
+	t.Run("with static type", func(t *testing.T) {
+
+		t.Parallel()
+
+		testEncodeAndDecode(
+			t,
+			cadence.TypeValue{
+				StaticType: "Int",
+			},
+			`{"type":"Type","value":{"staticType":"Int"}}`,
+		)
+
+	})
+	t.Run("without static type", func(t *testing.T) {
+
+		t.Parallel()
+
+		testEncodeAndDecode(
+			t,
+			cadence.TypeValue{},
+			`{"type":"Type","value":{"staticType":""}}`,
+		)
+	})
 }
 
 func TestEncodeCapability(t *testing.T) {
@@ -1225,8 +1242,8 @@ func TestExportRecursiveType(t *testing.T) {
 	t.Parallel()
 
 	ty := &cadence.ResourceType{
-		TypeID:     "S.test.Foo",
-		Identifier: "Foo",
+		Location:            utils.TestLocation,
+		QualifiedIdentifier: "Foo",
 		Fields: []cadence.Field{
 			{
 				Identifier: "foo",
@@ -1265,10 +1282,14 @@ func convertValueFromScript(t *testing.T, script string) cadence.Value {
 	rt := runtime.NewInterpreterRuntime()
 
 	value, err := rt.ExecuteScript(
-		[]byte(script),
-		nil,
-		&runtime.EmptyRuntimeInterface{},
-		runtime.StringLocation("test"),
+		runtime.Script{
+			Source:    []byte(script),
+			Arguments: nil,
+		},
+		runtime.Context{
+			Interface: runtime.NewEmptyRuntimeInterface(),
+			Location:  utils.TestLocation,
+		},
 	)
 
 	require.NoError(t, err)
@@ -1291,6 +1312,62 @@ func testAllEncodeAndDecode(t *testing.T, tests ...encodeTest) {
 	for _, testCase := range tests {
 		test(testCase)
 	}
+}
+
+func TestDecodeInvalidType(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("empty type", func(t *testing.T) {
+		t.Parallel()
+
+		encodedValue := `
+		{
+			"type":"Struct",
+			"value":{
+				"id":"",
+				"fields":[]
+			}
+		}
+	`
+		_, err := json.Decode([]byte(encodedValue))
+		require.Error(t, err)
+		assert.Equal(t, "failed to decode value: invalid JSON Cadence structure. invalid type ID: ``", err.Error())
+	})
+
+	t.Run("undefined type", func(t *testing.T) {
+		t.Parallel()
+
+		encodedValue := `
+		{
+			"type":"Struct",
+			"value":{
+				"id":"I.Foo",
+				"fields":[]
+			}
+		}
+	`
+		_, err := json.Decode([]byte(encodedValue))
+		require.Error(t, err)
+		assert.Equal(t, "failed to decode value: invalid JSON Cadence structure. invalid type ID: `I.Foo`", err.Error())
+	})
+
+	t.Run("unknown location prefix", func(t *testing.T) {
+		t.Parallel()
+
+		encodedValue := `
+		{
+			"type":"Struct",
+			"value":{
+				"id":"N.PublicKey",
+				"fields":[]
+			}
+		}
+	`
+		_, err := json.Decode([]byte(encodedValue))
+		require.Error(t, err)
+		assert.Equal(t, "failed to decode value: invalid JSON Cadence structure. invalid type ID: `N.PublicKey`", err.Error())
+	})
 }
 
 func testEncodeAndDecode(t *testing.T, val cadence.Value, expectedJSON string) {
@@ -1317,8 +1394,8 @@ func testDecode(t *testing.T, actualJSON string, expectedVal cadence.Value) {
 }
 
 var fooResourceType = &cadence.ResourceType{
-	TypeID:     "S.test.Foo",
-	Identifier: "Foo",
+	Location:            utils.TestLocation,
+	QualifiedIdentifier: "Foo",
 	Fields: []cadence.Field{
 		{
 			Identifier: "bar",

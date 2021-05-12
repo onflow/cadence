@@ -24,6 +24,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/runtime/common"
 )
 
@@ -54,10 +55,10 @@ func TestRuntimeTypeStorage(t *testing.T) {
 
 	runtimeInterface := &testRuntimeInterface{
 		storage: newTestStorage(nil, nil),
-		getSigningAccounts: func() []Address {
+		getSigningAccounts: func() ([]Address, error) {
 			return []Address{
 				common.BytesToAddress([]byte{42}),
-			}
+			}, nil
 		},
 		log: func(message string) {
 			loggedMessage = message
@@ -66,11 +67,120 @@ func TestRuntimeTypeStorage(t *testing.T) {
 
 	nextTransactionLocation := newTransactionLocationGenerator()
 
-	err := runtime.ExecuteTransaction(tx1, nil, runtimeInterface, nextTransactionLocation())
+	err := runtime.ExecuteTransaction(
+		Script{
+			Source: tx1,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
 	require.NoError(t, err)
 
-	err = runtime.ExecuteTransaction(tx2, nil, runtimeInterface, nextTransactionLocation())
+	err = runtime.ExecuteTransaction(
+		Script{
+			Source: tx2,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
 	require.NoError(t, err)
 
 	assert.Equal(t, `"Int"`, loggedMessage)
+}
+
+func TestBlockTimestamp(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("transaction", func(t *testing.T) {
+
+		t.Parallel()
+
+		runtime := NewInterpreterRuntime()
+
+		script := []byte(`
+			transaction {
+				prepare() {
+					let block = getCurrentBlock()
+					var ts: UFix64 = block.timestamp
+					log(ts.isInstance(Type<UFix64>()))
+
+					var div: UFix64 = 4.0
+
+					// Shouldn't panic
+					var res = ts/div
+				}
+			}
+        `)
+
+		var loggedMessage string
+
+		runtimeInterface := &testRuntimeInterface{
+			getSigningAccounts: func() ([]Address, error) {
+				return nil, nil
+			},
+			log: func(message string) {
+				loggedMessage = message
+			},
+		}
+
+		nextTransactionLocation := newTransactionLocationGenerator()
+		err := runtime.ExecuteTransaction(
+			Script{
+				Source: script,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+		require.NoError(t, err)
+		assert.Equal(t, "true", loggedMessage, "Block.timestamp is not UFix64")
+
+	})
+
+	t.Run("script", func(t *testing.T) {
+
+		t.Parallel()
+
+		runtime := NewInterpreterRuntime()
+
+		script := []byte(`
+			pub fun main(): [UFix64] {
+				let block = getCurrentBlock()
+				var ts: UFix64 = block.timestamp
+
+				var div: UFix64 = 4.0
+
+				// Shouldn't panic
+				var res = ts/div
+
+				return [ts, res]
+			}
+        `)
+
+		value, err := runtime.ExecuteScript(
+			Script{
+				Source: script,
+			},
+			Context{
+				Interface: &testRuntimeInterface{},
+				Location:  common.ScriptLocation{},
+			},
+		)
+
+		require.NoError(t, err)
+		require.NotNil(t, value)
+
+		require.IsType(t, cadence.Array{}, value)
+		values := value.(cadence.Array).Values
+
+		require.Equal(t, 2, len(values))
+		assert.IsType(t, cadence.UFix64Type{}, values[0].Type())
+		assert.IsType(t, cadence.UFix64Type{}, values[1].Type())
+	})
 }

@@ -24,67 +24,9 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/onflow/cadence/runtime/common"
 )
-
-func TestIdentifierLocation_MarshalJSON(t *testing.T) {
-
-	t.Parallel()
-
-	loc := IdentifierLocation("test")
-
-	actual, err := json.Marshal(loc)
-	require.NoError(t, err)
-
-	assert.JSONEq(t,
-		`
-        {
-            "Type": "IdentifierLocation",
-            "Identifier": "test"
-        }
-        `,
-		string(actual),
-	)
-}
-
-func TestStringLocation_MarshalJSON(t *testing.T) {
-
-	t.Parallel()
-
-	loc := StringLocation("test")
-
-	actual, err := json.Marshal(loc)
-	require.NoError(t, err)
-
-	assert.JSONEq(t,
-		`
-        {
-            "Type": "StringLocation",
-            "String": "test"
-        }
-        `,
-		string(actual),
-	)
-}
-
-func TestAddressLocation_MarshalJSON(t *testing.T) {
-
-	t.Parallel()
-
-	loc := AddressLocation([]byte{1})
-
-	actual, err := json.Marshal(loc)
-	require.NoError(t, err)
-
-	assert.JSONEq(t,
-		`
-        {
-            "Type": "AddressLocation",
-            "Address": "0x1"
-        }
-        `,
-		string(actual),
-	)
-}
 
 func TestImportDeclaration_MarshalJSON(t *testing.T) {
 
@@ -97,7 +39,7 @@ func TestImportDeclaration_MarshalJSON(t *testing.T) {
 				Pos:        Position{Offset: 1, Line: 2, Column: 3},
 			},
 		},
-		Location:    StringLocation("test"),
+		Location:    common.StringLocation("test"),
 		LocationPos: Position{Offset: 4, Line: 5, Column: 6},
 		Range: Range{
 			StartPos: Position{Offset: 7, Line: 8, Column: 9},

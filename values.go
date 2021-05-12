@@ -79,8 +79,17 @@ func NewOptional(value Value) Optional {
 
 func (Optional) isValue() {}
 
-func (Optional) Type() Type {
-	return nil
+func (o Optional) Type() Type {
+	var innerType Type
+	if o.Value == nil {
+		innerType = NeverType{}
+	} else {
+		innerType = o.Value.Type()
+	}
+
+	return OptionalType{
+		Type: innerType,
+	}
 }
 
 func (o Optional) ToGoValue() interface{} {
@@ -938,11 +947,17 @@ func (v Dictionary) ToGoValue() interface{} {
 }
 
 func (v Dictionary) String() string {
-	pairs := make([]struct{Key string; Value string}, len(v.Pairs))
+	pairs := make([]struct {
+		Key   string
+		Value string
+	}, len(v.Pairs))
 
 	for i, pair := range v.Pairs {
-		pairs[i] = struct{Key string;Value string}{
-			Key: pair.Key.String(),
+		pairs[i] = struct {
+			Key   string
+			Value string
+		}{
+			Key:   pair.Key.String(),
 			Value: pair.Value.String(),
 		}
 	}
@@ -990,11 +1005,14 @@ func (v Struct) ToGoValue() interface{} {
 }
 
 func (v Struct) String() string {
-	return formatComposite(v.StructType.Identifier, v.StructType.Fields, v.Fields)
+	return formatComposite(v.StructType.ID(), v.StructType.Fields, v.Fields)
 }
 
 func formatComposite(typeID string, fields []Field, values []Value) string {
-	preparedFields := make([]struct{Name string; Value string}, 0, len(fields))
+	preparedFields := make([]struct {
+		Name  string
+		Value string
+	}, 0, len(fields))
 	for i, field := range fields {
 		value := values[i]
 		preparedFields = append(preparedFields,
@@ -1002,7 +1020,7 @@ func formatComposite(typeID string, fields []Field, values []Value) string {
 				Name  string
 				Value string
 			}{
-				Name: field.Identifier,
+				Name:  field.Identifier,
 				Value: value.String(),
 			},
 		)
@@ -1044,7 +1062,7 @@ func (v Resource) ToGoValue() interface{} {
 }
 
 func (v Resource) String() string {
-	return formatComposite(v.ResourceType.Identifier, v.ResourceType.Fields, v.Fields)
+	return formatComposite(v.ResourceType.ID(), v.ResourceType.Fields, v.Fields)
 }
 
 // Event
@@ -1079,7 +1097,7 @@ func (v Event) ToGoValue() interface{} {
 	return ret
 }
 func (v Event) String() string {
-	return formatComposite(v.EventType.Identifier, v.EventType.Fields, v.Fields)
+	return formatComposite(v.EventType.ID(), v.EventType.Fields, v.Fields)
 }
 
 // Contract
@@ -1115,7 +1133,7 @@ func (v Contract) ToGoValue() interface{} {
 }
 
 func (v Contract) String() string {
-	return formatComposite(v.ContractType.Identifier, v.ContractType.Fields, v.Fields)
+	return formatComposite(v.ContractType.ID(), v.ContractType.Fields, v.Fields)
 }
 
 // Link
@@ -1220,4 +1238,39 @@ func (v Capability) String() string {
 		v.Address.String(),
 		v.Path.String(),
 	)
+}
+
+// Enum
+type Enum struct {
+	EnumType *EnumType
+	Fields   []Value
+}
+
+func NewEnum(fields []Value) Enum {
+	return Enum{Fields: fields}
+}
+
+func (Enum) isValue() {}
+
+func (v Enum) Type() Type {
+	return v.EnumType
+}
+
+func (v Enum) WithType(typ *EnumType) Enum {
+	v.EnumType = typ
+	return v
+}
+
+func (v Enum) ToGoValue() interface{} {
+	ret := make([]interface{}, len(v.Fields))
+
+	for i, field := range v.Fields {
+		ret[i] = field.ToGoValue()
+	}
+
+	return ret
+}
+
+func (v Enum) String() string {
+	return formatComposite(v.EnumType.ID(), v.EnumType.Fields, v.Fields)
 }

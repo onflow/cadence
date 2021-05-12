@@ -1,3 +1,21 @@
+/*
+ * Cadence - The resource-oriented smart contract programming language
+ *
+ * Copyright 2019-2020 Dapper Labs, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package cadence
 
 import (
@@ -5,8 +23,10 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/runtime/sema"
+	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
 func TestStringer(t *testing.T) {
@@ -18,77 +38,80 @@ func TestStringer(t *testing.T) {
 		expected string
 	}
 
-
 	ufix64, _ := NewUFix64("64.01")
 	fix64, _ := NewFix64("-32.11")
 
 	stringerTests := map[string]testCase{
 		"UInt": {
-			value: NewUInt(10),
+			value:    NewUInt(10),
 			expected: "10",
 		},
 		"UInt8": {
-			value: NewUInt8(8),
+			value:    NewUInt8(8),
 			expected: "8",
 		},
 		"UInt16": {
-			value: NewUInt16(16),
+			value:    NewUInt16(16),
 			expected: "16",
 		},
 		"UInt32": {
-			value: NewUInt32(32),
+			value:    NewUInt32(32),
 			expected: "32",
 		},
 		"UInt64": {
-			value: NewUInt64(64),
+			value:    NewUInt64(64),
 			expected: "64",
 		},
 		"UInt128": {
-			value: NewUInt128(128),
+			value:    NewUInt128(128),
 			expected: "128",
 		},
 		"UInt256": {
-			value: NewUInt256(256),
+			value:    NewUInt256(256),
 			expected: "256",
 		},
+		"Int": {
+			value:    NewInt(1000000),
+			expected: "1000000",
+		},
 		"Int8": {
-			value: NewInt8(-8),
+			value:    NewInt8(-8),
 			expected: "-8",
 		},
 		"Int16": {
-			value: NewInt16(-16),
+			value:    NewInt16(-16),
 			expected: "-16",
 		},
 		"Int32": {
-			value: NewInt32(-32),
+			value:    NewInt32(-32),
 			expected: "-32",
 		},
 		"Int64": {
-			value: NewInt64(-64),
+			value:    NewInt64(-64),
 			expected: "-64",
 		},
 		"Int128": {
-			value: NewInt128(-128),
+			value:    NewInt128(-128),
 			expected: "-128",
 		},
 		"Int256": {
-			value: NewInt256(-256),
+			value:    NewInt256(-256),
 			expected: "-256",
 		},
 		"Word8": {
-			value: NewWord8(8),
+			value:    NewWord8(8),
 			expected: "8",
 		},
 		"Word16": {
-			value: NewWord16(16),
+			value:    NewWord16(16),
 			expected: "16",
 		},
 		"Word32": {
-			value: NewWord32(32),
+			value:    NewWord32(32),
 			expected: "32",
 		},
 		"Word64": {
-			value: NewWord64(64),
+			value:    NewWord64(64),
 			expected: "64",
 		},
 		"UFix64": {
@@ -100,27 +123,27 @@ func TestStringer(t *testing.T) {
 			expected: "-32.11000000",
 		},
 		"Void": {
-			value: NewVoid(),
+			value:    NewVoid(),
 			expected: "()",
 		},
 		"true": {
-			value: NewBool(true),
+			value:    NewBool(true),
 			expected: "true",
 		},
 		"false": {
-			value: NewBool(false),
+			value:    NewBool(false),
 			expected: "false",
 		},
 		"some": {
-			value: NewOptional(ufix64),
+			value:    NewOptional(ufix64),
 			expected: "64.01000000",
 		},
 		"nil": {
-			value: NewOptional(nil),
+			value:    NewOptional(nil),
 			expected: "nil",
 		},
 		"String": {
-			value: NewString("Flow ridah!"),
+			value:    NewString("Flow ridah!"),
 			expected: "\"Flow ridah!\"",
 		},
 		"Array": {
@@ -133,24 +156,24 @@ func TestStringer(t *testing.T) {
 		"Dictionary": {
 			value: NewDictionary([]KeyValuePair{
 				{
-					Key: NewString("key"),
+					Key:   NewString("key"),
 					Value: NewString("value"),
 				},
 			}),
 			expected: "{\"key\": \"value\"}",
 		},
 		"Bytes": {
-			value: NewBytes([]byte{0x1, 0x2}),
+			value:    NewBytes([]byte{0x1, 0x2}),
 			expected: "[0x1, 0x2]",
 		},
 		"Address": {
-			value: NewAddress([8]byte{0, 0, 0, 0, 0, 0, 0, 1}),
+			value:    NewAddress([8]byte{0, 0, 0, 0, 0, 0, 0, 1}),
 			expected: "0x1",
 		},
 		"struct": {
 			value: NewStruct([]Value{NewString("bar")}).WithType(&StructType{
-				TypeID:     "S.test.Foo",
-				Identifier: "Foo",
+				Location:            utils.TestLocation,
+				QualifiedIdentifier: "FooStruct",
 				Fields: []Field{
 					{
 						Identifier: "y",
@@ -158,12 +181,12 @@ func TestStringer(t *testing.T) {
 					},
 				},
 			}),
-			expected: "Foo(y: \"bar\")",
+			expected: "S.test.FooStruct(y: \"bar\")",
 		},
 		"resource": {
 			value: NewResource([]Value{NewInt(1)}).WithType(&ResourceType{
-				TypeID:     "S.test.Foo",
-				Identifier: "FooResource",
+				Location:            utils.TestLocation,
+				QualifiedIdentifier: "FooResource",
 				Fields: []Field{
 					{
 						Identifier: "bar",
@@ -171,7 +194,7 @@ func TestStringer(t *testing.T) {
 					},
 				},
 			}),
-			expected: "FooResource(bar: 1)",
+			expected: "S.test.FooResource(bar: 1)",
 		},
 		"event": {
 			value: NewEvent(
@@ -180,8 +203,8 @@ func TestStringer(t *testing.T) {
 					NewString("foo"),
 				},
 			).WithType(&EventType{
-				TypeID:     "S.test.FooEvent",
-				Identifier: "FooEvent",
+				Location:            utils.TestLocation,
+				QualifiedIdentifier: "FooEvent",
 				Fields: []Field{
 					{
 						Identifier: "a",
@@ -193,12 +216,12 @@ func TestStringer(t *testing.T) {
 					},
 				},
 			}),
-			expected: "FooEvent(a: 1, b: \"foo\")",
+			expected: "S.test.FooEvent(a: 1, b: \"foo\")",
 		},
 		"contract": {
 			value: NewContract([]Value{NewString("bar")}).WithType(&ContractType{
-				TypeID:     "S.test.FooContract",
-				Identifier: "FooContract",
+				Location:            utils.TestLocation,
+				QualifiedIdentifier: "FooContract",
 				Fields: []Field{
 					{
 						Identifier: "y",
@@ -206,12 +229,12 @@ func TestStringer(t *testing.T) {
 					},
 				},
 			}),
-			expected: "FooContract(y: \"bar\")",
+			expected: "S.test.FooContract(y: \"bar\")",
 		},
 		"Link": {
 			value: NewLink(
 				Path{
-					Domain: "storage",
+					Domain:     "storage",
 					Identifier: "foo",
 				},
 				"Int",
@@ -220,13 +243,13 @@ func TestStringer(t *testing.T) {
 		},
 		"Path": {
 			value: Path{
-				Domain: "storage",
+				Domain:     "storage",
 				Identifier: "foo",
 			},
 			expected: "/storage/foo",
 		},
 		"Type": {
-			value: TypeValue{StaticType: "Int"},
+			value:    TypeValue{StaticType: "Int"},
 			expected: "Type<Int>()",
 		},
 		"Capability": {
@@ -239,7 +262,7 @@ func TestStringer(t *testing.T) {
 		},
 	}
 
-	test := func (name string, testCase testCase) {
+	test := func(name string, testCase testCase) {
 
 		t.Run(name, func(t *testing.T) {
 
@@ -420,10 +443,10 @@ func TestToBigEndianBytes(t *testing.T) {
 	// Ensure the test cases are complete
 
 	for _, integerType := range sema.AllNumberTypes {
-		switch integerType.(type) {
-		case *sema.NumberType, *sema.SignedNumberType,
-			*sema.IntegerType, *sema.SignedIntegerType,
-			*sema.FixedPointType, *sema.SignedFixedPointType:
+		switch integerType {
+		case sema.NumberType, sema.SignedNumberType,
+			sema.IntegerType, sema.SignedIntegerType,
+			sema.FixedPointType, sema.SignedFixedPointType:
 			continue
 		}
 
@@ -445,4 +468,29 @@ func TestToBigEndianBytes(t *testing.T) {
 			})
 		}
 	}
+}
+
+func TestOptional_Type(t *testing.T) {
+
+	t.Run("none", func(t *testing.T) {
+
+		require.Equal(t,
+			OptionalType{
+				Type: NeverType{},
+			},
+			Optional{}.Type(),
+		)
+	})
+
+	t.Run("some", func(t *testing.T) {
+
+		require.Equal(t,
+			OptionalType{
+				Type: Int8Type{},
+			},
+			Optional{
+				Value: Int8(2),
+			}.Type(),
+		)
+	})
 }

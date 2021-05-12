@@ -24,35 +24,53 @@ import (
 	"io"
 	"math"
 	"math/big"
+	"math/bits"
 	"strconv"
+	"strings"
 
 	"github.com/fxamacker/cbor/v2"
 
-	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/common/orderedmap"
 	"github.com/onflow/cadence/runtime/sema"
 )
 
-// A Decoder decodes CBOR-encoded representations of values.
+type DecodingCallback func(value interface{}, path []string)
+
+// A DecoderV4 decodes CBOR-encoded representations of values.
+// It can decode storage format version 4 and later.
 //
-type Decoder struct {
-	decoder *cbor.Decoder
-	owner   *common.Address
-	version uint16
+type DecoderV4 struct {
+	decoder        *cbor.Decoder
+	owner          *common.Address
+	version        uint16
+	decodeCallback DecodingCallback
 }
 
-// Decode returns a value decoded from its CBOR-encoded representation,
-// for the given owner (can be `nil`).
+// maxInt is math.MaxInt32 or math.MaxInt64 depending on arch.
+const maxInt = 1<<(bits.UintSize-1) - 1
+
+// DecodeValue returns a value decoded from its CBOR-encoded representation,
+// for the given owner (can be `nil`).  It can decode storage format
+// version 4 and later.
 //
 // The given path is used to identify values in the object graph.
 // For example, path elements are appended for array elements (the index),
 // dictionary values (the key), and composites (the field name).
 //
-func DecodeValue(b []byte, owner *common.Address, path []string, version uint16) (Value, error) {
+func DecodeValue(
+	data []byte,
+	owner *common.Address,
+	path []string,
+	version uint16,
+	decodeCallback DecodingCallback,
+) (
+	Value,
+	error,
+) {
+	reader := bytes.NewReader(data)
 
-	reader := bytes.NewReader(b)
-
-	decoder, err := NewDecoder(reader, owner, version)
+	decoder, err := NewDecoder(reader, owner, version, decodeCallback)
 	if err != nil {
 		return nil, err
 	}
@@ -65,36 +83,44 @@ func DecodeValue(b []byte, owner *common.Address, path []string, version uint16)
 	return v, nil
 }
 
-// NewDecoder initializes a Decoder that will decode CBOR-encoded bytes from the
+// NewDecoder initializes a DecoderV4 that will decode CBOR-encoded bytes from the
 // given io.Reader.
 //
 // It sets the given address as the owner (can be `nil`).
 //
-func NewDecoder(r io.Reader, owner *common.Address, version uint16) (*Decoder, error) {
-	dm, err := decMode()
-	if err != nil {
-		return nil, err
-	}
-
-	return &Decoder{
-		decoder: dm.NewDecoder(r),
-		owner:   owner,
-		version: version,
+func NewDecoder(
+	reader io.Reader,
+	owner *common.Address,
+	version uint16,
+	decodeCallback DecodingCallback,
+) (
+	*DecoderV4,
+	error,
+) {
+	return &DecoderV4{
+		decoder:        decMode.NewDecoder(reader),
+		owner:          owner,
+		version:        version,
+		decodeCallback: decodeCallback,
 	}, nil
 }
 
-func decMode() (cbor.DecMode, error) {
-	return cbor.DecOptions{
+var decMode = func() cbor.DecMode {
+	decMode, err := cbor.DecOptions{
 		IntDec:           cbor.IntDecConvertNone,
-		MaxArrayElements: 512 * 1024,
-		MaxMapPairs:      512 * 1024,
-		MaxNestedLevels:  256,
+		MaxArrayElements: maxInt,
+		MaxMapPairs:      maxInt,
+		MaxNestedLevels:  math.MaxInt16,
 	}.DecMode()
-}
+	if err != nil {
+		panic(err)
+	}
+	return decMode
+}()
 
 // Decode reads CBOR-encoded bytes from the io.Reader and decodes them to a value.
 //
-func (d *Decoder) Decode(path []string) (Value, error) {
+func (d *DecoderV4) Decode(path []string) (Value, error) {
 	var v interface{}
 	err := d.decoder.Decode(&v)
 	if err != nil {
@@ -104,7 +130,12 @@ func (d *Decoder) Decode(path []string) (Value, error) {
 	return d.decodeValue(v, path)
 }
 
-func (d *Decoder) decodeValue(v interface{}, path []string) (Value, error) {
+func (d *DecoderV4) decodeValue(v interface{}, path []string) (Value, error) {
+
+	if d.decodeCallback != nil {
+		d.decodeCallback(v, path)
+	}
+
 	switch v := v.(type) {
 
 	// CBOR Types
@@ -217,9 +248,6 @@ func (d *Decoder) decodeValue(v interface{}, path []string) (Value, error) {
 		case cborTagCapabilityValue:
 			return d.decodeCapability(v.Content)
 
-		case cborTagStorageReferenceValue:
-			return d.decodeStorageReference(v.Content)
-
 		case cborTagLinkValue:
 			return d.decodeLink(v.Content)
 
@@ -227,27 +255,48 @@ func (d *Decoder) decodeValue(v interface{}, path []string) (Value, error) {
 			return d.decodeType(v.Content)
 
 		default:
-			return nil, fmt.Errorf("unsupported decoded tag: %d, %v", v.Number, v.Content)
+			return nil, fmt.Errorf(
+				"unsupported decoded tag (@ %s): %d, %v",
+				strings.Join(path, "."),
+				v.Number,
+				v.Content,
+			)
 		}
 
 	default:
-		return nil, fmt.Errorf("unsupported decoded type: %[1]T, %[1]v", v)
+		return nil, fmt.Errorf(
+			"unsupported decoded type (@ %s): %[2]T, %[2]v",
+			strings.Join(path, "."),
+			v,
+		)
 	}
 }
 
-func (d *Decoder) decodeString(v string) Value {
+func (d *DecoderV4) decodeString(v string) Value {
 	value := NewStringValue(v)
 	value.modified = false
 	return value
 }
 
-func (d *Decoder) decodeArray(v []interface{}, path []string) (*ArrayValue, error) {
+func (d *DecoderV4) decodeArray(v []interface{}, path []string) (*ArrayValue, error) {
 	values := make([]Value, len(v))
+
+	// Pre-allocate and reuse valuePath.
+	valuePath := append(path, "")
+
+	lastValuePathIndex := len(path)
+
 	for i, value := range v {
-		valuePath := append(path[:], strconv.Itoa(i))
+		valuePath[lastValuePathIndex] = strconv.Itoa(i)
+
 		res, err := d.decodeValue(value, valuePath)
 		if err != nil {
-			return nil, fmt.Errorf("invalid array element encoding: %w", err)
+			return nil, fmt.Errorf(
+				"invalid array element encoding (@ %s, %d): %w",
+				strings.Join(path, "."),
+				i,
+				err,
+			)
 		}
 		values[i] = res
 	}
@@ -259,26 +308,45 @@ func (d *Decoder) decodeArray(v []interface{}, path []string) (*ArrayValue, erro
 	}, nil
 }
 
-func (d *Decoder) decodeDictionary(v interface{}, path []string) (*DictionaryValue, error) {
-	encoded, ok := v.(map[interface{}]interface{})
-	if !ok {
-		return nil, fmt.Errorf("invalid dictionary encoding: %T", v)
+func (d *DecoderV4) decodeDictionary(v interface{}, path []string) (*DictionaryValue, error) {
+	encoded, ok := v.(cborArray)
+	const expectedLength = encodedDictionaryValueLength
+	if !ok || len(encoded) != expectedLength {
+		return nil, fmt.Errorf("invalid dictionary encoding (@ %s): expected [%d]interface{}, got %T",
+			strings.Join(path, "."),
+			expectedLength,
+			v,
+		)
 	}
 
-	encodedKeys, ok := encoded[encodedDictionaryValueKeysFieldKey].([]interface{})
+	keysField := encoded[encodedDictionaryValueKeysFieldKey]
+	encodedKeys, ok := keysField.(cborArray)
 	if !ok {
-		return nil, fmt.Errorf("invalid dictionary keys encoding")
+		return nil, fmt.Errorf(
+			"invalid dictionary keys encoding (@ %s): %T",
+			strings.Join(path, "."),
+			keysField,
+		)
 	}
 
-	keysPath := append(path[:], dictionaryKeyPathPrefix)
+	keysPath := append(path, dictionaryKeyPathPrefix)
 	keys, err := d.decodeArray(encodedKeys, keysPath)
 	if err != nil {
-		return nil, fmt.Errorf("invalid dictionary keys encoding: %w", err)
+		return nil, fmt.Errorf(
+			"invalid dictionary keys encoding (@ %s): %w",
+			strings.Join(path, "."),
+			err,
+		)
 	}
 
-	encodedEntries, ok := encoded[encodedDictionaryValueEntriesFieldKey].(map[interface{}]interface{})
+	entriesField := encoded[encodedDictionaryValueEntriesFieldKey]
+	encodedEntries, ok := entriesField.(cborArray)
 	if !ok {
-		return nil, fmt.Errorf("invalid dictionary entries encoding")
+		return nil, fmt.Errorf(
+			"invalid dictionary entries encoding (@ %s): %T",
+			strings.Join(path, "."),
+			entriesField,
+		)
 	}
 
 	keyCount := keys.Count()
@@ -290,15 +358,18 @@ func (d *Decoder) decodeDictionary(v interface{}, path []string) (*DictionaryVal
 	countMismatch := entryCount != keyCount
 	if countMismatch && entryCount != 0 {
 		return nil, fmt.Errorf(
-			"invalid dictionary encoding: key and entry count mismatch: expected %d, got %d",
+			"invalid dictionary encoding (@ %s): key and entry count mismatch: expected %d, got %d",
+			strings.Join(path, "."),
 			keyCount,
 			entryCount,
 		)
 	}
 
-	var entries map[string]Value
-	var deferred map[string]string
+	entries := NewStringValueOrderedMap()
+
+	var deferred *orderedmap.StringStructOrderedMap
 	var deferredOwner *common.Address
+	var deferredStorageKeyBase string
 
 	// Are the values in the dictionary deferred, i.e. are they encoded
 	// separately and stored in separate storage keys?
@@ -307,45 +378,67 @@ func (d *Decoder) decodeDictionary(v interface{}, path []string) (*DictionaryVal
 
 	if isDeferred {
 
-		deferred = make(map[string]string, keyCount)
-		entries = map[string]Value{}
+		deferred = orderedmap.NewStringStructOrderedMap()
 		deferredOwner = d.owner
+		deferredStorageKeyBase = joinPath(append(path, dictionaryValuePathPrefix))
 		for _, keyValue := range keys.Values {
 			key := dictionaryKey(keyValue)
-			deferred[key] = joinPath(append(path[:], dictionaryValuePathPrefix, key))
+			deferred.Set(key, struct{}{})
 		}
 
 	} else {
-		entries = make(map[string]Value, entryCount)
 
-		for key, value := range encodedEntries {
+		// Pre-allocate and reuse valuePath.
+		valuePath := append(path, dictionaryValuePathPrefix, "")
 
-			keyString, ok := key.(string)
+		lastValuePathIndex := len(path) + 1
+
+		keyIndex := 0
+
+		for _, keyValue := range keys.Values {
+			keyStringValue, ok := keyValue.(HasKeyString)
 			if !ok {
-				return nil, fmt.Errorf("invalid dictionary key encoding")
+				return nil, fmt.Errorf(
+					"invalid dictionary key encoding (@ %s, %d): %T",
+					strings.Join(path, "."),
+					keyIndex,
+					keyValue,
+				)
 			}
 
-			valuePath := append(path[:], dictionaryValuePathPrefix, keyString)
+			keyString := keyStringValue.KeyString()
+			valuePath[lastValuePathIndex] = keyString
+
+			value := encodedEntries[keyIndex]
+
 			decodedValue, err := d.decodeValue(value, valuePath)
 			if err != nil {
-				return nil, fmt.Errorf("invalid dictionary value encoding: %w", err)
+				return nil, fmt.Errorf(
+					"invalid dictionary value encoding (@ %s, %s): %w",
+					strings.Join(path, "."),
+					keyString,
+					err,
+				)
 			}
 
-			entries[keyString] = decodedValue
+			entries.Set(keyString, decodedValue)
+
+			keyIndex++
 		}
 	}
 
 	return &DictionaryValue{
-		Keys:          keys,
-		Entries:       entries,
-		Owner:         d.owner,
-		modified:      false,
-		DeferredOwner: deferredOwner,
-		DeferredKeys:  deferred,
+		Keys:                   keys,
+		Entries:                entries,
+		Owner:                  d.owner,
+		modified:               false,
+		DeferredOwner:          deferredOwner,
+		DeferredKeys:           deferred,
+		DeferredStorageKeyBase: deferredStorageKeyBase,
 	}, nil
 }
 
-func (d *Decoder) decodeLocation(l interface{}) (ast.Location, error) {
+func (d *DecoderV4) decodeLocation(l interface{}) (common.Location, error) {
 	tag, ok := l.(cbor.Tag)
 	if !ok {
 		return nil, fmt.Errorf("invalid location encoding: %T", l)
@@ -363,56 +456,43 @@ func (d *Decoder) decodeLocation(l interface{}) (ast.Location, error) {
 	case cborTagIdentifierLocation:
 		return d.decodeIdentifierLocation(content)
 
-	case cborTagAddressContractLocation:
-		return d.decodeAddressContractLocation(content)
-
 	default:
 		return nil, fmt.Errorf("invalid location encoding tag: %d", tag.Number)
 	}
 }
 
-func (d *Decoder) decodeAddressLocation(v interface{}) (ast.Location, error) {
-	b, ok := v.([]byte)
-	if !ok {
-		return nil, fmt.Errorf("invalid address location encoding: %T", v)
-	}
-
-	err := d.checkAddressLength(b)
-	if err != nil {
-		return nil, err
-	}
-
-	return ast.AddressLocation(b), nil
-}
-
-func (d *Decoder) decodeStringLocation(v interface{}) (ast.Location, error) {
+func (d *DecoderV4) decodeStringLocation(v interface{}) (common.Location, error) {
 	s, ok := v.(string)
 	if !ok {
 		return nil, fmt.Errorf("invalid string location encoding: %T", v)
 	}
-	return ast.StringLocation(s), nil
+	return common.StringLocation(s), nil
 }
 
-func (d *Decoder) decodeIdentifierLocation(v interface{}) (ast.Location, error) {
+func (d *DecoderV4) decodeIdentifierLocation(v interface{}) (common.Location, error) {
 	s, ok := v.(string)
 	if !ok {
 		return nil, fmt.Errorf("invalid identifier location encoding: %T", v)
 	}
-	return ast.IdentifierLocation(s), nil
+	return common.IdentifierLocation(s), nil
 }
 
-func (d *Decoder) decodeAddressContractLocation(v interface{}) (ast.Location, error) {
-	encoded, ok := v.(map[interface{}]interface{})
-	if !ok {
-		return nil, fmt.Errorf("invalid address contract location encoding: %T", v)
+func (d *DecoderV4) decodeAddressLocation(v interface{}) (common.Location, error) {
+	encoded, ok := v.(cborArray)
+	const expectedLength = encodedAddressLocationLength
+	if !ok || len(encoded) != expectedLength {
+		return nil, fmt.Errorf("invalid address location encoding: expected [%d]interface{}, got %T",
+			expectedLength,
+			v,
+		)
 	}
 
 	// Address
 
-	field1 := encoded[encodedAddressContractLocationAddressFieldKey]
+	field1 := encoded[encodedAddressLocationAddressFieldKey]
 	encodedAddress, ok := field1.([]byte)
 	if !ok {
-		return nil, fmt.Errorf("invalid address contract location address encoding: %T", field1)
+		return nil, fmt.Errorf("invalid address location address encoding: %T", field1)
 	}
 
 	err := d.checkAddressLength(encodedAddress)
@@ -422,104 +502,140 @@ func (d *Decoder) decodeAddressContractLocation(v interface{}) (ast.Location, er
 
 	// Name
 
-	field2 := encoded[encodedAddressContractLocationNameFieldKey]
+	field2 := encoded[encodedAddressLocationNameFieldKey]
 	name, ok := field2.(string)
 	if !ok {
-		return nil, fmt.Errorf("invalid address contract location name encoding: %T", field2)
+		return nil, fmt.Errorf("invalid address location name encoding: %T", field2)
 	}
 
-	return ast.AddressContractLocation{
-		AddressLocation: encodedAddress,
-		Name:            name,
+	return common.AddressLocation{
+		Address: common.BytesToAddress(encodedAddress),
+		Name:    name,
 	}, nil
 }
 
-func (d *Decoder) decodeComposite(v interface{}, path []string) (*CompositeValue, error) {
-
-	encoded, ok := v.(map[interface{}]interface{})
-	if !ok {
-		return nil, fmt.Errorf("invalid composite encoding: %T", v)
+func (d *DecoderV4) decodeComposite(v interface{}, path []string) (*CompositeValue, error) {
+	encoded, ok := v.(cborArray)
+	const expectedLength = encodedCompositeValueLength
+	if !ok || len(encoded) != expectedLength {
+		return nil, fmt.Errorf("invalid composite encoding (@ %s): expected [%d]interface{}, got %T",
+			strings.Join(path, "."),
+			expectedLength,
+			v,
+		)
 	}
 
 	// Location
 
 	location, err := d.decodeLocation(encoded[encodedCompositeValueLocationFieldKey])
 	if err != nil {
-		return nil, fmt.Errorf("invalid composite location encoding: %w", err)
+		return nil, fmt.Errorf(
+			"invalid composite location encoding (@ %s): %w",
+			strings.Join(path, "."),
+			err,
+		)
 	}
 
-	// Type ID
+	// Qualified identifier
 
-	field2 := encoded[encodedCompositeValueTypeIDFieldKey]
-	encodedTypeID, ok := field2.(string)
+	qualifiedIdentifierField := encoded[encodedCompositeValueQualifiedIdentifierFieldKey]
+	qualifiedIdentifier, ok := qualifiedIdentifierField.(string)
 	if !ok {
-		return nil, fmt.Errorf("invalid composite type ID encoding: %T", field2)
+		return nil, fmt.Errorf(
+			"invalid composite qualified identifier encoding (@ %s): %T",
+			strings.Join(path, "."),
+			qualifiedIdentifierField,
+		)
 	}
-	typeID := sema.TypeID(encodedTypeID)
 
 	// Kind
 
-	field3 := encoded[encodedCompositeValueKindFieldKey]
-	encodedKind, ok := field3.(uint64)
+	kindField := encoded[encodedCompositeValueKindFieldKey]
+	encodedKind, ok := kindField.(uint64)
 	if !ok {
-		return nil, fmt.Errorf("invalid composite kind encoding: %T", field3)
+		return nil, fmt.Errorf(
+			"invalid composite kind encoding (@ %s): %T",
+			strings.Join(path, "."),
+			kindField,
+		)
 	}
 	kind := common.CompositeKind(encodedKind)
 
 	// Fields
 
-	field4 := encoded[encodedCompositeValueFieldsFieldKey]
-	encodedFields, ok := field4.(map[interface{}]interface{})
+	fieldsField := encoded[encodedCompositeValueFieldsFieldKey]
+	encodedFields, ok := fieldsField.(cborArray)
 	if !ok {
-		return nil, fmt.Errorf("invalid composite fields encoding")
+		return nil, fmt.Errorf(
+			"invalid composite fields encoding (@ %s): %T",
+			strings.Join(path, "."),
+			fieldsField,
+		)
 	}
 
-	fields := make(map[string]Value, len(encodedFields))
+	if len(encodedFields)%2 == 1 {
+		return nil, fmt.Errorf(
+			"invalid composite fields encoding (@ %s): fields should have even number of elements: got %d",
+			strings.Join(path, "."),
+			len(encodedFields),
+		)
+	}
 
-	for name, value := range encodedFields {
-		nameString, ok := name.(string)
+	fields := NewStringValueOrderedMap()
+
+	// Pre-allocate and reuse valuePath.
+	valuePath := append(path, "")
+
+	lastValuePathIndex := len(path)
+
+	for i := 0; i < len(encodedFields); i += 2 {
+
+		// field name
+		fieldName, ok := encodedFields[i].(string)
 		if !ok {
-			return nil, fmt.Errorf("invalid dictionary field name encoding: %T", name)
+			return nil, fmt.Errorf(
+				"invalid composite field name encoding (@ %s, %d): %T",
+				strings.Join(path, "."),
+				i/2,
+				encodedFields[i],
+			)
 		}
-		valuePath := append(path[:], nameString)
+
+		// field value
+		value := encodedFields[i+1]
+
+		valuePath[lastValuePathIndex] = fieldName
+
 		decodedValue, err := d.decodeValue(value, valuePath)
 		if err != nil {
-			return nil, fmt.Errorf("invalid dictionary field value encoding: %w", err)
+			return nil, fmt.Errorf(
+				"invalid composite field value encoding (@ %s, %s): %w",
+				strings.Join(path, "."),
+				fieldName,
+				err,
+			)
 		}
 
-		fields[nameString] = decodedValue
+		fields.Set(fieldName, decodedValue)
 	}
 
-	compositeValue := NewCompositeValue(location, typeID, kind, fields, d.owner)
+	compositeValue := NewCompositeValue(location, qualifiedIdentifier, kind, fields, d.owner)
 	compositeValue.modified = false
 	return compositeValue, nil
 }
 
 var bigOne = big.NewInt(1)
 
-func (d *Decoder) decodeBig(v interface{}) (*big.Int, error) {
+func (d *DecoderV4) decodeBig(v interface{}) (*big.Int, error) {
 	bigInt, ok := v.(big.Int)
 	if !ok {
 		return nil, fmt.Errorf("invalid bignum encoding: %T", v)
 	}
 
-	// The encoding of negative bignums is specified in
-	// https://tools.ietf.org/html/rfc7049#section-2.4.2:
-	// "For tag value 3, the value of the bignum is -1 - n."
-	//
-	// Negative bignums were encoded incorrectly in version < 2,
-	// as just -n.
-	//
-	// Fix this by adjusting by one.
-
-	if bigInt.Sign() < 0 && d.version < 2 {
-		bigInt.Add(&bigInt, bigOne)
-	}
-
 	return &bigInt, nil
 }
 
-func (d *Decoder) decodeInt(v interface{}) (IntValue, error) {
+func (d *DecoderV4) decodeInt(v interface{}) (IntValue, error) {
 	bigInt, err := d.decodeBig(v)
 	if err != nil {
 		return IntValue{}, fmt.Errorf("invalid Int encoding: %w", err)
@@ -528,7 +644,7 @@ func (d *Decoder) decodeInt(v interface{}) (IntValue, error) {
 	return NewIntValueFromBigInt(bigInt), nil
 }
 
-func (d *Decoder) decodeInt8(v interface{}) (Int8Value, error) {
+func (d *DecoderV4) decodeInt8(v interface{}) (Int8Value, error) {
 	switch v := v.(type) {
 	case uint64:
 		const max = math.MaxInt8
@@ -553,7 +669,7 @@ func (d *Decoder) decodeInt8(v interface{}) (Int8Value, error) {
 	}
 }
 
-func (d *Decoder) decodeInt16(v interface{}) (Int16Value, error) {
+func (d *DecoderV4) decodeInt16(v interface{}) (Int16Value, error) {
 	switch v := v.(type) {
 	case uint64:
 		const max = math.MaxInt16
@@ -578,7 +694,7 @@ func (d *Decoder) decodeInt16(v interface{}) (Int16Value, error) {
 	}
 }
 
-func (d *Decoder) decodeInt32(v interface{}) (Int32Value, error) {
+func (d *DecoderV4) decodeInt32(v interface{}) (Int32Value, error) {
 	switch v := v.(type) {
 	case uint64:
 		const max = math.MaxInt32
@@ -603,7 +719,7 @@ func (d *Decoder) decodeInt32(v interface{}) (Int32Value, error) {
 	}
 }
 
-func (d *Decoder) decodeInt64(v interface{}) (Int64Value, error) {
+func (d *DecoderV4) decodeInt64(v interface{}) (Int64Value, error) {
 	switch v := v.(type) {
 	case uint64:
 		const max = math.MaxInt64
@@ -620,7 +736,7 @@ func (d *Decoder) decodeInt64(v interface{}) (Int64Value, error) {
 	}
 }
 
-func (d *Decoder) decodeInt128(v interface{}) (Int128Value, error) {
+func (d *DecoderV4) decodeInt128(v interface{}) (Int128Value, error) {
 	bigInt, err := d.decodeBig(v)
 	if err != nil {
 		return Int128Value{}, fmt.Errorf("invalid Int encoding: %w", err)
@@ -639,7 +755,7 @@ func (d *Decoder) decodeInt128(v interface{}) (Int128Value, error) {
 	return NewInt128ValueFromBigInt(bigInt), nil
 }
 
-func (d *Decoder) decodeInt256(v interface{}) (Int256Value, error) {
+func (d *DecoderV4) decodeInt256(v interface{}) (Int256Value, error) {
 	bigInt, err := d.decodeBig(v)
 	if err != nil {
 		return Int256Value{}, fmt.Errorf("invalid Int encoding: %w", err)
@@ -658,7 +774,7 @@ func (d *Decoder) decodeInt256(v interface{}) (Int256Value, error) {
 	return NewInt256ValueFromBigInt(bigInt), nil
 }
 
-func (d *Decoder) decodeUInt(v interface{}) (UIntValue, error) {
+func (d *DecoderV4) decodeUInt(v interface{}) (UIntValue, error) {
 	bigInt, err := d.decodeBig(v)
 	if err != nil {
 		return UIntValue{}, fmt.Errorf("invalid UInt encoding: %w", err)
@@ -671,7 +787,7 @@ func (d *Decoder) decodeUInt(v interface{}) (UIntValue, error) {
 	return NewUIntValueFromBigInt(bigInt), nil
 }
 
-func (d *Decoder) decodeUInt8(v interface{}) (UInt8Value, error) {
+func (d *DecoderV4) decodeUInt8(v interface{}) (UInt8Value, error) {
 	value, ok := v.(uint64)
 	if !ok {
 		return 0, fmt.Errorf("unknown UInt8 encoding: %T", v)
@@ -683,7 +799,7 @@ func (d *Decoder) decodeUInt8(v interface{}) (UInt8Value, error) {
 	return UInt8Value(value), nil
 }
 
-func (d *Decoder) decodeUInt16(v interface{}) (UInt16Value, error) {
+func (d *DecoderV4) decodeUInt16(v interface{}) (UInt16Value, error) {
 	value, ok := v.(uint64)
 	if !ok {
 		return 0, fmt.Errorf("unknown UInt16 encoding: %T", v)
@@ -695,7 +811,7 @@ func (d *Decoder) decodeUInt16(v interface{}) (UInt16Value, error) {
 	return UInt16Value(value), nil
 }
 
-func (d *Decoder) decodeUInt32(v interface{}) (UInt32Value, error) {
+func (d *DecoderV4) decodeUInt32(v interface{}) (UInt32Value, error) {
 	value, ok := v.(uint64)
 	if !ok {
 		return 0, fmt.Errorf("unknown UInt32 encoding: %T", v)
@@ -707,7 +823,7 @@ func (d *Decoder) decodeUInt32(v interface{}) (UInt32Value, error) {
 	return UInt32Value(value), nil
 }
 
-func (d *Decoder) decodeUInt64(v interface{}) (UInt64Value, error) {
+func (d *DecoderV4) decodeUInt64(v interface{}) (UInt64Value, error) {
 	value, ok := v.(uint64)
 	if !ok {
 		return 0, fmt.Errorf("unknown UInt64 encoding: %T", v)
@@ -715,7 +831,7 @@ func (d *Decoder) decodeUInt64(v interface{}) (UInt64Value, error) {
 	return UInt64Value(value), nil
 }
 
-func (d *Decoder) decodeUInt128(v interface{}) (UInt128Value, error) {
+func (d *DecoderV4) decodeUInt128(v interface{}) (UInt128Value, error) {
 	bigInt, err := d.decodeBig(v)
 	if err != nil {
 		return UInt128Value{}, fmt.Errorf("invalid Int encoding: %w", err)
@@ -733,7 +849,7 @@ func (d *Decoder) decodeUInt128(v interface{}) (UInt128Value, error) {
 	return NewUInt128ValueFromBigInt(bigInt), nil
 }
 
-func (d *Decoder) decodeUInt256(v interface{}) (UInt256Value, error) {
+func (d *DecoderV4) decodeUInt256(v interface{}) (UInt256Value, error) {
 	bigInt, err := d.decodeBig(v)
 	if err != nil {
 		return UInt256Value{}, fmt.Errorf("invalid Int encoding: %w", err)
@@ -751,7 +867,7 @@ func (d *Decoder) decodeUInt256(v interface{}) (UInt256Value, error) {
 	return NewUInt256ValueFromBigInt(bigInt), nil
 }
 
-func (d *Decoder) decodeWord8(v interface{}) (Word8Value, error) {
+func (d *DecoderV4) decodeWord8(v interface{}) (Word8Value, error) {
 	value, ok := v.(uint64)
 	if !ok {
 		return 0, fmt.Errorf("unknown Word8 encoding: %T", v)
@@ -763,7 +879,7 @@ func (d *Decoder) decodeWord8(v interface{}) (Word8Value, error) {
 	return Word8Value(value), nil
 }
 
-func (d *Decoder) decodeWord16(v interface{}) (Word16Value, error) {
+func (d *DecoderV4) decodeWord16(v interface{}) (Word16Value, error) {
 	value, ok := v.(uint64)
 	if !ok {
 		return 0, fmt.Errorf("unknown Word16 encoding: %T", v)
@@ -775,7 +891,7 @@ func (d *Decoder) decodeWord16(v interface{}) (Word16Value, error) {
 	return Word16Value(value), nil
 }
 
-func (d *Decoder) decodeWord32(v interface{}) (Word32Value, error) {
+func (d *DecoderV4) decodeWord32(v interface{}) (Word32Value, error) {
 	value, ok := v.(uint64)
 	if !ok {
 		return 0, fmt.Errorf("unknown Word32 encoding: %T", v)
@@ -787,7 +903,7 @@ func (d *Decoder) decodeWord32(v interface{}) (Word32Value, error) {
 	return Word32Value(value), nil
 }
 
-func (d *Decoder) decodeWord64(v interface{}) (Word64Value, error) {
+func (d *DecoderV4) decodeWord64(v interface{}) (Word64Value, error) {
 	value, ok := v.(uint64)
 	if !ok {
 		return 0, fmt.Errorf("unknown Word64 encoding: %T", v)
@@ -795,7 +911,7 @@ func (d *Decoder) decodeWord64(v interface{}) (Word64Value, error) {
 	return Word64Value(value), nil
 }
 
-func (d *Decoder) decodeFix64(v interface{}) (Fix64Value, error) {
+func (d *DecoderV4) decodeFix64(v interface{}) (Fix64Value, error) {
 	switch v := v.(type) {
 	case uint64:
 		const max = math.MaxInt64
@@ -812,7 +928,7 @@ func (d *Decoder) decodeFix64(v interface{}) (Fix64Value, error) {
 	}
 }
 
-func (d *Decoder) decodeUFix64(v interface{}) (UFix64Value, error) {
+func (d *DecoderV4) decodeUFix64(v interface{}) (UFix64Value, error) {
 	value, ok := v.(uint64)
 	if !ok {
 		return 0, fmt.Errorf("unknown UFix64 encoding: %T", v)
@@ -820,10 +936,14 @@ func (d *Decoder) decodeUFix64(v interface{}) (UFix64Value, error) {
 	return UFix64Value(value), nil
 }
 
-func (d *Decoder) decodeSome(v interface{}, path []string) (*SomeValue, error) {
+func (d *DecoderV4) decodeSome(v interface{}, path []string) (*SomeValue, error) {
 	value, err := d.decodeValue(v, path)
 	if err != nil {
-		return nil, fmt.Errorf("invalid some value encoding: %w", err)
+		return nil, fmt.Errorf(
+			"invalid some value encoding (@ %s): %w",
+			strings.Join(path, "."),
+			err,
+		)
 	}
 
 	return &SomeValue{
@@ -832,37 +952,7 @@ func (d *Decoder) decodeSome(v interface{}, path []string) (*SomeValue, error) {
 	}, nil
 }
 
-func (d *Decoder) decodeStorageReference(v interface{}) (*StorageReferenceValue, error) {
-	encoded, ok := v.(map[interface{}]interface{})
-	if !ok {
-		return nil, fmt.Errorf("invalid storage reference encoding: %T", v)
-	}
-
-	authorized, ok := encoded[encodedStorageReferenceValueAuthorizedFieldKey].(bool)
-	if !ok {
-		return nil, fmt.Errorf("invalid storage reference authorized encoding: %T", authorized)
-	}
-
-	targetStorageAddressBytes, ok := encoded[encodedStorageReferenceValueTargetStorageAddressFieldKey].([]byte)
-	if !ok {
-		return nil, fmt.Errorf("invalid storage reference target storage address encoding: %T", authorized)
-	}
-
-	targetStorageAddress := common.BytesToAddress(targetStorageAddressBytes)
-
-	targetKey, ok := encoded[encodedStorageReferenceValueTargetKeyFieldKey].(string)
-	if !ok {
-		return nil, fmt.Errorf("invalid storage reference target key encoding: %T", targetKey)
-	}
-
-	return &StorageReferenceValue{
-		Authorized:           authorized,
-		TargetStorageAddress: targetStorageAddress,
-		TargetKey:            targetKey,
-	}, nil
-}
-
-func (d *Decoder) checkAddressLength(addressBytes []byte) error {
+func (d *DecoderV4) checkAddressLength(addressBytes []byte) error {
 	actualLength := len(addressBytes)
 	const expectedLength = common.AddressLength
 	if actualLength > expectedLength {
@@ -875,7 +965,7 @@ func (d *Decoder) checkAddressLength(addressBytes []byte) error {
 	return nil
 }
 
-func (d *Decoder) decodeAddress(v interface{}) (AddressValue, error) {
+func (d *DecoderV4) decodeAddress(v interface{}) (AddressValue, error) {
 	addressBytes, ok := v.([]byte)
 	if !ok {
 		return AddressValue{}, fmt.Errorf("invalid address encoding: %T", v)
@@ -890,10 +980,14 @@ func (d *Decoder) decodeAddress(v interface{}) (AddressValue, error) {
 	return address, nil
 }
 
-func (d *Decoder) decodePath(v interface{}) (PathValue, error) {
-	encoded, ok := v.(map[interface{}]interface{})
-	if !ok {
-		return PathValue{}, fmt.Errorf("invalid path encoding: %T", v)
+func (d *DecoderV4) decodePath(v interface{}) (PathValue, error) {
+	encoded, ok := v.(cborArray)
+	const expectedLength = encodedPathValueLength
+	if !ok || len(encoded) != expectedLength {
+		return PathValue{}, fmt.Errorf("invalid path encoding: expected [%d]interface{}, got %T",
+			expectedLength,
+			v,
+		)
 	}
 
 	field1 := encoded[encodedPathValueDomainFieldKey]
@@ -914,10 +1008,14 @@ func (d *Decoder) decodePath(v interface{}) (PathValue, error) {
 	}, nil
 }
 
-func (d *Decoder) decodeCapability(v interface{}) (CapabilityValue, error) {
-	encoded, ok := v.(map[interface{}]interface{})
-	if !ok {
-		return CapabilityValue{}, fmt.Errorf("invalid capability encoding: %T", v)
+func (d *DecoderV4) decodeCapability(v interface{}) (CapabilityValue, error) {
+	encoded, ok := v.(cborArray)
+	const expectedLength = encodedCapabilityValueLength
+	if !ok || len(encoded) != expectedLength {
+		return CapabilityValue{}, fmt.Errorf("invalid path encoding: expected [%d]interface{}, got %T",
+			expectedLength,
+			v,
+		)
 	}
 
 	// address
@@ -947,19 +1045,19 @@ func (d *Decoder) decodeCapability(v interface{}) (CapabilityValue, error) {
 	}
 
 	// borrow type (optional, for backwards compatibility)
-
+	// Capabilities used to be untyped, i.e. they didn't have a borrow type.
+	// Later an optional type paramater, the borrow type, was added to it,
+	// which specifies as what type the capability should be borrowed.
+	//
+	// The decoding must be backwards-compatible and support both capability values
+	// with a borrow type and ones without
 	var borrowType StaticType
 
-	if field3, ok := encoded[encodedCapabilityValueBorrowTypeFieldKey]; ok && field3 != nil {
+	if field3 := encoded[encodedCapabilityValueBorrowTypeFieldKey]; field3 != nil {
 
-		decodedStaticType, err := d.decodeStaticType(field3)
+		borrowType, err = d.decodeStaticType(field3)
 		if err != nil {
 			return CapabilityValue{}, fmt.Errorf("invalid capability borrow type encoding: %w", err)
-		}
-
-		borrowType, ok = decodedStaticType.(StaticType)
-		if !ok {
-			return CapabilityValue{}, fmt.Errorf("invalid capability borrow encoding: %T", decodedStaticType)
 		}
 	}
 
@@ -970,10 +1068,14 @@ func (d *Decoder) decodeCapability(v interface{}) (CapabilityValue, error) {
 	}, nil
 }
 
-func (d *Decoder) decodeLink(v interface{}) (LinkValue, error) {
-	encoded, ok := v.(map[interface{}]interface{})
-	if !ok {
-		return LinkValue{}, fmt.Errorf("invalid link encoding")
+func (d *DecoderV4) decodeLink(v interface{}) (LinkValue, error) {
+	encoded, ok := v.(cborArray)
+	const expectedLength = encodedLinkValueLength
+	if !ok || len(encoded) != expectedLength {
+		return LinkValue{}, fmt.Errorf("invalid link encoding: expected [%d]interface{}, got %T",
+			expectedLength,
+			v,
+		)
 	}
 
 	decodedPath, err := d.decodeValue(encoded[encodedLinkValueTargetPathFieldKey], nil)
@@ -986,14 +1088,9 @@ func (d *Decoder) decodeLink(v interface{}) (LinkValue, error) {
 		return LinkValue{}, fmt.Errorf("invalid link target path encoding: %T", decodedPath)
 	}
 
-	decodedStaticType, err := d.decodeStaticType(encoded[encodedLinkValueTypeFieldKey])
+	staticType, err := d.decodeStaticType(encoded[encodedLinkValueTypeFieldKey])
 	if err != nil {
 		return LinkValue{}, fmt.Errorf("invalid link type encoding: %w", err)
-	}
-
-	staticType, ok := decodedStaticType.(StaticType)
-	if !ok {
-		return LinkValue{}, fmt.Errorf("invalid link type encoding: %T", decodedStaticType)
 	}
 
 	return LinkValue{
@@ -1002,7 +1099,7 @@ func (d *Decoder) decodeLink(v interface{}) (LinkValue, error) {
 	}, nil
 }
 
-func (d *Decoder) decodeStaticType(v interface{}) (StaticType, error) {
+func (d *DecoderV4) decodeStaticType(v interface{}) (StaticType, error) {
 	tag, ok := v.(cbor.Tag)
 	if !ok {
 		return nil, fmt.Errorf("invalid static type encoding: %T", v)
@@ -1046,7 +1143,7 @@ func (d *Decoder) decodeStaticType(v interface{}) (StaticType, error) {
 	}
 }
 
-func (d *Decoder) decodePrimitiveStaticType(v interface{}) (PrimitiveStaticType, error) {
+func (d *DecoderV4) decodePrimitiveStaticType(v interface{}) (PrimitiveStaticType, error) {
 	encoded, ok := v.(uint64)
 	if !ok {
 		return PrimitiveStaticTypeUnknown,
@@ -1055,7 +1152,7 @@ func (d *Decoder) decodePrimitiveStaticType(v interface{}) (PrimitiveStaticType,
 	return PrimitiveStaticType(encoded), nil
 }
 
-func (d *Decoder) decodeOptionalStaticType(v interface{}) (StaticType, error) {
+func (d *DecoderV4) decodeOptionalStaticType(v interface{}) (StaticType, error) {
 	staticType, err := d.decodeStaticType(v)
 	if err != nil {
 		return nil, fmt.Errorf("invalid optional static type inner type encoding: %w", err)
@@ -1065,69 +1162,83 @@ func (d *Decoder) decodeOptionalStaticType(v interface{}) (StaticType, error) {
 	}, nil
 }
 
-func (d *Decoder) decodeLocationAndTypeID(
-	v interface{},
+func (d *DecoderV4) decodeStaticTypeLocationAndQualifiedIdentifier(
+	encoded cborArray,
 	locationKeyIndex uint64,
-	typeIDKeyIndex uint64,
+	qualifiedIdentifierIndex uint64,
 ) (
-	ast.Location,
-	sema.TypeID,
+	common.Location,
+	string,
 	error,
 ) {
-
-	encoded, ok := v.(map[interface{}]interface{})
-	if !ok {
-		return nil, "", fmt.Errorf("invalid static type encoding: %T", v)
-	}
-
 	location, err := d.decodeLocation(encoded[locationKeyIndex])
 	if err != nil {
 		return nil, "", fmt.Errorf("invalid static type location encoding: %w", err)
 	}
 
-	field2 := encoded[typeIDKeyIndex]
-	encodedTypeID, ok := field2.(string)
+	qualifiedIdentifierField := encoded[qualifiedIdentifierIndex]
+	qualifiedIdentifier, ok := qualifiedIdentifierField.(string)
 	if !ok {
-		return nil, "", fmt.Errorf("invalid static type type ID encoding: %T", field2)
+		return nil, "", fmt.Errorf(
+			"invalid static type qualified identifier encoding: %T",
+			qualifiedIdentifierField,
+		)
 	}
-	typeID := sema.TypeID(encodedTypeID)
 
-	return location, typeID, nil
+	return location, qualifiedIdentifier, nil
 }
 
-func (d *Decoder) decodeCompositeStaticType(v interface{}) (StaticType, error) {
-	location, typeID, err := d.decodeLocationAndTypeID(
-		v,
+func (d *DecoderV4) decodeCompositeStaticType(v interface{}) (StaticType, error) {
+	encoded, ok := v.(cborArray)
+	const expectedLength = encodedCompositeStaticTypeLength
+	if !ok || len(encoded) != expectedLength {
+		return nil, fmt.Errorf("invalid composite static type encoding: expected [%d]interface{}, got %T",
+			expectedLength,
+			v,
+		)
+	}
+
+	location, qualifiedIdentifier, err := d.decodeStaticTypeLocationAndQualifiedIdentifier(
+		encoded,
 		encodedCompositeStaticTypeLocationFieldKey,
-		encodedCompositeStaticTypeTypeIDFieldKey,
+		encodedCompositeStaticTypeQualifiedIdentifierFieldKey,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("invalid composite static type encoding: %w", err)
 	}
 
 	return CompositeStaticType{
-		Location: location,
-		TypeID:   typeID,
+		Location:            location,
+		QualifiedIdentifier: qualifiedIdentifier,
 	}, nil
 }
 
-func (d *Decoder) decodeInterfaceStaticType(v interface{}) (StaticType, error) {
-	location, typeID, err := d.decodeLocationAndTypeID(
-		v,
+func (d *DecoderV4) decodeInterfaceStaticType(v interface{}) (StaticType, error) {
+	encoded, ok := v.(cborArray)
+	const expectedLength = encodedInterfaceStaticTypeLength
+	if !ok || len(encoded) != expectedLength {
+		return nil, fmt.Errorf("invalid interface static type encoding: expected [%d]interface{}, got %T",
+			expectedLength,
+			v,
+		)
+	}
+
+	location, qualifiedIdentifier, err := d.decodeStaticTypeLocationAndQualifiedIdentifier(
+		encoded,
 		encodedInterfaceStaticTypeLocationFieldKey,
-		encodedInterfaceStaticTypeTypeIDFieldKey,
+		encodedInterfaceStaticTypeQualifiedIdentifierFieldKey,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("invalid interface static type encoding: %w", err)
 	}
 
 	return InterfaceStaticType{
-		Location: location,
-		TypeID:   typeID,
+		Location:            location,
+		QualifiedIdentifier: qualifiedIdentifier,
 	}, nil
 }
 
-func (d *Decoder) decodeVariableSizedStaticType(v interface{}) (StaticType, error) {
+func (d *DecoderV4) decodeVariableSizedStaticType(v interface{}) (StaticType, error) {
 	staticType, err := d.decodeStaticType(v)
 	if err != nil {
 		return nil, fmt.Errorf("invalid optional static type encoding: %w", err)
@@ -1137,10 +1248,14 @@ func (d *Decoder) decodeVariableSizedStaticType(v interface{}) (StaticType, erro
 	}, nil
 }
 
-func (d *Decoder) decodeConstantSizedStaticType(v interface{}) (StaticType, error) {
-	encoded, ok := v.(map[interface{}]interface{})
-	if !ok {
-		return nil, fmt.Errorf("invalid constant-sized static type encoding: %T", v)
+func (d *DecoderV4) decodeConstantSizedStaticType(v interface{}) (StaticType, error) {
+	encoded, ok := v.(cborArray)
+	const expectedLength = encodedConstantSizedStaticTypeLength
+	if !ok || len(encoded) != expectedLength {
+		return nil, fmt.Errorf("invalid constant-sized static type encoding: expected [%d]interface{}, got %T",
+			expectedLength,
+			v,
+		)
 	}
 
 	field1 := encoded[encodedConstantSizedStaticTypeSizeFieldKey]
@@ -1169,10 +1284,14 @@ func (d *Decoder) decodeConstantSizedStaticType(v interface{}) (StaticType, erro
 	}, nil
 }
 
-func (d *Decoder) decodeReferenceStaticType(v interface{}) (StaticType, error) {
-	encoded, ok := v.(map[interface{}]interface{})
-	if !ok {
-		return nil, fmt.Errorf("invalid reference static type encoding: %T", v)
+func (d *DecoderV4) decodeReferenceStaticType(v interface{}) (StaticType, error) {
+	encoded, ok := v.(cborArray)
+	const expectedLength = encodedReferenceStaticTypeLength
+	if !ok || len(encoded) != expectedLength {
+		return nil, fmt.Errorf("invalid reference static type encoding: expected [%d]interface{}, got %T",
+			expectedLength,
+			v,
+		)
 	}
 
 	field1 := encoded[encodedReferenceStaticTypeAuthorizedFieldKey]
@@ -1192,10 +1311,14 @@ func (d *Decoder) decodeReferenceStaticType(v interface{}) (StaticType, error) {
 	}, nil
 }
 
-func (d *Decoder) decodeDictionaryStaticType(v interface{}) (StaticType, error) {
-	encoded, ok := v.(map[interface{}]interface{})
-	if !ok {
-		return nil, fmt.Errorf("invalid dictionary static type encoding: %T", v)
+func (d *DecoderV4) decodeDictionaryStaticType(v interface{}) (StaticType, error) {
+	encoded, ok := v.(cborArray)
+	const expectedLength = encodedDictionaryStaticTypeLength
+	if !ok || len(encoded) != expectedLength {
+		return nil, fmt.Errorf("invalid dictionary static type encoding: expected [%d]interface{}, got %T",
+			expectedLength,
+			v,
+		)
 	}
 
 	keyType, err := d.decodeStaticType(encoded[encodedDictionaryStaticTypeKeyTypeFieldKey])
@@ -1214,10 +1337,14 @@ func (d *Decoder) decodeDictionaryStaticType(v interface{}) (StaticType, error) 
 	}, nil
 }
 
-func (d *Decoder) decodeRestrictedStaticType(v interface{}) (StaticType, error) {
-	encoded, ok := v.(map[interface{}]interface{})
-	if !ok {
-		return nil, fmt.Errorf("invalid restricted static type encoding: %T", v)
+func (d *DecoderV4) decodeRestrictedStaticType(v interface{}) (StaticType, error) {
+	encoded, ok := v.(cborArray)
+	const expectedLength = encodedRestrictedStaticTypeLength
+	if !ok || len(encoded) != expectedLength {
+		return nil, fmt.Errorf("invalid restricted static type encoding: expected [%d]interface{}, got %T",
+			expectedLength,
+			v,
+		)
 	}
 
 	restrictedType, err := d.decodeStaticType(encoded[encodedRestrictedStaticTypeTypeFieldKey])
@@ -1244,26 +1371,31 @@ func (d *Decoder) decodeRestrictedStaticType(v interface{}) (StaticType, error) 
 		restrictions[i] = restriction
 	}
 
-	return RestrictedStaticType{
+	return &RestrictedStaticType{
 		Type:         restrictedType,
 		Restrictions: restrictions,
 	}, nil
 }
 
-func (d *Decoder) decodeType(v interface{}) (TypeValue, error) {
-	encoded, ok := v.(map[interface{}]interface{})
-	if !ok {
-		return TypeValue{}, fmt.Errorf("invalid type encoding")
+func (d *DecoderV4) decodeType(v interface{}) (TypeValue, error) {
+	encoded, ok := v.(cborArray)
+	const expectedLength = encodedTypeValueTypeLength
+	if !ok || len(encoded) != expectedLength {
+		return TypeValue{}, fmt.Errorf("invalid type encoding: expected [%d]interface{}, got %T",
+			expectedLength,
+			v,
+		)
 	}
 
-	decodedStaticType, err := d.decodeStaticType(encoded[encodedTypeValueTypeFieldKey])
-	if err != nil {
-		return TypeValue{}, fmt.Errorf("invalid type encoding: %w", err)
-	}
+	var staticType StaticType
 
-	staticType, ok := decodedStaticType.(StaticType)
-	if !ok {
-		return TypeValue{}, fmt.Errorf("invalid type encoding: %T", decodedStaticType)
+	staticTypeField := encoded[encodedTypeValueTypeFieldKey]
+	if staticTypeField != nil {
+		var err error
+		staticType, err = d.decodeStaticType(staticTypeField)
+		if err != nil {
+			return TypeValue{}, fmt.Errorf("invalid type encoding: %w", err)
+		}
 	}
 
 	return TypeValue{
@@ -1271,7 +1403,7 @@ func (d *Decoder) decodeType(v interface{}) (TypeValue, error) {
 	}, nil
 }
 
-func (d *Decoder) decodeCapabilityStaticType(v interface{}) (StaticType, error) {
+func (d *DecoderV4) decodeCapabilityStaticType(v interface{}) (StaticType, error) {
 	var borrowStaticType StaticType
 	if v != nil {
 		var err error

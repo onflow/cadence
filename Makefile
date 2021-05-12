@@ -35,13 +35,22 @@ build:
 	go build -o ./runtime/cmd/main/main ./runtime/cmd/main
 	cd ./languageserver && make build
 
-.PHONY: install-tools
-install-tools:
-	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b ${GOPATH}/bin v1.29.0
+.PHONY: lint-github-actions
+lint-github-actions: build-linter
+	tools/golangci-lint/golangci-lint run --out-format=github-actions -v ./...
 
 .PHONY: lint
-lint:
-	golangci-lint run -v ./...
+lint: build-linter
+	tools/golangci-lint/golangci-lint run -v ./...
+
+.PHONY: build-linter
+build-linter: tools/golangci-lint/golangci-lint tools/maprangecheck/maprangecheck.so
+
+tools/maprangecheck/maprangecheck.so:
+	(cd tools/maprangecheck && $(MAKE) plugin)
+
+tools/golangci-lint/golangci-lint:
+	(cd tools/golangci-lint && $(MAKE))
 
 .PHONY: check-headers
 check-headers:
@@ -56,3 +65,10 @@ check-tidy: generate
 	go mod tidy
 	cd languageserver; go mod tidy
 	git diff --exit-code
+
+.PHONY: release
+release:
+	@(VERSIONED_FILES="version.go \
+	npm-packages/cadence-parser/package.json \
+	npm-packages/cadence-language-server/package.json" \
+	./bump-version.sh $(bump))

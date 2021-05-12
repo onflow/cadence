@@ -23,51 +23,177 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
+	"github.com/onflow/cadence/runtime/sema"
+	"github.com/onflow/cadence/runtime/stdlib"
+	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
-func TestInterpretMetaType(t *testing.T) {
+func TestInterpretMetaTypeEquality(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("constructor", func(t *testing.T) {
+	t.Run("Int == Int", func(t *testing.T) {
+
 		t.Parallel()
 
 		inter := parseCheckAndInterpret(t, `
-           let intInt = Type<Int>() == Type<Int>()
-           let intString = Type<Int>() == Type<String>()
-           let intOptional = Type<Int>() == Type<Int?>()
-           let intIntRef = Type<&Int>() == Type<&Int>()
-           let intStringRef = Type<&Int>() == Type<&String>()
+           let result = Type<Int>() == Type<Int>()
         `)
 
 		assert.Equal(t,
 			interpreter.BoolValue(true),
-			inter.Globals["intInt"].Value,
-		)
-
-		assert.Equal(t,
-			interpreter.BoolValue(false),
-			inter.Globals["intString"].Value,
-		)
-
-		assert.Equal(t,
-			interpreter.BoolValue(false),
-			inter.Globals["intOptional"].Value,
-		)
-
-		assert.Equal(t,
-			interpreter.BoolValue(true),
-			inter.Globals["intIntRef"].Value,
-		)
-
-		assert.Equal(t,
-			interpreter.BoolValue(false),
-			inter.Globals["intStringRef"].Value,
+			inter.Globals["result"].GetValue(),
 		)
 	})
 
-	t.Run("identifier", func(t *testing.T) {
+	t.Run("Int != String", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+           let result = Type<Int>() == Type<String>()
+        `)
+
+		assert.Equal(t,
+			interpreter.BoolValue(false),
+			inter.Globals["result"].GetValue(),
+		)
+	})
+
+	t.Run("Int != Int?", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+           let result = Type<Int>() == Type<Int?>()
+        `)
+
+		assert.Equal(t,
+			interpreter.BoolValue(false),
+			inter.Globals["result"].GetValue(),
+		)
+	})
+
+	t.Run("&Int == &Int", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+           let result = Type<&Int>() == Type<&Int>()
+        `)
+
+		assert.Equal(t,
+			interpreter.BoolValue(true),
+			inter.Globals["result"].GetValue(),
+		)
+	})
+
+	t.Run("&Int != &String", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+           let result = Type<&Int>() == Type<&String>()
+        `)
+
+		assert.Equal(t,
+			interpreter.BoolValue(false),
+			inter.Globals["result"].GetValue(),
+		)
+	})
+
+	t.Run("Int != unknownType", func(t *testing.T) {
+
+		t.Parallel()
+
+		valueDeclarations := stdlib.StandardLibraryValues{
+			{
+				Name: "unknownType",
+				Type: sema.MetaType,
+				Value: interpreter.TypeValue{
+					Type: nil,
+				},
+				Kind: common.DeclarationKindConstant,
+			},
+		}
+
+		semaValueDeclarations := valueDeclarations.ToSemaValueDeclarations()
+		interpreterValueDeclarations := valueDeclarations.ToInterpreterValueDeclarations()
+
+		inter := parseCheckAndInterpretWithOptions(t,
+			`
+              let result = Type<Int>() == unknownType
+            `,
+			ParseCheckAndInterpretOptions{
+				CheckerOptions: []sema.Option{
+					sema.WithPredeclaredValues(semaValueDeclarations),
+				},
+				Options: []interpreter.Option{
+					interpreter.WithPredeclaredValues(interpreterValueDeclarations),
+				},
+			},
+		)
+
+		assert.Equal(t,
+			interpreter.BoolValue(false),
+			inter.Globals["result"].GetValue(),
+		)
+	})
+
+	t.Run("unknownType1 != unknownType2", func(t *testing.T) {
+
+		t.Parallel()
+
+		valueDeclarations := stdlib.StandardLibraryValues{
+			{
+				Name: "unknownType1",
+				Type: sema.MetaType,
+				Value: interpreter.TypeValue{
+					Type: nil,
+				},
+				Kind: common.DeclarationKindConstant,
+			},
+			{
+				Name: "unknownType2",
+				Type: sema.MetaType,
+				Value: interpreter.TypeValue{
+					Type: nil,
+				},
+				Kind: common.DeclarationKindConstant,
+			},
+		}
+
+		semaValueDeclarations := valueDeclarations.ToSemaValueDeclarations()
+		interpreterValueDeclarations := valueDeclarations.ToInterpreterValueDeclarations()
+
+		inter := parseCheckAndInterpretWithOptions(t,
+			`
+              let result = unknownType1 == unknownType2
+            `,
+			ParseCheckAndInterpretOptions{
+				CheckerOptions: []sema.Option{
+					sema.WithPredeclaredValues(semaValueDeclarations),
+				},
+				Options: []interpreter.Option{
+					interpreter.WithPredeclaredValues(interpreterValueDeclarations),
+				},
+			},
+		)
+
+		assert.Equal(t,
+			interpreter.BoolValue(false),
+			inter.Globals["result"].GetValue(),
+		)
+	})
+}
+
+func TestInterpretMetaTypeIdentifier(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("identifier, Int", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -78,7 +204,62 @@ func TestInterpretMetaType(t *testing.T) {
 
 		assert.Equal(t,
 			interpreter.NewStringValue("[Int]"),
-			inter.Globals["identifier"].Value,
+			inter.Globals["identifier"].GetValue(),
+		)
+	})
+
+	t.Run("identifier, struct", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+          struct S {}
+
+          let type = Type<S>()
+          let identifier = type.identifier
+        `)
+
+		assert.Equal(t,
+			interpreter.NewStringValue("S.test.S"),
+			inter.Globals["identifier"].GetValue(),
+		)
+	})
+
+	t.Run("unknown", func(t *testing.T) {
+
+		t.Parallel()
+
+		valueDeclarations := stdlib.StandardLibraryValues{
+			{
+				Name: "unknownType",
+				Type: sema.MetaType,
+				Value: interpreter.TypeValue{
+					Type: nil,
+				},
+				Kind: common.DeclarationKindConstant,
+			},
+		}
+
+		semaValueDeclarations := valueDeclarations.ToSemaValueDeclarations()
+		interpreterValueDeclarations := valueDeclarations.ToInterpreterValueDeclarations()
+
+		inter := parseCheckAndInterpretWithOptions(t,
+			`
+              let identifier = unknownType.identifier
+            `,
+			ParseCheckAndInterpretOptions{
+				CheckerOptions: []sema.Option{
+					sema.WithPredeclaredValues(semaValueDeclarations),
+				},
+				Options: []interpreter.Option{
+					interpreter.WithPredeclaredValues(interpreterValueDeclarations),
+				},
+			},
+		)
+
+		assert.Equal(t,
+			interpreter.NewStringValue(""),
+			inter.Globals["identifier"].GetValue(),
 		)
 	})
 }
@@ -87,80 +268,185 @@ func TestInterpretIsInstance(t *testing.T) {
 
 	t.Parallel()
 
-	cases := map[string]struct {
+	cases := []struct {
+		name   string
 		code   string
 		result bool
 	}{
-		"string is an instance of string": {
-			`
-          let stringType = Type<String>()
-          let result = "abc".isInstance(stringType)
-			`,
-			true,
+		{
+			name: "string is an instance of String",
+			code: `
+              let stringType = Type<String>()
+              let result = "abc".isInstance(stringType)
+            `,
+			result: true,
 		},
-		"int is an instance of int": {
-			`
-          let intType = Type<Int>()
-          let result = (1).isInstance(intType)
-			`,
-			true,
+		{
+			name: "int is an instance of Int",
+			code: `
+              let intType = Type<Int>()
+              let result = (1).isInstance(intType)
+            `,
+			result: true,
 		},
-		"resource is an instance of resource": {
-			`
-          resource R {}
+		{
+			name: "resource is an instance of resource",
+			code: `
+              resource R {}
 
-          let r <- create R()
-          let rType = Type<@R>()
-          let result = r.isInstance(rType)
-			`,
-			true,
+              let r <- create R()
+              let rType = Type<@R>()
+              let result = r.isInstance(rType)
+            `,
+			result: true,
 		},
-		"int is not an instance of string": {
-			`
-          let stringType = Type<String>()
-          let result = (1).isInstance(stringType)
-			`,
-			false,
+		{
+			name: "int is not an instance of String",
+			code: `
+              let stringType = Type<String>()
+              let result = (1).isInstance(stringType)
+            `,
+			result: false,
 		},
-		"int is not an instance of resource": {
-			`
-          resource R {}
+		{
+			name: "int is not an instance of resource",
+			code: `
+              resource R {}
 
-          let rType = Type<@R>()
-          let result = (1).isInstance(rType)
-			`,
-			false,
+              let rType = Type<@R>()
+              let result = (1).isInstance(rType)
+            `,
+			result: false,
 		},
-		"resource is not an instance of string": {
-			`
-          resource R {}
+		{
+			name: "resource is not an instance of String",
+			code: `
+              resource R {}
 
-          let r <- create R()
-          let stringType = Type<String>()
-          let result = (r).isInstance(stringType)
-			`,
-			false,
+              let r <- create R()
+              let stringType = Type<String>()
+              let result = r.isInstance(stringType)
+            `,
+			result: false,
 		},
-		"resource R is not an instance of resource S": {
-			`
-          resource R {}
-          resource S {}
+		{
+			name: "resource R is not an instance of resource S",
+			code: `
+              resource R {}
+              resource S {}
 
-          let r <- create R()
-          let sType = Type<@S>()
-          let result = (r).isInstance(sType)
-			`,
-			false,
+              let r <- create R()
+              let sType = Type<@S>()
+              let result = r.isInstance(sType)
+            `,
+			result: false,
+		},
+		{
+			name: "struct S is not an instance of an unknown type",
+			code: `
+              struct S {}
+
+              let s = S()
+              let result = s.isInstance(unknownType)
+            `,
+			result: false,
 		},
 	}
 
-	for name, cases := range cases {
-		t.Run(name, func(t *testing.T) {
-			inter := parseCheckAndInterpret(t, cases.code)
+	valueDeclarations := stdlib.StandardLibraryValues{
+		{
+			Name: "unknownType",
+			Type: sema.MetaType,
+			Value: interpreter.TypeValue{
+				Type: nil,
+			},
+			Kind: common.DeclarationKindConstant,
+		},
+	}
+
+	semaValueDeclarations := valueDeclarations.ToSemaValueDeclarations()
+	interpreterValueDeclarations := valueDeclarations.ToInterpreterValueDeclarations()
+
+	for _, testCase := range cases {
+		t.Run(testCase.name, func(t *testing.T) {
+			inter := parseCheckAndInterpretWithOptions(t, testCase.code, ParseCheckAndInterpretOptions{
+				CheckerOptions: []sema.Option{
+					sema.WithPredeclaredValues(semaValueDeclarations),
+				},
+				Options: []interpreter.Option{
+					interpreter.WithPredeclaredValues(interpreterValueDeclarations),
+				},
+			})
 
 			assert.Equal(t,
-				interpreter.BoolValue(cases.result),
-				inter.Globals["result"].Value,
+				interpreter.BoolValue(testCase.result),
+				inter.Globals["result"].GetValue(),
+			)
+		})
+	}
+}
+
+func TestInterpretGetType(t *testing.T) {
+
+	t.Parallel()
+
+	cases := []struct {
+		name   string
+		code   string
+		result interpreter.Value
+	}{
+		{
+			name: "String",
+			code: `
+              let result = "abc".getType()
+            `,
+			result: interpreter.TypeValue{
+				Type: interpreter.PrimitiveStaticTypeString,
+			},
+		},
+		{
+			name: "Int",
+			code: `
+              let result = (1).getType()
+            `,
+			result: interpreter.TypeValue{
+				Type: interpreter.PrimitiveStaticTypeInt,
+			},
+		},
+		{
+			name: "resource",
+			code: `
+              resource R {}
+
+              let r <- create R()
+              let result = r.getType()
+            `,
+			result: interpreter.TypeValue{
+				Type: interpreter.CompositeStaticType{
+					Location:            utils.TestLocation,
+					QualifiedIdentifier: "R",
+				},
+			},
+		},
+		{
+			name: "array",
+			code: `
+              let result = [].getType()
+            `,
+			result: interpreter.TypeValue{
+				// TODO: not yet supported
+				Type: nil,
+			},
+		},
+	}
+
+	for _, testCase := range cases {
+		t.Run(testCase.name, func(t *testing.T) {
+			inter := parseCheckAndInterpret(t, testCase.code)
+
+			assert.Equal(t,
+				testCase.result,
+				inter.Globals["result"].GetValue(),
 			)
 		})
 	}

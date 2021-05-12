@@ -30,6 +30,10 @@ type StandardLibraryType struct {
 	Kind common.DeclarationKind
 }
 
+func (t StandardLibraryType) TypeDeclarationName() string {
+	return t.Name
+}
+
 func (t StandardLibraryType) TypeDeclarationType() sema.Type {
 	return t.Type
 }
@@ -46,14 +50,14 @@ func (StandardLibraryType) TypeDeclarationPosition() ast.Position {
 
 type StandardLibraryTypes []StandardLibraryType
 
-func (types StandardLibraryTypes) ToTypeDeclarations() map[string]sema.TypeDeclaration {
-	valueDeclarations := make(map[string]sema.TypeDeclaration, len(types))
-	for _, ty := range types {
-		valueDeclarations[ty.Name] = ty
+func (types StandardLibraryTypes) ToTypeDeclarations() []sema.TypeDeclaration {
+	valueDeclarations := make([]sema.TypeDeclaration, len(types))
+	for i, ty := range types {
+		valueDeclarations[i] = ty
 	}
 	return valueDeclarations
 }
 
 // BuiltinTypes
 
-var BuiltinTypes = StandardLibraryTypes{}
+var BuiltinTypes StandardLibraryTypes

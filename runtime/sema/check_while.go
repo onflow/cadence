@@ -29,11 +29,11 @@ func (checker *Checker) VisitWhileStatement(statement *ast.WhileStatement) ast.R
 	testType := testExpression.Accept(checker).(Type)
 
 	if !testType.IsInvalidType() &&
-		!IsSubType(testType, &BoolType{}) {
+		!IsSubType(testType, BoolType) {
 
 		checker.report(
 			&TypeMismatchError{
-				ExpectedType: &BoolType{},
+				ExpectedType: BoolType,
 				ActualType:   testType,
 				Range:        ast.NewRangeFromPositioned(testExpression),
 			},
@@ -59,12 +59,8 @@ func (checker *Checker) VisitWhileStatement(statement *ast.WhileStatement) ast.R
 }
 
 func (checker *Checker) reportResourceUsesInLoop(startPos, endPos ast.Position) {
-	var resource interface{}
-	var info ResourceInfo
 
-	resources := checker.resources
-	for resources.Size() != 0 {
-		resource, info, resources = resources.FirstRest()
+	checker.resources.ForEach(func(resource interface{}, info ResourceInfo) {
 
 		// If the resource is a variable,
 		// only report an error if the variable was declared outside the loop
@@ -74,29 +70,29 @@ func (checker *Checker) reportResourceUsesInLoop(startPos, endPos ast.Position) 
 			variable.Pos.Compare(startPos) > 0 &&
 			variable.Pos.Compare(endPos) < 0 {
 
-			continue
+			return
 		}
 
 		// Only report an error if the resource was invalidated
 
 		if info.Invalidations.IsEmpty() {
-			continue
+			return
 		}
 
 		invalidations := info.Invalidations.All()
 
-		for _, usePosition := range info.UsePositions.AllPositions() {
+		_ = info.UsePositions.ForEach(func(usePosition ast.Position, _ ResourceUse) error {
 
 			// Only report an error if the use is inside the loop
 
 			if usePosition.Compare(startPos) < 0 ||
 				usePosition.Compare(endPos) > 0 {
 
-				continue
+				return nil
 			}
 
 			if checker.resources.IsUseAfterInvalidationReported(resource, usePosition) {
-				continue
+				return nil
 			}
 
 			checker.resources.MarkUseAfterInvalidationReported(resource, usePosition)
@@ -110,8 +106,10 @@ func (checker *Checker) reportResourceUsesInLoop(startPos, endPos ast.Position) 
 					InLoop:        true,
 				},
 			)
-		}
-	}
+
+			return nil
+		})
+	})
 }
 
 func (checker *Checker) VisitBreakStatement(statement *ast.BreakStatement) ast.Repr {

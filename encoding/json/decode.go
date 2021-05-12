@@ -30,6 +30,8 @@ import (
 	"strings"
 
 	"github.com/onflow/cadence"
+	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/sema"
 )
 
 // A Decoder decodes JSON-encoded representations of Cadence values.
@@ -192,6 +194,8 @@ func decodeJSON(v interface{}) cadence.Value {
 		return decodeTypeValue(valueJSON)
 	case capabilityTypeStr:
 		return decodeCapability(valueJSON)
+	case enumTypeStr:
+		return decodeEnum(valueJSON)
 	}
 
 	panic(ErrInvalidJSONCadence)
@@ -481,18 +485,25 @@ func decodeKeyValuePair(valueJSON interface{}) cadence.KeyValuePair {
 }
 
 type composite struct {
-	typeID      string
-	identifier  string
-	fieldValues []cadence.Value
-	fieldTypes  []cadence.Field
+	location            common.Location
+	qualifiedIdentifier string
+	fieldValues         []cadence.Value
+	fieldTypes          []cadence.Field
 }
 
 func decodeComposite(valueJSON interface{}) composite {
 	obj := toObject(valueJSON)
 
 	typeID := obj.GetString(idKey)
+	location, qualifiedIdentifier, err := common.DecodeTypeID(typeID)
 
-	identifier := identifierFromTypeID(typeID)
+	if err != nil ||
+		location == nil && sema.NativeCompositeTypes[typeID] == nil {
+
+		// If the location is nil, and there is no native composite type with this ID, then its an invalid type.
+		// Note: This is moved out from the common.DecodeTypeID() to avoid the circular dependency.
+		panic(fmt.Errorf("%s. invalid type ID: `%s`", ErrInvalidJSONCadence, typeID))
+	}
 
 	fields := obj.GetSlice(fieldsKey)
 
@@ -507,10 +518,10 @@ func decodeComposite(valueJSON interface{}) composite {
 	}
 
 	return composite{
-		typeID:      typeID,
-		identifier:  identifier,
-		fieldValues: fieldValues,
-		fieldTypes:  fieldTypes,
+		location:            location,
+		qualifiedIdentifier: qualifiedIdentifier,
+		fieldValues:         fieldValues,
+		fieldTypes:          fieldTypes,
 	}
 }
 
@@ -532,9 +543,9 @@ func decodeStruct(valueJSON interface{}) cadence.Struct {
 	comp := decodeComposite(valueJSON)
 
 	return cadence.NewStruct(comp.fieldValues).WithType(&cadence.StructType{
-		TypeID:     comp.typeID,
-		Identifier: comp.identifier,
-		Fields:     comp.fieldTypes,
+		Location:            comp.location,
+		QualifiedIdentifier: comp.qualifiedIdentifier,
+		Fields:              comp.fieldTypes,
 	})
 }
 
@@ -542,9 +553,9 @@ func decodeResource(valueJSON interface{}) cadence.Resource {
 	comp := decodeComposite(valueJSON)
 
 	return cadence.NewResource(comp.fieldValues).WithType(&cadence.ResourceType{
-		TypeID:     comp.typeID,
-		Identifier: comp.identifier,
-		Fields:     comp.fieldTypes,
+		Location:            comp.location,
+		QualifiedIdentifier: comp.qualifiedIdentifier,
+		Fields:              comp.fieldTypes,
 	})
 }
 
@@ -552,9 +563,9 @@ func decodeEvent(valueJSON interface{}) cadence.Event {
 	comp := decodeComposite(valueJSON)
 
 	return cadence.NewEvent(comp.fieldValues).WithType(&cadence.EventType{
-		TypeID:     comp.typeID,
-		Identifier: comp.identifier,
-		Fields:     comp.fieldTypes,
+		Location:            comp.location,
+		QualifiedIdentifier: comp.qualifiedIdentifier,
+		Fields:              comp.fieldTypes,
 	})
 }
 
@@ -562,9 +573,19 @@ func decodeContract(valueJSON interface{}) cadence.Contract {
 	comp := decodeComposite(valueJSON)
 
 	return cadence.NewContract(comp.fieldValues).WithType(&cadence.ContractType{
-		TypeID:     comp.typeID,
-		Identifier: comp.identifier,
-		Fields:     comp.fieldTypes,
+		Location:            comp.location,
+		QualifiedIdentifier: comp.qualifiedIdentifier,
+		Fields:              comp.fieldTypes,
+	})
+}
+
+func decodeEnum(valueJSON interface{}) cadence.Enum {
+	comp := decodeComposite(valueJSON)
+
+	return cadence.NewEnum(comp.fieldValues).WithType(&cadence.EnumType{
+		Location:            comp.location,
+		QualifiedIdentifier: comp.qualifiedIdentifier,
+		Fields:              comp.fieldTypes,
 	})
 }
 
@@ -594,8 +615,15 @@ func decodePath(valueJSON interface{}) cadence.Path {
 func decodeTypeValue(valueJSON interface{}) cadence.TypeValue {
 	obj := toObject(valueJSON)
 
+	var staticType string
+
+	staticTypeProperty, ok := obj[staticTypeKey]
+	if ok && staticTypeProperty != nil {
+		staticType = toString(staticTypeProperty)
+	}
+
 	return cadence.TypeValue{
-		StaticType: obj.GetString(staticTypeKey),
+		StaticType: staticType,
 	}
 }
 

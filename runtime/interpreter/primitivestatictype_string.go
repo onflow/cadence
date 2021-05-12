@@ -18,6 +18,8 @@ func _() {
 	_ = x[PrimitiveStaticTypeAddress-7]
 	_ = x[PrimitiveStaticTypeString-8]
 	_ = x[PrimitiveStaticTypeCharacter-9]
+	_ = x[PrimitiveStaticTypeMetaType-10]
+	_ = x[PrimitiveStaticTypeBlock-11]
 	_ = x[PrimitiveStaticTypeNumber-18]
 	_ = x[PrimitiveStaticTypeSignedNumber-19]
 	_ = x[PrimitiveStaticTypeInteger-24]
@@ -50,62 +52,68 @@ func _() {
 	_ = x[PrimitiveStaticTypeCapabilityPath-79]
 	_ = x[PrimitiveStaticTypePublicPath-80]
 	_ = x[PrimitiveStaticTypePrivatePath-81]
+	_ = x[PrimitiveStaticTypeAuthAccount-90]
+	_ = x[PrimitiveStaticTypePublicAccount-91]
+	_ = x[PrimitiveStaticTypeDeployedContract-92]
+	_ = x[PrimitiveStaticTypeAuthAccountContracts-93]
 }
 
-const (
-	_PrimitiveStaticType_name_0 = "UnknownVoidAnyNeverAnyStructAnyResourceBoolAddressStringCharacter"
-	_PrimitiveStaticType_name_1 = "NumberSignedNumber"
-	_PrimitiveStaticType_name_2 = "IntegerSignedInteger"
-	_PrimitiveStaticType_name_3 = "FixedPointSignedFixedPoint"
-	_PrimitiveStaticType_name_4 = "IntInt8Int16Int32Int64Int128Int256"
-	_PrimitiveStaticType_name_5 = "UIntUInt8UInt16UInt32UInt64UInt128UInt256"
-	_PrimitiveStaticType_name_6 = "Word8Word16Word32Word64"
-	_PrimitiveStaticType_name_7 = "Fix64"
-	_PrimitiveStaticType_name_8 = "UFix64"
-	_PrimitiveStaticType_name_9 = "PathCapabilityStoragePathCapabilityPathPublicPathPrivatePath"
-)
+const _PrimitiveStaticType_name = "UnknownVoidAnyNeverAnyStructAnyResourceBoolAddressStringCharacterMetaTypeBlockNumberSignedNumberIntegerSignedIntegerFixedPointSignedFixedPointIntInt8Int16Int32Int64Int128Int256UIntUInt8UInt16UInt32UInt64UInt128UInt256Word8Word16Word32Word64Fix64UFix64PathCapabilityStoragePathCapabilityPathPublicPathPrivatePathAuthAccountPublicAccountDeployedContractAuthAccountContracts"
 
-var (
-	_PrimitiveStaticType_index_0 = [...]uint8{0, 7, 11, 14, 19, 28, 39, 43, 50, 56, 65}
-	_PrimitiveStaticType_index_1 = [...]uint8{0, 6, 18}
-	_PrimitiveStaticType_index_2 = [...]uint8{0, 7, 20}
-	_PrimitiveStaticType_index_3 = [...]uint8{0, 10, 26}
-	_PrimitiveStaticType_index_4 = [...]uint8{0, 3, 7, 12, 17, 22, 28, 34}
-	_PrimitiveStaticType_index_5 = [...]uint8{0, 4, 9, 15, 21, 27, 34, 41}
-	_PrimitiveStaticType_index_6 = [...]uint8{0, 5, 11, 17, 23}
-	_PrimitiveStaticType_index_9 = [...]uint8{0, 4, 14, 25, 39, 49, 60}
-)
+var _PrimitiveStaticType_map = map[PrimitiveStaticType]string{
+	0:  _PrimitiveStaticType_name[0:7],
+	1:  _PrimitiveStaticType_name[7:11],
+	2:  _PrimitiveStaticType_name[11:14],
+	3:  _PrimitiveStaticType_name[14:19],
+	4:  _PrimitiveStaticType_name[19:28],
+	5:  _PrimitiveStaticType_name[28:39],
+	6:  _PrimitiveStaticType_name[39:43],
+	7:  _PrimitiveStaticType_name[43:50],
+	8:  _PrimitiveStaticType_name[50:56],
+	9:  _PrimitiveStaticType_name[56:65],
+	10: _PrimitiveStaticType_name[65:73],
+	11: _PrimitiveStaticType_name[73:78],
+	18: _PrimitiveStaticType_name[78:84],
+	19: _PrimitiveStaticType_name[84:96],
+	24: _PrimitiveStaticType_name[96:103],
+	25: _PrimitiveStaticType_name[103:116],
+	30: _PrimitiveStaticType_name[116:126],
+	31: _PrimitiveStaticType_name[126:142],
+	36: _PrimitiveStaticType_name[142:145],
+	37: _PrimitiveStaticType_name[145:149],
+	38: _PrimitiveStaticType_name[149:154],
+	39: _PrimitiveStaticType_name[154:159],
+	40: _PrimitiveStaticType_name[159:164],
+	41: _PrimitiveStaticType_name[164:170],
+	42: _PrimitiveStaticType_name[170:176],
+	44: _PrimitiveStaticType_name[176:180],
+	45: _PrimitiveStaticType_name[180:185],
+	46: _PrimitiveStaticType_name[185:191],
+	47: _PrimitiveStaticType_name[191:197],
+	48: _PrimitiveStaticType_name[197:203],
+	49: _PrimitiveStaticType_name[203:210],
+	50: _PrimitiveStaticType_name[210:217],
+	53: _PrimitiveStaticType_name[217:222],
+	54: _PrimitiveStaticType_name[222:228],
+	55: _PrimitiveStaticType_name[228:234],
+	56: _PrimitiveStaticType_name[234:240],
+	64: _PrimitiveStaticType_name[240:245],
+	72: _PrimitiveStaticType_name[245:251],
+	76: _PrimitiveStaticType_name[251:255],
+	77: _PrimitiveStaticType_name[255:265],
+	78: _PrimitiveStaticType_name[265:276],
+	79: _PrimitiveStaticType_name[276:290],
+	80: _PrimitiveStaticType_name[290:300],
+	81: _PrimitiveStaticType_name[300:311],
+	90: _PrimitiveStaticType_name[311:322],
+	91: _PrimitiveStaticType_name[322:335],
+	92: _PrimitiveStaticType_name[335:351],
+	93: _PrimitiveStaticType_name[351:371],
+}
 
 func (i PrimitiveStaticType) String() string {
-	switch {
-	case i <= 9:
-		return _PrimitiveStaticType_name_0[_PrimitiveStaticType_index_0[i]:_PrimitiveStaticType_index_0[i+1]]
-	case 18 <= i && i <= 19:
-		i -= 18
-		return _PrimitiveStaticType_name_1[_PrimitiveStaticType_index_1[i]:_PrimitiveStaticType_index_1[i+1]]
-	case 24 <= i && i <= 25:
-		i -= 24
-		return _PrimitiveStaticType_name_2[_PrimitiveStaticType_index_2[i]:_PrimitiveStaticType_index_2[i+1]]
-	case 30 <= i && i <= 31:
-		i -= 30
-		return _PrimitiveStaticType_name_3[_PrimitiveStaticType_index_3[i]:_PrimitiveStaticType_index_3[i+1]]
-	case 36 <= i && i <= 42:
-		i -= 36
-		return _PrimitiveStaticType_name_4[_PrimitiveStaticType_index_4[i]:_PrimitiveStaticType_index_4[i+1]]
-	case 44 <= i && i <= 50:
-		i -= 44
-		return _PrimitiveStaticType_name_5[_PrimitiveStaticType_index_5[i]:_PrimitiveStaticType_index_5[i+1]]
-	case 53 <= i && i <= 56:
-		i -= 53
-		return _PrimitiveStaticType_name_6[_PrimitiveStaticType_index_6[i]:_PrimitiveStaticType_index_6[i+1]]
-	case i == 64:
-		return _PrimitiveStaticType_name_7
-	case i == 72:
-		return _PrimitiveStaticType_name_8
-	case 76 <= i && i <= 81:
-		i -= 76
-		return _PrimitiveStaticType_name_9[_PrimitiveStaticType_index_9[i]:_PrimitiveStaticType_index_9[i+1]]
-	default:
-		return "PrimitiveStaticType(" + strconv.FormatInt(int64(i), 10) + ")"
+	if str, ok := _PrimitiveStaticType_map[i]; ok {
+		return str
 	}
+	return "PrimitiveStaticType(" + strconv.FormatInt(int64(i), 10) + ")"
 }

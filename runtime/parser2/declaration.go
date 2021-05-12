@@ -85,11 +85,11 @@ func parseDeclaration(p *parser, docString string) ast.Declaration {
 			case keywordStruct, keywordResource, keywordContract, keywordEnum:
 				return parseCompositeOrInterfaceDeclaration(p, access, accessPos, docString)
 
-			case keywordTransaction:
+			case KeywordTransaction:
 				if access != ast.AccessNotSpecified {
 					panic(fmt.Errorf("invalid access modifier for transaction"))
 				}
-				return parseTransactionDeclaration(p)
+				return parseTransactionDeclaration(p, docString)
 
 			case keywordPriv, keywordPub, keywordAccess:
 				if access != ast.AccessNotSpecified {
@@ -370,7 +370,7 @@ func parseImportDeclaration(p *parser) *ast.ImportDeclaration {
 
 	var identifiers []ast.Identifier
 
-	var location ast.Location
+	var location common.Location
 	var locationPos ast.Position
 	var endPos ast.Position
 
@@ -382,7 +382,7 @@ func parseImportDeclaration(p *parser) *ast.ImportDeclaration {
 		case lexer.TokenString:
 			parsedString, errs := parseStringLiteral(p.current.Value.(string))
 			p.report(errs...)
-			location = ast.StringLocation(parsedString)
+			location = common.StringLocation(parsedString)
 
 		case lexer.TokenHexadecimalIntegerLiteral:
 			location = parseHexadecimalLocation(p.current.Value.(string))
@@ -396,7 +396,7 @@ func parseImportDeclaration(p *parser) *ast.ImportDeclaration {
 	}
 
 	setIdentifierLocation := func(identifier ast.Identifier) {
-		location = ast.IdentifierLocation(identifier.Identifier)
+		location = common.IdentifierLocation(identifier.Identifier)
 		locationPos = identifier.Pos
 		endPos = identifier.EndPosition()
 	}
@@ -442,8 +442,18 @@ func parseImportDeclaration(p *parser) *ast.ImportDeclaration {
 			case lexer.TokenIdentifier:
 
 				if p.current.Value == keywordFrom {
+					if expectCommaOrFrom {
+						atEnd = true
 
-					if !expectCommaOrFrom {
+						// Skip the `from` keyword
+						p.next()
+						p.skipSpaceAndComments(true)
+
+						parseLocation()
+						break
+					}
+
+					if !isNextTokenCommaOrFrom(p) {
 						panic(fmt.Errorf(
 							"expected %s, got keyword %q",
 							lexer.TokenIdentifier,
@@ -451,19 +461,14 @@ func parseImportDeclaration(p *parser) *ast.ImportDeclaration {
 						))
 					}
 
-					atEnd = true
-
-					// Skip the `from` keyword
-					p.next()
-					p.skipSpaceAndComments(true)
-
-					parseLocation()
-				} else {
-					identifier := tokenToIdentifier(p.current)
-					identifiers = append(identifiers, identifier)
-
-					expectCommaOrFrom = true
+					// If the next token is either comma or 'from' token, then fall through
+					// and process the current 'from' token as an identifier.
 				}
+
+				identifier := tokenToIdentifier(p.current)
+				identifiers = append(identifiers, identifier)
+
+				expectCommaOrFrom = true
 
 			case lexer.TokenEOF:
 				panic(fmt.Errorf(
@@ -562,7 +567,27 @@ func parseImportDeclaration(p *parser) *ast.ImportDeclaration {
 	}
 }
 
-func parseHexadecimalLocation(literal string) ast.AddressLocation {
+// isNextTokenCommaOrFrom check whether the token to follow is a comma or a from token.
+func isNextTokenCommaOrFrom(p *parser) bool {
+	p.startBuffering()
+	defer p.replayBuffered()
+
+	// skip the current token
+	p.next()
+	p.skipSpaceAndComments(true)
+
+	// Lookahead the next token
+	switch p.current.Type {
+	case lexer.TokenIdentifier:
+		return p.current.Value == keywordFrom
+	case lexer.TokenComma:
+		return true
+	default:
+		return false
+	}
+}
+
+func parseHexadecimalLocation(literal string) common.AddressLocation {
 	bytes := []byte(strings.Replace(literal[2:], "_", "", -1))
 
 	length := len(bytes)
@@ -578,7 +603,9 @@ func parseHexadecimalLocation(literal string) ast.AddressLocation {
 		panic(err)
 	}
 
-	return address
+	return common.AddressLocation{
+		Address: common.BytesToAddress(address),
+	}
 }
 
 // parseEventDeclaration parses an event declaration.
@@ -623,16 +650,16 @@ func parseEventDeclaration(
 			},
 		}
 
+	members := ast.NewMembers([]ast.Declaration{
+		initializer,
+	})
+
 	return &ast.CompositeDeclaration{
 		Access:        access,
 		CompositeKind: common.CompositeKindEvent,
 		Identifier:    identifier,
-		Members: &ast.Members{
-			Declarations: []ast.Declaration{
-				initializer,
-			},
-		},
-		DocString: docString,
+		Members:       members,
+		DocString:     docString,
 		Range: ast.Range{
 			StartPos: startPos,
 			EndPos:   parameterList.EndPos,
@@ -854,14 +881,9 @@ func parseCompositeOrInterfaceDeclaration(
 //
 //     membersAndNestedDeclarations : ( memberOrNestedDeclaration ';'* )*
 //
-func parseMembersAndNestedDeclarations(
-	p *parser,
-	endTokenType lexer.TokenType,
-) (
-	members *ast.Members,
-) {
+func parseMembersAndNestedDeclarations(p *parser, endTokenType lexer.TokenType) *ast.Members {
 
-	members = &ast.Members{}
+	var declarations []ast.Declaration
 
 	for {
 		_, docString := p.parseTrivia(triviaOptions{
@@ -876,15 +898,15 @@ func parseMembersAndNestedDeclarations(
 			continue
 
 		case endTokenType, lexer.TokenEOF:
-			return
+			return ast.NewMembers(declarations)
 
 		default:
 			memberOrNestedDeclaration := parseMemberOrNestedDeclaration(p, docString)
 			if memberOrNestedDeclaration == nil {
-				return
+				return ast.NewMembers(declarations)
 			}
 
-			members.Declarations = append(members.Declarations, memberOrNestedDeclaration)
+			declarations = append(declarations, memberOrNestedDeclaration)
 		}
 	}
 }

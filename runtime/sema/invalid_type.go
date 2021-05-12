@@ -22,7 +22,7 @@ package sema
 // It is the result of type checking failing and
 // can't be expressed in programs.
 //
-var InvalidType = &NominalType{
+var InvalidType = &SimpleType{
 	Name:                 "<<invalid>>",
 	QualifiedName:        "<<invalid>>",
 	TypeID:               "<<invalid>>",
@@ -31,5 +31,4 @@ var InvalidType = &NominalType{
 	Storable:             false,
 	Equatable:            false,
 	ExternallyReturnable: false,
-	IsSuperTypeOf:        nil,
 }

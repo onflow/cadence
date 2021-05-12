@@ -5,7 +5,7 @@ title: Run-time Types
 Types can be represented at run-time.
 To create a type value, use the constructor function `Type<T>()`, which accepts the static type as a type argument.
 
-This is similar to e.g. `T.self` in Swift, `T::class` in Kotlin, and `T.class` in Java.
+This is similar to e.g. `T.self` in Swift, `T::class`/`KClass<T>` in Kotlin, and `T.class`/`Class<T>` in Java.
 
 For example, to represent the type `Int` at run-time:
 
@@ -32,8 +32,51 @@ Type<Int>() == Type<Int>()
 Type<Int>() != Type<String>()
 ```
 
+To get the run-time type's fully qualified type identifier, use the `let identifier: String` field:
+
+```cadence
+let type = Type<Int>()
+type.identifier  // is "Int"
+```
+
+```cadence
+// in account 0x1
+
+struct Test {}
+
+let type = Type<Test>()
+type.identifier  // is "A.0000000000000001.Test"
+```
+
+### Getting the Type from a Value
+
+The method `fun getType(): Type` can be used to get the runtime type of a value.
+
+```cadence
+let something = "hello"
+
+let type: Type = something.getType()
+// `type` is `Type<String>()`
+```
+
+This method returns the **concrete run-time type** of the object, **not** the static type.
+
+```cadence
+// Declare a variable named `something` that has the *static* type `AnyResource`
+// and has a resource of type `Collectible`
+//
+let something: @AnyResource <- create Collectible()
+
+// The resource's concrete run-time type is `Collectible`
+//
+let type: Type = something.getType()
+// `type` is `Type<@Collectible>()`
+```
+
+### Asserting the Type of a Value
+
 The method `fun isInstance(_ type: Type): Bool` can be used to check if a value has a certain type,
-using the concrete run-time type,  and considering subtyping rules,
+using the concrete run-time type, and considering subtyping rules,
 
 ```cadence
 // Declare a variable named `collectible` that has the *static* type `Collectible`

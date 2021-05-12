@@ -40,14 +40,14 @@ func (checker *Checker) VisitUnaryExpression(expression *ast.UnaryExpression) as
 
 	switch expression.Operation {
 	case ast.OperationNegate:
-		expectedType := &BoolType{}
+		expectedType := BoolType
 		if !IsSubType(valueType, expectedType) {
 			reportInvalidUnaryOperator(expectedType)
 		}
 		return valueType
 
 	case ast.OperationMinus:
-		expectedType := &SignedNumberType{}
+		expectedType := SignedNumberType
 		if !IsSubType(valueType, expectedType) {
 			reportInvalidUnaryOperator(expectedType)
 		}

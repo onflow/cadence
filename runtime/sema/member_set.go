@@ -18,61 +18,103 @@
 
 package sema
 
-import (
-	"github.com/raviqqe/hamt"
-
-	interfaceentry "github.com/onflow/cadence/runtime/common/interface_entry"
-)
-
-// MemberSet is an immutable set of field assignments.
+// MemberSet is set of members.
 //
 type MemberSet struct {
-	set hamt.Set
+	Parent  *MemberSet
+	members *MemberStructOrderedMap
 }
 
 // NewMemberSet returns an empty member set.
 //
-func NewMemberSet() *MemberSet {
-	return &MemberSet{hamt.NewSet()}
-}
-
-func (ms *MemberSet) entry(member *Member) hamt.Entry {
-	return interfaceentry.InterfaceEntry{Interface: member}
+func NewMemberSet(parent *MemberSet) *MemberSet {
+	return &MemberSet{
+		Parent: parent,
+	}
 }
 
 // Add inserts a member into the set.
 //
 func (ms *MemberSet) Add(member *Member) {
-	entry := ms.entry(member)
-	ms.set = ms.set.Insert(entry)
+	if ms.members == nil {
+		ms.members = NewMemberStructOrderedMap()
+	}
+
+	ms.members.Set(member, struct{}{})
 }
 
 // Contains returns true if the given member exists in the set.
 //
 func (ms *MemberSet) Contains(member *Member) bool {
-	entry := ms.entry(member)
-	return ms.set.Include(entry)
-}
-
-// Intersection returns a new set containing all members that exist in both sets.
-//
-func (ms *MemberSet) Intersection(b *MemberSet) *MemberSet {
-	result := hamt.NewSet()
-
-	set := ms.set
-
-	for set.Size() != 0 {
-		var entry hamt.Entry
-		entry, set = set.FirstRest()
-
-		if b.set.Include(entry) {
-			result = result.Insert(entry)
+	if ms.members != nil {
+		_, ok := ms.members.Get(member)
+		if ok {
+			return true
 		}
 	}
 
-	return &MemberSet{result}
+	if ms.Parent != nil {
+		return ms.Parent.Contains(member)
+	}
+
+	return false
 }
 
+// ForEach calls the given function for each member.
+// It can be used to iterate over all members of the set.
+//
+func (ms *MemberSet) ForEach(cb func(member *Member) error) error {
+	memberSet := ms
+
+	visited := map[*Member]bool{}
+
+	for memberSet != nil {
+
+		if memberSet.members != nil {
+			for pair := memberSet.members.Oldest(); pair != nil; pair = pair.Next() {
+				member := pair.Key
+
+				if visited[member] {
+					continue
+				}
+
+				err := cb(member)
+				if err != nil {
+					return err
+				}
+
+				visited[member] = true
+			}
+		}
+
+		memberSet = memberSet.Parent
+	}
+
+	return nil
+}
+
+// Intersection returns a new set containing all members that exist in this and the given set.
+//
+func (ms *MemberSet) Intersection(otherMS *MemberSet) *MemberSet {
+
+	result := NewMemberSet(nil)
+
+	_ = ms.ForEach(func(member *Member) error {
+		if !otherMS.Contains(member) {
+			return nil
+		}
+
+		result.Add(member)
+
+		return nil
+	})
+
+	return result
+}
+
+// Clone returns a new child member set that contains all entries of this parent set.
+// Changes to the returned set will only be applied in the returned set, not the parent.
+//
 func (ms *MemberSet) Clone() *MemberSet {
-	return &MemberSet{set: ms.set}
+	return NewMemberSet(ms)
 }

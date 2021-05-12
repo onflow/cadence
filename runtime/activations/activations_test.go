@@ -28,14 +28,14 @@ func TestActivations(t *testing.T) {
 
 	t.Parallel()
 
-	activations := &Activations{}
+	activations := &ValueTypeActivations{}
 
 	activations.Set("a", 1)
 
 	assert.Equal(t, activations.Find("a"), 1)
 	assert.Nil(t, activations.Find("b"))
 
-	activations.PushCurrent()
+	activations.PushNewWithCurrent()
 
 	activations.Set("a", 2)
 	activations.Set("b", 3)
@@ -44,7 +44,7 @@ func TestActivations(t *testing.T) {
 	assert.Equal(t, activations.Find("b"), 3)
 	assert.Nil(t, activations.Find("c"))
 
-	activations.PushCurrent()
+	activations.PushNewWithCurrent()
 
 	activations.Set("a", 5)
 	activations.Set("c", 4)

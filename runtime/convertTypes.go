@@ -23,8 +23,8 @@ import (
 
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/sema"
-	"github.com/onflow/cadence/runtime/stdlib"
 )
 
 // ExportType converts a runtime type to its corresponding Go representation.
@@ -37,74 +37,8 @@ func ExportType(t sema.Type, results map[sema.TypeID]cadence.Type) cadence.Type 
 
 	result := func() cadence.Type {
 		switch t := t.(type) {
-		case *sema.AnyType:
-			return cadence.AnyType{}
-		case *sema.AnyStructType:
-			return cadence.AnyStructType{}
-		case *sema.AnyResourceType:
-			return cadence.AnyResourceType{}
-		case *sema.MetaType:
-			return cadence.MetaType{}
 		case *sema.OptionalType:
 			return exportOptionalType(t, results)
-		case *sema.BoolType:
-			return cadence.BoolType{}
-		case *sema.StringType:
-			return cadence.StringType{}
-		case *sema.CharacterType:
-			return cadence.CharacterType{}
-		case *sema.NumberType:
-			return cadence.NumberType{}
-		case *sema.SignedNumberType:
-			return cadence.SignedNumberType{}
-		case *sema.IntegerType:
-			return cadence.IntegerType{}
-		case *sema.SignedIntegerType:
-			return cadence.SignedIntegerType{}
-		case *sema.FixedPointType:
-			return cadence.FixedPointType{}
-		case *sema.SignedFixedPointType:
-			return cadence.SignedFixedPointType{}
-		case *sema.IntType:
-			return cadence.IntType{}
-		case *sema.Int8Type:
-			return cadence.Int8Type{}
-		case *sema.Int16Type:
-			return cadence.Int16Type{}
-		case *sema.Int32Type:
-			return cadence.Int32Type{}
-		case *sema.Int64Type:
-			return cadence.Int64Type{}
-		case *sema.Int128Type:
-			return cadence.Int128Type{}
-		case *sema.Int256Type:
-			return cadence.Int256Type{}
-		case *sema.UIntType:
-			return cadence.UIntType{}
-		case *sema.UInt8Type:
-			return cadence.UInt8Type{}
-		case *sema.UInt16Type:
-			return cadence.UInt16Type{}
-		case *sema.UInt32Type:
-			return cadence.UInt32Type{}
-		case *sema.UInt64Type:
-			return cadence.UInt64Type{}
-		case *sema.UInt128Type:
-			return cadence.UInt128Type{}
-		case *sema.UInt256Type:
-			return cadence.UInt256Type{}
-		case *sema.Word8Type:
-			return cadence.Word8Type{}
-		case *sema.Word16Type:
-			return cadence.Word16Type{}
-		case *sema.Word32Type:
-			return cadence.Word32Type{}
-		case *sema.Word64Type:
-			return cadence.Word64Type{}
-		case *sema.Fix64Type:
-			return cadence.Fix64Type{}
-		case *sema.UFix64Type:
-			return cadence.UFix64Type{}
 		case *sema.VariableSizedType:
 			return exportVariableSizedType(t, results)
 		case *sema.ConstantSizedType:
@@ -123,19 +57,63 @@ func ExportType(t sema.Type, results map[sema.TypeID]cadence.Type) cadence.Type 
 			return exportReferenceType(t, results)
 		case *sema.RestrictedType:
 			return exportRestrictedType(t, results)
-		case *stdlib.BlockType:
-			return cadence.BlockType{}
-		case *sema.CheckedFunctionType:
-			return exportFunctionType(t.FunctionType, results)
 		case *sema.CapabilityType:
 			return exportCapabilityType(t, results)
-		case *sema.AuthAccountType:
-			return cadence.AuthAccountType{}
-		case *sema.PublicAccountType:
-			return cadence.PublicAccountType{}
 		}
 
 		switch t {
+		case sema.NumberType:
+			return cadence.NumberType{}
+		case sema.SignedNumberType:
+			return cadence.SignedNumberType{}
+		case sema.IntegerType:
+			return cadence.IntegerType{}
+		case sema.SignedIntegerType:
+			return cadence.SignedIntegerType{}
+		case sema.FixedPointType:
+			return cadence.FixedPointType{}
+		case sema.SignedFixedPointType:
+			return cadence.SignedFixedPointType{}
+		case sema.IntType:
+			return cadence.IntType{}
+		case sema.Int8Type:
+			return cadence.Int8Type{}
+		case sema.Int16Type:
+			return cadence.Int16Type{}
+		case sema.Int32Type:
+			return cadence.Int32Type{}
+		case sema.Int64Type:
+			return cadence.Int64Type{}
+		case sema.Int128Type:
+			return cadence.Int128Type{}
+		case sema.Int256Type:
+			return cadence.Int256Type{}
+		case sema.UIntType:
+			return cadence.UIntType{}
+		case sema.UInt8Type:
+			return cadence.UInt8Type{}
+		case sema.UInt16Type:
+			return cadence.UInt16Type{}
+		case sema.UInt32Type:
+			return cadence.UInt32Type{}
+		case sema.UInt64Type:
+			return cadence.UInt64Type{}
+		case sema.UInt128Type:
+			return cadence.UInt128Type{}
+		case sema.UInt256Type:
+			return cadence.UInt256Type{}
+		case sema.Word8Type:
+			return cadence.Word8Type{}
+		case sema.Word16Type:
+			return cadence.Word16Type{}
+		case sema.Word32Type:
+			return cadence.Word32Type{}
+		case sema.Word64Type:
+			return cadence.Word64Type{}
+		case sema.Fix64Type:
+			return cadence.Fix64Type{}
+		case sema.UFix64Type:
+			return cadence.UFix64Type{}
 		case sema.PathType:
 			return cadence.PathType{}
 		case sema.StoragePathType:
@@ -152,6 +130,22 @@ func ExportType(t sema.Type, results map[sema.TypeID]cadence.Type) cadence.Type 
 			return cadence.VoidType{}
 		case sema.InvalidType:
 			return nil
+		case sema.MetaType:
+			return cadence.MetaType{}
+		case sema.BoolType:
+			return cadence.BoolType{}
+		case sema.CharacterType:
+			return cadence.CharacterType{}
+		case sema.AnyType:
+			return cadence.AnyType{}
+		case sema.AnyStructType:
+			return cadence.AnyStructType{}
+		case sema.AnyResourceType:
+			return cadence.AnyResourceType{}
+		case sema.BlockType:
+			return cadence.BlockType{}
+		case sema.StringType:
+			return cadence.StringType{}
 		}
 
 		panic(fmt.Sprintf("cannot export type of type %T", t))
@@ -189,12 +183,14 @@ func exportConstantSizedType(t *sema.ConstantSizedType, results map[sema.TypeID]
 
 func exportCompositeType(t *sema.CompositeType, results map[sema.TypeID]cadence.Type) (result cadence.CompositeType) {
 
-	id := string(t.ID())
-
 	fieldMembers := make([]*sema.Member, 0, len(t.Fields))
 
 	for _, identifier := range t.Fields {
-		member := t.Members[identifier]
+		member, ok := t.Members.Get(identifier)
+
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
 
 		if member.IgnoreInSerialization {
 			continue
@@ -208,30 +204,38 @@ func exportCompositeType(t *sema.CompositeType, results map[sema.TypeID]cadence.
 	switch t.Kind {
 	case common.CompositeKindStructure:
 		result = &cadence.StructType{
-			TypeID:     id,
-			Identifier: t.Identifier,
-			Fields:     fields,
+			Location:            t.Location,
+			QualifiedIdentifier: t.QualifiedIdentifier(),
+			Fields:              fields,
 		}
 
 	case common.CompositeKindResource:
 		result = &cadence.ResourceType{
-			TypeID:     id,
-			Identifier: t.Identifier,
-			Fields:     fields,
+			Location:            t.Location,
+			QualifiedIdentifier: t.QualifiedIdentifier(),
+			Fields:              fields,
 		}
 
 	case common.CompositeKindEvent:
 		result = &cadence.EventType{
-			TypeID:     id,
-			Identifier: t.Identifier,
-			Fields:     fields,
+			Location:            t.Location,
+			QualifiedIdentifier: t.QualifiedIdentifier(),
+			Fields:              fields,
 		}
 
 	case common.CompositeKindContract:
 		result = &cadence.ContractType{
-			TypeID:     id,
-			Identifier: t.Identifier,
-			Fields:     fields,
+			Location:            t.Location,
+			QualifiedIdentifier: t.QualifiedIdentifier(),
+			Fields:              fields,
+		}
+
+	case common.CompositeKindEnum:
+		result = &cadence.EnumType{
+			Location:            t.Location,
+			QualifiedIdentifier: t.QualifiedIdentifier(),
+			Fields:              fields,
+			RawType:             ExportType(t.EnumRawType, results),
 		}
 
 	default:
@@ -256,12 +260,14 @@ func exportCompositeType(t *sema.CompositeType, results map[sema.TypeID]cadence.
 
 func exportInterfaceType(t *sema.InterfaceType, results map[sema.TypeID]cadence.Type) (result cadence.InterfaceType) {
 
-	id := string(t.ID())
-
 	fieldMembers := make([]*sema.Member, 0, len(t.Fields))
 
 	for _, identifier := range t.Fields {
-		member := t.Members[identifier]
+		member, ok := t.Members.Get(identifier)
+
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
 
 		if member.IgnoreInSerialization {
 			continue
@@ -275,23 +281,23 @@ func exportInterfaceType(t *sema.InterfaceType, results map[sema.TypeID]cadence.
 	switch t.CompositeKind {
 	case common.CompositeKindStructure:
 		result = &cadence.StructInterfaceType{
-			TypeID:     id,
-			Identifier: t.Identifier,
-			Fields:     fields,
+			Location:            t.Location,
+			QualifiedIdentifier: t.QualifiedIdentifier(),
+			Fields:              fields,
 		}
 
 	case common.CompositeKindResource:
 		result = &cadence.ResourceInterfaceType{
-			TypeID:     id,
-			Identifier: t.Identifier,
-			Fields:     fields,
+			Location:            t.Location,
+			QualifiedIdentifier: t.QualifiedIdentifier(),
+			Fields:              fields,
 		}
 
 	case common.CompositeKindContract:
 		result = &cadence.ContractInterfaceType{
-			TypeID:     id,
-			Identifier: t.Identifier,
-			Fields:     fields,
+			Location:            t.Location,
+			QualifiedIdentifier: t.QualifiedIdentifier(),
+			Fields:              fields,
 		}
 
 	default:

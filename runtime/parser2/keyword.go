@@ -55,7 +55,7 @@ const (
 	keywordStruct      = "struct"
 	keywordResource    = "resource"
 	keywordInterface   = "interface"
-	keywordTransaction = "transaction"
+	KeywordTransaction = "transaction"
 	keywordPrepare     = "prepare"
 	keywordExecute     = "execute"
 	keywordCase        = "case"

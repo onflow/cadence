@@ -105,7 +105,9 @@ func (checker *Checker) declareFunctionDeclaration(
 	})
 	checker.report(err)
 
-	checker.recordFunctionDeclarationOrigin(declaration, functionType)
+	if checker.positionInfoEnabled {
+		checker.recordFunctionDeclarationOrigin(declaration, functionType)
+	}
 }
 
 func (checker *Checker) checkFunction(
@@ -146,8 +148,13 @@ func (checker *Checker) checkFunction(
 			//   variable declarations will have proper function activation
 			//   associated to it, and declare parameters in this new scope
 
+			var endPosGetter func() ast.Position
+			if functionBlock != nil {
+				endPosGetter = functionBlock.EndPosition
+			}
+
 			checker.enterValueScope()
-			defer checker.leaveValueScope(checkResourceLoss)
+			defer checker.leaveValueScope(endPosGetter, checkResourceLoss)
 
 			checker.declareParameters(parameterList, functionType.Parameters)
 
@@ -280,7 +287,9 @@ func (checker *Checker) declareParameters(
 			Pos:             &identifier.Pos,
 		}
 		checker.valueActivations.Set(identifier.Identifier, variable)
-		checker.recordVariableDeclarationOccurrence(identifier.Identifier, variable)
+		if checker.positionInfoEnabled {
+			checker.recordVariableDeclarationOccurrence(identifier.Identifier, variable)
+		}
 	}
 }
 
@@ -335,7 +344,7 @@ func (checker *Checker) visitFunctionBlock(
 	checkResourceLoss bool,
 ) {
 	checker.enterValueScope()
-	defer checker.leaveValueScope(checkResourceLoss)
+	defer checker.leaveValueScope(functionBlock.EndPosition, checkResourceLoss)
 
 	if functionBlock.PreConditions != nil {
 		checker.visitConditions(*functionBlock.PreConditions)
@@ -407,7 +416,10 @@ func (checker *Checker) VisitFunctionExpression(expression *ast.FunctionExpressi
 // to be initialized (as stated in the initialization info) have been initialized.
 //
 func (checker *Checker) checkFieldMembersInitialized(info *InitializationInfo) {
-	for member, field := range info.FieldMembers {
+	for pair := info.FieldMembers.Oldest(); pair != nil; pair = pair.Next() {
+		member := pair.Key
+		field := pair.Value
+
 		isInitialized := info.InitializedFieldMembers.Contains(member)
 		if isInitialized {
 			continue

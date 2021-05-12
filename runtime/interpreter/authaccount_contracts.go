@@ -21,72 +21,32 @@ package interpreter
 import (
 	"fmt"
 
-	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/sema"
-	"github.com/onflow/cadence/runtime/trampoline"
 )
 
 // AuthAccountContractsValue
 
-type AuthAccountContractsValue struct {
-	Address        AddressValue
-	AddFunction    FunctionValue
-	UpdateFunction FunctionValue
-	GetFunction    FunctionValue
-	RemoveFunction FunctionValue
-}
+func NewAuthAccountContractsValue(
+	address AddressValue,
+	addFunction FunctionValue,
+	updateFunction FunctionValue,
+	getFunction FunctionValue,
+	removeFunction FunctionValue,
+) *CompositeValue {
+	fields := NewStringValueOrderedMap()
+	fields.Set(sema.AuthAccountContractsTypeAddFunctionName, addFunction)
+	fields.Set(sema.AuthAccountContractsTypeGetFunctionName, getFunction)
+	fields.Set(sema.AuthAccountContractsTypeRemoveFunctionName, removeFunction)
+	fields.Set(sema.AuthAccountContractsTypeUpdateExperimentalFunctionName, updateFunction)
 
-func (AuthAccountContractsValue) IsValue() {}
-
-func (AuthAccountContractsValue) DynamicType(_ *Interpreter) DynamicType {
-	return AuthAccountContractsDynamicType{}
-}
-
-func (v AuthAccountContractsValue) Copy() Value {
-	return v
-}
-
-func (AuthAccountContractsValue) GetOwner() *common.Address {
-	// value is never owned
-	return nil
-}
-
-func (AuthAccountContractsValue) SetOwner(_ *common.Address) {
-	// NO-OP: value cannot be owned
-}
-
-func (AuthAccountContractsValue) IsModified() bool {
-	return false
-}
-
-func (AuthAccountContractsValue) SetModified(_ bool) {
-	// NO-OP
-}
-
-func (v AuthAccountContractsValue) Destroy(_ *Interpreter, _ LocationRange) trampoline.Trampoline {
-	return trampoline.Done{}
-}
-
-func (v AuthAccountContractsValue) String() string {
-	return fmt.Sprintf("AuthAccount.Contracts(%s)", v.Address)
-}
-
-func (v AuthAccountContractsValue) GetMember(_ *Interpreter, _ LocationRange, name string) Value {
-	switch name {
-	case sema.AuthAccountContractsTypeAddFunctionName:
-		return v.AddFunction
-	case sema.AuthAccountContractsTypeGetFunctionName:
-		return v.GetFunction
-	case sema.AuthAccountContractsTypeRemoveFunctionName:
-		return v.RemoveFunction
-	case sema.AuthAccountContractsTypeUpdateExperimentalFunctionName:
-		return v.UpdateFunction
+	stringer := func() string {
+		return fmt.Sprintf("AuthAccount.Contracts(%s)", address)
 	}
 
-	return nil
-}
-
-func (AuthAccountContractsValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
-	panic(errors.NewUnreachableError())
+	return &CompositeValue{
+		QualifiedIdentifier: sema.AuthAccountContractsType.QualifiedIdentifier(),
+		Kind:                sema.AuthAccountContractsType.Kind,
+		Fields:              fields,
+		stringer:            stringer,
+	}
 }

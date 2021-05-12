@@ -24,30 +24,6 @@ import (
 
 const FunctionEntryPointName = "main"
 
-// FunctionEntryPointType returns the type of the entry point function declaration, if any.
-//
-// Returns an error if no valid entry point function declaration exists.
-//
-func (checker *Checker) FunctionEntryPointType() (*FunctionType, error) {
-
-	entryPointValue, ok := checker.GlobalValues[FunctionEntryPointName]
-	if !ok {
-		return nil, &MissingEntryPointError{
-			Expected: FunctionEntryPointName,
-		}
-	}
-
-	invokableType, ok := entryPointValue.Type.(InvokableType)
-	if !ok {
-		return nil, &InvalidEntryPointTypeError{
-			Type: entryPointValue.Type,
-		}
-	}
-
-	functionType := invokableType.InvocationFunctionType()
-	return functionType, nil
-}
-
 // FunctionEntryPointDeclaration returns the entry point function declaration, if any.
 //
 // Returns nil if there are multiple function declarations with the same function entry point name, or any other top-level declarations.

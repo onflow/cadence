@@ -20,13 +20,11 @@ package checker
 
 import (
 	"fmt"
-	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/onflow/cadence/runtime/cmd"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/sema"
@@ -1735,7 +1733,7 @@ func TestCheckCompositeConstructorUseInInitializerAndFunction(t *testing.T) {
 
 			require.NoError(t, err)
 
-			testType := checker.GlobalTypes["Test"].Type
+			testType := RequireGlobalType(t, checker.Elaboration, "Test")
 
 			assert.IsType(t, &sema.CompositeType{}, testType)
 
@@ -1746,8 +1744,8 @@ func TestCheckCompositeConstructorUseInInitializerAndFunction(t *testing.T) {
 				structureType.Identifier,
 			)
 
-			testFunctionMember := structureType.Members["test"]
-
+			testFunctionMember, ok := structureType.Members.Get("test")
+			require.True(t, ok)
 			assert.IsType(t, &sema.FunctionType{}, testFunctionMember.TypeAnnotation.Type)
 
 			testFunctionType := testFunctionMember.TypeAnnotation.Type.(*sema.FunctionType)
@@ -2196,9 +2194,7 @@ func TestCheckMutualTypeUseTopLevel(t *testing.T) {
 
 						_, err := ParseAndCheck(t, code)
 
-						if !assert.NoError(t, err) {
-							cmd.PrettyPrintError(os.Stdout, err, "", map[string]string{"": code})
-						}
+						require.NoError(t, err)
 					})
 				}
 			}
@@ -2236,7 +2232,7 @@ func TestCheckCompositeFieldOrder(t *testing.T) {
 
 			require.NoError(t, err)
 
-			testType := checker.GlobalTypes["Test"].Type.(*sema.CompositeType)
+			testType := RequireGlobalType(t, checker.Elaboration, "Test").(*sema.CompositeType)
 
 			switch kind {
 			case common.CompositeKindContract:

@@ -20,6 +20,8 @@ package cadence
 
 import (
 	"fmt"
+
+	"github.com/onflow/cadence/runtime/common"
 )
 
 type Type interface {
@@ -66,7 +68,7 @@ type OptionalType struct {
 func (OptionalType) isType() {}
 
 func (t OptionalType) ID() string {
-	return fmt.Sprintf("%s?", t.Type)
+	return fmt.Sprintf("%s?", t.Type.ID())
 }
 
 // Variable
@@ -496,7 +498,8 @@ type Parameter struct {
 type CompositeType interface {
 	Type
 	isCompositeType()
-	CompositeIdentifier() string
+	CompositeTypeLocation() common.Location
+	CompositeTypeQualifiedIdentifier() string
 	CompositeFields() []Field
 	CompositeInitializers() [][]Parameter
 }
@@ -504,22 +507,30 @@ type CompositeType interface {
 // StructType
 
 type StructType struct {
-	TypeID       string
-	Identifier   string
-	Fields       []Field
-	Initializers [][]Parameter
+	Location            common.Location
+	QualifiedIdentifier string
+	Fields              []Field
+	Initializers        [][]Parameter
 }
 
 func (*StructType) isType() {}
 
 func (t *StructType) ID() string {
-	return t.TypeID
+	if t.Location == nil {
+		return t.QualifiedIdentifier
+	}
+
+	return string(t.Location.TypeID(t.QualifiedIdentifier))
 }
 
 func (*StructType) isCompositeType() {}
 
-func (t *StructType) CompositeIdentifier() string {
-	return t.Identifier
+func (t *StructType) CompositeTypeLocation() common.Location {
+	return t.Location
+}
+
+func (t *StructType) CompositeTypeQualifiedIdentifier() string {
+	return t.QualifiedIdentifier
 }
 
 func (t *StructType) CompositeFields() []Field {
@@ -533,22 +544,30 @@ func (t *StructType) CompositeInitializers() [][]Parameter {
 // ResourceType
 
 type ResourceType struct {
-	TypeID       string
-	Identifier   string
-	Fields       []Field
-	Initializers [][]Parameter
+	Location            common.Location
+	QualifiedIdentifier string
+	Fields              []Field
+	Initializers        [][]Parameter
 }
 
 func (*ResourceType) isType() {}
 
 func (t *ResourceType) ID() string {
-	return t.TypeID
+	if t.Location == nil {
+		return t.QualifiedIdentifier
+	}
+
+	return string(t.Location.TypeID(t.QualifiedIdentifier))
 }
 
 func (*ResourceType) isCompositeType() {}
 
-func (t *ResourceType) CompositeIdentifier() string {
-	return t.Identifier
+func (t *ResourceType) CompositeTypeLocation() common.Location {
+	return t.Location
+}
+
+func (t *ResourceType) CompositeTypeQualifiedIdentifier() string {
+	return t.QualifiedIdentifier
 }
 
 func (t *ResourceType) CompositeFields() []Field {
@@ -562,22 +581,30 @@ func (t *ResourceType) CompositeInitializers() [][]Parameter {
 // EventType
 
 type EventType struct {
-	TypeID      string
-	Identifier  string
-	Fields      []Field
-	Initializer []Parameter
+	Location            common.Location
+	QualifiedIdentifier string
+	Fields              []Field
+	Initializer         []Parameter
 }
 
 func (*EventType) isType() {}
 
 func (t *EventType) ID() string {
-	return t.TypeID
+	if t.Location == nil {
+		return t.QualifiedIdentifier
+	}
+
+	return string(t.Location.TypeID(t.QualifiedIdentifier))
 }
 
-func (EventType) isCompositeType() {}
+func (*EventType) isCompositeType() {}
 
-func (t *EventType) CompositeIdentifier() string {
-	return t.Identifier
+func (t *EventType) CompositeTypeLocation() common.Location {
+	return t.Location
+}
+
+func (t *EventType) CompositeTypeQualifiedIdentifier() string {
+	return t.QualifiedIdentifier
 }
 
 func (t *EventType) CompositeFields() []Field {
@@ -591,22 +618,30 @@ func (t *EventType) CompositeInitializers() [][]Parameter {
 // ContractType
 
 type ContractType struct {
-	TypeID       string
-	Identifier   string
-	Fields       []Field
-	Initializers [][]Parameter
+	Location            common.Location
+	QualifiedIdentifier string
+	Fields              []Field
+	Initializers        [][]Parameter
 }
 
 func (*ContractType) isType() {}
 
 func (t *ContractType) ID() string {
-	return t.TypeID
+	if t.Location == nil {
+		return t.QualifiedIdentifier
+	}
+
+	return string(t.Location.TypeID(t.QualifiedIdentifier))
 }
 
 func (*ContractType) isCompositeType() {}
 
-func (t *ContractType) CompositeIdentifier() string {
-	return t.Identifier
+func (t *ContractType) CompositeTypeLocation() common.Location {
+	return t.Location
+}
+
+func (t *ContractType) CompositeTypeQualifiedIdentifier() string {
+	return t.QualifiedIdentifier
 }
 
 func (t *ContractType) CompositeFields() []Field {
@@ -622,7 +657,8 @@ func (t *ContractType) CompositeInitializers() [][]Parameter {
 type InterfaceType interface {
 	Type
 	isInterfaceType()
-	InterfaceIdentifier() string
+	InterfaceTypeLocation() common.Location
+	InterfaceTypeQualifiedIdentifier() string
 	InterfaceFields() []Field
 	InterfaceInitializers() [][]Parameter
 }
@@ -630,22 +666,30 @@ type InterfaceType interface {
 // StructInterfaceType
 
 type StructInterfaceType struct {
-	TypeID       string
-	Identifier   string
-	Fields       []Field
-	Initializers [][]Parameter
+	Location            common.Location
+	QualifiedIdentifier string
+	Fields              []Field
+	Initializers        [][]Parameter
 }
 
 func (*StructInterfaceType) isType() {}
 
 func (t *StructInterfaceType) ID() string {
-	return t.TypeID
+	if t.Location == nil {
+		return t.QualifiedIdentifier
+	}
+
+	return string(t.Location.TypeID(t.QualifiedIdentifier))
 }
 
 func (*StructInterfaceType) isInterfaceType() {}
 
-func (t *StructInterfaceType) InterfaceIdentifier() string {
-	return t.Identifier
+func (t *StructInterfaceType) InterfaceTypeLocation() common.Location {
+	return t.Location
+}
+
+func (t *StructInterfaceType) InterfaceTypeQualifiedIdentifier() string {
+	return t.QualifiedIdentifier
 }
 
 func (t *StructInterfaceType) InterfaceFields() []Field {
@@ -659,22 +703,30 @@ func (t *StructInterfaceType) InterfaceInitializers() [][]Parameter {
 // ResourceInterfaceType
 
 type ResourceInterfaceType struct {
-	TypeID       string
-	Identifier   string
-	Fields       []Field
-	Initializers [][]Parameter
+	Location            common.Location
+	QualifiedIdentifier string
+	Fields              []Field
+	Initializers        [][]Parameter
 }
 
 func (*ResourceInterfaceType) isType() {}
 
 func (t *ResourceInterfaceType) ID() string {
-	return t.TypeID
+	if t.Location == nil {
+		return t.QualifiedIdentifier
+	}
+
+	return string(t.Location.TypeID(t.QualifiedIdentifier))
 }
 
 func (*ResourceInterfaceType) isInterfaceType() {}
 
-func (t *ResourceInterfaceType) InterfaceIdentifier() string {
-	return t.Identifier
+func (t *ResourceInterfaceType) InterfaceTypeLocation() common.Location {
+	return t.Location
+}
+
+func (t *ResourceInterfaceType) InterfaceTypeQualifiedIdentifier() string {
+	return t.QualifiedIdentifier
 }
 
 func (t *ResourceInterfaceType) InterfaceFields() []Field {
@@ -688,22 +740,30 @@ func (t *ResourceInterfaceType) InterfaceInitializers() [][]Parameter {
 // ContractInterfaceType
 
 type ContractInterfaceType struct {
-	TypeID       string
-	Identifier   string
-	Fields       []Field
-	Initializers [][]Parameter
+	Location            common.Location
+	QualifiedIdentifier string
+	Fields              []Field
+	Initializers        [][]Parameter
 }
 
 func (*ContractInterfaceType) isType() {}
 
 func (t *ContractInterfaceType) ID() string {
-	return t.TypeID
+	if t.Location == nil {
+		return t.QualifiedIdentifier
+	}
+
+	return string(t.Location.TypeID(t.QualifiedIdentifier))
 }
 
 func (*ContractInterfaceType) isInterfaceType() {}
 
-func (t *ContractInterfaceType) InterfaceIdentifier() string {
-	return t.Identifier
+func (t *ContractInterfaceType) InterfaceTypeLocation() common.Location {
+	return t.Location
+}
+
+func (t *ContractInterfaceType) InterfaceTypeQualifiedIdentifier() string {
+	return t.QualifiedIdentifier
 }
 
 func (t *ContractInterfaceType) InterfaceFields() []Field {
@@ -742,30 +802,6 @@ type ResourcePointer struct {
 func (ResourcePointer) isType() {}
 
 func (t ResourcePointer) ID() string {
-	return t.TypeName
-}
-
-// StructPointer
-
-type StructPointer struct {
-	TypeName string
-}
-
-func (StructPointer) isType() {}
-
-func (t StructPointer) ID() string {
-	return t.TypeName
-}
-
-// EventPointer
-
-type EventPointer struct {
-	TypeName string
-}
-
-func (EventPointer) isType() {}
-
-func (t EventPointer) ID() string {
 	return t.TypeName
 }
 
@@ -885,22 +921,39 @@ func (t CapabilityType) WithID(id string) CapabilityType {
 	return t
 }
 
-// AuthAccountType
-
-type AuthAccountType struct{}
-
-func (AuthAccountType) isType() {}
-
-func (AuthAccountType) ID() string {
-	return "AuthAccount"
+// EnumType
+type EnumType struct {
+	Location            common.Location
+	QualifiedIdentifier string
+	RawType             Type
+	Fields              []Field
+	Initializers        [][]Parameter
 }
 
-// PublicAccountType
+func (t *EnumType) isType() {}
 
-type PublicAccountType struct{}
+func (t *EnumType) ID() string {
+	if t.Location == nil {
+		return t.QualifiedIdentifier
+	}
 
-func (PublicAccountType) isType() {}
+	return string(t.Location.TypeID(t.QualifiedIdentifier))
+}
 
-func (PublicAccountType) ID() string {
-	return "PublicAccount"
+func (*EnumType) isCompositeType() {}
+
+func (t *EnumType) CompositeTypeLocation() common.Location {
+	return t.Location
+}
+
+func (t *EnumType) CompositeTypeQualifiedIdentifier() string {
+	return t.QualifiedIdentifier
+}
+
+func (t *EnumType) CompositeFields() []Field {
+	return t.Fields
+}
+
+func (t *EnumType) CompositeInitializers() [][]Parameter {
+	return t.Initializers
 }

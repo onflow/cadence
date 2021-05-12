@@ -51,7 +51,10 @@ pub struct Block {
 
     /// The timestamp of the block.
     ///
-    /// It is the local clock time of the block proposer when it generates the block
+    /// Unix timestamp of when the proposer claims it constructed the block.
+    ///
+    /// NOTE: It is included by the proposer, there are no guarantees on how much the time stamp can deviate from the true time the block was published.
+    /// Consider observing blocks’ status changes off-chain yourself to get a more reliable value.
     ///
     pub let timestamp: UFix64
 }

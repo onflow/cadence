@@ -162,14 +162,29 @@ func TestCheckReturnWithoutExpression(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestCheckAnyReturnType(t *testing.T) {
+func TestCheckFunctionUseInsideFunction(t *testing.T) {
 
 	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
-      fun foo(): AnyStruct {
-          return foo
+      fun foo() {
+          foo()
       }
+    `)
+
+	require.NoError(t, err)
+}
+
+func TestCheckFunctionReturnFunction(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+      fun foo(): ((Int): Void) {
+          return bar
+      }
+
+      fun bar(_ n: Int) {}
     `)
 
 	require.NoError(t, err)
@@ -368,4 +383,35 @@ func TestCheckInvalidResourceCapturingJustMemberAccess(t *testing.T) {
 
 	assert.IsType(t, &sema.ResourceCapturingError{}, errs[0])
 	assert.IsType(t, &sema.ResourceLossError{}, errs[1])
+}
+
+func TestCheckInvalidFunctionWithResult(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+     fun test(): Int {
+         let result = 0
+         return result
+     }
+   `)
+
+	errs := ExpectCheckerErrors(t, err, 1)
+
+	assert.IsType(t, &sema.RedeclarationError{}, errs[0])
+}
+
+func TestCheckFunctionNonExistingField(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+      fun f() {}
+
+      let x = f.y
+    `)
+
+	errs := ExpectCheckerErrors(t, err, 1)
+
+	assert.IsType(t, &sema.NotDeclaredMemberError{}, errs[0])
 }

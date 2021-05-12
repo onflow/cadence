@@ -23,25 +23,25 @@ import (
 	"strings"
 
 	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
+	"github.com/onflow/cadence/runtime/pretty"
 )
 
 // Error
 
 type Error struct {
+	Code   string
 	Errors []error
 }
 
 func (e Error) Error() string {
 	var sb strings.Builder
 	sb.WriteString("Parsing failed:\n")
-	for _, err := range e.Errors {
-		sb.WriteString(err.Error())
-		if err, ok := err.(errors.SecondaryError); ok {
-			sb.WriteString(". ")
-			sb.WriteString(err.SecondaryError())
-		}
-		sb.WriteString("\n")
+	printErr := pretty.NewErrorPrettyPrinter(&sb, false).
+		PrettyPrintError(e, nil, map[common.LocationID]string{"": e.Code})
+	if printErr != nil {
+		panic(printErr)
 	}
 	return sb.String()
 }

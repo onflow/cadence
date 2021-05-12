@@ -24,14 +24,17 @@ import (
 )
 
 type ValueDeclaration interface {
+	ValueDeclarationName() string
 	ValueDeclarationType() Type
 	ValueDeclarationKind() common.DeclarationKind
 	ValueDeclarationPosition() ast.Position
 	ValueDeclarationIsConstant() bool
 	ValueDeclarationArgumentLabels() []string
+	ValueDeclarationAvailable(common.Location) bool
 }
 
 type TypeDeclaration interface {
+	TypeDeclarationName() string
 	TypeDeclarationType() Type
 	TypeDeclarationKind() common.DeclarationKind
 	TypeDeclarationPosition() ast.Position

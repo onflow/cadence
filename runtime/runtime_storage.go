@@ -19,45 +19,45 @@
 package runtime
 
 import (
+	"bytes"
+	"fmt"
+	"sort"
 	"time"
 
-	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
 )
 
-type storageKey struct {
-	address common.Address
-	key     string
+const ENCODING_NUM_WORKER = 10
+
+type StorageKey struct {
+	Address common.Address
+	Key     string
 }
 
-type cacheEntry struct {
+type Cache map[StorageKey]CacheEntry
+
+type CacheEntry struct {
 	// true indicates that the value definitely must be written, independent of the value.
 	// false indicates that the value may has to be written if the value is modified.
-	mustWrite bool
-	value     interpreter.Value
+	MustWrite bool
+	Value     interpreter.Value
 }
 
-type interpreterRuntimeStorage struct {
-	runtimeInterface        Interface
-	highLevelStorageEnabled bool
-	highLevelStorage        HighLevelStorage
-	cache                   map[storageKey]cacheEntry
+type ContractUpdates map[StorageKey]interpreter.Value
+
+type runtimeStorage struct {
+	runtimeInterface Interface
+	cache            Cache
+	contractUpdates  ContractUpdates
 }
 
-func newInterpreterRuntimeStorage(runtimeInterface Interface) *interpreterRuntimeStorage {
-	highLevelStorageEnabled := false
-	highLevelStorage, ok := runtimeInterface.(HighLevelStorage)
-	if ok {
-		highLevelStorageEnabled = highLevelStorage.HighLevelStorageEnabled()
-	}
-
-	return &interpreterRuntimeStorage{
-		runtimeInterface:        runtimeInterface,
-		cache:                   map[storageKey]cacheEntry{},
-		highLevelStorage:        highLevelStorage,
-		highLevelStorageEnabled: highLevelStorageEnabled,
+func newRuntimeStorage(runtimeInterface Interface) *runtimeStorage {
+	return &runtimeStorage{
+		runtimeInterface: runtimeInterface,
+		cache:            Cache{},
+		contractUpdates:  ContractUpdates{},
 	}
 }
 
@@ -69,20 +69,20 @@ func newInterpreterRuntimeStorage(runtimeInterface Interface) *interpreterRuntim
 // If there is a cache miss, the key is read from storage through the runtime interface,
 // places in the cache, and returned.
 //
-func (s *interpreterRuntimeStorage) valueExists(
+func (s *runtimeStorage) valueExists(
 	address common.Address,
 	key string,
 ) bool {
 
-	fullKey := storageKey{
-		address: address,
-		key:     key,
+	fullKey := StorageKey{
+		Address: address,
+		Key:     key,
 	}
 
 	// Check cache
 
 	if entry, ok := s.cache[fullKey]; ok {
-		return entry.value != nil
+		return entry.Value != nil
 	}
 
 	// Cache miss: Ask interface
@@ -97,9 +97,9 @@ func (s *interpreterRuntimeStorage) valueExists(
 	}
 
 	if !exists {
-		s.cache[fullKey] = cacheEntry{
-			mustWrite: false,
-			value:     nil,
+		s.cache[fullKey] = CacheEntry{
+			MustWrite: false,
+			Value:     nil,
 		}
 	}
 
@@ -114,25 +114,25 @@ func (s *interpreterRuntimeStorage) valueExists(
 // If there is a cache miss, the key is read from storage through the runtime interface,
 // places in the cache, and returned.
 //
-func (s *interpreterRuntimeStorage) readValue(
+func (s *runtimeStorage) readValue(
 	address common.Address,
 	key string,
 	deferred bool,
 ) interpreter.OptionalValue {
 
-	fullKey := storageKey{
-		address: address,
-		key:     key,
+	fullKey := StorageKey{
+		Address: address,
+		Key:     key,
 	}
 
 	// Check cache. Return cached value, if any
 
 	if entry, ok := s.cache[fullKey]; ok {
-		if entry.value == nil {
+		if entry.Value == nil {
 			return interpreter.NilValue{}
 		}
 
-		return interpreter.NewSomeValueOwningNonCopying(entry.value)
+		return interpreter.NewSomeValueOwningNonCopying(entry.Value)
 	}
 
 	// Cache miss: Load and deserialize the stored value (if any)
@@ -151,9 +151,9 @@ func (s *interpreterRuntimeStorage) readValue(
 	storedData, version = interpreter.StripMagic(storedData)
 
 	if len(storedData) == 0 {
-		s.cache[fullKey] = cacheEntry{
-			mustWrite: false,
-			value:     nil,
+		s.cache[fullKey] = CacheEntry{
+			MustWrite: false,
+			Value:     nil,
 		}
 		return interpreter.NilValue{}
 	}
@@ -162,7 +162,13 @@ func (s *interpreterRuntimeStorage) readValue(
 
 	reportMetric(
 		func() {
-			storedValue, err = interpreter.DecodeValue(storedData, &address, []string{key}, version)
+			storedValue, err = interpreter.DecodeValue(
+				storedData,
+				&address,
+				[]string{key},
+				version,
+				nil,
+			)
 		},
 		s.runtimeInterface,
 		func(metrics Metrics, duration time.Duration) {
@@ -174,9 +180,9 @@ func (s *interpreterRuntimeStorage) readValue(
 	}
 
 	if !deferred {
-		s.cache[fullKey] = cacheEntry{
-			mustWrite: false,
-			value:     storedValue,
+		s.cache[fullKey] = CacheEntry{
+			MustWrite: false,
+			Value:     storedValue,
 		}
 	}
 
@@ -190,28 +196,28 @@ func (s *interpreterRuntimeStorage) readValue(
 // It does *not* serialize/save the value in  storage (through the runtime interface).
 // (The Cache is finally written back through the runtime interface in `writeCached`.)
 //
-func (s *interpreterRuntimeStorage) writeValue(
+func (s *runtimeStorage) writeValue(
 	address common.Address,
 	key string,
 	value interpreter.OptionalValue,
 ) {
-	fullKey := storageKey{
-		address: address,
-		key:     key,
+	fullKey := StorageKey{
+		Address: address,
+		Key:     key,
 	}
 
 	// Only write the value to the cache.
 	// The Cache is finally written back through the runtime interface in `writeCached`
 
 	entry := s.cache[fullKey]
-	entry.mustWrite = true
+	entry.MustWrite = true
 
 	switch typedValue := value.(type) {
 	case *interpreter.SomeValue:
-		entry.value = typedValue.Value
+		entry.Value = typedValue.Value
 
 	case interpreter.NilValue:
-		entry.value = nil
+		entry.Value = nil
 
 	default:
 		panic(errors.NewUnreachableError())
@@ -220,106 +226,238 @@ func (s *interpreterRuntimeStorage) writeValue(
 	s.cache[fullKey] = entry
 }
 
+func (s *runtimeStorage) recordContractUpdate(
+	address common.Address,
+	key string,
+	contract interpreter.Value,
+) {
+	fullKey := StorageKey{
+		Address: address,
+		Key:     key,
+	}
+
+	s.contractUpdates[fullKey] = contract
+}
+
+type writeItem struct {
+	storageKey StorageKey
+	value      interpreter.Value
+}
+
 // writeCached serializes/saves all values in the cache in storage (through the runtime interface).
 //
-func (s *interpreterRuntimeStorage) writeCached(inter *interpreter.Interpreter) {
-
-	type writeItem struct {
-		storageKey storageKey
-		value      interpreter.Value
-	}
+func (s *runtimeStorage) writeCached(inter *interpreter.Interpreter) {
 
 	var items []writeItem
 
-	for fullKey, entry := range s.cache {
+	// First, iterate over the cache
+	// and determine which items have to be written
 
-		if !entry.mustWrite && entry.value != nil && !entry.value.IsModified() {
+	for fullKey, entry := range s.cache { //nolint:maprangecheck
+
+		if !entry.MustWrite && entry.Value != nil && !entry.Value.IsModified() {
 			continue
 		}
 
 		items = append(items, writeItem{
 			storageKey: fullKey,
-			value:      entry.value,
+			value:      entry.Value,
 		})
-
-		if s.highLevelStorageEnabled {
-			var err error
-
-			var value cadence.Value
-			if entry.value != nil {
-				value = exportValueWithInterpreter(entry.value, inter, exportResults{})
-			}
-
-			wrapPanic(func() {
-				err = s.highLevelStorage.SetCadenceValue(fullKey.address, fullKey.key, value)
-			})
-			if err != nil {
-				panic(err)
-			}
-		}
 	}
 
-	// Don't use a for-range loop, as keys are added while iterating
-	for len(items) > 0 {
-		var item writeItem
-		item, items = items[0], items[1:]
-
-		var newData []byte
-		if item.value != nil {
-			var deferrals *interpreter.EncodingDeferrals
-			var err error
-			newData, deferrals, err = s.encodeValue(item.value, item.storageKey.key)
-			if err != nil {
-				panic(err)
-			}
-
-			for deferredKey, deferredValue := range deferrals.Values {
-
-				deferredStorageKey := storageKey{
-					address: item.storageKey.address,
-					key:     deferredKey,
-				}
-
-				if !deferredValue.IsModified() {
-					continue
-				}
-
-				items = append(items, writeItem{
-					storageKey: deferredStorageKey,
-					value:      deferredValue,
-				})
-			}
-
-			for _, deferralMove := range deferrals.Moves {
-
-				s.move(
-					deferralMove.DeferredOwner,
-					deferralMove.DeferredStorageKey,
-					deferralMove.NewOwner,
-					deferralMove.NewStorageKey,
-				)
-			}
-		}
-
-		if len(newData) > 0 {
-			newData = interpreter.PrependMagic(newData, interpreter.CurrentEncodingVersion)
-		}
-
-		var err error
-		wrapPanic(func() {
-			err = s.runtimeInterface.SetValue(
-				item.storageKey.address[:],
-				[]byte(item.storageKey.key),
-				newData,
-			)
+	for fullKey, value := range s.contractUpdates { //nolint:maprangecheck
+		items = append(items, writeItem{
+			storageKey: fullKey,
+			value:      value,
 		})
+	}
+
+	// Order the items by storage key in lexicographic order
+
+	sort.Slice(items, func(i, j int) bool {
+		a := items[i].storageKey
+		b := items[j].storageKey
+
+		if bytes.Compare(a.Address[:], b.Address[:]) < 0 {
+			return true
+		}
+
+		if a.Key < b.Key {
+			return true
+		}
+
+		return false
+	})
+
+	// Write cache entries in order
+
+	// run batch in a for loop, each batch will create a new batch
+	// to be run again, until the batch is empty.
+	batch := items
+	for len(batch) > 0 {
+
+		// a batch might contain lots of items, whereas
+		// a bundle only contains up to ENCODING_NUM_WORKER number of items,
+		// so that we could ensure the memory usage is O(K), instead of O(N).
+		// K being ENCODING_NUM_WORKER, N being the size of the batch
+		var bundleSize int
+		if len(batch) < ENCODING_NUM_WORKER {
+			bundleSize = len(batch)
+		} else {
+			bundleSize = ENCODING_NUM_WORKER
+		}
+		bundle, newBatch := batch[:bundleSize], batch[bundleSize:]
+
+		// parallelize the encoding for items within the same batch
+		// the encoding has no side effect
+		encodedResults, err := s.encodeWriteItems(ENCODING_NUM_WORKER, bundle)
 		if err != nil {
 			panic(err)
 		}
+
+		// process encoded items of the batch, play side effect for
+		// each item
+		for i, result := range encodedResults {
+			item := batch[i]
+			newItems, err := s.processEncodedItem(item, result)
+			if err != nil {
+				panic(err)
+			}
+			newBatch = append(newBatch, newItems...)
+		}
+		batch = newBatch
 	}
 }
 
-func (s *interpreterRuntimeStorage) encodeValue(
+type encodedResult struct {
+	newData   []byte
+	deferrals *interpreter.EncodingDeferrals
+	index     int // the index of the encoded item in the batch
+	err       error
+}
+
+func (s *runtimeStorage) encodeWriteItems(nWorker int, batch []writeItem) ([]*encodedResult, error) {
+	// cache all the encoded results, including errors
+	results := make(chan *encodedResult, len(batch))
+	defer close(results)
+
+	// if the number of items in a batch is less than the default number of workers, we will only create the
+	// same amount of workers as the items
+	if len(batch) < nWorker {
+		nWorker = len(batch)
+	}
+
+	// jobs buffers at most nWorker number of jobs for workers to work on in parallel
+	// each job contains the index of the item in the batch
+	jobs := make(chan int, nWorker)
+	defer close(jobs)
+
+	worker := func(jobs <-chan int, results chan<- *encodedResult) {
+		for i := range jobs {
+			item := batch[i]
+			if item.value == nil {
+				results <- nil
+			} else {
+				// TODO: encode value with a context, so that if there 10 jobs to work on,
+				// and one job failed, we could cancel the context and skip the rest of
+				// unprocssed jobs without processing them.
+				newData, deferrals, err := s.encodeValue(item.value, item.storageKey.Key)
+				results <- &encodedResult{
+					newData:   newData,
+					deferrals: deferrals,
+					index:     i,
+					err:       err,
+				}
+			}
+		}
+	}
+
+	for i := 0; i < nWorker; i++ {
+		go worker(jobs, results)
+	}
+
+	// push jobs to the workers.
+	// block if no more worker is available
+	for i := range batch {
+		jobs <- i
+	}
+
+	// initialize the array, so that we can insert the encoded result at
+	// the right position.
+	encodedResults := make([]*encodedResult, len(batch))
+
+	for i := 0; i < len(batch); i++ {
+		result := <-results
+		if result == nil {
+			continue
+		}
+
+		if result.err != nil {
+			return nil, fmt.Errorf("could not encode value: %v, %w", batch[result.index], result.err)
+		}
+
+		// since worker works on different job concurrently
+		// the results might arrive in a different order than the original jobs.
+		// use the index to insert the encoded result at the original position
+		encodedResults[result.index] = result
+	}
+
+	// the returned encodedResults has no error, because all errors have been handled already
+	return encodedResults, nil
+}
+
+// encoded could be nil if the given item doesn't have value
+func (s *runtimeStorage) processEncodedItem(item writeItem, encoded *encodedResult) ([]writeItem, error) {
+	var newItems []writeItem
+
+	if item.value != nil {
+		for _, deferredValue := range encoded.deferrals.Values {
+
+			deferredStorageKey := StorageKey{
+				Address: item.storageKey.Address,
+				Key:     deferredValue.Key,
+			}
+
+			if !deferredValue.Value.IsModified() {
+				continue
+			}
+
+			newItems = append(newItems, writeItem{
+				storageKey: deferredStorageKey,
+				value:      deferredValue.Value,
+			})
+		}
+
+		for _, deferralMove := range encoded.deferrals.Moves {
+			s.move(
+				deferralMove.DeferredOwner,
+				deferralMove.DeferredStorageKey,
+				deferralMove.NewOwner,
+				deferralMove.NewStorageKey,
+			)
+		}
+	}
+
+	var newData []byte
+	if encoded != nil && len(encoded.newData) > 0 {
+		newData = interpreter.PrependMagic(encoded.newData, interpreter.CurrentEncodingVersion)
+	}
+
+	var err error
+	wrapPanic(func() {
+		err = s.runtimeInterface.SetValue(
+			item.storageKey.Address[:],
+			[]byte(item.storageKey.Key),
+			newData,
+		)
+	})
+	if err != nil {
+		return nil, err
+	}
+	return newItems, nil
+}
+
+func (s *runtimeStorage) encodeValue(
 	value interpreter.Value,
 	path string,
 ) (
@@ -329,7 +467,12 @@ func (s *interpreterRuntimeStorage) encodeValue(
 ) {
 	reportMetric(
 		func() {
-			data, deferrals, err = interpreter.EncodeValue(value, []string{path}, true)
+			data, deferrals, err = interpreter.EncodeValue(
+				value,
+				[]string{path},
+				true,
+				nil,
+			)
 		},
 		s.runtimeInterface,
 		func(metrics Metrics, duration time.Duration) {
@@ -339,7 +482,7 @@ func (s *interpreterRuntimeStorage) encodeValue(
 	return
 }
 
-func (s *interpreterRuntimeStorage) move(
+func (s *runtimeStorage) move(
 	oldOwner common.Address, oldKey string,
 	newOwner common.Address, newKey string,
 ) {

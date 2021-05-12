@@ -30,16 +30,22 @@ import (
 )
 
 // TODO: implement occurrences for type references
-//  (e.g. conformances, conditional casting expression)
+//  (e.g. conformances, failable casting expression)
 
 func TestCheckOccurrencesVariableDeclarations(t *testing.T) {
 
 	t.Parallel()
 
-	checker, err := ParseAndCheck(t, `
+	checker, err := ParseAndCheckWithOptions(t, `
         let x = 1
         var y = x
-    `)
+        `,
+		ParseAndCheckOptions{
+			Options: []sema.Option{
+				sema.WithPositionInfoEnabled(true),
+			},
+		},
+	)
 
 	require.NoError(t, err)
 
@@ -90,7 +96,8 @@ func TestCheckOccurrencesFunction(t *testing.T) {
 
 	t.Parallel()
 
-	checker, err := ParseAndCheck(t, `
+	checker, err := ParseAndCheckWithOptions(t,
+		`
 		fun f1(paramX: Int, paramY: Bool) {
 		   let x = 1
 		   var y: Int? = x
@@ -104,7 +111,13 @@ func TestCheckOccurrencesFunction(t *testing.T) {
         fun f3() {
             f1(paramX: 2, paramY: false)
         }
-	`)
+		`,
+		ParseAndCheckOptions{
+			Options: []sema.Option{
+				sema.WithPositionInfoEnabled(true),
+			},
+		},
+	)
 
 	require.NoError(t, err)
 
@@ -223,7 +236,8 @@ func TestCheckOccurrencesStructAndInterface(t *testing.T) {
 
 	t.Parallel()
 
-	checker, err := ParseAndCheck(t, `
+	checker, err := ParseAndCheckWithOptions(t,
+		`
 		struct interface I1 {}
 
 	    struct S1: I1 {
@@ -238,7 +252,13 @@ func TestCheckOccurrencesStructAndInterface(t *testing.T) {
 	    fun f(): S1 {
 	       return S1()
 	    }
-	`)
+		`,
+		ParseAndCheckOptions{
+			Options: []sema.Option{
+				sema.WithPositionInfoEnabled(true),
+			},
+		},
+	)
 
 	require.NoError(t, err)
 

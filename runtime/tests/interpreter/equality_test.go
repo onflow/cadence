@@ -37,6 +37,21 @@ func TestInterpretEquality(t *testing.T) {
 
 		t.Parallel()
 
+		capabilityValue := interpreter.CapabilityValue{
+			Address: interpreter.NewAddressValue(common.BytesToAddress([]byte{0x1})),
+			Path: interpreter.PathValue{
+				Domain:     common.PathDomainStorage,
+				Identifier: "something",
+			},
+		}
+
+		capabilityValueDeclaration := stdlib.StandardLibraryValue{
+			Name:  "cap",
+			Type:  &sema.CapabilityType{},
+			Value: capabilityValue,
+			Kind:  common.DeclarationKindConstant,
+		}
+
 		inter := parseCheckAndInterpretWithOptions(t,
 			`
               let maybeCapNonNil: Capability? = cap
@@ -46,24 +61,13 @@ func TestInterpretEquality(t *testing.T) {
 		    `,
 			ParseCheckAndInterpretOptions{
 				Options: []interpreter.Option{
-					interpreter.WithPredefinedValues(map[string]interpreter.Value{
-						"cap": interpreter.CapabilityValue{
-							Address: interpreter.NewAddressValue(common.BytesToAddress([]byte{0x1})),
-							Path: interpreter.PathValue{
-								Domain:     common.PathDomainStorage,
-								Identifier: "something",
-							},
-						},
+					interpreter.WithPredeclaredValues([]interpreter.ValueDeclaration{
+						capabilityValueDeclaration,
 					}),
 				},
 				CheckerOptions: []sema.Option{
-					sema.WithPredeclaredValues(map[string]sema.ValueDeclaration{
-						"cap": stdlib.StandardLibraryValue{
-							Name:       "cap",
-							Type:       &sema.CapabilityType{},
-							Kind:       common.DeclarationKindConstant,
-							IsConstant: true,
-						},
+					sema.WithPredeclaredValues([]sema.ValueDeclaration{
+						capabilityValueDeclaration,
 					}),
 				},
 			},
@@ -71,12 +75,12 @@ func TestInterpretEquality(t *testing.T) {
 
 		assert.Equal(t,
 			interpreter.BoolValue(true),
-			inter.Globals["res1"].Value,
+			inter.Globals["res1"].GetValue(),
 		)
 
 		assert.Equal(t,
 			interpreter.BoolValue(true),
-			inter.Globals["res2"].Value,
+			inter.Globals["res2"].GetValue(),
 		)
 	})
 
@@ -95,12 +99,27 @@ func TestInterpretEquality(t *testing.T) {
 
 		assert.Equal(t,
 			interpreter.BoolValue(true),
-			inter.Globals["res1"].Value,
+			inter.Globals["res1"].GetValue(),
 		)
 
 		assert.Equal(t,
 			interpreter.BoolValue(true),
-			inter.Globals["res2"].Value,
+			inter.Globals["res2"].GetValue(),
+		)
+	})
+
+	t.Run("nil", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+          let n: Int? = 1
+          let res = nil == n
+		`)
+
+		assert.Equal(t,
+			interpreter.BoolValue(false),
+			inter.Globals["res"].GetValue(),
 		)
 	})
 }

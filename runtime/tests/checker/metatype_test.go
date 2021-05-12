@@ -42,8 +42,8 @@ func TestCheckMetaType(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t,
-			&sema.MetaType{},
-			checker.GlobalValues["type"].Type,
+			sema.MetaType,
+			RequireGlobalValue(t, checker.Elaboration, "type"),
 		)
 	})
 
@@ -59,79 +59,85 @@ func TestCheckMetaType(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t,
-			&sema.MetaType{},
-			checker.GlobalValues["type"].Type,
+			sema.MetaType,
+			RequireGlobalValue(t, checker.Elaboration, "type"),
 		)
 	})
 }
 
 func TestCheckIsInstance(t *testing.T) {
+
 	t.Parallel()
 
-	cases := map[string]struct {
+	cases := []struct {
+		name  string
 		code  string
 		valid bool
 	}{
-		"string is an instance of string": {
-			`
-          let stringType = Type<String>()
-          let result = "abc".isInstance(stringType)
-			`,
-			true,
+		{
+			name: "string is an instance of string",
+			code: `
+              let stringType = Type<String>()
+              let result = "abc".isInstance(stringType)
+            `,
+			valid: true,
 		},
-		"int is an instance of int": {
+		{
+			name: "int is an instance of int",
+			code: `
+              let intType = Type<Int>()
+              let result = (1).isInstance(intType)
+            `,
+			valid: true,
+		},
+		{
+			name: "resource is an instance of resource",
+			code: `
+              resource R {}
 
-			`
-          let intType = Type<Int>()
-          let result = (1).isInstance(intType)
-			`,
-			true,
+              let r <- create R()
+              let rType = Type<@R>()
+              let result = r.isInstance(rType)
+            `,
+			valid: true,
 		},
-		"resource is an instance of resource": {
-			`
-          resource R {}
-
-          let r <- create R()
-          let rType = Type<@R>()
-          let result = r.isInstance(rType)
-			`,
-			true,
+		{
+			name: "1 is an instance of Int?",
+			code: `
+              let result = (1).isInstance(Type<Int?>())
+            `,
+			valid: true,
 		},
-		"1 is an instance of Int?": {
-			`
-				let result = (1).isInstance(Type<Int?>())
-			`,
-			true,
+		{
+			name: "isInstance must take a type",
+			code: `
+              let result = (1).isInstance(3)
+            `,
+			valid: false,
 		},
-		"isInstance must take a type": {
-			`
-				let result = (1).isInstance(3)
-			`,
-			false,
-		},
-		"nil is not a type": {
-			`
-				let result = (1).isInstance(nil)
-			`,
-			false,
+		{
+			name: "nil is not a type",
+			code: `
+              let result = (1).isInstance(nil)
+            `,
+			valid: false,
 		},
 	}
 
-	for name, cases := range cases {
-		t.Run(name, func(t *testing.T) {
-			checker, err := ParseAndCheck(t, cases.code)
-			if cases.valid {
+	for _, testCase := range cases {
+		t.Run(testCase.name, func(t *testing.T) {
+			checker, err := ParseAndCheck(t, testCase.code)
+			if testCase.valid {
 				require.NoError(t, err)
 				assert.Equal(t,
-					&sema.BoolType{},
-					checker.GlobalValues["result"].Type,
+					sema.BoolType,
+					RequireGlobalValue(t, checker.Elaboration, "result"),
 				)
 			} else {
 				require.Error(t, err)
 			}
 		})
 	}
-
 }
 
 func TestCheckIsInstance_Redeclaration(t *testing.T) {
@@ -147,4 +153,48 @@ func TestCheckIsInstance_Redeclaration(t *testing.T) {
 	errs := ExpectCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.InvalidDeclarationError{}, errs[0])
+}
+
+func TestCheckGetType(t *testing.T) {
+
+	t.Parallel()
+
+	cases := []struct {
+		name string
+		code string
+	}{
+		{
+			name: "String",
+			code: `
+              let result = "abc".getType()
+            `,
+		},
+		{
+			name: "Int",
+			code: `
+              let result = (1).getType()
+            `,
+		},
+		{
+			name: "resource",
+			code: `
+              resource R {}
+
+              let r <- create R()
+              let result = r.getType()
+            `,
+		},
+	}
+
+	for _, testCase := range cases {
+		t.Run(testCase.name, func(t *testing.T) {
+			checker, err := ParseAndCheck(t, testCase.code)
+
+			require.NoError(t, err)
+			assert.Equal(t,
+				sema.MetaType,
+				RequireGlobalValue(t, checker.Elaboration, "result"),
+			)
+		})
+	}
 }

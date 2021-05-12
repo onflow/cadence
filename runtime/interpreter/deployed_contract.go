@@ -24,7 +24,6 @@ import (
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/sema"
-	"github.com/onflow/cadence/runtime/trampoline"
 )
 
 // DeployedContractValue
@@ -37,8 +36,16 @@ type DeployedContractValue struct {
 
 func (DeployedContractValue) IsValue() {}
 
-func (DeployedContractValue) DynamicType(_ *Interpreter) DynamicType {
+func (v DeployedContractValue) Accept(interpreter *Interpreter, visitor Visitor) {
+	visitor.VisitDeployedContractValue(interpreter, v)
+}
+
+func (DeployedContractValue) DynamicType(_ *Interpreter, _ DynamicTypeResults) DynamicType {
 	return DeployedContractDynamicType{}
+}
+
+func (DeployedContractValue) StaticType() StaticType {
+	return PrimitiveStaticTypeDeployedContract
 }
 
 func (v DeployedContractValue) Copy() Value {
@@ -62,8 +69,8 @@ func (DeployedContractValue) SetModified(_ bool) {
 	// NO-OP
 }
 
-func (v DeployedContractValue) Destroy(_ *Interpreter, _ LocationRange) trampoline.Trampoline {
-	return trampoline.Done{}
+func (v DeployedContractValue) Destroy(_ *Interpreter, _ func() LocationRange) {
+	// NO-OP
 }
 
 func (v DeployedContractValue) String() string {
@@ -75,7 +82,7 @@ func (v DeployedContractValue) String() string {
 	)
 }
 
-func (v DeployedContractValue) GetMember(_ *Interpreter, _ LocationRange, name string) Value {
+func (v DeployedContractValue) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
 	switch name {
 	case sema.DeployedContractTypeAddressFieldName:
 		return v.Address
@@ -90,6 +97,11 @@ func (v DeployedContractValue) GetMember(_ *Interpreter, _ LocationRange, name s
 	return nil
 }
 
-func (DeployedContractValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+func (DeployedContractValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
 	panic(errors.NewUnreachableError())
+}
+
+func (v DeployedContractValue) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType, _ TypeConformanceResults) bool {
+	_, ok := dynamicType.(DeployedContractDynamicType)
+	return ok
 }

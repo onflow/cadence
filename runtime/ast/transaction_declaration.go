@@ -31,6 +31,7 @@ type TransactionDeclaration struct {
 	PreConditions  *Conditions
 	PostConditions *Conditions
 	Execute        *SpecialFunctionDeclaration
+	DocString      string
 	Range
 }
 
@@ -51,6 +52,10 @@ func (d *TransactionDeclaration) DeclarationKind() common.DeclarationKind {
 
 func (d *TransactionDeclaration) DeclarationAccess() Access {
 	return AccessNotSpecified
+}
+
+func (d *TransactionDeclaration) DeclarationMembers() *Members {
+	return nil
 }
 
 func (d *TransactionDeclaration) MarshalJSON() ([]byte, error) {

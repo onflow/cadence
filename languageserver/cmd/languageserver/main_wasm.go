@@ -27,8 +27,9 @@ import (
 	"sync"
 	"syscall/js"
 
+	"github.com/onflow/cadence/runtime/common"
+
 	"github.com/onflow/cadence/languageserver/server"
-	"github.com/onflow/cadence/runtime/ast"
 )
 
 const globalFunctionNamePrefix = "CADENCE_LANGUAGE_SERVER"
@@ -157,7 +158,7 @@ func start(id int) {
 		onServerClose,
 	)
 
-	addressImportResolver := func(location ast.AddressLocation) (code string, err error) {
+	addressImportResolver := func(location common.AddressLocation) (code string, err error) {
 		res := global.Call(globalFunctionName(id, "getAddressCode"), location.String())
 		if res.IsNull() || res.IsUndefined() {
 			return "", fmt.Errorf("CLS %d: getAddressCode failed: %s", id, res)

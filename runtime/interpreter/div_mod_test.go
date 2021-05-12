@@ -3075,63 +3075,11 @@ func TestModInt256(t *testing.T) {
 	}
 }
 
-func TestReciprocalFix64(t *testing.T) {
-
-	t.Parallel()
-
-	assert.PanicsWithValue(t,
-		DivisionByZeroError{},
-		func() {
-			Fix64Value(0).Reciprocal()
-		},
-	)
-
-	assert.Equal(t,
-		Fix64Value(sema.Fix64Factor),
-		Fix64Value(sema.Fix64Factor).Reciprocal(),
-	)
-
-	assert.Equal(t,
-		Fix64Value(1),
-		Fix64Value(Fix64MaxDivisorValue).Reciprocal(),
-	)
-
-	assert.Equal(t,
-		Fix64Value(0),
-		Fix64Value(2*Fix64MaxDivisorValue).Reciprocal(),
-	)
-}
-
-func TestReciprocalUFix64(t *testing.T) {
-
-	t.Parallel()
-
-	assert.PanicsWithValue(t,
-		DivisionByZeroError{},
-		func() {
-			UFix64Value(0).Reciprocal()
-		},
-	)
-
-	assert.Equal(t,
-		UFix64Value(sema.Fix64Factor),
-		UFix64Value(sema.Fix64Factor).Reciprocal(),
-	)
-
-	assert.Equal(t,
-		UFix64Value(1),
-		UFix64Value(Fix64MaxDivisorValue).Reciprocal(),
-	)
-
-	assert.Equal(t,
-		UFix64Value(0),
-		UFix64Value(2*Fix64MaxDivisorValue).Reciprocal(),
-	)
-}
-
 func TestDivFix64(t *testing.T) {
 
 	t.Parallel()
+
+	const fix64MaxIntDividend = Fix64MaxValue / sema.Fix64Factor
 
 	tests := []struct {
 		a, b  int64
@@ -3140,29 +3088,29 @@ func TestDivFix64(t *testing.T) {
 		{0, 0, false},
 		{1, 0, false},
 		{2, 0, false},
-		{Fix64MaxIntDividend, 0, false},
-		{Fix64MaxIntDividend + 1, 0, false},
+		{fix64MaxIntDividend, 0, false},
+		{fix64MaxIntDividend + 1, 0, false},
 		{-1, 0, false},
 
 		{0, 1, true},
 		{1, 1, true},
 		{2, 1, true},
-		{Fix64MaxIntDividend, 1, true},
-		{Fix64MaxIntDividend + 1, 1, false},
+		{fix64MaxIntDividend, 1, true},
+		{fix64MaxIntDividend + 1, 1, false},
 		{-1, 1, true},
 
 		{0, 2, true},
 		{1, 2, true},
 		{2, 2, true},
-		{Fix64MaxIntDividend, 2, true},
-		{Fix64MaxIntDividend + 1, 2, false},
+		{fix64MaxIntDividend, 2, true},
+		{fix64MaxIntDividend + 1, 2, false},
 		{-1, 2, true},
 
 		{0, -1, true},
 		{1, -1, true},
 		{2, -1, true},
-		{Fix64MaxIntDividend, -1, true},
-		{Fix64MaxIntDividend + 1, -1, false},
+		{fix64MaxIntDividend, -1, true},
+		{fix64MaxIntDividend + 1, -1, false},
 		{-1, -1, true},
 	}
 
@@ -3184,13 +3132,25 @@ func TestDivFix64(t *testing.T) {
 	assert.Equal(t,
 		Fix64Value(1),
 		NewFix64ValueWithInteger(1).
-			Div(Fix64Value(Fix64MaxDivisorValue)),
+			Div(NewFix64ValueWithInteger(sema.Fix64Factor)),
 	)
 
-	assert.Panics(t, func() {
+	assert.Equal(t,
+		Fix64Value(0),
 		NewFix64ValueWithInteger(1).
-			Div(Fix64Value(Fix64MaxDivisorValue + 1))
-	})
+			Div(Fix64Value(Fix64MaxValue)),
+	)
+
+	assert.Equal(t,
+		Fix64Value(0),
+		Fix64Value(1).
+			Div(NewFix64ValueWithInteger(2)),
+	)
+
+	assert.Equal(t,
+		Fix64Value(1535399),
+		NewFix64ValueWithInteger(1543219).Div(NewFix64ValueWithInteger(100509284)),
+	)
 }
 
 func TestModFix64(t *testing.T) {
@@ -3238,6 +3198,8 @@ func TestDivModUFix64(t *testing.T) {
 
 	t.Parallel()
 
+	const ufix64MaxIntDividend = UFix64MaxValue / sema.Fix64Factor
+
 	tests := []struct {
 		a, b  uint64
 		valid bool
@@ -3245,20 +3207,20 @@ func TestDivModUFix64(t *testing.T) {
 		{0, 0, false},
 		{1, 0, false},
 		{2, 0, false},
-		{UFix64MaxIntDividend, 0, false},
-		{UFix64MaxIntDividend + 1, 0, false},
+		{ufix64MaxIntDividend, 0, false},
+		{ufix64MaxIntDividend + 1, 0, false},
 
 		{0, 1, true},
 		{1, 1, true},
 		{2, 1, true},
-		{UFix64MaxIntDividend, 1, true},
-		{UFix64MaxIntDividend + 1, 1, false},
+		{ufix64MaxIntDividend, 1, true},
+		{ufix64MaxIntDividend + 1, 1, false},
 
 		{0, 2, true},
 		{1, 2, true},
 		{2, 2, true},
-		{UFix64MaxIntDividend, 2, true},
-		{UFix64MaxIntDividend + 1, 2, false},
+		{ufix64MaxIntDividend, 2, true},
+		{ufix64MaxIntDividend + 1, 2, false},
 	}
 
 	for _, test := range tests {
@@ -3289,13 +3251,25 @@ func TestDivModUFix64(t *testing.T) {
 	assert.Equal(t,
 		UFix64Value(1),
 		NewUFix64ValueWithInteger(1).
-			Div(UFix64Value(UFix64MaxDivisorValue)),
+			Div(NewUFix64ValueWithInteger(sema.Fix64Factor)),
 	)
 
-	assert.Panics(t, func() {
+	assert.Equal(t,
+		UFix64Value(0),
 		NewUFix64ValueWithInteger(1).
-			Div(UFix64Value(UFix64MaxDivisorValue + 1))
-	})
+			Div(UFix64Value(UFix64MaxValue)),
+	)
+
+	assert.Equal(t,
+		UFix64Value(0),
+		UFix64Value(1).
+			Div(NewUFix64ValueWithInteger(2)),
+	)
+
+	assert.Equal(t,
+		UFix64Value(1535399),
+		NewUFix64ValueWithInteger(1543219).Div(NewUFix64ValueWithInteger(100509284)),
+	)
 }
 
 // TestNegativeMod ensures that modulo uses the dividend's sign

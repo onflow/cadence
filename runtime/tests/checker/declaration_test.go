@@ -25,7 +25,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/sema"
 )
@@ -42,13 +41,13 @@ func TestCheckConstantAndVariableDeclarations(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.IsType(t,
-		&sema.IntType{},
-		checker.GlobalValues["x"].Type,
+		sema.IntType,
+		RequireGlobalValue(t, checker.Elaboration, "x"),
 	)
 
 	assert.IsType(t,
-		&sema.IntType{},
-		checker.GlobalValues["y"].Type,
+		sema.IntType,
+		RequireGlobalValue(t, checker.Elaboration, "y"),
 	)
 }
 
@@ -389,22 +388,22 @@ func TestCheckVariableDeclarationSecondValue(t *testing.T) {
 
 	assert.IsType(t,
 		&sema.CompositeType{},
-		checker.GlobalValues["x"].Type,
+		RequireGlobalValue(t, checker.Elaboration, "x"),
 	)
 
 	assert.IsType(t,
 		&sema.CompositeType{},
-		checker.GlobalValues["y"].Type,
+		RequireGlobalValue(t, checker.Elaboration, "y"),
 	)
 
 	assert.IsType(t,
 		&sema.CompositeType{},
-		checker.GlobalValues["z"].Type,
+		RequireGlobalValue(t, checker.Elaboration, "z"),
 	)
 
 	assert.IsType(t,
 		&sema.CompositeType{},
-		checker.GlobalValues["r"].Type,
+		RequireGlobalValue(t, checker.Elaboration, "r"),
 	)
 }
 
@@ -428,22 +427,22 @@ func TestCheckVariableDeclarationSecondValueDictionary(t *testing.T) {
 
 	assert.IsType(t,
 		&sema.CompositeType{},
-		checker.GlobalValues["x"].Type,
+		RequireGlobalValue(t, checker.Elaboration, "x"),
 	)
 
 	assert.IsType(t,
 		&sema.DictionaryType{},
-		checker.GlobalValues["ys"].Type,
+		RequireGlobalValue(t, checker.Elaboration, "ys"),
 	)
 
 	assert.IsType(t,
 		&sema.OptionalType{},
-		checker.GlobalValues["z"].Type,
+		RequireGlobalValue(t, checker.Elaboration, "z"),
 	)
 
 	assert.IsType(t,
 		&sema.OptionalType{},
-		checker.GlobalValues["r"].Type,
+		RequireGlobalValue(t, checker.Elaboration, "r"),
 	)
 }
 
@@ -476,7 +475,7 @@ func TestCheckTopLevelContractRestriction(t *testing.T) {
 		ParseAndCheckOptions{
 			Options: []sema.Option{
 				sema.WithValidTopLevelDeclarationsHandler(
-					func(_ ast.Location) []common.DeclarationKind {
+					func(_ common.Location) []common.DeclarationKind {
 						return []common.DeclarationKind{
 							common.DeclarationKindContract,
 							common.DeclarationKindImport,
@@ -513,7 +512,7 @@ func TestCheckInvalidTopLevelContractRestriction(t *testing.T) {
 				ParseAndCheckOptions{
 					Options: []sema.Option{
 						sema.WithValidTopLevelDeclarationsHandler(
-							func(_ ast.Location) []common.DeclarationKind {
+							func(_ common.Location) []common.DeclarationKind {
 								return []common.DeclarationKind{
 									common.DeclarationKindContractInterface,
 									common.DeclarationKindContract,

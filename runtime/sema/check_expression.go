@@ -97,7 +97,7 @@ func (checker *Checker) checkSelfVariableUseInInitializer(variable *Variable, po
 			// If the member access is to a non-field, e.g. a function,
 			// *all* fields must have been initialized
 
-			field := initializationInfo.FieldMembers[accessedSelfMember]
+			field, _ := initializationInfo.FieldMembers.Get(accessedSelfMember)
 			if field == nil {
 				checkInitializationComplete()
 			}
@@ -168,32 +168,33 @@ func (checker *Checker) VisitExpressionStatement(statement *ast.ExpressionStatem
 }
 
 func (checker *Checker) VisitBoolExpression(_ *ast.BoolExpression) ast.Repr {
-	return &BoolType{}
+	return BoolType
+}
+
+var TypeOfNil = &OptionalType{
+	Type: NeverType,
 }
 
 func (checker *Checker) VisitNilExpression(_ *ast.NilExpression) ast.Repr {
-	// TODO: verify
-	return &OptionalType{
-		Type: NeverType,
-	}
+	return TypeOfNil
 }
 
 func (checker *Checker) VisitIntegerExpression(_ *ast.IntegerExpression) ast.Repr {
-	return &IntType{}
+	return IntType
 }
 
 func (checker *Checker) VisitFixedPointExpression(expression *ast.FixedPointExpression) ast.Repr {
 	// TODO: adjust once/if we support more fixed point types
 
 	if expression.Negative {
-		return &Fix64Type{}
+		return Fix64Type
 	} else {
-		return &UFix64Type{}
+		return UFix64Type
 	}
 }
 
 func (checker *Checker) VisitStringExpression(_ *ast.StringExpression) ast.Repr {
-	return &StringType{}
+	return StringType
 }
 
 func (checker *Checker) VisitIndexExpression(expression *ast.IndexExpression) ast.Repr {

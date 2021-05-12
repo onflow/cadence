@@ -23,7 +23,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/common"
 )
 
 func TestOptionalSubtyping(t *testing.T) {
@@ -33,8 +33,8 @@ func TestOptionalSubtyping(t *testing.T) {
 	t.Run("Int? <: Int?", func(t *testing.T) {
 		assert.True(t,
 			IsSubType(
-				&OptionalType{Type: &IntType{}},
-				&OptionalType{Type: &IntType{}},
+				&OptionalType{Type: IntType},
+				&OptionalType{Type: IntType},
 			),
 		)
 	})
@@ -42,8 +42,8 @@ func TestOptionalSubtyping(t *testing.T) {
 	t.Run("Int? <: Bool?", func(t *testing.T) {
 		assert.False(t,
 			IsSubType(
-				&OptionalType{Type: &IntType{}},
-				&OptionalType{Type: &BoolType{}},
+				&OptionalType{Type: IntType},
+				&OptionalType{Type: BoolType},
 			),
 		)
 	})
@@ -51,8 +51,8 @@ func TestOptionalSubtyping(t *testing.T) {
 	t.Run("Int8? <: Integer?", func(t *testing.T) {
 		assert.True(t,
 			IsSubType(
-				&OptionalType{Type: &Int8Type{}},
-				&OptionalType{Type: &IntegerType{}},
+				&OptionalType{Type: Int8Type},
+				&OptionalType{Type: IntegerType},
 			),
 		)
 	})
@@ -62,7 +62,7 @@ func TestCompositeType_ID(t *testing.T) {
 
 	t.Parallel()
 
-	location := ast.StringLocation("x")
+	location := common.StringLocation("x")
 
 	t.Run("composite in composite", func(t *testing.T) {
 
@@ -113,7 +113,7 @@ func TestInterfaceType_ID(t *testing.T) {
 
 	t.Parallel()
 
-	location := ast.StringLocation("x")
+	location := common.StringLocation("x")
 
 	t.Run("interface in composite", func(t *testing.T) {
 
@@ -170,14 +170,14 @@ func TestFunctionSubtyping(t *testing.T) {
 				&FunctionType{
 					Parameters: []*Parameter{
 						{
-							TypeAnnotation: NewTypeAnnotation(&IntType{}),
+							TypeAnnotation: NewTypeAnnotation(IntType),
 						},
 					},
 				},
 				&FunctionType{
 					Parameters: []*Parameter{
 						{
-							TypeAnnotation: NewTypeAnnotation(&AnyStructType{}),
+							TypeAnnotation: NewTypeAnnotation(AnyStructType),
 						},
 					},
 				},
@@ -191,14 +191,14 @@ func TestFunctionSubtyping(t *testing.T) {
 				&FunctionType{
 					Parameters: []*Parameter{
 						{
-							TypeAnnotation: NewTypeAnnotation(&AnyStructType{}),
+							TypeAnnotation: NewTypeAnnotation(AnyStructType),
 						},
 					},
 				},
 				&FunctionType{
 					Parameters: []*Parameter{
 						{
-							TypeAnnotation: NewTypeAnnotation(&IntType{}),
+							TypeAnnotation: NewTypeAnnotation(IntType),
 						},
 					},
 				},
@@ -210,10 +210,10 @@ func TestFunctionSubtyping(t *testing.T) {
 		assert.True(t,
 			IsSubType(
 				&FunctionType{
-					ReturnTypeAnnotation: NewTypeAnnotation(&IntType{}),
+					ReturnTypeAnnotation: NewTypeAnnotation(IntType),
 				},
 				&FunctionType{
-					ReturnTypeAnnotation: NewTypeAnnotation(&AnyStructType{}),
+					ReturnTypeAnnotation: NewTypeAnnotation(AnyStructType),
 				},
 			),
 		)
@@ -223,10 +223,10 @@ func TestFunctionSubtyping(t *testing.T) {
 		assert.False(t,
 			IsSubType(
 				&FunctionType{
-					ReturnTypeAnnotation: NewTypeAnnotation(&AnyStructType{}),
+					ReturnTypeAnnotation: NewTypeAnnotation(AnyStructType),
 				},
 				&FunctionType{
-					ReturnTypeAnnotation: NewTypeAnnotation(&IntType{}),
+					ReturnTypeAnnotation: NewTypeAnnotation(IntType),
 				},
 			),
 		)

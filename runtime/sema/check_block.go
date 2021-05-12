@@ -22,7 +22,7 @@ import "github.com/onflow/cadence/runtime/ast"
 
 func (checker *Checker) VisitBlock(block *ast.Block) ast.Repr {
 	checker.enterValueScope()
-	defer checker.leaveValueScope(true)
+	defer checker.leaveValueScope(block.EndPosition, true)
 
 	checker.visitStatements(block.Statements)
 

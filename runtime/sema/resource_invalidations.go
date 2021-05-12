@@ -18,50 +18,129 @@
 
 package sema
 
-import "github.com/raviqqe/hamt"
-
 type ResourceInvalidations struct {
-	invalidations hamt.Set
+	Parent        *ResourceInvalidations
+	invalidations *ResourceInvalidationStructOrderedMap
 }
 
-func (ris ResourceInvalidations) All() (result []ResourceInvalidation) {
-	s := ris.invalidations
-	for s.Size() != 0 {
-		var e hamt.Entry
-		e, s = s.FirstRest()
-		invalidation := e.(ResourceInvalidationEntry).ResourceInvalidation
-		result = append(result, invalidation)
+// ForEach calls the given function for each resource invalidation in the set.
+// It can be used to iterate over all invalidations.
+//
+func (ris *ResourceInvalidations) ForEach(cb func(invalidation ResourceInvalidation) error) error {
+
+	resourceInvalidations := ris
+
+	for resourceInvalidations != nil {
+
+		if resourceInvalidations.invalidations != nil {
+			for pair := resourceInvalidations.invalidations.Oldest(); pair != nil; pair = pair.Next() {
+				invalidation := pair.Key
+
+				err := cb(invalidation)
+				if err != nil {
+					return err
+				}
+			}
+		}
+
+		resourceInvalidations = resourceInvalidations.Parent
 	}
+
+	return nil
+}
+
+// Contains returns true if the given resource use position exists in the set.
+//
+func (ris ResourceInvalidations) Contains(invalidation ResourceInvalidation) bool {
+	if ris.invalidations != nil {
+		_, ok := ris.invalidations.Get(invalidation)
+		if ok {
+			return true
+		}
+	}
+
+	if ris.Parent != nil {
+		return ris.Parent.Contains(invalidation)
+	}
+
+	return false
+}
+
+// All returns a slice with all resource invalidations in the set.
+//
+func (ris ResourceInvalidations) All() (result []ResourceInvalidation) {
+	_ = ris.ForEach(func(invalidation ResourceInvalidation) error {
+		result = append(result, invalidation)
+
+		// NOTE: when changing this function to return an error,
+		// also return it from the outer function,
+		// as the outer error is currently ignored!
+		return nil
+	})
 	return
 }
 
-func (ris ResourceInvalidations) Include(invalidation ResourceInvalidation) bool {
-	return ris.invalidations.Include(ResourceInvalidationEntry{
-		ResourceInvalidation: invalidation,
+// Add adds the given resource invalidation to this set.
+//
+func (ris *ResourceInvalidations) Add(invalidation ResourceInvalidation) {
+	if ris.Contains(invalidation) {
+		return
+	}
+	if ris.invalidations == nil {
+		ris.invalidations = NewResourceInvalidationStructOrderedMap()
+	}
+	ris.invalidations.Set(invalidation, struct{}{})
+}
+
+// DeleteLocally removes the given resource invalidation from this current set.
+//
+// NOTE: the invalidation still might exist in a parent afterwards,
+// i.e. call to Contains might still return true!
+//
+func (ris *ResourceInvalidations) DeleteLocally(invalidation ResourceInvalidation) {
+	if ris.invalidations == nil {
+		return
+	}
+	ris.invalidations.Delete(invalidation)
+}
+
+// Merge adds the resource invalidations of the given set to this set.
+//
+func (ris *ResourceInvalidations) Merge(other ResourceInvalidations) {
+	_ = other.ForEach(func(invalidation ResourceInvalidation) error {
+		ris.Add(invalidation)
+
+		// NOTE: when changing this function to return an error,
+		// also return it from the outer function,
+		// as the outer error is currently ignored!
+		return nil
 	})
 }
 
-func (ris ResourceInvalidations) Insert(invalidation ResourceInvalidation) ResourceInvalidations {
-	entry := ResourceInvalidationEntry{invalidation}
-	newInvalidations := ris.invalidations.Insert(entry)
-	return ResourceInvalidations{newInvalidations}
-}
-
-func (ris ResourceInvalidations) Delete(invalidation ResourceInvalidation) ResourceInvalidations {
-	entry := ResourceInvalidationEntry{invalidation}
-	newInvalidations := ris.invalidations.Delete(entry)
-	return ResourceInvalidations{newInvalidations}
-}
-
-func (ris ResourceInvalidations) Merge(other ResourceInvalidations) ResourceInvalidations {
-	newInvalidations := ris.invalidations.Merge(other.invalidations)
-	return ResourceInvalidations{newInvalidations}
-}
-
+// Size returns the number of resource invalidations in this set.
+//
 func (ris ResourceInvalidations) Size() int {
-	return ris.invalidations.Size()
+	var size int
+	if ris.Parent != nil {
+		size = ris.Parent.Size()
+	}
+	if ris.invalidations == nil {
+		return size
+	}
+	return size + ris.invalidations.Len()
 }
 
+// IsEmpty returns true if this set contains no resource invalidations.
+//
 func (ris ResourceInvalidations) IsEmpty() bool {
 	return ris.Size() == 0
+}
+
+// Clone returns a new child resource invalidation set that contains all entries of this parent set.
+// Changes to the returned set will only be applied in the returned set, not the parent.
+//
+func (ris *ResourceInvalidations) Clone() ResourceInvalidations {
+	return ResourceInvalidations{
+		Parent: ris,
+	}
 }

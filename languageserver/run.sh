@@ -2,4 +2,9 @@
 
 SCRIPTPATH=$(dirname "$0")
 
-(cd "$SCRIPTPATH" && /usr/local/bin/go run ./cmd/languageserver/main.go "$@")
+
+if [ "$1" = "cadence" ] && [ "$2" = "language-server" ] ; then
+	(cd "$SCRIPTPATH" && go build -gcflags='-N -l' ./cmd/languageserver && ./languageserver "$@");
+else
+	flow "$@"
+fi

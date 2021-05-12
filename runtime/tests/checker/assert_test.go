@@ -42,7 +42,7 @@ func TestCheckAssertWithoutMessage(t *testing.T) {
 				sema.WithPredeclaredValues(
 					stdlib.StandardLibraryFunctions{
 						stdlib.AssertFunction,
-					}.ToValueDeclarations(),
+					}.ToSemaValueDeclarations(),
 				),
 			},
 		},
@@ -66,7 +66,7 @@ func TestCheckAssertWithMessage(t *testing.T) {
 				sema.WithPredeclaredValues(
 					stdlib.StandardLibraryFunctions{
 						stdlib.AssertFunction,
-					}.ToValueDeclarations(),
+					}.ToSemaValueDeclarations(),
 				),
 			},
 		},

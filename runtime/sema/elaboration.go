@@ -18,7 +18,11 @@
 
 package sema
 
-import "github.com/onflow/cadence/runtime/ast"
+import (
+	"sync"
+
+	"github.com/onflow/cadence/runtime/ast"
+)
 
 type MemberInfo struct {
 	Member       *Member
@@ -27,84 +31,132 @@ type MemberInfo struct {
 }
 
 type Elaboration struct {
-	FunctionDeclarationFunctionTypes       map[*ast.FunctionDeclaration]*FunctionType
-	VariableDeclarationValueTypes          map[*ast.VariableDeclaration]Type
-	VariableDeclarationSecondValueTypes    map[*ast.VariableDeclaration]Type
-	VariableDeclarationTargetTypes         map[*ast.VariableDeclaration]Type
-	AssignmentStatementValueTypes          map[*ast.AssignmentStatement]Type
-	AssignmentStatementTargetTypes         map[*ast.AssignmentStatement]Type
-	CompositeDeclarationTypes              map[*ast.CompositeDeclaration]*CompositeType
-	SpecialFunctionTypes                   map[*ast.SpecialFunctionDeclaration]*SpecialFunctionType
-	FunctionExpressionFunctionType         map[*ast.FunctionExpression]*FunctionType
-	InvocationExpressionArgumentTypes      map[*ast.InvocationExpression][]Type
-	InvocationExpressionParameterTypes     map[*ast.InvocationExpression][]Type
-	InvocationExpressionReturnTypes        map[*ast.InvocationExpression]Type
-	InterfaceDeclarationTypes              map[*ast.InterfaceDeclaration]*InterfaceType
-	CastingStaticValueTypes                map[*ast.CastingExpression]Type
-	CastingTargetTypes                     map[*ast.CastingExpression]Type
-	ReturnStatementValueTypes              map[*ast.ReturnStatement]Type
-	ReturnStatementReturnTypes             map[*ast.ReturnStatement]Type
-	BinaryExpressionResultTypes            map[*ast.BinaryExpression]Type
-	BinaryExpressionRightTypes             map[*ast.BinaryExpression]Type
-	MemberExpressionMemberInfos            map[*ast.MemberExpression]MemberInfo
-	ArrayExpressionArgumentTypes           map[*ast.ArrayExpression][]Type
-	ArrayExpressionElementType             map[*ast.ArrayExpression]Type
-	DictionaryExpressionType               map[*ast.DictionaryExpression]*DictionaryType
-	DictionaryExpressionEntryTypes         map[*ast.DictionaryExpression][]DictionaryEntryType
-	TransactionDeclarationTypes            map[*ast.TransactionDeclaration]*TransactionType
-	SwapStatementLeftTypes                 map[*ast.SwapStatement]Type
-	SwapStatementRightTypes                map[*ast.SwapStatement]Type
-	IsResourceMovingStorageIndexExpression map[*ast.IndexExpression]bool
-	CompositeNestedDeclarations            map[*ast.CompositeDeclaration]map[string]ast.Declaration
-	InterfaceNestedDeclarations            map[*ast.InterfaceDeclaration]map[string]ast.Declaration
-	PostConditionsRewrite                  map[*ast.Conditions]PostConditionsRewrite
-	EmitStatementEventTypes                map[*ast.EmitStatement]*CompositeType
+	lock                                *sync.RWMutex
+	FunctionDeclarationFunctionTypes    map[*ast.FunctionDeclaration]*FunctionType
+	VariableDeclarationValueTypes       map[*ast.VariableDeclaration]Type
+	VariableDeclarationSecondValueTypes map[*ast.VariableDeclaration]Type
+	VariableDeclarationTargetTypes      map[*ast.VariableDeclaration]Type
+	AssignmentStatementValueTypes       map[*ast.AssignmentStatement]Type
+	AssignmentStatementTargetTypes      map[*ast.AssignmentStatement]Type
+	CompositeDeclarationTypes           map[*ast.CompositeDeclaration]*CompositeType
+	ConstructorFunctionTypes            map[*ast.SpecialFunctionDeclaration]*ConstructorFunctionType
+	FunctionExpressionFunctionType      map[*ast.FunctionExpression]*FunctionType
+	InvocationExpressionArgumentTypes   map[*ast.InvocationExpression][]Type
+	InvocationExpressionParameterTypes  map[*ast.InvocationExpression][]Type
+	InvocationExpressionReturnTypes     map[*ast.InvocationExpression]Type
+	InterfaceDeclarationTypes           map[*ast.InterfaceDeclaration]*InterfaceType
+	CastingStaticValueTypes             map[*ast.CastingExpression]Type
+	CastingTargetTypes                  map[*ast.CastingExpression]Type
+	ReturnStatementValueTypes           map[*ast.ReturnStatement]Type
+	ReturnStatementReturnTypes          map[*ast.ReturnStatement]Type
+	BinaryExpressionResultTypes         map[*ast.BinaryExpression]Type
+	BinaryExpressionRightTypes          map[*ast.BinaryExpression]Type
+	MemberExpressionMemberInfos         map[*ast.MemberExpression]MemberInfo
+	ArrayExpressionArgumentTypes        map[*ast.ArrayExpression][]Type
+	ArrayExpressionElementType          map[*ast.ArrayExpression]Type
+	DictionaryExpressionType            map[*ast.DictionaryExpression]*DictionaryType
+	DictionaryExpressionEntryTypes      map[*ast.DictionaryExpression][]DictionaryEntryType
+	TransactionDeclarationTypes         map[*ast.TransactionDeclaration]*TransactionType
+	SwapStatementLeftTypes              map[*ast.SwapStatement]Type
+	SwapStatementRightTypes             map[*ast.SwapStatement]Type
+	IsResourceMoveIndexExpression       map[*ast.IndexExpression]bool
+	CompositeNestedDeclarations         map[*ast.CompositeDeclaration]map[string]ast.Declaration
+	InterfaceNestedDeclarations         map[*ast.InterfaceDeclaration]map[string]ast.Declaration
+	PostConditionsRewrite               map[*ast.Conditions]PostConditionsRewrite
+	EmitStatementEventTypes             map[*ast.EmitStatement]*CompositeType
 	// Keyed by qualified identifier
 	CompositeTypes                      map[TypeID]*CompositeType
 	InterfaceTypes                      map[TypeID]*InterfaceType
-	InvocationExpressionTypeArguments   map[*ast.InvocationExpression]map[*TypeParameter]Type
+	InvocationExpressionTypeArguments   map[*ast.InvocationExpression]*TypeParameterTypeOrderedMap
 	IdentifierInInvocationTypes         map[*ast.IdentifierExpression]Type
 	ImportDeclarationsResolvedLocations map[*ast.ImportDeclaration][]ResolvedLocation
+	GlobalValues                        *StringVariableOrderedMap
+	GlobalTypes                         *StringVariableOrderedMap
+	TransactionTypes                    []*TransactionType
+	EffectivePredeclaredValues          map[string]ValueDeclaration
+	EffectivePredeclaredTypes           map[string]TypeDeclaration
+	isChecking                          bool
 }
 
 func NewElaboration() *Elaboration {
 	return &Elaboration{
-		FunctionDeclarationFunctionTypes:       map[*ast.FunctionDeclaration]*FunctionType{},
-		VariableDeclarationValueTypes:          map[*ast.VariableDeclaration]Type{},
-		VariableDeclarationSecondValueTypes:    map[*ast.VariableDeclaration]Type{},
-		VariableDeclarationTargetTypes:         map[*ast.VariableDeclaration]Type{},
-		AssignmentStatementValueTypes:          map[*ast.AssignmentStatement]Type{},
-		AssignmentStatementTargetTypes:         map[*ast.AssignmentStatement]Type{},
-		CompositeDeclarationTypes:              map[*ast.CompositeDeclaration]*CompositeType{},
-		SpecialFunctionTypes:                   map[*ast.SpecialFunctionDeclaration]*SpecialFunctionType{},
-		FunctionExpressionFunctionType:         map[*ast.FunctionExpression]*FunctionType{},
-		InvocationExpressionArgumentTypes:      map[*ast.InvocationExpression][]Type{},
-		InvocationExpressionParameterTypes:     map[*ast.InvocationExpression][]Type{},
-		InvocationExpressionReturnTypes:        map[*ast.InvocationExpression]Type{},
-		InterfaceDeclarationTypes:              map[*ast.InterfaceDeclaration]*InterfaceType{},
-		CastingStaticValueTypes:                map[*ast.CastingExpression]Type{},
-		CastingTargetTypes:                     map[*ast.CastingExpression]Type{},
-		ReturnStatementValueTypes:              map[*ast.ReturnStatement]Type{},
-		ReturnStatementReturnTypes:             map[*ast.ReturnStatement]Type{},
-		BinaryExpressionResultTypes:            map[*ast.BinaryExpression]Type{},
-		BinaryExpressionRightTypes:             map[*ast.BinaryExpression]Type{},
-		MemberExpressionMemberInfos:            map[*ast.MemberExpression]MemberInfo{},
-		ArrayExpressionArgumentTypes:           map[*ast.ArrayExpression][]Type{},
-		ArrayExpressionElementType:             map[*ast.ArrayExpression]Type{},
-		DictionaryExpressionType:               map[*ast.DictionaryExpression]*DictionaryType{},
-		DictionaryExpressionEntryTypes:         map[*ast.DictionaryExpression][]DictionaryEntryType{},
-		TransactionDeclarationTypes:            map[*ast.TransactionDeclaration]*TransactionType{},
-		SwapStatementLeftTypes:                 map[*ast.SwapStatement]Type{},
-		SwapStatementRightTypes:                map[*ast.SwapStatement]Type{},
-		IsResourceMovingStorageIndexExpression: map[*ast.IndexExpression]bool{},
-		CompositeNestedDeclarations:            map[*ast.CompositeDeclaration]map[string]ast.Declaration{},
-		InterfaceNestedDeclarations:            map[*ast.InterfaceDeclaration]map[string]ast.Declaration{},
-		PostConditionsRewrite:                  map[*ast.Conditions]PostConditionsRewrite{},
-		EmitStatementEventTypes:                map[*ast.EmitStatement]*CompositeType{},
-		CompositeTypes:                         map[TypeID]*CompositeType{},
-		InterfaceTypes:                         map[TypeID]*InterfaceType{},
-		InvocationExpressionTypeArguments:      map[*ast.InvocationExpression]map[*TypeParameter]Type{},
-		IdentifierInInvocationTypes:            map[*ast.IdentifierExpression]Type{},
-		ImportDeclarationsResolvedLocations:    map[*ast.ImportDeclaration][]ResolvedLocation{},
+		lock:                                new(sync.RWMutex),
+		FunctionDeclarationFunctionTypes:    map[*ast.FunctionDeclaration]*FunctionType{},
+		VariableDeclarationValueTypes:       map[*ast.VariableDeclaration]Type{},
+		VariableDeclarationSecondValueTypes: map[*ast.VariableDeclaration]Type{},
+		VariableDeclarationTargetTypes:      map[*ast.VariableDeclaration]Type{},
+		AssignmentStatementValueTypes:       map[*ast.AssignmentStatement]Type{},
+		AssignmentStatementTargetTypes:      map[*ast.AssignmentStatement]Type{},
+		CompositeDeclarationTypes:           map[*ast.CompositeDeclaration]*CompositeType{},
+		ConstructorFunctionTypes:            map[*ast.SpecialFunctionDeclaration]*ConstructorFunctionType{},
+		FunctionExpressionFunctionType:      map[*ast.FunctionExpression]*FunctionType{},
+		InvocationExpressionArgumentTypes:   map[*ast.InvocationExpression][]Type{},
+		InvocationExpressionParameterTypes:  map[*ast.InvocationExpression][]Type{},
+		InvocationExpressionReturnTypes:     map[*ast.InvocationExpression]Type{},
+		InterfaceDeclarationTypes:           map[*ast.InterfaceDeclaration]*InterfaceType{},
+		CastingStaticValueTypes:             map[*ast.CastingExpression]Type{},
+		CastingTargetTypes:                  map[*ast.CastingExpression]Type{},
+		ReturnStatementValueTypes:           map[*ast.ReturnStatement]Type{},
+		ReturnStatementReturnTypes:          map[*ast.ReturnStatement]Type{},
+		BinaryExpressionResultTypes:         map[*ast.BinaryExpression]Type{},
+		BinaryExpressionRightTypes:          map[*ast.BinaryExpression]Type{},
+		MemberExpressionMemberInfos:         map[*ast.MemberExpression]MemberInfo{},
+		ArrayExpressionArgumentTypes:        map[*ast.ArrayExpression][]Type{},
+		ArrayExpressionElementType:          map[*ast.ArrayExpression]Type{},
+		DictionaryExpressionType:            map[*ast.DictionaryExpression]*DictionaryType{},
+		DictionaryExpressionEntryTypes:      map[*ast.DictionaryExpression][]DictionaryEntryType{},
+		TransactionDeclarationTypes:         map[*ast.TransactionDeclaration]*TransactionType{},
+		SwapStatementLeftTypes:              map[*ast.SwapStatement]Type{},
+		SwapStatementRightTypes:             map[*ast.SwapStatement]Type{},
+		IsResourceMoveIndexExpression:       map[*ast.IndexExpression]bool{},
+		CompositeNestedDeclarations:         map[*ast.CompositeDeclaration]map[string]ast.Declaration{},
+		InterfaceNestedDeclarations:         map[*ast.InterfaceDeclaration]map[string]ast.Declaration{},
+		PostConditionsRewrite:               map[*ast.Conditions]PostConditionsRewrite{},
+		EmitStatementEventTypes:             map[*ast.EmitStatement]*CompositeType{},
+		CompositeTypes:                      map[TypeID]*CompositeType{},
+		InterfaceTypes:                      map[TypeID]*InterfaceType{},
+		InvocationExpressionTypeArguments:   map[*ast.InvocationExpression]*TypeParameterTypeOrderedMap{},
+		IdentifierInInvocationTypes:         map[*ast.IdentifierExpression]Type{},
+		ImportDeclarationsResolvedLocations: map[*ast.ImportDeclaration][]ResolvedLocation{},
+		GlobalValues:                        NewStringVariableOrderedMap(),
+		GlobalTypes:                         NewStringVariableOrderedMap(),
+		EffectivePredeclaredValues:          map[string]ValueDeclaration{},
+		EffectivePredeclaredTypes:           map[string]TypeDeclaration{},
 	}
+}
+
+func (e *Elaboration) IsChecking() bool {
+	e.lock.RLock()
+	defer e.lock.RUnlock()
+	return e.isChecking
+}
+
+func (e *Elaboration) setIsChecking(isChecking bool) {
+	e.lock.Lock()
+	defer e.lock.Unlock()
+	e.isChecking = isChecking
+}
+
+// FunctionEntryPointType returns the type of the entry point function declaration, if any.
+//
+// Returns an error if no valid entry point function declaration exists.
+//
+func (e *Elaboration) FunctionEntryPointType() (*FunctionType, error) {
+
+	entryPointValue, ok := e.GlobalValues.Get(FunctionEntryPointName)
+	if !ok {
+		return nil, &MissingEntryPointError{
+			Expected: FunctionEntryPointName,
+		}
+	}
+
+	invokableType, ok := entryPointValue.Type.(InvokableType)
+	if !ok {
+		return nil, &InvalidEntryPointTypeError{
+			Type: entryPointValue.Type,
+		}
+	}
+
+	functionType := invokableType.InvocationFunctionType()
+	return functionType, nil
 }

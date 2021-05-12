@@ -20,100 +20,50 @@ package cmd
 
 import (
 	"fmt"
-	"io"
 	"io/ioutil"
 	"os"
 
-	"github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/parser2"
+	"github.com/onflow/cadence/runtime/pretty"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
 )
 
-func PrettyPrintError(writer io.Writer, err error, filename string, codes map[string]string) {
-	i := 0
-	printErr := func(err error, filename string) {
-		if i > 0 {
-			println()
-		}
-		_, writeErr := writer.Write([]byte(runtime.PrettyPrintError(err, filename, codes[filename], true)))
-		if writeErr != nil {
-			panic(writeErr)
-		}
-		i++
-	}
-
-	switch typedErr := err.(type) {
-	case parser2.Error:
-		for _, err := range typedErr.Errors {
-			printErr(err, filename)
-		}
-	case *sema.CheckerError:
-		for _, err := range typedErr.Errors {
-			printErr(err, filename)
-			if err, ok := err.(*sema.ImportedProgramError); ok {
-				filename := importLocationFileName(err.ImportLocation)
-
-				for _, nestedErr := range err.CheckerError.Errors {
-					PrettyPrintError(writer, nestedErr, filename, codes)
-				}
-			}
-		}
-	case ast.HasImportLocation:
-		location := typedErr.ImportLocation()
-		if location != nil {
-			filename = importLocationFileName(location)
-		}
-		printErr(err, filename)
-	default:
-		printErr(err, filename)
-	}
-}
-
-func importLocationFileName(importLocation ast.Location) string {
-	switch importLocation := importLocation.(type) {
-	case ast.StringLocation:
-		return string(importLocation)
-	case ast.AddressLocation:
-		return importLocation.ToAddress().ShortHexWithPrefix()
-	case ast.IdentifierLocation:
-		return string(importLocation)
-	case runtime.FileLocation:
-		return string(importLocation)
-	}
-	return ""
-}
-
-func must(err error, filename string, codes map[string]string) {
+func must(err error, location common.Location, codes map[common.LocationID]string) {
 	if err == nil {
 		return
 	}
-	PrettyPrintError(os.Stderr, err, filename, codes)
+	printErr := pretty.NewErrorPrettyPrinter(os.Stderr, true).
+		PrettyPrintError(err, location, codes)
+	if printErr != nil {
+		panic(printErr)
+	}
 	os.Exit(1)
 }
 
-func mustClosure(filename string, codes map[string]string) func(error) {
+func mustClosure(location common.Location, codes map[common.LocationID]string) func(error) {
 	return func(e error) {
-		must(e, filename, codes)
+		must(e, location, codes)
 	}
 }
 
-func PrepareProgramFromFile(filename string, codes map[string]string) (*ast.Program, func(error)) {
-	codeBytes, err := ioutil.ReadFile(filename)
+func PrepareProgramFromFile(location common.StringLocation, codes map[common.LocationID]string) (*ast.Program, func(error)) {
+	codeBytes, err := ioutil.ReadFile(string(location))
 
-	program, must := PrepareProgram(string(codeBytes), filename, codes)
+	program, must := PrepareProgram(string(codeBytes), location, codes)
 	must(err)
 
 	return program, must
 }
 
-func PrepareProgram(code string, filename string, codes map[string]string) (*ast.Program, func(error)) {
-	must := mustClosure(filename, codes)
+func PrepareProgram(code string, location common.Location, codes map[common.LocationID]string) (*ast.Program, func(error)) {
+	must := mustClosure(location, codes)
 
 	program, err := parser2.ParseProgram(code)
-	codes[filename] = code
+	codes[location.ID()] = code
 	must(err)
 
 	return program, must
@@ -129,41 +79,44 @@ var typeDeclarations = append(
 	stdlib.BuiltinTypes...,
 ).ToTypeDeclarations()
 
+var checkers = map[common.LocationID]*sema.Checker{}
+
 // PrepareChecker prepares and initializes a checker with a given code as a string,
 // and a filename which is used for pretty-printing errors, if any
-func PrepareChecker(program *ast.Program, filename string, codes map[string]string, must func(error)) (*sema.Checker, func(error)) {
-	location := runtime.FileLocation(filename)
+func PrepareChecker(
+	program *ast.Program,
+	location common.Location,
+	codes map[common.LocationID]string,
+	must func(error),
+) (*sema.Checker, func(error)) {
 	checker, err := sema.NewChecker(
 		program,
 		location,
-		sema.WithPredeclaredValues(valueDeclarations.ToValueDeclarations()),
+		sema.WithPredeclaredValues(valueDeclarations.ToSemaValueDeclarations()),
 		sema.WithPredeclaredTypes(typeDeclarations),
 		sema.WithImportHandler(
-			func(checker *sema.Checker, location ast.Location) (sema.Import, *sema.CheckerError) {
-				stringLocation, ok := location.(ast.StringLocation)
+			func(checker *sema.Checker, importedLocation common.Location, importRange ast.Range) (sema.Import, error) {
+				stringLocation, ok := importedLocation.(common.StringLocation)
 
 				if !ok {
 					return nil, &sema.CheckerError{
+						Location: location,
+						Codes:    codes,
 						Errors: []error{
-							fmt.Errorf("cannot import `%s`. only files are supported", location),
+							fmt.Errorf("cannot import `%s`. only files are supported", importedLocation),
 						},
 					}
 				}
 
-				importChecker, err := checker.EnsureLoaded(
-					location,
-					func() *ast.Program {
-						filename := string(stringLocation)
-						imported, _ := PrepareProgramFromFile(filename, codes)
-						return imported
-					},
-				)
-				if err != nil {
-					return nil, err
+				importedChecker, ok := checkers[importedLocation.ID()]
+				if !ok {
+					importedProgram, _ := PrepareProgramFromFile(stringLocation, codes)
+					importedChecker, _ = PrepareChecker(importedProgram, importedLocation, codes, must)
+					checkers[importedLocation.ID()] = importedChecker
 				}
 
-				return sema.CheckerImport{
-					Checker: importChecker,
+				return sema.ElaborationImport{
+					Elaboration: importedChecker.Elaboration,
 				}, nil
 			},
 		),
@@ -175,22 +128,25 @@ func PrepareChecker(program *ast.Program, filename string, codes map[string]stri
 
 func PrepareInterpreter(filename string) (*interpreter.Interpreter, *sema.Checker, func(error)) {
 
-	codes := map[string]string{}
+	codes := map[common.LocationID]string{}
 
-	program, must := PrepareProgramFromFile(filename, codes)
+	location := common.StringLocation(filename)
 
-	checker, must := PrepareChecker(program, filename, codes, must)
+	program, must := PrepareProgramFromFile(location, codes)
+
+	checker, must := PrepareChecker(program, location, codes, must)
 
 	must(checker.Check())
 
 	var uuid uint64
 
 	inter, err := interpreter.NewInterpreter(
-		checker,
-		interpreter.WithPredefinedValues(valueDeclarations.ToValues()),
-		interpreter.WithUUIDHandler(func() uint64 {
+		interpreter.ProgramFromChecker(checker),
+		checker.Location,
+		interpreter.WithPredeclaredValues(valueDeclarations.ToInterpreterValueDeclarations()),
+		interpreter.WithUUIDHandler(func() (uint64, error) {
 			defer func() { uuid++ }()
-			return uuid
+			return uuid, nil
 		}),
 	)
 	must(err)
@@ -201,6 +157,6 @@ func PrepareInterpreter(filename string) (*interpreter.Interpreter, *sema.Checke
 }
 
 func ExitWithError(message string) {
-	print(runtime.FormatErrorMessage(message, true))
+	println(pretty.FormatErrorMessage(message, true))
 	os.Exit(1)
 }

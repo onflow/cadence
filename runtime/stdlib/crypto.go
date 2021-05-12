@@ -1,3 +1,21 @@
+/*
+ * Cadence - The resource-oriented smart contract programming language
+ *
+ * Copyright 2019-2020 Dapper Labs, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package stdlib
 
 import (
@@ -6,12 +24,16 @@ import (
 
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
+	errors2 "github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/parser2"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib/internal"
-	"github.com/onflow/cadence/runtime/trampoline"
 )
+
+type SignatureAlgorithm = sema.SignatureAlgorithm
+
+type HashAlgorithm = sema.HashAlgorithm
 
 type CryptoSignatureVerifier interface {
 	VerifySignature(
@@ -19,16 +41,17 @@ type CryptoSignatureVerifier interface {
 		tag string,
 		signedData []byte,
 		publicKey []byte,
-		signatureAlgorithm string,
-		hashAlgorithm string,
-	) bool
+		signatureAlgorithm SignatureAlgorithm,
+		hashAlgorithm HashAlgorithm,
+	) (bool, error)
 }
 
 type CryptoHasher interface {
 	Hash(
 		data []byte,
-		hashAlgorithm string,
-	) []byte
+		tag string,
+		hashAlgorithm HashAlgorithm,
+	) ([]byte, error)
 }
 
 var CryptoChecker = func() *sema.Checker {
@@ -40,13 +63,13 @@ var CryptoChecker = func() *sema.Checker {
 		panic(err)
 	}
 
-	location := ast.IdentifierLocation("Crypto")
+	location := common.IdentifierLocation("Crypto")
 
 	var checker *sema.Checker
 	checker, err = sema.NewChecker(
 		program,
 		location,
-		sema.WithPredeclaredValues(BuiltinFunctions.ToValueDeclarations()),
+		sema.WithPredeclaredValues(BuiltinFunctions.ToSemaValueDeclarations()),
 		sema.WithPredeclaredTypes(BuiltinTypes.ToTypeDeclarations()),
 	)
 	if err != nil {
@@ -61,7 +84,55 @@ var CryptoChecker = func() *sema.Checker {
 	return checker
 }()
 
-var cryptoContractType = CryptoChecker.GlobalTypes["Crypto"].Type.(*sema.CompositeType)
+var cryptoContractType = func() *sema.CompositeType {
+	variable, ok := CryptoChecker.Elaboration.GlobalTypes.Get("Crypto")
+	if !ok {
+		panic(errors2.NewUnreachableError())
+	}
+	return variable.Type.(*sema.CompositeType)
+}()
+
+const cryptoSignatureVerifierImplIdentifier = "SignatureVerifierImpl"
+
+const cryptoHasherImplIdentifier = "HasherImpl"
+
+func registerCheckerElaborationCompositeType(
+	identifier string,
+	explicitConformances []*sema.InterfaceType,
+) {
+	typeID := CryptoChecker.Location.TypeID(identifier)
+	CryptoChecker.Elaboration.CompositeTypes[typeID] = &sema.CompositeType{
+		Location:                      CryptoChecker.Location,
+		Identifier:                    identifier,
+		Kind:                          common.CompositeKindStructure,
+		ExplicitInterfaceConformances: explicitConformances,
+	}
+}
+
+func init() {
+	signatureVerifierVariable, ok := CryptoChecker.Elaboration.GlobalTypes.Get("SignatureVerifier")
+	if !ok {
+		panic(errors2.NewUnreachableError())
+	}
+
+	registerCheckerElaborationCompositeType(
+		cryptoSignatureVerifierImplIdentifier,
+		[]*sema.InterfaceType{
+			signatureVerifierVariable.Type.(*sema.InterfaceType),
+		},
+	)
+
+	hasherVariable, ok := CryptoChecker.Elaboration.GlobalTypes.Get("Hasher")
+	if !ok {
+		panic(errors2.NewUnreachableError())
+	}
+	registerCheckerElaborationCompositeType(
+		cryptoHasherImplIdentifier,
+		[]*sema.InterfaceType{
+			hasherVariable.Type.(*sema.InterfaceType),
+		},
+	)
+}
 
 var cryptoContractInitializerTypes = func() (result []sema.Type) {
 	result = make([]sema.Type, len(cryptoContractType.ConstructorParameters))
@@ -73,7 +144,7 @@ var cryptoContractInitializerTypes = func() (result []sema.Type) {
 
 func newCryptoContractVerifySignatureFunction(signatureVerifier CryptoSignatureVerifier) interpreter.FunctionValue {
 	return interpreter.NewHostFunctionValue(
-		func(invocation interpreter.Invocation) trampoline.Trampoline {
+		func(invocation interpreter.Invocation) interpreter.Value {
 			signature, err := interpreter.ByteArrayValueToByteSlice(invocation.Arguments[0])
 			if err != nil {
 				panic(fmt.Errorf("verifySignature: invalid signature argument: %w", err))
@@ -95,38 +166,30 @@ func newCryptoContractVerifySignatureFunction(signatureVerifier CryptoSignatureV
 				panic(fmt.Errorf("verifySignature: invalid public key argument: %w", err))
 			}
 
-			signatureAlgorithmStringValue, ok := invocation.Arguments[4].(*interpreter.StringValue)
-			if !ok {
-				panic(errors.New("verifySignature: invalid signature algorithm argument: not a string"))
-			}
-			signatureAlgorithm := signatureAlgorithmStringValue.Str
+			signatureAlgorithm := getSignatureAlgorithmFromValue(invocation.Arguments[4])
 
-			hashAlgorithmStringValue, ok := invocation.Arguments[5].(*interpreter.StringValue)
-			if !ok {
-				panic(errors.New("verifySignature: invalid hash algorithm argument: not a string"))
-			}
-			hashAlgorithm := hashAlgorithmStringValue.Str
+			hashAlgorithm := getHashAlgorithmFromValue(invocation.Arguments[5])
 
-			isValid := signatureVerifier.VerifySignature(signature,
+			isValid, err := signatureVerifier.VerifySignature(signature,
 				tag,
 				signedData,
 				publicKey,
 				signatureAlgorithm,
 				hashAlgorithm,
 			)
+			if err != nil {
+				panic(err)
+			}
 
-			return trampoline.Done{Result: interpreter.BoolValue(isValid)}
+			return interpreter.BoolValue(isValid)
 		},
 	)
 }
 
 func newCryptoContractSignatureVerifier(signatureVerifier CryptoSignatureVerifier) *interpreter.CompositeValue {
-	implementationTypeID :=
-		sema.TypeID(string(cryptoContractInitializerTypes[0].ID()) + "Impl")
-
 	result := interpreter.NewCompositeValue(
 		CryptoChecker.Location,
-		implementationTypeID,
+		cryptoSignatureVerifierImplIdentifier,
 		common.CompositeKindStructure,
 		nil,
 		nil,
@@ -141,34 +204,36 @@ func newCryptoContractSignatureVerifier(signatureVerifier CryptoSignatureVerifie
 
 func newCryptoContractHashFunction(hasher CryptoHasher) interpreter.FunctionValue {
 	return interpreter.NewHostFunctionValue(
-		func(invocation interpreter.Invocation) trampoline.Trampoline {
+		func(invocation interpreter.Invocation) interpreter.Value {
 			data, err := interpreter.ByteArrayValueToByteSlice(invocation.Arguments[0])
 			if err != nil {
 				panic(fmt.Errorf("hash: invalid data argument: %w", err))
 			}
 
-			hashAlgorithmStringValue, ok := invocation.Arguments[1].(*interpreter.StringValue)
+			tagStringValue, ok := invocation.Arguments[1].(*interpreter.StringValue)
 			if !ok {
-				panic(errors.New("hash: invalid hash algorithm argument: not a string"))
+				panic(errors.New("hash: invalid tag argument: not a string"))
 			}
-			hashAlgorithm := hashAlgorithmStringValue.Str
+			tag := tagStringValue.Str
 
-			digest := hasher.Hash(data, hashAlgorithm)
+			hashAlgorithm := getHashAlgorithmFromValue(invocation.Arguments[2])
 
-			result := interpreter.ByteSliceToByteArrayValue(digest)
+			digest, err := hasher.Hash(data, tag, hashAlgorithm)
+			if err != nil {
+				panic(err)
 
-			return trampoline.Done{Result: result}
+			}
+
+			return interpreter.ByteSliceToByteArrayValue(digest)
 		},
 	)
 }
 
 func newCryptoContractHasher(hasher CryptoHasher) *interpreter.CompositeValue {
-	implementationTypeID :=
-		sema.TypeID(string(cryptoContractInitializerTypes[1].ID()) + "Impl")
 
 	result := interpreter.NewCompositeValue(
 		CryptoChecker.Location,
-		implementationTypeID,
+		cryptoHasherImplIdentifier,
 		common.CompositeKindStructure,
 		nil,
 		nil,
@@ -211,4 +276,42 @@ func NewCryptoContract(
 	compositeValue := value.(*interpreter.CompositeValue)
 
 	return compositeValue, nil
+}
+
+func getHashAlgorithmFromValue(value interpreter.Value) HashAlgorithm {
+	hashAlgoValue, ok := value.(*interpreter.CompositeValue)
+	if !ok || hashAlgoValue.QualifiedIdentifier != sema.HashAlgorithmTypeName {
+		panic(fmt.Sprintf("hash algorithm value must be of type %s", sema.HashAlgorithmType))
+	}
+
+	rawValue, ok := hashAlgoValue.Fields.Get(sema.EnumRawValueFieldName)
+	if !ok {
+		panic("cannot find hash algorithm raw value")
+	}
+
+	hashAlgoRawValue, ok := rawValue.(interpreter.UInt8Value)
+	if !ok {
+		panic("hash algorithm raw value needs to be subtype of integer")
+	}
+
+	return HashAlgorithm(hashAlgoRawValue.ToInt())
+}
+
+func getSignatureAlgorithmFromValue(value interpreter.Value) SignatureAlgorithm {
+	signAlgoValue, ok := value.(*interpreter.CompositeValue)
+	if !ok || signAlgoValue.QualifiedIdentifier != sema.SignatureAlgorithmTypeName {
+		panic(fmt.Sprintf("signature algorithm value must be of type %s", sema.SignatureAlgorithmType))
+	}
+
+	rawValue, ok := signAlgoValue.Fields.Get(sema.EnumRawValueFieldName)
+	if !ok {
+		panic("cannot find signature algorithm raw value")
+	}
+
+	hashAlgoRawValue, ok := rawValue.(interpreter.UInt8Value)
+	if !ok {
+		panic("signature algorithm raw value needs to be subtype of integer")
+	}
+
+	return SignatureAlgorithm(hashAlgoRawValue.ToInt())
 }

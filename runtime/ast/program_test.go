@@ -20,7 +20,6 @@ package ast
 
 import (
 	"encoding/json"
-	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -31,9 +30,7 @@ func TestProgram_MarshalJSON(t *testing.T) {
 
 	t.Parallel()
 
-	program := &Program{
-		Declarations: []Declaration{},
-	}
+	program := NewProgram([]Declaration{})
 
 	actual, err := json.Marshal(program)
 	require.NoError(t, err)
@@ -47,180 +44,4 @@ func TestProgram_MarshalJSON(t *testing.T) {
         `,
 		string(actual),
 	)
-}
-
-func TestProgramIndices(t *testing.T) {
-
-	functionA := &FunctionDeclaration{
-		Identifier: Identifier{Identifier: "A"},
-	}
-	functionB := &FunctionDeclaration{
-		Identifier: Identifier{Identifier: "B"},
-	}
-	functionC := &FunctionDeclaration{
-		Identifier: Identifier{Identifier: "C"},
-	}
-
-	compositeA := &CompositeDeclaration{
-		Identifier: Identifier{Identifier: "A"},
-	}
-	compositeB := &CompositeDeclaration{
-		Identifier: Identifier{Identifier: "B"},
-	}
-	compositeC := &CompositeDeclaration{
-		Identifier: Identifier{Identifier: "C"},
-	}
-
-	interfaceA := &InterfaceDeclaration{
-		Identifier: Identifier{Identifier: "A"},
-	}
-	interfaceB := &InterfaceDeclaration{
-		Identifier: Identifier{Identifier: "B"},
-	}
-	interfaceC := &InterfaceDeclaration{
-		Identifier: Identifier{Identifier: "C"},
-	}
-
-	transactionA := &TransactionDeclaration{
-		ParameterList: &ParameterList{
-			Parameters: []*Parameter{
-				{
-					Identifier: Identifier{Identifier: "A"},
-				},
-			},
-		},
-	}
-	transactionB := &TransactionDeclaration{
-		ParameterList: &ParameterList{
-			Parameters: []*Parameter{
-				{
-					Identifier: Identifier{Identifier: "B"},
-				},
-			},
-		},
-	}
-	transactionC := &TransactionDeclaration{
-		ParameterList: &ParameterList{
-			Parameters: []*Parameter{
-				{
-					Identifier: Identifier{Identifier: "C"},
-				},
-			},
-		},
-	}
-
-	importA := &ImportDeclaration{
-		Location: StringLocation("A"),
-	}
-	importB := &ImportDeclaration{
-		Location: StringLocation("B"),
-	}
-	importC := &ImportDeclaration{
-		Location: StringLocation("C"),
-	}
-
-	pragmaA := &PragmaDeclaration{
-		Expression: &IdentifierExpression{
-			Identifier: Identifier{Identifier: "A"},
-		},
-	}
-	pragmaB := &PragmaDeclaration{
-		Expression: &IdentifierExpression{
-			Identifier: Identifier{Identifier: "B"},
-		},
-	}
-	pragmaC := &PragmaDeclaration{
-		Expression: &IdentifierExpression{
-			Identifier: Identifier{Identifier: "C"},
-		},
-	}
-
-	program := &Program{
-		Declarations: []Declaration{
-			importB,
-			pragmaA,
-			transactionC,
-			functionC,
-			interfaceB,
-			transactionA,
-			compositeB,
-			importC,
-			transactionB,
-			importA,
-			interfaceA,
-			pragmaB,
-			functionA,
-			compositeC,
-			functionB,
-			interfaceC,
-			pragmaC,
-			compositeA,
-		},
-	}
-
-	var wg sync.WaitGroup
-	const parallelExecutionCount = 10
-
-	for i := 0; i < parallelExecutionCount; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-
-			require.Equal(t,
-				[]*FunctionDeclaration{
-					functionC,
-					functionA,
-					functionB,
-				},
-				program.FunctionDeclarations(),
-			)
-
-			require.Equal(t,
-				[]*CompositeDeclaration{
-					compositeB,
-					compositeC,
-					compositeA,
-				},
-				program.CompositeDeclarations(),
-			)
-
-			require.Equal(t,
-				[]*InterfaceDeclaration{
-					interfaceB,
-					interfaceA,
-					interfaceC,
-				},
-				program.InterfaceDeclarations(),
-			)
-
-			require.Equal(t,
-				[]*TransactionDeclaration{
-					transactionC,
-					transactionA,
-					transactionB,
-				},
-				program.TransactionDeclarations(),
-			)
-
-			require.Equal(t,
-				[]*ImportDeclaration{
-					importB,
-					importC,
-					importA,
-				},
-				program.ImportDeclarations(),
-			)
-
-			require.Equal(t,
-				[]*PragmaDeclaration{
-					pragmaA,
-					pragmaB,
-					pragmaC,
-				},
-				program.PragmaDeclarations(),
-			)
-		}()
-	}
-
-	wg.Wait()
 }

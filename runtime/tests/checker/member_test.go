@@ -47,8 +47,8 @@ func TestCheckOptionalChainingNonOptionalFieldRead(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Equal(t,
-		&sema.OptionalType{Type: &sema.IntType{}},
-		checker.GlobalValues["x"].Type,
+		&sema.OptionalType{Type: sema.IntType},
+		RequireGlobalValue(t, checker.Elaboration, "x"),
 	)
 }
 
@@ -72,8 +72,8 @@ func TestCheckOptionalChainingOptionalFieldRead(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Equal(t,
-		&sema.OptionalType{Type: &sema.IntType{}},
-		checker.GlobalValues["x"].Type,
+		&sema.OptionalType{Type: sema.IntType},
+		RequireGlobalValue(t, checker.Elaboration, "x"),
 	)
 }
 
@@ -95,11 +95,11 @@ func TestCheckOptionalChainingFunctionRead(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.True(t,
-		checker.GlobalValues["x"].Type.Equal(
+		RequireGlobalValue(t, checker.Elaboration, "x").Equal(
 			&sema.OptionalType{
 				Type: &sema.FunctionType{
 					ReturnTypeAnnotation: &sema.TypeAnnotation{
-						Type: &sema.IntType{},
+						Type: sema.IntType,
 					},
 				},
 			},
@@ -125,8 +125,8 @@ func TestCheckOptionalChainingFunctionCall(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.True(t,
-		checker.GlobalValues["x"].Type.Equal(
-			&sema.OptionalType{Type: &sema.IntType{}},
+		RequireGlobalValue(t, checker.Elaboration, "x").Equal(
+			&sema.OptionalType{Type: sema.IntType},
 		),
 	)
 }

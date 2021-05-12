@@ -36,22 +36,22 @@ func (checker *Checker) visitConditions(conditions []*ast.Condition) {
 	// and ensure the result is boolean
 
 	for _, condition := range conditions {
-		condition.Accept(checker)
+		checker.checkCondition(condition)
 	}
 }
 
-func (checker *Checker) VisitCondition(condition *ast.Condition) ast.Repr {
+func (checker *Checker) checkCondition(condition *ast.Condition) ast.Repr {
 
 	// check test expression is boolean
 
 	testType := condition.Test.Accept(checker).(Type)
 
 	if !testType.IsInvalidType() &&
-		!IsSubType(testType, &BoolType{}) {
+		!IsSubType(testType, BoolType) {
 
 		checker.report(
 			&TypeMismatchError{
-				ExpectedType: &BoolType{},
+				ExpectedType: BoolType,
 				ActualType:   testType,
 				Range:        ast.NewRangeFromPositioned(condition.Test),
 			},
@@ -65,11 +65,11 @@ func (checker *Checker) VisitCondition(condition *ast.Condition) ast.Repr {
 		messageType := condition.Message.Accept(checker).(Type)
 
 		if !messageType.IsInvalidType() &&
-			!IsSubType(messageType, &StringType{}) {
+			!IsSubType(messageType, StringType) {
 
 			checker.report(
 				&TypeMismatchError{
-					ExpectedType: &StringType{},
+					ExpectedType: StringType,
 					ActualType:   testType,
 					Range:        ast.NewRangeFromPositioned(condition.Message),
 				},

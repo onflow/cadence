@@ -24,14 +24,14 @@ import (
 
 type offset int
 
-// buf is a byte buffer, which allows reading and writing.
+// Buffer is a byte buffer, which allows reading and writing.
 //
-type buf struct {
+type Buffer struct {
 	data   []byte
 	offset offset
 }
 
-func (buf *buf) WriteByte(b byte) error {
+func (buf *Buffer) WriteByte(b byte) error {
 	if buf.offset < offset(len(buf.data)) {
 		buf.data[buf.offset] = b
 	} else {
@@ -41,7 +41,7 @@ func (buf *buf) WriteByte(b byte) error {
 	return nil
 }
 
-func (buf *buf) WriteBytes(data []byte) error {
+func (buf *Buffer) WriteBytes(data []byte) error {
 	for _, b := range data {
 		err := buf.WriteByte(b)
 		if err != nil {
@@ -51,7 +51,7 @@ func (buf *buf) WriteBytes(data []byte) error {
 	return nil
 }
 
-func (buf *buf) Read(data []byte) (int, error) {
+func (buf *Buffer) Read(data []byte) (int, error) {
 	n := copy(data, buf.data[buf.offset:])
 	if n == 0 && len(data) != 0 {
 		return 0, io.EOF
@@ -60,7 +60,7 @@ func (buf *buf) Read(data []byte) (int, error) {
 	return n, nil
 }
 
-func (buf *buf) ReadByte() (byte, error) {
+func (buf *Buffer) ReadByte() (byte, error) {
 	if buf.offset >= offset(len(buf.data)) {
 		return 0, io.EOF
 	}
@@ -69,7 +69,15 @@ func (buf *buf) ReadByte() (byte, error) {
 	return b, nil
 }
 
-func (buf *buf) ReadBytesEqual(expected []byte) (bool, error) {
+func (buf *Buffer) PeekByte() (byte, error) {
+	if buf.offset >= offset(len(buf.data)) {
+		return 0, io.EOF
+	}
+	b := buf.data[buf.offset]
+	return b, nil
+}
+
+func (buf *Buffer) ReadBytesEqual(expected []byte) (bool, error) {
 	off := buf.offset
 	for _, b := range expected {
 		if off >= offset(len(buf.data)) {
@@ -82,4 +90,8 @@ func (buf *buf) ReadBytesEqual(expected []byte) (bool, error) {
 	}
 	buf.offset = off
 	return true, nil
+}
+
+func (buf *Buffer) Bytes() []byte {
+	return buf.data
 }

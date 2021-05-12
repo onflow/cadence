@@ -26,16 +26,19 @@ Some of these features are:
 To get started writing Cadence, try it out in the
 [Playground](https://play.onflow.org/).
 
-If you want to develop locally, install the [Flow Command Line
-Client](https://github.com/onflow/flow/blob/master/docs/cli.md#flow-cli), which provides the [Flow
-emulator](https://github.com/onflow/flow/blob/master/docs/emulator.md#flow-emulator) and the [Visual Studio
-Code extension](https://github.com/onflow/flow/blob/master/docs/vscode-extension.md#cadence-visual-studio-code-extension).
-The emulator is a lightweight tool that emulates the behaviour of the real Flow
-network. The Visual Studio Code extension enables the development, deployment
-of, and interaction with Cadence contracts.
+If you want to develop locally, install the [Flow Command Line Client](https://github.com/onflow/flow/blob/master/docs/cli.md#flow-cli),
+which provides the [Flow emulator](https://github.com/onflow/flow/blob/master/docs/emulator.md#flow-emulator)
+and the [Visual Studio Code extension](https://github.com/onflow/flow/blob/master/docs/vscode-extension.md#cadence-visual-studio-code-extension).
+The emulator is a lightweight tool that emulates the behaviour of the real Flow network.
+The Visual Studio Code extension enables the development, deployment of, and interaction with Cadence contracts.
 
 ## Documentation
 
-To read more about Cadence, have a look at the language reference on the [Flow
-documentation site](https://docs.onflow.org/docs/cadence) or [in this
-repository](/docs#cadence-programming-language-documentation).
+To read more about Cadence, have a look at the language reference on the [Flow documentation site](https://docs.onflow.org/cadence/language/).
+
+## Contributing
+
+If you would like to contribute to Cadence, have a look at the [contributing guide](https://github.com/onflow/cadence/blob/master/CONTRIBUTING.md).
+
+Development documentation can be found in the [`docs` directory](https://github.com/onflow/flow/blob/master/docs/cli.md).
+For example, it contains the source for the language reference.

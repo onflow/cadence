@@ -28,10 +28,7 @@ import (
 	"time"
 
 	"github.com/mitchellh/mapstructure"
-
 	"github.com/onflow/cadence/encoding/json"
-	"github.com/onflow/cadence/languageserver/conversion"
-	"github.com/onflow/cadence/languageserver/jsonrpc2"
 	"github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
@@ -40,13 +37,16 @@ import (
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
 
+	"github.com/onflow/cadence/languageserver/conversion"
+	"github.com/onflow/cadence/languageserver/jsonrpc2"
 	"github.com/onflow/cadence/languageserver/protocol"
 )
 
 var valueDeclarations = append(
 	stdlib.FlowBuiltInFunctions(stdlib.FlowBuiltinImpls{}),
 	stdlib.BuiltinFunctions...,
-).ToValueDeclarations()
+).ToSemaValueDeclarations()
+
 var typeDeclarations = append(
 	stdlib.FlowBuiltInTypes,
 	stdlib.BuiltinTypes...,
@@ -56,7 +56,8 @@ var typeDeclarations = append(
 // information about each document that is used to support CodeLens,
 // transaction submission, and script execution.
 type Document struct {
-	Text string
+	Text    string
+	Version float64
 }
 
 func (d Document) Offset(line, column int) (offset int) {
@@ -137,19 +138,23 @@ type CommandHandler func(conn protocol.Conn, args ...interface{}) (interface{}, 
 
 // AddressImportResolver is a function that is used to resolve address imports
 //
-type AddressImportResolver func(location ast.AddressLocation) (string, error)
+type AddressImportResolver func(location common.AddressLocation) (string, error)
+
+// AddressContractNamesResolver is a function that is used to resolve contract names of an address
+//
+type AddressContractNamesResolver func(address common.Address) ([]string, error)
 
 // StringImportResolver is a function that is used to resolve string imports
 //
-type StringImportResolver func(mainPath string, location ast.StringLocation) (string, error)
+type StringImportResolver func(location common.StringLocation) (string, error)
 
 // CodeLensProvider is a function that is used to provide code lenses for the given checker
 //
-type CodeLensProvider func(uri protocol.DocumentUri, checker *sema.Checker) ([]*protocol.CodeLens, error)
+type CodeLensProvider func(uri protocol.DocumentUri, version float64, checker *sema.Checker) ([]*protocol.CodeLens, error)
 
 // DiagnosticProvider is a function that is used to provide diagnostics for the given checker
 //
-type DiagnosticProvider func(uri protocol.DocumentUri, checker *sema.Checker) ([]protocol.Diagnostic, error)
+type DiagnosticProvider func(uri protocol.DocumentUri, version float64, checker *sema.Checker) ([]protocol.Diagnostic, error)
 
 // InitializationOptionsHandler is a function that is used to handle initialization options sent by the client
 //
@@ -157,13 +162,15 @@ type InitializationOptionsHandler func(initializationOptions interface{}) error
 
 type Server struct {
 	protocolServer  *protocol.Server
-	checkers        map[protocol.DocumentUri]*sema.Checker
+	checkers        map[common.LocationID]*sema.Checker
 	documents       map[protocol.DocumentUri]Document
 	memberResolvers map[protocol.DocumentUri]map[string]sema.MemberResolver
 	// commands is the registry of custom commands we support
 	commands map[string]CommandHandler
 	// resolveAddressImport is the optional function that is used to resolve address imports
 	resolveAddressImport AddressImportResolver
+	// resolveAddressContractNames is the optional function that is used to resolve contract names for an address
+	resolveAddressContractNames AddressContractNamesResolver
 	// resolveStringImport is the optional function that is used to resolve string imports
 	resolveStringImport StringImportResolver
 	// codeLensProviders are the functions that are used to provide code lenses for a checker
@@ -172,6 +179,7 @@ type Server struct {
 	diagnosticProviders []DiagnosticProvider
 	// initializationOptionsHandlers are the functions that are used to handle initialization options sent by the client
 	initializationOptionsHandlers []InitializationOptionsHandler
+	accessCheckMode               sema.AccessCheckMode
 }
 
 type Option func(*Server) error
@@ -202,6 +210,16 @@ func WithCommand(command Command) Option {
 func WithAddressImportResolver(resolver AddressImportResolver) Option {
 	return func(s *Server) error {
 		s.resolveAddressImport = resolver
+		return nil
+	}
+}
+
+// WithAddressContractNamesResolver returns a server option that sets the given function
+// as the function that is used to resolve contract names of an address
+//
+func WithAddressContractNamesResolver(resolver AddressContractNamesResolver) Option {
+	return func(s *Server) error {
+		s.resolveAddressContractNames = resolver
 		return nil
 	}
 }
@@ -252,7 +270,7 @@ const ParseEntryPointArgumentsCommand = "cadence.server.parseEntryPointArguments
 
 func NewServer() (*Server, error) {
 	server := &Server{
-		checkers:        make(map[protocol.DocumentUri]*sema.Checker),
+		checkers:        make(map[common.LocationID]*sema.Checker),
 		documents:       make(map[protocol.DocumentUri]Document),
 		memberResolvers: make(map[protocol.DocumentUri]map[string]sema.MemberResolver),
 		commands:        make(map[string]CommandHandler),
@@ -289,6 +307,11 @@ func (s *Server) Stop() error {
 	return s.protocolServer.Stop()
 }
 
+func (s *Server) checkerForDocument(uri protocol.DocumentUri) *sema.Checker {
+	location := uriToLocation(uri)
+	return s.checkers[location.ID()]
+}
+
 func (s *Server) Initialize(
 	conn protocol.Conn,
 	params *protocol.InitializeParams,
@@ -311,8 +334,12 @@ func (s *Server) Initialize(
 		},
 	}
 
+	options := params.InitializationOptions
+
+	s.configure(options)
+
 	for _, handler := range s.initializationOptionsHandlers {
-		err := handler(params.InitializationOptions)
+		err := handler(options)
 		if err != nil {
 			return nil, err
 		}
@@ -322,6 +349,40 @@ func (s *Server) Initialize(
 	go s.registerCommands(conn)
 
 	return result, nil
+}
+
+const accessCheckModeOption = "accessCheckMode"
+
+func accessCheckModeFromName(name string) sema.AccessCheckMode {
+	switch name {
+	case "strict":
+		return sema.AccessCheckModeStrict
+
+	case "notSpecifiedRestricted":
+		return sema.AccessCheckModeNotSpecifiedRestricted
+
+	case "notSpecifiedUnrestricted":
+		return sema.AccessCheckModeNotSpecifiedUnrestricted
+
+	case "none":
+		return sema.AccessCheckModeNone
+
+	default:
+		return sema.AccessCheckModeStrict
+	}
+}
+
+func (s *Server) configure(opts interface{}) {
+	optsMap, ok := opts.(map[string]interface{})
+	if !ok {
+		return
+	}
+
+	if accessCheckModeName, ok := optsMap[accessCheckModeOption].(string); ok {
+		s.accessCheckMode = accessCheckModeFromName(accessCheckModeName)
+	} else {
+		s.accessCheckMode = sema.AccessCheckModeStrict
+	}
 }
 
 // Registers the commands that the server is able to handle.
@@ -389,15 +450,14 @@ func (s *Server) DidOpenTextDocument(conn protocol.Conn, params *protocol.DidOpe
 
 	uri := params.TextDocument.URI
 	text := params.TextDocument.Text
+	version := params.TextDocument.Version
 
 	s.documents[uri] = Document{
-		Text: text,
+		Text:    text,
+		Version: version,
 	}
 
-	err := s.check(conn, uri, text)
-	if err != nil {
-		return err
-	}
+	s.checkAndPublishDiagnostics(conn, uri, text, version)
 
 	return nil
 }
@@ -411,15 +471,14 @@ func (s *Server) DidChangeTextDocument(
 
 	uri := params.TextDocument.URI
 	text := params.ContentChanges[0].Text
+	version := params.TextDocument.Version
 
 	s.documents[uri] = Document{
-		Text: text,
+		Text:    text,
+		Version: version,
 	}
 
-	err := s.check(conn, uri, text)
-	if err != nil {
-		return err
-	}
+	s.checkAndPublishDiagnostics(conn, uri, text, version)
 
 	return nil
 }
@@ -436,24 +495,35 @@ type CadenceCheckCompletedParams struct {
 
 const cadenceCheckCompletedMethodName = "cadence/checkCompleted"
 
-func (s *Server) check(conn protocol.Conn, uri protocol.DocumentUri, text string) error {
+func (s *Server) checkAndPublishDiagnostics(
+	conn protocol.Conn,
+	uri protocol.DocumentUri,
+	text string,
+	version float64,
+) {
 
-	diagnostics, err := s.getDiagnostics(conn, uri, text)
+	diagnostics, _ := s.getDiagnostics(conn, uri, text, version)
 
 	// NOTE: always publish diagnostics and inform the client the checking completed
 
-	conn.PublishDiagnostics(&protocol.PublishDiagnosticsParams{
+	_ = conn.PublishDiagnostics(&protocol.PublishDiagnosticsParams{
 		URI:         uri,
 		Diagnostics: diagnostics,
 	})
 
-	valid := len(diagnostics) == 0
-	conn.Notify(cadenceCheckCompletedMethodName, &CadenceCheckCompletedParams{
+	valid := true
+
+	for _, diagnostic := range diagnostics {
+		if diagnostic.Severity == protocol.SeverityError {
+			valid = false
+			break
+		}
+	}
+
+	_ = conn.Notify(cadenceCheckCompletedMethodName, &CadenceCheckCompletedParams{
 		URI:   uri,
 		Valid: valid,
 	})
-
-	return err
 }
 
 // Hover returns contextual type information about the variable at the given
@@ -464,8 +534,8 @@ func (s *Server) Hover(
 ) (*protocol.Hover, error) {
 
 	uri := params.TextDocument.URI
-	checker, ok := s.checkers[uri]
-	if !ok {
+	checker := s.checkerForDocument(uri)
+	if checker == nil {
 		return nil, nil
 	}
 
@@ -494,8 +564,8 @@ func (s *Server) Definition(
 ) (*protocol.Location, error) {
 
 	uri := params.TextDocument.URI
-	checker, ok := s.checkers[uri]
-	if !ok {
+	checker := s.checkerForDocument(uri)
+	if checker == nil {
 		return nil, nil
 	}
 
@@ -542,15 +612,17 @@ func (s *Server) CodeLens(
 	codeLenses = []*protocol.CodeLens{}
 
 	uri := params.TextDocument.URI
-	checker, ok := s.checkers[uri]
-	if !ok {
+	checker := s.checkerForDocument(uri)
+	if checker == nil {
 		// Can we ensure this doesn't happen?
 		return
 	}
 
+	version := s.documents[uri].Version
+
 	for _, provider := range s.codeLensProviders {
 		var moreCodeLenses []*protocol.CodeLens
-		moreCodeLenses, err = provider(uri, checker)
+		moreCodeLenses, err = provider(uri, version, checker)
 		if err != nil {
 			return
 		}
@@ -809,8 +881,8 @@ func (s *Server) Completion(
 	items = []*protocol.CompletionItem{}
 
 	uri := params.TextDocument.URI
-	checker, ok := s.checkers[uri]
-	if !ok {
+	checker := s.checkerForDocument(uri)
+	if checker == nil {
 		return
 	}
 
@@ -1083,6 +1155,7 @@ func (s *Server) ResolveCompletionItem(
 // We register all the commands we support in registerCommands and populate
 // their corresponding handler at server initialization.
 func (s *Server) ExecuteCommand(conn protocol.Conn, params *protocol.ExecuteCommandParams) (interface{}, error) {
+
 	conn.LogMessage(&protocol.LogMessageParams{
 		Type:    protocol.Log,
 		Message: fmt.Sprintf("called execute command: %s", params.Command),
@@ -1098,10 +1171,12 @@ func (s *Server) ExecuteCommand(conn protocol.Conn, params *protocol.ExecuteComm
 // Shutdown tells the server to stop accepting any new requests. This can only
 // be followed by a call to Exit, which exits the process.
 func (*Server) Shutdown(conn protocol.Conn) error {
+
 	conn.ShowMessage(&protocol.ShowMessageParams{
 		Type:    protocol.Warning,
 		Message: "Cadence language server is shutting down",
 	})
+
 	return nil
 }
 
@@ -1123,10 +1198,12 @@ func (s *Server) getDiagnostics(
 	conn protocol.Conn,
 	uri protocol.DocumentUri,
 	text string,
+	version float64,
 ) (
 	diagnostics []protocol.Diagnostic,
 	diagnosticsErr error,
 ) {
+
 	// NOTE: Always initialize to an empty slice, i.e DON'T use nil:
 	// The later will be ignored instead of being treated as no items
 	diagnostics = []protocol.Diagnostic{}
@@ -1146,53 +1223,135 @@ func (s *Server) getDiagnostics(
 	// If there is a parse result succeeded proceed with resolving imports and checking the parsed program,
 	// even if there there might have been parsing errors.
 
+	location := uriToLocation(uri)
+
 	if program == nil {
-		delete(s.checkers, uri)
+		delete(s.checkers, location.ID())
 		return
-	}
-
-	mainPath := string(uri)
-
-	if strings.HasPrefix(mainPath, filePrefix) {
-		mainPath = mainPath[len(filePrefix):]
-	} else if strings.HasPrefix(mainPath, inMemoryPrefix) {
-		mainPath = mainPath[len(inMemoryPrefix):]
 	}
 
 	var checker *sema.Checker
 	checker, diagnosticsErr = sema.NewChecker(
 		program,
-		runtime.FileLocation(uri),
+		location,
 		sema.WithPredeclaredValues(valueDeclarations),
 		sema.WithPredeclaredTypes(typeDeclarations),
-		sema.WithImportHandler(func(checker *sema.Checker, location ast.Location) (sema.Import, *sema.CheckerError) {
-			switch location {
-			case stdlib.CryptoChecker.Location:
-				return sema.CheckerImport{
-					Checker: stdlib.CryptoChecker,
-				}, nil
+		sema.WithLocationHandler(
+			func(identifiers []ast.Identifier, location common.Location) ([]sema.ResolvedLocation, error) {
+				addressLocation, isAddress := location.(common.AddressLocation)
 
-			default:
-				var program *ast.Program
-				var err error
-				checker, checkerErr := checker.EnsureLoaded(location, func() *ast.Program {
-					program, err = s.resolveImport(mainPath, location)
-					return program
-				})
-				// TODO: improve
-				if err != nil {
-					return nil, &sema.CheckerError{
-						Errors: []error{err},
+				// if the location is not an address location, e.g. an identifier location (`import Crypto`),
+				// then return a single resolved location which declares all identifiers.
+
+				if !isAddress {
+					return []runtime.ResolvedLocation{
+						{
+							Location:    location,
+							Identifiers: identifiers,
+						},
+					}, nil
+				}
+
+				// if the location is an address,
+				// and no specific identifiers where requested in the import statement,
+				// then fetch all identifiers at this address
+
+				if len(identifiers) == 0 {
+					// if there is no contract name resolver,
+					// then return no resolved locations
+
+					if s.resolveAddressContractNames == nil {
+						return nil, nil
+					}
+
+					contractNames, err := s.resolveAddressContractNames(addressLocation.Address)
+					if err != nil {
+						panic(err)
+					}
+
+					// if there are no contracts deployed,
+					// then return no resolved locations
+
+					if len(contractNames) == 0 {
+						return nil, nil
+					}
+
+					identifiers = make([]ast.Identifier, len(contractNames))
+
+					for i := range identifiers {
+						identifiers[i] = runtime.Identifier{
+							Identifier: contractNames[i],
+						}
 					}
 				}
-				if checkerErr != nil {
-					return nil, checkerErr
+
+				// return one resolved location per identifier.
+				// each resolved location is an address contract location
+
+				resolvedLocations := make([]runtime.ResolvedLocation, len(identifiers))
+				for i := range resolvedLocations {
+					identifier := identifiers[i]
+					resolvedLocations[i] = runtime.ResolvedLocation{
+						Location: common.AddressLocation{
+							Address: addressLocation.Address,
+							Name:    identifier.Identifier,
+						},
+						Identifiers: []runtime.Identifier{identifier},
+					}
 				}
-				return sema.CheckerImport{
-					Checker: checker,
-				}, nil
-			}
-		}),
+
+				return resolvedLocations, nil
+			},
+		),
+		sema.WithOriginsAndOccurrencesEnabled(true),
+		sema.WithImportHandler(
+			func(checker *sema.Checker, importedLocation common.Location, importRange ast.Range) (sema.Import, error) {
+				switch importedLocation {
+				case stdlib.CryptoChecker.Location:
+					return sema.ElaborationImport{
+						Elaboration: stdlib.CryptoChecker.Elaboration,
+					}, nil
+
+				default:
+					if isPathLocation(importedLocation) {
+						// import may be a relative path and therefore should be normalized
+						// against the current location
+						importedLocation = normalizePathLocation(checker.Location, importedLocation)
+
+						if checker.Location == importedLocation {
+							return nil, &sema.CheckerError{
+								Errors: []error{fmt.Errorf("cannot import current file: %s", importedLocation)},
+							}
+						}
+					}
+
+					importedLocationID := importedLocation.ID()
+
+					importedChecker, ok := s.checkers[importedLocationID]
+					if !ok {
+						importedProgram, err := s.resolveImport(importedLocation)
+						if err != nil {
+							return nil, err
+						}
+
+						importedChecker, err = checker.SubChecker(importedProgram, importedLocation)
+						if err != nil {
+							return nil, err
+						}
+						s.checkers[importedLocationID] = importedChecker
+						err = importedChecker.Check()
+						if err != nil {
+							return nil, err
+						}
+					}
+
+					return sema.ElaborationImport{
+						Elaboration: importedChecker.Elaboration,
+					}, nil
+				}
+			},
+		),
+		sema.WithAccessCheckMode(s.accessCheckMode),
 	)
 	if diagnosticsErr != nil {
 		return
@@ -1208,7 +1367,7 @@ func (s *Server) getDiagnostics(
 		Message: fmt.Sprintf("checking %s took %s", string(uri), elapsed),
 	})
 
-	s.checkers[uri] = checker
+	s.checkers[location.ID()] = checker
 
 	if checkError != nil {
 		if parentErr, ok := checkError.(errors.ParentError); ok {
@@ -1219,7 +1378,7 @@ func (s *Server) getDiagnostics(
 
 	for _, provider := range s.diagnosticProviders {
 		var extraDiagnostics []protocol.Diagnostic
-		extraDiagnostics, diagnosticsErr = provider(uri, checker)
+		extraDiagnostics, diagnosticsErr = provider(uri, version, checker)
 		if diagnosticsErr != nil {
 			return
 		}
@@ -1296,13 +1455,7 @@ func parse(conn protocol.Conn, code, location string) (*ast.Program, error) {
 	return program, err
 }
 
-func (s *Server) resolveImport(
-	mainPath string,
-	location ast.Location,
-) (
-	program *ast.Program,
-	err error,
-) {
+func (s *Server) resolveImport(location common.Location) (program *ast.Program, err error) {
 	// NOTE: important, *DON'T* return an error when a location type
 	// is not supported: the import location can simply not be resolved,
 	// no error occurred while resolving it.
@@ -1313,13 +1466,14 @@ func (s *Server) resolveImport(
 
 	var code string
 	switch loc := location.(type) {
-	case ast.StringLocation:
+	case common.StringLocation:
 		if s.resolveStringImport == nil {
 			return nil, nil
 		}
-		code, err = s.resolveStringImport(mainPath, loc)
 
-	case ast.AddressLocation:
+		code, err = s.resolveStringImport(loc)
+
+	case common.AddressLocation:
 		if s.resolveAddressImport == nil {
 			return nil, nil
 		}
@@ -1368,13 +1522,14 @@ func (s *Server) getEntryPointParameters(_ protocol.Conn, args ...interface{}) (
 		return nil, err
 	}
 
-	uri, ok := args[0].(string)
+	uriArg, ok := args[0].(string)
 	if !ok {
 		return nil, fmt.Errorf("invalid URI argument: %#+v", args[0])
 	}
 
-	checker, ok := s.checkers[protocol.DocumentUri(uri)]
-	if !ok {
+	uri := protocol.DocumentUri(uriArg)
+	checker := s.checkerForDocument(uri)
+	if checker == nil {
 		return nil, fmt.Errorf("could not find document for URI %s", uri)
 	}
 
@@ -1397,13 +1552,14 @@ func (s *Server) getContractInitializerParameters(_ protocol.Conn, args ...inter
 		return nil, err
 	}
 
-	uri, ok := args[0].(string)
+	uriArg, ok := args[0].(string)
 	if !ok {
 		return nil, fmt.Errorf("invalid URI argument: %#+v", args[0])
 	}
 
-	checker, ok := s.checkers[protocol.DocumentUri(uri)]
-	if !ok {
+	uri := protocol.DocumentUri(uriArg)
+	checker := s.checkerForDocument(uri)
+	if checker == nil {
 		return nil, fmt.Errorf("could not find document for URI %s", uri)
 	}
 
@@ -1428,7 +1584,7 @@ func (s *Server) getContractInitializerParameters(_ protocol.Conn, args ...inter
 
 // parseEntryPointArguments returns the values for the given arguments (literals) for the entry point.
 //
-// There should be exactly 1 argument:
+// There should be exactly 2 arguments:
 //   * the DocumentURI of the file to submit
 //   * the array of arguments
 func (s *Server) parseEntryPointArguments(_ protocol.Conn, args ...interface{}) (interface{}, error) {
@@ -1438,13 +1594,14 @@ func (s *Server) parseEntryPointArguments(_ protocol.Conn, args ...interface{}) 
 		return nil, err
 	}
 
-	uri, ok := args[0].(string)
+	uriArg, ok := args[0].(string)
 	if !ok {
 		return nil, fmt.Errorf("invalid URI argument: %#+v", args[0])
 	}
 
-	checker, ok := s.checkers[protocol.DocumentUri(uri)]
-	if !ok {
+	uri := protocol.DocumentUri(uriArg)
+	checker := s.checkerForDocument(uri)
+	if checker == nil {
 		return nil, fmt.Errorf("could not find document for URI %s", uri)
 	}
 

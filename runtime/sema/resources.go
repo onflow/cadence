@@ -22,11 +22,47 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/raviqqe/hamt"
-
 	"github.com/onflow/cadence/runtime/ast"
-	interfaceentry "github.com/onflow/cadence/runtime/common/interface_entry"
+	"github.com/onflow/cadence/runtime/errors"
 )
+
+/*
+
+
+   ┌────────────────────────┐
+   │                        │
+   │       Resources:       │      ┌─────────────────┐                ┏━━━━━━━━━━┓
+   │                        │      │                 │                ▼          ┃
+   │  map[interface{}]Info ━╋━━━━━▶│      Info:      │       ┌────────────────┐  ┃
+   │                        │      │                 │       │                │  ┃
+   └────────────────────────┘      │  Invalidations ━╋━━━━━━▶│ Invalidations: │  ┃
+                                   │                 │       │                │  ┃
+                │                  │      Uses ━━━━━━╋━━━┓   └────────────────┘  ┃
+                                   │                 │   ┃                       ┃          ┏━━━━━━━━┓
+                │                  └─────────────────┘   ┃            │          ┃          ▼        ┃
+                                                         ┃                       ┃    ┌───────────┐  ┃
+             Clone                          │            ┃            │          ┃    │           │  ┃
+                                                         ┗━━━━━━━━━━━━━━━━━━━━━━━╋━━━▶│   Uses:   │  ┃
+                │                        Clone                        │          ┃    │           │  ┃
+                                                                                 ┃    └───────────┘  ┃
+                ▼                           │                      Clone         ┃                   ┃
+   ┌────────────────────────┐                                                    ┃          │        ┃
+   │                        │               ▼                         │          ┃                   ┃
+   │       Resources:       │      ┌─────────────────┐                           ┃          │        ┃
+   │                        │      │                 │                ▼          ┃                   ┃
+   │  map[interface{}]Info ━╋━━━━━▶│      Info:      │       ┌────────────────┐  ┃       Clone       ┃
+   │                        │      │                 │       │                │  ┃                   ┃
+   └────────────────────────┘      │  Invalidations ━╋━━━━━━▶│ Invalidations: │  ┃          │        ┃
+                                   │                 │       │                │  ┃                   ┃
+                                   │      Uses ━━━━━━╋━━━┓   │     Parent ━━━━╋━━┛          │        ┃
+                                   │                 │   ┃   │                │                      ┃
+                                   └─────────────────┘   ┃   └────────────────┘             ▼        ┃
+                                                         ┃                            ┌───────────┐  ┃
+                                                         ┃                            │   Uses:   │  ┃
+                                                         ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━▶│           │  ┃
+                                                                                      │  Parent ━━╋━━┛
+                                                                                      └───────────┘
+*/
 
 // ResourceInfo is the info for a resource.
 //
@@ -40,17 +76,31 @@ type ResourceInfo struct {
 	UsePositions ResourceUses
 }
 
+func (ri ResourceInfo) Clone() ResourceInfo {
+	return ResourceInfo{
+		DefinitivelyInvalidated: ri.DefinitivelyInvalidated,
+		Invalidations:           ri.Invalidations.Clone(),
+		UsePositions:            ri.UsePositions.Clone(),
+	}
+}
+
 // Resources is a map which contains invalidation info for resources.
 //
 type Resources struct {
-	resources hamt.Map
+	resources *InterfaceResourceInfoOrderedMap
 	Returns   bool
+}
+
+func NewResources() *Resources {
+	return &Resources{
+		resources: NewInterfaceResourceInfoOrderedMap(),
+	}
 }
 
 func (ris *Resources) String() string {
 	var builder strings.Builder
 	builder.WriteString("Resources:")
-	ris.ForEachResourceInfo(func(resource interface{}, info ResourceInfo) {
+	ris.ForEach(func(resource interface{}, info ResourceInfo) {
 		builder.WriteString("- ")
 		builder.WriteString(fmt.Sprint(resource))
 		builder.WriteString(": ")
@@ -60,95 +110,73 @@ func (ris *Resources) String() string {
 	return builder.String()
 }
 
-func (ris *Resources) ForEachResourceInfo(f func(resource interface{}, info ResourceInfo)) {
-	var resource interface{}
-	var info ResourceInfo
-
-	resources := ris
-	for resources.Size() != 0 {
-		resource, info, resources = resources.FirstRest()
-		f(resource, info)
-	}
-}
-
-// entry returns a `hamt` entry for the given resource.
-//
-func (ris *Resources) entry(resource interface{}) hamt.Entry {
-	return interfaceentry.InterfaceEntry{Interface: resource}
-}
-
-// Get returns the invalidation info for the given resource.
-//
 func (ris *Resources) Get(resource interface{}) ResourceInfo {
-	entry := ris.entry(resource)
-	existing := ris.resources.Find(entry)
-	if existing == nil {
-		return ResourceInfo{}
-	}
-	return existing.(ResourceInfo)
+	info, _ := ris.resources.Get(resource)
+	return info
 }
 
 // AddInvalidation adds the given invalidation to the set of invalidations for the given resource.
 // If the invalidation is not temporary, marks the resource to be definitely invalidated.
 //
 func (ris *Resources) AddInvalidation(resource interface{}, invalidation ResourceInvalidation) {
-	info := ris.Get(resource)
-	info.Invalidations = info.Invalidations.Insert(invalidation)
+	info, _ := ris.resources.Get(resource)
+	info.Invalidations.Add(invalidation)
 	if invalidation.Kind.IsDefinite() {
 		info.DefinitivelyInvalidated = true
 	}
-	entry := ris.entry(resource)
-	ris.resources = ris.resources.Insert(entry, info)
+	ris.resources.Set(resource, info)
 }
 
-// RemoveTemporaryInvalidation removes the given invalidation
+// RemoveTemporaryMoveInvalidation removes the given invalidation
 // from the set of invalidations for the given resource.
 //
-func (ris *Resources) RemoveTemporaryInvalidation(resource interface{}, invalidation ResourceInvalidation) {
-	info := ris.Get(resource)
-	info.Invalidations = info.Invalidations.Delete(invalidation)
-	entry := ris.entry(resource)
-	ris.resources = ris.resources.Insert(entry, info)
+func (ris *Resources) RemoveTemporaryMoveInvalidation(resource interface{}, invalidation ResourceInvalidation) {
+	if invalidation.Kind != ResourceInvalidationKindMoveTemporary {
+		panic(errors.NewUnreachableError())
+	}
+
+	info, _ := ris.resources.Get(resource)
+	info.Invalidations.DeleteLocally(invalidation)
+	ris.resources.Set(resource, info)
 }
 
 // AddUse adds the given use position to the set of use positions for the given resource.
 //
 func (ris *Resources) AddUse(resource interface{}, use ast.Position) {
-	info := ris.Get(resource)
-	info.UsePositions = info.UsePositions.Insert(use)
-	entry := ris.entry(resource)
-	ris.resources = ris.resources.Insert(entry, info)
+	info, _ := ris.resources.Get(resource)
+	info.UsePositions.Add(use)
+	ris.resources.Set(resource, info)
 }
 
 func (ris *Resources) MarkUseAfterInvalidationReported(resource interface{}, pos ast.Position) {
-	info := ris.Get(resource)
-	info.UsePositions = info.UsePositions.MarkUseAfterInvalidationReported(pos)
-	entry := ris.entry(resource)
-	ris.resources = ris.resources.Insert(entry, info)
+	info, _ := ris.resources.Get(resource)
+	info.UsePositions.MarkUseAfterInvalidationReported(pos)
+	ris.resources.Set(resource, info)
 }
 
 func (ris *Resources) IsUseAfterInvalidationReported(resource interface{}, pos ast.Position) bool {
-	info := ris.Get(resource)
+	info, _ := ris.resources.Get(resource)
 	return info.UsePositions.IsUseAfterInvalidationReported(pos)
 }
 
 func (ris *Resources) Clone() *Resources {
-	return &Resources{
-		resources: ris.resources,
-		Returns:   ris.Returns,
+	result := NewResources()
+	result.Returns = ris.Returns
+	for pair := ris.resources.Oldest(); pair != nil; pair = pair.Next() {
+		resource := pair.Key
+		info := pair.Value
+
+		result.resources.Set(resource, info.Clone())
 	}
+	return result
 }
 
 func (ris *Resources) Size() int {
-	return ris.resources.Size()
+	return ris.resources.Len()
 }
 
-func (ris *Resources) FirstRest() (interface{}, ResourceInfo, *Resources) {
-	entry, value, rest := ris.resources.FirstRest()
-	resource := entry.(interfaceentry.InterfaceEntry).Interface
-	info := value.(ResourceInfo)
-	resources := &Resources{resources: rest}
-	return resource, info, resources
+func (ris *Resources) ForEach(f func(resource interface{}, info ResourceInfo)) {
+	ris.resources.Foreach(f)
 }
 
 // MergeBranches merges the given resources from two branches into these resources.
@@ -158,15 +186,36 @@ func (ris *Resources) FirstRest() (interface{}, ResourceInfo, *Resources) {
 //
 func (ris *Resources) MergeBranches(thenResources *Resources, elseResources *Resources) {
 
-	infoTuples := NewBranchesResourceInfos(thenResources, elseResources)
-
 	elseReturns := false
 	if elseResources != nil {
 		elseReturns = elseResources.Returns
 	}
 
-	for resource, infoTuple := range infoTuples {
+	merged := make(map[interface{}]struct{})
+
+	merge := func(resource interface{}) {
+
+		// Only merge each resource once.
+		// We iterate over the resources of the then-branch
+		// and the else-branch (if it exists)
+
+		if _, ok := merged[resource]; ok {
+			return
+		}
+		defer func() {
+			merged[resource] = struct{}{}
+		}()
+
+		// Get the resource info in this outer scope,
+		// in the then-branch,
+		// and if there is an else-branch, from it.
+
 		info := ris.Get(resource)
+		thenInfo := thenResources.Get(resource)
+		var elseInfo ResourceInfo
+		if elseResources != nil {
+			elseInfo = elseResources.Get(resource)
+		}
 
 		// The resource can be considered definitely invalidated in both branches
 		// if in both branches, there were invalidations or the branch returned.
@@ -176,8 +225,8 @@ func (ris *Resources) MergeBranches(thenResources *Resources, elseResources *Res
 		// was invalidated.
 
 		definitelyInvalidatedInBranches :=
-			(!infoTuple.thenInfo.Invalidations.IsEmpty() || thenResources.Returns) &&
-				(!infoTuple.elseInfo.Invalidations.IsEmpty() || elseReturns)
+			(!thenInfo.Invalidations.IsEmpty() || thenResources.Returns) &&
+				(!elseInfo.Invalidations.IsEmpty() || elseReturns)
 
 		// The resource can be considered definitively invalidated if it was already invalidated,
 		// or the resource was invalidated in both branches
@@ -190,66 +239,33 @@ func (ris *Resources) MergeBranches(thenResources *Resources, elseResources *Res
 		// so only merge invalidations and uses if the branch did not return
 
 		if !thenResources.Returns {
-			info.Invalidations = info.Invalidations.
-				Merge(infoTuple.thenInfo.Invalidations)
-
-			info.UsePositions = info.UsePositions.
-				Merge(infoTuple.thenInfo.UsePositions)
+			info.Invalidations.Merge(thenInfo.Invalidations)
+			info.UsePositions.Merge(thenInfo.UsePositions)
 		}
 
 		if !elseReturns {
-			info.Invalidations = info.Invalidations.
-				Merge(infoTuple.elseInfo.Invalidations)
-
-			info.UsePositions = info.UsePositions.
-				Merge(infoTuple.elseInfo.UsePositions)
+			info.Invalidations.Merge(elseInfo.Invalidations)
+			info.UsePositions.Merge(elseInfo.UsePositions)
 		}
 
-		entry := ris.entry(resource)
-		ris.resources = ris.resources.Insert(entry, info)
+		ris.resources.Set(resource, info)
+	}
+
+	// Merge the resource info of all resources in the then-branch
+
+	thenResources.ForEach(func(resource interface{}, _ ResourceInfo) {
+		merge(resource)
+	})
+
+	// If there is an else-branch,
+	// then merge the resource info of all resources in it
+
+	if elseResources != nil {
+		elseResources.ForEach(func(resource interface{}, _ ResourceInfo) {
+			merge(resource)
+		})
 	}
 
 	ris.Returns = ris.Returns ||
 		(thenResources.Returns && elseReturns)
-}
-
-type BranchesResourceInfo struct {
-	thenInfo ResourceInfo
-	elseInfo ResourceInfo
-}
-
-type BranchesResourceInfos map[interface{}]BranchesResourceInfo
-
-func (infos BranchesResourceInfos) Add(
-	resources *Resources,
-	setValue func(*BranchesResourceInfo, ResourceInfo),
-) {
-	var resource interface{}
-	var resourceInfo ResourceInfo
-
-	for resources.Size() != 0 {
-		resource, resourceInfo, resources = resources.FirstRest()
-		branchesResourceInfo := infos[resource]
-		setValue(&branchesResourceInfo, resourceInfo)
-		infos[resource] = branchesResourceInfo
-	}
-}
-
-func NewBranchesResourceInfos(thenResources *Resources, elseResources *Resources) BranchesResourceInfos {
-	infoTuples := make(BranchesResourceInfos)
-	infoTuples.Add(
-		thenResources,
-		func(branchesResourceInfo *BranchesResourceInfo, resourceInfo ResourceInfo) {
-			branchesResourceInfo.thenInfo = resourceInfo
-		},
-	)
-	if elseResources != nil {
-		infoTuples.Add(
-			elseResources,
-			func(branchesResourceInfo *BranchesResourceInfo, resourceInfo ResourceInfo) {
-				branchesResourceInfo.elseInfo = resourceInfo
-			},
-		)
-	}
-	return infoTuples
 }

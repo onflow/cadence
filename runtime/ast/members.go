@@ -18,53 +18,75 @@
 
 package ast
 
-import "github.com/onflow/cadence/runtime/common"
+import (
+	"encoding/json"
+
+	"github.com/onflow/cadence/runtime/common"
+)
 
 // Members
 
 type Members struct {
-	Declarations []Declaration
+	declarations []Declaration
 	indices      memberIndices
 }
 
+func NewMembers(declarations []Declaration) *Members {
+	return &Members{
+		declarations: declarations,
+	}
+}
+
+func (m *Members) Declarations() []Declaration {
+	return m.declarations
+}
+
 func (m *Members) Fields() []*FieldDeclaration {
-	return m.indices.Fields(m.Declarations)
+	return m.indices.Fields(m.declarations)
 }
 
 func (m *Members) Functions() []*FunctionDeclaration {
-	return m.indices.Functions(m.Declarations)
+	return m.indices.Functions(m.declarations)
 }
 
 func (m *Members) SpecialFunctions() []*SpecialFunctionDeclaration {
-	return m.indices.SpecialFunctions(m.Declarations)
+	return m.indices.SpecialFunctions(m.declarations)
 }
 
 func (m *Members) Interfaces() []*InterfaceDeclaration {
-	return m.indices.Interfaces(m.Declarations)
+	return m.indices.Interfaces(m.declarations)
 }
 
 func (m *Members) Composites() []*CompositeDeclaration {
-	return m.indices.Composites(m.Declarations)
+	return m.indices.Composites(m.declarations)
 }
 
 func (m *Members) EnumCases() []*EnumCaseDeclaration {
-	return m.indices.EnumCases(m.Declarations)
+	return m.indices.EnumCases(m.declarations)
 }
 
 func (m *Members) FieldsByIdentifier() map[string]*FieldDeclaration {
-	return m.indices.FieldsByIdentifier(m.Declarations)
+	return m.indices.FieldsByIdentifier(m.declarations)
 }
 
 func (m *Members) FunctionsByIdentifier() map[string]*FunctionDeclaration {
-	return m.indices.FunctionsByIdentifier(m.Declarations)
+	return m.indices.FunctionsByIdentifier(m.declarations)
+}
+
+func (m *Members) CompositesByIdentifier() map[string]*CompositeDeclaration {
+	return m.indices.CompositesByIdentifier(m.declarations)
+}
+
+func (m *Members) InterfacesByIdentifier() map[string]*InterfaceDeclaration {
+	return m.indices.InterfacesByIdentifier(m.declarations)
 }
 
 func (m *Members) Initializers() []*SpecialFunctionDeclaration {
-	return m.indices.Initializers(m.Declarations)
+	return m.indices.Initializers(m.declarations)
 }
 
 func (m *Members) Destructors() []*SpecialFunctionDeclaration {
-	return m.indices.Destructors(m.Declarations)
+	return m.indices.Destructors(m.declarations)
 }
 
 // Destructor returns the first destructor, if any
@@ -86,4 +108,15 @@ func (m *Members) FieldPosition(name string, compositeKind common.CompositeKind)
 		field := fields[name]
 		return field.Identifier.Pos
 	}
+}
+
+func (m *Members) MarshalJSON() ([]byte, error) {
+	type Alias Members
+	return json.Marshal(&struct {
+		Declarations []Declaration
+		*Alias
+	}{
+		Declarations: m.declarations,
+		Alias:        (*Alias)(m),
+	})
 }

@@ -26,15 +26,15 @@ import (
 // Import
 
 type Import interface {
-	AllValueElements() map[string]ImportElement
+	AllValueElements() *StringImportElementOrderedMap
 	IsImportableValue(name string) bool
-	AllTypeElements() map[string]ImportElement
+	AllTypeElements() *StringImportElementOrderedMap
 	IsImportableType(name string) bool
 	IsChecking() bool
 }
 
 // ImportElement
-
+//
 type ImportElement struct {
 	DeclarationKind common.DeclarationKind
 	Access          ast.Access
@@ -42,60 +42,67 @@ type ImportElement struct {
 	ArgumentLabels  []string
 }
 
-// CheckerImport
-
-type CheckerImport struct {
-	Checker *Checker
+// ElaborationImport
+//
+type ElaborationImport struct {
+	Elaboration *Elaboration
 }
 
-func variablesToImportElements(variables map[string]*Variable) map[string]ImportElement {
-	elements := make(map[string]ImportElement, len(variables))
-	for name, variable := range variables {
-		elements[name] = ImportElement{
+func variablesToImportElements(variables *StringVariableOrderedMap) *StringImportElementOrderedMap {
+
+	elements := NewStringImportElementOrderedMap()
+
+	variables.Foreach(func(name string, variable *Variable) {
+
+		elements.Set(name, ImportElement{
 			DeclarationKind: variable.DeclarationKind,
 			Access:          variable.Access,
 			Type:            variable.Type,
 			ArgumentLabels:  variable.ArgumentLabels,
-		}
-	}
+		})
+	})
+
 	return elements
 }
 
-func (i CheckerImport) AllValueElements() map[string]ImportElement {
-	return variablesToImportElements(i.Checker.GlobalValues)
+func (i ElaborationImport) AllValueElements() *StringImportElementOrderedMap {
+	return variablesToImportElements(i.Elaboration.GlobalValues)
 }
 
-func (i CheckerImport) IsImportableValue(name string) bool {
-	_, isBaseValue := BaseValues[name]
-	if isBaseValue {
+func (i ElaborationImport) IsImportableValue(name string) bool {
+	if BaseValueActivation.Find(name) != nil {
 		return false
 	}
 
-	_, isPredeclaredValue := i.Checker.PredeclaredValues[name]
+	_, isPredeclaredValue := i.Elaboration.EffectivePredeclaredValues[name]
 	return !isPredeclaredValue
 }
 
-func (i CheckerImport) AllTypeElements() map[string]ImportElement {
-	return variablesToImportElements(i.Checker.GlobalTypes)
+func (i ElaborationImport) AllTypeElements() *StringImportElementOrderedMap {
+	return variablesToImportElements(i.Elaboration.GlobalTypes)
 }
 
-func (i CheckerImport) IsImportableType(name string) bool {
-	_, isPredeclaredType := i.Checker.PredeclaredTypes[name]
+func (i ElaborationImport) IsImportableType(name string) bool {
+	if BaseTypeActivation.Find(name) != nil {
+		return false
+	}
+
+	_, isPredeclaredType := i.Elaboration.EffectivePredeclaredTypes[name]
 	return !isPredeclaredType
 }
 
-func (i CheckerImport) IsChecking() bool {
-	return i.Checker.isChecking
+func (i ElaborationImport) IsChecking() bool {
+	return i.Elaboration.IsChecking()
 }
 
 // VirtualImport
 
 type VirtualImport struct {
-	ValueElements map[string]ImportElement
-	TypeElements  map[string]ImportElement
+	ValueElements *StringImportElementOrderedMap
+	TypeElements  *StringImportElementOrderedMap
 }
 
-func (i VirtualImport) AllValueElements() map[string]ImportElement {
+func (i VirtualImport) AllValueElements() *StringImportElementOrderedMap {
 	return i.ValueElements
 }
 
@@ -103,7 +110,7 @@ func (i VirtualImport) IsImportableValue(_ string) bool {
 	return true
 }
 
-func (i VirtualImport) AllTypeElements() map[string]ImportElement {
+func (i VirtualImport) AllTypeElements() *StringImportElementOrderedMap {
 	return i.TypeElements
 }
 

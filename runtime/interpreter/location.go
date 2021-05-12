@@ -18,13 +18,16 @@
 
 package interpreter
 
-import "github.com/onflow/cadence/runtime/ast"
+import (
+	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/common"
+)
 
 // LocationPosition defines a position in the source of the import tree.
 // The Location defines the script within the import tree, the Position
 // defines the row/colum within the source of that script.
 type LocationPosition struct {
-	Location ast.Location
+	Location common.Location
 	Position ast.Position
 }
 
@@ -32,10 +35,14 @@ type LocationPosition struct {
 // The Position defines the script within the import tree, the Range
 // defines the start/end position within the source of that script.
 type LocationRange struct {
-	Location ast.Location
+	Location common.Location
 	ast.Range
 }
 
-func (r LocationRange) ImportLocation() ast.Location {
+func (r LocationRange) ImportLocation() common.Location {
 	return r.Location
+}
+
+func ReturnEmptyLocationRange() LocationRange {
+	return LocationRange{}
 }

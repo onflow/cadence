@@ -37,27 +37,7 @@ func TestCheckEventDeclaration(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("ValidEvent", func(t *testing.T) {
-
-		t.Parallel()
-
-		checker, err := ParseAndCheck(t, `
-            event Transfer(to: Int, from: Int)
-        `)
-
-		require.NoError(t, err)
-
-		transferType := checker.GlobalTypes["Transfer"].Type
-
-		require.IsType(t, &sema.CompositeType{}, transferType)
-		transferCompositeType := transferType.(*sema.CompositeType)
-
-		require.Len(t, transferCompositeType.Members, 2)
-		assert.Equal(t, &sema.IntType{}, transferCompositeType.Members["to"].TypeAnnotation.Type)
-		assert.Equal(t, &sema.IntType{}, transferCompositeType.Members["from"].TypeAnnotation.Type)
-	})
-
-	t.Run("InvalidEventNonPrimitiveTypeComposite", func(t *testing.T) {
+	t.Run("invalid: non-primitive type composite", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -111,57 +91,47 @@ func TestCheckEventDeclaration(t *testing.T) {
 		}
 	})
 
-	t.Run("PrimitiveTypedFields", func(t *testing.T) {
-
-		t.Parallel()
-
-		validTypes := append(
-			sema.AllNumberTypes[:],
-			&sema.StringType{},
-			&sema.BoolType{},
-		)
-
-		for _, ty := range validTypes {
-
-			t.Run(ty.String(), func(t *testing.T) {
-
-				_, err := ParseAndCheck(t,
-					fmt.Sprintf(
-						`
-                          event Transfer(value: %s)
-                        `,
-						ty.String(),
-					),
-				)
-
-				require.NoError(t, err)
-			})
-		}
-	})
-
-	t.Run("EventParameterType", func(t *testing.T) {
+	t.Run("valid", func(t *testing.T) {
 
 		t.Parallel()
 
 		validTypes := append(
 			[]sema.Type{
-				&sema.StringType{},
-				&sema.CharacterType{},
-				&sema.BoolType{},
+				sema.StringType,
+				sema.CharacterType,
+				sema.BoolType,
 				&sema.AddressType{},
+				sema.MetaType,
+				sema.PathType,
+				sema.StoragePathType,
+				sema.PublicPathType,
+				sema.PrivatePathType,
+				sema.CapabilityPathType,
 			},
 			sema.AllNumberTypes...,
 		)
 
 		tests := validTypes[:]
 
-		for _, validType := range validTypes {
+		for _, ty := range validTypes {
 			tests = append(tests,
-				&sema.OptionalType{Type: validType},
-				&sema.VariableSizedType{Type: validType},
-				&sema.ConstantSizedType{Type: validType},
-				&sema.DictionaryType{KeyType: validType, ValueType: validType},
+				&sema.OptionalType{Type: ty},
+				&sema.VariableSizedType{Type: ty},
+				&sema.ConstantSizedType{Type: ty},
+				&sema.DictionaryType{
+					KeyType:   sema.StringType,
+					ValueType: ty,
+				},
 			)
+
+			if sema.IsValidDictionaryKeyType(ty) {
+				tests = append(tests,
+					&sema.DictionaryType{
+						KeyType:   ty,
+						ValueType: sema.StringType,
+					},
+				)
+			}
 		}
 
 		for _, ty := range tests {
@@ -180,6 +150,24 @@ func TestCheckEventDeclaration(t *testing.T) {
 				require.NoError(t, err)
 			})
 		}
+	})
+
+	t.Run("recursive", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          event E(recursive: Recursive)
+
+          struct Recursive {
+              let children: [Recursive]
+              init() {
+                  self.children = []
+              }
+          }
+		`)
+
+		require.NoError(t, err)
 	})
 
 	t.Run("RedeclaredEvent", func(t *testing.T) {
@@ -279,9 +267,9 @@ func TestCheckEmitEvent(t *testing.T) {
 			ParseAndCheckOptions{
 				Options: []sema.Option{
 					sema.WithImportHandler(
-						func(checker *sema.Checker, location ast.Location) (sema.Import, *sema.CheckerError) {
-							return sema.CheckerImport{
-								Checker: importedChecker,
+						func(_ *sema.Checker, _ common.Location, _ ast.Range) (sema.Import, error) {
+							return sema.ElaborationImport{
+								Elaboration: importedChecker.Elaboration,
 							}, nil
 						},
 					),

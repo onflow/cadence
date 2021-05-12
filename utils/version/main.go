@@ -51,7 +51,9 @@ package cadence
 const Version = "%s"
 `
 
-const goGenerateComment = "//go:generate go run ./utils/version generate"
+// NOTE: must be formatted/injected , as otherwise
+// it will be detected itself as a go generate invocation itself
+const goGenerateComment = "//go:generate go run ./utils/version/main.go"
 
 const target = "version.go"
 

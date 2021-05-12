@@ -125,7 +125,7 @@ func (checker *Checker) accessedSelfMember(expression ast.Expression) *Member {
 		return nil
 	}
 
-	var members map[string]*Member
+	var members *StringMemberOrderedMap
 	switch containerType := variable.Type.(type) {
 	case *CompositeType:
 		members = containerType.Members
@@ -139,7 +139,9 @@ func (checker *Checker) accessedSelfMember(expression ast.Expression) *Member {
 
 	fieldName := memberExpression.Identifier.Identifier
 
-	return members[fieldName]
+	// caller handles the non-existing fieldNames
+	member, _ := members.Get(fieldName)
+	return member
 }
 
 func (checker *Checker) visitAssignmentValueType(
@@ -337,8 +339,8 @@ func (checker *Checker) visitMemberExpressionAssignment(
 					// TODO: dedicated error: assignment to constant after initialization
 
 					reportAssignmentToConstant()
-				} else if functionActivation.InitializationInfo.FieldMembers[accessedSelfMember] == nil {
-					// This field is not supposed to be initialized
+				} else if _, ok := functionActivation.InitializationInfo.FieldMembers.Get(accessedSelfMember); !ok {
+					// This member is not supposed to be initialized
 
 					reportAssignmentToConstant()
 				} else {

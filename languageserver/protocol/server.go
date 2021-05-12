@@ -36,10 +36,10 @@ type Server struct {
 // the language server to push various types of messages to the client.
 // https://microsoft.github.io/language-server-protocol/specifications/specification-3-14
 type Conn interface {
-	Notify(method string, params interface{})
+	Notify(method string, params interface{}) error
 	ShowMessage(params *ShowMessageParams)
 	LogMessage(params *LogMessageParams)
-	PublishDiagnostics(params *PublishDiagnosticsParams)
+	PublishDiagnostics(params *PublishDiagnosticsParams) error
 	RegisterCapability(params *RegistrationParams) error
 }
 
@@ -50,24 +50,24 @@ type connection struct {
 // ShowMessage displays a notification message to the client. It is visible to
 // the user.
 func (conn *connection) ShowMessage(params *ShowMessageParams) {
-	conn.Notify("window/showMessage", params)
+	_ = conn.Notify("window/showMessage", params)
 }
 
 // LogMessage logs a message to the Cadence terminal in VS Code. It isn't
 // visible to the user unless they go looking for it.
 func (conn *connection) LogMessage(params *LogMessageParams) {
-	conn.Notify("window/logMessage", params)
+	_ = conn.Notify("window/logMessage", params)
 }
 
 // PublishDiagnostics is used to report errors for a document, typically syntax
 // or semantic errors in the code.
-func (conn *connection) PublishDiagnostics(params *PublishDiagnosticsParams) {
-	conn.Notify("textDocument/publishDiagnostics", params)
+func (conn *connection) PublishDiagnostics(params *PublishDiagnosticsParams) error {
+	return conn.Notify("textDocument/publishDiagnostics", params)
 }
 
 // Notify sends a notification to the client.
-func (conn *connection) Notify(method string, params interface{}) {
-	conn.jsonrpc2Server.Notify(method, params)
+func (conn *connection) Notify(method string, params interface{}) error {
+	return conn.jsonrpc2Server.Notify(method, params)
 }
 
 // RegisterCapability is used to dynamically inform the client that the server

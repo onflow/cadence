@@ -1468,9 +1468,9 @@ func TestCheckInvalidCreateImportedResource(t *testing.T) {
 		ParseAndCheckOptions{
 			Options: []sema.Option{
 				sema.WithImportHandler(
-					func(checker *sema.Checker, location ast.Location) (sema.Import, *sema.CheckerError) {
-						return sema.CheckerImport{
-							Checker: importedChecker,
+					func(_ *sema.Checker, _ common.Location, _ ast.Range) (sema.Import, error) {
+						return sema.ElaborationImport{
+							Elaboration: importedChecker.Elaboration,
 						}, nil
 					},
 				),
@@ -2704,7 +2704,7 @@ func TestCheckInvalidResourceLossThroughReturn(t *testing.T) {
 	assert.IsType(t, &sema.UnreachableStatementError{}, errs[1])
 }
 
-func TestCheckInvalidResourceLossThroughReturnInIfStatementThrenBranch(t *testing.T) {
+func TestCheckInvalidResourceLossThroughReturnInIfStatementThenBranch(t *testing.T) {
 
 	t.Parallel()
 
