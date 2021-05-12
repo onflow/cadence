@@ -135,12 +135,7 @@ var decMode = func() cbor.DecMode {
 // Decode reads CBOR-encoded bytes and decodes them to a value.
 //
 func (d *DecoderV4) Decode(path []string) (Value, error) {
-	v, err := d.decodeValue(path)
-	if err != nil {
-		return nil, err
-	}
-
-	return v, nil
+	return d.decodeValue(path)
 }
 
 func (d *DecoderV4) decodeValue(path []string) (Value, error) {
@@ -1145,7 +1140,7 @@ func (d *DecoderV4) decodePath() (PathValue, error) {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
 			return PathValue{}, fmt.Errorf("invalid path domain encoding: %s", e.ActualType.String())
 		}
-		return PathValue{}, nil
+		return PathValue{}, err
 	}
 
 	// Decode identifier at array index encodedPathValueIdentifierFieldKey
@@ -1154,7 +1149,7 @@ func (d *DecoderV4) decodePath() (PathValue, error) {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
 			return PathValue{}, fmt.Errorf("invalid path identifier encoding: %s", e.ActualType.String())
 		}
-		return PathValue{}, nil
+		return PathValue{}, err
 	}
 
 	return PathValue{
