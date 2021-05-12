@@ -323,16 +323,16 @@ func (e CyclicLinkError) Error() string {
 // ArrayIndexOutOfBoundsError
 //
 type ArrayIndexOutOfBoundsError struct {
-	Index    int
-	MaxIndex int
+	Index int
+	Size  int
 	LocationRange
 }
 
 func (e ArrayIndexOutOfBoundsError) Error() string {
 	return fmt.Sprintf(
-		"array index out of bounds: got %d, expected max %d",
+		"array index out of bounds: %d, but size is %d",
 		e.Index,
-		e.MaxIndex,
+		e.Size,
 	)
 }
 

@@ -683,27 +683,38 @@ func (v *ArrayValue) Concat(other ConcatenatableValue) Value {
 }
 
 func (v *ArrayValue) Get(_ *Interpreter, getLocationRange func() LocationRange, key Value) Value {
-	integerKey := key.(NumberValue).ToInt()
+	index := key.(NumberValue).ToInt()
 	count := v.Count()
 
 	// Check bounds
-	if integerKey < 0 || integerKey >= count {
+	if index < 0 || index >= count {
 		panic(ArrayIndexOutOfBoundsError{
-			Index:         integerKey,
-			MaxIndex:      count - 1,
+			Index:         index,
+			Size:          count,
 			LocationRange: getLocationRange(),
 		})
 	}
 
-	return v.Elements()[integerKey]
+	return v.Elements()[index]
 }
 
-func (v *ArrayValue) Set(_ *Interpreter, _ func() LocationRange, key Value, value Value) {
+func (v *ArrayValue) Set(_ *Interpreter, getLocationRange func() LocationRange, key Value, value Value) {
 	index := key.(NumberValue).ToInt()
-	v.SetIndex(index, value)
+	v.SetIndex(index, value, getLocationRange)
 }
 
-func (v *ArrayValue) SetIndex(index int, value Value) {
+func (v *ArrayValue) SetIndex(index int, value Value, getLocationRange func() LocationRange) {
+	count := v.Count()
+
+	// Check bounds
+	if index < 0 || index >= count {
+		panic(ArrayIndexOutOfBoundsError{
+			Index:         index,
+			Size:          count,
+			LocationRange: getLocationRange(),
+		})
+	}
+
 	v.modified = true
 	value.SetOwner(v.Owner)
 
