@@ -684,16 +684,8 @@ func (v *ArrayValue) Concat(other ConcatenatableValue) Value {
 
 func (v *ArrayValue) Get(_ *Interpreter, getLocationRange func() LocationRange, key Value) Value {
 	index := key.(NumberValue).ToInt()
-	count := v.Count()
 
-	// Check bounds
-	if index < 0 || index >= count {
-		panic(ArrayIndexOutOfBoundsError{
-			Index:         index,
-			Size:          count,
-			LocationRange: getLocationRange(),
-		})
-	}
+	v.checkBounds(index, getLocationRange)
 
 	return v.Elements()[index]
 }
@@ -704,9 +696,18 @@ func (v *ArrayValue) Set(_ *Interpreter, getLocationRange func() LocationRange, 
 }
 
 func (v *ArrayValue) SetIndex(index int, value Value, getLocationRange func() LocationRange) {
+	v.checkBounds(index, getLocationRange)
+
+	v.modified = true
+	value.SetOwner(v.Owner)
+
+	v.ensureElementsLoaded()
+	v.values[index] = value
+}
+
+func (v *ArrayValue) checkBounds(index int, getLocationRange func() LocationRange) {
 	count := v.Count()
 
-	// Check bounds
 	if index < 0 || index >= count {
 		panic(ArrayIndexOutOfBoundsError{
 			Index:         index,
@@ -714,12 +715,6 @@ func (v *ArrayValue) SetIndex(index int, value Value, getLocationRange func() Lo
 			LocationRange: getLocationRange(),
 		})
 	}
-
-	v.modified = true
-	value.SetOwner(v.Owner)
-
-	v.ensureElementsLoaded()
-	v.values[index] = value
 }
 
 func (v *ArrayValue) String(results StringResults) string {
@@ -755,7 +750,9 @@ func (v *ArrayValue) AppendAll(other AllAppendableValue) {
 	v.values = append(v.values, otherElements...)
 }
 
-func (v *ArrayValue) Insert(i int, element Value) {
+func (v *ArrayValue) Insert(index int, element Value, getLocationRange func() LocationRange) {
+	v.checkBounds(index, getLocationRange)
+
 	v.modified = true
 
 	element.SetOwner(v.Owner)
@@ -763,7 +760,13 @@ func (v *ArrayValue) Insert(i int, element Value) {
 	elements := v.Elements()
 
 	//nolint:gocritic
-	v.values = append(elements[:i], append([]Value{element}, elements[i:]...)...)
+	v.values = append(
+		elements[:index],
+		append(
+			[]Value{element},
+			elements[index:]...,
+		)...,
+	)
 }
 
 // TODO: unset owner?

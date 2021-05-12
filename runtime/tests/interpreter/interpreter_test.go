@@ -4179,7 +4179,7 @@ func TestInterpretArrayInsert(t *testing.T) {
 		interpreter.NewIntValueFromInt64(2),
 		interpreter.NewIntValueFromInt64(3),
 	).Copy().(*interpreter.ArrayValue)
-	expectedArray.Insert(1, interpreter.NewIntValueFromInt64(4))
+	expectedArray.Insert(1, interpreter.NewIntValueFromInt64(4), nil)
 
 	actualArray := inter.Globals["x"].GetValue()
 
@@ -4199,6 +4199,49 @@ func TestInterpretArrayInsert(t *testing.T) {
 		},
 		actualArray.(*interpreter.ArrayValue).Elements(),
 	)
+}
+
+func TestInterpretInvalidArrayInsert(t *testing.T) {
+
+	t.Parallel()
+
+	for name, index := range map[string]int{
+		"negative":          -1,
+		"larger than count": 3,
+	} {
+
+		t.Run(name, func(t *testing.T) {
+
+			inter := parseCheckAndInterpret(t, `
+               let x = [1, 2, 3]
+
+               fun test(_ index: Int) {
+                   x.insert(at: index, 4)
+               }
+            `)
+
+			indexValue := interpreter.NewIntValueFromInt64(int64(index))
+			_, err := inter.Invoke("test", indexValue)
+
+			var indexErr interpreter.ArrayIndexOutOfBoundsError
+			require.ErrorAs(t, err, &indexErr)
+
+			require.Equal(t,
+				interpreter.ArrayIndexOutOfBoundsError{
+					Index: index,
+					Size:  3,
+					LocationRange: interpreter.LocationRange{
+						Location: TestLocation,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 94, Line: 5, Column: 19},
+							EndPos:   ast.Position{Offset: 115, Line: 5, Column: 40},
+						},
+					},
+				},
+				indexErr,
+			)
+		})
+	}
 }
 
 func TestInterpretArrayRemove(t *testing.T) {
