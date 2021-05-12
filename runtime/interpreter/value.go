@@ -770,14 +770,16 @@ func (v *ArrayValue) Insert(index int, element Value, getLocationRange func() Lo
 }
 
 // TODO: unset owner?
-func (v *ArrayValue) Remove(i int) Value {
+func (v *ArrayValue) Remove(index int, getLocationRange func() LocationRange) Value {
+	v.checkBounds(index, getLocationRange)
+
 	v.modified = true
 
 	elements := v.Elements()
-	result := elements[i]
+	result := elements[index]
 
 	lastIndex := len(elements) - 1
-	copy(elements[i:], elements[i+1:])
+	copy(elements[index:], elements[index+1:])
 
 	// avoid memory leaks by explicitly setting value to nil
 	elements[lastIndex] = nil
@@ -855,9 +857,9 @@ func (v *ArrayValue) GetMember(_ *Interpreter, _ func() LocationRange, name stri
 	case "insert":
 		return NewHostFunctionValue(
 			func(invocation Invocation) Value {
-				i := invocation.Arguments[0].(NumberValue).ToInt()
+				index := invocation.Arguments[0].(NumberValue).ToInt()
 				element := invocation.Arguments[1]
-				v.Insert(i, element)
+				v.Insert(index, element, invocation.GetLocationRange)
 				return VoidValue{}
 			},
 		)
@@ -866,7 +868,7 @@ func (v *ArrayValue) GetMember(_ *Interpreter, _ func() LocationRange, name stri
 		return NewHostFunctionValue(
 			func(invocation Invocation) Value {
 				i := invocation.Arguments[0].(NumberValue).ToInt()
-				return v.Remove(i)
+				return v.Remove(i, invocation.GetLocationRange)
 			},
 		)
 
@@ -7130,9 +7132,9 @@ func (v *DictionaryValue) Remove(inter *Interpreter, getLocationRange func() Loc
 		v.Entries.Delete(key)
 
 		// TODO: optimize linear scan
-		for i, keyValue := range v.Keys.Elements() {
+		for index, keyValue := range v.Keys.Elements() {
 			if dictionaryKey(keyValue) == key {
-				v.Keys.Remove(i)
+				v.Keys.Remove(index, getLocationRange)
 				return value
 			}
 		}
