@@ -4163,42 +4163,70 @@ func TestInterpretArrayInsert(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
-      let x = [1, 2, 3]
+	type testCase struct {
+		name           string
+		index          int
+		expectedValues []interpreter.Value
+	}
 
-      fun test() {
-          x.insert(at: 1, 4)
-      }
-    `)
-
-	_, err := inter.Invoke("test")
-	require.NoError(t, err)
-
-	expectedArray := interpreter.NewArrayValueUnownedNonCopying(
-		interpreter.NewIntValueFromInt64(1),
-		interpreter.NewIntValueFromInt64(2),
-		interpreter.NewIntValueFromInt64(3),
-	).Copy().(*interpreter.ArrayValue)
-	expectedArray.Insert(1, interpreter.NewIntValueFromInt64(4), nil)
-
-	actualArray := inter.Globals["x"].GetValue()
-
-	require.Equal(t,
-		expectedArray,
-		actualArray,
-	)
-
-	assert.True(t, actualArray.IsModified())
-
-	assert.Equal(t,
-		[]interpreter.Value{
-			interpreter.NewIntValueFromInt64(1),
-			interpreter.NewIntValueFromInt64(4),
-			interpreter.NewIntValueFromInt64(2),
-			interpreter.NewIntValueFromInt64(3),
+	for _, testCase := range []testCase{
+		{
+			name:  "start",
+			index: 0,
+			expectedValues: []interpreter.Value{
+				interpreter.NewIntValueFromInt64(100),
+				interpreter.NewIntValueFromInt64(1),
+				interpreter.NewIntValueFromInt64(2),
+				interpreter.NewIntValueFromInt64(3),
+			},
 		},
-		actualArray.(*interpreter.ArrayValue).Elements(),
-	)
+		{
+			name:  "middle",
+			index: 1,
+			expectedValues: []interpreter.Value{
+				interpreter.NewIntValueFromInt64(1),
+				interpreter.NewIntValueFromInt64(100),
+				interpreter.NewIntValueFromInt64(2),
+				interpreter.NewIntValueFromInt64(3),
+			},
+		},
+		{
+			name:  "end",
+			index: 3,
+			expectedValues: []interpreter.Value{
+				interpreter.NewIntValueFromInt64(1),
+				interpreter.NewIntValueFromInt64(2),
+				interpreter.NewIntValueFromInt64(3),
+				interpreter.NewIntValueFromInt64(100),
+			},
+		},
+	} {
+
+		t.Run(testCase.name, func(t *testing.T) {
+
+			inter := parseCheckAndInterpret(t, `
+              let x = [1, 2, 3]
+
+              fun test(_ index: Int) {
+                  x.insert(at: index, 100)
+              }
+            `)
+
+			_, err := inter.Invoke("test", interpreter.NewIntValueFromInt64(int64(testCase.index)))
+			require.NoError(t, err)
+
+			actualArray := inter.Globals["x"].GetValue()
+
+			require.IsType(t, &interpreter.ArrayValue{}, actualArray)
+
+			assert.True(t, actualArray.IsModified())
+
+			assert.Equal(t,
+				testCase.expectedValues,
+				actualArray.(*interpreter.ArrayValue).Elements(),
+			)
+		})
+	}
 }
 
 func TestInterpretInvalidArrayInsert(t *testing.T) {
@@ -4289,7 +4317,7 @@ func TestInterpretInvalidArrayRemove(t *testing.T) {
 
 	for name, index := range map[string]int{
 		"negative":          -1,
-		"larger than count": 3,
+		"larger than count": 4,
 	} {
 
 		t.Run(name, func(t *testing.T) {
