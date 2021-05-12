@@ -1267,14 +1267,16 @@ func (d *DecoderV4) decodeLink() (LinkValue, error) {
 	}
 
 	// Decode path at array index encodedLinkValueTargetPathFieldKey
-	decodedPath, err := d.decodeValue(nil)
+	num, err := d.decoder.DecodeTagNumber()
 	if err != nil {
 		return LinkValue{}, fmt.Errorf("invalid link target path encoding: %w", err)
 	}
-
-	pathValue, ok := decodedPath.(PathValue)
-	if !ok {
-		return LinkValue{}, fmt.Errorf("invalid link target path encoding: %T", decodedPath)
+	if num != cborTagPathValue {
+		return LinkValue{}, fmt.Errorf("invalid link target path encoding: expected CBOR tag %d, got %d", cborTagPathValue, num)
+	}
+	pathValue, err := d.decodePath()
+	if err != nil {
+		return LinkValue{}, fmt.Errorf("invalid link target path encoding: %w", err)
 	}
 
 	// Decode type at array index encodedLinkValueTypeFieldKey
