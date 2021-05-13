@@ -35,11 +35,8 @@ func TestCompositeDeferredDecoding(t *testing.T) {
 
 	t.Run("Simple composite", func(t *testing.T) {
 
-		stringValue := NewStringValue("hello")
-		stringValue.modified = false
-
 		members := NewStringValueOrderedMap()
-		members.Set("a", stringValue)
+		members.Set("a", NewStringValue("hello"))
 		members.Set("b", BoolValue(true))
 
 		value := NewCompositeValue(
@@ -86,7 +83,7 @@ func TestCompositeDeferredDecoding(t *testing.T) {
 
 		decodeFieldValue, contains := decodedFields.Get("a")
 		assert.True(t, contains)
-		assert.Equal(t, stringValue, decodeFieldValue)
+		assert.Equal(t, NewStringValue("hello"), decodeFieldValue)
 
 		decodeFieldValue, contains = decodedFields.Get("b")
 		assert.True(t, contains)
@@ -144,11 +141,8 @@ func TestCompositeDeferredDecoding(t *testing.T) {
 
 	t.Run("Round trip - without loading", func(t *testing.T) {
 
-		stringValue := NewStringValue("hello")
-		stringValue.modified = false
-
 		members := NewStringValueOrderedMap()
-		members.Set("a", stringValue)
+		members.Set("a", NewStringValue("hello"))
 		members.Set("b", BoolValue(true))
 
 		value := NewCompositeValue(
@@ -196,7 +190,7 @@ func TestCompositeDeferredDecoding(t *testing.T) {
 
 		decodeFieldValue, contains := decodedFields.Get("a")
 		assert.True(t, contains)
-		assert.Equal(t, stringValue, decodeFieldValue)
+		assert.Equal(t, NewStringValue("hello"), decodeFieldValue)
 
 		decodeFieldValue, contains = decodedFields.Get("b")
 		assert.True(t, contains)
@@ -205,11 +199,8 @@ func TestCompositeDeferredDecoding(t *testing.T) {
 
 	t.Run("Round trip - partially loaded", func(t *testing.T) {
 
-		stringValue := NewStringValue("hello")
-		stringValue.modified = false
-
 		members := NewStringValueOrderedMap()
-		members.Set("a", stringValue)
+		members.Set("a", NewStringValue("hello"))
 		members.Set("b", BoolValue(true))
 
 		value := NewCompositeValue(
@@ -263,7 +254,7 @@ func TestCompositeDeferredDecoding(t *testing.T) {
 
 		decodeFieldValue, contains := decodedFields.Get("a")
 		assert.True(t, contains)
-		assert.Equal(t, stringValue, decodeFieldValue)
+		assert.Equal(t, NewStringValue("hello"), decodeFieldValue)
 
 		decodeFieldValue, contains = decodedFields.Get("b")
 		assert.True(t, contains)
@@ -273,7 +264,6 @@ func TestCompositeDeferredDecoding(t *testing.T) {
 	t.Run("callback", func(t *testing.T) {
 
 		stringValue := NewStringValue("hello")
-		stringValue.modified = false
 
 		members := NewStringValueOrderedMap()
 		members.Set("a", stringValue)
@@ -344,11 +334,8 @@ func TestCompositeDeferredDecoding(t *testing.T) {
 
 	t.Run("re-encoding", func(t *testing.T) {
 
-		stringValue := NewStringValue("hello")
-		stringValue.modified = false
-
 		members := NewStringValueOrderedMap()
-		members.Set("a", stringValue)
+		members.Set("a", NewStringValue("hello"))
 		members.Set("b", BoolValue(true))
 
 		value := NewCompositeValue(
@@ -585,7 +572,6 @@ func TestArrayDeferredDecoding(t *testing.T) {
 			assert.True(t, contains)
 
 			expected := NewStringValue(fmt.Sprintf("John%d", i))
-			expected.modified = false
 
 			assert.Equal(t, expected, decodeFieldValue)
 		}

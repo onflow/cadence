@@ -680,7 +680,7 @@ func TestVisitor(t *testing.T) {
 		IntValueVisitor: func(interpreter *Interpreter, value IntValue) {
 			intVisits++
 		},
-		StringValueVisitor: func(interpreter *Interpreter, value StringValue) {
+		StringValueVisitor: func(interpreter *Interpreter, value *StringValue) {
 			stringVisits++
 		},
 	}
