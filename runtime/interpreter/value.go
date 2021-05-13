@@ -329,46 +329,53 @@ type StringValue struct {
 	graphemes *uniseg.Graphemes
 }
 
-func NewStringValue(str string) StringValue {
-	return StringValue{
+func NewStringValue(str string) *StringValue {
+	return &StringValue{
 		Str: str,
 		// a negative value indicates the length has not been initialized, see Length()
 		length: -1,
 	}
 }
 
-func (StringValue) IsValue() {}
+func (v *StringValue) prepareGraphemes() {
+	if v.graphemes == nil {
+		v.graphemes = uniseg.NewGraphemes(v.Str)
+	} else {
+		v.graphemes.Reset()
+	}
+}
+func (*StringValue) IsValue() {}
 
-func (v StringValue) Accept(interpreter *Interpreter, visitor Visitor) {
+func (v *StringValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitStringValue(interpreter, v)
 }
 
-func (StringValue) DynamicType(_ *Interpreter, _ DynamicTypeResults) DynamicType {
+func (*StringValue) DynamicType(_ *Interpreter, _ DynamicTypeResults) DynamicType {
 	return StringDynamicType{}
 }
 
-func (StringValue) StaticType() StaticType {
+func (*StringValue) StaticType() StaticType {
 	return PrimitiveStaticTypeString
 }
 
-func (v StringValue) Copy() Value {
+func (v *StringValue) Copy() Value {
 	return v
 }
 
-func (StringValue) GetOwner() *common.Address {
+func (*StringValue) GetOwner() *common.Address {
 	// value is never owned
 	return nil
 }
 
-func (StringValue) SetOwner(_ *common.Address) {
+func (*StringValue) SetOwner(_ *common.Address) {
 	// NO-OP: value cannot be owned
 }
 
-func (StringValue) IsModified() bool {
+func (*StringValue) IsModified() bool {
 	return false
 }
 
-func (StringValue) SetModified(_ bool) {
+func (*StringValue) SetModified(_ bool) {
 	// NO-OP
 }
 
@@ -376,24 +383,24 @@ func (v StringValue) String(_ StringResults) string {
 	return format.String(v.Str)
 }
 
-func (v StringValue) KeyString() string {
+func (v *StringValue) KeyString() string {
 	return v.Str
 }
 
-func (v StringValue) Equal(other Value, _ *Interpreter, _ bool) bool {
-	otherString, ok := other.(StringValue)
+func (v *StringValue) Equal(other Value, _ *Interpreter, _ bool) bool {
+	otherString, ok := other.(*StringValue)
 	if !ok {
 		return false
 	}
 	return v.NormalForm() == otherString.NormalForm()
 }
 
-func (v StringValue) NormalForm() string {
+func (v *StringValue) NormalForm() string {
 	return norm.NFC.String(v.Str)
 }
 
-func (v StringValue) Concat(other ConcatenatableValue) Value {
-	otherString := other.(StringValue)
+func (v *StringValue) Concat(other ConcatenatableValue) Value {
+	otherString := other.(*StringValue)
 
 	var sb strings.Builder
 
@@ -403,7 +410,7 @@ func (v StringValue) Concat(other ConcatenatableValue) Value {
 	return NewStringValue(sb.String())
 }
 
-func (v StringValue) Slice(from IntValue, to IntValue, getLocationRange func() LocationRange) Value {
+func (v *StringValue) Slice(from IntValue, to IntValue, getLocationRange func() LocationRange) Value {
 	fromIndex := from.ToInt()
 	toIndex := to.ToInt()
 
@@ -411,7 +418,7 @@ func (v StringValue) Slice(from IntValue, to IntValue, getLocationRange func() L
 	return NewStringValue(v.Str[fromIndex:toIndex])
 }
 
-func (v StringValue) checkBounds(index int, getLocationRange func() LocationRange) {
+func (v *StringValue) checkBounds(index int, getLocationRange func() LocationRange) {
 	length := v.Length()
 
 	if index < 0 || index >= length {
@@ -423,7 +430,7 @@ func (v StringValue) checkBounds(index int, getLocationRange func() LocationRang
 	}
 }
 
-func (v StringValue) Get(_ *Interpreter, getLocationRange func() LocationRange, key Value) Value {
+func (v *StringValue) Get(_ *Interpreter, getLocationRange func() LocationRange, key Value) Value {
 	index := key.(NumberValue).ToInt()
 	v.checkBounds(index, getLocationRange)
 
@@ -438,11 +445,11 @@ func (v StringValue) Get(_ *Interpreter, getLocationRange func() LocationRange, 
 	return NewStringValue(char)
 }
 
-func (v StringValue) Set(_ *Interpreter, _ func() LocationRange, key Value, value Value) {
+func (v *StringValue) Set(_ *Interpreter, _ func() LocationRange, key Value, value Value) {
 	panic(errors.NewUnreachableError())
 }
 
-func (v StringValue) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
+func (v *StringValue) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
 	switch name {
 	case "length":
 		length := v.Length()
@@ -492,7 +499,7 @@ func (v *StringValue) Length() int {
 
 // DecodeHex hex-decodes this string and returns an array of UInt8 values
 //
-func (v StringValue) DecodeHex() *ArrayValue {
+func (v *StringValue) DecodeHex() *ArrayValue {
 	str := v.Str
 
 	bs, err := hex.DecodeString(str)
@@ -508,21 +515,13 @@ func (v StringValue) DecodeHex() *ArrayValue {
 	return NewArrayValueUnownedNonCopying(values...)
 }
 
-func (StringValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
+func (*StringValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
 	panic(errors.NewUnreachableError())
 }
 
-func (StringValue) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType, _ TypeConformanceResults) bool {
+func (*StringValue) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType, _ TypeConformanceResults) bool {
 	_, ok := dynamicType.(StringDynamicType)
 	return ok
-}
-
-func (v *StringValue) prepareGraphemes() {
-	if v.graphemes == nil {
-		v.graphemes = uniseg.NewGraphemes(v.Str)
-	} else {
-		v.graphemes.Reset()
-	}
 }
 
 // ArrayValue

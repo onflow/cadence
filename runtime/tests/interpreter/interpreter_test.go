@@ -7704,7 +7704,7 @@ func TestInterpretDictionaryValueEncodingOrder(t *testing.T) {
 		test.SetModified(false)
 		test.Keys.SetModified(false)
 		for _, key := range test.Keys.Elements() {
-			stringKey := key.(interpreter.StringValue)
+			stringKey := key.(*interpreter.StringValue)
 			stringKey.SetModified(false)
 		}
 
