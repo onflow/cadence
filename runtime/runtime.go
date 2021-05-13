@@ -1194,10 +1194,6 @@ func (r *interpreterRuntime) meteringInterpreterOptions(runtimeInterface Interfa
 	checkLimit := func() {
 		used++
 
-		if used <= limit {
-			return
-		}
-
 		var err error
 		wrapPanic(func() {
 			err = runtimeInterface.SetComputationUsed(used)
@@ -1205,6 +1201,11 @@ func (r *interpreterRuntime) meteringInterpreterOptions(runtimeInterface Interfa
 		if err != nil {
 			panic(err)
 		}
+
+		if used <= limit {
+			return
+		}
+
 		panic(ComputationLimitExceededError{
 			Limit: limit,
 		})
