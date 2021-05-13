@@ -977,7 +977,7 @@ func (r *interpreterRuntime) newInterpreter(
 			func(
 				signature *interpreter.ArrayValue,
 				signedData *interpreter.ArrayValue,
-				domainSeparationTag *interpreter.StringValue,
+				domainSeparationTag interpreter.StringValue,
 				hashAlgorithm *interpreter.CompositeValue,
 				publicKey *interpreter.CompositeValue,
 			) interpreter.BoolValue {
@@ -1907,7 +1907,7 @@ func (r *interpreterRuntime) newAuthAccountContractsChangeFunction(
 
 			const requiredArgumentCount = 2
 
-			nameValue := invocation.Arguments[0].(*interpreter.StringValue)
+			nameValue := invocation.Arguments[0].(interpreter.StringValue)
 			newCodeValue := invocation.Arguments[1].(*interpreter.ArrayValue)
 
 			constructorArguments := invocation.Arguments[requiredArgumentCount:]
@@ -1920,7 +1920,7 @@ func (r *interpreterRuntime) newAuthAccountContractsChangeFunction(
 
 			// Get the existing code
 
-			nameArgument := nameValue.Str
+			nameArgument := string(nameValue)
 
 			if nameArgument == "" {
 				panic(errors.New(
@@ -2272,10 +2272,10 @@ func (r *interpreterRuntime) newAuthAccountContractsGetFunction(
 	return interpreter.NewHostFunctionValue(
 		func(invocation interpreter.Invocation) interpreter.Value {
 
-			nameValue := invocation.Arguments[0].(*interpreter.StringValue)
+			nameValue := invocation.Arguments[0].(interpreter.StringValue)
 
 			address := addressValue.ToAddress()
-			nameArgument := nameValue.Str
+			nameArgument := string(nameValue)
 			var code []byte
 			var err error
 			wrapPanic(func() {
@@ -2308,10 +2308,10 @@ func (r *interpreterRuntime) newAuthAccountContractsRemoveFunction(
 	return interpreter.NewHostFunctionValue(
 		func(invocation interpreter.Invocation) interpreter.Value {
 
-			nameValue := invocation.Arguments[0].(*interpreter.StringValue)
+			nameValue := invocation.Arguments[0].(interpreter.StringValue)
 
 			address := addressValue.ToAddress()
-			nameArgument := nameValue.Str
+			nameArgument := string(nameValue)
 
 			// Get the current code
 
@@ -2726,7 +2726,7 @@ func newPublicKeyVerifyFunction(runtimeInterface Interface) interpreter.HostFunc
 		func(invocation interpreter.Invocation) interpreter.Value {
 			signatureValue := invocation.Arguments[0].(*interpreter.ArrayValue)
 			signedDataValue := invocation.Arguments[1].(*interpreter.ArrayValue)
-			domainSeparationTag := invocation.Arguments[2].(*interpreter.StringValue)
+			domainSeparationTag := invocation.Arguments[2].(interpreter.StringValue)
 			hashAlgo := invocation.Arguments[3].(*interpreter.CompositeValue)
 			publicKey := invocation.Self
 
@@ -2745,7 +2745,7 @@ func newPublicKeyVerifyFunction(runtimeInterface Interface) interpreter.HostFunc
 func validateSignature(
 	signatureValue *interpreter.ArrayValue,
 	signedDataValue *interpreter.ArrayValue,
-	domainSeparationTagValue *interpreter.StringValue,
+	domainSeparationTagValue interpreter.StringValue,
 	hashAlgorithmValue *interpreter.CompositeValue,
 	publicKeyValue *interpreter.CompositeValue,
 	runtimeInterface Interface,
@@ -2761,7 +2761,7 @@ func validateSignature(
 		panic(fmt.Errorf("failed to get signed data. %w", err))
 	}
 
-	domainSeparationTag := domainSeparationTagValue.Str
+	domainSeparationTag := string(domainSeparationTagValue)
 
 	hashAlgorithm := NewHashAlgorithmFromValue(hashAlgorithmValue)
 

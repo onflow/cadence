@@ -318,9 +318,7 @@ func (d *DecoderV4) decodeValue(path []string) (Value, error) {
 }
 
 func (d *DecoderV4) decodeString(v string) Value {
-	value := NewStringValue(v)
-	value.modified = false
-	return value
+	return NewStringValue(v)
 }
 
 func (d *DecoderV4) decodeArray(path []string, deferDecoding bool) (*ArrayValue, error) {

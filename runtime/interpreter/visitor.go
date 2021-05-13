@@ -23,7 +23,7 @@ type Visitor interface {
 	VisitTypeValue(interpreter *Interpreter, value TypeValue)
 	VisitVoidValue(interpreter *Interpreter, value VoidValue)
 	VisitBoolValue(interpreter *Interpreter, value BoolValue)
-	VisitStringValue(interpreter *Interpreter, value *StringValue)
+	VisitStringValue(interpreter *Interpreter, value StringValue)
 	VisitArrayValue(interpreter *Interpreter, value *ArrayValue) bool
 	VisitIntValue(interpreter *Interpreter, value IntValue)
 	VisitInt8Value(interpreter *Interpreter, value Int8Value)
@@ -66,7 +66,7 @@ type EmptyVisitor struct {
 	TypeValueVisitor                func(interpreter *Interpreter, value TypeValue)
 	VoidValueVisitor                func(interpreter *Interpreter, value VoidValue)
 	BoolValueVisitor                func(interpreter *Interpreter, value BoolValue)
-	StringValueVisitor              func(interpreter *Interpreter, value *StringValue)
+	StringValueVisitor              func(interpreter *Interpreter, value StringValue)
 	ArrayValueVisitor               func(interpreter *Interpreter, value *ArrayValue) bool
 	IntValueVisitor                 func(interpreter *Interpreter, value IntValue)
 	Int8ValueVisitor                func(interpreter *Interpreter, value Int8Value)
@@ -134,7 +134,7 @@ func (v EmptyVisitor) VisitBoolValue(interpreter *Interpreter, value BoolValue) 
 	v.BoolValueVisitor(interpreter, value)
 }
 
-func (v EmptyVisitor) VisitStringValue(interpreter *Interpreter, value *StringValue) {
+func (v EmptyVisitor) VisitStringValue(interpreter *Interpreter, value StringValue) {
 	if v.StringValueVisitor == nil {
 		return
 	}

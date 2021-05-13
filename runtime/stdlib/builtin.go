@@ -54,7 +54,7 @@ var AssertFunction = NewStandardLibraryFunction(
 		if !result {
 			var message string
 			if len(invocation.Arguments) > 1 {
-				message = invocation.Arguments[1].(*interpreter.StringValue).Str
+				message = string(invocation.Arguments[1].(interpreter.StringValue))
 			}
 			panic(AssertionError{
 				Message:       message,
@@ -93,9 +93,9 @@ var PanicFunction = NewStandardLibraryFunction(
 		),
 	},
 	func(invocation interpreter.Invocation) interpreter.Value {
-		message := invocation.Arguments[0].(*interpreter.StringValue)
+		message := invocation.Arguments[0].(interpreter.StringValue)
 		panic(PanicError{
-			Message:       message.Str,
+			Message:       string(message),
 			LocationRange: invocation.GetLocationRange(),
 		})
 	},
@@ -165,7 +165,7 @@ var CreatePublicKeyFunction = NewStandardLibraryFunction(
 			func(invocation interpreter.Invocation) interpreter.Value {
 				signature := invocation.Arguments[0].(*interpreter.ArrayValue)
 				signedData := invocation.Arguments[1].(*interpreter.ArrayValue)
-				domainSeparationTag := invocation.Arguments[2].(*interpreter.StringValue)
+				domainSeparationTag := invocation.Arguments[2].(interpreter.StringValue)
 				hashAlgo := invocation.Arguments[3].(*interpreter.CompositeValue)
 				publicKey := invocation.Self
 
