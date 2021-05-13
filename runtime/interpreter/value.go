@@ -398,8 +398,21 @@ func (v StringValue) Slice(from IntValue, to IntValue, getLocationRange func() L
 	return NewStringValue(string(v)[fromIndex:toIndex])
 }
 
-func (v StringValue) Get(_ *Interpreter, _ func() LocationRange, key Value) Value {
+func (v StringValue) checkBounds(index int, getLocationRange func() LocationRange) {
+	length := v.Length()
+
+	if index < 0 || index >= length {
+		panic(StringIndexOutOfBoundsError{
+			Index:         index,
+			Length:        length,
+			LocationRange: getLocationRange(),
+		})
+	}
+}
+
+func (v StringValue) Get(_ *Interpreter, getLocationRange func() LocationRange, key Value) Value {
 	index := key.(NumberValue).ToInt()
+	v.checkBounds(index, getLocationRange)
 
 	// TODO: optimize grapheme clusters to prevent unnecessary iteration
 	graphemes := uniseg.NewGraphemes(string(v))

@@ -632,6 +632,48 @@ func TestInterpretStringIndexing(t *testing.T) {
 	)
 }
 
+func TestInterpretInvalidStringIndexing(t *testing.T) {
+
+	t.Parallel()
+
+	for name, index := range map[string]int{
+		"negative":          -1,
+		"larger than count": 2,
+	} {
+
+		t.Run(name, func(t *testing.T) {
+
+			inter := parseCheckAndInterpret(t, `
+               fun test(_ index: Int) {
+                   let x = "ab"
+                   x[index]
+               }
+            `)
+
+			indexValue := interpreter.NewIntValueFromInt64(int64(index))
+			_, err := inter.Invoke("test", indexValue)
+
+			var indexErr interpreter.StringIndexOutOfBoundsError
+			require.ErrorAs(t, err, &indexErr)
+
+			require.Equal(t,
+				interpreter.StringIndexOutOfBoundsError{
+					Index:  index,
+					Length: 2,
+					LocationRange: interpreter.LocationRange{
+						Location: TestLocation,
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 93, Line: 4, Column: 20},
+							EndPos:   ast.Position{Offset: 99, Line: 4, Column: 26},
+						},
+					},
+				},
+				indexErr,
+			)
+		})
+	}
+}
+
 func TestInterpretStringIndexingUnicode(t *testing.T) {
 
 	t.Parallel()
