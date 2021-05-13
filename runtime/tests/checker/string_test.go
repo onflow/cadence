@@ -197,35 +197,6 @@ func TestCheckStringSliceBound(t *testing.T) {
 	require.NoError(t, err)
 }
 
-// TODO: prevent invalid character literals
-// func TestCheckInvalidCharacterLiteral(t *testing.T) {
-// 	//
-// 	_, err := ParseAndCheck(t, `
-//         let x: Character = "abc"
-// 	`)
-//
-// 	errs := ExpectCheckerErrors(t, err, 1)
-//
-// 	Expect(errs[0]).
-// 		To(BeAssignableToTypeOf(&sema.TypeMismatchError{}))
-// }
-
-// TODO: prevent assignment with invalid character literal
-// func TestCheckStringIndexingAssignmentWithInvalidCharacterLiteral(t *testing.T) {
-// 	//
-// 	_, err := ParseAndCheck(t, `
-//       fun test() {
-//           let z = "abc"
-//           z[0] = "def"
-//       }
-// 	`)
-//
-// 	errs := ExpectCheckerErrors(t, err, 1)
-//
-// 	Expect(errs[0]).
-// 		To(BeAssignableToTypeOf(&sema.TypeMismatchError{}))
-// }
-
 func TestCheckStringIndexing(t *testing.T) {
 
 	t.Parallel()
