@@ -336,6 +336,22 @@ func (e ArrayIndexOutOfBoundsError) Error() string {
 	)
 }
 
+// StringIndexOutOfBoundsError
+//
+type StringIndexOutOfBoundsError struct {
+	Index  int
+	Length int
+	LocationRange
+}
+
+func (e StringIndexOutOfBoundsError) Error() string {
+	return fmt.Sprintf(
+		"string index out of bounds: %d, but length is %d",
+		e.Index,
+		e.Length,
+	)
+}
+
 // EventEmissionUnavailableError
 //
 type EventEmissionUnavailableError struct {
