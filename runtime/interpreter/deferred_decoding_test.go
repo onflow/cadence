@@ -478,7 +478,7 @@ var newTestLargeCompositeValue = func(id int) *CompositeValue {
 	)
 
 	members := NewStringValueOrderedMap()
-	members.Set("fname", NewStringValue("John"))
+	members.Set("fname", NewStringValue(fmt.Sprintf("John%d", id)))
 	members.Set("lname", NewStringValue("Doe"))
 	members.Set("age", NewIntValueFromInt64(999))
 	members.Set("status", NewStringValue("unknown"))
@@ -491,4 +491,165 @@ var newTestLargeCompositeValue = func(id int) *CompositeValue {
 		members,
 		nil,
 	)
+}
+
+var newTestArrayValue = func(size int) *ArrayValue {
+	values := make([]Value, size)
+
+	for i := 0; i < size; i++ {
+		values[i] = newTestLargeCompositeValue(i)
+	}
+
+	return NewArrayValue(values)
+}
+
+func TestArrayDeferredDecoding(t *testing.T) {
+	t.Parallel()
+
+	t.Run("Simple array", func(t *testing.T) {
+		array := newTestArrayValue(10)
+
+		encoded, _, err := EncodeValue(array, nil, true, nil)
+		require.NoError(t, err)
+
+		decoded, err := DecodeValue(encoded, &testOwner, nil, CurrentEncodingVersion, nil)
+		require.NoError(t, err)
+
+		require.IsType(t, &ArrayValue{}, decoded)
+		decodedArray := decoded.(*ArrayValue)
+
+		// fields must not be loaded
+		assert.NotNil(t, decodedArray.content)
+
+		// Get an element from the array
+		element := decodedArray.Get(nil, nil, NewIntValueFromInt64(1))
+		assert.NotNil(t, element)
+
+		require.IsType(t, &CompositeValue{}, element)
+		compositeValue := element.(*CompositeValue)
+
+		// This loading must be shallow. The content of the element must not be loaded.
+		assert.NotNil(t, compositeValue.content)
+
+		// raw content cache must be empty
+		assert.Nil(t, decodedArray.content)
+
+		// all the fields must be shallow loaded
+		for _, element := range decodedArray.Elements() {
+			assert.NotNil(t, element)
+			require.IsType(t, &CompositeValue{}, element)
+			compositeValue := element.(*CompositeValue)
+			assert.NotNil(t, compositeValue.content)
+		}
+	})
+
+	t.Run("Round trip - without loading", func(t *testing.T) {
+
+		array := newTestArrayValue(2)
+
+		// Encode
+		encoded, _, err := EncodeValue(array, nil, true, nil)
+		require.NoError(t, err)
+
+		// Decode
+		decoded, err := DecodeValue(encoded, &testOwner, nil, CurrentEncodingVersion, nil)
+		require.NoError(t, err)
+
+		// Value must not be loaded. i.e: the content is available
+		require.IsType(t, &ArrayValue{}, decoded)
+		decodedArray := decoded.(*ArrayValue)
+		assert.NotNil(t, decodedArray.content)
+
+		// Re encode the decoded value
+		reEncoded, _, err := EncodeValue(decodedArray, nil, true, nil)
+		require.NoError(t, err)
+
+		reDecoded, err := DecodeValue(reEncoded, &testOwner, nil, CurrentEncodingVersion, nil)
+		require.NoError(t, err)
+
+		require.IsType(t, &ArrayValue{}, reDecoded)
+		reDecodedArray := reDecoded.(*ArrayValue)
+
+		reDecodedArray.ensureElementsLoaded()
+
+		// Check the elements
+
+		elements := reDecodedArray.Elements()
+		require.Len(t, elements, 2)
+
+		for i, element := range elements {
+			require.IsType(t, &CompositeValue{}, element)
+			elementVal := element.(*CompositeValue)
+
+			decodeFieldValue, contains := elementVal.Fields().Get("fname")
+			assert.True(t, contains)
+
+			expected := NewStringValue(fmt.Sprintf("John%d", i))
+			expected.modified = false
+
+			assert.Equal(t, expected, decodeFieldValue)
+		}
+
+	})
+
+}
+
+func BenchmarkArrayDeferredDecoding(b *testing.B) {
+
+	const size = 1000
+
+	encoded, _, err := EncodeValue(newTestArrayValue(size), nil, true, nil)
+	require.NoError(b, err)
+
+	b.Run("Simply decode", func(b *testing.B) {
+		b.ReportAllocs()
+		b.ResetTimer()
+
+		for i := 0; i < b.N; i++ {
+			_, err := DecodeValue(encoded, &testOwner, nil, CurrentEncodingVersion, nil)
+			require.NoError(b, err)
+		}
+	})
+
+	b.Run("Get first element", func(b *testing.B) {
+		b.ReportAllocs()
+		b.ResetTimer()
+
+		for i := 0; i < b.N; i++ {
+			decoded, err := DecodeValue(encoded, &testOwner, nil, CurrentEncodingVersion, nil)
+			require.NoError(b, err)
+
+			decodedArray := decoded.(*ArrayValue)
+			element := decodedArray.Get(nil, nil, NewIntValueFromInt64(0))
+			assert.NotNil(b, element)
+		}
+	})
+
+	b.Run("Get last element", func(b *testing.B) {
+		b.ReportAllocs()
+		b.ResetTimer()
+
+		for i := 0; i < b.N; i++ {
+			decoded, err := DecodeValue(encoded, &testOwner, nil, CurrentEncodingVersion, nil)
+			require.NoError(b, err)
+
+			decodedArray := decoded.(*ArrayValue)
+			element := decodedArray.Get(nil, nil, NewIntValueFromInt64(size-1))
+			assert.NotNil(b, element)
+		}
+	})
+
+	b.Run("Re-encode decoded", func(b *testing.B) {
+		b.ReportAllocs()
+
+		decoded, err := DecodeValue(encoded, &testOwner, nil, CurrentEncodingVersion, nil)
+		require.NoError(b, err)
+
+		b.ResetTimer()
+
+		for i := 0; i < b.N; i++ {
+			_, _, err = EncodeValue(decoded, nil, true, nil)
+			require.NoError(b, err)
+		}
+	})
 }

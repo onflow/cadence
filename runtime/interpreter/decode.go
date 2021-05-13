@@ -324,10 +324,19 @@ func (d *DecoderV4) decodeString(v string) Value {
 }
 
 func (d *DecoderV4) decodeArray(path []string) (*ArrayValue, error) {
-	size, err := d.decoder.DecodeArrayHead()
+	var content []byte
+	var err error
+	if d.isByteDecoder {
+		// Use the zero-copy method if available, for better performance.
+		content, err = d.decoder.DecodeRawBytesZeroCopy()
+	} else {
+		content, err = d.decoder.DecodeRawBytes()
+	}
+
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
-			return nil, fmt.Errorf("invalid array encoding (@ %s): expected []interface{}, got %s",
+			return nil, fmt.Errorf(
+				"invalid array encoding (@ %s): %s",
 				strings.Join(path, "."),
 				e.ActualType.String(),
 			)
@@ -335,34 +344,11 @@ func (d *DecoderV4) decodeArray(path []string) (*ArrayValue, error) {
 		return nil, err
 	}
 
-	values := make([]Value, size)
+	// Make a copy so that the path will not be affected by any modification at upper levels.
+	valuePath := make([]string, len(path))
+	copy(valuePath, path)
 
-	// Pre-allocate and reuse valuePath.
-	//nolint:gocritic
-	valuePath := append(path, "")
-
-	lastValuePathIndex := len(path)
-
-	for i := 0; i < int(size); i++ {
-		valuePath[lastValuePathIndex] = strconv.Itoa(i)
-
-		res, err := d.decodeValue(valuePath)
-		if err != nil {
-			return nil, fmt.Errorf(
-				"invalid array element encoding (@ %s, %d): %w",
-				strings.Join(path, "."),
-				i,
-				err,
-			)
-		}
-		values[i] = res
-	}
-
-	return &ArrayValue{
-		values:   values,
-		Owner:    d.owner,
-		modified: false,
-	}, nil
+	return NewDeferredArrayValue(valuePath, content, d.owner, d.decodeCallback, d.version), nil
 }
 
 func (d *DecoderV4) decodeDictionary(path []string) (*DictionaryValue, error) {
@@ -1816,6 +1802,50 @@ func decodeCompositeFields(v *CompositeValue, content []byte) error {
 	}
 
 	v.fields = fields
+
+	return nil
+}
+
+func decodeArrayElements(array *ArrayValue, elementContent []byte) error {
+	d, err := NewByteDecoder(elementContent, array.Owner, array.encodingVersion, array.decodeCallback)
+	if err != nil {
+		return err
+	}
+
+	size, err := d.decoder.DecodeArrayHead()
+	if err != nil {
+		if e, ok := err.(*cbor.WrongTypeError); ok {
+			return fmt.Errorf("invalid array encoding (@ %s): expected []interface{}, got %s",
+				strings.Join(array.valuePath, "."),
+				e.ActualType.String(),
+			)
+		}
+		return err
+	}
+
+	values := make([]Value, size)
+
+	// Pre-allocate and reuse valuePath.
+	valuePath := append(array.valuePath, "")
+
+	lastValuePathIndex := len(array.valuePath)
+
+	for i := 0; i < int(size); i++ {
+		valuePath[lastValuePathIndex] = strconv.Itoa(i)
+
+		res, err := d.decodeValue(valuePath)
+		if err != nil {
+			return fmt.Errorf(
+				"invalid array element encoding (@ %s, %d): %w",
+				strings.Join(array.valuePath, "."),
+				i,
+				err,
+			)
+		}
+		values[i] = res
+	}
+
+	array.values = values
 
 	return nil
 }
