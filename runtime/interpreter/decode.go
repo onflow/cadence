@@ -624,7 +624,11 @@ func (d *DecoderV4) decodeComposite(path []string) (*CompositeValue, error) {
 		return nil, err
 	}
 
-	compositeValue := NewDeferredCompositeValue(path, content, d.owner)
+	// Make a copy so that the path will not be affected by any modification at upper levels.
+	valuePath := make([]string, len(path))
+	copy(valuePath, path)
+
+	compositeValue := NewDeferredCompositeValue(valuePath, content, d.owner)
 	compositeValue.modified = false
 	return compositeValue, nil
 }
@@ -1648,7 +1652,7 @@ func decodeCompositeMetaInfo(v *CompositeValue, content []byte) error {
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
 			return fmt.Errorf("invalid composite encoding (@ %s): expected [%d]interface{}, got %s",
-				strings.Join(v.decodePath, "."),
+				strings.Join(v.valuePath, "."),
 				expectedLength,
 				e.ActualType.String(),
 			)
@@ -1658,7 +1662,7 @@ func decodeCompositeMetaInfo(v *CompositeValue, content []byte) error {
 
 	if size != expectedLength {
 		return fmt.Errorf("invalid composite encoding (@ %s): expected [%d]interface{}, got [%d]interface{}",
-			strings.Join(v.decodePath, "."),
+			strings.Join(v.valuePath, "."),
 			expectedLength,
 			size,
 		)
@@ -1671,7 +1675,7 @@ func decodeCompositeMetaInfo(v *CompositeValue, content []byte) error {
 	if err != nil {
 		return fmt.Errorf(
 			"invalid composite location encoding (@ %s): %w",
-			strings.Join(v.decodePath, "."),
+			strings.Join(v.valuePath, "."),
 			err,
 		)
 	}
@@ -1690,7 +1694,7 @@ func decodeCompositeMetaInfo(v *CompositeValue, content []byte) error {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
 			return fmt.Errorf(
 				"invalid composite kind encoding (@ %s): %s",
-				strings.Join(v.decodePath, "."),
+				strings.Join(v.valuePath, "."),
 				e.ActualType.String(),
 			)
 		}
@@ -1706,7 +1710,7 @@ func decodeCompositeMetaInfo(v *CompositeValue, content []byte) error {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
 			return fmt.Errorf(
 				"invalid composite fields encoding (@ %s): %s",
-				strings.Join(v.decodePath, "."),
+				strings.Join(v.valuePath, "."),
 				e.ActualType.String(),
 			)
 		}
@@ -1721,7 +1725,7 @@ func decodeCompositeMetaInfo(v *CompositeValue, content []byte) error {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
 			return fmt.Errorf(
 				"invalid composite qualified identifier encoding (@ %s): %s",
-				strings.Join(v.decodePath, "."),
+				strings.Join(v.valuePath, "."),
 				e.ActualType.String(),
 			)
 		}
@@ -1750,7 +1754,7 @@ func decodeCompositeFields(v *CompositeValue, content []byte) error {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
 			return fmt.Errorf(
 				"invalid composite fields encoding (@ %s): %s",
-				strings.Join(v.decodePath, "."),
+				strings.Join(v.valuePath, "."),
 				e.ActualType.String(),
 			)
 		}
@@ -1760,7 +1764,7 @@ func decodeCompositeFields(v *CompositeValue, content []byte) error {
 	if fieldsSize%2 == 1 {
 		return fmt.Errorf(
 			"invalid composite fields encoding (@ %s): fields should have even number of elements: got %d",
-			strings.Join(v.decodePath, "."),
+			strings.Join(v.valuePath, "."),
 			fieldsSize,
 		)
 	}
@@ -1768,9 +1772,9 @@ func decodeCompositeFields(v *CompositeValue, content []byte) error {
 	fields := NewStringValueOrderedMap()
 
 	// Pre-allocate and reuse valuePath.
-	valuePath := append(v.decodePath, "")
+	valuePath := append(v.valuePath, "")
 
-	lastValuePathIndex := len(v.decodePath)
+	lastValuePathIndex := len(v.valuePath)
 
 	for i := 0; i < int(fieldsSize); i += 2 {
 
@@ -1780,7 +1784,7 @@ func decodeCompositeFields(v *CompositeValue, content []byte) error {
 			if e, ok := err.(*cbor.WrongTypeError); ok {
 				return fmt.Errorf(
 					"invalid composite field name encoding (@ %s, %d): %s",
-					strings.Join(v.decodePath, "."),
+					strings.Join(v.valuePath, "."),
 					i/2,
 					e.ActualType.String(),
 				)
@@ -1796,7 +1800,7 @@ func decodeCompositeFields(v *CompositeValue, content []byte) error {
 		if err != nil {
 			return fmt.Errorf(
 				"invalid composite field value encoding (@ %s, %s): %w",
-				strings.Join(v.decodePath, "."),
+				strings.Join(v.valuePath, "."),
 				fieldName,
 				err,
 			)

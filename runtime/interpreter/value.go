@@ -6077,7 +6077,7 @@ type CompositeValue struct {
 
 	// Value's path to be used during decoding.
 	// Only available for decoded values that are not loaded yet.
-	decodePath []string
+	valuePath []string
 }
 
 type ComputedField func(*Interpreter) Value
@@ -6106,9 +6106,9 @@ func NewCompositeValue(
 
 func NewDeferredCompositeValue(path []string, content []byte, owner *common.Address) *CompositeValue {
 	return &CompositeValue{
-		Owner:      owner,
-		content:    content,
-		decodePath: path,
+		Owner:     owner,
+		content:   content,
+		valuePath: path,
 	}
 }
 
@@ -6194,6 +6194,7 @@ func (v *CompositeValue) Copy() Value {
 			modified:      true,
 			content:       v.content,
 			fieldsContent: v.fieldsContent,
+			valuePath:     v.valuePath,
 		}
 	}
 
@@ -6220,6 +6221,7 @@ func (v *CompositeValue) Copy() Value {
 		modified:      true,
 		content:       v.content,
 		fieldsContent: v.fieldsContent,
+		valuePath:     v.valuePath,
 	}
 }
 
@@ -6600,7 +6602,7 @@ func (v *CompositeValue) ensureFieldsLoaded() {
 
 	// Path and the fields-content are no longer needed.
 	// Clear the cache and free-up the memory.
-	v.decodePath = nil
+	v.valuePath = nil
 	v.fieldsContent = nil
 }
 
