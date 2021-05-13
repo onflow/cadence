@@ -171,6 +171,9 @@ type SignatureValidationHandlerFunc func(
 	key *CompositeValue,
 ) BoolValue
 
+// ExitHandlerFunc is a function that is called at the end of execution
+type ExitHandlerFunc func() error
+
 // CompositeTypeCode contains the the "prepared" / "callable" "code"
 // for the functions and the destructor of a composite
 // (contract, struct, resource, event).
@@ -248,6 +251,7 @@ type Interpreter struct {
 	uuidHandler                    UUIDHandlerFunc
 	PublicKeyValidationHandler     PublicKeyValidationHandlerFunc
 	SignatureValidationHandler     SignatureValidationHandlerFunc
+	ExitHandler                    ExitHandlerFunc
 	interpreted                    bool
 	statement                      ast.Statement
 }
@@ -415,6 +419,16 @@ func WithSignatureValidationHandler(handler SignatureValidationHandlerFunc) Opti
 	}
 }
 
+// WithExitHandler returns an interpreter option which sets the given
+// function as the function that is used when execution is complete.
+//
+func WithExitHandler(handler ExitHandlerFunc) Option {
+	return func(interpreter *Interpreter) error {
+		interpreter.SetExitHandler(handler)
+		return nil
+	}
+}
+
 // WithAllInterpreters returns an interpreter option which sets
 // the given map of interpreters as the map of all interpreters.
 //
@@ -548,6 +562,12 @@ func (interpreter *Interpreter) SetPublicKeyValidationHandler(function PublicKey
 //
 func (interpreter *Interpreter) SetSignatureValidationHandler(function SignatureValidationHandlerFunc) {
 	interpreter.SignatureValidationHandler = function
+}
+
+// SetExitHandler sets the function that is used to handle end of execution.
+//
+func (interpreter *Interpreter) SetExitHandler(function ExitHandlerFunc) {
+	interpreter.ExitHandler = function
 }
 
 // SetAllInterpreters sets the given map of interpreters as the map of all interpreters.

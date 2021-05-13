@@ -336,7 +336,8 @@ func (r *interpreterRuntime) interpret(
 		exportedValue = newExportableValue(result, inter)
 	}
 
-	return exportedValue, inter, nil
+	err = inter.ExitHandler()
+	return exportedValue, inter, err
 }
 
 func (r *interpreterRuntime) newAuthAccountValue(
@@ -1194,14 +1195,6 @@ func (r *interpreterRuntime) meteringInterpreterOptions(runtimeInterface Interfa
 	checkLimit := func() {
 		used++
 
-		var err error
-		wrapPanic(func() {
-			err = runtimeInterface.SetComputationUsed(used)
-		})
-		if err != nil {
-			panic(err)
-		}
-
 		if used <= limit {
 			return
 		}
@@ -1225,6 +1218,11 @@ func (r *interpreterRuntime) meteringInterpreterOptions(runtimeInterface Interfa
 		interpreter.WithOnFunctionInvocationHandler(
 			func(_ *interpreter.Interpreter, _ int) {
 				checkLimit()
+			},
+		),
+		interpreter.WithExitHandler(
+			func() error {
+				return runtimeInterface.SetComputationUsed(used)
 			},
 		),
 	}
