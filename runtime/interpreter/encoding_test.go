@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2021 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,7 +24,6 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/fxamacker/cbor/v2"
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/runtime/common"
@@ -5269,20 +5268,14 @@ func TestDecodeCallback(t *testing.T) {
 	require.Equal(t,
 		[]decodeCallback{
 			{
-				value: []interface{}{
-					cbor.Tag{
-						Number:  cborTagInt8Value,
-						Content: uint64(42),
-					},
-				},
-				path: nil,
+				value: Int8Value(42),
+				path:  []string{"0"},
 			},
 			{
-				value: cbor.Tag{
-					Number:  cborTagInt8Value,
-					Content: uint64(42),
+				value: &ArrayValue{
+					Values: []Value{Int8Value(42)},
 				},
-				path: []string{"0"},
+				path: nil,
 			},
 		},
 		decodeCallbacks,
