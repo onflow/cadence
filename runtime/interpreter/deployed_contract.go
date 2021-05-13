@@ -30,7 +30,7 @@ import (
 
 type DeployedContractValue struct {
 	Address AddressValue
-	Name    *StringValue
+	Name    StringValue
 	Code    *ArrayValue
 }
 

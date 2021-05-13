@@ -276,9 +276,7 @@ func (d *DecoderV3) decodeValue(v interface{}, path []string) (Value, error) {
 }
 
 func (d *DecoderV3) decodeString(v string) Value {
-	value := NewStringValue(v)
-	value.modified = false
-	return value
+	return NewStringValue(v)
 }
 
 func (d *DecoderV3) decodeArray(v []interface{}, path []string) (*ArrayValue, error) {

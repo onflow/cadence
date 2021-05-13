@@ -202,7 +202,6 @@ func TestEncodeDecodeString(t *testing.T) {
 
 	t.Run("empty", func(t *testing.T) {
 		expected := NewStringValue("")
-		expected.modified = false
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
@@ -216,7 +215,6 @@ func TestEncodeDecodeString(t *testing.T) {
 
 	t.Run("non-empty", func(t *testing.T) {
 		expected := NewStringValue("foo")
-		expected.modified = false
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
@@ -252,7 +250,6 @@ func TestEncodeDecodeArray(t *testing.T) {
 
 	t.Run("string and bool", func(t *testing.T) {
 		expectedString := NewStringValue("test")
-		expectedString.modified = false
 
 		expected := NewArrayValueUnownedNonCopying(
 			expectedString,
@@ -349,11 +346,7 @@ func TestEncodeDecodeDictionary(t *testing.T) {
 		expected.modified = false
 		expected.Keys.modified = false
 
-		key1.modified = false
 		value1.modified = false
-
-		key3.modified = false
-		value3.modified = false
 
 		encoded := []byte{
 			// tag
@@ -691,7 +684,6 @@ func TestEncodeDecodeComposite(t *testing.T) {
 
 	t.Run("non-empty resource, qualified identifier", func(t *testing.T) {
 		stringValue := NewStringValue("test")
-		stringValue.modified = false
 
 		members := NewStringValueOrderedMap()
 		members.Set("string", stringValue)
@@ -808,7 +800,6 @@ func TestEncodeDecodeComposite(t *testing.T) {
 
 	t.Run("non-empty resource, type ID, version <= 3", func(t *testing.T) {
 		stringValue := NewStringValue("test")
-		stringValue.modified = false
 
 		members := NewStringValueOrderedMap()
 		members.Set("string", stringValue)
@@ -3010,7 +3001,6 @@ func TestEncodeDecodeSomeValue(t *testing.T) {
 
 	t.Run("string", func(t *testing.T) {
 		expectedString := NewStringValue("test")
-		expectedString.modified = false
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
@@ -4929,7 +4919,6 @@ func TestEncodeDecodeDictionaryDeferred(t *testing.T) {
 	t.Run("resource values", func(t *testing.T) {
 
 		key1 := NewStringValue("test")
-		key1.modified = false
 		value1 := NewCompositeValue(
 			utils.TestLocation,
 			"R",
@@ -5045,9 +5034,7 @@ func TestEncodeDecodeDictionaryDeferred(t *testing.T) {
 	t.Run("non-resource values", func(t *testing.T) {
 
 		key1 := NewStringValue("test")
-		key1.modified = false
 		value1 := NewStringValue("xyz")
-		value1.modified = false
 
 		key2 := BoolValue(true)
 		value2 := BoolValue(false)

@@ -150,11 +150,11 @@ func newCryptoContractVerifySignatureFunction(signatureVerifier CryptoSignatureV
 				panic(fmt.Errorf("verifySignature: invalid signature argument: %w", err))
 			}
 
-			tagStringValue, ok := invocation.Arguments[1].(*interpreter.StringValue)
+			tagStringValue, ok := invocation.Arguments[1].(interpreter.StringValue)
 			if !ok {
 				panic(errors.New("verifySignature: invalid tag argument: not a string"))
 			}
-			tag := tagStringValue.Str
+			tag := string(tagStringValue)
 
 			signedData, err := interpreter.ByteArrayValueToByteSlice(invocation.Arguments[2])
 			if err != nil {
@@ -210,11 +210,11 @@ func newCryptoContractHashFunction(hasher CryptoHasher) interpreter.FunctionValu
 				panic(fmt.Errorf("hash: invalid data argument: %w", err))
 			}
 
-			tagStringValue, ok := invocation.Arguments[1].(*interpreter.StringValue)
+			tagStringValue, ok := invocation.Arguments[1].(interpreter.StringValue)
 			if !ok {
 				panic(errors.New("hash: invalid tag argument: not a string"))
 			}
-			tag := tagStringValue.Str
+			tag := string(tagStringValue)
 
 			hashAlgorithm := getHashAlgorithmFromValue(invocation.Arguments[2])
 

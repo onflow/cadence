@@ -166,7 +166,7 @@ type PublicKeyValidationHandlerFunc func(publicKey *CompositeValue) BoolValue
 type SignatureValidationHandlerFunc func(
 	signature *ArrayValue,
 	signedData *ArrayValue,
-	domainSeparationTag *StringValue,
+	domainSeparationTag StringValue,
 	hashAlgorithm *CompositeValue,
 	key *CompositeValue,
 ) BoolValue
@@ -1029,7 +1029,7 @@ func (interpreter *Interpreter) visitCondition(condition *ast.Condition) {
 	var message string
 	if condition.Message != nil {
 		messageValue := interpreter.evalExpression(condition.Message)
-		message = messageValue.(*StringValue).Str
+		message = string(messageValue.(StringValue))
 	}
 
 	panic(ConditionError{

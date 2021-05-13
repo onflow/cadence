@@ -369,8 +369,8 @@ func (e *Encoder) Encode(
 
 	// String
 
-	case *StringValue:
-		return e.enc.EncodeString(v.Str)
+	case StringValue:
+		return e.enc.EncodeString(string(v))
 
 	// Collections
 

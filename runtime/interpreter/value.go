@@ -318,25 +318,19 @@ func (v BoolValue) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType
 
 // StringValue
 
-type StringValue struct {
-	Str      string
-	modified bool
+type StringValue string
+
+func NewStringValue(str string) StringValue {
+	return StringValue(str)
 }
 
-func NewStringValue(str string) *StringValue {
-	return &StringValue{
-		Str:      str,
-		modified: true,
-	}
-}
+func (StringValue) IsValue() {}
 
-func (*StringValue) IsValue() {}
-
-func (v *StringValue) Accept(interpreter *Interpreter, visitor Visitor) {
+func (v StringValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitStringValue(interpreter, v)
 }
 
-func (*StringValue) DynamicType(_ *Interpreter, _ DynamicTypeResults) DynamicType {
+func (StringValue) DynamicType(_ *Interpreter, _ DynamicTypeResults) DynamicType {
 	return StringDynamicType{}
 }
 
@@ -344,72 +338,74 @@ func (StringValue) StaticType() StaticType {
 	return PrimitiveStaticTypeString
 }
 
-func (v *StringValue) Copy() Value {
-	return NewStringValue(v.Str)
+func (v StringValue) Copy() Value {
+	return v
 }
 
-func (*StringValue) GetOwner() *common.Address {
+func (StringValue) GetOwner() *common.Address {
 	// value is never owned
 	return nil
 }
 
-func (*StringValue) SetOwner(_ *common.Address) {
+func (StringValue) SetOwner(_ *common.Address) {
 	// NO-OP: value cannot be owned
 }
 
-func (v *StringValue) IsModified() bool {
-	return v.modified
+func (StringValue) IsModified() bool {
+	return false
 }
 
-func (v *StringValue) SetModified(modified bool) {
-	v.modified = modified
+func (StringValue) SetModified(_ bool) {
+	// NO-OP
 }
 
-func (v *StringValue) String(_ StringResults) string {
-	return format.String(v.Str)
+func (v StringValue) String(_ StringResults) string {
+	return format.String(string(v))
 }
 
-func (v *StringValue) KeyString() string {
-	return v.Str
+func (v StringValue) KeyString() string {
+	return string(v)
 }
 
-func (v *StringValue) Equal(other Value, _ *Interpreter, _ bool) bool {
-	otherString, ok := other.(*StringValue)
+func (v StringValue) Equal(other Value, _ *Interpreter, _ bool) bool {
+	otherString, ok := other.(StringValue)
 	if !ok {
 		return false
 	}
 	return v.NormalForm() == otherString.NormalForm()
 }
 
-func (v *StringValue) NormalForm() string {
-	return norm.NFC.String(v.Str)
+func (v StringValue) NormalForm() string {
+	return norm.NFC.String(string(v))
 }
 
-func (v *StringValue) Concat(other ConcatenatableValue) Value {
-	otherString := other.(*StringValue)
+func (v StringValue) Concat(other ConcatenatableValue) Value {
+	otherString := other.(StringValue)
 
 	var sb strings.Builder
 
-	sb.WriteString(v.Str)
-	sb.WriteString(otherString.Str)
+	sb.WriteString(string(v))
+	sb.WriteString(string(otherString))
 
-	return NewStringValue(sb.String())
+	return StringValue(sb.String())
 }
 
-func (v *StringValue) Slice(from IntValue, to IntValue) Value {
-	fromInt := from.ToInt()
-	toInt := to.ToInt()
-	return NewStringValue(v.Str[fromInt:toInt])
+func (v StringValue) Slice(from IntValue, to IntValue, getLocationRange func() LocationRange) Value {
+	fromIndex := from.ToInt()
+	toIndex := to.ToInt()
+
+	// TODO: use grapheme clusters
+	return NewStringValue(string(v)[fromIndex:toIndex])
 }
 
-func (v *StringValue) Get(_ *Interpreter, _ func() LocationRange, key Value) Value {
-	i := key.(NumberValue).ToInt()
+func (v StringValue) Get(_ *Interpreter, _ func() LocationRange, key Value) Value {
+	index := key.(NumberValue).ToInt()
 
 	// TODO: optimize grapheme clusters to prevent unnecessary iteration
-	graphemes := uniseg.NewGraphemes(v.Str)
+	graphemes := uniseg.NewGraphemes(string(v))
 	graphemes.Next()
 
-	for j := 0; j < i; j++ {
+	for j := 0; j < index; j++ {
 		graphemes.Next()
 	}
 
@@ -418,37 +414,11 @@ func (v *StringValue) Get(_ *Interpreter, _ func() LocationRange, key Value) Val
 	return NewStringValue(char)
 }
 
-func (v *StringValue) Set(_ *Interpreter, _ func() LocationRange, key Value, value Value) {
-	index := key.(NumberValue).ToInt()
-	char := value.(*StringValue)
-	v.SetIndex(index, char)
+func (v StringValue) Set(_ *Interpreter, _ func() LocationRange, key Value, value Value) {
+	panic(errors.NewUnreachableError())
 }
 
-func (v *StringValue) SetIndex(index int, char *StringValue) {
-	v.modified = true
-
-	str := v.Str
-
-	// TODO: optimize grapheme clusters to prevent unnecessary iteration
-	graphemes := uniseg.NewGraphemes(str)
-	graphemes.Next()
-
-	for j := 0; j < index; j++ {
-		graphemes.Next()
-	}
-
-	start, end := graphemes.Positions()
-
-	var sb strings.Builder
-
-	sb.WriteString(str[:start])
-	sb.WriteString(char.Str)
-	sb.WriteString(str[end:])
-
-	v.Str = sb.String()
-}
-
-func (v *StringValue) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
+func (v StringValue) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
 	switch name {
 	case "length":
 		count := v.Length()
@@ -467,7 +437,7 @@ func (v *StringValue) GetMember(_ *Interpreter, _ func() LocationRange, name str
 			func(invocation Invocation) Value {
 				from := invocation.Arguments[0].(IntValue)
 				to := invocation.Arguments[1].(IntValue)
-				return v.Slice(from, to)
+				return v.Slice(from, to, invocation.GetLocationRange)
 			},
 		)
 
@@ -484,14 +454,14 @@ func (v *StringValue) GetMember(_ *Interpreter, _ func() LocationRange, name str
 
 // Length returns the number of characters (grapheme clusters)
 //
-func (v *StringValue) Length() int {
-	return uniseg.GraphemeClusterCount(v.Str)
+func (v StringValue) Length() int {
+	return uniseg.GraphemeClusterCount(string(v))
 }
 
 // DecodeHex hex-decodes this string and returns an array of UInt8 values
 //
-func (v *StringValue) DecodeHex() *ArrayValue {
-	str := v.Str
+func (v StringValue) DecodeHex() *ArrayValue {
+	str := string(v)
 
 	bs, err := hex.DecodeString(str)
 	if err != nil {
@@ -506,11 +476,11 @@ func (v *StringValue) DecodeHex() *ArrayValue {
 	return NewArrayValueUnownedNonCopying(values...)
 }
 
-func (*StringValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
+func (StringValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
 	panic(errors.NewUnreachableError())
 }
 
-func (v *StringValue) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType, _ TypeConformanceResults) bool {
+func (StringValue) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType, _ TypeConformanceResults) bool {
 	_, ok := dynamicType.(StringDynamicType)
 	return ok
 }
