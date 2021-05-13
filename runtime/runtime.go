@@ -1920,7 +1920,7 @@ func (r *interpreterRuntime) newAuthAccountContractsChangeFunction(
 
 			// Get the existing code
 
-			nameArgument := string(nameValue)
+			nameArgument := nameValue.Str
 
 			if nameArgument == "" {
 				panic(errors.New(
@@ -2275,7 +2275,7 @@ func (r *interpreterRuntime) newAuthAccountContractsGetFunction(
 			nameValue := invocation.Arguments[0].(interpreter.StringValue)
 
 			address := addressValue.ToAddress()
-			nameArgument := string(nameValue)
+			nameArgument := nameValue.Str
 			var code []byte
 			var err error
 			wrapPanic(func() {
@@ -2311,7 +2311,7 @@ func (r *interpreterRuntime) newAuthAccountContractsRemoveFunction(
 			nameValue := invocation.Arguments[0].(interpreter.StringValue)
 
 			address := addressValue.ToAddress()
-			nameArgument := string(nameValue)
+			nameArgument := nameValue.Str
 
 			// Get the current code
 

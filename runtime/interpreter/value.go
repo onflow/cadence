@@ -318,10 +318,12 @@ func (v BoolValue) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType
 
 // StringValue
 
-type StringValue string
+type StringValue struct {
+	Str string
+}
 
 func NewStringValue(str string) StringValue {
-	return StringValue(str)
+	return StringValue{Str: str}
 }
 
 func (StringValue) IsValue() {}
@@ -360,11 +362,11 @@ func (StringValue) SetModified(_ bool) {
 }
 
 func (v StringValue) String(_ StringResults) string {
-	return format.String(string(v))
+	return format.String(v.Str)
 }
 
 func (v StringValue) KeyString() string {
-	return string(v)
+	return v.Str
 }
 
 func (v StringValue) Equal(other Value, _ *Interpreter, _ bool) bool {
@@ -376,7 +378,7 @@ func (v StringValue) Equal(other Value, _ *Interpreter, _ bool) bool {
 }
 
 func (v StringValue) NormalForm() string {
-	return norm.NFC.String(string(v))
+	return norm.NFC.String(v.Str)
 }
 
 func (v StringValue) Concat(other ConcatenatableValue) Value {
@@ -384,10 +386,10 @@ func (v StringValue) Concat(other ConcatenatableValue) Value {
 
 	var sb strings.Builder
 
-	sb.WriteString(string(v))
-	sb.WriteString(string(otherString))
+	sb.WriteString(v.Str)
+	sb.WriteString(otherString.Str)
 
-	return StringValue(sb.String())
+	return NewStringValue(sb.String())
 }
 
 func (v StringValue) Slice(from IntValue, to IntValue, getLocationRange func() LocationRange) Value {
@@ -395,7 +397,7 @@ func (v StringValue) Slice(from IntValue, to IntValue, getLocationRange func() L
 	toIndex := to.ToInt()
 
 	// TODO: use grapheme clusters
-	return NewStringValue(string(v)[fromIndex:toIndex])
+	return NewStringValue(v.Str[fromIndex:toIndex])
 }
 
 func (v StringValue) checkBounds(index int, getLocationRange func() LocationRange) {
@@ -415,7 +417,7 @@ func (v StringValue) Get(_ *Interpreter, getLocationRange func() LocationRange, 
 	v.checkBounds(index, getLocationRange)
 
 	// TODO: optimize grapheme clusters to prevent unnecessary iteration
-	graphemes := uniseg.NewGraphemes(string(v))
+	graphemes := uniseg.NewGraphemes(v.Str)
 	graphemes.Next()
 
 	for j := 0; j < index; j++ {
@@ -468,13 +470,13 @@ func (v StringValue) GetMember(_ *Interpreter, _ func() LocationRange, name stri
 // Length returns the number of characters (grapheme clusters)
 //
 func (v StringValue) Length() int {
-	return uniseg.GraphemeClusterCount(string(v))
+	return uniseg.GraphemeClusterCount(v.Str)
 }
 
 // DecodeHex hex-decodes this string and returns an array of UInt8 values
 //
 func (v StringValue) DecodeHex() *ArrayValue {
-	str := string(v)
+	str := v.Str
 
 	bs, err := hex.DecodeString(str)
 	if err != nil {
