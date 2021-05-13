@@ -155,7 +155,7 @@ func TestSetOwnerArrayInsert(t *testing.T) {
 	assert.Equal(t, &newOwner, array.GetOwner())
 	assert.Equal(t, &oldOwner, value.GetOwner())
 
-	array.Insert(0, value)
+	array.Insert(0, value, nil)
 
 	assert.Equal(t, &newOwner, array.GetOwner())
 	assert.Equal(t, &newOwner, value.GetOwner())
