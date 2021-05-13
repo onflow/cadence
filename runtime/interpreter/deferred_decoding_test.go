@@ -269,6 +269,78 @@ func TestCompositeDeferredDecoding(t *testing.T) {
 		assert.True(t, contains)
 		assert.Equal(t, BoolValue(true), decodeFieldValue)
 	})
+
+	t.Run("callback", func(t *testing.T) {
+
+		stringValue := NewStringValue("hello")
+		stringValue.modified = false
+
+		members := NewStringValueOrderedMap()
+		members.Set("a", stringValue)
+		members.Set("b", BoolValue(true))
+
+		value := NewCompositeValue(
+			utils.TestLocation,
+			"TestResource",
+			common.CompositeKindResource,
+			members,
+			nil,
+		)
+
+		// Encode
+		encoded, _, err := EncodeValue(value, nil, true, nil)
+		require.NoError(t, err)
+
+		// Decode
+
+		type decodeCallback struct {
+			value interface{}
+			path  []string
+		}
+
+		var decodeCallbacks []decodeCallback
+		callback := func(value interface{}, path []string) {
+			valuePath := make([]string, len(path))
+			copy(valuePath, path)
+
+			decodeCallbacks = append(decodeCallbacks, decodeCallback{
+				value: value,
+				path:  valuePath,
+			})
+		}
+
+		decoded, err := DecodeValue(encoded, &testOwner, []string{}, CurrentEncodingVersion, callback)
+		require.NoError(t, err)
+
+		// Callback must be only called once
+		require.Len(t, decodeCallbacks, 1)
+		assert.Equal(t, decoded, decodeCallbacks[0].value)
+		assert.Equal(t, []string{}, decodeCallbacks[0].path)
+
+		// Load the meta info, but not the fields
+		require.IsType(t, &CompositeValue{}, decoded)
+		compositeValue := decoded.(*CompositeValue)
+		compositeValue.QualifiedIdentifier()
+
+		require.Len(t, decodeCallbacks, 1)
+		assert.Equal(t, decoded, decodeCallbacks[0].value)
+		assert.Equal(t, []string{}, decodeCallbacks[0].path)
+
+		// Load fields
+		compositeValue.Fields()
+
+		// Callback must now have all three values
+		require.Len(t, decodeCallbacks, 3)
+
+		assert.Equal(t, decoded, decodeCallbacks[0].value)
+		assert.Equal(t, []string{}, decodeCallbacks[0].path)
+
+		assert.Equal(t, stringValue, decodeCallbacks[1].value)
+		assert.Equal(t, []string{"a"}, decodeCallbacks[1].path)
+
+		assert.Equal(t, BoolValue(true), decodeCallbacks[2].value)
+		assert.Equal(t, []string{"b"}, decodeCallbacks[2].path)
+	})
 }
 
 func BenchmarkCompositeDeferredDecoding(b *testing.B) {

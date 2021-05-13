@@ -628,9 +628,7 @@ func (d *DecoderV4) decodeComposite(path []string) (*CompositeValue, error) {
 	valuePath := make([]string, len(path))
 	copy(valuePath, path)
 
-	compositeValue := NewDeferredCompositeValue(valuePath, content, d.owner)
-	compositeValue.modified = false
-	return compositeValue, nil
+	return NewDeferredCompositeValue(valuePath, content, d.owner, d.decodeCallback), nil
 }
 
 var bigOne = big.NewInt(1)
@@ -1640,7 +1638,7 @@ func (d *DecoderV4) decodeCapabilityStaticType() (StaticType, error) {
 // This also extracts out the fields raw content and cache it separately inside the value.
 //
 func decodeCompositeMetaInfo(v *CompositeValue, content []byte) error {
-	d, err := NewByteDecoder(content, v.Owner, CurrentEncodingVersion, nil)
+	d, err := NewByteDecoder(content, v.Owner, CurrentEncodingVersion, v.decodeCallback)
 	if err != nil {
 		return err
 	}
@@ -1743,7 +1741,7 @@ func decodeCompositeMetaInfo(v *CompositeValue, content []byte) error {
 // decodeCompositeFields decodes fields from the byte content and updates the composite value.
 //
 func decodeCompositeFields(v *CompositeValue, content []byte) error {
-	d, err := NewByteDecoder(content, v.Owner, CurrentEncodingVersion, nil)
+	d, err := NewByteDecoder(content, v.Owner, CurrentEncodingVersion, v.decodeCallback)
 	if err != nil {
 		return err
 	}

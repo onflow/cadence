@@ -6078,6 +6078,10 @@ type CompositeValue struct {
 	// Value's path to be used during decoding.
 	// Only available for decoded values that are not loaded yet.
 	valuePath []string
+
+	// Callback function to be invoked when decoding the fields of this composite value.
+	// Only available for decoded values who's fields are not loaded yet.
+	decodeCallback DecodingCallback
 }
 
 type ComputedField func(*Interpreter) Value
@@ -6104,11 +6108,18 @@ func NewCompositeValue(
 	}
 }
 
-func NewDeferredCompositeValue(path []string, content []byte, owner *common.Address) *CompositeValue {
+func NewDeferredCompositeValue(
+	path []string,
+	content []byte,
+	owner *common.Address,
+	decodeCallback DecodingCallback,
+) *CompositeValue {
 	return &CompositeValue{
-		Owner:     owner,
-		content:   content,
-		valuePath: path,
+		Owner:          owner,
+		content:        content,
+		valuePath:      path,
+		decodeCallback: decodeCallback,
+		modified:       false,
 	}
 }
 
@@ -6190,11 +6201,12 @@ func (v *CompositeValue) Copy() Value {
 			Destructor:          v.Destructor,
 			destroyed:           v.destroyed,
 			// NOTE: new value has no owner
-			Owner:         nil,
-			modified:      true,
-			content:       v.content,
-			fieldsContent: v.fieldsContent,
-			valuePath:     v.valuePath,
+			Owner:          nil,
+			modified:       true,
+			content:        v.content,
+			fieldsContent:  v.fieldsContent,
+			valuePath:      v.valuePath,
+			decodeCallback: v.decodeCallback,
 		}
 	}
 
@@ -6217,11 +6229,12 @@ func (v *CompositeValue) Copy() Value {
 		Destructor:          v.Destructor,
 		destroyed:           v.destroyed,
 		// NOTE: new value has no owner
-		Owner:         nil,
-		modified:      true,
-		content:       v.content,
-		fieldsContent: v.fieldsContent,
-		valuePath:     v.valuePath,
+		Owner:          nil,
+		modified:       true,
+		content:        v.content,
+		fieldsContent:  v.fieldsContent,
+		valuePath:      v.valuePath,
+		decodeCallback: v.decodeCallback,
 	}
 }
 
@@ -6604,6 +6617,7 @@ func (v *CompositeValue) ensureFieldsLoaded() {
 	// Clear the cache and free-up the memory.
 	v.valuePath = nil
 	v.fieldsContent = nil
+	v.decodeCallback = nil
 }
 
 // DictionaryValue
