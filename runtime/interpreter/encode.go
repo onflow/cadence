@@ -370,7 +370,7 @@ func (e *Encoder) Encode(
 	// String
 
 	case StringValue:
-		return e.enc.EncodeString(string(v))
+		return e.enc.EncodeString(v.Str)
 
 	// Collections
 

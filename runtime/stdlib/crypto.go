@@ -154,7 +154,7 @@ func newCryptoContractVerifySignatureFunction(signatureVerifier CryptoSignatureV
 			if !ok {
 				panic(errors.New("verifySignature: invalid tag argument: not a string"))
 			}
-			tag := string(tagStringValue)
+			tag := tagStringValue.Str
 
 			signedData, err := interpreter.ByteArrayValueToByteSlice(invocation.Arguments[2])
 			if err != nil {

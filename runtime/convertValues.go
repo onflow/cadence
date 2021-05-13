@@ -83,7 +83,7 @@ func exportValueWithInterpreter(
 		case interpreter.BoolValue:
 			return cadence.NewBool(bool(v))
 		case interpreter.StringValue:
-			return cadence.NewString(string(v))
+			return cadence.NewString(v.Str)
 		case *interpreter.ArrayValue:
 			return exportArrayValue(v, inter, results)
 		case interpreter.IntValue:

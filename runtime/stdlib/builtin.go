@@ -54,7 +54,7 @@ var AssertFunction = NewStandardLibraryFunction(
 		if !result {
 			var message string
 			if len(invocation.Arguments) > 1 {
-				message = string(invocation.Arguments[1].(interpreter.StringValue))
+				message = invocation.Arguments[1].(interpreter.StringValue).Str
 			}
 			panic(AssertionError{
 				Message:       message,
@@ -95,7 +95,7 @@ var PanicFunction = NewStandardLibraryFunction(
 	func(invocation interpreter.Invocation) interpreter.Value {
 		message := invocation.Arguments[0].(interpreter.StringValue)
 		panic(PanicError{
-			Message:       string(message),
+			Message:       message.Str,
 			LocationRange: invocation.GetLocationRange(),
 		})
 	},

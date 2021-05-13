@@ -1029,7 +1029,7 @@ func (interpreter *Interpreter) visitCondition(condition *ast.Condition) {
 	var message string
 	if condition.Message != nil {
 		messageValue := interpreter.evalExpression(condition.Message)
-		message = string(messageValue.(StringValue))
+		message = messageValue.(StringValue).Str
 	}
 
 	panic(ConditionError{
