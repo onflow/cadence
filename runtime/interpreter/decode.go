@@ -1713,8 +1713,6 @@ func decodeCompositeMetaInfo(v *CompositeValue, content []byte) error {
 		return err
 	}
 
-	v.fieldsContent = fieldsContent
-
 	// Qualified identifier
 
 	// Decode qualified identifier at array index encodedCompositeValueQualifiedIdentifierFieldKey
@@ -1733,6 +1731,7 @@ func decodeCompositeMetaInfo(v *CompositeValue, content []byte) error {
 	v.location = location
 	v.qualifiedIdentifier = qualifiedIdentifier
 	v.kind = kind
+	v.fieldsContent = fieldsContent
 
 	return nil
 }

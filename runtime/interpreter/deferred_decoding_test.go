@@ -141,6 +141,134 @@ func TestCompositeDeferredDecoding(t *testing.T) {
 		assert.True(t, contains)
 		assert.Equal(t, newValue, fieldValue)
 	})
+
+	t.Run("Round trip - without loading", func(t *testing.T) {
+
+		stringValue := NewStringValue("hello")
+		stringValue.modified = false
+
+		members := NewStringValueOrderedMap()
+		members.Set("a", stringValue)
+		members.Set("b", BoolValue(true))
+
+		value := NewCompositeValue(
+			utils.TestLocation,
+			"TestResource",
+			common.CompositeKindResource,
+			members,
+			nil,
+		)
+
+		// Encode
+		encoded, _, err := EncodeValue(value, nil, true, nil)
+		require.NoError(t, err)
+
+		// Decode
+		decoded, err := DecodeValue(encoded, &testOwner, nil, CurrentEncodingVersion, nil)
+		require.NoError(t, err)
+
+		// Value must not be loaded. i.e: the content is available
+		require.IsType(t, &CompositeValue{}, decoded)
+		compositeValue := decoded.(*CompositeValue)
+		assert.NotNil(t, compositeValue.content)
+
+		// Re encode the decoded value
+		reEncoded, _, err := EncodeValue(decoded, nil, true, nil)
+		require.NoError(t, err)
+
+		reDecoded, err := DecodeValue(reEncoded, &testOwner, nil, CurrentEncodingVersion, nil)
+		require.NoError(t, err)
+
+		require.IsType(t, &CompositeValue{}, reDecoded)
+		compositeValue = reDecoded.(*CompositeValue)
+
+		compositeValue.ensureFieldsLoaded()
+
+		// Check the meta info
+		assert.Equal(t, value.Location(), compositeValue.Location())
+		assert.Equal(t, value.QualifiedIdentifier(), compositeValue.QualifiedIdentifier())
+		assert.Equal(t, value.Kind(), compositeValue.Kind())
+
+		// Check the fields
+
+		decodedFields := compositeValue.Fields()
+		require.Equal(t, 2, decodedFields.Len())
+
+		decodeFieldValue, contains := decodedFields.Get("a")
+		assert.True(t, contains)
+		assert.Equal(t, stringValue, decodeFieldValue)
+
+		decodeFieldValue, contains = decodedFields.Get("b")
+		assert.True(t, contains)
+		assert.Equal(t, BoolValue(true), decodeFieldValue)
+	})
+
+	t.Run("Round trip - partially loaded", func(t *testing.T) {
+
+		stringValue := NewStringValue("hello")
+		stringValue.modified = false
+
+		members := NewStringValueOrderedMap()
+		members.Set("a", stringValue)
+		members.Set("b", BoolValue(true))
+
+		value := NewCompositeValue(
+			utils.TestLocation,
+			"TestResource",
+			common.CompositeKindResource,
+			members,
+			nil,
+		)
+
+		// Encode
+		encoded, _, err := EncodeValue(value, nil, true, nil)
+		require.NoError(t, err)
+
+		// Decode
+		decoded, err := DecodeValue(encoded, &testOwner, nil, CurrentEncodingVersion, nil)
+		require.NoError(t, err)
+
+		// Partially loaded the value.
+
+		require.IsType(t, &CompositeValue{}, decoded)
+		compositeValue := decoded.(*CompositeValue)
+		// This will only load the meta info, but not the fields
+		compositeValue.QualifiedIdentifier()
+
+		assert.Nil(t, compositeValue.content)
+		assert.NotNil(t, compositeValue.fieldsContent)
+
+		// Re encode the decoded value
+		reEncoded, _, err := EncodeValue(decoded, nil, true, nil)
+		require.NoError(t, err)
+
+		// Decode back the value
+		reDecoded, err := DecodeValue(reEncoded, &testOwner, nil, CurrentEncodingVersion, nil)
+		require.NoError(t, err)
+
+		require.IsType(t, &CompositeValue{}, reDecoded)
+		compositeValue = reDecoded.(*CompositeValue)
+
+		compositeValue.ensureFieldsLoaded()
+
+		// Check the meta info
+		assert.Equal(t, value.Location(), compositeValue.Location())
+		assert.Equal(t, value.QualifiedIdentifier(), compositeValue.QualifiedIdentifier())
+		assert.Equal(t, value.Kind(), compositeValue.Kind())
+
+		// Check the fields
+
+		decodedFields := compositeValue.Fields()
+		require.Equal(t, 2, decodedFields.Len())
+
+		decodeFieldValue, contains := decodedFields.Get("a")
+		assert.True(t, contains)
+		assert.Equal(t, stringValue, decodeFieldValue)
+
+		decodeFieldValue, contains = decodedFields.Get("b")
+		assert.True(t, contains)
+		assert.Equal(t, BoolValue(true), decodeFieldValue)
+	})
 }
 
 func BenchmarkCompositeDeferredDecoding(b *testing.B) {
@@ -184,6 +312,20 @@ func BenchmarkCompositeDeferredDecoding(b *testing.B) {
 			require.True(b, ok)
 		}
 	})
+
+	b.Run("Re-encode decoded", func(b *testing.B) {
+		b.ReportAllocs()
+
+		decoded, err := DecodeValue(encoded, &testOwner, nil, CurrentEncodingVersion, nil)
+		require.NoError(b, err)
+
+		b.ResetTimer()
+
+		for i := 0; i < b.N; i++ {
+			_, _, err = EncodeValue(decoded, nil, true, nil)
+			require.NoError(b, err)
+		}
+	})
 }
 
 var newTestLargeCompositeValue = func(id int) *CompositeValue {
@@ -196,7 +338,7 @@ var newTestLargeCompositeValue = func(id int) *CompositeValue {
 	address := NewCompositeValue(
 		utils.TestLocation,
 		"Address",
-		common.CompositeKindResource,
+		common.CompositeKindStructure,
 		addressFields,
 		nil,
 	)
@@ -210,8 +352,8 @@ var newTestLargeCompositeValue = func(id int) *CompositeValue {
 
 	return NewCompositeValue(
 		utils.TestLocation,
-		"TestResource",
-		common.CompositeKindResource,
+		"Person",
+		common.CompositeKindStructure,
 		members,
 		nil,
 	)
