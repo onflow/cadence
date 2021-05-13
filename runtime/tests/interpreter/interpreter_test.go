@@ -736,6 +736,7 @@ func TestInterpretStringSlicing(t *testing.T) {
 		{"abcdef", 2, 3, "c", nil},
 		{"abcdef", 5, 6, "f", nil},
 		{"abcdef", 1, 6, "bcdef", nil},
+		// Invalid indices
 		{"abcdef", -1, 0, "", interpreter.StringIndexOutOfBoundsError{
 			Index:         -1,
 			Length:        6,
@@ -751,6 +752,16 @@ func TestInterpretStringSlicing(t *testing.T) {
 			Length:        6,
 			LocationRange: locationRange,
 		}},
+		// Unicode: indices are based on characters = grapheme clusters
+		{"cafe\\u{301}b", 0, 5, "cafe\u0301b", nil},
+		{"cafe\\u{301}ba\\u{308}", 0, 6, "cafe\u0301ba\u0308", nil},
+		{"cafe\\u{301}ba\\u{308}be", 0, 8, "cafe\u0301ba\u0308be", nil},
+		{"cafe\\u{301}b", 3, 5, "e\u0301b", nil},
+		{"cafe\\u{301}ba\\u{308}", 3, 6, "e\u0301ba\u0308", nil},
+		{"cafe\\u{301}ba\\u{308}be", 3, 8, "e\u0301ba\u0308be", nil},
+		{"cafe\\u{301}b", 4, 5, "b", nil},
+		{"cafe\\u{301}ba\\u{308}", 4, 6, "ba\u0308", nil},
+		{"cafe\\u{301}ba\\u{308}be", 4, 8, "ba\u0308be", nil},
 	}
 
 	for _, test := range tests {

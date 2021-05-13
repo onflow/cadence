@@ -417,8 +417,25 @@ func (v *StringValue) Slice(from IntValue, to IntValue, getLocationRange func() 
 	toIndex := to.ToInt()
 	v.checkBoundsInclusiveLength(toIndex, getLocationRange)
 
-	// TODO: use grapheme clusters
-	return NewStringValue(v.Str[fromIndex:toIndex])
+	if fromIndex == toIndex {
+		return NewStringValue("")
+	}
+
+	v.prepareGraphemes()
+
+	j := 0
+
+	for ; j <= fromIndex; j++ {
+		v.graphemes.Next()
+	}
+	start, _ := v.graphemes.Positions()
+
+	for ; j < toIndex; j++ {
+		v.graphemes.Next()
+	}
+	_, end := v.graphemes.Positions()
+
+	return NewStringValue(v.Str[start:end])
 }
 
 func (v *StringValue) checkBounds(index int, getLocationRange func() LocationRange) {
