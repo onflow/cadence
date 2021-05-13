@@ -320,8 +320,13 @@ func (v BoolValue) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType
 
 type StringValue struct {
 	Str string
+	// length is the cached length of the string, based on grapheme clusters.
 	// a negative value indicates the length has not been initialized, see Length()
 	length int
+	// graphemes is a grapheme cluster segmentation iterator,
+	// which is initialized lazily and reused/reset in functions
+	// that are based on grapheme clusters
+	graphemes *uniseg.Graphemes
 }
 
 func NewStringValue(str string) StringValue {
@@ -422,15 +427,13 @@ func (v StringValue) Get(_ *Interpreter, getLocationRange func() LocationRange, 
 	index := key.(NumberValue).ToInt()
 	v.checkBounds(index, getLocationRange)
 
-	// TODO: optimize grapheme clusters to prevent unnecessary iteration
-	graphemes := uniseg.NewGraphemes(v.Str)
-	graphemes.Next()
+	v.prepareGraphemes()
 
-	for j := 0; j < index; j++ {
-		graphemes.Next()
+	for j := 0; j <= index; j++ {
+		v.graphemes.Next()
 	}
 
-	char := graphemes.Str()
+	char := v.graphemes.Str()
 
 	return NewStringValue(char)
 }
@@ -477,7 +480,12 @@ func (v StringValue) GetMember(_ *Interpreter, _ func() LocationRange, name stri
 //
 func (v *StringValue) Length() int {
 	if v.length < 0 {
-		v.length = uniseg.GraphemeClusterCount(v.Str)
+		var length int
+		v.prepareGraphemes()
+		for v.graphemes.Next() {
+			length++
+		}
+		v.length = length
 	}
 	return v.length
 }
@@ -507,6 +515,14 @@ func (StringValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _
 func (StringValue) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType, _ TypeConformanceResults) bool {
 	_, ok := dynamicType.(StringDynamicType)
 	return ok
+}
+
+func (v *StringValue) prepareGraphemes() {
+	if v.graphemes == nil {
+		v.graphemes = uniseg.NewGraphemes(v.Str)
+	} else {
+		v.graphemes.Reset()
+	}
 }
 
 // ArrayValue

@@ -4159,11 +4159,16 @@ func TestInterpretStringLength(t *testing.T) {
 
 	inter := parseCheckAndInterpret(t, `
       let x = "cafe\u{301}".length
+      let y = x
     `)
 
 	assert.Equal(t,
 		interpreter.NewIntValueFromInt64(4),
 		inter.Globals["x"].GetValue(),
+	)
+	assert.Equal(t,
+		interpreter.NewIntValueFromInt64(4),
+		inter.Globals["y"].GetValue(),
 	)
 }
 
