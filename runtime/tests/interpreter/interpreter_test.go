@@ -719,6 +719,14 @@ func TestInterpretStringSlicing(t *testing.T) {
 
 	t.Parallel()
 
+	locationRange := interpreter.LocationRange{
+		Location: TestLocation,
+		Range: ast.Range{
+			StartPos: ast.Position{Offset: 116, Line: 4, Column: 31},
+			EndPos:   ast.Position{Offset: 141, Line: 4, Column: 56},
+		},
+	}
+
 	tests := []stringSliceTest{
 		{"abcdef", 0, 6, "abcdef", nil},
 		{"abcdef", 0, 0, "", nil},
@@ -727,9 +735,22 @@ func TestInterpretStringSlicing(t *testing.T) {
 		{"abcdef", 1, 2, "b", nil},
 		{"abcdef", 2, 3, "c", nil},
 		{"abcdef", 5, 6, "f", nil},
-		// TODO: check invalid arguments
-		// {"abcdef", -1, 0, "", &InvalidIndexError}
-		// },
+		{"abcdef", 1, 6, "bcdef", nil},
+		{"abcdef", -1, 0, "", interpreter.StringIndexOutOfBoundsError{
+			Index:         -1,
+			Length:        6,
+			LocationRange: locationRange,
+		}},
+		{"abcdef", 0, -1, "", interpreter.StringIndexOutOfBoundsError{
+			Index:         -1,
+			Length:        6,
+			LocationRange: locationRange,
+		}},
+		{"abcdef", 0, 10, "", interpreter.StringIndexOutOfBoundsError{
+			Index:         10,
+			Length:        6,
+			LocationRange: locationRange,
+		}},
 	}
 
 	for _, test := range tests {
@@ -764,7 +785,7 @@ func TestInterpretStringSlicing(t *testing.T) {
 				)
 				err = err.(interpreter.Error).Unwrap()
 
-				assert.IsType(t, test.expectedError, err)
+				assert.Equal(t, test.expectedError, err)
 			}
 		})
 	}

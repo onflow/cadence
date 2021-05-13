@@ -412,7 +412,10 @@ func (v *StringValue) Concat(other ConcatenatableValue) Value {
 
 func (v *StringValue) Slice(from IntValue, to IntValue, getLocationRange func() LocationRange) Value {
 	fromIndex := from.ToInt()
+	v.checkBoundsInclusiveLength(fromIndex, getLocationRange)
+
 	toIndex := to.ToInt()
+	v.checkBoundsInclusiveLength(toIndex, getLocationRange)
 
 	// TODO: use grapheme clusters
 	return NewStringValue(v.Str[fromIndex:toIndex])
@@ -422,6 +425,18 @@ func (v *StringValue) checkBounds(index int, getLocationRange func() LocationRan
 	length := v.Length()
 
 	if index < 0 || index >= length {
+		panic(StringIndexOutOfBoundsError{
+			Index:         index,
+			Length:        length,
+			LocationRange: getLocationRange(),
+		})
+	}
+}
+
+func (v *StringValue) checkBoundsInclusiveLength(index int, getLocationRange func() LocationRange) {
+	length := v.Length()
+
+	if index < 0 || index > length {
 		panic(StringIndexOutOfBoundsError{
 			Index:         index,
 			Length:        length,
