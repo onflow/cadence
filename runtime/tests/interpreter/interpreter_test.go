@@ -762,6 +762,8 @@ func TestInterpretStringSlicing(t *testing.T) {
 		{"cafe\\u{301}b", 4, 5, "b", nil},
 		{"cafe\\u{301}ba\\u{308}", 4, 6, "ba\u0308", nil},
 		{"cafe\\u{301}ba\\u{308}be", 4, 8, "ba\u0308be", nil},
+		{"cafe\\u{301}ba\\u{308}be", 3, 4, "e\u0301", nil},
+		{"cafe\\u{301}ba\\u{308}be", 5, 6, "a\u0308", nil},
 	}
 
 	for _, test := range tests {
