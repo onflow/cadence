@@ -782,6 +782,16 @@ func (e *Encoder) encodeArray(
 	path []string,
 	deferrals *EncodingDeferrals,
 ) error {
+
+	if v.content != nil {
+		err := e.enc.EncodeRawBytes(v.content)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	}
+
 	elements := v.Elements()
 	err := e.enc.EncodeArrayHead(uint64(len(elements)))
 	if err != nil {

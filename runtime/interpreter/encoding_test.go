@@ -86,9 +86,7 @@ func testEncodeDecode(t *testing.T, test encodeDecodeTest) {
 		require.NoError(t, err)
 
 		// Make sure the content is built.
-		if composite, ok := decoded.(*CompositeValue); ok {
-			composite.Fields()
-		}
+		decoded.String()
 
 		if !test.deferred || (test.deferred && test.decodedValue != nil) {
 			expectedValue := test.value
@@ -5331,7 +5329,7 @@ func TestDecodeCallback(t *testing.T) {
 
 	var decodeCallbacks []decodeCallback
 
-	_, err := DecodeValue(data, nil, nil, CurrentEncodingVersion, func(value interface{}, path []string) {
+	decoded, err := DecodeValue(data, nil, nil, CurrentEncodingVersion, func(value interface{}, path []string) {
 		decodeCallbacks = append(decodeCallbacks, decodeCallback{
 			value: value,
 			path:  path,
@@ -5339,17 +5337,20 @@ func TestDecodeCallback(t *testing.T) {
 	})
 	require.NoError(t, err)
 
+	// build the content
+	decoded.String()
+
 	require.Equal(t,
 		[]decodeCallback{
 			{
-				value: Int8Value(42),
-				path:  []string{"0"},
-			},
-			{
 				value: &ArrayValue{
-					Values: []Value{Int8Value(42)},
+					values: []Value{Int8Value(42)},
 				},
 				path: nil,
+			},
+			{
+				value: Int8Value(42),
+				path:  []string{"0"},
 			},
 		},
 		decodeCallbacks,

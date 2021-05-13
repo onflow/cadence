@@ -523,7 +523,20 @@ type ArrayValue struct {
 	modified bool
 
 	// Raw element content cache for decoded values.
-	elementsContent []byte
+	// Only available for decoded values who's elements are not loaded yet.
+	content []byte
+
+	// Value's path to be used during decoding.
+	// Only available for decoded values that are not loaded yet.
+	valuePath []string
+
+	// Callback function to be invoked when decoding the fields of this composite value.
+	// Only available for decoded values who's fields are not loaded yet.
+	decodeCallback DecodingCallback
+
+	// Encoding version of the raw content and raw fieldsContent of this value.
+	// Only available for decoded values who's fields are not loaded yet.
+	encodingVersion uint16
 }
 
 func NewArrayValue(values []Value) *ArrayValue {
@@ -547,6 +560,23 @@ func NewArrayValueUnownedNonCopying(values ...Value) *ArrayValue {
 		values:   values,
 		modified: true,
 		Owner:    nil,
+	}
+}
+
+func NewDeferredArrayValue(
+	path []string,
+	content []byte,
+	owner *common.Address,
+	callback DecodingCallback,
+	version uint16,
+) *ArrayValue {
+	return &ArrayValue{
+		valuePath:       path,
+		content:         content,
+		Owner:           owner,
+		modified:        false,
+		decodeCallback:  callback,
+		encodingVersion: version,
 	}
 }
 
@@ -584,12 +614,15 @@ func (v *ArrayValue) StaticType() StaticType {
 func (v *ArrayValue) Copy() Value {
 	// TODO: optimize, use copy-on-write
 
-	if v.elementsContent != nil {
+	if v.content != nil {
 		value := &ArrayValue{
 			values:          nil,
 			modified:        true,
 			Owner:           nil,
-			elementsContent: v.elementsContent,
+			content:         v.content,
+			valuePath:       v.valuePath,
+			decodeCallback:  v.decodeCallback,
+			encodingVersion: v.encodingVersion,
 		}
 
 		return value
@@ -910,14 +943,20 @@ func (v *ArrayValue) Elements() []Value {
 
 // Ensures the elements of this array value are loaded.
 func (v *ArrayValue) ensureElementsLoaded() {
-	if v.elementsContent == nil {
+	if v.content == nil {
 		return
 	}
 
-	// TODO: decode the content and update the elements
+	err := decodeArrayElements(v, v.content)
+	if err != nil {
+		panic(err)
+	}
 
-	// Clear the byte cache
-	v.elementsContent = nil
+	// Reset the cache
+	v.content = nil
+	v.valuePath = nil
+	v.decodeCallback = nil
+	v.encodingVersion = 0
 }
 
 // NumberValue
