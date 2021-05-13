@@ -24,7 +24,7 @@ PATH := $(PATH):$(GOPATH)/bin
 .PHONY: test
 test:
 	# test all packages
-	GO111MODULE=on go test $(if $(JSON_OUTPUT),-json,) -parallel 8 -race ./...
+	GO111MODULE=on go test -coverprofile=cover.txt -covermode=atomic -parallel 8 -race ./...
 	cd ./languageserver && make test
 
 .PHONY: build
