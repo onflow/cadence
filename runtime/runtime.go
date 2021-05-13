@@ -448,6 +448,10 @@ func (r *interpreterRuntime) InvokeContractFunction(
 		return nil, newError(err, context)
 	}
 
+
+	// Write back all stored values, which were actually just cached, back into storage
+	runtimeStorage.writeCached(inter)
+
 	return ExportValue(value, inter), nil
 }
 
