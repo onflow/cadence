@@ -4139,23 +4139,31 @@ func TestInterpretReferenceFailableDowncasting(t *testing.T) {
 	})
 }
 
-func TestInterpretLength(t *testing.T) {
+func TestInterpretArrayLength(t *testing.T) {
+
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+      let y = [1, 2, 3].length
+    `)
+
+	assert.Equal(t,
+		interpreter.NewIntValueFromInt64(3),
+		inter.Globals["y"].GetValue(),
+	)
+}
+
+func TestInterpretStringLength(t *testing.T) {
 
 	t.Parallel()
 
 	inter := parseCheckAndInterpret(t, `
       let x = "cafe\u{301}".length
-      let y = [1, 2, 3].length
     `)
 
 	assert.Equal(t,
 		interpreter.NewIntValueFromInt64(4),
 		inter.Globals["x"].GetValue(),
-	)
-
-	assert.Equal(t,
-		interpreter.NewIntValueFromInt64(3),
-		inter.Globals["y"].GetValue(),
 	)
 }
 

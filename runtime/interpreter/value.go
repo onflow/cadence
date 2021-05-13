@@ -320,10 +320,16 @@ func (v BoolValue) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType
 
 type StringValue struct {
 	Str string
+	// a negative value indicates the length has not been initialized, see Length()
+	length int
 }
 
 func NewStringValue(str string) StringValue {
-	return StringValue{Str: str}
+	return StringValue{
+		Str: str,
+		// a negative value indicates the length has not been initialized, see Length()
+		length: -1,
+	}
 }
 
 func (StringValue) IsValue() {}
@@ -436,8 +442,8 @@ func (v StringValue) Set(_ *Interpreter, _ func() LocationRange, key Value, valu
 func (v StringValue) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
 	switch name {
 	case "length":
-		count := v.Length()
-		return NewIntValueFromInt64(int64(count))
+		length := v.Length()
+		return NewIntValueFromInt64(int64(length))
 
 	case "concat":
 		return NewHostFunctionValue(
@@ -469,8 +475,11 @@ func (v StringValue) GetMember(_ *Interpreter, _ func() LocationRange, name stri
 
 // Length returns the number of characters (grapheme clusters)
 //
-func (v StringValue) Length() int {
-	return uniseg.GraphemeClusterCount(v.Str)
+func (v *StringValue) Length() int {
+	if v.length < 0 {
+		v.length = uniseg.GraphemeClusterCount(v.Str)
+	}
+	return v.length
 }
 
 // DecodeHex hex-decodes this string and returns an array of UInt8 values
