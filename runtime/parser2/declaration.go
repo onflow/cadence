@@ -588,7 +588,7 @@ func isNextTokenCommaOrFrom(p *parser) bool {
 }
 
 func parseHexadecimalLocation(literal string) common.AddressLocation {
-	bytes := []byte(strings.Replace(literal[2:], "_", "", -1))
+	bytes := []byte(strings.ReplaceAll(literal[2:], "_", ""))
 
 	length := len(bytes)
 	if length%2 == 1 {

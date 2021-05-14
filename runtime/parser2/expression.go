@@ -1497,7 +1497,7 @@ func parseIntegerLiteral(p *parser, literal, text string, kind IntegerLiteralKin
 		report(InvalidNumberLiteralKindTrailingUnderscore)
 	}
 
-	withoutUnderscores := strings.Replace(text, "_", "", -1)
+	withoutUnderscores := strings.ReplaceAll(text, "_", "")
 
 	var value *big.Int
 	var base int
@@ -1532,7 +1532,7 @@ func parseIntegerLiteral(p *parser, literal, text string, kind IntegerLiteralKin
 }
 
 func parseFixedPointPart(part string) (integer *big.Int, scale uint) {
-	withoutUnderscores := strings.Replace(part, "_", "", -1)
+	withoutUnderscores := strings.ReplaceAll(part, "_", "")
 	integer, _ = new(big.Int).SetString(withoutUnderscores, 10)
 	if integer == nil {
 		integer = new(big.Int)

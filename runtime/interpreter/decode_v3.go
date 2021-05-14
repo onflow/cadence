@@ -285,6 +285,7 @@ func (d *DecoderV3) decodeArray(v []interface{}, path []string) (*ArrayValue, er
 	values := make([]Value, len(v))
 
 	for i, value := range v {
+		//nolint:gocritic
 		valuePath := append(path[:], strconv.Itoa(i))
 		res, err := d.decodeValue(value, valuePath)
 		if err != nil {
@@ -325,6 +326,7 @@ func (d *DecoderV3) decodeDictionary(v interface{}, path []string) (*DictionaryV
 		)
 	}
 
+	//nolint:gocritic
 	keysPath := append(path[:], dictionaryKeyPathPrefix)
 	keys, err := d.decodeArray(encodedKeys, keysPath)
 	if err != nil {
@@ -466,6 +468,7 @@ func (d *DecoderV3) decodeDictionary(v interface{}, path []string) (*DictionaryV
 				)
 			}
 
+			//nolint:gocritic
 			valuePath := append(path[:], dictionaryValuePathPrefix, keyString)
 			decodedValue, err := d.decodeValue(value, valuePath)
 			if err != nil {
@@ -715,6 +718,7 @@ func (d *DecoderV3) decodeComposite(v interface{}, path []string) (*CompositeVal
 
 		value := encodedFields[fieldName]
 
+		//nolint:gocritic
 		valuePath := append(path[:], fieldName)
 		decodedValue, err := d.decodeValue(value, valuePath)
 		if err != nil {

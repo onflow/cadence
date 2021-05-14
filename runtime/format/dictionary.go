@@ -22,7 +22,10 @@ import (
 	"strings"
 )
 
-func Dictionary(pairs []struct{Key string; Value string}) string {
+func Dictionary(pairs []struct {
+	Key   string
+	Value string
+}) string {
 	var builder strings.Builder
 	builder.WriteRune('{')
 	for i, p := range pairs {

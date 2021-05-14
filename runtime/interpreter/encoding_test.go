@@ -3997,6 +3997,7 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 			Type:       ConvertSemaToPrimitiveStaticType(sema.BoolType),
 		}
 
+		//nolint:gocritic
 		encoded := append(
 			expectedLinkEncodingPrefix[:],
 			// tag
@@ -4004,6 +4005,7 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 			0x6,
 		)
 
+		//nolint:gocritic
 		version3Encoded := append(
 			expectedVersion3LinkEncodingPrefix[:],
 			// tag
@@ -4035,6 +4037,7 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 				Type: PrimitiveStaticTypeBool,
 			},
 		}
+
 		encodedType := []byte{
 			// tag
 			0xd8, cborTagOptionalStaticType,
@@ -4042,20 +4045,26 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 			0xd8, cborTagPrimitiveStaticType,
 			0x6,
 		}
+
+		//nolint:gocritic
 		encoded := append(
 			expectedLinkEncodingPrefix[:],
 			encodedType...,
 		)
+
+		//nolint:gocritic
 		version3Encoded := append(
 			expectedVersion3LinkEncodingPrefix[:],
 			encodedType...,
 		)
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				value:   value,
 				encoded: encoded,
 			},
 		)
+
 		testEncodeDecodeOldFormat(t,
 			encodeDecodeTest{
 				value:   value,
@@ -4074,6 +4083,8 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 				QualifiedIdentifier: "SimpleStruct",
 			},
 		}
+
+		//nolint:gocritic
 		encoded := append(
 			expectedLinkEncodingPrefix[:],
 			// tag
@@ -4093,6 +4104,8 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 			// SimpleStruct
 			0x53, 0x69, 0x6d, 0x70, 0x6c, 0x65, 0x53, 0x74, 0x72, 0x75, 0x63, 0x74,
 		)
+
+		//nolint:gocritic
 		version3Encoded := append(
 			expectedVersion3LinkEncodingPrefix[:],
 			// tag
@@ -4114,12 +4127,14 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 			// SimpleStruct
 			0x53, 0x69, 0x6d, 0x70, 0x6c, 0x65, 0x53, 0x74, 0x72, 0x75, 0x63, 0x74,
 		)
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				value:   value,
 				encoded: encoded,
 			},
 		)
+
 		testEncodeDecodeOldFormat(t,
 			encodeDecodeTest{
 				value:   value,
@@ -4224,6 +4239,8 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 				QualifiedIdentifier: "SimpleInterface",
 			},
 		}
+
+		//nolint:gocritic
 		encoded := append(
 			expectedLinkEncodingPrefix[:],
 			// tag
@@ -4243,6 +4260,8 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 			// SimpleInterface
 			0x53, 0x69, 0x6d, 0x70, 0x6c, 0x65, 0x49, 0x6e, 0x74, 0x65, 0x72, 0x66, 0x61, 0x63, 0x65,
 		)
+
+		//nolint:gocritic
 		version3Encoded := append(
 			expectedVersion3LinkEncodingPrefix[:],
 			// tag
@@ -4264,12 +4283,14 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 			// SimpleInterface
 			0x53, 0x69, 0x6d, 0x70, 0x6c, 0x65, 0x49, 0x6e, 0x74, 0x65, 0x72, 0x66, 0x61, 0x63, 0x65,
 		)
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				value:   value,
 				encoded: encoded,
 			},
 		)
+
 		testEncodeDecodeOldFormat(t,
 			encodeDecodeTest{
 				value:   value,
@@ -4375,6 +4396,8 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 				Type: PrimitiveStaticTypeBool,
 			},
 		}
+
+		//nolint:gocritic
 		encoded := append(
 			expectedLinkEncodingPrefix[:],
 			// tag
@@ -4383,6 +4406,8 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 			0xd8, cborTagPrimitiveStaticType,
 			0x6,
 		)
+
+		//nolint:gocritic
 		version3Encoded := append(
 			expectedVersion3LinkEncodingPrefix[:],
 			// tag
@@ -4391,12 +4416,14 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 			0xd8, cborTagPrimitiveStaticType,
 			0x6,
 		)
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				value:   value,
 				encoded: encoded,
 			},
 		)
+
 		testEncodeDecodeOldFormat(t,
 			encodeDecodeTest{
 				value:   value,
@@ -4415,6 +4442,8 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 				Size: 42,
 			},
 		}
+
+		//nolint:gocritic
 		encoded := append(
 			expectedLinkEncodingPrefix[:],
 			// tag
@@ -4427,6 +4456,8 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 			0xd8, cborTagPrimitiveStaticType,
 			0x6,
 		)
+
+		//nolint:gocritic
 		version3Encoded := append(
 			expectedVersion3LinkEncodingPrefix[:],
 			// tag
@@ -4443,12 +4474,14 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 			0xd8, cborTagPrimitiveStaticType,
 			0x6,
 		)
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				value:   value,
 				encoded: encoded,
 			},
 		)
+
 		testEncodeDecodeOldFormat(t,
 			encodeDecodeTest{
 				value:   value,
@@ -4467,6 +4500,8 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 				Type:       PrimitiveStaticTypeBool,
 			},
 		}
+
+		//nolint:gocritic
 		encoded := append(
 			expectedLinkEncodingPrefix[:],
 			// tag
@@ -4479,6 +4514,8 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 			0xd8, cborTagPrimitiveStaticType,
 			0x6,
 		)
+
+		//nolint:gocritic
 		version3Encoded := append(
 			expectedVersion3LinkEncodingPrefix[:],
 			// tag
@@ -4495,12 +4532,14 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 			0xd8, cborTagPrimitiveStaticType,
 			0x6,
 		)
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				value:   value,
 				encoded: encoded,
 			},
 		)
+
 		testEncodeDecodeOldFormat(t,
 			encodeDecodeTest{
 				value:   value,
@@ -4519,6 +4558,8 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 				Type:       PrimitiveStaticTypeBool,
 			},
 		}
+
+		//nolint:gocritic
 		encoded := append(
 			expectedLinkEncodingPrefix[:],
 			// tag
@@ -4531,6 +4572,8 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 			0xd8, cborTagPrimitiveStaticType,
 			0x6,
 		)
+
+		//nolint:gocritic
 		version3Encoded := append(
 			expectedVersion3LinkEncodingPrefix[:],
 			// tag
@@ -4547,12 +4590,14 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 			0xd8, cborTagPrimitiveStaticType,
 			0x6,
 		)
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				value:   value,
 				encoded: encoded,
 			},
 		)
+
 		testEncodeDecodeOldFormat(t,
 			encodeDecodeTest{
 				value:   value,
@@ -4571,6 +4616,8 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 				ValueType: PrimitiveStaticTypeString,
 			},
 		}
+
+		//nolint:gocritic
 		encoded := append(
 			expectedLinkEncodingPrefix[:],
 			// tag
@@ -4584,6 +4631,8 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 			0xd8, cborTagPrimitiveStaticType,
 			0x8,
 		)
+
+		//nolint:gocritic
 		version3Encoded := append(
 			expectedVersion3LinkEncodingPrefix[:],
 			// tag
@@ -4601,12 +4650,14 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 			0xd8, cborTagPrimitiveStaticType,
 			0x8,
 		)
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				value:   value,
 				encoded: encoded,
 			},
 		)
+
 		testEncodeDecodeOldFormat(t,
 			encodeDecodeTest{
 				value:   value,
@@ -4637,6 +4688,8 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 				},
 			},
 		}
+
+		//nolint:gocritic
 		encoded := append(
 			expectedLinkEncodingPrefix[:],
 			// tag
@@ -4694,6 +4747,8 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 			// I2
 			0x49, 0x32,
 		)
+
+		//nolint:gocritic
 		version3Encoded := append(
 			expectedVersion3LinkEncodingPrefix[:],
 			// tag
@@ -4761,12 +4816,14 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 			// I2
 			0x49, 0x32,
 		)
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				value:   value,
 				encoded: encoded,
 			},
 		)
+
 		testEncodeDecodeOldFormat(t,
 			encodeDecodeTest{
 				value:   value,
@@ -4782,6 +4839,8 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 			TargetPath: publicPathValue,
 			Type:       CapabilityStaticType{},
 		}
+
+		//nolint:gocritic
 		encoded := append(
 			expectedLinkEncodingPrefix[:],
 			// tag
@@ -4789,6 +4848,8 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 			// null
 			0xf6,
 		)
+
+		//nolint:gocritic
 		version3Encoded := append(
 			expectedVersion3LinkEncodingPrefix[:],
 			// tag
@@ -4796,12 +4857,14 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 			// null
 			0xf6,
 		)
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				value:   value,
 				encoded: encoded,
 			},
 		)
+
 		testEncodeDecodeOldFormat(t,
 			encodeDecodeTest{
 				value:   value,
@@ -4819,6 +4882,8 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 				BorrowType: PrimitiveStaticTypeBool,
 			},
 		}
+
+		//nolint:gocritic
 		encoded := append(
 			expectedLinkEncodingPrefix[:],
 			// tag
@@ -4827,6 +4892,8 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 			0xd8, cborTagPrimitiveStaticType,
 			0x6,
 		)
+
+		//nolint:gocritic
 		version3Encoded := append(
 			expectedVersion3LinkEncodingPrefix[:],
 			// tag
@@ -4835,12 +4902,14 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 			0xd8, cborTagPrimitiveStaticType,
 			0x6,
 		)
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				value:   value,
 				encoded: encoded,
 			},
 		)
+
 		testEncodeDecodeOldFormat(t,
 			encodeDecodeTest{
 				value:   value,

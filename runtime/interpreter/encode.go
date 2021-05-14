@@ -30,8 +30,6 @@ import (
 	"github.com/onflow/cadence/runtime/common"
 )
 
-type cborArray = []interface{}
-
 // Cadence needs to encode different kinds of objects in CBOR, for instance,
 // dictionaries, structs, resources, etc.
 //
@@ -790,6 +788,7 @@ func (e *Encoder) encodeArray(
 	}
 
 	// Pre-allocate and reuse valuePath.
+	//nolint:gocritic
 	valuePath := append(path, "")
 
 	lastValuePathIndex := len(path)
@@ -845,6 +844,7 @@ func (e *Encoder) encodeDictionaryValue(
 		return err
 	}
 
+	//nolint:gocritic
 	keysPath := append(path, dictionaryKeyPathPrefix)
 
 	// Encode keys (as array) at array index encodedDictionaryValueKeysFieldKey
@@ -885,6 +885,7 @@ func (e *Encoder) encodeDictionaryValue(
 	}
 
 	// Pre-allocate and reuse valuePath.
+	//nolint:gocritic
 	valuePath := append(path, dictionaryValuePathPrefix, "")
 
 	lastValuePathIndex := len(path) + 1
@@ -1014,6 +1015,7 @@ func (e *Encoder) encodeCompositeValue(
 	}
 
 	// Pre-allocate and reuse valuePath.
+	//nolint:gocritic
 	valuePath := append(path, "")
 
 	lastValuePathIndex := len(path)

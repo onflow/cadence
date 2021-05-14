@@ -69,8 +69,8 @@ func TestInterpretToString(t *testing.T) {
 		t.Run(ty.String(), func(t *testing.T) {
 
 			var literal string
- 			var expected interpreter.Value
- 			
+			var expected interpreter.Value
+
 			isSigned := sema.IsSubType(ty, sema.SignedFixedPointType)
 
 			if isSigned {
