@@ -341,6 +341,68 @@ func TestCompositeDeferredDecoding(t *testing.T) {
 		assert.Equal(t, BoolValue(true), decodeCallbacks[2].value)
 		assert.Equal(t, []string{"b"}, decodeCallbacks[2].path)
 	})
+
+	t.Run("re-encoding", func(t *testing.T) {
+
+		stringValue := NewStringValue("hello")
+		stringValue.modified = false
+
+		members := NewStringValueOrderedMap()
+		members.Set("a", stringValue)
+		members.Set("b", BoolValue(true))
+
+		value := NewCompositeValue(
+			utils.TestLocation,
+			"TestResource",
+			common.CompositeKindResource,
+			members,
+			nil,
+		)
+
+		// Encode
+		encoded, _, err := EncodeValue(value, nil, true, nil)
+		require.NoError(t, err)
+
+		// Decode
+		decoded, err := DecodeValue(encoded, &testOwner, nil, CurrentEncodingVersion, nil)
+		require.NoError(t, err)
+
+		// Partially loaded the value.
+
+		require.IsType(t, &CompositeValue{}, decoded)
+		compositeValue := decoded.(*CompositeValue)
+		// This will only load the meta info, but not the fields
+		compositeValue.QualifiedIdentifier()
+
+		assert.Nil(t, compositeValue.content)
+		assert.NotNil(t, compositeValue.fieldsContent)
+
+		// Re encode the decoded value
+		type encodeCallback struct {
+			value Value
+			path  []string
+		}
+
+		var encodeCallbacks []encodeCallback
+		callback := func(value Value, path []string) {
+			valuePath := make([]string, len(path))
+			copy(valuePath, path)
+
+			encodeCallbacks = append(encodeCallbacks, encodeCallback{
+				value: value,
+				path:  valuePath,
+			})
+		}
+
+		_, _, err = EncodeValue(decoded, nil, true, callback)
+		require.NoError(t, err)
+
+		// Elements are not loaded, so they must not be encoded again.
+		// i.e: Callback must be only called once.
+		require.Len(t, encodeCallbacks, 1)
+		assert.Equal(t, decoded, encodeCallbacks[0].value)
+		assert.Equal(t, []string{}, encodeCallbacks[0].path)
+	})
 }
 
 func BenchmarkCompositeDeferredDecoding(b *testing.B) {

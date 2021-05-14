@@ -1030,7 +1030,7 @@ func (e *Encoder) encodeCompositeValue(
 	// Encode fields (as array) at array index encodedCompositeValueFieldsFieldKey
 
 	// If the fields are not loaded, dump the raw fields content as it is.
-	if v.content != nil {
+	if v.fieldsContent != nil {
 		err := e.enc.EncodeRawBytes(v.fieldsContent)
 		if err != nil {
 			return err
