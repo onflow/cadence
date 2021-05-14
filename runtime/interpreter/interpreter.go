@@ -1192,7 +1192,7 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 			func(invocation Invocation) Value {
 				for i, argument := range invocation.Arguments {
 					parameter := compositeType.ConstructorParameters[i]
-					invocation.Self.Fields.Set(parameter.Identifier, argument)
+					invocation.Self.Fields().Set(parameter.Identifier, argument)
 				}
 				return nil
 			},
@@ -1306,10 +1306,10 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 			}
 
 			value := &CompositeValue{
-				Location:            location,
-				QualifiedIdentifier: qualifiedIdentifier,
-				Kind:                declaration.CompositeKind,
-				Fields:              fields,
+				location:            location,
+				qualifiedIdentifier: qualifiedIdentifier,
+				kind:                declaration.CompositeKind,
+				fields:              fields,
 				InjectedFields:      injectedFields,
 				Functions:           functions,
 				Destructor:          destructorFunction,
@@ -1402,10 +1402,10 @@ func (interpreter *Interpreter) declareEnumConstructor(
 		caseValueFields.Set(sema.EnumRawValueFieldName, rawValue)
 
 		caseValue := &CompositeValue{
-			Location:            location,
-			QualifiedIdentifier: qualifiedIdentifier,
-			Kind:                declaration.CompositeKind,
-			Fields:              caseValueFields,
+			location:            location,
+			qualifiedIdentifier: qualifiedIdentifier,
+			kind:                declaration.CompositeKind,
+			fields:              caseValueFields,
 			// NOTE: new value has no owner
 			Owner:    nil,
 			modified: true,
@@ -1431,7 +1431,7 @@ func EnumConstructorFunction(caseValues []*CompositeValue, nestedVariables *Stri
 	lookupTable := make(map[string]*CompositeValue)
 
 	for _, caseValue := range caseValues {
-		rawValue, ok := caseValue.Fields.Get(sema.EnumRawValueFieldName)
+		rawValue, ok := caseValue.Fields().Get(sema.EnumRawValueFieldName)
 		if !ok {
 			panic(errors.NewUnreachableError())
 		}

@@ -63,7 +63,7 @@ func TestInterpretEnumCaseUse(t *testing.T) {
 
 	assert.Equal(t,
 		common.CompositeKindEnum,
-		a.(*interpreter.CompositeValue).Kind,
+		a.(*interpreter.CompositeValue).Kind(),
 	)
 
 	b := inter.Globals["b"].GetValue()
@@ -74,7 +74,7 @@ func TestInterpretEnumCaseUse(t *testing.T) {
 
 	assert.Equal(t,
 		common.CompositeKindEnum,
-		b.(*interpreter.CompositeValue).Kind,
+		b.(*interpreter.CompositeValue).Kind(),
 	)
 }
 
@@ -206,13 +206,13 @@ func TestInterpretEnumInContract(t *testing.T) {
 	require.IsType(t, &interpreter.CompositeValue{}, c)
 	contract := c.(*interpreter.CompositeValue)
 
-	eValue, present := contract.Fields.Get("e")
+	eValue, present := contract.Fields().Get("e")
 	require.True(t, present)
 
 	require.IsType(t, &interpreter.CompositeValue{}, eValue)
 	enumCase := eValue.(*interpreter.CompositeValue)
 
-	rawValue, present := enumCase.Fields.Get("rawValue")
+	rawValue, present := enumCase.Fields().Get("rawValue")
 	require.True(t, present)
 
 	require.Equal(t,
