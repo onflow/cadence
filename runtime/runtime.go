@@ -336,7 +336,9 @@ func (r *interpreterRuntime) interpret(
 		exportedValue = newExportableValue(result, inter)
 	}
 
-	err = inter.ExitHandler()
+	if inter.ExitHandler != nil {
+		err = inter.ExitHandler()
+	}
 	return exportedValue, inter, err
 }
 
