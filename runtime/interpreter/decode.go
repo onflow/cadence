@@ -1777,6 +1777,7 @@ func decodeCompositeFields(v *CompositeValue, content []byte) error {
 	fields := NewStringValueOrderedMap()
 
 	// Pre-allocate and reuse valuePath.
+	//nolint:gocritic
 	valuePath := append(v.valuePath, "")
 
 	lastValuePathIndex := len(v.valuePath)

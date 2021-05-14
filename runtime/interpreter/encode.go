@@ -1042,9 +1042,9 @@ func (e *Encoder) encodeCompositeValue(
 			return err
 		}
 
-	// Pre-allocate and reuse valuePath.
-	//nolint:gocritic
-	valuePath := append(path, "")
+		// Pre-allocate and reuse valuePath.
+		//nolint:gocritic
+		valuePath := append(path, "")
 
 		lastValuePathIndex := len(path)
 
