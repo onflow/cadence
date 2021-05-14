@@ -401,7 +401,6 @@ func (r *interpreterRuntime) InvokeContractFunction(
 	// ensure the contract is loaded
 	inter = inter.EnsureLoaded(contractLocation)
 
-
 	for i, argumentType := range argumentTypes {
 		arguments[i] = r.convertArgument(
 			arguments[i],
@@ -447,7 +446,6 @@ func (r *interpreterRuntime) InvokeContractFunction(
 	if err != nil {
 		return nil, newError(err, context)
 	}
-
 
 	// Write back all stored values, which were actually just cached, back into storage
 	runtimeStorage.writeCached(inter)

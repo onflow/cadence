@@ -800,7 +800,6 @@ func (interpreter *Interpreter) InvokeFunction(function FunctionValue, invocatio
 	return
 }
 
-
 func (interpreter *Interpreter) InvokeTransaction(index int, arguments ...Value) (err error) {
 
 	// recover internal panics and return them as an error
@@ -3091,23 +3090,22 @@ func (interpreter *Interpreter) GetContractComposite(contractLocation common.Add
 	contractGlobal, ok := interpreter.Globals[contractLocation.Name]
 	if !ok {
 		return nil, NotDeclaredError{
-				ExpectedKind: common.DeclarationKindContract,
-				Name:         contractLocation.Name,
-			}
+			ExpectedKind: common.DeclarationKindContract,
+			Name:         contractLocation.Name,
+		}
 	}
 
 	// get contract value
 	contractValue, ok := contractGlobal.GetValue().(*CompositeValue)
 	if !ok {
 		return nil, NotDeclaredError{
-				ExpectedKind: common.DeclarationKindContract,
-				Name:         contractLocation.Name,
-			}
+			ExpectedKind: common.DeclarationKindContract,
+			Name:         contractLocation.Name,
+		}
 	}
 
 	return contractValue, nil
 }
-
 
 func (interpreter *Interpreter) getCompositeType(location common.Location, qualifiedIdentifier string) *sema.CompositeType {
 	if location == nil {

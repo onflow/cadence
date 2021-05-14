@@ -3106,7 +3106,7 @@ func TestInvokeContractFunction(t *testing.T) {
 		assert.Equal(tt, `"Hello number 42 from 0x1"`, loggedMessage)
 	})
 	t.Run("function with not enough arguments panics", func(tt *testing.T) {
-		assert.Panics(tt, func (){
+		assert.Panics(tt, func() {
 			_, _ = runtime.InvokeContractFunction(
 				common.AddressLocation{
 					Address: addressValue,
