@@ -442,7 +442,7 @@ func main() {
 				return "", err
 			}
 			pad := strings.Repeat("\t", group.Depth+1)
-			padded := pad + strings.Replace(res, "\n", "\n"+pad, -1)
+			padded := pad + strings.ReplaceAll(res, "\n", "\n"+pad)
 			trimmed := trailingWhitespaceRegexp.ReplaceAll([]byte(padded), nil)
 			return string(trimmed), nil
 		},

@@ -2606,7 +2606,10 @@ var BaseTypeActivation = NewVariableActivation(nil)
 
 func init() {
 
-	otherTypes := []Type{
+	types := AllNumberTypes[:]
+
+	types = append(
+		types,
 		MetaType,
 		VoidType,
 		AnyStructType,
@@ -2630,11 +2633,6 @@ func init() {
 		PublicKeyType,
 		SignatureAlgorithmType,
 		HashAlgorithmType,
-	}
-
-	types := append(
-		AllNumberTypes,
-		otherTypes...,
 	)
 
 	for _, ty := range types {

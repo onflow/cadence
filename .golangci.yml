@@ -11,14 +11,31 @@ linters:
     - typecheck
     - misspell
     - maprangecheck
+    - unused
+    - deadcode
+    - exportloopref
+    - gocritic
+    - gofmt
+    - goimports
+    - unconvert
+    - nilerr
 
 issues:
   exclude-rules:
     - path: _test\.go
       linters:
         - maprangecheck
+  max-issues-per-linter: 0
+  max-same-issues: 0
 
 linters-settings:
+  gocritic:
+    disabled-checks:
+      - ifElseChain        # style
+      - singleCaseSwitch   # style
+      - unslice            # false positives
+      - commentFormatting  # does not detect commented out code
+      - exitAfterDefer
   custom:
     maprangecheck:
       path: tools/maprangecheck/maprangecheck.so

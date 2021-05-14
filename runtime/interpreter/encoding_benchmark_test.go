@@ -143,7 +143,7 @@ func prepareCBORTestData() []benchmark {
 		}
 
 		// Construct benchmark name
-		name = name + fmt.Sprintf("_%dbytes", fileSize)
+		name += fmt.Sprintf("_%dbytes", fileSize)
 
 		// Decode test data to value
 		owner := common.BytesToAddress([]byte{})

@@ -765,12 +765,6 @@ func newSignAlgoValue(signAlgo sema.SignatureAlgorithm) cadence.Enum {
 	}).WithType(SignAlgoType)
 }
 
-func newHashAlgoValue(hashAlgo sema.HashAlgorithm) cadence.Enum {
-	return cadence.NewEnum([]cadence.Value{
-		cadence.NewUInt8(hashAlgo.RawValue()),
-	}).WithType(HashAlgoType)
-}
-
 func accountKeyExportedValue(
 	index int,
 	publicKeyBytes []byte,

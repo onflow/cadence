@@ -20,12 +20,12 @@ package wasm
 
 const emptyBlockType byte = 0x40
 
-type BlockType interface{
+type BlockType interface {
 	isBlockType()
 	write(writer *WASMWriter) error
 }
 
-type TypeIndexBlockType struct{
+type TypeIndexBlockType struct {
 	TypeIndex uint32
 }
 

@@ -35,4 +35,3 @@ func Capability(borrowType string, address string, path string) string {
 		path,
 	)
 }
-

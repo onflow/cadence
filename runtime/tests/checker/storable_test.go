@@ -92,8 +92,9 @@ func TestCheckStorable(t *testing.T) {
 
 	var testCases []testCase
 
-	storableTypes := append(
-		sema.AllNumberTypes[:],
+	storableTypes := sema.AllNumberTypes[:]
+	storableTypes = append(
+		storableTypes,
 		&sema.AddressType{},
 		sema.PathType,
 		&sema.CapabilityType{},

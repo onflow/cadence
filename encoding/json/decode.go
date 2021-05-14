@@ -27,7 +27,6 @@ import (
 	"io"
 	"math/big"
 	"strconv"
-	"strings"
 
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/runtime/common"
@@ -717,18 +716,4 @@ func toObject(valueJSON interface{}) jsonObject {
 	}
 
 	return v
-}
-
-func identifierFromTypeID(typeID string) string {
-	// fully-qualified type ID must have at least two parts
-	// (namespace + ID)
-	// e.g. foo.Bar
-	parts := strings.Split(typeID, ".")
-	if len(parts) < 2 {
-		// TODO: improve error message
-		panic(ErrInvalidJSONCadence)
-	}
-
-	// parse ID from fully-qualified type ID
-	return parts[len(parts)-1]
 }

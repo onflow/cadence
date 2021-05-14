@@ -335,6 +335,7 @@ func (d *DecoderV4) decodeArray(path []string) (*ArrayValue, error) {
 	values := make([]Value, size)
 
 	// Pre-allocate and reuse valuePath.
+	//nolint:gocritic
 	valuePath := append(path, "")
 
 	lastValuePathIndex := len(path)
@@ -387,6 +388,7 @@ func (d *DecoderV4) decodeDictionary(path []string) (*DictionaryValue, error) {
 	}
 
 	// Decode keys at array index encodedDictionaryValueKeysFieldKey
+	//nolint:gocritic
 	keysPath := append(path, dictionaryKeyPathPrefix)
 	keys, err := d.decodeArray(keysPath)
 	if err != nil {
@@ -448,6 +450,7 @@ func (d *DecoderV4) decodeDictionary(path []string) (*DictionaryValue, error) {
 	} else {
 
 		// Pre-allocate and reuse valuePath.
+		//nolint:gocritic
 		valuePath := append(path, dictionaryValuePathPrefix, "")
 
 		lastValuePathIndex := len(path) + 1
@@ -682,6 +685,7 @@ func (d *DecoderV4) decodeComposite(path []string) (*CompositeValue, error) {
 	fields := NewStringValueOrderedMap()
 
 	// Pre-allocate and reuse valuePath.
+	//nolint:gocritic
 	valuePath := append(path, "")
 
 	lastValuePathIndex := len(path)

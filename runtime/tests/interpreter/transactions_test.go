@@ -269,7 +269,7 @@ func TestInterpretTransactions(t *testing.T) {
           }
         `)
 
-		transactionArguments := []interpreter.Value{
+		arguments := []interpreter.Value{
 			interpreter.NewIntValueFromInt64(1),
 			interpreter.BoolValue(true),
 		}
@@ -290,7 +290,7 @@ func TestInterpretTransactions(t *testing.T) {
 			),
 		}
 
-		arguments := append(transactionArguments, prepareArguments...)
+		arguments = append(arguments, prepareArguments...)
 
 		err := inter.InvokeTransaction(0, arguments...)
 		assert.NoError(t, err)
