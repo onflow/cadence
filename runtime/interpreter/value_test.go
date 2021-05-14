@@ -20,6 +20,7 @@ package interpreter
 
 import (
 	"fmt"
+	"github.com/onflow/cadence/runtime/sema"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -2083,4 +2084,44 @@ func TestNumberValue_Equal(t *testing.T) {
 			)
 		})
 	}
+}
+
+func TestPublicKeyValue(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("Stringer output includes public key value", func(t *testing.T) {
+
+		t.Parallel()
+
+		publicKey := NewArrayValueUnownedNonCopying(
+			NewIntValueFromInt64(1),
+			NewIntValueFromInt64(7),
+			NewIntValueFromInt64(3),
+		)
+
+		publicKeyString := "[1, 7, 3]"
+
+		sigAlgo := func() *CompositeValue {
+			fields := NewStringValueOrderedMap()
+			fields.Set(sema.EnumRawValueFieldName, UInt8Value(sema.SignatureAlgorithmECDSA_secp256k1.RawValue()))
+
+			return &CompositeValue{
+				QualifiedIdentifier: sema.SignatureAlgorithmType.QualifiedIdentifier(),
+				Kind:                sema.SignatureAlgorithmType.Kind,
+				Fields:              fields,
+			}
+		}
+
+		key := NewPublicKeyValue(
+			publicKey,
+			sigAlgo(),
+			func(publicKey *CompositeValue) BoolValue {
+				return true
+			},
+			nil,
+		)
+
+		require.Contains(t, key.String(), publicKeyString)
+	})
 }
