@@ -87,7 +87,7 @@ func testEncodeDecode(t *testing.T, test encodeDecodeTest) {
 
 		// Make sure the content is built.
 		if composite, ok := decoded.(*CompositeValue); ok {
-			composite.ensureFieldsLoaded()
+			composite.Fields()
 		}
 
 		if !test.deferred || (test.deferred && test.decodedValue != nil) {

@@ -6082,6 +6082,10 @@ type CompositeValue struct {
 	// Callback function to be invoked when decoding the fields of this composite value.
 	// Only available for decoded values who's fields are not loaded yet.
 	decodeCallback DecodingCallback
+
+	// Encoding version of the raw content and raw fieldsContent of this value.
+	// Only available for decoded values who's fields are not loaded yet.
+	encodingVersion uint16
 }
 
 type ComputedField func(*Interpreter) Value
@@ -6113,13 +6117,15 @@ func NewDeferredCompositeValue(
 	content []byte,
 	owner *common.Address,
 	decodeCallback DecodingCallback,
+	version uint16,
 ) *CompositeValue {
 	return &CompositeValue{
-		Owner:          owner,
-		content:        content,
-		valuePath:      path,
-		decodeCallback: decodeCallback,
-		modified:       false,
+		Owner:           owner,
+		content:         content,
+		valuePath:       path,
+		decodeCallback:  decodeCallback,
+		modified:        false,
+		encodingVersion: version,
 	}
 }
 
@@ -6201,12 +6207,13 @@ func (v *CompositeValue) Copy() Value {
 			Destructor:          v.Destructor,
 			destroyed:           v.destroyed,
 			// NOTE: new value has no owner
-			Owner:          nil,
-			modified:       true,
-			content:        v.content,
-			fieldsContent:  v.fieldsContent,
-			valuePath:      v.valuePath,
-			decodeCallback: v.decodeCallback,
+			Owner:           nil,
+			modified:        true,
+			content:         v.content,
+			fieldsContent:   v.fieldsContent,
+			valuePath:       v.valuePath,
+			decodeCallback:  v.decodeCallback,
+			encodingVersion: v.encodingVersion,
 		}
 	}
 
@@ -6229,12 +6236,13 @@ func (v *CompositeValue) Copy() Value {
 		Destructor:          v.Destructor,
 		destroyed:           v.destroyed,
 		// NOTE: new value has no owner
-		Owner:          nil,
-		modified:       true,
-		content:        v.content,
-		fieldsContent:  v.fieldsContent,
-		valuePath:      v.valuePath,
-		decodeCallback: v.decodeCallback,
+		Owner:           nil,
+		modified:        true,
+		content:         v.content,
+		fieldsContent:   v.fieldsContent,
+		valuePath:       v.valuePath,
+		decodeCallback:  v.decodeCallback,
+		encodingVersion: v.encodingVersion,
 	}
 }
 
@@ -6614,10 +6622,11 @@ func (v *CompositeValue) ensureFieldsLoaded() {
 	}
 
 	// Path and the fields-content are no longer needed.
-	// Clear the cache and free-up the memory.
+	// Reset the cache and free-up the memory.
 	v.valuePath = nil
 	v.fieldsContent = nil
 	v.decodeCallback = nil
+	v.encodingVersion = 0
 }
 
 // DictionaryValue

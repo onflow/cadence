@@ -980,18 +980,18 @@ func (e *Encoder) encodeCompositeValue(
 	deferrals *EncodingDeferrals,
 ) error {
 
+	// Encode CBOR tag number
+	err := e.enc.EncodeRawBytes([]byte{
+		// tag number
+		0xd8, cborTagCompositeValue,
+	})
+
+	if err != nil {
+		return err
+	}
+
 	// If the value is not loaded, dump the raw content as it is.
 	if v.content != nil {
-		// Encode CBOR tag number
-		err := e.enc.EncodeRawBytes([]byte{
-			// tag number
-			0xd8, cborTagCompositeValue,
-		})
-
-		if err != nil {
-			return err
-		}
-
 		err = e.enc.EncodeRawBytes(v.content)
 		if err != nil {
 			return err
@@ -1000,10 +1000,8 @@ func (e *Encoder) encodeCompositeValue(
 		return nil
 	}
 
-	// Encode CBOR tag number and array head
-	err := e.enc.EncodeRawBytes([]byte{
-		// tag number
-		0xd8, cborTagCompositeValue,
+	// Encode array head
+	err = e.enc.EncodeRawBytes([]byte{
 		// array, 5 items follow
 		0x85,
 	})
