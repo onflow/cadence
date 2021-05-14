@@ -308,16 +308,13 @@ func (checker *Checker) visitMemberExpressionAssignment(
 			reportAssignmentToConstant()
 		}
 
-	} else {
+	} else if member.VariableKind == ast.VariableKindConstant {
 
 		// The assignment is not to a `self` field. Report if there is an attempt
 		// to assign to a constant field, which is always invalid,
 		// independent of the location of the assignment (initializer or not)
 
-		if member.VariableKind == ast.VariableKindConstant {
-
-			reportAssignmentToConstant()
-		}
+		reportAssignmentToConstant()
 	}
 
 	return member.TypeAnnotation.Type

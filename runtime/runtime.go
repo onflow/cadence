@@ -491,8 +491,8 @@ func (r *interpreterRuntime) transactionExecutionFunction(
 		if err != nil {
 			return nil, err
 		}
-		allArguments := append(values, authorizerValues...)
-		err = inter.InvokeTransaction(0, allArguments...)
+		values = append(values, authorizerValues...)
+		err = inter.InvokeTransaction(0, values...)
 		return nil, err
 	}
 }
@@ -1528,8 +1528,10 @@ func (r *interpreterRuntime) instantiateContract(
 
 	var contract *interpreter.CompositeValue
 
-	allInterpreterOptions := append(
-		interpreterOptions[:],
+	allInterpreterOptions := interpreterOptions[:]
+
+	allInterpreterOptions = append(
+		allInterpreterOptions,
 		interpreter.WithContractValueHandler(
 			func(
 				inter *interpreter.Interpreter,

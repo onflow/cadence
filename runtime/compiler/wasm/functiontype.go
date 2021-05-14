@@ -28,4 +28,3 @@ type FunctionType struct {
 	Params  []ValueType
 	Results []ValueType
 }
-

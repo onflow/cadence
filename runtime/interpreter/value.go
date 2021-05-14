@@ -620,8 +620,9 @@ func (v *ArrayValue) Destroy(interpreter *Interpreter, getLocationRange func() L
 
 func (v *ArrayValue) Concat(other ConcatenatableValue) Value {
 	otherArray := other.(*ArrayValue)
-	concatenated := append(v.Copy().(*ArrayValue).Values, otherArray.Values...)
-	return NewArrayValueUnownedNonCopying(concatenated...)
+	newArray := v.Copy().(*ArrayValue)
+	newArray.Values = append(newArray.Values, otherArray.Values...)
+	return newArray
 }
 
 func (v *ArrayValue) Get(_ *Interpreter, getLocationRange func() LocationRange, key Value) Value {

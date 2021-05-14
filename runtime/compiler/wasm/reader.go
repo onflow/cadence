@@ -1135,7 +1135,7 @@ func (r *WASMReader) readCustomSection() error {
 		return err
 	}
 
-	size = size - uint32(r.buf.offset-nameStartOffset)
+	size -= uint32(r.buf.offset - nameStartOffset)
 
 	switch name {
 	case customSectionNameName:

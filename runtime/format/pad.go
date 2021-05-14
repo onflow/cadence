@@ -37,4 +37,3 @@ func PadLeft(value string, separator rune, minLength uint) string {
 	builder.WriteString(value)
 	return builder.String()
 }
-

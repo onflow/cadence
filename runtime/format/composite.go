@@ -22,7 +22,10 @@ import (
 	"strings"
 )
 
-func Composite(typeID string, fields []struct{Name string; Value string}) string {
+func Composite(typeID string, fields []struct {
+	Name  string
+	Value string
+}) string {
 	var builder strings.Builder
 	builder.WriteString(typeID)
 	builder.WriteRune('(')
