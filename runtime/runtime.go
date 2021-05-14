@@ -58,6 +58,19 @@ type Runtime interface {
 	// or if the execution fails.
 	ExecuteTransaction(Script, Context) error
 
+	// InvokeContractFunction invokes a contract function with the given arguments.
+	//
+	// This function returns an error if the execution fails.
+	// If the contract function accepts an AuthAccount as a parameter the corresponding argument can be an interpreter.Address.
+	// returns a cadence.Value
+	InvokeContractFunction(
+		contractLocation common.AddressLocation,
+		functionName string,
+		arguments []interpreter.Value,
+		argumentTypes []sema.Type,
+		context Context,
+	) (cadence.Value, error)
+
 	// ParseAndCheckProgram parses and checks the given code without executing the program.
 	//
 	// This function returns an error if the program contains any syntax or semantic errors.
@@ -347,6 +360,123 @@ func (r *interpreterRuntime) newAuthAccountValue(
 		),
 		r.newAuthAccountKeys(addressValue, context.Interface),
 	)
+}
+
+func (r *interpreterRuntime) InvokeContractFunction(
+	contractLocation common.AddressLocation,
+	functionName string,
+	arguments []interpreter.Value,
+	argumentTypes []sema.Type,
+	context Context,
+) (cadence.Value, error) {
+	context.InitializeCodesAndPrograms()
+
+	runtimeStorage := newRuntimeStorage(context.Interface)
+
+	var interpreterOptions []interpreter.Option
+	var checkerOptions []sema.Option
+
+	functions := r.standardLibraryFunctions(
+		context,
+		runtimeStorage,
+		interpreterOptions,
+		checkerOptions,
+	)
+
+	// create interpreter
+	_, inter, err := r.interpret(
+		nil,
+		context,
+		runtimeStorage,
+		functions,
+		stdlib.BuiltinValues,
+		interpreterOptions,
+		checkerOptions,
+		nil,
+	)
+	if err != nil {
+		return nil, newError(err, context)
+	}
+
+	// ensure the contract is loaded
+	inter = inter.EnsureLoaded(contractLocation)
+
+
+	for i, argumentType := range argumentTypes {
+		arguments[i] = r.convertArgument(
+			arguments[i],
+			argumentType,
+			context,
+			runtimeStorage,
+			interpreterOptions,
+			checkerOptions,
+		)
+	}
+
+	contractValue, err := inter.GetContractComposite(contractLocation)
+	if err != nil {
+		return nil, newError(err, context)
+	}
+
+	// prepare invocation
+	invocation := interpreter.Invocation{
+		Self:               contractValue,
+		Arguments:          arguments,
+		ArgumentTypes:      argumentTypes,
+		TypeParameterTypes: nil,
+		GetLocationRange: func() interpreter.LocationRange {
+			return interpreter.LocationRange{
+				Location: context.Location,
+			}
+		},
+		Interpreter: inter,
+	}
+
+	contractMember := contractValue.GetMember(inter, invocation.GetLocationRange, functionName)
+
+	contractFunction, ok := contractMember.(interpreter.FunctionValue)
+	if !ok {
+		return nil, newError(
+			interpreter.NotInvokableError{
+				Value: contractFunction,
+			},
+			context)
+	}
+
+	value, err := inter.InvokeFunction(contractFunction, invocation)
+	if err != nil {
+		return nil, newError(err, context)
+	}
+
+
+	// Write back all stored values, which were actually just cached, back into storage
+	runtimeStorage.writeCached(inter)
+
+	return ExportValue(value, inter), nil
+}
+
+func (r *interpreterRuntime) convertArgument(
+	argument interpreter.Value,
+	argumentType sema.Type,
+	context Context,
+	runtimeStorage *runtimeStorage,
+	interpreterOptions []interpreter.Option,
+	checkerOptions []sema.Option,
+) interpreter.Value {
+	switch argumentType {
+	case sema.AuthAccountType:
+		// convert addresses to auth accounts so there is no need to construct an auth account value for the caller
+		if addressValue, ok := argument.(interpreter.AddressValue); ok {
+			return r.newAuthAccountValue(
+				interpreter.NewAddressValue(addressValue.ToAddress()),
+				context,
+				runtimeStorage,
+				interpreterOptions,
+				checkerOptions,
+			)
+		}
+	}
+	return argument
 }
 
 func (r *interpreterRuntime) ExecuteTransaction(script Script, context Context) error {

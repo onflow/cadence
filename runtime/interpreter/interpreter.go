@@ -788,6 +788,19 @@ func (interpreter *Interpreter) Invoke(functionName string, arguments ...Value) 
 	return interpreter.invokeVariable(functionName, arguments)
 }
 
+// InvokeFunction invokes a function value with the given invocation
+func (interpreter *Interpreter) InvokeFunction(function FunctionValue, invocation Invocation) (value Value, err error) {
+
+	// recover internal panics and return them as an error
+	defer interpreter.recoverErrors(func(internalErr error) {
+		err = internalErr
+	})
+
+	value = function.Invoke(invocation)
+	return
+}
+
+
 func (interpreter *Interpreter) InvokeTransaction(index int, arguments ...Value) (err error) {
 
 	// recover internal panics and return them as an error
@@ -2058,7 +2071,18 @@ func (interpreter *Interpreter) functionConditionsWrapper(
 	}
 }
 
-func (interpreter *Interpreter) ensureLoaded(
+func (interpreter *Interpreter) EnsureLoaded(
+	location common.Location,
+) *Interpreter {
+	return interpreter.ensureLoadedWithLocationHandler(
+		location,
+		func() Import {
+			return interpreter.importLocationHandler(interpreter, location)
+		},
+	)
+}
+
+func (interpreter *Interpreter) ensureLoadedWithLocationHandler(
 	location common.Location,
 	loadLocation func() Import,
 ) *Interpreter {
@@ -3050,12 +3074,7 @@ func (interpreter *Interpreter) getElaboration(location common.Location) *sema.E
 	// Ensure the program for this location is loaded,
 	// so its checker is available
 
-	inter := interpreter.ensureLoaded(
-		location,
-		func() Import {
-			return interpreter.importLocationHandler(interpreter, location)
-		},
-	)
+	inter := interpreter.EnsureLoaded(location)
 
 	locationID := location.ID()
 
@@ -3066,6 +3085,29 @@ func (interpreter *Interpreter) getElaboration(location common.Location) *sema.E
 
 	return subInterpreter.Program.Elaboration
 }
+
+// GetContractComposite gets the composite value of the contract at the address location.
+func (interpreter *Interpreter) GetContractComposite(contractLocation common.AddressLocation) (*CompositeValue, error) {
+	contractGlobal, ok := interpreter.Globals[contractLocation.Name]
+	if !ok {
+		return nil, NotDeclaredError{
+				ExpectedKind: common.DeclarationKindContract,
+				Name:         contractLocation.Name,
+			}
+	}
+
+	// get contract value
+	contractValue, ok := contractGlobal.GetValue().(*CompositeValue)
+	if !ok {
+		return nil, NotDeclaredError{
+				ExpectedKind: common.DeclarationKindContract,
+				Name:         contractLocation.Name,
+			}
+	}
+
+	return contractValue, nil
+}
+
 
 func (interpreter *Interpreter) getCompositeType(location common.Location, qualifiedIdentifier string) *sema.CompositeType {
 	if location == nil {
