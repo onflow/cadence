@@ -6210,6 +6210,7 @@ func (v *CompositeValue) Copy() Value {
 			Owner:           nil,
 			modified:        true,
 			content:         v.content,
+			stringer:        v.stringer,
 			fieldsContent:   v.fieldsContent,
 			valuePath:       v.valuePath,
 			decodeCallback:  v.decodeCallback,
