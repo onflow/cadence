@@ -592,6 +592,47 @@ func TestArrayDeferredDecoding(t *testing.T) {
 
 	})
 
+	t.Run("re-encoding", func(t *testing.T) {
+
+		array := newTestArrayValue(2)
+
+		// Encode
+		encoded, _, err := EncodeValue(array, nil, true, nil)
+		require.NoError(t, err)
+
+		// Decode
+		decoded, err := DecodeValue(encoded, &testOwner, nil, CurrentEncodingVersion, nil)
+		require.NoError(t, err)
+
+		// Value must not be loaded. i.e: the content is available
+		require.IsType(t, &ArrayValue{}, decoded)
+		decodedArray := decoded.(*ArrayValue)
+		assert.NotNil(t, decodedArray.content)
+
+		type prepareCallback struct {
+			value Value
+			path  []string
+		}
+
+		var prepareCallbacks []prepareCallback
+
+		callback := func(value Value, path []string) {
+			prepareCallbacks = append(prepareCallbacks, prepareCallback{
+				value: value,
+				path:  path,
+			})
+		}
+
+		// Re encode the decoded value
+		_, _, err = EncodeValue(decodedArray, []string{}, true, callback)
+		require.NoError(t, err)
+
+		// Elements are not loaded, so they must not be encoded again.
+		// i.e: Callback must be only called once.
+		require.Len(t, prepareCallbacks, 1)
+		assert.Equal(t, decoded, prepareCallbacks[0].value)
+		assert.Equal(t, []string{}, prepareCallbacks[0].path)
+	})
 }
 
 func BenchmarkArrayDeferredDecoding(b *testing.B) {
