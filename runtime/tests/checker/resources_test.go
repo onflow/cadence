@@ -4894,7 +4894,6 @@ func TestCheckInvalidationInPostConditionBefore(t *testing.T) {
 	assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
 }
 
-
 func TestCheckInvalidationInPostCondition(t *testing.T) {
 
 	t.Parallel()
@@ -4919,4 +4918,3 @@ func TestCheckInvalidationInPostCondition(t *testing.T) {
 
 	assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
 }
-
