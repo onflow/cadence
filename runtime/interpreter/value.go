@@ -6172,6 +6172,7 @@ func (v *CompositeValue) Copy() Value {
 		// NOTE: new value has no owner
 		Owner:    nil,
 		modified: true,
+		stringer: v.stringer,
 	}
 }
 
@@ -8182,6 +8183,17 @@ func NewPublicKeyValue(
 
 	// Validate the public key, and initialize 'isValid' field.
 	publicKeyValue.Fields.Set(sema.PublicKeyIsValidField, validationFunction(publicKeyValue))
+
+	// Public key value to string should include the key even though it is a computed field
+	stringerFields := NewStringValueOrderedMap()
+	stringerFields.Set(sema.PublicKeyPublicKeyField, publicKey.Copy())
+	publicKeyValue.Fields.Foreach(func(key string, value Value) {
+		stringerFields.Set(key, value)
+	})
+	stringer := func() string {
+		return formatComposite(string(publicKeyValue.TypeID()), stringerFields)
+	}
+	publicKeyValue.stringer = stringer
 
 	return publicKeyValue
 

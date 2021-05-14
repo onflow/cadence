@@ -366,6 +366,9 @@ func TestSetOwnerCompositeCopy(t *testing.T) {
 	const fieldName = "test"
 
 	composite.Fields.Set(fieldName, value)
+	composite.stringer = func() string {
+		return "random string"
+	}
 
 	compositeCopy := composite.Copy().(*CompositeValue)
 	valueCopy, _ := compositeCopy.Fields.Get(fieldName)
@@ -373,6 +376,7 @@ func TestSetOwnerCompositeCopy(t *testing.T) {
 	assert.Nil(t, compositeCopy.GetOwner())
 	assert.Nil(t, valueCopy.GetOwner())
 	assert.Equal(t, &oldOwner, value.GetOwner())
+	assert.Equal(t, composite.stringer(), compositeCopy.stringer())
 }
 
 func TestSetOwnerCompositeSetMember(t *testing.T) {
