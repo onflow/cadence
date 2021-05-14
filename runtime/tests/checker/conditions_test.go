@@ -492,8 +492,7 @@ func TestCheckFunctionWithPostConditionAndResourceResult(t *testing.T) {
         }
     `)
 
-	errs := ExpectCheckerErrors(t, err, 2)
+	errs := ExpectCheckerErrors(t, err, 1)
 
 	require.IsType(t, &sema.InvalidMoveOperationError{}, errs[0])
-	require.IsType(t, &sema.TypeMismatchError{}, errs[1])
 }
