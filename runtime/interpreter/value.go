@@ -6306,12 +6306,7 @@ func (v *CompositeValue) getInterpreter(interpreter *Interpreter) *Interpreter {
 		return interpreter
 	}
 
-	return interpreter.ensureLoaded(
-		v.Location,
-		func() Import {
-			return interpreter.importLocationHandler(interpreter, v.Location)
-		},
-	)
+	return interpreter.EnsureLoaded(v.Location)
 }
 
 func (v *CompositeValue) InitializeFunctions(interpreter *Interpreter) {
