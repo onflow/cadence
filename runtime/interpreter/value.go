@@ -527,15 +527,15 @@ type ArrayValue struct {
 	content []byte
 
 	// Value's path to be used during decoding.
-	// Only available for decoded values that are not loaded yet.
+	// Only available for decoded values who's elements are not loaded yet.
 	valuePath []string
 
-	// Callback function to be invoked when decoding the fields of this composite value.
-	// Only available for decoded values who's fields are not loaded yet.
+	// Callback function to be invoked when decoding the elements of this array value.
+	// Only available for decoded values who's elements are not loaded yet.
 	decodeCallback DecodingCallback
 
-	// Encoding version of the raw content and raw fieldsContent of this value.
-	// Only available for decoded values who's fields are not loaded yet.
+	// Encoding version of the raw content of the elements of this value.
+	// Only available for decoded values who's elements are not loaded yet.
 	encodingVersion uint16
 }
 
@@ -726,8 +726,8 @@ func (v *ArrayValue) Append(element Value) {
 
 	element.SetOwner(v.Owner)
 
-	//nolint:gocritic
-	v.values = append(v.Elements(), element)
+	v.ensureElementsLoaded()
+	v.values = append(v.values, element)
 }
 
 func (v *ArrayValue) AppendAll(other AllAppendableValue) {
@@ -740,8 +740,8 @@ func (v *ArrayValue) AppendAll(other AllAppendableValue) {
 		element.SetOwner(v.Owner)
 	}
 
-	//nolint:gocritic
-	v.values = append(v.Elements(), otherElements...)
+	v.ensureElementsLoaded()
+	v.values = append(v.values, otherElements...)
 }
 
 func (v *ArrayValue) Insert(i int, element Value) {
