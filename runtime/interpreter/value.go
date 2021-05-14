@@ -726,8 +726,8 @@ func (v *ArrayValue) Append(element Value) {
 
 	element.SetOwner(v.Owner)
 
-	elements := v.Elements()
-	v.values = append(elements, element)
+	//nolint:gocritic
+	v.values = append(v.Elements(), element)
 }
 
 func (v *ArrayValue) AppendAll(other AllAppendableValue) {
@@ -740,8 +740,8 @@ func (v *ArrayValue) AppendAll(other AllAppendableValue) {
 		element.SetOwner(v.Owner)
 	}
 
-	elements := v.Elements()
-	v.values = append(elements, otherElements...)
+	//nolint:gocritic
+	v.values = append(v.Elements(), otherElements...)
 }
 
 func (v *ArrayValue) Insert(i int, element Value) {
@@ -750,6 +750,8 @@ func (v *ArrayValue) Insert(i int, element Value) {
 	element.SetOwner(v.Owner)
 
 	elements := v.Elements()
+
+	//nolint:gocritic
 	v.values = append(elements[:i], append([]Value{element}, elements[i:]...)...)
 }
 

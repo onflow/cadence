@@ -1826,6 +1826,7 @@ func decodeArrayElements(array *ArrayValue, elementContent []byte) error {
 	values := make([]Value, size)
 
 	// Pre-allocate and reuse valuePath.
+	//nolint:gocritic
 	valuePath := append(array.valuePath, "")
 
 	lastValuePathIndex := len(array.valuePath)
