@@ -36,3 +36,4 @@ corpus
 suppressions
 
 languageserver/test/languageserver
+coverage.txt
