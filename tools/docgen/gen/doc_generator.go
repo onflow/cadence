@@ -1,7 +1,9 @@
 package gen
 
 import (
+	"bytes"
 	"fmt"
+	"io"
 	"os"
 	"path"
 	"strings"
@@ -35,6 +37,33 @@ type DocGenerator struct {
 	compositePageGen *template.Template
 	typeNames        []string
 	outputDir        string
+	files            InMemoryFS
+}
+
+type InMemoryFS map[string][]byte
+
+type InMemoryWriter struct {
+	fileName string
+	buf      *bytes.Buffer
+	fs       InMemoryFS
+}
+
+func NewInMemoryWriter(fs InMemoryFS, fileName string) *InMemoryWriter {
+	return &InMemoryWriter{
+		fileName: fileName,
+		fs:       fs,
+		buf:      &bytes.Buffer{},
+	}
+}
+
+func (w InMemoryWriter) Write(bytes []byte) (n int, err error) {
+	return w.buf.Write(bytes)
+}
+
+func (w InMemoryWriter) Close() error {
+	w.fs[w.fileName] = w.buf.Bytes()
+	w.buf = nil
+	return nil
 }
 
 func NewDocGenerator() *DocGenerator {
@@ -92,6 +121,22 @@ func (gen *DocGenerator) Generate(source string, outputDir string) error {
 	return gen.genProgram(program)
 }
 
+func (gen *DocGenerator) GenerateInMemory(source string) (InMemoryFS, error) {
+	gen.files = InMemoryFS{}
+
+	program, err := parser2.ParseProgram(source)
+	if err != nil {
+		return nil, err
+	}
+
+	err = gen.genProgram(program)
+	if err != nil {
+		return nil, err
+	}
+
+	return gen.files, nil
+}
+
 func (gen *DocGenerator) genProgram(program *ast.Program) error {
 	gen.typeNames = make([]string, 0)
 
@@ -102,10 +147,12 @@ func (gen *DocGenerator) genProgram(program *ast.Program) error {
 
 		// Generate entry page
 		// TODO: file name 'index' can conflict with struct names, resulting an overwrite.
-		f, err := os.Create(path.Join(gen.outputDir, "index.md"))
+		f, err := gen.fileWriter("index.md")
 		if err != nil {
-			return err
+			panic(err)
 		}
+
+		defer f.Close()
 
 		err = gen.entryPageGen.Execute(f, program)
 		if err != nil {
@@ -159,10 +206,12 @@ func (gen *DocGenerator) genCompositeDecl(name string, members *ast.Members, dec
 	}()
 
 	fileName := fmt.Sprint(gen.currentFileName(), mdFileExt)
-	f, err := os.Create(path.Join(gen.outputDir, fileName))
+	f, err := gen.fileWriter(fileName)
 	if err != nil {
 		panic(err)
 	}
+
+	defer f.Close()
 
 	err = gen.compositePageGen.Execute(f, decl)
 	if err != nil {
@@ -170,6 +219,14 @@ func (gen *DocGenerator) genCompositeDecl(name string, members *ast.Members, dec
 	}
 
 	return gen.genDeclarations(members.Declarations())
+}
+
+func (gen *DocGenerator) fileWriter(fileName string) (io.WriteCloser, error) {
+	if gen.files == nil {
+		return os.Create(path.Join(gen.outputDir, fileName))
+	}
+
+	return NewInMemoryWriter(gen.files, fileName), nil
 }
 
 func (gen *DocGenerator) currentFileName() string {

@@ -1,6 +1,7 @@
 package test
 
 import (
+	"fmt"
 	"os"
 	"testing"
 
@@ -22,6 +23,19 @@ func TestDocGen(t *testing.T) {
 	require.NoError(t, err)
 
 	docGen := gen.NewDocGenerator()
+
 	err = docGen.Generate(string(content), "generated")
 	require.NoError(t, err)
+}
+
+func TestInMemoryDocGen(t *testing.T) {
+	content, err := ioutil.ReadFile("samples/sample3.cdc")
+	require.NoError(t, err)
+
+	docGen := gen.NewDocGenerator()
+
+	files, err := docGen.GenerateInMemory(string(content))
+	require.NoError(t, err)
+
+	fmt.Println(string(files["TopShot.md"]))
 }
