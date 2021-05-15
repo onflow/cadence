@@ -1747,7 +1747,7 @@ func (r *interpreterRuntime) getPublicAccount(
 
 func (r *interpreterRuntime) newLogFunction(runtimeInterface Interface) interpreter.HostFunction {
 	return func(invocation interpreter.Invocation) interpreter.Value {
-		message := invocation.Arguments[0].String(interpreter.StringResults{})
+		message := fmt.Sprint(invocation.Arguments[0])
 		var err error
 		wrapPanic(func() {
 			err = runtimeInterface.ProgramLog(message)

@@ -100,13 +100,13 @@ func (v BlockValue) IDAsByteArray() [sema.BlockIDSize]byte {
 	return byteArray
 }
 
-func (v BlockValue) String(results StringResults) string {
+func (v BlockValue) String() string {
 	return fmt.Sprintf(
 		"Block(height: %s, view: %s, id: 0x%x, timestamp: %s)",
-		v.Height.String(results),
-		v.View.String(results),
+		v.Height,
+		v.View,
 		v.IDAsByteArray(),
-		v.Timestamp.String(results),
+		v.Timestamp,
 	)
 }
 

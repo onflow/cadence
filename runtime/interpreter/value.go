@@ -41,8 +41,6 @@ type DynamicTypeResults map[Value]DynamicType
 
 type TypeConformanceResults map[valueDynamicTypePair]bool
 
-type StringResults map[Value]struct{}
-
 type valueDynamicTypePair struct {
 	value       Value
 	dynamicType DynamicType
@@ -51,6 +49,7 @@ type valueDynamicTypePair struct {
 // Value
 
 type Value interface {
+	fmt.Stringer
 	IsValue()
 	Accept(interpreter *Interpreter, visitor Visitor)
 	DynamicType(interpreter *Interpreter, results DynamicTypeResults) DynamicType
@@ -61,7 +60,6 @@ type Value interface {
 	SetModified(modified bool)
 	StaticType() StaticType
 	ConformsToDynamicType(interpreter *Interpreter, dynamicType DynamicType, results TypeConformanceResults) bool
-	String(results StringResults) string
 }
 
 // ValueIndexableValue
@@ -150,7 +148,7 @@ func (TypeValue) SetModified(_ bool) {
 	// NO-OP
 }
 
-func (v TypeValue) String(_ StringResults) string {
+func (v TypeValue) String() string {
 	var typeString string
 	staticType := v.Type
 	if staticType != nil {
@@ -240,7 +238,7 @@ func (VoidValue) SetModified(_ bool) {
 	// NO-OP
 }
 
-func (VoidValue) String(_ StringResults) string {
+func (VoidValue) String() string {
 	return format.Void
 }
 
@@ -300,7 +298,7 @@ func (v BoolValue) Equal(other Value, _ *Interpreter, _ bool) bool {
 	return bool(v) == bool(otherBool)
 }
 
-func (v BoolValue) String(_ StringResults) string {
+func (v BoolValue) String() string {
 	return format.Bool(bool(v))
 }
 
@@ -365,7 +363,7 @@ func (v *StringValue) SetModified(modified bool) {
 	v.modified = modified
 }
 
-func (v *StringValue) String(_ StringResults) string {
+func (v *StringValue) String() string {
 	return format.String(v.Str)
 }
 
@@ -654,10 +652,10 @@ func (v *ArrayValue) SetIndex(index int, value Value) {
 	v.Values[index] = value
 }
 
-func (v *ArrayValue) String(results StringResults) string {
+func (v *ArrayValue) String() string {
 	values := make([]string, len(v.Values))
 	for i, value := range v.Values {
-		values[i] = value.String(results)
+		values[i] = value.String()
 	}
 	return format.Array(values)
 }
@@ -886,7 +884,7 @@ func getNumberValueMember(v NumberValue, name string) Value {
 	case sema.ToStringFunctionName:
 		return NewHostFunctionValue(
 			func(invocation Invocation) Value {
-				return NewStringValue(v.String(StringResults{}))
+				return NewStringValue(v.String())
 			},
 		)
 
@@ -1022,7 +1020,7 @@ func (v IntValue) ToBigInt() *big.Int {
 	return new(big.Int).Set(v.BigInt)
 }
 
-func (v IntValue) String(_ StringResults) string {
+func (v IntValue) String() string {
 	return format.BigInt(v.BigInt)
 }
 
@@ -1225,7 +1223,7 @@ func (Int8Value) SetModified(_ bool) {
 	// NO-OP
 }
 
-func (v Int8Value) String(_ StringResults) string {
+func (v Int8Value) String() string {
 	return format.Int(int64(v))
 }
 
@@ -1518,7 +1516,7 @@ func (Int16Value) SetModified(_ bool) {
 	// NO-OP
 }
 
-func (v Int16Value) String(_ StringResults) string {
+func (v Int16Value) String() string {
 	return format.Int(int64(v))
 }
 
@@ -1813,7 +1811,7 @@ func (Int32Value) SetModified(_ bool) {
 	// NO-OP
 }
 
-func (v Int32Value) String(_ StringResults) string {
+func (v Int32Value) String() string {
 	return format.Int(int64(v))
 }
 
@@ -2108,7 +2106,7 @@ func (Int64Value) SetModified(_ bool) {
 	// NO-OP
 }
 
-func (v Int64Value) String(_ StringResults) string {
+func (v Int64Value) String() string {
 	return format.Int(int64(v))
 }
 
@@ -2420,7 +2418,7 @@ func (v Int128Value) ToBigInt() *big.Int {
 	return new(big.Int).Set(v.BigInt)
 }
 
-func (v Int128Value) String(_ StringResults) string {
+func (v Int128Value) String() string {
 	return format.BigInt(v.BigInt)
 }
 
@@ -2784,7 +2782,7 @@ func (v Int256Value) ToBigInt() *big.Int {
 	return new(big.Int).Set(v.BigInt)
 }
 
-func (v Int256Value) String(_ StringResults) string {
+func (v Int256Value) String() string {
 	return format.BigInt(v.BigInt)
 }
 
@@ -3169,7 +3167,7 @@ func (v UIntValue) ToBigInt() *big.Int {
 	return new(big.Int).Set(v.BigInt)
 }
 
-func (v UIntValue) String(_ StringResults) string {
+func (v UIntValue) String() string {
 	return format.BigInt(v.BigInt)
 }
 
@@ -3383,7 +3381,7 @@ func (UInt8Value) SetModified(_ bool) {
 	// NO-OP
 }
 
-func (v UInt8Value) String(_ StringResults) string {
+func (v UInt8Value) String() string {
 	return format.Uint(uint64(v))
 }
 
@@ -3606,7 +3604,7 @@ func (UInt16Value) SetModified(_ bool) {
 	// NO-OP
 }
 
-func (v UInt16Value) String(_ StringResults) string {
+func (v UInt16Value) String() string {
 	return format.Uint(uint64(v))
 }
 
@@ -3831,7 +3829,7 @@ func (UInt32Value) SetModified(_ bool) {
 	// NO-OP
 }
 
-func (v UInt32Value) String(_ StringResults) string {
+func (v UInt32Value) String() string {
 	return format.Uint(uint64(v))
 }
 
@@ -4056,7 +4054,7 @@ func (UInt64Value) SetModified(_ bool) {
 	// NO-OP
 }
 
-func (v UInt64Value) String(_ StringResults) string {
+func (v UInt64Value) String() string {
 	return format.Uint(uint64(v))
 }
 
@@ -4303,7 +4301,7 @@ func (v UInt128Value) ToBigInt() *big.Int {
 	return new(big.Int).Set(v.BigInt)
 }
 
-func (v UInt128Value) String(_ StringResults) string {
+func (v UInt128Value) String() string {
 	return format.BigInt(v.BigInt)
 }
 
@@ -4609,7 +4607,7 @@ func (v UInt256Value) ToBigInt() *big.Int {
 	return new(big.Int).Set(v.BigInt)
 }
 
-func (v UInt256Value) String(_ StringResults) string {
+func (v UInt256Value) String() string {
 	return format.BigInt(v.BigInt)
 }
 
@@ -4896,7 +4894,7 @@ func (Word8Value) SetModified(_ bool) {
 	// NO-OP
 }
 
-func (v Word8Value) String(_ StringResults) string {
+func (v Word8Value) String() string {
 	return format.Uint(uint64(v))
 }
 
@@ -5064,7 +5062,7 @@ func (Word16Value) SetModified(_ bool) {
 	// NO-OP
 }
 
-func (v Word16Value) String(_ StringResults) string {
+func (v Word16Value) String() string {
 	return format.Uint(uint64(v))
 }
 
@@ -5234,7 +5232,7 @@ func (Word32Value) SetModified(_ bool) {
 	// NO-OP
 }
 
-func (v Word32Value) String(_ StringResults) string {
+func (v Word32Value) String() string {
 	return format.Uint(uint64(v))
 }
 
@@ -5405,7 +5403,7 @@ func (Word64Value) SetModified(_ bool) {
 	// NO-OP
 }
 
-func (v Word64Value) String(_ StringResults) string {
+func (v Word64Value) String() string {
 	return format.Uint(uint64(v))
 }
 
@@ -5591,12 +5589,12 @@ func (Fix64Value) SetModified(_ bool) {
 	// NO-OP
 }
 
-func (v Fix64Value) String(_ StringResults) string {
+func (v Fix64Value) String() string {
 	return format.Fix64(int64(v))
 }
 
 func (v Fix64Value) KeyString() string {
-	return v.String(StringResults{})
+	return v.String()
 }
 
 func (v Fix64Value) ToInt() int {
@@ -5859,12 +5857,12 @@ func (UFix64Value) SetModified(_ bool) {
 	// NO-OP
 }
 
-func (v UFix64Value) String(_ StringResults) string {
+func (v UFix64Value) String() string {
 	return format.UFix64(uint64(v))
 }
 
 func (v UFix64Value) KeyString() string {
-	return v.String(StringResults{})
+	return v.String()
 }
 
 func (v UFix64Value) ToInt() int {
@@ -6425,15 +6423,15 @@ func (v *CompositeValue) SetMember(_ *Interpreter, getLocationRange func() Locat
 	v.Fields().Set(name, value)
 }
 
-func (v *CompositeValue) String(results StringResults) string {
+func (v *CompositeValue) String() string {
 	if v.stringer != nil {
 		return v.stringer()
 	}
 
-	return formatComposite(string(v.TypeID()), v.Fields(), results)
+	return formatComposite(string(v.TypeID()), v.Fields())
 }
 
-func formatComposite(typeId string, fields *StringValueOrderedMap, results StringResults) string {
+func formatComposite(typeId string, fields *StringValueOrderedMap) string {
 	preparedFields := make([]struct {
 		Name  string
 		Value string
@@ -6446,7 +6444,7 @@ func formatComposite(typeId string, fields *StringValueOrderedMap, results Strin
 				Value string
 			}{
 				Name:  fieldName,
-				Value: value.String(results),
+				Value: value.String(),
 			},
 		)
 	})
@@ -6496,7 +6494,7 @@ func (v *CompositeValue) Equal(other Value, interpreter *Interpreter, loadDeferr
 func (v *CompositeValue) KeyString() string {
 	if v.Kind() == common.CompositeKindEnum {
 		rawValue, _ := v.Fields().Get(sema.EnumRawValueFieldName)
-		return rawValue.String(StringResults{})
+		return rawValue.String()
 	}
 
 	panic(errors.NewUnreachableError())
@@ -6882,7 +6880,7 @@ func (v *DictionaryValue) Set(inter *Interpreter, getLocationRange func() Locati
 	}
 }
 
-func (v *DictionaryValue) String(results StringResults) string {
+func (v *DictionaryValue) String() string {
 	pairs := make([]struct {
 		Key   string
 		Value string
@@ -6899,14 +6897,14 @@ func (v *DictionaryValue) String(results StringResults) string {
 		if value == nil {
 			valueString = "..."
 		} else {
-			valueString = value.String(results)
+			valueString = value.String()
 		}
 
 		pairs[i] = struct {
 			Key   string
 			Value string
 		}{
-			Key:   keyValue.String(results),
+			Key:   keyValue.String(),
 			Value: valueString,
 		}
 	}
@@ -7205,7 +7203,7 @@ func (v NilValue) Destroy(_ *Interpreter, _ func() LocationRange) {
 	// NO-OP
 }
 
-func (NilValue) String(_ StringResults) string {
+func (NilValue) String() string {
 	return format.Nil
 }
 
@@ -7313,8 +7311,8 @@ func (v *SomeValue) Destroy(interpreter *Interpreter, getLocationRange func() Lo
 	maybeDestroy(interpreter, getLocationRange, v.Value)
 }
 
-func (v *SomeValue) String(results StringResults) string {
-	return v.Value.String(results)
+func (v *SomeValue) String() string {
+	return v.Value.String()
 }
 
 func (v *SomeValue) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
@@ -7386,7 +7384,7 @@ func (v *StorageReferenceValue) Accept(interpreter *Interpreter, visitor Visitor
 	visitor.VisitStorageReferenceValue(interpreter, v)
 }
 
-func (v *StorageReferenceValue) String(_ StringResults) string {
+func (v *StorageReferenceValue) String() string {
 	return "StorageReference()"
 }
 
@@ -7533,13 +7531,8 @@ func (v *EphemeralReferenceValue) Accept(interpreter *Interpreter, visitor Visit
 	visitor.VisitEphemeralReferenceValue(interpreter, v)
 }
 
-func (v *EphemeralReferenceValue) String(results StringResults) string {
-	if _, ok := results[v]; ok {
-		return "..."
-	}
-	results[v] = struct{}{}
-	defer delete(results, v)
-	return v.Value.String(results)
+func (v *EphemeralReferenceValue) String() string {
+	return v.Value.String()
 }
 
 func (v *EphemeralReferenceValue) DynamicType(interpreter *Interpreter, results DynamicTypeResults) DynamicType {
@@ -7752,7 +7745,7 @@ func (v AddressValue) KeyString() string {
 	return common.Address(v).ShortHexWithPrefix()
 }
 
-func (v AddressValue) String(_ StringResults) string {
+func (v AddressValue) String() string {
 	return format.Address(common.Address(v))
 }
 
@@ -7795,7 +7788,7 @@ func (v AddressValue) GetMember(_ *Interpreter, _ func() LocationRange, name str
 	case sema.ToStringFunctionName:
 		return NewHostFunctionValue(
 			func(invocation Invocation) Value {
-				return NewStringValue(v.String(StringResults{}))
+				return NewStringValue(v.String())
 			},
 		)
 
@@ -8049,7 +8042,7 @@ func (v PathValue) Destroy(_ *Interpreter, _ func() LocationRange) {
 	// NO-OP
 }
 
-func (v PathValue) String(_ StringResults) string {
+func (v PathValue) String() string {
 	return format.Path(
 		v.Domain.Identifier(),
 		v.Identifier,
@@ -8143,15 +8136,15 @@ func (v CapabilityValue) Destroy(_ *Interpreter, _ func() LocationRange) {
 	// NO-OP
 }
 
-func (v CapabilityValue) String(results StringResults) string {
+func (v CapabilityValue) String() string {
 	var borrowType string
 	if v.BorrowType != nil {
 		borrowType = v.BorrowType.String()
 	}
 	return format.Capability(
 		borrowType,
-		v.Address.String(results),
-		v.Path.String(results),
+		v.Address.String(),
+		v.Path.String(),
 	)
 }
 
@@ -8253,10 +8246,10 @@ func (v LinkValue) Destroy(_ *Interpreter, _ func() LocationRange) {
 	// NO-OP
 }
 
-func (v LinkValue) String(results StringResults) string {
+func (v LinkValue) String() string {
 	return format.Link(
 		v.Type.String(),
-		v.TargetPath.String(results),
+		v.TargetPath.String(),
 	)
 }
 

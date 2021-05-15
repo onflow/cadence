@@ -5309,7 +5309,7 @@ type testValue struct {
 
 func (v testValue) String() string {
 	if v.literal == "" {
-		return v.value.String(interpreter.StringResults{})
+		return fmt.Sprint(v.value)
 	}
 	return v.literal
 }
@@ -7443,7 +7443,7 @@ func TestInterpretNestedDestroy(t *testing.T) {
 			),
 		},
 		func(invocation interpreter.Invocation) interpreter.Value {
-			message := invocation.Arguments[0].String(interpreter.StringResults{})
+			message := fmt.Sprintf("%v", invocation.Arguments[0])
 			logs = append(logs, message)
 			return interpreter.VoidValue{}
 		},

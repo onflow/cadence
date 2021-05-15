@@ -2681,12 +2681,7 @@ func TestRuntimePublicAccountAddress(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	assert.Equal(t,
-		[]string{
-			address.String(interpreter.StringResults{}),
-		},
-		loggedMessages,
-	)
+	assert.Equal(t, []string{fmt.Sprint(address)}, loggedMessages)
 }
 
 func TestRuntimeAccountPublishAndAccess(t *testing.T) {
