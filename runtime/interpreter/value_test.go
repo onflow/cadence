@@ -633,6 +633,15 @@ func TestStringer(t *testing.T) {
 			}(),
 			expected: `{"a": 42, "b": ...}`,
 		},
+		"Recursive ephemeral reference (array)": {
+			value: func() Value {
+				array := NewArrayValueUnownedNonCopying()
+				arrayRef := &EphemeralReferenceValue{Value: array}
+				array.Insert(0, arrayRef)
+				return array
+			}(),
+			expected: `[[...]]`,
+		},
 	}
 
 	test := func(name string, testCase testCase) {
@@ -643,7 +652,7 @@ func TestStringer(t *testing.T) {
 
 			assert.Equal(t,
 				testCase.expected,
-				testCase.value.String(),
+				testCase.value.String(StringResults{}),
 			)
 		})
 	}
