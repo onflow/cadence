@@ -73,12 +73,12 @@ func (v DeployedContractValue) Destroy(_ *Interpreter, _ func() LocationRange) {
 	// NO-OP
 }
 
-func (v DeployedContractValue) String() string {
+func (v DeployedContractValue) String(results StringResults) string {
 	return fmt.Sprintf(
 		"DeployedContract(address: %s, name: %s, code: %s)",
-		v.Address.String(),
-		v.Name,
-		v.Code,
+		v.Address.String(results),
+		v.Name.String(results),
+		v.Code.String(results),
 	)
 }
 
