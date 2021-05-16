@@ -76,6 +76,15 @@ func (s *Server) handleSignatureHelp(req *json.RawMessage) (interface{}, error) 
 	return s.Handler.SignatureHelp(s.conn, &params)
 }
 
+func (s *Server) handleDocumentHighlight(req *json.RawMessage) (interface{}, error) {
+	var params TextDocumentPositionParams
+	if err := json.Unmarshal(*req, &params); err != nil {
+		return nil, err
+	}
+
+	return s.Handler.DocumentHighlight(s.conn, &params)
+}
+
 func (s *Server) handleCodeLens(req *json.RawMessage) (interface{}, error) {
 	var params CodeLensParams
 	if err := json.Unmarshal(*req, &params); err != nil {

@@ -333,6 +333,7 @@ func (s *Server) Initialize(
 				TriggerCharacters: []string{"."},
 				ResolveProvider:   true,
 			},
+			DocumentHighlightProvider: true,
 		},
 	}
 
@@ -598,6 +599,46 @@ func (s *Server) SignatureHelp(
 	_ *protocol.TextDocumentPositionParams,
 ) (*protocol.SignatureHelp, error) {
 	return nil, nil
+}
+
+func (s *Server) DocumentHighlight(
+	_ protocol.Conn,
+	params *protocol.TextDocumentPositionParams,
+) (
+	[]*protocol.DocumentHighlight,
+	error,
+) {
+	uri := params.TextDocument.URI
+	checker := s.checkerForDocument(uri)
+	if checker == nil {
+		return nil, nil
+	}
+
+	position := conversion.ProtocolToSemaPosition(params.Position)
+	occurrences := checker.Occurrences.FindAll(position)
+
+	documentHighlights := make([]*protocol.DocumentHighlight, 0)
+
+	for _, occurrence := range occurrences {
+
+		origin := occurrence.Origin
+		if origin == nil || origin.StartPos == nil || origin.EndPos == nil {
+			continue
+		}
+
+		for _, occurrenceRange := range origin.Occurrences {
+			documentHighlights = append(documentHighlights,
+				&protocol.DocumentHighlight{
+					Range: conversion.ASTToProtocolRange(
+						occurrenceRange.StartPos,
+						occurrenceRange.EndPos,
+					),
+				},
+			)
+		}
+	}
+
+	return documentHighlights, nil
 }
 
 // CodeLens is called every time the document contents change and returns a
