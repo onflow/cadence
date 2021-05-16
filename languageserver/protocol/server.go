@@ -85,6 +85,7 @@ type Handler interface {
 	Definition(conn Conn, params *TextDocumentPositionParams) (*Location, error)
 	SignatureHelp(conn Conn, params *TextDocumentPositionParams) (*SignatureHelp, error)
 	DocumentHighlight(conn Conn, params *TextDocumentPositionParams) ([]*DocumentHighlight, error)
+	Rename(conn Conn, params *RenameParams) (*WorkspaceEdit, error)
 	CodeLens(conn Conn, params *CodeLensParams) ([]*CodeLens, error)
 	Completion(conn Conn, params *CompletionParams) ([]*CompletionItem, error)
 	ResolveCompletionItem(conn Conn, item *CompletionItem) (*CompletionItem, error)
@@ -130,6 +131,9 @@ func NewServer(handler Handler) *Server {
 
 	jsonrpc2Server.Methods["textDocument/documentHighlight"] =
 		server.handleDocumentHighlight
+
+	jsonrpc2Server.Methods["textDocument/rename"] =
+		server.handleRename
 
 	jsonrpc2Server.Methods["textDocument/completion"] =
 		server.handleCompletion

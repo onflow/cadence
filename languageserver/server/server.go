@@ -341,6 +341,7 @@ func (s *Server) Initialize(
 			},
 			DocumentHighlightProvider: true,
 			DocumentSymbolProvider:    true,
+			RenameProvider:            true,
 		},
 	}
 
@@ -653,6 +654,58 @@ func (s *Server) DocumentHighlight(
 	}
 
 	return documentHighlights, nil
+}
+
+func (s *Server) Rename(
+	_ protocol.Conn,
+	params *protocol.RenameParams,
+) (
+	*protocol.WorkspaceEdit,
+	error,
+) {
+	uri := params.TextDocument.URI
+	checker := s.checkerForDocument(uri)
+	if checker == nil {
+		return nil, nil
+	}
+
+	position := conversion.ProtocolToSemaPosition(params.Position)
+	occurrences := checker.Occurrences.FindAll(position)
+	// If there are no occurrences,
+	// then try the preceding position
+	if len(occurrences) == 0 && position.Column > 0 {
+		previousPosition := position
+		previousPosition.Column -= 1
+		occurrences = checker.Occurrences.FindAll(previousPosition)
+	}
+
+	textEdits := make([]protocol.TextEdit, 0)
+
+	for _, occurrence := range occurrences {
+
+		origin := occurrence.Origin
+		if origin == nil || origin.StartPos == nil || origin.EndPos == nil {
+			continue
+		}
+
+		for _, occurrenceRange := range origin.Occurrences {
+			textEdits = append(textEdits,
+				protocol.TextEdit{
+					Range: conversion.ASTToProtocolRange(
+						occurrenceRange.StartPos,
+						occurrenceRange.EndPos,
+					),
+					NewText: params.NewName,
+				},
+			)
+		}
+	}
+
+	return &protocol.WorkspaceEdit{
+		Changes: &map[string][]protocol.TextEdit{
+			string(uri): textEdits,
+		},
+	}, nil
 }
 
 // CodeLens is called every time the document contents change and returns a

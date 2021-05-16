@@ -85,6 +85,15 @@ func (s *Server) handleDocumentHighlight(req *json.RawMessage) (interface{}, err
 	return s.Handler.DocumentHighlight(s.conn, &params)
 }
 
+func (s *Server) handleRename(req *json.RawMessage) (interface{}, error) {
+	var params RenameParams
+	if err := json.Unmarshal(*req, &params); err != nil {
+		return nil, err
+	}
+
+	return s.Handler.Rename(s.conn, &params)
+}
+
 func (s *Server) handleCodeLens(req *json.RawMessage) (interface{}, error) {
 	var params CodeLensParams
 	if err := json.Unmarshal(*req, &params); err != nil {
