@@ -1319,7 +1319,7 @@ func (s *Server) rangeCompletions(
 	// The client asks for the column after the identifier,
 	// query the member accesses for the preceding position
 
-	ranges := checker.Ranges.Find(position)
+	ranges := checker.Ranges.FindAll(position)
 
 	delete(s.ranges, uri)
 
