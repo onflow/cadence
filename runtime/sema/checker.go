@@ -1392,7 +1392,6 @@ func (checker *Checker) recordVariableDeclarationOccurrence(name string, variabl
 
 func (checker *Checker) recordFieldDeclarationOrigin(
 	identifier ast.Identifier,
-	startPos, endPos ast.Position,
 	fieldType Type,
 ) *Origin {
 	if !checker.positionInfoEnabled {
@@ -1410,8 +1409,8 @@ func (checker *Checker) recordFieldDeclarationOrigin(
 	}
 
 	checker.Occurrences.Put(
-		startPos,
-		endPos,
+		startPosition,
+		endPosition,
 		origin,
 	)
 

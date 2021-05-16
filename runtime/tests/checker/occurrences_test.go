@@ -280,8 +280,8 @@ func TestCheckOccurrencesStructAndInterface(t *testing.T) {
 			DeclarationKind: common.DeclarationKindStructure,
 		},
 		{
-			StartPos:        sema.Position{Line: 5, Column: 8},
-			EndPos:          sema.Position{Line: 5, Column: 17},
+			StartPos:        sema.Position{Line: 5, Column: 12},
+			EndPos:          sema.Position{Line: 5, Column: 12},
 			OriginStartPos:  &sema.Position{Line: 5, Column: 12},
 			OriginEndPos:    &sema.Position{Line: 5, Column: 12},
 			DeclarationKind: common.DeclarationKindField,
