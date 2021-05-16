@@ -616,6 +616,13 @@ func (s *Server) DocumentHighlight(
 
 	position := conversion.ProtocolToSemaPosition(params.Position)
 	occurrences := checker.Occurrences.FindAll(position)
+	// If there are no occurrences,
+	// then try the preceding position
+	if len(occurrences) == 0 && position.Column > 0 {
+		previousPosition := position
+		previousPosition.Column -= 1
+		occurrences = checker.Occurrences.FindAll(previousPosition)
+	}
 
 	documentHighlights := make([]*protocol.DocumentHighlight, 0)
 
