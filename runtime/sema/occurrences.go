@@ -66,6 +66,7 @@ type Origin struct {
 	DeclarationKind common.DeclarationKind
 	StartPos        *ast.Position
 	EndPos          *ast.Position
+	Occurrences     []ast.Range
 }
 
 type Occurrences struct {
@@ -96,6 +97,13 @@ func (o *Occurrences) Put(startPos, endPos ast.Position, origin *Origin) {
 		occurrence.EndPos,
 	)
 	o.tree.Put(interval, occurrence)
+	origin.Occurrences = append(
+		origin.Occurrences,
+		ast.Range{
+			StartPos: startPos,
+			EndPos:   endPos,
+		},
+	)
 }
 
 type Occurrence struct {

@@ -780,8 +780,6 @@ func (checker *Checker) declareEnumConstructor(
 			constructorOrigins[caseName] =
 				checker.recordFieldDeclarationOrigin(
 					enumCase.Identifier,
-					enumCase.Identifier.StartPosition(),
-					enumCase.Identifier.EndPosition(),
 					compositeType,
 				)
 		}
@@ -1419,8 +1417,6 @@ func (checker *Checker) defaultMembersAndOrigins(
 			origins[identifier] =
 				checker.recordFieldDeclarationOrigin(
 					field.Identifier,
-					field.StartPos,
-					field.EndPos,
 					fieldTypeAnnotation.Type,
 				)
 		}
@@ -1527,8 +1523,6 @@ func (checker *Checker) eventMembersAndOrigins(
 			origins[identifier.Identifier] =
 				checker.recordFieldDeclarationOrigin(
 					identifier,
-					parameter.StartPos,
-					parameter.EndPos,
 					typeAnnotation.Type,
 				)
 		}
