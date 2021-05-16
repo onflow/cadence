@@ -57,7 +57,7 @@ func (r *Ranges) All() []Range {
 	return ranges
 }
 
-func (r *Ranges) Find(pos Position) []Range {
+func (r *Ranges) FindAll(pos Position) []Range {
 	entries := r.tree.SearchAll(pos)
 	ranges := make([]Range, len(entries))
 	for i, entry := range entries {

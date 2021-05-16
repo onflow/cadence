@@ -180,7 +180,7 @@ func TestCheckRange(t *testing.T) {
 		ranges,
 	)
 
-	ranges = checker.Ranges.Find(sema.Position{Line: 8, Column: 0})
+	ranges = checker.Ranges.FindAll(sema.Position{Line: 8, Column: 0})
 	sortAndFilterRanges()
 	assert.Equal(t,
 		[]sema.Range{
@@ -228,7 +228,7 @@ func TestCheckRange(t *testing.T) {
 		ranges,
 	)
 
-	ranges = checker.Ranges.Find(sema.Position{Line: 8, Column: 100})
+	ranges = checker.Ranges.FindAll(sema.Position{Line: 8, Column: 100})
 	sortAndFilterRanges()
 	assert.Equal(t,
 		[]sema.Range{
