@@ -556,7 +556,10 @@ func (interpreter *Interpreter) SetAllInterpreters(allInterpreters map[common.Lo
 	interpreter.allInterpreters = allInterpreters
 
 	// Register self
-	interpreter.allInterpreters[interpreter.Location.ID()] = interpreter
+	if interpreter.Location != nil {
+		locationID := interpreter.Location.ID()
+		interpreter.allInterpreters[locationID] = interpreter
+	}
 }
 
 // setTypeCodes sets the type codes.
