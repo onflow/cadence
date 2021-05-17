@@ -22,11 +22,11 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/onflow/cadence/encoding/json"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence"
-	"github.com/onflow/cadence/encoding/json"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/parser2"
@@ -900,6 +900,53 @@ func TestExportLinkValue(t *testing.T) {
 
 		assert.Equal(t, expected, actual)
 	})
+}
+func TestExportJsonDeterministic(t *testing.T) {
+
+	// exported order of field in a dictionary depends on the execution ,
+	// however the deterministic code should generate deterministic type
+
+	script := `
+        access(all) event Foo(bar: Int, aaa: {Int: {Int: String}})
+
+        access(all) fun main() {
+
+			let dict0 = {
+				3: "c",
+				2: "c",
+				1: "a",
+				0: "a"
+			}
+
+			let dict2 = {
+				7: "d"
+			}
+
+			dict2[1] = "c"
+			dict2[3] = "b"
+
+            emit Foo(
+				bar: 2,
+				aaa: {
+					2: dict2,
+					1: {
+						3: "a",
+						7: "b",
+						2: "a",
+						1: ""
+					},
+					0: dict0
+				}
+			)
+        }
+    `
+
+	event := exportEventFromScript(t, script)
+
+	bytes, err := json.Encode(event)
+
+	assert.NoError(t, err)
+	assert.Equal(t, "{\"type\":\"Event\",\"value\":{\"id\":\"S.test.Foo\",\"fields\":[{\"name\":\"bar\",\"value\":{\"type\":\"Int\",\"value\":\"2\"}},{\"name\":\"aaa\",\"value\":{\"type\":\"Dictionary\",\"value\":[{\"key\":{\"type\":\"Int\",\"value\":\"2\"},\"value\":{\"type\":\"Dictionary\",\"value\":[{\"key\":{\"type\":\"Int\",\"value\":\"7\"},\"value\":{\"type\":\"String\",\"value\":\"d\"}},{\"key\":{\"type\":\"Int\",\"value\":\"1\"},\"value\":{\"type\":\"String\",\"value\":\"c\"}},{\"key\":{\"type\":\"Int\",\"value\":\"3\"},\"value\":{\"type\":\"String\",\"value\":\"b\"}}]}},{\"key\":{\"type\":\"Int\",\"value\":\"1\"},\"value\":{\"type\":\"Dictionary\",\"value\":[{\"key\":{\"type\":\"Int\",\"value\":\"3\"},\"value\":{\"type\":\"String\",\"value\":\"a\"}},{\"key\":{\"type\":\"Int\",\"value\":\"7\"},\"value\":{\"type\":\"String\",\"value\":\"b\"}},{\"key\":{\"type\":\"Int\",\"value\":\"2\"},\"value\":{\"type\":\"String\",\"value\":\"a\"}},{\"key\":{\"type\":\"Int\",\"value\":\"1\"},\"value\":{\"type\":\"String\",\"value\":\"\"}}]}},{\"key\":{\"type\":\"Int\",\"value\":\"0\"},\"value\":{\"type\":\"Dictionary\",\"value\":[{\"key\":{\"type\":\"Int\",\"value\":\"3\"},\"value\":{\"type\":\"String\",\"value\":\"c\"}},{\"key\":{\"type\":\"Int\",\"value\":\"2\"},\"value\":{\"type\":\"String\",\"value\":\"c\"}},{\"key\":{\"type\":\"Int\",\"value\":\"1\"},\"value\":{\"type\":\"String\",\"value\":\"a\"}},{\"key\":{\"type\":\"Int\",\"value\":\"0\"},\"value\":{\"type\":\"String\",\"value\":\"a\"}}]}}]}}]}}\n", string(bytes))
 }
 
 var fooFields = []cadence.Field{
