@@ -4448,7 +4448,7 @@ func TestInterpretInvalidArrayInsert(t *testing.T) {
 
 	for name, index := range map[string]int{
 		"negative":          -1,
-		"larger than count": 3,
+		"larger than count": 4,
 	} {
 
 		t.Run(name, func(t *testing.T) {
@@ -4530,7 +4530,7 @@ func TestInterpretInvalidArrayRemove(t *testing.T) {
 
 	for name, index := range map[string]int{
 		"negative":          -1,
-		"larger than count": 4,
+		"larger than count": 3,
 	} {
 
 		t.Run(name, func(t *testing.T) {
