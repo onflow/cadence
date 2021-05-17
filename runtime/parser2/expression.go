@@ -550,6 +550,8 @@ func defineLessThanOrTypeArgumentsExpression() {
 			//
 			// This parse may fail, in which case we just ignore the error.
 
+			var argumentsStartPos ast.Position
+
 			(func() {
 				defer func() {
 					_ = recover()
@@ -559,7 +561,8 @@ func defineLessThanOrTypeArgumentsExpression() {
 				p.mustOne(lexer.TokenGreater)
 
 				p.skipSpaceAndComments(true)
-				p.mustOne(lexer.TokenParenOpen)
+				parenOpenToken := p.mustOne(lexer.TokenParenOpen)
+				argumentsStartPos = parenOpenToken.EndPos
 
 				isInvocation = true
 			})()
@@ -586,6 +589,7 @@ func defineLessThanOrTypeArgumentsExpression() {
 					InvokedExpression: left,
 					TypeArguments:     typeArguments,
 					Arguments:         arguments,
+					ArgumentsStartPos: argumentsStartPos,
 					EndPos:            endPos,
 				}
 
@@ -860,6 +864,7 @@ func defineInvocationExpression() {
 			return &ast.InvocationExpression{
 				InvokedExpression: left,
 				Arguments:         arguments,
+				ArgumentsStartPos: token.EndPos,
 				EndPos:            endPos,
 			}
 		},
@@ -900,7 +905,14 @@ func parseArgumentListRemainder(p *parser) (arguments []*ast.Argument, endPos as
 					p.current.Type,
 				))
 			}
-			arguments = append(arguments, parseArgument(p))
+			argument := parseArgument(p)
+
+			p.skipSpaceAndComments(true)
+
+			argument.TrailingSeparatorPos = p.current.StartPos
+
+			arguments = append(arguments, argument)
+
 			expectArgument = false
 		}
 	}
@@ -946,7 +958,9 @@ func parseArgument(p *parser) *ast.Argument {
 			Expression:    expr,
 		}
 	}
-	return &ast.Argument{Expression: expr}
+	return &ast.Argument{
+		Expression: expr,
+	}
 }
 
 func defineNestedExpression() {

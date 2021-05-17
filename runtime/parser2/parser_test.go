@@ -384,6 +384,11 @@ func TestParseArgumentList(t *testing.T) {
 							},
 						},
 					},
+					TrailingSeparatorPos: ast.Position{
+						Offset: 2,
+						Line:   1,
+						Column: 2,
+					},
 				},
 				{
 					Label: "b",
@@ -411,6 +416,11 @@ func TestParseArgumentList(t *testing.T) {
 								Column: 10,
 							},
 						},
+					},
+					TrailingSeparatorPos: ast.Position{
+						Offset: 11,
+						Line:   1,
+						Column: 11,
 					},
 				},
 			},
