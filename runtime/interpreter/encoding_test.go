@@ -86,7 +86,7 @@ func testEncodeDecode(t *testing.T, test encodeDecodeTest) {
 		require.NoError(t, err)
 
 		// Make sure the content is built.
-		_ = decoded.String()
+		_ = decoded.String(StringResults{})
 
 		if !test.deferred || (test.deferred && test.decodedValue != nil) {
 			expectedValue := test.value
@@ -5338,7 +5338,7 @@ func TestDecodeCallback(t *testing.T) {
 	require.NoError(t, err)
 
 	// build the content
-	_ = decoded.String()
+	_ = decoded.String(StringResults{})
 
 	require.Equal(t,
 		[]decodeCallback{
