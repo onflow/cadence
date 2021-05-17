@@ -26,6 +26,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/sema"
 	checkerUtils "github.com/onflow/cadence/runtime/tests/checker"
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
@@ -366,6 +367,9 @@ func TestSetOwnerCompositeCopy(t *testing.T) {
 	const fieldName = "test"
 
 	composite.fields.Set(fieldName, value)
+	composite.stringer = func(_ StringResults) string {
+		return "random string"
+	}
 
 	compositeCopy := composite.Copy().(*CompositeValue)
 	valueCopy, _ := compositeCopy.fields.Get(fieldName)
@@ -373,6 +377,10 @@ func TestSetOwnerCompositeCopy(t *testing.T) {
 	assert.Nil(t, compositeCopy.GetOwner())
 	assert.Nil(t, valueCopy.GetOwner())
 	assert.Equal(t, &oldOwner, value.GetOwner())
+	assert.Equal(t,
+		composite.stringer(StringResults{}),
+		compositeCopy.stringer(StringResults{}),
+	)
 }
 
 func TestSetOwnerCompositeSetMember(t *testing.T) {
@@ -559,7 +567,7 @@ func TestStringer(t *testing.T) {
 					nil,
 				)
 
-				compositeValue.stringer = func() string {
+				compositeValue.stringer = func(_ StringResults) string {
 					return "y --> bar"
 				}
 
@@ -2088,4 +2096,47 @@ func TestNumberValue_Equal(t *testing.T) {
 			)
 		})
 	}
+}
+
+func TestPublicKeyValue(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("Stringer output includes public key value", func(t *testing.T) {
+
+		t.Parallel()
+
+		publicKey := NewArrayValueUnownedNonCopying(
+			NewIntValueFromInt64(1),
+			NewIntValueFromInt64(7),
+			NewIntValueFromInt64(3),
+		)
+
+		publicKeyString := "[1, 7, 3]"
+
+		sigAlgo := func() *CompositeValue {
+			fields := NewStringValueOrderedMap()
+			fields.Set(sema.EnumRawValueFieldName, UInt8Value(sema.SignatureAlgorithmECDSA_secp256k1.RawValue()))
+
+			return &CompositeValue{
+				qualifiedIdentifier: sema.SignatureAlgorithmType.QualifiedIdentifier(),
+				kind:                sema.SignatureAlgorithmType.Kind,
+				fields:              fields,
+			}
+		}
+
+		key := NewPublicKeyValue(
+			publicKey,
+			sigAlgo(),
+			func(publicKey *CompositeValue) BoolValue {
+				return true
+			},
+			nil,
+		)
+
+		require.Contains(t,
+			key.String(StringResults{}),
+			publicKeyString,
+		)
+	})
 }

@@ -6169,7 +6169,7 @@ type CompositeValue struct {
 	Owner           *common.Address
 	destroyed       bool
 	modified        bool
-	stringer        func() string
+	stringer        func(results StringResults) string
 
 	// Raw-content cache for decoded values.
 	// Includes meta-info (type info, etc) as well as the fields content.
@@ -6344,6 +6344,7 @@ func (v *CompositeValue) Copy() Value {
 		// NOTE: new value has no owner
 		Owner:           nil,
 		modified:        true,
+		stringer:        v.stringer,
 		content:         v.content,
 		fieldsContent:   v.fieldsContent,
 		valuePath:       v.valuePath,
@@ -6530,7 +6531,7 @@ func (v *CompositeValue) SetMember(_ *Interpreter, getLocationRange func() Locat
 
 func (v *CompositeValue) String(results StringResults) string {
 	if v.stringer != nil {
-		return v.stringer()
+		return v.stringer(results)
 	}
 
 	return formatComposite(string(v.TypeID()), v.Fields(), results)
@@ -7997,7 +7998,7 @@ func NewAuthAccountValue(
 		return inter.accountGetLinkTargetFunction(address)
 	})
 
-	stringer := func() string {
+	stringer := func(_ StringResults) string {
 		return fmt.Sprintf("AuthAccount(%s)", address)
 	}
 
@@ -8081,7 +8082,7 @@ func NewPublicAccountValue(
 	})
 
 	// Stringer function
-	stringer := func() string {
+	stringer := func(_ StringResults) string {
 		return fmt.Sprintf("PublicAccount(%s)", address)
 	}
 
@@ -8441,6 +8442,23 @@ func NewPublicKeyValue(
 
 	// Validate the public key, and initialize 'isValid' field.
 	publicKeyValue.fields.Set(sema.PublicKeyIsValidField, validationFunction(publicKeyValue))
+
+	// Public key value to string should include the key even though it is a computed field
+	var stringerFields *StringValueOrderedMap
+	publicKeyValue.stringer = func(results StringResults) string {
+		if stringerFields == nil {
+			stringerFields = NewStringValueOrderedMap()
+			stringerFields.Set(sema.PublicKeyPublicKeyField, publicKey.Copy())
+			publicKeyValue.Fields().Foreach(func(key string, value Value) {
+				stringerFields.Set(key, value)
+			})
+		}
+		return formatComposite(
+			string(publicKeyValue.TypeID()),
+			stringerFields,
+			results,
+		)
+	}
 
 	return publicKeyValue
 
