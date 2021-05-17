@@ -6241,7 +6241,7 @@ func (v *CompositeValue) Copy() Value {
 		// NOTE: new value has no owner
 		Owner:           nil,
 		modified:        true,
-    stringer: v.stringer,
+		stringer: v.stringer,
 		content:         v.content,
 		fieldsContent:   v.fieldsContent,
 		valuePath:       v.valuePath,
