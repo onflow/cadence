@@ -342,6 +342,9 @@ func (s *Server) Initialize(
 			DocumentHighlightProvider: true,
 			DocumentSymbolProvider:    true,
 			RenameProvider:            true,
+			SignatureHelpProvider: &protocol.SignatureHelpOptions{
+				TriggerCharacters: []string{"("},
+			},
 		},
 	}
 
@@ -572,7 +575,10 @@ func formatType(ty sema.Type) string {
 func (s *Server) Definition(
 	_ protocol.Conn,
 	params *protocol.TextDocumentPositionParams,
-) (*protocol.Location, error) {
+) (
+	*protocol.Location,
+	error,
+) {
 
 	uri := params.TextDocument.URI
 	checker := s.checkerForDocument(uri)
@@ -601,12 +607,82 @@ func (s *Server) Definition(
 	}, nil
 }
 
-// TODO
 func (s *Server) SignatureHelp(
-	_ protocol.Conn,
-	_ *protocol.TextDocumentPositionParams,
+	conn protocol.Conn,
+	params *protocol.TextDocumentPositionParams,
 ) (*protocol.SignatureHelp, error) {
-	return nil, nil
+
+	uri := params.TextDocument.URI
+	checker := s.checkerForDocument(uri)
+	if checker == nil {
+		return nil, nil
+	}
+
+	position := conversion.ProtocolToSemaPosition(params.Position)
+	invocation := checker.FunctionInvocations.Find(position)
+
+	if invocation == nil {
+		return nil, nil
+	}
+
+	functionType := invocation.FunctionType
+
+	signatureLabelParts := make([]string, 0, len(functionType.Parameters))
+
+	argumentLabels := functionType.ArgumentLabels()
+
+	for i, parameter := range functionType.Parameters {
+
+		argumentLabel := argumentLabels[i]
+
+		typeAnnotation := parameter.TypeAnnotation.QualifiedString()
+
+		var signatureLabelPart string
+
+		if argumentLabel == sema.ArgumentLabelNotRequired {
+			signatureLabelPart = typeAnnotation
+		} else {
+			signatureLabelPart = fmt.Sprintf(
+				"%s: %s",
+				argumentLabel,
+				typeAnnotation,
+			)
+		}
+
+		signatureLabelParts = append(signatureLabelParts, signatureLabelPart)
+	}
+
+	signatureLabel := fmt.Sprintf(
+		"(%s): %s",
+		strings.Join(signatureLabelParts, ", "),
+		functionType.ReturnTypeAnnotation.QualifiedString(),
+	)
+
+	signatureParameters := make([]protocol.ParameterInformation, 0, len(signatureLabelParts))
+
+	for _, part := range signatureLabelParts {
+		signatureParameters = append(signatureParameters, protocol.ParameterInformation{
+			Label: part,
+		})
+	}
+
+	var activeParameter int
+
+	for _, trailingSeparatorPosition := range invocation.TrailingSeparatorPositions {
+		if position.Compare(sema.ASTToSemaPosition(trailingSeparatorPosition)) > 0 {
+			activeParameter++
+		}
+	}
+
+	return &protocol.SignatureHelp{
+		Signatures: []protocol.SignatureInformation{
+			{
+				Label:      signatureLabel,
+				Parameters: signatureParameters,
+			},
+		},
+		ActiveParameter: float64(activeParameter),
+	}, nil
 }
 
 func (s *Server) DocumentHighlight(
@@ -1098,6 +1174,11 @@ func (s *Server) memberCompletions(
 
 		if resolver.Kind == common.DeclarationKindFunction {
 			s.prepareFunctionMemberCompletionItem(item, resolver, name)
+
+			// If we are completing a function, we should also trigger signature help
+			item.Command = &protocol.Command{
+				Command: "editor.action.triggerParameterHints",
+			}
 		}
 
 		items = append(items, item)
@@ -1140,6 +1221,8 @@ func (s *Server) rangeCompletions(
 		// If the range is for a function, also prepare the argument list
 		// with placeholders and suggest it
 
+		var isFunctionCompletion bool
+
 		switch r.DeclarationKind {
 		case common.DeclarationKindFunction:
 			functionType := r.Type.(*sema.FunctionType)
@@ -1148,6 +1231,8 @@ func (s *Server) rangeCompletions(
 				r.Identifier,
 				functionType.Parameters,
 			)
+
+			isFunctionCompletion = true
 
 		case common.DeclarationKindStructure,
 			common.DeclarationKindResource,
@@ -1161,6 +1246,15 @@ func (s *Server) rangeCompletions(
 					r.Identifier,
 					constructorFunctionType.Parameters,
 				)
+
+				isFunctionCompletion = true
+			}
+		}
+
+		// If we are completing a function, we should also trigger signature help
+		if isFunctionCompletion {
+			item.Command = &protocol.Command{
+				Command: "editor.action.triggerParameterHints",
 			}
 		}
 
