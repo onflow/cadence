@@ -367,7 +367,7 @@ func TestSetOwnerCompositeCopy(t *testing.T) {
 	const fieldName = "test"
 
 	composite.fields.Set(fieldName, value)
-	composite.stringer = func() string {
+	composite.stringer = func(_ StringResults) string {
 		return "random string"
 	}
 
@@ -377,7 +377,10 @@ func TestSetOwnerCompositeCopy(t *testing.T) {
 	assert.Nil(t, compositeCopy.GetOwner())
 	assert.Nil(t, valueCopy.GetOwner())
 	assert.Equal(t, &oldOwner, value.GetOwner())
-	assert.Equal(t, composite.stringer(), compositeCopy.stringer())
+	assert.Equal(t,
+		composite.stringer(StringResults{}),
+		compositeCopy.stringer(StringResults{}),
+	)
 }
 
 func TestSetOwnerCompositeSetMember(t *testing.T) {
@@ -564,7 +567,7 @@ func TestStringer(t *testing.T) {
 					nil,
 				)
 
-				compositeValue.stringer = func() string {
+				compositeValue.stringer = func(_ StringResults) string {
 					return "y --> bar"
 				}
 
@@ -2116,9 +2119,9 @@ func TestPublicKeyValue(t *testing.T) {
 			fields.Set(sema.EnumRawValueFieldName, UInt8Value(sema.SignatureAlgorithmECDSA_secp256k1.RawValue()))
 
 			return &CompositeValue{
-				QualifiedIdentifier: sema.SignatureAlgorithmType.QualifiedIdentifier(),
-				Kind:                sema.SignatureAlgorithmType.Kind,
-				Fields:              fields,
+				qualifiedIdentifier: sema.SignatureAlgorithmType.QualifiedIdentifier(),
+				kind:                sema.SignatureAlgorithmType.Kind,
+				fields:              fields,
 			}
 		}
 
@@ -2131,6 +2134,9 @@ func TestPublicKeyValue(t *testing.T) {
 			nil,
 		)
 
-		require.Contains(t, key.String(), publicKeyString)
+		require.Contains(t,
+			key.String(StringResults{}),
+			publicKeyString,
+		)
 	})
 }
