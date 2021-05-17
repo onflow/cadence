@@ -128,7 +128,7 @@ var LogFunction = NewStandardLibraryFunction(
 		),
 	},
 	func(invocation interpreter.Invocation) interpreter.Value {
-		fmt.Printf("%v\n", invocation.Arguments[0])
+		println(invocation.Arguments[0].String(interpreter.StringResults{}))
 		return interpreter.VoidValue{}
 	},
 )

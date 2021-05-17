@@ -29,6 +29,7 @@ import (
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
+	"github.com/onflow/cadence/runtime/stdlib"
 	"github.com/onflow/cadence/runtime/tests/checker"
 	. "github.com/onflow/cadence/runtime/tests/utils"
 )
@@ -1031,4 +1032,106 @@ func TestInterpretIsInstanceCheckInPreCondition(t *testing.T) {
 	t.Run("equality", func(t *testing.T) {
 		test("x.getType() == self.getType()")
 	})
+}
+
+func TestInterpretFunctionWithPostConditionAndResourceResult(t *testing.T) {
+
+	t.Parallel()
+
+	checkCalled := false
+
+	// Inject a host function that is used to assert that the `result` value
+	// in the post condition is in fact a reference (ephemeral reference value),
+	// and not a resource (composite value)
+
+	valueDeclarations := stdlib.StandardLibraryValues{
+		{
+			Name: "check",
+			Type: &sema.FunctionType{
+				Parameters: []*sema.Parameter{
+					{
+						Label:      sema.ArgumentLabelNotRequired,
+						Identifier: "value",
+						TypeAnnotation: sema.NewTypeAnnotation(
+							sema.AnyStructType,
+						),
+					},
+				},
+				ReturnTypeAnnotation: sema.NewTypeAnnotation(
+					sema.VoidType,
+				),
+			},
+			Value: interpreter.NewHostFunctionValue(
+				func(invocation interpreter.Invocation) interpreter.Value {
+					checkCalled = true
+
+					argument := invocation.Arguments[0]
+					require.IsType(t, &interpreter.EphemeralReferenceValue{}, argument)
+
+					return interpreter.VoidValue{}
+				},
+			),
+			Kind: common.DeclarationKindConstant,
+		},
+	}
+
+	semaValueDeclarations := valueDeclarations.ToSemaValueDeclarations()
+	interpreterValueDeclarations := valueDeclarations.ToInterpreterValueDeclarations()
+
+	inter := parseCheckAndInterpretWithOptions(t,
+		`
+          resource R {}
+
+          resource Container {
+
+              let resources: @{String: R}
+
+              init() {
+                  self.resources <- {"original": <-create R()}
+              }
+
+              fun withdraw(): @R {
+                  post {
+                      self.use(result)
+                  }
+                  return <- self.resources.remove(key: "original")!
+              }
+
+              fun use(_ r: &R): Bool {
+                  check(r)
+                  return true
+              }
+
+              destroy() {
+                  destroy self.resources
+              }
+          }
+
+          fun test(): Bool {
+              let container <- create Container()
+
+              let r <- container.withdraw()
+              // show that while r is the resource,
+              // it also still exists in the container
+              let duplicated = container.resources["duplicate"] != nil
+
+              // clean-up
+              destroy r
+              destroy container
+
+              return duplicated
+          }
+        `,
+		ParseCheckAndInterpretOptions{
+			CheckerOptions: []sema.Option{
+				sema.WithPredeclaredValues(semaValueDeclarations),
+			},
+			Options: []interpreter.Option{
+				interpreter.WithPredeclaredValues(interpreterValueDeclarations),
+			},
+		})
+
+	_, err := inter.Invoke("test")
+	require.NoError(t, err)
+	require.True(t, checkCalled)
 }

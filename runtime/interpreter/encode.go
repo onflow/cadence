@@ -864,7 +864,7 @@ func (e *Encoder) encodeDictionaryValue(
 
 		for pair := v.Entries.Oldest(); pair != nil; pair = pair.Next() {
 			compositeValue, ok := pair.Value.(*CompositeValue)
-			if !ok || compositeValue.Kind != common.CompositeKindResource {
+			if !ok || compositeValue.Kind() != common.CompositeKindResource {
 				deferred = false
 				break
 			}
@@ -979,10 +979,29 @@ func (e *Encoder) encodeCompositeValue(
 	path []string,
 	deferrals *EncodingDeferrals,
 ) error {
-	// Encode CBOR tag number and array head
+
+	// Encode CBOR tag number
 	err := e.enc.EncodeRawBytes([]byte{
 		// tag number
 		0xd8, cborTagCompositeValue,
+	})
+
+	if err != nil {
+		return err
+	}
+
+	// If the value is not loaded, dump the raw content as it is.
+	if v.content != nil {
+		err = e.enc.EncodeRawBytes(v.content)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	}
+
+	// Encode array head
+	err = e.enc.EncodeRawBytes([]byte{
 		// array, 5 items follow
 		0x85,
 	})
@@ -991,7 +1010,7 @@ func (e *Encoder) encodeCompositeValue(
 	}
 
 	// Encode location at array index encodedCompositeValueLocationFieldKey
-	err = e.encodeLocation(v.Location)
+	err = e.encodeLocation(v.Location())
 	if err != nil {
 		return err
 	}
@@ -1003,45 +1022,55 @@ func (e *Encoder) encodeCompositeValue(
 	}
 
 	// Encode kind at array index encodedCompositeValueKindFieldKey
-	err = e.enc.EncodeUint(uint(v.Kind))
+	err = e.enc.EncodeUint(uint(v.Kind()))
 	if err != nil {
 		return err
 	}
 
 	// Encode fields (as array) at array index encodedCompositeValueFieldsFieldKey
-	err = e.enc.EncodeArrayHead(uint64(v.Fields.Len() * 2))
-	if err != nil {
-		return err
-	}
 
-	// Pre-allocate and reuse valuePath.
-	//nolint:gocritic
-	valuePath := append(path, "")
-
-	lastValuePathIndex := len(path)
-
-	for pair := v.Fields.Oldest(); pair != nil; pair = pair.Next() {
-		fieldName := pair.Key
-
-		// Encode field name as fields array element
-		err := e.enc.EncodeString(fieldName)
+	// If the fields are not loaded, dump the raw fields content as it is.
+	if v.fieldsContent != nil {
+		err := e.enc.EncodeRawBytes(v.fieldsContent)
+		if err != nil {
+			return err
+		}
+	} else {
+		fields := v.Fields()
+		err = e.enc.EncodeArrayHead(uint64(fields.Len() * 2))
 		if err != nil {
 			return err
 		}
 
-		value := pair.Value
+		// Pre-allocate and reuse valuePath.
+		//nolint:gocritic
+		valuePath := append(path, "")
 
-		valuePath[lastValuePathIndex] = fieldName
+		lastValuePathIndex := len(path)
 
-		// Encode value as fields array element
-		err = e.Encode(value, valuePath, deferrals)
-		if err != nil {
-			return err
+		for pair := fields.Oldest(); pair != nil; pair = pair.Next() {
+			fieldName := pair.Key
+
+			// Encode field name as fields array element
+			err := e.enc.EncodeString(fieldName)
+			if err != nil {
+				return err
+			}
+
+			value := pair.Value
+
+			valuePath[lastValuePathIndex] = fieldName
+
+			// Encode value as fields array element
+			err = e.Encode(value, valuePath, deferrals)
+			if err != nil {
+				return err
+			}
 		}
 	}
 
 	// Encode qualified identifier at array index encodedCompositeValueQualifiedIdentifierFieldKey
-	err = e.enc.EncodeString(v.QualifiedIdentifier)
+	err = e.enc.EncodeString(v.QualifiedIdentifier())
 	if err != nil {
 		return err
 	}

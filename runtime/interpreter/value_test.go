@@ -347,7 +347,7 @@ func TestSetOwnerComposite(t *testing.T) {
 
 	const fieldName = "test"
 
-	composite.Fields.Set(fieldName, value)
+	composite.fields.Set(fieldName, value)
 
 	composite.SetOwner(&newOwner)
 
@@ -366,13 +366,13 @@ func TestSetOwnerCompositeCopy(t *testing.T) {
 
 	const fieldName = "test"
 
-	composite.Fields.Set(fieldName, value)
+	composite.fields.Set(fieldName, value)
 	composite.stringer = func() string {
 		return "random string"
 	}
 
 	compositeCopy := composite.Copy().(*CompositeValue)
-	valueCopy, _ := compositeCopy.Fields.Get(fieldName)
+	valueCopy, _ := compositeCopy.fields.Get(fieldName)
 
 	assert.Nil(t, compositeCopy.GetOwner())
 	assert.Nil(t, valueCopy.GetOwner())
@@ -638,6 +638,15 @@ func TestStringer(t *testing.T) {
 			}(),
 			expected: `{"a": 42, "b": ...}`,
 		},
+		"Recursive ephemeral reference (array)": {
+			value: func() Value {
+				array := NewArrayValueUnownedNonCopying()
+				arrayRef := &EphemeralReferenceValue{Value: array}
+				array.Insert(0, arrayRef)
+				return array
+			}(),
+			expected: `[[...]]`,
+		},
 	}
 
 	test := func(name string, testCase testCase) {
@@ -648,7 +657,7 @@ func TestStringer(t *testing.T) {
 
 			assert.Equal(t,
 				testCase.expected,
-				testCase.value.String(),
+				testCase.value.String(StringResults{}),
 			)
 		})
 	}

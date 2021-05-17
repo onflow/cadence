@@ -41,6 +41,8 @@ type DynamicTypeResults map[Value]DynamicType
 
 type TypeConformanceResults map[valueDynamicTypePair]bool
 
+type StringResults map[Value]struct{}
+
 type valueDynamicTypePair struct {
 	value       Value
 	dynamicType DynamicType
@@ -49,7 +51,6 @@ type valueDynamicTypePair struct {
 // Value
 
 type Value interface {
-	fmt.Stringer
 	IsValue()
 	Accept(interpreter *Interpreter, visitor Visitor)
 	DynamicType(interpreter *Interpreter, results DynamicTypeResults) DynamicType
@@ -60,6 +61,7 @@ type Value interface {
 	SetModified(modified bool)
 	StaticType() StaticType
 	ConformsToDynamicType(interpreter *Interpreter, dynamicType DynamicType, results TypeConformanceResults) bool
+	String(results StringResults) string
 }
 
 // ValueIndexableValue
@@ -148,7 +150,7 @@ func (TypeValue) SetModified(_ bool) {
 	// NO-OP
 }
 
-func (v TypeValue) String() string {
+func (v TypeValue) String(_ StringResults) string {
 	var typeString string
 	staticType := v.Type
 	if staticType != nil {
@@ -238,7 +240,7 @@ func (VoidValue) SetModified(_ bool) {
 	// NO-OP
 }
 
-func (VoidValue) String() string {
+func (VoidValue) String(_ StringResults) string {
 	return format.Void
 }
 
@@ -298,7 +300,7 @@ func (v BoolValue) Equal(other Value, _ *Interpreter, _ bool) bool {
 	return bool(v) == bool(otherBool)
 }
 
-func (v BoolValue) String() string {
+func (v BoolValue) String(_ StringResults) string {
 	return format.Bool(bool(v))
 }
 
@@ -363,7 +365,7 @@ func (v *StringValue) SetModified(modified bool) {
 	v.modified = modified
 }
 
-func (v *StringValue) String() string {
+func (v *StringValue) String(_ StringResults) string {
 	return format.String(v.Str)
 }
 
@@ -652,10 +654,10 @@ func (v *ArrayValue) SetIndex(index int, value Value) {
 	v.Values[index] = value
 }
 
-func (v *ArrayValue) String() string {
+func (v *ArrayValue) String(results StringResults) string {
 	values := make([]string, len(v.Values))
 	for i, value := range v.Values {
-		values[i] = value.String()
+		values[i] = value.String(results)
 	}
 	return format.Array(values)
 }
@@ -884,7 +886,7 @@ func getNumberValueMember(v NumberValue, name string) Value {
 	case sema.ToStringFunctionName:
 		return NewHostFunctionValue(
 			func(invocation Invocation) Value {
-				return NewStringValue(v.String())
+				return NewStringValue(v.String(StringResults{}))
 			},
 		)
 
@@ -1020,7 +1022,7 @@ func (v IntValue) ToBigInt() *big.Int {
 	return new(big.Int).Set(v.BigInt)
 }
 
-func (v IntValue) String() string {
+func (v IntValue) String(_ StringResults) string {
 	return format.BigInt(v.BigInt)
 }
 
@@ -1223,7 +1225,7 @@ func (Int8Value) SetModified(_ bool) {
 	// NO-OP
 }
 
-func (v Int8Value) String() string {
+func (v Int8Value) String(_ StringResults) string {
 	return format.Int(int64(v))
 }
 
@@ -1516,7 +1518,7 @@ func (Int16Value) SetModified(_ bool) {
 	// NO-OP
 }
 
-func (v Int16Value) String() string {
+func (v Int16Value) String(_ StringResults) string {
 	return format.Int(int64(v))
 }
 
@@ -1811,7 +1813,7 @@ func (Int32Value) SetModified(_ bool) {
 	// NO-OP
 }
 
-func (v Int32Value) String() string {
+func (v Int32Value) String(_ StringResults) string {
 	return format.Int(int64(v))
 }
 
@@ -2106,7 +2108,7 @@ func (Int64Value) SetModified(_ bool) {
 	// NO-OP
 }
 
-func (v Int64Value) String() string {
+func (v Int64Value) String(_ StringResults) string {
 	return format.Int(int64(v))
 }
 
@@ -2418,7 +2420,7 @@ func (v Int128Value) ToBigInt() *big.Int {
 	return new(big.Int).Set(v.BigInt)
 }
 
-func (v Int128Value) String() string {
+func (v Int128Value) String(_ StringResults) string {
 	return format.BigInt(v.BigInt)
 }
 
@@ -2782,7 +2784,7 @@ func (v Int256Value) ToBigInt() *big.Int {
 	return new(big.Int).Set(v.BigInt)
 }
 
-func (v Int256Value) String() string {
+func (v Int256Value) String(_ StringResults) string {
 	return format.BigInt(v.BigInt)
 }
 
@@ -3167,7 +3169,7 @@ func (v UIntValue) ToBigInt() *big.Int {
 	return new(big.Int).Set(v.BigInt)
 }
 
-func (v UIntValue) String() string {
+func (v UIntValue) String(_ StringResults) string {
 	return format.BigInt(v.BigInt)
 }
 
@@ -3381,7 +3383,7 @@ func (UInt8Value) SetModified(_ bool) {
 	// NO-OP
 }
 
-func (v UInt8Value) String() string {
+func (v UInt8Value) String(_ StringResults) string {
 	return format.Uint(uint64(v))
 }
 
@@ -3604,7 +3606,7 @@ func (UInt16Value) SetModified(_ bool) {
 	// NO-OP
 }
 
-func (v UInt16Value) String() string {
+func (v UInt16Value) String(_ StringResults) string {
 	return format.Uint(uint64(v))
 }
 
@@ -3829,7 +3831,7 @@ func (UInt32Value) SetModified(_ bool) {
 	// NO-OP
 }
 
-func (v UInt32Value) String() string {
+func (v UInt32Value) String(_ StringResults) string {
 	return format.Uint(uint64(v))
 }
 
@@ -4054,7 +4056,7 @@ func (UInt64Value) SetModified(_ bool) {
 	// NO-OP
 }
 
-func (v UInt64Value) String() string {
+func (v UInt64Value) String(_ StringResults) string {
 	return format.Uint(uint64(v))
 }
 
@@ -4301,7 +4303,7 @@ func (v UInt128Value) ToBigInt() *big.Int {
 	return new(big.Int).Set(v.BigInt)
 }
 
-func (v UInt128Value) String() string {
+func (v UInt128Value) String(_ StringResults) string {
 	return format.BigInt(v.BigInt)
 }
 
@@ -4607,7 +4609,7 @@ func (v UInt256Value) ToBigInt() *big.Int {
 	return new(big.Int).Set(v.BigInt)
 }
 
-func (v UInt256Value) String() string {
+func (v UInt256Value) String(_ StringResults) string {
 	return format.BigInt(v.BigInt)
 }
 
@@ -4894,7 +4896,7 @@ func (Word8Value) SetModified(_ bool) {
 	// NO-OP
 }
 
-func (v Word8Value) String() string {
+func (v Word8Value) String(_ StringResults) string {
 	return format.Uint(uint64(v))
 }
 
@@ -5062,7 +5064,7 @@ func (Word16Value) SetModified(_ bool) {
 	// NO-OP
 }
 
-func (v Word16Value) String() string {
+func (v Word16Value) String(_ StringResults) string {
 	return format.Uint(uint64(v))
 }
 
@@ -5232,7 +5234,7 @@ func (Word32Value) SetModified(_ bool) {
 	// NO-OP
 }
 
-func (v Word32Value) String() string {
+func (v Word32Value) String(_ StringResults) string {
 	return format.Uint(uint64(v))
 }
 
@@ -5403,7 +5405,7 @@ func (Word64Value) SetModified(_ bool) {
 	// NO-OP
 }
 
-func (v Word64Value) String() string {
+func (v Word64Value) String(_ StringResults) string {
 	return format.Uint(uint64(v))
 }
 
@@ -5589,12 +5591,12 @@ func (Fix64Value) SetModified(_ bool) {
 	// NO-OP
 }
 
-func (v Fix64Value) String() string {
+func (v Fix64Value) String(_ StringResults) string {
 	return format.Fix64(int64(v))
 }
 
 func (v Fix64Value) KeyString() string {
-	return v.String()
+	return v.String(StringResults{})
 }
 
 func (v Fix64Value) ToInt() int {
@@ -5857,12 +5859,12 @@ func (UFix64Value) SetModified(_ bool) {
 	// NO-OP
 }
 
-func (v UFix64Value) String() string {
+func (v UFix64Value) String(_ StringResults) string {
 	return format.UFix64(uint64(v))
 }
 
 func (v UFix64Value) KeyString() string {
-	return v.String()
+	return v.String(StringResults{})
 }
 
 func (v UFix64Value) ToInt() int {
@@ -6050,19 +6052,42 @@ func (v UFix64Value) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicTy
 // CompositeValue
 
 type CompositeValue struct {
-	Location            common.Location
-	QualifiedIdentifier string
-	Kind                common.CompositeKind
-	Fields              *StringValueOrderedMap
-	InjectedFields      *StringValueOrderedMap
-	ComputedFields      *StringComputedFieldOrderedMap
-	NestedVariables     *StringVariableOrderedMap
-	Functions           map[string]FunctionValue
-	Destructor          FunctionValue
-	Owner               *common.Address
-	destroyed           bool
-	modified            bool
-	stringer            func() string
+	// Storable properties
+	location            common.Location
+	qualifiedIdentifier string
+	kind                common.CompositeKind
+	fields              *StringValueOrderedMap
+
+	InjectedFields  *StringValueOrderedMap
+	ComputedFields  *StringComputedFieldOrderedMap
+	NestedVariables *StringVariableOrderedMap
+	Functions       map[string]FunctionValue
+	Destructor      FunctionValue
+	Owner           *common.Address
+	destroyed       bool
+	modified        bool
+	stringer        func() string
+
+	// Raw-content cache for decoded values.
+	// Includes meta-info (type info, etc) as well as the fields content.
+	// Only available for decoded values who's content is not loaded yet.
+	content []byte
+
+	// Raw content cache for fields.
+	// Only available for decoded values who's fields are not loaded yet.
+	fieldsContent []byte
+
+	// Value's path to be used during decoding.
+	// Only available for decoded values that are not loaded yet.
+	valuePath []string
+
+	// Callback function to be invoked when decoding the fields of this composite value.
+	// Only available for decoded values who's fields are not loaded yet.
+	decodeCallback DecodingCallback
+
+	// Encoding version of the raw content and raw fieldsContent of this value.
+	// Only available for decoded values who's fields are not loaded yet.
+	encodingVersion uint16
 }
 
 type ComputedField func(*Interpreter) Value
@@ -6078,18 +6103,35 @@ func NewCompositeValue(
 	if fields == nil {
 		fields = NewStringValueOrderedMap()
 	}
+
 	return &CompositeValue{
-		Location:            location,
-		QualifiedIdentifier: qualifiedIdentifier,
-		Kind:                kind,
-		Fields:              fields,
+		location:            location,
+		qualifiedIdentifier: qualifiedIdentifier,
+		kind:                kind,
+		fields:              fields,
 		Owner:               owner,
 		modified:            true,
 	}
 }
 
-func (v *CompositeValue) Destroy(interpreter *Interpreter, getLocationRange func() LocationRange) {
+func NewDeferredCompositeValue(
+	path []string,
+	content []byte,
+	owner *common.Address,
+	decodeCallback DecodingCallback,
+	version uint16,
+) *CompositeValue {
+	return &CompositeValue{
+		Owner:           owner,
+		content:         content,
+		valuePath:       path,
+		decodeCallback:  decodeCallback,
+		modified:        false,
+		encodingVersion: version,
+	}
+}
 
+func (v *CompositeValue) Destroy(interpreter *Interpreter, getLocationRange func() LocationRange) {
 	interpreter = v.getInterpreter(interpreter)
 
 	// if composite was deserialized, dynamically link in the destructor
@@ -6123,13 +6165,13 @@ func (v *CompositeValue) Accept(interpreter *Interpreter, visitor Visitor) {
 		return
 	}
 
-	v.Fields.Foreach(func(_ string, value Value) {
+	v.Fields().Foreach(func(_ string, value Value) {
 		value.Accept(interpreter, visitor)
 	})
 }
 
 func (v *CompositeValue) DynamicType(interpreter *Interpreter, _ DynamicTypeResults) DynamicType {
-	staticType := interpreter.getCompositeType(v.Location, v.QualifiedIdentifier)
+	staticType := interpreter.getCompositeType(v.Location(), v.QualifiedIdentifier())
 	return CompositeDynamicType{
 		StaticType: staticType,
 	}
@@ -6137,14 +6179,14 @@ func (v *CompositeValue) DynamicType(interpreter *Interpreter, _ DynamicTypeResu
 
 func (v *CompositeValue) StaticType() StaticType {
 	return CompositeStaticType{
-		Location:            v.Location,
-		QualifiedIdentifier: v.QualifiedIdentifier,
+		Location:            v.Location(),
+		QualifiedIdentifier: v.QualifiedIdentifier(),
 	}
 }
 
 func (v *CompositeValue) Copy() Value {
 	// Resources and contracts are not copied
-	switch v.Kind {
+	switch v.Kind() {
 	case common.CompositeKindResource, common.CompositeKindContract:
 		return v
 
@@ -6152,18 +6194,44 @@ func (v *CompositeValue) Copy() Value {
 		break
 	}
 
+	// If fields are not loaded, then no need to load them.
+	// Return a copy with raw-content for fields.
+	if v.fieldsContent != nil {
+		return &CompositeValue{
+			location:            v.Location(),
+			qualifiedIdentifier: v.QualifiedIdentifier(),
+			kind:                v.Kind(),
+			fields:              nil,
+			InjectedFields:      v.InjectedFields,
+			ComputedFields:      v.ComputedFields,
+			NestedVariables:     v.NestedVariables,
+			Functions:           v.Functions,
+			Destructor:          v.Destructor,
+			destroyed:           v.destroyed,
+			// NOTE: new value has no owner
+			Owner:           nil,
+			modified:        true,
+			content:         v.content,
+			stringer:        v.stringer,
+			fieldsContent:   v.fieldsContent,
+			valuePath:       v.valuePath,
+			decodeCallback:  v.decodeCallback,
+			encodingVersion: v.encodingVersion,
+		}
+	}
+
 	newFields := NewStringValueOrderedMap()
-	v.Fields.Foreach(func(fieldName string, value Value) {
+	v.Fields().Foreach(func(fieldName string, value Value) {
 		newFields.Set(fieldName, value.Copy())
 	})
 
 	// NOTE: not copying functions or destructor – they are linked in
 
 	return &CompositeValue{
-		Location:            v.Location,
-		QualifiedIdentifier: v.QualifiedIdentifier,
-		Kind:                v.Kind,
-		Fields:              newFields,
+		location:            v.Location(),
+		qualifiedIdentifier: v.QualifiedIdentifier(),
+		kind:                v.Kind(),
+		fields:              newFields,
 		InjectedFields:      v.InjectedFields,
 		ComputedFields:      v.ComputedFields,
 		NestedVariables:     v.NestedVariables,
@@ -6171,16 +6239,21 @@ func (v *CompositeValue) Copy() Value {
 		Destructor:          v.Destructor,
 		destroyed:           v.destroyed,
 		// NOTE: new value has no owner
-		Owner:    nil,
-		modified: true,
-		stringer: v.stringer,
+		Owner:           nil,
+		modified:        true,
+    stringer: v.stringer,
+		content:         v.content,
+		fieldsContent:   v.fieldsContent,
+		valuePath:       v.valuePath,
+		decodeCallback:  v.decodeCallback,
+		encodingVersion: v.encodingVersion,
 	}
 }
 
 func (v *CompositeValue) checkStatus(getLocationRange func() LocationRange) {
 	if v.destroyed {
 		panic(DestroyedCompositeError{
-			CompositeKind: v.Kind,
+			CompositeKind: v.Kind(),
 			LocationRange: getLocationRange(),
 		})
 	}
@@ -6197,7 +6270,7 @@ func (v *CompositeValue) SetOwner(owner *common.Address) {
 
 	v.Owner = owner
 
-	v.Fields.Foreach(func(_ string, value Value) {
+	v.Fields().Foreach(func(_ string, value Value) {
 		value.SetOwner(owner)
 	})
 }
@@ -6207,7 +6280,7 @@ func (v *CompositeValue) IsModified() bool {
 		return true
 	}
 
-	for pair := v.Fields.Oldest(); pair != nil; pair = pair.Next() {
+	for pair := v.Fields().Oldest(); pair != nil; pair = pair.Next() {
 		if pair.Value.IsModified() {
 			return true
 		}
@@ -6239,13 +6312,13 @@ func (v *CompositeValue) SetModified(modified bool) {
 func (v *CompositeValue) GetMember(interpreter *Interpreter, getLocationRange func() LocationRange, name string) Value {
 	v.checkStatus(getLocationRange)
 
-	if v.Kind == common.CompositeKindResource &&
+	if v.Kind() == common.CompositeKindResource &&
 		name == sema.ResourceOwnerFieldName {
 
 		return v.OwnerValue(interpreter)
 	}
 
-	value, ok := v.Fields.Get(name)
+	value, ok := v.Fields().Get(name)
 	if ok {
 		return value
 	}
@@ -6273,9 +6346,9 @@ func (v *CompositeValue) GetMember(interpreter *Interpreter, getLocationRange fu
 	if v.InjectedFields == nil && interpreter.injectedCompositeFieldsHandler != nil {
 		v.InjectedFields = interpreter.injectedCompositeFieldsHandler(
 			interpreter,
-			v.Location,
-			v.QualifiedIdentifier,
-			v.Kind,
+			v.Location(),
+			v.QualifiedIdentifier(),
+			v.Kind(),
 		)
 	}
 
@@ -6302,11 +6375,13 @@ func (v *CompositeValue) getInterpreter(interpreter *Interpreter) *Interpreter {
 	// Get the correct interpreter. The program code might need to be loaded.
 	// NOTE: standard library values have no location
 
-	if v.Location == nil || common.LocationsMatch(interpreter.Location, v.Location) {
+	location := v.Location()
+
+	if location == nil || common.LocationsMatch(interpreter.Location, location) {
 		return interpreter
 	}
 
-	return interpreter.EnsureLoaded(v.Location)
+	return interpreter.EnsureLoaded(v.location)
 }
 
 func (v *CompositeValue) InitializeFunctions(interpreter *Interpreter) {
@@ -6348,18 +6423,18 @@ func (v *CompositeValue) SetMember(_ *Interpreter, getLocationRange func() Locat
 
 	value.SetOwner(v.Owner)
 
-	v.Fields.Set(name, value)
+	v.Fields().Set(name, value)
 }
 
-func (v *CompositeValue) String() string {
+func (v *CompositeValue) String(results StringResults) string {
 	if v.stringer != nil {
 		return v.stringer()
 	}
 
-	return formatComposite(string(v.TypeID()), v.Fields)
+	return formatComposite(string(v.TypeID()), v.Fields(), results)
 }
 
-func formatComposite(typeId string, fields *StringValueOrderedMap) string {
+func formatComposite(typeId string, fields *StringValueOrderedMap, results StringResults) string {
 	preparedFields := make([]struct {
 		Name  string
 		Value string
@@ -6372,7 +6447,7 @@ func formatComposite(typeId string, fields *StringValueOrderedMap) string {
 				Value string
 			}{
 				Name:  fieldName,
-				Value: value.String(),
+				Value: value.String(results),
 			},
 		)
 	})
@@ -6381,7 +6456,7 @@ func formatComposite(typeId string, fields *StringValueOrderedMap) string {
 }
 
 func (v *CompositeValue) GetField(name string) Value {
-	value, _ := v.Fields.Get(name)
+	value, _ := v.Fields().Get(name)
 	return value
 }
 
@@ -6391,18 +6466,21 @@ func (v *CompositeValue) Equal(other Value, interpreter *Interpreter, loadDeferr
 		return false
 	}
 
+	fields := v.Fields()
+	otherFields := otherComposite.Fields()
+
 	if !v.StaticType().Equal(otherComposite.StaticType()) ||
-		v.Kind != otherComposite.Kind ||
-		v.Fields.Len() != otherComposite.Fields.Len() {
+		v.Kind() != otherComposite.Kind() ||
+		fields.Len() != otherFields.Len() {
 
 		return false
 	}
 
-	for pair := v.Fields.Oldest(); pair != nil; pair = pair.Next() {
+	for pair := fields.Oldest(); pair != nil; pair = pair.Next() {
 		key := pair.Key
 		value := pair.Value
 
-		otherValue, ok := otherComposite.Fields.Get(key)
+		otherValue, ok := otherFields.Get(key)
 		if !ok {
 			return false
 		}
@@ -6417,20 +6495,21 @@ func (v *CompositeValue) Equal(other Value, interpreter *Interpreter, loadDeferr
 }
 
 func (v *CompositeValue) KeyString() string {
-	if v.Kind == common.CompositeKindEnum {
-		rawValue, _ := v.Fields.Get(sema.EnumRawValueFieldName)
-		return rawValue.String()
+	if v.Kind() == common.CompositeKindEnum {
+		rawValue, _ := v.Fields().Get(sema.EnumRawValueFieldName)
+		return rawValue.String(StringResults{})
 	}
 
 	panic(errors.NewUnreachableError())
 }
 
 func (v *CompositeValue) TypeID() common.TypeID {
-	if v.Location == nil {
-		return common.TypeID(v.QualifiedIdentifier)
+	location := v.Location()
+	if location == nil {
+		return common.TypeID(v.QualifiedIdentifier())
 	}
 
-	return v.Location.TypeID(v.QualifiedIdentifier)
+	return location.TypeID(v.QualifiedIdentifier())
 }
 
 func (v *CompositeValue) ConformsToDynamicType(
@@ -6445,21 +6524,23 @@ func (v *CompositeValue) ConformsToDynamicType(
 
 	compositeType, ok := compositeDynamicType.StaticType.(*sema.CompositeType)
 	if !ok ||
-		v.Kind != compositeType.Kind ||
-		v.QualifiedIdentifier != compositeType.QualifiedIdentifier() ||
-		v.Location.ID() != compositeType.Location.ID() {
+		v.Kind() != compositeType.Kind ||
+		v.QualifiedIdentifier() != compositeType.QualifiedIdentifier() ||
+		v.Location().ID() != compositeType.Location.ID() {
 
 		return false
 	}
 
+	fields := v.Fields()
+
 	// Here it is assumed that imported values can only have static fields values,
 	// but not computed field values.
-	if v.Fields.Len() != len(compositeType.Fields) {
+	if fields.Len() != len(compositeType.Fields) {
 		return false
 	}
 
 	for _, fieldName := range compositeType.Fields {
-		field, ok := v.Fields.Get(fieldName)
+		field, ok := fields.Get(fieldName)
 		if !ok {
 			return false
 		}
@@ -6482,6 +6563,74 @@ func (v *CompositeValue) ConformsToDynamicType(
 	}
 
 	return true
+}
+
+func (v *CompositeValue) Fields() *StringValueOrderedMap {
+	v.ensureFieldsLoaded()
+	return v.fields
+}
+
+func (v *CompositeValue) Location() common.Location {
+	v.ensureMetaInfoLoaded()
+	return v.location
+}
+
+func (v *CompositeValue) QualifiedIdentifier() string {
+	v.ensureMetaInfoLoaded()
+	return v.qualifiedIdentifier
+}
+
+func (v *CompositeValue) Kind() common.CompositeKind {
+	v.ensureMetaInfoLoaded()
+	return v.kind
+}
+
+// ensureMetaInfoLoaded ensures loading the meta information of this composite value.
+// If the meta info is already loaded, then calling this function won't have any effect.
+// Otherwise, the values are decoded form the cached raw-content.
+//
+// Meta info includes:
+//    - location
+//    - qualifiedIdentifier
+//    - kind
+//
+func (v *CompositeValue) ensureMetaInfoLoaded() {
+	if v.content == nil {
+		return
+	}
+
+	err := decodeCompositeMetaInfo(v, v.content)
+	if err != nil {
+		panic(err)
+	}
+
+	// Raw content is no longer needed. Clear the cache and free-up the memory.
+	v.content = nil
+}
+
+// ensureFieldsLoaded ensures loading the fields of this composite value.
+// If the fields are already loaded, then calling this function won't have any effect.
+// Otherwise, the fields are decoded form the cached raw-fields-content.
+//
+func (v *CompositeValue) ensureFieldsLoaded() {
+	// First ensure the fields content is extracted out.
+	v.ensureMetaInfoLoaded()
+
+	if v.fieldsContent == nil {
+		return
+	}
+
+	err := decodeCompositeFields(v, v.fieldsContent)
+	if err != nil {
+		panic(err)
+	}
+
+	// Path and the fields-content are no longer needed.
+	// Reset the cache and free-up the memory.
+	v.valuePath = nil
+	v.fieldsContent = nil
+	v.decodeCallback = nil
+	v.encodingVersion = 0
 }
 
 // DictionaryValue
@@ -6734,7 +6883,7 @@ func (v *DictionaryValue) Set(inter *Interpreter, getLocationRange func() Locati
 	}
 }
 
-func (v *DictionaryValue) String() string {
+func (v *DictionaryValue) String(results StringResults) string {
 	pairs := make([]struct {
 		Key   string
 		Value string
@@ -6751,14 +6900,14 @@ func (v *DictionaryValue) String() string {
 		if value == nil {
 			valueString = "..."
 		} else {
-			valueString = value.String()
+			valueString = value.String(results)
 		}
 
 		pairs[i] = struct {
 			Key   string
 			Value string
 		}{
-			Key:   keyValue.String(),
+			Key:   keyValue.String(results),
 			Value: valueString,
 		}
 	}
@@ -7057,7 +7206,7 @@ func (v NilValue) Destroy(_ *Interpreter, _ func() LocationRange) {
 	// NO-OP
 }
 
-func (NilValue) String() string {
+func (NilValue) String(_ StringResults) string {
 	return format.Nil
 }
 
@@ -7165,8 +7314,8 @@ func (v *SomeValue) Destroy(interpreter *Interpreter, getLocationRange func() Lo
 	maybeDestroy(interpreter, getLocationRange, v.Value)
 }
 
-func (v *SomeValue) String() string {
-	return v.Value.String()
+func (v *SomeValue) String(results StringResults) string {
+	return v.Value.String(results)
 }
 
 func (v *SomeValue) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
@@ -7238,7 +7387,7 @@ func (v *StorageReferenceValue) Accept(interpreter *Interpreter, visitor Visitor
 	visitor.VisitStorageReferenceValue(interpreter, v)
 }
 
-func (v *StorageReferenceValue) String() string {
+func (v *StorageReferenceValue) String(_ StringResults) string {
 	return "StorageReference()"
 }
 
@@ -7385,8 +7534,13 @@ func (v *EphemeralReferenceValue) Accept(interpreter *Interpreter, visitor Visit
 	visitor.VisitEphemeralReferenceValue(interpreter, v)
 }
 
-func (v *EphemeralReferenceValue) String() string {
-	return v.Value.String()
+func (v *EphemeralReferenceValue) String(results StringResults) string {
+	if _, ok := results[v]; ok {
+		return "..."
+	}
+	results[v] = struct{}{}
+	defer delete(results, v)
+	return v.Value.String(results)
 }
 
 func (v *EphemeralReferenceValue) DynamicType(interpreter *Interpreter, results DynamicTypeResults) DynamicType {
@@ -7599,7 +7753,7 @@ func (v AddressValue) KeyString() string {
 	return common.Address(v).ShortHexWithPrefix()
 }
 
-func (v AddressValue) String() string {
+func (v AddressValue) String(_ StringResults) string {
 	return format.Address(common.Address(v))
 }
 
@@ -7642,7 +7796,7 @@ func (v AddressValue) GetMember(_ *Interpreter, _ func() LocationRange, name str
 	case sema.ToStringFunctionName:
 		return NewHostFunctionValue(
 			func(invocation Invocation) Value {
-				return NewStringValue(v.String())
+				return NewStringValue(v.String(StringResults{}))
 			},
 		)
 
@@ -7740,9 +7894,9 @@ func NewAuthAccountValue(
 	}
 
 	return &CompositeValue{
-		QualifiedIdentifier: sema.AuthAccountType.QualifiedIdentifier(),
-		Kind:                sema.AuthAccountType.Kind,
-		Fields:              fields,
+		qualifiedIdentifier: sema.AuthAccountType.QualifiedIdentifier(),
+		kind:                sema.AuthAccountType.Kind,
+		fields:              fields,
 		ComputedFields:      computedFields,
 		stringer:            stringer,
 	}
@@ -7824,9 +7978,9 @@ func NewPublicAccountValue(
 	}
 
 	return &CompositeValue{
-		QualifiedIdentifier: sema.PublicAccountType.QualifiedIdentifier(),
-		Kind:                sema.PublicAccountType.Kind,
-		Fields:              fields,
+		qualifiedIdentifier: sema.PublicAccountType.QualifiedIdentifier(),
+		kind:                sema.PublicAccountType.Kind,
+		fields:              fields,
 		ComputedFields:      computedFields,
 		stringer:            stringer,
 	}
@@ -7896,7 +8050,7 @@ func (v PathValue) Destroy(_ *Interpreter, _ func() LocationRange) {
 	// NO-OP
 }
 
-func (v PathValue) String() string {
+func (v PathValue) String(_ StringResults) string {
 	return format.Path(
 		v.Domain.Identifier(),
 		v.Identifier,
@@ -7990,15 +8144,15 @@ func (v CapabilityValue) Destroy(_ *Interpreter, _ func() LocationRange) {
 	// NO-OP
 }
 
-func (v CapabilityValue) String() string {
+func (v CapabilityValue) String(results StringResults) string {
 	var borrowType string
 	if v.BorrowType != nil {
 		borrowType = v.BorrowType.String()
 	}
 	return format.Capability(
 		borrowType,
-		v.Address.String(),
-		v.Path.String(),
+		v.Address.String(results),
+		v.Path.String(results),
 	)
 }
 
@@ -8100,10 +8254,10 @@ func (v LinkValue) Destroy(_ *Interpreter, _ func() LocationRange) {
 	// NO-OP
 }
 
-func (v LinkValue) String() string {
+func (v LinkValue) String(results StringResults) string {
 	return format.Link(
 		v.Type.String(),
-		v.TargetPath.String(),
+		v.TargetPath.String(results),
 	)
 }
 
@@ -8140,9 +8294,9 @@ func NewAccountKeyValue(
 	fields.Set(sema.AccountKeyIsRevokedField, isRevoked)
 
 	return &CompositeValue{
-		QualifiedIdentifier: sema.AccountKeyType.QualifiedIdentifier(),
-		Kind:                sema.AccountKeyType.Kind,
-		Fields:              fields,
+		qualifiedIdentifier: sema.AccountKeyType.QualifiedIdentifier(),
+		kind:                sema.AccountKeyType.Kind,
+		fields:              fields,
 	}
 }
 
@@ -8170,15 +8324,15 @@ func NewPublicKeyValue(
 	}
 
 	publicKeyValue := &CompositeValue{
-		QualifiedIdentifier: sema.PublicKeyType.QualifiedIdentifier(),
-		Kind:                sema.PublicKeyType.Kind,
-		Fields:              fields,
+		qualifiedIdentifier: sema.PublicKeyType.QualifiedIdentifier(),
+		kind:                sema.PublicKeyType.Kind,
+		fields:              fields,
 		ComputedFields:      computedFields,
 		Functions:           functions,
 	}
 
 	// Validate the public key, and initialize 'isValid' field.
-	publicKeyValue.Fields.Set(sema.PublicKeyIsValidField, validationFunction(publicKeyValue))
+	publicKeyValue.fields.Set(sema.PublicKeyIsValidField, validationFunction(publicKeyValue))
 
 	// Public key value to string should include the key even though it is a computed field
 	var stringerFields *StringValueOrderedMap
@@ -8206,9 +8360,9 @@ func NewAuthAccountKeysValue(addFunction FunctionValue, getFunction FunctionValu
 	fields.Set(sema.AccountKeysRevokeFunctionName, revokeFunction)
 
 	return &CompositeValue{
-		QualifiedIdentifier: sema.AuthAccountKeysType.QualifiedIdentifier(),
-		Kind:                sema.AuthAccountKeysType.Kind,
-		Fields:              fields,
+		qualifiedIdentifier: sema.AuthAccountKeysType.QualifiedIdentifier(),
+		kind:                sema.AuthAccountKeysType.Kind,
+		fields:              fields,
 	}
 }
 
@@ -8218,9 +8372,9 @@ func NewPublicAccountKeysValue(getFunction FunctionValue) *CompositeValue {
 	fields.Set(sema.AccountKeysGetFunctionName, getFunction)
 
 	return &CompositeValue{
-		QualifiedIdentifier: sema.PublicAccountKeysType.QualifiedIdentifier(),
-		Kind:                sema.PublicAccountKeysType.Kind,
-		Fields:              fields,
+		qualifiedIdentifier: sema.PublicAccountKeysType.QualifiedIdentifier(),
+		kind:                sema.PublicAccountKeysType.Kind,
+		fields:              fields,
 	}
 }
 
@@ -8229,8 +8383,8 @@ func NewCryptoAlgorithmEnumCaseValue(enumType *sema.CompositeType, rawValue uint
 	fields.Set(sema.EnumRawValueFieldName, UInt8Value(rawValue))
 
 	return &CompositeValue{
-		QualifiedIdentifier: enumType.QualifiedIdentifier(),
-		Kind:                enumType.Kind,
-		Fields:              fields,
+		qualifiedIdentifier: enumType.QualifiedIdentifier(),
+		kind:                enumType.Kind,
+		fields:              fields,
 	}
 }

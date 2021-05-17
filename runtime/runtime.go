@@ -1268,8 +1268,9 @@ func (r *interpreterRuntime) emitEvent(
 ) error {
 	fields := make([]exportableValue, len(eventType.ConstructorParameters))
 
+	eventFields := event.Fields()
 	for i, parameter := range eventType.ConstructorParameters {
-		value, _ := event.Fields.Get(parameter.Identifier)
+		value, _ := eventFields.Get(parameter.Identifier)
 		fields[i] = newExportableValue(value, inter)
 	}
 
@@ -1333,14 +1334,14 @@ func (r *interpreterRuntime) newCreateAccountFunction(
 
 		payer := invocation.Arguments[0].(*interpreter.CompositeValue)
 
-		if payer.QualifiedIdentifier != sema.AuthAccountType.QualifiedIdentifier() {
+		if payer.QualifiedIdentifier() != sema.AuthAccountType.QualifiedIdentifier() {
 			panic(fmt.Sprintf(
 				"%[1]s requires the first argument (payer) to be an %[1]s",
 				sema.AuthAccountType,
 			))
 		}
 
-		payerAddressValue, ok := payer.Fields.Get(sema.AuthAccountAddressField)
+		payerAddressValue, ok := payer.Fields().Get(sema.AuthAccountAddressField)
 		if !ok {
 			panic("address is not set")
 		}
@@ -1746,7 +1747,7 @@ func (r *interpreterRuntime) getPublicAccount(
 
 func (r *interpreterRuntime) newLogFunction(runtimeInterface Interface) interpreter.HostFunction {
 	return func(invocation interpreter.Invocation) interpreter.Value {
-		message := fmt.Sprint(invocation.Arguments[0])
+		message := invocation.Arguments[0].String(interpreter.StringResults{})
 		var err error
 		wrapPanic(func() {
 			err = runtimeInterface.ProgramLog(message)
@@ -2610,6 +2611,8 @@ func (r *interpreterRuntime) newPublicAccountKeys(addressValue interpreter.Addre
 
 func NewPublicKeyFromValue(publicKey *interpreter.CompositeValue) *PublicKey {
 
+	fields := publicKey.Fields()
+
 	// publicKey field
 	publicKeyFieldGetter, ok := publicKey.ComputedFields.Get(sema.PublicKeyPublicKeyField)
 	if !ok {
@@ -2626,14 +2629,14 @@ func NewPublicKeyFromValue(publicKey *interpreter.CompositeValue) *PublicKey {
 	}
 
 	// sign algo field
-	signAlgoField, ok := publicKey.Fields.Get(sema.PublicKeySignAlgoField)
+	signAlgoField, ok := fields.Get(sema.PublicKeySignAlgoField)
 	if !ok {
 		panic("sign algorithm is not set")
 	}
 
 	signAlgoValue := signAlgoField.(*interpreter.CompositeValue)
 
-	rawValue, ok := signAlgoValue.Fields.Get(sema.EnumRawValueFieldName)
+	rawValue, ok := signAlgoValue.Fields().Get(sema.EnumRawValueFieldName)
 	if !ok {
 		panic("cannot find sign algorithm raw value")
 	}
@@ -2642,7 +2645,7 @@ func NewPublicKeyFromValue(publicKey *interpreter.CompositeValue) *PublicKey {
 
 	// `valid` and `validated` fields
 	var valid, validated bool
-	validField, validated := publicKey.Fields.Get(sema.PublicKeyIsValidField)
+	validField, validated := fields.Get(sema.PublicKeyIsValidField)
 	if validated {
 		valid = bool(validField.(interpreter.BoolValue))
 	}
@@ -2677,7 +2680,7 @@ func NewAccountKeyValue(accountKey *AccountKey, runtimeInterface Interface) *int
 func NewHashAlgorithmFromValue(value interpreter.Value) HashAlgorithm {
 	hashAlgoValue := value.(*interpreter.CompositeValue)
 
-	rawValue, ok := hashAlgoValue.Fields.Get(sema.EnumRawValueFieldName)
+	rawValue, ok := hashAlgoValue.Fields().Get(sema.EnumRawValueFieldName)
 	if !ok {
 		panic("cannot find hash algorithm raw value")
 	}

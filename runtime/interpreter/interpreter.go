@@ -963,29 +963,41 @@ func (interpreter *Interpreter) visitFunctionBody(
 
 	interpreter.visitConditions(preConditions)
 
-	var resultValue Value
+	var returnValue Value
 
 	if body != nil {
 		result = body()
 		if ret, ok := result.(functionReturn); ok {
-			resultValue = ret.Value
+			returnValue = ret.Value
 		} else {
-			resultValue = VoidValue{}
+			returnValue = VoidValue{}
 		}
 	} else {
-		resultValue = VoidValue{}
+		returnValue = VoidValue{}
 	}
 
-	// If there is a return type, declare the constant `result`
-	// which has the return value
+	// If there is a return type, declare the constant `result`.
+	// If it is a resource type, the constant has the same type as a referecne to the return type.
+	// If it is not a resource type, the constant has the same type as the return type.
 
 	if returnType != sema.VoidType {
-		interpreter.declareVariable(sema.ResultIdentifier, resultValue)
+		var resultValue Value
+		if returnType.IsResourceType() {
+			resultValue = &EphemeralReferenceValue{
+				Value: returnValue,
+			}
+		} else {
+			resultValue = returnValue
+		}
+		interpreter.declareVariable(
+			sema.ResultIdentifier,
+			resultValue,
+		)
 	}
 
 	interpreter.visitConditions(postConditions)
 
-	return resultValue
+	return returnValue
 }
 
 func (interpreter *Interpreter) visitConditions(conditions []*ast.Condition) {
@@ -1192,7 +1204,7 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 			func(invocation Invocation) Value {
 				for i, argument := range invocation.Arguments {
 					parameter := compositeType.ConstructorParameters[i]
-					invocation.Self.Fields.Set(parameter.Identifier, argument)
+					invocation.Self.Fields().Set(parameter.Identifier, argument)
 				}
 				return nil
 			},
@@ -1306,10 +1318,10 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 			}
 
 			value := &CompositeValue{
-				Location:            location,
-				QualifiedIdentifier: qualifiedIdentifier,
-				Kind:                declaration.CompositeKind,
-				Fields:              fields,
+				location:            location,
+				qualifiedIdentifier: qualifiedIdentifier,
+				kind:                declaration.CompositeKind,
+				fields:              fields,
 				InjectedFields:      injectedFields,
 				Functions:           functions,
 				Destructor:          destructorFunction,
@@ -1402,10 +1414,10 @@ func (interpreter *Interpreter) declareEnumConstructor(
 		caseValueFields.Set(sema.EnumRawValueFieldName, rawValue)
 
 		caseValue := &CompositeValue{
-			Location:            location,
-			QualifiedIdentifier: qualifiedIdentifier,
-			Kind:                declaration.CompositeKind,
-			Fields:              caseValueFields,
+			location:            location,
+			qualifiedIdentifier: qualifiedIdentifier,
+			kind:                declaration.CompositeKind,
+			fields:              caseValueFields,
 			// NOTE: new value has no owner
 			Owner:    nil,
 			modified: true,
@@ -1431,7 +1443,7 @@ func EnumConstructorFunction(caseValues []*CompositeValue, nestedVariables *Stri
 	lookupTable := make(map[string]*CompositeValue)
 
 	for _, caseValue := range caseValues {
-		rawValue, ok := caseValue.Fields.Get(sema.EnumRawValueFieldName)
+		rawValue, ok := caseValue.Fields().Get(sema.EnumRawValueFieldName)
 		if !ok {
 			panic(errors.NewUnreachableError())
 		}

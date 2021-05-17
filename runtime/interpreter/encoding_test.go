@@ -85,6 +85,11 @@ func testEncodeDecode(t *testing.T, test encodeDecodeTest) {
 	} else {
 		require.NoError(t, err)
 
+		// Make sure the content is built.
+		if composite, ok := decoded.(*CompositeValue); ok {
+			composite.Fields()
+		}
+
 		if !test.deferred || (test.deferred && test.decodedValue != nil) {
 			expectedValue := test.value
 			if test.decodedValue != nil {
