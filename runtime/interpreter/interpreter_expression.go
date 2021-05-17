@@ -682,13 +682,14 @@ func (interpreter *Interpreter) VisitDestroyExpression(expression *ast.DestroyEx
 
 func (interpreter *Interpreter) VisitReferenceExpression(referenceExpression *ast.ReferenceExpression) ast.Repr {
 
-	authorized := referenceExpression.Type.(*ast.ReferenceType).Authorized
+	borrowType := interpreter.Program.Elaboration.ReferenceExpressionBorrowTypes[referenceExpression]
 
 	result := interpreter.evalExpression(referenceExpression.Expression)
 
 	return &EphemeralReferenceValue{
-		Authorized: authorized,
-		Value:      result,
+		Authorized:   borrowType.Authorized,
+		Value:        result,
+		BorrowedType: borrowType.Type,
 	}
 }
 

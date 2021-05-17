@@ -3832,6 +3832,219 @@ func TestInterpretOptionalAnyStructFailableCastingNil(t *testing.T) {
 	)
 }
 
+func TestInterpretReferenceFailableDowncasting(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("ephemeral", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+          resource interface RI {}
+
+          resource R: RI {}
+
+          fun testInvalidUnauthorized(): &R? {
+              let r  <- create R()
+              let ref: AnyStruct = &r as &R{RI}
+              let ref2 = ref as? &R
+              destroy r
+              return ref2
+          }
+
+          fun testValidAuthorized(): &R? {
+              let r  <- create R()
+              let ref: AnyStruct = &r as auth &R{RI}
+              let ref2 = ref as? &R
+              destroy r
+              return ref2
+          }
+
+          fun testValidRestricted(): &R{RI}? {
+              let r  <- create R()
+              let ref: AnyStruct = &r as &R{RI}
+              let ref2 = ref as? &R{RI}
+              destroy r
+              return ref2
+          }
+        `)
+
+		result, err := inter.Invoke("testInvalidUnauthorized")
+		require.NoError(t, err)
+
+		assert.Equal(t,
+			interpreter.NilValue{},
+			result,
+		)
+
+		result, err = inter.Invoke("testValidAuthorized")
+		require.NoError(t, err)
+
+		assert.IsType(t,
+			&interpreter.SomeValue{},
+			result,
+		)
+
+		result, err = inter.Invoke("testValidRestricted")
+		require.NoError(t, err)
+
+		assert.IsType(t,
+			&interpreter.SomeValue{},
+			result,
+		)
+	})
+
+	t.Run("storage", func(t *testing.T) {
+
+		t.Parallel()
+
+		var inter *interpreter.Interpreter
+
+		getType := func(name string) sema.Type {
+			variable, ok := inter.Program.Elaboration.GlobalTypes.Get(name)
+			require.True(t, ok, "missing global type %s", name)
+			return variable.Type
+		}
+
+		// Inject a function that return a storage reference value,
+		// which is borrowed as:
+		// - `&R{RI}` (unauthorized, if argument for parameter `authorized` == false)
+		// - `auth &R{RI}` (authorized, if argument for parameter `authorized` == true)
+
+		storageAddress := common.BytesToAddress([]byte{0x42})
+		const storageKey = "test storage key"
+
+		standardLibraryFunctions :=
+			stdlib.StandardLibraryFunctions{
+				{
+					Name: "getStorageReference",
+					Type: &sema.FunctionType{
+						Parameters: []*sema.Parameter{
+							{
+								Label:      "authorized",
+								Identifier: "authorized",
+								TypeAnnotation: sema.NewTypeAnnotation(
+									sema.BoolType,
+								),
+							},
+						},
+						ReturnTypeAnnotation: sema.NewTypeAnnotation(
+							sema.AnyStructType,
+						),
+					},
+					Function: interpreter.NewHostFunctionValue(
+						func(invocation interpreter.Invocation) interpreter.Value {
+
+							authorized := bool(invocation.Arguments[0].(interpreter.BoolValue))
+
+							riType := getType("RI").(*sema.InterfaceType)
+							rType := getType("R")
+
+							return &interpreter.StorageReferenceValue{
+								Authorized:           authorized,
+								TargetStorageAddress: storageAddress,
+								TargetKey:            storageKey,
+								BorrowedType: &sema.RestrictedType{
+									Type: rType,
+									Restrictions: []*sema.InterfaceType{
+										riType,
+									},
+								},
+							}
+						},
+					),
+				},
+			}
+
+		valueDeclarations := standardLibraryFunctions.ToSemaValueDeclarations()
+		values := standardLibraryFunctions.ToInterpreterValueDeclarations()
+
+		var r interpreter.Value
+
+		inter = parseCheckAndInterpretWithOptions(t,
+			`
+              resource interface RI {}
+
+              resource R: RI {}
+
+              fun createR(): @R {
+                  return <- create R()
+              }
+
+              fun testInvalidUnauthorized(): &R? {
+                  let ref: AnyStruct = getStorageReference(authorized: false)
+                  return ref as? &R
+              }
+
+              fun testValidAuthorized(): &R? {
+                  let ref: AnyStruct = getStorageReference(authorized: true)
+                  return ref as? &R
+              }
+
+              fun testValidRestricted(): &R{RI}? {
+                  let ref: AnyStruct = getStorageReference(authorized: false)
+                  return ref as? &R{RI}
+              }
+            `,
+			ParseCheckAndInterpretOptions{
+				CheckerOptions: []sema.Option{
+					sema.WithPredeclaredValues(valueDeclarations),
+				},
+				Options: []interpreter.Option{
+					interpreter.WithPredeclaredValues(values),
+					interpreter.WithStorageReadHandler(
+						func(
+							inter *interpreter.Interpreter,
+							address common.Address,
+							key string,
+							deferred bool,
+						) interpreter.OptionalValue {
+
+							if address != storageAddress || key != storageKey {
+								return interpreter.NilValue{}
+							}
+
+							// When the storage reference is dereferenced,
+							// return r (a resource of type R)
+
+							return interpreter.NewSomeValueOwningNonCopying(r)
+						},
+					),
+				},
+			},
+		)
+
+		var err error
+		r, err = inter.Invoke("createR")
+		require.NoError(t, err)
+
+		result, err := inter.Invoke("testInvalidUnauthorized")
+		require.NoError(t, err)
+
+		assert.Equal(t,
+			interpreter.NilValue{},
+			result,
+		)
+
+		result, err = inter.Invoke("testValidAuthorized")
+		require.NoError(t, err)
+
+		assert.IsType(t,
+			&interpreter.SomeValue{},
+			result,
+		)
+
+		result, err = inter.Invoke("testValidRestricted")
+		require.NoError(t, err)
+
+		assert.IsType(t,
+			&interpreter.SomeValue{},
+			result,
+		)
+	})
+}
+
 func TestInterpretLength(t *testing.T) {
 
 	t.Parallel()

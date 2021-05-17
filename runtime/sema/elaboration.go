@@ -78,6 +78,7 @@ type Elaboration struct {
 	EffectivePredeclaredValues          map[string]ValueDeclaration
 	EffectivePredeclaredTypes           map[string]TypeDeclaration
 	isChecking                          bool
+	ReferenceExpressionBorrowTypes      map[*ast.ReferenceExpression]*ReferenceType
 }
 
 func NewElaboration() *Elaboration {
@@ -126,6 +127,7 @@ func NewElaboration() *Elaboration {
 		GlobalTypes:                         NewStringVariableOrderedMap(),
 		EffectivePredeclaredValues:          map[string]ValueDeclaration{},
 		EffectivePredeclaredTypes:           map[string]TypeDeclaration{},
+		ReferenceExpressionBorrowTypes:      map[*ast.ReferenceExpression]*ReferenceType{},
 	}
 }
 
