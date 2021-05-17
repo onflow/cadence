@@ -176,7 +176,7 @@ func (d *DecoderV4) decodeValue(path []string) (Value, error) {
 		value = NilValue{}
 
 	case cbor.ArrayType:
-		value, err = d.decodeArray(path)
+		value, err = d.decodeArray(path, true)
 
 	case cbor.TagType:
 		var num uint64
@@ -323,7 +323,20 @@ func (d *DecoderV4) decodeString(v string) Value {
 	return value
 }
 
-func (d *DecoderV4) decodeArray(path []string) (*ArrayValue, error) {
+func (d *DecoderV4) decodeArray(path []string, deferDecoding bool) (*ArrayValue, error) {
+	if !deferDecoding {
+		elements, err := d.decodeArrayElements(path)
+		if err != nil {
+			return nil, err
+		}
+
+		return &ArrayValue{
+			values:   elements,
+			Owner:    d.owner,
+			modified: false,
+		}, nil
+	}
+
 	var content []byte
 	var err error
 	if d.isByteDecoder {
@@ -379,7 +392,10 @@ func (d *DecoderV4) decodeDictionary(path []string) (*DictionaryValue, error) {
 	// Decode keys at array index encodedDictionaryValueKeysFieldKey
 	//nolint:gocritic
 	keysPath := append(path, dictionaryKeyPathPrefix)
-	keys, err := d.decodeArray(keysPath)
+
+	// Since the keys are always accessed below, do not defer
+	// the decoding for keys, as it can be an overhead.
+	keys, err := d.decodeArray(keysPath, false)
 	if err != nil {
 		return nil, fmt.Errorf(
 			"invalid dictionary keys encoding (@ %s): %w",
@@ -1806,39 +1822,34 @@ func decodeCompositeFields(v *CompositeValue, content []byte) error {
 	return nil
 }
 
-func decodeArrayElements(array *ArrayValue, elementContent []byte) error {
-	d, err := NewByteDecoder(elementContent, array.Owner, array.encodingVersion, array.decodeCallback)
-	if err != nil {
-		return err
-	}
-
+func (d *DecoderV4) decodeArrayElements(path []string) ([]Value, error) {
 	size, err := d.decoder.DecodeArrayHead()
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
-			return fmt.Errorf("invalid array encoding (@ %s): expected []interface{}, got %s",
-				strings.Join(array.valuePath, "."),
+			return nil, fmt.Errorf("invalid array encoding (@ %s): expected []interface{}, got %s",
+				strings.Join(path, "."),
 				e.ActualType.String(),
 			)
 		}
-		return err
+		return nil, err
 	}
 
 	values := make([]Value, size)
 
 	// Pre-allocate and reuse valuePath.
 	//nolint:gocritic
-	valuePath := append(array.valuePath, "")
+	valuePath := append(path, "")
 
-	lastValuePathIndex := len(array.valuePath)
+	lastValuePathIndex := len(path)
 
 	for i := 0; i < int(size); i++ {
 		valuePath[lastValuePathIndex] = strconv.Itoa(i)
 
 		res, err := d.decodeValue(valuePath)
 		if err != nil {
-			return fmt.Errorf(
+			return nil, fmt.Errorf(
 				"invalid array element encoding (@ %s, %d): %w",
-				strings.Join(array.valuePath, "."),
+				strings.Join(path, "."),
 				i,
 				err,
 			)
@@ -1846,7 +1857,20 @@ func decodeArrayElements(array *ArrayValue, elementContent []byte) error {
 		values[i] = res
 	}
 
-	array.values = values
+	return values, nil
+}
 
+func decodeArrayElements(array *ArrayValue, elementContent []byte) error {
+	d, err := NewByteDecoder(elementContent, array.Owner, array.encodingVersion, array.decodeCallback)
+	if err != nil {
+		return err
+	}
+
+	elements, err := d.decodeArrayElements(array.valuePath)
+	if err != nil {
+		return err
+	}
+
+	array.values = elements
 	return nil
 }
