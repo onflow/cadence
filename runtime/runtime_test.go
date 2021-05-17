@@ -6329,7 +6329,7 @@ func TestRuntimeTransaction_ContractUpdate(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestRuntime(t *testing.T) {
+func TestRuntimeExecuteScriptArguments(t *testing.T) {
 
 	t.Parallel()
 

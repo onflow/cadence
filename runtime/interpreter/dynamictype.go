@@ -31,6 +31,7 @@ type ReferenceDynamicType interface {
 	isReferenceType()
 	Authorized() bool
 	InnerType() DynamicType
+	BorrowedType() sema.Type
 }
 
 // MetaTypeDynamicType
@@ -106,8 +107,9 @@ func (SomeDynamicType) IsDynamicType() {}
 // StorageReferenceDynamicType
 
 type StorageReferenceDynamicType struct {
-	authorized bool
-	innerType  DynamicType
+	authorized   bool
+	innerType    DynamicType
+	borrowedType sema.Type
 }
 
 func (StorageReferenceDynamicType) IsDynamicType() {}
@@ -122,11 +124,16 @@ func (t StorageReferenceDynamicType) InnerType() DynamicType {
 	return t.innerType
 }
 
+func (t StorageReferenceDynamicType) BorrowedType() sema.Type {
+	return t.borrowedType
+}
+
 // EphemeralReferenceDynamicType
 
 type EphemeralReferenceDynamicType struct {
-	authorized bool
-	innerType  DynamicType
+	authorized   bool
+	innerType    DynamicType
+	borrowedType sema.Type
 }
 
 func (EphemeralReferenceDynamicType) IsDynamicType() {}
@@ -139,6 +146,10 @@ func (t EphemeralReferenceDynamicType) Authorized() bool {
 
 func (t EphemeralReferenceDynamicType) InnerType() DynamicType {
 	return t.innerType
+}
+
+func (t EphemeralReferenceDynamicType) BorrowedType() sema.Type {
+	return t.borrowedType
 }
 
 // AddressDynamicType

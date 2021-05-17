@@ -987,7 +987,8 @@ func (interpreter *Interpreter) visitFunctionBody(
 		var resultValue Value
 		if returnType.IsResourceType() {
 			resultValue = &EphemeralReferenceValue{
-				Value: returnValue,
+				Value:        returnValue,
+				BorrowedType: returnType,
 			}
 		} else {
 			resultValue = returnValue
@@ -2586,13 +2587,32 @@ func IsSubType(subType DynamicType, superType sema.Type) bool {
 
 	case ReferenceDynamicType:
 		if typedSuperType, ok := superType.(*sema.ReferenceType); ok {
-			if typedSubType.Authorized() {
-				return IsSubType(typedSubType.InnerType(), typedSuperType.Type)
-			} else {
-				// NOTE: Allowing all casts for casting unauthorized references is intentional:
-				// all invalid cases have already been rejected statically
+
+			// First, check that the dynamic type of the referenced value
+			// is a subtype of the super type
+
+			if !IsSubType(typedSubType.InnerType(), typedSuperType.Type) {
+				return false
+			}
+
+			// If the reference value is authorized it may be downcasted
+
+			authorized := typedSubType.Authorized()
+
+			if authorized {
 				return true
 			}
+
+			// If the reference value is not authorized,
+			// it may not be downcasted
+
+			return sema.IsSubType(
+				&sema.ReferenceType{
+					Authorized: authorized,
+					Type:       typedSubType.BorrowedType(),
+				},
+				typedSuperType,
+			)
 		}
 
 		return superType == sema.AnyStructType
