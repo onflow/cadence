@@ -645,7 +645,7 @@ func TestStringer(t *testing.T) {
 			value: func() Value {
 				array := NewArrayValueUnownedNonCopying()
 				arrayRef := &EphemeralReferenceValue{Value: array}
-				array.Insert(0, arrayRef)
+				array.Insert(0, arrayRef, nil)
 				return array
 			}(),
 			expected: `[[...]]`,
