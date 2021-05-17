@@ -19,6 +19,8 @@
 package interpreter
 
 import (
+	"math/big"
+
 	"github.com/onflow/cadence/fixedpoint"
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
@@ -278,12 +280,71 @@ func (interpreter *Interpreter) VisitNilExpression(_ *ast.NilExpression) ast.Rep
 }
 
 func (interpreter *Interpreter) VisitIntegerExpression(expression *ast.IntegerExpression) ast.Repr {
-	intSubType := interpreter.Program.Elaboration.IntegerExpressionType[expression]
+	typ := interpreter.Program.Elaboration.IntegerExpressionType[expression]
 
-	// TODO: This can be optimized to directly create the value of the integer-subtype,
-	// rather than creating an int value and then converting to the subtype.
-	intValue := IntValue{expression.Value}
-	return interpreter.convert(intValue, sema.IntType, intSubType)
+	value := expression.Value
+
+	if _, ok := typ.(*sema.AddressType); ok {
+		return NewAddressValueFromBytes(value.Bytes())
+	}
+
+	// The ranges are checked at the checker level.
+	// Hence it is safe to create the value without validation.
+	return NewIntValue(value, typ)
+
+}
+
+// NewIntValue creates a Cadence interpreter value of a given subtype.
+// This method assumes the range validations are done prior to calling this method. (i.e: at semantic level)
+//
+func NewIntValue(value *big.Int, intSubType sema.Type) Value {
+	switch intSubType {
+	case sema.IntType, sema.IntegerType, sema.SignedIntegerType:
+		return NewIntValueFromBigInt(value)
+	case sema.UIntType:
+		return NewUIntValueFromBigInt(value)
+
+	// Int*
+	case sema.Int8Type:
+		return Int8Value(value.Int64())
+	case sema.Int16Type:
+		return Int16Value(value.Int64())
+	case sema.Int32Type:
+		return Int32Value(value.Int64())
+	case sema.Int64Type:
+		return Int64Value(value.Int64())
+	case sema.Int128Type:
+		return NewInt128ValueFromBigInt(value)
+	case sema.Int256Type:
+		return NewInt256ValueFromBigInt(value)
+
+	// UInt*
+	case sema.UInt8Type:
+		return UInt8Value(value.Int64())
+	case sema.UInt16Type:
+		return UInt16Value(value.Int64())
+	case sema.UInt32Type:
+		return UInt32Value(value.Int64())
+	case sema.UInt64Type:
+		return UInt64Value(value.Int64())
+	case sema.UInt128Type:
+		return NewUInt128ValueFromBigInt(value)
+	case sema.UInt256Type:
+		return NewUInt256ValueFromBigInt(value)
+
+	// Word*
+	case sema.Word8Type:
+		return Word8Value(value.Int64())
+	case sema.Word16Type:
+		return Word16Value(value.Int64())
+	case sema.Word32Type:
+		return Word32Value(value.Int64())
+	case sema.Word64Type:
+		return Word64Value(value.Int64())
+
+	default:
+		panic(errors.NewUnreachableError())
+	}
 }
 
 func (interpreter *Interpreter) VisitFixedPointExpression(expression *ast.FixedPointExpression) ast.Repr {
