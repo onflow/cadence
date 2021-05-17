@@ -100,6 +100,7 @@ pub fun test main() {
     )
 }
 ```
+Refer the [PublicKey](../accounts#publickey) section for more details on the creation and the validity of public keys.
 
 The API of the Crypto contract is:
 
