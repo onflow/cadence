@@ -92,9 +92,11 @@ func (checker *Checker) checkInvocationExpression(invocationExpression *ast.Invo
 	var argumentTypes []Type
 	var returnType Type
 
+	functionType := invokableType.InvocationFunctionType()
+
 	checkInvocation := func() {
 		argumentTypes, returnType =
-			checker.checkInvocation(invocationExpression, invokableType)
+			checker.checkInvocation(invocationExpression, functionType)
 	}
 
 	if isOptionalChainingResult {
@@ -108,6 +110,27 @@ func (checker *Checker) checkInvocationExpression(invocationExpression *ast.Invo
 	}
 
 	checker.Elaboration.InvocationExpressionArgumentTypes[invocationExpression] = argumentTypes
+
+	arguments := invocationExpression.Arguments
+
+	if checker.positionInfoEnabled && len(arguments) > 0 {
+
+		trailingSeparatorPositions := make([]ast.Position, 0, len(arguments))
+
+		for _, argument := range arguments {
+			trailingSeparatorPositions = append(
+				trailingSeparatorPositions,
+				argument.TrailingSeparatorPos,
+			)
+		}
+
+		checker.FunctionInvocations.Put(
+			invocationExpression.ArgumentsStartPos,
+			invocationExpression.EndPos,
+			functionType,
+			trailingSeparatorPositions,
+		)
+	}
 
 	// If the invocation refers directly to the name of the function as stated in the declaration,
 	// or the invocation refers to a function of a composite (member),
@@ -320,13 +343,11 @@ func (checker *Checker) checkInvocationArgumentLabels(
 
 func (checker *Checker) checkInvocation(
 	invocationExpression *ast.InvocationExpression,
-	invokableType InvokableType,
+	functionType *FunctionType,
 ) (
 	argumentTypes []Type,
 	returnType Type,
 ) {
-	functionType := invokableType.InvocationFunctionType()
-
 	parameterCount := len(functionType.Parameters)
 	requiredArgumentCount := functionType.RequiredArgumentCount
 	typeParameterCount := len(functionType.TypeParameters)
@@ -416,7 +437,7 @@ func (checker *Checker) checkInvocation(
 		argumentExpressions[i] = argument.Expression
 	}
 
-	invokableType.CheckArgumentExpressions(
+	functionType.CheckArgumentExpressions(
 		checker,
 		argumentExpressions,
 		ast.NewRangeFromPositioned(invocationExpression),

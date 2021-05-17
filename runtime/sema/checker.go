@@ -98,6 +98,7 @@ type Checker struct {
 	memberOrigins                      map[Type]map[string]*Origin
 	MemberAccesses                     *MemberAccesses
 	Ranges                             *Ranges
+	FunctionInvocations                *FunctionInvocations
 	isChecked                          bool
 	inCreate                           bool
 	inInvocation                       bool
@@ -213,6 +214,7 @@ func WithPositionInfoEnabled(enabled bool) Option {
 			checker.Occurrences = NewOccurrences()
 			checker.MemberAccesses = NewMemberAccesses()
 			checker.Ranges = NewRanges()
+			checker.FunctionInvocations = NewFunctionInvocations()
 		}
 
 		return nil
