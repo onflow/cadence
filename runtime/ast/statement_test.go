@@ -469,9 +469,11 @@ func TestEmitStatement_MarshalJSON(t *testing.T) {
 							EndPos:   Position{Offset: 19, Line: 20, Column: 21},
 						},
 					},
+					TrailingSeparatorPos: Position{Offset: 28, Line: 29, Column: 30},
 				},
 			},
-			EndPos: Position{Offset: 22, Line: 23, Column: 24},
+			ArgumentsStartPos: Position{Offset: 31, Line: 32, Column: 33},
+			EndPos:            Position{Offset: 22, Line: 23, Column: 24},
 		},
 		StartPos: Position{Offset: 25, Line: 26, Column: 27},
 	}
@@ -523,10 +525,12 @@ func TestEmitStatement_MarshalJSON(t *testing.T) {
                             "StartPos": {"Offset": 16, "Line": 17, "Column": 18},
                             "EndPos": {"Offset": 19, "Line": 20, "Column": 21}
                         },
+                        "TrailingSeparatorPos": {"Offset": 28, "Line": 29, "Column": 30},
                         "StartPos": {"Offset": 10, "Line": 11, "Column": 12},
                         "EndPos": {"Offset": 19, "Line": 20, "Column": 21}
                     }
                 ],
+                "ArgumentsStartPos": {"Offset": 31, "Line": 32, "Column": 33},
                 "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
                 "EndPos": {"Offset": 22, "Line": 23, "Column": 24}
             },

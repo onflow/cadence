@@ -755,7 +755,8 @@ func parseNominalTypeInvocationRemainder(p *parser) *ast.InvocationExpression {
 	ty := parseNominalTypeRemainder(p, identifier)
 
 	p.skipSpaceAndComments(true)
-	p.mustOne(lexer.TokenParenOpen)
+	parenOpenToken := p.mustOne(lexer.TokenParenOpen)
+	argumentsStartPos := parenOpenToken.EndPos
 	arguments, endPos := parseArgumentListRemainder(p)
 
 	var invokedExpression ast.Expression = &ast.IdentifierExpression{
@@ -772,6 +773,7 @@ func parseNominalTypeInvocationRemainder(p *parser) *ast.InvocationExpression {
 	return &ast.InvocationExpression{
 		InvokedExpression: invokedExpression,
 		Arguments:         arguments,
+		ArgumentsStartPos: argumentsStartPos,
 		EndPos:            endPos,
 	}
 }

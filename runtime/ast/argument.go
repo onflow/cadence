@@ -24,24 +24,25 @@ import (
 )
 
 type Argument struct {
-	Label         string    `json:",omitempty"`
-	LabelStartPos *Position `json:",omitempty"`
-	LabelEndPos   *Position `json:",omitempty"`
-	Expression    Expression
+	Label                string    `json:",omitempty"`
+	LabelStartPos        *Position `json:",omitempty"`
+	LabelEndPos          *Position `json:",omitempty"`
+	TrailingSeparatorPos Position
+	Expression           Expression
 }
 
-func (a Argument) StartPosition() Position {
+func (a *Argument) StartPosition() Position {
 	if a.LabelStartPos != nil {
 		return *a.LabelStartPos
 	}
 	return a.Expression.StartPosition()
 }
 
-func (a Argument) EndPosition() Position {
+func (a *Argument) EndPosition() Position {
 	return a.Expression.EndPosition()
 }
 
-func (a Argument) String() string {
+func (a *Argument) String() string {
 	var builder strings.Builder
 	if a.Label != "" {
 		builder.WriteString(a.Label)
@@ -51,13 +52,13 @@ func (a Argument) String() string {
 	return builder.String()
 }
 
-func (a Argument) MarshalJSON() ([]byte, error) {
+func (a *Argument) MarshalJSON() ([]byte, error) {
 	type Alias Argument
 	return json.Marshal(&struct {
 		Range
-		Alias
+		*Alias
 	}{
 		Range: NewRangeFromPositioned(a),
-		Alias: Alias(a),
+		Alias: (*Alias)(a),
 	})
 }

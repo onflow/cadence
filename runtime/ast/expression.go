@@ -444,6 +444,7 @@ type InvocationExpression struct {
 	InvokedExpression Expression
 	TypeArguments     []*TypeAnnotation
 	Arguments         Arguments
+	ArgumentsStartPos Position
 	EndPos            Position `json:"-"`
 }
 

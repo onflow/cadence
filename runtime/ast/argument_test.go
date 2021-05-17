@@ -34,7 +34,7 @@ func TestArgument_MarshalJSON(t *testing.T) {
 
 		t.Parallel()
 
-		argument := Argument{
+		argument := &Argument{
 			Expression: &BoolExpression{
 				Value: false,
 				Range: Range{
@@ -42,6 +42,7 @@ func TestArgument_MarshalJSON(t *testing.T) {
 					EndPos:   Position{Offset: 4, Line: 5, Column: 6},
 				},
 			},
+			TrailingSeparatorPos: Position{Offset: 7, Line: 8, Column: 9},
 		}
 
 		actual, err := json.Marshal(argument)
@@ -57,7 +58,8 @@ func TestArgument_MarshalJSON(t *testing.T) {
                     "EndPos": {"Offset": 4, "Line": 5, "Column": 6}
                 },
                 "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
-                "EndPos": {"Offset": 4, "Line": 5, "Column": 6}
+                "EndPos": {"Offset": 4, "Line": 5, "Column": 6},
+                "TrailingSeparatorPos": {"Offset": 7, "Line": 8, "Column": 9}
             }
             `,
 			string(actual),
@@ -68,7 +70,7 @@ func TestArgument_MarshalJSON(t *testing.T) {
 
 		t.Parallel()
 
-		argument := Argument{
+		argument := &Argument{
 			Label:         "ok",
 			LabelStartPos: &Position{Offset: 7, Line: 8, Column: 9},
 			LabelEndPos:   &Position{Offset: 10, Line: 11, Column: 12},
@@ -79,6 +81,7 @@ func TestArgument_MarshalJSON(t *testing.T) {
 					EndPos:   Position{Offset: 4, Line: 5, Column: 6},
 				},
 			},
+			TrailingSeparatorPos: Position{Offset: 13, Line: 14, Column: 15},
 		}
 
 		actual, err := json.Marshal(argument)
@@ -96,6 +99,7 @@ func TestArgument_MarshalJSON(t *testing.T) {
                     "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
                     "EndPos": {"Offset": 4, "Line": 5, "Column": 6}
                 },
+			    "TrailingSeparatorPos": {"Offset": 13, "Line": 14, "Column": 15},
                 "StartPos": {"Offset": 7, "Line": 8, "Column": 9},
                 "EndPos": {"Offset": 4, "Line": 5, "Column": 6}
             }
