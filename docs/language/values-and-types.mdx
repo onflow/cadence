@@ -640,18 +640,9 @@ which are covered in the resources section of this document.
 
 ### Conditional Downcasting Operator
 
-<Callout type="info">
-
-🚧 Status: The conditional downcasting operator `as?` is implemented,
-but it only supports values that have the type `AnyStruct` and `AnyResource`.
-
-</Callout>
-
-The conditional downcasting operator `as?`
-can be used to type cast a value to a type.
+The conditional downcasting operator `as?` can be used to type cast a value to a type.
 The operator returns an optional.
-If the value has a type that is a subtype
-of the given type that should be casted to,
+If the value has a type that is a subtype of the given type that should be casted to,
 the operator returns the value as the given type,
 otherwise the result is `nil`.
 
