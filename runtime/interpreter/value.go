@@ -379,7 +379,7 @@ func (*StringValue) SetModified(_ bool) {
 	// NO-OP
 }
 
-func (v StringValue) String(_ StringResults) string {
+func (v *StringValue) String(_ StringResults) string {
 	return format.String(v.Str)
 }
 
