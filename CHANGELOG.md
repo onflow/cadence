@@ -1,4 +1,182 @@
-# v0.15.1  (2021-04-21)
+# v0.16.0 (2021-04-21)
+
+## 💥 Breaking Changes
+
+- Add new crypto features (#852) @SupunS
+
+  Renamed the `ECDSA_Secp256k1` signature algorithm to `ECDSA_secp256k1`.
+
+  Please update existing contracts, transactions, and scripts to use the new name.
+
+- Remove the high-level storage API (#877) @turbolent
+
+  The internal interface's `SetCadenceValue` function was removed.
+
+  This change does not affect Cadence programs (contracts, transactions, scripts).
+
+## ⭐ Features
+
+- Add non-local type inference for expressions (#875) @SupunS
+
+  The type of most declarations and expressions is now inferred in a uni-directional way, instead of only locally.
+
+  For example, this allows the following declarations to type-check without having to add static casts:
+
+  ```kotlin
+  let numbers: [Int8] = [1, 2, 3]
+  let nestedNumbers: [[Int8]] = [[1, 2], [3, 4]]
+  let numberNames: {Int64: String} = {0: "zero", 1: "one"}
+  let sum: Int8 = 1 + 2
+  ```
+
+- Add new crypto features (#852) @SupunS
+
+  **Hash Algorithms**
+
+  - Added [KMAC128_BLS_BLS12_381 hashing algorithm](https://docs.onflow.org/cadence/language/crypto/#hashing-algorithms)): `HashAlgorithm.KMAC128_BLS_BLS12_381`
+
+  **Signature Algorithms**
+
+  - Added [BLS_BLS12_381 signature algorithm](https://docs.onflow.org/cadence/language/crypto/#signature-algorithms): `SignatureAlgorithm.BLS_BLS12_381`
+
+  **`PublicKey` Type**
+
+  - Added the field `let isValid: Bool`. For example:
+
+    ```kotlin
+    let publicKey = PublicKey(publicKey: [], signatureAlgorithm: SignatureAlgorithm.ECDSA_P256)
+
+    let valid = publicKey.isValid
+    ```
+
+  - Added the function `verify`, which allows validating signatures:
+
+    ```kotlin
+    pub fun verify(
+        signature: [UInt8],
+        signedData: [UInt8],
+        domainSeparationTag: String,
+        hashAlgorithm: HashAlgorithm
+    ): Bool
+    ```
+
+    For example:
+
+    ```kotlin
+    let valid = publicKey.verify(
+        signature: [],
+        signedData: [],
+        domainSeparationTag: "something",
+        hashAlgorithm: HashAlgorithm.SHA2_256
+    )
+    ```
+
+  - Added the function `hashWithTag`, which allows hashing with a tag:
+
+    ```kotlin
+    pub fun hashWithTag(
+        _ data: [UInt8],
+        tag: string,
+        algorithm: HashAlgorithm
+    ): [UInt8]
+    ```
+
+- Direct contract function invoke (#878) @janezpodhostnik
+
+  Cadence now supports an additional function to allow the host environment to call contract functions directly.
+
+- Language Server: Add support for access check mode (#868) @turbolent
+- Record variable declaration ranges (#880) @turbolent
+
+## ⚡️ Performance
+
+The performance of decoding and encoding values was significantly improved by @fxamacker and @SupunS:
+
+- Optimize encoding by using CBOR lib's StreamEncoder (#830) @fxamacker
+- Optimize decoding by using CBOR StreamDecoder (#885) @fxamacker
+- Add deferred decoding for array values (#871) @SupunS
+- Add deferred decoding support for composite values (#896) @SupunS
+- Pre-allocate and reuse value-path for encoding (#858) @fxamacker
+- Pre-allocate and reuse value-path for decoding (#869) @turbolent
+- Optimize Address.Bytes() to inline fast path (#848) @fxamacker
+- Remove call to Valid() during encoding to boost speed by about 13-18% (#857) @fxamacker
+- Directly create int subtype value at interpreter (#913) @SupunS
+
+## 🛠 Improvements
+
+- Refactor Language Server to use CLI shared library (#751) @MaxStalker
+- Make PublicKey value immutable (#879) @SupunS
+- Language Server: update flow-cli (#894) @psiemens
+- Update language server to latest Cadence and Go SDK (#874) @psiemens
+- Make the interpreter location optional (#918) @turbolent
+
+## 🔒 Security
+
+This release contains major security fixes:
+
+- Declare post-condition result variable as reference if return type is a resource (#905) @turbolent
+
+  We would like to thank Deniz Mert Edincik for finding and reporting this critical issue responsibly through our [Responsible Disclosure Policy](https://github.com/onflow/cadence/blob/master/SECURITY.md).
+
+  See https://forum.onflow.org/t/fixed-cadence-vulnerability-2021-04-13
+
+- Fix dynamic subtype test for reference values (#914) @turbolent
+
+  We would like to thank Deniz Mert Edincik for finding and reporting this critical issue responsibly through our [Responsible Disclosure Policy](https://github.com/onflow/cadence/blob/master/SECURITY.md).
+
+  We would also like to thank Mikey Lemmon for finding this issue independently and reporting it responsibly, too.
+
+  See https://forum.onflow.org/t/fixed-cadence-vulnerability-2021-04-20
+
+- Check storability when value is written (before it is encoded) (#915) @turbolent
+
+  We would like to thank Deniz Mert Edincik for finding and reporting this medium issue responsibly through our [Responsible Disclosure Policy](https://github.com/onflow/cadence/blob/master/SECURITY.md).
+
+  See https://forum.onflow.org/t/fixed-cadence-vulnerability-2021-04-20
+
+- Check the index bounds for arrays (#917) @turbolent
+
+  We would like to thank Mário Silva for finding and reporting this medium issue responsibly through our [Responsible Disclosure Policy](https://github.com/onflow/cadence/blob/master/SECURITY.md).
+
+
+
+## 🐞 Bug Fixes
+
+- Improve reference values' dynamic type, static type, copy, equal, and conformance functions (#921) @turbolent
+- Implement `StaticType` for `StorageReferenceValue` and `EphemeralReferenceValue` (#920) @turbolent
+- Fix strings (#919) @turbolent
+- PublicKeyValue stringer fix (#903) @janezpodhostnik
+- Handle recursive values (due to references) in string function (#906) @turbolent
+- Handle case with no arguments (#886) @MaxStalker
+- Fix link function return value (#865) @turbolent
+- Fix optional type ID, add tests (#864) @turbolent
+- Fix function type members  (#867) @turbolent
+- Language Server:  Reuse existing checkers instead of re-parsing and re-checking imports  (#855) @turbolent
+- Only consider the program invalid if there are error diagnostics (#854) @turbolent
+
+## 🧪 Tests
+
+- Add test for TopShot moment batch transfer (#826) @turbolent
+- Test equal for nil value, in comparison and switch (#866) @turbolent
+- Test storing capabilities (#856) @turbolent
+- Test getCapability after unlink (#849) @turbolent
+- Add interpreter tests for common resource reference usages (#916) @turbolent
+- Add extra test for deterministic JSON export (#893) @m4ksio
+
+## 📖 Documentation
+
+- Add a reference to PublicKey in the crypto docs (#912) @SupunS
+- Tutorial typo fixes (#825) @joshuahannan
+- Update values-and-types.mdx (#827) @FeiyangTan
+
+## 🏗 Chores
+
+- Enable more linters and lint (#902) @turbolent
+- Measure and report code coverage (#899) @turbolent
+- Fix CI linter failure (#904) @SupunS
+- Fix Codecov "file not found at ./coverage.txt" (#901) @fxamacker
+
+# v0.15.1 (2021-04-21)
 
 ## 🛠 Improvements
 
@@ -9,7 +187,7 @@
 
 - Document saturation arithmetic and min/max fields (#817) @turbolent
 
-# v0.15.0  (2021-04-20)
+# v0.15.0 (2021-04-20)
 
 ## ⭐ Features
 
