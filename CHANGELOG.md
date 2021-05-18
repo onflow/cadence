@@ -1,3 +1,14 @@
+# v0.15.1  (2021-04-21)
+
+## 🛠 Improvements
+
+- Include wrapped error in InvalidEntryPointArgumentError message (#823) @mikeylemmon
+- Remove encoding and decoding support for storage references (#819) @turbolent
+
+## 📖 Documentation
+
+- Document saturation arithmetic and min/max fields (#817) @turbolent
+
 # v0.15.0  (2021-04-20)
 
 ## ⭐ Features
