@@ -6851,6 +6851,20 @@ func (v *CompositeValue) ConformsToDynamicType(
 
 func (v *CompositeValue) IsStorable() bool {
 
+	// Only structures, resources, enums, and contracts can be stored.
+	// Contracts are not directly storable by programs,
+	// but they are still stored in storage by the interpreter
+
+	switch v.Kind() {
+	case common.CompositeKindStructure,
+		common.CompositeKindResource,
+		common.CompositeKindEnum,
+		common.CompositeKindContract:
+		break
+	default:
+		return false
+	}
+
 	// Composite value's of native/built-in types are not storable for now
 	if v.Location() == nil {
 		return false
