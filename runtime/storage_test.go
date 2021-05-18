@@ -2193,3 +2193,44 @@ func TestRuntimeStorageNonStorable(t *testing.T) {
 		})
 	}
 }
+
+func TestRuntimeStorageRecursiveReference(t *testing.T) {
+
+	t.Parallel()
+
+	runtime := NewInterpreterRuntime()
+
+	address := common.BytesToAddress([]byte{0x1})
+
+	const code = `
+      transaction {
+	      prepare(signer: AuthAccount) {
+              let refs: [AnyStruct] = []
+              refs.insert(at: 0, &refs as &AnyStruct)
+              signer.save(refs, to: /storage/refs)
+	      }
+	  }
+    `
+
+	runtimeInterface := &testRuntimeInterface{
+		storage: newTestStorage(nil, nil),
+		getSigningAccounts: func() ([]Address, error) {
+			return []Address{address}, nil
+		},
+	}
+
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	err := runtime.ExecuteTransaction(
+		Script{
+			Source: []byte(code),
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.Error(t, err)
+
+	require.Contains(t, err.Error(), "cannot write non-storable value")
+}
