@@ -32,6 +32,7 @@ import (
 type StandardLibraryFunction struct {
 	Name           string
 	Type           sema.InvokableType
+	DocString      string
 	Function       interpreter.HostFunctionValue
 	ArgumentLabels []string
 	Available      func(common.Location) bool
@@ -47,6 +48,10 @@ func (f StandardLibraryFunction) ValueDeclarationValue() interpreter.Value {
 
 func (f StandardLibraryFunction) ValueDeclarationType() sema.Type {
 	return f.Type
+}
+
+func (f StandardLibraryFunction) ValueDeclarationDocString() string {
+	return f.DocString
 }
 
 func (StandardLibraryFunction) ValueDeclarationKind() common.DeclarationKind {
@@ -75,6 +80,7 @@ func (f StandardLibraryFunction) ValueDeclarationArgumentLabels() []string {
 func NewStandardLibraryFunction(
 	name string,
 	functionType sema.InvokableType,
+	docString string,
 	function interpreter.HostFunction,
 ) StandardLibraryFunction {
 
@@ -90,6 +96,7 @@ func NewStandardLibraryFunction(
 	return StandardLibraryFunction{
 		Name:           name,
 		Type:           functionType,
+		DocString:      docString,
 		Function:       functionValue,
 		ArgumentLabels: argumentLabels,
 	}

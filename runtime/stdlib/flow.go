@@ -31,9 +31,11 @@ import (
 
 // This file defines functions built in to the Flow runtime.
 
-// built-in function types
+const authAccountFunctionDocString = `
+Creates a new account, paid by the given existing account
+`
 
-var accountFunctionType = &sema.FunctionType{
+var authAccountFunctionType = &sema.FunctionType{
 	Parameters: []*sema.Parameter{
 		{
 			Identifier: "payer",
@@ -46,6 +48,10 @@ var accountFunctionType = &sema.FunctionType{
 		sema.AuthAccountType,
 	),
 }
+
+const getAccountFunctionDocString = `
+Returns the public account for the given address
+`
 
 var getAccountFunctionType = &sema.FunctionType{
 	Parameters: []*sema.Parameter{
@@ -77,11 +83,19 @@ var logFunctionType = &sema.FunctionType{
 	),
 }
 
+const getCurrentBlockFunctionDocString = `
+Returns the current block, i.e. the block which contains the currently executed transaction
+`
+
 var getCurrentBlockFunctionType = &sema.FunctionType{
 	ReturnTypeAnnotation: sema.NewTypeAnnotation(
 		sema.BlockType,
 	),
 }
+
+const getBlockFunctionDocString = `
+Returns the block at the given height. If the given block does not exist the function returns nil
+`
 
 var getBlockFunctionType = &sema.FunctionType{
 	Parameters: []*sema.Parameter{
@@ -99,6 +113,14 @@ var getBlockFunctionType = &sema.FunctionType{
 		},
 	),
 }
+
+const unsafeRandomFunctionDocString = `
+Returns a pseudo-random number.
+
+NOTE: The use of this function is unsafe if not used correctly.
+
+Follow best practices to prevent security issues when using this function
+`
 
 var unsafeRandomFunctionType = &sema.FunctionType{
 	ReturnTypeAnnotation: sema.NewTypeAnnotation(
@@ -123,32 +145,38 @@ func FlowBuiltInFunctions(impls FlowBuiltinImpls) StandardLibraryFunctions {
 	return StandardLibraryFunctions{
 		NewStandardLibraryFunction(
 			"AuthAccount",
-			accountFunctionType,
+			authAccountFunctionType,
+			authAccountFunctionDocString,
 			impls.CreateAccount,
 		),
 		NewStandardLibraryFunction(
 			"getAccount",
 			getAccountFunctionType,
+			getAccountFunctionDocString,
 			impls.GetAccount,
 		),
 		NewStandardLibraryFunction(
 			"log",
 			logFunctionType,
+			logFunctionDocString,
 			impls.Log,
 		),
 		NewStandardLibraryFunction(
 			"getCurrentBlock",
 			getCurrentBlockFunctionType,
+			getCurrentBlockFunctionDocString,
 			impls.GetCurrentBlock,
 		),
 		NewStandardLibraryFunction(
 			"getBlock",
 			getBlockFunctionType,
+			getBlockFunctionDocString,
 			impls.GetBlock,
 		),
 		NewStandardLibraryFunction(
 			"unsafeRandom",
 			unsafeRandomFunctionType,
+			unsafeRandomFunctionDocString,
 			impls.UnsafeRandom,
 		),
 	}

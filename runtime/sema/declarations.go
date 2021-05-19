@@ -26,6 +26,7 @@ import (
 type ValueDeclaration interface {
 	ValueDeclarationName() string
 	ValueDeclarationType() Type
+	ValueDeclarationDocString() string
 	ValueDeclarationKind() common.DeclarationKind
 	ValueDeclarationPosition() ast.Position
 	ValueDeclarationIsConstant() bool

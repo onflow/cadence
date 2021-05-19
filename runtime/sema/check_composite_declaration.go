@@ -690,6 +690,7 @@ func (checker *Checker) declareCompositeConstructor(
 	_, err := checker.valueActivations.Declare(variableDeclaration{
 		identifier:               declaration.Identifier.Identifier,
 		ty:                       constructorType,
+		docString:                declaration.DocString,
 		access:                   declaration.Access,
 		kind:                     declaration.DeclarationKind(),
 		pos:                      declaration.Identifier.Pos,
@@ -708,6 +709,7 @@ func (checker *Checker) declareContractValue(
 	_, err := checker.valueActivations.Declare(variableDeclaration{
 		identifier: declaration.Identifier.Identifier,
 		ty:         compositeType,
+		docString:  declaration.DocString,
 		// NOTE: contracts are always public
 		access:     ast.AccessPublic,
 		kind:       common.DeclarationKindContract,
@@ -792,6 +794,7 @@ func (checker *Checker) declareEnumConstructor(
 	_, err := checker.valueActivations.Declare(variableDeclaration{
 		identifier: declaration.Identifier.Identifier,
 		ty:         constructorType,
+		docString:  declaration.DocString,
 		// NOTE: enums are always public
 		access:         ast.AccessPublic,
 		kind:           common.DeclarationKindEnum,

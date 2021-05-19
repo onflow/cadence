@@ -233,6 +233,7 @@ func (a *VariableActivations) Depth() int {
 type variableDeclaration struct {
 	identifier               string
 	ty                       Type
+	docString                string
 	access                   ast.Access
 	kind                     common.DeclarationKind
 	pos                      ast.Position
@@ -277,6 +278,7 @@ func (a *VariableActivations) Declare(declaration variableDeclaration) (variable
 		Type:            declaration.ty,
 		Pos:             &declaration.pos,
 		ArgumentLabels:  declaration.argumentLabels,
+		DocString:       declaration.docString,
 	}
 	a.Set(declaration.identifier, variable)
 	return variable, err

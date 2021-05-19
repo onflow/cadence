@@ -287,6 +287,7 @@ func (checker *Checker) declareValue(declaration ValueDeclaration) *Variable {
 	variable, err := checker.valueActivations.Declare(variableDeclaration{
 		identifier: name,
 		ty:         declaration.ValueDeclarationType(),
+		docString:  declaration.ValueDeclarationDocString(),
 		// TODO: add access to ValueDeclaration and use declaration's access instead here
 		access:                   ast.AccessPublic,
 		kind:                     declaration.ValueDeclarationKind(),
@@ -2408,6 +2409,7 @@ func (checker *Checker) declareGlobalRanges() {
 				Identifier:      name,
 				Type:            variable.Type,
 				DeclarationKind: variable.DeclarationKind,
+				DocString:       variable.DocString,
 			},
 		)
 	}

@@ -30,6 +30,12 @@ import (
 
 // AssertFunction
 
+const assertFunctionDocString = `
+Terminates the program if the given condition is false, and reports a message which explains how the condition is false. Use this function for internal sanity checks.
+
+The message argument is optional.
+`
+
 var AssertFunction = NewStandardLibraryFunction(
 	"assert",
 	&sema.FunctionType{
@@ -49,6 +55,7 @@ var AssertFunction = NewStandardLibraryFunction(
 		),
 		RequiredArgumentCount: sema.RequiredArgumentCount(1),
 	},
+	assertFunctionDocString,
 	func(invocation interpreter.Invocation) interpreter.Value {
 		result := invocation.Arguments[0].(interpreter.BoolValue)
 		if !result {
@@ -78,6 +85,10 @@ func (e PanicError) Error() string {
 
 // PanicFunction
 
+const panicFunctionDocString = `
+Terminates the program unconditionally and reports a message which explains why the unrecoverable error occurred.
+`
+
 var PanicFunction = NewStandardLibraryFunction(
 	"panic",
 	&sema.FunctionType{
@@ -92,6 +103,7 @@ var PanicFunction = NewStandardLibraryFunction(
 			sema.NeverType,
 		),
 	},
+	panicFunctionDocString,
 	func(invocation interpreter.Invocation) interpreter.Value {
 		message := invocation.Arguments[0].(*interpreter.StringValue)
 		panic(PanicError{
@@ -111,22 +123,14 @@ var BuiltinFunctions = StandardLibraryFunctions{
 
 // LogFunction
 
+const logFunctionDocString = `
+Logs a string representation of the given value
+`
+
 var LogFunction = NewStandardLibraryFunction(
 	"log",
-	&sema.FunctionType{
-		Parameters: []*sema.Parameter{
-			{
-				Label:      sema.ArgumentLabelNotRequired,
-				Identifier: "value",
-				TypeAnnotation: sema.NewTypeAnnotation(
-					sema.AnyStructType,
-				),
-			},
-		},
-		ReturnTypeAnnotation: sema.NewTypeAnnotation(
-			sema.VoidType,
-		),
-	},
+	logFunctionType,
+	logFunctionDocString,
 	func(invocation interpreter.Invocation) interpreter.Value {
 		println(invocation.Arguments[0].String(interpreter.StringResults{}))
 		return interpreter.VoidValue{}
@@ -138,6 +142,10 @@ var LogFunction = NewStandardLibraryFunction(
 var HelperFunctions = StandardLibraryFunctions{
 	LogFunction,
 }
+
+const createPublicKeyFunctionDocString = `
+Constructs a new public key
+`
 
 var CreatePublicKeyFunction = NewStandardLibraryFunction(
 	sema.PublicKeyTypeName,
@@ -156,7 +164,7 @@ var CreatePublicKeyFunction = NewStandardLibraryFunction(
 		},
 		ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.PublicKeyType),
 	},
-
+	createPublicKeyFunctionDocString,
 	func(invocation interpreter.Invocation) interpreter.Value {
 		publicKey := invocation.Arguments[0].(*interpreter.ArrayValue)
 		signAlgo := invocation.Arguments[1].(*interpreter.CompositeValue)

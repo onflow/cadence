@@ -180,6 +180,7 @@ func (checker *Checker) visitVariableDeclaration(declaration *ast.VariableDeclar
 	variable, err := checker.valueActivations.Declare(variableDeclaration{
 		identifier:               identifier,
 		ty:                       declarationType,
+		docString:                declaration.DocString,
 		access:                   declaration.Access,
 		kind:                     declaration.DeclarationKind(),
 		pos:                      declaration.Identifier.Pos,
@@ -225,6 +226,7 @@ func (checker *Checker) recordVariableDeclarationRange(
 					Identifier:      identifier,
 					DeclarationKind: declaration.DeclarationKind(),
 					Type:            declarationType,
+					DocString:       declaration.DocString,
 				},
 			)
 		},

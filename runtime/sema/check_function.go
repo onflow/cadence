@@ -96,6 +96,7 @@ func (checker *Checker) declareFunctionDeclaration(
 	_, err := checker.valueActivations.Declare(variableDeclaration{
 		identifier:               declaration.Identifier.Identifier,
 		ty:                       functionType,
+		docString:                declaration.DocString,
 		access:                   declaration.Access,
 		kind:                     common.DeclarationKindFunction,
 		pos:                      declaration.Identifier.Pos,
