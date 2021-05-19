@@ -364,141 +364,38 @@ func (d *DecoderV4) decodeArray(path []string, deferDecoding bool) (*ArrayValue,
 
 func (d *DecoderV4) decodeDictionary(path []string) (*DictionaryValue, error) {
 
-	const expectedLength = encodedDictionaryValueLength
-
-	size, err := d.decoder.DecodeArrayHead()
-
-	if err != nil {
-		if e, ok := err.(*cbor.WrongTypeError); ok {
-			return nil, fmt.Errorf("invalid dictionary encoding (@ %s): expected [%d]interface{}, got %s",
-				strings.Join(path, "."),
-				expectedLength,
-				e.ActualType.String(),
-			)
-		}
-		return nil, err
-	}
-
-	if size != expectedLength {
-		return nil, fmt.Errorf("invalid dictionary encoding (@ %s): expected [%d]interface{}, got [%d]interface{}",
-			strings.Join(path, "."),
-			expectedLength,
-			size,
-		)
-	}
-
-	// Decode keys at array index encodedDictionaryValueKeysFieldKey
-	//nolint:gocritic
-	keysPath := append(path, dictionaryKeyPathPrefix)
-
-	// Since the keys are always accessed below, do not defer
-	// the decoding for keys, as it can be an overhead.
-	keys, err := d.decodeArray(keysPath, false)
-	if err != nil {
-		return nil, fmt.Errorf(
-			"invalid dictionary keys encoding (@ %s): %w",
-			strings.Join(path, "."),
-			err,
-		)
-	}
-
-	// Decode entries at array index encodedDictionaryValueEntriesFieldKey
-	entryCount, err := d.decoder.DecodeArrayHead()
-	if err != nil {
-		if e, ok := err.(*cbor.WrongTypeError); ok {
-			return nil, fmt.Errorf("invalid dictionary entries encoding (@ %s): %s",
-				strings.Join(path, "."),
-				e.ActualType.String(),
-			)
-		}
-		return nil, err
-	}
-
-	keyCount := keys.Count()
-
-	// The number of entries must either match the number of keys,
-	// or be zero in case the values are deferred
-
-	countMismatch := int(entryCount) != keyCount
-	if countMismatch && entryCount != 0 {
-		return nil, fmt.Errorf(
-			"invalid dictionary encoding (@ %s): key and entry count mismatch: expected %d, got %d",
-			strings.Join(path, "."),
-			keyCount,
-			entryCount,
-		)
-	}
-
-	entries := NewStringValueOrderedMap()
-
-	var deferred *orderedmap.StringStructOrderedMap
-	var deferredOwner *common.Address
-	var deferredStorageKeyBase string
-
-	// Are the values in the dictionary deferred, i.e. are they encoded
-	// separately and stored in separate storage keys?
-
-	isDeferred := countMismatch && entryCount == 0
-
-	if isDeferred {
-
-		deferred = orderedmap.NewStringStructOrderedMap()
-		deferredOwner = d.owner
-		deferredStorageKeyBase = joinPath(append(path, dictionaryValuePathPrefix))
-		for _, keyValue := range keys.Elements() {
-			key := dictionaryKey(keyValue)
-			deferred.Set(key, struct{}{})
-		}
-
+	var content []byte
+	var err error
+	if d.isByteDecoder {
+		// Use the zero-copy method if available, for better performance.
+		content, err = d.decoder.DecodeRawBytesZeroCopy()
 	} else {
-
-		// Pre-allocate and reuse valuePath.
-		//nolint:gocritic
-		valuePath := append(path, dictionaryValuePathPrefix, "")
-
-		lastValuePathIndex := len(path) + 1
-
-		keyIndex := 0
-
-		for _, keyValue := range keys.Elements() {
-			keyStringValue, ok := keyValue.(HasKeyString)
-			if !ok {
-				return nil, fmt.Errorf(
-					"invalid dictionary key encoding (@ %s, %d): %T",
-					strings.Join(path, "."),
-					keyIndex,
-					keyValue,
-				)
-			}
-
-			keyString := keyStringValue.KeyString()
-			valuePath[lastValuePathIndex] = keyString
-
-			decodedValue, err := d.decodeValue(valuePath)
-			if err != nil {
-				return nil, fmt.Errorf(
-					"invalid dictionary value encoding (@ %s, %s): %w",
-					strings.Join(path, "."),
-					keyString,
-					err,
-				)
-			}
-
-			entries.Set(keyString, decodedValue)
-
-			keyIndex++
-		}
+		content, err = d.decoder.DecodeRawBytes()
 	}
 
-	return &DictionaryValue{
-		Keys:                   keys,
-		Entries:                entries,
-		Owner:                  d.owner,
-		modified:               false,
-		DeferredOwner:          deferredOwner,
-		DeferredKeys:           deferred,
-		DeferredStorageKeyBase: deferredStorageKeyBase,
-	}, nil
+	if err != nil {
+		if e, ok := err.(*cbor.WrongTypeError); ok {
+			return nil, fmt.Errorf(
+				"invalid array encoding (@ %s): %s",
+				strings.Join(path, "."),
+				e.ActualType.String(),
+			)
+		}
+		return nil, err
+	}
+
+	// Make a copy so that the path will not be affected by any modification at upper levels.
+	valuePath := make([]string, len(path))
+	copy(valuePath, path)
+
+	return NewDeferredDictionaryValue(
+			valuePath,
+			content,
+			d.owner,
+			d.decodeCallback,
+			d.version,
+		),
+		nil
 }
 
 func (d *DecoderV4) decodeLocation() (common.Location, error) {
@@ -1870,5 +1767,148 @@ func decodeArrayElements(array *ArrayValue, elementContent []byte) error {
 	}
 
 	array.values = elements
+	return nil
+}
+
+func decodeDictionaryEntries(v *DictionaryValue, content []byte) error {
+	d, err := NewByteDecoder(content, v.Owner, v.encodingVersion, v.decodeCallback)
+	if err != nil {
+		return err
+	}
+
+	const expectedLength = encodedDictionaryValueLength
+
+	size, err := d.decoder.DecodeArrayHead()
+
+	if err != nil {
+		if e, ok := err.(*cbor.WrongTypeError); ok {
+			return fmt.Errorf("invalid dictionary encoding (@ %s): expected [%d]interface{}, got %s",
+				strings.Join(v.valuePath, "."),
+				expectedLength,
+				e.ActualType.String(),
+			)
+		}
+		return err
+	}
+
+	if size != expectedLength {
+		return fmt.Errorf("invalid dictionary encoding (@ %s): expected [%d]interface{}, got [%d]interface{}",
+			strings.Join(v.valuePath, "."),
+			expectedLength,
+			size,
+		)
+	}
+
+	// Decode keys at array index encodedDictionaryValueKeysFieldKey
+	//nolint:gocritic
+	keysPath := append(v.valuePath, dictionaryKeyPathPrefix)
+
+	// Since the keys are always accessed below, do not defer
+	// the decoding for keys, as it can be an overhead.
+	keys, err := d.decodeArray(keysPath, false)
+	if err != nil {
+		return fmt.Errorf(
+			"invalid dictionary keys encoding (@ %s): %w",
+			strings.Join(v.valuePath, "."),
+			err,
+		)
+	}
+
+	// Decode entries at array index encodedDictionaryValueEntriesFieldKey
+	entryCount, err := d.decoder.DecodeArrayHead()
+	if err != nil {
+		if e, ok := err.(*cbor.WrongTypeError); ok {
+			return fmt.Errorf("invalid dictionary entries encoding (@ %s): %s",
+				strings.Join(v.valuePath, "."),
+				e.ActualType.String(),
+			)
+		}
+		return err
+	}
+
+	keyCount := keys.Count()
+
+	// The number of entries must either match the number of keys,
+	// or be zero in case the values are deferred
+
+	countMismatch := int(entryCount) != keyCount
+	if countMismatch && entryCount != 0 {
+		return fmt.Errorf(
+			"invalid dictionary encoding (@ %s): key and entry count mismatch: expected %d, got %d",
+			strings.Join(v.valuePath, "."),
+			keyCount,
+			entryCount,
+		)
+	}
+
+	entries := NewStringValueOrderedMap()
+
+	var deferred *orderedmap.StringStructOrderedMap
+	var deferredOwner *common.Address
+	var deferredStorageKeyBase string
+
+	// Are the values in the dictionary deferred, i.e. are they encoded
+	// separately and stored in separate storage keys?
+
+	isDeferred := countMismatch && entryCount == 0
+
+	if isDeferred {
+
+		deferred = orderedmap.NewStringStructOrderedMap()
+		deferredOwner = d.owner
+		deferredStorageKeyBase = joinPath(append(v.valuePath, dictionaryValuePathPrefix))
+		for _, keyValue := range keys.Elements() {
+			key := dictionaryKey(keyValue)
+			deferred.Set(key, struct{}{})
+		}
+
+	} else {
+
+		// Pre-allocate and reuse valuePath.
+		//nolint:gocritic
+		valuePath := append(v.valuePath, dictionaryValuePathPrefix, "")
+
+		lastValuePathIndex := len(v.valuePath) + 1
+
+		keyIndex := 0
+
+		for _, keyValue := range keys.Elements() {
+			keyStringValue, ok := keyValue.(HasKeyString)
+			if !ok {
+				return fmt.Errorf(
+					"invalid dictionary key encoding (@ %s, %d): %T",
+					strings.Join(v.valuePath, "."),
+					keyIndex,
+					keyValue,
+				)
+			}
+
+			keyString := keyStringValue.KeyString()
+			valuePath[lastValuePathIndex] = keyString
+
+			decodedValue, err := d.decodeValue(valuePath)
+			if err != nil {
+				return fmt.Errorf(
+					"invalid dictionary value encoding (@ %s, %s): %w",
+					strings.Join(v.valuePath, "."),
+					keyString,
+					err,
+				)
+			}
+
+			entries.Set(keyString, decodedValue)
+
+			keyIndex++
+		}
+	}
+
+	v.Keys = keys
+	v.Entries = entries
+	v.Owner = d.owner
+	v.modified = false
+	v.DeferredOwner = deferredOwner
+	v.DeferredKeys = deferred
+	v.DeferredStorageKeyBase = deferredStorageKeyBase
+
 	return nil
 }
