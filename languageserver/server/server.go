@@ -1303,7 +1303,7 @@ func (s *Server) getDiagnostics(
 				return resolvedLocations, nil
 			},
 		),
-		sema.WithOriginsAndOccurrencesEnabled(true),
+		sema.WithPositionInfoEnabled(true),
 		sema.WithImportHandler(
 			func(checker *sema.Checker, importedLocation common.Location, importRange ast.Range) (sema.Import, error) {
 				switch importedLocation {
