@@ -28,6 +28,7 @@ import (
 type ValueDeclaration struct {
 	Name           string
 	Type           sema.Type
+	DocString      string
 	Kind           common.DeclarationKind
 	IsConstant     bool
 	ArgumentLabels []string
@@ -41,6 +42,10 @@ func (v ValueDeclaration) ValueDeclarationName() string {
 
 func (v ValueDeclaration) ValueDeclarationType() sema.Type {
 	return v.Type
+}
+
+func (v ValueDeclaration) ValueDeclarationDocString() string {
+	return v.DocString
 }
 
 func (v ValueDeclaration) ValueDeclarationValue() interpreter.Value {

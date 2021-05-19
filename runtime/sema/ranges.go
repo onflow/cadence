@@ -28,6 +28,7 @@ type Range struct {
 	Identifier      string
 	Type            Type
 	DeclarationKind common.DeclarationKind
+	DocString       string
 }
 
 type Ranges struct {

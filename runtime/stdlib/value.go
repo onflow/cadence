@@ -28,6 +28,7 @@ import (
 type StandardLibraryValue struct {
 	Name      string
 	Type      sema.Type
+	DocString string
 	Value     interpreter.Value
 	Kind      common.DeclarationKind
 	Available func(common.Location) bool
@@ -43,6 +44,10 @@ func (v StandardLibraryValue) ValueDeclarationValue() interpreter.Value {
 
 func (v StandardLibraryValue) ValueDeclarationType() sema.Type {
 	return v.Type
+}
+
+func (v StandardLibraryValue) ValueDeclarationDocString() string {
+	return v.DocString
 }
 
 func (v StandardLibraryValue) ValueDeclarationKind() common.DeclarationKind {

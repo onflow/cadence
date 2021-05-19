@@ -1573,6 +1573,7 @@ func TestInterpretHostFunction(t *testing.T) {
 				sema.IntType,
 			),
 		},
+		``,
 		func(invocation interpreter.Invocation) interpreter.Value {
 			a := invocation.Arguments[0].(interpreter.IntValue).ToBigInt()
 			b := invocation.Arguments[1].(interpreter.IntValue).ToBigInt()
@@ -1642,6 +1643,7 @@ func TestInterpretHostFunctionWithVariableArguments(t *testing.T) {
 			),
 			RequiredArgumentCount: sema.RequiredArgumentCount(1),
 		},
+		``,
 		func(invocation interpreter.Invocation) interpreter.Value {
 			called = true
 
@@ -8013,6 +8015,7 @@ func TestInterpretNestedDestroy(t *testing.T) {
 				sema.VoidType,
 			),
 		},
+		``,
 		func(invocation interpreter.Invocation) interpreter.Value {
 			message := invocation.Arguments[0].String(interpreter.StringResults{})
 			logs = append(logs, message)

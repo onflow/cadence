@@ -41,4 +41,6 @@ type Variable struct {
 	ArgumentLabels []string
 	// Pos is the position where the variable was declared
 	Pos *ast.Position
+	// DocString is the optional docstring
+	DocString string
 }
