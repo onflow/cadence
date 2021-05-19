@@ -1480,6 +1480,8 @@ func (s *Server) maybeResolveRange(uri protocol.DocumentUri, id string, result *
 		)
 	}
 
+	result.Documentation = r.DocString
+
 	return true
 }
 
