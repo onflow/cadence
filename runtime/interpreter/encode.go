@@ -844,10 +844,27 @@ func (e *Encoder) encodeDictionaryValue(
 	path []string,
 	deferrals *EncodingDeferrals,
 ) error {
-	// Encode CBOR tag number and array head
+
+	// Encode CBOR tag number
 	err := e.enc.EncodeRawBytes([]byte{
 		// tag number
 		0xd8, cborTagDictionaryValue,
+	})
+	if err != nil {
+		return err
+	}
+
+	if v.content != nil {
+		err := e.enc.EncodeRawBytes(v.content)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	}
+
+	// Encode array head
+	err = e.enc.EncodeRawBytes([]byte{
 		// array, 2 items follow
 		0x82,
 	})
@@ -910,8 +927,8 @@ func (e *Encoder) encodeDictionaryValue(
 		if deferred {
 
 			var isDeferred bool
-			if v.DeferredKeys != nil {
-				_, isDeferred = v.DeferredKeys.Get(key)
+			if v.deferredKeys != nil {
+				_, isDeferred = v.deferredKeys.Get(key)
 			}
 
 			// If the value is not deferred, i.e. it is in memory,
@@ -931,12 +948,12 @@ func (e *Encoder) encodeDictionaryValue(
 				// is stored in another account's storage,
 				// it must be moved.
 
-				deferredOwner := *v.DeferredOwner
+				deferredOwner := *v.deferredOwner
 				owner := *v.Owner
 
 				if deferredOwner != owner {
 
-					deferredStorageKey := joinPathElements(v.DeferredStorageKeyBase, key)
+					deferredStorageKey := joinPathElements(v.deferredStorageKeyBase, key)
 
 					deferrals.Moves = append(deferrals.Moves,
 						EncodingDeferralMove{

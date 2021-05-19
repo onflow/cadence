@@ -489,9 +489,9 @@ func (d *DecoderV3) decodeDictionary(v interface{}, path []string) (*DictionaryV
 		entries:                entries,
 		Owner:                  d.owner,
 		modified:               false,
-		DeferredOwner:          deferredOwner,
-		DeferredKeys:           deferred,
-		DeferredStorageKeyBase: deferredStorageKeyBase,
+		deferredOwner:          deferredOwner,
+		deferredKeys:           deferred,
+		deferredStorageKeyBase: deferredStorageKeyBase,
 	}, nil
 }
 
