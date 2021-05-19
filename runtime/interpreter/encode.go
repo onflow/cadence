@@ -859,7 +859,7 @@ func (e *Encoder) encodeDictionaryValue(
 	keysPath := append(path, dictionaryKeyPathPrefix)
 
 	// Encode keys (as array) at array index encodedDictionaryValueKeysFieldKey
-	err = e.encodeArray(v.Keys, keysPath, deferrals)
+	err = e.encodeArray(v.Keys(), keysPath, deferrals)
 	if err != nil {
 		return err
 	}
@@ -873,7 +873,7 @@ func (e *Encoder) encodeDictionaryValue(
 		// Iterating over the map in a non-deterministic way is OK,
 		// we only determine check if all values are resources.
 
-		for pair := v.Entries.Oldest(); pair != nil; pair = pair.Next() {
+		for pair := v.Entries().Oldest(); pair != nil; pair = pair.Next() {
 			compositeValue, ok := pair.Value.(*CompositeValue)
 			if !ok || compositeValue.Kind() != common.CompositeKindResource {
 				deferred = false
@@ -884,7 +884,7 @@ func (e *Encoder) encodeDictionaryValue(
 
 	// entries is empty if encoding of values is deferred,
 	// otherwise entries size is the same as keys size.
-	keys := v.Keys.Elements()
+	keys := v.Keys().Elements()
 	entriesLength := len(keys)
 	if deferred {
 		entriesLength = 0
@@ -904,7 +904,7 @@ func (e *Encoder) encodeDictionaryValue(
 
 	for _, keyValue := range keys {
 		key := dictionaryKey(keyValue)
-		entryValue, _ := v.Entries.Get(key)
+		entryValue, _ := v.Entries().Get(key)
 		valuePath[lastValuePathIndex] = key
 
 		if deferred {

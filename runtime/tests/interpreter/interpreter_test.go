@@ -3720,14 +3720,14 @@ func TestInterpretDictionaryIndexingAssignmentExisting(t *testing.T) {
 
 	assert.Equal(t,
 		expectedEntries,
-		actualDict.Entries,
+		actualDict.Entries(),
 	)
 
 	assert.Equal(t,
 		[]interpreter.Value{
 			interpreter.NewStringValue("abc"),
 		},
-		actualDict.Keys.Elements(),
+		actualDict.Keys().Elements(),
 	)
 
 	assert.True(t, actualDict.IsModified())
@@ -3785,7 +3785,7 @@ func TestInterpretDictionaryIndexingAssignmentNew(t *testing.T) {
 
 	assert.Equal(t,
 		expectedEntries,
-		actualDict.Entries,
+		actualDict.Entries(),
 	)
 
 	assert.Equal(t,
@@ -3793,7 +3793,7 @@ func TestInterpretDictionaryIndexingAssignmentNew(t *testing.T) {
 			interpreter.NewStringValue("def"),
 			interpreter.NewStringValue("abc"),
 		},
-		actualDict.Keys.Elements(),
+		actualDict.Keys().Elements(),
 	)
 
 	assert.True(t, actualDict.IsModified())
@@ -3849,14 +3849,14 @@ func TestInterpretDictionaryIndexingAssignmentNil(t *testing.T) {
 
 	assert.Equal(t,
 		expectedEntries,
-		actualDict.Entries,
+		actualDict.Entries(),
 	)
 
 	assert.Equal(t,
 		[]interpreter.Value{
 			interpreter.NewStringValue("abc"),
 		},
-		actualDict.Keys.Elements(),
+		actualDict.Keys().Elements(),
 	)
 
 	assert.True(t, actualDict.IsModified())
@@ -4940,14 +4940,14 @@ func TestInterpretDictionaryRemove(t *testing.T) {
 
 	assert.Equal(t,
 		expectedEntries,
-		actualDict.Entries,
+		actualDict.Entries(),
 	)
 
 	assert.Equal(t,
 		[]interpreter.Value{
 			interpreter.NewStringValue("def"),
 		},
-		actualDict.Keys.Elements(),
+		actualDict.Keys().Elements(),
 	)
 
 	assert.True(t, actualDict.IsModified())
@@ -4993,7 +4993,7 @@ func TestInterpretDictionaryInsert(t *testing.T) {
 
 	assert.Equal(t,
 		expectedEntries,
-		actualDict.Entries,
+		actualDict.Entries(),
 	)
 
 	assert.Equal(t,
@@ -5001,7 +5001,7 @@ func TestInterpretDictionaryInsert(t *testing.T) {
 			interpreter.NewStringValue("abc"),
 			interpreter.NewStringValue("def"),
 		},
-		actualDict.Keys.Elements(),
+		actualDict.Keys().Elements(),
 	)
 
 	assert.True(t, actualDict.IsModified())
@@ -7735,9 +7735,12 @@ func TestInterpretDictionaryValueEncodingOrder(t *testing.T) {
 		decoded, err := decoder.Decode(path)
 		require.NoError(t, err)
 
+		// ensure the value is loaded
+		_ = decoded.String(interpreter.StringResults{})
+
 		test.SetModified(false)
-		test.Keys.SetModified(false)
-		for _, key := range test.Keys.Elements() {
+		test.Keys().SetModified(false)
+		for _, key := range test.Keys().Elements() {
 			stringKey := key.(*interpreter.StringValue)
 			stringKey.SetModified(false)
 		}

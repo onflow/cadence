@@ -211,7 +211,7 @@ func TestSetOwnerDictionaryCopy(t *testing.T) {
 	dictionary.SetOwner(&newOwner)
 
 	dictionaryCopy := dictionary.Copy().(*DictionaryValue)
-	valueCopy, _ := dictionaryCopy.Entries.Get(keyValue.KeyString())
+	valueCopy, _ := dictionaryCopy.Entries().Get(keyValue.KeyString())
 
 	assert.Nil(t, dictionaryCopy.GetOwner())
 	assert.Nil(t, valueCopy.GetOwner())
@@ -632,11 +632,11 @@ func TestStringer(t *testing.T) {
 					UInt8Value(42),
 				)
 				return &DictionaryValue{
-					Keys: NewArrayValueUnownedNonCopying(
+					keys: NewArrayValueUnownedNonCopying(
 						NewStringValue("a"),
 						NewStringValue("b"),
 					),
-					Entries: entries,
+					entries: entries,
 				}
 			}(),
 			expected: `{"a": 42, "b": ...}`,

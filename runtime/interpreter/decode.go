@@ -1902,8 +1902,8 @@ func decodeDictionaryEntries(v *DictionaryValue, content []byte) error {
 		}
 	}
 
-	v.Keys = keys
-	v.Entries = entries
+	v.keys = keys
+	v.entries = entries
 	v.Owner = d.owner
 	v.modified = false
 	v.DeferredOwner = deferredOwner
