@@ -6977,6 +6977,22 @@ type DictionaryValue struct {
 	// prevDeferredKeys are the keys which are deferred and have been loaded from storage,
 	// i.e. they are keys that were previously in DeferredKeys.
 	prevDeferredKeys *orderedmap.StringStructOrderedMap
+
+	// Raw element content cache for decoded values.
+	// Only available for decoded values who's entries are not loaded yet.
+	content []byte
+
+	// Value's path to be used during decoding.
+	// Only available for decoded values who's entries are not loaded yet.
+	valuePath []string
+
+	// Callback function to be invoked when decoding the entries of this dictionary value.
+	// Only available for decoded values who's entries are not loaded yet.
+	decodeCallback DecodingCallback
+
+	// Encoding version of the raw content of the entries of this value.
+	// Only available for decoded values who's entries are not loaded yet.
+	encodingVersion uint16
 }
 
 func NewDictionaryValueUnownedNonCopying(keysAndValues ...Value) *DictionaryValue {
@@ -7002,6 +7018,23 @@ func NewDictionaryValueUnownedNonCopying(keysAndValues ...Value) *DictionaryValu
 	}
 
 	return result
+}
+
+func NewDeferredDictionaryValue(
+	path []string,
+	content []byte,
+	owner *common.Address,
+	decodeCallback DecodingCallback,
+	version uint16,
+) *DictionaryValue {
+	return &DictionaryValue{
+		Owner:           owner,
+		modified:        false,
+		valuePath:       path,
+		content:         content,
+		decodeCallback:  decodeCallback,
+		encodingVersion: version,
+	}
 }
 
 func (*DictionaryValue) IsValue() {}
