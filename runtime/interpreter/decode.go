@@ -376,7 +376,7 @@ func (d *DecoderV4) decodeDictionary(path []string) (*DictionaryValue, error) {
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
 			return nil, fmt.Errorf(
-				"invalid array encoding (@ %s): %s",
+				"invalid dictionary encoding (@ %s): %s",
 				strings.Join(path, "."),
 				e.ActualType.String(),
 			)
@@ -1904,11 +1904,9 @@ func decodeDictionaryEntries(v *DictionaryValue, content []byte) error {
 
 	v.keys = keys
 	v.entries = entries
-	v.Owner = d.owner
-	v.modified = false
-	v.DeferredOwner = deferredOwner
-	v.DeferredKeys = deferred
-	v.DeferredStorageKeyBase = deferredStorageKeyBase
+	v.deferredOwner = deferredOwner
+	v.deferredKeys = deferred
+	v.deferredStorageKeyBase = deferredStorageKeyBase
 
 	return nil
 }

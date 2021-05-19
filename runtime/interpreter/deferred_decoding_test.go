@@ -680,3 +680,252 @@ func BenchmarkArrayDeferredDecoding(b *testing.B) {
 		}
 	})
 }
+
+func TestDictionaryDeferredDecoding(t *testing.T) {
+	t.Parallel()
+
+	t.Run("Simple dictionary", func(t *testing.T) {
+		dictionary := newTestDictionaryValue(10)
+
+		encoded, _, err := EncodeValue(dictionary, nil, true, nil)
+		require.NoError(t, err)
+
+		decoded, err := DecodeValue(encoded, &testOwner, nil, CurrentEncodingVersion, nil)
+		require.NoError(t, err)
+
+		require.IsType(t, &DictionaryValue{}, decoded)
+		decodedDictionary := decoded.(*DictionaryValue)
+
+		// entries must not be loaded
+		assert.Nil(t, decodedDictionary.keys)
+		assert.Nil(t, decodedDictionary.entries)
+		assert.NotNil(t, decodedDictionary.content)
+
+		// Get a value from the dictionary
+		element := decodedDictionary.Get(nil, nil, NewStringValue("key5"))
+
+		assert.Equal(
+			t,
+			NewSomeValueOwningNonCopying(NewStringValue("value5")),
+			element,
+		)
+
+		// entries must be now loaded
+		assert.NotNil(t, decodedDictionary.keys)
+		assert.NotNil(t, decodedDictionary.entries)
+		assert.Nil(t, decodedDictionary.content)
+	})
+
+	t.Run("Round trip - without loading", func(t *testing.T) {
+
+		dictionary := newTestDictionaryValue(2)
+
+		// Encode
+		encoded, _, err := EncodeValue(dictionary, nil, true, nil)
+		require.NoError(t, err)
+
+		// Decode
+		decoded, err := DecodeValue(encoded, &testOwner, nil, CurrentEncodingVersion, nil)
+		require.NoError(t, err)
+
+		require.IsType(t, &DictionaryValue{}, decoded)
+		decodedDictionary := decoded.(*DictionaryValue)
+
+		// entries must not be loaded
+		assert.Nil(t, decodedDictionary.keys)
+		assert.Nil(t, decodedDictionary.entries)
+		assert.NotNil(t, decodedDictionary.content)
+
+		// Re encode the decoded value
+		reEncoded, _, err := EncodeValue(decodedDictionary, nil, true, nil)
+		require.NoError(t, err)
+
+		reDecoded, err := DecodeValue(reEncoded, &testOwner, nil, CurrentEncodingVersion, nil)
+		require.NoError(t, err)
+
+		require.IsType(t, &DictionaryValue{}, reDecoded)
+		reDecodedDictionary := decoded.(*DictionaryValue)
+
+		reDecodedDictionary.ensureLoaded()
+
+		// Check the elements
+		require.Equal(t, 2, reDecodedDictionary.Count())
+
+		i := 0
+		reDecodedDictionary.Entries().Foreach(func(key string, value Value) {
+			assert.Equal(t, fmt.Sprintf("key%d", i), key)
+			assert.Equal(t, NewStringValue(fmt.Sprintf("value%d", i)), value)
+			i++
+		})
+	})
+
+	t.Run("re-encoding", func(t *testing.T) {
+
+		dictionary := newTestDictionaryValue(2)
+
+		// Encode
+		encoded, _, err := EncodeValue(dictionary, nil, true, nil)
+		require.NoError(t, err)
+
+		// Decode
+		decoded, err := DecodeValue(encoded, &testOwner, nil, CurrentEncodingVersion, nil)
+		require.NoError(t, err)
+
+		require.IsType(t, &DictionaryValue{}, decoded)
+		decodedDictionary := decoded.(*DictionaryValue)
+
+		// entries must not be loaded
+		assert.Nil(t, decodedDictionary.keys)
+		assert.Nil(t, decodedDictionary.entries)
+		assert.NotNil(t, decodedDictionary.content)
+
+		type prepareCallback struct {
+			value Value
+			path  []string
+		}
+
+		var prepareCallbacks []prepareCallback
+
+		callback := func(value Value, path []string) {
+			valuePath := make([]string, len(path))
+			copy(valuePath, path)
+
+			prepareCallbacks = append(prepareCallbacks, prepareCallback{
+				value: value,
+				path:  valuePath,
+			})
+		}
+
+		// Re encode the decoded value
+		_, _, err = EncodeValue(decodedDictionary, []string{}, true, callback)
+		require.NoError(t, err)
+
+		// Entries are not loaded, so they must not be encoded again.
+		// i.e: Callback must be only called once.
+		require.Len(t, prepareCallbacks, 1)
+		assert.Equal(t, decoded, prepareCallbacks[0].value)
+		assert.Equal(t, []string{}, prepareCallbacks[0].path)
+	})
+
+	t.Run("deferred dictionary", func(t *testing.T) {
+		const size = 2
+		values := make([]Value, size*2)
+
+		testResource := NewCompositeValue(
+			utils.TestLocation,
+			"TestResource",
+			common.CompositeKindResource,
+			NewStringValueOrderedMap(),
+			nil,
+		)
+
+		for i := 0; i < size; i++ {
+			values[i*2] = NewStringValue(fmt.Sprintf("key%d", i))
+			values[i*2+1] = testResource
+		}
+
+		dictionary := NewDictionaryValueUnownedNonCopying(values...)
+
+		// Encode
+		encoded, _, err := EncodeValue(dictionary, nil, true, nil)
+		require.NoError(t, err)
+
+		// Decode
+		decoded, err := DecodeValue(encoded, &testOwner, nil, CurrentEncodingVersion, nil)
+		require.NoError(t, err)
+
+		require.IsType(t, &DictionaryValue{}, decoded)
+		decodedDictionary := decoded.(*DictionaryValue)
+
+		// entries must not be loaded
+		assert.Nil(t, decodedDictionary.keys)
+		assert.Nil(t, decodedDictionary.entries)
+		assert.NotNil(t, decodedDictionary.content)
+
+		// Create a dummy interpreter for 'get' function
+		inter, err := NewInterpreter(nil, utils.TestLocation)
+		require.NoError(t, err)
+		inter.storageReadHandler = func(
+			inter *Interpreter,
+			storageAddress common.Address,
+			key string,
+			deferred bool,
+		) OptionalValue {
+			if key == joinPath([]string{dictionaryValuePathPrefix, "key0"}) {
+				return NewSomeValueOwningNonCopying(testResource)
+			}
+
+			return NilValue{}
+		}
+
+		// Get a value from the dictionary
+		element := decodedDictionary.Get(inter, nil, NewStringValue("key0"))
+
+		assert.Equal(t, NewSomeValueOwningNonCopying(testResource), element)
+
+		// entries must be now loaded
+		assert.NotNil(t, decodedDictionary.keys)
+		assert.NotNil(t, decodedDictionary.entries)
+		assert.Nil(t, decodedDictionary.content)
+	})
+}
+
+var newTestDictionaryValue = func(size int) *DictionaryValue {
+	values := make([]Value, size*2)
+
+	for i := 0; i < size; i++ {
+		values[i*2] = NewStringValue(fmt.Sprintf("key%d", i))
+		values[i*2+1] = NewStringValue(fmt.Sprintf("value%d", i))
+	}
+
+	return NewDictionaryValueUnownedNonCopying(values...)
+}
+
+func BenchmarkDictionaryDeferredDecoding(b *testing.B) {
+
+	const size = 100
+
+	encoded, _, err := EncodeValue(newTestDictionaryValue(size), nil, true, nil)
+	require.NoError(b, err)
+
+	b.Run("Simply decode", func(b *testing.B) {
+		b.ReportAllocs()
+		b.ResetTimer()
+
+		for i := 0; i < b.N; i++ {
+			_, err := DecodeValue(encoded, &testOwner, nil, CurrentEncodingVersion, nil)
+			require.NoError(b, err)
+		}
+	})
+
+	b.Run("Get value", func(b *testing.B) {
+		b.ReportAllocs()
+
+		key := NewStringValue(fmt.Sprintf("key%d", size/2))
+
+		b.ResetTimer()
+
+		for i := 0; i < b.N; i++ {
+			decoded, err := DecodeValue(encoded, &testOwner, nil, CurrentEncodingVersion, nil)
+			require.NoError(b, err)
+
+			decodedDictionary := decoded.(*DictionaryValue)
+			value := decodedDictionary.Get(nil, nil, key)
+			assert.NotNil(b, value)
+		}
+	})
+
+	b.Run("Re-encode decoded", func(b *testing.B) {
+		b.ReportAllocs()
+
+		decoded, err := DecodeValue(encoded, &testOwner, nil, CurrentEncodingVersion, nil)
+		require.NoError(b, err)
+
+		b.ResetTimer()
+
+		for i := 0; i < b.N; i++ {
+			_, _, err = EncodeValue(decoded, nil, true, nil)
+			require.NoError(b, err)
+		}
+	})
+}

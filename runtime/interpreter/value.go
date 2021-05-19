@@ -6961,22 +6961,26 @@ type DictionaryValue struct {
 	entries  *StringValueOrderedMap
 	Owner    *common.Address
 	modified bool
+
 	// Deferral of values:
 	//
 	// Values in the dictionary might be deferred, i.e. are they encoded
 	// separately and stored in separate storage keys.
-	//
-	// DeferredOwner is the account in which the deferred values are stored.
+
+	// deferredOwner is the account in which the deferred values are stored.
 	// The account might differ from the owner: If the dictionary is moved
 	// from one account to another, its owner changes, but its deferred values
 	// stay stored in the deferred owner's account until the end of the transaction.
-	DeferredOwner *common.Address
-	// DeferredKeys are the keys which are deferred and have not been loaded from storage yet.
-	DeferredKeys *orderedmap.StringStructOrderedMap
-	// DeferredStorageKeyBase is the storage key prefix for all deferred keys
-	DeferredStorageKeyBase string
+	deferredOwner *common.Address
+
+	// deferredKeys are the keys which are deferred and have not been loaded from storage yet.
+	deferredKeys *orderedmap.StringStructOrderedMap
+
+	// deferredStorageKeyBase is the storage key prefix for all deferred keys
+	deferredStorageKeyBase string
+
 	// prevDeferredKeys are the keys which are deferred and have been loaded from storage,
-	// i.e. they are keys that were previously in DeferredKeys.
+	// i.e. they are keys that were previously in deferredKeys.
 	prevDeferredKeys *orderedmap.StringStructOrderedMap
 
 	// Raw element content cache for decoded values.
@@ -7008,9 +7012,9 @@ func NewDictionaryValueUnownedNonCopying(keysAndValues ...Value) *DictionaryValu
 		// NOTE: new value has no owner
 		Owner:                  nil,
 		modified:               true,
-		DeferredOwner:          nil,
-		DeferredKeys:           nil,
-		DeferredStorageKeyBase: "",
+		deferredOwner:          nil,
+		deferredKeys:           nil,
+		deferredStorageKeyBase: "",
 		prevDeferredKeys:       nil,
 	}
 
@@ -7040,24 +7044,6 @@ func NewDeferredDictionaryValue(
 
 func (*DictionaryValue) IsValue() {}
 
-// Ensures the elements of this array value are loaded.
-func (v *DictionaryValue) ensureLoaded() {
-	if v.content == nil {
-		return
-	}
-
-	err := decodeDictionaryEntries(v, v.content)
-	if err != nil {
-		panic(err)
-	}
-
-	// Reset the cache
-	v.content = nil
-	v.valuePath = nil
-	v.decodeCallback = nil
-	v.encodingVersion = 0
-}
-
 func (v *DictionaryValue) Keys() *ArrayValue {
 	v.ensureLoaded()
 	return v.keys
@@ -7066,6 +7052,21 @@ func (v *DictionaryValue) Keys() *ArrayValue {
 func (v *DictionaryValue) Entries() *StringValueOrderedMap {
 	v.ensureLoaded()
 	return v.entries
+}
+
+func (v *DictionaryValue) DeferredOwner() *common.Address {
+	v.ensureLoaded()
+	return v.deferredOwner
+}
+
+func (v *DictionaryValue) DeferredKeys() *orderedmap.StringStructOrderedMap {
+	v.ensureLoaded()
+	return v.deferredKeys
+}
+
+func (v *DictionaryValue) DeferredStorageKeyBase() string {
+	v.ensureLoaded()
+	return v.deferredStorageKeyBase
 }
 
 func (v *DictionaryValue) Accept(interpreter *Interpreter, visitor Visitor) {
@@ -7112,9 +7113,9 @@ func (v *DictionaryValue) Copy() Value {
 		return &DictionaryValue{
 			keys:                   v.keys,
 			entries:                v.entries,
-			DeferredOwner:          v.DeferredOwner,
-			DeferredKeys:           v.DeferredKeys,
-			DeferredStorageKeyBase: v.DeferredStorageKeyBase,
+			deferredOwner:          v.deferredOwner,
+			deferredKeys:           v.deferredKeys,
+			deferredStorageKeyBase: v.deferredStorageKeyBase,
 			prevDeferredKeys:       v.prevDeferredKeys,
 			// NOTE: new value has no owner
 			Owner:           nil,
@@ -7137,9 +7138,9 @@ func (v *DictionaryValue) Copy() Value {
 	return &DictionaryValue{
 		keys:                   newKeys,
 		entries:                newEntries,
-		DeferredOwner:          v.DeferredOwner,
-		DeferredKeys:           v.DeferredKeys,
-		DeferredStorageKeyBase: v.DeferredStorageKeyBase,
+		deferredOwner:          v.deferredOwner,
+		deferredKeys:           v.deferredKeys,
+		deferredStorageKeyBase: v.deferredStorageKeyBase,
 		prevDeferredKeys:       v.prevDeferredKeys,
 		// NOTE: new value has no owner
 		Owner:           nil,
@@ -7215,18 +7216,20 @@ func (v *DictionaryValue) Destroy(inter *Interpreter, getLocationRange func() Lo
 		maybeDestroy(inter, getLocationRange, value)
 	}
 
-	writeDeferredKeys(inter, v.DeferredOwner, v.DeferredStorageKeyBase, v.DeferredKeys)
-	writeDeferredKeys(inter, v.DeferredOwner, v.DeferredStorageKeyBase, v.prevDeferredKeys)
+	writeDeferredKeys(inter, v.deferredOwner, v.deferredStorageKeyBase, v.deferredKeys)
+	writeDeferredKeys(inter, v.deferredOwner, v.deferredStorageKeyBase, v.prevDeferredKeys)
 }
 
 func (v *DictionaryValue) ContainsKey(keyValue Value) BoolValue {
+	v.ensureLoaded()
+
 	key := dictionaryKey(keyValue)
-	_, ok := v.Entries().Get(key)
+	_, ok := v.entries.Get(key)
 	if ok {
 		return true
 	}
-	if v.DeferredKeys != nil {
-		_, ok := v.DeferredKeys.Get(key)
+	if v.deferredKeys != nil {
+		_, ok := v.deferredKeys.Get(key)
 		if ok {
 			return true
 		}
@@ -7247,16 +7250,16 @@ func (v *DictionaryValue) Get(inter *Interpreter, _ func() LocationRange, keyVal
 	// Is the key a deferred value? If so, load it from storage
 	// and keep it as an entry in memory
 
-	if v.DeferredKeys != nil {
-		_, ok := v.DeferredKeys.Delete(key)
+	if v.deferredKeys != nil {
+		_, ok := v.deferredKeys.Delete(key)
 		if ok {
-			storageKey := joinPathElements(v.DeferredStorageKeyBase, key)
+			storageKey := joinPathElements(v.deferredStorageKeyBase, key)
 			if v.prevDeferredKeys == nil {
 				v.prevDeferredKeys = orderedmap.NewStringStructOrderedMap()
 			}
 			v.prevDeferredKeys.Set(key, struct{}{})
 
-			storedValue := inter.ReadStored(*v.DeferredOwner, storageKey, true)
+			storedValue := inter.ReadStored(*v.deferredOwner, storageKey, true)
 			v.entries.Set(key, storedValue.(*SomeValue).Value)
 
 			// NOTE: *not* writing nil to the storage key,
@@ -7415,8 +7418,8 @@ func (v *DictionaryValue) Remove(inter *Interpreter, getLocationRange func() Loc
 
 	if v.prevDeferredKeys != nil {
 		if _, ok := v.prevDeferredKeys.Get(key); ok {
-			storageKey := joinPathElements(v.DeferredStorageKeyBase, key)
-			inter.writeStored(*v.DeferredOwner, storageKey, NilValue{})
+			storageKey := joinPathElements(v.deferredStorageKeyBase, key)
+			inter.writeStored(*v.deferredOwner, storageKey, NilValue{})
 		}
 	}
 
@@ -7606,6 +7609,24 @@ func (v *DictionaryValue) Equal(other Value, interpreter *Interpreter, loadDefer
 	}
 
 	return true
+}
+
+// ensureLoaded ensures the entries of this dictionary value are loaded.
+func (v *DictionaryValue) ensureLoaded() {
+	if v.content == nil {
+		return
+	}
+
+	err := decodeDictionaryEntries(v, v.content)
+	if err != nil {
+		panic(err)
+	}
+
+	// Reset the cache
+	v.content = nil
+	v.valuePath = nil
+	v.decodeCallback = nil
+	v.encodingVersion = 0
 }
 
 // OptionalValue

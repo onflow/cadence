@@ -4965,9 +4965,9 @@ func TestEncodeDecodeDictionaryDeferred(t *testing.T) {
 		decodedValue := &DictionaryValue{
 			keys:                   expected.Keys(),
 			entries:                NewStringValueOrderedMap(),
-			DeferredOwner:          &testOwner,
-			DeferredKeys:           deferredKeys,
-			DeferredStorageKeyBase: "v",
+			deferredOwner:          &testOwner,
+			deferredKeys:           deferredKeys,
+			deferredStorageKeyBase: "v",
 		}
 
 		encoded := []byte{
