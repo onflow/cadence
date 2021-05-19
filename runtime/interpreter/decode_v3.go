@@ -485,8 +485,8 @@ func (d *DecoderV3) decodeDictionary(v interface{}, path []string) (*DictionaryV
 	}
 
 	return &DictionaryValue{
-		Keys:                   keys,
-		Entries:                entries,
+		keys:                   keys,
+		entries:                entries,
 		Owner:                  d.owner,
 		modified:               false,
 		DeferredOwner:          deferredOwner,

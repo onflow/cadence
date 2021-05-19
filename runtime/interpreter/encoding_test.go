@@ -282,7 +282,7 @@ func TestEncodeDecodeDictionary(t *testing.T) {
 	t.Run("empty", func(t *testing.T) {
 		expected := NewDictionaryValueUnownedNonCopying()
 		expected.modified = false
-		expected.Keys.modified = false
+		expected.Keys().modified = false
 
 		encoded := []byte{
 			// tag
@@ -344,7 +344,7 @@ func TestEncodeDecodeDictionary(t *testing.T) {
 		)
 
 		expected.modified = false
-		expected.Keys.modified = false
+		expected.Keys().modified = false
 
 		value1.modified = false
 
@@ -446,7 +446,7 @@ func TestEncodeDecodeDictionary(t *testing.T) {
 			NewAddressValueFromBytes([]byte{0x42}),
 			Int8Value(42),
 		)
-		expected.Keys.modified = false
+		expected.Keys().modified = false
 		expected.modified = false
 
 		testEncodeDecode(t,
@@ -4943,7 +4943,7 @@ func TestEncodeDecodeDictionaryDeferred(t *testing.T) {
 			key2, value2,
 		)
 		expected.modified = false
-		expected.Keys.modified = false
+		expected.Keys().modified = false
 
 		deferredKeys := orderedmap.NewStringStructOrderedMap()
 		deferredKeys.Set("test", struct{}{})
@@ -4963,8 +4963,8 @@ func TestEncodeDecodeDictionaryDeferred(t *testing.T) {
 		}
 
 		decodedValue := &DictionaryValue{
-			Keys:                   expected.Keys,
-			Entries:                NewStringValueOrderedMap(),
+			keys:                   expected.Keys(),
+			entries:                NewStringValueOrderedMap(),
 			DeferredOwner:          &testOwner,
 			DeferredKeys:           deferredKeys,
 			DeferredStorageKeyBase: "v",
@@ -5044,7 +5044,7 @@ func TestEncodeDecodeDictionaryDeferred(t *testing.T) {
 			key2, value2,
 		)
 		expected.modified = false
-		expected.Keys.modified = false
+		expected.Keys().modified = false
 
 		deferrals := &EncodingDeferrals{}
 

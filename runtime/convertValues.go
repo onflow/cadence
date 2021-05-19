@@ -248,7 +248,7 @@ func exportDictionaryValue(
 
 	pairs := make([]cadence.KeyValuePair, v.Count())
 
-	for i, keyValue := range v.Keys.Elements() {
+	for i, keyValue := range v.Keys().Elements() {
 
 		// NOTE: use `Get` instead of accessing `Entries`,
 		// so that the potentially deferred values are loaded from storage
