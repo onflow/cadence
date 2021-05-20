@@ -715,7 +715,12 @@ func (v *ArrayValue) IsModified() bool {
 		return true
 	}
 
-	for _, value := range v.Elements() {
+	// If the elements are not loaded, that implies they are not modified.
+	if v.content != nil {
+		return false
+	}
+
+	for _, value := range v.values {
 		if value.IsModified() {
 			return true
 		}
@@ -1005,6 +1010,12 @@ func (v *ArrayValue) IsStorable() bool {
 
 	// TODO: only check decoded values
 	//   and assume still encoded values are storable?
+
+	// If the elements are not loaded, that implies they were read from storage.
+	// Hence they are storable.
+	if v.content != nil {
+		return true
+	}
 
 	for _, value := range v.Elements() {
 		if !value.IsStorable() {
@@ -6565,12 +6576,6 @@ func (v *CompositeValue) IsModified() bool {
 		return true
 	}
 
-	for pair := v.Fields().Oldest(); pair != nil; pair = pair.Next() {
-		if pair.Value.IsModified() {
-			return true
-		}
-	}
-
 	if v.InjectedFields != nil {
 		for pair := v.InjectedFields.Oldest(); pair != nil; pair = pair.Next() {
 			if pair.Value.IsModified() {
@@ -6584,6 +6589,17 @@ func (v *CompositeValue) IsModified() bool {
 			if pair.Value.GetValue().IsModified() {
 				return true
 			}
+		}
+	}
+
+	// If the fields are not loaded, then they are not modified.
+	if v.content != nil || v.fieldsContent != nil {
+		return false
+	}
+
+	for pair := v.fields.Oldest(); pair != nil; pair = pair.Next() {
+		if pair.Value.IsModified() {
+			return true
 		}
 	}
 
@@ -6852,11 +6868,13 @@ func (v *CompositeValue) ConformsToDynamicType(
 
 func (v *CompositeValue) IsStorable() bool {
 
+	v.ensureMetaInfoLoaded()
+
 	// Only structures, resources, enums, and contracts can be stored.
 	// Contracts are not directly storable by programs,
 	// but they are still stored in storage by the interpreter
 
-	switch v.Kind() {
+	switch v.kind {
 	case common.CompositeKindStructure,
 		common.CompositeKindResource,
 		common.CompositeKindEnum,
@@ -6867,7 +6885,7 @@ func (v *CompositeValue) IsStorable() bool {
 	}
 
 	// Composite value's of native/built-in types are not storable for now
-	if v.Location() == nil {
+	if v.location == nil {
 		return false
 	}
 
@@ -6877,7 +6895,13 @@ func (v *CompositeValue) IsStorable() bool {
 	// TODO: only check decoded fields
 	//   and assume still encoded fields are storable?
 
-	for pair := v.Fields().Oldest(); pair != nil; pair = pair.Next() {
+	// If the fields are not loaded, that implies they were read from storage.
+	// Hence they are storable.
+	if v.fieldsContent != nil {
+		return true
+	}
+
+	for pair := v.fields.Oldest(); pair != nil; pair = pair.Next() {
 		if !pair.Value.IsStorable() {
 			return false
 		}
@@ -7177,7 +7201,10 @@ func (v *DictionaryValue) IsModified() bool {
 		return true
 	}
 
-	v.ensureLoaded()
+	// If the keys/entries are not loaded, that implies they are not modified.
+	if v.content != nil {
+		return false
+	}
 
 	if v.keys.IsModified() {
 		return true
@@ -7501,10 +7528,14 @@ func writeDeferredKeys(
 
 func (v *DictionaryValue) IsStorable() bool {
 
-	v.ensureLoaded()
-
 	// TODO: only check decoded keys
 	//   and assume still encoded keys are storable?
+
+	// If the keys/entries are not loaded, that implies they were read from storage.
+	// Hence they are storable.
+	if v.content != nil {
+		return true
+	}
 
 	for _, keyValue := range v.keys.Elements() {
 		if !keyValue.IsStorable() {

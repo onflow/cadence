@@ -390,6 +390,37 @@ func TestCompositeDeferredDecoding(t *testing.T) {
 		assert.Equal(t, decoded, encodeCallbacks[0].value)
 		assert.Equal(t, []string{}, encodeCallbacks[0].path)
 	})
+
+	t.Run("storable and modified", func(t *testing.T) {
+		members := NewStringValueOrderedMap()
+		members.Set("a", NewStringValue("hello"))
+		members.Set("b", BoolValue(true))
+
+		value := NewCompositeValue(
+			utils.TestLocation,
+			"TestStruct",
+			common.CompositeKindStructure,
+			members,
+			nil,
+		)
+
+		encoded, _, err := EncodeValue(value, nil, true, nil)
+		require.NoError(t, err)
+
+		decoded, err := DecodeValue(encoded, &testOwner, nil, CurrentEncodingVersion, nil)
+		require.NoError(t, err)
+
+		require.IsType(t, &CompositeValue{}, decoded)
+		compositeValue := decoded.(*CompositeValue)
+
+		assert.False(t, compositeValue.IsModified())
+		assert.True(t, compositeValue.IsStorable())
+
+		// fields must not be loaded
+		assert.Nil(t, compositeValue.fields)
+		assert.Nil(t, compositeValue.content)
+		assert.NotNil(t, compositeValue.fieldsContent)
+	})
 }
 
 func BenchmarkCompositeDeferredDecoding(b *testing.B) {
@@ -618,6 +649,26 @@ func TestArrayDeferredDecoding(t *testing.T) {
 		require.Len(t, prepareCallbacks, 1)
 		assert.Equal(t, decoded, prepareCallbacks[0].value)
 		assert.Equal(t, []string{}, prepareCallbacks[0].path)
+	})
+
+	t.Run("storable and modified", func(t *testing.T) {
+		array := newTestArrayValue(2)
+
+		encoded, _, err := EncodeValue(array, nil, true, nil)
+		require.NoError(t, err)
+
+		decoded, err := DecodeValue(encoded, &testOwner, nil, CurrentEncodingVersion, nil)
+		require.NoError(t, err)
+
+		require.IsType(t, &ArrayValue{}, decoded)
+		decodedArray := decoded.(*ArrayValue)
+
+		assert.False(t, decodedArray.IsModified())
+		assert.True(t, decodedArray.IsStorable())
+
+		// elements must not be loaded
+		assert.Nil(t, decodedArray.values)
+		assert.NotNil(t, decodedArray.content)
 	})
 }
 
@@ -867,6 +918,27 @@ func TestDictionaryDeferredDecoding(t *testing.T) {
 		assert.NotNil(t, decodedDictionary.keys)
 		assert.NotNil(t, decodedDictionary.entries)
 		assert.Nil(t, decodedDictionary.content)
+	})
+
+	t.Run("storable and modified", func(t *testing.T) {
+		dictionary := newTestDictionaryValue(2)
+
+		encoded, _, err := EncodeValue(dictionary, nil, true, nil)
+		require.NoError(t, err)
+
+		decoded, err := DecodeValue(encoded, &testOwner, nil, CurrentEncodingVersion, nil)
+		require.NoError(t, err)
+
+		require.IsType(t, &DictionaryValue{}, decoded)
+		decodedDictionary := decoded.(*DictionaryValue)
+
+		assert.False(t, decodedDictionary.IsModified())
+		assert.True(t, decodedDictionary.IsStorable())
+
+		// entries must not be loaded
+		assert.Nil(t, decodedDictionary.keys)
+		assert.Nil(t, decodedDictionary.entries)
+		assert.NotNil(t, decodedDictionary.content)
 	})
 }
 
