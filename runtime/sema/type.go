@@ -2761,6 +2761,10 @@ const numberTypeMaxFieldDocString = `The maximum integer of this type`
 const fixedPointNumberTypeMinFieldDocString = `The minimum fixed-point value of this type`
 const fixedPointNumberTypeMaxFieldDocString = `The maximum fixed-point value of this type`
 
+const numberConversionFunctionDocStringSuffix = `
+The value must be within the bounds of this type.
+If a value is passed that is outside the bounds, the program aborts.`
+
 func init() {
 
 	// Declare a conversion function for all (leaf) number types
@@ -2861,13 +2865,24 @@ func init() {
 				baseFunctionVariable(
 					typeName,
 					functionType,
+					numberConversionDocString(
+						fmt.Sprintf("the type %s", numberType.String()),
+					),
 				),
 			)
 		}
 	}
 }
 
-func baseFunctionVariable(name string, ty InvokableType) *Variable {
+func numberConversionDocString(targetDescription string) string {
+	return fmt.Sprintf(
+		"Converts the given number to %s. %s",
+		targetDescription,
+		numberConversionFunctionDocStringSuffix,
+	)
+}
+
+func baseFunctionVariable(name string, ty InvokableType, docString string) *Variable {
 	return &Variable{
 		Identifier:      name,
 		DeclarationKind: common.DeclarationKindFunction,
@@ -2875,6 +2890,7 @@ func baseFunctionVariable(name string, ty InvokableType) *Variable {
 		IsBaseValue:     true,
 		Type:            ty,
 		Access:          ast.AccessPublic,
+		DocString:       docString,
 	}
 }
 
@@ -2918,6 +2934,7 @@ func init() {
 		baseFunctionVariable(
 			typeName,
 			functionType,
+			numberConversionDocString("an address"),
 		),
 	)
 }
@@ -3134,6 +3151,7 @@ func init() {
 				TypeParameters:       []*TypeParameter{{Name: "T"}},
 				ReturnTypeAnnotation: NewTypeAnnotation(MetaType),
 			},
+			"Creates a run-time type representing the given static type as a value",
 		),
 	)
 }
