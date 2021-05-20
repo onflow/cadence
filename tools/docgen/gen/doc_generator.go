@@ -20,15 +20,18 @@ import (
 const nameSeparator = "_"
 const mdFileExt = ".md"
 
+const baseTemplate = "base-template"
+const compositeFullTemplate = "composite-full-template"
+
 var templateFiles = []string{
-	"base-template",
+	baseTemplate,
+	compositeFullTemplate,
 	"declarations-template",
 	"function-template",
 	"composite-template",
 	"field-template",
 	"enum-template",
 	"enum-case-template",
-	"composite-full-template",
 	"initializer-template",
 }
 
@@ -56,11 +59,11 @@ func NewInMemoryWriter(fs InMemoryFS, fileName string) *InMemoryWriter {
 	}
 }
 
-func (w InMemoryWriter) Write(bytes []byte) (n int, err error) {
+func (w *InMemoryWriter) Write(bytes []byte) (n int, err error) {
 	return w.buf.Write(bytes)
 }
 
-func (w InMemoryWriter) Close() error {
+func (w *InMemoryWriter) Close() error {
 	w.fs[w.fileName] = w.buf.Bytes()
 	w.buf = nil
 	return nil
@@ -78,8 +81,8 @@ func NewDocGenerator() *DocGenerator {
 		return fmt.Sprint(fileNamePrefix, nameSeparator, decl.DeclarationIdentifier().String(), mdFileExt)
 	}
 
-	gen.entryPageGen = newTemplate("base-template")
-	gen.compositePageGen = newTemplate("composite-full-template")
+	gen.entryPageGen = newTemplate(baseTemplate)
+	gen.compositePageGen = newTemplate(compositeFullTemplate)
 
 	return gen
 }
@@ -112,6 +115,7 @@ func registerTemplates(tmpl *template.Template) *template.Template {
 
 func (gen *DocGenerator) Generate(source string, outputDir string) error {
 	gen.outputDir = outputDir
+	gen.typeNames = make([]string, 0)
 
 	program, err := parser2.ParseProgram(source)
 	if err != nil {
@@ -123,6 +127,7 @@ func (gen *DocGenerator) Generate(source string, outputDir string) error {
 
 func (gen *DocGenerator) GenerateInMemory(source string) (InMemoryFS, error) {
 	gen.files = InMemoryFS{}
+	gen.typeNames = make([]string, 0)
 
 	program, err := parser2.ParseProgram(source)
 	if err != nil {
@@ -138,7 +143,6 @@ func (gen *DocGenerator) GenerateInMemory(source string) (InMemoryFS, error) {
 }
 
 func (gen *DocGenerator) genProgram(program *ast.Program) error {
-	gen.typeNames = make([]string, 0)
 
 	// If its not a sole-declaration, i.e: has multiple top level declarations,
 	// then generated an entry page.
@@ -149,7 +153,7 @@ func (gen *DocGenerator) genProgram(program *ast.Program) error {
 		// TODO: file name 'index' can conflict with struct names, resulting an overwrite.
 		f, err := gen.fileWriter("index.md")
 		if err != nil {
-			panic(err)
+			return err
 		}
 
 		defer f.Close()
@@ -208,14 +212,14 @@ func (gen *DocGenerator) genCompositeDecl(name string, members *ast.Members, dec
 	fileName := fmt.Sprint(gen.currentFileName(), mdFileExt)
 	f, err := gen.fileWriter(fileName)
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	defer f.Close()
 
 	err = gen.compositePageGen.Execute(f, decl)
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	return gen.genDeclarations(members.Declarations())
