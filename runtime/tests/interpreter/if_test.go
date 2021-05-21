@@ -33,7 +33,7 @@ func TestInterpretIfStatement(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpretWithOptions(t,
+	inter, err := parseCheckAndInterpretWithOptions(t,
 		`
            pub fun testTrue(): Int {
                if true {
@@ -88,6 +88,7 @@ func TestInterpretIfStatement(t *testing.T) {
 			},
 		},
 	)
+	require.NoError(t, err)
 
 	for name, expected := range map[string]int64{
 		"testTrue":   2,

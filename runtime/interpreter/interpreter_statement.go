@@ -28,7 +28,7 @@ func (interpreter *Interpreter) evalStatement(statement ast.Statement) interface
 	// Recover and re-throw a panic, so that this interpreter's location and statement are used,
 	// instead of a potentially calling interpreter's location and statement
 
-	defer interpreter.recoverErrors(func(internalErr error) {
+	defer interpreter.RecoverErrors(func(internalErr error) {
 		panic(internalErr)
 	})
 

@@ -602,7 +602,7 @@ func (interpreter *Interpreter) Interpret() (err error) {
 	}
 
 	// recover internal panics and return them as an error
-	defer interpreter.recoverErrors(func(internalErr error) {
+	defer interpreter.RecoverErrors(func(internalErr error) {
 		err = internalErr
 	})
 
@@ -784,7 +784,7 @@ func (interpreter *Interpreter) prepareInvoke(
 func (interpreter *Interpreter) Invoke(functionName string, arguments ...Value) (value Value, err error) {
 
 	// recover internal panics and return them as an error
-	defer interpreter.recoverErrors(func(internalErr error) {
+	defer interpreter.RecoverErrors(func(internalErr error) {
 		err = internalErr
 	})
 
@@ -795,7 +795,7 @@ func (interpreter *Interpreter) Invoke(functionName string, arguments ...Value) 
 func (interpreter *Interpreter) InvokeFunction(function FunctionValue, invocation Invocation) (value Value, err error) {
 
 	// recover internal panics and return them as an error
-	defer interpreter.recoverErrors(func(internalErr error) {
+	defer interpreter.RecoverErrors(func(internalErr error) {
 		err = internalErr
 	})
 
@@ -806,7 +806,7 @@ func (interpreter *Interpreter) InvokeFunction(function FunctionValue, invocatio
 func (interpreter *Interpreter) InvokeTransaction(index int, arguments ...Value) (err error) {
 
 	// recover internal panics and return them as an error
-	defer interpreter.recoverErrors(func(internalErr error) {
+	defer interpreter.RecoverErrors(func(internalErr error) {
 		err = internalErr
 	})
 
@@ -814,7 +814,7 @@ func (interpreter *Interpreter) InvokeTransaction(index int, arguments ...Value)
 	return err
 }
 
-func (interpreter *Interpreter) recoverErrors(onError func(error)) {
+func (interpreter *Interpreter) RecoverErrors(onError func(error)) {
 	if r := recover(); r != nil {
 		var err error
 		switch r := r.(type) {

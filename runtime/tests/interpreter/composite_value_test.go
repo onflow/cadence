@@ -30,7 +30,7 @@ import (
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
-func TestCompositeValue(t *testing.T) {
+func TestInterpretCompositeValue(t *testing.T) {
 
 	t.Parallel()
 
@@ -114,7 +114,7 @@ func testCompositeValue(t *testing.T, code string) *interpreter.Interpreter {
 
 	valueDeclarations = append(valueDeclarations, customStructValue)
 
-	inter := parseCheckAndInterpretWithOptions(t,
+	inter, err := parseCheckAndInterpretWithOptions(t,
 		code,
 		ParseCheckAndInterpretOptions{
 			CheckerOptions: []sema.Option{
@@ -125,6 +125,7 @@ func testCompositeValue(t *testing.T, code string) *interpreter.Interpreter {
 			},
 		},
 	)
+	require.NoError(t, err)
 
 	return inter
 }
