@@ -19,6 +19,7 @@
 package common
 
 import (
+	"encoding/hex"
 	"fmt"
 	"strings"
 )
@@ -84,4 +85,17 @@ func (a *Address) bytes() []byte {
 func (a Address) ShortHexWithPrefix() string {
 	hexString := fmt.Sprintf("%x", [AddressLength]byte(a))
 	return fmt.Sprintf("0x%s", strings.TrimLeft(hexString, "0"))
+}
+
+// HexToAddress converts a hex string to an Address.
+func HexToAddress(h string) (Address, error) {
+	trimmed := strings.TrimPrefix(h, "0x")
+	if len(trimmed)%2 == 1 {
+		trimmed = "0" + trimmed
+	}
+	b, err := hex.DecodeString(trimmed)
+	if err != nil {
+		return Address{}, err
+	}
+	return BytesToAddress(b), nil
 }
