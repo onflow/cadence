@@ -26,7 +26,7 @@ jobs:
         go-version: '1.15.10'
     - uses: actions/setup-node@v2
       with:
-        node-version: '14'
+        node-version: '15'
     - uses: actions/cache@v1
       with:
         path: ~/go/pkg/mod
