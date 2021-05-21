@@ -180,7 +180,7 @@ func TestInterpretEnumInContract(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpretWithOptions(t,
+	inter, err := parseCheckAndInterpretWithOptions(t,
 		`
           contract C {
               enum E: UInt8 {
@@ -201,6 +201,7 @@ func TestInterpretEnumInContract(t *testing.T) {
 			},
 		},
 	)
+	require.NoError(t, err)
 
 	c := inter.Globals["C"].GetValue()
 	require.IsType(t, &interpreter.CompositeValue{}, c)

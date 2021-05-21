@@ -35,7 +35,7 @@ func (interpreter *Interpreter) InvokeFunctionValue(
 ) {
 
 	// recover internal panics and return them as an error
-	defer interpreter.recoverErrors(func(internalErr error) {
+	defer interpreter.RecoverErrors(func(internalErr error) {
 		err = internalErr
 	})
 
