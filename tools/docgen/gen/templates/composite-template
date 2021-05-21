@@ -9,7 +9,9 @@
 }
 ```
 
-{{if .DocString}}{{.DocString}}{{end}}
+{{- if .DocString}}
+{{ .DocString}}
+{{- end}}
 
 [More...]({{fileName .}})
 {{end}}

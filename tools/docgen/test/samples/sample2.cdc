@@ -1,6 +1,6 @@
 /// NFT is a dummy non-fungible token contract.
 ///
-pub contract NFT {
+pub contract NFT: Token {
 
     event TestEvent(x: Int, y: Int)
 

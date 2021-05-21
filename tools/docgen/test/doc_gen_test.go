@@ -1,3 +1,21 @@
+/*
+ * Cadence - The resource-oriented smart contract programming language
+ *
+ * Copyright 2019-2021 Dapper Labs, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package test
 
 import (
@@ -21,7 +39,7 @@ func TestDocGen(t *testing.T) {
 	// Don't run this as a test
 	t.Skip()
 
-	content, err := ioutil.ReadFile("samples/sample2.cdc")
+	content, err := ioutil.ReadFile("samples/sample1.cdc")
 	require.NoError(t, err)
 
 	err = os.MkdirAll("outputs", os.ModePerm)
@@ -47,7 +65,7 @@ func TestDocGenForMultiDeclarationFile(t *testing.T) {
 	for fileName, fileContent := range docFiles {
 		expectedContent, err := ioutil.ReadFile(path.Join("outputs", fileName))
 		require.NoError(t, err)
-		assert.Equal(t, expectedContent, fileContent)
+		assert.Equal(t, string(expectedContent), string(fileContent))
 	}
 }
 
@@ -66,7 +84,7 @@ func TestDocGenForSingleContractFile(t *testing.T) {
 	for fileName, fileContent := range docFiles {
 		expectedContent, err := ioutil.ReadFile(path.Join("outputs", fileName))
 		require.NoError(t, err)
-		assert.Equal(t, expectedContent, fileContent)
+		assert.Equal(t, string(expectedContent), string(fileContent))
 	}
 }
 

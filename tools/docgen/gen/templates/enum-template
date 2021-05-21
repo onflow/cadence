@@ -5,6 +5,7 @@
 enum {{.DeclarationIdentifier}}
 {{- if eq (len .Conformances) 1 -}}
 : {{index .Conformances 0}} {
+{{- else}} {
 {{- end -}}
 
 {{- range .Members.EnumCases -}}
@@ -13,5 +14,7 @@ enum {{.DeclarationIdentifier}}
 }
 ```
 
-{{if .DocString}}{{.DocString}}{{end}}
+{{- if .DocString}}
+{{ .DocString}}
+{{- end}}
 {{end}}

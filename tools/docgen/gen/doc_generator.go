@@ -1,3 +1,21 @@
+/*
+ * Cadence - The resource-oriented smart contract programming language
+ *
+ * Copyright 2019-2021 Dapper Labs, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package gen
 
 import (
@@ -40,31 +58,31 @@ type DocGenerator struct {
 	compositePageGen *template.Template
 	typeNames        []string
 	outputDir        string
-	files            InMemoryFS
+	files            InMemoryFiles
 }
 
-type InMemoryFS map[string][]byte
+type InMemoryFiles map[string][]byte
 
-type InMemoryWriter struct {
+type InMemoryFileWriter struct {
 	fileName string
 	buf      *bytes.Buffer
-	fs       InMemoryFS
+	files    InMemoryFiles
 }
 
-func NewInMemoryWriter(fs InMemoryFS, fileName string) *InMemoryWriter {
-	return &InMemoryWriter{
+func NewInMemoryFileWriter(files InMemoryFiles, fileName string) *InMemoryFileWriter {
+	return &InMemoryFileWriter{
 		fileName: fileName,
-		fs:       fs,
+		files:    files,
 		buf:      &bytes.Buffer{},
 	}
 }
 
-func (w *InMemoryWriter) Write(bytes []byte) (n int, err error) {
+func (w *InMemoryFileWriter) Write(bytes []byte) (n int, err error) {
 	return w.buf.Write(bytes)
 }
 
-func (w *InMemoryWriter) Close() error {
-	w.fs[w.fileName] = w.buf.Bytes()
+func (w *InMemoryFileWriter) Close() error {
+	w.files[w.fileName] = w.buf.Bytes()
 	w.buf = nil
 	return nil
 }
@@ -125,8 +143,8 @@ func (gen *DocGenerator) Generate(source string, outputDir string) error {
 	return gen.genProgram(program)
 }
 
-func (gen *DocGenerator) GenerateInMemory(source string) (InMemoryFS, error) {
-	gen.files = InMemoryFS{}
+func (gen *DocGenerator) GenerateInMemory(source string) (InMemoryFiles, error) {
+	gen.files = InMemoryFiles{}
 	gen.typeNames = make([]string, 0)
 
 	program, err := parser2.ParseProgram(source)
@@ -230,7 +248,7 @@ func (gen *DocGenerator) fileWriter(fileName string) (io.WriteCloser, error) {
 		return os.Create(path.Join(gen.outputDir, fileName))
 	}
 
-	return NewInMemoryWriter(gen.files, fileName), nil
+	return NewInMemoryFileWriter(gen.files, fileName), nil
 }
 
 func (gen *DocGenerator) currentFileName() string {
@@ -248,7 +266,31 @@ var functions = template.FuncMap{
 			common.DeclarationKindStructureInterface,
 			common.DeclarationKindResource,
 			common.DeclarationKindResourceInterface,
-			common.DeclarationKindContract:
+			common.DeclarationKindContract,
+			common.DeclarationKindContractInterface:
+			return true
+		default:
+			return false
+		}
+	},
+
+	"hasConformance": func(declaration ast.Declaration) bool {
+		switch declaration.DeclarationKind() {
+		case common.DeclarationKindStructure,
+			common.DeclarationKindResource,
+			common.DeclarationKindContract,
+			common.DeclarationKindEnum:
+			return true
+		default:
+			return false
+		}
+	},
+
+	"isInterface": func(declaration ast.Declaration) bool {
+		switch declaration.DeclarationKind() {
+		case common.DeclarationKindStructureInterface,
+			common.DeclarationKindResourceInterface,
+			common.DeclarationKindContractInterface:
 			return true
 		default:
 			return false
@@ -257,16 +299,6 @@ var functions = template.FuncMap{
 
 	"isEnum": func(declaration ast.Declaration) bool {
 		return declaration.DeclarationKind() == common.DeclarationKindEnum
-	},
-
-	"isInterface": func(declaration ast.Declaration) bool {
-		switch declaration.DeclarationKind() {
-		case common.DeclarationKindStructureInterface,
-			common.DeclarationKindResourceInterface:
-			return true
-		default:
-			return false
-		}
 	},
 
 	"declKeyword": func(declaration ast.Declaration) string {

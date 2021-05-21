@@ -1,5 +1,5 @@
 {{define "declarations"}}
-{{range .}}
+{{- range .}}
 {{- if isFunction . -}}
     {{template "function" .}}
 ---
@@ -9,6 +9,6 @@
 {{else if isEnum . -}}
     {{template "enum" .}}
 ---
-{{end -}}
-{{end}}
-{{end}}
+{{- end -}}
+{{- end -}}
+{{- end -}}

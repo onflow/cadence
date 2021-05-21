@@ -1,1 +1,1 @@
-{{template "declarations" .Declarations}}
+{{template "declarations" .Declarations -}}

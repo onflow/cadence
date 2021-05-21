@@ -25,7 +25,7 @@ fun noDocsFunction() {
 /// This is some struct. It has
 /// @field x: a string field
 /// @field y: a map of int and any-struct
-struct SomeStruct {
+struct SomeStruct: SomeInterface {
     var x: String
     var y: {Int: AnyStruct}
 
