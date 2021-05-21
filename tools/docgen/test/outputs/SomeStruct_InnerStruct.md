@@ -8,4 +8,4 @@ struct InnerStruct
     b:  String
 }
 ```
- This is a nested struct.
+This is a nested struct.

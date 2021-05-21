@@ -36,7 +36,10 @@ import (
 )
 
 const nameSeparator = "_"
+const newline = "\n"
 const mdFileExt = ".md"
+const paramPrefix = "@param "
+const returnPrefix = "@return "
 
 const baseTemplate = "base-template"
 const compositeFullTemplate = "composite-full-template"
@@ -318,4 +321,119 @@ var functions = template.FuncMap{
 			return false
 		}
 	},
+
+	"formatDoc": formatDocs,
+
+	"formatFuncDoc": formatFunctionDocs,
+}
+
+func formatDocs(docString string) string {
+	builder := strings.Builder{}
+
+	// Trim leading and trailing empty lines
+	docString = strings.TrimSpace(docString)
+
+	lines := strings.Split(docString, newline)
+
+	for i, line := range lines {
+		formattedLine := strings.TrimSpace(line)
+		if i > 0 {
+			builder.WriteString(newline)
+		}
+		builder.WriteString(formattedLine)
+	}
+
+	return builder.String()
+}
+
+func formatFunctionDocs(docString string) string {
+	builder := strings.Builder{}
+	params := make([]string, 0)
+	isPrevLineEmpty := false
+	docLines := 0
+	var returnDoc string
+
+	// Trim leading and trailing empty lines
+	docString = strings.TrimSpace(docString)
+
+	lines := strings.Split(docString, newline)
+
+	for _, line := range lines {
+		formattedLine := strings.TrimSpace(line)
+
+		if strings.HasPrefix(formattedLine, paramPrefix) {
+			paramInfo := strings.TrimPrefix(formattedLine, paramPrefix)
+			colonIndex := strings.IndexByte(paramInfo, ':')
+
+			// If colon isn't there, cannot determine the param name.
+			// Hence treat as a normal doc line.
+			if colonIndex >= 0 {
+				paramName := strings.TrimSpace(paramInfo[0:colonIndex])
+
+				// If param name is empty, treat as a normal doc line.
+				if len(paramName) > 0 {
+					paramDoc := strings.TrimSpace(paramInfo[colonIndex+1:])
+
+					var formattedParam string
+					if len(paramDoc) > 0 {
+						formattedParam = fmt.Sprintf("  - %s : _%s_", paramName, paramDoc)
+					} else {
+						formattedParam = fmt.Sprintf("  - %s", paramName)
+					}
+
+					params = append(params, formattedParam)
+					continue
+				}
+			}
+		} else if strings.HasPrefix(formattedLine, returnPrefix) {
+			returnDoc = formattedLine
+			continue
+		}
+
+		// Ignore the line if its a consecutive blank line.
+		isLineEmpty := len(formattedLine) == 0
+		if isPrevLineEmpty && isLineEmpty {
+			continue
+		}
+
+		if docLines > 0 {
+			builder.WriteString(newline)
+		}
+
+		builder.WriteString(formattedLine)
+		isPrevLineEmpty = isLineEmpty
+		docLines++
+	}
+
+	// Print the parameters
+	if len(params) > 0 {
+		if !isPrevLineEmpty {
+			builder.WriteString(newline)
+		}
+
+		builder.WriteString(newline)
+		builder.WriteString("Parameters:")
+
+		for _, param := range params {
+			builder.WriteString(newline)
+			builder.WriteString(param)
+		}
+
+		isPrevLineEmpty = false
+	}
+
+	// Print the return type info
+	if len(returnDoc) > 0 {
+		if !isPrevLineEmpty {
+			builder.WriteString(newline)
+		}
+
+		builder.WriteString(newline)
+
+		returnInfo := strings.TrimPrefix(returnDoc, returnPrefix)
+		returnInfo = strings.TrimSpace(returnInfo)
+		builder.WriteString(fmt.Sprintf("Returns: %s", returnInfo))
+	}
+
+	return builder.String()
 }

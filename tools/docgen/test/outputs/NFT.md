@@ -8,8 +8,7 @@ contract NFT
     field2:  String
 }
 ```
- NFT is a dummy non-fungible token contract.
-
+NFT is a dummy non-fungible token contract.
 Implemented Interfaces:
  - `Token`
 
@@ -20,8 +19,8 @@ Implemented Interfaces:
 ```cadence
 func foo(a Int, b String):  
 ```
- This is a foo function,
- This doesn't have a return type.
+This is a foo function,
+This doesn't have a return type.
 
 ---
 
@@ -30,10 +29,13 @@ func foo(a Int, b String):
 ```cadence
 func bar(name String, bytes [Int8]): bool 
 ```
- This is a bar function, with a return type
- @param name: The name. Must be a string
- @param bytes: Content
- @returns Validity
+This is a bar function, with a return type
+
+Parameters:
+  - name : _The name. Must be a string_
+  - bytes : _Content to be validated_
+
+Returns: Validity of the content
 
 ---
 
@@ -56,9 +58,9 @@ struct SomeStruct {
     y:  {Int: AnyStruct}
 }
 ```
- This is some struct. It has
- @field x: a string field
- @field y: a map of int and any-struct
+This is some struct. It has
+@field x: a string field
+@field y: a map of int and any-struct
 
 [More...](NFT_SomeStruct.md)
 
@@ -72,7 +74,7 @@ enum Direction {
     case RIGHT
 }
 ```
- This is an Enum without type conformance.
+This is an Enum without type conformance.
 
 ---
 ### enum `Color`
@@ -83,6 +85,6 @@ enum Color: Int8 {
     case Blue
 }
 ```
- This is an Enum, with explicit type conformance.
+This is an Enum, with explicit type conformance.
 
 ---

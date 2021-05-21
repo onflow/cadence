@@ -10,7 +10,7 @@
 ```
 
 {{- if .DocString}}
-{{ .DocString}}
+{{formatDoc .DocString}}
 {{- end}}
 
 [More...]({{fileName .}})

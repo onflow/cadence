@@ -4,4 +4,4 @@
 enum Direction {
 }
 ```
- This is an Enum without type conformance.
+This is an Enum without type conformance.
