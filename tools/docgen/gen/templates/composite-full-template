@@ -17,7 +17,7 @@
 ```
 
 {{- if .DocString}}
-{{ .DocString -}}
+{{formatDoc .DocString -}}
 {{- end -}}
 
 {{- if hasConformance . -}}

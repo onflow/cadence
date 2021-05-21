@@ -39,7 +39,7 @@ func TestDocGen(t *testing.T) {
 	// Don't run this as a test
 	t.Skip()
 
-	content, err := ioutil.ReadFile("samples/sample1.cdc")
+	content, err := ioutil.ReadFile(path.Join("samples", "sample2.cdc"))
 	require.NoError(t, err)
 
 	err = os.MkdirAll("outputs", os.ModePerm)
@@ -52,7 +52,7 @@ func TestDocGen(t *testing.T) {
 }
 
 func TestDocGenForMultiDeclarationFile(t *testing.T) {
-	content, err := ioutil.ReadFile("samples/sample1.cdc")
+	content, err := ioutil.ReadFile(path.Join("samples", "sample1.cdc"))
 	require.NoError(t, err)
 
 	docGen := gen.NewDocGenerator()
@@ -71,7 +71,7 @@ func TestDocGenForMultiDeclarationFile(t *testing.T) {
 
 func TestDocGenForSingleContractFile(t *testing.T) {
 
-	content, err := ioutil.ReadFile("samples/sample2.cdc")
+	content, err := ioutil.ReadFile(path.Join("samples", "sample2.cdc"))
 	require.NoError(t, err)
 
 	docGen := gen.NewDocGenerator()
@@ -116,4 +116,20 @@ func TestDocGenErrors(t *testing.T) {
 		require.Error(t, err)
 		assert.IsType(t, err, &os.PathError{})
 	})
+}
+
+func TestFunctionDocFormatting(t *testing.T) {
+
+	content, err := ioutil.ReadFile(path.Join("samples", "sample3.cdc"))
+	require.NoError(t, err)
+
+	docGen := gen.NewDocGenerator()
+
+	docFiles, err := docGen.GenerateInMemory(string(content))
+	require.NoError(t, err)
+	require.Len(t, docFiles, 1)
+
+	expectedContent, err := ioutil.ReadFile(path.Join("outputs", "sample3_output.md"))
+
+	assert.Equal(t, string(expectedContent), string(docFiles["index.md"]))
 }

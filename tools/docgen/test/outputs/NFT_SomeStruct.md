@@ -8,9 +8,9 @@ struct SomeStruct
     y:  {Int: AnyStruct}
 }
 ```
- This is some struct. It has
- @field x: a string field
- @field y: a map of int and any-struct
+This is some struct. It has
+@field x: a string field
+@field y: a map of int and any-struct
 
 ### Initializer
 
@@ -31,7 +31,7 @@ struct InnerStruct {
     b:  String
 }
 ```
- This is a nested struct.
+This is a nested struct.
 
 [More...](NFT_SomeStruct_InnerStruct.md)
 

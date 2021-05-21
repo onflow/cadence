@@ -17,8 +17,8 @@ pub contract NFT: Token {
 
     /// This is a bar function, with a return type
     /// @param name: The name. Must be a string
-    /// @param bytes: Content
-    /// @returns Validity
+    /// @param bytes: Content to be validated
+    /// @return Validity of the content
     fun bar(name: String, bytes: [Int8]): bool {
     }
 

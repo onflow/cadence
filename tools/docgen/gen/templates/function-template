@@ -13,6 +13,6 @@ func {{.DeclarationIdentifier}}(
 ```
 
 {{- if .DocString}}
-{{ .DocString}}
+{{formatFuncDoc .DocString}}
 {{- end}}
 {{end}}
