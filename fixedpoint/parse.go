@@ -104,7 +104,7 @@ func parseFixedPoint(v string) (
 
 	scale = uint(len(fractionalStr))
 
-	negative = false
+	negative = len(v) > 0 && v[0] == '-'
 
 	integer, ok := new(big.Int).SetString(integerStr, 10)
 	if !ok {
@@ -127,7 +127,6 @@ func parseFixedPoint(v string) (
 	}
 
 	if integer.Sign() < 0 {
-		negative = true
 		unsignedInteger = integer.Neg(integer)
 	} else {
 		unsignedInteger = integer
