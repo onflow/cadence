@@ -396,3 +396,43 @@ func TestVoidTypeInference(t *testing.T) {
 		assert.Equal(t, sema.IntType, typeMismatchErr.ActualType)
 	})
 }
+
+func TestInferenceWithCheckerErrors(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("undefined type reference", func(t *testing.T) {
+		_, err := ParseAndCheck(t, `
+			pub struct Foo {
+				pub var ownedNFTs: @{Int: UnknownType}
+
+				init() {
+					self.ownedNFTs = {}
+				}
+
+				pub fun borrowNFT(id: Int): &UnknownType {
+					return &self.ownedNFTs[id] as &UnknownType
+				}
+			}
+		`)
+
+		errs := ExpectCheckerErrors(t, err, 4)
+
+		require.IsType(t, &sema.NotDeclaredError{}, errs[0])
+		notDeclaredError := errs[0].(*sema.NotDeclaredError)
+		assert.Equal(t, "UnknownType", notDeclaredError.Name)
+
+		require.IsType(t, &sema.NotDeclaredError{}, errs[1])
+		notDeclaredError = errs[1].(*sema.NotDeclaredError)
+		assert.Equal(t, "UnknownType", notDeclaredError.Name)
+
+		require.IsType(t, &sema.NotDeclaredError{}, errs[2])
+		notDeclaredError = errs[2].(*sema.NotDeclaredError)
+		assert.Equal(t, "UnknownType", notDeclaredError.Name)
+
+		require.IsType(t, &sema.NotDeclaredError{}, errs[3])
+		notDeclaredError = errs[3].(*sema.NotDeclaredError)
+		assert.Equal(t, "UnknownType", notDeclaredError.Name)
+
+	})
+}
