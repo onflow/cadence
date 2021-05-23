@@ -57,24 +57,20 @@ func (checker *Checker) VisitReferenceExpression(referenceExpression *ast.Refere
 
 	indexExpression, isIndexExpression := referencedExpression.(*ast.IndexExpression)
 	if isIndexExpression {
-		// The referenced expression will evaluate to an optional type if it is indexing into storage:
-		// the result of the storage access is an optional.
-
+		// The referenced expression will evaluate to an optional type if it is indexing:
+		// the result of the access is an optional.
+		//
 		// Hence expect an optional.
-		var expectedType = wrapWithOptionalIfNotNil(targetType)
+
+		expectedType := wrapWithOptionalIfNotNil(targetType)
 
 		_, referencedType = checker.visitExpression(indexExpression, expectedType)
 
-		// The referenced expression will evaluate to an optional type if it is indexing into storage:
-		// the result of the storage access is an optional.
-		//
 		// Unwrap the optional one level, but not infinitely
 
 		if optionalReferencedType, ok := referencedType.(*OptionalType); ok {
 			referencedType = optionalReferencedType.Type
 		}
-
-		// Check if the index expression's target expression is a storage type
 
 	} else {
 		// If the referenced expression is not an index expression, check it normally
