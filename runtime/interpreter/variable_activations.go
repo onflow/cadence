@@ -22,15 +22,16 @@
 
 package interpreter
 
-// A VariableActivation is a map of strings to values.
+// A VariableActivation is a map of strings to variables.
 // It can be used to represent an active scope in a program,
 // i.e. it can be used as a symbol table during semantic analysis,
 // or as an activation record during interpretation or compilation.
 //
 type VariableActivation struct {
-	entries map[string]*Variable
-	Depth   int
-	Parent  *VariableActivation
+	entries    map[string]*Variable
+	Depth      int
+	Parent     *VariableActivation
+	isFunction bool
 }
 
 func NewVariableActivation(parent *VariableActivation) *VariableActivation {
@@ -44,8 +45,8 @@ func NewVariableActivation(parent *VariableActivation) *VariableActivation {
 	}
 }
 
-// Find returns the value for a given name in the activation.
-// It returns nil if no value is found.
+// Find returns the variable for a given name in the activation.
+// It returns nil if no variable is found.
 //
 func (a *VariableActivation) Find(name string) *Variable {
 
@@ -66,17 +67,45 @@ func (a *VariableActivation) Find(name string) *Variable {
 	return nil
 }
 
-// Set sets the given name-value pair in the activation.
+// FunctionVariables returns all variables in the current function activation.
 //
-func (a *VariableActivation) Set(name string, value *Variable) {
+func (a *VariableActivation) FunctionVariables() map[string]*Variable {
+
+	variables := make(map[string]*Variable)
+
+	current := a
+
+	for current != nil {
+
+		if current.entries != nil {
+			for name, variable := range current.entries {
+				if _, ok := variables[name]; !ok {
+					variables[name] = variable
+				}
+			}
+		}
+
+		if current.isFunction {
+			break
+		}
+
+		current = current.Parent
+	}
+
+	return variables
+}
+
+// Set sets the given name-variable pair in the activation.
+//
+func (a *VariableActivation) Set(name string, variable *Variable) {
 	if a.entries == nil {
 		a.entries = make(map[string]*Variable)
 	}
 
-	a.entries[name] = value
+	a.entries[name] = variable
 }
 
-// Activations is a stack of activation records.
+// VariableActivations is a stack of activation records.
 // Each entry represents a new activation record.
 //
 // The current / most nested activation record can be found
@@ -98,8 +127,8 @@ func (a *VariableActivations) Current() *VariableActivation {
 	return a.activations[count-1]
 }
 
-// Find returns the value for a given key in the current activation.
-// It returns nil if no value is found
+// Find returns the variable for a given key in the current activation.
+// It returns nil if no variable is found
 // or if there is no current activation.
 //
 func (a *VariableActivations) Find(name string) *Variable {
@@ -110,16 +139,16 @@ func (a *VariableActivations) Find(name string) *Variable {
 	return current.Find(name)
 }
 
-// Set sets the name-value pair in the current scope.
+// Set sets the name-variable pair in the current scope.
 //
-func (a *VariableActivations) Set(name string, value *Variable) {
+func (a *VariableActivations) Set(name string, variable *Variable) {
 	current := a.Current()
 	// create the first scope if there is no scope
 	if current == nil {
 		current = a.PushNewWithParent(nil)
 	}
 
-	current.Set(name, value)
+	current.Set(name, variable)
 }
 
 // PushNewWithParent pushes a new empty activation
