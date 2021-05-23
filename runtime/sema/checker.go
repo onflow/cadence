@@ -2424,3 +2424,13 @@ func (checker *Checker) declareGlobalRanges() {
 
 	checker.Elaboration.GlobalValues.Foreach(addRange)
 }
+
+func wrapWithOptionalIfNotNil(typ Type) Type {
+	if typ == nil {
+		return nil
+	}
+
+	return &OptionalType{
+		Type: typ,
+	}
+}

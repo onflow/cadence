@@ -61,9 +61,7 @@ func (checker *Checker) VisitReferenceExpression(referenceExpression *ast.Refere
 		// the result of the storage access is an optional.
 
 		// Hence expect an optional.
-		expectedType := &OptionalType{
-			Type: targetType,
-		}
+		var expectedType = wrapWithOptionalIfNotNil(targetType)
 
 		_, referencedType = checker.visitExpression(indexExpression, expectedType)
 
