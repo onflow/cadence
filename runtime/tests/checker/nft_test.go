@@ -251,7 +251,7 @@ pub contract TopShot: NonFungibleToken {
         }
     }
 
-    // A Set is a grouping of Plays that have occured in the real world
+    // A Set is a grouping of Plays that have occurred in the real world
     // that make up a related group of collectibles, like sets of baseball
     // or Magic cards. A Play can exist in multiple different sets.
     //
@@ -681,7 +681,7 @@ pub contract TopShot: NonFungibleToken {
 
         // deposit takes a Moment and adds it to the Collections dictionary
         //
-        // Paramters: token: the NFT to be deposited in the collection
+        // Parameters: token: the NFT to be deposited in the collection
         //
         pub fun deposit(token: @NonFungibleToken.NFT) {
 
