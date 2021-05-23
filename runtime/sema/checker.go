@@ -2390,3 +2390,13 @@ func expressionRange(expression ast.Expression) ast.Range {
 		return ast.NewRangeFromPositioned(expression)
 	}
 }
+
+func wrapWithOptionalIfNotNil(typ Type) Type {
+	if typ == nil {
+		return nil
+	}
+
+	return &OptionalType{
+		Type: typ,
+	}
+}
