@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"text/tabwriter"
 
 	"github.com/c-bata/go-prompt"
 	"github.com/onflow/cadence/runtime/interpreter"
@@ -163,9 +164,15 @@ func (d *InteractiveDebugger) Run() {
 }
 
 func (d *InteractiveDebugger) Help() {
+	w := tabwriter.NewWriter(os.Stdout, 0, 0, 1, ' ', 0)
 	for _, suggestion := range debuggerCommandSuggestions {
-		fmt.Printf("%s\t\t%s\n", suggestion.Text, suggestion.Description)
+		_, _ = fmt.Fprintf(w,
+			"%s\t\t%s\n",
+			suggestion.Text,
+			suggestion.Description,
+		)
 	}
+	_ = w.Flush()
 }
 
 func (d *InteractiveDebugger) Where() {
