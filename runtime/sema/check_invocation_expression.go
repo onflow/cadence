@@ -144,7 +144,7 @@ func (checker *Checker) checkInvocationExpression(invocationExpression *ast.Invo
 	}
 
 	if isOptionalChainingResult {
-		return &OptionalType{Type: returnType}
+		return wrapWithOptionalIfNotNil(returnType)
 	}
 	return returnType
 }
