@@ -2373,6 +2373,7 @@ func (checker *Checker) visitExpressionWithForceType(
 			&TypeMismatchError{
 				ExpectedType: expectedType,
 				ActualType:   actualType,
+				Expression:   expr,
 				Range:        expressionRange(expr),
 			},
 		)
