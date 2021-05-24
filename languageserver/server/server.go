@@ -2111,6 +2111,8 @@ func convertError(
 	switch err := err.(type) {
 	case *sema.TypeMismatchError:
 		codeAction = maybeReturnTypeChangeCodeActionResolver(diagnostic, err, uri, checker.Program)
+	case *sema.ConformanceError:
+		codeAction = maybeAddMissingMembersCodeActionResolver(diagnostic, err, uri)
 	}
 
 	return diagnostic, codeAction
@@ -2183,8 +2185,7 @@ func maybeReturnTypeChangeCodeActionResolver(
 		var title string
 		var textEdit protocol.TextEdit
 
-		if nominalType, ok := returnTypeAnnotation.Type.(*ast.NominalType); ok &&
-			nominalType.Identifier.Identifier == "" {
+		if isEmptyType(returnTypeAnnotation.Type) {
 
 			title = fmt.Sprintf("Add return type `%s`", err.ActualType)
 			insertionPos := parameterList.EndPosition().Shifted(1)
@@ -2217,6 +2218,119 @@ func maybeReturnTypeChangeCodeActionResolver(
 			},
 			IsPreferred: true,
 		}
+	}
+}
+
+func isEmptyType(t ast.Type) bool {
+	nominalType, ok := t.(*ast.NominalType)
+	return ok && nominalType.Identifier.Identifier == ""
+}
+
+const indentationCount = 4
+
+func maybeAddMissingMembersCodeActionResolver(
+	diagnostic protocol.Diagnostic,
+	err *sema.ConformanceError,
+	uri protocol.DocumentUri,
+) func() *protocol.CodeAction {
+
+	missingMemberCount := len(err.MissingMembers)
+	if missingMemberCount == 0 {
+		return nil
+	}
+
+	return func() *protocol.CodeAction {
+
+		var builder strings.Builder
+
+		indentation := strings.Repeat(" ", err.CompositeDeclaration.StartPos.Column+indentationCount)
+
+		for _, missingMember := range err.MissingMembers {
+			newMemberSource := formatNewMember(missingMember, indentation)
+			if newMemberSource == "" {
+				continue
+			}
+
+			builder.WriteRune('\n')
+			builder.WriteString(indentation)
+			if missingMember.Access != ast.AccessNotSpecified {
+				builder.WriteString(missingMember.Access.Keyword())
+				builder.WriteRune(' ')
+			}
+			builder.WriteString(newMemberSource)
+			builder.WriteRune('\n')
+		}
+
+		insertionPos := err.CompositeDeclaration.EndPos
+
+		textEdit := protocol.TextEdit{
+			Range: protocol.Range{
+				Start: conversion.ASTToProtocolPosition(insertionPos),
+				End:   conversion.ASTToProtocolPosition(insertionPos),
+			},
+			NewText: builder.String(),
+		}
+
+		return &protocol.CodeAction{
+			Title:       "Add missing members",
+			Kind:        protocol.QuickFix,
+			Diagnostics: []protocol.Diagnostic{diagnostic},
+			Edit: &protocol.WorkspaceEdit{
+				Changes: &map[string][]protocol.TextEdit{
+					string(uri): {textEdit},
+				},
+			},
+			IsPreferred: true,
+		}
+	}
+}
+
+func formatNewMember(member *sema.Member, indentation string) string {
+	switch member.DeclarationKind {
+	case common.DeclarationKindField:
+		return fmt.Sprintf(
+			"%s %s: %s",
+			member.VariableKind.Keyword(),
+			member.Identifier.Identifier,
+			member.TypeAnnotation,
+		)
+
+	case common.DeclarationKindFunction:
+		invokableType, ok := member.TypeAnnotation.Type.(sema.InvokableType)
+		if !ok {
+			return ""
+		}
+
+		functionType := invokableType.InvocationFunctionType()
+
+		var parametersBuilder strings.Builder
+
+		for i, parameter := range functionType.Parameters {
+			if i > 0 {
+				parametersBuilder.WriteString(", ")
+			}
+			parametersBuilder.WriteString(parameter.QualifiedString())
+		}
+
+		var returnType string
+		returnTypeAnnotation := functionType.ReturnTypeAnnotation
+		if returnTypeAnnotation != nil && returnTypeAnnotation.Type != sema.VoidType {
+			returnType = fmt.Sprintf(": %s", returnTypeAnnotation.QualifiedString())
+		}
+
+		innerIndentation := strings.Repeat(" ", indentationCount)
+
+		return fmt.Sprintf(
+			"fun %s(%s)%s {\n%[4]s%[5]spanic(\"TODO\")\n%[4]s}",
+			member.Identifier.Identifier,
+			parametersBuilder.String(),
+			returnType,
+			indentation,
+			innerIndentation,
+		)
+
+	default:
+		return ""
 	}
 }
 
