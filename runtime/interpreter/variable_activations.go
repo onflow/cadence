@@ -78,7 +78,7 @@ func (a *VariableActivation) FunctionVariables() map[string]*Variable {
 	for current != nil {
 
 		if current.entries != nil {
-			for name, variable := range current.entries {
+			for name, variable := range current.entries { //nolint:maprangecheck
 				if _, ok := variables[name]; !ok {
 					variables[name] = variable
 				}

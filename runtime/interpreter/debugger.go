@@ -32,7 +32,6 @@ type Stop struct {
 type Debugger struct {
 	pauseRequested uint32
 	stops          chan Stop
-	onStop         func(interpreter *Interpreter, statement ast.Statement)
 	continues      chan struct{}
 }
 
