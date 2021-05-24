@@ -2479,6 +2479,8 @@ type Diagnostic struct {
 	 * a scope collide all definitions can be marked via this property.
 	 */
 	RelatedInformation []DiagnosticRelatedInformation `json:"relatedInformation,omitempty"`
+
+	Data interface{} `json:"data,omitempty"`
 }
 
 /*Command defined:
@@ -3220,6 +3222,8 @@ type CodeAction struct {
 	 * executed and then the command.
 	 */
 	Command *Command `json:"command,omitempty"`
+
+	IsPreferred bool `json:"isPreferred,omitempty"`
 }
 
 /*CodeLens defined:

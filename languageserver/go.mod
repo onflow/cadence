@@ -3,6 +3,7 @@ module github.com/onflow/cadence/languageserver
 go 1.13
 
 require (
+	github.com/google/uuid v1.1.2
 	github.com/mattn/go-isatty v0.0.12
 	github.com/mitchellh/mapstructure v1.3.3
 	github.com/onflow/cadence v0.16.1-0.20210528234439-d3e46522a1b0

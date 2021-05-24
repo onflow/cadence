@@ -27,6 +27,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/mitchellh/mapstructure"
 	"github.com/onflow/cadence/encoding/json"
 	"github.com/onflow/cadence/runtime"
@@ -165,11 +166,12 @@ type DocumentSymbolProvider func(uri protocol.DocumentUri, version float64, chec
 type InitializationOptionsHandler func(initializationOptions interface{}) error
 
 type Server struct {
-	protocolServer  *protocol.Server
-	checkers        map[common.LocationID]*sema.Checker
-	documents       map[protocol.DocumentUri]Document
-	memberResolvers map[protocol.DocumentUri]map[string]sema.MemberResolver
-	ranges          map[protocol.DocumentUri]map[string]sema.Range
+	protocolServer      *protocol.Server
+	checkers            map[common.LocationID]*sema.Checker
+	documents           map[protocol.DocumentUri]Document
+	memberResolvers     map[protocol.DocumentUri]map[string]sema.MemberResolver
+	ranges              map[protocol.DocumentUri]map[string]sema.Range
+	codeActionResolvers map[protocol.DocumentUri]map[uuid.UUID]func() *protocol.CodeAction
 	// commands is the registry of custom commands we support
 	commands map[string]CommandHandler
 	// resolveAddressImport is the optional function that is used to resolve address imports
@@ -277,11 +279,12 @@ const ParseEntryPointArgumentsCommand = "cadence.server.parseEntryPointArguments
 
 func NewServer() (*Server, error) {
 	server := &Server{
-		checkers:        make(map[common.LocationID]*sema.Checker),
-		documents:       make(map[protocol.DocumentUri]Document),
-		memberResolvers: make(map[protocol.DocumentUri]map[string]sema.MemberResolver),
-		ranges:          make(map[protocol.DocumentUri]map[string]sema.Range),
-		commands:        make(map[string]CommandHandler),
+		checkers:            make(map[common.LocationID]*sema.Checker),
+		documents:           make(map[protocol.DocumentUri]Document),
+		memberResolvers:     make(map[protocol.DocumentUri]map[string]sema.MemberResolver),
+		ranges:              make(map[protocol.DocumentUri]map[string]sema.Range),
+		codeActionResolvers: make(map[protocol.DocumentUri]map[uuid.UUID]func() *protocol.CodeAction),
+		commands:            make(map[string]CommandHandler),
 	}
 	server.protocolServer = protocol.NewServer(server)
 
@@ -345,6 +348,7 @@ func (s *Server) Initialize(
 			SignatureHelpProvider: &protocol.SignatureHelpOptions{
 				TriggerCharacters: []string{"("},
 			},
+			CodeActionProvider: true,
 		},
 	}
 
@@ -782,6 +786,51 @@ func (s *Server) Rename(
 			string(uri): textEdits,
 		},
 	}, nil
+}
+
+func (s *Server) CodeAction(
+	conn protocol.Conn,
+	params *protocol.CodeActionParams,
+) (
+	codeActions []*protocol.CodeAction,
+	err error,
+) {
+	// NOTE: Always initialize to an empty slice, i.e DON'T use nil:
+	// The later will be ignored instead of being treated as no items
+	codeActions = []*protocol.CodeAction{}
+
+	uri := params.TextDocument.URI
+	checker := s.checkerForDocument(uri)
+	if checker == nil {
+		// Can we ensure this doesn't happen?
+		return
+	}
+
+	codeActionResolvers := s.codeActionResolvers[uri]
+
+	for _, diagnostic := range params.Context.Diagnostics {
+
+		if data, ok := diagnostic.Data.(string); ok {
+			codeActionID, err := uuid.Parse(data)
+			if err != nil {
+				continue
+			}
+
+			codeActionResolver, ok := codeActionResolvers[codeActionID]
+			if !ok {
+				continue
+			}
+
+			codeAction := codeActionResolver()
+			if codeAction == nil {
+				continue
+			}
+
+			codeActions = append(codeActions, codeAction)
+		}
+	}
+
+	return
 }
 
 // CodeLens is called every time the document contents change and returns a
@@ -1567,6 +1616,9 @@ func (s *Server) getDiagnostics(
 	diagnostics []protocol.Diagnostic,
 	diagnosticsErr error,
 ) {
+	// Always reset the code actions for this document
+	codeActions := map[uuid.UUID]func() *protocol.CodeAction{}
+	s.codeActionResolvers[uri] = codeActions
 
 	// NOTE: Always initialize to an empty slice, i.e DON'T use nil:
 	// The later will be ignored instead of being treated as no items
