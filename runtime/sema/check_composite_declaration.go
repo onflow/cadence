@@ -1057,6 +1057,7 @@ func (checker *Checker) checkCompositeConformance(
 
 		checker.report(
 			&ConformanceError{
+				CompositeDeclaration:           compositeDeclaration,
 				CompositeType:                  compositeType,
 				InterfaceType:                  interfaceType,
 				Pos:                            compositeDeclaration.Identifier.Pos,
