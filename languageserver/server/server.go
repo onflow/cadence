@@ -1600,7 +1600,6 @@ func (*Server) Exit(_ protocol.Conn) error {
 }
 
 const filePrefix = "file://"
-const inMemoryPrefix = "inmemory:/"
 
 // getDiagnostics parses and checks the given file and generates diagnostics
 // indicating each syntax or semantic error. Returns a list of diagnostics
@@ -1802,7 +1801,12 @@ func (s *Server) getDiagnostics(
 	}
 
 	for _, hint := range checker.Hints() {
-		diagnostic := convertHint(hint)
+		diagnostic, codeAction := convertHint(hint, uri)
+		if codeAction != nil {
+			codeActionID := uuid.New()
+			diagnostic.Data = codeActionID
+			codeActions[codeActionID] = codeAction
+		}
 		diagnostics = append(diagnostics, diagnostic)
 	}
 
@@ -2094,25 +2098,67 @@ func convertError(err convertibleError) protocol.Diagnostic {
 	}
 }
 
-// convertHint converts a checker error to a diagnostic.
-func convertHint(hint sema.Hint) protocol.Diagnostic {
+// convertHint converts a checker hint to a diagnostic
+// and an optional code action to resolve the hint.
+//
+func convertHint(hint sema.Hint, uri protocol.DocumentUri) (protocol.Diagnostic, func() *protocol.CodeAction) {
 	startPosition := hint.StartPosition()
 	endPosition := hint.EndPosition()
 
-	return protocol.Diagnostic{
+	protocolRange := conversion.ASTToProtocolRange(startPosition, endPosition)
+
+	diagnostic := protocol.Diagnostic{
 		Message: hint.Hint(),
 		// protocol.SeverityHint doesn't look prominent enough in VS Code,
 		// only the first character of the range is highlighted.
 		Severity: protocol.SeverityInformation,
-		Range: protocol.Range{
-			Start: protocol.Position{
-				Line:      float64(startPosition.Line - 1),
-				Character: float64(startPosition.Column),
-			},
-			End: protocol.Position{
-				Line:      float64(endPosition.Line - 1),
-				Character: float64(endPosition.Column + 1),
-			},
-		},
+		Range:    protocolRange,
 	}
+
+	var codeAction func() *protocol.CodeAction
+
+	switch hint := hint.(type) {
+	case *sema.ReplacementHint:
+		codeAction = func() *protocol.CodeAction {
+			replacement := hint.Expression.String()
+			return &protocol.CodeAction{
+				Title:       fmt.Sprintf("Replace with suggestion `%s`", replacement),
+				Kind:        protocol.QuickFix,
+				Diagnostics: []protocol.Diagnostic{diagnostic},
+				Edit: &protocol.WorkspaceEdit{
+					Changes: &map[string][]protocol.TextEdit{
+						string(uri): {
+							{
+								Range:   protocolRange,
+								NewText: replacement,
+							},
+						},
+					},
+				},
+				IsPreferred: true,
+			}
+		}
+
+	case *sema.RemovalHint:
+		codeAction = func() *protocol.CodeAction {
+			return &protocol.CodeAction{
+				Title:       "Remove unnecessary code",
+				Kind:        protocol.QuickFix,
+				Diagnostics: []protocol.Diagnostic{diagnostic},
+				Edit: &protocol.WorkspaceEdit{
+					Changes: &map[string][]protocol.TextEdit{
+						string(uri): {
+							{
+								Range:   protocolRange,
+								NewText: "",
+							},
+						},
+					},
+				},
+				IsPreferred: true,
+			}
+		}
+	}
+
+	return diagnostic, codeAction
 }
