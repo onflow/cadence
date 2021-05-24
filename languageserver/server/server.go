@@ -1630,7 +1630,7 @@ func (s *Server) getDiagnostics(
 
 	if parseError != nil {
 		if parentErr, ok := parseError.(errors.ParentError); ok {
-			parserDiagnostics := getDiagnosticsForParentError(conn, uri, parentErr)
+			parserDiagnostics := getDiagnosticsForParentError(conn, uri, parentErr, nil, codeActions)
 			diagnostics = append(diagnostics, parserDiagnostics...)
 		}
 	}
@@ -1786,7 +1786,7 @@ func (s *Server) getDiagnostics(
 
 	if checkError != nil {
 		if parentErr, ok := checkError.(errors.ParentError); ok {
-			checkerDiagnostics := getDiagnosticsForParentError(conn, uri, parentErr)
+			checkerDiagnostics := getDiagnosticsForParentError(conn, uri, parentErr, checker, codeActions)
 			diagnostics = append(diagnostics, checkerDiagnostics...)
 		}
 	}
@@ -1821,6 +1821,8 @@ func getDiagnosticsForParentError(
 	conn protocol.Conn,
 	uri protocol.DocumentUri,
 	err errors.ParentError,
+	checker *sema.Checker,
+	codeActions map[uuid.UUID]func() *protocol.CodeAction,
 ) (
 	diagnostics []protocol.Diagnostic,
 ) {
@@ -1833,7 +1835,12 @@ func getDiagnosticsForParentError(
 			})
 			continue
 		}
-		diagnostic := convertError(convertibleErr)
+		diagnostic, codeAction := convertError(convertibleErr, uri, checker)
+		if codeAction != nil {
+			codeActionID := uuid.New()
+			diagnostic.Data = codeActionID
+			codeActions[codeActionID] = codeAction
+		}
 
 		if errorNotes, ok := convertibleErr.(errors.ErrorNotes); ok {
 			for _, errorNote := range errorNotes.ErrorNotes() {
@@ -2069,10 +2076,21 @@ type convertibleError interface {
 	ast.HasPosition
 }
 
-// convertError converts a checker error to a diagnostic.
-func convertError(err convertibleError) protocol.Diagnostic {
+// convertError converts a checker error to a diagnostic
+// and an optional code action to resolve the error.
+//
+func convertError(
+	err convertibleError,
+	uri protocol.DocumentUri,
+	checker *sema.Checker,
+) (
+	protocol.Diagnostic,
+	func() *protocol.CodeAction,
+) {
 	startPosition := err.StartPosition()
 	endPosition := err.EndPosition()
+
+	protocolRange := conversion.ASTToProtocolRange(startPosition, endPosition)
 
 	var message strings.Builder
 	message.WriteString(err.Error())
@@ -2082,19 +2100,123 @@ func convertError(err convertibleError) protocol.Diagnostic {
 		message.WriteString(secondaryError.SecondaryError())
 	}
 
-	return protocol.Diagnostic{
+	diagnostic := protocol.Diagnostic{
 		Message:  message.String(),
 		Severity: protocol.SeverityError,
-		Range: protocol.Range{
-			Start: protocol.Position{
-				Line:      float64(startPosition.Line - 1),
-				Character: float64(startPosition.Column),
+		Range:    protocolRange,
+	}
+
+	var codeAction func() *protocol.CodeAction
+
+	switch err := err.(type) {
+	case *sema.TypeMismatchError:
+		codeAction = maybeReturnTypeChangeCodeActionResolver(diagnostic, err, uri, checker.Program)
+	}
+
+	return diagnostic, codeAction
+}
+
+func maybeReturnTypeChangeCodeActionResolver(
+	diagnostic protocol.Diagnostic,
+	err *sema.TypeMismatchError,
+	uri protocol.DocumentUri,
+	program *ast.Program,
+) func() *protocol.CodeAction {
+
+	// The type mismatch could be in a return statement
+	// due to a missing or wrong return type.
+	//
+	// Find the expression,
+	// its parent return statement,
+	// its parent function expression or function declaration,
+	// and suggest adding the return type.
+
+	if err.Expression == nil {
+		return nil
+	}
+
+	var foundReturn bool
+	var parameterList *ast.ParameterList
+	var returnTypeAnnotation *ast.TypeAnnotation
+
+	var stack []ast.Element
+	ast.Inspect(program, func(element ast.Element) bool {
+
+		switch element {
+		case err.Expression:
+			for i := len(stack) - 1; i >= 0; i-- {
+				parent := stack[i]
+				switch parent := parent.(type) {
+				case *ast.ReturnStatement:
+					if parent.Expression == err.Expression {
+						foundReturn = true
+					}
+
+				case *ast.FunctionDeclaration:
+					parameterList = parent.ParameterList
+					returnTypeAnnotation = parent.ReturnTypeAnnotation
+
+				case *ast.FunctionExpression:
+					parameterList = parent.ParameterList
+					returnTypeAnnotation = parent.ReturnTypeAnnotation
+				}
+			}
+
+			return false
+
+		case nil:
+			stack = stack[:len(stack)-1]
+
+		default:
+			stack = append(stack, element)
+		}
+
+		return true
+	})
+
+	if !foundReturn || parameterList == nil {
+		return nil
+	}
+
+	return func() *protocol.CodeAction {
+
+		var title string
+		var textEdit protocol.TextEdit
+
+		if nominalType, ok := returnTypeAnnotation.Type.(*ast.NominalType); ok &&
+			nominalType.Identifier.Identifier == "" {
+
+			title = fmt.Sprintf("Add return type `%s`", err.ActualType)
+			insertionPos := parameterList.EndPosition().Shifted(1)
+			textEdit = protocol.TextEdit{
+				Range: protocol.Range{
+					Start: conversion.ASTToProtocolPosition(insertionPos),
+					End:   conversion.ASTToProtocolPosition(insertionPos),
+				},
+				NewText: fmt.Sprintf(": %s", err.ActualType),
+			}
+		} else {
+			title = fmt.Sprintf("Change return type to `%s`", err.ActualType)
+			textEdit = protocol.TextEdit{
+				Range: conversion.ASTToProtocolRange(
+					returnTypeAnnotation.StartPosition(),
+					returnTypeAnnotation.EndPosition(),
+				),
+				NewText: err.ActualType.String(),
+			}
+		}
+
+		return &protocol.CodeAction{
+			Title:       title,
+			Kind:        protocol.QuickFix,
+			Diagnostics: []protocol.Diagnostic{diagnostic},
+			Edit: &protocol.WorkspaceEdit{
+				Changes: &map[string][]protocol.TextEdit{
+					string(uri): {textEdit},
+				},
 			},
-			End: protocol.Position{
-				Line:      float64(endPosition.Line - 1),
-				Character: float64(endPosition.Column + 1),
-			},
-		},
+			IsPreferred: true,
+		}
 	}
 }
 
