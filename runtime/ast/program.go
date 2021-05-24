@@ -61,6 +61,10 @@ func (p *Program) Accept(visitor Visitor) Repr {
 	return visitor.VisitProgram(p)
 }
 
+func (d *Program) Walk(walkChild func(Element)) {
+	walkDeclarations(walkChild, d.declarations)
+}
+
 func (p *Program) PragmaDeclarations() []*PragmaDeclaration {
 	return p.indices.pragmaDeclarations(p.declarations)
 }

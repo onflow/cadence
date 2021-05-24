@@ -42,6 +42,10 @@ func (d *CompositeDeclaration) Accept(visitor Visitor) Repr {
 	return visitor.VisitCompositeDeclaration(d)
 }
 
+func (d *CompositeDeclaration) Walk(walkChild func(Element)) {
+	walkDeclarations(walkChild, d.Members.declarations)
+}
+
 func (*CompositeDeclaration) isDeclaration() {}
 
 // NOTE: statement, so it can be represented in the AST,
@@ -91,6 +95,11 @@ func (d *FieldDeclaration) Accept(visitor Visitor) Repr {
 	return visitor.VisitFieldDeclaration(d)
 }
 
+func (d *FieldDeclaration) Walk(_ func(Element)) {
+	// NO-OP
+	// TODO: walk type
+}
+
 func (*FieldDeclaration) isDeclaration() {}
 
 func (d *FieldDeclaration) DeclarationIdentifier() *Identifier {
@@ -131,6 +140,10 @@ type EnumCaseDeclaration struct {
 
 func (d *EnumCaseDeclaration) Accept(visitor Visitor) Repr {
 	return visitor.VisitEnumCaseDeclaration(d)
+}
+
+func (*EnumCaseDeclaration) Walk(_ func(Element)) {
+	// NO-OP
 }
 
 func (*EnumCaseDeclaration) isDeclaration() {}

@@ -41,6 +41,10 @@ func (d *ImportDeclaration) Accept(visitor Visitor) Repr {
 	return visitor.VisitImportDeclaration(d)
 }
 
+func (*ImportDeclaration) Walk(_ func(Element)) {
+	// NO-OP
+}
+
 func (d *ImportDeclaration) DeclarationIdentifier() *Identifier {
 	return nil
 }
