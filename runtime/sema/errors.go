@@ -221,6 +221,7 @@ func (*AssignmentToConstantError) isSemanticError() {}
 type TypeMismatchError struct {
 	ExpectedType Type
 	ActualType   Type
+	Expression   ast.Expression
 	ast.Range
 }
 
