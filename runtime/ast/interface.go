@@ -39,6 +39,10 @@ func (d *InterfaceDeclaration) Accept(visitor Visitor) Repr {
 	return visitor.VisitInterfaceDeclaration(d)
 }
 
+func (d *InterfaceDeclaration) Walk(walkChild func(Element)) {
+	walkDeclarations(walkChild, d.Members.declarations)
+}
+
 func (*InterfaceDeclaration) isDeclaration() {}
 
 // NOTE: statement, so it can be represented in the AST,
