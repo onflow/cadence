@@ -19,7 +19,6 @@
 package conversion
 
 import (
-	"fmt"
 	"github.com/onflow/cadence/languageserver/protocol"
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
@@ -53,70 +52,95 @@ func ProtocolToSemaPosition(pos protocol.Position) sema.Position {
 	}
 }
 
-func DeclarationKindToSymbolData(declaration ast.Declaration) (symbolKind protocol.SymbolKind, detail string) {
-	detail = fmt.Sprintf("access: %s", declaration.DeclarationAccess().Description())
-	kind := declaration.DeclarationKind()
+func DeclarationKindToSymbolKind(kind common.DeclarationKind) protocol.SymbolKind {
 
 	switch kind {
-	case common.DeclarationKindContract:
-		symbolKind = protocol.Package
-	case common.DeclarationKindField:
-		symbolKind = protocol.Field
 	case common.DeclarationKindFunction:
-		symbolKind = protocol.Function
-	case common.DeclarationKindArgumentLabel:
-		symbolKind = protocol.TypeParameter
-	case common.DeclarationKindConstant:
-		symbolKind = protocol.Constant
+		return protocol.Function
+
+	case common.DeclarationKindField:
+		return protocol.Field
+
+	case common.DeclarationKindConstant,
+		common.DeclarationKindParameter:
+		return protocol.Constant
+
 	case common.DeclarationKindVariable:
-		symbolKind = protocol.Variable
+		return protocol.Variable
 
-	// TODO: For some reason events not working and will return empty DocumentSymbol array instead...
-/*	case common.DeclarationKindEvent:
-		symbolKind = protocol.Event
-*/
-	// We can unify response for initializer and destructor
 	case common.DeclarationKindInitializer:
-	case common.DeclarationKindDestructor:
-		// "init" and "destroy" don't have access modifiers, so we shall return empty string there
-		detail = ""
-		symbolKind = protocol.Constructor
+		return protocol.Constructor
 
-	default:
-		symbolKind = protocol.Null
+	case common.DeclarationKindDestructor:
+		return protocol.Function
+
+	case common.DeclarationKindStructure,
+		common.DeclarationKindResource,
+		common.DeclarationKindEvent,
+		common.DeclarationKindContract,
+		common.DeclarationKindType:
+		return protocol.Class
+
+	case common.DeclarationKindStructureInterface,
+		common.DeclarationKindResourceInterface,
+		common.DeclarationKindContractInterface:
+		return protocol.Interface
 	}
-	return symbolKind, detail
+
+	return 0
 }
 
-// ASTToDocumentSymbol converts AST Declaration to a DocumentSymbol
+// DeclarationToDocumentSymbol converts AST Declaration to a DocumentSymbol
 //
-func ASTToDocumentSymbol(declaration ast.Declaration) protocol.DocumentSymbol {
+func DeclarationToDocumentSymbol(declaration ast.Declaration) protocol.DocumentSymbol {
 	var children []protocol.DocumentSymbol
 
-	if declaration.DeclarationMembers() != nil {
-		for _, child := range declaration.DeclarationMembers().Declarations() {
-			symbolChild := ASTToDocumentSymbol(child)
-			children = append(children, symbolChild)
+	declarationMembers := declaration.DeclarationMembers()
+	if declarationMembers != nil {
+		for _, child := range declarationMembers.Declarations() {
+			childSymbol := DeclarationToDocumentSymbol(child)
+			children = append(children, childSymbol)
 		}
 	}
 
-	name := declaration.DeclarationIdentifier().Identifier
-	kind, detail := DeclarationKindToSymbolData(declaration)
+	declarationKind := declaration.DeclarationKind()
+
+	var name string
+	var selectionRange protocol.Range
+
+	identifier := declaration.DeclarationIdentifier()
+	if identifier != nil && identifier.Identifier != "" {
+		name = identifier.Identifier
+		selectionRange = ASTToProtocolRange(
+			identifier.StartPosition(),
+			identifier.EndPosition(),
+		)
+	} else {
+		switch declarationKind {
+		case common.DeclarationKindTransaction:
+			name = "transaction"
+		case common.DeclarationKindInitializer:
+			name = "init"
+		case common.DeclarationKindDestructor:
+			name = "destroy"
+		}
+
+		declarationStartPos := ASTToProtocolPosition(declaration.StartPosition())
+		selectionRange = protocol.Range{
+			Start: declarationStartPos,
+			End:   declarationStartPos,
+		}
+	}
 
 	symbol := protocol.DocumentSymbol{
-		Name:       name,
-		Detail:     detail,
-		Kind:       kind,
-		Deprecated: false,
-		Range: protocol.Range{
-			Start: ASTToProtocolPosition(declaration.StartPosition()),
-			End:   ASTToProtocolPosition(declaration.EndPosition()),
-		},
-		SelectionRange: protocol.Range{
-			Start: ASTToProtocolPosition(declaration.StartPosition()),
-			End:   ASTToProtocolPosition(declaration.EndPosition()),
-		},
-		Children: children,
+		Name: name,
+		Kind: DeclarationKindToSymbolKind(declarationKind),
+		Range: ASTToProtocolRange(
+			declaration.StartPosition(),
+			declaration.EndPosition(),
+		),
+		SelectionRange: selectionRange,
+		Children:       children,
 	}
 
 	return symbol
