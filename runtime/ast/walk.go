@@ -31,6 +31,8 @@ type Walker interface {
 // for each of the non-nil children of the element,
 // followed by a call of Walk(nil) on the returned walker.
 //
+// The initial walker may not be nil.
+//
 func Walk(walker Walker, element Element) {
 	if walker = walker.Walk(element); walker == nil {
 		return
