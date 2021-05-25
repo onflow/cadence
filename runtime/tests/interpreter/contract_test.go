@@ -33,7 +33,7 @@ func TestInterpretContractUseBeforeInitializationComplete(t *testing.T) {
 
 		t.Parallel()
 
-		_, _ = parseCheckAndInterpretWithOptions(t,
+		_, err := parseCheckAndInterpretWithOptions(t,
 			`
               contract C {
 
@@ -57,6 +57,7 @@ func TestInterpretContractUseBeforeInitializationComplete(t *testing.T) {
 				},
 			},
 		)
+		require.NoError(t, err)
 	})
 
 	t.Run("constructor of nested type, first qualified ", func(t *testing.T) {
