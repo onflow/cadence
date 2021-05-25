@@ -158,7 +158,7 @@ type DiagnosticProvider func(uri protocol.DocumentUri, version float64, checker 
 
 // DocumentSymbolProvider
 //
-type DocumentSymbolProvider func (uri protocol.DocumentUri, version float64, checker *sema.Checker)([]*protocol.DocumentSymbol, error)
+type DocumentSymbolProvider func(uri protocol.DocumentUri, version float64, checker *sema.Checker) ([]*protocol.DocumentSymbol, error)
 
 // InitializationOptionsHandler is a function that is used to handle initialization options sent by the client
 //
@@ -257,13 +257,6 @@ func WithCodeLensProvider(provider CodeLensProvider) Option {
 func WithDiagnosticProvider(provider DiagnosticProvider) Option {
 	return func(s *Server) error {
 		s.diagnosticProviders = append(s.diagnosticProviders, provider)
-		return nil
-	}
-}
-
-func WithDocumentSymbolProvider(provider DocumentSymbolProvider) Option {
-	return func(s *Server) error {
-		s.documentSymbolProviders = append(s.documentSymbolProviders, provider)
 		return nil
 	}
 }
@@ -1363,7 +1356,13 @@ func (s *Server) ExecuteCommand(conn protocol.Conn, params *protocol.ExecuteComm
 
 // DocumentSymbol is called every time the document contents change and returns a
 // tree of known  document symbols, which can be shown in outline panel
-func (s *Server) DocumentSymbol(conn protocol.Conn, params *protocol.DocumentSymbolParams) (symbols []*protocol.DocumentSymbol,err error) {
+func (s *Server) DocumentSymbol(
+	_ protocol.Conn,
+	params *protocol.DocumentSymbolParams,
+) (
+	symbols []*protocol.DocumentSymbol,
+	err error,
+) {
 
 	// NOTE: Always initialize to an empty slice, i.e DON'T use nil:
 	// The later will be ignored instead of being treated as no items
@@ -1371,26 +1370,14 @@ func (s *Server) DocumentSymbol(conn protocol.Conn, params *protocol.DocumentSym
 
 	// get uri from parameters caught by grpc server
 	uri := params.TextDocument.URI
-	checker, ok := s.checkers[uri]
-	if !ok {
-		// Can we ensure this doesn't happen?
+	checker := s.checkerForDocument(uri)
+	if checker == nil {
 		return
 	}
 
-	version := s.documents[uri].Version
-
-	// "documentSymbolProviders" contains all providers added via "WithDocumentSymbolProvider" method
-	// currently we have single provider we define inside of "NewFlowIntegration" method
-	for _, provider := range s.documentSymbolProviders {
-		var moreSymbols []*protocol.DocumentSymbol
-
-		// in this specific case it will call a method implemented in "integration.documentSymbols"
-		moreSymbols, err = provider(uri, version, checker)
-		if err != nil {
-			return
-		}
-
-		symbols = append(symbols, moreSymbols...)
+	for _, declaration := range checker.Program.Declarations() {
+		symbol := conversion.DeclarationToDocumentSymbol(declaration)
+		symbols = append(symbols, &symbol)
 	}
 
 	return
