@@ -85,6 +85,9 @@ func DeclarationKindToSymbolKind(kind common.DeclarationKind) protocol.SymbolKin
 		common.DeclarationKindResourceInterface,
 		common.DeclarationKindContractInterface:
 		return protocol.Interface
+
+	case common.DeclarationKindTransaction:
+		return protocol.Namespace
 	}
 
 	return 0
