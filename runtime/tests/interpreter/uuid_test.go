@@ -24,6 +24,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
@@ -65,10 +66,10 @@ func TestInterpretResourceUUID(t *testing.T) {
 		checker.ParseAndCheckOptions{
 			Options: []sema.Option{
 				sema.WithImportHandler(
-					func(checker *sema.Checker, location common.Location) (sema.Import, error) {
+					func(_ *sema.Checker, importedLocation common.Location, _ ast.Range) (sema.Import, error) {
 						assert.Equal(t,
 							ImportedLocation,
-							location,
+							importedLocation,
 						)
 
 						return sema.ElaborationImport{
@@ -124,15 +125,17 @@ func TestInterpretResourceUUID(t *testing.T) {
 	array := value.(*interpreter.ArrayValue)
 
 	const length = 2
-	require.Len(t, array.Values, length)
+
+	elements := array.Elements()
+	require.Len(t, elements, length)
 
 	for i := 0; i < length; i++ {
-		element := array.Values[i]
+		element := elements[i]
 
 		require.IsType(t, &interpreter.CompositeValue{}, element)
 		res := element.(*interpreter.CompositeValue)
 
-		uuidValue, present := res.Fields.Get(sema.ResourceUUIDFieldName)
+		uuidValue, present := res.Fields().Get(sema.ResourceUUIDFieldName)
 		require.True(t, present)
 		require.Equal(t,
 			interpreter.UInt64Value(i),

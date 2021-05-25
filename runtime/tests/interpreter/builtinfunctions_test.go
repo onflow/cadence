@@ -46,7 +46,7 @@ func TestInterpretToString(t *testing.T) {
 
 			assert.Equal(t,
 				interpreter.NewStringValue("42"),
-				inter.Globals["y"].Value,
+				inter.Globals["y"].GetValue(),
 			)
 		})
 	}
@@ -60,7 +60,7 @@ func TestInterpretToString(t *testing.T) {
 
 		assert.Equal(t,
 			interpreter.NewStringValue("0x42"),
-			inter.Globals["y"].Value,
+			inter.Globals["y"].GetValue(),
 		)
 	})
 
@@ -68,19 +68,33 @@ func TestInterpretToString(t *testing.T) {
 
 		t.Run(ty.String(), func(t *testing.T) {
 
+			var literal string
+			var expected interpreter.Value
+
+			isSigned := sema.IsSubType(ty, sema.SignedFixedPointType)
+
+			if isSigned {
+				literal = "-12.34"
+				expected = interpreter.NewStringValue("-12.34000000")
+			} else {
+				literal = "12.34"
+				expected = interpreter.NewStringValue("12.34000000")
+			}
+
 			inter := parseCheckAndInterpret(t,
 				fmt.Sprintf(
 					`
-                      let x: %s = 12.34
+                      let x: %s = %s
                       let y = x.toString()
                     `,
 					ty,
+					literal,
 				),
 			)
 
 			assert.Equal(t,
-				interpreter.NewStringValue("12.34000000"),
-				inter.Globals["y"].Value,
+				expected,
+				inter.Globals["y"].GetValue(),
 			)
 		})
 	}
@@ -106,7 +120,7 @@ func TestInterpretToBytes(t *testing.T) {
 				interpreter.UInt8Value(0x34),
 				interpreter.UInt8Value(0x56),
 			),
-			inter.Globals["y"].Value,
+			inter.Globals["y"].GetValue(),
 		)
 	})
 }
@@ -274,10 +288,10 @@ func TestInterpretToBigEndianBytes(t *testing.T) {
 	// Ensure the test cases are complete
 
 	for _, integerType := range sema.AllNumberTypes {
-		switch integerType.(type) {
-		case *sema.NumberType, *sema.SignedNumberType,
-			*sema.IntegerType, *sema.SignedIntegerType,
-			*sema.FixedPointType, *sema.SignedFixedPointType:
+		switch integerType {
+		case sema.NumberType, sema.SignedNumberType,
+			sema.IntegerType, sema.SignedIntegerType,
+			sema.FixedPointType, sema.SignedFixedPointType:
 			continue
 		}
 
@@ -305,7 +319,7 @@ func TestInterpretToBigEndianBytes(t *testing.T) {
 
 				assert.Equal(t,
 					interpreter.ByteSliceToByteArrayValue(expected),
-					inter.Globals["result"].Value,
+					inter.Globals["result"].GetValue(),
 				)
 			})
 		}

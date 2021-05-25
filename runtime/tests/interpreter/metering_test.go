@@ -24,6 +24,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
@@ -71,10 +72,10 @@ func TestInterpretStatementHandler(t *testing.T) {
 		checker.ParseAndCheckOptions{
 			Options: []sema.Option{
 				sema.WithImportHandler(
-					func(checker *sema.Checker, location common.Location) (sema.Import, error) {
+					func(_ *sema.Checker, importedLocation common.Location, _ ast.Range) (sema.Import, error) {
 						assert.Equal(t,
 							utils.ImportedLocation,
-							location,
+							importedLocation,
 						)
 
 						return sema.ElaborationImport{
@@ -100,19 +101,17 @@ func TestInterpretStatementHandler(t *testing.T) {
 		interpreter.ProgramFromChecker(importingChecker),
 		importingChecker.Location,
 		interpreter.WithOnStatementHandler(
-			func(statement *interpreter.Statement) {
-				inter := statement.Interpreter
-
-				id, ok := interpreterIDs[inter]
+			func(interpreter *interpreter.Interpreter, statement ast.Statement) {
+				id, ok := interpreterIDs[interpreter]
 				if !ok {
 					id = nextInterpreterID
 					nextInterpreterID++
-					interpreterIDs[inter] = id
+					interpreterIDs[interpreter] = id
 				}
 
 				occurrences = append(occurrences, occurrence{
 					interpreterID: id,
-					line:          statement.Statement.StartPosition().Line,
+					line:          statement.StartPosition().Line,
 				})
 			},
 		),
@@ -199,10 +198,10 @@ func TestInterpretLoopIterationHandler(t *testing.T) {
 		checker.ParseAndCheckOptions{
 			Options: []sema.Option{
 				sema.WithImportHandler(
-					func(checker *sema.Checker, location common.Location) (sema.Import, error) {
+					func(_ *sema.Checker, importedLocation common.Location, _ ast.Range) (sema.Import, error) {
 						assert.Equal(t,
 							utils.ImportedLocation,
-							location,
+							importedLocation,
 						)
 
 						return sema.ElaborationImport{
@@ -336,10 +335,10 @@ func TestInterpretFunctionInvocationHandler(t *testing.T) {
 		checker.ParseAndCheckOptions{
 			Options: []sema.Option{
 				sema.WithImportHandler(
-					func(checker *sema.Checker, location common.Location) (sema.Import, error) {
+					func(_ *sema.Checker, importedLocation common.Location, _ ast.Range) (sema.Import, error) {
 						assert.Equal(t,
 							utils.ImportedLocation,
-							location,
+							importedLocation,
 						)
 
 						return sema.ElaborationImport{

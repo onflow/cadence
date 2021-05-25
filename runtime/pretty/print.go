@@ -161,16 +161,19 @@ func (p ErrorPrettyPrinter) PrettyPrintError(err error, location common.Location
 		}
 
 		if err, ok := err.(errors.ParentError); ok {
+
 			for _, childErr := range err.ChildErrors() {
+
+				childLocation := location
 
 				if childErr, ok := childErr.(common.HasImportLocation); ok {
 					importLocation := childErr.ImportLocation()
 					if importLocation != nil {
-						location = importLocation
+						childLocation = importLocation
 					}
 				}
 
-				printErr := printError(childErr, location)
+				printErr := printError(childErr, childLocation)
 				if printErr != nil {
 					return printErr
 				}
@@ -253,7 +256,10 @@ func (p ErrorPrettyPrinter) writeCodeExcerpts(
 		}
 
 		// code, if position
-		if excerpt.startPos != nil && excerpt.startPos.Line > 0 && len(code) > 0 {
+		if excerpt.startPos != nil &&
+			excerpt.startPos.Line > 0 &&
+			excerpt.startPos.Line <= len(lines) &&
+			len(code) > 0 {
 
 			if i > 0 && lastLineNumber != 0 && excerpt.startPos.Line-1 > lastLineNumber {
 				p.writeCodeExcerptContinuation(lineNumberLength)

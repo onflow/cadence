@@ -2,14 +2,15 @@ name: CI
 
 on:
   push:
+    branches:
+      - master
+      - 'feature/**'
+      - 'v**'
   pull_request:
     branches:
-      # Branches from forks have the form 'user:branch-name' so we only run
-      # this job on pull_request events for branches that look like fork
-      # branches. Without this we would end up running this job twice for non
-      # forked PRs, once for the push and then once for opening the PR.
-      # See https://github.community/t/how-to-trigger-an-action-on-push-or-pull-request-but-not-both/16662/10
-      - '**:**'
+      - master
+      - 'feature/**'
+      - 'v**'
 
 jobs:
   test:
@@ -22,7 +23,10 @@ jobs:
         fetch-depth: 0
     - uses: actions/setup-go@v1
       with:
-        go-version: '1.14.5'
+        go-version: '1.15.10'
+    - uses: actions/setup-node@v2
+      with:
+        node-version: '15'
     - uses: actions/cache@v1
       with:
         path: ~/go/pkg/mod
@@ -35,6 +39,11 @@ jobs:
       run: make test
     - name: Check tidy
       run: make check-tidy
+    - name: Upload coverage report
+      uses: codecov/codecov-action@v1
+      with:
+        file: ./coverage.txt
+        flags: unittests
 
   lint:
     runs-on: ubuntu-20.04
@@ -44,7 +53,7 @@ jobs:
         fetch-depth: 0
     - uses: actions/setup-go@v1
       with:
-        go-version: '1.14.5'
+        go-version: '1.15.10'
     - uses: actions/cache@v1
       with:
         path: ~/go/pkg/mod

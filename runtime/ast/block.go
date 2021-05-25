@@ -83,10 +83,6 @@ type Condition struct {
 	Message Expression
 }
 
-func (c *Condition) Accept(visitor Visitor) Repr {
-	return visitor.VisitCondition(c)
-}
-
 // Conditions
 
 type Conditions []*Condition

@@ -19,7 +19,6 @@
 package compiler
 
 import (
-	"github.com/onflow/cadence/runtime/activations"
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/compiler/ir"
 	"github.com/onflow/cadence/runtime/errors"
@@ -28,14 +27,14 @@ import (
 
 type Compiler struct {
 	Checker     *sema.Checker
-	activations *activations.Activations
+	activations *LocalActivations
 	locals      []*Local
 }
 
 func NewCompiler(checker *sema.Checker) *Compiler {
 	return &Compiler{
 		Checker:     checker,
-		activations: &activations.Activations{},
+		activations: &LocalActivations{},
 	}
 }
 
@@ -50,11 +49,7 @@ func (compiler *Compiler) declareLocal(identifier string, valType ir.ValType) *L
 }
 
 func (compiler *Compiler) findLocal(name string) *Local {
-	result := compiler.activations.Find(name)
-	if result == nil {
-		return nil
-	}
-	return result.(*Local)
+	return compiler.activations.Find(name)
 }
 
 func (compiler *Compiler) setLocal(name string, variable *Local) {
@@ -394,14 +389,12 @@ func compileBinaryOperation(operation ast.Operation) ir.BinOp {
 
 func compileValueType(ty sema.Type) ir.ValType {
 	// TODO: add remaining types
-	switch ty.(type) {
-	case *sema.IntType:
-		return ir.ValTypeInt
-	}
 
 	switch ty {
 	case sema.StringType:
 		return ir.ValTypeString
+	case sema.IntType:
+		return ir.ValTypeInt
 	}
 
 	panic(errors.NewUnreachableError())

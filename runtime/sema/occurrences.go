@@ -66,6 +66,7 @@ type Origin struct {
 	DeclarationKind common.DeclarationKind
 	StartPos        *ast.Position
 	EndPos          *ast.Position
+	Occurrences     []ast.Range
 }
 
 type Occurrences struct {
@@ -96,6 +97,15 @@ func (o *Occurrences) Put(startPos, endPos ast.Position, origin *Origin) {
 		occurrence.EndPos,
 	)
 	o.tree.Put(interval, occurrence)
+	if origin != nil {
+		origin.Occurrences = append(
+			origin.Occurrences,
+			ast.Range{
+				StartPos: startPos,
+				EndPos:   endPos,
+			},
+		)
+	}
 }
 
 type Occurrence struct {
@@ -120,4 +130,13 @@ func (o *Occurrences) Find(pos Position) *Occurrence {
 	}
 	occurrence := value.(Occurrence)
 	return &occurrence
+}
+
+func (o *Occurrences) FindAll(pos Position) []Occurrence {
+	entries := o.tree.SearchAll(pos)
+	occurrences := make([]Occurrence, len(entries))
+	for i, entry := range entries {
+		occurrences[i] = entry.Value.(Occurrence)
+	}
+	return occurrences
 }

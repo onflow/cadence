@@ -23,6 +23,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/runtime/sema"
 )
@@ -375,4 +376,28 @@ func TestCheckInvalidSwapResourceDictionaryElement(t *testing.T) {
 	errs := ExpectCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+}
+
+func TestCheckInvalidTwoConstantsSwap(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+        fun test() {
+            let x = 1
+            let y = 1
+
+            x <-> y
+        }
+    `)
+
+	errs := ExpectCheckerErrors(t, err, 2)
+
+	require.IsType(t, &sema.AssignmentToConstantError{}, errs[0])
+	assignmentError := errs[0].(*sema.AssignmentToConstantError)
+	assert.Equal(t, "x", assignmentError.Name)
+
+	require.IsType(t, &sema.AssignmentToConstantError{}, errs[1])
+	assignmentError = errs[1].(*sema.AssignmentToConstantError)
+	assert.Equal(t, "y", assignmentError.Name)
 }

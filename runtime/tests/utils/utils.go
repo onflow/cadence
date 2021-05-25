@@ -20,14 +20,12 @@ package utils
 
 import (
 	"encoding/hex"
-	errors2 "errors"
 	"fmt"
 	"strings"
 	"testing"
 
 	"github.com/go-test/deep"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/runtime/common"
 )
@@ -123,15 +121,4 @@ func UpdateTransaction(name string, contract []byte) []byte {
 		name,
 		hex.EncodeToString(contract),
 	))
-}
-
-// TODO: switch to require.ErrorAs once released:
-// https://github.com/stretchr/testify/commit/95a9d909e98735cd8211dfc5cbbb6b8b0b665915
-func RequireErrorAs(t *testing.T, err error, target interface{}) {
-	require.True(
-		t,
-		errors2.As(err, target),
-		"error chain must contain a %T",
-		target,
-	)
 }

@@ -46,6 +46,15 @@ func NewAstPositionResourceUseOrderedMap() *AstPositionResourceUseOrderedMap {
 	}
 }
 
+// Clear removes all entries from this ordered map.
+func (om *AstPositionResourceUseOrderedMap) Clear() {
+	om.list.Init()
+	// NOTE: Range over map is safe, as it is only used to delete entries
+	for key := range om.pairs { //nolint:maprangecheck
+		delete(om.pairs, key)
+	}
+}
+
 // Get returns the value associated with the given key.
 // Returns nil if not found.
 // The second return value indicates if the key is present in the map.

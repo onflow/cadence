@@ -44,10 +44,13 @@ func TestCheckTypeArguments(t *testing.T) {
 
 		require.NoError(t, err)
 
-		assert.Equal(t,
+		capType := RequireGlobalValue(t, checker.Elaboration, "cap")
+
+		require.IsType(t,
 			&sema.CapabilityType{},
-			RequireGlobalValue(t, checker.Elaboration, "cap"),
+			capType,
 		)
+		require.Nil(t, capType.(*sema.CapabilityType).BorrowType)
 	})
 
 	t.Run("capability, instantiation with no arguments", func(t *testing.T) {
@@ -76,7 +79,7 @@ func TestCheckTypeArguments(t *testing.T) {
             `,
 			&sema.CapabilityType{
 				BorrowType: &sema.ReferenceType{
-					Type: &sema.IntType{},
+					Type: sema.IntType,
 				},
 			},
 		)
@@ -85,7 +88,7 @@ func TestCheckTypeArguments(t *testing.T) {
 		assert.Equal(t,
 			&sema.CapabilityType{
 				BorrowType: &sema.ReferenceType{
-					Type: &sema.IntType{},
+					Type: sema.IntType,
 				},
 			},
 			RequireGlobalValue(t, checker.Elaboration, "cap"),
@@ -101,7 +104,7 @@ func TestCheckTypeArguments(t *testing.T) {
               let cap: Capability<Int> = test
             `,
 			&sema.CapabilityType{
-				BorrowType: &sema.IntType{},
+				BorrowType: sema.IntType,
 			},
 		)
 
@@ -142,24 +145,31 @@ func TestCheckTypeArgumentSubtyping(t *testing.T) {
             `,
 			&sema.CapabilityType{
 				BorrowType: &sema.ReferenceType{
-					Type: &sema.IntType{},
+					Type: sema.IntType,
 				},
 			},
 		)
 		require.NoError(t, err)
 
-		assert.Equal(t,
-			&sema.CapabilityType{
-				BorrowType: &sema.ReferenceType{
-					Type: &sema.IntType{},
-				},
+		capType := RequireGlobalValue(t, checker.Elaboration, "cap")
+		require.IsType(t,
+			&sema.CapabilityType{},
+			capType,
+		)
+		require.Equal(t,
+			&sema.ReferenceType{
+				Type: sema.IntType,
 			},
-			RequireGlobalValue(t, checker.Elaboration, "cap"),
+			capType.(*sema.CapabilityType).BorrowType,
 		)
 
-		assert.Equal(t,
+		cap2Type := RequireGlobalValue(t, checker.Elaboration, "cap2")
+		require.IsType(t,
 			&sema.CapabilityType{},
-			RequireGlobalValue(t, checker.Elaboration, "cap2"),
+			cap2Type,
+		)
+		require.Nil(t,
+			cap2Type.(*sema.CapabilityType).BorrowType,
 		)
 	})
 
@@ -174,17 +184,16 @@ func TestCheckTypeArgumentSubtyping(t *testing.T) {
             `,
 			&sema.CapabilityType{
 				BorrowType: &sema.ReferenceType{
-					Type: &sema.IntType{},
+					Type: sema.IntType,
 				},
 			},
 		)
-
 		require.NoError(t, err)
 
 		assert.Equal(t,
 			&sema.CapabilityType{
 				BorrowType: &sema.ReferenceType{
-					Type: &sema.IntType{},
+					Type: sema.IntType,
 				},
 			},
 			RequireGlobalValue(t, checker.Elaboration, "cap"),
@@ -193,7 +202,7 @@ func TestCheckTypeArgumentSubtyping(t *testing.T) {
 		assert.Equal(t,
 			&sema.CapabilityType{
 				BorrowType: &sema.ReferenceType{
-					Type: &sema.IntType{},
+					Type: sema.IntType,
 				},
 			},
 			RequireGlobalValue(t, checker.Elaboration, "cap2"),
@@ -211,19 +220,25 @@ func TestCheckTypeArgumentSubtyping(t *testing.T) {
             `,
 			&sema.CapabilityType{},
 		)
+		require.NotNil(t, checker)
 
-		assert.Equal(t,
+		capType := RequireGlobalValue(t, checker.Elaboration, "cap")
+		require.IsType(t,
 			&sema.CapabilityType{},
-			RequireGlobalValue(t, checker.Elaboration, "cap"),
+			capType,
 		)
+		require.Nil(t, capType.(*sema.CapabilityType).BorrowType)
 
-		assert.Equal(t,
-			&sema.CapabilityType{
-				BorrowType: &sema.ReferenceType{
-					Type: &sema.IntType{},
-				},
+		cap2Type := RequireGlobalValue(t, checker.Elaboration, "cap2")
+		require.IsType(t,
+			&sema.CapabilityType{},
+			cap2Type,
+		)
+		require.Equal(t,
+			&sema.ReferenceType{
+				Type: sema.IntType,
 			},
-			RequireGlobalValue(t, checker.Elaboration, "cap2"),
+			cap2Type.(*sema.CapabilityType).BorrowType,
 		)
 
 		errs := ExpectCheckerErrors(t, err, 1)
@@ -246,7 +261,6 @@ func TestCheckTypeArgumentSubtyping(t *testing.T) {
 				},
 			},
 		)
-
 		require.NotNil(t, checker)
 
 		assert.Equal(t,
@@ -261,7 +275,7 @@ func TestCheckTypeArgumentSubtyping(t *testing.T) {
 		assert.Equal(t,
 			&sema.CapabilityType{
 				BorrowType: &sema.ReferenceType{
-					Type: &sema.IntType{},
+					Type: sema.IntType,
 				},
 			},
 			RequireGlobalValue(t, checker.Elaboration, "cap2"),

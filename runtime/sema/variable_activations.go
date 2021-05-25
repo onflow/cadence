@@ -19,49 +19,215 @@
 package sema
 
 import (
-	"github.com/onflow/cadence/runtime/activations"
+	"sync"
+
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 )
 
+// An VariableActivation is a map of strings to variables.
+// It is used to represent an active scope in a program,
+// i.e. it is used as a symbol table during semantic analysis.
+//
+type VariableActivation struct {
+	entries        *StringVariableOrderedMap
+	Depth          int
+	Parent         *VariableActivation
+	LeaveCallbacks []func(getEndPosition func() ast.Position)
+}
+
+// NewVariableActivation returns as new activation with the given parent.
+// The parent may be nil.
+//
+func NewVariableActivation(parent *VariableActivation) *VariableActivation {
+	activation := &VariableActivation{}
+	activation.SetParent(parent)
+	return activation
+}
+
+// SetParent sets the parent of this activation to the given parent
+// and updates the depth.
+//
+func (a *VariableActivation) SetParent(parent *VariableActivation) {
+	a.Parent = parent
+
+	var depth int
+	if parent != nil {
+		depth = parent.Depth + 1
+	}
+	a.Depth = depth
+}
+
+// Find returns the variable for a given name in the activation.
+// It returns nil if no variable is found.
+//
+func (a *VariableActivation) Find(name string) *Variable {
+
+	current := a
+
+	for current != nil {
+		if current.entries != nil {
+			result, ok := current.entries.Get(name)
+			if ok {
+				return result
+			}
+		}
+
+		current = current.Parent
+	}
+
+	return nil
+}
+
+// Set sets the given variable.
+//
+func (a *VariableActivation) Set(name string, variable *Variable) {
+	if a.entries == nil {
+		a.entries = NewStringVariableOrderedMap()
+	}
+
+	a.entries.Set(name, variable)
+}
+
+// Clear removes all variables from this activation.
+//
+func (a *VariableActivation) Clear() {
+	a.LeaveCallbacks = nil
+
+	if a.entries == nil {
+		return
+	}
+
+	a.entries.Clear()
+}
+
+// ForEach calls the given function for each name-variable pair in the activation.
+// It can be used to iterate over all entries of the activation.
+//
+func (a *VariableActivation) ForEach(cb func(string, *Variable) error) error {
+
+	activation := a
+
+	for activation != nil {
+
+		if activation.entries != nil {
+			for pair := activation.entries.Oldest(); pair != nil; pair = pair.Next() {
+				err := cb(pair.Key, pair.Value)
+				if err != nil {
+					return err
+				}
+			}
+		}
+
+		activation = activation.Parent
+	}
+
+	return nil
+}
+
+var variableActivationPool = sync.Pool{
+	New: func() interface{} {
+		return &VariableActivation{}
+	},
+}
+
+func getVariableActivation() *VariableActivation {
+	activation := variableActivationPool.Get().(*VariableActivation)
+	activation.Clear()
+	return activation
+}
+
+// VariableActivations is a stack of activation records.
+// Each entry represents a new activation record.
+//
+// The current / most nested activation record can be found
+// at the top of the stack (see function `Current`).
+//
 type VariableActivations struct {
-	activations *activations.Activations
+	activations []*VariableActivation
 }
 
-func NewValueActivations(parent *activations.Activation) *VariableActivations {
-	valueActivations := &activations.Activations{}
-	valueActivations.PushNewWithParent(parent)
-	return &VariableActivations{
-		activations: valueActivations,
-	}
+func NewVariableActivations(parent *VariableActivation) *VariableActivations {
+	activations := &VariableActivations{}
+	activations.pushNewWithParent(parent)
+	return activations
 }
 
+// pushNewWithParent pushes a new empty activation
+// to the top of the activation stack.
+// The new activation has the given parent as its parent.
+//
+func (a *VariableActivations) pushNewWithParent(parent *VariableActivation) *VariableActivation {
+	activation := getVariableActivation()
+	activation.SetParent(parent)
+	a.push(activation)
+	return activation
+}
+
+// push pushes the given activation
+// onto the top of the activation stack.
+//
+func (a *VariableActivations) push(activation *VariableActivation) {
+	a.activations = append(
+		a.activations,
+		activation,
+	)
+}
+
+// Enter pushes a new empty activation
+// to the top of the activation stack.
+// The new activation has the current activation as its parent.
+//
 func (a *VariableActivations) Enter() {
-	a.activations.PushNewWithCurrent()
+	a.pushNewWithParent(a.Current())
 }
 
-func (a *VariableActivations) Leave() {
-	a.activations.Pop()
+// Leave pops the top-most (current) activation
+// from the top of the activation stack.
+//
+func (a *VariableActivations) Leave(getEndPosition func() ast.Position) {
+	count := len(a.activations)
+	if count < 1 {
+		return
+	}
+	lastIndex := count - 1
+	activation := a.activations[lastIndex]
+	a.activations = a.activations[:lastIndex]
+	for _, callback := range activation.LeaveCallbacks {
+		callback(getEndPosition)
+	}
+	variableActivationPool.Put(activation)
 }
 
+// Set sets the variable in the current activation.
+//
 func (a *VariableActivations) Set(name string, variable *Variable) {
-	a.activations.Set(name, variable)
+	current := a.Current()
+	// create the first scope if there is no scope
+	if current == nil {
+		current = a.pushNewWithParent(nil)
+	}
+	current.Set(name, variable)
 }
 
+// Find returns the variable for a given name in the current activation.
+// It returns nil if no variable is found
+// or if there is no current activation.
+//
 func (a *VariableActivations) Find(name string) *Variable {
-	value := a.activations.Find(name)
-	if value == nil {
+
+	current := a.Current()
+	if current == nil {
 		return nil
 	}
-	variable, ok := value.(*Variable)
-	if !ok {
-		return nil
-	}
-	return variable
+
+	return current.Find(name)
 }
 
+// Depth returns the depth (size) of the activation stack.
+//
 func (a *VariableActivations) Depth() int {
-	return a.activations.Depth()
+	return len(a.activations)
 }
 
 type variableDeclaration struct {
@@ -77,7 +243,7 @@ type variableDeclaration struct {
 
 func (a *VariableActivations) Declare(declaration variableDeclaration) (variable *Variable, err error) {
 
-	depth := a.activations.Depth()
+	depth := a.Depth()
 
 	// Check if a variable with this name is already declared.
 	// Report an error if shadowing variables of outer scopes is not allowed,
@@ -112,7 +278,7 @@ func (a *VariableActivations) Declare(declaration variableDeclaration) (variable
 		Pos:             &declaration.pos,
 		ArgumentLabels:  declaration.argumentLabels,
 	}
-	a.activations.Set(declaration.identifier, variable)
+	a.Set(declaration.identifier, variable)
 	return variable, err
 }
 
@@ -156,12 +322,11 @@ func (a *VariableActivations) DeclareImplicitConstant(
 	)
 }
 
-func (a *VariableActivations) ForEachVariablesDeclaredInAndBelow(depth int, f func(name string, value *Variable)) {
+func (a *VariableActivations) ForEachVariableDeclaredInAndBelow(depth int, f func(name string, value *Variable)) {
 
 	activation := a.Current()
 
-	_ = activation.ForEach(func(name string, value interface{}) error {
-		variable := value.(*Variable)
+	_ = activation.ForEach(func(name string, variable *Variable) error {
 
 		if variable.ActivationDepth >= depth {
 			f(name, variable)
@@ -171,6 +336,14 @@ func (a *VariableActivations) ForEachVariablesDeclaredInAndBelow(depth int, f fu
 	})
 }
 
-func (a *VariableActivations) Current() *activations.Activation {
-	return a.activations.Current()
+// Current returns the current / most nested activation,
+// which can be found at the top of the stack.
+// It returns nil if there is no active activation.
+//
+func (a *VariableActivations) Current() *VariableActivation {
+	count := len(a.activations)
+	if count < 1 {
+		return nil
+	}
+	return a.activations[count-1]
 }

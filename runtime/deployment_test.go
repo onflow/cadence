@@ -32,7 +32,6 @@ import (
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
-	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
 func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
@@ -80,7 +79,7 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 	expectFailure := func(expectedErrorMessage string) expectation {
 		return func(t *testing.T, err error, accountCode []byte, events []cadence.Event, _ cadence.Type) {
 			var runtimeErr Error
-			utils.RequireErrorAs(t, err, &runtimeErr)
+			require.ErrorAs(t, err, &runtimeErr)
 
 			println(runtimeErr.Error())
 
@@ -116,7 +115,7 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 		argumentCodes := make([]string, len(test.arguments))
 
 		for i, argument := range test.arguments {
-			argumentCodes[i] = argument.String()
+			argumentCodes[i] = argument.String(interpreter.StringResults{})
 		}
 
 		argumentCode := strings.Join(argumentCodes, ", ")

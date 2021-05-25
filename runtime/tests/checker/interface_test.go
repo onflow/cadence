@@ -1860,6 +1860,7 @@ func BenchmarkContractInterfaceFungibleToken(b *testing.B) {
 		b.Fatal(err)
 	}
 
+	b.ReportAllocs()
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
@@ -1893,6 +1894,7 @@ func BenchmarkCheckContractInterfaceFungibleTokenConformance(b *testing.B) {
 		}.ToSemaValueDeclarations(),
 	)
 
+	b.ReportAllocs()
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
@@ -1976,7 +1978,7 @@ func TestCheckInvalidInterfaceUseAsTypeSuggestion(t *testing.T) {
 			},
 			ReturnTypeAnnotation: sema.NewTypeAnnotation(
 				&sema.DictionaryType{
-					KeyType: &sema.IntType{},
+					KeyType: sema.IntType,
 					ValueType: &sema.RestrictedType{
 						Type: sema.AnyStructType,
 						Restrictions: []*sema.InterfaceType{

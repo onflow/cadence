@@ -40,20 +40,33 @@ func (checker *Checker) visitVariableDeclaration(declaration *ast.VariableDeclar
 	// Determine the type of the initial value of the variable declaration
 	// and save it in the elaboration
 
-	valueType := declaration.Value.Accept(checker).(Type)
+	var declarationType Type
+	var expectedValueType Type
+
+	if declaration.TypeAnnotation != nil {
+		typeAnnotation := checker.ConvertTypeAnnotation(declaration.TypeAnnotation)
+		checker.checkTypeAnnotation(typeAnnotation, declaration.TypeAnnotation)
+		declarationType = typeAnnotation.Type
+
+		// If the variable declaration is an optional binding (`if let`),
+		// then the value is expected to be an optional of the declaration's type.
+		if isOptionalBinding {
+			expectedValueType = &OptionalType{
+				Type: declarationType,
+			}
+		} else {
+			expectedValueType = declarationType
+		}
+	}
+
+	valueType := checker.VisitExpression(declaration.Value, expectedValueType)
 
 	checker.Elaboration.VariableDeclarationValueTypes[declaration] = valueType
 
-	valueIsInvalid := valueType.IsInvalidType()
+	if isOptionalBinding {
+		optionalType, isOptional := valueType.(*OptionalType)
 
-	// If the variable declaration is an optional binding, the value must be optional
-
-	var valueIsOptional bool
-	var optionalValueType *OptionalType
-
-	if isOptionalBinding && !valueIsInvalid {
-		optionalValueType, valueIsOptional = valueType.(*OptionalType)
-		if !valueIsOptional {
+		if !isOptional || optionalType.Equal(declarationType) {
 			checker.report(
 				&TypeMismatchError{
 					ExpectedType: &OptionalType{},
@@ -61,63 +74,16 @@ func (checker *Checker) visitVariableDeclaration(declaration *ast.VariableDeclar
 					Range:        ast.NewRangeFromPositioned(declaration.Value),
 				},
 			)
+		} else if declarationType == nil {
+			declarationType = optionalType.Type
 		}
 	}
 
-	// Determine the declaration type based on the value type and the optional type annotation
-
-	declarationType := valueType
-
-	// If the declaration has an explicit type annotation, take it into account:
-	// Check it and ensure the value type is *compatible* with the type annotation
-
-	if declaration.TypeAnnotation != nil {
-
-		typeAnnotation := checker.ConvertTypeAnnotation(declaration.TypeAnnotation)
-		checker.checkTypeAnnotation(typeAnnotation, declaration.TypeAnnotation)
-
-		declarationType = typeAnnotation.Type
-
-		// check the value type is a subtype of the declaration type
-		if declarationType != nil && valueType != nil && !valueIsInvalid && !declarationType.IsInvalidType() {
-
-			if isOptionalBinding {
-				if optionalValueType != nil &&
-					(optionalValueType.Equal(declarationType) ||
-						!IsSubType(optionalValueType.Type, declarationType)) {
-
-					checker.report(
-						&TypeMismatchError{
-							ExpectedType: declarationType,
-							ActualType:   optionalValueType.Type,
-							Range:        ast.NewRangeFromPositioned(declaration.Value),
-						},
-					)
-				}
-
-			}
-		}
-	} else if isOptionalBinding && optionalValueType != nil {
-		declarationType = optionalValueType.Type
+	if declarationType == nil {
+		declarationType = valueType
 	}
 
 	checker.Elaboration.VariableDeclarationTargetTypes[declaration] = declarationType
-
-	if declarationType != nil &&
-		valueType != nil &&
-		!valueIsInvalid &&
-		!declarationType.IsInvalidType() &&
-		!isOptionalBinding &&
-		!checker.checkTypeCompatibility(declaration.Value, valueType, declarationType) {
-
-		checker.report(
-			&TypeMismatchError{
-				ExpectedType: declarationType,
-				ActualType:   valueType,
-				Range:        ast.NewRangeFromPositioned(declaration.Value),
-			},
-		)
-	}
 
 	checker.checkVariableDeclarationUsability(declaration)
 
@@ -202,7 +168,7 @@ func (checker *Checker) visitVariableDeclaration(declaration *ast.VariableDeclar
 			checker.Elaboration.VariableDeclarationSecondValueTypes[declaration] = secondValueType
 
 			if valueIsResource {
-				checker.elaboratePotentialResourceStorageMove(declaration.Value)
+				checker.elaborateIndexExpressionResourceMove(declaration.Value)
 			}
 		}
 	}
@@ -222,9 +188,47 @@ func (checker *Checker) visitVariableDeclaration(declaration *ast.VariableDeclar
 		allowOuterScopeShadowing: true,
 	})
 	checker.report(err)
-	if checker.originsAndOccurrencesEnabled {
+
+	if checker.positionInfoEnabled {
 		checker.recordVariableDeclarationOccurrence(identifier, variable)
+		checker.recordVariableDeclarationRange(declaration, identifier, declarationType)
 	}
+}
+
+func (checker *Checker) recordVariableDeclarationRange(
+	declaration *ast.VariableDeclaration,
+	identifier string,
+	declarationType Type,
+) {
+	activation := checker.valueActivations.Current()
+	activation.LeaveCallbacks = append(
+		activation.LeaveCallbacks,
+		func(getEndPosition func() ast.Position) {
+			if getEndPosition == nil {
+				return
+			}
+
+			// TODO: use the start position of the next statement
+			//   after this variable declaration instead
+
+			var startPosition ast.Position
+			if declaration.SecondValue != nil {
+				startPosition = declaration.SecondValue.EndPosition()
+			} else {
+				startPosition = declaration.Value.EndPosition()
+			}
+
+			checker.Ranges.Put(
+				startPosition,
+				getEndPosition(),
+				Range{
+					Identifier:      identifier,
+					DeclarationKind: declaration.DeclarationKind(),
+					Type:            declarationType,
+				},
+			)
+		},
+	)
 }
 
 func (checker *Checker) checkVariableDeclarationUsability(declaration *ast.VariableDeclaration) {
@@ -262,11 +266,11 @@ func (checker *Checker) checkVariableDeclarationUsability(declaration *ast.Varia
 	}
 }
 
-func (checker *Checker) elaboratePotentialResourceStorageMove(expression ast.Expression) {
+func (checker *Checker) elaborateIndexExpressionResourceMove(expression ast.Expression) {
 	indexExpression, ok := expression.(*ast.IndexExpression)
 	if !ok {
 		return
 	}
 
-	checker.Elaboration.IsResourceMovingStorageIndexExpression[indexExpression] = true
+	checker.Elaboration.IsResourceMoveIndexExpression[indexExpression] = true
 }

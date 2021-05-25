@@ -92,8 +92,9 @@ func TestCheckStorable(t *testing.T) {
 
 	var testCases []testCase
 
-	storableTypes := append(
-		sema.AllNumberTypes[:],
+	storableTypes := sema.AllNumberTypes[:]
+	storableTypes = append(
+		storableTypes,
 		&sema.AddressType{},
 		sema.PathType,
 		&sema.CapabilityType{},
@@ -114,7 +115,7 @@ func TestCheckStorable(t *testing.T) {
 
 	nonStorableTypes := []sema.Type{
 		&sema.FunctionType{
-			ReturnTypeAnnotation: sema.NewTypeAnnotation(&sema.IntType{}),
+			ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.IntType),
 		},
 		sema.NeverType,
 		sema.VoidType,
@@ -227,7 +228,7 @@ func TestCheckStorable(t *testing.T) {
 
 			if compositeKind == common.CompositeKindEvent &&
 				testCase.Type != nil &&
-				!sema.IsValidEventParameterType(testCase.Type) {
+				!sema.IsValidEventParameterType(testCase.Type, map[*sema.Member]bool{}) {
 
 				continue
 			}

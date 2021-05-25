@@ -91,8 +91,8 @@ func TestCheckFailableCastingWithResourceAnnotation(t *testing.T) {
 
 				errs := ExpectCheckerErrors(t, err, 2)
 
-				assert.IsType(t, &sema.InvalidEventUsageError{}, errs[0])
-				assert.IsType(t, &sema.InvalidResourceAnnotationError{}, errs[1])
+				assert.IsType(t, &sema.InvalidResourceAnnotationError{}, errs[0])
+				assert.IsType(t, &sema.InvalidEventUsageError{}, errs[1])
 
 			default:
 				panic(errors.NewUnreachableError())
@@ -439,8 +439,8 @@ func TestCheckVariableDeclarationWithResourceAnnotation(t *testing.T) {
 			case common.CompositeKindEvent:
 				errs := ExpectCheckerErrors(t, err, 2)
 
-				assert.IsType(t, &sema.InvalidEventUsageError{}, errs[0])
-				assert.IsType(t, &sema.InvalidResourceAnnotationError{}, errs[1])
+				assert.IsType(t, &sema.InvalidResourceAnnotationError{}, errs[0])
+				assert.IsType(t, &sema.InvalidEventUsageError{}, errs[1])
 
 			default:
 				panic(errors.NewUnreachableError())
@@ -1122,8 +1122,8 @@ func TestCheckFunctionTypeReturnTypeWithResourceAnnotation(t *testing.T) {
 				errs := ExpectCheckerErrors(t, err, 3)
 
 				assert.IsType(t, &sema.InvalidResourceAnnotationError{}, errs[0])
-				assert.IsType(t, &sema.InvalidEventUsageError{}, errs[1])
-				assert.IsType(t, &sema.InvalidResourceAnnotationError{}, errs[2])
+				assert.IsType(t, &sema.InvalidResourceAnnotationError{}, errs[1])
+				assert.IsType(t, &sema.InvalidEventUsageError{}, errs[2])
 
 			default:
 				panic(errors.NewUnreachableError())
@@ -1468,7 +1468,7 @@ func TestCheckInvalidCreateImportedResource(t *testing.T) {
 		ParseAndCheckOptions{
 			Options: []sema.Option{
 				sema.WithImportHandler(
-					func(checker *sema.Checker, location common.Location) (sema.Import, error) {
+					func(_ *sema.Checker, _ common.Location, _ ast.Range) (sema.Import, error) {
 						return sema.ElaborationImport{
 							Elaboration: importedChecker.Elaboration,
 						}, nil
@@ -4842,4 +4842,79 @@ func TestCheckResourceMoveMemberInvocation(t *testing.T) {
 
 		assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
 	})
+}
+
+func TestCheckInvalidationInPreCondition(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+      resource R {}
+
+      fun duplicate(_ r: @R): Bool {
+          destroy r
+          return true
+      }
+
+      fun duplicatePre(_ r: @R): @R {
+          pre {
+              duplicate(<-r)
+          }
+          return <- r
+      }
+    `)
+
+	errs := ExpectCheckerErrors(t, err, 1)
+
+	assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
+}
+
+func TestCheckInvalidationInPostConditionBefore(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+      resource R {}
+
+      fun duplicate(_ r: @R): Bool {
+          destroy r
+          return true
+      }
+
+      fun duplicatePostBefore(_ r: @R): @R {
+          post {
+              before(duplicate(<-r))
+          }
+          return <- r
+      }
+    `)
+
+	errs := ExpectCheckerErrors(t, err, 1)
+
+	assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
+}
+
+func TestCheckInvalidationInPostCondition(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+      resource R {}
+
+      fun duplicate(_ r: @R): Bool {
+          destroy r
+          return true
+      }
+
+      fun duplicatePostBefore(_ r: @R): @R {
+          post {
+              duplicate(<-r)
+          }
+          return <- r
+      }
+    `)
+
+	errs := ExpectCheckerErrors(t, err, 1)
+
+	assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
 }

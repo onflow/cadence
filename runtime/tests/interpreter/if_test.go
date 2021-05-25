@@ -137,7 +137,7 @@ func TestInterpretIfStatementTestWithDeclaration(t *testing.T) {
 		)
 		assert.Equal(t,
 			interpreter.NewIntValueFromInt64(1),
-			inter.Globals["branch"].Value,
+			inter.Globals["branch"].GetValue(),
 		)
 	})
 
@@ -150,7 +150,7 @@ func TestInterpretIfStatementTestWithDeclaration(t *testing.T) {
 		)
 		assert.Equal(t,
 			interpreter.NewIntValueFromInt64(2),
-			inter.Globals["branch"].Value,
+			inter.Globals["branch"].GetValue(),
 		)
 	})
 }
@@ -184,7 +184,7 @@ func TestInterpretIfStatementTestWithDeclarationAndElse(t *testing.T) {
 		)
 		assert.Equal(t,
 			interpreter.NewIntValueFromInt64(1),
-			inter.Globals["branch"].Value,
+			inter.Globals["branch"].GetValue(),
 		)
 	})
 
@@ -197,7 +197,7 @@ func TestInterpretIfStatementTestWithDeclarationAndElse(t *testing.T) {
 		)
 		assert.Equal(t,
 			interpreter.NewIntValueFromInt64(2),
-			inter.Globals["branch"].Value,
+			inter.Globals["branch"].GetValue(),
 		)
 
 	})
@@ -235,7 +235,7 @@ func TestInterpretIfStatementTestWithDeclarationNestedOptionals(t *testing.T) {
 		)
 		assert.Equal(t,
 			interpreter.NewIntValueFromInt64(1),
-			inter.Globals["branch"].Value,
+			inter.Globals["branch"].GetValue(),
 		)
 	})
 
@@ -251,7 +251,7 @@ func TestInterpretIfStatementTestWithDeclarationNestedOptionals(t *testing.T) {
 		)
 		assert.Equal(t,
 			interpreter.NewIntValueFromInt64(2),
-			inter.Globals["branch"].Value,
+			inter.Globals["branch"].GetValue(),
 		)
 	})
 }
@@ -288,7 +288,7 @@ func TestInterpretIfStatementTestWithDeclarationNestedOptionalsExplicitAnnotatio
 		)
 		assert.Equal(t,
 			interpreter.NewIntValueFromInt64(1),
-			inter.Globals["branch"].Value,
+			inter.Globals["branch"].GetValue(),
 		)
 
 	})
@@ -304,7 +304,7 @@ func TestInterpretIfStatementTestWithDeclarationNestedOptionalsExplicitAnnotatio
 		)
 		assert.Equal(t,
 			interpreter.NewIntValueFromInt64(2),
-			inter.Globals["branch"].Value,
+			inter.Globals["branch"].GetValue(),
 		)
 	})
 }

@@ -39,7 +39,7 @@ func TestInterpretEnum(t *testing.T) {
 
 	assert.IsType(t,
 		interpreter.HostFunctionValue{},
-		inter.Globals["E"].Value,
+		inter.Globals["E"].GetValue(),
 	)
 }
 
@@ -55,7 +55,7 @@ func TestInterpretEnumCaseUse(t *testing.T) {
       let b = E.b
     `)
 
-	a := inter.Globals["a"].Value
+	a := inter.Globals["a"].GetValue()
 	require.IsType(t,
 		&interpreter.CompositeValue{},
 		a,
@@ -63,10 +63,10 @@ func TestInterpretEnumCaseUse(t *testing.T) {
 
 	assert.Equal(t,
 		common.CompositeKindEnum,
-		a.(*interpreter.CompositeValue).Kind,
+		a.(*interpreter.CompositeValue).Kind(),
 	)
 
-	b := inter.Globals["b"].Value
+	b := inter.Globals["b"].GetValue()
 	require.IsType(t,
 		&interpreter.CompositeValue{},
 		b,
@@ -74,7 +74,7 @@ func TestInterpretEnumCaseUse(t *testing.T) {
 
 	assert.Equal(t,
 		common.CompositeKindEnum,
-		b.(*interpreter.CompositeValue).Kind,
+		b.(*interpreter.CompositeValue).Kind(),
 	)
 }
 
@@ -92,12 +92,12 @@ func TestInterpretEnumCaseRawValue(t *testing.T) {
 
 	require.Equal(t,
 		interpreter.Int64Value(0),
-		inter.Globals["a"].Value,
+		inter.Globals["a"].GetValue(),
 	)
 
 	require.Equal(t,
 		interpreter.Int64Value(1),
-		inter.Globals["b"].Value,
+		inter.Globals["b"].GetValue(),
 	)
 }
 
@@ -122,7 +122,7 @@ func TestInterpretEnumCaseEquality(t *testing.T) {
 			interpreter.BoolValue(true),
 			interpreter.BoolValue(true),
 		),
-		inter.Globals["res"].Value,
+		inter.Globals["res"].GetValue(),
 	)
 }
 
@@ -149,7 +149,7 @@ func TestInterpretEnumConstructor(t *testing.T) {
 			interpreter.BoolValue(true),
 			interpreter.BoolValue(true),
 		),
-		inter.Globals["res"].Value,
+		inter.Globals["res"].GetValue(),
 	)
 }
 
@@ -172,7 +172,7 @@ func TestInterpretEnumInstance(t *testing.T) {
 			interpreter.BoolValue(true),
 			interpreter.BoolValue(true),
 		),
-		inter.Globals["res"].Value,
+		inter.Globals["res"].GetValue(),
 	)
 }
 
@@ -202,17 +202,17 @@ func TestInterpretEnumInContract(t *testing.T) {
 		},
 	)
 
-	c := inter.Globals["C"].Value
+	c := inter.Globals["C"].GetValue()
 	require.IsType(t, &interpreter.CompositeValue{}, c)
 	contract := c.(*interpreter.CompositeValue)
 
-	eValue, present := contract.Fields.Get("e")
+	eValue, present := contract.Fields().Get("e")
 	require.True(t, present)
 
 	require.IsType(t, &interpreter.CompositeValue{}, eValue)
 	enumCase := eValue.(*interpreter.CompositeValue)
 
-	rawValue, present := enumCase.Fields.Get("rawValue")
+	rawValue, present := enumCase.Fields().Get("rawValue")
 	require.True(t, present)
 
 	require.Equal(t,

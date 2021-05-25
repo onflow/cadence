@@ -19,12 +19,14 @@
 package integration
 
 import (
-	"github.com/onflow/cadence"
-	"github.com/onflow/cadence/languageserver/protocol"
+	"regexp"
+
 	"github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/parser2"
 	"github.com/onflow/cadence/runtime/sema"
+
+	"github.com/onflow/cadence/languageserver/protocol"
 )
 
 type entryPointKind uint8
@@ -35,13 +37,17 @@ const (
 	entryPointKindTransaction
 )
 
+var SignersRegexp = regexp.MustCompile(`[\w-]+`)
+
 type entryPointInfo struct {
 	documentVersion       float64
 	startPos              *ast.Position
 	kind                  entryPointKind
 	parameters            []*sema.Parameter
 	pragmaArgumentStrings []string
-	pragmaArguments       [][]cadence.Value
+	pragmaArguments       [][]Argument
+	pragmaSignersStrings  [][]string
+	numberOfSigners       int
 }
 
 func (i *FlowIntegration) updateEntryPointInfoIfNeeded(
@@ -57,17 +63,19 @@ func (i *FlowIntegration) updateEntryPointInfoIfNeeded(
 	var kind entryPointKind
 	var docString string
 	var parameters []*sema.Parameter
+	var numberOfSigners int
 
 	transactionDeclaration := checker.Program.SoleTransactionDeclaration()
+	functionDeclaration := sema.FunctionEntryPointDeclaration(checker.Program)
+
 	if transactionDeclaration != nil {
 		startPos = &transactionDeclaration.StartPos
 		kind = entryPointKindTransaction
 		docString = transactionDeclaration.DocString
 		transactionType := checker.Elaboration.TransactionDeclarationTypes[transactionDeclaration]
 		parameters = transactionType.Parameters
+		numberOfSigners = len(transactionType.PrepareParameters)
 	} else {
-
-		functionDeclaration := sema.FunctionEntryPointDeclaration(checker.Program)
 		if functionDeclaration != nil {
 			startPos = &functionDeclaration.StartPos
 			kind = entryPointKindScript
@@ -77,8 +85,9 @@ func (i *FlowIntegration) updateEntryPointInfoIfNeeded(
 		}
 	}
 
+	var pragmaSigners [][]string
 	var pragmaArgumentStrings []string
-	var pragmaArguments [][]cadence.Value
+	var pragmaArguments [][]Argument
 
 	if startPos != nil {
 
@@ -88,15 +97,27 @@ func (i *FlowIntegration) updateEntryPointInfoIfNeeded(
 			parameterTypes[i] = parameter.TypeAnnotation.Type
 		}
 
-		for _, pragmaArgumentString := range parser2.ParseDocstringPragmaArguments(docString) {
-			arguments, err := runtime.ParseLiteralArgumentList(pragmaArgumentString, parameterTypes)
-			// TODO: record error and show diagnostic
-			if err != nil {
-				continue
-			}
+		if len(parameters) > 0 {
+			for _, pragmaArgumentString := range parser2.ParseDocstringPragmaArguments(docString) {
+				arguments, err := runtime.ParseLiteralArgumentList(pragmaArgumentString, parameterTypes)
+				// TODO: record error and show diagnostic
+				if err != nil {
+					continue
+				}
 
-			pragmaArgumentStrings = append(pragmaArgumentStrings, pragmaArgumentString)
-			pragmaArguments = append(pragmaArguments, arguments)
+				convertedArguments := make([]Argument, len(arguments))
+				for i, arg := range arguments {
+					convertedArguments[i] = Argument{arg}
+				}
+
+				pragmaArgumentStrings = append(pragmaArgumentStrings, pragmaArgumentString)
+				pragmaArguments = append(pragmaArguments, convertedArguments)
+			}
+		}
+
+		for _, pragmaSignerString := range parser2.ParseDocstringPragmaSigners(docString) {
+			signers := SignersRegexp.FindAllString(pragmaSignerString, -1)
+			pragmaSigners = append(pragmaSigners, signers)
 		}
 	}
 
@@ -107,5 +128,7 @@ func (i *FlowIntegration) updateEntryPointInfoIfNeeded(
 		parameters:            parameters,
 		pragmaArgumentStrings: pragmaArgumentStrings,
 		pragmaArguments:       pragmaArguments,
+		pragmaSignersStrings:  pragmaSigners,
+		numberOfSigners:       numberOfSigners,
 	}
 }

@@ -169,9 +169,10 @@ func exportSomeValue(v *interpreter.SomeValue, inter *interpreter.Interpreter, r
 }
 
 func exportArrayValue(v *interpreter.ArrayValue, inter *interpreter.Interpreter, results exportResults) cadence.Array {
-	values := make([]cadence.Value, len(v.Values))
+	elements := v.Elements()
+	values := make([]cadence.Value, len(elements))
 
-	for i, value := range v.Values {
+	for i, value := range elements {
 		values[i] = exportValueWithInterpreter(value, inter, results)
 	}
 
@@ -180,7 +181,9 @@ func exportArrayValue(v *interpreter.ArrayValue, inter *interpreter.Interpreter,
 
 func exportCompositeValue(v *interpreter.CompositeValue, inter *interpreter.Interpreter, results exportResults) cadence.Value {
 
-	dynamicType := v.DynamicType(inter).(interpreter.CompositeDynamicType)
+	dynamicTypeResults := interpreter.DynamicTypeResults{}
+
+	dynamicType := v.DynamicType(inter, dynamicTypeResults).(interpreter.CompositeDynamicType)
 	staticType := dynamicType.StaticType.(*sema.CompositeType)
 	// TODO: consider making the results map "global", by moving it up to exportValueWithInterpreter
 	t := exportCompositeType(staticType, map[sema.TypeID]cadence.Type{})
@@ -191,10 +194,22 @@ func exportCompositeValue(v *interpreter.CompositeValue, inter *interpreter.Inte
 	fieldNames := t.CompositeFields()
 	fields := make([]cadence.Value, len(fieldNames))
 
+	fieldsMap := v.Fields()
 	for i, field := range fieldNames {
-		fieldValue, _ := v.Fields.Get(field.Identifier)
+		fieldName := field.Identifier
+		fieldValue, ok := fieldsMap.Get(fieldName)
+
+		if !ok && v.ComputedFields != nil {
+			if computedField, ok := v.ComputedFields.Get(fieldName); ok {
+				fieldValue = computedField(inter)
+			}
+		}
+
 		fields[i] = exportValueWithInterpreter(fieldValue, inter, results)
 	}
+
+	// NOTE: when modifying the cases below,
+	// also update the error message below!
 
 	switch staticType.Kind {
 	case common.CompositeKindStructure:
@@ -205,6 +220,8 @@ func exportCompositeValue(v *interpreter.CompositeValue, inter *interpreter.Inte
 		return cadence.NewEvent(fields).WithType(t.(*cadence.EventType))
 	case common.CompositeKindContract:
 		return cadence.NewContract(fields).WithType(t.(*cadence.ContractType))
+	case common.CompositeKindEnum:
+		return cadence.NewEnum(fields).WithType(t.(*cadence.EnumType))
 	}
 
 	panic(fmt.Errorf(
@@ -216,6 +233,7 @@ func exportCompositeValue(v *interpreter.CompositeValue, inter *interpreter.Inte
 				common.CompositeKindResource.Name(),
 				common.CompositeKindEvent.Name(),
 				common.CompositeKindContract.Name(),
+				common.CompositeKindEnum.Name(),
 			},
 			"or",
 		),
@@ -230,12 +248,12 @@ func exportDictionaryValue(
 
 	pairs := make([]cadence.KeyValuePair, v.Count())
 
-	for i, keyValue := range v.Keys.Values {
+	for i, keyValue := range v.Keys().Elements() {
 
 		// NOTE: use `Get` instead of accessing `Entries`,
 		// so that the potentially deferred values are loaded from storage
 
-		value := v.Get(inter, interpreter.LocationRange{}, keyValue).(*interpreter.SomeValue).Value
+		value := v.Get(inter, interpreter.ReturnEmptyLocationRange, keyValue).(*interpreter.SomeValue).Value
 
 		convertedKey := exportValueWithInterpreter(keyValue, inter, results)
 		convertedValue := exportValueWithInterpreter(value, inter, results)
@@ -274,7 +292,11 @@ func exportTypeValue(v interpreter.TypeValue, inter *interpreter.Interpreter) ca
 }
 
 func exportCapabilityValue(v interpreter.CapabilityValue, inter *interpreter.Interpreter) cadence.Capability {
-	borrowType := string(inter.ConvertStaticToSemaType(v.BorrowType).ID())
+	var borrowType string
+	if v.BorrowType != nil {
+		borrowType = string(inter.ConvertStaticToSemaType(v.BorrowType).ID())
+	}
+
 	return cadence.Capability{
 		Path:       exportPathValue(v.Path),
 		Address:    cadence.NewAddress(v.Address),
@@ -366,13 +388,25 @@ func importValue(value cadence.Value) interpreter.Value {
 			v.Fields,
 		)
 	case cadence.Path:
-		return interpreter.PathValue{
-			Domain:     common.PathDomainFromIdentifier(v.Domain),
-			Identifier: v.Identifier,
-		}
+		return importPathValue(v)
+	case cadence.Enum:
+		return importCompositeValue(
+			common.CompositeKindEnum,
+			v.EnumType.Location,
+			v.EnumType.QualifiedIdentifier,
+			v.EnumType.Fields,
+			v.Fields,
+		)
 	}
 
 	panic(fmt.Sprintf("cannot import value of type %T", value))
+}
+
+func importPathValue(v cadence.Path) interpreter.PathValue {
+	return interpreter.PathValue{
+		Domain:     common.PathDomainFromIdentifier(v.Domain),
+		Identifier: v.Identifier,
+	}
 }
 
 func importOptionalValue(v cadence.Optional) interpreter.Value {

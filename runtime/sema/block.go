@@ -25,7 +25,7 @@ import (
 
 // BlockType
 //
-var BlockType = &NominalType{
+var BlockType = &SimpleType{
 	Name:                 "Block",
 	QualifiedName:        "Block",
 	TypeID:               "Block",
@@ -34,7 +34,7 @@ var BlockType = &NominalType{
 	Storable:             false,
 	Equatable:            false,
 	ExternallyReturnable: false,
-	Members: func(t *NominalType) map[string]MemberResolver {
+	Members: func(t *SimpleType) map[string]MemberResolver {
 		return map[string]MemberResolver{
 			"height": {
 				Kind: common.DeclarationKindField,
@@ -42,7 +42,7 @@ var BlockType = &NominalType{
 					return NewPublicConstantFieldMember(
 						t,
 						identifier,
-						&UInt64Type{},
+						UInt64Type,
 						blockTypeHeightFieldDocString,
 					)
 				},
@@ -53,7 +53,7 @@ var BlockType = &NominalType{
 					return NewPublicConstantFieldMember(
 						t,
 						identifier,
-						&UInt64Type{},
+						UInt64Type,
 						blockTypeViewFieldDocString,
 					)
 				},
@@ -64,7 +64,7 @@ var BlockType = &NominalType{
 					return NewPublicConstantFieldMember(
 						t,
 						identifier,
-						&UFix64Type{},
+						UFix64Type,
 						blockTypeTimestampFieldDocString,
 					)
 				},
@@ -87,7 +87,7 @@ var BlockType = &NominalType{
 const BlockIDSize = 32
 
 var blockIDFieldType = &ConstantSizedType{
-	Type: &UInt8Type{},
+	Type: UInt8Type,
 	Size: BlockIDSize,
 }
 
@@ -112,5 +112,8 @@ It is essentially the hash of the block
 const blockTypeIdFieldDocString = `
 The timestamp of the block.
 
-It is the local clock time of the block proposer when it generates the block
+Unix timestamp of when the proposer claims it constructed the block.
+
+NOTE: It is included by the proposer, there are no guarantees on how much the time stamp can deviate from the true time the block was published.
+Consider observing blocks’ status changes off-chain yourself to get a more reliable value
 `

@@ -19,7 +19,7 @@
 package ast
 
 import (
-	"github.com/segmentio/fasthash/fnv1"
+	"fmt"
 )
 
 // Position defines a row/column within a Cadence script.
@@ -40,12 +40,13 @@ func (position Position) Shifted(length int) Position {
 	}
 }
 
-func (position Position) Hash() (result uint32) {
-	result = fnv1.Init32
-	result = fnv1.AddUint32(result, uint32(position.Offset))
-	result = fnv1.AddUint32(result, uint32(position.Line))
-	result = fnv1.AddUint32(result, uint32(position.Column))
-	return
+func (position Position) String() string {
+	return fmt.Sprintf(
+		"%d(%d:%d)",
+		position.Offset,
+		position.Line,
+		position.Column,
+	)
 }
 
 func (position Position) Compare(other Position) int {

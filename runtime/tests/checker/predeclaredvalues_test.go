@@ -23,10 +23,10 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
-	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
 func TestCheckPredeclaredValues(t *testing.T) {
@@ -108,7 +108,7 @@ func TestCheckPredeclaredValues(t *testing.T) {
 					{
 						Label:          sema.ArgumentLabelNotRequired,
 						Identifier:     "n",
-						TypeAnnotation: sema.NewTypeAnnotation(&sema.IntType{}),
+						TypeAnnotation: sema.NewTypeAnnotation(sema.IntType),
 					},
 				},
 				ReturnTypeAnnotation: &sema.TypeAnnotation{
@@ -186,9 +186,9 @@ func TestCheckPredeclaredValues(t *testing.T) {
 				Options: []sema.Option{
 					predeclaredValuesOption,
 					sema.WithImportHandler(
-						func(checker *sema.Checker, location common.Location) (sema.Import, error) {
+						func(checker *sema.Checker, importedLocation common.Location, _ ast.Range) (sema.Import, error) {
 
-							importedChecker, importErr := getChecker(location)
+							importedChecker, importErr := getChecker(importedLocation)
 							if importErr != nil {
 								return nil, importErr
 							}
@@ -207,7 +207,7 @@ func TestCheckPredeclaredValues(t *testing.T) {
 		// The illegal use of 'foo' in 0x3 should be reported
 
 		var importedProgramError *sema.ImportedProgramError
-		utils.RequireErrorAs(t, errs[0], &importedProgramError)
+		require.ErrorAs(t, errs[0], &importedProgramError)
 		require.Equal(t, location3, importedProgramError.Location)
 		importedErrs := ExpectCheckerErrors(t, importedProgramError.Err, 1)
 		require.IsType(t, &sema.NotDeclaredError{}, importedErrs[0])

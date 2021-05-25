@@ -29,7 +29,6 @@ import (
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/tests/checker"
-	"github.com/onflow/cadence/runtime/trampoline"
 )
 
 func TestInterpretVirtualImport(t *testing.T) {
@@ -47,7 +46,7 @@ func TestInterpretVirtualImport(t *testing.T) {
 			fooType,
 			"bar",
 			&sema.FunctionType{
-				ReturnTypeAnnotation: sema.NewTypeAnnotation(&sema.UInt64Type{}),
+				ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.UInt64Type),
 			},
 			"",
 		))
@@ -59,6 +58,14 @@ func TestInterpretVirtualImport(t *testing.T) {
            return Foo.bar()
        }
     `
+
+	valueElements := sema.NewStringImportElementOrderedMap()
+
+	valueElements.Set("Foo", sema.ImportElement{
+		DeclarationKind: common.DeclarationKindStructure,
+		Access:          ast.AccessPublic,
+		Type:            fooType,
+	})
 
 	inter := parseCheckAndInterpretWithOptions(t,
 		code,
@@ -72,28 +79,30 @@ func TestInterpretVirtualImport(t *testing.T) {
 							location,
 						)
 
+						value := interpreter.NewCompositeValue(
+							location,
+							"Foo",
+							common.CompositeKindContract,
+							interpreter.NewStringValueOrderedMap(),
+							nil,
+						)
+
+						value.Functions = map[string]interpreter.FunctionValue{
+							"bar": interpreter.NewHostFunctionValue(
+								func(invocation interpreter.Invocation) interpreter.Value {
+									return interpreter.UInt64Value(42)
+								},
+							),
+						}
+
 						return interpreter.VirtualImport{
 							Globals: []struct {
 								Name  string
 								Value interpreter.Value
 							}{
 								{
-									Name: "Foo",
-									Value: &interpreter.CompositeValue{
-										Location:            location,
-										QualifiedIdentifier: "Foo",
-										Kind:                common.CompositeKindContract,
-										Fields:              interpreter.NewStringValueOrderedMap(),
-										Functions: map[string]interpreter.FunctionValue{
-											"bar": interpreter.NewHostFunctionValue(
-												func(invocation interpreter.Invocation) trampoline.Trampoline {
-													return trampoline.Done{
-														Result: interpreter.NewIntValueFromInt64(42),
-													}
-												},
-											),
-										},
-									},
+									Name:  "Foo",
+									Value: value,
 								},
 							},
 						}
@@ -102,15 +111,7 @@ func TestInterpretVirtualImport(t *testing.T) {
 			},
 			CheckerOptions: []sema.Option{
 				sema.WithImportHandler(
-					func(checker *sema.Checker, location common.Location) (sema.Import, error) {
-
-						valueElements := sema.NewStringImportElementOrderedMap()
-
-						valueElements.Set("Foo", sema.ImportElement{
-							DeclarationKind: common.DeclarationKindStructure,
-							Access:          ast.AccessPublic,
-							Type:            fooType,
-						})
+					func(_ *sema.Checker, _ common.Location, _ ast.Range) (sema.Import, error) {
 
 						return sema.VirtualImport{
 							ValueElements: valueElements,
@@ -125,7 +126,7 @@ func TestInterpretVirtualImport(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Equal(t,
-		interpreter.NewIntValueFromInt64(42),
+		interpreter.UInt64Value(42),
 		value,
 	)
 }
@@ -219,9 +220,9 @@ func TestInterpretImportMultipleProgramsFromLocation(t *testing.T) {
 					},
 				),
 				sema.WithImportHandler(
-					func(checker *sema.Checker, location common.Location) (sema.Import, error) {
-						require.IsType(t, common.AddressLocation{}, location)
-						addressLocation := location.(common.AddressLocation)
+					func(checker *sema.Checker, importedLocation common.Location, _ ast.Range) (sema.Import, error) {
+						require.IsType(t, common.AddressLocation{}, importedLocation)
+						addressLocation := importedLocation.(common.AddressLocation)
 
 						assert.Equal(t, address, addressLocation.Address)
 

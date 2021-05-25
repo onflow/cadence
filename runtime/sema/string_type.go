@@ -25,7 +25,7 @@ import (
 
 // StringType represents the string type
 //
-var StringType = &NominalType{
+var StringType = &SimpleType{
 	Name:                 "String",
 	QualifiedName:        "String",
 	TypeID:               "String",
@@ -40,12 +40,12 @@ var StringType = &NominalType{
 		ElementType: func(_ bool) Type {
 			return CharacterType
 		},
-		IndexingType: &IntegerType{},
+		IndexingType: IntegerType,
 	},
 }
 
 func init() {
-	StringType.Members = func(t *NominalType) map[string]MemberResolver {
+	StringType.Members = func(t *SimpleType) map[string]MemberResolver {
 		return map[string]MemberResolver{
 			"concat": {
 				Kind: common.DeclarationKindFunction,
@@ -86,7 +86,7 @@ func init() {
 					return NewPublicConstantFieldMember(
 						t,
 						identifier,
-						&IntType{},
+						IntType,
 						stringTypeLengthFieldDocString,
 					)
 				},
@@ -116,11 +116,11 @@ var stringTypeSliceFunctionType = &FunctionType{
 	Parameters: []*Parameter{
 		{
 			Identifier:     "from",
-			TypeAnnotation: NewTypeAnnotation(&IntType{}),
+			TypeAnnotation: NewTypeAnnotation(IntType),
 		},
 		{
 			Identifier:     "upTo",
-			TypeAnnotation: NewTypeAnnotation(&IntType{}),
+			TypeAnnotation: NewTypeAnnotation(IntType),
 		},
 	},
 	ReturnTypeAnnotation: NewTypeAnnotation(
@@ -139,7 +139,7 @@ If either of the parameters are out of the bounds of the string, the function wi
 var stringTypeDecodeHexFunctionType = &FunctionType{
 	ReturnTypeAnnotation: NewTypeAnnotation(
 		&VariableSizedType{
-			Type: &UInt8Type{},
+			Type: UInt8Type,
 		},
 	),
 }

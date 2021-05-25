@@ -20,6 +20,7 @@ package checker
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -103,34 +104,34 @@ func TestCheckIntegerBinaryOperations(t *testing.T) {
 				ast.OperationDiv,
 			},
 			tests: []operationTest{
-				{&sema.IntType{}, "1", "2", nil},
-				{&sema.UFix64Type{}, "1.2", "3.4", nil},
-				{&sema.Fix64Type{}, "-1.2", "-3.4", nil},
-				{&sema.UFix64Type{}, "1.2", "3", []error{
+				{sema.IntType, "1", "2", nil},
+				{sema.UFix64Type, "1.2", "3.4", nil},
+				{sema.Fix64Type, "-1.2", "-3.4", nil},
+				{sema.UFix64Type, "1.2", "3", []error{
 					&sema.InvalidBinaryOperandsError{},
 				}},
-				{&sema.IntType{}, "1", "2.3", []error{
+				{sema.IntType, "1", "2.3", []error{
 					&sema.InvalidBinaryOperandsError{},
 				}},
-				{&sema.IntType{}, "true", "2", []error{
+				{sema.IntType, "true", "2", []error{
 					&sema.InvalidBinaryOperandError{},
 					&sema.InvalidBinaryOperandsError{},
 					&sema.TypeMismatchError{},
 				}},
-				{&sema.Fix64Type{}, "true", "1.2", []error{
+				{sema.Fix64Type, "true", "1.2", []error{
 					&sema.InvalidBinaryOperandError{},
 					&sema.InvalidBinaryOperandsError{},
 					&sema.TypeMismatchError{},
 				}},
-				{&sema.IntType{}, "1", "true", []error{
+				{sema.IntType, "1", "true", []error{
 					&sema.InvalidBinaryOperandError{},
 					&sema.InvalidBinaryOperandsError{},
 				}},
-				{&sema.UFix64Type{}, "1.2", "true", []error{
+				{sema.UFix64Type, "1.2", "true", []error{
 					&sema.InvalidBinaryOperandError{},
 					&sema.InvalidBinaryOperandsError{},
 				}},
-				{&sema.IntType{}, "true", "false", []error{
+				{sema.IntType, "true", "false", []error{
 					&sema.InvalidBinaryOperandsError{},
 					&sema.TypeMismatchError{},
 				}},
@@ -224,35 +225,35 @@ func TestCheckIntegerBinaryOperations(t *testing.T) {
 				ast.OperationBitwiseRightShift,
 			},
 			tests: []operationTest{
-				{&sema.IntType{}, "1", "2", nil},
-				{&sema.UFix64Type{}, "1.2", "3.4", []error{
+				{sema.IntType, "1", "2", nil},
+				{sema.UFix64Type, "1.2", "3.4", []error{
 					&sema.InvalidBinaryOperandsError{},
 				}},
-				{&sema.UFix64Type{}, "1.2", "3", []error{
+				{sema.UFix64Type, "1.2", "3", []error{
 					&sema.InvalidBinaryOperandError{},
 					&sema.InvalidBinaryOperandsError{},
 				}},
-				{&sema.IntType{}, "1", "2.3", []error{
+				{sema.IntType, "1", "2.3", []error{
 					&sema.InvalidBinaryOperandError{},
 					&sema.InvalidBinaryOperandsError{},
 				}},
-				{&sema.IntType{}, "true", "2", []error{
+				{sema.IntType, "true", "2", []error{
 					&sema.InvalidBinaryOperandError{},
 					&sema.InvalidBinaryOperandsError{},
 					&sema.TypeMismatchError{},
 				}},
-				{&sema.UFix64Type{}, "true", "1.2", []error{
+				{sema.UFix64Type, "true", "1.2", []error{
 					&sema.InvalidBinaryOperandsError{},
 					&sema.TypeMismatchError{},
 				}},
-				{&sema.IntType{}, "1", "true", []error{
+				{sema.IntType, "1", "true", []error{
 					&sema.InvalidBinaryOperandError{},
 					&sema.InvalidBinaryOperandsError{},
 				}},
-				{&sema.UFix64Type{}, "1.2", "true", []error{
+				{sema.UFix64Type, "1.2", "true", []error{
 					&sema.InvalidBinaryOperandsError{},
 				}},
-				{&sema.IntType{}, "true", "false", []error{
+				{sema.IntType, "true", "false", []error{
 					&sema.InvalidBinaryOperandsError{},
 					&sema.TypeMismatchError{},
 				}},
@@ -286,6 +287,104 @@ func TestCheckIntegerBinaryOperations(t *testing.T) {
 				})
 			}
 		}
+	}
+}
+
+func TestCheckSaturatedArithmeticFunctions(t *testing.T) {
+
+	t.Parallel()
+
+	type testCase struct {
+		ty                              sema.Type
+		add, subtract, multiply, divide bool
+	}
+
+	testCases := []testCase{
+		{
+			ty:       sema.IntType,
+			add:      false,
+			subtract: false,
+			multiply: false,
+			divide:   false,
+		},
+		{
+			ty:       sema.UIntType,
+			add:      false,
+			subtract: true,
+			multiply: false,
+			divide:   false,
+		},
+	}
+
+	for _, ty := range append(
+		sema.AllSignedIntegerTypes[:],
+		sema.AllSignedFixedPointTypes...,
+	) {
+
+		if ty == sema.IntType {
+			continue
+		}
+
+		testCases = append(testCases, testCase{
+			ty:       ty,
+			add:      true,
+			subtract: true,
+			multiply: true,
+			divide:   true,
+		})
+	}
+
+	for _, ty := range append(
+		sema.AllUnsignedIntegerTypes[:],
+		sema.AllUnsignedFixedPointTypes...,
+	) {
+
+		if ty == sema.UIntType || strings.HasPrefix(ty.String(), "Word") {
+			continue
+		}
+
+		testCases = append(testCases, testCase{
+			ty:       ty,
+			add:      true,
+			subtract: true,
+			multiply: true,
+			divide:   false,
+		})
+	}
+
+	test := func(ty sema.Type, method string, expected bool) {
+
+		method = fmt.Sprintf("saturating%s", method)
+
+		t.Run(fmt.Sprintf("%s %s", ty, method), func(t *testing.T) {
+
+			_, err := ParseAndCheckWithPanic(t,
+				fmt.Sprintf(
+					`
+                      fun test(a: %[1]s, b: %[1]s): %[1]s {
+                          return a.%[2]s(b)
+                      }
+                    `,
+					ty,
+					method,
+				),
+			)
+
+			if expected {
+				require.NoError(t, err)
+			} else {
+				errs := ExpectCheckerErrors(t, err, 1)
+
+				assert.IsType(t, &sema.NotDeclaredMemberError{}, errs[0])
+			}
+		})
+	}
+
+	for _, testCase := range testCases {
+		test(testCase.ty, "Add", testCase.add)
+		test(testCase.ty, "Subtract", testCase.subtract)
+		test(testCase.ty, "Multiply", testCase.multiply)
+		test(testCase.ty, "Divide", testCase.divide)
 	}
 }
 

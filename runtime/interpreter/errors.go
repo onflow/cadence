@@ -298,7 +298,7 @@ func (e OverwriteError) Error() string {
 // CyclicLinkError
 //
 type CyclicLinkError struct {
-	Address AddressValue
+	Address common.Address
 	Paths   []PathValue
 	LocationRange
 }
@@ -309,13 +309,13 @@ func (e CyclicLinkError) Error() string {
 		if i > 0 {
 			builder.WriteString(" -> ")
 		}
-		builder.WriteString(path.String())
+		builder.WriteString(path.String(StringResults{}))
 	}
 	paths := builder.String()
 
 	return fmt.Sprintf(
 		"cyclic link in account %s: %s",
-		e.Address,
+		e.Address.ShortHexWithPrefix(),
 		paths,
 	)
 }
@@ -323,16 +323,32 @@ func (e CyclicLinkError) Error() string {
 // ArrayIndexOutOfBoundsError
 //
 type ArrayIndexOutOfBoundsError struct {
-	Index    int
-	MaxIndex int
+	Index int
+	Size  int
 	LocationRange
 }
 
 func (e ArrayIndexOutOfBoundsError) Error() string {
 	return fmt.Sprintf(
-		"array index out of bounds: got %d, expected max %d",
+		"array index out of bounds: %d, but size is %d",
 		e.Index,
-		e.MaxIndex,
+		e.Size,
+	)
+}
+
+// StringIndexOutOfBoundsError
+//
+type StringIndexOutOfBoundsError struct {
+	Index  int
+	Length int
+	LocationRange
+}
+
+func (e StringIndexOutOfBoundsError) Error() string {
+	return fmt.Sprintf(
+		"string index out of bounds: %d, but length is %d",
+		e.Index,
+		e.Length,
 	)
 }
 
@@ -378,5 +394,46 @@ func (e EncodingUnsupportedValueError) Error() string {
 		"encoding unsupported value to path [%s]: %[2]T, %[2]v",
 		strings.Join(e.Path, ","),
 		e.Value,
+	)
+}
+
+// MissingMemberValueError
+
+type MissingMemberValueError struct {
+	Name string
+	LocationRange
+}
+
+func (e MissingMemberValueError) Error() string {
+	return fmt.Sprintf("missing value for member `%s`", e.Name)
+}
+
+// InvocationArgumentTypeError
+
+type InvocationArgumentTypeError struct {
+	Index         int
+	ParameterType sema.Type
+	LocationRange
+}
+
+func (e InvocationArgumentTypeError) Error() string {
+	return fmt.Sprintf(
+		"invalid invocation with argument at index %d: expected %s",
+		e.Index,
+		e.ParameterType.QualifiedString(),
+	)
+}
+
+// ValueTransferTypeError
+
+type ValueTransferTypeError struct {
+	TargetType sema.Type
+	LocationRange
+}
+
+func (e ValueTransferTypeError) Error() string {
+	return fmt.Sprintf(
+		"invalid transfer of value: expected %s",
+		e.TargetType.QualifiedString(),
 	)
 }

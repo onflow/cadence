@@ -6,13 +6,26 @@ listed in no particular order.
 
 ## High Priority
 
+- Reliability
+
+  Cadence should run deterministically, and should not have crashers, stack overflows, or security issues.
+
+- Performance
+
+  Cadence's checker is currently not optimized for performance.
+  We are making performance improvements, mainly by profiling it using real-world programs
+  and optimizing hot paths, as well as avoiding unnecessary work (e.g. tracking position information).
+
+  Cadence programs are also currently executed using a tree-walking interpreter,
+  which is easy to modify and useful for debugging. However, it is not optimized for performance.
+  We are investigating  compilation to improve performance.
+  Potential targets / inspirations are WebAssembly, MoveVM, and IELE.
+
+## Lower Priority
+
 - [Testing of Cadence programs](https://github.com/onflow/cadence/issues/330)
 
   Cadence should provide means to test code.
-
-- [Account key API](https://github.com/onflow/cadence/issues/371)
-
-  Cadence should provide a more user-friendly API for managing keys.
 
 - Storage API
 
@@ -26,16 +39,6 @@ listed in no particular order.
 
   - [Scripts should have access to authorized accounts](https://github.com/onflow/cadence/issues/539)
 
-- Performance
-
-  Cadence's checker is currently not optimized for performance.
-  We are making performance improvements, mainly by profiling it using real-world programs
-  and optimizing hot paths, as well as avoiding unnecessary work (e.g. tracking position information).
-
-  Cadence programs are also currently executed using a tree-walking interpreter,
-  which is easy to modify and useful for debugging. However, it is not optimized for performance.
-  We are investigating  compilation to improve performance.
-  Potential targets / inspirations are WebAssembly, MoveVM, and IELE.
 
 - Extensibility
 
@@ -58,8 +61,6 @@ listed in no particular order.
   Refactor the pull-based architecture of the current interface to an injection-based architecture.
 
   Move non-essential type and value declarations out of the core Cadence code.
-
-## Lower Priority
 
 - [Code formatter / pretty printing of code](https://github.com/onflow/cadence/issues/209)
 
@@ -260,10 +261,6 @@ listed in no particular order.
   On the other hand, having some level of sub-second accuracy
   might be useful in the blocktime field,
   given that the block rate might be >1 block/sec at some point.
-
-- Contract Updates
-
-  Cadence should provide functionality to update contracts
 
 - Exposing entropy, safe random functionality
 

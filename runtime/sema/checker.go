@@ -74,7 +74,7 @@ type ResolvedLocation struct {
 
 type LocationHandlerFunc func(identifiers []ast.Identifier, location common.Location) ([]ResolvedLocation, error)
 
-type ImportHandlerFunc func(checker *Checker, location common.Location) (Import, error)
+type ImportHandlerFunc func(checker *Checker, importedLocation common.Location, importRange ast.Range) (Import, error)
 
 // Checker
 
@@ -92,11 +92,12 @@ type Checker struct {
 	containerTypes                     map[Type]bool
 	functionActivations                *FunctionActivations
 	inCondition                        bool
-	originsAndOccurrencesEnabled       bool
+	positionInfoEnabled                bool
 	Occurrences                        *Occurrences
 	variableOrigins                    map[*Variable]*Origin
 	memberOrigins                      map[Type]map[string]*Origin
 	MemberAccesses                     *MemberAccesses
+	Ranges                             *Ranges
 	isChecked                          bool
 	inCreate                           bool
 	inInvocation                       bool
@@ -109,6 +110,7 @@ type Checker struct {
 	locationHandler                    LocationHandlerFunc
 	importHandler                      ImportHandlerFunc
 	checkHandler                       CheckHandlerFunc
+	expectedType                       Type
 }
 
 type Option func(*Checker) error
@@ -197,17 +199,20 @@ func WithImportHandler(handler ImportHandlerFunc) Option {
 	}
 }
 
-// WithOriginsAndOccurrencesEnabled returns a checker option which enables/disables
-// if origins and occurrences are recorded.
+// WithPositionInfoEnabled returns a checker option which enables/disables
+// if position info recoding is enabled.
 //
-func WithOriginsAndOccurrencesEnabled(enabled bool) Option {
+// Position info includes origins, occurrences, member accesses, and ranges.
+//
+func WithPositionInfoEnabled(enabled bool) Option {
 	return func(checker *Checker) error {
-		checker.originsAndOccurrencesEnabled = enabled
+		checker.positionInfoEnabled = enabled
 		if enabled {
 			checker.memberOrigins = map[Type]map[string]*Origin{}
 			checker.variableOrigins = map[*Variable]*Origin{}
 			checker.Occurrences = NewOccurrences()
 			checker.MemberAccesses = NewMemberAccesses()
+			checker.Ranges = NewRanges()
 		}
 
 		return nil
@@ -220,8 +225,8 @@ func NewChecker(program *ast.Program, location common.Location, options ...Optio
 		return nil, &MissingLocationError{}
 	}
 
-	valueActivations := NewValueActivations(BaseValueActivation)
-	typeActivations := NewValueActivations(BaseTypeActivation)
+	valueActivations := NewVariableActivations(BaseValueActivation)
+	typeActivations := NewVariableActivations(BaseTypeActivation)
 	functionActivations := &FunctionActivations{}
 	functionActivations.EnterFunction(&FunctionType{
 		ReturnTypeAnnotation: NewTypeAnnotation(VoidType)},
@@ -289,7 +294,7 @@ func (checker *Checker) declareValue(declaration ValueDeclaration) *Variable {
 		allowOuterScopeShadowing: false,
 	})
 	checker.report(err)
-	if checker.originsAndOccurrencesEnabled {
+	if checker.positionInfoEnabled {
 		checker.recordVariableDeclarationOccurrence(name, variable)
 	}
 	return variable
@@ -315,7 +320,7 @@ func (checker *Checker) declareTypeDeclaration(declaration TypeDeclaration) {
 		},
 	)
 	checker.report(err)
-	if checker.originsAndOccurrencesEnabled {
+	if checker.positionInfoEnabled {
 		checker.recordVariableDeclarationOccurrence(identifier.Identifier, variable)
 	}
 }
@@ -336,6 +341,9 @@ func (checker *Checker) Check() error {
 		} else {
 			check()
 		}
+
+		checker.declareGlobalRanges()
+
 		checker.Elaboration.setIsChecking(false)
 		checker.isChecked = true
 	}
@@ -546,6 +554,9 @@ func (checker *Checker) checkTransfer(transfer *ast.Transfer, valueType Type) {
 	}
 }
 
+// This method is only used for checking invocation-expression.
+// This is also temporary, until the type inferring support is added for func arguments
+// TODO: Remove this method
 func (checker *Checker) checkTypeCompatibility(expression ast.Expression, valueType Type, targetType Type) bool {
 	switch typedExpression := expression.(type) {
 	case *ast.IntegerExpression:
@@ -558,7 +569,7 @@ func (checker *Checker) checkTypeCompatibility(expression ast.Expression, valueT
 			break
 		}
 
-		if IsSubType(unwrappedTargetType, &IntegerType{}) {
+		if IsSubType(unwrappedTargetType, IntegerType) {
 			CheckIntegerLiteral(typedExpression, unwrappedTargetType, checker.report)
 
 			return true
@@ -581,7 +592,7 @@ func (checker *Checker) checkTypeCompatibility(expression ast.Expression, valueT
 
 		valueTypeOK := CheckFixedPointLiteral(typedExpression, valueType, checker.report)
 
-		if IsSubType(unwrappedTargetType, &FixedPointType{}) {
+		if IsSubType(unwrappedTargetType, FixedPointType) {
 			if valueTypeOK {
 				CheckFixedPointLiteral(typedExpression, unwrappedTargetType, checker.report)
 			}
@@ -851,7 +862,7 @@ func (checker *Checker) findAndCheckValueVariable(identifier ast.Identifier, rec
 		return nil
 	}
 
-	if checker.originsAndOccurrencesEnabled && recordOccurrence && identifier.Identifier != "" {
+	if checker.positionInfoEnabled && recordOccurrence && identifier.Identifier != "" {
 		checker.recordVariableReferenceOccurrence(
 			identifier.StartPosition(),
 			identifier.EndPosition(),
@@ -1052,26 +1063,29 @@ func (checker *Checker) convertRestrictedType(t *ast.RestrictedType) Type {
 
 	var compositeType *CompositeType
 
-	if typeResult, ok := restrictedType.(*CompositeType); ok {
-		switch typeResult.Kind {
+	if !restrictedType.IsInvalidType() {
 
-		case common.CompositeKindResource,
-			common.CompositeKindStructure:
+		if typeResult, ok := restrictedType.(*CompositeType); ok {
+			switch typeResult.Kind {
 
-			compositeType = typeResult
+			case common.CompositeKindResource,
+				common.CompositeKindStructure:
 
-		default:
-			reportInvalidRestrictedType()
-		}
-	} else {
+				compositeType = typeResult
 
-		switch restrictedType {
-		case AnyResourceType, AnyStructType, AnyType:
-			break
-
-		default:
-			if t.Type != nil {
+			default:
 				reportInvalidRestrictedType()
+			}
+		} else {
+
+			switch restrictedType {
+			case AnyResourceType, AnyStructType, AnyType:
+				break
+
+			default:
+				if t.Type != nil {
+					reportInvalidRestrictedType()
+				}
 			}
 		}
 	}
@@ -1232,7 +1246,7 @@ func (checker *Checker) findAndCheckTypeVariable(identifier ast.Identifier, reco
 		return nil
 	}
 
-	if checker.originsAndOccurrencesEnabled && recordOccurrence && identifier.Identifier != "" {
+	if checker.positionInfoEnabled && recordOccurrence && identifier.Identifier != "" {
 		checker.recordVariableReferenceOccurrence(
 			identifier.StartPosition(),
 			identifier.EndPosition(),
@@ -1344,7 +1358,7 @@ func (checker *Checker) parameters(parameterList *ast.ParameterList) []*Paramete
 }
 
 func (checker *Checker) recordVariableReferenceOccurrence(startPos, endPos ast.Position, variable *Variable) {
-	if !checker.originsAndOccurrencesEnabled {
+	if !checker.positionInfoEnabled {
 		return
 	}
 
@@ -1378,10 +1392,9 @@ func (checker *Checker) recordVariableDeclarationOccurrence(name string, variabl
 
 func (checker *Checker) recordFieldDeclarationOrigin(
 	identifier ast.Identifier,
-	startPos, endPos ast.Position,
 	fieldType Type,
 ) *Origin {
-	if !checker.originsAndOccurrencesEnabled {
+	if !checker.positionInfoEnabled {
 		return nil
 	}
 
@@ -1396,8 +1409,8 @@ func (checker *Checker) recordFieldDeclarationOrigin(
 	}
 
 	checker.Occurrences.Put(
-		startPos,
-		endPos,
+		startPosition,
+		endPosition,
 		origin,
 	)
 
@@ -1408,7 +1421,7 @@ func (checker *Checker) recordFunctionDeclarationOrigin(
 	function *ast.FunctionDeclaration,
 	functionType *FunctionType,
 ) *Origin {
-	if !checker.originsAndOccurrencesEnabled {
+	if !checker.positionInfoEnabled {
 		return nil
 	}
 
@@ -1431,14 +1444,16 @@ func (checker *Checker) recordFunctionDeclarationOrigin(
 }
 
 func (checker *Checker) enterValueScope() {
+	//fmt.Printf("ENTER: %d\n", checker.valueActivations.Depth())
 	checker.valueActivations.Enter()
 }
 
-func (checker *Checker) leaveValueScope(checkResourceLoss bool) {
+func (checker *Checker) leaveValueScope(getEndPosition func() ast.Position, checkResourceLoss bool) {
 	if checkResourceLoss {
 		checker.checkResourceLoss(checker.valueActivations.Depth())
 	}
-	checker.valueActivations.Leave()
+
+	checker.valueActivations.Leave(getEndPosition)
 }
 
 // TODO: prune resource variables declared in function's scope
@@ -1450,7 +1465,7 @@ func (checker *Checker) leaveValueScope(checkResourceLoss bool) {
 //
 func (checker *Checker) checkResourceLoss(depth int) {
 
-	checker.valueActivations.ForEachVariablesDeclaredInAndBelow(depth, func(name string, variable *Variable) {
+	checker.valueActivations.ForEachVariableDeclaredInAndBelow(depth, func(name string, variable *Variable) {
 
 		// TODO: handle `self` and `result` properly
 
@@ -2031,7 +2046,7 @@ func (checker *Checker) predeclaredMembers(containerType Type) []*Member {
 
 			addPredeclaredMember(
 				ResourceUUIDFieldName,
-				&UInt64Type{},
+				UInt64Type,
 				common.DeclarationKindField,
 				ast.AccessPublic,
 				false,
@@ -2293,4 +2308,119 @@ func (checker *Checker) convertInstantiationType(t *ast.InstantiationType) Type 
 
 func (checker *Checker) Hints() []Hint {
 	return checker.hints
+}
+
+func (checker *Checker) VisitExpression(expr ast.Expression, expectedType Type) Type {
+	actualType, _ := checker.visitExpression(expr, expectedType)
+	return actualType
+}
+
+func (checker *Checker) visitExpression(expr ast.Expression, expectedType Type) (visibleType Type, actualType Type) {
+	return checker.visitExpressionWithForceType(expr, expectedType, true)
+}
+
+func (checker *Checker) VisitExpressionWithForceType(expr ast.Expression, expectedType Type, forceType bool) Type {
+	actualType, _ := checker.visitExpressionWithForceType(expr, expectedType, forceType)
+	return actualType
+}
+
+// visitExpressionWithForceType
+//
+// Parameters:
+// expr         - Expression to check
+// expectedType - Contextually expected type of the expression
+// forceType    - Specifies whether to use the expected type as a hard requirement (forceType = true)
+//                or whether to use the expected type for type inferring only (forceType = false)
+//
+// Return types:
+// visibleType - The type that others should 'see' as the type of this expression. This could be
+//               used as the type of the expression to avoid the type errors being delegated up.
+// actualType  - The actual type of the expression.
+//
+func (checker *Checker) visitExpressionWithForceType(
+	expr ast.Expression,
+	expectedType Type,
+	forceType bool,
+) (visibleType Type, actualType Type) {
+
+	// Cache the current contextually expected type, and set the `expectedType`
+	// as the new contextually expected type.
+	prevExpectedType := checker.expectedType
+
+	// If the expected type is invalid, treat it in the same manner as
+	// expected type is unknown.
+	if expectedType != nil && expectedType.IsInvalidType() {
+		expectedType = nil
+	}
+
+	checker.expectedType = expectedType
+	defer func() {
+		// Restore the prev contextually expected type
+		checker.expectedType = prevExpectedType
+	}()
+
+	actualType = expr.Accept(checker).(Type)
+
+	if forceType &&
+		expectedType != nil &&
+		actualType != InvalidType &&
+		!IsSubType(actualType, expectedType) {
+
+		checker.report(
+			&TypeMismatchError{
+				ExpectedType: expectedType,
+				ActualType:   actualType,
+				Range:        expressionRange(expr),
+			},
+		)
+
+		// If there are type mismatch errors, return the expected type as the visible-type of the expression.
+		// This is done to avoid the same error getting delegated up.
+		return expectedType, actualType
+	}
+
+	return actualType, actualType
+}
+
+func expressionRange(expression ast.Expression) ast.Range {
+	if indexExpr, ok := expression.(*ast.IndexExpression); ok {
+		return ast.Range{
+			StartPos: indexExpr.TargetExpression.StartPosition(),
+			EndPos:   indexExpr.EndPosition(),
+		}
+	} else {
+		return ast.NewRangeFromPositioned(expression)
+	}
+}
+
+func (checker *Checker) declareGlobalRanges() {
+	if !checker.positionInfoEnabled {
+		return
+	}
+
+	addRange := func(name string, variable *Variable) {
+		checker.Ranges.Put(
+			ast.Position{Line: 1, Column: 0},
+			ast.Position{Line: math.MaxInt32, Column: 0},
+			Range{
+				Identifier:      name,
+				Type:            variable.Type,
+				DeclarationKind: variable.DeclarationKind,
+			},
+		)
+	}
+
+	_ = BaseTypeActivation.ForEach(func(name string, variable *Variable) error {
+		addRange(name, variable)
+		return nil
+	})
+
+	_ = BaseValueActivation.ForEach(func(name string, variable *Variable) error {
+		addRange(name, variable)
+		return nil
+	})
+
+	checker.Elaboration.GlobalTypes.Foreach(addRange)
+
+	checker.Elaboration.GlobalValues.Foreach(addRange)
 }

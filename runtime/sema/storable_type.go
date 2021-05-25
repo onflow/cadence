@@ -24,7 +24,7 @@ package sema
 // to user programs, i.e. can't be used in type annotations
 // for e.g. parameters, return types, fields, etc.
 //
-var StorableType = &NominalType{
+var StorableType = &SimpleType{
 	Name:          "Storable",
 	QualifiedName: "Storable",
 	TypeID:        "Storable",

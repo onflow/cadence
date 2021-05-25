@@ -94,15 +94,26 @@ func (checker *Checker) importResolvedLocation(resolvedLocation ResolvedLocation
 
 	if checker.importHandler != nil {
 		var err error
-		imp, err = checker.importHandler(checker, location)
+		imp, err = checker.importHandler(checker, location, locationRange)
 		if err != nil {
-			checker.report(
-				&ImportedProgramError{
+
+			// The import handler may return CyclicImportsError specifically
+			// to indicate that this import is a cyclic import.
+			// In that case, return the error as is, for this location.
+			//
+			// If the error is not a cyclic error,
+			// it is considered a error in the imported program,
+			// and is wrapped
+
+			if _, ok := err.(*CyclicImportsError); !ok {
+				err = &ImportedProgramError{
 					Err:      err,
 					Location: location,
 					Range:    locationRange,
-				},
-			)
+				}
+			}
+
+			checker.report(err)
 			return
 		}
 	}

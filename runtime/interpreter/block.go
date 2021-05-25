@@ -41,7 +41,7 @@ func (v BlockValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitValue(interpreter, v)
 }
 
-func (BlockValue) DynamicType(_ *Interpreter) DynamicType {
+func (BlockValue) DynamicType(_ *Interpreter, _ DynamicTypeResults) DynamicType {
 	return BlockDynamicType{}
 }
 
@@ -70,7 +70,7 @@ func (BlockValue) SetModified(_ bool) {
 	// NO-OP
 }
 
-func (v BlockValue) GetMember(_ *Interpreter, _ LocationRange, name string) Value {
+func (v BlockValue) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
 	switch name {
 	case "height":
 		return v.Height
@@ -88,24 +88,33 @@ func (v BlockValue) GetMember(_ *Interpreter, _ LocationRange, name string) Valu
 	return nil
 }
 
-func (v BlockValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+func (v BlockValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
 	panic(runtimeErrors.NewUnreachableError())
 }
 
 func (v BlockValue) IDAsByteArray() [sema.BlockIDSize]byte {
 	var byteArray [sema.BlockIDSize]byte
-	for i, b := range v.ID.Values {
+	for i, b := range v.ID.Elements() {
 		byteArray[i] = byte(b.(UInt8Value))
 	}
 	return byteArray
 }
 
-func (v BlockValue) String() string {
+func (v BlockValue) String(results StringResults) string {
 	return fmt.Sprintf(
 		"Block(height: %s, view: %s, id: 0x%x, timestamp: %s)",
-		v.Height,
-		v.View,
+		v.Height.String(results),
+		v.View.String(results),
 		v.IDAsByteArray(),
-		v.Timestamp,
+		v.Timestamp.String(results),
 	)
+}
+
+func (v BlockValue) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType, _ TypeConformanceResults) bool {
+	_, ok := dynamicType.(BlockDynamicType)
+	return ok
+}
+
+func (BlockValue) IsStorable() bool {
+	return false
 }

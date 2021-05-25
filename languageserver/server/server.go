@@ -28,7 +28,6 @@ import (
 	"time"
 
 	"github.com/mitchellh/mapstructure"
-
 	"github.com/onflow/cadence/encoding/json"
 	"github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/ast"
@@ -40,7 +39,6 @@ import (
 
 	"github.com/onflow/cadence/languageserver/conversion"
 	"github.com/onflow/cadence/languageserver/jsonrpc2"
-
 	"github.com/onflow/cadence/languageserver/protocol"
 )
 
@@ -160,7 +158,7 @@ type DiagnosticProvider func(uri protocol.DocumentUri, version float64, checker 
 
 // DocumentSymbolProvider
 //
-type DocumentSymbolProvider func (uri protocol.DocumentUri, version float64, checker *sema.Checker)([]*protocol.DocumentSymbol, error)
+type DocumentSymbolProvider func(uri protocol.DocumentUri, version float64, checker *sema.Checker) ([]*protocol.DocumentSymbol, error)
 
 // InitializationOptionsHandler is a function that is used to handle initialization options sent by the client
 //
@@ -168,9 +166,10 @@ type InitializationOptionsHandler func(initializationOptions interface{}) error
 
 type Server struct {
 	protocolServer  *protocol.Server
-	checkers        map[protocol.DocumentUri]*sema.Checker
+	checkers        map[common.LocationID]*sema.Checker
 	documents       map[protocol.DocumentUri]Document
 	memberResolvers map[protocol.DocumentUri]map[string]sema.MemberResolver
+	ranges          map[protocol.DocumentUri]map[string]sema.Range
 	// commands is the registry of custom commands we support
 	commands map[string]CommandHandler
 	// resolveAddressImport is the optional function that is used to resolve address imports
@@ -187,6 +186,7 @@ type Server struct {
 	documentSymbolProviders []DocumentSymbolProvider
 	// initializationOptionsHandlers are the functions that are used to handle initialization options sent by the client
 	initializationOptionsHandlers []InitializationOptionsHandler
+	accessCheckMode               sema.AccessCheckMode
 }
 
 type Option func(*Server) error
@@ -284,9 +284,10 @@ const ParseEntryPointArgumentsCommand = "cadence.server.parseEntryPointArguments
 
 func NewServer() (*Server, error) {
 	server := &Server{
-		checkers:        make(map[protocol.DocumentUri]*sema.Checker),
+		checkers:        make(map[common.LocationID]*sema.Checker),
 		documents:       make(map[protocol.DocumentUri]Document),
 		memberResolvers: make(map[protocol.DocumentUri]map[string]sema.MemberResolver),
+		ranges:          make(map[protocol.DocumentUri]map[string]sema.Range),
 		commands:        make(map[string]CommandHandler),
 	}
 	server.protocolServer = protocol.NewServer(server)
@@ -321,6 +322,11 @@ func (s *Server) Stop() error {
 	return s.protocolServer.Stop()
 }
 
+func (s *Server) checkerForDocument(uri protocol.DocumentUri) *sema.Checker {
+	location := uriToLocation(uri)
+	return s.checkers[location.ID()]
+}
+
 func (s *Server) Initialize(
 	conn protocol.Conn,
 	params *protocol.InitializeParams,
@@ -340,12 +346,17 @@ func (s *Server) Initialize(
 				TriggerCharacters: []string{"."},
 				ResolveProvider:   true,
 			},
-			DocumentSymbolProvider: true,
+			DocumentHighlightProvider: true,
+			DocumentSymbolProvider:    true,
 		},
 	}
 
+	options := params.InitializationOptions
+
+	s.configure(options)
+
 	for _, handler := range s.initializationOptionsHandlers {
-		err := handler(params.InitializationOptions)
+		err := handler(options)
 		if err != nil {
 			return nil, err
 		}
@@ -355,6 +366,40 @@ func (s *Server) Initialize(
 	go s.registerCommands(conn)
 
 	return result, nil
+}
+
+const accessCheckModeOption = "accessCheckMode"
+
+func accessCheckModeFromName(name string) sema.AccessCheckMode {
+	switch name {
+	case "strict":
+		return sema.AccessCheckModeStrict
+
+	case "notSpecifiedRestricted":
+		return sema.AccessCheckModeNotSpecifiedRestricted
+
+	case "notSpecifiedUnrestricted":
+		return sema.AccessCheckModeNotSpecifiedUnrestricted
+
+	case "none":
+		return sema.AccessCheckModeNone
+
+	default:
+		return sema.AccessCheckModeStrict
+	}
+}
+
+func (s *Server) configure(opts interface{}) {
+	optsMap, ok := opts.(map[string]interface{})
+	if !ok {
+		return
+	}
+
+	if accessCheckModeName, ok := optsMap[accessCheckModeOption].(string); ok {
+		s.accessCheckMode = accessCheckModeFromName(accessCheckModeName)
+	} else {
+		s.accessCheckMode = sema.AccessCheckModeStrict
+	}
 }
 
 // Registers the commands that the server is able to handle.
@@ -483,7 +528,15 @@ func (s *Server) checkAndPublishDiagnostics(
 		Diagnostics: diagnostics,
 	})
 
-	valid := len(diagnostics) == 0
+	valid := true
+
+	for _, diagnostic := range diagnostics {
+		if diagnostic.Severity == protocol.SeverityError {
+			valid = false
+			break
+		}
+	}
+
 	_ = conn.Notify(cadenceCheckCompletedMethodName, &CadenceCheckCompletedParams{
 		URI:   uri,
 		Valid: valid,
@@ -498,8 +551,8 @@ func (s *Server) Hover(
 ) (*protocol.Hover, error) {
 
 	uri := params.TextDocument.URI
-	checker, ok := s.checkers[uri]
-	if !ok {
+	checker := s.checkerForDocument(uri)
+	if checker == nil {
 		return nil, nil
 	}
 
@@ -528,8 +581,8 @@ func (s *Server) Definition(
 ) (*protocol.Location, error) {
 
 	uri := params.TextDocument.URI
-	checker, ok := s.checkers[uri]
-	if !ok {
+	checker := s.checkerForDocument(uri)
+	if checker == nil {
 		return nil, nil
 	}
 
@@ -562,6 +615,53 @@ func (s *Server) SignatureHelp(
 	return nil, nil
 }
 
+func (s *Server) DocumentHighlight(
+	_ protocol.Conn,
+	params *protocol.TextDocumentPositionParams,
+) (
+	[]*protocol.DocumentHighlight,
+	error,
+) {
+	uri := params.TextDocument.URI
+	checker := s.checkerForDocument(uri)
+	if checker == nil {
+		return nil, nil
+	}
+
+	position := conversion.ProtocolToSemaPosition(params.Position)
+	occurrences := checker.Occurrences.FindAll(position)
+	// If there are no occurrences,
+	// then try the preceding position
+	if len(occurrences) == 0 && position.Column > 0 {
+		previousPosition := position
+		previousPosition.Column -= 1
+		occurrences = checker.Occurrences.FindAll(previousPosition)
+	}
+
+	documentHighlights := make([]*protocol.DocumentHighlight, 0)
+
+	for _, occurrence := range occurrences {
+
+		origin := occurrence.Origin
+		if origin == nil || origin.StartPos == nil || origin.EndPos == nil {
+			continue
+		}
+
+		for _, occurrenceRange := range origin.Occurrences {
+			documentHighlights = append(documentHighlights,
+				&protocol.DocumentHighlight{
+					Range: conversion.ASTToProtocolRange(
+						occurrenceRange.StartPos,
+						occurrenceRange.EndPos,
+					),
+				},
+			)
+		}
+	}
+
+	return documentHighlights, nil
+}
+
 // CodeLens is called every time the document contents change and returns a
 // list of actions to be injected into the source as inline buttons.
 func (s *Server) CodeLens(
@@ -576,8 +676,8 @@ func (s *Server) CodeLens(
 	codeLenses = []*protocol.CodeLens{}
 
 	uri := params.TextDocument.URI
-	checker, ok := s.checkers[uri]
-	if !ok {
+	checker := s.checkerForDocument(uri)
+	if checker == nil {
 		// Can we ensure this doesn't happen?
 		return
 	}
@@ -599,6 +699,7 @@ func (s *Server) CodeLens(
 
 type CompletionItemData struct {
 	URI protocol.DocumentUri `json:"uri"`
+	ID  string               `json:"id"`
 }
 
 var statementCompletionItems = []*protocol.CompletionItem{
@@ -845,8 +946,8 @@ func (s *Server) Completion(
 	items = []*protocol.CompletionItem{}
 
 	uri := params.TextDocument.URI
-	checker, ok := s.checkers[uri]
-	if !ok {
+	checker := s.checkerForDocument(uri)
+	if checker == nil {
 		return
 	}
 
@@ -858,13 +959,16 @@ func (s *Server) Completion(
 	position := conversion.ProtocolToSemaPosition(params.Position)
 
 	memberCompletions := s.memberCompletions(position, checker, uri)
-
-	// prioritize member completion items over other items
-	for _, item := range memberCompletions {
-		item.SortText = fmt.Sprintf("1" + item.Label)
+	if len(memberCompletions) > 0 {
+		return memberCompletions, nil
 	}
 
-	items = append(items, memberCompletions...)
+	// prioritize range completion items over other items
+	rangeCompletions := s.rangeCompletions(position, checker, uri)
+	for _, item := range rangeCompletions {
+		item.SortText = fmt.Sprintf("1" + item.Label)
+	}
+	items = append(items, rangeCompletions...)
 
 	// TODO: make conditional on position being inside a function declaration
 	items = append(items, statementCompletionItems...)
@@ -939,6 +1043,7 @@ func (s *Server) memberCompletions(
 			CommitCharacters: commitCharacters,
 			Data: CompletionItemData{
 				URI: uri,
+				ID:  name,
 			},
 		}
 
@@ -947,6 +1052,70 @@ func (s *Server) memberCompletions(
 
 		if resolver.Kind == common.DeclarationKindFunction {
 			s.prepareFunctionMemberCompletionItem(item, resolver, name)
+		}
+
+		items = append(items, item)
+	}
+
+	return items
+}
+
+func (s *Server) rangeCompletions(
+	position sema.Position,
+	checker *sema.Checker,
+	uri protocol.DocumentUri,
+) (items []*protocol.CompletionItem) {
+
+	ranges := checker.Ranges.FindAll(position)
+
+	delete(s.ranges, uri)
+
+	if ranges == nil {
+		return
+	}
+
+	resolvers := make(map[string]sema.Range, len(ranges))
+	s.ranges[uri] = resolvers
+
+	for index, r := range ranges {
+		id := strconv.Itoa(index)
+		kind := convertDeclarationKindToCompletionItemType(r.DeclarationKind)
+		item := &protocol.CompletionItem{
+			Label: r.Identifier,
+			Kind:  kind,
+			Data: CompletionItemData{
+				URI: uri,
+				ID:  id,
+			},
+		}
+
+		resolvers[id] = r
+
+		// If the range is for a function, also prepare the argument list
+		// with placeholders and suggest it
+
+		switch r.DeclarationKind {
+		case common.DeclarationKindFunction:
+			functionType := r.Type.(*sema.FunctionType)
+			s.prepareParametersCompletionItem(
+				item,
+				r.Identifier,
+				functionType.Parameters,
+			)
+
+		case common.DeclarationKindStructure,
+			common.DeclarationKindResource,
+			common.DeclarationKindEvent:
+
+			if constructorFunctionType, ok := r.Type.(*sema.ConstructorFunctionType); ok {
+				item.Kind = protocol.ConstructorCompletion
+
+				s.prepareParametersCompletionItem(
+					item,
+					r.Identifier,
+					constructorFunctionType.Parameters,
+				)
+			}
 		}
 
 		items = append(items, item)
@@ -966,13 +1135,21 @@ func (s *Server) prepareFunctionMemberCompletionItem(
 		return
 	}
 
+	s.prepareParametersCompletionItem(item, name, functionType.Parameters)
+}
+
+func (s *Server) prepareParametersCompletionItem(
+	item *protocol.CompletionItem,
+	name string,
+	parameters []*sema.Parameter,
+) {
 	item.InsertTextFormat = protocol.SnippetTextFormat
 
 	var builder strings.Builder
 	builder.WriteString(name)
 	builder.WriteRune('(')
 
-	for i, parameter := range functionType.Parameters {
+	for i, parameter := range parameters {
 		if i > 0 {
 			builder.WriteString(", ")
 		}
@@ -1003,13 +1180,21 @@ func convertDeclarationKindToCompletionItemType(kind common.DeclarationKind) pro
 	case common.DeclarationKindStructure,
 		common.DeclarationKindResource,
 		common.DeclarationKindEvent,
-		common.DeclarationKindContract:
+		common.DeclarationKindContract,
+		common.DeclarationKindType:
 		return protocol.ClassCompletion
 
 	case common.DeclarationKindStructureInterface,
 		common.DeclarationKindResourceInterface,
 		common.DeclarationKindContractInterface:
 		return protocol.InterfaceCompletion
+
+	case common.DeclarationKindVariable:
+		return protocol.VariableCompletion
+
+	case common.DeclarationKindConstant,
+		common.DeclarationKindParameter:
+		return protocol.ConstantCompletion
 
 	default:
 		return protocol.TextCompletion
@@ -1026,7 +1211,7 @@ func declarationKindCommitCharacters(kind common.DeclarationKind) []string {
 	}
 }
 
-// Completion is called to compute completion items at a given cursor position.
+// ResolveCompletionItem is called to compute completion items at a given cursor position.
 //
 func (s *Server) ResolveCompletionItem(
 	_ protocol.Conn,
@@ -1049,17 +1234,31 @@ func (s *Server) ResolveCompletionItem(
 		return
 	}
 
-	memberResolvers, ok := s.memberResolvers[data.URI]
-	if !ok {
+	resolved := s.maybeResolveMember(data.URI, data.ID, result)
+	if resolved {
 		return
 	}
 
-	resolver, ok := memberResolvers[item.Label]
-	if !ok {
+	resolved = s.maybeResolveRange(data.URI, data.ID, result)
+	if resolved {
 		return
 	}
 
-	member := resolver.Resolve(item.Label, ast.Range{}, func(err error) { /* NO-OP */ })
+	return
+}
+
+func (s *Server) maybeResolveMember(uri protocol.DocumentUri, id string, result *protocol.CompletionItem) bool {
+	memberResolvers, ok := s.memberResolvers[uri]
+	if !ok {
+		return false
+	}
+
+	resolver, ok := memberResolvers[id]
+	if !ok {
+		return false
+	}
+
+	member := resolver.Resolve(result.Label, ast.Range{}, func(err error) { /* NO-OP */ })
 
 	result.Documentation = protocol.MarkupContent{
 		Kind:  "markdown",
@@ -1111,7 +1310,37 @@ func (s *Server) ResolveCompletionItem(
 		)
 	}
 
-	return
+	return true
+}
+
+func (s *Server) maybeResolveRange(uri protocol.DocumentUri, id string, result *protocol.CompletionItem) bool {
+	ranges, ok := s.ranges[uri]
+	if !ok {
+		return false
+	}
+
+	r, ok := ranges[id]
+	if !ok {
+		return false
+	}
+
+	if constructorFunctionType, ok := r.Type.(*sema.ConstructorFunctionType); ok {
+		typeString := constructorFunctionType.QualifiedString()
+
+		result.Detail = fmt.Sprintf(
+			"(constructor) %s",
+			typeString[1:len(typeString)-1],
+		)
+
+	} else {
+		result.Detail = fmt.Sprintf(
+			"(%s) %s",
+			r.DeclarationKind.Name(),
+			r.Type.String(),
+		)
+	}
+
+	return true
 }
 
 // ExecuteCommand is called to execute a custom, server-defined command.
@@ -1134,18 +1363,16 @@ func (s *Server) ExecuteCommand(conn protocol.Conn, params *protocol.ExecuteComm
 
 // DocumentSymbol is called every time the document contents change and returns a
 // tree of known  document symbols, which can be shown in outline panel
-func (s *Server) DocumentSymbol(conn protocol.Conn, params *protocol.DocumentSymbolParams) (symbols []*protocol.DocumentSymbol,err error) {
+func (s *Server) DocumentSymbol(conn protocol.Conn, params *protocol.DocumentSymbolParams) (symbols []*protocol.DocumentSymbol, err error) {
 
 	// NOTE: Always initialize to an empty slice, i.e DON'T use nil:
 	// The later will be ignored instead of being treated as no items
 	symbols = []*protocol.DocumentSymbol{}
 
-	// get uri from parameters caught by grpc server
 	uri := params.TextDocument.URI
-	checker, ok := s.checkers[uri]
-	if !ok {
-		// Can we ensure this doesn't happen?
-		return
+	checker := s.checkerForDocument(uri)
+	if checker == nil {
+		return nil, fmt.Errorf("could not find document for URI %s", uri)
 	}
 
 	version := s.documents[uri].Version
@@ -1222,23 +1449,17 @@ func (s *Server) getDiagnostics(
 	// If there is a parse result succeeded proceed with resolving imports and checking the parsed program,
 	// even if there there might have been parsing errors.
 
+	location := uriToLocation(uri)
+
 	if program == nil {
-		delete(s.checkers, uri)
+		delete(s.checkers, location.ID())
 		return
-	}
-
-	mainPath := string(uri)
-
-	if strings.HasPrefix(mainPath, filePrefix) {
-		mainPath = mainPath[len(filePrefix):]
-	} else if strings.HasPrefix(mainPath, inMemoryPrefix) {
-		mainPath = mainPath[len(inMemoryPrefix):]
 	}
 
 	var checker *sema.Checker
 	checker, diagnosticsErr = sema.NewChecker(
 		program,
-		uriToLocation(uri),
+		location,
 		sema.WithPredeclaredValues(valueDeclarations),
 		sema.WithPredeclaredTypes(typeDeclarations),
 		sema.WithLocationHandler(
@@ -1308,10 +1529,9 @@ func (s *Server) getDiagnostics(
 				return resolvedLocations, nil
 			},
 		),
-		sema.WithOriginsAndOccurrencesEnabled(true),
+		sema.WithPositionInfoEnabled(true),
 		sema.WithImportHandler(
-			func(checker *sema.Checker, importedLocation common.Location) (sema.Import, error) {
-
+			func(checker *sema.Checker, importedLocation common.Location, importRange ast.Range) (sema.Import, error) {
 				switch importedLocation {
 				case stdlib.CryptoChecker.Location:
 					return sema.ElaborationImport{
@@ -1319,7 +1539,6 @@ func (s *Server) getDiagnostics(
 					}, nil
 
 				default:
-
 					if isPathLocation(importedLocation) {
 						// import may be a relative path and therefore should be normalized
 						// against the current location
@@ -1332,23 +1551,24 @@ func (s *Server) getDiagnostics(
 						}
 					}
 
-					importedProgram, err := s.resolveImport(importedLocation)
-					if err != nil {
-						return nil, &sema.CheckerError{
-							Errors: []error{err},
-						}
-					}
+					importedLocationID := importedLocation.ID()
 
-					importedChecker, err := checker.SubChecker(importedProgram, importedLocation)
-					if err != nil {
-						return nil, &sema.CheckerError{
-							Errors: []error{err},
+					importedChecker, ok := s.checkers[importedLocationID]
+					if !ok {
+						importedProgram, err := s.resolveImport(importedLocation)
+						if err != nil {
+							return nil, err
 						}
-					}
 
-					err = importedChecker.Check()
-					if err != nil {
-						return nil, err
+						importedChecker, err = checker.SubChecker(importedProgram, importedLocation)
+						if err != nil {
+							return nil, err
+						}
+						s.checkers[importedLocationID] = importedChecker
+						err = importedChecker.Check()
+						if err != nil {
+							return nil, err
+						}
 					}
 
 					return sema.ElaborationImport{
@@ -1357,6 +1577,7 @@ func (s *Server) getDiagnostics(
 				}
 			},
 		),
+		sema.WithAccessCheckMode(s.accessCheckMode),
 	)
 	if diagnosticsErr != nil {
 		return
@@ -1372,7 +1593,7 @@ func (s *Server) getDiagnostics(
 		Message: fmt.Sprintf("checking %s took %s", string(uri), elapsed),
 	})
 
-	s.checkers[uri] = checker
+	s.checkers[location.ID()] = checker
 
 	if checkError != nil {
 		if parentErr, ok := checkError.(errors.ParentError); ok {
@@ -1527,13 +1748,14 @@ func (s *Server) getEntryPointParameters(_ protocol.Conn, args ...interface{}) (
 		return nil, err
 	}
 
-	uri, ok := args[0].(string)
+	uriArg, ok := args[0].(string)
 	if !ok {
 		return nil, fmt.Errorf("invalid URI argument: %#+v", args[0])
 	}
 
-	checker, ok := s.checkers[protocol.DocumentUri(uri)]
-	if !ok {
+	uri := protocol.DocumentUri(uriArg)
+	checker := s.checkerForDocument(uri)
+	if checker == nil {
 		return nil, fmt.Errorf("could not find document for URI %s", uri)
 	}
 
@@ -1556,13 +1778,14 @@ func (s *Server) getContractInitializerParameters(_ protocol.Conn, args ...inter
 		return nil, err
 	}
 
-	uri, ok := args[0].(string)
+	uriArg, ok := args[0].(string)
 	if !ok {
 		return nil, fmt.Errorf("invalid URI argument: %#+v", args[0])
 	}
 
-	checker, ok := s.checkers[protocol.DocumentUri(uri)]
-	if !ok {
+	uri := protocol.DocumentUri(uriArg)
+	checker := s.checkerForDocument(uri)
+	if checker == nil {
 		return nil, fmt.Errorf("could not find document for URI %s", uri)
 	}
 
@@ -1587,7 +1810,7 @@ func (s *Server) getContractInitializerParameters(_ protocol.Conn, args ...inter
 
 // parseEntryPointArguments returns the values for the given arguments (literals) for the entry point.
 //
-// There should be exactly 1 argument:
+// There should be exactly 2 arguments:
 //   * the DocumentURI of the file to submit
 //   * the array of arguments
 func (s *Server) parseEntryPointArguments(_ protocol.Conn, args ...interface{}) (interface{}, error) {
@@ -1597,13 +1820,14 @@ func (s *Server) parseEntryPointArguments(_ protocol.Conn, args ...interface{}) 
 		return nil, err
 	}
 
-	uri, ok := args[0].(string)
+	uriArg, ok := args[0].(string)
 	if !ok {
 		return nil, fmt.Errorf("invalid URI argument: %#+v", args[0])
 	}
 
-	checker, ok := s.checkers[protocol.DocumentUri(uri)]
-	if !ok {
+	uri := protocol.DocumentUri(uriArg)
+	checker := s.checkerForDocument(uri)
+	if checker == nil {
 		return nil, fmt.Errorf("could not find document for URI %s", uri)
 	}
 

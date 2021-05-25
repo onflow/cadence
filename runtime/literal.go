@@ -137,56 +137,61 @@ func integerLiteralValue(expression ast.Expression, ty sema.Type) (cadence.Value
 
 	intValue := interpreter.NewIntValueFromBigInt(integerExpression.Value)
 
-	converter := func(value interpreter.Value, _ *interpreter.Interpreter) interpreter.Value {
-		return value
+	convertedValue, err := convertIntValue(intValue, ty)
+	if err != nil {
+		return nil, err
 	}
 
-	switch ty.(type) {
-	case *sema.IntType, *sema.IntegerType, *sema.SignedIntegerType:
-		break
-	case *sema.Int8Type:
-		converter = interpreter.ConvertInt8
-	case *sema.Int16Type:
-		converter = interpreter.ConvertInt16
-	case *sema.Int32Type:
-		converter = interpreter.ConvertInt32
-	case *sema.Int64Type:
-		converter = interpreter.ConvertInt64
-	case *sema.Int128Type:
-		converter = interpreter.ConvertInt128
-	case *sema.Int256Type:
-		converter = interpreter.ConvertInt256
+	result := ExportValue(convertedValue, nil)
 
-	case *sema.UIntType:
-		converter = interpreter.ConvertUInt
-	case *sema.UInt8Type:
-		converter = interpreter.ConvertUInt8
-	case *sema.UInt16Type:
-		converter = interpreter.ConvertUInt16
-	case *sema.UInt32Type:
-		converter = interpreter.ConvertUInt32
-	case *sema.UInt64Type:
-		converter = interpreter.ConvertUInt64
-	case *sema.UInt128Type:
-		converter = interpreter.ConvertUInt128
-	case *sema.UInt256Type:
-		converter = interpreter.ConvertUInt256
+	return result, nil
+}
 
-	case *sema.Word8Type:
-		converter = interpreter.ConvertWord8
-	case *sema.Word16Type:
-		converter = interpreter.ConvertWord16
-	case *sema.Word32Type:
-		converter = interpreter.ConvertWord32
-	case *sema.Word64Type:
-		converter = interpreter.ConvertWord64
+func convertIntValue(intValue interpreter.IntValue, ty sema.Type) (interpreter.Value, error) {
+
+	switch ty {
+	case sema.IntType, sema.IntegerType, sema.SignedIntegerType:
+		return intValue, nil
+	case sema.Int8Type:
+		return interpreter.ConvertInt8(intValue), nil
+	case sema.Int16Type:
+		return interpreter.ConvertInt16(intValue), nil
+	case sema.Int32Type:
+		return interpreter.ConvertInt32(intValue), nil
+	case sema.Int64Type:
+		return interpreter.ConvertInt64(intValue), nil
+	case sema.Int128Type:
+		return interpreter.ConvertInt128(intValue), nil
+	case sema.Int256Type:
+		return interpreter.ConvertInt256(intValue), nil
+
+	case sema.UIntType:
+		return interpreter.ConvertUInt(intValue), nil
+	case sema.UInt8Type:
+		return interpreter.ConvertUInt8(intValue), nil
+	case sema.UInt16Type:
+		return interpreter.ConvertUInt16(intValue), nil
+	case sema.UInt32Type:
+		return interpreter.ConvertUInt32(intValue), nil
+	case sema.UInt64Type:
+		return interpreter.ConvertUInt64(intValue), nil
+	case sema.UInt128Type:
+		return interpreter.ConvertUInt128(intValue), nil
+	case sema.UInt256Type:
+		return interpreter.ConvertUInt256(intValue), nil
+
+	case sema.Word8Type:
+		return interpreter.ConvertWord8(intValue), nil
+	case sema.Word16Type:
+		return interpreter.ConvertWord16(intValue), nil
+	case sema.Word32Type:
+		return interpreter.ConvertWord32(intValue), nil
+	case sema.Word64Type:
+		return interpreter.ConvertWord64(intValue), nil
 
 	default:
 		return nil, UnsupportedLiteralError
 	}
-
-	result := ExportValue(converter(intValue, nil), nil)
-	return result, nil
 }
 
 func fixedPointLiteralValue(expression ast.Expression, ty sema.Type) (cadence.Value, error) {
@@ -209,10 +214,10 @@ func fixedPointLiteralValue(expression ast.Expression, ty sema.Type) (cadence.Va
 		sema.Fix64Scale,
 	)
 
-	switch ty.(type) {
-	case *sema.Fix64Type, *sema.FixedPointType, *sema.SignedFixedPointType:
+	switch ty {
+	case sema.Fix64Type, sema.FixedPointType, sema.SignedFixedPointType:
 		return cadence.Fix64(value.Int64()), nil
-	case *sema.UFix64Type:
+	case sema.UFix64Type:
 		return cadence.UFix64(value.Uint64()), nil
 	}
 
@@ -306,10 +311,10 @@ func LiteralValue(expression ast.Expression, ty sema.Type) (cadence.Value, error
 	}
 
 	switch {
-	case sema.IsSubType(ty, &sema.IntegerType{}):
+	case sema.IsSubType(ty, sema.IntegerType):
 		return integerLiteralValue(expression, ty)
 
-	case sema.IsSubType(ty, &sema.FixedPointType{}):
+	case sema.IsSubType(ty, sema.FixedPointType):
 		return fixedPointLiteralValue(expression, ty)
 
 	case sema.IsSubType(ty, sema.PathType):

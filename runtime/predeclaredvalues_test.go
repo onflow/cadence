@@ -27,7 +27,6 @@ import (
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/tests/checker"
-	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
 func TestRuntimePredeclaredValues(t *testing.T) {
@@ -68,7 +67,7 @@ func TestRuntimePredeclaredValues(t *testing.T) {
 				{
 					Label:          sema.ArgumentLabelNotRequired,
 					Identifier:     "n",
-					TypeAnnotation: sema.NewTypeAnnotation(&sema.IntType{}),
+					TypeAnnotation: sema.NewTypeAnnotation(sema.IntType),
 				},
 			},
 			ReturnTypeAnnotation: &sema.TypeAnnotation{
@@ -131,14 +130,14 @@ func TestRuntimePredeclaredValues(t *testing.T) {
 	)
 
 	var checkerErr *sema.CheckerError
-	utils.RequireErrorAs(t, err, &checkerErr)
+	require.ErrorAs(t, err, &checkerErr)
 
 	errs := checker.ExpectCheckerErrors(t, err, 2)
 
 	// The illegal use of 'foo' in 0x3 should be reported
 
 	var importedProgramError *sema.ImportedProgramError
-	utils.RequireErrorAs(t, errs[0], &importedProgramError)
+	require.ErrorAs(t, errs[0], &importedProgramError)
 	//require.Equal(t, location3, importedProgramError.ImportLocation)
 	importedErrs := checker.ExpectCheckerErrors(t, importedProgramError.Err, 1)
 	require.IsType(t, &sema.NotDeclaredError{}, importedErrs[0])

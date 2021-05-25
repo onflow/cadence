@@ -68,7 +68,7 @@ type OptionalType struct {
 func (OptionalType) isType() {}
 
 func (t OptionalType) ID() string {
-	return fmt.Sprintf("%s?", t.Type)
+	return fmt.Sprintf("%s?", t.Type.ID())
 }
 
 // Variable
@@ -516,6 +516,10 @@ type StructType struct {
 func (*StructType) isType() {}
 
 func (t *StructType) ID() string {
+	if t.Location == nil {
+		return t.QualifiedIdentifier
+	}
+
 	return string(t.Location.TypeID(t.QualifiedIdentifier))
 }
 
@@ -549,6 +553,10 @@ type ResourceType struct {
 func (*ResourceType) isType() {}
 
 func (t *ResourceType) ID() string {
+	if t.Location == nil {
+		return t.QualifiedIdentifier
+	}
+
 	return string(t.Location.TypeID(t.QualifiedIdentifier))
 }
 
@@ -582,6 +590,10 @@ type EventType struct {
 func (*EventType) isType() {}
 
 func (t *EventType) ID() string {
+	if t.Location == nil {
+		return t.QualifiedIdentifier
+	}
+
 	return string(t.Location.TypeID(t.QualifiedIdentifier))
 }
 
@@ -615,6 +627,10 @@ type ContractType struct {
 func (*ContractType) isType() {}
 
 func (t *ContractType) ID() string {
+	if t.Location == nil {
+		return t.QualifiedIdentifier
+	}
+
 	return string(t.Location.TypeID(t.QualifiedIdentifier))
 }
 
@@ -659,6 +675,10 @@ type StructInterfaceType struct {
 func (*StructInterfaceType) isType() {}
 
 func (t *StructInterfaceType) ID() string {
+	if t.Location == nil {
+		return t.QualifiedIdentifier
+	}
+
 	return string(t.Location.TypeID(t.QualifiedIdentifier))
 }
 
@@ -692,6 +712,10 @@ type ResourceInterfaceType struct {
 func (*ResourceInterfaceType) isType() {}
 
 func (t *ResourceInterfaceType) ID() string {
+	if t.Location == nil {
+		return t.QualifiedIdentifier
+	}
+
 	return string(t.Location.TypeID(t.QualifiedIdentifier))
 }
 
@@ -725,6 +749,10 @@ type ContractInterfaceType struct {
 func (*ContractInterfaceType) isType() {}
 
 func (t *ContractInterfaceType) ID() string {
+	if t.Location == nil {
+		return t.QualifiedIdentifier
+	}
+
 	return string(t.Location.TypeID(t.QualifiedIdentifier))
 }
 
@@ -774,30 +802,6 @@ type ResourcePointer struct {
 func (ResourcePointer) isType() {}
 
 func (t ResourcePointer) ID() string {
-	return t.TypeName
-}
-
-// StructPointer
-
-type StructPointer struct {
-	TypeName string
-}
-
-func (StructPointer) isType() {}
-
-func (t StructPointer) ID() string {
-	return t.TypeName
-}
-
-// EventPointer
-
-type EventPointer struct {
-	TypeName string
-}
-
-func (EventPointer) isType() {}
-
-func (t EventPointer) ID() string {
 	return t.TypeName
 }
 
@@ -917,22 +921,39 @@ func (t CapabilityType) WithID(id string) CapabilityType {
 	return t
 }
 
-// AuthAccountType
-
-type AuthAccountType struct{}
-
-func (AuthAccountType) isType() {}
-
-func (AuthAccountType) ID() string {
-	return "AuthAccount"
+// EnumType
+type EnumType struct {
+	Location            common.Location
+	QualifiedIdentifier string
+	RawType             Type
+	Fields              []Field
+	Initializers        [][]Parameter
 }
 
-// PublicAccountType
+func (t *EnumType) isType() {}
 
-type PublicAccountType struct{}
+func (t *EnumType) ID() string {
+	if t.Location == nil {
+		return t.QualifiedIdentifier
+	}
 
-func (PublicAccountType) isType() {}
+	return string(t.Location.TypeID(t.QualifiedIdentifier))
+}
 
-func (PublicAccountType) ID() string {
-	return "PublicAccount"
+func (*EnumType) isCompositeType() {}
+
+func (t *EnumType) CompositeTypeLocation() common.Location {
+	return t.Location
+}
+
+func (t *EnumType) CompositeTypeQualifiedIdentifier() string {
+	return t.QualifiedIdentifier
+}
+
+func (t *EnumType) CompositeFields() []Field {
+	return t.Fields
+}
+
+func (t *EnumType) CompositeInitializers() [][]Parameter {
+	return t.Initializers
 }

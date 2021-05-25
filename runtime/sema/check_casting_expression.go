@@ -25,10 +25,7 @@ import (
 
 func (checker *Checker) VisitCastingExpression(expression *ast.CastingExpression) ast.Repr {
 
-	leftHandExpression := expression.Expression
-	leftHandType := leftHandExpression.Accept(checker).(Type)
-
-	checker.Elaboration.CastingStaticValueTypes[expression] = leftHandType
+	// Visit type annotation
 
 	rightHandTypeAnnotation := checker.ConvertTypeAnnotation(expression.TypeAnnotation)
 	checker.checkTypeAnnotation(rightHandTypeAnnotation, expression.TypeAnnotation)
@@ -36,6 +33,20 @@ func (checker *Checker) VisitCastingExpression(expression *ast.CastingExpression
 	rightHandType := rightHandTypeAnnotation.Type
 
 	checker.Elaboration.CastingTargetTypes[expression] = rightHandType
+
+	// visit the expression
+
+	leftHandExpression := expression.Expression
+
+	// In simple casting expression, type annotation is used to infer the type for the expression.
+	var expectedType Type
+	if expression.Operation == ast.OperationCast {
+		expectedType = rightHandType
+	}
+
+	leftHandType := checker.VisitExpression(leftHandExpression, expectedType)
+
+	checker.Elaboration.CastingStaticValueTypes[expression] = leftHandType
 
 	if leftHandType.IsResourceType() {
 		checker.recordResourceInvalidation(
@@ -70,11 +81,13 @@ func (checker *Checker) VisitCastingExpression(expression *ast.CastingExpression
 		}
 	}
 
+	bothValid := !leftHandType.IsInvalidType() &&
+		!rightHandType.IsInvalidType()
+
 	switch expression.Operation {
 	case ast.OperationFailableCast, ast.OperationForceCast:
 
-		if !leftHandType.IsInvalidType() &&
-			!rightHandType.IsInvalidType() {
+		if bothValid {
 
 			if leftHandType.IsResourceType() {
 				if !rightHandType.IsResourceType() {
@@ -107,6 +120,30 @@ func (checker *Checker) VisitCastingExpression(expression *ast.CastingExpression
 						Range:        ast.NewRangeFromPositioned(leftHandExpression),
 					},
 				)
+			} else if IsSubType(leftHandType, rightHandType) {
+
+				switch expression.Operation {
+				case ast.OperationFailableCast:
+					checker.hint(
+						&AlwaysSucceedingFailableCastHint{
+							ValueType:  leftHandType,
+							TargetType: rightHandType,
+							Range:      ast.NewRangeFromPositioned(expression),
+						},
+					)
+
+				case ast.OperationForceCast:
+					checker.hint(
+						&AlwaysSucceedingForceCastHint{
+							ValueType:  leftHandType,
+							TargetType: rightHandType,
+							Range:      ast.NewRangeFromPositioned(expression),
+						},
+					)
+
+				default:
+					panic(errors.NewUnreachableError())
+				}
 			}
 		}
 
@@ -117,19 +154,6 @@ func (checker *Checker) VisitCastingExpression(expression *ast.CastingExpression
 		return rightHandType
 
 	case ast.OperationCast:
-		if !leftHandType.IsInvalidType() &&
-			!rightHandType.IsInvalidType() &&
-			!checker.checkTypeCompatibility(leftHandExpression, leftHandType, rightHandType) {
-
-			checker.report(
-				&TypeMismatchError{
-					ActualType:   leftHandType,
-					ExpectedType: rightHandType,
-					Range:        ast.NewRangeFromPositioned(leftHandExpression),
-				},
-			)
-		}
-
 		return rightHandType
 
 	default:

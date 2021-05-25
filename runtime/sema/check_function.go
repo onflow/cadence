@@ -105,7 +105,7 @@ func (checker *Checker) declareFunctionDeclaration(
 	})
 	checker.report(err)
 
-	if checker.originsAndOccurrencesEnabled {
+	if checker.positionInfoEnabled {
 		checker.recordFunctionDeclarationOrigin(declaration, functionType)
 	}
 }
@@ -148,8 +148,13 @@ func (checker *Checker) checkFunction(
 			//   variable declarations will have proper function activation
 			//   associated to it, and declare parameters in this new scope
 
+			var endPosGetter func() ast.Position
+			if functionBlock != nil {
+				endPosGetter = functionBlock.EndPosition
+			}
+
 			checker.enterValueScope()
-			defer checker.leaveValueScope(checkResourceLoss)
+			defer checker.leaveValueScope(endPosGetter, checkResourceLoss)
 
 			checker.declareParameters(parameterList, functionType.Parameters)
 
@@ -174,6 +179,23 @@ func (checker *Checker) checkFunction(
 			}
 		},
 	)
+
+	if checker.positionInfoEnabled && functionBlock != nil {
+		startPos := functionBlock.StartPosition()
+		endPos := functionBlock.EndPosition()
+
+		for _, parameter := range functionType.Parameters {
+			checker.Ranges.Put(
+				startPos,
+				endPos,
+				Range{
+					Identifier:      parameter.Identifier,
+					Type:            parameter.TypeAnnotation.Type,
+					DeclarationKind: common.DeclarationKindParameter,
+				},
+			)
+		}
+	}
 }
 
 // checkFunctionExits checks that the given function block exits
@@ -282,7 +304,7 @@ func (checker *Checker) declareParameters(
 			Pos:             &identifier.Pos,
 		}
 		checker.valueActivations.Set(identifier.Identifier, variable)
-		if checker.originsAndOccurrencesEnabled {
+		if checker.positionInfoEnabled {
 			checker.recordVariableDeclarationOccurrence(identifier.Identifier, variable)
 		}
 	}
@@ -322,10 +344,20 @@ func (checker *Checker) visitWithPostConditions(postConditions *ast.Conditions, 
 		checker.declareBefore()
 	}
 
-	// If there is a return type, declare the constant `result` which has the return type
+	// If there is a return type, declare the constant `result`.
+	// If it is a resource type, the constant has the same type as a referecne to the return type.
+	// If it is not a resource type, the constant has the same type as the return type.
 
 	if returnType != VoidType {
-		checker.declareResult(returnType)
+		var resultType Type
+		if returnType.IsResourceType() {
+			resultType = &ReferenceType{
+				Type: returnType,
+			}
+		} else {
+			resultType = returnType
+		}
+		checker.declareResult(resultType)
 	}
 
 	if rewrittenPostConditions != nil {
@@ -339,7 +371,7 @@ func (checker *Checker) visitFunctionBlock(
 	checkResourceLoss bool,
 ) {
 	checker.enterValueScope()
-	defer checker.leaveValueScope(checkResourceLoss)
+	defer checker.leaveValueScope(functionBlock.EndPosition, checkResourceLoss)
 
 	if functionBlock.PreConditions != nil {
 		checker.visitConditions(*functionBlock.PreConditions)

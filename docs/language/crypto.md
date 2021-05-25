@@ -2,6 +2,49 @@
 title: Crypto
 ---
 
+### Hashing Algorithms
+The built-in enum `HashAlgorithm` provides the set of hashing algorithms that
+are supported by the language natively.
+
+```cadence
+pub enum HashAlgorithm: UInt8 {
+    /// SHA2_256 is Secure Hashing Algorithm 2 (SHA-2) with a 256-bit digest.
+    pub case SHA2_256 = 1
+
+    /// SHA2_384 is Secure Hashing Algorithm 2 (SHA-2) with a 384-bit digest.
+    pub case SHA2_384 = 2
+
+    /// SHA3_256 is Secure Hashing Algorithm 3 (SHA-3) with a 256-bit digest.
+    pub case SHA3_256 = 3
+
+    /// SHA3_384 is Secure Hashing Algorithm 3 (SHA-3) with a 384-bit digest.
+    pub case SHA3_384 = 4
+
+    /// KMAC128_BLS_BLS12_381 is an instance of KMAC128 mac algorithm, that can be used
+    /// as the hashing algorithm for BLS signature scheme on the curve BLS12-381.
+    pub case KMAC128_BLS_BLS12_381 = 5
+}
+```
+
+### Signing Algorithms
+The built-in enum `SignatureAlgorithm` provides the set of signing algorithms that
+are supported by the language natively.
+
+```cadence
+pub enum SignatureAlgorithm: UInt8 {
+    /// ECDSA_P256 is Elliptic Curve Digital Signature Algorithm (ECDSA) on the NIST P-256 curve.
+    pub case ECDSA_P256 = 1
+
+    /// ECDSA_secp256k1 is Elliptic Curve Digital Signature Algorithm (ECDSA) on the secp256k1 curve.
+    pub case ECDSA_secp256k1 = 2
+
+    /// BLS_BLS12_381 is BLS signature scheme on the BLS12-381 curve.
+    pub case BLS_BLS12_381 = 3
+}
+```
+
+## Crypto Contract
+
 The built-in contract `Crypto` can be used to perform cryptographic operations.
 The contract can be imported using `import Crypto`.
 
@@ -13,25 +56,25 @@ import Crypto
 pub fun test main() {
     let keyList = Crypto.KeyList()
 
-    let publicKeyA = Crypto.PublicKey(
+    let publicKeyA = PublicKey(
         publicKey:
             "db04940e18ec414664ccfd31d5d2d4ece3985acb8cb17a2025b2f1673427267968e52e2bbf3599059649d4b2cce98fdb8a3048e68abf5abe3e710129e90696ca".decodeHex(),
-        signatureAlgorithm: Crypto.ECDSA_P256
+        signatureAlgorithm: SignatureAlgorithm.ECDSA_P256
     )
     keyList.add(
         publicKeyA,
-        hashAlgorithm: Crypto.SHA3_256,
+        hashAlgorithm: HashAlgorithm.SHA3_256,
         weight: 0.5
     )
 
-    let publicKeyB = Crypto.PublicKey(
+    let publicKeyB = PublicKey(
         publicKey:
             "df9609ee588dd4a6f7789df8d56f03f545d4516f0c99b200d73b9a3afafc14de5d21a4fc7a2a2015719dc95c9e756cfa44f2a445151aaf42479e7120d83df956".decodeHex(),
-        signatureAlgorithm: Crypto.ECDSA_P256
+        signatureAlgorithm: SignatureAlgorithm.ECDSA_P256
     )
     keyList.add(
         publicKeyB,
-        hashAlgorithm: Crypto.SHA3_256,
+        hashAlgorithm: HashAlgorithm.SHA3_256,
         weight: 0.5
     )
 
@@ -57,38 +100,18 @@ pub fun test main() {
     )
 }
 ```
+Refer the [PublicKey](../accounts#publickey) section for more details on the creation and the validity of public keys.
 
 The API of the Crypto contract is:
 
 ```cadence
 pub contract Crypto {
 
-    pub struct SignatureAlgorithm {
-        pub let name: String
-    }
+    // Hash the data using the given hashing algorithm and returns the hashed data.
+    pub fun hash(_ data: [UInt8], algorithm: HashAlgorithm): [UInt8]
 
-    /// ECDSA_P256 is Elliptic Curve Digital Signature Algorithm (ECDSA) on the NIST P-256 curve
-    pub let ECDSA_P256: SignatureAlgorithm
-
-    /// ECDSA_Secp256k1 is Elliptic Curve Digital Signature Algorithm (ECDSA) on the secp256k1 curve
-    pub let ECDSA_Secp256k1: SignatureAlgorithm
-
-    pub struct HashAlgorithm {
-        pub let name: String
-    }
-
-    /// SHA2_256 is Secure Hashing Algorithm 2 (SHA-2) with a 256-bit digest
-    pub let SHA2_256: HashAlgorithm
-
-    /// SHA3_256 is Secure Hashing Algorithm 3 (SHA-3) with a 256-bit digest
-    pub let SHA3_256: HashAlgorithm
-
-    pub struct PublicKey {
-        pub let publicKey: [UInt8]
-        pub let signatureAlgorithm: SignatureAlgorithm
-
-        init(publicKey: [UInt8], signatureAlgorithm: SignatureAlgorithm)
-    }
+    // Hash the data using the given hashing algorithm and the tag. Returns the hashed data.
+    pub fun hashWithTag(_ data: [UInt8], tag: string, algorithm: HashAlgorithm): [UInt8]
 
     pub struct KeyListEntry {
         pub let keyIndex: Int

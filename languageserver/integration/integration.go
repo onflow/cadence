@@ -19,28 +19,40 @@
 package integration
 
 import (
-	"github.com/onflow/flow-go-sdk"
-	"github.com/onflow/flow-go-sdk/client"
+	"github.com/onflow/flow-cli/pkg/flowcli/project"
+	"github.com/onflow/flow-cli/pkg/flowcli/services"
 
 	"github.com/onflow/cadence/languageserver/protocol"
 	"github.com/onflow/cadence/languageserver/server"
 )
 
+type EmulatorState int
+
+const (
+	EmulatorOffline EmulatorState = iota
+	EmulatorStarting
+	EmulatorStarted
+)
+
 type FlowIntegration struct {
-	server         *server.Server
-	config         Config
-	flowClient     *client.Client
-	accounts       map[flow.Address]AccountPrivateKey
-	activeAddress  flow.Address
-	serviceAddress flow.Address
+	server *server.Server
+	config Config
+
 	entryPointInfo map[protocol.DocumentUri]entryPointInfo
+	contractInfo   map[protocol.DocumentUri]contractInfo
+
+	activeAccount ClientAccount
+	emulatorState EmulatorState
+
+	sharedServices *services.Services
+	project        *project.Project
 }
 
 func NewFlowIntegration(s *server.Server, enableFlowClient bool) (*FlowIntegration, error) {
 	integration := &FlowIntegration{
 		server:         s,
-		accounts:       make(map[flow.Address]AccountPrivateKey),
 		entryPointInfo: map[protocol.DocumentUri]entryPointInfo{},
+		contractInfo:   map[protocol.DocumentUri]contractInfo{},
 	}
 
 	options := []server.Option{

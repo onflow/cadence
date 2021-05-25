@@ -60,7 +60,7 @@ func (checker *Checker) VisitInterfaceDeclaration(declaration *ast.InterfaceDecl
 	// Activate new scope for nested types
 
 	checker.typeActivations.Enter()
-	defer checker.typeActivations.Leave()
+	defer checker.typeActivations.Leave(declaration.EndPosition)
 
 	// Declare nested types
 
@@ -168,7 +168,7 @@ func (checker *Checker) checkInterfaceFunctions(
 
 		func() {
 			checker.enterValueScope()
-			defer checker.leaveValueScope(false)
+			defer checker.leaveValueScope(function.EndPosition, false)
 
 			checker.declareSelfValue(selfType)
 
@@ -240,10 +240,10 @@ func (checker *Checker) declareInterfaceType(declaration *ast.InterfaceDeclarati
 	// Activate new scope for nested declarations
 
 	checker.typeActivations.Enter()
-	defer checker.typeActivations.Leave()
+	defer checker.typeActivations.Leave(declaration.EndPosition)
 
-	checker.valueActivations.Enter()
-	defer checker.valueActivations.Leave()
+	checker.enterValueScope()
+	defer checker.leaveValueScope(declaration.EndPosition, false)
 
 	// Check and declare nested types
 
@@ -287,10 +287,10 @@ func (checker *Checker) declareInterfaceMembers(declaration *ast.InterfaceDeclar
 	// Activate new scope for nested declarations
 
 	checker.typeActivations.Enter()
-	defer checker.typeActivations.Leave()
+	defer checker.typeActivations.Leave(declaration.EndPosition)
 
-	checker.valueActivations.Enter()
-	defer checker.valueActivations.Leave()
+	checker.enterValueScope()
+	defer checker.leaveValueScope(declaration.EndPosition, false)
 
 	// Declare nested types
 
@@ -311,7 +311,7 @@ func (checker *Checker) declareInterfaceMembers(declaration *ast.InterfaceDeclar
 
 	interfaceType.Members = members
 	interfaceType.Fields = fields
-	if checker.originsAndOccurrencesEnabled {
+	if checker.positionInfoEnabled {
 		checker.memberOrigins[interfaceType] = origins
 	}
 

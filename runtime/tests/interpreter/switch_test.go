@@ -187,4 +187,74 @@ func TestInterpretSwitchStatement(t *testing.T) {
 			assert.Equal(t, expected, actual)
 		}
 	})
+
+	t.Run("optional", func(t *testing.T) {
+
+		inter := parseCheckAndInterpretWithOptions(t,
+			`
+              fun test(_ x: Int?, _ y: Int?): String {
+                  switch x {
+                  case y:
+                      return "1"
+                  case nil:
+                      return "2"
+                  default:
+                      return "3"
+                  }
+                  return "4"
+              }
+            `,
+			ParseCheckAndInterpretOptions{
+				HandleCheckerError: func(err error) {
+					errs := checker.ExpectCheckerErrors(t, err, 1)
+
+					assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
+				},
+			},
+		)
+
+		type testCase struct {
+			arguments []interpreter.Value
+			expected  interpreter.Value
+		}
+
+		for _, testCase := range []testCase{
+			{
+				[]interpreter.Value{
+					interpreter.NewSomeValueOwningNonCopying(
+						interpreter.NewIntValueFromInt64(1),
+					),
+					interpreter.NewSomeValueOwningNonCopying(
+						interpreter.NewIntValueFromInt64(1),
+					),
+				},
+				interpreter.NewStringValue("1"),
+			},
+			{
+				[]interpreter.Value{
+					interpreter.NilValue{},
+					interpreter.NewSomeValueOwningNonCopying(
+						interpreter.NewIntValueFromInt64(1),
+					),
+				},
+				interpreter.NewStringValue("2"),
+			},
+			{
+				[]interpreter.Value{
+					interpreter.NewSomeValueOwningNonCopying(
+						interpreter.NewIntValueFromInt64(1),
+					),
+					interpreter.NewSomeValueOwningNonCopying(
+						interpreter.NewIntValueFromInt64(2),
+					),
+				},
+				interpreter.NewStringValue("3"),
+			},
+		} {
+			actual, err := inter.Invoke("test", testCase.arguments...)
+			require.NoError(t, err)
+
+			assert.Equal(t, testCase.expected, actual)
+		}
+	})
 }

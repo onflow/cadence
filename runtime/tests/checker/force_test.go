@@ -41,12 +41,12 @@ func TestCheckForce(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t,
-			&sema.OptionalType{Type: &sema.IntType{}},
+			&sema.OptionalType{Type: sema.IntType},
 			RequireGlobalValue(t, checker.Elaboration, "x"),
 		)
 
 		assert.Equal(t,
-			&sema.IntType{},
+			sema.IntType,
 			RequireGlobalValue(t, checker.Elaboration, "y"),
 		)
 
@@ -62,12 +62,12 @@ func TestCheckForce(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t,
-			&sema.IntType{},
+			sema.IntType,
 			RequireGlobalValue(t, checker.Elaboration, "x"),
 		)
 
 		assert.Equal(t,
-			&sema.IntType{},
+			sema.IntType,
 			RequireGlobalValue(t, checker.Elaboration, "y"),
 		)
 
@@ -90,5 +90,42 @@ func TestCheckForce(t *testing.T) {
 		errs := ExpectCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
+	})
+
+	t.Run("optional mismatching", func(t *testing.T) {
+
+		_, err := ParseAndCheck(t, `
+          let x: Int? = 1
+          let y: String = x!
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		typeMismatchError := errs[0].(*sema.TypeMismatchError)
+
+		expected := &sema.OptionalType{Type: sema.StringType}
+		assert.Equal(t, expected, typeMismatchError.ExpectedType)
+
+		expected = &sema.OptionalType{Type: sema.IntType}
+		assert.Equal(t, expected, typeMismatchError.ActualType)
+	})
+
+	t.Run("non-optional mismatching", func(t *testing.T) {
+
+		_, err := ParseAndCheck(t, `
+          let x: Int = 1
+          let y: String = x!
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		typeMismatchError := errs[0].(*sema.TypeMismatchError)
+
+		expectedType := &sema.OptionalType{Type: sema.StringType}
+		assert.Equal(t, expectedType, typeMismatchError.ExpectedType)
+
+		assert.Equal(t, sema.IntType, typeMismatchError.ActualType)
 	})
 }

@@ -20,6 +20,7 @@ package interpreter_test
 
 import (
 	"fmt"
+	"math"
 	"math/big"
 	"testing"
 
@@ -28,7 +29,6 @@ import (
 
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
-	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
 func TestInterpretNegativeZeroFixedPoint(t *testing.T) {
@@ -41,7 +41,7 @@ func TestInterpretNegativeZeroFixedPoint(t *testing.T) {
 
 	assert.Equal(t,
 		interpreter.Fix64Value(-42000000),
-		inter.Globals["x"].Value,
+		inter.Globals["x"].GetValue(),
 	)
 }
 
@@ -57,8 +57,9 @@ func TestInterpretFixedPointConversionAndAddition(t *testing.T) {
 	}
 
 	for _, fixedPointType := range sema.AllFixedPointTypes {
-		switch fixedPointType.(type) {
-		case *sema.FixedPointType, *sema.SignedFixedPointType:
+		// Only test leaf types
+		switch fixedPointType {
+		case sema.FixedPointType, sema.SignedFixedPointType:
 			continue
 		}
 
@@ -84,17 +85,17 @@ func TestInterpretFixedPointConversionAndAddition(t *testing.T) {
 
 			assert.Equal(t,
 				value,
-				inter.Globals["x"].Value,
+				inter.Globals["x"].GetValue(),
 			)
 
 			assert.Equal(t,
 				value,
-				inter.Globals["y"].Value,
+				inter.Globals["y"].GetValue(),
 			)
 
 			assert.Equal(t,
 				interpreter.BoolValue(true),
-				inter.Globals["z"].Value,
+				inter.Globals["z"].GetValue(),
 			)
 
 		})
@@ -108,8 +109,9 @@ var testFixedPointValues = map[string]interpreter.Value{
 
 func init() {
 	for _, fixedPointType := range sema.AllFixedPointTypes {
-		switch fixedPointType.(type) {
-		case *sema.FixedPointType, *sema.SignedFixedPointType:
+		// Only test leaf types
+		switch fixedPointType {
+		case sema.FixedPointType, sema.SignedFixedPointType:
 			continue
 		}
 
@@ -146,12 +148,12 @@ func TestInterpretFixedPointConversions(t *testing.T) {
 
 				assert.Equal(t,
 					fixedPointValue,
-					inter.Globals["x"].Value,
+					inter.Globals["x"].GetValue(),
 				)
 
 				assert.Equal(t,
 					integerValue,
-					inter.Globals["y"].Value,
+					inter.Globals["y"].GetValue(),
 				)
 			})
 		}
@@ -181,12 +183,12 @@ func TestInterpretFixedPointConversions(t *testing.T) {
 
 				assert.Equal(t,
 					expected,
-					inter.Globals["x"].Value,
+					inter.Globals["x"].GetValue(),
 				)
 
 				assert.Equal(t,
 					expected,
-					inter.Globals["y"].Value,
+					inter.Globals["y"].GetValue(),
 				)
 			})
 		}
@@ -217,12 +219,12 @@ func TestInterpretFixedPointConversions(t *testing.T) {
 
 				assert.Equal(t,
 					expected,
-					inter.Globals["x"].Value,
+					inter.Globals["x"].GetValue(),
 				)
 
 				assert.Equal(t,
 					expected,
-					inter.Globals["y"].Value,
+					inter.Globals["y"].GetValue(),
 				)
 			})
 		}
@@ -246,12 +248,12 @@ func TestInterpretFixedPointConversions(t *testing.T) {
 
 				assert.Equal(t,
 					interpreter.Fix64Value(value*sema.Fix64Factor),
-					inter.Globals["x"].Value,
+					inter.Globals["x"].GetValue(),
 				)
 
 				assert.Equal(t,
 					interpreter.UFix64Value(value*sema.Fix64Factor),
-					inter.Globals["y"].Value,
+					inter.Globals["y"].GetValue(),
 				)
 			})
 		}
@@ -275,12 +277,12 @@ func TestInterpretFixedPointConversions(t *testing.T) {
 
 				assert.Equal(t,
 					interpreter.UFix64Value(value*sema.Fix64Factor),
-					inter.Globals["x"].Value,
+					inter.Globals["x"].GetValue(),
 				)
 
 				assert.Equal(t,
 					interpreter.Fix64Value(value*sema.Fix64Factor),
-					inter.Globals["y"].Value,
+					inter.Globals["y"].GetValue(),
 				)
 			})
 		}
@@ -297,7 +299,7 @@ func TestInterpretFixedPointConversions(t *testing.T) {
 
 		_, err := inter.Invoke("test")
 
-		utils.RequireErrorAs(t, err, &interpreter.UnderflowError{})
+		require.ErrorAs(t, err, &interpreter.UnderflowError{})
 	})
 
 	t.Run("invalid UFix64 > max Fix64 int to Fix64", func(t *testing.T) {
@@ -316,7 +318,7 @@ func TestInterpretFixedPointConversions(t *testing.T) {
 
 		_, err := inter.Invoke("test")
 
-		utils.RequireErrorAs(t, err, &interpreter.OverflowError{})
+		require.ErrorAs(t, err, &interpreter.OverflowError{})
 	})
 
 	t.Run("invalid negative integer to UFix64", func(t *testing.T) {
@@ -345,7 +347,7 @@ func TestInterpretFixedPointConversions(t *testing.T) {
 					err,
 				)
 
-				utils.RequireErrorAs(t, err, &interpreter.UnderflowError{})
+				require.ErrorAs(t, err, &interpreter.UnderflowError{})
 			})
 		}
 	})
@@ -353,12 +355,12 @@ func TestInterpretFixedPointConversions(t *testing.T) {
 	t.Run("invalid big integer (>uint64) to UFix64", func(t *testing.T) {
 
 		bigIntegerTypes := []sema.Type{
-			&sema.Word64Type{},
-			&sema.UInt64Type{},
-			&sema.UInt128Type{},
-			&sema.UInt256Type{},
-			&sema.Int256Type{},
-			&sema.Int128Type{},
+			sema.Word64Type,
+			sema.UInt64Type,
+			sema.UInt128Type,
+			sema.UInt256Type,
+			sema.Int256Type,
+			sema.Int128Type,
 		}
 
 		for _, integerType := range bigIntegerTypes {
@@ -380,7 +382,7 @@ func TestInterpretFixedPointConversions(t *testing.T) {
 
 				_, err := inter.Invoke("test")
 
-				utils.RequireErrorAs(t, err, &interpreter.OverflowError{})
+				require.ErrorAs(t, err, &interpreter.OverflowError{})
 			})
 		}
 	})
@@ -416,7 +418,7 @@ func TestInterpretFixedPointConversions(t *testing.T) {
 
 				_, err := inter.Invoke("test")
 
-				utils.RequireErrorAs(t, err, &interpreter.OverflowError{})
+				require.ErrorAs(t, err, &interpreter.OverflowError{})
 			})
 		}
 	})
@@ -453,7 +455,7 @@ func TestInterpretFixedPointConversions(t *testing.T) {
 				_, err := inter.Invoke("test")
 				require.Error(t, err)
 
-				utils.RequireErrorAs(t, err, &interpreter.OverflowError{})
+				require.ErrorAs(t, err, &interpreter.OverflowError{})
 			})
 		}
 	})
@@ -490,8 +492,70 @@ func TestInterpretFixedPointConversions(t *testing.T) {
 				_, err := inter.Invoke("test")
 				require.Error(t, err)
 
-				utils.RequireErrorAs(t, err, &interpreter.UnderflowError{})
+				require.ErrorAs(t, err, &interpreter.UnderflowError{})
 			})
 		}
 	})
+}
+
+func TestInterpretFixedPointMinMax(t *testing.T) {
+
+	t.Parallel()
+
+	type testCase struct {
+		min interpreter.Value
+		max interpreter.Value
+	}
+
+	test := func(t *testing.T, ty sema.Type, test testCase) {
+
+		inter := parseCheckAndInterpret(t,
+			fmt.Sprintf(
+				`
+				  let min = %[1]s.min
+				  let max = %[1]s.max
+				`,
+				ty,
+			),
+		)
+
+		require.Equal(t,
+			test.min,
+			inter.Globals["min"].GetValue(),
+		)
+		require.Equal(t,
+			test.max,
+			inter.Globals["max"].GetValue(),
+		)
+	}
+
+	testCases := map[sema.Type]testCase{
+		sema.Fix64Type: {
+			min: interpreter.Fix64Value(math.MinInt64),
+			max: interpreter.Fix64Value(math.MaxInt64),
+		},
+		sema.UFix64Type: {
+			min: interpreter.UFix64Value(0),
+			max: interpreter.UFix64Value(math.MaxUint64),
+		},
+	}
+
+	for _, ty := range sema.AllFixedPointTypes {
+		// Only test leaf types
+		switch ty {
+		case sema.FixedPointType, sema.SignedFixedPointType:
+			continue
+		}
+
+		if _, ok := testCases[ty]; !ok {
+			require.Fail(t, "missing type: %s", ty.String())
+		}
+	}
+
+	for ty, testCase := range testCases {
+
+		t.Run(ty.String(), func(t *testing.T) {
+			test(t, ty, testCase)
+		})
+	}
 }

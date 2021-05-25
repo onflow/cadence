@@ -80,7 +80,7 @@ func TestCheckToBytes(t *testing.T) {
 
 		assert.Equal(t,
 			&sema.VariableSizedType{
-				Type: &sema.UInt8Type{},
+				Type: sema.UInt8Type,
 			},
 			resType,
 		)
@@ -106,7 +106,7 @@ func TestCheckToBigEndianBytes(t *testing.T) {
 
 			assert.Equal(t,
 				&sema.VariableSizedType{
-					Type: &sema.UInt8Type{},
+					Type: sema.UInt8Type,
 				},
 				resType,
 			)

@@ -67,11 +67,11 @@ func (checker *Checker) visitCompositeDeclaration(declaration *ast.CompositeDecl
 	// Activate new scopes for nested types
 
 	checker.typeActivations.Enter()
-	defer checker.typeActivations.Leave()
+	defer checker.typeActivations.Leave(declaration.EndPosition)
 
 	if kind == ContainerKindComposite {
-		checker.valueActivations.Enter()
-		defer checker.valueActivations.Leave()
+		checker.enterValueScope()
+		defer checker.leaveValueScope(declaration.EndPosition, false)
 	}
 
 	checker.declareCompositeNestedTypes(declaration, kind, true)
@@ -424,7 +424,7 @@ func (checker *Checker) declareCompositeType(declaration *ast.CompositeDeclarati
 	})
 	checker.report(err)
 
-	if checker.originsAndOccurrencesEnabled {
+	if checker.positionInfoEnabled {
 		checker.recordVariableDeclarationOccurrence(
 			identifier.Identifier,
 			variable,
@@ -447,10 +447,10 @@ func (checker *Checker) declareCompositeType(declaration *ast.CompositeDeclarati
 	// Activate new scope for nested declarations
 
 	checker.typeActivations.Enter()
-	defer checker.typeActivations.Leave()
+	defer checker.typeActivations.Leave(declaration.EndPosition)
 
-	checker.valueActivations.Enter()
-	defer checker.valueActivations.Leave()
+	checker.enterValueScope()
+	defer checker.leaveValueScope(declaration.EndPosition, false)
 
 	// Check and declare nested types
 
@@ -499,10 +499,10 @@ func (checker *Checker) declareCompositeMembersAndValue(
 		// Activate new scopes for nested types
 
 		checker.typeActivations.Enter()
-		defer checker.typeActivations.Leave()
+		defer checker.typeActivations.Leave(declaration.EndPosition)
 
-		checker.valueActivations.Enter()
-		defer checker.valueActivations.Leave()
+		checker.enterValueScope()
+		defer checker.leaveValueScope(declaration.EndPosition, false)
 
 		checker.declareCompositeNestedTypes(declaration, kind, false)
 
@@ -626,7 +626,7 @@ func (checker *Checker) declareCompositeMembersAndValue(
 
 		compositeType.Members = members
 		compositeType.Fields = fields
-		if checker.originsAndOccurrencesEnabled {
+		if checker.positionInfoEnabled {
 			checker.memberOrigins[compositeType] = origins
 		}
 	})()
@@ -672,7 +672,7 @@ func (checker *Checker) declareCompositeMembersAndValue(
 
 func (checker *Checker) declareCompositeConstructor(
 	declaration *ast.CompositeDeclaration,
-	constructorType *SpecialFunctionType,
+	constructorType *ConstructorFunctionType,
 	constructorArgumentLabels []string,
 ) {
 	// Resource and event constructors are effectively always private,
@@ -734,11 +734,11 @@ func (checker *Checker) declareEnumConstructor(
 	constructorMembers := NewStringMemberOrderedMap()
 
 	var constructorOrigins map[string]*Origin
-	if checker.originsAndOccurrencesEnabled {
+	if checker.positionInfoEnabled {
 		constructorOrigins = make(map[string]*Origin, len(enumCases))
 	}
 
-	constructorType := &SpecialFunctionType{
+	constructorType := &ConstructorFunctionType{
 		FunctionType: &FunctionType{
 			Parameters: []*Parameter{
 				{
@@ -751,8 +751,8 @@ func (checker *Checker) declareEnumConstructor(
 					Type: compositeType,
 				},
 			),
+			Members: constructorMembers,
 		},
-		Members: constructorMembers,
 	}
 
 	memberCaseTypeAnnotation := NewTypeAnnotation(compositeType)
@@ -776,18 +776,16 @@ func (checker *Checker) declareEnumConstructor(
 				DocString:       enumCase.DocString,
 			})
 
-		if checker.originsAndOccurrencesEnabled && constructorOrigins != nil {
+		if checker.positionInfoEnabled && constructorOrigins != nil {
 			constructorOrigins[caseName] =
 				checker.recordFieldDeclarationOrigin(
 					enumCase.Identifier,
-					enumCase.Identifier.StartPosition(),
-					enumCase.Identifier.EndPosition(),
 					compositeType,
 				)
 		}
 	}
 
-	if checker.originsAndOccurrencesEnabled {
+	if checker.positionInfoEnabled {
 		checker.memberOrigins[constructorType] = constructorOrigins
 	}
 
@@ -933,7 +931,7 @@ func (checker *Checker) enumRawType(declaration *ast.CompositeDeclaration) Type 
 	rawType := checker.ConvertType(conformance)
 
 	if !rawType.IsInvalidType() &&
-		!IsSubType(rawType, &IntegerType{}) {
+		!IsSubType(rawType, IntegerType) {
 
 		checker.report(
 			&InvalidEnumRawTypeError{
@@ -1271,11 +1269,11 @@ func (checker *Checker) compositeConstructorType(
 	compositeDeclaration *ast.CompositeDeclaration,
 	compositeType *CompositeType,
 ) (
-	constructorFunctionType *SpecialFunctionType,
+	constructorFunctionType *ConstructorFunctionType,
 	argumentLabels []string,
 ) {
 
-	constructorFunctionType = &SpecialFunctionType{
+	constructorFunctionType = &ConstructorFunctionType{
 		FunctionType: &FunctionType{
 			ReturnTypeAnnotation: NewTypeAnnotation(compositeType),
 		},
@@ -1297,8 +1295,8 @@ func (checker *Checker) compositeConstructorType(
 		// NOTE: Don't use `constructorFunctionType`, as it has a return type.
 		//   The initializer itself has a `Void` return type.
 
-		checker.Elaboration.SpecialFunctionTypes[firstInitializer] =
-			&SpecialFunctionType{
+		checker.Elaboration.ConstructorFunctionTypes[firstInitializer] =
+			&ConstructorFunctionType{
 				FunctionType: &FunctionType{
 					Parameters:           constructorFunctionType.Parameters,
 					ReturnTypeAnnotation: NewTypeAnnotation(VoidType),
@@ -1338,7 +1336,7 @@ func (checker *Checker) defaultMembersAndOrigins(
 
 	memberCount := len(fields) + len(functions)
 	members = NewStringMemberOrderedMap()
-	if checker.originsAndOccurrencesEnabled {
+	if checker.positionInfoEnabled {
 		origins = make(map[string]*Origin, memberCount)
 	}
 
@@ -1415,12 +1413,10 @@ func (checker *Checker) defaultMembersAndOrigins(
 				DocString:       field.DocString,
 			})
 
-		if checker.originsAndOccurrencesEnabled && origins != nil {
+		if checker.positionInfoEnabled && origins != nil {
 			origins[identifier] =
 				checker.recordFieldDeclarationOrigin(
 					field.Identifier,
-					field.StartPos,
-					field.EndPos,
 					fieldTypeAnnotation.Type,
 				)
 		}
@@ -1481,7 +1477,7 @@ func (checker *Checker) defaultMembersAndOrigins(
 				DocString:       function.DocString,
 			})
 
-		if checker.originsAndOccurrencesEnabled && origins != nil {
+		if checker.positionInfoEnabled && origins != nil {
 			origins[identifier] =
 				checker.recordFunctionDeclarationOrigin(function, functionType)
 		}
@@ -1501,7 +1497,7 @@ func (checker *Checker) eventMembersAndOrigins(
 	parameters := initializer.FunctionDeclaration.ParameterList.Parameters
 
 	members = NewStringMemberOrderedMap()
-	if checker.originsAndOccurrencesEnabled {
+	if checker.positionInfoEnabled {
 		origins = make(map[string]*Origin, len(parameters))
 	}
 
@@ -1523,12 +1519,10 @@ func (checker *Checker) eventMembersAndOrigins(
 				VariableKind:    ast.VariableKindConstant,
 			})
 
-		if checker.originsAndOccurrencesEnabled && origins != nil {
+		if checker.positionInfoEnabled && origins != nil {
 			origins[identifier.Identifier] =
 				checker.recordFieldDeclarationOrigin(
 					identifier,
-					parameter.StartPos,
-					parameter.EndPos,
 					typeAnnotation.Type,
 				)
 		}
@@ -1701,7 +1695,7 @@ func (checker *Checker) checkSpecialFunction(
 	checkResourceLoss := containerKind != ContainerKindInterface
 
 	checker.enterValueScope()
-	defer checker.leaveValueScope(checkResourceLoss)
+	defer checker.leaveValueScope(specialFunction.EndPosition, checkResourceLoss)
 
 	checker.declareSelfValue(containerType)
 
@@ -1758,7 +1752,7 @@ func (checker *Checker) checkCompositeFunctions(
 
 		func() {
 			checker.enterValueScope()
-			defer checker.leaveValueScope(true)
+			defer checker.leaveValueScope(function.EndPosition, true)
 
 			checker.declareSelfValue(selfType)
 
@@ -1799,7 +1793,7 @@ func (checker *Checker) declareSelfValue(selfType Type) {
 		Pos:             nil,
 	}
 	checker.valueActivations.Set(SelfIdentifier, self)
-	if checker.originsAndOccurrencesEnabled {
+	if checker.positionInfoEnabled {
 		checker.recordVariableDeclarationOccurrence(SelfIdentifier, self)
 	}
 }

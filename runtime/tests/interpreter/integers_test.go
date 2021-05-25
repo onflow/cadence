@@ -20,6 +20,7 @@ package interpreter_test
 
 import (
 	"fmt"
+	"math"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -55,9 +56,9 @@ var testIntegerTypesAndValues = map[string]interpreter.Value{
 
 func init() {
 	for _, integerType := range sema.AllIntegerTypes {
-
-		switch integerType.(type) {
-		case *sema.IntegerType, *sema.SignedIntegerType:
+		// Only test leaf types
+		switch integerType {
+		case sema.IntegerType, sema.SignedIntegerType:
 			continue
 		}
 
@@ -88,17 +89,17 @@ func TestInterpretIntegerConversions(t *testing.T) {
 
 			assert.Equal(t,
 				value,
-				inter.Globals["x"].Value,
+				inter.Globals["x"].GetValue(),
 			)
 
 			assert.Equal(t,
 				value,
-				inter.Globals["y"].Value,
+				inter.Globals["y"].GetValue(),
 			)
 
 			assert.Equal(t,
 				interpreter.BoolValue(true),
-				inter.Globals["z"].Value,
+				inter.Globals["z"].GetValue(),
 			)
 
 		})
@@ -118,14 +119,14 @@ func TestInterpretAddressConversion(t *testing.T) {
 		interpreter.AddressValue{
 			0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
 		},
-		inter.Globals["x"].Value,
+		inter.Globals["x"].GetValue(),
 	)
 
 	assert.Equal(t,
 		interpreter.AddressValue{
 			0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2,
 		},
-		inter.Globals["y"].Value,
+		inter.Globals["y"].GetValue(),
 	)
 }
 
@@ -148,7 +149,7 @@ func TestInterpretIntegerLiteralTypeConversionInVariableDeclaration(t *testing.T
 
 			assert.Equal(t,
 				value,
-				inter.Globals["x"].Value,
+				inter.Globals["x"].GetValue(),
 			)
 
 		})
@@ -174,7 +175,7 @@ func TestInterpretIntegerLiteralTypeConversionInVariableDeclarationOptional(t *t
 
 			assert.Equal(t,
 				interpreter.NewSomeValueOwningNonCopying(value),
-				inter.Globals["x"].Value,
+				inter.Globals["x"].GetValue(),
 			)
 		})
 	}
@@ -202,7 +203,7 @@ func TestInterpretIntegerLiteralTypeConversionInAssignment(t *testing.T) {
 
 			assert.Equal(t,
 				value,
-				inter.Globals["x"].Value,
+				inter.Globals["x"].GetValue(),
 			)
 
 			_, err := inter.Invoke("test")
@@ -211,7 +212,7 @@ func TestInterpretIntegerLiteralTypeConversionInAssignment(t *testing.T) {
 			numberValue := value.(interpreter.NumberValue)
 			assert.Equal(t,
 				numberValue.Plus(numberValue),
-				inter.Globals["x"].Value,
+				inter.Globals["x"].GetValue(),
 			)
 		})
 	}
@@ -239,7 +240,7 @@ func TestInterpretIntegerLiteralTypeConversionInAssignmentOptional(t *testing.T)
 
 			assert.Equal(t,
 				interpreter.NewSomeValueOwningNonCopying(value),
-				inter.Globals["x"].Value,
+				inter.Globals["x"].GetValue(),
 			)
 
 			_, err := inter.Invoke("test")
@@ -251,7 +252,7 @@ func TestInterpretIntegerLiteralTypeConversionInAssignmentOptional(t *testing.T)
 				interpreter.NewSomeValueOwningNonCopying(
 					numberValue.Plus(numberValue),
 				),
-				inter.Globals["x"].Value,
+				inter.Globals["x"].GetValue(),
 			)
 		})
 	}
@@ -279,7 +280,7 @@ func TestInterpretIntegerLiteralTypeConversionInFunctionCallArgument(t *testing.
 
 			assert.Equal(t,
 				value,
-				inter.Globals["x"].Value,
+				inter.Globals["x"].GetValue(),
 			)
 		})
 	}
@@ -307,7 +308,7 @@ func TestInterpretIntegerLiteralTypeConversionInFunctionCallArgumentOptional(t *
 
 			assert.Equal(t,
 				interpreter.NewSomeValueOwningNonCopying(value),
-				inter.Globals["x"].Value,
+				inter.Globals["x"].GetValue(),
 			)
 		})
 	}
@@ -369,6 +370,129 @@ func TestInterpretIntegerLiteralTypeConversionInReturnOptional(t *testing.T) {
 				interpreter.NewSomeValueOwningNonCopying(value),
 				result,
 			)
+		})
+	}
+}
+
+func TestInterpretIntegerMinMax(t *testing.T) {
+
+	t.Parallel()
+
+	type testCase struct {
+		min interpreter.Value
+		max interpreter.Value
+	}
+
+	test := func(t *testing.T, ty sema.Type, field string, expected interpreter.Value) {
+
+		inter := parseCheckAndInterpret(t,
+			fmt.Sprintf(
+				`
+				  let x = %s.%s
+				`,
+				ty,
+				field,
+			),
+		)
+
+		require.Equal(t,
+			expected,
+			inter.Globals["x"].GetValue(),
+		)
+	}
+
+	testCases := map[sema.Type]testCase{
+		sema.IntType: {},
+		sema.UIntType: {
+			min: interpreter.NewUIntValueFromUint64(0),
+		},
+		sema.UInt8Type: {
+			min: interpreter.UInt8Value(0),
+			max: interpreter.UInt8Value(math.MaxUint8),
+		},
+		sema.UInt16Type: {
+			min: interpreter.UInt16Value(0),
+			max: interpreter.UInt16Value(math.MaxUint16),
+		},
+		sema.UInt32Type: {
+			min: interpreter.UInt32Value(0),
+			max: interpreter.UInt32Value(math.MaxUint32),
+		},
+		sema.UInt64Type: {
+			min: interpreter.UInt64Value(0),
+			max: interpreter.UInt64Value(math.MaxUint64),
+		},
+		sema.UInt128Type: {
+			min: interpreter.NewUInt128ValueFromUint64(0),
+			max: interpreter.NewUInt128ValueFromBigInt(sema.UInt128TypeMaxIntBig),
+		},
+		sema.UInt256Type: {
+			min: interpreter.NewUInt256ValueFromUint64(0),
+			max: interpreter.NewUInt256ValueFromBigInt(sema.UInt256TypeMaxIntBig),
+		},
+		sema.Word8Type: {
+			min: interpreter.Word8Value(0),
+			max: interpreter.Word8Value(math.MaxUint8),
+		},
+		sema.Word16Type: {
+			min: interpreter.Word16Value(0),
+			max: interpreter.Word16Value(math.MaxUint16),
+		},
+		sema.Word32Type: {
+			min: interpreter.Word32Value(0),
+			max: interpreter.Word32Value(math.MaxUint32),
+		},
+		sema.Word64Type: {
+			min: interpreter.Word64Value(0),
+			max: interpreter.Word64Value(math.MaxUint64),
+		},
+		sema.Int8Type: {
+			min: interpreter.Int8Value(math.MinInt8),
+			max: interpreter.Int8Value(math.MaxInt8),
+		},
+		sema.Int16Type: {
+			min: interpreter.Int16Value(math.MinInt16),
+			max: interpreter.Int16Value(math.MaxInt16),
+		},
+		sema.Int32Type: {
+			min: interpreter.Int32Value(math.MinInt32),
+			max: interpreter.Int32Value(math.MaxInt32),
+		},
+		sema.Int64Type: {
+			min: interpreter.Int64Value(math.MinInt64),
+			max: interpreter.Int64Value(math.MaxInt64),
+		},
+		sema.Int128Type: {
+			min: interpreter.NewInt128ValueFromBigInt(sema.Int128TypeMinIntBig),
+			max: interpreter.NewInt128ValueFromBigInt(sema.Int128TypeMaxIntBig),
+		},
+		sema.Int256Type: {
+			min: interpreter.NewInt256ValueFromBigInt(sema.Int256TypeMinIntBig),
+			max: interpreter.NewInt256ValueFromBigInt(sema.Int256TypeMaxIntBig),
+		},
+	}
+
+	for _, ty := range sema.AllIntegerTypes {
+		// Only test leaf types
+		switch ty {
+		case sema.IntegerType, sema.SignedIntegerType:
+			continue
+		}
+
+		if _, ok := testCases[ty]; !ok {
+			require.Fail(t, "missing type: %s", ty.String())
+		}
+	}
+
+	for ty, testCase := range testCases {
+
+		t.Run(ty.String(), func(t *testing.T) {
+			if testCase.min != nil {
+				test(t, ty, sema.NumberTypeMinFieldName, testCase.min)
+			}
+			if testCase.max != nil {
+				test(t, ty, sema.NumberTypeMaxFieldName, testCase.max)
+			}
 		})
 	}
 }

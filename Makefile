@@ -24,7 +24,7 @@ PATH := $(PATH):$(GOPATH)/bin
 .PHONY: test
 test:
 	# test all packages
-	GO111MODULE=on go test $(if $(JSON_OUTPUT),-json,) -parallel 8 -race ./...
+	GO111MODULE=on go test -coverprofile=coverage.txt -covermode=atomic -parallel 8 -race ./...
 	cd ./languageserver && make test
 
 .PHONY: build
@@ -65,3 +65,10 @@ check-tidy: generate
 	go mod tidy
 	cd languageserver; go mod tidy
 	git diff --exit-code
+
+.PHONY: release
+release:
+	@(VERSIONED_FILES="version.go \
+	npm-packages/cadence-parser/package.json \
+	npm-packages/cadence-language-server/package.json" \
+	./bump-version.sh $(bump))

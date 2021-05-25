@@ -9,7 +9,7 @@ are the most critical to review.
 
 ______
 
-For contributor use:
+<!-- Complete: -->
 
 - [ ] Targeted PR against `master` branch
 - [ ] Linked to Github issue with discussion and accepted design OR link to spec that describes this work

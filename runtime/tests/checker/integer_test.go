@@ -439,9 +439,9 @@ func TestCheckInvalidIntegerConversionFunctionWithoutArgs(t *testing.T) {
 	t.Parallel()
 
 	for _, ty := range allIntegerTypesAndAddressType {
-
-		switch ty.(type) {
-		case *sema.IntegerType, *sema.SignedIntegerType:
+		// Only test leaf types
+		switch ty {
+		case sema.IntegerType, sema.SignedIntegerType:
 			continue
 		}
 
@@ -469,9 +469,9 @@ func TestCheckFixedPointToIntegerConversion(t *testing.T) {
 	t.Parallel()
 
 	for _, ty := range sema.AllIntegerTypes {
-
-		switch ty.(type) {
-		case *sema.IntegerType, *sema.SignedIntegerType:
+		// Only test leaf types
+		switch ty {
+		case sema.IntegerType, sema.SignedIntegerType:
 			continue
 		}
 
@@ -513,6 +513,49 @@ func TestCheckIntegerLiteralArguments(t *testing.T) {
 			)
 
 			require.NoError(t, err)
+		})
+	}
+}
+
+func TestCheckIntegerMinMax(t *testing.T) {
+
+	t.Parallel()
+
+	test := func(t *testing.T, ty sema.Type, field string) {
+
+		checker, err := ParseAndCheck(t,
+			fmt.Sprintf(
+				`
+				  let x = %s.%s
+				`,
+				ty,
+				field,
+			),
+		)
+		require.NoError(t, err)
+
+		require.Equal(t,
+			ty,
+			RequireGlobalValue(t, checker.Elaboration, "x"),
+		)
+	}
+
+	for _, ty := range sema.AllIntegerTypes {
+		// Only test leaf types
+		switch ty {
+		case sema.IntegerType, sema.SignedIntegerType:
+			continue
+		}
+
+		t.Run(ty.String(), func(t *testing.T) {
+			numericType := ty.(*sema.NumericType)
+			if numericType.MinInt() != nil {
+				test(t, ty, "min")
+			}
+
+			if numericType.MaxInt() != nil {
+				test(t, ty, "max")
+			}
 		})
 	}
 }

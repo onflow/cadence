@@ -24,7 +24,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/runtime/interpreter"
-	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
 func TestInterpretCapability_borrow(t *testing.T) {
@@ -35,8 +34,11 @@ func TestInterpretCapability_borrow(t *testing.T) {
 
 		t.Parallel()
 
+		address := interpreter.NewAddressValueFromBytes([]byte{42})
+
 		inter, _ := testAccount(
 			t,
+			address,
 			true,
 			`
               resource R {
@@ -47,7 +49,13 @@ func TestInterpretCapability_borrow(t *testing.T) {
                   }
               }
 
-              resource R2 {}
+              resource R2 {
+                  let foo: Int
+
+                  init() {
+                      self.foo = 42
+                  }
+              }
 
               struct S {
                   let foo: Int
@@ -69,6 +77,8 @@ func TestInterpretCapability_borrow(t *testing.T) {
 
                   account.link<&R>(/public/loop1, target: /public/loop2)
                   account.link<&R>(/public/loop2, target: /public/loop1)
+
+                  account.link<&R2>(/public/r2, target: /storage/r)
               }
 
               fun foo(_ path: CapabilityPath): Int {
@@ -106,6 +116,22 @@ func TestInterpretCapability_borrow(t *testing.T) {
               fun singleTyped(): Int {
                   return account.getCapability<&R>(/public/single)!.borrow()!.foo
               }
+
+              fun r2(): Int {
+                  return account.getCapability<&R2>(/public/r2).borrow()!.foo
+              }
+
+              fun singleChangeAfterBorrow(): Int {
+                 let ref = account.getCapability(/public/single).borrow<&R>()!
+
+                 let r <- account.load<@R>(from: /storage/r)
+                 destroy r
+
+                 let r2 <- create R2()
+                 account.save(<-r2, to: /storage/r)
+
+                 return ref.foo
+              }
             `,
 		)
 
@@ -159,7 +185,7 @@ func TestInterpretCapability_borrow(t *testing.T) {
 			_, err := inter.Invoke("nonExistent")
 			require.Error(t, err)
 
-			utils.RequireErrorAs(t, err, &interpreter.ForceNilError{})
+			require.ErrorAs(t, err, &interpreter.ForceNilError{})
 		})
 
 		t.Run("loop", func(t *testing.T) {
@@ -168,7 +194,7 @@ func TestInterpretCapability_borrow(t *testing.T) {
 			require.Error(t, err)
 
 			var cyclicLinkErr interpreter.CyclicLinkError
-			utils.RequireErrorAs(t, err, &cyclicLinkErr)
+			require.ErrorAs(t, err, &cyclicLinkErr)
 
 			require.Equal(t,
 				cyclicLinkErr.Error(),
@@ -183,14 +209,31 @@ func TestInterpretCapability_borrow(t *testing.T) {
 
 			require.Equal(t, interpreter.NewIntValueFromInt64(42), value)
 		})
+
+		t.Run("r2", func(t *testing.T) {
+
+			_, err := inter.Invoke("r2")
+			require.ErrorAs(t, err, &interpreter.ForceNilError{})
+		})
+
+		t.Run("single change after borrow", func(t *testing.T) {
+
+			_, err := inter.Invoke("singleChangeAfterBorrow")
+			require.Error(t, err)
+
+			require.ErrorAs(t, err, &interpreter.DereferenceError{})
+		})
 	})
 
 	t.Run("struct", func(t *testing.T) {
 
 		t.Parallel()
 
+		address := interpreter.NewAddressValueFromBytes([]byte{42})
+
 		inter, _ := testAccount(
 			t,
+			address,
 			true,
 			`
               struct S {
@@ -201,7 +244,13 @@ func TestInterpretCapability_borrow(t *testing.T) {
                   }
               }
 
-              struct S2 {}
+              struct S2 {
+                  let foo: Int
+
+                  init() {
+                      self.foo = 42
+                  }
+              }
 
               resource R {
                   let foo: Int
@@ -223,6 +272,8 @@ func TestInterpretCapability_borrow(t *testing.T) {
 
                   account.link<&S>(/public/loop1, target: /public/loop2)
                   account.link<&S>(/public/loop2, target: /public/loop1)
+
+                  account.link<&S2>(/public/s2, target: /storage/s)
               }
 
               fun foo(_ path: CapabilityPath): Int {
@@ -260,6 +311,22 @@ func TestInterpretCapability_borrow(t *testing.T) {
               fun singleTyped(): Int {
                   return account.getCapability<&S>(/public/single)!.borrow()!.foo
               }
+
+              fun s2(): Int {
+                  return account.getCapability<&S2>(/public/s2).borrow()!.foo
+              }
+
+              fun singleChangeAfterBorrow(): Int {
+                 let ref = account.getCapability(/public/single).borrow<&S>()!
+
+                 // remove stored value
+                 account.load<S>(from: /storage/s)
+
+                 let s2 = S2()
+                 account.save(s2, to: /storage/s)
+
+                 return ref.foo
+              }
             `,
 		)
 
@@ -319,7 +386,7 @@ func TestInterpretCapability_borrow(t *testing.T) {
 			_, err := inter.Invoke("nonExistent")
 			require.Error(t, err)
 
-			utils.RequireErrorAs(t, err, &interpreter.ForceNilError{})
+			require.ErrorAs(t, err, &interpreter.ForceNilError{})
 		})
 
 		t.Run("loop", func(t *testing.T) {
@@ -328,7 +395,7 @@ func TestInterpretCapability_borrow(t *testing.T) {
 			require.Error(t, err)
 
 			var cyclicLinkErr interpreter.CyclicLinkError
-			utils.RequireErrorAs(t, err, &cyclicLinkErr)
+			require.ErrorAs(t, err, &cyclicLinkErr)
 
 			require.Equal(t,
 				cyclicLinkErr.Error(),
@@ -343,6 +410,20 @@ func TestInterpretCapability_borrow(t *testing.T) {
 
 			require.Equal(t, interpreter.NewIntValueFromInt64(42), value)
 		})
+
+		t.Run("s2", func(t *testing.T) {
+
+			_, err := inter.Invoke("s2")
+			require.ErrorAs(t, err, &interpreter.ForceNilError{})
+		})
+
+		t.Run("single change after borrow", func(t *testing.T) {
+
+			_, err := inter.Invoke("singleChangeAfterBorrow")
+			require.Error(t, err)
+
+			require.ErrorAs(t, err, &interpreter.DereferenceError{})
+		})
 	})
 }
 
@@ -354,8 +435,11 @@ func TestInterpretCapability_check(t *testing.T) {
 
 		t.Parallel()
 
+		address := interpreter.NewAddressValueFromBytes([]byte{42})
+
 		inter, _ := testAccount(
 			t,
+			address,
 			true,
 			`
               resource R {
@@ -366,7 +450,13 @@ func TestInterpretCapability_check(t *testing.T) {
                   }
               }
 
-              resource R2 {}
+              resource R2 {
+                  let foo: Int
+
+                  init() {
+                      self.foo = 42
+                  }
+              }
 
               struct S {
                   let foo: Int
@@ -388,6 +478,8 @@ func TestInterpretCapability_check(t *testing.T) {
 
                   account.link<&R>(/public/loop1, target: /public/loop2)
                   account.link<&R>(/public/loop2, target: /public/loop1)
+
+                  account.link<&R2>(/public/r2, target: /storage/r)
               }
 
               fun check(_ path: CapabilityPath): Bool {
@@ -424,6 +516,10 @@ func TestInterpretCapability_check(t *testing.T) {
 
               fun singleTyped(): Bool {
                   return account.getCapability<&R>(/public/single)!.check()
+              }
+
+              fun r2(): Bool {
+                  return account.getCapability<&R2>(/public/r2).check()
               }
             `,
 		)
@@ -487,7 +583,7 @@ func TestInterpretCapability_check(t *testing.T) {
 			require.Error(t, err)
 
 			var cyclicLinkErr interpreter.CyclicLinkError
-			utils.RequireErrorAs(t, err, &cyclicLinkErr)
+			require.ErrorAs(t, err, &cyclicLinkErr)
 
 			require.Equal(t,
 				cyclicLinkErr.Error(),
@@ -502,14 +598,25 @@ func TestInterpretCapability_check(t *testing.T) {
 
 			require.Equal(t, interpreter.BoolValue(true), value)
 		})
+
+		t.Run("r2", func(t *testing.T) {
+
+			value, err := inter.Invoke("r2")
+			require.NoError(t, err)
+
+			require.Equal(t, interpreter.BoolValue(false), value)
+		})
 	})
 
 	t.Run("struct", func(t *testing.T) {
 
 		t.Parallel()
 
+		address := interpreter.NewAddressValueFromBytes([]byte{42})
+
 		inter, _ := testAccount(
 			t,
+			address,
 			true,
 			`
               struct S {
@@ -520,7 +627,13 @@ func TestInterpretCapability_check(t *testing.T) {
                   }
               }
 
-              struct S2 {}
+              struct S2 {
+                  let foo: Int
+
+                  init() {
+                      self.foo = 42
+                  }
+              }
 
               resource R {
                   let foo: Int
@@ -542,6 +655,8 @@ func TestInterpretCapability_check(t *testing.T) {
 
                   account.link<&S>(/public/loop1, target: /public/loop2)
                   account.link<&S>(/public/loop2, target: /public/loop1)
+
+                  account.link<&S2>(/public/s2, target: /storage/s)
               }
 
               fun check(_ path: CapabilityPath): Bool {
@@ -578,6 +693,10 @@ func TestInterpretCapability_check(t *testing.T) {
 
               fun singleTyped(): Bool {
                   return account.getCapability<&S>(/public/single)!.check()
+              }
+
+              fun s2(): Bool {
+                  return account.getCapability<&S2>(/public/s2).check()
               }
             `,
 		)
@@ -641,7 +760,7 @@ func TestInterpretCapability_check(t *testing.T) {
 			require.Error(t, err)
 
 			var cyclicLinkErr interpreter.CyclicLinkError
-			utils.RequireErrorAs(t, err, &cyclicLinkErr)
+			require.ErrorAs(t, err, &cyclicLinkErr)
 
 			require.Equal(t,
 				cyclicLinkErr.Error(),
@@ -656,5 +775,61 @@ func TestInterpretCapability_check(t *testing.T) {
 
 			require.Equal(t, interpreter.BoolValue(true), value)
 		})
+
+		t.Run("s2", func(t *testing.T) {
+
+			value, err := inter.Invoke("s2")
+			require.NoError(t, err)
+
+			require.Equal(t, interpreter.BoolValue(false), value)
+		})
 	})
+}
+
+func TestInterpretCapability_address(t *testing.T) {
+
+	t.Parallel()
+
+	address := interpreter.NewAddressValueFromBytes([]byte{42})
+
+	inter, _ := testAccount(
+		t,
+		address,
+		true,
+		`
+			fun single(): Address {
+				return account.getCapability(/public/single).address
+			}
+
+			fun double(): Address {
+				return account.getCapability(/public/double).address
+			}
+
+			fun nonExistent() : Address {
+				return account.getCapability(/public/nonExistent).address
+			}				
+		`,
+	)
+
+	t.Run("single", func(t *testing.T) {
+		value, err := inter.Invoke("single")
+		require.NoError(t, err)
+
+		require.IsType(t, interpreter.AddressValue{}, value)
+	})
+
+	t.Run("double", func(t *testing.T) {
+		value, err := inter.Invoke("double")
+		require.NoError(t, err)
+
+		require.IsType(t, interpreter.AddressValue{}, value)
+	})
+
+	t.Run("nonExistent", func(t *testing.T) {
+		value, err := inter.Invoke("nonExistent")
+		require.NoError(t, err)
+
+		require.IsType(t, interpreter.AddressValue{}, value)
+	})
+
 }

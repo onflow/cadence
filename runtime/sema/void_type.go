@@ -20,7 +20,7 @@ package sema
 
 // VoidType represents the void type
 //
-var VoidType = &NominalType{
+var VoidType = &SimpleType{
 	Name:                 "Void",
 	QualifiedName:        "Void",
 	TypeID:               "Void",

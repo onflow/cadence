@@ -20,6 +20,8 @@ package runtime
 
 import (
 	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/sema"
 )
 
 type ContractUpdateValidator struct {
@@ -75,21 +77,32 @@ func (validator *ContractUpdateValidator) Validate() error {
 }
 
 func (validator *ContractUpdateValidator) getRootDeclaration(program *ast.Program) ast.Declaration {
+	decl, err := getRootDeclaration(program)
+
+	if err != nil {
+		validator.report(&ContractNotFoundError{
+			Range: ast.NewRangeFromPositioned(program),
+		})
+	}
+
+	return decl
+}
+
+func getRootDeclaration(program *ast.Program) (ast.Declaration, error) {
 	compositeDecl := program.SoleContractDeclaration()
 	if compositeDecl != nil {
-		return compositeDecl
+		return compositeDecl, nil
 	}
 
 	interfaceDecl := program.SoleContractInterfaceDeclaration()
 	if interfaceDecl != nil {
-		return interfaceDecl
+		return interfaceDecl, nil
 	}
 
-	validator.report(&ContractNotFoundError{
+	return nil, &ContractNotFoundError{
 		Range: ast.NewRangeFromPositioned(program),
-	})
+	}
 
-	return nil
 }
 
 func (validator *ContractUpdateValidator) hasErrors() bool {
@@ -106,9 +119,9 @@ func (validator *ContractUpdateValidator) checkDeclarationUpdatability(
 	//      - 'structs' and 'enums'
 	if oldDeclaration.DeclarationKind() != newDeclaration.DeclarationKind() {
 		validator.report(&InvalidDeclarationKindChangeError{
-			name:    oldDeclaration.DeclarationIdentifier().Identifier,
-			oldKind: oldDeclaration.DeclarationKind(),
-			newKind: newDeclaration.DeclarationKind(),
+			Name:    oldDeclaration.DeclarationIdentifier().Identifier,
+			OldKind: oldDeclaration.DeclarationKind(),
+			NewKind: newDeclaration.DeclarationKind(),
 			Range:   ast.NewRangeFromPositioned(newDeclaration.DeclarationIdentifier()),
 		})
 
@@ -146,8 +159,8 @@ func (validator *ContractUpdateValidator) checkFields(oldDeclaration ast.Declara
 		oldField := oldFields[newField.Identifier.Identifier]
 		if oldField == nil {
 			validator.report(&ExtraneousFieldError{
-				declName:  newDeclaration.DeclarationIdentifier().Identifier,
-				fieldName: newField.Identifier.Identifier,
+				DeclName:  newDeclaration.DeclarationIdentifier().Identifier,
+				FieldName: newField.Identifier.Identifier,
 				Range:     ast.NewRangeFromPositioned(newField.Identifier),
 			})
 
@@ -162,9 +175,9 @@ func (validator *ContractUpdateValidator) checkField(oldField *ast.FieldDeclarat
 	err := oldField.TypeAnnotation.Type.CheckEqual(newField.TypeAnnotation.Type, validator)
 	if err != nil {
 		validator.report(&FieldMismatchError{
-			declName:  validator.currentDecl.DeclarationIdentifier().Identifier,
-			fieldName: newField.Identifier.Identifier,
-			err:       err,
+			DeclName:  validator.currentDecl.DeclarationIdentifier().Identifier,
+			FieldName: newField.Identifier.Identifier,
+			Err:       err,
 			Range:     ast.NewRangeFromPositioned(newField.TypeAnnotation),
 		})
 	}
@@ -175,43 +188,107 @@ func (validator *ContractUpdateValidator) checkNestedDeclarations(
 	newDeclaration ast.Declaration,
 ) {
 
-	oldNestedCompositeDecls := oldDeclaration.DeclarationMembers().CompositesByIdentifier()
-	oldNestedInterfaceDecls := oldDeclaration.DeclarationMembers().InterfacesByIdentifier()
+	oldCompositeAndInterfaceDecls := getNestedCompositeAndInterfaceDecls(oldDeclaration)
 
-	getOldCompositeOrInterfaceDecl := func(name string) (ast.Declaration, bool) {
-		oldCompositeDecl := oldNestedCompositeDecls[name]
-		if oldCompositeDecl != nil {
-			return oldCompositeDecl, true
-		}
-
-		oldInterfaceDecl := oldNestedInterfaceDecls[name]
-		if oldInterfaceDecl != nil {
-			return oldInterfaceDecl, true
-		}
-
-		return nil, false
-	}
-
+	// Check nested structs, enums, etc.
 	newNestedCompositeDecls := newDeclaration.DeclarationMembers().Composites()
 	for _, newNestedDecl := range newNestedCompositeDecls {
-		oldNestedDecl, found := getOldCompositeOrInterfaceDecl(newNestedDecl.Identifier.Identifier)
+		oldNestedDecl, found := oldCompositeAndInterfaceDecls[newNestedDecl.Identifier.Identifier]
 		if !found {
 			// Then its a new declaration
 			continue
 		}
 
 		validator.checkDeclarationUpdatability(oldNestedDecl, newNestedDecl)
+
+		// If theres a matching new decl, then remove the old one from the map.
+		delete(oldCompositeAndInterfaceDecls, newNestedDecl.Identifier.Identifier)
 	}
 
+	// Check nested interfaces.
 	newNestedInterfaces := newDeclaration.DeclarationMembers().Interfaces()
 	for _, newNestedDecl := range newNestedInterfaces {
-		oldNestedDecl, found := getOldCompositeOrInterfaceDecl(newNestedDecl.Identifier.Identifier)
+		oldNestedDecl, found := oldCompositeAndInterfaceDecls[newNestedDecl.Identifier.Identifier]
 		if !found {
 			// Then this is a new declaration.
 			continue
 		}
 
 		validator.checkDeclarationUpdatability(oldNestedDecl, newNestedDecl)
+
+		// If theres a matching new decl, then remove the old one from the map.
+		delete(oldCompositeAndInterfaceDecls, newNestedDecl.Identifier.Identifier)
+	}
+
+	// The remaining old declarations doesn't have a corresponding new declaration.
+	// i.e: An existing declaration is removed.
+	// Hence report an error.
+	for name := range oldCompositeAndInterfaceDecls { //nolint:maprangecheck
+		validator.report(&MissingCompositeDeclarationError{
+			Name:  name,
+			Range: ast.NewRangeFromPositioned(newDeclaration.DeclarationIdentifier()),
+		})
+	}
+
+	// Check enum-cases, if theres any.
+	validator.checkEnumCases(oldDeclaration, newDeclaration)
+}
+
+func getNestedCompositeAndInterfaceDecls(declaration ast.Declaration) map[string]ast.Declaration {
+	compositeAndInterfaceDecls := map[string]ast.Declaration{}
+
+	nestedCompositeDecls := declaration.DeclarationMembers().CompositesByIdentifier()
+	for identifier, nestedDecl := range nestedCompositeDecls { //nolint:maprangecheck
+		compositeAndInterfaceDecls[identifier] = nestedDecl
+	}
+
+	nestedInterfaceDecls := declaration.DeclarationMembers().InterfacesByIdentifier()
+	for identifier, nestedDecl := range nestedInterfaceDecls { //nolint:maprangecheck
+		compositeAndInterfaceDecls[identifier] = nestedDecl
+	}
+
+	return compositeAndInterfaceDecls
+}
+
+// checkEnumCases validates updating enum cases. Updated enum must:
+//   - Have at-least the same number of enum-cases as the old enum (Adding is allowed, but no removals).
+//   - Preserve the order of the old enum-cases (Adding to top/middle is not allowed, swapping is not allowed).
+func (validator *ContractUpdateValidator) checkEnumCases(oldDeclaration ast.Declaration, newDeclaration ast.Declaration) {
+	newEnumCases := newDeclaration.DeclarationMembers().EnumCases()
+	oldEnumCases := oldDeclaration.DeclarationMembers().EnumCases()
+
+	newEnumCaseCount := len(newEnumCases)
+	oldEnumCaseCount := len(oldEnumCases)
+
+	if newEnumCaseCount < oldEnumCaseCount {
+		validator.report(&MissingEnumCasesError{
+			DeclName: newDeclaration.DeclarationIdentifier().Identifier,
+			Expected: oldEnumCaseCount,
+			Found:    newEnumCaseCount,
+			Range:    ast.NewRangeFromPositioned(newDeclaration.DeclarationIdentifier()),
+		})
+
+		// If some enum cases are removed, trying to match each enum case
+		// may result in too many regression errors. hence return.
+		return
+	}
+
+	// Check whether the enum cases matches the old enum cases.
+	for index, newEnumCase := range newEnumCases {
+		// If there are no more old enum-cases, then these are newly added enum-cases,
+		// which should be fine.
+		if index >= oldEnumCaseCount {
+			continue
+		}
+
+		oldEnumCase := oldEnumCases[index]
+		if oldEnumCase.Identifier.Identifier != newEnumCase.Identifier.Identifier {
+			validator.report(&EnumCaseMismatchError{
+				ExpectedName: oldEnumCase.Identifier.Identifier,
+				FoundName:    newEnumCase.Identifier.Identifier,
+				Range:        ast.NewRangeFromPositioned(newEnumCase),
+			})
+		}
 	}
 }
 
@@ -284,8 +361,25 @@ func (validator *ContractUpdateValidator) CheckRestrictedTypeEquality(expected *
 		return getTypeMismatchError(expected, found)
 	}
 
-	err := expected.Type.CheckEqual(foundRestrictedType.Type, validator)
-	if err != nil || len(expected.Restrictions) != len(foundRestrictedType.Restrictions) {
+	if expected.Type == nil {
+		if !isAnyStructOrAnyResourceType(foundRestrictedType.Type) {
+			return getTypeMismatchError(expected, found)
+		}
+		// else go on to check type restrictions
+	} else if foundRestrictedType.Type == nil {
+		if !isAnyStructOrAnyResourceType(expected.Type) {
+			return getTypeMismatchError(expected, found)
+		}
+		// else go on to check type restrictions
+	} else {
+		// both are not nil
+		err := expected.Type.CheckEqual(foundRestrictedType.Type, validator)
+		if err != nil {
+			return getTypeMismatchError(expected, found)
+		}
+	}
+
+	if len(expected.Restrictions) != len(foundRestrictedType.Restrictions) {
 		return getTypeMismatchError(expected, found)
 	}
 
@@ -396,18 +490,18 @@ func (validator *ContractUpdateValidator) checkIdentifierEquality(
 }
 
 func (validator *ContractUpdateValidator) checkConformances(
-	oldEnum *ast.CompositeDeclaration,
-	newEnum *ast.CompositeDeclaration,
+	oldDecl *ast.CompositeDeclaration,
+	newDecl *ast.CompositeDeclaration,
 ) {
 
-	oldConformances := oldEnum.Conformances
-	newConformances := newEnum.Conformances
+	oldConformances := oldDecl.Conformances
+	newConformances := newDecl.Conformances
 
 	if len(oldConformances) != len(newConformances) {
 		validator.report(&ConformanceCountMismatchError{
-			expected: len(oldConformances),
-			found:    len(newConformances),
-			Range:    ast.NewRangeFromPositioned(newEnum.Identifier),
+			Expected: len(oldConformances),
+			Found:    len(newConformances),
+			Range:    ast.NewRangeFromPositioned(newDecl.Identifier),
 		})
 
 		// If the lengths are not the same, trying to match the conformance
@@ -420,8 +514,8 @@ func (validator *ContractUpdateValidator) checkConformances(
 		err := oldConformance.CheckEqual(newConformance, validator)
 		if err != nil {
 			validator.report(&ConformanceMismatchError{
-				declName: newEnum.Identifier.Identifier,
-				err:      err,
+				DeclName: newDecl.Identifier.Identifier,
+				Err:      err,
 				Range:    ast.NewRangeFromPositioned(newConformance),
 			})
 		}
@@ -437,16 +531,16 @@ func (validator *ContractUpdateValidator) report(err error) {
 
 func (validator *ContractUpdateValidator) getContractUpdateError() error {
 	return &ContractUpdateError{
-		contractName: validator.contractName,
-		errors:       validator.errors,
-		location:     validator.location,
+		ContractName: validator.contractName,
+		Errors:       validator.errors,
+		Location:     validator.location,
 	}
 }
 
 func getTypeMismatchError(expectedType ast.Type, foundType ast.Type) *TypeMismatchError {
 	return &TypeMismatchError{
-		expectedType: expectedType,
-		foundType:    foundType,
+		ExpectedType: expectedType,
+		FoundType:    foundType,
 		Range:        ast.NewRangeFromPositioned(foundType),
 	}
 }
@@ -457,9 +551,53 @@ func identifiersEqual(expected []ast.Identifier, found []ast.Identifier) bool {
 	}
 
 	for index, element := range found {
-		if expected[index] != element {
+		if expected[index].Identifier != element.Identifier {
 			return false
 		}
 	}
 	return true
+}
+
+func isAnyStructOrAnyResourceType(astType ast.Type) bool {
+	// If the restricted type is not stated, then it is either AnyStruct or AnyResource
+	if astType == nil {
+		return true
+	}
+
+	nominalType, ok := astType.(*ast.NominalType)
+	if !ok {
+		return false
+	}
+
+	switch nominalType.Identifier.Identifier {
+	case sema.AnyStructType.Name, sema.AnyResourceType.Name:
+		return true
+	default:
+		return false
+	}
+}
+
+func containsEnumsInProgram(program *ast.Program) bool {
+	declaration, err := getRootDeclaration(program)
+
+	if err != nil {
+		return false
+	}
+
+	return containsEnums(declaration)
+}
+
+func containsEnums(declaration ast.Declaration) bool {
+	if declaration.DeclarationKind() == common.DeclarationKindEnum {
+		return true
+	}
+
+	nestedCompositeDecls := declaration.DeclarationMembers().Composites()
+	for _, nestedDecl := range nestedCompositeDecls {
+		if containsEnums(nestedDecl) {
+			return true
+		}
+	}
+
+	return false
 }

@@ -37,7 +37,7 @@ func (checker *Checker) VisitMemberExpression(expression *ast.MemberExpression) 
 			}
 		}
 
-		if checker.originsAndOccurrencesEnabled {
+		if checker.positionInfoEnabled {
 			checker.MemberAccesses.Put(
 				expression.AccessPos,
 				expression.EndPosition(),
@@ -119,7 +119,7 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression) (accessedT
 			checker.currentMemberExpression = previousMemberExpression
 		}()
 
-		accessedType = accessedExpression.Accept(checker).(Type)
+		accessedType = checker.VisitExpression(accessedExpression, nil)
 	}()
 
 	checker.checkUnusedExpressionResourceLoss(accessedType, accessedExpression)
@@ -218,7 +218,7 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression) (accessedT
 		}
 	} else {
 
-		if checker.originsAndOccurrencesEnabled {
+		if checker.positionInfoEnabled {
 			origins := checker.memberOrigins[accessedType]
 			origin := origins[identifier]
 			checker.Occurrences.Put(
@@ -287,7 +287,7 @@ func (checker *Checker) isReadableMember(member *Member) bool {
 		// check if the current location is the same as the member's container location
 
 		location := member.ContainerType.(LocatedType).GetLocation()
-		if common.LocationsMatch(checker.Location, location) {
+		if common.LocationsInSameAccount(checker.Location, location) {
 			return true
 		}
 	}

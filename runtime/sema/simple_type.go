@@ -28,12 +28,12 @@ type ValueIndexingInfo struct {
 	IsValueIndexableType          bool
 	AllowsValueIndexingAssignment bool
 	ElementType                   func(_ bool) Type
-	IndexingType                  *IntegerType
+	IndexingType                  *NumericType
 }
 
-// NominalType represents a simple nominal type.
+// SimpleType represents a simple nominal type.
 //
-type NominalType struct {
+type SimpleType struct {
 	Name                 string
 	QualifiedName        string
 	TypeID               TypeID
@@ -43,73 +43,73 @@ type NominalType struct {
 	Equatable            bool
 	ExternallyReturnable bool
 	IsSuperTypeOf        func(subType Type) bool
-	Members              func(*NominalType) map[string]MemberResolver
+	Members              func(*SimpleType) map[string]MemberResolver
 	members              map[string]MemberResolver
 	membersOnce          sync.Once
 	NestedTypes          *StringTypeOrderedMap
 	ValueIndexingInfo    ValueIndexingInfo
 }
 
-func (*NominalType) IsType() {}
+func (*SimpleType) IsType() {}
 
-func (t *NominalType) String() string {
+func (t *SimpleType) String() string {
 	return t.Name
 }
 
-func (t *NominalType) QualifiedString() string {
+func (t *SimpleType) QualifiedString() string {
 	return t.Name
 }
 
-func (t *NominalType) ID() TypeID {
+func (t *SimpleType) ID() TypeID {
 	return t.TypeID
 }
 
-func (t *NominalType) Equal(other Type) bool {
+func (t *SimpleType) Equal(other Type) bool {
 	return other == t
 }
 
-func (t *NominalType) IsResourceType() bool {
+func (t *SimpleType) IsResourceType() bool {
 	return t.IsResource
 }
 
-func (t *NominalType) IsInvalidType() bool {
+func (t *SimpleType) IsInvalidType() bool {
 	return t.IsInvalid
 }
 
-func (t *NominalType) IsStorable(_ map[*Member]bool) bool {
+func (t *SimpleType) IsStorable(_ map[*Member]bool) bool {
 	return t.Storable
 }
 
-func (t *NominalType) IsEquatable() bool {
+func (t *SimpleType) IsEquatable() bool {
 	return t.Equatable
 }
 
-func (t *NominalType) IsExternallyReturnable(_ map[*Member]bool) bool {
+func (t *SimpleType) IsExternallyReturnable(_ map[*Member]bool) bool {
 	return t.ExternallyReturnable
 }
 
-func (*NominalType) TypeAnnotationState() TypeAnnotationState {
+func (*SimpleType) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
 
-func (t *NominalType) RewriteWithRestrictedTypes() (Type, bool) {
+func (t *SimpleType) RewriteWithRestrictedTypes() (Type, bool) {
 	return t, false
 }
 
-func (*NominalType) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
+func (*SimpleType) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
 	return false
 }
 
-func (t *NominalType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
+func (t *SimpleType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
 	return t
 }
 
-func (t *NominalType) GetMembers() map[string]MemberResolver {
+func (t *SimpleType) GetMembers() map[string]MemberResolver {
 	t.initializeMembers()
 	return t.members
 }
 
-func (t *NominalType) initializeMembers() {
+func (t *SimpleType) initializeMembers() {
 	t.membersOnce.Do(func() {
 		var members map[string]MemberResolver
 		if t.Members != nil {
@@ -119,26 +119,26 @@ func (t *NominalType) initializeMembers() {
 	})
 }
 
-func (t *NominalType) isContainerType() bool {
+func (t *SimpleType) isContainerType() bool {
 	return t.NestedTypes != nil
 }
 
-func (t *NominalType) GetNestedTypes() *StringTypeOrderedMap {
+func (t *SimpleType) GetNestedTypes() *StringTypeOrderedMap {
 	return t.NestedTypes
 }
 
-func (t *NominalType) isValueIndexableType() bool {
+func (t *SimpleType) isValueIndexableType() bool {
 	return t.ValueIndexingInfo.IsValueIndexableType
 }
 
-func (t *NominalType) AllowsValueIndexingAssignment() bool {
+func (t *SimpleType) AllowsValueIndexingAssignment() bool {
 	return t.ValueIndexingInfo.AllowsValueIndexingAssignment
 }
 
-func (t *NominalType) ElementType(isAssignment bool) Type {
+func (t *SimpleType) ElementType(isAssignment bool) Type {
 	return t.ValueIndexingInfo.ElementType(isAssignment)
 }
 
-func (t *NominalType) IndexingType() Type {
+func (t *SimpleType) IndexingType() Type {
 	return t.ValueIndexingInfo.IndexingType
 }

@@ -138,7 +138,7 @@ func (checker *Checker) checkResourceVariableCapturingInFunction(variable *Varia
 func (checker *Checker) VisitExpressionStatement(statement *ast.ExpressionStatement) ast.Repr {
 	expression := statement.Expression
 
-	ty := expression.Accept(checker).(Type)
+	ty := checker.VisitExpression(expression, nil)
 
 	if ty.IsResourceType() {
 		checker.report(
@@ -146,22 +146,6 @@ func (checker *Checker) VisitExpressionStatement(statement *ast.ExpressionStatem
 				Range: ast.NewRangeFromPositioned(expression),
 			},
 		)
-	}
-
-	// Ensure that a self-standing expression can be converted to its own type.
-	//
-	// For example, the expression might be a fixed-point expression,
-	// which is inferred to have type Fix64, and the check ensures the literal
-	// fits into the type's range.
-	//
-	// This check is already performed for e.g. variable declarations
-	// and function function arguments.
-	//
-	// It might seem odd that the target type is the value type,
-	// but this is exactly the case for an expression that is a separate statement.
-
-	if !ty.IsInvalidType() {
-		checker.checkTypeCompatibility(expression, ty, ty)
 	}
 
 	return nil
@@ -179,21 +163,70 @@ func (checker *Checker) VisitNilExpression(_ *ast.NilExpression) ast.Repr {
 	return TypeOfNil
 }
 
-func (checker *Checker) VisitIntegerExpression(_ *ast.IntegerExpression) ast.Repr {
-	return &IntType{}
+func (checker *Checker) VisitIntegerExpression(expression *ast.IntegerExpression) ast.Repr {
+	expectedType := UnwrapOptionalType(checker.expectedType)
+
+	var actualType Type
+	isAddress := false
+
+	// If the contextually expected type is a subtype of Integer or Address, then take that.
+	if expectedType == nil || IsSubType(expectedType, NeverType) {
+		actualType = IntType
+	} else if IsSubType(expectedType, IntegerType) {
+		actualType = expectedType
+	} else if IsSubType(expectedType, &AddressType{}) {
+		isAddress = true
+		CheckAddressLiteral(expression, checker.report)
+		actualType = expectedType
+	} else {
+		// Otherwise infer the type as `Int` which can represent any integer.
+		actualType = IntType
+	}
+
+	if !isAddress {
+		CheckIntegerLiteral(expression, actualType, checker.report)
+	}
+
+	checker.Elaboration.IntegerExpressionType[expression] = actualType
+
+	return actualType
 }
 
 func (checker *Checker) VisitFixedPointExpression(expression *ast.FixedPointExpression) ast.Repr {
 	// TODO: adjust once/if we support more fixed point types
 
-	if expression.Negative {
-		return &Fix64Type{}
+	// If the contextually expected type is a subtype of FixedPoint, then take that.
+	// Otherwise, infer the type from the expression itself.
+
+	expectedType := UnwrapOptionalType(checker.expectedType)
+
+	var actualType Type
+
+	if expectedType != nil &&
+		!IsSubType(expectedType, NeverType) &&
+		IsSubType(expectedType, FixedPointType) {
+		actualType = expectedType
+	} else if expression.Negative {
+		actualType = Fix64Type
 	} else {
-		return &UFix64Type{}
+		actualType = UFix64Type
 	}
+
+	CheckFixedPointLiteral(expression, actualType, checker.report)
+
+	checker.Elaboration.FixedPointExpression[expression] = actualType
+
+	return actualType
 }
 
-func (checker *Checker) VisitStringExpression(_ *ast.StringExpression) ast.Repr {
+func (checker *Checker) VisitStringExpression(expression *ast.StringExpression) ast.Repr {
+	expectedType := UnwrapOptionalType(checker.expectedType)
+
+	if expectedType != nil && IsSubType(expectedType, CharacterType) {
+		checker.checkCharacterLiteral(expression)
+		return expectedType
+	}
+
 	return StringType
 }
 
@@ -211,7 +244,7 @@ func (checker *Checker) visitIndexExpression(
 ) Type {
 
 	targetExpression := indexExpression.TargetExpression
-	targetType := targetExpression.Accept(checker).(Type)
+	targetType := checker.VisitExpression(targetExpression, nil)
 
 	// NOTE: check indexed type first for UX reasons
 
@@ -264,23 +297,7 @@ func (checker *Checker) visitValueIndexingExpression(
 	indexingExpression ast.Expression,
 	isAssignment bool,
 ) Type {
-	indexingType := indexingExpression.Accept(checker).(Type)
+	checker.VisitExpression(indexingExpression, indexedType.IndexingType())
 
-	elementType := indexedType.ElementType(isAssignment)
-
-	// check indexing expression's type can be used to index
-	// into indexed expression's type
-
-	if !indexingType.IsInvalidType() &&
-		!IsSubType(indexingType, indexedType.IndexingType()) {
-
-		checker.report(
-			&NotIndexingTypeError{
-				Type:  indexingType,
-				Range: ast.NewRangeFromPositioned(indexingExpression),
-			},
-		)
-	}
-
-	return elementType
+	return indexedType.ElementType(isAssignment)
 }
