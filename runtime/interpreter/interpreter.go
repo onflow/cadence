@@ -2495,25 +2495,27 @@ func (interpreter *Interpreter) defineConverterFunctions() {
 	}
 }
 
+// typeFunction is the `Type` function. It is stateless, hence it can be re-used across interpreters.
+//
+var typeFunction = NewHostFunctionValue(
+	func(invocation Invocation) Value {
+
+		typeParameterPair := invocation.TypeParameterTypes.Oldest()
+		if typeParameterPair == nil {
+			panic(errors.NewUnreachableError())
+		}
+
+		ty := typeParameterPair.Value
+
+		return TypeValue{
+			Type: ConvertSemaToStaticType(ty),
+		}
+	},
+)
+
 func (interpreter *Interpreter) defineTypeFunction() {
-	err := interpreter.ImportValue(
-		"Type",
-		NewHostFunctionValue(
-			func(invocation Invocation) Value {
 
-				typeParameterPair := invocation.TypeParameterTypes.Oldest()
-				if typeParameterPair == nil {
-					panic(errors.NewUnreachableError())
-				}
-
-				ty := typeParameterPair.Value
-
-				return TypeValue{
-					Type: ConvertSemaToStaticType(ty),
-				}
-			},
-		),
-	)
+	err := interpreter.ImportValue("Type", typeFunction)
 	if err != nil {
 		panic(errors.NewUnreachableError())
 	}
