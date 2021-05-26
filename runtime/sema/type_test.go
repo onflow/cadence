@@ -529,3 +529,71 @@ func TestBeforeType_Strings(t *testing.T) {
 		beforeType.QualifiedString(),
 	)
 }
+
+func TestQualifiedIdentifierCreation(t *testing.T) {
+
+	a := &CompositeType{
+		Kind:       common.CompositeKindStructure,
+		Identifier: "A",
+		Location:   common.StringLocation("a"),
+		Fields:     []string{},
+		Members:    NewStringMemberOrderedMap(),
+	}
+
+	b := &CompositeType{
+		Kind:          common.CompositeKindStructure,
+		Identifier:    "B",
+		Location:      common.StringLocation("a"),
+		Fields:        []string{},
+		Members:       NewStringMemberOrderedMap(),
+		ContainerType: a,
+	}
+
+	c := &CompositeType{
+		Kind:          common.CompositeKindStructure,
+		Identifier:    "C",
+		Location:      common.StringLocation("a"),
+		Fields:        []string{},
+		Members:       NewStringMemberOrderedMap(),
+		ContainerType: b,
+	}
+
+	identifier := qualifiedIdentifier("foo", c)
+	assert.Equal(t, "A.B.C.foo", identifier)
+}
+
+func BenchmarkQualifiedIdentifierCreation(b *testing.B) {
+
+	foo := &CompositeType{
+		Kind:       common.CompositeKindStructure,
+		Identifier: "foo",
+		Location:   common.StringLocation("a"),
+		Fields:     []string{},
+		Members:    NewStringMemberOrderedMap(),
+	}
+
+	bar := &CompositeType{
+		Kind:          common.CompositeKindStructure,
+		Identifier:    "bar",
+		Location:      common.StringLocation("a"),
+		Fields:        []string{},
+		Members:       NewStringMemberOrderedMap(),
+		ContainerType: foo,
+	}
+
+	b.Run("One level", func(b *testing.B) {
+		b.ReportAllocs()
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			qualifiedIdentifier("baz", nil)
+		}
+	})
+
+	b.Run("Three levels", func(b *testing.B) {
+		b.ReportAllocs()
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			qualifiedIdentifier("baz", bar)
+		}
+	})
+}
