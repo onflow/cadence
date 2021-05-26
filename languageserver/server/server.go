@@ -166,12 +166,12 @@ type DocumentSymbolProvider func(uri protocol.DocumentUri, version float64, chec
 type InitializationOptionsHandler func(initializationOptions interface{}) error
 
 type Server struct {
-	protocolServer      *protocol.Server
-	checkers            map[common.LocationID]*sema.Checker
-	documents           map[protocol.DocumentUri]Document
-	memberResolvers     map[protocol.DocumentUri]map[string]sema.MemberResolver
-	ranges              map[protocol.DocumentUri]map[string]sema.Range
-	codeActionResolvers map[protocol.DocumentUri]map[uuid.UUID]func() *protocol.CodeAction
+	protocolServer       *protocol.Server
+	checkers             map[common.LocationID]*sema.Checker
+	documents            map[protocol.DocumentUri]Document
+	memberResolvers      map[protocol.DocumentUri]map[string]sema.MemberResolver
+	ranges               map[protocol.DocumentUri]map[string]sema.Range
+	codeActionsResolvers map[protocol.DocumentUri]map[uuid.UUID]func() []*protocol.CodeAction
 	// commands is the registry of custom commands we support
 	commands map[string]CommandHandler
 	// resolveAddressImport is the optional function that is used to resolve address imports
@@ -279,12 +279,12 @@ const ParseEntryPointArgumentsCommand = "cadence.server.parseEntryPointArguments
 
 func NewServer() (*Server, error) {
 	server := &Server{
-		checkers:            make(map[common.LocationID]*sema.Checker),
-		documents:           make(map[protocol.DocumentUri]Document),
-		memberResolvers:     make(map[protocol.DocumentUri]map[string]sema.MemberResolver),
-		ranges:              make(map[protocol.DocumentUri]map[string]sema.Range),
-		codeActionResolvers: make(map[protocol.DocumentUri]map[uuid.UUID]func() *protocol.CodeAction),
-		commands:            make(map[string]CommandHandler),
+		checkers:             make(map[common.LocationID]*sema.Checker),
+		documents:            make(map[protocol.DocumentUri]Document),
+		memberResolvers:      make(map[protocol.DocumentUri]map[string]sema.MemberResolver),
+		ranges:               make(map[protocol.DocumentUri]map[string]sema.Range),
+		codeActionsResolvers: make(map[protocol.DocumentUri]map[uuid.UUID]func() []*protocol.CodeAction),
+		commands:             make(map[string]CommandHandler),
 	}
 	server.protocolServer = protocol.NewServer(server)
 
@@ -806,7 +806,7 @@ func (s *Server) CodeAction(
 		return
 	}
 
-	codeActionResolvers := s.codeActionResolvers[uri]
+	codeActionsResolvers := s.codeActionsResolvers[uri]
 
 	for _, diagnostic := range params.Context.Diagnostics {
 
@@ -816,17 +816,14 @@ func (s *Server) CodeAction(
 				continue
 			}
 
-			codeActionResolver, ok := codeActionResolvers[codeActionID]
+			codeActionsResolver, ok := codeActionsResolvers[codeActionID]
 			if !ok {
 				continue
 			}
 
-			codeAction := codeActionResolver()
-			if codeAction == nil {
-				continue
-			}
-
-			codeActions = append(codeActions, codeAction)
+			codeActions = append(codeActions,
+				codeActionsResolver()...,
+			)
 		}
 	}
 
@@ -1616,8 +1613,8 @@ func (s *Server) getDiagnostics(
 	diagnosticsErr error,
 ) {
 	// Always reset the code actions for this document
-	codeActions := map[uuid.UUID]func() *protocol.CodeAction{}
-	s.codeActionResolvers[uri] = codeActions
+	codeActionsResolvers := map[uuid.UUID]func() []*protocol.CodeAction{}
+	s.codeActionsResolvers[uri] = codeActionsResolvers
 
 	// NOTE: Always initialize to an empty slice, i.e DON'T use nil:
 	// The later will be ignored instead of being treated as no items
@@ -1630,7 +1627,7 @@ func (s *Server) getDiagnostics(
 
 	if parseError != nil {
 		if parentErr, ok := parseError.(errors.ParentError); ok {
-			parserDiagnostics := getDiagnosticsForParentError(conn, uri, parentErr, nil, codeActions)
+			parserDiagnostics := s.getDiagnosticsForParentError(conn, uri, parentErr, codeActionsResolvers)
 			diagnostics = append(diagnostics, parserDiagnostics...)
 		}
 	}
@@ -1786,7 +1783,7 @@ func (s *Server) getDiagnostics(
 
 	if checkError != nil {
 		if parentErr, ok := checkError.(errors.ParentError); ok {
-			checkerDiagnostics := getDiagnosticsForParentError(conn, uri, parentErr, checker, codeActions)
+			checkerDiagnostics := s.getDiagnosticsForParentError(conn, uri, parentErr, codeActionsResolvers)
 			diagnostics = append(diagnostics, checkerDiagnostics...)
 		}
 	}
@@ -1801,11 +1798,11 @@ func (s *Server) getDiagnostics(
 	}
 
 	for _, hint := range checker.Hints() {
-		diagnostic, codeAction := convertHint(hint, uri)
-		if codeAction != nil {
-			codeActionID := uuid.New()
-			diagnostic.Data = codeActionID
-			codeActions[codeActionID] = codeAction
+		diagnostic, codeActionsResolver := convertHint(hint, uri)
+		if codeActionsResolver != nil {
+			codeActionsResolverID := uuid.New()
+			diagnostic.Data = codeActionsResolverID
+			codeActionsResolvers[codeActionsResolverID] = codeActionsResolver
 		}
 		diagnostics = append(diagnostics, diagnostic)
 	}
@@ -1817,12 +1814,11 @@ func (s *Server) getDiagnostics(
 // a diagnostic. Both parser and checker errors can be unpacked.
 //
 // Logs any conversion failures to the client.
-func getDiagnosticsForParentError(
+func (s *Server) getDiagnosticsForParentError(
 	conn protocol.Conn,
 	uri protocol.DocumentUri,
 	err errors.ParentError,
-	checker *sema.Checker,
-	codeActions map[uuid.UUID]func() *protocol.CodeAction,
+	codeActionsResolvers map[uuid.UUID]func() []*protocol.CodeAction,
 ) (
 	diagnostics []protocol.Diagnostic,
 ) {
@@ -1835,11 +1831,11 @@ func getDiagnosticsForParentError(
 			})
 			continue
 		}
-		diagnostic, codeAction := convertError(convertibleErr, uri, checker)
-		if codeAction != nil {
-			codeActionID := uuid.New()
-			diagnostic.Data = codeActionID
-			codeActions[codeActionID] = codeAction
+		diagnostic, codeActionsResolver := s.convertError(convertibleErr, uri)
+		if codeActionsResolver != nil {
+			codeActionsResolverID := uuid.New()
+			diagnostic.Data = codeActionsResolverID
+			codeActionsResolvers[codeActionsResolverID] = codeActionsResolver
 		}
 
 		if errorNotes, ok := convertibleErr.(errors.ErrorNotes); ok {
@@ -2079,13 +2075,12 @@ type convertibleError interface {
 // convertError converts a checker error to a diagnostic
 // and an optional code action to resolve the error.
 //
-func convertError(
+func (s *Server) convertError(
 	err convertibleError,
 	uri protocol.DocumentUri,
-	checker *sema.Checker,
 ) (
 	protocol.Diagnostic,
-	func() *protocol.CodeAction,
+	func() []*protocol.CodeAction,
 ) {
 	startPosition := err.StartPosition()
 	endPosition := err.EndPosition()
@@ -2106,24 +2101,25 @@ func convertError(
 		Range:    protocolRange,
 	}
 
-	var codeAction func() *protocol.CodeAction
+	var codeActionsResolver func() []*protocol.CodeAction
 
 	switch err := err.(type) {
 	case *sema.TypeMismatchError:
-		codeAction = maybeReturnTypeChangeCodeActionResolver(diagnostic, err, uri, checker.Program)
+		codeActionsResolver = s.maybeReturnTypeChangeCodeActionsResolver(diagnostic, err, uri)
 	case *sema.ConformanceError:
-		codeAction = maybeAddMissingMembersCodeActionResolver(diagnostic, err, uri)
+		codeActionsResolver = maybeAddMissingMembersCodeActionResolver(diagnostic, err, uri)
+	case *sema.NotDeclaredError:
+		codeActionsResolver = s.maybeAddVariableDeclarationActionsResolver(diagnostic, err, uri)
 	}
 
-	return diagnostic, codeAction
+	return diagnostic, codeActionsResolver
 }
 
-func maybeReturnTypeChangeCodeActionResolver(
+func (s *Server) maybeReturnTypeChangeCodeActionsResolver(
 	diagnostic protocol.Diagnostic,
 	err *sema.TypeMismatchError,
 	uri protocol.DocumentUri,
-	program *ast.Program,
-) func() *protocol.CodeAction {
+) func() []*protocol.CodeAction {
 
 	// The type mismatch could be in a return statement
 	// due to a missing or wrong return type.
@@ -2137,12 +2133,17 @@ func maybeReturnTypeChangeCodeActionResolver(
 		return nil
 	}
 
+	checker := s.checkerForDocument(uri)
+	if checker == nil {
+		return nil
+	}
+
 	var foundReturn bool
 	var parameterList *ast.ParameterList
 	var returnTypeAnnotation *ast.TypeAnnotation
 
 	var stack []ast.Element
-	ast.Inspect(program, func(element ast.Element) bool {
+	ast.Inspect(checker.Program, func(element ast.Element) bool {
 
 		switch element {
 		case err.Expression:
@@ -2180,7 +2181,7 @@ func maybeReturnTypeChangeCodeActionResolver(
 		return nil
 	}
 
-	return func() *protocol.CodeAction {
+	return func() []*protocol.CodeAction {
 
 		var title string
 		var textEdit protocol.TextEdit
@@ -2207,16 +2208,18 @@ func maybeReturnTypeChangeCodeActionResolver(
 			}
 		}
 
-		return &protocol.CodeAction{
-			Title:       title,
-			Kind:        protocol.QuickFix,
-			Diagnostics: []protocol.Diagnostic{diagnostic},
-			Edit: &protocol.WorkspaceEdit{
-				Changes: &map[string][]protocol.TextEdit{
-					string(uri): {textEdit},
+		return []*protocol.CodeAction{
+			{
+				Title:       title,
+				Kind:        protocol.QuickFix,
+				Diagnostics: []protocol.Diagnostic{diagnostic},
+				Edit: &protocol.WorkspaceEdit{
+					Changes: &map[string][]protocol.TextEdit{
+						string(uri): {textEdit},
+					},
 				},
+				IsPreferred: true,
 			},
-			IsPreferred: true,
 		}
 	}
 }
@@ -2232,14 +2235,14 @@ func maybeAddMissingMembersCodeActionResolver(
 	diagnostic protocol.Diagnostic,
 	err *sema.ConformanceError,
 	uri protocol.DocumentUri,
-) func() *protocol.CodeAction {
+) func() []*protocol.CodeAction {
 
 	missingMemberCount := len(err.MissingMembers)
 	if missingMemberCount == 0 {
 		return nil
 	}
 
-	return func() *protocol.CodeAction {
+	return func() []*protocol.CodeAction {
 
 		var builder strings.Builder
 
@@ -2271,16 +2274,18 @@ func maybeAddMissingMembersCodeActionResolver(
 			NewText: builder.String(),
 		}
 
-		return &protocol.CodeAction{
-			Title:       "Add missing members",
-			Kind:        protocol.QuickFix,
-			Diagnostics: []protocol.Diagnostic{diagnostic},
-			Edit: &protocol.WorkspaceEdit{
-				Changes: &map[string][]protocol.TextEdit{
-					string(uri): {textEdit},
+		return []*protocol.CodeAction{
+			{
+				Title:       "Add missing members",
+				Kind:        protocol.QuickFix,
+				Diagnostics: []protocol.Diagnostic{diagnostic},
+				Edit: &protocol.WorkspaceEdit{
+					Changes: &map[string][]protocol.TextEdit{
+						string(uri): {textEdit},
+					},
 				},
+				IsPreferred: true,
 			},
-			IsPreferred: true,
 		}
 	}
 }
@@ -2334,10 +2339,86 @@ func formatNewMember(member *sema.Member, indentation string) string {
 	}
 }
 
+func (s *Server) maybeAddVariableDeclarationActionsResolver(
+	diagnostic protocol.Diagnostic,
+	err *sema.NotDeclaredError,
+	uri protocol.DocumentUri,
+) func() []*protocol.CodeAction {
+
+	if err.ExpectedKind != common.DeclarationKindVariable {
+		return nil
+	}
+
+	return func() []*protocol.CodeAction {
+
+		document, ok := s.documents[uri]
+		if !ok {
+			return nil
+		}
+
+		lineStart := err.Pos.Offset - err.Pos.Column
+		indentationEnd := lineStart
+		for ; indentationEnd < err.Pos.Offset; indentationEnd++ {
+			switch document.Text[indentationEnd] {
+			case ' ', '\t':
+				continue
+			}
+			break
+		}
+
+		codeActions := make([]*protocol.CodeAction, 0, len(ast.VariableKinds))
+
+		for _, variableKind := range ast.VariableKinds {
+
+			insertionPos := ast.Position{
+				Line:   err.Pos.Line,
+				Column: 0,
+			}
+
+			// TODO: hope for https://github.com/microsoft/language-server-protocol/issues/724
+			//  to get implemented, so the cursor can be placed at the value,
+			//  or if insertion for a snippet gets supported add a var/let option and a value placeholder
+
+			textEdit := protocol.TextEdit{
+				Range: protocol.Range{
+					Start: conversion.ASTToProtocolPosition(insertionPos),
+					End:   conversion.ASTToProtocolPosition(insertionPos),
+				},
+				NewText: fmt.Sprintf(
+					"%s%s %s = TODO\n",
+					document.Text[lineStart:indentationEnd],
+					variableKind.Keyword(),
+					err.Name,
+				),
+			}
+
+			codeActions = append(codeActions, &protocol.CodeAction{
+				Title:       fmt.Sprintf("Declare %s", variableKind.Name()),
+				Kind:        protocol.QuickFix,
+				Diagnostics: []protocol.Diagnostic{diagnostic},
+				Edit: &protocol.WorkspaceEdit{
+					Changes: &map[string][]protocol.TextEdit{
+						string(uri): {textEdit},
+					},
+				},
+				IsPreferred: variableKind == ast.VariableKindConstant,
+			})
+		}
+
+		return codeActions
+	}
+}
+
 // convertHint converts a checker hint to a diagnostic
 // and an optional code action to resolve the hint.
 //
-func convertHint(hint sema.Hint, uri protocol.DocumentUri) (protocol.Diagnostic, func() *protocol.CodeAction) {
+func convertHint(
+	hint sema.Hint,
+	uri protocol.DocumentUri,
+) (
+	protocol.Diagnostic,
+	func() []*protocol.CodeAction,
+) {
 	startPosition := hint.StartPosition()
 	endPosition := hint.EndPosition()
 
@@ -2351,50 +2432,54 @@ func convertHint(hint sema.Hint, uri protocol.DocumentUri) (protocol.Diagnostic,
 		Range:    protocolRange,
 	}
 
-	var codeAction func() *protocol.CodeAction
+	var codeActionsResolver func() []*protocol.CodeAction
 
 	switch hint := hint.(type) {
 	case *sema.ReplacementHint:
-		codeAction = func() *protocol.CodeAction {
+		codeActionsResolver = func() []*protocol.CodeAction {
 			replacement := hint.Expression.String()
-			return &protocol.CodeAction{
-				Title:       fmt.Sprintf("Replace with suggestion `%s`", replacement),
-				Kind:        protocol.QuickFix,
-				Diagnostics: []protocol.Diagnostic{diagnostic},
-				Edit: &protocol.WorkspaceEdit{
-					Changes: &map[string][]protocol.TextEdit{
-						string(uri): {
-							{
-								Range:   protocolRange,
-								NewText: replacement,
+			return []*protocol.CodeAction{
+				{
+					Title:       fmt.Sprintf("Replace with suggestion `%s`", replacement),
+					Kind:        protocol.QuickFix,
+					Diagnostics: []protocol.Diagnostic{diagnostic},
+					Edit: &protocol.WorkspaceEdit{
+						Changes: &map[string][]protocol.TextEdit{
+							string(uri): {
+								{
+									Range:   protocolRange,
+									NewText: replacement,
+								},
 							},
 						},
 					},
+					IsPreferred: true,
 				},
-				IsPreferred: true,
 			}
 		}
 
 	case *sema.RemovalHint:
-		codeAction = func() *protocol.CodeAction {
-			return &protocol.CodeAction{
-				Title:       "Remove unnecessary code",
-				Kind:        protocol.QuickFix,
-				Diagnostics: []protocol.Diagnostic{diagnostic},
-				Edit: &protocol.WorkspaceEdit{
-					Changes: &map[string][]protocol.TextEdit{
-						string(uri): {
-							{
-								Range:   protocolRange,
-								NewText: "",
+		codeActionsResolver = func() []*protocol.CodeAction {
+			return []*protocol.CodeAction{
+				{
+					Title:       "Remove unnecessary code",
+					Kind:        protocol.QuickFix,
+					Diagnostics: []protocol.Diagnostic{diagnostic},
+					Edit: &protocol.WorkspaceEdit{
+						Changes: &map[string][]protocol.TextEdit{
+							string(uri): {
+								{
+									Range:   protocolRange,
+									NewText: "",
+								},
 							},
 						},
 					},
+					IsPreferred: true,
 				},
-				IsPreferred: true,
 			}
 		}
 	}
 
-	return diagnostic, codeAction
+	return diagnostic, codeActionsResolver
 }
