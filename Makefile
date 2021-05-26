@@ -27,6 +27,8 @@ COVERPKGS := $(shell go list ./... | grep -v /cmd | grep -v /runtime/test | tr "
 test:
 	# test all packages
 	GO111MODULE=on go test -coverprofile=coverage.txt -covermode=atomic -parallel 8 -race -coverpkg $(COVERPKGS) ./...
+	# remove coverage of empty functions from report
+	sed -e 's/^.* 0 0$$//' coverage.txt
 	cd ./languageserver && make test
 
 .PHONY: build
