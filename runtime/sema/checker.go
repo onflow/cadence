@@ -1380,6 +1380,7 @@ func (checker *Checker) recordVariableReferenceOccurrence(startPos, endPos ast.P
 			DeclarationKind: variable.DeclarationKind,
 			StartPos:        startPos2,
 			EndPos:          endPos2,
+			DocString:       variable.DocString,
 		}
 		checker.variableOrigins[variable] = origin
 	}
@@ -1398,6 +1399,7 @@ func (checker *Checker) recordVariableDeclarationOccurrence(name string, variabl
 func (checker *Checker) recordFieldDeclarationOrigin(
 	identifier ast.Identifier,
 	fieldType Type,
+	docString string,
 ) *Origin {
 	if !checker.positionInfoEnabled {
 		return nil
@@ -1411,6 +1413,7 @@ func (checker *Checker) recordFieldDeclarationOrigin(
 		DeclarationKind: common.DeclarationKindField,
 		StartPos:        &startPosition,
 		EndPos:          &endPosition,
+		DocString:       docString,
 	}
 
 	checker.Occurrences.Put(
@@ -1438,6 +1441,7 @@ func (checker *Checker) recordFunctionDeclarationOrigin(
 		DeclarationKind: common.DeclarationKindFunction,
 		StartPos:        &startPosition,
 		EndPos:          &endPosition,
+		DocString:       function.DocString,
 	}
 
 	checker.Occurrences.Put(

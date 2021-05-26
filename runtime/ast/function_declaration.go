@@ -86,6 +86,10 @@ func (d *FunctionDeclaration) DeclarationMembers() *Members {
 	return nil
 }
 
+func (d *FunctionDeclaration) DeclarationDocString() string {
+	return d.DocString
+}
+
 func (d *FunctionDeclaration) MarshalJSON() ([]byte, error) {
 	type Alias FunctionDeclaration
 	return json.Marshal(&struct {
@@ -138,7 +142,11 @@ func (d *SpecialFunctionDeclaration) DeclarationAccess() Access {
 }
 
 func (d *SpecialFunctionDeclaration) DeclarationMembers() *Members {
-	return nil
+	return d.FunctionDeclaration.DeclarationMembers()
+}
+
+func (d *SpecialFunctionDeclaration) DeclarationDocString() string {
+	return d.FunctionDeclaration.DeclarationDocString()
 }
 
 func (d *SpecialFunctionDeclaration) MarshalJSON() ([]byte, error) {

@@ -61,6 +61,10 @@ func (d *ImportDeclaration) DeclarationMembers() *Members {
 	return nil
 }
 
+func (d *ImportDeclaration) DeclarationDocString() string {
+	return ""
+}
+
 func (d *ImportDeclaration) MarshalJSON() ([]byte, error) {
 	type Alias ImportDeclaration
 	return json.Marshal(&struct {
