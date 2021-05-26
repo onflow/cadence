@@ -32,36 +32,26 @@ import (
 )
 
 func qualifiedIdentifier(identifier string, containerType Type) string {
-
-	// Gather all identifiers: this, parent, grand-parent, etc.
-
-	identifiers := []string{identifier}
-
-	for containerType != nil {
-		switch typedContainerType := containerType.(type) {
-		case *InterfaceType:
-			identifiers = append(identifiers, typedContainerType.Identifier)
-			containerType = typedContainerType.ContainerType
-		case *CompositeType:
-			identifiers = append(identifiers, typedContainerType.Identifier)
-			containerType = typedContainerType.ContainerType
-		default:
-			switch containerType {
-			case PublicAccountType:
-				identifiers = append(identifiers, string(typedContainerType.ID()))
-				containerType = nil
-			case AuthAccountType:
-				identifiers = append(identifiers, string(typedContainerType.ID()))
-				containerType = nil
-			default:
-				panic(errors.NewUnreachableError())
-			}
-		}
+	if containerType == nil {
+		return identifier
 	}
 
-	// Append all identifiers, in reverse order
+	// Gather all identifiers: this, parent, grand-parent, etc.
+	const level = 0
+	identifiers, bufSize := containerTypeNames(containerType, level+1)
 
+	identifiers[level] = identifier
+	bufSize += len(identifier)
+
+	// Append all identifiers, in reverse order
 	var sb strings.Builder
+
+	// Grow the buffer at once.
+	//
+	// bytes needed for separator '.'
+	// i.e: 1 x (length of identifiers - 1)
+	bufSize += len(identifiers) - 1
+	sb.Grow(bufSize)
 
 	for i := len(identifiers) - 1; i >= 0; i-- {
 		sb.WriteString(identifiers[i])
@@ -71,6 +61,42 @@ func qualifiedIdentifier(identifier string, containerType Type) string {
 	}
 
 	return sb.String()
+}
+
+func containerTypeNames(typ Type, level int) (typeNames []string, bufSize int) {
+	if typ == nil {
+		return make([]string, level), 0
+	}
+
+	var typeName string
+	var containerType Type
+
+	switch typedContainerType := typ.(type) {
+	case *InterfaceType:
+		typeName = typedContainerType.Identifier
+		containerType = typedContainerType.ContainerType
+	case *CompositeType:
+		typeName = typedContainerType.Identifier
+		containerType = typedContainerType.ContainerType
+	default:
+		switch typ {
+		case PublicAccountType:
+			typeName = string(typedContainerType.ID())
+			containerType = nil
+		case AuthAccountType:
+			typeName = string(typedContainerType.ID())
+			containerType = nil
+		default:
+			panic(errors.NewUnreachableError())
+		}
+	}
+
+	typeNames, bufSize = containerTypeNames(containerType, level+1)
+
+	typeNames[level] = typeName
+	bufSize += len(typeName)
+
+	return typeNames, bufSize
 }
 
 type TypeID = common.TypeID
