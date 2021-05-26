@@ -102,6 +102,7 @@ func (checker *Checker) visitCompositeDeclaration(declaration *ast.CompositeDecl
 		declaration.Members.Fields(),
 		compositeType,
 		declaration.DeclarationKind(),
+		declaration.DeclarationDocString(),
 		compositeType.ConstructorParameters,
 		kind,
 		initializationInfo,
@@ -114,6 +115,7 @@ func (checker *Checker) visitCompositeDeclaration(declaration *ast.CompositeDecl
 		checker.checkCompositeFunctions(
 			declaration.Members.Functions(),
 			compositeType,
+			declaration.DocString,
 		)
 
 	case ContainerKindInterface:
@@ -121,6 +123,7 @@ func (checker *Checker) visitCompositeDeclaration(declaration *ast.CompositeDecl
 			declaration.Members.Functions(),
 			compositeType,
 			declaration.DeclarationKind(),
+			declaration.DocString,
 		)
 
 	default:
@@ -179,6 +182,7 @@ func (checker *Checker) visitCompositeDeclaration(declaration *ast.CompositeDecl
 			compositeType.Members,
 			compositeType,
 			declaration.DeclarationKind(),
+			declaration.DeclarationDocString(),
 			kind,
 		)
 	})
@@ -233,6 +237,7 @@ func (checker *Checker) declareCompositeNestedTypes(
 			ty:                       nestedType,
 			declarationKind:          nestedDeclaration.DeclarationKind(),
 			access:                   nestedDeclaration.DeclarationAccess(),
+			docString:                nestedDeclaration.DeclarationDocString(),
 			allowOuterScopeShadowing: true,
 		})
 		checker.report(err)
@@ -420,6 +425,7 @@ func (checker *Checker) declareCompositeType(declaration *ast.CompositeDeclarati
 		ty:                       compositeType,
 		declarationKind:          declaration.DeclarationKind(),
 		access:                   declaration.Access,
+		docString:                declaration.DocString,
 		allowOuterScopeShadowing: false,
 	})
 	checker.report(err)
@@ -784,6 +790,7 @@ func (checker *Checker) declareEnumConstructor(
 				checker.recordFieldDeclarationOrigin(
 					enumCase.Identifier,
 					compositeType,
+					enumCase.DocString,
 				)
 		}
 	}
@@ -1423,6 +1430,7 @@ func (checker *Checker) defaultMembersAndOrigins(
 				checker.recordFieldDeclarationOrigin(
 					field.Identifier,
 					fieldTypeAnnotation.Type,
+					field.DocString,
 				)
 		}
 
@@ -1529,6 +1537,7 @@ func (checker *Checker) eventMembersAndOrigins(
 				checker.recordFieldDeclarationOrigin(
 					identifier,
 					typeAnnotation.Type,
+					"",
 				)
 		}
 	}
@@ -1618,6 +1627,7 @@ func (checker *Checker) checkInitializers(
 	fields []*ast.FieldDeclaration,
 	containerType Type,
 	containerDeclarationKind common.DeclarationKind,
+	containerDocString string,
 	initializerParameters []*Parameter,
 	containerKind ContainerKind,
 	initializationInfo *InitializationInfo,
@@ -1637,6 +1647,7 @@ func (checker *Checker) checkInitializers(
 		initializer,
 		containerType,
 		containerDeclarationKind,
+		containerDocString,
 		initializerParameters,
 		containerKind,
 		initializationInfo,
@@ -1690,6 +1701,7 @@ func (checker *Checker) checkSpecialFunction(
 	specialFunction *ast.SpecialFunctionDeclaration,
 	containerType Type,
 	containerDeclarationKind common.DeclarationKind,
+	containerDocString string,
 	parameters []*Parameter,
 	containerKind ContainerKind,
 	initializationInfo *InitializationInfo,
@@ -1702,7 +1714,7 @@ func (checker *Checker) checkSpecialFunction(
 	checker.enterValueScope()
 	defer checker.leaveValueScope(specialFunction.EndPosition, checkResourceLoss)
 
-	checker.declareSelfValue(containerType)
+	checker.declareSelfValue(containerType, containerDocString)
 
 	functionType := &FunctionType{
 		Parameters:           parameters,
@@ -1749,6 +1761,7 @@ func (checker *Checker) checkSpecialFunction(
 func (checker *Checker) checkCompositeFunctions(
 	functions []*ast.FunctionDeclaration,
 	selfType *CompositeType,
+	selfDocString string,
 ) {
 	for _, function := range functions {
 		// NOTE: new activation, as function declarations
@@ -1759,7 +1772,7 @@ func (checker *Checker) checkCompositeFunctions(
 			checker.enterValueScope()
 			defer checker.leaveValueScope(function.EndPosition, true)
 
-			checker.declareSelfValue(selfType)
+			checker.declareSelfValue(selfType, selfDocString)
 
 			checker.visitFunctionDeclaration(
 				function,
@@ -1781,7 +1794,7 @@ func (checker *Checker) checkCompositeFunctions(
 	}
 }
 
-func (checker *Checker) declareSelfValue(selfType Type) {
+func (checker *Checker) declareSelfValue(selfType Type, selfDocString string) {
 
 	// NOTE: declare `self` one depth lower ("inside" function),
 	// so it can't be re-declared by the function's parameters
@@ -1796,6 +1809,7 @@ func (checker *Checker) declareSelfValue(selfType Type) {
 		IsConstant:      true,
 		ActivationDepth: depth,
 		Pos:             nil,
+		DocString:       selfDocString,
 	}
 	checker.valueActivations.Set(SelfIdentifier, self)
 	if checker.positionInfoEnabled {
@@ -1904,6 +1918,7 @@ func (checker *Checker) checkDestructors(
 	members *StringMemberOrderedMap,
 	containerType Type,
 	containerDeclarationKind common.DeclarationKind,
+	containerDocString string,
 	containerKind ContainerKind,
 ) {
 	count := len(destructors)
@@ -1935,6 +1950,7 @@ func (checker *Checker) checkDestructors(
 		firstDestructor,
 		containerType,
 		containerDeclarationKind,
+		containerDocString,
 		containerKind,
 	)
 
@@ -1993,6 +2009,7 @@ func (checker *Checker) checkDestructor(
 	destructor *ast.SpecialFunctionDeclaration,
 	containerType Type,
 	containerDeclarationKind common.DeclarationKind,
+	containerDocString string,
 	containerKind ContainerKind,
 ) {
 
@@ -2010,6 +2027,7 @@ func (checker *Checker) checkDestructor(
 		destructor,
 		containerType,
 		containerDeclarationKind,
+		containerDocString,
 		parameters,
 		containerKind,
 		nil,

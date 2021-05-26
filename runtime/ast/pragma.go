@@ -59,6 +59,10 @@ func (d *PragmaDeclaration) DeclarationMembers() *Members {
 	return nil
 }
 
+func (d *PragmaDeclaration) DeclarationDocString() string {
+	return ""
+}
+
 func (d *PragmaDeclaration) MarshalJSON() ([]byte, error) {
 	type Alias PragmaDeclaration
 	return json.Marshal(&struct {

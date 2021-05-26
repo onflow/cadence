@@ -67,6 +67,7 @@ type Origin struct {
 	StartPos        *ast.Position
 	EndPos          *ast.Position
 	Occurrences     []ast.Range
+	DocString       string
 }
 
 type Occurrences struct {

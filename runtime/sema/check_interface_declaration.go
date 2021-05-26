@@ -71,6 +71,7 @@ func (checker *Checker) VisitInterfaceDeclaration(declaration *ast.InterfaceDecl
 		declaration.Members.Fields(),
 		interfaceType,
 		declaration.DeclarationKind(),
+		declaration.DeclarationDocString(),
 		interfaceType.InitializerParameters,
 		kind,
 		nil,
@@ -82,6 +83,7 @@ func (checker *Checker) VisitInterfaceDeclaration(declaration *ast.InterfaceDecl
 		declaration.Members.Functions(),
 		interfaceType,
 		declaration.DeclarationKind(),
+		declaration.DeclarationDocString(),
 	)
 
 	fieldPositionGetter := func(name string) ast.Position {
@@ -100,6 +102,7 @@ func (checker *Checker) VisitInterfaceDeclaration(declaration *ast.InterfaceDecl
 		interfaceType.Members,
 		interfaceType,
 		declaration.DeclarationKind(),
+		declaration.DeclarationDocString(),
 		kind,
 	)
 
@@ -150,6 +153,7 @@ func (checker *Checker) declareInterfaceNestedTypes(
 			ty:                       nestedType,
 			declarationKind:          nestedDeclaration.DeclarationKind(),
 			access:                   nestedDeclaration.DeclarationAccess(),
+			docString:                nestedDeclaration.DeclarationDocString(),
 			allowOuterScopeShadowing: false,
 		})
 		checker.report(err)
@@ -160,6 +164,7 @@ func (checker *Checker) checkInterfaceFunctions(
 	functions []*ast.FunctionDeclaration,
 	selfType Type,
 	declarationKind common.DeclarationKind,
+	selfDocString string,
 ) {
 	for _, function := range functions {
 		// NOTE: new activation, as function declarations
@@ -170,7 +175,7 @@ func (checker *Checker) checkInterfaceFunctions(
 			checker.enterValueScope()
 			defer checker.leaveValueScope(function.EndPosition, false)
 
-			checker.declareSelfValue(selfType)
+			checker.declareSelfValue(selfType, selfDocString)
 
 			checker.visitFunctionDeclaration(
 				function,
@@ -218,6 +223,7 @@ func (checker *Checker) declareInterfaceType(declaration *ast.InterfaceDeclarati
 		ty:                       interfaceType,
 		declarationKind:          declaration.DeclarationKind(),
 		access:                   declaration.Access,
+		docString:                declaration.DocString,
 		allowOuterScopeShadowing: false,
 	})
 	checker.report(err)
