@@ -564,15 +564,64 @@ func (s *Server) Hover(
 		return nil, nil
 	}
 
+	var markup strings.Builder
+
+	_, _ = fmt.Fprintf(
+		&markup,
+		"**Type**\n\n```cadence\n%s\n```\n",
+		documentType(occurrence.Origin.Type),
+	)
+
+	docString := occurrence.Origin.DocString
+	if docString != "" {
+		_, _ = fmt.Fprintf(
+			&markup,
+			"\n**Documentation**\n\n%s\n",
+			docString,
+		)
+	}
+
 	contents := protocol.MarkupContent{
 		Kind:  protocol.Markdown,
-		Value: formatType(occurrence.Origin.Type),
+		Value: markup.String(),
 	}
 	return &protocol.Hover{Contents: contents}, nil
 }
 
-func formatType(ty sema.Type) string {
-	return fmt.Sprintf("* Type: `%s`", ty.QualifiedString())
+func documentType(ty sema.Type) string {
+	if invokableType, ok := ty.(sema.InvokableType); ok {
+		return documentFunctionType(invokableType.InvocationFunctionType())
+	}
+	return ty.QualifiedString()
+}
+
+func documentFunctionType(ty *sema.FunctionType) string {
+	var builder strings.Builder
+	builder.WriteString("fun ")
+	if len(ty.TypeParameters) > 0 {
+		builder.WriteRune('<')
+		for i, typeParameter := range ty.TypeParameters {
+			if i > 0 {
+				builder.WriteString(", ")
+			}
+			builder.WriteString(typeParameter.QualifiedString())
+		}
+		builder.WriteRune('>')
+	}
+	builder.WriteRune('(')
+	for i, parameter := range ty.Parameters {
+		if i > 0 {
+			builder.WriteString(", ")
+		}
+		builder.WriteString(parameter.QualifiedString())
+	}
+	builder.WriteString(")")
+
+	if ty.ReturnTypeAnnotation.Type != sema.VoidType {
+		builder.WriteString(": ")
+		builder.WriteString(ty.ReturnTypeAnnotation.QualifiedString())
+	}
+	return builder.String()
 }
 
 // Definition finds the definition of the type at the given location.
