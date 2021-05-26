@@ -2106,8 +2106,10 @@ func (s *Server) convertError(
 	switch err := err.(type) {
 	case *sema.TypeMismatchError:
 		codeActionsResolver = s.maybeReturnTypeChangeCodeActionsResolver(diagnostic, err, uri)
+
 	case *sema.ConformanceError:
 		codeActionsResolver = maybeAddMissingMembersCodeActionResolver(diagnostic, err, uri)
+
 	case *sema.NotDeclaredError:
 		codeActionsResolver = s.maybeAddVariableDeclarationActionsResolver(diagnostic, err, uri)
 	}
