@@ -51,6 +51,10 @@ func (e *BoolExpression) Accept(visitor Visitor) Repr {
 	return e.AcceptExp(visitor)
 }
 
+func (*BoolExpression) Walk(_ func(Element)) {
+	// NO-OP
+}
+
 func (e *BoolExpression) AcceptExp(visitor ExpressionVisitor) Repr {
 	return visitor.VisitBoolExpression(e)
 }
@@ -85,6 +89,10 @@ func (*NilExpression) isIfStatementTest() {}
 
 func (e *NilExpression) Accept(visitor Visitor) Repr {
 	return e.AcceptExp(visitor)
+}
+
+func (*NilExpression) Walk(_ func(Element)) {
+	// NO-OP
 }
 
 func (e *NilExpression) AcceptExp(visitor ExpressionVisitor) Repr {
@@ -131,6 +139,10 @@ func (e *StringExpression) Accept(visitor Visitor) Repr {
 	return e.AcceptExp(visitor)
 }
 
+func (*StringExpression) Walk(_ func(Element)) {
+	// NO-OP
+}
+
 func (e *StringExpression) AcceptExp(visitor ExpressionVisitor) Repr {
 	return visitor.VisitStringExpression(e)
 }
@@ -164,6 +176,10 @@ func (*IntegerExpression) isIfStatementTest() {}
 
 func (e *IntegerExpression) Accept(visitor Visitor) Repr {
 	return e.AcceptExp(visitor)
+}
+
+func (*IntegerExpression) Walk(_ func(Element)) {
+	// NO-OP
 }
 
 func (e *IntegerExpression) AcceptExp(visitor ExpressionVisitor) Repr {
@@ -203,6 +219,10 @@ func (*FixedPointExpression) isIfStatementTest() {}
 
 func (e *FixedPointExpression) Accept(visitor Visitor) Repr {
 	return e.AcceptExp(visitor)
+}
+
+func (*FixedPointExpression) Walk(_ func(Element)) {
+	// NO-OP
 }
 
 func (e *FixedPointExpression) AcceptExp(visitor ExpressionVisitor) Repr {
@@ -254,6 +274,10 @@ func (e *ArrayExpression) Accept(visitor Visitor) Repr {
 	return e.AcceptExp(visitor)
 }
 
+func (e *ArrayExpression) Walk(walkChild func(Element)) {
+	walkExpressions(walkChild, e.Values)
+}
+
 func (e *ArrayExpression) AcceptExp(visitor ExpressionVisitor) Repr {
 	return visitor.VisitArrayExpression(e)
 }
@@ -295,6 +319,13 @@ func (*DictionaryExpression) isIfStatementTest() {}
 
 func (e *DictionaryExpression) Accept(visitor Visitor) Repr {
 	return e.AcceptExp(visitor)
+}
+
+func (e *DictionaryExpression) Walk(walkChild func(Element)) {
+	for _, entry := range e.Entries {
+		walkChild(entry.Key)
+		walkChild(entry.Value)
+	}
 }
 
 func (e *DictionaryExpression) AcceptExp(visitor ExpressionVisitor) Repr {
@@ -355,6 +386,10 @@ func (*IdentifierExpression) isIfStatementTest() {}
 
 func (e *IdentifierExpression) Accept(visitor Visitor) Repr {
 	return e.AcceptExp(visitor)
+}
+
+func (*IdentifierExpression) Walk(_ func(Element)) {
+	// NO-OP
 }
 
 func (e *IdentifierExpression) AcceptExp(visitor ExpressionVisitor) Repr {
@@ -418,6 +453,13 @@ func (*InvocationExpression) isIfStatementTest() {}
 
 func (e *InvocationExpression) Accept(visitor Visitor) Repr {
 	return e.AcceptExp(visitor)
+}
+
+func (e *InvocationExpression) Walk(walkChild func(Element)) {
+	walkChild(e.InvokedExpression)
+	for _, argument := range e.Arguments {
+		walkChild(argument.Expression)
+	}
 }
 
 func (e *InvocationExpression) AcceptExp(visitor ExpressionVisitor) Repr {
@@ -495,6 +537,10 @@ func (e *MemberExpression) Accept(visitor Visitor) Repr {
 	return e.AcceptExp(visitor)
 }
 
+func (e *MemberExpression) Walk(walkChild func(Element)) {
+	walkChild(e.Expression)
+}
+
 func (e *MemberExpression) AcceptExp(visitor ExpressionVisitor) Repr {
 	return visitor.VisitMemberExpression(e)
 }
@@ -557,6 +603,11 @@ func (e *IndexExpression) Accept(visitor Visitor) Repr {
 	return e.AcceptExp(visitor)
 }
 
+func (e *IndexExpression) Walk(walkChild func(Element)) {
+	walkChild(e.TargetExpression)
+	walkChild(e.IndexingExpression)
+}
+
 func (e *IndexExpression) AcceptExp(visitor ExpressionVisitor) Repr {
 	return visitor.VisitIndexExpression(e)
 }
@@ -592,6 +643,14 @@ func (*ConditionalExpression) isIfStatementTest() {}
 
 func (e *ConditionalExpression) Accept(visitor Visitor) Repr {
 	return e.AcceptExp(visitor)
+}
+
+func (e *ConditionalExpression) Walk(walkChild func(Element)) {
+	walkChild(e.Test)
+	walkChild(e.Then)
+	if e.Else != nil {
+		walkChild(e.Else)
+	}
 }
 
 func (e *ConditionalExpression) AcceptExp(visitor ExpressionVisitor) Repr {
@@ -641,6 +700,10 @@ func (e *UnaryExpression) Accept(visitor Visitor) Repr {
 	return e.AcceptExp(visitor)
 }
 
+func (e *UnaryExpression) Walk(walkChild func(Element)) {
+	walkChild(e.Expression)
+}
+
 func (e *UnaryExpression) AcceptExp(visitor ExpressionVisitor) Repr {
 	return visitor.VisitUnaryExpression(e)
 }
@@ -687,6 +750,11 @@ func (*BinaryExpression) isIfStatementTest() {}
 
 func (e *BinaryExpression) Accept(visitor Visitor) Repr {
 	return e.AcceptExp(visitor)
+}
+
+func (e *BinaryExpression) Walk(walkChild func(Element)) {
+	walkChild(e.Left)
+	walkChild(e.Right)
 }
 
 func (e *BinaryExpression) AcceptExp(visitor ExpressionVisitor) Repr {
@@ -738,6 +806,12 @@ func (e *FunctionExpression) Accept(visitor Visitor) Repr {
 	return e.AcceptExp(visitor)
 }
 
+func (e *FunctionExpression) Walk(walkChild func(Element)) {
+	// TODO: walk parameters
+	// TODO: walk return type
+	walkChild(e.FunctionBlock)
+}
+
 func (e *FunctionExpression) AcceptExp(visitor ExpressionVisitor) Repr {
 	return visitor.VisitFunctionExpression(e)
 }
@@ -783,6 +857,10 @@ func (*CastingExpression) isIfStatementTest() {}
 
 func (e *CastingExpression) Accept(visitor Visitor) Repr {
 	return e.AcceptExp(visitor)
+}
+func (e *CastingExpression) Walk(walkChild func(Element)) {
+	walkChild(e.Expression)
+	// TODO: also walk type
 }
 
 func (e *CastingExpression) AcceptExp(visitor ExpressionVisitor) Repr {
@@ -832,6 +910,10 @@ func (e *CreateExpression) Accept(visitor Visitor) Repr {
 	return e.AcceptExp(visitor)
 }
 
+func (e *CreateExpression) Walk(walkChild func(Element)) {
+	walkChild(e.InvocationExpression)
+}
+
 func (e *CreateExpression) AcceptExp(visitor ExpressionVisitor) Repr {
 	return visitor.VisitCreateExpression(e)
 }
@@ -877,6 +959,10 @@ func (*DestroyExpression) isIfStatementTest() {}
 
 func (e *DestroyExpression) Accept(visitor Visitor) Repr {
 	return e.AcceptExp(visitor)
+}
+
+func (e *DestroyExpression) Walk(walkChild func(Element)) {
+	walkChild(e.Expression)
 }
 
 func (e *DestroyExpression) AcceptExp(visitor ExpressionVisitor) Repr {
@@ -927,6 +1013,11 @@ func (e *ReferenceExpression) Accept(visitor Visitor) Repr {
 	return e.AcceptExp(visitor)
 }
 
+func (e *ReferenceExpression) Walk(walkChild func(Element)) {
+	walkChild(e.Expression)
+	// TODO: walk type
+}
+
 func (e *ReferenceExpression) AcceptExp(visitor ExpressionVisitor) Repr {
 	return visitor.VisitReferenceExpression(e)
 }
@@ -975,6 +1066,10 @@ func (e *ForceExpression) Accept(visitor Visitor) Repr {
 	return e.AcceptExp(visitor)
 }
 
+func (e *ForceExpression) Walk(walkChild func(Element)) {
+	walkChild(e.Expression)
+}
+
 func (e *ForceExpression) AcceptExp(visitor ExpressionVisitor) Repr {
 	return visitor.VisitForceExpression(e)
 }
@@ -1018,6 +1113,10 @@ func (*PathExpression) isIfStatementTest() {}
 
 func (e *PathExpression) Accept(visitor Visitor) Repr {
 	return e.AcceptExp(visitor)
+}
+
+func (*PathExpression) Walk(_ func(Element)) {
+	// NO-OP
 }
 
 func (e *PathExpression) AcceptExp(visitor ExpressionVisitor) Repr {

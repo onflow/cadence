@@ -48,14 +48,19 @@ type ParseCheckAndInterpretOptions struct {
 }
 
 func parseCheckAndInterpret(t testing.TB, code string) *interpreter.Interpreter {
-	return parseCheckAndInterpretWithOptions(t, code, ParseCheckAndInterpretOptions{})
+	inter, err := parseCheckAndInterpretWithOptions(t, code, ParseCheckAndInterpretOptions{})
+	require.NoError(t, err)
+	return inter
 }
 
 func parseCheckAndInterpretWithOptions(
 	t testing.TB,
 	code string,
 	options ParseCheckAndInterpretOptions,
-) *interpreter.Interpreter {
+) (
+	inter *interpreter.Interpreter,
+	err error,
+) {
 
 	checker, err := checker.ParseAndCheckWithOptions(t,
 		code,
@@ -74,8 +79,8 @@ func parseCheckAndInterpretWithOptions(
 		if printErr != nil {
 			panic(printErr)
 		}
-		assert.FailNow(t, sb.String())
-		return nil
+		assert.Fail(t, sb.String())
+		return nil, err
 	}
 
 	var uuid uint64 = 0
@@ -90,7 +95,7 @@ func parseCheckAndInterpretWithOptions(
 		options.Options...,
 	)
 
-	inter, err := interpreter.NewInterpreter(
+	inter, err = interpreter.NewInterpreter(
 		interpreter.ProgramFromChecker(checker),
 		checker.Location,
 		interpreterOptions...,
@@ -99,9 +104,24 @@ func parseCheckAndInterpretWithOptions(
 	require.NoError(t, err)
 
 	err = inter.Interpret()
-	require.NoError(t, err)
 
-	return inter
+	if err == nil {
+
+		// recover internal panics and return them as an error
+		defer inter.RecoverErrors(func(internalErr error) {
+			err = internalErr
+		})
+
+		// Ensure that all global declarations are evaluated:
+		// Contract declarations are evaluated lazily,
+		// so force the contract value handler to be called
+
+		for _, variable := range inter.Globals {
+			_ = variable.GetValue()
+		}
+	}
+
+	return inter, err
 }
 
 func constructorArguments(compositeKind common.CompositeKind, arguments string) string {
@@ -827,7 +847,7 @@ func TestInterpretReturns(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpretWithOptions(t,
+	inter, err := parseCheckAndInterpretWithOptions(t,
 		`
            pub fun returnEarly(): Int {
                return 2
@@ -842,6 +862,7 @@ func TestInterpretReturns(t *testing.T) {
 			},
 		},
 	)
+	require.NoError(t, err)
 
 	value, err := inter.Invoke("returnEarly")
 	require.NoError(t, err)
@@ -1679,7 +1700,7 @@ func TestInterpretCompositeDeclaration(t *testing.T) {
 
 			t.Parallel()
 
-			inter := parseCheckAndInterpretWithOptions(t,
+			inter, err := parseCheckAndInterpretWithOptions(t,
 				fmt.Sprintf(
 					`
                        pub %[1]s Test {}
@@ -1700,6 +1721,7 @@ func TestInterpretCompositeDeclaration(t *testing.T) {
 					},
 				},
 			)
+			require.NoError(t, err)
 
 			value, err := inter.Invoke("test")
 			require.NoError(t, err)
@@ -3126,7 +3148,7 @@ func TestInterpretCompositeNilEquality(t *testing.T) {
 				conformances = ": Int"
 			}
 
-			inter := parseCheckAndInterpretWithOptions(t,
+			inter, err := parseCheckAndInterpretWithOptions(t,
 				fmt.Sprintf(
 					`
                       pub %[1]s X%[2]s %[3]s
@@ -3148,6 +3170,7 @@ func TestInterpretCompositeNilEquality(t *testing.T) {
 					},
 				},
 			)
+			require.NoError(t, err)
 
 			assert.Equal(t,
 				interpreter.BoolValue(false),
@@ -3189,7 +3212,7 @@ func TestInterpretInterfaceConformanceNoRequirements(t *testing.T) {
 
 		t.Run(compositeKind.Keyword(), func(t *testing.T) {
 
-			inter := parseCheckAndInterpretWithOptions(t,
+			inter := parseCheckAndInterpret(t,
 				fmt.Sprintf(
 					`
                       pub %[1]s interface Test {}
@@ -3205,11 +3228,6 @@ func TestInterpretInterfaceConformanceNoRequirements(t *testing.T) {
 					compositeKind.ConstructionKeyword(),
 					constructorArguments(compositeKind, ""),
 				),
-				ParseCheckAndInterpretOptions{
-					Options: []interpreter.Option{
-						makeContractValueHandler(nil, nil, nil),
-					},
-				},
 			)
 
 			assert.IsType(t,
@@ -3249,7 +3267,7 @@ func TestInterpretInterfaceFieldUse(t *testing.T) {
 
 		t.Run(compositeKind.Keyword(), func(t *testing.T) {
 
-			inter := parseCheckAndInterpretWithOptions(t,
+			inter, err := parseCheckAndInterpretWithOptions(t,
 				fmt.Sprintf(
 					`
                       pub %[1]s interface Test {
@@ -3288,6 +3306,7 @@ func TestInterpretInterfaceFieldUse(t *testing.T) {
 					},
 				},
 			)
+			require.NoError(t, err)
 
 			assert.Equal(t,
 				interpreter.NewIntValueFromInt64(1),
@@ -3326,7 +3345,7 @@ func TestInterpretInterfaceFunctionUse(t *testing.T) {
 
 		t.Run(compositeKind.Keyword(), func(t *testing.T) {
 
-			inter := parseCheckAndInterpretWithOptions(t,
+			inter, err := parseCheckAndInterpretWithOptions(t,
 				fmt.Sprintf(
 					`
                       pub %[1]s interface Test {
@@ -3353,6 +3372,7 @@ func TestInterpretInterfaceFunctionUse(t *testing.T) {
 					},
 				},
 			)
+			require.NoError(t, err)
 
 			assert.Equal(t,
 				interpreter.NewIntValueFromInt64(2),
@@ -4090,7 +4110,8 @@ func TestInterpretReferenceFailableDowncasting(t *testing.T) {
 
 		var r interpreter.Value
 
-		inter = parseCheckAndInterpretWithOptions(t,
+		var err error
+		inter, err = parseCheckAndInterpretWithOptions(t,
 			`
               resource interface RI {}
 
@@ -4142,8 +4163,8 @@ func TestInterpretReferenceFailableDowncasting(t *testing.T) {
 				},
 			},
 		)
+		require.NoError(t, err)
 
-		var err error
 		r, err = inter.Invoke("createR")
 		require.NoError(t, err)
 
@@ -6531,7 +6552,7 @@ func TestInterpretOptionalChainingFieldReadAndNilCoalescing(t *testing.T) {
 	valueDeclarations := standardLibraryFunctions.ToSemaValueDeclarations()
 	values := standardLibraryFunctions.ToInterpreterValueDeclarations()
 
-	inter := parseCheckAndInterpretWithOptions(t,
+	inter, err := parseCheckAndInterpretWithOptions(t,
 		`
           struct Test {
               let x: Int
@@ -6553,6 +6574,7 @@ func TestInterpretOptionalChainingFieldReadAndNilCoalescing(t *testing.T) {
 			},
 		},
 	)
+	require.NoError(t, err)
 
 	assert.Equal(t,
 		inter.Globals["x"].GetValue(),
@@ -6572,7 +6594,7 @@ func TestInterpretOptionalChainingFunctionCallAndNilCoalescing(t *testing.T) {
 	valueDeclarations := standardLibraryFunctions.ToSemaValueDeclarations()
 	values := standardLibraryFunctions.ToInterpreterValueDeclarations()
 
-	inter := parseCheckAndInterpretWithOptions(t,
+	inter, err := parseCheckAndInterpretWithOptions(t,
 		`
           struct Test {
               fun x(): Int {
@@ -6592,6 +6614,7 @@ func TestInterpretOptionalChainingFunctionCallAndNilCoalescing(t *testing.T) {
 			},
 		},
 	)
+	require.NoError(t, err)
 
 	assert.Equal(t,
 		inter.Globals["x"].GetValue(),
@@ -6603,7 +6626,7 @@ func TestInterpretCompositeDeclarationNestedTypeScopingOuterInner(t *testing.T) 
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpretWithOptions(t,
+	inter, err := parseCheckAndInterpretWithOptions(t,
 		`
           pub contract Test {
 
@@ -6628,6 +6651,7 @@ func TestInterpretCompositeDeclarationNestedTypeScopingOuterInner(t *testing.T) 
 			},
 		},
 	)
+	require.NoError(t, err)
 
 	x1 := inter.Globals["x1"].GetValue()
 	x2 := inter.Globals["x2"].GetValue()
@@ -6657,7 +6681,7 @@ func TestInterpretCompositeDeclarationNestedConstructor(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpretWithOptions(t,
+	inter, err := parseCheckAndInterpretWithOptions(t,
 		`
           pub contract Test {
 
@@ -6672,6 +6696,7 @@ func TestInterpretCompositeDeclarationNestedConstructor(t *testing.T) {
 			},
 		},
 	)
+	require.NoError(t, err)
 
 	x := inter.Globals["x"].GetValue()
 
@@ -6724,7 +6749,7 @@ func TestInterpretFungibleTokenContract(t *testing.T) {
 	valueDeclarations := standardLibraryFunctions.ToSemaValueDeclarations()
 	values := standardLibraryFunctions.ToInterpreterValueDeclarations()
 
-	inter := parseCheckAndInterpretWithOptions(t,
+	inter, err := parseCheckAndInterpretWithOptions(t,
 		code,
 		ParseCheckAndInterpretOptions{
 			Options: []interpreter.Option{
@@ -6736,6 +6761,7 @@ func TestInterpretFungibleTokenContract(t *testing.T) {
 			},
 		},
 	)
+	require.NoError(t, err)
 
 	value, err := inter.Invoke("test")
 	require.NoError(t, err)
@@ -6775,7 +6801,7 @@ func TestInterpretContractAccountFieldUse(t *testing.T) {
 		0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
 	}
 
-	inter := parseCheckAndInterpretWithOptions(t, code,
+	inter, err := parseCheckAndInterpretWithOptions(t, code,
 		ParseCheckAndInterpretOptions{
 			Options: []interpreter.Option{
 				makeContractValueHandler(nil, nil, nil),
@@ -6816,6 +6842,7 @@ func TestInterpretContractAccountFieldUse(t *testing.T) {
 			},
 		},
 	)
+	require.NoError(t, err)
 
 	assert.Equal(t,
 		addressValue,
@@ -6924,7 +6951,7 @@ func TestInterpretContractUseInNestedDeclaration(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpretWithOptions(t, `
+	inter, err := parseCheckAndInterpretWithOptions(t, `
           pub contract C {
 
               pub var i: Int
@@ -6949,6 +6976,7 @@ func TestInterpretContractUseInNestedDeclaration(t *testing.T) {
 			},
 		},
 	)
+	require.NoError(t, err)
 
 	i := inter.Globals["C"].GetValue().(interpreter.MemberAccessibleValue).
 		GetMember(inter, interpreter.ReturnEmptyLocationRange, "i")
@@ -7153,7 +7181,7 @@ func TestInterpretHexDecode(t *testing.T) {
 		valueDeclarations := standardLibraryFunctions.ToSemaValueDeclarations()
 		values := standardLibraryFunctions.ToInterpreterValueDeclarations()
 
-		inter := parseCheckAndInterpretWithOptions(t,
+		inter, err := parseCheckAndInterpretWithOptions(t,
 			`
               fun hexDecode(_ s: String): [UInt8] {
                   if s.length % 2 != 0 {
@@ -7210,6 +7238,7 @@ func TestInterpretHexDecode(t *testing.T) {
 				},
 			},
 		)
+		require.NoError(t, err)
 
 		result, err := inter.Invoke("test")
 		require.NoError(t, err)
@@ -7335,7 +7364,7 @@ func TestInterpretResourceOwnerFieldUse(t *testing.T) {
 		Kind: common.DeclarationKindConstant,
 	}
 
-	inter := parseCheckAndInterpretWithOptions(t,
+	inter, err := parseCheckAndInterpretWithOptions(t,
 		code,
 		ParseCheckAndInterpretOptions{
 			CheckerOptions: []sema.Option{
@@ -7371,6 +7400,7 @@ func TestInterpretResourceOwnerFieldUse(t *testing.T) {
 			},
 		},
 	)
+	require.NoError(t, err)
 
 	result, err := inter.Invoke("test")
 	require.NoError(t, err)
@@ -7753,7 +7783,7 @@ func TestInterpretEphemeralReferenceToOptional(t *testing.T) {
 
 	t.Parallel()
 
-	_ = parseCheckAndInterpretWithOptions(t,
+	_, err := parseCheckAndInterpretWithOptions(t,
 		`
           contract C {
 
@@ -7785,6 +7815,7 @@ func TestInterpretEphemeralReferenceToOptional(t *testing.T) {
 			},
 		},
 	)
+	require.NoError(t, err)
 }
 
 func TestInterpretNestedDeclarationOrder(t *testing.T) {
@@ -7792,7 +7823,7 @@ func TestInterpretNestedDeclarationOrder(t *testing.T) {
 	t.Parallel()
 
 	t.Run("A, B", func(t *testing.T) {
-		_ = parseCheckAndInterpretWithOptions(t,
+		_, err := parseCheckAndInterpretWithOptions(t,
 			`
               pub contract Test {
 
@@ -7819,11 +7850,12 @@ func TestInterpretNestedDeclarationOrder(t *testing.T) {
 				},
 			},
 		)
+		require.NoError(t, err)
 	})
 
 	t.Run("B, A", func(t *testing.T) {
 
-		_ = parseCheckAndInterpretWithOptions(t,
+		_, err := parseCheckAndInterpretWithOptions(t,
 			`
               pub contract Test {
 
@@ -7850,6 +7882,7 @@ func TestInterpretNestedDeclarationOrder(t *testing.T) {
 				},
 			},
 		)
+		require.NoError(t, err)
 	})
 }
 
@@ -7936,7 +7969,7 @@ func TestInterpretFailableCastingCompositeTypeConfusion(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpretWithOptions(t,
+	inter, err := parseCheckAndInterpretWithOptions(t,
 		`
           contract A {
               struct S {}
@@ -7954,6 +7987,7 @@ func TestInterpretFailableCastingCompositeTypeConfusion(t *testing.T) {
 			},
 		},
 	)
+	require.NoError(t, err)
 
 	assert.Equal(t,
 		interpreter.NilValue{},
@@ -7995,7 +8029,7 @@ func TestInterpretNestedDestroy(t *testing.T) {
 		logFunction,
 	}.ToInterpreterValueDeclarations()
 
-	inter := parseCheckAndInterpretWithOptions(t,
+	inter, err := parseCheckAndInterpretWithOptions(t,
 		`
           resource B {
               let id: Int
@@ -8049,6 +8083,7 @@ func TestInterpretNestedDestroy(t *testing.T) {
 			HandleCheckerError: nil,
 		},
 	)
+	require.NoError(t, err)
 
 	value, err := inter.Invoke("test")
 	require.NoError(t, err)
@@ -8222,7 +8257,7 @@ func TestInterpretMissingMember(t *testing.T) {
 	valueDeclarations := predeclaredValues.ToSemaValueDeclarations()
 	values := predeclaredValues.ToInterpreterValueDeclarations()
 
-	inter := parseCheckAndInterpretWithOptions(t,
+	inter, err := parseCheckAndInterpretWithOptions(t,
 		`
           fun test() {
               // access missing field y
@@ -8238,8 +8273,9 @@ func TestInterpretMissingMember(t *testing.T) {
 			},
 		},
 	)
+	require.NoError(t, err)
 
-	_, err := inter.Invoke("test")
+	_, err = inter.Invoke("test")
 	require.Error(t, err)
 
 	var missingMemberError interpreter.MissingMemberValueError

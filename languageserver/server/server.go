@@ -156,6 +156,10 @@ type CodeLensProvider func(uri protocol.DocumentUri, version float64, checker *s
 //
 type DiagnosticProvider func(uri protocol.DocumentUri, version float64, checker *sema.Checker) ([]protocol.Diagnostic, error)
 
+// DocumentSymbolProvider
+//
+type DocumentSymbolProvider func(uri protocol.DocumentUri, version float64, checker *sema.Checker) ([]*protocol.DocumentSymbol, error)
+
 // InitializationOptionsHandler is a function that is used to handle initialization options sent by the client
 //
 type InitializationOptionsHandler func(initializationOptions interface{}) error
@@ -178,6 +182,8 @@ type Server struct {
 	codeLensProviders []CodeLensProvider
 	// diagnosticProviders are the functions that are used to provide diagnostics for a checker
 	diagnosticProviders []DiagnosticProvider
+	// documentSymbolProviders are the functions that are used to provide information about document symbols for a checker
+	documentSymbolProviders []DocumentSymbolProvider
 	// initializationOptionsHandlers are the functions that are used to handle initialization options sent by the client
 	initializationOptionsHandlers []InitializationOptionsHandler
 	accessCheckMode               sema.AccessCheckMode
@@ -333,6 +339,9 @@ func (s *Server) Initialize(
 				TriggerCharacters: []string{"."},
 				ResolveProvider:   true,
 			},
+			DocumentHighlightProvider: true,
+			DocumentSymbolProvider:    true,
+			RenameProvider:            true,
 		},
 	}
 
@@ -598,6 +607,105 @@ func (s *Server) SignatureHelp(
 	_ *protocol.TextDocumentPositionParams,
 ) (*protocol.SignatureHelp, error) {
 	return nil, nil
+}
+
+func (s *Server) DocumentHighlight(
+	_ protocol.Conn,
+	params *protocol.TextDocumentPositionParams,
+) (
+	[]*protocol.DocumentHighlight,
+	error,
+) {
+	uri := params.TextDocument.URI
+	checker := s.checkerForDocument(uri)
+	if checker == nil {
+		return nil, nil
+	}
+
+	position := conversion.ProtocolToSemaPosition(params.Position)
+	occurrences := checker.Occurrences.FindAll(position)
+	// If there are no occurrences,
+	// then try the preceding position
+	if len(occurrences) == 0 && position.Column > 0 {
+		previousPosition := position
+		previousPosition.Column -= 1
+		occurrences = checker.Occurrences.FindAll(previousPosition)
+	}
+
+	documentHighlights := make([]*protocol.DocumentHighlight, 0)
+
+	for _, occurrence := range occurrences {
+
+		origin := occurrence.Origin
+		if origin == nil || origin.StartPos == nil || origin.EndPos == nil {
+			continue
+		}
+
+		for _, occurrenceRange := range origin.Occurrences {
+			documentHighlights = append(documentHighlights,
+				&protocol.DocumentHighlight{
+					Range: conversion.ASTToProtocolRange(
+						occurrenceRange.StartPos,
+						occurrenceRange.EndPos,
+					),
+				},
+			)
+		}
+	}
+
+	return documentHighlights, nil
+}
+
+func (s *Server) Rename(
+	_ protocol.Conn,
+	params *protocol.RenameParams,
+) (
+	*protocol.WorkspaceEdit,
+	error,
+) {
+	uri := params.TextDocument.URI
+	checker := s.checkerForDocument(uri)
+	if checker == nil {
+		return nil, nil
+	}
+
+	position := conversion.ProtocolToSemaPosition(params.Position)
+	occurrences := checker.Occurrences.FindAll(position)
+	// If there are no occurrences,
+	// then try the preceding position
+	if len(occurrences) == 0 && position.Column > 0 {
+		previousPosition := position
+		previousPosition.Column -= 1
+		occurrences = checker.Occurrences.FindAll(previousPosition)
+	}
+
+	textEdits := make([]protocol.TextEdit, 0)
+
+	for _, occurrence := range occurrences {
+
+		origin := occurrence.Origin
+		if origin == nil || origin.StartPos == nil || origin.EndPos == nil {
+			continue
+		}
+
+		for _, occurrenceRange := range origin.Occurrences {
+			textEdits = append(textEdits,
+				protocol.TextEdit{
+					Range: conversion.ASTToProtocolRange(
+						occurrenceRange.StartPos,
+						occurrenceRange.EndPos,
+					),
+					NewText: params.NewName,
+				},
+			)
+		}
+	}
+
+	return &protocol.WorkspaceEdit{
+		Changes: &map[string][]protocol.TextEdit{
+			string(uri): textEdits,
+		},
+	}, nil
 }
 
 // CodeLens is called every time the document contents change and returns a
@@ -873,7 +981,7 @@ var containerCompletionItems = []*protocol.CompletionItem{
 // Completion is called to compute completion items at a given cursor position.
 //
 func (s *Server) Completion(
-	_ protocol.Conn,
+	conn protocol.Conn,
 	params *protocol.CompletionParams,
 ) (
 	items []*protocol.CompletionItem,
@@ -1004,7 +1112,7 @@ func (s *Server) rangeCompletions(
 	uri protocol.DocumentUri,
 ) (items []*protocol.CompletionItem) {
 
-	ranges := checker.Ranges.Find(position)
+	ranges := checker.Ranges.FindAll(position)
 
 	delete(s.ranges, uri)
 
@@ -1297,6 +1405,35 @@ func (s *Server) ExecuteCommand(conn protocol.Conn, params *protocol.ExecuteComm
 		return nil, fmt.Errorf("invalid command: %s", params.Command)
 	}
 	return f(conn, params.Arguments...)
+}
+
+// DocumentSymbol is called every time the document contents change and returns a
+// tree of known  document symbols, which can be shown in outline panel
+func (s *Server) DocumentSymbol(
+	_ protocol.Conn,
+	params *protocol.DocumentSymbolParams,
+) (
+	symbols []*protocol.DocumentSymbol,
+	err error,
+) {
+
+	// NOTE: Always initialize to an empty slice, i.e DON'T use nil:
+	// The later will be ignored instead of being treated as no items
+	symbols = []*protocol.DocumentSymbol{}
+
+	// get uri from parameters caught by grpc server
+	uri := params.TextDocument.URI
+	checker := s.checkerForDocument(uri)
+	if checker == nil {
+		return
+	}
+
+	for _, declaration := range checker.Program.Declarations() {
+		symbol := conversion.DeclarationToDocumentSymbol(declaration)
+		symbols = append(symbols, &symbol)
+	}
+
+	return
 }
 
 // Shutdown tells the server to stop accepting any new requests. This can only

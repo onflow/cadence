@@ -67,7 +67,7 @@ func TestInterpretVirtualImport(t *testing.T) {
 		Type:            fooType,
 	})
 
-	inter := parseCheckAndInterpretWithOptions(t,
+	inter, err := parseCheckAndInterpretWithOptions(t,
 		code,
 		ParseCheckAndInterpretOptions{
 			Options: []interpreter.Option{
@@ -121,6 +121,7 @@ func TestInterpretVirtualImport(t *testing.T) {
 			},
 		},
 	)
+	require.NoError(t, err)
 
 	value, err := inter.Invoke("test")
 	require.NoError(t, err)

@@ -1,0 +1,57 @@
+# {{declTypeTitle .}} `{{.DeclarationIdentifier}}`
+
+```cadence
+{{declKeyword .}} {{.DeclarationIdentifier}}
+
+{{- if isEnum . -}}
+{{- if eq (len .Conformances) 1 -}}
+: {{index .Conformances 0}} {
+{{- else}} {
+{{- end -}}
+
+{{- end -}}
+{{- range .Members.Fields -}}
+    {{template "field" . -}}
+{{end}}
+}
+```
+
+{{- if .DocString}}
+{{ .DocString -}}
+{{- end -}}
+
+{{- if hasConformance . -}}
+{{if gt (len .Conformances) 0}}
+
+{{- if isEnum . -}}
+{{else}}
+Implemented Interfaces:
+    {{- range $index, $conformance := .Conformances}}
+ - `{{$conformance -}}`
+    {{- end}}
+{{end -}}
+{{end}}
+{{end}}
+
+{{- if genInitializer . -}}
+{{if gt (len .Members.Initializers) 0}}
+### Initializer
+{{$init := index .Members.Initializers  0}}
+{{- template "initializer" $init.FunctionDeclaration -}}
+{{- end -}}
+{{- end -}}
+
+{{if gt (len .Members.Functions) 0 -}}
+## Functions
+{{template "declarations" .Members.Functions -}}
+{{- end -}}
+
+{{- if gt (len .Members.Composites) 0 -}}
+## Structs & Resources
+{{template "declarations" .Members.Composites -}}
+{{- end -}}
+
+{{- if gt (len .Members.Interfaces) 0 -}}
+## Interfaces
+{{template "declarations" .Members.Interfaces -}}
+{{- end -}}

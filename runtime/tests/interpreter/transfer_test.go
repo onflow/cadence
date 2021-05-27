@@ -58,7 +58,7 @@ func TestInterpretTransferCheck(t *testing.T) {
 		},
 	}
 
-	inter := parseCheckAndInterpretWithOptions(t,
+	inter, err := parseCheckAndInterpretWithOptions(t,
 		`
           fun test() {
             let alsoFruit: Fruit = fruit
@@ -74,8 +74,9 @@ func TestInterpretTransferCheck(t *testing.T) {
 			},
 		},
 	)
+	require.NoError(t, err)
 
-	_, err := inter.Invoke("test")
+	_, err = inter.Invoke("test")
 	require.Error(t, err)
 
 	require.ErrorAs(t, err, &interpreter.ValueTransferTypeError{})

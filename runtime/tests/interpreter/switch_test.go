@@ -35,7 +35,7 @@ func TestInterpretSwitchStatement(t *testing.T) {
 
 	t.Run("Bool", func(t *testing.T) {
 
-		inter := parseCheckAndInterpretWithOptions(t,
+		inter, err := parseCheckAndInterpretWithOptions(t,
 			`
               fun test(_ x: Bool): Int {
                   switch x {
@@ -57,6 +57,7 @@ func TestInterpretSwitchStatement(t *testing.T) {
 				},
 			},
 		)
+		require.NoError(t, err)
 
 		for argument, expected := range map[interpreter.Value]interpreter.Value{
 			interpreter.BoolValue(true):  interpreter.NewIntValueFromInt64(1),
@@ -72,7 +73,7 @@ func TestInterpretSwitchStatement(t *testing.T) {
 
 	t.Run("Int", func(t *testing.T) {
 
-		inter := parseCheckAndInterpretWithOptions(t,
+		inter, err := parseCheckAndInterpretWithOptions(t,
 			`
               fun test(_ x: Int): String {
                   switch x {
@@ -94,6 +95,7 @@ func TestInterpretSwitchStatement(t *testing.T) {
 				},
 			},
 		)
+		require.NoError(t, err)
 
 		for argument, expected := range map[interpreter.Value]interpreter.Value{
 			interpreter.NewIntValueFromInt64(1): interpreter.NewStringValue("1"),
@@ -111,7 +113,7 @@ func TestInterpretSwitchStatement(t *testing.T) {
 
 	t.Run("break", func(t *testing.T) {
 
-		inter := parseCheckAndInterpretWithOptions(t,
+		inter, err := parseCheckAndInterpretWithOptions(t,
 			`
               fun test(_ x: Int): String {
                   switch x {
@@ -134,6 +136,7 @@ func TestInterpretSwitchStatement(t *testing.T) {
 				},
 			},
 		)
+		require.NoError(t, err)
 
 		for argument, expected := range map[interpreter.Value]interpreter.Value{
 			interpreter.NewIntValueFromInt64(1): interpreter.NewStringValue("4"),
@@ -190,7 +193,7 @@ func TestInterpretSwitchStatement(t *testing.T) {
 
 	t.Run("optional", func(t *testing.T) {
 
-		inter := parseCheckAndInterpretWithOptions(t,
+		inter, err := parseCheckAndInterpretWithOptions(t,
 			`
               fun test(_ x: Int?, _ y: Int?): String {
                   switch x {
@@ -212,6 +215,7 @@ func TestInterpretSwitchStatement(t *testing.T) {
 				},
 			},
 		)
+		require.NoError(t, err)
 
 		type testCase struct {
 			arguments []interpreter.Value

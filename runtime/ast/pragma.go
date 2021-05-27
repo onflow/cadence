@@ -39,6 +39,10 @@ func (d *PragmaDeclaration) Accept(visitor Visitor) Repr {
 	return visitor.VisitPragmaDeclaration(d)
 }
 
+func (d *PragmaDeclaration) Walk(walkChild func(Element)) {
+	walkChild(d.Expression)
+}
+
 func (d *PragmaDeclaration) DeclarationIdentifier() *Identifier {
 	return nil
 }

@@ -24,6 +24,9 @@ jobs:
     - uses: actions/setup-go@v1
       with:
         go-version: '1.15.10'
+    - uses: actions/setup-node@v2
+      with:
+        node-version: '15'
     - uses: actions/cache@v1
       with:
         path: ~/go/pkg/mod
@@ -34,13 +37,13 @@ jobs:
       run: make build
     - name: Test
       run: make test
-    - name: Check tidy
-      run: make check-tidy
     - name: Upload coverage report
       uses: codecov/codecov-action@v1
       with:
         file: ./coverage.txt
         flags: unittests
+    - name: Check tidy
+      run: make check-tidy
 
   lint:
     runs-on: ubuntu-20.04

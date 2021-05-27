@@ -84,10 +84,13 @@ type Handler interface {
 	Hover(conn Conn, params *TextDocumentPositionParams) (*Hover, error)
 	Definition(conn Conn, params *TextDocumentPositionParams) (*Location, error)
 	SignatureHelp(conn Conn, params *TextDocumentPositionParams) (*SignatureHelp, error)
+	DocumentHighlight(conn Conn, params *TextDocumentPositionParams) ([]*DocumentHighlight, error)
+	Rename(conn Conn, params *RenameParams) (*WorkspaceEdit, error)
 	CodeLens(conn Conn, params *CodeLensParams) ([]*CodeLens, error)
 	Completion(conn Conn, params *CompletionParams) ([]*CompletionItem, error)
 	ResolveCompletionItem(conn Conn, item *CompletionItem) (*CompletionItem, error)
 	ExecuteCommand(conn Conn, params *ExecuteCommandParams) (interface{}, error)
+	DocumentSymbol(conn Conn, params *DocumentSymbolParams) ([]*DocumentSymbol, error)
 	Shutdown(conn Conn) error
 	Exit(conn Conn) error
 }
@@ -126,6 +129,12 @@ func NewServer(handler Handler) *Server {
 	jsonrpc2Server.Methods["textDocument/codeLens"] =
 		server.handleCodeLens
 
+	jsonrpc2Server.Methods["textDocument/documentHighlight"] =
+		server.handleDocumentHighlight
+
+	jsonrpc2Server.Methods["textDocument/rename"] =
+		server.handleRename
+
 	jsonrpc2Server.Methods["textDocument/completion"] =
 		server.handleCompletion
 
@@ -134,6 +143,9 @@ func NewServer(handler Handler) *Server {
 
 	jsonrpc2Server.Methods["workspace/executeCommand"] =
 		server.handleExecuteCommand
+
+	jsonrpc2Server.Methods["textDocument/documentSymbol"] =
+		server.handleDocumentSymbol
 
 	jsonrpc2Server.Methods["shutdown"] =
 		server.handleShutdown

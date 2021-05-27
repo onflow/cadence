@@ -171,6 +171,9 @@ type SignatureValidationHandlerFunc func(
 	key *CompositeValue,
 ) BoolValue
 
+// ExitHandlerFunc is a function that is called at the end of execution
+type ExitHandlerFunc func() error
+
 // CompositeTypeCode contains the the "prepared" / "callable" "code"
 // for the functions and the destructor of a composite
 // (contract, struct, resource, event).
@@ -248,6 +251,7 @@ type Interpreter struct {
 	uuidHandler                    UUIDHandlerFunc
 	PublicKeyValidationHandler     PublicKeyValidationHandlerFunc
 	SignatureValidationHandler     SignatureValidationHandlerFunc
+	ExitHandler                    ExitHandlerFunc
 	interpreted                    bool
 	statement                      ast.Statement
 }
@@ -415,6 +419,16 @@ func WithSignatureValidationHandler(handler SignatureValidationHandlerFunc) Opti
 	}
 }
 
+// WithExitHandler returns an interpreter option which sets the given
+// function as the function that is used when execution is complete.
+//
+func WithExitHandler(handler ExitHandlerFunc) Option {
+	return func(interpreter *Interpreter) error {
+		interpreter.SetExitHandler(handler)
+		return nil
+	}
+}
+
 // WithAllInterpreters returns an interpreter option which sets
 // the given map of interpreters as the map of all interpreters.
 //
@@ -557,6 +571,12 @@ func (interpreter *Interpreter) SetSignatureValidationHandler(function Signature
 	interpreter.SignatureValidationHandler = function
 }
 
+// SetExitHandler sets the function that is used to handle end of execution.
+//
+func (interpreter *Interpreter) SetExitHandler(function ExitHandlerFunc) {
+	interpreter.ExitHandler = function
+}
+
 // SetAllInterpreters sets the given map of interpreters as the map of all interpreters.
 //
 func (interpreter *Interpreter) SetAllInterpreters(allInterpreters map[common.LocationID]*Interpreter) {
@@ -609,7 +629,7 @@ func (interpreter *Interpreter) Interpret() (err error) {
 	}
 
 	// recover internal panics and return them as an error
-	defer interpreter.recoverErrors(func(internalErr error) {
+	defer interpreter.RecoverErrors(func(internalErr error) {
 		err = internalErr
 	})
 
@@ -791,7 +811,7 @@ func (interpreter *Interpreter) prepareInvoke(
 func (interpreter *Interpreter) Invoke(functionName string, arguments ...Value) (value Value, err error) {
 
 	// recover internal panics and return them as an error
-	defer interpreter.recoverErrors(func(internalErr error) {
+	defer interpreter.RecoverErrors(func(internalErr error) {
 		err = internalErr
 	})
 
@@ -802,7 +822,7 @@ func (interpreter *Interpreter) Invoke(functionName string, arguments ...Value) 
 func (interpreter *Interpreter) InvokeFunction(function FunctionValue, invocation Invocation) (value Value, err error) {
 
 	// recover internal panics and return them as an error
-	defer interpreter.recoverErrors(func(internalErr error) {
+	defer interpreter.RecoverErrors(func(internalErr error) {
 		err = internalErr
 	})
 
@@ -813,7 +833,7 @@ func (interpreter *Interpreter) InvokeFunction(function FunctionValue, invocatio
 func (interpreter *Interpreter) InvokeTransaction(index int, arguments ...Value) (err error) {
 
 	// recover internal panics and return them as an error
-	defer interpreter.recoverErrors(func(internalErr error) {
+	defer interpreter.RecoverErrors(func(internalErr error) {
 		err = internalErr
 	})
 
@@ -821,7 +841,7 @@ func (interpreter *Interpreter) InvokeTransaction(index int, arguments ...Value)
 	return err
 }
 
-func (interpreter *Interpreter) recoverErrors(onError func(error)) {
+func (interpreter *Interpreter) RecoverErrors(onError func(error)) {
 	if r := recover(); r != nil {
 		var err error
 		switch r := r.(type) {

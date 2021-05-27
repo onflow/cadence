@@ -22,13 +22,14 @@ import (
 	"testing"
 
 	"github.com/onflow/cadence/runtime/interpreter"
+	"github.com/stretchr/testify/require"
 )
 
 func TestInterpretContractWithNestedDeclaration(t *testing.T) {
 
 	t.Parallel()
 
-	_ = parseCheckAndInterpretWithOptions(t,
+	_, err := parseCheckAndInterpretWithOptions(t,
 		`
 	      contract C {
 
@@ -45,4 +46,5 @@ func TestInterpretContractWithNestedDeclaration(t *testing.T) {
 			},
 		},
 	)
+	require.NoError(t, err)
 }

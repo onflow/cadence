@@ -31,6 +31,10 @@ func (b *Block) Accept(visitor Visitor) Repr {
 	return visitor.VisitBlock(b)
 }
 
+func (b *Block) Walk(walkChild func(Element)) {
+	walkStatements(walkChild, b.Statements)
+}
+
 func (b *Block) MarshalJSON() ([]byte, error) {
 	type Alias Block
 	return json.Marshal(&struct {
@@ -52,6 +56,12 @@ type FunctionBlock struct {
 
 func (b *FunctionBlock) Accept(visitor Visitor) Repr {
 	return visitor.VisitFunctionBlock(b)
+}
+
+func (b *FunctionBlock) Walk(walkChild func(Element)) {
+	// TODO: pre-conditions
+	walkChild(b.Block)
+	// TODO: post-conditions
 }
 
 func (b *FunctionBlock) MarshalJSON() ([]byte, error) {

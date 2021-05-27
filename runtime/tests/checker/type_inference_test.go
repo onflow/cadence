@@ -27,7 +27,7 @@ import (
 	"github.com/onflow/cadence/runtime/sema"
 )
 
-func TestArrayElementTypeInference(t *testing.T) {
+func TestCheckArrayElementTypeInference(t *testing.T) {
 
 	t.Parallel()
 
@@ -101,7 +101,7 @@ func TestArrayElementTypeInference(t *testing.T) {
 	})
 }
 
-func TestDictionaryTypeInference(t *testing.T) {
+func TestCheckDictionaryTypeInference(t *testing.T) {
 
 	t.Parallel()
 
@@ -170,7 +170,7 @@ func TestDictionaryTypeInference(t *testing.T) {
 	})
 }
 
-func TestReturnTypeInference(t *testing.T) {
+func TestCheckReturnTypeInference(t *testing.T) {
 
 	t.Parallel()
 
@@ -200,7 +200,7 @@ func TestReturnTypeInference(t *testing.T) {
 	})
 }
 
-func TestFunctionArgumentTypeInference(t *testing.T) {
+func TestCheckFunctionArgumentTypeInference(t *testing.T) {
 
 	t.Parallel()
 
@@ -234,7 +234,7 @@ func TestFunctionArgumentTypeInference(t *testing.T) {
 	)
 }
 
-func TestBinaryExpressionTypeInference(t *testing.T) {
+func TestCheckBinaryExpressionTypeInference(t *testing.T) {
 
 	t.Parallel()
 
@@ -259,7 +259,7 @@ func TestBinaryExpressionTypeInference(t *testing.T) {
 	})
 }
 
-func TestUnaryExpressionTypeInference(t *testing.T) {
+func TestCheckUnaryExpressionTypeInference(t *testing.T) {
 
 	t.Parallel()
 
@@ -280,7 +280,7 @@ func TestUnaryExpressionTypeInference(t *testing.T) {
 	})
 }
 
-func TestForceExpressionTypeInference(t *testing.T) {
+func TestCheckForceExpressionTypeInference(t *testing.T) {
 
 	t.Parallel()
 
@@ -376,7 +376,7 @@ func TestCastExpressionTypeInference(t *testing.T) {
 	})
 }
 
-func TestVoidTypeInference(t *testing.T) {
+func TestCheckVoidTypeInference(t *testing.T) {
 
 	t.Parallel()
 
@@ -394,5 +394,35 @@ func TestVoidTypeInference(t *testing.T) {
 
 		assert.Equal(t, sema.VoidType, typeMismatchErr.ExpectedType)
 		assert.Equal(t, sema.IntType, typeMismatchErr.ActualType)
+	})
+}
+
+func TestCheckInferenceWithCheckerErrors(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("undefined type reference", func(t *testing.T) {
+
+		_, err := ParseAndCheck(t, `
+			struct Foo {
+				let ownedNFTs: @{Int: UnknownType}
+
+				init() {
+					self.ownedNFTs = {}
+				}
+
+				fun borrowNFT(id: Int): &UnknownType {
+					return &self.ownedNFTs[id] as &UnknownType
+				}
+			}
+		`)
+
+		errs := ExpectCheckerErrors(t, err, 4)
+
+		for _, err := range errs {
+			require.IsType(t, &sema.NotDeclaredError{}, err)
+			notDeclaredError := err.(*sema.NotDeclaredError)
+			assert.Equal(t, "UnknownType", notDeclaredError.Name)
+		}
 	})
 }

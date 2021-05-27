@@ -2134,7 +2134,6 @@ func testReferenceCastValid(t *testing.T, types, fromType, targetType string, op
 	)
 
 	value, err := inter.Invoke("test")
-
 	require.NoError(t, err)
 
 	switch operation {
@@ -3366,7 +3365,7 @@ func TestInterpretDynamicCastingCapability(t *testing.T) {
 
 					t.Run(fmt.Sprintf("valid: from %s to %s", fromType, targetType), func(t *testing.T) {
 
-						inter := parseCheckAndInterpretWithOptions(t,
+						inter, err := parseCheckAndInterpretWithOptions(t,
 							fmt.Sprintf(
 								`
                                   struct S {}
@@ -3379,6 +3378,7 @@ func TestInterpretDynamicCastingCapability(t *testing.T) {
 							),
 							options,
 						)
+						require.NoError(t, err)
 
 						assert.Equal(t,
 							capabilityValue,
@@ -3402,7 +3402,7 @@ func TestInterpretDynamicCastingCapability(t *testing.T) {
 
 					t.Run(fmt.Sprintf("invalid: from %s to Capability<&%s>", fromType, otherType), func(t *testing.T) {
 
-						inter := parseCheckAndInterpretWithOptions(t,
+						inter, err := parseCheckAndInterpretWithOptions(t,
 							fmt.Sprintf(
 								`
                                   struct S {}
@@ -3418,6 +3418,7 @@ func TestInterpretDynamicCastingCapability(t *testing.T) {
 							),
 							options,
 						)
+						require.NoError(t, err)
 
 						result, err := inter.Invoke("test")
 

@@ -76,6 +76,24 @@ func (s *Server) handleSignatureHelp(req *json.RawMessage) (interface{}, error) 
 	return s.Handler.SignatureHelp(s.conn, &params)
 }
 
+func (s *Server) handleDocumentHighlight(req *json.RawMessage) (interface{}, error) {
+	var params TextDocumentPositionParams
+	if err := json.Unmarshal(*req, &params); err != nil {
+		return nil, err
+	}
+
+	return s.Handler.DocumentHighlight(s.conn, &params)
+}
+
+func (s *Server) handleRename(req *json.RawMessage) (interface{}, error) {
+	var params RenameParams
+	if err := json.Unmarshal(*req, &params); err != nil {
+		return nil, err
+	}
+
+	return s.Handler.Rename(s.conn, &params)
+}
+
 func (s *Server) handleCodeLens(req *json.RawMessage) (interface{}, error) {
 	var params CodeLensParams
 	if err := json.Unmarshal(*req, &params); err != nil {
@@ -110,6 +128,14 @@ func (s *Server) handleExecuteCommand(req *json.RawMessage) (interface{}, error)
 	}
 
 	return s.Handler.ExecuteCommand(s.conn, &params)
+}
+
+func (s *Server) handleDocumentSymbol(req *json.RawMessage) (interface{}, error) {
+	var params DocumentSymbolParams
+	if err := json.Unmarshal(*req, &params); err != nil {
+		return nil, err
+	}
+	return s.Handler.DocumentSymbol(s.conn, &params)
 }
 
 func (s *Server) handleShutdown(_ *json.RawMessage) (interface{}, error) {

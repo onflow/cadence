@@ -376,7 +376,7 @@ func TestInterpretInterfaceFunctionUseWithPreCondition(t *testing.T) {
 
 		t.Run(compositeKind.Keyword(), func(t *testing.T) {
 
-			inter := parseCheckAndInterpretWithOptions(t,
+			inter, err := parseCheckAndInterpretWithOptions(t,
 				fmt.Sprintf(
 					`
                       pub %[1]s interface Test {
@@ -414,8 +414,9 @@ func TestInterpretInterfaceFunctionUseWithPreCondition(t *testing.T) {
 					},
 				},
 			)
+			require.NoError(t, err)
 
-			_, err := inter.Invoke("callTest", interpreter.NewIntValueFromInt64(0))
+			_, err = inter.Invoke("callTest", interpreter.NewIntValueFromInt64(0))
 
 			var conditionErr interpreter.ConditionError
 			require.ErrorAs(t, err, &conditionErr)
@@ -580,7 +581,7 @@ func TestInterpretTypeRequirementWithPreCondition(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpretWithOptions(t,
+	inter, err := parseCheckAndInterpretWithOptions(t,
 		`
 
           pub struct interface Also {
@@ -623,6 +624,7 @@ func TestInterpretTypeRequirementWithPreCondition(t *testing.T) {
 			},
 		},
 	)
+	require.NoError(t, err)
 
 	t.Run("-1", func(t *testing.T) {
 		_, err := inter.Invoke("test", interpreter.NewIntValueFromInt64(-1))
@@ -752,7 +754,7 @@ func TestInterpretResourceTypeRequirementInitializerAndDestructorPreConditions(t
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpretWithOptions(t,
+	inter, err := parseCheckAndInterpretWithOptions(t,
 		`
           pub contract interface CI {
 
@@ -797,6 +799,7 @@ func TestInterpretResourceTypeRequirementInitializerAndDestructorPreConditions(t
 			},
 		},
 	)
+	require.NoError(t, err)
 
 	t.Run("1", func(t *testing.T) {
 		_, err := inter.Invoke("test", interpreter.NewIntValueFromInt64(1))
@@ -976,7 +979,7 @@ func TestInterpretIsInstanceCheckInPreCondition(t *testing.T) {
 
 	test := func(condition string) {
 
-		inter := parseCheckAndInterpretWithOptions(t,
+		inter, err := parseCheckAndInterpretWithOptions(t,
 			fmt.Sprintf(
 				`
                    contract interface CI {
@@ -1017,8 +1020,9 @@ func TestInterpretIsInstanceCheckInPreCondition(t *testing.T) {
 				},
 			},
 		)
+		require.NoError(t, err)
 
-		_, err := inter.Invoke("test1")
+		_, err = inter.Invoke("test1")
 		require.NoError(t, err)
 
 		_, err = inter.Invoke("test2")
@@ -1078,7 +1082,7 @@ func TestInterpretFunctionWithPostConditionAndResourceResult(t *testing.T) {
 	semaValueDeclarations := valueDeclarations.ToSemaValueDeclarations()
 	interpreterValueDeclarations := valueDeclarations.ToInterpreterValueDeclarations()
 
-	inter := parseCheckAndInterpretWithOptions(t,
+	inter, err := parseCheckAndInterpretWithOptions(t,
 		`
           resource R {}
 
@@ -1129,9 +1133,11 @@ func TestInterpretFunctionWithPostConditionAndResourceResult(t *testing.T) {
 			Options: []interpreter.Option{
 				interpreter.WithPredeclaredValues(interpreterValueDeclarations),
 			},
-		})
+		},
+	)
+	require.NoError(t, err)
 
-	_, err := inter.Invoke("test")
+	_, err = inter.Invoke("test")
 	require.NoError(t, err)
 	require.True(t, checkCalled)
 }
