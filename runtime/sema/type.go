@@ -79,16 +79,7 @@ func containerTypeNames(typ Type, level int) (typeNames []string, bufSize int) {
 		typeName = typedContainerType.Identifier
 		containerType = typedContainerType.ContainerType
 	default:
-		switch typ {
-		case PublicAccountType:
-			typeName = string(typedContainerType.ID())
-			containerType = nil
-		case AuthAccountType:
-			typeName = string(typedContainerType.ID())
-			containerType = nil
-		default:
-			panic(errors.NewUnreachableError())
-		}
+		panic(errors.NewUnreachableError())
 	}
 
 	typeNames, bufSize = containerTypeNames(containerType, level+1)

@@ -568,6 +568,11 @@ func TestQualifiedIdentifierCreation(t *testing.T) {
 		identifier := qualifiedIdentifier("foo", nil)
 		assert.Equal(t, "foo", identifier)
 	})
+
+	t.Run("public account container", func(t *testing.T) {
+		identifier := qualifiedIdentifier("foo", PublicAccountType)
+		assert.Equal(t, "PublicAccount.foo", identifier)
+	})
 }
 
 func BenchmarkQualifiedIdentifierCreation(b *testing.B) {
