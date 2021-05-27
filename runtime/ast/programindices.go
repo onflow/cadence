@@ -38,6 +38,8 @@ type programIndices struct {
 	_functionDeclarations []*FunctionDeclaration
 	// Use `transactionDeclarations()` instead
 	_transactionDeclarations []*TransactionDeclaration
+	// Use `variableDeclarations()` instead
+	_variableDeclarations []*VariableDeclaration
 }
 
 func (i *programIndices) pragmaDeclarations(declarations []Declaration) []*PragmaDeclaration {
@@ -68,6 +70,11 @@ func (i *programIndices) functionDeclarations(declarations []Declaration) []*Fun
 func (i *programIndices) transactionDeclarations(declarations []Declaration) []*TransactionDeclaration {
 	i.once.Do(i.initializer(declarations))
 	return i._transactionDeclarations
+}
+
+func (i *programIndices) variableDeclarations(declarations []Declaration) []*VariableDeclaration {
+	i.once.Do(i.initializer(declarations))
+	return i._variableDeclarations
 }
 
 func (i *programIndices) initializer(declarations []Declaration) func() {
@@ -107,6 +114,9 @@ func (i *programIndices) init(declarations []Declaration) {
 
 		case *TransactionDeclaration:
 			i._transactionDeclarations = append(i._transactionDeclarations, declaration)
+
+		case *VariableDeclaration:
+			i._variableDeclarations = append(i._variableDeclarations, declaration)
 		}
 	}
 }
