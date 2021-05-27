@@ -643,33 +643,6 @@ func (interpreter *Interpreter) Interpret() (err error) {
 	return nil
 }
 
-func (interpreter *Interpreter) prepareInterpretation() {
-	program := interpreter.Program.Program
-
-	// Pre-declare empty variables for all interfaces, composites, and function declarations
-	for _, declaration := range program.InterfaceDeclarations() {
-		interpreter.declareVariable(declaration.Identifier.Identifier, nil)
-	}
-
-	for _, declaration := range program.CompositeDeclarations() {
-		interpreter.declareVariable(declaration.Identifier.Identifier, nil)
-	}
-
-	for _, declaration := range program.FunctionDeclarations() {
-		interpreter.declareVariable(declaration.Identifier.Identifier, nil)
-	}
-
-	// TODO:
-	// Register top-level interface declarations, as their functions' conditions
-	// need to be included in conforming composites' functions
-}
-
-func (interpreter *Interpreter) visitGlobalDeclarations(declarations []ast.Declaration) {
-	for _, declaration := range declarations {
-		interpreter.visitGlobalDeclaration(declaration)
-	}
-}
-
 // visitGlobalDeclaration firsts interprets the global declaration,
 // then finds the declaration and adds it to the globals
 //
@@ -881,9 +854,30 @@ func (interpreter *Interpreter) RecoverErrors(onError func(error)) {
 }
 
 func (interpreter *Interpreter) VisitProgram(program *ast.Program) ast.Repr {
-	interpreter.prepareInterpretation()
 
-	interpreter.visitGlobalDeclarations(program.Declarations())
+	for _, declaration := range program.ImportDeclarations() {
+		interpreter.visitGlobalDeclaration(declaration)
+	}
+
+	for _, declaration := range program.InterfaceDeclarations() {
+		interpreter.visitGlobalDeclaration(declaration)
+	}
+
+	for _, declaration := range program.CompositeDeclarations() {
+		interpreter.visitGlobalDeclaration(declaration)
+	}
+
+	for _, declaration := range program.FunctionDeclarations() {
+		interpreter.visitGlobalDeclaration(declaration)
+	}
+
+	for _, declaration := range program.TransactionDeclarations() {
+		interpreter.visitGlobalDeclaration(declaration)
+	}
+
+	for _, declaration := range program.VariableDeclarations() {
+		interpreter.visitGlobalDeclaration(declaration)
+	}
 
 	return nil
 }
