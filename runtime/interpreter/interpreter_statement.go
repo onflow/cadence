@@ -283,6 +283,28 @@ func (interpreter *Interpreter) VisitPragmaDeclaration(_ *ast.PragmaDeclaration)
 // then declares the variable with the name bound to the value
 func (interpreter *Interpreter) VisitVariableDeclaration(declaration *ast.VariableDeclaration) ast.Repr {
 
+	interpreter.visitVariableDeclaration(
+		declaration,
+		func(identifier string, value Value) {
+
+			// NOTE: lexical scope, always declare a new variable.
+			// Do not find an existing variable and assign the value!
+
+			_ = interpreter.declareVariable(
+				identifier,
+				value,
+			)
+		},
+	)
+
+	return nil
+}
+
+func (interpreter *Interpreter) visitVariableDeclaration(
+	declaration *ast.VariableDeclaration,
+	valueCallback func(identifier string, value Value),
+) {
+
 	targetType := interpreter.Program.Elaboration.VariableDeclarationTargetTypes[declaration]
 	valueType := interpreter.Program.Elaboration.VariableDeclarationValueTypes[declaration]
 	secondValueType := interpreter.Program.Elaboration.VariableDeclarationSecondValueTypes[declaration]
@@ -296,13 +318,13 @@ func (interpreter *Interpreter) VisitVariableDeclaration(declaration *ast.Variab
 
 	valueCopy := interpreter.copyAndConvert(result, valueType, targetType, getLocationRange)
 
-	interpreter.declareVariable(
+	valueCallback(
 		declaration.Identifier.Identifier,
 		valueCopy,
 	)
 
 	if declaration.SecondValue == nil {
-		return nil
+		return
 	}
 
 	interpreter.visitAssignment(
@@ -313,8 +335,6 @@ func (interpreter *Interpreter) VisitVariableDeclaration(declaration *ast.Variab
 		secondValueType,
 		declaration,
 	)
-
-	return nil
 }
 
 func (interpreter *Interpreter) VisitAssignmentStatement(assignment *ast.AssignmentStatement) ast.Repr {
