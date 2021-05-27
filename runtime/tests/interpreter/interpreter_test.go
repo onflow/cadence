@@ -8283,3 +8283,30 @@ func TestInterpretMissingMember(t *testing.T) {
 
 	require.Equal(t, "y", missingMemberError.Name)
 }
+
+func BenchmarkNewInterpreter(b *testing.B) {
+
+	b.Run("new interpreter", func(b *testing.B) {
+		b.ResetTimer()
+		b.ReportAllocs()
+
+		for i := 0; i < b.N; i++ {
+			_, err := interpreter.NewInterpreter(nil, nil)
+			require.NoError(b, err)
+		}
+	})
+
+	b.Run("new sub-interpreter", func(b *testing.B) {
+		b.ReportAllocs()
+
+		inter, err := interpreter.NewInterpreter(nil, nil)
+		require.NoError(b, err)
+
+		b.ResetTimer()
+
+		for i := 0; i < b.N; i++ {
+			_, err := inter.NewSubInterpreter(nil, nil)
+			require.NoError(b, err)
+		}
+	})
+}

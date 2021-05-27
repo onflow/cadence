@@ -469,7 +469,14 @@ func NewInterpreter(program *Program, location common.Location, options ...Optio
 
 	interpreter.defineBaseFunctions()
 
-	for _, option := range append(defaultOptions, options...) {
+	for _, option := range defaultOptions {
+		err := option(interpreter)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	for _, option := range options {
 		err := option(interpreter)
 		if err != nil {
 			return nil, err
@@ -2435,8 +2442,18 @@ func (interpreter *Interpreter) defineBaseFunctions() {
 	interpreter.defineTypeFunction()
 }
 
-func (interpreter *Interpreter) defineConverterFunctions() {
-	for _, declaration := range converterDeclarations {
+type converterFunction struct {
+	name      string
+	converter HostFunctionValue
+}
+
+// Converter functions are stateless functions. Hence they can be re-used across interpreters.
+//
+var converterFunctionValues = func() []converterFunction {
+
+	converterFuncValues := make([]converterFunction, len(converterDeclarations))
+
+	for index, declaration := range converterDeclarations {
 		// NOTE: declare in loop, as captured in closure below
 		convert := declaration.convert
 		converterFunctionValue := NewHostFunctionValue(
@@ -2460,7 +2477,18 @@ func (interpreter *Interpreter) defineConverterFunctions() {
 			addMember(sema.NumberTypeMaxFieldName, declaration.max)
 		}
 
-		err := interpreter.ImportValue(declaration.name, converterFunctionValue)
+		converterFuncValues[index] = converterFunction{
+			name:      declaration.name,
+			converter: converterFunctionValue,
+		}
+	}
+
+	return converterFuncValues
+}()
+
+func (interpreter *Interpreter) defineConverterFunctions() {
+	for _, converterFunc := range converterFunctionValues {
+		err := interpreter.ImportValue(converterFunc.name, converterFunc.converter)
 		if err != nil {
 			panic(errors.NewUnreachableError())
 		}
