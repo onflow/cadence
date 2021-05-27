@@ -799,7 +799,7 @@ then use the `borrow` function on the capability to get the reference from it, t
 
 ```cadence
 // Get the public receiver capability
-let cap = recipient.getCapability(/public/MainReceiver)!
+let cap = recipient.getCapability(/public/MainReceiver)
 
 // Borrow a reference from the capability
 self.receiverRef = cap.borrow<&ExampleToken.Vault{ExampleToken.Receiver}>()
