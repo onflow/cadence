@@ -188,7 +188,7 @@ func (checker *Checker) visitIdentifierExpressionAssignment(
 	identifier := target.Identifier.Identifier
 
 	// check identifier was declared before
-	variable := checker.findAndCheckValueVariable(target.Identifier, true)
+	variable := checker.findAndCheckValueVariable(target, true)
 	if variable == nil {
 		return InvalidType
 	}

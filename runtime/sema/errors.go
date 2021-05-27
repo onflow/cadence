@@ -177,6 +177,7 @@ func (n RedeclarationNote) Message() string {
 type NotDeclaredError struct {
 	ExpectedKind common.DeclarationKind
 	Name         string
+	Expression   *ast.IdentifierExpression
 	Pos          ast.Position
 }
 
