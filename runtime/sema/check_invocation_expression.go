@@ -69,6 +69,11 @@ func (checker *Checker) checkInvocationExpression(invocationExpression *ast.Invo
 		}
 	}
 
+	var argumentTypes []Type
+	defer func() {
+		checker.Elaboration.InvocationExpressionArgumentTypes[invocationExpression] = argumentTypes
+	}()
+
 	invokableType, ok := expressionType.(InvokableType)
 	if !ok {
 		if !expressionType.IsInvalidType() {
@@ -79,6 +84,14 @@ func (checker *Checker) checkInvocationExpression(invocationExpression *ast.Invo
 				},
 			)
 		}
+
+		argumentTypes = make([]Type, 0, len(invocationExpression.Arguments))
+
+		for _, argument := range invocationExpression.Arguments {
+			argumentType := checker.VisitExpression(argument.Expression, nil)
+			argumentTypes = append(argumentTypes, argumentType)
+		}
+
 		return InvalidType
 	}
 
@@ -89,7 +102,6 @@ func (checker *Checker) checkInvocationExpression(invocationExpression *ast.Invo
 	// then `isOptionalChainingResult` is true, which means the invocation
 	// is only potential, i.e. the invocation will not always
 
-	var argumentTypes []Type
 	var returnType Type
 
 	functionType := invokableType.InvocationFunctionType()
@@ -108,8 +120,6 @@ func (checker *Checker) checkInvocationExpression(invocationExpression *ast.Invo
 	} else {
 		checkInvocation()
 	}
-
-	checker.Elaboration.InvocationExpressionArgumentTypes[invocationExpression] = argumentTypes
 
 	arguments := invocationExpression.Arguments
 
