@@ -532,34 +532,42 @@ func TestBeforeType_Strings(t *testing.T) {
 
 func TestQualifiedIdentifierCreation(t *testing.T) {
 
-	a := &CompositeType{
-		Kind:       common.CompositeKindStructure,
-		Identifier: "A",
-		Location:   common.StringLocation("a"),
-		Fields:     []string{},
-		Members:    NewStringMemberOrderedMap(),
-	}
+	t.Run("with containers", func(t *testing.T) {
 
-	b := &CompositeType{
-		Kind:          common.CompositeKindStructure,
-		Identifier:    "B",
-		Location:      common.StringLocation("a"),
-		Fields:        []string{},
-		Members:       NewStringMemberOrderedMap(),
-		ContainerType: a,
-	}
+		a := &CompositeType{
+			Kind:       common.CompositeKindStructure,
+			Identifier: "A",
+			Location:   common.StringLocation("a"),
+			Fields:     []string{},
+			Members:    NewStringMemberOrderedMap(),
+		}
 
-	c := &CompositeType{
-		Kind:          common.CompositeKindStructure,
-		Identifier:    "C",
-		Location:      common.StringLocation("a"),
-		Fields:        []string{},
-		Members:       NewStringMemberOrderedMap(),
-		ContainerType: b,
-	}
+		b := &CompositeType{
+			Kind:          common.CompositeKindStructure,
+			Identifier:    "B",
+			Location:      common.StringLocation("a"),
+			Fields:        []string{},
+			Members:       NewStringMemberOrderedMap(),
+			ContainerType: a,
+		}
 
-	identifier := qualifiedIdentifier("foo", c)
-	assert.Equal(t, "A.B.C.foo", identifier)
+		c := &CompositeType{
+			Kind:          common.CompositeKindStructure,
+			Identifier:    "C",
+			Location:      common.StringLocation("a"),
+			Fields:        []string{},
+			Members:       NewStringMemberOrderedMap(),
+			ContainerType: b,
+		}
+
+		identifier := qualifiedIdentifier("foo", c)
+		assert.Equal(t, "A.B.C.foo", identifier)
+	})
+
+	t.Run("without containers", func(t *testing.T) {
+		identifier := qualifiedIdentifier("foo", nil)
+		assert.Equal(t, "foo", identifier)
+	})
 }
 
 func BenchmarkQualifiedIdentifierCreation(b *testing.B) {
