@@ -52,6 +52,12 @@ func (d *FunctionDeclaration) Accept(visitor Visitor) Repr {
 	return visitor.VisitFunctionDeclaration(d)
 }
 
+func (d *FunctionDeclaration) Walk(walkChild func(Element)) {
+	// TODO: walk parameters
+	// TODO: walk return type
+	walkChild(d.FunctionBlock)
+}
+
 func (*FunctionDeclaration) isDeclaration() {}
 func (*FunctionDeclaration) isStatement()   {}
 
@@ -110,6 +116,10 @@ func (d *SpecialFunctionDeclaration) EndPosition() Position {
 
 func (d *SpecialFunctionDeclaration) Accept(visitor Visitor) Repr {
 	return d.FunctionDeclaration.Accept(visitor)
+}
+
+func (d *SpecialFunctionDeclaration) Walk(walkChild func(Element)) {
+	d.FunctionDeclaration.Walk(walkChild)
 }
 
 func (*SpecialFunctionDeclaration) isDeclaration() {}

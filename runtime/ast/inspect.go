@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2021 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,35 +16,18 @@
  * limitations under the License.
  */
 
-package interpreter_test
+package ast
 
-import (
-	"testing"
+type inspector func(Element) bool
 
-	"github.com/onflow/cadence/runtime/interpreter"
-	"github.com/stretchr/testify/require"
-)
+func (f inspector) Walk(element Element) Walker {
+	if f(element) {
+		return f
+	}
 
-func TestInterpretContractWithNestedDeclaration(t *testing.T) {
+	return nil
+}
 
-	t.Parallel()
-
-	_, err := parseCheckAndInterpretWithOptions(t,
-		`
-	      contract C {
-
-	          struct S {}
-
-	          init() {
-	              C.S()
-	          }
-	      }
-	    `,
-		ParseCheckAndInterpretOptions{
-			Options: []interpreter.Option{
-				makeContractValueHandler(nil, nil, nil),
-			},
-		},
-	)
-	require.NoError(t, err)
+func Inspect(element Element, f func(Element) bool) {
+	Walk(inspector(f), element)
 }

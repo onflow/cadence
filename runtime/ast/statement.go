@@ -40,6 +40,10 @@ func (s *ReturnStatement) Accept(visitor Visitor) Repr {
 	return visitor.VisitReturnStatement(s)
 }
 
+func (s *ReturnStatement) Walk(walkChild func(Element)) {
+	walkChild(s.Expression)
+}
+
 func (s *ReturnStatement) MarshalJSON() ([]byte, error) {
 	type Alias ReturnStatement
 	return json.Marshal(&struct {
@@ -61,6 +65,10 @@ func (*BreakStatement) isStatement() {}
 
 func (s *BreakStatement) Accept(visitor Visitor) Repr {
 	return visitor.VisitBreakStatement(s)
+}
+
+func (*BreakStatement) Walk(_ func(Element)) {
+	// NO-OP
 }
 
 func (s *BreakStatement) MarshalJSON() ([]byte, error) {
@@ -86,6 +94,10 @@ func (s *ContinueStatement) Accept(visitor Visitor) Repr {
 	return visitor.VisitContinueStatement(s)
 }
 
+func (*ContinueStatement) Walk(_ func(Element)) {
+	// NO-OP
+}
+
 func (s *ContinueStatement) MarshalJSON() ([]byte, error) {
 	type Alias ContinueStatement
 	return json.Marshal(&struct {
@@ -100,6 +112,7 @@ func (s *ContinueStatement) MarshalJSON() ([]byte, error) {
 // IfStatementTest
 
 type IfStatementTest interface {
+	Element
 	isIfStatementTest()
 }
 
@@ -129,6 +142,14 @@ func (s *IfStatement) Accept(visitor Visitor) Repr {
 	return visitor.VisitIfStatement(s)
 }
 
+func (s *IfStatement) Walk(walkChild func(Element)) {
+	walkChild(s.Test)
+	walkChild(s.Then)
+	if s.Else != nil {
+		walkChild(s.Else)
+	}
+}
+
 func (s *IfStatement) MarshalJSON() ([]byte, error) {
 	type Alias IfStatement
 	return json.Marshal(&struct {
@@ -154,6 +175,11 @@ func (*WhileStatement) isStatement() {}
 
 func (s *WhileStatement) Accept(visitor Visitor) Repr {
 	return visitor.VisitWhileStatement(s)
+}
+
+func (s *WhileStatement) Walk(walkChild func(Element)) {
+	walkChild(s.Test)
+	walkChild(s.Block)
 }
 
 func (s *WhileStatement) StartPosition() Position {
@@ -190,6 +216,11 @@ func (*ForStatement) isStatement() {}
 
 func (s *ForStatement) Accept(visitor Visitor) Repr {
 	return visitor.VisitForStatement(s)
+}
+
+func (s *ForStatement) Walk(walkChild func(Element)) {
+	walkChild(s.Value)
+	walkChild(s.Block)
 }
 
 func (s *ForStatement) StartPosition() Position {
@@ -234,6 +265,10 @@ func (s *EmitStatement) Accept(visitor Visitor) Repr {
 	return visitor.VisitEmitStatement(s)
 }
 
+func (s *EmitStatement) Walk(walkChild func(Element)) {
+	walkChild(s.InvocationExpression)
+}
+
 func (s *EmitStatement) MarshalJSON() ([]byte, error) {
 	type Alias EmitStatement
 	return json.Marshal(&struct {
@@ -267,6 +302,11 @@ func (*AssignmentStatement) isStatement() {}
 
 func (s *AssignmentStatement) Accept(visitor Visitor) Repr {
 	return visitor.VisitAssignmentStatement(s)
+}
+
+func (s *AssignmentStatement) Walk(walkChild func(Element)) {
+	walkChild(s.Target)
+	walkChild(s.Value)
 }
 
 func (s *AssignmentStatement) MarshalJSON() ([]byte, error) {
@@ -303,6 +343,11 @@ func (s *SwapStatement) Accept(visitor Visitor) Repr {
 	return visitor.VisitSwapStatement(s)
 }
 
+func (s *SwapStatement) Walk(walkChild func(Element)) {
+	walkChild(s.Left)
+	walkChild(s.Right)
+}
+
 func (s *SwapStatement) MarshalJSON() ([]byte, error) {
 	type Alias SwapStatement
 	return json.Marshal(&struct {
@@ -336,6 +381,10 @@ func (s *ExpressionStatement) Accept(visitor Visitor) Repr {
 	return visitor.VisitExpressionStatement(s)
 }
 
+func (s *ExpressionStatement) Walk(walkChild func(Element)) {
+	walkChild(s.Expression)
+}
+
 func (s *ExpressionStatement) MarshalJSON() ([]byte, error) {
 	type Alias ExpressionStatement
 	return json.Marshal(&struct {
@@ -361,6 +410,14 @@ func (*SwitchStatement) isStatement() {}
 
 func (s *SwitchStatement) Accept(visitor Visitor) Repr {
 	return visitor.VisitSwitchStatement(s)
+}
+
+func (s *SwitchStatement) Walk(walkChild func(Element)) {
+	walkChild(s.Expression)
+	for _, switchCase := range s.Cases {
+		walkChild(switchCase.Expression)
+		walkStatements(walkChild, switchCase.Statements)
+	}
 }
 
 func (s *SwitchStatement) MarshalJSON() ([]byte, error) {

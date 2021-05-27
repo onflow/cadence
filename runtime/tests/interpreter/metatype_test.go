@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
@@ -122,7 +123,7 @@ func TestInterpretMetaTypeEquality(t *testing.T) {
 		semaValueDeclarations := valueDeclarations.ToSemaValueDeclarations()
 		interpreterValueDeclarations := valueDeclarations.ToInterpreterValueDeclarations()
 
-		inter := parseCheckAndInterpretWithOptions(t,
+		inter, err := parseCheckAndInterpretWithOptions(t,
 			`
               let result = Type<Int>() == unknownType
             `,
@@ -135,6 +136,7 @@ func TestInterpretMetaTypeEquality(t *testing.T) {
 				},
 			},
 		)
+		require.NoError(t, err)
 
 		assert.Equal(t,
 			interpreter.BoolValue(false),
@@ -168,7 +170,7 @@ func TestInterpretMetaTypeEquality(t *testing.T) {
 		semaValueDeclarations := valueDeclarations.ToSemaValueDeclarations()
 		interpreterValueDeclarations := valueDeclarations.ToInterpreterValueDeclarations()
 
-		inter := parseCheckAndInterpretWithOptions(t,
+		inter, err := parseCheckAndInterpretWithOptions(t,
 			`
               let result = unknownType1 == unknownType2
             `,
@@ -181,6 +183,7 @@ func TestInterpretMetaTypeEquality(t *testing.T) {
 				},
 			},
 		)
+		require.NoError(t, err)
 
 		assert.Equal(t,
 			interpreter.BoolValue(false),
@@ -243,7 +246,7 @@ func TestInterpretMetaTypeIdentifier(t *testing.T) {
 		semaValueDeclarations := valueDeclarations.ToSemaValueDeclarations()
 		interpreterValueDeclarations := valueDeclarations.ToInterpreterValueDeclarations()
 
-		inter := parseCheckAndInterpretWithOptions(t,
+		inter, err := parseCheckAndInterpretWithOptions(t,
 			`
               let identifier = unknownType.identifier
             `,
@@ -256,6 +259,7 @@ func TestInterpretMetaTypeIdentifier(t *testing.T) {
 				},
 			},
 		)
+		require.NoError(t, err)
 
 		assert.Equal(t,
 			interpreter.NewStringValue(""),
@@ -369,7 +373,7 @@ func TestInterpretIsInstance(t *testing.T) {
 
 	for _, testCase := range cases {
 		t.Run(testCase.name, func(t *testing.T) {
-			inter := parseCheckAndInterpretWithOptions(t, testCase.code, ParseCheckAndInterpretOptions{
+			inter, err := parseCheckAndInterpretWithOptions(t, testCase.code, ParseCheckAndInterpretOptions{
 				CheckerOptions: []sema.Option{
 					sema.WithPredeclaredValues(semaValueDeclarations),
 				},
@@ -377,6 +381,7 @@ func TestInterpretIsInstance(t *testing.T) {
 					interpreter.WithPredeclaredValues(interpreterValueDeclarations),
 				},
 			})
+			require.NoError(t, err)
 
 			assert.Equal(t,
 				interpreter.BoolValue(testCase.result),
@@ -517,7 +522,7 @@ func TestInterpretGetType(t *testing.T) {
 			valueDeclarations := standardLibraryFunctions.ToSemaValueDeclarations()
 			values := standardLibraryFunctions.ToInterpreterValueDeclarations()
 
-			inter := parseCheckAndInterpretWithOptions(t,
+			inter, err := parseCheckAndInterpretWithOptions(t,
 				testCase.code,
 				ParseCheckAndInterpretOptions{
 					CheckerOptions: []sema.Option{
@@ -547,6 +552,7 @@ func TestInterpretGetType(t *testing.T) {
 					},
 				},
 			)
+			require.NoError(t, err)
 
 			assert.Equal(t,
 				testCase.result,

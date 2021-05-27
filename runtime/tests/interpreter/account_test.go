@@ -130,7 +130,7 @@ func testAccount(
 		return value
 	}
 
-	inter := parseCheckAndInterpretWithOptions(t,
+	inter, err := parseCheckAndInterpretWithOptions(t,
 		code,
 		ParseCheckAndInterpretOptions{
 			CheckerOptions: []sema.Option{
@@ -144,6 +144,7 @@ func testAccount(
 			},
 		},
 	)
+	require.NoError(t, err)
 
 	return inter, storedValues
 }
@@ -1487,7 +1488,7 @@ func TestInterpretAccount_getCapability(t *testing.T) {
 	}
 }
 
-func TestCheckAccount_BalanceFields(t *testing.T) {
+func TestInterpretAccount_BalanceFields(t *testing.T) {
 	t.Parallel()
 
 	for accountType, auth := range map[string]bool{
@@ -1534,7 +1535,7 @@ func TestCheckAccount_BalanceFields(t *testing.T) {
 	}
 }
 
-func TestCheckAccount_StorageFields(t *testing.T) {
+func TestInterpretAccount_StorageFields(t *testing.T) {
 	t.Parallel()
 
 	for accountType, auth := range map[string]bool{

@@ -1651,7 +1651,8 @@ pub contract TopShot: NonFungibleToken {
 
 	deployTx := utils.DeploymentTransaction("TopShot", []byte(topShotContract))
 
-	topShotAddress := common.Address{0x0b, 0x2a, 0x32, 0x99, 0xcc, 0x85, 0x7e, 0x29}
+	topShotAddress, err := common.HexToAddress("0x0b2a3299cc857e29")
+	require.NoError(t, err)
 
 	var events []cadence.Event
 	var loggedMessages []string
@@ -1706,7 +1707,7 @@ pub contract TopShot: NonFungibleToken {
 
 	signerAddress = topShotAddress
 
-	err := runtime.ExecuteTransaction(
+	err = runtime.ExecuteTransaction(
 		Script{
 			Source: deployTx,
 		},

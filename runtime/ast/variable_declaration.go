@@ -59,6 +59,14 @@ func (d *VariableDeclaration) Accept(visitor Visitor) Repr {
 	return visitor.VisitVariableDeclaration(d)
 }
 
+func (d *VariableDeclaration) Walk(walkChild func(Element)) {
+	// TODO: walk type
+	walkChild(d.Value)
+	if d.SecondValue != nil {
+		walkChild(d.SecondValue)
+	}
+}
+
 func (d *VariableDeclaration) DeclarationIdentifier() *Identifier {
 	return &d.Identifier
 }

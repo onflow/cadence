@@ -672,17 +672,20 @@ let twoOpt = value?.number
 let two = twoOpt ?? 0
 // `two` is `2`
 
-// Try to access the `number` field of `noValue`, which has type `Value?`
+// Try to access the `number` field of `noValue`, which has type `Value?`.
 // This still returns an `Int?`
 let nilValue = noValue?.number
 // This time, since `noValue` is `nil`, `nilValue` will also be `nil`
 
-// Call the `set` function of the struct
-// whether or not the object exists, this will not fail
+// Try to call the `set` function of `value`.
+// The function call is performed, as `value` is not nil
 value?.set(new: 4)
+
+// Try to call the `set` function of `noValue`.
+// The function call is *not* performed, as `noValue` is nil
 noValue?.set(new: 4)
 
-// Call the `setAndReturn` function, which returns an `Int`
+// Call the `setAndReturn` function, which returns an `Int`.
 // Because `value` is an optional, the return value is type `Int?`
 let sixOpt = value?.setAndReturn(new: 6)
 let six = sixOpt ?? 0

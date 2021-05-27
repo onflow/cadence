@@ -19,10 +19,10 @@
 package conversion
 
 import (
-	"github.com/onflow/cadence/runtime/ast"
-	"github.com/onflow/cadence/runtime/sema"
-
 	"github.com/onflow/cadence/languageserver/protocol"
+	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/sema"
 )
 
 // ASTToProtocolPosition converts an AST position to a LSP position
@@ -50,4 +50,101 @@ func ProtocolToSemaPosition(pos protocol.Position) sema.Position {
 		Line:   int(pos.Line + 1),
 		Column: int(pos.Character),
 	}
+}
+
+func DeclarationKindToSymbolKind(kind common.DeclarationKind) protocol.SymbolKind {
+
+	switch kind {
+	case common.DeclarationKindFunction:
+		return protocol.Function
+
+	case common.DeclarationKindField:
+		return protocol.Field
+
+	case common.DeclarationKindConstant,
+		common.DeclarationKindParameter:
+		return protocol.Constant
+
+	case common.DeclarationKindVariable:
+		return protocol.Variable
+
+	case common.DeclarationKindInitializer:
+		return protocol.Constructor
+
+	case common.DeclarationKindDestructor:
+		return protocol.Function
+
+	case common.DeclarationKindStructure,
+		common.DeclarationKindResource,
+		common.DeclarationKindEvent,
+		common.DeclarationKindContract,
+		common.DeclarationKindType:
+		return protocol.Class
+
+	case common.DeclarationKindStructureInterface,
+		common.DeclarationKindResourceInterface,
+		common.DeclarationKindContractInterface:
+		return protocol.Interface
+
+	case common.DeclarationKindTransaction:
+		return protocol.Namespace
+	}
+
+	return 0
+}
+
+// DeclarationToDocumentSymbol converts AST Declaration to a DocumentSymbol
+//
+func DeclarationToDocumentSymbol(declaration ast.Declaration) protocol.DocumentSymbol {
+	var children []protocol.DocumentSymbol
+
+	declarationMembers := declaration.DeclarationMembers()
+	if declarationMembers != nil {
+		for _, child := range declarationMembers.Declarations() {
+			childSymbol := DeclarationToDocumentSymbol(child)
+			children = append(children, childSymbol)
+		}
+	}
+
+	declarationKind := declaration.DeclarationKind()
+
+	var name string
+	var selectionRange protocol.Range
+
+	identifier := declaration.DeclarationIdentifier()
+	if identifier != nil && identifier.Identifier != "" {
+		name = identifier.Identifier
+		selectionRange = ASTToProtocolRange(
+			identifier.StartPosition(),
+			identifier.EndPosition(),
+		)
+	} else {
+		switch declarationKind {
+		case common.DeclarationKindTransaction:
+			name = "transaction"
+		case common.DeclarationKindInitializer:
+			name = "init"
+		case common.DeclarationKindDestructor:
+			name = "destroy"
+		}
+
+		declarationStartPos := ASTToProtocolPosition(declaration.StartPosition())
+		selectionRange = protocol.Range{
+			Start: declarationStartPos,
+			End:   declarationStartPos,
+		}
+	}
+
+	symbol := protocol.DocumentSymbol{
+		Name: name,
+		Kind: DeclarationKindToSymbolKind(declarationKind),
+		Range: ASTToProtocolRange(
+			declaration.StartPosition(),
+			declaration.EndPosition(),
+		),
+		SelectionRange: selectionRange,
+		Children:       children,
+	}
+
+	return symbol
 }

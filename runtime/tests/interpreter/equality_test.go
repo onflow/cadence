@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
@@ -52,7 +53,7 @@ func TestInterpretEquality(t *testing.T) {
 			Kind:  common.DeclarationKindConstant,
 		}
 
-		inter := parseCheckAndInterpretWithOptions(t,
+		inter, err := parseCheckAndInterpretWithOptions(t,
 			`
               let maybeCapNonNil: Capability? = cap
               let maybeCapNil: Capability? = nil
@@ -72,6 +73,7 @@ func TestInterpretEquality(t *testing.T) {
 				},
 			},
 		)
+		require.NoError(t, err)
 
 		assert.Equal(t,
 			interpreter.BoolValue(true),
