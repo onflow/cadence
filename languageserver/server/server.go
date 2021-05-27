@@ -2356,6 +2356,35 @@ func (s *Server) maybeAddVariableDeclarationActionsResolver(
 			return nil
 		}
 
+		checker := s.checkerForDocument(uri)
+		if checker == nil {
+			return nil
+		}
+
+		var isAssignment bool
+
+		var stack []ast.Element
+		ast.Inspect(checker.Program, func(element ast.Element) bool {
+
+			switch element {
+			case err.Expression:
+
+				parent := stack[len(stack)-1]
+				switch parent := parent.(type) {
+				case *ast.AssignmentStatement:
+					isAssignment = parent.Target == err.Expression
+				}
+
+				return false
+			case nil:
+				stack = stack[:len(stack)-1]
+			default:
+				stack = append(stack, element)
+			}
+
+			return true
+		})
+
 		lineStart := err.Pos.Offset - err.Pos.Column
 		indentationEnd := lineStart
 		for ; indentationEnd < err.Pos.Offset; indentationEnd++ {
@@ -2369,6 +2398,16 @@ func (s *Server) maybeAddVariableDeclarationActionsResolver(
 		codeActions := make([]*protocol.CodeAction, 0, len(ast.VariableKinds))
 
 		for _, variableKind := range ast.VariableKinds {
+
+			var isPreferred bool
+			if isAssignment {
+				isPreferred = variableKind == ast.VariableKindVariable
+				if variableKind == ast.VariableKindConstant {
+					continue
+				}
+			} else {
+				isPreferred = variableKind == ast.VariableKindConstant
+			}
 
 			insertionPos := ast.Position{
 				Line:   err.Pos.Line,
@@ -2401,7 +2440,7 @@ func (s *Server) maybeAddVariableDeclarationActionsResolver(
 						string(uri): {textEdit},
 					},
 				},
-				IsPreferred: variableKind == ast.VariableKindConstant,
+				IsPreferred: isPreferred,
 			})
 		}
 

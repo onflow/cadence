@@ -25,7 +25,7 @@ import (
 
 func (checker *Checker) VisitIdentifierExpression(expression *ast.IdentifierExpression) ast.Repr {
 	identifier := expression.Identifier
-	variable := checker.findAndCheckValueVariable(identifier, true)
+	variable := checker.findAndCheckValueVariable(expression, true)
 	if variable == nil {
 		return InvalidType
 	}

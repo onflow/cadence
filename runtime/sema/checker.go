@@ -852,13 +852,15 @@ func (checker *Checker) inSwitch() bool {
 	return checker.functionActivations.Current().InSwitch()
 }
 
-func (checker *Checker) findAndCheckValueVariable(identifier ast.Identifier, recordOccurrence bool) *Variable {
+func (checker *Checker) findAndCheckValueVariable(identifierExpression *ast.IdentifierExpression, recordOccurrence bool) *Variable {
+	identifier := identifierExpression.Identifier
 	variable := checker.valueActivations.Find(identifier.Identifier)
 	if variable == nil {
 		checker.report(
 			&NotDeclaredError{
 				ExpectedKind: common.DeclarationKindVariable,
 				Name:         identifier.Identifier,
+				Expression:   identifierExpression,
 				Pos:          identifier.StartPosition(),
 			},
 		)
@@ -1550,7 +1552,7 @@ func (checker *Checker) recordResourceInvalidation(
 		return nil
 	}
 
-	variable := checker.findAndCheckValueVariable(identifierExpression.Identifier, false)
+	variable := checker.findAndCheckValueVariable(identifierExpression, false)
 	if variable == nil {
 		return nil
 	}
