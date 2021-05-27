@@ -112,12 +112,17 @@ func parseCheckAndInterpretWithOptions(
 			err = internalErr
 		})
 
-		// Ensure that all global declarations are evaluated:
 		// Contract declarations are evaluated lazily,
 		// so force the contract value handler to be called
 
-		for _, variable := range inter.Globals {
-			_ = variable.GetValue()
+		for _, compositeDeclaration := range checker.Program.CompositeDeclarations() {
+			if compositeDeclaration.CompositeKind != common.CompositeKindContract {
+				continue
+			}
+
+			contractVariable := inter.Globals[compositeDeclaration.Identifier.Identifier]
+
+			_ = contractVariable.GetValue()
 		}
 	}
 
@@ -6271,30 +6276,6 @@ func TestInterpretReferenceDereferenceFailure(t *testing.T) {
 	_, err := inter.Invoke("test")
 
 	require.ErrorAs(t, err, &interpreter.DestroyedCompositeError{})
-}
-
-func TestInterpretInvalidForwardReferenceCall(t *testing.T) {
-
-	t.Parallel()
-
-	// TODO: improve:
-	//   - call to `g` should succeed, but access to `y` should fail with error
-	//   - maybe make this a static error
-
-	assert.Panics(t, func() {
-		_ = parseCheckAndInterpret(t, `
-          fun f(): Int {
-             return g()
-          }
-
-          let x = f()
-          let y = 0
-
-          fun g(): Int {
-              return y
-          }
-        `)
-	})
 }
 
 func TestInterpretVariableDeclarationSecondValue(t *testing.T) {
