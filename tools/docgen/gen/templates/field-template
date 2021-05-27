@@ -1,0 +1,4 @@
+{{define "field"}}
+
+    {{.DeclarationIdentifier}}:  {{.TypeAnnotation.Type.String -}}
+{{end -}}

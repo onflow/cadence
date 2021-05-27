@@ -1,0 +1,14 @@
+{{define "declarations"}}
+{{- range .}}
+{{- if isFunction . -}}
+    {{template "function" .}}
+---
+{{else if isComposite . -}}
+    {{template "composite" .}}
+---
+{{else if isEnum . -}}
+    {{template "enum" .}}
+---
+{{- end -}}
+{{- end -}}
+{{- end -}}

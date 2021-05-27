@@ -1,0 +1,17 @@
+{{define "composite"}}
+### {{declKeyword .}} `{{.DeclarationIdentifier}}`
+
+```cadence
+{{declKeyword .}} {{.DeclarationIdentifier}} {
+{{- range .Members.Fields -}}
+    {{template "field" . -}}
+{{end}}
+}
+```
+
+{{- if .DocString}}
+{{ .DocString}}
+{{- end}}
+
+[More...]({{fileName .}})
+{{end}}
