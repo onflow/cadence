@@ -39,19 +39,87 @@ pub enum SignatureAlgorithm: UInt8 {
     pub case ECDSA_secp256k1 = 2
 
     /// BLS_BLS12_381 is BLS signature scheme on the BLS12-381 curve.
+    /// The scheme is set-up so that signatures are in G_1 (curve over prime field) while public keys are in G_2 (curve over extended prime field).
     pub case BLS_BLS12_381 = 3
 }
 ```
+
+### PublicKey
+```cadence
+struct PublicKey {
+    let publicKey: [UInt8]
+    let signatureAlgorithm: SignatureAlgorithm
+    let isValid: Bool
+
+    /// Verifies a signature under the given tag, data and public key.
+    /// It uses the given hash algorithm to hash the tag and data.
+    pub fun verify(
+        signature: [UInt8],
+        signedData: [UInt8],
+        domainSeparationTag: String,
+        hashAlgorithm: HashAlgorithm
+    ): Bool
+}
+```
+
+A `PublicKey` can be constructed using the raw key and the signing algorithm.
+```cadence
+let publicKey = PublicKey(
+    publicKey: "010203".decodeHex(),
+    signatureAlgorithm: SignatureAlgorithm.ECDSA_P256
+)
+```
+
+The raw key value depends on the supported signature scheme:
+ - `ECDSA_P256` and `ECDSA_secp256k1` : the public key is a curve point (X,Y) where X and Y are two prime field elements.
+ The raw key is represneted by `bytes(X) || bytes(Y)`, where `||` is the concatenation operation,
+ and bytes() is the bytes big-endian encoding of the input integer padded by zeros to the byte-length of the field prime. 
+ The field prime is 32-bytes long for both curves and hence the raw public key is 64-bytes long.
+ - `BLS_BLS_12_381` : the public key is a G_2 (curve over extension field) element. The encoding follows the compressed serialization defined in 
+ https://www.ietf.org/archive/id/draft-irtf-cfrg-pairing-friendly-curves-08.html#name-point-serialization-procedu. A public key is 96-bytes long.
+
+
+A public key is validated at the time of creation. Hence, public keys are immutable.
+e.g:
+```cadence
+publicKey.signatureAlgorithm = SignatureAlgorithm.ECDSA_secp256k1   // Not allowed
+publicKey.publicKey = []                                            // Not allowed
+
+publicKey.publicKey[2] = 4      // No effect
+```
+
+The validity of a public key can be checked using the `isValid` field.
+Verifications performed with an invalid public key (using `verify()` method) will always fail.
+
+#### Signature verification
+
+```cadence
+
+// TODO: add a simple example of public key creation and a signature verification
+```
+TODO: details signature verification 
 
 ## Crypto Contract
 
 The built-in contract `Crypto` can be used to perform cryptographic operations.
 The contract can be imported using `import Crypto`.
 
+```cadence
+
+// TODO: add a simple example of hashing
+```
+
+ TODO: details hashing with and without tag 
+
+
+
+The crypto contract also allows creating key lists to be used for a simple multi-signature 
+verification. 
 For example, to verify two signatures with equal weights for some signed data:
 
 ```cadence
 import Crypto
+
 
 pub fun test main() {
     let keyList = Crypto.KeyList()
@@ -100,7 +168,7 @@ pub fun test main() {
     )
 }
 ```
-Refer the [PublicKey](../accounts#publickey) section for more details on the creation and the validity of public keys.
+
 
 The API of the Crypto contract is:
 
