@@ -3019,6 +3019,7 @@ func init() {
 		baseFunctionVariable(
 			typeName,
 			functionType,
+			"Creates an empty string",
 		),
 	)
 }
