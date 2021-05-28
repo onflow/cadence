@@ -6,6 +6,8 @@ title: Crypto
 The built-in enum `HashAlgorithm` provides the set of hashing algorithms that
 are supported by the language natively.
 
+🚧 Status: `KMAC128_BLS_BLS12_381` is not supported yet.
+
 ```cadence
 pub enum HashAlgorithm: UInt8 {
     /// SHA2_256 is Secure Hashing Algorithm 2 (SHA-2) with a 256-bit digest.
@@ -31,6 +33,8 @@ pub enum HashAlgorithm: UInt8 {
 ### Signing Algorithms
 The built-in enum `SignatureAlgorithm` provides the set of signing algorithms that
 are supported by the language natively.
+
+🚧 Status: `BLS_BLS12_381` is not supported yet.
 
 ```cadence
 pub enum SignatureAlgorithm: UInt8 {
@@ -74,6 +78,8 @@ let publicKey = PublicKey(
 ```
 
 The raw key value depends on the supported signature scheme:
+🚧 Status: `BLS_BLS12_381` is not supported yet.
+
  - `ECDSA_P256` and `ECDSA_secp256k1` : the public key is a curve point `(X,Y)` where `X` and `Y` are two prime field elements. The raw key is represented as `bytes(X) || bytes(Y)`, where `||` is the concatenation operation, and `bytes()` is the bytes big-endian encoding of the input integer padded by zeros to the byte-length of the field prime. The raw public key is 64-bytes long.
  - `BLS_BLS_12_381` : the public key is a G_2 (curve over extension field) element. The encoding follows the compressed serialization defined in 
  https://www.ietf.org/archive/id/draft-irtf-cfrg-pairing-friendly-curves-08.html#name-point-serialization-procedu. A public key is 96-bytes long.
@@ -112,6 +118,8 @@ let isValid = pk.verify(
 ```
 
 The inputs to `verify()` depend on the signature scheme used:
+🚧 Status: `BLS_BLS12_381` is not supported yet.
+
 - ECDSA (`ECDSA_P256` and `ECDSA_secp256k1`): 
    - `signature` is the couple `(r,s)`. It is represented as `bytes(r) || bytes(s)`, where `||` is the concatenation operation, and `bytes()` is the bytes big-endian encoding of the input integer padded by zeros to the byte-length of the curve order. The signature is 64 bytes-long for both curves. 
    - `signedData` is the arbitrary message to verify the signature against.
@@ -143,12 +151,16 @@ pub fun hash(_ data: [UInt8], algorithm: HashAlgorithm): [UInt8]
 pub fun hashWithTag(_ data: [UInt8], tag: string, algorithm: HashAlgorithm): [UInt8]
 ```
 
+🚧 Status: `KMAC128_BLS_BLS12_381` is not supported yet.
+
 - `hash` hashes the input data using the input hashing algorithm. 
     - If `KMAC128_BLS_BLS12_381` is used, data is hashed using the standard mac `KMAC128(customizer, key, data, length)` with the following inputs:
         - `customizer` is the UTF-8 encoding of "H2C" 
         - `key` is the UTF-8 encoding of `"APP_BLS_SIG_BLS12381G1_XOF:KMAC128_SSWU_RO_POP_"`
         - `data` is the input data to hash
         - `length` is 1024 bytes
+
+🚧 Status: `hashWithTag` is not supported yet.
 
 - `hashWithTag` hashes data along with a tag. This allows instanciating independent hashing functions customized with a domain separation tag. This is implemented differently depending on the hashing algorithm:
     - `SHA2_256`, `SHA2_384`, `SHA3_256`, `SHA3_384` : the hashed message is `bytes(tag) || data` where `bytes()` is the UTF-8 encoding of the input string, padded with zeros till 32 bytes. The tags accepted must not exceed 32 bytes.
