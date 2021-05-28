@@ -22,6 +22,8 @@ pub enum HashAlgorithm: UInt8 {
 
     /// KMAC128_BLS_BLS12_381 is an instance of KMAC128 mac algorithm, that can be used
     /// as the hashing algorithm for BLS signature scheme on the curve BLS12-381.
+    // This is a customized version of KMAC128 that is compatible with the hashing to curve 
+    // used in BLS signatures.  
     pub case KMAC128_BLS_BLS12_381 = 5
 }
 ```
@@ -71,10 +73,7 @@ let publicKey = PublicKey(
 ```
 
 The raw key value depends on the supported signature scheme:
- - `ECDSA_P256` and `ECDSA_secp256k1` : the public key is a curve point (X,Y) where X and Y are two prime field elements.
- The raw key is represneted by `bytes(X) || bytes(Y)`, where `||` is the concatenation operation,
- and bytes() is the bytes big-endian encoding of the input integer padded by zeros to the byte-length of the field prime. 
- The field prime is 32-bytes long for both curves and hence the raw public key is 64-bytes long.
+ - `ECDSA_P256` and `ECDSA_secp256k1` : the public key is a curve point (X,Y) where X and Y are two prime field elements. The raw key is represented as `bytes(X) || bytes(Y)`, where `||` is the concatenation operation, and bytes() is the bytes big-endian encoding of the input integer padded by zeros to the byte-length of the field prime. The field prime is 32-bytes long for both curves and hence the raw public key is 64-bytes long.
  - `BLS_BLS_12_381` : the public key is a G_2 (curve over extension field) element. The encoding follows the compressed serialization defined in 
  https://www.ietf.org/archive/id/draft-irtf-cfrg-pairing-friendly-curves-08.html#name-point-serialization-procedu. A public key is 96-bytes long.
 
@@ -95,21 +94,78 @@ Verifications performed with an invalid public key (using `verify()` method) wil
 
 ```cadence
 
-// TODO: add a simple example of public key creation and a signature verification
+let pk = PublicKey(
+    // TODO: update the key
+    publicKey: "010203".decodeHex(),
+    signatureAlgorithm: SignatureAlgorithm.ECDSA_P256
+)
+// TODO: update the signature and message
+let signature = "00"
+let message = "00"
+
+let isValid = pk.verify(
+       signature: signature,
+        signedData: message,
+        domainSeparationTag: "",
+        hashAlgorithm: SHA2_256
+    )
 ```
-TODO: details signature verification 
+
+The inputs to `verify()` depend on the signature scheme used:
+- ECDSA (`ECDSA_P256` and `ECDSA_secp256k1`): 
+   - signature is the couple (r,s), it is represented as `bytes(r) || bytes(s)`, where `||` is the concatenation operation, and bytes() is the bytes big-endian encoding of the input integer padded by zeros to the byte-length of the curve order. The signature byte-length is 64 for both curves. 
+   - signedData is the arbitrary message to verify the signature against.
+   - domainSeparationTag is the domain tag used for signing. Only the [user tag](https://github.com/onflow/flow-go-sdk/blob/master/sign.go#L34-L37) is accepted. The user tag is the UTF-8 encoding of `"FLOW-V0.0-user"` padded to 32 bytes.
+   - hashAlgorithm is the algorithm used to hash the message along with the given tag (check `hashWithTag` function fo more details). Only `SHA2_256` or `SHA3_256` are accepted.
+
+- BLS (`BLS_BLS_12_381`): 
+   - signature is a G_1 (curve over prime field) point. The encoding follows the compressed serialization defined in https://www.ietf.org/archive/id/draft-irtf-cfrg-pairing-friendly-curves-08.html#name-point-serialization-procedu. A signature is 48-bytes long.
+   - signedData is the arbitrary message to verify the signature against.
+   - domainSeparationTag is the domain tag used for signing. All tags are accepted. 
+   - hashAlgorithm is the algorithm used to hash the message along with the given tag (check `hashWithTag` function fo more details). Only `KMAC128_BLS_BLS12_381` is accepted.
+
+BLS verification performs the necessary membership check of the signature while the membership check of the public key is performed at the creation of the `PublicKey` object. 
 
 ## Crypto Contract
 
 The built-in contract `Crypto` can be used to perform cryptographic operations.
 The contract can be imported using `import Crypto`.
 
-```cadence
+### Hashing
 
-// TODO: add a simple example of hashing
+The crypto contract hashing API is:
+
+```cadence
+    // Hash the data using the given hashing algorithm and returns the hashed data.
+    pub fun hash(_ data: [UInt8], algorithm: HashAlgorithm): [UInt8]
+
+    // Hash the data using the given hashing algorithm and the tag. Returns the hashed data.
+    pub fun hashWithTag(_ data: [UInt8], tag: string, algorithm: HashAlgorithm): [UInt8]
 ```
 
- TODO: details hashing with and without tag 
+`hash` hashes the input data using the input hashing algorithm. 
+If `KMAC128_BLS_BLS12_381` is used, data is hashed using the standard mac `KMAC128(customizer, key, data, length)` with the following inputs:
+  - customizer is the UTF-8 encoding of "H2C" 
+  - key is the UTF-8 encoding of `"APP_BLS_SIG_BLS12381G1_XOF:KMAC128_SSWU_RO_POP_"`
+  - data is the input data to hash
+  - length is 1024 bytes
+
+
+`hashWithTag` hashes data along with a tag. This allows instanciating independent hashing functions customized by a domain separation tag. This is implemented differently depending on the hashing algorithm:
+- `SHA2_256`, `SHA2_384`, `SHA3_256`, `SHA3_384` : the hashed message is `bytes(tag) || data` where `bytes()` is the UTF-8 encoding of the input string, padded with zeros till 32 bytes. The tags accepted must not exceed 32 bytes.
+- `KMAC128_BLS_BLS12_381` : this is a call to standard `KMAC128(customizer, key, data, length)` with the following inputs:
+  - customizer is the UTF-8 encoding of "H2C" 
+  - key is the UTF-8 encoding of `"APP_" || tag || "BLS_SIG_BLS12381G1_XOF:KMAC128_SSWU_RO_POP_"`
+  - data is the input data to hash
+  - length is 1024 bytes
+
+For example, to compute a SHA3-256 hash:
+
+```cadence
+ let data = "random_data"
+ let digest = hash(data, SHA3_256)
+```
+
 
 
 
@@ -170,17 +226,9 @@ pub fun test main() {
 ```
 
 
-The API of the Crypto contract is:
+The API of the Crypto contract related to key lists is:
 
 ```cadence
-pub contract Crypto {
-
-    // Hash the data using the given hashing algorithm and returns the hashed data.
-    pub fun hash(_ data: [UInt8], algorithm: HashAlgorithm): [UInt8]
-
-    // Hash the data using the given hashing algorithm and the tag. Returns the hashed data.
-    pub fun hashWithTag(_ data: [UInt8], tag: string, algorithm: HashAlgorithm): [UInt8]
-
     pub struct KeyListEntry {
         pub let keyIndex: Int
         pub let publicKey: PublicKey
@@ -228,5 +276,4 @@ pub contract Crypto {
 
         pub init(keyIndex: Int, signature: [UInt8])
     }
-}
 ```
