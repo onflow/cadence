@@ -803,6 +803,16 @@ Strings have multiple built-in functions you can use:
   // `length` is `5`
   ```
 
+- `cadence•let utf8: [UInt8]`
+
+  Returns the number of characters in the string as an integer.
+
+  ```cadence
+  let flowers = "Flowers \u{1F490}"
+  let bytes = flowers.utf8
+  // `bytes` is `[70, 108, 111, 119, 101, 114, 115, 32, 240, 159, 146, 144]`
+  ```
+
 - `cadence•fun concat(_ other: String): String`
 
   Concatenates the string `other` to the end of the original string,
