@@ -53,5 +53,65 @@ func TestInterpretRecursiveValueString(t *testing.T) {
 			Get(inter, nil, interpreter.NewStringValue("mapRef")).
 			String(interpreter.StringResults{}),
 	)
+}
 
+func TestInterpretStringFunction(t *testing.T) {
+
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+      fun test(): String {
+          return String()
+      }
+	`)
+
+	result, err := inter.Invoke("test")
+	require.NoError(t, err)
+
+	require.Equal(t,
+		interpreter.NewStringValue(""),
+		result,
+	)
+}
+
+func TestInterpretStringDecodeHex(t *testing.T) {
+
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+      fun test(): [UInt8] {
+          return "01CADE".decodeHex()
+      }
+	`)
+
+	result, err := inter.Invoke("test")
+	require.NoError(t, err)
+
+	require.Equal(t,
+		interpreter.NewArrayValueUnownedNonCopying(
+			interpreter.UInt8Value(1),
+			interpreter.UInt8Value(0xCA),
+			interpreter.UInt8Value(0xDE),
+		),
+		result,
+	)
+}
+
+func TestInterpretStringEncodeHex(t *testing.T) {
+
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+      fun test(): String {
+          return String.encodeHex([1 as UInt8, 2, 3, 0xCA, 0xDE])
+      }
+	`)
+
+	result, err := inter.Invoke("test")
+	require.NoError(t, err)
+
+	require.Equal(t,
+		interpreter.NewStringValue("010203cade"),
+		result,
+	)
 }

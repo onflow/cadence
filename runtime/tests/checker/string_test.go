@@ -243,3 +243,53 @@ func TestCheckInvalidStringIndexingAssignmentWithCharacterLiteral(t *testing.T) 
 
 	assert.IsType(t, &sema.NotIndexingAssignableTypeError{}, errs[0])
 }
+
+func TestCheckStringFunction(t *testing.T) {
+
+	t.Parallel()
+
+	checker, err := ParseAndCheck(t, `
+        let x = String()
+	`)
+
+	require.NoError(t, err)
+
+	assert.Equal(t,
+		sema.StringType,
+		RequireGlobalValue(t, checker.Elaboration, "x"),
+	)
+}
+
+func TestCheckStringDecodeHex(t *testing.T) {
+
+	t.Parallel()
+
+	checker, err := ParseAndCheck(t, `
+        let x = "01CADE".decodeHex()
+	`)
+
+	require.NoError(t, err)
+
+	assert.Equal(t,
+		&sema.VariableSizedType{
+			Type: sema.UInt8Type,
+		},
+		RequireGlobalValue(t, checker.Elaboration, "x"),
+	)
+}
+
+func TestCheckStringEncodeHex(t *testing.T) {
+
+	t.Parallel()
+
+	checker, err := ParseAndCheck(t, `
+        let x = String.encodeHex([1 as UInt8, 2, 3, 0xCA, 0xDE])
+	`)
+
+	require.NoError(t, err)
+
+	assert.Equal(t,
+		sema.StringType,
+		RequireGlobalValue(t, checker.Elaboration, "x"),
+	)
+}

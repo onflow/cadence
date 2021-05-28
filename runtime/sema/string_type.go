@@ -23,6 +23,11 @@ import (
 	"github.com/onflow/cadence/runtime/common"
 )
 
+const StringTypeEncodeHexFunctionName = "encodeHex"
+const StringTypeEncodeHexFunctionDocString = `
+Returns a hexadecimal string for the given byte array
+`
+
 // StringType represents the string type
 //
 var StringType = &SimpleType{

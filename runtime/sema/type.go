@@ -2946,6 +2946,66 @@ func numberFunctionArgumentExpressionsChecker(targetType Type) ArgumentExpressio
 	}
 }
 
+func init() {
+
+	// Declare a function for the string type.
+	// For now it has no parameters and creates an empty string
+
+	typeName := StringType.String()
+
+	// Check that the function is not accidentally redeclared
+
+	if BaseValueActivation.Find(typeName) != nil {
+		panic(errors.NewUnreachableError())
+	}
+
+	functionType := &FunctionType{
+		ReturnTypeAnnotation: NewTypeAnnotation(StringType),
+	}
+
+	addMember := func(member *Member) {
+		if functionType.Members == nil {
+			functionType.Members = NewStringMemberOrderedMap()
+		}
+		name := member.Identifier.Identifier
+		_, exists := functionType.Members.Get(name)
+		if exists {
+			panic(errors.NewUnreachableError())
+		}
+		functionType.Members.Set(name, member)
+	}
+
+	addMember(NewPublicFunctionMember(
+		functionType,
+		StringTypeEncodeHexFunctionName,
+		&FunctionType{
+			Parameters: []*Parameter{
+				{
+					Label:      ArgumentLabelNotRequired,
+					Identifier: "data",
+					TypeAnnotation: NewTypeAnnotation(
+						&VariableSizedType{
+							Type: UInt8Type,
+						},
+					),
+				},
+			},
+			ReturnTypeAnnotation: NewTypeAnnotation(
+				StringType,
+			),
+		},
+		StringTypeEncodeHexFunctionDocString,
+	))
+
+	BaseValueActivation.Set(
+		typeName,
+		baseFunctionVariable(
+			typeName,
+			functionType,
+		),
+	)
+}
+
 func suggestIntegerLiteralConversionReplacement(
 	checker *Checker,
 	argument *ast.IntegerExpression,
