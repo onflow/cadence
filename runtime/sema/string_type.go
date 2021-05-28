@@ -85,6 +85,19 @@ func init() {
 					)
 				},
 			},
+			"utf8": {
+				Kind: common.DeclarationKindField,
+				Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
+					return NewPublicConstantFieldMember(
+						t,
+						identifier,
+						&VariableSizedType{
+							Type: UInt8Type,
+						},
+						stringTypeUtf8FieldDocString,
+					)
+				},
+			},
 			"length": {
 				Kind: common.DeclarationKindField,
 				Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
@@ -158,4 +171,8 @@ If the string is malformed, the program aborts
 
 const stringTypeLengthFieldDocString = `
 The number of characters in the string
+`
+
+const stringTypeUtf8FieldDocString = `
+The byte array of the UTF-8 encoding
 `

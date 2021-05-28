@@ -293,3 +293,22 @@ func TestCheckStringEncodeHex(t *testing.T) {
 		RequireGlobalValue(t, checker.Elaboration, "x"),
 	)
 }
+
+func TestCheckStringUtf8Field(t *testing.T) {
+
+	t.Parallel()
+
+	checker, err := ParseAndCheck(t, `
+
+      let x = "abc".utf8
+	`)
+
+	require.NoError(t, err)
+
+	assert.Equal(t,
+		&sema.VariableSizedType{
+			Type: sema.UInt8Type,
+		},
+		RequireGlobalValue(t, checker.Elaboration, "x"),
+	)
+}

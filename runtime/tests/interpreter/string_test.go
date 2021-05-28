@@ -115,3 +115,53 @@ func TestInterpretStringEncodeHex(t *testing.T) {
 		result,
 	)
 }
+
+func TestInterpretStringUtf8Field(t *testing.T) {
+
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+      fun test(): [UInt8] {
+          return "Flowers \u{1F490} are beautiful".utf8
+      }
+	`)
+
+	result, err := inter.Invoke("test")
+	require.NoError(t, err)
+
+	require.Equal(t,
+		interpreter.NewArrayValueUnownedNonCopying(
+			// Flowers
+			interpreter.UInt8Value(70),
+			interpreter.UInt8Value(108),
+			interpreter.UInt8Value(111),
+			interpreter.UInt8Value(119),
+			interpreter.UInt8Value(101),
+			interpreter.UInt8Value(114),
+			interpreter.UInt8Value(115),
+			interpreter.UInt8Value(32),
+			// Bouquet
+			interpreter.UInt8Value(240),
+			interpreter.UInt8Value(159),
+			interpreter.UInt8Value(146),
+			interpreter.UInt8Value(144),
+			interpreter.UInt8Value(32),
+			// are
+			interpreter.UInt8Value(97),
+			interpreter.UInt8Value(114),
+			interpreter.UInt8Value(101),
+			interpreter.UInt8Value(32),
+			// beautiful
+			interpreter.UInt8Value(98),
+			interpreter.UInt8Value(101),
+			interpreter.UInt8Value(97),
+			interpreter.UInt8Value(117),
+			interpreter.UInt8Value(116),
+			interpreter.UInt8Value(105),
+			interpreter.UInt8Value(102),
+			interpreter.UInt8Value(117),
+			interpreter.UInt8Value(108),
+		),
+		result,
+	)
+}
