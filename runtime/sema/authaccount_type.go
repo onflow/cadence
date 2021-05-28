@@ -600,7 +600,7 @@ var authAccountKeysTypeRevokeFunctionType = &FunctionType{
 
 func init() {
 	// Set the container type after initializing the AccountKeysTypes, to avoid initializing loop.
-	AuthAccountKeysType.ContainerType = AuthAccountType
+	AuthAccountKeysType.SetContainerType(AuthAccountType)
 }
 
 const AccountKeysTypeName = "Keys"

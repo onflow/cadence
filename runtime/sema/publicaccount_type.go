@@ -128,7 +128,7 @@ var PublicAccountKeysType = func() *CompositeType {
 
 func init() {
 	// Set the container type after initializing the AccountKeysTypes, to avoid initializing loop.
-	PublicAccountKeysType.ContainerType = PublicAccountType
+	PublicAccountKeysType.SetContainerType(PublicAccountType)
 }
 
 const publicAccountTypeGetLinkTargetFunctionDocString = `
