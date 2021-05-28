@@ -3586,6 +3586,11 @@ type InterfaceType struct {
 	InitializerParameters []*Parameter
 	ContainerType         Type
 	nestedTypes           *StringTypeOrderedMap
+	cachedIdentifiers     struct {
+		TypeID              TypeID
+		QualifiedIdentifier string
+	}
+	cachedIdentifiersOnce sync.Once
 }
 
 func (*InterfaceType) IsType() {}
@@ -3611,11 +3616,25 @@ func (t *InterfaceType) GetLocation() common.Location {
 }
 
 func (t *InterfaceType) QualifiedIdentifier() string {
-	return qualifiedIdentifier(t.Identifier, t.ContainerType)
+	t.initializeIdentifiers()
+	return t.cachedIdentifiers.QualifiedIdentifier
 }
 
 func (t *InterfaceType) ID() TypeID {
-	return t.Location.TypeID(t.QualifiedIdentifier())
+	t.initializeIdentifiers()
+	return t.cachedIdentifiers.TypeID
+}
+
+func (t *InterfaceType) initializeIdentifiers() {
+	t.cachedIdentifiersOnce.Do(func() {
+		t.cachedIdentifiers.QualifiedIdentifier = qualifiedIdentifier(t.Identifier, t.ContainerType)
+
+		if t.Location == nil {
+			t.cachedIdentifiers.TypeID = TypeID(t.cachedIdentifiers.QualifiedIdentifier)
+		} else {
+			t.cachedIdentifiers.TypeID = t.Location.TypeID(t.cachedIdentifiers.QualifiedIdentifier)
+		}
+	})
 }
 
 func (t *InterfaceType) Equal(other Type) bool {
