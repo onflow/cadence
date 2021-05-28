@@ -67,9 +67,14 @@ func TestCheckInvalidCompositeRedeclaringType(t *testing.T) {
 				),
 			)
 
-			errs := ExpectCheckerErrors(t, err, 1)
+			// Two redeclaration errors:
+			// - One for the type
+			// - Another for the value
+
+			errs := ExpectCheckerErrors(t, err, 2)
 
 			assert.IsType(t, &sema.RedeclarationError{}, errs[0])
+			assert.IsType(t, &sema.RedeclarationError{}, errs[1])
 		})
 	}
 }

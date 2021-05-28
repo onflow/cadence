@@ -19,6 +19,7 @@
 package interpreter
 
 import (
+	"encoding/hex"
 	"fmt"
 	"math"
 	goRuntime "runtime"
@@ -2440,6 +2441,7 @@ func init() {
 func (interpreter *Interpreter) defineBaseFunctions() {
 	interpreter.defineConverterFunctions()
 	interpreter.defineTypeFunction()
+	interpreter.defineStringFunction()
 }
 
 type converterFunction struct {
@@ -2514,8 +2516,44 @@ var typeFunction = NewHostFunctionValue(
 )
 
 func (interpreter *Interpreter) defineTypeFunction() {
+	err := interpreter.ImportValue(sema.MetaType.String(), typeFunction)
+	if err != nil {
+		panic(errors.NewUnreachableError())
+	}
+}
 
-	err := interpreter.ImportValue("Type", typeFunction)
+// stringFunction is the `String` function. It is stateless, hence it can be re-used across interpreters.
+//
+var stringFunction = func() Value {
+	functionValue := NewHostFunctionValue(
+		func(invocation Invocation) Value {
+			return NewStringValue("")
+		},
+	)
+
+	addMember := func(name string, value Value) {
+		if functionValue.NestedVariables == nil {
+			functionValue.NestedVariables = NewStringVariableOrderedMap()
+		}
+		functionValue.NestedVariables.Set(name, NewVariableWithValue(value))
+	}
+
+	addMember(
+		sema.StringTypeEncodeHexFunctionName,
+		NewHostFunctionValue(
+			func(invocation Invocation) Value {
+				argument := invocation.Arguments[0].(*ArrayValue)
+				bytes, _ := ByteArrayValueToByteSlice(argument)
+				return NewStringValue(hex.EncodeToString(bytes))
+			},
+		),
+	)
+
+	return functionValue
+}()
+
+func (interpreter *Interpreter) defineStringFunction() {
+	err := interpreter.ImportValue(sema.StringType.String(), stringFunction)
 	if err != nil {
 		panic(errors.NewUnreachableError())
 	}
