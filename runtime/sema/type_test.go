@@ -548,7 +548,7 @@ func TestQualifiedIdentifierCreation(t *testing.T) {
 			Location:      common.StringLocation("a"),
 			Fields:        []string{},
 			Members:       NewStringMemberOrderedMap(),
-			ContainerType: a,
+			containerType: a,
 		}
 
 		c := &CompositeType{
@@ -557,7 +557,7 @@ func TestQualifiedIdentifierCreation(t *testing.T) {
 			Location:      common.StringLocation("a"),
 			Fields:        []string{},
 			Members:       NewStringMemberOrderedMap(),
-			ContainerType: b,
+			containerType: b,
 		}
 
 		identifier := qualifiedIdentifier("foo", c)
@@ -591,7 +591,7 @@ func BenchmarkQualifiedIdentifierCreation(b *testing.B) {
 		Location:      common.StringLocation("a"),
 		Fields:        []string{},
 		Members:       NewStringMemberOrderedMap(),
-		ContainerType: foo,
+		containerType: foo,
 	}
 
 	b.Run("One level", func(b *testing.B) {

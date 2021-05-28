@@ -74,10 +74,10 @@ func containerTypeNames(typ Type, level int) (typeNames []string, bufSize int) {
 	switch typedContainerType := typ.(type) {
 	case *InterfaceType:
 		typeName = typedContainerType.Identifier
-		containerType = typedContainerType.ContainerType
+		containerType = typedContainerType.containerType
 	case *CompositeType:
 		typeName = typedContainerType.Identifier
-		containerType = typedContainerType.ContainerType
+		containerType = typedContainerType.containerType
 	default:
 		panic(errors.NewUnreachableError())
 	}
@@ -187,6 +187,7 @@ type MemberResolver struct {
 type ContainedType interface {
 	Type
 	GetContainerType() Type
+	SetContainerType(containerType Type)
 }
 
 // ContainerType is a type which might have nested types
@@ -3180,14 +3181,14 @@ type CompositeType struct {
 	// TODO: add support for overloaded initializers
 	ConstructorParameters []*Parameter
 	nestedTypes           *StringTypeOrderedMap
-	ContainerType         Type
+	containerType         Type
 	EnumRawType           Type
 	hasComputedMembers    bool
-	cachedIdentifiers     struct {
+	cachedIdentifiers     *struct {
 		TypeID              TypeID
 		QualifiedIdentifier string
 	}
-	cachedIdentifiersOnce sync.Once
+	cachedIdentifiersLock sync.RWMutex
 }
 
 func (t *CompositeType) ExplicitInterfaceConformanceSet() *InterfaceSet {
@@ -3223,7 +3224,31 @@ func (t *CompositeType) QualifiedString() string {
 }
 
 func (t *CompositeType) GetContainerType() Type {
-	return t.ContainerType
+	return t.containerType
+}
+
+func (t *CompositeType) SetContainerType(containerType Type) {
+	t.containerType = containerType
+	t.clearIdentifiers()
+}
+
+func (t *CompositeType) clearIdentifiers() {
+	t.cachedIdentifiersLock.Lock()
+	defer t.cachedIdentifiersLock.Unlock()
+
+	t.cachedIdentifiers = nil
+	if t.nestedTypes != nil {
+		t.nestedTypes.Foreach(clearIdentifiers)
+	}
+}
+
+func clearIdentifiers(_ string, typ Type) {
+	switch semaType := typ.(type) {
+	case *CompositeType:
+		semaType.clearIdentifiers()
+	case *InterfaceType:
+		semaType.clearIdentifiers()
+	}
 }
 
 func (t *CompositeType) GetCompositeKind() common.CompositeKind {
@@ -3245,15 +3270,29 @@ func (t *CompositeType) ID() TypeID {
 }
 
 func (t *CompositeType) initializeIdentifiers() {
-	t.cachedIdentifiersOnce.Do(func() {
-		t.cachedIdentifiers.QualifiedIdentifier = qualifiedIdentifier(t.Identifier, t.ContainerType)
+	t.cachedIdentifiersLock.Lock()
+	defer t.cachedIdentifiersLock.Unlock()
 
-		if t.Location == nil {
-			t.cachedIdentifiers.TypeID = TypeID(t.cachedIdentifiers.QualifiedIdentifier)
-		} else {
-			t.cachedIdentifiers.TypeID = t.Location.TypeID(t.cachedIdentifiers.QualifiedIdentifier)
-		}
-	})
+	if t.cachedIdentifiers != nil {
+		return
+	}
+
+	identifier := qualifiedIdentifier(t.Identifier, t.containerType)
+
+	var typeID TypeID
+	if t.Location == nil {
+		typeID = TypeID(identifier)
+	} else {
+		typeID = t.Location.TypeID(identifier)
+	}
+
+	t.cachedIdentifiers = &struct {
+		TypeID              TypeID
+		QualifiedIdentifier string
+	}{
+		TypeID:              typeID,
+		QualifiedIdentifier: identifier,
+	}
 }
 
 func (t *CompositeType) Equal(other Type) bool {
@@ -3357,7 +3396,7 @@ func (t *CompositeType) InterfaceType() *InterfaceType {
 		Members:               t.Members,
 		Fields:                t.Fields,
 		InitializerParameters: t.ConstructorParameters,
-		ContainerType:         t.ContainerType,
+		containerType:         t.containerType,
 		nestedTypes:           t.nestedTypes,
 	}
 }
@@ -3366,7 +3405,7 @@ func (t *CompositeType) TypeRequirements() []*CompositeType {
 
 	var typeRequirements []*CompositeType
 
-	if containerComposite, ok := t.ContainerType.(*CompositeType); ok {
+	if containerComposite, ok := t.containerType.(*CompositeType); ok {
 		for _, conformance := range containerComposite.ExplicitInterfaceConformances {
 			ty, ok := conformance.nestedTypes.Get(t.Identifier)
 			if !ok {
@@ -3584,13 +3623,13 @@ type InterfaceType struct {
 	Fields              []string
 	// TODO: add support for overloaded initializers
 	InitializerParameters []*Parameter
-	ContainerType         Type
+	containerType         Type
 	nestedTypes           *StringTypeOrderedMap
-	cachedIdentifiers     struct {
+	cachedIdentifiers     *struct {
 		TypeID              TypeID
 		QualifiedIdentifier string
 	}
-	cachedIdentifiersOnce sync.Once
+	cachedIdentifiersLock sync.RWMutex
 }
 
 func (*InterfaceType) IsType() {}
@@ -3604,7 +3643,22 @@ func (t *InterfaceType) QualifiedString() string {
 }
 
 func (t *InterfaceType) GetContainerType() Type {
-	return t.ContainerType
+	return t.containerType
+}
+
+func (t *InterfaceType) SetContainerType(containerType Type) {
+	t.containerType = containerType
+	t.clearIdentifiers()
+}
+
+func (t *InterfaceType) clearIdentifiers() {
+	t.cachedIdentifiersLock.Lock()
+	defer t.cachedIdentifiersLock.Unlock()
+
+	t.cachedIdentifiers = nil
+	if t.nestedTypes != nil {
+		t.nestedTypes.Foreach(clearIdentifiers)
+	}
 }
 
 func (t *InterfaceType) GetCompositeKind() common.CompositeKind {
@@ -3626,15 +3680,29 @@ func (t *InterfaceType) ID() TypeID {
 }
 
 func (t *InterfaceType) initializeIdentifiers() {
-	t.cachedIdentifiersOnce.Do(func() {
-		t.cachedIdentifiers.QualifiedIdentifier = qualifiedIdentifier(t.Identifier, t.ContainerType)
+	t.cachedIdentifiersLock.Lock()
+	defer t.cachedIdentifiersLock.Unlock()
 
-		if t.Location == nil {
-			t.cachedIdentifiers.TypeID = TypeID(t.cachedIdentifiers.QualifiedIdentifier)
-		} else {
-			t.cachedIdentifiers.TypeID = t.Location.TypeID(t.cachedIdentifiers.QualifiedIdentifier)
-		}
-	})
+	if t.cachedIdentifiers != nil {
+		return
+	}
+
+	identifier := qualifiedIdentifier(t.Identifier, t.containerType)
+
+	var typeID TypeID
+	if t.Location == nil {
+		typeID = TypeID(identifier)
+	} else {
+		typeID = t.Location.TypeID(identifier)
+	}
+
+	t.cachedIdentifiers = &struct {
+		TypeID              TypeID
+		QualifiedIdentifier string
+	}{
+		TypeID:              typeID,
+		QualifiedIdentifier: identifier,
+	}
 }
 
 func (t *InterfaceType) Equal(other Type) bool {

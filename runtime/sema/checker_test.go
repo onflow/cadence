@@ -70,10 +70,10 @@ func TestCompositeType_ID(t *testing.T) {
 			&CompositeType{
 				Location:   location,
 				Identifier: "C",
-				ContainerType: &CompositeType{
+				containerType: &CompositeType{
 					Location:   location,
 					Identifier: "B",
-					ContainerType: &CompositeType{
+					containerType: &CompositeType{
 						Location:   location,
 						Identifier: "A",
 					},
@@ -92,10 +92,10 @@ func TestCompositeType_ID(t *testing.T) {
 			&CompositeType{
 				Location:   location,
 				Identifier: "C",
-				ContainerType: &InterfaceType{
+				containerType: &InterfaceType{
 					Location:   location,
 					Identifier: "B",
-					ContainerType: &CompositeType{
+					containerType: &CompositeType{
 						Location:   location,
 						Identifier: "A",
 					},
@@ -121,10 +121,10 @@ func TestInterfaceType_ID(t *testing.T) {
 			&InterfaceType{
 				Location:   location,
 				Identifier: "C",
-				ContainerType: &CompositeType{
+				containerType: &CompositeType{
 					Location:   location,
 					Identifier: "B",
-					ContainerType: &CompositeType{
+					containerType: &CompositeType{
 						Location:   location,
 						Identifier: "A",
 					},
@@ -143,10 +143,10 @@ func TestInterfaceType_ID(t *testing.T) {
 			&InterfaceType{
 				Location:   location,
 				Identifier: "C",
-				ContainerType: &InterfaceType{
+				containerType: &InterfaceType{
 					Location:   location,
 					Identifier: "B",
-					ContainerType: &CompositeType{
+					containerType: &CompositeType{
 						Location:   location,
 						Identifier: "A",
 					},

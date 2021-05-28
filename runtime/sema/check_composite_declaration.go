@@ -473,12 +473,12 @@ func (checker *Checker) declareCompositeType(declaration *ast.CompositeDeclarati
 
 	for _, nestedInterfaceType := range nestedInterfaceTypes {
 		compositeType.nestedTypes.Set(nestedInterfaceType.Identifier, nestedInterfaceType)
-		nestedInterfaceType.ContainerType = compositeType
+		nestedInterfaceType.SetContainerType(compositeType)
 	}
 
 	for _, nestedCompositeType := range nestedCompositeTypes {
 		compositeType.nestedTypes.Set(nestedCompositeType.Identifier, nestedCompositeType)
-		nestedCompositeType.ContainerType = compositeType
+		nestedCompositeType.SetContainerType(compositeType)
 	}
 
 	return compositeType
