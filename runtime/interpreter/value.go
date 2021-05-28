@@ -501,6 +501,9 @@ func (v *StringValue) GetMember(_ *Interpreter, _ func() LocationRange, name str
 		length := v.Length()
 		return NewIntValueFromInt64(int64(length))
 
+	case "utf8":
+		return ByteSliceToByteArrayValue([]byte(v.Str))
+
 	case "concat":
 		return NewHostFunctionValue(
 			func(invocation Invocation) Value {
