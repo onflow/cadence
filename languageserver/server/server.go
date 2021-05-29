@@ -2363,7 +2363,12 @@ func (s *Server) maybeAddVariableDeclarationActionsResolver(
 			return nil
 		}
 
-		var isAssignment bool
+		var isAssignmentTarget bool
+		var isInvoked bool
+		var parentFunctionStartPos *ast.Position
+		var invocationArgumentTypes []sema.Type
+		var invocationArgumentLabels []string
+		var invocationReturnType sema.Type
 
 		var stack []ast.Element
 		ast.Inspect(checker.Program, func(element ast.Element) bool {
@@ -2374,7 +2379,35 @@ func (s *Server) maybeAddVariableDeclarationActionsResolver(
 				parent := stack[len(stack)-1]
 				switch parent := parent.(type) {
 				case *ast.AssignmentStatement:
-					isAssignment = parent.Target == err.Expression
+					isAssignmentTarget = parent.Target == err.Expression
+
+				case *ast.InvocationExpression:
+					isInvoked = parent.InvokedExpression == err.Expression
+
+					invocationArgumentTypes = checker.Elaboration.InvocationExpressionArgumentTypes[parent]
+					invocationReturnType = checker.Elaboration.InvocationExpressionReturnTypes[parent]
+
+					invocationArgumentLabels = make([]string, 0, len(parent.Arguments))
+					for _, argument := range parent.Arguments {
+						invocationArgumentLabels = append(
+							invocationArgumentLabels,
+							argument.Label,
+						)
+					}
+
+					// Find the containing function declaration, if any
+					for i := len(stack) - 2; i > 0; i-- {
+						element := stack[i]
+						switch element := element.(type) {
+						case *ast.FunctionDeclaration:
+							parentFunctionStartPos = &element.StartPos
+							break
+
+						case *ast.SpecialFunctionDeclaration:
+							parentFunctionStartPos = &element.FunctionDeclaration.StartPos
+							break
+						}
+					}
 				}
 
 				return false
@@ -2387,67 +2420,192 @@ func (s *Server) maybeAddVariableDeclarationActionsResolver(
 			return true
 		})
 
-		lineStart := err.Pos.Offset - err.Pos.Column
-		indentationEnd := lineStart
-		for ; indentationEnd < err.Pos.Offset; indentationEnd++ {
-			switch document.Text[indentationEnd] {
-			case ' ', '\t':
-				continue
-			}
+		if isInvoked {
+
+			// If the identifier is invoked,
+			// propose the declaration of a function
+
+			return functionDeclarationCodeActions(
+				err,
+				document,
+				diagnostic,
+				uri,
+				parentFunctionStartPos,
+				invocationArgumentTypes,
+				invocationArgumentLabels,
+				invocationReturnType,
+			)
+
+		} else {
+
+			// If the identifier is not invoked,
+			// propose the declaration of a variable,
+			// or a constant (if the identifier is not assigned to)
+
+			return variableDeclarationCodeActions(
+				err,
+				document,
+				diagnostic,
+				uri,
+				isAssignmentTarget,
+			)
+		}
+	}
+}
+
+func functionDeclarationCodeActions(
+	err *sema.NotDeclaredError,
+	document Document,
+	diagnostic protocol.Diagnostic,
+	uri protocol.DocumentUri,
+	parentFunctionStartPos *ast.Position,
+	invocationArgumentTypes []sema.Type,
+	invocationArgumentLabels []string,
+	invocationReturnType sema.Type,
+) []*protocol.CodeAction {
+
+	var indentation string
+
+	insertionPos := ast.Position{
+		Line:   err.Pos.Line,
+		Column: 0,
+	}
+	if parentFunctionStartPos != nil {
+		insertionPos = *parentFunctionStartPos
+		indentation = document.Text[insertionPos.Offset-insertionPos.Column : insertionPos.Offset]
+	}
+
+	insertionRange := protocol.Range{
+		Start: conversion.ASTToProtocolPosition(insertionPos),
+		End:   conversion.ASTToProtocolPosition(insertionPos),
+	}
+
+	var parameters strings.Builder
+
+	for i, argumentType := range invocationArgumentTypes {
+		if i > 'z' {
 			break
 		}
 
-		codeActions := make([]*protocol.CodeAction, 0, len(ast.VariableKinds))
+		if i > 0 {
+			parameters.WriteString(", ")
+		}
+		argumentLabel := invocationArgumentLabels[i]
+		if argumentLabel == "" {
+			parameters.WriteString("_ ")
+			parameters.WriteByte(byte('a' + i))
+		} else {
+			parameters.WriteString(argumentLabel)
+		}
+		parameters.WriteString(": ")
+		if argumentType.IsInvalidType() {
+			parameters.WriteString(sema.VoidType.String())
+		} else {
+			parameters.WriteString(argumentType.QualifiedString())
+		}
+	}
 
-		for _, variableKind := range ast.VariableKinds {
+	var returnType string
+	if !invocationReturnType.IsInvalidType() && invocationReturnType != sema.VoidType {
+		returnType = fmt.Sprintf(": %s", invocationReturnType.QualifiedString())
+	}
 
-			var isPreferred bool
-			if isAssignment {
-				isPreferred = variableKind == ast.VariableKindVariable
-				if variableKind == ast.VariableKindConstant {
-					continue
-				}
-			} else {
-				isPreferred = variableKind == ast.VariableKindConstant
-			}
+	textEdit := protocol.TextEdit{
+		Range: insertionRange,
+		NewText: fmt.Sprintf(
+			"fun %s(%s)%s {}\n\n%s",
+			err.Name,
+			parameters.String(),
+			returnType,
+			indentation,
+		),
+	}
 
-			insertionPos := ast.Position{
-				Line:   err.Pos.Line,
-				Column: 0,
-			}
-
-			// TODO: hope for https://github.com/microsoft/language-server-protocol/issues/724
-			//  to get implemented, so the cursor can be placed at the value,
-			//  or if insertion for a snippet gets supported add a var/let option and a value placeholder
-
-			textEdit := protocol.TextEdit{
-				Range: protocol.Range{
-					Start: conversion.ASTToProtocolPosition(insertionPos),
-					End:   conversion.ASTToProtocolPosition(insertionPos),
+	return []*protocol.CodeAction{
+		{
+			Title:       "Declare function",
+			Kind:        protocol.QuickFix,
+			Diagnostics: []protocol.Diagnostic{diagnostic},
+			Edit: &protocol.WorkspaceEdit{
+				Changes: &map[string][]protocol.TextEdit{
+					string(uri): {textEdit},
 				},
-				NewText: fmt.Sprintf(
-					"%s%s %s = TODO\n",
-					document.Text[lineStart:indentationEnd],
-					variableKind.Keyword(),
-					err.Name,
-				),
-			}
+			},
+			IsPreferred: true,
+		},
+	}
+}
 
-			codeActions = append(codeActions, &protocol.CodeAction{
-				Title:       fmt.Sprintf("Declare %s", variableKind.Name()),
-				Kind:        protocol.QuickFix,
-				Diagnostics: []protocol.Diagnostic{diagnostic},
-				Edit: &protocol.WorkspaceEdit{
-					Changes: &map[string][]protocol.TextEdit{
-						string(uri): {textEdit},
-					},
-				},
-				IsPreferred: isPreferred,
-			})
+func variableDeclarationCodeActions(
+	err *sema.NotDeclaredError,
+	document Document,
+	diagnostic protocol.Diagnostic,
+	uri protocol.DocumentUri,
+	isAssignmentTarget bool,
+) []*protocol.CodeAction {
+
+	lineStart := err.Pos.Offset - err.Pos.Column
+	indentationEnd := lineStart
+	for ; indentationEnd < err.Pos.Offset; indentationEnd++ {
+		switch document.Text[indentationEnd] {
+		case ' ', '\t':
+			continue
+		}
+		break
+	}
+
+	codeActions := make([]*protocol.CodeAction, 0, len(ast.VariableKinds))
+
+	insertionPos := ast.Position{
+		Line:   err.Pos.Line,
+		Column: 0,
+	}
+
+	insertionRange := protocol.Range{
+		Start: conversion.ASTToProtocolPosition(insertionPos),
+		End:   conversion.ASTToProtocolPosition(insertionPos),
+	}
+
+	for _, variableKind := range ast.VariableKinds {
+
+		var isPreferred bool
+		if isAssignmentTarget {
+			isPreferred = variableKind == ast.VariableKindVariable
+			if variableKind == ast.VariableKindConstant {
+				continue
+			}
+		} else {
+			isPreferred = variableKind == ast.VariableKindConstant
 		}
 
-		return codeActions
+		// TODO: hope for https://github.com/microsoft/language-server-protocol/issues/724
+		//  to get implemented, so the cursor can be placed at the value,
+		//  or if insertion for a snippet gets supported add a var/let option and a value placeholder
+
+		textEdit := protocol.TextEdit{
+			Range: insertionRange,
+			NewText: fmt.Sprintf(
+				"%s%s %s = TODO\n",
+				document.Text[lineStart:indentationEnd],
+				variableKind.Keyword(),
+				err.Name,
+			),
+		}
+
+		codeActions = append(codeActions, &protocol.CodeAction{
+			Title:       fmt.Sprintf("Declare %s", variableKind.Name()),
+			Kind:        protocol.QuickFix,
+			Diagnostics: []protocol.Diagnostic{diagnostic},
+			Edit: &protocol.WorkspaceEdit{
+				Changes: &map[string][]protocol.TextEdit{
+					string(uri): {textEdit},
+				},
+			},
+			IsPreferred: isPreferred,
+		})
 	}
+
+	return codeActions
 }
 
 // convertHint converts a checker hint to a diagnostic
