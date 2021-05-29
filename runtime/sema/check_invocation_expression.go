@@ -92,6 +92,8 @@ func (checker *Checker) checkInvocationExpression(invocationExpression *ast.Invo
 			argumentTypes = append(argumentTypes, argumentType)
 		}
 
+		checker.Elaboration.InvocationExpressionReturnTypes[invocationExpression] = checker.expectedType
+
 		return InvalidType
 	}
 
