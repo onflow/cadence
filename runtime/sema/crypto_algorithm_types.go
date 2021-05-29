@@ -213,7 +213,9 @@ ECDSA_secp256k1 is Elliptic Curve Digital Signature Algorithm (ECDSA) on the sec
 `
 
 const SignatureAlgorithmDocStringBLS_BLS12_381 = `
-BLS_BLS12_381 is BLS signature scheme on the BLS12-381 curve
+BLS_BLS12_381 is BLS signature scheme on the BLS12-381 curve.
+The scheme is set-up so that signatures are in G_1 (curve over prime field) 
+while public keys are in G_2 (curve over extended prime field).
 `
 
 const HashAlgorithmTypeName = "HashAlgorithm"
@@ -235,6 +237,8 @@ SHA3_384 is Secure Hashing Algorithm 3 (SHA-3) with a 384-bit digest
 `
 
 const HashAlgorithmDocStringKMAC128_BLS_BLS12_381 = `
-KMAC128_BLS_BLS12_381 is an instance of KMAC128 mac algorithm, that can be used
-as the hashing algorithm for BLS signature scheme on the curve BLS12-381.
+KMAC128_BLS_BLS12_381 is an instance of KECCAK Message Authentication Code (KMAC128) mac algorithm,
+that can be used as the hashing algorithm for BLS signature scheme on the curve BLS12-381.
+This is a customized version of KMAC128 that is compatible with the hashing to curve 
+used in BLS signatures.
 `
