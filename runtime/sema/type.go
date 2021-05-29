@@ -3149,26 +3149,29 @@ func (t *CompositeType) GetContainerType() Type {
 }
 
 func (t *CompositeType) SetContainerType(containerType Type) {
+	t.checkIdentifiersCached()
 	t.containerType = containerType
-	t.clearIdentifiers()
 }
 
-func (t *CompositeType) clearIdentifiers() {
+func (t *CompositeType) checkIdentifiersCached() {
 	t.cachedIdentifiersLock.Lock()
 	defer t.cachedIdentifiersLock.Unlock()
 
-	t.cachedIdentifiers = nil
+	if t.cachedIdentifiers != nil {
+		panic(errors.NewUnreachableError())
+	}
+
 	if t.nestedTypes != nil {
-		t.nestedTypes.Foreach(clearIdentifiers)
+		t.nestedTypes.Foreach(checkIdentifiersCached)
 	}
 }
 
-func clearIdentifiers(_ string, typ Type) {
+func checkIdentifiersCached(_ string, typ Type) {
 	switch semaType := typ.(type) {
 	case *CompositeType:
-		semaType.clearIdentifiers()
+		semaType.checkIdentifiersCached()
 	case *InterfaceType:
-		semaType.clearIdentifiers()
+		semaType.checkIdentifiersCached()
 	}
 }
 
@@ -3568,17 +3571,20 @@ func (t *InterfaceType) GetContainerType() Type {
 }
 
 func (t *InterfaceType) SetContainerType(containerType Type) {
+	t.checkIdentifiersCached()
 	t.containerType = containerType
-	t.clearIdentifiers()
 }
 
-func (t *InterfaceType) clearIdentifiers() {
+func (t *InterfaceType) checkIdentifiersCached() {
 	t.cachedIdentifiersLock.Lock()
 	defer t.cachedIdentifiersLock.Unlock()
 
-	t.cachedIdentifiers = nil
+	if t.cachedIdentifiers != nil {
+		panic(errors.NewUnreachableError())
+	}
+
 	if t.nestedTypes != nil {
-		t.nestedTypes.Foreach(clearIdentifiers)
+		t.nestedTypes.Foreach(checkIdentifiersCached)
 	}
 }
 
