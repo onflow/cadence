@@ -864,7 +864,7 @@ func (checker *Checker) explicitInterfaceConformances(
 ) []*InterfaceType {
 
 	var interfaceTypes []*InterfaceType
-	seenConformances := map[TypeID]bool{}
+	seenConformances := map[*InterfaceType]bool{}
 
 	for _, conformance := range declaration.Conformances {
 		convertedType := checker.ConvertType(conformance)
@@ -872,9 +872,7 @@ func (checker *Checker) explicitInterfaceConformances(
 		if interfaceType, ok := convertedType.(*InterfaceType); ok {
 			interfaceTypes = append(interfaceTypes, interfaceType)
 
-			typeID := interfaceType.ID()
-
-			if seenConformances[typeID] {
+			if seenConformances[interfaceType] {
 				checker.report(
 					&DuplicateConformanceError{
 						CompositeType: compositeType,
@@ -884,7 +882,7 @@ func (checker *Checker) explicitInterfaceConformances(
 				)
 			}
 
-			seenConformances[typeID] = true
+			seenConformances[interfaceType] = true
 
 		} else if !convertedType.IsInvalidType() {
 			checker.report(
