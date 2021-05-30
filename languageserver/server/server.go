@@ -2072,6 +2072,11 @@ type convertibleError interface {
 	ast.HasPosition
 }
 
+type insertionPosition struct {
+	ast.Position
+	before bool
+}
+
 // convertError converts a checker error to a diagnostic
 // and an optional code action to resolve the error.
 //
@@ -2105,13 +2110,98 @@ func (s *Server) convertError(
 
 	switch err := err.(type) {
 	case *sema.TypeMismatchError:
-		codeActionsResolver = s.maybeReturnTypeChangeCodeActionsResolver(diagnostic, err, uri)
+		codeActionsResolver = s.maybeReturnTypeChangeCodeActionsResolver(diagnostic, uri, err)
 
 	case *sema.ConformanceError:
 		codeActionsResolver = maybeAddMissingMembersCodeActionResolver(diagnostic, err, uri)
 
 	case *sema.NotDeclaredError:
-		codeActionsResolver = s.maybeAddVariableDeclarationActionsResolver(diagnostic, err, uri)
+		if err.ExpectedKind == common.DeclarationKindVariable {
+			codeActionsResolver = s.maybeAddDeclarationActionsResolver(
+				diagnostic,
+				uri,
+				err.Expression,
+				err.Pos,
+				err.Name,
+				nil,
+			)
+		}
+
+	case *sema.NotDeclaredMemberError:
+		var declarationGetter func(elaboration *sema.Elaboration) ast.Declaration
+
+		switch ty := err.Type.(type) {
+		case *sema.CompositeType:
+			declarationGetter = func(elaboration *sema.Elaboration) ast.Declaration {
+				return elaboration.CompositeTypeDeclarations[ty]
+			}
+		case *sema.InterfaceType:
+			declarationGetter = func(elaboration *sema.Elaboration) ast.Declaration {
+				return elaboration.InterfaceTypeDeclarations[ty]
+			}
+		}
+
+		if declarationGetter != nil {
+			codeActionsResolver = s.maybeAddDeclarationActionsResolver(
+				diagnostic,
+				uri,
+				err.Expression,
+				err.StartPos,
+				err.Name,
+				func(checker *sema.Checker, isFunction bool) insertionPosition {
+					declaration := declarationGetter(checker.Elaboration)
+
+					members := declaration.DeclarationMembers()
+					declarations := members.Declarations()
+					functions := members.Functions()
+					fields := members.Fields()
+
+					switch {
+					case isFunction && len(functions) > 0:
+						// If a function is inserted,
+						// prefer adding it after the last function (if any)
+						lastFunction := functions[len(functions)-1]
+						return insertionPosition{
+							before:   false,
+							Position: lastFunction.EndPosition().Shifted(1),
+						}
+					case !isFunction && len(fields) > 0:
+						// If a field is inserted,
+						// prefer inserting it after the last field (if any)
+						lastField := fields[len(fields)-1]
+						return insertionPosition{
+							before:   false,
+							Position: lastField.EndPosition().Shifted(1),
+						}
+					case !isFunction && len(functions) > 0:
+						// If a field is inserted,
+						// and there are no fields, but functions,
+						// insert it before the first function
+						firstFunction := functions[0]
+						return insertionPosition{
+							before:   true,
+							Position: firstFunction.StartPosition(),
+						}
+					}
+
+					// By default, insert the declaration after the last declaration (if any).
+					// Otherwise, insert it before the end of the containing declaration
+
+					if len(declarations) > 0 {
+						lastDeclaration := declarations[len(declarations)-1]
+						return insertionPosition{
+							before:   false,
+							Position: lastDeclaration.EndPosition().Shifted(1),
+						}
+					}
+
+					return insertionPosition{
+						before:   true,
+						Position: declaration.EndPosition(),
+					}
+				},
+			)
+		}
 	}
 
 	return diagnostic, codeActionsResolver
@@ -2119,8 +2209,8 @@ func (s *Server) convertError(
 
 func (s *Server) maybeReturnTypeChangeCodeActionsResolver(
 	diagnostic protocol.Diagnostic,
-	err *sema.TypeMismatchError,
 	uri protocol.DocumentUri,
+	err *sema.TypeMismatchError,
 ) func() []*protocol.CodeAction {
 
 	// The type mismatch could be in a return statement
@@ -2149,6 +2239,11 @@ func (s *Server) maybeReturnTypeChangeCodeActionsResolver(
 
 		switch element {
 		case err.Expression:
+
+			// We found the error expression.
+			// Determine what should be declared based on the context,
+			// i.e. from the parents
+
 			for i := len(stack) - 1; i >= 0; i-- {
 				parent := stack[i]
 				switch parent := parent.(type) {
@@ -2341,15 +2436,14 @@ func formatNewMember(member *sema.Member, indentation string) string {
 	}
 }
 
-func (s *Server) maybeAddVariableDeclarationActionsResolver(
+func (s *Server) maybeAddDeclarationActionsResolver(
 	diagnostic protocol.Diagnostic,
-	err *sema.NotDeclaredError,
 	uri protocol.DocumentUri,
+	errorExpression ast.Expression,
+	errorPos ast.Position,
+	name string,
+	memberInsertionPosGetter func(checker *sema.Checker, isFunction bool) insertionPosition,
 ) func() []*protocol.CodeAction {
-
-	if err.ExpectedKind != common.DeclarationKindVariable {
-		return nil
-	}
 
 	return func() []*protocol.CodeAction {
 
@@ -2365,7 +2459,7 @@ func (s *Server) maybeAddVariableDeclarationActionsResolver(
 
 		var isAssignmentTarget bool
 		var isInvoked bool
-		var parentFunctionStartPos *ast.Position
+		var parentFunctionEndPos *ast.Position
 		var invocationArgumentTypes []sema.Type
 		var invocationArgumentLabels []string
 		var invocationReturnType sema.Type
@@ -2374,15 +2468,19 @@ func (s *Server) maybeAddVariableDeclarationActionsResolver(
 		ast.Inspect(checker.Program, func(element ast.Element) bool {
 
 			switch element {
-			case err.Expression:
+			case errorExpression:
+
+				// We found the error expression.
+				// Determine what should be declared based on the context,
+				// i.e. from the parents
 
 				parent := stack[len(stack)-1]
 				switch parent := parent.(type) {
 				case *ast.AssignmentStatement:
-					isAssignmentTarget = parent.Target == err.Expression
+					isAssignmentTarget = parent.Target == errorExpression
 
 				case *ast.InvocationExpression:
-					isInvoked = parent.InvokedExpression == err.Expression
+					isInvoked = parent.InvokedExpression == errorExpression
 
 					invocationArgumentTypes = checker.Elaboration.InvocationExpressionArgumentTypes[parent]
 					invocationReturnType = checker.Elaboration.InvocationExpressionReturnTypes[parent]
@@ -2395,17 +2493,22 @@ func (s *Server) maybeAddVariableDeclarationActionsResolver(
 						)
 					}
 
-					// Find the containing function declaration, if any
-					for i := len(stack) - 2; i > 0; i-- {
-						element := stack[i]
-						switch element := element.(type) {
-						case *ast.FunctionDeclaration:
-							parentFunctionStartPos = &element.StartPos
-							break
+					if memberInsertionPosGetter == nil {
 
-						case *ast.SpecialFunctionDeclaration:
-							parentFunctionStartPos = &element.FunctionDeclaration.StartPos
-							break
+						// Find the containing function declaration, if any
+						for i := len(stack) - 2; i > 0; i-- {
+							element := stack[i]
+							switch element := element.(type) {
+							case *ast.FunctionDeclaration:
+								position := element.EndPosition()
+								parentFunctionEndPos = &position
+								break
+
+							case *ast.SpecialFunctionDeclaration:
+								position := element.FunctionDeclaration.EndPosition()
+								parentFunctionEndPos = &position
+								break
+							}
 						}
 					}
 				}
@@ -2420,17 +2523,46 @@ func (s *Server) maybeAddVariableDeclarationActionsResolver(
 			return true
 		})
 
+		var insertionPos insertionPosition
+
 		if isInvoked {
 
 			// If the identifier is invoked,
 			// propose the declaration of a function
 
+			if memberInsertionPosGetter != nil {
+				insertionPos = memberInsertionPosGetter(checker, true)
+			} else {
+
+				// If the function declaration is not a member,
+				// declare it after the parent function (if any).
+				//
+				// If there is no parent function,
+				// then the declaration is local,
+				// so insert the function before the use
+
+				if parentFunctionEndPos != nil {
+					insertionPos = insertionPosition{
+						before:   false,
+						Position: parentFunctionEndPos.Shifted(1),
+					}
+				} else {
+					insertionPos = insertionPosition{
+						before: true,
+						Position: ast.Position{
+							Line:   errorPos.Line,
+							Column: 0,
+						},
+					}
+				}
+			}
+
 			return functionDeclarationCodeActions(
-				err,
+				uri,
 				document,
 				diagnostic,
-				uri,
-				parentFunctionStartPos,
+				insertionPos,
+				name,
 				invocationArgumentTypes,
 				invocationArgumentLabels,
 				invocationReturnType,
@@ -2442,47 +2574,100 @@ func (s *Server) maybeAddVariableDeclarationActionsResolver(
 			// propose the declaration of a variable,
 			// or a constant (if the identifier is not assigned to)
 
-			return variableDeclarationCodeActions(
-				err,
-				document,
-				diagnostic,
-				uri,
-				isAssignmentTarget,
-			)
+			if memberInsertionPosGetter != nil {
+				insertionPos = memberInsertionPosGetter(checker, false)
+
+				memberExpression := errorExpression.(*ast.MemberExpression)
+				expectedType := checker.Elaboration.MemberExpressionExpectedTypes[memberExpression]
+
+				var typeString string
+				if expectedType != nil {
+					typeString = expectedType.QualifiedString()
+				} else {
+					typeString = "TODO"
+				}
+
+				return fieldDeclarationCodeActions(
+					uri,
+					document,
+					diagnostic,
+					insertionPos,
+					name,
+					typeString,
+					isAssignmentTarget,
+				)
+			} else {
+
+				// If a variable is inserted,
+				// then insert it before the error's line
+
+				insertionPos := ast.Position{
+					Offset: errorPos.Offset - errorPos.Column,
+					Line:   errorPos.Line,
+					Column: 0,
+				}
+
+				for insertionPos.Column < errorPos.Column {
+					switch document.Text[insertionPos.Offset] {
+					case ' ', '\t':
+						insertionPos.Offset++
+						insertionPos.Column++
+						continue
+					}
+					break
+				}
+
+				return variableDeclarationCodeActions(
+					uri,
+					document,
+					diagnostic,
+					insertionPos,
+					name,
+					isAssignmentTarget,
+				)
+			}
 		}
 	}
 }
 
+func extractIndentation(text string, pos ast.Position) string {
+	lineStartOffset := pos.Offset - pos.Column
+	indentationEndOffset := lineStartOffset
+	for ; indentationEndOffset < pos.Offset; indentationEndOffset++ {
+		switch text[indentationEndOffset] {
+		case ' ', '\t':
+			continue
+		}
+		break
+	}
+	return text[lineStartOffset:indentationEndOffset]
+}
+
 func functionDeclarationCodeActions(
-	err *sema.NotDeclaredError,
+	uri protocol.DocumentUri,
 	document Document,
 	diagnostic protocol.Diagnostic,
-	uri protocol.DocumentUri,
-	parentFunctionStartPos *ast.Position,
+	insertionPos insertionPosition,
+	name string,
 	invocationArgumentTypes []sema.Type,
 	invocationArgumentLabels []string,
 	invocationReturnType sema.Type,
 ) []*protocol.CodeAction {
 
-	var indentation string
+	pos := insertionPos.Position
 
-	insertionPos := ast.Position{
-		Line:   err.Pos.Line,
-		Column: 0,
-	}
-	if parentFunctionStartPos != nil {
-		insertionPos = *parentFunctionStartPos
-		indentation = document.Text[insertionPos.Offset-insertionPos.Column : insertionPos.Offset]
-	}
+	indentation := extractIndentation(document.Text, pos)
 
 	insertionRange := protocol.Range{
-		Start: conversion.ASTToProtocolPosition(insertionPos),
-		End:   conversion.ASTToProtocolPosition(insertionPos),
+		Start: conversion.ASTToProtocolPosition(pos),
+		End:   conversion.ASTToProtocolPosition(pos),
 	}
 
 	var parameters strings.Builder
 
 	for i, argumentType := range invocationArgumentTypes {
+
+		// Only support the generation of parameters from a-z
 		if i > 'z' {
 			break
 		}
@@ -2493,6 +2678,7 @@ func functionDeclarationCodeActions(
 		argumentLabel := invocationArgumentLabels[i]
 		if argumentLabel == "" {
 			parameters.WriteString("_ ")
+			// Generate a parameter name (a-z)
 			parameters.WriteByte(byte('a' + i))
 		} else {
 			parameters.WriteString(argumentLabel)
@@ -2506,18 +2692,24 @@ func functionDeclarationCodeActions(
 	}
 
 	var returnType string
-	if !invocationReturnType.IsInvalidType() && invocationReturnType != sema.VoidType {
+	if invocationReturnType != nil &&
+		!invocationReturnType.IsInvalidType() &&
+		invocationReturnType != sema.VoidType {
+
 		returnType = fmt.Sprintf(": %s", invocationReturnType.QualifiedString())
 	}
+
+	prefix, suffix := insertionPrefixSuffix(insertionPos, document, indentation)
 
 	textEdit := protocol.TextEdit{
 		Range: insertionRange,
 		NewText: fmt.Sprintf(
-			"fun %s(%s)%s {}\n\n%s",
-			err.Name,
+			"%sfun %s(%s)%s {}\n%s",
+			prefix,
+			name,
 			parameters.String(),
 			returnType,
-			indentation,
+			suffix,
 		),
 	}
 
@@ -2536,30 +2728,50 @@ func functionDeclarationCodeActions(
 	}
 }
 
+func insertionPrefixSuffix(
+	insertionPos insertionPosition,
+	document Document,
+	indentation string,
+) (
+	prefix string,
+	suffix string,
+) {
+	if insertionPos.before {
+
+		for offset := insertionPos.Offset - 1; offset >= insertionPos.Offset-insertionPos.Column; offset-- {
+			switch document.Text[offset] {
+			case ' ', '\t':
+				continue
+			case '{':
+				prefix = "\n" + indentation
+				break
+			default:
+				break
+			}
+		}
+
+		if document.Text[insertionPos.Offset] == '}' {
+			prefix += "    "
+		}
+		suffix = "\n" + indentation
+	} else {
+		prefix = "\n\n" + indentation
+	}
+	return prefix, suffix
+}
+
 func variableDeclarationCodeActions(
-	err *sema.NotDeclaredError,
+	uri protocol.DocumentUri,
 	document Document,
 	diagnostic protocol.Diagnostic,
-	uri protocol.DocumentUri,
+	insertionPos ast.Position,
+	name string,
 	isAssignmentTarget bool,
 ) []*protocol.CodeAction {
 
-	lineStart := err.Pos.Offset - err.Pos.Column
-	indentationEnd := lineStart
-	for ; indentationEnd < err.Pos.Offset; indentationEnd++ {
-		switch document.Text[indentationEnd] {
-		case ' ', '\t':
-			continue
-		}
-		break
-	}
-
 	codeActions := make([]*protocol.CodeAction, 0, len(ast.VariableKinds))
 
-	insertionPos := ast.Position{
-		Line:   err.Pos.Line,
-		Column: 0,
-	}
+	indentation := extractIndentation(document.Text, insertionPos)
 
 	insertionRange := protocol.Range{
 		Start: conversion.ASTToProtocolPosition(insertionPos),
@@ -2585,15 +2797,82 @@ func variableDeclarationCodeActions(
 		textEdit := protocol.TextEdit{
 			Range: insertionRange,
 			NewText: fmt.Sprintf(
-				"%s%s %s = TODO\n",
-				document.Text[lineStart:indentationEnd],
+				"%s %s = TODO\n%s",
 				variableKind.Keyword(),
-				err.Name,
+				name,
+				indentation,
 			),
 		}
 
 		codeActions = append(codeActions, &protocol.CodeAction{
 			Title:       fmt.Sprintf("Declare %s", variableKind.Name()),
+			Kind:        protocol.QuickFix,
+			Diagnostics: []protocol.Diagnostic{diagnostic},
+			Edit: &protocol.WorkspaceEdit{
+				Changes: &map[string][]protocol.TextEdit{
+					string(uri): {textEdit},
+				},
+			},
+			IsPreferred: isPreferred,
+		})
+	}
+
+	return codeActions
+}
+
+func fieldDeclarationCodeActions(
+	uri protocol.DocumentUri,
+	document Document,
+	diagnostic protocol.Diagnostic,
+	insertionPos insertionPosition,
+	name string,
+	typeString string,
+	isAssignmentTarget bool,
+) []*protocol.CodeAction {
+
+	pos := insertionPos.Position
+
+	indentation := extractIndentation(document.Text, pos)
+
+	codeActions := make([]*protocol.CodeAction, 0, len(ast.VariableKinds))
+
+	insertionRange := protocol.Range{
+		Start: conversion.ASTToProtocolPosition(pos),
+		End:   conversion.ASTToProtocolPosition(pos),
+	}
+
+	prefix, suffix := insertionPrefixSuffix(insertionPos, document, indentation)
+
+	for _, variableKind := range ast.VariableKinds {
+
+		var isPreferred bool
+		if isAssignmentTarget {
+			isPreferred = variableKind == ast.VariableKindVariable
+			if variableKind == ast.VariableKindConstant {
+				continue
+			}
+		} else {
+			isPreferred = variableKind == ast.VariableKindConstant
+		}
+
+		// TODO: hope for https://github.com/microsoft/language-server-protocol/issues/724
+		//  to get implemented, so the cursor can be placed at the value,
+		//  or if insertion for a snippet gets supported add a var/let option and a value placeholder
+
+		textEdit := protocol.TextEdit{
+			Range: insertionRange,
+			NewText: fmt.Sprintf(
+				"%s%s %s: %s\n%s",
+				prefix,
+				variableKind.Keyword(),
+				name,
+				typeString,
+				suffix,
+			),
+		}
+
+		codeActions = append(codeActions, &protocol.CodeAction{
+			Title:       fmt.Sprintf("Declare %s field", variableKind.Name()),
 			Kind:        protocol.QuickFix,
 			Diagnostics: []protocol.Diagnostic{diagnostic},
 			Edit: &protocol.WorkspaceEdit{
