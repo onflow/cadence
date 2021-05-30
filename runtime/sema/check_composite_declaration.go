@@ -443,6 +443,7 @@ func (checker *Checker) declareCompositeType(declaration *ast.CompositeDeclarati
 	// Register in elaboration
 
 	checker.Elaboration.CompositeDeclarationTypes[declaration] = compositeType
+	checker.Elaboration.CompositeTypeDeclarations[compositeType] = declaration
 
 	// Activate new scope for nested declarations
 

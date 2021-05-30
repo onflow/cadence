@@ -227,6 +227,7 @@ func (checker *Checker) declareInterfaceType(declaration *ast.InterfaceDeclarati
 	)
 
 	checker.Elaboration.InterfaceDeclarationTypes[declaration] = interfaceType
+	checker.Elaboration.InterfaceTypeDeclarations[interfaceType] = declaration
 
 	if !declaration.CompositeKind.SupportsInterfaces() {
 		checker.report(
