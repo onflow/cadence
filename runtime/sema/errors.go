@@ -678,8 +678,9 @@ func (e *MissingInitializerError) EndPosition() ast.Position {
 // NotDeclaredMemberError
 
 type NotDeclaredMemberError struct {
-	Name string
-	Type Type
+	Name       string
+	Type       Type
+	Expression *ast.MemberExpression
 	ast.Range
 }
 

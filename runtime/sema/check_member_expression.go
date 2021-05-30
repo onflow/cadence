@@ -210,8 +210,9 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression) (accessedT
 
 			checker.report(
 				&NotDeclaredMemberError{
-					Type: accessedType,
-					Name: identifier,
+					Type:       accessedType,
+					Name:       identifier,
+					Expression: expression,
 					Range: ast.Range{
 						StartPos: identifierStartPosition,
 						EndPos:   identifierEndPosition,
