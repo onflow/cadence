@@ -2684,6 +2684,8 @@ func IsSubType(subType DynamicType, superType sema.Type) bool {
 		return sema.IsSubType(typedSubType.StaticType, superType)
 
 	case FunctionDynamicType:
+		// TODO: once support for dynamically casting functions is added,
+		//   ensure that constructor functions are not normal
 		return superType == sema.AnyStructType
 
 	case CompositeDynamicType:
