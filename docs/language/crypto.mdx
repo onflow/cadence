@@ -131,15 +131,16 @@ let pk = PublicKey(
     signatureAlgorithm: SignatureAlgorithm.ECDSA_P256
 )
 
-let signature = "108EF718F153CFDC516D8040ABF2C8CC7AECF37C6F6EF357C31DFE1F7AC79C9D0145D1A2F08A48F1A2489A84C725D6A7AB3E842D9DC5F8FE8E659FFF5982310D"
+let signature = "108EF718F153CFDC516D8040ABF2C8CC7AECF37C6F6EF357C31DFE1F7AC79C9D0145D1A2F08A48F1A2489A84C725D6A7AB3E842D9DC5F8FE8E659FFF5982310D".decodeHex()
 let message : [UInt8] = [1, 2, 3]
 
 let isValid = pk.verify(   
        signature: signature,
         signedData: message,
         domainSeparationTag: "",
-        hashAlgorithm: SHA2_256
-    ) // isValid should be false
+        hashAlgorithm: HashAlgorithm.SHA2_256
+    ) 
+    // isValid should be false
 ```
 
 The inputs to `verify()` depend on the signature scheme used:
