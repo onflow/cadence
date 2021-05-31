@@ -1391,6 +1391,18 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 	constructor := NewHostFunctionValue(
 		func(invocation Invocation) Value {
 
+			// Check that the resource is constructed
+			// in the same location as it was declared
+
+			if compositeType.Kind == common.CompositeKindResource &&
+				!common.LocationsMatch(invocation.Interpreter.Location, compositeType.Location) {
+
+				panic(ResourceConstructionError{
+					CompositeType: compositeType,
+					LocationRange: invocation.GetLocationRange(),
+				})
+			}
+
 			// Load injected fields
 			var injectedFields *StringValueOrderedMap
 			if interpreter.injectedCompositeFieldsHandler != nil {
