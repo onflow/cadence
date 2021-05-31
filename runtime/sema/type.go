@@ -4292,6 +4292,32 @@ func IsSubType(subType Type, superType Type) bool {
 		return true
 	}
 
+	return checkSubTypeWithoutEquality(subType, superType)
+}
+
+// IsProperSubType is similar to IsSubType,
+// i.e. it determines if the given subtype is a subtype
+// of the given supertype, but returns false
+// if the subtype and supertype refer to the same type.
+//
+func IsProperSubType(subType Type, superType Type) bool {
+
+	if subType.Equal(superType) {
+		return false
+	}
+
+	return checkSubTypeWithoutEquality(subType, superType)
+}
+
+// checkSubTypeWithoutEquality determines if the given subtype
+// is a subtype of the given supertype, BUT it does NOT check
+// the equality of the two types, so does NOT return a specific
+// value when the two types are equal or are not.
+//
+// Consider using IsSubType or IsProperSubType
+//
+func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
+
 	if subType == NeverType {
 		return true
 	}
