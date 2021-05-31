@@ -298,7 +298,7 @@ func TestInterpretImportMultipleProgramsFromLocation(t *testing.T) {
 	)
 }
 
-func TestInterpretResourceConstruction(t *testing.T) {
+func TestInterpretResourceConstructionThroughImportAndStaticCast(t *testing.T) {
 
 	t.Parallel()
 
@@ -376,6 +376,99 @@ func TestInterpretResourceConstruction(t *testing.T) {
 	require.NoError(t, err)
 
 	_, err = inter.Invoke("test")
+	require.Error(t, err)
+
+	var resourceConstructionError interpreter.ResourceConstructionError
+	require.ErrorAs(t, err, &resourceConstructionError)
+
+	assert.Equal(t,
+		checker.RequireGlobalType(t, importedChecker.Elaboration, "R"),
+		resourceConstructionError.CompositeType,
+	)
+}
+
+func TestInterpretResourceConstructionThroughIndirectImport(t *testing.T) {
+
+	t.Parallel()
+
+	address := common.BytesToAddress([]byte{0x1})
+
+	importedChecker, err := checker.ParseAndCheckWithOptions(t,
+		`
+          resource R {}
+        `,
+		checker.ParseAndCheckOptions{
+			Location: common.AddressLocation{
+				Address: address,
+			},
+		},
+	)
+	require.NoError(t, err)
+
+	importingChecker, err := checker.ParseAndCheckWithOptions(t,
+		`
+          import R from 0x1
+
+          fun test(createR: ((): @R)) {
+              let r <- createR()
+              destroy r
+          }
+        `,
+		checker.ParseAndCheckOptions{
+			Options: []sema.Option{
+				sema.WithImportHandler(
+					func(checker *sema.Checker, importedLocation common.Location, _ ast.Range) (sema.Import, error) {
+						require.IsType(t, common.AddressLocation{}, importedLocation)
+						addressLocation := importedLocation.(common.AddressLocation)
+
+						assert.Equal(t, address, addressLocation.Address)
+
+						return sema.ElaborationImport{
+							Elaboration: importedChecker.Elaboration,
+						}, nil
+					},
+				),
+			},
+		},
+	)
+	require.NoError(t, err)
+
+	var subInterpreter *interpreter.Interpreter
+
+	inter, err := interpreter.NewInterpreter(
+		interpreter.ProgramFromChecker(importingChecker),
+		importingChecker.Location,
+		interpreter.WithImportLocationHandler(
+			func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
+				require.IsType(t, common.AddressLocation{}, location)
+				addressLocation := location.(common.AddressLocation)
+
+				assert.Equal(t, address, addressLocation.Address)
+
+				program := interpreter.ProgramFromChecker(importedChecker)
+				var err error
+				subInterpreter, err = inter.NewSubInterpreter(program, location)
+				if err != nil {
+					panic(err)
+				}
+
+				return interpreter.InterpreterImport{
+					Interpreter: subInterpreter,
+				}
+			},
+		),
+		interpreter.WithUUIDHandler(func() (uint64, error) {
+			return 0, nil
+		}),
+	)
+	require.NoError(t, err)
+
+	err = inter.Interpret()
+	require.NoError(t, err)
+
+	rConstructor := subInterpreter.Globals["R"].GetValue()
+
+	_, err = inter.Invoke("test", rConstructor)
 	require.Error(t, err)
 
 	var resourceConstructionError interpreter.ResourceConstructionError
