@@ -54,6 +54,7 @@ var templateFiles = []string{
 	"enum-template",
 	"enum-case-template",
 	"initializer-template",
+	"event-template",
 }
 
 type DocGenerator struct {
@@ -320,6 +321,16 @@ var functions = template.FuncMap{
 		return decls
 	},
 
+	"events": func(declarations []*ast.CompositeDeclaration) []*ast.CompositeDeclaration {
+		decls := make([]*ast.CompositeDeclaration, 0)
+		for _, decl := range declarations {
+			if decl.DeclarationKind() == common.DeclarationKindEvent {
+				decls = append(decls, decl)
+			}
+		}
+		return decls
+	},
+
 	"formatDoc": formatDocs,
 
 	"formatFuncDoc": formatFunctionDocs,
@@ -344,7 +355,7 @@ func formatDocs(docString string) string {
 	return builder.String()
 }
 
-func formatFunctionDocs(docString string) string {
+func formatFunctionDocs(docString string, genReturnType bool) string {
 	builder := strings.Builder{}
 	params := make([]string, 0)
 	isPrevLineEmpty := false
@@ -383,7 +394,7 @@ func formatFunctionDocs(docString string) string {
 					continue
 				}
 			}
-		} else if strings.HasPrefix(formattedLine, returnPrefix) {
+		} else if genReturnType && strings.HasPrefix(formattedLine, returnPrefix) {
 			returnDoc = formattedLine
 			continue
 		}

@@ -34,4 +34,13 @@
 {{- end}}
 {{end -}}
 
+{{$eventDecls := events .Composites -}}
+{{if gt (len $eventDecls) 0 -}}
+## Events
+{{- range $eventDecls}}
+{{template "event" .}}
+---
+{{- end}}
+{{end -}}
+
 {{- end -}}

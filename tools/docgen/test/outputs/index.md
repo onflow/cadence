@@ -90,3 +90,37 @@ func noDocsFunction()
 ```
 
 ---
+## Events
+
+### event `TestEvent`
+
+```cadence
+event TestEvent(x Int, y Int)
+```
+An event.
+Events are special values that can be emitted during the execution of a program.
+An event type can be declared with the event keyword.
+@return Events return nothing. So it shouldn't generate a separate return type documentation.
+
+Parameters:
+  - x : _An integer parameter for the event_
+  - y : _A second integer parameter for the same event_
+
+---
+
+### event `FooEvent`
+
+```cadence
+event FooEvent()
+```
+An event without params
+
+---
+
+### event `EventWithoutDocs`
+
+```cadence
+event EventWithoutDocs()
+```
+
+---

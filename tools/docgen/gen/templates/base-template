@@ -31,3 +31,12 @@
 ---
 {{- end}}
 {{end -}}
+
+{{$eventDecls := events .CompositeDeclarations -}}
+{{if gt (len $eventDecls) 0 -}}
+## Events
+{{- range $eventDecls}}
+{{template "event" .}}
+---
+{{- end}}
+{{end -}}
