@@ -47,7 +47,7 @@ const compositeFullTemplate = "composite-full-template"
 var templateFiles = []string{
 	baseTemplate,
 	compositeFullTemplate,
-	"declarations-template",
+	"composite-members-template",
 	"function-template",
 	"composite-template",
 	"field-template",
@@ -259,41 +259,12 @@ func (gen *DocGenerator) currentFileName() string {
 }
 
 var functions = template.FuncMap{
-	"isFunction": func(declaration ast.Declaration) bool {
-		return declaration.DeclarationKind() == common.DeclarationKindFunction
-	},
-
-	"isComposite": func(declaration ast.Declaration) bool {
-		switch declaration.DeclarationKind() {
-		case common.DeclarationKindStructure,
-			common.DeclarationKindStructureInterface,
-			common.DeclarationKindResource,
-			common.DeclarationKindResourceInterface,
-			common.DeclarationKindContract,
-			common.DeclarationKindContractInterface:
-			return true
-		default:
-			return false
-		}
-	},
-
 	"hasConformance": func(declaration ast.Declaration) bool {
 		switch declaration.DeclarationKind() {
 		case common.DeclarationKindStructure,
 			common.DeclarationKindResource,
 			common.DeclarationKindContract,
 			common.DeclarationKindEnum:
-			return true
-		default:
-			return false
-		}
-	},
-
-	"isInterface": func(declaration ast.Declaration) bool {
-		switch declaration.DeclarationKind() {
-		case common.DeclarationKindStructureInterface,
-			common.DeclarationKindResourceInterface,
-			common.DeclarationKindContractInterface:
 			return true
 		default:
 			return false
@@ -320,6 +291,33 @@ var functions = template.FuncMap{
 		default:
 			return false
 		}
+	},
+
+	"enums": func(declarations []*ast.CompositeDeclaration) []*ast.CompositeDeclaration {
+		decls := make([]*ast.CompositeDeclaration, 0)
+
+		for _, decl := range declarations {
+			if decl.DeclarationKind() == common.DeclarationKindEnum {
+				decls = append(decls, decl)
+			}
+		}
+
+		return decls
+	},
+
+	"structsAndResources": func(declarations []*ast.CompositeDeclaration) []*ast.CompositeDeclaration {
+		decls := make([]*ast.CompositeDeclaration, 0)
+
+		for _, decl := range declarations {
+			switch decl.DeclarationKind() {
+			case common.DeclarationKindStructure,
+				common.DeclarationKindResource:
+				decls = append(decls, decl)
+			default:
+			}
+		}
+
+		return decls
 	},
 
 	"formatDoc": formatDocs,

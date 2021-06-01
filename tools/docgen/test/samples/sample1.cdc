@@ -51,3 +51,11 @@ enum Color: Int8 {
     case Red
     case Blue
 }
+
+struct interface SomeInterface {
+    var x: String
+    var y: {Int: AnyStruct}
+
+    /// Everyone must implement the `foo` function.
+    fun foo()
+}

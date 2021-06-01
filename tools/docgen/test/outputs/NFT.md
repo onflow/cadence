@@ -8,44 +8,12 @@ contract NFT
     field2:  String
 }
 ```
+
 NFT is a dummy non-fungible token contract.
+
 Implemented Interfaces:
- - `Token`
+  - `Token`
 
-## Functions
-
-### fun `foo()`
-
-```cadence
-func foo(a Int, b String):  
-```
-This is a foo function,
-This doesn't have a return type.
-
----
-
-### fun `bar()`
-
-```cadence
-func bar(name String, bytes [Int8]): bool 
-```
-This is a bar function, with a return type
-
-Parameters:
-  - name : _The name. Must be a string_
-  - bytes : _Content to be validated_
-
-Returns: Validity of the content
-
----
-
-### fun `noDocsFunction()`
-
-```cadence
-func noDocsFunction():  
-```
-
----
 ## Structs & Resources
 
 ### struct `SomeStruct`
@@ -65,6 +33,7 @@ This is some struct. It has
 [More...](NFT_SomeStruct.md)
 
 ---
+## Enums
 
 ### enum `Direction`
 
@@ -77,6 +46,7 @@ enum Direction {
 This is an Enum without type conformance.
 
 ---
+
 ### enum `Color`
 
 ```cadence
@@ -86,5 +56,39 @@ enum Color: Int8 {
 }
 ```
 This is an Enum, with explicit type conformance.
+
+---
+## Functions
+
+### fun `foo()`
+
+```cadence
+func foo(a Int, b String)
+```
+This is a foo function,
+This doesn't have a return type.
+
+---
+
+### fun `bar()`
+
+```cadence
+func bar(name String, bytes [Int8]): bool
+```
+This is a bar function, with a return type
+
+Parameters:
+  - name : _The name. Must be a string_
+  - bytes : _Content to be validated_
+
+Returns: Validity of the content
+
+---
+
+### fun `noDocsFunction()`
+
+```cadence
+func noDocsFunction()
+```
 
 ---

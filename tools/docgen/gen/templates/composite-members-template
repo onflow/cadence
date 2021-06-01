@@ -1,12 +1,14 @@
-{{if gt (len .InterfaceDeclarations) 0 -}}
+{{define "composite-members" -}}
+
+{{if gt (len .Interfaces) 0 -}}
 ## Interfaces
-{{- range .InterfaceDeclarations}}
-{{template "composite" .}}
+{{- range .Interfaces}}
+    {{template "composite" .}}
 ---
 {{- end}}
 {{end -}}
 
-{{$structAndResourceDecls := structsAndResources .CompositeDeclarations -}}
+{{$structAndResourceDecls := structsAndResources .Composites -}}
 {{if gt (len $structAndResourceDecls) 0 -}}
 ## Structs & Resources
 {{- range $structAndResourceDecls}}
@@ -15,7 +17,7 @@
 {{- end}}
 {{end -}}
 
-{{$enumDecls := enums .CompositeDeclarations -}}
+{{$enumDecls := enums .Composites -}}
 {{if gt (len $enumDecls) 0 -}}
 ## Enums
 {{- range $enumDecls}}
@@ -24,10 +26,12 @@
 {{- end}}
 {{end -}}
 
-{{if gt (len .FunctionDeclarations) 0 -}}
+{{if gt (len .Functions) 0 -}}
 ## Functions
-{{- range .FunctionDeclarations}}
+{{- range .Functions}}
 {{template "function" .}}
 ---
 {{- end}}
 {{end -}}
+
+{{- end -}}

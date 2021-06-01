@@ -60,7 +60,7 @@ func TestDocGenForMultiDeclarationFile(t *testing.T) {
 	docFiles, err := docGen.GenerateInMemory(string(content))
 	require.NoError(t, err)
 
-	require.Len(t, docFiles, 5)
+	require.Len(t, docFiles, 6)
 
 	for fileName, fileContent := range docFiles {
 		expectedContent, err := ioutil.ReadFile(path.Join("outputs", fileName))
