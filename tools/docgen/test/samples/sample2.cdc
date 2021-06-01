@@ -2,6 +2,12 @@
 ///
 pub contract NFT: Token {
 
+    /// An event.
+    /// Events are special values that can be emitted during the execution of a program.
+    /// An event type can be declared with the event keyword.
+    /// @param x: An integer parameter for the event
+    /// @param y: A second integer parameter for the same event
+    /// @return Events return nothing. So it shouldn't generate a separate return type documentation.
     event TestEvent(x: Int, y: Int)
 
     /// A variable fields
