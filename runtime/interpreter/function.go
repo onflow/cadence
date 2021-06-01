@@ -69,8 +69,10 @@ func (f InterpretedFunctionValue) Accept(interpreter *Interpreter, visitor Visit
 	visitor.VisitInterpretedFunctionValue(interpreter, f)
 }
 
+var functionDynamicType DynamicType = FunctionDynamicType{}
+
 func (InterpretedFunctionValue) DynamicType(_ *Interpreter, _ DynamicTypeResults) DynamicType {
-	return FunctionDynamicType{}
+	return functionDynamicType
 }
 
 func (f InterpretedFunctionValue) StaticType() StaticType {
@@ -158,8 +160,10 @@ func (f HostFunctionValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitHostFunctionValue(interpreter, f)
 }
 
+var hostFunctionDynamicType DynamicType = FunctionDynamicType{}
+
 func (HostFunctionValue) DynamicType(_ *Interpreter, _ DynamicTypeResults) DynamicType {
-	return FunctionDynamicType{}
+	return hostFunctionDynamicType
 }
 
 func (HostFunctionValue) StaticType() StaticType {
@@ -236,8 +240,10 @@ func (f BoundFunctionValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitBoundFunctionValue(interpreter, f)
 }
 
+var boundFunctionDynamicType DynamicType = FunctionDynamicType{}
+
 func (BoundFunctionValue) DynamicType(_ *Interpreter, _ DynamicTypeResults) DynamicType {
-	return FunctionDynamicType{}
+	return boundFunctionDynamicType
 }
 
 func (f BoundFunctionValue) StaticType() StaticType {

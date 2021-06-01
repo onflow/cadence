@@ -123,8 +123,10 @@ func (v TypeValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitTypeValue(interpreter, v)
 }
 
+var metaTypeDynamicType DynamicType = MetaTypeDynamicType{}
+
 func (TypeValue) DynamicType(_ *Interpreter, _ DynamicTypeResults) DynamicType {
-	return MetaTypeDynamicType{}
+	return metaTypeDynamicType
 }
 
 func (TypeValue) StaticType() StaticType {
@@ -217,8 +219,10 @@ func (v VoidValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitVoidValue(interpreter, v)
 }
 
+var voidDynamicType DynamicType = VoidDynamicType{}
+
 func (VoidValue) DynamicType(_ *Interpreter, _ DynamicTypeResults) DynamicType {
-	return VoidDynamicType{}
+	return voidDynamicType
 }
 
 func (VoidValue) StaticType() StaticType {
@@ -269,8 +273,10 @@ func (v BoolValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitBoolValue(interpreter, v)
 }
 
+var boolDynamicType DynamicType = BoolDynamicType{}
+
 func (BoolValue) DynamicType(_ *Interpreter, _ DynamicTypeResults) DynamicType {
-	return BoolDynamicType{}
+	return boolDynamicType
 }
 
 func (BoolValue) StaticType() StaticType {
@@ -364,8 +370,10 @@ func (v *StringValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitStringValue(interpreter, v)
 }
 
+var stringDynamicType DynamicType = StringDynamicType{}
+
 func (*StringValue) DynamicType(_ *Interpreter, _ DynamicTypeResults) DynamicType {
-	return StringDynamicType{}
+	return stringDynamicType
 }
 
 func (*StringValue) StaticType() StaticType {
@@ -7720,8 +7728,10 @@ func (v NilValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitNilValue(interpreter, v)
 }
 
+var nilDynamicType DynamicType = NilDynamicType{}
+
 func (NilValue) DynamicType(_ *Interpreter, _ DynamicTypeResults) DynamicType {
-	return NilDynamicType{}
+	return nilDynamicType
 }
 
 func (NilValue) StaticType() StaticType {
@@ -8396,8 +8406,10 @@ func (v AddressValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitAddressValue(interpreter, v)
 }
 
+var addressDynamicType DynamicType = AddressDynamicType{}
+
 func (AddressValue) DynamicType(_ *Interpreter, _ DynamicTypeResults) DynamicType {
-	return AddressDynamicType{}
+	return addressDynamicType
 }
 
 func (AddressValue) StaticType() StaticType {
@@ -8662,14 +8674,18 @@ func (v PathValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitPathValue(interpreter, v)
 }
 
+var storagePathDynamicType DynamicType = StoragePathDynamicType{}
+var publicPathDynamicType DynamicType = PublicPathDynamicType{}
+var privatePathDynamicType DynamicType = PrivatePathDynamicType{}
+
 func (v PathValue) DynamicType(_ *Interpreter, _ DynamicTypeResults) DynamicType {
 	switch v.Domain {
 	case common.PathDomainStorage:
-		return StoragePathDynamicType{}
+		return storagePathDynamicType
 	case common.PathDomainPublic:
-		return PublicPathDynamicType{}
+		return publicPathDynamicType
 	case common.PathDomainPrivate:
-		return PrivatePathDynamicType{}
+		return privatePathDynamicType
 	default:
 		panic(errors.NewUnreachableError())
 	}
