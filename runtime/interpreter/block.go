@@ -41,8 +41,10 @@ func (v BlockValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitValue(interpreter, v)
 }
 
+var blockDynamicType DynamicType = BlockDynamicType{}
+
 func (BlockValue) DynamicType(_ *Interpreter, _ DynamicTypeResults) DynamicType {
-	return BlockDynamicType{}
+	return blockDynamicType
 }
 
 func (BlockValue) StaticType() StaticType {

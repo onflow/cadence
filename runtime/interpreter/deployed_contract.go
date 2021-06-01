@@ -40,8 +40,10 @@ func (v DeployedContractValue) Accept(interpreter *Interpreter, visitor Visitor)
 	visitor.VisitDeployedContractValue(interpreter, v)
 }
 
+var deployedContractDynamicType DynamicType = DeployedContractDynamicType{}
+
 func (DeployedContractValue) DynamicType(_ *Interpreter, _ DynamicTypeResults) DynamicType {
-	return DeployedContractDynamicType{}
+	return deployedContractDynamicType
 }
 
 func (DeployedContractValue) StaticType() StaticType {
