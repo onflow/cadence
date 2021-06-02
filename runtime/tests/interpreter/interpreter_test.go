@@ -5871,7 +5871,7 @@ type testValue struct {
 
 func (v testValue) String() string {
 	if v.literal == "" {
-		return v.value.String(interpreter.StringResults{})
+		return v.value.String()
 	}
 	return v.literal
 }
@@ -7749,7 +7749,7 @@ func TestInterpretDictionaryValueEncodingOrder(t *testing.T) {
 		require.NoError(t, err)
 
 		// ensure the value is loaded
-		_ = decoded.String(interpreter.StringResults{})
+		_ = decoded.String()
 
 		test.SetModified(false)
 		test.Keys().SetModified(false)
@@ -7998,7 +7998,7 @@ func TestInterpretNestedDestroy(t *testing.T) {
 		},
 		``,
 		func(invocation interpreter.Invocation) interpreter.Value {
-			message := invocation.Arguments[0].String(interpreter.StringResults{})
+			message := invocation.Arguments[0].String()
 			logs = append(logs, message)
 			return interpreter.VoidValue{}
 		},

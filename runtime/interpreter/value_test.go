@@ -660,7 +660,7 @@ func TestStringer(t *testing.T) {
 
 			assert.Equal(t,
 				testCase.expected,
-				testCase.value.String(StringResults{}),
+				testCase.value.String(),
 			)
 		})
 	}
@@ -2135,7 +2135,7 @@ func TestPublicKeyValue(t *testing.T) {
 		)
 
 		require.Contains(t,
-			key.String(StringResults{}),
+			key.String(),
 			publicKeyString,
 		)
 	})

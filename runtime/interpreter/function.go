@@ -59,8 +59,12 @@ type InterpretedFunctionValue struct {
 	PostConditions   ast.Conditions
 }
 
-func (f InterpretedFunctionValue) String(results StringResults) string {
+func (f InterpretedFunctionValue) String() string {
 	return fmt.Sprintf("Function%s", f.Type.String())
+}
+
+func (f InterpretedFunctionValue) RecursiveString(_ StringResults) string {
+	return f.String()
 }
 
 func (InterpretedFunctionValue) IsValue() {}
@@ -139,9 +143,13 @@ type HostFunctionValue struct {
 	NestedVariables *StringVariableOrderedMap
 }
 
-func (f HostFunctionValue) String(results StringResults) string {
+func (f HostFunctionValue) String() string {
 	// TODO: include type
 	return "Function(...)"
+}
+
+func (f HostFunctionValue) RecursiveString(_ StringResults) string {
+	return f.String()
 }
 
 func NewHostFunctionValue(
@@ -226,8 +234,12 @@ type BoundFunctionValue struct {
 	Self     *CompositeValue
 }
 
-func (f BoundFunctionValue) String(results StringResults) string {
-	return f.Function.String(results)
+func (f BoundFunctionValue) String() string {
+	return f.RecursiveString(StringResults{})
+}
+
+func (f BoundFunctionValue) RecursiveString(results StringResults) string {
+	return f.Function.RecursiveString(results)
 }
 
 func (BoundFunctionValue) IsValue() {}

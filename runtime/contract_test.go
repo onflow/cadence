@@ -173,11 +173,9 @@ func TestRuntimeContract(t *testing.T) {
 
 		contractKey := []byte(formatContractKey("Test"))
 
-		codeArrayString := interpreter.ByteSliceToByteArrayValue([]byte(tc.code)).
-			String(interpreter.StringResults{})
+		codeArrayString := interpreter.ByteSliceToByteArrayValue([]byte(tc.code)).String()
 
-		code2ArrayString := interpreter.ByteSliceToByteArrayValue([]byte(tc.code2)).
-			String(interpreter.StringResults{})
+		code2ArrayString := interpreter.ByteSliceToByteArrayValue([]byte(tc.code2)).String()
 
 		t.Run("add", func(t *testing.T) {
 

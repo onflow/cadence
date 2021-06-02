@@ -52,6 +52,9 @@ type valueDynamicTypePair struct {
 // Value
 
 type Value interface {
+	// Stringer provides `func String() string`
+	// NOTE: important, error messages rely on values to implement String
+	fmt.Stringer
 	IsValue()
 	Accept(interpreter *Interpreter, visitor Visitor)
 	DynamicType(interpreter *Interpreter, results DynamicTypeResults) DynamicType
@@ -62,7 +65,7 @@ type Value interface {
 	SetModified(modified bool)
 	StaticType() StaticType
 	ConformsToDynamicType(interpreter *Interpreter, dynamicType DynamicType, results TypeConformanceResults) bool
-	String(results StringResults) string
+	RecursiveString(results StringResults) string
 	IsStorable() bool
 }
 
@@ -152,7 +155,7 @@ func (TypeValue) SetModified(_ bool) {
 	// NO-OP
 }
 
-func (v TypeValue) String(_ StringResults) string {
+func (v TypeValue) String() string {
 	var typeString string
 	staticType := v.Type
 	if staticType != nil {
@@ -160,6 +163,10 @@ func (v TypeValue) String(_ StringResults) string {
 	}
 
 	return format.TypeValue(typeString)
+}
+
+func (v TypeValue) RecursiveString(_ StringResults) string {
+	return v.String()
 }
 
 func (v TypeValue) Equal(other Value, _ *Interpreter, _ bool) bool {
@@ -246,8 +253,12 @@ func (VoidValue) SetModified(_ bool) {
 	// NO-OP
 }
 
-func (VoidValue) String(_ StringResults) string {
+func (VoidValue) String() string {
 	return format.Void
+}
+
+func (v VoidValue) RecursiveString(_ StringResults) string {
+	return v.String()
 }
 
 func (v VoidValue) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType, _ TypeConformanceResults) bool {
@@ -310,8 +321,12 @@ func (v BoolValue) Equal(other Value, _ *Interpreter, _ bool) bool {
 	return bool(v) == bool(otherBool)
 }
 
-func (v BoolValue) String(_ StringResults) string {
+func (v BoolValue) String() string {
 	return format.Bool(bool(v))
+}
+
+func (v BoolValue) RecursiveString(_ StringResults) string {
+	return v.String()
 }
 
 func (v BoolValue) KeyString() string {
@@ -393,8 +408,12 @@ func (*StringValue) SetModified(_ bool) {
 	// NO-OP
 }
 
-func (v *StringValue) String(_ StringResults) string {
+func (v *StringValue) String() string {
 	return format.String(v.Str)
+}
+
+func (v *StringValue) RecursiveString(_ StringResults) string {
+	return v.String()
 }
 
 func (v *StringValue) KeyString() string {
@@ -784,12 +803,16 @@ func (v *ArrayValue) checkBounds(index int, getLocationRange func() LocationRang
 	}
 }
 
-func (v *ArrayValue) String(results StringResults) string {
+func (v *ArrayValue) String() string {
+	return v.RecursiveString(StringResults{})
+}
+
+func (v *ArrayValue) RecursiveString(results StringResults) string {
 	elements := v.Elements()
 	values := make([]string, len(elements))
 
 	for i, value := range elements {
-		values[i] = value.String(results)
+		values[i] = value.RecursiveString(results)
 	}
 	return format.Array(values)
 }
@@ -1105,7 +1128,7 @@ func getNumberValueMember(v NumberValue, name string) Value {
 	case sema.ToStringFunctionName:
 		return NewHostFunctionValue(
 			func(invocation Invocation) Value {
-				return NewStringValue(v.String(StringResults{}))
+				return NewStringValue(v.String())
 			},
 		)
 
@@ -1241,8 +1264,12 @@ func (v IntValue) ToBigInt() *big.Int {
 	return new(big.Int).Set(v.BigInt)
 }
 
-func (v IntValue) String(_ StringResults) string {
+func (v IntValue) String() string {
 	return format.BigInt(v.BigInt)
+}
+
+func (v IntValue) RecursiveString(_ StringResults) string {
+	return v.String()
 }
 
 func (v IntValue) KeyString() string {
@@ -1448,8 +1475,12 @@ func (Int8Value) SetModified(_ bool) {
 	// NO-OP
 }
 
-func (v Int8Value) String(_ StringResults) string {
+func (v Int8Value) String() string {
 	return format.Int(int64(v))
+}
+
+func (v Int8Value) RecursiveString(_ StringResults) string {
+	return v.String()
 }
 
 func (v Int8Value) KeyString() string {
@@ -1745,8 +1776,12 @@ func (Int16Value) SetModified(_ bool) {
 	// NO-OP
 }
 
-func (v Int16Value) String(_ StringResults) string {
+func (v Int16Value) String() string {
 	return format.Int(int64(v))
+}
+
+func (v Int16Value) RecursiveString(_ StringResults) string {
+	return v.String()
 }
 
 func (v Int16Value) KeyString() string {
@@ -2044,8 +2079,12 @@ func (Int32Value) SetModified(_ bool) {
 	// NO-OP
 }
 
-func (v Int32Value) String(_ StringResults) string {
+func (v Int32Value) String() string {
 	return format.Int(int64(v))
+}
+
+func (v Int32Value) RecursiveString(_ StringResults) string {
+	return v.String()
 }
 
 func (v Int32Value) KeyString() string {
@@ -2343,8 +2382,12 @@ func (Int64Value) SetModified(_ bool) {
 	// NO-OP
 }
 
-func (v Int64Value) String(_ StringResults) string {
+func (v Int64Value) String() string {
 	return format.Int(int64(v))
+}
+
+func (v Int64Value) RecursiveString(_ StringResults) string {
+	return v.String()
 }
 
 func (v Int64Value) KeyString() string {
@@ -2659,8 +2702,12 @@ func (v Int128Value) ToBigInt() *big.Int {
 	return new(big.Int).Set(v.BigInt)
 }
 
-func (v Int128Value) String(_ StringResults) string {
+func (v Int128Value) String() string {
 	return format.BigInt(v.BigInt)
+}
+
+func (v Int128Value) RecursiveString(_ StringResults) string {
+	return v.String()
 }
 
 func (v Int128Value) KeyString() string {
@@ -3027,8 +3074,12 @@ func (v Int256Value) ToBigInt() *big.Int {
 	return new(big.Int).Set(v.BigInt)
 }
 
-func (v Int256Value) String(_ StringResults) string {
+func (v Int256Value) String() string {
 	return format.BigInt(v.BigInt)
+}
+
+func (v Int256Value) RecursiveString(_ StringResults) string {
+	return v.String()
 }
 
 func (v Int256Value) KeyString() string {
@@ -3416,8 +3467,12 @@ func (v UIntValue) ToBigInt() *big.Int {
 	return new(big.Int).Set(v.BigInt)
 }
 
-func (v UIntValue) String(_ StringResults) string {
+func (v UIntValue) String() string {
 	return format.BigInt(v.BigInt)
+}
+
+func (v UIntValue) RecursiveString(_ StringResults) string {
+	return v.String()
 }
 
 func (v UIntValue) KeyString() string {
@@ -3634,8 +3689,12 @@ func (UInt8Value) SetModified(_ bool) {
 	// NO-OP
 }
 
-func (v UInt8Value) String(_ StringResults) string {
+func (v UInt8Value) String() string {
 	return format.Uint(uint64(v))
+}
+
+func (v UInt8Value) RecursiveString(_ StringResults) string {
+	return v.String()
 }
 
 func (v UInt8Value) KeyString() string {
@@ -3861,8 +3920,12 @@ func (UInt16Value) SetModified(_ bool) {
 	// NO-OP
 }
 
-func (v UInt16Value) String(_ StringResults) string {
+func (v UInt16Value) String() string {
 	return format.Uint(uint64(v))
+}
+
+func (v UInt16Value) RecursiveString(_ StringResults) string {
+	return v.String()
 }
 
 func (v UInt16Value) KeyString() string {
@@ -4090,8 +4153,12 @@ func (UInt32Value) SetModified(_ bool) {
 	// NO-OP
 }
 
-func (v UInt32Value) String(_ StringResults) string {
+func (v UInt32Value) String() string {
 	return format.Uint(uint64(v))
+}
+
+func (v UInt32Value) RecursiveString(_ StringResults) string {
+	return v.String()
 }
 
 func (v UInt32Value) KeyString() string {
@@ -4319,8 +4386,12 @@ func (UInt64Value) SetModified(_ bool) {
 	// NO-OP
 }
 
-func (v UInt64Value) String(_ StringResults) string {
+func (v UInt64Value) String() string {
 	return format.Uint(uint64(v))
+}
+
+func (v UInt64Value) RecursiveString(_ StringResults) string {
+	return v.String()
 }
 
 func (v UInt64Value) KeyString() string {
@@ -4570,8 +4641,12 @@ func (v UInt128Value) ToBigInt() *big.Int {
 	return new(big.Int).Set(v.BigInt)
 }
 
-func (v UInt128Value) String(_ StringResults) string {
+func (v UInt128Value) String() string {
 	return format.BigInt(v.BigInt)
+}
+
+func (v UInt128Value) RecursiveString(_ StringResults) string {
+	return v.String()
 }
 
 func (v UInt128Value) KeyString() string {
@@ -4880,8 +4955,12 @@ func (v UInt256Value) ToBigInt() *big.Int {
 	return new(big.Int).Set(v.BigInt)
 }
 
-func (v UInt256Value) String(_ StringResults) string {
+func (v UInt256Value) String() string {
 	return format.BigInt(v.BigInt)
+}
+
+func (v UInt256Value) RecursiveString(_ StringResults) string {
+	return v.String()
 }
 
 func (v UInt256Value) KeyString() string {
@@ -5171,8 +5250,12 @@ func (Word8Value) SetModified(_ bool) {
 	// NO-OP
 }
 
-func (v Word8Value) String(_ StringResults) string {
+func (v Word8Value) String() string {
 	return format.Uint(uint64(v))
+}
+
+func (v Word8Value) RecursiveString(_ StringResults) string {
+	return v.String()
 }
 
 func (v Word8Value) KeyString() string {
@@ -5343,8 +5426,12 @@ func (Word16Value) SetModified(_ bool) {
 	// NO-OP
 }
 
-func (v Word16Value) String(_ StringResults) string {
+func (v Word16Value) String() string {
 	return format.Uint(uint64(v))
+}
+
+func (v Word16Value) RecursiveString(_ StringResults) string {
+	return v.String()
 }
 
 func (v Word16Value) KeyString() string {
@@ -5517,8 +5604,12 @@ func (Word32Value) SetModified(_ bool) {
 	// NO-OP
 }
 
-func (v Word32Value) String(_ StringResults) string {
+func (v Word32Value) String() string {
 	return format.Uint(uint64(v))
+}
+
+func (v Word32Value) RecursiveString(_ StringResults) string {
+	return v.String()
 }
 
 func (v Word32Value) KeyString() string {
@@ -5692,8 +5783,12 @@ func (Word64Value) SetModified(_ bool) {
 	// NO-OP
 }
 
-func (v Word64Value) String(_ StringResults) string {
+func (v Word64Value) String() string {
 	return format.Uint(uint64(v))
+}
+
+func (v Word64Value) RecursiveString(_ StringResults) string {
+	return v.String()
 }
 
 func (v Word64Value) KeyString() string {
@@ -5882,12 +5977,16 @@ func (Fix64Value) SetModified(_ bool) {
 	// NO-OP
 }
 
-func (v Fix64Value) String(_ StringResults) string {
+func (v Fix64Value) String() string {
 	return format.Fix64(int64(v))
 }
 
+func (v Fix64Value) RecursiveString(_ StringResults) string {
+	return v.String()
+}
+
 func (v Fix64Value) KeyString() string {
-	return v.String(StringResults{})
+	return v.String()
 }
 
 func (v Fix64Value) ToInt() int {
@@ -6154,12 +6253,16 @@ func (UFix64Value) SetModified(_ bool) {
 	// NO-OP
 }
 
-func (v UFix64Value) String(_ StringResults) string {
+func (v UFix64Value) String() string {
 	return format.UFix64(uint64(v))
 }
 
+func (v UFix64Value) RecursiveString(_ StringResults) string {
+	return v.String()
+}
+
 func (v UFix64Value) KeyString() string {
-	return v.String(StringResults{})
+	return v.String()
 }
 
 func (v UFix64Value) ToInt() int {
@@ -6730,7 +6833,11 @@ func (v *CompositeValue) SetMember(_ *Interpreter, getLocationRange func() Locat
 	v.Fields().Set(name, value)
 }
 
-func (v *CompositeValue) String(results StringResults) string {
+func (v *CompositeValue) String() string {
+	return v.RecursiveString(StringResults{})
+}
+
+func (v *CompositeValue) RecursiveString(results StringResults) string {
 	if v.stringer != nil {
 		return v.stringer(results)
 	}
@@ -6751,7 +6858,7 @@ func formatComposite(typeId string, fields *StringValueOrderedMap, results Strin
 				Value string
 			}{
 				Name:  fieldName,
-				Value: value.String(results),
+				Value: value.RecursiveString(results),
 			},
 		)
 	})
@@ -6801,7 +6908,7 @@ func (v *CompositeValue) Equal(other Value, interpreter *Interpreter, loadDeferr
 func (v *CompositeValue) KeyString() string {
 	if v.Kind() == common.CompositeKindEnum {
 		rawValue, _ := v.Fields().Get(sema.EnumRawValueFieldName)
-		return rawValue.String(StringResults{})
+		return rawValue.String()
 	}
 
 	panic(errors.NewUnreachableError())
@@ -7329,7 +7436,11 @@ func (v *DictionaryValue) Set(inter *Interpreter, getLocationRange func() Locati
 	}
 }
 
-func (v *DictionaryValue) String(results StringResults) string {
+func (v *DictionaryValue) String() string {
+	return v.RecursiveString(StringResults{})
+}
+
+func (v *DictionaryValue) RecursiveString(results StringResults) string {
 	v.ensureLoaded()
 	keys := v.keys.Elements()
 
@@ -7349,14 +7460,14 @@ func (v *DictionaryValue) String(results StringResults) string {
 		if value == nil {
 			valueString = "..."
 		} else {
-			valueString = value.String(results)
+			valueString = value.RecursiveString(results)
 		}
 
 		pairs[i] = struct {
 			Key   string
 			Value string
 		}{
-			Key:   keyValue.String(results),
+			Key:   keyValue.RecursiveString(results),
 			Value: valueString,
 		}
 	}
@@ -7717,8 +7828,12 @@ func (v NilValue) Destroy(_ *Interpreter, _ func() LocationRange) {
 	// NO-OP
 }
 
-func (NilValue) String(_ StringResults) string {
+func (NilValue) String() string {
 	return format.Nil
+}
+
+func (v NilValue) RecursiveString(_ StringResults) string {
+	return v.String()
 }
 
 var nilValueMapFunction = NewHostFunctionValue(
@@ -7829,8 +7944,12 @@ func (v *SomeValue) Destroy(interpreter *Interpreter, getLocationRange func() Lo
 	maybeDestroy(interpreter, getLocationRange, v.Value)
 }
 
-func (v *SomeValue) String(results StringResults) string {
-	return v.Value.String(results)
+func (v *SomeValue) String() string {
+	return v.RecursiveString(StringResults{})
+}
+
+func (v *SomeValue) RecursiveString(results StringResults) string {
+	return v.Value.RecursiveString(results)
 }
 
 func (v *SomeValue) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
@@ -7906,8 +8025,12 @@ func (v *StorageReferenceValue) Accept(interpreter *Interpreter, visitor Visitor
 	visitor.VisitStorageReferenceValue(interpreter, v)
 }
 
-func (v *StorageReferenceValue) String(_ StringResults) string {
+func (*StorageReferenceValue) String() string {
 	return "StorageReference()"
+}
+
+func (v *StorageReferenceValue) RecursiveString(_ StringResults) string {
+	return v.String()
 }
 
 func (v *StorageReferenceValue) DynamicType(interpreter *Interpreter, results DynamicTypeResults) DynamicType {
@@ -7981,6 +8104,7 @@ func (v *StorageReferenceValue) ReferencedValue(interpreter *Interpreter) *Value
 			dynamicTypeResults := DynamicTypeResults{}
 			dynamicType := value.DynamicType(interpreter, dynamicTypeResults)
 			if !IsSubType(dynamicType, v.BorrowedType) {
+				IsSubType(dynamicType, v.BorrowedType)
 				return nil
 			}
 		}
@@ -8122,13 +8246,17 @@ func (v *EphemeralReferenceValue) Accept(interpreter *Interpreter, visitor Visit
 	visitor.VisitEphemeralReferenceValue(interpreter, v)
 }
 
-func (v *EphemeralReferenceValue) String(results StringResults) string {
+func (v *EphemeralReferenceValue) String() string {
+	return v.RecursiveString(StringResults{})
+}
+
+func (v *EphemeralReferenceValue) RecursiveString(results StringResults) string {
 	if _, ok := results[v]; ok {
 		return "..."
 	}
 	results[v] = struct{}{}
 	defer delete(results, v)
-	return v.Value.String(results)
+	return v.Value.RecursiveString(results)
 }
 
 func (v *EphemeralReferenceValue) DynamicType(interpreter *Interpreter, results DynamicTypeResults) DynamicType {
@@ -8372,8 +8500,12 @@ func (v AddressValue) KeyString() string {
 	return common.Address(v).ShortHexWithPrefix()
 }
 
-func (v AddressValue) String(_ StringResults) string {
+func (v AddressValue) String() string {
 	return format.Address(common.Address(v))
+}
+
+func (v AddressValue) RecursiveString(_ StringResults) string {
+	return v.String()
 }
 
 func (AddressValue) GetOwner() *common.Address {
@@ -8415,7 +8547,7 @@ func (v AddressValue) GetMember(_ *Interpreter, _ func() LocationRange, name str
 	case sema.ToStringFunctionName:
 		return NewHostFunctionValue(
 			func(invocation Invocation) Value {
-				return NewStringValue(v.String(StringResults{}))
+				return NewStringValue(v.String())
 			},
 		)
 
@@ -8673,11 +8805,15 @@ func (v PathValue) Destroy(_ *Interpreter, _ func() LocationRange) {
 	// NO-OP
 }
 
-func (v PathValue) String(_ StringResults) string {
+func (v PathValue) String() string {
 	return format.Path(
 		v.Domain.Identifier(),
 		v.Identifier,
 	)
+}
+
+func (v PathValue) RecursiveString(_ StringResults) string {
+	return v.String()
 }
 
 func (v PathValue) KeyString() string {
@@ -8771,15 +8907,19 @@ func (v CapabilityValue) Destroy(_ *Interpreter, _ func() LocationRange) {
 	// NO-OP
 }
 
-func (v CapabilityValue) String(results StringResults) string {
+func (v CapabilityValue) String() string {
+	return v.RecursiveString(StringResults{})
+}
+
+func (v CapabilityValue) RecursiveString(results StringResults) string {
 	var borrowType string
 	if v.BorrowType != nil {
 		borrowType = v.BorrowType.String()
 	}
 	return format.Capability(
 		borrowType,
-		v.Address.String(results),
-		v.Path.String(results),
+		v.Address.RecursiveString(results),
+		v.Path.RecursiveString(results),
 	)
 }
 
@@ -8885,10 +9025,14 @@ func (v LinkValue) Destroy(_ *Interpreter, _ func() LocationRange) {
 	// NO-OP
 }
 
-func (v LinkValue) String(results StringResults) string {
+func (v LinkValue) String() string {
+	return v.RecursiveString(StringResults{})
+}
+
+func (v LinkValue) RecursiveString(results StringResults) string {
 	return format.Link(
 		v.Type.String(),
-		v.TargetPath.String(results),
+		v.TargetPath.RecursiveString(results),
 	)
 }
 

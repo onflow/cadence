@@ -43,7 +43,7 @@ func TestInterpretRecursiveValueString(t *testing.T) {
 
 	require.Equal(t,
 		`{"mapRef": {"mapRef": {"mapRef": ...}}}`,
-		mapValue.String(interpreter.StringResults{}),
+		mapValue.String(),
 	)
 
 	require.IsType(t, &interpreter.DictionaryValue{}, mapValue)
@@ -51,7 +51,7 @@ func TestInterpretRecursiveValueString(t *testing.T) {
 		`{"mapRef": {"mapRef": ...}}`,
 		mapValue.(*interpreter.DictionaryValue).
 			Get(inter, nil, interpreter.NewStringValue("mapRef")).
-			String(interpreter.StringResults{}),
+			String(),
 	)
 }
 
