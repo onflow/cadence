@@ -214,9 +214,15 @@ For example, to create an account and have the signer of the transaction pay for
 creation, and authorize one key to access the account:
 
 ```cadence
-transaction(key: PublicKey) {
+transaction(publicKey: [UInt8]) {
     prepare(signer: AuthAccount) {
+        let key = PublicKey(
+            publicKey: publicKey,
+            signatureAlgorithm: SignatureAlgorithm.ECDSA_P256
+        )
+
         let account = AuthAccount(payer: signer)
+
         account.keys.add(
             publicKey: key,
             hashAlgorithm: HashAlgorithm.SHA3_256,
