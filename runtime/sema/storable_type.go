@@ -39,6 +39,7 @@ var StorableType = &SimpleType{
 	Storable:             true,
 	Equatable:            false,
 	ExternallyReturnable: false,
+	Importable:           false,
 	IsSuperTypeOf: func(subType Type) bool {
 		storableResults := map[*Member]bool{}
 		return subType.IsStorable(storableResults)

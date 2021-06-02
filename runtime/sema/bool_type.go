@@ -29,4 +29,5 @@ var BoolType = &SimpleType{
 	Storable:             true,
 	Equatable:            true,
 	ExternallyReturnable: true,
+	Importable:           true,
 }

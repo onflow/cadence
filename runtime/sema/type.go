@@ -124,6 +124,9 @@ type Type interface {
 	// and pre-set before a recursive call.
 	IsExternallyReturnable(results map[*Member]bool) bool
 
+	// IsImportable returns true if values of the type can be imported to a program as arguments
+	IsImportable(results map[*Member]bool) bool
+
 	// IsEquatable returns true if values of the type can be equated
 	IsEquatable() bool
 
@@ -490,6 +493,10 @@ func (t *OptionalType) IsExternallyReturnable(results map[*Member]bool) bool {
 	return t.Type.IsExternallyReturnable(results)
 }
 
+func (t *OptionalType) IsImportable(results map[*Member]bool) bool {
+	return t.Type.IsImportable(results)
+}
+
 func (t *OptionalType) IsEquatable() bool {
 	return t.Type.IsEquatable()
 }
@@ -653,6 +660,10 @@ func (*GenericType) IsStorable(_ map[*Member]bool) bool {
 }
 
 func (*GenericType) IsExternallyReturnable(_ map[*Member]bool) bool {
+	return false
+}
+
+func (t *GenericType) IsImportable(_ map[*Member]bool) bool {
 	return false
 }
 
@@ -920,6 +931,10 @@ func (*NumericType) IsExternallyReturnable(_ map[*Member]bool) bool {
 	return true
 }
 
+func (t *NumericType) IsImportable(_ map[*Member]bool) bool {
+	return true
+}
+
 func (*NumericType) IsEquatable() bool {
 	return true
 }
@@ -1083,6 +1098,10 @@ func (*FixedPointNumericType) IsStorable(_ map[*Member]bool) bool {
 }
 
 func (*FixedPointNumericType) IsExternallyReturnable(_ map[*Member]bool) bool {
+	return true
+}
+
+func (t *FixedPointNumericType) IsImportable(_ map[*Member]bool) bool {
 	return true
 }
 
@@ -1803,6 +1822,10 @@ func (t *VariableSizedType) IsExternallyReturnable(results map[*Member]bool) boo
 	return t.Type.IsExternallyReturnable(results)
 }
 
+func (t *VariableSizedType) IsImportable(results map[*Member]bool) bool {
+	return t.Type.IsImportable(results)
+}
+
 func (*VariableSizedType) IsEquatable() bool {
 	// TODO:
 	return false
@@ -1924,6 +1947,10 @@ func (t *ConstantSizedType) IsStorable(results map[*Member]bool) bool {
 
 func (t *ConstantSizedType) IsExternallyReturnable(results map[*Member]bool) bool {
 	return t.Type.IsStorable(results)
+}
+
+func (t *ConstantSizedType) IsImportable(results map[*Member]bool) bool {
+	return t.Type.IsImportable(results)
 }
 
 func (*ConstantSizedType) IsEquatable() bool {
@@ -2366,6 +2393,10 @@ func (t *FunctionType) IsStorable(_ map[*Member]bool) bool {
 
 func (t *FunctionType) IsExternallyReturnable(_ map[*Member]bool) bool {
 	// Functions cannot be exported, as they cannot be serialized
+	return false
+}
+
+func (t *FunctionType) IsImportable(_ map[*Member]bool) bool {
 	return false
 }
 
@@ -3184,7 +3215,9 @@ type CompositeType struct {
 	containerType         Type
 	EnumRawType           Type
 	hasComputedMembers    bool
-	cachedIdentifiers     *struct {
+	importable            bool
+
+	cachedIdentifiers *struct {
 		TypeID              TypeID
 		QualifiedIdentifier string
 	}
@@ -3347,6 +3380,35 @@ func (t *CompositeType) IsStorable(results map[*Member]bool) bool {
 
 	for pair := t.Members.Oldest(); pair != nil; pair = pair.Next() {
 		if !pair.Value.IsStorable(results) {
+			return false
+		}
+	}
+
+	return true
+}
+
+func (t *CompositeType) IsImportable(results map[*Member]bool) bool {
+	// Use the pre-determined flag for native types
+	if t.Location == nil {
+		return t.importable
+	}
+
+	// Only structures, resources, and enums can be imported
+
+	switch t.Kind {
+	case common.CompositeKindStructure,
+		common.CompositeKindResource,
+		common.CompositeKindEnum:
+		break
+	default:
+		return false
+	}
+
+	// If this composite type has a member which is not importable,
+	// then the composite type is not importable.
+
+	for pair := t.Members.Oldest(); pair != nil; pair = pair.Next() {
+		if !pair.Value.IsImportable(results) {
 			return false
 		}
 	}
@@ -3561,6 +3623,14 @@ func (m *Member) IsStorable(results map[*Member]bool) (result bool) {
 func (m *Member) IsExternallyReturnable(results map[*Member]bool) (result bool) {
 	test := func(t Type) bool {
 		return t.IsExternallyReturnable(results)
+	}
+	return m.testType(test, results)
+}
+
+// IsImportable returns whether a member can be imported to a program
+func (m *Member) IsImportable(results map[*Member]bool) (result bool) {
+	test := func(t Type) bool {
+		return t.IsImportable(results)
 	}
 	return m.testType(test, results)
 }
@@ -3784,6 +3854,23 @@ func (t *InterfaceType) IsExternallyReturnable(results map[*Member]bool) bool {
 	return true
 }
 
+func (t *InterfaceType) IsImportable(results map[*Member]bool) bool {
+	if t.CompositeKind != common.CompositeKindStructure {
+		return false
+	}
+
+	// If this interface type has a member which is not importable,
+	// then the interface type is not importable.
+
+	for pair := t.Members.Oldest(); pair != nil; pair = pair.Next() {
+		if !pair.Value.IsImportable(results) {
+			return false
+		}
+	}
+
+	return true
+}
+
 func (*InterfaceType) IsEquatable() bool {
 	// TODO:
 	return false
@@ -3895,6 +3982,11 @@ func (t *DictionaryType) IsStorable(results map[*Member]bool) bool {
 func (t *DictionaryType) IsExternallyReturnable(results map[*Member]bool) bool {
 	return t.KeyType.IsExternallyReturnable(results) &&
 		t.ValueType.IsExternallyReturnable(results)
+}
+
+func (t *DictionaryType) IsImportable(results map[*Member]bool) bool {
+	return t.KeyType.IsImportable(results) &&
+		t.ValueType.IsImportable(results)
 }
 
 func (*DictionaryType) IsEquatable() bool {
@@ -4225,6 +4317,10 @@ func (t *ReferenceType) IsExternallyReturnable(_ map[*Member]bool) bool {
 	return true
 }
 
+func (t *ReferenceType) IsImportable(_ map[*Member]bool) bool {
+	return false
+}
+
 func (*ReferenceType) IsEquatable() bool {
 	return true
 }
@@ -4326,6 +4422,10 @@ func (*AddressType) IsStorable(_ map[*Member]bool) bool {
 }
 
 func (*AddressType) IsExternallyReturnable(_ map[*Member]bool) bool {
+	return true
+}
+
+func (t *AddressType) IsImportable(_ map[*Member]bool) bool {
 	return true
 }
 
@@ -5114,6 +5214,10 @@ func (*TransactionType) IsExternallyReturnable(_ map[*Member]bool) bool {
 	return false
 }
 
+func (t *TransactionType) IsImportable(_ map[*Member]bool) bool {
+	return false
+}
+
 func (*TransactionType) IsEquatable() bool {
 	return false
 }
@@ -5288,6 +5392,20 @@ func (t *RestrictedType) IsExternallyReturnable(results map[*Member]bool) bool {
 	return true
 }
 
+func (t *RestrictedType) IsImportable(results map[*Member]bool) bool {
+	if t.Type != nil && !t.Type.IsImportable(results) {
+		return false
+	}
+
+	for _, restriction := range t.Restrictions {
+		if !restriction.IsImportable(results) {
+			return false
+		}
+	}
+
+	return true
+}
+
 func (*RestrictedType) IsEquatable() bool {
 	// TODO:
 	return false
@@ -5437,6 +5555,10 @@ func (*CapabilityType) IsStorable(_ map[*Member]bool) bool {
 }
 
 func (*CapabilityType) IsExternallyReturnable(_ map[*Member]bool) bool {
+	return true
+}
+
+func (t *CapabilityType) IsImportable(_ map[*Member]bool) bool {
 	return true
 }
 
@@ -5658,6 +5780,7 @@ var AccountKeyType = func() *CompositeType {
 	accountKeyType := &CompositeType{
 		Identifier: AccountKeyTypeName,
 		Kind:       common.CompositeKindStructure,
+		importable: false,
 	}
 
 	const accountKeyIndexFieldDocString = `The index of the account key`
@@ -5734,6 +5857,7 @@ var PublicKeyType = func() *CompositeType {
 		Identifier:         PublicKeyTypeName,
 		Kind:               common.CompositeKindStructure,
 		hasComputedMembers: true,
+		importable:         true,
 	}
 
 	var members = []*Member{

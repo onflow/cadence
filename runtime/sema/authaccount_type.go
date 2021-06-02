@@ -51,6 +51,7 @@ var AuthAccountType = func() *CompositeType {
 		Identifier:         AuthAccountTypeName,
 		Kind:               common.CompositeKindStructure,
 		hasComputedMembers: true,
+		importable:         false,
 
 		nestedTypes: func() *StringTypeOrderedMap {
 			nestedTypes := NewStringTypeOrderedMap()
@@ -529,6 +530,7 @@ var AuthAccountKeysType = func() *CompositeType {
 	accountKeys := &CompositeType{
 		Identifier: AccountKeysTypeName,
 		Kind:       common.CompositeKindStructure,
+		importable: false,
 	}
 
 	var members = []*Member{

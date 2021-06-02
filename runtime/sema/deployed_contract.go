@@ -34,6 +34,7 @@ var DeployedContractType = &SimpleType{
 	Storable:             false,
 	Equatable:            false,
 	ExternallyReturnable: false,
+	Importable:           false,
 	Members: func(t *SimpleType) map[string]MemberResolver {
 		return map[string]MemberResolver{
 			DeployedContractTypeAddressFieldName: {

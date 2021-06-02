@@ -29,4 +29,5 @@ var CharacterType = &SimpleType{
 	Storable:             true,
 	Equatable:            true,
 	ExternallyReturnable: true,
+	Importable:           true,
 }

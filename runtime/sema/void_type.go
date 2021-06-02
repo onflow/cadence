@@ -29,4 +29,5 @@ var VoidType = &SimpleType{
 	Storable:             false,
 	Equatable:            false,
 	ExternallyReturnable: true,
+	Importable:           false,
 }
