@@ -21,6 +21,7 @@ package runtime
 import (
 	"fmt"
 	"testing"
+	"unicode/utf8"
 
 	"github.com/onflow/cadence/encoding/json"
 	"github.com/stretchr/testify/assert"
@@ -1797,4 +1798,54 @@ func TestMalformedArgumentPassing(t *testing.T) {
 	for _, testCase := range argumentPassingTests {
 		testArgumentPassing(testCase)
 	}
+}
+
+func TestStringValueImport(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("non-utf8", func(t *testing.T) {
+		nonUTF8String := "\xbd\xb2\x3d\xbc\x20\xe2"
+		require.False(t, utf8.ValidString(nonUTF8String))
+
+		stringValue := cadence.NewString(nonUTF8String)
+
+		script := `
+            pub fun main(s: String) {
+                log(s)
+            }
+        `
+
+		encodedArg, err := json.Encode(stringValue)
+		require.NoError(t, err)
+
+		rt := NewInterpreterRuntime()
+
+		validated := false
+
+		runtimeInterface := &testRuntimeInterface{
+			decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+				return json.Decode(b)
+			},
+			log: func(s string) {
+				assert.True(t, utf8.ValidString(s))
+				validated = true
+			},
+		}
+
+		_, err = rt.ExecuteScript(
+			Script{
+				Source:    []byte(script),
+				Arguments: [][]byte{encodedArg},
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  utils.TestLocation,
+			},
+		)
+
+		require.NoError(t, err)
+
+		assert.True(t, validated)
+	})
 }

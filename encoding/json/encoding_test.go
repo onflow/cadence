@@ -23,6 +23,7 @@ import (
 	"math"
 	"math/big"
 	"testing"
+	"unicode/utf8"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -1402,4 +1403,23 @@ var fooResourceType = &cadence.ResourceType{
 			Type:       cadence.IntType{},
 		},
 	},
+}
+
+func TestNonUTF8StringEncoding(t *testing.T) {
+	nonUTF8String := "\xbd\xb2\x3d\xbc\x20\xe2"
+
+	// Make sure it is an invalid utf8 string
+	assert.False(t, utf8.ValidString(nonUTF8String))
+
+	stringValue := cadence.NewString(nonUTF8String)
+
+	encodedValue, err := json.Encode(stringValue)
+	require.NoError(t, err)
+
+	decodedValue, err := json.Decode(encodedValue)
+	require.NoError(t, err)
+
+	// Decoded value must be a valid utf8 string
+	assert.IsType(t, cadence.String(""), decodedValue)
+	assert.True(t, utf8.ValidString(decodedValue.String()))
 }
