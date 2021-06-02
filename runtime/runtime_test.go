@@ -2683,7 +2683,7 @@ func TestRuntimePublicAccountAddress(t *testing.T) {
 
 	assert.Equal(t,
 		[]string{
-			address.String(interpreter.StringResults{}),
+			address.String(),
 		},
 		loggedMessages,
 	)

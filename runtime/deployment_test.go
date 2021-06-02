@@ -115,7 +115,7 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 		argumentCodes := make([]string, len(test.arguments))
 
 		for i, argument := range test.arguments {
-			argumentCodes[i] = argument.String(interpreter.StringResults{})
+			argumentCodes[i] = argument.String()
 		}
 
 		argumentCode := strings.Join(argumentCodes, ", ")
