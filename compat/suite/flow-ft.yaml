@@ -6,7 +6,7 @@ url: https://github.com/onflow/flow-ft.git
 branch: master
 files:
 - path: contracts/FungibleToken.cdc
-- path: contracts/TokenForwarding.cdc
+- path: contracts/utilityContracts/TokenForwarding.cdc
   # language=Python prefix=source=''\n
   prepare: |
       import re
@@ -14,7 +14,7 @@ files:
 
       source = re.sub(
         'import FungibleToken from 0xFUNGIBLETOKENADDRESS',
-        f'import FungibleToken from "{Path("FungibleToken.cdc").resolve()}"',
+        f'import FungibleToken from "{Path("../FungibleToken.cdc").resolve()}"',
         source,
       )
 
