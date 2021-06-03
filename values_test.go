@@ -21,6 +21,7 @@ package cadence
 import (
 	"fmt"
 	"testing"
+	"unicode/utf8"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -493,4 +494,23 @@ func TestOptional_Type(t *testing.T) {
 			}.Type(),
 		)
 	})
+}
+
+func TestNonUTF8String(t *testing.T) {
+	nonUTF8String := "\xbd\xb2\x3d\xbc\x20\xe2"
+
+	// Make sure it is an invalid utf8 string
+	assert.False(t, utf8.ValidString(nonUTF8String))
+
+	defer func() {
+		r := recover()
+		require.NotNil(t, r)
+
+		err, isError := r.(error)
+		require.True(t, isError)
+
+		assert.Contains(t, err.Error(), "invalid UTF-8 in string")
+	}()
+
+	_ = NewString(nonUTF8String)
 }
