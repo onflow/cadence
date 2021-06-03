@@ -54,8 +54,8 @@ pub enum SignatureAlgorithm: UInt8 {
     pub case ECDSA_secp256k1 = 2
 
     /// BLS_BLS12_381 is BLS signature scheme on the BLS12-381 curve.
-    /// The scheme is set-up so that signatures are in G_1 (curve over prime field) 
-    /// while public keys are in G_2 (curve over extended prime field).
+    /// The scheme is set-up so that signatures are in G_1 (curve over the prime field) 
+    /// while public keys are in G_2 (curve over the prime field extension).
     pub case BLS_BLS12_381 = 3
 }
 ```
@@ -105,7 +105,7 @@ The raw key value depends on the supported signature scheme:
   The raw public key is 64-bytes long.
 
 - `BLS_BLS_12_381`:
-  The public key is a G_2 (curve over extension field) element. 
+  The public key is a G_2 (curve over the prime field extension) element. 
   The encoding follows the compressed serialization defined in the
   [IETF draft-irtf-cfrg-pairing-friendly-curves-08](https://www.ietf.org/archive/id/draft-irtf-cfrg-pairing-friendly-curves-08.html#name-point-serialization-procedu).
   A public key is 96-bytes long.
@@ -158,13 +158,12 @@ The inputs to `verify()` depend on the signature scheme used:
      and `bytes()` is the bytes big-endian encoding of the input integer padded by zeros to the byte-length of the curve order. 
      The signature is 64 bytes-long for both curves. 
    - `signedData` is the arbitrary message to verify the signature against.
-   - `domainSeparationTag` is the domain tag used for signing. The interface only accepts the the user tag, 
-   the UTF-8 encoding of `"FLOW-V0.0-user"` padded to 32 bytes.
-   - `hashAlgorithm` is the algorithm used to hash the message along with the given tag (check `hashWithTag` function for more details). 
+   - `domainSeparationTag` is the domain tag used for signing. The interface only accepts the the user tag `"FLOW-V0.0-user"`.
+   - `hashAlgorithm` is the algorithm used to hash the message along with the given tag (check `hashWithTag` [function](./crypto.mdx#hashing) for more details). 
      Only `SHA2_256` or `SHA3_256` are accepted.
 
 - BLS (`BLS_BLS_12_381`): 
-   - `signature` is a G_1 (curve over prime field) point. 
+   - `signature` is a G_1 (curve over the prime field) point. 
      The encoding follows the compressed serialization defined in the [IETF draft-irtf-cfrg-pairing-friendly-curves-08](https://www.ietf.org/archive/id/draft-irtf-cfrg-pairing-friendly-curves-08.html#name-point-serialization-procedu).
      A signature is 48-bytes long.
    - `signedData` is the arbitrary message to verify the signature against.
@@ -198,7 +197,7 @@ pub fun hashWithTag(_ data: [UInt8], tag: string, algorithm: HashAlgorithm): [UI
 </Callout>
 
 - `hash` hashes the input data using the input hashing algorithm. 
-    - If `KMAC128_BLS_BLS12_381` is used, data is hashed using the standard mac `KMAC128(customizer, key, data, length)` with the following inputs:
+    - If `KMAC128_BLS_BLS12_381` is used, data is hashed using the standard MAC `KMAC128(customizer, key, data, length)` with the following inputs:
         - `customizer` is the UTF-8 encoding of `"H2C"` 
         - `key` is the UTF-8 encoding of `"APP_BLS_SIG_BLS12381G1_XOF:KMAC128_SSWU_RO_POP_"`
         - `data` is the input data to hash
@@ -214,7 +213,7 @@ pub fun hashWithTag(_ data: [UInt8], tag: string, algorithm: HashAlgorithm): [UI
     - `SHA2_256`, `SHA2_384`, `SHA3_256`, `SHA3_384` : 
     the hashed message is `bytes(tag) || data` where `bytes()` is the UTF-8 encoding of the input string, 
     padded with zeros till 32 bytes. 
-    The tags accepted and must not exceed 32 bytes. 
+    The tags accepted must not exceed 32 bytes. 
     If the tag used is empty, no data prefix is applied and the hashed message is simply `data`.
     - `KMAC128_BLS_BLS12_381` : this is a call to standard `KMAC128(customizer, key, data, length)` with the following inputs:
         - `customizer` is the UTF-8 encoding of `"H2C"`
