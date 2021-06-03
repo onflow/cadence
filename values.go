@@ -22,6 +22,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"math/big"
+	"unicode/utf8"
 
 	"github.com/onflow/cadence/fixedpoint"
 	"github.com/onflow/cadence/runtime/common"
@@ -136,6 +137,10 @@ func (v Bool) String() string {
 type String string
 
 func NewString(s string) String {
+	if !utf8.ValidString(s) {
+		panic(fmt.Errorf("invalid UTF-8 in string: %s", s))
+	}
+
 	return String(s)
 }
 

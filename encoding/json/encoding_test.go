@@ -1411,7 +1411,8 @@ func TestNonUTF8StringEncoding(t *testing.T) {
 	// Make sure it is an invalid utf8 string
 	assert.False(t, utf8.ValidString(nonUTF8String))
 
-	stringValue := cadence.NewString(nonUTF8String)
+	// Avoid using the `NewString()` constructor to skip the validation
+	stringValue := cadence.String(nonUTF8String)
 
 	encodedValue, err := json.Encode(stringValue)
 	require.NoError(t, err)

@@ -1808,7 +1808,8 @@ func TestStringValueImport(t *testing.T) {
 		nonUTF8String := "\xbd\xb2\x3d\xbc\x20\xe2"
 		require.False(t, utf8.ValidString(nonUTF8String))
 
-		stringValue := cadence.NewString(nonUTF8String)
+		// Avoid using the `NewString()` constructor to skip the validation
+		stringValue := cadence.String(nonUTF8String)
 
 		script := `
             pub fun main(s: String) {
