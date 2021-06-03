@@ -4,6 +4,9 @@ maintainers:
 - joshua.hannan@dapperlabs.com
 url: https://github.com/onflow/flow-ft.git
 branch: master
+go_tests:
+- path: lib/go/test
+  command: make test
 files:
 - path: contracts/FungibleToken.cdc
 - path: contracts/utilityContracts/TokenForwarding.cdc
