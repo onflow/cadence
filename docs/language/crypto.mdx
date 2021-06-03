@@ -11,7 +11,6 @@ are supported by the language natively.
 🚧 Status: `KMAC128_BLS_BLS12_381` is not supported yet.
 
 </Callout>
-
 ```cadence
 pub enum HashAlgorithm: UInt8 {
     /// SHA2_256 is Secure Hashing Algorithm 2 (SHA-2) with a 256-bit digest.
@@ -98,17 +97,17 @@ The raw key value depends on the supported signature scheme:
 
 </Callout>
 
- - `ECDSA_P256` and `ECDSA_secp256k1` : 
- The public key is a curve point `(X,Y)` where `X` and `Y` are two prime field elements. 
- The raw key is represented as `bytes(X) || bytes(Y)`, where `||` is the concatenation operation,
+- `ECDSA_P256` and `ECDSA_secp256k1`:
+  The public key is a curve point `(X,Y)` where `X` and `Y` are two prime field elements. 
+  The raw key is represented as `bytes(X) || bytes(Y)`, where `||` is the concatenation operation,
   and `bytes()` is the bytes big-endian encoding of the input integer padded by zeros to the byte-length of the field prime.
   The raw public key is 64-bytes long.
 
- - `BLS_BLS_12_381` : 
- The public key is a G_2 (curve over extension field) element. 
- The encoding follows the compressed serialization defined in the
- [IETF draft-irtf-cfrg-pairing-friendly-curves-08](https://www.ietf.org/archive/id/draft-irtf-cfrg-pairing-friendly-curves-08.html#name-point-serialization-procedu).
- A public key is 96-bytes long.
+- `BLS_BLS_12_381`:
+  The public key is a G_2 (curve over extension field) element. 
+  The encoding follows the compressed serialization defined in the
+  [IETF draft-irtf-cfrg-pairing-friendly-curves-08](https://www.ietf.org/archive/id/draft-irtf-cfrg-pairing-friendly-curves-08.html#name-point-serialization-procedu).
+  A public key is 96-bytes long.
 
 
 A public key is validated at the time of creation. Hence, public keys are immutable.
@@ -137,12 +136,12 @@ let signature = "108EF718F153CFDC516D8040ABF2C8CC7AECF37C6F6EF357C31DFE1F7AC79C9
 let message : [UInt8] = [1, 2, 3]
 
 let isValid = pk.verify(   
-       signature: signature,
-        signedData: message,
-        domainSeparationTag: "",
-        hashAlgorithm: HashAlgorithm.SHA2_256
-    ) 
-    // isValid should be false
+    signature: signature,
+    signedData: message,
+    domainSeparationTag: "",
+    hashAlgorithm: HashAlgorithm.SHA2_256
+) 
+// `isValid` is false
 ```
 
 The inputs to `verify()` depend on the signature scheme used:
@@ -155,22 +154,22 @@ The inputs to `verify()` depend on the signature scheme used:
 
 - ECDSA (`ECDSA_P256` and `ECDSA_secp256k1`): 
    - `signature` is the couple `(r,s)`. It is represented as `bytes(r) || bytes(s)`, where `||` is the concatenation operation, 
-   and `bytes()` is the bytes big-endian encoding of the input integer padded by zeros to the byte-length of the curve order. 
-   The signature is 64 bytes-long for both curves. 
+     and `bytes()` is the bytes big-endian encoding of the input integer padded by zeros to the byte-length of the curve order. 
+     The signature is 64 bytes-long for both curves. 
    - `signedData` is the arbitrary message to verify the signature against.
    - `domainSeparationTag` is the domain tag used for signing. The interface only accepts the the user tag, 
    the UTF-8 encoding of `"FLOW-V0.0-user"` padded to 32 bytes.
    - `hashAlgorithm` is the algorithm used to hash the message along with the given tag (check `hashWithTag` function for more details). 
-   Only `SHA2_256` or `SHA3_256` are accepted.
+     Only `SHA2_256` or `SHA3_256` are accepted.
 
 - BLS (`BLS_BLS_12_381`): 
    - `signature` is a G_1 (curve over prime field) point. 
-   The encoding follows the compressed serialization defined in the [IETF draft-irtf-cfrg-pairing-friendly-curves-08](https://www.ietf.org/archive/id/draft-irtf-cfrg-pairing-friendly-curves-08.html#name-point-serialization-procedu).
-   A signature is 48-bytes long.
+     The encoding follows the compressed serialization defined in the [IETF draft-irtf-cfrg-pairing-friendly-curves-08](https://www.ietf.org/archive/id/draft-irtf-cfrg-pairing-friendly-curves-08.html#name-point-serialization-procedu).
+     A signature is 48-bytes long.
    - `signedData` is the arbitrary message to verify the signature against.
    - `domainSeparationTag` is the domain tag used for signing. All tags are accepted. 
    - `hashAlgorithm` is the algorithm used to hash the message along with the given tag (check `hashWithTag` function for more details). 
-   Only `KMAC128_BLS_BLS12_381` is accepted.
+     Only `KMAC128_BLS_BLS12_381` is accepted.
 
 BLS verification performs the necessary membership check of the signature while the membership check of the public key is performed at the creation of the `PublicKey` object. 
 
@@ -230,8 +229,9 @@ let data: [UInt8] = [1, 2, 3]
 let digest = Crypto.hash(data, algorithm: HashAlgorithm.SHA3_256)
 ```
 
-The crypto contract also allows creating key lists to be used for a simple multi-signature 
-verification. 
+### Key Lists
+
+The crypto contract also allows creating key lists to be used for multi-signature verification.
 For example, to verify two signatures with equal weights for some signed data:
 
 ```cadence
