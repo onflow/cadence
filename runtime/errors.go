@@ -201,6 +201,23 @@ func (e *ScriptParameterTypeNotStorableError) Error() string {
 	)
 }
 
+// ScriptParameterTypeNotImportableError is an error that is reported for
+// script parameter types that are not importable.
+//
+// For example, the type `Int` is an importable type,
+// whereas a function-type is not.
+//
+type ScriptParameterTypeNotImportableError struct {
+	Type sema.Type
+}
+
+func (e *ScriptParameterTypeNotImportableError) Error() string {
+	return fmt.Sprintf(
+		"parameter type is a non-importable type: `%s`",
+		e.Type.QualifiedString(),
+	)
+}
+
 // ParsingCheckingError is an error wrapper
 // for a parsing or a checking error at a specific location
 //

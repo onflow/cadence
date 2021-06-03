@@ -214,7 +214,7 @@ func (r *interpreterRuntime) ExecuteScript(script Script, context Context) (cade
 	if len(functionEntryPointType.Parameters) > 0 {
 		for _, param := range functionEntryPointType.Parameters {
 			if !param.TypeAnnotation.Type.IsImportable(map[*sema.Member]bool{}) {
-				err = &ScriptParameterTypeNotStorableError{
+				err = &ScriptParameterTypeNotImportableError{
 					Type: param.TypeAnnotation.Type,
 				}
 				return nil, newError(err, context)

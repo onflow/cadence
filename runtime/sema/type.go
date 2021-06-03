@@ -3215,7 +3215,9 @@ type CompositeType struct {
 	containerType         Type
 	EnumRawType           Type
 	hasComputedMembers    bool
-	importable            bool
+
+	// Only applicable for native composite types.
+	importable bool
 
 	cachedIdentifiers *struct {
 		TypeID              TypeID
@@ -5857,7 +5859,7 @@ var PublicKeyType = func() *CompositeType {
 		Identifier:         PublicKeyTypeName,
 		Kind:               common.CompositeKindStructure,
 		hasComputedMembers: true,
-		importable:         true,
+		importable:         false,
 	}
 
 	var members = []*Member{

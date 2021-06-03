@@ -2441,7 +2441,7 @@ func TestScriptReturnTypeNotReturnableError(t *testing.T) {
 	})
 }
 
-func TestScriptParameterTypeNotStorableError(t *testing.T) {
+func TestScriptParameterTypeNotImportableError(t *testing.T) {
 
 	t.Parallel()
 
@@ -2471,7 +2471,7 @@ func TestScriptParameterTypeNotStorableError(t *testing.T) {
 		},
 	)
 
-	var subErr *ScriptParameterTypeNotStorableError
+	var subErr *ScriptParameterTypeNotImportableError
 	require.ErrorAs(t, err, &subErr)
 }
 
@@ -6451,4 +6451,312 @@ func TestPanics(t *testing.T) {
 		},
 	)
 	assert.Error(t, err)
+}
+
+func TestScriptParameterTypeValidation(t *testing.T) {
+
+	t.Parallel()
+
+	fooStruct := cadence.Struct{
+		StructType: &cadence.StructType{
+			Location:            utils.TestLocation,
+			QualifiedIdentifier: "Foo",
+			Fields:              []cadence.Field{},
+		},
+		Fields: []cadence.Value{},
+	}
+
+	t.Run("Struct", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            pub fun main(arg: Foo) {
+            }
+
+            pub struct Foo {
+            }
+        `
+
+		_, err := importAndExportValuesFromScript(t, script, fooStruct)
+		require.NoError(t, err)
+	})
+
+	t.Run("Non-Importable Struct", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            pub fun main(arg: Foo?) {
+            }
+
+            pub struct Foo {
+                pub var funcTypedField: (():Void)
+
+                init() {
+                    self.funcTypedField = fun() {}
+                }
+            }
+        `
+
+		_, err := importAndExportValuesFromScript(t, script, cadence.NewOptional(nil))
+		require.Error(t, err)
+
+		require.IsType(t, Error{}, err)
+		runtimeErr := err.(Error)
+
+		assert.IsType(t, &ScriptParameterTypeNotImportableError{}, runtimeErr.Err)
+	})
+
+	t.Run("Interface", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            pub fun main(arg: {Bar}) {
+            }
+
+            pub struct Foo: Bar {
+            }
+
+            pub struct interface Bar {
+            }
+        `
+
+		_, err := importAndExportValuesFromScript(t, script, fooStruct)
+		require.NoError(t, err)
+	})
+
+	t.Run("Non-Importable Interface", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            pub fun main(arg: {Bar}?) {
+            }
+
+            pub struct interface Bar {
+                pub var funcTypedField: (():Void)
+            }
+        `
+
+		_, err := importAndExportValuesFromScript(t, script, cadence.NewOptional(nil))
+		require.Error(t, err)
+
+		require.IsType(t, Error{}, err)
+		runtimeErr := err.(Error)
+
+		assert.IsType(t, &ScriptParameterTypeNotImportableError{}, runtimeErr.Err)
+	})
+
+	t.Run("Resource", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            pub fun main(arg: @Baz?) {
+                destroy arg
+            }
+
+            pub resource Baz {
+            }
+        `
+
+		_, err := importAndExportValuesFromScript(t, script, cadence.NewOptional(nil))
+		require.NoError(t, err)
+	})
+
+	t.Run("Contract", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            pub fun main(arg: Foo?) {
+            }
+
+            pub contract Foo {
+            }
+        `
+
+		_, err := importAndExportValuesFromScript(t, script, cadence.NewOptional(nil))
+		require.Error(t, err)
+
+		require.IsType(t, Error{}, err)
+		runtimeErr := err.(Error)
+
+		assert.IsType(t, &ScriptParameterTypeNotImportableError{}, runtimeErr.Err)
+	})
+
+	t.Run("Array", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            pub fun main(arg: [String]) {
+            }
+        `
+
+		_, err := importAndExportValuesFromScript(
+			t,
+			script,
+			cadence.NewArray([]cadence.Value{}),
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("Non-Importable Array", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            pub fun main(arg: [(():Void)]) {
+            }
+        `
+
+		_, err := importAndExportValuesFromScript(
+			t,
+			script,
+			cadence.NewArray([]cadence.Value{}),
+		)
+
+		require.Error(t, err)
+
+		require.IsType(t, Error{}, err)
+		runtimeErr := err.(Error)
+
+		assert.IsType(t, &ScriptParameterTypeNotImportableError{}, runtimeErr.Err)
+	})
+
+	t.Run("Dictionary", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            pub fun main(arg: {String: Bool}) {
+            }
+        `
+
+		_, err := importAndExportValuesFromScript(
+			t,
+			script,
+			cadence.NewDictionary([]cadence.KeyValuePair{}),
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("Non-Importable Dictionary", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            pub fun main(arg: {String: (():Void)}) {
+            }
+        `
+
+		_, err := importAndExportValuesFromScript(
+			t,
+			script,
+			cadence.NewArray([]cadence.Value{}),
+		)
+
+		require.Error(t, err)
+
+		require.IsType(t, Error{}, err)
+		runtimeErr := err.(Error)
+
+		assert.IsType(t, &ScriptParameterTypeNotImportableError{}, runtimeErr.Err)
+	})
+
+	t.Run("Numeric Types", func(t *testing.T) {
+		t.Parallel()
+
+		for _, typ := range sema.AllNumberTypes {
+
+			t.Run(typ.QualifiedString(), func(t *testing.T) {
+				t.Parallel()
+
+				script := fmt.Sprintf(`
+                        pub fun main(arg: %s?) {
+                        }
+                    `,
+					typ.QualifiedString(),
+				)
+
+				_, err := importAndExportValuesFromScript(t, script, cadence.NewOptional(nil))
+				assert.NoError(t, err)
+			})
+		}
+	})
+
+	t.Run("Native composites", func(t *testing.T) {
+		t.Parallel()
+
+		type argumentPassingTest struct {
+			label         string
+			typeSignature string
+			argument      cadence.Value
+			expectErrors  bool
+		}
+
+		var argumentPassingTests []*argumentPassingTest
+
+		for typeName, typ := range sema.NativeCompositeTypes {
+			var value cadence.Value
+			expectErrors := false
+
+			switch typ {
+			case sema.HashAlgorithmType:
+				value = cadence.NewEnum(
+					[]cadence.Value{
+						cadence.NewUInt8(0),
+					},
+				).WithType(HashAlgoType)
+
+			case sema.SignatureAlgorithmType:
+				value = cadence.NewEnum(
+					[]cadence.Value{
+						cadence.NewUInt8(0),
+					},
+				).WithType(SignAlgoType)
+
+			default:
+				// This test case only focuses on the type,
+				// and has no interest in the value.
+				value = nil
+
+				expectErrors = true
+			}
+
+			testCase := &argumentPassingTest{
+				label:         typeName,
+				typeSignature: typeName + "?",
+				argument:      cadence.NewOptional(value),
+				expectErrors:  expectErrors,
+			}
+
+			argumentPassingTests = append(argumentPassingTests, testCase)
+		}
+
+		testArgumentPassing := func(test *argumentPassingTest) {
+
+			t.Run(test.label, func(t *testing.T) {
+				t.Parallel()
+
+				script := fmt.Sprintf(`
+                    pub fun main(arg: %s) {
+                    }`,
+					test.typeSignature,
+				)
+
+				_, err := importAndExportValuesFromScript(t, script, test.argument)
+
+				if test.expectErrors {
+					require.Error(t, err, "'%s' shouldn't be usable as a script argument type", test.label)
+
+					require.IsType(t, Error{}, err)
+					runtimeErr := err.(Error)
+
+					assert.IsType(t, &ScriptParameterTypeNotImportableError{}, runtimeErr.Err)
+				} else {
+					assert.NoError(t, err)
+				}
+			})
+		}
+
+		for _, testCase := range argumentPassingTests {
+			testArgumentPassing(testCase)
+		}
+	})
 }
