@@ -1,0 +1,43 @@
+name: Source Compatibility Suite
+on:
+  schedule:
+    - cron: '0 12 * * *'
+  workflow_dispatch:
+
+jobs:
+  test-e2e-canary:
+    name: E2E Test Canary
+    runs-on: ubuntu-latest
+    steps:
+    - name: Setup Go
+      uses: actions/setup-go@v2
+      with:
+        go-version: '1.15'
+    - name: Checkout repo
+      uses: actions/checkout@v2
+
+jobs:
+  source-compat:
+    runs-on: ubuntu-20.04
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
+    - uses: actions/setup-go@v2
+      with:
+        go-version: '1.15.x'
+    - uses: actions/setup-python@v2
+      with:
+        python-version: '3.x'
+    - uses: actions/cache@v1
+      with:
+        path: ~/go/pkg/mod
+        key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+        restore-keys: |
+          ${{ runner.os }}-go-
+    - name: Install dependencies
+      working-directory: compat
+      run: pip3 install -r requirements.txt
+    - name: Check
+      working-directory: compat
+      run: python3 main.py --format=pretty --check
