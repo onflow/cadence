@@ -7,6 +7,7 @@ import logging
 import os
 import re
 import shlex
+import shutil
 import subprocess
 import sys
 import textwrap
@@ -176,7 +177,7 @@ class Description:
 
     def _clone(self, working_dir: Path):
         if working_dir.exists():
-            raise Exception(f"{working_dir} exists")
+            shutil.rmtree(working_dir)
 
         logger.info(f"Cloning {self.url} ({self.branch})")
 
