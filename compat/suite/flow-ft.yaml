@@ -10,95 +10,79 @@ go_tests:
 files:
 - path: contracts/FungibleToken.cdc
 - path: contracts/utilityContracts/TokenForwarding.cdc
-  # language=Python prefix=source=''\n
+  # language=Python prefix="replace: Callable[[str, str], None]\n"
   prepare: |
-      import re
-      from pathlib import Path
+    from pathlib import Path
 
-      source = re.sub(
-        'import FungibleToken from 0xFUNGIBLETOKENADDRESS',
-        f'import FungibleToken from "{Path("../FungibleToken.cdc").resolve()}"',
-        source,
-      )
+    replace(
+      'import FungibleToken from 0xFUNGIBLETOKENADDRESS',
+      f'import FungibleToken from "{Path("../FungibleToken.cdc").resolve()}"'
+    )
 
 - path: contracts/ExampleToken.cdc
-  # language=Python prefix=source=''\n
+  # language=Python prefix="replace: Callable[[str, str], None]\n"
   prepare: |
-      import re
-      from pathlib import Path
+    from pathlib import Path
 
-      source = re.sub(
-        'import FungibleToken from 0xFUNGIBLETOKENADDRESS',
-        f'import FungibleToken from "{Path("FungibleToken.cdc").resolve()}"',
-        source,
-      )
+    replace(
+      'import FungibleToken from 0xFUNGIBLETOKENADDRESS',
+      f'import FungibleToken from "{Path("FungibleToken.cdc").resolve()}"'
+    )
 
 - path: transactions/transfer_tokens.cdc
-  # language=Python prefix=source=''\n
+  # language=Python prefix="replace: Callable[[str, str], None]\n"
   prepare: |
-      import re
-      from pathlib import Path
+    from pathlib import Path
 
-      source = re.sub(
-        'import FungibleToken from 0xFUNGIBLETOKENADDRESS',
-        f'import FungibleToken from "{Path("../contracts/FungibleToken.cdc").resolve()}"',
-        source,
-      )
-      source = re.sub(
-        'import ExampleToken from 0xTOKENADDRESS',
-        f'import ExampleToken from "{Path("../contracts/ExampleToken.cdc").resolve()}"',
-        source,
-      )
+    replace(
+      'import FungibleToken from 0xFUNGIBLETOKENADDRESS',
+      f'import FungibleToken from "{Path("../contracts/FungibleToken.cdc").resolve()}"'
+    )
+    replace(
+      'import ExampleToken from 0xTOKENADDRESS',
+      f'import ExampleToken from "{Path("../contracts/ExampleToken.cdc").resolve()}"'
+    )
 
 - path: transactions/setup_account.cdc
-  # language=Python prefix=source=''\n
+  # language=Python prefix="replace: Callable[[str, str], None]\n"
   prepare: |
-      import re
-      from pathlib import Path
+    from pathlib import Path
 
-      source = re.sub(
-        'import FungibleToken from 0xFUNGIBLETOKENADDRESS',
-        f'import FungibleToken from "{Path("../contracts/FungibleToken.cdc").resolve()}"',
-        source,
-      )
-      source = re.sub(
-        'import ExampleToken from 0xTOKENADDRESS',
-        f'import ExampleToken from "{Path("../contracts/ExampleToken.cdc").resolve()}"',
-        source,
-      )
+    replace(
+      'import FungibleToken from 0xFUNGIBLETOKENADDRESS',
+      f'import FungibleToken from "{Path("../contracts/FungibleToken.cdc").resolve()}"'
+    )
+    replace(
+      'import ExampleToken from 0xTOKENADDRESS',
+      f'import ExampleToken from "{Path("../contracts/ExampleToken.cdc").resolve()}"'
+    )
 
 - path: transactions/mint_tokens.cdc
-  # language=Python prefix=source=''\n
+  # language=Python prefix="replace: Callable[[str, str], None]\n"
   prepare: |
-      import re
-      from pathlib import Path
+    from pathlib import Path
 
-      source = re.sub(
-        'import FungibleToken from 0xFUNGIBLETOKENADDRESS',
-        f'import FungibleToken from "{Path("../contracts/FungibleToken.cdc").resolve()}"',
-        source,
-      )
-      source = re.sub(
-        'import ExampleToken from 0xTOKENADDRESS',
-        f'import ExampleToken from "{Path("../contracts/ExampleToken.cdc").resolve()}"',
-        source,
-      )
+    replace(
+      'import FungibleToken from 0xFUNGIBLETOKENADDRESS',
+      f'import FungibleToken from "{Path("../contracts/FungibleToken.cdc").resolve()}"'
+    )
+    replace(
+      'import ExampleToken from 0xTOKENADDRESS',
+      f'import ExampleToken from "{Path("../contracts/ExampleToken.cdc").resolve()}"'
+    )
 
 
 - path: transactions/burn_tokens.cdc
-  # language=Python prefix=source=''\n
+  # language=Python prefix="replace: Callable[[str, str], None]\n"
   prepare: |
-      import re
-      from pathlib import Path
+    from pathlib import Path
 
-      source = re.sub(
-        'import FungibleToken from 0xFUNGIBLETOKENADDRESS',
-        f'import FungibleToken from "{Path("../contracts/FungibleToken.cdc").resolve()}"',
-        source,
-      )
-      source = re.sub(
-        'import ExampleToken from 0xTOKENADDRESS',
-        f'import ExampleToken from "{Path("../contracts/ExampleToken.cdc").resolve()}"',
-        source,
-      )
+    replace(
+      'import FungibleToken from 0xFUNGIBLETOKENADDRESS',
+      f'import FungibleToken from "{Path("../contracts/FungibleToken.cdc").resolve()}"'
+    )
+    replace(
+      'import ExampleToken from 0xTOKENADDRESS',
+      f'import ExampleToken from "{Path("../contracts/ExampleToken.cdc").resolve()}"'
+    )
 

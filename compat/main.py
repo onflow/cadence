@@ -64,10 +64,13 @@ class File:
         with path.open(mode="r") as f:
             source = f.read()
 
-        variables = {"source": source}
+        def replace(pattern, replacement):
+            nonlocal source
+            source = re.sub(pattern, replacement, source)
+
+        variables = {"replace": replace}
         with cwd(str(path.parent.absolute())):
             exec(self.prepare, variables)
-        source = variables["source"]
 
         with path.open(mode="w") as f:
             f.write(source)
