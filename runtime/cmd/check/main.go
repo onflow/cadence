@@ -38,13 +38,45 @@ import (
 	"github.com/onflow/cadence/runtime/sema"
 )
 
+type memberAccountAccessFlags []string
+
+func (f *memberAccountAccessFlags) String() string {
+	return ""
+}
+
+func (f *memberAccountAccessFlags) Set(value string) error {
+	*f = append(*f, value)
+	return nil
+}
+
 var benchFlag = flag.Bool("bench", false, "benchmark the checker")
 var jsonFlag = flag.Bool("json", false, "print the result formatted as JSON")
 
+var memberAccountAccessFlag memberAccountAccessFlags
+
 func main() {
+	flag.Var(&memberAccountAccessFlag, "memberAccountAccess", "allow account access from:to")
 	flag.Parse()
+
+	memberAccountAccess := map[common.LocationID]map[common.LocationID]struct{}{}
+
+	for _, value := range memberAccountAccessFlag {
+		parts := strings.SplitN(value, ":", 2)
+		if len(parts) < 2 {
+			panic(fmt.Errorf("invalid member access flag: got '%s', expected 'from:to'", value))
+		}
+		sourceLocationID := common.LocationID(parts[0])
+		targetLocationID := common.LocationID(parts[1])
+		nested := memberAccountAccess[sourceLocationID]
+		if nested == nil {
+			nested = map[common.LocationID]struct{}{}
+			memberAccountAccess[sourceLocationID] = nested
+		}
+		nested[targetLocationID] = struct{}{}
+	}
+
 	args := flag.Args()
-	run(args, *benchFlag, *jsonFlag)
+	run(args, *benchFlag, *jsonFlag, memberAccountAccess)
 }
 
 type benchResult struct {
@@ -133,7 +165,12 @@ func newStdoutOutput() stdoutOutput {
 	}
 }
 
-func run(paths []string, bench bool, json bool) {
+func run(
+	paths []string,
+	bench bool,
+	json bool,
+	memberAccountAccess map[common.LocationID]map[common.LocationID]struct{},
+) {
 	if len(paths) == 0 {
 		paths = []string{""}
 	}
@@ -150,7 +187,7 @@ func run(paths []string, bench bool, json bool) {
 	useColor := !json
 
 	for _, path := range paths {
-		res, runSucceeded := runPath(path, bench, useColor)
+		res, runSucceeded := runPath(path, bench, useColor, memberAccountAccess)
 		if !runSucceeded {
 			allSucceeded = false
 		}
@@ -165,7 +202,12 @@ func run(paths []string, bench bool, json bool) {
 	}
 }
 
-func runPath(path string, bench bool, useColor bool) (res result, succeeded bool) {
+func runPath(
+	path string,
+	bench bool,
+	useColor bool,
+	memberAccountAccess map[common.LocationID]map[common.LocationID]struct{},
+) (res result, succeeded bool) {
 	res = result{
 		Path: path,
 	}
@@ -192,7 +234,7 @@ func runPath(path string, bench bool, useColor bool) (res result, succeeded bool
 
 		program, must = cmd.PrepareProgram(code, location, codes)
 
-		checker, _ = cmd.PrepareChecker(program, location, codes, must)
+		checker, _ = cmd.PrepareChecker(program, location, codes, memberAccountAccess, must)
 
 		err = checker.Check()
 		if err != nil {
@@ -213,7 +255,7 @@ func runPath(path string, bench bool, useColor bool) (res result, succeeded bool
 	if bench && err == nil {
 		benchRes := testing.Benchmark(func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				checker, must = cmd.PrepareChecker(program, location, codes, must)
+				checker, must = cmd.PrepareChecker(program, location, codes, memberAccountAccess, must)
 				must(checker.Check())
 				if err != nil {
 					panic(err)

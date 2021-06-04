@@ -87,6 +87,7 @@ func PrepareChecker(
 	program *ast.Program,
 	location common.Location,
 	codes map[common.LocationID]string,
+	memberAccountAccess map[common.LocationID]map[common.LocationID]struct{},
 	must func(error),
 ) (*sema.Checker, func(error)) {
 	checker, err := sema.NewChecker(
@@ -111,7 +112,7 @@ func PrepareChecker(
 				importedChecker, ok := checkers[importedLocation.ID()]
 				if !ok {
 					importedProgram, _ := PrepareProgramFromFile(stringLocation, codes)
-					importedChecker, _ = PrepareChecker(importedProgram, importedLocation, codes, must)
+					importedChecker, _ = PrepareChecker(importedProgram, importedLocation, codes, nil, must)
 					must(importedChecker.Check())
 					checkers[importedLocation.ID()] = importedChecker
 				}
@@ -121,6 +122,20 @@ func PrepareChecker(
 				}, nil
 			},
 		),
+		sema.WithMemberAccountAccessHandler(func(checker *sema.Checker, memberLocation common.Location) bool {
+
+			if memberAccountAccess == nil {
+				return false
+			}
+
+			targets, ok := memberAccountAccess[checker.Location.ID()]
+			if !ok {
+				return false
+			}
+
+			_, ok = targets[memberLocation.ID()]
+			return ok
+		}),
 	)
 	must(err)
 
@@ -135,7 +150,7 @@ func PrepareInterpreter(filename string) (*interpreter.Interpreter, *sema.Checke
 
 	program, must := PrepareProgramFromFile(location, codes)
 
-	checker, must := PrepareChecker(program, location, codes, must)
+	checker, must := PrepareChecker(program, location, codes, nil, must)
 
 	must(checker.Check())
 

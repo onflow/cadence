@@ -76,6 +76,8 @@ type LocationHandlerFunc func(identifiers []ast.Identifier, location common.Loca
 
 type ImportHandlerFunc func(checker *Checker, importedLocation common.Location, importRange ast.Range) (Import, error)
 
+type MemberAccountAccessHandlerFunc func(checker *Checker, memberLocation common.Location) bool
+
 // Checker
 
 type Checker struct {
@@ -112,6 +114,7 @@ type Checker struct {
 	importHandler                      ImportHandlerFunc
 	checkHandler                       CheckHandlerFunc
 	expectedType                       Type
+	memberAccountAccessHandler         MemberAccountAccessHandlerFunc
 }
 
 type Option func(*Checker) error
@@ -196,6 +199,17 @@ func WithLocationHandler(handler LocationHandlerFunc) Option {
 func WithImportHandler(handler ImportHandlerFunc) Option {
 	return func(checker *Checker) error {
 		checker.importHandler = handler
+		return nil
+	}
+}
+
+// WithMemberAccountAccessHandler returns a checker option which sets
+// the given handler as function which is used to determine
+// if the access of a member with account access modifier is valid.
+//
+func WithMemberAccountAccessHandler(handler MemberAccountAccessHandlerFunc) Option {
+	return func(checker *Checker) error {
+		checker.memberAccountAccessHandler = handler
 		return nil
 	}
 }

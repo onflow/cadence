@@ -294,6 +294,10 @@ func (checker *Checker) isReadableMember(member *Member) bool {
 		if common.LocationsInSameAccount(checker.Location, location) {
 			return true
 		}
+
+		if checker.memberAccountAccessHandler != nil {
+			return checker.memberAccountAccessHandler(checker, location)
+		}
 	}
 
 	return false
