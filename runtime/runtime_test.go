@@ -2269,11 +2269,11 @@ func TestParseAndCheckProgram(t *testing.T) {
 	})
 }
 
-func TestScriptReturnTypeNotReturnableError(t *testing.T) {
+func TestRuntimeScriptReturnType(t *testing.T) {
 
 	t.Parallel()
 
-	test := func(code string, expected cadence.Value) {
+	test := func(t *testing.T, code string, expected cadence.Value) {
 
 		runtime := NewInterpreterRuntime()
 
@@ -2308,7 +2308,7 @@ func TestScriptReturnTypeNotReturnableError(t *testing.T) {
 
 		t.Parallel()
 
-		test(
+		test(t,
 			`
               pub fun main(): ((): Int) {
                   return fun (): Int {
@@ -2324,7 +2324,7 @@ func TestScriptReturnTypeNotReturnableError(t *testing.T) {
 
 		t.Parallel()
 
-		test(
+		test(t,
 			`
               pub fun main(): &Address {
                   let a: Address = 0x1
@@ -2339,7 +2339,7 @@ func TestScriptReturnTypeNotReturnableError(t *testing.T) {
 
 		t.Parallel()
 
-		test(
+		test(t,
 			`
               pub fun main(): [&AnyStruct] {
                   let refs: [&AnyStruct] = []
@@ -2359,7 +2359,7 @@ func TestScriptReturnTypeNotReturnableError(t *testing.T) {
 
 		t.Parallel()
 
-		test(
+		test(t,
 			`
               pub fun main(): StoragePath {
                   return /storage/foo
@@ -2376,7 +2376,7 @@ func TestScriptReturnTypeNotReturnableError(t *testing.T) {
 
 		t.Parallel()
 
-		test(
+		test(t,
 			`
               pub fun main(): PublicPath {
                   return /public/foo
@@ -2393,7 +2393,7 @@ func TestScriptReturnTypeNotReturnableError(t *testing.T) {
 
 		t.Parallel()
 
-		test(
+		test(t,
 			`
               pub fun main(): PrivatePath {
                   return /private/foo
@@ -2410,7 +2410,7 @@ func TestScriptReturnTypeNotReturnableError(t *testing.T) {
 
 		t.Parallel()
 
-		test(
+		test(t,
 			`
               pub fun main(): CapabilityPath {
                   return /public/foo
@@ -2427,7 +2427,7 @@ func TestScriptReturnTypeNotReturnableError(t *testing.T) {
 
 		t.Parallel()
 
-		test(
+		test(t,
 			`
               pub fun main(): Path {
                   return /storage/foo
@@ -2437,6 +2437,126 @@ func TestScriptReturnTypeNotReturnableError(t *testing.T) {
 				Domain:     "storage",
 				Identifier: "foo",
 			},
+		)
+	})
+
+	t.Run("block", func(t *testing.T) {
+
+		t.Parallel()
+
+		test(t,
+			`
+              pub fun main(): Block {
+                  return getCurrentBlock()
+              }
+            `,
+			nil,
+		)
+	})
+
+	t.Run("string", func(t *testing.T) {
+
+		t.Parallel()
+
+		test(t,
+			`
+              pub fun main(): String {
+                  return "Hello!"
+              }
+            `,
+			cadence.NewString("Hello!"),
+		)
+	})
+
+	t.Run("address", func(t *testing.T) {
+
+		t.Parallel()
+
+		test(t,
+			`
+              pub fun main(): Address {
+                  return 0x1
+              }
+            `,
+			cadence.NewAddress([8]byte{0, 0, 0, 0, 0, 0, 0, 1}),
+		)
+	})
+
+	t.Run("character", func(t *testing.T) {
+
+		t.Parallel()
+
+		test(t,
+			`
+              pub fun main(): Character {
+                  return "a"[0]
+              }
+            `,
+			cadence.NewString("a"),
+		)
+	})
+
+	t.Run("capability", func(t *testing.T) {
+
+		t.Parallel()
+
+		test(t,
+			`
+              pub fun main(): Capability {
+                  return getAccount(0x1).getCapability<&Int>(/public/test)
+              }
+            `,
+			cadence.Capability{
+				Path: cadence.Path{
+					Domain:     "public",
+					Identifier: "test",
+				},
+				Address:    cadence.Address{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1},
+				BorrowType: "&Int",
+			},
+		)
+	})
+
+	t.Run("type", func(t *testing.T) {
+
+		t.Parallel()
+
+		test(t,
+			`
+              pub fun main(): Type {
+                  return Type<Int>()
+              }
+            `,
+			cadence.TypeValue{
+				StaticType: "Int",
+			},
+		)
+	})
+
+	t.Run("enum", func(t *testing.T) {
+
+		t.Parallel()
+
+		test(t,
+			`
+              pub fun main(): HashAlgorithm {
+                  return HashAlgorithm.SHA3_256
+              }
+            `,
+			cadence.Enum{
+				Fields: []cadence.Value{
+					cadence.UInt8(3),
+				},
+			}.WithType(&cadence.EnumType{
+				QualifiedIdentifier: "HashAlgorithm",
+				RawType:             cadence.UInt8Type{},
+				Fields: []cadence.Field{
+					{
+						Identifier: "rawValue",
+						Type:       cadence.UInt8Type{},
+					},
+				},
+			}),
 		)
 	})
 }
