@@ -51,10 +51,18 @@ jobs:
           go-version: '1.15'
 
       - name: Update Cadence
-        run: go get github.com/onflow/cadence@${{ github.event.pull_request.head.sha }}
+        run: |
+          go get github.com/onflow/cadence@${{ github.event.pull_request.head.sha }}
+          cd integration
+          go get github.com/onflow/cadence@${{ github.event.pull_request.head.sha }}
+          cd ..
       
       - name: go mod tidy
-        run: go mod tidy
+        run: |
+          go mod tidy
+          cd integration
+          go mod tidy
+          cd ..
 
       # create the pull request
       - name: Create Pull Request
