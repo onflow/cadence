@@ -61,7 +61,7 @@ jobs:
         uses: peter-evans/create-pull-request@v3
         with:
           token: ${{ secrets.REMOTE_REPO_PAT }}
-          commit-message: update cadence to commit ${{ github.event.pull_request.head.sha }}
+          commit-message: update Cadence to commit ${{ github.event.pull_request.head.sha }}
           title: Auto-Update ${{ env.LOCAL_REPO_NAME }} - ${{ github.event.pull_request.title }}
           body: |
               Auto generated PR to update Cadence version.
