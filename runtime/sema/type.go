@@ -3395,7 +3395,7 @@ func (t *CompositeType) IsImportable(results map[*Member]bool) bool {
 		return t.importable
 	}
 
-	// Only structures, resources, and enums can be imported
+	// Only structures and enums can be imported
 
 	switch t.Kind {
 	case common.CompositeKindStructure,
