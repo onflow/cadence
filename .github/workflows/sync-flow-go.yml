@@ -53,8 +53,8 @@ jobs:
       - name: Update Cadence
         run: go get github.com/onflow/cadence@${{ github.event.pull_request.head.sha }}
       
-      - name: Make tidy
-        run: make tidy
+      - name: go mod tidy
+        run: go mod tidy
 
       # create the pull request
       - name: Create Pull Request
