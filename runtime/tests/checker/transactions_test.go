@@ -328,7 +328,7 @@ func TestCheckTransactions(t *testing.T) {
 		      transaction(rs: @[R]) {}
 		    `,
 			[]error{
-				&sema.InvalidResourceTransactionParameterError{},
+				&sema.InvalidNonImportableTransactionParameterTypeError{},
 				&sema.ResourceLossError{},
 			},
 		)
@@ -344,7 +344,7 @@ func TestCheckTransactions(t *testing.T) {
 			  }
 		    `,
 			[]error{
-				&sema.InvalidNonStorableTransactionParameterTypeError{},
+				&sema.InvalidNonImportableTransactionParameterTypeError{},
 			},
 		)
 	})
