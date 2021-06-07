@@ -31,6 +31,5 @@ var AnyResourceType = &SimpleType{
 	Equatable: false,
 	// The actual returnability of a value is checked at run-time
 	ExternallyReturnable: true,
-	// The actual importability is checked at runtime
-	Importable: true,
+	Importable:           false,
 }

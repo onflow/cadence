@@ -3399,7 +3399,6 @@ func (t *CompositeType) IsImportable(results map[*Member]bool) bool {
 
 	switch t.Kind {
 	case common.CompositeKindStructure,
-		common.CompositeKindResource,
 		common.CompositeKindEnum:
 		break
 	default:
@@ -5561,7 +5560,7 @@ func (*CapabilityType) IsExternallyReturnable(_ map[*Member]bool) bool {
 }
 
 func (t *CapabilityType) IsImportable(_ map[*Member]bool) bool {
-	return true
+	return false
 }
 
 func (*CapabilityType) IsEquatable() bool {

@@ -6457,6 +6457,15 @@ func TestScriptParameterTypeValidation(t *testing.T) {
 
 	t.Parallel()
 
+	assertNonImportableError := func(t *testing.T, err error) {
+		require.Error(t, err)
+
+		require.IsType(t, Error{}, err)
+		runtimeErr := err.(Error)
+
+		assert.IsType(t, &ScriptParameterTypeNotImportableError{}, runtimeErr.Err)
+	}
+
 	fooStruct := cadence.Struct{
 		StructType: &cadence.StructType{
 			Location:            utils.TestLocation,
@@ -6478,7 +6487,7 @@ func TestScriptParameterTypeValidation(t *testing.T) {
         `
 
 		_, err := importAndExportValuesFromScript(t, script, fooStruct)
-		require.NoError(t, err)
+		assert.NoError(t, err)
 	})
 
 	t.Run("Non-Importable Struct", func(t *testing.T) {
@@ -6498,12 +6507,19 @@ func TestScriptParameterTypeValidation(t *testing.T) {
         `
 
 		_, err := importAndExportValuesFromScript(t, script, cadence.NewOptional(nil))
-		require.Error(t, err)
+		assertNonImportableError(t, err)
+	})
 
-		require.IsType(t, Error{}, err)
-		runtimeErr := err.(Error)
+	t.Run("AnyStruct", func(t *testing.T) {
+		t.Parallel()
 
-		assert.IsType(t, &ScriptParameterTypeNotImportableError{}, runtimeErr.Err)
+		script := `
+            pub fun main(arg: AnyStruct?) {
+            }
+        `
+
+		_, err := importAndExportValuesFromScript(t, script, cadence.NewOptional(nil))
+		assert.NoError(t, err)
 	})
 
 	t.Run("Interface", func(t *testing.T) {
@@ -6521,7 +6537,7 @@ func TestScriptParameterTypeValidation(t *testing.T) {
         `
 
 		_, err := importAndExportValuesFromScript(t, script, fooStruct)
-		require.NoError(t, err)
+		assert.NoError(t, err)
 	})
 
 	t.Run("Non-Importable Interface", func(t *testing.T) {
@@ -6537,12 +6553,7 @@ func TestScriptParameterTypeValidation(t *testing.T) {
         `
 
 		_, err := importAndExportValuesFromScript(t, script, cadence.NewOptional(nil))
-		require.Error(t, err)
-
-		require.IsType(t, Error{}, err)
-		runtimeErr := err.(Error)
-
-		assert.IsType(t, &ScriptParameterTypeNotImportableError{}, runtimeErr.Err)
+		assertNonImportableError(t, err)
 	})
 
 	t.Run("Resource", func(t *testing.T) {
@@ -6558,7 +6569,20 @@ func TestScriptParameterTypeValidation(t *testing.T) {
         `
 
 		_, err := importAndExportValuesFromScript(t, script, cadence.NewOptional(nil))
-		require.NoError(t, err)
+		assertNonImportableError(t, err)
+	})
+
+	t.Run("AnyResource", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            pub fun main(arg: @AnyResource?) {
+                destroy arg
+            }
+        `
+
+		_, err := importAndExportValuesFromScript(t, script, cadence.NewOptional(nil))
+		assertNonImportableError(t, err)
 	})
 
 	t.Run("Contract", func(t *testing.T) {
@@ -6573,12 +6597,7 @@ func TestScriptParameterTypeValidation(t *testing.T) {
         `
 
 		_, err := importAndExportValuesFromScript(t, script, cadence.NewOptional(nil))
-		require.Error(t, err)
-
-		require.IsType(t, Error{}, err)
-		runtimeErr := err.(Error)
-
-		assert.IsType(t, &ScriptParameterTypeNotImportableError{}, runtimeErr.Err)
+		assertNonImportableError(t, err)
 	})
 
 	t.Run("Array", func(t *testing.T) {
@@ -6595,7 +6614,7 @@ func TestScriptParameterTypeValidation(t *testing.T) {
 			cadence.NewArray([]cadence.Value{}),
 		)
 
-		require.NoError(t, err)
+		assert.NoError(t, err)
 	})
 
 	t.Run("Non-Importable Array", func(t *testing.T) {
@@ -6612,12 +6631,7 @@ func TestScriptParameterTypeValidation(t *testing.T) {
 			cadence.NewArray([]cadence.Value{}),
 		)
 
-		require.Error(t, err)
-
-		require.IsType(t, Error{}, err)
-		runtimeErr := err.(Error)
-
-		assert.IsType(t, &ScriptParameterTypeNotImportableError{}, runtimeErr.Err)
+		assertNonImportableError(t, err)
 	})
 
 	t.Run("Dictionary", func(t *testing.T) {
@@ -6634,7 +6648,19 @@ func TestScriptParameterTypeValidation(t *testing.T) {
 			cadence.NewDictionary([]cadence.KeyValuePair{}),
 		)
 
-		require.NoError(t, err)
+		assert.NoError(t, err)
+	})
+
+	t.Run("Capability", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            pub fun main(arg: Capability<&Int>?) {
+            }
+        `
+
+		_, err := importAndExportValuesFromScript(t, script, cadence.NewOptional(nil))
+		assertNonImportableError(t, err)
 	})
 
 	t.Run("Non-Importable Dictionary", func(t *testing.T) {
@@ -6651,12 +6677,7 @@ func TestScriptParameterTypeValidation(t *testing.T) {
 			cadence.NewArray([]cadence.Value{}),
 		)
 
-		require.Error(t, err)
-
-		require.IsType(t, Error{}, err)
-		runtimeErr := err.(Error)
-
-		assert.IsType(t, &ScriptParameterTypeNotImportableError{}, runtimeErr.Err)
+		assertNonImportableError(t, err)
 	})
 
 	t.Run("Numeric Types", func(t *testing.T) {
@@ -6743,12 +6764,7 @@ func TestScriptParameterTypeValidation(t *testing.T) {
 				_, err := importAndExportValuesFromScript(t, script, test.argument)
 
 				if test.expectErrors {
-					require.Error(t, err, "'%s' shouldn't be usable as a script argument type", test.label)
-
-					require.IsType(t, Error{}, err)
-					runtimeErr := err.(Error)
-
-					assert.IsType(t, &ScriptParameterTypeNotImportableError{}, runtimeErr.Err)
+					assertNonImportableError(t, err)
 				} else {
 					assert.NoError(t, err)
 				}
