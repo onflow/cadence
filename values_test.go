@@ -144,21 +144,21 @@ func TestStringer(t *testing.T) {
 			expected: "nil",
 		},
 		"String": {
-			value:    NewString("Flow ridah!"),
+			value:    String("Flow ridah!"),
 			expected: "\"Flow ridah!\"",
 		},
 		"Array": {
 			value: NewArray([]Value{
 				NewInt(10),
-				NewString("TEST"),
+				String("TEST"),
 			}),
 			expected: "[10, \"TEST\"]",
 		},
 		"Dictionary": {
 			value: NewDictionary([]KeyValuePair{
 				{
-					Key:   NewString("key"),
-					Value: NewString("value"),
+					Key:   String("key"),
+					Value: String("value"),
 				},
 			}),
 			expected: "{\"key\": \"value\"}",
@@ -172,7 +172,7 @@ func TestStringer(t *testing.T) {
 			expected: "0x1",
 		},
 		"struct": {
-			value: NewStruct([]Value{NewString("bar")}).WithType(&StructType{
+			value: NewStruct([]Value{String("bar")}).WithType(&StructType{
 				Location:            utils.TestLocation,
 				QualifiedIdentifier: "FooStruct",
 				Fields: []Field{
@@ -201,7 +201,7 @@ func TestStringer(t *testing.T) {
 			value: NewEvent(
 				[]Value{
 					NewInt(1),
-					NewString("foo"),
+					String("foo"),
 				},
 			).WithType(&EventType{
 				Location:            utils.TestLocation,
@@ -220,7 +220,7 @@ func TestStringer(t *testing.T) {
 			expected: "S.test.FooEvent(a: 1, b: \"foo\")",
 		},
 		"contract": {
-			value: NewContract([]Value{NewString("bar")}).WithType(&ContractType{
+			value: NewContract([]Value{String("bar")}).WithType(&ContractType{
 				Location:            utils.TestLocation,
 				QualifiedIdentifier: "FooContract",
 				Fields: []Field{
@@ -502,15 +502,8 @@ func TestNonUTF8String(t *testing.T) {
 	// Make sure it is an invalid utf8 string
 	assert.False(t, utf8.ValidString(nonUTF8String))
 
-	defer func() {
-		r := recover()
-		require.NotNil(t, r)
+	_, err := NewString(nonUTF8String)
+	require.Error(t, err)
 
-		err, isError := r.(error)
-		require.True(t, isError)
-
-		assert.Contains(t, err.Error(), "invalid UTF-8 in string")
-	}()
-
-	_ = NewString(nonUTF8String)
+	assert.Contains(t, err.Error(), "invalid UTF-8 in string")
 }

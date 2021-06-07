@@ -223,7 +223,11 @@ func decodeBool(valueJSON interface{}) cadence.Bool {
 }
 
 func decodeString(valueJSON interface{}) cadence.String {
-	return cadence.NewString(toString(valueJSON))
+	str, err := cadence.NewString(toString(valueJSON))
+	if err != nil {
+		panic(err)
+	}
+	return str
 }
 
 func decodeAddress(valueJSON interface{}) cadence.Address {

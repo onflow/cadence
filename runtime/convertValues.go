@@ -29,30 +29,16 @@ import (
 )
 
 // exportValue converts a runtime value to its native Go representation.
-func exportValue(value exportableValue) cadence.Value {
+func exportValue(value exportableValue) (cadence.Value, error) {
 	return exportValueWithInterpreter(value.Value, value.Interpreter(), exportResults{})
 }
 
 // ExportValue converts a runtime value to its native Go representation.
-func ExportValue(value interpreter.Value, inter *interpreter.Interpreter) cadence.Value {
+func ExportValue(value interpreter.Value, inter *interpreter.Interpreter) (cadence.Value, error) {
 	return exportValueWithInterpreter(value, inter, exportResults{})
 }
 
-// exportEvent converts a runtime event to its native Go representation.
-func exportEvent(event exportableEvent) cadence.Event {
-	fields := make([]cadence.Value, len(event.Fields))
-
-	results := exportResults{}
-
-	for i, field := range event.Fields {
-		fields[i] = exportValueWithInterpreter(field.Value, field.Interpreter(), results)
-	}
-
-	eventType := ExportType(event.Type, map[sema.TypeID]cadence.Type{}).(*cadence.EventType)
-	return cadence.NewEvent(fields).WithType(eventType)
-}
-
-type exportResults map[interpreter.Value]cadence.Value
+type exportResults map[*interpreter.EphemeralReferenceValue]struct{}
 
 // exportValueWithInterpreter exports the given internal (interpreter) value to an external value.
 //
@@ -64,123 +50,150 @@ func exportValueWithInterpreter(
 	value interpreter.Value,
 	inter *interpreter.Interpreter,
 	results exportResults,
-) cadence.Value {
-
-	if result, ok := results[value]; ok {
-		return result
-	}
-
-	results[value] = nil
-
-	result := func() cadence.Value {
-
-		switch v := value.(type) {
-		case interpreter.VoidValue:
-			return cadence.NewVoid()
-		case interpreter.NilValue:
-			return cadence.NewOptional(nil)
-		case *interpreter.SomeValue:
-			return exportSomeValue(v, inter, results)
-		case interpreter.BoolValue:
-			return cadence.NewBool(bool(v))
-		case *interpreter.StringValue:
-			return cadence.NewString(v.Str)
-		case *interpreter.ArrayValue:
-			return exportArrayValue(v, inter, results)
-		case interpreter.IntValue:
-			return cadence.NewIntFromBig(v.ToBigInt())
-		case interpreter.Int8Value:
-			return cadence.NewInt8(int8(v))
-		case interpreter.Int16Value:
-			return cadence.NewInt16(int16(v))
-		case interpreter.Int32Value:
-			return cadence.NewInt32(int32(v))
-		case interpreter.Int64Value:
-			return cadence.NewInt64(int64(v))
-		case interpreter.Int128Value:
-			return cadence.NewInt128FromBig(v.ToBigInt())
-		case interpreter.Int256Value:
-			return cadence.NewInt256FromBig(v.ToBigInt())
-		case interpreter.UIntValue:
-			return cadence.NewUIntFromBig(v.ToBigInt())
-		case interpreter.UInt8Value:
-			return cadence.NewUInt8(uint8(v))
-		case interpreter.UInt16Value:
-			return cadence.NewUInt16(uint16(v))
-		case interpreter.UInt32Value:
-			return cadence.NewUInt32(uint32(v))
-		case interpreter.UInt64Value:
-			return cadence.NewUInt64(uint64(v))
-		case interpreter.UInt128Value:
-			return cadence.NewUInt128FromBig(v.ToBigInt())
-		case interpreter.UInt256Value:
-			return cadence.NewUInt256FromBig(v.ToBigInt())
-		case interpreter.Word8Value:
-			return cadence.NewWord8(uint8(v))
-		case interpreter.Word16Value:
-			return cadence.NewWord16(uint16(v))
-		case interpreter.Word32Value:
-			return cadence.NewWord32(uint32(v))
-		case interpreter.Word64Value:
-			return cadence.NewWord64(uint64(v))
-		case interpreter.Fix64Value:
-			return cadence.Fix64(v)
-		case interpreter.UFix64Value:
-			return cadence.UFix64(v)
-		case *interpreter.CompositeValue:
-			return exportCompositeValue(v, inter, results)
-		case *interpreter.DictionaryValue:
-			return exportDictionaryValue(v, inter, results)
-		case interpreter.AddressValue:
-			return cadence.NewAddress(v)
-		case interpreter.LinkValue:
-			return exportLinkValue(v, inter)
-		case interpreter.PathValue:
-			return exportPathValue(v)
-		case interpreter.TypeValue:
-			return exportTypeValue(v, inter)
-		case interpreter.CapabilityValue:
-			return exportCapabilityValue(v, inter)
-		case *interpreter.EphemeralReferenceValue:
-			return exportValueWithInterpreter(v.Value, inter, results)
-		case *interpreter.StorageReferenceValue:
-			referencedValue := v.ReferencedValue(inter)
-			if referencedValue == nil {
-				return nil
-			}
-			return exportValueWithInterpreter(*referencedValue, inter, results)
+) (
+	cadence.Value,
+	error,
+) {
+	// Break recursion through ephemeral references
+	if referenceValue, ok := value.(*interpreter.EphemeralReferenceValue); ok {
+		if _, ok := results[referenceValue]; ok {
+			return nil, nil
 		}
-
-		panic(fmt.Sprintf("cannot export value of type %T", value))
-	}()
-
-	results[value] = result
-
-	return result
-}
-
-func exportSomeValue(v *interpreter.SomeValue, inter *interpreter.Interpreter, results exportResults) cadence.Optional {
-	if v.Value == nil {
-		return cadence.NewOptional(nil)
+		defer delete(results, referenceValue)
+		results[referenceValue] = struct{}{}
 	}
 
-	value := exportValueWithInterpreter(v.Value, inter, results)
+	switch v := value.(type) {
+	case interpreter.VoidValue:
+		return cadence.NewVoid(), nil
+	case interpreter.NilValue:
+		return cadence.NewOptional(nil), nil
+	case *interpreter.SomeValue:
+		return exportSomeValue(v, inter, results)
+	case interpreter.BoolValue:
+		return cadence.NewBool(bool(v)), nil
+	case *interpreter.StringValue:
+		return cadence.NewString(v.Str)
+	case *interpreter.ArrayValue:
+		return exportArrayValue(v, inter, results)
+	case interpreter.IntValue:
+		return cadence.NewIntFromBig(v.ToBigInt()), nil
+	case interpreter.Int8Value:
+		return cadence.NewInt8(int8(v)), nil
+	case interpreter.Int16Value:
+		return cadence.NewInt16(int16(v)), nil
+	case interpreter.Int32Value:
+		return cadence.NewInt32(int32(v)), nil
+	case interpreter.Int64Value:
+		return cadence.NewInt64(int64(v)), nil
+	case interpreter.Int128Value:
+		return cadence.NewInt128FromBig(v.ToBigInt()), nil
+	case interpreter.Int256Value:
+		return cadence.NewInt256FromBig(v.ToBigInt()), nil
+	case interpreter.UIntValue:
+		return cadence.NewUIntFromBig(v.ToBigInt()), nil
+	case interpreter.UInt8Value:
+		return cadence.NewUInt8(uint8(v)), nil
+	case interpreter.UInt16Value:
+		return cadence.NewUInt16(uint16(v)), nil
+	case interpreter.UInt32Value:
+		return cadence.NewUInt32(uint32(v)), nil
+	case interpreter.UInt64Value:
+		return cadence.NewUInt64(uint64(v)), nil
+	case interpreter.UInt128Value:
+		return cadence.NewUInt128FromBig(v.ToBigInt()), nil
+	case interpreter.UInt256Value:
+		return cadence.NewUInt256FromBig(v.ToBigInt()), nil
+	case interpreter.Word8Value:
+		return cadence.NewWord8(uint8(v)), nil
+	case interpreter.Word16Value:
+		return cadence.NewWord16(uint16(v)), nil
+	case interpreter.Word32Value:
+		return cadence.NewWord32(uint32(v)), nil
+	case interpreter.Word64Value:
+		return cadence.NewWord64(uint64(v)), nil
+	case interpreter.Fix64Value:
+		return cadence.Fix64(v), nil
+	case interpreter.UFix64Value:
+		return cadence.UFix64(v), nil
+	case *interpreter.CompositeValue:
+		return exportCompositeValue(v, inter, results)
+	case *interpreter.DictionaryValue:
+		return exportDictionaryValue(v, inter, results)
+	case interpreter.AddressValue:
+		return cadence.NewAddress(v), nil
+	case interpreter.LinkValue:
+		return exportLinkValue(v, inter), nil
+	case interpreter.PathValue:
+		return exportPathValue(v), nil
+	case interpreter.TypeValue:
+		return exportTypeValue(v, inter), nil
+	case interpreter.CapabilityValue:
+		return exportCapabilityValue(v, inter), nil
+	case *interpreter.EphemeralReferenceValue:
+		return exportValueWithInterpreter(v.Value, inter, results)
+	case *interpreter.StorageReferenceValue:
+		referencedValue := v.ReferencedValue(inter)
+		if referencedValue == nil {
+			return nil, nil
+		}
+		return exportValueWithInterpreter(*referencedValue, inter, results)
+	}
 
-	return cadence.NewOptional(value)
+	return nil, fmt.Errorf("cannot export value of type %T", value)
+
 }
 
-func exportArrayValue(v *interpreter.ArrayValue, inter *interpreter.Interpreter, results exportResults) cadence.Array {
+func exportSomeValue(
+	v *interpreter.SomeValue,
+	inter *interpreter.Interpreter,
+	results exportResults,
+) (
+	cadence.Optional,
+	error,
+) {
+	if v.Value == nil {
+		return cadence.NewOptional(nil), nil
+	}
+
+	value, err := exportValueWithInterpreter(v.Value, inter, results)
+	if err != nil {
+		return cadence.Optional{}, err
+	}
+
+	return cadence.NewOptional(value), nil
+}
+
+func exportArrayValue(
+	v *interpreter.ArrayValue,
+	inter *interpreter.Interpreter,
+	results exportResults,
+) (
+	cadence.Array,
+	error,
+) {
 	elements := v.Elements()
 	values := make([]cadence.Value, len(elements))
 
 	for i, value := range elements {
-		values[i] = exportValueWithInterpreter(value, inter, results)
+		exportedValue, err := exportValueWithInterpreter(value, inter, results)
+		if err != nil {
+			return cadence.Array{}, err
+		}
+		values[i] = exportedValue
 	}
 
-	return cadence.NewArray(values)
+	return cadence.NewArray(values), nil
 }
 
-func exportCompositeValue(v *interpreter.CompositeValue, inter *interpreter.Interpreter, results exportResults) cadence.Value {
+func exportCompositeValue(
+	v *interpreter.CompositeValue,
+	inter *interpreter.Interpreter,
+	results exportResults,
+) (
+	cadence.Value,
+	error,
+) {
 
 	dynamicTypeResults := interpreter.DynamicTypeResults{}
 
@@ -206,7 +219,11 @@ func exportCompositeValue(v *interpreter.CompositeValue, inter *interpreter.Inte
 			}
 		}
 
-		fields[i] = exportValueWithInterpreter(fieldValue, inter, results)
+		exportedFieldValue, err := exportValueWithInterpreter(fieldValue, inter, results)
+		if err != nil {
+			return nil, err
+		}
+		fields[i] = exportedFieldValue
 	}
 
 	// NOTE: when modifying the cases below,
@@ -214,18 +231,18 @@ func exportCompositeValue(v *interpreter.CompositeValue, inter *interpreter.Inte
 
 	switch staticType.Kind {
 	case common.CompositeKindStructure:
-		return cadence.NewStruct(fields).WithType(t.(*cadence.StructType))
+		return cadence.NewStruct(fields).WithType(t.(*cadence.StructType)), nil
 	case common.CompositeKindResource:
-		return cadence.NewResource(fields).WithType(t.(*cadence.ResourceType))
+		return cadence.NewResource(fields).WithType(t.(*cadence.ResourceType)), nil
 	case common.CompositeKindEvent:
-		return cadence.NewEvent(fields).WithType(t.(*cadence.EventType))
+		return cadence.NewEvent(fields).WithType(t.(*cadence.EventType)), nil
 	case common.CompositeKindContract:
-		return cadence.NewContract(fields).WithType(t.(*cadence.ContractType))
+		return cadence.NewContract(fields).WithType(t.(*cadence.ContractType)), nil
 	case common.CompositeKindEnum:
-		return cadence.NewEnum(fields).WithType(t.(*cadence.EnumType))
+		return cadence.NewEnum(fields).WithType(t.(*cadence.EnumType)), nil
 	}
 
-	panic(fmt.Errorf(
+	return nil, fmt.Errorf(
 		"invalid composite kind `%s`, must be %s",
 		staticType.Kind,
 		common.EnumerateWords(
@@ -238,15 +255,17 @@ func exportCompositeValue(v *interpreter.CompositeValue, inter *interpreter.Inte
 			},
 			"or",
 		),
-	))
+	)
 }
 
 func exportDictionaryValue(
 	v *interpreter.DictionaryValue,
 	inter *interpreter.Interpreter,
 	results exportResults,
-) cadence.Dictionary {
-
+) (
+	cadence.Dictionary,
+	error,
+) {
 	pairs := make([]cadence.KeyValuePair, v.Count())
 
 	for i, keyValue := range v.Keys().Elements() {
@@ -256,8 +275,14 @@ func exportDictionaryValue(
 
 		value := v.Get(inter, interpreter.ReturnEmptyLocationRange, keyValue).(*interpreter.SomeValue).Value
 
-		convertedKey := exportValueWithInterpreter(keyValue, inter, results)
-		convertedValue := exportValueWithInterpreter(value, inter, results)
+		convertedKey, err := exportValueWithInterpreter(keyValue, inter, results)
+		if err != nil {
+			return cadence.Dictionary{}, err
+		}
+		convertedValue, err := exportValueWithInterpreter(value, inter, results)
+		if err != nil {
+			return cadence.Dictionary{}, err
+		}
 
 		pairs[i] = cadence.KeyValuePair{
 			Key:   convertedKey,
@@ -265,7 +290,7 @@ func exportDictionaryValue(
 		}
 	}
 
-	return cadence.NewDictionary(pairs)
+	return cadence.NewDictionary(pairs), nil
 }
 
 func exportLinkValue(v interpreter.LinkValue, inter *interpreter.Interpreter) cadence.Link {
@@ -303,6 +328,24 @@ func exportCapabilityValue(v interpreter.CapabilityValue, inter *interpreter.Int
 		Address:    cadence.NewAddress(v.Address),
 		BorrowType: borrowType,
 	}
+}
+
+// exportEvent converts a runtime event to its native Go representation.
+func exportEvent(event exportableEvent) (cadence.Event, error) {
+	fields := make([]cadence.Value, len(event.Fields))
+
+	results := exportResults{}
+
+	for i, field := range event.Fields {
+		value, err := exportValueWithInterpreter(field.Value, field.Interpreter(), results)
+		if err != nil {
+			return cadence.Event{}, err
+		}
+		fields[i] = value
+	}
+
+	eventType := ExportType(event.Type, map[sema.TypeID]cadence.Type{}).(*cadence.EventType)
+	return cadence.NewEvent(fields).WithType(eventType), nil
 }
 
 // importValue converts a Cadence value to a runtime value.
