@@ -89,7 +89,7 @@ func (checker *Checker) checkTransactionParameters(declaration *ast.TransactionD
 
 	// Check parameter types
 
-	for i, parameter := range parameters {
+	for _, parameter := range parameters {
 		parameterType := parameter.TypeAnnotation.Type
 
 		// Ignore invalid parameter types
@@ -98,25 +98,11 @@ func (checker *Checker) checkTransactionParameters(declaration *ast.TransactionD
 			continue
 		}
 
-		// Parameters may not be resources
+		// Parameters must be importable
 
-		if parameterType.IsResourceType() {
-
-			astParameter := declaration.ParameterList.Parameters[i]
-
+		if !parameterType.IsImportable(map[*Member]bool{}) {
 			checker.report(
-				&InvalidResourceTransactionParameterError{
-					Type:  parameterType,
-					Range: ast.NewRangeFromPositioned(astParameter.TypeAnnotation),
-				},
-			)
-		}
-
-		// Parameters must be storable
-
-		if !parameter.TypeAnnotation.Type.IsStorable(map[*Member]bool{}) {
-			checker.report(
-				&InvalidNonStorableTransactionParameterTypeError{
+				&InvalidNonImportableTransactionParameterTypeError{
 					Type: parameterType,
 				},
 			)
