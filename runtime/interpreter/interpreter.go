@@ -2675,7 +2675,7 @@ func IsSubType(subType DynamicType, superType sema.Type) bool {
 	case CompositeDynamicType:
 		return sema.IsSubType(typedSubType.StaticType, superType)
 
-	case ArrayDynamicType:
+	case *ArrayDynamicType:
 		var superTypeElementType sema.Type
 
 		switch typedSuperType := superType.(type) {

@@ -716,7 +716,7 @@ func (v *ArrayValue) DynamicType(interpreter *Interpreter, seenReferences SeenRe
 		elementTypes[i] = value.DynamicType(interpreter, seenReferences)
 	}
 
-	return ArrayDynamicType{
+	return &ArrayDynamicType{
 		ElementTypes: elementTypes,
 	}
 }
@@ -1049,7 +1049,7 @@ func (v *ArrayValue) ConformsToDynamicType(
 	results TypeConformanceResults,
 ) bool {
 
-	arrayType, ok := dynamicType.(ArrayDynamicType)
+	arrayType, ok := dynamicType.(*ArrayDynamicType)
 
 	elements := v.Elements()
 
