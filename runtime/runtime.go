@@ -1323,7 +1323,7 @@ func (r *interpreterRuntime) emitEvent(
 		Fields: fields,
 	}
 
-	exportedEvent, err := exportEvent(eventValue)
+	exportedEvent, err := exportEvent(eventValue, seenReferences{})
 	if err != nil {
 		return err
 	}
@@ -1355,7 +1355,7 @@ func (r *interpreterRuntime) emitAccountEvent(
 		))
 	}
 
-	exportedEvent, err := exportEvent(eventValue)
+	exportedEvent, err := exportEvent(eventValue, seenReferences{})
 	if err != nil {
 		panic(err)
 	}
