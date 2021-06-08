@@ -877,12 +877,12 @@ func TestEphemeralReferenceTypeConformance(t *testing.T) {
 	code := `
         pub fun getEphemeralRef(): &Foo {
             var foo = Foo()
-            var foo_ref = &foo as &Foo
+            var fooRef = &foo as &Foo
 
             // Create the cyclic reference
-            foo_ref.bar = foo_ref
+            fooRef.bar = fooRef
 
-            return foo_ref
+            return fooRef
         }
 
         pub struct Foo {

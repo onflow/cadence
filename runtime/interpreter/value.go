@@ -38,7 +38,12 @@ import (
 	"github.com/onflow/cadence/runtime/sema"
 )
 
-type TypeConformanceResults map[valueDynamicTypePair]bool
+type TypeConformanceResults map[typeConformanceResultEntry]bool
+
+type typeConformanceResultEntry struct {
+	EphemeralReferenceValue       *EphemeralReferenceValue
+	EphemeralReferenceDynamicType EphemeralReferenceDynamicType
+}
 
 // SeenReferences is a set of seen references.
 //
@@ -46,11 +51,6 @@ type TypeConformanceResults map[valueDynamicTypePair]bool
 // as not all values are Go hashable, i.e. this might lead to run-time panics
 //
 type SeenReferences map[*EphemeralReferenceValue]struct{}
-
-type valueDynamicTypePair struct {
-	value       Value
-	dynamicType DynamicType
-}
 
 // Value
 
@@ -8409,24 +8409,7 @@ func (v *StorageReferenceValue) ConformsToDynamicType(
 		return false
 	}
 
-	valueTypePair := valueDynamicTypePair{
-		value:       v,
-		dynamicType: dynamicType,
-	}
-
-	if result, contains := results[valueTypePair]; contains {
-		return result
-	}
-
-	// It is safe to set 'true' here even this is not checked yet, because the final result
-	// doesn't depend on this. It depends on the rest of values of the object tree.
-	results[valueTypePair] = true
-
-	result := (*referencedValue).ConformsToDynamicType(interpreter, refType.InnerType(), results)
-
-	results[valueTypePair] = result
-
-	return result
+	return (*referencedValue).ConformsToDynamicType(interpreter, refType.InnerType(), results)
 }
 
 func (*StorageReferenceValue) IsStorable() bool {
@@ -8626,22 +8609,22 @@ func (v *EphemeralReferenceValue) ConformsToDynamicType(
 		return false
 	}
 
-	valueTypePair := valueDynamicTypePair{
-		value:       v,
-		dynamicType: dynamicType,
+	entry := typeConformanceResultEntry{
+		EphemeralReferenceValue:       v,
+		EphemeralReferenceDynamicType: refType,
 	}
 
-	if result, contains := results[valueTypePair]; contains {
+	if result, contains := results[entry]; contains {
 		return result
 	}
 
 	// It is safe to set 'true' here even this is not checked yet, because the final result
 	// doesn't depend on this. It depends on the rest of values of the object tree.
-	results[valueTypePair] = true
+	results[entry] = true
 
 	result := (*referencedValue).ConformsToDynamicType(interpreter, refType.InnerType(), results)
 
-	results[valueTypePair] = result
+	results[entry] = result
 
 	return result
 }
