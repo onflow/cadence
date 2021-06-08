@@ -1,6 +1,6 @@
 # Open a PR in flow-go when a PR in cadence is merged
 # The PR in flow-go is based on the last opened `auto-cadence-upgrade/*` if it exists, otherwise on the master branch
-
+name: Sync flow-go
 
 # Only run on pull requests merged to master
 on:
@@ -15,34 +15,29 @@ jobs:
     # the PR could have been closed otherwise. Only run if it has actually ben merged
     if: github.event.pull_request.merged == true
     steps:
-      # Central place for some constants so they are not scattered around
-      - name: Set Parameters
-        id: step_one
-        run: |
-          echo "REMOTE_REPO=onflow/flow-go" >> $GITHUB_ENV
-          echo "LOCAL_REPO_NAME=cadence" >> $GITHUB_ENV
     
-      # checkout the repo we are going to be updating with fetch depth of 0 to get all the branches fro the next step
-      - name: Checkout ${{ env.REMOTE_REPO }}
+      # checkout the repo we are going to be updating with fetch depth of 0 to get all the branches for the next step
+      - name: Checkout onflow/flow-go
         uses: actions/checkout@v2
         with:
           fetch-depth: 0
           token: ${{ secrets.REMOTE_REPO_PAT }}
-          repository: ${{ env.REMOTE_REPO }}
-
+          repository: onflow/flow-go
+      
       # get the latest update branch name to base the PR on that branch
-      - name: Get ${{ env.REMOTE_REPO }} base branch name
+      - name: Get onflow/flow-go base branch name
         run: |
-          BRANCH=$(git branch -r -l "origin/auto-{{ $LOCAL_REPO_NAME }}-upgrade*" --format "%(refname:lstrip=3)" --sort=-committerdate | head -n 1)
+          git fetch
+          BRANCH=$(git branch -r -l "*auto-cadence-upgrade/*" --format "%(refname:lstrip=3)" --sort=-committerdate | head -n 1)
           [ -z $BRANCH ] && BRANCH=master
           echo "BASE_BRANCH=$BRANCH" >> $GITHUB_ENV
 
       # checkout the correct branch of the remote repo
-      - name: Checkout ${{ env.REMOTE_REPO }} branch
+      - name: Checkout onflow/flow-go branch
         uses: actions/checkout@v2
         with:
           token: ${{ secrets.REMOTE_REPO_PAT }}
-          repository: ${{ env.REMOTE_REPO }}
+          repository: onflow/flow-go
           ref: ${{ env.BASE_BRANCH }}
 
       - name: Setup Go
@@ -52,9 +47,9 @@ jobs:
 
       - name: Update Cadence
         run: |
-          go get github.com/onflow/cadence@${{ github.event.pull_request.head.sha }}
+          go get github.com/onflow/cadence@${{ github.event.pull_request.merge_commit_sha }}
           cd integration
-          go get github.com/onflow/cadence@${{ github.event.pull_request.head.sha }}
+          go get github.com/onflow/cadence@${{ github.event.pull_request.merge_commit_sha }}
           cd ..
       
       - name: go mod tidy
@@ -69,10 +64,17 @@ jobs:
         uses: peter-evans/create-pull-request@v3
         with:
           token: ${{ secrets.REMOTE_REPO_PAT }}
-          commit-message: update Cadence to commit ${{ github.event.pull_request.head.sha }}
-          title: Auto-Update ${{ env.LOCAL_REPO_NAME }} - ${{ github.event.pull_request.title }}
+          commit-message: update Cadence to commit ${{ github.event.pull_request.merge_commit_sha }}
+          title: "Auto Cadence Update: _${{ github.event.pull_request.title }}_"
           body: |
               Auto generated PR to update Cadence version.
 
               References: ${{ github.event.pull_request.html_url }}
-          branch: auto-${{ env.LOCAL_REPO_NAME }}-upgrade/${{ github.event.pull_request.head.ref }}
+          branch: auto-cadence-upgrade/${{ github.event.pull_request.head.ref }}
+          delete-branch: true
+
+          # we can tweak the following:
+          # labels: A comma or newline-separated list of labels.
+          # assignees: A comma or newline-separated list of assignees (GitHub usernames).
+          # reviewers: A comma or newline-separated list of reviewers (GitHub usernames) to request a review from.
+          assignees: janezpodhostnik
