@@ -299,24 +299,30 @@ func TestImportValue(t *testing.T) {
 
 	t.Parallel()
 
-	type exportTest struct {
+	type importTest struct {
 		label    string
 		expected interpreter.Value
 		value    cadence.Value
 	}
 
-	test := func(tt exportTest) {
+	test := func(tt importTest) {
 
 		t.Run(tt.label, func(t *testing.T) {
 
 			t.Parallel()
 
-			actual := importValue(nil, tt.value)
-			assert.Equal(t, tt.expected, actual)
+			actual, err := importValue(nil, tt.value)
+
+			if tt.expected == nil {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+				assert.Equal(t, tt.expected, actual)
+			}
 		})
 	}
 
-	for _, tt := range []exportTest{
+	for _, tt := range []importTest{
 		{
 			label:    "Void",
 			expected: interpreter.VoidValue{},
@@ -369,6 +375,35 @@ func TestImportValue(t *testing.T) {
 					interpreter.NewStringValue("foo"),
 				}...,
 			),
+		},
+		{
+			label:    "Dictionary",
+			expected: interpreter.NewDictionaryValueUnownedNonCopying(),
+			value:    cadence.NewDictionary([]cadence.KeyValuePair{}),
+		},
+		{
+			label: "Dictionary (non-empty)",
+			expected: interpreter.NewDictionaryValueUnownedNonCopying(
+				interpreter.NewStringValue("a"),
+				interpreter.NewIntValueFromInt64(1),
+				interpreter.NewStringValue("b"),
+				interpreter.NewIntValueFromInt64(2),
+			),
+			value: cadence.NewDictionary([]cadence.KeyValuePair{
+				{
+					Key:   cadence.String("a"),
+					Value: cadence.NewInt(1),
+				},
+				{
+					Key:   cadence.String("b"),
+					Value: cadence.NewInt(2),
+				},
+			}),
+		},
+		{
+			label:    "Address",
+			expected: interpreter.NewAddressValueFromBytes([]byte{0x1}),
+			value:    cadence.NewAddress([8]byte{0, 0, 0, 0, 0, 0, 0, 1}),
 		},
 		{
 			label:    "Int",
@@ -480,6 +515,28 @@ func TestImportValue(t *testing.T) {
 				Domain:     common.PathDomainStorage,
 				Identifier: "foo",
 			},
+		},
+		{
+			label: "Link (invalid)",
+			value: cadence.Link{
+				TargetPath: cadence.Path{
+					Domain:     "storage",
+					Identifier: "test",
+				},
+				BorrowType: "Int",
+			},
+			expected: nil,
+		},
+		{
+			label: "Capability (invalid)",
+			value: cadence.Capability{
+				Path: cadence.Path{
+					Domain:     "public",
+					Identifier: "test",
+				},
+				BorrowType: "Int",
+			},
+			expected: nil,
 		},
 	} {
 		test(tt)

@@ -681,7 +681,13 @@ func validateArgumentParams(
 			}
 		}
 
-		arg := importValue(inter, value)
+		arg, err := importValue(inter, value)
+		if err != nil {
+			return nil, &InvalidEntryPointArgumentError{
+				Index: i,
+				Err:   err,
+			}
+		}
 
 		dynamicTypeResults := interpreter.DynamicTypeResults{}
 
