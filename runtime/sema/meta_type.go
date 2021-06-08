@@ -38,6 +38,7 @@ var MetaType = &SimpleType{
 	Storable:             true,
 	Equatable:            true,
 	ExternallyReturnable: true,
+	Importable:           true,
 	Members: func(t *SimpleType) map[string]MemberResolver {
 		return map[string]MemberResolver{
 			"identifier": {

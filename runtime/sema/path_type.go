@@ -30,6 +30,7 @@ var PathType = &SimpleType{
 	// TODO: implement support for equating paths in the future
 	Equatable:            false,
 	ExternallyReturnable: true,
+	Importable:           true,
 	IsSuperTypeOf: func(subType Type) bool {
 		return IsSubType(subType, StoragePathType) ||
 			IsSubType(subType, CapabilityPathType)
@@ -47,6 +48,7 @@ var StoragePathType = &SimpleType{
 	// TODO: implement support for equating paths in the future
 	Equatable:            false,
 	ExternallyReturnable: true,
+	Importable:           true,
 }
 
 // CapabilityPathType
@@ -60,6 +62,7 @@ var CapabilityPathType = &SimpleType{
 	// TODO: implement support for equating paths in the future
 	Equatable:            false,
 	ExternallyReturnable: true,
+	Importable:           true,
 	IsSuperTypeOf: func(subType Type) bool {
 		return IsSubType(subType, PrivatePathType) ||
 			IsSubType(subType, PublicPathType)
@@ -77,6 +80,7 @@ var PublicPathType = &SimpleType{
 	// TODO: implement support for equating paths in the future
 	Equatable:            false,
 	ExternallyReturnable: true,
+	Importable:           true,
 }
 
 // PrivatePathType
@@ -90,4 +94,5 @@ var PrivatePathType = &SimpleType{
 	// TODO: implement support for equating paths in the future
 	Equatable:            false,
 	ExternallyReturnable: true,
+	Importable:           true,
 }

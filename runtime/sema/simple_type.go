@@ -42,6 +42,7 @@ type SimpleType struct {
 	Storable             bool
 	Equatable            bool
 	ExternallyReturnable bool
+	Importable           bool
 	IsSuperTypeOf        func(subType Type) bool
 	Members              func(*SimpleType) map[string]MemberResolver
 	members              map[string]MemberResolver
@@ -86,6 +87,10 @@ func (t *SimpleType) IsEquatable() bool {
 
 func (t *SimpleType) IsExternallyReturnable(_ map[*Member]bool) bool {
 	return t.ExternallyReturnable
+}
+
+func (t *SimpleType) IsImportable(_ map[*Member]bool) bool {
+	return t.Importable
 }
 
 func (*SimpleType) TypeAnnotationState() TypeAnnotationState {

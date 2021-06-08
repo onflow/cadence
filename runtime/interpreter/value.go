@@ -6984,8 +6984,7 @@ func (v *CompositeValue) ConformsToDynamicType(
 	compositeType, ok := compositeDynamicType.StaticType.(*sema.CompositeType)
 	if !ok ||
 		v.Kind() != compositeType.Kind ||
-		v.QualifiedIdentifier() != compositeType.QualifiedIdentifier() ||
-		v.Location().ID() != compositeType.Location.ID() {
+		v.TypeID() != compositeType.ID() {
 
 		return false
 	}

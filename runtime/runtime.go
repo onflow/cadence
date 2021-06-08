@@ -210,11 +210,11 @@ func (r *interpreterRuntime) ExecuteScript(script Script, context Context) (cade
 		return nil, newError(err, context)
 	}
 
-	// Ensure the entry point's parameter types are storable
+	// Ensure the entry point's parameter types are importable
 	if len(functionEntryPointType.Parameters) > 0 {
 		for _, param := range functionEntryPointType.Parameters {
-			if !param.TypeAnnotation.Type.IsStorable(map[*sema.Member]bool{}) {
-				err = &ScriptParameterTypeNotStorableError{
+			if !param.TypeAnnotation.Type.IsImportable(map[*sema.Member]bool{}) {
+				err = &ScriptParameterTypeNotImportableError{
 					Type: param.TypeAnnotation.Type,
 				}
 				return nil, newError(err, context)
