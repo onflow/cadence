@@ -79,7 +79,7 @@ func (f InterpretedFunctionValue) Walk(_ func(Value)) {
 
 var functionDynamicType DynamicType = FunctionDynamicType{}
 
-func (InterpretedFunctionValue) DynamicType(_ *Interpreter, _ DynamicTypeResults) DynamicType {
+func (InterpretedFunctionValue) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
 	return functionDynamicType
 }
 
@@ -178,7 +178,7 @@ func (f HostFunctionValue) Walk(_ func(Value)) {
 
 var hostFunctionDynamicType DynamicType = FunctionDynamicType{}
 
-func (HostFunctionValue) DynamicType(_ *Interpreter, _ DynamicTypeResults) DynamicType {
+func (HostFunctionValue) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
 	return hostFunctionDynamicType
 }
 
@@ -266,7 +266,7 @@ func (f BoundFunctionValue) Walk(_ func(Value)) {
 
 var boundFunctionDynamicType DynamicType = FunctionDynamicType{}
 
-func (BoundFunctionValue) DynamicType(_ *Interpreter, _ DynamicTypeResults) DynamicType {
+func (BoundFunctionValue) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
 	return boundFunctionDynamicType
 }
 

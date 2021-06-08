@@ -48,7 +48,7 @@ func (v DeployedContractValue) Walk(walkChild func(Value)) {
 
 var deployedContractDynamicType DynamicType = DeployedContractDynamicType{}
 
-func (DeployedContractValue) DynamicType(_ *Interpreter, _ DynamicTypeResults) DynamicType {
+func (DeployedContractValue) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
 	return deployedContractDynamicType
 }
 

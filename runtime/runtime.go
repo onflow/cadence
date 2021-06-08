@@ -689,9 +689,7 @@ func validateArgumentParams(
 			}
 		}
 
-		dynamicTypeResults := interpreter.DynamicTypeResults{}
-
-		dynamicType := arg.DynamicType(inter, dynamicTypeResults)
+		dynamicType := arg.DynamicType(inter, interpreter.SeenReferences{})
 
 		// Ensure the argument is of an importable type
 		if !dynamicType.IsImportable() {

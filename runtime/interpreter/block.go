@@ -50,7 +50,7 @@ func (v BlockValue) Walk(walkChild func(Value)) {
 
 var blockDynamicType DynamicType = BlockDynamicType{}
 
-func (BlockValue) DynamicType(_ *Interpreter, _ DynamicTypeResults) DynamicType {
+func (BlockValue) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
 	return blockDynamicType
 }
 

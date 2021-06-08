@@ -628,8 +628,7 @@ func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingEx
 
 	switch expression.Operation {
 	case ast.OperationFailableCast, ast.OperationForceCast:
-		dynamicTypeResults := DynamicTypeResults{}
-		dynamicType := value.DynamicType(interpreter, dynamicTypeResults)
+		dynamicType := value.DynamicType(interpreter, SeenReferences{})
 		isSubType := IsSubType(dynamicType, expectedType)
 
 		switch expression.Operation {

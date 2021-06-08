@@ -915,7 +915,7 @@ func TestEphemeralReferenceTypeConformance(t *testing.T) {
 	require.NoError(t, err)
 	require.IsType(t, &EphemeralReferenceValue{}, value)
 
-	dynamicType := value.DynamicType(inter, DynamicTypeResults{})
+	dynamicType := value.DynamicType(inter, SeenReferences{})
 
 	// Check the dynamic type conformance on a cyclic value.
 	conforms := value.ConformsToDynamicType(inter, dynamicType, TypeConformanceResults{})
