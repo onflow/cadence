@@ -65,7 +65,7 @@ jobs:
         with:
           token: ${{ secrets.REMOTE_REPO_PAT }}
           commit-message: update Cadence to commit ${{ github.event.pull_request.merge_commit_sha }}
-          title: "Auto Cadence Update: _${{ github.event.pull_request.title }}_"
+          title: "Auto Cadence Update: ${{ github.event.pull_request.title }}"
           body: |
               Auto generated PR to update Cadence version.
 
