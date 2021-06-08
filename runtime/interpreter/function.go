@@ -59,59 +59,59 @@ type InterpretedFunctionValue struct {
 	PostConditions   ast.Conditions
 }
 
-func (f InterpretedFunctionValue) String() string {
+func (f *InterpretedFunctionValue) String() string {
 	return fmt.Sprintf("Function%s", f.Type.String())
 }
 
-func (f InterpretedFunctionValue) RecursiveString(_ SeenReferences) string {
+func (f *InterpretedFunctionValue) RecursiveString(_ SeenReferences) string {
 	return f.String()
 }
 
-func (InterpretedFunctionValue) IsValue() {}
+func (*InterpretedFunctionValue) IsValue() {}
 
-func (f InterpretedFunctionValue) Accept(interpreter *Interpreter, visitor Visitor) {
+func (f *InterpretedFunctionValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitInterpretedFunctionValue(interpreter, f)
 }
 
-func (f InterpretedFunctionValue) Walk(_ func(Value)) {
+func (f *InterpretedFunctionValue) Walk(_ func(Value)) {
 	// NO-OP
 }
 
 var functionDynamicType DynamicType = FunctionDynamicType{}
 
-func (InterpretedFunctionValue) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
+func (*InterpretedFunctionValue) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
 	return functionDynamicType
 }
 
-func (f InterpretedFunctionValue) StaticType() StaticType {
+func (f *InterpretedFunctionValue) StaticType() StaticType {
 	// TODO: add function static type, convert f.Type
 	return nil
 }
 
-func (f InterpretedFunctionValue) Copy() Value {
+func (f *InterpretedFunctionValue) Copy() Value {
 	return f
 }
 
-func (InterpretedFunctionValue) GetOwner() *common.Address {
+func (*InterpretedFunctionValue) GetOwner() *common.Address {
 	// value is never owned
 	return nil
 }
 
-func (InterpretedFunctionValue) SetOwner(_ *common.Address) {
+func (*InterpretedFunctionValue) SetOwner(_ *common.Address) {
 	// NO-OP: value cannot be owned
 }
 
-func (InterpretedFunctionValue) IsModified() bool {
+func (*InterpretedFunctionValue) IsModified() bool {
 	return false
 }
 
-func (InterpretedFunctionValue) SetModified(_ bool) {
+func (*InterpretedFunctionValue) SetModified(_ bool) {
 	// NO-OP
 }
 
-func (InterpretedFunctionValue) isFunctionValue() {}
+func (*InterpretedFunctionValue) isFunctionValue() {}
 
-func (f InterpretedFunctionValue) Invoke(invocation Invocation) Value {
+func (f *InterpretedFunctionValue) Invoke(invocation Invocation) Value {
 
 	// Check arguments' dynamic types match parameter types
 
@@ -130,13 +130,13 @@ func (f InterpretedFunctionValue) Invoke(invocation Invocation) Value {
 	return f.Interpreter.invokeInterpretedFunction(f, invocation)
 }
 
-func (f InterpretedFunctionValue) ConformsToDynamicType(_ *Interpreter, _ DynamicType, _ TypeConformanceResults) bool {
+func (f *InterpretedFunctionValue) ConformsToDynamicType(_ *Interpreter, _ DynamicType, _ TypeConformanceResults) bool {
 	// TODO: once FunctionDynamicType has parameter and return type info,
 	//   check it matches InterpretedFunctionValue's static function type
 	return false
 }
 
-func (InterpretedFunctionValue) IsStorable() bool {
+func (*InterpretedFunctionValue) IsStorable() bool {
 	return false
 }
 

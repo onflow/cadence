@@ -609,7 +609,7 @@ func (interpreter *Interpreter) VisitFunctionExpression(expression *ast.Function
 
 	statements := expression.FunctionBlock.Block.Statements
 
-	return InterpretedFunctionValue{
+	return &InterpretedFunctionValue{
 		Interpreter:      interpreter,
 		ParameterList:    expression.ParameterList,
 		Type:             functionType,

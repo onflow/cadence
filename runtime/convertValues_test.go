@@ -267,7 +267,7 @@ func TestExportValue(t *testing.T) {
 		},
 		{
 			label:    "Interpreted Function (invalid)",
-			value:    interpreter.InterpretedFunctionValue{},
+			value:    &interpreter.InterpretedFunctionValue{},
 			expected: nil,
 		},
 		{

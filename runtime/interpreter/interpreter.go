@@ -1003,7 +1003,7 @@ func (interpreter *Interpreter) functionDeclarationValue(
 	declaration *ast.FunctionDeclaration,
 	functionType *sema.FunctionType,
 	lexicalScope *VariableActivation,
-) InterpretedFunctionValue {
+) *InterpretedFunctionValue {
 
 	var preConditions ast.Conditions
 	if declaration.FunctionBlock.PreConditions != nil {
@@ -1021,7 +1021,7 @@ func (interpreter *Interpreter) functionDeclarationValue(
 		beforeStatements = postConditionsRewrite.BeforeStatements
 	}
 
-	return InterpretedFunctionValue{
+	return &InterpretedFunctionValue{
 		Interpreter:      interpreter,
 		ParameterList:    declaration.ParameterList,
 		Type:             functionType,
@@ -1315,14 +1315,14 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 	} else {
 		compositeInitializerFunction := interpreter.compositeInitializerFunction(declaration, lexicalScope)
 		if compositeInitializerFunction != nil {
-			initializerFunction = *compositeInitializerFunction
+			initializerFunction = compositeInitializerFunction
 		}
 	}
 
 	var destructorFunction FunctionValue
 	compositeDestructorFunction := interpreter.compositeDestructorFunction(declaration, lexicalScope)
 	if compositeDestructorFunction != nil {
-		destructorFunction = *compositeDestructorFunction
+		destructorFunction = compositeDestructorFunction
 	}
 
 	functions := interpreter.compositeFunctions(declaration, lexicalScope)
@@ -1713,7 +1713,7 @@ func (interpreter *Interpreter) functionWrappers(
 func (interpreter *Interpreter) compositeFunction(
 	functionDeclaration *ast.FunctionDeclaration,
 	lexicalScope *VariableActivation,
-) InterpretedFunctionValue {
+) *InterpretedFunctionValue {
 
 	functionType := interpreter.Program.Elaboration.FunctionDeclarationFunctionTypes[functionDeclaration]
 
@@ -1738,7 +1738,7 @@ func (interpreter *Interpreter) compositeFunction(
 	parameterList := functionDeclaration.ParameterList
 	statements := functionDeclaration.FunctionBlock.Block.Statements
 
-	return InterpretedFunctionValue{
+	return &InterpretedFunctionValue{
 		Interpreter:      interpreter,
 		ParameterList:    parameterList,
 		Type:             functionType,
