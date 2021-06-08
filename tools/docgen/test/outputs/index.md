@@ -1,34 +1,20 @@
+## Interfaces
 
-### fun `foo()`
-
-```cadence
-func foo(a Int, b String):  
-```
-
----
-
-### fun `bar()`
+### struct interface `SomeInterface`
 
 ```cadence
-func bar(name String, bytes [Int8]): bool 
-```
-This is a bar function, with a return type
+struct interface SomeInterface {
 
-Parameters:
-  - name : _The name. Must be a string_
-  - bytes : _Content to be validated_
+    x:  String
 
-Returns: Validity of the content
-
----
-
-### fun `noDocsFunction()`
-
-```cadence
-func noDocsFunction():  
+    y:  {Int: AnyStruct}
+}
 ```
 
+[More...](SomeInterface.md)
+
 ---
+## Structs & Resources
 
 ### struct `SomeStruct`
 
@@ -47,6 +33,7 @@ This is some struct. It has
 [More...](SomeStruct.md)
 
 ---
+## Enums
 
 ### enum `Direction`
 
@@ -59,6 +46,7 @@ enum Direction {
 This is an Enum without type conformance.
 
 ---
+
 ### enum `Color`
 
 ```cadence
@@ -68,5 +56,37 @@ enum Color: Int8 {
 }
 ```
 This is an Enum, with explicit type conformance.
+
+---
+## Functions
+
+### fun `foo()`
+
+```cadence
+func foo(a Int, b String)
+```
+
+---
+
+### fun `bar()`
+
+```cadence
+func bar(name String, bytes [Int8]): bool
+```
+This is a bar function, with a return type
+
+Parameters:
+  - name : _The name. Must be a string_
+  - bytes : _Content to be validated_
+
+Returns: Validity of the content
+
+---
+
+### fun `noDocsFunction()`
+
+```cadence
+func noDocsFunction()
+```
 
 ---
