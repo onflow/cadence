@@ -42,7 +42,12 @@ type DynamicTypeResults map[Value]DynamicType
 
 type TypeConformanceResults map[valueDynamicTypePair]bool
 
-type StringResults map[Value]struct{}
+// SeenReferences is a set of seen references.
+//
+// NOTE: Do not generalize to map[interpreter.Value],
+// as not all values are Go hashable, i.e. this might lead to run-time panics
+//
+type SeenReferences map[*EphemeralReferenceValue]struct{}
 
 type valueDynamicTypePair struct {
 	value       Value
@@ -66,7 +71,7 @@ type Value interface {
 	SetModified(modified bool)
 	StaticType() StaticType
 	ConformsToDynamicType(interpreter *Interpreter, dynamicType DynamicType, results TypeConformanceResults) bool
-	RecursiveString(results StringResults) string
+	RecursiveString(seenReferences SeenReferences) string
 	IsStorable() bool
 }
 
@@ -172,7 +177,7 @@ func (v TypeValue) String() string {
 	return format.TypeValue(typeString)
 }
 
-func (v TypeValue) RecursiveString(_ StringResults) string {
+func (v TypeValue) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
@@ -270,7 +275,7 @@ func (VoidValue) String() string {
 	return format.Void
 }
 
-func (v VoidValue) RecursiveString(_ StringResults) string {
+func (v VoidValue) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
@@ -344,7 +349,7 @@ func (v BoolValue) String() string {
 	return format.Bool(bool(v))
 }
 
-func (v BoolValue) RecursiveString(_ StringResults) string {
+func (v BoolValue) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
@@ -437,7 +442,7 @@ func (v *StringValue) String() string {
 	return format.String(v.Str)
 }
 
-func (v *StringValue) RecursiveString(_ StringResults) string {
+func (v *StringValue) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
@@ -535,7 +540,7 @@ func (v *StringValue) Get(_ *Interpreter, getLocationRange func() LocationRange,
 	return NewStringValue(char)
 }
 
-func (v *StringValue) Set(_ *Interpreter, _ func() LocationRange, key Value, value Value) {
+func (v *StringValue) Set(_ *Interpreter, _ func() LocationRange, _ Value, _ Value) {
 	panic(errors.NewUnreachableError())
 }
 
@@ -835,15 +840,15 @@ func (v *ArrayValue) checkBounds(index int, getLocationRange func() LocationRang
 }
 
 func (v *ArrayValue) String() string {
-	return v.RecursiveString(StringResults{})
+	return v.RecursiveString(SeenReferences{})
 }
 
-func (v *ArrayValue) RecursiveString(results StringResults) string {
+func (v *ArrayValue) RecursiveString(seenReferences SeenReferences) string {
 	elements := v.Elements()
 	values := make([]string, len(elements))
 
 	for i, value := range elements {
-		values[i] = value.RecursiveString(results)
+		values[i] = value.RecursiveString(seenReferences)
 	}
 	return format.Array(values)
 }
@@ -1305,7 +1310,7 @@ func (v IntValue) String() string {
 	return format.BigInt(v.BigInt)
 }
 
-func (v IntValue) RecursiveString(_ StringResults) string {
+func (v IntValue) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
@@ -1522,7 +1527,7 @@ func (v Int8Value) String() string {
 	return format.Int(int64(v))
 }
 
-func (v Int8Value) RecursiveString(_ StringResults) string {
+func (v Int8Value) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
@@ -1829,7 +1834,7 @@ func (v Int16Value) String() string {
 	return format.Int(int64(v))
 }
 
-func (v Int16Value) RecursiveString(_ StringResults) string {
+func (v Int16Value) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
@@ -2138,7 +2143,7 @@ func (v Int32Value) String() string {
 	return format.Int(int64(v))
 }
 
-func (v Int32Value) RecursiveString(_ StringResults) string {
+func (v Int32Value) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
@@ -2447,7 +2452,7 @@ func (v Int64Value) String() string {
 	return format.Int(int64(v))
 }
 
-func (v Int64Value) RecursiveString(_ StringResults) string {
+func (v Int64Value) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
@@ -2773,7 +2778,7 @@ func (v Int128Value) String() string {
 	return format.BigInt(v.BigInt)
 }
 
-func (v Int128Value) RecursiveString(_ StringResults) string {
+func (v Int128Value) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
@@ -3151,7 +3156,7 @@ func (v Int256Value) String() string {
 	return format.BigInt(v.BigInt)
 }
 
-func (v Int256Value) RecursiveString(_ StringResults) string {
+func (v Int256Value) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
@@ -3550,7 +3555,7 @@ func (v UIntValue) String() string {
 	return format.BigInt(v.BigInt)
 }
 
-func (v UIntValue) RecursiveString(_ StringResults) string {
+func (v UIntValue) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
@@ -3778,7 +3783,7 @@ func (v UInt8Value) String() string {
 	return format.Uint(uint64(v))
 }
 
-func (v UInt8Value) RecursiveString(_ StringResults) string {
+func (v UInt8Value) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
@@ -4015,7 +4020,7 @@ func (v UInt16Value) String() string {
 	return format.Uint(uint64(v))
 }
 
-func (v UInt16Value) RecursiveString(_ StringResults) string {
+func (v UInt16Value) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
@@ -4254,7 +4259,7 @@ func (v UInt32Value) String() string {
 	return format.Uint(uint64(v))
 }
 
-func (v UInt32Value) RecursiveString(_ StringResults) string {
+func (v UInt32Value) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
@@ -4493,7 +4498,7 @@ func (v UInt64Value) String() string {
 	return format.Uint(uint64(v))
 }
 
-func (v UInt64Value) RecursiveString(_ StringResults) string {
+func (v UInt64Value) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
@@ -4754,7 +4759,7 @@ func (v UInt128Value) String() string {
 	return format.BigInt(v.BigInt)
 }
 
-func (v UInt128Value) RecursiveString(_ StringResults) string {
+func (v UInt128Value) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
@@ -5074,7 +5079,7 @@ func (v UInt256Value) String() string {
 	return format.BigInt(v.BigInt)
 }
 
-func (v UInt256Value) RecursiveString(_ StringResults) string {
+func (v UInt256Value) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
@@ -5375,7 +5380,7 @@ func (v Word8Value) String() string {
 	return format.Uint(uint64(v))
 }
 
-func (v Word8Value) RecursiveString(_ StringResults) string {
+func (v Word8Value) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
@@ -5557,7 +5562,7 @@ func (v Word16Value) String() string {
 	return format.Uint(uint64(v))
 }
 
-func (v Word16Value) RecursiveString(_ StringResults) string {
+func (v Word16Value) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
@@ -5741,7 +5746,7 @@ func (v Word32Value) String() string {
 	return format.Uint(uint64(v))
 }
 
-func (v Word32Value) RecursiveString(_ StringResults) string {
+func (v Word32Value) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
@@ -5926,7 +5931,7 @@ func (v Word64Value) String() string {
 	return format.Uint(uint64(v))
 }
 
-func (v Word64Value) RecursiveString(_ StringResults) string {
+func (v Word64Value) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
@@ -6126,7 +6131,7 @@ func (v Fix64Value) String() string {
 	return format.Fix64(int64(v))
 }
 
-func (v Fix64Value) RecursiveString(_ StringResults) string {
+func (v Fix64Value) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
@@ -6408,7 +6413,7 @@ func (v UFix64Value) String() string {
 	return format.UFix64(uint64(v))
 }
 
-func (v UFix64Value) RecursiveString(_ StringResults) string {
+func (v UFix64Value) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
@@ -6619,7 +6624,7 @@ type CompositeValue struct {
 	Owner           *common.Address
 	destroyed       bool
 	modified        bool
-	stringer        func(results StringResults) string
+	stringer        func(seenReferences SeenReferences) string
 
 	// Raw-content cache for decoded values.
 	// Includes meta-info (type info, etc) as well as the fields content.
@@ -6991,18 +6996,18 @@ func (v *CompositeValue) SetMember(_ *Interpreter, getLocationRange func() Locat
 }
 
 func (v *CompositeValue) String() string {
-	return v.RecursiveString(StringResults{})
+	return v.RecursiveString(SeenReferences{})
 }
 
-func (v *CompositeValue) RecursiveString(results StringResults) string {
+func (v *CompositeValue) RecursiveString(seenReferences SeenReferences) string {
 	if v.stringer != nil {
-		return v.stringer(results)
+		return v.stringer(seenReferences)
 	}
 
-	return formatComposite(string(v.TypeID()), v.Fields(), results)
+	return formatComposite(string(v.TypeID()), v.Fields(), seenReferences)
 }
 
-func formatComposite(typeId string, fields *StringValueOrderedMap, results StringResults) string {
+func formatComposite(typeId string, fields *StringValueOrderedMap, seenReferences SeenReferences) string {
 	preparedFields := make([]struct {
 		Name  string
 		Value string
@@ -7015,7 +7020,7 @@ func formatComposite(typeId string, fields *StringValueOrderedMap, results Strin
 				Value string
 			}{
 				Name:  fieldName,
-				Value: value.RecursiveString(results),
+				Value: value.RecursiveString(seenReferences),
 			},
 		)
 	})
@@ -7633,10 +7638,10 @@ func (v *DictionaryValue) Set(inter *Interpreter, getLocationRange func() Locati
 }
 
 func (v *DictionaryValue) String() string {
-	return v.RecursiveString(StringResults{})
+	return v.RecursiveString(SeenReferences{})
 }
 
-func (v *DictionaryValue) RecursiveString(results StringResults) string {
+func (v *DictionaryValue) RecursiveString(seenReferences SeenReferences) string {
 	v.ensureLoaded()
 	keys := v.keys.Elements()
 
@@ -7656,14 +7661,14 @@ func (v *DictionaryValue) RecursiveString(results StringResults) string {
 		if value == nil {
 			valueString = "..."
 		} else {
-			valueString = value.RecursiveString(results)
+			valueString = value.RecursiveString(seenReferences)
 		}
 
 		pairs[i] = struct {
 			Key   string
 			Value string
 		}{
-			Key:   keyValue.RecursiveString(results),
+			Key:   keyValue.RecursiveString(seenReferences),
 			Value: valueString,
 		}
 	}
@@ -8034,7 +8039,7 @@ func (NilValue) String() string {
 	return format.Nil
 }
 
-func (v NilValue) RecursiveString(_ StringResults) string {
+func (v NilValue) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
@@ -8151,11 +8156,11 @@ func (v *SomeValue) Destroy(interpreter *Interpreter, getLocationRange func() Lo
 }
 
 func (v *SomeValue) String() string {
-	return v.RecursiveString(StringResults{})
+	return v.RecursiveString(SeenReferences{})
 }
 
-func (v *SomeValue) RecursiveString(results StringResults) string {
-	return v.Value.RecursiveString(results)
+func (v *SomeValue) RecursiveString(seenReferences SeenReferences) string {
+	return v.Value.RecursiveString(seenReferences)
 }
 
 func (v *SomeValue) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
@@ -8240,7 +8245,7 @@ func (*StorageReferenceValue) String() string {
 	return "StorageReference()"
 }
 
-func (v *StorageReferenceValue) RecursiveString(_ StringResults) string {
+func (v *StorageReferenceValue) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
@@ -8463,16 +8468,17 @@ func (*EphemeralReferenceValue) Walk(_ func(Value)) {
 }
 
 func (v *EphemeralReferenceValue) String() string {
-	return v.RecursiveString(StringResults{})
+	return v.RecursiveString(SeenReferences{})
 }
 
-func (v *EphemeralReferenceValue) RecursiveString(results StringResults) string {
-	if _, ok := results[v]; ok {
+func (v *EphemeralReferenceValue) RecursiveString(seenReferences SeenReferences) string {
+	if _, ok := seenReferences[v]; ok {
 		return "..."
 	}
-	results[v] = struct{}{}
-	defer delete(results, v)
-	return v.Value.RecursiveString(results)
+	seenReferences[v] = struct{}{}
+	defer delete(seenReferences, v)
+
+	return v.Value.RecursiveString(seenReferences)
 }
 
 func (v *EphemeralReferenceValue) DynamicType(interpreter *Interpreter, results DynamicTypeResults) DynamicType {
@@ -8726,7 +8732,7 @@ func (v AddressValue) String() string {
 	return format.Address(common.Address(v))
 }
 
-func (v AddressValue) RecursiveString(_ StringResults) string {
+func (v AddressValue) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
@@ -8776,8 +8782,8 @@ func (v AddressValue) GetMember(_ *Interpreter, _ func() LocationRange, name str
 	case sema.AddressTypeToBytesFunctionName:
 		return NewHostFunctionValue(
 			func(invocation Invocation) Value {
-				bytes := common.Address(v)
-				return ByteSliceToByteArrayValue(bytes[:])
+				address := common.Address(v)
+				return ByteSliceToByteArrayValue(address[:])
 			},
 		)
 	}
@@ -8866,7 +8872,7 @@ func NewAuthAccountValue(
 		return inter.accountGetLinkTargetFunction(address)
 	})
 
-	stringer := func(_ StringResults) string {
+	stringer := func(_ SeenReferences) string {
 		return fmt.Sprintf("AuthAccount(%s)", address)
 	}
 
@@ -8950,7 +8956,7 @@ func NewPublicAccountValue(
 	})
 
 	// Stringer function
-	stringer := func(_ StringResults) string {
+	stringer := func(_ SeenReferences) string {
 		return fmt.Sprintf("PublicAccount(%s)", address)
 	}
 
@@ -9042,7 +9048,7 @@ func (v PathValue) String() string {
 	)
 }
 
-func (v PathValue) RecursiveString(_ StringResults) string {
+func (v PathValue) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
@@ -9143,18 +9149,18 @@ func (v CapabilityValue) Destroy(_ *Interpreter, _ func() LocationRange) {
 }
 
 func (v CapabilityValue) String() string {
-	return v.RecursiveString(StringResults{})
+	return v.RecursiveString(SeenReferences{})
 }
 
-func (v CapabilityValue) RecursiveString(results StringResults) string {
+func (v CapabilityValue) RecursiveString(seenReferences SeenReferences) string {
 	var borrowType string
 	if v.BorrowType != nil {
 		borrowType = v.BorrowType.String()
 	}
 	return format.Capability(
 		borrowType,
-		v.Address.RecursiveString(results),
-		v.Path.RecursiveString(results),
+		v.Address.RecursiveString(seenReferences),
+		v.Path.RecursiveString(seenReferences),
 	)
 }
 
@@ -9265,13 +9271,13 @@ func (v LinkValue) Destroy(_ *Interpreter, _ func() LocationRange) {
 }
 
 func (v LinkValue) String() string {
-	return v.RecursiveString(StringResults{})
+	return v.RecursiveString(SeenReferences{})
 }
 
-func (v LinkValue) RecursiveString(results StringResults) string {
+func (v LinkValue) RecursiveString(seenReferences SeenReferences) string {
 	return format.Link(
 		v.Type.String(),
-		v.TargetPath.RecursiveString(results),
+		v.TargetPath.RecursiveString(seenReferences),
 	)
 }
 
@@ -9357,7 +9363,7 @@ func NewPublicKeyValue(
 
 	// Public key value to string should include the key even though it is a computed field
 	var stringerFields *StringValueOrderedMap
-	publicKeyValue.stringer = func(results StringResults) string {
+	publicKeyValue.stringer = func(seenReferences SeenReferences) string {
 		if stringerFields == nil {
 			stringerFields = NewStringValueOrderedMap()
 			stringerFields.Set(sema.PublicKeyPublicKeyField, publicKey.Copy())
@@ -9368,7 +9374,7 @@ func NewPublicKeyValue(
 		return formatComposite(
 			string(publicKeyValue.TypeID()),
 			stringerFields,
-			results,
+			seenReferences,
 		)
 	}
 

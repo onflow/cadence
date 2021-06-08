@@ -63,7 +63,7 @@ func (f InterpretedFunctionValue) String() string {
 	return fmt.Sprintf("Function%s", f.Type.String())
 }
 
-func (f InterpretedFunctionValue) RecursiveString(_ StringResults) string {
+func (f InterpretedFunctionValue) RecursiveString(_ SeenReferences) string {
 	return f.String()
 }
 
@@ -154,7 +154,7 @@ func (f HostFunctionValue) String() string {
 	return "Function(...)"
 }
 
-func (f HostFunctionValue) RecursiveString(_ StringResults) string {
+func (f HostFunctionValue) RecursiveString(_ SeenReferences) string {
 	return f.String()
 }
 
@@ -247,11 +247,11 @@ type BoundFunctionValue struct {
 }
 
 func (f BoundFunctionValue) String() string {
-	return f.RecursiveString(StringResults{})
+	return f.RecursiveString(SeenReferences{})
 }
 
-func (f BoundFunctionValue) RecursiveString(results StringResults) string {
-	return f.Function.RecursiveString(results)
+func (f BoundFunctionValue) RecursiveString(seenReferences SeenReferences) string {
+	return f.Function.RecursiveString(seenReferences)
 }
 
 func (BoundFunctionValue) IsValue() {}

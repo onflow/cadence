@@ -110,16 +110,16 @@ func (v BlockValue) IDAsByteArray() [sema.BlockIDSize]byte {
 }
 
 func (v BlockValue) String() string {
-	return v.RecursiveString(StringResults{})
+	return v.RecursiveString(SeenReferences{})
 }
 
-func (v BlockValue) RecursiveString(results StringResults) string {
+func (v BlockValue) RecursiveString(seenReferences SeenReferences) string {
 	return fmt.Sprintf(
 		"Block(height: %s, view: %s, id: 0x%x, timestamp: %s)",
-		v.Height.RecursiveString(results),
-		v.View.RecursiveString(results),
+		v.Height.RecursiveString(seenReferences),
+		v.View.RecursiveString(seenReferences),
 		v.IDAsByteArray(),
-		v.Timestamp.RecursiveString(results),
+		v.Timestamp.RecursiveString(seenReferences),
 	)
 }
 
