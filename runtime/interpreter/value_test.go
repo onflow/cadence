@@ -2163,7 +2163,7 @@ func TestHashable(t *testing.T) {
 
 		t.Run(interfaceName, func(t *testing.T) {
 
-			interfaceType, ok := scope.Lookup("Value").Type().Underlying().(*types.Interface)
+			interfaceType, ok := scope.Lookup(interfaceName).Type().Underlying().(*types.Interface)
 			require.True(t, ok)
 
 			for _, name := range scope.Names() {
