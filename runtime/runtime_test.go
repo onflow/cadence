@@ -2441,7 +2441,7 @@ func TestScriptReturnTypeNotReturnableError(t *testing.T) {
 	})
 }
 
-func TestScriptParameterTypeNotStorableError(t *testing.T) {
+func TestScriptParameterTypeNotImportableError(t *testing.T) {
 
 	t.Parallel()
 
@@ -2471,7 +2471,7 @@ func TestScriptParameterTypeNotStorableError(t *testing.T) {
 		},
 	)
 
-	var subErr *ScriptParameterTypeNotStorableError
+	var subErr *ScriptParameterTypeNotImportableError
 	require.ErrorAs(t, err, &subErr)
 }
 
@@ -2683,7 +2683,7 @@ func TestRuntimePublicAccountAddress(t *testing.T) {
 
 	assert.Equal(t,
 		[]string{
-			address.String(interpreter.StringResults{}),
+			address.String(),
 		},
 		loggedMessages,
 	)

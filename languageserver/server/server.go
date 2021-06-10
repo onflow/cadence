@@ -27,6 +27,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/mitchellh/mapstructure"
 	"github.com/onflow/cadence/encoding/json"
 	"github.com/onflow/cadence/runtime"
@@ -165,11 +166,12 @@ type DocumentSymbolProvider func(uri protocol.DocumentUri, version float64, chec
 type InitializationOptionsHandler func(initializationOptions interface{}) error
 
 type Server struct {
-	protocolServer  *protocol.Server
-	checkers        map[common.LocationID]*sema.Checker
-	documents       map[protocol.DocumentUri]Document
-	memberResolvers map[protocol.DocumentUri]map[string]sema.MemberResolver
-	ranges          map[protocol.DocumentUri]map[string]sema.Range
+	protocolServer       *protocol.Server
+	checkers             map[common.LocationID]*sema.Checker
+	documents            map[protocol.DocumentUri]Document
+	memberResolvers      map[protocol.DocumentUri]map[string]sema.MemberResolver
+	ranges               map[protocol.DocumentUri]map[string]sema.Range
+	codeActionsResolvers map[protocol.DocumentUri]map[uuid.UUID]func() []*protocol.CodeAction
 	// commands is the registry of custom commands we support
 	commands map[string]CommandHandler
 	// resolveAddressImport is the optional function that is used to resolve address imports
@@ -277,11 +279,12 @@ const ParseEntryPointArgumentsCommand = "cadence.server.parseEntryPointArguments
 
 func NewServer() (*Server, error) {
 	server := &Server{
-		checkers:        make(map[common.LocationID]*sema.Checker),
-		documents:       make(map[protocol.DocumentUri]Document),
-		memberResolvers: make(map[protocol.DocumentUri]map[string]sema.MemberResolver),
-		ranges:          make(map[protocol.DocumentUri]map[string]sema.Range),
-		commands:        make(map[string]CommandHandler),
+		checkers:             make(map[common.LocationID]*sema.Checker),
+		documents:            make(map[protocol.DocumentUri]Document),
+		memberResolvers:      make(map[protocol.DocumentUri]map[string]sema.MemberResolver),
+		ranges:               make(map[protocol.DocumentUri]map[string]sema.Range),
+		codeActionsResolvers: make(map[protocol.DocumentUri]map[uuid.UUID]func() []*protocol.CodeAction),
+		commands:             make(map[string]CommandHandler),
 	}
 	server.protocolServer = protocol.NewServer(server)
 
@@ -345,6 +348,7 @@ func (s *Server) Initialize(
 			SignatureHelpProvider: &protocol.SignatureHelpOptions{
 				TriggerCharacters: []string{"("},
 			},
+			CodeActionProvider: true,
 		},
 	}
 
@@ -560,15 +564,64 @@ func (s *Server) Hover(
 		return nil, nil
 	}
 
+	var markup strings.Builder
+
+	_, _ = fmt.Fprintf(
+		&markup,
+		"**Type**\n\n```cadence\n%s\n```\n",
+		documentType(occurrence.Origin.Type),
+	)
+
+	docString := occurrence.Origin.DocString
+	if docString != "" {
+		_, _ = fmt.Fprintf(
+			&markup,
+			"\n**Documentation**\n\n%s\n",
+			docString,
+		)
+	}
+
 	contents := protocol.MarkupContent{
 		Kind:  protocol.Markdown,
-		Value: formatType(occurrence.Origin.Type),
+		Value: markup.String(),
 	}
 	return &protocol.Hover{Contents: contents}, nil
 }
 
-func formatType(ty sema.Type) string {
-	return fmt.Sprintf("* Type: `%s`", ty.QualifiedString())
+func documentType(ty sema.Type) string {
+	if invokableType, ok := ty.(sema.InvokableType); ok {
+		return documentFunctionType(invokableType.InvocationFunctionType())
+	}
+	return ty.QualifiedString()
+}
+
+func documentFunctionType(ty *sema.FunctionType) string {
+	var builder strings.Builder
+	builder.WriteString("fun ")
+	if len(ty.TypeParameters) > 0 {
+		builder.WriteRune('<')
+		for i, typeParameter := range ty.TypeParameters {
+			if i > 0 {
+				builder.WriteString(", ")
+			}
+			builder.WriteString(typeParameter.QualifiedString())
+		}
+		builder.WriteRune('>')
+	}
+	builder.WriteRune('(')
+	for i, parameter := range ty.Parameters {
+		if i > 0 {
+			builder.WriteString(", ")
+		}
+		builder.WriteString(parameter.QualifiedString())
+	}
+	builder.WriteString(")")
+
+	if ty.ReturnTypeAnnotation.Type != sema.VoidType {
+		builder.WriteString(": ")
+		builder.WriteString(ty.ReturnTypeAnnotation.QualifiedString())
+	}
+	return builder.String()
 }
 
 // Definition finds the definition of the type at the given location.
@@ -782,6 +835,48 @@ func (s *Server) Rename(
 			string(uri): textEdits,
 		},
 	}, nil
+}
+
+func (s *Server) CodeAction(
+	conn protocol.Conn,
+	params *protocol.CodeActionParams,
+) (
+	codeActions []*protocol.CodeAction,
+	err error,
+) {
+	// NOTE: Always initialize to an empty slice, i.e DON'T use nil:
+	// The later will be ignored instead of being treated as no items
+	codeActions = []*protocol.CodeAction{}
+
+	uri := params.TextDocument.URI
+	checker := s.checkerForDocument(uri)
+	if checker == nil {
+		// Can we ensure this doesn't happen?
+		return
+	}
+
+	codeActionsResolvers := s.codeActionsResolvers[uri]
+
+	for _, diagnostic := range params.Context.Diagnostics {
+
+		if data, ok := diagnostic.Data.(string); ok {
+			codeActionID, err := uuid.Parse(data)
+			if err != nil {
+				continue
+			}
+
+			codeActionsResolver, ok := codeActionsResolvers[codeActionID]
+			if !ok {
+				continue
+			}
+
+			codeActions = append(codeActions,
+				codeActionsResolver()...,
+			)
+		}
+	}
+
+	return
 }
 
 // CodeLens is called every time the document contents change and returns a
@@ -1551,7 +1646,6 @@ func (*Server) Exit(_ protocol.Conn) error {
 }
 
 const filePrefix = "file://"
-const inMemoryPrefix = "inmemory:/"
 
 // getDiagnostics parses and checks the given file and generates diagnostics
 // indicating each syntax or semantic error. Returns a list of diagnostics
@@ -1567,6 +1661,9 @@ func (s *Server) getDiagnostics(
 	diagnostics []protocol.Diagnostic,
 	diagnosticsErr error,
 ) {
+	// Always reset the code actions for this document
+	codeActionsResolvers := map[uuid.UUID]func() []*protocol.CodeAction{}
+	s.codeActionsResolvers[uri] = codeActionsResolvers
 
 	// NOTE: Always initialize to an empty slice, i.e DON'T use nil:
 	// The later will be ignored instead of being treated as no items
@@ -1579,7 +1676,7 @@ func (s *Server) getDiagnostics(
 
 	if parseError != nil {
 		if parentErr, ok := parseError.(errors.ParentError); ok {
-			parserDiagnostics := getDiagnosticsForParentError(conn, uri, parentErr)
+			parserDiagnostics := s.getDiagnosticsForParentError(conn, uri, parentErr, codeActionsResolvers)
 			diagnostics = append(diagnostics, parserDiagnostics...)
 		}
 	}
@@ -1735,7 +1832,7 @@ func (s *Server) getDiagnostics(
 
 	if checkError != nil {
 		if parentErr, ok := checkError.(errors.ParentError); ok {
-			checkerDiagnostics := getDiagnosticsForParentError(conn, uri, parentErr)
+			checkerDiagnostics := s.getDiagnosticsForParentError(conn, uri, parentErr, codeActionsResolvers)
 			diagnostics = append(diagnostics, checkerDiagnostics...)
 		}
 	}
@@ -1750,7 +1847,12 @@ func (s *Server) getDiagnostics(
 	}
 
 	for _, hint := range checker.Hints() {
-		diagnostic := convertHint(hint)
+		diagnostic, codeActionsResolver := convertHint(hint, uri)
+		if codeActionsResolver != nil {
+			codeActionsResolverID := uuid.New()
+			diagnostic.Data = codeActionsResolverID
+			codeActionsResolvers[codeActionsResolverID] = codeActionsResolver
+		}
 		diagnostics = append(diagnostics, diagnostic)
 	}
 
@@ -1761,10 +1863,11 @@ func (s *Server) getDiagnostics(
 // a diagnostic. Both parser and checker errors can be unpacked.
 //
 // Logs any conversion failures to the client.
-func getDiagnosticsForParentError(
+func (s *Server) getDiagnosticsForParentError(
 	conn protocol.Conn,
 	uri protocol.DocumentUri,
 	err errors.ParentError,
+	codeActionsResolvers map[uuid.UUID]func() []*protocol.CodeAction,
 ) (
 	diagnostics []protocol.Diagnostic,
 ) {
@@ -1777,7 +1880,12 @@ func getDiagnosticsForParentError(
 			})
 			continue
 		}
-		diagnostic := convertError(convertibleErr)
+		diagnostic, codeActionsResolver := s.convertError(convertibleErr, uri)
+		if codeActionsResolver != nil {
+			codeActionsResolverID := uuid.New()
+			diagnostic.Data = codeActionsResolverID
+			codeActionsResolvers[codeActionsResolverID] = codeActionsResolver
+		}
 
 		if errorNotes, ok := convertibleErr.(errors.ErrorNotes); ok {
 			for _, errorNote := range errorNotes.ErrorNotes() {
@@ -2013,10 +2121,25 @@ type convertibleError interface {
 	ast.HasPosition
 }
 
-// convertError converts a checker error to a diagnostic.
-func convertError(err convertibleError) protocol.Diagnostic {
+type insertionPosition struct {
+	ast.Position
+	before bool
+}
+
+// convertError converts a checker error to a diagnostic
+// and an optional code action to resolve the error.
+//
+func (s *Server) convertError(
+	err convertibleError,
+	uri protocol.DocumentUri,
+) (
+	protocol.Diagnostic,
+	func() []*protocol.CodeAction,
+) {
 	startPosition := err.StartPosition()
 	endPosition := err.EndPosition()
+
+	protocolRange := conversion.ASTToProtocolRange(startPosition, endPosition)
 
 	var message strings.Builder
 	message.WriteString(err.Error())
@@ -2026,41 +2149,864 @@ func convertError(err convertibleError) protocol.Diagnostic {
 		message.WriteString(secondaryError.SecondaryError())
 	}
 
-	return protocol.Diagnostic{
+	diagnostic := protocol.Diagnostic{
 		Message:  message.String(),
 		Severity: protocol.SeverityError,
-		Range: protocol.Range{
-			Start: protocol.Position{
-				Line:      float64(startPosition.Line - 1),
-				Character: float64(startPosition.Column),
+		Range:    protocolRange,
+	}
+
+	var codeActionsResolver func() []*protocol.CodeAction
+
+	switch err := err.(type) {
+	case *sema.TypeMismatchError:
+		codeActionsResolver = s.maybeReturnTypeChangeCodeActionsResolver(diagnostic, uri, err)
+
+	case *sema.ConformanceError:
+		codeActionsResolver = maybeAddMissingMembersCodeActionResolver(diagnostic, err, uri)
+
+	case *sema.NotDeclaredError:
+		if err.ExpectedKind == common.DeclarationKindVariable {
+			codeActionsResolver = s.maybeAddDeclarationActionsResolver(
+				diagnostic,
+				uri,
+				err.Expression,
+				err.Pos,
+				err.Name,
+				nil,
+			)
+		}
+
+	case *sema.NotDeclaredMemberError:
+		var declarationGetter func(elaboration *sema.Elaboration) ast.Declaration
+
+		switch ty := err.Type.(type) {
+		case *sema.CompositeType:
+			declarationGetter = func(elaboration *sema.Elaboration) ast.Declaration {
+				return elaboration.CompositeTypeDeclarations[ty]
+			}
+		case *sema.InterfaceType:
+			declarationGetter = func(elaboration *sema.Elaboration) ast.Declaration {
+				return elaboration.InterfaceTypeDeclarations[ty]
+			}
+		}
+
+		if declarationGetter != nil {
+			codeActionsResolver = s.maybeAddDeclarationActionsResolver(
+				diagnostic,
+				uri,
+				err.Expression,
+				err.StartPos,
+				err.Name,
+				func(checker *sema.Checker, isFunction bool) insertionPosition {
+					declaration := declarationGetter(checker.Elaboration)
+
+					members := declaration.DeclarationMembers()
+					declarations := members.Declarations()
+					functions := members.Functions()
+					fields := members.Fields()
+
+					switch {
+					case isFunction && len(functions) > 0:
+						// If a function is inserted,
+						// prefer adding it after the last function (if any)
+						lastFunction := functions[len(functions)-1]
+						return insertionPosition{
+							before:   false,
+							Position: lastFunction.EndPosition().Shifted(1),
+						}
+					case !isFunction && len(fields) > 0:
+						// If a field is inserted,
+						// prefer inserting it after the last field (if any)
+						lastField := fields[len(fields)-1]
+						return insertionPosition{
+							before:   false,
+							Position: lastField.EndPosition().Shifted(1),
+						}
+					case !isFunction && len(functions) > 0:
+						// If a field is inserted,
+						// and there are no fields, but functions,
+						// insert it before the first function
+						firstFunction := functions[0]
+						return insertionPosition{
+							before:   true,
+							Position: firstFunction.StartPosition(),
+						}
+					}
+
+					// By default, insert the declaration after the last declaration (if any).
+					// Otherwise, insert it before the end of the containing declaration
+
+					if len(declarations) > 0 {
+						lastDeclaration := declarations[len(declarations)-1]
+						return insertionPosition{
+							before:   false,
+							Position: lastDeclaration.EndPosition().Shifted(1),
+						}
+					}
+
+					return insertionPosition{
+						before:   true,
+						Position: declaration.EndPosition(),
+					}
+				},
+			)
+		}
+	}
+
+	return diagnostic, codeActionsResolver
+}
+
+func (s *Server) maybeReturnTypeChangeCodeActionsResolver(
+	diagnostic protocol.Diagnostic,
+	uri protocol.DocumentUri,
+	err *sema.TypeMismatchError,
+) func() []*protocol.CodeAction {
+
+	// The type mismatch could be in a return statement
+	// due to a missing or wrong return type.
+	//
+	// Find the expression,
+	// its parent return statement,
+	// its parent function expression or function declaration,
+	// and suggest adding the return type.
+
+	if err.Expression == nil {
+		return nil
+	}
+
+	checker := s.checkerForDocument(uri)
+	if checker == nil {
+		return nil
+	}
+
+	var foundReturn bool
+	var parameterList *ast.ParameterList
+	var returnTypeAnnotation *ast.TypeAnnotation
+
+	var stack []ast.Element
+	ast.Inspect(checker.Program, func(element ast.Element) bool {
+
+		switch element {
+		case err.Expression:
+
+			// We found the error expression.
+			// Determine what should be declared based on the context,
+			// i.e. from the parents
+
+			for i := len(stack) - 1; i >= 0; i-- {
+				parent := stack[i]
+				switch parent := parent.(type) {
+				case *ast.ReturnStatement:
+					if parent.Expression == err.Expression {
+						foundReturn = true
+					}
+
+				case *ast.FunctionDeclaration:
+					parameterList = parent.ParameterList
+					returnTypeAnnotation = parent.ReturnTypeAnnotation
+
+				case *ast.FunctionExpression:
+					parameterList = parent.ParameterList
+					returnTypeAnnotation = parent.ReturnTypeAnnotation
+				}
+			}
+
+			return false
+
+		case nil:
+			stack = stack[:len(stack)-1]
+
+		default:
+			stack = append(stack, element)
+		}
+
+		return true
+	})
+
+	if !foundReturn || parameterList == nil {
+		return nil
+	}
+
+	return func() []*protocol.CodeAction {
+
+		var title string
+		var textEdit protocol.TextEdit
+
+		if isEmptyType(returnTypeAnnotation.Type) {
+
+			title = fmt.Sprintf("Add return type `%s`", err.ActualType)
+			insertionPos := parameterList.EndPosition().Shifted(1)
+			textEdit = protocol.TextEdit{
+				Range: protocol.Range{
+					Start: conversion.ASTToProtocolPosition(insertionPos),
+					End:   conversion.ASTToProtocolPosition(insertionPos),
+				},
+				NewText: fmt.Sprintf(": %s", err.ActualType),
+			}
+		} else {
+			title = fmt.Sprintf("Change return type to `%s`", err.ActualType)
+			textEdit = protocol.TextEdit{
+				Range: conversion.ASTToProtocolRange(
+					returnTypeAnnotation.StartPosition(),
+					returnTypeAnnotation.EndPosition(),
+				),
+				NewText: err.ActualType.String(),
+			}
+		}
+
+		return []*protocol.CodeAction{
+			{
+				Title:       title,
+				Kind:        protocol.QuickFix,
+				Diagnostics: []protocol.Diagnostic{diagnostic},
+				Edit: &protocol.WorkspaceEdit{
+					Changes: &map[string][]protocol.TextEdit{
+						string(uri): {textEdit},
+					},
+				},
+				IsPreferred: true,
 			},
-			End: protocol.Position{
-				Line:      float64(endPosition.Line - 1),
-				Character: float64(endPosition.Column + 1),
+		}
+	}
+}
+
+func isEmptyType(t ast.Type) bool {
+	nominalType, ok := t.(*ast.NominalType)
+	return ok && nominalType.Identifier.Identifier == ""
+}
+
+const indentationCount = 4
+
+func maybeAddMissingMembersCodeActionResolver(
+	diagnostic protocol.Diagnostic,
+	err *sema.ConformanceError,
+	uri protocol.DocumentUri,
+) func() []*protocol.CodeAction {
+
+	missingMemberCount := len(err.MissingMembers)
+	if missingMemberCount == 0 {
+		return nil
+	}
+
+	return func() []*protocol.CodeAction {
+
+		var builder strings.Builder
+
+		indentation := strings.Repeat(" ", err.CompositeDeclaration.StartPos.Column+indentationCount)
+
+		for _, missingMember := range err.MissingMembers {
+			newMemberSource := formatNewMember(missingMember, indentation)
+			if newMemberSource == "" {
+				continue
+			}
+
+			builder.WriteRune('\n')
+			builder.WriteString(indentation)
+			if missingMember.Access != ast.AccessNotSpecified {
+				builder.WriteString(missingMember.Access.Keyword())
+				builder.WriteRune(' ')
+			}
+			builder.WriteString(newMemberSource)
+			builder.WriteRune('\n')
+		}
+
+		insertionPos := err.CompositeDeclaration.EndPos
+
+		textEdit := protocol.TextEdit{
+			Range: protocol.Range{
+				Start: conversion.ASTToProtocolPosition(insertionPos),
+				End:   conversion.ASTToProtocolPosition(insertionPos),
 			},
+			NewText: builder.String(),
+		}
+
+		return []*protocol.CodeAction{
+			{
+				Title:       "Add missing members",
+				Kind:        protocol.QuickFix,
+				Diagnostics: []protocol.Diagnostic{diagnostic},
+				Edit: &protocol.WorkspaceEdit{
+					Changes: &map[string][]protocol.TextEdit{
+						string(uri): {textEdit},
+					},
+				},
+				IsPreferred: true,
+			},
+		}
+	}
+}
+
+func formatNewMember(member *sema.Member, indentation string) string {
+	switch member.DeclarationKind {
+	case common.DeclarationKindField:
+		return fmt.Sprintf(
+			"%s %s: %s",
+			member.VariableKind.Keyword(),
+			member.Identifier.Identifier,
+			member.TypeAnnotation,
+		)
+
+	case common.DeclarationKindFunction:
+		invokableType, ok := member.TypeAnnotation.Type.(sema.InvokableType)
+		if !ok {
+			return ""
+		}
+
+		functionType := invokableType.InvocationFunctionType()
+
+		var parametersBuilder strings.Builder
+
+		for i, parameter := range functionType.Parameters {
+			if i > 0 {
+				parametersBuilder.WriteString(", ")
+			}
+			parametersBuilder.WriteString(parameter.QualifiedString())
+		}
+
+		var returnType string
+		returnTypeAnnotation := functionType.ReturnTypeAnnotation
+		if returnTypeAnnotation != nil && returnTypeAnnotation.Type != sema.VoidType {
+			returnType = fmt.Sprintf(": %s", returnTypeAnnotation.QualifiedString())
+		}
+
+		innerIndentation := strings.Repeat(" ", indentationCount)
+
+		return fmt.Sprintf(
+			"fun %s(%s)%s {\n%[4]s%[5]spanic(\"TODO\")\n%[4]s}",
+			member.Identifier.Identifier,
+			parametersBuilder.String(),
+			returnType,
+			indentation,
+			innerIndentation,
+		)
+
+	default:
+		return ""
+	}
+}
+
+func (s *Server) maybeAddDeclarationActionsResolver(
+	diagnostic protocol.Diagnostic,
+	uri protocol.DocumentUri,
+	errorExpression ast.Expression,
+	errorPos ast.Position,
+	name string,
+	memberInsertionPosGetter func(checker *sema.Checker, isFunction bool) insertionPosition,
+) func() []*protocol.CodeAction {
+
+	return func() []*protocol.CodeAction {
+
+		document, ok := s.documents[uri]
+		if !ok {
+			return nil
+		}
+
+		checker := s.checkerForDocument(uri)
+		if checker == nil {
+			return nil
+		}
+
+		var isAssignmentTarget bool
+		var isInvoked bool
+		var parentFunctionEndPos *ast.Position
+		var invocationArgumentTypes []sema.Type
+		var invocationArgumentLabels []string
+		var invocationReturnType sema.Type
+
+		var stack []ast.Element
+		ast.Inspect(checker.Program, func(element ast.Element) bool {
+
+			switch element {
+			case errorExpression:
+
+				// We found the error expression.
+				// Determine what should be declared based on the context,
+				// i.e. from the parents
+
+				parent := stack[len(stack)-1]
+				switch parent := parent.(type) {
+				case *ast.AssignmentStatement:
+					isAssignmentTarget = parent.Target == errorExpression
+
+				case *ast.InvocationExpression:
+					isInvoked = parent.InvokedExpression == errorExpression
+
+					invocationArgumentTypes = checker.Elaboration.InvocationExpressionArgumentTypes[parent]
+					invocationReturnType = checker.Elaboration.InvocationExpressionReturnTypes[parent]
+
+					invocationArgumentLabels = make([]string, 0, len(parent.Arguments))
+					for _, argument := range parent.Arguments {
+						invocationArgumentLabels = append(
+							invocationArgumentLabels,
+							argument.Label,
+						)
+					}
+
+					if memberInsertionPosGetter == nil {
+
+						// Find the containing function declaration, if any
+						for i := len(stack) - 2; i > 0; i-- {
+							element := stack[i]
+							switch element := element.(type) {
+							case *ast.FunctionDeclaration:
+								position := element.EndPosition()
+								parentFunctionEndPos = &position
+								break
+
+							case *ast.SpecialFunctionDeclaration:
+								position := element.FunctionDeclaration.EndPosition()
+								parentFunctionEndPos = &position
+								break
+							}
+						}
+					}
+				}
+
+				return false
+			case nil:
+				stack = stack[:len(stack)-1]
+			default:
+				stack = append(stack, element)
+			}
+
+			return true
+		})
+
+		var insertionPos insertionPosition
+
+		if isInvoked {
+
+			// If the identifier is invoked,
+			// propose the declaration of a function
+
+			if memberInsertionPosGetter != nil {
+				insertionPos = memberInsertionPosGetter(checker, true)
+			} else {
+
+				// If the function declaration is not a member,
+				// declare it after the parent function (if any).
+				//
+				// If there is no parent function,
+				// then the declaration is local,
+				// so insert the function before the use
+
+				if parentFunctionEndPos != nil {
+					insertionPos = insertionPosition{
+						before:   false,
+						Position: parentFunctionEndPos.Shifted(1),
+					}
+				} else {
+					insertionPos = insertionPosition{
+						before: true,
+						Position: ast.Position{
+							Line:   errorPos.Line,
+							Column: 0,
+						},
+					}
+				}
+			}
+
+			return functionDeclarationCodeActions(
+				uri,
+				document,
+				diagnostic,
+				insertionPos,
+				name,
+				invocationArgumentTypes,
+				invocationArgumentLabels,
+				invocationReturnType,
+			)
+
+		} else {
+
+			// If the identifier is not invoked,
+			// propose the declaration of a variable,
+			// or a constant (if the identifier is not assigned to)
+
+			if memberInsertionPosGetter != nil {
+				insertionPos = memberInsertionPosGetter(checker, false)
+
+				memberExpression := errorExpression.(*ast.MemberExpression)
+				expectedType := checker.Elaboration.MemberExpressionExpectedTypes[memberExpression]
+
+				var typeString string
+				if expectedType != nil {
+					typeString = expectedType.QualifiedString()
+				} else {
+					typeString = "TODO"
+				}
+
+				return fieldDeclarationCodeActions(
+					uri,
+					document,
+					diagnostic,
+					insertionPos,
+					name,
+					typeString,
+					isAssignmentTarget,
+				)
+			} else {
+
+				// If a variable is inserted,
+				// then insert it before the error's line
+
+				insertionPos := ast.Position{
+					Offset: errorPos.Offset - errorPos.Column,
+					Line:   errorPos.Line,
+					Column: 0,
+				}
+
+				for insertionPos.Column < errorPos.Column {
+					switch document.Text[insertionPos.Offset] {
+					case ' ', '\t':
+						insertionPos.Offset++
+						insertionPos.Column++
+						continue
+					}
+					break
+				}
+
+				return variableDeclarationCodeActions(
+					uri,
+					document,
+					diagnostic,
+					insertionPos,
+					name,
+					isAssignmentTarget,
+				)
+			}
+		}
+	}
+}
+
+func extractIndentation(text string, pos ast.Position) string {
+	lineStartOffset := pos.Offset - pos.Column
+	indentationEndOffset := lineStartOffset
+	for ; indentationEndOffset < pos.Offset; indentationEndOffset++ {
+		switch text[indentationEndOffset] {
+		case ' ', '\t':
+			continue
+		}
+		break
+	}
+	return text[lineStartOffset:indentationEndOffset]
+}
+
+func functionDeclarationCodeActions(
+	uri protocol.DocumentUri,
+	document Document,
+	diagnostic protocol.Diagnostic,
+	insertionPos insertionPosition,
+	name string,
+	invocationArgumentTypes []sema.Type,
+	invocationArgumentLabels []string,
+	invocationReturnType sema.Type,
+) []*protocol.CodeAction {
+
+	pos := insertionPos.Position
+
+	indentation := extractIndentation(document.Text, pos)
+
+	insertionRange := protocol.Range{
+		Start: conversion.ASTToProtocolPosition(pos),
+		End:   conversion.ASTToProtocolPosition(pos),
+	}
+
+	var parameters strings.Builder
+
+	for i, argumentType := range invocationArgumentTypes {
+
+		// Only support the generation of parameters from a-z
+		if i > 'z' {
+			break
+		}
+
+		if i > 0 {
+			parameters.WriteString(", ")
+		}
+		argumentLabel := invocationArgumentLabels[i]
+		if argumentLabel == "" {
+			parameters.WriteString("_ ")
+			// Generate a parameter name (a-z)
+			parameters.WriteByte(byte('a' + i))
+		} else {
+			parameters.WriteString(argumentLabel)
+		}
+		parameters.WriteString(": ")
+		if argumentType.IsInvalidType() {
+			parameters.WriteString(sema.VoidType.String())
+		} else {
+			parameters.WriteString(argumentType.QualifiedString())
+		}
+	}
+
+	var returnType string
+	if invocationReturnType != nil &&
+		!invocationReturnType.IsInvalidType() &&
+		invocationReturnType != sema.VoidType {
+
+		returnType = fmt.Sprintf(": %s", invocationReturnType.QualifiedString())
+	}
+
+	prefix, suffix := insertionPrefixSuffix(insertionPos, document, indentation)
+
+	textEdit := protocol.TextEdit{
+		Range: insertionRange,
+		NewText: fmt.Sprintf(
+			"%sfun %s(%s)%s {}\n%s",
+			prefix,
+			name,
+			parameters.String(),
+			returnType,
+			suffix,
+		),
+	}
+
+	return []*protocol.CodeAction{
+		{
+			Title:       "Declare function",
+			Kind:        protocol.QuickFix,
+			Diagnostics: []protocol.Diagnostic{diagnostic},
+			Edit: &protocol.WorkspaceEdit{
+				Changes: &map[string][]protocol.TextEdit{
+					string(uri): {textEdit},
+				},
+			},
+			IsPreferred: true,
 		},
 	}
 }
 
-// convertHint converts a checker error to a diagnostic.
-func convertHint(hint sema.Hint) protocol.Diagnostic {
+func insertionPrefixSuffix(
+	insertionPos insertionPosition,
+	document Document,
+	indentation string,
+) (
+	prefix string,
+	suffix string,
+) {
+	if insertionPos.before {
+
+		for offset := insertionPos.Offset - 1; offset >= insertionPos.Offset-insertionPos.Column; offset-- {
+			switch document.Text[offset] {
+			case ' ', '\t':
+				continue
+			case '{':
+				prefix = "\n" + indentation
+				break
+			default:
+				break
+			}
+		}
+
+		if document.Text[insertionPos.Offset] == '}' {
+			prefix += "    "
+		}
+		suffix = "\n" + indentation
+	} else {
+		prefix = "\n\n" + indentation
+	}
+	return prefix, suffix
+}
+
+func variableDeclarationCodeActions(
+	uri protocol.DocumentUri,
+	document Document,
+	diagnostic protocol.Diagnostic,
+	insertionPos ast.Position,
+	name string,
+	isAssignmentTarget bool,
+) []*protocol.CodeAction {
+
+	codeActions := make([]*protocol.CodeAction, 0, len(ast.VariableKinds))
+
+	indentation := extractIndentation(document.Text, insertionPos)
+
+	insertionRange := protocol.Range{
+		Start: conversion.ASTToProtocolPosition(insertionPos),
+		End:   conversion.ASTToProtocolPosition(insertionPos),
+	}
+
+	for _, variableKind := range ast.VariableKinds {
+
+		var isPreferred bool
+		if isAssignmentTarget {
+			isPreferred = variableKind == ast.VariableKindVariable
+			if variableKind == ast.VariableKindConstant {
+				continue
+			}
+		} else {
+			isPreferred = variableKind == ast.VariableKindConstant
+		}
+
+		// TODO: hope for https://github.com/microsoft/language-server-protocol/issues/724
+		//  to get implemented, so the cursor can be placed at the value,
+		//  or if insertion for a snippet gets supported add a var/let option and a value placeholder
+
+		textEdit := protocol.TextEdit{
+			Range: insertionRange,
+			NewText: fmt.Sprintf(
+				"%s %s = TODO\n%s",
+				variableKind.Keyword(),
+				name,
+				indentation,
+			),
+		}
+
+		codeActions = append(codeActions, &protocol.CodeAction{
+			Title:       fmt.Sprintf("Declare %s", variableKind.Name()),
+			Kind:        protocol.QuickFix,
+			Diagnostics: []protocol.Diagnostic{diagnostic},
+			Edit: &protocol.WorkspaceEdit{
+				Changes: &map[string][]protocol.TextEdit{
+					string(uri): {textEdit},
+				},
+			},
+			IsPreferred: isPreferred,
+		})
+	}
+
+	return codeActions
+}
+
+func fieldDeclarationCodeActions(
+	uri protocol.DocumentUri,
+	document Document,
+	diagnostic protocol.Diagnostic,
+	insertionPos insertionPosition,
+	name string,
+	typeString string,
+	isAssignmentTarget bool,
+) []*protocol.CodeAction {
+
+	pos := insertionPos.Position
+
+	indentation := extractIndentation(document.Text, pos)
+
+	codeActions := make([]*protocol.CodeAction, 0, len(ast.VariableKinds))
+
+	insertionRange := protocol.Range{
+		Start: conversion.ASTToProtocolPosition(pos),
+		End:   conversion.ASTToProtocolPosition(pos),
+	}
+
+	prefix, suffix := insertionPrefixSuffix(insertionPos, document, indentation)
+
+	for _, variableKind := range ast.VariableKinds {
+
+		var isPreferred bool
+		if isAssignmentTarget {
+			isPreferred = variableKind == ast.VariableKindVariable
+			if variableKind == ast.VariableKindConstant {
+				continue
+			}
+		} else {
+			isPreferred = variableKind == ast.VariableKindConstant
+		}
+
+		// TODO: hope for https://github.com/microsoft/language-server-protocol/issues/724
+		//  to get implemented, so the cursor can be placed at the value,
+		//  or if insertion for a snippet gets supported add a var/let option and a value placeholder
+
+		textEdit := protocol.TextEdit{
+			Range: insertionRange,
+			NewText: fmt.Sprintf(
+				"%s%s %s: %s\n%s",
+				prefix,
+				variableKind.Keyword(),
+				name,
+				typeString,
+				suffix,
+			),
+		}
+
+		codeActions = append(codeActions, &protocol.CodeAction{
+			Title:       fmt.Sprintf("Declare %s field", variableKind.Name()),
+			Kind:        protocol.QuickFix,
+			Diagnostics: []protocol.Diagnostic{diagnostic},
+			Edit: &protocol.WorkspaceEdit{
+				Changes: &map[string][]protocol.TextEdit{
+					string(uri): {textEdit},
+				},
+			},
+			IsPreferred: isPreferred,
+		})
+	}
+
+	return codeActions
+}
+
+// convertHint converts a checker hint to a diagnostic
+// and an optional code action to resolve the hint.
+//
+func convertHint(
+	hint sema.Hint,
+	uri protocol.DocumentUri,
+) (
+	protocol.Diagnostic,
+	func() []*protocol.CodeAction,
+) {
 	startPosition := hint.StartPosition()
 	endPosition := hint.EndPosition()
 
-	return protocol.Diagnostic{
+	protocolRange := conversion.ASTToProtocolRange(startPosition, endPosition)
+
+	diagnostic := protocol.Diagnostic{
 		Message: hint.Hint(),
 		// protocol.SeverityHint doesn't look prominent enough in VS Code,
 		// only the first character of the range is highlighted.
 		Severity: protocol.SeverityInformation,
-		Range: protocol.Range{
-			Start: protocol.Position{
-				Line:      float64(startPosition.Line - 1),
-				Character: float64(startPosition.Column),
-			},
-			End: protocol.Position{
-				Line:      float64(endPosition.Line - 1),
-				Character: float64(endPosition.Column + 1),
-			},
-		},
+		Range:    protocolRange,
 	}
+
+	var codeActionsResolver func() []*protocol.CodeAction
+
+	switch hint := hint.(type) {
+	case *sema.ReplacementHint:
+		codeActionsResolver = func() []*protocol.CodeAction {
+			replacement := hint.Expression.String()
+			return []*protocol.CodeAction{
+				{
+					Title:       fmt.Sprintf("Replace with suggestion `%s`", replacement),
+					Kind:        protocol.QuickFix,
+					Diagnostics: []protocol.Diagnostic{diagnostic},
+					Edit: &protocol.WorkspaceEdit{
+						Changes: &map[string][]protocol.TextEdit{
+							string(uri): {
+								{
+									Range:   protocolRange,
+									NewText: replacement,
+								},
+							},
+						},
+					},
+					IsPreferred: true,
+				},
+			}
+		}
+
+	case *sema.RemovalHint:
+		codeActionsResolver = func() []*protocol.CodeAction {
+			return []*protocol.CodeAction{
+				{
+					Title:       "Remove unnecessary code",
+					Kind:        protocol.QuickFix,
+					Diagnostics: []protocol.Diagnostic{diagnostic},
+					Edit: &protocol.WorkspaceEdit{
+						Changes: &map[string][]protocol.TextEdit{
+							string(uri): {
+								{
+									Range:   protocolRange,
+									NewText: "",
+								},
+							},
+						},
+					},
+					IsPreferred: true,
+				},
+			}
+		}
+	}
+
+	return diagnostic, codeActionsResolver
 }

@@ -290,6 +290,7 @@ type typeDeclaration struct {
 	declarationKind          common.DeclarationKind
 	access                   ast.Access
 	allowOuterScopeShadowing bool
+	docString                string
 }
 
 func (a *VariableActivations) DeclareType(declaration typeDeclaration) (*Variable, error) {
@@ -303,6 +304,7 @@ func (a *VariableActivations) DeclareType(declaration typeDeclaration) (*Variabl
 			isConstant:               true,
 			argumentLabels:           nil,
 			allowOuterScopeShadowing: declaration.allowOuterScopeShadowing,
+			docString:                declaration.docString,
 		},
 	)
 }

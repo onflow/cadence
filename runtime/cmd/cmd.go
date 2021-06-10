@@ -112,6 +112,7 @@ func PrepareChecker(
 				if !ok {
 					importedProgram, _ := PrepareProgramFromFile(stringLocation, codes)
 					importedChecker, _ = PrepareChecker(importedProgram, importedLocation, codes, must)
+					must(importedChecker.Check())
 					checkers[importedLocation.ID()] = importedChecker
 				}
 

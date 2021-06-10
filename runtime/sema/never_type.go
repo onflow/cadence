@@ -28,4 +28,5 @@ var NeverType = &SimpleType{
 	Storable:             false,
 	Equatable:            false,
 	ExternallyReturnable: false,
+	Importable:           false,
 }

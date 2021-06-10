@@ -39,12 +39,14 @@ type Elaboration struct {
 	AssignmentStatementValueTypes       map[*ast.AssignmentStatement]Type
 	AssignmentStatementTargetTypes      map[*ast.AssignmentStatement]Type
 	CompositeDeclarationTypes           map[*ast.CompositeDeclaration]*CompositeType
+	CompositeTypeDeclarations           map[*CompositeType]*ast.CompositeDeclaration
+	InterfaceDeclarationTypes           map[*ast.InterfaceDeclaration]*InterfaceType
+	InterfaceTypeDeclarations           map[*InterfaceType]*ast.InterfaceDeclaration
 	ConstructorFunctionTypes            map[*ast.SpecialFunctionDeclaration]*ConstructorFunctionType
 	FunctionExpressionFunctionType      map[*ast.FunctionExpression]*FunctionType
 	InvocationExpressionArgumentTypes   map[*ast.InvocationExpression][]Type
 	InvocationExpressionParameterTypes  map[*ast.InvocationExpression][]Type
 	InvocationExpressionReturnTypes     map[*ast.InvocationExpression]Type
-	InterfaceDeclarationTypes           map[*ast.InterfaceDeclaration]*InterfaceType
 	CastingStaticValueTypes             map[*ast.CastingExpression]Type
 	CastingTargetTypes                  map[*ast.CastingExpression]Type
 	ReturnStatementValueTypes           map[*ast.ReturnStatement]Type
@@ -52,6 +54,7 @@ type Elaboration struct {
 	BinaryExpressionResultTypes         map[*ast.BinaryExpression]Type
 	BinaryExpressionRightTypes          map[*ast.BinaryExpression]Type
 	MemberExpressionMemberInfos         map[*ast.MemberExpression]MemberInfo
+	MemberExpressionExpectedTypes       map[*ast.MemberExpression]Type
 	ArrayExpressionArgumentTypes        map[*ast.ArrayExpression][]Type
 	ArrayExpressionElementType          map[*ast.ArrayExpression]Type
 	DictionaryExpressionType            map[*ast.DictionaryExpression]*DictionaryType
@@ -91,12 +94,14 @@ func NewElaboration() *Elaboration {
 		AssignmentStatementValueTypes:       map[*ast.AssignmentStatement]Type{},
 		AssignmentStatementTargetTypes:      map[*ast.AssignmentStatement]Type{},
 		CompositeDeclarationTypes:           map[*ast.CompositeDeclaration]*CompositeType{},
+		CompositeTypeDeclarations:           map[*CompositeType]*ast.CompositeDeclaration{},
+		InterfaceDeclarationTypes:           map[*ast.InterfaceDeclaration]*InterfaceType{},
+		InterfaceTypeDeclarations:           map[*InterfaceType]*ast.InterfaceDeclaration{},
 		ConstructorFunctionTypes:            map[*ast.SpecialFunctionDeclaration]*ConstructorFunctionType{},
 		FunctionExpressionFunctionType:      map[*ast.FunctionExpression]*FunctionType{},
 		InvocationExpressionArgumentTypes:   map[*ast.InvocationExpression][]Type{},
 		InvocationExpressionParameterTypes:  map[*ast.InvocationExpression][]Type{},
 		InvocationExpressionReturnTypes:     map[*ast.InvocationExpression]Type{},
-		InterfaceDeclarationTypes:           map[*ast.InterfaceDeclaration]*InterfaceType{},
 		CastingStaticValueTypes:             map[*ast.CastingExpression]Type{},
 		CastingTargetTypes:                  map[*ast.CastingExpression]Type{},
 		ReturnStatementValueTypes:           map[*ast.ReturnStatement]Type{},
@@ -104,6 +109,7 @@ func NewElaboration() *Elaboration {
 		BinaryExpressionResultTypes:         map[*ast.BinaryExpression]Type{},
 		BinaryExpressionRightTypes:          map[*ast.BinaryExpression]Type{},
 		MemberExpressionMemberInfos:         map[*ast.MemberExpression]MemberInfo{},
+		MemberExpressionExpectedTypes:       map[*ast.MemberExpression]Type{},
 		ArrayExpressionArgumentTypes:        map[*ast.ArrayExpression][]Type{},
 		ArrayExpressionElementType:          map[*ast.ArrayExpression]Type{},
 		DictionaryExpressionType:            map[*ast.DictionaryExpression]*DictionaryType{},

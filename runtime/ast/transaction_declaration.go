@@ -68,6 +68,10 @@ func (d *TransactionDeclaration) DeclarationMembers() *Members {
 	return nil
 }
 
+func (d *TransactionDeclaration) DeclarationDocString() string {
+	return ""
+}
+
 func (d *TransactionDeclaration) MarshalJSON() ([]byte, error) {
 	type Alias TransactionDeclaration
 	return json.Marshal(&struct {

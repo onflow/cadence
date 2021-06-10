@@ -40,6 +40,7 @@ var PublicAccountType = func() *CompositeType {
 		Identifier:         PublicAccountTypeName,
 		Kind:               common.CompositeKindStructure,
 		hasComputedMembers: true,
+		importable:         false,
 
 		nestedTypes: func() *StringTypeOrderedMap {
 			nestedTypes := NewStringTypeOrderedMap()
@@ -110,6 +111,7 @@ var PublicAccountKeysType = func() *CompositeType {
 	accountKeys := &CompositeType{
 		Identifier: AccountKeysTypeName,
 		Kind:       common.CompositeKindStructure,
+		importable: false,
 	}
 
 	var members = []*Member{
@@ -128,7 +130,7 @@ var PublicAccountKeysType = func() *CompositeType {
 
 func init() {
 	// Set the container type after initializing the AccountKeysTypes, to avoid initializing loop.
-	PublicAccountKeysType.ContainerType = PublicAccountType
+	PublicAccountKeysType.SetContainerType(PublicAccountType)
 }
 
 const publicAccountTypeGetLinkTargetFunctionDocString = `

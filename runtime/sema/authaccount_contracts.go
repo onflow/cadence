@@ -35,6 +35,7 @@ var AuthAccountContractsType = func() *CompositeType {
 	authAccountContractsType := &CompositeType{
 		Identifier: AuthAccountContractsTypeName,
 		Kind:       common.CompositeKindStructure,
+		importable: false,
 	}
 
 	var members = []*Member{
@@ -71,7 +72,7 @@ var AuthAccountContractsType = func() *CompositeType {
 
 func init() {
 	// Set the container type after initializing the `AuthAccountContractsType`, to avoid initializing loop.
-	AuthAccountContractsType.ContainerType = AuthAccountType
+	AuthAccountContractsType.SetContainerType(AuthAccountType)
 }
 
 const authAccountContractsTypeAddFunctionDocString = `

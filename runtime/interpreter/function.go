@@ -59,8 +59,12 @@ type InterpretedFunctionValue struct {
 	PostConditions   ast.Conditions
 }
 
-func (f InterpretedFunctionValue) String(results StringResults) string {
+func (f InterpretedFunctionValue) String() string {
 	return fmt.Sprintf("Function%s", f.Type.String())
+}
+
+func (f InterpretedFunctionValue) RecursiveString(_ StringResults) string {
+	return f.String()
 }
 
 func (InterpretedFunctionValue) IsValue() {}
@@ -69,8 +73,10 @@ func (f InterpretedFunctionValue) Accept(interpreter *Interpreter, visitor Visit
 	visitor.VisitInterpretedFunctionValue(interpreter, f)
 }
 
+var functionDynamicType DynamicType = FunctionDynamicType{}
+
 func (InterpretedFunctionValue) DynamicType(_ *Interpreter, _ DynamicTypeResults) DynamicType {
-	return FunctionDynamicType{}
+	return functionDynamicType
 }
 
 func (f InterpretedFunctionValue) StaticType() StaticType {
@@ -139,9 +145,13 @@ type HostFunctionValue struct {
 	NestedVariables *StringVariableOrderedMap
 }
 
-func (f HostFunctionValue) String(results StringResults) string {
+func (f HostFunctionValue) String() string {
 	// TODO: include type
 	return "Function(...)"
+}
+
+func (f HostFunctionValue) RecursiveString(_ StringResults) string {
+	return f.String()
 }
 
 func NewHostFunctionValue(
@@ -158,8 +168,10 @@ func (f HostFunctionValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitHostFunctionValue(interpreter, f)
 }
 
+var hostFunctionDynamicType DynamicType = FunctionDynamicType{}
+
 func (HostFunctionValue) DynamicType(_ *Interpreter, _ DynamicTypeResults) DynamicType {
-	return FunctionDynamicType{}
+	return hostFunctionDynamicType
 }
 
 func (HostFunctionValue) StaticType() StaticType {
@@ -226,8 +238,12 @@ type BoundFunctionValue struct {
 	Self     *CompositeValue
 }
 
-func (f BoundFunctionValue) String(results StringResults) string {
-	return f.Function.String(results)
+func (f BoundFunctionValue) String() string {
+	return f.RecursiveString(StringResults{})
+}
+
+func (f BoundFunctionValue) RecursiveString(results StringResults) string {
+	return f.Function.RecursiveString(results)
 }
 
 func (BoundFunctionValue) IsValue() {}
@@ -236,8 +252,10 @@ func (f BoundFunctionValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitBoundFunctionValue(interpreter, f)
 }
 
+var boundFunctionDynamicType DynamicType = FunctionDynamicType{}
+
 func (BoundFunctionValue) DynamicType(_ *Interpreter, _ DynamicTypeResults) DynamicType {
-	return FunctionDynamicType{}
+	return boundFunctionDynamicType
 }
 
 func (f BoundFunctionValue) StaticType() StaticType {

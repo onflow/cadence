@@ -309,7 +309,7 @@ func (e CyclicLinkError) Error() string {
 		if i > 0 {
 			builder.WriteString(" -> ")
 		}
-		builder.WriteString(path.String(StringResults{}))
+		builder.WriteString(path.String())
 	}
 	paths := builder.String()
 

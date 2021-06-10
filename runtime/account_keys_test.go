@@ -223,7 +223,10 @@ func TestRuntimeImportAccountAPITypes(t *testing.T) {
 		)
 
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "parameter type is non-storable type")
+		assert.IsType(t, Error{}, err)
+		runtimeErr := err.(Error)
+
+		assert.IsType(t, &ScriptParameterTypeNotImportableError{}, runtimeErr.Err)
 	}
 }
 

@@ -46,7 +46,9 @@ func (checker *Checker) VisitBinaryExpression(expression *ast.BinaryExpression) 
 	// is done based on the operation kind.
 
 	var expectedType Type
-	if operationKind == BinaryOperationKindArithmetic {
+	switch operationKind {
+	case BinaryOperationKindArithmetic,
+		BinaryOperationKindBitwise:
 		expectedType = UnwrapOptionalType(checker.expectedType)
 	}
 
@@ -73,9 +75,42 @@ func (checker *Checker) VisitBinaryExpression(expression *ast.BinaryExpression) 
 
 		// Right hand side will always be evaluated
 
-		// Visit the expression, with contextually expected type. Use the expected type
-		// only for inferring wherever possible, but do not check for compatibility.
+		// Visit the expression, with contextually expected type.
+		// Use the expected type only for inferring wherever possible,
+		// but do not check for compatibility.
 		// Compatibility is checked separately for each operand kind.
+		//
+		// If there is no contextually expected type,
+		// then expect the right type to have the type of the left side.
+		// For example, this allows a declaration like this to type-check:
+		//
+		// ```
+		// let x = 1 as UInt8
+		// let y = x + 1
+		// ```
+		//
+		// Also, if there is a contextually expected type,
+		// but the left type is a subtype and more specific (i.e not the same),
+		// then use it instead as the expected type for the right type.
+		// For example, this allows declarations like the following to type-check:
+		//
+		// ```
+		// let x = 1 as UInt8
+		// let y: Integer = x + 1
+		// ```
+		//
+		// ```
+		// let string = "this is a test"
+		// let index = 1 as UInt8
+		// let character = string[index + 1]
+		// ```
+
+		if expectedType == nil ||
+			(leftType != expectedType && IsProperSubType(leftType, expectedType)) {
+
+			expectedType = leftType
+		}
+
 		rightType := checker.VisitExpressionWithForceType(expression.Right, expectedType, false)
 
 		rightIsInvalid := rightType.IsInvalidType()

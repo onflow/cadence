@@ -41,8 +41,10 @@ func (v BlockValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitValue(interpreter, v)
 }
 
+var blockDynamicType DynamicType = BlockDynamicType{}
+
 func (BlockValue) DynamicType(_ *Interpreter, _ DynamicTypeResults) DynamicType {
-	return BlockDynamicType{}
+	return blockDynamicType
 }
 
 func (BlockValue) StaticType() StaticType {
@@ -100,13 +102,17 @@ func (v BlockValue) IDAsByteArray() [sema.BlockIDSize]byte {
 	return byteArray
 }
 
-func (v BlockValue) String(results StringResults) string {
+func (v BlockValue) String() string {
+	return v.RecursiveString(StringResults{})
+}
+
+func (v BlockValue) RecursiveString(results StringResults) string {
 	return fmt.Sprintf(
 		"Block(height: %s, view: %s, id: 0x%x, timestamp: %s)",
-		v.Height.String(results),
-		v.View.String(results),
+		v.Height.RecursiveString(results),
+		v.View.RecursiveString(results),
 		v.IDAsByteArray(),
-		v.Timestamp.String(results),
+		v.Timestamp.RecursiveString(results),
 	)
 }
 

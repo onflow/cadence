@@ -164,44 +164,7 @@ struct AccountKey {
     let isRevoked: Bool
 }
 ```
-
-### PublicKey
-```cadence
-struct PublicKey {
-    let publicKey: [UInt8]
-    let signatureAlgorithm: SignatureAlgorithm
-    let isValid: Bool
-
-    /// Verifies a signature under the given tag, data and public key.
-    /// It uses the given hash algorithm to hash the tag and data.
-    pub fun verify(
-        signature: [UInt8],
-        signedData: [UInt8],
-        domainSeparationTag: String,
-        hashAlgorithm: HashAlgorithm
-    ): Bool
-}
-```
-
-A `PublicKey` can be constructed using the raw key and the signing algorithm.
-```cadence
-let publicKey = PublicKey(
-    publicKey: "010203".decodeHex(),
-    signatureAlgorithm: SignatureAlgorithm.ECDSA_P256
-)
-```
-
-A public key is validated at the time of creation. Hence, public keys are immutable.
-e.g:
-```cadence
-publicKey.signatureAlgorithm = SignatureAlgorithm.ECDSA_secp256k1   // Not allowed
-publicKey.publicKey = []                                            // Not allowed
-
-publicKey.publicKey[2] = 4      // No effect
-```
-
-The validity of a public key can be checked using the `isValid` field.
-Verifications performed with an invalid public key (using `verify()` method) will always fail.
+Refer the [PublicKey](./crypto.md#publickey) section for more details on the creation and validity of public keys.
 
 ### Account Key API
 Account key API provides a set of functions to manage account keys.
@@ -214,9 +177,15 @@ For example, to create an account and have the signer of the transaction pay for
 creation, and authorize one key to access the account:
 
 ```cadence
-transaction(key: PublicKey) {
+transaction(publicKey: [UInt8]) {
     prepare(signer: AuthAccount) {
+        let key = PublicKey(
+            publicKey: publicKey,
+            signatureAlgorithm: SignatureAlgorithm.ECDSA_P256
+        )
+
         let account = AuthAccount(payer: signer)
+
         account.keys.add(
             publicKey: key,
             hashAlgorithm: HashAlgorithm.SHA3_256,

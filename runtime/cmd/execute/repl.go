@@ -153,7 +153,7 @@ func printWelcome() {
 }
 
 func colorizeResult(value interpreter.Value) string {
-	str := value.String(interpreter.StringResults{})
+	str := value.String()
 	return aurora.Colorize(str, aurora.YellowFg|aurora.BrightFg).String()
 }
 

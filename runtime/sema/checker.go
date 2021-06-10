@@ -852,13 +852,15 @@ func (checker *Checker) inSwitch() bool {
 	return checker.functionActivations.Current().InSwitch()
 }
 
-func (checker *Checker) findAndCheckValueVariable(identifier ast.Identifier, recordOccurrence bool) *Variable {
+func (checker *Checker) findAndCheckValueVariable(identifierExpression *ast.IdentifierExpression, recordOccurrence bool) *Variable {
+	identifier := identifierExpression.Identifier
 	variable := checker.valueActivations.Find(identifier.Identifier)
 	if variable == nil {
 		checker.report(
 			&NotDeclaredError{
 				ExpectedKind: common.DeclarationKindVariable,
 				Name:         identifier.Identifier,
+				Expression:   identifierExpression,
 				Pos:          identifier.StartPosition(),
 			},
 		)
@@ -1378,6 +1380,7 @@ func (checker *Checker) recordVariableReferenceOccurrence(startPos, endPos ast.P
 			DeclarationKind: variable.DeclarationKind,
 			StartPos:        startPos2,
 			EndPos:          endPos2,
+			DocString:       variable.DocString,
 		}
 		checker.variableOrigins[variable] = origin
 	}
@@ -1396,6 +1399,7 @@ func (checker *Checker) recordVariableDeclarationOccurrence(name string, variabl
 func (checker *Checker) recordFieldDeclarationOrigin(
 	identifier ast.Identifier,
 	fieldType Type,
+	docString string,
 ) *Origin {
 	if !checker.positionInfoEnabled {
 		return nil
@@ -1409,6 +1413,7 @@ func (checker *Checker) recordFieldDeclarationOrigin(
 		DeclarationKind: common.DeclarationKindField,
 		StartPos:        &startPosition,
 		EndPos:          &endPosition,
+		DocString:       docString,
 	}
 
 	checker.Occurrences.Put(
@@ -1436,6 +1441,7 @@ func (checker *Checker) recordFunctionDeclarationOrigin(
 		DeclarationKind: common.DeclarationKindFunction,
 		StartPos:        &startPosition,
 		EndPos:          &endPosition,
+		DocString:       function.DocString,
 	}
 
 	checker.Occurrences.Put(
@@ -1550,7 +1556,7 @@ func (checker *Checker) recordResourceInvalidation(
 		return nil
 	}
 
-	variable := checker.findAndCheckValueVariable(identifierExpression.Identifier, false)
+	variable := checker.findAndCheckValueVariable(identifierExpression, false)
 	if variable == nil {
 		return nil
 	}
@@ -2373,6 +2379,7 @@ func (checker *Checker) visitExpressionWithForceType(
 			&TypeMismatchError{
 				ExpectedType: expectedType,
 				ActualType:   actualType,
+				Expression:   expr,
 				Range:        expressionRange(expr),
 			},
 		)

@@ -39,6 +39,7 @@ var StringType = &SimpleType{
 	Storable:             true,
 	Equatable:            true,
 	ExternallyReturnable: true,
+	Importable:           true,
 	ValueIndexingInfo: ValueIndexingInfo{
 		IsValueIndexableType:          true,
 		AllowsValueIndexingAssignment: false,

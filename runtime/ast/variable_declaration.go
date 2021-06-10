@@ -86,6 +86,10 @@ func (d *VariableDeclaration) DeclarationMembers() *Members {
 	return nil
 }
 
+func (d *VariableDeclaration) DeclarationDocString() string {
+	return d.DocString
+}
+
 func (d *VariableDeclaration) MarshalJSON() ([]byte, error) {
 	type Alias VariableDeclaration
 	return json.Marshal(&struct {

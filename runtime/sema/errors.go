@@ -177,6 +177,7 @@ func (n RedeclarationNote) Message() string {
 type NotDeclaredError struct {
 	ExpectedKind common.DeclarationKind
 	Name         string
+	Expression   *ast.IdentifierExpression
 	Pos          ast.Position
 }
 
@@ -221,6 +222,7 @@ func (*AssignmentToConstantError) isSemanticError() {}
 type TypeMismatchError struct {
 	ExpectedType Type
 	ActualType   Type
+	Expression   ast.Expression
 	ast.Range
 }
 
@@ -676,8 +678,9 @@ func (e *MissingInitializerError) EndPosition() ast.Position {
 // NotDeclaredMemberError
 
 type NotDeclaredMemberError struct {
-	Name string
-	Type Type
+	Name       string
+	Type       Type
+	Expression *ast.MemberExpression
 	ast.Range
 }
 
@@ -924,6 +927,7 @@ type InitializerMismatch struct {
 //  use `InitializerMismatch`, `MissingMembers`, `MemberMismatches`, etc
 
 type ConformanceError struct {
+	CompositeDeclaration           *ast.CompositeDeclaration
 	CompositeType                  *CompositeType
 	InterfaceType                  *InterfaceType
 	InitializerMismatch            *InitializerMismatch
@@ -2310,21 +2314,21 @@ func (e *InvalidResourceTransactionParameterError) Error() string {
 
 func (*InvalidResourceTransactionParameterError) isSemanticError() {}
 
-// InvalidNonStorableTransactionParameterTypeError
+// InvalidNonImportableTransactionParameterTypeError
 
-type InvalidNonStorableTransactionParameterTypeError struct {
+type InvalidNonImportableTransactionParameterTypeError struct {
 	Type Type
 	ast.Range
 }
 
-func (e *InvalidNonStorableTransactionParameterTypeError) Error() string {
+func (e *InvalidNonImportableTransactionParameterTypeError) Error() string {
 	return fmt.Sprintf(
-		"transaction parameter must be storable: `%s`",
+		"transaction parameter must be importable: `%s`",
 		e.Type.QualifiedString(),
 	)
 }
 
-func (*InvalidNonStorableTransactionParameterTypeError) isSemanticError() {}
+func (*InvalidNonImportableTransactionParameterTypeError) isSemanticError() {}
 
 // InvalidTransactionFieldAccessModifierError
 

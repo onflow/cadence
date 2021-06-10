@@ -30,4 +30,6 @@ var AnyStructType = &SimpleType{
 	Storable:             true,
 	Equatable:            false,
 	ExternallyReturnable: true,
+	// The actual importability is checked at runtime
+	Importable: true,
 }

@@ -94,6 +94,15 @@ func (s *Server) handleRename(req *json.RawMessage) (interface{}, error) {
 	return s.Handler.Rename(s.conn, &params)
 }
 
+func (s *Server) handleCodeAction(req *json.RawMessage) (interface{}, error) {
+	var params CodeActionParams
+	if err := json.Unmarshal(*req, &params); err != nil {
+		return nil, err
+	}
+
+	return s.Handler.CodeAction(s.conn, &params)
+}
+
 func (s *Server) handleCodeLens(req *json.RawMessage) (interface{}, error) {
 	var params CodeLensParams
 	if err := json.Unmarshal(*req, &params); err != nil {

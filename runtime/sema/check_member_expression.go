@@ -205,10 +205,14 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression) (accessedT
 
 	if member == nil {
 		if !accessedType.IsInvalidType() {
+
+			checker.Elaboration.MemberExpressionExpectedTypes[expression] = checker.expectedType
+
 			checker.report(
 				&NotDeclaredMemberError{
-					Type: accessedType,
-					Name: identifier,
+					Type:       accessedType,
+					Name:       identifier,
+					Expression: expression,
 					Range: ast.Range{
 						StartPos: identifierStartPosition,
 						EndPos:   identifierEndPosition,

@@ -8,11 +8,11 @@ func {{.DeclarationIdentifier}}(
     {{.EffectiveArgumentLabel}} {{.TypeAnnotation.Type.String -}}
 {{end -}}
 )
-{{- $returnType := .ReturnTypeAnnotation}}
-{{- if $returnType}}: {{$returnType.Type.String}} {{end}}
+{{- $returnType := .ReturnTypeAnnotation.Type.String}}
+{{- if $returnType}}: {{$returnType}}{{end}}
 ```
 
 {{- if .DocString}}
-{{formatFuncDoc .DocString}}
+{{formatFuncDoc .DocString true}}
 {{- end}}
-{{end}}
+{{end -}}

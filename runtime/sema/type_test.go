@@ -26,6 +26,7 @@ import (
 
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/parser2"
 )
 
 func TestConstantSizedType_String(t *testing.T) {
@@ -548,7 +549,7 @@ func TestQualifiedIdentifierCreation(t *testing.T) {
 			Location:      common.StringLocation("a"),
 			Fields:        []string{},
 			Members:       NewStringMemberOrderedMap(),
-			ContainerType: a,
+			containerType: a,
 		}
 
 		c := &CompositeType{
@@ -557,7 +558,7 @@ func TestQualifiedIdentifierCreation(t *testing.T) {
 			Location:      common.StringLocation("a"),
 			Fields:        []string{},
 			Members:       NewStringMemberOrderedMap(),
-			ContainerType: b,
+			containerType: b,
 		}
 
 		identifier := qualifiedIdentifier("foo", c)
@@ -591,7 +592,7 @@ func BenchmarkQualifiedIdentifierCreation(b *testing.B) {
 		Location:      common.StringLocation("a"),
 		Fields:        []string{},
 		Members:       NewStringMemberOrderedMap(),
-		ContainerType: foo,
+		containerType: foo,
 	}
 
 	b.Run("One level", func(b *testing.B) {
@@ -609,4 +610,95 @@ func BenchmarkQualifiedIdentifierCreation(b *testing.B) {
 			qualifiedIdentifier("baz", bar)
 		}
 	})
+}
+
+func TestIdentifierCacheUpdate(t *testing.T) {
+
+	code := `
+          pub contract interface Test {
+
+              pub struct interface NestedInterface {
+                  pub fun test(): Bool
+              }
+
+              pub struct Nested: NestedInterface {}
+          }
+
+          pub contract TestImpl {
+
+              pub struct Nested {
+                  pub fun test(): Bool {
+                      return true
+                  }
+              }
+          }
+	`
+
+	program, err := parser2.ParseProgram(code)
+	require.NoError(t, err)
+
+	checker, err := NewChecker(
+		program,
+		common.StringLocation("test"),
+	)
+	require.NoError(t, err)
+
+	err = checker.Check()
+	require.NoError(t, err)
+
+	checker.typeActivations.ForEachVariableDeclaredInAndBelow(
+		0,
+		func(_ string, value *Variable) {
+			typ := value.Type
+
+			var checkIdentifiers func(t *testing.T, typ Type)
+
+			checkNestedTypes := func(nestedTypes *StringTypeOrderedMap) {
+				if nestedTypes != nil {
+					nestedTypes.Foreach(
+						func(_ string, typ Type) {
+							checkIdentifiers(t, typ)
+						},
+					)
+				}
+			}
+
+			checkIdentifiers = func(t *testing.T, typ Type) {
+				switch semaType := typ.(type) {
+				case *CompositeType:
+					cachedQualifiedID := semaType.QualifiedIdentifier()
+					cachedID := semaType.ID()
+
+					// clear cached identifiers for one level
+					semaType.cachedIdentifiers = nil
+
+					recalculatedQualifiedID := semaType.QualifiedIdentifier()
+					recalculatedID := semaType.ID()
+
+					assert.Equal(t, recalculatedQualifiedID, cachedQualifiedID)
+					assert.Equal(t, recalculatedID, cachedID)
+
+					// Recursively check for nested types
+					checkNestedTypes(semaType.nestedTypes)
+
+				case *InterfaceType:
+					cachedQualifiedID := semaType.QualifiedIdentifier()
+					cachedID := semaType.ID()
+
+					// clear cached identifiers for one level
+					semaType.cachedIdentifiers = nil
+
+					recalculatedQualifiedID := semaType.QualifiedIdentifier()
+					recalculatedID := semaType.ID()
+
+					assert.Equal(t, recalculatedQualifiedID, cachedQualifiedID)
+					assert.Equal(t, recalculatedID, cachedID)
+
+					// Recursively check for nested types
+					checkNestedTypes(semaType.nestedTypes)
+				}
+			}
+
+			checkIdentifiers(t, typ)
+		})
 }

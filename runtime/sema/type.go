@@ -74,10 +74,10 @@ func containerTypeNames(typ Type, level int) (typeNames []string, bufSize int) {
 	switch typedContainerType := typ.(type) {
 	case *InterfaceType:
 		typeName = typedContainerType.Identifier
-		containerType = typedContainerType.ContainerType
+		containerType = typedContainerType.containerType
 	case *CompositeType:
 		typeName = typedContainerType.Identifier
-		containerType = typedContainerType.ContainerType
+		containerType = typedContainerType.containerType
 	default:
 		panic(errors.NewUnreachableError())
 	}
@@ -123,6 +123,9 @@ type Type interface {
 	// it is checked at the start of the recursively called function,
 	// and pre-set before a recursive call.
 	IsExternallyReturnable(results map[*Member]bool) bool
+
+	// IsImportable returns true if values of the type can be imported to a program as arguments
+	IsImportable(results map[*Member]bool) bool
 
 	// IsEquatable returns true if values of the type can be equated
 	IsEquatable() bool
@@ -187,6 +190,7 @@ type MemberResolver struct {
 type ContainedType interface {
 	Type
 	GetContainerType() Type
+	SetContainerType(containerType Type)
 }
 
 // ContainerType is a type which might have nested types
@@ -489,6 +493,10 @@ func (t *OptionalType) IsExternallyReturnable(results map[*Member]bool) bool {
 	return t.Type.IsExternallyReturnable(results)
 }
 
+func (t *OptionalType) IsImportable(results map[*Member]bool) bool {
+	return t.Type.IsImportable(results)
+}
+
 func (t *OptionalType) IsEquatable() bool {
 	return t.Type.IsEquatable()
 }
@@ -652,6 +660,10 @@ func (*GenericType) IsStorable(_ map[*Member]bool) bool {
 }
 
 func (*GenericType) IsExternallyReturnable(_ map[*Member]bool) bool {
+	return false
+}
+
+func (t *GenericType) IsImportable(_ map[*Member]bool) bool {
 	return false
 }
 
@@ -919,6 +931,10 @@ func (*NumericType) IsExternallyReturnable(_ map[*Member]bool) bool {
 	return true
 }
 
+func (t *NumericType) IsImportable(_ map[*Member]bool) bool {
+	return true
+}
+
 func (*NumericType) IsEquatable() bool {
 	return true
 }
@@ -1082,6 +1098,10 @@ func (*FixedPointNumericType) IsStorable(_ map[*Member]bool) bool {
 }
 
 func (*FixedPointNumericType) IsExternallyReturnable(_ map[*Member]bool) bool {
+	return true
+}
+
+func (t *FixedPointNumericType) IsImportable(_ map[*Member]bool) bool {
 	return true
 }
 
@@ -1802,6 +1822,10 @@ func (t *VariableSizedType) IsExternallyReturnable(results map[*Member]bool) boo
 	return t.Type.IsExternallyReturnable(results)
 }
 
+func (t *VariableSizedType) IsImportable(results map[*Member]bool) bool {
+	return t.Type.IsImportable(results)
+}
+
 func (*VariableSizedType) IsEquatable() bool {
 	// TODO:
 	return false
@@ -1923,6 +1947,10 @@ func (t *ConstantSizedType) IsStorable(results map[*Member]bool) bool {
 
 func (t *ConstantSizedType) IsExternallyReturnable(results map[*Member]bool) bool {
 	return t.Type.IsStorable(results)
+}
+
+func (t *ConstantSizedType) IsImportable(results map[*Member]bool) bool {
+	return t.Type.IsImportable(results)
 }
 
 func (*ConstantSizedType) IsEquatable() bool {
@@ -2365,6 +2393,10 @@ func (t *FunctionType) IsStorable(_ map[*Member]bool) bool {
 
 func (t *FunctionType) IsExternallyReturnable(_ map[*Member]bool) bool {
 	// Functions cannot be exported, as they cannot be serialized
+	return false
+}
+
+func (t *FunctionType) IsImportable(_ map[*Member]bool) bool {
 	return false
 }
 
@@ -3180,9 +3212,18 @@ type CompositeType struct {
 	// TODO: add support for overloaded initializers
 	ConstructorParameters []*Parameter
 	nestedTypes           *StringTypeOrderedMap
-	ContainerType         Type
+	containerType         Type
 	EnumRawType           Type
 	hasComputedMembers    bool
+
+	// Only applicable for native composite types.
+	importable bool
+
+	cachedIdentifiers *struct {
+		TypeID              TypeID
+		QualifiedIdentifier string
+	}
+	cachedIdentifiersLock sync.RWMutex
 }
 
 func (t *CompositeType) ExplicitInterfaceConformanceSet() *InterfaceSet {
@@ -3218,7 +3259,34 @@ func (t *CompositeType) QualifiedString() string {
 }
 
 func (t *CompositeType) GetContainerType() Type {
-	return t.ContainerType
+	return t.containerType
+}
+
+func (t *CompositeType) SetContainerType(containerType Type) {
+	t.checkIdentifiersCached()
+	t.containerType = containerType
+}
+
+func (t *CompositeType) checkIdentifiersCached() {
+	t.cachedIdentifiersLock.Lock()
+	defer t.cachedIdentifiersLock.Unlock()
+
+	if t.cachedIdentifiers != nil {
+		panic(errors.NewUnreachableError())
+	}
+
+	if t.nestedTypes != nil {
+		t.nestedTypes.Foreach(checkIdentifiersCached)
+	}
+}
+
+func checkIdentifiersCached(_ string, typ Type) {
+	switch semaType := typ.(type) {
+	case *CompositeType:
+		semaType.checkIdentifiersCached()
+	case *InterfaceType:
+		semaType.checkIdentifiersCached()
+	}
 }
 
 func (t *CompositeType) GetCompositeKind() common.CompositeKind {
@@ -3230,15 +3298,39 @@ func (t *CompositeType) GetLocation() common.Location {
 }
 
 func (t *CompositeType) QualifiedIdentifier() string {
-	return qualifiedIdentifier(t.Identifier, t.ContainerType)
+	t.initializeIdentifiers()
+	return t.cachedIdentifiers.QualifiedIdentifier
 }
 
 func (t *CompositeType) ID() TypeID {
-	if t.Location == nil {
-		return TypeID(t.QualifiedIdentifier())
+	t.initializeIdentifiers()
+	return t.cachedIdentifiers.TypeID
+}
+
+func (t *CompositeType) initializeIdentifiers() {
+	t.cachedIdentifiersLock.Lock()
+	defer t.cachedIdentifiersLock.Unlock()
+
+	if t.cachedIdentifiers != nil {
+		return
 	}
 
-	return t.Location.TypeID(t.QualifiedIdentifier())
+	identifier := qualifiedIdentifier(t.Identifier, t.containerType)
+
+	var typeID TypeID
+	if t.Location == nil {
+		typeID = TypeID(identifier)
+	} else {
+		typeID = t.Location.TypeID(identifier)
+	}
+
+	t.cachedIdentifiers = &struct {
+		TypeID              TypeID
+		QualifiedIdentifier string
+	}{
+		TypeID:              typeID,
+		QualifiedIdentifier: identifier,
+	}
 }
 
 func (t *CompositeType) Equal(other Type) bool {
@@ -3297,6 +3389,34 @@ func (t *CompositeType) IsStorable(results map[*Member]bool) bool {
 	return true
 }
 
+func (t *CompositeType) IsImportable(results map[*Member]bool) bool {
+	// Use the pre-determined flag for native types
+	if t.Location == nil {
+		return t.importable
+	}
+
+	// Only structures and enums can be imported
+
+	switch t.Kind {
+	case common.CompositeKindStructure,
+		common.CompositeKindEnum:
+		break
+	default:
+		return false
+	}
+
+	// If this composite type has a member which is not importable,
+	// then the composite type is not importable.
+
+	for pair := t.Members.Oldest(); pair != nil; pair = pair.Next() {
+		if !pair.Value.IsImportable(results) {
+			return false
+		}
+	}
+
+	return true
+}
+
 func (t *CompositeType) IsExternallyReturnable(results map[*Member]bool) bool {
 	// Only structures, resources, and enums can be stored
 
@@ -3342,7 +3462,7 @@ func (t *CompositeType) InterfaceType() *InterfaceType {
 		Members:               t.Members,
 		Fields:                t.Fields,
 		InitializerParameters: t.ConstructorParameters,
-		ContainerType:         t.ContainerType,
+		containerType:         t.containerType,
 		nestedTypes:           t.nestedTypes,
 	}
 }
@@ -3351,7 +3471,7 @@ func (t *CompositeType) TypeRequirements() []*CompositeType {
 
 	var typeRequirements []*CompositeType
 
-	if containerComposite, ok := t.ContainerType.(*CompositeType); ok {
+	if containerComposite, ok := t.containerType.(*CompositeType); ok {
 		for _, conformance := range containerComposite.ExplicitInterfaceConformances {
 			ty, ok := conformance.nestedTypes.Get(t.Identifier)
 			if !ok {
@@ -3508,6 +3628,14 @@ func (m *Member) IsExternallyReturnable(results map[*Member]bool) (result bool) 
 	return m.testType(test, results)
 }
 
+// IsImportable returns whether a member can be imported to a program
+func (m *Member) IsImportable(results map[*Member]bool) (result bool) {
+	test := func(t Type) bool {
+		return t.IsImportable(results)
+	}
+	return m.testType(test, results)
+}
+
 // IsValidEventParameterType returns whether has a valid event parameter type
 func (m *Member) IsValidEventParameterType(results map[*Member]bool) bool {
 	test := func(t Type) bool {
@@ -3569,8 +3697,13 @@ type InterfaceType struct {
 	Fields              []string
 	// TODO: add support for overloaded initializers
 	InitializerParameters []*Parameter
-	ContainerType         Type
+	containerType         Type
 	nestedTypes           *StringTypeOrderedMap
+	cachedIdentifiers     *struct {
+		TypeID              TypeID
+		QualifiedIdentifier string
+	}
+	cachedIdentifiersLock sync.RWMutex
 }
 
 func (*InterfaceType) IsType() {}
@@ -3584,7 +3717,25 @@ func (t *InterfaceType) QualifiedString() string {
 }
 
 func (t *InterfaceType) GetContainerType() Type {
-	return t.ContainerType
+	return t.containerType
+}
+
+func (t *InterfaceType) SetContainerType(containerType Type) {
+	t.checkIdentifiersCached()
+	t.containerType = containerType
+}
+
+func (t *InterfaceType) checkIdentifiersCached() {
+	t.cachedIdentifiersLock.Lock()
+	defer t.cachedIdentifiersLock.Unlock()
+
+	if t.cachedIdentifiers != nil {
+		panic(errors.NewUnreachableError())
+	}
+
+	if t.nestedTypes != nil {
+		t.nestedTypes.Foreach(checkIdentifiersCached)
+	}
 }
 
 func (t *InterfaceType) GetCompositeKind() common.CompositeKind {
@@ -3596,11 +3747,39 @@ func (t *InterfaceType) GetLocation() common.Location {
 }
 
 func (t *InterfaceType) QualifiedIdentifier() string {
-	return qualifiedIdentifier(t.Identifier, t.ContainerType)
+	t.initializeIdentifiers()
+	return t.cachedIdentifiers.QualifiedIdentifier
 }
 
 func (t *InterfaceType) ID() TypeID {
-	return t.Location.TypeID(t.QualifiedIdentifier())
+	t.initializeIdentifiers()
+	return t.cachedIdentifiers.TypeID
+}
+
+func (t *InterfaceType) initializeIdentifiers() {
+	t.cachedIdentifiersLock.Lock()
+	defer t.cachedIdentifiersLock.Unlock()
+
+	if t.cachedIdentifiers != nil {
+		return
+	}
+
+	identifier := qualifiedIdentifier(t.Identifier, t.containerType)
+
+	var typeID TypeID
+	if t.Location == nil {
+		typeID = TypeID(identifier)
+	} else {
+		typeID = t.Location.TypeID(identifier)
+	}
+
+	t.cachedIdentifiers = &struct {
+		TypeID              TypeID
+		QualifiedIdentifier string
+	}{
+		TypeID:              typeID,
+		QualifiedIdentifier: identifier,
+	}
 }
 
 func (t *InterfaceType) Equal(other Type) bool {
@@ -3669,6 +3848,23 @@ func (t *InterfaceType) IsExternallyReturnable(results map[*Member]bool) bool {
 
 	for pair := t.Members.Oldest(); pair != nil; pair = pair.Next() {
 		if !pair.Value.IsExternallyReturnable(results) {
+			return false
+		}
+	}
+
+	return true
+}
+
+func (t *InterfaceType) IsImportable(results map[*Member]bool) bool {
+	if t.CompositeKind != common.CompositeKindStructure {
+		return false
+	}
+
+	// If this interface type has a member which is not importable,
+	// then the interface type is not importable.
+
+	for pair := t.Members.Oldest(); pair != nil; pair = pair.Next() {
+		if !pair.Value.IsImportable(results) {
 			return false
 		}
 	}
@@ -3787,6 +3983,11 @@ func (t *DictionaryType) IsStorable(results map[*Member]bool) bool {
 func (t *DictionaryType) IsExternallyReturnable(results map[*Member]bool) bool {
 	return t.KeyType.IsExternallyReturnable(results) &&
 		t.ValueType.IsExternallyReturnable(results)
+}
+
+func (t *DictionaryType) IsImportable(results map[*Member]bool) bool {
+	return t.KeyType.IsImportable(results) &&
+		t.ValueType.IsImportable(results)
 }
 
 func (*DictionaryType) IsEquatable() bool {
@@ -4117,6 +4318,10 @@ func (t *ReferenceType) IsExternallyReturnable(_ map[*Member]bool) bool {
 	return true
 }
 
+func (t *ReferenceType) IsImportable(_ map[*Member]bool) bool {
+	return false
+}
+
 func (*ReferenceType) IsEquatable() bool {
 	return true
 }
@@ -4221,6 +4426,10 @@ func (*AddressType) IsExternallyReturnable(_ map[*Member]bool) bool {
 	return true
 }
 
+func (t *AddressType) IsImportable(_ map[*Member]bool) bool {
+	return true
+}
+
 func (*AddressType) IsEquatable() bool {
 	return true
 }
@@ -4291,6 +4500,32 @@ func IsSubType(subType Type, superType Type) bool {
 	if subType.Equal(superType) {
 		return true
 	}
+
+	return checkSubTypeWithoutEquality(subType, superType)
+}
+
+// IsProperSubType is similar to IsSubType,
+// i.e. it determines if the given subtype is a subtype
+// of the given supertype, but returns false
+// if the subtype and supertype refer to the same type.
+//
+func IsProperSubType(subType Type, superType Type) bool {
+
+	if subType.Equal(superType) {
+		return false
+	}
+
+	return checkSubTypeWithoutEquality(subType, superType)
+}
+
+// checkSubTypeWithoutEquality determines if the given subtype
+// is a subtype of the given supertype, BUT it does NOT check
+// the equality of the two types, so does NOT return a specific
+// value when the two types are equal or are not.
+//
+// Consider using IsSubType or IsProperSubType
+//
+func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 
 	if subType == NeverType {
 		return true
@@ -4980,6 +5215,10 @@ func (*TransactionType) IsExternallyReturnable(_ map[*Member]bool) bool {
 	return false
 }
 
+func (t *TransactionType) IsImportable(_ map[*Member]bool) bool {
+	return false
+}
+
 func (*TransactionType) IsEquatable() bool {
 	return false
 }
@@ -5154,6 +5393,20 @@ func (t *RestrictedType) IsExternallyReturnable(results map[*Member]bool) bool {
 	return true
 }
 
+func (t *RestrictedType) IsImportable(results map[*Member]bool) bool {
+	if t.Type != nil && !t.Type.IsImportable(results) {
+		return false
+	}
+
+	for _, restriction := range t.Restrictions {
+		if !restriction.IsImportable(results) {
+			return false
+		}
+	}
+
+	return true
+}
+
 func (*RestrictedType) IsEquatable() bool {
 	// TODO:
 	return false
@@ -5304,6 +5557,10 @@ func (*CapabilityType) IsStorable(_ map[*Member]bool) bool {
 
 func (*CapabilityType) IsExternallyReturnable(_ map[*Member]bool) bool {
 	return true
+}
+
+func (t *CapabilityType) IsImportable(_ map[*Member]bool) bool {
+	return false
 }
 
 func (*CapabilityType) IsEquatable() bool {
@@ -5524,6 +5781,7 @@ var AccountKeyType = func() *CompositeType {
 	accountKeyType := &CompositeType{
 		Identifier: AccountKeyTypeName,
 		Kind:       common.CompositeKindStructure,
+		importable: false,
 	}
 
 	const accountKeyIndexFieldDocString = `The index of the account key`
@@ -5600,6 +5858,7 @@ var PublicKeyType = func() *CompositeType {
 		Identifier:         PublicKeyTypeName,
 		Kind:               common.CompositeKindStructure,
 		hasComputedMembers: true,
+		importable:         false,
 	}
 
 	var members = []*Member{

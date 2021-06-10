@@ -6,10 +6,13 @@ import json
 import logging
 import os
 import re
+import shlex
+import shutil
 import subprocess
 import sys
 import textwrap
 from collections import defaultdict
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 from enum import Enum, unique
 from pathlib import Path
@@ -36,6 +39,16 @@ class Openable(Protocol):
         pass
 
 
+@contextmanager
+def cwd(path):
+    oldpwd = os.getcwd()
+    os.chdir(path)
+    try:
+        yield
+    finally:
+        os.chdir(oldpwd)
+
+
 @dataclass
 class File:
     path: str
@@ -52,8 +65,8 @@ class File:
             source = f.read()
 
         variables = {"source": source}
-        os.chdir(str(path.parent.absolute()))
-        exec(self.prepare, variables)
+        with cwd(str(path.parent.absolute())):
+            exec(self.prepare, variables)
         source = variables["source"]
 
         with path.open(mode="w") as f:
@@ -87,6 +100,27 @@ class File:
             return False, result
 
         return True, result
+
+
+@dataclass
+class GoTest:
+    path: str
+    command: str
+
+    def run(self, working_dir: Path, prepare: bool) -> bool:
+
+        cadence_path = shlex.quote(str(Path.cwd().parent.absolute()))
+        with cwd(working_dir / self.path):
+            if prepare:
+                subprocess.run([
+                    "go", "mod", "edit", "-replace", f'github.com/onflow/cadence={cadence_path}',
+                ])
+                subprocess.run([
+                    "go", "get", "-t", ".",
+                ])
+
+            result = subprocess.run(shlex.split(self.command))
+            return result.returncode == 0
 
 
 @dataclass
@@ -127,7 +161,8 @@ class Description:
     description: str
     url: str
     branch: str
-    files: List[File]
+    files: List[File] = field(default_factory=list)
+    go_tests: List[GoTest] = field(default_factory=list)
 
     @staticmethod
     def load(name: str) -> Description:
@@ -142,17 +177,43 @@ class Description:
 
     def _clone(self, working_dir: Path):
         if working_dir.exists():
-            raise Exception(f"{working_dir} exists")
+            shutil.rmtree(working_dir)
 
         logger.info(f"Cloning {self.url} ({self.branch})")
 
         Git.clone(self.url, self.branch, working_dir)
 
-    def run(self, name: str, clone: bool, use_json: bool, bench: bool) -> (bool, List):
+    def run(
+        self,
+        name: str,
+        prepare: bool,
+        use_json: bool,
+        bench: bool,
+        check: bool,
+        go_test: bool,
+    ) -> (bool, List[Result]):
+
         working_dir = SUITE_PATH / name
 
-        if clone:
+        if prepare:
             self._clone(working_dir)
+
+        results: List[Result] = []
+        check_succeeded = True
+        if check:
+            check_succeeded, results = self.check(working_dir, prepare=prepare, use_json=use_json, bench=bench)
+
+        go_tests_succeeded = True
+        if go_test:
+            for test in self.go_tests:
+                if not test.run(working_dir, prepare=prepare):
+                    go_tests_succeeded = False
+
+        succeeded = check_succeeded and go_tests_succeeded
+
+        return succeeded, results
+
+    def check(self, working_dir: Path, prepare: bool, use_json: bool, bench: bool) -> (bool, List[Result]):
 
         run_succeeded = True
 
@@ -161,7 +222,7 @@ class Description:
         for file in self.files:
             path = working_dir.joinpath(file.path)
 
-            if clone:
+            if prepare:
                 file.rewrite(path)
 
             parse_succeeded, parse_results = \
@@ -492,7 +553,7 @@ class Comparisons:
 
     @staticmethod
     def _time_markdown(time: int) -> str:
-        return f'{time/1000000:.2f}'
+        return f'{time / 1000000:.2f}'
 
     @staticmethod
     def _delta_markdown(delta: float) -> str:
@@ -585,7 +646,7 @@ def build_all():
     "--rerun",
     is_flag=True,
     default=False,
-    help="Rerun without cloning"
+    help="Rerun without cloning and preparing the suites"
 )
 @click.option(
     "--format",
@@ -594,10 +655,22 @@ def build_all():
     help="output format",
 )
 @click.option(
-    "--bench",
+    "--bench/--no-bench",
     is_flag=True,
     default=False,
     help="Run benchmarks"
+)
+@click.option(
+    "--check/--no-check",
+    is_flag=True,
+    default=True,
+    help="Parse and check the suite files"
+)
+@click.option(
+    "--go-test/--no-go-test",
+    is_flag=True,
+    default=False,
+    help="Run the suite Go tests"
 )
 @click.option(
     "--output",
@@ -624,6 +697,8 @@ def main(
         rerun: bool,
         format: Format,
         bench: bool,
+        check: bool,
+        go_test: bool,
         output: Optional[LazyFile],
         other_ref: Optional[str],
         delta_threshold: float,
@@ -632,7 +707,7 @@ def main(
     if other_ref is None and format not in ("pretty", "json"):
         raise Exception(f"unsupported format: {format}")
 
-    clone = not rerun
+    prepare = not rerun
 
     output: IO = output.open() if output else sys.stdout
 
@@ -643,9 +718,11 @@ def main(
     # Run for the current checkout
 
     current_success, current_results = run(
-        clone=clone,
+        prepare=prepare,
         use_json=use_json_for_run,
         bench=bench,
+        check=check,
+        go_test=go_test,
         names=names
     )
 
@@ -658,9 +735,11 @@ def main(
 
             _, other_results = run(
                 # suite repositories were already cloned in the previous run
-                clone=False,
+                prepare=False,
                 use_json=use_json_for_run,
                 bench=bench,
+                check=check,
+                go_test=go_test,
                 names=names
             )
 
@@ -688,7 +767,8 @@ def main(
         exit(1)
 
 
-def run(clone: bool, use_json: bool, bench: bool, names: Collection[str]) -> (bool, List[Result]):
+def run(prepare: bool, use_json: bool, bench: bool, check: bool, go_test: bool, names: Collection[str]) -> (
+bool, List[Result]):
     build_all()
 
     all_succeeded = True
@@ -704,9 +784,11 @@ def run(clone: bool, use_json: bool, bench: bool, names: Collection[str]) -> (bo
 
         run_succeeded, results = description.run(
             name,
-            clone=clone,
+            prepare=prepare,
             use_json=use_json,
-            bench=bench
+            bench=bench,
+            check=check,
+            go_test=go_test,
         )
 
         if not run_succeeded:

@@ -643,33 +643,6 @@ func (interpreter *Interpreter) Interpret() (err error) {
 	return nil
 }
 
-func (interpreter *Interpreter) prepareInterpretation() {
-	program := interpreter.Program.Program
-
-	// Pre-declare empty variables for all interfaces, composites, and function declarations
-	for _, declaration := range program.InterfaceDeclarations() {
-		interpreter.declareVariable(declaration.Identifier.Identifier, nil)
-	}
-
-	for _, declaration := range program.CompositeDeclarations() {
-		interpreter.declareVariable(declaration.Identifier.Identifier, nil)
-	}
-
-	for _, declaration := range program.FunctionDeclarations() {
-		interpreter.declareVariable(declaration.Identifier.Identifier, nil)
-	}
-
-	// TODO:
-	// Register top-level interface declarations, as their functions' conditions
-	// need to be included in conforming composites' functions
-}
-
-func (interpreter *Interpreter) visitGlobalDeclarations(declarations []ast.Declaration) {
-	for _, declaration := range declarations {
-		interpreter.visitGlobalDeclaration(declaration)
-	}
-}
-
 // visitGlobalDeclaration firsts interprets the global declaration,
 // then finds the declaration and adds it to the globals
 //
@@ -881,9 +854,87 @@ func (interpreter *Interpreter) RecoverErrors(onError func(error)) {
 }
 
 func (interpreter *Interpreter) VisitProgram(program *ast.Program) ast.Repr {
-	interpreter.prepareInterpretation()
 
-	interpreter.visitGlobalDeclarations(program.Declarations())
+	for _, declaration := range program.ImportDeclarations() {
+		interpreter.visitGlobalDeclaration(declaration)
+	}
+
+	for _, declaration := range program.InterfaceDeclarations() {
+		interpreter.visitGlobalDeclaration(declaration)
+	}
+
+	for _, declaration := range program.CompositeDeclarations() {
+		interpreter.visitGlobalDeclaration(declaration)
+	}
+
+	for _, declaration := range program.FunctionDeclarations() {
+		interpreter.visitGlobalDeclaration(declaration)
+	}
+
+	for _, declaration := range program.TransactionDeclarations() {
+		interpreter.visitGlobalDeclaration(declaration)
+	}
+
+	// Finally, evaluate the global variable declarations,
+	// which are effectively lazy declarations,
+	// i.e. the value is evaluated on first access.
+	//
+	// This enables forward references, especially indirect ones
+	// through functions, for example:
+	//
+	// ```
+	// fun f(): Int {
+	//    return g()
+	// }
+	//
+	// let x = f()
+	// let y = 0
+	//
+	// fun g(): Int {
+	//     return y
+	// }
+	// ```
+	//
+	// Here, the variable `x` has an indirect forward reference
+	// to variable `y`, through functions `f` and `g`.
+	// When variable `x` is evaluated, it forces the evaluation of variable `y`.
+	//
+	// Variable declarations are still eagerly evaluated,
+	// in the order they are declared.
+
+	// First, for each variable declaration, declare a variable with a getter
+	// which will evaluate the variable declaration. The resulting value
+	// is reused for subsequent reads of the variable.
+
+	variableDeclarationVariables := make([]*Variable, 0, len(program.VariableDeclarations()))
+
+	for _, declaration := range program.VariableDeclarations() {
+
+		// Rebind declaration, so the closure captures to current iteration's value,
+		// i.e. the next iteration doesn't override `declaration`
+
+		declaration := declaration
+
+		identifier := declaration.Identifier.Identifier
+		variable := NewVariableWithGetter(func() Value {
+			var result Value
+			interpreter.visitVariableDeclaration(declaration, func(_ string, value Value) {
+				result = value
+			})
+			return result
+		})
+		interpreter.setVariable(identifier, variable)
+		interpreter.Globals[identifier] = variable
+
+		variableDeclarationVariables = append(variableDeclarationVariables, variable)
+	}
+
+	// Second, force the evaluation of all variable declarations,
+	// in the order they were declared.
+
+	for _, variable := range variableDeclarationVariables {
+		_ = variable.GetValue()
+	}
 
 	return nil
 }

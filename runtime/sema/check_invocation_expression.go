@@ -92,6 +92,8 @@ func (checker *Checker) checkInvocationExpression(invocationExpression *ast.Invo
 			argumentTypes = append(argumentTypes, argumentType)
 		}
 
+		checker.Elaboration.InvocationExpressionReturnTypes[invocationExpression] = checker.expectedType
+
 		return InvalidType
 	}
 
@@ -268,7 +270,7 @@ func (checker *Checker) checkIdentifierInvocationArgumentLabels(
 	invocationExpression *ast.InvocationExpression,
 	identifierExpression *ast.IdentifierExpression,
 ) {
-	variable := checker.findAndCheckValueVariable(identifierExpression.Identifier, false)
+	variable := checker.findAndCheckValueVariable(identifierExpression, false)
 
 	if variable == nil || len(variable.ArgumentLabels) == 0 {
 		return

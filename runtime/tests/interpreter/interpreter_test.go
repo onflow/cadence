@@ -112,12 +112,17 @@ func parseCheckAndInterpretWithOptions(
 			err = internalErr
 		})
 
-		// Ensure that all global declarations are evaluated:
 		// Contract declarations are evaluated lazily,
 		// so force the contract value handler to be called
 
-		for _, variable := range inter.Globals {
-			_ = variable.GetValue()
+		for _, compositeDeclaration := range checker.Program.CompositeDeclarations() {
+			if compositeDeclaration.CompositeKind != common.CompositeKindContract {
+				continue
+			}
+
+			contractVariable := inter.Globals[compositeDeclaration.Identifier.Identifier]
+
+			_ = contractVariable.GetValue()
 		}
 	}
 
@@ -5866,7 +5871,7 @@ type testValue struct {
 
 func (v testValue) String() string {
 	if v.literal == "" {
-		return v.value.String(interpreter.StringResults{})
+		return v.value.String()
 	}
 	return v.literal
 }
@@ -6271,30 +6276,6 @@ func TestInterpretReferenceDereferenceFailure(t *testing.T) {
 	_, err := inter.Invoke("test")
 
 	require.ErrorAs(t, err, &interpreter.DestroyedCompositeError{})
-}
-
-func TestInterpretInvalidForwardReferenceCall(t *testing.T) {
-
-	t.Parallel()
-
-	// TODO: improve:
-	//   - call to `g` should succeed, but access to `y` should fail with error
-	//   - maybe make this a static error
-
-	assert.Panics(t, func() {
-		_ = parseCheckAndInterpret(t, `
-          fun f(): Int {
-             return g()
-          }
-
-          let x = f()
-          let y = 0
-
-          fun g(): Int {
-              return y
-          }
-        `)
-	})
 }
 
 func TestInterpretVariableDeclarationSecondValue(t *testing.T) {
@@ -7768,7 +7749,7 @@ func TestInterpretDictionaryValueEncodingOrder(t *testing.T) {
 		require.NoError(t, err)
 
 		// ensure the value is loaded
-		_ = decoded.String(interpreter.StringResults{})
+		_ = decoded.String()
 
 		test.SetModified(false)
 		test.Keys().SetModified(false)
@@ -8017,7 +7998,7 @@ func TestInterpretNestedDestroy(t *testing.T) {
 		},
 		``,
 		func(invocation interpreter.Invocation) interpreter.Value {
-			message := invocation.Arguments[0].String(interpreter.StringResults{})
+			message := invocation.Arguments[0].String()
 			logs = append(logs, message)
 			return interpreter.VoidValue{}
 		},

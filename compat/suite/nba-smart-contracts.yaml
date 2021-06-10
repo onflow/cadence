@@ -1,0 +1,106 @@
+description: NBA Top Shot
+maintainers:
+- bastian@dapperlabs.com
+- joshua.hannan@dapperlabs.com
+url: https://github.com/dapperlabs/nba-smart-contracts.git
+branch: master
+go_tests:
+- path: lib/go/test
+  command: make test
+files:
+- path: contracts/TopShot.cdc
+  # language=Python prefix=source=''\n
+  prepare: |
+    import re
+    from pathlib import Path
+
+    source = re.sub(
+      'import NonFungibleToken from 0xNFTADDRESS',
+      f'import NonFungibleToken from "{Path("../../flow-nft/contracts/NonFungibleToken.cdc").resolve()}"',
+      source,
+    )
+
+- path: contracts/MarketTopShot.cdc
+  # language=Python prefix=source=''\n
+  prepare: |
+    import re
+    from pathlib import Path
+
+    source = re.sub(
+      'import FungibleToken from 0xFUNGIBLETOKENADDRESS',
+      f'import FungibleToken from "{Path("../../flow-ft/contracts/FungibleToken.cdc").resolve()}"',
+      source,
+    )
+
+    source = re.sub(
+      'import NonFungibleToken from 0xNFTADDRESS',
+      f'import NonFungibleToken from "{Path("../../flow-nft/contracts/NonFungibleToken.cdc").resolve()}"',
+      source,
+    )
+
+    source = re.sub(
+      'import TopShot from 0xTOPSHOTADDRESS',
+      f'import TopShot from  "{Path("TopShot.cdc").resolve()}"',
+      source,
+    )
+
+- path: contracts/TopShotMarketV2.cdc
+  # language=Python prefix=source=''\n
+  prepare: |
+    import re
+    from pathlib import Path
+
+    source = re.sub(
+      'import FungibleToken from 0xFUNGIBLETOKENADDRESS',
+      f'import FungibleToken from "{Path("../../flow-ft/contracts/FungibleToken.cdc").resolve()}"',
+      source,
+    )
+
+    source = re.sub(
+      'import NonFungibleToken from 0xNFTADDRESS',
+      f'import NonFungibleToken from "{Path("../../flow-nft/contracts/NonFungibleToken.cdc").resolve()}"',
+      source,
+    )
+
+    source = re.sub(
+      'import TopShot from 0xTOPSHOTADDRESS',
+      f'import TopShot from  "{Path("TopShot.cdc").resolve()}"',
+      source,
+    )
+
+- path: contracts/TopShotShardedCollection.cdc
+  # language=Python prefix=source=''\n
+  prepare: |
+    import re
+    from pathlib import Path
+
+    source = re.sub(
+      'import NonFungibleToken from 0xNFTADDRESS',
+      f'import NonFungibleToken from "{Path("../../flow-nft/contracts/NonFungibleToken.cdc").resolve()}"',
+      source,
+    )
+
+    source = re.sub(
+      'import TopShot from 0xTOPSHOTADDRESS',
+      f'import TopShot from  "{Path("TopShot.cdc").resolve()}"',
+      source,
+    )
+
+- path: contracts/TopshotAdminReceiver.cdc
+  # language=Python prefix=source=''\n
+  prepare: |
+    import re
+    from pathlib import Path
+
+    source = re.sub(
+      'import TopShotShardedCollection from 0xSHARDEDADDRESS',
+      f'import TopShotShardedCollection from "{Path("TopShotShardedCollection.cdc").resolve()}"',
+      source,
+    )
+
+    source = re.sub(
+      'import TopShot from 0xTOPSHOTADDRESS',
+      f'import TopShot from  "{Path("TopShot.cdc").resolve()}"',
+      source,
+    )
+

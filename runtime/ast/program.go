@@ -89,6 +89,10 @@ func (p *Program) TransactionDeclarations() []*TransactionDeclaration {
 	return p.indices.transactionDeclarations(p.declarations)
 }
 
+func (p *Program) VariableDeclarations() []*VariableDeclaration {
+	return p.indices.variableDeclarations(p.declarations)
+}
+
 // SoleContractDeclaration returns the sole contract declaration, if any,
 // and if there are no other actionable declarations.
 //

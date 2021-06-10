@@ -66,6 +66,10 @@ func (d *InterfaceDeclaration) DeclarationMembers() *Members {
 	return d.Members
 }
 
+func (d *InterfaceDeclaration) DeclarationDocString() string {
+	return d.DocString
+}
+
 func (d *InterfaceDeclaration) MarshalJSON() ([]byte, error) {
 	type Alias InterfaceDeclaration
 	return json.Marshal(&struct {

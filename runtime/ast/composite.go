@@ -69,6 +69,10 @@ func (d *CompositeDeclaration) DeclarationMembers() *Members {
 	return d.Members
 }
 
+func (d *CompositeDeclaration) DeclarationDocString() string {
+	return d.DocString
+}
+
 func (d *CompositeDeclaration) MarshalJSON() ([]byte, error) {
 	type Alias CompositeDeclaration
 	return json.Marshal(&struct {
@@ -116,6 +120,10 @@ func (d *FieldDeclaration) DeclarationAccess() Access {
 
 func (d *FieldDeclaration) DeclarationMembers() *Members {
 	return nil
+}
+
+func (d *FieldDeclaration) DeclarationDocString() string {
+	return d.DocString
 }
 
 func (d *FieldDeclaration) MarshalJSON() ([]byte, error) {
@@ -170,6 +178,10 @@ func (d *EnumCaseDeclaration) EndPosition() Position {
 
 func (d *EnumCaseDeclaration) DeclarationMembers() *Members {
 	return nil
+}
+
+func (d *EnumCaseDeclaration) DeclarationDocString() string {
+	return d.DocString
 }
 
 func (d *EnumCaseDeclaration) MarshalJSON() ([]byte, error) {
