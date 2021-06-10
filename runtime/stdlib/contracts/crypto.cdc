@@ -184,6 +184,6 @@ pub contract Crypto {
 
         // Initialize constants
 
-        self.domainSeparationTagUser = "user"
+        self.domainSeparationTagUser = "FLOW-V0.0-user"
     }
 }
