@@ -515,8 +515,8 @@ func importPublicKey(
 		case sema.PublicKeyPublicKeyField:
 			arrayValue, ok := value.(*interpreter.ArrayValue)
 			if !ok {
-				panic(fmt.Sprintf(
-					"cannot import value of type %s. Invalid value for field %s: %T",
+				panic(fmt.Errorf(
+					"cannot import value of type '%s'. invalid value for field '%s': %v",
 					sema.PublicKeyType,
 					fieldName,
 					value,
@@ -528,8 +528,8 @@ func importPublicKey(
 		case sema.PublicKeySignAlgoField:
 			compositeValue, ok := value.(*interpreter.CompositeValue)
 			if !ok {
-				panic(fmt.Sprintf(
-					"cannot import value of type %s. Invalid value for field %s: %T",
+				panic(fmt.Errorf(
+					"cannot import value of type '%s'. invalid value for field '%s': %v",
 					sema.PublicKeyType,
 					fieldName,
 					value,
@@ -544,13 +544,29 @@ func importPublicKey(
 			return
 
 		default:
-			panic(fmt.Sprintf(
-				"cannot import value of type %s. Invalid field %s",
+			panic(fmt.Errorf(
+				"cannot import value of type '%s'. invalid field '%s'",
 				sema.PublicKeyType,
 				fieldName,
 			))
 		}
 	})
+
+	if publicKeyValue == nil {
+		panic(fmt.Errorf(
+			"cannot import value of type '%s'. missing field '%s'",
+			sema.PublicKeyType,
+			sema.PublicKeyPublicKeyField,
+		))
+	}
+
+	if signAlgoValue == nil {
+		panic(fmt.Errorf(
+			"cannot import value of type '%s'. missing field '%s'",
+			sema.PublicKeyType,
+			sema.PublicKeySignAlgoField,
+		))
+	}
 
 	return interpreter.NewPublicKeyValue(
 		publicKeyValue,

@@ -1854,3 +1854,503 @@ func TestStringValueImport(t *testing.T) {
 		assert.True(t, validated)
 	})
 }
+
+func TestPublicKeyImport(t *testing.T) {
+
+	t.Parallel()
+
+	executeScript := func(
+		t *testing.T,
+		script string,
+		arg cadence.Value,
+		runtimeInterface Interface,
+	) (cadence.Value, error) {
+
+		encodedArg, err := json.Encode(arg)
+		require.NoError(t, err)
+
+		rt := NewInterpreterRuntime()
+
+		return rt.ExecuteScript(
+			Script{
+				Source:    []byte(script),
+				Arguments: [][]byte{encodedArg},
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  utils.TestLocation,
+			},
+		)
+	}
+
+	publicKeyBytes := cadence.NewArray([]cadence.Value{
+		cadence.NewUInt8(1),
+		cadence.NewUInt8(2),
+	})
+
+	t.Run("Test IsValid", func(t *testing.T) {
+		t.Parallel()
+
+		testPublicKeyImport := func(userSetValidity, publicKeyActualValidity bool) {
+			t.Run(
+				fmt.Sprintf("UserSet(%v)|Actual(%v)", userSetValidity, publicKeyActualValidity),
+				func(t *testing.T) {
+
+					t.Parallel()
+
+					script := `
+                        pub fun main(key: PublicKey): Bool {
+                            return key.isValid
+                        }
+                    `
+
+					publicKey := cadence.NewStruct(
+						[]cadence.Value{
+							// PublicKey bytes
+							publicKeyBytes,
+
+							// Sign algorithm
+							cadence.NewEnum(
+								[]cadence.Value{
+									cadence.NewUInt8(0),
+								},
+							).WithType(SignAlgoType),
+
+							// isValid
+							cadence.NewBool(userSetValidity),
+						},
+					).WithType(PublicKeyType)
+
+					publicKeyValidated := false
+
+					runtimeInterface := &testRuntimeInterface{
+						decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+							return json.Decode(b)
+						},
+
+						validatePublicKey: func(publicKey *PublicKey) (bool, error) {
+							publicKeyValidated = true
+							return publicKeyActualValidity, nil
+						},
+					}
+
+					actual, err := executeScript(t, script, publicKey, runtimeInterface)
+					require.NoError(t, err)
+
+					// Check whether 'isValid' field returns the actual validity of
+					// the public key, but not the one set by the user.
+					assert.True(t, publicKeyValidated)
+					assert.Equal(t, actual, cadence.NewBool(publicKeyActualValidity))
+				},
+			)
+		}
+
+		testPublicKeyImport(true, true)
+		testPublicKeyImport(true, false)
+		testPublicKeyImport(false, true)
+		testPublicKeyImport(false, false)
+	})
+
+	t.Run("Test Verify", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            pub fun main(key: PublicKey): Bool {
+                return key.verify(
+                    signature: [],
+                    signedData: [],
+                    domainSeparationTag: "",
+                    hashAlgorithm: HashAlgorithm.SHA2_256
+                )
+            }
+        `
+
+		publicKey := cadence.NewStruct(
+			[]cadence.Value{
+				// PublicKey bytes
+				publicKeyBytes,
+
+				// Sign algorithm
+				cadence.NewEnum(
+					[]cadence.Value{
+						cadence.NewUInt8(0),
+					},
+				).WithType(SignAlgoType),
+
+				// isValid
+				cadence.NewBool(true),
+			},
+		).WithType(PublicKeyType)
+
+		verifyInvoked := false
+
+		runtimeInterface := &testRuntimeInterface{
+			decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+				return json.Decode(b)
+			},
+
+			verifySignature: func(
+				signature []byte,
+				tag string,
+				signedData []byte,
+				publicKey []byte,
+				signatureAlgorithm SignatureAlgorithm,
+				hashAlgorithm HashAlgorithm,
+			) (bool, error) {
+				verifyInvoked = true
+				return true, nil
+			},
+		}
+
+		actual, err := executeScript(t, script, publicKey, runtimeInterface)
+		require.NoError(t, err)
+
+		assert.True(t, verifyInvoked)
+		assert.Equal(t, actual, cadence.NewBool(true))
+	})
+
+	runtimeInterface := &testRuntimeInterface{
+		decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+			return json.Decode(b)
+		},
+	}
+
+	t.Run("Invalid raw public key", func(t *testing.T) {
+		script := `
+            pub fun main(key: PublicKey) {
+            }
+        `
+
+		publicKey := cadence.NewStruct(
+			[]cadence.Value{
+				// Invalid value for 'publicKey' field
+				cadence.NewBool(true),
+
+				cadence.NewEnum(
+					[]cadence.Value{
+						cadence.NewUInt8(0),
+					},
+				).WithType(SignAlgoType),
+
+				cadence.NewBool(true),
+			},
+		).WithType(PublicKeyType)
+
+		// TODO: remove this once 'importValue' method returns errors.
+		//	 Assert the returned error instead.
+		defer func() {
+			r := recover()
+
+			err, isError := r.(error)
+			require.True(t, isError)
+			require.Error(t, err)
+
+			assert.Contains(
+				t,
+				err.Error(),
+				"invalid value for field 'publicKey': true",
+			)
+		}()
+
+		_, err := executeScript(t, script, publicKey, runtimeInterface)
+		require.Error(t, err)
+	})
+
+	t.Run("Invalid sign algo", func(t *testing.T) {
+		script := `
+            pub fun main(key: PublicKey) {
+            }
+        `
+
+		publicKey := cadence.NewStruct(
+			[]cadence.Value{
+				publicKeyBytes,
+
+				// Invalid value for 'signatureAlgorithm' field
+				cadence.NewBool(true),
+
+				cadence.NewBool(true),
+			},
+		).WithType(PublicKeyType)
+
+		// TODO: remove this once 'importValue' method returns errors.
+		//	 Assert the returned error instead.
+		defer func() {
+			r := recover()
+
+			err, isError := r.(error)
+			require.True(t, isError)
+			require.Error(t, err)
+
+			assert.Contains(
+				t,
+				err.Error(),
+				"invalid value for field 'signatureAlgorithm': true",
+			)
+		}()
+
+		_, err := executeScript(t, script, publicKey, runtimeInterface)
+		require.Error(t, err)
+	})
+
+	t.Run("Extra field", func(t *testing.T) {
+		script := `
+            pub fun main(key: PublicKey) {
+            }
+        `
+
+		jsonCdc := `
+            {
+                "type":"Struct",
+                "value":{
+                    "id":"PublicKey",
+                    "fields":[
+                        {
+                            "name":"publicKey",
+                            "value":{
+                                "type":"Array",
+                                "value":[
+                                    {
+                                        "type":"UInt8",
+                                        "value":"1"
+                                    },
+                                    {
+                                        "type":"UInt8",
+                                        "value":"2"
+                                    }
+                                ]
+                            }
+                        },
+                        {
+                            "name":"signatureAlgorithm",
+                            "value":{
+                                "type":"Enum",
+                                "value":{
+                                    "id":"SignatureAlgorithm",
+                                    "fields":[
+                                        {
+                                            "name":"rawValue",
+                                            "value":{
+                                                "type":"UInt8",
+                                                "value":"0"
+                                            }
+                                        }
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "name":"isValid",
+                            "value":{
+                            "type":"Bool",
+                            "value":true
+                            }
+                        },
+                        {
+                            "name":"extraField",
+                            "value":{
+                            "type":"Bool",
+                            "value":true
+                            }
+                        }
+                    ]
+                }
+            }
+        `
+
+		rt := NewInterpreterRuntime()
+
+		// TODO: remove this once 'importValue' method returns errors.
+		//	 Assert the returned error instead.
+		defer func() {
+			r := recover()
+
+			err, isError := r.(error)
+			require.True(t, isError)
+			require.Error(t, err)
+
+			assert.Contains(
+				t,
+				err.Error(),
+				"invalid field 'extraField'",
+			)
+		}()
+
+		_, err := rt.ExecuteScript(
+			Script{
+				Source: []byte(script),
+				Arguments: [][]byte{
+					[]byte(jsonCdc),
+				},
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  utils.TestLocation,
+			},
+		)
+		require.Error(t, err)
+	})
+
+	t.Run("Missing raw public key", func(t *testing.T) {
+		script := `
+            pub fun main(key: PublicKey): Bool {
+                return key.isValid
+            }
+        `
+
+		jsonCdc := `
+            {
+                "type":"Struct",
+                "value":{
+                    "id":"PublicKey",
+                    "fields":[
+                        {
+                            "name":"signatureAlgorithm",
+                            "value":{
+                                "type":"Enum",
+                                "value":{
+                                    "id":"SignatureAlgorithm",
+                                    "fields":[
+                                        {
+                                            "name":"rawValue",
+                                            "value":{
+                                                "type":"UInt8",
+                                                "value":"0"
+                                            }
+                                        }
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "name":"isValid",
+                            "value":{
+                            "type":"Bool",
+                            "value":true
+                            }
+                        }
+                    ]
+                }
+            }
+        `
+
+		rt := NewInterpreterRuntime()
+
+		// TODO: remove this once 'importValue' method returns errors.
+		//	 Assert the returned error instead.
+		defer func() {
+			r := recover()
+
+			err, isError := r.(error)
+			require.True(t, isError)
+			require.Error(t, err)
+
+			assert.Contains(
+				t,
+				err.Error(),
+				"missing field 'publicKey'",
+			)
+		}()
+
+		value, err := rt.ExecuteScript(
+			Script{
+				Source: []byte(script),
+				Arguments: [][]byte{
+					[]byte(jsonCdc),
+				},
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  utils.TestLocation,
+			},
+		)
+
+		require.NoError(t, err)
+		assert.Equal(t, value, cadence.NewBool(true))
+	})
+
+	t.Run("Missing isValid", func(t *testing.T) {
+		script := `
+            pub fun main(key: PublicKey): Bool {
+                return key.isValid
+            }
+        `
+
+		jsonCdc := `
+            {
+                "type":"Struct",
+                "value":{
+                    "id":"PublicKey",
+                    "fields":[
+                        {
+                            "name":"publicKey",
+                            "value":{
+                                "type":"Array",
+                                "value":[
+                                    {
+                                        "type":"UInt8",
+                                        "value":"1"
+                                    },
+                                    {
+                                        "type":"UInt8",
+                                        "value":"2"
+                                    }
+                                ]
+                            }
+                        },
+                        {
+                            "name":"signatureAlgorithm",
+                            "value":{
+                                "type":"Enum",
+                                "value":{
+                                    "id":"SignatureAlgorithm",
+                                    "fields":[
+                                        {
+                                            "name":"rawValue",
+                                            "value":{
+                                                "type":"UInt8",
+                                                "value":"0"
+                                            }
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    ]
+                }
+            }
+        `
+
+		rt := NewInterpreterRuntime()
+
+		publicKeyValidated := false
+
+		runtimeInterface := &testRuntimeInterface{
+			decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+				return json.Decode(b)
+			},
+
+			validatePublicKey: func(publicKey *PublicKey) (bool, error) {
+				publicKeyValidated = true
+				return true, nil
+			},
+		}
+
+		value, err := rt.ExecuteScript(
+			Script{
+				Source: []byte(script),
+				Arguments: [][]byte{
+					[]byte(jsonCdc),
+				},
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  utils.TestLocation,
+			},
+		)
+
+		require.NoError(t, err)
+		assert.True(t, publicKeyValidated)
+		assert.Equal(t, value, cadence.NewBool(true))
+	})
+}
