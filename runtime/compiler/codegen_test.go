@@ -25,8 +25,6 @@ import (
 
 	"github.com/onflow/cadence/runtime/compiler/ir"
 	"github.com/onflow/cadence/runtime/compiler/wasm"
-	"github.com/onflow/cadence/runtime/interpreter"
-	"github.com/onflow/cadence/vm"
 )
 
 func TestWasmCodeGenSimple(t *testing.T) {
@@ -197,12 +195,4 @@ func TestWasmCodeGenSimple(t *testing.T) {
 	require.NoError(t, err)
 
 	_ = wasm.WASM2WAT(buf.Bytes())
-
-	machine, err := vm.NewVM(buf.Bytes())
-	require.NoError(t, err)
-
-	res, err := machine.Invoke("inc", interpreter.NewIntValueFromInt64(2))
-	require.NoError(t, err)
-
-	require.Equal(t, interpreter.NewIntValueFromInt64(3), res)
 }
