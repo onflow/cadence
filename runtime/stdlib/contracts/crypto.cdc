@@ -1,16 +1,4 @@
 
-pub struct interface SignatureVerifier  {
-
-    pub fun verify(
-        signature: [UInt8],
-        tag: String,
-        signedData: [UInt8],
-        publicKey: [UInt8],
-        signatureAlgorithm: SignatureAlgorithm,
-        hashAlgorithm: HashAlgorithm
-    ): Bool
-}
-
 pub struct interface Hasher  {
 
     pub fun hash(
@@ -144,12 +132,10 @@ pub contract Crypto {
 
                 // Ensure the signature is valid
 
-                if !Crypto.signatureVerifier.verify(
+                if !key.publicKey.verify(
                     signature: signature.signature,
-                    tag: Crypto.domainSeparationTagUser,
                     signedData: signedData,
-                    publicKey: key.publicKey.publicKey,
-                    signatureAlgorithm: key.publicKey.signatureAlgorithm,
+                    domainSeparationTag: Crypto.domainSeparationTagUser,
                     hashAlgorithm:key.hashAlgorithm
                 ) {
                     return false
@@ -174,12 +160,10 @@ pub contract Crypto {
 
     priv let domainSeparationTagUser: String
 
-    priv let signatureVerifier: {SignatureVerifier}
     priv let hasher: {Hasher}
 
-    init(signatureVerifier: {SignatureVerifier}, hasher: {Hasher}) {
+    init(hasher: {Hasher}) {
 
-        self.signatureVerifier = signatureVerifier
         self.hasher = hasher
 
         // Initialize constants
