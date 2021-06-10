@@ -468,8 +468,12 @@ func (i *FlowIntegration) getServicePrivateKey() (string, error) {
 		return "", err
 	}
 
-	rawKey := serviceAccount.DefaultKey().ToConfig().Context["privateKey"]
-	return rawKey, nil
+	pkey, err := serviceAccount.Key().PrivateKey()
+	if err != nil {
+		return "", err
+	}
+
+	return (*pkey).String(), nil
 }
 
 // createAccountHelper creates a new account and returns its address.
@@ -481,7 +485,7 @@ func (i *FlowIntegration) createAccountHelper(conn protocol.Conn) (address flow.
 
 	signer := serviceAccount.Name()
 
-	defaultKey := serviceAccount.DefaultKey()
+	defaultKey := serviceAccount.Key()
 	serviceAccountPrivateKey, err := i.getServicePrivateKey()
 	if err != nil {
 		return flow.Address{}, errorWithMessage(conn, ErrorMessageServiceAccountKey, err)
@@ -522,16 +526,20 @@ func (i *FlowIntegration) storeAccountHelper(conn protocol.Conn, address flow.Ad
 		return ClientAccount{}, errorWithMessage(conn, ErrorMessageServiceAccount, err)
 	}
 
-	defaultKey := serviceAccount.DefaultKey()
+	defaultKey := serviceAccount.Key()
 	serviceAddress := serviceAccount.Address().String()
-	privateKey := defaultKey.ToConfig().Context["privateKey"]
 
 	// Store new account
 	code := makeManagerCode(transactionAddAccount, serviceAddress)
 	accountAddress := fmt.Sprintf("Address:0x%v", address)
 	txArgs := []string{accountAddress}
 
-	_, txResult, err := i.sharedServices.Transactions.SendForAddressWithCode(code, serviceAddress, privateKey, txArgs, "")
+	pkey, err := defaultKey.PrivateKey()
+	if err != nil {
+		return
+	}
+
+	_, txResult, err := i.sharedServices.Transactions.SendForAddressWithCode(code, serviceAddress, (*pkey).String(), txArgs, "")
 	if err != nil {
 		return ClientAccount{}, errorWithMessage(conn, ErrorMessageAccountStore, err)
 	}
