@@ -5858,7 +5858,7 @@ var PublicKeyType = func() *CompositeType {
 		Identifier:         PublicKeyTypeName,
 		Kind:               common.CompositeKindStructure,
 		hasComputedMembers: true,
-		importable:         false,
+		importable:         true,
 	}
 
 	var members = []*Member{

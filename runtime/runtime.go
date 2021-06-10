@@ -681,7 +681,7 @@ func validateArgumentParams(
 			}
 		}
 
-		arg := importValue(value)
+		arg := importValue(inter, runtimeInterface, value)
 
 		dynamicTypeResults := interpreter.DynamicTypeResults{}
 

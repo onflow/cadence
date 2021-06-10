@@ -223,8 +223,12 @@ func TestExportValue(t *testing.T) {
 			actual := exportValueWithInterpreter(tt.value, nil, exportResults{})
 			assert.Equal(t, tt.expected, actual)
 
+			runtimeInterface := &testRuntimeInterface{}
+			inter, err := interpreter.NewInterpreter(nil, utils.TestLocation)
+			require.NoError(t, err)
+
 			if !tt.skipReverse {
-				original := importValue(actual)
+				original := importValue(inter, runtimeInterface, actual)
 				assert.Equal(t, tt.value, original)
 			}
 		})

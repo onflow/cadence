@@ -684,6 +684,24 @@ func TestTransactionParameterTypeValidation(t *testing.T) {
 					},
 				).WithType(SignAlgoType)
 
+			case sema.PublicKeyType:
+				value = cadence.NewStruct(
+					[]cadence.Value{
+						// PublicKey bytes
+						cadence.NewArray([]cadence.Value{}),
+
+						// Sign algorithm
+						cadence.NewEnum(
+							[]cadence.Value{
+								cadence.NewUInt8(0),
+							},
+						).WithType(SignAlgoType),
+
+						// isValid
+						cadence.NewBool(false),
+					},
+				).WithType(PublicKeyType)
+
 			default:
 				// This test case only focuses on the type,
 				// and has no interest in the value.
