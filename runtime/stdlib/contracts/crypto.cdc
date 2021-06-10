@@ -93,7 +93,7 @@ pub contract Crypto {
         }
 
         /// Returns true if the given signatures are valid for the given signed data
-        pub fun isValid(
+        pub fun verify(
             signatureSet: [KeyListSignature],
             signedData: [UInt8]
         ): Bool {

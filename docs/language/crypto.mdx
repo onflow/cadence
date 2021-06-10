@@ -278,7 +278,7 @@ pub fun test main() {
     // "foo", encoded as UTF-8, in hex representation
     let signedData = "666f6f".decodeHex()
 
-    let isValid = keyList.isValid(
+    let isValid = keyList.verify(
         signatureSet: signatureSet,
         signedData: signedData
     )
@@ -324,7 +324,7 @@ pub struct KeyList {
     pub fun revoke(keyIndex: Int)
 
     /// Returns true if the given signatures are valid for the given signed data
-    pub fun isValid(
+    pub fun verify(
         signatureSet: [KeyListSignature],
         signedData: [UInt8]
     ): Bool

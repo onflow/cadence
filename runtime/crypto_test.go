@@ -88,7 +88,7 @@ func TestRuntimeCrypto_verify(t *testing.T) {
               )
           ]
 
-          return keyList.isValid(
+          return keyList.verify(
               signatureSet: signatureSet,
               signedData: "0506".decodeHex()
           )
