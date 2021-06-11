@@ -2520,13 +2520,16 @@ func (r *interpreterRuntime) newAccountKeysAddFunction(
 	return interpreter.NewHostFunctionValue(
 		func(invocation interpreter.Invocation) interpreter.Value {
 			publicKeyValue := invocation.Arguments[0].(*interpreter.CompositeValue)
-			publicKey := NewPublicKeyFromValue(publicKeyValue)
+
+			publicKey, err := NewPublicKeyFromValue(publicKeyValue)
+			if err != nil {
+				panic(err)
+			}
 
 			hashAlgo := NewHashAlgorithmFromValue(invocation.Arguments[1])
 			address := addressValue.ToAddress()
 			weight := invocation.Arguments[2].(interpreter.UFix64Value).ToInt()
 
-			var err error
 			var accountKey *AccountKey
 			wrapPanic(func() {
 				accountKey, err = runtimeInterface.AddAccountKey(address, publicKey, hashAlgo, weight)
@@ -2629,39 +2632,51 @@ func (r *interpreterRuntime) newPublicAccountKeys(addressValue interpreter.Addre
 	)
 }
 
-func NewPublicKeyFromValue(publicKey *interpreter.CompositeValue) *PublicKey {
+func NewPublicKeyFromValue(publicKey *interpreter.CompositeValue) (*PublicKey, error) {
 
 	fields := publicKey.Fields()
 
 	// publicKey field
 	publicKeyFieldGetter, ok := publicKey.ComputedFields.Get(sema.PublicKeyPublicKeyField)
 	if !ok {
-		panic("public key value is not set")
+		return nil, fmt.Errorf("public key value is not set")
 	}
 
 	// Interpreter is not available at this point.
 	// For now its safe to pass a nil interpreter here, as the publicKey field doesn't use it.
-	key := publicKeyFieldGetter(nil).(*interpreter.ArrayValue)
+	key := publicKeyFieldGetter(nil)
 
 	byteArray, err := interpreter.ByteArrayValueToByteSlice(key)
 	if err != nil {
-		panic(fmt.Errorf("public key needs to be a byte array. %w", err))
+		return nil, fmt.Errorf("public key needs to be a byte array. %w", err)
 	}
 
 	// sign algo field
 	signAlgoField, ok := fields.Get(sema.PublicKeySignAlgoField)
 	if !ok {
-		panic("sign algorithm is not set")
+		return nil, errors.New("sign algorithm is not set")
 	}
 
-	signAlgoValue := signAlgoField.(*interpreter.CompositeValue)
+	signAlgoValue, ok := signAlgoField.(*interpreter.CompositeValue)
+	if !ok {
+		return nil, fmt.Errorf(
+			"sign algorithm does not belong to type: %s",
+			sema.SignatureAlgorithmType.QualifiedString(),
+		)
+	}
 
 	rawValue, ok := signAlgoValue.Fields().Get(sema.EnumRawValueFieldName)
 	if !ok {
-		panic("cannot find sign algorithm raw value")
+		return nil, errors.New("cannot find sign algorithm raw value")
 	}
 
-	signAlgoRawValue := rawValue.(interpreter.UInt8Value)
+	signAlgoRawValue, ok := rawValue.(interpreter.UInt8Value)
+	if !ok {
+		return nil, fmt.Errorf(
+			"sign algorithm raw-value does not belong to type: %s",
+			sema.UInt8Type.QualifiedString(),
+		)
+	}
 
 	// `valid` and `validated` fields
 	var valid, validated bool
@@ -2675,7 +2690,7 @@ func NewPublicKeyFromValue(publicKey *interpreter.CompositeValue) *PublicKey {
 		SignAlgo:  SignatureAlgorithm(signAlgoRawValue.ToInt()),
 		IsValid:   valid,
 		Validated: validated,
-	}
+	}, nil
 }
 
 func NewPublicKeyValue(publicKey *PublicKey, runtimeInterface Interface) *interpreter.CompositeValue {
@@ -2726,9 +2741,11 @@ func newPublicKeyValidationFunction(
 }
 
 func validatePublicKey(publicKeyValue *interpreter.CompositeValue, runtimeInterface Interface) interpreter.BoolValue {
-	publicKey := NewPublicKeyFromValue(publicKeyValue)
+	publicKey, err := NewPublicKeyFromValue(publicKeyValue)
+	if err != nil {
+		return false
+	}
 
-	var err error
 	var valid bool
 	wrapPanic(func() {
 		valid, err = runtimeInterface.ValidatePublicKey(publicKey)
@@ -2785,7 +2802,10 @@ func validateSignature(
 
 	hashAlgorithm := NewHashAlgorithmFromValue(hashAlgorithmValue)
 
-	publicKey := NewPublicKeyFromValue(publicKeyValue)
+	publicKey, err := NewPublicKeyFromValue(publicKeyValue)
+	if err != nil {
+		return false
+	}
 
 	var valid bool
 	wrapPanic(func() {
