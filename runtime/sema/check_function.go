@@ -394,7 +394,7 @@ func (checker *Checker) declareResult(ty Type) {
 	_, err := checker.valueActivations.DeclareImplicitConstant(
 		ResultIdentifier,
 		ty,
-		common.DeclarationKindResult,
+		common.DeclarationKindConstant,
 	)
 	checker.report(err)
 	// TODO: record occurrence - but what position?

@@ -1476,11 +1476,8 @@ func (checker *Checker) checkResourceLoss(depth int) {
 
 	checker.valueActivations.ForEachVariableDeclaredInAndBelow(depth, func(name string, variable *Variable) {
 
-		// TODO: handle `self` and `result` properly
-
 		if variable.Type.IsResourceType() &&
 			variable.DeclarationKind != common.DeclarationKindSelf &&
-			variable.DeclarationKind != common.DeclarationKindResult &&
 			!checker.resources.Get(variable).DefinitivelyInvalidated {
 
 			checker.report(
