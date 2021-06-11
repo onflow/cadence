@@ -7215,6 +7215,7 @@ func NewDeferredDictionaryValue(
 ) *DictionaryValue {
 	return &DictionaryValue{
 		Owner:           owner,
+		deferredOwner:   owner,
 		modified:        false,
 		valuePath:       path,
 		content:         content,

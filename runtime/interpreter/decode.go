@@ -1844,7 +1844,6 @@ func decodeDictionaryEntries(v *DictionaryValue, content []byte) error {
 	entries := NewStringValueOrderedMap()
 
 	var deferred *orderedmap.StringStructOrderedMap
-	var deferredOwner *common.Address
 	var deferredStorageKeyBase string
 
 	// Are the values in the dictionary deferred, i.e. are they encoded
@@ -1855,7 +1854,6 @@ func decodeDictionaryEntries(v *DictionaryValue, content []byte) error {
 	if isDeferred {
 
 		deferred = orderedmap.NewStringStructOrderedMap()
-		deferredOwner = d.owner
 		deferredStorageKeyBase = joinPath(append(v.valuePath, dictionaryValuePathPrefix))
 		for _, keyValue := range keys.Elements() {
 			key := dictionaryKey(keyValue)
@@ -1900,11 +1898,12 @@ func decodeDictionaryEntries(v *DictionaryValue, content []byte) error {
 
 			keyIndex++
 		}
+
+		v.deferredOwner = nil
 	}
 
 	v.keys = keys
 	v.entries = entries
-	v.deferredOwner = deferredOwner
 	v.deferredKeys = deferred
 	v.deferredStorageKeyBase = deferredStorageKeyBase
 
