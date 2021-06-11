@@ -44,9 +44,13 @@ func (d *TransactionDeclaration) Walk(walkChild func(Element)) {
 	for _, declaration := range d.Fields {
 		walkChild(declaration)
 	}
-	walkChild(d.Prepare)
-	walkChild(d.Execute)
-	// TODO: walk post-conditions
+	if d.Prepare != nil {
+		walkChild(d.Prepare)
+	}
+	if d.Execute != nil {
+		walkChild(d.Execute)
+	}
+	// TODO: walk pre and post-conditions
 }
 
 func (*TransactionDeclaration) isDeclaration() {}
