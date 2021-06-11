@@ -88,7 +88,7 @@ func TestRuntimeCrypto_verify(t *testing.T) {
               )
           ]
 
-          return keyList.isValid(
+          return keyList.verify(
               signatureSet: signatureSet,
               signedData: "0506".decodeHex()
           )
@@ -108,7 +108,7 @@ func TestRuntimeCrypto_verify(t *testing.T) {
 		) (bool, error) {
 			called = true
 			assert.Equal(t, []byte{3, 4}, signature)
-			assert.Equal(t, "user", tag)
+			assert.Equal(t, "FLOW-V0.0-user", tag)
 			assert.Equal(t, []byte{5, 6}, signedData)
 			assert.Equal(t, []byte{1, 2}, publicKey)
 			assert.Equal(t, SignatureAlgorithmECDSA_P256, signatureAlgorithm)

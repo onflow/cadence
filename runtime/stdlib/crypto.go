@@ -35,17 +35,6 @@ type SignatureAlgorithm = sema.SignatureAlgorithm
 
 type HashAlgorithm = sema.HashAlgorithm
 
-type CryptoSignatureVerifier interface {
-	VerifySignature(
-		signature []byte,
-		tag string,
-		signedData []byte,
-		publicKey []byte,
-		signatureAlgorithm SignatureAlgorithm,
-		hashAlgorithm HashAlgorithm,
-	) (bool, error)
-}
-
 type CryptoHasher interface {
 	Hash(
 		data []byte,
@@ -92,8 +81,6 @@ var cryptoContractType = func() *sema.CompositeType {
 	return variable.Type.(*sema.CompositeType)
 }()
 
-const cryptoSignatureVerifierImplIdentifier = "SignatureVerifierImpl"
-
 const cryptoHasherImplIdentifier = "HasherImpl"
 
 func registerCheckerElaborationCompositeType(
@@ -110,18 +97,6 @@ func registerCheckerElaborationCompositeType(
 }
 
 func init() {
-	signatureVerifierVariable, ok := CryptoChecker.Elaboration.GlobalTypes.Get("SignatureVerifier")
-	if !ok {
-		panic(errors2.NewUnreachableError())
-	}
-
-	registerCheckerElaborationCompositeType(
-		cryptoSignatureVerifierImplIdentifier,
-		[]*sema.InterfaceType{
-			signatureVerifierVariable.Type.(*sema.InterfaceType),
-		},
-	)
-
 	hasherVariable, ok := CryptoChecker.Elaboration.GlobalTypes.Get("Hasher")
 	if !ok {
 		panic(errors2.NewUnreachableError())
@@ -141,66 +116,6 @@ var cryptoContractInitializerTypes = func() (result []sema.Type) {
 	}
 	return result
 }()
-
-func newCryptoContractVerifySignatureFunction(signatureVerifier CryptoSignatureVerifier) interpreter.FunctionValue {
-	return interpreter.NewHostFunctionValue(
-		func(invocation interpreter.Invocation) interpreter.Value {
-			signature, err := interpreter.ByteArrayValueToByteSlice(invocation.Arguments[0])
-			if err != nil {
-				panic(fmt.Errorf("verifySignature: invalid signature argument: %w", err))
-			}
-
-			tagStringValue, ok := invocation.Arguments[1].(*interpreter.StringValue)
-			if !ok {
-				panic(errors.New("verifySignature: invalid tag argument: not a string"))
-			}
-			tag := tagStringValue.Str
-
-			signedData, err := interpreter.ByteArrayValueToByteSlice(invocation.Arguments[2])
-			if err != nil {
-				panic(fmt.Errorf("verifySignature: invalid signed data argument: %w", err))
-			}
-
-			publicKey, err := interpreter.ByteArrayValueToByteSlice(invocation.Arguments[3])
-			if err != nil {
-				panic(fmt.Errorf("verifySignature: invalid public key argument: %w", err))
-			}
-
-			signatureAlgorithm := getSignatureAlgorithmFromValue(invocation.Arguments[4])
-
-			hashAlgorithm := getHashAlgorithmFromValue(invocation.Arguments[5])
-
-			isValid, err := signatureVerifier.VerifySignature(signature,
-				tag,
-				signedData,
-				publicKey,
-				signatureAlgorithm,
-				hashAlgorithm,
-			)
-			if err != nil {
-				panic(err)
-			}
-
-			return interpreter.BoolValue(isValid)
-		},
-	)
-}
-
-func newCryptoContractSignatureVerifier(signatureVerifier CryptoSignatureVerifier) *interpreter.CompositeValue {
-	result := interpreter.NewCompositeValue(
-		CryptoChecker.Location,
-		cryptoSignatureVerifierImplIdentifier,
-		common.CompositeKindStructure,
-		nil,
-		nil,
-	)
-
-	result.Functions = map[string]interpreter.FunctionValue{
-		"verify": newCryptoContractVerifySignatureFunction(signatureVerifier),
-	}
-
-	return result
-}
 
 func newCryptoContractHashFunction(hasher CryptoHasher) interpreter.FunctionValue {
 	return interpreter.NewHostFunctionValue(
@@ -249,7 +164,6 @@ func newCryptoContractHasher(hasher CryptoHasher) *interpreter.CompositeValue {
 func NewCryptoContract(
 	inter *interpreter.Interpreter,
 	constructor interpreter.FunctionValue,
-	signatureVerifier CryptoSignatureVerifier,
 	hasher CryptoHasher,
 	invocationRange ast.Range,
 ) (
@@ -258,7 +172,6 @@ func NewCryptoContract(
 ) {
 
 	var cryptoContractInitializerArguments = []interpreter.Value{
-		newCryptoContractSignatureVerifier(signatureVerifier),
 		newCryptoContractHasher(hasher),
 	}
 
@@ -295,23 +208,4 @@ func getHashAlgorithmFromValue(value interpreter.Value) HashAlgorithm {
 	}
 
 	return HashAlgorithm(hashAlgoRawValue.ToInt())
-}
-
-func getSignatureAlgorithmFromValue(value interpreter.Value) SignatureAlgorithm {
-	signAlgoValue, ok := value.(*interpreter.CompositeValue)
-	if !ok || signAlgoValue.QualifiedIdentifier() != sema.SignatureAlgorithmTypeName {
-		panic(fmt.Sprintf("signature algorithm value must be of type %s", sema.SignatureAlgorithmType))
-	}
-
-	rawValue, ok := signAlgoValue.Fields().Get(sema.EnumRawValueFieldName)
-	if !ok {
-		panic("cannot find signature algorithm raw value")
-	}
-
-	hashAlgoRawValue, ok := rawValue.(interpreter.UInt8Value)
-	if !ok {
-		panic("signature algorithm raw value needs to be subtype of integer")
-	}
-
-	return SignatureAlgorithm(hashAlgoRawValue.ToInt())
 }
