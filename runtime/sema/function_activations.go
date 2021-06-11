@@ -51,14 +51,14 @@ func (a *FunctionActivations) IsLocal() bool {
 	return currentFunctionDepth > 0
 }
 
-func (a *FunctionActivations) EnterFunction(functionType *FunctionType, valueActivationDepth int) {
-	a.activations = append(a.activations,
-		&FunctionActivation{
-			ReturnType:           functionType.ReturnTypeAnnotation.Type,
-			ValueActivationDepth: valueActivationDepth,
-			ReturnInfo:           &ReturnInfo{},
-		},
-	)
+func (a *FunctionActivations) EnterFunction(functionType *FunctionType, valueActivationDepth int) *FunctionActivation {
+	activation := &FunctionActivation{
+		ReturnType:           functionType.ReturnTypeAnnotation.Type,
+		ValueActivationDepth: valueActivationDepth,
+		ReturnInfo:           &ReturnInfo{},
+	}
+	a.activations = append(a.activations, activation)
+	return activation
 }
 
 func (a *FunctionActivations) LeaveFunction() {
@@ -66,10 +66,14 @@ func (a *FunctionActivations) LeaveFunction() {
 	a.activations = a.activations[:lastIndex]
 }
 
-func (a *FunctionActivations) WithFunction(functionType *FunctionType, valueActivationDepth int, f func()) {
-	a.EnterFunction(functionType, valueActivationDepth)
+func (a *FunctionActivations) WithFunction(
+	functionType *FunctionType,
+	valueActivationDepth int,
+	f func(activation *FunctionActivation),
+) {
+	activation := a.EnterFunction(functionType, valueActivationDepth)
 	defer a.LeaveFunction()
-	f()
+	f(activation)
 }
 
 func (a *FunctionActivations) Current() *FunctionActivation {
