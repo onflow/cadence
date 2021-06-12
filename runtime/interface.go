@@ -291,13 +291,3 @@ func (i emptyRuntimeInterface) GetStorageCapacity(_ Address) (uint64, error) {
 func (i *emptyRuntimeInterface) ValidatePublicKey(_ *PublicKey) (bool, error) {
 	return false, nil
 }
-
-func (i emptyRuntimeInterface) ValidateSignature(
-	_ []byte,
-	_ []byte,
-	_ string,
-	_ HashAlgorithm,
-	_ *PublicKey,
-) (bool, error) {
-	return false, nil
-}
