@@ -37,6 +37,24 @@ Multi-line comments are balanced.
 /* this is a // comment up to here */ this is not part of the comment */
 ```
 
+### Documentation Comments
+Documentation comments (also known as "doc-strings" ro "doc-comment") are a special set of comments that would be
+processed by various tools to generate human-readable documentations for cadence programs.
+
+Single line doc-comments starts with three slashes (`///`)
+```cadence
+/// This is a documnetation comment on a single line.
+/// Another documnetation comment line that is not executed.
+
+let x = 1
+```
+
+Multi-line doc-comments comments start with a slash followed by two asterisks (`/**`)
+```cadence
+/** This is a documnetation comment
+ which spans multiple lines. **/
+```
+
 ## Names
 
 Names may start with any upper or lowercase letter (A-Z, a-z)
