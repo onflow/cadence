@@ -152,12 +152,10 @@ var CreatePublicKeyFunction = NewStandardLibraryFunction(
 	&sema.FunctionType{
 		Parameters: []*sema.Parameter{
 			{
-				Label:          sema.PublicKeyPublicKeyField,
 				Identifier:     sema.PublicKeyPublicKeyField,
 				TypeAnnotation: sema.NewTypeAnnotation(&sema.VariableSizedType{Type: sema.UInt8Type}),
 			},
 			{
-				Label:          sema.PublicKeySignAlgoField,
 				Identifier:     sema.PublicKeySignAlgoField,
 				TypeAnnotation: sema.NewTypeAnnotation(sema.SignatureAlgorithmType),
 			},
@@ -169,27 +167,13 @@ var CreatePublicKeyFunction = NewStandardLibraryFunction(
 		publicKey := invocation.Arguments[0].(*interpreter.ArrayValue)
 		signAlgo := invocation.Arguments[1].(*interpreter.CompositeValue)
 
-		verifyFunc := interpreter.NewHostFunctionValue(
-			func(invocation interpreter.Invocation) interpreter.Value {
-				signature := invocation.Arguments[0].(*interpreter.ArrayValue)
-				signedData := invocation.Arguments[1].(*interpreter.ArrayValue)
-				domainSeparationTag := invocation.Arguments[2].(*interpreter.StringValue)
-				hashAlgo := invocation.Arguments[3].(*interpreter.CompositeValue)
-				publicKey := invocation.Self
-
-				return invocation.Interpreter.SignatureValidationHandler(
-					signature,
-					signedData,
-					domainSeparationTag,
-					hashAlgo,
-					publicKey,
-				)
-			},
-		)
-
 		validationFunc := invocation.Interpreter.PublicKeyValidationHandler
 
-		return interpreter.NewPublicKeyValue(publicKey, signAlgo, validationFunc, verifyFunc)
+		return interpreter.NewPublicKeyValue(
+			publicKey,
+			signAlgo,
+			validationFunc,
+		)
 	},
 )
 
@@ -217,9 +201,10 @@ var HashAlgorithmValue = StandardLibraryValue{
 func cryptoAlgorithmEnumType(enumType *sema.CompositeType, enumCases []sema.CryptoAlgorithm) *sema.ConstructorFunctionType {
 	members := make([]*sema.Member, len(enumCases))
 	for i, algo := range enumCases {
-		members[i] = sema.NewPublicEnumCaseMember(
+		members[i] = sema.NewPublicConstantFieldMember(
 			enumType,
 			algo.Name(),
+			enumType,
 			algo.DocString(),
 		)
 	}
