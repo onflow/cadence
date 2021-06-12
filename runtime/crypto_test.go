@@ -30,35 +30,6 @@ import (
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
-func TestRuntimeCrypto_import(t *testing.T) {
-
-	t.Parallel()
-
-	runtime := NewInterpreterRuntime()
-
-	script := []byte(`
-      import Crypto
-
-      pub fun main(): String {
-          return Crypto.ECDSA_P256.name
-      }
-    `)
-
-	runtimeInterface := &testRuntimeInterface{}
-
-	_, err := runtime.ExecuteScript(
-		Script{
-			Source: script,
-		},
-		Context{
-			Interface: runtimeInterface,
-			Location:  utils.TestLocation,
-		},
-	)
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "value of type `Crypto` has no member `ECDSA_P256`")
-}
-
 func TestRuntimeCrypto_verify(t *testing.T) {
 
 	t.Parallel()
@@ -136,7 +107,7 @@ func TestRuntimeCrypto_verify(t *testing.T) {
 	assert.True(t, called)
 }
 
-func TestRuntimeCrypto_hash(t *testing.T) {
+func TestRuntimeHashAlgorithm_hash(t *testing.T) {
 
 	t.Parallel()
 
@@ -156,10 +127,8 @@ func TestRuntimeCrypto_hash(t *testing.T) {
 
 	t.Run("hash", func(t *testing.T) {
 		script := `
-            import Crypto
-
             pub fun main() {
-                log(Crypto.hash("01020304".decodeHex(), algorithm: HashAlgorithm.SHA3_256))
+                log(HashAlgorithm.SHA3_256.hash("01020304".decodeHex()))
             }
         `
 
@@ -198,10 +167,8 @@ func TestRuntimeCrypto_hash(t *testing.T) {
 
 	t.Run("hash - check tag", func(t *testing.T) {
 		script := `
-            import Crypto
-
             pub fun main() {
-                Crypto.hash("01020304".decodeHex(), algorithm: HashAlgorithm.SHA3_256)
+                HashAlgorithm.SHA3_256.hash("01020304".decodeHex())
             }
         `
 
@@ -225,13 +192,10 @@ func TestRuntimeCrypto_hash(t *testing.T) {
 
 	t.Run("hashWithTag - check tag", func(t *testing.T) {
 		script := `
-            import Crypto
-
             pub fun main() {
-                Crypto.hashWithTag(
+                HashAlgorithm.SHA3_256.hashWithTag(
                     "01020304".decodeHex(),
-                    tag: "some-tag",
-                    algorithm: HashAlgorithm.SHA3_256
+                    tag: "some-tag"
                 )
             }
         `
@@ -253,28 +217,9 @@ func TestRuntimeCrypto_hash(t *testing.T) {
 		assert.True(t, called)
 		assert.Equal(t, "some-tag", hashTag)
 	})
-
-	t.Run("hashWithTag - without tag", func(t *testing.T) {
-		script := `
-            import Crypto
-
-            pub fun main() {
-                Crypto.hashWithTag(
-                    data: "01020304".decodeHex(),
-                    algorithm: HashAlgorithm.SHA3_256
-                )
-            }
-        `
-
-		runtimeInterface := &testRuntimeInterface{}
-
-		_, err := executeScript(script, runtimeInterface)
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "incorrect number of arguments")
-	})
 }
 
-func TestHashingAlgorithms(t *testing.T) {
+func TestRuntimeHashingAlgorithmExport(t *testing.T) {
 
 	t.Parallel()
 
@@ -314,7 +259,7 @@ func TestHashingAlgorithms(t *testing.T) {
 	}
 }
 
-func TestSignatureAlgorithms(t *testing.T) {
+func TestRuntimeSignatureAlgorithmExport(t *testing.T) {
 
 	t.Parallel()
 
