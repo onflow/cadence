@@ -3595,23 +3595,6 @@ func NewPublicConstantFieldMember(
 	}
 }
 
-func NewPublicEnumCaseMember(
-	caseType Type,
-	identifier string,
-	docString string,
-) *Member {
-	return &Member{
-		Access: ast.AccessPublic,
-		Identifier: ast.Identifier{
-			Identifier: identifier,
-		},
-		DeclarationKind: common.DeclarationKindField,
-		TypeAnnotation:  NewTypeAnnotation(caseType),
-		VariableKind:    ast.VariableKindConstant,
-		DocString:       docString,
-	}
-}
-
 // IsStorable returns whether a member is a storable field
 func (m *Member) IsStorable(results map[*Member]bool) (result bool) {
 	test := func(t Type) bool {
@@ -5934,7 +5917,12 @@ type CryptoAlgorithm interface {
 func GetMembersAsMap(members []*Member) *StringMemberOrderedMap {
 	membersMap := NewStringMemberOrderedMap()
 	for _, member := range members {
-		membersMap.Set(member.Identifier.Identifier, member)
+		name := member.Identifier.Identifier
+		_, ok := membersMap.Get(name)
+		if ok {
+			panic(fmt.Errorf("invalid duplicate member: %s", name))
+		}
+		membersMap.Set(name, member)
 	}
 
 	return membersMap

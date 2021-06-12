@@ -40,7 +40,11 @@ var HashAlgorithms = []CryptoAlgorithm{
 	HashAlgorithmKMAC128_BLS_BLS12_381,
 }
 
-var SignatureAlgorithmType = newNativeEnumType(SignatureAlgorithmTypeName, UInt8Type)
+var SignatureAlgorithmType = newNativeEnumType(
+	SignatureAlgorithmTypeName,
+	UInt8Type,
+	nil,
+)
 
 type SignatureAlgorithm uint8
 
@@ -103,7 +107,80 @@ func (algo SignatureAlgorithm) DocString() string {
 	panic(errors.NewUnreachableError())
 }
 
-var HashAlgorithmType = newNativeEnumType(HashAlgorithmTypeName, UInt8Type)
+const HashAlgorithmTypeHashFunctionName = "hash"
+
+var HashAlgorithmTypeHashFunctionType = &FunctionType{
+	Parameters: []*Parameter{
+		{
+			Label:      ArgumentLabelNotRequired,
+			Identifier: "data",
+			TypeAnnotation: NewTypeAnnotation(
+				&VariableSizedType{
+					Type: UInt8Type,
+				},
+			),
+		},
+	},
+	ReturnTypeAnnotation: NewTypeAnnotation(
+		&VariableSizedType{
+			Type: UInt8Type,
+		},
+	),
+}
+
+const HashAlgorithmTypeHashFunctionDocString = `
+Returns the hash of the given data
+`
+
+const HashAlgorithmTypeHashWithTagFunctionName = "hashWithTag"
+
+var HashAlgorithmTypeHashWithTagFunctionType = &FunctionType{
+	Parameters: []*Parameter{
+		{
+			Label:      ArgumentLabelNotRequired,
+			Identifier: "data",
+			TypeAnnotation: NewTypeAnnotation(
+				&VariableSizedType{
+					Type: UInt8Type,
+				},
+			),
+		},
+		{
+			Identifier:     "tag",
+			TypeAnnotation: NewTypeAnnotation(StringType),
+		},
+	},
+	ReturnTypeAnnotation: NewTypeAnnotation(
+		&VariableSizedType{
+			Type: UInt8Type,
+		},
+	),
+}
+
+const HashAlgorithmTypeHashWithTagFunctionDocString = `
+Returns the hash of the given data and tag
+`
+
+var HashAlgorithmType = newNativeEnumType(
+	HashAlgorithmTypeName,
+	UInt8Type,
+	func(enumType *CompositeType) []*Member {
+		return []*Member{
+			NewPublicFunctionMember(
+				enumType,
+				HashAlgorithmTypeHashFunctionName,
+				HashAlgorithmTypeHashFunctionType,
+				HashAlgorithmTypeHashFunctionDocString,
+			),
+			NewPublicFunctionMember(
+				enumType,
+				HashAlgorithmTypeHashWithTagFunctionName,
+				HashAlgorithmTypeHashWithTagFunctionType,
+				HashAlgorithmTypeHashWithTagFunctionDocString,
+			),
+		}
+	},
+)
 
 type HashAlgorithm uint8
 
@@ -179,8 +256,12 @@ func (algo HashAlgorithm) DocString() string {
 	panic(errors.NewUnreachableError())
 }
 
-func newNativeEnumType(identifier string, rawType Type) *CompositeType {
-	accountKeyType := &CompositeType{
+func newNativeEnumType(
+	identifier string,
+	rawType Type,
+	membersConstructor func(enumType *CompositeType) []*Member,
+) *CompositeType {
+	ty := &CompositeType{
 		Identifier:  identifier,
 		EnumRawType: rawType,
 		Kind:        common.CompositeKindEnum,
@@ -189,18 +270,26 @@ func newNativeEnumType(identifier string, rawType Type) *CompositeType {
 
 	// Members of the enum type are *not* the enum cases!
 	// Each individual enum case is an instance of the enum type,
-	// so only has a single member, the raw value field
-	var members = []*Member{
-		NewPublicEnumCaseMember(
-			rawType,
-			EnumRawValueFieldName,
-			enumRawValueFieldDocString,
-		),
+	// so only has a single member, the raw value field,
+	// plus potentially other fields and functions
+
+	var members []*Member
+	if membersConstructor != nil {
+		members = membersConstructor(ty)
 	}
 
-	accountKeyType.Members = GetMembersAsMap(members)
-	accountKeyType.Fields = getFieldNames(members)
-	return accountKeyType
+	members = append(members,
+		NewPublicConstantFieldMember(
+			ty,
+			EnumRawValueFieldName,
+			rawType,
+			enumRawValueFieldDocString,
+		),
+	)
+
+	ty.Members = GetMembersAsMap(members)
+	ty.Fields = getFieldNames(members)
+	return ty
 }
 
 const SignatureAlgorithmTypeName = "SignatureAlgorithm"
