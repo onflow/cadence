@@ -1,7 +1,7 @@
 # Cadence Documentation Generator
 
-This is a tool to generate human-readable documentation for Cadence programs. 
-The tool currently supports generating documentation for following declarations:
+A tool to generate human-readable documentation for Cadence programs.
+Supports generating documentation for following declarations:
 - Composite types (Contracts, Structs, Resources, Enums)
 - Interfaces (Contract interfaces, Struct interfaces, Resource Interfaces)
 - Functions and Parameters
@@ -14,15 +14,32 @@ The tool currently supports generating documentation in Markdown format.
 `go run <cadence_dir>/tools/docgen/main.go <path_to_cadence_file> <output_dir>`
 
 ## Documentation Comments Format
-Documentation comments (aka "docstrings": line comments starts with `///`, or block comments starting with `/**`) 
-added in a Cadence code are processed by the tool.
-[Standard Markdown format](https://www.markdownguide.org/basic-syntax/) is supported in documentation comments, 
-with a bit of Cadence flavour.
-Any Markdown syntax used within the comments would be honoured and rendered like a standard Markdown snippet.
-This gives the flexibility for the developers to write well-structured documentations. 
-<br/>
+The documentation comments (i.e: "doc-strings" / "doc-comments": line comments starts with `///`,
+or block comments starting with `/**`) available in Cadence programs are processed by the tool,
+to produce human-readable documentations.
+
+### Markdown Support
+Standard Markdown format is supported in doc-comments, with a bit of Cadence flavour.
+This means, any Markdown syntax used within the comments would be honoured and rendered like a standard Markdown snippet.
+It gives the flexibility for the developers to write well-structured documentations.
+
 e.g: A set of bullet points added using Markdown bullets syntax, would be rendered as bullet points in the
 generated documentation as well.
+
+Documentation Comment:
+```
+/// This is the description of the function. You can use markdown syntax here.
+/// Can use **bold** or _italic_ texts, or even bullet-points:
+///   - Here's the first point.
+///   - Can also use code snippets (eg: `a + b`)
+  ```
+Output:
+
+>This is the description of the function. You can use markdown syntax here.<br/>
+>Can use **bold** or _italic_ texts, or even bullet-points:
+>   - Here's the first point.
+>   - Can also use code snippets (eg: `a + b`)
+
 
 ### Function Documentation
 Function documentation may start with a description of the function.
