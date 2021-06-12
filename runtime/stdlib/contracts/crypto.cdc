@@ -1,21 +1,12 @@
 
-pub struct interface Hasher  {
-
-    pub fun hash(
-        data: [UInt8],
-        tag: String,
-        algorithm: HashAlgorithm
-    ): [UInt8]
-}
-
 pub contract Crypto {
 
     pub fun hash(_ data: [UInt8], algorithm: HashAlgorithm): [UInt8] {
-        return self.hashWithTag(data, tag: "", algorithm: algorithm)
+        return algorithm.hash(data)
     }
 
     pub fun hashWithTag(_ data: [UInt8], tag: String, algorithm: HashAlgorithm): [UInt8] {
-        return self.hasher.hash(data: data, tag: tag, algorithm: algorithm)
+        return algorithm.hashWithTag(data, tag: tag)
     }
 
     pub struct KeyListEntry {
@@ -160,14 +151,7 @@ pub contract Crypto {
 
     priv let domainSeparationTagUser: String
 
-    priv let hasher: {Hasher}
-
-    init(hasher: {Hasher}) {
-
-        self.hasher = hasher
-
-        // Initialize constants
-
+    init() {
         self.domainSeparationTagUser = "FLOW-V0.0-user"
     }
 }
