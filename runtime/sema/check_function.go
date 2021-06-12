@@ -144,7 +144,7 @@ func (checker *Checker) checkFunction(
 	checker.functionActivations.WithFunction(
 		functionType,
 		checker.valueActivations.Depth(),
-		func() {
+		func(functionActivation *FunctionActivation) {
 			// NOTE: important to begin scope in function activation, so that
 			//   variable declarations will have proper function activation
 			//   associated to it, and declare parameters in this new scope
@@ -155,11 +155,14 @@ func (checker *Checker) checkFunction(
 			}
 
 			checker.enterValueScope()
-			defer checker.leaveValueScope(endPosGetter, checkResourceLoss)
+			defer func() {
+				checkResourceLoss := checkResourceLoss &&
+					!functionActivation.ReturnInfo.DefinitelyHalted
+				checker.leaveValueScope(endPosGetter, checkResourceLoss)
+			}()
 
 			checker.declareParameters(parameterList, functionType.Parameters)
 
-			functionActivation := checker.functionActivations.Current()
 			functionActivation.InitializationInfo = initializationInfo
 
 			if functionBlock != nil {

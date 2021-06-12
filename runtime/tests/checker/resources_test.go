@@ -4918,3 +4918,40 @@ func TestCheckInvalidationInPostCondition(t *testing.T) {
 
 	assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
 }
+
+func TestCheckFunctionDefinitelyHaltedNoResourceLoss(t *testing.T) {
+
+	t.Parallel()
+
+	// A function which definitely halts does not lead to a resource loss error
+
+	t.Run("panic statement", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithPanic(t, `
+          fun duplicate(_ r: @AnyResource) {
+              panic("")
+          }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("if statement", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithPanic(t, `
+          fun duplicate(_ r: @AnyResource, x: Bool) {
+              if x {
+                  panic("true")
+              } else {
+                  panic("false")
+              }
+          }
+        `)
+
+		require.NoError(t, err)
+	})
+}
