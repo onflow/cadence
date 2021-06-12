@@ -572,6 +572,5 @@ func importPublicKey(
 		publicKeyValue,
 		signAlgoValue,
 		inter.PublicKeyValidationHandler,
-		newPublicKeyVerifyFunction(runtimeInterface),
 	)
 }

@@ -163,14 +163,21 @@ type UUIDHandlerFunc func() (uint64, error)
 // PublicKeyValidationHandlerFunc is a function that validates a given public key.
 type PublicKeyValidationHandlerFunc func(publicKey *CompositeValue) BoolValue
 
-// SignatureValidationHandlerFunc is a function that validates a signature.
-type SignatureValidationHandlerFunc func(
+// SignatureVerificationHandlerFunc is a function that validates a signature.
+type SignatureVerificationHandlerFunc func(
 	signature *ArrayValue,
 	signedData *ArrayValue,
 	domainSeparationTag *StringValue,
 	hashAlgorithm *CompositeValue,
 	key *CompositeValue,
 ) BoolValue
+
+// HashHandlerFunc is a function that hashes.
+type HashHandlerFunc func(
+	data *ArrayValue,
+	tag *StringValue,
+	hashAlgorithm *CompositeValue,
+) *ArrayValue
 
 // ExitHandlerFunc is a function that is called at the end of execution
 type ExitHandlerFunc func() error
@@ -251,7 +258,8 @@ type Interpreter struct {
 	accountHandler                 AccountHandlerFunc
 	uuidHandler                    UUIDHandlerFunc
 	PublicKeyValidationHandler     PublicKeyValidationHandlerFunc
-	SignatureValidationHandler     SignatureValidationHandlerFunc
+	SignatureVerificationHandler   SignatureVerificationHandlerFunc
+	HashHandler                    HashHandlerFunc
 	ExitHandler                    ExitHandlerFunc
 	interpreted                    bool
 	statement                      ast.Statement
@@ -410,12 +418,22 @@ func WithPublicKeyValidationHandler(handler PublicKeyValidationHandlerFunc) Opti
 	}
 }
 
-// WithSignatureValidationHandler returns an interpreter option which sets the given
+// WithSignatureVerificationHandler returns an interpreter option which sets the given
 // function as the function that is used to handle signature validation.
 //
-func WithSignatureValidationHandler(handler SignatureValidationHandlerFunc) Option {
+func WithSignatureVerificationHandler(handler SignatureVerificationHandlerFunc) Option {
 	return func(interpreter *Interpreter) error {
-		interpreter.SetSignatureValidationHandler(handler)
+		interpreter.SetSignatureVerificationHandler(handler)
+		return nil
+	}
+}
+
+// WithHashHandler returns an interpreter option which sets the given
+// function as the function that is used to hash.
+//
+func WithHashHandler(handler HashHandlerFunc) Option {
+	return func(interpreter *Interpreter) error {
+		interpreter.SetHashHandler(handler)
 		return nil
 	}
 }
@@ -566,10 +584,16 @@ func (interpreter *Interpreter) SetPublicKeyValidationHandler(function PublicKey
 	interpreter.PublicKeyValidationHandler = function
 }
 
-// SetSignatureValidationHandler sets the function that is used to handle signature validation.
+// SetSignatureVerificationHandler sets the function that is used to handle signature validation.
 //
-func (interpreter *Interpreter) SetSignatureValidationHandler(function SignatureValidationHandlerFunc) {
-	interpreter.SignatureValidationHandler = function
+func (interpreter *Interpreter) SetSignatureVerificationHandler(function SignatureVerificationHandlerFunc) {
+	interpreter.SignatureVerificationHandler = function
+}
+
+// SetHashHandler sets the function that is used to hash.
+//
+func (interpreter *Interpreter) SetHashHandler(function HashHandlerFunc) {
+	interpreter.HashHandler = function
 }
 
 // SetExitHandler sets the function that is used to handle end of execution.
@@ -2261,7 +2285,8 @@ func (interpreter *Interpreter) NewSubInterpreter(
 		withTypeCodes(interpreter.typeCodes),
 		WithAccountHandlerFunc(interpreter.accountHandler),
 		WithPublicKeyValidationHandler(interpreter.PublicKeyValidationHandler),
-		WithSignatureValidationHandler(interpreter.SignatureValidationHandler),
+		WithSignatureVerificationHandler(interpreter.SignatureVerificationHandler),
+		WithHashHandler(interpreter.HashHandler),
 	}
 
 	return NewInterpreter(
