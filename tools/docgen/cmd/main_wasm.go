@@ -19,9 +19,10 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
+
+	"encoding/json"
 	"runtime/debug"
 	"syscall/js"
 
@@ -51,10 +52,10 @@ func main() {
 	<-done
 }
 
-type Documentations map[string]string
+type documentations map[string]string
 
 type result struct {
-	Docs  Documentations `json:"docs"`
+	Docs  documentations `json:"docs"`
 	Error error          `json:"error,omitempty"`
 }
 
@@ -91,9 +92,9 @@ func generateDocs(args []js.Value) string {
 		}
 
 		// Convert the byte content to string before sending as json.
-		res.Docs = Documentations{}
-		for fileName, doc := range docs {
-			res.Docs[fileName] = string(doc)
+		res.Docs = documentations{}
+		for fileName, content := range docs {
+			res.Docs[fileName] = string(content)
 		}
 	}()
 

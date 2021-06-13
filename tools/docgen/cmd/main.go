@@ -20,11 +20,12 @@ package main
 
 import (
 	"fmt"
-	"github.com/onflow/cadence/tools/docgen"
 	"log"
 	"os"
 
 	"io/ioutil"
+
+	"github.com/onflow/cadence/tools/docgen"
 )
 
 func main() {
