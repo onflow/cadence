@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/onflow/cadence/encoding/json"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -228,10 +229,10 @@ func TestRuntimeHashingAlgorithmExport(t *testing.T) {
 
 	testHashAlgorithm := func(algo sema.CryptoAlgorithm) {
 		script := fmt.Sprintf(`
-			pub fun main(): HashAlgorithm {
-				return HashAlgorithm.%s
-			}
-			`,
+              pub fun main(): HashAlgorithm {
+                  return HashAlgorithm.%s
+              }
+            `,
 			algo.Name(),
 		)
 
@@ -268,10 +269,10 @@ func TestRuntimeSignatureAlgorithmExport(t *testing.T) {
 
 	testSignatureAlgorithm := func(algo sema.CryptoAlgorithm) {
 		script := fmt.Sprintf(`
-			pub fun main(): SignatureAlgorithm {
-				return SignatureAlgorithm.%s
-			}
-			`,
+              pub fun main(): SignatureAlgorithm {
+                  return SignatureAlgorithm.%s
+              }
+            `,
 			algo.Name(),
 		)
 
@@ -292,6 +293,62 @@ func TestRuntimeSignatureAlgorithmExport(t *testing.T) {
 
 		require.Len(t, enumValue.Fields, 1)
 		assert.Equal(t, cadence.NewUInt8(algo.RawValue()), enumValue.Fields[0])
+	}
+
+	for _, algo := range sema.SignatureAlgorithms {
+		testSignatureAlgorithm(algo)
+	}
+}
+
+func TestRuntimeSignatureAlgorithmImport(t *testing.T) {
+
+	t.Parallel()
+
+	runtime := NewInterpreterRuntime()
+	runtimeInterface := &testRuntimeInterface{
+		decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+			return json.Decode(b)
+		},
+	}
+
+	const script = `
+      pub fun main(algo: SignatureAlgorithm): UInt8 {
+          return algo.rawValue
+      }
+    `
+
+	testSignatureAlgorithm := func(algo sema.CryptoAlgorithm) {
+
+		value, err := runtime.ExecuteScript(
+			Script{
+				Source: []byte(script),
+				Arguments: encodeArgs([]cadence.Value{
+					cadence.NewEnum([]cadence.Value{
+						cadence.UInt8(algo.RawValue()),
+					}).WithType(&cadence.EnumType{
+						QualifiedIdentifier: "SignatureAlgorithm",
+						RawType:             cadence.UInt8Type{},
+						Fields: []cadence.Field{
+							{
+								Identifier: "rawValue",
+								Type:       cadence.UInt8Type{},
+							},
+						},
+					}),
+				}),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  utils.TestLocation,
+			},
+		)
+
+		require.NoError(t, err)
+
+		assert.Equal(t,
+			cadence.NewUInt8(algo.RawValue()),
+			value,
+		)
 	}
 
 	for _, algo := range sema.SignatureAlgorithms {
