@@ -681,7 +681,7 @@ func validateArgumentParams(
 			}
 		}
 
-		arg := importValue(inter, runtimeInterface, value)
+		arg := importValue(inter, value)
 
 		dynamicTypeResults := interpreter.DynamicTypeResults{}
 
@@ -2717,10 +2717,7 @@ func NewPublicKeyValue(
 ) *interpreter.CompositeValue {
 	return interpreter.NewPublicKeyValue(
 		interpreter.ByteSliceToByteArrayValue(publicKey.PublicKey),
-		interpreter.NewCryptoAlgorithmEnumCaseValue(
-			sema.SignatureAlgorithmType,
-			publicKey.SignAlgo.RawValue(),
-		),
+		stdlib.NewSignatureAlgorithmCase(publicKey.SignAlgo.RawValue()),
 		func(publicKeyValue *interpreter.CompositeValue) interpreter.BoolValue {
 			// If the public key is already validated, avoid re-validating, and return the cached result.
 			if publicKey.Validated {
@@ -2742,10 +2739,7 @@ func NewAccountKeyValue(
 			accountKey.PublicKey,
 			validatePublicKey,
 		),
-		interpreter.NewCryptoAlgorithmEnumCaseValue(
-			sema.HashAlgorithmType,
-			accountKey.HashAlgo.RawValue(),
-		),
+		stdlib.NewHashAlgorithmCase(accountKey.HashAlgo.RawValue()),
 		interpreter.NewUFix64ValueWithInteger(uint64(accountKey.Weight)),
 		interpreter.BoolValue(accountKey.IsRevoked),
 	)

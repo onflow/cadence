@@ -7147,6 +7147,24 @@ func (v *CompositeValue) ensureFieldsLoaded() {
 	v.encodingVersion = 0
 }
 
+func NewEnumCaseValue(
+	enumType *sema.CompositeType,
+	rawValue NumberValue,
+	functions map[string]FunctionValue,
+) *CompositeValue {
+
+	fields := NewStringValueOrderedMap()
+	fields.Set(sema.EnumRawValueFieldName, rawValue)
+
+	return &CompositeValue{
+		location:            enumType.Location,
+		qualifiedIdentifier: enumType.QualifiedIdentifier(),
+		kind:                enumType.Kind,
+		fields:              fields,
+		Functions:           functions,
+	}
+}
+
 // DictionaryValue
 
 type DictionaryValue struct {
@@ -9247,43 +9265,3 @@ func NewPublicAccountKeysValue(getFunction FunctionValue) *CompositeValue {
 		fields:              fields,
 	}
 }
-
-func NewCryptoAlgorithmEnumCaseValue(enumType *sema.CompositeType, rawValue uint8) *CompositeValue {
-	fields := NewStringValueOrderedMap()
-	fields.Set(sema.EnumRawValueFieldName, UInt8Value(rawValue))
-
-	functions := map[string]FunctionValue{
-		sema.HashAlgorithmTypeHashFunctionName:        hashAlgorithmHashFunction,
-		sema.HashAlgorithmTypeHashWithTagFunctionName: hashAlgorithmHashWithTagFunction,
-	}
-
-	return &CompositeValue{
-		qualifiedIdentifier: enumType.QualifiedIdentifier(),
-		kind:                enumType.Kind,
-		fields:              fields,
-		Functions:           functions,
-	}
-}
-
-var hashAlgorithmHashFunction = NewHostFunctionValue(
-	func(invocation Invocation) Value {
-		dataValue := invocation.Arguments[0].(*ArrayValue)
-		hashAlgoValue := invocation.Self
-
-		return invocation.Interpreter.HashHandler(dataValue, nil, hashAlgoValue)
-	},
-)
-
-var hashAlgorithmHashWithTagFunction = NewHostFunctionValue(
-	func(invocation Invocation) Value {
-		dataValue := invocation.Arguments[0].(*ArrayValue)
-		tagValue := invocation.Arguments[1].(*StringValue)
-		hashAlgoValue := invocation.Self
-
-		return invocation.Interpreter.HashHandler(
-			dataValue,
-			tagValue,
-			hashAlgoValue,
-		)
-	},
-)

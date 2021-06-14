@@ -305,12 +305,12 @@ func exportCapabilityValue(v interpreter.CapabilityValue, inter *interpreter.Int
 }
 
 // importValue converts a Cadence value to a runtime value.
-func importValue(inter *interpreter.Interpreter, runtimeInterface Interface, value cadence.Value) interpreter.Value {
+func importValue(inter *interpreter.Interpreter, value cadence.Value) interpreter.Value {
 	switch v := value.(type) {
 	case cadence.Void:
 		return interpreter.VoidValue{}
 	case cadence.Optional:
-		return importOptionalValue(inter, runtimeInterface, v)
+		return importOptionalValue(inter, v)
 	case cadence.Bool:
 		return interpreter.BoolValue(v)
 	case cadence.String:
@@ -360,13 +360,12 @@ func importValue(inter *interpreter.Interpreter, runtimeInterface Interface, val
 	case cadence.UFix64:
 		return interpreter.UFix64Value(v)
 	case cadence.Array:
-		return importArrayValue(inter, runtimeInterface, v)
+		return importArrayValue(inter, v)
 	case cadence.Dictionary:
-		return importDictionaryValue(inter, runtimeInterface, v)
+		return importDictionaryValue(inter, v)
 	case cadence.Struct:
 		return importCompositeValue(
 			inter,
-			runtimeInterface,
 			common.CompositeKindStructure,
 			v.StructType.Location,
 			v.StructType.QualifiedIdentifier,
@@ -376,7 +375,6 @@ func importValue(inter *interpreter.Interpreter, runtimeInterface Interface, val
 	case cadence.Resource:
 		return importCompositeValue(
 			inter,
-			runtimeInterface,
 			common.CompositeKindResource,
 			v.ResourceType.Location,
 			v.ResourceType.QualifiedIdentifier,
@@ -386,7 +384,6 @@ func importValue(inter *interpreter.Interpreter, runtimeInterface Interface, val
 	case cadence.Event:
 		return importCompositeValue(
 			inter,
-			runtimeInterface,
 			common.CompositeKindEvent,
 			v.EventType.Location,
 			v.EventType.QualifiedIdentifier,
@@ -398,7 +395,6 @@ func importValue(inter *interpreter.Interpreter, runtimeInterface Interface, val
 	case cadence.Enum:
 		return importCompositeValue(
 			inter,
-			runtimeInterface,
 			common.CompositeKindEnum,
 			v.EnumType.Location,
 			v.EnumType.QualifiedIdentifier,
@@ -419,26 +415,24 @@ func importPathValue(v cadence.Path) interpreter.PathValue {
 
 func importOptionalValue(
 	inter *interpreter.Interpreter,
-	runtimeInterface Interface,
 	v cadence.Optional,
 ) interpreter.Value {
 	if v.Value == nil {
 		return interpreter.NilValue{}
 	}
 
-	innerValue := importValue(inter, runtimeInterface, v.Value)
+	innerValue := importValue(inter, v.Value)
 	return interpreter.NewSomeValueOwningNonCopying(innerValue)
 }
 
 func importArrayValue(
 	inter *interpreter.Interpreter,
-	runtimeInterface Interface,
 	v cadence.Array,
 ) *interpreter.ArrayValue {
 	values := make([]interpreter.Value, len(v.Values))
 
-	for i, elem := range v.Values {
-		values[i] = importValue(inter, runtimeInterface, elem)
+	for i, element := range v.Values {
+		values[i] = importValue(inter, element)
 	}
 
 	return interpreter.NewArrayValueUnownedNonCopying(values...)
@@ -446,14 +440,13 @@ func importArrayValue(
 
 func importDictionaryValue(
 	inter *interpreter.Interpreter,
-	runtimeInterface Interface,
 	v cadence.Dictionary,
 ) *interpreter.DictionaryValue {
 	keysAndValues := make([]interpreter.Value, len(v.Pairs)*2)
 
 	for i, pair := range v.Pairs {
-		keysAndValues[i*2] = importValue(inter, runtimeInterface, pair.Key)
-		keysAndValues[i*2+1] = importValue(inter, runtimeInterface, pair.Value)
+		keysAndValues[i*2] = importValue(inter, pair.Key)
+		keysAndValues[i*2+1] = importValue(inter, pair.Value)
 	}
 
 	return interpreter.NewDictionaryValueUnownedNonCopying(keysAndValues...)
@@ -461,7 +454,6 @@ func importDictionaryValue(
 
 func importCompositeValue(
 	inter *interpreter.Interpreter,
-	runtimeInterface Interface,
 	kind common.CompositeKind,
 	location Location,
 	qualifiedIdentifier string,
@@ -475,7 +467,7 @@ func importCompositeValue(
 		fieldValue := fieldValues[i]
 		fields.Set(
 			fieldType.Identifier,
-			importValue(inter, runtimeInterface, fieldValue),
+			importValue(inter, fieldValue),
 		)
 	}
 
@@ -503,7 +495,6 @@ func importCompositeValue(
 
 func importPublicKey(
 	inter *interpreter.Interpreter,
-	runtimeInterface Interface,
 	fields *interpreter.StringValueOrderedMap,
 ) *interpreter.CompositeValue {
 
