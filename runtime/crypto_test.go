@@ -355,3 +355,87 @@ func TestRuntimeSignatureAlgorithmImport(t *testing.T) {
 		testSignatureAlgorithm(algo)
 	}
 }
+
+func TestRuntimeHashAlgorithmImport(t *testing.T) {
+
+	t.Parallel()
+
+	const script = `
+      pub fun main(algo: HashAlgorithm): UInt8 {
+          let data: [UInt8] = [1, 2, 3]
+          log(algo.hash(data))
+          log(algo.hashWithTag(data, tag: "some-tag"))
+
+          return algo.rawValue
+      }
+    `
+
+	testHashAlgorithm := func(algo sema.CryptoAlgorithm) {
+
+		var logs []string
+		var hashCalls int
+
+		runtime := NewInterpreterRuntime()
+		runtimeInterface := &testRuntimeInterface{
+			hash: func(data []byte, tag string, hashAlgorithm HashAlgorithm) ([]byte, error) {
+				hashCalls++
+				switch hashCalls {
+				case 1:
+					assert.Empty(t, tag)
+				case 2:
+					assert.Equal(t, "some-tag", tag)
+				}
+				return []byte{4, 5, 6}, nil
+			},
+			decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+				return json.Decode(b)
+			},
+			log: func(message string) {
+				logs = append(logs, message)
+			},
+		}
+
+		value, err := runtime.ExecuteScript(
+			Script{
+				Source: []byte(script),
+				Arguments: encodeArgs([]cadence.Value{
+					cadence.NewEnum([]cadence.Value{
+						cadence.UInt8(algo.RawValue()),
+					}).WithType(&cadence.EnumType{
+						QualifiedIdentifier: "HashAlgorithm",
+						RawType:             cadence.UInt8Type{},
+						Fields: []cadence.Field{
+							{
+								Identifier: "rawValue",
+								Type:       cadence.UInt8Type{},
+							},
+						},
+					}),
+				}),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  utils.TestLocation,
+			},
+		)
+
+		require.NoError(t, err)
+
+		assert.Equal(t,
+			cadence.NewUInt8(algo.RawValue()),
+			value,
+		)
+		assert.Equal(t,
+			[]string{
+				"[4, 5, 6]",
+				"[4, 5, 6]",
+			},
+			logs,
+		)
+		assert.Equal(t, 2, hashCalls)
+	}
+
+	for _, algo := range sema.SignatureAlgorithms {
+		testHashAlgorithm(algo)
+	}
+}

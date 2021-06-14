@@ -25,6 +25,7 @@ import (
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
+	"github.com/onflow/cadence/runtime/stdlib"
 )
 
 // exportValue converts a runtime value to its native Go representation.
@@ -474,13 +475,23 @@ func importCompositeValue(
 	if location == nil {
 		switch sema.NativeCompositeTypes[qualifiedIdentifier] {
 		case sema.PublicKeyType:
-			// PublicKey has computed fields, and methods that requires host
-			// environment. Therefore it needs to be handled separately.
-			return importPublicKey(inter, runtimeInterface, fields)
-		case sema.SignatureAlgorithmType, sema.HashAlgorithmType:
+			// PublicKey has a dedicated constructor
+			// (e.g. it has computed fields that must be initialized)
+			return importPublicKey(inter, fields)
+
+		case sema.HashAlgorithmType:
+			// HashAlgorithmType has a dedicated constructor
+			// (e.g. it has host functions)
+			return importHashAlgorithm(fields)
+
+		case sema.SignatureAlgorithmType:
 			// continue in the normal path
+
 		default:
-			panic(fmt.Errorf("cannot import value of type %s", qualifiedIdentifier))
+			panic(fmt.Errorf(
+				"cannot import value of type %s",
+				qualifiedIdentifier,
+			))
 		}
 	}
 
@@ -501,6 +512,8 @@ func importPublicKey(
 	var publicKeyValue *interpreter.ArrayValue
 	var signAlgoValue *interpreter.CompositeValue
 
+	ty := sema.PublicKeyType
+
 	fields.Foreach(func(fieldName string, value interpreter.Value) {
 		switch fieldName {
 		case sema.PublicKeyPublicKeyField:
@@ -508,7 +521,7 @@ func importPublicKey(
 			if !ok {
 				panic(fmt.Errorf(
 					"cannot import value of type '%s'. invalid value for field '%s': %v",
-					sema.PublicKeyType,
+					ty,
 					fieldName,
 					value,
 				))
@@ -521,7 +534,7 @@ func importPublicKey(
 			if !ok {
 				panic(fmt.Errorf(
 					"cannot import value of type '%s'. invalid value for field '%s': %v",
-					sema.PublicKeyType,
+					ty,
 					fieldName,
 					value,
 				))
@@ -537,7 +550,7 @@ func importPublicKey(
 		default:
 			panic(fmt.Errorf(
 				"cannot import value of type '%s'. invalid field '%s'",
-				sema.PublicKeyType,
+				ty,
 				fieldName,
 			))
 		}
@@ -546,7 +559,7 @@ func importPublicKey(
 	if publicKeyValue == nil {
 		panic(fmt.Errorf(
 			"cannot import value of type '%s'. missing field '%s'",
-			sema.PublicKeyType,
+			ty,
 			sema.PublicKeyPublicKeyField,
 		))
 	}
@@ -554,7 +567,7 @@ func importPublicKey(
 	if signAlgoValue == nil {
 		panic(fmt.Errorf(
 			"cannot import value of type '%s'. missing field '%s'",
-			sema.PublicKeyType,
+			ty,
 			sema.PublicKeySignAlgoField,
 		))
 	}
@@ -564,4 +577,46 @@ func importPublicKey(
 		signAlgoValue,
 		inter.PublicKeyValidationHandler,
 	)
+}
+
+func importHashAlgorithm(
+	fields *interpreter.StringValueOrderedMap,
+) *interpreter.CompositeValue {
+
+	var foundRawValue bool
+	var rawValue interpreter.UInt8Value
+
+	ty := sema.HashAlgorithmType
+
+	fields.Foreach(func(fieldName string, value interpreter.Value) {
+		switch fieldName {
+		case sema.EnumRawValueFieldName:
+			rawValue, foundRawValue = value.(interpreter.UInt8Value)
+			if !foundRawValue {
+				panic(fmt.Errorf(
+					"cannot import value of type '%s'. invalid value for field '%s': %v",
+					ty,
+					fieldName,
+					value,
+				))
+			}
+
+		default:
+			panic(fmt.Errorf(
+				"cannot import value of type '%s'. invalid field '%s'",
+				ty,
+				fieldName,
+			))
+		}
+	})
+
+	if !foundRawValue {
+		panic(fmt.Errorf(
+			"cannot import value of type '%s'. missing field '%s'",
+			ty,
+			sema.EnumRawValueFieldName,
+		))
+	}
+
+	return stdlib.NewHashAlgorithmCase(uint8(rawValue))
 }
