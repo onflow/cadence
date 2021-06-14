@@ -193,43 +193,6 @@ func TestRuntimeAccountKeyConstructor(t *testing.T) {
 	assert.Contains(t, err.Error(), "cannot find variable in this scope: `AccountKey`")
 }
 
-func TestRuntimeImportAccountAPITypes(t *testing.T) {
-
-	t.Parallel()
-
-	nextTransactionLocation := newTransactionLocationGenerator()
-
-	for _, ty := range []sema.Type{
-		sema.AccountKeyType,
-		sema.PublicKeyType,
-	} {
-
-		rt := NewInterpreterRuntime()
-
-		script := []byte(fmt.Sprintf(`
-			pub fun main(key: %s) {}
-		`, ty.String()))
-
-		runtimeInterface := &testRuntimeInterface{}
-
-		_, err := rt.ExecuteScript(
-			Script{
-				Source: script,
-			},
-			Context{
-				Interface: runtimeInterface,
-				Location:  nextTransactionLocation(),
-			},
-		)
-
-		require.Error(t, err)
-		assert.IsType(t, Error{}, err)
-		runtimeErr := err.(Error)
-
-		assert.IsType(t, &ScriptParameterTypeNotImportableError{}, runtimeErr.Err)
-	}
-}
-
 func TestRuntimeStoreAccountAPITypes(t *testing.T) {
 
 	t.Parallel()

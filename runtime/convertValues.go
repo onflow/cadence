@@ -305,12 +305,12 @@ func exportCapabilityValue(v interpreter.CapabilityValue, inter *interpreter.Int
 }
 
 // importValue converts a Cadence value to a runtime value.
-func importValue(value cadence.Value) interpreter.Value {
+func importValue(inter *interpreter.Interpreter, runtimeInterface Interface, value cadence.Value) interpreter.Value {
 	switch v := value.(type) {
 	case cadence.Void:
 		return interpreter.VoidValue{}
 	case cadence.Optional:
-		return importOptionalValue(v)
+		return importOptionalValue(inter, runtimeInterface, v)
 	case cadence.Bool:
 		return interpreter.BoolValue(v)
 	case cadence.String:
@@ -360,11 +360,13 @@ func importValue(value cadence.Value) interpreter.Value {
 	case cadence.UFix64:
 		return interpreter.UFix64Value(v)
 	case cadence.Array:
-		return importArrayValue(v)
+		return importArrayValue(inter, runtimeInterface, v)
 	case cadence.Dictionary:
-		return importDictionaryValue(v)
+		return importDictionaryValue(inter, runtimeInterface, v)
 	case cadence.Struct:
 		return importCompositeValue(
+			inter,
+			runtimeInterface,
 			common.CompositeKindStructure,
 			v.StructType.Location,
 			v.StructType.QualifiedIdentifier,
@@ -373,6 +375,8 @@ func importValue(value cadence.Value) interpreter.Value {
 		)
 	case cadence.Resource:
 		return importCompositeValue(
+			inter,
+			runtimeInterface,
 			common.CompositeKindResource,
 			v.ResourceType.Location,
 			v.ResourceType.QualifiedIdentifier,
@@ -381,6 +385,8 @@ func importValue(value cadence.Value) interpreter.Value {
 		)
 	case cadence.Event:
 		return importCompositeValue(
+			inter,
+			runtimeInterface,
 			common.CompositeKindEvent,
 			v.EventType.Location,
 			v.EventType.QualifiedIdentifier,
@@ -391,6 +397,8 @@ func importValue(value cadence.Value) interpreter.Value {
 		return importPathValue(v)
 	case cadence.Enum:
 		return importCompositeValue(
+			inter,
+			runtimeInterface,
 			common.CompositeKindEnum,
 			v.EnumType.Location,
 			v.EnumType.QualifiedIdentifier,
@@ -409,37 +417,51 @@ func importPathValue(v cadence.Path) interpreter.PathValue {
 	}
 }
 
-func importOptionalValue(v cadence.Optional) interpreter.Value {
+func importOptionalValue(
+	inter *interpreter.Interpreter,
+	runtimeInterface Interface,
+	v cadence.Optional,
+) interpreter.Value {
 	if v.Value == nil {
 		return interpreter.NilValue{}
 	}
 
-	innerValue := importValue(v.Value)
+	innerValue := importValue(inter, runtimeInterface, v.Value)
 	return interpreter.NewSomeValueOwningNonCopying(innerValue)
 }
 
-func importArrayValue(v cadence.Array) *interpreter.ArrayValue {
+func importArrayValue(
+	inter *interpreter.Interpreter,
+	runtimeInterface Interface,
+	v cadence.Array,
+) *interpreter.ArrayValue {
 	values := make([]interpreter.Value, len(v.Values))
 
 	for i, elem := range v.Values {
-		values[i] = importValue(elem)
+		values[i] = importValue(inter, runtimeInterface, elem)
 	}
 
 	return interpreter.NewArrayValueUnownedNonCopying(values...)
 }
 
-func importDictionaryValue(v cadence.Dictionary) *interpreter.DictionaryValue {
+func importDictionaryValue(
+	inter *interpreter.Interpreter,
+	runtimeInterface Interface,
+	v cadence.Dictionary,
+) *interpreter.DictionaryValue {
 	keysAndValues := make([]interpreter.Value, len(v.Pairs)*2)
 
 	for i, pair := range v.Pairs {
-		keysAndValues[i*2] = importValue(pair.Key)
-		keysAndValues[i*2+1] = importValue(pair.Value)
+		keysAndValues[i*2] = importValue(inter, runtimeInterface, pair.Key)
+		keysAndValues[i*2+1] = importValue(inter, runtimeInterface, pair.Value)
 	}
 
 	return interpreter.NewDictionaryValueUnownedNonCopying(keysAndValues...)
 }
 
 func importCompositeValue(
+	inter *interpreter.Interpreter,
+	runtimeInterface Interface,
 	kind common.CompositeKind,
 	location Location,
 	qualifiedIdentifier string,
@@ -453,8 +475,21 @@ func importCompositeValue(
 		fieldValue := fieldValues[i]
 		fields.Set(
 			fieldType.Identifier,
-			importValue(fieldValue),
+			importValue(inter, runtimeInterface, fieldValue),
 		)
+	}
+
+	if location == nil {
+		switch sema.NativeCompositeTypes[qualifiedIdentifier] {
+		case sema.PublicKeyType:
+			// PublicKey has computed fields, and methods that requires host
+			// environment. Therefore it needs to be handled separately.
+			return importPublicKey(inter, runtimeInterface, fields)
+		case sema.SignatureAlgorithmType, sema.HashAlgorithmType:
+			// continue in the normal path
+		default:
+			panic(fmt.Errorf("cannot import value of type %s", qualifiedIdentifier))
+		}
 	}
 
 	return interpreter.NewCompositeValue(
@@ -463,5 +498,80 @@ func importCompositeValue(
 		kind,
 		fields,
 		nil,
+	)
+}
+
+func importPublicKey(
+	inter *interpreter.Interpreter,
+	runtimeInterface Interface,
+	fields *interpreter.StringValueOrderedMap,
+) *interpreter.CompositeValue {
+
+	var publicKeyValue *interpreter.ArrayValue
+	var signAlgoValue *interpreter.CompositeValue
+
+	fields.Foreach(func(fieldName string, value interpreter.Value) {
+		switch fieldName {
+		case sema.PublicKeyPublicKeyField:
+			arrayValue, ok := value.(*interpreter.ArrayValue)
+			if !ok {
+				panic(fmt.Errorf(
+					"cannot import value of type '%s'. invalid value for field '%s': %v",
+					sema.PublicKeyType,
+					fieldName,
+					value,
+				))
+			}
+
+			publicKeyValue = arrayValue
+
+		case sema.PublicKeySignAlgoField:
+			compositeValue, ok := value.(*interpreter.CompositeValue)
+			if !ok {
+				panic(fmt.Errorf(
+					"cannot import value of type '%s'. invalid value for field '%s': %v",
+					sema.PublicKeyType,
+					fieldName,
+					value,
+				))
+			}
+
+			signAlgoValue = compositeValue
+
+		case sema.PublicKeyIsValidField:
+			// 'isValid' field set by the user must be ignored.
+			// This is calculated when creating the public key.
+			return
+
+		default:
+			panic(fmt.Errorf(
+				"cannot import value of type '%s'. invalid field '%s'",
+				sema.PublicKeyType,
+				fieldName,
+			))
+		}
+	})
+
+	if publicKeyValue == nil {
+		panic(fmt.Errorf(
+			"cannot import value of type '%s'. missing field '%s'",
+			sema.PublicKeyType,
+			sema.PublicKeyPublicKeyField,
+		))
+	}
+
+	if signAlgoValue == nil {
+		panic(fmt.Errorf(
+			"cannot import value of type '%s'. missing field '%s'",
+			sema.PublicKeyType,
+			sema.PublicKeySignAlgoField,
+		))
+	}
+
+	return interpreter.NewPublicKeyValue(
+		publicKeyValue,
+		signAlgoValue,
+		inter.PublicKeyValidationHandler,
+		newPublicKeyVerifyFunction(runtimeInterface),
 	)
 }
