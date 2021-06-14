@@ -26,7 +26,7 @@ Standard Markdown format is supported in doc-comments, with a bit of Cadence fla
 This means, any Markdown syntax used within the comments would be honoured and rendered like a standard Markdown snippet.
 It gives the flexibility for the developers to write well-structured documentations.
 
-e.g: A set of bullet points added using Markdown bullets syntax, would be rendered as bullet points in the
+e.g: A set of bullet points added using Markdown bullets syntax would be rendered as bullet points in the
 generated documentation as well.
 
 Documentation Comment:
