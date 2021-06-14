@@ -25,6 +25,7 @@ var AnyType = &SimpleType{
 	Name:          "Any",
 	QualifiedName: "Any",
 	TypeID:        "Any",
+	tag:           AnyTag,
 	IsInvalid:     false,
 	IsResource:    false,
 	// `Any` is never a valid type in user programs

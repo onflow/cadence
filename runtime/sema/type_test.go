@@ -705,17 +705,25 @@ func TestIdentifierCacheUpdate(t *testing.T) {
 }
 
 func TestCommonSuperType(t *testing.T) {
-	fmt.Println(CommonSuperType(UInt8Tag, UInt8Tag))
-	fmt.Println(CommonSuperType(UInt8Tag, UInt16Tag))
-	fmt.Println(CommonSuperType(Int8Tag, Int16Tag))
+	nilType := &OptionalType{NeverType}
 
-	fmt.Println(CommonSuperType(NilTag, NilTag))
-	fmt.Println(CommonSuperType(Int8Tag, NilTag))
+	fmt.Println(CommonSuperType(UInt8Type, UInt8Type, UInt8Type))
+	fmt.Println(CommonSuperType(UInt8Type, UInt16Type, UInt256Type))
+	fmt.Println(CommonSuperType(Int8Type, Int16Type))
 
-	fmt.Println(CommonSuperType(AnyStructTag, AnyStructTag))
-	fmt.Println(CommonSuperType(AnyResourceTag, AnyResourceTag))
-	fmt.Println(CommonSuperType(AnyStructTag, AnyResourceTag))
+	fmt.Println(CommonSuperType(nilType, nilType))
+	fmt.Println(CommonSuperType(Int8Type, nilType))
 
-	fmt.Println(CommonSuperType(Int8Tag, StringTag))
-	fmt.Println(CommonSuperType(NilTag, StringTag))
+	fmt.Println(CommonSuperType(AnyStructType, AnyStructType))
+	fmt.Println(CommonSuperType(AnyResourceType, AnyResourceType))
+	fmt.Println(CommonSuperType(AnyStructType, AnyResourceType))
+
+	fmt.Println(CommonSuperType(Int8Type, StringType))
+	fmt.Println(CommonSuperType(nilType, StringType))
+
+	fmt.Println("----")
+	fmt.Println(CommonSuperType(
+		&VariableSizedType{Type: StringType},
+		&VariableSizedType{Type: StringType},
+	))
 }

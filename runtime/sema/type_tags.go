@@ -37,25 +37,45 @@ const Int128Tag = Int64Tag << 1
 const Int256Tag = Int128Tag << 1
 
 const IntTag = Int256Tag << 1
-const StringTag = IntTag << 1
-const NilTag = StringTag << 1
-const AnyStructTag = NilTag << 1
+const UIntTag = IntTag << 1
+const StringTag = UIntTag << 1
+const CharacterTag = StringTag << 1
+const BoolTag = CharacterTag << 1
+const NilTag = BoolTag << 1
+const VoidTag = NilTag << 1
+const AddressTag = VoidTag << 1
+const MetaTag = AddressTag << 1
+const AnyStructTag = MetaTag << 1
 const AnyResourceTag = AnyStructTag << 1
+const AnyTag = AnyResourceTag << 1
 
-const ArrayTag = AnyResourceTag << 1
+const PathTag = AnyTag << 1
+const StoragePathTag = PathTag << 1
+const CapabilityPathTag = StoragePathTag << 1
+const PublicPathTag = CapabilityPathTag << 1
+const PrivatePathTag = PublicPathTag << 1
+
+const ArrayTag = PrivatePathTag << 1
 const DictionaryTag = ArrayTag << 1
 const CompositeTag = DictionaryTag << 1
 const ReferenceTag = CompositeTag << 1
 const ResourceTag = ReferenceTag << 1
 
-//const OptionalTag = <actual_type> | NilTag
-// Should be dynamically created
+const OptionalTag = ResourceTag << 1
+const GenericTag = OptionalTag << 1
+const FunctionTag = GenericTag << 1
+const InterfaceTag = FunctionTag << 1
+const TransactionTag = InterfaceTag << 1
+const RestrictedTag = TransactionTag << 1
+const CapabilityTag = RestrictedTag << 1
+
+const InvalidTag TypeTag = 1 << 62
 
 // Super types
 
 const SignedIntTag = IntTag | Int8Tag | Int16Tag | Int32Tag | Int64Tag | Int128Tag | Int256Tag
 
-const UnsignedIntTag = UInt8Tag | UInt16Tag | UInt32Tag | UInt64Tag | UInt128Tag | UInt256Tag
+const UnsignedIntTag = UIntTag | UInt8Tag | UInt16Tag | UInt32Tag | UInt64Tag | UInt128Tag | UInt256Tag
 
 const IntSuperTypeTag = SignedIntTag | UnsignedIntTag
 
@@ -64,20 +84,22 @@ const AnyStructSuperTypeTag = AnyStructTag | NeverTypeTag | IntSuperTypeTag | St
 
 const AnyResourceSuperTypeTag = AnyResourceTag | ResourceTag
 
+const AnySuperTypeTag = AnyResourceSuperTypeTag | AnyStructSuperTypeTag
+
 // Methods
 
-func CommonSuperType(typeTags ...TypeTag) Type {
+func CommonSuperType(types ...Type) Type {
 	join := NeverTypeTag
 
-	for _, typeTag := range typeTags {
-		join |= typeTag
+	for _, typ := range types {
+		join |= typ.Tag()
 	}
 
-	return getType(join)
+	return getType(join, types...)
 }
 
-func getType(tag TypeTag) Type {
-	switch tag {
+func getType(joinedTypeTag TypeTag, types ...Type) Type {
+	switch joinedTypeTag {
 	case Int8Tag:
 		return Int8Type
 	case Int16Tag:
@@ -106,6 +128,8 @@ func getType(tag TypeTag) Type {
 
 	case IntTag:
 		return IntType
+	case UIntTag:
+		return UIntType
 	case StringTag:
 		return StringType
 	case NilTag:
@@ -118,15 +142,29 @@ func getType(tag TypeTag) Type {
 		return AnyResourceType
 	case NeverTypeTag:
 		return NeverType
+	case ArrayTag:
+		// Contains only arrays.
+		var prevType Type
+		for _, typ := range types {
+			if prevType == nil {
+				prevType = typ
+				continue
+			}
+
+			if typ != prevType {
+				// TODO: could be array of structs, resources, or both
+				return AnyStructType
+			}
+		}
+
+		return prevType
 
 	default:
 
 		// Optional types.
-		// If the joined type contains nil, and iff that nil didn't
-		// come from AnyStruct, then treat it as optional type.
-		if isSuperType(tag, NilTag) && !isSuperType(tag, AnyStructSuperTypeTag) {
-			// Type without the nil
-			innerTypeTag := tag & (^NilTag)
+		if joinedTypeTag.contains(OptionalTag) {
+			// Get the type without the optional flag
+			innerTypeTag := joinedTypeTag & (^OptionalTag)
 			innerType := getType(innerTypeTag)
 
 			return &OptionalType{
@@ -134,20 +172,22 @@ func getType(tag TypeTag) Type {
 			}
 		}
 
-		if isSubType(tag, UnsignedIntTag) {
-			return UIntType
-		}
-
-		// SignedIntTag also included here
-		if isSubType(tag, IntSuperTypeTag) {
+		// Any heterogeneous int subtypes goes here.
+		if joinedTypeTag.belongsTo(IntSuperTypeTag) {
 			return IntType
 		}
 
-		if isSubType(tag, AnyStructSuperTypeTag) {
+		if joinedTypeTag.contains(ArrayTag) {
+			// TODO: Arrays with other types.
+			// 	could only be AnyStruct, AnyResource or none (both)
 			return AnyStructType
 		}
 
-		if isSubType(tag, AnyResourceSuperTypeTag) {
+		if joinedTypeTag.belongsTo(AnyStructSuperTypeTag) {
+			return AnyStructType
+		}
+
+		if joinedTypeTag.belongsTo(AnyResourceSuperTypeTag) {
 			return AnyResourceType
 		}
 
@@ -156,10 +196,10 @@ func getType(tag TypeTag) Type {
 	}
 }
 
-func isSubType(typeTag, superTypeTag TypeTag) bool {
-	return (typeTag & superTypeTag) == typeTag
+func (t TypeTag) contains(typeTag TypeTag) bool {
+	return (t & typeTag) == typeTag
 }
 
-func isSuperType(typeTag, subTypeTag TypeTag) bool {
-	return isSubType(subTypeTag, typeTag)
+func (t TypeTag) belongsTo(typeTag TypeTag) bool {
+	return typeTag.contains(t)
 }

@@ -24,6 +24,7 @@ var BoolType = &SimpleType{
 	Name:                 "Bool",
 	QualifiedName:        "Bool",
 	TypeID:               "Bool",
+	tag:                  BoolTag,
 	IsInvalid:            false,
 	IsResource:           false,
 	Storable:             true,

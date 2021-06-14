@@ -24,6 +24,7 @@ var CharacterType = &SimpleType{
 	Name:                 "Character",
 	QualifiedName:        "Character",
 	TypeID:               "Character",
+	tag:                  CharacterTag,
 	IsInvalid:            false,
 	IsResource:           false,
 	Storable:             true,
