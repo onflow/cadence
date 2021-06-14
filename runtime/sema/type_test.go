@@ -19,6 +19,7 @@
 package sema
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -701,4 +702,20 @@ func TestIdentifierCacheUpdate(t *testing.T) {
 
 			checkIdentifiers(t, typ)
 		})
+}
+
+func TestCommonSuperType(t *testing.T) {
+	fmt.Println(CommonSuperType(UInt8Tag, UInt8Tag))
+	fmt.Println(CommonSuperType(UInt8Tag, UInt16Tag))
+	fmt.Println(CommonSuperType(Int8Tag, Int16Tag))
+
+	fmt.Println(CommonSuperType(NilTag, NilTag))
+	fmt.Println(CommonSuperType(Int8Tag, NilTag))
+
+	fmt.Println(CommonSuperType(AnyStructTag, AnyStructTag))
+	fmt.Println(CommonSuperType(AnyResourceTag, AnyResourceTag))
+	fmt.Println(CommonSuperType(AnyStructTag, AnyResourceTag))
+
+	fmt.Println(CommonSuperType(Int8Tag, StringTag))
+	fmt.Println(CommonSuperType(NilTag, StringTag))
 }
