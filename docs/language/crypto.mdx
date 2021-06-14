@@ -31,6 +31,12 @@ pub enum HashAlgorithm: UInt8 {
     /// This is a customized version of KMAC128 that is compatible with the hashing to curve 
     /// used in BLS signatures.
     pub case KMAC128_BLS_BLS12_381 = 5
+
+    /// Returns the hash of the given data
+    pub fun hash(_ data: [UInt8]): [UInt8]
+
+    /// Returns the hash of the given data and tag
+    pub fun hashWithTag(_ data: [UInt8], tag: string): [UInt8]
 }
 ```
 
