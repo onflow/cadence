@@ -18,6 +18,7 @@
 
 import {Message} from "vscode-jsonrpc/lib/messages";
 import {go} from './go.js'
+import WebAssemblyInstantiatedSource = WebAssembly.WebAssemblyInstantiatedSource
 
 // Callbacks defines the functions that the language server calls
 // and that need to be implemented by the client.
@@ -46,11 +47,9 @@ export interface Callbacks {
   onServerClose?(): void
 }
 
-declare global {
-  interface Window {
-    [key: string]: any
-  }
-}
+const env: {
+  [key: string]: any
+} = typeof global !== 'undefined' ? global : window
 
 export class CadenceLanguageServer {
 
@@ -69,25 +68,31 @@ export class CadenceLanguageServer {
   public readonly id: number
   private isClientClosed: boolean = false
 
-  public static async create(binaryLocation: string, callbacks: Callbacks): Promise<CadenceLanguageServer> {
+  public static async create(binaryLocation: string | BufferSource, callbacks: Callbacks): Promise<CadenceLanguageServer> {
     await this.ensureLoaded(binaryLocation)
     return new CadenceLanguageServer(callbacks)
   }
 
-  private static async ensureLoaded(binaryLocation: string) {
+  private static async ensureLoaded(urlOrBinary: string | BufferSource) {
     if (this.loaded) {
       return
     }
 
     this.setWriteSync()
 
-    await this.load(binaryLocation)
+    await this.load(urlOrBinary)
     this.loaded = true
   }
 
-  private static async load(binaryLocation: string) {
-    const binary = fetch(binaryLocation)
-    const instantiatedSource = await WebAssembly.instantiateStreaming(binary, go.importObject)
+  private static async load(urlOrBinary: string | BufferSource): Promise<void> {
+    let instantiatedSource: WebAssemblyInstantiatedSource
+    if (typeof urlOrBinary === 'string') {
+      const binaryRequest = fetch(urlOrBinary)
+      instantiatedSource = (await WebAssembly.instantiateStreaming(binaryRequest, go.importObject))
+    } else {
+      instantiatedSource = await WebAssembly.instantiate(urlOrBinary, go.importObject);
+    }
+
     // NOTE: don't await the promise, just ignore it, as it is only resolved when the program exists
     go.run(instantiatedSource.instance).then(() => {})
   }
@@ -99,16 +104,16 @@ export class CadenceLanguageServer {
     // by calling global functions. There does not seem to be support yet to directly import functions
     // from the JS environment into the WebAssembly environment
 
-    this.id = window[CadenceLanguageServer.functionName('start')]()
+    this.id = env[CadenceLanguageServer.functionName('start')]()
 
-    window[this.functionName('toClient')] = (message: string): void => {
+    env[this.functionName('toClient')] = (message: string): void => {
       if (!callbacks.toClient) {
         return
       }
       callbacks.toClient(JSON.parse(message))
     }
 
-    window[this.functionName('getAddressCode')] = (address: string): string | undefined => {
+    env[this.functionName('getAddressCode')] = (address: string): string | undefined => {
       if (!callbacks.getAddressCode) {
         return undefined
       }
@@ -116,7 +121,7 @@ export class CadenceLanguageServer {
       return callbacks.getAddressCode(address)
     }
 
-    window[this.functionName('onServerClose')] = (): void => {
+    env[this.functionName('onServerClose')] = (): void => {
       if (!callbacks.onServerClose) {
         return
       }
@@ -124,7 +129,7 @@ export class CadenceLanguageServer {
     }
 
     callbacks.toServer = (error: any, message: any) => {
-      window[this.functionName('toServer')](error, JSON.stringify(message))
+      env[this.functionName('toServer')](error, JSON.stringify(message))
     }
 
     callbacks.onClientClose = () => {
@@ -132,7 +137,7 @@ export class CadenceLanguageServer {
         return
       }
       this.isClientClosed = true
-      window[this.functionName('onClientClose')]()
+      env[this.functionName('onClientClose')]()
     }
   }
 
@@ -155,7 +160,7 @@ export class CadenceLanguageServer {
     // When the language server writes to a file, e.g. standard output or standard error,
     // then log the output in the console
 
-    window['fs'].writeSync = function (fileDescriptor: number, buf: Uint8Array): number {
+    env['fs'].writeSync = function (fileDescriptor: number, buf: Uint8Array): number {
       // Get the currently buffered output for the given file descriptor,
       // or initialize it, if there is no buffered output yet.
 

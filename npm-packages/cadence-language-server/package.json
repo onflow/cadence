@@ -9,10 +9,15 @@
   },
   "main": "dist/index.js",
   "scripts": {
-    "build": "tsc"
+    "build": "tsc",
+    "test": "jest"
   },
   "license": "Apache-2.0",
   "devDependencies": {
+    "@types/jest": "^26.0.14",
+    "jest": "^26.5.3",
+    "node-fetch": "^2.6.1",
+    "ts-jest": "^26.4.1",
     "typescript": "^4.0.2"
   },
   "dependencies": {
