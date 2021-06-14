@@ -687,6 +687,13 @@ func validateArgumentParams(
 
 		dynamicType := arg.DynamicType(inter, dynamicTypeResults)
 
+		// Ensure the argument is of an importable type
+		if !dynamicType.IsImportable() {
+			return nil, &ArgumentNotImportableError{
+				Type: dynamicType,
+			}
+		}
+
 		// Check that decoded value is a subtype of static parameter type
 		if !interpreter.IsSubType(dynamicType, parameterType) {
 			return nil, &InvalidEntryPointArgumentError{

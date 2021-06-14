@@ -218,6 +218,20 @@ func (e *ScriptParameterTypeNotImportableError) Error() string {
 	)
 }
 
+// ArgumentNotImportableError is an error that is reported for
+// script arguments that belongs to non-importable types.
+//
+type ArgumentNotImportableError struct {
+	Type interpreter.DynamicType
+}
+
+func (e *ArgumentNotImportableError) Error() string {
+	return fmt.Sprintf(
+		"argument type is not importable: `%s`",
+		e.Type,
+	)
+}
+
 // ParsingCheckingError is an error wrapper
 // for a parsing or a checking error at a specific location
 //

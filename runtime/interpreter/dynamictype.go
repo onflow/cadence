@@ -24,6 +24,7 @@ import (
 
 type DynamicType interface {
 	IsDynamicType()
+	IsImportable() bool
 }
 
 type ReferenceDynamicType interface {
@@ -40,11 +41,19 @@ type MetaTypeDynamicType struct{}
 
 func (MetaTypeDynamicType) IsDynamicType() {}
 
+func (MetaTypeDynamicType) IsImportable() bool {
+	return false
+}
+
 // VoidDynamicType
 
 type VoidDynamicType struct{}
 
 func (VoidDynamicType) IsDynamicType() {}
+
+func (VoidDynamicType) IsImportable() bool {
+	return false
+}
 
 // StringDynamicType
 
@@ -52,11 +61,19 @@ type StringDynamicType struct{}
 
 func (StringDynamicType) IsDynamicType() {}
 
+func (StringDynamicType) IsImportable() bool {
+	return true
+}
+
 // BoolDynamicType
 
 type BoolDynamicType struct{}
 
 func (BoolDynamicType) IsDynamicType() {}
+
+func (BoolDynamicType) IsImportable() bool {
+	return true
+}
 
 // ArrayDynamicType
 
@@ -66,6 +83,16 @@ type ArrayDynamicType struct {
 
 func (ArrayDynamicType) IsDynamicType() {}
 
+func (t ArrayDynamicType) IsImportable() bool {
+	for _, elementType := range t.ElementTypes {
+		if !elementType.IsImportable() {
+			return false
+		}
+	}
+
+	return true
+}
+
 // NumberDynamicType
 
 type NumberDynamicType struct {
@@ -73,6 +100,10 @@ type NumberDynamicType struct {
 }
 
 func (NumberDynamicType) IsDynamicType() {}
+
+func (NumberDynamicType) IsImportable() bool {
+	return true
+}
 
 // CompositeDynamicType
 
@@ -82,6 +113,11 @@ type CompositeDynamicType struct {
 
 func (CompositeDynamicType) IsDynamicType() {}
 
+func (t CompositeDynamicType) IsImportable() bool {
+	// TODO: use 'IsImportable()' once available
+	return t.StaticType.IsStorable(map[*sema.Member]bool{})
+}
+
 // DictionaryDynamicType
 
 type DictionaryDynamicType struct {
@@ -90,11 +126,26 @@ type DictionaryDynamicType struct {
 
 func (DictionaryDynamicType) IsDynamicType() {}
 
+func (t DictionaryDynamicType) IsImportable() bool {
+	for _, entryType := range t.EntryTypes {
+		if !entryType.KeyType.IsImportable() ||
+			!entryType.ValueType.IsImportable() {
+			return false
+		}
+	}
+
+	return true
+}
+
 // NilDynamicType
 
 type NilDynamicType struct{}
 
 func (NilDynamicType) IsDynamicType() {}
+
+func (NilDynamicType) IsImportable() bool {
+	return true
+}
 
 // SomeDynamicType
 
@@ -103,6 +154,10 @@ type SomeDynamicType struct {
 }
 
 func (SomeDynamicType) IsDynamicType() {}
+
+func (t SomeDynamicType) IsImportable() bool {
+	return t.InnerType.IsImportable()
+}
 
 // StorageReferenceDynamicType
 
@@ -126,6 +181,10 @@ func (t StorageReferenceDynamicType) InnerType() DynamicType {
 
 func (t StorageReferenceDynamicType) BorrowedType() sema.Type {
 	return t.borrowedType
+}
+
+func (StorageReferenceDynamicType) IsImportable() bool {
+	return false
 }
 
 // EphemeralReferenceDynamicType
@@ -152,11 +211,19 @@ func (t EphemeralReferenceDynamicType) BorrowedType() sema.Type {
 	return t.borrowedType
 }
 
+func (EphemeralReferenceDynamicType) IsImportable() bool {
+	return false
+}
+
 // AddressDynamicType
 
 type AddressDynamicType struct{}
 
 func (AddressDynamicType) IsDynamicType() {}
+
+func (AddressDynamicType) IsImportable() bool {
+	return true
+}
 
 // FunctionDynamicType
 
@@ -164,11 +231,19 @@ type FunctionDynamicType struct{}
 
 func (FunctionDynamicType) IsDynamicType() {}
 
+func (FunctionDynamicType) IsImportable() bool {
+	return false
+}
+
 // PrivatePathDynamicType
 
 type PrivatePathDynamicType struct{}
 
 func (PrivatePathDynamicType) IsDynamicType() {}
+
+func (PrivatePathDynamicType) IsImportable() bool {
+	return true
+}
 
 // PublicPathDynamicType
 
@@ -176,11 +251,19 @@ type PublicPathDynamicType struct{}
 
 func (PublicPathDynamicType) IsDynamicType() {}
 
+func (PublicPathDynamicType) IsImportable() bool {
+	return true
+}
+
 // StoragePathDynamicType
 
 type StoragePathDynamicType struct{}
 
 func (StoragePathDynamicType) IsDynamicType() {}
+
+func (StoragePathDynamicType) IsImportable() bool {
+	return true
+}
 
 // CapabilityDynamicType
 
@@ -190,17 +273,29 @@ type CapabilityDynamicType struct {
 
 func (CapabilityDynamicType) IsDynamicType() {}
 
+func (CapabilityDynamicType) IsImportable() bool {
+	return false
+}
+
 // DeployedContractDynamicType
 
 type DeployedContractDynamicType struct{}
 
 func (DeployedContractDynamicType) IsDynamicType() {}
 
+func (DeployedContractDynamicType) IsImportable() bool {
+	return false
+}
+
 // BlockDynamicType
 
 type BlockDynamicType struct{}
 
 func (BlockDynamicType) IsDynamicType() {}
+
+func (BlockDynamicType) IsImportable() bool {
+	return false
+}
 
 // UnwrapOptionalDynamicType returns the type if it is not an optional type,
 // or the inner-most type if it is (optional types are repeatedly unwrapped)
