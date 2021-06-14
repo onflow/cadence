@@ -34,13 +34,22 @@ func TestScriptParameterTypeValidation(t *testing.T) {
 
 	t.Parallel()
 
-	assertNonImportableError := func(t *testing.T, err error) {
+	expectNonImportableError := func(t *testing.T, err error) {
 		require.Error(t, err)
 
 		require.IsType(t, Error{}, err)
 		runtimeErr := err.(Error)
 
 		assert.IsType(t, &ScriptParameterTypeNotImportableError{}, runtimeErr.Err)
+	}
+
+	expectRuntimeError := func(t *testing.T, err error, expectedError error) {
+		require.Error(t, err)
+
+		require.IsType(t, Error{}, err)
+		runtimeErr := err.(Error)
+
+		assert.IsType(t, expectedError, runtimeErr.Err)
 	}
 
 	fooStruct := cadence.Struct{
@@ -50,6 +59,40 @@ func TestScriptParameterTypeValidation(t *testing.T) {
 			Fields:              []cadence.Field{},
 		},
 		Fields: []cadence.Value{},
+	}
+
+	publicAccountKeys := cadence.Struct{
+		StructType: &cadence.StructType{
+			QualifiedIdentifier: "PublicAccount.Keys",
+			Fields:              []cadence.Field{},
+		},
+		Fields: []cadence.Value{},
+	}
+
+	executeScript := func(t *testing.T, script string, arg cadence.Value) error {
+		encodedArg, err := json.Encode(arg)
+		require.NoError(t, err)
+
+		rt := NewInterpreterRuntime()
+
+		runtimeInterface := &testRuntimeInterface{
+			decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+				return json.Decode(b)
+			},
+		}
+
+		_, err = rt.ExecuteScript(
+			Script{
+				Source:    []byte(script),
+				Arguments: [][]byte{encodedArg},
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  utils.TestLocation,
+			},
+		)
+
+		return err
 	}
 
 	t.Run("Struct", func(t *testing.T) {
@@ -63,7 +106,7 @@ func TestScriptParameterTypeValidation(t *testing.T) {
             }
         `
 
-		_, err := importAndExportValuesFromScript(t, script, fooStruct)
+		err := executeScript(t, script, fooStruct)
 		assert.NoError(t, err)
 	})
 
@@ -83,8 +126,8 @@ func TestScriptParameterTypeValidation(t *testing.T) {
             }
         `
 
-		_, err := importAndExportValuesFromScript(t, script, cadence.NewOptional(nil))
-		assertNonImportableError(t, err)
+		err := executeScript(t, script, cadence.NewOptional(nil))
+		expectNonImportableError(t, err)
 	})
 
 	t.Run("AnyStruct", func(t *testing.T) {
@@ -95,7 +138,7 @@ func TestScriptParameterTypeValidation(t *testing.T) {
             }
         `
 
-		_, err := importAndExportValuesFromScript(t, script, cadence.NewOptional(nil))
+		err := executeScript(t, script, cadence.NewOptional(nil))
 		assert.NoError(t, err)
 	})
 
@@ -113,7 +156,7 @@ func TestScriptParameterTypeValidation(t *testing.T) {
             }
         `
 
-		_, err := importAndExportValuesFromScript(t, script, fooStruct)
+		err := executeScript(t, script, fooStruct)
 		assert.NoError(t, err)
 	})
 
@@ -129,8 +172,8 @@ func TestScriptParameterTypeValidation(t *testing.T) {
             }
         `
 
-		_, err := importAndExportValuesFromScript(t, script, cadence.NewOptional(nil))
-		assertNonImportableError(t, err)
+		err := executeScript(t, script, cadence.NewOptional(nil))
+		expectNonImportableError(t, err)
 	})
 
 	t.Run("Resource", func(t *testing.T) {
@@ -145,8 +188,8 @@ func TestScriptParameterTypeValidation(t *testing.T) {
             }
         `
 
-		_, err := importAndExportValuesFromScript(t, script, cadence.NewOptional(nil))
-		assertNonImportableError(t, err)
+		err := executeScript(t, script, cadence.NewOptional(nil))
+		expectNonImportableError(t, err)
 	})
 
 	t.Run("AnyResource", func(t *testing.T) {
@@ -158,8 +201,8 @@ func TestScriptParameterTypeValidation(t *testing.T) {
             }
         `
 
-		_, err := importAndExportValuesFromScript(t, script, cadence.NewOptional(nil))
-		assertNonImportableError(t, err)
+		err := executeScript(t, script, cadence.NewOptional(nil))
+		expectNonImportableError(t, err)
 	})
 
 	t.Run("Contract", func(t *testing.T) {
@@ -173,8 +216,8 @@ func TestScriptParameterTypeValidation(t *testing.T) {
             }
         `
 
-		_, err := importAndExportValuesFromScript(t, script, cadence.NewOptional(nil))
-		assertNonImportableError(t, err)
+		err := executeScript(t, script, cadence.NewOptional(nil))
+		expectNonImportableError(t, err)
 	})
 
 	t.Run("Array", func(t *testing.T) {
@@ -185,7 +228,7 @@ func TestScriptParameterTypeValidation(t *testing.T) {
             }
         `
 
-		_, err := importAndExportValuesFromScript(
+		err := executeScript(
 			t,
 			script,
 			cadence.NewArray([]cadence.Value{}),
@@ -202,13 +245,13 @@ func TestScriptParameterTypeValidation(t *testing.T) {
             }
         `
 
-		_, err := importAndExportValuesFromScript(
+		err := executeScript(
 			t,
 			script,
 			cadence.NewArray([]cadence.Value{}),
 		)
 
-		assertNonImportableError(t, err)
+		expectNonImportableError(t, err)
 	})
 
 	t.Run("Dictionary", func(t *testing.T) {
@@ -219,7 +262,7 @@ func TestScriptParameterTypeValidation(t *testing.T) {
             }
         `
 
-		_, err := importAndExportValuesFromScript(
+		err := executeScript(
 			t,
 			script,
 			cadence.NewDictionary([]cadence.KeyValuePair{}),
@@ -236,8 +279,8 @@ func TestScriptParameterTypeValidation(t *testing.T) {
             }
         `
 
-		_, err := importAndExportValuesFromScript(t, script, cadence.NewOptional(nil))
-		assertNonImportableError(t, err)
+		err := executeScript(t, script, cadence.NewOptional(nil))
+		expectNonImportableError(t, err)
 	})
 
 	t.Run("Non-Importable Dictionary", func(t *testing.T) {
@@ -248,13 +291,13 @@ func TestScriptParameterTypeValidation(t *testing.T) {
             }
         `
 
-		_, err := importAndExportValuesFromScript(
+		err := executeScript(
 			t,
 			script,
 			cadence.NewArray([]cadence.Value{}),
 		)
 
-		assertNonImportableError(t, err)
+		expectNonImportableError(t, err)
 	})
 
 	t.Run("Numeric Types", func(t *testing.T) {
@@ -272,7 +315,7 @@ func TestScriptParameterTypeValidation(t *testing.T) {
 					typ.QualifiedString(),
 				)
 
-				_, err := importAndExportValuesFromScript(t, script, cadence.NewOptional(nil))
+				err := executeScript(t, script, cadence.NewOptional(nil))
 				assert.NoError(t, err)
 			})
 		}
@@ -356,10 +399,10 @@ func TestScriptParameterTypeValidation(t *testing.T) {
 					test.typeSignature,
 				)
 
-				_, err := importAndExportValuesFromScript(t, script, test.argument)
+				err := executeScript(t, script, test.argument)
 
 				if test.expectErrors {
-					assertNonImportableError(t, err)
+					expectNonImportableError(t, err)
 				} else {
 					assert.NoError(t, err)
 				}
@@ -369,6 +412,74 @@ func TestScriptParameterTypeValidation(t *testing.T) {
 		for _, testCase := range argumentPassingTests {
 			testArgumentPassing(testCase)
 		}
+	})
+
+	t.Run("As AnyStruct", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+                pub fun main(arg: AnyStruct?) {
+                }
+                pub struct Foo {
+                    pub var nonImportableField: PublicAccount.Keys?
+                    init() {
+                        self.nonImportableField = nil
+                    }
+                }
+            `
+
+		err := executeScript(t, script, fooStruct)
+		expectRuntimeError(t, err, &ArgumentNotImportableError{})
+	})
+
+	t.Run("As importable interface", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+                pub fun main(arg: {Bar}?) {
+                }
+                pub struct Foo: Bar {
+                    pub var nonImportableField: PublicAccount.Keys?
+                    init() {
+                        self.nonImportableField = nil
+                    }
+                }
+                pub struct interface Bar {
+                }
+            `
+
+		err := executeScript(t, script, fooStruct)
+		expectRuntimeError(t, err, &ArgumentNotImportableError{})
+	})
+
+	t.Run("Native struct as AnyStruct", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+                pub fun main(arg: AnyStruct) {
+                }
+            `
+
+		err := executeScript(t, script, publicAccountKeys)
+		expectRuntimeError(t, err, &ArgumentNotImportableError{})
+	})
+
+	t.Run("In array", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+                pub fun main(arg: [AnyStruct]) {
+                }
+            `
+
+		err := executeScript(
+			t,
+			script,
+			cadence.NewArray([]cadence.Value{
+				publicAccountKeys,
+			}),
+		)
+		expectRuntimeError(t, err, &ArgumentNotImportableError{})
 	})
 }
 
@@ -393,6 +504,15 @@ func TestTransactionParameterTypeValidation(t *testing.T) {
 		}
 	}
 
+	expectRuntimeError := func(t *testing.T, err error, expectedError error) {
+		require.Error(t, err)
+
+		require.IsType(t, Error{}, err)
+		runtimeErr := err.(Error)
+
+		assert.IsType(t, expectedError, runtimeErr.Err)
+	}
+
 	fooStruct := cadence.Struct{
 		StructType: &cadence.StructType{
 			Location:            utils.TestLocation,
@@ -402,7 +522,15 @@ func TestTransactionParameterTypeValidation(t *testing.T) {
 		Fields: []cadence.Value{},
 	}
 
-	executeTransaction := func(script string, arg cadence.Value) error {
+	publicAccountKeys := cadence.Struct{
+		StructType: &cadence.StructType{
+			QualifiedIdentifier: "PublicAccount.Keys",
+			Fields:              []cadence.Field{},
+		},
+		Fields: []cadence.Value{},
+	}
+
+	executeTransaction := func(t *testing.T, script string, arg cadence.Value) error {
 		encodedArg, err := json.Encode(arg)
 		require.NoError(t, err)
 
@@ -437,7 +565,7 @@ func TestTransactionParameterTypeValidation(t *testing.T) {
             }
         `
 
-		err := executeTransaction(script, fooStruct)
+		err := executeTransaction(t, script, fooStruct)
 		assert.NoError(t, err)
 	})
 
@@ -457,7 +585,7 @@ func TestTransactionParameterTypeValidation(t *testing.T) {
             }
         `
 
-		err := executeTransaction(script, cadence.NewOptional(nil))
+		err := executeTransaction(t, script, cadence.NewOptional(nil))
 		expectCheckerErrors(
 			t,
 			err,
@@ -473,7 +601,7 @@ func TestTransactionParameterTypeValidation(t *testing.T) {
             }
         `
 
-		err := executeTransaction(script, cadence.NewOptional(nil))
+		err := executeTransaction(t, script, cadence.NewOptional(nil))
 		assert.NoError(t, err)
 	})
 
@@ -491,7 +619,7 @@ func TestTransactionParameterTypeValidation(t *testing.T) {
             }
         `
 
-		err := executeTransaction(script, fooStruct)
+		err := executeTransaction(t, script, fooStruct)
 		assert.NoError(t, err)
 	})
 
@@ -507,7 +635,7 @@ func TestTransactionParameterTypeValidation(t *testing.T) {
             }
         `
 
-		err := executeTransaction(script, cadence.NewOptional(nil))
+		err := executeTransaction(t, script, cadence.NewOptional(nil))
 
 		expectCheckerErrors(
 			t,
@@ -527,7 +655,7 @@ func TestTransactionParameterTypeValidation(t *testing.T) {
             }
         `
 
-		err := executeTransaction(script, cadence.NewOptional(nil))
+		err := executeTransaction(t, script, cadence.NewOptional(nil))
 
 		expectCheckerErrors(
 			t,
@@ -545,7 +673,7 @@ func TestTransactionParameterTypeValidation(t *testing.T) {
             }
         `
 
-		err := executeTransaction(script, cadence.NewOptional(nil))
+		err := executeTransaction(t, script, cadence.NewOptional(nil))
 
 		expectCheckerErrors(
 			t,
@@ -566,7 +694,7 @@ func TestTransactionParameterTypeValidation(t *testing.T) {
             }
         `
 
-		err := executeTransaction(script, cadence.NewOptional(nil))
+		err := executeTransaction(t, script, cadence.NewOptional(nil))
 
 		expectCheckerErrors(
 			t,
@@ -583,7 +711,7 @@ func TestTransactionParameterTypeValidation(t *testing.T) {
             }
         `
 
-		err := executeTransaction(script, cadence.NewArray([]cadence.Value{}))
+		err := executeTransaction(t, script, cadence.NewArray([]cadence.Value{}))
 		assert.NoError(t, err)
 	})
 
@@ -595,7 +723,7 @@ func TestTransactionParameterTypeValidation(t *testing.T) {
             }
         `
 
-		err := executeTransaction(script, cadence.NewArray([]cadence.Value{}))
+		err := executeTransaction(t, script, cadence.NewArray([]cadence.Value{}))
 
 		expectCheckerErrors(
 			t,
@@ -612,7 +740,7 @@ func TestTransactionParameterTypeValidation(t *testing.T) {
             }
         `
 
-		err := executeTransaction(script, cadence.NewDictionary([]cadence.KeyValuePair{}))
+		err := executeTransaction(t, script, cadence.NewDictionary([]cadence.KeyValuePair{}))
 		assert.NoError(t, err)
 	})
 
@@ -624,7 +752,7 @@ func TestTransactionParameterTypeValidation(t *testing.T) {
             }
         `
 
-		err := executeTransaction(script, cadence.NewOptional(nil))
+		err := executeTransaction(t, script, cadence.NewOptional(nil))
 
 		expectCheckerErrors(
 			t,
@@ -641,7 +769,7 @@ func TestTransactionParameterTypeValidation(t *testing.T) {
             }
         `
 
-		err := executeTransaction(script, cadence.NewArray([]cadence.Value{}))
+		err := executeTransaction(t, script, cadence.NewArray([]cadence.Value{}))
 
 		expectCheckerErrors(
 			t,
@@ -665,7 +793,7 @@ func TestTransactionParameterTypeValidation(t *testing.T) {
 					typ.QualifiedString(),
 				)
 
-				err := executeTransaction(script, cadence.NewOptional(nil))
+				err := executeTransaction(t, script, cadence.NewOptional(nil))
 				assert.NoError(t, err)
 			})
 		}
@@ -749,7 +877,7 @@ func TestTransactionParameterTypeValidation(t *testing.T) {
 					test.typeSignature,
 				)
 
-				err := executeTransaction(script, test.argument)
+				err := executeTransaction(t, script, test.argument)
 
 				if test.expectErrors {
 					expectCheckerErrors(
@@ -766,5 +894,72 @@ func TestTransactionParameterTypeValidation(t *testing.T) {
 		for _, testCase := range argumentPassingTests {
 			testArgumentPassing(testCase)
 		}
+	})
+
+	t.Run("As AnyStruct", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+                transaction(arg: AnyStruct?) {
+                }
+                pub struct Foo {
+                    pub var nonImportableField: PublicAccount.Keys?
+                    init() {
+                        self.nonImportableField = nil
+                    }
+                }
+            `
+
+		err := executeTransaction(t, script, cadence.NewOptional(fooStruct))
+		expectRuntimeError(t, err, &ArgumentNotImportableError{})
+	})
+
+	t.Run("As importable interface", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+                transaction(arg: {Bar}?) {
+                }
+                pub struct Foo: Bar {
+                    pub var nonImportableField: PublicAccount.Keys?
+                    init() {
+                        self.nonImportableField = nil
+                    }
+                }
+                pub struct interface Bar {
+                }
+            `
+
+		err := executeTransaction(t, script, cadence.NewOptional(fooStruct))
+		expectRuntimeError(t, err, &ArgumentNotImportableError{})
+	})
+
+	t.Run("Native struct as AnyStruct", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+                transaction(arg: AnyStruct) {
+                }
+            `
+
+		err := executeTransaction(t, script, publicAccountKeys)
+		expectRuntimeError(t, err, &ArgumentNotImportableError{})
+	})
+
+	t.Run("In array", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+                transaction(arg: [AnyStruct]) {
+                }
+            `
+
+		err := executeTransaction(t,
+			script,
+			cadence.NewArray([]cadence.Value{
+				publicAccountKeys,
+			}),
+		)
+		expectRuntimeError(t, err, &ArgumentNotImportableError{})
 	})
 }
