@@ -83,7 +83,7 @@ type ArrayDynamicType struct {
 
 func (*ArrayDynamicType) IsDynamicType() {}
 
-func (t ArrayDynamicType) IsImportable() bool {
+func (t *ArrayDynamicType) IsImportable() bool {
 	for _, elementType := range t.ElementTypes {
 		if !elementType.IsImportable() {
 			return false
