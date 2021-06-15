@@ -74,5 +74,6 @@ check-tidy: generate
 release:
 	@(VERSIONED_FILES="version.go \
 	npm-packages/cadence-parser/package.json \
-	npm-packages/cadence-language-server/package.json" \
+	npm-packages/cadence-language-server/package.json \
+	npm-packages/cadence-docgen/package.json" \
 	./bump-version.sh $(bump))
