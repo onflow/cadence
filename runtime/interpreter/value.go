@@ -7147,6 +7147,24 @@ func (v *CompositeValue) ensureFieldsLoaded() {
 	v.encodingVersion = 0
 }
 
+func NewEnumCaseValue(
+	enumType *sema.CompositeType,
+	rawValue NumberValue,
+	functions map[string]FunctionValue,
+) *CompositeValue {
+
+	fields := NewStringValueOrderedMap()
+	fields.Set(sema.EnumRawValueFieldName, rawValue)
+
+	return &CompositeValue{
+		location:            enumType.Location,
+		qualifiedIdentifier: enumType.QualifiedIdentifier(),
+		kind:                enumType.Kind,
+		fields:              fields,
+		Functions:           functions,
+	}
+}
+
 // DictionaryValue
 
 type DictionaryValue struct {
@@ -9151,8 +9169,7 @@ func NewAccountKeyValue(
 func NewPublicKeyValue(
 	publicKey *ArrayValue,
 	signAlgo *CompositeValue,
-	validationFunction PublicKeyValidationHandlerFunc,
-	verifyFunction FunctionValue,
+	validatePublicKey PublicKeyValidationHandlerFunc,
 ) *CompositeValue {
 
 	fields := NewStringValueOrderedMap()
@@ -9167,7 +9184,7 @@ func NewPublicKeyValue(
 	)
 
 	functions := map[string]FunctionValue{
-		sema.PublicKeyVerifyFunction: verifyFunction,
+		sema.PublicKeyVerifyFunction: publicKeyVerifyFunction,
 	}
 
 	publicKeyValue := &CompositeValue{
@@ -9179,7 +9196,11 @@ func NewPublicKeyValue(
 	}
 
 	// Validate the public key, and initialize 'isValid' field.
-	publicKeyValue.fields.Set(sema.PublicKeyIsValidField, validationFunction(publicKeyValue))
+
+	publicKeyValue.fields.Set(
+		sema.PublicKeyIsValidField,
+		validatePublicKey(publicKeyValue),
+	)
 
 	// Public key value to string should include the key even though it is a computed field
 	var stringerFields *StringValueOrderedMap
@@ -9199,8 +9220,25 @@ func NewPublicKeyValue(
 	}
 
 	return publicKeyValue
-
 }
+
+var publicKeyVerifyFunction = NewHostFunctionValue(
+	func(invocation Invocation) Value {
+		signatureValue := invocation.Arguments[0].(*ArrayValue)
+		signedDataValue := invocation.Arguments[1].(*ArrayValue)
+		domainSeparationTag := invocation.Arguments[2].(*StringValue)
+		hashAlgo := invocation.Arguments[3].(*CompositeValue)
+		publicKey := invocation.Self
+
+		return invocation.Interpreter.SignatureVerificationHandler(
+			signatureValue,
+			signedDataValue,
+			domainSeparationTag,
+			hashAlgo,
+			publicKey,
+		)
+	},
+)
 
 // NewAuthAccountKeysValue constructs a AuthAccount.Keys value.
 func NewAuthAccountKeysValue(addFunction FunctionValue, getFunction FunctionValue, revokeFunction FunctionValue) *CompositeValue {
@@ -9224,17 +9262,6 @@ func NewPublicAccountKeysValue(getFunction FunctionValue) *CompositeValue {
 	return &CompositeValue{
 		qualifiedIdentifier: sema.PublicAccountKeysType.QualifiedIdentifier(),
 		kind:                sema.PublicAccountKeysType.Kind,
-		fields:              fields,
-	}
-}
-
-func NewCryptoAlgorithmEnumCaseValue(enumType *sema.CompositeType, rawValue uint8) *CompositeValue {
-	fields := NewStringValueOrderedMap()
-	fields.Set(sema.EnumRawValueFieldName, UInt8Value(rawValue))
-
-	return &CompositeValue{
-		qualifiedIdentifier: enumType.QualifiedIdentifier(),
-		kind:                enumType.Kind,
 		fields:              fields,
 	}
 }

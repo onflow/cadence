@@ -681,7 +681,7 @@ func validateArgumentParams(
 			}
 		}
 
-		arg := importValue(inter, runtimeInterface, value)
+		arg := importValue(inter, value)
 
 		dynamicTypeResults := interpreter.DynamicTypeResults{}
 
@@ -964,7 +964,6 @@ func (r *interpreterRuntime) newInterpreter(
 					compositeType,
 					constructor,
 					invocationRange,
-					context.Interface,
 					runtimeStorage,
 				)
 			},
@@ -985,7 +984,7 @@ func (r *interpreterRuntime) newInterpreter(
 				return validatePublicKey(publicKey, context.Interface)
 			},
 		),
-		interpreter.WithSignatureValidationHandler(
+		interpreter.WithSignatureVerificationHandler(
 			func(
 				signature *interpreter.ArrayValue,
 				signedData *interpreter.ArrayValue,
@@ -993,12 +992,26 @@ func (r *interpreterRuntime) newInterpreter(
 				hashAlgorithm *interpreter.CompositeValue,
 				publicKey *interpreter.CompositeValue,
 			) interpreter.BoolValue {
-				return validateSignature(
+				return verifySignature(
 					signature,
 					signedData,
 					domainSeparationTag,
 					hashAlgorithm,
 					publicKey,
+					context.Interface,
+				)
+			},
+		),
+		interpreter.WithHashHandler(
+			func(
+				data *interpreter.ArrayValue,
+				tag *interpreter.StringValue,
+				hashAlgorithm *interpreter.CompositeValue,
+			) *interpreter.ArrayValue {
+				return hash(
+					data,
+					tag,
+					hashAlgorithm,
 					context.Interface,
 				)
 			},
@@ -1567,7 +1580,6 @@ func (r *interpreterRuntime) loadContract(
 	compositeType *sema.CompositeType,
 	constructor interpreter.FunctionValue,
 	invocationRange ast.Range,
-	runtimeInterface Interface,
 	runtimeStorage *runtimeStorage,
 ) *interpreter.CompositeValue {
 
@@ -1576,7 +1588,6 @@ func (r *interpreterRuntime) loadContract(
 		contract, err := stdlib.NewCryptoContract(
 			inter,
 			constructor,
-			runtimeInterface,
 			invocationRange,
 		)
 		if err != nil {
@@ -1714,7 +1725,6 @@ func (r *interpreterRuntime) instantiateContract(
 					compositeType,
 					constructor,
 					invocationRange,
-					context.Interface,
 					runtimeStorage,
 				)
 			},
@@ -2546,7 +2556,10 @@ func (r *interpreterRuntime) newAccountKeysAddFunction(
 				},
 			)
 
-			return NewAccountKeyValue(accountKey, runtimeInterface)
+			return NewAccountKeyValue(
+				accountKey,
+				invocation.Interpreter.PublicKeyValidationHandler,
+			)
 		},
 	)
 }
@@ -2577,7 +2590,10 @@ func (r *interpreterRuntime) newAccountKeysGetFunction(
 				return interpreter.NilValue{}
 			}
 
-			return NewAccountKeyValue(accountKey, runtimeInterface)
+			return NewAccountKeyValue(
+				accountKey,
+				invocation.Interpreter.PublicKeyValidationHandler,
+			)
 		},
 	)
 }
@@ -2617,7 +2633,10 @@ func (r *interpreterRuntime) newAccountKeysRevokeFunction(
 				},
 			)
 
-			return NewAccountKeyValue(accountKey, runtimeInterface)
+			return NewAccountKeyValue(
+				accountKey,
+				invocation.Interpreter.PublicKeyValidationHandler,
+			)
 		},
 	)
 }
@@ -2692,20 +2711,35 @@ func NewPublicKeyFromValue(publicKey *interpreter.CompositeValue) (*PublicKey, e
 	}, nil
 }
 
-func NewPublicKeyValue(publicKey *PublicKey, runtimeInterface Interface) *interpreter.CompositeValue {
+func NewPublicKeyValue(
+	publicKey *PublicKey,
+	validatePublicKey interpreter.PublicKeyValidationHandlerFunc,
+) *interpreter.CompositeValue {
 	return interpreter.NewPublicKeyValue(
 		interpreter.ByteSliceToByteArrayValue(publicKey.PublicKey),
-		interpreter.NewCryptoAlgorithmEnumCaseValue(sema.SignatureAlgorithmType, publicKey.SignAlgo.RawValue()),
-		newPublicKeyValidationFunction(publicKey, runtimeInterface),
-		newPublicKeyVerifyFunction(runtimeInterface),
+		stdlib.NewSignatureAlgorithmCase(publicKey.SignAlgo.RawValue()),
+		func(publicKeyValue *interpreter.CompositeValue) interpreter.BoolValue {
+			// If the public key is already validated, avoid re-validating, and return the cached result.
+			if publicKey.Validated {
+				return interpreter.BoolValue(publicKey.IsValid)
+			}
+
+			return validatePublicKey(publicKeyValue)
+		},
 	)
 }
 
-func NewAccountKeyValue(accountKey *AccountKey, runtimeInterface Interface) *interpreter.CompositeValue {
+func NewAccountKeyValue(
+	accountKey *AccountKey,
+	validatePublicKey interpreter.PublicKeyValidationHandlerFunc,
+) *interpreter.CompositeValue {
 	return interpreter.NewAccountKeyValue(
 		interpreter.NewIntValueFromInt64(int64(accountKey.KeyIndex)),
-		NewPublicKeyValue(accountKey.PublicKey, runtimeInterface),
-		interpreter.NewCryptoAlgorithmEnumCaseValue(sema.HashAlgorithmType, accountKey.HashAlgo.RawValue()),
+		NewPublicKeyValue(
+			accountKey.PublicKey,
+			validatePublicKey,
+		),
+		stdlib.NewHashAlgorithmCase(accountKey.HashAlgo.RawValue()),
 		interpreter.NewUFix64ValueWithInteger(uint64(accountKey.Weight)),
 		interpreter.BoolValue(accountKey.IsRevoked),
 	)
@@ -2722,21 +2756,6 @@ func NewHashAlgorithmFromValue(value interpreter.Value) HashAlgorithm {
 	hashAlgoRawValue := rawValue.(interpreter.UInt8Value)
 
 	return HashAlgorithm(hashAlgoRawValue.ToInt())
-}
-
-func newPublicKeyValidationFunction(
-	publicKey *PublicKey,
-	runtimeInterface Interface,
-) interpreter.PublicKeyValidationHandlerFunc {
-
-	return func(publicKeyValue *interpreter.CompositeValue) interpreter.BoolValue {
-		// If the public key is already validated, avoid re-validating, and return the cached result.
-		if publicKey.Validated {
-			return interpreter.BoolValue(publicKey.IsValid)
-		}
-
-		return validatePublicKey(publicKeyValue, runtimeInterface)
-	}
 }
 
 func validatePublicKey(publicKeyValue *interpreter.CompositeValue, runtimeInterface Interface) interpreter.BoolValue {
@@ -2757,28 +2776,7 @@ func validatePublicKey(publicKeyValue *interpreter.CompositeValue, runtimeInterf
 	return interpreter.BoolValue(valid)
 }
 
-func newPublicKeyVerifyFunction(runtimeInterface Interface) interpreter.HostFunctionValue {
-	return interpreter.NewHostFunctionValue(
-		func(invocation interpreter.Invocation) interpreter.Value {
-			signatureValue := invocation.Arguments[0].(*interpreter.ArrayValue)
-			signedDataValue := invocation.Arguments[1].(*interpreter.ArrayValue)
-			domainSeparationTag := invocation.Arguments[2].(*interpreter.StringValue)
-			hashAlgo := invocation.Arguments[3].(*interpreter.CompositeValue)
-			publicKey := invocation.Self
-
-			return validateSignature(
-				signatureValue,
-				signedDataValue,
-				domainSeparationTag,
-				hashAlgo,
-				publicKey,
-				runtimeInterface,
-			)
-		},
-	)
-}
-
-func validateSignature(
+func verifySignature(
 	signatureValue *interpreter.ArrayValue,
 	signedDataValue *interpreter.ArrayValue,
 	domainSeparationTagValue *interpreter.StringValue,
@@ -2823,4 +2821,34 @@ func validateSignature(
 	}
 
 	return interpreter.BoolValue(valid)
+}
+
+func hash(
+	dataValue *interpreter.ArrayValue,
+	tagValue *interpreter.StringValue,
+	hashAlgorithmValue *interpreter.CompositeValue,
+	runtimeInterface Interface,
+) *interpreter.ArrayValue {
+
+	data, err := interpreter.ByteArrayValueToByteSlice(dataValue)
+	if err != nil {
+		panic(fmt.Errorf("failed to get data. %w", err))
+	}
+
+	var tag string
+	if tagValue != nil {
+		tag = tagValue.Str
+	}
+
+	hashAlgorithm := NewHashAlgorithmFromValue(hashAlgorithmValue)
+
+	var result []byte
+	wrapPanic(func() {
+		result, err = runtimeInterface.Hash(data, tag, hashAlgorithm)
+	})
+	if err != nil {
+		panic(err)
+	}
+
+	return interpreter.ByteSliceToByteArrayValue(result)
 }

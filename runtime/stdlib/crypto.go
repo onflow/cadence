@@ -19,9 +19,6 @@
 package stdlib
 
 import (
-	"errors"
-	"fmt"
-
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	errors2 "github.com/onflow/cadence/runtime/errors"
@@ -30,18 +27,6 @@ import (
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib/internal"
 )
-
-type SignatureAlgorithm = sema.SignatureAlgorithm
-
-type HashAlgorithm = sema.HashAlgorithm
-
-type CryptoHasher interface {
-	Hash(
-		data []byte,
-		tag string,
-		hashAlgorithm HashAlgorithm,
-	) ([]byte, error)
-}
 
 var CryptoChecker = func() *sema.Checker {
 
@@ -81,34 +66,6 @@ var cryptoContractType = func() *sema.CompositeType {
 	return variable.Type.(*sema.CompositeType)
 }()
 
-const cryptoHasherImplIdentifier = "HasherImpl"
-
-func registerCheckerElaborationCompositeType(
-	identifier string,
-	explicitConformances []*sema.InterfaceType,
-) {
-	typeID := CryptoChecker.Location.TypeID(identifier)
-	CryptoChecker.Elaboration.CompositeTypes[typeID] = &sema.CompositeType{
-		Location:                      CryptoChecker.Location,
-		Identifier:                    identifier,
-		Kind:                          common.CompositeKindStructure,
-		ExplicitInterfaceConformances: explicitConformances,
-	}
-}
-
-func init() {
-	hasherVariable, ok := CryptoChecker.Elaboration.GlobalTypes.Get("Hasher")
-	if !ok {
-		panic(errors2.NewUnreachableError())
-	}
-	registerCheckerElaborationCompositeType(
-		cryptoHasherImplIdentifier,
-		[]*sema.InterfaceType{
-			hasherVariable.Type.(*sema.InterfaceType),
-		},
-	)
-}
-
 var cryptoContractInitializerTypes = func() (result []sema.Type) {
 	result = make([]sema.Type, len(cryptoContractType.ConstructorParameters))
 	for i, parameter := range cryptoContractType.ConstructorParameters {
@@ -117,67 +74,17 @@ var cryptoContractInitializerTypes = func() (result []sema.Type) {
 	return result
 }()
 
-func newCryptoContractHashFunction(hasher CryptoHasher) interpreter.FunctionValue {
-	return interpreter.NewHostFunctionValue(
-		func(invocation interpreter.Invocation) interpreter.Value {
-			data, err := interpreter.ByteArrayValueToByteSlice(invocation.Arguments[0])
-			if err != nil {
-				panic(fmt.Errorf("hash: invalid data argument: %w", err))
-			}
-
-			tagStringValue, ok := invocation.Arguments[1].(*interpreter.StringValue)
-			if !ok {
-				panic(errors.New("hash: invalid tag argument: not a string"))
-			}
-			tag := tagStringValue.Str
-
-			hashAlgorithm := getHashAlgorithmFromValue(invocation.Arguments[2])
-
-			digest, err := hasher.Hash(data, tag, hashAlgorithm)
-			if err != nil {
-				panic(err)
-
-			}
-
-			return interpreter.ByteSliceToByteArrayValue(digest)
-		},
-	)
-}
-
-func newCryptoContractHasher(hasher CryptoHasher) *interpreter.CompositeValue {
-
-	result := interpreter.NewCompositeValue(
-		CryptoChecker.Location,
-		cryptoHasherImplIdentifier,
-		common.CompositeKindStructure,
-		nil,
-		nil,
-	)
-
-	result.Functions = map[string]interpreter.FunctionValue{
-		"hash": newCryptoContractHashFunction(hasher),
-	}
-
-	return result
-}
-
 func NewCryptoContract(
 	inter *interpreter.Interpreter,
 	constructor interpreter.FunctionValue,
-	hasher CryptoHasher,
 	invocationRange ast.Range,
 ) (
 	*interpreter.CompositeValue,
 	error,
 ) {
-
-	var cryptoContractInitializerArguments = []interpreter.Value{
-		newCryptoContractHasher(hasher),
-	}
-
 	value, err := inter.InvokeFunctionValue(
 		constructor,
-		cryptoContractInitializerArguments,
+		nil,
 		cryptoContractInitializerTypes,
 		cryptoContractInitializerTypes,
 		invocationRange,
@@ -189,23 +96,4 @@ func NewCryptoContract(
 	compositeValue := value.(*interpreter.CompositeValue)
 
 	return compositeValue, nil
-}
-
-func getHashAlgorithmFromValue(value interpreter.Value) HashAlgorithm {
-	hashAlgoValue, ok := value.(*interpreter.CompositeValue)
-	if !ok || hashAlgoValue.QualifiedIdentifier() != sema.HashAlgorithmTypeName {
-		panic(fmt.Sprintf("hash algorithm value must be of type %s", sema.HashAlgorithmType))
-	}
-
-	rawValue, ok := hashAlgoValue.Fields().Get(sema.EnumRawValueFieldName)
-	if !ok {
-		panic("cannot find hash algorithm raw value")
-	}
-
-	hashAlgoRawValue, ok := rawValue.(interpreter.UInt8Value)
-	if !ok {
-		panic("hash algorithm raw value needs to be subtype of integer")
-	}
-
-	return HashAlgorithm(hashAlgoRawValue.ToInt())
 }
