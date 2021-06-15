@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package gen
+package docgen
 
 import (
 	"bytes"
@@ -31,7 +31,7 @@ import (
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/parser2"
-	"github.com/onflow/cadence/tools/docgen/gen/templates"
+	"github.com/onflow/cadence/tools/docgen/templates"
 )
 
 const nameSeparator = "_"
