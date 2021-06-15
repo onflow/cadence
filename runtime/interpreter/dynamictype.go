@@ -42,7 +42,7 @@ type MetaTypeDynamicType struct{}
 func (MetaTypeDynamicType) IsDynamicType() {}
 
 func (MetaTypeDynamicType) IsImportable() bool {
-	return false
+	return sema.MetaType.Importable
 }
 
 // VoidDynamicType
@@ -52,7 +52,7 @@ type VoidDynamicType struct{}
 func (VoidDynamicType) IsDynamicType() {}
 
 func (VoidDynamicType) IsImportable() bool {
-	return false
+	return sema.VoidType.Importable
 }
 
 // StringDynamicType
@@ -62,7 +62,7 @@ type StringDynamicType struct{}
 func (StringDynamicType) IsDynamicType() {}
 
 func (StringDynamicType) IsImportable() bool {
-	return true
+	return sema.StringType.Importable
 }
 
 // BoolDynamicType
@@ -72,7 +72,7 @@ type BoolDynamicType struct{}
 func (BoolDynamicType) IsDynamicType() {}
 
 func (BoolDynamicType) IsImportable() bool {
-	return true
+	return sema.BoolType.Importable
 }
 
 // ArrayDynamicType
@@ -241,7 +241,7 @@ type PrivatePathDynamicType struct{}
 func (PrivatePathDynamicType) IsDynamicType() {}
 
 func (PrivatePathDynamicType) IsImportable() bool {
-	return true
+	return sema.PrivatePathType.Importable
 }
 
 // PublicPathDynamicType
@@ -251,7 +251,7 @@ type PublicPathDynamicType struct{}
 func (PublicPathDynamicType) IsDynamicType() {}
 
 func (PublicPathDynamicType) IsImportable() bool {
-	return true
+	return sema.PublicPathType.Importable
 }
 
 // StoragePathDynamicType
@@ -261,7 +261,8 @@ type StoragePathDynamicType struct{}
 func (StoragePathDynamicType) IsDynamicType() {}
 
 func (StoragePathDynamicType) IsImportable() bool {
-	return true
+	return sema.StoragePathType.Importable
+
 }
 
 // CapabilityDynamicType
@@ -283,7 +284,7 @@ type DeployedContractDynamicType struct{}
 func (DeployedContractDynamicType) IsDynamicType() {}
 
 func (DeployedContractDynamicType) IsImportable() bool {
-	return false
+	return sema.DeployedContractType.Importable
 }
 
 // BlockDynamicType
@@ -293,7 +294,7 @@ type BlockDynamicType struct{}
 func (BlockDynamicType) IsDynamicType() {}
 
 func (BlockDynamicType) IsImportable() bool {
-	return false
+	return sema.BlockType.Importable
 }
 
 // UnwrapOptionalDynamicType returns the type if it is not an optional type,
