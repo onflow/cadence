@@ -37,6 +37,27 @@ Multi-line comments are balanced.
 /* this is a // comment up to here */ this is not part of the comment */
 ```
 
+### Documentation Comments
+Documentation comments (also known as "doc-strings" or "doc-comment") are a special set of comments that can be
+processed by tools, for example to generate human-readable documentation, or provide documentation in an IDE.
+
+Doc-comments either start with three slashes (`///`) on each line,
+or are surrounded by `/**` and `**/`.
+
+```cadence
+/// This is a documentation comment for `x`.
+/// It spans multiple lines.
+
+let x = 1
+```
+
+```cadence
+/** 
+  This is a documentation comment
+  which also spans multiple lines.
+**/
+```
+
 ## Names
 
 Names may start with any upper or lowercase letter (A-Z, a-z)
