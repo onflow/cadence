@@ -553,21 +553,21 @@ func importCompositeValue(
 		case sema.PublicKeyType:
 			// PublicKey has a dedicated constructor
 			// (e.g. it has computed fields that must be initialized)
-			return importPublicKey(inter, fields), nil
+			return importPublicKey(inter, fields)
 
 		case sema.HashAlgorithmType:
 			// HashAlgorithmType has a dedicated constructor
 			// (e.g. it has host functions)
-			return importHashAlgorithm(fields), nil
+			return importHashAlgorithm(fields)
 
 		case sema.SignatureAlgorithmType:
 			// continue in the normal path
 
 		default:
-			panic(fmt.Errorf(
+			return nil, fmt.Errorf(
 				"cannot import value of type %s",
 				qualifiedIdentifier,
-			))
+			)
 		}
 	}
 
@@ -583,24 +583,27 @@ func importCompositeValue(
 func importPublicKey(
 	inter *interpreter.Interpreter,
 	fields *interpreter.StringValueOrderedMap,
-) *interpreter.CompositeValue {
+) (
+	*interpreter.CompositeValue,
+	error,
+) {
 
 	var publicKeyValue *interpreter.ArrayValue
 	var signAlgoValue *interpreter.CompositeValue
 
 	ty := sema.PublicKeyType
 
-	fields.Foreach(func(fieldName string, value interpreter.Value) {
+	err := fields.ForeachWithError(func(fieldName string, value interpreter.Value) error {
 		switch fieldName {
 		case sema.PublicKeyPublicKeyField:
 			arrayValue, ok := value.(*interpreter.ArrayValue)
 			if !ok {
-				panic(fmt.Errorf(
+				return fmt.Errorf(
 					"cannot import value of type '%s'. invalid value for field '%s': %v",
 					ty,
 					fieldName,
 					value,
-				))
+				)
 			}
 
 			publicKeyValue = arrayValue
@@ -608,12 +611,12 @@ func importPublicKey(
 		case sema.PublicKeySignAlgoField:
 			compositeValue, ok := value.(*interpreter.CompositeValue)
 			if !ok {
-				panic(fmt.Errorf(
+				return fmt.Errorf(
 					"cannot import value of type '%s'. invalid value for field '%s': %v",
 					ty,
 					fieldName,
 					value,
-				))
+				)
 			}
 
 			signAlgoValue = compositeValue
@@ -621,78 +624,90 @@ func importPublicKey(
 		case sema.PublicKeyIsValidField:
 			// 'isValid' field set by the user must be ignored.
 			// This is calculated when creating the public key.
-			return
 
 		default:
-			panic(fmt.Errorf(
+			return fmt.Errorf(
 				"cannot import value of type '%s'. invalid field '%s'",
 				ty,
 				fieldName,
-			))
+			)
 		}
+
+		return nil
 	})
+	if err != nil {
+		return nil, err
+	}
 
 	if publicKeyValue == nil {
-		panic(fmt.Errorf(
+		return nil, fmt.Errorf(
 			"cannot import value of type '%s'. missing field '%s'",
 			ty,
 			sema.PublicKeyPublicKeyField,
-		))
+		)
 	}
 
 	if signAlgoValue == nil {
-		panic(fmt.Errorf(
+		return nil, fmt.Errorf(
 			"cannot import value of type '%s'. missing field '%s'",
 			ty,
 			sema.PublicKeySignAlgoField,
-		))
+		)
 	}
 
 	return interpreter.NewPublicKeyValue(
 		publicKeyValue,
 		signAlgoValue,
 		inter.PublicKeyValidationHandler,
-	)
+	), nil
 }
 
 func importHashAlgorithm(
 	fields *interpreter.StringValueOrderedMap,
-) *interpreter.CompositeValue {
+) (
+	*interpreter.CompositeValue,
+	error,
+) {
 
 	var foundRawValue bool
 	var rawValue interpreter.UInt8Value
 
 	ty := sema.HashAlgorithmType
 
-	fields.Foreach(func(fieldName string, value interpreter.Value) {
+	err := fields.ForeachWithError(func(fieldName string, value interpreter.Value) error {
 		switch fieldName {
 		case sema.EnumRawValueFieldName:
 			rawValue, foundRawValue = value.(interpreter.UInt8Value)
 			if !foundRawValue {
-				panic(fmt.Errorf(
+				return fmt.Errorf(
 					"cannot import value of type '%s'. invalid value for field '%s': %v",
 					ty,
 					fieldName,
 					value,
-				))
+				)
 			}
 
 		default:
-			panic(fmt.Errorf(
+			return fmt.Errorf(
 				"cannot import value of type '%s'. invalid field '%s'",
 				ty,
 				fieldName,
-			))
+			)
 		}
+
+		return nil
 	})
+	if err != nil {
+		return nil, err
+	}
 
 	if !foundRawValue {
-		panic(fmt.Errorf(
+		return nil, fmt.Errorf(
 			"cannot import value of type '%s'. missing field '%s'",
 			ty,
 			sema.EnumRawValueFieldName,
-		))
+		)
 	}
 
-	return stdlib.NewHashAlgorithmCase(uint8(rawValue))
+	return stdlib.NewHashAlgorithmCase(uint8(rawValue)), nil
 }
