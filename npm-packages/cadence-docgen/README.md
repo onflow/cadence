@@ -10,7 +10,8 @@ import {CadenceDocgen} from "@onflow/cadence-docgen"
 
 const docgen = await CadenceDocgen.create("cadence-docgen.wasm")
 
-const ast = docgen.generate(`
+const docs = docgen.generate(`
+  /// This is a simple function with a doc-comment.
   pub fun hello() {
   }
 `)
@@ -24,8 +25,6 @@ const ast = docgen.generate(`
   cd ../../tools/docgen/wasm/
 
   GOARCH=wasm GOOS=js go build -o ../../../npm-packages/cadence-docgen/dist/cadence-docgen.wasm
-
-  cd -
   ```
 
 <!-- Cannot build from current location due to: https://github.com/golang/go/issues/43733 -->

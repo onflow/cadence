@@ -56,9 +56,9 @@ export class CadenceDocgen {
     let instantiatedSource: WebAssemblyInstantiatedSource
     if (typeof urlOrBinary === 'string') {
       const binaryRequest = fetch(urlOrBinary)
-      instantiatedSource = (await WebAssembly.instantiateStreaming(binaryRequest, go.importObject))
+      instantiatedSource = await WebAssembly.instantiateStreaming(binaryRequest, go.importObject)
     } else {
-      instantiatedSource = await WebAssembly.instantiate(urlOrBinary, go.importObject);
+      instantiatedSource = await WebAssembly.instantiate(urlOrBinary, go.importObject)
     }
 
     // NOTE: don't await the promise, just ignore it, as it is only resolved when the program exists
