@@ -2221,8 +2221,7 @@ func checkHashable(ty types.Type) error {
 		}
 	case *types.Pointer,
 		*types.Array,
-		*types.Interface,
-		*types.Signature:
+		*types.Interface:
 		return nil
 
 	case *types.Struct:
