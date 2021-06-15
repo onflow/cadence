@@ -143,8 +143,8 @@ func getType(joinedTypeTag TypeTag, types ...Type) Type {
 		return AnyResourceType
 	case NeverTypeTag:
 		return NeverType
-	case ArrayTag:
-		// Contains only arrays.
+	case ArrayTag, DictionaryTag:
+		// Contains only arrays or only dictionaries.
 		var prevType Type
 		for _, typ := range types {
 			if prevType == nil {
@@ -162,7 +162,7 @@ func getType(joinedTypeTag TypeTag, types ...Type) Type {
 	default:
 
 		// Optional types.
-		if joinedTypeTag.contains(OptionalTag) {
+		if joinedTypeTag.containsAny(OptionalTag) {
 			// Get the type without the optional flag
 			innerTypeTag := joinedTypeTag & (^OptionalTag)
 			innerType := getType(innerTypeTag)
@@ -177,8 +177,8 @@ func getType(joinedTypeTag TypeTag, types ...Type) Type {
 			return IntType
 		}
 
-		if joinedTypeTag.contains(ArrayTag) {
-			// At this point, the types contains arrays and other types.
+		if joinedTypeTag.containsAny(ArrayTag, DictionaryTag) {
+			// At this point, the types contains arrays/dictionaries along with other types.
 			// So the common supertype could only be AnyStruct, AnyResource or none (both)
 			return commonSupertypeOfHeterogeneousTypes(types)
 		}
@@ -196,12 +196,18 @@ func getType(joinedTypeTag TypeTag, types ...Type) Type {
 	}
 }
 
-func (t TypeTag) contains(typeTag TypeTag) bool {
-	return (t & typeTag) == typeTag
+func (t TypeTag) containsAny(typeTags ...TypeTag) bool {
+	for _, tag := range typeTags {
+		if (t & tag) == tag {
+			return true
+		}
+	}
+
+	return false
 }
 
 func (t TypeTag) belongsTo(typeTag TypeTag) bool {
-	return typeTag.contains(t)
+	return typeTag.containsAny(t)
 }
 
 func commonSupertypeOfHeterogeneousTypes(types []Type) Type {

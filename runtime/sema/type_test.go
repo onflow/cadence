@@ -772,4 +772,82 @@ func TestCommonSuperType(t *testing.T) {
 		&VariableSizedType{Type: &VariableSizedType{Type: resourceType}},
 		&VariableSizedType{Type: &VariableSizedType{Type: StringType}},
 	))
+
+	fmt.Println("---- Dictionaries ---- ")
+	stringStringDictionary := &DictionaryType{
+		KeyType:   StringType,
+		ValueType: StringType,
+	}
+
+	stringBoolDictionary := &DictionaryType{
+		KeyType:   StringType,
+		ValueType: BoolType,
+	}
+
+	stringResourceDictionary := &DictionaryType{
+		KeyType:   StringType,
+		ValueType: resourceType,
+	}
+
+	assertLeastCommonSuperType := func(expectedType Type, types ...Type) {
+		assert.Equal(t, expectedType, CommonSuperType(types...))
+	}
+
+	assertLeastCommonSuperType(
+		stringStringDictionary,
+		stringStringDictionary,
+		stringStringDictionary,
+	)
+
+	assertLeastCommonSuperType(
+		AnyStructType,
+		stringStringDictionary,
+		stringBoolDictionary,
+	)
+
+	assertLeastCommonSuperType(
+		AnyStructType,
+		stringStringDictionary,
+		StringType,
+	)
+
+	assertLeastCommonSuperType(
+		NeverType,
+		stringStringDictionary,
+		stringResourceDictionary,
+	)
+
+	assertLeastCommonSuperType(
+		stringResourceDictionary,
+		stringResourceDictionary,
+		stringResourceDictionary,
+	)
+
+	assertLeastCommonSuperType(
+		AnyResourceType,
+		resourceType,
+		stringResourceDictionary,
+	)
+
+	nestedResourceDictionary := &DictionaryType{
+		KeyType:   StringType,
+		ValueType: stringResourceDictionary,
+	}
+
+	nestedStringDictionary := &DictionaryType{
+		KeyType:   StringType,
+		ValueType: stringStringDictionary,
+	}
+
+	assertLeastCommonSuperType(
+		nestedResourceDictionary,
+		nestedResourceDictionary,
+		nestedResourceDictionary,
+	)
+
+	assertLeastCommonSuperType(
+		NeverType,
+		nestedStringDictionary,
+		nestedResourceDictionary,
+	)
 }
