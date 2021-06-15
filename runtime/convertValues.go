@@ -488,7 +488,9 @@ func importCompositeValue(
 		case sema.SignatureAlgorithmType, sema.HashAlgorithmType:
 			// continue in the normal path
 		default:
-			panic(fmt.Errorf("cannot import value of type %s", qualifiedIdentifier))
+			// Continue and return a dummy value.
+			// It will be validated later through the 'IsStorable' dynamic check.
+			// TODO: return an error
 		}
 	}
 

@@ -114,8 +114,7 @@ type CompositeDynamicType struct {
 func (CompositeDynamicType) IsDynamicType() {}
 
 func (t CompositeDynamicType) IsImportable() bool {
-	// TODO: use 'IsImportable()' once available
-	return t.StaticType.IsStorable(map[*sema.Member]bool{})
+	return t.StaticType.IsImportable(map[*sema.Member]bool{})
 }
 
 // DictionaryDynamicType
