@@ -28,11 +28,10 @@ import (
 
 	"text/template"
 
-	"github.com/markbates/pkger"
-
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/parser2"
+	"github.com/onflow/cadence/tools/docgen/gen/templates"
 )
 
 const nameSeparator = "_"
@@ -103,36 +102,37 @@ func NewDocGenerator() *DocGenerator {
 		return fmt.Sprint(fileNamePrefix, nameSeparator, decl.DeclarationIdentifier().String(), mdFileExt)
 	}
 
-	gen.entryPageGen = newTemplate(baseTemplate)
-	gen.compositePageGen = newTemplate(compositeFullTemplate)
+	templateProvider := templates.NewMarkdownTemplateProvider()
+
+	gen.entryPageGen = newTemplate(baseTemplate, templateProvider)
+	gen.compositePageGen = newTemplate(compositeFullTemplate, templateProvider)
 
 	return gen
 }
 
-func newTemplate(name string) *template.Template {
-	tmpl := template.New(name).Funcs(functions)
-	tmpl = registerTemplates(tmpl)
-	return tmpl
-}
+func newTemplate(name string, templateProvider templates.TemplateProvider) *template.Template {
+	rootTemplate := template.New(name).Funcs(functions)
 
-func registerTemplates(tmpl *template.Template) *template.Template {
-	info, err := pkger.Current()
-	if err != nil {
-		panic(err)
+	for _, templateFile := range templateFiles {
+		content, err := templateProvider.Get(templateFile)
+		if err != nil {
+			panic(err)
+		}
+
+		var tmpl *template.Template
+		if templateFile == name {
+			tmpl = rootTemplate
+		} else {
+			tmpl = rootTemplate.New(name)
+		}
+
+		_, err = tmpl.Parse(content)
+		if err != nil {
+			panic(err)
+		}
 	}
 
-	var filePaths = make([]string, len(templateFiles))
-
-	for i, templateFile := range templateFiles {
-		filePaths[i] = path.Join(info.Dir, "gen", "templates", templateFile)
-	}
-
-	tmpl, err = tmpl.ParseFiles(filePaths...)
-	if err != nil {
-		panic(err)
-	}
-
-	return tmpl
+	return rootTemplate
 }
 
 func (gen *DocGenerator) Generate(source string, outputDir string) error {
