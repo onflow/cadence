@@ -7429,7 +7429,7 @@ func (v *DictionaryValue) DynamicType(interpreter *Interpreter, seenReferences S
 			}
 	}
 
-	return DictionaryDynamicType{
+	return &DictionaryDynamicType{
 		EntryTypes: entryTypes,
 	}
 }
@@ -7876,7 +7876,7 @@ func (v *DictionaryValue) ConformsToDynamicType(
 
 	v.ensureLoaded()
 
-	dictionaryType, ok := dynamicType.(DictionaryDynamicType)
+	dictionaryType, ok := dynamicType.(*DictionaryDynamicType)
 	if !ok || v.Count() != len(dictionaryType.EntryTypes) {
 		return false
 	}

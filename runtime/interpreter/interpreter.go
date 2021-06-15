@@ -2705,7 +2705,7 @@ func IsSubType(subType DynamicType, superType sema.Type) bool {
 
 		return true
 
-	case DictionaryDynamicType:
+	case *DictionaryDynamicType:
 
 		if typedSuperType, ok := superType.(*sema.DictionaryType); ok {
 			for _, entryTypes := range typedSubType.EntryTypes {

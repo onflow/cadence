@@ -123,9 +123,9 @@ type DictionaryDynamicType struct {
 	EntryTypes []struct{ KeyType, ValueType DynamicType }
 }
 
-func (DictionaryDynamicType) IsDynamicType() {}
+func (*DictionaryDynamicType) IsDynamicType() {}
 
-func (t DictionaryDynamicType) IsImportable() bool {
+func (t *DictionaryDynamicType) IsImportable() bool {
 	for _, entryType := range t.EntryTypes {
 		if !entryType.KeyType.IsImportable() ||
 			!entryType.ValueType.IsImportable() {
