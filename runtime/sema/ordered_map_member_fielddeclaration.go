@@ -131,6 +131,19 @@ func (om *MemberAstFieldDeclarationOrderedMap) Foreach(f func(key *Member, value
 	}
 }
 
+// ForeachWithError iterates over the entries of the map in the insertion order,
+// and invokes the provided function for each key-value pair.
+// If the passed function returns an error, iteration breaks and the error is returned.
+func (om *MemberAstFieldDeclarationOrderedMap) ForeachWithError(f func(key *Member, value *ast.FieldDeclaration) error) error {
+	for pair := om.Oldest(); pair != nil; pair = pair.Next() {
+		err := f(pair.Key, pair.Value)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // MemberAstFieldDeclarationPair
 //
 type MemberAstFieldDeclarationPair struct {
