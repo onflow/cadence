@@ -29,7 +29,7 @@ import (
 	"github.com/onflow/cadence/tools/docgen"
 )
 
-const globalFunctionNamePrefix = "CADENCE_DOC_GENERATOR"
+const globalFunctionNamePrefix = "CADENCE_DOCGEN"
 
 func globalFunctionName(name string) string {
 	return fmt.Sprintf("__%s_%s__", globalFunctionNamePrefix, name)
