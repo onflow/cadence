@@ -69,8 +69,9 @@ func TestScriptParameterTypeValidation(t *testing.T) {
 		Fields: []cadence.Value{},
 	}
 
-	executeScript := func(t *testing.T, script string, arg cadence.Value) error {
-		encodedArg, err := json.Encode(arg)
+	executeScript := func(t *testing.T, script string, arg cadence.Value) (err error) {
+		var encodedArg []byte
+		encodedArg, err = json.Encode(arg)
 		require.NoError(t, err)
 
 		rt := NewInterpreterRuntime()
@@ -80,6 +81,13 @@ func TestScriptParameterTypeValidation(t *testing.T) {
 				return json.Decode(b)
 			},
 		}
+
+		// TODO: remove once importValue returns an error
+		defer func() {
+			if r := recover(); r != nil {
+				err, _ = r.(error)
+			}
+		}()
 
 		_, err = rt.ExecuteScript(
 			Script{
@@ -461,7 +469,8 @@ func TestScriptParameterTypeValidation(t *testing.T) {
             `
 
 		err := executeScript(t, script, publicAccountKeys)
-		expectRuntimeError(t, err, &ArgumentNotImportableError{})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "cannot import value of type PublicAccount.Keys")
 	})
 
 	t.Run("Invalid struct in array", func(t *testing.T) {
@@ -479,7 +488,8 @@ func TestScriptParameterTypeValidation(t *testing.T) {
 				publicAccountKeys,
 			}),
 		)
-		expectRuntimeError(t, err, &ArgumentNotImportableError{})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "cannot import value of type PublicAccount.Keys")
 	})
 }
 
@@ -530,8 +540,9 @@ func TestTransactionParameterTypeValidation(t *testing.T) {
 		Fields: []cadence.Value{},
 	}
 
-	executeTransaction := func(t *testing.T, script string, arg cadence.Value) error {
-		encodedArg, err := json.Encode(arg)
+	executeTransaction := func(t *testing.T, script string, arg cadence.Value) (err error) {
+		var encodedArg []byte
+		encodedArg, err = json.Encode(arg)
 		require.NoError(t, err)
 
 		rt := NewInterpreterRuntime()
@@ -541,6 +552,13 @@ func TestTransactionParameterTypeValidation(t *testing.T) {
 				return json.Decode(b)
 			},
 		}
+
+		// TODO: remove once importValue returns an error
+		defer func() {
+			if r := recover(); r != nil {
+				err, _ = r.(error)
+			}
+		}()
 
 		return rt.ExecuteTransaction(
 			Script{
@@ -943,7 +961,8 @@ func TestTransactionParameterTypeValidation(t *testing.T) {
             `
 
 		err := executeTransaction(t, script, publicAccountKeys)
-		expectRuntimeError(t, err, &ArgumentNotImportableError{})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "cannot import value of type PublicAccount.Keys")
 	})
 
 	t.Run("Invalid native struct in array", func(t *testing.T) {
@@ -960,6 +979,7 @@ func TestTransactionParameterTypeValidation(t *testing.T) {
 				publicAccountKeys,
 			}),
 		)
-		expectRuntimeError(t, err, &ArgumentNotImportableError{})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "cannot import value of type PublicAccount.Keys")
 	})
 }
