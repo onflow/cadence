@@ -29,7 +29,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/runtime/parser2"
-	"github.com/onflow/cadence/tools/docgen/gen"
+	"github.com/onflow/cadence/tools/docgen"
 )
 
 // This is a convenient method to generate the doc files given a cadence file.
@@ -45,7 +45,7 @@ func TestDocGen(t *testing.T) {
 	err = os.MkdirAll("outputs", os.ModePerm)
 	require.NoError(t, err)
 
-	docGen := gen.NewDocGenerator()
+	docGen := docgen.NewDocGenerator()
 
 	err = docGen.Generate(string(content), "outputs")
 	require.NoError(t, err)
@@ -55,7 +55,7 @@ func TestDocGenForMultiDeclarationFile(t *testing.T) {
 	content, err := ioutil.ReadFile(path.Join("samples", "sample1.cdc"))
 	require.NoError(t, err)
 
-	docGen := gen.NewDocGenerator()
+	docGen := docgen.NewDocGenerator()
 
 	docFiles, err := docGen.GenerateInMemory(string(content))
 	require.NoError(t, err)
@@ -74,7 +74,7 @@ func TestDocGenForSingleContractFile(t *testing.T) {
 	content, err := ioutil.ReadFile(path.Join("samples", "sample2.cdc"))
 	require.NoError(t, err)
 
-	docGen := gen.NewDocGenerator()
+	docGen := docgen.NewDocGenerator()
 
 	docFiles, err := docGen.GenerateInMemory(string(content))
 	require.NoError(t, err)
@@ -93,7 +93,7 @@ func TestDocGenErrors(t *testing.T) {
 	t.Parallel()
 
 	t.Run("syntax error", func(t *testing.T) {
-		docGen := gen.NewDocGenerator()
+		docGen := docgen.NewDocGenerator()
 
 		code := `
             fun foo() {
@@ -105,7 +105,7 @@ func TestDocGenErrors(t *testing.T) {
 	})
 
 	t.Run("invalid output path", func(t *testing.T) {
-		docGen := gen.NewDocGenerator()
+		docGen := docgen.NewDocGenerator()
 
 		code := `
             fun foo() {
@@ -123,7 +123,7 @@ func TestFunctionDocFormatting(t *testing.T) {
 	content, err := ioutil.ReadFile(path.Join("samples", "sample3.cdc"))
 	require.NoError(t, err)
 
-	docGen := gen.NewDocGenerator()
+	docGen := docgen.NewDocGenerator()
 
 	docFiles, err := docGen.GenerateInMemory(string(content))
 	require.NoError(t, err)

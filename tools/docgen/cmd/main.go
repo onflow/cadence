@@ -25,7 +25,7 @@ import (
 
 	"io/ioutil"
 
-	"github.com/onflow/cadence/tools/docgen/gen"
+	"github.com/onflow/cadence/tools/docgen"
 )
 
 func main() {
@@ -58,7 +58,7 @@ func main() {
 
 	code := string(content)
 
-	docGen := gen.NewDocGenerator()
+	docGen := docgen.NewDocGenerator()
 	err = docGen.Generate(code, outputDir)
 
 	if err != nil {

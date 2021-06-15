@@ -2131,7 +2131,6 @@ func TestPublicKeyValue(t *testing.T) {
 			func(publicKey *CompositeValue) BoolValue {
 				return true
 			},
-			nil,
 		)
 
 		require.Contains(t,

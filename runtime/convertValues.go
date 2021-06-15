@@ -25,6 +25,7 @@ import (
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
+	"github.com/onflow/cadence/runtime/stdlib"
 )
 
 // exportValue converts a runtime value to its native Go representation.
@@ -305,12 +306,12 @@ func exportCapabilityValue(v interpreter.CapabilityValue, inter *interpreter.Int
 }
 
 // importValue converts a Cadence value to a runtime value.
-func importValue(inter *interpreter.Interpreter, runtimeInterface Interface, value cadence.Value) interpreter.Value {
+func importValue(inter *interpreter.Interpreter, value cadence.Value) interpreter.Value {
 	switch v := value.(type) {
 	case cadence.Void:
 		return interpreter.VoidValue{}
 	case cadence.Optional:
-		return importOptionalValue(inter, runtimeInterface, v)
+		return importOptionalValue(inter, v)
 	case cadence.Bool:
 		return interpreter.BoolValue(v)
 	case cadence.String:
@@ -360,13 +361,12 @@ func importValue(inter *interpreter.Interpreter, runtimeInterface Interface, val
 	case cadence.UFix64:
 		return interpreter.UFix64Value(v)
 	case cadence.Array:
-		return importArrayValue(inter, runtimeInterface, v)
+		return importArrayValue(inter, v)
 	case cadence.Dictionary:
-		return importDictionaryValue(inter, runtimeInterface, v)
+		return importDictionaryValue(inter, v)
 	case cadence.Struct:
 		return importCompositeValue(
 			inter,
-			runtimeInterface,
 			common.CompositeKindStructure,
 			v.StructType.Location,
 			v.StructType.QualifiedIdentifier,
@@ -376,7 +376,6 @@ func importValue(inter *interpreter.Interpreter, runtimeInterface Interface, val
 	case cadence.Resource:
 		return importCompositeValue(
 			inter,
-			runtimeInterface,
 			common.CompositeKindResource,
 			v.ResourceType.Location,
 			v.ResourceType.QualifiedIdentifier,
@@ -386,7 +385,6 @@ func importValue(inter *interpreter.Interpreter, runtimeInterface Interface, val
 	case cadence.Event:
 		return importCompositeValue(
 			inter,
-			runtimeInterface,
 			common.CompositeKindEvent,
 			v.EventType.Location,
 			v.EventType.QualifiedIdentifier,
@@ -398,7 +396,6 @@ func importValue(inter *interpreter.Interpreter, runtimeInterface Interface, val
 	case cadence.Enum:
 		return importCompositeValue(
 			inter,
-			runtimeInterface,
 			common.CompositeKindEnum,
 			v.EnumType.Location,
 			v.EnumType.QualifiedIdentifier,
@@ -419,26 +416,24 @@ func importPathValue(v cadence.Path) interpreter.PathValue {
 
 func importOptionalValue(
 	inter *interpreter.Interpreter,
-	runtimeInterface Interface,
 	v cadence.Optional,
 ) interpreter.Value {
 	if v.Value == nil {
 		return interpreter.NilValue{}
 	}
 
-	innerValue := importValue(inter, runtimeInterface, v.Value)
+	innerValue := importValue(inter, v.Value)
 	return interpreter.NewSomeValueOwningNonCopying(innerValue)
 }
 
 func importArrayValue(
 	inter *interpreter.Interpreter,
-	runtimeInterface Interface,
 	v cadence.Array,
 ) *interpreter.ArrayValue {
 	values := make([]interpreter.Value, len(v.Values))
 
-	for i, elem := range v.Values {
-		values[i] = importValue(inter, runtimeInterface, elem)
+	for i, element := range v.Values {
+		values[i] = importValue(inter, element)
 	}
 
 	return interpreter.NewArrayValueUnownedNonCopying(values...)
@@ -446,14 +441,13 @@ func importArrayValue(
 
 func importDictionaryValue(
 	inter *interpreter.Interpreter,
-	runtimeInterface Interface,
 	v cadence.Dictionary,
 ) *interpreter.DictionaryValue {
 	keysAndValues := make([]interpreter.Value, len(v.Pairs)*2)
 
 	for i, pair := range v.Pairs {
-		keysAndValues[i*2] = importValue(inter, runtimeInterface, pair.Key)
-		keysAndValues[i*2+1] = importValue(inter, runtimeInterface, pair.Value)
+		keysAndValues[i*2] = importValue(inter, pair.Key)
+		keysAndValues[i*2+1] = importValue(inter, pair.Value)
 	}
 
 	return interpreter.NewDictionaryValueUnownedNonCopying(keysAndValues...)
@@ -461,7 +455,6 @@ func importDictionaryValue(
 
 func importCompositeValue(
 	inter *interpreter.Interpreter,
-	runtimeInterface Interface,
 	kind common.CompositeKind,
 	location Location,
 	qualifiedIdentifier string,
@@ -475,22 +468,30 @@ func importCompositeValue(
 		fieldValue := fieldValues[i]
 		fields.Set(
 			fieldType.Identifier,
-			importValue(inter, runtimeInterface, fieldValue),
+			importValue(inter, fieldValue),
 		)
 	}
 
 	if location == nil {
 		switch sema.NativeCompositeTypes[qualifiedIdentifier] {
 		case sema.PublicKeyType:
-			// PublicKey has computed fields, and methods that requires host
-			// environment. Therefore it needs to be handled separately.
-			return importPublicKey(inter, runtimeInterface, fields)
-		case sema.SignatureAlgorithmType, sema.HashAlgorithmType:
+			// PublicKey has a dedicated constructor
+			// (e.g. it has computed fields that must be initialized)
+			return importPublicKey(inter, fields)
+
+		case sema.HashAlgorithmType:
+			// HashAlgorithmType has a dedicated constructor
+			// (e.g. it has host functions)
+			return importHashAlgorithm(fields)
+
+		case sema.SignatureAlgorithmType:
 			// continue in the normal path
+
 		default:
-			// Continue and return a dummy value.
-			// It will be validated later through the 'IsStorable' dynamic check.
-			// TODO: return an error
+			panic(fmt.Errorf(
+				"cannot import value of type %s",
+				qualifiedIdentifier,
+			))
 		}
 	}
 
@@ -505,12 +506,13 @@ func importCompositeValue(
 
 func importPublicKey(
 	inter *interpreter.Interpreter,
-	runtimeInterface Interface,
 	fields *interpreter.StringValueOrderedMap,
 ) *interpreter.CompositeValue {
 
 	var publicKeyValue *interpreter.ArrayValue
 	var signAlgoValue *interpreter.CompositeValue
+
+	ty := sema.PublicKeyType
 
 	fields.Foreach(func(fieldName string, value interpreter.Value) {
 		switch fieldName {
@@ -519,7 +521,7 @@ func importPublicKey(
 			if !ok {
 				panic(fmt.Errorf(
 					"cannot import value of type '%s'. invalid value for field '%s': %v",
-					sema.PublicKeyType,
+					ty,
 					fieldName,
 					value,
 				))
@@ -532,7 +534,7 @@ func importPublicKey(
 			if !ok {
 				panic(fmt.Errorf(
 					"cannot import value of type '%s'. invalid value for field '%s': %v",
-					sema.PublicKeyType,
+					ty,
 					fieldName,
 					value,
 				))
@@ -548,7 +550,7 @@ func importPublicKey(
 		default:
 			panic(fmt.Errorf(
 				"cannot import value of type '%s'. invalid field '%s'",
-				sema.PublicKeyType,
+				ty,
 				fieldName,
 			))
 		}
@@ -557,7 +559,7 @@ func importPublicKey(
 	if publicKeyValue == nil {
 		panic(fmt.Errorf(
 			"cannot import value of type '%s'. missing field '%s'",
-			sema.PublicKeyType,
+			ty,
 			sema.PublicKeyPublicKeyField,
 		))
 	}
@@ -565,7 +567,7 @@ func importPublicKey(
 	if signAlgoValue == nil {
 		panic(fmt.Errorf(
 			"cannot import value of type '%s'. missing field '%s'",
-			sema.PublicKeyType,
+			ty,
 			sema.PublicKeySignAlgoField,
 		))
 	}
@@ -574,6 +576,47 @@ func importPublicKey(
 		publicKeyValue,
 		signAlgoValue,
 		inter.PublicKeyValidationHandler,
-		newPublicKeyVerifyFunction(runtimeInterface),
 	)
+}
+
+func importHashAlgorithm(
+	fields *interpreter.StringValueOrderedMap,
+) *interpreter.CompositeValue {
+
+	var foundRawValue bool
+	var rawValue interpreter.UInt8Value
+
+	ty := sema.HashAlgorithmType
+
+	fields.Foreach(func(fieldName string, value interpreter.Value) {
+		switch fieldName {
+		case sema.EnumRawValueFieldName:
+			rawValue, foundRawValue = value.(interpreter.UInt8Value)
+			if !foundRawValue {
+				panic(fmt.Errorf(
+					"cannot import value of type '%s'. invalid value for field '%s': %v",
+					ty,
+					fieldName,
+					value,
+				))
+			}
+
+		default:
+			panic(fmt.Errorf(
+				"cannot import value of type '%s'. invalid field '%s'",
+				ty,
+				fieldName,
+			))
+		}
+	})
+
+	if !foundRawValue {
+		panic(fmt.Errorf(
+			"cannot import value of type '%s'. missing field '%s'",
+			ty,
+			sema.EnumRawValueFieldName,
+		))
+	}
+
+	return stdlib.NewHashAlgorithmCase(uint8(rawValue))
 }
