@@ -36,7 +36,8 @@ const Int64Tag = Int32Tag << 1
 const Int128Tag = Int64Tag << 1
 const Int256Tag = Int128Tag << 1
 
-const IntTag = Int256Tag << 1
+// reserve 10 bits for float and word
+const IntTag = Int256Tag << 10
 const UIntTag = IntTag << 1
 const StringTag = UIntTag << 1
 const CharacterTag = StringTag << 1
@@ -151,9 +152,8 @@ func getType(joinedTypeTag TypeTag, types ...Type) Type {
 				continue
 			}
 
-			if typ != prevType {
-				// TODO: could be array of structs, resources, or both
-				return AnyStructType
+			if !typ.Equal(prevType) {
+				return commonSupertypeOfHeterogeneousTypes(types)
 			}
 		}
 
@@ -178,9 +178,9 @@ func getType(joinedTypeTag TypeTag, types ...Type) Type {
 		}
 
 		if joinedTypeTag.contains(ArrayTag) {
-			// TODO: Arrays with other types.
-			// 	could only be AnyStruct, AnyResource or none (both)
-			return AnyStructType
+			// At this point, the types contains arrays and other types.
+			// So the common supertype could only be AnyStruct, AnyResource or none (both)
+			return commonSupertypeOfHeterogeneousTypes(types)
 		}
 
 		if joinedTypeTag.belongsTo(AnyStructSuperTypeTag) {
@@ -202,4 +202,25 @@ func (t TypeTag) contains(typeTag TypeTag) bool {
 
 func (t TypeTag) belongsTo(typeTag TypeTag) bool {
 	return typeTag.contains(t)
+}
+
+func commonSupertypeOfHeterogeneousTypes(types []Type) Type {
+	var hasStructs, hasResources bool
+	for _, typ := range types {
+		isResource := typ.IsResourceType()
+		hasResources = hasResources || isResource
+		hasStructs = hasStructs || !isResource
+	}
+
+	if hasResources {
+		if hasStructs {
+			// If the types has both structs and resources,
+			// then there no common super type.
+			return NeverType
+		}
+
+		return AnyResourceType
+	}
+
+	return AnyStructType
 }

@@ -707,6 +707,12 @@ func TestIdentifierCacheUpdate(t *testing.T) {
 func TestCommonSuperType(t *testing.T) {
 	nilType := &OptionalType{NeverType}
 
+	resourceType := &CompositeType{
+		Location:   nil,
+		Identifier: "Foo",
+		Kind:       common.CompositeKindResource,
+	}
+
 	fmt.Println(CommonSuperType(UInt8Type, UInt8Type, UInt8Type))
 	fmt.Println(CommonSuperType(UInt8Type, UInt16Type, UInt256Type))
 	fmt.Println(CommonSuperType(Int8Type, Int16Type))
@@ -721,9 +727,49 @@ func TestCommonSuperType(t *testing.T) {
 	fmt.Println(CommonSuperType(Int8Type, StringType))
 	fmt.Println(CommonSuperType(nilType, StringType))
 
-	fmt.Println("----")
+	fmt.Println("---- Arrays ---- ")
 	fmt.Println(CommonSuperType(
 		&VariableSizedType{Type: StringType},
 		&VariableSizedType{Type: StringType},
+	))
+
+	fmt.Println(CommonSuperType(
+		&VariableSizedType{Type: StringType},
+		&ConstantSizedType{Type: StringType, Size: 2},
+	))
+
+	fmt.Println(CommonSuperType(
+		&VariableSizedType{Type: StringType},
+		&VariableSizedType{Type: BoolType},
+	))
+
+	fmt.Println(CommonSuperType(
+		&VariableSizedType{Type: StringType},
+		StringType,
+	))
+
+	fmt.Println(CommonSuperType(
+		&VariableSizedType{Type: StringType},
+		&VariableSizedType{Type: resourceType},
+	))
+
+	fmt.Println(CommonSuperType(
+		&VariableSizedType{Type: resourceType},
+		&VariableSizedType{Type: resourceType},
+	))
+
+	fmt.Println(CommonSuperType(
+		resourceType,
+		&VariableSizedType{Type: resourceType},
+	))
+
+	fmt.Println(CommonSuperType(
+		&VariableSizedType{Type: &VariableSizedType{Type: resourceType}},
+		&VariableSizedType{Type: &VariableSizedType{Type: resourceType}},
+	))
+
+	fmt.Println(CommonSuperType(
+		&VariableSizedType{Type: &VariableSizedType{Type: resourceType}},
+		&VariableSizedType{Type: &VariableSizedType{Type: StringType}},
 	))
 }
