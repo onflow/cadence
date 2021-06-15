@@ -1539,7 +1539,10 @@ func (interpreter *Interpreter) declareEnumConstructor(
 	return lexicalScope, variable
 }
 
-func EnumConstructorFunction(caseValues []*CompositeValue, nestedVariables *StringVariableOrderedMap) HostFunctionValue {
+func EnumConstructorFunction(
+	caseValues []*CompositeValue,
+	nestedVariables *StringVariableOrderedMap,
+) *HostFunctionValue {
 
 	// Prepare a lookup table based on the big-endian byte representation
 
@@ -2516,7 +2519,7 @@ func defineBaseFunctions(activation *VariableActivation) {
 
 type converterFunction struct {
 	name      string
-	converter HostFunctionValue
+	converter *HostFunctionValue
 }
 
 // Converter functions are stateless functions. Hence they can be re-used across interpreters.
@@ -2846,7 +2849,7 @@ func StorageKey(path PathValue) string {
 	return fmt.Sprintf("%s\x1F%s", path.Domain.Identifier(), path.Identifier)
 }
 
-func (interpreter *Interpreter) authAccountSaveFunction(addressValue AddressValue) HostFunctionValue {
+func (interpreter *Interpreter) authAccountSaveFunction(addressValue AddressValue) *HostFunctionValue {
 	return NewHostFunctionValue(func(invocation Invocation) Value {
 
 		value := invocation.Arguments[0]
@@ -2879,15 +2882,15 @@ func (interpreter *Interpreter) authAccountSaveFunction(addressValue AddressValu
 	})
 }
 
-func (interpreter *Interpreter) authAccountLoadFunction(addressValue AddressValue) HostFunctionValue {
+func (interpreter *Interpreter) authAccountLoadFunction(addressValue AddressValue) *HostFunctionValue {
 	return interpreter.authAccountReadFunction(addressValue, true)
 }
 
-func (interpreter *Interpreter) authAccountCopyFunction(addressValue AddressValue) HostFunctionValue {
+func (interpreter *Interpreter) authAccountCopyFunction(addressValue AddressValue) *HostFunctionValue {
 	return interpreter.authAccountReadFunction(addressValue, false)
 }
 
-func (interpreter *Interpreter) authAccountReadFunction(addressValue AddressValue, clear bool) HostFunctionValue {
+func (interpreter *Interpreter) authAccountReadFunction(addressValue AddressValue, clear bool) *HostFunctionValue {
 
 	return NewHostFunctionValue(func(invocation Invocation) Value {
 
@@ -2934,7 +2937,7 @@ func (interpreter *Interpreter) authAccountReadFunction(addressValue AddressValu
 	})
 }
 
-func (interpreter *Interpreter) authAccountBorrowFunction(addressValue AddressValue) HostFunctionValue {
+func (interpreter *Interpreter) authAccountBorrowFunction(addressValue AddressValue) *HostFunctionValue {
 	return NewHostFunctionValue(func(invocation Invocation) Value {
 
 		address := addressValue.ToAddress()
@@ -2970,7 +2973,7 @@ func (interpreter *Interpreter) authAccountBorrowFunction(addressValue AddressVa
 	})
 }
 
-func (interpreter *Interpreter) authAccountLinkFunction(addressValue AddressValue) HostFunctionValue {
+func (interpreter *Interpreter) authAccountLinkFunction(addressValue AddressValue) *HostFunctionValue {
 	return NewHostFunctionValue(func(invocation Invocation) Value {
 
 		address := addressValue.ToAddress()
@@ -3018,7 +3021,7 @@ func (interpreter *Interpreter) authAccountLinkFunction(addressValue AddressValu
 	})
 }
 
-func (interpreter *Interpreter) accountGetLinkTargetFunction(addressValue AddressValue) HostFunctionValue {
+func (interpreter *Interpreter) accountGetLinkTargetFunction(addressValue AddressValue) *HostFunctionValue {
 	return NewHostFunctionValue(func(invocation Invocation) Value {
 
 		address := addressValue.ToAddress()
@@ -3048,7 +3051,7 @@ func (interpreter *Interpreter) accountGetLinkTargetFunction(addressValue Addres
 	})
 }
 
-func (interpreter *Interpreter) authAccountUnlinkFunction(addressValue AddressValue) HostFunctionValue {
+func (interpreter *Interpreter) authAccountUnlinkFunction(addressValue AddressValue) *HostFunctionValue {
 	return NewHostFunctionValue(func(invocation Invocation) Value {
 
 		address := addressValue.ToAddress()
@@ -3072,7 +3075,7 @@ func (interpreter *Interpreter) capabilityBorrowFunction(
 	addressValue AddressValue,
 	pathValue PathValue,
 	borrowType *sema.ReferenceType,
-) HostFunctionValue {
+) *HostFunctionValue {
 
 	return NewHostFunctionValue(
 		func(invocation Invocation) Value {
@@ -3130,7 +3133,7 @@ func (interpreter *Interpreter) capabilityCheckFunction(
 	addressValue AddressValue,
 	pathValue PathValue,
 	borrowType *sema.ReferenceType,
-) HostFunctionValue {
+) *HostFunctionValue {
 
 	return NewHostFunctionValue(
 		func(invocation Invocation) Value {
@@ -3391,7 +3394,7 @@ func (interpreter *Interpreter) getMember(self Value, getLocationRange func() Lo
 	return result
 }
 
-func (interpreter *Interpreter) isInstanceFunction(self Value) HostFunctionValue {
+func (interpreter *Interpreter) isInstanceFunction(self Value) *HostFunctionValue {
 	return NewHostFunctionValue(
 		func(invocation Invocation) Value {
 			firstArgument := invocation.Arguments[0]
@@ -3413,7 +3416,7 @@ func (interpreter *Interpreter) isInstanceFunction(self Value) HostFunctionValue
 	)
 }
 
-func (interpreter *Interpreter) getTypeFunction(self Value) HostFunctionValue {
+func (interpreter *Interpreter) getTypeFunction(self Value) *HostFunctionValue {
 	return NewHostFunctionValue(
 		func(invocation Invocation) Value {
 			return TypeValue{

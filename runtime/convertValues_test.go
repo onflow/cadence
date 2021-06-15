@@ -272,7 +272,7 @@ func TestExportValue(t *testing.T) {
 		},
 		{
 			label:    "Host Function (invalid)",
-			value:    interpreter.HostFunctionValue{},
+			value:    &interpreter.HostFunctionValue{},
 			expected: nil,
 		},
 		{

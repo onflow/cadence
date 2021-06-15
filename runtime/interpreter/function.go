@@ -28,7 +28,7 @@ import (
 )
 
 // Invocation
-
+//
 type Invocation struct {
 	Self               *CompositeValue
 	Arguments          []Value
@@ -39,7 +39,7 @@ type Invocation struct {
 }
 
 // FunctionValue
-
+//
 type FunctionValue interface {
 	Value
 	isFunctionValue()
@@ -47,7 +47,7 @@ type FunctionValue interface {
 }
 
 // InterpretedFunctionValue
-
+//
 type InterpretedFunctionValue struct {
 	Interpreter      *Interpreter
 	ParameterList    *ast.ParameterList
@@ -141,7 +141,7 @@ func (*InterpretedFunctionValue) IsStorable() bool {
 }
 
 // HostFunctionValue
-
+//
 type HostFunction func(invocation Invocation) Value
 
 type HostFunctionValue struct {
@@ -149,72 +149,72 @@ type HostFunctionValue struct {
 	NestedVariables *StringVariableOrderedMap
 }
 
-func (f HostFunctionValue) String() string {
+func (f *HostFunctionValue) String() string {
 	// TODO: include type
 	return "Function(...)"
 }
 
-func (f HostFunctionValue) RecursiveString(_ SeenReferences) string {
+func (f *HostFunctionValue) RecursiveString(_ SeenReferences) string {
 	return f.String()
 }
 
 func NewHostFunctionValue(
 	function HostFunction,
-) HostFunctionValue {
-	return HostFunctionValue{
+) *HostFunctionValue {
+	return &HostFunctionValue{
 		Function: function,
 	}
 }
 
-func (HostFunctionValue) IsValue() {}
+func (*HostFunctionValue) IsValue() {}
 
-func (f HostFunctionValue) Accept(interpreter *Interpreter, visitor Visitor) {
+func (f *HostFunctionValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitHostFunctionValue(interpreter, f)
 }
 
-func (f HostFunctionValue) Walk(_ func(Value)) {
+func (f *HostFunctionValue) Walk(_ func(Value)) {
 	// NO-OP
 }
 
 var hostFunctionDynamicType DynamicType = FunctionDynamicType{}
 
-func (HostFunctionValue) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
+func (*HostFunctionValue) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
 	return hostFunctionDynamicType
 }
 
-func (HostFunctionValue) StaticType() StaticType {
+func (*HostFunctionValue) StaticType() StaticType {
 	// TODO: add function static type, store static type in host function value
 	return nil
 }
 
-func (f HostFunctionValue) Copy() Value {
+func (f *HostFunctionValue) Copy() Value {
 	return f
 }
 
-func (HostFunctionValue) GetOwner() *common.Address {
+func (*HostFunctionValue) GetOwner() *common.Address {
 	// value is never owned
 	return nil
 }
 
-func (HostFunctionValue) SetOwner(_ *common.Address) {
+func (*HostFunctionValue) SetOwner(_ *common.Address) {
 	// NO-OP: value cannot be owned
 }
 
-func (HostFunctionValue) IsModified() bool {
+func (*HostFunctionValue) IsModified() bool {
 	return false
 }
 
-func (HostFunctionValue) SetModified(_ bool) {
+func (*HostFunctionValue) SetModified(_ bool) {
 	// NO-OP
 }
 
-func (HostFunctionValue) isFunctionValue() {}
+func (*HostFunctionValue) isFunctionValue() {}
 
-func (f HostFunctionValue) Invoke(invocation Invocation) Value {
+func (f *HostFunctionValue) Invoke(invocation Invocation) Value {
 	return f.Function(invocation)
 }
 
-func (f HostFunctionValue) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
+func (f *HostFunctionValue) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
 	if f.NestedVariables != nil {
 		if variable, ok := f.NestedVariables.Get(name); ok {
 			return variable.GetValue()
@@ -223,11 +223,11 @@ func (f HostFunctionValue) GetMember(_ *Interpreter, _ func() LocationRange, nam
 	return nil
 }
 
-func (HostFunctionValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
+func (*HostFunctionValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
 	panic(errors.NewUnreachableError())
 }
 
-func (f HostFunctionValue) ConformsToDynamicType(_ *Interpreter, _ DynamicType, _ TypeConformanceResults) bool {
+func (f *HostFunctionValue) ConformsToDynamicType(_ *Interpreter, _ DynamicType, _ TypeConformanceResults) bool {
 	// TODO: once HostFunctionValue has static function type,
 	//   and FunctionDynamicType has parameter and return type info,
 	//   check they match
@@ -235,12 +235,12 @@ func (f HostFunctionValue) ConformsToDynamicType(_ *Interpreter, _ DynamicType, 
 	return false
 }
 
-func (HostFunctionValue) IsStorable() bool {
+func (*HostFunctionValue) IsStorable() bool {
 	return false
 }
 
 // BoundFunctionValue
-
+//
 type BoundFunctionValue struct {
 	Function FunctionValue
 	Self     *CompositeValue

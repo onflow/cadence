@@ -8850,10 +8850,7 @@ func NewAuthAccountValue(
 	}
 }
 
-func accountGetCapabilityFunction(
-	addressValue AddressValue,
-) HostFunctionValue {
-
+func accountGetCapabilityFunction(addressValue AddressValue) *HostFunctionValue {
 	return NewHostFunctionValue(
 		func(invocation Invocation) Value {
 

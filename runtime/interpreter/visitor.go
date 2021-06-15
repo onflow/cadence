@@ -56,7 +56,7 @@ type Visitor interface {
 	VisitCapabilityValue(interpreter *Interpreter, value CapabilityValue)
 	VisitLinkValue(interpreter *Interpreter, value LinkValue)
 	VisitInterpretedFunctionValue(interpreter *Interpreter, value *InterpretedFunctionValue)
-	VisitHostFunctionValue(interpreter *Interpreter, value HostFunctionValue)
+	VisitHostFunctionValue(interpreter *Interpreter, value *HostFunctionValue)
 	VisitBoundFunctionValue(interpreter *Interpreter, value BoundFunctionValue)
 	VisitDeployedContractValue(interpreter *Interpreter, value DeployedContractValue)
 }
@@ -99,7 +99,7 @@ type EmptyVisitor struct {
 	CapabilityValueVisitor          func(interpreter *Interpreter, value CapabilityValue)
 	LinkValueVisitor                func(interpreter *Interpreter, value LinkValue)
 	InterpretedFunctionValueVisitor func(interpreter *Interpreter, value *InterpretedFunctionValue)
-	HostFunctionValueVisitor        func(interpreter *Interpreter, value HostFunctionValue)
+	HostFunctionValueVisitor        func(interpreter *Interpreter, value *HostFunctionValue)
 	BoundFunctionValueVisitor       func(interpreter *Interpreter, value BoundFunctionValue)
 	DeployedContractValueVisitor    func(interpreter *Interpreter, value DeployedContractValue)
 }
@@ -365,7 +365,7 @@ func (v EmptyVisitor) VisitInterpretedFunctionValue(interpreter *Interpreter, va
 	v.InterpretedFunctionValueVisitor(interpreter, value)
 }
 
-func (v EmptyVisitor) VisitHostFunctionValue(interpreter *Interpreter, value HostFunctionValue) {
+func (v EmptyVisitor) VisitHostFunctionValue(interpreter *Interpreter, value *HostFunctionValue) {
 	if v.HostFunctionValueVisitor == nil {
 		return
 	}

@@ -1503,7 +1503,7 @@ func storageCapacityGetFunction(addressValue interpreter.AddressValue, runtimeIn
 func (r *interpreterRuntime) newAddPublicKeyFunction(
 	addressValue interpreter.AddressValue,
 	runtimeInterface Interface,
-) interpreter.HostFunctionValue {
+) *interpreter.HostFunctionValue {
 	return interpreter.NewHostFunctionValue(
 		func(invocation interpreter.Invocation) interpreter.Value {
 			publicKeyValue := invocation.Arguments[0].(*interpreter.ArrayValue)
@@ -1537,7 +1537,7 @@ func (r *interpreterRuntime) newAddPublicKeyFunction(
 func (r *interpreterRuntime) newRemovePublicKeyFunction(
 	addressValue interpreter.AddressValue,
 	runtimeInterface Interface,
-) interpreter.HostFunctionValue {
+) *interpreter.HostFunctionValue {
 	return interpreter.NewHostFunctionValue(
 		func(invocation interpreter.Invocation) interpreter.Value {
 			index := invocation.Arguments[0].(interpreter.IntValue)
@@ -1953,7 +1953,7 @@ func (r *interpreterRuntime) newAuthAccountContractsChangeFunction(
 	interpreterOptions []interpreter.Option,
 	checkerOptions []sema.Option,
 	isUpdate bool,
-) interpreter.HostFunctionValue {
+) *interpreter.HostFunctionValue {
 	return interpreter.NewHostFunctionValue(
 		func(invocation interpreter.Invocation) interpreter.Value {
 
@@ -2320,7 +2320,7 @@ func (r *interpreterRuntime) updateAccountContractCode(
 func (r *interpreterRuntime) newAuthAccountContractsGetFunction(
 	addressValue interpreter.AddressValue,
 	runtimeInterface Interface,
-) interpreter.HostFunctionValue {
+) *interpreter.HostFunctionValue {
 	return interpreter.NewHostFunctionValue(
 		func(invocation interpreter.Invocation) interpreter.Value {
 
@@ -2356,7 +2356,7 @@ func (r *interpreterRuntime) newAuthAccountContractsRemoveFunction(
 	addressValue interpreter.AddressValue,
 	runtimeInterface Interface,
 	runtimeStorage *runtimeStorage,
-) interpreter.HostFunctionValue {
+) *interpreter.HostFunctionValue {
 	return interpreter.NewHostFunctionValue(
 		func(invocation interpreter.Invocation) interpreter.Value {
 
@@ -2548,7 +2548,7 @@ func NewBlockValue(block Block) interpreter.BlockValue {
 func (r *interpreterRuntime) newAccountKeysAddFunction(
 	addressValue interpreter.AddressValue,
 	runtimeInterface Interface,
-) interpreter.HostFunctionValue {
+) *interpreter.HostFunctionValue {
 	return interpreter.NewHostFunctionValue(
 		func(invocation interpreter.Invocation) interpreter.Value {
 			publicKeyValue := invocation.Arguments[0].(*interpreter.CompositeValue)
@@ -2590,7 +2590,7 @@ func (r *interpreterRuntime) newAccountKeysAddFunction(
 func (r *interpreterRuntime) newAccountKeysGetFunction(
 	addressValue interpreter.AddressValue,
 	runtimeInterface Interface,
-) interpreter.HostFunctionValue {
+) *interpreter.HostFunctionValue {
 	return interpreter.NewHostFunctionValue(
 		func(invocation interpreter.Invocation) interpreter.Value {
 			index := invocation.Arguments[0].(interpreter.IntValue).ToInt()
@@ -2626,7 +2626,7 @@ func (r *interpreterRuntime) newAccountKeysGetFunction(
 func (r *interpreterRuntime) newAccountKeysRevokeFunction(
 	addressValue interpreter.AddressValue,
 	runtimeInterface Interface,
-) interpreter.HostFunctionValue {
+) *interpreter.HostFunctionValue {
 	return interpreter.NewHostFunctionValue(
 		func(invocation interpreter.Invocation) interpreter.Value {
 			indexValue := invocation.Arguments[0].(interpreter.IntValue)
