@@ -414,7 +414,7 @@ func TestScriptParameterTypeValidation(t *testing.T) {
 		}
 	})
 
-	t.Run("As AnyStruct", func(t *testing.T) {
+	t.Run("Invalid struct as AnyStruct", func(t *testing.T) {
 		t.Parallel()
 
 		script := `
@@ -432,7 +432,7 @@ func TestScriptParameterTypeValidation(t *testing.T) {
 		expectRuntimeError(t, err, &ArgumentNotImportableError{})
 	})
 
-	t.Run("As importable interface", func(t *testing.T) {
+	t.Run("Invalid struct as valid interface", func(t *testing.T) {
 		t.Parallel()
 
 		script := `
@@ -452,7 +452,7 @@ func TestScriptParameterTypeValidation(t *testing.T) {
 		expectRuntimeError(t, err, &ArgumentNotImportableError{})
 	})
 
-	t.Run("Native struct as AnyStruct", func(t *testing.T) {
+	t.Run("Invalid native struct as AnyStruct", func(t *testing.T) {
 		t.Parallel()
 
 		script := `
@@ -464,7 +464,7 @@ func TestScriptParameterTypeValidation(t *testing.T) {
 		expectRuntimeError(t, err, &ArgumentNotImportableError{})
 	})
 
-	t.Run("In array", func(t *testing.T) {
+	t.Run("Invalid struct in array", func(t *testing.T) {
 		t.Parallel()
 
 		script := `
@@ -896,7 +896,7 @@ func TestTransactionParameterTypeValidation(t *testing.T) {
 		}
 	})
 
-	t.Run("As AnyStruct", func(t *testing.T) {
+	t.Run("Invalid struct as AnyStruct", func(t *testing.T) {
 		t.Parallel()
 
 		script := `
@@ -914,7 +914,7 @@ func TestTransactionParameterTypeValidation(t *testing.T) {
 		expectRuntimeError(t, err, &ArgumentNotImportableError{})
 	})
 
-	t.Run("As importable interface", func(t *testing.T) {
+	t.Run("Invalid struct as valid interface", func(t *testing.T) {
 		t.Parallel()
 
 		script := `
@@ -934,7 +934,7 @@ func TestTransactionParameterTypeValidation(t *testing.T) {
 		expectRuntimeError(t, err, &ArgumentNotImportableError{})
 	})
 
-	t.Run("Native struct as AnyStruct", func(t *testing.T) {
+	t.Run("Invalid native struct as AnyStruct", func(t *testing.T) {
 		t.Parallel()
 
 		script := `
@@ -946,7 +946,7 @@ func TestTransactionParameterTypeValidation(t *testing.T) {
 		expectRuntimeError(t, err, &ArgumentNotImportableError{})
 	})
 
-	t.Run("In array", func(t *testing.T) {
+	t.Run("Invalid native struct in array", func(t *testing.T) {
 		t.Parallel()
 
 		script := `
