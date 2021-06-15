@@ -17,7 +17,7 @@ go run main.go <path_to_cadence_file> <output_dir>
 ```
 
 ## Documentation Comments Format
-The documentation comments (i.e: "doc-strings" / "doc-comments": line comments starts with `///`,
+The documentation comments ("doc-strings" / "doc-comments": line comments starting with `///`,
 or block comments starting with `/**`) available in Cadence programs are processed by the tool,
 to produce human-readable documentations.
 
@@ -65,15 +65,15 @@ pub fun add(a: Int, b: Int): Int {
 - Avoid using headings, horizontal-lines in the documentation.
   - It could potentially conflict with the headers and lines added by the tool, when generating the documentation
   - This may cause the generated documentation to be rendered in a disorganized manner.
-- Use inline-codes (within backticks `` `foo` ``) when referring to names/identifiers in the code.
-  - e.g: Referring to a function name, parameter names, etc.
-    ```
-    /// This is the description of the function.
-    /// This function adds `a` and `b` values.
-    ///
-    pub fun add(a: Int, b: Int): Int {
-    }
-    ```
+- Use inline-codes (within backticks `` `foo` ``) when referring to names/identifiers (such as function names,
+  parameter names, etc.) in the code.
+  ```
+  /// This is the description of the function.
+  /// This function adds `a` and `b` values.
+  ///
+  pub fun add(a: Int, b: Int): Int {
+  }
+  ```
 - When documenting function parameters and return type, avoid mixing parameter/return-type documentations
   with the description of the function. e.g:
   ```
