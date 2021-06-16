@@ -18,8 +18,8 @@
 
 package sema
 
-// TypeTag is a bit representation of a type.
-// Each type has a unique dedicated bit.
+// TypeTag is a bitMaskBit representation for types.
+// Each type has a unique dedicated bit in the bitMaskBit.
 //
 type TypeTag struct {
 	block1 uint64
@@ -69,65 +69,124 @@ func (t TypeTag) Not() TypeTag {
 	}
 }
 
+const (
+	uint8TypeMaskBit uint64 = iota
+	uint16TypeMaskBit
+	uint32TypeMaskBit
+	uint64TypeMaskBit
+	uint128TypeMaskBit
+	uint256TypeMaskBit
+
+	int8TypeMaskBit
+	int16TypeMaskBit
+	int32TypeMaskBit
+	int64TypeMaskBit
+	int128TypeMaskBit
+	int256TypeMaskBit
+
+	word8TypeMaskBit
+	word16TypeMaskBit
+	word32TypeMaskBit
+	word64TypeMaskBit
+
+	fix64TypeMaskBit
+	ufix64TypeMaskBit
+
+	intTypeMaskBit
+	uIntTypeMaskBit
+	stringTypeMaskBit
+	characterTypeMaskBit
+	boolTypeMaskBit
+	nilTypeMaskBit
+	voidTypeMaskBit
+	addressTypeMaskBit
+	metaTypeMaskBit
+	anyStructTypeMaskBit
+	anyResourceTypeMaskBit
+	anyTypeMaskBit
+
+	pathTypeMaskBit
+	storagePathTypeMaskBit
+	capabilityPathTypeMaskBit
+	publicPathTypeMaskBit
+	privatePathTypeMaskBit
+
+	arrayTypeMaskBit
+	dictionaryTypeMaskBit
+	compositeTypeMaskBit
+	referenceTypeMaskBit
+	resourceTypeMaskBit
+
+	optionalTypeMaskBit
+	genericTypeMaskBit
+	functionTypeMaskBit
+	interfaceTypeMaskBit
+	transactionTypeMaskBit
+	restrictedTypeMaskBit
+	capabilityTypeMaskBit
+
+	invalidTypeMaskBit
+)
+
 var (
 	NeverTypeTag = TypeTag{0, 0}
 
-	UInt8TypeTag   = NewTypeTag(0)
-	UInt16TypeTag  = NewTypeTag(1)
-	UInt32TypeTag  = NewTypeTag(2)
-	UInt64TypeTag  = NewTypeTag(3)
-	UInt128TypeTag = NewTypeTag(4)
-	UInt256TypeTag = NewTypeTag(5)
+	UInt8TypeTag   = NewTypeTag(uint8TypeMaskBit)
+	UInt16TypeTag  = NewTypeTag(uint16TypeMaskBit)
+	UInt32TypeTag  = NewTypeTag(uint32TypeMaskBit)
+	UInt64TypeTag  = NewTypeTag(uint64TypeMaskBit)
+	UInt128TypeTag = NewTypeTag(uint128TypeMaskBit)
+	UInt256TypeTag = NewTypeTag(uint256TypeMaskBit)
 
-	Int8TypeTag   = NewTypeTag(6)
-	Int16TypeTag  = NewTypeTag(7)
-	Int32TypeTag  = NewTypeTag(8)
-	Int64TypeTag  = NewTypeTag(9)
-	Int128TypeTag = NewTypeTag(10)
-	Int256TypeTag = NewTypeTag(11)
+	Int8TypeTag   = NewTypeTag(int8TypeMaskBit)
+	Int16TypeTag  = NewTypeTag(int16TypeMaskBit)
+	Int32TypeTag  = NewTypeTag(int32TypeMaskBit)
+	Int64TypeTag  = NewTypeTag(int64TypeMaskBit)
+	Int128TypeTag = NewTypeTag(int128TypeMaskBit)
+	Int256TypeTag = NewTypeTag(int256TypeMaskBit)
 
-	Word8TypeTag  = NewTypeTag(12)
-	Word16TypeTag = NewTypeTag(13)
-	Word32TypeTag = NewTypeTag(14)
-	Word64TypeTag = NewTypeTag(15)
+	Word8TypeTag  = NewTypeTag(word8TypeMaskBit)
+	Word16TypeTag = NewTypeTag(word16TypeMaskBit)
+	Word32TypeTag = NewTypeTag(word32TypeMaskBit)
+	Word64TypeTag = NewTypeTag(word64TypeMaskBit)
 
-	Fix64TypeTag  = NewTypeTag(16)
-	UFix64TypeTag = NewTypeTag(17)
+	Fix64TypeTag  = NewTypeTag(fix64TypeMaskBit)
+	UFix64TypeTag = NewTypeTag(ufix64TypeMaskBit)
 
-	IntTypeTag         = NewTypeTag(22)
-	UIntTypeTag        = NewTypeTag(23)
-	StringTypeTag      = NewTypeTag(24)
-	CharacterTypeTag   = NewTypeTag(25)
-	BoolTypeTag        = NewTypeTag(26)
-	NilTypeTag         = NewTypeTag(27)
-	VoidTypeTag        = NewTypeTag(28)
-	AddressTypeTag     = NewTypeTag(29)
-	MetaTypeTag        = NewTypeTag(30)
-	AnyStructTypeTag   = NewTypeTag(31)
-	AnyResourceTypeTag = NewTypeTag(32)
-	AnyTypeTag         = NewTypeTag(33)
+	IntTypeTag         = NewTypeTag(intTypeMaskBit)
+	UIntTypeTag        = NewTypeTag(uIntTypeMaskBit)
+	StringTypeTag      = NewTypeTag(stringTypeMaskBit)
+	CharacterTypeTag   = NewTypeTag(characterTypeMaskBit)
+	BoolTypeTag        = NewTypeTag(boolTypeMaskBit)
+	NilTypeTag         = NewTypeTag(nilTypeMaskBit)
+	VoidTypeTag        = NewTypeTag(voidTypeMaskBit)
+	AddressTypeTag     = NewTypeTag(addressTypeMaskBit)
+	MetaTypeTag        = NewTypeTag(metaTypeMaskBit)
+	AnyStructTypeTag   = NewTypeTag(anyStructTypeMaskBit)
+	AnyResourceTypeTag = NewTypeTag(anyResourceTypeMaskBit)
+	AnyTypeTag         = NewTypeTag(anyTypeMaskBit)
 
-	PathTypeTag           = NewTypeTag(34)
-	StoragePathTypeTag    = NewTypeTag(35)
-	CapabilityPathTypeTag = NewTypeTag(36)
-	PublicPathTypeTag     = NewTypeTag(37)
-	PrivatePathTypeTag    = NewTypeTag(38)
+	PathTypeTag           = NewTypeTag(pathTypeMaskBit)
+	StoragePathTypeTag    = NewTypeTag(storagePathTypeMaskBit)
+	CapabilityPathTypeTag = NewTypeTag(capabilityPathTypeMaskBit)
+	PublicPathTypeTag     = NewTypeTag(publicPathTypeMaskBit)
+	PrivatePathTypeTag    = NewTypeTag(privatePathTypeMaskBit)
 
-	ArrayTypeTag      = NewTypeTag(39)
-	DictionaryTypeTag = NewTypeTag(40)
-	CompositeTypeTag  = NewTypeTag(41)
-	ReferenceTypeTag  = NewTypeTag(42)
-	ResourceTypeTag   = NewTypeTag(43)
+	ArrayTypeTag      = NewTypeTag(arrayTypeMaskBit)
+	DictionaryTypeTag = NewTypeTag(dictionaryTypeMaskBit)
+	CompositeTypeTag  = NewTypeTag(compositeTypeMaskBit)
+	ReferenceTypeTag  = NewTypeTag(referenceTypeMaskBit)
+	ResourceTypeTag   = NewTypeTag(resourceTypeMaskBit)
 
-	OptionalTypeTag    = NewTypeTag(44)
-	GenericTypeTag     = NewTypeTag(45)
-	FunctionTypeTag    = NewTypeTag(46)
-	InterfaceTypeTag   = NewTypeTag(47)
-	TransactionTypeTag = NewTypeTag(48)
-	RestrictedTypeTag  = NewTypeTag(49)
-	CapabilityTypeTag  = NewTypeTag(50)
+	OptionalTypeTag    = NewTypeTag(optionalTypeMaskBit)
+	GenericTypeTag     = NewTypeTag(genericTypeMaskBit)
+	FunctionTypeTag    = NewTypeTag(functionTypeMaskBit)
+	InterfaceTypeTag   = NewTypeTag(interfaceTypeMaskBit)
+	TransactionTypeTag = NewTypeTag(transactionTypeMaskBit)
+	RestrictedTypeTag  = NewTypeTag(restrictedTypeMaskBit)
+	CapabilityTypeTag  = NewTypeTag(capabilityTypeMaskBit)
 
-	InvalidTypeTag = NewTypeTag(51)
+	InvalidTypeTag = NewTypeTag(invalidTypeMaskBit)
 
 	// Super types
 
