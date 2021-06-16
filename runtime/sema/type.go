@@ -451,7 +451,7 @@ func (*OptionalType) IsType() {}
 func (t *OptionalType) Tag() TypeTag {
 	// typeTag of the innter type, with the 'optional' flag turned on.
 	// Nested optionals makes no difference.
-	return t.Type.Tag() | OptionalTag
+	return t.Type.Tag().Or(OptionalTag)
 }
 
 func (t *OptionalType) String() string {

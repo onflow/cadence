@@ -18,74 +18,107 @@
 
 package sema
 
-type TypeTag uint64
+type TypeTag struct {
+	block1 uint64
+	block2 uint64
+}
 
-const NeverTypeTag TypeTag = 0
+func NewTypeTag(flag uint64) TypeTag {
+	if flag >= 127 {
+		panic("flag too large")
+	}
 
-const UInt8Tag TypeTag = 1
-const UInt16Tag = UInt8Tag << 1
-const UInt32Tag = UInt16Tag << 1
-const UInt64Tag = UInt32Tag << 1
-const UInt128Tag = UInt64Tag << 1
-const UInt256Tag = UInt128Tag << 1
+	if flag < 63 {
+		return TypeTag{1 << flag, 0}
+	}
 
-const Int8Tag = UInt256Tag << 1
-const Int16Tag = Int8Tag << 1
-const Int32Tag = Int16Tag << 1
-const Int64Tag = Int32Tag << 1
-const Int128Tag = Int64Tag << 1
-const Int256Tag = Int128Tag << 1
+	return TypeTag{0, 1 << (flag - 63)}
+}
 
-// reserve 10 bits for float and word
-const IntTag = Int256Tag << 10
-const UIntTag = IntTag << 1
-const StringTag = UIntTag << 1
-const CharacterTag = StringTag << 1
-const BoolTag = CharacterTag << 1
-const NilTag = BoolTag << 1
-const VoidTag = NilTag << 1
-const AddressTag = VoidTag << 1
-const MetaTag = AddressTag << 1
-const AnyStructTag = MetaTag << 1
-const AnyResourceTag = AnyStructTag << 1
-const AnyTag = AnyResourceTag << 1
+func (t TypeTag) Equals(tag TypeTag) bool {
+	return t.block1 == tag.block1 && t.block2 == tag.block2
+}
 
-const PathTag = AnyTag << 1
-const StoragePathTag = PathTag << 1
-const CapabilityPathTag = StoragePathTag << 1
-const PublicPathTag = CapabilityPathTag << 1
-const PrivatePathTag = PublicPathTag << 1
+func (t TypeTag) And(tag TypeTag) TypeTag {
+	return TypeTag{t.block1 & tag.block1, t.block2 & tag.block2}
+}
 
-const ArrayTag = PrivatePathTag << 1
-const DictionaryTag = ArrayTag << 1
-const CompositeTag = DictionaryTag << 1
-const ReferenceTag = CompositeTag << 1
-const ResourceTag = ReferenceTag << 1
+func (t TypeTag) Or(tag TypeTag) TypeTag {
+	return TypeTag{t.block1 | tag.block1, t.block2 | tag.block2}
+}
 
-const OptionalTag = ResourceTag << 1
-const GenericTag = OptionalTag << 1
-const FunctionTag = GenericTag << 1
-const InterfaceTag = FunctionTag << 1
-const TransactionTag = InterfaceTag << 1
-const RestrictedTag = TransactionTag << 1
-const CapabilityTag = RestrictedTag << 1
+func (t TypeTag) Not() TypeTag {
+	return TypeTag{^t.block1, ^t.block2}
+}
 
-const InvalidTag TypeTag = 1 << 62
+var (
+	NeverTypeTag = TypeTag{0, 0}
 
-// Super types
+	UInt8Tag   = NewTypeTag(0)
+	UInt16Tag  = NewTypeTag(1)
+	UInt32Tag  = NewTypeTag(2)
+	UInt64Tag  = NewTypeTag(3)
+	UInt128Tag = NewTypeTag(4)
+	UInt256Tag = NewTypeTag(5)
 
-const SignedIntTag = IntTag | Int8Tag | Int16Tag | Int32Tag | Int64Tag | Int128Tag | Int256Tag
+	Int8Tag   = NewTypeTag(6)
+	Int16Tag  = NewTypeTag(7)
+	Int32Tag  = NewTypeTag(8)
+	Int64Tag  = NewTypeTag(9)
+	Int128Tag = NewTypeTag(10)
+	Int256Tag = NewTypeTag(11)
 
-const UnsignedIntTag = UIntTag | UInt8Tag | UInt16Tag | UInt32Tag | UInt64Tag | UInt128Tag | UInt256Tag
+	// reserve 10 bits for float and word
+	IntTag         = NewTypeTag(21)
+	UIntTag        = NewTypeTag(22)
+	StringTag      = NewTypeTag(23)
+	CharacterTag   = NewTypeTag(24)
+	BoolTag        = NewTypeTag(25)
+	NilTag         = NewTypeTag(26)
+	VoidTag        = NewTypeTag(27)
+	AddressTag     = NewTypeTag(28)
+	MetaTag        = NewTypeTag(29)
+	AnyStructTag   = NewTypeTag(30)
+	AnyResourceTag = NewTypeTag(31)
+	AnyTag         = NewTypeTag(32)
 
-const IntSuperTypeTag = SignedIntTag | UnsignedIntTag
+	PathTag           = NewTypeTag(33)
+	StoragePathTag    = NewTypeTag(34)
+	CapabilityPathTag = NewTypeTag(35)
+	PublicPathTag     = NewTypeTag(36)
+	PrivatePathTag    = NewTypeTag(37)
 
-const AnyStructSuperTypeTag = AnyStructTag | NeverTypeTag | IntSuperTypeTag | StringTag | ArrayTag |
-	DictionaryTag | CompositeTag | ReferenceTag | NilTag
+	ArrayTag      = NewTypeTag(38)
+	DictionaryTag = NewTypeTag(39)
+	CompositeTag  = NewTypeTag(40)
+	ReferenceTag  = NewTypeTag(41)
+	ResourceTag   = NewTypeTag(42)
 
-const AnyResourceSuperTypeTag = AnyResourceTag | ResourceTag
+	OptionalTag    = NewTypeTag(43)
+	GenericTag     = NewTypeTag(44)
+	FunctionTag    = NewTypeTag(45)
+	InterfaceTag   = NewTypeTag(46)
+	TransactionTag = NewTypeTag(47)
+	RestrictedTag  = NewTypeTag(48)
+	CapabilityTag  = NewTypeTag(49)
 
-const AnySuperTypeTag = AnyResourceSuperTypeTag | AnyStructSuperTypeTag
+	InvalidTag = NewTypeTag(50)
+
+	// Super types
+
+	SignedIntTag = IntTag.Or(Int8Tag).Or(Int16Tag).Or(Int32Tag).Or(Int64Tag).Or(Int128Tag).Or(Int256Tag)
+
+	UnsignedIntTag = UIntTag.Or(UInt8Tag).Or(UInt16Tag).Or(UInt32Tag).Or(UInt64Tag).Or(UInt128Tag).Or(UInt256Tag)
+
+	IntSuperTypeTag = SignedIntTag.Or(UnsignedIntTag)
+
+	AnyStructSuperTypeTag = AnyStructTag.Or(NeverTypeTag).Or(IntSuperTypeTag).Or(StringTag).Or(ArrayTag).
+				Or(DictionaryTag).Or(CompositeTag).Or(ReferenceTag).Or(NilTag)
+
+	AnyResourceSuperTypeTag = AnyResourceTag.Or(ResourceTag)
+
+	AnySuperTypeTag = AnyResourceSuperTypeTag.Or(AnyStructSuperTypeTag)
+)
 
 // Methods
 
@@ -93,57 +126,61 @@ func CommonSuperType(types ...Type) Type {
 	join := NeverTypeTag
 
 	for _, typ := range types {
-		join |= typ.Tag()
+		join = join.Or(typ.Tag())
 	}
 
 	return getType(join, types...)
 }
 
 func getType(joinedTypeTag TypeTag, types ...Type) Type {
-	switch joinedTypeTag {
-	case Int8Tag:
+	if joinedTypeTag.block2 > 0 {
+		panic("unsupported")
+	}
+
+	switch joinedTypeTag.block1 {
+	case Int8Tag.block1:
 		return Int8Type
-	case Int16Tag:
+	case Int16Tag.block1:
 		return Int16Type
-	case Int32Tag:
+	case Int32Tag.block1:
 		return Int32Type
-	case Int64Tag:
+	case Int64Tag.block1:
 		return Int64Type
-	case Int128Tag:
+	case Int128Tag.block1:
 		return Int128Type
-	case Int256Tag:
+	case Int256Tag.block1:
 		return Int256Type
 
-	case UInt8Tag:
+	case UInt8Tag.block1:
 		return UInt8Type
-	case UInt16Tag:
+	case UInt16Tag.block1:
 		return UInt16Type
-	case UInt32Tag:
+	case UInt32Tag.block1:
 		return UInt32Type
-	case UInt64Tag:
+	case UInt64Tag.block1:
 		return UInt64Type
-	case UInt128Tag:
+	case UInt128Tag.block1:
 		return UInt128Type
-	case UInt256Tag:
+	case UInt256Tag.block1:
 		return UInt256Type
 
-	case IntTag:
+	case IntTag.block1:
 		return IntType
-	case UIntTag:
+	case UIntTag.block1:
 		return UIntType
-	case StringTag:
+	case StringTag.block1:
 		return StringType
-	case NilTag:
+	case NilTag.block1:
 		return &OptionalType{
 			Type: NeverType,
 		}
-	case AnyStructTag:
+	case AnyStructTag.block1:
 		return AnyStructType
-	case AnyResourceTag:
+	case AnyResourceTag.block1:
 		return AnyResourceType
-	case NeverTypeTag:
+	case NeverTypeTag.block1:
 		return NeverType
-	case ArrayTag, DictionaryTag:
+	case ArrayTag.block1, DictionaryTag.block1:
 		// Contains only arrays or only dictionaries.
 		var prevType Type
 		for _, typ := range types {
@@ -162,32 +199,31 @@ func getType(joinedTypeTag TypeTag, types ...Type) Type {
 	default:
 
 		// Optional types.
-		if joinedTypeTag.containsAny(OptionalTag) {
+		if joinedTypeTag.ContainsAny(OptionalTag) {
 			// Get the type without the optional flag
-			innerTypeTag := joinedTypeTag & (^OptionalTag)
+			innerTypeTag := joinedTypeTag.And(OptionalTag.Not())
 			innerType := getType(innerTypeTag)
-
 			return &OptionalType{
 				Type: innerType,
 			}
 		}
 
 		// Any heterogeneous int subtypes goes here.
-		if joinedTypeTag.belongsTo(IntSuperTypeTag) {
+		if joinedTypeTag.BelongsTo(IntSuperTypeTag) {
 			return IntType
 		}
 
-		if joinedTypeTag.containsAny(ArrayTag, DictionaryTag) {
+		if joinedTypeTag.ContainsAny(ArrayTag, DictionaryTag) {
 			// At this point, the types contains arrays/dictionaries along with other types.
 			// So the common supertype could only be AnyStruct, AnyResource or none (both)
 			return commonSupertypeOfHeterogeneousTypes(types)
 		}
 
-		if joinedTypeTag.belongsTo(AnyStructSuperTypeTag) {
+		if joinedTypeTag.BelongsTo(AnyStructSuperTypeTag) {
 			return AnyStructType
 		}
 
-		if joinedTypeTag.belongsTo(AnyResourceSuperTypeTag) {
+		if joinedTypeTag.BelongsTo(AnyResourceSuperTypeTag) {
 			return AnyResourceType
 		}
 
@@ -196,9 +232,9 @@ func getType(joinedTypeTag TypeTag, types ...Type) Type {
 	}
 }
 
-func (t TypeTag) containsAny(typeTags ...TypeTag) bool {
+func (t TypeTag) ContainsAny(typeTags ...TypeTag) bool {
 	for _, tag := range typeTags {
-		if (t & tag) == tag {
+		if t.And(tag).Equals(tag) {
 			return true
 		}
 	}
@@ -206,8 +242,8 @@ func (t TypeTag) containsAny(typeTags ...TypeTag) bool {
 	return false
 }
 
-func (t TypeTag) belongsTo(typeTag TypeTag) bool {
-	return typeTag.containsAny(t)
+func (t TypeTag) BelongsTo(targetTypeTag TypeTag) bool {
+	return targetTypeTag.ContainsAny(t)
 }
 
 func commonSupertypeOfHeterogeneousTypes(types []Type) Type {
