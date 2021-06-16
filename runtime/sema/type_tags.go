@@ -18,7 +18,7 @@
 
 package sema
 
-// TypeTag is a bitMaskBit representation for types.
+// TypeTag is a bitmask representation for types.
 // Each type has a unique dedicated bit in the bitMaskBit.
 //
 type TypeTag struct {
@@ -67,6 +67,20 @@ func (t TypeTag) Not() TypeTag {
 		block1: ^t.block1,
 		block2: ^t.block2,
 	}
+}
+
+func (t TypeTag) ContainsAny(typeTags ...TypeTag) bool {
+	for _, tag := range typeTags {
+		if t.And(tag).Equals(tag) {
+			return true
+		}
+	}
+
+	return false
+}
+
+func (t TypeTag) BelongsTo(typeTag TypeTag) bool {
+	return typeTag.ContainsAny(t)
 }
 
 const (
@@ -348,20 +362,6 @@ func getType(joinedTypeTag TypeTag, types ...Type) Type {
 
 	// If nothing works, then there's no common supertype.
 	return NeverType
-}
-
-func (t TypeTag) ContainsAny(typeTags ...TypeTag) bool {
-	for _, tag := range typeTags {
-		if t.And(tag).Equals(tag) {
-			return true
-		}
-	}
-
-	return false
-}
-
-func (t TypeTag) BelongsTo(targetTypeTag TypeTag) bool {
-	return targetTypeTag.ContainsAny(t)
 }
 
 func commonSupertypeOfHeterogeneousTypes(types []Type) Type {
