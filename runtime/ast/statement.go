@@ -41,7 +41,9 @@ func (s *ReturnStatement) Accept(visitor Visitor) Repr {
 }
 
 func (s *ReturnStatement) Walk(walkChild func(Element)) {
-	walkChild(s.Expression)
+	if s.Expression != nil {
+		walkChild(s.Expression)
+	}
 }
 
 func (s *ReturnStatement) MarshalJSON() ([]byte, error) {
