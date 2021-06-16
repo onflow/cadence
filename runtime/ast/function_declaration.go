@@ -55,7 +55,9 @@ func (d *FunctionDeclaration) Accept(visitor Visitor) Repr {
 func (d *FunctionDeclaration) Walk(walkChild func(Element)) {
 	// TODO: walk parameters
 	// TODO: walk return type
-	walkChild(d.FunctionBlock)
+	if d.FunctionBlock != nil {
+		walkChild(d.FunctionBlock)
+	}
 }
 
 func (*FunctionDeclaration) isDeclaration() {}
