@@ -705,6 +705,19 @@ func TestIdentifierCacheUpdate(t *testing.T) {
 }
 
 func TestCommonSuperType(t *testing.T) {
+
+	t.Run("duplicate mask", func(t *testing.T) {
+		defer func() {
+			if r := recover(); r != nil {
+				err, _ := r.(error)
+				require.Error(t, err)
+				assert.Equal(t, "duplicate type tag: {32 0}", err.Error())
+			}
+		}()
+
+		_ = newTypeTagFromLowerMask(32)
+	})
+
 	nilType := &OptionalType{NeverType}
 
 	resourceType := &CompositeType{

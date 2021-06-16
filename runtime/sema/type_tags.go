@@ -18,54 +18,60 @@
 
 package sema
 
+import (
+	"fmt"
+
+	"github.com/onflow/cadence/runtime/errors"
+)
+
 // TypeTag is a bitmask representation for types.
-// Each type has a unique dedicated bit in the bitMaskBit.
+// Each type has a unique dedicated bit in the bitMask.
+// The mask consist of two sections: lowerMask and the upperMask.
+// Each section can represent 64-types. Currently only the lower mask is used.
 //
 type TypeTag struct {
-	block1 uint64
-	block2 uint64
+	lowerMask uint64
+	upperMask uint64
 }
 
-func NewTypeTag(flag uint64) TypeTag {
-	if flag > 127 {
-		panic("flag out of range")
+var allTypeTags = map[TypeTag]bool{}
+
+func newTypeTagFromLowerMask(mask uint64) TypeTag {
+	typeTag := TypeTag{
+		lowerMask: mask,
+		upperMask: 0,
 	}
 
-	if flag < 64 {
-		return TypeTag{
-			block1: 1 << flag,
-			block2: 0,
-		}
+	if _, ok := allTypeTags[typeTag]; ok {
+		panic(fmt.Errorf("duplicate type tag: %v", typeTag))
 	}
+	allTypeTags[typeTag] = true
 
-	return TypeTag{
-		block1: 0,
-		block2: 1 << (flag - 64),
-	}
+	return typeTag
 }
 
 func (t TypeTag) Equals(tag TypeTag) bool {
-	return t.block1 == tag.block1 && t.block2 == tag.block2
+	return t.lowerMask == tag.lowerMask && t.upperMask == tag.upperMask
 }
 
 func (t TypeTag) And(tag TypeTag) TypeTag {
 	return TypeTag{
-		block1: t.block1 & tag.block1,
-		block2: t.block2 & tag.block2,
+		lowerMask: t.lowerMask & tag.lowerMask,
+		upperMask: t.upperMask & tag.upperMask,
 	}
 }
 
 func (t TypeTag) Or(tag TypeTag) TypeTag {
 	return TypeTag{
-		block1: t.block1 | tag.block1,
-		block2: t.block2 | tag.block2,
+		lowerMask: t.lowerMask | tag.lowerMask,
+		upperMask: t.upperMask | tag.upperMask,
 	}
 }
 
 func (t TypeTag) Not() TypeTag {
 	return TypeTag{
-		block1: ^t.block1,
-		block2: ^t.block2,
+		lowerMask: ^t.lowerMask,
+		upperMask: ^t.upperMask,
 	}
 }
 
@@ -83,124 +89,126 @@ func (t TypeTag) BelongsTo(typeTag TypeTag) bool {
 	return typeTag.ContainsAny(t)
 }
 
+const neverTypeMask = 0
+
 const (
-	uint8TypeMaskBit uint64 = iota
-	uint16TypeMaskBit
-	uint32TypeMaskBit
-	uint64TypeMaskBit
-	uint128TypeMaskBit
-	uint256TypeMaskBit
+	uint8TypeMask uint64 = 1 << iota
+	uint16TypeMask
+	uint32TypeMask
+	uint64TypeMask
+	uint128TypeMask
+	uint256TypeMask
 
-	int8TypeMaskBit
-	int16TypeMaskBit
-	int32TypeMaskBit
-	int64TypeMaskBit
-	int128TypeMaskBit
-	int256TypeMaskBit
+	int8TypeMask
+	int16TypeMask
+	int32TypeMask
+	int64TypeMask
+	int128TypeMask
+	int256TypeMask
 
-	word8TypeMaskBit
-	word16TypeMaskBit
-	word32TypeMaskBit
-	word64TypeMaskBit
+	word8TypeMask
+	word16TypeMask
+	word32TypeMask
+	word64TypeMask
 
-	fix64TypeMaskBit
-	ufix64TypeMaskBit
+	fix64TypeMask
+	ufix64TypeMask
 
-	intTypeMaskBit
-	uIntTypeMaskBit
-	stringTypeMaskBit
-	characterTypeMaskBit
-	boolTypeMaskBit
-	nilTypeMaskBit
-	voidTypeMaskBit
-	addressTypeMaskBit
-	metaTypeMaskBit
-	anyStructTypeMaskBit
-	anyResourceTypeMaskBit
-	anyTypeMaskBit
+	intTypeMask
+	uIntTypeMask
+	stringTypeMask
+	characterTypeMask
+	boolTypeMask
+	nilTypeMask
+	voidTypeMask
+	addressTypeMask
+	metaTypeMask
+	anyStructTypeMask
+	anyResourceTypeMask
+	anyTypeMask
 
-	pathTypeMaskBit
-	storagePathTypeMaskBit
-	capabilityPathTypeMaskBit
-	publicPathTypeMaskBit
-	privatePathTypeMaskBit
+	pathTypeMask
+	storagePathTypeMask
+	capabilityPathTypeMask
+	publicPathTypeMask
+	privatePathTypeMask
 
-	arrayTypeMaskBit
-	dictionaryTypeMaskBit
-	compositeTypeMaskBit
-	referenceTypeMaskBit
-	resourceTypeMaskBit
+	arrayTypeMask
+	dictionaryTypeMask
+	compositeTypeMask
+	referenceTypeMask
+	resourceTypeMask
 
-	optionalTypeMaskBit
-	genericTypeMaskBit
-	functionTypeMaskBit
-	interfaceTypeMaskBit
-	transactionTypeMaskBit
-	restrictedTypeMaskBit
-	capabilityTypeMaskBit
+	optionalTypeMask
+	genericTypeMask
+	functionTypeMask
+	interfaceTypeMask
+	transactionTypeMask
+	restrictedTypeMask
+	capabilityTypeMask
 
-	invalidTypeMaskBit
+	invalidTypeMask
 )
 
 var (
-	NeverTypeTag = TypeTag{0, 0}
+	NeverTypeTag = newTypeTagFromLowerMask(neverTypeMask)
 
-	UInt8TypeTag   = NewTypeTag(uint8TypeMaskBit)
-	UInt16TypeTag  = NewTypeTag(uint16TypeMaskBit)
-	UInt32TypeTag  = NewTypeTag(uint32TypeMaskBit)
-	UInt64TypeTag  = NewTypeTag(uint64TypeMaskBit)
-	UInt128TypeTag = NewTypeTag(uint128TypeMaskBit)
-	UInt256TypeTag = NewTypeTag(uint256TypeMaskBit)
+	UInt8TypeTag   = newTypeTagFromLowerMask(uint8TypeMask)
+	UInt16TypeTag  = newTypeTagFromLowerMask(uint16TypeMask)
+	UInt32TypeTag  = newTypeTagFromLowerMask(uint32TypeMask)
+	UInt64TypeTag  = newTypeTagFromLowerMask(uint64TypeMask)
+	UInt128TypeTag = newTypeTagFromLowerMask(uint128TypeMask)
+	UInt256TypeTag = newTypeTagFromLowerMask(uint256TypeMask)
 
-	Int8TypeTag   = NewTypeTag(int8TypeMaskBit)
-	Int16TypeTag  = NewTypeTag(int16TypeMaskBit)
-	Int32TypeTag  = NewTypeTag(int32TypeMaskBit)
-	Int64TypeTag  = NewTypeTag(int64TypeMaskBit)
-	Int128TypeTag = NewTypeTag(int128TypeMaskBit)
-	Int256TypeTag = NewTypeTag(int256TypeMaskBit)
+	Int8TypeTag   = newTypeTagFromLowerMask(int8TypeMask)
+	Int16TypeTag  = newTypeTagFromLowerMask(int16TypeMask)
+	Int32TypeTag  = newTypeTagFromLowerMask(int32TypeMask)
+	Int64TypeTag  = newTypeTagFromLowerMask(int64TypeMask)
+	Int128TypeTag = newTypeTagFromLowerMask(int128TypeMask)
+	Int256TypeTag = newTypeTagFromLowerMask(int256TypeMask)
 
-	Word8TypeTag  = NewTypeTag(word8TypeMaskBit)
-	Word16TypeTag = NewTypeTag(word16TypeMaskBit)
-	Word32TypeTag = NewTypeTag(word32TypeMaskBit)
-	Word64TypeTag = NewTypeTag(word64TypeMaskBit)
+	Word8TypeTag  = newTypeTagFromLowerMask(word8TypeMask)
+	Word16TypeTag = newTypeTagFromLowerMask(word16TypeMask)
+	Word32TypeTag = newTypeTagFromLowerMask(word32TypeMask)
+	Word64TypeTag = newTypeTagFromLowerMask(word64TypeMask)
 
-	Fix64TypeTag  = NewTypeTag(fix64TypeMaskBit)
-	UFix64TypeTag = NewTypeTag(ufix64TypeMaskBit)
+	Fix64TypeTag  = newTypeTagFromLowerMask(fix64TypeMask)
+	UFix64TypeTag = newTypeTagFromLowerMask(ufix64TypeMask)
 
-	IntTypeTag         = NewTypeTag(intTypeMaskBit)
-	UIntTypeTag        = NewTypeTag(uIntTypeMaskBit)
-	StringTypeTag      = NewTypeTag(stringTypeMaskBit)
-	CharacterTypeTag   = NewTypeTag(characterTypeMaskBit)
-	BoolTypeTag        = NewTypeTag(boolTypeMaskBit)
-	NilTypeTag         = NewTypeTag(nilTypeMaskBit)
-	VoidTypeTag        = NewTypeTag(voidTypeMaskBit)
-	AddressTypeTag     = NewTypeTag(addressTypeMaskBit)
-	MetaTypeTag        = NewTypeTag(metaTypeMaskBit)
-	AnyStructTypeTag   = NewTypeTag(anyStructTypeMaskBit)
-	AnyResourceTypeTag = NewTypeTag(anyResourceTypeMaskBit)
-	AnyTypeTag         = NewTypeTag(anyTypeMaskBit)
+	IntTypeTag         = newTypeTagFromLowerMask(intTypeMask)
+	UIntTypeTag        = newTypeTagFromLowerMask(uIntTypeMask)
+	StringTypeTag      = newTypeTagFromLowerMask(stringTypeMask)
+	CharacterTypeTag   = newTypeTagFromLowerMask(characterTypeMask)
+	BoolTypeTag        = newTypeTagFromLowerMask(boolTypeMask)
+	NilTypeTag         = newTypeTagFromLowerMask(nilTypeMask)
+	VoidTypeTag        = newTypeTagFromLowerMask(voidTypeMask)
+	AddressTypeTag     = newTypeTagFromLowerMask(addressTypeMask)
+	MetaTypeTag        = newTypeTagFromLowerMask(metaTypeMask)
+	AnyStructTypeTag   = newTypeTagFromLowerMask(anyStructTypeMask)
+	AnyResourceTypeTag = newTypeTagFromLowerMask(anyResourceTypeMask)
+	AnyTypeTag         = newTypeTagFromLowerMask(anyTypeMask)
 
-	PathTypeTag           = NewTypeTag(pathTypeMaskBit)
-	StoragePathTypeTag    = NewTypeTag(storagePathTypeMaskBit)
-	CapabilityPathTypeTag = NewTypeTag(capabilityPathTypeMaskBit)
-	PublicPathTypeTag     = NewTypeTag(publicPathTypeMaskBit)
-	PrivatePathTypeTag    = NewTypeTag(privatePathTypeMaskBit)
+	PathTypeTag           = newTypeTagFromLowerMask(pathTypeMask)
+	StoragePathTypeTag    = newTypeTagFromLowerMask(storagePathTypeMask)
+	CapabilityPathTypeTag = newTypeTagFromLowerMask(capabilityPathTypeMask)
+	PublicPathTypeTag     = newTypeTagFromLowerMask(publicPathTypeMask)
+	PrivatePathTypeTag    = newTypeTagFromLowerMask(privatePathTypeMask)
 
-	ArrayTypeTag      = NewTypeTag(arrayTypeMaskBit)
-	DictionaryTypeTag = NewTypeTag(dictionaryTypeMaskBit)
-	CompositeTypeTag  = NewTypeTag(compositeTypeMaskBit)
-	ReferenceTypeTag  = NewTypeTag(referenceTypeMaskBit)
-	ResourceTypeTag   = NewTypeTag(resourceTypeMaskBit)
+	ArrayTypeTag      = newTypeTagFromLowerMask(arrayTypeMask)
+	DictionaryTypeTag = newTypeTagFromLowerMask(dictionaryTypeMask)
+	CompositeTypeTag  = newTypeTagFromLowerMask(compositeTypeMask)
+	ReferenceTypeTag  = newTypeTagFromLowerMask(referenceTypeMask)
+	ResourceTypeTag   = newTypeTagFromLowerMask(resourceTypeMask)
 
-	OptionalTypeTag    = NewTypeTag(optionalTypeMaskBit)
-	GenericTypeTag     = NewTypeTag(genericTypeMaskBit)
-	FunctionTypeTag    = NewTypeTag(functionTypeMaskBit)
-	InterfaceTypeTag   = NewTypeTag(interfaceTypeMaskBit)
-	TransactionTypeTag = NewTypeTag(transactionTypeMaskBit)
-	RestrictedTypeTag  = NewTypeTag(restrictedTypeMaskBit)
-	CapabilityTypeTag  = NewTypeTag(capabilityTypeMaskBit)
+	OptionalTypeTag    = newTypeTagFromLowerMask(optionalTypeMask)
+	GenericTypeTag     = newTypeTagFromLowerMask(genericTypeMask)
+	FunctionTypeTag    = newTypeTagFromLowerMask(functionTypeMask)
+	InterfaceTypeTag   = newTypeTagFromLowerMask(interfaceTypeMask)
+	TransactionTypeTag = newTypeTagFromLowerMask(transactionTypeMask)
+	RestrictedTypeTag  = newTypeTagFromLowerMask(restrictedTypeMask)
+	CapabilityTypeTag  = newTypeTagFromLowerMask(capabilityTypeMask)
 
-	InvalidTypeTag = NewTypeTag(invalidTypeMaskBit)
+	InvalidTypeTag = newTypeTagFromLowerMask(invalidTypeMask)
 
 	// Super types
 
@@ -246,75 +254,75 @@ func CommonSuperType(types ...Type) Type {
 		join = join.Or(typ.Tag())
 	}
 
-	return getType(join, types...)
+	return findCommonSupperType(join, types...)
 }
 
-func getType(joinedTypeTag TypeTag, types ...Type) Type {
-	if joinedTypeTag.block2 > 0 {
+func findCommonSupperType(joinedTypeTag TypeTag, types ...Type) Type {
+	if joinedTypeTag.upperMask != 0 {
 		// All existing types can be represented using 64-bits.
-		// Hence block2 is unused for now.
-		panic("unsupported")
+		// Hence upperMask is unused for now.
+		panic(errors.NewUnreachableError())
 	}
 
-	switch joinedTypeTag.block1 {
+	switch joinedTypeTag.lowerMask {
 
-	case UInt8TypeTag.block1:
+	case uint8TypeMask:
 		return UInt8Type
-	case UInt16TypeTag.block1:
+	case uint16TypeMask:
 		return UInt16Type
-	case UInt32TypeTag.block1:
+	case uint32TypeMask:
 		return UInt32Type
-	case UInt64TypeTag.block1:
+	case uint64TypeMask:
 		return UInt64Type
-	case UInt128TypeTag.block1:
+	case uint128TypeMask:
 		return UInt128Type
-	case UInt256TypeTag.block1:
+	case uint256TypeMask:
 		return UInt256Type
 
-	case Int8TypeTag.block1:
+	case int8TypeMask:
 		return Int8Type
-	case Int16TypeTag.block1:
+	case int16TypeMask:
 		return Int16Type
-	case Int32TypeTag.block1:
+	case int32TypeMask:
 		return Int32Type
-	case Int64TypeTag.block1:
+	case int64TypeMask:
 		return Int64Type
-	case Int128TypeTag.block1:
+	case int128TypeMask:
 		return Int128Type
-	case Int256TypeTag.block1:
+	case int256TypeMask:
 		return Int256Type
 
-	case Word8TypeTag.block1:
+	case word8TypeMask:
 		return Word8Type
-	case Word16TypeTag.block1:
+	case word16TypeMask:
 		return Word16Type
-	case Word32TypeTag.block1:
+	case word32TypeMask:
 		return Word32Type
-	case Word64TypeTag.block1:
+	case word64TypeMask:
 		return Word64Type
 
-	case Fix64TypeTag.block1:
+	case fix64TypeMask:
 		return Fix64Type
-	case UFix64TypeTag.block1:
+	case ufix64TypeMask:
 		return UFix64Type
 
-	case IntTypeTag.block1:
+	case intTypeMask:
 		return IntType
-	case UIntTypeTag.block1:
+	case uIntTypeMask:
 		return UIntType
-	case StringTypeTag.block1:
+	case stringTypeMask:
 		return StringType
-	case NilTypeTag.block1:
+	case nilTypeMask:
 		return &OptionalType{
 			Type: NeverType,
 		}
-	case AnyStructTypeTag.block1:
+	case anyStructTypeMask:
 		return AnyStructType
-	case AnyResourceTypeTag.block1:
+	case anyResourceTypeMask:
 		return AnyResourceType
-	case NeverTypeTag.block1:
+	case neverTypeMask:
 		return NeverType
-	case ArrayTypeTag.block1, DictionaryTypeTag.block1:
+	case arrayTypeMask, dictionaryTypeMask:
 		// Contains only arrays or only dictionaries.
 		var prevType Type
 		for _, typ := range types {
@@ -335,7 +343,7 @@ func getType(joinedTypeTag TypeTag, types ...Type) Type {
 	if joinedTypeTag.ContainsAny(OptionalTypeTag) {
 		// Get the type without the optional flag
 		innerTypeTag := joinedTypeTag.And(OptionalTypeTag.Not())
-		innerType := getType(innerTypeTag)
+		innerType := findCommonSupperType(innerTypeTag)
 		return &OptionalType{
 			Type: innerType,
 		}
@@ -375,7 +383,7 @@ func commonSupertypeOfHeterogeneousTypes(types []Type) Type {
 	if hasResources {
 		if hasStructs {
 			// If the types has both structs and resources,
-			// then there no common super type.
+			// then there's no common super type.
 			return NeverType
 		}
 
