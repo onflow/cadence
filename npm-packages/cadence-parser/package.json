@@ -9,7 +9,7 @@
   },
   "main": "dist/index.js",
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && GOARCH=wasm GOOS=js go build -o ./dist/cadence-parser.wasm ../../runtime/cmd/parse",
     "test": "jest"
   },
   "license": "Apache-2.0",

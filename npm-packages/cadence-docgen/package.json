@@ -9,7 +9,7 @@
   },
   "main": "dist/index.js",
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && cd ../../tools/docgen/wasm && GOARCH=wasm GOOS=js go build -o ../../../npm-packages/cadence-docgen/dist/cadence-docgen.wasm && cd ../../../npm-packages/cadence-docgen",
     "test": "jest"
   },
   "license": "Apache-2.0",

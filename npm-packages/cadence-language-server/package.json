@@ -9,7 +9,7 @@
   },
   "main": "dist/index.js",
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && cd ../../languageserver && GOARCH=wasm GOOS=js go build -o ../npm-packages/cadence-language-server/dist/cadence-language-server.wasm ./cmd/languageserver && cd ../npm-packages/cadence-language-server",
     "test": "jest"
   },
   "license": "Apache-2.0",
