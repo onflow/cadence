@@ -24,7 +24,7 @@ var PathType = &SimpleType{
 	Name:          "Path",
 	QualifiedName: "Path",
 	TypeID:        "Path",
-	tag:           PathTag,
+	tag:           PathTypeTag,
 	IsInvalid:     false,
 	IsResource:    false,
 	Storable:      true,
@@ -44,7 +44,7 @@ var StoragePathType = &SimpleType{
 	Name:          "StoragePath",
 	QualifiedName: "StoragePath",
 	TypeID:        "StoragePath",
-	tag:           StoragePathTag,
+	tag:           StoragePathTypeTag,
 	IsResource:    false,
 	Storable:      true,
 	// TODO: implement support for equating paths in the future
@@ -59,7 +59,7 @@ var CapabilityPathType = &SimpleType{
 	Name:          "CapabilityPath",
 	QualifiedName: "CapabilityPath",
 	TypeID:        "CapabilityPath",
-	tag:           CapabilityPathTag,
+	tag:           CapabilityPathTypeTag,
 	IsResource:    false,
 	Storable:      true,
 	// TODO: implement support for equating paths in the future
@@ -78,7 +78,7 @@ var PublicPathType = &SimpleType{
 	Name:          "PublicPath",
 	QualifiedName: "PublicPath",
 	TypeID:        "PublicPath",
-	tag:           PublicPathTag,
+	tag:           PublicPathTypeTag,
 	IsResource:    false,
 	Storable:      true,
 	// TODO: implement support for equating paths in the future
@@ -93,7 +93,7 @@ var PrivatePathType = &SimpleType{
 	Name:          "PrivatePath",
 	QualifiedName: "PrivatePath",
 	TypeID:        "PrivatePath",
-	tag:           PrivatePathTag,
+	tag:           PrivatePathTypeTag,
 	IsResource:    false,
 	Storable:      true,
 	// TODO: implement support for equating paths in the future
