@@ -1736,7 +1736,7 @@ func (r *interpreterRuntime) instantiateContract(
 		return nil, err
 	}
 
-	contract = interpeter.Globals[contractType.Identifier].GetValue().(*interpreter.CompositeValue)
+	contract = interpeter.Globals.Get(contractType.Identifier).GetValue().(*interpreter.CompositeValue)
 
 	return contract, err
 }

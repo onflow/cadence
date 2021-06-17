@@ -39,7 +39,7 @@ func TestInterpretEnum(t *testing.T) {
 
 	assert.IsType(t,
 		interpreter.HostFunctionValue{},
-		inter.Globals["E"].GetValue(),
+		inter.Globals.Get("E").GetValue(),
 	)
 }
 
@@ -55,7 +55,7 @@ func TestInterpretEnumCaseUse(t *testing.T) {
       let b = E.b
     `)
 
-	a := inter.Globals["a"].GetValue()
+	a := inter.Globals.Get("a").GetValue()
 	require.IsType(t,
 		&interpreter.CompositeValue{},
 		a,
@@ -66,7 +66,7 @@ func TestInterpretEnumCaseUse(t *testing.T) {
 		a.(*interpreter.CompositeValue).Kind(),
 	)
 
-	b := inter.Globals["b"].GetValue()
+	b := inter.Globals.Get("b").GetValue()
 	require.IsType(t,
 		&interpreter.CompositeValue{},
 		b,
@@ -92,12 +92,12 @@ func TestInterpretEnumCaseRawValue(t *testing.T) {
 
 	require.Equal(t,
 		interpreter.Int64Value(0),
-		inter.Globals["a"].GetValue(),
+		inter.Globals.Get("a").GetValue(),
 	)
 
 	require.Equal(t,
 		interpreter.Int64Value(1),
-		inter.Globals["b"].GetValue(),
+		inter.Globals.Get("b").GetValue(),
 	)
 }
 
@@ -122,7 +122,7 @@ func TestInterpretEnumCaseEquality(t *testing.T) {
 			interpreter.BoolValue(true),
 			interpreter.BoolValue(true),
 		),
-		inter.Globals["res"].GetValue(),
+		inter.Globals.Get("res").GetValue(),
 	)
 }
 
@@ -149,7 +149,7 @@ func TestInterpretEnumConstructor(t *testing.T) {
 			interpreter.BoolValue(true),
 			interpreter.BoolValue(true),
 		),
-		inter.Globals["res"].GetValue(),
+		inter.Globals.Get("res").GetValue(),
 	)
 }
 
@@ -172,7 +172,7 @@ func TestInterpretEnumInstance(t *testing.T) {
 			interpreter.BoolValue(true),
 			interpreter.BoolValue(true),
 		),
-		inter.Globals["res"].GetValue(),
+		inter.Globals.Get("res").GetValue(),
 	)
 }
 
@@ -203,7 +203,7 @@ func TestInterpretEnumInContract(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	c := inter.Globals["C"].GetValue()
+	c := inter.Globals.Get("C").GetValue()
 	require.IsType(t, &interpreter.CompositeValue{}, c)
 	contract := c.(*interpreter.CompositeValue)
 

@@ -228,13 +228,52 @@ func (c TypeCodes) Merge(codes TypeCodes) {
 	}
 }
 
+// Builtin global values
+var builtinVariables = map[string]*Variable{}
+
+type GlobalVariables struct {
+	// Global values defined in the program
+	vars map[string]*Variable
+}
+
+func (g *GlobalVariables) Contains(name string) bool {
+	if _, ok := builtinVariables[name]; ok {
+		return true
+	}
+
+	_, ok := g.vars[name]
+	return ok
+}
+
+func (g *GlobalVariables) Get(name string) *Variable {
+	if variable, ok := builtinVariables[name]; ok {
+		return variable
+	}
+
+	return g.vars[name]
+}
+
+func (g *GlobalVariables) Set(name string, variable *Variable) {
+	g.vars[name] = variable
+}
+
+func (g *GlobalVariables) Foreach(f func(name string, variable *Variable)) {
+	for name, variable := range builtinVariables {
+		f(name, variable)
+	}
+
+	for name, variable := range g.vars {
+		f(name, variable)
+	}
+}
+
 type Interpreter struct {
 	Program                        *Program
 	Location                       common.Location
 	PredeclaredValues              []ValueDeclaration
 	effectivePredeclaredValues     map[string]ValueDeclaration
-	activations                    *VariableActivations
-	Globals                        map[string]*Variable
+	activations                    VariableActivations
+	Globals                        GlobalVariables
 	allInterpreters                map[common.LocationID]*Interpreter
 	typeCodes                      TypeCodes
 	Transactions                   []*HostFunctionValue
@@ -312,7 +351,7 @@ func WithPredeclaredValues(predeclaredValues []ValueDeclaration) Option {
 				continue
 			}
 			name := declaration.ValueDeclarationName()
-			interpreter.Globals[name] = variable
+			interpreter.Globals.Set(name, variable)
 			interpreter.effectivePredeclaredValues[name] = declaration
 		}
 
@@ -449,15 +488,31 @@ func withTypeCodes(typeCodes TypeCodes) Option {
 	}
 }
 
+var baseInterpreter = func() Interpreter {
+	interpreter := &Interpreter{
+		activations: VariableActivations{},
+	}
+
+	interpreter.defineBaseFunctions()
+
+	return *interpreter
+}()
+
 func NewInterpreter(program *Program, location common.Location, options ...Option) (*Interpreter, error) {
 
 	interpreter := &Interpreter{
-		Program:                    program,
-		Location:                   location,
-		activations:                &VariableActivations{},
-		Globals:                    map[string]*Variable{},
+		Program:     program,
+		Location:    location,
+		activations: VariableActivations{},
+		Globals: GlobalVariables{
+			vars: map[string]*Variable{},
+		},
 		effectivePredeclaredValues: map[string]ValueDeclaration{},
 	}
+
+	// Start a new activation/scope for the current program.
+	// Use the base activation as the parent.
+	interpreter.activations.PushNewWithParent(baseInterpreter.activations.Current())
 
 	defaultOptions := []Option{
 		WithAllInterpreters(map[common.LocationID]*Interpreter{}),
@@ -468,12 +523,10 @@ func NewInterpreter(program *Program, location common.Location, options ...Optio
 		}),
 	}
 
-	interpreter.defineBaseFunctions()
-
 	for _, option := range defaultOptions {
 		err := option(interpreter)
 		if err != nil {
-			return nil, err
+			panic(err)
 		}
 	}
 
@@ -658,7 +711,7 @@ func (interpreter *Interpreter) declareGlobal(declaration ast.Declaration) {
 	}
 	name := identifier.Identifier
 	// NOTE: semantic analysis already checked possible invalid redeclaration
-	interpreter.Globals[name] = interpreter.findVariable(name)
+	interpreter.Globals.Set(name, interpreter.findVariable(name))
 }
 
 // invokeVariable looks up the function by the given name from global variables,
@@ -672,8 +725,8 @@ func (interpreter *Interpreter) invokeVariable(
 ) {
 
 	// function must be defined as a global variable
-	variable, ok := interpreter.Globals[functionName]
-	if !ok {
+	variable := interpreter.Globals.Get(functionName)
+	if variable == nil {
 		return nil, NotDeclaredError{
 			ExpectedKind: common.DeclarationKindFunction,
 			Name:         functionName,
@@ -924,7 +977,7 @@ func (interpreter *Interpreter) VisitProgram(program *ast.Program) ast.Repr {
 			return result
 		})
 		interpreter.setVariable(identifier, variable)
-		interpreter.Globals[identifier] = variable
+		interpreter.Globals.Set(identifier, variable)
 
 		variableDeclarationVariables = append(variableDeclarationVariables, variable)
 	}
@@ -1002,14 +1055,19 @@ func (interpreter *Interpreter) functionDeclarationValue(
 // NOTE: consider using NewInterpreter and WithPredeclaredValues if the value should be predeclared in all locations
 //
 func (interpreter *Interpreter) ImportValue(name string, value Value) error {
-	if _, ok := interpreter.Globals[name]; ok {
+	// This method should only be called for the base interpreter
+	if interpreter.Program != nil {
+		panic(errors.NewUnreachableError())
+	}
+
+	if interpreter.Globals.Contains(name) {
 		return RedeclarationError{
 			Name: name,
 		}
 	}
 
 	variable := interpreter.declareVariable(name, value)
-	interpreter.Globals[name] = variable
+	builtinVariables[name] = variable
 	return nil
 }
 
@@ -2222,7 +2280,7 @@ func (interpreter *Interpreter) ensureLoadedWithLocationHandler(
 		for _, global := range virtualImport.Globals {
 			variable := NewVariableWithValue(global.Value)
 			subInterpreter.setVariable(global.Name, variable)
-			subInterpreter.Globals[global.Name] = variable
+			subInterpreter.Globals.Set(global.Name, variable)
 		}
 
 		subInterpreter.typeCodes.
@@ -3261,8 +3319,8 @@ func (interpreter *Interpreter) getElaboration(location common.Location) *sema.E
 
 // GetContractComposite gets the composite value of the contract at the address location.
 func (interpreter *Interpreter) GetContractComposite(contractLocation common.AddressLocation) (*CompositeValue, error) {
-	contractGlobal, ok := interpreter.Globals[contractLocation.Name]
-	if !ok {
+	contractGlobal := interpreter.Globals.Get(contractLocation.Name)
+	if contractGlobal == nil {
 		return nil, NotDeclaredError{
 			ExpectedKind: common.DeclarationKindContract,
 			Name:         contractLocation.Name,
@@ -3270,8 +3328,8 @@ func (interpreter *Interpreter) GetContractComposite(contractLocation common.Add
 	}
 
 	// get contract value
-	contractValue, ok := contractGlobal.GetValue().(*CompositeValue)
-	if !ok {
+	contractValue := contractGlobal.GetValue().(*CompositeValue)
+	if contractValue == nil {
 		return nil, NotDeclaredError{
 			ExpectedKind: common.DeclarationKindContract,
 			Name:         contractLocation.Name,

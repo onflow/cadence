@@ -49,10 +49,13 @@ func (interpreter *Interpreter) importResolvedLocation(resolvedLocation sema.Res
 		variables = make(map[string]*Variable, identifierLength)
 		for _, identifier := range resolvedLocation.Identifiers {
 			variables[identifier.Identifier] =
-				subInterpreter.Globals[identifier.Identifier]
+				subInterpreter.Globals.Get(identifier.Identifier)
 		}
 	} else {
-		variables = subInterpreter.Globals
+		variables = map[string]*Variable{}
+		subInterpreter.Globals.Foreach(func(name string, variable *Variable) {
+			variables[name] = variable
+		})
 	}
 
 	// Gather all variable names and sort them lexicographically
@@ -83,6 +86,6 @@ func (interpreter *Interpreter) importResolvedLocation(resolvedLocation sema.Res
 		}
 
 		interpreter.setVariable(name, variable)
-		interpreter.Globals[name] = variable
+		interpreter.Globals.Set(name, variable)
 	}
 }
