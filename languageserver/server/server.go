@@ -1794,6 +1794,11 @@ func (s *Server) getDiagnostics(
 						if err != nil {
 							return nil, err
 						}
+						if importedProgram == nil {
+							return nil, &sema.CheckerError{
+								Errors: []error{fmt.Errorf("cannot import %s", importedLocation)},
+							}
+						}
 
 						importedChecker, err = checker.SubChecker(importedProgram, importedLocation)
 						if err != nil {
