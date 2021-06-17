@@ -28,6 +28,11 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// TestRuntimeArgumentImportMissingType tests if errors produced while validating
+// transaction and script arguments are gracefully handled.
+// This is for example the case when an argument specifies a non-existing type,
+// which results in a type loading error.
+//
 func TestRuntimeArgumentImportMissingType(t *testing.T) {
 
 	t.Parallel()
