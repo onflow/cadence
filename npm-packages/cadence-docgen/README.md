@@ -17,14 +17,3 @@ const docs = docgen.generate(`
 `)
 ```
 
-## Development
-
-- Building the docgen WASM binary:
-
-  ```sh
-  cd ../../tools/docgen/wasm/
-
-  GOARCH=wasm GOOS=js go build -o ../../../npm-packages/cadence-docgen/dist/cadence-docgen.wasm
-  ```
-
-<!-- Cannot build from current location due to: https://github.com/golang/go/issues/43733 -->
