@@ -1,7 +1,7 @@
 # Struct Interface `SomeInterface`
 
 ```cadence
-struct interface SomeInterface
+struct interface SomeInterface {
 
     x:  String
 
