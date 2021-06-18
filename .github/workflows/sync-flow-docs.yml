@@ -1,5 +1,5 @@
-# Open a PR in onflow/flow when a PR for docs in Cadence is merged.
-# The new PR is based on the last opened `auto-cadence-upgrade/*` if it exists, otherwise on the master branch
+# Open a PR in onflow/flow when a documentation PR got merged
+
 name: Sync onflow/flow docs
 
 on:
@@ -16,11 +16,21 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event.pull_request.merged || github.event_name == 'workflow_dispatch'
     steps:
-      - name: Create Pull Request
+      - name: Checkout onflow/flow
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.REMOTE_REPO_PAT }}
+          repository: onflow/flow
+
+      - name: Create commit
+        run: git commit --allow-empty -m "update Cadence docs"
+
+      - name: Create pull request
         uses: peter-evans/create-pull-request@v3
         with:
           token: ${{ secrets.REMOTE_REPO_PAT }}
-          commit-message: update Cadence docs
+          commit-message: Update Cadence docs
           title: "Auto Cadence Update"
           body: |
               Auto generated PR to update Cadence docs.
