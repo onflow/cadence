@@ -783,8 +783,9 @@ github.com/olekukonko/tablewriter v0.0.2-0.20190409134802-7e037d187b0c/go.mod h1
 github.com/onflow/cadence v0.14.2/go.mod h1:EEXKRNuW5C2E1wRM4fLhfqoTgXohPFieXwOGJubz1Jg=
 github.com/onflow/cadence v0.15.0/go.mod h1:KMzDF6cIv6nb5PJW9aITaqazbmJX8MMeibFcpPP385M=
 github.com/onflow/cadence v0.15.1/go.mod h1:KMzDF6cIv6nb5PJW9aITaqazbmJX8MMeibFcpPP385M=
-github.com/onflow/cadence v0.17.0 h1:TFpwYVIs2b/bd6TlYxa3zMZN2S9CByMvW7Uk01KFP9Y=
 github.com/onflow/cadence v0.17.0/go.mod h1:iR/tZpP+1YhM8iRnOBPiBIs7on5dE3hk2ZfunCRQswE=
+github.com/onflow/cadence v0.18.1-0.20210617175100-225316245130 h1:orhP/xejE6IYEkIgl/GdFwXPrblwcPfWCQXPiq6INho=
+github.com/onflow/cadence v0.18.1-0.20210617175100-225316245130/go.mod h1:iR/tZpP+1YhM8iRnOBPiBIs7on5dE3hk2ZfunCRQswE=
 github.com/onflow/cadence/languageserver v0.15.2/go.mod h1:hQGE8dYH5CfQ1Oe0nXglchgURzZwR3JQhmuXtv4ROHs=
 github.com/onflow/flow-cli v0.21.1-0.20210528105132-21bfcf38261f h1:WDCindhJ6QaO0TAEGGod6+7DITvytSunbF0N9tjHjqc=
 github.com/onflow/flow-cli v0.21.1-0.20210528105132-21bfcf38261f/go.mod h1:nAmb3KS0DD8w7oX7w8HH2URQou2LzhdN/odEJAQwzIU=
