@@ -1,7 +1,7 @@
 # Struct `InnerStruct`
 
 ```cadence
-struct InnerStruct
+struct InnerStruct {
 
     a:  Int
 

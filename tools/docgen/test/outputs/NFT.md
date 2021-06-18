@@ -1,7 +1,7 @@
 # Contract `NFT`
 
 ```cadence
-contract NFT
+contract NFT {
 
     field1:  Int
 

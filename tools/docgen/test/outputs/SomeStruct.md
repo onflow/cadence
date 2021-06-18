@@ -1,7 +1,7 @@
 # Struct `SomeStruct`
 
 ```cadence
-struct SomeStruct
+struct SomeStruct {
 
     x:  String
 
