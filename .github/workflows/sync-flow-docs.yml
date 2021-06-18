@@ -39,6 +39,9 @@ jobs:
               Auto generated PR to update Cadence docs.
 
               References: ${{ github.event.pull_request.html_url }}
+
+              **MERGE this PR**! Rebasing will not work!
+
           branch: auto-cadence-upgrade/${{ github.run_id }}_${{ github.run_number }}
           delete-branch: true
           assignees: turbolent
