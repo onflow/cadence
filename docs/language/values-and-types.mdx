@@ -895,12 +895,12 @@ Array literals start with an opening square bracket `[` and end with a closing s
 
 Arrays either have a fixed size or are variably sized, i.e., elements can be added and removed.
 
-Fixed-size arrays have the form `[T; N]`, where `T` is the element type,
+Fixed-size array types have the form `[T; N]`, where `T` is the element type,
 and `N` is the size of the array.  `N` has to be statically known, meaning
 that it needs to be an integer literal.
 For example, a fixed-size array of 3 `Int8` elements has the type `[Int8; 3]`.
 
-Variable-size arrays have the form `[T]`, where `T` is the element type.
+Variable-size array types have the form `[T]`, where `T` is the element type.
 For example, the type `[Int16]` specifies a variable-size array of elements that have type `Int16`.
 
 All values in an array must have a type which is a subtype of the array's element type (`T`).
