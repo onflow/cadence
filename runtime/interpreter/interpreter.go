@@ -235,35 +235,6 @@ func (c TypeCodes) Merge(codes TypeCodes) {
 	}
 }
 
-// Builtin variables
-var builtinVariables = map[string]*Variable{}
-
-// GlobalVariables represents global variables defined in a program.
-//
-type GlobalVariables map[string]*Variable
-
-func (globalVars GlobalVariables) Contains(name string) bool {
-	if _, ok := builtinVariables[name]; ok {
-		return true
-	}
-
-	_, ok := globalVars[name]
-	return ok
-}
-
-func (globalVars GlobalVariables) Get(name string) (*Variable, bool) {
-	variable, ok := builtinVariables[name]
-	if !ok {
-		variable, ok = globalVars[name]
-	}
-
-	return variable, ok
-}
-
-func (globalVars GlobalVariables) Set(name string, variable *Variable) {
-	globalVars[name] = variable
-}
-
 type Interpreter struct {
 	Program                        *Program
 	Location                       common.Location
@@ -499,17 +470,9 @@ func withTypeCodes(typeCodes TypeCodes) Option {
 // Create a base-activation so that it can be reused across all interpreters.
 //
 var baseActivation = func() *VariableActivation {
-	interpreter := &Interpreter{
-		activations: &VariableActivations{},
-	}
-
-	interpreter.defineBaseFunctions()
-
-	if interpreter.activations.Depth() > 1 {
-		panic(errors.NewUnreachableError())
-	}
-
-	return interpreter.activations.Current()
+	activation := NewVariableActivation(nil)
+	defineBaseFunctions(activation)
+	return activation
 }()
 
 func NewInterpreter(program *Program, location common.Location, options ...Option) (*Interpreter, error) {
@@ -1068,26 +1031,6 @@ func (interpreter *Interpreter) functionDeclarationValue(
 		Statements:       declaration.FunctionBlock.Block.Statements,
 		PostConditions:   rewrittenPostConditions,
 	}
-}
-
-// NOTE: consider using NewInterpreter and WithPredeclaredValues if
-// the value should be predeclared in all locations.
-// This method should only be called for the base interpreter.
-//
-func (interpreter *Interpreter) ImportBuiltinValue(name string, value Value) error {
-	if interpreter.Program != nil {
-		panic(errors.NewUnreachableError())
-	}
-
-	if _, ok := builtinVariables[name]; ok {
-		return RedeclarationError{
-			Name: name,
-		}
-	}
-
-	variable := interpreter.declareVariable(name, value)
-	builtinVariables[name] = variable
-	return nil
 }
 
 func (interpreter *Interpreter) VisitBlock(block *ast.Block) ast.Repr {
@@ -2567,10 +2510,10 @@ func init() {
 	}
 }
 
-func (interpreter *Interpreter) defineBaseFunctions() {
-	interpreter.defineConverterFunctions()
-	interpreter.defineTypeFunction()
-	interpreter.defineStringFunction()
+func defineBaseFunctions(activation *VariableActivation) {
+	defineConverterFunctions(activation)
+	defineTypeFunction(activation)
+	defineStringFunction(activation)
 }
 
 type converterFunction struct {
@@ -2617,12 +2560,9 @@ var converterFunctionValues = func() []converterFunction {
 	return converterFuncValues
 }()
 
-func (interpreter *Interpreter) defineConverterFunctions() {
+func defineConverterFunctions(activation *VariableActivation) {
 	for _, converterFunc := range converterFunctionValues {
-		err := interpreter.ImportBuiltinValue(converterFunc.name, converterFunc.converter)
-		if err != nil {
-			panic(errors.NewUnreachableError())
-		}
+		defineBaseValue(activation, converterFunc.name, converterFunc.converter)
 	}
 }
 
@@ -2644,11 +2584,15 @@ var typeFunction = NewHostFunctionValue(
 	},
 )
 
-func (interpreter *Interpreter) defineTypeFunction() {
-	err := interpreter.ImportBuiltinValue(sema.MetaType.String(), typeFunction)
-	if err != nil {
+func defineTypeFunction(activation *VariableActivation) {
+	defineBaseValue(activation, sema.MetaType.String(), typeFunction)
+}
+
+func defineBaseValue(activation *VariableActivation, name string, value Value) {
+	if activation.Find(name) != nil {
 		panic(errors.NewUnreachableError())
 	}
+	activation.Set(name, NewVariableWithValue(value))
 }
 
 // stringFunction is the `String` function. It is stateless, hence it can be re-used across interpreters.
@@ -2681,11 +2625,8 @@ var stringFunction = func() Value {
 	return functionValue
 }()
 
-func (interpreter *Interpreter) defineStringFunction() {
-	err := interpreter.ImportBuiltinValue(sema.StringType.String(), stringFunction)
-	if err != nil {
-		panic(errors.NewUnreachableError())
-	}
+func defineStringFunction(activation *VariableActivation) {
+	defineBaseValue(activation, sema.StringType.String(), stringFunction)
 }
 
 // TODO:
