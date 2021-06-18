@@ -24,7 +24,10 @@ jobs:
           repository: onflow/flow
 
       - name: Create commit
-        run: git commit --allow-empty -m "update Cadence docs"
+        run: |
+          git config --global user.email "bot@onflow.org"
+          git config --global user.name "Flow Bot"
+          git commit --allow-empty -m "update Cadence docs"
 
       - name: Create pull request
         uses: peter-evans/create-pull-request@v3
