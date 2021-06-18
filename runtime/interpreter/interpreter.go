@@ -228,41 +228,40 @@ func (c TypeCodes) Merge(codes TypeCodes) {
 	}
 }
 
-// Builtin global values
+// Builtin variables
 var builtinVariables = map[string]*Variable{}
 
-type GlobalVariables struct {
-	// Global values defined in the program
-	vars map[string]*Variable
-}
+// GlobalVariables represents global variables defined in a program.
+//
+type GlobalVariables map[string]*Variable
 
-func (g *GlobalVariables) Contains(name string) bool {
+func (globalVars GlobalVariables) Contains(name string) bool {
 	if _, ok := builtinVariables[name]; ok {
 		return true
 	}
 
-	_, ok := g.vars[name]
+	_, ok := globalVars[name]
 	return ok
 }
 
-func (g *GlobalVariables) Get(name string) *Variable {
+func (globalVars GlobalVariables) Get(name string) *Variable {
 	if variable, ok := builtinVariables[name]; ok {
 		return variable
 	}
 
-	return g.vars[name]
+	return globalVars[name]
 }
 
-func (g *GlobalVariables) Set(name string, variable *Variable) {
-	g.vars[name] = variable
+func (globalVars GlobalVariables) Set(name string, variable *Variable) {
+	globalVars[name] = variable
 }
 
-func (g *GlobalVariables) Foreach(f func(name string, variable *Variable)) {
+func (globalVars GlobalVariables) Foreach(f func(name string, variable *Variable)) {
 	for name, variable := range builtinVariables {
 		f(name, variable)
 	}
 
-	for name, variable := range g.vars {
+	for name, variable := range globalVars {
 		f(name, variable)
 	}
 }
@@ -272,7 +271,7 @@ type Interpreter struct {
 	Location                       common.Location
 	PredeclaredValues              []ValueDeclaration
 	effectivePredeclaredValues     map[string]ValueDeclaration
-	activations                    VariableActivations
+	activations                    *VariableActivations
 	Globals                        GlobalVariables
 	allInterpreters                map[common.LocationID]*Interpreter
 	typeCodes                      TypeCodes
@@ -488,9 +487,11 @@ func withTypeCodes(typeCodes TypeCodes) Option {
 	}
 }
 
+// Create a base interpreter, so that base-activation can be reused across all interpreters.
+//
 var baseInterpreter = func() Interpreter {
 	interpreter := &Interpreter{
-		activations: VariableActivations{},
+		activations: &VariableActivations{},
 	}
 
 	interpreter.defineBaseFunctions()
@@ -501,12 +502,10 @@ var baseInterpreter = func() Interpreter {
 func NewInterpreter(program *Program, location common.Location, options ...Option) (*Interpreter, error) {
 
 	interpreter := &Interpreter{
-		Program:     program,
-		Location:    location,
-		activations: VariableActivations{},
-		Globals: GlobalVariables{
-			vars: map[string]*Variable{},
-		},
+		Program:                    program,
+		Location:                   location,
+		activations:                &VariableActivations{},
+		Globals:                    map[string]*Variable{},
 		effectivePredeclaredValues: map[string]ValueDeclaration{},
 	}
 
@@ -526,7 +525,7 @@ func NewInterpreter(program *Program, location common.Location, options ...Optio
 	for _, option := range defaultOptions {
 		err := option(interpreter)
 		if err != nil {
-			panic(err)
+			return nil, err
 		}
 	}
 
@@ -1052,15 +1051,16 @@ func (interpreter *Interpreter) functionDeclarationValue(
 	}
 }
 
-// NOTE: consider using NewInterpreter and WithPredeclaredValues if the value should be predeclared in all locations
+// NOTE: consider using NewInterpreter and WithPredeclaredValues if
+// the value should be predeclared in all locations.
+// This method should only be called for the base interpreter.
 //
-func (interpreter *Interpreter) ImportValue(name string, value Value) error {
-	// This method should only be called for the base interpreter
+func (interpreter *Interpreter) ImportBuiltinValue(name string, value Value) error {
 	if interpreter.Program != nil {
 		panic(errors.NewUnreachableError())
 	}
 
-	if interpreter.Globals.Contains(name) {
+	if _, ok := builtinVariables[name]; ok {
 		return RedeclarationError{
 			Name: name,
 		}
@@ -2599,7 +2599,7 @@ var converterFunctionValues = func() []converterFunction {
 
 func (interpreter *Interpreter) defineConverterFunctions() {
 	for _, converterFunc := range converterFunctionValues {
-		err := interpreter.ImportValue(converterFunc.name, converterFunc.converter)
+		err := interpreter.ImportBuiltinValue(converterFunc.name, converterFunc.converter)
 		if err != nil {
 			panic(errors.NewUnreachableError())
 		}
@@ -2625,7 +2625,7 @@ var typeFunction = NewHostFunctionValue(
 )
 
 func (interpreter *Interpreter) defineTypeFunction() {
-	err := interpreter.ImportValue(sema.MetaType.String(), typeFunction)
+	err := interpreter.ImportBuiltinValue(sema.MetaType.String(), typeFunction)
 	if err != nil {
 		panic(errors.NewUnreachableError())
 	}
@@ -2662,7 +2662,7 @@ var stringFunction = func() Value {
 }()
 
 func (interpreter *Interpreter) defineStringFunction() {
-	err := interpreter.ImportValue(sema.StringType.String(), stringFunction)
+	err := interpreter.ImportBuiltinValue(sema.StringType.String(), stringFunction)
 	if err != nil {
 		panic(errors.NewUnreachableError())
 	}
