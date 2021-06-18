@@ -408,15 +408,24 @@ let y = 1 > 2 ? nil : 3
 
 Operators have the following precedences, highest to lowest:
 
-- Multiplication precedence: `*`, `&*`, `/`, `%`
-- Addition precedence: `+`, `&+`, `-`, `&-`
+- Unary precedence: `-`, `!`, `<-`
+- Cast precedence: `as`, `as?`, `as!`
+- Multiplication precedence: `*`, `/`, `%`
+- Addition precedence: `+`, `-`
+- Bitwise shift precedence: `<<`, `>>`
+- Bitwise conjunction precedence: `&`
+- Bitwise exclusive disjunction precedence: `^`
+- Bitwise disjunction precedence: `|`
+- Nil-Coalescing precedence: `??`
 - Relational precedence: `<`, `<=`, `>`, `>=`
 - Equality precedence: `==`, `!=`
 - Logical conjunction precedence: `&&`
 - Logical disjunction precedence: `||`
 - Ternary precedence: `? :`
 
-All operators are left-associative, except for the ternary operator, which is right-associative.
+All operators are left-associative, except for the following operators which are right-associative:
+- Ternary operator
+- Nil-coalescing operator
 
 Expressions can be wrapped in parentheses to override precedence conventions,
 i.e. an alternate order should be indicated, or when the default order should be emphasized
