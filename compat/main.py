@@ -53,6 +53,7 @@ def cwd(path):
 class File:
     path: str
     prepare: Optional[str]
+    member_account_access: List[str] = field(default_factory=list)
 
     def rewrite(self, path: Path):
         if not isinstance(self.prepare, str):
@@ -64,10 +65,13 @@ class File:
         with path.open(mode="r") as f:
             source = f.read()
 
-        variables = {"source": source}
+        def replace(pattern, replacement):
+            nonlocal source
+            source = re.sub(pattern, replacement, source)
+
+        variables = {"replace": replace}
         with cwd(str(path.parent.absolute())):
             exec(self.prepare, variables)
-        source = variables["source"]
 
         with path.open(mode="w") as f:
             f.write(source)
@@ -76,16 +80,27 @@ class File:
     def parse(cls, path: Path, use_json: bool, bench: bool) -> (bool, Optional):
         return cls._run(PARSER_PATH, "Parsing", path, use_json, bench)
 
-    @classmethod
-    def check(cls, path: Path, use_json: bool, bench: bool) -> (bool, Optional):
-        return cls._run(CHECKER_PATH, "Checking", path, use_json, bench)
+    def check(self, path: Path, use_json: bool, bench: bool) -> (bool, Optional):
+        extra_args = [
+            f"-memberAccountAccess=S.{path}:S.{(path.parent / Path(other_path)).resolve()}"
+            for other_path in self.member_account_access
+        ]
+        return self._run(CHECKER_PATH, "Checking", path, use_json, bench, extra_args)
 
     @staticmethod
-    def _run(tool_path: Path, verb: str, path: Path, use_json: bool, bench: bool) -> (bool, Optional):
+    def _run(
+            tool_path: Path,
+            verb: str,
+            path: Path,
+            use_json: bool,
+            bench: bool,
+            extra_args: List[str] = None
+    ) -> (bool, Optional):
         logger.info(f"{verb} {path}")
         json_args = ["-json"] if use_json else []
         bench_args = ["-bench"] if bench else []
-        args = json_args + bench_args
+        args = json_args + bench_args + (extra_args or [])
+
         completed_process = subprocess.run(
             [tool_path, *args, path],
             cwd=str(path.parent),
@@ -107,13 +122,16 @@ class GoTest:
     path: str
     command: str
 
-    def run(self, working_dir: Path, prepare: bool) -> bool:
+    def run(self, working_dir: Path, prepare: bool, go_test_ref: Optional[str]) -> bool:
+        if go_test_ref:
+            replacement = f'github.com/onflow/cadence@{go_test_ref}'
+        else:
+            replacement = shlex.quote(str(Path.cwd().parent.absolute()))
 
-        cadence_path = shlex.quote(str(Path.cwd().parent.absolute()))
         with cwd(working_dir / self.path):
             if prepare:
                 subprocess.run([
-                    "go", "mod", "edit", "-replace", f'github.com/onflow/cadence={cadence_path}',
+                    "go", "mod", "edit", "-replace", f'github.com/onflow/cadence={replacement}',
                 ])
                 subprocess.run([
                     "go", "get", "-t", ".",
@@ -156,6 +174,11 @@ class Result:
     check_result: Optional[CheckResult] = field(default=None)
 
 
+def load_index(path: Path) -> List[str]:
+    with path.open(mode="r") as f:
+        return yaml.safe_load(f)
+
+
 @dataclass
 class Description:
     description: str
@@ -191,6 +214,7 @@ class Description:
         bench: bool,
         check: bool,
         go_test: bool,
+        go_test_ref: Optional[str],
     ) -> (bool, List[Result]):
 
         working_dir = SUITE_PATH / name
@@ -206,7 +230,7 @@ class Description:
         go_tests_succeeded = True
         if go_test:
             for test in self.go_tests:
-                if not test.run(working_dir, prepare=prepare):
+                if not test.run(working_dir, prepare=prepare, go_test_ref=go_test_ref):
                     go_tests_succeeded = False
 
         succeeded = check_succeeded and go_tests_succeeded
@@ -238,7 +262,7 @@ class Description:
                 continue
 
             check_succeeded, check_results = \
-                File.check(path, use_json=use_json, bench=bench)
+                file.check(path, use_json=use_json, bench=bench)
             if check_results:
                 result.check_result = CheckResult.from_dict(check_results[0])
             if use_json:
@@ -255,7 +279,7 @@ class Git:
     @staticmethod
     def clone(url: str, branch: str, working_dir: Path):
         subprocess.run([
-            "git", "clone", "--single-branch", "--branch",
+            "git", "clone", "--depth", "1", "--branch",
             branch, url, working_dir
         ])
 
@@ -673,6 +697,11 @@ def build_all():
     help="Run the suite Go tests"
 )
 @click.option(
+    "--go-test-ref",
+    default=None,
+    help="Git ref of Cadence for Go tests"
+)
+@click.option(
     "--output",
     default=None,
     type=click.File("w"),
@@ -699,6 +728,7 @@ def main(
         bench: bool,
         check: bool,
         go_test: bool,
+        go_test_ref: Optional[str],
         output: Optional[LazyFile],
         other_ref: Optional[str],
         delta_threshold: float,
@@ -723,6 +753,7 @@ def main(
         bench=bench,
         check=check,
         go_test=go_test,
+        go_test_ref=go_test_ref,
         names=names
     )
 
@@ -767,14 +798,22 @@ def main(
         exit(1)
 
 
-def run(prepare: bool, use_json: bool, bench: bool, check: bool, go_test: bool, names: Collection[str]) -> (
-bool, List[Result]):
+def run(
+        prepare: bool,
+        use_json: bool,
+        bench: bool,
+        check: bool,
+        go_test: bool,
+        go_test_ref: Optional[str],
+        names: Collection[str]
+) -> (bool, List[Result]):
+
     build_all()
 
     all_succeeded = True
 
     if not len(names):
-        names = [description_path.stem for description_path in SUITE_PATH.glob("*.yaml")]
+        names = load_index(SUITE_PATH / "index.yaml")
 
     all_results: List[Result] = []
 
@@ -789,6 +828,7 @@ bool, List[Result]):
             bench=bench,
             check=check,
             go_test=go_test,
+            go_test_ref=go_test_ref,
         )
 
         if not run_succeeded:

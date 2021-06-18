@@ -1,0 +1,139 @@
+description: Flow Core Contracts
+maintainers:
+- bastian@dapperlabs.com
+- joshua.hannan@dapperlabs.com
+url: https://github.com/onflow/flow-core-contracts.git
+branch: master
+go_tests:
+- path: lib/go/test
+  command: make test
+files:
+- path: contracts/FlowToken.cdc
+  # language=Python prefix="replace: Callable[[str, str], None]\n"
+  prepare: |
+    from pathlib import Path
+
+    replace(
+      'import FungibleToken from 0xFUNGIBLETOKENADDRESS',
+      f'import FungibleToken from "{Path("../../flow-ft/contracts/FungibleToken.cdc").resolve()}"'
+    )
+
+- path: contracts/FlowFees.cdc
+  # language=Python prefix="replace: Callable[[str, str], None]\n"
+  prepare: |
+    from pathlib import Path
+
+    replace(
+      'import FungibleToken from 0xFUNGIBLETOKENADDRESS',
+      f'import FungibleToken from "{Path("../../flow-ft/contracts/FungibleToken.cdc").resolve()}"'
+    )
+    replace(
+      'import FlowToken from 0xFLOWTOKENADDRESS',
+      f'import FlowToken from "{Path("FlowToken.cdc").resolve()}"'
+    )
+
+- path: contracts/FlowIDTableStaking.cdc
+  # language=Python prefix="replace: Callable[[str, str], None]\n"
+  prepare: |
+    from pathlib import Path
+
+    replace(
+      'import FungibleToken from 0xFUNGIBLETOKENADDRESS',
+      f'import FungibleToken from "{Path("../../flow-ft/contracts/FungibleToken.cdc").resolve()}"'
+    )
+    replace(
+      'import FlowToken from 0xFLOWTOKENADDRESS',
+      f'import FlowToken from "{Path("FlowToken.cdc").resolve()}"'
+    )
+
+- path: contracts/FlowStorageFees.cdc
+  # language=Python prefix="replace: Callable[[str, str], None]\n"
+  prepare: |
+    from pathlib import Path
+
+    replace(
+      'import FungibleToken from 0xFUNGIBLETOKENADDRESS',
+      f'import FungibleToken from "{Path("../../flow-ft/contracts/FungibleToken.cdc").resolve()}"'
+    )
+    replace(
+      'import FlowToken from 0xFLOWTOKENADDRESS',
+      f'import FlowToken from "{Path("FlowToken.cdc").resolve()}"'
+    )
+
+- path: contracts/FlowServiceAccount.cdc
+  # language=Python prefix="replace: Callable[[str, str], None]\n"
+  prepare: |
+    from pathlib import Path
+
+    replace(
+      'import FungibleToken from 0xFUNGIBLETOKENADDRESS',
+      f'import FungibleToken from "{Path("../../flow-ft/contracts/FungibleToken.cdc").resolve()}"'
+    )
+    replace(
+      'import FlowToken from 0xFLOWTOKENADDRESS',
+      f'import FlowToken from "{Path("FlowToken.cdc").resolve()}"'
+    )
+    replace(
+      'import FlowFees from 0xFLOWFEESADDRESS',
+      f'import FlowFees from "{Path("FlowFees.cdc").resolve()}"'
+    )
+    replace(
+      'import FlowStorageFees from 0xFLOWSTORAGEFEESADDRESS',
+      f'import FlowStorageFees from "{Path("FlowStorageFees.cdc").resolve()}"'
+    )
+
+- path: contracts/StakingProxy.cdc
+
+- path: contracts/LockedTokens.cdc
+  # language=Python prefix="replace: Callable[[str, str], None]\n"
+  prepare: |
+    from pathlib import Path
+
+    replace(
+      'import FlowToken from 0xFLOWTOKENADDRESS',
+      f'import FlowToken from "{Path("FlowToken.cdc").resolve()}"'
+    )
+    replace(
+      'import FungibleToken from 0xFUNGIBLETOKENADDRESS',
+      f'import FungibleToken from "{Path("../../flow-ft/contracts/FungibleToken.cdc").resolve()}"'
+    )
+    replace(
+      'import FlowIDTableStaking from 0xFLOWIDTABLESTAKINGADDRESS',
+      f'import FlowIDTableStaking from "{Path("FlowIDTableStaking.cdc").resolve()}"'
+    )
+    replace(
+      'import FlowStorageFees from 0xFLOWSTORAGEFEESADDRESS',
+      f'import FlowStorageFees from "{Path("FlowStorageFees.cdc").resolve()}"'
+    )
+    replace(
+      'import StakingProxy from 0xSTAKINGPROXYADDRESS',
+      f'import StakingProxy from "{Path("StakingProxy.cdc").resolve()}"'
+    )
+
+- path: contracts/FlowStakingCollection.cdc
+  member_account_access:
+    - 'LockedTokens.cdc'
+  # language=Python prefix="replace: Callable[[str, str], None]\n"
+  prepare: |
+    from pathlib import Path
+
+    replace(
+      'import FungibleToken from 0xFUNGIBLETOKENADDRESS',
+      f'import FungibleToken from "{Path("../../flow-ft/contracts/FungibleToken.cdc").resolve()}"'
+    )
+    replace(
+      'import FlowToken from 0xFLOWTOKENADDRESS',
+      f'import FlowToken from "{Path("FlowToken.cdc").resolve()}"'
+    )
+    replace(
+      'import FlowIDTableStaking from 0xFLOWIDTABLESTAKINGADDRESS',
+      f'import FlowIDTableStaking from "{Path("FlowIDTableStaking.cdc").resolve()}"'
+    )
+    replace(
+      'import LockedTokens from 0xLOCKEDTOKENSADDRESS',
+      f'import LockedTokens from "{Path("LockedTokens.cdc").resolve()}"'
+    )
+    replace(
+      'import FlowStorageFees from 0xFLOWSTORAGEFEESADDRESS',
+      f'import FlowStorageFees from "{Path("FlowStorageFees.cdc").resolve()}"'
+    )

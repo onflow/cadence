@@ -44,7 +44,7 @@ func main() {
 
 	program, must := cmd.PrepareProgramFromFile(location, codes)
 
-	checker, must := cmd.PrepareChecker(program, location, codes, must)
+	checker, must := cmd.PrepareChecker(program, location, codes, nil, must)
 
 	must(checker.Check())
 

@@ -10,65 +10,54 @@ go_tests:
 files:
 - path: contracts/NonFungibleToken.cdc
 - path: contracts/ExampleNFT.cdc
-  # language=Python prefix=source=''\n
+  # language=Python prefix="replace: Callable[[str, str], None]\n"
   prepare: |
-      import re
-      from pathlib import Path
+    from pathlib import Path
 
-      source = re.sub(
-        'import NonFungibleToken from 0x02',
-        f'import NonFungibleToken from "{Path("NonFungibleToken.cdc").resolve()}"',
-        source,
-      )
+    replace(
+      'import NonFungibleToken from 0x02',
+      f'import NonFungibleToken from "{Path("NonFungibleToken.cdc").resolve()}"'
+    )
 
 
 - path: transactions/mint_nft.cdc
-  # language=Python prefix=source=''\n
+  # language=Python prefix="replace: Callable[[str, str], None]\n"
   prepare: |
-      import re
-      from pathlib import Path
+    from pathlib import Path
 
-      source = re.sub(
-        'import NonFungibleToken from 0xNFTADDRESS',
-        f'import NonFungibleToken from "{Path("../contracts/NonFungibleToken.cdc").resolve()}"',
-        source,
-      )
-      source = re.sub(
-        'import ExampleNFT from 0xNFTCONTRACTADDRESS',
-        f'import ExampleNFT from "{Path("../contracts/ExampleNFT.cdc").resolve()}"',
-        source,
-      )
+    replace(
+      'import NonFungibleToken from 0xNFTADDRESS',
+      f'import NonFungibleToken from "{Path("../contracts/NonFungibleToken.cdc").resolve()}"'
+    )
+    replace(
+      'import ExampleNFT from 0xNFTCONTRACTADDRESS',
+      f'import ExampleNFT from "{Path("../contracts/ExampleNFT.cdc").resolve()}"'
+    )
 
 - path: transactions/setup_account.cdc
-  # language=Python prefix=source=''\n
+  # language=Python prefix="replace: Callable[[str, str], None]\n"
   prepare: |
-      import re
-      from pathlib import Path
+    from pathlib import Path
 
-      source = re.sub(
-        'import NonFungibleToken from 0xNFTADDRESS',
-        f'import NonFungibleToken from "{Path("../contracts/NonFungibleToken.cdc").resolve()}"',
-        source,
-      )
-      source = re.sub(
-        'import ExampleNFT from 0xNFTCONTRACTADDRESS',
-        f'import ExampleNFT from "{Path("../contracts/ExampleNFT.cdc").resolve()}"',
-        source,
-      )
+    replace(
+      'import NonFungibleToken from 0xNFTADDRESS',
+      f'import NonFungibleToken from "{Path("../contracts/NonFungibleToken.cdc").resolve()}"'
+    )
+    replace(
+      'import ExampleNFT from 0xNFTCONTRACTADDRESS',
+      f'import ExampleNFT from "{Path("../contracts/ExampleNFT.cdc").resolve()}"'
+    )
 
 - path: transactions/transfer_nft.cdc
-  # language=Python prefix=source=''\n
+  # language=Python prefix="replace: Callable[[str, str], None]\n"
   prepare: |
-      import re
-      from pathlib import Path
+    from pathlib import Path
 
-      source = re.sub(
-        'import NonFungibleToken from 0xNFTADDRESS',
-        f'import NonFungibleToken from "{Path("../contracts/NonFungibleToken.cdc").resolve()}"',
-        source,
-      )
-      source = re.sub(
-        'import ExampleNFT from 0xNFTCONTRACTADDRESS',
-        f'import ExampleNFT from "{Path("../contracts/ExampleNFT.cdc").resolve()}"',
-        source,
-      )
+    replace(
+      'import NonFungibleToken from 0xNFTADDRESS',
+      f'import NonFungibleToken from "{Path("../contracts/NonFungibleToken.cdc").resolve()}"'
+    )
+    replace(
+      'import ExampleNFT from 0xNFTCONTRACTADDRESS',
+      f'import ExampleNFT from "{Path("../contracts/ExampleNFT.cdc").resolve()}"'
+    )

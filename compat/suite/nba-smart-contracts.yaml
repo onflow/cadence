@@ -9,98 +9,82 @@ go_tests:
   command: make test
 files:
 - path: contracts/TopShot.cdc
-  # language=Python prefix=source=''\n
+  # language=Python prefix="replace: Callable[[str, str], None]\n"
   prepare: |
-    import re
     from pathlib import Path
 
-    source = re.sub(
+    replace(
       'import NonFungibleToken from 0xNFTADDRESS',
-      f'import NonFungibleToken from "{Path("../../flow-nft/contracts/NonFungibleToken.cdc").resolve()}"',
-      source,
+      f'import NonFungibleToken from "{Path("../../flow-nft/contracts/NonFungibleToken.cdc").resolve()}"'
     )
 
 - path: contracts/MarketTopShot.cdc
-  # language=Python prefix=source=''\n
+  # language=Python prefix="replace: Callable[[str, str], None]\n"
   prepare: |
-    import re
     from pathlib import Path
 
-    source = re.sub(
+    replace(
       'import FungibleToken from 0xFUNGIBLETOKENADDRESS',
-      f'import FungibleToken from "{Path("../../flow-ft/contracts/FungibleToken.cdc").resolve()}"',
-      source,
+      f'import FungibleToken from "{Path("../../flow-ft/contracts/FungibleToken.cdc").resolve()}"'
     )
 
-    source = re.sub(
+    replace(
       'import NonFungibleToken from 0xNFTADDRESS',
-      f'import NonFungibleToken from "{Path("../../flow-nft/contracts/NonFungibleToken.cdc").resolve()}"',
-      source,
+      f'import NonFungibleToken from "{Path("../../flow-nft/contracts/NonFungibleToken.cdc").resolve()}"'
     )
 
-    source = re.sub(
+    replace(
       'import TopShot from 0xTOPSHOTADDRESS',
-      f'import TopShot from  "{Path("TopShot.cdc").resolve()}"',
-      source,
+      f'import TopShot from  "{Path("TopShot.cdc").resolve()}"'
     )
 
 - path: contracts/TopShotMarketV2.cdc
-  # language=Python prefix=source=''\n
+  # language=Python prefix="replace: Callable[[str, str], None]\n"
   prepare: |
-    import re
     from pathlib import Path
 
-    source = re.sub(
+    replace(
       'import FungibleToken from 0xFUNGIBLETOKENADDRESS',
-      f'import FungibleToken from "{Path("../../flow-ft/contracts/FungibleToken.cdc").resolve()}"',
-      source,
+      f'import FungibleToken from "{Path("../../flow-ft/contracts/FungibleToken.cdc").resolve()}"'
     )
 
-    source = re.sub(
+    replace(
       'import NonFungibleToken from 0xNFTADDRESS',
-      f'import NonFungibleToken from "{Path("../../flow-nft/contracts/NonFungibleToken.cdc").resolve()}"',
-      source,
+      f'import NonFungibleToken from "{Path("../../flow-nft/contracts/NonFungibleToken.cdc").resolve()}"'
     )
 
-    source = re.sub(
+    replace(
       'import TopShot from 0xTOPSHOTADDRESS',
-      f'import TopShot from  "{Path("TopShot.cdc").resolve()}"',
-      source,
+      f'import TopShot from  "{Path("TopShot.cdc").resolve()}"'
     )
 
 - path: contracts/TopShotShardedCollection.cdc
-  # language=Python prefix=source=''\n
+  # language=Python prefix="replace: Callable[[str, str], None]\n"
   prepare: |
-    import re
     from pathlib import Path
 
-    source = re.sub(
+    replace(
       'import NonFungibleToken from 0xNFTADDRESS',
-      f'import NonFungibleToken from "{Path("../../flow-nft/contracts/NonFungibleToken.cdc").resolve()}"',
-      source,
+      f'import NonFungibleToken from "{Path("../../flow-nft/contracts/NonFungibleToken.cdc").resolve()}"'
     )
 
-    source = re.sub(
+    replace(
       'import TopShot from 0xTOPSHOTADDRESS',
-      f'import TopShot from  "{Path("TopShot.cdc").resolve()}"',
-      source,
+      f'import TopShot from  "{Path("TopShot.cdc").resolve()}"'
     )
 
 - path: contracts/TopshotAdminReceiver.cdc
-  # language=Python prefix=source=''\n
+  # language=Python prefix="replace: Callable[[str, str], None]\n"
   prepare: |
-    import re
     from pathlib import Path
 
-    source = re.sub(
+    replace(
       'import TopShotShardedCollection from 0xSHARDEDADDRESS',
-      f'import TopShotShardedCollection from "{Path("TopShotShardedCollection.cdc").resolve()}"',
-      source,
+      f'import TopShotShardedCollection from "{Path("TopShotShardedCollection.cdc").resolve()}"'
     )
 
-    source = re.sub(
+    replace(
       'import TopShot from 0xTOPSHOTADDRESS',
-      f'import TopShot from  "{Path("TopShot.cdc").resolve()}"',
-      source,
+      f'import TopShot from  "{Path("TopShot.cdc").resolve()}"'
     )
 
