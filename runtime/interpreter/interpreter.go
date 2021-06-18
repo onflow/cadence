@@ -244,26 +244,17 @@ func (globalVars GlobalVariables) Contains(name string) bool {
 	return ok
 }
 
-func (globalVars GlobalVariables) Get(name string) *Variable {
-	if variable, ok := builtinVariables[name]; ok {
-		return variable
+func (globalVars GlobalVariables) Get(name string) (*Variable, bool) {
+	variable, ok := builtinVariables[name]
+	if !ok {
+		variable, ok = globalVars[name]
 	}
 
-	return globalVars[name]
+	return variable, ok
 }
 
 func (globalVars GlobalVariables) Set(name string, variable *Variable) {
 	globalVars[name] = variable
-}
-
-func (globalVars GlobalVariables) Foreach(f func(name string, variable *Variable)) {
-	for name, variable := range builtinVariables {
-		f(name, variable)
-	}
-
-	for name, variable := range globalVars {
-		f(name, variable)
-	}
 }
 
 type Interpreter struct {
@@ -487,16 +478,20 @@ func withTypeCodes(typeCodes TypeCodes) Option {
 	}
 }
 
-// Create a base interpreter, so that base-activation can be reused across all interpreters.
+// Create a base-activation so that it can be reused across all interpreters.
 //
-var baseInterpreter = func() Interpreter {
+var baseActivation = func() *VariableActivation {
 	interpreter := &Interpreter{
 		activations: &VariableActivations{},
 	}
 
 	interpreter.defineBaseFunctions()
 
-	return *interpreter
+	if interpreter.activations.Depth() > 1 {
+		panic(errors.NewUnreachableError())
+	}
+
+	return interpreter.activations.Current()
 }()
 
 func NewInterpreter(program *Program, location common.Location, options ...Option) (*Interpreter, error) {
@@ -511,7 +506,7 @@ func NewInterpreter(program *Program, location common.Location, options ...Optio
 
 	// Start a new activation/scope for the current program.
 	// Use the base activation as the parent.
-	interpreter.activations.PushNewWithParent(baseInterpreter.activations.Current())
+	interpreter.activations.PushNewWithParent(baseActivation)
 
 	defaultOptions := []Option{
 		WithAllInterpreters(map[common.LocationID]*Interpreter{}),
@@ -724,8 +719,8 @@ func (interpreter *Interpreter) invokeVariable(
 ) {
 
 	// function must be defined as a global variable
-	variable := interpreter.Globals.Get(functionName)
-	if variable == nil {
+	variable, ok := interpreter.Globals.Get(functionName)
+	if !ok {
 		return nil, NotDeclaredError{
 			ExpectedKind: common.DeclarationKindFunction,
 			Name:         functionName,
@@ -3319,8 +3314,8 @@ func (interpreter *Interpreter) getElaboration(location common.Location) *sema.E
 
 // GetContractComposite gets the composite value of the contract at the address location.
 func (interpreter *Interpreter) GetContractComposite(contractLocation common.AddressLocation) (*CompositeValue, error) {
-	contractGlobal := interpreter.Globals.Get(contractLocation.Name)
-	if contractGlobal == nil {
+	contractGlobal, ok := interpreter.Globals.Get(contractLocation.Name)
+	if !ok {
 		return nil, NotDeclaredError{
 			ExpectedKind: common.DeclarationKindContract,
 			Name:         contractLocation.Name,
@@ -3328,8 +3323,8 @@ func (interpreter *Interpreter) GetContractComposite(contractLocation common.Add
 	}
 
 	// get contract value
-	contractValue := contractGlobal.GetValue().(*CompositeValue)
-	if contractValue == nil {
+	contractValue, ok := contractGlobal.GetValue().(*CompositeValue)
+	if !ok {
 		return nil, NotDeclaredError{
 			ExpectedKind: common.DeclarationKindContract,
 			Name:         contractLocation.Name,

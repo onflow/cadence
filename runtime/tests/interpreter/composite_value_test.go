@@ -51,12 +51,12 @@ func TestInterpretCompositeValue(t *testing.T) {
 
 		require.Equal(t,
 			interpreter.NewStringValue("Apple"),
-			inter.Globals.Get("name").GetValue(),
+			inter.Globals["name"].GetValue(),
 		)
 
 		require.Equal(t,
 			interpreter.NewStringValue("Red"),
-			inter.Globals.Get("color").GetValue(),
+			inter.Globals["color"].GetValue(),
 		)
 	})
 }

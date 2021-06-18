@@ -107,19 +107,19 @@ func TestInterpretDynamicCastingNumber(t *testing.T) {
 
 								assert.Equal(t,
 									test.expected,
-									inter.Globals.Get("x").GetValue(),
+									inter.Globals["x"].GetValue(),
 								)
 
 								assert.Equal(t,
 									test.expected,
-									inter.Globals.Get("y").GetValue(),
+									inter.Globals["y"].GetValue(),
 								)
 
 								assert.Equal(t,
 									interpreter.NewSomeValueOwningNonCopying(
 										test.expected,
 									),
-									inter.Globals.Get("z").GetValue(),
+									inter.Globals["z"].GetValue(),
 								)
 							})
 						}
@@ -203,14 +203,14 @@ func TestInterpretDynamicCastingVoid(t *testing.T) {
 
 						assert.Equal(t,
 							interpreter.VoidValue{},
-							inter.Globals.Get("x").GetValue(),
+							inter.Globals["x"].GetValue(),
 						)
 
 						assert.Equal(t,
 							interpreter.NewSomeValueOwningNonCopying(
 								interpreter.VoidValue{},
 							),
-							inter.Globals.Get("y").GetValue(),
+							inter.Globals["y"].GetValue(),
 						)
 					})
 				}
@@ -289,14 +289,14 @@ func TestInterpretDynamicCastingString(t *testing.T) {
 
 						assert.Equal(t,
 							interpreter.NewStringValue("test"),
-							inter.Globals.Get("x").GetValue(),
+							inter.Globals["x"].GetValue(),
 						)
 
 						assert.Equal(t,
 							interpreter.NewSomeValueOwningNonCopying(
 								interpreter.NewStringValue("test"),
 							),
-							inter.Globals.Get("y").GetValue(),
+							inter.Globals["y"].GetValue(),
 						)
 					})
 				}
@@ -374,14 +374,14 @@ func TestInterpretDynamicCastingBool(t *testing.T) {
 
 						assert.Equal(t,
 							interpreter.BoolValue(true),
-							inter.Globals.Get("x").GetValue(),
+							inter.Globals["x"].GetValue(),
 						)
 
 						assert.Equal(t,
 							interpreter.NewSomeValueOwningNonCopying(
 								interpreter.BoolValue(true),
 							),
-							inter.Globals.Get("y").GetValue(),
+							inter.Globals["y"].GetValue(),
 						)
 					})
 				}
@@ -463,14 +463,14 @@ func TestInterpretDynamicCastingAddress(t *testing.T) {
 						}
 						assert.Equal(t,
 							addressValue,
-							inter.Globals.Get("y").GetValue(),
+							inter.Globals["y"].GetValue(),
 						)
 
 						assert.Equal(t,
 							interpreter.NewSomeValueOwningNonCopying(
 								addressValue,
 							),
-							inter.Globals.Get("z").GetValue(),
+							inter.Globals["z"].GetValue(),
 						)
 					})
 				}
@@ -551,17 +551,17 @@ func TestInterpretDynamicCastingStruct(t *testing.T) {
 
 						assert.IsType(t,
 							&interpreter.CompositeValue{},
-							inter.Globals.Get("x").GetValue(),
+							inter.Globals["x"].GetValue(),
 						)
 
 						require.IsType(t,
 							&interpreter.SomeValue{},
-							inter.Globals.Get("y").GetValue(),
+							inter.Globals["y"].GetValue(),
 						)
 
 						require.IsType(t,
 							&interpreter.CompositeValue{},
-							inter.Globals.Get("y").GetValue().(*interpreter.SomeValue).Value,
+							inter.Globals["y"].GetValue().(*interpreter.SomeValue).Value,
 						)
 					})
 				}
@@ -1037,14 +1037,14 @@ func TestInterpretDynamicCastingSome(t *testing.T) {
 
 						assert.Equal(t,
 							expectedValue,
-							inter.Globals.Get("y").GetValue(),
+							inter.Globals["y"].GetValue(),
 						)
 
 						if targetType == sema.AnyStructType && !returnsOptional {
 
 							assert.Equal(t,
 								expectedValue,
-								inter.Globals.Get("z").GetValue(),
+								inter.Globals["z"].GetValue(),
 							)
 
 						} else {
@@ -1052,7 +1052,7 @@ func TestInterpretDynamicCastingSome(t *testing.T) {
 								interpreter.NewSomeValueOwningNonCopying(
 									expectedValue,
 								),
-								inter.Globals.Get("z").GetValue(),
+								inter.Globals["z"].GetValue(),
 							)
 						}
 
@@ -1136,14 +1136,14 @@ func TestInterpretDynamicCastingArray(t *testing.T) {
 
 						assert.Equal(t,
 							expectedValue,
-							inter.Globals.Get("x").GetValue(),
+							inter.Globals["x"].GetValue(),
 						)
 
 						assert.Equal(t,
 							interpreter.NewSomeValueOwningNonCopying(
 								expectedValue,
 							),
-							inter.Globals.Get("y").GetValue(),
+							inter.Globals["y"].GetValue(),
 						)
 					})
 				}
@@ -1231,14 +1231,14 @@ func TestInterpretDynamicCastingDictionary(t *testing.T) {
 
 						assert.Equal(t,
 							expectedValue,
-							inter.Globals.Get("y").GetValue(),
+							inter.Globals["y"].GetValue(),
 						)
 
 						assert.Equal(t,
 							interpreter.NewSomeValueOwningNonCopying(
 								expectedValue,
 							),
-							inter.Globals.Get("z").GetValue(),
+							inter.Globals["z"].GetValue(),
 						)
 					})
 				}
@@ -3382,14 +3382,14 @@ func TestInterpretDynamicCastingCapability(t *testing.T) {
 
 						assert.Equal(t,
 							capabilityValue,
-							inter.Globals.Get("x").GetValue(),
+							inter.Globals["x"].GetValue(),
 						)
 
 						assert.Equal(t,
 							interpreter.NewSomeValueOwningNonCopying(
 								capabilityValue,
 							),
-							inter.Globals.Get("y").GetValue(),
+							inter.Globals["y"].GetValue(),
 						)
 					})
 				}
