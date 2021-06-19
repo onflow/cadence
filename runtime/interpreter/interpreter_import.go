@@ -48,10 +48,11 @@ func (interpreter *Interpreter) importResolvedLocation(resolvedLocation sema.Res
 	if identifierLength > 0 {
 		variables = make(map[string]*Variable, identifierLength)
 		for _, identifier := range resolvedLocation.Identifiers {
-			variables[identifier.Identifier] =
-				subInterpreter.Globals[identifier.Identifier]
+			variable, _ := subInterpreter.Globals.Get(identifier.Identifier)
+			variables[identifier.Identifier] = variable
 		}
 	} else {
+		// Only take the global values defined in the program.
 		variables = subInterpreter.Globals
 	}
 
@@ -83,6 +84,6 @@ func (interpreter *Interpreter) importResolvedLocation(resolvedLocation sema.Res
 		}
 
 		interpreter.setVariable(name, variable)
-		interpreter.Globals[name] = variable
+		interpreter.Globals.Set(name, variable)
 	}
 }

@@ -235,13 +235,42 @@ func (c TypeCodes) Merge(codes TypeCodes) {
 	}
 }
 
+// Builtin variables
+var builtinVariables = map[string]*Variable{}
+
+// GlobalVariables represents global variables defined in a program.
+//
+type GlobalVariables map[string]*Variable
+
+func (globalVars GlobalVariables) Contains(name string) bool {
+	if _, ok := builtinVariables[name]; ok {
+		return true
+	}
+
+	_, ok := globalVars[name]
+	return ok
+}
+
+func (globalVars GlobalVariables) Get(name string) (*Variable, bool) {
+	variable, ok := builtinVariables[name]
+	if !ok {
+		variable, ok = globalVars[name]
+	}
+
+	return variable, ok
+}
+
+func (globalVars GlobalVariables) Set(name string, variable *Variable) {
+	globalVars[name] = variable
+}
+
 type Interpreter struct {
 	Program                        *Program
 	Location                       common.Location
 	PredeclaredValues              []ValueDeclaration
 	effectivePredeclaredValues     map[string]ValueDeclaration
 	activations                    *VariableActivations
-	Globals                        map[string]*Variable
+	Globals                        GlobalVariables
 	allInterpreters                map[common.LocationID]*Interpreter
 	typeCodes                      TypeCodes
 	Transactions                   []*HostFunctionValue
@@ -320,7 +349,7 @@ func WithPredeclaredValues(predeclaredValues []ValueDeclaration) Option {
 				continue
 			}
 			name := declaration.ValueDeclarationName()
-			interpreter.Globals[name] = variable
+			interpreter.Globals.Set(name, variable)
 			interpreter.effectivePredeclaredValues[name] = declaration
 		}
 
@@ -467,6 +496,22 @@ func withTypeCodes(typeCodes TypeCodes) Option {
 	}
 }
 
+// Create a base-activation so that it can be reused across all interpreters.
+//
+var baseActivation = func() *VariableActivation {
+	interpreter := &Interpreter{
+		activations: &VariableActivations{},
+	}
+
+	interpreter.defineBaseFunctions()
+
+	if interpreter.activations.Depth() > 1 {
+		panic(errors.NewUnreachableError())
+	}
+
+	return interpreter.activations.Current()
+}()
+
 func NewInterpreter(program *Program, location common.Location, options ...Option) (*Interpreter, error) {
 
 	interpreter := &Interpreter{
@@ -477,6 +522,10 @@ func NewInterpreter(program *Program, location common.Location, options ...Optio
 		effectivePredeclaredValues: map[string]ValueDeclaration{},
 	}
 
+	// Start a new activation/scope for the current program.
+	// Use the base activation as the parent.
+	interpreter.activations.PushNewWithParent(baseActivation)
+
 	defaultOptions := []Option{
 		WithAllInterpreters(map[common.LocationID]*Interpreter{}),
 		withTypeCodes(TypeCodes{
@@ -485,8 +534,6 @@ func NewInterpreter(program *Program, location common.Location, options ...Optio
 			TypeRequirementCodes: map[sema.TypeID]WrapperCode{},
 		}),
 	}
-
-	interpreter.defineBaseFunctions()
 
 	for _, option := range defaultOptions {
 		err := option(interpreter)
@@ -682,7 +729,7 @@ func (interpreter *Interpreter) declareGlobal(declaration ast.Declaration) {
 	}
 	name := identifier.Identifier
 	// NOTE: semantic analysis already checked possible invalid redeclaration
-	interpreter.Globals[name] = interpreter.findVariable(name)
+	interpreter.Globals.Set(name, interpreter.findVariable(name))
 }
 
 // invokeVariable looks up the function by the given name from global variables,
@@ -696,7 +743,7 @@ func (interpreter *Interpreter) invokeVariable(
 ) {
 
 	// function must be defined as a global variable
-	variable, ok := interpreter.Globals[functionName]
+	variable, ok := interpreter.Globals.Get(functionName)
 	if !ok {
 		return nil, NotDeclaredError{
 			ExpectedKind: common.DeclarationKindFunction,
@@ -948,7 +995,7 @@ func (interpreter *Interpreter) VisitProgram(program *ast.Program) ast.Repr {
 			return result
 		})
 		interpreter.setVariable(identifier, variable)
-		interpreter.Globals[identifier] = variable
+		interpreter.Globals.Set(identifier, variable)
 
 		variableDeclarationVariables = append(variableDeclarationVariables, variable)
 	}
@@ -1023,17 +1070,23 @@ func (interpreter *Interpreter) functionDeclarationValue(
 	}
 }
 
-// NOTE: consider using NewInterpreter and WithPredeclaredValues if the value should be predeclared in all locations
+// NOTE: consider using NewInterpreter and WithPredeclaredValues if
+// the value should be predeclared in all locations.
+// This method should only be called for the base interpreter.
 //
-func (interpreter *Interpreter) ImportValue(name string, value Value) error {
-	if _, ok := interpreter.Globals[name]; ok {
+func (interpreter *Interpreter) ImportBuiltinValue(name string, value Value) error {
+	if interpreter.Program != nil {
+		panic(errors.NewUnreachableError())
+	}
+
+	if _, ok := builtinVariables[name]; ok {
 		return RedeclarationError{
 			Name: name,
 		}
 	}
 
 	variable := interpreter.declareVariable(name, value)
-	interpreter.Globals[name] = variable
+	builtinVariables[name] = variable
 	return nil
 }
 
@@ -2246,7 +2299,7 @@ func (interpreter *Interpreter) ensureLoadedWithLocationHandler(
 		for _, global := range virtualImport.Globals {
 			variable := NewVariableWithValue(global.Value)
 			subInterpreter.setVariable(global.Name, variable)
-			subInterpreter.Globals[global.Name] = variable
+			subInterpreter.Globals.Set(global.Name, variable)
 		}
 
 		subInterpreter.typeCodes.
@@ -2566,7 +2619,7 @@ var converterFunctionValues = func() []converterFunction {
 
 func (interpreter *Interpreter) defineConverterFunctions() {
 	for _, converterFunc := range converterFunctionValues {
-		err := interpreter.ImportValue(converterFunc.name, converterFunc.converter)
+		err := interpreter.ImportBuiltinValue(converterFunc.name, converterFunc.converter)
 		if err != nil {
 			panic(errors.NewUnreachableError())
 		}
@@ -2592,7 +2645,7 @@ var typeFunction = NewHostFunctionValue(
 )
 
 func (interpreter *Interpreter) defineTypeFunction() {
-	err := interpreter.ImportValue(sema.MetaType.String(), typeFunction)
+	err := interpreter.ImportBuiltinValue(sema.MetaType.String(), typeFunction)
 	if err != nil {
 		panic(errors.NewUnreachableError())
 	}
@@ -2629,7 +2682,7 @@ var stringFunction = func() Value {
 }()
 
 func (interpreter *Interpreter) defineStringFunction() {
-	err := interpreter.ImportValue(sema.StringType.String(), stringFunction)
+	err := interpreter.ImportBuiltinValue(sema.StringType.String(), stringFunction)
 	if err != nil {
 		panic(errors.NewUnreachableError())
 	}
@@ -3286,7 +3339,7 @@ func (interpreter *Interpreter) getElaboration(location common.Location) *sema.E
 
 // GetContractComposite gets the composite value of the contract at the address location.
 func (interpreter *Interpreter) GetContractComposite(contractLocation common.AddressLocation) (*CompositeValue, error) {
-	contractGlobal, ok := interpreter.Globals[contractLocation.Name]
+	contractGlobal, ok := interpreter.Globals.Get(contractLocation.Name)
 	if !ok {
 		return nil, NotDeclaredError{
 			ExpectedKind: common.DeclarationKindContract,

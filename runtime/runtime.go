@@ -1753,7 +1753,15 @@ func (r *interpreterRuntime) instantiateContract(
 		return nil, err
 	}
 
-	contract = interpeter.Globals[contractType.Identifier].GetValue().(*interpreter.CompositeValue)
+	variable, ok := interpeter.Globals.Get(contractType.Identifier)
+	if !ok {
+		return nil, fmt.Errorf(
+			"cannot find contract: `%s`",
+			contractType.Identifier,
+		)
+	}
+
+	contract = variable.GetValue().(*interpreter.CompositeValue)
 
 	return contract, err
 }

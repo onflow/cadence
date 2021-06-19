@@ -34,7 +34,7 @@ func Execute(args []string) {
 
 	inter, _, must := cmd.PrepareInterpreter(args[0])
 
-	if _, hasMain := inter.Globals["main"]; !hasMain {
+	if !inter.Globals.Contains("main") {
 		return
 	}
 
