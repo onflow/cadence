@@ -20,9 +20,42 @@ package format
 
 import (
 	"strconv"
+	"strings"
+	"unicode/utf8"
 )
 
 func String(s string) string {
-	// TODO: quote like in string literal
-	return strconv.Quote(s)
+	var b strings.Builder
+	b.WriteByte('"')
+	for _, r := range s {
+		switch r {
+		case 0:
+			b.WriteString(`\0`)
+		case '\n':
+			b.WriteString(`\n`)
+		case '\r':
+			b.WriteString(`\r`)
+		case '\t':
+			b.WriteString(`\t`)
+		case '\\':
+			b.WriteString(`\\`)
+		case '"':
+			b.WriteString(`\"`)
+		default:
+			switch {
+			case 0x20 <= r && r <= 0x7E:
+				// ASCII printable from space through DEL-1.
+				b.WriteRune(r)
+			case r > utf8.MaxRune:
+				r = 0xFFFD
+				fallthrough
+			default:
+				b.WriteString(`\u{`)
+				b.WriteString(strconv.FormatInt(int64(r), 16))
+				b.WriteByte('}')
+			}
+		}
+	}
+	b.WriteByte('"')
+	return b.String()
 }
