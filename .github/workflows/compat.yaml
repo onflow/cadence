@@ -31,4 +31,4 @@ jobs:
       run: pip3 install -r requirements.txt
     - name: Check
       working-directory: compat
-      run: "python3 main.py --format=pretty --check --go-test --go-test-ref ${{ github.event.inputs.goTestRef }}"
+      run: "python3 main.py --format=pretty --check --go-test --go-test-ref ${{ github.event.inputs.goTestRef || 'master' }}"
