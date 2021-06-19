@@ -19,7 +19,6 @@
 package sema
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -726,141 +725,304 @@ func TestCommonSuperType(t *testing.T) {
 		Kind:       common.CompositeKindResource,
 	}
 
-	fmt.Println(CommonSuperType(UInt8Type, UInt8Type, UInt8Type))
-	fmt.Println(CommonSuperType(UInt8Type, UInt16Type, UInt256Type))
-	fmt.Println(CommonSuperType(Int8Type, Int16Type))
-
-	fmt.Println(CommonSuperType(nilType, nilType))
-	fmt.Println(CommonSuperType(Int8Type, nilType))
-
-	fmt.Println(CommonSuperType(AnyStructType, AnyStructType))
-	fmt.Println(CommonSuperType(AnyResourceType, AnyResourceType))
-	fmt.Println(CommonSuperType(AnyStructType, AnyResourceType))
-
-	fmt.Println(CommonSuperType(Int8Type, StringType))
-	fmt.Println(CommonSuperType(nilType, StringType))
-
-	fmt.Println("---- Arrays ---- ")
-	fmt.Println(CommonSuperType(
-		&VariableSizedType{Type: StringType},
-		&VariableSizedType{Type: StringType},
-	))
-
-	fmt.Println(CommonSuperType(
-		&VariableSizedType{Type: StringType},
-		&ConstantSizedType{Type: StringType, Size: 2},
-	))
-
-	fmt.Println(CommonSuperType(
-		&VariableSizedType{Type: StringType},
-		&VariableSizedType{Type: BoolType},
-	))
-
-	fmt.Println(CommonSuperType(
-		&VariableSizedType{Type: StringType},
-		StringType,
-	))
-
-	fmt.Println(CommonSuperType(
-		&VariableSizedType{Type: StringType},
-		&VariableSizedType{Type: resourceType},
-	))
-
-	fmt.Println(CommonSuperType(
-		&VariableSizedType{Type: resourceType},
-		&VariableSizedType{Type: resourceType},
-	))
-
-	fmt.Println(CommonSuperType(
-		resourceType,
-		&VariableSizedType{Type: resourceType},
-	))
-
-	fmt.Println(CommonSuperType(
-		&VariableSizedType{Type: &VariableSizedType{Type: resourceType}},
-		&VariableSizedType{Type: &VariableSizedType{Type: resourceType}},
-	))
-
-	fmt.Println(CommonSuperType(
-		&VariableSizedType{Type: &VariableSizedType{Type: resourceType}},
-		&VariableSizedType{Type: &VariableSizedType{Type: StringType}},
-	))
-
-	fmt.Println("---- Dictionaries ---- ")
-	stringStringDictionary := &DictionaryType{
-		KeyType:   StringType,
-		ValueType: StringType,
+	type testCase struct {
+		name              string
+		types             []Type
+		expectedSuperType Type
 	}
 
-	stringBoolDictionary := &DictionaryType{
-		KeyType:   StringType,
-		ValueType: BoolType,
+	testLeastCommonSuperType := func(t *testing.T, tests []testCase) {
+		for _, test := range tests {
+			t.Run(test.name, func(t *testing.T) {
+				assert.Equal(
+					t,
+					test.expectedSuperType,
+					LeastCommonSuperType(test.types...),
+				)
+			})
+		}
 	}
 
-	stringResourceDictionary := &DictionaryType{
-		KeyType:   StringType,
-		ValueType: resourceType,
-	}
+	t.Run("Simple types", func(t *testing.T) {
+		tests := []testCase{
+			{
+				name: "homogenous int types",
+				types: []Type{
+					UInt8Type,
+					UInt8Type,
+					UInt8Type,
+				},
+				expectedSuperType: UInt8Type,
+			},
+			{
+				name: "heterogeneous int types",
+				types: []Type{
+					UInt8Type,
+					UInt16Type,
+					UInt256Type,
+				},
+				expectedSuperType: AnyStructType,
+			},
+			{
+				name: "heterogeneous simple types",
+				types: []Type{
+					StringType,
+					Int8Type,
+				},
+				expectedSuperType: AnyStructType,
+			},
+			{
+				name: "all nil",
+				types: []Type{
+					nilType,
+					nilType,
+					nilType,
+				},
+				expectedSuperType: nilType,
+			},
+			{
+				name: "optional",
+				types: []Type{
+					nilType,
+					Int8Type,
+				},
+				expectedSuperType: &OptionalType{
+					Type: Int8Type,
+				},
+			},
+			{
+				name: "optional with heterogeneous types",
+				types: []Type{
+					nilType,
+					Int8Type,
+					StringType,
+				},
+				expectedSuperType: AnyStructType,
+			},
+		}
 
-	assertLeastCommonSuperType := func(expectedType Type, types ...Type) {
-		assert.Equal(t, expectedType, CommonSuperType(types...))
-	}
+		testLeastCommonSuperType(t, tests)
+	})
 
-	assertLeastCommonSuperType(
-		stringStringDictionary,
-		stringStringDictionary,
-		stringStringDictionary,
-	)
+	t.Run("Structs & Resources", func(t *testing.T) {
+		tests := []testCase{
+			{
+				name: "all anyStructs",
+				types: []Type{
+					AnyStructType,
+					AnyStructType,
+				},
+				expectedSuperType: AnyStructType,
+			},
+			{
+				name: "all anyResources",
+				types: []Type{
+					AnyResourceType,
+					AnyResourceType,
+				},
+				expectedSuperType: AnyResourceType,
+			},
+			{
+				name: "structs and resources",
+				types: []Type{
+					AnyResourceType,
+					AnyStructType,
+				},
+				expectedSuperType: NeverType,
+			},
+		}
 
-	assertLeastCommonSuperType(
-		AnyStructType,
-		stringStringDictionary,
-		stringBoolDictionary,
-	)
+		testLeastCommonSuperType(t, tests)
+	})
 
-	assertLeastCommonSuperType(
-		AnyStructType,
-		stringStringDictionary,
-		StringType,
-	)
+	t.Run("Arrays", func(t *testing.T) {
 
-	assertLeastCommonSuperType(
-		NeverType,
-		stringStringDictionary,
-		stringResourceDictionary,
-	)
+		stringArray := &VariableSizedType{
+			Type: StringType,
+		}
 
-	assertLeastCommonSuperType(
-		stringResourceDictionary,
-		stringResourceDictionary,
-		stringResourceDictionary,
-	)
+		resourceArray := &VariableSizedType{
+			Type: resourceType,
+		}
 
-	assertLeastCommonSuperType(
-		AnyResourceType,
-		resourceType,
-		stringResourceDictionary,
-	)
+		nestedResourceArray := &VariableSizedType{
+			Type: resourceArray,
+		}
 
-	nestedResourceDictionary := &DictionaryType{
-		KeyType:   StringType,
-		ValueType: stringResourceDictionary,
-	}
+		tests := []testCase{
+			{
+				name: "homogeneous arrays",
+				types: []Type{
+					stringArray,
+					stringArray,
+				},
+				expectedSuperType: stringArray,
+			},
+			{
+				name: "var-sized & constant-sized",
+				types: []Type{
+					stringArray,
+					&ConstantSizedType{Type: StringType, Size: 2},
+				},
+				expectedSuperType: AnyStructType,
+			},
+			{
+				name: "heterogeneous arrays",
+				types: []Type{
+					stringArray,
+					&VariableSizedType{Type: BoolType},
+				},
+				expectedSuperType: AnyStructType,
+			},
+			{
+				name: "simple-typed array & resource array",
+				types: []Type{
+					stringArray,
+					resourceArray,
+				},
+				expectedSuperType: NeverType,
+			},
+			{
+				name: "array & non-array",
+				types: []Type{
+					stringArray,
+					StringType,
+				},
+				expectedSuperType: AnyStructType,
+			},
+			{
+				name: "resource array",
+				types: []Type{
+					resourceArray,
+					resourceArray,
+				},
+				expectedSuperType: resourceArray,
+			},
+			{
+				name: "resource array & resource",
+				types: []Type{
+					resourceArray,
+					resourceType,
+				},
+				expectedSuperType: AnyResourceType,
+			},
+			{
+				name: "nested resource arrays",
+				types: []Type{
+					nestedResourceArray,
+					nestedResourceArray,
+				},
+				expectedSuperType: nestedResourceArray,
+			},
+			{
+				name: "nested resource-array & struct-array",
+				types: []Type{
+					nestedResourceArray,
+					&VariableSizedType{Type: stringArray},
+				},
+				expectedSuperType: NeverType,
+			},
+		}
 
-	nestedStringDictionary := &DictionaryType{
-		KeyType:   StringType,
-		ValueType: stringStringDictionary,
-	}
+		testLeastCommonSuperType(t, tests)
+	})
 
-	assertLeastCommonSuperType(
-		nestedResourceDictionary,
-		nestedResourceDictionary,
-		nestedResourceDictionary,
-	)
+	t.Run("Dictionaries", func(t *testing.T) {
 
-	assertLeastCommonSuperType(
-		NeverType,
-		nestedStringDictionary,
-		nestedResourceDictionary,
-	)
+		stringStringDictionary := &DictionaryType{
+			KeyType:   StringType,
+			ValueType: StringType,
+		}
+
+		stringBoolDictionary := &DictionaryType{
+			KeyType:   StringType,
+			ValueType: BoolType,
+		}
+
+		stringResourceDictionary := &DictionaryType{
+			KeyType:   StringType,
+			ValueType: resourceType,
+		}
+
+		nestedResourceDictionary := &DictionaryType{
+			KeyType:   StringType,
+			ValueType: stringResourceDictionary,
+		}
+
+		nestedStringDictionary := &DictionaryType{
+			KeyType:   StringType,
+			ValueType: stringStringDictionary,
+		}
+
+		tests := []testCase{
+			{
+				name: "homogeneous dictionaries",
+				types: []Type{
+					stringStringDictionary,
+					stringStringDictionary,
+				},
+				expectedSuperType: stringStringDictionary,
+			},
+			{
+				name: "heterogeneous dictionaries",
+				types: []Type{
+					stringStringDictionary,
+					stringBoolDictionary,
+				},
+				expectedSuperType: AnyStructType,
+			},
+			{
+				name: "dictionary & non-dictionary",
+				types: []Type{
+					stringStringDictionary,
+					StringType,
+				},
+				expectedSuperType: AnyStructType,
+			},
+
+			{
+				name: "struct dictionary & resource dictionary",
+				types: []Type{
+					stringStringDictionary,
+					stringResourceDictionary,
+				},
+				expectedSuperType: NeverType,
+			},
+
+			{
+				name: "resource dictionaries",
+				types: []Type{
+					stringResourceDictionary,
+					stringResourceDictionary,
+				},
+				expectedSuperType: stringResourceDictionary,
+			},
+			{
+				name: "resource dictionary & resource",
+				types: []Type{
+					stringResourceDictionary,
+					resourceType,
+				},
+				expectedSuperType: AnyResourceType,
+			},
+			{
+				name: "nested resource dictionaries",
+				types: []Type{
+					nestedResourceDictionary,
+					nestedResourceDictionary,
+				},
+				expectedSuperType: nestedResourceDictionary,
+			},
+			{
+				name: "nested resource-dictionary & nested struct-dictionary",
+				types: []Type{
+					nestedResourceDictionary,
+					nestedStringDictionary,
+				},
+				expectedSuperType: NeverType,
+			},
+		}
+
+		testLeastCommonSuperType(t, tests)
+	})
 }

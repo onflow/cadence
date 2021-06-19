@@ -175,18 +175,15 @@ var (
 	Fix64TypeTag  = newTypeTagFromLowerMask(fix64TypeMask)
 	UFix64TypeTag = newTypeTagFromLowerMask(ufix64TypeMask)
 
-	IntTypeTag         = newTypeTagFromLowerMask(intTypeMask)
-	UIntTypeTag        = newTypeTagFromLowerMask(uIntTypeMask)
-	StringTypeTag      = newTypeTagFromLowerMask(stringTypeMask)
-	CharacterTypeTag   = newTypeTagFromLowerMask(characterTypeMask)
-	BoolTypeTag        = newTypeTagFromLowerMask(boolTypeMask)
-	NilTypeTag         = newTypeTagFromLowerMask(nilTypeMask)
-	VoidTypeTag        = newTypeTagFromLowerMask(voidTypeMask)
-	AddressTypeTag     = newTypeTagFromLowerMask(addressTypeMask)
-	MetaTypeTag        = newTypeTagFromLowerMask(metaTypeMask)
-	AnyStructTypeTag   = newTypeTagFromLowerMask(anyStructTypeMask)
-	AnyResourceTypeTag = newTypeTagFromLowerMask(anyResourceTypeMask)
-	AnyTypeTag         = newTypeTagFromLowerMask(anyTypeMask)
+	IntTypeTag       = newTypeTagFromLowerMask(intTypeMask)
+	UIntTypeTag      = newTypeTagFromLowerMask(uIntTypeMask)
+	StringTypeTag    = newTypeTagFromLowerMask(stringTypeMask)
+	CharacterTypeTag = newTypeTagFromLowerMask(characterTypeMask)
+	BoolTypeTag      = newTypeTagFromLowerMask(boolTypeMask)
+	NilTypeTag       = newTypeTagFromLowerMask(nilTypeMask)
+	VoidTypeTag      = newTypeTagFromLowerMask(voidTypeMask)
+	AddressTypeTag   = newTypeTagFromLowerMask(addressTypeMask)
+	MetaTypeTag      = newTypeTagFromLowerMask(metaTypeMask)
 
 	PathTypeTag           = newTypeTagFromLowerMask(pathTypeMask)
 	StoragePathTypeTag    = newTypeTagFromLowerMask(storagePathTypeMask)
@@ -228,11 +225,11 @@ var (
 				Or(UInt128TypeTag).
 				Or(UInt256TypeTag)
 
-	IntSuperTypeTag = SignedIntTypeTag.Or(UnsignedIntTypeTag)
+	IntegerTypeTag = SignedIntTypeTag.Or(UnsignedIntTypeTag)
 
-	AnyStructSuperTypeTag = AnyStructTypeTag.
+	AnyStructTypeTag = newTypeTagFromLowerMask(anyStructTypeMask).
 				Or(NeverTypeTag).
-				Or(IntSuperTypeTag).
+				Or(IntegerTypeTag).
 				Or(StringTypeTag).
 				Or(ArrayTypeTag).
 				Or(DictionaryTypeTag).
@@ -240,14 +237,17 @@ var (
 				Or(ReferenceTypeTag).
 				Or(NilTypeTag)
 
-	AnyResourceSuperTypeTag = AnyResourceTypeTag.Or(ResourceTypeTag)
+	AnyResourceTypeTag = newTypeTagFromLowerMask(anyResourceTypeMask).
+				Or(ResourceTypeTag)
 
-	AnySuperTypeTag = AnyResourceSuperTypeTag.Or(AnyStructSuperTypeTag)
+	AnyTypeTag = newTypeTagFromLowerMask(anyTypeMask).
+			Or(AnyStructTypeTag).
+			Or(AnyResourceTypeTag)
 )
 
 // Methods
 
-func CommonSuperType(types ...Type) Type {
+func LeastCommonSuperType(types ...Type) Type {
 	join := NeverTypeTag
 
 	for _, typ := range types {
@@ -332,7 +332,7 @@ func findCommonSupperType(joinedTypeTag TypeTag, types ...Type) Type {
 			}
 
 			if !typ.Equal(prevType) {
-				return commonSupertypeOfHeterogeneousTypes(types)
+				return commonSuperTypeOfHeterogeneousTypes(types)
 			}
 		}
 
@@ -343,28 +343,37 @@ func findCommonSupperType(joinedTypeTag TypeTag, types ...Type) Type {
 	if joinedTypeTag.ContainsAny(OptionalTypeTag) {
 		// Get the type without the optional flag
 		innerTypeTag := joinedTypeTag.And(OptionalTypeTag.Not())
-		innerType := findCommonSupperType(innerTypeTag)
+		supperType := findCommonSupperType(innerTypeTag)
+
+		// If the common supertype of the rest of types contain nil,
+		// then do not wrap with optional again.
+		if supperType.Tag().ContainsAny(NilTypeTag) {
+			return supperType
+		}
+
 		return &OptionalType{
-			Type: innerType,
+			Type: supperType,
 		}
 	}
 
 	// Any heterogeneous int subtypes goes here.
-	if joinedTypeTag.BelongsTo(IntSuperTypeTag) {
-		return IntType
+	if joinedTypeTag.BelongsTo(IntegerTypeTag) {
+		// Cadence currently doesn't support implicit casting to int supertypes.
+		// Therefore any heterogeneous integer types should belong to AnyStruct.
+		return AnyStructType
 	}
 
 	if joinedTypeTag.ContainsAny(ArrayTypeTag, DictionaryTypeTag) {
 		// At this point, the types contains arrays/dictionaries along with other types.
 		// So the common supertype could only be AnyStruct, AnyResource or none (both)
-		return commonSupertypeOfHeterogeneousTypes(types)
+		return commonSuperTypeOfHeterogeneousTypes(types)
 	}
 
-	if joinedTypeTag.BelongsTo(AnyStructSuperTypeTag) {
+	if joinedTypeTag.BelongsTo(AnyStructTypeTag) {
 		return AnyStructType
 	}
 
-	if joinedTypeTag.BelongsTo(AnyResourceSuperTypeTag) {
+	if joinedTypeTag.BelongsTo(AnyResourceTypeTag) {
 		return AnyResourceType
 	}
 
@@ -372,7 +381,7 @@ func findCommonSupperType(joinedTypeTag TypeTag, types ...Type) Type {
 	return NeverType
 }
 
-func commonSupertypeOfHeterogeneousTypes(types []Type) Type {
+func commonSuperTypeOfHeterogeneousTypes(types []Type) Type {
 	var hasStructs, hasResources bool
 	for _, typ := range types {
 		isResource := typ.IsResourceType()
