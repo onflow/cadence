@@ -830,6 +830,30 @@ func TestCommonSuperType(t *testing.T) {
 				},
 				expectedSuperType: NeverType,
 			},
+			{
+				name: "all structs",
+				types: []Type{
+					PublicKeyType,
+					PublicKeyType,
+				},
+				expectedSuperType: PublicKeyType,
+			},
+			{
+				name: "mixed type structs",
+				types: []Type{
+					PublicKeyType,
+					AuthAccountType,
+				},
+				expectedSuperType: AnyStructType,
+			},
+			{
+				name: "struct and anyStruct",
+				types: []Type{
+					AnyStructType,
+					PublicKeyType,
+				},
+				expectedSuperType: AnyStructType,
+			},
 		}
 
 		testLeastCommonSuperType(t, tests)

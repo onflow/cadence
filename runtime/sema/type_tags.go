@@ -322,8 +322,8 @@ func findCommonSupperType(joinedTypeTag TypeTag, types ...Type) Type {
 		return AnyResourceType
 	case neverTypeMask:
 		return NeverType
-	case arrayTypeMask, dictionaryTypeMask:
-		// Contains only arrays or only dictionaries.
+	case arrayTypeMask, dictionaryTypeMask, compositeTypeMask:
+		// Contains only arrays/dictionaries/composites.
 		var prevType Type
 		for _, typ := range types {
 			if prevType == nil {
@@ -363,8 +363,12 @@ func findCommonSupperType(joinedTypeTag TypeTag, types ...Type) Type {
 		return AnyStructType
 	}
 
-	if joinedTypeTag.ContainsAny(ArrayTypeTag, DictionaryTypeTag) {
-		// At this point, the types contains arrays/dictionaries along with other types.
+	if joinedTypeTag.ContainsAny(
+		ArrayTypeTag,
+		DictionaryTypeTag,
+		CompositeTypeTag,
+	) {
+		// At this point, the types contains arrays/dictionaries/composites along with other types.
 		// So the common supertype could only be AnyStruct, AnyResource or none (both)
 		return commonSuperTypeOfHeterogeneousTypes(types)
 	}
