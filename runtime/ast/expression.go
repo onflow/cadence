@@ -951,8 +951,17 @@ func (e *UnaryExpression) AcceptExp(visitor ExpressionVisitor) Repr {
 func (e *UnaryExpression) String() string {
 	return fmt.Sprintf(
 		"%s%s",
-		e.Operation.Symbol(), e.Expression,
+		e.Operation.Symbol(),
+		e.Expression,
 	)
+}
+
+func (e *UnaryExpression) Doc() prettier.Doc {
+	return prettier.Concat{
+		prettier.Text(e.Operation.Symbol()),
+		// TODO: potentially parenthesize
+		e.Expression.Doc(),
+	}
 }
 
 func (e *UnaryExpression) StartPosition() Position {

@@ -923,6 +923,28 @@ func TestUnaryExpression_MarshalJSON(t *testing.T) {
 	)
 }
 
+func TestUnaryExpression_Doc(t *testing.T) {
+
+	t.Parallel()
+
+	expr := &UnaryExpression{
+		Operation: OperationMinus,
+		Expression: &IdentifierExpression{
+			Identifier: Identifier{
+				Identifier: "foo",
+			},
+		},
+	}
+
+	assert.Equal(t,
+		prettier.Concat{
+			prettier.Text("-"),
+			prettier.Text("foo"),
+		},
+		expr.Doc(),
+	)
+}
+
 func TestBinaryExpression_MarshalJSON(t *testing.T) {
 
 	t.Parallel()
