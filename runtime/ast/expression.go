@@ -24,6 +24,8 @@ import (
 	"math/big"
 	"strconv"
 	"strings"
+
+	"github.com/turbolent/prettier"
 )
 
 const NilConstant = "nil"
@@ -64,6 +66,17 @@ func (e *BoolExpression) String() string {
 		return "true"
 	}
 	return "false"
+}
+
+var boolExpressionTrueDoc prettier.Doc = prettier.Text("true")
+var boolExpressionFalseDoc prettier.Doc = prettier.Text("false")
+
+func (e *BoolExpression) Doc() prettier.Doc {
+	if e.Value {
+		return boolExpressionTrueDoc
+	} else {
+		return boolExpressionFalseDoc
+	}
 }
 
 func (e *BoolExpression) MarshalJSON() ([]byte, error) {

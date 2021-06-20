@@ -25,6 +25,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/turbolent/prettier"
 )
 
 func TestBoolExpression_MarshalJSON(t *testing.T) {
@@ -52,6 +53,21 @@ func TestBoolExpression_MarshalJSON(t *testing.T) {
         }
         `,
 		string(actual),
+	)
+}
+
+func TestBoolExpression_Doc(t *testing.T) {
+
+	t.Parallel()
+
+	assert.Equal(t,
+		prettier.Text("true"),
+		(&BoolExpression{Value: true}).Doc(),
+	)
+
+	assert.Equal(t,
+		prettier.Text("false"),
+		(&BoolExpression{Value: false}).Doc(),
 	)
 }
 
