@@ -1922,3 +1922,143 @@ func TestFunctionExpression_MarshalJSON(t *testing.T) {
 		string(actual),
 	)
 }
+
+func TestFunctionExpression_Doc(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("no parameters, no return type, no statements", func(t *testing.T) {
+
+		t.Parallel()
+
+		expr := &FunctionExpression{
+			FunctionBlock: &FunctionBlock{
+				Block: &Block{
+					Statements: []Statement{},
+				},
+			},
+		}
+
+		expected := prettier.Concat{
+			prettier.Text("fun "),
+			prettier.Group{
+				Doc: prettier.Text("()"),
+			},
+			prettier.Text(" {}"),
+		}
+
+		assert.Equal(t, expected, expr.Doc())
+	})
+
+	t.Run("multiple parameters, return type, statements", func(t *testing.T) {
+
+		t.Parallel()
+
+		// TODO: pre-conditions and post-conditions
+
+		expr := &FunctionExpression{
+			ParameterList: &ParameterList{
+				Parameters: []*Parameter{
+					{
+						Label: "a",
+						Identifier: Identifier{
+							Identifier: "b",
+						},
+						TypeAnnotation: &TypeAnnotation{
+							Type: &NominalType{
+								Identifier: Identifier{
+									Identifier: "C",
+								},
+							},
+						},
+					},
+					{
+						Identifier: Identifier{
+							Identifier: "d",
+						},
+						TypeAnnotation: &TypeAnnotation{
+							Type: &NominalType{
+								Identifier: Identifier{
+									Identifier: "E",
+								},
+							},
+						},
+					},
+				},
+			},
+			ReturnTypeAnnotation: &TypeAnnotation{
+				IsResource: true,
+				Type: &NominalType{
+					Identifier: Identifier{
+						Identifier: "Int",
+					},
+				},
+			},
+			FunctionBlock: &FunctionBlock{
+				Block: &Block{
+					Statements: []Statement{
+						&ReturnStatement{
+							Expression: &IntegerExpression{
+								PositiveLiteral: "1",
+								Value:           big.NewInt(1),
+								Base:            10,
+							},
+						},
+					},
+				},
+			},
+		}
+
+		expected := prettier.Concat{
+			prettier.Text("fun "),
+			prettier.Group{
+				Doc: prettier.Concat{
+					prettier.Group{
+						Doc: prettier.Concat{
+							prettier.Text("("),
+							prettier.Indent{
+								Doc: prettier.Concat{
+									prettier.SoftLine{},
+									prettier.Concat{
+										prettier.Concat{
+											prettier.Text("a"),
+											prettier.Space,
+											prettier.Text("b"),
+											prettier.Text(": "),
+										},
+										prettier.Concat{
+											prettier.Text(","),
+											prettier.Line{},
+										},
+										prettier.Concat{
+											prettier.Text("d"),
+											prettier.Text(": "),
+										},
+									},
+								},
+							},
+							prettier.SoftLine{},
+							prettier.Text(")"),
+						},
+					},
+					prettier.Text(": "),
+					// TODO: type
+				},
+			},
+			prettier.Text(" {"),
+			prettier.Indent{
+				Doc: prettier.Concat{
+					prettier.HardLine{},
+					prettier.Concat{
+						prettier.Text("return "),
+						prettier.Text("1"),
+					},
+				},
+			},
+			prettier.HardLine{},
+			prettier.Text("}"),
+		}
+
+		assert.Equal(t, expected, expr.Doc())
+	})
+}
