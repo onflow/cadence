@@ -1017,6 +1017,28 @@ func (e *BinaryExpression) String() string {
 	)
 }
 
+func (e *BinaryExpression) Doc() prettier.Doc {
+	// TODO: potentially parenthesize
+	leftDoc := e.Left.Doc()
+
+	// TODO: potentially parenthesize
+	rightDoc := e.Right.Doc()
+
+	return prettier.Group{
+		Doc: prettier.Concat{
+			prettier.Group{
+				Doc: leftDoc,
+			},
+			prettier.Line{},
+			prettier.Text(e.Operation.Symbol()),
+			prettier.Space,
+			prettier.Group{
+				Doc: rightDoc,
+			},
+		},
+	}
+}
+
 func (e *BinaryExpression) StartPosition() Position {
 	return e.Left.StartPosition()
 }

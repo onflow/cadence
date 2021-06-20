@@ -1003,6 +1003,42 @@ func TestBinaryExpression_MarshalJSON(t *testing.T) {
 	)
 }
 
+func TestBinaryExpression_Doc(t *testing.T) {
+
+	t.Parallel()
+
+	expr := &BinaryExpression{
+		Operation: OperationPlus,
+		Left: &IntegerExpression{
+			PositiveLiteral: "42",
+			Value:           big.NewInt(42),
+			Base:            10,
+		},
+		Right: &IntegerExpression{
+			PositiveLiteral: "99",
+			Value:           big.NewInt(99),
+			Base:            10,
+		},
+	}
+
+	assert.Equal(t,
+		prettier.Group{
+			Doc: prettier.Concat{
+				prettier.Group{
+					Doc: prettier.Text("42"),
+				},
+				prettier.Line{},
+				prettier.Text("+"),
+				prettier.Space,
+				prettier.Group{
+					Doc: prettier.Text("99"),
+				},
+			},
+		},
+		expr.Doc(),
+	)
+}
+
 func TestDestroyExpression_MarshalJSON(t *testing.T) {
 
 	t.Parallel()
