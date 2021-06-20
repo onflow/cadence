@@ -600,6 +600,55 @@ func (e *InvocationExpression) String() string {
 	return builder.String()
 }
 
+func (e *InvocationExpression) Doc() prettier.Doc {
+
+	result := prettier.Concat{
+		e.InvokedExpression.Doc(),
+	}
+
+	if len(e.TypeArguments) > 0 {
+		typeArgumentDocs := make([]prettier.Doc, len(e.TypeArguments))
+		// TODO: type arguments
+		//for i, typeArgument := range e.TypeArguments {
+		//	typeArgumentDocs[i] = typeArgument.Doc()
+		//}
+
+		result = append(result,
+			prettier.Wrap(
+				prettier.Text("<"),
+				prettier.Join(arrayExpressionSeparatorDoc, typeArgumentDocs...),
+				prettier.Text(">"),
+				prettier.SoftLine{},
+			),
+		)
+	}
+
+	var argumentsDoc prettier.Doc
+	if len(e.Arguments) == 0 {
+		argumentsDoc = prettier.Text("()")
+	} else {
+		argumentDocs := make([]prettier.Doc, len(e.Arguments))
+		for i, argument := range e.Arguments {
+			argumentDoc := argument.Expression.Doc()
+			if argument.Label != "" {
+				argumentDoc = prettier.Concat{
+					prettier.Text(argument.Label + ": "),
+					argumentDoc,
+				}
+			}
+			argumentDocs[i] = argumentDoc
+		}
+		argumentsDoc = prettier.WrapParentheses(
+			prettier.Join(arrayExpressionSeparatorDoc, argumentDocs...),
+			prettier.SoftLine{},
+		)
+	}
+
+	result = append(result, argumentsDoc)
+
+	return result
+}
+
 func (e *InvocationExpression) StartPosition() Position {
 	return e.InvokedExpression.StartPosition()
 }

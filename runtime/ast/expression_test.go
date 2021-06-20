@@ -1102,6 +1102,99 @@ func TestInvocationExpression_MarshalJSON(t *testing.T) {
 	)
 }
 
+func TestInvocationExpression_Doc(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("without type arguments and arguments", func(t *testing.T) {
+
+		t.Parallel()
+
+		expr := &InvocationExpression{
+			InvokedExpression: &IdentifierExpression{
+				Identifier: Identifier{
+					Identifier: "foobar",
+				},
+			},
+		}
+
+		assert.Equal(t,
+			prettier.Concat{
+				prettier.Text("foobar"),
+				prettier.Text("()"),
+			},
+			expr.Doc(),
+		)
+	})
+
+	t.Run("with type argument and argument", func(t *testing.T) {
+
+		t.Parallel()
+
+		expr := &InvocationExpression{
+			InvokedExpression: &IdentifierExpression{
+				Identifier: Identifier{
+					Identifier: "foobar",
+				},
+			},
+			TypeArguments: []*TypeAnnotation{
+				{
+					IsResource: true,
+					Type: &NominalType{
+						Identifier: Identifier{
+							Identifier: "AB",
+						},
+					},
+				},
+			},
+			Arguments: []*Argument{
+				{
+					Label: "ok",
+					Expression: &BoolExpression{
+						Value: false,
+					},
+				},
+			},
+		}
+
+		assert.Equal(t,
+			prettier.Concat{
+				prettier.Text("foobar"),
+				prettier.Group{
+					Doc: prettier.Concat{
+						prettier.Text("<"),
+						prettier.Indent{
+							Doc: prettier.Concat{
+								prettier.SoftLine{},
+								nil,
+							},
+						},
+						prettier.SoftLine{},
+						prettier.Text(">"),
+					},
+				},
+				prettier.Group{
+					Doc: prettier.Concat{
+						prettier.Text("("),
+						prettier.Indent{
+							Doc: prettier.Concat{
+								prettier.SoftLine{},
+								prettier.Concat{
+									prettier.Text("ok: "),
+									prettier.Text("false"),
+								},
+							},
+						},
+						prettier.SoftLine{},
+						prettier.Text(")"),
+					},
+				},
+			},
+			expr.Doc(),
+		)
+	})
+}
+
 func TestCastingExpression_MarshalJSON(t *testing.T) {
 
 	t.Parallel()
