@@ -116,6 +116,12 @@ func (e *NilExpression) String() string {
 	return NilConstant
 }
 
+var nilExpressionDoc prettier.Doc = prettier.Text("nil")
+
+func (*NilExpression) Doc() prettier.Doc {
+	return nilExpressionDoc
+}
+
 func (e *NilExpression) StartPosition() Position {
 	return e.Pos
 }

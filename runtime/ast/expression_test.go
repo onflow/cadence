@@ -94,6 +94,16 @@ func TestNilExpression_MarshalJSON(t *testing.T) {
 	)
 }
 
+func TestNilExpression_Doc(t *testing.T) {
+
+	t.Parallel()
+
+	assert.Equal(t,
+		prettier.Text("nil"),
+		(&NilExpression{}).Doc(),
+	)
+}
+
 func TestStringExpression_MarshalJSON(t *testing.T) {
 
 	t.Parallel()
