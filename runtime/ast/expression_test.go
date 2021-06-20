@@ -384,6 +384,63 @@ func TestArrayExpression_MarshalJSON(t *testing.T) {
 	)
 }
 
+func TestArrayExpression_Doc(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("empty", func(t *testing.T) {
+
+		t.Parallel()
+
+		assert.Equal(t,
+			prettier.Text("[]"),
+			(&ArrayExpression{}).Doc(),
+		)
+	})
+
+	t.Run("non-empty", func(t *testing.T) {
+
+		t.Parallel()
+
+		expr := &ArrayExpression{
+			Values: []Expression{
+				&NilExpression{},
+				&BoolExpression{Value: true},
+				&StringExpression{Value: "test"},
+			},
+		}
+
+		assert.Equal(t,
+			prettier.Group{
+				Doc: prettier.Concat{
+					prettier.Text("["),
+					prettier.Indent{
+						Doc: prettier.Concat{
+							prettier.SoftLine{},
+							prettier.Concat{
+								prettier.Text("nil"),
+								prettier.Concat{
+									prettier.Text(","),
+									prettier.Line{},
+								},
+								prettier.Text("true"),
+								prettier.Concat{
+									prettier.Text(","),
+									prettier.Line{},
+								},
+								prettier.Text(`"test"`),
+							},
+						},
+					},
+					prettier.SoftLine{},
+					prettier.Text("]"),
+				},
+			},
+			expr.Doc(),
+		)
+	})
+}
+
 func TestDictionaryExpression_MarshalJSON(t *testing.T) {
 
 	t.Parallel()

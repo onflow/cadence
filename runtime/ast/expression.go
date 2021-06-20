@@ -348,6 +348,26 @@ func (e *ArrayExpression) String() string {
 	return builder.String()
 }
 
+var arrayExpressionSeparatorDoc prettier.Doc = prettier.Concat{
+	prettier.Text(","),
+	prettier.Line{},
+}
+
+func (e *ArrayExpression) Doc() prettier.Doc {
+	if len(e.Values) == 0 {
+		return prettier.Text("[]")
+	}
+
+	elementDocs := make([]prettier.Doc, len(e.Values))
+	for i, value := range e.Values {
+		elementDocs[i] = value.Doc()
+	}
+	return prettier.WrapBrackets(
+		prettier.Join(arrayExpressionSeparatorDoc, elementDocs...),
+		prettier.SoftLine{},
+	)
+}
+
 func (e *ArrayExpression) MarshalJSON() ([]byte, error) {
 	type Alias ArrayExpression
 	return json.Marshal(&struct {
