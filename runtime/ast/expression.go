@@ -865,6 +865,44 @@ func (e *ConditionalExpression) String() string {
 	)
 }
 
+var conditionalExpressionTestSeparatorDoc prettier.Doc = prettier.Concat{
+	prettier.Line{},
+	prettier.Text("? "),
+}
+var conditionalExpressionBranchSeparatorDoc prettier.Doc = prettier.Concat{
+	prettier.Line{},
+	prettier.Text(": "),
+}
+
+func (e *ConditionalExpression) Doc() prettier.Doc {
+	// TODO: potentially parenthesize
+	testDoc := e.Test.Doc()
+
+	// TODO: potentially parenthesize
+	thenDoc := e.Then.Doc()
+
+	// TODO: potentially parenthesize
+	elseDoc := e.Else.Doc()
+
+	return prettier.Group{
+		Doc: prettier.Concat{
+			testDoc,
+			prettier.Indent{
+				Doc: prettier.Concat{
+					conditionalExpressionTestSeparatorDoc,
+					prettier.Indent{
+						Doc: thenDoc,
+					},
+					conditionalExpressionBranchSeparatorDoc,
+					prettier.Indent{
+						Doc: elseDoc,
+					},
+				},
+			},
+		},
+	}
+}
+
 func (e *ConditionalExpression) StartPosition() Position {
 	return e.Test.StartPosition()
 }

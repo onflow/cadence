@@ -1128,6 +1128,54 @@ func TestConditionalExpression_MarshalJSON(t *testing.T) {
 	)
 }
 
+func TestConditionalExpression_Doc(t *testing.T) {
+
+	t.Parallel()
+
+	expr := &ConditionalExpression{
+		Test: &BoolExpression{
+			Value: false,
+		},
+		Then: &IntegerExpression{
+			PositiveLiteral: "42",
+			Value:           big.NewInt(42),
+			Base:            10,
+		},
+		Else: &IntegerExpression{
+			PositiveLiteral: "99",
+			Value:           big.NewInt(99),
+			Base:            10,
+		},
+	}
+
+	assert.Equal(t,
+		prettier.Group{
+			Doc: prettier.Concat{
+				prettier.Text(`false`),
+				prettier.Indent{
+					Doc: prettier.Concat{
+						prettier.Concat{
+							prettier.Line{},
+							prettier.Text("? "),
+						},
+						prettier.Indent{
+							Doc: prettier.Text(`42`),
+						},
+						prettier.Concat{
+							prettier.Line{},
+							prettier.Text(": "),
+						},
+						prettier.Indent{
+							Doc: prettier.Text(`99`),
+						},
+					},
+				},
+			},
+		},
+		expr.Doc(),
+	)
+}
+
 func TestInvocationExpression_MarshalJSON(t *testing.T) {
 
 	t.Parallel()
