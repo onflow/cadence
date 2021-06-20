@@ -604,6 +604,20 @@ func TestIdentifierExpression_MarshalJSON(t *testing.T) {
 	)
 }
 
+func TestIdentifierExpression_Doc(t *testing.T) {
+
+	t.Parallel()
+
+	assert.Equal(t,
+		prettier.Text("test"),
+		(&IdentifierExpression{
+			Identifier: Identifier{
+				Identifier: "test",
+			},
+		}).Doc(),
+	)
+}
+
 func TestPathExpression_MarshalJSON(t *testing.T) {
 
 	t.Parallel()

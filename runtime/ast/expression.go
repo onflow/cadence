@@ -512,6 +512,10 @@ func (e *IdentifierExpression) String() string {
 	return e.Identifier.Identifier
 }
 
+func (e *IdentifierExpression) Doc() prettier.Doc {
+	return prettier.Text(e.Identifier.Identifier)
+}
+
 func (e *IdentifierExpression) MarshalJSON() ([]byte, error) {
 	type Alias IdentifierExpression
 	return json.Marshal(&struct {
