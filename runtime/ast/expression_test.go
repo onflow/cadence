@@ -1660,6 +1660,32 @@ func TestCreateExpression_MarshalJSON(t *testing.T) {
 	)
 }
 
+func TestCreateExpression_Doc(t *testing.T) {
+
+	t.Parallel()
+
+	expr := &CreateExpression{
+		InvocationExpression: &InvocationExpression{
+			InvokedExpression: &IdentifierExpression{
+				Identifier: Identifier{
+					Identifier: "foo",
+				},
+			},
+		},
+	}
+
+	assert.Equal(t,
+		prettier.Concat{
+			prettier.Text("create "),
+			prettier.Concat{
+				prettier.Text("foo"),
+				prettier.Text("()"),
+			},
+		},
+		expr.Doc(),
+	)
+}
+
 func TestReferenceExpression_MarshalJSON(t *testing.T) {
 
 	expr := &ReferenceExpression{

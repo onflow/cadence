@@ -1213,6 +1213,13 @@ func (e *CreateExpression) String() string {
 	)
 }
 
+func (e *CreateExpression) Doc() prettier.Doc {
+	return prettier.Concat{
+		prettier.Text("create "),
+		e.InvocationExpression.Doc(),
+	}
+}
+
 func (e *CreateExpression) StartPosition() Position {
 	return e.StartPos
 }
