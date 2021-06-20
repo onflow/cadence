@@ -147,8 +147,9 @@ func TestIntegerExpression_MarshalJSON(t *testing.T) {
 	t.Parallel()
 
 	expr := &IntegerExpression{
-		Value: big.NewInt(42),
-		Base:  10,
+		PositiveLiteral: "4_2",
+		Value:           big.NewInt(42),
+		Base:            10,
 		Range: Range{
 			StartPos: Position{Offset: 1, Line: 2, Column: 3},
 			EndPos:   Position{Offset: 4, Line: 5, Column: 6},
@@ -162,6 +163,7 @@ func TestIntegerExpression_MarshalJSON(t *testing.T) {
 		`
         {
             "Type": "IntegerExpression",
+            "PositiveLiteral": "4_2",
             "Value": "42",
             "Base": 10,
             "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
@@ -177,6 +179,7 @@ func TestFixedPointExpression_MarshalJSON(t *testing.T) {
 	t.Parallel()
 
 	expr := &FixedPointExpression{
+		PositiveLiteral: "42.2400000000",
 		Negative:        true,
 		UnsignedInteger: big.NewInt(42),
 		Fractional:      big.NewInt(24),
@@ -194,6 +197,7 @@ func TestFixedPointExpression_MarshalJSON(t *testing.T) {
 		`
         {
             "Type": "FixedPointExpression",
+            "PositiveLiteral": "42.2400000000",
             "Negative": true,
             "UnsignedInteger": "42",
             "Fractional": "24",
@@ -487,8 +491,9 @@ func TestUnaryExpression_MarshalJSON(t *testing.T) {
 	expr := &UnaryExpression{
 		Operation: OperationNegate,
 		Expression: &IntegerExpression{
-			Value: big.NewInt(42),
-			Base:  10,
+			PositiveLiteral: "42",
+			Value:           big.NewInt(42),
+			Base:            10,
 			Range: Range{
 				StartPos: Position{Offset: 1, Line: 2, Column: 3},
 				EndPos:   Position{Offset: 4, Line: 5, Column: 6},
@@ -507,6 +512,7 @@ func TestUnaryExpression_MarshalJSON(t *testing.T) {
             "Operation": "OperationNegate",
             "Expression": {
                 "Type": "IntegerExpression",
+                "PositiveLiteral": "42",
                 "Value": "42",
                 "Base": 10,
                 "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
@@ -527,16 +533,18 @@ func TestBinaryExpression_MarshalJSON(t *testing.T) {
 	expr := &BinaryExpression{
 		Operation: OperationPlus,
 		Left: &IntegerExpression{
-			Value: big.NewInt(42),
-			Base:  10,
+			PositiveLiteral: "42",
+			Value:           big.NewInt(42),
+			Base:            10,
 			Range: Range{
 				StartPos: Position{Offset: 1, Line: 2, Column: 3},
 				EndPos:   Position{Offset: 4, Line: 5, Column: 6},
 			},
 		},
 		Right: &IntegerExpression{
-			Value: big.NewInt(99),
-			Base:  10,
+			PositiveLiteral: "99",
+			Value:           big.NewInt(99),
+			Base:            10,
 			Range: Range{
 				StartPos: Position{Offset: 7, Line: 8, Column: 9},
 				EndPos:   Position{Offset: 10, Line: 11, Column: 12},
@@ -554,6 +562,7 @@ func TestBinaryExpression_MarshalJSON(t *testing.T) {
             "Operation": "OperationPlus",
             "Left": {
                 "Type": "IntegerExpression",
+                "PositiveLiteral": "42",
                 "Value": "42",
                 "Base": 10,
                 "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
@@ -561,6 +570,7 @@ func TestBinaryExpression_MarshalJSON(t *testing.T) {
             },
             "Right": {
                 "Type": "IntegerExpression",
+                "PositiveLiteral": "99",
                 "Value": "99",
                 "Base": 10,
                 "StartPos": {"Offset": 7, "Line": 8, "Column": 9},
@@ -665,16 +675,18 @@ func TestConditionalExpression_MarshalJSON(t *testing.T) {
 			},
 		},
 		Then: &IntegerExpression{
-			Value: big.NewInt(42),
-			Base:  10,
+			PositiveLiteral: "42",
+			Value:           big.NewInt(42),
+			Base:            10,
 			Range: Range{
 				StartPos: Position{Offset: 7, Line: 8, Column: 9},
 				EndPos:   Position{Offset: 10, Line: 11, Column: 12},
 			},
 		},
 		Else: &IntegerExpression{
-			Value: big.NewInt(99),
-			Base:  10,
+			PositiveLiteral: "99",
+			Value:           big.NewInt(99),
+			Base:            10,
 			Range: Range{
 				StartPos: Position{Offset: 13, Line: 14, Column: 15},
 				EndPos:   Position{Offset: 16, Line: 17, Column: 18},
@@ -697,6 +709,7 @@ func TestConditionalExpression_MarshalJSON(t *testing.T) {
             },
             "Then": {
                 "Type": "IntegerExpression",
+                "PositiveLiteral": "42",
                 "Value": "42",
                 "Base": 10,
                 "StartPos": {"Offset": 7, "Line": 8, "Column": 9},
@@ -704,6 +717,7 @@ func TestConditionalExpression_MarshalJSON(t *testing.T) {
             },
             "Else": {
                 "Type": "IntegerExpression",
+                "PositiveLiteral": "99",
                 "Value": "99",
                 "Base": 10,
                 "StartPos": {"Offset": 13, "Line": 14, "Column": 15},

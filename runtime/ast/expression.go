@@ -188,8 +188,9 @@ func (e *StringExpression) MarshalJSON() ([]byte, error) {
 // IntegerExpression
 
 type IntegerExpression struct {
-	Value *big.Int `json:"-"`
-	Base  int
+	PositiveLiteral string
+	Value           *big.Int `json:"-"`
+	Base            int
 	Range
 }
 
@@ -210,7 +211,12 @@ func (e *IntegerExpression) AcceptExp(visitor ExpressionVisitor) Repr {
 }
 
 func (e *IntegerExpression) String() string {
-	return e.Value.String()
+	literal := e.PositiveLiteral
+	if e.Value.Sign() < 0 {
+		literal = "-" + literal
+	}
+	return literal
+}
 }
 
 func (e *IntegerExpression) MarshalJSON() ([]byte, error) {
@@ -229,6 +235,7 @@ func (e *IntegerExpression) MarshalJSON() ([]byte, error) {
 // FixedPointExpression
 
 type FixedPointExpression struct {
+	PositiveLiteral string
 	Negative        bool
 	UnsignedInteger *big.Int `json:"-"`
 	Fractional      *big.Int `json:"-"`
@@ -253,6 +260,14 @@ func (e *FixedPointExpression) AcceptExp(visitor ExpressionVisitor) Repr {
 }
 
 func (e *FixedPointExpression) String() string {
+	literal := e.PositiveLiteral
+	if literal != "" {
+		if e.Negative {
+			literal = "-" + literal
+		}
+		return literal
+	}
+
 	var builder strings.Builder
 	if e.Negative {
 		builder.WriteRune('-')

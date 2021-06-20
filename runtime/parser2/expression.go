@@ -1539,9 +1539,10 @@ func parseIntegerLiteral(p *parser, literal, text string, kind IntegerLiteralKin
 	}
 
 	return &ast.IntegerExpression{
-		Value: value,
-		Base:  base,
-		Range: tokenRange,
+		PositiveLiteral: literal,
+		Value:           value,
+		Base:            base,
+		Range:           tokenRange,
 	}
 }
 
@@ -1558,12 +1559,13 @@ func parseFixedPointPart(part string) (integer *big.Int, scale uint) {
 	return integer, scale
 }
 
-func parseFixedPointLiteral(text string, tokenRange ast.Range) *ast.FixedPointExpression {
-	parts := strings.Split(text, ".")
+func parseFixedPointLiteral(literal string, tokenRange ast.Range) *ast.FixedPointExpression {
+	parts := strings.Split(literal, ".")
 	integer, _ := parseFixedPointPart(parts[0])
 	fractional, scale := parseFixedPointPart(parts[1])
 
 	return &ast.FixedPointExpression{
+		PositiveLiteral: literal,
 		Negative:        false,
 		UnsignedInteger: integer,
 		Fractional:      fractional,
