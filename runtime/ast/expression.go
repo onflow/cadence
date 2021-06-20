@@ -167,7 +167,11 @@ func (e *StringExpression) AcceptExp(visitor ExpressionVisitor) Repr {
 }
 
 func (e *StringExpression) String() string {
-	return strconv.Quote(e.Value)
+	return QuoteString(e.Value)
+}
+
+func (e *StringExpression) Doc() prettier.Doc {
+	return prettier.Text(QuoteString(e.Value))
 }
 
 func (e *StringExpression) MarshalJSON() ([]byte, error) {

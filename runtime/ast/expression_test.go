@@ -132,6 +132,16 @@ func TestStringExpression_MarshalJSON(t *testing.T) {
 	)
 }
 
+func TestStringExpression_Doc(t *testing.T) {
+
+	t.Parallel()
+
+	assert.Equal(t,
+		prettier.Text(`"test"`),
+		(&StringExpression{Value: "test"}).Doc(),
+	)
+}
+
 func TestIntegerExpression_MarshalJSON(t *testing.T) {
 
 	t.Parallel()
