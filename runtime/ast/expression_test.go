@@ -659,6 +659,25 @@ func TestPathExpression_MarshalJSON(t *testing.T) {
 	)
 }
 
+func TestPathExpression_Doc(t *testing.T) {
+
+	t.Parallel()
+
+	expr := &PathExpression{
+		Domain: Identifier{
+			Identifier: "storage",
+		},
+		Identifier: Identifier{
+			Identifier: "test",
+		},
+	}
+
+	assert.Equal(t,
+		prettier.Text("/storage/test"),
+		expr.Doc(),
+	)
+}
+
 func TestMemberExpression_MarshalJSON(t *testing.T) {
 
 	t.Parallel()

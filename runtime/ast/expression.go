@@ -1329,6 +1329,10 @@ func (e *PathExpression) String() string {
 	return fmt.Sprintf("/%s/%s", e.Domain, e.Identifier)
 }
 
+func (e *PathExpression) Doc() prettier.Doc {
+	return prettier.Text(e.String())
+}
+
 func (e *PathExpression) StartPosition() Position {
 	return e.StartPos
 }
