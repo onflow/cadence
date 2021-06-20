@@ -824,6 +824,44 @@ func TestIndexExpression_MarshalJSON(t *testing.T) {
 	)
 }
 
+func TestIndexExpression_Doc(t *testing.T) {
+
+	t.Parallel()
+
+	expr := &IndexExpression{
+		TargetExpression: &IdentifierExpression{
+			Identifier: Identifier{
+				Identifier: "foo",
+			},
+		},
+		IndexingExpression: &IdentifierExpression{
+			Identifier: Identifier{
+				Identifier: "bar",
+			},
+		},
+	}
+
+	assert.Equal(t,
+		prettier.Concat{
+			prettier.Text("foo"),
+			prettier.Group{
+				Doc: prettier.Concat{
+					prettier.Text("["),
+					prettier.Indent{
+						Doc: prettier.Concat{
+							prettier.SoftLine{},
+							prettier.Text("bar"),
+						},
+					},
+					prettier.SoftLine{},
+					prettier.Text("]"),
+				},
+			},
+		},
+		expr.Doc(),
+	)
+}
+
 func TestUnaryExpression_MarshalJSON(t *testing.T) {
 
 	t.Parallel()

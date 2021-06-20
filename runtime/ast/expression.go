@@ -805,8 +805,19 @@ func (e *IndexExpression) AcceptExp(visitor ExpressionVisitor) Repr {
 func (e *IndexExpression) String() string {
 	return fmt.Sprintf(
 		"%s[%s]",
-		e.TargetExpression, e.IndexingExpression,
+		e.TargetExpression,
+		e.IndexingExpression,
 	)
+}
+
+func (e *IndexExpression) Doc() prettier.Doc {
+	return prettier.Concat{
+		e.TargetExpression.Doc(),
+		prettier.WrapBrackets(
+			e.IndexingExpression.Doc(),
+			prettier.SoftLine{},
+		),
+	}
 }
 
 func (e *IndexExpression) MarshalJSON() ([]byte, error) {
