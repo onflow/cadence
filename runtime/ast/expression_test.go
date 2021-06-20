@@ -1493,6 +1493,43 @@ func TestCastingExpression_MarshalJSON(t *testing.T) {
 	)
 }
 
+func TestCastingExpression_Doc(t *testing.T) {
+
+	t.Parallel()
+
+	expr := &CastingExpression{
+		Expression: &IntegerExpression{
+			PositiveLiteral: "42",
+			Value:           big.NewInt(42),
+			Base:            10,
+		},
+		Operation: OperationFailableCast,
+		TypeAnnotation: &TypeAnnotation{
+			IsResource: true,
+			Type: &NominalType{
+				Identifier: Identifier{
+					Identifier: "Int",
+				},
+			},
+		},
+	}
+
+	assert.Equal(t,
+		prettier.Group{
+			Doc: prettier.Concat{
+				prettier.Group{
+					Doc: prettier.Text("42"),
+				},
+				prettier.Line{},
+				prettier.Text("as?"),
+				prettier.Space,
+				// TODO: type
+			},
+		},
+		expr.Doc(),
+	)
+}
+
 func TestCreateExpression_MarshalJSON(t *testing.T) {
 
 	t.Parallel()

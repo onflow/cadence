@@ -1145,6 +1145,23 @@ func (e *CastingExpression) String() string {
 	)
 }
 
+func (e *CastingExpression) Doc() prettier.Doc {
+	// TODO: potentially parenthesize
+	doc := e.Expression.Doc()
+
+	return prettier.Group{
+		Doc: prettier.Concat{
+			prettier.Group{
+				Doc: doc,
+			},
+			prettier.Line{},
+			prettier.Text(e.Operation.Symbol()),
+			prettier.Space,
+			// TODO: type
+		},
+	}
+}
+
 func (e *CastingExpression) StartPosition() Position {
 	return e.Expression.StartPosition()
 }
