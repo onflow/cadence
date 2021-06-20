@@ -603,6 +603,7 @@ func (e *InvocationExpression) String() string {
 func (e *InvocationExpression) Doc() prettier.Doc {
 
 	result := prettier.Concat{
+		// TODO: potentially parenthesize
 		e.InvokedExpression.Doc(),
 	}
 
@@ -733,7 +734,7 @@ func (e *MemberExpression) Doc() prettier.Doc {
 		separatorDoc = memberExpressionSeparatorDoc
 	}
 	return prettier.Concat{
-		// TODO: replace once Expression implements Doc
+		// TODO: potentially parenthesize
 		e.Expression.Doc(),
 		prettier.Group{
 			Doc: prettier.Indent{
@@ -812,6 +813,7 @@ func (e *IndexExpression) String() string {
 
 func (e *IndexExpression) Doc() prettier.Doc {
 	return prettier.Concat{
+		// TODO: potentially parenthesize
 		e.TargetExpression.Doc(),
 		prettier.WrapBrackets(
 			e.IndexingExpression.Doc(),
@@ -1327,6 +1329,7 @@ func (e *CreateExpression) String() string {
 func (e *CreateExpression) Doc() prettier.Doc {
 	return prettier.Concat{
 		prettier.Text("create "),
+		// TODO: potentially parenthesize
 		e.InvocationExpression.Doc(),
 	}
 }
