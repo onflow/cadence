@@ -20,6 +20,8 @@ package ast
 
 import (
 	"encoding/json"
+
+	"github.com/turbolent/prettier"
 )
 
 type Statement interface {
@@ -43,6 +45,21 @@ func (s *ReturnStatement) Accept(visitor Visitor) Repr {
 func (s *ReturnStatement) Walk(walkChild func(Element)) {
 	if s.Expression != nil {
 		walkChild(s.Expression)
+	}
+}
+
+const returnStatementKeywordDoc = prettier.Text("return")
+const returnStatementKeywordSpaceDoc = prettier.Text("return ")
+
+func (s *ReturnStatement) Doc() prettier.Doc {
+	if s.Expression == nil {
+		return returnStatementKeywordDoc
+	}
+
+	return prettier.Concat{
+		returnStatementKeywordSpaceDoc,
+		// TODO: potentially parenthesize
+		s.Expression.Doc(),
 	}
 }
 
