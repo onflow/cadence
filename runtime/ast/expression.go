@@ -22,7 +22,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/big"
-	"strconv"
 	"strings"
 
 	"github.com/turbolent/prettier"
@@ -36,6 +35,7 @@ type Expression interface {
 	IfStatementTest
 	isExpression()
 	AcceptExp(ExpressionVisitor) Repr
+	Doc() prettier.Doc
 }
 
 // BoolExpression
