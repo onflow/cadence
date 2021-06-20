@@ -1739,6 +1739,43 @@ func TestReferenceExpression_MarshalJSON(t *testing.T) {
 	)
 }
 
+func TestReferenceExpression_Doc(t *testing.T) {
+
+	t.Parallel()
+
+	expr := &ReferenceExpression{
+		Expression: &IntegerExpression{
+			PositiveLiteral: "42",
+			Value:           big.NewInt(42),
+			Base:            10,
+		},
+		Type: &ReferenceType{
+			Authorized: true,
+			Type: &NominalType{
+				Identifier: Identifier{
+					Identifier: "Int",
+				},
+			},
+		},
+	}
+
+	assert.Equal(t,
+		prettier.Group{
+			Doc: prettier.Concat{
+				prettier.Text("&"),
+				prettier.Group{
+					Doc: prettier.Text("42"),
+				},
+				prettier.Line{},
+				prettier.Text("as"),
+				prettier.Space,
+				// TODO: type
+			},
+		},
+		expr.Doc(),
+	)
+}
+
 func TestFunctionExpression_MarshalJSON(t *testing.T) {
 
 	t.Parallel()

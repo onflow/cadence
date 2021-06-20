@@ -1335,6 +1335,27 @@ func (e *ReferenceExpression) String() string {
 	)
 }
 
+var referenceExpressionRefOperatorDoc prettier.Doc = prettier.Text("&")
+var referenceExpressionAsOperatorDoc prettier.Doc = prettier.Text("as")
+
+func (e *ReferenceExpression) Doc() prettier.Doc {
+	// TODO: potentially parenthesize
+	doc := e.Expression.Doc()
+
+	return prettier.Group{
+		Doc: prettier.Concat{
+			referenceExpressionRefOperatorDoc,
+			prettier.Group{
+				Doc: doc,
+			},
+			prettier.Line{},
+			referenceExpressionAsOperatorDoc,
+			prettier.Space,
+			// TODO: type
+		},
+	}
+}
+
 func (e *ReferenceExpression) StartPosition() Position {
 	return e.StartPos
 }
