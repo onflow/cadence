@@ -1264,6 +1264,16 @@ func (e *DestroyExpression) String() string {
 	)
 }
 
+const destroyExpressionKeywordDoc = prettier.Text("destroy ")
+
+func (e *DestroyExpression) Doc() prettier.Doc {
+	return prettier.Concat{
+		destroyExpressionKeywordDoc,
+		// TODO: potentially parenthesize
+		e.Expression.Doc(),
+	}
+}
+
 func (e *DestroyExpression) StartPosition() Position {
 	return e.StartPos
 }

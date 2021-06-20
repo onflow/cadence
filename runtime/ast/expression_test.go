@@ -1078,6 +1078,27 @@ func TestDestroyExpression_MarshalJSON(t *testing.T) {
 	)
 }
 
+func TestDestroyExpression_Doc(t *testing.T) {
+
+	t.Parallel()
+
+	d := &DestroyExpression{
+		Expression: &IdentifierExpression{
+			Identifier: Identifier{
+				Identifier: "foo",
+			},
+		},
+	}
+
+	assert.Equal(t,
+		prettier.Concat{
+			prettier.Text("destroy "),
+			prettier.Text("foo"),
+		},
+		d.Doc(),
+	)
+}
+
 func TestForceExpression_MarshalJSON(t *testing.T) {
 
 	t.Parallel()
