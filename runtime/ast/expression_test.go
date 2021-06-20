@@ -174,6 +174,91 @@ func TestIntegerExpression_MarshalJSON(t *testing.T) {
 	)
 }
 
+func TestIntegerExpression_Doc(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("decimal", func(t *testing.T) {
+
+		t.Parallel()
+
+		expr := &IntegerExpression{
+			PositiveLiteral: "4_2",
+			Value:           big.NewInt(42),
+			Base:            10,
+		}
+
+		assert.Equal(t,
+			prettier.Text(`4_2`),
+			expr.Doc(),
+		)
+	})
+
+	t.Run("negative", func(t *testing.T) {
+
+		t.Parallel()
+
+		expr := &IntegerExpression{
+			PositiveLiteral: "4_2",
+			Value:           big.NewInt(-42),
+			Base:            10,
+		}
+
+		assert.Equal(t,
+			prettier.Text(`-4_2`),
+			expr.Doc(),
+		)
+	})
+
+	t.Run("binary", func(t *testing.T) {
+
+		t.Parallel()
+
+		expr := &IntegerExpression{
+			PositiveLiteral: "0b10_10_10",
+			Value:           big.NewInt(42),
+			Base:            2,
+		}
+
+		assert.Equal(t,
+			prettier.Text(`0b10_10_10`),
+			expr.Doc(),
+		)
+	})
+
+	t.Run("octal", func(t *testing.T) {
+
+		t.Parallel()
+
+		expr := &IntegerExpression{
+			PositiveLiteral: "0o5_2",
+			Value:           big.NewInt(42),
+			Base:            8,
+		}
+
+		assert.Equal(t,
+			prettier.Text(`0o5_2`),
+			expr.Doc(),
+		)
+	})
+
+	t.Run("hex", func(t *testing.T) {
+
+		t.Parallel()
+
+		expr := &IntegerExpression{
+			PositiveLiteral: "0x2_A",
+			Value:           big.NewInt(42),
+			Base:            16,
+		}
+
+		assert.Equal(t,
+			prettier.Text(`0x2_A`),
+			expr.Doc(),
+		)
+	})
+}
+
 func TestFixedPointExpression_MarshalJSON(t *testing.T) {
 
 	t.Parallel()

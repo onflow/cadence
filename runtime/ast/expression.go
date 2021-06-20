@@ -217,6 +217,13 @@ func (e *IntegerExpression) String() string {
 	}
 	return literal
 }
+
+func (e *IntegerExpression) Doc() prettier.Doc {
+	literal := e.PositiveLiteral
+	if e.Value.Sign() < 0 {
+		literal = "-" + literal
+	}
+	return prettier.Text(literal)
 }
 
 func (e *IntegerExpression) MarshalJSON() ([]byte, error) {
