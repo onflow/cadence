@@ -707,6 +707,76 @@ func TestMemberExpression_MarshalJSON(t *testing.T) {
 	)
 }
 
+func TestMemberExpression_Doc(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("non-optional", func(t *testing.T) {
+
+		t.Parallel()
+
+		expr := &MemberExpression{
+			Expression: &IdentifierExpression{
+				Identifier: Identifier{
+					Identifier: "foo",
+				},
+			},
+			Identifier: Identifier{
+				Identifier: "bar",
+			},
+		}
+
+		assert.Equal(t,
+			prettier.Concat{
+				prettier.Text("foo"),
+				prettier.Group{
+					Doc: prettier.Indent{
+						Doc: prettier.Concat{
+							prettier.SoftLine{},
+							prettier.Text("."),
+							prettier.Text("bar"),
+						},
+					},
+				},
+			},
+			expr.Doc(),
+		)
+	})
+
+	t.Run("optional", func(t *testing.T) {
+
+		t.Parallel()
+
+		expr := &MemberExpression{
+			Expression: &IdentifierExpression{
+				Identifier: Identifier{
+					Identifier: "foo",
+				},
+			},
+			Optional: true,
+			Identifier: Identifier{
+				Identifier: "bar",
+			},
+		}
+
+		assert.Equal(t,
+			prettier.Concat{
+				prettier.Text("foo"),
+				prettier.Group{
+					Doc: prettier.Indent{
+						Doc: prettier.Concat{
+							prettier.SoftLine{},
+							prettier.Text("?."),
+							prettier.Text("bar"),
+						},
+					},
+				},
+			},
+			expr.Doc(),
+		)
+	})
+}
+
 func TestIndexExpression_MarshalJSON(t *testing.T) {
 
 	t.Parallel()

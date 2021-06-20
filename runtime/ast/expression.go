@@ -722,6 +722,31 @@ func (e *MemberExpression) String() string {
 	)
 }
 
+var memberExpressionSeparatorDoc prettier.Doc = prettier.Text(".")
+var memberExpressionOptionalSeparatorDoc prettier.Doc = prettier.Text("?.")
+
+func (e *MemberExpression) Doc() prettier.Doc {
+	var separatorDoc prettier.Doc
+	if e.Optional {
+		separatorDoc = memberExpressionOptionalSeparatorDoc
+	} else {
+		separatorDoc = memberExpressionSeparatorDoc
+	}
+	return prettier.Concat{
+		// TODO: replace once Expression implements Doc
+		e.Expression.Doc(),
+		prettier.Group{
+			Doc: prettier.Indent{
+				Doc: prettier.Concat{
+					prettier.SoftLine{},
+					separatorDoc,
+					prettier.Text(e.Identifier.Identifier),
+				},
+			},
+		},
+	}
+}
+
 func (e *MemberExpression) StartPosition() Position {
 	return e.Expression.StartPosition()
 }
