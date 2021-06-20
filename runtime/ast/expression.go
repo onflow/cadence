@@ -1404,6 +1404,16 @@ func (e *ForceExpression) String() string {
 	return fmt.Sprintf("%s!", e.Expression)
 }
 
+const forceExpressionOperatorDoc = prettier.Text("!")
+
+func (e *ForceExpression) Doc() prettier.Doc {
+	return prettier.Concat{
+		// TODO: potentially parenthesize
+		e.Expression.Doc(),
+		forceExpressionOperatorDoc,
+	}
+}
+
 func (e *ForceExpression) StartPosition() Position {
 	return e.Expression.StartPosition()
 }

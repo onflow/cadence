@@ -1138,6 +1138,26 @@ func TestForceExpression_MarshalJSON(t *testing.T) {
 	)
 }
 
+func TestForceExpression_Doc(t *testing.T) {
+
+	t.Parallel()
+
+	expr := &ForceExpression{
+		Expression: &IdentifierExpression{
+			Identifier: Identifier{
+				Identifier: "foo",
+			},
+		},
+	}
+	assert.Equal(t,
+		prettier.Concat{
+			prettier.Text("foo"),
+			prettier.Text("!"),
+		},
+		expr.Doc(),
+	)
+}
+
 func TestConditionalExpression_MarshalJSON(t *testing.T) {
 
 	t.Parallel()
