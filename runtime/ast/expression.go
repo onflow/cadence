@@ -289,6 +289,14 @@ func (e *FixedPointExpression) String() string {
 	return builder.String()
 }
 
+func (e *FixedPointExpression) Doc() prettier.Doc {
+	literal := e.PositiveLiteral
+	if e.Negative {
+		literal = "-" + literal
+	}
+	return prettier.Text(literal)
+}
+
 func (e *FixedPointExpression) MarshalJSON() ([]byte, error) {
 	type Alias FixedPointExpression
 	return json.Marshal(&struct {

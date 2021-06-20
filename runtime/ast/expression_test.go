@@ -295,6 +295,44 @@ func TestFixedPointExpression_MarshalJSON(t *testing.T) {
 	)
 }
 
+func TestFixedPointExpression_Doc(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("positive", func(t *testing.T) {
+
+		t.Parallel()
+
+		expr := &FixedPointExpression{
+			PositiveLiteral: "1_2.3_4",
+			UnsignedInteger: big.NewInt(42),
+			Scale:           2,
+		}
+
+		assert.Equal(t,
+			prettier.Text(`1_2.3_4`),
+			expr.Doc(),
+		)
+	})
+
+	t.Run("negative", func(t *testing.T) {
+
+		t.Parallel()
+
+		expr := &FixedPointExpression{
+			PositiveLiteral: "1_2.3_4",
+			Negative:        true,
+			UnsignedInteger: big.NewInt(42),
+			Scale:           2,
+		}
+
+		assert.Equal(t,
+			prettier.Text(`-1_2.3_4`),
+			expr.Doc(),
+		)
+	})
+}
+
 func TestArrayExpression_MarshalJSON(t *testing.T) {
 
 	t.Parallel()
