@@ -497,6 +497,82 @@ func TestDictionaryExpression_MarshalJSON(t *testing.T) {
 	)
 }
 
+func TestDictionaryExpression_Doc(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("empty", func(t *testing.T) {
+
+		t.Parallel()
+
+		assert.Equal(t,
+			prettier.Text("{}"),
+			(&DictionaryExpression{}).Doc(),
+		)
+	})
+
+	t.Run("non-empty", func(t *testing.T) {
+
+		t.Parallel()
+
+		expr := &DictionaryExpression{
+			Entries: []DictionaryEntry{
+				{
+					Key:   &StringExpression{Value: "foo"},
+					Value: &NilExpression{},
+				},
+				{
+					Key:   &StringExpression{Value: "bar"},
+					Value: &BoolExpression{Value: true},
+				},
+			},
+		}
+
+		assert.Equal(t,
+			prettier.Group{
+				Doc: prettier.Concat{
+					prettier.Text("{"),
+					prettier.Indent{
+						Doc: prettier.Concat{
+							prettier.SoftLine{},
+							prettier.Concat{
+								prettier.Group{
+									Doc: prettier.Concat{
+										prettier.Text(`"foo"`),
+										prettier.Concat{
+											prettier.Text(":"),
+											prettier.Line{},
+										},
+										prettier.Text("nil"),
+									},
+								},
+								prettier.Concat{
+									prettier.Text(","),
+									prettier.Line{},
+								},
+								prettier.Group{
+									Doc: prettier.Concat{
+										prettier.Text(`"bar"`),
+										prettier.Concat{
+											prettier.Text(":"),
+											prettier.Line{},
+										},
+										prettier.Text("true"),
+									},
+								},
+							},
+						},
+					},
+					prettier.SoftLine{},
+					prettier.Text("}"),
+				},
+			},
+			expr.Doc(),
+		)
+	})
+
+}
+
 func TestIdentifierExpression_MarshalJSON(t *testing.T) {
 
 	t.Parallel()

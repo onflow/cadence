@@ -420,6 +420,27 @@ func (e *DictionaryExpression) String() string {
 	return builder.String()
 }
 
+var dictionaryExpressionSeparatorDoc prettier.Doc = prettier.Concat{
+	prettier.Text(","),
+	prettier.Line{},
+}
+
+func (e *DictionaryExpression) Doc() prettier.Doc {
+	if len(e.Entries) == 0 {
+		return prettier.Text("{}")
+	}
+
+	entryDocs := make([]prettier.Doc, len(e.Entries))
+	for i, entry := range e.Entries {
+		entryDocs[i] = entry.Doc()
+	}
+
+	return prettier.WrapBraces(
+		prettier.Join(dictionaryExpressionSeparatorDoc, entryDocs...),
+		prettier.SoftLine{},
+	)
+}
+
 func (e *DictionaryExpression) MarshalJSON() ([]byte, error) {
 	type Alias DictionaryExpression
 	return json.Marshal(&struct {
@@ -445,6 +466,24 @@ func (e DictionaryEntry) MarshalJSON() ([]byte, error) {
 		Type:  "DictionaryEntry",
 		Alias: (*Alias)(&e),
 	})
+}
+
+var dictionaryEntrySeparatorDoc prettier.Doc = prettier.Concat{
+	prettier.Text(":"),
+	prettier.Line{},
+}
+
+func (e DictionaryEntry) Doc() prettier.Doc {
+	keyDoc := e.Key.Doc()
+	valueDoc := e.Value.Doc()
+
+	return prettier.Group{
+		Doc: prettier.Concat{
+			keyDoc,
+			dictionaryEntrySeparatorDoc,
+			valueDoc,
+		},
+	}
 }
 
 // IdentifierExpression
