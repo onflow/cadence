@@ -2155,6 +2155,7 @@ func (p TypeParameter) checkTypeBound(ty Type, typeRange ast.Range) error {
 
 func formatFunctionType(
 	spaces bool,
+	receiverType string,
 	typeParameters []string,
 	parameters []string,
 	returnTypeAnnotation string,
@@ -2162,6 +2163,12 @@ func formatFunctionType(
 
 	var builder strings.Builder
 	builder.WriteRune('(')
+
+	if receiverType != "" {
+		builder.WriteString(receiverType)
+		builder.WriteRune('#')
+	}
+
 	if len(typeParameters) > 0 {
 		builder.WriteRune('<')
 		for i, typeParameter := range typeParameters {
@@ -2197,6 +2204,7 @@ func formatFunctionType(
 // FunctionType
 //
 type FunctionType struct {
+	ReceiverType             Type
 	IsConstructor            bool
 	TypeParameters           []*TypeParameter
 	Parameters               []*Parameter
@@ -2225,6 +2233,11 @@ func (t *FunctionType) CheckArgumentExpressions(
 
 func (t *FunctionType) String() string {
 
+	var receiverType string
+	if t.ReceiverType != nil {
+		receiverType = t.ReceiverType.String()
+	}
+
 	typeParameters := make([]string, len(t.TypeParameters))
 
 	for i, typeParameter := range t.TypeParameters {
@@ -2241,6 +2254,7 @@ func (t *FunctionType) String() string {
 
 	return formatFunctionType(
 		true,
+		receiverType,
 		typeParameters,
 		parameters,
 		returnTypeAnnotation,
@@ -2248,6 +2262,11 @@ func (t *FunctionType) String() string {
 }
 
 func (t *FunctionType) QualifiedString() string {
+
+	var receiverType string
+	if t.ReceiverType != nil {
+		receiverType = t.ReceiverType.QualifiedString()
+	}
 
 	typeParameters := make([]string, len(t.TypeParameters))
 
@@ -2265,6 +2284,7 @@ func (t *FunctionType) QualifiedString() string {
 
 	return formatFunctionType(
 		true,
+		receiverType,
 		typeParameters,
 		parameters,
 		returnTypeAnnotation,
@@ -2273,6 +2293,12 @@ func (t *FunctionType) QualifiedString() string {
 
 // NOTE: parameter names and argument labels are *not* part of the ID!
 func (t *FunctionType) ID() TypeID {
+
+	var receiverType string
+	if t.ReceiverType != nil {
+		receiverType = string(t.ReceiverType.ID())
+	}
+
 	typeParameters := make([]string, len(t.TypeParameters))
 
 	for i, typeParameter := range t.TypeParameters {
@@ -2290,6 +2316,7 @@ func (t *FunctionType) ID() TypeID {
 	return TypeID(
 		formatFunctionType(
 			false,
+			receiverType,
 			typeParameters,
 			parameters,
 			returnTypeAnnotation,
@@ -2330,16 +2357,33 @@ func (t *FunctionType) Equal(other Type) bool {
 		}
 	}
 
-	// Ensures that a constructor function type is
-	// NOT equal to a function type with the same parameters, return type, etc.
+	if !IsSubType(
+		t.ReturnTypeAnnotation.Type,
+		otherFunction.ReturnTypeAnnotation.Type,
+	) {
+		return false
+	}
+
+	if t.ReceiverType != nil {
+		if otherFunction.ReceiverType == nil {
+			return false
+		}
+
+		if !t.ReceiverType.Equal(otherFunction.ReceiverType) {
+			return false
+		}
+
+	} else if otherFunction.ReceiverType != nil {
+		return false
+	}
+
+	// Constructors?
 
 	if t.IsConstructor != otherFunction.IsConstructor {
 		return false
 	}
 
-	// return type
-
-	return t.ReturnTypeAnnotation.Equal(otherFunction.ReturnTypeAnnotation)
+	return true
 }
 
 func (t *FunctionType) HasSameArgumentLabels(other *FunctionType) bool {
@@ -4813,21 +4857,24 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 
 		// Functions are covariant in their return type
 
-		if typedSubType.ReturnTypeAnnotation != nil {
-			if typedSuperType.ReturnTypeAnnotation == nil {
+		if !IsSubType(
+			typedSubType.ReturnTypeAnnotation.Type,
+			typedSuperType.ReturnTypeAnnotation.Type,
+		) {
+			return false
+		}
+
+		if typedSubType.ReceiverType != nil {
+			if typedSuperType.ReceiverType == nil {
 				return false
 			}
 
-			if !IsSubType(
-				typedSubType.ReturnTypeAnnotation.Type,
-				typedSuperType.ReturnTypeAnnotation.Type,
-			) {
+			if !typedSubType.ReceiverType.Equal(typedSuperType.ReceiverType) {
 				return false
 			}
-		} else {
-			if typedSuperType.ReturnTypeAnnotation != nil {
-				return false
-			}
+
+		} else if typedSuperType.ReceiverType != nil {
+			return false
 		}
 
 		// Constructors?
