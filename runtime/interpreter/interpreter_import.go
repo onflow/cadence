@@ -78,11 +78,6 @@ func (interpreter *Interpreter) importResolvedLocation(resolvedLocation sema.Res
 			}
 		}
 
-		// don't import base values
-		if sema.BaseValueActivation.Find(name) != nil {
-			continue
-		}
-
 		interpreter.setVariable(name, variable)
 		interpreter.Globals.Set(name, variable)
 	}
