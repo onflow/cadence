@@ -19,8 +19,8 @@
 package integration
 
 import (
-	"github.com/onflow/flow-cli/pkg/flowcli/project"
-	"github.com/onflow/flow-cli/pkg/flowcli/services"
+	"github.com/onflow/flow-cli/pkg/flowkit"
+	"github.com/onflow/flow-cli/pkg/flowkit/services"
 
 	"github.com/onflow/cadence/languageserver/protocol"
 	"github.com/onflow/cadence/languageserver/server"
@@ -45,7 +45,7 @@ type FlowIntegration struct {
 	emulatorState EmulatorState
 
 	sharedServices *services.Services
-	project        *project.Project
+	state          *flowkit.State
 }
 
 func NewFlowIntegration(s *server.Server, enableFlowClient bool) (*FlowIntegration, error) {
