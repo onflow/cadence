@@ -25,9 +25,10 @@ import (
 )
 
 // TypeTag is a bitmask representation for types.
-// Each type has a unique dedicated bit in the bitMask.
+// Each type has a unique dedicated bit/bit-pattern in the bitmask.
 // The mask consist of two sections: lowerMask and the upperMask.
 // Each section can represent 64-types. Currently only the lower mask is used.
+// Upper mask is reserved for future use.
 //
 type TypeTag struct {
 	lowerMask uint64
@@ -45,6 +46,7 @@ func newTypeTagFromLowerMask(mask uint64) TypeTag {
 	if _, ok := allTypeTags[typeTag]; ok {
 		panic(fmt.Errorf("duplicate type tag: %v", typeTag))
 	}
+
 	allTypeTags[typeTag] = true
 
 	return typeTag
@@ -92,19 +94,29 @@ func (t TypeTag) BelongsTo(typeTag TypeTag) bool {
 const neverTypeMask = 0
 
 const (
-	uint8TypeMask uint64 = 1 << iota
-	uint16TypeMask
-	uint32TypeMask
-	uint64TypeMask
-	uint128TypeMask
-	uint256TypeMask
+	numberTypeMask uint64 = 1 << iota
+	signedNumberTypeMask
+	integerTypeMask
+	signedIntegerTypeMask
+	unsignedIntegerTypeMask
+	fixedPointTypeMask
+	signedFixedPointTypeMask
 
+	intTypeMask
 	int8TypeMask
 	int16TypeMask
 	int32TypeMask
 	int64TypeMask
 	int128TypeMask
 	int256TypeMask
+
+	uIntTypeMask
+	uint8TypeMask
+	uint16TypeMask
+	uint32TypeMask
+	uint64TypeMask
+	uint128TypeMask
+	uint256TypeMask
 
 	word8TypeMask
 	word16TypeMask
@@ -114,8 +126,6 @@ const (
 	fix64TypeMask
 	ufix64TypeMask
 
-	intTypeMask
-	uIntTypeMask
 	stringTypeMask
 	characterTypeMask
 	boolTypeMask
@@ -153,6 +163,7 @@ const (
 var (
 	NeverTypeTag = newTypeTagFromLowerMask(neverTypeMask)
 
+	UIntTypeTag    = newTypeTagFromLowerMask(uIntTypeMask)
 	UInt8TypeTag   = newTypeTagFromLowerMask(uint8TypeMask)
 	UInt16TypeTag  = newTypeTagFromLowerMask(uint16TypeMask)
 	UInt32TypeTag  = newTypeTagFromLowerMask(uint32TypeMask)
@@ -160,6 +171,7 @@ var (
 	UInt128TypeTag = newTypeTagFromLowerMask(uint128TypeMask)
 	UInt256TypeTag = newTypeTagFromLowerMask(uint256TypeMask)
 
+	IntTypeTag    = newTypeTagFromLowerMask(intTypeMask)
 	Int8TypeTag   = newTypeTagFromLowerMask(int8TypeMask)
 	Int16TypeTag  = newTypeTagFromLowerMask(int16TypeMask)
 	Int32TypeTag  = newTypeTagFromLowerMask(int32TypeMask)
@@ -175,8 +187,6 @@ var (
 	Fix64TypeTag  = newTypeTagFromLowerMask(fix64TypeMask)
 	UFix64TypeTag = newTypeTagFromLowerMask(ufix64TypeMask)
 
-	IntTypeTag       = newTypeTagFromLowerMask(intTypeMask)
-	UIntTypeTag      = newTypeTagFromLowerMask(uIntTypeMask)
 	StringTypeTag    = newTypeTagFromLowerMask(stringTypeMask)
 	CharacterTypeTag = newTypeTagFromLowerMask(characterTypeMask)
 	BoolTypeTag      = newTypeTagFromLowerMask(boolTypeMask)
@@ -191,12 +201,11 @@ var (
 	PublicPathTypeTag     = newTypeTagFromLowerMask(publicPathTypeMask)
 	PrivatePathTypeTag    = newTypeTagFromLowerMask(privatePathTypeMask)
 
-	ArrayTypeTag      = newTypeTagFromLowerMask(arrayTypeMask)
-	DictionaryTypeTag = newTypeTagFromLowerMask(dictionaryTypeMask)
-	CompositeTypeTag  = newTypeTagFromLowerMask(compositeTypeMask)
-	ReferenceTypeTag  = newTypeTagFromLowerMask(referenceTypeMask)
-	ResourceTypeTag   = newTypeTagFromLowerMask(resourceTypeMask)
-
+	ArrayTypeTag       = newTypeTagFromLowerMask(arrayTypeMask)
+	DictionaryTypeTag  = newTypeTagFromLowerMask(dictionaryTypeMask)
+	CompositeTypeTag   = newTypeTagFromLowerMask(compositeTypeMask)
+	ReferenceTypeTag   = newTypeTagFromLowerMask(referenceTypeMask)
+	ResourceTypeTag    = newTypeTagFromLowerMask(resourceTypeMask)
 	OptionalTypeTag    = newTypeTagFromLowerMask(optionalTypeMask)
 	GenericTypeTag     = newTypeTagFromLowerMask(genericTypeMask)
 	FunctionTypeTag    = newTypeTagFromLowerMask(functionTypeMask)
@@ -209,7 +218,8 @@ var (
 
 	// Super types
 
-	SignedIntTypeTag = IntTypeTag.
+	SignedIntegerTypeTag = newTypeTagFromLowerMask(signedIntegerTypeMask).
+				Or(IntTypeTag).
 				Or(Int8TypeTag).
 				Or(Int16TypeTag).
 				Or(Int32TypeTag).
@@ -217,7 +227,8 @@ var (
 				Or(Int128TypeTag).
 				Or(Int256TypeTag)
 
-	UnsignedIntTypeTag = UIntTypeTag.
+	UnsignedIntegerTypeTag = newTypeTagFromLowerMask(unsignedIntegerTypeMask).
+				Or(UIntTypeTag).
 				Or(UInt8TypeTag).
 				Or(UInt16TypeTag).
 				Or(UInt32TypeTag).
@@ -225,7 +236,28 @@ var (
 				Or(UInt128TypeTag).
 				Or(UInt256TypeTag)
 
-	IntegerTypeTag = SignedIntTypeTag.Or(UnsignedIntTypeTag)
+	IntegerTypeTag = newTypeTagFromLowerMask(integerTypeMask).
+			Or(SignedIntegerTypeTag).
+			Or(UnsignedIntegerTypeTag).
+			Or(Word8TypeTag).
+			Or(Word16TypeTag).
+			Or(Word32TypeTag).
+			Or(Word64TypeTag)
+
+	FixedPointTypeTag = newTypeTagFromLowerMask(fixedPointTypeMask).
+				Or(Fix64TypeTag).
+				Or(UFix64TypeTag)
+
+	SignedFixedPointTypeTag = newTypeTagFromLowerMask(signedFixedPointTypeMask).
+				Or(Fix64TypeTag)
+
+	SignedNumberTypeTag = newTypeTagFromLowerMask(signedNumberTypeMask).
+				Or(SignedIntegerTypeTag).
+				Or(SignedFixedPointTypeTag)
+
+	NumberTypeTag = newTypeTagFromLowerMask(numberTypeMask).
+			Or(IntegerTypeTag).
+			Or(FixedPointTypeTag)
 
 	AnyStructTypeTag = newTypeTagFromLowerMask(anyStructTypeMask).
 				Or(NeverTypeTag).
@@ -266,19 +298,8 @@ func findCommonSupperType(joinedTypeTag TypeTag, types ...Type) Type {
 
 	switch joinedTypeTag.lowerMask {
 
-	case uint8TypeMask:
-		return UInt8Type
-	case uint16TypeMask:
-		return UInt16Type
-	case uint32TypeMask:
-		return UInt32Type
-	case uint64TypeMask:
-		return UInt64Type
-	case uint128TypeMask:
-		return UInt128Type
-	case uint256TypeMask:
-		return UInt256Type
-
+	case intTypeMask:
+		return IntType
 	case int8TypeMask:
 		return Int8Type
 	case int16TypeMask:
@@ -291,6 +312,21 @@ func findCommonSupperType(joinedTypeTag TypeTag, types ...Type) Type {
 		return Int128Type
 	case int256TypeMask:
 		return Int256Type
+
+	case uIntTypeMask:
+		return UIntType
+	case uint8TypeMask:
+		return UInt8Type
+	case uint16TypeMask:
+		return UInt16Type
+	case uint32TypeMask:
+		return UInt32Type
+	case uint64TypeMask:
+		return UInt64Type
+	case uint128TypeMask:
+		return UInt128Type
+	case uint256TypeMask:
+		return UInt256Type
 
 	case word8TypeMask:
 		return Word8Type
@@ -306,10 +342,6 @@ func findCommonSupperType(joinedTypeTag TypeTag, types ...Type) Type {
 	case ufix64TypeMask:
 		return UFix64Type
 
-	case intTypeMask:
-		return IntType
-	case uIntTypeMask:
-		return UIntType
 	case stringTypeMask:
 		return StringType
 	case nilTypeMask:
@@ -356,33 +388,42 @@ func findCommonSupperType(joinedTypeTag TypeTag, types ...Type) Type {
 		}
 	}
 
+	// NOTE: Below order is important!
+
+	if joinedTypeTag.BelongsTo(SignedIntegerTypeTag) {
+		return SignedIntegerType
+	}
+
 	// Any heterogeneous int subtypes goes here.
 	if joinedTypeTag.BelongsTo(IntegerTypeTag) {
-		// Cadence currently doesn't support implicit casting to int supertypes.
-		// Therefore any heterogeneous integer types should belong to AnyStruct.
-		return AnyStructType
+		return IntegerType
 	}
 
-	if joinedTypeTag.ContainsAny(
-		ArrayTypeTag,
-		DictionaryTypeTag,
-		CompositeTypeTag,
-	) {
-		// At this point, the types contains arrays/dictionaries/composites along with other types.
-		// So the common supertype could only be AnyStruct, AnyResource or none (both)
-		return commonSuperTypeOfHeterogeneousTypes(types)
+	if joinedTypeTag.BelongsTo(SignedFixedPointTypeTag) {
+		return SignedFixedPointType
 	}
 
-	if joinedTypeTag.BelongsTo(AnyStructTypeTag) {
-		return AnyStructType
+	// Any heterogeneous fixed-point subtypes goes here.
+	if joinedTypeTag.BelongsTo(FixedPointTypeTag) {
+		return FixedPointType
 	}
 
-	if joinedTypeTag.BelongsTo(AnyResourceTypeTag) {
-		return AnyResourceType
+	if joinedTypeTag.BelongsTo(SignedNumberTypeTag) {
+		return SignedNumberType
 	}
 
-	// If nothing works, then there's no common supertype.
-	return NeverType
+	// Any heterogeneous numeric subtypes goes here.
+	if joinedTypeTag.BelongsTo(NumberTypeTag) {
+		return NumberType
+	}
+
+	// At this point, all the types are heterogeneous.
+	// So the common supertype could only be one of:
+	//    - AnyStruct
+	//    - AnyResource
+	//    - None (if there are both structs and resources)
+
+	return commonSuperTypeOfHeterogeneousTypes(types)
 }
 
 func commonSuperTypeOfHeterogeneousTypes(types []Type) Type {

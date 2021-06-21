@@ -705,7 +705,7 @@ func TestIdentifierCacheUpdate(t *testing.T) {
 
 func TestCommonSuperType(t *testing.T) {
 
-	t.Run("duplicate mask", func(t *testing.T) {
+	t.Run("Duplicate Mask", func(t *testing.T) {
 		defer func() {
 			if r := recover(); r != nil {
 				err, _ := r.(error)
@@ -746,7 +746,7 @@ func TestCommonSuperType(t *testing.T) {
 	t.Run("Simple types", func(t *testing.T) {
 		tests := []testCase{
 			{
-				name: "homogenous int types",
+				name: "homogenous integer types",
 				types: []Type{
 					UInt8Type,
 					UInt8Type,
@@ -755,13 +755,71 @@ func TestCommonSuperType(t *testing.T) {
 				expectedSuperType: UInt8Type,
 			},
 			{
-				name: "heterogeneous int types",
+				name: "heterogeneous integer types",
 				types: []Type{
 					UInt8Type,
 					UInt16Type,
 					UInt256Type,
+					IntegerType,
+					Word64Type,
 				},
-				expectedSuperType: AnyStructType,
+				expectedSuperType: IntegerType,
+			},
+			{
+				name: "heterogeneous fixed-point types",
+				types: []Type{
+					Fix64Type,
+					UFix64Type,
+					FixedPointType,
+				},
+				expectedSuperType: FixedPointType,
+			},
+			{
+				name: "heterogeneous numeric types",
+				types: []Type{
+					Int8Type,
+					UInt16Type,
+					IntegerType,
+					Word64Type,
+					Fix64Type,
+					UFix64Type,
+					FixedPointType,
+				},
+				expectedSuperType: NumberType,
+			},
+			{
+				name: "signed numbers",
+				types: []Type{
+					Int8Type,
+					Int128Type,
+					Fix64Type,
+				},
+				expectedSuperType: SignedNumberType,
+			},
+			{
+				name: "signed integers",
+				types: []Type{
+					Int8Type,
+					Int128Type,
+				},
+				expectedSuperType: SignedIntegerType,
+			},
+			{
+				name: "unsigned numbers",
+				types: []Type{
+					UInt8Type,
+					UInt128Type,
+					UFix64Type,
+				},
+				expectedSuperType: NumberType,
+			},
+			{
+				name: "unsigned integers",
+				types: []Type{
+					UInt8Type,
+					UInt128Type,
+				},
+				expectedSuperType: IntegerType,
 			},
 			{
 				name: "heterogeneous simple types",

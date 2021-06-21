@@ -635,7 +635,6 @@ type GenericType struct {
 func (*GenericType) IsType() {}
 
 func (t *GenericType) Tag() TypeTag {
-	// FIXME
 	return GenericTypeTag
 }
 
@@ -1197,17 +1196,20 @@ func (t *FixedPointNumericType) initializeMemberResolvers() {
 var (
 
 	// NumberType represents the super-type of all number types
-	NumberType = NewNumericType(NumberTypeName)
+	NumberType = NewNumericType(NumberTypeName).
+			WithTag(NumberTypeTag)
 
 	// SignedNumberType represents the super-type of all signed number types
-	SignedNumberType = NewNumericType(SignedNumberTypeName)
+	SignedNumberType = NewNumericType(SignedNumberTypeName).
+				WithTag(SignedNumberTypeTag)
 
 	// IntegerType represents the super-type of all integer types
-	IntegerType = NewNumericType(IntegerTypeName)
+	IntegerType = NewNumericType(IntegerTypeName).
+			WithTag(IntegerTypeTag)
 
 	// SignedIntegerType represents the super-type of all signed integer types
 	SignedIntegerType = NewNumericType(SignedIntegerTypeName).
-				WithTag(SignedIntTypeTag)
+				WithTag(SignedIntegerTypeTag)
 
 	// IntType represents the arbitrary-precision integer type `Int`
 	IntType = NewNumericType(IntTypeName).
@@ -1352,10 +1354,12 @@ var (
 			WithIntRange(Word64TypeMinInt, Word64TypeMaxInt)
 
 	// FixedPointType represents the super-type of all fixed-point types
-	FixedPointType = NewNumericType(FixedPointTypeName)
+	FixedPointType = NewNumericType(FixedPointTypeName).
+			WithTag(FixedPointTypeTag)
 
 	// SignedFixedPointType represents the super-type of all signed fixed-point types
-	SignedFixedPointType = NewNumericType(SignedFixedPointTypeName)
+	SignedFixedPointType = NewNumericType(SignedFixedPointTypeName).
+				WithTag(SignedFixedPointTypeTag)
 
 	// Fix64Type represents the 64-bit signed decimal fixed-point type `Fix64`
 	// which has a scale of Fix64Scale, and checks for overflow and underflow
