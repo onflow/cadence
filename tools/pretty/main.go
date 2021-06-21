@@ -150,7 +150,7 @@ var portFlag = flag.Int("port", 9090, "port")
 func main() {
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte(page))
+		_, _ = w.Write([]byte(page))
 	})
 
 	http.HandleFunc("/pretty", func(w http.ResponseWriter, r *http.Request) {
@@ -162,7 +162,7 @@ func main() {
 			return
 		}
 
-		fmt.Fprintf(w, pretty(req.Code, req.MaxLineLength))
+		_, _ = w.Write([]byte(pretty(req.Code, req.MaxLineLength)))
 	})
 
 	ln, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", *portFlag))
@@ -171,5 +171,5 @@ func main() {
 	}
 	log.Printf("Listening on http://%s/", ln.Addr().String())
 	var srv http.Server
-	srv.Serve(ln)
+	_ = srv.Serve(ln)
 }
