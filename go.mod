@@ -3,7 +3,6 @@ module github.com/onflow/cadence
 go 1.15
 
 require (
-	github.com/Workiva/go-datastructures v1.0.53
 	github.com/bytecodealliance/wasmtime-go v0.22.0
 	github.com/c-bata/go-prompt v0.2.5
 	github.com/cheekybits/genny v1.0.0

@@ -53,7 +53,8 @@ func newTypeTagFromLowerMask(mask uint64) TypeTag {
 }
 
 func (t TypeTag) Equals(tag TypeTag) bool {
-	return t.lowerMask == tag.lowerMask && t.upperMask == tag.upperMask
+	return t.lowerMask == tag.lowerMask &&
+		t.upperMask == tag.upperMask
 }
 
 func (t TypeTag) And(tag TypeTag) TypeTag {
@@ -88,7 +89,7 @@ func (t TypeTag) ContainsAny(typeTags ...TypeTag) bool {
 }
 
 func (t TypeTag) BelongsTo(typeTag TypeTag) bool {
-	return typeTag.ContainsAny(t)
+	return t.And(typeTag).Equals(t)
 }
 
 const neverTypeMask = 0
