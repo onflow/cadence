@@ -2355,6 +2355,13 @@ func (t *FunctionType) Equal(other Type) bool {
 		}
 	}
 
+	// Ensures that a constructor function type is
+	// NOT equal to a function type with the same parameters, return type, etc.
+
+	if t.IsConstructor != otherFunction.IsConstructor {
+		return false
+	}
+
 	// return type
 
 	if !t.ReturnTypeAnnotation.Type.
@@ -4866,12 +4873,24 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 
 		// Functions are covariant in their return type
 
-		if !IsSubType(
-			typedSubType.ReturnTypeAnnotation.Type,
-			typedSuperType.ReturnTypeAnnotation.Type,
-		) {
-			return false
+		if typedSubType.ReturnTypeAnnotation != nil {
+			if typedSuperType.ReturnTypeAnnotation == nil {
+				return false
+			}
+
+			if !IsSubType(
+				typedSubType.ReturnTypeAnnotation.Type,
+				typedSuperType.ReturnTypeAnnotation.Type,
+			) {
+				return false
+			}
+		} else {
+			if typedSuperType.ReturnTypeAnnotation != nil {
+				return false
+			}
 		}
+
+		// Receiver type
 
 		if typedSubType.ReceiverType != nil {
 			if typedSuperType.ReceiverType == nil {
