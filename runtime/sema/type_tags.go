@@ -423,35 +423,22 @@ func findCommonSupperType(joinedTypeTag TypeTag, types ...Type) Type {
 
 	// NOTE: Below order is important!
 
-	if joinedTypeTag.BelongsTo(SignedIntegerTypeTag) {
+	switch {
+	case joinedTypeTag.BelongsTo(SignedIntegerTypeTag):
 		return SignedIntegerType
-	}
-
-	if joinedTypeTag.BelongsTo(IntegerTypeTag) {
+	case joinedTypeTag.BelongsTo(IntegerTypeTag):
 		return IntegerType
-	}
-
-	if joinedTypeTag.BelongsTo(SignedFixedPointTypeTag) {
+	case joinedTypeTag.BelongsTo(SignedFixedPointTypeTag):
 		return SignedFixedPointType
-	}
-
-	if joinedTypeTag.BelongsTo(FixedPointTypeTag) {
+	case joinedTypeTag.BelongsTo(FixedPointTypeTag):
 		return FixedPointType
-	}
-
-	if joinedTypeTag.BelongsTo(SignedNumberTypeTag) {
+	case joinedTypeTag.BelongsTo(SignedNumberTypeTag):
 		return SignedNumberType
-	}
-
-	if joinedTypeTag.BelongsTo(NumberTypeTag) {
+	case joinedTypeTag.BelongsTo(NumberTypeTag):
 		return NumberType
-	}
-
-	if joinedTypeTag.BelongsTo(CapabilityPathTypeTag) {
+	case joinedTypeTag.BelongsTo(CapabilityPathTypeTag):
 		return CapabilityPathType
-	}
-
-	if joinedTypeTag.BelongsTo(PathTypeTag) {
+	case joinedTypeTag.BelongsTo(PathTypeTag):
 		return PathType
 	}
 
