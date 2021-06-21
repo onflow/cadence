@@ -19,10 +19,12 @@
 package integration
 
 import (
-	"github.com/onflow/flow-cli/pkg/flowcli/gateway"
-	"github.com/onflow/flow-cli/pkg/flowcli/output"
-	"github.com/onflow/flow-cli/pkg/flowcli/project"
-	"github.com/onflow/flow-cli/pkg/flowcli/services"
+	"github.com/onflow/flow-cli/pkg/flowkit"
+	"github.com/onflow/flow-cli/pkg/flowkit/gateway"
+	"github.com/onflow/flow-cli/pkg/flowkit/output"
+	"github.com/onflow/flow-cli/pkg/flowkit/services"
+	"github.com/onflow/flow-cli/pkg/flowkit/state"
+	"github.com/spf13/afero"
 )
 
 func (i *FlowIntegration) initialize(initializationOptions interface{}) error {
@@ -37,12 +39,13 @@ func (i *FlowIntegration) initialize(initializationOptions interface{}) error {
 
 	configurationPaths := []string{conf.configPath}
 
-	flowProject, err := project.Load(configurationPaths)
+	loader := &afero.Afero{Fs: afero.NewOsFs()}
+	state, err := flowkit.Load(configurationPaths, loader)
 	if err != nil {
 		return err
 	}
 
-	host := flowProject.NetworkByName("emulator").Host
+	host := state.Networks().ByName("emulator").Host
 	logger := output.NewStdoutLogger(output.NoneLog)
 
 	grpcGateway, err := gateway.NewGrpcGateway(host)
@@ -50,8 +53,8 @@ func (i *FlowIntegration) initialize(initializationOptions interface{}) error {
 		return err
 	}
 
-	i.sharedServices = services.NewServices(grpcGateway, flowProject, logger)
-	i.project = flowProject
+	i.sharedServices = services.NewServices(grpcGateway, state, logger)
+	i.state = state
 
 	return nil
 }

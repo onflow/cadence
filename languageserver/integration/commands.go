@@ -26,7 +26,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/onflow/flow-cli/pkg/flowcli"
+	"github.com/onflow/flow-cli/pkg/flowkit"
 	"github.com/onflow/flow-go-sdk"
 	"github.com/onflow/flow-go-sdk/crypto"
 
@@ -117,7 +117,7 @@ func makeManagerCode(script string, serviceAddress string) []byte {
 //
 // No arguments are expected
 func (i *FlowIntegration) initAccountManager(conn protocol.Conn, args ...interface{}) (interface{}, error) {
-	serviceAccount, err := i.project.EmulatorServiceAccount()
+	serviceAccount, err := i.state.EmulatorServiceAccount()
 	if err != nil {
 		return nil, errorWithMessage(conn, ErrorMessageServiceAccount, err)
 	}
@@ -370,7 +370,7 @@ func (i *FlowIntegration) createDefaultAccounts(conn protocol.Conn, args ...inte
 	accounts := make([]ClientAccount, count+1)
 
 	// Get service account
-	serviceAccount, err := i.project.EmulatorServiceAccount()
+	serviceAccount, err := i.state.EmulatorServiceAccount()
 	if err != nil {
 		return nil, errorWithMessage(conn, ErrorMessageServiceAccount, err)
 	}
@@ -463,7 +463,7 @@ func (i *FlowIntegration) deployContract(conn protocol.Conn, args ...interface{}
 
 // getServicePrivateKey returns private key for service account
 func (i *FlowIntegration) getServicePrivateKey() (string, error) {
-	serviceAccount, err := i.project.EmulatorServiceAccount()
+	serviceAccount, err := i.state.EmulatorServiceAccount()
 	if err != nil {
 		return "", err
 	}
@@ -478,7 +478,7 @@ func (i *FlowIntegration) getServicePrivateKey() (string, error) {
 
 // createAccountHelper creates a new account and returns its address.
 func (i *FlowIntegration) createAccountHelper(conn protocol.Conn) (address flow.Address, err error) {
-	serviceAccount, err := i.project.EmulatorServiceAccount()
+	serviceAccount, err := i.state.EmulatorServiceAccount()
 	if err != nil {
 		return flow.Address{}, errorWithMessage(conn, ErrorMessageServiceAccount, err)
 	}
@@ -521,7 +521,7 @@ func (i *FlowIntegration) createAccountHelper(conn protocol.Conn) (address flow.
 // storeAccountHelper sends transaction to store account on chain
 func (i *FlowIntegration) storeAccountHelper(conn protocol.Conn, address flow.Address) (newAccount ClientAccount, err error) {
 
-	serviceAccount, err := i.project.EmulatorServiceAccount()
+	serviceAccount, err := i.state.EmulatorServiceAccount()
 	if err != nil {
 		return ClientAccount{}, errorWithMessage(conn, ErrorMessageServiceAccount, err)
 	}
@@ -544,7 +544,7 @@ func (i *FlowIntegration) storeAccountHelper(conn protocol.Conn, address flow.Ad
 		return ClientAccount{}, errorWithMessage(conn, ErrorMessageAccountStore, err)
 	}
 
-	events := flowcli.EventsFromTransaction(txResult)
+	events := flowkit.EventsFromTransaction(txResult)
 	name := strings.ReplaceAll(events[0].Values["name"], `"`, "")
 
 	newAccount = ClientAccount{
