@@ -19,6 +19,7 @@
 package checker
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -711,4 +712,54 @@ func TestCheckInferenceWithCheckerErrors(t *testing.T) {
 			assert.Equal(t, "UnknownType", notDeclaredError.Name)
 		}
 	})
+}
+
+func TestCheckArraySupertypeInference(t *testing.T) {
+
+	t.Parallel()
+
+	tests := []struct {
+		literal             string
+		expectedElementType sema.Type
+	}{
+		{
+			literal:             `[0, true]`,
+			expectedElementType: sema.AnyStructType,
+		},
+		{
+			literal:             `[0, 6, 275]`,
+			expectedElementType: sema.IntType,
+		},
+		{
+			literal:             `[UInt(65), 6, 275, 13423]`,
+			expectedElementType: sema.IntegerType,
+		},
+		{
+			literal:             `[UInt(0), UInt(6), UInt(275), UInt(13423)]`,
+			expectedElementType: sema.UIntType,
+		},
+		{
+			literal: `["hello", nil, nil, nil]`,
+			expectedElementType: &sema.OptionalType{
+				Type: sema.StringType,
+			},
+		},
+	}
+
+	for _, test := range tests {
+		code := fmt.Sprintf(
+			"let x = %s",
+			test.literal,
+		)
+
+		checker, err := ParseAndCheck(t, code)
+		require.NoError(t, err)
+
+		xType := RequireGlobalValue(t, checker.Elaboration, "x")
+
+		require.IsType(t, &sema.VariableSizedType{}, xType)
+		arrayType := xType.(*sema.VariableSizedType)
+
+		assert.Equal(t, test.expectedElementType, arrayType.Type)
+	}
 }

@@ -950,19 +950,6 @@ func TestCheckInvalidDictionarySubtyping(t *testing.T) {
 	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 }
 
-func TestCheckInvalidArrayElements(t *testing.T) {
-
-	t.Parallel()
-
-	_, err := ParseAndCheck(t, `
-      let z = [0, true]
-	`)
-
-	errs := ExpectCheckerErrors(t, err, 1)
-
-	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
-}
-
 func TestCheckConstantSizedArrayDeclaration(t *testing.T) {
 
 	t.Parallel()
