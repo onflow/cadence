@@ -42,7 +42,7 @@ type Elaboration struct {
 	CompositeTypeDeclarations           map[*CompositeType]*ast.CompositeDeclaration
 	InterfaceDeclarationTypes           map[*ast.InterfaceDeclaration]*InterfaceType
 	InterfaceTypeDeclarations           map[*InterfaceType]*ast.InterfaceDeclaration
-	ConstructorFunctionTypes            map[*ast.SpecialFunctionDeclaration]*ConstructorFunctionType
+	ConstructorFunctionTypes            map[*ast.SpecialFunctionDeclaration]*FunctionType
 	FunctionExpressionFunctionType      map[*ast.FunctionExpression]*FunctionType
 	InvocationExpressionArgumentTypes   map[*ast.InvocationExpression][]Type
 	InvocationExpressionParameterTypes  map[*ast.InvocationExpression][]Type
@@ -97,7 +97,7 @@ func NewElaboration() *Elaboration {
 		CompositeTypeDeclarations:           map[*CompositeType]*ast.CompositeDeclaration{},
 		InterfaceDeclarationTypes:           map[*ast.InterfaceDeclaration]*InterfaceType{},
 		InterfaceTypeDeclarations:           map[*InterfaceType]*ast.InterfaceDeclaration{},
-		ConstructorFunctionTypes:            map[*ast.SpecialFunctionDeclaration]*ConstructorFunctionType{},
+		ConstructorFunctionTypes:            map[*ast.SpecialFunctionDeclaration]*FunctionType{},
 		FunctionExpressionFunctionType:      map[*ast.FunctionExpression]*FunctionType{},
 		InvocationExpressionArgumentTypes:   map[*ast.InvocationExpression][]Type{},
 		InvocationExpressionParameterTypes:  map[*ast.InvocationExpression][]Type{},
@@ -162,13 +162,12 @@ func (e *Elaboration) FunctionEntryPointType() (*FunctionType, error) {
 		}
 	}
 
-	invokableType, ok := entryPointValue.Type.(InvokableType)
+	functionType, ok := entryPointValue.Type.(*FunctionType)
 	if !ok {
 		return nil, &InvalidEntryPointTypeError{
 			Type: entryPointValue.Type,
 		}
 	}
 
-	functionType := invokableType.InvocationFunctionType()
 	return functionType, nil
 }

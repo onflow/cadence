@@ -731,15 +731,13 @@ func (interpreter *Interpreter) invokeVariable(
 	ty := functionVariable.Type
 
 	// function must be invokable
-	invokableType, ok := ty.(sema.InvokableType)
+	functionType, ok := ty.(*sema.FunctionType)
 
 	if !ok {
 		return nil, NotInvokableError{
 			Value: variableValue,
 		}
 	}
-
-	functionType := invokableType.InvocationFunctionType()
 
 	return interpreter.prepareInvoke(functionValue, functionType, arguments)
 }
@@ -1591,7 +1589,7 @@ func (interpreter *Interpreter) compositeInitializerFunction(
 	}
 
 	initializer = initializers[0]
-	functionType := interpreter.Program.Elaboration.ConstructorFunctionTypes[initializer].FunctionType
+	functionType := interpreter.Program.Elaboration.ConstructorFunctionTypes[initializer]
 
 	parameterList := initializer.FunctionDeclaration.ParameterList
 

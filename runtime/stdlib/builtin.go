@@ -254,7 +254,7 @@ var hashAlgorithmHashWithTagFunction = interpreter.NewHostFunctionValue(
 	},
 )
 
-func cryptoAlgorithmEnumType(enumType *sema.CompositeType, enumCases []sema.CryptoAlgorithm) *sema.ConstructorFunctionType {
+func cryptoAlgorithmEnumType(enumType *sema.CompositeType, enumCases []sema.CryptoAlgorithm) *sema.FunctionType {
 	members := make([]*sema.Member, len(enumCases))
 	for i, algo := range enumCases {
 		members[i] = sema.NewPublicConstantFieldMember(
@@ -265,21 +265,20 @@ func cryptoAlgorithmEnumType(enumType *sema.CompositeType, enumCases []sema.Cryp
 		)
 	}
 
-	constructorType := &sema.ConstructorFunctionType{
-		FunctionType: &sema.FunctionType{
-			Parameters: []*sema.Parameter{
-				{
-					Identifier:     sema.EnumRawValueFieldName,
-					TypeAnnotation: sema.NewTypeAnnotation(enumType.EnumRawType),
-				},
+	constructorType := &sema.FunctionType{
+		IsConstructor: true,
+		Parameters: []*sema.Parameter{
+			{
+				Identifier:     sema.EnumRawValueFieldName,
+				TypeAnnotation: sema.NewTypeAnnotation(enumType.EnumRawType),
 			},
-			ReturnTypeAnnotation: sema.NewTypeAnnotation(
-				&sema.OptionalType{
-					Type: enumType,
-				},
-			),
-			Members: sema.GetMembersAsMap(members),
 		},
+		ReturnTypeAnnotation: sema.NewTypeAnnotation(
+			&sema.OptionalType{
+				Type: enumType,
+			},
+		),
+		Members: sema.GetMembersAsMap(members),
 	}
 
 	return constructorType

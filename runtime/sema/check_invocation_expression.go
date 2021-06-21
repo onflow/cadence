@@ -74,7 +74,7 @@ func (checker *Checker) checkInvocationExpression(invocationExpression *ast.Invo
 		checker.Elaboration.InvocationExpressionArgumentTypes[invocationExpression] = argumentTypes
 	}()
 
-	invokableType, ok := expressionType.(InvokableType)
+	functionType, ok := expressionType.(*FunctionType)
 	if !ok {
 		if !expressionType.IsInvalidType() {
 			checker.report(
@@ -105,8 +105,6 @@ func (checker *Checker) checkInvocationExpression(invocationExpression *ast.Invo
 	// is only potential, i.e. the invocation will not always
 
 	var returnType Type
-
-	functionType := invokableType.InvocationFunctionType()
 
 	checkInvocation := func() {
 		argumentTypes, returnType =
@@ -164,7 +162,7 @@ func (checker *Checker) checkInvocationExpression(invocationExpression *ast.Invo
 
 	checker.checkConstructorInvocationWithResourceResult(
 		invocationExpression,
-		invokableType,
+		functionType,
 		returnType,
 		inCreate,
 	)
@@ -238,11 +236,11 @@ func (checker *Checker) checkMemberInvocationResourceInvalidation(invokedExpress
 
 func (checker *Checker) checkConstructorInvocationWithResourceResult(
 	invocationExpression *ast.InvocationExpression,
-	invokableType InvokableType,
+	functionType *FunctionType,
 	returnType Type,
 	inCreate bool,
 ) {
-	if _, ok := invokableType.(*ConstructorFunctionType); !ok {
+	if !functionType.IsConstructor {
 		return
 	}
 
