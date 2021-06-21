@@ -1166,4 +1166,46 @@ func TestCommonSuperType(t *testing.T) {
 		testLeastCommonSuperType(t, tests)
 	})
 
+	t.Run("Path types", func(t *testing.T) {
+		tests := []testCase{
+			{
+				name: "homogenous paths",
+				types: []Type{
+					PrivatePathType,
+					PrivatePathType,
+				},
+				expectedSuperType: PrivatePathType,
+			},
+			{
+				name: "capability paths",
+				types: []Type{
+					PrivatePathType,
+					PublicPathType,
+				},
+				expectedSuperType: CapabilityPathType,
+			},
+			{
+				name: "heterogeneous paths",
+				types: []Type{
+					PrivatePathType,
+					PublicPathType,
+					StoragePathType,
+				},
+				expectedSuperType: PathType,
+			},
+			{
+				name: "paths & non-paths",
+				types: []Type{
+					PrivatePathType,
+					PublicPathType,
+					StoragePathType,
+					StringType,
+				},
+				expectedSuperType: AnyStructType,
+			},
+		}
+
+		testLeastCommonSuperType(t, tests)
+	})
+
 }

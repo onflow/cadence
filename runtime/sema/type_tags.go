@@ -160,62 +160,6 @@ const (
 )
 
 var (
-	NeverTypeTag = newTypeTagFromLowerMask(neverTypeMask)
-
-	UIntTypeTag    = newTypeTagFromLowerMask(uIntTypeMask)
-	UInt8TypeTag   = newTypeTagFromLowerMask(uint8TypeMask)
-	UInt16TypeTag  = newTypeTagFromLowerMask(uint16TypeMask)
-	UInt32TypeTag  = newTypeTagFromLowerMask(uint32TypeMask)
-	UInt64TypeTag  = newTypeTagFromLowerMask(uint64TypeMask)
-	UInt128TypeTag = newTypeTagFromLowerMask(uint128TypeMask)
-	UInt256TypeTag = newTypeTagFromLowerMask(uint256TypeMask)
-
-	IntTypeTag    = newTypeTagFromLowerMask(intTypeMask)
-	Int8TypeTag   = newTypeTagFromLowerMask(int8TypeMask)
-	Int16TypeTag  = newTypeTagFromLowerMask(int16TypeMask)
-	Int32TypeTag  = newTypeTagFromLowerMask(int32TypeMask)
-	Int64TypeTag  = newTypeTagFromLowerMask(int64TypeMask)
-	Int128TypeTag = newTypeTagFromLowerMask(int128TypeMask)
-	Int256TypeTag = newTypeTagFromLowerMask(int256TypeMask)
-
-	Word8TypeTag  = newTypeTagFromLowerMask(word8TypeMask)
-	Word16TypeTag = newTypeTagFromLowerMask(word16TypeMask)
-	Word32TypeTag = newTypeTagFromLowerMask(word32TypeMask)
-	Word64TypeTag = newTypeTagFromLowerMask(word64TypeMask)
-
-	Fix64TypeTag  = newTypeTagFromLowerMask(fix64TypeMask)
-	UFix64TypeTag = newTypeTagFromLowerMask(ufix64TypeMask)
-
-	StringTypeTag    = newTypeTagFromLowerMask(stringTypeMask)
-	CharacterTypeTag = newTypeTagFromLowerMask(characterTypeMask)
-	BoolTypeTag      = newTypeTagFromLowerMask(boolTypeMask)
-	NilTypeTag       = newTypeTagFromLowerMask(nilTypeMask)
-	VoidTypeTag      = newTypeTagFromLowerMask(voidTypeMask)
-	AddressTypeTag   = newTypeTagFromLowerMask(addressTypeMask)
-	MetaTypeTag      = newTypeTagFromLowerMask(metaTypeMask)
-
-	PathTypeTag           = newTypeTagFromLowerMask(pathTypeMask)
-	StoragePathTypeTag    = newTypeTagFromLowerMask(storagePathTypeMask)
-	CapabilityPathTypeTag = newTypeTagFromLowerMask(capabilityPathTypeMask)
-	PublicPathTypeTag     = newTypeTagFromLowerMask(publicPathTypeMask)
-	PrivatePathTypeTag    = newTypeTagFromLowerMask(privatePathTypeMask)
-
-	ArrayTypeTag       = newTypeTagFromLowerMask(arrayTypeMask)
-	DictionaryTypeTag  = newTypeTagFromLowerMask(dictionaryTypeMask)
-	CompositeTypeTag   = newTypeTagFromLowerMask(compositeTypeMask)
-	ReferenceTypeTag   = newTypeTagFromLowerMask(referenceTypeMask)
-	OptionalTypeTag    = newTypeTagFromLowerMask(optionalTypeMask)
-	GenericTypeTag     = newTypeTagFromLowerMask(genericTypeMask)
-	FunctionTypeTag    = newTypeTagFromLowerMask(functionTypeMask)
-	InterfaceTypeTag   = newTypeTagFromLowerMask(interfaceTypeMask)
-	TransactionTypeTag = newTypeTagFromLowerMask(transactionTypeMask)
-	RestrictedTypeTag  = newTypeTagFromLowerMask(restrictedTypeMask)
-	CapabilityTypeTag  = newTypeTagFromLowerMask(capabilityTypeMask)
-
-	InvalidTypeTag = newTypeTagFromLowerMask(invalidTypeMask)
-
-	// Super types
-
 	SignedIntegerTypeTag = newTypeTagFromLowerMask(signedIntegerTypeMask).
 				Or(IntTypeTag).
 				Or(Int8TypeTag).
@@ -257,14 +201,75 @@ var (
 			Or(IntegerTypeTag).
 			Or(FixedPointTypeTag)
 
+	UIntTypeTag    = newTypeTagFromLowerMask(uIntTypeMask)
+	UInt8TypeTag   = newTypeTagFromLowerMask(uint8TypeMask)
+	UInt16TypeTag  = newTypeTagFromLowerMask(uint16TypeMask)
+	UInt32TypeTag  = newTypeTagFromLowerMask(uint32TypeMask)
+	UInt64TypeTag  = newTypeTagFromLowerMask(uint64TypeMask)
+	UInt128TypeTag = newTypeTagFromLowerMask(uint128TypeMask)
+	UInt256TypeTag = newTypeTagFromLowerMask(uint256TypeMask)
+
+	IntTypeTag    = newTypeTagFromLowerMask(intTypeMask)
+	Int8TypeTag   = newTypeTagFromLowerMask(int8TypeMask)
+	Int16TypeTag  = newTypeTagFromLowerMask(int16TypeMask)
+	Int32TypeTag  = newTypeTagFromLowerMask(int32TypeMask)
+	Int64TypeTag  = newTypeTagFromLowerMask(int64TypeMask)
+	Int128TypeTag = newTypeTagFromLowerMask(int128TypeMask)
+	Int256TypeTag = newTypeTagFromLowerMask(int256TypeMask)
+
+	Word8TypeTag  = newTypeTagFromLowerMask(word8TypeMask)
+	Word16TypeTag = newTypeTagFromLowerMask(word16TypeMask)
+	Word32TypeTag = newTypeTagFromLowerMask(word32TypeMask)
+	Word64TypeTag = newTypeTagFromLowerMask(word64TypeMask)
+
+	Fix64TypeTag  = newTypeTagFromLowerMask(fix64TypeMask)
+	UFix64TypeTag = newTypeTagFromLowerMask(ufix64TypeMask)
+
+	StringTypeTag    = newTypeTagFromLowerMask(stringTypeMask)
+	CharacterTypeTag = newTypeTagFromLowerMask(characterTypeMask)
+	BoolTypeTag      = newTypeTagFromLowerMask(boolTypeMask)
+	NilTypeTag       = newTypeTagFromLowerMask(nilTypeMask)
+	VoidTypeTag      = newTypeTagFromLowerMask(voidTypeMask)
+	AddressTypeTag   = newTypeTagFromLowerMask(addressTypeMask)
+	MetaTypeTag      = newTypeTagFromLowerMask(metaTypeMask)
+	NeverTypeTag     = newTypeTagFromLowerMask(neverTypeMask)
+	InvalidTypeTag   = newTypeTagFromLowerMask(invalidTypeMask)
+
+	StoragePathTypeTag = newTypeTagFromLowerMask(storagePathTypeMask)
+	PublicPathTypeTag  = newTypeTagFromLowerMask(publicPathTypeMask)
+	PrivatePathTypeTag = newTypeTagFromLowerMask(privatePathTypeMask)
+
+	CapabilityPathTypeTag = newTypeTagFromLowerMask(capabilityPathTypeMask).
+				Or(PublicPathTypeTag).
+				Or(PrivatePathTypeTag)
+
+	PathTypeTag = newTypeTagFromLowerMask(pathTypeMask).
+			Or(CapabilityPathTypeTag).
+			Or(StoragePathTypeTag)
+
+	ArrayTypeTag       = newTypeTagFromLowerMask(arrayTypeMask)
+	DictionaryTypeTag  = newTypeTagFromLowerMask(dictionaryTypeMask)
+	CompositeTypeTag   = newTypeTagFromLowerMask(compositeTypeMask)
+	ReferenceTypeTag   = newTypeTagFromLowerMask(referenceTypeMask)
+	OptionalTypeTag    = newTypeTagFromLowerMask(optionalTypeMask)
+	GenericTypeTag     = newTypeTagFromLowerMask(genericTypeMask)
+	FunctionTypeTag    = newTypeTagFromLowerMask(functionTypeMask)
+	InterfaceTypeTag   = newTypeTagFromLowerMask(interfaceTypeMask)
+	TransactionTypeTag = newTypeTagFromLowerMask(transactionTypeMask)
+	RestrictedTypeTag  = newTypeTagFromLowerMask(restrictedTypeMask)
+	CapabilityTypeTag  = newTypeTagFromLowerMask(capabilityTypeMask)
+
 	AnyStructTypeTag = newTypeTagFromLowerMask(anyStructTypeMask).
 				Or(NeverTypeTag).
-				Or(IntegerTypeTag).
+				Or(NumberTypeTag).
 				Or(StringTypeTag).
-				Or(ArrayTypeTag).
-				Or(DictionaryTypeTag).
 				Or(ReferenceTypeTag).
-				Or(NilTypeTag)
+				Or(NilTypeTag).
+				Or(BoolTypeTag).
+				Or(CharacterTypeTag).
+				Or(VoidTypeTag).
+				Or(MetaTypeTag).
+				Or(PathTypeTag)
 
 	AnyResourceTypeTag = newTypeTagFromLowerMask(anyResourceTypeMask)
 
@@ -356,8 +361,18 @@ func findCommonSupperType(joinedTypeTag TypeTag, types ...Type) Type {
 		return &AddressType{}
 	case metaTypeMask:
 		return MetaType
+	case pathTypeMask:
+		return PathType
+	case capabilityPathTypeMask:
+		return CapabilityPathType
+	case privatePathTypeMask:
+		return PrivatePathType
+	case publicPathTypeMask:
+		return PublicPathType
+	case storagePathTypeMask:
+		return StoragePathType
 
-	// All derived types must go here.
+	// All derived types goes here.
 	case arrayTypeMask,
 		dictionaryTypeMask,
 		compositeTypeMask,
@@ -370,7 +385,10 @@ func findCommonSupperType(joinedTypeTag TypeTag, types ...Type) Type {
 		restrictedTypeMask,
 		capabilityTypeMask:
 
-		// Contains only arrays/dictionaries/composites.
+		// We reach here if all types belongs to same kind.
+		// e.g: All are arrays, all are dictionaries, etc.
+		// Therefore check for member types, and decide the
+		// common suprtype based on the member types.
 		var prevType Type
 		for _, typ := range types {
 			if prevType == nil {
@@ -409,7 +427,6 @@ func findCommonSupperType(joinedTypeTag TypeTag, types ...Type) Type {
 		return SignedIntegerType
 	}
 
-	// Any heterogeneous int subtypes goes here.
 	if joinedTypeTag.BelongsTo(IntegerTypeTag) {
 		return IntegerType
 	}
@@ -418,7 +435,6 @@ func findCommonSupperType(joinedTypeTag TypeTag, types ...Type) Type {
 		return SignedFixedPointType
 	}
 
-	// Any heterogeneous fixed-point subtypes goes here.
 	if joinedTypeTag.BelongsTo(FixedPointTypeTag) {
 		return FixedPointType
 	}
@@ -427,9 +443,16 @@ func findCommonSupperType(joinedTypeTag TypeTag, types ...Type) Type {
 		return SignedNumberType
 	}
 
-	// Any heterogeneous numeric subtypes goes here.
 	if joinedTypeTag.BelongsTo(NumberTypeTag) {
 		return NumberType
+	}
+
+	if joinedTypeTag.BelongsTo(CapabilityPathTypeTag) {
+		return CapabilityPathType
+	}
+
+	if joinedTypeTag.BelongsTo(PathTypeTag) {
+		return PathType
 	}
 
 	// At this point, all the types are heterogeneous.
