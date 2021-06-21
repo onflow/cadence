@@ -21,6 +21,7 @@ package integration
 import (
 	"errors"
 	"fmt"
+	"github.com/onflow/cadence"
 	"io/ioutil"
 	"net/url"
 	"strings"
@@ -124,11 +125,6 @@ func (i *FlowIntegration) initAccountManager(conn protocol.Conn, args ...interfa
 
 	serviceAddress := serviceAccount.Address().String()
 
-	privateKey, err := i.getServicePrivateKey()
-	if err != nil {
-		return nil, errorWithMessage(conn, ErrorMessageServiceAccountKey, err)
-	}
-
 	// Check if emulator is up
 	err = i.waitForNetwork()
 	if err != nil {
@@ -137,12 +133,17 @@ func (i *FlowIntegration) initAccountManager(conn protocol.Conn, args ...interfa
 
 	name := "AccountManager"
 	code := makeManagerCode(fmt.Sprintf(contractAccountManager, serviceAccountName), serviceAddress)
-	update, err := i.isContractDeployed(serviceAddress, name)
+	update, err := i.isContractDeployed(serviceAccount.Address(), name)
 	if err != nil {
 		return nil, errorWithMessage(conn, fmt.Sprintf("can't read contract from account %s", serviceAddress), err)
 	}
 
-	_, deployError := i.sharedServices.Accounts.AddContractForAddressWithCode(serviceAddress, privateKey, name, code, update)
+	_, deployError := i.sharedServices.Accounts.AddContract(
+		serviceAccount,
+		name,
+		code,
+		update,
+	)
 
 	if deployError != nil {
 		return nil, errorWithMessage(conn, ErrorMessageDeploy, err)
@@ -197,21 +198,24 @@ func (i *FlowIntegration) sendTransaction(conn protocol.Conn, args ...interface{
 	}
 
 	// Send transaction via shared library
-	privateKey, err := i.getServicePrivateKey()
-	if err != nil {
-		return nil, errorWithMessage(conn, ErrorMessageServiceAccountKey, err)
-	}
-
 	code, err := ioutil.ReadFile(path.Path)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load transaction file: %s", path.Path)
 	}
 
-	_, txResult, err := i.sharedServices.Transactions.SendForAddressWithCode(
-		code,
-		signers[0],
-		privateKey,
-		[]string{}, argsJSON)
+	txArgs, err := flowkit.ParseArgumentsJSON(argsJSON)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse JSON arguments")
+	}
+
+	signer, err := i.state.EmulatorServiceAccount()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get service account, err: %w", err)
+	}
+	signer.SetAddress(flow.HexToAddress(signers[0]))
+
+	const gasLimit uint64 = 1000
+	_, txResult, err := i.sharedServices.Transactions.Send(signer, code, "", gasLimit, txArgs, "")
 	if err != nil {
 		return nil, errorWithMessage(conn, ErrorMessageTransactionError, err)
 	}
@@ -258,13 +262,26 @@ func (i *FlowIntegration) executeScript(conn protocol.Conn, args ...interface{})
 		)
 	}
 
+	code, err := i.state.ReadFile(path.Path)
+	if err != nil {
+		return nil, errorWithMessage(
+			conn,
+			ErrorMessageScriptExecution,
+			fmt.Errorf("file load error: %w", err),
+		)
+	}
+
+	scriptArgs, err := flowkit.ParseArgumentsJSON(argsJSON)
+	if err != nil {
+		return nil, errorWithMessage(
+			conn,
+			ErrorMessageScriptExecution,
+			fmt.Errorf("arguments error: %w", err),
+		)
+	}
+
 	// Execute script via shared library
-	scriptResult, err := i.sharedServices.Scripts.Execute(
-		path.Path,
-		[]string{},
-		argsJSON,
-		"emulator",
-	)
+	scriptResult, err := i.sharedServices.Scripts.Execute(code, scriptArgs, "", "")
 	if err != nil {
 		return nil, errorWithMessage(conn, ErrorMessageScriptExecution, err)
 	}
@@ -441,18 +458,22 @@ func (i *FlowIntegration) deployContract(conn protocol.Conn, args ...interface{}
 	showMessage(conn, fmt.Sprintf("Deploying contract %s to account %s", name, to))
 
 	// Send transaction via shared library
-	privateKey, err := i.getServicePrivateKey()
+	signer, err := i.state.EmulatorServiceAccount()
 	if err != nil {
-		return nil, errorWithMessage(conn, ErrorMessageServiceAccount, err)
+		return nil, errorWithMessage(conn, fmt.Sprintf("service account error"), err)
 	}
 
-	update, err := i.isContractDeployed(to, name)
+	update, err := i.isContractDeployed(flow.HexToAddress(to), name)
 	if err != nil {
 		return nil, errorWithMessage(conn, fmt.Sprintf("can't read contract from account %s", to), err)
 	}
 
-	_, deployError := i.sharedServices.Accounts.AddContractForAddress(to, privateKey, name, path.Path, update)
+	code, err := i.state.ReadFile(path.Path)
+	if err != nil {
+		return nil, errorWithMessage(conn, fmt.Sprintf("failed to load contract code: %s", path.Path), err)
+	}
 
+	_, deployError := i.sharedServices.Accounts.AddContract(signer, name, code, update)
 	if deployError != nil {
 		return nil, errorWithMessage(conn, ErrorMessageDeploy, deployError)
 	}
@@ -462,54 +483,37 @@ func (i *FlowIntegration) deployContract(conn protocol.Conn, args ...interface{}
 }
 
 // getServicePrivateKey returns private key for service account
-func (i *FlowIntegration) getServicePrivateKey() (string, error) {
+func (i *FlowIntegration) getServicePrivateKey() (*crypto.PrivateKey, error) {
 	serviceAccount, err := i.state.EmulatorServiceAccount()
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	pkey, err := serviceAccount.Key().PrivateKey()
-	if err != nil {
-		return "", err
-	}
-
-	return (*pkey).String(), nil
+	return serviceAccount.Key().PrivateKey()
 }
 
 // createAccountHelper creates a new account and returns its address.
 func (i *FlowIntegration) createAccountHelper(conn protocol.Conn) (address flow.Address, err error) {
-	serviceAccount, err := i.state.EmulatorServiceAccount()
+	signer, err := i.state.EmulatorServiceAccount()
 	if err != nil {
 		return flow.Address{}, errorWithMessage(conn, ErrorMessageServiceAccount, err)
 	}
 
-	signer := serviceAccount.Name()
-
-	defaultKey := serviceAccount.Key()
-	serviceAccountPrivateKey, err := i.getServicePrivateKey()
+	pkey, err := signer.Key().PrivateKey()
 	if err != nil {
-		return flow.Address{}, errorWithMessage(conn, ErrorMessageServiceAccountKey, err)
+		return flow.Address{}, errorWithMessage(conn, ErrorMessageServiceAccount, err)
 	}
 
-	cryptoKey, err := crypto.DecodePrivateKeyHex(defaultKey.SigAlgo(), serviceAccountPrivateKey)
-	if err != nil {
-		return flow.Address{}, errorWithMessage(conn, ErrorMessagePrivateKeyDecoder, err)
-	}
-
-	keys := []string{cryptoKey.PublicKey().String()}
-	weights := []int{1000}
-
-	signatureAlgorithm := defaultKey.SigAlgo().String()
-	hashAlgorithm := defaultKey.HashAlgo().String()
-	var contracts []string
+	keys := []crypto.PublicKey{(*pkey).PublicKey()}
+	weights := []int{flow.AccountKeyWeightThreshold}
 
 	newAccount, err := i.sharedServices.Accounts.Create(
 		signer,
 		keys,
 		weights,
-		signatureAlgorithm,
-		hashAlgorithm,
-		contracts,
+		crypto.ECDSA_P256,
+		crypto.SHA3_256,
+		nil,
 	)
 	if err != nil {
 		return flow.Address{}, errorWithMessage(conn, ErrorMessageAccountCreate, err)
@@ -526,20 +530,24 @@ func (i *FlowIntegration) storeAccountHelper(conn protocol.Conn, address flow.Ad
 		return ClientAccount{}, errorWithMessage(conn, ErrorMessageServiceAccount, err)
 	}
 
-	defaultKey := serviceAccount.Key()
 	serviceAddress := serviceAccount.Address().String()
 
 	// Store new account
 	code := makeManagerCode(transactionAddAccount, serviceAddress)
-	accountAddress := fmt.Sprintf("Address:0x%v", address)
-	txArgs := []string{accountAddress}
-
-	pkey, err := defaultKey.PrivateKey()
-	if err != nil {
-		return
+	txArgs := []cadence.Value{
+		cadence.NewAddress(address),
 	}
 
-	_, txResult, err := i.sharedServices.Transactions.SendForAddressWithCode(code, serviceAddress, (*pkey).String(), txArgs, "")
+	const gasLimit uint64 = 1000
+
+	_, txResult, err := i.sharedServices.Transactions.Send(
+		serviceAccount,
+		code,
+		"",
+		gasLimit,
+		txArgs,
+		"",
+	)
 	if err != nil {
 		return ClientAccount{}, errorWithMessage(conn, ErrorMessageAccountStore, err)
 	}
@@ -555,7 +563,7 @@ func (i *FlowIntegration) storeAccountHelper(conn protocol.Conn, address flow.Ad
 	return
 }
 
-func (i *FlowIntegration) isContractDeployed(address string, name string) (bool, error) {
+func (i *FlowIntegration) isContractDeployed(address flow.Address, name string) (bool, error) {
 	account, err := i.sharedServices.Accounts.Get(address)
 
 	if err != nil {
