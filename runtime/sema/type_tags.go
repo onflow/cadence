@@ -148,8 +148,6 @@ const (
 	dictionaryTypeMask
 	compositeTypeMask
 	referenceTypeMask
-	resourceTypeMask
-
 	optionalTypeMask
 	genericTypeMask
 	functionTypeMask
@@ -206,7 +204,6 @@ var (
 	DictionaryTypeTag  = newTypeTagFromLowerMask(dictionaryTypeMask)
 	CompositeTypeTag   = newTypeTagFromLowerMask(compositeTypeMask)
 	ReferenceTypeTag   = newTypeTagFromLowerMask(referenceTypeMask)
-	ResourceTypeTag    = newTypeTagFromLowerMask(resourceTypeMask)
 	OptionalTypeTag    = newTypeTagFromLowerMask(optionalTypeMask)
 	GenericTypeTag     = newTypeTagFromLowerMask(genericTypeMask)
 	FunctionTypeTag    = newTypeTagFromLowerMask(functionTypeMask)
@@ -266,12 +263,10 @@ var (
 				Or(StringTypeTag).
 				Or(ArrayTypeTag).
 				Or(DictionaryTypeTag).
-				Or(CompositeTypeTag).
 				Or(ReferenceTypeTag).
 				Or(NilTypeTag)
 
-	AnyResourceTypeTag = newTypeTagFromLowerMask(anyResourceTypeMask).
-				Or(ResourceTypeTag)
+	AnyResourceTypeTag = newTypeTagFromLowerMask(anyResourceTypeMask)
 
 	AnyTypeTag = newTypeTagFromLowerMask(anyTypeMask).
 			Or(AnyStructTypeTag).
@@ -349,13 +344,32 @@ func findCommonSupperType(joinedTypeTag TypeTag, types ...Type) Type {
 		return &OptionalType{
 			Type: NeverType,
 		}
-	case anyStructTypeMask:
-		return AnyStructType
-	case anyResourceTypeMask:
-		return AnyResourceType
 	case neverTypeMask:
 		return NeverType
-	case arrayTypeMask, dictionaryTypeMask, compositeTypeMask:
+	case characterTypeMask:
+		return CharacterType
+	case boolTypeMask:
+		return BoolType
+	case voidTypeMask:
+		return VoidType
+	case addressTypeMask:
+		return &AddressType{}
+	case metaTypeMask:
+		return MetaType
+
+	// All derived types must go here.
+	case arrayTypeMask,
+		dictionaryTypeMask,
+		compositeTypeMask,
+		referenceTypeMask,
+		optionalTypeMask,
+		genericTypeMask,
+		functionTypeMask,
+		interfaceTypeMask,
+		transactionTypeMask,
+		restrictedTypeMask,
+		capabilityTypeMask:
+
 		// Contains only arrays/dictionaries/composites.
 		var prevType Type
 		for _, typ := range types {

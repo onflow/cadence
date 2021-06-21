@@ -1107,4 +1107,63 @@ func TestCommonSuperType(t *testing.T) {
 
 		testLeastCommonSuperType(t, tests)
 	})
+
+	t.Run("References types", func(t *testing.T) {
+		tests := []testCase{
+			{
+				name: "homogenous references",
+				types: []Type{
+					&ReferenceType{
+						Type: Int8Type,
+					},
+					&ReferenceType{
+						Type: Int8Type,
+					},
+					&ReferenceType{
+						Type: Int8Type,
+					},
+				},
+				expectedSuperType: &ReferenceType{
+					Type: Int8Type,
+				},
+			},
+			{
+				name: "heterogeneous references",
+				types: []Type{
+					&ReferenceType{
+						Type: Int8Type,
+					},
+					&ReferenceType{
+						Type: StringType,
+					},
+				},
+				expectedSuperType: AnyStructType,
+			},
+			{
+				name: "references & non-references",
+				types: []Type{
+					Int8Type,
+					&ReferenceType{
+						Type: Int8Type,
+					},
+				},
+				expectedSuperType: AnyStructType,
+			},
+			{
+				name: "struct references & resource reference",
+				types: []Type{
+					&ReferenceType{
+						Type: Int8Type,
+					},
+					&ReferenceType{
+						Type: resourceType,
+					},
+				},
+				expectedSuperType: AnyStructType,
+			},
+		}
+
+		testLeastCommonSuperType(t, tests)
+	})
+
 }
