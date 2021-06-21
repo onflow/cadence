@@ -62,10 +62,9 @@ func (checker *Checker) checkInvocationExpression(invocationExpression *ast.Invo
 
 	isOptionalChainingResult := false
 	if memberExpression, ok := invokedExpression.(*ast.MemberExpression); ok {
-		var member *Member
-		_, member, isOptionalChainingResult = checker.visitMember(memberExpression)
-		if member != nil {
-			expressionType = member.TypeAnnotation.Type
+		isOptionalChainingResult = memberExpression.Optional
+		if isOptionalChainingResult {
+			expressionType = expressionType.(*OptionalType).Type
 		}
 	}
 
@@ -469,6 +468,7 @@ func (checker *Checker) checkInvocation(
 
 	// Save types in the elaboration
 
+	checker.Elaboration.InvocationExpressionReceiverTypes[invocationExpression] = functionType.ReceiverType
 	checker.Elaboration.InvocationExpressionTypeArguments[invocationExpression] = typeArguments
 	checker.Elaboration.InvocationExpressionParameterTypes[invocationExpression] = parameterTypes
 	checker.Elaboration.InvocationExpressionReturnTypes[invocationExpression] = returnType
