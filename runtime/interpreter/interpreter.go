@@ -3449,3 +3449,17 @@ func (interpreter *Interpreter) getTypeFunction(self Value) *HostFunctionValue {
 func (interpreter *Interpreter) setMember(self Value, getLocationRange func() LocationRange, identifier string, value Value) {
 	self.(MemberAccessibleValue).SetMember(interpreter, getLocationRange, identifier, value)
 }
+
+func (interpreter *Interpreter) ExpectType(
+	value Value,
+	expectedType sema.Type,
+	getLocationRange func() LocationRange,
+) {
+	dynamicType := value.DynamicType(interpreter, SeenReferences{})
+	if !IsSubType(dynamicType, expectedType) {
+		panic(TypeMismatchError{
+			ExpectedType:  expectedType,
+			LocationRange: getLocationRange(),
+		})
+	}
+}
