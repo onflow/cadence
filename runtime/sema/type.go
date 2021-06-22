@@ -2357,10 +2357,8 @@ func (t *FunctionType) Equal(other Type) bool {
 		}
 	}
 
-	if !IsSubType(
-		t.ReturnTypeAnnotation.Type,
-		otherFunction.ReturnTypeAnnotation.Type,
-	) {
+	if !t.ReturnTypeAnnotation.Type.
+		Equal(otherFunction.ReturnTypeAnnotation.Type) {
 		return false
 	}
 
