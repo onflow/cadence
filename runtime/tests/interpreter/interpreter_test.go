@@ -4238,9 +4238,18 @@ func TestInterpretStructureFunctionBindingInside(t *testing.T) {
 
 	t.Parallel()
 
+	// TODO: replace AnyStruct return types with (X#(): X),
+	//   and test case once bound function types are supported:
+	//
+	//   fun test(): X {
+	//   	let x = X()
+	//   	let bar = x.foo()
+	//   	return bar()
+	//   }
+
 	inter := parseCheckAndInterpret(t, `
         struct X {
-            fun foo(): ((): X) {
+            fun foo(): AnyStruct {
                 return self.bar
             }
 
@@ -4249,14 +4258,22 @@ func TestInterpretStructureFunctionBindingInside(t *testing.T) {
             }
         }
 
-        fun test(): X {
+        fun test(): AnyStruct {
             let x = X()
-            let bar = x.foo()
-            return bar()
+            return x.foo()
         }
     `)
 
-	value, err := inter.Invoke("test")
+	functionValue, err := inter.Invoke("test")
+	require.NoError(t, err)
+
+	value, err := inter.InvokeFunctionValue(
+		functionValue.(interpreter.FunctionValue),
+		nil,
+		nil,
+		nil,
+		nil,
+	)
 	require.NoError(t, err)
 
 	assert.IsType(t,

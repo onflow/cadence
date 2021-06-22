@@ -409,7 +409,7 @@ func (e MissingMemberValueError) Error() string {
 }
 
 // InvocationArgumentTypeError
-
+//
 type InvocationArgumentTypeError struct {
 	Index         int
 	ParameterType sema.Type
@@ -424,8 +424,24 @@ func (e InvocationArgumentTypeError) Error() string {
 	)
 }
 
-// ValueTransferTypeError
+// InvocationReceiverTypeError
+//
+type InvocationReceiverTypeError struct {
+	SelfType     sema.Type
+	ReceiverType sema.Type
+	LocationRange
+}
 
+func (e InvocationReceiverTypeError) Error() string {
+	return fmt.Sprintf(
+		"invalid invocation on %s: expected %s",
+		e.SelfType.QualifiedString(),
+		e.ReceiverType.QualifiedString(),
+	)
+}
+
+// ValueTransferTypeError
+//
 type ValueTransferTypeError struct {
 	TargetType sema.Type
 	LocationRange
