@@ -312,6 +312,7 @@ func (f BoundFunctionValue) Invoke(invocation Invocation) Value {
 				}
 			}
 		}
+
 		if !sema.IsSubType(selfType, receiverType) {
 			panic(InvocationReceiverTypeError{
 				SelfType:      selfType,
