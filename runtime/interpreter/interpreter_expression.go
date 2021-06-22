@@ -525,6 +525,8 @@ func (interpreter *Interpreter) VisitInvocationExpression(invocationExpression *
 
 	arguments := interpreter.visitExpressionsNonCopying(argumentExpressions)
 
+	receiverType :=
+		interpreter.Program.Elaboration.InvocationExpressionReceiverTypes[invocationExpression]
 	typeParameterTypes :=
 		interpreter.Program.Elaboration.InvocationExpressionTypeArguments[invocationExpression]
 	argumentTypes :=
@@ -536,6 +538,7 @@ func (interpreter *Interpreter) VisitInvocationExpression(invocationExpression *
 
 	resultValue := interpreter.invokeFunctionValue(
 		function,
+		receiverType,
 		arguments,
 		argumentExpressions,
 		argumentTypes,

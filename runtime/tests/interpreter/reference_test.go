@@ -81,3 +81,42 @@ func TestInterpretResourceReferenceFieldComparison(t *testing.T) {
 		value,
 	)
 }
+
+func TestInterpretContainerVariance(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("function", func(t *testing.T) {
+
+		inter := parseCheckAndInterpret(t, `
+          struct S1 {
+              pub fun getSecret(): Int {
+                  return 0
+              }
+          }
+
+          struct S2 {
+              priv fun getSecret(): Int {
+                  return 42
+              }
+          }
+
+          fun test(): Int {
+              let dict: {Int: &S1} = {}
+
+              let s2 = S2()
+
+              let dictRef = &dict as! &{Int: &AnyStruct}
+              dictRef[0] = &s2 as! &AnyStruct
+
+              return dict.values[0].getSecret()
+          }
+        `)
+
+		_, err := inter.Invoke("test")
+
+		var invocationReceiverTypeErr interpreter.InvocationReceiverTypeError
+		require.ErrorAs(t, err, &invocationReceiverTypeErr)
+	})
+
+}
