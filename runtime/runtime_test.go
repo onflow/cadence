@@ -6453,4 +6453,74 @@ func TestPanics(t *testing.T) {
 		},
 	)
 	assert.Error(t, err)
+
+func TestRuntimeGetCapability(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("invalid", func(t *testing.T) {
+
+		t.Parallel()
+
+		runtime := NewInterpreterRuntime()
+
+		script := []byte(`
+          pub fun main(): Capability {
+              let dict: {Int: AuthAccount} = {}
+              let ref = &dict as! &{Int: AnyStruct}
+              ref[0] = getAccount(0x01) as AnyStruct
+              return dict.values[0].getCapability(/private/xxx)
+          }
+        `)
+
+		runtimeInterface := &testRuntimeInterface{}
+
+		nextTransactionLocation := newTransactionLocationGenerator()
+
+		_, err := runtime.ExecuteScript(
+			Script{
+				Source: script,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+
+		var typeErr interpreter.TypeMismatchError
+		require.ErrorAs(t, err, &typeErr)
+	})
+
+	t.Run("valid", func(t *testing.T) {
+
+		t.Parallel()
+
+		runtime := NewInterpreterRuntime()
+
+		script := []byte(`
+          pub fun main(): Capability {
+              let dict: {Int: AuthAccount} = {}
+              let ref = &dict as! &{Int: AnyStruct}
+              ref[0] = getAccount(0x01) as AnyStruct
+              return dict.values[0].getCapability(/private/xxx)
+          }
+        `)
+
+		runtimeInterface := &testRuntimeInterface{}
+
+		nextTransactionLocation := newTransactionLocationGenerator()
+
+		_, err := runtime.ExecuteScript(
+			Script{
+				Source: script,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+
+		var typeErr interpreter.TypeMismatchError
+		require.ErrorAs(t, err, &typeErr)
+	})
 }

@@ -8786,7 +8786,7 @@ func NewAuthAccountValue(
 	fields.Set(sema.AuthAccountAddressField, address)
 	fields.Set(sema.AuthAccountAddPublicKeyField, addPublicKeyFunction)
 	fields.Set(sema.AuthAccountRemovePublicKeyField, removePublicKeyFunction)
-	fields.Set(sema.AuthAccountGetCapabilityField, accountGetCapabilityFunction(address))
+	fields.Set(sema.AuthAccountGetCapabilityField, accountGetCapabilityFunction(address, sema.CapabilityPathType))
 	fields.Set(sema.AuthAccountContractsField, contracts)
 	fields.Set(sema.AuthAccountKeysField, keys)
 
@@ -8850,11 +8850,18 @@ func NewAuthAccountValue(
 	}
 }
 
-func accountGetCapabilityFunction(addressValue AddressValue) *HostFunctionValue {
+func accountGetCapabilityFunction(addressValue AddressValue, pathType sema.Type) *HostFunctionValue {
 	return NewHostFunctionValue(
 		func(invocation Invocation) Value {
 
 			path := invocation.Arguments[0].(PathValue)
+			pathDynamicType := path.DynamicType(invocation.Interpreter, SeenReferences{})
+			if !IsSubType(pathDynamicType, pathType) {
+				panic(TypeMismatchError{
+					ExpectedType:  pathType,
+					LocationRange: invocation.GetLocationRange(),
+				})
+			}
 
 			// NOTE: the type parameter is optional, for backwards compatibility
 
@@ -8891,7 +8898,7 @@ func NewPublicAccountValue(
 
 	fields := NewStringValueOrderedMap()
 	fields.Set(sema.PublicAccountAddressField, address)
-	fields.Set(sema.PublicAccountGetCapabilityField, accountGetCapabilityFunction(address))
+	fields.Set(sema.PublicAccountGetCapabilityField, accountGetCapabilityFunction(address, sema.PublicPathType))
 	fields.Set(sema.PublicAccountKeysField, keys)
 
 	// Computed fields
