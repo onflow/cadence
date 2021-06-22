@@ -2357,10 +2357,14 @@ func (t *FunctionType) Equal(other Type) bool {
 		}
 	}
 
+	// return type
+
 	if !t.ReturnTypeAnnotation.Type.
 		Equal(otherFunction.ReturnTypeAnnotation.Type) {
 		return false
 	}
+
+	// receiver type
 
 	if t.ReceiverType != nil {
 		if otherFunction.ReceiverType == nil {
@@ -2375,7 +2379,7 @@ func (t *FunctionType) Equal(other Type) bool {
 		return false
 	}
 
-	// Constructors?
+	// constructors
 
 	if t.IsConstructor != otherFunction.IsConstructor {
 		return false
