@@ -4791,6 +4791,19 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 			}
 
 		case *CompositeType:
+
+			// The supertype composite type might be a type requirement.
+			// Check if the subtype composite type implicitly conforms to it.
+
+			if typedInnerSubType, ok := typedSubType.Type.(*CompositeType); ok {
+
+				for _, conformance := range typedInnerSubType.ImplicitTypeRequirementConformances {
+					if conformance == typedInnerSuperType {
+						return true
+					}
+				}
+			}
+
 			// An unauthorized reference is not a subtype of a reference to a composite type `&V`
 			// (e.g. reference to a restricted type `&T{Us}`, or reference to an interface type `&T`)
 			//
