@@ -2259,6 +2259,14 @@ func (interpreter *Interpreter) ensureLoadedWithLocationHandler(
 		subInterpreter.typeCodes.
 			Merge(virtualImport.TypeCodes)
 
+		// Virtual import does not register interpreter itself,
+		// unlike InterpreterImport
+		interpreter.allInterpreters[locationID] = subInterpreter
+
+		subInterpreter.Program = &Program{
+			Elaboration: virtualImport.Elaboration,
+		}
+
 		return subInterpreter
 
 	default:

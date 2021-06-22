@@ -119,4 +119,43 @@ func TestInterpretContainerVariance(t *testing.T) {
 		require.ErrorAs(t, err, &invocationReceiverTypeErr)
 	})
 
+	t.Run("field", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+          struct S1 {
+              var value: Int
+
+              init() {
+                  self.value = 0
+              }
+          }
+
+          struct S2 {
+              // field is only publicly readable, not writeable
+              pub var value: Int
+
+              init() {
+                  self.value = 0
+              }
+          }
+
+          fun test(): Int {
+              let dict: {Int: &S1} = {}
+
+              let s2 = S2()
+
+              let dictRef = &dict as! &{Int: &AnyStruct}
+              dictRef[0] = &s2 as! &AnyStruct
+
+              dict.values[0].value = 1
+
+              return s2.value
+          }
+        `)
+
+		_, err := inter.Invoke("test")
+		require.Error(t, err)
+	})
 }
