@@ -454,8 +454,6 @@ func (interpreter *Interpreter) VisitMemberExpression(expression *ast.MemberExpr
 	getLocationRange := locationRangeGetter(interpreter.Location, expression)
 	identifier := expression.Identifier.Identifier
 
-	// Check that the accessed type matched the expected one
-
 	interpreter.checkMemberAccessedType(
 		expression,
 		self,
@@ -482,6 +480,9 @@ func (interpreter *Interpreter) VisitMemberExpression(expression *ast.MemberExpr
 	return resultValue
 }
 
+// checkMemberAccessedType checks that the dynamic type of the accessed value
+// of the member access matches the expected static type
+//
 func (interpreter *Interpreter) checkMemberAccessedType(
 	memberExpression *ast.MemberExpression,
 	self Value,

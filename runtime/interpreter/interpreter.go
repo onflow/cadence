@@ -1169,8 +1169,6 @@ func (interpreter *Interpreter) visitAssignment(
 
 	getLocationRange := locationRangeGetter(interpreter.Location, position)
 
-	// Check that the accessed type matched the expected one
-
 	if targetMemberExpression, ok := targetExpression.(*ast.MemberExpression); ok {
 		interpreter.checkMemberAccessedType(
 			targetMemberExpression,
