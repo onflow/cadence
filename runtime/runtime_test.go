@@ -6453,6 +6453,7 @@ func TestPanics(t *testing.T) {
 		},
 	)
 	assert.Error(t, err)
+}
 
 func TestRuntimeGetCapability(t *testing.T) {
 
