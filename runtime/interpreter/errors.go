@@ -238,6 +238,20 @@ func (e ForceNilError) Error() string {
 	return "unexpectedly found nil while forcing an Optional value"
 }
 
+// ForceCastTypeMismatchError
+//
+type ForceCastTypeMismatchError struct {
+	ExpectedType sema.Type
+	LocationRange
+}
+
+func (e ForceCastTypeMismatchError) Error() string {
+	return fmt.Sprintf(
+		"unexpectedly found non-`%s` while force-casting value",
+		e.ExpectedType.QualifiedString(),
+	)
+}
+
 // TypeMismatchError
 //
 type TypeMismatchError struct {
@@ -247,7 +261,7 @@ type TypeMismatchError struct {
 
 func (e TypeMismatchError) Error() string {
 	return fmt.Sprintf(
-		"unexpectedly found non-`%s` while force-casting value",
+		"type mismatch: expected %s",
 		e.ExpectedType.QualifiedString(),
 	)
 }
