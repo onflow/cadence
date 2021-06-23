@@ -66,7 +66,9 @@ func TestInterpetOptionalResourceBindingWithSecondValue(t *testing.T) {
 
           let copy <- test.duplicate()
 
-          let res = copy != nil && test.r != nil
+          // "copy" here is actually expected to hold resource,
+          // the important test is that the field was properly set to nil
+          let res = copy != nil && test.r == nil
 
           destroy copy
           destroy test
@@ -77,5 +79,5 @@ func TestInterpetOptionalResourceBindingWithSecondValue(t *testing.T) {
 
 	result, err := inter.Invoke("test")
 	require.NoError(t, err)
-	require.Equal(t, interpreter.BoolValue(false), result)
+	require.Equal(t, interpreter.BoolValue(true), result)
 }

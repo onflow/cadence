@@ -4992,17 +4992,12 @@ func TestCheckOptionalResourceBindingWithSecondValue(t *testing.T) {
           }
       }
 
-      fun test(): Bool {
+      fun test() {
           let test <- create Test()
-
           let copy <- test.duplicate()
-
-          let res = copy != nil && test.r != nil
 
           destroy copy
           destroy test
-
-          return res
       }
     `)
 	require.NoError(t, err)
