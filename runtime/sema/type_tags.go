@@ -369,10 +369,6 @@ func findCommonSupperType(joinedTypeTag TypeTag, types ...Type) Type {
 		return BlockType
 	case deployedContractMask:
 		return DeployedContractType
-	case pathTypeMask:
-		return PathType
-	case capabilityPathTypeMask:
-		return CapabilityPathType
 	case privatePathTypeMask:
 		return PrivatePathType
 	case publicPathTypeMask:
@@ -380,10 +376,27 @@ func findCommonSupperType(joinedTypeTag TypeTag, types ...Type) Type {
 	case storagePathTypeMask:
 		return StoragePathType
 
+	case compositeTypeMask:
+		// We reach here if all are composite types.
+		// Therefore check for member types, and decide the
+		// common supertype based on the member types.
+		var prevType Type
+		for _, typ := range types {
+			if prevType == nil {
+				prevType = typ
+				continue
+			}
+
+			if !typ.Equal(prevType) {
+				return commonSuperTypeOfComposites(types)
+			}
+		}
+
+		return prevType
+
 	// All derived types goes here.
 	case arrayTypeMask,
 		dictionaryTypeMask,
-		compositeTypeMask,
 		referenceTypeMask,
 		optionalTypeMask,
 		genericTypeMask,
@@ -396,7 +409,7 @@ func findCommonSupperType(joinedTypeTag TypeTag, types ...Type) Type {
 		// We reach here if all types belongs to same kind.
 		// e.g: All are arrays, all are dictionaries, etc.
 		// Therefore check for member types, and decide the
-		// common suprtype based on the member types.
+		// common supertype based on the member types.
 		var prevType Type
 		for _, typ := range types {
 			if prevType == nil {
@@ -465,15 +478,71 @@ func commonSuperTypeOfHeterogeneousTypes(types []Type) Type {
 		isResource := typ.IsResourceType()
 		hasResources = hasResources || isResource
 		hasStructs = hasStructs || !isResource
+
+		if hasResources && hasStructs {
+			return NeverType
+		}
 	}
 
 	if hasResources {
-		if hasStructs {
+		return AnyResourceType
+	}
+
+	return AnyStructType
+}
+
+func commonSuperTypeOfComposites(types []Type) Type {
+	var hasStructs, hasResources bool
+
+	commonInterfaces := map[string]bool{}
+	commonInterfacesList := make([]*InterfaceType, 0)
+
+	hasCommonInterface := true
+
+	for i, typ := range types {
+		isResource := typ.IsResourceType()
+		hasResources = hasResources || isResource
+		hasStructs = hasStructs || !isResource
+
+		if hasResources && hasStructs {
 			// If the types has both structs and resources,
 			// then there's no common super type.
 			return NeverType
 		}
 
+		if hasCommonInterface {
+			compositeType := typ.(*CompositeType)
+
+			if i == 0 {
+				for _, interfaceType := range compositeType.ExplicitInterfaceConformances {
+					commonInterfaces[interfaceType.QualifiedIdentifier()] = true
+					commonInterfacesList = append(commonInterfacesList, interfaceType)
+				}
+			} else {
+				intersection := map[string]bool{}
+				commonInterfacesList = make([]*InterfaceType, 0)
+
+				for _, interfaceType := range compositeType.ExplicitInterfaceConformances {
+					if _, ok := commonInterfaces[interfaceType.QualifiedIdentifier()]; ok {
+						intersection[interfaceType.QualifiedIdentifier()] = true
+						commonInterfacesList = append(commonInterfacesList, interfaceType)
+					}
+				}
+
+				commonInterfaces = intersection
+			}
+
+			if len(commonInterfaces) == 0 {
+				hasCommonInterface = false
+			}
+		}
+	}
+
+	if hasCommonInterface {
+		return commonInterfacesList[0]
+	}
+
+	if hasResources {
 		return AnyResourceType
 	}
 

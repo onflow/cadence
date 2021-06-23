@@ -887,6 +887,40 @@ func TestCommonSuperType(t *testing.T) {
 	})
 
 	t.Run("Structs & Resources", func(t *testing.T) {
+
+		testLocation := common.StringLocation("test")
+
+		interfaceType1 := &InterfaceType{
+			Location:      testLocation,
+			Identifier:    "I1",
+			CompositeKind: common.CompositeKindStructure,
+			Members:       NewStringMemberOrderedMap(),
+		}
+
+		interfaceType2 := &InterfaceType{
+			Location:      testLocation,
+			Identifier:    "I2",
+			CompositeKind: common.CompositeKindStructure,
+			Members:       NewStringMemberOrderedMap(),
+		}
+
+		interfaceType3 := &InterfaceType{
+			Location:      testLocation,
+			Identifier:    "I3",
+			CompositeKind: common.CompositeKindStructure,
+			Members:       NewStringMemberOrderedMap(),
+		}
+
+		newCompositeWithInterfaces := func(name string, interfaces ...*InterfaceType) *CompositeType {
+			return &CompositeType{
+				Location:                      testLocation,
+				Identifier:                    name,
+				Kind:                          common.CompositeKindStructure,
+				ExplicitInterfaceConformances: interfaces,
+				Members:                       NewStringMemberOrderedMap(),
+			}
+		}
+
 		tests := []testCase{
 			{
 				name: "all anyStructs",
@@ -933,6 +967,32 @@ func TestCommonSuperType(t *testing.T) {
 				types: []Type{
 					AnyStructType,
 					PublicKeyType,
+				},
+				expectedSuperType: AnyStructType,
+			},
+			{
+				name: "common interface",
+				types: []Type{
+					newCompositeWithInterfaces("Foo", interfaceType1, interfaceType2),
+					newCompositeWithInterfaces("Bar", interfaceType2, interfaceType3),
+					newCompositeWithInterfaces("Baz", interfaceType1, interfaceType2, interfaceType3),
+				},
+				expectedSuperType: interfaceType2,
+			},
+			{
+				name: "multiple common interfaces",
+				types: []Type{
+					newCompositeWithInterfaces("Foo", interfaceType1, interfaceType2),
+					newCompositeWithInterfaces("Baz", interfaceType1, interfaceType2, interfaceType3),
+				},
+				expectedSuperType: interfaceType1,
+			},
+			{
+				name: "no common interfaces",
+				types: []Type{
+					newCompositeWithInterfaces("Foo", interfaceType1),
+					newCompositeWithInterfaces("Baz", interfaceType2),
+					newCompositeWithInterfaces("Baz", interfaceType3),
 				},
 				expectedSuperType: AnyStructType,
 			},
