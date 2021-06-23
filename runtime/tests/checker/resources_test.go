@@ -3081,10 +3081,9 @@ func TestCheckInvalidResourceInterfaceUseAsType(t *testing.T) {
       let r: @I <- create R()
     `)
 
-	errs := ExpectCheckerErrors(t, err, 2)
+	errs := ExpectCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.InvalidInterfaceTypeError{}, errs[0])
-	assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
 }
 
 // TestCheckResourceInterfaceUseAsType test if a resource

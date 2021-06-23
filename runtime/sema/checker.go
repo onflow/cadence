@@ -2192,11 +2192,15 @@ func (checker *Checker) checkTypeAnnotation(typeAnnotation *TypeAnnotation, pos 
 		)
 	}
 
-	rewrittenType, rewritten := typeAnnotation.Type.RewriteWithRestrictedTypes()
+	checker.checkInvalidInterfaceAsType(typeAnnotation.Type, pos)
+}
+
+func (checker *Checker) checkInvalidInterfaceAsType(ty Type, pos ast.HasPosition) {
+	rewrittenType, rewritten := ty.RewriteWithRestrictedTypes()
 	if rewritten {
 		checker.report(
 			&InvalidInterfaceTypeError{
-				ActualType:   typeAnnotation.Type,
+				ActualType:   ty,
 				ExpectedType: rewrittenType,
 				Range: ast.Range{
 					StartPos: pos.StartPosition(),
