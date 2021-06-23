@@ -337,6 +337,14 @@ func (checker *Checker) declareTypeDeclaration(declaration TypeDeclaration) {
 		},
 	)
 	checker.report(err)
+
+	switch ty := ty.(type) {
+	case *CompositeType:
+		checker.Elaboration.CompositeTypes[ty.ID()] = ty
+	case *InterfaceType:
+		checker.Elaboration.InterfaceTypes[ty.ID()] = ty
+	}
+
 	if checker.positionInfoEnabled {
 		checker.recordVariableDeclarationOccurrence(identifier.Identifier, variable)
 	}
