@@ -65,15 +65,16 @@ func (interpreter *Interpreter) identifierExpressionGetterSetter(identifierExpre
 // for the target index expression
 //
 func (interpreter *Interpreter) indexExpressionGetterSetter(indexExpression *ast.IndexExpression) getterSetter {
-	typedResult := interpreter.evalExpression(indexExpression.TargetExpression).(ValueIndexableValue)
+	target := interpreter.evalExpression(indexExpression.TargetExpression).(ValueIndexableValue)
 	indexingValue := interpreter.evalExpression(indexExpression.IndexingExpression)
 	getLocationRange := locationRangeGetter(interpreter.Location, indexExpression)
 	return getterSetter{
+		target: target,
 		get: func() Value {
-			return typedResult.Get(interpreter, getLocationRange, indexingValue)
+			return target.Get(interpreter, getLocationRange, indexingValue)
 		},
 		set: func(value Value) {
-			typedResult.Set(interpreter, getLocationRange, indexingValue, value)
+			target.Set(interpreter, getLocationRange, indexingValue, value)
 		},
 	}
 }
@@ -83,9 +84,10 @@ func (interpreter *Interpreter) indexExpressionGetterSetter(indexExpression *ast
 //
 func (interpreter *Interpreter) memberExpressionGetterSetter(memberExpression *ast.MemberExpression) getterSetter {
 	target := interpreter.evalExpression(memberExpression.Expression)
-	getLocationRange := locationRangeGetter(interpreter.Location, memberExpression)
 	identifier := memberExpression.Identifier.Identifier
+	getLocationRange := locationRangeGetter(interpreter.Location, memberExpression)
 	return getterSetter{
+		target: target,
 		get: func() Value {
 			return interpreter.getMember(target, getLocationRange, identifier)
 		},
@@ -460,27 +462,11 @@ func (interpreter *Interpreter) VisitMemberExpression(expression *ast.MemberExpr
 
 	// Check that the accessed type matched the expected one
 
-	memberInfo := interpreter.Program.Elaboration.MemberExpressionMemberInfos[expression]
-	accessedType := memberInfo.AccessedType
-	if expression.Optional {
-		accessedType = accessedType.(*sema.OptionalType).Type
-	}
-
-	switch self := self.(type) {
-	case *HostFunctionValue, *ArrayValue, *DictionaryValue:
-		// TODO: dynamic type information incomplete
-		break
-	case *CompositeValue:
-		// Ignore for example transactions
-		// TODO: find a better solution to declare/detect transactions
-		if self.kind == common.CompositeKindUnknown ||
-			self.QualifiedIdentifier() == "" {
-			break
-		}
-		interpreter.ExpectType(self, accessedType, getLocationRange)
-	default:
-		interpreter.ExpectType(self, accessedType, getLocationRange)
-	}
+	interpreter.checkMemberAccessedType(
+		expression,
+		self,
+		getLocationRange,
+	)
 
 	resultValue := interpreter.getMember(self, getLocationRange, identifier)
 	if resultValue == nil {
@@ -500,6 +486,34 @@ func (interpreter *Interpreter) VisitMemberExpression(expression *ast.MemberExpr
 	}
 
 	return resultValue
+}
+
+func (interpreter *Interpreter) checkMemberAccessedType(
+	memberExpression *ast.MemberExpression,
+	self Value,
+	getLocationRange func() LocationRange,
+) {
+	memberInfo := interpreter.Program.Elaboration.MemberExpressionMemberInfos[memberExpression]
+	accessedType := memberInfo.AccessedType
+	if memberExpression.Optional {
+		accessedType = accessedType.(*sema.OptionalType).Type
+	}
+
+	switch self := self.(type) {
+	case *HostFunctionValue, *ArrayValue, *DictionaryValue:
+		// TODO: dynamic type information incomplete
+		break
+	case *CompositeValue:
+		// Ignore for example transactions
+		// TODO: find a better solution to declare/detect transactions
+		if self.kind == common.CompositeKindUnknown ||
+			self.QualifiedIdentifier() == "" {
+			break
+		}
+		interpreter.ExpectType(self, accessedType, getLocationRange)
+	default:
+		interpreter.ExpectType(self, accessedType, getLocationRange)
+	}
 }
 
 func (interpreter *Interpreter) VisitIndexExpression(expression *ast.IndexExpression) ast.Repr {
