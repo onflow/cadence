@@ -265,7 +265,7 @@ func TestCheckReferenceExpressionWithInterfaceResultType(t *testing.T) {
 
 		errs := ExpectCheckerErrors(t, err, 1)
 
-		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		assert.IsType(t, &sema.InvalidInterfaceTypeError{}, errs[0])
 	})
 
 	t.Run("struct", func(t *testing.T) {
@@ -282,7 +282,7 @@ func TestCheckReferenceExpressionWithInterfaceResultType(t *testing.T) {
 
 		errs := ExpectCheckerErrors(t, err, 1)
 
-		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		assert.IsType(t, &sema.InvalidInterfaceTypeError{}, errs[0])
 	})
 }
 
