@@ -41,12 +41,12 @@ func TestInterpretCompositeValue(t *testing.T) {
 		inter := testCompositeValue(
 			t,
 			`
-			// Get a static field using member access
-			let name: String = fruit.name
+              // Get a static field using member access
+              let name: String = fruit.name
 
-			// Get a computed field using member access
-			let color: String = fruit.color
-			`,
+              // Get a computed field using member access
+              let color: String = fruit.color
+            `,
 		)
 
 		require.Equal(t,
@@ -64,12 +64,10 @@ func TestInterpretCompositeValue(t *testing.T) {
 // Utility methods
 func testCompositeValue(t *testing.T, code string) *interpreter.Interpreter {
 
-	var valueDeclarations stdlib.StandardLibraryValues
-
 	// 'fruit' composite type
 	fruitType := &sema.CompositeType{
 		Location:   utils.TestLocation,
-		Identifier: "fruit",
+		Identifier: "Fruit",
 		Kind:       common.CompositeKindStructure,
 	}
 
@@ -105,20 +103,29 @@ func testCompositeValue(t *testing.T, code string) *interpreter.Interpreter {
 		return interpreter.NewStringValue("Red")
 	})
 
-	customStructValue := stdlib.StandardLibraryValue{
-		Name:  value.QualifiedIdentifier(),
-		Type:  fruitType,
-		Value: value,
-		Kind:  common.DeclarationKindConstant,
+	valueDeclarations := stdlib.StandardLibraryValues{
+		{
+			Name:  "fruit",
+			Type:  fruitType,
+			Value: value,
+			Kind:  common.DeclarationKindConstant,
+		},
 	}
 
-	valueDeclarations = append(valueDeclarations, customStructValue)
+	typeDeclarations := []sema.TypeDeclaration{
+		stdlib.StandardLibraryType{
+			Name: fruitType.Identifier,
+			Type: fruitType,
+			Kind: common.DeclarationKindStructure,
+		},
+	}
 
 	inter, err := parseCheckAndInterpretWithOptions(t,
 		code,
 		ParseCheckAndInterpretOptions{
 			CheckerOptions: []sema.Option{
 				sema.WithPredeclaredValues(valueDeclarations.ToSemaValueDeclarations()),
+				sema.WithPredeclaredTypes(typeDeclarations),
 			},
 			Options: []interpreter.Option{
 				interpreter.WithPredeclaredValues(valueDeclarations.ToInterpreterValueDeclarations()),
