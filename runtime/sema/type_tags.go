@@ -134,9 +134,11 @@ const (
 	voidTypeMask
 	addressTypeMask
 	metaTypeMask
+	blockTypeMask
 	anyStructTypeMask
 	anyResourceTypeMask
 	anyTypeMask
+	deployedContractMask
 
 	pathTypeMask
 	storagePathTypeMask
@@ -225,15 +227,17 @@ var (
 	Fix64TypeTag  = newTypeTagFromLowerMask(fix64TypeMask)
 	UFix64TypeTag = newTypeTagFromLowerMask(ufix64TypeMask)
 
-	StringTypeTag    = newTypeTagFromLowerMask(stringTypeMask)
-	CharacterTypeTag = newTypeTagFromLowerMask(characterTypeMask)
-	BoolTypeTag      = newTypeTagFromLowerMask(boolTypeMask)
-	NilTypeTag       = newTypeTagFromLowerMask(nilTypeMask)
-	VoidTypeTag      = newTypeTagFromLowerMask(voidTypeMask)
-	AddressTypeTag   = newTypeTagFromLowerMask(addressTypeMask)
-	MetaTypeTag      = newTypeTagFromLowerMask(metaTypeMask)
-	NeverTypeTag     = newTypeTagFromLowerMask(neverTypeMask)
-	InvalidTypeTag   = newTypeTagFromLowerMask(invalidTypeMask)
+	StringTypeTag           = newTypeTagFromLowerMask(stringTypeMask)
+	CharacterTypeTag        = newTypeTagFromLowerMask(characterTypeMask)
+	BoolTypeTag             = newTypeTagFromLowerMask(boolTypeMask)
+	NilTypeTag              = newTypeTagFromLowerMask(nilTypeMask)
+	VoidTypeTag             = newTypeTagFromLowerMask(voidTypeMask)
+	AddressTypeTag          = newTypeTagFromLowerMask(addressTypeMask)
+	MetaTypeTag             = newTypeTagFromLowerMask(metaTypeMask)
+	NeverTypeTag            = newTypeTagFromLowerMask(neverTypeMask)
+	InvalidTypeTag          = newTypeTagFromLowerMask(invalidTypeMask)
+	BlockTypeTag            = newTypeTagFromLowerMask(blockTypeMask)
+	DeployedContractTypeTag = newTypeTagFromLowerMask(deployedContractMask)
 
 	StoragePathTypeTag = newTypeTagFromLowerMask(storagePathTypeMask)
 	PublicPathTypeTag  = newTypeTagFromLowerMask(publicPathTypeMask)
@@ -361,6 +365,10 @@ func findCommonSupperType(joinedTypeTag TypeTag, types ...Type) Type {
 		return &AddressType{}
 	case metaTypeMask:
 		return MetaType
+	case blockTypeMask:
+		return BlockType
+	case deployedContractMask:
+		return DeployedContractType
 	case pathTypeMask:
 		return PathType
 	case capabilityPathTypeMask:

@@ -743,6 +743,30 @@ func TestCommonSuperType(t *testing.T) {
 		}
 	}
 
+	t.Run("All types", func(t *testing.T) {
+		// super type of similar types should be the type itself.
+		// i.e: super type of collection of T's should be T.
+		// Make sure its true for all known types.
+
+		tests := make([]testCase, 0)
+
+		BaseTypeActivation.ForEach(func(name string, variable *Variable) error {
+			typ := variable.Type
+			tests = append(tests, testCase{
+				name: name,
+				types: []Type{
+					typ,
+					typ,
+				},
+				expectedSuperType: typ,
+			})
+
+			return nil
+		})
+
+		testLeastCommonSuperType(t, tests)
+	})
+
 	t.Run("Simple types", func(t *testing.T) {
 		tests := []testCase{
 			{
