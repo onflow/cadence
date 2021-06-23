@@ -435,14 +435,14 @@ func (interpreter *Interpreter) VisitDictionaryExpression(expression *ast.Dictio
 }
 
 func (interpreter *Interpreter) VisitMemberExpression(expression *ast.MemberExpression) ast.Repr {
-	result := interpreter.evalExpression(expression.Expression)
+	self := interpreter.evalExpression(expression.Expression)
 	if expression.Optional {
-		switch typedResult := result.(type) {
+		switch typeSelf := self.(type) {
 		case NilValue:
-			return typedResult
+			return typeSelf
 
 		case *SomeValue:
-			result = typedResult.Value
+			self = typeSelf.Value
 
 		default:
 			panic(errors.NewUnreachableError())
@@ -451,7 +451,32 @@ func (interpreter *Interpreter) VisitMemberExpression(expression *ast.MemberExpr
 
 	getLocationRange := locationRangeGetter(interpreter.Location, expression)
 	identifier := expression.Identifier.Identifier
-	resultValue := interpreter.getMember(result, getLocationRange, identifier)
+
+	// Check that the accessed type matched the expected one
+
+	memberInfo := interpreter.Program.Elaboration.MemberExpressionMemberInfos[expression]
+	accessedType := memberInfo.AccessedType
+	if expression.Optional {
+		accessedType = accessedType.(*sema.OptionalType).Type
+	}
+
+	switch self := self.(type) {
+	case *HostFunctionValue, *ArrayValue, *DictionaryValue:
+		// TODO: dynamic type information incomplete
+		break
+	case *CompositeValue:
+		// Ignore for example transactions
+		// TODO: find a better solution to declare/detect transactions
+		if self.kind == common.CompositeKindUnknown ||
+			self.QualifiedIdentifier() == "" {
+			break
+		}
+		interpreter.ExpectType(self, accessedType, getLocationRange)
+	default:
+		interpreter.ExpectType(self, accessedType, getLocationRange)
+	}
+
+	resultValue := interpreter.getMember(self, getLocationRange, identifier)
 	if resultValue == nil {
 		panic(MissingMemberValueError{
 			Name:          identifier,
@@ -645,12 +670,10 @@ func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingEx
 		case ast.OperationForceCast:
 			if !isSubType {
 				getLocationRange := locationRangeGetter(interpreter.Location, expression.Expression)
-				panic(
-					TypeMismatchError{
-						ExpectedType:  expectedType,
-						LocationRange: getLocationRange(),
-					},
-				)
+				panic(ForceCastTypeMismatchError{
+					ExpectedType:  expectedType,
+					LocationRange: getLocationRange(),
+				})
 			}
 
 			return value

@@ -6968,16 +6968,7 @@ func (v *CompositeValue) OwnerValue(interpreter *Interpreter) OptionalValue {
 	ownerAccount := interpreter.accountHandler(address)
 
 	// Owner must be of `PublicAccount` type.
-
-	dynamicType := ownerAccount.DynamicType(interpreter, SeenReferences{})
-
-	compositeDynamicType, ok := dynamicType.(CompositeDynamicType)
-
-	if !ok || !sema.PublicAccountType.Equal(compositeDynamicType.StaticType) {
-		panic(&TypeMismatchError{
-			ExpectedType: sema.PublicAccountType,
-		})
-	}
+	interpreter.ExpectType(ownerAccount, sema.PublicAccountType, nil)
 
 	return NewSomeValueOwningNonCopying(ownerAccount)
 }

@@ -5060,14 +5060,14 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 		switch typedSubType := subType.(type) {
 		case *CompositeType:
 
-			// Resources are not subtypes of resource interfaces.
-			// (Use `AnyResource` / `AnyStruct` / `Any` with restriction instead).
-
-			if typedSuperType.CompositeKind == common.CompositeKindResource ||
-				typedSuperType.CompositeKind == common.CompositeKindStructure {
-
-				return false
-			}
+			//// Resources are not subtypes of resource interfaces.
+			//// (Use `AnyResource` / `AnyStruct` / `Any` with restriction instead).
+			//
+			//if typedSuperType.CompositeKind == common.CompositeKindResource ||
+			//	typedSuperType.CompositeKind == common.CompositeKindStructure {
+			//
+			//	return false
+			//}
 
 			// A composite type `T` is a subtype of a interface type `V`:
 			// if `T` conforms to `V`, and `V` and `T` are of the same kind
@@ -5798,6 +5798,7 @@ func init() {
 		SignatureAlgorithmType,
 		AuthAccountType,
 		AuthAccountKeysType,
+		AuthAccountContractsType,
 		PublicAccountType,
 		PublicAccountKeysType,
 	}

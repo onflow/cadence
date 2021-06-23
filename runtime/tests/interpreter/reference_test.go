@@ -86,7 +86,7 @@ func TestInterpretContainerVariance(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("function", func(t *testing.T) {
+	t.Run("interpreted function", func(t *testing.T) {
 
 		inter := parseCheckAndInterpret(t, `
           struct S1 {
@@ -115,8 +115,91 @@ func TestInterpretContainerVariance(t *testing.T) {
 
 		_, err := inter.Invoke("test")
 
-		var invocationReceiverTypeErr interpreter.InvocationReceiverTypeError
-		require.ErrorAs(t, err, &invocationReceiverTypeErr)
+		var typeMismatchErr interpreter.TypeMismatchError
+		require.ErrorAs(t, err, &typeMismatchErr)
 	})
 
+	t.Run("field read", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+          struct S1 {
+              var value: Int
+
+              init() {
+                  self.value = 0
+              }
+          }
+
+          struct S2 {
+              priv var value: Int
+
+              init() {
+                  self.value = 1
+              }
+          }
+
+          fun test(): Int {
+              let dict: {Int: &S1} = {}
+
+              let s2 = S2()
+
+              let dictRef = &dict as &{Int: &AnyStruct}
+              dictRef[0] = &s2 as &AnyStruct
+
+              return dict.values[0].value
+          }
+        `)
+
+		_, err := inter.Invoke("test")
+		require.Error(t, err)
+
+		var typeMismatchErr interpreter.TypeMismatchError
+		require.ErrorAs(t, err, &typeMismatchErr)
+	})
+
+	t.Run("field write", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+	     struct S1 {
+	         var value: Int
+
+	         init() {
+	             self.value = 0
+	         }
+	     }
+
+	     struct S2 {
+	         // field is only publicly readable, not writeable
+	         pub var value: Int
+
+	         init() {
+	             self.value = 0
+	         }
+	     }
+
+	     fun test() {
+	         let dict: {Int: &S1} = {}
+
+	         let s2 = S2()
+
+	         let dictRef = &dict as &{Int: &AnyStruct}
+	         dictRef[0] = &s2 as &AnyStruct
+
+	         dict.values[0].value = 1
+
+             // NOTE: intentionally not reading,
+             // the test checks writes
+         }
+	   `)
+
+		_, err := inter.Invoke("test")
+		require.Error(t, err)
+
+		var typeMismatchErr interpreter.TypeMismatchError
+		require.ErrorAs(t, err, &typeMismatchErr)
+	})
 }

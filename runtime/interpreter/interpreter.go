@@ -3443,9 +3443,13 @@ func (interpreter *Interpreter) ExpectType(
 ) {
 	dynamicType := value.DynamicType(interpreter, SeenReferences{})
 	if !IsSubType(dynamicType, expectedType) {
+		var locationRange LocationRange
+		if getLocationRange != nil {
+			locationRange = getLocationRange()
+		}
 		panic(TypeMismatchError{
 			ExpectedType:  expectedType,
-			LocationRange: getLocationRange(),
+			LocationRange: locationRange,
 		})
 	}
 }
