@@ -118,11 +118,26 @@ func (interpreter *Interpreter) visitIfStatementWithVariableDeclaration(
 ) controlReturn {
 
 	value := interpreter.evalExpression(declaration.Value)
+
+	valueType := interpreter.Program.Elaboration.VariableDeclarationValueTypes[declaration]
+
+	if declaration.SecondValue != nil {
+		secondValueType := interpreter.Program.Elaboration.VariableDeclarationSecondValueTypes[declaration]
+
+		interpreter.visitAssignment(
+			declaration.Transfer.Operation,
+			declaration.Value,
+			valueType,
+			declaration.SecondValue,
+			secondValueType,
+			declaration,
+		)
+	}
+
 	var result interface{}
 	if someValue, ok := value.(*SomeValue); ok {
 
 		targetType := interpreter.Program.Elaboration.VariableDeclarationTargetTypes[declaration]
-		valueType := interpreter.Program.Elaboration.VariableDeclarationValueTypes[declaration]
 		getLocationRange := locationRangeGetter(interpreter.Location, declaration.Value)
 		unwrappedValueCopy := interpreter.copyAndConvert(someValue.Value, valueType, targetType, getLocationRange)
 
