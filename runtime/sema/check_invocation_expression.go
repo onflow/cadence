@@ -439,7 +439,7 @@ func (checker *Checker) checkInvocation(
 	for i := minCount; i < argumentCount; i++ {
 		argument := invocationExpression.Arguments[i]
 		// TODO: pass the expected type to support type inferring for parameters
-		argumentTypes[i] = checker.VisitExpression(argument.Expression, nil)
+		argumentTypes[i] = checker.VisitExpressionWithoutTypeInferring(argument.Expression)
 	}
 
 	// The invokable type might have special checks for the arguments
@@ -519,7 +519,7 @@ func (checker *Checker) checkInvocationRequiredArgument(
 	argument := arguments[argumentIndex]
 
 	// TODO: pass the expected type to support type inferring for parameters
-	argumentType := checker.VisitExpression(argument.Expression, nil)
+	argumentType := checker.VisitExpressionWithoutTypeInferring(argument.Expression)
 	argumentTypes[argumentIndex] = argumentType
 
 	checker.checkInvocationArgumentMove(argument.Expression, argumentType)

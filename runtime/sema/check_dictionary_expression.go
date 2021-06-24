@@ -37,7 +37,10 @@ func (checker *Checker) VisitDictionaryExpression(expression *ast.DictionaryExpr
 		valueType = expectedMapType.ValueType
 	}
 
-	entryTypes := make([]DictionaryEntryType, len(expression.Entries))
+	dictionarySize := len(expression.Entries)
+	entryTypes := make([]DictionaryEntryType, dictionarySize)
+	keyTypes := make([]Type, dictionarySize)
+	valueTypes := make([]Type, dictionarySize)
 
 	for i, entry := range expression.Entries {
 		// NOTE: important to check move after each type check,
@@ -56,25 +59,45 @@ func (checker *Checker) VisitDictionaryExpression(expression *ast.DictionaryExpr
 			ValueType: entryValueType,
 		}
 
-		// infer key type from first entry's key
-		// TODO: find common super type?
-		if keyType == nil {
-			keyType = entryKeyType
-		}
+		// If type inferring is turned off (e.g: func argument checking), then use the old way.
+		if !checker.inferTypes {
+			// infer key type from first entry's key
+			// TODO: find common super type?
+			if keyType == nil {
+				keyType = entryKeyType
+			}
 
-		// infer value type from first entry's value
-		// TODO: find common super type?
-		if valueType == nil {
-			valueType = entryValueType
+			// infer value type from first entry's value
+			// TODO: find common super type?
+			if valueType == nil {
+				valueType = entryValueType
+			}
+		} else {
+			keyTypes[i] = entryKeyType
+			valueTypes[i] = entryValueType
 		}
 	}
 
 	if keyType == nil {
-		keyType = NeverType
+		// If type inferring is turned off (e.g: func argument checking), then use the old way.
+		if !checker.inferTypes {
+			keyType = NeverType
+		} else {
+			// Contextually expected type is not available.
+			// Therefore, find the least common supertype of the keys.
+			keyType = LeastCommonSuperType(keyTypes...)
+		}
 	}
 
 	if valueType == nil {
-		valueType = NeverType
+		// If type inferring is turned off (e.g: func argument checking), then use the old way.
+		if !checker.inferTypes {
+			valueType = NeverType
+		} else {
+			// Contextually expected type is not available.
+			// Therefore, find the least common supertype of the values.
+			valueType = LeastCommonSuperType(valueTypes...)
+		}
 	}
 
 	if !IsValidDictionaryKeyType(keyType) {
@@ -106,7 +129,7 @@ func IsValidDictionaryKeyType(keyType Type) bool {
 		return keyType.Kind == common.CompositeKindEnum
 	default:
 		switch keyType {
-		case NeverType, BoolType, CharacterType, StringType:
+		case NeverType, BoolType, CharacterType, StringType, InvalidType:
 			return true
 		default:
 			return IsSubType(keyType, NumberType) ||

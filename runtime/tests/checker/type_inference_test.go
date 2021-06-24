@@ -19,12 +19,12 @@
 package checker
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/sema"
 )
 
@@ -718,48 +718,81 @@ func TestCheckArraySupertypeInference(t *testing.T) {
 
 	t.Parallel()
 
-	tests := []struct {
-		literal             string
-		expectedElementType sema.Type
-	}{
-		{
-			literal:             `[0, true]`,
-			expectedElementType: sema.AnyStructType,
-		},
-		{
-			literal:             `[0, 6, 275]`,
-			expectedElementType: sema.IntType,
-		},
-		{
-			literal:             `[UInt(65), 6, 275, 13423]`,
-			expectedElementType: sema.IntegerType,
-		},
-		{
-			literal:             `[UInt(0), UInt(6), UInt(275), UInt(13423)]`,
-			expectedElementType: sema.UIntType,
-		},
-		{
-			literal: `["hello", nil, nil, nil]`,
-			expectedElementType: &sema.OptionalType{
-				Type: sema.StringType,
+	t.Run("has supertype", func(t *testing.T) {
+		tests := []struct {
+			code                string
+			expectedElementType sema.Type
+		}{
+			{
+				code:                `let x = [0, true]`,
+				expectedElementType: sema.AnyStructType,
 			},
-		},
-	}
+			{
+				code:                `let x = [0, 6, 275]`,
+				expectedElementType: sema.IntType,
+			},
+			{
+				code:                `let x = [UInt(65), 6, 275, 13423]`,
+				expectedElementType: sema.IntegerType,
+			},
+			{
+				code:                `let x = [UInt(0), UInt(6), UInt(275), UInt(13423)]`,
+				expectedElementType: sema.UIntType,
+			},
+			{
+				code: `let x = ["hello", nil, nil, nil]`,
+				expectedElementType: &sema.OptionalType{
+					Type: sema.StringType,
+				},
+			},
+			{
+				code: `
+                    let x = [Foo(), Bar(), Baz()]
 
-	for _, test := range tests {
-		code := fmt.Sprintf(
-			"let x = %s",
-			test.literal,
-		)
+                    pub struct interface I1 {}
 
-		checker, err := ParseAndCheck(t, code)
-		require.NoError(t, err)
+                    pub struct interface I2 {}
 
-		xType := RequireGlobalValue(t, checker.Elaboration, "x")
+                    pub struct interface I3 {}
 
-		require.IsType(t, &sema.VariableSizedType{}, xType)
-		arrayType := xType.(*sema.VariableSizedType)
+                    pub struct Foo: I1, I2 {}
 
-		assert.Equal(t, test.expectedElementType, arrayType.Type)
-	}
+                    pub struct Bar: I2, I3 {}
+
+                    pub struct Baz: I1, I2, I3 {}
+                `,
+				expectedElementType: &sema.InterfaceType{
+					Location:      common.StringLocation("test"),
+					Identifier:    "I2",
+					CompositeKind: common.CompositeKindStructure,
+				},
+			},
+		}
+
+		for _, test := range tests {
+			checker, err := ParseAndCheck(t, test.code)
+			require.NoError(t, err)
+
+			xType := RequireGlobalValue(t, checker.Elaboration, "x")
+
+			require.IsType(t, &sema.VariableSizedType{}, xType)
+			arrayType := xType.(*sema.VariableSizedType)
+
+			assert.Equal(t, test.expectedElementType.ID(), arrayType.Type.ID())
+		}
+	})
+
+	t.Run("no supertype", func(t *testing.T) {
+		code := `
+            let x = [<- create Foo(), Bar()]
+
+            pub resource Foo {}
+
+            pub struct Bar {}
+        `
+		_, err := ParseAndCheck(t, code)
+		checkerErr := ExpectCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.TypeAnnotationRequiredError{}, checkerErr[0])
+	})
 }

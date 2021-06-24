@@ -114,6 +114,7 @@ type Checker struct {
 	importHandler                      ImportHandlerFunc
 	checkHandler                       CheckHandlerFunc
 	expectedType                       Type
+	inferTypes                         bool
 	memberAccountAccessHandler         MemberAccountAccessHandlerFunc
 }
 
@@ -2330,17 +2331,22 @@ func (checker *Checker) Hints() []Hint {
 	return checker.hints
 }
 
+func (checker *Checker) VisitExpressionWithoutTypeInferring(expr ast.Expression) Type {
+	actualType, _ := checker.visitExpressionWithForceType(expr, nil, false, false)
+	return actualType
+}
+
 func (checker *Checker) VisitExpression(expr ast.Expression, expectedType Type) Type {
 	actualType, _ := checker.visitExpression(expr, expectedType)
 	return actualType
 }
 
 func (checker *Checker) visitExpression(expr ast.Expression, expectedType Type) (visibleType Type, actualType Type) {
-	return checker.visitExpressionWithForceType(expr, expectedType, true)
+	return checker.visitExpressionWithForceType(expr, expectedType, true, true)
 }
 
 func (checker *Checker) VisitExpressionWithForceType(expr ast.Expression, expectedType Type, forceType bool) Type {
-	actualType, _ := checker.visitExpressionWithForceType(expr, expectedType, forceType)
+	actualType, _ := checker.visitExpressionWithForceType(expr, expectedType, forceType, true)
 	return actualType
 }
 
@@ -2361,11 +2367,13 @@ func (checker *Checker) visitExpressionWithForceType(
 	expr ast.Expression,
 	expectedType Type,
 	forceType bool,
+	inferTypes bool,
 ) (visibleType Type, actualType Type) {
 
 	// Cache the current contextually expected type, and set the `expectedType`
 	// as the new contextually expected type.
 	prevExpectedType := checker.expectedType
+	prevInferTypes := checker.inferTypes
 
 	// If the expected type is invalid, treat it in the same manner as
 	// expected type is unknown.
@@ -2374,9 +2382,11 @@ func (checker *Checker) visitExpressionWithForceType(
 	}
 
 	checker.expectedType = expectedType
+	checker.inferTypes = inferTypes
+
 	defer func() {
-		// Restore the prev contextually expected type
 		checker.expectedType = prevExpectedType
+		checker.inferTypes = prevInferTypes
 	}()
 
 	actualType = expr.Accept(checker).(Type)

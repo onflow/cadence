@@ -293,7 +293,16 @@ func LeastCommonSuperType(types ...Type) Type {
 		join = join.Or(typ.Tag())
 	}
 
-	return findCommonSupperType(join, types...)
+	supertype := findCommonSupperType(join, types...)
+
+	// 'Any' is a valid type, since its the supertype of all types.
+	// However, in the context of checker, 'Any' is not a possible
+	// type for expressions. Hence return 'InvalidType'.
+	if supertype == AnyType {
+		return InvalidType
+	}
+
+	return supertype
 }
 
 func findCommonSupperType(joinedTypeTag TypeTag, types ...Type) Type {

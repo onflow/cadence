@@ -137,7 +137,7 @@ func TestCheckInvalidDictionaryKeys(t *testing.T) {
 
 	errs := ExpectCheckerErrors(t, err, 1)
 
-	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	assert.IsType(t, &sema.InvalidDictionaryKeyTypeError{}, errs[0])
 }
 
 func TestCheckInvalidDictionaryValues(t *testing.T) {
@@ -148,9 +148,7 @@ func TestCheckInvalidDictionaryValues(t *testing.T) {
       let z = {"a": 1, "b": true}
 	`)
 
-	errs := ExpectCheckerErrors(t, err, 1)
-
-	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	require.NoError(t, err)
 }
 
 func TestCheckDictionaryIndexingString(t *testing.T) {

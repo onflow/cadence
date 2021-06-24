@@ -945,7 +945,7 @@ func TestCommonSuperType(t *testing.T) {
 					AnyResourceType,
 					AnyStructType,
 				},
-				expectedSuperType: AnyType,
+				expectedSuperType: InvalidType,
 			},
 			{
 				name: "all structs",
@@ -1047,7 +1047,7 @@ func TestCommonSuperType(t *testing.T) {
 					stringArray,
 					resourceArray,
 				},
-				expectedSuperType: AnyType,
+				expectedSuperType: InvalidType,
 			},
 			{
 				name: "array & non-array",
@@ -1087,7 +1087,7 @@ func TestCommonSuperType(t *testing.T) {
 					nestedResourceArray,
 					&VariableSizedType{Type: stringArray},
 				},
-				expectedSuperType: AnyType,
+				expectedSuperType: InvalidType,
 			},
 		}
 
@@ -1153,7 +1153,7 @@ func TestCommonSuperType(t *testing.T) {
 					stringStringDictionary,
 					stringResourceDictionary,
 				},
-				expectedSuperType: AnyType,
+				expectedSuperType: InvalidType,
 			},
 
 			{
@@ -1186,7 +1186,7 @@ func TestCommonSuperType(t *testing.T) {
 					nestedResourceDictionary,
 					nestedStringDictionary,
 				},
-				expectedSuperType: AnyType,
+				expectedSuperType: InvalidType,
 			},
 		}
 
