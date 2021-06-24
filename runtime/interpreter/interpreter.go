@@ -811,7 +811,7 @@ func (interpreter *Interpreter) prepareInvoke(
 		Interpreter:      interpreter,
 	}
 
-	return functionValue.Invoke(invocation), nil
+	return functionValue.invoke(invocation), nil
 }
 
 // Invoke invokes a global function with the given arguments
@@ -833,7 +833,7 @@ func (interpreter *Interpreter) InvokeFunction(function FunctionValue, invocatio
 		err = internalErr
 	})
 
-	value = function.Invoke(invocation)
+	value = function.invoke(invocation)
 	return
 }
 
@@ -1457,7 +1457,7 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 			if initializerFunction != nil {
 				// NOTE: arguments are already properly boxed by invocation expression
 
-				_ = initializerFunction.Invoke(invocation)
+				_ = initializerFunction.invoke(invocation)
 			}
 
 			return value
@@ -2177,7 +2177,7 @@ func (interpreter *Interpreter) functionConditionsWrapper(
 					// NOTE: It is important to actually return the value returned
 					//   from the inner function, otherwise it is lost
 
-					returnValue := inner.Invoke(invocation)
+					returnValue := inner.invoke(invocation)
 					return functionReturn{returnValue}
 				}
 			}
