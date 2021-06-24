@@ -449,9 +449,11 @@ type OptionalType struct {
 func (*OptionalType) IsType() {}
 
 func (t *OptionalType) Tag() TypeTag {
-	// typeTag of the inner type, with the 'optional' flag turned on.
-	// Nested optionals makes no difference.
-	return t.Type.Tag().Or(OptionalTypeTag)
+	if t.Type == NeverType {
+		return NilTypeTag
+	}
+
+	return t.Type.Tag().Or(NilTypeTag)
 }
 
 func (t *OptionalType) String() string {

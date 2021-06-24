@@ -92,7 +92,7 @@ func (t TypeTag) BelongsTo(typeTag TypeTag) bool {
 	return t.And(typeTag).Equals(t)
 }
 
-const neverTypeMask = 0
+const noTypeMask = 0
 
 const (
 	numberTypeMask uint64 = 1 << iota
@@ -139,6 +139,7 @@ const (
 	anyResourceTypeMask
 	anyTypeMask
 	deployedContractMask
+	neverTypeMask
 
 	pathTypeMask
 	storagePathTypeMask
@@ -150,7 +151,6 @@ const (
 	dictionaryTypeMask
 	compositeTypeMask
 	referenceTypeMask
-	optionalTypeMask
 	genericTypeMask
 	functionTypeMask
 	interfaceTypeMask
@@ -162,6 +162,9 @@ const (
 )
 
 var (
+	// special tag to represent mask with no types included
+	NoTypeTag = newTypeTagFromLowerMask(noTypeMask)
+
 	SignedIntegerTypeTag = newTypeTagFromLowerMask(signedIntegerTypeMask).
 				Or(IntTypeTag).
 				Or(Int8TypeTag).
@@ -255,7 +258,6 @@ var (
 	DictionaryTypeTag  = newTypeTagFromLowerMask(dictionaryTypeMask)
 	CompositeTypeTag   = newTypeTagFromLowerMask(compositeTypeMask)
 	ReferenceTypeTag   = newTypeTagFromLowerMask(referenceTypeMask)
-	OptionalTypeTag    = newTypeTagFromLowerMask(optionalTypeMask)
 	GenericTypeTag     = newTypeTagFromLowerMask(genericTypeMask)
 	FunctionTypeTag    = newTypeTagFromLowerMask(functionTypeMask)
 	InterfaceTypeTag   = newTypeTagFromLowerMask(interfaceTypeMask)
@@ -285,7 +287,7 @@ var (
 // Methods
 
 func LeastCommonSuperType(types ...Type) Type {
-	join := NeverTypeTag
+	join := NoTypeTag
 
 	for _, typ := range types {
 		join = join.Or(typ.Tag())
@@ -375,6 +377,8 @@ func findCommonSupperType(joinedTypeTag TypeTag, types ...Type) Type {
 		return PublicPathType
 	case storagePathTypeMask:
 		return StoragePathType
+	case noTypeMask:
+		return AnyType
 
 	case compositeTypeMask:
 		// We reach here if all are composite types.
@@ -398,7 +402,6 @@ func findCommonSupperType(joinedTypeTag TypeTag, types ...Type) Type {
 	case arrayTypeMask,
 		dictionaryTypeMask,
 		referenceTypeMask,
-		optionalTypeMask,
 		genericTypeMask,
 		functionTypeMask,
 		interfaceTypeMask,
@@ -426,10 +429,10 @@ func findCommonSupperType(joinedTypeTag TypeTag, types ...Type) Type {
 	}
 
 	// Optional types.
-	if joinedTypeTag.ContainsAny(OptionalTypeTag) {
+	if joinedTypeTag.ContainsAny(NilTypeTag) {
 		// Get the type without the optional flag
-		innerTypeTag := joinedTypeTag.And(OptionalTypeTag.Not())
-		supperType := findCommonSupperType(innerTypeTag)
+		innerTypeTag := joinedTypeTag.And(NilTypeTag.Not())
+		supperType := findCommonSupperType(innerTypeTag, types...)
 
 		// If the common supertype of the rest of types contain nil,
 		// then do not wrap with optional again.
@@ -480,7 +483,7 @@ func commonSuperTypeOfHeterogeneousTypes(types []Type) Type {
 		hasStructs = hasStructs || !isResource
 
 		if hasResources && hasStructs {
-			return NeverType
+			return AnyType
 		}
 	}
 
@@ -507,7 +510,7 @@ func commonSuperTypeOfComposites(types []Type) Type {
 		if hasResources && hasStructs {
 			// If the types has both structs and resources,
 			// then there's no common super type.
-			return NeverType
+			return AnyType
 		}
 
 		if hasCommonInterface {
