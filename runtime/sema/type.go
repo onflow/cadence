@@ -4709,11 +4709,31 @@ func (t *AddressType) GetMembers() map[string]MemberResolver {
 //
 func IsSubType(subType Type, superType Type) bool {
 
+	if subType == nil {
+		return false
+	}
+
 	if subType.Equal(superType) {
 		return true
 	}
 
 	return checkSubTypeWithoutEquality(subType, superType)
+}
+
+// IsSameTypeKind determines if the given subtype belongs to the
+// same kind as the supertype.
+//
+// e.g: 'Never' type is a subtype of 'Integer', but not of the
+// same kind as 'Int'. Whereas, 'Int8' is both a subtype
+// as well as of same kind as 'Integer'.
+//
+func IsSameTypeKind(subType Type, superType Type) bool {
+
+	if subType == NeverType {
+		return false
+	}
+
+	return IsSubType(subType, superType)
 }
 
 // IsProperSubType is similar to IsSubType,

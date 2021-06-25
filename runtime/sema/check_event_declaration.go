@@ -92,11 +92,11 @@ func IsValidEventParameterType(t Type, results map[*Member]bool) bool {
 
 	default:
 		switch t {
-		case MetaType, BoolType, CharacterType, StringType:
+		case MetaType, BoolType, CharacterType, StringType, NeverType:
 			return true
 		}
 
-		return IsSubType(t, NumberType) ||
-			IsSubType(t, PathType)
+		return IsSameTypeKind(t, NumberType) ||
+			IsSameTypeKind(t, PathType)
 	}
 }
