@@ -750,7 +750,7 @@ func TestCommonSuperType(t *testing.T) {
 
 		tests := make([]testCase, 0)
 
-		BaseTypeActivation.ForEach(func(name string, variable *Variable) error {
+		err := BaseTypeActivation.ForEach(func(name string, variable *Variable) error {
 			typ := variable.Type
 			tests = append(tests, testCase{
 				name: name,
@@ -764,6 +764,7 @@ func TestCommonSuperType(t *testing.T) {
 			return nil
 		})
 
+		require.NoError(t, err)
 		testLeastCommonSuperType(t, tests)
 	})
 
