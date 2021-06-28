@@ -71,7 +71,7 @@ func TestCheckInvalidConditionalExpressionElse(t *testing.T) {
 	assert.Equal(t, sema.InvalidType, xType)
 }
 
-func TestCheckConditionalExpressionTypeInfer(t *testing.T) {
+func TestCheckConditionalExpressionTypeInferring(t *testing.T) {
 
 	t.Parallel()
 

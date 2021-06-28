@@ -719,6 +719,8 @@ func TestCheckArraySupertypeInference(t *testing.T) {
 	t.Parallel()
 
 	t.Run("has supertype", func(t *testing.T) {
+		t.Parallel()
+
 		tests := []struct {
 			name                string
 			code                string
@@ -817,6 +819,8 @@ func TestCheckArraySupertypeInference(t *testing.T) {
 
 		for _, test := range tests {
 			t.Run(test.name, func(t *testing.T) {
+				t.Parallel()
+
 				checker, err := ParseAndCheck(t, test.code)
 				require.NoError(t, err)
 
@@ -831,6 +835,8 @@ func TestCheckArraySupertypeInference(t *testing.T) {
 	})
 
 	t.Run("no supertype", func(t *testing.T) {
+		t.Parallel()
+
 		code := `
             let x = [<- create Foo(), Bar()]
 
@@ -850,6 +856,8 @@ func TestCheckDictionarySupertypeInference(t *testing.T) {
 	t.Parallel()
 
 	t.Run("has supertype", func(t *testing.T) {
+		t.Parallel()
+
 		tests := []struct {
 			name              string
 			code              string
@@ -963,6 +971,8 @@ func TestCheckDictionarySupertypeInference(t *testing.T) {
 
 		for _, test := range tests {
 			t.Run(test.name, func(t *testing.T) {
+				t.Parallel()
+
 				checker, err := ParseAndCheck(t, test.code)
 				require.NoError(t, err)
 
@@ -978,6 +988,8 @@ func TestCheckDictionarySupertypeInference(t *testing.T) {
 	})
 
 	t.Run("no supertype", func(t *testing.T) {
+		t.Parallel()
+
 		code := `
             let x = {0: <- create Foo(), 1: Bar()}
 
@@ -992,6 +1004,8 @@ func TestCheckDictionarySupertypeInference(t *testing.T) {
 	})
 
 	t.Run("unsupported supertype for keys", func(t *testing.T) {
+		t.Parallel()
+
 		code := `
             let x = {0: 1, "hello": 2}
         `

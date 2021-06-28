@@ -704,8 +704,11 @@ func TestIdentifierCacheUpdate(t *testing.T) {
 }
 
 func TestCommonSuperType(t *testing.T) {
+	t.Parallel()
 
 	t.Run("Duplicate Mask", func(t *testing.T) {
+		t.Parallel()
+
 		defer func() {
 			if r := recover(); r != nil {
 				err, _ := r.(error)
@@ -734,6 +737,8 @@ func TestCommonSuperType(t *testing.T) {
 	testLeastCommonSuperType := func(t *testing.T, tests []testCase) {
 		for _, test := range tests {
 			t.Run(test.name, func(t *testing.T) {
+				t.Parallel()
+
 				assert.Equal(
 					t,
 					test.expectedSuperType,
@@ -744,6 +749,8 @@ func TestCommonSuperType(t *testing.T) {
 	}
 
 	t.Run("All types", func(t *testing.T) {
+		t.Parallel()
+
 		// super type of similar types should be the type itself.
 		// i.e: super type of collection of T's should be T.
 		// Make sure its true for all known types.
@@ -769,6 +776,8 @@ func TestCommonSuperType(t *testing.T) {
 	})
 
 	t.Run("Simple types", func(t *testing.T) {
+		t.Parallel()
+
 		tests := []testCase{
 			{
 				name: "homogenous integer types",
@@ -888,6 +897,7 @@ func TestCommonSuperType(t *testing.T) {
 	})
 
 	t.Run("Structs & Resources", func(t *testing.T) {
+		t.Parallel()
 
 		testLocation := common.StringLocation("test")
 
@@ -1003,6 +1013,7 @@ func TestCommonSuperType(t *testing.T) {
 	})
 
 	t.Run("Arrays", func(t *testing.T) {
+		t.Parallel()
 
 		stringArray := &VariableSizedType{
 			Type: StringType,
@@ -1095,6 +1106,7 @@ func TestCommonSuperType(t *testing.T) {
 	})
 
 	t.Run("Dictionaries", func(t *testing.T) {
+		t.Parallel()
 
 		stringStringDictionary := &DictionaryType{
 			KeyType:   StringType,
@@ -1194,6 +1206,8 @@ func TestCommonSuperType(t *testing.T) {
 	})
 
 	t.Run("References types", func(t *testing.T) {
+		t.Parallel()
+
 		tests := []testCase{
 			{
 				name: "homogenous references",
@@ -1252,6 +1266,8 @@ func TestCommonSuperType(t *testing.T) {
 	})
 
 	t.Run("Path types", func(t *testing.T) {
+		t.Parallel()
+
 		tests := []testCase{
 			{
 				name: "homogenous paths",
@@ -1292,5 +1308,4 @@ func TestCommonSuperType(t *testing.T) {
 
 		testLeastCommonSuperType(t, tests)
 	})
-
 }
