@@ -137,20 +137,7 @@ func TestCheckInvalidDictionaryKeys(t *testing.T) {
 
 	errs := ExpectCheckerErrors(t, err, 1)
 
-	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
-}
-
-func TestCheckInvalidDictionaryValues(t *testing.T) {
-
-	t.Parallel()
-
-	_, err := ParseAndCheck(t, `
-      let z = {"a": 1, "b": true}
-	`)
-
-	errs := ExpectCheckerErrors(t, err, 1)
-
-	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	assert.IsType(t, &sema.InvalidDictionaryKeyTypeError{}, errs[0])
 }
 
 func TestCheckDictionaryIndexingString(t *testing.T) {
@@ -943,19 +930,6 @@ func TestCheckInvalidDictionarySubtyping(t *testing.T) {
 	_, err := ParseAndCheck(t, `
       let xs: {String: Bool} = {}
       let ys: {String: Int} = xs
-	`)
-
-	errs := ExpectCheckerErrors(t, err, 1)
-
-	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
-}
-
-func TestCheckInvalidArrayElements(t *testing.T) {
-
-	t.Parallel()
-
-	_, err := ParseAndCheck(t, `
-      let z = [0, true]
 	`)
 
 	errs := ExpectCheckerErrors(t, err, 1)

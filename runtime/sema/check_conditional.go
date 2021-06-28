@@ -62,26 +62,32 @@ func (checker *Checker) VisitIfStatement(statement *ast.IfStatement) ast.Repr {
 
 func (checker *Checker) VisitConditionalExpression(expression *ast.ConditionalExpression) ast.Repr {
 
-	thenType, elseType := checker.visitConditional(expression.Test, expression.Then, expression.Else)
+	expectedType := checker.expectedType
+
+	checker.VisitExpression(expression.Test, BoolType)
+
+	thenType, elseType := checker.checkConditionalBranches(
+		func() Type {
+			return checker.VisitExpression(expression.Then, expectedType)
+		},
+		func() Type {
+			return checker.VisitExpression(expression.Else, expectedType)
+		},
+	)
 
 	if thenType == nil || elseType == nil {
 		panic(errors.NewUnreachableError())
 	}
 
-	// TODO: improve
-	resultType := thenType
-
-	if !IsSubType(elseType, resultType) {
-		checker.report(
-			&TypeMismatchError{
-				ExpectedType: resultType,
-				ActualType:   elseType,
-				Range:        ast.NewRangeFromPositioned(expression.Else),
-			},
-		)
+	if expectedType != nil {
+		return expectedType
 	}
 
-	return resultType
+	if thenType.Equal(elseType) {
+		return thenType
+	}
+
+	return LeastCommonSuperType(thenType, elseType)
 }
 
 // visitConditional checks a conditional.

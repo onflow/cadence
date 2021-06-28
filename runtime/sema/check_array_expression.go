@@ -69,19 +69,14 @@ func (checker *Checker) VisitArrayExpression(expression *ast.ArrayExpression) as
 
 		checker.checkVariableMove(value)
 		checker.checkResourceMoveOperation(value, valueType)
-
-		// infer element type from first element
-		// TODO: find common super type?
-		if elementType == nil {
-			elementType = valueType
-		}
 	}
 
 	checker.Elaboration.ArrayExpressionArgumentTypes[expression] = argumentTypes
 
 	if elementType == nil {
-		// i.e: contextually expected type is not available and array has zero elements.
-		elementType = NeverType
+		// Contextually expected type is not available.
+		// Therefore, find the least common supertype of the elements.
+		elementType = LeastCommonSuperType(argumentTypes...)
 	}
 
 	checker.Elaboration.ArrayExpressionElementType[expression] = elementType
