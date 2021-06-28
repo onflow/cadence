@@ -19,7 +19,6 @@
 package ast
 
 import (
-	"encoding/json"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -44,7 +43,7 @@ func TestPragmaDeclaration_MarshalJSON(t *testing.T) {
 		},
 	}
 
-	actual, err := json.Marshal(members)
+	actual, err := jsonMarshalAndVerify(members)
 	require.NoError(t, err)
 
 	assert.JSONEq(t,

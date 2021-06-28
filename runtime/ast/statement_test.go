@@ -19,7 +19,6 @@
 package ast
 
 import (
-	"encoding/json"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -40,7 +39,7 @@ func TestExpressionStatement_MarshalJSON(t *testing.T) {
 		},
 	}
 
-	actual, err := json.Marshal(stmt)
+	actual, err := jsonMarshalAndVerify(stmt)
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
@@ -79,7 +78,7 @@ func TestReturnStatement_MarshalJSON(t *testing.T) {
 		},
 	}
 
-	actual, err := json.Marshal(stmt)
+	actual, err := jsonMarshalAndVerify(stmt)
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
@@ -111,7 +110,7 @@ func TestBreakStatement_MarshalJSON(t *testing.T) {
 		},
 	}
 
-	actual, err := json.Marshal(stmt)
+	actual, err := jsonMarshalAndVerify(stmt)
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
@@ -137,7 +136,7 @@ func TestContinueStatement_MarshalJSON(t *testing.T) {
 		},
 	}
 
-	actual, err := json.Marshal(stmt)
+	actual, err := jsonMarshalAndVerify(stmt)
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
@@ -181,7 +180,7 @@ func TestIfStatement_MarshalJSON(t *testing.T) {
 		StartPos: Position{Offset: 19, Line: 20, Column: 21},
 	}
 
-	actual, err := json.Marshal(stmt)
+	actual, err := jsonMarshalAndVerify(stmt)
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
@@ -236,7 +235,7 @@ func TestWhileStatement_MarshalJSON(t *testing.T) {
 		StartPos: Position{Offset: 13, Line: 14, Column: 15},
 	}
 
-	actual, err := json.Marshal(stmt)
+	actual, err := jsonMarshalAndVerify(stmt)
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
@@ -289,7 +288,7 @@ func TestForStatement_MarshalJSON(t *testing.T) {
 		StartPos: Position{Offset: 16, Line: 17, Column: 18},
 	}
 
-	actual, err := json.Marshal(stmt)
+	actual, err := jsonMarshalAndVerify(stmt)
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
@@ -345,7 +344,7 @@ func TestAssignmentStatement_MarshalJSON(t *testing.T) {
 		},
 	}
 
-	actual, err := json.Marshal(stmt)
+	actual, err := jsonMarshalAndVerify(stmt)
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
@@ -402,7 +401,7 @@ func TestSwapStatement_MarshalJSON(t *testing.T) {
 		},
 	}
 
-	actual, err := json.Marshal(stmt)
+	actual, err := jsonMarshalAndVerify(stmt)
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
@@ -478,7 +477,7 @@ func TestEmitStatement_MarshalJSON(t *testing.T) {
 		StartPos: Position{Offset: 25, Line: 26, Column: 27},
 	}
 
-	actual, err := json.Marshal(stmt)
+	actual, err := jsonMarshalAndVerify(stmt)
 	require.NoError(t, err)
 
 	assert.JSONEq(t,

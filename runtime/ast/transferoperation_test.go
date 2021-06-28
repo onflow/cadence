@@ -19,7 +19,6 @@
 package ast
 
 import (
-	"encoding/json"
 	"fmt"
 	"testing"
 
@@ -32,7 +31,7 @@ func TestTransferOperation_MarshalJSON(t *testing.T) {
 	t.Parallel()
 
 	for transferOperation := TransferOperation(0); transferOperation < TransferOperation(TransferOperationCount()); transferOperation++ {
-		actual, err := json.Marshal(transferOperation)
+		actual, err := jsonMarshalAndVerify(transferOperation)
 		require.NoError(t, err)
 
 		assert.JSONEq(t, fmt.Sprintf(`"%s"`, transferOperation), string(actual))

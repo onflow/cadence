@@ -19,7 +19,6 @@
 package ast
 
 import (
-	"encoding/json"
 	"math/big"
 	"testing"
 
@@ -39,7 +38,7 @@ func TestBoolExpression_MarshalJSON(t *testing.T) {
 		},
 	}
 
-	actual, err := json.Marshal(expr)
+	actual, err := jsonMarshalAndVerify(expr)
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
@@ -63,7 +62,7 @@ func TestNilExpression_MarshalJSON(t *testing.T) {
 		Pos: Position{Offset: 1, Line: 2, Column: 3},
 	}
 
-	actual, err := json.Marshal(expr)
+	actual, err := jsonMarshalAndVerify(expr)
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
@@ -90,7 +89,7 @@ func TestStringExpression_MarshalJSON(t *testing.T) {
 		},
 	}
 
-	actual, err := json.Marshal(expr)
+	actual, err := jsonMarshalAndVerify(expr)
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
@@ -119,7 +118,7 @@ func TestIntegerExpression_MarshalJSON(t *testing.T) {
 		},
 	}
 
-	actual, err := json.Marshal(expr)
+	actual, err := jsonMarshalAndVerify(expr)
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
@@ -151,7 +150,7 @@ func TestFixedPointExpression_MarshalJSON(t *testing.T) {
 		},
 	}
 
-	actual, err := json.Marshal(expr)
+	actual, err := jsonMarshalAndVerify(expr)
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
@@ -193,7 +192,7 @@ func TestArrayExpression_MarshalJSON(t *testing.T) {
 		},
 	}
 
-	actual, err := json.Marshal(expr)
+	actual, err := jsonMarshalAndVerify(expr)
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
@@ -246,7 +245,7 @@ func TestDictionaryExpression_MarshalJSON(t *testing.T) {
 		},
 	}
 
-	actual, err := json.Marshal(expr)
+	actual, err := jsonMarshalAndVerify(expr)
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
@@ -288,7 +287,7 @@ func TestIdentifierExpression_MarshalJSON(t *testing.T) {
 		},
 	}
 
-	actual, err := json.Marshal(expr)
+	actual, err := jsonMarshalAndVerify(expr)
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
@@ -324,7 +323,7 @@ func TestPathExpression_MarshalJSON(t *testing.T) {
 		},
 	}
 
-	actual, err := json.Marshal(expr)
+	actual, err := jsonMarshalAndVerify(expr)
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
@@ -369,7 +368,7 @@ func TestMemberExpression_MarshalJSON(t *testing.T) {
 		},
 	}
 
-	actual, err := json.Marshal(expr)
+	actual, err := jsonMarshalAndVerify(expr)
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
@@ -418,7 +417,7 @@ func TestIndexExpression_MarshalJSON(t *testing.T) {
 		},
 	}
 
-	actual, err := json.Marshal(expr)
+	actual, err := jsonMarshalAndVerify(expr)
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
@@ -461,7 +460,7 @@ func TestUnaryExpression_MarshalJSON(t *testing.T) {
 		StartPos: Position{Offset: 7, Line: 8, Column: 9},
 	}
 
-	actual, err := json.Marshal(expr)
+	actual, err := jsonMarshalAndVerify(expr)
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
@@ -508,7 +507,7 @@ func TestBinaryExpression_MarshalJSON(t *testing.T) {
 		},
 	}
 
-	actual, err := json.Marshal(expr)
+	actual, err := jsonMarshalAndVerify(expr)
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
@@ -552,7 +551,7 @@ func TestDestroyExpression_MarshalJSON(t *testing.T) {
 		StartPos: Position{Offset: 4, Line: 5, Column: 6},
 	}
 
-	actual, err := json.Marshal(expr)
+	actual, err := jsonMarshalAndVerify(expr)
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
@@ -591,7 +590,7 @@ func TestForceExpression_MarshalJSON(t *testing.T) {
 		EndPos: Position{Offset: 4, Line: 5, Column: 6},
 	}
 
-	actual, err := json.Marshal(expr)
+	actual, err := jsonMarshalAndVerify(expr)
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
@@ -646,7 +645,7 @@ func TestConditionalExpression_MarshalJSON(t *testing.T) {
 		},
 	}
 
-	actual, err := json.Marshal(expr)
+	actual, err := jsonMarshalAndVerify(expr)
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
@@ -723,7 +722,7 @@ func TestInvocationExpression_MarshalJSON(t *testing.T) {
 		EndPos:            Position{Offset: 22, Line: 23, Column: 24},
 	}
 
-	actual, err := json.Marshal(expr)
+	actual, err := jsonMarshalAndVerify(expr)
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
@@ -806,7 +805,7 @@ func TestCastingExpression_MarshalJSON(t *testing.T) {
 		},
 	}
 
-	actual, err := json.Marshal(expr)
+	actual, err := jsonMarshalAndVerify(expr)
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
@@ -892,7 +891,7 @@ func TestCreateExpression_MarshalJSON(t *testing.T) {
 		StartPos: Position{Offset: 25, Line: 26, Column: 27},
 	}
 
-	actual, err := json.Marshal(expr)
+	actual, err := jsonMarshalAndVerify(expr)
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
@@ -974,7 +973,7 @@ func TestReferenceExpression_MarshalJSON(t *testing.T) {
 		StartPos: Position{Offset: 7, Line: 8, Column: 9},
 	}
 
-	actual, err := json.Marshal(expr)
+	actual, err := jsonMarshalAndVerify(expr)
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
@@ -1064,7 +1063,7 @@ func TestFunctionExpression_MarshalJSON(t *testing.T) {
 		StartPos: Position{Offset: 34, Line: 35, Column: 36},
 	}
 
-	actual, err := json.Marshal(expr)
+	actual, err := jsonMarshalAndVerify(expr)
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
