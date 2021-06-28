@@ -457,6 +457,8 @@ func findCommonSupperType(joinedTypeTag TypeTag, types ...Type) Type {
 	// NOTE: Below order is important!
 
 	switch {
+	case joinedTypeTag.ContainsAny(InvalidTypeTag):
+		return InvalidType
 	case joinedTypeTag.BelongsTo(SignedIntegerTypeTag):
 		return SignedIntegerType
 	case joinedTypeTag.BelongsTo(IntegerTypeTag):

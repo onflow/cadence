@@ -2374,8 +2374,8 @@ func (checker *Checker) visitExpressionWithForceType(
 	}
 
 	checker.expectedType = expectedType
-
 	defer func() {
+		// Restore the prev contextually expected type
 		checker.expectedType = prevExpectedType
 	}()
 

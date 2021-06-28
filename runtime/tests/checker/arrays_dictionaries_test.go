@@ -140,17 +140,6 @@ func TestCheckInvalidDictionaryKeys(t *testing.T) {
 	assert.IsType(t, &sema.InvalidDictionaryKeyTypeError{}, errs[0])
 }
 
-func TestCheckInvalidDictionaryValues(t *testing.T) {
-
-	t.Parallel()
-
-	_, err := ParseAndCheck(t, `
-      let z = {"a": 1, "b": true}
-	`)
-
-	require.NoError(t, err)
-}
-
 func TestCheckDictionaryIndexingString(t *testing.T) {
 
 	t.Parallel()
