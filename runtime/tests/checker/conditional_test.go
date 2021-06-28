@@ -59,16 +59,36 @@ func TestCheckInvalidConditionalExpressionElse(t *testing.T) {
 
 	t.Parallel()
 
-	checker, err := ParseAndCheck(t, `
-        let x = true ? 2 : y
-	`)
+	t.Run("undeclared variable", func(t *testing.T) {
+		t.Parallel()
 
-	errs := ExpectCheckerErrors(t, err, 1)
+		checker, err := ParseAndCheck(t, `
+            let x = true ? 2 : y
+	    `)
 
-	assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
+		errs := ExpectCheckerErrors(t, err, 1)
 
-	xType := RequireGlobalValue(t, checker.Elaboration, "x")
-	assert.Equal(t, sema.InvalidType, xType)
+		assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
+
+		xType := RequireGlobalValue(t, checker.Elaboration, "x")
+		assert.Equal(t, sema.InvalidType, xType)
+	})
+
+	t.Run("mismatching type", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            let x: Int8 = true ? 2 : "hello"
+	    `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		typeMismatchError := errs[0].(*sema.TypeMismatchError)
+
+		assert.Equal(t, sema.Int8Type, typeMismatchError.ExpectedType)
+		assert.Equal(t, sema.StringType, typeMismatchError.ActualType)
+	})
 }
 
 func TestCheckConditionalExpressionTypeInferring(t *testing.T) {
