@@ -94,12 +94,15 @@ func TestInterpretForStatementWithContinue(t *testing.T) {
 	value, err := inter.Invoke("test")
 	require.NoError(t, err)
 
+	require.IsType(t, value, &interpreter.ArrayValue{})
+	arrayValue := value.(*interpreter.ArrayValue)
+
 	assert.Equal(t,
-		interpreter.NewArrayValueUnownedNonCopying(
+		[]interpreter.Value{
 			interpreter.NewIntValueFromInt64(4),
 			interpreter.NewIntValueFromInt64(5),
-		),
-		value,
+		},
+		arrayValue.Elements(),
 	)
 }
 

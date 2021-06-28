@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/onflow/cadence/runtime/sema"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -480,7 +481,7 @@ func BenchmarkCompositeDeferredDecoding(b *testing.B) {
 	})
 }
 
-var newTestLargeCompositeValue = func(id int) *CompositeValue {
+func newTestLargeCompositeValue(id int) *CompositeValue {
 	addressFields := NewStringValueOrderedMap()
 	addressFields.Set("street", NewStringValue(fmt.Sprintf("No: %d", id)))
 	addressFields.Set("city", NewStringValue("Vancouver"))
@@ -511,14 +512,19 @@ var newTestLargeCompositeValue = func(id int) *CompositeValue {
 	)
 }
 
-var newTestArrayValue = func(size int) *ArrayValue {
+func newTestArrayValue(size int) *ArrayValue {
 	values := make([]Value, size)
 
 	for i := 0; i < size; i++ {
 		values[i] = newTestLargeCompositeValue(i)
 	}
 
-	return NewArrayValue(values)
+	return NewArrayValueUnownedNonCopying(
+		&sema.VariableSizedType{
+			Type: sema.AnyStructType,
+		},
+		values...,
+	)
 }
 
 func TestArrayDeferredDecoding(t *testing.T) {
@@ -942,7 +948,7 @@ func TestDictionaryDeferredDecoding(t *testing.T) {
 	})
 }
 
-var newTestDictionaryValue = func(size int) *DictionaryValue {
+func newTestDictionaryValue(size int) *DictionaryValue {
 	values := make([]Value, size*2)
 
 	for i := 0; i < size; i++ {

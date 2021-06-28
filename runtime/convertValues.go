@@ -436,7 +436,10 @@ func importArrayValue(
 		values[i] = importValue(inter, element)
 	}
 
-	return interpreter.NewArrayValueUnownedNonCopying(values...)
+	// TODO: type
+	var arrayType sema.ArrayType
+
+	return interpreter.NewArrayValueUnownedNonCopying(arrayType, values...)
 }
 
 func importDictionaryValue(

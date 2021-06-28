@@ -1130,20 +1130,30 @@ func TestInterpretDynamicCastingArray(t *testing.T) {
 							),
 						)
 
-						expectedValue := interpreter.NewArrayValueUnownedNonCopying(
+						expectedElements := []interpreter.Value{
 							interpreter.NewIntValueFromInt64(42),
-						)
+						}
+
+						xValue := inter.Globals["x"].GetValue()
+						require.IsType(t, xValue, &interpreter.ArrayValue{})
+						xArray := xValue.(*interpreter.ArrayValue)
 
 						assert.Equal(t,
-							expectedValue,
-							inter.Globals["x"].GetValue(),
+							expectedElements,
+							xArray.Elements(),
 						)
 
+						yValue := inter.Globals["y"].GetValue()
+						require.IsType(t, yValue, &interpreter.SomeValue{})
+						ySome := yValue.(*interpreter.SomeValue)
+
+						innerValue := ySome.Value
+						require.IsType(t, innerValue, &interpreter.ArrayValue{})
+						innerArray := innerValue.(*interpreter.ArrayValue)
+
 						assert.Equal(t,
-							interpreter.NewSomeValueOwningNonCopying(
-								expectedValue,
-							),
-							inter.Globals["y"].GetValue(),
+							expectedElements,
+							innerArray.Elements(),
 						)
 					})
 				}

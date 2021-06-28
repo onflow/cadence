@@ -2523,7 +2523,10 @@ func NewBlockValue(block Block) interpreter.BlockValue {
 	for i, b := range block.Hash {
 		values[i] = interpreter.UInt8Value(b)
 	}
-	idValue := interpreter.NewArrayValue(values)
+	idValue := interpreter.NewArrayValueUnownedNonCopying(
+		sema.ByteArrayType,
+		values...,
+	)
 
 	// timestamp
 	// TODO: verify

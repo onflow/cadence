@@ -80,17 +80,20 @@ var exportTests = []exportTest{
 		expected: cadence.NewString("foo"),
 	},
 	{
-		label:    "Array empty",
-		value:    interpreter.NewArrayValueUnownedNonCopying([]interpreter.Value{}...),
+		label: "Array empty",
+		value: interpreter.NewArrayValueUnownedNonCopying(
+			// TODO: type
+			nil,
+		),
 		expected: cadence.NewArray([]cadence.Value{}),
 	},
 	{
 		label: "Array non-empty",
 		value: interpreter.NewArrayValueUnownedNonCopying(
-			[]interpreter.Value{
-				interpreter.NewIntValueFromInt64(42),
-				interpreter.NewStringValue("foo"),
-			}...,
+			// TODO: type
+			nil,
+			interpreter.NewIntValueFromInt64(42),
+			interpreter.NewStringValue("foo"),
 		),
 		expected: cadence.NewArray([]cadence.Value{
 			cadence.NewInt(42),

@@ -112,19 +112,13 @@ const HashAlgorithmTypeHashFunctionName = "hash"
 var HashAlgorithmTypeHashFunctionType = &FunctionType{
 	Parameters: []*Parameter{
 		{
-			Label:      ArgumentLabelNotRequired,
-			Identifier: "data",
-			TypeAnnotation: NewTypeAnnotation(
-				&VariableSizedType{
-					Type: UInt8Type,
-				},
-			),
+			Label:          ArgumentLabelNotRequired,
+			Identifier:     "data",
+			TypeAnnotation: NewTypeAnnotation(ByteArrayType),
 		},
 	},
 	ReturnTypeAnnotation: NewTypeAnnotation(
-		&VariableSizedType{
-			Type: UInt8Type,
-		},
+		ByteArrayType,
 	),
 }
 
@@ -140,9 +134,7 @@ var HashAlgorithmTypeHashWithTagFunctionType = &FunctionType{
 			Label:      ArgumentLabelNotRequired,
 			Identifier: "data",
 			TypeAnnotation: NewTypeAnnotation(
-				&VariableSizedType{
-					Type: UInt8Type,
-				},
+				ByteArrayType,
 			),
 		},
 		{
@@ -151,9 +143,7 @@ var HashAlgorithmTypeHashWithTagFunctionType = &FunctionType{
 		},
 	},
 	ReturnTypeAnnotation: NewTypeAnnotation(
-		&VariableSizedType{
-			Type: UInt8Type,
-		},
+		ByteArrayType,
 	),
 }
 

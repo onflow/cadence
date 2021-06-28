@@ -235,7 +235,10 @@ func TestEncodeDecodeArray(t *testing.T) {
 	t.Parallel()
 
 	t.Run("empty", func(t *testing.T) {
-		expected := NewArrayValueUnownedNonCopying()
+		expected := NewArrayValueUnownedNonCopying(
+			// TODO: type
+			nil,
+		)
 		expected.modified = false
 
 		testEncodeDecode(t,
@@ -252,6 +255,8 @@ func TestEncodeDecodeArray(t *testing.T) {
 		expectedString := NewStringValue("test")
 
 		expected := NewArrayValueUnownedNonCopying(
+			// TODO: type
+			nil,
 			expectedString,
 			BoolValue(true),
 		)
@@ -280,6 +285,7 @@ func TestEncodeDecodeDictionary(t *testing.T) {
 	t.Parallel()
 
 	t.Run("empty", func(t *testing.T) {
+
 		expected := NewDictionaryValueUnownedNonCopying()
 		expected.modified = false
 		expected.Keys().modified = false
@@ -329,7 +335,10 @@ func TestEncodeDecodeDictionary(t *testing.T) {
 
 	t.Run("non-empty", func(t *testing.T) {
 		key1 := NewStringValue("test")
-		value1 := NewArrayValueUnownedNonCopying()
+		value1 := NewArrayValueUnownedNonCopying(
+			// TODO: type
+			nil,
+		)
 
 		key2 := BoolValue(true)
 		value2 := BoolValue(false)
@@ -5252,7 +5261,11 @@ func TestEncodeDecodeTypeValue(t *testing.T) {
 
 func TestEncodePrepareCallback(t *testing.T) {
 
-	value := NewArrayValueUnownedNonCopying(Int8Value(42))
+	value := NewArrayValueUnownedNonCopying(
+		// TODO: type
+		nil,
+		Int8Value(42),
+	)
 
 	type prepareCallback struct {
 		value Value
@@ -5374,7 +5387,11 @@ func BenchmarkDecoding(b *testing.B) {
 }
 
 func prepareLargeTestValue() Value {
-	values := NewArrayValueUnownedNonCopying()
+	values := NewArrayValueUnownedNonCopying(
+		&sema.VariableSizedType{
+			Type: sema.AnyStructType,
+		},
+	)
 	for i := 0; i < 100; i++ {
 		dict := NewDictionaryValueUnownedNonCopying()
 		for i := 0; i < 100; i++ {

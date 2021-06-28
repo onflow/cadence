@@ -51,7 +51,12 @@ func TestOwnerNewArray(t *testing.T) {
 
 	assert.Equal(t, &oldOwner, value.GetOwner())
 
-	array := NewArrayValueUnownedNonCopying(value)
+	array := NewArrayValueUnownedNonCopying(
+		&sema.VariableSizedType{
+			Type: sema.AnyStructType,
+		},
+		value,
+	)
 
 	assert.Nil(t, array.GetOwner())
 	assert.Nil(t, value.GetOwner())
@@ -66,7 +71,12 @@ func TestSetOwnerArray(t *testing.T) {
 
 	value := newTestCompositeValue(oldOwner)
 
-	array := NewArrayValueUnownedNonCopying(value)
+	array := NewArrayValueUnownedNonCopying(
+		&sema.VariableSizedType{
+			Type: sema.AnyStructType,
+		},
+		value,
+	)
 
 	array.SetOwner(&newOwner)
 
@@ -83,7 +93,12 @@ func TestSetOwnerArrayCopy(t *testing.T) {
 
 	value := newTestCompositeValue(oldOwner)
 
-	array := NewArrayValueUnownedNonCopying(value)
+	array := NewArrayValueUnownedNonCopying(
+		&sema.VariableSizedType{
+			Type: sema.AnyStructType,
+		},
+		value,
+	)
 
 	array.SetOwner(&newOwner)
 
@@ -105,7 +120,12 @@ func TestSetOwnerArraySetIndex(t *testing.T) {
 	value1 := newTestCompositeValue(oldOwner)
 	value2 := newTestCompositeValue(oldOwner)
 
-	array := NewArrayValueUnownedNonCopying(value1)
+	array := NewArrayValueUnownedNonCopying(
+		&sema.VariableSizedType{
+			Type: sema.AnyStructType,
+		},
+		value1,
+	)
 	array.SetOwner(&newOwner)
 
 	assert.Equal(t, &newOwner, array.GetOwner())
@@ -128,7 +148,11 @@ func TestSetOwnerArrayAppend(t *testing.T) {
 
 	value := newTestCompositeValue(oldOwner)
 
-	array := NewArrayValueUnownedNonCopying()
+	array := NewArrayValueUnownedNonCopying(
+		&sema.VariableSizedType{
+			Type: sema.AnyStructType,
+		},
+	)
 	array.SetOwner(&newOwner)
 
 	assert.Equal(t, &newOwner, array.GetOwner())
@@ -149,7 +173,11 @@ func TestSetOwnerArrayInsert(t *testing.T) {
 
 	value := newTestCompositeValue(oldOwner)
 
-	array := NewArrayValueUnownedNonCopying()
+	array := NewArrayValueUnownedNonCopying(
+		&sema.VariableSizedType{
+			Type: sema.AnyStructType,
+		},
+	)
 	array.SetOwner(&newOwner)
 
 	assert.Equal(t, &newOwner, array.GetOwner())
@@ -523,6 +551,9 @@ func TestStringer(t *testing.T) {
 		},
 		"Array": {
 			value: NewArrayValueUnownedNonCopying(
+				&sema.VariableSizedType{
+					Type: sema.AnyStructType,
+				},
 				NewIntValueFromInt64(10),
 				NewStringValue("TEST"),
 			),
@@ -633,6 +664,9 @@ func TestStringer(t *testing.T) {
 				)
 				return &DictionaryValue{
 					keys: NewArrayValueUnownedNonCopying(
+						&sema.VariableSizedType{
+							Type: sema.StringType,
+						},
 						NewStringValue("a"),
 						NewStringValue("b"),
 					),
@@ -643,7 +677,11 @@ func TestStringer(t *testing.T) {
 		},
 		"Recursive ephemeral reference (array)": {
 			value: func() Value {
-				array := NewArrayValueUnownedNonCopying()
+				array := NewArrayValueUnownedNonCopying(
+					&sema.VariableSizedType{
+						Type: sema.AnyStructType,
+					},
+				)
 				arrayRef := &EphemeralReferenceValue{Value: array}
 				array.Insert(0, arrayRef, nil)
 				return array
@@ -688,7 +726,12 @@ func TestVisitor(t *testing.T) {
 	var value Value
 	value = NewIntValueFromInt64(42)
 	value = NewSomeValueOwningNonCopying(value)
-	value = NewArrayValueUnownedNonCopying(value)
+	value = NewArrayValueUnownedNonCopying(
+		&sema.VariableSizedType{
+			Type: sema.AnyStructType,
+		},
+		value,
+	)
 	value = NewDictionaryValueUnownedNonCopying(NewStringValue("42"), value)
 	members := NewStringValueOrderedMap()
 	members.Set("foo", value)
@@ -858,7 +901,7 @@ func TestBlockValue(t *testing.T) {
 	block := BlockValue{
 		Height:    4,
 		View:      5,
-		ID:        NewArrayValueUnownedNonCopying(),
+		ID:        NewArrayValueUnownedNonCopying(sema.ByteArrayType),
 		Timestamp: 5.0,
 	}
 
@@ -1554,10 +1597,16 @@ func TestArrayValue_Equal(t *testing.T) {
 
 		require.True(t,
 			NewArrayValueUnownedNonCopying(
+				&sema.VariableSizedType{
+					Type: sema.UInt8Type,
+				},
 				UInt8Value(1),
 				UInt8Value(2),
 			).Equal(
 				NewArrayValueUnownedNonCopying(
+					&sema.VariableSizedType{
+						Type: sema.UInt8Type,
+					},
 					UInt8Value(1),
 					UInt8Value(2),
 				),
@@ -1573,10 +1622,16 @@ func TestArrayValue_Equal(t *testing.T) {
 
 		require.False(t,
 			NewArrayValueUnownedNonCopying(
+				&sema.VariableSizedType{
+					Type: sema.UInt8Type,
+				},
 				UInt8Value(1),
 				UInt8Value(2),
 			).Equal(
 				NewArrayValueUnownedNonCopying(
+					&sema.VariableSizedType{
+						Type: sema.UInt8Type,
+					},
 					UInt8Value(2),
 					UInt8Value(3),
 				),
@@ -1592,9 +1647,15 @@ func TestArrayValue_Equal(t *testing.T) {
 
 		require.False(t,
 			NewArrayValueUnownedNonCopying(
+				&sema.VariableSizedType{
+					Type: sema.UInt8Type,
+				},
 				UInt8Value(1),
 			).Equal(
 				NewArrayValueUnownedNonCopying(
+					&sema.VariableSizedType{
+						Type: sema.UInt8Type,
+					},
 					UInt8Value(1),
 					UInt8Value(2),
 				),
@@ -1610,10 +1671,16 @@ func TestArrayValue_Equal(t *testing.T) {
 
 		require.False(t,
 			NewArrayValueUnownedNonCopying(
+				&sema.VariableSizedType{
+					Type: sema.UInt8Type,
+				},
 				UInt8Value(1),
 				UInt8Value(2),
 			).Equal(
 				NewArrayValueUnownedNonCopying(
+					&sema.VariableSizedType{
+						Type: sema.UInt8Type,
+					},
 					UInt8Value(1),
 				),
 				nil,
@@ -1628,6 +1695,9 @@ func TestArrayValue_Equal(t *testing.T) {
 
 		require.False(t,
 			NewArrayValueUnownedNonCopying(
+				&sema.VariableSizedType{
+					Type: sema.UInt8Type,
+				},
 				UInt8Value(1),
 			).Equal(
 				UInt8Value(1),
@@ -1765,6 +1835,9 @@ func TestDictionaryValue_Equal(t *testing.T) {
 				NewStringValue("2"),
 			).Equal(
 				NewArrayValueUnownedNonCopying(
+					&sema.VariableSizedType{
+						Type: sema.UInt8Type,
+					},
 					UInt8Value(1),
 					UInt8Value(2),
 				),
@@ -2107,6 +2180,9 @@ func TestPublicKeyValue(t *testing.T) {
 		t.Parallel()
 
 		publicKey := NewArrayValueUnownedNonCopying(
+			&sema.VariableSizedType{
+				Type: sema.IntType,
+			},
 			NewIntValueFromInt64(1),
 			NewIntValueFromInt64(7),
 			NewIntValueFromInt64(3),

@@ -271,9 +271,7 @@ func TestCheckStringDecodeHex(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Equal(t,
-		&sema.VariableSizedType{
-			Type: sema.UInt8Type,
-		},
+		sema.ByteArrayType,
 		RequireGlobalValue(t, checker.Elaboration, "x"),
 	)
 }
@@ -306,9 +304,7 @@ func TestCheckStringUtf8Field(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Equal(t,
-		&sema.VariableSizedType{
-			Type: sema.UInt8Type,
-		},
+		sema.ByteArrayType,
 		RequireGlobalValue(t, checker.Elaboration, "x"),
 	)
 }

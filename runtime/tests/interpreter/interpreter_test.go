@@ -207,6 +207,9 @@ func TestInterpretConstantAndVariableDeclarations(t *testing.T) {
 
 	assert.Equal(t,
 		interpreter.NewArrayValueUnownedNonCopying(
+			&sema.VariableSizedType{
+				Type: sema.IntType,
+			},
 			interpreter.NewIntValueFromInt64(1),
 			interpreter.NewIntValueFromInt64(2),
 		),
@@ -569,6 +572,9 @@ func TestInterpretArrayIndexingAssignment(t *testing.T) {
 	actualArray := inter.Globals["z"].GetValue()
 
 	expectedArray := interpreter.NewArrayValueUnownedNonCopying(
+		&sema.VariableSizedType{
+			Type: sema.IntType,
+		},
 		interpreter.NewIntValueFromInt64(0),
 		interpreter.NewIntValueFromInt64(3),
 	).Copy().(*interpreter.ArrayValue)
@@ -2098,6 +2104,9 @@ func TestInterpretStructCopyOnDeclaration(t *testing.T) {
 
 	assert.Equal(t,
 		interpreter.NewArrayValueUnownedNonCopying(
+			&sema.VariableSizedType{
+				Type: sema.BoolType,
+			},
 			interpreter.BoolValue(false),
 			interpreter.BoolValue(true),
 		),
@@ -2135,6 +2144,9 @@ func TestInterpretStructCopyOnDeclarationModifiedWithStructFunction(t *testing.T
 
 	assert.Equal(t,
 		interpreter.NewArrayValueUnownedNonCopying(
+			&sema.VariableSizedType{
+				Type: sema.BoolType,
+			},
 			interpreter.BoolValue(false),
 			interpreter.BoolValue(true),
 		),
@@ -2169,6 +2181,9 @@ func TestInterpretStructCopyOnIdentifierAssignment(t *testing.T) {
 
 	assert.Equal(t,
 		interpreter.NewArrayValueUnownedNonCopying(
+			&sema.VariableSizedType{
+				Type: sema.BoolType,
+			},
 			interpreter.BoolValue(false),
 			interpreter.BoolValue(true),
 		),
@@ -2203,6 +2218,9 @@ func TestInterpretStructCopyOnIndexingAssignment(t *testing.T) {
 
 	assert.Equal(t,
 		interpreter.NewArrayValueUnownedNonCopying(
+			&sema.VariableSizedType{
+				Type: sema.BoolType,
+			},
 			interpreter.BoolValue(false),
 			interpreter.BoolValue(true),
 		),
@@ -2244,6 +2262,9 @@ func TestInterpretStructCopyOnMemberAssignment(t *testing.T) {
 
 	assert.Equal(t,
 		interpreter.NewArrayValueUnownedNonCopying(
+			&sema.VariableSizedType{
+				Type: sema.BoolType,
+			},
 			interpreter.BoolValue(false),
 			interpreter.BoolValue(true),
 		),
@@ -2310,6 +2331,9 @@ func TestInterpretArrayCopy(t *testing.T) {
 
 	assert.Equal(t,
 		interpreter.NewArrayValueUnownedNonCopying(
+			&sema.VariableSizedType{
+				Type: sema.IntType,
+			},
 			interpreter.NewIntValueFromInt64(0),
 			interpreter.NewIntValueFromInt64(1),
 		),
@@ -2343,6 +2367,9 @@ func TestInterpretStructCopyInArray(t *testing.T) {
 
 	assert.Equal(t,
 		interpreter.NewArrayValueUnownedNonCopying(
+			&sema.VariableSizedType{
+				Type: sema.IntType,
+			},
 			interpreter.NewIntValueFromInt64(2),
 			interpreter.NewIntValueFromInt64(3),
 			interpreter.NewIntValueFromInt64(1),
@@ -4307,22 +4334,11 @@ func TestInterpretArrayAppend(t *testing.T) {
 	_, err := inter.Invoke("test")
 	require.NoError(t, err)
 
-	expectedArray := interpreter.NewArrayValueUnownedNonCopying(
-		interpreter.NewIntValueFromInt64(1),
-		interpreter.NewIntValueFromInt64(2),
-		interpreter.NewIntValueFromInt64(3),
-	).Copy().(*interpreter.ArrayValue)
-	expectedArray.Append(interpreter.NewIntValueFromInt64(4))
-
 	actualArray := inter.Globals["xs"].GetValue()
-
-	require.Equal(t,
-		expectedArray,
-		actualArray,
-	)
 
 	assert.True(t, actualArray.IsModified())
 
+	arrayValue := actualArray.(*interpreter.ArrayValue)
 	assert.Equal(t,
 		[]interpreter.Value{
 			interpreter.NewIntValueFromInt64(1),
@@ -4330,8 +4346,9 @@ func TestInterpretArrayAppend(t *testing.T) {
 			interpreter.NewIntValueFromInt64(3),
 			interpreter.NewIntValueFromInt64(4),
 		},
-		actualArray.(*interpreter.ArrayValue).Elements(),
+		arrayValue.Elements(),
 	)
+	assert.True(t, arrayValue.IsModified())
 }
 
 func TestInterpretArrayAppendBound(t *testing.T) {
@@ -4350,15 +4367,17 @@ func TestInterpretArrayAppendBound(t *testing.T) {
 	value, err := inter.Invoke("test")
 	require.NoError(t, err)
 
+	arrayValue := value.(*interpreter.ArrayValue)
 	assert.Equal(t,
-		interpreter.NewArrayValueUnownedNonCopying(
+		[]interpreter.Value{
 			interpreter.NewIntValueFromInt64(1),
 			interpreter.NewIntValueFromInt64(2),
 			interpreter.NewIntValueFromInt64(3),
 			interpreter.NewIntValueFromInt64(4),
-		),
-		value,
+		},
+		arrayValue.Elements(),
 	)
+	assert.True(t, arrayValue.IsModified())
 }
 
 func TestInterpretArrayAppendAll(t *testing.T) {
@@ -4376,15 +4395,17 @@ func TestInterpretArrayAppendAll(t *testing.T) {
 	value, err := inter.Invoke("test")
 	require.NoError(t, err)
 
+	arrayValue := value.(*interpreter.ArrayValue)
 	assert.Equal(t,
-		interpreter.NewArrayValueUnownedNonCopying(
+		[]interpreter.Value{
 			interpreter.NewIntValueFromInt64(1),
 			interpreter.NewIntValueFromInt64(2),
 			interpreter.NewIntValueFromInt64(3),
 			interpreter.NewIntValueFromInt64(4),
-		),
-		value,
+		},
+		arrayValue.Elements(),
 	)
+	assert.True(t, arrayValue.IsModified())
 }
 
 func TestInterpretArrayAppendAllBound(t *testing.T) {
@@ -4403,15 +4424,17 @@ func TestInterpretArrayAppendAllBound(t *testing.T) {
 	value, err := inter.Invoke("test")
 	require.NoError(t, err)
 
+	arrayValue := value.(*interpreter.ArrayValue)
 	assert.Equal(t,
-		interpreter.NewArrayValueUnownedNonCopying(
+		[]interpreter.Value{
 			interpreter.NewIntValueFromInt64(1),
 			interpreter.NewIntValueFromInt64(2),
 			interpreter.NewIntValueFromInt64(3),
 			interpreter.NewIntValueFromInt64(4),
-		),
-		value,
+		},
+		arrayValue.Elements(),
 	)
+	assert.True(t, arrayValue.IsModified())
 }
 
 func TestInterpretArrayConcat(t *testing.T) {
@@ -4428,15 +4451,17 @@ func TestInterpretArrayConcat(t *testing.T) {
 	value, err := inter.Invoke("test")
 	require.NoError(t, err)
 
+	arrayValue := value.(*interpreter.ArrayValue)
 	assert.Equal(t,
-		interpreter.NewArrayValueUnownedNonCopying(
+		[]interpreter.Value{
 			interpreter.NewIntValueFromInt64(1),
 			interpreter.NewIntValueFromInt64(2),
 			interpreter.NewIntValueFromInt64(3),
 			interpreter.NewIntValueFromInt64(4),
-		),
-		value,
+		},
+		arrayValue.Elements(),
 	)
+	assert.True(t, arrayValue.IsModified())
 }
 
 func TestInterpretArrayConcatBound(t *testing.T) {
@@ -4454,15 +4479,17 @@ func TestInterpretArrayConcatBound(t *testing.T) {
 	value, err := inter.Invoke("test")
 	require.NoError(t, err)
 
+	arrayValue := value.(*interpreter.ArrayValue)
 	assert.Equal(t,
-		interpreter.NewArrayValueUnownedNonCopying(
+		[]interpreter.Value{
 			interpreter.NewIntValueFromInt64(1),
 			interpreter.NewIntValueFromInt64(2),
 			interpreter.NewIntValueFromInt64(3),
 			interpreter.NewIntValueFromInt64(4),
-		),
-		value,
+		},
+		arrayValue.Elements(),
 	)
+	assert.True(t, arrayValue.IsModified())
 }
 
 func TestInterpretArrayConcatDoesNotModifyOriginalArray(t *testing.T) {
@@ -4480,13 +4507,15 @@ func TestInterpretArrayConcatDoesNotModifyOriginalArray(t *testing.T) {
 	value, err := inter.Invoke("test")
 	require.NoError(t, err)
 
+	arrayValue := value.(*interpreter.ArrayValue)
 	assert.Equal(t,
-		interpreter.NewArrayValueUnownedNonCopying(
+		[]interpreter.Value{
 			interpreter.NewIntValueFromInt64(1),
 			interpreter.NewIntValueFromInt64(2),
-		),
-		value,
+		},
+		arrayValue.Elements(),
 	)
+	assert.True(t, arrayValue.IsModified())
 }
 
 func TestInterpretArrayInsert(t *testing.T) {
@@ -4611,30 +4640,17 @@ func TestInterpretArrayRemove(t *testing.T) {
       let y = x.remove(at: 1)
     `)
 
-	expectedArray := interpreter.NewArrayValueUnownedNonCopying(
-		interpreter.NewIntValueFromInt64(1),
-		interpreter.NewIntValueFromInt64(2),
-		interpreter.NewIntValueFromInt64(3),
-	).Copy().(*interpreter.ArrayValue)
-	expectedArray.Remove(1, nil)
+	value := inter.Globals["x"].GetValue()
 
-	actualArray := inter.Globals["x"].GetValue()
-
-	require.Equal(t,
-		expectedArray,
-		actualArray,
-	)
-
-	assert.True(t, actualArray.IsModified())
-
+	arrayValue := value.(*interpreter.ArrayValue)
 	assert.Equal(t,
 		[]interpreter.Value{
 			interpreter.NewIntValueFromInt64(1),
 			interpreter.NewIntValueFromInt64(3),
 		},
-		actualArray.(*interpreter.ArrayValue).Elements(),
+		arrayValue.Elements(),
 	)
-
+	assert.True(t, value.IsModified())
 	assert.Equal(t,
 		interpreter.NewIntValueFromInt64(2),
 		inter.Globals["y"].GetValue(),
@@ -4693,30 +4709,17 @@ func TestInterpretArrayRemoveFirst(t *testing.T) {
       let y = x.removeFirst()
     `)
 
-	expectedArray := interpreter.NewArrayValueUnownedNonCopying(
-		interpreter.NewIntValueFromInt64(1),
-		interpreter.NewIntValueFromInt64(2),
-		interpreter.NewIntValueFromInt64(3),
-	).Copy().(*interpreter.ArrayValue)
-	expectedArray.RemoveFirst(nil)
+	value := inter.Globals["x"].GetValue()
 
-	actualArray := inter.Globals["x"].GetValue()
-
-	require.Equal(t,
-		expectedArray,
-		actualArray,
-	)
-
-	assert.True(t, actualArray.IsModified())
-
+	arrayValue := value.(*interpreter.ArrayValue)
 	assert.Equal(t,
 		[]interpreter.Value{
 			interpreter.NewIntValueFromInt64(2),
 			interpreter.NewIntValueFromInt64(3),
 		},
-		actualArray.(*interpreter.ArrayValue).Elements(),
+		arrayValue.Elements(),
 	)
-
+	assert.True(t, value.IsModified())
 	assert.Equal(t,
 		interpreter.NewIntValueFromInt64(1),
 		inter.Globals["y"].GetValue(),
@@ -4765,29 +4768,18 @@ func TestInterpretArrayRemoveLast(t *testing.T) {
           let y = x.removeLast()
     `)
 
-	expectedArray := interpreter.NewArrayValueUnownedNonCopying(
-		interpreter.NewIntValueFromInt64(1),
-		interpreter.NewIntValueFromInt64(2),
-		interpreter.NewIntValueFromInt64(3),
-	).Copy().(*interpreter.ArrayValue)
-	expectedArray.RemoveLast(nil)
+	value := inter.Globals["x"].GetValue()
 
-	actualArray := inter.Globals["x"].GetValue()
-
-	require.Equal(t,
-		expectedArray,
-		actualArray,
-	)
-
-	assert.True(t, actualArray.IsModified())
+	arrayValue := value.(*interpreter.ArrayValue)
 
 	assert.Equal(t,
 		[]interpreter.Value{
 			interpreter.NewIntValueFromInt64(1),
 			interpreter.NewIntValueFromInt64(2),
 		},
-		actualArray.(*interpreter.ArrayValue).Elements(),
+		arrayValue.Elements(),
 	)
+	assert.True(t, arrayValue.IsModified())
 
 	assert.Equal(t,
 		interpreter.NewIntValueFromInt64(3),
@@ -5057,13 +5049,15 @@ func TestInterpretDictionaryKeys(t *testing.T) {
 	value, err := inter.Invoke("test")
 	require.NoError(t, err)
 
+	arrayValue := value.(*interpreter.ArrayValue)
+
 	assert.Equal(t,
-		interpreter.NewArrayValueUnownedNonCopying(
+		[]interpreter.Value{
 			interpreter.NewStringValue("def"),
 			interpreter.NewStringValue("abc"),
 			interpreter.NewStringValue("a"),
-		),
-		value,
+		},
+		arrayValue.Elements(),
 	)
 }
 
@@ -5082,13 +5076,15 @@ func TestInterpretDictionaryValues(t *testing.T) {
 	value, err := inter.Invoke("test")
 	require.NoError(t, err)
 
+	arrayValue := value.(*interpreter.ArrayValue)
+
 	assert.Equal(t,
-		interpreter.NewArrayValueUnownedNonCopying(
+		[]interpreter.Value{
 			interpreter.NewIntValueFromInt64(2),
 			interpreter.NewIntValueFromInt64(1),
 			interpreter.NewIntValueFromInt64(3),
-		),
-		value,
+		},
+		arrayValue.Elements(),
 	)
 }
 
@@ -5435,6 +5431,9 @@ func TestInterpretSwapVariables(t *testing.T) {
 
 	assert.Equal(t,
 		interpreter.NewArrayValueUnownedNonCopying(
+			&sema.VariableSizedType{
+				Type: sema.IntType,
+			},
 			interpreter.NewIntValueFromInt64(3),
 			interpreter.NewIntValueFromInt64(2),
 		),
@@ -5468,6 +5467,9 @@ func TestInterpretSwapArrayAndField(t *testing.T) {
 
 	assert.Equal(t,
 		interpreter.NewArrayValueUnownedNonCopying(
+			&sema.VariableSizedType{
+				Type: sema.IntType,
+			},
 			interpreter.NewIntValueFromInt64(2),
 			interpreter.NewIntValueFromInt64(1),
 		),
@@ -5865,6 +5867,7 @@ func TestInterpretEmitEvent(t *testing.T) {
 
 type testValue struct {
 	value              interpreter.Value
+	ty                 sema.Type
 	literal            string
 	notAsDictionaryKey bool
 }
@@ -5880,55 +5883,132 @@ func TestInterpretEmitEventParameterTypes(t *testing.T) {
 
 	t.Parallel()
 
+	sType := &sema.CompositeType{
+		Location:   TestLocation,
+		Identifier: "S",
+		Kind:       common.CompositeKindStructure,
+		Members:    sema.NewStringMemberOrderedMap(),
+	}
+
+	sValue := interpreter.NewCompositeValue(
+		TestLocation,
+		"S",
+		common.CompositeKindStructure,
+		interpreter.NewStringValueOrderedMap(),
+		nil,
+	)
+	sValue.Functions = map[string]interpreter.FunctionValue{}
+
 	validTypes := map[string]testValue{
-		"String":    {value: interpreter.NewStringValue("test")},
-		"Character": {value: interpreter.NewStringValue("X")},
-		"Bool":      {value: interpreter.BoolValue(true)},
+		"String": {
+			value: interpreter.NewStringValue("test"),
+			ty:    sema.StringType,
+		},
+		"Character": {
+			value: interpreter.NewStringValue("X"),
+			ty:    sema.CharacterType,
+		},
+		"Bool": {
+			value: interpreter.BoolValue(true),
+			ty:    sema.BoolType,
+		},
 		"Address": {
 			literal: `0x1`,
 			value:   interpreter.NewAddressValueFromBytes([]byte{0x1}),
+			ty:      &sema.AddressType{},
 		},
 		// Int*
-		"Int":    {value: interpreter.NewIntValueFromInt64(42)},
-		"Int8":   {value: interpreter.Int8Value(42)},
-		"Int16":  {value: interpreter.Int16Value(42)},
-		"Int32":  {value: interpreter.Int32Value(42)},
-		"Int64":  {value: interpreter.Int64Value(42)},
-		"Int128": {value: interpreter.NewInt128ValueFromInt64(42)},
-		"Int256": {value: interpreter.NewInt256ValueFromInt64(42)},
-		// UInt*
-		"UInt":    {value: interpreter.NewUIntValueFromUint64(42)},
-		"UInt8":   {value: interpreter.UInt8Value(42)},
-		"UInt16":  {value: interpreter.UInt16Value(42)},
-		"UInt32":  {value: interpreter.UInt32Value(42)},
-		"UInt64":  {value: interpreter.UInt64Value(42)},
-		"UInt128": {value: interpreter.NewUInt128ValueFromUint64(42)},
-		"UInt256": {value: interpreter.NewUInt256ValueFromUint64(42)},
-		// Word*
-		"Word8":  {value: interpreter.Word8Value(42)},
-		"Word16": {value: interpreter.Word16Value(42)},
-		"Word32": {value: interpreter.Word32Value(42)},
-		"Word64": {value: interpreter.Word64Value(42)},
-		// Fix*
-		"Fix64": {value: interpreter.Fix64Value(123000000)},
-		// UFix*
-		"UFix64": {value: interpreter.UFix64Value(123000000)},
-		// Struct
-		"S": {
-			literal: `S()`,
-			value: func() interpreter.Value {
-				v := interpreter.NewCompositeValue(
-					TestLocation,
-					"S",
-					common.CompositeKindStructure,
-					interpreter.NewStringValueOrderedMap(),
-					nil,
-				)
-				v.Functions = map[string]interpreter.FunctionValue{}
-				return v
-			}(),
-			notAsDictionaryKey: true,
+		"Int": {
+			value: interpreter.NewIntValueFromInt64(42),
+			ty:    sema.IntType,
 		},
+		"Int8": {
+			value: interpreter.Int8Value(42),
+			ty:    sema.Int8Type,
+		},
+		"Int16": {
+			value: interpreter.Int16Value(42),
+			ty:    sema.Int16Type,
+		},
+		"Int32": {
+			value: interpreter.Int32Value(42),
+			ty:    sema.Int32Type,
+		},
+		"Int64": {
+			value: interpreter.Int64Value(42),
+			ty:    sema.Int64Type,
+		},
+		"Int128": {
+			value: interpreter.NewInt128ValueFromInt64(42),
+			ty:    sema.Int128Type,
+		},
+		"Int256": {
+			value: interpreter.NewInt256ValueFromInt64(42),
+			ty:    sema.Int256Type,
+		},
+		// UInt*
+		"UInt": {
+			value: interpreter.NewUIntValueFromUint64(42),
+			ty:    sema.UIntType,
+		},
+		"UInt8": {
+			value: interpreter.UInt8Value(42),
+			ty:    sema.UInt8Type,
+		},
+		"UInt16": {
+			value: interpreter.UInt16Value(42),
+			ty:    sema.UInt16Type,
+		},
+		"UInt32": {
+			value: interpreter.UInt32Value(42),
+			ty:    sema.UInt32Type,
+		},
+		"UInt64": {
+			value: interpreter.UInt64Value(42),
+			ty:    sema.UInt64Type,
+		},
+		"UInt128": {
+			value: interpreter.NewUInt128ValueFromUint64(42),
+			ty:    sema.UInt128Type,
+		},
+		"UInt256": {
+			value: interpreter.NewUInt256ValueFromUint64(42),
+			ty:    sema.UInt256Type,
+		},
+		// Word*
+		"Word8": {
+			value: interpreter.Word8Value(42),
+			ty:    sema.Word8Type,
+		},
+		"Word16": {
+			value: interpreter.Word16Value(42),
+			ty:    sema.Word16Type,
+		},
+		"Word32": {
+			value: interpreter.Word32Value(42),
+			ty:    sema.Word32Type,
+		},
+		"Word64": {
+			value: interpreter.Word64Value(42),
+			ty:    sema.Word64Type,
+		},
+		// Fix*
+		"Fix64": {
+			value: interpreter.Fix64Value(123000000),
+			ty:    sema.Fix64Type,
+		},
+		// UFix*
+		"UFix64": {
+			value: interpreter.UFix64Value(123000000),
+			ty:    sema.UFix64Type,
+		},
+		// TODO:
+		//// Struct
+		//"S": {
+		//	literal:            `s`,
+		//	ty:                 sType,
+		//	notAsDictionaryKey: true,
+		//},
 	}
 
 	for _, integerType := range sema.AllIntegerTypes {
@@ -5968,13 +6048,24 @@ func TestInterpretEmitEventParameterTypes(t *testing.T) {
 
 		tests[fmt.Sprintf("[%s]", validType)] =
 			testValue{
-				value:   interpreter.NewArrayValueUnownedNonCopying(testCase.value),
+				value: interpreter.NewArrayValueUnownedNonCopying(
+					&sema.VariableSizedType{
+						Type: testCase.ty,
+					},
+					testCase.value,
+				),
 				literal: fmt.Sprintf("[%s as %s]", testCase, validType),
 			}
 
 		tests[fmt.Sprintf("[%s; 1]", validType)] =
 			testValue{
-				value:   interpreter.NewArrayValueUnownedNonCopying(testCase.value),
+				value: interpreter.NewArrayValueUnownedNonCopying(
+					&sema.ConstantSizedType{
+						Type: testCase.ty,
+						Size: 1,
+					},
+					testCase.value,
+				),
 				literal: fmt.Sprintf("[%s as %s]", testCase, validType),
 			}
 
@@ -5988,14 +6079,12 @@ func TestInterpretEmitEventParameterTypes(t *testing.T) {
 		}
 	}
 
-	for ty, value := range tests {
+	for ty, testCase := range tests {
 
 		t.Run(ty, func(t *testing.T) {
 
 			code := fmt.Sprintf(
 				`
-                  struct S {}
-
                   event Test(_ value: %[1]s)
 
                   fun test() {
@@ -6003,10 +6092,32 @@ func TestInterpretEmitEventParameterTypes(t *testing.T) {
                   }
                 `,
 				ty,
-				value,
+				testCase.String(),
 			)
 
-			inter := parseCheckAndInterpret(t, code)
+			valueDeclarations := stdlib.StandardLibraryValues{
+				{
+					Name:  "s",
+					Type:  sType,
+					Value: sValue,
+					Kind:  common.DeclarationKindConstant,
+				},
+			}
+
+			inter, err := parseCheckAndInterpretWithOptions(
+				t, code, ParseCheckAndInterpretOptions{
+					CheckerOptions: []sema.Option{
+						sema.WithPredeclaredValues(valueDeclarations.ToSemaValueDeclarations()),
+						sema.WithPredeclaredTypes([]sema.TypeDeclaration{
+							stdlib.StandardLibraryType{
+								Name: "S",
+								Type: sType,
+								Kind: common.DeclarationKindStructure,
+							},
+						}),
+					},
+				})
+			require.NoError(t, err)
 
 			var actualEvents []*interpreter.CompositeValue
 
@@ -6017,13 +6128,13 @@ func TestInterpretEmitEventParameterTypes(t *testing.T) {
 				},
 			)
 
-			_, err := inter.Invoke("test")
+			_, err = inter.Invoke("test")
 			require.NoError(t, err)
 
 			testType := checker.RequireGlobalType(t, inter.Program.Elaboration, "Test")
 
 			members := interpreter.NewStringValueOrderedMap()
-			members.Set("value", value.value)
+			members.Set("value", testCase.value)
 
 			expectedEvents := []*interpreter.CompositeValue{
 				interpreter.NewCompositeValue(
@@ -6204,6 +6315,9 @@ func TestInterpretReferenceUse(t *testing.T) {
 
 	assert.Equal(t,
 		interpreter.NewArrayValueUnownedNonCopying(
+			&sema.VariableSizedType{
+				Type: sema.IntType,
+			},
 			interpreter.NewIntValueFromInt64(1),
 			interpreter.NewIntValueFromInt64(2),
 			interpreter.NewIntValueFromInt64(2),
@@ -6248,6 +6362,9 @@ func TestInterpretReferenceUseAccess(t *testing.T) {
 
 	assert.Equal(t,
 		interpreter.NewArrayValueUnownedNonCopying(
+			&sema.VariableSizedType{
+				Type: sema.IntType,
+			},
 			interpreter.NewIntValueFromInt64(0),
 			interpreter.NewIntValueFromInt64(1),
 			interpreter.NewIntValueFromInt64(2),
@@ -6751,6 +6868,10 @@ func TestInterpretFungibleTokenContract(t *testing.T) {
 
 	assert.Equal(t,
 		interpreter.NewArrayValueUnownedNonCopying(
+			&sema.ConstantSizedType{
+				Type: sema.IntType,
+				Size: 2,
+			},
 			interpreter.NewIntValueFromInt64(40),
 			interpreter.NewIntValueFromInt64(60),
 		),
@@ -7135,7 +7256,7 @@ func TestInterpretHexDecode(t *testing.T) {
 
 	t.Parallel()
 
-	expected := interpreter.NewArrayValueUnownedNonCopying(
+	expected := []interpreter.Value{
 		interpreter.UInt8Value(71),
 		interpreter.UInt8Value(111),
 		interpreter.UInt8Value(32),
@@ -7152,7 +7273,7 @@ func TestInterpretHexDecode(t *testing.T) {
 		interpreter.UInt8Value(108),
 		interpreter.UInt8Value(111),
 		interpreter.UInt8Value(119),
-	)
+	}
 
 	t.Run("in Cadence", func(t *testing.T) {
 
@@ -7226,7 +7347,13 @@ func TestInterpretHexDecode(t *testing.T) {
 		result, err := inter.Invoke("test")
 		require.NoError(t, err)
 
-		assert.Equal(t, expected, result)
+		require.IsType(t, result, &interpreter.ArrayValue{})
+		arrayValue := result.(*interpreter.ArrayValue)
+
+		assert.Equal(t,
+			expected,
+			arrayValue.Elements(),
+		)
 	})
 
 	t.Run("native", func(t *testing.T) {
@@ -7242,7 +7369,13 @@ func TestInterpretHexDecode(t *testing.T) {
 		result, err := inter.Invoke("test")
 		require.NoError(t, err)
 
-		assert.Equal(t, expected, result)
+		require.IsType(t, result, &interpreter.ArrayValue{})
+		arrayValue := result.(*interpreter.ArrayValue)
+
+		assert.Equal(t,
+			expected,
+			arrayValue.Elements(),
+		)
 	})
 
 }
@@ -7389,11 +7522,11 @@ func TestInterpretResourceOwnerFieldUse(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Equal(t,
-		interpreter.NewArrayValueUnownedNonCopying(
+		[]interpreter.Value{
 			interpreter.NilValue{},
 			interpreter.NewSomeValueOwningNonCopying(interpreter.AddressValue(address)),
-		),
-		result,
+		},
+		result.(*interpreter.ArrayValue).Elements(),
 	)
 }
 
@@ -8125,6 +8258,12 @@ func TestInterpretInternalAssignment(t *testing.T) {
 
 	assert.Equal(t,
 		interpreter.NewArrayValueUnownedNonCopying(
+			&sema.VariableSizedType{
+				Type: &sema.DictionaryType{
+					KeyType:   sema.StringType,
+					ValueType: sema.IntType,
+				},
+			},
 			interpreter.NewDictionaryValueUnownedNonCopying(
 				interpreter.NewStringValue("a"),
 				interpreter.NewIntValueFromInt64(1),
