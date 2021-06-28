@@ -62,13 +62,11 @@ func (checker *Checker) VisitDictionaryExpression(expression *ast.DictionaryExpr
 		// If type inferring is turned off (e.g: func argument checking), then use the old way.
 		if !checker.inferTypes {
 			// infer key type from first entry's key
-			// TODO: find common super type?
 			if keyType == nil {
 				keyType = entryKeyType
 			}
 
 			// infer value type from first entry's value
-			// TODO: find common super type?
 			if valueType == nil {
 				valueType = entryValueType
 			}
@@ -79,25 +77,15 @@ func (checker *Checker) VisitDictionaryExpression(expression *ast.DictionaryExpr
 	}
 
 	if keyType == nil {
-		// If type inferring is turned off (e.g: func argument checking), then use the old way.
-		if !checker.inferTypes {
-			keyType = NeverType
-		} else {
-			// Contextually expected type is not available.
-			// Therefore, find the least common supertype of the keys.
-			keyType = LeastCommonSuperType(keyTypes...)
-		}
+		// Contextually expected type is not available.
+		// Therefore, find the least common supertype of the keys.
+		keyType = LeastCommonSuperType(keyTypes...)
 	}
 
 	if valueType == nil {
-		// If type inferring is turned off (e.g: func argument checking), then use the old way.
-		if !checker.inferTypes {
-			valueType = NeverType
-		} else {
-			// Contextually expected type is not available.
-			// Therefore, find the least common supertype of the values.
-			valueType = LeastCommonSuperType(valueTypes...)
-		}
+		// Contextually expected type is not available.
+		// Therefore, find the least common supertype of the values.
+		valueType = LeastCommonSuperType(valueTypes...)
 	}
 
 	if !IsValidDictionaryKeyType(keyType) {

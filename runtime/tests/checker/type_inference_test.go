@@ -777,7 +777,6 @@ func TestCheckArraySupertypeInference(t *testing.T) {
 
                     pub struct Baz: Foo {}
                 `,
-
 				// Covariance is not supported for now.
 				expectedElementType: sema.AnyStructType,
 			},
@@ -792,7 +791,6 @@ func TestCheckArraySupertypeInference(t *testing.T) {
 
                     pub struct Baz: Foo {}
                 `,
-
 				expectedElementType: &sema.VariableSizedType{
 					Type: &sema.RestrictedType{
 						Type: sema.AnyStructType,

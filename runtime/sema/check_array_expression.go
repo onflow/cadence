@@ -81,14 +81,9 @@ func (checker *Checker) VisitArrayExpression(expression *ast.ArrayExpression) as
 	checker.Elaboration.ArrayExpressionArgumentTypes[expression] = argumentTypes
 
 	if elementType == nil {
-		// If type inferring is turned off (e.g: func argument checking), then use the old way.
-		if !checker.inferTypes {
-			elementType = NeverType
-		} else {
-			// Contextually expected type is not available.
-			// Therefore, find the least common supertype of the elements.
-			elementType = LeastCommonSuperType(argumentTypes...)
-		}
+		// Contextually expected type is not available.
+		// Therefore, find the least common supertype of the elements.
+		elementType = LeastCommonSuperType(argumentTypes...)
 	}
 
 	checker.Elaboration.ArrayExpressionElementType[expression] = elementType
