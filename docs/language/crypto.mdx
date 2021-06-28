@@ -7,12 +7,6 @@ title: Crypto
 The built-in enum `HashAlgorithm` provides the set of hashing algorithms that
 are supported by the language natively.
 
-<Callout type="info">
-
-🚧 Status: `KMAC128_BLS_BLS12_381` is not supported yet.
-
-</Callout>
-
 ```cadence
 pub enum HashAlgorithm: UInt8 {
     /// SHA2_256 is Secure Hashing Algorithm 2 (SHA-2) with a 256-bit digest.
@@ -41,24 +35,12 @@ pub enum HashAlgorithm: UInt8 {
 }
 ```
 
-<Callout type="info">
-
-🚧 Status: `KMAC128_BLS_BLS12_381` is not supported yet.
-
-</Callout>
-
 - `hash` hashes the input data using the input hashing algorithm.
   If `KMAC128_BLS_BLS12_381` is used, data is hashed using the standard MAC `KMAC128(customizer, key, data, length)` with the following inputs:
     - `customizer` is the UTF-8 encoding of `"H2C"`
     - `key` is the UTF-8 encoding of `"APP_BLS_SIG_BLS12381G1_XOF:KMAC128_SSWU_RO_POP_"`
     - `data` is the input data to hash
     - `length` is 1024 bytes
-
-<Callout type="info">
-
-🚧 Status: `hashWithTag` is not supported yet.
-
-</Callout>
 
 - `hashWithTag` hashes data along with a tag.
   This allows instanciating independent hashing functions customized with a domain separation tag.
@@ -86,12 +68,6 @@ let digest = HashAlgorithm.SHA3_256.hash(data)
 
 The built-in enum `SignatureAlgorithm` provides the set of signing algorithms that
 are supported by the language natively.
-
-<Callout type="info">
-
-🚧 Status: `BLS_BLS12_381` is not supported yet.
-
-</Callout>
 
 ```cadence
 pub enum SignatureAlgorithm: UInt8 {
@@ -139,12 +115,6 @@ let publicKey = PublicKey(
 ```
 
 The raw key value depends on the supported signature scheme:
-
-<Callout type="info">
-
-🚧 Status: `BLS_BLS12_381` is not supported yet.
-
-</Callout>
 
 - `ECDSA_P256` and `ECDSA_secp256k1`:
   The public key is a curve point `(X,Y)` where `X` and `Y` are two prime field elements.
@@ -194,12 +164,6 @@ let isValid = pk.verify(
 ```
 
 The inputs to `verify()` depend on the signature scheme used:
-
-<Callout type="info">
-
-🚧 Status: `BLS_BLS12_381` is not supported yet.
-
-</Callout>
 
 - ECDSA (`ECDSA_P256` and `ECDSA_secp256k1`):
    - `signature` is the couple `(r,s)`. It is represented as `bytes(r) || bytes(s)`, where `||` is the concatenation operation,

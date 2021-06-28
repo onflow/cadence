@@ -20,11 +20,11 @@ package integration
 
 import (
 	"fmt"
+	"github.com/onflow/cadence"
 	"io/ioutil"
 
-	"github.com/onflow/flow-go-sdk"
-
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/flow-go-sdk"
 )
 
 func resolveFileImport(location common.StringLocation) (string, error) {
@@ -65,7 +65,9 @@ func (i *FlowIntegration) resolveAddressImport(location common.AddressLocation) 
 }
 
 func (i *FlowIntegration) getAccount(address common.Address) (*flow.Account, error) {
-	account, err := i.sharedServices.Accounts.Get(address.String())
+	account, err := i.sharedServices.Accounts.Get(
+		flow.HexToAddress(address.String()),
+	)
 
 	if err != nil {
 		return nil, fmt.Errorf(
@@ -78,19 +80,20 @@ func (i *FlowIntegration) getAccount(address common.Address) (*flow.Account, err
 	return account, nil
 }
 
-
-func (i *FlowIntegration) getAccountAddress (name string) (flow.Address, error) {
-	serviceAccount, err := i.project.EmulatorServiceAccount()
+func (i *FlowIntegration) getAccountAddress(name string) (flow.Address, error) {
+	serviceAccount, err := i.state.EmulatorServiceAccount()
 	if err != nil {
 		return flow.Address{}, err
 	}
 
 	code := makeManagerCode(scriptGetAddress, serviceAccount.Address().String())
-	args := []string{fmt.Sprintf("String:%s", name)}
+	args := []cadence.Value{
+		cadence.NewString(name),
+	}
 
-	result,err := i.sharedServices.Scripts.ExecuteWithCode(code,args, "")
+	result, err := i.sharedServices.Scripts.Execute(code, args, "", "")
 	if err != nil {
 		return flow.Address{}, err
 	}
-	return flow.HexToAddress(result.String()),nil
+	return flow.HexToAddress(result.String()), nil
 }
