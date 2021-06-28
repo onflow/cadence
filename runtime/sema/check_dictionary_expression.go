@@ -59,21 +59,8 @@ func (checker *Checker) VisitDictionaryExpression(expression *ast.DictionaryExpr
 			ValueType: entryValueType,
 		}
 
-		// If type inferring is turned off (e.g: func argument checking), then use the old way.
-		if !checker.inferTypes {
-			// infer key type from first entry's key
-			if keyType == nil {
-				keyType = entryKeyType
-			}
-
-			// infer value type from first entry's value
-			if valueType == nil {
-				valueType = entryValueType
-			}
-		} else {
-			keyTypes[i] = entryKeyType
-			valueTypes[i] = entryValueType
-		}
+		keyTypes[i] = entryKeyType
+		valueTypes[i] = entryValueType
 	}
 
 	if keyType == nil {

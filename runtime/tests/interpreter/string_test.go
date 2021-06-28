@@ -103,7 +103,7 @@ func TestInterpretStringEncodeHex(t *testing.T) {
 
 	inter := parseCheckAndInterpret(t, `
       fun test(): String {
-          return String.encodeHex([1 as UInt8, 2, 3, 0xCA, 0xDE])
+          return String.encodeHex([1, 2, 3, 0xCA, 0xDE] as [UInt8])
       }
 	`)
 
