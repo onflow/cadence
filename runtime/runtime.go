@@ -2496,9 +2496,7 @@ func (r *interpreterRuntime) ReadLinked(address common.Address, path cadence.Pat
 				&sema.ReferenceType{
 					Type: sema.AnyType,
 				},
-				func() interpreter.LocationRange {
-					return interpreter.LocationRange{}
-				},
+				interpreter.ReturnEmptyLocationRange,
 			)
 			if err != nil {
 				return nil, err

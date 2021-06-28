@@ -286,7 +286,10 @@ func TestEncodeDecodeDictionary(t *testing.T) {
 
 	t.Run("empty", func(t *testing.T) {
 
-		expected := NewDictionaryValueUnownedNonCopying()
+		expected := NewDictionaryValueUnownedNonCopying(
+			// TODO: type
+			&sema.DictionaryType{},
+		)
 		expected.modified = false
 		expected.Keys().modified = false
 
@@ -347,6 +350,8 @@ func TestEncodeDecodeDictionary(t *testing.T) {
 		value3 := NewStringValue("bar")
 
 		expected := NewDictionaryValueUnownedNonCopying(
+			// TODO: type
+			&sema.DictionaryType{},
 			key1, value1,
 			key2, value2,
 			key3, value3,
@@ -452,6 +457,8 @@ func TestEncodeDecodeDictionary(t *testing.T) {
 
 	t.Run("temporary address value key string change in format version 2", func(t *testing.T) {
 		expected := NewDictionaryValueUnownedNonCopying(
+			// TODO: type
+			&sema.DictionaryType{},
 			NewAddressValueFromBytes([]byte{0x42}),
 			Int8Value(42),
 		)
@@ -4948,6 +4955,8 @@ func TestEncodeDecodeDictionaryDeferred(t *testing.T) {
 		value2.modified = false
 
 		expected := NewDictionaryValueUnownedNonCopying(
+			// TODO: type
+			&sema.DictionaryType{},
 			key1, value1,
 			key2, value2,
 		)
@@ -4972,6 +4981,8 @@ func TestEncodeDecodeDictionaryDeferred(t *testing.T) {
 		}
 
 		decodedValue := &DictionaryValue{
+			// TODO:
+			Type:                   nil,
 			keys:                   expected.Keys(),
 			entries:                NewStringValueOrderedMap(),
 			deferredOwner:          &testOwner,
@@ -5049,6 +5060,8 @@ func TestEncodeDecodeDictionaryDeferred(t *testing.T) {
 		value2 := BoolValue(false)
 
 		expected := NewDictionaryValueUnownedNonCopying(
+			// TODO: type
+			&sema.DictionaryType{},
 			key1, value1,
 			key2, value2,
 		)
@@ -5393,7 +5406,12 @@ func prepareLargeTestValue() Value {
 		},
 	)
 	for i := 0; i < 100; i++ {
-		dict := NewDictionaryValueUnownedNonCopying()
+		dict := NewDictionaryValueUnownedNonCopying(
+			&sema.DictionaryType{
+				KeyType:   sema.StringType,
+				ValueType: sema.Int256Type,
+			},
+		)
 		for i := 0; i < 100; i++ {
 			key := NewStringValue(fmt.Sprintf("hello world %d", i))
 			value := NewInt256ValueFromInt64(int64(i))

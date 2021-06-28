@@ -91,7 +91,7 @@ func (checker *Checker) VisitArrayExpression(expression *ast.ArrayExpression) as
 		}
 	}
 
-	checker.Elaboration.ArrayExpressionArrayTypes[expression] = resultType
+	checker.Elaboration.ArrayExpressionArrayType[expression] = resultType
 
 	return resultType
 }

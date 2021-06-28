@@ -7166,6 +7166,7 @@ func NewEnumCaseValue(
 // DictionaryValue
 
 type DictionaryValue struct {
+	Type     *sema.DictionaryType
 	keys     *ArrayValue
 	entries  *StringValueOrderedMap
 	Owner    *common.Address
@@ -7209,19 +7210,21 @@ type DictionaryValue struct {
 	encodingVersion uint16
 }
 
-func NewDictionaryValueUnownedNonCopying(keysAndValues ...Value) *DictionaryValue {
+func NewDictionaryValueUnownedNonCopying(
+	dictionaryType *sema.DictionaryType,
+	keysAndValues ...Value,
+) *DictionaryValue {
+
 	keysAndValuesCount := len(keysAndValues)
 	if keysAndValuesCount%2 != 0 {
 		panic("uneven number of keys and values")
 	}
 
-	// TODO: type
-	var keyType sema.Type
-
 	result := &DictionaryValue{
+		Type: dictionaryType,
 		keys: NewArrayValueUnownedNonCopying(
 			&sema.VariableSizedType{
-				Type: keyType,
+				Type: dictionaryType.KeyType,
 			},
 		),
 		entries: NewStringValueOrderedMap(),
@@ -7249,6 +7252,8 @@ func NewDeferredDictionaryValue(
 	version uint16,
 ) *DictionaryValue {
 	return &DictionaryValue{
+		// TODO: type
+		Type:            nil,
 		Owner:           owner,
 		deferredOwner:   owner,
 		modified:        false,
@@ -7321,13 +7326,13 @@ func (v *DictionaryValue) DynamicType(interpreter *Interpreter, results DynamicT
 }
 
 func (v *DictionaryValue) StaticType() StaticType {
-	// TODO: store static type in dictionary values
-	return nil
+	return ConvertSemaToStaticType(v.Type)
 }
 
 func (v *DictionaryValue) Copy() Value {
 	if v.content != nil {
 		return &DictionaryValue{
+			Type:                   v.Type,
 			keys:                   v.keys,
 			entries:                v.entries,
 			deferredOwner:          v.deferredOwner,
@@ -7353,6 +7358,7 @@ func (v *DictionaryValue) Copy() Value {
 	})
 
 	return &DictionaryValue{
+		Type:                   v.Type,
 		keys:                   newKeys,
 		entries:                newEntries,
 		deferredOwner:          v.deferredOwner,

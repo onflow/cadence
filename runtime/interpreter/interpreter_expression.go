@@ -383,7 +383,7 @@ func (interpreter *Interpreter) VisitArrayExpression(expression *ast.ArrayExpres
 	values := interpreter.visitExpressionsNonCopying(expression.Values)
 
 	argumentTypes := interpreter.Program.Elaboration.ArrayExpressionArgumentTypes[expression]
-	arrayType := interpreter.Program.Elaboration.ArrayExpressionArrayTypes[expression]
+	arrayType := interpreter.Program.Elaboration.ArrayExpressionArrayType[expression]
 	elementType := arrayType.ElementType(false)
 
 	copies := make([]Value, len(values))
@@ -403,7 +403,8 @@ func (interpreter *Interpreter) VisitDictionaryExpression(expression *ast.Dictio
 	entryTypes := interpreter.Program.Elaboration.DictionaryExpressionEntryTypes[expression]
 	dictionaryType := interpreter.Program.Elaboration.DictionaryExpressionType[expression]
 
-	dictionary := NewDictionaryValueUnownedNonCopying()
+	dictionary := NewDictionaryValueUnownedNonCopying(dictionaryType)
+
 	for i, dictionaryEntryValues := range values {
 		entryType := entryTypes[i]
 		entry := expression.Entries[i]

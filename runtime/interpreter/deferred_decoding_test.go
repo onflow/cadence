@@ -876,12 +876,25 @@ func TestDictionaryDeferredDecoding(t *testing.T) {
 			nil,
 		)
 
+		testResourceType := &sema.CompositeType{
+			Location:   utils.TestLocation,
+			Identifier: "TestResource",
+			Kind:       common.CompositeKindResource,
+			Members:    sema.NewStringMemberOrderedMap(),
+		}
+
 		for i := 0; i < size; i++ {
 			values[i*2] = NewStringValue(fmt.Sprintf("key%d", i))
 			values[i*2+1] = testResource
 		}
 
-		dictionary := NewDictionaryValueUnownedNonCopying(values...)
+		dictionary := NewDictionaryValueUnownedNonCopying(
+			&sema.DictionaryType{
+				KeyType:   sema.StringType,
+				ValueType: testResourceType,
+			},
+			values...,
+		)
 
 		// Encode
 		encoded, _, err := EncodeValue(dictionary, nil, true, nil)
@@ -956,7 +969,13 @@ func newTestDictionaryValue(size int) *DictionaryValue {
 		values[i*2+1] = NewStringValue(fmt.Sprintf("value%d", i))
 	}
 
-	return NewDictionaryValueUnownedNonCopying(values...)
+	return NewDictionaryValueUnownedNonCopying(
+		&sema.DictionaryType{
+			KeyType:   sema.StringType,
+			ValueType: sema.StringType,
+		},
+		values...,
+	)
 }
 
 func BenchmarkDictionaryDeferredDecoding(b *testing.B) {

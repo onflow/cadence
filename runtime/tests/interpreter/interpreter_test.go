@@ -3598,6 +3598,10 @@ func TestInterpretDictionary(t *testing.T) {
     `)
 
 	expectedDict := interpreter.NewDictionaryValueUnownedNonCopying(
+		&sema.DictionaryType{
+			KeyType:   sema.StringType,
+			ValueType: sema.IntType,
+		},
 		interpreter.NewStringValue("a"), interpreter.NewIntValueFromInt64(1),
 		interpreter.NewStringValue("b"), interpreter.NewIntValueFromInt64(2),
 	).Copy()
@@ -3621,6 +3625,10 @@ func TestInterpretDictionaryInsertionOrder(t *testing.T) {
     `)
 
 	expectedDict := interpreter.NewDictionaryValueUnownedNonCopying(
+		&sema.DictionaryType{
+			KeyType:   sema.StringType,
+			ValueType: sema.IntType,
+		},
 		interpreter.NewStringValue("c"), interpreter.NewIntValueFromInt64(3),
 		interpreter.NewStringValue("a"), interpreter.NewIntValueFromInt64(1),
 		interpreter.NewStringValue("b"), interpreter.NewIntValueFromInt64(2),
@@ -3742,24 +3750,8 @@ func TestInterpretDictionaryIndexingAssignmentExisting(t *testing.T) {
 		value,
 	)
 
-	expectedDict := interpreter.NewDictionaryValueUnownedNonCopying(
-		interpreter.NewStringValue("abc"), interpreter.NewIntValueFromInt64(42),
-	).Copy().(*interpreter.DictionaryValue)
-	expectedDict.Set(
-		inter,
-		interpreter.ReturnEmptyLocationRange,
-		interpreter.NewStringValue("abc"),
-		interpreter.NewSomeValueOwningNonCopying(
-			interpreter.NewIntValueFromInt64(23),
-		),
-	)
-
-	actualDict := inter.Globals["x"].GetValue().(*interpreter.DictionaryValue)
-
-	require.Equal(t,
-		expectedDict,
-		actualDict,
-	)
+	actualValue := inter.Globals["x"].GetValue()
+	actualDict := actualValue.(*interpreter.DictionaryValue)
 
 	newValue := actualDict.
 		Get(inter, interpreter.ReturnEmptyLocationRange, interpreter.NewStringValue("abc"))
@@ -3807,6 +3799,10 @@ func TestInterpretDictionaryIndexingAssignmentNew(t *testing.T) {
 	)
 
 	expectedDict := interpreter.NewDictionaryValueUnownedNonCopying(
+		&sema.DictionaryType{
+			KeyType:   sema.StringType,
+			ValueType: sema.IntType,
+		},
 		interpreter.NewStringValue("def"), interpreter.NewIntValueFromInt64(42),
 	).Copy().(*interpreter.DictionaryValue)
 	expectedDict.Set(
@@ -3873,6 +3869,10 @@ func TestInterpretDictionaryIndexingAssignmentNil(t *testing.T) {
 	)
 
 	expectedDict := interpreter.NewDictionaryValueUnownedNonCopying(
+		&sema.DictionaryType{
+			KeyType:   sema.StringType,
+			ValueType: sema.IntType,
+		},
 		interpreter.NewStringValue("def"), interpreter.NewIntValueFromInt64(42),
 		interpreter.NewStringValue("abc"), interpreter.NewIntValueFromInt64(23),
 	).Copy().(*interpreter.DictionaryValue)
@@ -4942,18 +4942,10 @@ func TestInterpretDictionaryRemove(t *testing.T) {
       let removed = xs.remove(key: "abc")
     `)
 
-	expectedDict := interpreter.NewDictionaryValueUnownedNonCopying(
-		interpreter.NewStringValue("abc"), interpreter.NewIntValueFromInt64(1),
-		interpreter.NewStringValue("def"), interpreter.NewIntValueFromInt64(2),
-	).Copy().(*interpreter.DictionaryValue)
-	expectedDict.Remove(nil, interpreter.ReturnEmptyLocationRange, interpreter.NewStringValue("abc"))
+	actualValue := inter.Globals["xs"].GetValue()
 
-	actualDict := inter.Globals["xs"].GetValue().(*interpreter.DictionaryValue)
-
-	assert.Equal(t,
-		expectedDict,
-		actualDict,
-	)
+	require.IsType(t, actualValue, &interpreter.DictionaryValue{})
+	actualDict := actualValue.(*interpreter.DictionaryValue)
 
 	expectedEntries := interpreter.NewStringValueOrderedMap()
 	expectedEntries.Set("def", interpreter.NewIntValueFromInt64(2))
@@ -4989,23 +4981,10 @@ func TestInterpretDictionaryInsert(t *testing.T) {
       let inserted = xs.insert(key: "abc", 3)
     `)
 
-	expectedDict := interpreter.NewDictionaryValueUnownedNonCopying(
-		interpreter.NewStringValue("abc"), interpreter.NewIntValueFromInt64(1),
-		interpreter.NewStringValue("def"), interpreter.NewIntValueFromInt64(2),
-	).Copy().(*interpreter.DictionaryValue)
-	expectedDict.Insert(
-		nil,
-		interpreter.ReturnEmptyLocationRange,
-		interpreter.NewStringValue("abc"),
-		interpreter.NewIntValueFromInt64(3),
-	)
+	actualValue := inter.Globals["xs"].GetValue()
 
-	actualDict := inter.Globals["xs"].GetValue().(*interpreter.DictionaryValue)
-
-	require.Equal(t,
-		expectedDict,
-		actualDict,
-	)
+	require.IsType(t, actualValue, &interpreter.DictionaryValue{})
+	actualDict := actualValue.(*interpreter.DictionaryValue)
 
 	expectedEntries := interpreter.NewStringValueOrderedMap()
 	expectedEntries.Set("abc", interpreter.NewIntValueFromInt64(3))
@@ -6073,7 +6052,13 @@ func TestInterpretEmitEventParameterTypes(t *testing.T) {
 
 			tests[fmt.Sprintf("{%[1]s: %[1]s}", validType)] =
 				testValue{
-					value:   interpreter.NewDictionaryValueUnownedNonCopying(testCase.value, testCase.value).Copy(),
+					value: interpreter.NewDictionaryValueUnownedNonCopying(
+						&sema.DictionaryType{
+							KeyType:   testCase.ty,
+							ValueType: testCase.ty,
+						},
+						testCase.value, testCase.value,
+					).Copy(),
 					literal: fmt.Sprintf("{%[1]s as %[2]s: %[1]s as %[2]s}", testCase, validType),
 				}
 		}
@@ -8265,12 +8250,20 @@ func TestInterpretInternalAssignment(t *testing.T) {
 				},
 			},
 			interpreter.NewDictionaryValueUnownedNonCopying(
+				&sema.DictionaryType{
+					KeyType:   sema.StringType,
+					ValueType: sema.IntType,
+				},
 				interpreter.NewStringValue("a"),
 				interpreter.NewIntValueFromInt64(1),
 				interpreter.NewStringValue("b"),
 				interpreter.NewIntValueFromInt64(2),
 			),
 			interpreter.NewDictionaryValueUnownedNonCopying(
+				&sema.DictionaryType{
+					KeyType:   sema.StringType,
+					ValueType: sema.IntType,
+				},
 				interpreter.NewStringValue("a"),
 				interpreter.NewIntValueFromInt64(1),
 			),
@@ -8302,7 +8295,12 @@ func TestInterpretCopyOnReturn(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Equal(t,
-		interpreter.NewDictionaryValueUnownedNonCopying(),
+		interpreter.NewDictionaryValueUnownedNonCopying(
+			&sema.DictionaryType{
+				KeyType:   sema.StringType,
+				ValueType: sema.StringType,
+			},
+		),
 		value,
 	)
 }
