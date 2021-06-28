@@ -767,6 +767,45 @@ func TestCheckArraySupertypeInference(t *testing.T) {
 					CompositeKind: common.CompositeKindStructure,
 				},
 			},
+			{
+				code: `
+                    let x = [[Bar()], [Baz()]]
+
+                    pub struct interface Foo {}
+
+                    pub struct Bar: Foo {}
+
+                    pub struct Baz: Foo {}
+                `,
+
+				// Covariance is not supported for now.
+				expectedElementType: sema.AnyStructType,
+			},
+			{
+				code: `
+                    // Covariance is supported with explicit type annotation.
+                    let x = [[Bar()], [Baz()]] as [[{Foo}]]
+
+                    pub struct interface Foo {}
+
+                    pub struct Bar: Foo {}
+
+                    pub struct Baz: Foo {}
+                `,
+
+				expectedElementType: &sema.VariableSizedType{
+					Type: &sema.RestrictedType{
+						Type: sema.AnyStructType,
+						Restrictions: []*sema.InterfaceType{
+							{
+								Location:      common.StringLocation("test"),
+								Identifier:    "Foo",
+								CompositeKind: common.CompositeKindStructure,
+							},
+						},
+					},
+				},
+			},
 		}
 
 		for _, test := range tests {
