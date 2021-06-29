@@ -73,6 +73,10 @@ func (f InterpretedFunctionValue) Accept(interpreter *Interpreter, visitor Visit
 	visitor.VisitInterpretedFunctionValue(interpreter, f)
 }
 
+func (f InterpretedFunctionValue) Walk(_ func(Value)) {
+	// NO-OP
+}
+
 var functionDynamicType DynamicType = FunctionDynamicType{}
 
 func (InterpretedFunctionValue) DynamicType(_ *Interpreter, _ DynamicTypeResults) DynamicType {
@@ -168,6 +172,10 @@ func (f HostFunctionValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitHostFunctionValue(interpreter, f)
 }
 
+func (f HostFunctionValue) Walk(_ func(Value)) {
+	// NO-OP
+}
+
 var hostFunctionDynamicType DynamicType = FunctionDynamicType{}
 
 func (HostFunctionValue) DynamicType(_ *Interpreter, _ DynamicTypeResults) DynamicType {
@@ -250,6 +258,10 @@ func (BoundFunctionValue) IsValue() {}
 
 func (f BoundFunctionValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitBoundFunctionValue(interpreter, f)
+}
+
+func (f BoundFunctionValue) Walk(_ func(Value)) {
+	// NO-OP
 }
 
 var boundFunctionDynamicType DynamicType = FunctionDynamicType{}
