@@ -236,8 +236,10 @@ func TestEncodeDecodeArray(t *testing.T) {
 
 	t.Run("empty", func(t *testing.T) {
 		expected := NewArrayValueUnownedNonCopying(
-			// TODO: type
-			nil,
+			&sema.ConstantSizedType{
+				Type: sema.AnyStructType,
+				Size: 0,
+			},
 		)
 		expected.modified = false
 
@@ -245,6 +247,28 @@ func TestEncodeDecodeArray(t *testing.T) {
 			encodeDecodeTest{
 				value: expected,
 				encoded: []byte{
+					// cbor Array Value tag
+					0xd8, cborTagArrayValue,
+
+					// array, 2 items follow
+					0x82,
+
+					// Type info
+
+					// array type tag
+					0xd8, cborTagConstantSizedStaticType,
+
+					// array, 2 items follow
+					0x82,
+
+					// size (0)
+					0x0,
+
+					// element type
+					0xd8, cborTagPrimitiveStaticType, byte(PrimitiveStaticTypeAnyStruct),
+
+					// Elements
+
 					// array, 0 items follow
 					0x80,
 				},
@@ -255,8 +279,9 @@ func TestEncodeDecodeArray(t *testing.T) {
 		expectedString := NewStringValue("test")
 
 		expected := NewArrayValueUnownedNonCopying(
-			// TODO: type
-			nil,
+			&sema.VariableSizedType{
+				Type: sema.AnyStructType,
+			},
 			expectedString,
 			BoolValue(true),
 		)
@@ -266,6 +291,22 @@ func TestEncodeDecodeArray(t *testing.T) {
 			encodeDecodeTest{
 				value: expected,
 				encoded: []byte{
+					// cbor Array Value tag
+					0xd8, cborTagArrayValue,
+
+					// array, 2 items follow
+					0x82,
+
+					// Type info
+
+					// array type tag
+					0xd8, cborTagVariableSizedStaticType,
+
+					// element type
+					0xd8, cborTagPrimitiveStaticType, byte(PrimitiveStaticTypeAnyStruct),
+
+					// Elements
+
 					// array, 2 items follow
 					0x82,
 					// UTF-8 string, length 4
@@ -287,8 +328,10 @@ func TestEncodeDecodeDictionary(t *testing.T) {
 	t.Run("empty", func(t *testing.T) {
 
 		expected := NewDictionaryValueUnownedNonCopying(
-			// TODO: type
-			&sema.DictionaryType{},
+			&sema.DictionaryType{
+				KeyType:   sema.StringType,
+				ValueType: sema.AnyStructType,
+			},
 		)
 		expected.modified = false
 		expected.Keys().modified = false
@@ -298,8 +341,24 @@ func TestEncodeDecodeDictionary(t *testing.T) {
 			0xd8, cborTagDictionaryValue,
 			// array, 2 items follow
 			0x82,
-			// array, 0 items follow
+
+			// cbor Array Value tag
+			0xd8, cborTagArrayValue,
+
+			// array, 2 items follow
+			0x82,
+
+			// Type info
+
+			// array type tag
+			0xd8, cborTagVariableSizedStaticType,
+
+			// element type
+			0xd8, cborTagPrimitiveStaticType, byte(PrimitiveStaticTypeString),
+
+			// Element: array, 0 items follow
 			0x80,
+
 			// array, 0 items follow
 			0x80,
 		}
@@ -339,8 +398,9 @@ func TestEncodeDecodeDictionary(t *testing.T) {
 	t.Run("non-empty", func(t *testing.T) {
 		key1 := NewStringValue("test")
 		value1 := NewArrayValueUnownedNonCopying(
-			// TODO: type
-			nil,
+			&sema.VariableSizedType{
+				Type: sema.AnyStructType,
+			},
 		)
 
 		key2 := BoolValue(true)
@@ -351,7 +411,10 @@ func TestEncodeDecodeDictionary(t *testing.T) {
 
 		expected := NewDictionaryValueUnownedNonCopying(
 			// TODO: type
-			&sema.DictionaryType{},
+			&sema.DictionaryType{
+				KeyType:   sema.AnyStructType,
+				ValueType: sema.AnyStructType,
+			},
 			key1, value1,
 			key2, value2,
 			key3, value3,
@@ -368,6 +431,22 @@ func TestEncodeDecodeDictionary(t *testing.T) {
 			// array, 2 items follow
 			0x82,
 
+			// Keys
+
+			// cbor Array Value tag
+			0xd8, cborTagArrayValue,
+
+			// array, 2 items follow
+			0x82,
+
+			// Type info
+
+			// array type tag
+			0xd8, cborTagVariableSizedStaticType,
+
+			// element type
+			0xd8, cborTagPrimitiveStaticType, byte(PrimitiveStaticTypeAnyStruct),
+
 			// array, 3 items follow
 			0x83,
 			// UTF-8 string, length 4
@@ -381,10 +460,28 @@ func TestEncodeDecodeDictionary(t *testing.T) {
 			// f, o, o
 			0x66, 0x6f, 0x6f,
 
+			// Values
+
 			// array, 3 items follow
 			0x83,
-			// array, 0 items follow
+
+			// cbor Array Value tag
+			0xd8, cborTagArrayValue,
+
+			// array, 2 items follow
+			0x82,
+
+			// Type info
+
+			// array type tag
+			0xd8, cborTagVariableSizedStaticType,
+
+			// element type
+			0xd8, cborTagPrimitiveStaticType, byte(PrimitiveStaticTypeAnyStruct),
+
+			// Elements. array, 0 items follow
 			0x80,
+
 			// false
 			0xf4,
 			// UTF-8 string, length 3
@@ -457,8 +554,10 @@ func TestEncodeDecodeDictionary(t *testing.T) {
 
 	t.Run("temporary address value key string change in format version 2", func(t *testing.T) {
 		expected := NewDictionaryValueUnownedNonCopying(
-			// TODO: type
-			&sema.DictionaryType{},
+			&sema.DictionaryType{
+				KeyType:   &sema.AddressType{},
+				ValueType: sema.Int8Type,
+			},
 			NewAddressValueFromBytes([]byte{0x42}),
 			Int8Value(42),
 		)
@@ -4984,8 +5083,7 @@ func TestEncodeDecodeDictionaryDeferred(t *testing.T) {
 		}
 
 		decodedValue := &DictionaryValue{
-			// TODO:
-			Type:                   nil,
+			Type:                   expected.Type,
 			keys:                   expected.Keys(),
 			entries:                NewStringValueOrderedMap(),
 			deferredOwner:          &testOwner,
@@ -4998,7 +5096,16 @@ func TestEncodeDecodeDictionaryDeferred(t *testing.T) {
 			0xd8, cborTagDictionaryValue,
 			// array, 2 items follow
 			0x82,
+			// keys to follow
+			// cbor Array Value tag
+			0xd8, cborTagArrayValue,
 			// array, 2 items follow
+			0x82,
+			// array type tag
+			0xd8, cborTagVariableSizedStaticType,
+			// element type
+			0xd8, cborTagPrimitiveStaticType, byte(PrimitiveStaticTypeAnyStruct),
+			// keys: array, 2 items follow
 			0x82,
 			// UTF-8 string, length 4
 			0x64,
@@ -5081,7 +5188,17 @@ func TestEncodeDecodeDictionaryDeferred(t *testing.T) {
 			0xd8, cborTagDictionaryValue,
 			// array, 2 items follow
 			0x82,
+
+			// cbor Array Value tag
+			0xd8, cborTagArrayValue,
+			// keys
 			// array, 2 items follow
+			0x82,
+			// array type tag
+			0xd8, cborTagVariableSizedStaticType,
+			// element type
+			0xd8, cborTagPrimitiveStaticType, byte(PrimitiveStaticTypeAnyStruct),
+			// keys: array, 2 items follow
 			0x82,
 			// UTF-8 string, length 4
 			0x64,
@@ -5281,8 +5398,9 @@ func TestEncodeDecodeTypeValue(t *testing.T) {
 func TestEncodePrepareCallback(t *testing.T) {
 
 	value := NewArrayValueUnownedNonCopying(
-		// TODO: type
-		nil,
+		&sema.VariableSizedType{
+			Type: sema.Int8Type,
+		},
 		Int8Value(42),
 	)
 
@@ -5317,7 +5435,21 @@ func TestEncodePrepareCallback(t *testing.T) {
 
 	utils.AssertEqualWithDiff(t,
 		[]byte{
-			// array with 1 item follow
+			// cbor Array Value tag
+			0xd8, cborTagArrayValue,
+
+			// array, 2 items follow
+			0x82,
+
+			// Type info
+
+			// array type tag
+			0xd8, cborTagVariableSizedStaticType,
+
+			// element type
+			0xd8, cborTagPrimitiveStaticType, 0x18, byte(PrimitiveStaticTypeInt8),
+
+			// elements: array with 1 item follow
 			0x81,
 			// tag
 			0xd8, cborTagInt8Value,
@@ -5332,6 +5464,19 @@ func TestEncodePrepareCallback(t *testing.T) {
 func TestDecodeCallback(t *testing.T) {
 
 	data := []byte{
+		// cbor Array Value tag
+		0xd8, cborTagArrayValue,
+
+		// array, 2 items follow
+		0x82,
+
+		// Type info
+		// array type tag
+		0xd8, cborTagVariableSizedStaticType,
+
+		// element type
+		0xd8, cborTagPrimitiveStaticType, 0x18, byte(PrimitiveStaticTypeInt8),
+
 		// array with 1 item follow
 		0x81,
 		// tag

@@ -1128,7 +1128,7 @@ func (v *ArrayValue) ensureElementsLoaded() {
 	}
 
 	// Reset the cache
-	v.content = nil
+	v.elementsContent = nil
 	v.valuePath = nil
 	v.decodeCallback = nil
 	v.encodingVersion = 0
