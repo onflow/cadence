@@ -7225,6 +7225,10 @@ type DictionaryValue struct {
 	// Only available for decoded values who's entries are not loaded yet.
 	content []byte
 
+	// Raw content cache for entries.
+	// Only available for decoded values who's entries are not loaded yet.
+	entriesContent []byte
+
 	// Value's path to be used during decoding.
 	// Only available for decoded values who's entries are not loaded yet.
 	valuePath []string
@@ -7882,19 +7886,42 @@ func (v *DictionaryValue) Equal(other Value, interpreter *Interpreter, loadDefer
 	return true
 }
 
-// ensureLoaded ensures the entries of this dictionary value are loaded.
-func (v *DictionaryValue) ensureLoaded() {
+// ensureMetaInfoLoaded ensures loading the meta information of this dictionary value.
+// If the meta info is already loaded, then calling this function won't have any effect.
+// Otherwise, the values are decoded form the cached raw-content.
+//
+// Meta info includes:
+//    - static type
+//
+func (v *DictionaryValue) ensureMetaInfoLoaded() {
 	if v.content == nil {
 		return
 	}
 
-	err := decodeDictionaryEntries(v, v.content)
+	err := decodeDictionaryMetaInfo(v, v.content)
+	if err != nil {
+		panic(err)
+	}
+
+	// Raw content is no longer needed. Clear the cache and free-up the memory.
+	v.content = nil
+}
+
+// ensureLoaded ensures the entries of this dictionary value are loaded.
+func (v *DictionaryValue) ensureLoaded() {
+	v.ensureMetaInfoLoaded()
+
+	if v.entriesContent == nil {
+		return
+	}
+
+	err := decodeDictionaryEntries(v, v.entriesContent)
 	if err != nil {
 		panic(err)
 	}
 
 	// Reset the cache
-	v.content = nil
+	v.entriesContent = nil
 	v.valuePath = nil
 	v.decodeCallback = nil
 	v.encodingVersion = 0

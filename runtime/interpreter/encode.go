@@ -855,12 +855,13 @@ func (e *EncoderV5) encodeArray(
 const (
 	encodedDictionaryValueKeysFieldKey    uint64 = 0
 	encodedDictionaryValueEntriesFieldKey uint64 = 1
+	encodedDictionaryValueTypeFieldKey    uint64 = 2
 
 	// !!! *WARNING* !!!
 	//
 	// encodedDictionaryValueLength MUST be updated when new element is added.
 	// It is used to verify encoded dictionaries length during decoding.
-	encodedDictionaryValueLength = 2
+	encodedDictionaryValueLength = 3
 )
 
 const dictionaryKeyPathPrefix = "k"
@@ -872,6 +873,7 @@ const dictionaryValuePathPrefix = "v"
 //			Content: cborArray{
 //				encodedDictionaryValueKeysFieldKey:    []interface{}(keys),
 //				encodedDictionaryValueEntriesFieldKey: []interface{}(entries),
+// 				encodedDictionaryValueTypeFieldKey:    []interface{}(type),
 //			},
 // }
 func (e *EncoderV5) encodeDictionaryValue(
@@ -901,7 +903,7 @@ func (e *EncoderV5) encodeDictionaryValue(
 	// Encode array head
 	err = e.enc.EncodeRawBytes([]byte{
 		// array, 2 items follow
-		0x82,
+		0x83,
 	})
 	if err != nil {
 		return err
@@ -1007,6 +1009,12 @@ func (e *EncoderV5) encodeDictionaryValue(
 				return err
 			}
 		}
+	}
+
+	// Encode dictionary static type at array index encodedDictionaryValueTypeFieldKey
+	err = e.encodeStaticType(v.StaticType())
+	if err != nil {
+		return err
 	}
 
 	return nil
