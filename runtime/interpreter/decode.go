@@ -1800,26 +1800,38 @@ func decodeCompositeFields(v *CompositeValue, content []byte) error {
 	return nil
 }
 
-func decodeArrayMetaInfo(array *ArrayValue, content []byte) error {
-	if array.encodingVersion == 4 {
-		// In encoding version 4, no meta info was available for arrays.
-		// The raw content only consist of the elements.
-		array.elementsContent = content
-		return nil
+func (d *DecoderV5) decodeArrayValueStaticType(valuePath []string) (StaticType, error) {
+	const expectedLength = encodedArrayValueLength
+
+	size, err := d.decoder.DecodeArrayHead()
+
+	if err != nil {
+		if e, ok := err.(*cbor.WrongTypeError); ok {
+			return nil, fmt.Errorf("invalid array encoding (@ %s): expected [%d]interface{}, got %s",
+				strings.Join(valuePath, "."),
+				expectedLength,
+				e.ActualType.String(),
+			)
+		}
+		return nil, err
 	}
 
-	d, err := NewByteDecoder(content, array.Owner, array.encodingVersion, array.decodeCallback)
-	if err != nil {
-		return err
+	if size != expectedLength {
+		return nil, fmt.Errorf("invalid array encoding (@ %s): expected [%d]interface{}, got [%d]interface{}",
+			strings.Join(valuePath, "."),
+			expectedLength,
+			size,
+		)
 	}
 
-	err = d.decodeArrayValueHead(array.valuePath)
-	if err != nil {
-		return err
-	}
+	// Static type
 
 	// Decode type at array index encodedArrayValueStaticTypeFieldKey
-	_, err = d.decodeStaticType()
+	return d.decodeStaticType()
+}
+
+func decodeArrayMetaInfo(array *ArrayValue, content []byte) error {
+	d, err := NewByteDecoder(content, array.Owner, array.encodingVersion, array.decodeCallback)
 	if err != nil {
 		return err
 	}
@@ -1827,7 +1839,10 @@ func decodeArrayMetaInfo(array *ArrayValue, content []byte) error {
 	// TODO: store array type
 	//   Option 1: convert to sema type. - Don't have the interpreter
 	//   Option 2: Store static type in array
-	// TODO: store type info
+	_, err = d.decodeArrayValueStaticType(array.valuePath)
+	if err != nil {
+		return err
+	}
 	array.Type = nil
 
 	// Elements
