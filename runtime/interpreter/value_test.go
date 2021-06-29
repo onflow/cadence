@@ -201,8 +201,10 @@ func TestOwnerNewDictionary(t *testing.T) {
 	assert.Equal(t, &oldOwner, value.GetOwner())
 
 	dictionary := NewDictionaryValueUnownedNonCopying(
-		// TODO: type
-		&sema.DictionaryType{},
+		&sema.DictionaryType{
+			KeyType:   sema.StringType,
+			ValueType: sema.AnyStructType,
+		},
 		keyValue, value,
 	)
 
@@ -222,8 +224,10 @@ func TestSetOwnerDictionary(t *testing.T) {
 	value := newTestCompositeValue(oldOwner)
 
 	dictionary := NewDictionaryValueUnownedNonCopying(
-		// TODO: type
-		&sema.DictionaryType{},
+		&sema.DictionaryType{
+			KeyType:   sema.StringType,
+			ValueType: sema.AnyStructType,
+		},
 		keyValue, value,
 	)
 
@@ -244,8 +248,10 @@ func TestSetOwnerDictionaryCopy(t *testing.T) {
 	value := newTestCompositeValue(oldOwner)
 
 	dictionary := NewDictionaryValueUnownedNonCopying(
-		// TODO: type
-		&sema.DictionaryType{},
+		&sema.DictionaryType{
+			KeyType:   sema.StringType,
+			ValueType: sema.AnyStructType,
+		},
 		keyValue, value,
 	)
 	dictionary.SetOwner(&newOwner)
@@ -269,8 +275,10 @@ func TestSetOwnerDictionarySetIndex(t *testing.T) {
 	value := newTestCompositeValue(oldOwner)
 
 	dictionary := NewDictionaryValueUnownedNonCopying(
-		// TODO: type
-		&sema.DictionaryType{},
+		&sema.DictionaryType{
+			KeyType:   sema.StringType,
+			ValueType: sema.AnyStructType,
+		},
 	)
 	dictionary.SetOwner(&newOwner)
 
@@ -299,8 +307,10 @@ func TestSetOwnerDictionaryInsert(t *testing.T) {
 	value := newTestCompositeValue(oldOwner)
 
 	dictionary := NewDictionaryValueUnownedNonCopying(
-		// TODO: type
-		&sema.DictionaryType{},
+		&sema.DictionaryType{
+			KeyType:   sema.StringType,
+			ValueType: sema.AnyStructType,
+		},
 	)
 	dictionary.SetOwner(&newOwner)
 

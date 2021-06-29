@@ -7583,12 +7583,9 @@ func (v *DictionaryValue) GetMember(interpreter *Interpreter, getLocationRange f
 			i++
 		}
 
-		// TODO: type
-		var valueType sema.Type
-
 		return NewArrayValueUnownedNonCopying(
 			&sema.VariableSizedType{
-				Type: valueType,
+				Type: v.Type.ValueType,
 			},
 			dictionaryValues...,
 		)
