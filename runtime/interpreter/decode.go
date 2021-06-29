@@ -174,9 +174,6 @@ func (d *DecoderV5) decodeValue(path []string) (Value, error) {
 		}
 		value = NilValue{}
 
-	case cbor.ArrayType:
-		value, err = d.decodeArray(path, true)
-
 	case cbor.TagType:
 		var num uint64
 		num, err = d.decoder.DecodeTagNumber()
@@ -204,6 +201,9 @@ func (d *DecoderV5) decodeValue(path []string) (Value, error) {
 
 		case cborTagCompositeValue:
 			value, err = d.decodeComposite(path)
+
+		case cborTagArrayValue:
+			value, err = d.decodeArray(path, true)
 
 		// Int*
 
@@ -322,6 +322,12 @@ func (d *DecoderV5) decodeString(v string) Value {
 
 func (d *DecoderV5) decodeArray(path []string, deferDecoding bool) (*ArrayValue, error) {
 	if !deferDecoding {
+		// TODO: store type info
+		_, err := d.decodeArrayValueStaticType(path)
+		if err != nil {
+			return nil, err
+		}
+
 		elements, err := d.decodeArrayElements(path)
 		if err != nil {
 			return nil, err
@@ -331,6 +337,7 @@ func (d *DecoderV5) decodeArray(path []string, deferDecoding bool) (*ArrayValue,
 			values:   elements,
 			Owner:    d.owner,
 			modified: false,
+			Type:     nil,
 		}, nil
 	}
 
@@ -1761,6 +1768,77 @@ func decodeCompositeFields(v *CompositeValue, content []byte) error {
 	return nil
 }
 
+func (d *DecoderV5) decodeArrayValueStaticType(valuePath []string) (StaticType, error) {
+	const expectedLength = encodedArrayValueLength
+
+	size, err := d.decoder.DecodeArrayHead()
+
+	if err != nil {
+		if e, ok := err.(*cbor.WrongTypeError); ok {
+			return nil, fmt.Errorf("invalid array encoding (@ %s): expected [%d]interface{}, got %s",
+				strings.Join(valuePath, "."),
+				expectedLength,
+				e.ActualType.String(),
+			)
+		}
+		return nil, err
+	}
+
+	if size != expectedLength {
+		return nil, fmt.Errorf("invalid array encoding (@ %s): expected [%d]interface{}, got [%d]interface{}",
+			strings.Join(valuePath, "."),
+			expectedLength,
+			size,
+		)
+	}
+
+	// Static type
+
+	// Decode type at array index encodedArrayValueStaticTypeFieldKey
+	return d.decodeStaticType()
+}
+
+func decodeArrayMetaInfo(array *ArrayValue, content []byte) error {
+	d, err := NewByteDecoder(content, array.Owner, array.encodingVersion, array.decodeCallback)
+	if err != nil {
+		return err
+	}
+
+	// TODO: store array type
+	//   Option 1: convert to sema type. - Don't have the interpreter
+	//   Option 2: Store static type in array
+	_, err = d.decodeArrayValueStaticType(array.valuePath)
+	if err != nil {
+		return err
+	}
+	array.Type = nil
+
+	// Elements
+
+	var elementsContent []byte
+	if d.isByteDecoder {
+		// Use the zero-copy method if available, for better performance.
+		elementsContent, err = d.decoder.DecodeRawBytesZeroCopy()
+	} else {
+		elementsContent, err = d.decoder.DecodeRawBytes()
+	}
+
+	if err != nil {
+		if e, ok := err.(*cbor.WrongTypeError); ok {
+			return fmt.Errorf(
+				"invalid array elements encoding (@ %s): %s",
+				strings.Join(array.valuePath, "."),
+				e.ActualType.String(),
+			)
+		}
+		return err
+	}
+
+	array.elementsContent = elementsContent
+
+	return nil
+}
+
 func decodeArrayElements(array *ArrayValue, elementContent []byte) error {
 	if array.encodingVersion == 4 {
 		return decodeArrayElementsV4(array, elementContent)
@@ -1819,6 +1897,23 @@ func decodeDictionaryEntries(v *DictionaryValue, content []byte) error {
 
 	// Since the keys are always accessed below, do not defer
 	// the decoding for keys, as it can be an overhead.
+
+	num, err := d.decoder.DecodeTagNumber()
+	if err != nil {
+		return fmt.Errorf(
+			"invalid dictionary keys encoding (@ %s): %w",
+			strings.Join(v.valuePath, "."),
+			err,
+		)
+	}
+
+	if num != cborTagArrayValue {
+		return fmt.Errorf(
+			"invalid dictionary keys encoding (@ %s)",
+			strings.Join(v.valuePath, "."),
+		)
+	}
+
 	keys, err := d.decodeArray(keysPath, false)
 	if err != nil {
 		return fmt.Errorf(

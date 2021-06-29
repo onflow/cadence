@@ -4956,7 +4956,10 @@ func TestEncodeDecodeDictionaryDeferred(t *testing.T) {
 
 		expected := NewDictionaryValueUnownedNonCopying(
 			// TODO: type
-			&sema.DictionaryType{},
+			&sema.DictionaryType{
+				KeyType:   sema.AnyStructType,
+				ValueType: sema.AnyResourceType,
+			},
 			key1, value1,
 			key2, value2,
 		)
@@ -5061,7 +5064,10 @@ func TestEncodeDecodeDictionaryDeferred(t *testing.T) {
 
 		expected := NewDictionaryValueUnownedNonCopying(
 			// TODO: type
-			&sema.DictionaryType{},
+			&sema.DictionaryType{
+				KeyType:   sema.AnyStructType,
+				ValueType: sema.AnyStructType,
+			},
 			key1, value1,
 			key2, value2,
 		)
