@@ -425,6 +425,7 @@ func (UFix64Type) ID() string {
 }
 
 type ArrayType interface {
+	Type
 	Element() Type
 }
 
