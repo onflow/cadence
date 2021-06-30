@@ -328,7 +328,6 @@ func (d *DecoderV5) decodeArray(path []string, deferDecoding bool) (*ArrayValue,
 		}
 
 		// Decode type at array index encodedArrayValueStaticTypeFieldKey
-		// TODO: store type info
 		arrayStaticType, err := d.decodeStaticType()
 		if err != nil {
 			return nil, err
