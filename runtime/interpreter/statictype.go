@@ -36,7 +36,7 @@ import (
 //
 type StaticType interface {
 	fmt.Stringer
-	IsStaticType()
+	isStaticType()
 	Equal(other StaticType) bool
 }
 
@@ -47,7 +47,7 @@ type CompositeStaticType struct {
 	QualifiedIdentifier string
 }
 
-func (CompositeStaticType) IsStaticType() {}
+func (CompositeStaticType) isStaticType() {}
 
 func (t CompositeStaticType) String() string {
 	if t.Location == nil {
@@ -73,7 +73,7 @@ type InterfaceStaticType struct {
 	QualifiedIdentifier string
 }
 
-func (InterfaceStaticType) IsStaticType() {}
+func (InterfaceStaticType) isStaticType() {}
 
 func (t InterfaceStaticType) String() string {
 	if t.Location == nil {
@@ -92,13 +92,22 @@ func (t InterfaceStaticType) Equal(other StaticType) bool {
 		otherInterfaceType.QualifiedIdentifier == t.QualifiedIdentifier
 }
 
+// ArrayStaticType
+
+type ArrayStaticType interface {
+	StaticType
+	isArrayStaticType()
+}
+
 // VariableSizedStaticType
 
 type VariableSizedStaticType struct {
 	Type StaticType
 }
 
-func (VariableSizedStaticType) IsStaticType() {}
+func (VariableSizedStaticType) isStaticType() {}
+
+func (VariableSizedStaticType) isArrayStaticType() {}
 
 func (t VariableSizedStaticType) String() string {
 	return fmt.Sprintf("[%s]", t.Type)
@@ -120,7 +129,9 @@ type ConstantSizedStaticType struct {
 	Size int64
 }
 
-func (ConstantSizedStaticType) IsStaticType() {}
+func (ConstantSizedStaticType) isStaticType() {}
+
+func (ConstantSizedStaticType) isArrayStaticType() {}
 
 func (t ConstantSizedStaticType) String() string {
 	return fmt.Sprintf("[%s; %d]", t.Type, t.Size)
@@ -143,7 +154,7 @@ type DictionaryStaticType struct {
 	ValueType StaticType
 }
 
-func (DictionaryStaticType) IsStaticType() {}
+func (DictionaryStaticType) isStaticType() {}
 
 func (t DictionaryStaticType) String() string {
 	return fmt.Sprintf("{%s: %s}", t.KeyType, t.ValueType)
@@ -165,7 +176,7 @@ type OptionalStaticType struct {
 	Type StaticType
 }
 
-func (OptionalStaticType) IsStaticType() {}
+func (OptionalStaticType) isStaticType() {}
 
 func (t OptionalStaticType) String() string {
 	return fmt.Sprintf("%s?", t.Type)
@@ -192,7 +203,7 @@ type RestrictedStaticType struct {
 // Key types in Go maps must be (transitively) hashable types,
 // and slices are not, but `Restrictions` is one.
 //
-func (*RestrictedStaticType) IsStaticType() {}
+func (*RestrictedStaticType) isStaticType() {}
 
 func (t *RestrictedStaticType) String() string {
 	restrictions := make([]string, len(t.Restrictions))
@@ -231,7 +242,7 @@ type ReferenceStaticType struct {
 	Type       StaticType
 }
 
-func (ReferenceStaticType) IsStaticType() {}
+func (ReferenceStaticType) isStaticType() {}
 
 func (t ReferenceStaticType) String() string {
 	auth := ""
@@ -258,7 +269,7 @@ type CapabilityStaticType struct {
 	BorrowType StaticType
 }
 
-func (CapabilityStaticType) IsStaticType() {}
+func (CapabilityStaticType) isStaticType() {}
 
 func (t CapabilityStaticType) String() string {
 	if t.BorrowType != nil {
@@ -337,7 +348,7 @@ func ConvertSemaToStaticType(t sema.Type) StaticType {
 	return primitiveStaticType
 }
 
-func ConvertSemaArrayTypeToStaticArrayType(t sema.ArrayType) StaticType {
+func ConvertSemaArrayTypeToStaticArrayType(t sema.ArrayType) ArrayStaticType {
 	switch t := t.(type) {
 	case *sema.VariableSizedType:
 		return VariableSizedStaticType{
