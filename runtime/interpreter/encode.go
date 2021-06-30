@@ -150,7 +150,7 @@ const (
 
 	cborTagPathValue
 	cborTagCapabilityValue
-	cborTagStorageReferenceValue // deprecated
+	_ // DO NOT REPLACE! used to be used for storage references
 	cborTagLinkValue
 	_
 	_
@@ -789,8 +789,8 @@ const (
 // cbor.Tag{
 //     Number: cborTagArrayValue,
 //     Content: cborArray{
-//         encodedArrayValueStaticTypeFieldKey: []interface{}(v.type),
-//         encodedArrayValueElementsFieldKey:   []interface{}(v.Elements),
+//         encodedArrayValueStaticTypeFieldKeyV5: []interface{}(v.type),
+//         encodedArrayValueElementsFieldKeyV5:   []interface{}(v.Elements),
 //     },
 // }
 func (e *EncoderV5) encodeArray(
@@ -826,13 +826,13 @@ func (e *EncoderV5) encodeArray(
 		return err
 	}
 
-	// Encode array static type at array index encodedArrayValueStaticTypeFieldKey
+	// Encode array static type at array index encodedArrayValueStaticTypeFieldKeyV5
 	err = e.encodeStaticType(v.StaticType())
 	if err != nil {
 		return err
 	}
 
-	// Encode elements (as array) at array index encodedArrayValueElementsFieldKey
+	// Encode elements (as array) at array index encodedArrayValueElementsFieldKeyV5
 
 	elements := v.Elements()
 	err = e.enc.EncodeArrayHead(uint64(len(elements)))
@@ -860,9 +860,9 @@ func (e *EncoderV5) encodeArray(
 
 // NOTE: NEVER change, only add/increment; ensure uint64
 const (
-	encodedDictionaryValueTypeFieldKey    uint64 = 0
-	encodedDictionaryValueKeysFieldKey    uint64 = 1
-	encodedDictionaryValueEntriesFieldKey uint64 = 2
+	// encodedDictionaryValueTypeFieldKeyV5    uint64 = 0
+	// encodedDictionaryValueKeysFieldKeyV5    uint64 = 1
+	// encodedDictionaryValueEntriesFieldKeyV5 uint64 = 2
 
 	// !!! *WARNING* !!!
 	//
@@ -878,9 +878,9 @@ const dictionaryValuePathPrefix = "v"
 // cbor.Tag{
 //			Number: cborTagDictionaryValue,
 //			Content: cborArray{
-// 				encodedDictionaryValueTypeFieldKey:    []interface{}(type),
-//				encodedDictionaryValueKeysFieldKey:    []interface{}(keys),
-//				encodedDictionaryValueEntriesFieldKey: []interface{}(entries),
+// 				encodedDictionaryValueTypeFieldKeyV5:    []interface{}(type),
+//				encodedDictionaryValueKeysFieldKeyV5:    []interface{}(keys),
+//				encodedDictionaryValueEntriesFieldKeyV5: []interface{}(entries),
 //			},
 // }
 func (e *EncoderV5) encodeDictionaryValue(
@@ -919,13 +919,13 @@ func (e *EncoderV5) encodeDictionaryValue(
 	//nolint:gocritic
 	keysPath := append(path, dictionaryKeyPathPrefix)
 
-	// (1) Encode dictionary static type at array index encodedDictionaryValueTypeFieldKey
+	// (1) Encode dictionary static type at array index encodedDictionaryValueTypeFieldKeyV5
 	err = e.encodeStaticType(v.StaticType())
 	if err != nil {
 		return err
 	}
 
-	// (2) Encode keys (as array) at array index encodedDictionaryValueKeysFieldKey
+	// (2) Encode keys (as array) at array index encodedDictionaryValueKeysFieldKeyV5
 	err = e.encodeArray(v.Keys(), keysPath, deferrals)
 	if err != nil {
 		return err
@@ -957,7 +957,7 @@ func (e *EncoderV5) encodeDictionaryValue(
 		entriesLength = 0
 	}
 
-	// (3) Encode values (as array) at array index encodedDictionaryValueEntriesFieldKey
+	// (3) Encode values (as array) at array index encodedDictionaryValueEntriesFieldKeyV5
 	err = e.enc.EncodeArrayHead(uint64(entriesLength))
 	if err != nil {
 		return err
@@ -1029,11 +1029,11 @@ func (e *EncoderV5) encodeDictionaryValue(
 
 // NOTE: NEVER change, only add/increment; ensure uint64
 const (
-	encodedCompositeValueLocationFieldKey            uint64 = 0
-	encodedCompositeValueTypeIDFieldKey              uint64 = 1
-	encodedCompositeValueKindFieldKey                uint64 = 2
-	encodedCompositeValueFieldsFieldKey              uint64 = 3
-	encodedCompositeValueQualifiedIdentifierFieldKey uint64 = 4
+	// encodedCompositeValueLocationFieldKeyV5            uint64 = 0
+	// encodedCompositeValueTypeIDFieldKeyV5              uint64 = 1
+	// encodedCompositeValueKindFieldKeyV5                uint64 = 2
+	// encodedCompositeValueFieldsFieldKeyV5              uint64 = 3
+	// encodedCompositeValueQualifiedIdentifierFieldKeyV5 uint64 = 4
 
 	// !!! *WARNING* !!!
 	//
@@ -1046,11 +1046,11 @@ const (
 // cbor.Tag{
 //		Number: cborTagCompositeValue,
 //		Content: cborArray{
-//			encodedCompositeValueLocationFieldKey:            common.Location(location),
-//			encodedCompositeValueTypeIDFieldKey:              nil,
-//			encodedCompositeValueKindFieldKey:                uint(v.Kind),
-//			encodedCompositeValueFieldsFieldKey:              []interface{}(fields),
-//			encodedCompositeValueQualifiedIdentifierFieldKey: string(v.QualifiedIdentifier),
+//			encodedCompositeValueLocationFieldKeyV5:            common.Location(location),
+//			encodedCompositeValueTypeIDFieldKeyV5:              nil,
+//			encodedCompositeValueKindFieldKeyV5:                uint(v.Kind),
+//			encodedCompositeValueFieldsFieldKeyV5:              []interface{}(fields),
+//			encodedCompositeValueQualifiedIdentifierFieldKeyV5: string(v.QualifiedIdentifier),
 //		},
 // }
 func (e *EncoderV5) encodeCompositeValue(
@@ -1088,25 +1088,25 @@ func (e *EncoderV5) encodeCompositeValue(
 		return err
 	}
 
-	// Encode location at array index encodedCompositeValueLocationFieldKey
+	// Encode location at array index encodedCompositeValueLocationFieldKeyV5
 	err = e.encodeLocation(v.Location())
 	if err != nil {
 		return err
 	}
 
-	// Encode nil (obsolete) at array index encodedCompositeValueTypeIDFieldKey
+	// Encode nil (obsolete) at array index encodedCompositeValueTypeIDFieldKeyV5
 	err = e.enc.EncodeNil()
 	if err != nil {
 		return err
 	}
 
-	// Encode kind at array index encodedCompositeValueKindFieldKey
+	// Encode kind at array index encodedCompositeValueKindFieldKeyV5
 	err = e.enc.EncodeUint(uint(v.Kind()))
 	if err != nil {
 		return err
 	}
 
-	// Encode fields (as array) at array index encodedCompositeValueFieldsFieldKey
+	// Encode fields (as array) at array index encodedCompositeValueFieldsFieldKeyV5
 
 	// If the fields are not loaded, dump the raw fields content as it is.
 	if v.fieldsContent != nil {
@@ -1148,7 +1148,7 @@ func (e *EncoderV5) encodeCompositeValue(
 		}
 	}
 
-	// Encode qualified identifier at array index encodedCompositeValueQualifiedIdentifierFieldKey
+	// Encode qualified identifier at array index encodedCompositeValueQualifiedIdentifierFieldKeyV5
 	err = e.enc.EncodeString(v.QualifiedIdentifier())
 	if err != nil {
 		return err
@@ -1195,8 +1195,8 @@ func (e *EncoderV5) encodeAddressValue(v AddressValue) error {
 
 // NOTE: NEVER change, only add/increment; ensure uint64
 const (
-	encodedPathValueDomainFieldKey     uint64 = 0
-	encodedPathValueIdentifierFieldKey uint64 = 1
+	// encodedPathValueDomainFieldKeyV5     uint64 = 0
+	// encodedPathValueIdentifierFieldKeyV5 uint64 = 1
 
 	// !!! *WARNING* !!!
 	//
@@ -1209,8 +1209,8 @@ const (
 // cbor.Tag{
 //			Number: cborTagPathValue,
 //			Content: []interface{}{
-//				encodedPathValueDomainFieldKey:     uint(v.Domain),
-//				encodedPathValueIdentifierFieldKey: string(v.Identifier),
+//				encodedPathValueDomainFieldKeyV5:     uint(v.Domain),
+//				encodedPathValueIdentifierFieldKeyV5: string(v.Identifier),
 //			},
 // }
 func (e *EncoderV5) encodePathValue(v PathValue) error {
@@ -1225,21 +1225,21 @@ func (e *EncoderV5) encodePathValue(v PathValue) error {
 		return err
 	}
 
-	// Encode domain at array index encodedPathValueDomainFieldKey
+	// Encode domain at array index encodedPathValueDomainFieldKeyV5
 	err = e.enc.EncodeUint(uint(v.Domain))
 	if err != nil {
 		return err
 	}
 
-	// Encode identifier at array index encodedPathValueIdentifierFieldKey
+	// Encode identifier at array index encodedPathValueIdentifierFieldKeyV5
 	return e.enc.EncodeString(v.Identifier)
 }
 
 // NOTE: NEVER change, only add/increment; ensure uint64
 const (
-	encodedCapabilityValueAddressFieldKey    uint64 = 0
-	encodedCapabilityValuePathFieldKey       uint64 = 1
-	encodedCapabilityValueBorrowTypeFieldKey uint64 = 2
+	// encodedCapabilityValueAddressFieldKeyV5    uint64 = 0
+	// encodedCapabilityValuePathFieldKeyV5       uint64 = 1
+	// encodedCapabilityValueBorrowTypeFieldKeyV5 uint64 = 2
 
 	// !!! *WARNING* !!!
 	//
@@ -1252,9 +1252,9 @@ const (
 // cbor.Tag{
 //			Number: cborTagCapabilityValue,
 //			Content: []interface{}{
-//					encodedCapabilityValueAddressFieldKey:    AddressValue(v.Address),
-// 					encodedCapabilityValuePathFieldKey:       PathValue(v.Path),
-// 					encodedCapabilityValueBorrowTypeFieldKey: StaticType(v.BorrowType),
+//					encodedCapabilityValueAddressFieldKeyV5:    AddressValue(v.Address),
+// 					encodedCapabilityValuePathFieldKeyV5:       PathValue(v.Path),
+// 					encodedCapabilityValueBorrowTypeFieldKeyV5: StaticType(v.BorrowType),
 // 				},
 // }
 func (e *EncoderV5) encodeCapabilityValue(v CapabilityValue) error {
@@ -1269,26 +1269,26 @@ func (e *EncoderV5) encodeCapabilityValue(v CapabilityValue) error {
 		return err
 	}
 
-	// Encode address at array index encodedCapabilityValueAddressFieldKey
+	// Encode address at array index encodedCapabilityValueAddressFieldKeyV5
 	err = e.encodeAddressValue(v.Address)
 	if err != nil {
 		return err
 	}
 
-	// Encode path at array index encodedCapabilityValuePathFieldKey
+	// Encode path at array index encodedCapabilityValuePathFieldKeyV5
 	err = e.encodePathValue(v.Path)
 	if err != nil {
 		return err
 	}
 
-	// Encode borrow type at array index encodedCapabilityValueBorrowTypeFieldKey
+	// Encode borrow type at array index encodedCapabilityValueBorrowTypeFieldKeyV5
 	return e.encodeStaticType(v.BorrowType)
 }
 
 // NOTE: NEVER change, only add/increment; ensure uint64
 const (
-	encodedAddressLocationAddressFieldKey uint64 = 0
-	encodedAddressLocationNameFieldKey    uint64 = 1
+	// encodedAddressLocationAddressFieldKeyV5 uint64 = 0
+	// encodedAddressLocationNameFieldKeyV5    uint64 = 1
 
 	// !!! *WARNING* !!!
 	//
@@ -1335,8 +1335,8 @@ func (e *EncoderV5) encodeLocation(l common.Location) error {
 		// cbor.Tag{
 		//		Number: cborTagAddressLocation,
 		//		Content: []interface{}{
-		//			encodedAddressLocationAddressFieldKey: []byte{l.Address.Bytes()},
-		//			encodedAddressLocationNameFieldKey:    string(l.Name),
+		//			encodedAddressLocationAddressFieldKeyV5: []byte{l.Address.Bytes()},
+		//			encodedAddressLocationNameFieldKeyV5:    string(l.Name),
 		//		},
 		// }
 		// Encode tag number and array head
@@ -1349,12 +1349,12 @@ func (e *EncoderV5) encodeLocation(l common.Location) error {
 		if err != nil {
 			return err
 		}
-		// Encode address at array index encodedAddressLocationAddressFieldKey
+		// Encode address at array index encodedAddressLocationAddressFieldKeyV5
 		err = e.enc.EncodeBytes(l.Address.Bytes())
 		if err != nil {
 			return err
 		}
-		// Encode name at array index encodedAddressLocationNameFieldKey
+		// Encode name at array index encodedAddressLocationNameFieldKeyV5
 		return e.enc.EncodeString(l.Name)
 	default:
 		return fmt.Errorf("unsupported location: %T", l)
@@ -1363,8 +1363,8 @@ func (e *EncoderV5) encodeLocation(l common.Location) error {
 
 // NOTE: NEVER change, only add/increment; ensure uint64
 const (
-	encodedLinkValueTargetPathFieldKey uint64 = 0
-	encodedLinkValueTypeFieldKey       uint64 = 1
+	// encodedLinkValueTargetPathFieldKeyV5 uint64 = 0
+	// encodedLinkValueTypeFieldKeyV5       uint64 = 1
 
 	// !!! *WARNING* !!!
 	//
@@ -1377,8 +1377,8 @@ const (
 // cbor.Tag{
 //			Number: cborTagLinkValue,
 //			Content: []interface{}{
-//				encodedLinkValueTargetPathFieldKey: PathValue(v.TargetPath),
-//				encodedLinkValueTypeFieldKey:       StaticType(v.Type),
+//				encodedLinkValueTargetPathFieldKeyV5: PathValue(v.TargetPath),
+//				encodedLinkValueTypeFieldKeyV5:       StaticType(v.Type),
 //			},
 // }
 func (e *EncoderV5) encodeLinkValue(v LinkValue) error {
@@ -1392,12 +1392,12 @@ func (e *EncoderV5) encodeLinkValue(v LinkValue) error {
 	if err != nil {
 		return err
 	}
-	// Encode path at array index encodedLinkValueTargetPathFieldKey
+	// Encode path at array index encodedLinkValueTargetPathFieldKeyV5
 	err = e.encodePathValue(v.TargetPath)
 	if err != nil {
 		return err
 	}
-	// Encode type at array index encodedLinkValueTypeFieldKey
+	// Encode type at array index encodedLinkValueTypeFieldKeyV5
 	return e.encodeStaticType(v.Type)
 }
 
@@ -1476,9 +1476,9 @@ func (e *EncoderV5) encodeOptionalStaticType(v OptionalStaticType) error {
 
 // NOTE: NEVER change, only add/increment; ensure uint64
 const (
-	encodedCompositeStaticTypeLocationFieldKey            uint64 = 0
-	encodedCompositeStaticTypeTypeIDFieldKey              uint64 = 1
-	encodedCompositeStaticTypeQualifiedIdentifierFieldKey uint64 = 2
+	// encodedCompositeStaticTypeLocationFieldKeyV5            uint64 = 0
+	// encodedCompositeStaticTypeTypeIDFieldKeyV5              uint64 = 1
+	// encodedCompositeStaticTypeQualifiedIdentifierFieldKeyV5 uint64 = 2
 
 	// !!! *WARNING* !!!
 	//
@@ -1491,9 +1491,9 @@ const (
 // cbor.Tag{
 //			Number: cborTagCompositeStaticType,
 // 			Content: cborArray{
-//				encodedCompositeStaticTypeLocationFieldKey:            Location(v.Location),
-// 				encodedCompositeStaticTypeTypeIDFieldKey:              nil,
-//				encodedCompositeStaticTypeQualifiedIdentifierFieldKey: string(v.QualifiedIdentifier),
+//				encodedCompositeStaticTypeLocationFieldKeyV5:            Location(v.Location),
+// 				encodedCompositeStaticTypeTypeIDFieldKeyV5:              nil,
+//				encodedCompositeStaticTypeQualifiedIdentifierFieldKeyV5: string(v.QualifiedIdentifier),
 //		},
 // }
 func (e *EncoderV5) encodeCompositeStaticType(v CompositeStaticType) error {
@@ -1507,25 +1507,25 @@ func (e *EncoderV5) encodeCompositeStaticType(v CompositeStaticType) error {
 	if err != nil {
 		return err
 	}
-	// Encode location at array index encodedCompositeStaticTypeLocationFieldKey
+	// Encode location at array index encodedCompositeStaticTypeLocationFieldKeyV5
 	err = e.encodeLocation(v.Location)
 	if err != nil {
 		return err
 	}
-	// Encode nil (obsolete) at array index encodedCompositeStaticTypeTypeIDFieldKey
+	// Encode nil (obsolete) at array index encodedCompositeStaticTypeTypeIDFieldKeyV5
 	err = e.enc.EncodeNil()
 	if err != nil {
 		return err
 	}
-	// Encode qualified identifier at array index encodedCompositeStaticTypeQualifiedIdentifierFieldKey
+	// Encode qualified identifier at array index encodedCompositeStaticTypeQualifiedIdentifierFieldKeyV5
 	return e.enc.EncodeString(v.QualifiedIdentifier)
 }
 
 // NOTE: NEVER change, only add/increment; ensure uint64
 const (
-	encodedInterfaceStaticTypeLocationFieldKey            uint64 = 0
-	encodedInterfaceStaticTypeTypeIDFieldKey              uint64 = 1
-	encodedInterfaceStaticTypeQualifiedIdentifierFieldKey uint64 = 2
+	// encodedInterfaceStaticTypeLocationFieldKeyV5            uint64 = 0
+	// encodedInterfaceStaticTypeTypeIDFieldKeyV5              uint64 = 1
+	// encodedInterfaceStaticTypeQualifiedIdentifierFieldKeyV5 uint64 = 2
 
 	// !!! *WARNING* !!!
 	//
@@ -1538,9 +1538,9 @@ const (
 // cbor.Tag{
 //		Number: cborTagInterfaceStaticType,
 //		Content: cborArray{
-//				encodedInterfaceStaticTypeLocationFieldKey:            Location(v.Location),
-// 				encodedInterfaceStaticTypeTypeIDFieldKey:              nil,
-//				encodedInterfaceStaticTypeQualifiedIdentifierFieldKey: string(v.QualifiedIdentifier),
+//				encodedInterfaceStaticTypeLocationFieldKeyV5:            Location(v.Location),
+// 				encodedInterfaceStaticTypeTypeIDFieldKeyV5:              nil,
+//				encodedInterfaceStaticTypeQualifiedIdentifierFieldKeyV5: string(v.QualifiedIdentifier),
 //		},
 // }
 func (e *EncoderV5) encodeInterfaceStaticType(v InterfaceStaticType) error {
@@ -1554,17 +1554,17 @@ func (e *EncoderV5) encodeInterfaceStaticType(v InterfaceStaticType) error {
 	if err != nil {
 		return err
 	}
-	// Encode location at array index encodedInterfaceStaticTypeLocationFieldKey
+	// Encode location at array index encodedInterfaceStaticTypeLocationFieldKeyV5
 	err = e.encodeLocation(v.Location)
 	if err != nil {
 		return err
 	}
-	// Encode nil (obsolete) at array index encodedInterfaceStaticTypeTypeIDFieldKey
+	// Encode nil (obsolete) at array index encodedInterfaceStaticTypeTypeIDFieldKeyV5
 	err = e.enc.EncodeNil()
 	if err != nil {
 		return err
 	}
-	// Encode qualified identifier at array index encodedInterfaceStaticTypeQualifiedIdentifierFieldKey
+	// Encode qualified identifier at array index encodedInterfaceStaticTypeQualifiedIdentifierFieldKeyV5
 	return e.enc.EncodeString(v.QualifiedIdentifier)
 }
 
@@ -1586,8 +1586,8 @@ func (e *EncoderV5) encodeVariableSizedStaticType(v VariableSizedStaticType) err
 
 // NOTE: NEVER change, only add/increment; ensure uint64
 const (
-	encodedConstantSizedStaticTypeSizeFieldKey uint64 = 0
-	encodedConstantSizedStaticTypeTypeFieldKey uint64 = 1
+	// encodedConstantSizedStaticTypeSizeFieldKeyV5 uint64 = 0
+	// encodedConstantSizedStaticTypeTypeFieldKeyV5 uint64 = 1
 
 	// !!! *WARNING* !!!
 	//
@@ -1600,8 +1600,8 @@ const (
 // cbor.Tag{
 //		Number: cborTagConstantSizedStaticType,
 //		Content: cborArray{
-//				encodedConstantSizedStaticTypeSizeFieldKey: int64(v.Size),
-//				encodedConstantSizedStaticTypeTypeFieldKey: StaticType(v.Type),
+//				encodedConstantSizedStaticTypeSizeFieldKeyV5: int64(v.Size),
+//				encodedConstantSizedStaticTypeTypeFieldKeyV5: StaticType(v.Type),
 //		},
 // }
 func (e *EncoderV5) encodeConstantSizedStaticType(v ConstantSizedStaticType) error {
@@ -1615,19 +1615,19 @@ func (e *EncoderV5) encodeConstantSizedStaticType(v ConstantSizedStaticType) err
 	if err != nil {
 		return err
 	}
-	// Encode size at array index encodedConstantSizedStaticTypeSizeFieldKey
+	// Encode size at array index encodedConstantSizedStaticTypeSizeFieldKeyV5
 	err = e.enc.EncodeInt64(v.Size)
 	if err != nil {
 		return err
 	}
-	// Encode type at array index encodedConstantSizedStaticTypeTypeFieldKey
+	// Encode type at array index encodedConstantSizedStaticTypeTypeFieldKeyV5
 	return e.encodeStaticType(v.Type)
 }
 
 // NOTE: NEVER change, only add/increment; ensure uint64
 const (
-	encodedReferenceStaticTypeAuthorizedFieldKey uint64 = 0
-	encodedReferenceStaticTypeTypeFieldKey       uint64 = 1
+	// encodedReferenceStaticTypeAuthorizedFieldKeyV5 uint64 = 0
+	// encodedReferenceStaticTypeTypeFieldKeyV5       uint64 = 1
 
 	// !!! *WARNING* !!!
 	//
@@ -1640,8 +1640,8 @@ const (
 // cbor.Tag{
 //		Number: cborTagReferenceStaticType,
 //		Content: cborArray{
-//				encodedReferenceStaticTypeAuthorizedFieldKey: bool(v.Authorized),
-//				encodedReferenceStaticTypeTypeFieldKey:       StaticType(v.Type),
+//				encodedReferenceStaticTypeAuthorizedFieldKeyV5: bool(v.Authorized),
+//				encodedReferenceStaticTypeTypeFieldKeyV5:       StaticType(v.Type),
 //		},
 //	}
 func (e *EncoderV5) encodeReferenceStaticType(v ReferenceStaticType) error {
@@ -1655,19 +1655,19 @@ func (e *EncoderV5) encodeReferenceStaticType(v ReferenceStaticType) error {
 	if err != nil {
 		return err
 	}
-	// Encode authorized at array index encodedReferenceStaticTypeAuthorizedFieldKey
+	// Encode authorized at array index encodedReferenceStaticTypeAuthorizedFieldKeyV5
 	err = e.enc.EncodeBool(v.Authorized)
 	if err != nil {
 		return err
 	}
-	// Encode type at array index encodedReferenceStaticTypeTypeFieldKey
+	// Encode type at array index encodedReferenceStaticTypeTypeFieldKeyV5
 	return e.encodeStaticType(v.Type)
 }
 
 // NOTE: NEVER change, only add/increment; ensure uint64
 const (
-	encodedDictionaryStaticTypeKeyTypeFieldKey   uint64 = 0
-	encodedDictionaryStaticTypeValueTypeFieldKey uint64 = 1
+	// encodedDictionaryStaticTypeKeyTypeFieldKeyV5   uint64 = 0
+	// encodedDictionaryStaticTypeValueTypeFieldKeyV5 uint64 = 1
 
 	// !!! *WARNING* !!!
 	//
@@ -1680,8 +1680,8 @@ const (
 // cbor.Tag{
 //		Number: cborTagDictionaryStaticType,
 // 		Content: []interface{}{
-//				encodedDictionaryStaticTypeKeyTypeFieldKey:   StaticType(v.KeyType),
-//				encodedDictionaryStaticTypeValueTypeFieldKey: StaticType(v.ValueType),
+//				encodedDictionaryStaticTypeKeyTypeFieldKeyV5:   StaticType(v.KeyType),
+//				encodedDictionaryStaticTypeValueTypeFieldKeyV5: StaticType(v.ValueType),
 //		},
 // }
 func (e *EncoderV5) encodeDictionaryStaticType(v DictionaryStaticType) error {
@@ -1695,19 +1695,19 @@ func (e *EncoderV5) encodeDictionaryStaticType(v DictionaryStaticType) error {
 	if err != nil {
 		return err
 	}
-	// Encode key type at array index encodedDictionaryStaticTypeKeyTypeFieldKey
+	// Encode key type at array index encodedDictionaryStaticTypeKeyTypeFieldKeyV5
 	err = e.encodeStaticType(v.KeyType)
 	if err != nil {
 		return err
 	}
-	// Encode value type at array index encodedDictionaryStaticTypeValueTypeFieldKey
+	// Encode value type at array index encodedDictionaryStaticTypeValueTypeFieldKeyV5
 	return e.encodeStaticType(v.ValueType)
 }
 
 // NOTE: NEVER change, only add/increment; ensure uint64
 const (
-	encodedRestrictedStaticTypeTypeFieldKey         uint64 = 0
-	encodedRestrictedStaticTypeRestrictionsFieldKey uint64 = 1
+	// encodedRestrictedStaticTypeTypeFieldKeyV5         uint64 = 0
+	// encodedRestrictedStaticTypeRestrictionsFieldKeyV5 uint64 = 1
 
 	// !!! *WARNING* !!!
 	//
@@ -1720,8 +1720,8 @@ const (
 // cbor.Tag{
 //		Number: cborTagRestrictedStaticType,
 //		Content: cborArray{
-//				encodedRestrictedStaticTypeTypeFieldKey:         StaticType(v.Type),
-//				encodedRestrictedStaticTypeRestrictionsFieldKey: []interface{}(v.Restrictions),
+//				encodedRestrictedStaticTypeTypeFieldKeyV5:         StaticType(v.Type),
+//				encodedRestrictedStaticTypeRestrictionsFieldKeyV5: []interface{}(v.Restrictions),
 //		},
 // }
 func (e *EncoderV5) encodeRestrictedStaticType(v *RestrictedStaticType) error {
@@ -1735,12 +1735,12 @@ func (e *EncoderV5) encodeRestrictedStaticType(v *RestrictedStaticType) error {
 	if err != nil {
 		return err
 	}
-	// Encode type at array index encodedRestrictedStaticTypeTypeFieldKey
+	// Encode type at array index encodedRestrictedStaticTypeTypeFieldKeyV5
 	err = e.encodeStaticType(v.Type)
 	if err != nil {
 		return err
 	}
-	// Encode restrictions (as array) at array index encodedRestrictedStaticTypeRestrictionsFieldKey
+	// Encode restrictions (as array) at array index encodedRestrictedStaticTypeRestrictionsFieldKeyV5
 	err = e.enc.EncodeArrayHead(uint64(len(v.Restrictions)))
 	if err != nil {
 		return err
@@ -1757,7 +1757,7 @@ func (e *EncoderV5) encodeRestrictedStaticType(v *RestrictedStaticType) error {
 
 // NOTE: NEVER change, only add/increment; ensure uint64
 const (
-	encodedTypeValueTypeFieldKey uint64 = 0
+	// encodedTypeValueTypeFieldKeyV5 uint64 = 0
 
 	// !!! *WARNING* !!!
 	//
@@ -1770,7 +1770,7 @@ const (
 // cbor.Tag{
 //			Number: cborTagTypeValue,
 //			Content: cborArray{
-//				encodedTypeValueTypeFieldKey: StaticType(v.Type),
+//				encodedTypeValueTypeFieldKeyV5: StaticType(v.Type),
 //			},
 //	}
 func (e *EncoderV5) encodeTypeValue(v TypeValue) error {
@@ -1784,7 +1784,7 @@ func (e *EncoderV5) encodeTypeValue(v TypeValue) error {
 	if err != nil {
 		return err
 	}
-	// Encode type at array index encodedTypeValueTypeFieldKey
+	// Encode type at array index encodedTypeValueTypeFieldKeyV5
 	return e.encodeStaticType(v.Type)
 }
 
