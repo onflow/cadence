@@ -588,6 +588,8 @@ func TestArrayDeferredDecoding(t *testing.T) {
 		reEncoded, _, err := EncodeValue(decodedArray, nil, true, nil)
 		require.NoError(t, err)
 
+		require.Equal(t, encoded, reEncoded)
+
 		reDecoded, err := DecodeValue(reEncoded, &testOwner, nil, CurrentEncodingVersion, nil)
 		require.NoError(t, err)
 
@@ -647,8 +649,10 @@ func TestArrayDeferredDecoding(t *testing.T) {
 		}
 
 		// Re encode the decoded value
-		_, _, err = EncodeValue(decodedArray, []string{}, true, callback)
+		reEncoded, _, err := EncodeValue(decodedArray, []string{}, true, callback)
 		require.NoError(t, err)
+
+		require.Equal(t, encoded, reEncoded)
 
 		// Elements are not loaded, so they must not be encoded again.
 		// i.e: Callback must be only called once.
@@ -797,6 +801,8 @@ func TestDictionaryDeferredDecoding(t *testing.T) {
 		reEncoded, _, err := EncodeValue(decodedDictionary, nil, true, nil)
 		require.NoError(t, err)
 
+		require.Equal(t, encoded, reEncoded)
+
 		reDecoded, err := DecodeValue(reEncoded, &testOwner, nil, CurrentEncodingVersion, nil)
 		require.NoError(t, err)
 
@@ -854,8 +860,10 @@ func TestDictionaryDeferredDecoding(t *testing.T) {
 		}
 
 		// Re encode the decoded value
-		_, _, err = EncodeValue(decodedDictionary, []string{}, true, callback)
+		reEncoded, _, err := EncodeValue(decodedDictionary, []string{}, true, callback)
 		require.NoError(t, err)
+
+		require.Equal(t, encoded, reEncoded)
 
 		// Entries are not loaded, so they must not be encoded again.
 		// i.e: Callback must be only called once.
@@ -883,7 +891,7 @@ func TestDictionaryDeferredDecoding(t *testing.T) {
 
 		dictionary := NewDictionaryValueUnownedNonCopying(
 			DictionaryStaticType{
-				KeyType:   PrimitiveStaticTypeString,
+				KeyType: PrimitiveStaticTypeString,
 				ValueType: CompositeStaticType{
 					Location:            utils.TestLocation,
 					QualifiedIdentifier: "TestResource",

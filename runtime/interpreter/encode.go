@@ -799,6 +799,15 @@ func (e *EncoderV5) encodeArray(
 	deferrals *EncodingDeferrals,
 ) error {
 
+	// Encode tag number and array head
+	err := e.enc.EncodeRawBytes([]byte{
+		// tag number
+		0xd8, cborTagArrayValue,
+	})
+	if err != nil {
+		return err
+	}
+
 	if v.content != nil {
 		err := e.enc.EncodeRawBytes(v.content)
 		if err != nil {
@@ -808,10 +817,8 @@ func (e *EncoderV5) encodeArray(
 		return nil
 	}
 
-	// Encode tag number and array head
-	err := e.enc.EncodeRawBytes([]byte{
-		// tag number
-		0xd8, cborTagArrayValue,
+	// Encode array head
+	err = e.enc.EncodeRawBytes([]byte{
 		// array, 2 items follow
 		0x82,
 	})
