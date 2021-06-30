@@ -394,7 +394,7 @@ func (interpreter *Interpreter) VisitArrayExpression(expression *ast.ArrayExpres
 		copies[i] = interpreter.copyAndConvert(argument, argumentType, elementType, getLocationRange)
 	}
 
-	arrayStaticType := ConvertSemaToStaticType(arrayType)
+	arrayStaticType := ConvertSemaArrayTypeToStaticArrayType(arrayType)
 
 	return NewArrayValueUnownedNonCopying(arrayStaticType, copies...)
 }
@@ -405,7 +405,7 @@ func (interpreter *Interpreter) VisitDictionaryExpression(expression *ast.Dictio
 	entryTypes := interpreter.Program.Elaboration.DictionaryExpressionEntryTypes[expression]
 	dictionaryType := interpreter.Program.Elaboration.DictionaryExpressionType[expression]
 
-	dictionaryStaticType := ConvertSemaToStaticType(dictionaryType).(DictionaryStaticType)
+	dictionaryStaticType := ConvertSemaDictionaryTypeToStaticDictionaryType(dictionaryType)
 
 	dictionary := NewDictionaryValueUnownedNonCopying(dictionaryStaticType)
 

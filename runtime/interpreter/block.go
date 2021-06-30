@@ -41,6 +41,13 @@ func (v BlockValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitValue(interpreter, v)
 }
 
+func (v BlockValue) Walk(walkChild func(Value)) {
+	walkChild(v.Height)
+	walkChild(v.View)
+	walkChild(v.ID)
+	walkChild(v.Timestamp)
+}
+
 var blockDynamicType DynamicType = BlockDynamicType{}
 
 func (BlockValue) DynamicType(_ *Interpreter, _ DynamicTypeResults) DynamicType {

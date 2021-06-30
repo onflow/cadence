@@ -6039,7 +6039,7 @@ func TestInterpretEmitEventParameterTypes(t *testing.T) {
 		tests[fmt.Sprintf("[%s; 1]", validType)] =
 			testValue{
 				value: interpreter.NewArrayValueUnownedNonCopying(
-					&interpreter.ConstantSizedStaticType{
+					interpreter.ConstantSizedStaticType{
 						Type: interpreter.ConvertSemaToStaticType(testCase.ty),
 						Size: 1,
 					},
@@ -6853,7 +6853,7 @@ func TestInterpretFungibleTokenContract(t *testing.T) {
 
 	assert.Equal(t,
 		interpreter.NewArrayValueUnownedNonCopying(
-			&interpreter.ConstantSizedStaticType{
+			interpreter.ConstantSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeInt,
 				Size: 2,
 			},

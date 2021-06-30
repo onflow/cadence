@@ -294,24 +294,13 @@ func ConvertSemaToStaticType(t sema.Type) StaticType {
 		}
 
 	case *sema.InterfaceType:
-		return convertToInterfaceStaticType(t)
+		return ConvertSemaInterfaceTypeToStaticInterfaceType(t)
 
-	case *sema.VariableSizedType:
-		return VariableSizedStaticType{
-			Type: ConvertSemaToStaticType(t.Type),
-		}
-
-	case *sema.ConstantSizedType:
-		return ConstantSizedStaticType{
-			Type: ConvertSemaToStaticType(t.Type),
-			Size: t.Size,
-		}
+	case sema.ArrayType:
+		return ConvertSemaArrayTypeToStaticArrayType(t)
 
 	case *sema.DictionaryType:
-		return DictionaryStaticType{
-			KeyType:   ConvertSemaToStaticType(t.KeyType),
-			ValueType: ConvertSemaToStaticType(t.ValueType),
-		}
+		return ConvertSemaDictionaryTypeToStaticDictionaryType(t)
 
 	case *sema.OptionalType:
 		return OptionalStaticType{
@@ -322,7 +311,7 @@ func ConvertSemaToStaticType(t sema.Type) StaticType {
 		restrictions := make([]InterfaceStaticType, len(t.Restrictions))
 
 		for i, restriction := range t.Restrictions {
-			restrictions[i] = convertToInterfaceStaticType(restriction)
+			restrictions[i] = ConvertSemaInterfaceTypeToStaticInterfaceType(restriction)
 		}
 
 		return &RestrictedStaticType{
@@ -331,7 +320,7 @@ func ConvertSemaToStaticType(t sema.Type) StaticType {
 		}
 
 	case *sema.ReferenceType:
-		return convertSemaReferenceToStaticReferenceType(t)
+		return ConvertSemaReferenceTyoeToStaticReferenceType(t)
 
 	case *sema.CapabilityType:
 		result := CapabilityStaticType{}
@@ -348,14 +337,39 @@ func ConvertSemaToStaticType(t sema.Type) StaticType {
 	return primitiveStaticType
 }
 
-func convertSemaReferenceToStaticReferenceType(t *sema.ReferenceType) ReferenceStaticType {
+func ConvertSemaArrayTypeToStaticArrayType(t sema.ArrayType) StaticType {
+	switch t := t.(type) {
+	case *sema.VariableSizedType:
+		return VariableSizedStaticType{
+			Type: ConvertSemaToStaticType(t.Type),
+		}
+
+	case *sema.ConstantSizedType:
+		return ConstantSizedStaticType{
+			Type: ConvertSemaToStaticType(t.Type),
+			Size: t.Size,
+		}
+
+	default:
+		panic(errors.NewUnreachableError())
+	}
+}
+
+func ConvertSemaDictionaryTypeToStaticDictionaryType(t *sema.DictionaryType) DictionaryStaticType {
+	return DictionaryStaticType{
+		KeyType:   ConvertSemaToStaticType(t.KeyType),
+		ValueType: ConvertSemaToStaticType(t.ValueType),
+	}
+}
+
+func ConvertSemaReferenceTyoeToStaticReferenceType(t *sema.ReferenceType) ReferenceStaticType {
 	return ReferenceStaticType{
 		Authorized: t.Authorized,
 		Type:       ConvertSemaToStaticType(t.Type),
 	}
 }
 
-func convertToInterfaceStaticType(t *sema.InterfaceType) InterfaceStaticType {
+func ConvertSemaInterfaceTypeToStaticInterfaceType(t *sema.InterfaceType) InterfaceStaticType {
 	return InterfaceStaticType{
 		Location:            t.Location,
 		QualifiedIdentifier: t.QualifiedIdentifier(),

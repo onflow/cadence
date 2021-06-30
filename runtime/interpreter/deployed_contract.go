@@ -40,6 +40,12 @@ func (v DeployedContractValue) Accept(interpreter *Interpreter, visitor Visitor)
 	visitor.VisitDeployedContractValue(interpreter, v)
 }
 
+func (v DeployedContractValue) Walk(walkChild func(Value)) {
+	walkChild(v.Address)
+	walkChild(v.Name)
+	walkChild(v.Code)
+}
+
 var deployedContractDynamicType DynamicType = DeployedContractDynamicType{}
 
 func (DeployedContractValue) DynamicType(_ *Interpreter, _ DynamicTypeResults) DynamicType {

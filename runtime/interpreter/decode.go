@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"io"
 	"math"
+	"math/big"
 	"math/bits"
 	"strconv"
 	"strings"
@@ -328,7 +329,6 @@ func (d *DecoderV5) decodeArray(path []string, deferDecoding bool) (*ArrayValue,
 		}
 
 		// Decode type at array index encodedArrayValueStaticTypeFieldKey
-		// TODO: store type info
 		arrayStaticType, err := d.decodeStaticType()
 		if err != nil {
 			return nil, err
@@ -604,6 +604,8 @@ func (d *DecoderV5) decodeComposite(path []string) (*CompositeValue, error) {
 
 	return NewDeferredCompositeValue(valuePath, content, d.owner, d.decodeCallback, d.version), nil
 }
+
+var bigOne = big.NewInt(1)
 
 func (d *DecoderV5) decodeInt() (IntValue, error) {
 	bigInt, err := d.decoder.DecodeBigInt()
@@ -1610,10 +1612,6 @@ func (d *DecoderV5) decodeCapabilityStaticType() (StaticType, error) {
 // This also extracts out the fields raw content and cache it separately inside the value.
 //
 func decodeCompositeMetaInfo(v *CompositeValue, content []byte) error {
-	if v.encodingVersion < 5 {
-		return decodeCompositeMetaInfoV4(v, content)
-	}
-
 	d, err := NewByteDecoder(content, v.Owner, v.encodingVersion, v.decodeCallback)
 	if err != nil {
 		return err
@@ -1724,9 +1722,6 @@ func decodeCompositeMetaInfo(v *CompositeValue, content []byte) error {
 // decodeCompositeFields decodes fields from the byte content and updates the composite value.
 //
 func decodeCompositeFields(v *CompositeValue, content []byte) error {
-	if v.encodingVersion < 5 {
-		return decodeCompositeFieldsV4(v, content)
-	}
 
 	d, err := NewByteDecoder(content, v.Owner, v.encodingVersion, v.decodeCallback)
 	if err != nil {
@@ -1801,12 +1796,6 @@ func decodeCompositeFields(v *CompositeValue, content []byte) error {
 }
 
 func decodeArrayMetaInfo(array *ArrayValue, content []byte) error {
-	if array.encodingVersion < 5 {
-		// In encoding version 4, no meta info was available for arrays.
-		// The raw content only consist of the elements.
-		array.elementsContent = content
-		return nil
-	}
 
 	d, err := NewByteDecoder(content, array.Owner, array.encodingVersion, array.decodeCallback)
 	if err != nil {
@@ -1853,9 +1842,6 @@ func decodeArrayMetaInfo(array *ArrayValue, content []byte) error {
 }
 
 func decodeArrayElements(array *ArrayValue, elementContent []byte) error {
-	if array.encodingVersion < 5 {
-		return decodeArrayElementsV4(array, elementContent)
-	}
 
 	d, err := NewByteDecoder(elementContent, array.Owner, array.encodingVersion, array.decodeCallback)
 	if err != nil {
@@ -1872,12 +1858,6 @@ func decodeArrayElements(array *ArrayValue, elementContent []byte) error {
 }
 
 func decodeDictionaryMetaInfo(v *DictionaryValue, content []byte) error {
-	if v.encodingVersion < 4 {
-		// In encoding version 4, no meta info was available for dictionaries.
-		// The raw content only consist of the entries.
-		v.entriesContent = content
-		return nil
-	}
 
 	d, err := NewByteDecoder(content, v.Owner, v.encodingVersion, v.decodeCallback)
 	if err != nil {
