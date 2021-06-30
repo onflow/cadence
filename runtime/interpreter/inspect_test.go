@@ -29,12 +29,22 @@ func TestInspectValue(t *testing.T) {
 
 	t.Parallel()
 
-	dictValue := NewDictionaryValueUnownedNonCopying()
+	dictionaryStaticType := DictionaryStaticType{
+		KeyType:   PrimitiveStaticTypeString,
+		ValueType: PrimitiveStaticTypeInt256,
+	}
 	dictValueKey := NewStringValue("hello world")
 	dictValueValue := NewInt256ValueFromInt64(1)
-	dictValue.Set(nil, ReturnEmptyLocationRange, dictValueKey, NewSomeValueOwningNonCopying(dictValueValue))
+	dictValue := NewDictionaryValueUnownedNonCopying(dictionaryStaticType,
+		dictValueKey, dictValueValue,
+	)
 
-	arrayValue := NewArrayValueUnownedNonCopying(dictValue)
+	arrayValue := NewArrayValueUnownedNonCopying(
+		VariableSizedStaticType{
+			Type: dictionaryStaticType,
+		},
+		dictValue,
+	)
 
 	optionalValue := NewSomeValueOwningNonCopying(arrayValue)
 

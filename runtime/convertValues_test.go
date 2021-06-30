@@ -1790,8 +1790,8 @@ func TestArrayValueImportExport(t *testing.T) {
 		t.Parallel()
 
 		value := interpreter.NewArrayValueUnownedNonCopying(
-			&sema.VariableSizedType{
-				Type: sema.AnyStructType,
+			interpreter.VariableSizedStaticType{
+				Type: interpreter.PrimitiveStaticTypeAnyStruct,
 			},
 		)
 
@@ -1823,8 +1823,8 @@ func TestArrayValueImportExport(t *testing.T) {
 		t.Parallel()
 
 		value := interpreter.NewArrayValueUnownedNonCopying(
-			&sema.VariableSizedType{
-				Type: sema.AnyStructType,
+			interpreter.VariableSizedStaticType{
+				Type: interpreter.PrimitiveStaticTypeAnyStruct,
 			},
 			interpreter.NewIntValueFromInt64(42),
 			interpreter.NewStringValue("foo"),
