@@ -1911,9 +1911,18 @@ func decodeDictionaryMetaInfo(v *DictionaryValue, content []byte) error {
 	// TODO: store dictionary type
 	//   Option 1: convert to sema type. - Don't have the interpreter
 	//   Option 2: Store static type in dictionary
-	_, err = d.decodeStaticType()
+	staticType, err := d.decodeStaticType()
 	if err != nil {
 		return err
+	}
+
+	dictionaryStaticType, ok := staticType.(DictionaryStaticType)
+	if !ok {
+		return fmt.Errorf(
+			"invalid dictionary static type encoding (@ %s): %s",
+			strings.Join(v.valuePath, "."),
+			staticType.String(),
+		)
 	}
 
 	// Lazily decode keys
@@ -1961,7 +1970,7 @@ func decodeDictionaryMetaInfo(v *DictionaryValue, content []byte) error {
 	keysContent = append(keysContent, valuesContent...)
 
 	v.entriesContent = keysContent
-	v.Type = nil
+	v.Type = dictionaryStaticType
 
 	return nil
 }
