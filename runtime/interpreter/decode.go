@@ -329,7 +329,7 @@ func (d *DecoderV5) decodeArray(path []string, deferDecoding bool) (*ArrayValue,
 
 		// Decode type at array index encodedArrayValueStaticTypeFieldKey
 		// TODO: store type info
-		_, err = d.decodeStaticType()
+		arrayStaticType, err := d.decodeStaticType()
 		if err != nil {
 			return nil, err
 		}
@@ -343,7 +343,7 @@ func (d *DecoderV5) decodeArray(path []string, deferDecoding bool) (*ArrayValue,
 			values:   elements,
 			Owner:    d.owner,
 			modified: false,
-			Type:     nil,
+			Type:     arrayStaticType,
 		}, nil
 	}
 
@@ -1819,16 +1819,12 @@ func decodeArrayMetaInfo(array *ArrayValue, content []byte) error {
 	}
 
 	// Decode type at array index encodedArrayValueStaticTypeFieldKey
-	_, err = d.decodeStaticType()
+	arrayStaticType, err := d.decodeStaticType()
 	if err != nil {
 		return err
 	}
 
-	// TODO: store array type
-	//   Option 1: convert to sema type. - Don't have the interpreter
-	//   Option 2: Store static type in array
-	// TODO: store type info
-	array.Type = nil
+	array.Type = arrayStaticType
 
 	// Elements
 
