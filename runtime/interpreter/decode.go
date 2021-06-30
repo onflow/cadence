@@ -1801,6 +1801,13 @@ func decodeCompositeFields(v *CompositeValue, content []byte) error {
 }
 
 func decodeArrayMetaInfo(array *ArrayValue, content []byte) error {
+	if array.encodingVersion == 4 {
+		// In encoding version 4, no meta info was available for arrays.
+		// The raw content only consist of the elements.
+		array.elementsContent = content
+		return nil
+	}
+
 	d, err := NewByteDecoder(content, array.Owner, array.encodingVersion, array.decodeCallback)
 	if err != nil {
 		return err
@@ -1869,6 +1876,13 @@ func decodeArrayElements(array *ArrayValue, elementContent []byte) error {
 }
 
 func decodeDictionaryMetaInfo(v *DictionaryValue, content []byte) error {
+	if v.encodingVersion == 4 {
+		// In encoding version 4, no meta info was available for dictionaries.
+		// The raw content only consist of the entries.
+		v.entriesContent = content
+		return nil
+	}
+
 	d, err := NewByteDecoder(content, v.Owner, v.encodingVersion, v.decodeCallback)
 	if err != nil {
 		return err
