@@ -374,6 +374,32 @@ func (d *DecoderV5) decodeArray(path []string, deferDecoding bool) (*ArrayValue,
 	return NewDeferredArrayValue(valuePath, content, d.owner, d.decodeCallback, d.version), nil
 }
 
+func (d *DecoderV5) decodeArrayValueHead(valuePath []string) error {
+	const expectedLength = encodedArrayValueLength
+
+	size, err := d.decoder.DecodeArrayHead()
+
+	if err != nil {
+		if e, ok := err.(*cbor.WrongTypeError); ok {
+			return fmt.Errorf("invalid array encoding (@ %s): expected [%d]interface{}, got %s",
+				strings.Join(valuePath, "."),
+				expectedLength,
+				e.ActualType.String(),
+			)
+		}
+		return err
+	}
+
+	if size != expectedLength {
+		return fmt.Errorf("invalid array encoding (@ %s): expected [%d]interface{}, got [%d]interface{}",
+			strings.Join(valuePath, "."),
+			expectedLength,
+			size,
+		)
+	}
+
+	return nil
+}
 
 func (d *DecoderV5) decodeArrayElements(path []string) ([]Value, error) {
 	size, err := d.decoder.DecodeArrayHead()
@@ -1774,34 +1800,14 @@ func decodeCompositeFields(v *CompositeValue, content []byte) error {
 	return nil
 }
 
-func (d *DecoderV5) decodeArrayValueHead(valuePath []string) error {
-	const expectedLength = encodedArrayValueLength
-
-	size, err := d.decoder.DecodeArrayHead()
-
-	if err != nil {
-		if e, ok := err.(*cbor.WrongTypeError); ok {
-			return fmt.Errorf("invalid array encoding (@ %s): expected [%d]interface{}, got %s",
-				strings.Join(valuePath, "."),
-				expectedLength,
-				e.ActualType.String(),
-			)
-		}
-		return err
-	}
-
-	if size != expectedLength {
-		return fmt.Errorf("invalid array encoding (@ %s): expected [%d]interface{}, got [%d]interface{}",
-			strings.Join(valuePath, "."),
-			expectedLength,
-			size,
-		)
-	}
-
-	return nil
-}
-
 func decodeArrayMetaInfo(array *ArrayValue, content []byte) error {
+	if array.encodingVersion == 4 {
+		// In encoding version 4, no meta info was available for arrays.
+		// The raw content only consist of the elements.
+		array.elementsContent = content
+		return nil
+	}
+
 	d, err := NewByteDecoder(content, array.Owner, array.encodingVersion, array.decodeCallback)
 	if err != nil {
 		return err

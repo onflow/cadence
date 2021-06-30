@@ -781,7 +781,7 @@ const (
 	// !!! *WARNING* !!!
 	//
 	// encodedArrayValueLength MUST be updated when new element is added.
-	// It is used to verify encoded dictionaries length during decoding.
+	// It is used to verify encoded array length during decoding.
 	encodedArrayValueLength = 2
 )
 
