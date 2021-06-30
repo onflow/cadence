@@ -22,7 +22,6 @@ import (
 	"testing"
 
 	"github.com/onflow/cadence/runtime/interpreter"
-	"github.com/onflow/cadence/runtime/sema"
 	"github.com/stretchr/testify/require"
 )
 
@@ -90,7 +89,9 @@ func TestInterpretStringDecodeHex(t *testing.T) {
 
 	require.Equal(t,
 		interpreter.NewArrayValueUnownedNonCopying(
-			sema.ByteArrayType,
+			&interpreter.VariableSizedStaticType{
+				Type: interpreter.PrimitiveStaticTypeUInt8,
+			},
 			interpreter.UInt8Value(1),
 			interpreter.UInt8Value(0xCA),
 			interpreter.UInt8Value(0xDE),
@@ -133,7 +134,9 @@ func TestInterpretStringUtf8Field(t *testing.T) {
 
 	require.Equal(t,
 		interpreter.NewArrayValueUnownedNonCopying(
-			sema.ByteArrayType,
+			&interpreter.VariableSizedStaticType{
+				Type: interpreter.PrimitiveStaticTypeUInt8,
+			},
 			// Flowers
 			interpreter.UInt8Value(70),
 			interpreter.UInt8Value(108),

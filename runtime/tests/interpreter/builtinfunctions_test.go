@@ -111,7 +111,9 @@ func TestInterpretToBytes(t *testing.T) {
 
 		assert.Equal(t,
 			interpreter.NewArrayValueUnownedNonCopying(
-				sema.ByteArrayType,
+				&interpreter.VariableSizedStaticType{
+					Type: interpreter.PrimitiveStaticTypeUInt8,
+				},
 				interpreter.UInt8Value(0x0),
 				interpreter.UInt8Value(0x0),
 				interpreter.UInt8Value(0x0),

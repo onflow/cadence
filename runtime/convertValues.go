@@ -437,7 +437,7 @@ func importArrayValue(
 	}
 
 	// TODO: type
-	var arrayType sema.ArrayType
+	var arrayType interpreter.StaticType
 
 	return interpreter.NewArrayValueUnownedNonCopying(arrayType, values...)
 }

@@ -5401,8 +5401,8 @@ func BenchmarkDecoding(b *testing.B) {
 
 func prepareLargeTestValue() Value {
 	values := NewArrayValueUnownedNonCopying(
-		&sema.VariableSizedType{
-			Type: sema.AnyStructType,
+		&VariableSizedStaticType{
+			Type: PrimitiveStaticTypeAnyStruct,
 		},
 	)
 	for i := 0; i < 100; i++ {

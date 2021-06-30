@@ -52,8 +52,8 @@ func TestOwnerNewArray(t *testing.T) {
 	assert.Equal(t, &oldOwner, value.GetOwner())
 
 	array := NewArrayValueUnownedNonCopying(
-		&sema.VariableSizedType{
-			Type: sema.AnyStructType,
+		&VariableSizedStaticType{
+			Type: PrimitiveStaticTypeAnyStruct,
 		},
 		value,
 	)
@@ -72,8 +72,8 @@ func TestSetOwnerArray(t *testing.T) {
 	value := newTestCompositeValue(oldOwner)
 
 	array := NewArrayValueUnownedNonCopying(
-		&sema.VariableSizedType{
-			Type: sema.AnyStructType,
+		&VariableSizedStaticType{
+			Type: PrimitiveStaticTypeAnyStruct,
 		},
 		value,
 	)
@@ -94,8 +94,8 @@ func TestSetOwnerArrayCopy(t *testing.T) {
 	value := newTestCompositeValue(oldOwner)
 
 	array := NewArrayValueUnownedNonCopying(
-		&sema.VariableSizedType{
-			Type: sema.AnyStructType,
+		&VariableSizedStaticType{
+			Type: PrimitiveStaticTypeAnyStruct,
 		},
 		value,
 	)
@@ -121,8 +121,8 @@ func TestSetOwnerArraySetIndex(t *testing.T) {
 	value2 := newTestCompositeValue(oldOwner)
 
 	array := NewArrayValueUnownedNonCopying(
-		&sema.VariableSizedType{
-			Type: sema.AnyStructType,
+		&VariableSizedStaticType{
+			Type: PrimitiveStaticTypeAnyStruct,
 		},
 		value1,
 	)
@@ -149,8 +149,8 @@ func TestSetOwnerArrayAppend(t *testing.T) {
 	value := newTestCompositeValue(oldOwner)
 
 	array := NewArrayValueUnownedNonCopying(
-		&sema.VariableSizedType{
-			Type: sema.AnyStructType,
+		&VariableSizedStaticType{
+			Type: PrimitiveStaticTypeAnyStruct,
 		},
 	)
 	array.SetOwner(&newOwner)
@@ -174,8 +174,8 @@ func TestSetOwnerArrayInsert(t *testing.T) {
 	value := newTestCompositeValue(oldOwner)
 
 	array := NewArrayValueUnownedNonCopying(
-		&sema.VariableSizedType{
-			Type: sema.AnyStructType,
+		&VariableSizedStaticType{
+			Type: PrimitiveStaticTypeAnyStruct,
 		},
 	)
 	array.SetOwner(&newOwner)
@@ -569,8 +569,8 @@ func TestStringer(t *testing.T) {
 		},
 		"Array": {
 			value: NewArrayValueUnownedNonCopying(
-				&sema.VariableSizedType{
-					Type: sema.AnyStructType,
+				&VariableSizedStaticType{
+					Type: PrimitiveStaticTypeAnyStruct,
 				},
 				NewIntValueFromInt64(10),
 				NewStringValue("TEST"),
@@ -694,8 +694,8 @@ func TestStringer(t *testing.T) {
 						ValueType: sema.UInt8Type,
 					},
 					keys: NewArrayValueUnownedNonCopying(
-						&sema.VariableSizedType{
-							Type: sema.StringType,
+						&VariableSizedStaticType{
+							Type: PrimitiveStaticTypeAnyStruct,
 						},
 						NewStringValue("a"),
 						NewStringValue("b"),
@@ -708,8 +708,8 @@ func TestStringer(t *testing.T) {
 		"Recursive ephemeral reference (array)": {
 			value: func() Value {
 				array := NewArrayValueUnownedNonCopying(
-					&sema.VariableSizedType{
-						Type: sema.AnyStructType,
+					&VariableSizedStaticType{
+						Type: PrimitiveStaticTypeAnyStruct,
 					},
 				)
 				arrayRef := &EphemeralReferenceValue{Value: array}
@@ -757,8 +757,8 @@ func TestVisitor(t *testing.T) {
 	value = NewIntValueFromInt64(42)
 	value = NewSomeValueOwningNonCopying(value)
 	value = NewArrayValueUnownedNonCopying(
-		&sema.VariableSizedType{
-			Type: sema.AnyStructType,
+		&VariableSizedStaticType{
+			Type: PrimitiveStaticTypeAnyStruct,
 		},
 		value,
 	)
@@ -937,7 +937,7 @@ func TestBlockValue(t *testing.T) {
 	block := BlockValue{
 		Height:    4,
 		View:      5,
-		ID:        NewArrayValueUnownedNonCopying(sema.ByteArrayType),
+		ID:        NewArrayValueUnownedNonCopying(byteArrayStaticType),
 		Timestamp: 5.0,
 	}
 
@@ -1627,22 +1627,22 @@ func TestArrayValue_Equal(t *testing.T) {
 
 	t.Parallel()
 
+	uint8ArrayStaticType := &VariableSizedStaticType{
+		Type: PrimitiveStaticTypeUInt8,
+	}
+
 	t.Run("equal", func(t *testing.T) {
 
 		t.Parallel()
 
 		require.True(t,
 			NewArrayValueUnownedNonCopying(
-				&sema.VariableSizedType{
-					Type: sema.UInt8Type,
-				},
+				uint8ArrayStaticType,
 				UInt8Value(1),
 				UInt8Value(2),
 			).Equal(
 				NewArrayValueUnownedNonCopying(
-					&sema.VariableSizedType{
-						Type: sema.UInt8Type,
-					},
+					uint8ArrayStaticType,
 					UInt8Value(1),
 					UInt8Value(2),
 				),
@@ -1658,16 +1658,12 @@ func TestArrayValue_Equal(t *testing.T) {
 
 		require.False(t,
 			NewArrayValueUnownedNonCopying(
-				&sema.VariableSizedType{
-					Type: sema.UInt8Type,
-				},
+				uint8ArrayStaticType,
 				UInt8Value(1),
 				UInt8Value(2),
 			).Equal(
 				NewArrayValueUnownedNonCopying(
-					&sema.VariableSizedType{
-						Type: sema.UInt8Type,
-					},
+					uint8ArrayStaticType,
 					UInt8Value(2),
 					UInt8Value(3),
 				),
@@ -1683,15 +1679,11 @@ func TestArrayValue_Equal(t *testing.T) {
 
 		require.False(t,
 			NewArrayValueUnownedNonCopying(
-				&sema.VariableSizedType{
-					Type: sema.UInt8Type,
-				},
+				uint8ArrayStaticType,
 				UInt8Value(1),
 			).Equal(
 				NewArrayValueUnownedNonCopying(
-					&sema.VariableSizedType{
-						Type: sema.UInt8Type,
-					},
+					uint8ArrayStaticType,
 					UInt8Value(1),
 					UInt8Value(2),
 				),
@@ -1707,16 +1699,12 @@ func TestArrayValue_Equal(t *testing.T) {
 
 		require.False(t,
 			NewArrayValueUnownedNonCopying(
-				&sema.VariableSizedType{
-					Type: sema.UInt8Type,
-				},
+				uint8ArrayStaticType,
 				UInt8Value(1),
 				UInt8Value(2),
 			).Equal(
 				NewArrayValueUnownedNonCopying(
-					&sema.VariableSizedType{
-						Type: sema.UInt8Type,
-					},
+					uint8ArrayStaticType,
 					UInt8Value(1),
 				),
 				nil,
@@ -1731,9 +1719,7 @@ func TestArrayValue_Equal(t *testing.T) {
 
 		require.False(t,
 			NewArrayValueUnownedNonCopying(
-				&sema.VariableSizedType{
-					Type: sema.UInt8Type,
-				},
+				uint8ArrayStaticType,
 				UInt8Value(1),
 			).Equal(
 				UInt8Value(1),
@@ -1916,9 +1902,7 @@ func TestDictionaryValue_Equal(t *testing.T) {
 				NewStringValue("2"),
 			).Equal(
 				NewArrayValueUnownedNonCopying(
-					&sema.VariableSizedType{
-						Type: sema.UInt8Type,
-					},
+					byteArrayStaticType,
 					UInt8Value(1),
 					UInt8Value(2),
 				),
@@ -2261,8 +2245,8 @@ func TestPublicKeyValue(t *testing.T) {
 		t.Parallel()
 
 		publicKey := NewArrayValueUnownedNonCopying(
-			&sema.VariableSizedType{
-				Type: sema.IntType,
+			&VariableSizedStaticType{
+				Type: PrimitiveStaticTypeInt,
 			},
 			NewIntValueFromInt64(1),
 			NewIntValueFromInt64(7),

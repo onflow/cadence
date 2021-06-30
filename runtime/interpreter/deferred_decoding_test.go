@@ -520,8 +520,8 @@ func newTestArrayValue(size int) *ArrayValue {
 	}
 
 	return NewArrayValueUnownedNonCopying(
-		&sema.VariableSizedType{
-			Type: sema.AnyStructType,
+		&VariableSizedStaticType{
+			Type: PrimitiveStaticTypeAnyStruct,
 		},
 		values...,
 	)
