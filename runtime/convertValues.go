@@ -455,7 +455,7 @@ func importDictionaryValue(
 
 	return interpreter.NewDictionaryValueUnownedNonCopying(
 		// TODO: type
-		&sema.DictionaryType{},
+		&interpreter.DictionaryStaticType{},
 		keysAndValues...,
 	)
 }

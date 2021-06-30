@@ -2508,9 +2508,7 @@ func (r *interpreterRuntime) ReadLinked(address common.Address, path cadence.Pat
 	)
 }
 
-var byteArrayStaticType = &interpreter.VariableSizedStaticType{
-	Type: interpreter.PrimitiveStaticTypeInt8,
-}
+var byteArrayStaticType = interpreter.ConvertSemaToStaticType(sema.ByteArrayType)
 
 func NewBlockValue(block Block) interpreter.BlockValue {
 

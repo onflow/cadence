@@ -405,7 +405,9 @@ func (interpreter *Interpreter) VisitDictionaryExpression(expression *ast.Dictio
 	entryTypes := interpreter.Program.Elaboration.DictionaryExpressionEntryTypes[expression]
 	dictionaryType := interpreter.Program.Elaboration.DictionaryExpressionType[expression]
 
-	dictionary := NewDictionaryValueUnownedNonCopying(dictionaryType)
+	dictionaryStaticType := ConvertSemaToStaticType(dictionaryType).(*DictionaryStaticType)
+
+	dictionary := NewDictionaryValueUnownedNonCopying(dictionaryStaticType)
 
 	for i, dictionaryEntryValues := range values {
 		entryType := entryTypes[i]

@@ -201,8 +201,10 @@ func TestOwnerNewDictionary(t *testing.T) {
 	assert.Equal(t, &oldOwner, value.GetOwner())
 
 	dictionary := NewDictionaryValueUnownedNonCopying(
-		// TODO: type
-		&sema.DictionaryType{},
+		&DictionaryStaticType{
+			KeyType:   PrimitiveStaticTypeString,
+			ValueType: PrimitiveStaticTypeAnyStruct,
+		},
 		keyValue, value,
 	)
 
@@ -222,8 +224,10 @@ func TestSetOwnerDictionary(t *testing.T) {
 	value := newTestCompositeValue(oldOwner)
 
 	dictionary := NewDictionaryValueUnownedNonCopying(
-		// TODO: type
-		&sema.DictionaryType{},
+		&DictionaryStaticType{
+			KeyType:   PrimitiveStaticTypeString,
+			ValueType: PrimitiveStaticTypeAnyStruct,
+		},
 		keyValue, value,
 	)
 
@@ -244,8 +248,10 @@ func TestSetOwnerDictionaryCopy(t *testing.T) {
 	value := newTestCompositeValue(oldOwner)
 
 	dictionary := NewDictionaryValueUnownedNonCopying(
-		// TODO: type
-		&sema.DictionaryType{},
+		&DictionaryStaticType{
+			KeyType:   PrimitiveStaticTypeString,
+			ValueType: PrimitiveStaticTypeAnyStruct,
+		},
 		keyValue, value,
 	)
 	dictionary.SetOwner(&newOwner)
@@ -269,8 +275,10 @@ func TestSetOwnerDictionarySetIndex(t *testing.T) {
 	value := newTestCompositeValue(oldOwner)
 
 	dictionary := NewDictionaryValueUnownedNonCopying(
-		// TODO: type
-		&sema.DictionaryType{},
+		&DictionaryStaticType{
+			KeyType:   PrimitiveStaticTypeString,
+			ValueType: PrimitiveStaticTypeAnyStruct,
+		},
 	)
 	dictionary.SetOwner(&newOwner)
 
@@ -299,8 +307,10 @@ func TestSetOwnerDictionaryInsert(t *testing.T) {
 	value := newTestCompositeValue(oldOwner)
 
 	dictionary := NewDictionaryValueUnownedNonCopying(
-		// TODO: type
-		&sema.DictionaryType{},
+		&DictionaryStaticType{
+			KeyType:   PrimitiveStaticTypeString,
+			ValueType: PrimitiveStaticTypeAnyStruct,
+		},
 	)
 	dictionary.SetOwner(&newOwner)
 
@@ -579,9 +589,9 @@ func TestStringer(t *testing.T) {
 		},
 		"Dictionary": {
 			value: NewDictionaryValueUnownedNonCopying(
-				&sema.DictionaryType{
-					KeyType:   sema.StringType,
-					ValueType: sema.StringType,
+				&DictionaryStaticType{
+					KeyType:   PrimitiveStaticTypeString,
+					ValueType: PrimitiveStaticTypeString,
 				},
 				NewStringValue("key"),
 				NewStringValue("value"),
@@ -672,9 +682,9 @@ func TestStringer(t *testing.T) {
 		},
 		"Dictionary with non-deferred values": {
 			value: NewDictionaryValueUnownedNonCopying(
-				&sema.DictionaryType{
-					KeyType:   sema.StringType,
-					ValueType: sema.UInt8Type,
+				&DictionaryStaticType{
+					KeyType:   PrimitiveStaticTypeString,
+					ValueType: PrimitiveStaticTypeUInt8,
 				},
 				NewStringValue("a"), UInt8Value(42),
 				NewStringValue("b"), UInt8Value(99),
@@ -689,9 +699,9 @@ func TestStringer(t *testing.T) {
 					UInt8Value(42),
 				)
 				return &DictionaryValue{
-					Type: &sema.DictionaryType{
-						KeyType:   sema.StringType,
-						ValueType: sema.UInt8Type,
+					Type: &DictionaryStaticType{
+						KeyType:   PrimitiveStaticTypeString,
+						ValueType: PrimitiveStaticTypeUInt8,
 					},
 					keys: NewArrayValueUnownedNonCopying(
 						&VariableSizedStaticType{
@@ -763,9 +773,9 @@ func TestVisitor(t *testing.T) {
 		value,
 	)
 	value = NewDictionaryValueUnownedNonCopying(
-		&sema.DictionaryType{
-			KeyType:   sema.StringType,
-			ValueType: sema.AnyType,
+		&DictionaryStaticType{
+			KeyType:   PrimitiveStaticTypeString,
+			ValueType: PrimitiveStaticTypeAny,
 		},
 		NewStringValue("42"), value,
 	)
@@ -1734,26 +1744,25 @@ func TestDictionaryValue_Equal(t *testing.T) {
 
 	t.Parallel()
 
+	byteStringDictionaryType := &DictionaryStaticType{
+		KeyType:   PrimitiveStaticTypeUInt8,
+		ValueType: PrimitiveStaticTypeString,
+	}
+
 	t.Run("equal", func(t *testing.T) {
 
 		t.Parallel()
 
 		require.True(t,
 			NewDictionaryValueUnownedNonCopying(
-				&sema.DictionaryType{
-					KeyType:   sema.UInt8Type,
-					ValueType: sema.StringType,
-				},
+				byteStringDictionaryType,
 				UInt8Value(1),
 				NewStringValue("1"),
 				UInt8Value(2),
 				NewStringValue("2"),
 			).Equal(
 				NewDictionaryValueUnownedNonCopying(
-					&sema.DictionaryType{
-						KeyType:   sema.UInt8Type,
-						ValueType: sema.StringType,
-					},
+					byteStringDictionaryType,
 					UInt8Value(1),
 					NewStringValue("1"),
 					UInt8Value(2),
@@ -1771,20 +1780,14 @@ func TestDictionaryValue_Equal(t *testing.T) {
 
 		require.False(t,
 			NewDictionaryValueUnownedNonCopying(
-				&sema.DictionaryType{
-					KeyType:   sema.UInt8Type,
-					ValueType: sema.StringType,
-				},
+				byteStringDictionaryType,
 				UInt8Value(1),
 				NewStringValue("1"),
 				UInt8Value(2),
 				NewStringValue("2"),
 			).Equal(
 				NewDictionaryValueUnownedNonCopying(
-					&sema.DictionaryType{
-						KeyType:   sema.UInt8Type,
-						ValueType: sema.StringType,
-					},
+					byteStringDictionaryType,
 					UInt8Value(2),
 					NewStringValue("1"),
 					UInt8Value(3),
@@ -1802,20 +1805,14 @@ func TestDictionaryValue_Equal(t *testing.T) {
 
 		require.False(t,
 			NewDictionaryValueUnownedNonCopying(
-				&sema.DictionaryType{
-					KeyType:   sema.UInt8Type,
-					ValueType: sema.StringType,
-				},
+				byteStringDictionaryType,
 				UInt8Value(1),
 				NewStringValue("1"),
 				UInt8Value(2),
 				NewStringValue("2"),
 			).Equal(
 				NewDictionaryValueUnownedNonCopying(
-					&sema.DictionaryType{
-						KeyType:   sema.UInt8Type,
-						ValueType: sema.StringType,
-					},
+					byteStringDictionaryType,
 					UInt8Value(1),
 					NewStringValue("2"),
 					UInt8Value(2),
@@ -1833,19 +1830,13 @@ func TestDictionaryValue_Equal(t *testing.T) {
 
 		require.False(t,
 			NewDictionaryValueUnownedNonCopying(
-				&sema.DictionaryType{
-					KeyType:   sema.UInt8Type,
-					ValueType: sema.StringType,
-				},
+				byteStringDictionaryType,
 
 				UInt8Value(1),
 				NewStringValue("1"),
 			).Equal(
 				NewDictionaryValueUnownedNonCopying(
-					&sema.DictionaryType{
-						KeyType:   sema.UInt8Type,
-						ValueType: sema.StringType,
-					},
+					byteStringDictionaryType,
 					UInt8Value(1),
 					NewStringValue("1"),
 					UInt8Value(2),
@@ -1863,20 +1854,14 @@ func TestDictionaryValue_Equal(t *testing.T) {
 
 		require.False(t,
 			NewDictionaryValueUnownedNonCopying(
-				&sema.DictionaryType{
-					KeyType:   sema.UInt8Type,
-					ValueType: sema.StringType,
-				},
+				byteStringDictionaryType,
 				UInt8Value(1),
 				NewStringValue("1"),
 				UInt8Value(2),
 				NewStringValue("2"),
 			).Equal(
 				NewDictionaryValueUnownedNonCopying(
-					&sema.DictionaryType{
-						KeyType:   sema.UInt8Type,
-						ValueType: sema.StringType,
-					},
+					byteStringDictionaryType,
 					UInt8Value(1),
 					NewStringValue("1"),
 				),
@@ -1892,10 +1877,7 @@ func TestDictionaryValue_Equal(t *testing.T) {
 
 		require.False(t,
 			NewDictionaryValueUnownedNonCopying(
-				&sema.DictionaryType{
-					KeyType:   sema.UInt8Type,
-					ValueType: sema.StringType,
-				},
+				byteStringDictionaryType,
 				UInt8Value(1),
 				NewStringValue("1"),
 				UInt8Value(2),

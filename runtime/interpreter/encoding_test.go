@@ -287,8 +287,10 @@ func TestEncodeDecodeDictionary(t *testing.T) {
 	t.Run("empty", func(t *testing.T) {
 
 		expected := NewDictionaryValueUnownedNonCopying(
-			// TODO: type
-			&sema.DictionaryType{},
+			&DictionaryStaticType{
+				KeyType:   PrimitiveStaticTypeString,
+				ValueType: PrimitiveStaticTypeAnyStruct,
+			},
 		)
 		expected.modified = false
 		expected.Keys().modified = false
@@ -350,8 +352,10 @@ func TestEncodeDecodeDictionary(t *testing.T) {
 		value3 := NewStringValue("bar")
 
 		expected := NewDictionaryValueUnownedNonCopying(
-			// TODO: type
-			&sema.DictionaryType{},
+			&DictionaryStaticType{
+				KeyType:   PrimitiveStaticTypeAnyStruct,
+				ValueType: PrimitiveStaticTypeAnyStruct,
+			},
 			key1, value1,
 			key2, value2,
 			key3, value3,
@@ -457,8 +461,10 @@ func TestEncodeDecodeDictionary(t *testing.T) {
 
 	t.Run("temporary address value key string change in format version 2", func(t *testing.T) {
 		expected := NewDictionaryValueUnownedNonCopying(
-			// TODO: type
-			&sema.DictionaryType{},
+			&DictionaryStaticType{
+				KeyType:   PrimitiveStaticTypeAddress,
+				ValueType: PrimitiveStaticTypeInt8,
+			},
 			NewAddressValueFromBytes([]byte{0x42}),
 			Int8Value(42),
 		)
@@ -4955,8 +4961,10 @@ func TestEncodeDecodeDictionaryDeferred(t *testing.T) {
 		value2.modified = false
 
 		expected := NewDictionaryValueUnownedNonCopying(
-			// TODO: type
-			&sema.DictionaryType{},
+			&DictionaryStaticType{
+				KeyType:   PrimitiveStaticTypeAnyStruct,
+				ValueType: PrimitiveStaticTypeAnyResource,
+			},
 			key1, value1,
 			key2, value2,
 		)
@@ -5060,8 +5068,10 @@ func TestEncodeDecodeDictionaryDeferred(t *testing.T) {
 		value2 := BoolValue(false)
 
 		expected := NewDictionaryValueUnownedNonCopying(
-			// TODO: type
-			&sema.DictionaryType{},
+			&DictionaryStaticType{
+				KeyType:   PrimitiveStaticTypeAnyStruct,
+				ValueType: PrimitiveStaticTypeAnyStruct,
+			},
 			key1, value1,
 			key2, value2,
 		)
@@ -5407,9 +5417,9 @@ func prepareLargeTestValue() Value {
 	)
 	for i := 0; i < 100; i++ {
 		dict := NewDictionaryValueUnownedNonCopying(
-			&sema.DictionaryType{
-				KeyType:   sema.StringType,
-				ValueType: sema.Int256Type,
+			&DictionaryStaticType{
+				KeyType:   PrimitiveStaticTypeString,
+				ValueType: PrimitiveStaticTypeInt256,
 			},
 		)
 		for i := 0; i < 100; i++ {

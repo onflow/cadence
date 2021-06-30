@@ -3598,9 +3598,9 @@ func TestInterpretDictionary(t *testing.T) {
     `)
 
 	expectedDict := interpreter.NewDictionaryValueUnownedNonCopying(
-		&sema.DictionaryType{
-			KeyType:   sema.StringType,
-			ValueType: sema.IntType,
+		&interpreter.DictionaryStaticType{
+			KeyType:   interpreter.PrimitiveStaticTypeString,
+			ValueType: interpreter.PrimitiveStaticTypeInt,
 		},
 		interpreter.NewStringValue("a"), interpreter.NewIntValueFromInt64(1),
 		interpreter.NewStringValue("b"), interpreter.NewIntValueFromInt64(2),
@@ -3625,9 +3625,9 @@ func TestInterpretDictionaryInsertionOrder(t *testing.T) {
     `)
 
 	expectedDict := interpreter.NewDictionaryValueUnownedNonCopying(
-		&sema.DictionaryType{
-			KeyType:   sema.StringType,
-			ValueType: sema.IntType,
+		&interpreter.DictionaryStaticType{
+			KeyType:   interpreter.PrimitiveStaticTypeString,
+			ValueType: interpreter.PrimitiveStaticTypeInt,
 		},
 		interpreter.NewStringValue("c"), interpreter.NewIntValueFromInt64(3),
 		interpreter.NewStringValue("a"), interpreter.NewIntValueFromInt64(1),
@@ -3799,9 +3799,9 @@ func TestInterpretDictionaryIndexingAssignmentNew(t *testing.T) {
 	)
 
 	expectedDict := interpreter.NewDictionaryValueUnownedNonCopying(
-		&sema.DictionaryType{
-			KeyType:   sema.StringType,
-			ValueType: sema.IntType,
+		&interpreter.DictionaryStaticType{
+			KeyType:   interpreter.PrimitiveStaticTypeString,
+			ValueType: interpreter.PrimitiveStaticTypeInt,
 		},
 		interpreter.NewStringValue("def"), interpreter.NewIntValueFromInt64(42),
 	).Copy().(*interpreter.DictionaryValue)
@@ -3869,9 +3869,9 @@ func TestInterpretDictionaryIndexingAssignmentNil(t *testing.T) {
 	)
 
 	expectedDict := interpreter.NewDictionaryValueUnownedNonCopying(
-		&sema.DictionaryType{
-			KeyType:   sema.StringType,
-			ValueType: sema.IntType,
+		&interpreter.DictionaryStaticType{
+			KeyType:   interpreter.PrimitiveStaticTypeString,
+			ValueType: interpreter.PrimitiveStaticTypeInt,
 		},
 		interpreter.NewStringValue("def"), interpreter.NewIntValueFromInt64(42),
 		interpreter.NewStringValue("abc"), interpreter.NewIntValueFromInt64(23),
@@ -6053,9 +6053,9 @@ func TestInterpretEmitEventParameterTypes(t *testing.T) {
 			tests[fmt.Sprintf("{%[1]s: %[1]s}", validType)] =
 				testValue{
 					value: interpreter.NewDictionaryValueUnownedNonCopying(
-						&sema.DictionaryType{
-							KeyType:   testCase.ty,
-							ValueType: testCase.ty,
+						&interpreter.DictionaryStaticType{
+							KeyType:   interpreter.ConvertSemaToStaticType(testCase.ty),
+							ValueType: interpreter.ConvertSemaToStaticType(testCase.ty),
 						},
 						testCase.value, testCase.value,
 					).Copy(),
@@ -8292,9 +8292,9 @@ func TestInterpretCopyOnReturn(t *testing.T) {
 
 	assert.Equal(t,
 		interpreter.NewDictionaryValueUnownedNonCopying(
-			&sema.DictionaryType{
-				KeyType:   sema.StringType,
-				ValueType: sema.StringType,
+			&interpreter.DictionaryStaticType{
+				KeyType:   interpreter.PrimitiveStaticTypeString,
+				ValueType: interpreter.PrimitiveStaticTypeString,
 			},
 		),
 		value,

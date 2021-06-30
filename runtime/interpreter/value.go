@@ -7326,7 +7326,7 @@ func (v *DictionaryValue) DynamicType(interpreter *Interpreter, results DynamicT
 }
 
 func (v *DictionaryValue) StaticType() StaticType {
-	return ConvertSemaToStaticType(v.Type)
+	return v.Type
 }
 
 func (v *DictionaryValue) Copy() Value {
