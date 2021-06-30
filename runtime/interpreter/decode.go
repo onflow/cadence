@@ -1897,6 +1897,15 @@ func decodeDictionaryMetaInfo(v *DictionaryValue, content []byte) error {
 		)
 	}
 
+	// Decode type
+	// TODO: store dictionary type
+	//   Option 1: convert to sema type. - Don't have the interpreter
+	//   Option 2: Store static type in dictionary
+	_, err = d.decodeStaticType()
+	if err != nil {
+		return err
+	}
+
 	// Lazily decode keys
 
 	var keysContent []byte
@@ -1939,17 +1948,9 @@ func decodeDictionaryMetaInfo(v *DictionaryValue, content []byte) error {
 		return err
 	}
 
-	// Decode type
-	// TODO: store dictionary type
-	//   Option 1: convert to sema type. - Don't have the interpreter
-	//   Option 2: Store static type in array
-	_, err = d.decodeStaticType()
-	if err != nil {
-		return err
-	}
+	keysContent = append(keysContent, valuesContent...)
 
-	//nolint:gocritic
-	v.entriesContent = append(keysContent, valuesContent...)
+	v.entriesContent = keysContent
 	v.Type = nil
 
 	return nil
