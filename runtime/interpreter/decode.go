@@ -1609,10 +1609,6 @@ func (d *DecoderV5) decodeCapabilityStaticType() (StaticType, error) {
 // This also extracts out the fields raw content and cache it separately inside the value.
 //
 func decodeCompositeMetaInfo(v *CompositeValue, content []byte) error {
-	if v.encodingVersion < 5 {
-		return decodeCompositeMetaInfoV4(v, content)
-	}
-
 	d, err := NewByteDecoder(content, v.Owner, v.encodingVersion, v.decodeCallback)
 	if err != nil {
 		return err
@@ -1723,9 +1719,6 @@ func decodeCompositeMetaInfo(v *CompositeValue, content []byte) error {
 // decodeCompositeFields decodes fields from the byte content and updates the composite value.
 //
 func decodeCompositeFields(v *CompositeValue, content []byte) error {
-	if v.encodingVersion < 5 {
-		return decodeCompositeFieldsV4(v, content)
-	}
 
 	d, err := NewByteDecoder(content, v.Owner, v.encodingVersion, v.decodeCallback)
 	if err != nil {
@@ -1800,12 +1793,6 @@ func decodeCompositeFields(v *CompositeValue, content []byte) error {
 }
 
 func decodeArrayMetaInfo(array *ArrayValue, content []byte) error {
-	if array.encodingVersion < 5 {
-		// In encoding version 4, no meta info was available for arrays.
-		// The raw content only consist of the elements.
-		array.elementsContent = content
-		return nil
-	}
 
 	d, err := NewByteDecoder(content, array.Owner, array.encodingVersion, array.decodeCallback)
 	if err != nil {
@@ -1852,9 +1839,6 @@ func decodeArrayMetaInfo(array *ArrayValue, content []byte) error {
 }
 
 func decodeArrayElements(array *ArrayValue, elementContent []byte) error {
-	if array.encodingVersion < 5 {
-		return decodeArrayElementsV4(array, elementContent)
-	}
 
 	d, err := NewByteDecoder(elementContent, array.Owner, array.encodingVersion, array.decodeCallback)
 	if err != nil {
@@ -1871,9 +1855,6 @@ func decodeArrayElements(array *ArrayValue, elementContent []byte) error {
 }
 
 func decodeDictionaryEntries(v *DictionaryValue, content []byte) error {
-	if v.encodingVersion < 5 {
-		return decodeDictionaryEntriesV4(v, content)
-	}
 
 	d, err := NewByteDecoder(content, v.Owner, v.encodingVersion, v.decodeCallback)
 	if err != nil {
