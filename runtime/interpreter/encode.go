@@ -67,7 +67,7 @@ const (
 	cborTagAddressValue
 	cborTagCompositeValue
 	cborTagTypeValue
-	_
+	cborTagArrayValue
 	_
 	_
 	_
@@ -776,7 +776,23 @@ func joinPathElements(elements ...string) string {
 	return strings.Join(elements, pathSeparator)
 }
 
-// encodeArray encodes ArrayValue as []interface{}(v)
+// NOTE: NEVER change, only add/increment; ensure uint64
+const (
+	// !!! *WARNING* !!!
+	//
+	// encodedArrayValueLength MUST be updated when new element is added.
+	// It is used to verify encoded array length during decoding.
+	encodedArrayValueLength = 2
+)
+
+// encodeArray encodes ArrayValue as
+// cbor.Tag{
+//     Number: cborTagArrayValue,
+//     Content: cborArray{
+//         encodedArrayValueStaticTypeFieldKey: []interface{}(v.type),
+//         encodedArrayValueElementsFieldKey:   []interface{}(v.Elements),
+//     },
+// }
 func (e *EncoderV5) encodeArray(
 	v *ArrayValue,
 	path []string,
@@ -792,8 +808,27 @@ func (e *EncoderV5) encodeArray(
 		return nil
 	}
 
+	// Encode tag number and array head
+	err := e.enc.EncodeRawBytes([]byte{
+		// tag number
+		0xd8, cborTagArrayValue,
+		// array, 2 items follow
+		0x82,
+	})
+	if err != nil {
+		return err
+	}
+
+	// Encode array static type at array index encodedArrayValueStaticTypeFieldKey
+	err = e.encodeStaticType(v.StaticType())
+	if err != nil {
+		return err
+	}
+
+	// Encode elements (as array) at array index encodedArrayValueElementsFieldKey
+
 	elements := v.Elements()
-	err := e.enc.EncodeArrayHead(uint64(len(elements)))
+	err = e.enc.EncodeArrayHead(uint64(len(elements)))
 	if err != nil {
 		return err
 	}

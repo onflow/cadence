@@ -247,6 +247,28 @@ func TestEncodeDecodeArray(t *testing.T) {
 			encodeDecodeTest{
 				value: expected,
 				encoded: []byte{
+					// cbor Array Value tag
+					0xd8, cborTagArrayValue,
+
+					// array, 2 items follow
+					0x82,
+
+					// Type info
+
+					// array type tag
+					0xd8, cborTagConstantSizedStaticType,
+
+					// array, 2 items follow
+					0x82,
+
+					// size (0)
+					0x0,
+
+					// element type
+					0xd8, cborTagPrimitiveStaticType, byte(PrimitiveStaticTypeAnyStruct),
+
+					// Elements
+
 					// array, 0 items follow
 					0x80,
 				},
@@ -269,6 +291,22 @@ func TestEncodeDecodeArray(t *testing.T) {
 			encodeDecodeTest{
 				value: expected,
 				encoded: []byte{
+					// cbor Array Value tag
+					0xd8, cborTagArrayValue,
+
+					// array, 2 items follow
+					0x82,
+
+					// Type info
+
+					// array type tag
+					0xd8, cborTagVariableSizedStaticType,
+
+					// element type
+					0xd8, cborTagPrimitiveStaticType, byte(PrimitiveStaticTypeAnyStruct),
+
+					// Elements
+
 					// array, 2 items follow
 					0x82,
 					// UTF-8 string, length 4
@@ -303,8 +341,24 @@ func TestEncodeDecodeDictionary(t *testing.T) {
 			0xd8, cborTagDictionaryValue,
 			// array, 2 items follow
 			0x82,
-			// array, 0 items follow
+
+			// cbor Array Value tag
+			0xd8, cborTagArrayValue,
+
+			// array, 2 items follow
+			0x82,
+
+			// Type info
+
+			// array type tag
+			0xd8, cborTagVariableSizedStaticType,
+
+			// element type
+			0xd8, cborTagPrimitiveStaticType, byte(PrimitiveStaticTypeString),
+
+			// Element: array, 0 items follow
 			0x80,
+
 			// array, 0 items follow
 			0x80,
 		}
@@ -376,6 +430,22 @@ func TestEncodeDecodeDictionary(t *testing.T) {
 			// array, 2 items follow
 			0x82,
 
+			// Keys
+
+			// cbor Array Value tag
+			0xd8, cborTagArrayValue,
+
+			// array, 2 items follow
+			0x82,
+
+			// Type info
+
+			// array type tag
+			0xd8, cborTagVariableSizedStaticType,
+
+			// element type
+			0xd8, cborTagPrimitiveStaticType, byte(PrimitiveStaticTypeAnyStruct),
+
 			// array, 3 items follow
 			0x83,
 			// UTF-8 string, length 4
@@ -389,10 +459,28 @@ func TestEncodeDecodeDictionary(t *testing.T) {
 			// f, o, o
 			0x66, 0x6f, 0x6f,
 
+			// Values
+
 			// array, 3 items follow
 			0x83,
-			// array, 0 items follow
+
+			// cbor Array Value tag
+			0xd8, cborTagArrayValue,
+
+			// array, 2 items follow
+			0x82,
+
+			// Type info
+
+			// array type tag
+			0xd8, cborTagVariableSizedStaticType,
+
+			// element type
+			0xd8, cborTagPrimitiveStaticType, byte(PrimitiveStaticTypeAnyStruct),
+
+			// Elements. array, 0 items follow
 			0x80,
+
 			// false
 			0xf4,
 			// UTF-8 string, length 3
@@ -5006,7 +5094,16 @@ func TestEncodeDecodeDictionaryDeferred(t *testing.T) {
 			0xd8, cborTagDictionaryValue,
 			// array, 2 items follow
 			0x82,
+			// keys to follow
+			// cbor Array Value tag
+			0xd8, cborTagArrayValue,
 			// array, 2 items follow
+			0x82,
+			// array type tag
+			0xd8, cborTagVariableSizedStaticType,
+			// element type
+			0xd8, cborTagPrimitiveStaticType, byte(PrimitiveStaticTypeAnyStruct),
+			// keys: array, 2 items follow
 			0x82,
 			// UTF-8 string, length 4
 			0x64,
@@ -5088,7 +5185,17 @@ func TestEncodeDecodeDictionaryDeferred(t *testing.T) {
 			0xd8, cborTagDictionaryValue,
 			// array, 2 items follow
 			0x82,
+
+			// cbor Array Value tag
+			0xd8, cborTagArrayValue,
+			// keys
 			// array, 2 items follow
+			0x82,
+			// array type tag
+			0xd8, cborTagVariableSizedStaticType,
+			// element type
+			0xd8, cborTagPrimitiveStaticType, byte(PrimitiveStaticTypeAnyStruct),
+			// keys: array, 2 items follow
 			0x82,
 			// UTF-8 string, length 4
 			0x64,
@@ -5325,7 +5432,21 @@ func TestEncodePrepareCallback(t *testing.T) {
 
 	utils.AssertEqualWithDiff(t,
 		[]byte{
-			// array with 1 item follow
+			// cbor Array Value tag
+			0xd8, cborTagArrayValue,
+
+			// array, 2 items follow
+			0x82,
+
+			// Type info
+
+			// array type tag
+			0xd8, cborTagVariableSizedStaticType,
+
+			// element type
+			0xd8, cborTagPrimitiveStaticType, 0x18, byte(PrimitiveStaticTypeInt8),
+
+			// elements: array with 1 item follow
 			0x81,
 			// tag
 			0xd8, cborTagInt8Value,
@@ -5340,6 +5461,19 @@ func TestEncodePrepareCallback(t *testing.T) {
 func TestDecodeCallback(t *testing.T) {
 
 	data := []byte{
+		// cbor Array Value tag
+		0xd8, cborTagArrayValue,
+
+		// array, 2 items follow
+		0x82,
+
+		// Type info
+		// array type tag
+		0xd8, cborTagVariableSizedStaticType,
+
+		// element type
+		0xd8, cborTagPrimitiveStaticType, 0x18, byte(PrimitiveStaticTypeInt8),
+
 		// array with 1 item follow
 		0x81,
 		// tag
@@ -5372,6 +5506,9 @@ func TestDecodeCallback(t *testing.T) {
 			{
 				value: &ArrayValue{
 					values: []Value{Int8Value(42)},
+					Type: VariableSizedStaticType{
+						Type: PrimitiveStaticTypeInt8,
+					},
 				},
 				path: nil,
 			},

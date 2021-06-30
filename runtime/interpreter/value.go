@@ -632,8 +632,13 @@ type ArrayValue struct {
 	modified bool
 
 	// Raw element content cache for decoded values.
-	// Only available for decoded values who's elements are not loaded yet.
+	// Includes meta-info (type info, etc) as well as the elements content.
+	// Only available for decoded arrays who's elements are not loaded yet.
 	content []byte
+
+	// Raw content cache for elements.
+	// Only available for decoded arrays who's elements are not loaded yet.
+	elementsContent []byte
 
 	// Value's path to be used during decoding.
 	// Only available for decoded values who's elements are not loaded yet.
@@ -1113,19 +1118,42 @@ func (v *ArrayValue) Elements() []Value {
 	return v.values
 }
 
-// Ensures the elements of this array value are loaded.
-func (v *ArrayValue) ensureElementsLoaded() {
+// ensureMetaInfoLoaded ensures loading the meta information of this array value.
+// If the meta info is already loaded, then calling this function won't have any effect.
+// Otherwise, the values are decoded form the cached raw-content.
+//
+// Meta info includes:
+//    - static type
+//
+func (v *ArrayValue) ensureMetaInfoLoaded() {
 	if v.content == nil {
 		return
 	}
 
-	err := decodeArrayElements(v, v.content)
+	err := decodeArrayMetaInfo(v, v.content)
+	if err != nil {
+		panic(err)
+	}
+
+	// Raw content is no longer needed. Clear the cache and free-up the memory.
+	v.content = nil
+}
+
+// Ensures the elements of this array value are loaded.
+func (v *ArrayValue) ensureElementsLoaded() {
+	v.ensureMetaInfoLoaded()
+
+	if v.elementsContent == nil {
+		return
+	}
+
+	err := decodeArrayElements(v, v.elementsContent)
 	if err != nil {
 		panic(err)
 	}
 
 	// Reset the cache
-	v.content = nil
+	v.elementsContent = nil
 	v.valuePath = nil
 	v.decodeCallback = nil
 	v.encodingVersion = 0
