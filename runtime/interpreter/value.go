@@ -7166,7 +7166,7 @@ func NewEnumCaseValue(
 // DictionaryValue
 
 type DictionaryValue struct {
-	Type     *DictionaryStaticType
+	Type     DictionaryStaticType
 	keys     *ArrayValue
 	entries  *StringValueOrderedMap
 	Owner    *common.Address
@@ -7211,7 +7211,7 @@ type DictionaryValue struct {
 }
 
 func NewDictionaryValueUnownedNonCopying(
-	dictionaryType *DictionaryStaticType,
+	dictionaryType DictionaryStaticType,
 	keysAndValues ...Value,
 ) *DictionaryValue {
 
@@ -7223,7 +7223,7 @@ func NewDictionaryValueUnownedNonCopying(
 	result := &DictionaryValue{
 		Type: dictionaryType,
 		keys: NewArrayValueUnownedNonCopying(
-			&VariableSizedStaticType{
+			VariableSizedStaticType{
 				Type: dictionaryType.KeyType,
 			},
 		),
@@ -7253,7 +7253,7 @@ func NewDeferredDictionaryValue(
 ) *DictionaryValue {
 	return &DictionaryValue{
 		// TODO: type
-		Type:            nil,
+		Type:            DictionaryStaticType{},
 		Owner:           owner,
 		deferredOwner:   owner,
 		modified:        false,
@@ -7587,7 +7587,7 @@ func (v *DictionaryValue) GetMember(interpreter *Interpreter, getLocationRange f
 		var valueStaticType StaticType
 
 		return NewArrayValueUnownedNonCopying(
-			&VariableSizedStaticType{
+			VariableSizedStaticType{
 				Type: valueStaticType,
 			},
 

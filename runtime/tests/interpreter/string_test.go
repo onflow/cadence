@@ -89,7 +89,7 @@ func TestInterpretStringDecodeHex(t *testing.T) {
 
 	require.Equal(t,
 		interpreter.NewArrayValueUnownedNonCopying(
-			&interpreter.VariableSizedStaticType{
+			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeUInt8,
 			},
 			interpreter.UInt8Value(1),
@@ -134,7 +134,7 @@ func TestInterpretStringUtf8Field(t *testing.T) {
 
 	require.Equal(t,
 		interpreter.NewArrayValueUnownedNonCopying(
-			&interpreter.VariableSizedStaticType{
+			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeUInt8,
 			},
 			// Flowers

@@ -52,7 +52,7 @@ func TestOwnerNewArray(t *testing.T) {
 	assert.Equal(t, &oldOwner, value.GetOwner())
 
 	array := NewArrayValueUnownedNonCopying(
-		&VariableSizedStaticType{
+		VariableSizedStaticType{
 			Type: PrimitiveStaticTypeAnyStruct,
 		},
 		value,
@@ -72,7 +72,7 @@ func TestSetOwnerArray(t *testing.T) {
 	value := newTestCompositeValue(oldOwner)
 
 	array := NewArrayValueUnownedNonCopying(
-		&VariableSizedStaticType{
+		VariableSizedStaticType{
 			Type: PrimitiveStaticTypeAnyStruct,
 		},
 		value,
@@ -94,7 +94,7 @@ func TestSetOwnerArrayCopy(t *testing.T) {
 	value := newTestCompositeValue(oldOwner)
 
 	array := NewArrayValueUnownedNonCopying(
-		&VariableSizedStaticType{
+		VariableSizedStaticType{
 			Type: PrimitiveStaticTypeAnyStruct,
 		},
 		value,
@@ -121,7 +121,7 @@ func TestSetOwnerArraySetIndex(t *testing.T) {
 	value2 := newTestCompositeValue(oldOwner)
 
 	array := NewArrayValueUnownedNonCopying(
-		&VariableSizedStaticType{
+		VariableSizedStaticType{
 			Type: PrimitiveStaticTypeAnyStruct,
 		},
 		value1,
@@ -149,7 +149,7 @@ func TestSetOwnerArrayAppend(t *testing.T) {
 	value := newTestCompositeValue(oldOwner)
 
 	array := NewArrayValueUnownedNonCopying(
-		&VariableSizedStaticType{
+		VariableSizedStaticType{
 			Type: PrimitiveStaticTypeAnyStruct,
 		},
 	)
@@ -174,7 +174,7 @@ func TestSetOwnerArrayInsert(t *testing.T) {
 	value := newTestCompositeValue(oldOwner)
 
 	array := NewArrayValueUnownedNonCopying(
-		&VariableSizedStaticType{
+		VariableSizedStaticType{
 			Type: PrimitiveStaticTypeAnyStruct,
 		},
 	)
@@ -201,7 +201,7 @@ func TestOwnerNewDictionary(t *testing.T) {
 	assert.Equal(t, &oldOwner, value.GetOwner())
 
 	dictionary := NewDictionaryValueUnownedNonCopying(
-		&DictionaryStaticType{
+		DictionaryStaticType{
 			KeyType:   PrimitiveStaticTypeString,
 			ValueType: PrimitiveStaticTypeAnyStruct,
 		},
@@ -224,7 +224,7 @@ func TestSetOwnerDictionary(t *testing.T) {
 	value := newTestCompositeValue(oldOwner)
 
 	dictionary := NewDictionaryValueUnownedNonCopying(
-		&DictionaryStaticType{
+		DictionaryStaticType{
 			KeyType:   PrimitiveStaticTypeString,
 			ValueType: PrimitiveStaticTypeAnyStruct,
 		},
@@ -248,7 +248,7 @@ func TestSetOwnerDictionaryCopy(t *testing.T) {
 	value := newTestCompositeValue(oldOwner)
 
 	dictionary := NewDictionaryValueUnownedNonCopying(
-		&DictionaryStaticType{
+		DictionaryStaticType{
 			KeyType:   PrimitiveStaticTypeString,
 			ValueType: PrimitiveStaticTypeAnyStruct,
 		},
@@ -275,7 +275,7 @@ func TestSetOwnerDictionarySetIndex(t *testing.T) {
 	value := newTestCompositeValue(oldOwner)
 
 	dictionary := NewDictionaryValueUnownedNonCopying(
-		&DictionaryStaticType{
+		DictionaryStaticType{
 			KeyType:   PrimitiveStaticTypeString,
 			ValueType: PrimitiveStaticTypeAnyStruct,
 		},
@@ -307,7 +307,7 @@ func TestSetOwnerDictionaryInsert(t *testing.T) {
 	value := newTestCompositeValue(oldOwner)
 
 	dictionary := NewDictionaryValueUnownedNonCopying(
-		&DictionaryStaticType{
+		DictionaryStaticType{
 			KeyType:   PrimitiveStaticTypeString,
 			ValueType: PrimitiveStaticTypeAnyStruct,
 		},
@@ -579,7 +579,7 @@ func TestStringer(t *testing.T) {
 		},
 		"Array": {
 			value: NewArrayValueUnownedNonCopying(
-				&VariableSizedStaticType{
+				VariableSizedStaticType{
 					Type: PrimitiveStaticTypeAnyStruct,
 				},
 				NewIntValueFromInt64(10),
@@ -589,7 +589,7 @@ func TestStringer(t *testing.T) {
 		},
 		"Dictionary": {
 			value: NewDictionaryValueUnownedNonCopying(
-				&DictionaryStaticType{
+				DictionaryStaticType{
 					KeyType:   PrimitiveStaticTypeString,
 					ValueType: PrimitiveStaticTypeString,
 				},
@@ -682,7 +682,7 @@ func TestStringer(t *testing.T) {
 		},
 		"Dictionary with non-deferred values": {
 			value: NewDictionaryValueUnownedNonCopying(
-				&DictionaryStaticType{
+				DictionaryStaticType{
 					KeyType:   PrimitiveStaticTypeString,
 					ValueType: PrimitiveStaticTypeUInt8,
 				},
@@ -699,12 +699,12 @@ func TestStringer(t *testing.T) {
 					UInt8Value(42),
 				)
 				return &DictionaryValue{
-					Type: &DictionaryStaticType{
+					Type: DictionaryStaticType{
 						KeyType:   PrimitiveStaticTypeString,
 						ValueType: PrimitiveStaticTypeUInt8,
 					},
 					keys: NewArrayValueUnownedNonCopying(
-						&VariableSizedStaticType{
+						VariableSizedStaticType{
 							Type: PrimitiveStaticTypeAnyStruct,
 						},
 						NewStringValue("a"),
@@ -718,7 +718,7 @@ func TestStringer(t *testing.T) {
 		"Recursive ephemeral reference (array)": {
 			value: func() Value {
 				array := NewArrayValueUnownedNonCopying(
-					&VariableSizedStaticType{
+					VariableSizedStaticType{
 						Type: PrimitiveStaticTypeAnyStruct,
 					},
 				)
@@ -767,13 +767,13 @@ func TestVisitor(t *testing.T) {
 	value = NewIntValueFromInt64(42)
 	value = NewSomeValueOwningNonCopying(value)
 	value = NewArrayValueUnownedNonCopying(
-		&VariableSizedStaticType{
+		VariableSizedStaticType{
 			Type: PrimitiveStaticTypeAnyStruct,
 		},
 		value,
 	)
 	value = NewDictionaryValueUnownedNonCopying(
-		&DictionaryStaticType{
+		DictionaryStaticType{
 			KeyType:   PrimitiveStaticTypeString,
 			ValueType: PrimitiveStaticTypeAny,
 		},
@@ -1637,7 +1637,7 @@ func TestArrayValue_Equal(t *testing.T) {
 
 	t.Parallel()
 
-	uint8ArrayStaticType := &VariableSizedStaticType{
+	uint8ArrayStaticType := VariableSizedStaticType{
 		Type: PrimitiveStaticTypeUInt8,
 	}
 
@@ -1744,7 +1744,7 @@ func TestDictionaryValue_Equal(t *testing.T) {
 
 	t.Parallel()
 
-	byteStringDictionaryType := &DictionaryStaticType{
+	byteStringDictionaryType := DictionaryStaticType{
 		KeyType:   PrimitiveStaticTypeUInt8,
 		ValueType: PrimitiveStaticTypeString,
 	}
@@ -2227,7 +2227,7 @@ func TestPublicKeyValue(t *testing.T) {
 		t.Parallel()
 
 		publicKey := NewArrayValueUnownedNonCopying(
-			&VariableSizedStaticType{
+			VariableSizedStaticType{
 				Type: PrimitiveStaticTypeInt,
 			},
 			NewIntValueFromInt64(1),
