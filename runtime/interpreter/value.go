@@ -7171,7 +7171,7 @@ func (v *CompositeValue) ConformsToDynamicType(
 		dynamicTypeResults := DynamicTypeResults{}
 		fieldDynamicType := field.DynamicType(interpreter, dynamicTypeResults)
 
-		if !IsSubType(fieldDynamicType, member.TypeAnnotation.Type) {
+		if !interpreter.IsSubType(fieldDynamicType, member.TypeAnnotation.Type) {
 			return false
 		}
 
@@ -8404,8 +8404,8 @@ func (v *StorageReferenceValue) ReferencedValue(interpreter *Interpreter) *Value
 		if v.BorrowedType != nil {
 			dynamicTypeResults := DynamicTypeResults{}
 			dynamicType := value.DynamicType(interpreter, dynamicTypeResults)
-			if !IsSubType(dynamicType, v.BorrowedType) {
-				IsSubType(dynamicType, v.BorrowedType)
+			if !interpreter.IsSubType(dynamicType, v.BorrowedType) {
+				interpreter.IsSubType(dynamicType, v.BorrowedType)
 				return nil
 			}
 		}

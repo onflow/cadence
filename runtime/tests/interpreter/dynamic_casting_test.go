@@ -1121,8 +1121,9 @@ func TestInterpretDynamicCastingArray(t *testing.T) {
 						inter := parseCheckAndInterpret(t,
 							fmt.Sprintf(
 								`
-                                  let x: %[1]s = [42]
-                                  let y: %[2]s? = x %[3]s %[2]s
+                                  let x: [Int] = [42]
+                                  let y: %[1]s = x
+                                  let z: %[2]s? = y %[3]s %[2]s
                                 `,
 								fromType,
 								targetType,
@@ -1134,20 +1135,20 @@ func TestInterpretDynamicCastingArray(t *testing.T) {
 							interpreter.NewIntValueFromInt64(42),
 						}
 
-						xValue := inter.Globals["x"].GetValue()
-						require.IsType(t, xValue, &interpreter.ArrayValue{})
-						xArray := xValue.(*interpreter.ArrayValue)
+						yValue := inter.Globals["y"].GetValue()
+						require.IsType(t, yValue, &interpreter.ArrayValue{})
+						yArray := yValue.(*interpreter.ArrayValue)
 
 						assert.Equal(t,
 							expectedElements,
-							xArray.Elements(),
+							yArray.Elements(),
 						)
 
-						yValue := inter.Globals["y"].GetValue()
-						require.IsType(t, yValue, &interpreter.SomeValue{})
-						ySome := yValue.(*interpreter.SomeValue)
+						zValue := inter.Globals["z"].GetValue()
+						require.IsType(t, zValue, &interpreter.SomeValue{})
+						zSome := zValue.(*interpreter.SomeValue)
 
-						innerValue := ySome.Value
+						innerValue := zSome.Value
 						require.IsType(t, innerValue, &interpreter.ArrayValue{})
 						innerArray := innerValue.(*interpreter.ArrayValue)
 
@@ -1194,6 +1195,33 @@ func TestInterpretDynamicCastingArray(t *testing.T) {
 					})
 				}
 			}
+
+			t.Run("invalid upcast", func(t *testing.T) {
+
+				inter := parseCheckAndInterpret(t,
+					fmt.Sprintf(
+						`
+		                  fun test(): [Int]? {
+		                      let x: [AnyStruct] = []
+		                      return x %s [Int]
+		                  }
+		                `,
+						operation.Symbol(),
+					),
+				)
+
+				result, err := inter.Invoke("test")
+
+				if returnsOptional {
+					require.NoError(t, err)
+					assert.Equal(t,
+						interpreter.NilValue{},
+						result,
+					)
+				} else {
+					require.ErrorAs(t, err, &interpreter.TypeMismatchError{})
+				}
+			})
 		})
 	}
 }
@@ -1294,6 +1322,33 @@ func TestInterpretDynamicCastingDictionary(t *testing.T) {
 					})
 				}
 			}
+
+			t.Run("invalid upcast", func(t *testing.T) {
+
+				inter := parseCheckAndInterpret(t,
+					fmt.Sprintf(
+						`
+		                  fun test(): {Int: String}? {
+		                      let x: {Int: AnyStruct} = {}
+		                      return x %s {Int: String}
+		                  }
+		                `,
+						operation.Symbol(),
+					),
+				)
+
+				result, err := inter.Invoke("test")
+
+				if returnsOptional {
+					require.NoError(t, err)
+					assert.Equal(t,
+						interpreter.NilValue{},
+						result,
+					)
+				} else {
+					require.ErrorAs(t, err, &interpreter.TypeMismatchError{})
+				}
+			})
 		})
 	}
 }

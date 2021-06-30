@@ -695,7 +695,7 @@ func validateArgumentParams(
 		}
 
 		// Check that decoded value is a subtype of static parameter type
-		if !interpreter.IsSubType(dynamicType, parameterType) {
+		if !inter.IsSubType(dynamicType, parameterType) {
 			return nil, &InvalidEntryPointArgumentError{
 				Index: i,
 				Err: &InvalidValueTypeError{
