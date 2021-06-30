@@ -675,6 +675,8 @@ func NewDeferredArrayValue(
 	version uint16,
 ) *ArrayValue {
 	return &ArrayValue{
+		// TODO: type
+		Type:            nil,
 		valuePath:       path,
 		content:         content,
 		Owner:           owner,
