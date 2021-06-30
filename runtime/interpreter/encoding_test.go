@@ -236,8 +236,8 @@ func TestEncodeDecodeArray(t *testing.T) {
 
 	t.Run("empty", func(t *testing.T) {
 		expected := NewArrayValueUnownedNonCopying(
-			&sema.ConstantSizedType{
-				Type: sema.AnyStructType,
+			&ConstantSizedStaticType{
+				Type: PrimitiveStaticTypeAnyStruct,
 				Size: 0,
 			},
 		)
@@ -279,8 +279,8 @@ func TestEncodeDecodeArray(t *testing.T) {
 		expectedString := NewStringValue("test")
 
 		expected := NewArrayValueUnownedNonCopying(
-			&sema.VariableSizedType{
-				Type: sema.AnyStructType,
+			&VariableSizedStaticType{
+				Type: PrimitiveStaticTypeAnyStruct,
 			},
 			expectedString,
 			BoolValue(true),
@@ -328,9 +328,9 @@ func TestEncodeDecodeDictionary(t *testing.T) {
 	t.Run("empty", func(t *testing.T) {
 
 		expected := NewDictionaryValueUnownedNonCopying(
-			&sema.DictionaryType{
-				KeyType:   sema.StringType,
-				ValueType: sema.AnyStructType,
+			&DictionaryStaticType{
+				KeyType:   PrimitiveStaticTypeString,
+				ValueType: PrimitiveStaticTypeAnyStruct,
 			},
 		)
 		expected.modified = false
@@ -398,8 +398,8 @@ func TestEncodeDecodeDictionary(t *testing.T) {
 	t.Run("non-empty", func(t *testing.T) {
 		key1 := NewStringValue("test")
 		value1 := NewArrayValueUnownedNonCopying(
-			&sema.VariableSizedType{
-				Type: sema.AnyStructType,
+			&VariableSizedStaticType{
+				Type: PrimitiveStaticTypeAnyStruct,
 			},
 		)
 
@@ -410,9 +410,9 @@ func TestEncodeDecodeDictionary(t *testing.T) {
 		value3 := NewStringValue("bar")
 
 		expected := NewDictionaryValueUnownedNonCopying(
-			&sema.DictionaryType{
-				KeyType:   sema.AnyStructType,
-				ValueType: sema.AnyStructType,
+			&DictionaryStaticType{
+				KeyType:   PrimitiveStaticTypeAnyStruct,
+				ValueType: PrimitiveStaticTypeAnyStruct,
 			},
 			key1, value1,
 			key2, value2,
@@ -553,9 +553,9 @@ func TestEncodeDecodeDictionary(t *testing.T) {
 
 	t.Run("temporary address value key string change in format version 2", func(t *testing.T) {
 		expected := NewDictionaryValueUnownedNonCopying(
-			&sema.DictionaryType{
-				KeyType:   &sema.AddressType{},
-				ValueType: sema.Int8Type,
+			&DictionaryStaticType{
+				KeyType:   PrimitiveStaticTypeAddress,
+				ValueType: PrimitiveStaticTypeInt8,
 			},
 			NewAddressValueFromBytes([]byte{0x42}),
 			Int8Value(42),
@@ -5053,9 +5053,9 @@ func TestEncodeDecodeDictionaryDeferred(t *testing.T) {
 		value2.modified = false
 
 		expected := NewDictionaryValueUnownedNonCopying(
-			&sema.DictionaryType{
-				KeyType:   sema.AnyStructType,
-				ValueType: sema.AnyResourceType,
+			&DictionaryStaticType{
+				KeyType:   PrimitiveStaticTypeAnyStruct,
+				ValueType: PrimitiveStaticTypeAnyResource,
 			},
 			key1, value1,
 			key2, value2,
@@ -5168,9 +5168,9 @@ func TestEncodeDecodeDictionaryDeferred(t *testing.T) {
 		value2 := BoolValue(false)
 
 		expected := NewDictionaryValueUnownedNonCopying(
-			&sema.DictionaryType{
-				KeyType:   sema.AnyStructType,
-				ValueType: sema.AnyStructType,
+			&DictionaryStaticType{
+				KeyType:   PrimitiveStaticTypeAnyStruct,
+				ValueType: PrimitiveStaticTypeAnyStruct,
 			},
 			key1, value1,
 			key2, value2,
@@ -5395,8 +5395,8 @@ func TestEncodeDecodeTypeValue(t *testing.T) {
 func TestEncodePrepareCallback(t *testing.T) {
 
 	value := NewArrayValueUnownedNonCopying(
-		&sema.VariableSizedType{
-			Type: sema.Int8Type,
+		&VariableSizedStaticType{
+			Type: PrimitiveStaticTypeInt8,
 		},
 		Int8Value(42),
 	)
@@ -5549,15 +5549,15 @@ func BenchmarkDecoding(b *testing.B) {
 
 func prepareLargeTestValue() Value {
 	values := NewArrayValueUnownedNonCopying(
-		&sema.VariableSizedType{
-			Type: sema.AnyStructType,
+		&VariableSizedStaticType{
+			Type: PrimitiveStaticTypeAnyStruct,
 		},
 	)
 	for i := 0; i < 100; i++ {
 		dict := NewDictionaryValueUnownedNonCopying(
-			&sema.DictionaryType{
-				KeyType:   sema.StringType,
-				ValueType: sema.Int256Type,
+			&DictionaryStaticType{
+				KeyType:   PrimitiveStaticTypeString,
+				ValueType: PrimitiveStaticTypeInt256,
 			},
 		)
 		for i := 0; i < 100; i++ {

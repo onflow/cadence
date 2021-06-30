@@ -437,7 +437,7 @@ func importArrayValue(
 	}
 
 	// TODO: type
-	var arrayType sema.ArrayType
+	var arrayType interpreter.StaticType
 
 	return interpreter.NewArrayValueUnownedNonCopying(arrayType, values...)
 }
@@ -455,7 +455,7 @@ func importDictionaryValue(
 
 	return interpreter.NewDictionaryValueUnownedNonCopying(
 		// TODO: type
-		&sema.DictionaryType{},
+		&interpreter.DictionaryStaticType{},
 		keysAndValues...,
 	)
 }

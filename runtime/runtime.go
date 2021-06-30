@@ -2508,6 +2508,8 @@ func (r *interpreterRuntime) ReadLinked(address common.Address, path cadence.Pat
 	)
 }
 
+var byteArrayStaticType = interpreter.ConvertSemaToStaticType(sema.ByteArrayType)
+
 func NewBlockValue(block Block) interpreter.BlockValue {
 
 	// height
@@ -2522,7 +2524,7 @@ func NewBlockValue(block Block) interpreter.BlockValue {
 		values[i] = interpreter.UInt8Value(b)
 	}
 	idValue := interpreter.NewArrayValueUnownedNonCopying(
-		sema.ByteArrayType,
+		byteArrayStaticType,
 		values...,
 	)
 

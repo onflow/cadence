@@ -22,7 +22,6 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/onflow/cadence/runtime/sema"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -520,8 +519,8 @@ func newTestArrayValue(size int) *ArrayValue {
 	}
 
 	return NewArrayValueUnownedNonCopying(
-		&sema.VariableSizedType{
-			Type: sema.AnyStructType,
+		&VariableSizedStaticType{
+			Type: PrimitiveStaticTypeAnyStruct,
 		},
 		values...,
 	)
@@ -876,22 +875,18 @@ func TestDictionaryDeferredDecoding(t *testing.T) {
 			nil,
 		)
 
-		testResourceType := &sema.CompositeType{
-			Location:   utils.TestLocation,
-			Identifier: "TestResource",
-			Kind:       common.CompositeKindResource,
-			Members:    sema.NewStringMemberOrderedMap(),
-		}
-
 		for i := 0; i < size; i++ {
 			values[i*2] = NewStringValue(fmt.Sprintf("key%d", i))
 			values[i*2+1] = testResource
 		}
 
 		dictionary := NewDictionaryValueUnownedNonCopying(
-			&sema.DictionaryType{
-				KeyType:   sema.StringType,
-				ValueType: testResourceType,
+			&DictionaryStaticType{
+				KeyType:   PrimitiveStaticTypeString,
+				ValueType: CompositeStaticType{
+					Location:            utils.TestLocation,
+					QualifiedIdentifier: "TestResource",
+				},
 			},
 			values...,
 		)
@@ -970,9 +965,9 @@ func newTestDictionaryValue(size int) *DictionaryValue {
 	}
 
 	return NewDictionaryValueUnownedNonCopying(
-		&sema.DictionaryType{
-			KeyType:   sema.StringType,
-			ValueType: sema.StringType,
+		&DictionaryStaticType{
+			KeyType:   PrimitiveStaticTypeString,
+			ValueType: PrimitiveStaticTypeString,
 		},
 		values...,
 	)
