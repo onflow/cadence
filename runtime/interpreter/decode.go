@@ -1571,7 +1571,7 @@ func (d *DecoderV5) decodeCapabilityStaticType() (StaticType, error) {
 // This also extracts out the fields raw content and cache it separately inside the value.
 //
 func decodeCompositeMetaInfo(v *CompositeValue, content []byte) error {
-	if v.encodingVersion == 4 {
+	if v.encodingVersion < 5 {
 		return decodeCompositeMetaInfoV4(v, content)
 	}
 
@@ -1685,7 +1685,7 @@ func decodeCompositeMetaInfo(v *CompositeValue, content []byte) error {
 // decodeCompositeFields decodes fields from the byte content and updates the composite value.
 //
 func decodeCompositeFields(v *CompositeValue, content []byte) error {
-	if v.encodingVersion == 4 {
+	if v.encodingVersion < 5 {
 		return decodeCompositeFieldsV4(v, content)
 	}
 
@@ -1762,7 +1762,7 @@ func decodeCompositeFields(v *CompositeValue, content []byte) error {
 }
 
 func decodeArrayElements(array *ArrayValue, elementContent []byte) error {
-	if array.encodingVersion == 4 {
+	if array.encodingVersion < 5 {
 		return decodeArrayElementsV4(array, elementContent)
 	}
 
@@ -1781,7 +1781,7 @@ func decodeArrayElements(array *ArrayValue, elementContent []byte) error {
 }
 
 func decodeDictionaryEntries(v *DictionaryValue, content []byte) error {
-	if v.encodingVersion == 4 {
+	if v.encodingVersion < 5 {
 		return decodeDictionaryEntriesV4(v, content)
 	}
 
