@@ -1236,9 +1236,9 @@ func TestInterpretDynamicCastingDictionary(t *testing.T) {
 						)
 
 						expectedValue := interpreter.NewDictionaryValueUnownedNonCopying(
-							&sema.DictionaryType{
-								KeyType:   sema.StringType,
-								ValueType: sema.IntType,
+							interpreter.DictionaryStaticType{
+								KeyType:   interpreter.PrimitiveStaticTypeString,
+								ValueType: interpreter.PrimitiveStaticTypeInt,
 							},
 							interpreter.NewStringValue("test"), interpreter.NewIntValueFromInt64(42),
 						).Copy()

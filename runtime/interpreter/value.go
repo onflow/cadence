@@ -577,6 +577,8 @@ func (*StringValue) IsStorable() bool {
 	return true
 }
 
+var byteArrayStaticType = ConvertSemaToStaticType(sema.ByteArrayType)
+
 // DecodeHex hex-decodes this string and returns an array of UInt8 values
 //
 func (v *StringValue) DecodeHex() *ArrayValue {
@@ -592,7 +594,7 @@ func (v *StringValue) DecodeHex() *ArrayValue {
 		values[i] = UInt8Value(b)
 	}
 
-	return NewArrayValueUnownedNonCopying(sema.ByteArrayType, values...)
+	return NewArrayValueUnownedNonCopying(byteArrayStaticType, values...)
 }
 
 func (*StringValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -607,7 +609,7 @@ func (*StringValue) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicTyp
 // ArrayValue
 
 type ArrayValue struct {
-	Type     sema.ArrayType
+	Type     StaticType
 	values   []Value
 	Owner    *common.Address
 	modified bool
@@ -634,7 +636,7 @@ type ArrayValue struct {
 	encodingVersion uint16
 }
 
-func NewArrayValueUnownedNonCopying(arrayType sema.ArrayType, values ...Value) *ArrayValue {
+func NewArrayValueUnownedNonCopying(arrayType StaticType, values ...Value) *ArrayValue {
 	// NOTE: new value has no owner
 
 	for _, value := range values {
@@ -661,8 +663,6 @@ func NewDeferredArrayValue(
 	version uint16,
 ) *ArrayValue {
 	return &ArrayValue{
-		// TODO: type
-		Type:            nil,
 		valuePath:       path,
 		content:         content,
 		Owner:           owner,
@@ -699,7 +699,7 @@ func (v *ArrayValue) DynamicType(interpreter *Interpreter, results DynamicTypeRe
 }
 
 func (v *ArrayValue) StaticType() StaticType {
-	return ConvertSemaToStaticType(v.Type)
+	return v.Type
 }
 
 func (v *ArrayValue) Copy() Value {
@@ -7194,7 +7194,7 @@ func NewEnumCaseValue(
 // DictionaryValue
 
 type DictionaryValue struct {
-	Type     *sema.DictionaryType
+	Type     DictionaryStaticType
 	keys     *ArrayValue
 	entries  *StringValueOrderedMap
 	Owner    *common.Address
@@ -7243,7 +7243,7 @@ type DictionaryValue struct {
 }
 
 func NewDictionaryValueUnownedNonCopying(
-	dictionaryType *sema.DictionaryType,
+	dictionaryType DictionaryStaticType,
 	keysAndValues ...Value,
 ) *DictionaryValue {
 
@@ -7255,7 +7255,7 @@ func NewDictionaryValueUnownedNonCopying(
 	result := &DictionaryValue{
 		Type: dictionaryType,
 		keys: NewArrayValueUnownedNonCopying(
-			&sema.VariableSizedType{
+			VariableSizedStaticType{
 				Type: dictionaryType.KeyType,
 			},
 		),
@@ -7285,7 +7285,7 @@ func NewDeferredDictionaryValue(
 ) *DictionaryValue {
 	return &DictionaryValue{
 		// TODO: type
-		Type:            nil,
+		Type:            DictionaryStaticType{},
 		Owner:           owner,
 		deferredOwner:   owner,
 		modified:        false,
@@ -7358,7 +7358,7 @@ func (v *DictionaryValue) DynamicType(interpreter *Interpreter, results DynamicT
 }
 
 func (v *DictionaryValue) StaticType() StaticType {
-	return ConvertSemaToStaticType(v.Type)
+	return v.Type
 }
 
 func (v *DictionaryValue) Copy() Value {
@@ -7616,12 +7616,13 @@ func (v *DictionaryValue) GetMember(interpreter *Interpreter, getLocationRange f
 		}
 
 		// TODO: type
-		var valueType sema.Type
+		var valueStaticType StaticType
 
 		return NewArrayValueUnownedNonCopying(
-			&sema.VariableSizedType{
-				Type: valueType,
+			VariableSizedStaticType{
+				Type: valueStaticType,
 			},
+
 			dictionaryValues...,
 		)
 

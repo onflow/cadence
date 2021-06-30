@@ -25,7 +25,6 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/onflow/cadence/runtime/sema"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -49,8 +48,8 @@ func withWritesToStorage(
 	runtimeStorage := newRuntimeStorage(runtimeInterface)
 
 	array := interpreter.NewArrayValueUnownedNonCopying(
-		&sema.VariableSizedType{
-			Type: sema.IntType,
+		interpreter.VariableSizedStaticType{
+			Type: interpreter.PrimitiveStaticTypeInt,
 		},
 	)
 
