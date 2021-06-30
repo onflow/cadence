@@ -36,10 +36,9 @@ import (
 )
 
 type exportTest struct {
-	label       string
-	value       interpreter.Value
-	expected    cadence.Value
-	skipReverse bool
+	label    string
+	value    interpreter.Value
+	expected cadence.Value
 }
 
 var exportTests = []exportTest{
@@ -49,10 +48,9 @@ var exportTests = []exportTest{
 		expected: cadence.NewVoid(),
 	},
 	{
-		label:       "Nil",
-		value:       interpreter.NilValue{},
-		expected:    cadence.NewOptional(nil),
-		skipReverse: true,
+		label:    "Nil",
+		value:    interpreter.NilValue{},
+		expected: cadence.NewOptional(nil),
 	},
 	{
 		label:    "SomeValue",
@@ -78,27 +76,6 @@ var exportTests = []exportTest{
 		label:    "String non-empty",
 		value:    interpreter.NewStringValue("foo"),
 		expected: cadence.NewString("foo"),
-	},
-	{
-		label: "Array empty",
-		value: interpreter.NewArrayValueUnownedNonCopying(
-			// TODO: type
-			nil,
-		),
-		expected: cadence.NewArray([]cadence.Value{}),
-	},
-	{
-		label: "Array non-empty",
-		value: interpreter.NewArrayValueUnownedNonCopying(
-			// TODO: type
-			nil,
-			interpreter.NewIntValueFromInt64(42),
-			interpreter.NewStringValue("foo"),
-		),
-		expected: cadence.NewArray([]cadence.Value{
-			cadence.NewInt(42),
-			cadence.NewString("foo"),
-		}),
 	},
 	{
 		label:    "Int",
@@ -229,10 +206,8 @@ func TestExportValue(t *testing.T) {
 			inter, err := interpreter.NewInterpreter(nil, utils.TestLocation)
 			require.NoError(t, err)
 
-			if !tt.skipReverse {
-				original := importValue(inter, actual)
-				assert.Equal(t, tt.value, original)
-			}
+			original := importValue(inter, actual)
+			assert.Equal(t, tt.value, original)
 		})
 	}
 
@@ -1806,11 +1781,96 @@ func TestMalformedArgumentPassing(t *testing.T) {
 	}
 }
 
+func TestArrayValueImportExport(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("export empty", func(t *testing.T) {
+
+		t.Parallel()
+
+		value := interpreter.NewArrayValueUnownedNonCopying(
+			&sema.VariableSizedType{
+				Type: sema.AnyStructType,
+			},
+		)
+
+		actual := exportValueWithInterpreter(value, nil, exportResults{})
+		assert.Equal(t,
+			cadence.NewArray([]cadence.Value{}),
+			actual,
+		)
+	})
+
+	t.Run("import empty", func(t *testing.T) {
+
+		t.Parallel()
+
+		value := cadence.NewArray([]cadence.Value{})
+
+		actual := importValue(nil, value)
+		assert.Equal(t,
+			interpreter.NewArrayValueUnownedNonCopying(
+				// TODO: type
+				nil,
+			),
+			actual,
+		)
+	})
+
+	t.Run("export non-empty", func(t *testing.T) {
+
+		t.Parallel()
+
+		value := interpreter.NewArrayValueUnownedNonCopying(
+			&sema.VariableSizedType{
+				Type: sema.AnyStructType,
+			},
+			interpreter.NewIntValueFromInt64(42),
+			interpreter.NewStringValue("foo"),
+		)
+
+		actual := exportValueWithInterpreter(value, nil, exportResults{})
+		assert.Equal(t,
+			cadence.NewArray([]cadence.Value{
+				cadence.NewInt(42),
+				cadence.NewString("foo"),
+			}),
+			actual,
+		)
+	})
+
+	t.Run("import non-empty", func(t *testing.T) {
+
+		t.Parallel()
+
+		value := cadence.NewArray([]cadence.Value{
+			cadence.NewInt(42),
+			cadence.NewString("foo"),
+		})
+
+		actual := importValue(nil, value)
+		assert.Equal(t,
+			interpreter.NewArrayValueUnownedNonCopying(
+				// TODO: type
+				nil,
+				interpreter.NewIntValueFromInt64(42),
+				interpreter.NewStringValue("foo"),
+			),
+			actual,
+		)
+	})
+
+}
+
 func TestStringValueImport(t *testing.T) {
 
 	t.Parallel()
 
 	t.Run("non-utf8", func(t *testing.T) {
+
+		t.Parallel()
+
 		nonUTF8String := "\xbd\xb2\x3d\xbc\x20\xe2"
 		require.False(t, utf8.ValidString(nonUTF8String))
 

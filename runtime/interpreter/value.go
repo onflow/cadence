@@ -57,6 +57,7 @@ type Value interface {
 	fmt.Stringer
 	IsValue()
 	Accept(interpreter *Interpreter, visitor Visitor)
+	Walk(walkChild func(Value))
 	DynamicType(interpreter *Interpreter, results DynamicTypeResults) DynamicType
 	Copy() Value
 	GetOwner() *common.Address
@@ -124,6 +125,10 @@ func (TypeValue) IsValue() {}
 
 func (v TypeValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitTypeValue(interpreter, v)
+}
+
+func (TypeValue) Walk(_ func(Value)) {
+	// NO-OP
 }
 
 var metaTypeDynamicType DynamicType = MetaTypeDynamicType{}
@@ -226,6 +231,10 @@ func (v VoidValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitVoidValue(interpreter, v)
 }
 
+func (VoidValue) Walk(_ func(Value)) {
+	// NO-OP
+}
+
 var voidDynamicType DynamicType = VoidDynamicType{}
 
 func (VoidValue) DynamicType(_ *Interpreter, _ DynamicTypeResults) DynamicType {
@@ -282,6 +291,10 @@ func (BoolValue) IsValue() {}
 
 func (v BoolValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitBoolValue(interpreter, v)
+}
+
+func (BoolValue) Walk(_ func(Value)) {
+	// NO-OP
 }
 
 var boolDynamicType DynamicType = BoolDynamicType{}
@@ -383,6 +396,10 @@ func (*StringValue) IsValue() {}
 
 func (v *StringValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitStringValue(interpreter, v)
+}
+
+func (*StringValue) Walk(_ func(Value)) {
+	// NO-OP
 }
 
 var stringDynamicType DynamicType = StringDynamicType{}
@@ -677,6 +694,12 @@ func (v *ArrayValue) Accept(interpreter *Interpreter, visitor Visitor) {
 
 	for _, value := range v.Elements() {
 		value.Accept(interpreter, visitor)
+	}
+}
+
+func (v *ArrayValue) Walk(walkChild func(Value)) {
+	for _, value := range v.Elements() {
+		walkChild(value)
 	}
 }
 
@@ -1232,6 +1255,10 @@ func (v IntValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitIntValue(interpreter, v)
 }
 
+func (IntValue) Walk(_ func(Value)) {
+	// NO-OP
+}
+
 var intDynamicType DynamicType = NumberDynamicType{sema.IntType}
 
 func (IntValue) DynamicType(_ *Interpreter, _ DynamicTypeResults) DynamicType {
@@ -1452,6 +1479,10 @@ func (Int8Value) IsValue() {}
 
 func (v Int8Value) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitInt8Value(interpreter, v)
+}
+
+func (Int8Value) Walk(_ func(Value)) {
+	// NO-OP
 }
 
 var int8DynamicType DynamicType = NumberDynamicType{sema.Int8Type}
@@ -1755,6 +1786,10 @@ func (Int16Value) IsValue() {}
 
 func (v Int16Value) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitInt16Value(interpreter, v)
+}
+
+func (Int16Value) Walk(_ func(Value)) {
+	// NO-OP
 }
 
 var int16DynamicType DynamicType = NumberDynamicType{sema.Int16Type}
@@ -2062,6 +2097,10 @@ func (v Int32Value) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitInt32Value(interpreter, v)
 }
 
+func (Int32Value) Walk(_ func(Value)) {
+	// NO-OP
+}
+
 var int32DynamicType DynamicType = NumberDynamicType{sema.Int32Type}
 
 func (Int32Value) DynamicType(_ *Interpreter, _ DynamicTypeResults) DynamicType {
@@ -2365,6 +2404,10 @@ func (Int64Value) IsValue() {}
 
 func (v Int64Value) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitInt64Value(interpreter, v)
+}
+
+func (Int64Value) Walk(_ func(Value)) {
+	// NO-OP
 }
 
 var int64DynamicType DynamicType = NumberDynamicType{sema.Int64Type}
@@ -2678,6 +2721,10 @@ func (v Int128Value) IsValue() {}
 
 func (v Int128Value) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitInt128Value(interpreter, v)
+}
+
+func (Int128Value) Walk(_ func(Value)) {
+	// NO-OP
 }
 
 var int128DynamicType DynamicType = NumberDynamicType{sema.Int128Type}
@@ -3052,6 +3099,10 @@ func (v Int256Value) IsValue() {}
 
 func (v Int256Value) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitInt256Value(interpreter, v)
+}
+
+func (Int256Value) Walk(_ func(Value)) {
+	// NO-OP
 }
 
 var int256DynamicType DynamicType = NumberDynamicType{sema.Int256Type}
@@ -3449,6 +3500,10 @@ func (v UIntValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitUIntValue(interpreter, v)
 }
 
+func (UIntValue) Walk(_ func(Value)) {
+	// NO-OP
+}
+
 var uintDynamicType DynamicType = NumberDynamicType{sema.UIntType}
 
 func (UIntValue) DynamicType(_ *Interpreter, _ DynamicTypeResults) DynamicType {
@@ -3680,6 +3735,10 @@ func (UInt8Value) IsValue() {}
 
 func (v UInt8Value) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitUInt8Value(interpreter, v)
+}
+
+func (UInt8Value) Walk(_ func(Value)) {
+	// NO-OP
 }
 
 var uint8DynamicType DynamicType = NumberDynamicType{sema.UInt8Type}
@@ -3916,6 +3975,10 @@ func (v UInt16Value) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitUInt16Value(interpreter, v)
 }
 
+func (UInt16Value) Walk(_ func(Value)) {
+	// NO-OP
+}
+
 var uint16DynamicType DynamicType = NumberDynamicType{sema.UInt16Type}
 
 func (UInt16Value) DynamicType(_ *Interpreter, _ DynamicTypeResults) DynamicType {
@@ -4148,6 +4211,10 @@ func (UInt32Value) IsValue() {}
 
 func (v UInt32Value) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitUInt32Value(interpreter, v)
+}
+
+func (UInt32Value) Walk(_ func(Value)) {
+	// NO-OP
 }
 
 var uint32DynamicType DynamicType = NumberDynamicType{sema.UInt32Type}
@@ -4383,6 +4450,10 @@ func (UInt64Value) IsValue() {}
 
 func (v UInt64Value) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitUInt64Value(interpreter, v)
+}
+
+func (UInt64Value) Walk(_ func(Value)) {
+	// NO-OP
 }
 
 var uint64DynamicType DynamicType = NumberDynamicType{sema.UInt64Type}
@@ -4631,6 +4702,10 @@ func (v UInt128Value) IsValue() {}
 
 func (v UInt128Value) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitUInt128Value(interpreter, v)
+}
+
+func (UInt128Value) Walk(_ func(Value)) {
+	// NO-OP
 }
 
 var uint128DynamicType DynamicType = NumberDynamicType{sema.UInt128Type}
@@ -4949,6 +5024,10 @@ func (v UInt256Value) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitUInt256Value(interpreter, v)
 }
 
+func (UInt256Value) Walk(_ func(Value)) {
+	// NO-OP
+}
+
 var uint256DynamicType DynamicType = NumberDynamicType{sema.UInt256Type}
 
 func (UInt256Value) DynamicType(_ *Interpreter, _ DynamicTypeResults) DynamicType {
@@ -5255,6 +5334,10 @@ func (v Word8Value) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitWord8Value(interpreter, v)
 }
 
+func (Word8Value) Walk(_ func(Value)) {
+	// NO-OP
+}
+
 var word8DynamicType DynamicType = NumberDynamicType{sema.Word8Type}
 
 func (Word8Value) DynamicType(_ *Interpreter, _ DynamicTypeResults) DynamicType {
@@ -5432,6 +5515,10 @@ func (Word16Value) IsValue() {}
 
 func (v Word16Value) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitWord16Value(interpreter, v)
+}
+
+func (Word16Value) Walk(_ func(Value)) {
+	// NO-OP
 }
 
 var word16DynamicType DynamicType = NumberDynamicType{sema.Word16Type}
@@ -5613,6 +5700,10 @@ func (v Word32Value) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitWord32Value(interpreter, v)
 }
 
+func (Word32Value) Walk(_ func(Value)) {
+	// NO-OP
+}
+
 var word32DynamicType DynamicType = NumberDynamicType{sema.Word32Type}
 
 func (Word32Value) DynamicType(_ *Interpreter, _ DynamicTypeResults) DynamicType {
@@ -5792,6 +5883,10 @@ func (Word64Value) IsValue() {}
 
 func (v Word64Value) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitWord64Value(interpreter, v)
+}
+
+func (Word64Value) Walk(_ func(Value)) {
+	// NO-OP
 }
 
 var word64DynamicType DynamicType = NumberDynamicType{sema.Word64Type}
@@ -5988,6 +6083,10 @@ func (Fix64Value) IsValue() {}
 
 func (v Fix64Value) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitFix64Value(interpreter, v)
+}
+
+func (Fix64Value) Walk(_ func(Value)) {
+	// NO-OP
 }
 
 var fix64DynamicType DynamicType = NumberDynamicType{sema.Fix64Type}
@@ -6266,6 +6365,10 @@ func (UFix64Value) IsValue() {}
 
 func (v UFix64Value) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitUFix64Value(interpreter, v)
+}
+
+func (UFix64Value) Walk(_ func(Value)) {
+	// NO-OP
 }
 
 var ufix64DynamicType DynamicType = NumberDynamicType{sema.UFix64Type}
@@ -6615,6 +6718,12 @@ func (v *CompositeValue) Accept(interpreter *Interpreter, visitor Visitor) {
 
 	v.Fields().Foreach(func(_ string, value Value) {
 		value.Accept(interpreter, visitor)
+	})
+}
+
+func (v *CompositeValue) Walk(walkChild func(Value)) {
+	v.Fields().Foreach(func(_ string, value Value) {
+		walkChild(value)
 	})
 }
 
@@ -7305,6 +7414,15 @@ func (v *DictionaryValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	}
 }
 
+func (v *DictionaryValue) Walk(walkChild func(Value)) {
+	for _, value := range v.Keys().Elements() {
+		walkChild(value)
+	}
+	v.Entries().Foreach(func(_ string, value Value) {
+		walkChild(value)
+	})
+}
+
 func (v *DictionaryValue) DynamicType(interpreter *Interpreter, results DynamicTypeResults) DynamicType {
 	keys := v.Keys().Elements()
 	entryTypes := make([]struct{ KeyType, ValueType DynamicType }, len(keys))
@@ -7583,14 +7701,10 @@ func (v *DictionaryValue) GetMember(interpreter *Interpreter, getLocationRange f
 			i++
 		}
 
-		// TODO: type
-		var valueStaticType StaticType
-
 		return NewArrayValueUnownedNonCopying(
 			VariableSizedStaticType{
-				Type: valueStaticType,
+				Type: v.Type.ValueType,
 			},
-
 			dictionaryValues...,
 		)
 
@@ -7890,6 +8004,10 @@ func (v NilValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitNilValue(interpreter, v)
 }
 
+func (NilValue) Walk(_ func(Value)) {
+	// NO-OP
+}
+
 var nilDynamicType DynamicType = NilDynamicType{}
 
 func (NilValue) DynamicType(_ *Interpreter, _ DynamicTypeResults) DynamicType {
@@ -7992,6 +8110,10 @@ func (v *SomeValue) Accept(interpreter *Interpreter, visitor Visitor) {
 		return
 	}
 	v.Value.Accept(interpreter, visitor)
+}
+
+func (v *SomeValue) Walk(walkChild func(Value)) {
+	walkChild(v.Value)
 }
 
 func (v *SomeValue) DynamicType(interpreter *Interpreter, results DynamicTypeResults) DynamicType {
@@ -8124,6 +8246,11 @@ func (*StorageReferenceValue) IsValue() {}
 
 func (v *StorageReferenceValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitStorageReferenceValue(interpreter, v)
+}
+
+func (*StorageReferenceValue) Walk(_ func(Value)) {
+	// NO-OP
+	// NOTE: *not* walking referenced value!
 }
 
 func (*StorageReferenceValue) String() string {
@@ -8345,6 +8472,11 @@ func (*EphemeralReferenceValue) IsValue() {}
 
 func (v *EphemeralReferenceValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitEphemeralReferenceValue(interpreter, v)
+}
+
+func (*EphemeralReferenceValue) Walk(_ func(Value)) {
+	// NO-OP
+	// NOTE: *not* walking referenced value!
 }
 
 func (v *EphemeralReferenceValue) String() string {
@@ -8583,6 +8715,10 @@ func (AddressValue) IsValue() {}
 
 func (v AddressValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitAddressValue(interpreter, v)
+}
+
+func (AddressValue) Walk(_ func(Value)) {
+	// NO-OP
 }
 
 var addressDynamicType DynamicType = AddressDynamicType{}
@@ -8857,6 +8993,10 @@ func (v PathValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitPathValue(interpreter, v)
 }
 
+func (PathValue) Walk(_ func(Value)) {
+	// NO-OP
+}
+
 var storagePathDynamicType DynamicType = StoragePathDynamicType{}
 var publicPathDynamicType DynamicType = PublicPathDynamicType{}
 var privatePathDynamicType DynamicType = PrivatePathDynamicType{}
@@ -8970,6 +9110,11 @@ func (CapabilityValue) IsValue() {}
 
 func (v CapabilityValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitCapabilityValue(interpreter, v)
+}
+
+func (v CapabilityValue) Walk(walkChild func(Value)) {
+	walkChild(v.Address)
+	walkChild(v.Path)
 }
 
 func (v CapabilityValue) DynamicType(inter *Interpreter, _ DynamicTypeResults) DynamicType {
@@ -9097,6 +9242,10 @@ func (LinkValue) IsValue() {}
 
 func (v LinkValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitLinkValue(interpreter, v)
+}
+
+func (v LinkValue) Walk(walkChild func(Value)) {
+	walkChild(v.TargetPath)
 }
 
 func (LinkValue) DynamicType(_ *Interpreter, _ DynamicTypeResults) DynamicType {
