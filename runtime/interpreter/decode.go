@@ -1950,6 +1950,9 @@ func decodeDictionaryMetaInfo(v *DictionaryValue, content []byte) error {
 }
 
 func decodeDictionaryEntries(v *DictionaryValue, content []byte) error {
+	if v.encodingVersion == 4 {
+		return decodeDictionaryEntriesV4(v, content)
+	}
 
 	d, err := NewByteDecoder(content, v.Owner, v.encodingVersion, v.decodeCallback)
 	if err != nil {
