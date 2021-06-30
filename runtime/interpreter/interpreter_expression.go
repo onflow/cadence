@@ -405,7 +405,7 @@ func (interpreter *Interpreter) VisitDictionaryExpression(expression *ast.Dictio
 	entryTypes := interpreter.Program.Elaboration.DictionaryExpressionEntryTypes[expression]
 	dictionaryType := interpreter.Program.Elaboration.DictionaryExpressionType[expression]
 
-	dictionaryStaticType := ConvertSemaToStaticType(dictionaryType).(*DictionaryStaticType)
+	dictionaryStaticType := ConvertSemaToStaticType(dictionaryType).(DictionaryStaticType)
 
 	dictionary := NewDictionaryValueUnownedNonCopying(dictionaryStaticType)
 

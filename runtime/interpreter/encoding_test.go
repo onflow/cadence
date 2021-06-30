@@ -236,7 +236,7 @@ func TestEncodeDecodeArray(t *testing.T) {
 
 	t.Run("empty", func(t *testing.T) {
 		expected := NewArrayValueUnownedNonCopying(
-			&ConstantSizedStaticType{
+			ConstantSizedStaticType{
 				Type: PrimitiveStaticTypeAnyStruct,
 				Size: 0,
 			},
@@ -279,7 +279,7 @@ func TestEncodeDecodeArray(t *testing.T) {
 		expectedString := NewStringValue("test")
 
 		expected := NewArrayValueUnownedNonCopying(
-			&VariableSizedStaticType{
+			VariableSizedStaticType{
 				Type: PrimitiveStaticTypeAnyStruct,
 			},
 			expectedString,
@@ -328,7 +328,7 @@ func TestEncodeDecodeDictionary(t *testing.T) {
 	t.Run("empty", func(t *testing.T) {
 
 		expected := NewDictionaryValueUnownedNonCopying(
-			&DictionaryStaticType{
+			DictionaryStaticType{
 				KeyType:   PrimitiveStaticTypeString,
 				ValueType: PrimitiveStaticTypeAnyStruct,
 			},
@@ -398,7 +398,7 @@ func TestEncodeDecodeDictionary(t *testing.T) {
 	t.Run("non-empty", func(t *testing.T) {
 		key1 := NewStringValue("test")
 		value1 := NewArrayValueUnownedNonCopying(
-			&VariableSizedStaticType{
+			VariableSizedStaticType{
 				Type: PrimitiveStaticTypeAnyStruct,
 			},
 		)
@@ -410,7 +410,7 @@ func TestEncodeDecodeDictionary(t *testing.T) {
 		value3 := NewStringValue("bar")
 
 		expected := NewDictionaryValueUnownedNonCopying(
-			&DictionaryStaticType{
+			DictionaryStaticType{
 				KeyType:   PrimitiveStaticTypeAnyStruct,
 				ValueType: PrimitiveStaticTypeAnyStruct,
 			},
@@ -553,7 +553,7 @@ func TestEncodeDecodeDictionary(t *testing.T) {
 
 	t.Run("temporary address value key string change in format version 2", func(t *testing.T) {
 		expected := NewDictionaryValueUnownedNonCopying(
-			&DictionaryStaticType{
+			DictionaryStaticType{
 				KeyType:   PrimitiveStaticTypeAddress,
 				ValueType: PrimitiveStaticTypeInt8,
 			},
@@ -5053,7 +5053,7 @@ func TestEncodeDecodeDictionaryDeferred(t *testing.T) {
 		value2.modified = false
 
 		expected := NewDictionaryValueUnownedNonCopying(
-			&DictionaryStaticType{
+			DictionaryStaticType{
 				KeyType:   PrimitiveStaticTypeAnyStruct,
 				ValueType: PrimitiveStaticTypeAnyResource,
 			},
@@ -5168,7 +5168,7 @@ func TestEncodeDecodeDictionaryDeferred(t *testing.T) {
 		value2 := BoolValue(false)
 
 		expected := NewDictionaryValueUnownedNonCopying(
-			&DictionaryStaticType{
+			DictionaryStaticType{
 				KeyType:   PrimitiveStaticTypeAnyStruct,
 				ValueType: PrimitiveStaticTypeAnyStruct,
 			},
@@ -5395,7 +5395,7 @@ func TestEncodeDecodeTypeValue(t *testing.T) {
 func TestEncodePrepareCallback(t *testing.T) {
 
 	value := NewArrayValueUnownedNonCopying(
-		&VariableSizedStaticType{
+		VariableSizedStaticType{
 			Type: PrimitiveStaticTypeInt8,
 		},
 		Int8Value(42),
@@ -5506,6 +5506,9 @@ func TestDecodeCallback(t *testing.T) {
 			{
 				value: &ArrayValue{
 					values: []Value{Int8Value(42)},
+					Type: VariableSizedStaticType{
+						Type: PrimitiveStaticTypeInt8,
+					},
 				},
 				path: nil,
 			},
@@ -5549,13 +5552,13 @@ func BenchmarkDecoding(b *testing.B) {
 
 func prepareLargeTestValue() Value {
 	values := NewArrayValueUnownedNonCopying(
-		&VariableSizedStaticType{
+		VariableSizedStaticType{
 			Type: PrimitiveStaticTypeAnyStruct,
 		},
 	)
 	for i := 0; i < 100; i++ {
 		dict := NewDictionaryValueUnownedNonCopying(
-			&DictionaryStaticType{
+			DictionaryStaticType{
 				KeyType:   PrimitiveStaticTypeString,
 				ValueType: PrimitiveStaticTypeInt256,
 			},

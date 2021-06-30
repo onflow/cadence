@@ -37,13 +37,13 @@ func TestByteArrayValueToByteSlice(t *testing.T) {
 
 		invalid := []Value{
 			NewArrayValueUnownedNonCopying(
-				&VariableSizedStaticType{
+				VariableSizedStaticType{
 					Type: PrimitiveStaticTypeInt64,
 				},
 				UInt64Value(500),
 			),
 			NewArrayValueUnownedNonCopying(
-				&VariableSizedStaticType{
+				VariableSizedStaticType{
 					Type: PrimitiveStaticTypeInt256,
 				},
 				NewInt256ValueFromBigInt(largeBigInt),
@@ -63,19 +63,19 @@ func TestByteArrayValueToByteSlice(t *testing.T) {
 
 		invalid := map[Value][]byte{
 			NewArrayValueUnownedNonCopying(
-				&VariableSizedStaticType{
+				VariableSizedStaticType{
 					Type: PrimitiveStaticTypeInteger,
 				},
 			): {},
 			NewArrayValueUnownedNonCopying(
-				&VariableSizedStaticType{
+				VariableSizedStaticType{
 					Type: PrimitiveStaticTypeInteger,
 				},
 				UInt64Value(2),
 				NewUInt128ValueFromUint64(3),
 			): {2, 3},
 			NewArrayValueUnownedNonCopying(
-				&VariableSizedStaticType{
+				VariableSizedStaticType{
 					Type: PrimitiveStaticTypeInteger,
 				},
 				UInt8Value(4),

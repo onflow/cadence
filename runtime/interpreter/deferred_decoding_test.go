@@ -519,7 +519,7 @@ func newTestArrayValue(size int) *ArrayValue {
 	}
 
 	return NewArrayValueUnownedNonCopying(
-		&VariableSizedStaticType{
+		VariableSizedStaticType{
 			Type: PrimitiveStaticTypeAnyStruct,
 		},
 		values...,
@@ -881,7 +881,7 @@ func TestDictionaryDeferredDecoding(t *testing.T) {
 		}
 
 		dictionary := NewDictionaryValueUnownedNonCopying(
-			&DictionaryStaticType{
+			DictionaryStaticType{
 				KeyType:   PrimitiveStaticTypeString,
 				ValueType: CompositeStaticType{
 					Location:            utils.TestLocation,
@@ -965,7 +965,7 @@ func newTestDictionaryValue(size int) *DictionaryValue {
 	}
 
 	return NewDictionaryValueUnownedNonCopying(
-		&DictionaryStaticType{
+		DictionaryStaticType{
 			KeyType:   PrimitiveStaticTypeString,
 			ValueType: PrimitiveStaticTypeString,
 		},
