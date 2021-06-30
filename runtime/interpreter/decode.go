@@ -22,7 +22,6 @@ import (
 	"fmt"
 	"io"
 	"math"
-	"math/big"
 	"math/bits"
 	"strconv"
 	"strings"
@@ -604,8 +603,6 @@ func (d *DecoderV5) decodeComposite(path []string) (*CompositeValue, error) {
 
 	return NewDeferredCompositeValue(valuePath, content, d.owner, d.decodeCallback, d.version), nil
 }
-
-var bigOne = big.NewInt(1)
 
 func (d *DecoderV5) decodeInt() (IntValue, error) {
 	bigInt, err := d.decoder.DecodeBigInt()
