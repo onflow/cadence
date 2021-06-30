@@ -72,13 +72,7 @@ func testEncodeDecode(t *testing.T, test encodeDecodeTest) {
 		version = test.decodeVersion
 	}
 
-	var decoded Value
-	var err error
-	if version <= 3 {
-		decoded, err = DecodeValueV3(encoded, &testOwner, nil, version, nil)
-	} else {
-		decoded, err = DecodeValue(encoded, &testOwner, nil, version, nil)
-	}
+	decoded, err := DecodeValue(encoded, &testOwner, nil, version, nil)
 
 	if test.invalid {
 		require.Error(t, err)

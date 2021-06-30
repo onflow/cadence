@@ -82,8 +82,8 @@ func worker(jobs <-chan entry, wg *sync.WaitGroup, decoded *uint64) {
 		owner := common.BytesToAddress(rawOwner)
 
 		decodeFunction := interpreter.DecodeValue
-		if version <= 3 {
-			decodeFunction = interpreter.DecodeValueV3
+		if version <= 4 {
+			decodeFunction = interpreter.DecodeValueV4
 		}
 
 		var value interpreter.Value
