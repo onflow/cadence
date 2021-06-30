@@ -1723,6 +1723,78 @@ func TestArrayValue_Equal(t *testing.T) {
 		)
 	})
 
+	t.Run("different types", func(t *testing.T) {
+
+		t.Parallel()
+
+		uint16ArrayStaticType := VariableSizedStaticType{
+			Type: PrimitiveStaticTypeUInt16,
+		}
+
+		require.False(t,
+			NewArrayValueUnownedNonCopying(
+				uint8ArrayStaticType,
+			).Equal(
+				NewArrayValueUnownedNonCopying(
+					uint16ArrayStaticType,
+				),
+				nil,
+				true,
+			),
+		)
+	})
+
+	t.Run("no type, type", func(t *testing.T) {
+
+		t.Parallel()
+
+		require.False(t,
+			NewArrayValueUnownedNonCopying(
+				nil,
+			).Equal(
+				NewArrayValueUnownedNonCopying(
+					uint8ArrayStaticType,
+				),
+				nil,
+				true,
+			),
+		)
+	})
+
+	t.Run("type, no type", func(t *testing.T) {
+
+		t.Parallel()
+
+		require.False(t,
+			NewArrayValueUnownedNonCopying(
+				uint8ArrayStaticType,
+			).Equal(
+				NewArrayValueUnownedNonCopying(
+					nil,
+				),
+				nil,
+				true,
+			),
+		)
+	})
+
+	t.Run("no types", func(t *testing.T) {
+
+		t.Parallel()
+
+		require.True(t,
+			NewArrayValueUnownedNonCopying(
+				nil,
+			).Equal(
+				NewArrayValueUnownedNonCopying(
+					nil,
+				),
+				nil,
+				true,
+			),
+		)
+	})
+
 	t.Run("different kind", func(t *testing.T) {
 
 		t.Parallel()
@@ -1864,6 +1936,28 @@ func TestDictionaryValue_Equal(t *testing.T) {
 					byteStringDictionaryType,
 					UInt8Value(1),
 					NewStringValue("1"),
+				),
+				nil,
+				true,
+			),
+		)
+	})
+
+	t.Run("different types", func(t *testing.T) {
+
+		t.Parallel()
+
+		stringByteDictionaryStaticType := DictionaryStaticType{
+			KeyType:   PrimitiveStaticTypeString,
+			ValueType: PrimitiveStaticTypeUInt8,
+		}
+
+		require.False(t,
+			NewDictionaryValueUnownedNonCopying(
+				byteStringDictionaryType,
+			).Equal(
+				NewDictionaryValueUnownedNonCopying(
+					stringByteDictionaryStaticType,
 				),
 				nil,
 				true,

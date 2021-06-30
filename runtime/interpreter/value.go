@@ -1101,6 +1101,16 @@ func (v *ArrayValue) Equal(other Value, interpreter *Interpreter, loadDeferred b
 		return false
 	}
 
+	if v.Type == nil {
+		if otherArray.Type != nil {
+			return false
+		}
+	} else if otherArray.Type == nil ||
+		!v.Type.Equal(otherArray.Type) {
+
+		return false
+	}
+
 	for i, value := range elements {
 		otherValue := otherElements[i]
 
@@ -7459,14 +7469,14 @@ func (v *DictionaryValue) Walk(walkChild func(Value)) {
 
 func (v *DictionaryValue) DynamicType(interpreter *Interpreter, results DynamicTypeResults) DynamicType {
 	keys := v.Keys().Elements()
-	entryTypes := make([]struct{ KeyType, ValueType DynamicType }, len(keys))
+	entryTypes := make([]DictionaryStaticTypeEntry, len(keys))
 
 	for i, key := range keys {
 		// NOTE: Force unwrap, otherwise dynamic type check is for optional type.
 		// This is safe because we are iterating over the keys.
 		value := v.Get(interpreter, ReturnEmptyLocationRange, key).(*SomeValue).Value
 		entryTypes[i] =
-			struct{ KeyType, ValueType DynamicType }{
+			DictionaryStaticTypeEntry{
 				KeyType:   key.DynamicType(interpreter, results),
 				ValueType: value.DynamicType(interpreter, results),
 			}
@@ -7965,6 +7975,10 @@ func (v *DictionaryValue) Equal(other Value, interpreter *Interpreter, loadDefer
 
 	v.ensureLoaded()
 	otherDictionary.ensureLoaded()
+
+	if !v.Type.Equal(otherDictionary.Type) {
+		return false
+	}
 
 	if !v.keys.Equal(otherDictionary.keys, interpreter, loadDeferred) {
 		return false
