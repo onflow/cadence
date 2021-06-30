@@ -527,6 +527,7 @@ func newTestArrayValue(size int) *ArrayValue {
 }
 
 func TestArrayDeferredDecoding(t *testing.T) {
+
 	t.Parallel()
 
 	t.Run("Simple array", func(t *testing.T) {
@@ -583,7 +584,7 @@ func TestArrayDeferredDecoding(t *testing.T) {
 		decodedArray := decoded.(*ArrayValue)
 		assert.NotNil(t, decodedArray.content)
 
-		// Re encode the decoded value
+		// Re-encode the decoded value
 		reEncoded, _, err := EncodeValue(decodedArray, nil, true, nil)
 		require.NoError(t, err)
 
