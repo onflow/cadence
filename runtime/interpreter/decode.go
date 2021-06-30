@@ -322,8 +322,14 @@ func (d *DecoderV5) decodeString(v string) Value {
 
 func (d *DecoderV5) decodeArray(path []string, deferDecoding bool) (*ArrayValue, error) {
 	if !deferDecoding {
+		err := d.decodeArrayValueHead(path)
+		if err != nil {
+			return nil, err
+		}
+
+		// Decode type at array index encodedArrayValueStaticTypeFieldKey
 		// TODO: store type info
-		_, err := d.decodeArrayValueStaticType(path)
+		_, err = d.decodeStaticType()
 		if err != nil {
 			return nil, err
 		}
@@ -1768,34 +1774,31 @@ func decodeCompositeFields(v *CompositeValue, content []byte) error {
 	return nil
 }
 
-func (d *DecoderV5) decodeArrayValueStaticType(valuePath []string) (StaticType, error) {
+func (d *DecoderV5) decodeArrayValueHead(valuePath []string) error {
 	const expectedLength = encodedArrayValueLength
 
 	size, err := d.decoder.DecodeArrayHead()
 
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
-			return nil, fmt.Errorf("invalid array encoding (@ %s): expected [%d]interface{}, got %s",
+			return fmt.Errorf("invalid array encoding (@ %s): expected [%d]interface{}, got %s",
 				strings.Join(valuePath, "."),
 				expectedLength,
 				e.ActualType.String(),
 			)
 		}
-		return nil, err
+		return err
 	}
 
 	if size != expectedLength {
-		return nil, fmt.Errorf("invalid array encoding (@ %s): expected [%d]interface{}, got [%d]interface{}",
+		return fmt.Errorf("invalid array encoding (@ %s): expected [%d]interface{}, got [%d]interface{}",
 			strings.Join(valuePath, "."),
 			expectedLength,
 			size,
 		)
 	}
 
-	// Static type
-
-	// Decode type at array index encodedArrayValueStaticTypeFieldKey
-	return d.decodeStaticType()
+	return nil
 }
 
 func decodeArrayMetaInfo(array *ArrayValue, content []byte) error {
@@ -1804,13 +1807,21 @@ func decodeArrayMetaInfo(array *ArrayValue, content []byte) error {
 		return err
 	}
 
-	// TODO: store array type
-	//   Option 1: convert to sema type. - Don't have the interpreter
-	//   Option 2: Store static type in array
-	_, err = d.decodeArrayValueStaticType(array.valuePath)
+	err = d.decodeArrayValueHead(array.valuePath)
 	if err != nil {
 		return err
 	}
+
+	// Decode type at array index encodedArrayValueStaticTypeFieldKey
+	_, err = d.decodeStaticType()
+	if err != nil {
+		return err
+	}
+
+	// TODO: store array type
+	//   Option 1: convert to sema type. - Don't have the interpreter
+	//   Option 2: Store static type in array
+	// TODO: store type info
 	array.Type = nil
 
 	// Elements

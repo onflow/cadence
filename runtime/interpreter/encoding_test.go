@@ -410,7 +410,6 @@ func TestEncodeDecodeDictionary(t *testing.T) {
 		value3 := NewStringValue("bar")
 
 		expected := NewDictionaryValueUnownedNonCopying(
-			// TODO: type
 			&sema.DictionaryType{
 				KeyType:   sema.AnyStructType,
 				ValueType: sema.AnyStructType,
@@ -5054,7 +5053,6 @@ func TestEncodeDecodeDictionaryDeferred(t *testing.T) {
 		value2.modified = false
 
 		expected := NewDictionaryValueUnownedNonCopying(
-			// TODO: type
 			&sema.DictionaryType{
 				KeyType:   sema.AnyStructType,
 				ValueType: sema.AnyResourceType,
@@ -5170,7 +5168,6 @@ func TestEncodeDecodeDictionaryDeferred(t *testing.T) {
 		value2 := BoolValue(false)
 
 		expected := NewDictionaryValueUnownedNonCopying(
-			// TODO: type
 			&sema.DictionaryType{
 				KeyType:   sema.AnyStructType,
 				ValueType: sema.AnyStructType,
