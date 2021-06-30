@@ -115,18 +115,18 @@ pub struct interface HasID {
 }
 
 pub struct A: HasID {
-    pub let name: String
+    pub let id: String
 
-    init(name: String) {
-        self.name = name
+    init(id: String) {
+        self.id = id
     }
 }
 
 pub struct B: HasID {
-    pub let name: String
+    pub let id: String
 
-    init(name: String) {
-        self.name = name
+    init(id: String) {
+        self.id = id
     }
 }
 
@@ -135,8 +135,8 @@ pub struct B: HasID {
 // to variables with type `AnyResource{HasID}`: Some resource type which only allows
 // access to the functionality of resource interface `HasID`
 
-let hasID1: {HasID} = A(name: "1")
-let hasID2: {HasID} = B(name: "2")
+let hasID1: {HasID} = A(id: "1")
+let hasID2: {HasID} = B(id: "2")
 
 // Declare a function named `getID` which has one parameter with type `{HasID}`.
 // The type `{HasID}` is a short-hand for `AnyStruct{HasID}`:
