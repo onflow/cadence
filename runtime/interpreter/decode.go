@@ -1857,7 +1857,7 @@ func decodeArrayElements(array *ArrayValue, elementContent []byte) error {
 	return nil
 }
 
-func decodeDictionaryEntries(v *DictionaryValue, content []byte) error {
+func decodeDictionaryMetaInfo(v *DictionaryValue, content []byte) error {
 
 	d, err := NewByteDecoder(content, v.Owner, v.encodingVersion, v.decodeCallback)
 	if err != nil {
@@ -1885,6 +1885,78 @@ func decodeDictionaryEntries(v *DictionaryValue, content []byte) error {
 			expectedLength,
 			size,
 		)
+	}
+
+	// Decode type
+	staticType, err := d.decodeStaticType()
+	if err != nil {
+		return err
+	}
+
+	dictionaryStaticType, ok := staticType.(DictionaryStaticType)
+	if !ok {
+		return fmt.Errorf(
+			"invalid dictionary static type encoding (@ %s): %s",
+			strings.Join(v.valuePath, "."),
+			staticType.String(),
+		)
+	}
+
+	// Lazily decode keys
+
+	var keysContent []byte
+	if d.isByteDecoder {
+		// Use the zero-copy method if available, for better performance.
+		keysContent, err = d.decoder.DecodeRawBytesZeroCopy()
+	} else {
+		keysContent, err = d.decoder.DecodeRawBytes()
+	}
+
+	if err != nil {
+		if e, ok := err.(*cbor.WrongTypeError); ok {
+			return fmt.Errorf(
+				"invalid dictionary keys encoding (@ %s): %s",
+				strings.Join(v.valuePath, "."),
+				e.ActualType.String(),
+			)
+		}
+		return err
+	}
+
+	// Lazily decode values
+
+	var valuesContent []byte
+	if d.isByteDecoder {
+		// Use the zero-copy method if available, for better performance.
+		valuesContent, err = d.decoder.DecodeRawBytesZeroCopy()
+	} else {
+		valuesContent, err = d.decoder.DecodeRawBytes()
+	}
+
+	if err != nil {
+		if e, ok := err.(*cbor.WrongTypeError); ok {
+			return fmt.Errorf(
+				"invalid dictionary values encoding (@ %s): %s",
+				strings.Join(v.valuePath, "."),
+				e.ActualType.String(),
+			)
+		}
+		return err
+	}
+
+	keysContent = append(keysContent, valuesContent...)
+
+	v.entriesContent = keysContent
+	v.Type = dictionaryStaticType
+
+	return nil
+}
+
+func decodeDictionaryEntries(v *DictionaryValue, content []byte) error {
+
+	d, err := NewByteDecoder(content, v.Owner, v.encodingVersion, v.decodeCallback)
+	if err != nil {
+		return err
 	}
 
 	// Decode keys at array index encodedDictionaryValueKeysFieldKey

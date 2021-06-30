@@ -853,14 +853,15 @@ func (e *EncoderV5) encodeArray(
 
 // NOTE: NEVER change, only add/increment; ensure uint64
 const (
-	encodedDictionaryValueKeysFieldKey    uint64 = 0
-	encodedDictionaryValueEntriesFieldKey uint64 = 1
+	encodedDictionaryValueTypeFieldKey    uint64 = 0
+	encodedDictionaryValueKeysFieldKey    uint64 = 1
+	encodedDictionaryValueEntriesFieldKey uint64 = 2
 
 	// !!! *WARNING* !!!
 	//
 	// encodedDictionaryValueLength MUST be updated when new element is added.
 	// It is used to verify encoded dictionaries length during decoding.
-	encodedDictionaryValueLength = 2
+	encodedDictionaryValueLength = 3
 )
 
 const dictionaryKeyPathPrefix = "k"
@@ -870,6 +871,7 @@ const dictionaryValuePathPrefix = "v"
 // cbor.Tag{
 //			Number: cborTagDictionaryValue,
 //			Content: cborArray{
+// 				encodedDictionaryValueTypeFieldKey:    []interface{}(type),
 //				encodedDictionaryValueKeysFieldKey:    []interface{}(keys),
 //				encodedDictionaryValueEntriesFieldKey: []interface{}(entries),
 //			},
@@ -900,8 +902,8 @@ func (e *EncoderV5) encodeDictionaryValue(
 
 	// Encode array head
 	err = e.enc.EncodeRawBytes([]byte{
-		// array, 2 items follow
-		0x82,
+		// array, 3 items follow
+		0x83,
 	})
 	if err != nil {
 		return err
@@ -910,7 +912,13 @@ func (e *EncoderV5) encodeDictionaryValue(
 	//nolint:gocritic
 	keysPath := append(path, dictionaryKeyPathPrefix)
 
-	// Encode keys (as array) at array index encodedDictionaryValueKeysFieldKey
+	// (1) Encode dictionary static type at array index encodedDictionaryValueTypeFieldKey
+	err = e.encodeStaticType(v.StaticType())
+	if err != nil {
+		return err
+	}
+
+	// (2) Encode keys (as array) at array index encodedDictionaryValueKeysFieldKey
 	err = e.encodeArray(v.Keys(), keysPath, deferrals)
 	if err != nil {
 		return err
@@ -942,7 +950,7 @@ func (e *EncoderV5) encodeDictionaryValue(
 		entriesLength = 0
 	}
 
-	// Encode values (as array) at array index encodedDictionaryValueEntriesFieldKey
+	// (3) Encode values (as array) at array index encodedDictionaryValueEntriesFieldKey
 	err = e.enc.EncodeArrayHead(uint64(entriesLength))
 	if err != nil {
 		return err
