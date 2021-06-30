@@ -1908,9 +1908,6 @@ func decodeDictionaryMetaInfo(v *DictionaryValue, content []byte) error {
 	}
 
 	// Decode type
-	// TODO: store dictionary type
-	//   Option 1: convert to sema type. - Don't have the interpreter
-	//   Option 2: Store static type in dictionary
 	staticType, err := d.decodeStaticType()
 	if err != nil {
 		return err
