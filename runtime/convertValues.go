@@ -436,7 +436,10 @@ func importArrayValue(
 		values[i] = importValue(inter, element)
 	}
 
-	return interpreter.NewArrayValueUnownedNonCopying(values...)
+	// TODO: type
+	var arrayType sema.ArrayType
+
+	return interpreter.NewArrayValueUnownedNonCopying(arrayType, values...)
 }
 
 func importDictionaryValue(
@@ -450,7 +453,11 @@ func importDictionaryValue(
 		keysAndValues[i*2+1] = importValue(inter, pair.Value)
 	}
 
-	return interpreter.NewDictionaryValueUnownedNonCopying(keysAndValues...)
+	return interpreter.NewDictionaryValueUnownedNonCopying(
+		// TODO: type
+		&sema.DictionaryType{},
+		keysAndValues...,
+	)
 }
 
 func importCompositeValue(

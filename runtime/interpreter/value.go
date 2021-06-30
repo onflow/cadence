@@ -609,7 +609,7 @@ func (v *StringValue) DecodeHex() *ArrayValue {
 		values[i] = UInt8Value(b)
 	}
 
-	return NewArrayValueUnownedNonCopying(values...)
+	return NewArrayValueUnownedNonCopying(sema.ByteArrayType, values...)
 }
 
 func (*StringValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -624,6 +624,7 @@ func (*StringValue) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicTyp
 // ArrayValue
 
 type ArrayValue struct {
+	Type     sema.ArrayType
 	values   []Value
 	Owner    *common.Address
 	modified bool
@@ -645,13 +646,7 @@ type ArrayValue struct {
 	encodingVersion uint16
 }
 
-func NewArrayValue(values []Value) *ArrayValue {
-	return &ArrayValue{
-		values: values,
-	}
-}
-
-func NewArrayValueUnownedNonCopying(values ...Value) *ArrayValue {
+func NewArrayValueUnownedNonCopying(arrayType sema.ArrayType, values ...Value) *ArrayValue {
 	// NOTE: new value has no owner
 
 	for _, value := range values {
@@ -663,6 +658,7 @@ func NewArrayValueUnownedNonCopying(values ...Value) *ArrayValue {
 	}
 
 	return &ArrayValue{
+		Type:     arrayType,
 		values:   values,
 		modified: true,
 		Owner:    nil,
@@ -677,6 +673,8 @@ func NewDeferredArrayValue(
 	version uint16,
 ) *ArrayValue {
 	return &ArrayValue{
+		// TODO: type
+		Type:            nil,
 		valuePath:       path,
 		content:         content,
 		Owner:           owner,
@@ -719,8 +717,7 @@ func (v *ArrayValue) DynamicType(interpreter *Interpreter, results DynamicTypeRe
 }
 
 func (v *ArrayValue) StaticType() StaticType {
-	// TODO: store static type in array values
-	return nil
+	return ConvertSemaToStaticType(v.Type)
 }
 
 func (v *ArrayValue) Copy() Value {
@@ -728,6 +725,7 @@ func (v *ArrayValue) Copy() Value {
 
 	if v.content != nil {
 		value := &ArrayValue{
+			Type:            v.Type,
 			values:          nil,
 			modified:        true,
 			Owner:           nil,
@@ -744,7 +742,7 @@ func (v *ArrayValue) Copy() Value {
 	for i, value := range v.values {
 		copies[i] = value.Copy()
 	}
-	return NewArrayValueUnownedNonCopying(copies...)
+	return NewArrayValueUnownedNonCopying(v.Type, copies...)
 }
 
 func (v *ArrayValue) GetOwner() *common.Address {
@@ -7277,6 +7275,7 @@ func NewEnumCaseValue(
 // DictionaryValue
 
 type DictionaryValue struct {
+	Type     *sema.DictionaryType
 	keys     *ArrayValue
 	entries  *StringValueOrderedMap
 	Owner    *common.Address
@@ -7320,14 +7319,23 @@ type DictionaryValue struct {
 	encodingVersion uint16
 }
 
-func NewDictionaryValueUnownedNonCopying(keysAndValues ...Value) *DictionaryValue {
+func NewDictionaryValueUnownedNonCopying(
+	dictionaryType *sema.DictionaryType,
+	keysAndValues ...Value,
+) *DictionaryValue {
+
 	keysAndValuesCount := len(keysAndValues)
 	if keysAndValuesCount%2 != 0 {
 		panic("uneven number of keys and values")
 	}
 
 	result := &DictionaryValue{
-		keys:    NewArrayValueUnownedNonCopying(),
+		Type: dictionaryType,
+		keys: NewArrayValueUnownedNonCopying(
+			&sema.VariableSizedType{
+				Type: dictionaryType.KeyType,
+			},
+		),
 		entries: NewStringValueOrderedMap(),
 		// NOTE: new value has no owner
 		Owner:                  nil,
@@ -7353,6 +7361,8 @@ func NewDeferredDictionaryValue(
 	version uint16,
 ) *DictionaryValue {
 	return &DictionaryValue{
+		// TODO: type
+		Type:            nil,
 		Owner:           owner,
 		deferredOwner:   owner,
 		modified:        false,
@@ -7434,13 +7444,13 @@ func (v *DictionaryValue) DynamicType(interpreter *Interpreter, results DynamicT
 }
 
 func (v *DictionaryValue) StaticType() StaticType {
-	// TODO: store static type in dictionary values
-	return nil
+	return ConvertSemaToStaticType(v.Type)
 }
 
 func (v *DictionaryValue) Copy() Value {
 	if v.content != nil {
 		return &DictionaryValue{
+			Type:                   v.Type,
 			keys:                   v.keys,
 			entries:                v.entries,
 			deferredOwner:          v.deferredOwner,
@@ -7466,6 +7476,7 @@ func (v *DictionaryValue) Copy() Value {
 	})
 
 	return &DictionaryValue{
+		Type:                   v.Type,
 		keys:                   newKeys,
 		entries:                newEntries,
 		deferredOwner:          v.deferredOwner,
@@ -7689,7 +7700,13 @@ func (v *DictionaryValue) GetMember(interpreter *Interpreter, getLocationRange f
 			dictionaryValues[i] = value.Copy()
 			i++
 		}
-		return NewArrayValueUnownedNonCopying(dictionaryValues...)
+
+		return NewArrayValueUnownedNonCopying(
+			&sema.VariableSizedType{
+				Type: v.Type.ValueType,
+			},
+			dictionaryValues...,
+		)
 
 	case "remove":
 		return NewHostFunctionValue(

@@ -2496,9 +2496,7 @@ func (r *interpreterRuntime) ReadLinked(address common.Address, path cadence.Pat
 				&sema.ReferenceType{
 					Type: sema.AnyType,
 				},
-				func() interpreter.LocationRange {
-					return interpreter.LocationRange{}
-				},
+				interpreter.ReturnEmptyLocationRange,
 			)
 			if err != nil {
 				return nil, err
@@ -2523,7 +2521,10 @@ func NewBlockValue(block Block) interpreter.BlockValue {
 	for i, b := range block.Hash {
 		values[i] = interpreter.UInt8Value(b)
 	}
-	idValue := interpreter.NewArrayValue(values)
+	idValue := interpreter.NewArrayValueUnownedNonCopying(
+		sema.ByteArrayType,
+		values...,
+	)
 
 	// timestamp
 	// TODO: verify

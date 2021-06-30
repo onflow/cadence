@@ -360,9 +360,7 @@ const ToBigEndianBytesFunctionName = "toBigEndianBytes"
 
 var toBigEndianBytesFunctionType = &FunctionType{
 	ReturnTypeAnnotation: NewTypeAnnotation(
-		&VariableSizedType{
-			Type: UInt8Type,
-		},
+		ByteArrayType,
 	),
 }
 
@@ -3033,9 +3031,7 @@ func init() {
 					Label:      ArgumentLabelNotRequired,
 					Identifier: "data",
 					TypeAnnotation: NewTypeAnnotation(
-						&VariableSizedType{
-							Type: UInt8Type,
-						},
+						ByteArrayType,
 					),
 				},
 			},
@@ -4448,9 +4444,7 @@ const AddressTypeToBytesFunctionName = `toBytes`
 
 var arrayTypeToBytesFunctionType = &FunctionType{
 	ReturnTypeAnnotation: NewTypeAnnotation(
-		&VariableSizedType{
-			Type: UInt8Type,
-		},
+		ByteArrayType,
 	),
 }
 
@@ -5883,17 +5877,13 @@ var publicKeyVerifyFunctionType = &FunctionType{
 		{
 			Identifier: "signature",
 			TypeAnnotation: NewTypeAnnotation(
-				&VariableSizedType{
-					Type: UInt8Type,
-				},
+				ByteArrayType,
 			),
 		},
 		{
 			Identifier: "signedData",
 			TypeAnnotation: NewTypeAnnotation(
-				&VariableSizedType{
-					Type: UInt8Type,
-				},
+				ByteArrayType,
 			),
 		},
 		{

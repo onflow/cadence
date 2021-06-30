@@ -92,9 +92,7 @@ func init() {
 					return NewPublicConstantFieldMember(
 						t,
 						identifier,
-						&VariableSizedType{
-							Type: UInt8Type,
-						},
+						ByteArrayType,
 						stringTypeUtf8FieldDocString,
 					)
 				},
@@ -155,12 +153,12 @@ It does not modify the original string.
 If either of the parameters are out of the bounds of the string, the function will fail
 `
 
+var ByteArrayType = &VariableSizedType{
+	Type: UInt8Type,
+}
+
 var stringTypeDecodeHexFunctionType = &FunctionType{
-	ReturnTypeAnnotation: NewTypeAnnotation(
-		&VariableSizedType{
-			Type: UInt8Type,
-		},
-	),
+	ReturnTypeAnnotation: NewTypeAnnotation(ByteArrayType),
 }
 
 const stringTypeDecodeHexFunctionDocString = `

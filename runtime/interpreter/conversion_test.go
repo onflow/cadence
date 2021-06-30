@@ -23,6 +23,7 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/onflow/cadence/runtime/sema"
 	"github.com/stretchr/testify/require"
 )
 
@@ -36,8 +37,18 @@ func TestByteArrayValueToByteSlice(t *testing.T) {
 		require.True(t, ok)
 
 		invalid := []Value{
-			NewArrayValueUnownedNonCopying(UInt64Value(500)),
-			NewArrayValueUnownedNonCopying(NewInt256ValueFromBigInt(largeBigInt)),
+			NewArrayValueUnownedNonCopying(
+				&sema.VariableSizedType{
+					Type: sema.UInt64Type,
+				},
+				UInt64Value(500),
+			),
+			NewArrayValueUnownedNonCopying(
+				&sema.VariableSizedType{
+					Type: sema.Int256Type,
+				},
+				NewInt256ValueFromBigInt(largeBigInt),
+			),
 			UInt64Value(500),
 			BoolValue(true),
 			NewStringValue("test"),
@@ -52,9 +63,25 @@ func TestByteArrayValueToByteSlice(t *testing.T) {
 	t.Run("valid", func(t *testing.T) {
 
 		invalid := map[Value][]byte{
-			NewArrayValueUnownedNonCopying():                                             {},
-			NewArrayValueUnownedNonCopying(UInt64Value(2), NewUInt128ValueFromUint64(3)): {2, 3},
-			NewArrayValueUnownedNonCopying(UInt8Value(4), NewIntValueFromInt64(5)):       {4, 5},
+			NewArrayValueUnownedNonCopying(
+				&sema.VariableSizedType{
+					Type: sema.IntegerType,
+				},
+			): {},
+			NewArrayValueUnownedNonCopying(
+				&sema.VariableSizedType{
+					Type: sema.IntegerType,
+				},
+				UInt64Value(2),
+				NewUInt128ValueFromUint64(3),
+			): {2, 3},
+			NewArrayValueUnownedNonCopying(
+				&sema.VariableSizedType{
+					Type: sema.IntegerType,
+				},
+				UInt8Value(4),
+				NewIntValueFromInt64(5),
+			): {4, 5},
 		}
 
 		for value, expected := range invalid {

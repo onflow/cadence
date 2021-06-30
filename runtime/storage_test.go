@@ -25,6 +25,7 @@ import (
 	"strconv"
 	"testing"
 
+	"github.com/onflow/cadence/runtime/sema"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -35,14 +36,23 @@ import (
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
-func withWritesToStorage(arrayElementCount int, storageItemCount int, onWrite func(owner, key, value []byte), handler func(runtimeStorage *runtimeStorage)) {
+func withWritesToStorage(
+	arrayElementCount int,
+	storageItemCount int,
+	onWrite func(owner, key, value []byte),
+	handler func(runtimeStorage *runtimeStorage),
+) {
 	runtimeInterface := &testRuntimeInterface{
 		storage: newTestStorage(nil, onWrite),
 	}
 
 	runtimeStorage := newRuntimeStorage(runtimeInterface)
 
-	array := interpreter.NewArrayValueUnownedNonCopying()
+	array := interpreter.NewArrayValueUnownedNonCopying(
+		&sema.VariableSizedType{
+			Type: sema.IntType,
+		},
+	)
 
 	for i := 0; i < arrayElementCount; i++ {
 		array.Append(interpreter.NewIntValueFromInt64(int64(i)))

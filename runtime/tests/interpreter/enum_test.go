@@ -21,6 +21,7 @@ package interpreter_test
 import (
 	"testing"
 
+	"github.com/onflow/cadence/runtime/sema"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -118,6 +119,9 @@ func TestInterpretEnumCaseEquality(t *testing.T) {
 
 	require.Equal(t,
 		interpreter.NewArrayValueUnownedNonCopying(
+			&sema.VariableSizedType{
+				Type: sema.BoolType,
+			},
 			interpreter.BoolValue(true),
 			interpreter.BoolValue(true),
 			interpreter.BoolValue(true),
@@ -144,6 +148,9 @@ func TestInterpretEnumConstructor(t *testing.T) {
 
 	require.Equal(t,
 		interpreter.NewArrayValueUnownedNonCopying(
+			&sema.VariableSizedType{
+				Type: sema.BoolType,
+			},
 			interpreter.BoolValue(true),
 			interpreter.BoolValue(true),
 			interpreter.BoolValue(true),
@@ -169,6 +176,9 @@ func TestInterpretEnumInstance(t *testing.T) {
 
 	require.Equal(t,
 		interpreter.NewArrayValueUnownedNonCopying(
+			&sema.VariableSizedType{
+				Type: sema.BoolType,
+			},
 			interpreter.BoolValue(true),
 			interpreter.BoolValue(true),
 		),

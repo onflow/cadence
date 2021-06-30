@@ -21,6 +21,8 @@ package interpreter
 import (
 	"errors"
 	"math"
+
+	"github.com/onflow/cadence/runtime/sema"
 )
 
 func ByteArrayValueToByteSlice(value Value) ([]byte, error) {
@@ -85,5 +87,8 @@ func ByteSliceToByteArrayValue(buf []byte) *ArrayValue {
 		values[i] = UInt8Value(b)
 	}
 
-	return NewArrayValueUnownedNonCopying(values...)
+	return NewArrayValueUnownedNonCopying(
+		sema.ByteArrayType,
+		values...,
+	)
 }
