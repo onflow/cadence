@@ -79,6 +79,7 @@ func (BoolDynamicType) IsImportable() bool {
 
 type ArrayDynamicType struct {
 	ElementTypes []DynamicType
+	StaticType   ArrayStaticType
 }
 
 func (ArrayDynamicType) IsDynamicType() {}
@@ -119,8 +120,14 @@ func (t CompositeDynamicType) IsImportable() bool {
 
 // DictionaryDynamicType
 
+type DictionaryStaticTypeEntry struct {
+	KeyType   DynamicType
+	ValueType DynamicType
+}
+
 type DictionaryDynamicType struct {
-	EntryTypes []struct{ KeyType, ValueType DynamicType }
+	EntryTypes []DictionaryStaticTypeEntry
+	StaticType DictionaryStaticType
 }
 
 func (DictionaryDynamicType) IsDynamicType() {}

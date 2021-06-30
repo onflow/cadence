@@ -720,6 +720,7 @@ func (v *ArrayValue) DynamicType(interpreter *Interpreter, results DynamicTypeRe
 
 	return ArrayDynamicType{
 		ElementTypes: elementTypes,
+		StaticType:   v.Type,
 	}
 }
 
@@ -7484,6 +7485,7 @@ func (v *DictionaryValue) DynamicType(interpreter *Interpreter, results DynamicT
 
 	return DictionaryDynamicType{
 		EntryTypes: entryTypes,
+		StaticType: v.Type,
 	}
 }
 
