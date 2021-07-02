@@ -720,6 +720,7 @@ func (v *ArrayValue) DynamicType(interpreter *Interpreter, results DynamicTypeRe
 
 	return ArrayDynamicType{
 		ElementTypes: elementTypes,
+		StaticType:   v.Type,
 	}
 }
 
@@ -1098,6 +1099,16 @@ func (v *ArrayValue) Equal(other Value, interpreter *Interpreter, loadDeferred b
 	otherElements := otherArray.Elements()
 
 	if len(elements) != len(otherElements) {
+		return false
+	}
+
+	if v.Type == nil {
+		if otherArray.Type != nil {
+			return false
+		}
+	} else if otherArray.Type == nil ||
+		!v.Type.Equal(otherArray.Type) {
+
 		return false
 	}
 
@@ -7160,7 +7171,7 @@ func (v *CompositeValue) ConformsToDynamicType(
 		dynamicTypeResults := DynamicTypeResults{}
 		fieldDynamicType := field.DynamicType(interpreter, dynamicTypeResults)
 
-		if !IsSubType(fieldDynamicType, member.TypeAnnotation.Type) {
+		if !interpreter.IsSubType(fieldDynamicType, member.TypeAnnotation.Type) {
 			return false
 		}
 
@@ -7459,14 +7470,14 @@ func (v *DictionaryValue) Walk(walkChild func(Value)) {
 
 func (v *DictionaryValue) DynamicType(interpreter *Interpreter, results DynamicTypeResults) DynamicType {
 	keys := v.Keys().Elements()
-	entryTypes := make([]struct{ KeyType, ValueType DynamicType }, len(keys))
+	entryTypes := make([]DictionaryStaticTypeEntry, len(keys))
 
 	for i, key := range keys {
 		// NOTE: Force unwrap, otherwise dynamic type check is for optional type.
 		// This is safe because we are iterating over the keys.
 		value := v.Get(interpreter, ReturnEmptyLocationRange, key).(*SomeValue).Value
 		entryTypes[i] =
-			struct{ KeyType, ValueType DynamicType }{
+			DictionaryStaticTypeEntry{
 				KeyType:   key.DynamicType(interpreter, results),
 				ValueType: value.DynamicType(interpreter, results),
 			}
@@ -7474,6 +7485,7 @@ func (v *DictionaryValue) DynamicType(interpreter *Interpreter, results DynamicT
 
 	return DictionaryDynamicType{
 		EntryTypes: entryTypes,
+		StaticType: v.Type,
 	}
 }
 
@@ -7966,6 +7978,10 @@ func (v *DictionaryValue) Equal(other Value, interpreter *Interpreter, loadDefer
 	v.ensureLoaded()
 	otherDictionary.ensureLoaded()
 
+	if !v.Type.Equal(otherDictionary.Type) {
+		return false
+	}
+
 	if !v.keys.Equal(otherDictionary.keys, interpreter, loadDeferred) {
 		return false
 	}
@@ -8388,8 +8404,8 @@ func (v *StorageReferenceValue) ReferencedValue(interpreter *Interpreter) *Value
 		if v.BorrowedType != nil {
 			dynamicTypeResults := DynamicTypeResults{}
 			dynamicType := value.DynamicType(interpreter, dynamicTypeResults)
-			if !IsSubType(dynamicType, v.BorrowedType) {
-				IsSubType(dynamicType, v.BorrowedType)
+			if !interpreter.IsSubType(dynamicType, v.BorrowedType) {
+				interpreter.IsSubType(dynamicType, v.BorrowedType)
 				return nil
 			}
 		}
