@@ -148,12 +148,7 @@ func prepareCBORTestData() []benchmark {
 		// Decode test data to value
 		owner := common.BytesToAddress([]byte{})
 
-		var value Value
-		if version <= 3 {
-			value, err = DecodeValueV3(buf.Bytes(), &owner, nil, version, nil)
-		} else {
-			value, err = DecodeValue(buf.Bytes(), &owner, nil, version, nil)
-		}
+		value, err := DecodeValue(buf.Bytes(), &owner, nil, version, nil)
 		if err != nil {
 			panic(fmt.Sprintf("failed to decode value in file %s: %s\n", fileName, err))
 		}

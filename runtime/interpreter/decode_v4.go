@@ -487,7 +487,7 @@ func (d *DecoderV4) decodeAddressLocation() (common.Location, error) {
 
 	// Address
 
-	// Decode address at array index encodedAddressLocationAddressFieldKey
+	// Decode address at array index encodedAddressLocationAddressFieldKeyV4
 	encodedAddress, err := d.decoder.DecodeBytes()
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
@@ -503,7 +503,7 @@ func (d *DecoderV4) decodeAddressLocation() (common.Location, error) {
 
 	// Name
 
-	// Decode name at array index encodedAddressLocationNameFieldKey
+	// Decode name at array index encodedAddressLocationNameFieldKeyV4
 	name, err := d.decoder.DecodeString()
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
@@ -943,7 +943,7 @@ func (d *DecoderV4) decodePath() (PathValue, error) {
 		)
 	}
 
-	// Decode domain at array index encodedPathValueDomainFieldKey
+	// Decode domain at array index encodedPathValueDomainFieldKeyV4
 	domain, err := d.decoder.DecodeUint64()
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
@@ -952,7 +952,7 @@ func (d *DecoderV4) decodePath() (PathValue, error) {
 		return PathValue{}, err
 	}
 
-	// Decode identifier at array index encodedPathValueIdentifierFieldKey
+	// Decode identifier at array index encodedPathValueIdentifierFieldKeyV4
 	identifier, err := d.decoder.DecodeString()
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
@@ -991,7 +991,7 @@ func (d *DecoderV4) decodeCapability() (CapabilityValue, error) {
 
 	// address
 
-	// Decode address at array index encodedCapabilityValueAddressFieldKey
+	// Decode address at array index encodedCapabilityValueAddressFieldKeyV4
 	var num uint64
 	num, err = d.decoder.DecodeTagNumber()
 	if err != nil {
@@ -1007,7 +1007,7 @@ func (d *DecoderV4) decodeCapability() (CapabilityValue, error) {
 
 	// path
 
-	// Decode path at array index encodedCapabilityValuePathFieldKey
+	// Decode path at array index encodedCapabilityValuePathFieldKeyV4
 	num, err = d.decoder.DecodeTagNumber()
 	if err != nil {
 		return CapabilityValue{}, fmt.Errorf("invalid capability path: %w", err)
@@ -1020,7 +1020,7 @@ func (d *DecoderV4) decodeCapability() (CapabilityValue, error) {
 		return CapabilityValue{}, fmt.Errorf("invalid capability path: %w", err)
 	}
 
-	// Decode borrow type at array index encodedCapabilityValueBorrowTypeFieldKey
+	// Decode borrow type at array index encodedCapabilityValueBorrowTypeFieldKeyV4
 
 	// borrow type (optional, for backwards compatibility)
 	// Capabilities used to be untyped, i.e. they didn't have a borrow type.
@@ -1071,7 +1071,7 @@ func (d *DecoderV4) decodeLink() (LinkValue, error) {
 		)
 	}
 
-	// Decode path at array index encodedLinkValueTargetPathFieldKey
+	// Decode path at array index encodedLinkValueTargetPathFieldKeyV4
 	num, err := d.decoder.DecodeTagNumber()
 	if err != nil {
 		return LinkValue{}, fmt.Errorf("invalid link target path encoding: %w", err)
@@ -1084,7 +1084,7 @@ func (d *DecoderV4) decodeLink() (LinkValue, error) {
 		return LinkValue{}, fmt.Errorf("invalid link target path encoding: %w", err)
 	}
 
-	// Decode type at array index encodedLinkValueTypeFieldKey
+	// Decode type at array index encodedLinkValueTypeFieldKeyV4
 	staticType, err := d.decodeStaticType()
 	if err != nil {
 		return LinkValue{}, fmt.Errorf("invalid link type encoding: %w", err)
@@ -1185,19 +1185,19 @@ func (d *DecoderV4) decodeCompositeStaticType() (StaticType, error) {
 		)
 	}
 
-	// Decode location at array index encodedCompositeStaticTypeLocationFieldKey
+	// Decode location at array index encodedCompositeStaticTypeLocationFieldKeyV4
 	location, err := d.decodeLocation()
 	if err != nil {
 		return nil, fmt.Errorf("invalid composite static type location encoding: %w", err)
 	}
 
-	// Skip obsolete element at array index encodedCompositeStaticTypeTypeIDFieldKey
+	// Skip obsolete element at array index encodedCompositeStaticTypeTypeIDFieldKeyV4
 	err = d.decoder.Skip()
 	if err != nil {
 		return nil, err
 	}
 
-	// Decode qualified identifier at array index encodedCompositeStaticTypeQualifiedIdentifierFieldKey
+	// Decode qualified identifier at array index encodedCompositeStaticTypeQualifiedIdentifierFieldKeyV4
 	qualifiedIdentifier, err := d.decoder.DecodeString()
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
@@ -1239,19 +1239,19 @@ func (d *DecoderV4) decodeInterfaceStaticType() (InterfaceStaticType, error) {
 			)
 	}
 
-	// Decode location at array index encodedInterfaceStaticTypeLocationFieldKey
+	// Decode location at array index encodedInterfaceStaticTypeLocationFieldKeyV4
 	location, err := d.decodeLocation()
 	if err != nil {
 		return InterfaceStaticType{}, fmt.Errorf("invalid interface static type location encoding: %w", err)
 	}
 
-	// Skip obsolete element at array index encodedInterfaceStaticTypeTypeIDFieldKey
+	// Skip obsolete element at array index encodedInterfaceStaticTypeTypeIDFieldKeyV4
 	err = d.decoder.Skip()
 	if err != nil {
 		return InterfaceStaticType{}, err
 	}
 
-	// Decode qualified identifier at array index encodedInterfaceStaticTypeQualifiedIdentifierFieldKey
+	// Decode qualified identifier at array index encodedInterfaceStaticTypeQualifiedIdentifierFieldKeyV4
 	qualifiedIdentifier, err := d.decoder.DecodeString()
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
@@ -1303,7 +1303,7 @@ func (d *DecoderV4) decodeConstantSizedStaticType() (StaticType, error) {
 		)
 	}
 
-	// Decode size at array index encodedConstantSizedStaticTypeSizeFieldKey
+	// Decode size at array index encodedConstantSizedStaticTypeSizeFieldKeyV4
 	size, err := d.decoder.DecodeUint64()
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
@@ -1321,7 +1321,7 @@ func (d *DecoderV4) decodeConstantSizedStaticType() (StaticType, error) {
 		)
 	}
 
-	// Decode type at array index encodedConstantSizedStaticTypeTypeFieldKey
+	// Decode type at array index encodedConstantSizedStaticTypeTypeFieldKeyV4
 	staticType, err := d.decodeStaticType()
 	if err != nil {
 		return nil, fmt.Errorf("invalid constant-sized static type inner type encoding: %w", err)
@@ -1355,7 +1355,7 @@ func (d *DecoderV4) decodeReferenceStaticType() (StaticType, error) {
 		)
 	}
 
-	// Decode authorized at array index encodedReferenceStaticTypeAuthorizedFieldKey
+	// Decode authorized at array index encodedReferenceStaticTypeAuthorizedFieldKeyV4
 	authorized, err := d.decoder.DecodeBool()
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
@@ -1364,7 +1364,7 @@ func (d *DecoderV4) decodeReferenceStaticType() (StaticType, error) {
 		return nil, err
 	}
 
-	// Decode type at array index encodedReferenceStaticTypeTypeFieldKey
+	// Decode type at array index encodedReferenceStaticTypeTypeFieldKeyV4
 	staticType, err := d.decodeStaticType()
 	if err != nil {
 		return nil, fmt.Errorf("invalid reference static type inner type encoding: %w", err)
@@ -1398,13 +1398,13 @@ func (d *DecoderV4) decodeDictionaryStaticType() (StaticType, error) {
 		)
 	}
 
-	// Decode key type at array index encodedDictionaryStaticTypeKeyTypeFieldKey
+	// Decode key type at array index encodedDictionaryStaticTypeKeyTypeFieldKeyV4
 	keyType, err := d.decodeStaticType()
 	if err != nil {
 		return nil, fmt.Errorf("invalid dictionary static type key type encoding: %w", err)
 	}
 
-	// Decode value type at array index encodedDictionaryStaticTypeValueTypeFieldKey
+	// Decode value type at array index encodedDictionaryStaticTypeValueTypeFieldKeyV4
 	valueType, err := d.decodeStaticType()
 	if err != nil {
 		return nil, fmt.Errorf("invalid dictionary static type value type encoding: %w", err)
@@ -1438,13 +1438,13 @@ func (d *DecoderV4) decodeRestrictedStaticType() (StaticType, error) {
 		)
 	}
 
-	// Decode restricted type at array index encodedRestrictedStaticTypeTypeFieldKey
+	// Decode restricted type at array index encodedRestrictedStaticTypeTypeFieldKeyV4
 	restrictedType, err := d.decodeStaticType()
 	if err != nil {
 		return nil, fmt.Errorf("invalid restricted static type key type encoding: %w", err)
 	}
 
-	// Decode restrictions at array index encodedRestrictedStaticTypeRestrictionsFieldKey
+	// Decode restrictions at array index encodedRestrictedStaticTypeRestrictionsFieldKeyV4
 	restrictionSize, err := d.decoder.DecodeArrayHead()
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
@@ -1506,7 +1506,7 @@ func (d *DecoderV4) decodeType() (TypeValue, error) {
 		)
 	}
 
-	// Decode type at array index encodedTypeValueTypeFieldKey
+	// Decode type at array index encodedTypeValueTypeFieldKeyV4
 	var staticType StaticType
 
 	// Optional type can be CBOR nil.
@@ -1581,7 +1581,7 @@ func decodeCompositeMetaInfoV4(v *CompositeValue, content []byte) error {
 
 	// Location
 
-	// Decode location at array index encodedCompositeValueLocationFieldKey
+	// Decode location at array index encodedCompositeValueLocationFieldKeyV4
 	location, err := d.decodeLocation()
 	if err != nil {
 		return fmt.Errorf(
@@ -1591,7 +1591,7 @@ func decodeCompositeMetaInfoV4(v *CompositeValue, content []byte) error {
 		)
 	}
 
-	// Skip obsolete element at array index encodedCompositeValueTypeIDFieldKey
+	// Skip obsolete element at array index encodedCompositeValueTypeIDFieldKeyV4
 	err = d.decoder.Skip()
 	if err != nil {
 		return err
@@ -1599,7 +1599,7 @@ func decodeCompositeMetaInfoV4(v *CompositeValue, content []byte) error {
 
 	// Kind
 
-	// Decode kind at array index encodedCompositeValueKindFieldKey
+	// Decode kind at array index encodedCompositeValueKindFieldKeyV4
 	encodedKind, err := d.decoder.DecodeUint64()
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
@@ -1637,7 +1637,7 @@ func decodeCompositeMetaInfoV4(v *CompositeValue, content []byte) error {
 
 	// Qualified identifier
 
-	// Decode qualified identifier at array index encodedCompositeValueQualifiedIdentifierFieldKey
+	// Decode qualified identifier at array index encodedCompositeValueQualifiedIdentifierFieldKeyV4
 	qualifiedIdentifier, err := d.decoder.DecodeString()
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
@@ -1666,7 +1666,7 @@ func decodeCompositeFieldsV4(v *CompositeValue, content []byte) error {
 		return err
 	}
 
-	// Decode fields at array index encodedCompositeValueFieldsFieldKey
+	// Decode fields at array index encodedCompositeValueFieldsFieldKeyV4
 	fieldsSize, err := d.decoder.DecodeArrayHead()
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
@@ -1777,7 +1777,7 @@ func decodeDictionaryEntriesV4(v *DictionaryValue, content []byte) error {
 		)
 	}
 
-	// Decode keys at array index encodedDictionaryValueKeysFieldKey
+	// Decode keys at array index encodedDictionaryValueKeysFieldKeyV4
 	//nolint:gocritic
 	keysPath := append(v.valuePath, dictionaryKeyPathPrefix)
 
@@ -1792,7 +1792,7 @@ func decodeDictionaryEntriesV4(v *DictionaryValue, content []byte) error {
 		)
 	}
 
-	// Decode entries at array index encodedDictionaryValueEntriesFieldKey
+	// Decode entries at array index encodedDictionaryValueEntriesFieldKeyV4
 	entryCount, err := d.decoder.DecodeArrayHead()
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {

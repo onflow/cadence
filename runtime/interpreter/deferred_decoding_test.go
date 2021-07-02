@@ -527,6 +527,7 @@ func newTestArrayValue(size int) *ArrayValue {
 }
 
 func TestArrayDeferredDecoding(t *testing.T) {
+
 	t.Parallel()
 
 	t.Run("Simple array", func(t *testing.T) {
@@ -583,9 +584,11 @@ func TestArrayDeferredDecoding(t *testing.T) {
 		decodedArray := decoded.(*ArrayValue)
 		assert.NotNil(t, decodedArray.content)
 
-		// Re encode the decoded value
+		// Re-encode the decoded value
 		reEncoded, _, err := EncodeValue(decodedArray, nil, true, nil)
 		require.NoError(t, err)
+
+		require.Equal(t, encoded, reEncoded)
 
 		reDecoded, err := DecodeValue(reEncoded, &testOwner, nil, CurrentEncodingVersion, nil)
 		require.NoError(t, err)
@@ -646,8 +649,10 @@ func TestArrayDeferredDecoding(t *testing.T) {
 		}
 
 		// Re encode the decoded value
-		_, _, err = EncodeValue(decodedArray, []string{}, true, callback)
+		reEncoded, _, err := EncodeValue(decodedArray, []string{}, true, callback)
 		require.NoError(t, err)
+
+		require.Equal(t, encoded, reEncoded)
 
 		// Elements are not loaded, so they must not be encoded again.
 		// i.e: Callback must be only called once.
@@ -674,6 +679,44 @@ func TestArrayDeferredDecoding(t *testing.T) {
 		// elements must not be loaded
 		assert.Nil(t, decodedArray.values)
 		assert.NotNil(t, decodedArray.content)
+	})
+
+	t.Run("Decode with V4", func(t *testing.T) {
+
+		array := newTestArrayValue(2)
+
+		// Encode
+		encoded, _, err := EncodeValueV4(array, nil, true, nil)
+		require.NoError(t, err)
+
+		// Decode
+		const encodingVersion = 4
+		decoded, err := DecodeValueV4(encoded, &testOwner, nil, encodingVersion, nil)
+		require.NoError(t, err)
+
+		// Value must not be loaded. i.e: the content is available
+		require.IsType(t, &ArrayValue{}, decoded)
+		decodedArray := decoded.(*ArrayValue)
+		assert.NotNil(t, decodedArray.content)
+
+		decodedArray.ensureElementsLoaded()
+
+		// Check the elements
+
+		elements := decodedArray.Elements()
+		require.Len(t, elements, 2)
+
+		for i, element := range elements {
+			require.IsType(t, &CompositeValue{}, element)
+			elementVal := element.(*CompositeValue)
+
+			decodeFieldValue, contains := elementVal.Fields().Get("fname")
+			assert.True(t, contains)
+
+			expected := NewStringValue(fmt.Sprintf("John%d", i))
+
+			assert.Equal(t, expected, decodeFieldValue)
+		}
 	})
 }
 
@@ -796,6 +839,8 @@ func TestDictionaryDeferredDecoding(t *testing.T) {
 		reEncoded, _, err := EncodeValue(decodedDictionary, nil, true, nil)
 		require.NoError(t, err)
 
+		require.Equal(t, encoded, reEncoded)
+
 		reDecoded, err := DecodeValue(reEncoded, &testOwner, nil, CurrentEncodingVersion, nil)
 		require.NoError(t, err)
 
@@ -853,8 +898,10 @@ func TestDictionaryDeferredDecoding(t *testing.T) {
 		}
 
 		// Re encode the decoded value
-		_, _, err = EncodeValue(decodedDictionary, []string{}, true, callback)
+		reEncoded, _, err := EncodeValue(decodedDictionary, []string{}, true, callback)
 		require.NoError(t, err)
+
+		require.Equal(t, encoded, reEncoded)
 
 		// Entries are not loaded, so they must not be encoded again.
 		// i.e: Callback must be only called once.
@@ -882,7 +929,7 @@ func TestDictionaryDeferredDecoding(t *testing.T) {
 
 		dictionary := NewDictionaryValueUnownedNonCopying(
 			DictionaryStaticType{
-				KeyType:   PrimitiveStaticTypeString,
+				KeyType: PrimitiveStaticTypeString,
 				ValueType: CompositeStaticType{
 					Location:            utils.TestLocation,
 					QualifiedIdentifier: "TestResource",
@@ -953,6 +1000,35 @@ func TestDictionaryDeferredDecoding(t *testing.T) {
 		assert.Nil(t, decodedDictionary.keys)
 		assert.Nil(t, decodedDictionary.entries)
 		assert.NotNil(t, decodedDictionary.content)
+	})
+
+	t.Run("Decode with V4", func(t *testing.T) {
+
+		dictionary := newTestDictionaryValue(2)
+
+		// Encode
+		encoded, _, err := EncodeValueV4(dictionary, nil, true, nil)
+		require.NoError(t, err)
+
+		// Decode
+		const encodingVersion = 4
+		decoded, err := DecodeValueV4(encoded, &testOwner, nil, encodingVersion, nil)
+		require.NoError(t, err)
+
+		require.IsType(t, &DictionaryValue{}, decoded)
+		decodedDictionary := decoded.(*DictionaryValue)
+
+		decodedDictionary.ensureLoaded()
+
+		// Check the elements
+		require.Equal(t, 2, decodedDictionary.Count())
+
+		i := 0
+		decodedDictionary.Entries().Foreach(func(key string, value Value) {
+			assert.Equal(t, fmt.Sprintf("key%d", i), key)
+			assert.Equal(t, NewStringValue(fmt.Sprintf("value%d", i)), value)
+			i++
+		})
 	})
 }
 
