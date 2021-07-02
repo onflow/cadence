@@ -680,6 +680,44 @@ func TestArrayDeferredDecoding(t *testing.T) {
 		assert.Nil(t, decodedArray.values)
 		assert.NotNil(t, decodedArray.content)
 	})
+
+	t.Run("Decode with V4", func(t *testing.T) {
+
+		array := newTestArrayValue(2)
+
+		// Encode
+		encoded, _, err := EncodeValueV4(array, nil, true, nil)
+		require.NoError(t, err)
+
+		// Decode
+		const encodingVersion = 4
+		decoded, err := DecodeValueV4(encoded, &testOwner, nil, encodingVersion, nil)
+		require.NoError(t, err)
+
+		// Value must not be loaded. i.e: the content is available
+		require.IsType(t, &ArrayValue{}, decoded)
+		decodedArray := decoded.(*ArrayValue)
+		assert.NotNil(t, decodedArray.content)
+
+		decodedArray.ensureElementsLoaded()
+
+		// Check the elements
+
+		elements := decodedArray.Elements()
+		require.Len(t, elements, 2)
+
+		for i, element := range elements {
+			require.IsType(t, &CompositeValue{}, element)
+			elementVal := element.(*CompositeValue)
+
+			decodeFieldValue, contains := elementVal.Fields().Get("fname")
+			assert.True(t, contains)
+
+			expected := NewStringValue(fmt.Sprintf("John%d", i))
+
+			assert.Equal(t, expected, decodeFieldValue)
+		}
+	})
 }
 
 func BenchmarkArrayDeferredDecoding(b *testing.B) {
@@ -962,6 +1000,35 @@ func TestDictionaryDeferredDecoding(t *testing.T) {
 		assert.Nil(t, decodedDictionary.keys)
 		assert.Nil(t, decodedDictionary.entries)
 		assert.NotNil(t, decodedDictionary.content)
+	})
+
+	t.Run("Decode with V4", func(t *testing.T) {
+
+		dictionary := newTestDictionaryValue(2)
+
+		// Encode
+		encoded, _, err := EncodeValueV4(dictionary, nil, true, nil)
+		require.NoError(t, err)
+
+		// Decode
+		const encodingVersion = 4
+		decoded, err := DecodeValueV4(encoded, &testOwner, nil, encodingVersion, nil)
+		require.NoError(t, err)
+
+		require.IsType(t, &DictionaryValue{}, decoded)
+		decodedDictionary := decoded.(*DictionaryValue)
+
+		decodedDictionary.ensureLoaded()
+
+		// Check the elements
+		require.Equal(t, 2, decodedDictionary.Count())
+
+		i := 0
+		decodedDictionary.Entries().Foreach(func(key string, value Value) {
+			assert.Equal(t, fmt.Sprintf("key%d", i), key)
+			assert.Equal(t, NewStringValue(fmt.Sprintf("value%d", i)), value)
+			i++
+		})
 	})
 }
 

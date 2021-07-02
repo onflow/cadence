@@ -1871,6 +1871,12 @@ func decodeArrayElements(array *ArrayValue, elementContent []byte) error {
 }
 
 func decodeDictionaryMetaInfo(v *DictionaryValue, content []byte) error {
+	if v.encodingVersion < 5 {
+		// In encoding version 4, no meta info was available for dictionaries.
+		// The raw content only consist of the entries.
+		v.entriesContent = content
+		return nil
+	}
 
 	d, err := NewByteDecoder(content, v.Owner, v.encodingVersion, v.decodeCallback)
 	if err != nil {
