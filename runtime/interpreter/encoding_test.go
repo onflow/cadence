@@ -24,6 +24,7 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/runtime/common"
@@ -3785,4 +3786,143 @@ func prepareLargeTestValue() Value {
 		values.Append(dict)
 	}
 	return values
+}
+
+func TestDecodeV4EncodeV5(t *testing.T) {
+	t.Parallel()
+
+	const encodingVersion = 4
+
+	t.Run("Array", func(t *testing.T) {
+		t.Parallel()
+
+		array := NewArrayValueUnownedNonCopying(
+			VariableSizedStaticType{
+				Type: PrimitiveStaticTypeAnyStruct,
+			},
+			NewStringValue("value1"),
+			NewStringValue("value2"),
+		)
+		array.SetModified(false)
+
+		// Encode
+		encodedV4, _, err := EncodeValueV4(array, nil, true, nil)
+		require.NoError(t, err)
+
+		// Decode
+		decodedV4, err := DecodeValueV4(encodedV4, &testOwner, nil, encodingVersion, nil)
+		require.NoError(t, err)
+
+		require.IsType(t, &ArrayValue{}, decodedV4)
+		decodedArrayV4 := decodedV4.(*ArrayValue)
+
+		// NOTE: Mock enriching type information.
+		// This would be done during state migration using context type.
+		decodedArrayV4.ensureElementsLoaded()
+		decodedArrayV4.Type = array.Type
+
+		// Encode
+		encodedV5, _, err := EncodeValue(decodedArrayV4, nil, true, nil)
+		require.NoError(t, err)
+
+		// Decode
+		decodedV5, err := DecodeValue(encodedV5, nil, nil, CurrentEncodingVersion, nil)
+		require.NoError(t, err)
+
+		// Check decoded value after round trip
+
+		require.IsType(t, &ArrayValue{}, decodedV5)
+		decodedArrayV5 := decodedV5.(*ArrayValue)
+
+		decodedArrayV5.ensureElementsLoaded()
+
+		assert.Equal(t, array, decodedArrayV5)
+	})
+
+	t.Run("Dictionary", func(t *testing.T) {
+		t.Parallel()
+
+		dictionary := NewDictionaryValueUnownedNonCopying(
+			DictionaryStaticType{
+				KeyType:   PrimitiveStaticTypeString,
+				ValueType: PrimitiveStaticTypeInt,
+			},
+			NewStringValue("key1"),
+			NewIntValueFromInt64(4),
+			NewStringValue("key2"),
+			NewIntValueFromInt64(6),
+		)
+		dictionary.SetModified(false)
+		dictionary.keys.SetModified(false)
+
+		// Encode from v4
+		encodedV4, _, err := EncodeValueV4(dictionary, nil, true, nil)
+		require.NoError(t, err)
+
+		// Decode from v4
+		decodedV4, err := DecodeValueV4(encodedV4, &testOwner, nil, encodingVersion, nil)
+		require.NoError(t, err)
+
+		require.IsType(t, &DictionaryValue{}, decodedV4)
+		decodedDictionaryV4 := decodedV4.(*DictionaryValue)
+
+		// NOTE: Mock enriching type information.
+		// This would be done during state migration using context type.
+		decodedDictionaryV4.ensureLoaded()
+		decodedDictionaryV4.Type = dictionary.Type
+		decodedDictionaryV4.keys.Type = dictionary.keys.Type
+
+		// Encode from v5
+		encodedV5, _, err := EncodeValue(decodedDictionaryV4, nil, true, nil)
+		require.NoError(t, err)
+
+		// Decode from v5
+		decodedV5, err := DecodeValue(encodedV5, nil, nil, CurrentEncodingVersion, nil)
+		require.NoError(t, err)
+
+		// Check decoded value after round trip
+
+		require.IsType(t, &DictionaryValue{}, decodedV5)
+		decodedDictionaryV5 := decodedV5.(*DictionaryValue)
+
+		decodedDictionaryV5.ensureLoaded()
+
+		assert.Equal(t, dictionary, decodedDictionaryV5)
+	})
+
+	t.Run("Composite", func(t *testing.T) {
+		t.Parallel()
+
+		compositeValue := newTestLargeCompositeValue(4)
+		compositeValue.SetModified(false)
+		compositeValue.Fields().Foreach(func(_ string, value Value) {
+			value.SetModified(false)
+		})
+
+		// Encode from v4
+		encodedV4, _, err := EncodeValueV4(compositeValue, nil, true, nil)
+		require.NoError(t, err)
+
+		// Decode from v4
+		decodedV4, err := DecodeValueV4(encodedV4, &testOwner, nil, encodingVersion, nil)
+		require.NoError(t, err)
+
+		// Encode from v5
+		encodedV5, _, err := EncodeValue(decodedV4, nil, true, nil)
+		require.NoError(t, err)
+
+		// Decode from v5
+		decodedV5, err := DecodeValue(encodedV5, nil, nil, CurrentEncodingVersion, nil)
+		require.NoError(t, err)
+
+		// Check decoded value after round trip
+
+		require.IsType(t, &CompositeValue{}, decodedV5)
+		decodedCompositeV5 := decodedV5.(*CompositeValue)
+
+		// Make sure the content is built.
+		_ = decodedCompositeV5.String()
+
+		assert.Equal(t, compositeValue, decodedCompositeV5)
+	})
 }
