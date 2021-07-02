@@ -947,7 +947,7 @@ func TestBlockValue(t *testing.T) {
 	block := BlockValue{
 		Height:    4,
 		View:      5,
-		ID:        NewArrayValueUnownedNonCopying(byteArrayStaticType),
+		ID:        NewArrayValueUnownedNonCopying(ByteArrayStaticType),
 		Timestamp: 5.0,
 	}
 
@@ -1884,7 +1884,7 @@ func TestDictionaryValue_Equal(t *testing.T) {
 				NewStringValue("2"),
 			).Equal(
 				NewArrayValueUnownedNonCopying(
-					byteArrayStaticType,
+					ByteArrayStaticType,
 					UInt8Value(1),
 					UInt8Value(2),
 				),

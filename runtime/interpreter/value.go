@@ -535,7 +535,7 @@ func (v *StringValue) Get(_ *Interpreter, getLocationRange func() LocationRange,
 	return NewStringValue(char)
 }
 
-func (v *StringValue) Set(_ *Interpreter, _ func() LocationRange, key Value, value Value) {
+func (v *StringValue) Set(_ *Interpreter, _ func() LocationRange, _ Value, _ Value) {
 	panic(errors.NewUnreachableError())
 }
 
@@ -594,7 +594,7 @@ func (*StringValue) IsStorable() bool {
 	return true
 }
 
-var byteArrayStaticType = ConvertSemaToStaticType(sema.ByteArrayType)
+var ByteArrayStaticType = ConvertSemaArrayTypeToStaticArrayType(sema.ByteArrayType)
 
 // DecodeHex hex-decodes this string and returns an array of UInt8 values
 //
@@ -611,7 +611,7 @@ func (v *StringValue) DecodeHex() *ArrayValue {
 		values[i] = UInt8Value(b)
 	}
 
-	return NewArrayValueUnownedNonCopying(byteArrayStaticType, values...)
+	return NewArrayValueUnownedNonCopying(ByteArrayStaticType, values...)
 }
 
 func (*StringValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -626,7 +626,7 @@ func (*StringValue) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicTyp
 // ArrayValue
 
 type ArrayValue struct {
-	Type     StaticType
+	Type     ArrayStaticType
 	values   []Value
 	Owner    *common.Address
 	modified bool
@@ -653,7 +653,7 @@ type ArrayValue struct {
 	encodingVersion uint16
 }
 
-func NewArrayValueUnownedNonCopying(arrayType StaticType, values ...Value) *ArrayValue {
+func NewArrayValueUnownedNonCopying(arrayType ArrayStaticType, values ...Value) *ArrayValue {
 	// NOTE: new value has no owner
 
 	for _, value := range values {

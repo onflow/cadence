@@ -328,9 +328,18 @@ func (d *DecoderV5) decodeArray(path []string, deferDecoding bool) (*ArrayValue,
 		}
 
 		// Decode type at array index encodedArrayValueStaticTypeFieldKeyV5
-		arrayStaticType, err := d.decodeStaticType()
+		staticType, err := d.decodeStaticType()
 		if err != nil {
 			return nil, err
+		}
+
+		arrayStaticType, ok := staticType.(ArrayStaticType)
+		if !ok {
+			return nil, fmt.Errorf(
+				"invalid decoded array static type (@ %s): %s",
+				strings.Join(path, "."),
+				staticType,
+			)
 		}
 
 		elements, err := d.decodeArrayElements(path)
@@ -1818,9 +1827,18 @@ func decodeArrayMetaInfo(array *ArrayValue, content []byte) error {
 	}
 
 	// Decode type at array index encodedArrayValueStaticTypeFieldKeyV5
-	arrayStaticType, err := d.decodeStaticType()
+	staticType, err := d.decodeStaticType()
 	if err != nil {
 		return err
+	}
+
+	arrayStaticType, ok := staticType.(ArrayStaticType)
+	if !ok {
+		return fmt.Errorf(
+			"invalid decoded array static type (@ %s): %s",
+			strings.Join(array.valuePath, "."),
+			staticType,
+		)
 	}
 
 	array.Type = arrayStaticType
