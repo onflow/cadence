@@ -2768,21 +2768,6 @@ func TestStaticTypeAvailability(t *testing.T) {
 			},
 		}
 
-		// TODO: type must be inferred, and shouldn't panic
-		defer func() {
-			r := recover()
-
-			err, isError := r.(error)
-			require.True(t, isError)
-			require.Error(t, err)
-
-			assert.Contains(
-				t,
-				err.Error(),
-				"invalid static type for argument: 0",
-			)
-		}()
-
 		_, err := executeTestScript(t, script, structValue)
 		require.NoError(t, err)
 	})
@@ -2822,21 +2807,6 @@ func TestStaticTypeAvailability(t *testing.T) {
 				}),
 			},
 		}
-
-		// TODO: type must be inferred, and shouldn't panic
-		defer func() {
-			r := recover()
-
-			err, isError := r.(error)
-			require.True(t, isError)
-			require.Error(t, err)
-
-			assert.Contains(
-				t,
-				err.Error(),
-				"invalid static type for argument: 0",
-			)
-		}()
 
 		_, err := executeTestScript(t, script, structValue)
 		require.NoError(t, err)
