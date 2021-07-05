@@ -702,3 +702,595 @@ func TestIdentifierCacheUpdate(t *testing.T) {
 			checkIdentifiers(t, typ)
 		})
 }
+
+func TestCommonSuperType(t *testing.T) {
+
+	t.Run("Duplicate Mask", func(t *testing.T) {
+		defer func() {
+			if r := recover(); r != nil {
+				err, _ := r.(error)
+				require.Error(t, err)
+				assert.Equal(t, "duplicate type tag: {32 0}", err.Error())
+			}
+		}()
+
+		_ = newTypeTagFromLowerMask(32)
+	})
+
+	nilType := &OptionalType{NeverType}
+
+	resourceType := &CompositeType{
+		Location:   nil,
+		Identifier: "Foo",
+		Kind:       common.CompositeKindResource,
+	}
+
+	type testCase struct {
+		name              string
+		types             []Type
+		expectedSuperType Type
+	}
+
+	testLeastCommonSuperType := func(t *testing.T, tests []testCase) {
+		for _, test := range tests {
+			t.Run(test.name, func(t *testing.T) {
+				assert.Equal(
+					t,
+					test.expectedSuperType,
+					LeastCommonSuperType(test.types...),
+				)
+			})
+		}
+	}
+
+	t.Run("All types", func(t *testing.T) {
+		// super type of similar types should be the type itself.
+		// i.e: super type of collection of T's should be T.
+		// Make sure its true for all known types.
+
+		tests := make([]testCase, 0)
+
+		err := BaseTypeActivation.ForEach(func(name string, variable *Variable) error {
+			typ := variable.Type
+			tests = append(tests, testCase{
+				name: name,
+				types: []Type{
+					typ,
+					typ,
+				},
+				expectedSuperType: typ,
+			})
+
+			return nil
+		})
+
+		require.NoError(t, err)
+		testLeastCommonSuperType(t, tests)
+	})
+
+	t.Run("Simple types", func(t *testing.T) {
+		tests := []testCase{
+			{
+				name: "homogenous integer types",
+				types: []Type{
+					UInt8Type,
+					UInt8Type,
+					UInt8Type,
+				},
+				expectedSuperType: UInt8Type,
+			},
+			{
+				name: "heterogeneous integer types",
+				types: []Type{
+					UInt8Type,
+					UInt16Type,
+					UInt256Type,
+					IntegerType,
+					Word64Type,
+				},
+				expectedSuperType: IntegerType,
+			},
+			{
+				name: "heterogeneous fixed-point types",
+				types: []Type{
+					Fix64Type,
+					UFix64Type,
+					FixedPointType,
+				},
+				expectedSuperType: FixedPointType,
+			},
+			{
+				name: "heterogeneous numeric types",
+				types: []Type{
+					Int8Type,
+					UInt16Type,
+					IntegerType,
+					Word64Type,
+					Fix64Type,
+					UFix64Type,
+					FixedPointType,
+				},
+				expectedSuperType: NumberType,
+			},
+			{
+				name: "signed numbers",
+				types: []Type{
+					Int8Type,
+					Int128Type,
+					Fix64Type,
+				},
+				expectedSuperType: SignedNumberType,
+			},
+			{
+				name: "signed integers",
+				types: []Type{
+					Int8Type,
+					Int128Type,
+				},
+				expectedSuperType: SignedIntegerType,
+			},
+			{
+				name: "unsigned numbers",
+				types: []Type{
+					UInt8Type,
+					UInt128Type,
+					UFix64Type,
+				},
+				expectedSuperType: NumberType,
+			},
+			{
+				name: "unsigned integers",
+				types: []Type{
+					UInt8Type,
+					UInt128Type,
+				},
+				expectedSuperType: IntegerType,
+			},
+			{
+				name: "heterogeneous simple types",
+				types: []Type{
+					StringType,
+					Int8Type,
+				},
+				expectedSuperType: AnyStructType,
+			},
+			{
+				name: "all nil",
+				types: []Type{
+					nilType,
+					nilType,
+					nilType,
+				},
+				expectedSuperType: nilType,
+			},
+			{
+				name: "optional",
+				types: []Type{
+					nilType,
+					Int8Type,
+				},
+				expectedSuperType: &OptionalType{
+					Type: Int8Type,
+				},
+			},
+			{
+				name: "optional with heterogeneous types",
+				types: []Type{
+					nilType,
+					Int8Type,
+					StringType,
+				},
+				expectedSuperType: AnyStructType,
+			},
+		}
+
+		testLeastCommonSuperType(t, tests)
+	})
+
+	t.Run("Structs & Resources", func(t *testing.T) {
+
+		testLocation := common.StringLocation("test")
+
+		interfaceType1 := &InterfaceType{
+			Location:      testLocation,
+			Identifier:    "I1",
+			CompositeKind: common.CompositeKindStructure,
+			Members:       NewStringMemberOrderedMap(),
+		}
+
+		interfaceType2 := &InterfaceType{
+			Location:      testLocation,
+			Identifier:    "I2",
+			CompositeKind: common.CompositeKindStructure,
+			Members:       NewStringMemberOrderedMap(),
+		}
+
+		interfaceType3 := &InterfaceType{
+			Location:      testLocation,
+			Identifier:    "I3",
+			CompositeKind: common.CompositeKindStructure,
+			Members:       NewStringMemberOrderedMap(),
+		}
+
+		newCompositeWithInterfaces := func(name string, interfaces ...*InterfaceType) *CompositeType {
+			return &CompositeType{
+				Location:                      testLocation,
+				Identifier:                    name,
+				Kind:                          common.CompositeKindStructure,
+				ExplicitInterfaceConformances: interfaces,
+				Members:                       NewStringMemberOrderedMap(),
+			}
+		}
+
+		tests := []testCase{
+			{
+				name: "all anyStructs",
+				types: []Type{
+					AnyStructType,
+					AnyStructType,
+				},
+				expectedSuperType: AnyStructType,
+			},
+			{
+				name: "all anyResources",
+				types: []Type{
+					AnyResourceType,
+					AnyResourceType,
+				},
+				expectedSuperType: AnyResourceType,
+			},
+			{
+				name: "structs and resources",
+				types: []Type{
+					AnyResourceType,
+					AnyStructType,
+				},
+				expectedSuperType: AnyType,
+			},
+			{
+				name: "all structs",
+				types: []Type{
+					PublicKeyType,
+					PublicKeyType,
+				},
+				expectedSuperType: PublicKeyType,
+			},
+			{
+				name: "mixed type structs",
+				types: []Type{
+					PublicKeyType,
+					AuthAccountType,
+				},
+				expectedSuperType: AnyStructType,
+			},
+			{
+				name: "struct and anyStruct",
+				types: []Type{
+					AnyStructType,
+					PublicKeyType,
+				},
+				expectedSuperType: AnyStructType,
+			},
+			{
+				name: "common interface",
+				types: []Type{
+					newCompositeWithInterfaces("Foo", interfaceType1, interfaceType2),
+					newCompositeWithInterfaces("Bar", interfaceType2, interfaceType3),
+					newCompositeWithInterfaces("Baz", interfaceType1, interfaceType2, interfaceType3),
+				},
+				expectedSuperType: interfaceType2,
+			},
+			{
+				name: "multiple common interfaces",
+				types: []Type{
+					newCompositeWithInterfaces("Foo", interfaceType1, interfaceType2),
+					newCompositeWithInterfaces("Baz", interfaceType1, interfaceType2, interfaceType3),
+				},
+				expectedSuperType: interfaceType1,
+			},
+			{
+				name: "no common interfaces",
+				types: []Type{
+					newCompositeWithInterfaces("Foo", interfaceType1),
+					newCompositeWithInterfaces("Baz", interfaceType2),
+					newCompositeWithInterfaces("Baz", interfaceType3),
+				},
+				expectedSuperType: AnyStructType,
+			},
+		}
+
+		testLeastCommonSuperType(t, tests)
+	})
+
+	t.Run("Arrays", func(t *testing.T) {
+
+		stringArray := &VariableSizedType{
+			Type: StringType,
+		}
+
+		resourceArray := &VariableSizedType{
+			Type: resourceType,
+		}
+
+		nestedResourceArray := &VariableSizedType{
+			Type: resourceArray,
+		}
+
+		tests := []testCase{
+			{
+				name: "homogeneous arrays",
+				types: []Type{
+					stringArray,
+					stringArray,
+				},
+				expectedSuperType: stringArray,
+			},
+			{
+				name: "var-sized & constant-sized",
+				types: []Type{
+					stringArray,
+					&ConstantSizedType{Type: StringType, Size: 2},
+				},
+				expectedSuperType: AnyStructType,
+			},
+			{
+				name: "heterogeneous arrays",
+				types: []Type{
+					stringArray,
+					&VariableSizedType{Type: BoolType},
+				},
+				expectedSuperType: AnyStructType,
+			},
+			{
+				name: "simple-typed array & resource array",
+				types: []Type{
+					stringArray,
+					resourceArray,
+				},
+				expectedSuperType: AnyType,
+			},
+			{
+				name: "array & non-array",
+				types: []Type{
+					stringArray,
+					StringType,
+				},
+				expectedSuperType: AnyStructType,
+			},
+			{
+				name: "resource array",
+				types: []Type{
+					resourceArray,
+					resourceArray,
+				},
+				expectedSuperType: resourceArray,
+			},
+			{
+				name: "resource array & resource",
+				types: []Type{
+					resourceArray,
+					resourceType,
+				},
+				expectedSuperType: AnyResourceType,
+			},
+			{
+				name: "nested resource arrays",
+				types: []Type{
+					nestedResourceArray,
+					nestedResourceArray,
+				},
+				expectedSuperType: nestedResourceArray,
+			},
+			{
+				name: "nested resource-array & struct-array",
+				types: []Type{
+					nestedResourceArray,
+					&VariableSizedType{Type: stringArray},
+				},
+				expectedSuperType: AnyType,
+			},
+		}
+
+		testLeastCommonSuperType(t, tests)
+	})
+
+	t.Run("Dictionaries", func(t *testing.T) {
+
+		stringStringDictionary := &DictionaryType{
+			KeyType:   StringType,
+			ValueType: StringType,
+		}
+
+		stringBoolDictionary := &DictionaryType{
+			KeyType:   StringType,
+			ValueType: BoolType,
+		}
+
+		stringResourceDictionary := &DictionaryType{
+			KeyType:   StringType,
+			ValueType: resourceType,
+		}
+
+		nestedResourceDictionary := &DictionaryType{
+			KeyType:   StringType,
+			ValueType: stringResourceDictionary,
+		}
+
+		nestedStringDictionary := &DictionaryType{
+			KeyType:   StringType,
+			ValueType: stringStringDictionary,
+		}
+
+		tests := []testCase{
+			{
+				name: "homogeneous dictionaries",
+				types: []Type{
+					stringStringDictionary,
+					stringStringDictionary,
+				},
+				expectedSuperType: stringStringDictionary,
+			},
+			{
+				name: "heterogeneous dictionaries",
+				types: []Type{
+					stringStringDictionary,
+					stringBoolDictionary,
+				},
+				expectedSuperType: AnyStructType,
+			},
+			{
+				name: "dictionary & non-dictionary",
+				types: []Type{
+					stringStringDictionary,
+					StringType,
+				},
+				expectedSuperType: AnyStructType,
+			},
+
+			{
+				name: "struct dictionary & resource dictionary",
+				types: []Type{
+					stringStringDictionary,
+					stringResourceDictionary,
+				},
+				expectedSuperType: AnyType,
+			},
+
+			{
+				name: "resource dictionaries",
+				types: []Type{
+					stringResourceDictionary,
+					stringResourceDictionary,
+				},
+				expectedSuperType: stringResourceDictionary,
+			},
+			{
+				name: "resource dictionary & resource",
+				types: []Type{
+					stringResourceDictionary,
+					resourceType,
+				},
+				expectedSuperType: AnyResourceType,
+			},
+			{
+				name: "nested resource dictionaries",
+				types: []Type{
+					nestedResourceDictionary,
+					nestedResourceDictionary,
+				},
+				expectedSuperType: nestedResourceDictionary,
+			},
+			{
+				name: "nested resource-dictionary & nested struct-dictionary",
+				types: []Type{
+					nestedResourceDictionary,
+					nestedStringDictionary,
+				},
+				expectedSuperType: AnyType,
+			},
+		}
+
+		testLeastCommonSuperType(t, tests)
+	})
+
+	t.Run("References types", func(t *testing.T) {
+		tests := []testCase{
+			{
+				name: "homogenous references",
+				types: []Type{
+					&ReferenceType{
+						Type: Int8Type,
+					},
+					&ReferenceType{
+						Type: Int8Type,
+					},
+					&ReferenceType{
+						Type: Int8Type,
+					},
+				},
+				expectedSuperType: &ReferenceType{
+					Type: Int8Type,
+				},
+			},
+			{
+				name: "heterogeneous references",
+				types: []Type{
+					&ReferenceType{
+						Type: Int8Type,
+					},
+					&ReferenceType{
+						Type: StringType,
+					},
+				},
+				expectedSuperType: AnyStructType,
+			},
+			{
+				name: "references & non-references",
+				types: []Type{
+					Int8Type,
+					&ReferenceType{
+						Type: Int8Type,
+					},
+				},
+				expectedSuperType: AnyStructType,
+			},
+			{
+				name: "struct references & resource reference",
+				types: []Type{
+					&ReferenceType{
+						Type: Int8Type,
+					},
+					&ReferenceType{
+						Type: resourceType,
+					},
+				},
+				expectedSuperType: AnyStructType,
+			},
+		}
+
+		testLeastCommonSuperType(t, tests)
+	})
+
+	t.Run("Path types", func(t *testing.T) {
+		tests := []testCase{
+			{
+				name: "homogenous paths",
+				types: []Type{
+					PrivatePathType,
+					PrivatePathType,
+				},
+				expectedSuperType: PrivatePathType,
+			},
+			{
+				name: "capability paths",
+				types: []Type{
+					PrivatePathType,
+					PublicPathType,
+				},
+				expectedSuperType: CapabilityPathType,
+			},
+			{
+				name: "heterogeneous paths",
+				types: []Type{
+					PrivatePathType,
+					PublicPathType,
+					StoragePathType,
+				},
+				expectedSuperType: PathType,
+			},
+			{
+				name: "paths & non-paths",
+				types: []Type{
+					PrivatePathType,
+					PublicPathType,
+					StoragePathType,
+					StringType,
+				},
+				expectedSuperType: AnyStructType,
+			},
+		}
+
+		testLeastCommonSuperType(t, tests)
+	})
+
+}
