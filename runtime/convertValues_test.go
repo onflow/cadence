@@ -986,13 +986,13 @@ func TestEnumValue(t *testing.T) {
             }
         `
 
-		actual, err := importAndExportValuesFromScript(t, script, enumValue)
+		actual, err := executeTestScript(t, script, enumValue)
 		require.NoError(t, err)
 		assert.Equal(t, enumValue, actual)
 	})
 }
 
-func importAndExportValuesFromScript(t *testing.T, script string, arg cadence.Value) (cadence.Value, error) {
+func executeTestScript(t *testing.T, script string, arg cadence.Value) (cadence.Value, error) {
 	encodedArg, err := json.Encode(arg)
 	require.NoError(t, err)
 
@@ -1263,7 +1263,7 @@ func TestArgumentPassing(t *testing.T) {
 				returnStmt,
 			)
 
-			actual, err := importAndExportValuesFromScript(t, script, test.exportedValue)
+			actual, err := executeTestScript(t, script, test.exportedValue)
 			require.NoError(t, err)
 
 			if !test.skipExport {
@@ -1416,7 +1416,7 @@ func TestComplexStructArgumentPassing(t *testing.T) {
 		"Foo",
 	)
 
-	actual, err := importAndExportValuesFromScript(t, script, complexStructValue)
+	actual, err := executeTestScript(t, script, complexStructValue)
 	require.NoError(t, err)
 	assert.Equal(t, complexStructValue, actual)
 
@@ -1518,7 +1518,7 @@ func TestComplexStructWithAnyStructFields(t *testing.T) {
 		"Foo",
 	)
 
-	actual, err := importAndExportValuesFromScript(t, script, complexStructValue)
+	actual, err := executeTestScript(t, script, complexStructValue)
 	require.NoError(t, err)
 	assert.Equal(t, complexStructValue, actual)
 }
@@ -1779,7 +1779,7 @@ func TestMalformedArgumentPassing(t *testing.T) {
 				test.typeSignature,
 			)
 
-			_, err := importAndExportValuesFromScript(t, script, test.exportedValue)
+			_, err := executeTestScript(t, script, test.exportedValue)
 			require.Error(t, err)
 
 			require.IsType(t, Error{}, err)
@@ -2781,5 +2781,117 @@ func TestImportExportComplex(t *testing.T) {
 			internalCompositeValue,
 			actual,
 		)
+	})
+}
+
+func TestStaticTypeAvailability(t *testing.T) {
+	t.Parallel()
+
+	t.Run("inner array", func(t *testing.T) {
+		script := `
+            pub fun main(arg: Foo) {
+            }
+
+            pub struct Foo {
+                pub var a: AnyStruct
+
+                init() {
+                    self.a = nil
+                }
+            }
+        `
+
+		structValue := cadence.Struct{
+			StructType: &cadence.StructType{
+				Location:            utils.TestLocation,
+				QualifiedIdentifier: "Foo",
+				Fields: []cadence.Field{
+					{
+						Identifier: "a",
+						Type:       cadence.AnyStructType{},
+					},
+				},
+			},
+
+			Fields: []cadence.Value{
+				cadence.NewArray([]cadence.Value{
+					cadence.NewString("foo"),
+					cadence.NewString("bar"),
+				}),
+			},
+		}
+
+		// TODO: type must be inferred, and shouldn't panic
+		defer func() {
+			r := recover()
+
+			err, isError := r.(error)
+			require.True(t, isError)
+			require.Error(t, err)
+
+			assert.Contains(
+				t,
+				err.Error(),
+				"invalid static type for argument: 0",
+			)
+		}()
+
+		_, err := executeTestScript(t, script, structValue)
+		require.NoError(t, err)
+	})
+
+	t.Run("inner dictionary", func(t *testing.T) {
+		script := `
+            pub fun main(arg: Foo) {
+            }
+
+            pub struct Foo {
+                pub var a: AnyStruct
+
+                init() {
+                    self.a = nil
+                }
+            }
+        `
+
+		structValue := cadence.Struct{
+			StructType: &cadence.StructType{
+				Location:            utils.TestLocation,
+				QualifiedIdentifier: "Foo",
+				Fields: []cadence.Field{
+					{
+						Identifier: "a",
+						Type:       cadence.AnyStructType{},
+					},
+				},
+			},
+
+			Fields: []cadence.Value{
+				cadence.NewDictionary([]cadence.KeyValuePair{
+					{
+						Key:   cadence.NewString("foo"),
+						Value: cadence.NewString("bar"),
+					},
+				}),
+			},
+		}
+
+		// TODO: type must be inferred, and shouldn't panic
+		defer func() {
+			r := recover()
+
+			err, isError := r.(error)
+			require.True(t, isError)
+			require.Error(t, err)
+
+			assert.Contains(
+				t,
+				err.Error(),
+				"invalid static type for argument: 0",
+			)
+		}()
+
+		_, err := executeTestScript(t, script, structValue)
+		require.NoError(t, err)
 	})
 }
