@@ -20,6 +20,8 @@ package common
 
 import (
 	"encoding/json"
+	"fmt"
+	"strings"
 
 	"github.com/onflow/cadence/runtime/errors"
 )
@@ -179,4 +181,21 @@ func (k CompositeKind) SupportsInterfaces() bool {
 
 func (k CompositeKind) MarshalJSON() ([]byte, error) {
 	return json.Marshal(k.String())
+}
+
+var compositeKindMap = map[string]CompositeKind{
+	"CompositeKindUnknown":   CompositeKindUnknown,
+	"CompositeKindStructure": CompositeKindStructure,
+	"CompositeKindResource":  CompositeKindResource,
+	"CompositeKindContract":  CompositeKindContract,
+	"CompositeKindEvent":     CompositeKindEvent,
+	"CompositeKindEnum":      CompositeKindEnum,
+}
+
+func (a *CompositeKind) UnmarshalJSON(b []byte) error {
+	if c, ok := compositeKindMap[strings.Trim(string(b), `"`)]; ok {
+		*a = c
+		return nil
+	}
+	return fmt.Errorf("unknown CompositeKind")
 }
