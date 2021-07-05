@@ -1611,6 +1611,27 @@ func TestMalformedArgumentPassing(t *testing.T) {
 		},
 	}
 
+	// Struct with nested array with mismatching element type
+	malformedStruct5 := cadence.Struct{
+		StructType: &cadence.StructType{
+			Location:            utils.TestLocation,
+			QualifiedIdentifier: "Bar",
+			Fields: []cadence.Field{
+				{
+					Identifier: "a",
+					Type: cadence.VariableSizedArrayType{
+						ElementType: malformedStructType1,
+					},
+				},
+			},
+		},
+		Fields: []cadence.Value{
+			cadence.NewArray([]cadence.Value{
+				cadence.NewString("mismatching value"),
+			}),
+		},
+	}
+
 	type argumentPassingTest struct {
 		label           string
 		typeSignature   string
@@ -1666,13 +1687,29 @@ func TestMalformedArgumentPassing(t *testing.T) {
 			expectedErrType: &InvalidValueTypeError{},
 		},
 		{
+			label:         "Nested array with mismatching element",
+			typeSignature: "[[String]]",
+			exportedValue: cadence.NewArray([]cadence.Value{
+				cadence.NewArray([]cadence.Value{
+					cadence.NewInt(5),
+				}),
+			}),
+			expectedErrType: &InvalidValueTypeError{},
+		},
+		{
+			label:           "Inner array with mismatching element",
+			typeSignature:   "Bar",
+			exportedValue:   malformedStruct5,
+			expectedErrType: &MalformedValueError{},
+		},
+		{
 			label:           "Malformed Optional",
 			typeSignature:   "Foo?",
 			exportedValue:   cadence.NewOptional(malformedStruct1),
 			expectedErrType: &MalformedValueError{},
 		},
 		{
-			label:         "Malformed Map",
+			label:         "Malformed dictionary",
 			typeSignature: "{String: Foo}",
 			exportedValue: cadence.NewDictionary([]cadence.KeyValuePair{
 				{
@@ -1681,6 +1718,22 @@ func TestMalformedArgumentPassing(t *testing.T) {
 				},
 			}),
 			expectedErrType: &MalformedValueError{},
+		},
+		{
+			label:         "Nested dictionary with mismatching element",
+			typeSignature: "{String: {String: String}}",
+			exportedValue: cadence.NewDictionary([]cadence.KeyValuePair{
+				{
+					Key: cadence.NewString("hello"),
+					Value: cadence.NewDictionary([]cadence.KeyValuePair{
+						{
+							Key:   cadence.NewString("hello"),
+							Value: cadence.NewInt(6),
+						},
+					}),
+				},
+			}),
+			expectedErrType: &InvalidValueTypeError{},
 		},
 	}
 
