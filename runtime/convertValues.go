@@ -506,6 +506,16 @@ func importDictionaryValue(
 					keysAndValues[0],
 				))
 			}
+
+			for i := 1; i < len(v.Pairs); i++ {
+				key := keysAndValues[i*2]
+				nextKeySemaType := inter.ConvertStaticToSemaType(key.StaticType())
+				if !sema.IsSubType(nextKeySemaType, keySemaType) {
+					panic(fmt.Errorf(
+						"cannot import dictionary: keys does not belong to the same type",
+					))
+				}
+			}
 		}
 
 		dictionaryStaticType = interpreter.DictionaryStaticType{
