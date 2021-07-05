@@ -34,6 +34,7 @@ func TestCompositeDeferredDecoding(t *testing.T) {
 	t.Parallel()
 
 	t.Run("Simple composite", func(t *testing.T) {
+		t.Parallel()
 
 		members := NewStringValueOrderedMap()
 		members.Set("a", NewStringValue("hello"))
@@ -94,6 +95,8 @@ func TestCompositeDeferredDecoding(t *testing.T) {
 	})
 
 	t.Run("Nested composite", func(t *testing.T) {
+		t.Parallel()
+
 		value := newTestLargeCompositeValue(0)
 
 		encoded, _, err := EncodeValue(value, nil, true, nil)
@@ -116,6 +119,8 @@ func TestCompositeDeferredDecoding(t *testing.T) {
 	})
 
 	t.Run("Field update", func(t *testing.T) {
+		t.Parallel()
+
 		value := newTestLargeCompositeValue(0)
 
 		encoded, _, err := EncodeValue(value, nil, true, nil)
@@ -140,6 +145,7 @@ func TestCompositeDeferredDecoding(t *testing.T) {
 	})
 
 	t.Run("Round trip - without loading", func(t *testing.T) {
+		t.Parallel()
 
 		members := NewStringValueOrderedMap()
 		members.Set("a", NewStringValue("hello"))
@@ -198,6 +204,7 @@ func TestCompositeDeferredDecoding(t *testing.T) {
 	})
 
 	t.Run("Round trip - partially loaded", func(t *testing.T) {
+		t.Parallel()
 
 		members := NewStringValueOrderedMap()
 		members.Set("a", NewStringValue("hello"))
@@ -262,6 +269,7 @@ func TestCompositeDeferredDecoding(t *testing.T) {
 	})
 
 	t.Run("callback", func(t *testing.T) {
+		t.Parallel()
 
 		stringValue := NewStringValue("hello")
 
@@ -333,6 +341,7 @@ func TestCompositeDeferredDecoding(t *testing.T) {
 	})
 
 	t.Run("re-encoding", func(t *testing.T) {
+		t.Parallel()
 
 		members := NewStringValueOrderedMap()
 		members.Set("a", NewStringValue("hello"))
@@ -392,6 +401,8 @@ func TestCompositeDeferredDecoding(t *testing.T) {
 	})
 
 	t.Run("storable and modified", func(t *testing.T) {
+		t.Parallel()
+
 		members := NewStringValueOrderedMap()
 		members.Set("a", NewStringValue("hello"))
 		members.Set("b", BoolValue(true))
@@ -531,6 +542,8 @@ func TestArrayDeferredDecoding(t *testing.T) {
 	t.Parallel()
 
 	t.Run("Simple array", func(t *testing.T) {
+		t.Parallel()
+
 		array := newTestArrayValue(10)
 
 		encoded, _, err := EncodeValue(array, nil, true, nil)
@@ -568,6 +581,7 @@ func TestArrayDeferredDecoding(t *testing.T) {
 	})
 
 	t.Run("Round trip - without loading", func(t *testing.T) {
+		t.Parallel()
 
 		array := newTestArrayValue(2)
 
@@ -618,6 +632,7 @@ func TestArrayDeferredDecoding(t *testing.T) {
 	})
 
 	t.Run("re-encoding", func(t *testing.T) {
+		t.Parallel()
 
 		array := newTestArrayValue(2)
 
@@ -662,6 +677,8 @@ func TestArrayDeferredDecoding(t *testing.T) {
 	})
 
 	t.Run("storable and modified", func(t *testing.T) {
+		t.Parallel()
+
 		array := newTestArrayValue(2)
 
 		encoded, _, err := EncodeValue(array, nil, true, nil)
@@ -682,6 +699,7 @@ func TestArrayDeferredDecoding(t *testing.T) {
 	})
 
 	t.Run("Decode with V4", func(t *testing.T) {
+		t.Parallel()
 
 		array := newTestArrayValue(2)
 
@@ -784,6 +802,8 @@ func TestDictionaryDeferredDecoding(t *testing.T) {
 	t.Parallel()
 
 	t.Run("Simple dictionary", func(t *testing.T) {
+		t.Parallel()
+
 		dictionary := newTestDictionaryValue(10)
 
 		encoded, _, err := EncodeValue(dictionary, nil, true, nil)
@@ -816,6 +836,7 @@ func TestDictionaryDeferredDecoding(t *testing.T) {
 	})
 
 	t.Run("Round trip - without loading", func(t *testing.T) {
+		t.Parallel()
 
 		dictionary := newTestDictionaryValue(2)
 
@@ -861,6 +882,7 @@ func TestDictionaryDeferredDecoding(t *testing.T) {
 	})
 
 	t.Run("re-encoding", func(t *testing.T) {
+		t.Parallel()
 
 		dictionary := newTestDictionaryValue(2)
 
@@ -911,6 +933,8 @@ func TestDictionaryDeferredDecoding(t *testing.T) {
 	})
 
 	t.Run("deferred dictionary", func(t *testing.T) {
+		t.Parallel()
+
 		const size = 2
 		values := make([]Value, size*2)
 
@@ -982,6 +1006,8 @@ func TestDictionaryDeferredDecoding(t *testing.T) {
 	})
 
 	t.Run("storable and modified", func(t *testing.T) {
+		t.Parallel()
+
 		dictionary := newTestDictionaryValue(2)
 
 		encoded, _, err := EncodeValue(dictionary, nil, true, nil)
@@ -1003,6 +1029,7 @@ func TestDictionaryDeferredDecoding(t *testing.T) {
 	})
 
 	t.Run("Decode with V4", func(t *testing.T) {
+		t.Parallel()
 
 		dictionary := newTestDictionaryValue(2)
 
