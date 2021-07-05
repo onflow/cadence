@@ -715,10 +715,47 @@ func validateArgumentParams(
 			}
 		}
 
+		// Ensure static type info is available for all values
+		interpreter.InspectValue(arg, func(value interpreter.Value) bool {
+			if value == nil {
+				return true
+			}
+
+			if !hasValidStaticType(value) {
+				panic(fmt.Errorf("invalid static type for argument: %d", i))
+			}
+
+			return true
+		})
+
 		argumentValues[i] = arg
 	}
 
 	return argumentValues, nil
+}
+
+func hasValidStaticType(value interpreter.Value) bool {
+	switch value := value.(type) {
+	case *interpreter.ArrayValue:
+		switch value.StaticType().(type) {
+		case interpreter.ConstantSizedStaticType, interpreter.VariableSizedStaticType:
+			return true
+		default:
+			return false
+		}
+	case *interpreter.DictionaryValue:
+		dictionaryType, ok := value.StaticType().(interpreter.DictionaryStaticType)
+		if !ok {
+			return false
+		}
+
+		return dictionaryType.KeyType != nil &&
+			dictionaryType.ValueType != nil
+	default:
+		// For other values, static type is NOT inferred.
+		// Hence no need to validate it here.
+		return value.StaticType() != nil
+	}
 }
 
 // ParseAndCheckProgram parses the given code and checks it.
