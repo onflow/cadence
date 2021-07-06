@@ -2064,11 +2064,11 @@ func TestImportExportDictionaryValue(t *testing.T) {
 				Key: cadence.NewString("a"),
 				Value: cadence.NewDictionary([]cadence.KeyValuePair{
 					{
-						Key:   cadence.NewInt(1),
+						Key:   cadence.NewInt8(1),
 						Value: cadence.NewInt(100),
 					},
 					{
-						Key:   cadence.NewInt(2),
+						Key:   cadence.NewInt8(2),
 						Value: cadence.NewString("hello"),
 					},
 				}),
@@ -2077,7 +2077,7 @@ func TestImportExportDictionaryValue(t *testing.T) {
 				Key: cadence.NewString("b"),
 				Value: cadence.NewDictionary([]cadence.KeyValuePair{
 					{
-						Key:   cadence.NewInt(1),
+						Key:   cadence.NewInt8(1),
 						Value: cadence.NewString("foo"),
 					},
 					{
@@ -2113,8 +2113,8 @@ func TestImportExportDictionaryValue(t *testing.T) {
 						KeyType:   interpreter.PrimitiveStaticTypeNumber,
 						ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
 					},
-					interpreter.NewIntValueFromInt64(1), interpreter.NewIntValueFromInt64(100),
-					interpreter.NewIntValueFromInt64(2), interpreter.NewStringValue("hello"),
+					interpreter.Int8Value(1), interpreter.NewIntValueFromInt64(100),
+					interpreter.Int8Value(2), interpreter.NewStringValue("hello"),
 				),
 
 				interpreter.NewStringValue("b"),
@@ -2123,7 +2123,7 @@ func TestImportExportDictionaryValue(t *testing.T) {
 						KeyType:   interpreter.PrimitiveStaticTypeNumber,
 						ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
 					},
-					interpreter.NewIntValueFromInt64(1), interpreter.NewStringValue("foo"),
+					interpreter.Int8Value(1), interpreter.NewStringValue("foo"),
 					interpreter.NewIntValueFromInt64(2), interpreter.NewIntValueFromInt64(50),
 				),
 			),

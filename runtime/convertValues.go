@@ -435,10 +435,9 @@ func importOptionalValue(inter *interpreter.Interpreter, v cadence.Optional, exp
 func importArrayValue(inter *interpreter.Interpreter, v cadence.Array, expectedType sema.Type) *interpreter.ArrayValue {
 	values := make([]interpreter.Value, len(v.Values))
 
-	var arrayType sema.ArrayType
 	var elementType sema.Type
-	if expectedArrayType, ok := expectedType.(sema.ArrayType); ok {
-		arrayType = expectedArrayType
+	arrayType, ok := expectedType.(sema.ArrayType)
+	if ok {
 		elementType = arrayType.ElementType(false)
 	}
 
@@ -489,9 +488,10 @@ func importDictionaryValue(
 			keyStaticType = interpreter.PrimitiveStaticTypeNever
 			valueStaticType = interpreter.PrimitiveStaticTypeNever
 		} else {
-			valueStaticType = interpreter.PrimitiveStaticTypeAnyStruct
-			keyStaticType = keysAndValues[0].StaticType()
+			// Infer the keys type from the first entry
 
+			key := keysAndValues[0]
+			keyStaticType = key.StaticType()
 			keySemaType := inter.ConvertStaticToSemaType(keyStaticType)
 
 			if sema.IsSubType(keySemaType, sema.NumberType) {
@@ -503,19 +503,24 @@ func importDictionaryValue(
 			} else {
 				panic(fmt.Errorf(
 					"cannot import dictionary: unsupported key: %v",
-					keysAndValues[0],
+					key,
 				))
 			}
 
+			// Make sure all keys are subtype of the inferred key-type
+
+			inferredKeySemaType := inter.ConvertStaticToSemaType(keyStaticType)
+
 			for i := 1; i < len(v.Pairs); i++ {
-				key := keysAndValues[i*2]
-				nextKeySemaType := inter.ConvertStaticToSemaType(key.StaticType())
-				if !sema.IsSubType(nextKeySemaType, keySemaType) {
+				keySemaType := inter.ConvertStaticToSemaType(keysAndValues[i*2].StaticType())
+				if !sema.IsSubType(keySemaType, inferredKeySemaType) {
 					panic(fmt.Errorf(
 						"cannot import dictionary: keys does not belong to the same type",
 					))
 				}
 			}
+
+			valueStaticType = interpreter.PrimitiveStaticTypeAnyStruct
 		}
 
 		dictionaryStaticType = interpreter.DictionaryStaticType{
