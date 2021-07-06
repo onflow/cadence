@@ -97,6 +97,7 @@ func (t InterfaceStaticType) Equal(other StaticType) bool {
 type ArrayStaticType interface {
 	StaticType
 	isArrayStaticType()
+	ElementType() StaticType
 }
 
 // VariableSizedStaticType
@@ -108,6 +109,10 @@ type VariableSizedStaticType struct {
 func (VariableSizedStaticType) isStaticType() {}
 
 func (VariableSizedStaticType) isArrayStaticType() {}
+
+func (t VariableSizedStaticType) ElementType() StaticType {
+	return t.Type
+}
 
 func (t VariableSizedStaticType) String() string {
 	return fmt.Sprintf("[%s]", t.Type)
@@ -132,6 +137,10 @@ type ConstantSizedStaticType struct {
 func (ConstantSizedStaticType) isStaticType() {}
 
 func (ConstantSizedStaticType) isArrayStaticType() {}
+
+func (t ConstantSizedStaticType) ElementType() StaticType {
+	return t.Type
+}
 
 func (t ConstantSizedStaticType) String() string {
 	return fmt.Sprintf("[%s; %d]", t.Type, t.Size)
