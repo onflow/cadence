@@ -473,8 +473,8 @@ func TestEncodeDecodeComposite(t *testing.T) {
 		encoded := []byte{
 			// tag
 			0xd8, cborTagCompositeValue,
-			// array, 5 items follow
-			0x85,
+			// array, 4 items follow
+			0x84,
 
 			// tag
 			0xd8, cborTagStringLocation,
@@ -482,9 +482,6 @@ func TestEncodeDecodeComposite(t *testing.T) {
 			0x64,
 			// t, e, s, t
 			0x74, 0x65, 0x73, 0x74,
-
-			// nil
-			0xf6,
 
 			// positive integer 1
 			0x1,
@@ -524,8 +521,8 @@ func TestEncodeDecodeComposite(t *testing.T) {
 		encoded := []byte{
 			// tag
 			0xd8, cborTagCompositeValue,
-			// array, 5 items follow
-			0x85,
+			// array, 4 items follow
+			0x84,
 
 			// tag
 			0xd8, cborTagStringLocation,
@@ -533,9 +530,6 @@ func TestEncodeDecodeComposite(t *testing.T) {
 			0x64,
 			// t, e, s, t
 			0x74, 0x65, 0x73, 0x74,
-
-			// nil
-			0xf6,
 
 			// positive integer 2
 			0x2,
@@ -586,8 +580,8 @@ func TestEncodeDecodeComposite(t *testing.T) {
 		encoded := []byte{
 			// tag
 			0xd8, cborTagCompositeValue,
-			// array, 5 items follow
-			0x85,
+			// array, 4 items follow
+			0x84,
 
 			// tag
 			0xd8, cborTagAddressLocation,
@@ -601,9 +595,6 @@ func TestEncodeDecodeComposite(t *testing.T) {
 			0x6a,
 			0x54, 0x65, 0x73, 0x74, 0x53, 0x74, 0x72, 0x75,
 			0x63, 0x74,
-
-			// nil
-			0xf6,
 
 			// positive integer 1
 			0x1,
@@ -3001,16 +2992,14 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 			expectedLinkEncodingPrefix[:],
 			// tag
 			0xd8, cborTagCompositeStaticType,
-			// array, 3 items follow
-			0x83,
+			// array, 2 items follow
+			0x82,
 			// tag
 			0xd8, cborTagStringLocation,
 			// UTF-8 string, length 4
 			0x64,
 			// t, e, s, t
 			0x74, 0x65, 0x73, 0x74,
-			// nil
-			0xf6,
 			// UTF-8 string, length 12
 			0x6c,
 			// SimpleStruct
@@ -3039,16 +3028,14 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 			expectedLinkEncodingPrefix[:],
 			// tag
 			0xd8, cborTagInterfaceStaticType,
-			// array, 3 items follow
-			0x83,
+			// array, 2 items follow
+			0x82,
 			// tag
 			0xd8, cborTagStringLocation,
 			// UTF-8 string, length 4
 			0x64,
 			// t, e, s, t
 			0x74, 0x65, 0x73, 0x74,
-			// nil
-			0xf6,
 			// UTF-8 string, length 22
 			0x6F,
 			// SimpleInterface
@@ -3244,16 +3231,14 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 			0x82,
 			// tag
 			0xd8, cborTagCompositeStaticType,
-			// array, 3 items follow
-			0x83,
+			// array, 2 items follow
+			0x82,
 			// tag
 			0xd8, cborTagStringLocation,
 			// UTF-8 string, length 4
 			0x64,
 			// t, e, s, t
 			0x74, 0x65, 0x73, 0x74,
-			// nil
-			0xf6,
 			// UTF-8 string, length 1
 			0x61,
 			// S
@@ -3262,32 +3247,28 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 			0x82,
 			// tag
 			0xd8, cborTagInterfaceStaticType,
-			// array, 3 items follow
-			0x83,
+			// array, 2 items follow
+			0x82,
 			// tag
 			0xd8, cborTagStringLocation,
 			// UTF-8 string, length 4
 			0x64,
 			// t, e, s, t
 			0x74, 0x65, 0x73, 0x74,
-			// nil
-			0xf6,
 			// UTF-8 string, length 2
 			0x62,
 			// I1
 			0x49, 0x31,
 			// tag
 			0xd8, cborTagInterfaceStaticType,
-			// array, 3 items follow
-			0x83,
+			// array, 2 items follow
+			0x82,
 			// tag
 			0xd8, cborTagStringLocation,
 			// UTF-8 string, length 4
 			0x64,
 			// t, e, s, t
 			0x74, 0x65, 0x73, 0x74,
-			// nil
-			0xf6,
 			// UTF-8 string, length 2
 			0x62,
 			// I2
@@ -3789,6 +3770,7 @@ func prepareLargeTestValue() Value {
 }
 
 func TestDecodeV4EncodeV5(t *testing.T) {
+
 	t.Parallel()
 
 	const encodingVersion = 4
@@ -3899,7 +3881,7 @@ func TestDecodeV4EncodeV5(t *testing.T) {
 			value.SetModified(false)
 		})
 
-		// Encode from v4
+		// Encode to v4
 		encodedV4, _, err := EncodeValueV4(compositeValue, nil, true, nil)
 		require.NoError(t, err)
 
@@ -3907,7 +3889,13 @@ func TestDecodeV4EncodeV5(t *testing.T) {
 		decodedV4, err := DecodeValueV4(encodedV4, &testOwner, nil, encodingVersion, nil)
 		require.NoError(t, err)
 
-		// Encode from v5
+		require.IsType(t, &CompositeValue{}, decodedV4)
+		decodedCompositeV4 := decodedV4.(*CompositeValue)
+
+		// Make sure the content is decoded.
+		_ = decodedCompositeV4.String()
+
+		// Encode to v5
 		encodedV5, _, err := EncodeValue(decodedV4, nil, true, nil)
 		require.NoError(t, err)
 
@@ -3920,7 +3908,7 @@ func TestDecodeV4EncodeV5(t *testing.T) {
 		require.IsType(t, &CompositeValue{}, decodedV5)
 		decodedCompositeV5 := decodedV5.(*CompositeValue)
 
-		// Make sure the content is built.
+		// Make sure the content is decoded.
 		_ = decodedCompositeV5.String()
 
 		assert.Equal(t, compositeValue, decodedCompositeV5)

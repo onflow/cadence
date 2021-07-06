@@ -1030,16 +1030,15 @@ func (e *EncoderV5) encodeDictionaryValue(
 // NOTE: NEVER change, only add/increment; ensure uint64
 const (
 	// encodedCompositeValueLocationFieldKeyV5            uint64 = 0
-	// encodedCompositeValueTypeIDFieldKeyV5              uint64 = 1
-	// encodedCompositeValueKindFieldKeyV5                uint64 = 2
-	// encodedCompositeValueFieldsFieldKeyV5              uint64 = 3
-	// encodedCompositeValueQualifiedIdentifierFieldKeyV5 uint64 = 4
+	// encodedCompositeValueKindFieldKeyV5                uint64 = 1
+	// encodedCompositeValueFieldsFieldKeyV5              uint64 = 2
+	// encodedCompositeValueQualifiedIdentifierFieldKeyV5 uint64 = 3
 
 	// !!! *WARNING* !!!
 	//
 	// encodedCompositeValueLength MUST be updated when new element is added.
 	// It is used to verify encoded composites length during decoding.
-	encodedCompositeValueLength = 5
+	encodedCompositeValueLength = 4
 )
 
 // encodeCompositeValue encodes CompositeValue as
@@ -1047,7 +1046,6 @@ const (
 //		Number: cborTagCompositeValue,
 //		Content: cborArray{
 //			encodedCompositeValueLocationFieldKeyV5:            common.Location(location),
-//			encodedCompositeValueTypeIDFieldKeyV5:              nil,
 //			encodedCompositeValueKindFieldKeyV5:                uint(v.Kind),
 //			encodedCompositeValueFieldsFieldKeyV5:              []interface{}(fields),
 //			encodedCompositeValueQualifiedIdentifierFieldKeyV5: string(v.QualifiedIdentifier),
@@ -1081,8 +1079,8 @@ func (e *EncoderV5) encodeCompositeValue(
 
 	// Encode array head
 	err = e.enc.EncodeRawBytes([]byte{
-		// array, 5 items follow
-		0x85,
+		// array, 4 items follow
+		0x84,
 	})
 	if err != nil {
 		return err
@@ -1090,12 +1088,6 @@ func (e *EncoderV5) encodeCompositeValue(
 
 	// Encode location at array index encodedCompositeValueLocationFieldKeyV5
 	err = e.encodeLocation(v.Location())
-	if err != nil {
-		return err
-	}
-
-	// Encode nil (obsolete) at array index encodedCompositeValueTypeIDFieldKeyV5
-	err = e.enc.EncodeNil()
 	if err != nil {
 		return err
 	}
@@ -1477,14 +1469,13 @@ func (e *EncoderV5) encodeOptionalStaticType(v OptionalStaticType) error {
 // NOTE: NEVER change, only add/increment; ensure uint64
 const (
 	// encodedCompositeStaticTypeLocationFieldKeyV5            uint64 = 0
-	// encodedCompositeStaticTypeTypeIDFieldKeyV5              uint64 = 1
-	// encodedCompositeStaticTypeQualifiedIdentifierFieldKeyV5 uint64 = 2
+	// encodedCompositeStaticTypeQualifiedIdentifierFieldKeyV5 uint64 = 1
 
 	// !!! *WARNING* !!!
 	//
 	// encodedCompositeStaticTypeLength MUST be updated when new element is added.
 	// It is used to verify encoded composite static type length during decoding.
-	encodedCompositeStaticTypeLength = 3
+	encodedCompositeStaticTypeLength = 2
 )
 
 // encodeCompositeStaticType encodes CompositeStaticType as
@@ -1492,7 +1483,6 @@ const (
 //			Number: cborTagCompositeStaticType,
 // 			Content: cborArray{
 //				encodedCompositeStaticTypeLocationFieldKeyV5:            Location(v.Location),
-// 				encodedCompositeStaticTypeTypeIDFieldKeyV5:              nil,
 //				encodedCompositeStaticTypeQualifiedIdentifierFieldKeyV5: string(v.QualifiedIdentifier),
 //		},
 // }
@@ -1501,22 +1491,19 @@ func (e *EncoderV5) encodeCompositeStaticType(v CompositeStaticType) error {
 	err := e.enc.EncodeRawBytes([]byte{
 		// tag number
 		0xd8, cborTagCompositeStaticType,
-		// array, 3 items follow
-		0x83,
+		// array, 2 items follow
+		0x82,
 	})
 	if err != nil {
 		return err
 	}
+
 	// Encode location at array index encodedCompositeStaticTypeLocationFieldKeyV5
 	err = e.encodeLocation(v.Location)
 	if err != nil {
 		return err
 	}
-	// Encode nil (obsolete) at array index encodedCompositeStaticTypeTypeIDFieldKeyV5
-	err = e.enc.EncodeNil()
-	if err != nil {
-		return err
-	}
+
 	// Encode qualified identifier at array index encodedCompositeStaticTypeQualifiedIdentifierFieldKeyV5
 	return e.enc.EncodeString(v.QualifiedIdentifier)
 }
@@ -1524,14 +1511,13 @@ func (e *EncoderV5) encodeCompositeStaticType(v CompositeStaticType) error {
 // NOTE: NEVER change, only add/increment; ensure uint64
 const (
 	// encodedInterfaceStaticTypeLocationFieldKeyV5            uint64 = 0
-	// encodedInterfaceStaticTypeTypeIDFieldKeyV5              uint64 = 1
-	// encodedInterfaceStaticTypeQualifiedIdentifierFieldKeyV5 uint64 = 2
+	// encodedInterfaceStaticTypeQualifiedIdentifierFieldKeyV5 uint64 = 1
 
 	// !!! *WARNING* !!!
 	//
 	// encodedInterfaceStaticTypeLength MUST be updated when new element is added.
 	// It is used to verify encoded interface static type length during decoding.
-	encodedInterfaceStaticTypeLength = 3
+	encodedInterfaceStaticTypeLength = 2
 )
 
 // encodeInterfaceStaticType encodes InterfaceStaticType as
@@ -1539,7 +1525,6 @@ const (
 //		Number: cborTagInterfaceStaticType,
 //		Content: cborArray{
 //				encodedInterfaceStaticTypeLocationFieldKeyV5:            Location(v.Location),
-// 				encodedInterfaceStaticTypeTypeIDFieldKeyV5:              nil,
 //				encodedInterfaceStaticTypeQualifiedIdentifierFieldKeyV5: string(v.QualifiedIdentifier),
 //		},
 // }
@@ -1548,22 +1533,19 @@ func (e *EncoderV5) encodeInterfaceStaticType(v InterfaceStaticType) error {
 	err := e.enc.EncodeRawBytes([]byte{
 		// tag number
 		0xd8, cborTagInterfaceStaticType,
-		// array, 3 items follow
-		0x83,
+		// array, 2 items follow
+		0x82,
 	})
 	if err != nil {
 		return err
 	}
+
 	// Encode location at array index encodedInterfaceStaticTypeLocationFieldKeyV5
 	err = e.encodeLocation(v.Location)
 	if err != nil {
 		return err
 	}
-	// Encode nil (obsolete) at array index encodedInterfaceStaticTypeTypeIDFieldKeyV5
-	err = e.enc.EncodeNil()
-	if err != nil {
-		return err
-	}
+
 	// Encode qualified identifier at array index encodedInterfaceStaticTypeQualifiedIdentifierFieldKeyV5
 	return e.enc.EncodeString(v.QualifiedIdentifier)
 }
