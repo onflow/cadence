@@ -7731,8 +7731,8 @@ func TestInterpretCompositeValueFieldEncodingOrder(t *testing.T) {
 	expectedPrefix := []byte{
 		// tag
 		0xd8, 0x84,
-		// array, 5 items follow
-		0x85,
+		// array, 4 items follow
+		0x84,
 
 		// tag
 		0xd8, 0xc1,
@@ -7740,9 +7740,6 @@ func TestInterpretCompositeValueFieldEncodingOrder(t *testing.T) {
 		0x64,
 		// t, e, s, t
 		0x74, 0x65, 0x73, 0x74,
-
-		// nil
-		0xf6,
 
 		// positive integer 1
 		0x1,

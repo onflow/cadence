@@ -1258,12 +1258,6 @@ func (d *DecoderV5) decodeCompositeStaticType() (StaticType, error) {
 		return nil, fmt.Errorf("invalid composite static type location encoding: %w", err)
 	}
 
-	// Skip obsolete element at array index encodedCompositeStaticTypeTypeIDFieldKeyV5
-	err = d.decoder.Skip()
-	if err != nil {
-		return nil, err
-	}
-
 	// Decode qualified identifier at array index encodedCompositeStaticTypeQualifiedIdentifierFieldKeyV5
 	qualifiedIdentifier, err := d.decoder.DecodeString()
 	if err != nil {
@@ -1310,12 +1304,6 @@ func (d *DecoderV5) decodeInterfaceStaticType() (InterfaceStaticType, error) {
 	location, err := d.decodeLocation()
 	if err != nil {
 		return InterfaceStaticType{}, fmt.Errorf("invalid interface static type location encoding: %w", err)
-	}
-
-	// Skip obsolete element at array index encodedInterfaceStaticTypeTypeIDFieldKeyV5
-	err = d.decoder.Skip()
-	if err != nil {
-		return InterfaceStaticType{}, err
 	}
 
 	// Decode qualified identifier at array index encodedInterfaceStaticTypeQualifiedIdentifierFieldKeyV5
@@ -1660,12 +1648,6 @@ func decodeCompositeMetaInfo(v *CompositeValue, content []byte) error {
 			strings.Join(v.valuePath, "."),
 			err,
 		)
-	}
-
-	// Skip obsolete element at array index encodedCompositeValueTypeIDFieldKeyV5
-	err = d.decoder.Skip()
-	if err != nil {
-		return err
 	}
 
 	// Kind
