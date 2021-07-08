@@ -154,6 +154,14 @@ func (checker *Checker) VisitCastingExpression(expression *ast.CastingExpression
 		return rightHandType
 
 	case ast.OperationCast:
+		if checker.expectedType == rightHandType {
+			checker.hint(
+				&UnnecessaryCastHint{
+					TargetType: rightHandType,
+					Range:      ast.NewRangeFromPositioned(expression.TypeAnnotation),
+				},
+			)
+		}
 		return rightHandType
 
 	default:
