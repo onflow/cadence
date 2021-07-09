@@ -77,6 +77,81 @@ func TestCheckOptionalChainingOptionalFieldRead(t *testing.T) {
 	)
 }
 
+func TestCheckOptionalChainingNonOptionalFieldAccess(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("function", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+              fun test() {
+                  let bar = Bar()
+                  // field Bar.foo is not optional but try to access it through optional chaining
+                  bar.foo?.getContent()
+              }
+
+              struct Bar {
+                  var foo: Foo
+                  init() {
+                      self.foo = Foo()
+                  }
+              }
+
+              struct Foo {
+                  fun getContent(): String {
+                      return "hello"
+                  }
+              }
+            `,
+		)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.InvalidOptionalChainingError{}, errs[0])
+
+	})
+
+	t.Run("non-function", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+              fun test() {
+                  let bar = Bar()
+                  // Two issues:
+                  //    - Field Bar.foo is not optional, but access through optional chaining
+                  //    - Field Foo.id is not a function, yet invoke as a function
+                  bar.foo?.id()
+              }
+
+              struct Bar {
+                  var foo: Foo
+                  init() {
+                      self.foo = Foo()
+                  }
+              }
+
+              struct Foo {
+                  var id: String
+
+                  init() {
+                      self.id = ""
+                  }
+              }
+            `,
+		)
+
+		errs := ExpectCheckerErrors(t, err, 2)
+
+		assert.IsType(t, &sema.InvalidOptionalChainingError{}, errs[0])
+		assert.IsType(t, &sema.NotCallableError{}, errs[1])
+	})
+}
+
 func TestCheckOptionalChainingFunctionRead(t *testing.T) {
 
 	t.Parallel()
