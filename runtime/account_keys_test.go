@@ -63,13 +63,13 @@ func TestRuntimeTransaction_AddPublicKey(t *testing.T) {
 		{
 			name: "Single key",
 			code: `
-			  transaction(keyA: [UInt8]) {
-				prepare(signer: AuthAccount) {
-				  let acct = AuthAccount(payer: signer)
-				  acct.addPublicKey(keyA)
-				}
-			  }
-			`,
+              transaction(keyA: [UInt8]) {
+                prepare(signer: AuthAccount) {
+                  let acct = AuthAccount(payer: signer)
+                  acct.addPublicKey(keyA)
+                }
+              }
+            `,
 			keyCount: 1,
 			args:     []cadence.Value{keyA},
 			expected: [][]byte{{1, 2, 3}},
@@ -77,15 +77,15 @@ func TestRuntimeTransaction_AddPublicKey(t *testing.T) {
 		{
 			name: "Multiple keys",
 			code: `
-			  transaction(keys: [[UInt8]]) {
-				prepare(signer: AuthAccount) {
-				  let acct = AuthAccount(payer: signer)
-				  for key in keys {
-					acct.addPublicKey(key)
-				  }
-				}
-			  }
-			`,
+              transaction(keys: [[UInt8]]) {
+                prepare(signer: AuthAccount) {
+                  let acct = AuthAccount(payer: signer)
+                  for key in keys {
+                    acct.addPublicKey(key)
+                  }
+                }
+              }
+            `,
 			keyCount: 2,
 			args:     []cadence.Value{keys},
 			expected: [][]byte{{1, 2, 3}, {4, 5, 6}},
@@ -162,19 +162,19 @@ func TestRuntimeAccountKeyConstructor(t *testing.T) {
 	rt := NewInterpreterRuntime()
 
 	script := []byte(`
-		pub fun main(): AccountKey {
-			let key = AccountKey(
-				PublicKey(
-					publicKey: "0102".decodeHex(),
-					signAlgo: "SignatureAlgorithmECDSA_P256"
-				),
-				hashAlgorithm: "HashAlgorithmSHA3_256",
-				weight: 1.7
-			)
+        pub fun main(): AccountKey {
+            let key = AccountKey(
+                PublicKey(
+                    publicKey: "0102".decodeHex(),
+                    signAlgo: "SignatureAlgorithmECDSA_P256"
+                ),
+                hashAlgorithm: "HashAlgorithmSHA3_256",
+                weight: 1.7
+            )
 
-			return key
-      	}
-	`)
+            return key
+          }
+    `)
 
 	runtimeInterface := &testRuntimeInterface{}
 
@@ -207,13 +207,13 @@ func TestRuntimeStoreAccountAPITypes(t *testing.T) {
 		rt := NewInterpreterRuntime()
 
 		script := []byte(fmt.Sprintf(`
-			transaction {
+            transaction {
 
-				prepare(signer: AuthAccount) {
-					signer.save<%s>(panic(""))
-				}
-			}
-		`, ty.String()))
+                prepare(signer: AuthAccount) {
+                    signer.save<%s>(panic(""))
+                }
+            }
+        `, ty.String()))
 
 		runtimeInterface := &testRuntimeInterface{}
 
@@ -449,7 +449,12 @@ func TestRuntimeAuthAccountKeysAdd(t *testing.T) {
 
 func TestRuntimePublicAccountKeys(t *testing.T) {
 
+	t.Parallel()
+
 	t.Run("get key", func(t *testing.T) {
+
+		t.Parallel()
+
 		storage := newTestAccountKeyStorage()
 		storage.keys = append(storage.keys, accountKeyA, accountKeyB)
 
@@ -458,10 +463,11 @@ func TestRuntimePublicAccountKeys(t *testing.T) {
 
 		test := accountKeyTestCase{
 			code: `
-				pub fun main(): AccountKey? {
-					let acc = getAccount(0x02)
-					return acc.keys.get(keyIndex: 0)
-				}`,
+              pub fun main(): AccountKey? {
+                  let acc = getAccount(0x02)
+                  return acc.keys.get(keyIndex: 0)
+              }
+            `,
 			args: []cadence.Value{},
 		}
 
@@ -487,6 +493,9 @@ func TestRuntimePublicAccountKeys(t *testing.T) {
 	})
 
 	t.Run("get another key", func(t *testing.T) {
+
+		t.Parallel()
+
 		storage := newTestAccountKeyStorage()
 		storage.keys = append(storage.keys, accountKeyA, accountKeyB)
 
@@ -495,10 +504,11 @@ func TestRuntimePublicAccountKeys(t *testing.T) {
 
 		test := accountKeyTestCase{
 			code: `
-				pub fun main(): AccountKey? {
-					let acc = getAccount(0x02)
-					return acc.keys.get(keyIndex: 1)
-				}`,
+              pub fun main(): AccountKey? {
+                  let acc = getAccount(0x02)
+                  return acc.keys.get(keyIndex: 1)
+              }
+            `,
 			args: []cadence.Value{},
 		}
 
@@ -521,7 +531,10 @@ func TestRuntimePublicAccountKeys(t *testing.T) {
 		assert.Equal(t, accountKeyB, storage.returnedKey)
 	})
 
-	t.Run("get non existing key", func(t *testing.T) {
+	t.Run("get non-existing key", func(t *testing.T) {
+
+		t.Parallel()
+
 		storage := newTestAccountKeyStorage()
 		storage.keys = append(storage.keys, accountKeyA, accountKeyB)
 
@@ -530,10 +543,11 @@ func TestRuntimePublicAccountKeys(t *testing.T) {
 
 		test := accountKeyTestCase{
 			code: `
-				pub fun main(): AccountKey? {
-					let acc = getAccount(0x02)
-					return acc.keys.get(keyIndex: 4)
-				}`,
+                pub fun main(): AccountKey? {
+                    let acc = getAccount(0x02)
+                    return acc.keys.get(keyIndex: 4)
+                }
+            `,
 			args: []cadence.Value{},
 		}
 
@@ -548,6 +562,9 @@ func TestRuntimePublicAccountKeys(t *testing.T) {
 	})
 
 	t.Run("get revoked key", func(t *testing.T) {
+
+		t.Parallel()
+
 		storage := newTestAccountKeyStorage()
 		storage.keys = append(storage.keys, revokedAccountKeyA, accountKeyB)
 
@@ -556,11 +573,12 @@ func TestRuntimePublicAccountKeys(t *testing.T) {
 
 		test := accountKeyTestCase{
 			code: `
-				pub fun main(): AccountKey? {
-					let acc = getAccount(0x02)
-					var keys: PublicAccount.Keys = acc.keys
-					return keys.get(keyIndex: 0)
-				}`,
+              pub fun main(): AccountKey? {
+                  let acc = getAccount(0x02)
+                  var keys: PublicAccount.Keys = acc.keys
+                  return keys.get(keyIndex: 0)
+              }
+            `,
 			args: []cadence.Value{},
 		}
 
@@ -592,15 +610,15 @@ func TestRuntimeHashAlgorithm(t *testing.T) {
 	rt := NewInterpreterRuntime()
 
 	script := []byte(`
-		pub fun main(): [HashAlgorithm?] {
-			var key1: HashAlgorithm? = HashAlgorithm.SHA3_256
+        pub fun main(): [HashAlgorithm?] {
+            var key1: HashAlgorithm? = HashAlgorithm.SHA3_256
 
-			var key2: HashAlgorithm? = HashAlgorithm(rawValue: 3)
+            var key2: HashAlgorithm? = HashAlgorithm(rawValue: 3)
 
-			var key3: HashAlgorithm? = HashAlgorithm(rawValue: 100)
-			return [key1, key2, key3]
-      	}
-	`)
+            var key3: HashAlgorithm? = HashAlgorithm(rawValue: 100)
+            return [key1, key2, key3]
+          }
+    `)
 
 	runtimeInterface := &testRuntimeInterface{}
 
@@ -662,15 +680,15 @@ func TestRuntimeSignatureAlgorithm(t *testing.T) {
 	rt := NewInterpreterRuntime()
 
 	script := []byte(`
-		pub fun main(): [SignatureAlgorithm?] {
-			var key1: SignatureAlgorithm? = SignatureAlgorithm.ECDSA_secp256k1
+        pub fun main(): [SignatureAlgorithm?] {
+            var key1: SignatureAlgorithm? = SignatureAlgorithm.ECDSA_secp256k1
 
-			var key2: SignatureAlgorithm? = SignatureAlgorithm(rawValue: 2)
+            var key2: SignatureAlgorithm? = SignatureAlgorithm(rawValue: 2)
 
-			var key3: SignatureAlgorithm? = SignatureAlgorithm(rawValue: 100)
-			return [key1, key2, key3]
-		}
-	`)
+            var key3: SignatureAlgorithm? = SignatureAlgorithm(rawValue: 100)
+            return [key1, key2, key3]
+        }
+    `)
 
 	runtimeInterface := &testRuntimeInterface{}
 
@@ -822,7 +840,6 @@ func getAccountKeyTestRuntimeInterface(storage *testAccountKeyStorage) *testRunt
 			storage.returnedKey = accountKey
 			return accountKey, nil
 		},
-
 		getAccountKey: func(address Address, index int) (*AccountKey, error) {
 			if index >= len(storage.keys) {
 				storage.returnedKey = nil
@@ -833,7 +850,6 @@ func getAccountKeyTestRuntimeInterface(storage *testAccountKeyStorage) *testRunt
 			storage.returnedKey = accountKey
 			return accountKey, nil
 		},
-
 		removeAccountKey: func(address Address, index int) (*AccountKey, error) {
 			if index >= len(storage.keys) {
 				storage.returnedKey = nil
@@ -848,7 +864,6 @@ func getAccountKeyTestRuntimeInterface(storage *testAccountKeyStorage) *testRunt
 
 			return accountKey, nil
 		},
-
 		emitEvent: func(event cadence.Event) error {
 			storage.events = append(storage.events, event)
 			return nil
@@ -863,20 +878,20 @@ func addAuthAccountKey(t *testing.T, runtime Runtime, runtimeInterface *testRunt
 	test := accountKeyTestCase{
 		name: "Add key",
 		code: `
-				transaction {
-					prepare(signer: AuthAccount) {
-						let key = PublicKey(
-							publicKey: "010203".decodeHex(),
-							signatureAlgorithm: SignatureAlgorithm.ECDSA_P256
-						)
+                transaction {
+                    prepare(signer: AuthAccount) {
+                        let key = PublicKey(
+                            publicKey: "010203".decodeHex(),
+                            signatureAlgorithm: SignatureAlgorithm.ECDSA_P256
+                        )
 
-						var addedKey: AccountKey = signer.keys.add(
-							publicKey: key,
-							hashAlgorithm: HashAlgorithm.SHA3_256,
-							weight: 100.0
-						)
-					}
-				}`,
+                        var addedKey: AccountKey = signer.keys.add(
+                            publicKey: key,
+                            hashAlgorithm: HashAlgorithm.SHA3_256,
+                            weight: 100.0
+                        )
+                    }
+                }`,
 		args: []cadence.Value{},
 	}
 
@@ -975,15 +990,15 @@ func TestPublicKey(t *testing.T) {
 
 	t.Run("Constructor", func(t *testing.T) {
 		script := `
-			pub fun main(): PublicKey {
-				let publicKey =  PublicKey(
-					publicKey: "0102".decodeHex(),
-					signatureAlgorithm: SignatureAlgorithm.ECDSA_P256
-				)
+            pub fun main(): PublicKey {
+                let publicKey =  PublicKey(
+                    publicKey: "0102".decodeHex(),
+                    signatureAlgorithm: SignatureAlgorithm.ECDSA_P256
+                )
 
-				return publicKey
-			}
-		`
+                return publicKey
+            }
+        `
 
 		value, err := executeScript(script, runtimeInterface)
 		require.NoError(t, err)
@@ -1007,15 +1022,15 @@ func TestPublicKey(t *testing.T) {
 
 	t.Run("Validate func", func(t *testing.T) {
 		script := `
-			pub fun main(): Bool {
-				let publicKey =  PublicKey(
-					publicKey: "0102".decodeHex(),
-					signatureAlgorithm: SignatureAlgorithm.ECDSA_P256
-				)
+            pub fun main(): Bool {
+                let publicKey =  PublicKey(
+                    publicKey: "0102".decodeHex(),
+                    signatureAlgorithm: SignatureAlgorithm.ECDSA_P256
+                )
 
-				return publicKey.validate()
-			}
-		`
+                return publicKey.validate()
+            }
+        `
 
 		runtimeInterface := &testRuntimeInterface{
 			validatePublicKey: func(publicKey *PublicKey) (bool, error) {
@@ -1031,15 +1046,15 @@ func TestPublicKey(t *testing.T) {
 	t.Run("IsValid", func(t *testing.T) {
 		for _, validity := range []bool{true, false} {
 			script := `
-			pub fun main(): Bool {
-				let publicKey =  PublicKey(
-					publicKey: "0102".decodeHex(),
-					signatureAlgorithm: SignatureAlgorithm.ECDSA_P256
-				)
+            pub fun main(): Bool {
+                let publicKey =  PublicKey(
+                    publicKey: "0102".decodeHex(),
+                    signatureAlgorithm: SignatureAlgorithm.ECDSA_P256
+                )
 
-				return publicKey.isValid
-			}
-		`
+                return publicKey.isValid
+            }
+        `
 			invoked := false
 			validateMethodReturnValue := validity
 
@@ -1066,13 +1081,13 @@ func TestPublicKey(t *testing.T) {
 
 		for index, key := range storage.keys {
 			script := fmt.Sprintf(`
-				pub fun main(): Bool {
-					// Get a public key from host env
-					let acc = getAccount(0x02)
-					let publicKey = acc.keys.get(keyIndex: %d)!.publicKey
-					return publicKey.isValid
-				}
-			`, index)
+                pub fun main(): Bool {
+                    // Get a public key from host env
+                    let acc = getAccount(0x02)
+                    let publicKey = acc.keys.get(keyIndex: %d)!.publicKey
+                    return publicKey.isValid
+                }
+            `, index)
 
 			invoked := false
 			validateMethodReturnValue := true
@@ -1102,20 +1117,20 @@ func TestPublicKey(t *testing.T) {
 
 	t.Run("Verify", func(t *testing.T) {
 		script := `
-			pub fun main(): Bool {
-				let publicKey =  PublicKey(
-					publicKey: "0102".decodeHex(),
-					signatureAlgorithm: SignatureAlgorithm.ECDSA_P256
-				)
+            pub fun main(): Bool {
+                let publicKey =  PublicKey(
+                    publicKey: "0102".decodeHex(),
+                    signatureAlgorithm: SignatureAlgorithm.ECDSA_P256
+                )
 
-				return publicKey.verify(
-					signature: [],
-					signedData: [],
-					domainSeparationTag: "something",
-					hashAlgorithm: HashAlgorithm.SHA2_256
-				)
-			}
-		`
+                return publicKey.verify(
+                    signature: [],
+                    signedData: [],
+                    domainSeparationTag: "something",
+                    hashAlgorithm: HashAlgorithm.SHA2_256
+                )
+            }
+        `
 		invoked := false
 
 		runtimeInterface := &testRuntimeInterface{
@@ -1145,19 +1160,19 @@ func TestPublicKey(t *testing.T) {
 		storage.keys = append(storage.keys, accountKeyA, accountKeyB)
 
 		script := `
-			pub fun main(): Bool {
-				// Get a public key from host env
-				let acc = getAccount(0x02)
-				let publicKey = acc.keys.get(keyIndex: 0)!.publicKey
+            pub fun main(): Bool {
+                // Get a public key from host env
+                let acc = getAccount(0x02)
+                let publicKey = acc.keys.get(keyIndex: 0)!.publicKey
 
-				return publicKey.verify(
-					signature: [],
-					signedData: [],
-					domainSeparationTag: "something",
-					hashAlgorithm: HashAlgorithm.SHA2_256
-				)
-			}
-		`
+                return publicKey.verify(
+                    signature: [],
+                    signedData: [],
+                    domainSeparationTag: "something",
+                    hashAlgorithm: HashAlgorithm.SHA2_256
+                )
+            }
+        `
 		invoked := false
 
 		runtimeInterface := getAccountKeyTestRuntimeInterface(storage)
@@ -1182,19 +1197,19 @@ func TestPublicKey(t *testing.T) {
 
 	t.Run("field mutability", func(t *testing.T) {
 		script := `
-			pub fun main(): PublicKey {
-				let publicKey =  PublicKey(
-					publicKey: "0102".decodeHex(),
-					signatureAlgorithm: SignatureAlgorithm.ECDSA_P256
-				)
+            pub fun main(): PublicKey {
+                let publicKey =  PublicKey(
+                    publicKey: "0102".decodeHex(),
+                    signatureAlgorithm: SignatureAlgorithm.ECDSA_P256
+                )
 
-				publicKey.publicKey = []
-				publicKey.signatureAlgorithm = SignatureAlgorithm.ECDSA_secp256k1
-				publicKey.isValid = true
+                publicKey.publicKey = []
+                publicKey.signatureAlgorithm = SignatureAlgorithm.ECDSA_secp256k1
+                publicKey.isValid = true
 
-				return publicKey
-			}
-		`
+                return publicKey
+            }
+        `
 
 		_, err := executeScript(script, runtimeInterface)
 		require.Error(t, err)
@@ -1215,17 +1230,17 @@ func TestPublicKey(t *testing.T) {
 
 	t.Run("raw-key mutability", func(t *testing.T) {
 		script := `
-			pub fun main(): PublicKey {
-				let publicKey =  PublicKey(
-					publicKey: "0102".decodeHex(),
-					signatureAlgorithm: SignatureAlgorithm.ECDSA_P256
-				)
+            pub fun main(): PublicKey {
+                let publicKey =  PublicKey(
+                    publicKey: "0102".decodeHex(),
+                    signatureAlgorithm: SignatureAlgorithm.ECDSA_P256
+                )
 
-				publicKey.publicKey[0] = 5
+                publicKey.publicKey[0] = 5
 
-				return publicKey
-			}
-		`
+                return publicKey
+            }
+        `
 
 		value, err := executeScript(script, runtimeInterface)
 		require.NoError(t, err)
