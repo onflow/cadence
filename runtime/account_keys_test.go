@@ -269,6 +269,9 @@ func TestRuntimeAuthAccountKeys(t *testing.T) {
 	t.Parallel()
 
 	t.Run("add key", func(t *testing.T) {
+
+		t.Parallel()
+
 		storage := newTestAccountKeyStorage()
 		rt := NewInterpreterRuntime()
 		runtimeInterface := getAccountKeyTestRuntimeInterface(storage)
@@ -279,7 +282,10 @@ func TestRuntimeAuthAccountKeys(t *testing.T) {
 		assert.Equal(t, accountKeyA, storage.returnedKey)
 	})
 
-	t.Run("get key", func(t *testing.T) {
+	t.Run("get existing key", func(t *testing.T) {
+
+		t.Parallel()
+
 		storage := newTestAccountKeyStorage()
 		rt := NewInterpreterRuntime()
 		runtimeInterface := getAccountKeyTestRuntimeInterface(storage)
@@ -288,11 +294,12 @@ func TestRuntimeAuthAccountKeys(t *testing.T) {
 
 		test := accountKeyTestCase{
 			code: `
-				transaction {
-					prepare(signer: AuthAccount) {
-						let key: AccountKey? = signer.keys.get(keyIndex: 0)
-					}
-				}`,
+                transaction {
+                    prepare(signer: AuthAccount) {
+                        let key = signer.keys.get(keyIndex: 0) ?? panic("unexpectedly nil")
+                        assert(!key.isRevoked)
+                    }
+                }`,
 			args: []cadence.Value{},
 		}
 
@@ -303,7 +310,10 @@ func TestRuntimeAuthAccountKeys(t *testing.T) {
 		assert.Equal(t, accountKeyA, storage.returnedKey)
 	})
 
-	t.Run("get non existing key", func(t *testing.T) {
+	t.Run("get non-existing key", func(t *testing.T) {
+
+		t.Parallel()
+
 		storage := newTestAccountKeyStorage()
 		rt := NewInterpreterRuntime()
 		runtimeInterface := getAccountKeyTestRuntimeInterface(storage)
@@ -312,11 +322,12 @@ func TestRuntimeAuthAccountKeys(t *testing.T) {
 
 		test := accountKeyTestCase{
 			code: `
-				transaction {
-					prepare(signer: AuthAccount) {
-						let key: AccountKey? = signer.keys.get(keyIndex: 5)
-					}
-				}`,
+                transaction {
+                    prepare(signer: AuthAccount) {
+                        let key: AccountKey? = signer.keys.get(keyIndex: 5)
+                        assert(key == nil)
+                    }
+                }`,
 			args: []cadence.Value{},
 		}
 
@@ -325,7 +336,10 @@ func TestRuntimeAuthAccountKeys(t *testing.T) {
 		assert.Nil(t, storage.returnedKey)
 	})
 
-	t.Run("revoke key", func(t *testing.T) {
+	t.Run("revoke existing key", func(t *testing.T) {
+
+		t.Parallel()
+
 		storage := newTestAccountKeyStorage()
 		rt := NewInterpreterRuntime()
 		runtimeInterface := getAccountKeyTestRuntimeInterface(storage)
@@ -334,11 +348,12 @@ func TestRuntimeAuthAccountKeys(t *testing.T) {
 
 		test := accountKeyTestCase{
 			code: `
-				transaction {
-					prepare(signer: AuthAccount) {
-						let key: AccountKey? = signer.keys.revoke(keyIndex: 0)
-					}
-				}`,
+                transaction {
+                    prepare(signer: AuthAccount) {
+                        let key = signer.keys.revoke(keyIndex: 0) ?? panic("unexpectedly nil")
+                        assert(key.isRevoked)
+                    }
+                }`,
 			args: []cadence.Value{},
 		}
 
@@ -349,7 +364,10 @@ func TestRuntimeAuthAccountKeys(t *testing.T) {
 		assert.Equal(t, revokedAccountKeyA, storage.returnedKey)
 	})
 
-	t.Run("revoke non existing key", func(t *testing.T) {
+	t.Run("revoke non-existing key", func(t *testing.T) {
+
+		t.Parallel()
+
 		storage := newTestAccountKeyStorage()
 		rt := NewInterpreterRuntime()
 		runtimeInterface := getAccountKeyTestRuntimeInterface(storage)
@@ -358,11 +376,12 @@ func TestRuntimeAuthAccountKeys(t *testing.T) {
 
 		test := accountKeyTestCase{
 			code: `
-				transaction {
-					prepare(signer: AuthAccount) {
-						var acc: AccountKey? = signer.keys.revoke(keyIndex: 5)
-					}
-				}`,
+                transaction {
+                    prepare(signer: AuthAccount) {
+                        let key: AccountKey? = signer.keys.revoke(keyIndex: 5)
+                        assert(key == nil)
+                    }
+                }`,
 			args: []cadence.Value{},
 		}
 
