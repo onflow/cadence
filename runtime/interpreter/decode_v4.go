@@ -271,11 +271,10 @@ func (d *DecoderV4) decodeValue(path []string) (Value, error) {
 			value, err = d.decodeType()
 
 		default:
-			return nil, fmt.Errorf(
-				"unsupported decoded tag (@ %s): %d",
-				strings.Join(path, "."),
-				num,
-			)
+			return nil, UnsupportedTagDecodingError{
+				Path: path[:],
+				Tag:  num,
+			}
 		}
 
 	default:
