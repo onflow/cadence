@@ -154,8 +154,7 @@ func (checker *Checker) VisitCastingExpression(expression *ast.CastingExpression
 		return rightHandType
 
 	case ast.OperationCast:
-		if checker.expectedType != nil &&
-			IsCastRedundant(leftHandExpression, exprActualType, rightHandType, checker.expectedType) {
+		if IsCastRedundant(leftHandExpression, exprActualType, rightHandType, checker.expectedType) {
 			checker.hint(
 				&UnnecessaryCastHint{
 					TargetType: rightHandType,
@@ -415,7 +414,7 @@ func FailableCastCanSucceed(subType, superType Type) bool {
 }
 
 func IsCastRedundant(expr ast.Expression, exprInferredType, targetType, expectedType Type) bool {
-	if expectedType.Equal(targetType) {
+	if expectedType != nil && expectedType.Equal(targetType) {
 		return true
 	}
 
@@ -485,6 +484,8 @@ func (d *CheckCastVisitor) VisitArrayExpression(expr *ast.ArrayExpression) ast.R
 	}
 
 	for _, element := range expr.Values {
+		// If at-least one element uses the target-type to infer the expression type,
+		// then the casting is not redundant.
 		if !d.isTargetTypeRedundant(
 			element,
 			inferredArrayType.ElementType(false),
@@ -509,6 +510,8 @@ func (d *CheckCastVisitor) VisitDictionaryExpression(expr *ast.DictionaryExpress
 	}
 
 	for _, entry := range expr.Entries {
+		// If at-least one key or value uses the target-type to infer the expression type,
+		// then the casting is not redundant.
 		if !d.isTargetTypeRedundant(
 			entry.Key,
 			inferredDictionaryType.KeyType,
