@@ -44,7 +44,7 @@ func (checker *Checker) VisitCastingExpression(expression *ast.CastingExpression
 		expectedType = rightHandType
 	}
 
-	leftHandType := checker.VisitExpression(leftHandExpression, expectedType)
+	leftHandType, exprActualType := checker.visitExpression(leftHandExpression, expectedType)
 
 	checker.Elaboration.CastingStaticValueTypes[expression] = leftHandType
 
@@ -154,7 +154,8 @@ func (checker *Checker) VisitCastingExpression(expression *ast.CastingExpression
 		return rightHandType
 
 	case ast.OperationCast:
-		if checker.expectedType != nil && checker.expectedType.Equal(rightHandType) {
+		if checker.expectedType != nil &&
+			IsCastRedundant(leftHandExpression, exprActualType, rightHandType, checker.expectedType) {
 			checker.hint(
 				&UnnecessaryCastHint{
 					TargetType: rightHandType,
@@ -411,4 +412,204 @@ func FailableCastCanSucceed(subType, superType Type) bool {
 	}
 
 	return true
+}
+
+func IsCastRedundant(expr ast.Expression, exprInferredType, targetType, expectedType Type) bool {
+	if expectedType.Equal(targetType) {
+		return true
+	}
+
+	checkCastVisitor := &CheckCastVisitor{
+		expectedType: expectedType,
+	}
+
+	return checkCastVisitor.isTargetTypeRedundant(expr, exprInferredType, targetType)
+}
+
+type CheckCastVisitor struct {
+	exprInferredType Type
+	targetType       Type
+	expectedType     Type
+}
+
+var _ ast.ExpressionVisitor = &CheckCastVisitor{}
+
+func (d *CheckCastVisitor) isTargetTypeRedundant(expr ast.Expression, exprInferredType, targetType Type) bool {
+	prevInferredType := d.exprInferredType
+	prevTargetType := d.targetType
+
+	defer func() {
+		d.exprInferredType = prevInferredType
+		d.targetType = prevTargetType
+	}()
+
+	d.exprInferredType = exprInferredType
+	d.targetType = targetType
+
+	result := expr.AcceptExp(d)
+	return result.(bool)
+}
+
+func (d *CheckCastVisitor) VisitBoolExpression(_ *ast.BoolExpression) ast.Repr {
+	return d.isTypeRedundant(BoolType, d.targetType)
+}
+
+func (d *CheckCastVisitor) VisitNilExpression(_ *ast.NilExpression) ast.Repr {
+	return d.isTypeRedundant(TypeOfNil, d.targetType)
+}
+
+func (d *CheckCastVisitor) VisitIntegerExpression(_ *ast.IntegerExpression) ast.Repr {
+	return d.isTypeRedundant(IntType, d.targetType)
+}
+
+func (d *CheckCastVisitor) VisitFixedPointExpression(expr *ast.FixedPointExpression) ast.Repr {
+	if expr.Negative {
+		return d.isTypeRedundant(Fix64Type, d.targetType)
+	}
+
+	return d.isTypeRedundant(UFix64Type, d.targetType)
+}
+
+func (d *CheckCastVisitor) VisitArrayExpression(expr *ast.ArrayExpression) ast.Repr {
+	// If the target type is `ConstantSizedType`, then it is not redundant.
+	// Because array literals are always inferred to be `VariableSizedType`,
+	// unless specified.
+	targetArrayType, ok := d.targetType.(*VariableSizedType)
+	if !ok {
+		return false
+	}
+
+	inferredArrayType, ok := d.exprInferredType.(ArrayType)
+	if !ok {
+		return false
+	}
+
+	for _, element := range expr.Values {
+		if !d.isTargetTypeRedundant(
+			element,
+			inferredArrayType.ElementType(false),
+			targetArrayType.ElementType(false),
+		) {
+			return false
+		}
+	}
+
+	return true
+}
+
+func (d *CheckCastVisitor) VisitDictionaryExpression(expr *ast.DictionaryExpression) ast.Repr {
+	targetDictionaryType, ok := d.targetType.(*DictionaryType)
+	if !ok {
+		return false
+	}
+
+	inferredDictionaryType, ok := d.exprInferredType.(*DictionaryType)
+	if !ok {
+		return false
+	}
+
+	for _, entry := range expr.Entries {
+		if !d.isTargetTypeRedundant(
+			entry.Key,
+			inferredDictionaryType.KeyType,
+			targetDictionaryType.KeyType,
+		) {
+			return false
+		}
+
+		if !d.isTargetTypeRedundant(
+			entry.Value,
+			inferredDictionaryType.ValueType,
+			targetDictionaryType.ValueType,
+		) {
+			return false
+		}
+	}
+
+	return true
+}
+
+func (d *CheckCastVisitor) VisitIdentifierExpression(_ *ast.IdentifierExpression) ast.Repr {
+	return d.isTypeRedundant(d.exprInferredType, d.targetType)
+}
+
+func (d *CheckCastVisitor) VisitInvocationExpression(_ *ast.InvocationExpression) ast.Repr {
+	return d.isTypeRedundant(d.exprInferredType, d.targetType)
+}
+
+func (d *CheckCastVisitor) VisitMemberExpression(_ *ast.MemberExpression) ast.Repr {
+	return d.isTypeRedundant(d.exprInferredType, d.targetType)
+}
+
+func (d *CheckCastVisitor) VisitIndexExpression(_ *ast.IndexExpression) ast.Repr {
+	return d.isTypeRedundant(d.exprInferredType, d.targetType)
+}
+
+func (d *CheckCastVisitor) VisitConditionalExpression(_ *ast.ConditionalExpression) ast.Repr {
+	return d.isTypeRedundant(d.exprInferredType, d.targetType)
+}
+
+func (d *CheckCastVisitor) VisitUnaryExpression(_ *ast.UnaryExpression) ast.Repr {
+	//TODO:
+	return false
+}
+
+func (d *CheckCastVisitor) VisitBinaryExpression(_ *ast.BinaryExpression) ast.Repr {
+	//TODO:
+	return false
+}
+
+func (d *CheckCastVisitor) VisitFunctionExpression(_ *ast.FunctionExpression) ast.Repr {
+	return d.isTypeRedundant(d.exprInferredType, d.targetType)
+}
+
+func (d *CheckCastVisitor) VisitStringExpression(_ *ast.StringExpression) ast.Repr {
+	return d.isTypeRedundant(StringType, d.targetType)
+}
+
+func (d *CheckCastVisitor) VisitCastingExpression(_ *ast.CastingExpression) ast.Repr {
+	return false
+}
+
+func (d *CheckCastVisitor) VisitCreateExpression(_ *ast.CreateExpression) ast.Repr {
+	return d.isTypeRedundant(d.exprInferredType, d.targetType)
+}
+
+func (d *CheckCastVisitor) VisitDestroyExpression(_ *ast.DestroyExpression) ast.Repr {
+	return d.isTypeRedundant(d.exprInferredType, d.targetType)
+}
+
+func (d *CheckCastVisitor) VisitReferenceExpression(_ *ast.ReferenceExpression) ast.Repr {
+	return d.isTypeRedundant(d.exprInferredType, d.targetType)
+}
+
+func (d *CheckCastVisitor) VisitForceExpression(_ *ast.ForceExpression) ast.Repr {
+	return d.isTypeRedundant(d.exprInferredType, d.targetType)
+}
+
+func (d *CheckCastVisitor) VisitPathExpression(_ *ast.PathExpression) ast.Repr {
+	return d.isTypeRedundant(d.exprInferredType, d.targetType)
+}
+
+func (d *CheckCastVisitor) isTypeRedundant(exprType, targetType Type) bool {
+	// If there is no expected type (e.g: var-decl with no type annotation),
+	// then the simple-cast might be used as a way of marking the type of the variable.
+	// Therefore it is ok for the target type to be a super-type.
+	// But being the exact type as expression's type is redundant.
+	// e.g:
+	//   var x: Int8 = 5
+	//   var y = x as Int8     // <-- not ok
+	//   var y = x as Integer  // <-- ok
+	if d.expectedType == nil {
+		return exprType != nil &&
+			exprType.Equal(targetType)
+	}
+
+	// Otherwise, if there is already a expected type from the context,
+	// then target type being same/supertype is redundant.
+	// e.g:
+	//   var x: Int8 = 5
+	//   var y: AnyStruct = x as Int8     // <-- not ok
+	//   var y: AnyStruct = x as Integer  // <-- not ok
+	return IsSubType(exprType, targetType)
 }
