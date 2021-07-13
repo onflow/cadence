@@ -49,6 +49,19 @@ type DecoderV5 struct {
 // maxInt is math.MaxInt32 or math.MaxInt64 depending on arch.
 const maxInt = 1<<(bits.UintSize-1) - 1
 
+type UnsupportedTagDecodingError struct {
+	Path []string
+	Tag  uint64
+}
+
+func (e UnsupportedTagDecodingError) Error() string {
+	return fmt.Sprintf(
+		"unsupported decoded tag (@ %s): %d",
+		strings.Join(e.Path, "."),
+		e.Tag,
+	)
+}
+
 // DecodeValue returns a value decoded from its CBOR-encoded representation,
 // for the given owner (can be `nil`).  It can decode storage format
 // version 4 and later.
@@ -290,11 +303,10 @@ func (d *DecoderV5) decodeValue(path []string) (Value, error) {
 			value, err = d.decodeType()
 
 		default:
-			return nil, fmt.Errorf(
-				"unsupported decoded tag (@ %s): %d",
-				strings.Join(path, "."),
-				num,
-			)
+			return nil, UnsupportedTagDecodingError{
+				Path: path[:],
+				Tag:  num,
+			}
 		}
 
 	default:
