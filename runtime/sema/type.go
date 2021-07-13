@@ -95,6 +95,7 @@ type TypeID = common.TypeID
 type Type interface {
 	IsType()
 	ID() TypeID
+	Tag() TypeTag
 	String() string
 	QualifiedString() string
 	Equal(other Type) bool
@@ -445,6 +446,14 @@ type OptionalType struct {
 
 func (*OptionalType) IsType() {}
 
+func (t *OptionalType) Tag() TypeTag {
+	if t.Type == NeverType {
+		return NilTypeTag
+	}
+
+	return t.Type.Tag().Or(NilTypeTag)
+}
+
 func (t *OptionalType) String() string {
 	if t.Type == nil {
 		return "optional"
@@ -624,6 +633,10 @@ type GenericType struct {
 }
 
 func (*GenericType) IsType() {}
+
+func (t *GenericType) Tag() TypeTag {
+	return GenericTypeTag
+}
 
 func (t *GenericType) String() string {
 	return t.TypeParameter.Name
@@ -830,6 +843,7 @@ func addSaturatingArithmeticFunctions(t SaturatingArithmeticType, members map[st
 //
 type NumericType struct {
 	name                       string
+	tag                        TypeTag
 	minInt                     *big.Int
 	maxInt                     *big.Int
 	supportsSaturatingAdd      bool
@@ -844,6 +858,15 @@ var _ IntegerRangedType = &NumericType{}
 
 func NewNumericType(typeName string) *NumericType {
 	return &NumericType{name: typeName}
+}
+
+func (t *NumericType) Tag() TypeTag {
+	return t.tag
+}
+
+func (t *NumericType) WithTag(tag TypeTag) *NumericType {
+	t.tag = tag
+	return t
 }
 
 func (t *NumericType) WithIntRange(min *big.Int, max *big.Int) *NumericType {
@@ -980,6 +1003,7 @@ func (t *NumericType) initializeMemberResolvers() {
 //
 type FixedPointNumericType struct {
 	name                       string
+	tag                        TypeTag
 	scale                      uint
 	minInt                     *big.Int
 	maxInt                     *big.Int
@@ -999,6 +1023,15 @@ func NewFixedPointNumericType(typeName string) *FixedPointNumericType {
 	return &FixedPointNumericType{
 		name: typeName,
 	}
+}
+
+func (t *FixedPointNumericType) Tag() TypeTag {
+	return t.tag
+}
+
+func (t *FixedPointNumericType) WithTag(tag TypeTag) *FixedPointNumericType {
+	t.tag = tag
+	return t
 }
 
 func (t *FixedPointNumericType) WithIntRange(minInt *big.Int, maxInt *big.Int) *FixedPointNumericType {
@@ -1163,22 +1196,28 @@ func (t *FixedPointNumericType) initializeMemberResolvers() {
 var (
 
 	// NumberType represents the super-type of all number types
-	NumberType = NewNumericType(NumberTypeName)
+	NumberType = NewNumericType(NumberTypeName).
+			WithTag(NumberTypeTag)
 
 	// SignedNumberType represents the super-type of all signed number types
-	SignedNumberType = NewNumericType(SignedNumberTypeName)
+	SignedNumberType = NewNumericType(SignedNumberTypeName).
+				WithTag(SignedNumberTypeTag)
 
 	// IntegerType represents the super-type of all integer types
-	IntegerType = NewNumericType(IntegerTypeName)
+	IntegerType = NewNumericType(IntegerTypeName).
+			WithTag(IntegerTypeTag)
 
 	// SignedIntegerType represents the super-type of all signed integer types
-	SignedIntegerType = NewNumericType(SignedIntegerTypeName)
+	SignedIntegerType = NewNumericType(SignedIntegerTypeName).
+				WithTag(SignedIntegerTypeTag)
 
 	// IntType represents the arbitrary-precision integer type `Int`
-	IntType = NewNumericType(IntTypeName)
+	IntType = NewNumericType(IntTypeName).
+		WithTag(IntTypeTag)
 
 	// Int8Type represents the 8-bit signed integer type `Int8`
 	Int8Type = NewNumericType(Int8TypeName).
+			WithTag(Int8TypeTag).
 			WithIntRange(Int8TypeMinInt, Int8TypeMaxInt).
 			WithSaturatingAdd().
 			WithSaturatingSubtract().
@@ -1187,6 +1226,7 @@ var (
 
 	// Int16Type represents the 16-bit signed integer type `Int16`
 	Int16Type = NewNumericType(Int16TypeName).
+			WithTag(Int16TypeTag).
 			WithIntRange(Int16TypeMinInt, Int16TypeMaxInt).
 			WithSaturatingAdd().
 			WithSaturatingSubtract().
@@ -1195,6 +1235,7 @@ var (
 
 	// Int32Type represents the 32-bit signed integer type `Int32`
 	Int32Type = NewNumericType(Int32TypeName).
+			WithTag(Int32TypeTag).
 			WithIntRange(Int32TypeMinInt, Int32TypeMaxInt).
 			WithSaturatingAdd().
 			WithSaturatingSubtract().
@@ -1203,6 +1244,7 @@ var (
 
 	// Int64Type represents the 64-bit signed integer type `Int64`
 	Int64Type = NewNumericType(Int64TypeName).
+			WithTag(Int64TypeTag).
 			WithIntRange(Int64TypeMinInt, Int64TypeMaxInt).
 			WithSaturatingAdd().
 			WithSaturatingSubtract().
@@ -1211,6 +1253,7 @@ var (
 
 	// Int128Type represents the 128-bit signed integer type `Int128`
 	Int128Type = NewNumericType(Int128TypeName).
+			WithTag(Int128TypeTag).
 			WithIntRange(Int128TypeMinIntBig, Int128TypeMaxIntBig).
 			WithSaturatingAdd().
 			WithSaturatingSubtract().
@@ -1219,6 +1262,7 @@ var (
 
 	// Int256Type represents the 256-bit signed integer type `Int256`
 	Int256Type = NewNumericType(Int256TypeName).
+			WithTag(Int256TypeTag).
 			WithIntRange(Int256TypeMinIntBig, Int256TypeMaxIntBig).
 			WithSaturatingAdd().
 			WithSaturatingSubtract().
@@ -1227,12 +1271,14 @@ var (
 
 	// UIntType represents the arbitrary-precision unsigned integer type `UInt`
 	UIntType = NewNumericType(UIntTypeName).
+			WithTag(UIntTypeTag).
 			WithIntRange(UIntTypeMin, nil).
 			WithSaturatingSubtract()
 
 	// UInt8Type represents the 8-bit unsigned integer type `UInt8`
 	// which checks for overflow and underflow
 	UInt8Type = NewNumericType(UInt8TypeName).
+			WithTag(UInt8TypeTag).
 			WithIntRange(UInt8TypeMinInt, UInt8TypeMaxInt).
 			WithSaturatingAdd().
 			WithSaturatingSubtract().
@@ -1241,6 +1287,7 @@ var (
 	// UInt16Type represents the 16-bit unsigned integer type `UInt16`
 	// which checks for overflow and underflow
 	UInt16Type = NewNumericType(UInt16TypeName).
+			WithTag(UInt16TypeTag).
 			WithIntRange(UInt16TypeMinInt, UInt16TypeMaxInt).
 			WithSaturatingAdd().
 			WithSaturatingSubtract().
@@ -1249,6 +1296,7 @@ var (
 	// UInt32Type represents the 32-bit unsigned integer type `UInt32`
 	// which checks for overflow and underflow
 	UInt32Type = NewNumericType(UInt32TypeName).
+			WithTag(UInt32TypeTag).
 			WithIntRange(UInt32TypeMinInt, UInt32TypeMaxInt).
 			WithSaturatingAdd().
 			WithSaturatingSubtract().
@@ -1257,6 +1305,7 @@ var (
 	// UInt64Type represents the 64-bit unsigned integer type `UInt64`
 	// which checks for overflow and underflow
 	UInt64Type = NewNumericType(UInt64TypeName).
+			WithTag(UInt64TypeTag).
 			WithIntRange(UInt64TypeMinInt, UInt64TypeMaxInt).
 			WithSaturatingAdd().
 			WithSaturatingSubtract().
@@ -1265,6 +1314,7 @@ var (
 	// UInt128Type represents the 128-bit unsigned integer type `UInt128`
 	// which checks for overflow and underflow
 	UInt128Type = NewNumericType(UInt128TypeName).
+			WithTag(UInt128TypeTag).
 			WithIntRange(UInt128TypeMinIntBig, UInt128TypeMaxIntBig).
 			WithSaturatingAdd().
 			WithSaturatingSubtract().
@@ -1273,6 +1323,7 @@ var (
 	// UInt256Type represents the 256-bit unsigned integer type `UInt256`
 	// which checks for overflow and underflow
 	UInt256Type = NewNumericType(UInt256TypeName).
+			WithTag(UInt256TypeTag).
 			WithIntRange(UInt256TypeMinIntBig, UInt256TypeMaxIntBig).
 			WithSaturatingAdd().
 			WithSaturatingSubtract().
@@ -1281,32 +1332,39 @@ var (
 	// Word8Type represents the 8-bit unsigned integer type `Word8`
 	// which does NOT check for overflow and underflow
 	Word8Type = NewNumericType(Word8TypeName).
+			WithTag(Word8TypeTag).
 			WithIntRange(Word8TypeMinInt, Word8TypeMaxInt)
 
 	// Word16Type represents the 16-bit unsigned integer type `Word16`
 	// which does NOT check for overflow and underflow
 	Word16Type = NewNumericType(Word16TypeName).
+			WithTag(Word16TypeTag).
 			WithIntRange(Word16TypeMinInt, Word16TypeMaxInt)
 
 	// Word32Type represents the 32-bit unsigned integer type `Word32`
 	// which does NOT check for overflow and underflow
 	Word32Type = NewNumericType(Word32TypeName).
+			WithTag(Word32TypeTag).
 			WithIntRange(Word32TypeMinInt, Word32TypeMaxInt)
 
 	// Word64Type represents the 64-bit unsigned integer type `Word64`
 	// which does NOT check for overflow and underflow
 	Word64Type = NewNumericType(Word64TypeName).
+			WithTag(Word64TypeTag).
 			WithIntRange(Word64TypeMinInt, Word64TypeMaxInt)
 
 	// FixedPointType represents the super-type of all fixed-point types
-	FixedPointType = NewNumericType(FixedPointTypeName)
+	FixedPointType = NewNumericType(FixedPointTypeName).
+			WithTag(FixedPointTypeTag)
 
 	// SignedFixedPointType represents the super-type of all signed fixed-point types
-	SignedFixedPointType = NewNumericType(SignedFixedPointTypeName)
+	SignedFixedPointType = NewNumericType(SignedFixedPointTypeName).
+				WithTag(SignedFixedPointTypeTag)
 
 	// Fix64Type represents the 64-bit signed decimal fixed-point type `Fix64`
 	// which has a scale of Fix64Scale, and checks for overflow and underflow
 	Fix64Type = NewFixedPointNumericType(Fix64TypeName).
+			WithTag(Fix64TypeTag).
 			WithIntRange(Fix64TypeMinIntBig, Fix64TypeMaxIntBig).
 			WithFractionalRange(Fix64TypeMinFractionalBig, Fix64TypeMaxFractionalBig).
 			WithScale(Fix64Scale).
@@ -1318,6 +1376,7 @@ var (
 	// UFix64Type represents the 64-bit unsigned decimal fixed-point type `UFix64`
 	// which has a scale of 1E9, and checks for overflow and underflow
 	UFix64Type = NewFixedPointNumericType(UFix64TypeName).
+			WithTag(UFix64TypeTag).
 			WithIntRange(UFix64TypeMinIntBig, UFix64TypeMaxIntBig).
 			WithFractionalRange(UFix64TypeMinFractionalBig, UFix64TypeMaxFractionalBig).
 			WithScale(Fix64Scale).
@@ -1772,6 +1831,10 @@ func (*VariableSizedType) IsType() {}
 
 func (*VariableSizedType) isArrayType() {}
 
+func (t *VariableSizedType) Tag() TypeTag {
+	return ArrayTypeTag
+}
+
 func (t *VariableSizedType) String() string {
 	return fmt.Sprintf("[%s]", t.Type)
 }
@@ -1897,6 +1960,10 @@ type ConstantSizedType struct {
 func (*ConstantSizedType) IsType() {}
 
 func (*ConstantSizedType) isArrayType() {}
+
+func (t *ConstantSizedType) Tag() TypeTag {
+	return ArrayTypeTag
+}
 
 func (t *ConstantSizedType) String() string {
 	return fmt.Sprintf("[%s; %d]", t.Type, t.Size)
@@ -2217,6 +2284,10 @@ func RequiredArgumentCount(count int) *int {
 }
 
 func (*FunctionType) IsType() {}
+
+func (t *FunctionType) Tag() TypeTag {
+	return FunctionTypeTag
+}
 
 func (t *FunctionType) InvocationFunctionType() *FunctionType {
 	return t
@@ -3222,6 +3293,10 @@ type CompositeType struct {
 	cachedIdentifiersLock sync.RWMutex
 }
 
+func (t *CompositeType) Tag() TypeTag {
+	return CompositeTypeTag
+}
+
 func (t *CompositeType) ExplicitInterfaceConformanceSet() *InterfaceSet {
 	t.initializeExplicitInterfaceConformanceSet()
 	return t.explicitInterfaceConformanceSet
@@ -3687,6 +3762,10 @@ type InterfaceType struct {
 
 func (*InterfaceType) IsType() {}
 
+func (t *InterfaceType) Tag() TypeTag {
+	return InterfaceTypeTag
+}
+
 func (t *InterfaceType) String() string {
 	return t.Identifier
 }
@@ -3909,6 +3988,10 @@ type DictionaryType struct {
 }
 
 func (*DictionaryType) IsType() {}
+
+func (t *DictionaryType) Tag() TypeTag {
+	return DictionaryTypeTag
+}
 
 func (t *DictionaryType) String() string {
 	return fmt.Sprintf(
@@ -4235,6 +4318,10 @@ type ReferenceType struct {
 
 func (*ReferenceType) IsType() {}
 
+func (t *ReferenceType) Tag() TypeTag {
+	return ReferenceTypeTag
+}
+
 func (t *ReferenceType) string(typeFormatter func(Type) string) string {
 	if t.Type == nil {
 		return "reference"
@@ -4371,6 +4458,10 @@ func (t *ReferenceType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
 type AddressType struct{}
 
 func (*AddressType) IsType() {}
+
+func (t *AddressType) Tag() TypeTag {
+	return AddressTypeTag
+}
 
 func (*AddressType) String() string {
 	return "Address"
@@ -5159,6 +5250,10 @@ func (*TransactionType) ExecuteFunctionType() *ConstructorFunctionType {
 
 func (*TransactionType) IsType() {}
 
+func (t *TransactionType) Tag() TypeTag {
+	return TransactionTypeTag
+}
+
 func (*TransactionType) String() string {
 	return "Transaction"
 }
@@ -5263,6 +5358,10 @@ func (t *RestrictedType) initializeRestrictionSet() {
 }
 
 func (*RestrictedType) IsType() {}
+
+func (t *RestrictedType) Tag() TypeTag {
+	return RestrictedTypeTag
+}
 
 func (t *RestrictedType) string(separator string, typeFormatter func(Type) string) string {
 	var result strings.Builder
@@ -5469,6 +5568,10 @@ type CapabilityType struct {
 }
 
 func (*CapabilityType) IsType() {}
+
+func (t *CapabilityType) Tag() TypeTag {
+	return CapabilityTypeTag
+}
 
 func (t *CapabilityType) string(typeFormatter func(Type) string) string {
 	var builder strings.Builder

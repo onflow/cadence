@@ -23,6 +23,7 @@ var NeverType = &SimpleType{
 	Name:                 "Never",
 	QualifiedName:        "Never",
 	TypeID:               "Never",
+	tag:                  NeverTypeTag,
 	IsInvalid:            false,
 	IsResource:           false,
 	Storable:             false,

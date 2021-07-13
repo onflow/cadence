@@ -435,10 +435,9 @@ func importOptionalValue(inter *interpreter.Interpreter, v cadence.Optional, exp
 func importArrayValue(inter *interpreter.Interpreter, v cadence.Array, expectedType sema.Type) *interpreter.ArrayValue {
 	values := make([]interpreter.Value, len(v.Values))
 
-	var arrayType sema.ArrayType
 	var elementType sema.Type
-	if expectedArrayType, ok := expectedType.(sema.ArrayType); ok {
-		arrayType = expectedArrayType
+	arrayType, ok := expectedType.(sema.ArrayType)
+	if ok {
 		elementType = arrayType.ElementType(false)
 	}
 
@@ -449,6 +448,17 @@ func importArrayValue(inter *interpreter.Interpreter, v cadence.Array, expectedT
 	var staticArrayType interpreter.ArrayStaticType
 	if arrayType != nil {
 		staticArrayType = interpreter.ConvertSemaArrayTypeToStaticArrayType(arrayType)
+	} else {
+		types := make([]sema.Type, len(v.Values))
+
+		for i, value := range values {
+			types[i] = inter.ConvertStaticToSemaType(value.StaticType())
+		}
+
+		elementSuperType := sema.LeastCommonSuperType(types...)
+		staticArrayType = interpreter.VariableSizedStaticType{
+			Type: interpreter.ConvertSemaToStaticType(elementSuperType),
+		}
 	}
 
 	return interpreter.NewArrayValueUnownedNonCopying(staticArrayType, values...)
@@ -461,11 +471,11 @@ func importDictionaryValue(
 ) *interpreter.DictionaryValue {
 	keysAndValues := make([]interpreter.Value, len(v.Pairs)*2)
 
-	var dictionaryType *sema.DictionaryType
 	var keyType sema.Type
 	var valueType sema.Type
-	if expectedDictionaryType, ok := expectedType.(*sema.DictionaryType); ok {
-		dictionaryType = expectedDictionaryType
+
+	dictionaryType, ok := expectedType.(*sema.DictionaryType)
+	if ok {
 		keyType = dictionaryType.KeyType
 		valueType = dictionaryType.ValueType
 	}
@@ -478,6 +488,23 @@ func importDictionaryValue(
 	var dictionaryStaticType interpreter.DictionaryStaticType
 	if dictionaryType != nil {
 		dictionaryStaticType = interpreter.ConvertSemaDictionaryTypeToStaticDictionaryType(dictionaryType)
+	} else {
+		size := len(v.Pairs)
+		keyTypes := make([]sema.Type, size)
+		valueTypes := make([]sema.Type, size)
+
+		for i := 0; i < size; i++ {
+			keyTypes[i] = inter.ConvertStaticToSemaType(keysAndValues[i*2].StaticType())
+			valueTypes[i] = inter.ConvertStaticToSemaType(keysAndValues[i*2+1].StaticType())
+		}
+
+		keySuperType := sema.LeastCommonSuperType(keyTypes...)
+		valueSuperType := sema.LeastCommonSuperType(valueTypes...)
+
+		dictionaryStaticType = interpreter.DictionaryStaticType{
+			KeyType:   interpreter.ConvertSemaToStaticType(keySuperType),
+			ValueType: interpreter.ConvertSemaToStaticType(valueSuperType),
+		}
 	}
 
 	return interpreter.NewDictionaryValueUnownedNonCopying(
