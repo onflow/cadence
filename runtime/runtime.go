@@ -2605,9 +2605,11 @@ func (r *interpreterRuntime) newAccountKeysGetFunction(
 				return interpreter.NilValue{}
 			}
 
-			return NewAccountKeyValue(
-				accountKey,
-				invocation.Interpreter.PublicKeyValidationHandler,
+			return interpreter.NewSomeValueOwningNonCopying(
+				NewAccountKeyValue(
+					accountKey,
+					invocation.Interpreter.PublicKeyValidationHandler,
+				),
 			)
 		},
 	)
@@ -2648,9 +2650,11 @@ func (r *interpreterRuntime) newAccountKeysRevokeFunction(
 				},
 			)
 
-			return NewAccountKeyValue(
-				accountKey,
-				invocation.Interpreter.PublicKeyValidationHandler,
+			return interpreter.NewSomeValueOwningNonCopying(
+				NewAccountKeyValue(
+					accountKey,
+					invocation.Interpreter.PublicKeyValidationHandler,
+				),
 			)
 		},
 	)
