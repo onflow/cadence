@@ -44,7 +44,11 @@ func (checker *Checker) VisitCastingExpression(expression *ast.CastingExpression
 		expectedType = rightHandType
 	}
 
+	beforeErrors := len(checker.errors)
+
 	leftHandType, exprActualType := checker.visitExpression(leftHandExpression, expectedType)
+
+	hasErrors := len(checker.errors) > beforeErrors
 
 	checker.Elaboration.CastingStaticValueTypes[expression] = leftHandType
 
@@ -154,7 +158,12 @@ func (checker *Checker) VisitCastingExpression(expression *ast.CastingExpression
 		return rightHandType
 
 	case ast.OperationCast:
-		if IsCastRedundant(leftHandExpression, exprActualType, rightHandType, checker.expectedType) {
+		// If there are errors in the lhs-expr, then the target type is considered as
+		// the inferred-type of the expression. i.e: exprActualType == rightHandType
+		// Then, it is not possible to determine whether the target type is redundant.
+		// Therefore don't check for redundant casts, if there are errors.
+		if !hasErrors &&
+			IsCastRedundant(leftHandExpression, exprActualType, rightHandType, checker.expectedType) {
 			checker.hint(
 				&UnnecessaryCastHint{
 					TargetType: rightHandType,
@@ -413,6 +422,10 @@ func FailableCastCanSucceed(subType, superType Type) bool {
 	return true
 }
 
+// IsCastRedundant checks whether a simple cast is redundant.
+// Checks for two cases:
+//    - Case I: Contextually expected type is same as casted type (target type).
+//    - Case II: Expression is self typed, and is same as the casted type (target type).
 func IsCastRedundant(expr ast.Expression, exprInferredType, targetType, expectedType Type) bool {
 	if expectedType != nil && expectedType.Equal(targetType) {
 		return true
@@ -571,6 +584,8 @@ func (d *CheckCastVisitor) VisitStringExpression(_ *ast.StringExpression) ast.Re
 }
 
 func (d *CheckCastVisitor) VisitCastingExpression(_ *ast.CastingExpression) ast.Repr {
+	// This is already covered under Case-I: where expected type is same as casted type.
+	// So skip checking it here to avid duplicate errors.
 	return false
 }
 

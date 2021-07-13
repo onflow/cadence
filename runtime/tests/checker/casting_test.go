@@ -5940,7 +5940,7 @@ func TestCheckUnnecessaryCasts(t *testing.T) {
 	t.Run("Same type as expected type", func(t *testing.T) {
 		t.Parallel()
 
-		t.Run("var decl", func(t *testing.T) {
+		t.Run("Var decl", func(t *testing.T) {
 			t.Parallel()
 
 			checker, err := ParseAndCheckWithAny(t, `
@@ -5958,7 +5958,7 @@ func TestCheckUnnecessaryCasts(t *testing.T) {
 			assert.Equal(t, sema.Int8Type, castHint.TargetType)
 		})
 
-		t.Run("binary exp", func(t *testing.T) {
+		t.Run("Binary exp", func(t *testing.T) {
 			t.Parallel()
 
 			checker, err := ParseAndCheckWithAny(t, `
@@ -5979,7 +5979,7 @@ func TestCheckUnnecessaryCasts(t *testing.T) {
 			assert.Equal(t, sema.Int8Type, castHint.TargetType)
 		})
 
-		t.Run("nested casts", func(t *testing.T) {
+		t.Run("Nested casts", func(t *testing.T) {
 			t.Parallel()
 
 			checker, err := ParseAndCheckWithAny(t, `
@@ -5996,7 +5996,7 @@ func TestCheckUnnecessaryCasts(t *testing.T) {
 			assert.Equal(t, sema.Int8Type, castHint.TargetType)
 		})
 
-		t.Run("arrays", func(t *testing.T) {
+		t.Run("Arrays", func(t *testing.T) {
 			t.Parallel()
 
 			checker, err := ParseAndCheckWithAny(t, `
@@ -6013,7 +6013,7 @@ func TestCheckUnnecessaryCasts(t *testing.T) {
 			assert.Equal(t, sema.CharacterType, castHint.TargetType)
 		})
 
-		t.Run("dictionaries", func(t *testing.T) {
+		t.Run("Dictionaries", func(t *testing.T) {
 			t.Parallel()
 
 			checker, err := ParseAndCheckWithAny(t, `
@@ -6030,7 +6030,7 @@ func TestCheckUnnecessaryCasts(t *testing.T) {
 			assert.Equal(t, sema.UInt8Type, castHint.TargetType)
 		})
 
-		t.Run("undefined types", func(t *testing.T) {
+		t.Run("Undefined types", func(t *testing.T) {
 			t.Parallel()
 
 			checker, err := ParseAndCheckWithAny(t, `
@@ -6051,7 +6051,7 @@ func TestCheckUnnecessaryCasts(t *testing.T) {
 	t.Run("Same type as expression", func(t *testing.T) {
 		t.Parallel()
 
-		t.Run("Int", func(t *testing.T) {
+		t.Run("String", func(t *testing.T) {
 			t.Parallel()
 
 			checker, err := ParseAndCheckWithAny(t, `
@@ -6066,6 +6066,23 @@ func TestCheckUnnecessaryCasts(t *testing.T) {
 			require.IsType(t, &sema.UnnecessaryCastHint{}, hints[0])
 			castHint := hints[0].(*sema.UnnecessaryCastHint)
 			assert.Equal(t, sema.StringType, castHint.TargetType)
+		})
+
+		t.Run("Bool", func(t *testing.T) {
+			t.Parallel()
+
+			checker, err := ParseAndCheckWithAny(t, `
+                let x = true as Bool
+            `)
+
+			require.NoError(t, err)
+
+			hints := checker.Hints()
+			require.Len(t, hints, 1)
+
+			require.IsType(t, &sema.UnnecessaryCastHint{}, hints[0])
+			castHint := hints[0].(*sema.UnnecessaryCastHint)
+			assert.Equal(t, sema.BoolType, castHint.TargetType)
 		})
 
 		t.Run("Without expected type", func(t *testing.T) {
@@ -6134,6 +6151,22 @@ func TestCheckUnnecessaryCasts(t *testing.T) {
 				castHint.TargetType)
 		})
 
+		t.Run("Array, invalid typed elements", func(t *testing.T) {
+			t.Parallel()
+
+			checker, err := ParseAndCheckWithAny(t, `
+                let a: Int8 = 5
+                let b: Int8 = 6
+                let c: Int8 = 7
+                let x = [a, b, c] as [String]
+            `)
+
+			require.Error(t, err)
+
+			hints := checker.Hints()
+			require.Len(t, hints, 0)
+		})
+
 		t.Run("Nested array, all elements self typed", func(t *testing.T) {
 			t.Parallel()
 
@@ -6170,6 +6203,22 @@ func TestCheckUnnecessaryCasts(t *testing.T) {
             `)
 
 			require.NoError(t, err)
+
+			hints := checker.Hints()
+			require.Len(t, hints, 0)
+		})
+
+		t.Run("Dictionary, invalid typed entries", func(t *testing.T) {
+			t.Parallel()
+
+			checker, err := ParseAndCheckWithAny(t, `
+                let a: Int8 = 5
+                let b: Int8 = 6
+                let c: Int8 = 7
+                let x = {a: b, b: c, c: a} as {Int8: String}
+            `)
+
+			require.Error(t, err)
 
 			hints := checker.Hints()
 			require.Len(t, hints, 0)
@@ -6217,6 +6266,180 @@ func TestCheckUnnecessaryCasts(t *testing.T) {
 
 			hints := checker.Hints()
 			require.Len(t, hints, 0)
+		})
+
+		t.Run("Reference, without type", func(t *testing.T) {
+			t.Parallel()
+
+			checker, err := ParseAndCheckWithAny(t, `
+                let x: Bool = false
+                let y = &x as &Bool
+            `)
+
+			require.NoError(t, err)
+
+			hints := checker.Hints()
+			require.Len(t, hints, 0)
+		})
+
+		t.Run("Reference, with type", func(t *testing.T) {
+			t.Parallel()
+
+			checker, err := ParseAndCheckWithAny(t, `
+                let x: Bool = false
+                let y: &Bool = &x as &Bool 
+            `)
+
+			require.NoError(t, err)
+
+			hints := checker.Hints()
+			require.Len(t, hints, 0)
+		})
+
+		// TODO: enable once https://github.com/onflow/cadence/pull/1027 is merged.
+
+		//t.Run("Conditional expr", func(t *testing.T) {
+		//	t.Parallel()
+		//
+		//	checker, err := ParseAndCheckWithAny(t, `
+		//        let x = (true ? 5.4 : nil) as UFix64?
+		//    `)
+		//
+		//	require.NoError(t, err)
+		//
+		//	hints := checker.Hints()
+		//	require.Len(t, hints, 1)
+		//
+		//	require.IsType(t, &sema.UnnecessaryCastHint{}, hints[0])
+		//	castHint := hints[0].(*sema.UnnecessaryCastHint)
+		//	assert.Equal(t, sema.Int8Type, castHint.TargetType)
+		//})
+
+		t.Run("Invocation", func(t *testing.T) {
+			t.Parallel()
+
+			checker, err := ParseAndCheckWithAny(t, `
+                let x = foo() as UInt
+
+                fun foo(): UInt {
+                    return 3
+                }
+            `)
+
+			require.NoError(t, err)
+
+			hints := checker.Hints()
+			require.Len(t, hints, 1)
+
+			require.IsType(t, &sema.UnnecessaryCastHint{}, hints[0])
+			castHint := hints[0].(*sema.UnnecessaryCastHint)
+			assert.Equal(t, sema.UIntType, castHint.TargetType)
+		})
+
+		t.Run("Member access", func(t *testing.T) {
+			t.Parallel()
+
+			checker, err := ParseAndCheckWithAny(t, `
+                let x = Foo()
+                let y = x.bar as String
+
+                struct Foo {
+                    pub var bar: String
+
+                    init() {
+                        self.bar = "hello"
+                    }
+                }
+            `)
+
+			require.NoError(t, err)
+
+			hints := checker.Hints()
+			require.Len(t, hints, 1)
+
+			require.IsType(t, &sema.UnnecessaryCastHint{}, hints[0])
+			castHint := hints[0].(*sema.UnnecessaryCastHint)
+			assert.Equal(t, sema.StringType, castHint.TargetType)
+		})
+
+		t.Run("Index access", func(t *testing.T) {
+			t.Parallel()
+
+			checker, err := ParseAndCheckWithAny(t, `
+                let x: [Int] = [1, 4, 6]
+                let y = x[0] as Int
+            `)
+
+			require.NoError(t, err)
+
+			hints := checker.Hints()
+			require.Len(t, hints, 1)
+
+			require.IsType(t, &sema.UnnecessaryCastHint{}, hints[0])
+			castHint := hints[0].(*sema.UnnecessaryCastHint)
+			assert.Equal(t, sema.IntType, castHint.TargetType)
+		})
+
+		t.Run("Create expr", func(t *testing.T) {
+			t.Parallel()
+
+			checker, err := ParseAndCheckWithAny(t, `
+                let x <- create Foo() as @Foo
+
+                resource Foo {}
+            `)
+
+			require.NoError(t, err)
+
+			hints := checker.Hints()
+			require.Len(t, hints, 1)
+
+			require.IsType(t, &sema.UnnecessaryCastHint{}, hints[0])
+			castHint := hints[0].(*sema.UnnecessaryCastHint)
+
+			require.IsType(t, &sema.CompositeType{}, castHint.TargetType)
+			compositeType := castHint.TargetType.(*sema.CompositeType)
+			assert.Equal(t, "Foo", compositeType.Identifier)
+		})
+
+		t.Run("Force expr", func(t *testing.T) {
+			t.Parallel()
+
+			checker, err := ParseAndCheckWithAny(t, `
+                let x: Int? = 5
+                let y = x! as Int
+            `)
+
+			require.NoError(t, err)
+
+			hints := checker.Hints()
+			require.Len(t, hints, 1)
+
+			require.IsType(t, &sema.UnnecessaryCastHint{}, hints[0])
+			castHint := hints[0].(*sema.UnnecessaryCastHint)
+			assert.Equal(t, sema.IntType, castHint.TargetType)
+		})
+
+		t.Run("Path expr", func(t *testing.T) {
+			t.Parallel()
+
+			checker, err := ParseAndCheckWithAny(t, `
+                let x: CapabilityPath = /public/foo as PublicPath
+                let y = /public/foo as PublicPath
+            `)
+
+			require.NoError(t, err)
+
+			hints := checker.Hints()
+			require.Len(t, hints, 2)
+
+			require.IsType(t, &sema.UnnecessaryCastHint{}, hints[0])
+			castHint := hints[0].(*sema.UnnecessaryCastHint)
+			assert.Equal(t, sema.PublicPathType, castHint.TargetType)
+
+			require.IsType(t, &sema.UnnecessaryCastHint{}, hints[1])
+			castHint = hints[1].(*sema.UnnecessaryCastHint)
+			assert.Equal(t, sema.PublicPathType, castHint.TargetType)
 		})
 	})
 }
