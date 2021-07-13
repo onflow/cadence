@@ -6085,6 +6085,28 @@ func TestCheckUnnecessaryCasts(t *testing.T) {
 			assert.Equal(t, sema.BoolType, castHint.TargetType)
 		})
 
+		t.Run("Nil", func(t *testing.T) {
+			t.Parallel()
+
+			checker, err := ParseAndCheckWithAny(t, `
+                let x = nil as Never?
+            `)
+
+			require.NoError(t, err)
+
+			hints := checker.Hints()
+			require.Len(t, hints, 1)
+
+			require.IsType(t, &sema.UnnecessaryCastHint{}, hints[0])
+			castHint := hints[0].(*sema.UnnecessaryCastHint)
+			assert.Equal(
+				t,
+				&sema.OptionalType{
+					Type: sema.NeverType,
+				},
+				castHint.TargetType)
+		})
+
 		t.Run("Without expected type", func(t *testing.T) {
 			t.Parallel()
 
@@ -6125,6 +6147,46 @@ func TestCheckUnnecessaryCasts(t *testing.T) {
 			require.IsType(t, &sema.UnnecessaryCastHint{}, hints[1])
 			castHint = hints[1].(*sema.UnnecessaryCastHint)
 			assert.Equal(t, sema.IntegerType, castHint.TargetType)
+		})
+
+		t.Run("Int literal with expected type", func(t *testing.T) {
+			t.Parallel()
+
+			checker, err := ParseAndCheckWithAny(t, `
+                let x: AnyStruct = 4 as Int8      // OK
+                let y: AnyStruct = 4 as Integer   // Not OK
+            `)
+
+			require.NoError(t, err)
+
+			hints := checker.Hints()
+			require.Len(t, hints, 1)
+
+			require.IsType(t, &sema.UnnecessaryCastHint{}, hints[0])
+			castHint := hints[0].(*sema.UnnecessaryCastHint)
+			assert.Equal(t, sema.IntegerType, castHint.TargetType)
+		})
+
+		t.Run("Fixed point literal", func(t *testing.T) {
+			t.Parallel()
+
+			checker, err := ParseAndCheckWithAny(t, `
+                let x = 4.5 as UFix64
+                let y = -4.5 as Fix64
+            `)
+
+			require.NoError(t, err)
+
+			hints := checker.Hints()
+			require.Len(t, hints, 2)
+
+			require.IsType(t, &sema.UnnecessaryCastHint{}, hints[0])
+			castHint := hints[0].(*sema.UnnecessaryCastHint)
+			assert.Equal(t, sema.UFix64Type, castHint.TargetType)
+
+			require.IsType(t, &sema.UnnecessaryCastHint{}, hints[1])
+			castHint = hints[1].(*sema.UnnecessaryCastHint)
+			assert.Equal(t, sema.Fix64Type, castHint.TargetType)
 		})
 
 		t.Run("Array, all elements self typed", func(t *testing.T) {
@@ -6440,6 +6502,65 @@ func TestCheckUnnecessaryCasts(t *testing.T) {
 			require.IsType(t, &sema.UnnecessaryCastHint{}, hints[1])
 			castHint = hints[1].(*sema.UnnecessaryCastHint)
 			assert.Equal(t, sema.PublicPathType, castHint.TargetType)
+		})
+
+		t.Run("Unary expr", func(t *testing.T) {
+			t.Parallel()
+
+			checker, err := ParseAndCheckWithAny(t, `
+                let x = !true as Bool
+                let y: Fix64 = 5.0
+                let z = -y as Fix64
+            `)
+
+			require.NoError(t, err)
+
+			hints := checker.Hints()
+			require.Len(t, hints, 2)
+
+			require.IsType(t, &sema.UnnecessaryCastHint{}, hints[0])
+			castHint := hints[0].(*sema.UnnecessaryCastHint)
+			assert.Equal(t, sema.BoolType, castHint.TargetType)
+
+			require.IsType(t, &sema.UnnecessaryCastHint{}, hints[1])
+			castHint = hints[1].(*sema.UnnecessaryCastHint)
+			assert.Equal(t, sema.Fix64Type, castHint.TargetType)
+		})
+
+		t.Run("Binary expr", func(t *testing.T) {
+			t.Parallel()
+
+			checker, err := ParseAndCheckWithAny(t, `
+                let x = (1 + 2) as Int     // supposed to be redundant
+                let y = (1 + 2) as Int8    // ok
+            `)
+
+			require.NoError(t, err)
+
+			hints := checker.Hints()
+
+			// Binary expressions are currently skipped from checking.
+			require.Len(t, hints, 0)
+		})
+
+		t.Run("Function expr", func(t *testing.T) {
+			t.Parallel()
+
+			checker, err := ParseAndCheckWithAny(t, `
+                let x =
+                    fun (_ x: Int): Int {
+                        return x * 2
+                    } as ((Int): Int)
+            `)
+
+			require.NoError(t, err)
+
+			hints := checker.Hints()
+			require.Len(t, hints, 1)
+
+			require.IsType(t, &sema.UnnecessaryCastHint{}, hints[0])
+			castHint := hints[0].(*sema.UnnecessaryCastHint)
+			require.IsType(t, &sema.FunctionType{}, castHint.TargetType)
 		})
 	})
 }

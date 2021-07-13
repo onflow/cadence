@@ -471,14 +471,18 @@ func (d *CheckCastVisitor) VisitNilExpression(_ *ast.NilExpression) ast.Repr {
 }
 
 func (d *CheckCastVisitor) VisitIntegerExpression(_ *ast.IntegerExpression) ast.Repr {
+	// For integer expressions, default inferred type is `Int`.
+	// So, if the target type is not `Int`, then the cast is not redundant.
 	return d.isTypeRedundant(IntType, d.targetType)
 }
 
 func (d *CheckCastVisitor) VisitFixedPointExpression(expr *ast.FixedPointExpression) ast.Repr {
 	if expr.Negative {
+		// Default inferred type for fixed-point expressions with sign is `Fix64Type`.
 		return d.isTypeRedundant(Fix64Type, d.targetType)
 	}
 
+	// Default inferred type for fixed-point expressions without sign is `UFix64Type`.
 	return d.isTypeRedundant(UFix64Type, d.targetType)
 }
 
@@ -566,12 +570,12 @@ func (d *CheckCastVisitor) VisitConditionalExpression(_ *ast.ConditionalExpressi
 }
 
 func (d *CheckCastVisitor) VisitUnaryExpression(_ *ast.UnaryExpression) ast.Repr {
-	//TODO:
-	return false
+	return d.isTypeRedundant(d.exprInferredType, d.targetType)
 }
 
 func (d *CheckCastVisitor) VisitBinaryExpression(_ *ast.BinaryExpression) ast.Repr {
-	//TODO:
+	// Binary expressions are not straight-forward to check.
+	// Hence skip checking redundant casts for now.
 	return false
 }
 
@@ -616,18 +620,18 @@ func (d *CheckCastVisitor) isTypeRedundant(exprType, targetType Type) bool {
 	// But being the exact type as expression's type is redundant.
 	// e.g:
 	//   var x: Int8 = 5
-	//   var y = x as Int8     // <-- not ok
-	//   var y = x as Integer  // <-- ok
+	//   var y = x as Int8     // <-- not ok: `y` will be of type `Int8` with/without cast
+	//   var y = x as Integer  // <-- ok	: `y` will be of type `Integer`
 	if d.expectedType == nil {
 		return exprType != nil &&
 			exprType.Equal(targetType)
 	}
 
-	// Otherwise, if there is already a expected type from the context,
+	// Otherwise, if there is already an expected type from the context,
 	// then target type being same/supertype is redundant.
 	// e.g:
 	//   var x: Int8 = 5
-	//   var y: AnyStruct = x as Int8     // <-- not ok
-	//   var y: AnyStruct = x as Integer  // <-- not ok
+	//   var y: AnyStruct = x as Int8     // <-- not ok: `y` will anyway have an `Int8` value
+	//   var y: AnyStruct = x as Integer  // <-- not ok: `y` will anyway have an `Int8` value
 	return IsSubType(exprType, targetType)
 }
