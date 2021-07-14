@@ -435,7 +435,7 @@ func IsCastRedundant(expr ast.Expression, exprInferredType, targetType, expected
 		expectedType: expectedType,
 	}
 
-	return checkCastVisitor.isTargetTypeRedundant(expr, exprInferredType, targetType)
+	return checkCastVisitor.isCastRedundant(expr, exprInferredType, targetType)
 }
 
 type CheckCastVisitor struct {
@@ -446,7 +446,7 @@ type CheckCastVisitor struct {
 
 var _ ast.ExpressionVisitor = &CheckCastVisitor{}
 
-func (d *CheckCastVisitor) isTargetTypeRedundant(expr ast.Expression, exprInferredType, targetType Type) bool {
+func (d *CheckCastVisitor) isCastRedundant(expr ast.Expression, exprInferredType, targetType Type) bool {
 	prevInferredType := d.exprInferredType
 	prevTargetType := d.targetType
 
@@ -503,7 +503,7 @@ func (d *CheckCastVisitor) VisitArrayExpression(expr *ast.ArrayExpression) ast.R
 	for _, element := range expr.Values {
 		// If at-least one element uses the target-type to infer the expression type,
 		// then the casting is not redundant.
-		if !d.isTargetTypeRedundant(
+		if !d.isCastRedundant(
 			element,
 			inferredArrayType.ElementType(false),
 			targetArrayType.ElementType(false),
@@ -529,7 +529,7 @@ func (d *CheckCastVisitor) VisitDictionaryExpression(expr *ast.DictionaryExpress
 	for _, entry := range expr.Entries {
 		// If at-least one key or value uses the target-type to infer the expression type,
 		// then the casting is not redundant.
-		if !d.isTargetTypeRedundant(
+		if !d.isCastRedundant(
 			entry.Key,
 			inferredDictionaryType.KeyType,
 			targetDictionaryType.KeyType,
@@ -537,7 +537,7 @@ func (d *CheckCastVisitor) VisitDictionaryExpression(expr *ast.DictionaryExpress
 			return false
 		}
 
-		if !d.isTargetTypeRedundant(
+		if !d.isCastRedundant(
 			entry.Value,
 			inferredDictionaryType.ValueType,
 			targetDictionaryType.ValueType,
