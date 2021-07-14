@@ -484,7 +484,7 @@ func (e ResourceConstructionError) Error() string {
 }
 
 // ContainerMutationError
-
+//
 type ContainerMutationError struct {
 	ExpectedType sema.Type
 	LocationRange
