@@ -6459,7 +6459,7 @@ func TestRuntimeGetCapability(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("invalid", func(t *testing.T) {
+	t.Run("invalid: private path, public account used as auth account", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -6488,11 +6488,13 @@ func TestRuntimeGetCapability(t *testing.T) {
 			},
 		)
 
+		require.Error(t, err)
+
 		var typeErr interpreter.TypeMismatchError
 		require.ErrorAs(t, err, &typeErr)
 	})
 
-	t.Run("valid", func(t *testing.T) {
+	t.Run("invalid: public path, public account used as auth account", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -6511,7 +6513,7 @@ func TestRuntimeGetCapability(t *testing.T) {
 
 		nextTransactionLocation := newTransactionLocationGenerator()
 
-		res, err := runtime.ExecuteScript(
+		_, err := runtime.ExecuteScript(
 			Script{
 				Source: script,
 			},
@@ -6521,16 +6523,9 @@ func TestRuntimeGetCapability(t *testing.T) {
 			},
 		)
 
-		require.NoError(t, err)
-		require.Equal(t,
-			cadence.Capability{
-				Address: cadence.BytesToAddress([]byte{0x1}),
-				Path: cadence.Path{
-					Domain:     "public",
-					Identifier: "xxx",
-				},
-			},
-			res,
-		)
+		require.Error(t, err)
+
+		var typeErr interpreter.TypeMismatchError
+		require.ErrorAs(t, err, &typeErr)
 	})
 }
