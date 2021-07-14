@@ -260,7 +260,7 @@ func (r *interpreterRuntime) ExecuteScript(script Script, context Context) (cade
 		return nil, newError(err, context)
 	}
 
-	return exportValue(value), nil
+	return exportValue(value)
 }
 
 type interpretFunc func(inter *interpreter.Interpreter) (interpreter.Value, error)
@@ -459,7 +459,7 @@ func (r *interpreterRuntime) InvokeContractFunction(
 		return nil, newError(err, context)
 	}
 
-	return ExportValue(value, inter), nil
+	return ExportValue(value, inter)
 }
 
 func (r *interpreterRuntime) convertArgument(
@@ -1317,8 +1317,10 @@ func (r *interpreterRuntime) emitEvent(
 		Fields: fields,
 	}
 
-	var err error
-	exportedEvent := exportEvent(eventValue)
+	exportedEvent, err := exportEvent(eventValue)
+	if err != nil {
+		return err
+	}
 	wrapPanic(func() {
 		err = runtimeInterface.EmitEvent(exportedEvent)
 	})
@@ -1347,8 +1349,10 @@ func (r *interpreterRuntime) emitAccountEvent(
 		))
 	}
 
-	var err error
-	exportedEvent := exportEvent(eventValue)
+	exportedEvent, err := exportEvent(eventValue)
+	if err != nil {
+		panic(err)
+	}
 	wrapPanic(func() {
 		err = runtimeInterface.EmitEvent(exportedEvent)
 	})
@@ -2473,7 +2477,7 @@ func (r *interpreterRuntime) executeNonProgram(interpret interpretFunc, context 
 		return nil, newError(err, context)
 	}
 
-	return exportValue(value), nil
+	return exportValue(value)
 }
 
 func (r *interpreterRuntime) ReadStored(address common.Address, path cadence.Path, context Context) (cadence.Value, error) {

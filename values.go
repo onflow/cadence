@@ -136,12 +136,12 @@ func (v Bool) String() string {
 
 type String string
 
-func NewString(s string) String {
+func NewString(s string) (String, error) {
 	if !utf8.ValidString(s) {
-		panic(fmt.Errorf("invalid UTF-8 in string: %s", s))
+		return "", fmt.Errorf("invalid UTF-8 in string: %s", s)
 	}
 
-	return String(s)
+	return String(s), nil
 }
 
 func (String) isValue() {}

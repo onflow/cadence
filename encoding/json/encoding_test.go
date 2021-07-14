@@ -91,12 +91,12 @@ func TestEncodeString(t *testing.T) {
 	testAllEncodeAndDecode(t, []encodeTest{
 		{
 			"Empty",
-			cadence.NewString(""),
+			cadence.String(""),
 			`{"type":"String","value":""}`,
 		},
 		{
 			"Non-empty",
-			cadence.NewString("foo"),
+			cadence.String("foo"),
 			`{"type":"String","value":"foo"}`,
 		},
 	}...)
@@ -589,15 +589,15 @@ func TestEncodeDictionary(t *testing.T) {
 		"Simple",
 		cadence.NewDictionary([]cadence.KeyValuePair{
 			{
-				Key:   cadence.NewString("a"),
+				Key:   cadence.String("a"),
 				Value: cadence.NewInt(1),
 			},
 			{
-				Key:   cadence.NewString("b"),
+				Key:   cadence.String("b"),
 				Value: cadence.NewInt(2),
 			},
 			{
-				Key:   cadence.NewString("c"),
+				Key:   cadence.String("c"),
 				Value: cadence.NewInt(3),
 			},
 		}),
@@ -608,28 +608,28 @@ func TestEncodeDictionary(t *testing.T) {
 		"Nested",
 		cadence.NewDictionary([]cadence.KeyValuePair{
 			{
-				Key: cadence.NewString("a"),
+				Key: cadence.String("a"),
 				Value: cadence.NewDictionary([]cadence.KeyValuePair{
 					{
-						Key:   cadence.NewString("1"),
+						Key:   cadence.String("1"),
 						Value: cadence.NewInt(1),
 					},
 				}),
 			},
 			{
-				Key: cadence.NewString("b"),
+				Key: cadence.String("b"),
 				Value: cadence.NewDictionary([]cadence.KeyValuePair{
 					{
-						Key:   cadence.NewString("2"),
+						Key:   cadence.String("2"),
 						Value: cadence.NewInt(2),
 					},
 				}),
 			},
 			{
-				Key: cadence.NewString("c"),
+				Key: cadence.String("c"),
 				Value: cadence.NewDictionary([]cadence.KeyValuePair{
 					{
-						Key:   cadence.NewString("3"),
+						Key:   cadence.String("3"),
 						Value: cadence.NewInt(3),
 					},
 				}),
@@ -642,19 +642,19 @@ func TestEncodeDictionary(t *testing.T) {
 		"Resources",
 		cadence.NewDictionary([]cadence.KeyValuePair{
 			{
-				Key: cadence.NewString("a"),
+				Key: cadence.String("a"),
 				Value: cadence.NewResource([]cadence.Value{
 					cadence.NewInt(1),
 				}).WithType(fooResourceType),
 			},
 			{
-				Key: cadence.NewString("b"),
+				Key: cadence.String("b"),
 				Value: cadence.NewResource([]cadence.Value{
 					cadence.NewInt(2),
 				}).WithType(fooResourceType),
 			},
 			{
-				Key: cadence.NewString("c"),
+				Key: cadence.String("c"),
 				Value: cadence.NewResource([]cadence.Value{
 					cadence.NewInt(3),
 				}).WithType(fooResourceType),
@@ -794,7 +794,7 @@ func TestEncodeStruct(t *testing.T) {
 		cadence.NewStruct(
 			[]cadence.Value{
 				cadence.NewInt(1),
-				cadence.NewString("foo"),
+				cadence.String("foo"),
 			},
 		).WithType(simpleStructType),
 		`{"type":"Struct","value":{"id":"S.test.FooStruct","fields":[{"name":"a","value":{"type":"Int","value":"1"}},{"name":"b","value":{"type":"String","value":"foo"}}]}}`,
@@ -819,7 +819,7 @@ func TestEncodeStruct(t *testing.T) {
 		"Resources",
 		cadence.NewStruct(
 			[]cadence.Value{
-				cadence.NewString("foo"),
+				cadence.String("foo"),
 				cadence.NewResource(
 					[]cadence.Value{
 						cadence.NewInt(42),
@@ -857,7 +857,7 @@ func TestEncodeEvent(t *testing.T) {
 		cadence.NewEvent(
 			[]cadence.Value{
 				cadence.NewInt(1),
-				cadence.NewString("foo"),
+				cadence.String("foo"),
 			},
 		).WithType(simpleEventType),
 		`{"type":"Event","value":{"id":"S.test.FooEvent","fields":[{"name":"a","value":{"type":"Int","value":"1"}},{"name":"b","value":{"type":"String","value":"foo"}}]}}`,
@@ -882,7 +882,7 @@ func TestEncodeEvent(t *testing.T) {
 		"Resources",
 		cadence.NewEvent(
 			[]cadence.Value{
-				cadence.NewString("foo"),
+				cadence.String("foo"),
 				cadence.NewResource(
 					[]cadence.Value{
 						cadence.NewInt(42),
@@ -920,7 +920,7 @@ func TestEncodeContract(t *testing.T) {
 		cadence.NewContract(
 			[]cadence.Value{
 				cadence.NewInt(1),
-				cadence.NewString("foo"),
+				cadence.String("foo"),
 			},
 		).WithType(simpleContractType),
 		`{"type":"Contract","value":{"id":"S.test.FooContract","fields":[{"name":"a","value":{"type":"Int","value":"1"}},{"name":"b","value":{"type":"String","value":"foo"}}]}}`,
@@ -945,7 +945,7 @@ func TestEncodeContract(t *testing.T) {
 		"Resources",
 		cadence.NewContract(
 			[]cadence.Value{
-				cadence.NewString("foo"),
+				cadence.String("foo"),
 				cadence.NewResource(
 					[]cadence.Value{
 						cadence.NewInt(42),
