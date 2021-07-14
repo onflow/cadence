@@ -60,11 +60,22 @@ func (checker *Checker) checkInvocationExpression(invocationExpression *ast.Invo
 	invokedExpression := invocationExpression.InvokedExpression
 	expressionType := checker.VisitExpression(invokedExpression, nil)
 
+	// Get the member from the invoked value
+	// based on the use of optional chaining syntax
+
 	isOptionalChainingResult := false
 	if memberExpression, ok := invokedExpression.(*ast.MemberExpression); ok {
+
+		// If the member expression is using optional chaining,
+		// check if the invoked type is optional
+
 		isOptionalChainingResult = memberExpression.Optional
 		if isOptionalChainingResult {
-			expressionType = expressionType.(*OptionalType).Type
+			if optionalExpressionType, ok := expressionType.(*OptionalType); ok {
+
+				// The invoked type is optional, get the type from the wrapped type
+				expressionType = optionalExpressionType.Type
+			}
 		}
 	}
 
