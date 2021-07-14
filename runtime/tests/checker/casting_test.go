@@ -6046,6 +6046,46 @@ func TestCheckUnnecessaryCasts(t *testing.T) {
 			// Shouldn't log hints for undeclared types
 			require.Len(t, checker.Hints(), 0)
 		})
+
+		t.Run("with generics", func(t *testing.T) {
+			t.Parallel()
+
+			typeParameter := &sema.TypeParameter{
+				Name:      "T",
+				TypeBound: nil,
+			}
+
+			checker, err := parseAndCheckWithTestValue(t, `
+                let res = test<[Int8]>([1, 2, 3] as [Int8])
+                `,
+				&sema.FunctionType{
+					TypeParameters: []*sema.TypeParameter{
+						typeParameter,
+					},
+					Parameters: []*sema.Parameter{
+						{
+							Label:      sema.ArgumentLabelNotRequired,
+							Identifier: "value",
+							TypeAnnotation: sema.NewTypeAnnotation(
+								&sema.GenericType{
+									TypeParameter: typeParameter,
+								},
+							),
+						},
+					},
+					ReturnTypeAnnotation:  sema.NewTypeAnnotation(sema.VoidType),
+					RequiredArgumentCount: nil,
+				},
+			)
+
+			require.NoError(t, err)
+
+			// Even though expected type is available via the generics,
+			// inferring arg type from the generics is not supported yet.
+			// Therefore the cast is not redundant.
+			hints := checker.Hints()
+			require.Len(t, hints, 0)
+		})
 	})
 
 	t.Run("Same type as expression", func(t *testing.T) {
