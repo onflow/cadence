@@ -431,9 +431,7 @@ func IsCastRedundant(expr ast.Expression, exprInferredType, targetType, expected
 		return true
 	}
 
-	checkCastVisitor := &CheckCastVisitor{
-		expectedType: expectedType,
-	}
+	checkCastVisitor := &CheckCastVisitor{}
 
 	return checkCastVisitor.isCastRedundant(expr, exprInferredType, targetType)
 }
@@ -441,7 +439,6 @@ func IsCastRedundant(expr ast.Expression, exprInferredType, targetType, expected
 type CheckCastVisitor struct {
 	exprInferredType Type
 	targetType       Type
-	expectedType     Type
 }
 
 var _ ast.ExpressionVisitor = &CheckCastVisitor{}
@@ -622,16 +619,6 @@ func (d *CheckCastVisitor) isTypeRedundant(exprType, targetType Type) bool {
 	//   var x: Int8 = 5
 	//   var y = x as Int8     // <-- not ok: `y` will be of type `Int8` with/without cast
 	//   var y = x as Integer  // <-- ok	: `y` will be of type `Integer`
-	if d.expectedType == nil {
-		return exprType != nil &&
-			exprType.Equal(targetType)
-	}
-
-	// Otherwise, if there is already an expected type from the context,
-	// then target type being same/supertype is redundant.
-	// e.g:
-	//   var x: Int8 = 5
-	//   var y: AnyStruct = x as Int8     // <-- not ok: `y` will anyway have an `Int8` value
-	//   var y: AnyStruct = x as Integer  // <-- not ok: `y` will anyway have an `Int8` value
-	return IsSubType(exprType, targetType)
+	return exprType != nil &&
+		exprType.Equal(targetType)
 }

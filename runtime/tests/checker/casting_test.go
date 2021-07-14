@@ -6172,29 +6172,7 @@ func TestCheckUnnecessaryCasts(t *testing.T) {
 			checker, err := ParseAndCheckWithAny(t, `
                 let x: Int8 = 5
                 let y: AnyStruct = x as Int8      // Not OK
-                let z: AnyStruct = x as Integer   // Not OK
-            `)
-
-			require.NoError(t, err)
-
-			hints := checker.Hints()
-			require.Len(t, hints, 2)
-
-			require.IsType(t, &sema.UnnecessaryCastHint{}, hints[0])
-			castHint := hints[0].(*sema.UnnecessaryCastHint)
-			assert.Equal(t, sema.Int8Type, castHint.TargetType)
-
-			require.IsType(t, &sema.UnnecessaryCastHint{}, hints[1])
-			castHint = hints[1].(*sema.UnnecessaryCastHint)
-			assert.Equal(t, sema.IntegerType, castHint.TargetType)
-		})
-
-		t.Run("Int literal with expected type", func(t *testing.T) {
-			t.Parallel()
-
-			checker, err := ParseAndCheckWithAny(t, `
-                let x: AnyStruct = 4 as Int8      // OK
-                let y: AnyStruct = 4 as Integer   // Not OK
+                let z: AnyStruct = x as Integer   // OK
             `)
 
 			require.NoError(t, err)
@@ -6204,7 +6182,40 @@ func TestCheckUnnecessaryCasts(t *testing.T) {
 
 			require.IsType(t, &sema.UnnecessaryCastHint{}, hints[0])
 			castHint := hints[0].(*sema.UnnecessaryCastHint)
-			assert.Equal(t, sema.IntegerType, castHint.TargetType)
+			assert.Equal(t, sema.Int8Type, castHint.TargetType)
+		})
+
+		t.Run("With invalid expected type", func(t *testing.T) {
+			t.Parallel()
+
+			checker, err := ParseAndCheckWithAny(t, `
+                let x: Int8 = 5
+                let y: String = x as Int8
+                let z: String = x as Integer
+            `)
+
+			require.Error(t, err)
+
+			hints := checker.Hints()
+			require.Len(t, hints, 1)
+
+			require.IsType(t, &sema.UnnecessaryCastHint{}, hints[0])
+			castHint := hints[0].(*sema.UnnecessaryCastHint)
+			assert.Equal(t, sema.Int8Type, castHint.TargetType)
+		})
+
+		t.Run("Int literal with expected type", func(t *testing.T) {
+			t.Parallel()
+
+			checker, err := ParseAndCheckWithAny(t, `
+                let x: AnyStruct = 4 as Int8      // OK
+                let y: AnyStruct = 4 as Integer   // OK
+            `)
+
+			require.NoError(t, err)
+
+			hints := checker.Hints()
+			require.Len(t, hints, 0)
 		})
 
 		t.Run("Fixed point literal", func(t *testing.T) {
