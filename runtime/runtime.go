@@ -270,7 +270,16 @@ func scriptExecutionFunction(
 	arguments [][]byte,
 	runtimeInterface Interface,
 ) interpretFunc {
-	return func(inter *interpreter.Interpreter) (interpreter.Value, error) {
+	return func(inter *interpreter.Interpreter) (value interpreter.Value, err error) {
+
+		// Recover internal panics and return them as an error.
+		// For example, the argument validation might attempt to
+		// load contract code for non-existing types
+
+		defer inter.RecoverErrors(func(internalErr error) {
+			err = internalErr
+		})
+
 		values, err := validateArgumentParams(
 			inter,
 			runtimeInterface,
@@ -621,7 +630,16 @@ func (r *interpreterRuntime) transactionExecutionFunction(
 	runtimeInterface Interface,
 	authorizerValues []interpreter.Value,
 ) interpretFunc {
-	return func(inter *interpreter.Interpreter) (interpreter.Value, error) {
+	return func(inter *interpreter.Interpreter) (value interpreter.Value, err error) {
+
+		// Recover internal panics and return them as an error.
+		// For example, the argument validation might attempt to
+		// load contract code for non-existing types
+
+		defer inter.RecoverErrors(func(internalErr error) {
+			err = internalErr
+		})
+
 		values, err := validateArgumentParams(
 			inter,
 			runtimeInterface,
@@ -631,6 +649,7 @@ func (r *interpreterRuntime) transactionExecutionFunction(
 		if err != nil {
 			return nil, err
 		}
+
 		values = append(values, authorizerValues...)
 		err = inter.InvokeTransaction(0, values...)
 		return nil, err
