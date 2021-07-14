@@ -126,11 +126,11 @@ func exportValueWithInterpreter(
 		return exportCapabilityValue(v, inter), nil
 	case *interpreter.EphemeralReferenceValue:
 		// Break recursion through ephemeral references
-    if _, ok := seenReferences[referenceValue]; ok {
+		if _, ok := seenReferences[v]; ok {
 			return nil, nil
 		}
-		defer delete(seenReferences, referenceValue)
-    seenReferences[referenceValue] = struct{}{}    
+		defer delete(seenReferences, v)
+		seenReferences[v] = struct{}{}
 		return exportValueWithInterpreter(v.Value, inter, seenReferences)
 	case *interpreter.StorageReferenceValue:
 		referencedValue := v.ReferencedValue(inter)
