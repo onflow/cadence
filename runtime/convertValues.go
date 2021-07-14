@@ -78,11 +78,11 @@ func exportValueWithInterpreter(
 	case interpreter.Int64Value:
 		return cadence.NewInt64(int64(v)), nil
 	case interpreter.Int128Value:
-		return cadence.NewInt128FromBig(v.ToBigInt()), nil
+		return cadence.NewInt128FromBig(v.ToBigInt())
 	case interpreter.Int256Value:
-		return cadence.NewInt256FromBig(v.ToBigInt()), nil
+		return cadence.NewInt256FromBig(v.ToBigInt())
 	case interpreter.UIntValue:
-		return cadence.NewUIntFromBig(v.ToBigInt()), nil
+		return cadence.NewUIntFromBig(v.ToBigInt())
 	case interpreter.UInt8Value:
 		return cadence.NewUInt8(uint8(v)), nil
 	case interpreter.UInt16Value:
@@ -92,9 +92,9 @@ func exportValueWithInterpreter(
 	case interpreter.UInt64Value:
 		return cadence.NewUInt64(uint64(v)), nil
 	case interpreter.UInt128Value:
-		return cadence.NewUInt128FromBig(v.ToBigInt()), nil
+		return cadence.NewUInt128FromBig(v.ToBigInt())
 	case interpreter.UInt256Value:
-		return cadence.NewUInt256FromBig(v.ToBigInt()), nil
+		return cadence.NewUInt256FromBig(v.ToBigInt())
 	case interpreter.Word8Value:
 		return cadence.NewWord8(uint8(v)), nil
 	case interpreter.Word16Value:
@@ -346,60 +346,62 @@ func exportEvent(event exportableEvent) (cadence.Event, error) {
 }
 
 // importValue converts a Cadence value to a runtime value.
-func importValue(inter *interpreter.Interpreter, value cadence.Value) interpreter.Value {
+func importValue(inter *interpreter.Interpreter, value cadence.Value) (interpreter.Value, error) {
 	switch v := value.(type) {
 	case cadence.Void:
-		return interpreter.VoidValue{}
+		return interpreter.VoidValue{}, nil
 	case cadence.Optional:
 		return importOptionalValue(inter, v)
 	case cadence.Bool:
-		return interpreter.BoolValue(v)
+		return interpreter.BoolValue(v), nil
 	case cadence.String:
-		return interpreter.NewStringValue(string(v))
+		return interpreter.NewStringValue(string(v)), nil
 	case cadence.Bytes:
-		return interpreter.ByteSliceToByteArrayValue(v)
+		return interpreter.ByteSliceToByteArrayValue(v), nil
 	case cadence.Address:
-		return interpreter.NewAddressValueFromBytes(v.Bytes())
+		return interpreter.NewAddressValue(common.Address(v)), nil
 	case cadence.Int:
-		return interpreter.NewIntValueFromBigInt(v.Big())
+		return interpreter.NewIntValueFromBigInt(v.Value), nil
 	case cadence.Int8:
-		return interpreter.Int8Value(v)
+		return interpreter.Int8Value(v), nil
 	case cadence.Int16:
-		return interpreter.Int16Value(v)
+		return interpreter.Int16Value(v), nil
 	case cadence.Int32:
-		return interpreter.Int32Value(v)
+		return interpreter.Int32Value(v), nil
 	case cadence.Int64:
-		return interpreter.Int64Value(v)
+		return interpreter.Int64Value(v), nil
 	case cadence.Int128:
-		return interpreter.NewInt128ValueFromBigInt(v.Big())
+		return interpreter.NewInt128ValueFromBigInt(v.Value), nil
 	case cadence.Int256:
-		return interpreter.NewInt256ValueFromBigInt(v.Big())
+		return interpreter.NewInt256ValueFromBigInt(v.Value), nil
 	case cadence.UInt:
-		return interpreter.NewUIntValueFromBigInt(v.Big())
+		return interpreter.NewUIntValueFromBigInt(v.Value), nil
 	case cadence.UInt8:
-		return interpreter.UInt8Value(v)
+		return interpreter.UInt8Value(v), nil
 	case cadence.UInt16:
-		return interpreter.UInt16Value(v)
+		return interpreter.UInt16Value(v), nil
 	case cadence.UInt32:
-		return interpreter.UInt32Value(v)
+		return interpreter.UInt32Value(v), nil
 	case cadence.UInt64:
-		return interpreter.UInt64Value(v)
+		return interpreter.UInt64Value(v), nil
 	case cadence.UInt128:
-		return interpreter.NewUInt128ValueFromBigInt(v.Big())
+		return interpreter.NewUInt128ValueFromBigInt(v.Value), nil
 	case cadence.UInt256:
-		return interpreter.NewUInt256ValueFromBigInt(v.Big())
+		return interpreter.NewUInt256ValueFromBigInt(v.Value), nil
 	case cadence.Word8:
-		return interpreter.Word8Value(v)
+		return interpreter.Word8Value(v), nil
 	case cadence.Word16:
-		return interpreter.Word16Value(v)
+		return interpreter.Word16Value(v), nil
 	case cadence.Word32:
-		return interpreter.Word32Value(v)
+		return interpreter.Word32Value(v), nil
 	case cadence.Word64:
-		return interpreter.Word64Value(v)
+		return interpreter.Word64Value(v), nil
 	case cadence.Fix64:
-		return interpreter.Fix64Value(v)
+		return interpreter.Fix64Value(v), nil
 	case cadence.UFix64:
-		return interpreter.UFix64Value(v)
+		return interpreter.UFix64Value(v), nil
+	case cadence.Path:
+		return importPathValue(v), nil
 	case cadence.Array:
 		return importArrayValue(inter, v)
 	case cadence.Dictionary:
@@ -431,8 +433,6 @@ func importValue(inter *interpreter.Interpreter, value cadence.Value) interprete
 			v.EventType.Fields,
 			v.Fields,
 		)
-	case cadence.Path:
-		return importPathValue(v)
 	case cadence.Enum:
 		return importCompositeValue(
 			inter,
@@ -444,7 +444,7 @@ func importValue(inter *interpreter.Interpreter, value cadence.Value) interprete
 		)
 	}
 
-	panic(fmt.Sprintf("cannot import value of type %T", value))
+	return nil, fmt.Errorf("cannot import value of type %T", value)
 }
 
 func importPathValue(v cadence.Path) interpreter.PathValue {
@@ -457,40 +457,66 @@ func importPathValue(v cadence.Path) interpreter.PathValue {
 func importOptionalValue(
 	inter *interpreter.Interpreter,
 	v cadence.Optional,
-) interpreter.Value {
+) (
+	interpreter.Value,
+	error,
+) {
 	if v.Value == nil {
-		return interpreter.NilValue{}
+		return interpreter.NilValue{}, nil
 	}
 
-	innerValue := importValue(inter, v.Value)
-	return interpreter.NewSomeValueOwningNonCopying(innerValue)
+	innerValue, err := importValue(inter, v.Value)
+	if err != nil {
+		return nil, err
+	}
+
+	return interpreter.NewSomeValueOwningNonCopying(innerValue), nil
 }
 
 func importArrayValue(
 	inter *interpreter.Interpreter,
 	v cadence.Array,
-) *interpreter.ArrayValue {
+) (
+	*interpreter.ArrayValue,
+	error,
+) {
 	values := make([]interpreter.Value, len(v.Values))
 
-	for i, element := range v.Values {
-		values[i] = importValue(inter, element)
+	for i, elem := range v.Values {
+		value, err := importValue(inter, elem)
+		if err != nil {
+			return nil, err
+		}
+		values[i] = value
 	}
 
-	return interpreter.NewArrayValueUnownedNonCopying(values...)
+	return interpreter.NewArrayValueUnownedNonCopying(values...), nil
 }
 
 func importDictionaryValue(
 	inter *interpreter.Interpreter,
 	v cadence.Dictionary,
-) *interpreter.DictionaryValue {
+) (
+	*interpreter.DictionaryValue,
+	error,
+) {
 	keysAndValues := make([]interpreter.Value, len(v.Pairs)*2)
 
 	for i, pair := range v.Pairs {
-		keysAndValues[i*2] = importValue(inter, pair.Key)
-		keysAndValues[i*2+1] = importValue(inter, pair.Value)
+		key, err := importValue(inter, pair.Key)
+		if err != nil {
+			return nil, err
+		}
+		keysAndValues[i*2] = key
+
+		value, err := importValue(inter, pair.Value)
+		if err != nil {
+			return nil, err
+		}
+		keysAndValues[i*2+1] = value
 	}
 
-	return interpreter.NewDictionaryValueUnownedNonCopying(keysAndValues...)
+	return interpreter.NewDictionaryValueUnownedNonCopying(keysAndValues...), nil
 }
 
 func importCompositeValue(
@@ -500,15 +526,22 @@ func importCompositeValue(
 	qualifiedIdentifier string,
 	fieldTypes []cadence.Field,
 	fieldValues []cadence.Value,
-) *interpreter.CompositeValue {
+) (
+	*interpreter.CompositeValue,
+	error,
+) {
 	fields := interpreter.NewStringValueOrderedMap()
 
 	for i := 0; i < len(fieldTypes) && i < len(fieldValues); i++ {
 		fieldType := fieldTypes[i]
 		fieldValue := fieldValues[i]
+		value, err := importValue(inter, fieldValue)
+		if err != nil {
+			return nil, err
+		}
 		fields.Set(
 			fieldType.Identifier,
-			importValue(inter, fieldValue),
+			value,
 		)
 	}
 
@@ -528,10 +561,10 @@ func importCompositeValue(
 			// continue in the normal path
 
 		default:
-			panic(fmt.Errorf(
+			return nil, fmt.Errorf(
 				"cannot import value of type %s",
 				qualifiedIdentifier,
-			))
+			)
 		}
 	}
 
@@ -541,30 +574,33 @@ func importCompositeValue(
 		kind,
 		fields,
 		nil,
-	)
+	), nil
 }
 
 func importPublicKey(
 	inter *interpreter.Interpreter,
 	fields *interpreter.StringValueOrderedMap,
-) *interpreter.CompositeValue {
+) (
+	*interpreter.CompositeValue,
+	error,
+) {
 
 	var publicKeyValue *interpreter.ArrayValue
 	var signAlgoValue *interpreter.CompositeValue
 
 	ty := sema.PublicKeyType
 
-	fields.Foreach(func(fieldName string, value interpreter.Value) {
+	err := fields.ForeachWithError(func(fieldName string, value interpreter.Value) error {
 		switch fieldName {
 		case sema.PublicKeyPublicKeyField:
 			arrayValue, ok := value.(*interpreter.ArrayValue)
 			if !ok {
-				panic(fmt.Errorf(
+				return fmt.Errorf(
 					"cannot import value of type '%s'. invalid value for field '%s': %v",
 					ty,
 					fieldName,
 					value,
-				))
+				)
 			}
 
 			publicKeyValue = arrayValue
@@ -572,12 +608,12 @@ func importPublicKey(
 		case sema.PublicKeySignAlgoField:
 			compositeValue, ok := value.(*interpreter.CompositeValue)
 			if !ok {
-				panic(fmt.Errorf(
+				return fmt.Errorf(
 					"cannot import value of type '%s'. invalid value for field '%s': %v",
 					ty,
 					fieldName,
 					value,
-				))
+				)
 			}
 
 			signAlgoValue = compositeValue
@@ -585,78 +621,90 @@ func importPublicKey(
 		case sema.PublicKeyIsValidField:
 			// 'isValid' field set by the user must be ignored.
 			// This is calculated when creating the public key.
-			return
 
 		default:
-			panic(fmt.Errorf(
+			return fmt.Errorf(
 				"cannot import value of type '%s'. invalid field '%s'",
 				ty,
 				fieldName,
-			))
+			)
 		}
+
+		return nil
 	})
+	if err != nil {
+		return nil, err
+	}
 
 	if publicKeyValue == nil {
-		panic(fmt.Errorf(
+		return nil, fmt.Errorf(
 			"cannot import value of type '%s'. missing field '%s'",
 			ty,
 			sema.PublicKeyPublicKeyField,
-		))
+		)
 	}
 
 	if signAlgoValue == nil {
-		panic(fmt.Errorf(
+		return nil, fmt.Errorf(
 			"cannot import value of type '%s'. missing field '%s'",
 			ty,
 			sema.PublicKeySignAlgoField,
-		))
+		)
 	}
 
 	return interpreter.NewPublicKeyValue(
 		publicKeyValue,
 		signAlgoValue,
 		inter.PublicKeyValidationHandler,
-	)
+	), nil
 }
 
 func importHashAlgorithm(
 	fields *interpreter.StringValueOrderedMap,
-) *interpreter.CompositeValue {
+) (
+	*interpreter.CompositeValue,
+	error,
+) {
 
 	var foundRawValue bool
 	var rawValue interpreter.UInt8Value
 
 	ty := sema.HashAlgorithmType
 
-	fields.Foreach(func(fieldName string, value interpreter.Value) {
+	err := fields.ForeachWithError(func(fieldName string, value interpreter.Value) error {
 		switch fieldName {
 		case sema.EnumRawValueFieldName:
 			rawValue, foundRawValue = value.(interpreter.UInt8Value)
 			if !foundRawValue {
-				panic(fmt.Errorf(
+				return fmt.Errorf(
 					"cannot import value of type '%s'. invalid value for field '%s': %v",
 					ty,
 					fieldName,
 					value,
-				))
+				)
 			}
 
 		default:
-			panic(fmt.Errorf(
+			return fmt.Errorf(
 				"cannot import value of type '%s'. invalid field '%s'",
 				ty,
 				fieldName,
-			))
+			)
 		}
+
+		return nil
 	})
+	if err != nil {
+		return nil, err
+	}
 
 	if !foundRawValue {
-		panic(fmt.Errorf(
+		return nil, fmt.Errorf(
 			"cannot import value of type '%s'. missing field '%s'",
 			ty,
 			sema.EnumRawValueFieldName,
-		))
+		)
 	}
 
-	return stdlib.NewHashAlgorithmCase(uint8(rawValue))
+	return stdlib.NewHashAlgorithmCase(uint8(rawValue)), nil
 }

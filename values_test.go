@@ -20,6 +20,7 @@ package cadence
 
 import (
 	"fmt"
+	"math/big"
 	"testing"
 	"unicode/utf8"
 
@@ -506,4 +507,95 @@ func TestNonUTF8String(t *testing.T) {
 	require.Error(t, err)
 
 	assert.Contains(t, err.Error(), "invalid UTF-8 in string")
+}
+
+func TestNewInt128FromBig(t *testing.T) {
+
+	_, err := NewInt128FromBig(big.NewInt(1))
+	require.NoError(t, err)
+
+	belowMin := new(big.Int).Sub(
+		sema.Int128TypeMinIntBig,
+		big.NewInt(1),
+	)
+	_, err = NewInt128FromBig(belowMin)
+	require.Error(t, err)
+
+	aboveMax := new(big.Int).Add(
+		sema.Int128TypeMaxIntBig,
+		big.NewInt(1),
+	)
+	_, err = NewInt128FromBig(aboveMax)
+	require.Error(t, err)
+}
+
+func TestNewInt256FromBig(t *testing.T) {
+
+	_, err := NewInt256FromBig(big.NewInt(1))
+	require.NoError(t, err)
+
+	belowMin := new(big.Int).Sub(
+		sema.Int256TypeMinIntBig,
+		big.NewInt(1),
+	)
+	_, err = NewInt256FromBig(belowMin)
+	require.Error(t, err)
+
+	aboveMax := new(big.Int).Add(
+		sema.Int256TypeMaxIntBig,
+		big.NewInt(1),
+	)
+	_, err = NewInt256FromBig(aboveMax)
+	require.Error(t, err)
+}
+
+func TestNewUIntFromBig(t *testing.T) {
+
+	_, err := NewUIntFromBig(big.NewInt(1))
+	require.NoError(t, err)
+
+	belowMin := big.NewInt(-1)
+	_, err = NewUIntFromBig(belowMin)
+	require.Error(t, err)
+
+	large := new(big.Int).Add(
+		sema.UInt256TypeMaxIntBig,
+		big.NewInt(1),
+	)
+	_, err = NewUIntFromBig(large)
+	require.NoError(t, err)
+}
+
+func TestNewUInt128FromBig(t *testing.T) {
+
+	_, err := NewUInt128FromBig(big.NewInt(1))
+	require.NoError(t, err)
+
+	belowMin := big.NewInt(-1)
+	_, err = NewUInt128FromBig(belowMin)
+	require.Error(t, err)
+
+	aboveMax := new(big.Int).Add(
+		sema.UInt128TypeMaxIntBig,
+		big.NewInt(1),
+	)
+	_, err = NewUInt128FromBig(aboveMax)
+	require.Error(t, err)
+}
+
+func TestNewUInt256FromBig(t *testing.T) {
+
+	_, err := NewUInt256FromBig(big.NewInt(1))
+	require.NoError(t, err)
+
+	belowMin := big.NewInt(-1)
+	_, err = NewUInt256FromBig(belowMin)
+	require.Error(t, err)
+
+	aboveMax := new(big.Int).Add(
+		sema.UInt256TypeMaxIntBig,
+		big.NewInt(1),
+	)
+	_, err = NewUInt256FromBig(aboveMax)
+	require.Error(t, err)
 }

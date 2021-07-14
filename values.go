@@ -28,6 +28,7 @@ import (
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/format"
 	"github.com/onflow/cadence/runtime/interpreter"
+	"github.com/onflow/cadence/runtime/sema"
 )
 
 // Value
@@ -378,9 +379,14 @@ func NewInt128(i int) Int128 {
 	return Int128{big.NewInt(int64(i))}
 }
 
-func NewInt128FromBig(i *big.Int) Int128 {
-	// TODO: check range?
-	return Int128{i}
+func NewInt128FromBig(i *big.Int) (Int128, error) {
+	if i.Cmp(sema.Int128TypeMinIntBig) < 0 {
+		return Int128{}, fmt.Errorf("value exceeds min of Int128: %s", i.String())
+	}
+	if i.Cmp(sema.Int128TypeMaxIntBig) > 0 {
+		return Int128{}, fmt.Errorf("value exceeds max of Int128: %s", i.String())
+	}
+	return Int128{i}, nil
 }
 
 func (Int128) isValue() {}
@@ -419,9 +425,14 @@ func NewInt256(i int) Int256 {
 	return Int256{big.NewInt(int64(i))}
 }
 
-func NewInt256FromBig(i *big.Int) Int256 {
-	// TODO: check range?
-	return Int256{i}
+func NewInt256FromBig(i *big.Int) (Int256, error) {
+	if i.Cmp(sema.Int256TypeMinIntBig) < 0 {
+		return Int256{}, fmt.Errorf("value exceeds min of Int256: %s", i.String())
+	}
+	if i.Cmp(sema.Int256TypeMaxIntBig) > 0 {
+		return Int256{}, fmt.Errorf("value exceeds max of Int256: %s", i.String())
+	}
+	return Int256{i}, nil
 }
 
 func (Int256) isValue() {}
@@ -460,11 +471,11 @@ func NewUInt(i uint) UInt {
 	return UInt{big.NewInt(int64(i))}
 }
 
-func NewUIntFromBig(i *big.Int) UInt {
+func NewUIntFromBig(i *big.Int) (UInt, error) {
 	if i.Sign() < 0 {
-		panic("negative input")
+		return UInt{}, fmt.Errorf("invalid negative value for UInt: %s", i.String())
 	}
-	return UInt{i}
+	return UInt{i}, nil
 }
 
 func (UInt) isValue() {}
@@ -494,6 +505,7 @@ func (v UInt) String() string {
 }
 
 // UInt8
+
 type UInt8 uint8
 
 func NewUInt8(v uint8) UInt8 {
@@ -612,12 +624,14 @@ func NewUInt128(i uint) UInt128 {
 	return UInt128{big.NewInt(int64(i))}
 }
 
-func NewUInt128FromBig(i *big.Int) UInt128 {
-	// TODO: check range?
+func NewUInt128FromBig(i *big.Int) (UInt128, error) {
 	if i.Sign() < 0 {
-		panic("negative input")
+		return UInt128{}, fmt.Errorf("invalid negative value for UInt: %s", i.String())
 	}
-	return UInt128{i}
+	if i.Cmp(sema.UInt128TypeMaxIntBig) > 0 {
+		return UInt128{}, fmt.Errorf("value exceeds max of UInt128: %s", i.String())
+	}
+	return UInt128{i}, nil
 }
 
 func (UInt128) isValue() {}
@@ -656,12 +670,14 @@ func NewUInt256(i uint) UInt256 {
 	return UInt256{big.NewInt(int64(i))}
 }
 
-func NewUInt256FromBig(i *big.Int) UInt256 {
-	// TODO: check range?
+func NewUInt256FromBig(i *big.Int) (UInt256, error) {
 	if i.Sign() < 0 {
-		panic("negative input")
+		return UInt256{}, fmt.Errorf("invalid negative value for UInt256: %s", i.String())
 	}
-	return UInt256{i}
+	if i.Cmp(sema.UInt256TypeMaxIntBig) > 0 {
+		return UInt256{}, fmt.Errorf("value exceeds max of UInt256: %s", i.String())
+	}
+	return UInt256{i}, nil
 }
 
 func (UInt256) isValue() {}

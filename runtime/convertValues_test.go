@@ -299,24 +299,30 @@ func TestImportValue(t *testing.T) {
 
 	t.Parallel()
 
-	type exportTest struct {
+	type importTest struct {
 		label    string
 		expected interpreter.Value
 		value    cadence.Value
 	}
 
-	test := func(tt exportTest) {
+	test := func(tt importTest) {
 
 		t.Run(tt.label, func(t *testing.T) {
 
 			t.Parallel()
 
-			actual := importValue(nil, tt.value)
-			assert.Equal(t, tt.expected, actual)
+			actual, err := importValue(nil, tt.value)
+
+			if tt.expected == nil {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+				assert.Equal(t, tt.expected, actual)
+			}
 		})
 	}
 
-	for _, tt := range []exportTest{
+	for _, tt := range []importTest{
 		{
 			label:    "Void",
 			expected: interpreter.VoidValue{},
@@ -369,6 +375,35 @@ func TestImportValue(t *testing.T) {
 					interpreter.NewStringValue("foo"),
 				}...,
 			),
+		},
+		{
+			label:    "Dictionary",
+			expected: interpreter.NewDictionaryValueUnownedNonCopying(),
+			value:    cadence.NewDictionary([]cadence.KeyValuePair{}),
+		},
+		{
+			label: "Dictionary (non-empty)",
+			expected: interpreter.NewDictionaryValueUnownedNonCopying(
+				interpreter.NewStringValue("a"),
+				interpreter.NewIntValueFromInt64(1),
+				interpreter.NewStringValue("b"),
+				interpreter.NewIntValueFromInt64(2),
+			),
+			value: cadence.NewDictionary([]cadence.KeyValuePair{
+				{
+					Key:   cadence.String("a"),
+					Value: cadence.NewInt(1),
+				},
+				{
+					Key:   cadence.String("b"),
+					Value: cadence.NewInt(2),
+				},
+			}),
+		},
+		{
+			label:    "Address",
+			expected: interpreter.NewAddressValueFromBytes([]byte{0x1}),
+			value:    cadence.NewAddress([8]byte{0, 0, 0, 0, 0, 0, 0, 1}),
 		},
 		{
 			label:    "Int",
@@ -480,6 +515,28 @@ func TestImportValue(t *testing.T) {
 				Domain:     common.PathDomainStorage,
 				Identifier: "foo",
 			},
+		},
+		{
+			label: "Link (invalid)",
+			value: cadence.Link{
+				TargetPath: cadence.Path{
+					Domain:     "storage",
+					Identifier: "test",
+				},
+				BorrowType: "Int",
+			},
+			expected: nil,
+		},
+		{
+			label: "Capability (invalid)",
+			value: cadence.Capability{
+				Path: cadence.Path{
+					Domain:     "public",
+					Identifier: "test",
+				},
+				BorrowType: "Int",
+			},
+			expected: nil,
 		},
 	} {
 		test(tt)
@@ -2349,24 +2406,11 @@ func TestPublicKeyImport(t *testing.T) {
 			},
 		).WithType(PublicKeyType)
 
-		// TODO: remove this once 'importValue' method returns errors.
-		//	 Assert the returned error instead.
-		defer func() {
-			r := recover()
-
-			err, isError := r.(error)
-			require.True(t, isError)
-			require.Error(t, err)
-
-			assert.Contains(
-				t,
-				err.Error(),
-				"invalid value for field 'publicKey': true",
-			)
-		}()
-
 		_, err := executeScript(t, script, publicKey, runtimeInterface)
 		require.Error(t, err)
+
+		var argErr *InvalidEntryPointArgumentError
+		require.ErrorAs(t, err, &argErr)
 	})
 
 	t.Run("Invalid content in public key", func(t *testing.T) {
@@ -2396,16 +2440,10 @@ func TestPublicKeyImport(t *testing.T) {
 		_, err := executeScript(t, script, publicKey, runtimeInterface)
 		require.Error(t, err)
 
-		require.IsType(t, Error{}, err)
-		runtimeError := err.(Error)
+		var valueErr *MalformedValueError
+		require.ErrorAs(t, err, &valueErr)
 
-		require.IsType(t, &InvalidEntryPointArgumentError{}, runtimeError.Err)
-		argError := runtimeError.Err.(*InvalidEntryPointArgumentError)
-
-		require.IsType(t, &MalformedValueError{}, argError.Err)
-		malformedArgError := argError.Err.(*MalformedValueError)
-
-		assert.Equal(t, sema.PublicKeyType, malformedArgError.ExpectedType)
+		assert.Equal(t, sema.PublicKeyType, valueErr.ExpectedType)
 	})
 
 	t.Run("Invalid sign algo", func(t *testing.T) {
@@ -2425,24 +2463,11 @@ func TestPublicKeyImport(t *testing.T) {
 			},
 		).WithType(PublicKeyType)
 
-		// TODO: remove this once 'importValue' method returns errors.
-		//	 Assert the returned error instead.
-		defer func() {
-			r := recover()
-
-			err, isError := r.(error)
-			require.True(t, isError)
-			require.Error(t, err)
-
-			assert.Contains(
-				t,
-				err.Error(),
-				"invalid value for field 'signatureAlgorithm': true",
-			)
-		}()
-
 		_, err := executeScript(t, script, publicKey, runtimeInterface)
 		require.Error(t, err)
+
+		var argErr *InvalidEntryPointArgumentError
+		require.ErrorAs(t, err, &argErr)
 	})
 
 	t.Run("Invalid sign algo fields", func(t *testing.T) {
@@ -2469,16 +2494,10 @@ func TestPublicKeyImport(t *testing.T) {
 		_, err := executeScript(t, script, publicKey, runtimeInterface)
 		require.Error(t, err)
 
-		require.IsType(t, Error{}, err)
-		runtimeError := err.(Error)
+		var valueErr *MalformedValueError
+		require.ErrorAs(t, err, &valueErr)
 
-		require.IsType(t, &InvalidEntryPointArgumentError{}, runtimeError.Err)
-		argError := runtimeError.Err.(*InvalidEntryPointArgumentError)
-
-		require.IsType(t, &MalformedValueError{}, argError.Err)
-		malformedArgError := argError.Err.(*MalformedValueError)
-
-		assert.Equal(t, sema.PublicKeyType, malformedArgError.ExpectedType)
+		assert.Equal(t, sema.PublicKeyType, valueErr.ExpectedType)
 	})
 
 	t.Run("Extra field", func(t *testing.T) {
@@ -2548,22 +2567,6 @@ func TestPublicKeyImport(t *testing.T) {
 
 		rt := NewInterpreterRuntime()
 
-		// TODO: remove this once 'importValue' method returns errors.
-		//	 Assert the returned error instead.
-		defer func() {
-			r := recover()
-
-			err, isError := r.(error)
-			require.True(t, isError)
-			require.Error(t, err)
-
-			assert.Contains(
-				t,
-				err.Error(),
-				"invalid field 'extraField'",
-			)
-		}()
-
 		_, err := rt.ExecuteScript(
 			Script{
 				Source: []byte(script),
@@ -2577,6 +2580,9 @@ func TestPublicKeyImport(t *testing.T) {
 			},
 		)
 		require.Error(t, err)
+
+		var argErr *InvalidEntryPointArgumentError
+		require.ErrorAs(t, err, &argErr)
 	})
 
 	t.Run("Missing raw public key", func(t *testing.T) {
@@ -2624,23 +2630,7 @@ func TestPublicKeyImport(t *testing.T) {
 
 		rt := NewInterpreterRuntime()
 
-		// TODO: remove this once 'importValue' method returns errors.
-		//	 Assert the returned error instead.
-		defer func() {
-			r := recover()
-
-			err, isError := r.(error)
-			require.True(t, isError)
-			require.Error(t, err)
-
-			assert.Contains(
-				t,
-				err.Error(),
-				"missing field 'publicKey'",
-			)
-		}()
-
-		value, err := rt.ExecuteScript(
+		_, err := rt.ExecuteScript(
 			Script{
 				Source: []byte(script),
 				Arguments: [][]byte{
@@ -2653,8 +2643,8 @@ func TestPublicKeyImport(t *testing.T) {
 			},
 		)
 
-		require.NoError(t, err)
-		assert.Equal(t, value, cadence.NewBool(true))
+		var argErr *InvalidEntryPointArgumentError
+		require.ErrorAs(t, err, &argErr)
 	})
 
 	t.Run("Missing isValid", func(t *testing.T) {
