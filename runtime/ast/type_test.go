@@ -204,8 +204,9 @@ func TestConstantSizedType_MarshalJSON(t *testing.T) {
 			},
 		},
 		Size: &IntegerExpression{
-			Value: big.NewInt(42),
-			Base:  10,
+			PositiveLiteral: "42",
+			Value:           big.NewInt(42),
+			Base:            10,
 			Range: Range{
 				StartPos: Position{Offset: 4, Line: 5, Column: 6},
 				EndPos:   Position{Offset: 7, Line: 8, Column: 9},
@@ -236,6 +237,7 @@ func TestConstantSizedType_MarshalJSON(t *testing.T) {
             },
             "Size": {
                 "Type": "IntegerExpression",
+                "PositiveLiteral": "42",
                 "Value": "42",
                 "Base": 10,
                 "StartPos": {"Offset": 4, "Line": 5, "Column": 6},

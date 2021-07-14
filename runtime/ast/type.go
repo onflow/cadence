@@ -67,6 +67,11 @@ type Type interface {
 	CheckEqual(other Type, checker TypeEqualityChecker) error
 }
 
+func IsEmptyType(t Type) bool {
+	nominalType, ok := t.(*NominalType)
+	return ok && nominalType.Identifier.Identifier == ""
+}
+
 // NominalType represents a named type
 
 type NominalType struct {

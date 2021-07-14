@@ -20,6 +20,8 @@ package ast
 
 import (
 	"encoding/json"
+
+	"github.com/turbolent/prettier"
 )
 
 // Transfer represents the operation in variable declarations
@@ -50,4 +52,19 @@ func (f Transfer) MarshalJSON() ([]byte, error) {
 		Range: NewRangeFromPositioned(f),
 		Alias: (*Alias)(&f),
 	})
+}
+
+var copyTransferDoc prettier.Doc = prettier.Text("=")
+var moveTransferDoc prettier.Doc = prettier.Text("<-")
+var forceMoveTransferDoc prettier.Doc = prettier.Text("<-!")
+
+func (f Transfer) Doc() prettier.Doc {
+	switch f.Operation {
+	case TransferOperationMove:
+		return moveTransferDoc
+	case TransferOperationMoveForced:
+		return forceMoveTransferDoc
+	default:
+		return copyTransferDoc
+	}
 }
