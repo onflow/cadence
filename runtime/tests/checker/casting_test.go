@@ -6189,6 +6189,40 @@ func TestCheckUnnecessaryCasts(t *testing.T) {
 			assert.Equal(t, sema.Fix64Type, castHint.TargetType)
 		})
 
+		t.Run("Array, with literals", func(t *testing.T) {
+			t.Parallel()
+
+			checker, err := ParseAndCheckWithAny(t, `
+                let x = [5, 6, 7] as [Int]
+            `)
+
+			require.NoError(t, err)
+
+			hints := checker.Hints()
+			require.Len(t, hints, 1)
+
+			require.IsType(t, &sema.UnnecessaryCastHint{}, hints[0])
+			castHint := hints[0].(*sema.UnnecessaryCastHint)
+			assert.Equal(t,
+				&sema.VariableSizedType{
+					Type: sema.IntType,
+				},
+				castHint.TargetType)
+		})
+
+		t.Run("Array, with literals, inferred", func(t *testing.T) {
+			t.Parallel()
+
+			checker, err := ParseAndCheckWithAny(t, `
+                let x = [5, 6, 7] as [UInt8]
+            `)
+
+			require.NoError(t, err)
+
+			hints := checker.Hints()
+			require.Len(t, hints, 0)
+		})
+
 		t.Run("Array, all elements self typed", func(t *testing.T) {
 			t.Parallel()
 
