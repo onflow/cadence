@@ -54,15 +54,6 @@ func exportValueWithInterpreter(
 	cadence.Value,
 	error,
 ) {
-	// Break recursion through ephemeral references
-	if referenceValue, ok := value.(*interpreter.EphemeralReferenceValue); ok {
-		if _, ok := results[referenceValue]; ok {
-			return nil, nil
-		}
-		defer delete(results, referenceValue)
-		results[referenceValue] = struct{}{}
-	}
-
 	switch v := value.(type) {
 	case interpreter.VoidValue:
 		return cadence.NewVoid(), nil
@@ -131,6 +122,12 @@ func exportValueWithInterpreter(
 	case interpreter.CapabilityValue:
 		return exportCapabilityValue(v, inter), nil
 	case *interpreter.EphemeralReferenceValue:
+		// Break recursion through ephemeral references
+		if _, ok := results[v]; ok {
+			return nil, nil
+		}
+		defer delete(results, v)
+		results[v] = struct{}{}
 		return exportValueWithInterpreter(v.Value, inter, results)
 	case *interpreter.StorageReferenceValue:
 		referencedValue := v.ReferencedValue(inter)
