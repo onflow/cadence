@@ -8648,20 +8648,15 @@ func NewAddressValueFromBytes(b []byte) AddressValue {
 }
 
 func ConvertAddress(value Value) AddressValue {
-	// TODO: https://github.com/dapperlabs/flow-go/issues/2141
-	result := AddressValue{}
-	if intValue, ok := value.(IntValue); ok {
-		bigEndianBytes := intValue.BigInt.Bytes()
-		copy(
-			result[common.AddressLength-len(bigEndianBytes):common.AddressLength],
-			bigEndianBytes,
-		)
-	} else {
-		binary.BigEndian.PutUint64(
-			result[common.AddressLength-8:common.AddressLength],
-			uint64(value.(NumberValue).ToInt()),
-		)
-	}
+	var result AddressValue
+
+	uint64Value := ConvertUInt64(value)
+
+	binary.BigEndian.PutUint64(
+		result[:common.AddressLength],
+		uint64(uint64Value),
+	)
+
 	return result
 }
 
