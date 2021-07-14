@@ -39,7 +39,7 @@ func NewAuthAccountContractsValue(
 	fields.Set(sema.AuthAccountContractsTypeRemoveFunctionName, removeFunction)
 	fields.Set(sema.AuthAccountContractsTypeUpdateExperimentalFunctionName, updateFunction)
 
-	stringer := func(_ StringResults) string {
+	stringer := func(_ SeenReferences) string {
 		return fmt.Sprintf("AuthAccount.Contracts(%s)", address)
 	}
 

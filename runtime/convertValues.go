@@ -30,15 +30,17 @@ import (
 
 // exportValue converts a runtime value to its native Go representation.
 func exportValue(value exportableValue) (cadence.Value, error) {
-	return exportValueWithInterpreter(value.Value, value.Interpreter(), exportResults{})
+	return exportValueWithInterpreter(value.Value, value.Interpreter(), seenReferences{})
 }
 
 // ExportValue converts a runtime value to its native Go representation.
 func ExportValue(value interpreter.Value, inter *interpreter.Interpreter) (cadence.Value, error) {
-	return exportValueWithInterpreter(value, inter, exportResults{})
+	return exportValueWithInterpreter(value, inter, seenReferences{})
 }
 
-type exportResults map[*interpreter.EphemeralReferenceValue]struct{}
+// NOTE: Do not generalize to map[interpreter.Value],
+// as not all values are Go hashable, i.e. this might lead to run-time panics
+type seenReferences map[*interpreter.EphemeralReferenceValue]struct{}
 
 // exportValueWithInterpreter exports the given internal (interpreter) value to an external value.
 //
@@ -49,24 +51,25 @@ type exportResults map[*interpreter.EphemeralReferenceValue]struct{}
 func exportValueWithInterpreter(
 	value interpreter.Value,
 	inter *interpreter.Interpreter,
-	results exportResults,
+	seenReferences seenReferences,
 ) (
 	cadence.Value,
 	error,
 ) {
+
 	switch v := value.(type) {
 	case interpreter.VoidValue:
 		return cadence.NewVoid(), nil
 	case interpreter.NilValue:
 		return cadence.NewOptional(nil), nil
 	case *interpreter.SomeValue:
-		return exportSomeValue(v, inter, results)
+		return exportSomeValue(v, inter, seenReferences)
 	case interpreter.BoolValue:
 		return cadence.NewBool(bool(v)), nil
 	case *interpreter.StringValue:
 		return cadence.NewString(v.Str)
 	case *interpreter.ArrayValue:
-		return exportArrayValue(v, inter, results)
+		return exportArrayValue(v, inter, seenReferences)
 	case interpreter.IntValue:
 		return cadence.NewIntFromBig(v.ToBigInt()), nil
 	case interpreter.Int8Value:
@@ -108,9 +111,9 @@ func exportValueWithInterpreter(
 	case interpreter.UFix64Value:
 		return cadence.UFix64(v), nil
 	case *interpreter.CompositeValue:
-		return exportCompositeValue(v, inter, results)
+		return exportCompositeValue(v, inter, seenReferences)
 	case *interpreter.DictionaryValue:
-		return exportDictionaryValue(v, inter, results)
+		return exportDictionaryValue(v, inter, seenReferences)
 	case interpreter.AddressValue:
 		return cadence.NewAddress(v), nil
 	case interpreter.LinkValue:
@@ -123,18 +126,18 @@ func exportValueWithInterpreter(
 		return exportCapabilityValue(v, inter), nil
 	case *interpreter.EphemeralReferenceValue:
 		// Break recursion through ephemeral references
-		if _, ok := results[v]; ok {
+		if _, ok := seenReferences[v]; ok {
 			return nil, nil
 		}
-		defer delete(results, v)
-		results[v] = struct{}{}
-		return exportValueWithInterpreter(v.Value, inter, results)
+		defer delete(seenReferences, v)
+		seenReferences[v] = struct{}{}
+		return exportValueWithInterpreter(v.Value, inter, seenReferences)
 	case *interpreter.StorageReferenceValue:
 		referencedValue := v.ReferencedValue(inter)
 		if referencedValue == nil {
 			return nil, nil
 		}
-		return exportValueWithInterpreter(*referencedValue, inter, results)
+		return exportValueWithInterpreter(*referencedValue, inter, seenReferences)
 	}
 
 	return nil, fmt.Errorf("cannot export value of type %T", value)
@@ -144,7 +147,7 @@ func exportValueWithInterpreter(
 func exportSomeValue(
 	v *interpreter.SomeValue,
 	inter *interpreter.Interpreter,
-	results exportResults,
+	seenReferences seenReferences,
 ) (
 	cadence.Optional,
 	error,
@@ -153,7 +156,7 @@ func exportSomeValue(
 		return cadence.NewOptional(nil), nil
 	}
 
-	value, err := exportValueWithInterpreter(v.Value, inter, results)
+	value, err := exportValueWithInterpreter(v.Value, inter, seenReferences)
 	if err != nil {
 		return cadence.Optional{}, err
 	}
@@ -164,7 +167,7 @@ func exportSomeValue(
 func exportArrayValue(
 	v *interpreter.ArrayValue,
 	inter *interpreter.Interpreter,
-	results exportResults,
+	seenReferences seenReferences,
 ) (
 	cadence.Array,
 	error,
@@ -173,7 +176,7 @@ func exportArrayValue(
 	values := make([]cadence.Value, len(elements))
 
 	for i, value := range elements {
-		exportedValue, err := exportValueWithInterpreter(value, inter, results)
+		exportedValue, err := exportValueWithInterpreter(value, inter, seenReferences)
 		if err != nil {
 			return cadence.Array{}, err
 		}
@@ -186,15 +189,13 @@ func exportArrayValue(
 func exportCompositeValue(
 	v *interpreter.CompositeValue,
 	inter *interpreter.Interpreter,
-	results exportResults,
+	seenReferences seenReferences,
 ) (
 	cadence.Value,
 	error,
 ) {
 
-	dynamicTypeResults := interpreter.DynamicTypeResults{}
-
-	dynamicType := v.DynamicType(inter, dynamicTypeResults).(interpreter.CompositeDynamicType)
+	dynamicType := v.DynamicType(inter, interpreter.SeenReferences{}).(interpreter.CompositeDynamicType)
 	staticType := dynamicType.StaticType.(*sema.CompositeType)
 	// TODO: consider making the results map "global", by moving it up to exportValueWithInterpreter
 	t := exportCompositeType(staticType, map[sema.TypeID]cadence.Type{})
@@ -216,7 +217,7 @@ func exportCompositeValue(
 			}
 		}
 
-		exportedFieldValue, err := exportValueWithInterpreter(fieldValue, inter, results)
+		exportedFieldValue, err := exportValueWithInterpreter(fieldValue, inter, seenReferences)
 		if err != nil {
 			return nil, err
 		}
@@ -258,7 +259,7 @@ func exportCompositeValue(
 func exportDictionaryValue(
 	v *interpreter.DictionaryValue,
 	inter *interpreter.Interpreter,
-	results exportResults,
+	seenReferences seenReferences,
 ) (
 	cadence.Dictionary,
 	error,
@@ -272,11 +273,11 @@ func exportDictionaryValue(
 
 		value := v.Get(inter, interpreter.ReturnEmptyLocationRange, keyValue).(*interpreter.SomeValue).Value
 
-		convertedKey, err := exportValueWithInterpreter(keyValue, inter, results)
+		convertedKey, err := exportValueWithInterpreter(keyValue, inter, seenReferences)
 		if err != nil {
 			return cadence.Dictionary{}, err
 		}
-		convertedValue, err := exportValueWithInterpreter(value, inter, results)
+		convertedValue, err := exportValueWithInterpreter(value, inter, seenReferences)
 		if err != nil {
 			return cadence.Dictionary{}, err
 		}
@@ -328,13 +329,11 @@ func exportCapabilityValue(v interpreter.CapabilityValue, inter *interpreter.Int
 }
 
 // exportEvent converts a runtime event to its native Go representation.
-func exportEvent(event exportableEvent) (cadence.Event, error) {
+func exportEvent(event exportableEvent, seenReferences seenReferences) (cadence.Event, error) {
 	fields := make([]cadence.Value, len(event.Fields))
 
-	results := exportResults{}
-
 	for i, field := range event.Fields {
-		value, err := exportValueWithInterpreter(field.Value, field.Interpreter(), results)
+		value, err := exportValueWithInterpreter(field.Value, field.Interpreter(), seenReferences)
 		if err != nil {
 			return cadence.Event{}, err
 		}

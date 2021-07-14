@@ -51,7 +51,7 @@ func TestExportValue(t *testing.T) {
 
 			t.Parallel()
 
-			actual, err := exportValueWithInterpreter(tt.value, nil, exportResults{})
+			actual, err := exportValueWithInterpreter(tt.value, nil, seenReferences{})
 			if tt.expected == nil {
 				require.Error(t, err)
 			} else {
@@ -267,12 +267,12 @@ func TestExportValue(t *testing.T) {
 		},
 		{
 			label:    "Interpreted Function (invalid)",
-			value:    interpreter.InterpretedFunctionValue{},
+			value:    &interpreter.InterpretedFunctionValue{},
 			expected: nil,
 		},
 		{
 			label:    "Host Function (invalid)",
-			value:    interpreter.HostFunctionValue{},
+			value:    &interpreter.HostFunctionValue{},
 			expected: nil,
 		},
 		{
@@ -1043,7 +1043,7 @@ func TestExportTypeValue(t *testing.T) {
 		value := interpreter.TypeValue{
 			Type: nil,
 		}
-		actual, err := exportValueWithInterpreter(value, nil, exportResults{})
+		actual, err := exportValueWithInterpreter(value, nil, seenReferences{})
 		require.NoError(t, err)
 
 		expected := cadence.TypeValue{
@@ -1120,7 +1120,7 @@ func TestExportCapabilityValue(t *testing.T) {
 			BorrowType: interpreter.PrimitiveStaticTypeInt,
 		}
 
-		actual, err := exportValueWithInterpreter(capability, nil, exportResults{})
+		actual, err := exportValueWithInterpreter(capability, nil, seenReferences{})
 		require.NoError(t, err)
 
 		expected := cadence.Capability{
@@ -1165,7 +1165,7 @@ func TestExportCapabilityValue(t *testing.T) {
 			},
 		}
 
-		actual, err := exportValueWithInterpreter(capability, inter, exportResults{})
+		actual, err := exportValueWithInterpreter(capability, inter, seenReferences{})
 		require.NoError(t, err)
 
 		expected := cadence.Capability{
@@ -1190,7 +1190,7 @@ func TestExportCapabilityValue(t *testing.T) {
 			},
 		}
 
-		actual, err := exportValueWithInterpreter(capability, nil, exportResults{})
+		actual, err := exportValueWithInterpreter(capability, nil, seenReferences{})
 		require.NoError(t, err)
 
 		expected := cadence.Capability{
@@ -1219,7 +1219,7 @@ func TestExportLinkValue(t *testing.T) {
 			Type: interpreter.PrimitiveStaticTypeInt,
 		}
 
-		actual, err := exportValueWithInterpreter(link, nil, exportResults{})
+		actual, err := exportValueWithInterpreter(link, nil, seenReferences{})
 		require.NoError(t, err)
 
 		expected := cadence.Link{
@@ -1261,7 +1261,7 @@ func TestExportLinkValue(t *testing.T) {
 			},
 		}
 
-		actual, err := exportValueWithInterpreter(capability, inter, exportResults{})
+		actual, err := exportValueWithInterpreter(capability, inter, seenReferences{})
 		require.NoError(t, err)
 
 		expected := cadence.Link{
