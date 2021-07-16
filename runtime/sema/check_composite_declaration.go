@@ -158,6 +158,8 @@ func (checker *Checker) visitCompositeDeclaration(declaration *ast.CompositeDecl
 
 	checkMissingMembers := kind != ContainerKindInterface
 
+	overridden := map[string]bool{}
+
 	for i, interfaceType := range compositeType.ExplicitInterfaceConformances {
 		interfaceNominalType := declaration.Conformances[i]
 
@@ -170,6 +172,7 @@ func (checker *Checker) visitCompositeDeclaration(declaration *ast.CompositeDecl
 				checkMissingMembers:            checkMissingMembers,
 				interfaceTypeIsTypeRequirement: false,
 			},
+			&overridden,
 		)
 	}
 
@@ -964,7 +967,9 @@ func (checker *Checker) checkCompositeConformance(
 	interfaceType *InterfaceType,
 	compositeKindMismatchIdentifier ast.Identifier,
 	options compositeConformanceCheckOptions,
+	overridden *map[string]bool,
 ) {
+
 	var missingMembers []*Member
 	var memberMismatches []MemberMismatch
 	var missingNestedCompositeTypes []*CompositeType
@@ -1017,16 +1022,31 @@ func (checker *Checker) checkCompositeConformance(
 		if interfaceMember.Predeclared {
 			return
 		}
-
 		compositeMember, ok := compositeType.Members.Get(name)
 		if !ok {
 			if options.checkMissingMembers {
-				missingMembers = append(missingMembers, interfaceMember)
+				if interfaceMember.DeclarationKind != common.DeclarationKindFunction {
+					missingMembers = append(missingMembers, interfaceMember)
+				} else {
+					if !interfaceMember.HasImplementation {
+						missingMembers = append(missingMembers, interfaceMember)
+					} else {
+						if (*overridden)[name] {
+							checker.report(
+								&MultipleInterfaceDefaultImplementationsError{
+									CompositeType: compositeType,
+									Member:        interfaceMember,
+								},
+							)
+						}
+						(*overridden)[name] = true
+					}
+
+				}
 			}
-			return
 		}
 
-		if !checker.memberSatisfied(compositeMember, interfaceMember) {
+		if compositeMember != nil && !checker.memberSatisfied(compositeMember, interfaceMember) {
 			memberMismatches = append(memberMismatches,
 				MemberMismatch{
 					CompositeMember: compositeMember,
@@ -1034,6 +1054,7 @@ func (checker *Checker) checkCompositeConformance(
 				},
 			)
 		}
+
 	})
 
 	// Determine missing nested composite type definitions
@@ -1049,6 +1070,7 @@ func (checker *Checker) checkCompositeConformance(
 
 		nestedCompositeType, ok := compositeType.nestedTypes.Get(name)
 		if !ok {
+
 			missingNestedCompositeTypes = append(missingNestedCompositeTypes, requiredCompositeType)
 			return
 		}
@@ -1075,13 +1097,13 @@ func (checker *Checker) checkCompositeConformance(
 			},
 		)
 	}
+
 }
 
 // TODO: return proper error
 func (checker *Checker) memberSatisfied(compositeMember, interfaceMember *Member) bool {
 
 	// Check declaration kind
-
 	if compositeMember.DeclarationKind != interfaceMember.DeclarationKind {
 		return false
 	}
@@ -1150,6 +1172,7 @@ func (checker *Checker) memberSatisfied(compositeMember, interfaceMember *Member
 
 				return false
 			}
+
 		}
 	}
 
@@ -1262,6 +1285,7 @@ func (checker *Checker) checkTypeRequirement(
 	// like a top-level composite declaration to an interface type
 
 	requiredInterfaceType := requiredCompositeType.InterfaceType()
+	overridden := map[string]bool{}
 
 	checker.checkCompositeConformance(
 		compositeDeclaration,
@@ -1272,6 +1296,7 @@ func (checker *Checker) checkTypeRequirement(
 			checkMissingMembers:            true,
 			interfaceTypeIsTypeRequirement: true,
 		},
+		&overridden,
 	)
 }
 
@@ -1475,17 +1500,24 @@ func (checker *Checker) defaultMembersAndOrigins(
 			)
 		}
 
+		hasImplementation := false
+
+		if function.FunctionBlock != nil && len(function.FunctionBlock.Block.Statements) > 0 {
+			hasImplementation = true
+		}
+
 		members.Set(
 			identifier,
 			&Member{
-				ContainerType:   containerType,
-				Access:          function.Access,
-				Identifier:      function.Identifier,
-				DeclarationKind: declarationKind,
-				TypeAnnotation:  fieldTypeAnnotation,
-				VariableKind:    ast.VariableKindConstant,
-				ArgumentLabels:  argumentLabels,
-				DocString:       function.DocString,
+				ContainerType:     containerType,
+				Access:            function.Access,
+				Identifier:        function.Identifier,
+				DeclarationKind:   declarationKind,
+				TypeAnnotation:    fieldTypeAnnotation,
+				VariableKind:      ast.VariableKindConstant,
+				ArgumentLabels:    argumentLabels,
+				DocString:         function.DocString,
+				HasImplementation: hasImplementation,
 			})
 
 		if checker.positionInfoEnabled && origins != nil {
@@ -1730,15 +1762,6 @@ func (checker *Checker) checkSpecialFunction(
 	)
 
 	switch containerKind {
-	case ContainerKindInterface:
-		if specialFunction.FunctionDeclaration.FunctionBlock != nil {
-
-			checker.checkInterfaceSpecialFunctionBlock(
-				specialFunction.FunctionDeclaration.FunctionBlock,
-				containerDeclarationKind,
-				specialFunction.Kind,
-			)
-		}
 
 	case ContainerKindComposite:
 		// Event declarations have an empty initializer as it is synthesized

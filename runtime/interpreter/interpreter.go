@@ -206,6 +206,7 @@ type WrapperCode struct {
 	InitializerFunctionWrapper FunctionWrapper
 	DestructorFunctionWrapper  FunctionWrapper
 	FunctionWrappers           map[string]FunctionWrapper
+	Functions                  map[string]FunctionValue
 }
 
 // TypeCodes is the value which stores the "prepared" / "callable" "code"
@@ -1354,7 +1355,13 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 		// the order does not matter.
 
 		for name, functionWrapper := range code.FunctionWrappers { //nolint:maprangecheck
+
+			if functions[name] == nil {
+				functions[name] = code.Functions[name]
+			}
+
 			functions[name] = functionWrapper(functions[name])
+
 		}
 	}
 
@@ -1375,7 +1382,6 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 
 	for i := len(typeRequirements) - 1; i >= 0; i-- {
 		typeRequirement := typeRequirements[i]
-
 		wrapFunctions(interpreter.typeCodes.TypeRequirementCodes[typeRequirement.ID()])
 	}
 
@@ -1666,6 +1672,29 @@ func (interpreter *Interpreter) compositeDestructorFunction(
 		Statements:       statements,
 		PostConditions:   rewrittenPostConditions,
 	}
+}
+
+func (interpreter *Interpreter) interfaceFunctions(
+	interfaceDeclaration *ast.InterfaceDeclaration,
+	lexicalScope *VariableActivation,
+) map[string]FunctionValue {
+
+	functions := map[string]FunctionValue{}
+
+	for _, functionDeclaration := range interfaceDeclaration.Members.Functions() {
+		name := functionDeclaration.Identifier.Identifier
+		if functionDeclaration.FunctionBlock != nil {
+			if len(functionDeclaration.FunctionBlock.Block.Statements) > 0 {
+				functions[name] =
+					interpreter.compositeFunction(
+						functionDeclaration,
+						lexicalScope,
+					)
+			}
+		}
+	}
+
+	return functions
 }
 
 func (interpreter *Interpreter) compositeFunctions(
@@ -2028,11 +2057,13 @@ func (interpreter *Interpreter) declareInterface(
 	initializerFunctionWrapper := interpreter.initializerFunctionWrapper(declaration.Members, lexicalScope)
 	destructorFunctionWrapper := interpreter.destructorFunctionWrapper(declaration.Members, lexicalScope)
 	functionWrappers := interpreter.functionWrappers(declaration.Members, lexicalScope)
+	interfaceFunctions := interpreter.interfaceFunctions(declaration, lexicalScope)
 
 	interpreter.typeCodes.InterfaceCodes[typeID] = WrapperCode{
 		InitializerFunctionWrapper: initializerFunctionWrapper,
 		DestructorFunctionWrapper:  destructorFunctionWrapper,
 		FunctionWrappers:           functionWrappers,
+		Functions:                  interfaceFunctions,
 	}
 }
 

@@ -177,22 +177,35 @@ func (checker *Checker) checkInterfaceFunctions(
 
 			checker.declareSelfValue(selfType, selfDocString)
 
+			mustExit := false
+			checkResourceLoss := false
+
+			if function.FunctionBlock != nil {
+				if len(function.FunctionBlock.Block.Statements) > 0 {
+					mustExit = true
+					checkResourceLoss = true
+				} else if (function.FunctionBlock.PreConditions == nil || len(*function.FunctionBlock.PreConditions) == 0) &&
+					(function.FunctionBlock.PostConditions == nil || len(*function.FunctionBlock.PostConditions) == 0) {
+
+					checker.report(
+						&InvalidImplementationError{
+							Pos:             function.FunctionBlock.StartPosition(),
+							ContainerKind:   declarationKind,
+							ImplementedKind: common.DeclarationKindFunction,
+						},
+					)
+				}
+			}
+
 			checker.visitFunctionDeclaration(
 				function,
 				functionDeclarationOptions{
-					mustExit:          false,
+					mustExit:          mustExit,
 					declareFunction:   false,
-					checkResourceLoss: false,
+					checkResourceLoss: checkResourceLoss,
 				},
 			)
 
-			if function.FunctionBlock != nil {
-				checker.checkInterfaceSpecialFunctionBlock(
-					function.FunctionBlock,
-					declarationKind,
-					common.DeclarationKindFunction,
-				)
-			}
 		}()
 	}
 }
@@ -336,33 +349,5 @@ func (checker *Checker) declareInterfaceMembers(declaration *ast.InterfaceDeclar
 
 	for _, nestedCompositeDeclaration := range declaration.Members.Composites() {
 		checker.declareCompositeMembersAndValue(nestedCompositeDeclaration, ContainerKindInterface)
-	}
-}
-
-func (checker *Checker) checkInterfaceSpecialFunctionBlock(
-	functionBlock *ast.FunctionBlock,
-	containerKind common.DeclarationKind,
-	implementedKind common.DeclarationKind,
-) {
-
-	statements := functionBlock.Block.Statements
-	if len(statements) > 0 {
-		checker.report(
-			&InvalidImplementationError{
-				Pos:             statements[0].StartPosition(),
-				ContainerKind:   containerKind,
-				ImplementedKind: implementedKind,
-			},
-		)
-	} else if (functionBlock.PreConditions == nil || len(*functionBlock.PreConditions) == 0) &&
-		(functionBlock.PostConditions == nil || len(*functionBlock.PostConditions) == 0) {
-
-		checker.report(
-			&InvalidImplementationError{
-				Pos:             functionBlock.StartPosition(),
-				ContainerKind:   containerKind,
-				ImplementedKind: implementedKind,
-			},
-		)
 	}
 }
