@@ -97,14 +97,14 @@ type postfixExpr struct {
 	leftDenotation postfixExprFunc
 }
 
-var exprNullDenotations = map[lexer.TokenType]exprNullDenotationFunc{}
+var exprNullDenotations = [lexer.TokenMax]exprNullDenotationFunc{}
 
 type exprLeftDenotationFunc func(parser *parser, token lexer.Token, left ast.Expression) ast.Expression
 
-var exprLeftBindingPowers = map[lexer.TokenType]int{}
+var exprLeftBindingPowers [lexer.TokenMax]int
 var exprIdentifierLeftBindingPowers = map[string]int{}
-var exprLeftDenotations = map[lexer.TokenType]exprLeftDenotationFunc{}
-var exprMetaLeftDenotations = map[lexer.TokenType]exprMetaLeftDenotationFunc{}
+var exprLeftDenotations [lexer.TokenMax]exprLeftDenotationFunc
+var exprMetaLeftDenotations [lexer.TokenMax]exprMetaLeftDenotationFunc
 
 func defineExpr(def interface{}) {
 	switch def := def.(type) {
@@ -1242,8 +1242,8 @@ func applyExprMetaLeftDenotation(
 	// e.g. determining the left binding power based on parsing more tokens
 	// or performing look-ahead
 
-	metaLeftDenotation, ok := exprMetaLeftDenotations[p.current.Type]
-	if !ok {
+	metaLeftDenotation := exprMetaLeftDenotations[p.current.Type]
+	if metaLeftDenotation == nil {
 		metaLeftDenotation = defaultExprMetaLeftDenotation
 	}
 
@@ -1289,17 +1289,18 @@ func exprLeftBindingPower(token lexer.Token) int {
 
 func applyExprNullDenotation(p *parser, token lexer.Token) ast.Expression {
 	tokenType := token.Type
-	nullDenotation, ok := exprNullDenotations[tokenType]
-	if !ok {
-		panic(fmt.Errorf("unexpected token in expression: %s", token.Type))
+	nullDenotation := exprNullDenotations[tokenType]
+	if nullDenotation == nil {
+		panic(fmt.Errorf("unexpected token in expression: %s", tokenType))
 	}
 	return nullDenotation(p, token)
 }
 
 func applyExprLeftDenotation(p *parser, token lexer.Token, left ast.Expression) ast.Expression {
-	leftDenotation, ok := exprLeftDenotations[token.Type]
-	if !ok {
-		panic(fmt.Errorf("unexpected token in expression: %s", token.Type))
+	tokenType := token.Type
+	leftDenotation := exprLeftDenotations[tokenType]
+	if leftDenotation == nil {
+		panic(fmt.Errorf("unexpected token in expression: %s", tokenType))
 	}
 	return leftDenotation(p, token, left)
 }
