@@ -20,6 +20,7 @@ package parser2
 
 import (
 	"fmt"
+	"sync"
 
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/errors"
@@ -33,9 +34,11 @@ const (
 	typeLeftBindingPowerInstantiation
 )
 
+var once sync.Once
+
 type typeNullDenotationFunc func(parser *parser, token lexer.Token) ast.Type
 
-var typeNullDenotations = map[lexer.TokenType]typeNullDenotationFunc{}
+var typeNullDenotations [256]typeNullDenotationFunc
 
 type typeLeftDenotationFunc func(parser *parser, token lexer.Token, left ast.Type) ast.Type
 type typeMetaLeftDenotationFunc func(
@@ -47,9 +50,9 @@ type typeMetaLeftDenotationFunc func(
 	done bool,
 )
 
-var typeLeftBindingPowers = map[lexer.TokenType]int{}
-var typeLeftDenotations = map[lexer.TokenType]typeLeftDenotationFunc{}
-var typeMetaLeftDenotations = map[lexer.TokenType]typeMetaLeftDenotationFunc{}
+var typeLeftBindingPowers [256]int
+var typeLeftDenotations [256]typeLeftDenotationFunc
+var typeMetaLeftDenotations [256]typeMetaLeftDenotationFunc
 
 func setTypeNullDenotation(tokenType lexer.TokenType, nullDenotation typeNullDenotationFunc) {
 	current := typeNullDenotations[tokenType]
@@ -147,6 +150,13 @@ func init() {
 	defineRestrictedOrDictionaryType()
 	defineFunctionType()
 	defineInstantiationType()
+
+	for i := 0; i < 256; i++ {
+		typeLeftBindingPowers[i] = 0
+		typeNullDenotations[i] = nil
+		typeLeftDenotations[i] = nil
+		typeMetaLeftDenotations[i] = nil
+	}
 
 	setTypeNullDenotation(
 		lexer.TokenIdentifier,
@@ -682,8 +692,9 @@ func applyTypeMetaLeftDenotation(
 	// e.g. determining the left binding power based on parsing more tokens,
 	// or performing look-ahead
 
-	metaLeftDenotation, ok := typeMetaLeftDenotations[p.current.Type]
-	if !ok {
+	var metaLeftDenotation typeMetaLeftDenotationFunc
+	metaLeftDenotation = typeMetaLeftDenotations[p.current.Type]
+	if metaLeftDenotation == nil {
 		metaLeftDenotation = defaultTypeMetaLeftDenotation
 	}
 
@@ -734,16 +745,18 @@ func parseTypeAnnotation(p *parser) *ast.TypeAnnotation {
 
 func applyTypeNullDenotation(p *parser, token lexer.Token) ast.Type {
 	tokenType := token.Type
-	nullDenotation, ok := typeNullDenotations[tokenType]
-	if !ok {
+	var nullDenotation typeNullDenotationFunc
+	nullDenotation = typeNullDenotations[tokenType]
+	if nullDenotation == nil {
 		panic(fmt.Errorf("unexpected token in type: %s", token.Type))
 	}
 	return nullDenotation(p, token)
 }
 
 func applyTypeLeftDenotation(p *parser, token lexer.Token, left ast.Type) ast.Type {
-	leftDenotation, ok := typeLeftDenotations[token.Type]
-	if !ok {
+	var leftDenotation typeLeftDenotationFunc
+	leftDenotation = typeLeftDenotations[token.Type]
+	if leftDenotation == nil {
 		panic(fmt.Errorf("unexpected token in type: %s", token.Type))
 	}
 	return leftDenotation(p, token, left)
