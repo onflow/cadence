@@ -35,7 +35,7 @@ const (
 
 type typeNullDenotationFunc func(parser *parser, token lexer.Token) ast.Type
 
-var typeNullDenotations [256]typeNullDenotationFunc
+var typeNullDenotations [lexer.TokenMax]typeNullDenotationFunc
 
 type typeLeftDenotationFunc func(parser *parser, token lexer.Token, left ast.Type) ast.Type
 type typeMetaLeftDenotationFunc func(
@@ -47,9 +47,9 @@ type typeMetaLeftDenotationFunc func(
 	done bool,
 )
 
-var typeLeftBindingPowers [256]int
-var typeLeftDenotations [256]typeLeftDenotationFunc
-var typeMetaLeftDenotations [256]typeMetaLeftDenotationFunc
+var typeLeftBindingPowers [lexer.TokenMax]int
+var typeLeftDenotations [lexer.TokenMax]typeLeftDenotationFunc
+var typeMetaLeftDenotations [lexer.TokenMax]typeMetaLeftDenotationFunc
 
 func setTypeNullDenotation(tokenType lexer.TokenType, nullDenotation typeNullDenotationFunc) {
 	current := typeNullDenotations[int(tokenType)]
@@ -141,7 +141,8 @@ func defineType(def interface{}) {
 }
 
 func init() {
-	for i := 0; i < 256; i++ {
+	var i lexer.TokenType
+	for i = 0; i < lexer.TokenMax; i++ {
 		typeLeftBindingPowers[i] = 0
 		typeNullDenotations[i] = nil
 		typeLeftDenotations[i] = nil
@@ -742,17 +743,15 @@ func parseTypeAnnotation(p *parser) *ast.TypeAnnotation {
 
 func applyTypeNullDenotation(p *parser, token lexer.Token) ast.Type {
 	tokenType := token.Type
-	var nullDenotation typeNullDenotationFunc
-	nullDenotation = typeNullDenotations[int(tokenType)]
+	var nullDenotation typeNullDenotationFunc = typeNullDenotations[int(tokenType)]
 	if nullDenotation == nil {
-		panic(fmt.Errorf("unexpected token in type: %s", token.Type))
+		panic(fmt.Errorf("unexpected token in type: %s", tokenType))
 	}
 	return nullDenotation(p, token)
 }
 
 func applyTypeLeftDenotation(p *parser, token lexer.Token, left ast.Type) ast.Type {
-	var leftDenotation typeLeftDenotationFunc
-	leftDenotation = typeLeftDenotations[token.Type]
+	var leftDenotation typeLeftDenotationFunc = typeLeftDenotations[token.Type]
 	if leftDenotation == nil {
 		panic(fmt.Errorf("unexpected token in type: %s", token.Type))
 	}
