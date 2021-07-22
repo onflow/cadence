@@ -35,7 +35,7 @@ func TestLiteralValue(t *testing.T) {
 		value, err := ParseLiteral(`"hello"`, sema.StringType)
 		require.NoError(t, err)
 		require.Equal(t,
-			cadence.NewString("hello"),
+			cadence.String("hello"),
 			value,
 		)
 	})
@@ -158,7 +158,7 @@ func TestLiteralValue(t *testing.T) {
 		require.Equal(t,
 			cadence.NewDictionary([]cadence.KeyValuePair{
 				{
-					Key:   cadence.NewString("hello"),
+					Key:   cadence.String("hello"),
 					Value: cadence.NewBool(true),
 				},
 			}),
