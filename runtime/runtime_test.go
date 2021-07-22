@@ -815,7 +815,7 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
 			`,
 			args: [][]byte{
 				jsoncdc.MustEncode(cadence.NewInt(42)),
-				jsoncdc.MustEncode(cadence.NewString("foo")),
+				jsoncdc.MustEncode(cadence.String("foo")),
 			},
 			expectedLogs: []string{"42", `"foo"`},
 		},
@@ -842,7 +842,7 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
 			  }
 			`,
 			args: [][]byte{
-				jsoncdc.MustEncode(cadence.NewString("foo")),
+				jsoncdc.MustEncode(cadence.String("foo")),
 			},
 			check: func(t *testing.T, err error) {
 				assert.Error(t, err)
@@ -908,7 +908,7 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
 					cadence.NewDictionary(
 						[]cadence.KeyValuePair{
 							{
-								Key:   cadence.NewString("y"),
+								Key:   cadence.String("y"),
 								Value: cadence.NewInt(42),
 							},
 						},
@@ -931,7 +931,7 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
 					cadence.NewDictionary(
 						[]cadence.KeyValuePair{
 							{
-								Key:   cadence.NewString("y"),
+								Key:   cadence.String("y"),
 								Value: cadence.NewInt(42),
 							},
 						},
@@ -964,7 +964,7 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
 			args: [][]byte{
 				jsoncdc.MustEncode(
 					cadence.
-						NewStruct([]cadence.Value{cadence.NewString("bar")}).
+						NewStruct([]cadence.Value{cadence.String("bar")}).
 						WithType(&cadence.StructType{
 							Location:            utils.TestLocation,
 							QualifiedIdentifier: "Foo",
@@ -1001,7 +1001,7 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
 				jsoncdc.MustEncode(
 					cadence.NewArray([]cadence.Value{
 						cadence.
-							NewStruct([]cadence.Value{cadence.NewString("bar")}).
+							NewStruct([]cadence.Value{cadence.String("bar")}).
 							WithType(&cadence.StructType{
 								Location:            utils.TestLocation,
 								QualifiedIdentifier: "Foo",
@@ -1113,7 +1113,7 @@ func TestRuntimeScriptArguments(t *testing.T) {
 			`,
 			args: [][]byte{
 				jsoncdc.MustEncode(cadence.NewInt(42)),
-				jsoncdc.MustEncode(cadence.NewString("foo")),
+				jsoncdc.MustEncode(cadence.String("foo")),
 			},
 			expectedLogs: []string{"42", `"foo"`},
 		},
@@ -1138,7 +1138,7 @@ func TestRuntimeScriptArguments(t *testing.T) {
 				}
 			`,
 			args: [][]byte{
-				jsoncdc.MustEncode(cadence.NewString("foo")),
+				jsoncdc.MustEncode(cadence.String("foo")),
 			},
 			check: func(t *testing.T, err error) {
 				assert.Error(t, err)
@@ -1197,7 +1197,7 @@ func TestRuntimeScriptArguments(t *testing.T) {
 					cadence.NewDictionary(
 						[]cadence.KeyValuePair{
 							{
-								Key:   cadence.NewString("y"),
+								Key:   cadence.String("y"),
 								Value: cadence.NewInt(42),
 							},
 						},
@@ -1218,7 +1218,7 @@ func TestRuntimeScriptArguments(t *testing.T) {
 					cadence.NewDictionary(
 						[]cadence.KeyValuePair{
 							{
-								Key:   cadence.NewString("y"),
+								Key:   cadence.String("y"),
 								Value: cadence.NewInt(42),
 							},
 						},
@@ -1249,7 +1249,7 @@ func TestRuntimeScriptArguments(t *testing.T) {
 			args: [][]byte{
 				jsoncdc.MustEncode(
 					cadence.
-						NewStruct([]cadence.Value{cadence.NewString("bar")}).
+						NewStruct([]cadence.Value{cadence.String("bar")}).
 						WithType(&cadence.StructType{
 							Location:            utils.TestLocation,
 							QualifiedIdentifier: "Foo",
@@ -1284,7 +1284,7 @@ func TestRuntimeScriptArguments(t *testing.T) {
 				jsoncdc.MustEncode(
 					cadence.NewArray([]cadence.Value{
 						cadence.
-							NewStruct([]cadence.Value{cadence.NewString("bar")}).
+							NewStruct([]cadence.Value{cadence.String("bar")}).
 							WithType(&cadence.StructType{
 								Location:            utils.TestLocation,
 								QualifiedIdentifier: "Foo",
@@ -2273,7 +2273,7 @@ func TestScriptReturnTypeNotReturnableError(t *testing.T) {
 
 	t.Parallel()
 
-	test := func(code string, expected cadence.Value) {
+	test := func(t *testing.T, code string, expected cadence.Value) {
 
 		runtime := NewInterpreterRuntime()
 
@@ -2308,7 +2308,7 @@ func TestScriptReturnTypeNotReturnableError(t *testing.T) {
 
 		t.Parallel()
 
-		test(
+		test(t,
 			`
               pub fun main(): ((): Int) {
                   return fun (): Int {
@@ -2324,7 +2324,7 @@ func TestScriptReturnTypeNotReturnableError(t *testing.T) {
 
 		t.Parallel()
 
-		test(
+		test(t,
 			`
               pub fun main(): &Address {
                   let a: Address = 0x1
@@ -2339,7 +2339,7 @@ func TestScriptReturnTypeNotReturnableError(t *testing.T) {
 
 		t.Parallel()
 
-		test(
+		test(t,
 			`
               pub fun main(): [&AnyStruct] {
                   let refs: [&AnyStruct] = []
@@ -2349,7 +2349,9 @@ func TestScriptReturnTypeNotReturnableError(t *testing.T) {
             `,
 			cadence.NewArray([]cadence.Value{
 				cadence.NewArray([]cadence.Value{
-					nil,
+					cadence.NewArray([]cadence.Value{
+						nil,
+					}),
 				}),
 			}),
 		)
@@ -2359,7 +2361,7 @@ func TestScriptReturnTypeNotReturnableError(t *testing.T) {
 
 		t.Parallel()
 
-		test(
+		test(t,
 			`
               pub fun main(): StoragePath {
                   return /storage/foo
@@ -2376,7 +2378,7 @@ func TestScriptReturnTypeNotReturnableError(t *testing.T) {
 
 		t.Parallel()
 
-		test(
+		test(t,
 			`
               pub fun main(): PublicPath {
                   return /public/foo
@@ -2393,7 +2395,7 @@ func TestScriptReturnTypeNotReturnableError(t *testing.T) {
 
 		t.Parallel()
 
-		test(
+		test(t,
 			`
               pub fun main(): PrivatePath {
                   return /private/foo
@@ -2410,7 +2412,7 @@ func TestScriptReturnTypeNotReturnableError(t *testing.T) {
 
 		t.Parallel()
 
-		test(
+		test(t,
 			`
               pub fun main(): CapabilityPath {
                   return /public/foo
@@ -2427,7 +2429,7 @@ func TestScriptReturnTypeNotReturnableError(t *testing.T) {
 
 		t.Parallel()
 
-		test(
+		test(t,
 			`
               pub fun main(): Path {
                   return /storage/foo
@@ -5881,7 +5883,7 @@ func TestRuntimeUpdateCodeCaching(t *testing.T) {
 		},
 	)
 	require.NoError(t, err)
-	require.Equal(t, cadence.NewString("1"), result1)
+	require.Equal(t, cadence.String("1"), result1)
 
 	// The deployed hello world contract was imported,
 	// assert that it was stored in the program storage
@@ -5930,7 +5932,7 @@ func TestRuntimeUpdateCodeCaching(t *testing.T) {
 		},
 	)
 	require.NoError(t, err)
-	require.Equal(t, cadence.NewString("2"), result2)
+	require.Equal(t, cadence.String("2"), result2)
 }
 
 func TestRuntimeNoProgramsHitForToplevelPrograms(t *testing.T) {

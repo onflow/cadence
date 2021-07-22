@@ -131,6 +131,19 @@ func (om *AstPositionResourceUseOrderedMap) Foreach(f func(key ast.Position, val
 	}
 }
 
+// ForeachWithError iterates over the entries of the map in the insertion order,
+// and invokes the provided function for each key-value pair.
+// If the passed function returns an error, iteration breaks and the error is returned.
+func (om *AstPositionResourceUseOrderedMap) ForeachWithError(f func(key ast.Position, value ResourceUse) error) error {
+	for pair := om.Oldest(); pair != nil; pair = pair.Next() {
+		err := f(pair.Key, pair.Value)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // AstPositionResourceUsePair
 //
 type AstPositionResourceUsePair struct {
