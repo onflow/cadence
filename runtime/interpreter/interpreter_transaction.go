@@ -89,7 +89,7 @@ func (interpreter *Interpreter) declareTransactionEntryPoint(declaration *ast.Tr
 					transactionScope,
 				)
 
-				prepare.Invoke(invocation)
+				prepare.invoke(invocation)
 			}
 
 			var body func() controlReturn
@@ -104,7 +104,7 @@ func (interpreter *Interpreter) declareTransactionEntryPoint(declaration *ast.Tr
 				invocationWithoutArguments.Arguments = nil
 
 				body = func() controlReturn {
-					value := execute.Invoke(invocationWithoutArguments)
+					value := execute.invoke(invocationWithoutArguments)
 					return functionReturn{
 						Value: value,
 					}
