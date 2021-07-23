@@ -682,8 +682,7 @@ func applyTypeMetaLeftDenotation(
 	// e.g. determining the left binding power based on parsing more tokens,
 	// or performing look-ahead
 
-	var metaLeftDenotation typeMetaLeftDenotationFunc
-	metaLeftDenotation = typeMetaLeftDenotations[p.current.Type]
+	metaLeftDenotation := typeMetaLeftDenotations[p.current.Type]
 	if metaLeftDenotation == nil {
 		metaLeftDenotation = defaultTypeMetaLeftDenotation
 	}
