@@ -52,7 +52,7 @@ var typeLeftDenotations [lexer.TokenMax]typeLeftDenotationFunc
 var typeMetaLeftDenotations [lexer.TokenMax]typeMetaLeftDenotationFunc
 
 func setTypeNullDenotation(tokenType lexer.TokenType, nullDenotation typeNullDenotationFunc) {
-	current := typeNullDenotations[int(tokenType)]
+	current := typeNullDenotations[tokenType]
 	if current != nil {
 		panic(fmt.Errorf(
 			"type null denotation for token %s already exists",
@@ -63,7 +63,7 @@ func setTypeNullDenotation(tokenType lexer.TokenType, nullDenotation typeNullDen
 }
 
 func setTypeLeftBindingPower(tokenType lexer.TokenType, power int) {
-	current := typeLeftBindingPowers[int(tokenType)]
+	current := typeLeftBindingPowers[tokenType]
 	if current > power {
 		return
 	}
@@ -71,25 +71,25 @@ func setTypeLeftBindingPower(tokenType lexer.TokenType, power int) {
 }
 
 func setTypeLeftDenotation(tokenType lexer.TokenType, leftDenotation typeLeftDenotationFunc) {
-	current := typeLeftDenotations[int(tokenType)]
+	current := typeLeftDenotations[tokenType]
 	if current != nil {
 		panic(fmt.Errorf(
 			"type left denotation for token %s already exists",
 			tokenType,
 		))
 	}
-	typeLeftDenotations[int(tokenType)] = leftDenotation
+	typeLeftDenotations[tokenType] = leftDenotation
 }
 
 func setTypeMetaLeftDenotation(tokenType lexer.TokenType, metaLeftDenotation typeMetaLeftDenotationFunc) {
-	current := typeMetaLeftDenotations[int(tokenType)]
+	current := typeMetaLeftDenotations[tokenType]
 	if current != nil {
 		panic(fmt.Errorf(
 			"type meta left denotation for token %s already exists",
 			tokenType,
 		))
 	}
-	typeMetaLeftDenotations[int(tokenType)] = metaLeftDenotation
+	typeMetaLeftDenotations[tokenType] = metaLeftDenotation
 }
 
 type prefixTypeFunc func(right ast.Type, tokenRange ast.Range) ast.Type
@@ -141,14 +141,6 @@ func defineType(def interface{}) {
 }
 
 func init() {
-	var i lexer.TokenType
-	for i = 0; i < lexer.TokenMax; i++ {
-		typeLeftBindingPowers[i] = 0
-		typeNullDenotations[i] = nil
-		typeLeftDenotations[i] = nil
-		typeMetaLeftDenotations[i] = nil
-	}
-
 	defineArrayType()
 	defineOptionalType()
 	defineReferenceType()
@@ -691,7 +683,7 @@ func applyTypeMetaLeftDenotation(
 	// or performing look-ahead
 
 	var metaLeftDenotation typeMetaLeftDenotationFunc
-	metaLeftDenotation = typeMetaLeftDenotations[int(p.current.Type)]
+	metaLeftDenotation = typeMetaLeftDenotations[p.current.Type]
 	if metaLeftDenotation == nil {
 		metaLeftDenotation = defaultTypeMetaLeftDenotation
 	}
@@ -710,7 +702,7 @@ func defaultTypeMetaLeftDenotation(
 	result ast.Type,
 	done bool,
 ) {
-	if rightBindingPower >= typeLeftBindingPowers[int(p.current.Type)] {
+	if rightBindingPower >= typeLeftBindingPowers[p.current.Type] {
 		return left, true
 	}
 
