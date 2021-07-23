@@ -743,7 +743,7 @@ func parseTypeAnnotation(p *parser) *ast.TypeAnnotation {
 
 func applyTypeNullDenotation(p *parser, token lexer.Token) ast.Type {
 	tokenType := token.Type
-	var nullDenotation typeNullDenotationFunc = typeNullDenotations[int(tokenType)]
+	nullDenotation := typeNullDenotations[tokenType]
 	if nullDenotation == nil {
 		panic(fmt.Errorf("unexpected token in type: %s", tokenType))
 	}
