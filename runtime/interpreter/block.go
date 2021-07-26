@@ -71,14 +71,6 @@ func (BlockValue) SetOwner(_ *common.Address) {
 	// NO-OP: value cannot be owned
 }
 
-func (BlockValue) IsModified() bool {
-	return false
-}
-
-func (BlockValue) SetModified(_ bool) {
-	// NO-OP
-}
-
 func (v BlockValue) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
 	switch name {
 	case "height":

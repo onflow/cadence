@@ -62,8 +62,6 @@ type Value interface {
 	Copy() Value
 	GetOwner() *common.Address
 	SetOwner(address *common.Address)
-	IsModified() bool
-	SetModified(modified bool)
 	StaticType() StaticType
 	ConformsToDynamicType(interpreter *Interpreter, dynamicType DynamicType, results TypeConformanceResults) bool
 	RecursiveString(results StringResults) string
@@ -152,14 +150,6 @@ func (TypeValue) GetOwner() *common.Address {
 
 func (TypeValue) SetOwner(_ *common.Address) {
 	// NO-OP: value cannot be owned
-}
-
-func (TypeValue) IsModified() bool {
-	return false
-}
-
-func (TypeValue) SetModified(_ bool) {
-	// NO-OP
 }
 
 func (v TypeValue) String() string {
@@ -258,14 +248,6 @@ func (VoidValue) SetOwner(_ *common.Address) {
 	// NO-OP: value cannot be owned
 }
 
-func (VoidValue) IsModified() bool {
-	return false
-}
-
-func (VoidValue) SetModified(_ bool) {
-	// NO-OP
-}
-
 func (VoidValue) String() string {
 	return format.Void
 }
@@ -318,14 +300,6 @@ func (BoolValue) GetOwner() *common.Address {
 
 func (BoolValue) SetOwner(_ *common.Address) {
 	// NO-OP: value cannot be owned
-}
-
-func (BoolValue) IsModified() bool {
-	return false
-}
-
-func (BoolValue) SetModified(_ bool) {
-	// NO-OP
 }
 
 func (v BoolValue) Negate() BoolValue {
@@ -423,14 +397,6 @@ func (*StringValue) GetOwner() *common.Address {
 
 func (*StringValue) SetOwner(_ *common.Address) {
 	// NO-OP: value cannot be owned
-}
-
-func (*StringValue) IsModified() bool {
-	return false
-}
-
-func (*StringValue) SetModified(_ bool) {
-	// NO-OP
 }
 
 func (v *StringValue) String() string {
@@ -767,29 +733,6 @@ func (v *ArrayValue) SetOwner(owner *common.Address) {
 	for _, value := range v.Elements() {
 		value.SetOwner(owner)
 	}
-}
-
-func (v *ArrayValue) IsModified() bool {
-	if v.modified {
-		return true
-	}
-
-	// If the elements are not loaded, that implies they are not modified.
-	if v.content != nil {
-		return false
-	}
-
-	for _, value := range v.values {
-		if value.IsModified() {
-			return true
-		}
-	}
-
-	return false
-}
-
-func (v *ArrayValue) SetModified(modified bool) {
-	v.modified = modified
 }
 
 func (v *ArrayValue) Destroy(interpreter *Interpreter, getLocationRange func() LocationRange) {
@@ -1323,14 +1266,6 @@ func (IntValue) SetOwner(_ *common.Address) {
 	// NO-OP: value cannot be owned
 }
 
-func (IntValue) IsModified() bool {
-	return false
-}
-
-func (IntValue) SetModified(_ bool) {
-	// NO-OP
-}
-
 func (v IntValue) ToInt() int {
 	// TODO: handle overflow
 	return int(v.BigInt.Int64())
@@ -1547,14 +1482,6 @@ func (Int8Value) GetOwner() *common.Address {
 
 func (Int8Value) SetOwner(_ *common.Address) {
 	// NO-OP: value cannot be owned
-}
-
-func (Int8Value) IsModified() bool {
-	return false
-}
-
-func (Int8Value) SetModified(_ bool) {
-	// NO-OP
 }
 
 func (v Int8Value) String() string {
@@ -1854,14 +1781,6 @@ func (Int16Value) GetOwner() *common.Address {
 
 func (Int16Value) SetOwner(_ *common.Address) {
 	// NO-OP: value cannot be owned
-}
-
-func (Int16Value) IsModified() bool {
-	return false
-}
-
-func (Int16Value) SetModified(_ bool) {
-	// NO-OP
 }
 
 func (v Int16Value) String() string {
@@ -2165,14 +2084,6 @@ func (Int32Value) SetOwner(_ *common.Address) {
 	// NO-OP: value cannot be owned
 }
 
-func (Int32Value) IsModified() bool {
-	return false
-}
-
-func (Int32Value) SetModified(_ bool) {
-	// NO-OP
-}
-
 func (v Int32Value) String() string {
 	return format.Int(int64(v))
 }
@@ -2472,14 +2383,6 @@ func (Int64Value) GetOwner() *common.Address {
 
 func (Int64Value) SetOwner(_ *common.Address) {
 	// NO-OP: value cannot be owned
-}
-
-func (Int64Value) IsModified() bool {
-	return false
-}
-
-func (Int64Value) SetModified(_ bool) {
-	// NO-OP
 }
 
 func (v Int64Value) String() string {
@@ -2789,14 +2692,6 @@ func (Int128Value) GetOwner() *common.Address {
 
 func (Int128Value) SetOwner(_ *common.Address) {
 	// NO-OP: value cannot be owned
-}
-
-func (Int128Value) IsModified() bool {
-	return false
-}
-
-func (Int128Value) SetModified(_ bool) {
-	// NO-OP
 }
 
 func (v Int128Value) ToInt() int {
@@ -3167,14 +3062,6 @@ func (Int256Value) GetOwner() *common.Address {
 
 func (Int256Value) SetOwner(_ *common.Address) {
 	// NO-OP: value cannot be owned
-}
-
-func (Int256Value) IsModified() bool {
-	return false
-}
-
-func (Int256Value) SetModified(_ bool) {
-	// NO-OP
 }
 
 func (v Int256Value) ToInt() int {
@@ -3568,14 +3455,6 @@ func (UIntValue) SetOwner(_ *common.Address) {
 	// NO-OP: value cannot be owned
 }
 
-func (UIntValue) IsModified() bool {
-	return false
-}
-
-func (UIntValue) SetModified(_ bool) {
-	// NO-OP
-}
-
 func (v UIntValue) ToInt() int {
 	// TODO: handle overflow
 	return int(v.BigInt.Int64())
@@ -3805,14 +3684,6 @@ func (UInt8Value) SetOwner(_ *common.Address) {
 	// NO-OP: value cannot be owned
 }
 
-func (UInt8Value) IsModified() bool {
-	return false
-}
-
-func (UInt8Value) SetModified(_ bool) {
-	// NO-OP
-}
-
 func (v UInt8Value) String() string {
 	return format.Uint(uint64(v))
 }
@@ -4040,14 +3911,6 @@ func (UInt16Value) GetOwner() *common.Address {
 
 func (UInt16Value) SetOwner(_ *common.Address) {
 	// NO-OP: value cannot be owned
-}
-
-func (UInt16Value) IsModified() bool {
-	return false
-}
-
-func (UInt16Value) SetModified(_ bool) {
-	// NO-OP
 }
 
 func (v UInt16Value) String() string {
@@ -4281,14 +4144,6 @@ func (UInt32Value) SetOwner(_ *common.Address) {
 	// NO-OP: value cannot be owned
 }
 
-func (UInt32Value) IsModified() bool {
-	return false
-}
-
-func (UInt32Value) SetModified(_ bool) {
-	// NO-OP
-}
-
 func (v UInt32Value) String() string {
 	return format.Uint(uint64(v))
 }
@@ -4518,14 +4373,6 @@ func (UInt64Value) GetOwner() *common.Address {
 
 func (UInt64Value) SetOwner(_ *common.Address) {
 	// NO-OP: value cannot be owned
-}
-
-func (UInt64Value) IsModified() bool {
-	return false
-}
-
-func (UInt64Value) SetModified(_ bool) {
-	// NO-OP
 }
 
 func (v UInt64Value) String() string {
@@ -4770,14 +4617,6 @@ func (UInt128Value) GetOwner() *common.Address {
 
 func (UInt128Value) SetOwner(_ *common.Address) {
 	// NO-OP: value cannot be owned
-}
-
-func (UInt128Value) IsModified() bool {
-	return false
-}
-
-func (UInt128Value) SetModified(_ bool) {
-	// NO-OP
 }
 
 func (v UInt128Value) ToInt() int {
@@ -5092,14 +4931,6 @@ func (UInt256Value) SetOwner(_ *common.Address) {
 	// NO-OP: value cannot be owned
 }
 
-func (UInt256Value) IsModified() bool {
-	return false
-}
-
-func (UInt256Value) SetModified(_ bool) {
-	// NO-OP
-}
-
 func (v UInt256Value) ToInt() int {
 	// TODO: handle overflow
 	return int(v.BigInt.Int64())
@@ -5402,14 +5233,6 @@ func (Word8Value) SetOwner(_ *common.Address) {
 	// NO-OP: value cannot be owned
 }
 
-func (Word8Value) IsModified() bool {
-	return false
-}
-
-func (Word8Value) SetModified(_ bool) {
-	// NO-OP
-}
-
 func (v Word8Value) String() string {
 	return format.Uint(uint64(v))
 }
@@ -5582,14 +5405,6 @@ func (Word16Value) GetOwner() *common.Address {
 
 func (Word16Value) SetOwner(_ *common.Address) {
 	// NO-OP: value cannot be owned
-}
-
-func (Word16Value) IsModified() bool {
-	return false
-}
-
-func (Word16Value) SetModified(_ bool) {
-	// NO-OP
 }
 
 func (v Word16Value) String() string {
@@ -5768,14 +5583,6 @@ func (Word32Value) SetOwner(_ *common.Address) {
 	// NO-OP: value cannot be owned
 }
 
-func (Word32Value) IsModified() bool {
-	return false
-}
-
-func (Word32Value) SetModified(_ bool) {
-	// NO-OP
-}
-
 func (v Word32Value) String() string {
 	return format.Uint(uint64(v))
 }
@@ -5951,14 +5758,6 @@ func (Word64Value) GetOwner() *common.Address {
 
 func (Word64Value) SetOwner(_ *common.Address) {
 	// NO-OP: value cannot be owned
-}
-
-func (Word64Value) IsModified() bool {
-	return false
-}
-
-func (Word64Value) SetModified(_ bool) {
-	// NO-OP
 }
 
 func (v Word64Value) String() string {
@@ -6151,14 +5950,6 @@ func (Fix64Value) GetOwner() *common.Address {
 
 func (Fix64Value) SetOwner(_ *common.Address) {
 	// NO-OP: value cannot be owned
-}
-
-func (Fix64Value) IsModified() bool {
-	return false
-}
-
-func (Fix64Value) SetModified(_ bool) {
-	// NO-OP
 }
 
 func (v Fix64Value) String() string {
@@ -6433,14 +6224,6 @@ func (UFix64Value) GetOwner() *common.Address {
 
 func (UFix64Value) SetOwner(_ *common.Address) {
 	// NO-OP: value cannot be owned
-}
-
-func (UFix64Value) IsModified() bool {
-	return false
-}
-
-func (UFix64Value) SetModified(_ bool) {
-	// NO-OP
 }
 
 func (v UFix64Value) String() string {
@@ -6871,45 +6654,6 @@ func (v *CompositeValue) SetOwner(owner *common.Address) {
 	v.Fields().Foreach(func(_ string, value Value) {
 		value.SetOwner(owner)
 	})
-}
-
-func (v *CompositeValue) IsModified() bool {
-	if v.modified {
-		return true
-	}
-
-	if v.InjectedFields != nil {
-		for pair := v.InjectedFields.Oldest(); pair != nil; pair = pair.Next() {
-			if pair.Value.IsModified() {
-				return true
-			}
-		}
-	}
-
-	if v.NestedVariables != nil {
-		for pair := v.NestedVariables.Oldest(); pair != nil; pair = pair.Next() {
-			if pair.Value.GetValue().IsModified() {
-				return true
-			}
-		}
-	}
-
-	// If the fields are not loaded, then they are not modified.
-	if v.content != nil || v.fieldsContent != nil {
-		return false
-	}
-
-	for pair := v.fields.Oldest(); pair != nil; pair = pair.Next() {
-		if pair.Value.IsModified() {
-			return true
-		}
-	}
-
-	return false
-}
-
-func (v *CompositeValue) SetModified(modified bool) {
-	v.modified = modified
 }
 
 func (v *CompositeValue) GetMember(interpreter *Interpreter, getLocationRange func() LocationRange, name string) Value {
@@ -7559,34 +7303,6 @@ func (v *DictionaryValue) SetOwner(owner *common.Address) {
 	})
 }
 
-func (v *DictionaryValue) IsModified() bool {
-	if v.modified {
-		return true
-	}
-
-	// If the keys/entries are not loaded, that implies they are not modified.
-	if v.content != nil {
-		return false
-	}
-
-	if v.keys.IsModified() {
-		return true
-	}
-
-	for pair := v.entries.Oldest(); pair != nil; pair = pair.Next() {
-		value := pair.Value
-		if value.IsModified() {
-			return true
-		}
-	}
-
-	return false
-}
-
-func (v *DictionaryValue) SetModified(modified bool) {
-	v.modified = modified
-}
-
 func maybeDestroy(inter *Interpreter, getLocationRange func() LocationRange, value Value) {
 	destroyableValue, ok := value.(DestroyableValue)
 	if !ok {
@@ -8104,14 +7820,6 @@ func (NilValue) GetOwner() *common.Address {
 	return nil
 }
 
-func (NilValue) SetOwner(_ *common.Address) {
-	// NO-OP: value cannot be owned
-}
-
-func (NilValue) IsModified() bool {
-	return false
-}
-
 func (NilValue) SetModified(_ bool) {
 	// NO-OP
 }
@@ -8226,14 +7934,6 @@ func (v *SomeValue) SetOwner(owner *common.Address) {
 	v.Owner = owner
 
 	v.Value.SetOwner(owner)
-}
-
-func (v *SomeValue) IsModified() bool {
-	return v.Value.IsModified()
-}
-
-func (v *SomeValue) SetModified(modified bool) {
-	v.Value.SetModified(modified)
 }
 
 func (v *SomeValue) Destroy(interpreter *Interpreter, getLocationRange func() LocationRange) {
@@ -8386,14 +8086,6 @@ func (v *StorageReferenceValue) GetOwner() *common.Address {
 
 func (v *StorageReferenceValue) SetOwner(_ *common.Address) {
 	// NO-OP: value cannot be owned
-}
-
-func (*StorageReferenceValue) IsModified() bool {
-	return false
-}
-
-func (*StorageReferenceValue) SetModified(_ bool) {
-	// NO-OP
 }
 
 func (v *StorageReferenceValue) ReferencedValue(interpreter *Interpreter) *Value {
@@ -8618,14 +8310,6 @@ func (v *EphemeralReferenceValue) SetOwner(_ *common.Address) {
 	// NO-OP: value cannot be owned
 }
 
-func (*EphemeralReferenceValue) IsModified() bool {
-	return false
-}
-
-func (*EphemeralReferenceValue) SetModified(_ bool) {
-	// NO-OP
-}
-
 func (v *EphemeralReferenceValue) ReferencedValue() *Value {
 	// Just like for storage references, references to optionals are unwrapped,
 	// i.e. a reference to `nil` aborts when dereferenced.
@@ -8827,14 +8511,6 @@ func (AddressValue) GetOwner() *common.Address {
 
 func (AddressValue) SetOwner(_ *common.Address) {
 	// NO-OP: value cannot be owned
-}
-
-func (AddressValue) IsModified() bool {
-	return false
-}
-
-func (AddressValue) SetModified(_ bool) {
-	// NO-OP
 }
 
 func (v AddressValue) Equal(other Value, _ *Interpreter, _ bool) bool {
@@ -9113,14 +8789,6 @@ func (PathValue) SetOwner(_ *common.Address) {
 	// NO-OP: value cannot be owned
 }
 
-func (PathValue) IsModified() bool {
-	return false
-}
-
-func (PathValue) SetModified(_ bool) {
-	// NO-OP
-}
-
 func (v PathValue) Destroy(_ *Interpreter, _ func() LocationRange) {
 	// NO-OP
 }
@@ -9218,14 +8886,6 @@ func (CapabilityValue) GetOwner() *common.Address {
 
 func (CapabilityValue) SetOwner(_ *common.Address) {
 	// NO-OP: value cannot be owned
-}
-
-func (CapabilityValue) IsModified() bool {
-	return false
-}
-
-func (CapabilityValue) SetModified(_ bool) {
-	// NO-OP
 }
 
 func (v CapabilityValue) Destroy(_ *Interpreter, _ func() LocationRange) {
@@ -9340,14 +9000,6 @@ func (LinkValue) GetOwner() *common.Address {
 
 func (LinkValue) SetOwner(_ *common.Address) {
 	// NO-OP: value cannot be owned
-}
-
-func (LinkValue) IsModified() bool {
-	return false
-}
-
-func (LinkValue) SetModified(_ bool) {
-	// NO-OP
 }
 
 func (v LinkValue) Destroy(_ *Interpreter, _ func() LocationRange) {
