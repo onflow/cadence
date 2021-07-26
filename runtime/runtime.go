@@ -1813,6 +1813,7 @@ func (r *interpreterRuntime) getPublicAccount(
 		storageUsedGetFunction(accountAddress, runtimeInterface, runtimeStorage),
 		storageCapacityGetFunction(accountAddress, runtimeInterface),
 		r.newPublicAccountKeys(accountAddress, runtimeInterface),
+		r.newPublicAccountContracts(accountAddress, runtimeInterface),
 	)
 }
 
@@ -1932,7 +1933,7 @@ func (r *interpreterRuntime) newAuthAccountContracts(
 			checkerOptions,
 			true,
 		),
-		r.newAuthAccountContractsGetFunction(
+		r.newAccountContractsGetFunction(
 			addressValue,
 			context.Interface,
 		),
@@ -1941,7 +1942,7 @@ func (r *interpreterRuntime) newAuthAccountContracts(
 			context.Interface,
 			runtimeStorage,
 		),
-		r.newAuthAccountContractsGetNamesFunction(
+		r.newAccountContractsGetNamesFunction(
 			addressValue,
 			context.Interface,
 		),
@@ -2340,7 +2341,7 @@ func (r *interpreterRuntime) updateAccountContractCode(
 	return nil
 }
 
-func (r *interpreterRuntime) newAuthAccountContractsGetFunction(
+func (r *interpreterRuntime) newAccountContractsGetFunction(
 	addressValue interpreter.AddressValue,
 	runtimeInterface Interface,
 ) *interpreter.HostFunctionValue {
@@ -2466,7 +2467,7 @@ func (r *interpreterRuntime) newAuthAccountContractsRemoveFunction(
 	)
 }
 
-func (r *interpreterRuntime) newAuthAccountContractsGetNamesFunction(
+func (r *interpreterRuntime) newAccountContractsGetNamesFunction(
 	addressValue interpreter.AddressValue,
 	runtimeInterface Interface,
 ) func() *interpreter.ArrayValue {
@@ -2721,6 +2722,23 @@ func (r *interpreterRuntime) newPublicAccountKeys(addressValue interpreter.Addre
 		r.newAccountKeysGetFunction(
 			addressValue,
 			runtimeInterface,
+		),
+	)
+}
+
+func (r *interpreterRuntime) newPublicAccountContracts(
+	addressValue interpreter.AddressValue,
+	inter Interface,
+) *interpreter.CompositeValue {
+	return interpreter.NewPublicAccountContractsValue(
+		addressValue,
+		r.newAccountContractsGetFunction(
+			addressValue,
+			inter,
+		),
+		r.newAccountContractsGetNamesFunction(
+			addressValue,
+			inter,
 		),
 	)
 }

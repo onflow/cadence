@@ -31,6 +31,7 @@ const PublicAccountStorageCapacityField = "storageCapacity"
 const PublicAccountGetCapabilityField = "getCapability"
 const PublicAccountGetTargetLinkField = "getLinkTarget"
 const PublicAccountKeysField = "keys"
+const PublicAccountContractsField = "contracts"
 
 // PublicAccountType represents the publicly accessible portion of an account.
 //
@@ -45,6 +46,7 @@ var PublicAccountType = func() *CompositeType {
 		nestedTypes: func() *StringTypeOrderedMap {
 			nestedTypes := NewStringTypeOrderedMap()
 			nestedTypes.Set(AccountKeysTypeName, PublicAccountKeysType)
+			nestedTypes.Set(PublicAccountContractsTypeName, PublicAccountContractsType)
 			return nestedTypes
 		}(),
 	}
@@ -97,6 +99,12 @@ var PublicAccountType = func() *CompositeType {
 			PublicAccountKeysField,
 			PublicAccountKeysType,
 			accountTypeKeysFieldDocString,
+		),
+		NewPublicConstantFieldMember(
+			publicAccountType,
+			PublicAccountContractsField,
+			PublicAccountContractsType,
+			accountTypeContractsFieldDocString,
 		),
 	}
 
