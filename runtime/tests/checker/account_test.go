@@ -1349,13 +1349,23 @@ func TestCheckAccount_StorageFields(t *testing.T) {
 	}
 }
 
-func TestAuthAccountContractsType(t *testing.T) {
+func TestAuthAccountContracts(t *testing.T) {
 
 	t.Parallel()
 
-	_, err := ParseAndCheckAccount(t, `
-      let contracts: AuthAccount.Contracts = authAccount.contracts
-	`)
+	t.Run("contracts type", func(t *testing.T) {
+		_, err := ParseAndCheckAccount(t, `
+          let contracts: AuthAccount.Contracts = authAccount.contracts
+	    `)
 
-	require.NoError(t, err)
+		require.NoError(t, err)
+	})
+
+	t.Run("contracts names", func(t *testing.T) {
+		_, err := ParseAndCheckAccount(t, `
+          let names: [String] = authAccount.contracts.names
+	    `)
+
+		require.NoError(t, err)
+	})
 }
