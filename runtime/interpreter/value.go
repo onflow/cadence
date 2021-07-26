@@ -8887,12 +8887,14 @@ func NewPublicAccountValue(
 	storageUsedGet func(interpreter *Interpreter) UInt64Value,
 	storageCapacityGet func() UInt64Value,
 	keys *CompositeValue,
+	contracts *CompositeValue,
 ) *CompositeValue {
 
 	fields := NewStringValueOrderedMap()
 	fields.Set(sema.PublicAccountAddressField, address)
 	fields.Set(sema.PublicAccountGetCapabilityField, accountGetCapabilityFunction(address))
 	fields.Set(sema.PublicAccountKeysField, keys)
+	fields.Set(sema.PublicAccountContractsField, contracts)
 
 	// Computed fields
 	computedFields := NewStringComputedFieldOrderedMap()
@@ -9384,5 +9386,34 @@ func NewPublicAccountKeysValue(getFunction FunctionValue) *CompositeValue {
 		qualifiedIdentifier: sema.PublicAccountKeysType.QualifiedIdentifier(),
 		kind:                sema.PublicAccountKeysType.Kind,
 		fields:              fields,
+	}
+}
+
+// PublicAccountContractsValue
+
+func NewPublicAccountContractsValue(
+	address AddressValue,
+	getFunction FunctionValue,
+	namesGet func() *ArrayValue,
+) *CompositeValue {
+
+	fields := NewStringValueOrderedMap()
+	fields.Set(sema.PublicAccountContractsTypeGetFunctionName, getFunction)
+
+	computedFields := NewStringComputedFieldOrderedMap()
+	computedFields.Set(sema.PublicAccountContractsTypeNamesField, func(*Interpreter) Value {
+		return namesGet()
+	})
+
+	stringer := func(_ SeenReferences) string {
+		return fmt.Sprintf("PublicAccount.Contracts(%s)", address)
+	}
+
+	return &CompositeValue{
+		qualifiedIdentifier: sema.PublicAccountContractsType.QualifiedIdentifier(),
+		kind:                sema.PublicAccountContractsType.Kind,
+		fields:              fields,
+		ComputedFields:      computedFields,
+		stringer:            stringer,
 	}
 }
