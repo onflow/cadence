@@ -1312,7 +1312,6 @@ func TestAuthAccountContracts(t *testing.T) {
 		assert.True(t, invoked)
 	})
 
-
 	t.Run("update names", func(t *testing.T) {
 		t.Parallel()
 
