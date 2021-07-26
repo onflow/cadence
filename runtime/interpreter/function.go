@@ -102,14 +102,6 @@ func (*InterpretedFunctionValue) SetOwner(_ *common.Address) {
 	// NO-OP: value cannot be owned
 }
 
-func (*InterpretedFunctionValue) IsModified() bool {
-	return false
-}
-
-func (*InterpretedFunctionValue) SetModified(_ bool) {
-	// NO-OP
-}
-
 func (*InterpretedFunctionValue) isFunctionValue() {}
 
 func (f *InterpretedFunctionValue) Invoke(invocation Invocation) Value {
@@ -201,14 +193,6 @@ func (*HostFunctionValue) SetOwner(_ *common.Address) {
 	// NO-OP: value cannot be owned
 }
 
-func (*HostFunctionValue) IsModified() bool {
-	return false
-}
-
-func (*HostFunctionValue) SetModified(_ bool) {
-	// NO-OP
-}
-
 func (*HostFunctionValue) isFunctionValue() {}
 
 func (f *HostFunctionValue) Invoke(invocation Invocation) Value {
@@ -286,14 +270,6 @@ func (BoundFunctionValue) GetOwner() *common.Address {
 
 func (BoundFunctionValue) SetOwner(_ *common.Address) {
 	// NO-OP: value cannot be owned
-}
-
-func (BoundFunctionValue) IsModified() bool {
-	return false
-}
-
-func (BoundFunctionValue) SetModified(_ bool) {
-	// NO-OP
 }
 
 func (BoundFunctionValue) isFunctionValue() {}

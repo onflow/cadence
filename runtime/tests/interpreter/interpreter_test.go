@@ -585,7 +585,7 @@ func TestInterpretArrayIndexingAssignment(t *testing.T) {
 		actualArray,
 	)
 
-	assert.True(t, actualArray.IsModified())
+	// TODO: assert actualArray was updated in storage
 
 	assert.Equal(t,
 		[]interpreter.Value{
@@ -1997,7 +1997,7 @@ func TestInterpretStructureFieldAssignment(t *testing.T) {
 
 	test := inter.Globals["test"].GetValue().(*interpreter.CompositeValue)
 
-	assert.True(t, test.IsModified())
+	// TODO: assert test was updated in storage
 
 	assert.Equal(t,
 		interpreter.NewIntValueFromInt64(1),
@@ -2007,7 +2007,7 @@ func TestInterpretStructureFieldAssignment(t *testing.T) {
 	value, err := inter.Invoke("callTest")
 	require.NoError(t, err)
 
-	assert.True(t, test.IsModified())
+	// TODO: assert test was updated in storage
 
 	assert.Equal(t,
 		interpreter.VoidValue{},
@@ -3614,7 +3614,7 @@ func TestInterpretDictionary(t *testing.T) {
 		actualDict,
 	)
 
-	assert.True(t, actualDict.IsModified())
+	// TODO: assert actualDict was updated in storage
 }
 
 func TestInterpretDictionaryInsertionOrder(t *testing.T) {
@@ -3643,7 +3643,7 @@ func TestInterpretDictionaryInsertionOrder(t *testing.T) {
 		actualDict,
 	)
 
-	assert.True(t, actualDict.IsModified())
+	// TODO: assert actualDict was updated in storage
 }
 
 func TestInterpretDictionaryIndexingString(t *testing.T) {
@@ -3778,7 +3778,7 @@ func TestInterpretDictionaryIndexingAssignmentExisting(t *testing.T) {
 		actualDict.Keys().Elements(),
 	)
 
-	assert.True(t, actualDict.IsModified())
+	// TODO: assert actualDict was updated in storage
 }
 
 func TestInterpretDictionaryIndexingAssignmentNew(t *testing.T) {
@@ -3849,7 +3849,7 @@ func TestInterpretDictionaryIndexingAssignmentNew(t *testing.T) {
 		actualDict.Keys().Elements(),
 	)
 
-	assert.True(t, actualDict.IsModified())
+	// TODO: assert actualDict was updated in storage
 }
 
 func TestInterpretDictionaryIndexingAssignmentNil(t *testing.T) {
@@ -3917,7 +3917,7 @@ func TestInterpretDictionaryIndexingAssignmentNil(t *testing.T) {
 		actualDict.Keys().Elements(),
 	)
 
-	assert.True(t, actualDict.IsModified())
+	// TODO: assert actualDict was updated in storage
 }
 
 func TestInterpretOptionalAnyStruct(t *testing.T) {
@@ -4357,7 +4357,7 @@ func TestInterpretArrayAppend(t *testing.T) {
 
 	actualArray := inter.Globals["xs"].GetValue()
 
-	assert.True(t, actualArray.IsModified())
+	// TODO: assert actualArray was updated in storage
 
 	arrayValue := actualArray.(*interpreter.ArrayValue)
 	assert.Equal(t,
@@ -4369,7 +4369,7 @@ func TestInterpretArrayAppend(t *testing.T) {
 		},
 		arrayValue.Elements(),
 	)
-	assert.True(t, arrayValue.IsModified())
+	// TODO: assert arrayValue was updated in storage
 }
 
 func TestInterpretArrayAppendBound(t *testing.T) {
@@ -4398,7 +4398,7 @@ func TestInterpretArrayAppendBound(t *testing.T) {
 		},
 		arrayValue.Elements(),
 	)
-	assert.True(t, arrayValue.IsModified())
+	// TODO: assert arrayValue was updated in storage
 }
 
 func TestInterpretArrayAppendAll(t *testing.T) {
@@ -4426,7 +4426,7 @@ func TestInterpretArrayAppendAll(t *testing.T) {
 		},
 		arrayValue.Elements(),
 	)
-	assert.True(t, arrayValue.IsModified())
+	// TODO: assert arrayValue was updated in storage
 }
 
 func TestInterpretArrayAppendAllBound(t *testing.T) {
@@ -4455,7 +4455,7 @@ func TestInterpretArrayAppendAllBound(t *testing.T) {
 		},
 		arrayValue.Elements(),
 	)
-	assert.True(t, arrayValue.IsModified())
+	// TODO: assert arrayValue was updated in storage
 }
 
 func TestInterpretArrayConcat(t *testing.T) {
@@ -4482,7 +4482,7 @@ func TestInterpretArrayConcat(t *testing.T) {
 		},
 		arrayValue.Elements(),
 	)
-	assert.True(t, arrayValue.IsModified())
+	// TODO: assert arrayValue was updated in storage
 }
 
 func TestInterpretArrayConcatBound(t *testing.T) {
@@ -4510,7 +4510,7 @@ func TestInterpretArrayConcatBound(t *testing.T) {
 		},
 		arrayValue.Elements(),
 	)
-	assert.True(t, arrayValue.IsModified())
+	// TODO: assert arrayValue was updated in storage
 }
 
 func TestInterpretArrayConcatDoesNotModifyOriginalArray(t *testing.T) {
@@ -4536,7 +4536,7 @@ func TestInterpretArrayConcatDoesNotModifyOriginalArray(t *testing.T) {
 		},
 		arrayValue.Elements(),
 	)
-	assert.True(t, arrayValue.IsModified())
+	// TODO: assert arrayValue was updated in storage
 }
 
 func TestInterpretArrayInsert(t *testing.T) {
@@ -4599,7 +4599,7 @@ func TestInterpretArrayInsert(t *testing.T) {
 
 			require.IsType(t, &interpreter.ArrayValue{}, actualArray)
 
-			assert.True(t, actualArray.IsModified())
+			// TODO: assert actualArray was updated in storage
 
 			assert.Equal(t,
 				testCase.expectedValues,
@@ -4671,7 +4671,7 @@ func TestInterpretArrayRemove(t *testing.T) {
 		},
 		arrayValue.Elements(),
 	)
-	assert.True(t, value.IsModified())
+	// TODO: assert value was updated in storage
 	assert.Equal(t,
 		interpreter.NewIntValueFromInt64(2),
 		inter.Globals["y"].GetValue(),
@@ -4740,7 +4740,7 @@ func TestInterpretArrayRemoveFirst(t *testing.T) {
 		},
 		arrayValue.Elements(),
 	)
-	assert.True(t, value.IsModified())
+	// TODO: assert value was updated in storage
 	assert.Equal(t,
 		interpreter.NewIntValueFromInt64(1),
 		inter.Globals["y"].GetValue(),
@@ -4800,7 +4800,7 @@ func TestInterpretArrayRemoveLast(t *testing.T) {
 		},
 		arrayValue.Elements(),
 	)
-	assert.True(t, arrayValue.IsModified())
+	// TODO: assert arrayValue was updated in storage
 
 	assert.Equal(t,
 		interpreter.NewIntValueFromInt64(3),
@@ -4983,7 +4983,7 @@ func TestInterpretDictionaryRemove(t *testing.T) {
 		actualDict.Keys().Elements(),
 	)
 
-	assert.True(t, actualDict.IsModified())
+	// TODO: assert actualDict was updated in storage
 
 	assert.Equal(t,
 		interpreter.NewSomeValueOwningNonCopying(
@@ -5024,7 +5024,7 @@ func TestInterpretDictionaryInsert(t *testing.T) {
 		actualDict.Keys().Elements(),
 	)
 
-	assert.True(t, actualDict.IsModified())
+	// TODO: assert actualDict was updated in storage
 
 	assert.Equal(t,
 		interpreter.NewSomeValueOwningNonCopying(

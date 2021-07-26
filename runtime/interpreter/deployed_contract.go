@@ -69,14 +69,6 @@ func (DeployedContractValue) SetOwner(_ *common.Address) {
 	// NO-OP: value cannot be owned
 }
 
-func (DeployedContractValue) IsModified() bool {
-	return false
-}
-
-func (DeployedContractValue) SetModified(_ bool) {
-	// NO-OP
-}
-
 func (v DeployedContractValue) Destroy(_ *Interpreter, _ func() LocationRange) {
 	// NO-OP
 }

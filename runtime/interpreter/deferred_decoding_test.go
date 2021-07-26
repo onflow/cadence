@@ -425,7 +425,6 @@ func TestCompositeDeferredDecoding(t *testing.T) {
 		require.IsType(t, &CompositeValue{}, decoded)
 		compositeValue := decoded.(*CompositeValue)
 
-		assert.False(t, compositeValue.IsModified())
 		assert.True(t, compositeValue.IsStorable())
 
 		// fields must not be loaded
@@ -691,7 +690,6 @@ func TestArrayDeferredDecoding(t *testing.T) {
 		require.IsType(t, &ArrayValue{}, decoded)
 		decodedArray := decoded.(*ArrayValue)
 
-		assert.False(t, decodedArray.IsModified())
 		assert.True(t, decodedArray.IsStorable())
 
 		// elements must not be loaded
@@ -1035,7 +1033,6 @@ func TestDictionaryDeferredDecoding(t *testing.T) {
 		require.IsType(t, &DictionaryValue{}, decoded)
 		decodedDictionary := decoded.(*DictionaryValue)
 
-		assert.False(t, decodedDictionary.IsModified())
 		assert.True(t, decodedDictionary.IsStorable())
 
 		// entries must not be loaded
