@@ -1268,7 +1268,7 @@ func TestAuthAccountContracts(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("names", func(t *testing.T) {
+	t.Run("get names", func(t *testing.T) {
 		t.Parallel()
 
 		rt := NewInterpreterRuntime()
@@ -1310,5 +1310,44 @@ func TestAuthAccountContracts(t *testing.T) {
 
 		require.NoError(t, err)
 		assert.True(t, invoked)
+	})
+
+
+	t.Run("update names", func(t *testing.T) {
+		t.Parallel()
+
+		rt := NewInterpreterRuntime()
+
+		script := []byte(`
+            transaction {
+                prepare(signer: AuthAccount) {
+                    signer.contracts.names[0] = "baz"
+                    assert(signer.contracts.names[0] == "foo")
+                }
+            }
+        `)
+
+		runtimeInterface := &testRuntimeInterface{
+			getSigningAccounts: func() ([]Address, error) {
+				return []Address{{42}}, nil
+			},
+			getAccountContractNames: func(_ Address) ([]string, error) {
+				return []string{"foo", "bar"}, nil
+			},
+		}
+
+		nextTransactionLocation := newTransactionLocationGenerator()
+
+		err := rt.ExecuteTransaction(
+			Script{
+				Source: script,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+
+		require.NoError(t, err)
 	})
 }
