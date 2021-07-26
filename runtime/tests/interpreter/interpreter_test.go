@@ -7377,6 +7377,11 @@ func TestInterpretResourceOwnerFieldUse(t *testing.T) {
 							interpreter.NewPublicAccountKeysValue(
 								panicFunction,
 							),
+							interpreter.NewPublicAccountContractsValue(
+								address,
+								nil,
+								nil,
+							),
 						)
 					},
 				),
