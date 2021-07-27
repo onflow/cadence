@@ -95,9 +95,11 @@ func (v BlockValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, 
 
 func (v BlockValue) IDAsByteArray() [sema.BlockIDSize]byte {
 	var byteArray [sema.BlockIDSize]byte
-	for i, b := range v.ID.Elements() {
+	i := 0
+	v.ID.Walk(func(b Value) {
 		byteArray[i] = byte(b.(UInt8Value))
-	}
+		i++
+	})
 	return byteArray
 }
 

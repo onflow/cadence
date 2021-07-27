@@ -24,6 +24,7 @@ import (
 	"math"
 	goRuntime "runtime"
 
+	"github.com/fxamacker/atree"
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
@@ -97,32 +98,6 @@ type OnLoopIterationFunc func(
 type OnFunctionInvocationFunc func(
 	inter *Interpreter,
 	line int,
-)
-
-// StorageExistenceHandlerFunc is a function that handles storage existence checks.
-//
-type StorageExistenceHandlerFunc func(
-	inter *Interpreter,
-	storageAddress common.Address,
-	key string,
-) bool
-
-// StorageReadHandlerFunc is a function that handles storage reads.
-//
-type StorageReadHandlerFunc func(
-	inter *Interpreter,
-	storageAddress common.Address,
-	key string,
-	deferred bool,
-) OptionalValue
-
-// StorageWriteHandlerFunc is a function that handles storage writes.
-//
-type StorageWriteHandlerFunc func(
-	inter *Interpreter,
-	storageAddress common.Address,
-	key string,
-	value OptionalValue,
 )
 
 // InjectedCompositeFieldsHandlerFunc is a function that handles storage reads.
@@ -235,6 +210,13 @@ func (c TypeCodes) Merge(codes TypeCodes) {
 	}
 }
 
+type Storage interface {
+	atree.SlabStorage
+	Exists(interpreter *Interpreter, address common.Address, key string) bool
+	Read(interpreter *Interpreter, address common.Address, key string) OptionalValue
+	Write(interpreter *Interpreter, address common.Address, key string, value OptionalValue)
+}
+
 type Interpreter struct {
 	Program                        *Program
 	Location                       common.Location
@@ -245,13 +227,11 @@ type Interpreter struct {
 	allInterpreters                map[common.LocationID]*Interpreter
 	typeCodes                      TypeCodes
 	Transactions                   []*HostFunctionValue
+	storage                        Storage
 	onEventEmitted                 OnEventEmittedFunc
 	onStatement                    OnStatementFunc
 	onLoopIteration                OnLoopIterationFunc
 	onFunctionInvocation           OnFunctionInvocationFunc
-	storageExistenceHandler        StorageExistenceHandlerFunc
-	storageReadHandler             StorageReadHandlerFunc
-	storageWriteHandler            StorageWriteHandlerFunc
 	injectedCompositeFieldsHandler InjectedCompositeFieldsHandlerFunc
 	contractValueHandler           ContractValueHandlerFunc
 	importLocationHandler          ImportLocationHandlerFunc
@@ -328,32 +308,12 @@ func WithPredeclaredValues(predeclaredValues []ValueDeclaration) Option {
 	}
 }
 
-// WithStorageExistenceHandler returns an interpreter option which sets the given function
-// as the function that is used when a storage key is checked for existence.
+// WithStorage returns an interpreter option which sets the given value
+// as the function that is used for storage operations.
 //
-func WithStorageExistenceHandler(handler StorageExistenceHandlerFunc) Option {
+func WithStorage(storage Storage) Option {
 	return func(interpreter *Interpreter) error {
-		interpreter.SetStorageExistenceHandler(handler)
-		return nil
-	}
-}
-
-// WithStorageReadHandler returns an interpreter option which sets the given function
-// as the function that is used when a stored value is read.
-//
-func WithStorageReadHandler(handler StorageReadHandlerFunc) Option {
-	return func(interpreter *Interpreter) error {
-		interpreter.SetStorageReadHandler(handler)
-		return nil
-	}
-}
-
-// WithStorageWriteHandler returns an interpreter option which sets the given function
-// as the function that is used when a stored value is written.
-//
-func WithStorageWriteHandler(handler StorageWriteHandlerFunc) Option {
-	return func(interpreter *Interpreter) error {
-		interpreter.SetStorageWriteHandler(handler)
+		interpreter.SetStorage(storage)
 		return nil
 	}
 }
@@ -539,22 +499,10 @@ func (interpreter *Interpreter) SetOnFunctionInvocationHandler(function OnFuncti
 	interpreter.onFunctionInvocation = function
 }
 
-// SetStorageExistenceHandler sets the function that is used when a storage key is checked for existence.
+// SetStorage sets the value that is used for storage operations.
 //
-func (interpreter *Interpreter) SetStorageExistenceHandler(function StorageExistenceHandlerFunc) {
-	interpreter.storageExistenceHandler = function
-}
-
-// SetStorageReadHandler sets the function that is used when a stored value is read.
-//
-func (interpreter *Interpreter) SetStorageReadHandler(function StorageReadHandlerFunc) {
-	interpreter.storageReadHandler = function
-}
-
-// SetStorageWriteHandler sets the function that is used when a stored value is written.
-//
-func (interpreter *Interpreter) SetStorageWriteHandler(function StorageWriteHandlerFunc) {
-	interpreter.storageWriteHandler = function
+func (interpreter *Interpreter) SetStorage(storage Storage) {
+	interpreter.storage = storage
 }
 
 // SetInjectedCompositeFieldsHandler sets the function that is used to initialize
@@ -2270,9 +2218,7 @@ func (interpreter *Interpreter) NewSubInterpreter(
 		WithOnStatementHandler(interpreter.onStatement),
 		WithOnLoopIterationHandler(interpreter.onLoopIteration),
 		WithOnFunctionInvocationHandler(interpreter.onFunctionInvocation),
-		WithStorageExistenceHandler(interpreter.storageExistenceHandler),
-		WithStorageReadHandler(interpreter.storageReadHandler),
-		WithStorageWriteHandler(interpreter.storageWriteHandler),
+		WithStorage(interpreter.storage),
 		WithInjectedCompositeFieldsHandler(interpreter.injectedCompositeFieldsHandler),
 		WithContractValueHandler(interpreter.contractValueHandler),
 		WithImportLocationHandler(interpreter.importLocationHandler),
@@ -2296,17 +2242,17 @@ func (interpreter *Interpreter) NewSubInterpreter(
 }
 
 func (interpreter *Interpreter) storedValueExists(storageAddress common.Address, key string) bool {
-	return interpreter.storageExistenceHandler(interpreter, storageAddress, key)
+	return interpreter.storage.Exists(interpreter, storageAddress, key)
 }
 
-func (interpreter *Interpreter) ReadStored(storageAddress common.Address, key string, deferred bool) OptionalValue {
-	return interpreter.storageReadHandler(interpreter, storageAddress, key, deferred)
+func (interpreter *Interpreter) ReadStored(storageAddress common.Address, key string) OptionalValue {
+	return interpreter.storage.Read(interpreter, storageAddress, key)
 }
 
 func (interpreter *Interpreter) writeStored(storageAddress common.Address, key string, value OptionalValue) {
 	value.SetOwner(&storageAddress)
 
-	interpreter.storageWriteHandler(interpreter, storageAddress, key, value)
+	interpreter.storage.Write(interpreter, storageAddress, key, value)
 }
 
 type valueConverterDeclaration struct {
@@ -2914,7 +2860,7 @@ func (interpreter *Interpreter) authAccountReadFunction(addressValue AddressValu
 		path := invocation.Arguments[0].(PathValue)
 		key := StorageKey(path)
 
-		value := interpreter.ReadStored(address, key, false)
+		value := interpreter.ReadStored(address, key)
 
 		switch value := value.(type) {
 		case NilValue:
@@ -3047,7 +2993,7 @@ func (interpreter *Interpreter) accountGetLinkTargetFunction(addressValue Addres
 
 		capabilityKey := StorageKey(capabilityPath)
 
-		value := interpreter.ReadStored(address, capabilityKey, false)
+		value := interpreter.ReadStored(address, capabilityKey)
 
 		switch value := value.(type) {
 		case NilValue:
@@ -3235,7 +3181,7 @@ func (interpreter *Interpreter) GetCapabilityFinalTargetStorageKey(
 			seenKeys[key] = struct{}{}
 		}
 
-		value := interpreter.ReadStored(address, key, false)
+		value := interpreter.ReadStored(address, key)
 
 		switch value := value.(type) {
 		case NilValue:
