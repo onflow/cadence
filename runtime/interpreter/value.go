@@ -105,7 +105,7 @@ type AllAppendableValue interface {
 
 type EquatableValue interface {
 	Value
-	Equal(other Value, interpreter *Interpreter, loadDeferred bool) bool
+	Equal(other Value, getLocationRange func() LocationRange) bool
 }
 
 // DestroyableValue
@@ -174,7 +174,7 @@ func (v TypeValue) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
-func (v TypeValue) Equal(other Value, _ *Interpreter, _ bool) bool {
+func (v TypeValue) Equal(other Value, _ func() LocationRange) bool {
 	otherTypeValue, ok := other.(TypeValue)
 	if !ok {
 		return false
@@ -1066,7 +1066,7 @@ func (v *ArrayValue) IsStorable() bool {
 	return true
 }
 
-func (v *ArrayValue) Equal(other Value, interpreter *Interpreter, loadDeferred bool) bool {
+func (v *ArrayValue) Equal(other Value, getLocationRange func() LocationRange) bool {
 	otherArray, ok := other.(*ArrayValue)
 	if !ok {
 		return false
@@ -1093,7 +1093,7 @@ func (v *ArrayValue) Equal(other Value, interpreter *Interpreter, loadDeferred b
 		otherValue := otherElements[i]
 
 		equatableValue, ok := value.(EquatableValue)
-		if !ok || !equatableValue.Equal(otherValue, interpreter, loadDeferred) {
+		if !ok || !equatableValue.Equal(otherValue, getLocationRange) {
 			return false
 		}
 	}
@@ -1404,7 +1404,7 @@ func (v IntValue) GreaterEqual(other NumberValue) BoolValue {
 	return cmp >= 0
 }
 
-func (v IntValue) Equal(other Value, _ *Interpreter, _ bool) bool {
+func (v IntValue) Equal(other Value, _ func() LocationRange) bool {
 	otherInt, ok := other.(IntValue)
 	if !ok {
 		return false
@@ -1697,7 +1697,7 @@ func (v Int8Value) GreaterEqual(other NumberValue) BoolValue {
 	return v >= other.(Int8Value)
 }
 
-func (v Int8Value) Equal(other Value, _ *Interpreter, _ bool) bool {
+func (v Int8Value) Equal(other Value, _ func() LocationRange) bool {
 	otherInt8, ok := other.(Int8Value)
 	if !ok {
 		return false
@@ -1996,7 +1996,7 @@ func (v Int16Value) GreaterEqual(other NumberValue) BoolValue {
 	return v >= other.(Int16Value)
 }
 
-func (v Int16Value) Equal(other Value, _ *Interpreter, _ bool) bool {
+func (v Int16Value) Equal(other Value, _ func() LocationRange) bool {
 	otherInt16, ok := other.(Int16Value)
 	if !ok {
 		return false
@@ -2297,7 +2297,7 @@ func (v Int32Value) GreaterEqual(other NumberValue) BoolValue {
 	return v >= other.(Int32Value)
 }
 
-func (v Int32Value) Equal(other Value, _ *Interpreter, _ bool) bool {
+func (v Int32Value) Equal(other Value, _ func() LocationRange) bool {
 	otherInt32, ok := other.(Int32Value)
 	if !ok {
 		return false
@@ -2602,7 +2602,7 @@ func (v Int64Value) GreaterEqual(other NumberValue) BoolValue {
 	return v >= other.(Int64Value)
 }
 
-func (v Int64Value) Equal(other Value, _ *Interpreter, _ bool) bool {
+func (v Int64Value) Equal(other Value, _ func() LocationRange) bool {
 	otherInt64, ok := other.(Int64Value)
 	if !ok {
 		return false
@@ -2951,7 +2951,7 @@ func (v Int128Value) GreaterEqual(other NumberValue) BoolValue {
 	return cmp >= 0
 }
 
-func (v Int128Value) Equal(other Value, _ *Interpreter, _ bool) bool {
+func (v Int128Value) Equal(other Value, _ func() LocationRange) bool {
 	otherInt, ok := other.(Int128Value)
 	if !ok {
 		return false
@@ -3321,7 +3321,7 @@ func (v Int256Value) GreaterEqual(other NumberValue) BoolValue {
 	return cmp >= 0
 }
 
-func (v Int256Value) Equal(other Value, _ *Interpreter, _ bool) bool {
+func (v Int256Value) Equal(other Value, _ func() LocationRange) bool {
 	otherInt, ok := other.(Int256Value)
 	if !ok {
 		return false
@@ -3604,7 +3604,7 @@ func (v UIntValue) GreaterEqual(other NumberValue) BoolValue {
 	return cmp >= 0
 }
 
-func (v UIntValue) Equal(other Value, _ *Interpreter, _ bool) bool {
+func (v UIntValue) Equal(other Value, _ func() LocationRange) bool {
 	otherUInt, ok := other.(UIntValue)
 	if !ok {
 		return false
@@ -3828,7 +3828,7 @@ func (v UInt8Value) GreaterEqual(other NumberValue) BoolValue {
 	return v >= other.(UInt8Value)
 }
 
-func (v UInt8Value) Equal(other Value, _ *Interpreter, _ bool) bool {
+func (v UInt8Value) Equal(other Value, _ func() LocationRange) bool {
 	otherUInt8, ok := other.(UInt8Value)
 	if !ok {
 		return false
@@ -4056,7 +4056,7 @@ func (v UInt16Value) GreaterEqual(other NumberValue) BoolValue {
 	return v >= other.(UInt16Value)
 }
 
-func (v UInt16Value) Equal(other Value, _ *Interpreter, _ bool) bool {
+func (v UInt16Value) Equal(other Value, _ func() LocationRange) bool {
 	otherUInt16, ok := other.(UInt16Value)
 	if !ok {
 		return false
@@ -4287,7 +4287,7 @@ func (v UInt32Value) GreaterEqual(other NumberValue) BoolValue {
 	return v >= other.(UInt32Value)
 }
 
-func (v UInt32Value) Equal(other Value, _ *Interpreter, _ bool) bool {
+func (v UInt32Value) Equal(other Value, _ func() LocationRange) bool {
 	otherUInt32, ok := other.(UInt32Value)
 	if !ok {
 		return false
@@ -4523,7 +4523,7 @@ func (v UInt64Value) GreaterEqual(other NumberValue) BoolValue {
 	return v >= other.(UInt64Value)
 }
 
-func (v UInt64Value) Equal(other Value, _ *Interpreter, _ bool) bool {
+func (v UInt64Value) Equal(other Value, _ func() LocationRange) bool {
 	otherUInt64, ok := other.(UInt64Value)
 	if !ok {
 		return false
@@ -4818,7 +4818,7 @@ func (v UInt128Value) GreaterEqual(other NumberValue) BoolValue {
 	return cmp >= 0
 }
 
-func (v UInt128Value) Equal(other Value, _ *Interpreter, _ bool) bool {
+func (v UInt128Value) Equal(other Value, _ func() LocationRange) bool {
 	otherInt, ok := other.(UInt128Value)
 	if !ok {
 		return false
@@ -5130,7 +5130,7 @@ func (v UInt256Value) GreaterEqual(other NumberValue) BoolValue {
 	return cmp >= 0
 }
 
-func (v UInt256Value) Equal(other Value, _ *Interpreter, _ bool) bool {
+func (v UInt256Value) Equal(other Value, _ func() LocationRange) bool {
 	otherInt, ok := other.(UInt256Value)
 	if !ok {
 		return false
@@ -5347,7 +5347,7 @@ func (v Word8Value) GreaterEqual(other NumberValue) BoolValue {
 	return v >= other.(Word8Value)
 }
 
-func (v Word8Value) Equal(other Value, _ *Interpreter, _ bool) bool {
+func (v Word8Value) Equal(other Value, _ func() LocationRange) bool {
 	otherWord8, ok := other.(Word8Value)
 	if !ok {
 		return false
@@ -5520,7 +5520,7 @@ func (v Word16Value) GreaterEqual(other NumberValue) BoolValue {
 	return v >= other.(Word16Value)
 }
 
-func (v Word16Value) Equal(other Value, _ *Interpreter, _ bool) bool {
+func (v Word16Value) Equal(other Value, _ func() LocationRange) bool {
 	otherWord16, ok := other.(Word16Value)
 	if !ok {
 		return false
@@ -5697,7 +5697,7 @@ func (v Word32Value) GreaterEqual(other NumberValue) BoolValue {
 	return v >= other.(Word32Value)
 }
 
-func (v Word32Value) Equal(other Value, _ *Interpreter, _ bool) bool {
+func (v Word32Value) Equal(other Value, _ func() LocationRange) bool {
 	otherWord32, ok := other.(Word32Value)
 	if !ok {
 		return false
@@ -5874,7 +5874,7 @@ func (v Word64Value) GreaterEqual(other NumberValue) BoolValue {
 	return v >= other.(Word64Value)
 }
 
-func (v Word64Value) Equal(other Value, _ *Interpreter, _ bool) bool {
+func (v Word64Value) Equal(other Value, _ func() LocationRange) bool {
 	otherWord64, ok := other.(Word64Value)
 	if !ok {
 		return false
@@ -6147,7 +6147,7 @@ func (v Fix64Value) GreaterEqual(other NumberValue) BoolValue {
 	return v >= other.(Fix64Value)
 }
 
-func (v Fix64Value) Equal(other Value, _ *Interpreter, _ bool) bool {
+func (v Fix64Value) Equal(other Value, _ func() LocationRange) bool {
 	otherFix64, ok := other.(Fix64Value)
 	if !ok {
 		return false
@@ -6385,7 +6385,7 @@ func (v UFix64Value) GreaterEqual(other NumberValue) BoolValue {
 	return v >= other.(UFix64Value)
 }
 
-func (v UFix64Value) Equal(other Value, _ *Interpreter, _ bool) bool {
+func (v UFix64Value) Equal(other Value, _ func() LocationRange) bool {
 	otherUFix64, ok := other.(UFix64Value)
 	if !ok {
 		return false
@@ -6835,7 +6835,7 @@ func (v *CompositeValue) GetField(name string) Value {
 	return value
 }
 
-func (v *CompositeValue) Equal(other Value, interpreter *Interpreter, loadDeferred bool) bool {
+func (v *CompositeValue) Equal(other Value, getLocationRange func() LocationRange) bool {
 	otherComposite, ok := other.(*CompositeValue)
 	if !ok {
 		return false
@@ -6861,7 +6861,7 @@ func (v *CompositeValue) Equal(other Value, interpreter *Interpreter, loadDeferr
 		}
 
 		equatableValue, ok := value.(EquatableValue)
-		if !ok || !equatableValue.Equal(otherValue, interpreter, loadDeferred) {
+		if !ok || !equatableValue.Equal(otherValue, getLocationRange) {
 			return false
 		}
 	}
@@ -7725,7 +7725,7 @@ func (v *DictionaryValue) ConformsToDynamicType(
 	return true
 }
 
-func (v *DictionaryValue) Equal(other Value, interpreter *Interpreter, loadDeferred bool) bool {
+func (v *DictionaryValue) Equal(other Value, getLocationRange func() LocationRange) bool {
 	otherDictionary, ok := other.(*DictionaryValue)
 	if !ok {
 		return false
@@ -7744,7 +7744,7 @@ func (v *DictionaryValue) Equal(other Value, interpreter *Interpreter, loadDefer
 		return false
 	}
 
-	if !v.keys.Equal(otherDictionary.keys, interpreter, loadDeferred) {
+	if !v.keys.Equal(otherDictionary.keys, getLocationRange) {
 		return false
 	}
 
@@ -7866,7 +7866,7 @@ func (NilValue) GetOwner() *common.Address {
 	return nil
 }
 
-func (NilValue) SetModified(_ bool) {
+func (NilValue) SetOwner(_ *common.Address) {
 	// NO-OP
 }
 
@@ -7906,7 +7906,7 @@ func (v NilValue) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType,
 	return ok
 }
 
-func (v NilValue) Equal(other Value, _ *Interpreter, _ bool) bool {
+func (v NilValue) Equal(other Value, _ func() LocationRange) bool {
 	_, ok := other.(NilValue)
 	return ok
 }
@@ -8034,7 +8034,7 @@ func (v SomeValue) ConformsToDynamicType(
 	return ok && v.Value.ConformsToDynamicType(interpreter, someType.InnerType, results)
 }
 
-func (v *SomeValue) Equal(other Value, interpreter *Interpreter, loadDeferred bool) bool {
+func (v *SomeValue) Equal(other Value, getLocationRange func() LocationRange) bool {
 	otherSome, ok := other.(*SomeValue)
 	if !ok {
 		return false
@@ -8045,7 +8045,7 @@ func (v *SomeValue) Equal(other Value, interpreter *Interpreter, loadDeferred bo
 		return false
 	}
 
-	return equatableValue.Equal(otherSome.Value, interpreter, loadDeferred)
+	return equatableValue.Equal(otherSome.Value, getLocationRange)
 }
 
 func (v *SomeValue) IsStorable() bool {
@@ -8125,7 +8125,7 @@ func (v *StorageReferenceValue) SetOwner(_ *common.Address) {
 }
 
 func (v *StorageReferenceValue) ReferencedValue(interpreter *Interpreter) *Value {
-	switch referenced := interpreter.ReadStored(v.TargetStorageAddress, v.TargetKey, false).(type) {
+	switch referenced := interpreter.ReadStored(v.TargetStorageAddress, v.TargetKey).(type) {
 	case *SomeValue:
 		value := referenced.Value
 
@@ -8193,7 +8193,7 @@ func (v *StorageReferenceValue) Set(interpreter *Interpreter, getLocationRange f
 		Set(interpreter, getLocationRange, key, value)
 }
 
-func (v *StorageReferenceValue) Equal(other Value, _ *Interpreter, _ bool) bool {
+func (v *StorageReferenceValue) Equal(other Value, _ func() LocationRange) bool {
 	otherReference, ok := other.(*StorageReferenceValue)
 	if !ok ||
 		v.TargetStorageAddress != otherReference.TargetStorageAddress ||
@@ -8386,7 +8386,7 @@ func (v *EphemeralReferenceValue) Set(interpreter *Interpreter, getLocationRange
 		Set(interpreter, getLocationRange, key, value)
 }
 
-func (v *EphemeralReferenceValue) Equal(other Value, _ *Interpreter, _ bool) bool {
+func (v *EphemeralReferenceValue) Equal(other Value, _ func() LocationRange) bool {
 	otherReference, ok := other.(*EphemeralReferenceValue)
 	if !ok ||
 		v.Value != otherReference.Value ||
@@ -8524,7 +8524,7 @@ func (AddressValue) SetOwner(_ *common.Address) {
 	// NO-OP: value cannot be owned
 }
 
-func (v AddressValue) Equal(other Value, _ *Interpreter, _ bool) bool {
+func (v AddressValue) Equal(other Value, _ func() LocationRange) bool {
 	otherAddress, ok := other.(AddressValue)
 	if !ok {
 		return false
@@ -8842,7 +8842,7 @@ func (v PathValue) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType
 	}
 }
 
-func (v PathValue) Equal(other Value, _ *Interpreter, _ bool) bool {
+func (v PathValue) Equal(other Value, _ func() LocationRange) bool {
 	otherPath, ok := other.(PathValue)
 	if !ok {
 		return false
@@ -8957,7 +8957,7 @@ func (v CapabilityValue) ConformsToDynamicType(_ *Interpreter, dynamicType Dynam
 	return ok
 }
 
-func (v CapabilityValue) Equal(other Value, interpreter *Interpreter, loadDeferred bool) bool {
+func (v CapabilityValue) Equal(other Value, getLocationRange func() LocationRange) bool {
 	otherCapability, ok := other.(CapabilityValue)
 	if !ok {
 		return false
@@ -8973,8 +8973,8 @@ func (v CapabilityValue) Equal(other Value, interpreter *Interpreter, loadDeferr
 		return false
 	}
 
-	return otherCapability.Address.Equal(v.Address, interpreter, loadDeferred) &&
-		otherCapability.Path.Equal(v.Path, interpreter, loadDeferred)
+	return otherCapability.Address.Equal(v.Address, getLocationRange) &&
+		otherCapability.Path.Equal(v.Path, getLocationRange)
 }
 
 func (CapabilityValue) IsStorable() bool {
@@ -9041,13 +9041,13 @@ func (v LinkValue) ConformsToDynamicType(_ *Interpreter, _ DynamicType, _ TypeCo
 	return false
 }
 
-func (v LinkValue) Equal(other Value, interpreter *Interpreter, loadDeferred bool) bool {
+func (v LinkValue) Equal(other Value, getLocationRange func() LocationRange) bool {
 	otherLink, ok := other.(LinkValue)
 	if !ok {
 		return false
 	}
 
-	return otherLink.TargetPath.Equal(v.TargetPath, interpreter, loadDeferred) &&
+	return otherLink.TargetPath.Equal(v.TargetPath, getLocationRange) &&
 		otherLink.Type.Equal(v.Type)
 }
 
