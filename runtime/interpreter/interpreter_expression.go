@@ -180,12 +180,12 @@ func (interpreter *Interpreter) VisitBinaryExpression(expression *ast.BinaryExpr
 	case ast.OperationEqual:
 		left := interpreter.evalExpression(expression.Left)
 		right := interpreter.evalExpression(expression.Right)
-		return interpreter.testEqual(left, right)
+		return interpreter.testEqual(left, right, expression)
 
 	case ast.OperationNotEqual:
 		left := interpreter.evalExpression(expression.Left)
 		right := interpreter.evalExpression(expression.Right)
-		return !interpreter.testEqual(left, right)
+		return !interpreter.testEqual(left, right, expression)
 
 	case ast.OperationOr:
 		// interpret the left-hand side
@@ -236,7 +236,7 @@ func (interpreter *Interpreter) VisitBinaryExpression(expression *ast.BinaryExpr
 	})
 }
 
-func (interpreter *Interpreter) testEqual(left, right Value) BoolValue {
+func (interpreter *Interpreter) testEqual(left, right Value, hasPosition ast.HasPosition) BoolValue {
 	left = interpreter.unbox(left)
 	right = interpreter.unbox(right)
 
@@ -245,7 +245,9 @@ func (interpreter *Interpreter) testEqual(left, right Value) BoolValue {
 		return false
 	}
 
-	return BoolValue(leftEquatable.Equal(right, interpreter, true))
+	getLocationRange := locationRangeGetter(interpreter.Location, hasPosition)
+
+	return BoolValue(leftEquatable.Equal(right, getLocationRange))
 }
 
 func (interpreter *Interpreter) VisitUnaryExpression(expression *ast.UnaryExpression) ast.Repr {
@@ -396,7 +398,7 @@ func (interpreter *Interpreter) VisitArrayExpression(expression *ast.ArrayExpres
 
 	arrayStaticType := ConvertSemaArrayTypeToStaticArrayType(arrayType)
 
-	return NewArrayValueUnownedNonCopying(arrayStaticType, copies...)
+	return NewArrayValueUnownedNonCopying(arrayStaticType, interpreter.storage, copies...)
 }
 
 func (interpreter *Interpreter) VisitDictionaryExpression(expression *ast.DictionaryExpression) ast.Repr {
