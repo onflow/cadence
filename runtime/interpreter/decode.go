@@ -360,10 +360,9 @@ func (d *DecoderV5) decodeArray(path []string, deferDecoding bool) (*ArrayValue,
 		}
 
 		return &ArrayValue{
-			values:   elements,
-			Owner:    d.owner,
-			modified: false,
-			Type:     arrayStaticType,
+			values: elements,
+			Owner:  d.owner,
+			Type:   arrayStaticType,
 		}, nil
 	}
 

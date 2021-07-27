@@ -28,6 +28,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/fxamacker/atree"
 	"github.com/rivo/uniseg"
 	"golang.org/x/text/unicode/norm"
 
@@ -542,7 +543,7 @@ func (v *StringValue) GetMember(_ *Interpreter, _ func() LocationRange, name str
 	case "decodeHex":
 		return NewHostFunctionValue(
 			func(invocation Invocation) Value {
-				return v.DecodeHex()
+				return v.DecodeHex(invocation.Interpreter.storage)
 			},
 		)
 	}
@@ -572,7 +573,7 @@ var ByteArrayStaticType = ConvertSemaArrayTypeToStaticArrayType(sema.ByteArrayTy
 
 // DecodeHex hex-decodes this string and returns an array of UInt8 values
 //
-func (v *StringValue) DecodeHex() *ArrayValue {
+func (v *StringValue) DecodeHex(storage Storage) *ArrayValue {
 	str := v.Str
 
 	bs, err := hex.DecodeString(str)
@@ -585,7 +586,7 @@ func (v *StringValue) DecodeHex() *ArrayValue {
 		values[i] = UInt8Value(b)
 	}
 
-	return NewArrayValueUnownedNonCopying(ByteArrayStaticType, values...)
+	return NewArrayValueUnownedNonCopying(ByteArrayStaticType, storage, values...)
 }
 
 func (*StringValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -600,34 +601,17 @@ func (*StringValue) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicTyp
 // ArrayValue
 
 type ArrayValue struct {
-	Type     ArrayStaticType
-	values   []Value
-	Owner    *common.Address
-	modified bool
-
-	// Raw element content cache for decoded values.
-	// Includes meta-info (type info, etc) as well as the elements content.
-	// Only available for decoded arrays who's elements are not loaded yet.
-	content []byte
-
-	// Raw content cache for elements.
-	// Only available for decoded arrays who's elements are not loaded yet.
-	elementsContent []byte
-
-	// Value's path to be used during decoding.
-	// Only available for decoded values who's elements are not loaded yet.
-	valuePath []string
-
-	// Callback function to be invoked when decoding the elements of this array value.
-	// Only available for decoded values who's elements are not loaded yet.
-	decodeCallback DecodingCallback
-
-	// Encoding version of the raw content of the elements of this value.
-	// Only available for decoded values who's elements are not loaded yet.
-	encodingVersion uint16
+	Type    ArrayStaticType
+	Owner   *common.Address
+	storage Storage
+	array   *atree.Array
 }
 
-func NewArrayValueUnownedNonCopying(arrayType ArrayStaticType, values ...Value) *ArrayValue {
+func NewArrayValueUnownedNonCopying(
+	arrayType ArrayStaticType,
+	storage Storage,
+	values ...Value,
+) *ArrayValue {
 	// NOTE: new value has no owner
 
 	for _, value := range values {
@@ -638,32 +622,15 @@ func NewArrayValueUnownedNonCopying(arrayType ArrayStaticType, values ...Value) 
 		values = make([]Value, 0)
 	}
 
-	return &ArrayValue{
-		Type:     arrayType,
-		values:   values,
-		modified: true,
-		Owner:    nil,
+	array, err := atree.NewArray(storage)
+	if err != nil {
+		panic(ExternalError{err})
 	}
-}
-
-func NewDeferredArrayValue(
-	path []string,
-	content []byte,
-	owner *common.Address,
-	callback DecodingCallback,
-	version uint16,
-) *ArrayValue {
-
-	// Note: static type for deferred arrays gets populated when the meta info is loaded.
-	// i.e: at `ensureMetaInfoLoaded()` method
 
 	return &ArrayValue{
-		valuePath:       path,
-		content:         content,
-		Owner:           owner,
-		modified:        false,
-		decodeCallback:  callback,
-		encodingVersion: version,
+		Type:  arrayType,
+		array: array,
+		Owner: nil,
 	}
 }
 
@@ -675,24 +642,27 @@ func (v *ArrayValue) Accept(interpreter *Interpreter, visitor Visitor) {
 		return
 	}
 
-	for _, value := range v.Elements() {
-		value.Accept(interpreter, visitor)
-	}
+	v.Walk(func(element Value) {
+		element.Accept(interpreter, visitor)
+	})
 }
 
 func (v *ArrayValue) Walk(walkChild func(Value)) {
-	for _, value := range v.Elements() {
-		walkChild(value)
-	}
+	_ = v.array.Iterate(func(element atree.Value) (resume bool, err error) {
+		walkChild(element.(Value))
+		return true, nil
+	})
 }
 
 func (v *ArrayValue) DynamicType(interpreter *Interpreter, seenReferences SeenReferences) DynamicType {
-	elements := v.Elements()
-	elementTypes := make([]DynamicType, len(elements))
+	elementTypes := make([]DynamicType, v.Count())
 
-	for i, value := range elements {
-		elementTypes[i] = value.DynamicType(interpreter, seenReferences)
-	}
+	i := 0
+
+	v.Walk(func(element Value) {
+		elementTypes[i] = element.DynamicType(interpreter, seenReferences)
+		i++
+	})
 
 	return &ArrayDynamicType{
 		ElementTypes: elementTypes,
@@ -708,26 +678,18 @@ func (v *ArrayValue) StaticType() StaticType {
 func (v *ArrayValue) Copy() Value {
 	// TODO: optimize, use copy-on-write
 
-	if v.content != nil {
-		value := &ArrayValue{
-			Type:            v.Type,
-			values:          nil,
-			modified:        true,
-			Owner:           nil,
-			content:         v.content,
-			valuePath:       v.valuePath,
-			decodeCallback:  v.decodeCallback,
-			encodingVersion: v.encodingVersion,
-		}
-
-		return value
+	copiedValue, err := v.array.DeepCopy(v.storage)
+	if err != nil {
+		panic(err)
 	}
 
-	copies := make([]Value, len(v.values))
-	for i, value := range v.values {
-		copies[i] = value.Copy()
+	return &ArrayValue{
+		Type: v.Type,
+		// NOTE: new value has no owner
+		Owner:   nil,
+		storage: v.storage,
+		array:   copiedValue.(*atree.Array),
 	}
-	return NewArrayValueUnownedNonCopying(v.Type, copies...)
 }
 
 func (v *ArrayValue) GetOwner() *common.Address {
@@ -741,30 +703,39 @@ func (v *ArrayValue) SetOwner(owner *common.Address) {
 
 	v.Owner = owner
 
-	for _, value := range v.Elements() {
-		value.SetOwner(owner)
-	}
+	v.Walk(func(element Value) {
+		element.SetOwner(owner)
+	})
 }
 
 func (v *ArrayValue) Destroy(interpreter *Interpreter, getLocationRange func() LocationRange) {
-	for _, value := range v.Elements() {
-		maybeDestroy(interpreter, getLocationRange, value)
-	}
+	v.Walk(func(element Value) {
+		maybeDestroy(interpreter, getLocationRange, element)
+	})
 }
 
 func (v *ArrayValue) Concat(other ConcatenatableValue) Value {
 	otherArray := other.(*ArrayValue)
 	newArray := v.Copy().(*ArrayValue)
-	newArray.values = append(newArray.Elements(), otherArray.Elements()...)
+	newArray.AppendAll(otherArray)
 	return newArray
 }
 
 func (v *ArrayValue) Get(_ *Interpreter, getLocationRange func() LocationRange, key Value) Value {
 	index := key.(NumberValue).ToInt()
+	return v.GetIndex(index, getLocationRange)
+}
 
+func (v *ArrayValue) GetIndex(index int, getLocationRange func() LocationRange) Value {
 	v.checkBounds(index, getLocationRange)
 
-	return v.Elements()[index]
+	element, err := v.array.Get(uint64(index))
+	if err != nil {
+		panic(err)
+	}
+
+	// TODO: embed atree.Value in Value and implement
+	return element.(Value)
 }
 
 func (v *ArrayValue) Set(inter *Interpreter, getLocationRange func() LocationRange, key Value, value Value) {
@@ -783,8 +754,11 @@ func (v *ArrayValue) SetIndex(inter *Interpreter, getLocationRange func() Locati
 	v.modified = true
 	value.SetOwner(v.Owner)
 
-	v.ensureElementsLoaded()
-	v.values[index] = value
+	// TODO: embed atree.Value in Value and implement
+	err := v.array.Set(uint64(index), value.(atree.Value))
+	if err != nil {
+		panic(err)
+	}
 }
 
 func (v *ArrayValue) checkBounds(index int, getLocationRange func() LocationRange) {
@@ -804,12 +778,14 @@ func (v *ArrayValue) String() string {
 }
 
 func (v *ArrayValue) RecursiveString(seenReferences SeenReferences) string {
-	elements := v.Elements()
-	values := make([]string, len(elements))
+	values := make([]string, v.Count())
 
-	for i, value := range elements {
+	i := 0
+	v.Walk(func(value Value) {
 		values[i] = value.RecursiveString(seenReferences)
-	}
+		i++
+	})
+
 	return format.Array(values)
 }
 
@@ -820,33 +796,27 @@ func (v *ArrayValue) Append(inter *Interpreter, getLocationRange func() Location
 
 	inter.checkContainerMutation(arrayStaticType.ElementType(), element, getLocationRange)
 
-	v.modified = true
-
 	element.SetOwner(v.Owner)
 
-	v.ensureElementsLoaded()
-	v.values = append(v.values, element)
+	// TODO: embed atree.Value in Value and implement
+	err := v.array.Append(element.(atree.Value))
+	if err != nil {
+		panic(err)
+	}
 }
 
 func (v *ArrayValue) AppendAll(inter *Interpreter, getLocationRange func() LocationRange, other AllAppendableValue) {
 	otherArray := other.(*ArrayValue)
-	otherElements := otherArray.Elements()
 
-	// Use the getter, to make sure lazily decoded values are properly loaded.
-	arrayStaticType := v.StaticType().(ArrayStaticType)
-
-	for _, element := range otherElements {
-		inter.checkContainerMutation(arrayStaticType.ElementType(), element, getLocationRange)
-	}
-
-	v.modified = true
-
-	for _, element := range otherElements {
+	otherArray.Walk(func(element Value) {
 		element.SetOwner(v.Owner)
-	}
 
-	v.ensureElementsLoaded()
-	v.values = append(v.values, otherElements...)
+		// TODO: embed atree.Value in Value and implement
+		err := v.array.Append(element.(atree.Value))
+		if err != nil {
+			panic(err)
+		}
+	})
 }
 
 func (v *ArrayValue) Insert(inter *Interpreter, getLocationRange func() LocationRange, index int, element Value) {
@@ -870,75 +840,53 @@ func (v *ArrayValue) Insert(inter *Interpreter, getLocationRange func() Location
 
 	element.SetOwner(v.Owner)
 
-	elements := v.Elements()
-
-	//nolint:gocritic
-	v.values = append(
-		elements[:index],
-		append(
-			[]Value{element},
-			elements[index:]...,
-		)...,
-	)
+	// TODO: embed atree.Value in Value and implement
+	err := v.array.Insert(uint64(index), element.(atree.Value))
+	if err != nil {
+		panic(err)
+	}
 }
 
 // TODO: unset owner?
 func (v *ArrayValue) Remove(index int, getLocationRange func() LocationRange) Value {
 	v.checkBounds(index, getLocationRange)
 
-	v.modified = true
+	element, err := v.array.Remove(uint64(index))
+	if err != nil {
+		panic(err)
+	}
 
-	elements := v.Elements()
-	result := elements[index]
-
-	lastIndex := len(elements) - 1
-	copy(elements[index:], elements[index+1:])
-
-	// avoid memory leaks by explicitly setting value to nil
-	elements[lastIndex] = nil
-
-	v.values = elements[:lastIndex]
-
-	return result
+	// TODO: embed atree.Value in Value and implement
+	return element.(Value)
 }
 
-// TODO: unset owner?
 func (v *ArrayValue) RemoveFirst(getLocationRange func() LocationRange) Value {
-	v.checkBounds(0, getLocationRange)
-
-	v.modified = true
-
-	elements := v.Elements()
-
-	var firstElement Value
-	firstElement, v.values = elements[0], elements[1:]
-	return firstElement
+	return v.Remove(0, getLocationRange)
 }
 
-// TODO: unset owner?
 func (v *ArrayValue) RemoveLast(getLocationRange func() LocationRange) Value {
-	lastIndex := v.Count() - 1
-	v.checkBounds(lastIndex, getLocationRange)
-
-	v.modified = true
-
-	elements := v.Elements()
-	var lastElement Value
-
-	lastElement, v.values = elements[lastIndex], elements[:lastIndex]
-	return lastElement
+	return v.Remove(v.Count()-1, getLocationRange)
 }
 
 func (v *ArrayValue) Contains(needleValue Value) BoolValue {
 	needleEquatable := needleValue.(EquatableValue)
 
-	for _, arrayValue := range v.Elements() {
-		if needleEquatable.Equal(arrayValue, nil, true) {
-			return true
+	var result bool
+	err := v.array.Iterate(func(element atree.Value) (resume bool, err error) {
+		// TODO: embed atree.Value in Value and implement
+		if needleEquatable.Equal(element.(Value), nil) {
+			result = true
+			// stop iteration
+			return false, nil
 		}
+		// continue iteration
+		return true, nil
+	})
+	if err != nil {
+		panic(err)
 	}
 
-	return false
+	return BoolValue(result)
 }
 
 func (v *ArrayValue) GetMember(inter *Interpreter, getLocationRange func() LocationRange, name string) Value {
@@ -1009,7 +957,6 @@ func (v *ArrayValue) GetMember(inter *Interpreter, getLocationRange func() Locat
 				return v.Contains(invocation.Arguments[0])
 			},
 		)
-
 	}
 
 	return nil
@@ -1020,7 +967,7 @@ func (v *ArrayValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string,
 }
 
 func (v *ArrayValue) Count() int {
-	return len(v.Elements())
+	return int(v.array.Count())
 }
 
 func (v *ArrayValue) ConformsToDynamicType(
@@ -1031,39 +978,58 @@ func (v *ArrayValue) ConformsToDynamicType(
 
 	arrayType, ok := dynamicType.(*ArrayDynamicType)
 
-	elements := v.Elements()
-
-	if !ok || len(elements) != len(arrayType.ElementTypes) {
+	if !ok || v.Count() != len(arrayType.ElementTypes) {
 		return false
 	}
 
-	for index, element := range elements {
-		if !element.ConformsToDynamicType(interpreter, arrayType.ElementTypes[index], results) {
-			return false
-		}
+	iterator, err := v.array.Iterator()
+	if err != nil {
+		panic(err)
 	}
 
-	return true
+	index := 0
+	for {
+		value, err := iterator.Next()
+		if err != nil {
+			panic(err)
+		}
+		if value == nil {
+			return true
+		}
+
+		// TODO: embed atree.Value in Value and implement
+		if !value.(Value).ConformsToDynamicType(interpreter, arrayType.ElementTypes[index], results) {
+			return false
+		}
+
+		index++
+	}
 }
 
 func (v *ArrayValue) IsStorable() bool {
 
-	// TODO: only check decoded values
-	//   and assume still encoded values are storable?
-
-	// If the elements are not loaded, that implies they were read from storage.
-	// Hence they are storable.
-	if v.content != nil {
-		return true
+	iterator, err := v.array.Iterator()
+	if err != nil {
+		panic(err)
 	}
 
-	for _, value := range v.Elements() {
-		if !value.IsStorable() {
+	index := 0
+	for {
+		value, err := iterator.Next()
+		if err != nil {
+			panic(err)
+		}
+		if value == nil {
+			return true
+		}
+
+		// TODO: embed atree.Value in Value and implement
+		if !value.(Value).IsStorable() {
 			return false
 		}
-	}
 
-	return true
+		index++
+	}
 }
 
 func (v *ArrayValue) Equal(other Value, getLocationRange func() LocationRange) bool {
@@ -1072,10 +1038,9 @@ func (v *ArrayValue) Equal(other Value, getLocationRange func() LocationRange) b
 		return false
 	}
 
-	elements := v.Elements()
-	otherElements := otherArray.Elements()
+	count := v.Count()
 
-	if len(elements) != len(otherElements) {
+	if count != otherArray.Count() {
 		return false
 	}
 
@@ -1089,8 +1054,9 @@ func (v *ArrayValue) Equal(other Value, getLocationRange func() LocationRange) b
 		return false
 	}
 
-	for i, value := range elements {
-		otherValue := otherElements[i]
+	for i := 0; i < count; i++ {
+		value := v.GetIndex(i, getLocationRange)
+		otherValue := otherArray.GetIndex(i, getLocationRange)
 
 		equatableValue, ok := value.(EquatableValue)
 		if !ok || !equatableValue.Equal(otherValue, getLocationRange) {
@@ -1099,52 +1065,6 @@ func (v *ArrayValue) Equal(other Value, getLocationRange func() LocationRange) b
 	}
 
 	return true
-}
-
-func (v *ArrayValue) Elements() []Value {
-	v.ensureElementsLoaded()
-	return v.values
-}
-
-// ensureMetaInfoLoaded ensures loading the meta information of this array value.
-// If the meta info is already loaded, then calling this function won't have any effect.
-// Otherwise, the values are decoded form the cached raw-content.
-//
-// Meta info includes:
-//    - static type
-//
-func (v *ArrayValue) ensureMetaInfoLoaded() {
-	if v.content == nil {
-		return
-	}
-
-	err := decodeArrayMetaInfo(v, v.content)
-	if err != nil {
-		panic(err)
-	}
-
-	// Raw content is no longer needed. Clear the cache and free-up the memory.
-	v.content = nil
-}
-
-// Ensures the elements of this array value are loaded.
-func (v *ArrayValue) ensureElementsLoaded() {
-	v.ensureMetaInfoLoaded()
-
-	if v.elementsContent == nil {
-		return
-	}
-
-	err := decodeArrayElements(v, v.elementsContent)
-	if err != nil {
-		panic(err)
-	}
-
-	// Reset the cache
-	v.elementsContent = nil
-	v.valuePath = nil
-	v.decodeCallback = nil
-	v.encodingVersion = 0
 }
 
 // NumberValue
@@ -7134,6 +7054,7 @@ type DictionaryValue struct {
 func NewDictionaryValueUnownedNonCopying(
 	interpreter *Interpreter,
 	dictionaryType DictionaryStaticType,
+	storage Storage,
 	keysAndValues ...Value,
 ) *DictionaryValue {
 
@@ -7148,6 +7069,7 @@ func NewDictionaryValueUnownedNonCopying(
 			VariableSizedStaticType{
 				Type: dictionaryType.KeyType,
 			},
+			storage,
 		),
 		entries: NewStringValueOrderedMap(),
 		// NOTE: new value has no owner
@@ -7342,12 +7264,12 @@ func maybeDestroy(inter *Interpreter, getLocationRange func() LocationRange, val
 func (v *DictionaryValue) Destroy(inter *Interpreter, getLocationRange func() LocationRange) {
 	v.ensureLoaded()
 
-	for _, keyValue := range v.keys.Elements() {
+	v.keys.Walk(func(keyValue Value) {
 		// Don't use `Entries` here: the value might be deferred and needs to be loaded
 		value := v.Get(inter, getLocationRange, keyValue)
 		maybeDestroy(inter, getLocationRange, keyValue)
 		maybeDestroy(inter, getLocationRange, value)
-	}
+	})
 
 	writeDeferredKeys(inter, v.deferredOwner, v.deferredStorageKeyBase, v.deferredKeys)
 	writeDeferredKeys(inter, v.deferredOwner, v.deferredStorageKeyBase, v.prevDeferredKeys)
@@ -7392,7 +7314,7 @@ func (v *DictionaryValue) Get(inter *Interpreter, _ func() LocationRange, keyVal
 			}
 			v.prevDeferredKeys.Set(key, struct{}{})
 
-			storedValue := inter.ReadStored(*v.deferredOwner, storageKey, true)
+			storedValue := inter.ReadStored(*v.deferredOwner, storageKey)
 			v.entries.Set(key, storedValue.(*SomeValue).Value)
 
 			// NOTE: *not* writing nil to the storage key,
