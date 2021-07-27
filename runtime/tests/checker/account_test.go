@@ -1390,7 +1390,7 @@ func TestPublicAccountContracts(t *testing.T) {
 
 	t.Run("contracts type", func(t *testing.T) {
 		_, err := ParseAndCheckAccount(t, `
-          let contracts: PublicAccount.Contracts = publicAccount.contracts
+            let contracts: PublicAccount.Contracts = publicAccount.contracts
 	    `)
 
 		require.NoError(t, err)
@@ -1398,7 +1398,7 @@ func TestPublicAccountContracts(t *testing.T) {
 
 	t.Run("contracts names", func(t *testing.T) {
 		_, err := ParseAndCheckAccount(t, `
-          let names: [String] = publicAccount.contracts.names
+            let names: [String] = publicAccount.contracts.names
 	    `)
 
 		require.NoError(t, err)
