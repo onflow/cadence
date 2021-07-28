@@ -34,6 +34,8 @@ type DeployedContractValue struct {
 	Code    *ArrayValue
 }
 
+var _ Value = DeployedContractValue{}
+
 func (DeployedContractValue) IsValue() {}
 
 func (v DeployedContractValue) Accept(interpreter *Interpreter, visitor Visitor) {

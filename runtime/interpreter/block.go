@@ -35,6 +35,8 @@ type BlockValue struct {
 	Timestamp UFix64Value
 }
 
+var _ Value = BlockValue{}
+
 func (BlockValue) IsValue() {}
 
 func (v BlockValue) Accept(interpreter *Interpreter, visitor Visitor) {

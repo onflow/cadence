@@ -59,6 +59,10 @@ type InterpretedFunctionValue struct {
 	PostConditions   ast.Conditions
 }
 
+var _ Value = InterpretedFunctionValue{}
+
+func (InterpretedFunctionValue) IsValue() {}
+
 func (f InterpretedFunctionValue) String() string {
 	return fmt.Sprintf("Function%s", f.Type.String())
 }
@@ -66,8 +70,6 @@ func (f InterpretedFunctionValue) String() string {
 func (f InterpretedFunctionValue) RecursiveString(_ StringResults) string {
 	return f.String()
 }
-
-func (InterpretedFunctionValue) IsValue() {}
 
 func (f InterpretedFunctionValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitInterpretedFunctionValue(interpreter, f)
@@ -158,6 +160,8 @@ func NewHostFunctionValue(
 	}
 }
 
+var _ Value = HostFunctionValue{}
+
 func (HostFunctionValue) IsValue() {}
 
 func (f HostFunctionValue) Accept(interpreter *Interpreter, visitor Visitor) {
@@ -230,6 +234,10 @@ type BoundFunctionValue struct {
 	Self     *CompositeValue
 }
 
+var _ Value = BoundFunctionValue{}
+
+func (BoundFunctionValue) IsValue() {}
+
 func (f BoundFunctionValue) String() string {
 	return f.RecursiveString(StringResults{})
 }
@@ -237,8 +245,6 @@ func (f BoundFunctionValue) String() string {
 func (f BoundFunctionValue) RecursiveString(results StringResults) string {
 	return f.Function.RecursiveString(results)
 }
-
-func (BoundFunctionValue) IsValue() {}
 
 func (f BoundFunctionValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitBoundFunctionValue(interpreter, f)

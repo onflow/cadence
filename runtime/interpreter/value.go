@@ -120,6 +120,8 @@ type TypeValue struct {
 	Type StaticType
 }
 
+var _ Value = TypeValue{}
+
 func (TypeValue) IsValue() {}
 
 func (v TypeValue) Accept(interpreter *Interpreter, visitor Visitor) {
@@ -216,6 +218,8 @@ func (TypeValue) IsStorable() bool {
 
 type VoidValue struct{}
 
+var _ Value = VoidValue{}
+
 func (VoidValue) IsValue() {}
 
 func (v VoidValue) Accept(interpreter *Interpreter, visitor Visitor) {
@@ -269,6 +273,8 @@ func (VoidValue) IsStorable() bool {
 // BoolValue
 
 type BoolValue bool
+
+var _ Value = BoolValue(false)
 
 func (BoolValue) IsValue() {}
 
@@ -360,6 +366,8 @@ func NewStringValue(str string) *StringValue {
 	}
 }
 
+var _ Value = &StringValue{}
+
 func (v *StringValue) prepareGraphemes() {
 	if v.graphemes == nil {
 		v.graphemes = uniseg.NewGraphemes(v.Str)
@@ -367,6 +375,7 @@ func (v *StringValue) prepareGraphemes() {
 		v.graphemes.Reset()
 	}
 }
+
 func (*StringValue) IsValue() {}
 
 func (v *StringValue) Accept(interpreter *Interpreter, visitor Visitor) {
@@ -629,6 +638,8 @@ func NewArrayValueUnownedNonCopying(
 		Owner: nil,
 	}
 }
+
+var _ Value = &ArrayValue{}
 
 func (*ArrayValue) IsValue() {}
 
@@ -1164,6 +1175,8 @@ func ConvertInt(value Value) IntValue {
 	}
 }
 
+var _ Value = IntValue{}
+
 func (v IntValue) IsValue() {}
 
 func (v IntValue) Accept(interpreter *Interpreter, visitor Visitor) {
@@ -1381,6 +1394,8 @@ func (IntValue) IsStorable() bool {
 // Int8Value
 
 type Int8Value int8
+
+var _ Value = Int8Value(0)
 
 func (Int8Value) IsValue() {}
 
@@ -1680,6 +1695,8 @@ func (Int8Value) IsStorable() bool {
 // Int16Value
 
 type Int16Value int16
+
+var _ Value = Int16Value(0)
 
 func (Int16Value) IsValue() {}
 
@@ -1982,6 +1999,8 @@ func (Int16Value) IsStorable() bool {
 
 type Int32Value int32
 
+var _ Value = Int32Value(0)
+
 func (Int32Value) IsValue() {}
 
 func (v Int32Value) Accept(interpreter *Interpreter, visitor Visitor) {
@@ -2282,6 +2301,8 @@ func (Int32Value) IsStorable() bool {
 // Int64Value
 
 type Int64Value int64
+
+var _ Value = Int64Value(0)
 
 func (Int64Value) IsValue() {}
 
@@ -2592,6 +2613,9 @@ func NewInt128ValueFromInt64(value int64) Int128Value {
 func NewInt128ValueFromBigInt(value *big.Int) Int128Value {
 	return Int128Value{BigInt: value}
 }
+
+var _ Value = Int128Value{}
+
 func (v Int128Value) IsValue() {}
 
 func (v Int128Value) Accept(interpreter *Interpreter, visitor Visitor) {
@@ -2961,6 +2985,8 @@ func NewInt256ValueFromInt64(value int64) Int256Value {
 func NewInt256ValueFromBigInt(value *big.Int) Int256Value {
 	return Int256Value{BigInt: value}
 }
+
+var _ Value = Int256Value{}
 
 func (v Int256Value) IsValue() {}
 
@@ -3353,6 +3379,8 @@ func ConvertUInt(value Value) UIntValue {
 	}
 }
 
+var _ Value = UIntValue{}
+
 func (v UIntValue) IsValue() {}
 
 func (v UIntValue) Accept(interpreter *Interpreter, visitor Visitor) {
@@ -3581,6 +3609,8 @@ func (UIntValue) IsStorable() bool {
 // UInt8Value
 
 type UInt8Value uint8
+
+var _ Value = UInt8Value(0)
 
 func (UInt8Value) IsValue() {}
 
@@ -3812,6 +3842,8 @@ func (UInt8Value) IsStorable() bool {
 
 type UInt16Value uint16
 
+var _ Value = UInt16Value(0)
+
 func (UInt16Value) IsValue() {}
 
 func (v UInt16Value) Accept(interpreter *Interpreter, visitor Visitor) {
@@ -4041,6 +4073,8 @@ func (UInt16Value) IsStorable() bool {
 // UInt32Value
 
 type UInt32Value uint32
+
+var _ Value = UInt32Value(0)
 
 func (UInt32Value) IsValue() {}
 
@@ -4272,6 +4306,8 @@ func (UInt32Value) IsStorable() bool {
 // UInt64Value
 
 type UInt64Value uint64
+
+var _ Value = UInt64Value(0)
 
 func (UInt64Value) IsValue() {}
 
@@ -4516,6 +4552,8 @@ func NewUInt128ValueFromUint64(value uint64) UInt128Value {
 func NewUInt128ValueFromBigInt(value *big.Int) UInt128Value {
 	return UInt128Value{BigInt: value}
 }
+
+var _ Value = UInt128Value{}
 
 func (v UInt128Value) IsValue() {}
 
@@ -4829,6 +4867,8 @@ func NewUInt256ValueFromBigInt(value *big.Int) UInt256Value {
 	return UInt256Value{BigInt: value}
 }
 
+var _ Value = UInt256Value{}
+
 func (v UInt256Value) IsValue() {}
 
 func (v UInt256Value) Accept(interpreter *Interpreter, visitor Visitor) {
@@ -5131,6 +5171,8 @@ func (UInt256Value) IsStorable() bool {
 
 type Word8Value uint8
 
+var _ Value = Word8Value(0)
+
 func (Word8Value) IsValue() {}
 
 func (v Word8Value) Accept(interpreter *Interpreter, visitor Visitor) {
@@ -5306,6 +5348,8 @@ func (Word8Value) IsStorable() bool {
 
 type Word16Value uint16
 
+var _ Value = Word16Value(0)
+
 func (Word16Value) IsValue() {}
 
 func (v Word16Value) Accept(interpreter *Interpreter, visitor Visitor) {
@@ -5480,6 +5524,8 @@ func (Word16Value) IsStorable() bool {
 // Word32Value
 
 type Word32Value uint32
+
+var _ Value = Word32Value(0)
 
 func (Word32Value) IsValue() {}
 
@@ -5657,6 +5703,8 @@ func (Word32Value) IsStorable() bool {
 // Word64Value
 
 type Word64Value uint64
+
+var _ Value = Word64Value(0)
 
 func (Word64Value) IsValue() {}
 
@@ -5849,6 +5897,8 @@ func NewFix64ValueWithInteger(integer int64) Fix64Value {
 
 	return Fix64Value(integer * sema.Fix64Factor)
 }
+
+var _ Value = Fix64Value(0)
 
 func (Fix64Value) IsValue() {}
 
@@ -6123,6 +6173,8 @@ func NewUFix64ValueWithInteger(integer uint64) UFix64Value {
 
 	return UFix64Value(integer * sema.Fix64Factor)
 }
+
+var _ Value = UFix64Value(0)
 
 func (UFix64Value) IsValue() {}
 
@@ -6462,6 +6514,8 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, getLocationRange func
 	v.destroyed = true
 	v.modified = true
 }
+
+var _ Value = &CompositeValue{}
 
 func (*CompositeValue) IsValue() {}
 
@@ -7028,6 +7082,8 @@ func NewDictionaryValueUnownedNonCopying(
 	return result
 }
 
+var _ Value = &DictionaryValue{}
+
 func (*DictionaryValue) IsValue() {}
 
 func (v *DictionaryValue) Accept(interpreter *Interpreter, visitor Visitor) {
@@ -7199,7 +7255,7 @@ func (v *DictionaryValue) RecursiveString(results StringResults) string {
 	return format.Dictionary(pairs)
 }
 
-func (v *DictionaryValue) GetMember(interpreter *Interpreter, getLocationRange func() LocationRange, name string) Value {
+func (v *DictionaryValue) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
 	switch name {
 	case "length":
 		return NewIntValueFromInt64(int64(v.Count()))
@@ -7473,6 +7529,8 @@ type OptionalValue interface {
 
 type NilValue struct{}
 
+var _ Value = NilValue{}
+
 func (NilValue) IsValue() {}
 
 func (v NilValue) Accept(interpreter *Interpreter, visitor Visitor) {
@@ -7568,6 +7626,8 @@ func NewSomeValueOwningNonCopying(value Value) *SomeValue {
 		Owner: value.GetOwner(),
 	}
 }
+
+var _ Value = &SomeValue{}
 
 func (*SomeValue) IsValue() {}
 
@@ -7700,6 +7760,8 @@ type StorageReferenceValue struct {
 	TargetKey            string
 	BorrowedType         sema.Type
 }
+
+var _ Value = &StorageReferenceValue{}
 
 func (*StorageReferenceValue) IsValue() {}
 
@@ -7919,6 +7981,8 @@ type EphemeralReferenceValue struct {
 	BorrowedType sema.Type
 }
 
+var _ Value = &EphemeralReferenceValue{}
+
 func (*EphemeralReferenceValue) IsValue() {}
 
 func (v *EphemeralReferenceValue) Accept(interpreter *Interpreter, visitor Visitor) {
@@ -8126,6 +8190,8 @@ func (*EphemeralReferenceValue) IsStorable() bool {
 
 type AddressValue common.Address
 
+var _ Value = AddressValue{}
+
 func NewAddressValue(a common.Address) AddressValue {
 	return NewAddressValueFromBytes(a[:])
 }
@@ -8153,6 +8219,8 @@ func ConvertAddress(value Value) AddressValue {
 	}
 	return result
 }
+
+var _ Value = AddressValue{}
 
 func (AddressValue) IsValue() {}
 
@@ -8422,6 +8490,8 @@ type PathValue struct {
 	Identifier string
 }
 
+var _ Value = PathValue{}
+
 func (PathValue) IsValue() {}
 
 func (v PathValue) Accept(interpreter *Interpreter, visitor Visitor) {
@@ -8532,6 +8602,8 @@ type CapabilityValue struct {
 	Path       PathValue
 	BorrowType StaticType
 }
+
+var _ Value = CapabilityValue{}
 
 func (CapabilityValue) IsValue() {}
 
@@ -8656,6 +8728,8 @@ type LinkValue struct {
 	TargetPath PathValue
 	Type       StaticType
 }
+
+var _ Value = LinkValue{}
 
 func (LinkValue) IsValue() {}
 
