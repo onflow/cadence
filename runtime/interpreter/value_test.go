@@ -448,7 +448,7 @@ func TestSetOwnerComposite(t *testing.T) {
 
 	const fieldName = "test"
 
-	composite.fields.Set(fieldName, value)
+	composite.Fields.Set(fieldName, value)
 
 	composite.SetOwner(&newOwner)
 
@@ -467,13 +467,13 @@ func TestSetOwnerCompositeCopy(t *testing.T) {
 
 	const fieldName = "test"
 
-	composite.fields.Set(fieldName, value)
+	composite.Fields.Set(fieldName, value)
 	composite.stringer = func(_ SeenReferences) string {
 		return "random string"
 	}
 
 	compositeCopy := composite.Copy().(*CompositeValue)
-	valueCopy, _ := compositeCopy.fields.Get(fieldName)
+	valueCopy, _ := compositeCopy.Fields.Get(fieldName)
 
 	assert.Nil(t, compositeCopy.GetOwner())
 	assert.Nil(t, valueCopy.GetOwner())
@@ -2429,9 +2429,9 @@ func TestPublicKeyValue(t *testing.T) {
 			fields.Set(sema.EnumRawValueFieldName, UInt8Value(sema.SignatureAlgorithmECDSA_secp256k1.RawValue()))
 
 			return &CompositeValue{
-				qualifiedIdentifier: sema.SignatureAlgorithmType.QualifiedIdentifier(),
-				kind:                sema.SignatureAlgorithmType.Kind,
-				fields:              fields,
+				QualifiedIdentifier: sema.SignatureAlgorithmType.QualifiedIdentifier(),
+				Kind:                sema.SignatureAlgorithmType.Kind,
+				Fields:              fields,
 			}
 		}
 

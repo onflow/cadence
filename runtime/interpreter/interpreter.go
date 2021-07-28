@@ -1388,10 +1388,10 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 			}
 
 			value := &CompositeValue{
-				location:            location,
-				qualifiedIdentifier: qualifiedIdentifier,
-				kind:                declaration.CompositeKind,
-				fields:              fields,
+				Location:            location,
+				QualifiedIdentifier: qualifiedIdentifier,
+				Kind:                declaration.CompositeKind,
+				Fields:              fields,
 				InjectedFields:      injectedFields,
 				Functions:           functions,
 				Destructor:          destructorFunction,
@@ -1484,10 +1484,10 @@ func (interpreter *Interpreter) declareEnumConstructor(
 		caseValueFields.Set(sema.EnumRawValueFieldName, rawValue)
 
 		caseValue := &CompositeValue{
-			location:            location,
-			qualifiedIdentifier: qualifiedIdentifier,
-			kind:                declaration.CompositeKind,
-			fields:              caseValueFields,
+			Location:            location,
+			QualifiedIdentifier: qualifiedIdentifier,
+			Kind:                declaration.CompositeKind,
+			Fields:              caseValueFields,
 			// NOTE: new value has no owner
 			Owner:    nil,
 			modified: true,
