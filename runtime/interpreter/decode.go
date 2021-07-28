@@ -368,7 +368,7 @@ func (d *DecoderV5) decodeArray(path []string) (*ArrayValue, error) {
 }
 
 func (d *DecoderV5) decodeArrayValueHead(valuePath []string) error {
-	const expectedLength = encodedArrayValueLength
+	const expectedLength = 2
 
 	size, err := d.decoder.DecodeArrayHead()
 
@@ -1555,9 +1555,6 @@ func (d *DecoderV5) decodeCapabilityStaticType() (StaticType, error) {
 // This also extracts out the fields raw content and cache it separately inside the value.
 //
 func decodeCompositeMetaInfo(v *CompositeValue, content []byte) error {
-	if v.encodingVersion < 5 {
-		return decodeCompositeMetaInfoV4(v, content)
-	}
 
 	d, err := NewByteDecoder(content, v.Owner, v.encodingVersion, v.decodeCallback)
 	if err != nil {
@@ -1663,9 +1660,6 @@ func decodeCompositeMetaInfo(v *CompositeValue, content []byte) error {
 // decodeCompositeFields decodes fields from the byte content and updates the composite value.
 //
 func decodeCompositeFields(v *CompositeValue, content []byte) error {
-	if v.encodingVersion < 5 {
-		return decodeCompositeFieldsV4(v, content)
-	}
 
 	d, err := NewByteDecoder(content, v.Owner, v.encodingVersion, v.decodeCallback)
 	if err != nil {

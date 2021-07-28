@@ -504,14 +504,14 @@ func (v *StringValue) Set(_ *Interpreter, _ func() LocationRange, _ Value, _ Val
 	panic(errors.NewUnreachableError())
 }
 
-func (v *StringValue) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
+func (v *StringValue) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
 	switch name {
 	case "length":
 		length := v.Length()
 		return NewIntValueFromInt64(int64(length))
 
 	case "utf8":
-		return ByteSliceToByteArrayValue([]byte(v.Str))
+		return ByteSliceToByteArrayValue(interpreter.storage, []byte(v.Str))
 
 	case "concat":
 		return NewHostFunctionValue(
@@ -1059,7 +1059,7 @@ type NumberValue interface {
 	ToBigEndianBytes() []byte
 }
 
-func getNumberValueMember(v NumberValue, name string) Value {
+func getNumberValueMember(v NumberValue, name string, storage Storage) Value {
 	switch name {
 
 	case sema.ToStringFunctionName:
@@ -1072,7 +1072,7 @@ func getNumberValueMember(v NumberValue, name string) Value {
 	case sema.ToBigEndianBytesFunctionName:
 		return NewHostFunctionValue(
 			func(invocation Invocation) Value {
-				return ByteSliceToByteArrayValue(v.ToBigEndianBytes())
+				return ByteSliceToByteArrayValue(storage, v.ToBigEndianBytes())
 			},
 		)
 
@@ -1350,8 +1350,8 @@ func (v IntValue) BitwiseRightShift(other IntegerValue) IntegerValue {
 	return IntValue{res}
 }
 
-func (v IntValue) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name)
+func (v IntValue) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
+	return getNumberValueMember(v, name, interpreter.storage)
 }
 
 func (IntValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -1649,8 +1649,8 @@ func (v Int8Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 	return v >> o
 }
 
-func (v Int8Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name)
+func (v Int8Value) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
+	return getNumberValueMember(v, name, interpreter.storage)
 }
 
 func (Int8Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -1948,8 +1948,8 @@ func (v Int16Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 	return v >> o
 }
 
-func (v Int16Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name)
+func (v Int16Value) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
+	return getNumberValueMember(v, name, interpreter.storage)
 }
 
 func (Int16Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -2249,8 +2249,8 @@ func (v Int32Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 	return v >> o
 }
 
-func (v Int32Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name)
+func (v Int32Value) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
+	return getNumberValueMember(v, name, interpreter.storage)
 }
 
 func (Int32Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -2549,8 +2549,8 @@ func (v Int64Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 	return v >> o
 }
 
-func (v Int64Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name)
+func (v Int64Value) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
+	return getNumberValueMember(v, name, interpreter.storage)
 }
 
 func (Int64Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -2920,8 +2920,8 @@ func (v Int128Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 	return Int128Value{res}
 }
 
-func (v Int128Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name)
+func (v Int128Value) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
+	return getNumberValueMember(v, name, interpreter.storage)
 }
 
 func (Int128Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -3290,8 +3290,8 @@ func (v Int256Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 	return Int256Value{res}
 }
 
-func (v Int256Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name)
+func (v Int256Value) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
+	return getNumberValueMember(v, name, interpreter.storage)
 }
 
 func (Int256Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -3550,8 +3550,8 @@ func (v UIntValue) BitwiseRightShift(other IntegerValue) IntegerValue {
 	return UIntValue{res}
 }
 
-func (v UIntValue) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name)
+func (v UIntValue) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
+	return getNumberValueMember(v, name, interpreter.storage)
 }
 
 func (UIntValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -3780,8 +3780,8 @@ func (v UInt8Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 	return v >> o
 }
 
-func (v UInt8Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name)
+func (v UInt8Value) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
+	return getNumberValueMember(v, name, interpreter.storage)
 }
 
 func (UInt8Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -4008,8 +4008,8 @@ func (v UInt16Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 	return v >> o
 }
 
-func (v UInt16Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name)
+func (v UInt16Value) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
+	return getNumberValueMember(v, name, interpreter.storage)
 }
 
 func (UInt16Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -4239,8 +4239,8 @@ func (v UInt32Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 	return v >> o
 }
 
-func (v UInt32Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name)
+func (v UInt32Value) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
+	return getNumberValueMember(v, name, interpreter.storage)
 }
 
 func (UInt32Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -4473,8 +4473,8 @@ func (v UInt64Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 	return v >> o
 }
 
-func (v UInt64Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name)
+func (v UInt64Value) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
+	return getNumberValueMember(v, name, interpreter.storage)
 }
 
 func (UInt64Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -4787,8 +4787,8 @@ func (v UInt128Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 	return UInt128Value{res}
 }
 
-func (v UInt128Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name)
+func (v UInt128Value) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
+	return getNumberValueMember(v, name, interpreter.storage)
 }
 
 func (UInt128Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -5099,8 +5099,8 @@ func (v UInt256Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 	return UInt256Value{res}
 }
 
-func (v UInt256Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name)
+func (v UInt256Value) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
+	return getNumberValueMember(v, name, interpreter.storage)
 }
 
 func (UInt256Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -5274,8 +5274,8 @@ func (v Word8Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 	return v >> o
 }
 
-func (v Word8Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name)
+func (v Word8Value) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
+	return getNumberValueMember(v, name, interpreter.storage)
 }
 
 func (Word8Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -5447,8 +5447,8 @@ func (v Word16Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 	return v >> o
 }
 
-func (v Word16Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name)
+func (v Word16Value) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
+	return getNumberValueMember(v, name, interpreter.storage)
 }
 
 func (Word16Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -5624,8 +5624,8 @@ func (v Word32Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 	return v >> o
 }
 
-func (v Word32Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name)
+func (v Word32Value) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
+	return getNumberValueMember(v, name, interpreter.storage)
 }
 
 func (Word32Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -5801,8 +5801,8 @@ func (v Word64Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 	return v >> o
 }
 
-func (v Word64Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name)
+func (v Word64Value) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
+	return getNumberValueMember(v, name, interpreter.storage)
 }
 
 func (Word64Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -6080,8 +6080,8 @@ func ConvertFix64(value Value) Fix64Value {
 	}
 }
 
-func (v Fix64Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name)
+func (v Fix64Value) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
+	return getNumberValueMember(v, name, interpreter.storage)
 }
 
 func (Fix64Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -6325,8 +6325,8 @@ func ConvertUFix64(value Value) UFix64Value {
 	}
 }
 
-func (v UFix64Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name)
+func (v UFix64Value) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
+	return getNumberValueMember(v, name, interpreter.storage)
 }
 
 func (UFix64Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -8208,7 +8208,7 @@ func (v AddressValue) ToAddress() common.Address {
 	return common.Address(v)
 }
 
-func (v AddressValue) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
+func (v AddressValue) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
 	switch name {
 
 	case sema.ToStringFunctionName:
@@ -8222,7 +8222,7 @@ func (v AddressValue) GetMember(_ *Interpreter, _ func() LocationRange, name str
 		return NewHostFunctionValue(
 			func(invocation Invocation) Value {
 				bytes := common.Address(v)
-				return ByteSliceToByteArrayValue(bytes[:])
+				return ByteSliceToByteArrayValue(interpreter.storage, bytes[:])
 			},
 		)
 	}
