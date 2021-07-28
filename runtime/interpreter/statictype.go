@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/fxamacker/atree"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/sema"
@@ -38,6 +39,7 @@ type StaticType interface {
 	fmt.Stringer
 	isStaticType()
 	Equal(other StaticType) bool
+	Encode(e *atree.Encoder) error
 }
 
 // CompositeStaticType
