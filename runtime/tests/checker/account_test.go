@@ -1417,4 +1417,50 @@ func TestPublicAccountContracts(t *testing.T) {
 		assert.IsType(t, &sema.InvalidAssignmentAccessError{}, errors[0])
 		assert.IsType(t, &sema.AssignmentToConstantMemberError{}, errors[1])
 	})
+
+	t.Run("add contract", func(t *testing.T) {
+		_, err := ParseAndCheckAccount(t, `
+            fun test() {
+                publicAccount.contracts.add(name: "foo", code: "012".decodeHex())
+            }
+	    `)
+
+		require.Error(t, err)
+		errors := ExpectCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.NotDeclaredMemberError{}, errors[0])
+		notDeclaredError := errors[0].(*sema.NotDeclaredMemberError)
+		assert.Equal(t, "add", notDeclaredError.Name)
+	})
+
+	t.Run("update contract", func(t *testing.T) {
+		_, err := ParseAndCheckAccount(t, `
+            fun test() {
+                publicAccount.contracts.update__experimental(name: "foo", code: "012".decodeHex())
+            }
+	    `)
+
+		require.Error(t, err)
+		errors := ExpectCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.NotDeclaredMemberError{}, errors[0])
+		notDeclaredError := errors[0].(*sema.NotDeclaredMemberError)
+		assert.Equal(t, "update__experimental", notDeclaredError.Name)
+	})
+
+	t.Run("remove contract", func(t *testing.T) {
+		_, err := ParseAndCheckAccount(t, `
+            fun test() {
+                publicAccount.contracts.remove(name: "foo")
+            }
+	    `)
+
+		require.Error(t, err)
+		errors := ExpectCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.NotDeclaredMemberError{}, errors[0])
+		notDeclaredError := errors[0].(*sema.NotDeclaredMemberError)
+		assert.Equal(t, "remove", notDeclaredError.Name)
+	})
+
 }
