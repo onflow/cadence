@@ -19,7 +19,6 @@
 package interpreter
 
 import (
-	"bytes"
 	"encoding/binary"
 	"encoding/hex"
 	"fmt"
@@ -33,7 +32,6 @@ import (
 	"golang.org/x/text/unicode/norm"
 
 	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/common/orderedmap"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/format"
 	"github.com/onflow/cadence/runtime/sema"
@@ -7003,52 +7001,10 @@ func NewEnumCaseValue(
 // DictionaryValue
 
 type DictionaryValue struct {
-	Type     DictionaryStaticType
-	keys     *ArrayValue
-	entries  *StringValueOrderedMap
-	Owner    *common.Address
-	modified bool
-
-	// Deferral of values:
-	//
-	// Values in the dictionary might be deferred, i.e. are they encoded
-	// separately and stored in separate storage keys.
-
-	// deferredOwner is the account in which the deferred values are stored.
-	// The account might differ from the owner: If the dictionary is moved
-	// from one account to another, its owner changes, but its deferred values
-	// stay stored in the deferred owner's account until the end of the transaction.
-	deferredOwner *common.Address
-
-	// deferredKeys are the keys which are deferred and have not been loaded from storage yet.
-	deferredKeys *orderedmap.StringStructOrderedMap
-
-	// deferredStorageKeyBase is the storage key prefix for all deferred keys
-	deferredStorageKeyBase string
-
-	// prevDeferredKeys are the keys which are deferred and have been loaded from storage,
-	// i.e. they are keys that were previously in deferredKeys.
-	prevDeferredKeys *orderedmap.StringStructOrderedMap
-
-	// Raw element content cache for decoded values.
-	// Only available for decoded values who's entries are not loaded yet.
-	content []byte
-
-	// Raw content cache for entries.
-	// Only available for decoded values who's entries are not loaded yet.
-	entriesContent []byte
-
-	// Value's path to be used during decoding.
-	// Only available for decoded values who's entries are not loaded yet.
-	valuePath []string
-
-	// Callback function to be invoked when decoding the entries of this dictionary value.
-	// Only available for decoded values who's entries are not loaded yet.
-	decodeCallback DecodingCallback
-
-	// Encoding version of the raw content of the entries of this value.
-	// Only available for decoded values who's entries are not loaded yet.
-	encodingVersion uint16
+	Type    DictionaryStaticType
+	keys    *ArrayValue
+	entries *StringValueOrderedMap
+	Owner   *common.Address
 }
 
 func NewDictionaryValueUnownedNonCopying(
@@ -7073,12 +7029,7 @@ func NewDictionaryValueUnownedNonCopying(
 		),
 		entries: NewStringValueOrderedMap(),
 		// NOTE: new value has no owner
-		Owner:                  nil,
-		modified:               true,
-		deferredOwner:          nil,
-		deferredKeys:           nil,
-		deferredStorageKeyBase: "",
-		prevDeferredKeys:       nil,
+		Owner: nil,
 	}
 
 	for i := 0; i < keysAndValuesCount; i += 2 {
@@ -7088,92 +7039,40 @@ func NewDictionaryValueUnownedNonCopying(
 	return result
 }
 
-func NewDeferredDictionaryValue(
-	path []string,
-	content []byte,
-	owner *common.Address,
-	decodeCallback DecodingCallback,
-	version uint16,
-) *DictionaryValue {
-
-	// Note: static type for deferred dictionaries gets populated when the meta info is loaded.
-	// i.e: at `ensureMetaInfoLoaded()` method
-
-	return &DictionaryValue{
-		Owner:           owner,
-		deferredOwner:   owner,
-		modified:        false,
-		valuePath:       path,
-		content:         content,
-		decodeCallback:  decodeCallback,
-		encodingVersion: version,
-	}
-}
-
 func (*DictionaryValue) IsValue() {}
-
-func (v *DictionaryValue) Keys() *ArrayValue {
-	v.ensureLoaded()
-	return v.keys
-}
-
-func (v *DictionaryValue) Entries() *StringValueOrderedMap {
-	v.ensureLoaded()
-	return v.entries
-}
-
-func (v *DictionaryValue) DeferredOwner() *common.Address {
-	v.ensureLoaded()
-	return v.deferredOwner
-}
-
-func (v *DictionaryValue) DeferredKeys() *orderedmap.StringStructOrderedMap {
-	v.ensureLoaded()
-	return v.deferredKeys
-}
-
-func (v *DictionaryValue) DeferredStorageKeyBase() string {
-	v.ensureLoaded()
-	return v.deferredStorageKeyBase
-}
 
 func (v *DictionaryValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	descend := visitor.VisitDictionaryValue(interpreter, v)
 	if !descend {
 		return
 	}
-	for _, key := range v.Keys().Elements() {
-		key.Accept(interpreter, visitor)
 
-		// NOTE: Force unwrap. This is safe because we are iterating over the keys.
-		value := v.Get(interpreter, ReturnEmptyLocationRange, key).(*SomeValue).Value
+	v.Walk(func(value Value) {
 		value.Accept(interpreter, visitor)
-	}
+	})
 }
 
 func (v *DictionaryValue) Walk(walkChild func(Value)) {
-	for _, value := range v.Keys().Elements() {
-		walkChild(value)
-	}
-	v.Entries().Foreach(func(_ string, value Value) {
+	v.keys.Walk(walkChild)
+	v.entries.Foreach(func(_ string, value Value) {
 		walkChild(value)
 	})
 }
 
 func (v *DictionaryValue) DynamicType(interpreter *Interpreter, seenReferences SeenReferences) DynamicType {
-	keys := v.Keys().Elements()
-	entryTypes := make([]DictionaryStaticTypeEntry, len(keys))
+	entryTypes := make([]DictionaryStaticTypeEntry, v.keys.Count())
 
-	for i, key := range keys {
-		// NOTE: Force unwrap, otherwise dynamic type check is for optional type.
-		// This is safe because we are iterating over the keys.
-		value := v.Get(interpreter, ReturnEmptyLocationRange, key).(*SomeValue).Value
-		entryTypes[i] =
+	index := 0
+	v.keys.Walk(func(keyValue Value) {
+		key := dictionaryKey(keyValue)
+		value, _ := v.entries.Get(key)
+		entryTypes[index] =
 			DictionaryStaticTypeEntry{
-				KeyType:   key.DynamicType(interpreter, seenReferences),
+				KeyType:   keyValue.DynamicType(interpreter, seenReferences),
 				ValueType: value.DynamicType(interpreter, seenReferences),
 			}
-	}
+		index++
+	})
 
 	return &DictionaryDynamicType{
 		EntryTypes: entryTypes,
@@ -7182,53 +7081,25 @@ func (v *DictionaryValue) DynamicType(interpreter *Interpreter, seenReferences S
 }
 
 func (v *DictionaryValue) StaticType() StaticType {
-	v.ensureMetaInfoLoaded()
 	return v.Type
 }
 
 func (v *DictionaryValue) Copy() Value {
-	if v.content != nil {
-		return &DictionaryValue{
-			Type:                   v.Type,
-			keys:                   v.keys,
-			entries:                v.entries,
-			deferredOwner:          v.deferredOwner,
-			deferredKeys:           v.deferredKeys,
-			deferredStorageKeyBase: v.deferredStorageKeyBase,
-			prevDeferredKeys:       v.prevDeferredKeys,
-			// NOTE: new value has no owner
-			Owner:           nil,
-			modified:        true,
-			content:         v.content,
-			valuePath:       v.valuePath,
-			decodeCallback:  v.decodeCallback,
-			encodingVersion: v.encodingVersion,
-		}
-	}
 
-	newKeys := v.Keys().Copy().(*ArrayValue)
+	newKeys := v.keys.Copy().(*ArrayValue)
 
 	newEntries := NewStringValueOrderedMap()
 
-	v.Entries().Foreach(func(key string, value Value) {
+	v.entries.Foreach(func(key string, value Value) {
 		newEntries.Set(key, value.Copy())
 	})
 
 	return &DictionaryValue{
-		Type:                   v.Type,
-		keys:                   newKeys,
-		entries:                newEntries,
-		deferredOwner:          v.deferredOwner,
-		deferredKeys:           v.deferredKeys,
-		deferredStorageKeyBase: v.deferredStorageKeyBase,
-		prevDeferredKeys:       v.prevDeferredKeys,
+		Type:    v.Type,
+		keys:    newKeys,
+		entries: newEntries,
 		// NOTE: new value has no owner
-		Owner:           nil,
-		modified:        true,
-		content:         v.content,
-		valuePath:       v.valuePath,
-		decodeCallback:  v.decodeCallback,
-		encodingVersion: v.encodingVersion,
+		Owner: nil,
 	}
 }
 
@@ -7240,8 +7111,6 @@ func (v *DictionaryValue) SetOwner(owner *common.Address) {
 	if v.Owner == owner {
 		return
 	}
-
-	v.ensureLoaded()
 
 	v.Owner = owner
 
@@ -7262,72 +7131,29 @@ func maybeDestroy(inter *Interpreter, getLocationRange func() LocationRange, val
 }
 
 func (v *DictionaryValue) Destroy(inter *Interpreter, getLocationRange func() LocationRange) {
-	v.ensureLoaded()
 
 	v.keys.Walk(func(keyValue Value) {
-		// Don't use `Entries` here: the value might be deferred and needs to be loaded
-		value := v.Get(inter, getLocationRange, keyValue)
 		maybeDestroy(inter, getLocationRange, keyValue)
+		value := v.Get(inter, getLocationRange, keyValue)
 		maybeDestroy(inter, getLocationRange, value)
 	})
-
-	writeDeferredKeys(inter, v.deferredOwner, v.deferredStorageKeyBase, v.deferredKeys)
-	writeDeferredKeys(inter, v.deferredOwner, v.deferredStorageKeyBase, v.prevDeferredKeys)
 }
 
 func (v *DictionaryValue) ContainsKey(keyValue Value) BoolValue {
-	v.ensureLoaded()
-
 	key := dictionaryKey(keyValue)
 	_, ok := v.entries.Get(key)
-	if ok {
-		return true
-	}
-	if v.deferredKeys != nil {
-		_, ok := v.deferredKeys.Get(key)
-		if ok {
-			return true
-		}
-	}
-	return false
+	return BoolValue(ok)
 }
 
-func (v *DictionaryValue) Get(inter *Interpreter, _ func() LocationRange, keyValue Value) Value {
+func (v *DictionaryValue) Get(_ *Interpreter, _ func() LocationRange, keyValue Value) Value {
 	key := dictionaryKey(keyValue)
-
-	v.ensureLoaded()
 
 	value, ok := v.entries.Get(key)
 	if ok {
 		return NewSomeValueOwningNonCopying(value)
 	}
 
-	// Is the key a deferred value? If so, load it from storage
-	// and keep it as an entry in memory
-
-	if v.deferredKeys != nil {
-		_, ok := v.deferredKeys.Delete(key)
-		if ok {
-			storageKey := joinPathElements(v.deferredStorageKeyBase, key)
-			if v.prevDeferredKeys == nil {
-				v.prevDeferredKeys = orderedmap.NewStringStructOrderedMap()
-			}
-			v.prevDeferredKeys.Set(key, struct{}{})
-
-			storedValue := inter.ReadStored(*v.deferredOwner, storageKey)
-			v.entries.Set(key, storedValue.(*SomeValue).Value)
-
-			// NOTE: *not* writing nil to the storage key,
-			// as this would result in a loss of the value:
-			// the read value is not modified,
-			// so it won't be written back
-
-			return storedValue
-		}
-	}
-
 	return NilValue{}
-
 }
 
 func dictionaryKey(keyValue Value) string {
@@ -7339,7 +7165,8 @@ func dictionaryKey(keyValue Value) string {
 }
 
 func (v *DictionaryValue) Set(inter *Interpreter, getLocationRange func() LocationRange, keyValue Value, value Value) {
-	v.modified = true
+
+	// TODO: update in storage
 
 	// Use the getter, to make sure lazily decoded values are properly loaded.
 	dictionaryStaticType := v.StaticType().(DictionaryStaticType)
@@ -7371,36 +7198,27 @@ func (v *DictionaryValue) String() string {
 }
 
 func (v *DictionaryValue) RecursiveString(seenReferences SeenReferences) string {
-	v.ensureLoaded()
-	keys := v.keys.Elements()
 
 	pairs := make([]struct {
 		Key   string
 		Value string
-	}, len(keys))
+	}, v.keys.Count())
 
-	for i, keyValue := range keys {
+	index := 0
+	v.keys.Walk(func(keyValue Value) {
 		key := dictionaryKey(keyValue)
 		value, _ := v.entries.Get(key)
 
-		// Value is potentially deferred,
-		// so might be nil
-
-		var valueString string
-		if value == nil {
-			valueString = "..."
-		} else {
-			valueString = value.RecursiveString(seenReferences)
-		}
-
-		pairs[i] = struct {
+		pairs[index] = struct {
 			Key   string
 			Value string
 		}{
 			Key:   keyValue.RecursiveString(seenReferences),
-			Value: valueString,
+			Value: value.RecursiveString(seenReferences),
 		}
-	}
+
+		index++
+	})
 
 	return format.Dictionary(pairs)
 }
@@ -7410,24 +7228,22 @@ func (v *DictionaryValue) GetMember(interpreter *Interpreter, getLocationRange f
 	case "length":
 		return NewIntValueFromInt64(int64(v.Count()))
 
-	// TODO: is returning copies correct?
 	case "keys":
-		return v.Keys().Copy()
+		return v.keys.Copy()
 
-	// TODO: is returning copies correct?
 	case "values":
 		dictionaryValues := make([]Value, v.Count())
 		i := 0
-		for _, keyValue := range v.Keys().Elements() {
-			value := v.Get(interpreter, getLocationRange, keyValue).(*SomeValue).Value
+		v.entries.Foreach(func(_ string, value Value) {
 			dictionaryValues[i] = value.Copy()
 			i++
-		}
+		})
 
 		return NewArrayValueUnownedNonCopying(
 			VariableSizedStaticType{
 				Type: v.Type.ValueType,
 			},
+			v.keys.storage,
 			dictionaryValues...,
 		)
 
@@ -7477,42 +7293,44 @@ func (v *DictionaryValue) SetMember(_ *Interpreter, _ func() LocationRange, _ st
 }
 
 func (v *DictionaryValue) Count() int {
-	return v.Keys().Count()
+	return v.keys.Count()
 }
 
 // TODO: unset owner?
 func (v *DictionaryValue) Remove(inter *Interpreter, getLocationRange func() LocationRange, keyValue Value) OptionalValue {
-	v.modified = true
+
+	// TODO: update in storage
 
 	// Don't use `Entries` here: the value might be deferred and needs to be loaded
 	value := v.Get(inter, getLocationRange, keyValue)
 
 	key := dictionaryKey(keyValue)
 
-	// If a resource that was previously deferred is removed from the dictionary,
-	// we delete its old key in storage, and then rely on resource semantics
-	// to make sure it is stored or destroyed later
-
-	if v.prevDeferredKeys != nil {
-		if _, ok := v.prevDeferredKeys.Get(key); ok {
-			storageKey := joinPathElements(v.deferredStorageKeyBase, key)
-			inter.writeStored(*v.deferredOwner, storageKey, NilValue{})
-		}
-	}
-
 	switch value := value.(type) {
 	case *SomeValue:
-
-		v.ensureLoaded()
-
 		v.entries.Delete(key)
 
 		// TODO: optimize linear scan
-		for index, keyValue := range v.keys.Elements() {
-			if dictionaryKey(keyValue) == key {
+		iterator, err := v.keys.array.Iterator()
+		if err != nil {
+			panic(err)
+		}
+		index := 0
+		for {
+			keyValue, err := iterator.Next()
+			if err != nil {
+				panic(err)
+			}
+			if keyValue == nil {
+				break
+			}
+
+			// TODO: embed atree.Value in Value and implement
+			if dictionaryKey(keyValue.(Value)) == key {
 				v.keys.Remove(index, getLocationRange)
 				return value
 			}
+			index++
 		}
 
 		// Should never occur, the key should have been found
@@ -7534,23 +7352,13 @@ func (v *DictionaryValue) Insert(inter *Interpreter, locationRangeGetter func() 
 	inter.checkContainerMutation(dictionaryStaticType.KeyType, keyValue, locationRangeGetter)
 	inter.checkContainerMutation(dictionaryStaticType.ValueType, value, locationRangeGetter)
 
-	v.modified = true
+	// TODO: update in storage
 
-	v.ensureLoaded()
-
-	// Don't use `Entries` here: the value might be deferred and needs to be loaded
 	existingValue := v.Get(inter, locationRangeGetter, keyValue)
 
 	key := dictionaryKey(keyValue)
 
 	value.SetOwner(v.Owner)
-
-	// Mark the inserted value itself modified.
-	// It might have been stored as a deferred value and loaded,
-	// so must be written (potentially as a deferred value again),
-	// and would otherwise be ignored by the writeback optimization.
-
-	value.SetModified(true)
 
 	v.entries.Set(key, value)
 
@@ -7567,35 +7375,24 @@ func (v *DictionaryValue) Insert(inter *Interpreter, locationRangeGetter func() 
 	}
 }
 
-func writeDeferredKeys(
-	inter *Interpreter,
-	owner *common.Address,
-	storageKeyBase string,
-	keys *orderedmap.StringStructOrderedMap,
-) {
-	if keys == nil {
-		return
-	}
-
-	for pair := keys.Oldest(); pair != nil; pair = pair.Next() {
-		storageKey := joinPathElements(storageKeyBase, pair.Key)
-		inter.writeStored(*owner, storageKey, NilValue{})
-	}
-}
-
 func (v *DictionaryValue) IsStorable() bool {
 
-	// TODO: only check decoded keys
-	//   and assume still encoded keys are storable?
-
-	// If the keys/entries are not loaded, that implies they were read from storage.
-	// Hence they are storable.
-	if v.content != nil {
-		return true
+	iterator, err := v.keys.array.Iterator()
+	if err != nil {
+		panic(err)
 	}
 
-	for _, keyValue := range v.keys.Elements() {
-		if !keyValue.IsStorable() {
+	for {
+		keyValue, err := iterator.Next()
+		if err != nil {
+			panic(err)
+		}
+		if keyValue == nil {
+			break
+		}
+
+		// TODO: embed atree.Value in Value and implement
+		if !keyValue.(Value).IsStorable() {
 			return false
 		}
 	}
@@ -7620,15 +7417,30 @@ func (v *DictionaryValue) ConformsToDynamicType(
 	results TypeConformanceResults,
 ) bool {
 
-	v.ensureLoaded()
-
 	dictionaryType, ok := dynamicType.(*DictionaryDynamicType)
 	if !ok || v.Count() != len(dictionaryType.EntryTypes) {
 		return false
 	}
 
-	for index, entryKey := range v.keys.Elements() {
+	iterator, err := v.keys.array.Iterator()
+	if err != nil {
+		panic(err)
+	}
+
+	index := 0
+	for {
+		keyValue, err := iterator.Next()
+		if err != nil {
+			panic(err)
+		}
+		if keyValue == nil {
+			return true
+		}
+
 		entryType := dictionaryType.EntryTypes[index]
+
+		// TODO: embed atree.Value in Value and implement
+		entryKey := keyValue.(Value)
 
 		// Check the key
 		if !entryKey.ConformsToDynamicType(interpreter, entryType.KeyType, results) {
@@ -7642,9 +7454,9 @@ func (v *DictionaryValue) ConformsToDynamicType(
 		if !ok || !entryValue.ConformsToDynamicType(interpreter, entryType.ValueType, results) {
 			return false
 		}
-	}
 
-	return true
+		index++
+	}
 }
 
 func (v *DictionaryValue) Equal(other Value, getLocationRange func() LocationRange) bool {
@@ -7652,15 +7464,6 @@ func (v *DictionaryValue) Equal(other Value, getLocationRange func() LocationRan
 	if !ok {
 		return false
 	}
-
-	if v.content != nil &&
-		otherDictionary.content != nil &&
-		bytes.Equal(v.content, otherDictionary.content) {
-		return true
-	}
-
-	v.ensureLoaded()
-	otherDictionary.ensureLoaded()
 
 	if !v.Type.Equal(otherDictionary.Type) {
 		return false
@@ -7670,29 +7473,15 @@ func (v *DictionaryValue) Equal(other Value, getLocationRange func() LocationRan
 		return false
 	}
 
-	keys := v.keys.Elements()
-	otherKeys := otherDictionary.keys.Elements()
+	for pair := v.entries.Oldest(); pair != nil; pair = pair.Next() {
+		key := pair.Key
 
-	for i, keyValue := range keys {
-		otherKeyValue := otherKeys[i]
-
-		var value, otherValue Value
-		var valueExists, otherValueExists bool
-
-		if loadDeferred {
-			value = v.Get(interpreter, nil, keyValue)
-			valueExists = true
-
-			otherValue = otherDictionary.Get(interpreter, nil, otherKeyValue)
-			otherValueExists = true
-		} else {
-			value, valueExists = v.entries.Get(dictionaryKey(keyValue))
-			otherValue, otherValueExists = otherDictionary.entries.Get(dictionaryKey(otherKeyValue))
-		}
+		value, valueExists := v.entries.Get(key)
+		otherValue, otherValueExists := otherDictionary.entries.Get(key)
 
 		if valueExists {
 			equatableValue, ok := value.(EquatableValue)
-			if !ok || !equatableValue.Equal(otherValue, interpreter, loadDeferred) {
+			if !ok || !equatableValue.Equal(otherValue, getLocationRange) {
 				return false
 			}
 		} else if otherValueExists {
@@ -7701,47 +7490,6 @@ func (v *DictionaryValue) Equal(other Value, getLocationRange func() LocationRan
 	}
 
 	return true
-}
-
-// ensureMetaInfoLoaded ensures loading the meta information of this dictionary value.
-// If the meta info is already loaded, then calling this function won't have any effect.
-// Otherwise, the values are decoded form the cached raw-content.
-//
-// Meta info includes:
-//    - static type
-//
-func (v *DictionaryValue) ensureMetaInfoLoaded() {
-	if v.content == nil {
-		return
-	}
-
-	err := decodeDictionaryMetaInfo(v, v.content)
-	if err != nil {
-		panic(err)
-	}
-
-	// Raw content is no longer needed. Clear the cache and free-up the memory.
-	v.content = nil
-}
-
-// ensureLoaded ensures the entries of this dictionary value are loaded.
-func (v *DictionaryValue) ensureLoaded() {
-	v.ensureMetaInfoLoaded()
-
-	if v.entriesContent == nil {
-		return
-	}
-
-	err := decodeDictionaryEntries(v, v.entriesContent)
-	if err != nil {
-		panic(err)
-	}
-
-	// Reset the cache
-	v.entriesContent = nil
-	v.valuePath = nil
-	v.decodeCallback = nil
-	v.encodingVersion = 0
 }
 
 // OptionalValue
