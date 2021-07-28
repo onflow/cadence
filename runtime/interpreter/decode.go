@@ -29,7 +29,6 @@ import (
 	"github.com/fxamacker/cbor/v2"
 
 	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/common/orderedmap"
 	"github.com/onflow/cadence/runtime/sema"
 )
 
@@ -216,7 +215,7 @@ func (d *DecoderV5) decodeValue(path []string) (Value, error) {
 			value, err = d.decodeComposite(path)
 
 		case cborTagArrayValue:
-			value, err = d.decodeArray(path, true)
+			value, err = d.decodeArray(path)
 
 		// Int*
 
@@ -332,65 +331,40 @@ func (d *DecoderV5) decodeString(v string) Value {
 	return NewStringValue(v)
 }
 
-func (d *DecoderV5) decodeArray(path []string, deferDecoding bool) (*ArrayValue, error) {
-	if !deferDecoding {
-		err := d.decodeArrayValueHead(path)
-		if err != nil {
-			return nil, err
-		}
-
-		// Decode type at array index encodedArrayValueStaticTypeFieldKeyV5
-		staticType, err := d.decodeStaticType()
-		if err != nil {
-			return nil, err
-		}
-
-		arrayStaticType, ok := staticType.(ArrayStaticType)
-		if !ok {
-			return nil, fmt.Errorf(
-				"invalid decoded array static type (@ %s): %s",
-				strings.Join(path, "."),
-				staticType,
-			)
-		}
-
-		elements, err := d.decodeArrayElements(path)
-		if err != nil {
-			return nil, err
-		}
-
-		return &ArrayValue{
-			values: elements,
-			Owner:  d.owner,
-			Type:   arrayStaticType,
-		}, nil
-	}
-
-	var content []byte
-	var err error
-	if d.isByteDecoder {
-		// Use the zero-copy method if available, for better performance.
-		content, err = d.decoder.DecodeRawBytesZeroCopy()
-	} else {
-		content, err = d.decoder.DecodeRawBytes()
-	}
-
+func (d *DecoderV5) decodeArray(path []string) (*ArrayValue, error) {
+	err := d.decodeArrayValueHead(path)
 	if err != nil {
-		if e, ok := err.(*cbor.WrongTypeError); ok {
-			return nil, fmt.Errorf(
-				"invalid array encoding (@ %s): %s",
-				strings.Join(path, "."),
-				e.ActualType.String(),
-			)
-		}
 		return nil, err
 	}
 
-	// Make a copy so that the path will not be affected by any modification at upper levels.
-	valuePath := make([]string, len(path))
-	copy(valuePath, path)
+	// Decode type at array index encodedArrayValueStaticTypeFieldKeyV5
+	staticType, err := d.decodeStaticType()
+	if err != nil {
+		return nil, err
+	}
 
-	return NewDeferredArrayValue(valuePath, content, d.owner, d.decodeCallback, d.version), nil
+	arrayStaticType, ok := staticType.(ArrayStaticType)
+	if !ok {
+		return nil, fmt.Errorf(
+			"invalid decoded array static type (@ %s): %s",
+			strings.Join(path, "."),
+			staticType,
+		)
+	}
+
+	elements, err := d.decodeArrayElements(path)
+	if err != nil {
+		return nil, err
+	}
+
+	// TODO: create new array
+	_ = arrayStaticType
+	_ = elements
+	return &ArrayValue{
+		//values: elements,
+		Owner: d.owner,
+		Type:  arrayStaticType,
+	}, nil
 }
 
 func (d *DecoderV5) decodeArrayValueHead(valuePath []string) error {
@@ -456,42 +430,6 @@ func (d *DecoderV5) decodeArrayElements(path []string) ([]Value, error) {
 	}
 
 	return values, nil
-}
-
-func (d *DecoderV5) decodeDictionary(path []string) (*DictionaryValue, error) {
-
-	var content []byte
-	var err error
-	if d.isByteDecoder {
-		// Use the zero-copy method if available, for better performance.
-		content, err = d.decoder.DecodeRawBytesZeroCopy()
-	} else {
-		content, err = d.decoder.DecodeRawBytes()
-	}
-
-	if err != nil {
-		if e, ok := err.(*cbor.WrongTypeError); ok {
-			return nil, fmt.Errorf(
-				"invalid dictionary encoding (@ %s): %s",
-				strings.Join(path, "."),
-				e.ActualType.String(),
-			)
-		}
-		return nil, err
-	}
-
-	// Make a copy so that the path will not be affected by any modification at upper levels.
-	valuePath := make([]string, len(path))
-	copy(valuePath, path)
-
-	return NewDeferredDictionaryValue(
-			valuePath,
-			content,
-			d.owner,
-			d.decodeCallback,
-			d.version,
-		),
-		nil
 }
 
 func (d *DecoderV5) decodeLocation() (common.Location, error) {
@@ -1801,321 +1739,237 @@ func decodeCompositeFields(v *CompositeValue, content []byte) error {
 	return nil
 }
 
-func decodeArrayMetaInfo(array *ArrayValue, content []byte) error {
-	if array.encodingVersion < 5 {
-		// In encoding version 4, no meta info was available for arrays.
-		// The raw content only consist of the elements.
-		array.elementsContent = content
-		return nil
-	}
-
-	d, err := NewByteDecoder(content, array.Owner, array.encodingVersion, array.decodeCallback)
-	if err != nil {
-		return err
-	}
-
-	err = d.decodeArrayValueHead(array.valuePath)
-	if err != nil {
-		return err
-	}
-
-	// Decode type at array index encodedArrayValueStaticTypeFieldKeyV5
-	staticType, err := d.decodeStaticType()
-	if err != nil {
-		return err
-	}
-
-	arrayStaticType, ok := staticType.(ArrayStaticType)
-	if !ok {
-		return fmt.Errorf(
-			"invalid decoded array static type (@ %s): %s",
-			strings.Join(array.valuePath, "."),
-			staticType,
-		)
-	}
-
-	array.Type = arrayStaticType
-
-	// Elements
-
-	var elementsContent []byte
-	if d.isByteDecoder {
-		// Use the zero-copy method if available, for better performance.
-		elementsContent, err = d.decoder.DecodeRawBytesZeroCopy()
-	} else {
-		elementsContent, err = d.decoder.DecodeRawBytes()
-	}
-
-	if err != nil {
-		if e, ok := err.(*cbor.WrongTypeError); ok {
-			return fmt.Errorf(
-				"invalid array elements encoding (@ %s): %s",
-				strings.Join(array.valuePath, "."),
-				e.ActualType.String(),
-			)
-		}
-		return err
-	}
-
-	array.elementsContent = elementsContent
-
-	return nil
+func (d *DecoderV5) decodeDictionary(path []string) (*DictionaryValue, error) {
+	// TODO:
+	return nil, nil
 }
 
-func decodeArrayElements(array *ArrayValue, elementContent []byte) error {
-	if array.encodingVersion < 5 {
-		return decodeArrayElementsV4(array, elementContent)
-	}
-
-	d, err := NewByteDecoder(elementContent, array.Owner, array.encodingVersion, array.decodeCallback)
-	if err != nil {
-		return err
-	}
-
-	elements, err := d.decodeArrayElements(array.valuePath)
-	if err != nil {
-		return err
-	}
-
-	array.values = elements
-	return nil
-}
-
-func decodeDictionaryMetaInfo(v *DictionaryValue, content []byte) error {
-	if v.encodingVersion < 5 {
-		// In encoding version 4, no meta info was available for dictionaries.
-		// The raw content only consist of the entries.
-		v.entriesContent = content
-		return nil
-	}
-
-	d, err := NewByteDecoder(content, v.Owner, v.encodingVersion, v.decodeCallback)
-	if err != nil {
-		return err
-	}
-
-	const expectedLength = encodedDictionaryValueLength
-
-	size, err := d.decoder.DecodeArrayHead()
-
-	if err != nil {
-		if e, ok := err.(*cbor.WrongTypeError); ok {
-			return fmt.Errorf("invalid dictionary encoding (@ %s): expected [%d]interface{}, got %s",
-				strings.Join(v.valuePath, "."),
-				expectedLength,
-				e.ActualType.String(),
-			)
-		}
-		return err
-	}
-
-	if size != expectedLength {
-		return fmt.Errorf("invalid dictionary encoding (@ %s): expected [%d]interface{}, got [%d]interface{}",
-			strings.Join(v.valuePath, "."),
-			expectedLength,
-			size,
-		)
-	}
-
-	// Decode type
-	staticType, err := d.decodeStaticType()
-	if err != nil {
-		return err
-	}
-
-	dictionaryStaticType, ok := staticType.(DictionaryStaticType)
-	if !ok {
-		return fmt.Errorf(
-			"invalid dictionary static type encoding (@ %s): %s",
-			strings.Join(v.valuePath, "."),
-			staticType.String(),
-		)
-	}
-
-	// Lazily decode keys
-
-	var keysContent []byte
-	if d.isByteDecoder {
-		// Use the zero-copy method if available, for better performance.
-		keysContent, err = d.decoder.DecodeRawBytesZeroCopy()
-	} else {
-		keysContent, err = d.decoder.DecodeRawBytes()
-	}
-
-	if err != nil {
-		if e, ok := err.(*cbor.WrongTypeError); ok {
-			return fmt.Errorf(
-				"invalid dictionary keys encoding (@ %s): %s",
-				strings.Join(v.valuePath, "."),
-				e.ActualType.String(),
-			)
-		}
-		return err
-	}
-
-	// Lazily decode values
-
-	var valuesContent []byte
-	if d.isByteDecoder {
-		// Use the zero-copy method if available, for better performance.
-		valuesContent, err = d.decoder.DecodeRawBytesZeroCopy()
-	} else {
-		valuesContent, err = d.decoder.DecodeRawBytes()
-	}
-
-	if err != nil {
-		if e, ok := err.(*cbor.WrongTypeError); ok {
-			return fmt.Errorf(
-				"invalid dictionary values encoding (@ %s): %s",
-				strings.Join(v.valuePath, "."),
-				e.ActualType.String(),
-			)
-		}
-		return err
-	}
-
-	keysContent = append(keysContent, valuesContent...)
-
-	v.entriesContent = keysContent
-	v.Type = dictionaryStaticType
-
-	return nil
-}
-
-func decodeDictionaryEntries(v *DictionaryValue, content []byte) error {
-	if v.encodingVersion < 5 {
-		return decodeDictionaryEntriesV4(v, content)
-	}
-
-	d, err := NewByteDecoder(content, v.Owner, v.encodingVersion, v.decodeCallback)
-	if err != nil {
-		return err
-	}
-
-	// Decode keys at array index encodedDictionaryValueKeysFieldKeyV5
-	//nolint:gocritic
-	keysPath := append(v.valuePath, dictionaryKeyPathPrefix)
-
-	// Since the keys are always accessed below, do not defer
-	// the decoding for keys, as it can be an overhead.
-
-	num, err := d.decoder.DecodeTagNumber()
-	if err != nil {
-		return fmt.Errorf(
-			"invalid dictionary keys encoding (@ %s): %w",
-			strings.Join(v.valuePath, "."),
-			err,
-		)
-	}
-
-	if num != cborTagArrayValue {
-		return fmt.Errorf(
-			"invalid dictionary keys encoding (@ %s)",
-			strings.Join(v.valuePath, "."),
-		)
-	}
-
-	keys, err := d.decodeArray(keysPath, false)
-	if err != nil {
-		return fmt.Errorf(
-			"invalid dictionary keys encoding (@ %s): %w",
-			strings.Join(v.valuePath, "."),
-			err,
-		)
-	}
-
-	// Decode entries at array index encodedDictionaryValueEntriesFieldKeyV5
-	entryCount, err := d.decoder.DecodeArrayHead()
-	if err != nil {
-		if e, ok := err.(*cbor.WrongTypeError); ok {
-			return fmt.Errorf("invalid dictionary entries encoding (@ %s): %s",
-				strings.Join(v.valuePath, "."),
-				e.ActualType.String(),
-			)
-		}
-		return err
-	}
-
-	keyCount := keys.Count()
-
-	// The number of entries must either match the number of keys,
-	// or be zero in case the values are deferred
-
-	countMismatch := int(entryCount) != keyCount
-	if countMismatch && entryCount != 0 {
-		return fmt.Errorf(
-			"invalid dictionary encoding (@ %s): key and entry count mismatch: expected %d, got %d",
-			strings.Join(v.valuePath, "."),
-			keyCount,
-			entryCount,
-		)
-	}
-
-	entries := NewStringValueOrderedMap()
-
-	var deferred *orderedmap.StringStructOrderedMap
-	var deferredStorageKeyBase string
-
-	// Are the values in the dictionary deferred, i.e. are they encoded
-	// separately and stored in separate storage keys?
-
-	isDeferred := countMismatch && entryCount == 0
-
-	if isDeferred {
-
-		deferred = orderedmap.NewStringStructOrderedMap()
-		deferredStorageKeyBase = joinPath(append(v.valuePath, dictionaryValuePathPrefix))
-		for _, keyValue := range keys.Elements() {
-			key := dictionaryKey(keyValue)
-			deferred.Set(key, struct{}{})
-		}
-
-	} else {
-
-		// Pre-allocate and reuse valuePath.
-		//nolint:gocritic
-		valuePath := append(v.valuePath, dictionaryValuePathPrefix, "")
-
-		lastValuePathIndex := len(v.valuePath) + 1
-
-		keyIndex := 0
-
-		for _, keyValue := range keys.Elements() {
-			keyStringValue, ok := keyValue.(HasKeyString)
-			if !ok {
-				return fmt.Errorf(
-					"invalid dictionary key encoding (@ %s, %d): %T",
-					strings.Join(v.valuePath, "."),
-					keyIndex,
-					keyValue,
-				)
-			}
-
-			keyString := keyStringValue.KeyString()
-			valuePath[lastValuePathIndex] = keyString
-
-			decodedValue, err := d.decodeValue(valuePath)
-			if err != nil {
-				return fmt.Errorf(
-					"invalid dictionary value encoding (@ %s, %s): %w",
-					strings.Join(v.valuePath, "."),
-					keyString,
-					err,
-				)
-			}
-
-			entries.Set(keyString, decodedValue)
-
-			keyIndex++
-		}
-
-		v.deferredOwner = nil
-	}
-
-	v.keys = keys
-	v.entries = entries
-	v.deferredKeys = deferred
-	v.deferredStorageKeyBase = deferredStorageKeyBase
-
-	return nil
-}
+// TODO:
+//func decodeDictionaryMetaInfo(v *DictionaryValue, content []byte) error {
+//
+//
+//	const expectedLength = encodedDictionaryValueLength
+//
+//	size, err := d.decoder.DecodeArrayHead()
+//
+//	if err != nil {
+//		if e, ok := err.(*cbor.WrongTypeError); ok {
+//			return fmt.Errorf("invalid dictionary encoding (@ %s): expected [%d]interface{}, got %s",
+//				strings.Join(v.valuePath, "."),
+//				expectedLength,
+//				e.ActualType.String(),
+//			)
+//		}
+//		return err
+//	}
+//
+//	if size != expectedLength {
+//		return fmt.Errorf("invalid dictionary encoding (@ %s): expected [%d]interface{}, got [%d]interface{}",
+//			strings.Join(v.valuePath, "."),
+//			expectedLength,
+//			size,
+//		)
+//	}
+//
+//	// Decode type
+//	staticType, err := d.decodeStaticType()
+//	if err != nil {
+//		return err
+//	}
+//
+//	dictionaryStaticType, ok := staticType.(DictionaryStaticType)
+//	if !ok {
+//		return fmt.Errorf(
+//			"invalid dictionary static type encoding (@ %s): %s",
+//			strings.Join(v.valuePath, "."),
+//			staticType.String(),
+//		)
+//	}
+//
+//	// Lazily decode keys
+//
+//	var keysContent []byte
+//	if d.isByteDecoder {
+//		// Use the zero-copy method if available, for better performance.
+//		keysContent, err = d.decoder.DecodeRawBytesZeroCopy()
+//	} else {
+//		keysContent, err = d.decoder.DecodeRawBytes()
+//	}
+//
+//	if err != nil {
+//		if e, ok := err.(*cbor.WrongTypeError); ok {
+//			return fmt.Errorf(
+//				"invalid dictionary keys encoding (@ %s): %s",
+//				strings.Join(v.valuePath, "."),
+//				e.ActualType.String(),
+//			)
+//		}
+//		return err
+//	}
+//
+//	// Lazily decode values
+//
+//	var valuesContent []byte
+//	if d.isByteDecoder {
+//		// Use the zero-copy method if available, for better performance.
+//		valuesContent, err = d.decoder.DecodeRawBytesZeroCopy()
+//	} else {
+//		valuesContent, err = d.decoder.DecodeRawBytes()
+//	}
+//
+//	if err != nil {
+//		if e, ok := err.(*cbor.WrongTypeError); ok {
+//			return fmt.Errorf(
+//				"invalid dictionary values encoding (@ %s): %s",
+//				strings.Join(v.valuePath, "."),
+//				e.ActualType.String(),
+//			)
+//		}
+//		return err
+//	}
+//
+//	keysContent = append(keysContent, valuesContent...)
+//
+//	v.entriesContent = keysContent
+//	v.Type = dictionaryStaticType
+//
+//	return nil
+//}
+//
+//func decodeDictionaryEntries(v *DictionaryValue, content []byte) error {
+//	if v.encodingVersion < 5 {
+//		return decodeDictionaryEntriesV4(v, content)
+//	}
+//
+//	d, err := NewByteDecoder(content, v.Owner, v.encodingVersion, v.decodeCallback)
+//	if err != nil {
+//		return err
+//	}
+//
+//	// Decode keys at array index encodedDictionaryValueKeysFieldKeyV5
+//	//nolint:gocritic
+//	keysPath := append(v.valuePath, dictionaryKeyPathPrefix)
+//
+//	// Since the keys are always accessed below, do not defer
+//	// the decoding for keys, as it can be an overhead.
+//
+//	num, err := d.decoder.DecodeTagNumber()
+//	if err != nil {
+//		return fmt.Errorf(
+//			"invalid dictionary keys encoding (@ %s): %w",
+//			strings.Join(v.valuePath, "."),
+//			err,
+//		)
+//	}
+//
+//	if num != cborTagArrayValue {
+//		return fmt.Errorf(
+//			"invalid dictionary keys encoding (@ %s)",
+//			strings.Join(v.valuePath, "."),
+//		)
+//	}
+//
+//	keys, err := d.decodeArray(keysPath, false)
+//	if err != nil {
+//		return fmt.Errorf(
+//			"invalid dictionary keys encoding (@ %s): %w",
+//			strings.Join(v.valuePath, "."),
+//			err,
+//		)
+//	}
+//
+//	// Decode entries at array index encodedDictionaryValueEntriesFieldKeyV5
+//	entryCount, err := d.decoder.DecodeArrayHead()
+//	if err != nil {
+//		if e, ok := err.(*cbor.WrongTypeError); ok {
+//			return fmt.Errorf("invalid dictionary entries encoding (@ %s): %s",
+//				strings.Join(v.valuePath, "."),
+//				e.ActualType.String(),
+//			)
+//		}
+//		return err
+//	}
+//
+//	keyCount := keys.Count()
+//
+//	// The number of entries must either match the number of keys,
+//	// or be zero in case the values are deferred
+//
+//	countMismatch := int(entryCount) != keyCount
+//	if countMismatch && entryCount != 0 {
+//		return fmt.Errorf(
+//			"invalid dictionary encoding (@ %s): key and entry count mismatch: expected %d, got %d",
+//			strings.Join(v.valuePath, "."),
+//			keyCount,
+//			entryCount,
+//		)
+//	}
+//
+//	entries := NewStringValueOrderedMap()
+//
+//	var deferred *orderedmap.StringStructOrderedMap
+//	var deferredStorageKeyBase string
+//
+//	// Are the values in the dictionary deferred, i.e. are they encoded
+//	// separately and stored in separate storage keys?
+//
+//	isDeferred := countMismatch && entryCount == 0
+//
+//	if isDeferred {
+//
+//		deferred = orderedmap.NewStringStructOrderedMap()
+//		deferredStorageKeyBase = joinPath(append(v.valuePath, dictionaryValuePathPrefix))
+//		for _, keyValue := range keys.Elements() {
+//			key := dictionaryKey(keyValue)
+//			deferred.Set(key, struct{}{})
+//		}
+//
+//	} else {
+//
+//		// Pre-allocate and reuse valuePath.
+//		//nolint:gocritic
+//		valuePath := append(v.valuePath, dictionaryValuePathPrefix, "")
+//
+//		lastValuePathIndex := len(v.valuePath) + 1
+//
+//		keyIndex := 0
+//
+//		for _, keyValue := range keys.Elements() {
+//			keyStringValue, ok := keyValue.(HasKeyString)
+//			if !ok {
+//				return fmt.Errorf(
+//					"invalid dictionary key encoding (@ %s, %d): %T",
+//					strings.Join(v.valuePath, "."),
+//					keyIndex,
+//					keyValue,
+//				)
+//			}
+//
+//			keyString := keyStringValue.KeyString()
+//			valuePath[lastValuePathIndex] = keyString
+//
+//			decodedValue, err := d.decodeValue(valuePath)
+//			if err != nil {
+//				return fmt.Errorf(
+//					"invalid dictionary value encoding (@ %s, %s): %w",
+//					strings.Join(v.valuePath, "."),
+//					keyString,
+//					err,
+//				)
+//			}
+//
+//			entries.Set(keyString, decodedValue)
+//
+//			keyIndex++
+//		}
+//
+//		v.deferredOwner = nil
+//	}
+//
+//	v.keys = keys
+//	v.entries = entries
+//	v.deferredKeys = deferred
+//	v.deferredStorageKeyBase = deferredStorageKeyBase
+//
+//	return nil
+//}
