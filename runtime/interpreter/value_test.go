@@ -48,8 +48,7 @@ func TestOwnerNewArray(t *testing.T) {
 
 	t.Parallel()
 
-	// TODO:
-	var storage Storage
+	storage := NewInMemoryStorage()
 
 	oldOwner := common.Address{0x1}
 
@@ -73,8 +72,7 @@ func TestSetOwnerArray(t *testing.T) {
 
 	t.Parallel()
 
-	// TODO:
-	var storage Storage
+	storage := NewInMemoryStorage()
 
 	oldOwner := common.Address{0x1}
 	newOwner := common.Address{0x2}
@@ -99,8 +97,7 @@ func TestSetOwnerArrayCopy(t *testing.T) {
 
 	t.Parallel()
 
-	// TODO:
-	var storage Storage
+	storage := NewInMemoryStorage()
 
 	oldOwner := common.Address{0x1}
 	newOwner := common.Address{0x2}
@@ -129,8 +126,7 @@ func TestSetOwnerArraySetIndex(t *testing.T) {
 
 	t.Parallel()
 
-	// TODO:
-	var storage Storage
+	storage := NewInMemoryStorage()
 
 	oldOwner := common.Address{0x1}
 	newOwner := common.Address{0x2}
@@ -153,7 +149,7 @@ func TestSetOwnerArraySetIndex(t *testing.T) {
 
 	inter := newTestInterpreterWithTestStruct(t)
 
-	array.Set(inter, ReturnEmptyLocationRange, NewIntValueFromInt64(0), value2)
+	array.SetIndex(inter, ReturnEmptyLocationRange,0, value2)
 
 	assert.Equal(t, &newOwner, array.GetOwner())
 	assert.Equal(t, &newOwner, value1.GetOwner())
@@ -164,8 +160,7 @@ func TestSetOwnerArrayAppend(t *testing.T) {
 
 	t.Parallel()
 
-	// TODO:
-	var storage Storage
+	storage := NewInMemoryStorage()
 
 	oldOwner := common.Address{0x1}
 	newOwner := common.Address{0x2}
@@ -193,8 +188,7 @@ func TestSetOwnerArrayInsert(t *testing.T) {
 
 	t.Parallel()
 
-	// TODO:
-	var storage Storage
+	storage := NewInMemoryStorage()
 
 	oldOwner := common.Address{0x1}
 	newOwner := common.Address{0x2}
@@ -222,8 +216,7 @@ func TestOwnerNewDictionary(t *testing.T) {
 
 	t.Parallel()
 
-	// TODO:
-	var storage Storage
+	storage := NewInMemoryStorage()
 
 	oldOwner := common.Address{0x1}
 
@@ -251,8 +244,7 @@ func TestSetOwnerDictionary(t *testing.T) {
 
 	t.Parallel()
 
-	// TODO:
-	var storage Storage
+	storage := NewInMemoryStorage()
 
 	oldOwner := common.Address{0x1}
 	newOwner := common.Address{0x2}
@@ -280,8 +272,7 @@ func TestSetOwnerDictionaryCopy(t *testing.T) {
 
 	t.Parallel()
 
-	// TODO:
-	var storage Storage
+	storage := NewInMemoryStorage()
 
 	oldOwner := common.Address{0x1}
 	newOwner := common.Address{0x2}
@@ -312,8 +303,7 @@ func TestSetOwnerDictionarySetIndex(t *testing.T) {
 
 	t.Parallel()
 
-	// TODO:
-	var storage Storage
+	storage := NewInMemoryStorage()
 
 	oldOwner := common.Address{0x1}
 	newOwner := common.Address{0x2}
@@ -349,8 +339,7 @@ func TestSetOwnerDictionaryInsert(t *testing.T) {
 
 	t.Parallel()
 
-	// TODO:
-	var storage Storage
+	storage := NewInMemoryStorage()
 
 	oldOwner := common.Address{0x1}
 	newOwner := common.Address{0x2}
@@ -527,8 +516,7 @@ func TestStringer(t *testing.T) {
 
 	t.Parallel()
 
-	// TODO:
-	var storage Storage
+	storage := NewInMemoryStorage()
 
 	type testCase struct {
 		value    Value
@@ -818,8 +806,7 @@ func TestVisitor(t *testing.T) {
 
 	t.Parallel()
 
-	// TODO:
-	var storage Storage
+	storage := NewInMemoryStorage()
 
 	var intVisits, stringVisits int
 
@@ -1019,8 +1006,7 @@ func TestBlockValue(t *testing.T) {
 
 	t.Parallel()
 
-	// TODO:
-	var storage Storage
+	storage := NewInMemoryStorage()
 
 	block := BlockValue{
 		Height: 4,
@@ -1701,8 +1687,7 @@ func TestArrayValue_Equal(t *testing.T) {
 
 		t.Parallel()
 
-		// TODO:
-		var storage Storage
+		storage := NewInMemoryStorage()
 
 		require.True(t,
 			NewArrayValueUnownedNonCopying(
@@ -1726,8 +1711,7 @@ func TestArrayValue_Equal(t *testing.T) {
 
 		t.Parallel()
 
-		// TODO:
-		var storage Storage
+		storage := NewInMemoryStorage()
 
 		require.False(t,
 			NewArrayValueUnownedNonCopying(
@@ -1751,8 +1735,7 @@ func TestArrayValue_Equal(t *testing.T) {
 
 		t.Parallel()
 
-		// TODO:
-		var storage Storage
+		storage := NewInMemoryStorage()
 
 		require.False(t,
 			NewArrayValueUnownedNonCopying(
@@ -1775,8 +1758,7 @@ func TestArrayValue_Equal(t *testing.T) {
 
 		t.Parallel()
 
-		// TODO:
-		var storage Storage
+		storage := NewInMemoryStorage()
 
 		require.False(t,
 			NewArrayValueUnownedNonCopying(
@@ -1799,8 +1781,7 @@ func TestArrayValue_Equal(t *testing.T) {
 
 		t.Parallel()
 
-		// TODO:
-		var storage Storage
+		storage := NewInMemoryStorage()
 
 		uint16ArrayStaticType := VariableSizedStaticType{
 			Type: PrimitiveStaticTypeUInt16,
@@ -1824,8 +1805,7 @@ func TestArrayValue_Equal(t *testing.T) {
 
 		t.Parallel()
 
-		// TODO:
-		var storage Storage
+		storage := NewInMemoryStorage()
 
 		require.False(t,
 			NewArrayValueUnownedNonCopying(
@@ -1845,8 +1825,7 @@ func TestArrayValue_Equal(t *testing.T) {
 
 		t.Parallel()
 
-		// TODO:
-		var storage Storage
+		storage := NewInMemoryStorage()
 
 		require.False(t,
 			NewArrayValueUnownedNonCopying(
@@ -1866,8 +1845,7 @@ func TestArrayValue_Equal(t *testing.T) {
 
 		t.Parallel()
 
-		// TODO:
-		var storage Storage
+		storage := NewInMemoryStorage()
 
 		require.True(t,
 			NewArrayValueUnownedNonCopying(
@@ -1887,8 +1865,7 @@ func TestArrayValue_Equal(t *testing.T) {
 
 		t.Parallel()
 
-		// TODO:
-		var storage Storage
+		storage := NewInMemoryStorage()
 
 		require.False(t,
 			NewArrayValueUnownedNonCopying(
@@ -1916,8 +1893,7 @@ func TestDictionaryValue_Equal(t *testing.T) {
 
 		t.Parallel()
 
-		// TODO:
-		var storage Storage
+		storage := NewInMemoryStorage()
 
 		require.True(t,
 			NewDictionaryValueUnownedNonCopying(
@@ -1947,8 +1923,7 @@ func TestDictionaryValue_Equal(t *testing.T) {
 
 		t.Parallel()
 
-		// TODO:
-		var storage Storage
+		storage := NewInMemoryStorage()
 
 		require.False(t,
 			NewDictionaryValueUnownedNonCopying(
@@ -1978,8 +1953,7 @@ func TestDictionaryValue_Equal(t *testing.T) {
 
 		t.Parallel()
 
-		// TODO:
-		var storage Storage
+		storage := NewInMemoryStorage()
 
 		require.False(t,
 			NewDictionaryValueUnownedNonCopying(
@@ -2009,8 +1983,7 @@ func TestDictionaryValue_Equal(t *testing.T) {
 
 		t.Parallel()
 
-		// TODO:
-		var storage Storage
+		storage := NewInMemoryStorage()
 
 		require.False(t,
 			NewDictionaryValueUnownedNonCopying(
@@ -2038,8 +2011,7 @@ func TestDictionaryValue_Equal(t *testing.T) {
 
 		t.Parallel()
 
-		// TODO:
-		var storage Storage
+		storage := NewInMemoryStorage()
 
 		require.False(t,
 			NewDictionaryValueUnownedNonCopying(
@@ -2067,8 +2039,7 @@ func TestDictionaryValue_Equal(t *testing.T) {
 
 		t.Parallel()
 
-		// TODO:
-		var storage Storage
+		storage := NewInMemoryStorage()
 
 		stringByteDictionaryStaticType := DictionaryStaticType{
 			KeyType:   PrimitiveStaticTypeString,
@@ -2095,8 +2066,7 @@ func TestDictionaryValue_Equal(t *testing.T) {
 
 		t.Parallel()
 
-		// TODO:
-		var storage Storage
+		storage := NewInMemoryStorage()
 
 		require.False(t,
 			NewDictionaryValueUnownedNonCopying(
@@ -2440,8 +2410,7 @@ func TestPublicKeyValue(t *testing.T) {
 
 		t.Parallel()
 
-		// TODO:
-		var storage Storage
+		storage := NewInMemoryStorage()
 
 		publicKey := NewArrayValueUnownedNonCopying(
 			VariableSizedStaticType{

@@ -35,8 +35,7 @@ func TestByteArrayValueToByteSlice(t *testing.T) {
 		largeBigInt, ok := new(big.Int).SetString("1000000000000000000000000000000000000000000000", 10)
 		require.True(t, ok)
 
-		// TODO:
-		var storage Storage
+		storage := NewInMemoryStorage()
 
 		invalid := []Value{
 			NewArrayValueUnownedNonCopying(
@@ -66,8 +65,7 @@ func TestByteArrayValueToByteSlice(t *testing.T) {
 
 	t.Run("valid", func(t *testing.T) {
 
-		// TODO:
-		var storage Storage
+		storage := NewInMemoryStorage()
 
 		invalid := map[Value][]byte{
 			NewArrayValueUnownedNonCopying(

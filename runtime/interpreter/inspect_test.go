@@ -29,8 +29,7 @@ func TestInspectValue(t *testing.T) {
 
 	t.Parallel()
 
-	// TODO:
-	var storage Storage
+	storage := NewInMemoryStorage()
 
 	dictionaryStaticType := DictionaryStaticType{
 		KeyType:   PrimitiveStaticTypeString,

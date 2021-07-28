@@ -612,24 +612,28 @@ func NewArrayValueUnownedNonCopying(
 	storage Storage,
 	values ...Value,
 ) *ArrayValue {
-	// NOTE: new value has no owner
-
-	for _, value := range values {
-		value.SetOwner(nil)
-	}
-
-	if values == nil {
-		values = make([]Value, 0)
-	}
 
 	array, err := atree.NewArray(storage)
 	if err != nil {
+
 		panic(ExternalError{err})
+	}
+
+	for i, value := range values {
+		// NOTE: new value has no owner
+		value.SetOwner(nil)
+
+		// TODO: embed atree.Value in Value and implement
+		err := array.Insert(uint64(i), value.(atree.Value))
+		if err != nil {
+			panic(err)
+		}
 	}
 
 	return &ArrayValue{
 		Type:  arrayType,
 		array: array,
+		// NOTE: new value has no owner
 		Owner: nil,
 	}
 }
@@ -649,6 +653,7 @@ func (v *ArrayValue) Accept(interpreter *Interpreter, visitor Visitor) {
 
 func (v *ArrayValue) Walk(walkChild func(Value)) {
 	_ = v.array.Iterate(func(element atree.Value) (resume bool, err error) {
+		// TODO: embed atree.Value in Value and implement
 		walkChild(element.(Value))
 		return true, nil
 	})
@@ -751,7 +756,6 @@ func (v *ArrayValue) SetIndex(inter *Interpreter, getLocationRange func() Locati
 
 	inter.checkContainerMutation(arrayStaticType.ElementType(), value, getLocationRange)
 
-	v.modified = true
 	value.SetOwner(v.Owner)
 
 	// TODO: embed atree.Value in Value and implement
