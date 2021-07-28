@@ -44,9 +44,9 @@ func NewAuthAccountContractsValue(
 	}
 
 	return &CompositeValue{
-		qualifiedIdentifier: sema.AuthAccountContractsType.QualifiedIdentifier(),
-		kind:                sema.AuthAccountContractsType.Kind,
-		fields:              fields,
+		QualifiedIdentifier: sema.AuthAccountContractsType.QualifiedIdentifier(),
+		Kind:                sema.AuthAccountContractsType.Kind,
+		Fields:              fields,
 		stringer:            stringer,
 	}
 }
