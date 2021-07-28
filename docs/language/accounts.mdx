@@ -97,6 +97,9 @@ Every account can be accessed through two types:
       fun unlink(_ path: CapabilityPath)
 
       struct Contracts {
+
+          let names: [String]
+
           fun add(
               name: String,
               code: [UInt8],

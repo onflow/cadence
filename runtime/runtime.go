@@ -1941,6 +1941,10 @@ func (r *interpreterRuntime) newAuthAccountContracts(
 			context.Interface,
 			runtimeStorage,
 		),
+		r.newAuthAccountContractsGetNamesFunction(
+			addressValue,
+			context.Interface,
+		),
 	)
 }
 
@@ -2460,6 +2464,31 @@ func (r *interpreterRuntime) newAuthAccountContractsRemoveFunction(
 			}
 		},
 	)
+}
+
+func (r *interpreterRuntime) newAuthAccountContractsGetNamesFunction(
+	addressValue interpreter.AddressValue,
+	runtimeInterface Interface,
+) func() *interpreter.ArrayValue {
+	address := addressValue.ToAddress()
+
+	return func() *interpreter.ArrayValue {
+		var names []string
+		var err error
+		wrapPanic(func() {
+			names, err = runtimeInterface.GetAccountContractNames(address)
+		})
+		if err != nil {
+			panic(err)
+		}
+
+		values := make([]interpreter.Value, len(names))
+		for i, name := range names {
+			values[i] = interpreter.NewStringValue(name)
+		}
+
+		return interpreter.NewArrayValueUnownedNonCopying(values...)
+	}
 }
 
 func (r *interpreterRuntime) onStatementHandler() interpreter.OnStatementFunc {

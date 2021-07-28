@@ -1263,3 +1263,90 @@ func TestPublicKey(t *testing.T) {
 	})
 
 }
+
+func TestAuthAccountContracts(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("get names", func(t *testing.T) {
+		t.Parallel()
+
+		rt := NewInterpreterRuntime()
+
+		script := []byte(`
+            transaction {
+                prepare(signer: AuthAccount) {
+                    let names = signer.contracts.names
+
+                    assert(names.isInstance(Type<[String]>()))
+                    assert(names.length == 2)
+                }
+            }
+        `)
+
+		invoked := false
+
+		runtimeInterface := &testRuntimeInterface{
+			getSigningAccounts: func() ([]Address, error) {
+				return []Address{{42}}, nil
+			},
+			getAccountContractNames: func(_ Address) ([]string, error) {
+				invoked = true
+				return []string{"foo", "bar"}, nil
+			},
+		}
+
+		nextTransactionLocation := newTransactionLocationGenerator()
+
+		err := rt.ExecuteTransaction(
+			Script{
+				Source: script,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+
+		require.NoError(t, err)
+		assert.True(t, invoked)
+	})
+
+	t.Run("update names", func(t *testing.T) {
+		t.Parallel()
+
+		rt := NewInterpreterRuntime()
+
+		script := []byte(`
+            transaction {
+                prepare(signer: AuthAccount) {
+                    signer.contracts.names[0] = "baz"
+                    assert(signer.contracts.names[0] == "foo")
+                }
+            }
+        `)
+
+		runtimeInterface := &testRuntimeInterface{
+			getSigningAccounts: func() ([]Address, error) {
+				return []Address{{42}}, nil
+			},
+			getAccountContractNames: func(_ Address) ([]string, error) {
+				return []string{"foo", "bar"}, nil
+			},
+		}
+
+		nextTransactionLocation := newTransactionLocationGenerator()
+
+		err := rt.ExecuteTransaction(
+			Script{
+				Source: script,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+
+		require.NoError(t, err)
+	})
+}

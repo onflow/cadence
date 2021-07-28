@@ -131,6 +131,7 @@ type testRuntimeInterface struct {
 	programs                   map[common.LocationID]*interpreter.Program
 	implementationDebugLog     func(message string) error
 	validatePublicKey          func(publicKey *PublicKey) (bool, error)
+	getAccountContractNames    func(address Address) ([]string, error)
 }
 
 // testRuntimeInterface should implement Interface
@@ -389,6 +390,14 @@ func (i *testRuntimeInterface) ValidatePublicKey(key *PublicKey) (bool, error) {
 	}
 
 	return i.validatePublicKey(key)
+}
+
+func (i *testRuntimeInterface) GetAccountContractNames(address Address) ([]string, error) {
+	if i.getAccountContractNames == nil {
+		return []string{}, nil
+	}
+
+	return i.getAccountContractNames(address)
 }
 
 func TestRuntimeImport(t *testing.T) {
