@@ -35,17 +35,22 @@ func TestByteArrayValueToByteSlice(t *testing.T) {
 		largeBigInt, ok := new(big.Int).SetString("1000000000000000000000000000000000000000000000", 10)
 		require.True(t, ok)
 
+		// TODO:
+		var storage Storage
+
 		invalid := []Value{
 			NewArrayValueUnownedNonCopying(
 				VariableSizedStaticType{
 					Type: PrimitiveStaticTypeInt64,
 				},
+				storage,
 				UInt64Value(500),
 			),
 			NewArrayValueUnownedNonCopying(
 				VariableSizedStaticType{
 					Type: PrimitiveStaticTypeInt256,
 				},
+				storage,
 				NewInt256ValueFromBigInt(largeBigInt),
 			),
 			UInt64Value(500),
@@ -61,16 +66,21 @@ func TestByteArrayValueToByteSlice(t *testing.T) {
 
 	t.Run("valid", func(t *testing.T) {
 
+		// TODO:
+		var storage Storage
+
 		invalid := map[Value][]byte{
 			NewArrayValueUnownedNonCopying(
 				VariableSizedStaticType{
 					Type: PrimitiveStaticTypeInteger,
 				},
+				storage,
 			): {},
 			NewArrayValueUnownedNonCopying(
 				VariableSizedStaticType{
 					Type: PrimitiveStaticTypeInteger,
 				},
+				storage,
 				UInt64Value(2),
 				NewUInt128ValueFromUint64(3),
 			): {2, 3},
@@ -78,6 +88,7 @@ func TestByteArrayValueToByteSlice(t *testing.T) {
 				VariableSizedStaticType{
 					Type: PrimitiveStaticTypeInteger,
 				},
+				storage,
 				UInt8Value(4),
 				NewIntValueFromInt64(5),
 			): {4, 5},

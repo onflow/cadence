@@ -29,6 +29,9 @@ func TestInspectValue(t *testing.T) {
 
 	t.Parallel()
 
+	// TODO:
+	var storage Storage
+
 	dictionaryStaticType := DictionaryStaticType{
 		KeyType:   PrimitiveStaticTypeString,
 		ValueType: PrimitiveStaticTypeInt256,
@@ -38,14 +41,15 @@ func TestInspectValue(t *testing.T) {
 	dictValue := NewDictionaryValueUnownedNonCopying(
 		newTestInterpreter(t),
 		dictionaryStaticType,
-		dictValueKey,
-		dictValueValue,
+		storage,
+		dictValueKey, dictValueValue,
 	)
 
 	arrayValue := NewArrayValueUnownedNonCopying(
 		VariableSizedStaticType{
 			Type: dictionaryStaticType,
 		},
+		storage,
 		dictValue,
 	)
 

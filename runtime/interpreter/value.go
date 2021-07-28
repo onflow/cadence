@@ -104,6 +104,8 @@ type AllAppendableValue interface {
 
 type EquatableValue interface {
 	Value
+	// Equal returns true if the given value is equal to this value.
+	// If no location range is available, pass e.g. ReturnEmptyLocationRange
 	Equal(other Value, getLocationRange func() LocationRange) bool
 }
 
@@ -872,7 +874,7 @@ func (v *ArrayValue) Contains(needleValue Value) BoolValue {
 	var result bool
 	err := v.array.Iterate(func(element atree.Value) (resume bool, err error) {
 		// TODO: embed atree.Value in Value and implement
-		if needleEquatable.Equal(element.(Value), nil) {
+		if needleEquatable.Equal(element.(Value), ReturnEmptyLocationRange) {
 			result = true
 			// stop iteration
 			return false, nil

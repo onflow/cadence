@@ -124,7 +124,7 @@ func reEncodeDecode(value interpreter.Value, owner common.Address) {
 		log.Fatalf("cannot compare unequatable %[1]T\n%[1]s\n", value)
 	}
 
-	if !equatableValue.Equal(newValue, nil, false) {
+	if !equatableValue.Equal(newValue, interpreter.ReturnEmptyLocationRange) {
 		log.Fatalf("values are unequal:\n%s\n%s\n", value, newValue)
 	}
 }
