@@ -29,20 +29,32 @@ func ByteArrayValueToByteSlice(value Value) ([]byte, error) {
 		return nil, errors.New("value is not an array")
 	}
 
-	elements := array.Elements()
-	result := make([]byte, len(elements))
+	result := make([]byte, array.Count())
 
-	for i, element := range elements {
+	iterator, err := array.array.Iterator()
+	if err != nil {
+		return nil, err
+	}
 
-		b, err := ByteValueToByte(element)
+	index := 0
+	for {
+		value, err := iterator.Next()
+		if err != nil {
+			return nil, err
+		}
+		if value == nil {
+			return result, nil
+		}
+
+		// TODO: embed atree.Value in Value and implement
+		b, err := ByteValueToByte(value.(Value))
 		if err != nil {
 			return nil, err
 		}
 
-		result[i] = b
+		result[index] = b
+		index++
 	}
-
-	return result, nil
 }
 
 func ByteValueToByte(element Value) (byte, error) {
@@ -79,7 +91,7 @@ func ByteValueToByte(element Value) (byte, error) {
 	return b, nil
 }
 
-func ByteSliceToByteArrayValue(buf []byte) *ArrayValue {
+func ByteSliceToByteArrayValue(storage Storage, buf []byte) *ArrayValue {
 	values := make([]Value, len(buf))
 	for i, b := range buf {
 		values[i] = UInt8Value(b)
@@ -87,6 +99,7 @@ func ByteSliceToByteArrayValue(buf []byte) *ArrayValue {
 
 	return NewArrayValueUnownedNonCopying(
 		ByteArrayStaticType,
+		storage,
 		values...,
 	)
 }
