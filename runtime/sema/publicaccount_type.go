@@ -141,6 +141,37 @@ func init() {
 	PublicAccountKeysType.SetContainerType(PublicAccountType)
 }
 
+var publicAccountTypeGetCapabilityFunctionType = func() *FunctionType {
+
+	typeParameter := &TypeParameter{
+		TypeBound: &ReferenceType{
+			Type: AnyType,
+		},
+		Name:     "T",
+		Optional: true,
+	}
+
+	return &FunctionType{
+		TypeParameters: []*TypeParameter{
+			typeParameter,
+		},
+		Parameters: []*Parameter{
+			{
+				Label:          ArgumentLabelNotRequired,
+				Identifier:     "capabilityPath",
+				TypeAnnotation: NewTypeAnnotation(PublicPathType),
+			},
+		},
+		ReturnTypeAnnotation: NewTypeAnnotation(
+			&CapabilityType{
+				BorrowType: &GenericType{
+					TypeParameter: typeParameter,
+				},
+			},
+		),
+	}
+}()
+
 const publicAccountTypeGetLinkTargetFunctionDocString = `
 Returns the capability at the given public path, or nil if it does not exist
 `
