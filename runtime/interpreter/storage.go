@@ -19,7 +19,10 @@
 package interpreter
 
 import (
+	"bytes"
+
 	"github.com/fxamacker/atree"
+	"github.com/fxamacker/cbor/v2"
 	"github.com/onflow/cadence/runtime/common"
 )
 
@@ -75,4 +78,21 @@ func NewInMemoryStorage() InMemoryStorage {
 	return InMemoryStorage{
 		BasicSlabStorage: atree.NewBasicSlabStorage(),
 	}
+}
+
+func storableSize(v atree.Storable) uint32 {
+	var buf bytes.Buffer
+	enc := &atree.Encoder{
+		Writer: &buf,
+		CBOR:   cbor.NewStreamEncoder(&buf),
+	}
+	err := v.Encode(enc)
+	if err != nil {
+		panic(err)
+	}
+	err = enc.CBOR.Flush()
+	if err != nil {
+		panic(err)
+	}
+	return uint32(len(buf.Bytes()))
 }
