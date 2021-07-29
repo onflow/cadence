@@ -2639,6 +2639,15 @@ type ConstructorFunctionType struct {
 	*FunctionType
 }
 
+func (t *ConstructorFunctionType) Equal(other Type) bool {
+	// NOTE: this function is important:
+	// it ensures that a constructor function type
+	// is NOT equal to a function type with the same parameters, return type, etc.
+
+	otherConstructor, ok := other.(*ConstructorFunctionType)
+	return ok && t.FunctionType.Equal(otherConstructor.FunctionType)
+}
+
 // CheckedFunctionType is the the type representing a function that checks the arguments,
 // e.g., integer functions
 

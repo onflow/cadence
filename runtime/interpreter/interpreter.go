@@ -1391,6 +1391,18 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 	constructor := NewHostFunctionValue(
 		func(invocation Invocation) Value {
 
+			// Check that the resource is constructed
+			// in the same location as it was declared
+
+			if compositeType.Kind == common.CompositeKindResource &&
+				!common.LocationsMatch(invocation.Interpreter.Location, compositeType.Location) {
+
+				panic(ResourceConstructionError{
+					CompositeType: compositeType,
+					LocationRange: invocation.GetLocationRange(),
+				})
+			}
+
 			// Load injected fields
 			var injectedFields *StringValueOrderedMap
 			if interpreter.injectedCompositeFieldsHandler != nil {
@@ -2673,6 +2685,8 @@ func IsSubType(subType DynamicType, superType sema.Type) bool {
 		return sema.IsSubType(typedSubType.StaticType, superType)
 
 	case FunctionDynamicType:
+		// TODO: once support for dynamically casting functions is added,
+		//   ensure that constructor functions are not normal
 		return superType == sema.AnyStructType
 
 	case CompositeDynamicType:
