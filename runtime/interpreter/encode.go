@@ -169,6 +169,24 @@ const (
 	cborTagCapabilityStaticType
 )
 
+// Encode encodes the value as a CBOR nil
+//
+func (v NilValue) Encode(e *atree.Encoder) error {
+	return e.CBOR.EncodeNil()
+}
+
+// Encode encodes the value as a CBOR bool
+//
+func (v BoolValue) Encode(e *atree.Encoder) error {
+	return e.CBOR.EncodeBool(bool(v))
+}
+
+// Encode encodes the value as a CBOR string
+//
+func (v *StringValue) Encode(e *atree.Encoder) error {
+	return e.CBOR.EncodeString(v.Str)
+}
+
 // cborVoidValue represents the CBOR value:
 //
 // 	cbor.Tag{

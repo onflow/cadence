@@ -316,14 +316,15 @@ func (v VoidValue) DeepCopy(_ atree.SlabStorage) (atree.Value, error) {
 }
 
 func (v VoidValue) ByteSize() uint32 {
+	// TODO: improve
 	return storableSize(v)
 }
 
-func (v VoidValue) ID() atree.StorageID {
+func (VoidValue) ID() atree.StorageID {
 	return atree.StorageIDUndefined
 }
 
-func (v VoidValue) Mutable() bool {
+func (VoidValue) Mutable() bool {
 	return false
 }
 
@@ -336,6 +337,8 @@ func (v VoidValue) Value(_ atree.SlabStorage) (atree.Value, error) {
 type BoolValue bool
 
 var _ Value = BoolValue(false)
+
+var _ atree.Storable = BoolValue(false)
 
 func (BoolValue) IsValue() {}
 
@@ -406,6 +409,31 @@ func (BoolValue) IsStorable() bool {
 	return true
 }
 
+func (v BoolValue) Storable() atree.Storable {
+	return v
+}
+
+func (v BoolValue) DeepCopy(_ atree.SlabStorage) (atree.Value, error) {
+	return v, nil
+}
+
+func (v BoolValue) ByteSize() uint32 {
+	// TODO: improve
+	return storableSize(v)
+}
+
+func (BoolValue) ID() atree.StorageID {
+	return atree.StorageIDUndefined
+}
+
+func (BoolValue) Mutable() bool {
+	return false
+}
+
+func (v BoolValue) Value(_ atree.SlabStorage) (atree.Value, error) {
+	return v, nil
+}
+
 // StringValue
 
 type StringValue struct {
@@ -428,6 +456,8 @@ func NewStringValue(str string) *StringValue {
 }
 
 var _ Value = &StringValue{}
+
+var _ atree.Storable = &StringValue{}
 
 func (v *StringValue) prepareGraphemes() {
 	if v.graphemes == nil {
@@ -629,6 +659,30 @@ func (v *StringValue) Length() int {
 
 func (*StringValue) IsStorable() bool {
 	return true
+}
+
+func (v *StringValue) Storable() atree.Storable {
+	return v
+}
+
+func (v *StringValue) DeepCopy(_ atree.SlabStorage) (atree.Value, error) {
+	return v, nil
+}
+
+func (v *StringValue) ByteSize() uint32 {
+	return storableSize(v)
+}
+
+func (*StringValue) ID() atree.StorageID {
+	return atree.StorageIDUndefined
+}
+
+func (*StringValue) Mutable() bool {
+	return false
+}
+
+func (v *StringValue) Value(_ atree.SlabStorage) (atree.Value, error) {
+	return v, nil
 }
 
 var ByteArrayStaticType = ConvertSemaArrayTypeToStaticArrayType(sema.ByteArrayType)
@@ -1257,6 +1311,8 @@ func ConvertInt(value Value) IntValue {
 
 var _ Value = IntValue{}
 
+var _ atree.Storable = IntValue{}
+
 func (v IntValue) IsValue() {}
 
 func (v IntValue) Accept(interpreter *Interpreter, visitor Visitor) {
@@ -1471,11 +1527,38 @@ func (IntValue) IsStorable() bool {
 	return true
 }
 
+func (v IntValue) Storable() atree.Storable {
+	return v
+}
+
+func (v IntValue) DeepCopy(_ atree.SlabStorage) (atree.Value, error) {
+	return v, nil
+}
+
+func (v IntValue) ByteSize() uint32 {
+	// TODO: optimize
+	return storableSize(v)
+}
+
+func (IntValue) ID() atree.StorageID {
+	return atree.StorageIDUndefined
+}
+
+func (IntValue) Mutable() bool {
+	return false
+}
+
+func (v IntValue) Value(_ atree.SlabStorage) (atree.Value, error) {
+	return v, nil
+}
+
 // Int8Value
 
 type Int8Value int8
 
 var _ Value = Int8Value(0)
+
+var _ atree.Storable = Int8Value(0)
 
 func (Int8Value) IsValue() {}
 
@@ -1772,11 +1855,38 @@ func (Int8Value) IsStorable() bool {
 	return true
 }
 
+func (v Int8Value) Storable() atree.Storable {
+	return v
+}
+
+func (v Int8Value) DeepCopy(_ atree.SlabStorage) (atree.Value, error) {
+	return v, nil
+}
+
+func (v Int8Value) ByteSize() uint32 {
+	// TODO: optimize
+	return storableSize(v)
+}
+
+func (Int8Value) ID() atree.StorageID {
+	return atree.StorageIDUndefined
+}
+
+func (Int8Value) Mutable() bool {
+	return false
+}
+
+func (v Int8Value) Value(_ atree.SlabStorage) (atree.Value, error) {
+	return v, nil
+}
+
 // Int16Value
 
 type Int16Value int16
 
 var _ Value = Int16Value(0)
+
+var _ atree.Storable = Int16Value(0)
 
 func (Int16Value) IsValue() {}
 
@@ -2075,11 +2185,38 @@ func (Int16Value) IsStorable() bool {
 	return true
 }
 
+func (v Int16Value) Storable() atree.Storable {
+	return v
+}
+
+func (v Int16Value) DeepCopy(_ atree.SlabStorage) (atree.Value, error) {
+	return v, nil
+}
+
+func (v Int16Value) ByteSize() uint32 {
+	// TODO: optimize
+	return storableSize(v)
+}
+
+func (Int16Value) ID() atree.StorageID {
+	return atree.StorageIDUndefined
+}
+
+func (Int16Value) Mutable() bool {
+	return false
+}
+
+func (v Int16Value) Value(_ atree.SlabStorage) (atree.Value, error) {
+	return v, nil
+}
+
 // Int32Value
 
 type Int32Value int32
 
 var _ Value = Int32Value(0)
+
+var _ atree.Storable = Int32Value(0)
 
 func (Int32Value) IsValue() {}
 
@@ -2378,11 +2515,38 @@ func (Int32Value) IsStorable() bool {
 	return true
 }
 
+func (v Int32Value) Storable() atree.Storable {
+	return v
+}
+
+func (v Int32Value) DeepCopy(_ atree.SlabStorage) (atree.Value, error) {
+	return v, nil
+}
+
+func (v Int32Value) ByteSize() uint32 {
+	// TODO: optimize
+	return storableSize(v)
+}
+
+func (Int32Value) ID() atree.StorageID {
+	return atree.StorageIDUndefined
+}
+
+func (Int32Value) Mutable() bool {
+	return false
+}
+
+func (v Int32Value) Value(_ atree.SlabStorage) (atree.Value, error) {
+	return v, nil
+}
+
 // Int64Value
 
 type Int64Value int64
 
 var _ Value = Int64Value(0)
+
+var _ atree.Storable = Int64Value(0)
 
 func (Int64Value) IsValue() {}
 
@@ -2680,6 +2844,31 @@ func (Int64Value) IsStorable() bool {
 	return true
 }
 
+func (v Int64Value) Storable() atree.Storable {
+	return v
+}
+
+func (v Int64Value) DeepCopy(_ atree.SlabStorage) (atree.Value, error) {
+	return v, nil
+}
+
+func (v Int64Value) ByteSize() uint32 {
+	// TODO: optimize
+	return storableSize(v)
+}
+
+func (Int64Value) ID() atree.StorageID {
+	return atree.StorageIDUndefined
+}
+
+func (Int64Value) Mutable() bool {
+	return false
+}
+
+func (v Int64Value) Value(_ atree.SlabStorage) (atree.Value, error) {
+	return v, nil
+}
+
 // Int128Value
 
 type Int128Value struct {
@@ -2695,6 +2884,8 @@ func NewInt128ValueFromBigInt(value *big.Int) Int128Value {
 }
 
 var _ Value = Int128Value{}
+
+var _ atree.Storable = Int128Value{}
 
 func (v Int128Value) IsValue() {}
 
@@ -3052,6 +3243,31 @@ func (Int128Value) IsStorable() bool {
 	return true
 }
 
+func (v Int128Value) Storable() atree.Storable {
+	return v
+}
+
+func (v Int128Value) DeepCopy(_ atree.SlabStorage) (atree.Value, error) {
+	return v, nil
+}
+
+func (v Int128Value) ByteSize() uint32 {
+	// TODO: optimize
+	return storableSize(v)
+}
+
+func (Int128Value) ID() atree.StorageID {
+	return atree.StorageIDUndefined
+}
+
+func (Int128Value) Mutable() bool {
+	return false
+}
+
+func (v Int128Value) Value(_ atree.SlabStorage) (atree.Value, error) {
+	return v, nil
+}
+
 // Int256Value
 
 type Int256Value struct {
@@ -3067,6 +3283,8 @@ func NewInt256ValueFromBigInt(value *big.Int) Int256Value {
 }
 
 var _ Value = Int256Value{}
+
+var _ atree.Storable = Int256Value{}
 
 func (v Int256Value) IsValue() {}
 
@@ -3424,6 +3642,31 @@ func (Int256Value) IsStorable() bool {
 	return true
 }
 
+func (v Int256Value) Storable() atree.Storable {
+	return v
+}
+
+func (v Int256Value) DeepCopy(_ atree.SlabStorage) (atree.Value, error) {
+	return v, nil
+}
+
+func (v Int256Value) ByteSize() uint32 {
+	// TODO: optimize
+	return storableSize(v)
+}
+
+func (Int256Value) ID() atree.StorageID {
+	return atree.StorageIDUndefined
+}
+
+func (Int256Value) Mutable() bool {
+	return false
+}
+
+func (v Int256Value) Value(_ atree.SlabStorage) (atree.Value, error) {
+	return v, nil
+}
+
 // UIntValue
 
 type UIntValue struct {
@@ -3460,6 +3703,8 @@ func ConvertUInt(value Value) UIntValue {
 }
 
 var _ Value = UIntValue{}
+
+var _ atree.Storable = UIntValue{}
 
 func (v UIntValue) IsValue() {}
 
@@ -3686,11 +3931,38 @@ func (UIntValue) IsStorable() bool {
 	return true
 }
 
+func (v UIntValue) Storable() atree.Storable {
+	return v
+}
+
+func (v UIntValue) DeepCopy(_ atree.SlabStorage) (atree.Value, error) {
+	return v, nil
+}
+
+func (v UIntValue) ByteSize() uint32 {
+	// TODO: optimize
+	return storableSize(v)
+}
+
+func (UIntValue) ID() atree.StorageID {
+	return atree.StorageIDUndefined
+}
+
+func (UIntValue) Mutable() bool {
+	return false
+}
+
+func (v UIntValue) Value(_ atree.SlabStorage) (atree.Value, error) {
+	return v, nil
+}
+
 // UInt8Value
 
 type UInt8Value uint8
 
 var _ Value = UInt8Value(0)
+
+var _ atree.Storable = UInt8Value(0)
 
 func (UInt8Value) IsValue() {}
 
@@ -3918,11 +4190,38 @@ func (UInt8Value) IsStorable() bool {
 	return true
 }
 
+func (v UInt8Value) Storable() atree.Storable {
+	return v
+}
+
+func (v UInt8Value) DeepCopy(_ atree.SlabStorage) (atree.Value, error) {
+	return v, nil
+}
+
+func (v UInt8Value) ByteSize() uint32 {
+	// TODO: optimize
+	return storableSize(v)
+}
+
+func (UInt8Value) ID() atree.StorageID {
+	return atree.StorageIDUndefined
+}
+
+func (UInt8Value) Mutable() bool {
+	return false
+}
+
+func (v UInt8Value) Value(_ atree.SlabStorage) (atree.Value, error) {
+	return v, nil
+}
+
 // UInt16Value
 
 type UInt16Value uint16
 
 var _ Value = UInt16Value(0)
+
+var _ atree.Storable = UInt16Value(0)
 
 func (UInt16Value) IsValue() {}
 
@@ -4150,11 +4449,38 @@ func (UInt16Value) IsStorable() bool {
 	return true
 }
 
+func (v UInt16Value) Storable() atree.Storable {
+	return v
+}
+
+func (v UInt16Value) DeepCopy(_ atree.SlabStorage) (atree.Value, error) {
+	return v, nil
+}
+
+func (v UInt16Value) ByteSize() uint32 {
+	// TODO: optimize
+	return storableSize(v)
+}
+
+func (UInt16Value) ID() atree.StorageID {
+	return atree.StorageIDUndefined
+}
+
+func (UInt16Value) Mutable() bool {
+	return false
+}
+
+func (v UInt16Value) Value(_ atree.SlabStorage) (atree.Value, error) {
+	return v, nil
+}
+
 // UInt32Value
 
 type UInt32Value uint32
 
 var _ Value = UInt32Value(0)
+
+var _ atree.Storable = UInt32Value(0)
 
 func (UInt32Value) IsValue() {}
 
@@ -4383,11 +4709,38 @@ func (UInt32Value) IsStorable() bool {
 	return true
 }
 
+func (v UInt32Value) Storable() atree.Storable {
+	return v
+}
+
+func (v UInt32Value) DeepCopy(_ atree.SlabStorage) (atree.Value, error) {
+	return v, nil
+}
+
+func (v UInt32Value) ByteSize() uint32 {
+	// TODO: optimize
+	return storableSize(v)
+}
+
+func (UInt32Value) ID() atree.StorageID {
+	return atree.StorageIDUndefined
+}
+
+func (UInt32Value) Mutable() bool {
+	return false
+}
+
+func (v UInt32Value) Value(_ atree.SlabStorage) (atree.Value, error) {
+	return v, nil
+}
+
 // UInt64Value
 
 type UInt64Value uint64
 
 var _ Value = UInt64Value(0)
+
+var _ atree.Storable = UInt64Value(0)
 
 func (UInt64Value) IsValue() {}
 
@@ -4619,6 +4972,31 @@ func (UInt64Value) IsStorable() bool {
 	return true
 }
 
+func (v UInt64Value) Storable() atree.Storable {
+	return v
+}
+
+func (v UInt64Value) DeepCopy(_ atree.SlabStorage) (atree.Value, error) {
+	return v, nil
+}
+
+func (v UInt64Value) ByteSize() uint32 {
+	// TODO: optimize
+	return storableSize(v)
+}
+
+func (UInt64Value) ID() atree.StorageID {
+	return atree.StorageIDUndefined
+}
+
+func (UInt64Value) Mutable() bool {
+	return false
+}
+
+func (v UInt64Value) Value(_ atree.SlabStorage) (atree.Value, error) {
+	return v, nil
+}
+
 // UInt128Value
 
 type UInt128Value struct {
@@ -4634,6 +5012,8 @@ func NewUInt128ValueFromBigInt(value *big.Int) UInt128Value {
 }
 
 var _ Value = UInt128Value{}
+
+var _ atree.Storable = UInt128Value{}
 
 func (v UInt128Value) IsValue() {}
 
@@ -4933,6 +5313,31 @@ func (UInt128Value) IsStorable() bool {
 	return true
 }
 
+func (v UInt128Value) Storable() atree.Storable {
+	return v
+}
+
+func (v UInt128Value) DeepCopy(_ atree.SlabStorage) (atree.Value, error) {
+	return v, nil
+}
+
+func (v UInt128Value) ByteSize() uint32 {
+	// TODO: optimize
+	return storableSize(v)
+}
+
+func (UInt128Value) ID() atree.StorageID {
+	return atree.StorageIDUndefined
+}
+
+func (UInt128Value) Mutable() bool {
+	return false
+}
+
+func (v UInt128Value) Value(_ atree.SlabStorage) (atree.Value, error) {
+	return v, nil
+}
+
 // UInt256Value
 
 type UInt256Value struct {
@@ -4948,6 +5353,8 @@ func NewUInt256ValueFromBigInt(value *big.Int) UInt256Value {
 }
 
 var _ Value = UInt256Value{}
+
+var _ atree.Storable = UInt256Value{}
 
 func (v UInt256Value) IsValue() {}
 
@@ -5247,11 +5654,38 @@ func (UInt256Value) IsStorable() bool {
 	return true
 }
 
+func (v UInt256Value) Storable() atree.Storable {
+	return v
+}
+
+func (v UInt256Value) DeepCopy(_ atree.SlabStorage) (atree.Value, error) {
+	return v, nil
+}
+
+func (v UInt256Value) ByteSize() uint32 {
+	// TODO: optimize
+	return storableSize(v)
+}
+
+func (UInt256Value) ID() atree.StorageID {
+	return atree.StorageIDUndefined
+}
+
+func (UInt256Value) Mutable() bool {
+	return false
+}
+
+func (v UInt256Value) Value(_ atree.SlabStorage) (atree.Value, error) {
+	return v, nil
+}
+
 // Word8Value
 
 type Word8Value uint8
 
 var _ Value = Word8Value(0)
+
+var _ atree.Storable = Word8Value(0)
 
 func (Word8Value) IsValue() {}
 
@@ -5424,11 +5858,38 @@ func (Word8Value) IsStorable() bool {
 	return true
 }
 
+func (v Word8Value) Storable() atree.Storable {
+	return v
+}
+
+func (v Word8Value) DeepCopy(_ atree.SlabStorage) (atree.Value, error) {
+	return v, nil
+}
+
+func (v Word8Value) ByteSize() uint32 {
+	// TODO: optimize
+	return storableSize(v)
+}
+
+func (Word8Value) ID() atree.StorageID {
+	return atree.StorageIDUndefined
+}
+
+func (Word8Value) Mutable() bool {
+	return false
+}
+
+func (v Word8Value) Value(_ atree.SlabStorage) (atree.Value, error) {
+	return v, nil
+}
+
 // Word16Value
 
 type Word16Value uint16
 
 var _ Value = Word16Value(0)
+
+var _ atree.Storable = Word16Value(0)
 
 func (Word16Value) IsValue() {}
 
@@ -5601,11 +6062,38 @@ func (Word16Value) IsStorable() bool {
 	return true
 }
 
+func (v Word16Value) Storable() atree.Storable {
+	return v
+}
+
+func (v Word16Value) DeepCopy(_ atree.SlabStorage) (atree.Value, error) {
+	return v, nil
+}
+
+func (v Word16Value) ByteSize() uint32 {
+	// TODO: optimize
+	return storableSize(v)
+}
+
+func (Word16Value) ID() atree.StorageID {
+	return atree.StorageIDUndefined
+}
+
+func (Word16Value) Mutable() bool {
+	return false
+}
+
+func (v Word16Value) Value(_ atree.SlabStorage) (atree.Value, error) {
+	return v, nil
+}
+
 // Word32Value
 
 type Word32Value uint32
 
 var _ Value = Word32Value(0)
+
+var _ atree.Storable = Word32Value(0)
 
 func (Word32Value) IsValue() {}
 
@@ -5780,11 +6268,38 @@ func (Word32Value) IsStorable() bool {
 	return true
 }
 
+func (v Word32Value) Storable() atree.Storable {
+	return v
+}
+
+func (v Word32Value) DeepCopy(_ atree.SlabStorage) (atree.Value, error) {
+	return v, nil
+}
+
+func (v Word32Value) ByteSize() uint32 {
+	// TODO: optimize
+	return storableSize(v)
+}
+
+func (Word32Value) ID() atree.StorageID {
+	return atree.StorageIDUndefined
+}
+
+func (Word32Value) Mutable() bool {
+	return false
+}
+
+func (v Word32Value) Value(_ atree.SlabStorage) (atree.Value, error) {
+	return v, nil
+}
+
 // Word64Value
 
 type Word64Value uint64
 
 var _ Value = Word64Value(0)
+
+var _ atree.Storable = Word64Value(0)
 
 func (Word64Value) IsValue() {}
 
@@ -5959,6 +6474,31 @@ func (Word64Value) IsStorable() bool {
 	return true
 }
 
+func (v Word64Value) Storable() atree.Storable {
+	return v
+}
+
+func (v Word64Value) DeepCopy(_ atree.SlabStorage) (atree.Value, error) {
+	return v, nil
+}
+
+func (v Word64Value) ByteSize() uint32 {
+	// TODO: optimize
+	return storableSize(v)
+}
+
+func (Word64Value) ID() atree.StorageID {
+	return atree.StorageIDUndefined
+}
+
+func (Word64Value) Mutable() bool {
+	return false
+}
+
+func (v Word64Value) Value(_ atree.SlabStorage) (atree.Value, error) {
+	return v, nil
+}
+
 // Fix64Value
 //
 type Fix64Value int64
@@ -5979,6 +6519,8 @@ func NewFix64ValueWithInteger(integer int64) Fix64Value {
 }
 
 var _ Value = Fix64Value(0)
+
+var _ atree.Storable = Fix64Value(0)
 
 func (Fix64Value) IsValue() {}
 
@@ -6240,6 +6782,31 @@ func (Fix64Value) IsStorable() bool {
 	return true
 }
 
+func (v Fix64Value) Storable() atree.Storable {
+	return v
+}
+
+func (v Fix64Value) DeepCopy(_ atree.SlabStorage) (atree.Value, error) {
+	return v, nil
+}
+
+func (v Fix64Value) ByteSize() uint32 {
+	// TODO: optimize
+	return storableSize(v)
+}
+
+func (Fix64Value) ID() atree.StorageID {
+	return atree.StorageIDUndefined
+}
+
+func (Fix64Value) Mutable() bool {
+	return false
+}
+
+func (v Fix64Value) Value(_ atree.SlabStorage) (atree.Value, error) {
+	return v, nil
+}
+
 // UFix64Value
 //
 type UFix64Value uint64
@@ -6255,6 +6822,8 @@ func NewUFix64ValueWithInteger(integer uint64) UFix64Value {
 }
 
 var _ Value = UFix64Value(0)
+
+var _ atree.Storable = UFix64Value(0)
 
 func (UFix64Value) IsValue() {}
 
@@ -6485,6 +7054,31 @@ func (v UFix64Value) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicTy
 
 func (UFix64Value) IsStorable() bool {
 	return true
+}
+
+func (v UFix64Value) Storable() atree.Storable {
+	return v
+}
+
+func (v UFix64Value) DeepCopy(_ atree.SlabStorage) (atree.Value, error) {
+	return v, nil
+}
+
+func (v UFix64Value) ByteSize() uint32 {
+	// TODO: optimize
+	return storableSize(v)
+}
+
+func (UFix64Value) ID() atree.StorageID {
+	return atree.StorageIDUndefined
+}
+
+func (UFix64Value) Mutable() bool {
+	return false
+}
+
+func (v UFix64Value) Value(_ atree.SlabStorage) (atree.Value, error) {
+	return v, nil
 }
 
 // CompositeValue
@@ -7468,6 +8062,8 @@ type NilValue struct{}
 
 var _ Value = NilValue{}
 
+var _ atree.Storable = NilValue{}
+
 func (NilValue) IsValue() {}
 
 func (v NilValue) Accept(interpreter *Interpreter, visitor Visitor) {
@@ -7548,6 +8144,31 @@ func (v NilValue) Equal(other Value, _ func() LocationRange) bool {
 
 func (NilValue) IsStorable() bool {
 	return true
+}
+
+func (v NilValue) Storable() atree.Storable {
+	return v
+}
+
+func (v NilValue) DeepCopy(_ atree.SlabStorage) (atree.Value, error) {
+	return v, nil
+}
+
+func (v NilValue) ByteSize() uint32 {
+	// TODO: optimize
+	return storableSize(v)
+}
+
+func (NilValue) ID() atree.StorageID {
+	return atree.StorageIDUndefined
+}
+
+func (NilValue) Mutable() bool {
+	return false
+}
+
+func (v NilValue) Value(_ atree.SlabStorage) (atree.Value, error) {
+	return v, nil
 }
 
 // SomeValue
@@ -7882,6 +8503,15 @@ func (*StorageReferenceValue) IsStorable() bool {
 	return false
 }
 
+func (v *StorageReferenceValue) Storable() atree.Storable {
+	// TODO:
+	return nil
+}
+
+func (v *StorageReferenceValue) DeepCopy(_ atree.SlabStorage) (atree.Value, error) {
+	return v.Copy(), nil
+}
+
 // EphemeralReferenceValue
 
 type EphemeralReferenceValue struct {
@@ -8093,6 +8723,15 @@ func (*EphemeralReferenceValue) IsStorable() bool {
 	return false
 }
 
+func (v *EphemeralReferenceValue) Storable() atree.Storable {
+	// TODO:
+	return nil
+}
+
+func (v *EphemeralReferenceValue) DeepCopy(_ atree.SlabStorage) (atree.Value, error) {
+	return v.Copy(), nil
+}
+
 // AddressValue
 
 type AddressValue common.Address
@@ -8121,6 +8760,8 @@ func ConvertAddress(value Value) AddressValue {
 }
 
 var _ Value = AddressValue{}
+
+var _ atree.Storable = AddressValue{}
 
 func (AddressValue) IsValue() {}
 
@@ -8216,6 +8857,31 @@ func (v AddressValue) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicT
 
 func (AddressValue) IsStorable() bool {
 	return true
+}
+
+func (v AddressValue) Storable() atree.Storable {
+	return v
+}
+
+func (v AddressValue) DeepCopy(_ atree.SlabStorage) (atree.Value, error) {
+	return v, nil
+}
+
+func (v AddressValue) ByteSize() uint32 {
+	// TOD O: optimize
+	return storableSize(v)
+}
+
+func (AddressValue) ID() atree.StorageID {
+	return atree.StorageIDUndefined
+}
+
+func (AddressValue) Mutable() bool {
+	return false
+}
+
+func (v AddressValue) Value(_ atree.SlabStorage) (atree.Value, error) {
+	return v, nil
 }
 
 // NewAuthAccountValue constructs an auth account value.
@@ -8398,6 +9064,8 @@ type PathValue struct {
 
 var _ Value = PathValue{}
 
+var _ atree.Storable = PathValue{}
+
 func (PathValue) IsValue() {}
 
 func (v PathValue) Accept(interpreter *Interpreter, visitor Visitor) {
@@ -8501,6 +9169,30 @@ func (PathValue) IsStorable() bool {
 	return true
 }
 
+func (v PathValue) Storable() atree.Storable {
+	return v
+}
+
+func (v PathValue) DeepCopy(_ atree.SlabStorage) (atree.Value, error) {
+	return v, nil
+}
+
+func (v PathValue) ByteSize() uint32 {
+	return storableSize(v)
+}
+
+func (PathValue) ID() atree.StorageID {
+	return atree.StorageIDUndefined
+}
+
+func (PathValue) Mutable() bool {
+	return false
+}
+
+func (v PathValue) Value(_ atree.SlabStorage) (atree.Value, error) {
+	return v, nil
+}
+
 // CapabilityValue
 
 type CapabilityValue struct {
@@ -8510,6 +9202,8 @@ type CapabilityValue struct {
 }
 
 var _ Value = CapabilityValue{}
+
+var _ atree.Storable = CapabilityValue{}
 
 func (CapabilityValue) IsValue() {}
 
@@ -8628,6 +9322,30 @@ func (CapabilityValue) IsStorable() bool {
 	return true
 }
 
+func (v CapabilityValue) Storable() atree.Storable {
+	return v
+}
+
+func (v CapabilityValue) DeepCopy(_ atree.SlabStorage) (atree.Value, error) {
+	return v, nil
+}
+
+func (v CapabilityValue) ByteSize() uint32 {
+	return storableSize(v)
+}
+
+func (CapabilityValue) ID() atree.StorageID {
+	return atree.StorageIDUndefined
+}
+
+func (CapabilityValue) Mutable() bool {
+	return false
+}
+
+func (v CapabilityValue) Value(_ atree.SlabStorage) (atree.Value, error) {
+	return v, nil
+}
+
 // LinkValue
 
 type LinkValue struct {
@@ -8702,6 +9420,30 @@ func (v LinkValue) Equal(other Value, getLocationRange func() LocationRange) boo
 
 func (LinkValue) IsStorable() bool {
 	return true
+}
+
+func (v LinkValue) Storable() atree.Storable {
+	return v
+}
+
+func (v LinkValue) DeepCopy(_ atree.SlabStorage) (atree.Value, error) {
+	return v, nil
+}
+
+func (v LinkValue) ByteSize() uint32 {
+	return storableSize(v)
+}
+
+func (LinkValue) ID() atree.StorageID {
+	return atree.StorageIDUndefined
+}
+
+func (LinkValue) Mutable() bool {
+	return false
+}
+
+func (v LinkValue) Value(_ atree.SlabStorage) (atree.Value, error) {
+	return v, nil
 }
 
 // NewAccountKeyValue constructs an AccountKey value.
