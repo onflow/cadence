@@ -21,6 +21,7 @@ package interpreter
 import (
 	"fmt"
 
+	"github.com/fxamacker/atree"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/sema"
@@ -114,4 +115,13 @@ func (v DeployedContractValue) ConformsToDynamicType(_ *Interpreter, dynamicType
 
 func (DeployedContractValue) IsStorable() bool {
 	return false
+}
+
+func (DeployedContractValue) Storable() atree.Storable {
+	// TODO:
+	return nil
+}
+
+func (v DeployedContractValue) DeepCopy(_ atree.SlabStorage) (atree.Value, error) {
+	return v, nil
 }

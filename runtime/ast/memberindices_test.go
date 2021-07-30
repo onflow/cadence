@@ -124,7 +124,7 @@ func TestMemberIndices(t *testing.T) {
 					fieldA,
 					fieldB,
 				},
-				members.Fields(),
+				members.Fields,
 			)
 
 			require.Equal(t,

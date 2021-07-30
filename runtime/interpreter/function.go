@@ -21,6 +21,7 @@ package interpreter
 import (
 	"fmt"
 
+	"github.com/fxamacker/atree"
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
@@ -134,6 +135,15 @@ func (InterpretedFunctionValue) IsStorable() bool {
 	return false
 }
 
+func (InterpretedFunctionValue) Storable() atree.Storable {
+	// TODO:
+	return nil
+}
+
+func (v InterpretedFunctionValue) DeepCopy(_ atree.SlabStorage) (atree.Value, error) {
+	return v, nil
+}
+
 // HostFunctionValue
 
 type HostFunction func(invocation Invocation) Value
@@ -227,6 +237,15 @@ func (HostFunctionValue) IsStorable() bool {
 	return false
 }
 
+func (HostFunctionValue) Storable() atree.Storable {
+	// TODO:
+	return nil
+}
+
+func (v HostFunctionValue) DeepCopy(_ atree.SlabStorage) (atree.Value, error) {
+	return v, nil
+}
+
 // BoundFunctionValue
 
 type BoundFunctionValue struct {
@@ -294,4 +313,13 @@ func (f BoundFunctionValue) ConformsToDynamicType(
 
 func (BoundFunctionValue) IsStorable() bool {
 	return false
+}
+
+func (BoundFunctionValue) Storable() atree.Storable {
+	// TODO:
+	return nil
+}
+
+func (v BoundFunctionValue) DeepCopy(_ atree.SlabStorage) (atree.Value, error) {
+	return v, nil
 }

@@ -1255,7 +1255,7 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 			func(invocation Invocation) Value {
 				for i, argument := range invocation.Arguments {
 					parameter := compositeType.ConstructorParameters[i]
-					invocation.Self.Fields().Set(parameter.Identifier, argument)
+					invocation.Self.Fields.Set(parameter.Identifier, argument)
 				}
 				return nil
 			},
@@ -1368,6 +1368,7 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 				fields.Set(sema.ResourceUUIDFieldName, UInt64Value(uuid))
 			}
 
+			// TODO: store in storage
 			value := &CompositeValue{
 				Location:            location,
 				QualifiedIdentifier: qualifiedIdentifier,
@@ -1377,8 +1378,7 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 				Functions:           functions,
 				Destructor:          destructorFunction,
 				// NOTE: new value has no owner
-				Owner:    nil,
-				modified: true,
+				Owner: nil,
 			}
 
 			invocation.Self = value
@@ -1464,14 +1464,14 @@ func (interpreter *Interpreter) declareEnumConstructor(
 		caseValueFields := NewStringValueOrderedMap()
 		caseValueFields.Set(sema.EnumRawValueFieldName, rawValue)
 
+		// TODO: store in storage
 		caseValue := &CompositeValue{
 			Location:            location,
 			QualifiedIdentifier: qualifiedIdentifier,
 			Kind:                declaration.CompositeKind,
 			Fields:              caseValueFields,
 			// NOTE: new value has no owner
-			Owner:    nil,
-			modified: true,
+			Owner: nil,
 		}
 		caseValues[i] = caseValue
 
@@ -1494,7 +1494,7 @@ func EnumConstructorFunction(caseValues []*CompositeValue, nestedVariables *Stri
 	lookupTable := make(map[string]*CompositeValue)
 
 	for _, caseValue := range caseValues {
-		rawValue, ok := caseValue.Fields().Get(sema.EnumRawValueFieldName)
+		rawValue, ok := caseValue.Fields.Get(sema.EnumRawValueFieldName)
 		if !ok {
 			panic(errors.NewUnreachableError())
 		}
@@ -1909,7 +1909,7 @@ func (interpreter *Interpreter) boxOptional(value Value, valueType, targetType s
 
 		switch typedInner := inner.(type) {
 		case *SomeValue:
-			inner = typedInner.Value
+			inner = typedInner.InnerValue
 
 		case NilValue:
 			// NOTE: nested nil will be unboxed!
@@ -1934,7 +1934,7 @@ func (interpreter *Interpreter) unbox(value Value) Value {
 			return value
 		}
 
-		value = some.Value
+		value = some.InnerValue
 	}
 }
 
@@ -2880,7 +2880,7 @@ func (interpreter *Interpreter) authAccountReadFunction(addressValue AddressValu
 
 			dynamicTypeResults := DynamicTypeResults{}
 
-			dynamicType := value.Value.DynamicType(interpreter, dynamicTypeResults)
+			dynamicType := value.InnerValue.DynamicType(interpreter, dynamicTypeResults)
 			if !interpreter.IsSubType(dynamicType, ty) {
 				return NilValue{}
 			}
@@ -3001,7 +3001,7 @@ func (interpreter *Interpreter) accountGetLinkTargetFunction(addressValue Addres
 
 		case *SomeValue:
 
-			link, ok := value.Value.(LinkValue)
+			link, ok := value.InnerValue.(LinkValue)
 			if !ok {
 				return NilValue{}
 			}
@@ -3189,7 +3189,7 @@ func (interpreter *Interpreter) GetCapabilityFinalTargetStorageKey(
 
 		case *SomeValue:
 
-			if link, ok := value.Value.(LinkValue); ok {
+			if link, ok := value.InnerValue.(LinkValue); ok {
 
 				allowedType := interpreter.ConvertStaticToSemaType(link.Type)
 

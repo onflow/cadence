@@ -51,10 +51,11 @@ func (interpreter *Interpreter) declareTransactionEntryPoint(declaration *ast.Tr
 	postConditionsRewrite :=
 		interpreter.Program.Elaboration.PostConditionsRewrite[declaration.PostConditions]
 
+	// TODO: storage in storage
+
 	self := &CompositeValue{
 		Location: interpreter.Location,
 		Fields:   NewStringValueOrderedMap(),
-		modified: true,
 	}
 
 	transactionFunction := NewHostFunctionValue(
