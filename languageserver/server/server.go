@@ -2208,7 +2208,7 @@ func (s *Server) convertError(
 					members := declaration.DeclarationMembers()
 					declarations := members.Declarations()
 					functions := members.Functions()
-					fields := members.Fields()
+					fields := members.Fields
 
 					switch {
 					case isFunction && len(functions) > 0:

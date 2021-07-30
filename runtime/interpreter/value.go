@@ -1189,6 +1189,14 @@ func (v *ArrayValue) Equal(other Value, getLocationRange func() LocationRange) b
 	return true
 }
 
+func (v *ArrayValue) Storable() atree.Storable {
+	return v.array.Storable()
+}
+
+func (v *ArrayValue) DeepCopy(storage atree.SlabStorage) (atree.Value, error) {
+	return v.array.DeepCopy(storage)
+}
+
 // NumberValue
 //
 type NumberValue interface {
@@ -7084,12 +7092,12 @@ func (v UFix64Value) Value(_ atree.SlabStorage) (atree.Value, error) {
 // CompositeValue
 
 type CompositeValue struct {
-	// Storable properties
+	// Storable fields
 	Location            common.Location
 	QualifiedIdentifier string
 	Kind                common.CompositeKind
 	Fields              *StringValueOrderedMap
-
+	// Non-storable fields
 	InjectedFields  *StringValueOrderedMap
 	ComputedFields  *StringComputedFieldOrderedMap
 	NestedVariables *StringVariableOrderedMap
@@ -7098,17 +7106,22 @@ type CompositeValue struct {
 	Owner           *common.Address
 	destroyed       bool
 	stringer        func(seenReferences SeenReferences) string
+	StorageID       atree.StorageID
 }
 
 type ComputedField func(*Interpreter) Value
 
 func NewCompositeValue(
+	storage Storage,
 	location common.Location,
 	qualifiedIdentifier string,
 	kind common.CompositeKind,
 	fields *StringValueOrderedMap,
 	owner *common.Address,
 ) *CompositeValue {
+
+	// TODO: store in storage, initialize StorageID
+
 	// TODO: only allocate when setting a field
 	if fields == nil {
 		fields = NewStringValueOrderedMap()
@@ -7151,6 +7164,8 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, getLocationRange func
 }
 
 var _ Value = &CompositeValue{}
+
+var _ atree.Storable = &CompositeValue{}
 
 func (*CompositeValue) IsValue() {}
 
@@ -7222,7 +7237,7 @@ func (v *CompositeValue) Copy() Value {
 func (v *CompositeValue) checkStatus(getLocationRange func() LocationRange) {
 	if v.destroyed {
 		panic(DestroyedCompositeError{
-			CompositeKind: v.Kind(),
+			CompositeKind: v.Kind,
 			LocationRange: getLocationRange(),
 		})
 	}
@@ -7239,7 +7254,7 @@ func (v *CompositeValue) SetOwner(owner *common.Address) {
 
 	v.Owner = owner
 
-	v.Fields().Foreach(func(_ string, value Value) {
+	v.Fields.Foreach(func(_ string, value Value) {
 		value.SetOwner(owner)
 	})
 }
@@ -7247,13 +7262,13 @@ func (v *CompositeValue) SetOwner(owner *common.Address) {
 func (v *CompositeValue) GetMember(interpreter *Interpreter, getLocationRange func() LocationRange, name string) Value {
 	v.checkStatus(getLocationRange)
 
-	if v.Kind() == common.CompositeKindResource &&
+	if v.Kind == common.CompositeKindResource &&
 		name == sema.ResourceOwnerFieldName {
 
 		return v.OwnerValue(interpreter)
 	}
 
-	value, ok := v.Fields().Get(name)
+	value, ok := v.Fields.Get(name)
 	if ok {
 		return value
 	}
@@ -7281,9 +7296,9 @@ func (v *CompositeValue) GetMember(interpreter *Interpreter, getLocationRange fu
 	if v.InjectedFields == nil && interpreter.injectedCompositeFieldsHandler != nil {
 		v.InjectedFields = interpreter.injectedCompositeFieldsHandler(
 			interpreter,
-			v.Location(),
-			v.QualifiedIdentifier(),
-			v.Kind(),
+			v.Location,
+			v.QualifiedIdentifier,
+			v.Kind,
 		)
 	}
 
@@ -7310,7 +7325,7 @@ func (v *CompositeValue) getInterpreter(interpreter *Interpreter) *Interpreter {
 	// Get the correct interpreter. The program code might need to be loaded.
 	// NOTE: standard library values have no location
 
-	location := v.Location()
+	location := v.Location
 
 	if location == nil || common.LocationsMatch(interpreter.Location, location) {
 		return interpreter
@@ -7535,6 +7550,32 @@ func (v *CompositeValue) IsStorable() bool {
 	return true
 }
 
+func (v *CompositeValue) Storable() atree.Storable {
+	return v
+}
+
+func (v *CompositeValue) DeepCopy(_ atree.SlabStorage) (atree.Value, error) {
+	// TODO: store in storage
+	return v.Copy(), nil
+}
+
+func (v *CompositeValue) ByteSize() uint32 {
+	// TODO: optimize
+	return storableSize(v)
+}
+
+func (v *CompositeValue) ID() atree.StorageID {
+	return v.StorageID
+}
+
+func (v *CompositeValue) Mutable() bool {
+	return true
+}
+
+func (v *CompositeValue) Value(_ atree.SlabStorage) (atree.Value, error) {
+	return v, nil
+}
+
 func NewEnumCaseValue(
 	enumType *sema.CompositeType,
 	rawValue NumberValue,
@@ -7556,10 +7597,11 @@ func NewEnumCaseValue(
 // DictionaryValue
 
 type DictionaryValue struct {
-	Type    DictionaryStaticType
-	keys    *ArrayValue
-	entries *StringValueOrderedMap
-	Owner   *common.Address
+	Type      DictionaryStaticType
+	keys      *ArrayValue
+	entries   *StringValueOrderedMap
+	Owner     *common.Address
+	StorageID atree.StorageID
 }
 
 func NewDictionaryValueUnownedNonCopying(
@@ -7568,6 +7610,8 @@ func NewDictionaryValueUnownedNonCopying(
 	storage Storage,
 	keysAndValues ...Value,
 ) *DictionaryValue {
+
+	// TODO: store in storage
 
 	keysAndValuesCount := len(keysAndValues)
 	if keysAndValuesCount%2 != 0 {
@@ -7595,6 +7639,8 @@ func NewDictionaryValueUnownedNonCopying(
 }
 
 var _ Value = &DictionaryValue{}
+
+var _ atree.Storable = &DictionaryValue{}
 
 func (*DictionaryValue) IsValue() {}
 
@@ -7739,7 +7785,7 @@ func (v *DictionaryValue) Set(inter *Interpreter, getLocationRange func() Locati
 
 	switch typedValue := value.(type) {
 	case *SomeValue:
-		_ = v.Insert(inter, getLocationRange, keyValue, typedValue.Value)
+		_ = v.Insert(inter, getLocationRange, keyValue, typedValue.InnerValue)
 
 	case NilValue:
 		_ = v.Remove(inter, getLocationRange, keyValue)
@@ -8049,6 +8095,31 @@ func (v *DictionaryValue) Equal(other Value, getLocationRange func() LocationRan
 	return true
 }
 
+func (v *DictionaryValue) ByteSize() uint32 {
+	return storableSize(v)
+}
+
+func (v *DictionaryValue) ID() atree.StorageID {
+	return v.StorageID
+}
+
+func (v *DictionaryValue) Mutable() bool {
+	return true
+}
+
+func (v *DictionaryValue) Value(_ atree.SlabStorage) (atree.Value, error) {
+	return v, nil
+}
+
+func (v *DictionaryValue) Storable() atree.Storable {
+	return v
+}
+
+func (v *DictionaryValue) DeepCopy(storage atree.SlabStorage) (atree.Value, error) {
+	// TODO:
+	return v.Copy(), nil
+}
+
 // OptionalValue
 
 type OptionalValue interface {
@@ -8174,18 +8245,20 @@ func (v NilValue) Value(_ atree.SlabStorage) (atree.Value, error) {
 // SomeValue
 
 type SomeValue struct {
-	Value Value
-	Owner *common.Address
+	InnerValue Value
+	Owner      *common.Address
 }
 
 func NewSomeValueOwningNonCopying(value Value) *SomeValue {
 	return &SomeValue{
-		Value: value,
-		Owner: value.GetOwner(),
+		InnerValue: value,
+		Owner:      value.GetOwner(),
 	}
 }
 
 var _ Value = &SomeValue{}
+
+var _ atree.Storable = &SomeValue{}
 
 func (*SomeValue) IsValue() {}
 
@@ -8194,20 +8267,20 @@ func (v *SomeValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	if !descend {
 		return
 	}
-	v.Value.Accept(interpreter, visitor)
+	v.InnerValue.Accept(interpreter, visitor)
 }
 
 func (v *SomeValue) Walk(walkChild func(Value)) {
-	walkChild(v.Value)
+	walkChild(v.InnerValue)
 }
 
 func (v *SomeValue) DynamicType(interpreter *Interpreter, seenReferences SeenReferences) DynamicType {
-	innerType := v.Value.DynamicType(interpreter, seenReferences)
+	innerType := v.InnerValue.DynamicType(interpreter, seenReferences)
 	return SomeDynamicType{InnerType: innerType}
 }
 
 func (v *SomeValue) StaticType() StaticType {
-	innerType := v.Value.StaticType()
+	innerType := v.InnerValue.StaticType()
 	if innerType == nil {
 		return nil
 	}
@@ -8220,7 +8293,7 @@ func (*SomeValue) isOptionalValue() {}
 
 func (v *SomeValue) Copy() Value {
 	return &SomeValue{
-		Value: v.Value.Copy(),
+		InnerValue: v.InnerValue.Copy(),
 		// NOTE: new value has no owner
 		Owner: nil,
 	}
@@ -8237,11 +8310,11 @@ func (v *SomeValue) SetOwner(owner *common.Address) {
 
 	v.Owner = owner
 
-	v.Value.SetOwner(owner)
+	v.InnerValue.SetOwner(owner)
 }
 
 func (v *SomeValue) Destroy(interpreter *Interpreter, getLocationRange func() LocationRange) {
-	maybeDestroy(interpreter, getLocationRange, v.Value)
+	maybeDestroy(interpreter, getLocationRange, v.InnerValue)
 }
 
 func (v *SomeValue) String() string {
@@ -8249,7 +8322,7 @@ func (v *SomeValue) String() string {
 }
 
 func (v *SomeValue) RecursiveString(seenReferences SeenReferences) string {
-	return v.Value.RecursiveString(seenReferences)
+	return v.InnerValue.RecursiveString(seenReferences)
 }
 
 func (v *SomeValue) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
@@ -8263,7 +8336,7 @@ func (v *SomeValue) GetMember(_ *Interpreter, _ func() LocationRange, name strin
 				valueType := transformFunctionType.Parameters[0].TypeAnnotation.Type
 
 				transformInvocation := Invocation{
-					Arguments:        []Value{v.Value},
+					Arguments:        []Value{v.InnerValue},
 					ArgumentTypes:    []sema.Type{valueType},
 					GetLocationRange: invocation.GetLocationRange,
 					Interpreter:      invocation.Interpreter,
@@ -8289,7 +8362,7 @@ func (v SomeValue) ConformsToDynamicType(
 	results TypeConformanceResults,
 ) bool {
 	someType, ok := dynamicType.(SomeDynamicType)
-	return ok && v.Value.ConformsToDynamicType(interpreter, someType.InnerType, results)
+	return ok && v.InnerValue.ConformsToDynamicType(interpreter, someType.InnerType, results)
 }
 
 func (v *SomeValue) Equal(other Value, getLocationRange func() LocationRange) bool {
@@ -8298,16 +8371,41 @@ func (v *SomeValue) Equal(other Value, getLocationRange func() LocationRange) bo
 		return false
 	}
 
-	equatableValue, ok := v.Value.(EquatableValue)
+	equatableValue, ok := v.InnerValue.(EquatableValue)
 	if !ok {
 		return false
 	}
 
-	return equatableValue.Equal(otherSome.Value, getLocationRange)
+	return equatableValue.Equal(otherSome.InnerValue, getLocationRange)
 }
 
 func (v *SomeValue) IsStorable() bool {
-	return v.Value.IsStorable()
+	return v.InnerValue.IsStorable()
+}
+
+func (v *SomeValue) Storable() atree.Storable {
+	return v
+}
+
+func (v *SomeValue) DeepCopy(storage atree.SlabStorage) (atree.Value, error) {
+	// TODO:
+	return v.Copy(), nil
+}
+func (v *SomeValue) ByteSize() uint32 {
+	// TODO: optimize
+	return storableSize(v)
+}
+
+func (v *SomeValue) ID() atree.StorageID {
+	return atree.StorageIDUndefined
+}
+
+func (v *SomeValue) Mutable() bool {
+	return false
+}
+
+func (v *SomeValue) Value(_ atree.SlabStorage) (atree.Value, error) {
+	return v, nil
 }
 
 // StorageReferenceValue
@@ -8387,7 +8485,7 @@ func (v *StorageReferenceValue) SetOwner(_ *common.Address) {
 func (v *StorageReferenceValue) ReferencedValue(interpreter *Interpreter) *Value {
 	switch referenced := interpreter.ReadStored(v.TargetStorageAddress, v.TargetKey).(type) {
 	case *SomeValue:
-		value := referenced.Value
+		value := referenced.InnerValue
 
 		if v.BorrowedType != nil {
 			dynamicType := value.DynamicType(interpreter, SeenReferences{})
@@ -8603,7 +8701,7 @@ func (v *EphemeralReferenceValue) ReferencedValue() *Value {
 
 	switch referenced := v.Value.(type) {
 	case *SomeValue:
-		return &referenced.Value
+		return &referenced.InnerValue
 	case NilValue:
 		return nil
 	default:
@@ -9511,7 +9609,7 @@ func NewPublicKeyValue(
 		if stringerFields == nil {
 			stringerFields = NewStringValueOrderedMap()
 			stringerFields.Set(sema.PublicKeyPublicKeyField, publicKey.Copy())
-			publicKeyValue.Fields().Foreach(func(key string, value Value) {
+			publicKeyValue.Fields.Foreach(func(key string, value Value) {
 				stringerFields.Set(key, value)
 			})
 		}

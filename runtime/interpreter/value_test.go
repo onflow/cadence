@@ -34,8 +34,9 @@ import (
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
-func newTestCompositeValue(owner common.Address) *CompositeValue {
+func newTestCompositeValue(storage Storage, owner common.Address) *CompositeValue {
 	return NewCompositeValue(
+		storage,
 		utils.TestLocation,
 		"Test",
 		common.CompositeKindStructure,
@@ -52,7 +53,7 @@ func TestOwnerNewArray(t *testing.T) {
 
 	oldOwner := common.Address{0x1}
 
-	value := newTestCompositeValue(oldOwner)
+	value := newTestCompositeValue(storage, oldOwner)
 
 	assert.Equal(t, &oldOwner, value.GetOwner())
 
@@ -77,7 +78,7 @@ func TestSetOwnerArray(t *testing.T) {
 	oldOwner := common.Address{0x1}
 	newOwner := common.Address{0x2}
 
-	value := newTestCompositeValue(oldOwner)
+	value := newTestCompositeValue(storage, oldOwner)
 
 	array := NewArrayValueUnownedNonCopying(
 		VariableSizedStaticType{
@@ -102,7 +103,7 @@ func TestSetOwnerArrayCopy(t *testing.T) {
 	oldOwner := common.Address{0x1}
 	newOwner := common.Address{0x2}
 
-	value := newTestCompositeValue(oldOwner)
+	value := newTestCompositeValue(storage, oldOwner)
 
 	array := NewArrayValueUnownedNonCopying(
 		VariableSizedStaticType{
@@ -131,8 +132,8 @@ func TestSetOwnerArraySetIndex(t *testing.T) {
 	oldOwner := common.Address{0x1}
 	newOwner := common.Address{0x2}
 
-	value1 := newTestCompositeValue(oldOwner)
-	value2 := newTestCompositeValue(oldOwner)
+	value1 := newTestCompositeValue(storage, oldOwner)
+	value2 := newTestCompositeValue(storage, oldOwner)
 
 	array := NewArrayValueUnownedNonCopying(
 		VariableSizedStaticType{
@@ -165,7 +166,7 @@ func TestSetOwnerArrayAppend(t *testing.T) {
 	oldOwner := common.Address{0x1}
 	newOwner := common.Address{0x2}
 
-	value := newTestCompositeValue(oldOwner)
+	value := newTestCompositeValue(storage, oldOwner)
 
 	array := NewArrayValueUnownedNonCopying(
 		VariableSizedStaticType{
@@ -193,7 +194,7 @@ func TestSetOwnerArrayInsert(t *testing.T) {
 	oldOwner := common.Address{0x1}
 	newOwner := common.Address{0x2}
 
-	value := newTestCompositeValue(oldOwner)
+	value := newTestCompositeValue(storage, oldOwner)
 
 	array := NewArrayValueUnownedNonCopying(
 		VariableSizedStaticType{
@@ -221,7 +222,7 @@ func TestOwnerNewDictionary(t *testing.T) {
 	oldOwner := common.Address{0x1}
 
 	keyValue := NewStringValue("test")
-	value := newTestCompositeValue(oldOwner)
+	value := newTestCompositeValue(storage, oldOwner)
 
 	assert.Equal(t, &oldOwner, value.GetOwner())
 
@@ -250,7 +251,7 @@ func TestSetOwnerDictionary(t *testing.T) {
 	newOwner := common.Address{0x2}
 
 	keyValue := NewStringValue("test")
-	value := newTestCompositeValue(oldOwner)
+	value := newTestCompositeValue(storage, oldOwner)
 
 	dictionary := NewDictionaryValueUnownedNonCopying(
 		newTestInterpreterWithTestStruct(t),
@@ -278,7 +279,7 @@ func TestSetOwnerDictionaryCopy(t *testing.T) {
 	newOwner := common.Address{0x2}
 
 	keyValue := NewStringValue("test")
-	value := newTestCompositeValue(oldOwner)
+	value := newTestCompositeValue(storage, oldOwner)
 
 	dictionary := NewDictionaryValueUnownedNonCopying(
 		newTestInterpreterWithTestStruct(t),
@@ -309,7 +310,7 @@ func TestSetOwnerDictionarySetIndex(t *testing.T) {
 	newOwner := common.Address{0x2}
 
 	keyValue := NewStringValue("test")
-	value := newTestCompositeValue(oldOwner)
+	value := newTestCompositeValue(storage, oldOwner)
 
 	dictionary := NewDictionaryValueUnownedNonCopying(
 		newTestInterpreterWithTestStruct(t),
@@ -345,7 +346,7 @@ func TestSetOwnerDictionaryInsert(t *testing.T) {
 	newOwner := common.Address{0x2}
 
 	keyValue := NewStringValue("test")
-	value := newTestCompositeValue(oldOwner)
+	value := newTestCompositeValue(storage, oldOwner)
 
 	inter := newTestInterpreterWithTestStruct(t)
 
@@ -372,9 +373,11 @@ func TestOwnerNewSome(t *testing.T) {
 
 	t.Parallel()
 
+	storage := NewInMemoryStorage()
+
 	oldOwner := common.Address{0x1}
 
-	value := newTestCompositeValue(oldOwner)
+	value := newTestCompositeValue(storage, oldOwner)
 
 	assert.Equal(t, &oldOwner, value.GetOwner())
 
@@ -388,10 +391,12 @@ func TestSetOwnerSome(t *testing.T) {
 
 	t.Parallel()
 
+	storage := NewInMemoryStorage()
+
 	oldOwner := common.Address{0x1}
 	newOwner := common.Address{0x2}
 
-	value := newTestCompositeValue(oldOwner)
+	value := newTestCompositeValue(storage, oldOwner)
 
 	assert.Equal(t, &oldOwner, value.GetOwner())
 
@@ -407,10 +412,12 @@ func TestSetOwnerSomeCopy(t *testing.T) {
 
 	t.Parallel()
 
+	storage := NewInMemoryStorage()
+
 	oldOwner := common.Address{0x1}
 	newOwner := common.Address{0x2}
 
-	value := newTestCompositeValue(oldOwner)
+	value := newTestCompositeValue(storage, oldOwner)
 
 	assert.Equal(t, &oldOwner, value.GetOwner())
 
@@ -418,7 +425,7 @@ func TestSetOwnerSomeCopy(t *testing.T) {
 	some.SetOwner(&newOwner)
 
 	someCopy := some.Copy().(*SomeValue)
-	valueCopy := someCopy.Value
+	valueCopy := someCopy.InnerValue
 
 	assert.Nil(t, someCopy.GetOwner())
 	assert.Nil(t, valueCopy.GetOwner())
@@ -429,9 +436,11 @@ func TestOwnerNewComposite(t *testing.T) {
 
 	t.Parallel()
 
+	storage := NewInMemoryStorage()
+
 	oldOwner := common.Address{0x1}
 
-	composite := newTestCompositeValue(oldOwner)
+	composite := newTestCompositeValue(storage, oldOwner)
 
 	assert.Equal(t, &oldOwner, composite.GetOwner())
 }
@@ -440,11 +449,13 @@ func TestSetOwnerComposite(t *testing.T) {
 
 	t.Parallel()
 
+	storage := NewInMemoryStorage()
+
 	oldOwner := common.Address{0x1}
 	newOwner := common.Address{0x2}
 
-	value := newTestCompositeValue(oldOwner)
-	composite := newTestCompositeValue(oldOwner)
+	value := newTestCompositeValue(storage, oldOwner)
+	composite := newTestCompositeValue(storage, oldOwner)
 
 	const fieldName = "test"
 
@@ -460,10 +471,12 @@ func TestSetOwnerCompositeCopy(t *testing.T) {
 
 	t.Parallel()
 
+	storage := NewInMemoryStorage()
+
 	oldOwner := common.Address{0x1}
 
-	value := newTestCompositeValue(oldOwner)
-	composite := newTestCompositeValue(oldOwner)
+	value := newTestCompositeValue(storage, oldOwner)
+	composite := newTestCompositeValue(storage, oldOwner)
 
 	const fieldName = "test"
 
@@ -488,11 +501,13 @@ func TestSetOwnerCompositeSetMember(t *testing.T) {
 
 	t.Parallel()
 
+	storage := NewInMemoryStorage()
+
 	oldOwner := common.Address{0x1}
 	newOwner := common.Address{0x2}
 
-	value := newTestCompositeValue(oldOwner)
-	composite := newTestCompositeValue(oldOwner)
+	value := newTestCompositeValue(storage, oldOwner)
+	composite := newTestCompositeValue(storage, oldOwner)
 
 	const fieldName = "test"
 
@@ -658,6 +673,7 @@ func TestStringer(t *testing.T) {
 				members.Set("y", NewStringValue("bar"))
 
 				return NewCompositeValue(
+					storage,
 					utils.TestLocation,
 					"Foo",
 					common.CompositeKindResource,
@@ -673,6 +689,7 @@ func TestStringer(t *testing.T) {
 				members.Set("y", NewStringValue("bar"))
 
 				compositeValue := NewCompositeValue(
+					storage,
 					utils.TestLocation,
 					"Foo",
 					common.CompositeKindResource,
@@ -844,6 +861,7 @@ func TestVisitor(t *testing.T) {
 	members := NewStringValueOrderedMap()
 	members.Set("foo", value)
 	value = NewCompositeValue(
+		storage,
 		utils.TestLocation,
 		"Foo",
 		common.CompositeKindStructure,
@@ -860,6 +878,8 @@ func TestVisitor(t *testing.T) {
 func TestKeyString(t *testing.T) {
 
 	t.Parallel()
+
+	storage := NewInMemoryStorage()
 
 	type testCase struct {
 		value    HasKeyString
@@ -964,6 +984,7 @@ func TestKeyString(t *testing.T) {
 				members := NewStringValueOrderedMap()
 				members.Set("rawValue", UInt8Value(42))
 				return NewCompositeValue(
+					storage,
 					utils.TestLocation,
 					"Foo",
 					common.CompositeKindEnum,
@@ -2098,6 +2119,8 @@ func TestCompositeValue_Equal(t *testing.T) {
 
 		t.Parallel()
 
+		storage := NewInMemoryStorage()
+
 		fields1 := NewStringValueOrderedMap()
 		fields1.Set("a", NewStringValue("a"))
 
@@ -2106,6 +2129,7 @@ func TestCompositeValue_Equal(t *testing.T) {
 
 		require.True(t,
 			NewCompositeValue(
+				storage,
 				utils.TestLocation,
 				"X",
 				common.CompositeKindStructure,
@@ -2113,6 +2137,7 @@ func TestCompositeValue_Equal(t *testing.T) {
 				nil,
 			).Equal(
 				NewCompositeValue(
+					storage,
 					utils.TestLocation,
 					"X",
 					common.CompositeKindStructure,
@@ -2128,6 +2153,8 @@ func TestCompositeValue_Equal(t *testing.T) {
 
 		t.Parallel()
 
+		storage := NewInMemoryStorage()
+
 		fields1 := NewStringValueOrderedMap()
 		fields1.Set("a", NewStringValue("a"))
 
@@ -2136,6 +2163,7 @@ func TestCompositeValue_Equal(t *testing.T) {
 
 		require.False(t,
 			NewCompositeValue(
+				storage,
 				common.IdentifierLocation("A"),
 				"X",
 				common.CompositeKindStructure,
@@ -2143,6 +2171,7 @@ func TestCompositeValue_Equal(t *testing.T) {
 				nil,
 			).Equal(
 				NewCompositeValue(
+					storage,
 					common.IdentifierLocation("B"),
 					"X",
 					common.CompositeKindStructure,
@@ -2158,6 +2187,8 @@ func TestCompositeValue_Equal(t *testing.T) {
 
 		t.Parallel()
 
+		storage := NewInMemoryStorage()
+
 		fields1 := NewStringValueOrderedMap()
 		fields1.Set("a", NewStringValue("a"))
 
@@ -2166,6 +2197,7 @@ func TestCompositeValue_Equal(t *testing.T) {
 
 		require.False(t,
 			NewCompositeValue(
+				storage,
 				common.IdentifierLocation("A"),
 				"X",
 				common.CompositeKindStructure,
@@ -2173,6 +2205,7 @@ func TestCompositeValue_Equal(t *testing.T) {
 				nil,
 			).Equal(
 				NewCompositeValue(
+					storage,
 					common.IdentifierLocation("A"),
 					"Y",
 					common.CompositeKindStructure,
@@ -2188,6 +2221,8 @@ func TestCompositeValue_Equal(t *testing.T) {
 
 		t.Parallel()
 
+		storage := NewInMemoryStorage()
+
 		fields1 := NewStringValueOrderedMap()
 		fields1.Set("a", NewStringValue("a"))
 
@@ -2196,6 +2231,7 @@ func TestCompositeValue_Equal(t *testing.T) {
 
 		require.False(t,
 			NewCompositeValue(
+				storage,
 				common.IdentifierLocation("A"),
 				"X",
 				common.CompositeKindStructure,
@@ -2203,6 +2239,7 @@ func TestCompositeValue_Equal(t *testing.T) {
 				nil,
 			).Equal(
 				NewCompositeValue(
+					storage,
 					common.IdentifierLocation("A"),
 					"X",
 					common.CompositeKindStructure,
@@ -2218,6 +2255,8 @@ func TestCompositeValue_Equal(t *testing.T) {
 
 		t.Parallel()
 
+		storage := NewInMemoryStorage()
+
 		fields1 := NewStringValueOrderedMap()
 		fields1.Set("a", NewStringValue("a"))
 
@@ -2227,6 +2266,7 @@ func TestCompositeValue_Equal(t *testing.T) {
 
 		require.False(t,
 			NewCompositeValue(
+				storage,
 				common.IdentifierLocation("A"),
 				"X",
 				common.CompositeKindStructure,
@@ -2234,6 +2274,7 @@ func TestCompositeValue_Equal(t *testing.T) {
 				nil,
 			).Equal(
 				NewCompositeValue(
+					storage,
 					common.IdentifierLocation("A"),
 					"X",
 					common.CompositeKindStructure,
@@ -2249,6 +2290,8 @@ func TestCompositeValue_Equal(t *testing.T) {
 
 		t.Parallel()
 
+		storage := NewInMemoryStorage()
+
 		fields1 := NewStringValueOrderedMap()
 		fields1.Set("a", NewStringValue("a"))
 		fields1.Set("b", NewStringValue("b"))
@@ -2258,6 +2301,7 @@ func TestCompositeValue_Equal(t *testing.T) {
 
 		require.False(t,
 			NewCompositeValue(
+				storage,
 				common.IdentifierLocation("A"),
 				"X",
 				common.CompositeKindStructure,
@@ -2265,6 +2309,7 @@ func TestCompositeValue_Equal(t *testing.T) {
 				nil,
 			).Equal(
 				NewCompositeValue(
+					storage,
 					common.IdentifierLocation("A"),
 					"X",
 					common.CompositeKindStructure,
@@ -2280,6 +2325,8 @@ func TestCompositeValue_Equal(t *testing.T) {
 
 		t.Parallel()
 
+		storage := NewInMemoryStorage()
+
 		fields1 := NewStringValueOrderedMap()
 		fields1.Set("a", NewStringValue("a"))
 
@@ -2288,6 +2335,7 @@ func TestCompositeValue_Equal(t *testing.T) {
 
 		require.False(t,
 			NewCompositeValue(
+				storage,
 				common.IdentifierLocation("A"),
 				"X",
 				common.CompositeKindStructure,
@@ -2295,6 +2343,7 @@ func TestCompositeValue_Equal(t *testing.T) {
 				nil,
 			).Equal(
 				NewCompositeValue(
+					storage,
 					common.IdentifierLocation("A"),
 					"X",
 					common.CompositeKindResource,
@@ -2310,11 +2359,14 @@ func TestCompositeValue_Equal(t *testing.T) {
 
 		t.Parallel()
 
+		storage := NewInMemoryStorage()
+
 		fields1 := NewStringValueOrderedMap()
 		fields1.Set("a", NewStringValue("a"))
 
 		require.False(t,
 			NewCompositeValue(
+				storage,
 				common.IdentifierLocation("A"),
 				"X",
 				common.CompositeKindStructure,

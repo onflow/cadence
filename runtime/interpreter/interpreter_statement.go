@@ -139,7 +139,7 @@ func (interpreter *Interpreter) visitIfStatementWithVariableDeclaration(
 
 		targetType := interpreter.Program.Elaboration.VariableDeclarationTargetTypes[declaration]
 		getLocationRange := locationRangeGetter(interpreter.Location, declaration.Value)
-		unwrappedValueCopy := interpreter.copyAndConvert(someValue.Value, valueType, targetType, getLocationRange)
+		unwrappedValueCopy := interpreter.copyAndConvert(someValue.InnerValue, valueType, targetType, getLocationRange)
 
 		interpreter.activations.PushNewWithCurrent()
 		defer interpreter.activations.Pop()

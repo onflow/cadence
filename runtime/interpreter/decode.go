@@ -535,31 +535,8 @@ func (d *DecoderV5) decodeAddressLocation() (common.Location, error) {
 }
 
 func (d *DecoderV5) decodeComposite(path []string) (*CompositeValue, error) {
-	var content []byte
-	var err error
-	if d.isByteDecoder {
-		// Use the zero-copy method if available, for better performance.
-		content, err = d.decoder.DecodeRawBytesZeroCopy()
-	} else {
-		content, err = d.decoder.DecodeRawBytes()
-	}
-
-	if err != nil {
-		if e, ok := err.(*cbor.WrongTypeError); ok {
-			return nil, fmt.Errorf(
-				"invalid composite encoding (@ %s): %s",
-				strings.Join(path, "."),
-				e.ActualType.String(),
-			)
-		}
-		return nil, err
-	}
-
-	// Make a copy so that the path will not be affected by any modification at upper levels.
-	valuePath := make([]string, len(path))
-	copy(valuePath, path)
-
-	return NewDeferredCompositeValue(valuePath, content, d.owner, d.decodeCallback, d.version), nil
+	// TODO:
+	return nil, nil
 }
 
 func (d *DecoderV5) decodeInt() (IntValue, error) {
@@ -901,8 +878,8 @@ func (d *DecoderV5) decodeSome(path []string) (*SomeValue, error) {
 	}
 
 	return &SomeValue{
-		Value: value,
-		Owner: d.owner,
+		InnerValue: value,
+		Owner:      d.owner,
 	}, nil
 }
 
@@ -1546,192 +1523,192 @@ func (d *DecoderV5) decodeCapabilityStaticType() (StaticType, error) {
 	}, nil
 }
 
-// decodeCompositeMetaInfo decodes the meta info from the byte content and updates the composite value.
-// Meta info includes:
-//    - location
-//    - qualifiedIdentifier
-//    - kind
+//// decodeCompositeMetaInfo decodes the meta info from the byte content and updates the composite value.
+//// Meta info includes:
+////    - location
+////    - QualifiedIdentifier
+////    - kind
+////
+//// This also extracts out the fields raw content and cache it separately inside the value.
+////
+//func decodeCompositeMetaInfo(v *CompositeValue, content []byte) error {
 //
-// This also extracts out the fields raw content and cache it separately inside the value.
+//	d, err := NewByteDecoder(content, v.Owner, v.encodingVersion, v.decodeCallback)
+//	if err != nil {
+//		return err
+//	}
 //
-func decodeCompositeMetaInfo(v *CompositeValue, content []byte) error {
-
-	d, err := NewByteDecoder(content, v.Owner, v.encodingVersion, v.decodeCallback)
-	if err != nil {
-		return err
-	}
-
-	const expectedLength = encodedCompositeValueLength
-
-	size, err := d.decoder.DecodeArrayHead()
-
-	if err != nil {
-		if e, ok := err.(*cbor.WrongTypeError); ok {
-			return fmt.Errorf("invalid composite encoding (@ %s): expected [%d]interface{}, got %s",
-				strings.Join(v.valuePath, "."),
-				expectedLength,
-				e.ActualType.String(),
-			)
-		}
-		return err
-	}
-
-	if size != expectedLength {
-		return fmt.Errorf("invalid composite encoding (@ %s): expected [%d]interface{}, got [%d]interface{}",
-			strings.Join(v.valuePath, "."),
-			expectedLength,
-			size,
-		)
-	}
-
-	// Location
-
-	// Decode location at array index encodedCompositeValueLocationFieldKeyV5
-	location, err := d.decodeLocation()
-	if err != nil {
-		return fmt.Errorf(
-			"invalid composite location encoding (@ %s): %w",
-			strings.Join(v.valuePath, "."),
-			err,
-		)
-	}
-
-	// Kind
-
-	// Decode kind at array index encodedCompositeValueKindFieldKeyV5
-	encodedKind, err := d.decoder.DecodeUint64()
-	if err != nil {
-		if e, ok := err.(*cbor.WrongTypeError); ok {
-			return fmt.Errorf(
-				"invalid composite kind encoding (@ %s): %s",
-				strings.Join(v.valuePath, "."),
-				e.ActualType.String(),
-			)
-		}
-		return err
-	}
-
-	kind := common.CompositeKind(encodedKind)
-
-	// Fields
-
-	var fieldsContent []byte
-	if d.isByteDecoder {
-		// Use the zero-copy method if available, for better performance.
-		fieldsContent, err = d.decoder.DecodeRawBytesZeroCopy()
-	} else {
-		fieldsContent, err = d.decoder.DecodeRawBytes()
-	}
-
-	if err != nil {
-		if e, ok := err.(*cbor.WrongTypeError); ok {
-			return fmt.Errorf(
-				"invalid composite fields encoding (@ %s): %s",
-				strings.Join(v.valuePath, "."),
-				e.ActualType.String(),
-			)
-		}
-		return err
-	}
-
-	// Qualified identifier
-
-	// Decode qualified identifier at array index encodedCompositeValueQualifiedIdentifierFieldKeyV5
-	qualifiedIdentifier, err := d.decoder.DecodeString()
-	if err != nil {
-		if e, ok := err.(*cbor.WrongTypeError); ok {
-			return fmt.Errorf(
-				"invalid composite qualified identifier encoding (@ %s): %s",
-				strings.Join(v.valuePath, "."),
-				e.ActualType.String(),
-			)
-		}
-		return err
-	}
-
-	v.location = location
-	v.qualifiedIdentifier = qualifiedIdentifier
-	v.kind = kind
-	v.fieldsContent = fieldsContent
-
-	return nil
-}
-
-// decodeCompositeFields decodes fields from the byte content and updates the composite value.
+//	const expectedLength = encodedCompositeValueLength
 //
-func decodeCompositeFields(v *CompositeValue, content []byte) error {
-
-	d, err := NewByteDecoder(content, v.Owner, v.encodingVersion, v.decodeCallback)
-	if err != nil {
-		return err
-	}
-
-	// Decode fields at array index encodedCompositeValueFieldsFieldKeyV5
-	fieldsSize, err := d.decoder.DecodeArrayHead()
-	if err != nil {
-		if e, ok := err.(*cbor.WrongTypeError); ok {
-			return fmt.Errorf(
-				"invalid composite fields encoding (@ %s): %s",
-				strings.Join(v.valuePath, "."),
-				e.ActualType.String(),
-			)
-		}
-		return err
-	}
-
-	if fieldsSize%2 == 1 {
-		return fmt.Errorf(
-			"invalid composite fields encoding (@ %s): fields should have even number of elements: got %d",
-			strings.Join(v.valuePath, "."),
-			fieldsSize,
-		)
-	}
-
-	fields := NewStringValueOrderedMap()
-
-	// Pre-allocate and reuse valuePath.
-	//nolint:gocritic
-	valuePath := append(v.valuePath, "")
-
-	lastValuePathIndex := len(v.valuePath)
-
-	for i := 0; i < int(fieldsSize); i += 2 {
-
-		// field name
-		fieldName, err := d.decoder.DecodeString()
-		if err != nil {
-			if e, ok := err.(*cbor.WrongTypeError); ok {
-				return fmt.Errorf(
-					"invalid composite field name encoding (@ %s, %d): %s",
-					strings.Join(v.valuePath, "."),
-					i/2,
-					e.ActualType.String(),
-				)
-			}
-			return err
-		}
-
-		// field value
-
-		valuePath[lastValuePathIndex] = fieldName
-
-		decodedValue, err := d.decodeValue(valuePath)
-		if err != nil {
-			return fmt.Errorf(
-				"invalid composite field value encoding (@ %s, %s): %w",
-				strings.Join(v.valuePath, "."),
-				fieldName,
-				err,
-			)
-		}
-
-		fields.Set(fieldName, decodedValue)
-	}
-
-	v.fields = fields
-
-	return nil
-}
+//	size, err := d.decoder.DecodeArrayHead()
+//
+//	if err != nil {
+//		if e, ok := err.(*cbor.WrongTypeError); ok {
+//			return fmt.Errorf("invalid composite encoding (@ %s): expected [%d]interface{}, got %s",
+//				strings.Join(v.valuePath, "."),
+//				expectedLength,
+//				e.ActualType.String(),
+//			)
+//		}
+//		return err
+//	}
+//
+//	if size != expectedLength {
+//		return fmt.Errorf("invalid composite encoding (@ %s): expected [%d]interface{}, got [%d]interface{}",
+//			strings.Join(v.valuePath, "."),
+//			expectedLength,
+//			size,
+//		)
+//	}
+//
+//	// Location
+//
+//	// Decode location at array index encodedCompositeValueLocationFieldKeyV5
+//	location, err := d.decodeLocation()
+//	if err != nil {
+//		return fmt.Errorf(
+//			"invalid composite location encoding (@ %s): %w",
+//			strings.Join(v.valuePath, "."),
+//			err,
+//		)
+//	}
+//
+//	// Kind
+//
+//	// Decode kind at array index encodedCompositeValueKindFieldKeyV5
+//	encodedKind, err := d.decoder.DecodeUint64()
+//	if err != nil {
+//		if e, ok := err.(*cbor.WrongTypeError); ok {
+//			return fmt.Errorf(
+//				"invalid composite kind encoding (@ %s): %s",
+//				strings.Join(v.valuePath, "."),
+//				e.ActualType.String(),
+//			)
+//		}
+//		return err
+//	}
+//
+//	kind := common.CompositeKind(encodedKind)
+//
+//	// Fields
+//
+//	var fieldsContent []byte
+//	if d.isByteDecoder {
+//		// Use the zero-copy method if available, for better performance.
+//		fieldsContent, err = d.decoder.DecodeRawBytesZeroCopy()
+//	} else {
+//		fieldsContent, err = d.decoder.DecodeRawBytes()
+//	}
+//
+//	if err != nil {
+//		if e, ok := err.(*cbor.WrongTypeError); ok {
+//			return fmt.Errorf(
+//				"invalid composite fields encoding (@ %s): %s",
+//				strings.Join(v.valuePath, "."),
+//				e.ActualType.String(),
+//			)
+//		}
+//		return err
+//	}
+//
+//	// Qualified identifier
+//
+//	// Decode qualified identifier at array index encodedCompositeValueQualifiedIdentifierFieldKeyV5
+//	qualifiedIdentifier, err := d.decoder.DecodeString()
+//	if err != nil {
+//		if e, ok := err.(*cbor.WrongTypeError); ok {
+//			return fmt.Errorf(
+//				"invalid composite qualified identifier encoding (@ %s): %s",
+//				strings.Join(v.valuePath, "."),
+//				e.ActualType.String(),
+//			)
+//		}
+//		return err
+//	}
+//
+//	v.Location = location
+//	v.QualifiedIdentifier = qualifiedIdentifier
+//	v.Kind = kind
+//	v.fieldsContent = fieldsContent
+//
+//	return nil
+//}
+//
+//// decodeCompositeFields decodes fields from the byte content and updates the composite value.
+////
+//func decodeCompositeFields(v *CompositeValue, content []byte) error {
+//
+//	d, err := NewByteDecoder(content, v.Owner, v.encodingVersion, v.decodeCallback)
+//	if err != nil {
+//		return err
+//	}
+//
+//	// Decode fields at array index encodedCompositeValueFieldsFieldKeyV5
+//	fieldsSize, err := d.decoder.DecodeArrayHead()
+//	if err != nil {
+//		if e, ok := err.(*cbor.WrongTypeError); ok {
+//			return fmt.Errorf(
+//				"invalid composite fields encoding (@ %s): %s",
+//				strings.Join(v.valuePath, "."),
+//				e.ActualType.String(),
+//			)
+//		}
+//		return err
+//	}
+//
+//	if fieldsSize%2 == 1 {
+//		return fmt.Errorf(
+//			"invalid composite fields encoding (@ %s): fields should have even number of elements: got %d",
+//			strings.Join(v.valuePath, "."),
+//			fieldsSize,
+//		)
+//	}
+//
+//	fields := NewStringValueOrderedMap()
+//
+//	// Pre-allocate and reuse valuePath.
+//	//nolint:gocritic
+//	valuePath := append(v.valuePath, "")
+//
+//	lastValuePathIndex := len(v.valuePath)
+//
+//	for i := 0; i < int(fieldsSize); i += 2 {
+//
+//		// field name
+//		fieldName, err := d.decoder.DecodeString()
+//		if err != nil {
+//			if e, ok := err.(*cbor.WrongTypeError); ok {
+//				return fmt.Errorf(
+//					"invalid composite field name encoding (@ %s, %d): %s",
+//					strings.Join(v.valuePath, "."),
+//					i/2,
+//					e.ActualType.String(),
+//				)
+//			}
+//			return err
+//		}
+//
+//		// field value
+//
+//		valuePath[lastValuePathIndex] = fieldName
+//
+//		decodedValue, err := d.decodeValue(valuePath)
+//		if err != nil {
+//			return fmt.Errorf(
+//				"invalid composite field value encoding (@ %s, %s): %w",
+//				strings.Join(v.valuePath, "."),
+//				fieldName,
+//				err,
+//			)
+//		}
+//
+//		fields.Set(fieldName, decodedValue)
+//	}
+//
+//	v.Fields = fields
+//
+//	return nil
+//}
 
 func (d *DecoderV5) decodeDictionary(path []string) (*DictionaryValue, error) {
 	// TODO:

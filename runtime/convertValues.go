@@ -152,11 +152,11 @@ func exportSomeValue(
 	cadence.Optional,
 	error,
 ) {
-	if v.Value == nil {
+	if v.InnerValue == nil {
 		return cadence.NewOptional(nil), nil
 	}
 
-	value, err := exportValueWithInterpreter(v.Value, inter, seenReferences)
+	value, err := exportValueWithInterpreter(v.InnerValue, inter, seenReferences)
 	if err != nil {
 		return cadence.Optional{}, err
 	}
@@ -206,7 +206,7 @@ func exportCompositeValue(
 	fieldNames := t.CompositeFields()
 	fields := make([]cadence.Value, len(fieldNames))
 
-	fieldsMap := v.Fields()
+	fieldsMap := v.Fields
 	for i, field := range fieldNames {
 		fieldName := field.Identifier
 		fieldValue, ok := fieldsMap.Get(fieldName)
@@ -271,7 +271,7 @@ func exportDictionaryValue(
 		// NOTE: use `Get` instead of accessing `Entries`,
 		// so that the potentially deferred values are loaded from storage
 
-		value := v.Get(inter, interpreter.ReturnEmptyLocationRange, keyValue).(*interpreter.SomeValue).Value
+		value := v.Get(inter, interpreter.ReturnEmptyLocationRange, keyValue).(*interpreter.SomeValue).InnerValue
 
 		convertedKey, err := exportValueWithInterpreter(keyValue, inter, seenReferences)
 		if err != nil {

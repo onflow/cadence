@@ -1366,7 +1366,7 @@ func (r *interpreterRuntime) emitEvent(
 ) error {
 	fields := make([]exportableValue, len(eventType.ConstructorParameters))
 
-	eventFields := event.Fields()
+	eventFields := event.Fields
 	for i, parameter := range eventType.ConstructorParameters {
 		value, _ := eventFields.Get(parameter.Identifier)
 		fields[i] = newExportableValue(value, inter)
@@ -1443,7 +1443,7 @@ func (r *interpreterRuntime) newCreateAccountFunction(
 			))
 		}
 
-		payerAddressValue, ok := payer.Fields().Get(sema.AuthAccountAddressField)
+		payerAddressValue, ok := payer.Fields.Get(sema.AuthAccountAddressField)
 		if !ok {
 			panic("address is not set")
 		}
@@ -1682,7 +1682,7 @@ func (r *interpreterRuntime) loadContract(
 
 		switch typedValue := storedValue.(type) {
 		case *interpreter.SomeValue:
-			return typedValue.Value.(*interpreter.CompositeValue)
+			return typedValue.InnerValue.(*interpreter.CompositeValue)
 		case interpreter.NilValue:
 			panic("failed to load contract")
 		default:
@@ -2788,7 +2788,7 @@ func (r *interpreterRuntime) newPublicAccountContracts(
 
 func NewPublicKeyFromValue(publicKey *interpreter.CompositeValue) (*PublicKey, error) {
 
-	fields := publicKey.Fields()
+	fields := publicKey.Fields
 
 	// publicKey field
 	publicKeyFieldGetter, ok := publicKey.ComputedFields.Get(sema.PublicKeyPublicKeyField)
@@ -2819,7 +2819,7 @@ func NewPublicKeyFromValue(publicKey *interpreter.CompositeValue) (*PublicKey, e
 		)
 	}
 
-	rawValue, ok := signAlgoValue.Fields().Get(sema.EnumRawValueFieldName)
+	rawValue, ok := signAlgoValue.Fields.Get(sema.EnumRawValueFieldName)
 	if !ok {
 		return nil, errors.New("cannot find sign algorithm raw value")
 	}
@@ -2884,7 +2884,7 @@ func NewAccountKeyValue(
 func NewHashAlgorithmFromValue(value interpreter.Value) HashAlgorithm {
 	hashAlgoValue := value.(*interpreter.CompositeValue)
 
-	rawValue, ok := hashAlgoValue.Fields().Get(sema.EnumRawValueFieldName)
+	rawValue, ok := hashAlgoValue.Fields.Get(sema.EnumRawValueFieldName)
 	if !ok {
 		panic("cannot find hash algorithm raw value")
 	}

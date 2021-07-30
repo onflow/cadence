@@ -198,7 +198,7 @@ func TestInterpretAuthAccount_save(t *testing.T) {
 
 				require.IsType(t, &interpreter.SomeValue{}, value)
 
-				innerValue := value.(*interpreter.SomeValue).Value
+				innerValue := value.(*interpreter.SomeValue).InnerValue
 
 				assert.IsType(t, &interpreter.CompositeValue{}, innerValue)
 			}
@@ -249,7 +249,7 @@ func TestInterpretAuthAccount_save(t *testing.T) {
 
 				require.IsType(t, &interpreter.SomeValue{}, value)
 
-				innerValue := value.(*interpreter.SomeValue).Value
+				innerValue := value.(*interpreter.SomeValue).InnerValue
 
 				assert.IsType(t, &interpreter.CompositeValue{}, innerValue)
 			}
@@ -319,7 +319,7 @@ func TestInterpretAuthAccount_load(t *testing.T) {
 
 			require.IsType(t, &interpreter.SomeValue{}, value)
 
-			innerValue := value.(*interpreter.SomeValue).Value
+			innerValue := value.(*interpreter.SomeValue).InnerValue
 
 			assert.IsType(t, &interpreter.CompositeValue{}, innerValue)
 
@@ -401,7 +401,7 @@ func TestInterpretAuthAccount_load(t *testing.T) {
 
 			require.IsType(t, &interpreter.SomeValue{}, value)
 
-			innerValue := value.(*interpreter.SomeValue).Value
+			innerValue := value.(*interpreter.SomeValue).InnerValue
 
 			assert.IsType(t, &interpreter.CompositeValue{}, innerValue)
 
@@ -488,7 +488,7 @@ func TestInterpretAuthAccount_copy(t *testing.T) {
 
 			require.IsType(t, &interpreter.SomeValue{}, value)
 
-			innerValue := value.(*interpreter.SomeValue).Value
+			innerValue := value.(*interpreter.SomeValue).InnerValue
 
 			assert.IsType(t, &interpreter.CompositeValue{}, innerValue)
 
@@ -611,7 +611,7 @@ func TestInterpretAuthAccount_borrow(t *testing.T) {
 
 			require.IsType(t, &interpreter.SomeValue{}, value)
 
-			innerValue := value.(*interpreter.SomeValue).Value
+			innerValue := value.(*interpreter.SomeValue).InnerValue
 
 			assert.IsType(t, &interpreter.StorageReferenceValue{}, innerValue)
 
@@ -637,7 +637,7 @@ func TestInterpretAuthAccount_borrow(t *testing.T) {
 
 			require.IsType(t, &interpreter.SomeValue{}, value)
 
-			innerValue = value.(*interpreter.SomeValue).Value
+			innerValue = value.(*interpreter.SomeValue).InnerValue
 
 			assert.IsType(t, &interpreter.StorageReferenceValue{}, innerValue)
 
@@ -738,7 +738,7 @@ func TestInterpretAuthAccount_borrow(t *testing.T) {
 
 			require.IsType(t, &interpreter.SomeValue{}, value)
 
-			innerValue := value.(*interpreter.SomeValue).Value
+			innerValue := value.(*interpreter.SomeValue).InnerValue
 
 			assert.IsType(t, &interpreter.StorageReferenceValue{}, innerValue)
 
@@ -764,7 +764,7 @@ func TestInterpretAuthAccount_borrow(t *testing.T) {
 
 			require.IsType(t, &interpreter.SomeValue{}, value)
 
-			innerValue = value.(*interpreter.SomeValue).Value
+			innerValue = value.(*interpreter.SomeValue).InnerValue
 
 			assert.IsType(t, &interpreter.StorageReferenceValue{}, innerValue)
 
@@ -849,7 +849,7 @@ func TestInterpretAuthAccount_link(t *testing.T) {
 
 					require.IsType(t, &interpreter.SomeValue{}, value)
 
-					capability := value.(*interpreter.SomeValue).Value
+					capability := value.(*interpreter.SomeValue).InnerValue
 
 					rType := checker.RequireGlobalType(t, inter.Program.Elaboration, "R")
 
@@ -895,7 +895,7 @@ func TestInterpretAuthAccount_link(t *testing.T) {
 
 					require.IsType(t, &interpreter.SomeValue{}, value)
 
-					capability := value.(*interpreter.SomeValue).Value
+					capability := value.(*interpreter.SomeValue).InnerValue
 
 					r2Type := checker.RequireGlobalType(t, inter.Program.Elaboration, "R2")
 
@@ -995,7 +995,7 @@ func TestInterpretAuthAccount_link(t *testing.T) {
 
 					require.IsType(t, &interpreter.SomeValue{}, value)
 
-					capability := value.(*interpreter.SomeValue).Value
+					capability := value.(*interpreter.SomeValue).InnerValue
 
 					sType := checker.RequireGlobalType(t, inter.Program.Elaboration, "S")
 
@@ -1041,7 +1041,7 @@ func TestInterpretAuthAccount_link(t *testing.T) {
 
 					require.IsType(t, &interpreter.SomeValue{}, value)
 
-					capability := value.(*interpreter.SomeValue).Value
+					capability := value.(*interpreter.SomeValue).InnerValue
 					require.IsType(t, interpreter.CapabilityValue{}, capability)
 
 					s2Type := checker.RequireGlobalType(t, inter.Program.Elaboration, "S2")
@@ -1288,7 +1288,7 @@ func TestInterpretAccount_getLinkTarget(t *testing.T) {
 
 				require.IsType(t, &interpreter.SomeValue{}, value)
 
-				innerValue := value.(*interpreter.SomeValue).Value
+				innerValue := value.(*interpreter.SomeValue).InnerValue
 
 				assert.Equal(t,
 					interpreter.PathValue{
@@ -1359,7 +1359,7 @@ func TestInterpretAccount_getLinkTarget(t *testing.T) {
 
 				require.IsType(t, &interpreter.SomeValue{}, value)
 
-				innerValue := value.(*interpreter.SomeValue).Value
+				innerValue := value.(*interpreter.SomeValue).InnerValue
 
 				assert.Equal(t,
 					interpreter.PathValue{

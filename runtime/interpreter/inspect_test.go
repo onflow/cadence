@@ -54,8 +54,8 @@ func TestInspectValue(t *testing.T) {
 
 	optionalValue := NewSomeValueOwningNonCopying(arrayValue)
 
-	compositeValue := newTestCompositeValue(common.Address{})
-	compositeValue.Fields().Set("value", optionalValue)
+	compositeValue := newTestCompositeValue(storage, common.Address{})
+	compositeValue.Fields.Set("value", optionalValue)
 
 	t.Run("dict", func(t *testing.T) {
 
