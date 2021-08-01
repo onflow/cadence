@@ -90,7 +90,7 @@ type MemberAccessibleValue interface {
 
 type ConcatenatableValue interface {
 	Value
-	Concat(other ConcatenatableValue) Value
+	Concat(other ConcatenatableValue, storage Storage) Value
 }
 
 // AllAppendableValue
@@ -220,7 +220,8 @@ func (TypeValue) IsStorable() bool {
 	return true
 }
 
-func (v TypeValue) Storable() atree.Storable {
+func (v TypeValue) Storable(_ atree.SlabStorage) atree.Storable {
+	// TODO: store in storage and return StorageIDStorable if size > max element inline size
 	return v
 }
 
@@ -232,15 +233,7 @@ func (v TypeValue) ByteSize() uint32 {
 	return storableSize(v)
 }
 
-func (v TypeValue) ID() atree.StorageID {
-	return atree.StorageIDUndefined
-}
-
-func (v TypeValue) Mutable() bool {
-	return false
-}
-
-func (v TypeValue) Value(_ atree.SlabStorage) (atree.Value, error) {
+func (v TypeValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 	return v, nil
 }
 
@@ -298,7 +291,7 @@ func (VoidValue) IsStorable() bool {
 	return true
 }
 
-func (v VoidValue) Storable() atree.Storable {
+func (v VoidValue) Storable(_ atree.SlabStorage) atree.Storable {
 	return v
 }
 
@@ -311,15 +304,7 @@ func (v VoidValue) ByteSize() uint32 {
 	return storableSize(v)
 }
 
-func (VoidValue) ID() atree.StorageID {
-	return atree.StorageIDUndefined
-}
-
-func (VoidValue) Mutable() bool {
-	return false
-}
-
-func (v VoidValue) Value(_ atree.SlabStorage) (atree.Value, error) {
+func (v VoidValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 	return v, nil
 }
 
@@ -396,7 +381,7 @@ func (BoolValue) IsStorable() bool {
 	return true
 }
 
-func (v BoolValue) Storable() atree.Storable {
+func (v BoolValue) Storable(_ atree.SlabStorage) atree.Storable {
 	return v
 }
 
@@ -409,15 +394,7 @@ func (v BoolValue) ByteSize() uint32 {
 	return storableSize(v)
 }
 
-func (BoolValue) ID() atree.StorageID {
-	return atree.StorageIDUndefined
-}
-
-func (BoolValue) Mutable() bool {
-	return false
-}
-
-func (v BoolValue) Value(_ atree.SlabStorage) (atree.Value, error) {
+func (v BoolValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 	return v, nil
 }
 
@@ -507,7 +484,7 @@ func (v *StringValue) NormalForm() string {
 	return norm.NFC.String(v.Str)
 }
 
-func (v *StringValue) Concat(other ConcatenatableValue) Value {
+func (v *StringValue) Concat(other ConcatenatableValue, _ Storage) Value {
 	otherString := other.(*StringValue)
 
 	var sb strings.Builder
@@ -596,13 +573,13 @@ func (v *StringValue) GetMember(interpreter *Interpreter, _ func() LocationRange
 		return NewIntValueFromInt64(int64(length))
 
 	case "utf8":
-		return ByteSliceToByteArrayValue(interpreter.storage, []byte(v.Str))
+		return ByteSliceToByteArrayValue(interpreter.Storage, []byte(v.Str))
 
 	case "concat":
 		return NewHostFunctionValue(
 			func(invocation Invocation) Value {
 				otherValue := invocation.Arguments[0].(ConcatenatableValue)
-				return v.Concat(otherValue)
+				return v.Concat(otherValue, invocation.Interpreter.Storage)
 			},
 		)
 
@@ -618,7 +595,7 @@ func (v *StringValue) GetMember(interpreter *Interpreter, _ func() LocationRange
 	case "decodeHex":
 		return NewHostFunctionValue(
 			func(invocation Invocation) Value {
-				return v.DecodeHex(invocation.Interpreter.storage)
+				return v.DecodeHex(invocation.Interpreter.Storage)
 			},
 		)
 	}
@@ -644,7 +621,8 @@ func (*StringValue) IsStorable() bool {
 	return true
 }
 
-func (v *StringValue) Storable() atree.Storable {
+func (v *StringValue) Storable(_ atree.SlabStorage) atree.Storable {
+	// TODO: store in storage and return StorageIDStorable if size > max element inline size
 	return v
 }
 
@@ -656,15 +634,7 @@ func (v *StringValue) ByteSize() uint32 {
 	return storableSize(v)
 }
 
-func (*StringValue) ID() atree.StorageID {
-	return atree.StorageIDUndefined
-}
-
-func (*StringValue) Mutable() bool {
-	return false
-}
-
-func (v *StringValue) Value(_ atree.SlabStorage) (atree.Value, error) {
+func (v *StringValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 	return v, nil
 }
 
@@ -700,21 +670,19 @@ func (*StringValue) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicTyp
 // ArrayValue
 
 type ArrayValue struct {
-	Type    ArrayStaticType
-	Owner   *common.Address
-	storage Storage
-	array   *atree.Array
+	Type  ArrayStaticType
+	Owner *common.Address
+	array *atree.Array
 }
 
 func NewArrayValueUnownedNonCopying(
 	arrayType ArrayStaticType,
-	storage Storage,
+	slabStorage atree.SlabStorage,
 	values ...Value,
 ) *ArrayValue {
 
-	array, err := atree.NewArray(storage)
+	array, err := atree.NewArray(slabStorage)
 	if err != nil {
-
 		panic(ExternalError{err})
 	}
 
@@ -722,10 +690,9 @@ func NewArrayValueUnownedNonCopying(
 		// NOTE: new value has no owner
 		value.SetOwner(nil)
 
-		// TODO: embed atree.Value in Value and implement
 		err := array.Insert(uint64(i), value.(atree.Value))
 		if err != nil {
-			panic(err)
+			panic(ExternalError{err})
 		}
 	}
 
@@ -754,7 +721,7 @@ func (v *ArrayValue) Accept(interpreter *Interpreter, visitor Visitor) {
 
 func (v *ArrayValue) Walk(walkChild func(Value)) {
 	_ = v.array.Iterate(func(element atree.Value) (resume bool, err error) {
-		// TODO: embed atree.Value in Value and implement
+
 		walkChild(element.(Value))
 		return true, nil
 	})
@@ -803,9 +770,13 @@ func (v *ArrayValue) Destroy(interpreter *Interpreter, getLocationRange func() L
 	})
 }
 
-func (v *ArrayValue) Concat(other ConcatenatableValue) Value {
+func (v *ArrayValue) Concat(other ConcatenatableValue, storage Storage) Value {
 	otherArray := other.(*ArrayValue)
-	newArray := v.Copy().(*ArrayValue)
+	newValue, err := v.DeepCopy(storage)
+	if err != nil {
+		panic(ExternalError{err})
+	}
+	newArray := newValue.(*ArrayValue)
 	newArray.AppendAll(otherArray)
 	return newArray
 }
@@ -820,10 +791,9 @@ func (v *ArrayValue) GetIndex(index int, getLocationRange func() LocationRange) 
 
 	element, err := v.array.Get(uint64(index))
 	if err != nil {
-		panic(err)
+		panic(ExternalError{err})
 	}
 
-	// TODO: embed atree.Value in Value and implement
 	return element.(Value)
 }
 
@@ -842,10 +812,9 @@ func (v *ArrayValue) SetIndex(inter *Interpreter, getLocationRange func() Locati
 
 	value.SetOwner(v.Owner)
 
-	// TODO: embed atree.Value in Value and implement
 	err := v.array.Set(uint64(index), value.(atree.Value))
 	if err != nil {
-		panic(err)
+		panic(ExternalError{err})
 	}
 }
 
@@ -886,10 +855,9 @@ func (v *ArrayValue) Append(inter *Interpreter, getLocationRange func() Location
 
 	element.SetOwner(v.Owner)
 
-	// TODO: embed atree.Value in Value and implement
 	err := v.array.Append(element.(atree.Value))
 	if err != nil {
-		panic(err)
+		panic(ExternalError{err})
 	}
 }
 
@@ -899,10 +867,9 @@ func (v *ArrayValue) AppendAll(inter *Interpreter, getLocationRange func() Locat
 	otherArray.Walk(func(element Value) {
 		element.SetOwner(v.Owner)
 
-		// TODO: embed atree.Value in Value and implement
 		err := v.array.Append(element.(atree.Value))
 		if err != nil {
-			panic(err)
+			panic(ExternalError{err})
 		}
 	})
 }
@@ -928,10 +895,9 @@ func (v *ArrayValue) Insert(inter *Interpreter, getLocationRange func() Location
 
 	element.SetOwner(v.Owner)
 
-	// TODO: embed atree.Value in Value and implement
 	err := v.array.Insert(uint64(index), element.(atree.Value))
 	if err != nil {
-		panic(err)
+		panic(ExternalError{err})
 	}
 }
 
@@ -941,10 +907,9 @@ func (v *ArrayValue) Remove(index int, getLocationRange func() LocationRange) Va
 
 	element, err := v.array.Remove(uint64(index))
 	if err != nil {
-		panic(err)
+		panic(ExternalError{err})
 	}
 
-	// TODO: embed atree.Value in Value and implement
 	return element.(Value)
 }
 
@@ -961,7 +926,7 @@ func (v *ArrayValue) Contains(needleValue Value) BoolValue {
 
 	var result bool
 	err := v.array.Iterate(func(element atree.Value) (resume bool, err error) {
-		// TODO: embed atree.Value in Value and implement
+
 		if needleEquatable.Equal(element.(Value), ReturnEmptyLocationRange) {
 			result = true
 			// stop iteration
@@ -971,7 +936,7 @@ func (v *ArrayValue) Contains(needleValue Value) BoolValue {
 		return true, nil
 	})
 	if err != nil {
-		panic(err)
+		panic(ExternalError{err})
 	}
 
 	return BoolValue(result)
@@ -1003,7 +968,7 @@ func (v *ArrayValue) GetMember(inter *Interpreter, getLocationRange func() Locat
 		return NewHostFunctionValue(
 			func(invocation Invocation) Value {
 				otherArray := invocation.Arguments[0].(ConcatenatableValue)
-				return v.Concat(otherArray)
+				return v.Concat(otherArray, invocation.Interpreter.Storage)
 			},
 		)
 
@@ -1072,20 +1037,19 @@ func (v *ArrayValue) ConformsToDynamicType(
 
 	iterator, err := v.array.Iterator()
 	if err != nil {
-		panic(err)
+		panic(ExternalError{err})
 	}
 
 	index := 0
 	for {
 		value, err := iterator.Next()
 		if err != nil {
-			panic(err)
+			panic(ExternalError{err})
 		}
 		if value == nil {
 			return true
 		}
 
-		// TODO: embed atree.Value in Value and implement
 		if !value.(Value).ConformsToDynamicType(interpreter, arrayType.ElementTypes[index], results) {
 			return false
 		}
@@ -1098,20 +1062,19 @@ func (v *ArrayValue) IsStorable() bool {
 
 	iterator, err := v.array.Iterator()
 	if err != nil {
-		panic(err)
+		panic(ExternalError{err})
 	}
 
 	index := 0
 	for {
 		value, err := iterator.Next()
 		if err != nil {
-			panic(err)
+			panic(ExternalError{err})
 		}
 		if value == nil {
 			return true
 		}
 
-		// TODO: embed atree.Value in Value and implement
 		if !value.(Value).IsStorable() {
 			return false
 		}
@@ -1155,8 +1118,8 @@ func (v *ArrayValue) Equal(other Value, getLocationRange func() LocationRange) b
 	return true
 }
 
-func (v *ArrayValue) Storable() atree.Storable {
-	return v.array.Storable()
+func (v *ArrayValue) Storable(storage atree.SlabStorage) atree.Storable {
+	return v.array.Storable(storage)
 }
 
 func (v *ArrayValue) DeepCopy(storage atree.SlabStorage) (atree.Value, error) {
@@ -1489,7 +1452,7 @@ func (v IntValue) BitwiseRightShift(other IntegerValue) IntegerValue {
 }
 
 func (v IntValue) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name, interpreter.storage)
+	return getNumberValueMember(v, name, interpreter.Storage)
 }
 
 func (IntValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -1509,7 +1472,8 @@ func (IntValue) IsStorable() bool {
 	return true
 }
 
-func (v IntValue) Storable() atree.Storable {
+func (v IntValue) Storable(_ atree.SlabStorage) atree.Storable {
+	// TODO: store in storage and return StorageIDStorable if size > max element inline size
 	return v
 }
 
@@ -1522,15 +1486,7 @@ func (v IntValue) ByteSize() uint32 {
 	return storableSize(v)
 }
 
-func (IntValue) ID() atree.StorageID {
-	return atree.StorageIDUndefined
-}
-
-func (IntValue) Mutable() bool {
-	return false
-}
-
-func (v IntValue) Value(_ atree.SlabStorage) (atree.Value, error) {
+func (v IntValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 	return v, nil
 }
 
@@ -1813,7 +1769,7 @@ func (v Int8Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 }
 
 func (v Int8Value) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name, interpreter.storage)
+	return getNumberValueMember(v, name, interpreter.Storage)
 }
 
 func (Int8Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -1833,7 +1789,7 @@ func (Int8Value) IsStorable() bool {
 	return true
 }
 
-func (v Int8Value) Storable() atree.Storable {
+func (v Int8Value) Storable(_ atree.SlabStorage) atree.Storable {
 	return v
 }
 
@@ -1846,15 +1802,7 @@ func (v Int8Value) ByteSize() uint32 {
 	return storableSize(v)
 }
 
-func (Int8Value) ID() atree.StorageID {
-	return atree.StorageIDUndefined
-}
-
-func (Int8Value) Mutable() bool {
-	return false
-}
-
-func (v Int8Value) Value(_ atree.SlabStorage) (atree.Value, error) {
+func (v Int8Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 	return v, nil
 }
 
@@ -2137,7 +2085,7 @@ func (v Int16Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 }
 
 func (v Int16Value) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name, interpreter.storage)
+	return getNumberValueMember(v, name, interpreter.Storage)
 }
 
 func (Int16Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -2159,7 +2107,7 @@ func (Int16Value) IsStorable() bool {
 	return true
 }
 
-func (v Int16Value) Storable() atree.Storable {
+func (v Int16Value) Storable(_ atree.SlabStorage) atree.Storable {
 	return v
 }
 
@@ -2172,15 +2120,7 @@ func (v Int16Value) ByteSize() uint32 {
 	return storableSize(v)
 }
 
-func (Int16Value) ID() atree.StorageID {
-	return atree.StorageIDUndefined
-}
-
-func (Int16Value) Mutable() bool {
-	return false
-}
-
-func (v Int16Value) Value(_ atree.SlabStorage) (atree.Value, error) {
+func (v Int16Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 	return v, nil
 }
 
@@ -2463,7 +2403,7 @@ func (v Int32Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 }
 
 func (v Int32Value) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name, interpreter.storage)
+	return getNumberValueMember(v, name, interpreter.Storage)
 }
 
 func (Int32Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -2485,7 +2425,7 @@ func (Int32Value) IsStorable() bool {
 	return true
 }
 
-func (v Int32Value) Storable() atree.Storable {
+func (v Int32Value) Storable(_ atree.SlabStorage) atree.Storable {
 	return v
 }
 
@@ -2498,15 +2438,7 @@ func (v Int32Value) ByteSize() uint32 {
 	return storableSize(v)
 }
 
-func (Int32Value) ID() atree.StorageID {
-	return atree.StorageIDUndefined
-}
-
-func (Int32Value) Mutable() bool {
-	return false
-}
-
-func (v Int32Value) Value(_ atree.SlabStorage) (atree.Value, error) {
+func (v Int32Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 	return v, nil
 }
 
@@ -2788,7 +2720,7 @@ func (v Int64Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 }
 
 func (v Int64Value) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name, interpreter.storage)
+	return getNumberValueMember(v, name, interpreter.Storage)
 }
 
 func (Int64Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -2810,7 +2742,7 @@ func (Int64Value) IsStorable() bool {
 	return true
 }
 
-func (v Int64Value) Storable() atree.Storable {
+func (v Int64Value) Storable(_ atree.SlabStorage) atree.Storable {
 	return v
 }
 
@@ -2823,15 +2755,7 @@ func (v Int64Value) ByteSize() uint32 {
 	return storableSize(v)
 }
 
-func (Int64Value) ID() atree.StorageID {
-	return atree.StorageIDUndefined
-}
-
-func (Int64Value) Mutable() bool {
-	return false
-}
-
-func (v Int64Value) Value(_ atree.SlabStorage) (atree.Value, error) {
+func (v Int64Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 	return v, nil
 }
 
@@ -3185,7 +3109,7 @@ func (v Int128Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 }
 
 func (v Int128Value) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name, interpreter.storage)
+	return getNumberValueMember(v, name, interpreter.Storage)
 }
 
 func (Int128Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -3205,7 +3129,7 @@ func (Int128Value) IsStorable() bool {
 	return true
 }
 
-func (v Int128Value) Storable() atree.Storable {
+func (v Int128Value) Storable(_ atree.SlabStorage) atree.Storable {
 	return v
 }
 
@@ -3218,15 +3142,7 @@ func (v Int128Value) ByteSize() uint32 {
 	return storableSize(v)
 }
 
-func (Int128Value) ID() atree.StorageID {
-	return atree.StorageIDUndefined
-}
-
-func (Int128Value) Mutable() bool {
-	return false
-}
-
-func (v Int128Value) Value(_ atree.SlabStorage) (atree.Value, error) {
+func (v Int128Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 	return v, nil
 }
 
@@ -3580,7 +3496,7 @@ func (v Int256Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 }
 
 func (v Int256Value) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name, interpreter.storage)
+	return getNumberValueMember(v, name, interpreter.Storage)
 }
 
 func (Int256Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -3600,7 +3516,7 @@ func (Int256Value) IsStorable() bool {
 	return true
 }
 
-func (v Int256Value) Storable() atree.Storable {
+func (v Int256Value) Storable(_ atree.SlabStorage) atree.Storable {
 	return v
 }
 
@@ -3613,15 +3529,7 @@ func (v Int256Value) ByteSize() uint32 {
 	return storableSize(v)
 }
 
-func (Int256Value) ID() atree.StorageID {
-	return atree.StorageIDUndefined
-}
-
-func (Int256Value) Mutable() bool {
-	return false
-}
-
-func (v Int256Value) Value(_ atree.SlabStorage) (atree.Value, error) {
+func (v Int256Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 	return v, nil
 }
 
@@ -3865,7 +3773,7 @@ func (v UIntValue) BitwiseRightShift(other IntegerValue) IntegerValue {
 }
 
 func (v UIntValue) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name, interpreter.storage)
+	return getNumberValueMember(v, name, interpreter.Storage)
 }
 
 func (UIntValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -3885,7 +3793,8 @@ func (UIntValue) IsStorable() bool {
 	return true
 }
 
-func (v UIntValue) Storable() atree.Storable {
+func (v UIntValue) Storable(_ atree.SlabStorage) atree.Storable {
+	// TODO: store in storage and return StorageIDStorable if size > max element inline size
 	return v
 }
 
@@ -3898,15 +3807,7 @@ func (v UIntValue) ByteSize() uint32 {
 	return storableSize(v)
 }
 
-func (UIntValue) ID() atree.StorageID {
-	return atree.StorageIDUndefined
-}
-
-func (UIntValue) Mutable() bool {
-	return false
-}
-
-func (v UIntValue) Value(_ atree.SlabStorage) (atree.Value, error) {
+func (v UIntValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 	return v, nil
 }
 
@@ -4120,7 +4021,7 @@ func (v UInt8Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 }
 
 func (v UInt8Value) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name, interpreter.storage)
+	return getNumberValueMember(v, name, interpreter.Storage)
 }
 
 func (UInt8Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -4140,7 +4041,7 @@ func (UInt8Value) IsStorable() bool {
 	return true
 }
 
-func (v UInt8Value) Storable() atree.Storable {
+func (v UInt8Value) Storable(_ atree.SlabStorage) atree.Storable {
 	return v
 }
 
@@ -4153,15 +4054,7 @@ func (v UInt8Value) ByteSize() uint32 {
 	return storableSize(v)
 }
 
-func (UInt8Value) ID() atree.StorageID {
-	return atree.StorageIDUndefined
-}
-
-func (UInt8Value) Mutable() bool {
-	return false
-}
-
-func (v UInt8Value) Value(_ atree.SlabStorage) (atree.Value, error) {
+func (v UInt8Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 	return v, nil
 }
 
@@ -4374,7 +4267,7 @@ func (v UInt16Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 }
 
 func (v UInt16Value) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name, interpreter.storage)
+	return getNumberValueMember(v, name, interpreter.Storage)
 }
 
 func (UInt16Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -4396,7 +4289,7 @@ func (UInt16Value) IsStorable() bool {
 	return true
 }
 
-func (v UInt16Value) Storable() atree.Storable {
+func (v UInt16Value) Storable(_ atree.SlabStorage) atree.Storable {
 	return v
 }
 
@@ -4409,15 +4302,7 @@ func (v UInt16Value) ByteSize() uint32 {
 	return storableSize(v)
 }
 
-func (UInt16Value) ID() atree.StorageID {
-	return atree.StorageIDUndefined
-}
-
-func (UInt16Value) Mutable() bool {
-	return false
-}
-
-func (v UInt16Value) Value(_ atree.SlabStorage) (atree.Value, error) {
+func (v UInt16Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 	return v, nil
 }
 
@@ -4630,7 +4515,7 @@ func (v UInt32Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 }
 
 func (v UInt32Value) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name, interpreter.storage)
+	return getNumberValueMember(v, name, interpreter.Storage)
 }
 
 func (UInt32Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -4652,7 +4537,7 @@ func (UInt32Value) IsStorable() bool {
 	return true
 }
 
-func (v UInt32Value) Storable() atree.Storable {
+func (v UInt32Value) Storable(_ atree.SlabStorage) atree.Storable {
 	return v
 }
 
@@ -4665,15 +4550,7 @@ func (v UInt32Value) ByteSize() uint32 {
 	return storableSize(v)
 }
 
-func (UInt32Value) ID() atree.StorageID {
-	return atree.StorageIDUndefined
-}
-
-func (UInt32Value) Mutable() bool {
-	return false
-}
-
-func (v UInt32Value) Value(_ atree.SlabStorage) (atree.Value, error) {
+func (v UInt32Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 	return v, nil
 }
 
@@ -4889,7 +4766,7 @@ func (v UInt64Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 }
 
 func (v UInt64Value) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name, interpreter.storage)
+	return getNumberValueMember(v, name, interpreter.Storage)
 }
 
 func (UInt64Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -4911,7 +4788,7 @@ func (UInt64Value) IsStorable() bool {
 	return true
 }
 
-func (v UInt64Value) Storable() atree.Storable {
+func (v UInt64Value) Storable(_ atree.SlabStorage) atree.Storable {
 	return v
 }
 
@@ -4924,15 +4801,7 @@ func (v UInt64Value) ByteSize() uint32 {
 	return storableSize(v)
 }
 
-func (UInt64Value) ID() atree.StorageID {
-	return atree.StorageIDUndefined
-}
-
-func (UInt64Value) Mutable() bool {
-	return false
-}
-
-func (v UInt64Value) Value(_ atree.SlabStorage) (atree.Value, error) {
+func (v UInt64Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 	return v, nil
 }
 
@@ -5228,7 +5097,7 @@ func (v UInt128Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 }
 
 func (v UInt128Value) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name, interpreter.storage)
+	return getNumberValueMember(v, name, interpreter.Storage)
 }
 
 func (UInt128Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -5248,7 +5117,7 @@ func (UInt128Value) IsStorable() bool {
 	return true
 }
 
-func (v UInt128Value) Storable() atree.Storable {
+func (v UInt128Value) Storable(_ atree.SlabStorage) atree.Storable {
 	return v
 }
 
@@ -5261,15 +5130,7 @@ func (v UInt128Value) ByteSize() uint32 {
 	return storableSize(v)
 }
 
-func (UInt128Value) ID() atree.StorageID {
-	return atree.StorageIDUndefined
-}
-
-func (UInt128Value) Mutable() bool {
-	return false
-}
-
-func (v UInt128Value) Value(_ atree.SlabStorage) (atree.Value, error) {
+func (v UInt128Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 	return v, nil
 }
 
@@ -5565,7 +5426,7 @@ func (v UInt256Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 }
 
 func (v UInt256Value) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name, interpreter.storage)
+	return getNumberValueMember(v, name, interpreter.Storage)
 }
 
 func (UInt256Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -5585,7 +5446,7 @@ func (UInt256Value) IsStorable() bool {
 	return true
 }
 
-func (v UInt256Value) Storable() atree.Storable {
+func (v UInt256Value) Storable(_ atree.SlabStorage) atree.Storable {
 	return v
 }
 
@@ -5598,15 +5459,7 @@ func (v UInt256Value) ByteSize() uint32 {
 	return storableSize(v)
 }
 
-func (UInt256Value) ID() atree.StorageID {
-	return atree.StorageIDUndefined
-}
-
-func (UInt256Value) Mutable() bool {
-	return false
-}
-
-func (v UInt256Value) Value(_ atree.SlabStorage) (atree.Value, error) {
+func (v UInt256Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 	return v, nil
 }
 
@@ -5765,7 +5618,7 @@ func (v Word8Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 }
 
 func (v Word8Value) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name, interpreter.storage)
+	return getNumberValueMember(v, name, interpreter.Storage)
 }
 
 func (Word8Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -5785,7 +5638,7 @@ func (Word8Value) IsStorable() bool {
 	return true
 }
 
-func (v Word8Value) Storable() atree.Storable {
+func (v Word8Value) Storable(_ atree.SlabStorage) atree.Storable {
 	return v
 }
 
@@ -5798,15 +5651,7 @@ func (v Word8Value) ByteSize() uint32 {
 	return storableSize(v)
 }
 
-func (Word8Value) ID() atree.StorageID {
-	return atree.StorageIDUndefined
-}
-
-func (Word8Value) Mutable() bool {
-	return false
-}
-
-func (v Word8Value) Value(_ atree.SlabStorage) (atree.Value, error) {
+func (v Word8Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 	return v, nil
 }
 
@@ -5964,7 +5809,7 @@ func (v Word16Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 }
 
 func (v Word16Value) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name, interpreter.storage)
+	return getNumberValueMember(v, name, interpreter.Storage)
 }
 
 func (Word16Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -5986,7 +5831,7 @@ func (Word16Value) IsStorable() bool {
 	return true
 }
 
-func (v Word16Value) Storable() atree.Storable {
+func (v Word16Value) Storable(_ atree.SlabStorage) atree.Storable {
 	return v
 }
 
@@ -5999,15 +5844,7 @@ func (v Word16Value) ByteSize() uint32 {
 	return storableSize(v)
 }
 
-func (Word16Value) ID() atree.StorageID {
-	return atree.StorageIDUndefined
-}
-
-func (Word16Value) Mutable() bool {
-	return false
-}
-
-func (v Word16Value) Value(_ atree.SlabStorage) (atree.Value, error) {
+func (v Word16Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 	return v, nil
 }
 
@@ -6166,7 +6003,7 @@ func (v Word32Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 }
 
 func (v Word32Value) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name, interpreter.storage)
+	return getNumberValueMember(v, name, interpreter.Storage)
 }
 
 func (Word32Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -6188,7 +6025,7 @@ func (Word32Value) IsStorable() bool {
 	return true
 }
 
-func (v Word32Value) Storable() atree.Storable {
+func (v Word32Value) Storable(_ atree.SlabStorage) atree.Storable {
 	return v
 }
 
@@ -6200,16 +6037,7 @@ func (v Word32Value) ByteSize() uint32 {
 	// TODO: optimize
 	return storableSize(v)
 }
-
-func (Word32Value) ID() atree.StorageID {
-	return atree.StorageIDUndefined
-}
-
-func (Word32Value) Mutable() bool {
-	return false
-}
-
-func (v Word32Value) Value(_ atree.SlabStorage) (atree.Value, error) {
+func (v Word32Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 	return v, nil
 }
 
@@ -6368,7 +6196,7 @@ func (v Word64Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 }
 
 func (v Word64Value) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name, interpreter.storage)
+	return getNumberValueMember(v, name, interpreter.Storage)
 }
 
 func (Word64Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -6390,7 +6218,7 @@ func (Word64Value) IsStorable() bool {
 	return true
 }
 
-func (v Word64Value) Storable() atree.Storable {
+func (v Word64Value) Storable(_ atree.SlabStorage) atree.Storable {
 	return v
 }
 
@@ -6403,15 +6231,7 @@ func (v Word64Value) ByteSize() uint32 {
 	return storableSize(v)
 }
 
-func (Word64Value) ID() atree.StorageID {
-	return atree.StorageIDUndefined
-}
-
-func (Word64Value) Mutable() bool {
-	return false
-}
-
-func (v Word64Value) Value(_ atree.SlabStorage) (atree.Value, error) {
+func (v Word64Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 	return v, nil
 }
 
@@ -6672,7 +6492,7 @@ func ConvertFix64(value Value) Fix64Value {
 }
 
 func (v Fix64Value) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name, interpreter.storage)
+	return getNumberValueMember(v, name, interpreter.Storage)
 }
 
 func (Fix64Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -6694,7 +6514,7 @@ func (Fix64Value) IsStorable() bool {
 	return true
 }
 
-func (v Fix64Value) Storable() atree.Storable {
+func (v Fix64Value) Storable(_ atree.SlabStorage) atree.Storable {
 	return v
 }
 
@@ -6707,15 +6527,7 @@ func (v Fix64Value) ByteSize() uint32 {
 	return storableSize(v)
 }
 
-func (Fix64Value) ID() atree.StorageID {
-	return atree.StorageIDUndefined
-}
-
-func (Fix64Value) Mutable() bool {
-	return false
-}
-
-func (v Fix64Value) Value(_ atree.SlabStorage) (atree.Value, error) {
+func (v Fix64Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 	return v, nil
 }
 
@@ -6942,7 +6754,7 @@ func ConvertUFix64(value Value) UFix64Value {
 }
 
 func (v UFix64Value) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name, interpreter.storage)
+	return getNumberValueMember(v, name, interpreter.Storage)
 }
 
 func (UFix64Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -6964,7 +6776,7 @@ func (UFix64Value) IsStorable() bool {
 	return true
 }
 
-func (v UFix64Value) Storable() atree.Storable {
+func (v UFix64Value) Storable(_ atree.SlabStorage) atree.Storable {
 	return v
 }
 
@@ -6977,15 +6789,7 @@ func (v UFix64Value) ByteSize() uint32 {
 	return storableSize(v)
 }
 
-func (UFix64Value) ID() atree.StorageID {
-	return atree.StorageIDUndefined
-}
-
-func (UFix64Value) Mutable() bool {
-	return false
-}
-
-func (v UFix64Value) Value(_ atree.SlabStorage) (atree.Value, error) {
+func (v UFix64Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 	return v, nil
 }
 
@@ -7012,7 +6816,7 @@ type CompositeValue struct {
 type ComputedField func(*Interpreter) Value
 
 func NewCompositeValue(
-	storage Storage,
+	slabStorage atree.SlabStorage,
 	location common.Location,
 	qualifiedIdentifier string,
 	kind common.CompositeKind,
@@ -7020,20 +6824,33 @@ func NewCompositeValue(
 	owner *common.Address,
 ) *CompositeValue {
 
-	// TODO: store in storage, initialize StorageID
+	storageID := slabStorage.GenerateStorageID()
 
 	// TODO: only allocate when setting a field
 	if fields == nil {
 		fields = NewStringValueOrderedMap()
 	}
 
-	return &CompositeValue{
+	v := &CompositeValue{
 		Location:            location,
 		QualifiedIdentifier: qualifiedIdentifier,
 		Kind:                kind,
 		Fields:              fields,
 		Owner:               owner,
+		StorageID:           storageID,
 	}
+
+	if err := slabStorage.Store(
+		storageID,
+		atree.StorableSlab{
+			StorageID: storageID,
+			Storable:  v,
+		},
+	); err != nil {
+		panic(ExternalError{err})
+	}
+
+	return v
 }
 
 func (v *CompositeValue) Destroy(interpreter *Interpreter, getLocationRange func() LocationRange) {
@@ -7416,8 +7233,8 @@ func (v *CompositeValue) IsStorable() bool {
 	return true
 }
 
-func (v *CompositeValue) Storable() atree.Storable {
-	return v
+func (v *CompositeValue) Storable(_ atree.SlabStorage) atree.Storable {
+	return atree.StorageIDStorable(v.StorageID)
 }
 
 func (v *CompositeValue) DeepCopy(storage atree.SlabStorage) (atree.Value, error) {
@@ -7461,15 +7278,7 @@ func (v *CompositeValue) ByteSize() uint32 {
 	return storableSize(v)
 }
 
-func (v *CompositeValue) ID() atree.StorageID {
-	return v.StorageID
-}
-
-func (v *CompositeValue) Mutable() bool {
-	return true
-}
-
-func (v *CompositeValue) Value(_ atree.SlabStorage) (atree.Value, error) {
+func (v *CompositeValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 	return v, nil
 }
 
@@ -7504,7 +7313,7 @@ type DictionaryValue struct {
 func NewDictionaryValueUnownedNonCopying(
 	interpreter *Interpreter,
 	dictionaryType DictionaryStaticType,
-	storage Storage,
+	slabStorage atree.SlabStorage,
 	keysAndValues ...Value,
 ) *DictionaryValue {
 
@@ -7521,7 +7330,7 @@ func NewDictionaryValueUnownedNonCopying(
 			VariableSizedStaticType{
 				Type: dictionaryType.KeyType,
 			},
-			storage,
+			slabStorage,
 		),
 		entries: NewStringValueOrderedMap(),
 		// NOTE: new value has no owner
@@ -7663,7 +7472,7 @@ func (v *DictionaryValue) Set(inter *Interpreter, getLocationRange func() Locati
 
 	switch typedValue := value.(type) {
 	case *SomeValue:
-		_ = v.Insert(inter, getLocationRange, keyValue, typedValue.InnerValue)
+		_ = v.Insert(inter, getLocationRange, keyValue, typedValue.Value)
 
 	case NilValue:
 		_ = v.Remove(inter, getLocationRange, keyValue)
@@ -7803,19 +7612,18 @@ func (v *DictionaryValue) Remove(inter *Interpreter, getLocationRange func() Loc
 		// TODO: optimize linear scan
 		iterator, err := v.keys.array.Iterator()
 		if err != nil {
-			panic(err)
+			panic(ExternalError{err})
 		}
 		index := 0
 		for {
 			keyValue, err := iterator.Next()
 			if err != nil {
-				panic(err)
+				panic(ExternalError{err})
 			}
 			if keyValue == nil {
 				break
 			}
 
-			// TODO: embed atree.Value in Value and implement
 			if dictionaryKey(keyValue.(Value)) == key {
 				v.keys.Remove(index, getLocationRange)
 				return value
@@ -7869,19 +7677,18 @@ func (v *DictionaryValue) IsStorable() bool {
 
 	iterator, err := v.keys.array.Iterator()
 	if err != nil {
-		panic(err)
+		panic(ExternalError{err})
 	}
 
 	for {
 		keyValue, err := iterator.Next()
 		if err != nil {
-			panic(err)
+			panic(ExternalError{err})
 		}
 		if keyValue == nil {
 			break
 		}
 
-		// TODO: embed atree.Value in Value and implement
 		if !keyValue.(Value).IsStorable() {
 			return false
 		}
@@ -7914,14 +7721,14 @@ func (v *DictionaryValue) ConformsToDynamicType(
 
 	iterator, err := v.keys.array.Iterator()
 	if err != nil {
-		panic(err)
+		panic(ExternalError{err})
 	}
 
 	index := 0
 	for {
 		keyValue, err := iterator.Next()
 		if err != nil {
-			panic(err)
+			panic(ExternalError{err})
 		}
 		if keyValue == nil {
 			return true
@@ -7929,7 +7736,6 @@ func (v *DictionaryValue) ConformsToDynamicType(
 
 		entryType := dictionaryType.EntryTypes[index]
 
-		// TODO: embed atree.Value in Value and implement
 		entryKey := keyValue.(Value)
 
 		// Check the key
@@ -7986,19 +7792,12 @@ func (v *DictionaryValue) ByteSize() uint32 {
 	return storableSize(v)
 }
 
-func (v *DictionaryValue) ID() atree.StorageID {
-	return v.StorageID
-}
-
-func (v *DictionaryValue) Mutable() bool {
-	return true
-}
-
-func (v *DictionaryValue) Value(_ atree.SlabStorage) (atree.Value, error) {
+func (v *DictionaryValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 	return v, nil
 }
 
-func (v *DictionaryValue) Storable() atree.Storable {
+func (v *DictionaryValue) Storable(_ atree.SlabStorage) atree.Storable {
+	// TODO: store in storage and return StorageIDStorable
 	return v
 }
 
@@ -8138,7 +7937,7 @@ func (NilValue) IsStorable() bool {
 	return true
 }
 
-func (v NilValue) Storable() atree.Storable {
+func (v NilValue) Storable(_ atree.SlabStorage) atree.Storable {
 	return v
 }
 
@@ -8151,15 +7950,7 @@ func (v NilValue) ByteSize() uint32 {
 	return storableSize(v)
 }
 
-func (NilValue) ID() atree.StorageID {
-	return atree.StorageIDUndefined
-}
-
-func (NilValue) Mutable() bool {
-	return false
-}
-
-func (v NilValue) Value(_ atree.SlabStorage) (atree.Value, error) {
+func (v NilValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 	return v, nil
 }
 
@@ -8296,7 +8087,8 @@ func (v *SomeValue) IsStorable() bool {
 	return v.Value.IsStorable()
 }
 
-func (v *SomeValue) Storable() atree.Storable {
+func (v *SomeValue) Storable(_ atree.SlabStorage) atree.Storable {
+	// TODO: store in storage and return StorageIDStorable if size > max element inline size
 	return v
 }
 
@@ -8320,15 +8112,7 @@ func (v *SomeValue) ByteSize() uint32 {
 	return storableSize(v)
 }
 
-func (v *SomeValue) ID() atree.StorageID {
-	return atree.StorageIDUndefined
-}
-
-func (v *SomeValue) Mutable() bool {
-	return false
-}
-
-func (v *SomeValue) Value(_ atree.SlabStorage) (atree.Value, error) {
+func (v *SomeValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 	return v, nil
 }
 
@@ -8837,7 +8621,7 @@ func (v AddressValue) GetMember(interpreter *Interpreter, _ func() LocationRange
 		return NewHostFunctionValue(
 			func(invocation Invocation) Value {
 				address := common.Address(v)
-				return ByteSliceToByteArrayValue(interpreter.storage, address[:])
+				return ByteSliceToByteArrayValue(interpreter.Storage, address[:])
 			},
 		)
 	}
@@ -8858,7 +8642,7 @@ func (AddressValue) IsStorable() bool {
 	return true
 }
 
-func (v AddressValue) Storable() atree.Storable {
+func (v AddressValue) Storable(_ atree.SlabStorage) atree.Storable {
 	return v
 }
 
@@ -8871,15 +8655,7 @@ func (v AddressValue) ByteSize() uint32 {
 	return storableSize(v)
 }
 
-func (AddressValue) ID() atree.StorageID {
-	return atree.StorageIDUndefined
-}
-
-func (AddressValue) Mutable() bool {
-	return false
-}
-
-func (v AddressValue) Value(_ atree.SlabStorage) (atree.Value, error) {
+func (v AddressValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 	return v, nil
 }
 
@@ -9164,7 +8940,8 @@ func (PathValue) IsStorable() bool {
 	return true
 }
 
-func (v PathValue) Storable() atree.Storable {
+func (v PathValue) Storable(_ atree.SlabStorage) atree.Storable {
+	// TODO: store in storage and return StorageIDStorable if size > max element inline size
 	return v
 }
 
@@ -9176,15 +8953,7 @@ func (v PathValue) ByteSize() uint32 {
 	return storableSize(v)
 }
 
-func (PathValue) ID() atree.StorageID {
-	return atree.StorageIDUndefined
-}
-
-func (PathValue) Mutable() bool {
-	return false
-}
-
-func (v PathValue) Value(_ atree.SlabStorage) (atree.Value, error) {
+func (v PathValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 	return v, nil
 }
 
@@ -9313,7 +9082,8 @@ func (CapabilityValue) IsStorable() bool {
 	return true
 }
 
-func (v CapabilityValue) Storable() atree.Storable {
+func (v CapabilityValue) Storable(_ atree.SlabStorage) atree.Storable {
+	// TODO: store in storage and return StorageIDStorable if size > max element inline size
 	return v
 }
 
@@ -9325,15 +9095,7 @@ func (v CapabilityValue) ByteSize() uint32 {
 	return storableSize(v)
 }
 
-func (CapabilityValue) ID() atree.StorageID {
-	return atree.StorageIDUndefined
-}
-
-func (CapabilityValue) Mutable() bool {
-	return false
-}
-
-func (v CapabilityValue) Value(_ atree.SlabStorage) (atree.Value, error) {
+func (v CapabilityValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 	return v, nil
 }
 
@@ -9409,7 +9171,8 @@ func (LinkValue) IsStorable() bool {
 	return true
 }
 
-func (v LinkValue) Storable() atree.Storable {
+func (v LinkValue) Storable(_ atree.SlabStorage) atree.Storable {
+	// TODO: store in storage and return StorageIDStorable if size > max element inline size
 	return v
 }
 
@@ -9421,15 +9184,7 @@ func (v LinkValue) ByteSize() uint32 {
 	return storableSize(v)
 }
 
-func (LinkValue) ID() atree.StorageID {
-	return atree.StorageIDUndefined
-}
-
-func (LinkValue) Mutable() bool {
-	return false
-}
-
-func (v LinkValue) Value(_ atree.SlabStorage) (atree.Value, error) {
+func (v LinkValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 	return v, nil
 }
 
@@ -9457,6 +9212,7 @@ func NewAccountKeyValue(
 
 // NewPublicKeyValue constructs a PublicKey value.
 func NewPublicKeyValue(
+	storage Storage,
 	publicKey *ArrayValue,
 	signAlgo *CompositeValue,
 	validatePublicKey PublicKeyValidationHandlerFunc,
@@ -9469,7 +9225,11 @@ func NewPublicKeyValue(
 	computedFields.Set(
 		sema.PublicKeyPublicKeyField,
 		func(interpreter *Interpreter) Value {
-			return publicKey.Copy()
+			keyCopy, err := publicKey.DeepCopy(storage)
+			if err != nil {
+				panic(err)
+			}
+			return keyCopy.(Value)
 		},
 	)
 
@@ -9497,7 +9257,13 @@ func NewPublicKeyValue(
 	publicKeyValue.stringer = func(seenReferences SeenReferences) string {
 		if stringerFields == nil {
 			stringerFields = NewStringValueOrderedMap()
-			stringerFields.Set(sema.PublicKeyPublicKeyField, publicKey.Copy())
+
+			keyCopy, err := publicKey.DeepCopy(storage)
+			if err != nil {
+				panic(err)
+			}
+
+			stringerFields.Set(sema.PublicKeyPublicKeyField, keyCopy.(Value))
 			publicKeyValue.Fields.Foreach(func(key string, value Value) {
 				stringerFields.Set(key, value)
 			})

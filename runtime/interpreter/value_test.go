@@ -1036,6 +1036,8 @@ func TestEphemeralReferenceTypeConformance(t *testing.T) {
 
 	t.Parallel()
 
+	storage := NewInMemoryStorage()
+
 	// Obtain a self referencing (cyclic) ephemeral reference value.
 
 	code := `
@@ -1068,6 +1070,7 @@ func TestEphemeralReferenceTypeConformance(t *testing.T) {
 	inter, err := NewInterpreter(
 		ProgramFromChecker(checker),
 		checker.Location,
+		WithStorage(storage),
 	)
 
 	require.NoError(t, err)
@@ -2467,12 +2470,23 @@ func TestPublicKeyValue(t *testing.T) {
 			}
 		}
 
+		interpreter, err := NewInterpreter(
+			nil,
+			utils.TestLocation,
+			WithStorage(storage),
+			WithPublicKeyValidationHandler(
+				func(publicKey *CompositeValue) BoolValue {
+					return true
+				},
+			),
+		)
+		require.NoError(t, err)
+
 		key := NewPublicKeyValue(
+			interpreter.Storage,
 			publicKey,
 			sigAlgo(),
-			func(publicKey *CompositeValue) BoolValue {
-				return true
-			},
+			interpreter.PublicKeyValidationHandler,
 		)
 
 		require.Contains(t,

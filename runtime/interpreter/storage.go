@@ -47,12 +47,11 @@ func (i InMemoryStorage) Read(_ *Interpreter, address common.Address, key string
 		return nil
 	}
 
-	value, err := storable.Value(i.BasicSlabStorage)
+	value, err := storable.StoredValue(i.BasicSlabStorage)
 	if err != nil {
-		panic(err)
+		panic(ExternalError{err})
 	}
 
-	// TODO: embed atree.Value in Value and implement
 	return NewSomeValueOwningNonCopying(value.(Value))
 }
 
