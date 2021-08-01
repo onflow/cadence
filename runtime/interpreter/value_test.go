@@ -1294,8 +1294,7 @@ func TestBoolValue_Equal(t *testing.T) {
 		require.True(t,
 			BoolValue(true).Equal(
 				BoolValue(true),
-				nil,
-				true,
+				ReturnEmptyLocationRange,
 			),
 		)
 	})
@@ -1307,8 +1306,7 @@ func TestBoolValue_Equal(t *testing.T) {
 		require.True(t,
 			BoolValue(false).Equal(
 				BoolValue(false),
-				nil,
-				true,
+				ReturnEmptyLocationRange,
 			),
 		)
 	})
@@ -1320,8 +1318,7 @@ func TestBoolValue_Equal(t *testing.T) {
 		require.False(t,
 			BoolValue(true).Equal(
 				BoolValue(false),
-				nil,
-				true,
+				ReturnEmptyLocationRange,
 			),
 		)
 	})
@@ -1333,8 +1330,7 @@ func TestBoolValue_Equal(t *testing.T) {
 		require.False(t,
 			BoolValue(true).Equal(
 				UInt8Value(1),
-				nil,
-				true,
+				ReturnEmptyLocationRange,
 			),
 		)
 	})
@@ -1351,8 +1347,7 @@ func TestStringValue_Equal(t *testing.T) {
 		require.True(t,
 			NewStringValue("test").Equal(
 				NewStringValue("test"),
-				nil,
-				true,
+				ReturnEmptyLocationRange,
 			),
 		)
 	})
@@ -1364,8 +1359,7 @@ func TestStringValue_Equal(t *testing.T) {
 		require.False(t,
 			NewStringValue("test").Equal(
 				NewStringValue("foo"),
-				nil,
-				true,
+				ReturnEmptyLocationRange,
 			),
 		)
 	})
@@ -1377,8 +1371,7 @@ func TestStringValue_Equal(t *testing.T) {
 		require.False(t,
 			NewStringValue("1").Equal(
 				UInt8Value(1),
-				nil,
-				true,
+				ReturnEmptyLocationRange,
 			),
 		)
 	})
