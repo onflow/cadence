@@ -219,7 +219,7 @@ func (interpreter *Interpreter) VisitBinaryExpression(expression *ast.BinaryExpr
 
 		// only evaluate right-hand side if left-hand side is nil
 		if some, ok := left.(*SomeValue); ok {
-			return some.InnerValue
+			return some.Value
 		}
 
 		value := interpreter.evalExpression(expression.Right)
@@ -452,7 +452,7 @@ func (interpreter *Interpreter) VisitMemberExpression(expression *ast.MemberExpr
 			return typeSelf
 
 		case *SomeValue:
-			self = typeSelf.InnerValue
+			self = typeSelf.Value
 
 		default:
 			panic(errors.NewUnreachableError())
@@ -556,7 +556,7 @@ func (interpreter *Interpreter) VisitInvocationExpression(invocationExpression *
 			return typedResult
 
 		case *SomeValue:
-			result = typedResult.InnerValue
+			result = typedResult.Value
 
 		default:
 			panic(errors.NewUnreachableError())
@@ -746,7 +746,7 @@ func (interpreter *Interpreter) VisitForceExpression(expression *ast.ForceExpres
 
 	switch result := result.(type) {
 	case *SomeValue:
-		return result.InnerValue
+		return result.Value
 
 	case NilValue:
 		panic(

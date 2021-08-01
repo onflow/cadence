@@ -878,8 +878,8 @@ func (d *DecoderV5) decodeSome(path []string) (*SomeValue, error) {
 	}
 
 	return &SomeValue{
-		InnerValue: value,
-		Owner:      d.owner,
+		Value: value,
+		Owner: d.owner,
 	}, nil
 }
 

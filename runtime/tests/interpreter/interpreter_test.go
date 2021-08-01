@@ -6224,7 +6224,7 @@ func TestInterpretSwapResourceDictionaryElementReturnDictionary(t *testing.T) {
 
 	assert.IsType(t,
 		&interpreter.CompositeValue{},
-		foo.(*interpreter.SomeValue).InnerValue,
+		foo.(*interpreter.SomeValue).Value,
 	)
 }
 
@@ -6254,7 +6254,7 @@ func TestInterpretSwapResourceDictionaryElementRemoveUsingNil(t *testing.T) {
 
 	assert.IsType(t,
 		&interpreter.CompositeValue{},
-		value.(*interpreter.SomeValue).InnerValue,
+		value.(*interpreter.SomeValue).Value,
 	)
 }
 
@@ -6444,7 +6444,7 @@ func TestInterpretVariableDeclarationSecondValue(t *testing.T) {
 		values[0],
 	)
 
-	firstValue := values[0].(*interpreter.SomeValue).InnerValue
+	firstValue := values[0].(*interpreter.SomeValue).Value
 
 	require.IsType(t,
 		&interpreter.CompositeValue{},
@@ -6463,7 +6463,7 @@ func TestInterpretVariableDeclarationSecondValue(t *testing.T) {
 		values[1],
 	)
 
-	secondValue := values[1].(*interpreter.SomeValue).InnerValue
+	secondValue := values[1].(*interpreter.SomeValue).Value
 
 	require.IsType(t,
 		&interpreter.CompositeValue{},
@@ -6610,7 +6610,7 @@ func TestInterpretOptionalChainingFunctionRead(t *testing.T) {
 
 	assert.IsType(t,
 		interpreter.BoundFunctionValue{},
-		inter.Globals["x2"].GetValue().(*interpreter.SomeValue).InnerValue,
+		inter.Globals["x2"].GetValue().(*interpreter.SomeValue).Value,
 	)
 }
 
@@ -7406,7 +7406,7 @@ func TestInterpretOptionalChainingOptionalFieldRead(t *testing.T) {
 
 	assert.Equal(t,
 		&interpreter.SomeValue{
-			InnerValue: interpreter.NewIntValueFromInt64(1),
+			Value: interpreter.NewIntValueFromInt64(1),
 		},
 		inter.Globals["x"].GetValue(),
 	)

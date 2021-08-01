@@ -152,11 +152,11 @@ func exportSomeValue(
 	cadence.Optional,
 	error,
 ) {
-	if v.InnerValue == nil {
+	if v.Value == nil {
 		return cadence.NewOptional(nil), nil
 	}
 
-	value, err := exportValueWithInterpreter(v.InnerValue, inter, seenReferences)
+	value, err := exportValueWithInterpreter(v.Value, inter, seenReferences)
 	if err != nil {
 		return cadence.Optional{}, err
 	}
@@ -271,7 +271,7 @@ func exportDictionaryValue(
 		// NOTE: use `Get` instead of accessing `Entries`,
 		// so that the potentially deferred values are loaded from storage
 
-		value := v.Get(inter, interpreter.ReturnEmptyLocationRange, keyValue).(*interpreter.SomeValue).InnerValue
+		value := v.Get(inter, interpreter.ReturnEmptyLocationRange, keyValue).(*interpreter.SomeValue).Value
 
 		convertedKey, err := exportValueWithInterpreter(keyValue, inter, seenReferences)
 		if err != nil {

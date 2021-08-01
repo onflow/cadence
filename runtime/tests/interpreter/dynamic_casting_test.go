@@ -561,7 +561,7 @@ func TestInterpretDynamicCastingStruct(t *testing.T) {
 
 						require.IsType(t,
 							&interpreter.CompositeValue{},
-							inter.Globals["y"].GetValue().(*interpreter.SomeValue).InnerValue,
+							inter.Globals["y"].GetValue().(*interpreter.SomeValue).Value,
 						)
 					})
 				}
@@ -703,7 +703,7 @@ func testResourceCastValid(t *testing.T, types, fromType string, targetType stri
 
 		require.IsType(t,
 			&interpreter.CompositeValue{},
-			value.(*interpreter.SomeValue).InnerValue,
+			value.(*interpreter.SomeValue).Value,
 		)
 
 	case ast.OperationForceCast:
@@ -849,7 +849,7 @@ func testStructCastValid(t *testing.T, types, fromType string, targetType string
 
 		require.IsType(t,
 			&interpreter.CompositeValue{},
-			value.(*interpreter.SomeValue).InnerValue,
+			value.(*interpreter.SomeValue).Value,
 		)
 
 	case ast.OperationForceCast:
@@ -1148,7 +1148,7 @@ func TestInterpretDynamicCastingArray(t *testing.T) {
 						require.IsType(t, zValue, &interpreter.SomeValue{})
 						zSome := zValue.(*interpreter.SomeValue)
 
-						innerValue := zSome.InnerValue
+						innerValue := zSome.Value
 						require.IsType(t, innerValue, &interpreter.ArrayValue{})
 						innerArray := innerValue.(*interpreter.ArrayValue)
 
@@ -2220,7 +2220,7 @@ func testReferenceCastValid(t *testing.T, types, fromType, targetType string, op
 
 		require.IsType(t,
 			&interpreter.EphemeralReferenceValue{},
-			value.(*interpreter.SomeValue).InnerValue,
+			value.(*interpreter.SomeValue).Value,
 		)
 
 	case ast.OperationForceCast:

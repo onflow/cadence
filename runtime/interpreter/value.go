@@ -8245,14 +8245,14 @@ func (v NilValue) Value(_ atree.SlabStorage) (atree.Value, error) {
 // SomeValue
 
 type SomeValue struct {
-	InnerValue Value
-	Owner      *common.Address
+	Value Value
+	Owner *common.Address
 }
 
 func NewSomeValueOwningNonCopying(value Value) *SomeValue {
 	return &SomeValue{
-		InnerValue: value,
-		Owner:      value.GetOwner(),
+		Value: value,
+		Owner: value.GetOwner(),
 	}
 }
 
@@ -8267,20 +8267,20 @@ func (v *SomeValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	if !descend {
 		return
 	}
-	v.InnerValue.Accept(interpreter, visitor)
+	v.Value.Accept(interpreter, visitor)
 }
 
 func (v *SomeValue) Walk(walkChild func(Value)) {
-	walkChild(v.InnerValue)
+	walkChild(v.Value)
 }
 
 func (v *SomeValue) DynamicType(interpreter *Interpreter, seenReferences SeenReferences) DynamicType {
-	innerType := v.InnerValue.DynamicType(interpreter, seenReferences)
+	innerType := v.Value.DynamicType(interpreter, seenReferences)
 	return SomeDynamicType{InnerType: innerType}
 }
 
 func (v *SomeValue) StaticType() StaticType {
-	innerType := v.InnerValue.StaticType()
+	innerType := v.Value.StaticType()
 	if innerType == nil {
 		return nil
 	}
@@ -8293,7 +8293,7 @@ func (*SomeValue) isOptionalValue() {}
 
 func (v *SomeValue) Copy() Value {
 	return &SomeValue{
-		InnerValue: v.InnerValue.Copy(),
+		Value: v.Value.Copy(),
 		// NOTE: new value has no owner
 		Owner: nil,
 	}
@@ -8310,11 +8310,11 @@ func (v *SomeValue) SetOwner(owner *common.Address) {
 
 	v.Owner = owner
 
-	v.InnerValue.SetOwner(owner)
+	v.Value.SetOwner(owner)
 }
 
 func (v *SomeValue) Destroy(interpreter *Interpreter, getLocationRange func() LocationRange) {
-	maybeDestroy(interpreter, getLocationRange, v.InnerValue)
+	maybeDestroy(interpreter, getLocationRange, v.Value)
 }
 
 func (v *SomeValue) String() string {
@@ -8322,7 +8322,7 @@ func (v *SomeValue) String() string {
 }
 
 func (v *SomeValue) RecursiveString(seenReferences SeenReferences) string {
-	return v.InnerValue.RecursiveString(seenReferences)
+	return v.Value.RecursiveString(seenReferences)
 }
 
 func (v *SomeValue) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
@@ -8336,7 +8336,7 @@ func (v *SomeValue) GetMember(_ *Interpreter, _ func() LocationRange, name strin
 				valueType := transformFunctionType.Parameters[0].TypeAnnotation.Type
 
 				transformInvocation := Invocation{
-					Arguments:        []Value{v.InnerValue},
+					Arguments:        []Value{v.Value},
 					ArgumentTypes:    []sema.Type{valueType},
 					GetLocationRange: invocation.GetLocationRange,
 					Interpreter:      invocation.Interpreter,
@@ -8362,7 +8362,7 @@ func (v SomeValue) ConformsToDynamicType(
 	results TypeConformanceResults,
 ) bool {
 	someType, ok := dynamicType.(SomeDynamicType)
-	return ok && v.InnerValue.ConformsToDynamicType(interpreter, someType.InnerType, results)
+	return ok && v.Value.ConformsToDynamicType(interpreter, someType.InnerType, results)
 }
 
 func (v *SomeValue) Equal(other Value, getLocationRange func() LocationRange) bool {
@@ -8371,16 +8371,16 @@ func (v *SomeValue) Equal(other Value, getLocationRange func() LocationRange) bo
 		return false
 	}
 
-	equatableValue, ok := v.InnerValue.(EquatableValue)
+	equatableValue, ok := v.Value.(EquatableValue)
 	if !ok {
 		return false
 	}
 
-	return equatableValue.Equal(otherSome.InnerValue, getLocationRange)
+	return equatableValue.Equal(otherSome.Value, getLocationRange)
 }
 
 func (v *SomeValue) IsStorable() bool {
-	return v.InnerValue.IsStorable()
+	return v.Value.IsStorable()
 }
 
 func (v *SomeValue) Storable() atree.Storable {
