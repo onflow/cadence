@@ -8400,7 +8400,7 @@ func (v *StorageReferenceValue) SetOwner(_ *common.Address) {
 func (v *StorageReferenceValue) ReferencedValue(interpreter *Interpreter) *Value {
 	switch referenced := interpreter.ReadStored(v.TargetStorageAddress, v.TargetKey).(type) {
 	case *SomeValue:
-		value := referenced.InnerValue
+		value := referenced.Value
 
 		if v.BorrowedType != nil {
 			dynamicType := value.DynamicType(interpreter, SeenReferences{})
@@ -8607,7 +8607,7 @@ func (v *EphemeralReferenceValue) ReferencedValue() *Value {
 
 	switch referenced := v.Value.(type) {
 	case *SomeValue:
-		return &referenced.InnerValue
+		return &referenced.Value
 	case NilValue:
 		return nil
 	default:
