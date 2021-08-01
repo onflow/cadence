@@ -115,7 +115,10 @@ func TestSetOwnerArrayCopy(t *testing.T) {
 
 	array.SetOwner(&newOwner)
 
-	arrayCopy := array.Copy().(*ArrayValue)
+	copyResult, err := array.DeepCopy(storage)
+	require.NoError(t, err)
+
+	arrayCopy := copyResult.(*ArrayValue)
 	valueCopy := arrayCopy.GetIndex(0, ReturnEmptyLocationRange)
 
 	assert.Nil(t, arrayCopy.GetOwner())
@@ -292,7 +295,10 @@ func TestSetOwnerDictionaryCopy(t *testing.T) {
 	)
 	dictionary.SetOwner(&newOwner)
 
-	dictionaryCopy := dictionary.Copy().(*DictionaryValue)
+	copyResult, err := dictionary.DeepCopy(storage)
+	require.NoError(t, err)
+
+	dictionaryCopy := copyResult.(*DictionaryValue)
 	valueCopy := dictionaryCopy.Get(nil, ReturnEmptyLocationRange, keyValue)
 
 	assert.Nil(t, dictionaryCopy.GetOwner())
@@ -424,8 +430,11 @@ func TestSetOwnerSomeCopy(t *testing.T) {
 	some := NewSomeValueOwningNonCopying(value)
 	some.SetOwner(&newOwner)
 
-	someCopy := some.Copy().(*SomeValue)
-	valueCopy := someCopy.InnerValue
+	copyResult, err := some.DeepCopy(storage)
+	require.NoError(t, err)
+
+	someCopy := copyResult.(*SomeValue)
+	valueCopy := someCopy.Value
 
 	assert.Nil(t, someCopy.GetOwner())
 	assert.Nil(t, valueCopy.GetOwner())
@@ -485,7 +494,10 @@ func TestSetOwnerCompositeCopy(t *testing.T) {
 		return "random string"
 	}
 
-	compositeCopy := composite.Copy().(*CompositeValue)
+	copyResult, err := composite.DeepCopy(storage)
+	require.NoError(t, err)
+
+	compositeCopy := copyResult.(*CompositeValue)
 	valueCopy, _ := compositeCopy.Fields.Get(fieldName)
 
 	assert.Nil(t, compositeCopy.GetOwner())
