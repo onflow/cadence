@@ -30,6 +30,8 @@ import (
 
 func TestInterpretEnum(t *testing.T) {
 
+	t.Parallel()
+
 	inter := parseCheckAndInterpret(t, `
       enum E: Int64 {
           case a
@@ -44,6 +46,8 @@ func TestInterpretEnum(t *testing.T) {
 }
 
 func TestInterpretEnumCaseUse(t *testing.T) {
+
+	t.Parallel()
 
 	inter := parseCheckAndInterpret(t, `
       enum E: Int64 {
@@ -63,7 +67,7 @@ func TestInterpretEnumCaseUse(t *testing.T) {
 
 	assert.Equal(t,
 		common.CompositeKindEnum,
-		a.(*interpreter.CompositeValue).Kind(),
+		a.(*interpreter.CompositeValue).Kind,
 	)
 
 	b := inter.Globals["b"].GetValue()
@@ -74,11 +78,13 @@ func TestInterpretEnumCaseUse(t *testing.T) {
 
 	assert.Equal(t,
 		common.CompositeKindEnum,
-		b.(*interpreter.CompositeValue).Kind(),
+		b.(*interpreter.CompositeValue).Kind,
 	)
 }
 
 func TestInterpretEnumCaseRawValue(t *testing.T) {
+
+	t.Parallel()
 
 	inter := parseCheckAndInterpret(t, `
       enum E: Int64 {
@@ -103,6 +109,8 @@ func TestInterpretEnumCaseRawValue(t *testing.T) {
 
 func TestInterpretEnumCaseEquality(t *testing.T) {
 
+	t.Parallel()
+
 	inter := parseCheckAndInterpret(t, `
       enum E: Int64 {
           case a
@@ -116,11 +124,14 @@ func TestInterpretEnumCaseEquality(t *testing.T) {
       ]
     `)
 
+	storage := interpreter.NewInMemoryStorage()
+
 	require.Equal(t,
 		interpreter.NewArrayValueUnownedNonCopying(
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeBool,
 			},
+			storage,
 			interpreter.BoolValue(true),
 			interpreter.BoolValue(true),
 			interpreter.BoolValue(true),
@@ -130,6 +141,8 @@ func TestInterpretEnumCaseEquality(t *testing.T) {
 }
 
 func TestInterpretEnumConstructor(t *testing.T) {
+
+	t.Parallel()
 
 	inter := parseCheckAndInterpret(t, `
       enum E: Int64 {
@@ -145,11 +158,14 @@ func TestInterpretEnumConstructor(t *testing.T) {
       ]
     `)
 
+	storage := interpreter.NewInMemoryStorage()
+
 	require.Equal(t,
 		interpreter.NewArrayValueUnownedNonCopying(
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeBool,
 			},
+			storage,
 			interpreter.BoolValue(true),
 			interpreter.BoolValue(true),
 			interpreter.BoolValue(true),
@@ -160,6 +176,8 @@ func TestInterpretEnumConstructor(t *testing.T) {
 }
 
 func TestInterpretEnumInstance(t *testing.T) {
+
+	t.Parallel()
 
 	inter := parseCheckAndInterpret(t, `
       enum E: Int64 {
@@ -173,11 +191,14 @@ func TestInterpretEnumInstance(t *testing.T) {
       ]
     `)
 
+	storage := interpreter.NewInMemoryStorage()
+
 	require.Equal(t,
 		interpreter.NewArrayValueUnownedNonCopying(
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeBool,
 			},
+			storage,
 			interpreter.BoolValue(true),
 			interpreter.BoolValue(true),
 		),

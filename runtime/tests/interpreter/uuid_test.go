@@ -84,9 +84,12 @@ func TestInterpretResourceUUID(t *testing.T) {
 
 	var uuid uint64
 
+	storage := interpreter.NewInMemoryStorage()
+
 	inter, err := interpreter.NewInterpreter(
 		interpreter.ProgramFromChecker(importingChecker),
 		importingChecker.Location,
+		interpreter.WithStorage(storage),
 		interpreter.WithUUIDHandler(
 			func() (uint64, error) {
 				defer func() { uuid++ }()
@@ -126,11 +129,10 @@ func TestInterpretResourceUUID(t *testing.T) {
 
 	const length = 2
 
-	elements := array.Elements()
-	require.Len(t, elements, length)
+	require.Equal(t, length, array.Count())
 
 	for i := 0; i < length; i++ {
-		element := elements[i]
+		element := array.GetIndex(i, interpreter.ReturnEmptyLocationRange)
 
 		require.IsType(t, &interpreter.CompositeValue{}, element)
 		res := element.(*interpreter.CompositeValue)

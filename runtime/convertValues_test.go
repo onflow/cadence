@@ -660,9 +660,12 @@ func TestExportTypeValue(t *testing.T) {
 		err = checker.Check()
 		require.NoError(t, err)
 
+		storage := interpreter.NewInMemoryStorage()
+
 		inter, err := interpreter.NewInterpreter(
 			interpreter.ProgramFromChecker(checker),
 			checker.Location,
+			interpreter.WithStorage(storage),
 		)
 		require.NoError(t, err)
 
@@ -730,9 +733,12 @@ func TestExportCapabilityValue(t *testing.T) {
 		err = checker.Check()
 		require.NoError(t, err)
 
+		storage := interpreter.NewInMemoryStorage()
+
 		inter, err := interpreter.NewInterpreter(
 			interpreter.ProgramFromChecker(checker),
 			checker.Location,
+			interpreter.WithStorage(storage),
 		)
 		require.NoError(t, err)
 
@@ -818,9 +824,12 @@ func TestExportLinkValue(t *testing.T) {
 		err = checker.Check()
 		require.NoError(t, err)
 
+		storage := interpreter.NewInMemoryStorage()
+
 		inter, err := interpreter.NewInterpreter(
 			interpreter.ProgramFromChecker(checker),
 			checker.Location,
+			interpreter.WithStorage(storage),
 		)
 		require.NoError(t, err)
 
@@ -2748,7 +2757,14 @@ func TestImportExportComplex(t *testing.T) {
 		program := interpreter.Program{
 			Elaboration: sema.NewElaboration(),
 		}
-		inter, err := interpreter.NewInterpreter(&program, utils.TestLocation)
+
+		storage := interpreter.NewInMemoryStorage()
+
+		inter, err := interpreter.NewInterpreter(
+			&program,
+			utils.TestLocation,
+			interpreter.WithStorage(storage),
+		)
 		require.NoError(t, err)
 
 		program.Elaboration.CompositeTypes[semaCompositeType.ID()] = semaCompositeType
@@ -2767,7 +2783,14 @@ func TestImportExportComplex(t *testing.T) {
 		program := interpreter.Program{
 			Elaboration: sema.NewElaboration(),
 		}
-		inter, err := interpreter.NewInterpreter(&program, utils.TestLocation)
+
+		storage := interpreter.NewInMemoryStorage()
+
+		inter, err := interpreter.NewInterpreter(
+			&program,
+			utils.TestLocation,
+			interpreter.WithStorage(storage),
+		)
 		require.NoError(t, err)
 
 		program.Elaboration.CompositeTypes[semaCompositeType.ID()] = semaCompositeType

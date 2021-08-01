@@ -531,25 +531,26 @@ func TestInterpretGetType(t *testing.T) {
 					},
 					Options: []interpreter.Option{
 						interpreter.WithPredeclaredValues(values),
-						interpreter.WithStorageReadHandler(
-							func(
-								inter *interpreter.Interpreter,
-								address common.Address,
-								key string,
-								deferred bool,
-							) interpreter.OptionalValue {
-
-								if address != storageAddress || key != storageKey {
-									return interpreter.NilValue{}
-								}
-
-								// When the storage reference is dereferenced,
-
-								return interpreter.NewSomeValueOwningNonCopying(
-									interpreter.NewIntValueFromInt64(2),
-								)
-							},
-						),
+						// TODO:
+						//interpreter.WithStorageReadHandler(
+						//	func(
+						//		inter *interpreter.Interpreter,
+						//		address common.Address,
+						//		key string,
+						//		deferred bool,
+						//	) interpreter.OptionalValue {
+						//
+						//		if address != storageAddress || key != storageKey {
+						//			return interpreter.NilValue{}
+						//		}
+						//
+						//		// When the storage reference is dereferenced,
+						//
+						//		return interpreter.NewSomeValueOwningNonCopying(
+						//			interpreter.NewIntValueFromInt64(2),
+						//		)
+						//	},
+						//),
 					},
 				},
 			)

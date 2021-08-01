@@ -71,7 +71,13 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 
 		codeHashValue := event.Fields[codeHashParameterIndex]
 
-		inter, err := interpreter.NewInterpreter(nil, utils.TestLocation)
+		storage := interpreter.NewInMemoryStorage()
+
+		inter, err := interpreter.NewInterpreter(
+			nil,
+			utils.TestLocation,
+			interpreter.WithStorage(storage),
+		)
 		require.NoError(t, err)
 
 		importedValue := importValue(inter, codeHashValue, sema.ByteArrayType)

@@ -221,8 +221,8 @@ func (v TypeValue) DeepCopy(_ atree.SlabStorage) (atree.Value, error) {
 	return v, nil
 }
 
-func (v TypeValue) ByteSize() uint32 {
-	return storableSize(v)
+func (v TypeValue) ByteSize(storage atree.SlabStorage) uint32 {
+	return storableSize(v, storage)
 }
 
 func (v TypeValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
@@ -291,9 +291,9 @@ func (v VoidValue) DeepCopy(_ atree.SlabStorage) (atree.Value, error) {
 	return v, nil
 }
 
-func (v VoidValue) ByteSize() uint32 {
+func (v VoidValue) ByteSize(storage atree.SlabStorage) uint32 {
 	// TODO: improve
-	return storableSize(v)
+	return storableSize(v, storage)
 }
 
 func (v VoidValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
@@ -381,9 +381,9 @@ func (v BoolValue) DeepCopy(_ atree.SlabStorage) (atree.Value, error) {
 	return v, nil
 }
 
-func (v BoolValue) ByteSize() uint32 {
+func (v BoolValue) ByteSize(storage atree.SlabStorage) uint32 {
 	// TODO: improve
-	return storableSize(v)
+	return storableSize(v, storage)
 }
 
 func (v BoolValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
@@ -622,8 +622,8 @@ func (v *StringValue) DeepCopy(_ atree.SlabStorage) (atree.Value, error) {
 	return v, nil
 }
 
-func (v *StringValue) ByteSize() uint32 {
-	return storableSize(v)
+func (v *StringValue) ByteSize(storage atree.SlabStorage) uint32 {
+	return storableSize(v, storage)
 }
 
 func (v *StringValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
@@ -1454,9 +1454,9 @@ func (v IntValue) DeepCopy(_ atree.SlabStorage) (atree.Value, error) {
 	return IntValue{new(big.Int).Set(v.BigInt)}, nil
 }
 
-func (v IntValue) ByteSize() uint32 {
+func (v IntValue) ByteSize(storage atree.SlabStorage) uint32 {
 	// TODO: optimize
-	return storableSize(v)
+	return storableSize(v, storage)
 }
 
 func (v IntValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
@@ -1770,9 +1770,9 @@ func (v Int8Value) DeepCopy(_ atree.SlabStorage) (atree.Value, error) {
 	return v, nil
 }
 
-func (v Int8Value) ByteSize() uint32 {
+func (v Int8Value) ByteSize(storage atree.SlabStorage) uint32 {
 	// TODO: optimize
-	return storableSize(v)
+	return storableSize(v, storage)
 }
 
 func (v Int8Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
@@ -2088,9 +2088,9 @@ func (v Int16Value) DeepCopy(_ atree.SlabStorage) (atree.Value, error) {
 	return v, nil
 }
 
-func (v Int16Value) ByteSize() uint32 {
+func (v Int16Value) ByteSize(storage atree.SlabStorage) uint32 {
 	// TODO: optimize
-	return storableSize(v)
+	return storableSize(v, storage)
 }
 
 func (v Int16Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
@@ -2406,9 +2406,9 @@ func (v Int32Value) DeepCopy(_ atree.SlabStorage) (atree.Value, error) {
 	return v, nil
 }
 
-func (v Int32Value) ByteSize() uint32 {
+func (v Int32Value) ByteSize(storage atree.SlabStorage) uint32 {
 	// TODO: optimize
-	return storableSize(v)
+	return storableSize(v, storage)
 }
 
 func (v Int32Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
@@ -2723,9 +2723,9 @@ func (v Int64Value) DeepCopy(_ atree.SlabStorage) (atree.Value, error) {
 	return v, nil
 }
 
-func (v Int64Value) ByteSize() uint32 {
+func (v Int64Value) ByteSize(storage atree.SlabStorage) uint32 {
 	// TODO: optimize
-	return storableSize(v)
+	return storableSize(v, storage)
 }
 
 func (v Int64Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
@@ -3110,9 +3110,9 @@ func (v Int128Value) DeepCopy(_ atree.SlabStorage) (atree.Value, error) {
 	return Int128Value{BigInt: new(big.Int).Set(v.BigInt)}, nil
 }
 
-func (v Int128Value) ByteSize() uint32 {
+func (v Int128Value) ByteSize(storage atree.SlabStorage) uint32 {
 	// TODO: optimize
-	return storableSize(v)
+	return storableSize(v, storage)
 }
 
 func (v Int128Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
@@ -3497,9 +3497,9 @@ func (v Int256Value) DeepCopy(_ atree.SlabStorage) (atree.Value, error) {
 	return Int256Value{new(big.Int).Set(v.BigInt)}, nil
 }
 
-func (v Int256Value) ByteSize() uint32 {
+func (v Int256Value) ByteSize(storage atree.SlabStorage) uint32 {
 	// TODO: optimize
-	return storableSize(v)
+	return storableSize(v, storage)
 }
 
 func (v Int256Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
@@ -3775,9 +3775,9 @@ func (v UIntValue) DeepCopy(_ atree.SlabStorage) (atree.Value, error) {
 	return UIntValue{new(big.Int).Set(v.BigInt)}, nil
 }
 
-func (v UIntValue) ByteSize() uint32 {
+func (v UIntValue) ByteSize(storage atree.SlabStorage) uint32 {
 	// TODO: optimize
-	return storableSize(v)
+	return storableSize(v, storage)
 }
 
 func (v UIntValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
@@ -4022,9 +4022,9 @@ func (v UInt8Value) DeepCopy(_ atree.SlabStorage) (atree.Value, error) {
 	return v, nil
 }
 
-func (v UInt8Value) ByteSize() uint32 {
+func (v UInt8Value) ByteSize(storage atree.SlabStorage) uint32 {
 	// TODO: optimize
-	return storableSize(v)
+	return storableSize(v, storage)
 }
 
 func (v UInt8Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
@@ -4270,9 +4270,9 @@ func (v UInt16Value) DeepCopy(_ atree.SlabStorage) (atree.Value, error) {
 	return v, nil
 }
 
-func (v UInt16Value) ByteSize() uint32 {
+func (v UInt16Value) ByteSize(storage atree.SlabStorage) uint32 {
 	// TODO: optimize
-	return storableSize(v)
+	return storableSize(v, storage)
 }
 
 func (v UInt16Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
@@ -4518,9 +4518,9 @@ func (v UInt32Value) DeepCopy(_ atree.SlabStorage) (atree.Value, error) {
 	return v, nil
 }
 
-func (v UInt32Value) ByteSize() uint32 {
+func (v UInt32Value) ByteSize(storage atree.SlabStorage) uint32 {
 	// TODO: optimize
-	return storableSize(v)
+	return storableSize(v, storage)
 }
 
 func (v UInt32Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
@@ -4769,9 +4769,9 @@ func (v UInt64Value) DeepCopy(_ atree.SlabStorage) (atree.Value, error) {
 	return v, nil
 }
 
-func (v UInt64Value) ByteSize() uint32 {
+func (v UInt64Value) ByteSize(storage atree.SlabStorage) uint32 {
 	// TODO: optimize
-	return storableSize(v)
+	return storableSize(v, storage)
 }
 
 func (v UInt64Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
@@ -5098,9 +5098,9 @@ func (v UInt128Value) DeepCopy(_ atree.SlabStorage) (atree.Value, error) {
 	return UInt128Value{new(big.Int).Set(v.BigInt)}, nil
 }
 
-func (v UInt128Value) ByteSize() uint32 {
+func (v UInt128Value) ByteSize(storage atree.SlabStorage) uint32 {
 	// TODO: optimize
-	return storableSize(v)
+	return storableSize(v, storage)
 }
 
 func (v UInt128Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
@@ -5427,9 +5427,9 @@ func (v UInt256Value) DeepCopy(_ atree.SlabStorage) (atree.Value, error) {
 	return UInt256Value{new(big.Int).Set(v.BigInt)}, nil
 }
 
-func (v UInt256Value) ByteSize() uint32 {
+func (v UInt256Value) ByteSize(storage atree.SlabStorage) uint32 {
 	// TODO: optimize
-	return storableSize(v)
+	return storableSize(v, storage)
 }
 
 func (v UInt256Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
@@ -5619,9 +5619,9 @@ func (v Word8Value) DeepCopy(_ atree.SlabStorage) (atree.Value, error) {
 	return v, nil
 }
 
-func (v Word8Value) ByteSize() uint32 {
+func (v Word8Value) ByteSize(storage atree.SlabStorage) uint32 {
 	// TODO: optimize
-	return storableSize(v)
+	return storableSize(v, storage)
 }
 
 func (v Word8Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
@@ -5812,9 +5812,9 @@ func (v Word16Value) DeepCopy(_ atree.SlabStorage) (atree.Value, error) {
 	return v, nil
 }
 
-func (v Word16Value) ByteSize() uint32 {
+func (v Word16Value) ByteSize(storage atree.SlabStorage) uint32 {
 	// TODO: optimize
-	return storableSize(v)
+	return storableSize(v, storage)
 }
 
 func (v Word16Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
@@ -6006,9 +6006,9 @@ func (v Word32Value) DeepCopy(_ atree.SlabStorage) (atree.Value, error) {
 	return v, nil
 }
 
-func (v Word32Value) ByteSize() uint32 {
+func (v Word32Value) ByteSize(storage atree.SlabStorage) uint32 {
 	// TODO: optimize
-	return storableSize(v)
+	return storableSize(v, storage)
 }
 func (v Word32Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 	return v, nil
@@ -6199,9 +6199,9 @@ func (v Word64Value) DeepCopy(_ atree.SlabStorage) (atree.Value, error) {
 	return v, nil
 }
 
-func (v Word64Value) ByteSize() uint32 {
+func (v Word64Value) ByteSize(storage atree.SlabStorage) uint32 {
 	// TODO: optimize
-	return storableSize(v)
+	return storableSize(v, storage)
 }
 
 func (v Word64Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
@@ -6495,9 +6495,9 @@ func (v Fix64Value) DeepCopy(_ atree.SlabStorage) (atree.Value, error) {
 	return v, nil
 }
 
-func (v Fix64Value) ByteSize() uint32 {
+func (v Fix64Value) ByteSize(storage atree.SlabStorage) uint32 {
 	// TODO: optimize
-	return storableSize(v)
+	return storableSize(v, storage)
 }
 
 func (v Fix64Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
@@ -6757,9 +6757,9 @@ func (v UFix64Value) DeepCopy(_ atree.SlabStorage) (atree.Value, error) {
 	return v, nil
 }
 
-func (v UFix64Value) ByteSize() uint32 {
+func (v UFix64Value) ByteSize(storage atree.SlabStorage) uint32 {
 	// TODO: optimize
-	return storableSize(v)
+	return storableSize(v, storage)
 }
 
 func (v UFix64Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
@@ -7257,9 +7257,9 @@ func (v *CompositeValue) DeepCopy(storage atree.SlabStorage) (atree.Value, error
 	return newValue, nil
 }
 
-func (v *CompositeValue) ByteSize() uint32 {
+func (v *CompositeValue) ByteSize(storage atree.SlabStorage) uint32 {
 	// TODO: optimize
-	return storableSize(v)
+	return storableSize(v, storage)
 }
 
 func (v *CompositeValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
@@ -7288,8 +7288,8 @@ func NewEnumCaseValue(
 
 type DictionaryValue struct {
 	Type      DictionaryStaticType
-	keys      *ArrayValue
-	entries   *StringValueOrderedMap
+	Keys      *ArrayValue
+	Entries   *StringValueOrderedMap
 	Owner     *common.Address
 	StorageID atree.StorageID
 }
@@ -7309,13 +7309,13 @@ func NewDictionaryValueUnownedNonCopying(
 
 	result := &DictionaryValue{
 		Type: dictionaryType,
-		keys: NewArrayValueUnownedNonCopying(
+		Keys: NewArrayValueUnownedNonCopying(
 			VariableSizedStaticType{
 				Type: dictionaryType.KeyType,
 			},
 			slabStorage,
 		),
-		entries: NewStringValueOrderedMap(),
+		Entries: NewStringValueOrderedMap(),
 		// NOTE: new value has no owner
 		Owner: nil,
 	}
@@ -7347,19 +7347,19 @@ func (v *DictionaryValue) Accept(interpreter *Interpreter, visitor Visitor) {
 }
 
 func (v *DictionaryValue) Walk(walkChild func(Value)) {
-	v.keys.Walk(walkChild)
-	v.entries.Foreach(func(_ string, value Value) {
+	v.Keys.Walk(walkChild)
+	v.Entries.Foreach(func(_ string, value Value) {
 		walkChild(value)
 	})
 }
 
 func (v *DictionaryValue) DynamicType(interpreter *Interpreter, results DynamicTypeResults) DynamicType {
-	entryTypes := make([]DictionaryStaticTypeEntry, v.keys.Count())
+	entryTypes := make([]DictionaryStaticTypeEntry, v.Keys.Count())
 
 	index := 0
-	v.keys.Walk(func(keyValue Value) {
+	v.Keys.Walk(func(keyValue Value) {
 		key := dictionaryKey(keyValue)
-		value, _ := v.entries.Get(key)
+		value, _ := v.Entries.Get(key)
 		entryTypes[index] =
 			DictionaryStaticTypeEntry{
 				KeyType:   keyValue.DynamicType(interpreter, results),
@@ -7389,9 +7389,9 @@ func (v *DictionaryValue) SetOwner(owner *common.Address) {
 
 	v.Owner = owner
 
-	v.keys.SetOwner(owner)
+	v.Keys.SetOwner(owner)
 
-	v.entries.Foreach(func(_ string, value Value) {
+	v.Entries.Foreach(func(_ string, value Value) {
 		value.SetOwner(owner)
 	})
 }
@@ -7407,7 +7407,7 @@ func maybeDestroy(inter *Interpreter, getLocationRange func() LocationRange, val
 
 func (v *DictionaryValue) Destroy(inter *Interpreter, getLocationRange func() LocationRange) {
 
-	v.keys.Walk(func(keyValue Value) {
+	v.Keys.Walk(func(keyValue Value) {
 		maybeDestroy(inter, getLocationRange, keyValue)
 		value := v.Get(inter, getLocationRange, keyValue)
 		maybeDestroy(inter, getLocationRange, value)
@@ -7416,14 +7416,14 @@ func (v *DictionaryValue) Destroy(inter *Interpreter, getLocationRange func() Lo
 
 func (v *DictionaryValue) ContainsKey(keyValue Value) BoolValue {
 	key := dictionaryKey(keyValue)
-	_, ok := v.entries.Get(key)
+	_, ok := v.Entries.Get(key)
 	return BoolValue(ok)
 }
 
 func (v *DictionaryValue) Get(_ *Interpreter, _ func() LocationRange, keyValue Value) Value {
 	key := dictionaryKey(keyValue)
 
-	value, ok := v.entries.Get(key)
+	value, ok := v.Entries.Get(key)
 	if ok {
 		return NewSomeValueOwningNonCopying(value)
 	}
@@ -7464,12 +7464,12 @@ func (v *DictionaryValue) RecursiveString(results StringResults) string {
 	pairs := make([]struct {
 		Key   string
 		Value string
-	}, v.keys.Count())
+	}, v.Keys.Count())
 
 	index := 0
-	v.keys.Walk(func(keyValue Value) {
+	v.Keys.Walk(func(keyValue Value) {
 		key := dictionaryKey(keyValue)
-		value, _ := v.entries.Get(key)
+		value, _ := v.Entries.Get(key)
 
 		pairs[index] = struct {
 			Key   string
@@ -7491,7 +7491,7 @@ func (v *DictionaryValue) GetMember(interpreter *Interpreter, _ func() LocationR
 		return NewIntValueFromInt64(int64(v.Count()))
 
 	case "keys":
-		keys, err := v.keys.DeepCopy(interpreter.Storage)
+		keys, err := v.Keys.DeepCopy(interpreter.Storage)
 		if err != nil {
 			panic(ExternalError{err})
 		}
@@ -7500,7 +7500,7 @@ func (v *DictionaryValue) GetMember(interpreter *Interpreter, _ func() LocationR
 	case "values":
 		dictionaryValues := make([]Value, v.Count())
 		i := 0
-		v.entries.Foreach(func(_ string, value Value) {
+		v.Entries.Foreach(func(_ string, value Value) {
 			valueCopy, err := value.DeepCopy(interpreter.Storage)
 			if err != nil {
 				panic(ExternalError{err})
@@ -7564,7 +7564,7 @@ func (v *DictionaryValue) SetMember(_ *Interpreter, _ func() LocationRange, _ st
 }
 
 func (v *DictionaryValue) Count() int {
-	return v.keys.Count()
+	return v.Keys.Count()
 }
 
 // TODO: unset owner?
@@ -7579,10 +7579,10 @@ func (v *DictionaryValue) Remove(inter *Interpreter, getLocationRange func() Loc
 
 	switch value := value.(type) {
 	case *SomeValue:
-		v.entries.Delete(key)
+		v.Entries.Delete(key)
 
 		// TODO: optimize linear scan
-		iterator, err := v.keys.array.Iterator()
+		iterator, err := v.Keys.array.Iterator()
 		if err != nil {
 			panic(ExternalError{err})
 		}
@@ -7597,7 +7597,7 @@ func (v *DictionaryValue) Remove(inter *Interpreter, getLocationRange func() Loc
 			}
 
 			if dictionaryKey(keyValue.(Value)) == key {
-				v.keys.Remove(index, getLocationRange)
+				v.Keys.Remove(index, getLocationRange)
 				return value
 			}
 			index++
@@ -7624,14 +7624,14 @@ func (v *DictionaryValue) Insert(inter *Interpreter, locationRangeGetter func() 
 
 	value.SetOwner(v.Owner)
 
-	v.entries.Set(key, value)
+	v.Entries.Set(key, value)
 
 	switch existingValue := existingValue.(type) {
 	case *SomeValue:
 		return existingValue
 
 	case NilValue:
-		v.keys.Append(keyValue)
+		v.Keys.Append(keyValue)
 		return existingValue
 
 	default:
@@ -7641,7 +7641,7 @@ func (v *DictionaryValue) Insert(inter *Interpreter, locationRangeGetter func() 
 
 func (v *DictionaryValue) IsStorable() bool {
 
-	iterator, err := v.keys.array.Iterator()
+	iterator, err := v.Keys.array.Iterator()
 	if err != nil {
 		panic(ExternalError{err})
 	}
@@ -7660,7 +7660,7 @@ func (v *DictionaryValue) IsStorable() bool {
 		}
 	}
 
-	for pair := v.entries.Oldest(); pair != nil; pair = pair.Next() {
+	for pair := v.Entries.Oldest(); pair != nil; pair = pair.Next() {
 		if !pair.Value.IsStorable() {
 			return false
 		}
@@ -7685,7 +7685,7 @@ func (v *DictionaryValue) ConformsToDynamicType(
 		return false
 	}
 
-	iterator, err := v.keys.array.Iterator()
+	iterator, err := v.Keys.array.Iterator()
 	if err != nil {
 		panic(ExternalError{err})
 	}
@@ -7712,7 +7712,7 @@ func (v *DictionaryValue) ConformsToDynamicType(
 		// Check the value. Here it is assumed an imported value can only have
 		// static entries, but not deferred keys/values.
 		key := dictionaryKey(entryKey)
-		entryValue, ok := v.entries.Get(key)
+		entryValue, ok := v.Entries.Get(key)
 		if !ok || !entryValue.ConformsToDynamicType(interpreter, entryType.ValueType, results) {
 			return false
 		}
@@ -7731,15 +7731,15 @@ func (v *DictionaryValue) Equal(other Value, getLocationRange func() LocationRan
 		return false
 	}
 
-	if !v.keys.Equal(otherDictionary.keys, getLocationRange) {
+	if !v.Keys.Equal(otherDictionary.Keys, getLocationRange) {
 		return false
 	}
 
-	for pair := v.entries.Oldest(); pair != nil; pair = pair.Next() {
+	for pair := v.Entries.Oldest(); pair != nil; pair = pair.Next() {
 		key := pair.Key
 
-		value, valueExists := v.entries.Get(key)
-		otherValue, otherValueExists := otherDictionary.entries.Get(key)
+		value, valueExists := v.Entries.Get(key)
+		otherValue, otherValueExists := otherDictionary.Entries.Get(key)
 
 		if valueExists {
 			equatableValue, ok := value.(EquatableValue)
@@ -7754,8 +7754,8 @@ func (v *DictionaryValue) Equal(other Value, getLocationRange func() LocationRan
 	return true
 }
 
-func (v *DictionaryValue) ByteSize() uint32 {
-	return storableSize(v)
+func (v *DictionaryValue) ByteSize(storage atree.SlabStorage) uint32 {
+	return storableSize(v, storage)
 }
 
 func (v *DictionaryValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
@@ -7771,7 +7771,7 @@ func (v *DictionaryValue) DeepCopy(storage atree.SlabStorage) (atree.Value, erro
 
 	result := NewDictionaryValueUnownedNonCopying(v.Type, storage)
 
-	iterator, err := v.keys.array.Iterator()
+	iterator, err := v.Keys.array.Iterator()
 	if err != nil {
 		return nil, err
 	}
@@ -7791,11 +7791,11 @@ func (v *DictionaryValue) DeepCopy(storage atree.SlabStorage) (atree.Value, erro
 			return nil, err
 		}
 
-		result.keys.Insert(index, valueCopy.(Value), ReturnEmptyLocationRange)
+		result.Keys.Insert(index, valueCopy.(Value), ReturnEmptyLocationRange)
 		index++
 	}
 
-	for pair := v.entries.Oldest(); pair != nil; pair = pair.Next() {
+	for pair := v.Entries.Oldest(); pair != nil; pair = pair.Next() {
 		key := pair.Key
 		value := pair.Value
 
@@ -7804,7 +7804,7 @@ func (v *DictionaryValue) DeepCopy(storage atree.SlabStorage) (atree.Value, erro
 			return nil, err
 		}
 
-		result.entries.Set(key, valueCopy.(Value))
+		result.Entries.Set(key, valueCopy.(Value))
 	}
 
 	return result, nil
@@ -7911,9 +7911,9 @@ func (v NilValue) DeepCopy(_ atree.SlabStorage) (atree.Value, error) {
 	return v, nil
 }
 
-func (v NilValue) ByteSize() uint32 {
+func (v NilValue) ByteSize(storage atree.SlabStorage) uint32 {
 	// TODO: optimize
-	return storableSize(v)
+	return storableSize(v, storage)
 }
 
 func (v NilValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
@@ -8073,9 +8073,9 @@ func (v *SomeValue) DeepCopy(storage atree.SlabStorage) (atree.Value, error) {
 	}, nil
 }
 
-func (v *SomeValue) ByteSize() uint32 {
+func (v *SomeValue) ByteSize(storage atree.SlabStorage) uint32 {
 	// TODO: optimize
-	return storableSize(v)
+	return storableSize(v, storage)
 }
 
 func (v *SomeValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
@@ -8651,9 +8651,9 @@ func (v AddressValue) DeepCopy(_ atree.SlabStorage) (atree.Value, error) {
 	return v, nil
 }
 
-func (v AddressValue) ByteSize() uint32 {
+func (v AddressValue) ByteSize(storage atree.SlabStorage) uint32 {
 	// TOD O: optimize
-	return storableSize(v)
+	return storableSize(v, storage)
 }
 
 func (v AddressValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
@@ -8944,8 +8944,8 @@ func (v PathValue) DeepCopy(_ atree.SlabStorage) (atree.Value, error) {
 	return v, nil
 }
 
-func (v PathValue) ByteSize() uint32 {
-	return storableSize(v)
+func (v PathValue) ByteSize(storage atree.SlabStorage) uint32 {
+	return storableSize(v, storage)
 }
 
 func (v PathValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
@@ -9086,8 +9086,8 @@ func (v CapabilityValue) DeepCopy(_ atree.SlabStorage) (atree.Value, error) {
 	return v, nil
 }
 
-func (v CapabilityValue) ByteSize() uint32 {
-	return storableSize(v)
+func (v CapabilityValue) ByteSize(storage atree.SlabStorage) uint32 {
+	return storableSize(v, storage)
 }
 
 func (v CapabilityValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
@@ -9175,8 +9175,8 @@ func (v LinkValue) DeepCopy(_ atree.SlabStorage) (atree.Value, error) {
 	return v, nil
 }
 
-func (v LinkValue) ByteSize() uint32 {
-	return storableSize(v)
+func (v LinkValue) ByteSize(storage atree.SlabStorage) uint32 {
+	return storableSize(v, storage)
 }
 
 func (v LinkValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {

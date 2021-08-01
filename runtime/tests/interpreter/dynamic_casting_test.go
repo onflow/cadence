@@ -1141,7 +1141,7 @@ func TestInterpretDynamicCastingArray(t *testing.T) {
 
 						assert.Equal(t,
 							expectedElements,
-							yArray.Elements(),
+							elements(yArray),
 						)
 
 						zValue := inter.Globals["z"].GetValue()
@@ -1154,7 +1154,7 @@ func TestInterpretDynamicCastingArray(t *testing.T) {
 
 						assert.Equal(t,
 							expectedElements,
-							innerArray.Elements(),
+							elements(innerArray),
 						)
 					})
 				}
@@ -1263,13 +1263,17 @@ func TestInterpretDynamicCastingDictionary(t *testing.T) {
 							),
 						)
 
-						expectedValue := interpreter.NewDictionaryValueUnownedNonCopying(
+						storage := interpreter.NewInMemoryStorage()
+
+						expectedValue, err := interpreter.NewDictionaryValueUnownedNonCopying(
 							interpreter.DictionaryStaticType{
 								KeyType:   interpreter.PrimitiveStaticTypeString,
 								ValueType: interpreter.PrimitiveStaticTypeInt,
 							},
+							storage,
 							interpreter.NewStringValue("test"), interpreter.NewIntValueFromInt64(42),
-						).Copy()
+						).DeepCopy(storage)
+						require.NoError(t, err)
 
 						assert.Equal(t,
 							expectedValue,
@@ -1278,7 +1282,7 @@ func TestInterpretDynamicCastingDictionary(t *testing.T) {
 
 						assert.Equal(t,
 							interpreter.NewSomeValueOwningNonCopying(
-								expectedValue,
+								expectedValue.(interpreter.Value),
 							),
 							inter.Globals["z"].GetValue(),
 						)

@@ -3620,7 +3620,7 @@ package interpreter
 //				path:  nil,
 //			},
 //			{
-//				value: value.Elements()[0],
+//				value: elements(value)[0],
 //				path:  []string{"0"},
 //			},
 //		},
