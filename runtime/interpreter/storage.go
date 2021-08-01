@@ -41,7 +41,7 @@ func (i InMemoryStorage) Exists(_ *Interpreter, address common.Address, key stri
 func (i InMemoryStorage) Read(_ *Interpreter, address common.Address, key string) OptionalValue {
 	storable, ok := i.Data[InMemoryStorageKey{Address: address, Key: key}]
 	if !ok {
-		return nil
+		return NilValue{}
 	}
 
 	value, err := storable.StoredValue(i.BasicSlabStorage)
@@ -73,6 +73,7 @@ var _ Storage = InMemoryStorage{}
 func NewInMemoryStorage() InMemoryStorage {
 	return InMemoryStorage{
 		BasicSlabStorage: atree.NewBasicSlabStorage(),
+		Data:             make(map[InMemoryStorageKey]atree.Storable),
 	}
 }
 
