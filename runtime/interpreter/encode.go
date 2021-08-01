@@ -800,7 +800,7 @@ func (v *SomeValue) Encode(e *atree.Encoder) error {
 		return err
 	}
 	// TODO: might be replaced by atree with StorageIDStorable if mutable or too large to inline
-	return v.InnerValue.Storable().Encode(e)
+	return v.Value.Storable(e.Storage).Encode(e)
 }
 
 // Encode encodes AddressValue as

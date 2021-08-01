@@ -1909,7 +1909,7 @@ func (interpreter *Interpreter) boxOptional(value Value, valueType, targetType s
 
 		switch typedInner := inner.(type) {
 		case *SomeValue:
-			inner = typedInner.InnerValue
+			inner = typedInner.Value
 
 		case NilValue:
 			// NOTE: nested nil will be unboxed!
@@ -1934,7 +1934,7 @@ func (interpreter *Interpreter) unbox(value Value) Value {
 			return value
 		}
 
-		value = some.InnerValue
+		value = some.Value
 	}
 }
 
@@ -2880,7 +2880,7 @@ func (interpreter *Interpreter) authAccountReadFunction(addressValue AddressValu
 
 			dynamicTypeResults := DynamicTypeResults{}
 
-			dynamicType := value.InnerValue.DynamicType(interpreter, dynamicTypeResults)
+			dynamicType := value.Value.DynamicType(interpreter, dynamicTypeResults)
 			if !interpreter.IsSubType(dynamicType, ty) {
 				return NilValue{}
 			}
@@ -3001,7 +3001,7 @@ func (interpreter *Interpreter) accountGetLinkTargetFunction(addressValue Addres
 
 		case *SomeValue:
 
-			link, ok := value.InnerValue.(LinkValue)
+			link, ok := value.Value.(LinkValue)
 			if !ok {
 				return NilValue{}
 			}
@@ -3189,7 +3189,7 @@ func (interpreter *Interpreter) GetCapabilityFinalTargetStorageKey(
 
 		case *SomeValue:
 
-			if link, ok := value.InnerValue.(LinkValue); ok {
+			if link, ok := value.Value.(LinkValue); ok {
 
 				allowedType := interpreter.ConvertStaticToSemaType(link.Type)
 
