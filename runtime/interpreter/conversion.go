@@ -33,20 +33,19 @@ func ByteArrayValueToByteSlice(value Value) ([]byte, error) {
 
 	iterator, err := array.array.Iterator()
 	if err != nil {
-		return nil, err
+		return nil, ExternalError{err}
 	}
 
 	index := 0
 	for {
 		value, err := iterator.Next()
 		if err != nil {
-			return nil, err
+			return nil, ExternalError{err}
 		}
 		if value == nil {
 			return result, nil
 		}
 
-		// TODO: embed atree.Value in Value and implement
 		b, err := ByteValueToByte(value.(Value))
 		if err != nil {
 			return nil, err

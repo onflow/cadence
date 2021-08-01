@@ -1655,7 +1655,7 @@ func (r *interpreterRuntime) loadContract(
 
 		switch typedValue := storedValue.(type) {
 		case *interpreter.SomeValue:
-			return typedValue.InnerValue.(*interpreter.CompositeValue)
+			return typedValue.Value.(*interpreter.CompositeValue)
 		case interpreter.NilValue:
 			panic("failed to load contract")
 		default:
@@ -2609,9 +2609,11 @@ func (r *interpreterRuntime) newAccountKeysAddFunction(
 				},
 			)
 
+			inter := invocation.Interpreter
 			return NewAccountKeyValue(
+				inter.Storage,
 				accountKey,
-				invocation.Interpreter.PublicKeyValidationHandler,
+				inter.PublicKeyValidationHandler,
 			)
 		},
 	)
@@ -2765,11 +2767,16 @@ func NewPublicKeyFromValue(publicKey *interpreter.CompositeValue) (*PublicKey, e
 }
 
 func NewPublicKeyValue(
+	storage interpreter.Storage,
 	publicKey *PublicKey,
 	validatePublicKey interpreter.PublicKeyValidationHandlerFunc,
 ) *interpreter.CompositeValue {
 	return interpreter.NewPublicKeyValue(
-		interpreter.ByteSliceToByteArrayValue(publicKey.PublicKey),
+		storage,
+		interpreter.ByteSliceToByteArrayValue(
+			storage,
+			publicKey.PublicKey,
+		),
 		stdlib.NewSignatureAlgorithmCase(publicKey.SignAlgo.RawValue()),
 		func(publicKeyValue *interpreter.CompositeValue) interpreter.BoolValue {
 			// If the public key is already validated, avoid re-validating, and return the cached result.
@@ -2783,12 +2790,14 @@ func NewPublicKeyValue(
 }
 
 func NewAccountKeyValue(
+	storage interpreter.Storage,
 	accountKey *AccountKey,
 	validatePublicKey interpreter.PublicKeyValidationHandlerFunc,
 ) *interpreter.CompositeValue {
 	return interpreter.NewAccountKeyValue(
 		interpreter.NewIntValueFromInt64(int64(accountKey.KeyIndex)),
 		NewPublicKeyValue(
+			storage,
 			accountKey.PublicKey,
 			validatePublicKey,
 		),

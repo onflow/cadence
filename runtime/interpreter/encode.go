@@ -771,7 +771,7 @@ func (v *CompositeValue) Encode(e *atree.Encoder) error {
 
 		// Encode value as fields array element
 		// TODO: might be replaced by atree with StorageIDStorable if mutable or too large to inline
-		err = value.Storable().Encode(e)
+		err = value.Storable(e.Storage).Encode(e)
 		if err != nil {
 			return err
 		}

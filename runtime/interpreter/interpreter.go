@@ -227,7 +227,7 @@ type Interpreter struct {
 	allInterpreters                map[common.LocationID]*Interpreter
 	typeCodes                      TypeCodes
 	Transactions                   []*HostFunctionValue
-	storage                        Storage
+	Storage                        Storage
 	onEventEmitted                 OnEventEmittedFunc
 	onStatement                    OnStatementFunc
 	onLoopIteration                OnLoopIterationFunc
@@ -502,7 +502,7 @@ func (interpreter *Interpreter) SetOnFunctionInvocationHandler(function OnFuncti
 // SetStorage sets the value that is used for storage operations.
 //
 func (interpreter *Interpreter) SetStorage(storage Storage) {
-	interpreter.storage = storage
+	interpreter.Storage = storage
 }
 
 // SetInjectedCompositeFieldsHandler sets the function that is used to initialize
@@ -1752,7 +1752,12 @@ func (interpreter *Interpreter) copyAndConvert(
 	getLocationRange func() LocationRange,
 ) Value {
 
-	result := interpreter.convertAndBox(value.Copy(), valueType, targetType)
+	valueCopy, err := value.DeepCopy(interpreter.Storage)
+	if err != nil {
+		panic(ExternalError{err})
+	}
+
+	result := interpreter.convertAndBox(valueCopy.(Value), valueType, targetType)
 
 	if !interpreter.checkValueTransferTargetType(result, targetType) {
 		panic(ValueTransferTypeError{
@@ -2218,7 +2223,7 @@ func (interpreter *Interpreter) NewSubInterpreter(
 		WithOnStatementHandler(interpreter.onStatement),
 		WithOnLoopIterationHandler(interpreter.onLoopIteration),
 		WithOnFunctionInvocationHandler(interpreter.onFunctionInvocation),
-		WithStorage(interpreter.storage),
+		WithStorage(interpreter.Storage),
 		WithInjectedCompositeFieldsHandler(interpreter.injectedCompositeFieldsHandler),
 		WithContractValueHandler(interpreter.contractValueHandler),
 		WithImportLocationHandler(interpreter.importLocationHandler),
@@ -2242,17 +2247,17 @@ func (interpreter *Interpreter) NewSubInterpreter(
 }
 
 func (interpreter *Interpreter) storedValueExists(storageAddress common.Address, key string) bool {
-	return interpreter.storage.Exists(interpreter, storageAddress, key)
+	return interpreter.Storage.Exists(interpreter, storageAddress, key)
 }
 
 func (interpreter *Interpreter) ReadStored(storageAddress common.Address, key string) OptionalValue {
-	return interpreter.storage.Read(interpreter, storageAddress, key)
+	return interpreter.Storage.Read(interpreter, storageAddress, key)
 }
 
 func (interpreter *Interpreter) writeStored(storageAddress common.Address, key string, value OptionalValue) {
 	value.SetOwner(&storageAddress)
 
-	interpreter.storage.Write(interpreter, storageAddress, key, value)
+	interpreter.Storage.Write(interpreter, storageAddress, key, value)
 }
 
 type valueConverterDeclaration struct {
