@@ -759,7 +759,7 @@ func TestStringer(t *testing.T) {
 			},
 			expected: "Capability(address: 0x102030405, path: /storage/foo)",
 		},
-		"Dictionary with non-deferred values": {
+		"Dictionary": {
 			value: NewDictionaryValueUnownedNonCopying(
 				newTestInterpreter(t),
 				DictionaryStaticType{
@@ -771,31 +771,6 @@ func TestStringer(t *testing.T) {
 				NewStringValue("b"), UInt8Value(99),
 			),
 			expected: `{"a": 42, "b": 99}`,
-		},
-		"Dictionary with deferred value": {
-			value: func() Value {
-				entries := NewStringValueOrderedMap()
-				entries.Set(
-					NewStringValue("a").KeyString(),
-					UInt8Value(42),
-				)
-				return &DictionaryValue{
-					Type: DictionaryStaticType{
-						KeyType:   PrimitiveStaticTypeString,
-						ValueType: PrimitiveStaticTypeUInt8,
-					},
-					keys: NewArrayValueUnownedNonCopying(
-						VariableSizedStaticType{
-							Type: PrimitiveStaticTypeAnyStruct,
-						},
-						storage,
-						NewStringValue("a"),
-						NewStringValue("b"),
-					),
-					entries: entries,
-				}
-			}(),
-			expected: `{"a": 42, "b": ...}`,
 		},
 		"Recursive ephemeral reference (array)": {
 			value: func() Value {
