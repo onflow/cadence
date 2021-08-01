@@ -78,7 +78,11 @@ func (interpreter *Interpreter) invokeFunctionValue(
 			getLocationRange := locationRangeGetter(interpreter.Location, locationPos)
 			argumentCopies[i] = interpreter.copyAndConvert(argument, argumentType, parameterType, getLocationRange)
 		} else {
-			argumentCopies[i] = argument.Copy()
+			argumentCopy, err := argument.DeepCopy(interpreter.Storage)
+			if err != nil {
+				panic(err)
+			}
+			argumentCopies[i] = argumentCopy.(Value)
 		}
 	}
 

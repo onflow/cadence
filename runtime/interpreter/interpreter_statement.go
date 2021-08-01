@@ -233,17 +233,21 @@ func (interpreter *Interpreter) VisitForStatement(statement *ast.ForStatement) a
 		nil,
 	)
 
-	values := interpreter.evalExpression(statement.Value).Copy().(*ArrayValue)
-
-	iterator, err := values.array.Iterator()
+	valueCopy, err := interpreter.evalExpression(statement.Value).
+		DeepCopy(interpreter.Storage)
 	if err != nil {
-		panic(err)
+		panic(ExternalError{err})
+	}
+
+	iterator, err := valueCopy.(*ArrayValue).array.Iterator()
+	if err != nil {
+		panic(ExternalError{err})
 	}
 
 	for {
 		value, err := iterator.Next()
 		if err != nil {
-			panic(err)
+			panic(ExternalError{err})
 		}
 
 		if value == nil {
@@ -252,7 +256,6 @@ func (interpreter *Interpreter) VisitForStatement(statement *ast.ForStatement) a
 
 		interpreter.reportLoopIteration(statement)
 
-		// TODO: embed atree.Value in Value and implement
 		variable.SetValue(value.(Value))
 
 		result := statement.Block.Accept(interpreter)
