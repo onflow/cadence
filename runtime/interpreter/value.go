@@ -8516,9 +8516,8 @@ func (*StorageReferenceValue) IsStorable() bool {
 	return false
 }
 
-func (v *StorageReferenceValue) Storable() atree.Storable {
-	// TODO:
-	return nil
+func (v *StorageReferenceValue) Storable(_ atree.SlabStorage) atree.Storable {
+	return atree.NonStorable{Value: v}
 }
 
 func (v *StorageReferenceValue) DeepCopy(_ atree.SlabStorage) (atree.Value, error) {
@@ -8728,9 +8727,8 @@ func (*EphemeralReferenceValue) IsStorable() bool {
 	return false
 }
 
-func (v *EphemeralReferenceValue) Storable() atree.Storable {
-	// TODO:
-	return nil
+func (v *EphemeralReferenceValue) Storable(_ atree.SlabStorage) atree.Storable {
+	return atree.NonStorable{Value: v}
 }
 
 func (v *EphemeralReferenceValue) DeepCopy(_ atree.SlabStorage) (atree.Value, error) {
