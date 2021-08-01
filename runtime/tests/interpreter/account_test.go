@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/fxamacker/atree"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -40,7 +41,7 @@ func testAccount(
 	code string,
 ) (
 	*interpreter.Interpreter,
-	map[string]interpreter.OptionalValue,
+	map[interpreter.InMemoryStorageKey]atree.Storable,
 ) {
 
 	var valueDeclarations stdlib.StandardLibraryValues
@@ -109,32 +110,6 @@ func testAccount(
 	accountValueDeclaration.Name = "account"
 	valueDeclarations = append(valueDeclarations, accountValueDeclaration)
 
-	storedValues := map[string]interpreter.OptionalValue{}
-
-	// NOTE: checker, getter and setter are very naive for testing purposes and don't remove nil values
-	//
-
-	storageChecker := func(_ *interpreter.Interpreter, _ common.Address, key string) bool {
-		_, ok := storedValues[key]
-		return ok
-	}
-
-	storageSetter := func(_ *interpreter.Interpreter, _ common.Address, key string, value interpreter.OptionalValue) {
-		if _, ok := value.(interpreter.NilValue); ok {
-			delete(storedValues, key)
-		} else {
-			storedValues[key] = value
-		}
-	}
-
-	storageGetter := func(_ *interpreter.Interpreter, _ common.Address, key string, _ bool) interpreter.OptionalValue {
-		value := storedValues[key]
-		if value == nil {
-			return interpreter.NilValue{}
-		}
-		return value
-	}
-
 	inter, err := parseCheckAndInterpretWithOptions(t,
 		code,
 		ParseCheckAndInterpretOptions{
@@ -143,15 +118,12 @@ func testAccount(
 			},
 			Options: []interpreter.Option{
 				interpreter.WithPredeclaredValues(valueDeclarations.ToInterpreterValueDeclarations()),
-				interpreter.WithStorageExistenceHandler(storageChecker),
-				interpreter.WithStorageReadHandler(storageGetter),
-				interpreter.WithStorageWriteHandler(storageSetter),
 			},
 		},
 	)
 	require.NoError(t, err)
 
-	return inter, storedValues
+	return inter, inter.Storage.(interpreter.InMemoryStorage).Data
 }
 
 func returnZeroUInt64() interpreter.UInt64Value {

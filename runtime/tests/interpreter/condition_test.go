@@ -534,9 +534,12 @@ func TestInterpretInitializerWithInterfacePreCondition(t *testing.T) {
 
 					if compositeKind == common.CompositeKindContract {
 
+						storage := interpreter.NewInMemoryStorage()
+
 						inter, err := interpreter.NewInterpreter(
 							interpreter.ProgramFromChecker(checker),
 							checker.Location,
+							interpreter.WithStorage(storage),
 							makeContractValueHandler(
 								[]interpreter.Value{
 									interpreter.NewIntValueFromInt64(value),
@@ -558,9 +561,12 @@ func TestInterpretInitializerWithInterfacePreCondition(t *testing.T) {
 						_, err = inter.Invoke("test")
 						check(err)
 					} else {
+						storage := interpreter.NewInMemoryStorage()
+
 						inter, err := interpreter.NewInterpreter(
 							interpreter.ProgramFromChecker(checker),
 							checker.Location,
+							interpreter.WithStorage(storage),
 							uuidHandler,
 						)
 						require.NoError(t, err)

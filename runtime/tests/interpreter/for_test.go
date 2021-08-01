@@ -102,7 +102,7 @@ func TestInterpretForStatementWithContinue(t *testing.T) {
 			interpreter.NewIntValueFromInt64(4),
 			interpreter.NewIntValueFromInt64(5),
 		},
-		arrayValue.Elements(),
+		elements(arrayValue),
 	)
 }
 

@@ -64,6 +64,10 @@ func TestInterpretCompositeValue(t *testing.T) {
 // Utility methods
 func testCompositeValue(t *testing.T, code string) *interpreter.Interpreter {
 
+	storage := interpreter.NewInMemoryStorage()
+
+	var valueDeclarations stdlib.StandardLibraryValues
+
 	// 'fruit' composite type
 	fruitType := &sema.CompositeType{
 		Location:   utils.TestLocation,
@@ -91,6 +95,7 @@ func testCompositeValue(t *testing.T, code string) *interpreter.Interpreter {
 	fields.Set("name", interpreter.NewStringValue("Apple"))
 
 	value := interpreter.NewCompositeValue(
+		storage,
 		utils.TestLocation,
 		fruitType.Identifier,
 		common.CompositeKindStructure,
@@ -105,7 +110,7 @@ func testCompositeValue(t *testing.T, code string) *interpreter.Interpreter {
 
 	valueDeclarations := stdlib.StandardLibraryValues{
 		{
-			Name:  "fruit",
+			Name:  value.QualifiedIdentifier,
 			Type:  fruitType,
 			Value: value,
 			Kind:  common.DeclarationKindConstant,
@@ -129,6 +134,7 @@ func testCompositeValue(t *testing.T, code string) *interpreter.Interpreter {
 			},
 			Options: []interpreter.Option{
 				interpreter.WithPredeclaredValues(valueDeclarations.ToInterpreterValueDeclarations()),
+				interpreter.WithStorage(storage),
 			},
 		},
 	)

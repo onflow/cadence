@@ -24,6 +24,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/onflow/cadence/runtime/tests/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/sha3"
@@ -70,7 +71,16 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 
 		codeHashValue := event.Fields[codeHashParameterIndex]
 
-		codeHash, err := importValue(nil, codeHashValue, sema.ByteArrayType)
+		storage := interpreter.NewInMemoryStorage()
+
+		inter, err := interpreter.NewInterpreter(
+			nil,
+			utils.TestLocation,
+			interpreter.WithStorage(storage),
+		)
+		require.NoError(t, err)
+
+		codeHash, err := importValue(inter, codeHashValue, sema.ByteArrayType)
 		require.NoError(t, err)
 
 		actualCodeHash, err := interpreter.ByteArrayValueToByteSlice(codeHash)

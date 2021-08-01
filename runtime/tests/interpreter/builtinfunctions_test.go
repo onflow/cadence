@@ -30,6 +30,8 @@ import (
 
 func TestInterpretToString(t *testing.T) {
 
+	t.Parallel()
+
 	for _, ty := range sema.AllIntegerTypes {
 
 		t.Run(ty.String(), func(t *testing.T) {
@@ -52,6 +54,8 @@ func TestInterpretToString(t *testing.T) {
 	}
 
 	t.Run("Address", func(t *testing.T) {
+
+		t.Parallel()
 
 		inter := parseCheckAndInterpret(t, `
           let x: Address = 0x42
@@ -102,7 +106,11 @@ func TestInterpretToString(t *testing.T) {
 
 func TestInterpretToBytes(t *testing.T) {
 
+	t.Parallel()
+
 	t.Run("Address", func(t *testing.T) {
+
+		t.Parallel()
 
 		inter := parseCheckAndInterpret(t, `
           let x: Address = 0x123456
@@ -114,6 +122,7 @@ func TestInterpretToBytes(t *testing.T) {
 				interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeUInt8,
 				},
+				inter.Storage,
 				interpreter.UInt8Value(0x0),
 				interpreter.UInt8Value(0x0),
 				interpreter.UInt8Value(0x0),
@@ -129,6 +138,8 @@ func TestInterpretToBytes(t *testing.T) {
 }
 
 func TestInterpretToBigEndianBytes(t *testing.T) {
+
+	t.Parallel()
 
 	typeTests := map[string]map[string][]byte{
 		// Int*
@@ -320,8 +331,10 @@ func TestInterpretToBigEndianBytes(t *testing.T) {
 					),
 				)
 
+				storage := interpreter.NewInMemoryStorage()
+
 				assert.Equal(t,
-					interpreter.ByteSliceToByteArrayValue(expected),
+					interpreter.ByteSliceToByteArrayValue(storage, expected),
 					inter.Globals["result"].GetValue(),
 				)
 			})

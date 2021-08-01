@@ -33,6 +33,10 @@ import (
 
 func TestInterpretVirtualImport(t *testing.T) {
 
+	t.Parallel()
+
+	storage := interpreter.NewInMemoryStorage()
+
 	fooType := &sema.CompositeType{
 		Location:   common.IdentifierLocation("Foo"),
 		Identifier: "Foo",
@@ -80,6 +84,7 @@ func TestInterpretVirtualImport(t *testing.T) {
 						)
 
 						value := interpreter.NewCompositeValue(
+							storage,
 							location,
 							"Foo",
 							common.CompositeKindContract,
@@ -255,9 +260,12 @@ func TestInterpretImportMultipleProgramsFromLocation(t *testing.T) {
 	)
 	require.NoError(t, err)
 
+	storage := interpreter.NewInMemoryStorage()
+
 	inter, err := interpreter.NewInterpreter(
 		interpreter.ProgramFromChecker(importingChecker),
 		importingChecker.Location,
+		interpreter.WithStorage(storage),
 		interpreter.WithImportLocationHandler(
 			func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
 				require.IsType(t, common.AddressLocation{}, location)

@@ -192,7 +192,7 @@ func TestInterpretSwitchStatement(t *testing.T) {
 
 			assert.Equal(t,
 				expectedValues,
-				arrayValue.Elements(),
+				elements(arrayValue),
 			)
 		}
 	})
