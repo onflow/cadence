@@ -61,10 +61,6 @@ func (BlockValue) StaticType() StaticType {
 	return PrimitiveStaticTypeBlock
 }
 
-func (v BlockValue) Copy() Value {
-	return v
-}
-
 func (BlockValue) GetOwner() *common.Address {
 	// value is never owned
 	return nil

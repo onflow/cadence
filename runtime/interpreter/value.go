@@ -62,7 +62,6 @@ type Value interface {
 	Accept(interpreter *Interpreter, visitor Visitor)
 	Walk(walkChild func(Value))
 	DynamicType(interpreter *Interpreter, seenReferences SeenReferences) DynamicType
-	Copy() Value
 	GetOwner() *common.Address
 	SetOwner(address *common.Address)
 	StaticType() StaticType
@@ -151,10 +150,6 @@ func (TypeValue) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
 
 func (TypeValue) StaticType() StaticType {
 	return PrimitiveStaticTypeMetaType
-}
-
-func (v TypeValue) Copy() Value {
-	return v
 }
 
 func (TypeValue) GetOwner() *common.Address {
@@ -277,10 +272,6 @@ func (VoidValue) StaticType() StaticType {
 	return PrimitiveStaticTypeVoid
 }
 
-func (v VoidValue) Copy() Value {
-	return v
-}
-
 func (VoidValue) GetOwner() *common.Address {
 	// value is never owned
 	return nil
@@ -358,10 +349,6 @@ func (BoolValue) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
 
 func (BoolValue) StaticType() StaticType {
 	return PrimitiveStaticTypeBool
-}
-
-func (v BoolValue) Copy() Value {
-	return v
 }
 
 func (BoolValue) GetOwner() *common.Address {
@@ -485,10 +472,6 @@ func (*StringValue) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
 
 func (*StringValue) StaticType() StaticType {
 	return PrimitiveStaticTypeString
-}
-
-func (v *StringValue) Copy() Value {
-	return v
 }
 
 func (*StringValue) GetOwner() *common.Address {
@@ -796,23 +779,6 @@ func (v *ArrayValue) DynamicType(interpreter *Interpreter, seenReferences SeenRe
 func (v *ArrayValue) StaticType() StaticType {
 	v.ensureMetaInfoLoaded()
 	return v.Type
-}
-
-func (v *ArrayValue) Copy() Value {
-	// TODO: optimize, use copy-on-write
-
-	copiedValue, err := v.array.DeepCopy(v.storage)
-	if err != nil {
-		panic(err)
-	}
-
-	return &ArrayValue{
-		Type: v.Type,
-		// NOTE: new value has no owner
-		Owner:   nil,
-		storage: v.storage,
-		array:   copiedValue.(*atree.Array),
-	}
 }
 
 func (v *ArrayValue) GetOwner() *common.Address {
@@ -1194,7 +1160,19 @@ func (v *ArrayValue) Storable() atree.Storable {
 }
 
 func (v *ArrayValue) DeepCopy(storage atree.SlabStorage) (atree.Value, error) {
-	return v.array.DeepCopy(storage)
+	// TODO: optimize, use copy-on-write
+
+	copiedValue, err := v.array.DeepCopy(storage)
+	if err != nil {
+		return nil, err
+	}
+
+	return &ArrayValue{
+		Type: v.Type,
+		// NOTE: new value has no owner
+		Owner: nil,
+		array: copiedValue.(*atree.Array),
+	}, nil
 }
 
 // NumberValue
@@ -1339,10 +1317,6 @@ func (IntValue) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
 
 func (IntValue) StaticType() StaticType {
 	return PrimitiveStaticTypeInt
-}
-
-func (v IntValue) Copy() Value {
-	return IntValue{new(big.Int).Set(v.BigInt)}
 }
 
 func (IntValue) GetOwner() *common.Address {
@@ -1540,7 +1514,7 @@ func (v IntValue) Storable() atree.Storable {
 }
 
 func (v IntValue) DeepCopy(_ atree.SlabStorage) (atree.Value, error) {
-	return v, nil
+	return IntValue{new(big.Int).Set(v.BigInt)}, nil
 }
 
 func (v IntValue) ByteSize() uint32 {
@@ -1586,10 +1560,6 @@ func (Int8Value) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
 
 func (Int8Value) StaticType() StaticType {
 	return PrimitiveStaticTypeInt8
-}
-
-func (v Int8Value) Copy() Value {
-	return v
 }
 
 func (Int8Value) GetOwner() *common.Address {
@@ -1914,10 +1884,6 @@ func (Int16Value) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
 
 func (Int16Value) StaticType() StaticType {
 	return PrimitiveStaticTypeInt16
-}
-
-func (v Int16Value) Copy() Value {
-	return v
 }
 
 func (Int16Value) GetOwner() *common.Address {
@@ -2246,10 +2212,6 @@ func (Int32Value) StaticType() StaticType {
 	return PrimitiveStaticTypeInt32
 }
 
-func (v Int32Value) Copy() Value {
-	return v
-}
-
 func (Int32Value) GetOwner() *common.Address {
 	// value is never owned
 	return nil
@@ -2574,10 +2536,6 @@ func (Int64Value) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
 
 func (Int64Value) StaticType() StaticType {
 	return PrimitiveStaticTypeInt64
-}
-
-func (v Int64Value) Copy() Value {
-	return v
 }
 
 func (Int64Value) GetOwner() *common.Address {
@@ -2913,10 +2871,6 @@ func (Int128Value) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
 
 func (Int128Value) StaticType() StaticType {
 	return PrimitiveStaticTypeInt128
-}
-
-func (v Int128Value) Copy() Value {
-	return Int128Value{BigInt: new(big.Int).Set(v.BigInt)}
 }
 
 func (Int128Value) GetOwner() *common.Address {
@@ -3256,7 +3210,7 @@ func (v Int128Value) Storable() atree.Storable {
 }
 
 func (v Int128Value) DeepCopy(_ atree.SlabStorage) (atree.Value, error) {
-	return v, nil
+	return Int128Value{BigInt: new(big.Int).Set(v.BigInt)}, nil
 }
 
 func (v Int128Value) ByteSize() uint32 {
@@ -3312,10 +3266,6 @@ func (Int256Value) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
 
 func (Int256Value) StaticType() StaticType {
 	return PrimitiveStaticTypeInt256
-}
-
-func (v Int256Value) Copy() Value {
-	return Int256Value{new(big.Int).Set(v.BigInt)}
 }
 
 func (Int256Value) GetOwner() *common.Address {
@@ -3655,7 +3605,7 @@ func (v Int256Value) Storable() atree.Storable {
 }
 
 func (v Int256Value) DeepCopy(_ atree.SlabStorage) (atree.Value, error) {
-	return v, nil
+	return Int256Value{new(big.Int).Set(v.BigInt)}, nil
 }
 
 func (v Int256Value) ByteSize() uint32 {
@@ -3732,10 +3682,6 @@ func (UIntValue) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
 
 func (UIntValue) StaticType() StaticType {
 	return PrimitiveStaticTypeUInt
-}
-
-func (v UIntValue) Copy() Value {
-	return UIntValue{new(big.Int).Set(v.BigInt)}
 }
 
 func (UIntValue) GetOwner() *common.Address {
@@ -3944,7 +3890,7 @@ func (v UIntValue) Storable() atree.Storable {
 }
 
 func (v UIntValue) DeepCopy(_ atree.SlabStorage) (atree.Value, error) {
-	return v, nil
+	return UIntValue{new(big.Int).Set(v.BigInt)}, nil
 }
 
 func (v UIntValue) ByteSize() uint32 {
@@ -3990,10 +3936,6 @@ func (UInt8Value) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
 
 func (UInt8Value) StaticType() StaticType {
 	return PrimitiveStaticTypeUInt8
-}
-
-func (v UInt8Value) Copy() Value {
-	return v
 }
 
 func (UInt8Value) GetOwner() *common.Address {
@@ -4251,9 +4193,6 @@ func (UInt16Value) StaticType() StaticType {
 	return PrimitiveStaticTypeUInt16
 }
 
-func (v UInt16Value) Copy() Value {
-	return v
-}
 func (UInt16Value) GetOwner() *common.Address {
 	// value is never owned
 	return nil
@@ -4510,10 +4449,6 @@ func (UInt32Value) StaticType() StaticType {
 	return PrimitiveStaticTypeUInt32
 }
 
-func (v UInt32Value) Copy() Value {
-	return v
-}
-
 func (UInt32Value) GetOwner() *common.Address {
 	// value is never owned
 	return nil
@@ -4768,10 +4703,6 @@ func (UInt64Value) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
 
 func (UInt64Value) StaticType() StaticType {
 	return PrimitiveStaticTypeUInt64
-}
-
-func (v UInt64Value) Copy() Value {
-	return v
 }
 
 func (UInt64Value) GetOwner() *common.Address {
@@ -5041,10 +4972,6 @@ func (UInt128Value) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
 
 func (UInt128Value) StaticType() StaticType {
 	return PrimitiveStaticTypeUInt128
-}
-
-func (v UInt128Value) Copy() Value {
-	return UInt128Value{new(big.Int).Set(v.BigInt)}
 }
 
 func (UInt128Value) GetOwner() *common.Address {
@@ -5326,7 +5253,7 @@ func (v UInt128Value) Storable() atree.Storable {
 }
 
 func (v UInt128Value) DeepCopy(_ atree.SlabStorage) (atree.Value, error) {
-	return v, nil
+	return UInt128Value{new(big.Int).Set(v.BigInt)}, nil
 }
 
 func (v UInt128Value) ByteSize() uint32 {
@@ -5382,10 +5309,6 @@ func (UInt256Value) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
 
 func (UInt256Value) StaticType() StaticType {
 	return PrimitiveStaticTypeUInt256
-}
-
-func (v UInt256Value) Copy() Value {
-	return UInt256Value{new(big.Int).Set(v.BigInt)}
 }
 
 func (UInt256Value) GetOwner() *common.Address {
@@ -5667,7 +5590,7 @@ func (v UInt256Value) Storable() atree.Storable {
 }
 
 func (v UInt256Value) DeepCopy(_ atree.SlabStorage) (atree.Value, error) {
-	return v, nil
+	return UInt256Value{new(big.Int).Set(v.BigInt)}, nil
 }
 
 func (v UInt256Value) ByteSize() uint32 {
@@ -5713,10 +5636,6 @@ func (Word8Value) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
 
 func (Word8Value) StaticType() StaticType {
 	return PrimitiveStaticTypeWord8
-}
-
-func (v Word8Value) Copy() Value {
-	return v
 }
 
 func (Word8Value) GetOwner() *common.Address {
@@ -5919,9 +5838,6 @@ func (Word16Value) StaticType() StaticType {
 	return PrimitiveStaticTypeWord16
 }
 
-func (v Word16Value) Copy() Value {
-	return v
-}
 func (Word16Value) GetOwner() *common.Address {
 	// value is never owned
 	return nil
@@ -6121,10 +6037,6 @@ func (Word32Value) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
 
 func (Word32Value) StaticType() StaticType {
 	return PrimitiveStaticTypeWord32
-}
-
-func (v Word32Value) Copy() Value {
-	return v
 }
 
 func (Word32Value) GetOwner() *common.Address {
@@ -6327,10 +6239,6 @@ func (Word64Value) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
 
 func (Word64Value) StaticType() StaticType {
 	return PrimitiveStaticTypeWord64
-}
-
-func (v Word64Value) Copy() Value {
-	return v
 }
 
 func (Word64Value) GetOwner() *common.Address {
@@ -6548,10 +6456,6 @@ func (Fix64Value) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
 
 func (Fix64Value) StaticType() StaticType {
 	return PrimitiveStaticTypeFix64
-}
-
-func (v Fix64Value) Copy() Value {
-	return v
 }
 
 func (Fix64Value) GetOwner() *common.Address {
@@ -6851,10 +6755,6 @@ func (UFix64Value) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
 
 func (UFix64Value) StaticType() StaticType {
 	return PrimitiveStaticTypeUFix64
-}
-
-func (v UFix64Value) Copy() Value {
-	return v
 }
 
 func (UFix64Value) GetOwner() *common.Address {
@@ -7200,40 +7100,6 @@ func (v *CompositeValue) StaticType() StaticType {
 	}
 }
 
-func (v *CompositeValue) Copy() Value {
-	// Resources and contracts are not copied
-	switch v.Kind {
-	case common.CompositeKindResource, common.CompositeKindContract:
-		return v
-
-	default:
-		break
-	}
-
-	newFields := NewStringValueOrderedMap()
-	v.Fields.Foreach(func(fieldName string, value Value) {
-		newFields.Set(fieldName, value.Copy())
-	})
-
-	// NOTE: not copying functions or destructor – they are linked in
-
-	return &CompositeValue{
-		Location:            v.Location,
-		QualifiedIdentifier: v.QualifiedIdentifier,
-		Kind:                v.Kind,
-		Fields:              newFields,
-		InjectedFields:      v.InjectedFields,
-		ComputedFields:      v.ComputedFields,
-		NestedVariables:     v.NestedVariables,
-		Functions:           v.Functions,
-		Destructor:          v.Destructor,
-		destroyed:           v.destroyed,
-		// NOTE: new value has no owner
-		Owner:    nil,
-		stringer: v.stringer,
-	}
-}
-
 func (v *CompositeValue) checkStatus(getLocationRange func() LocationRange) {
 	if v.destroyed {
 		panic(DestroyedCompositeError{
@@ -7554,9 +7420,40 @@ func (v *CompositeValue) Storable() atree.Storable {
 	return v
 }
 
-func (v *CompositeValue) DeepCopy(_ atree.SlabStorage) (atree.Value, error) {
-	// TODO: store in storage
-	return v.Copy(), nil
+func (v *CompositeValue) DeepCopy(storage atree.SlabStorage) (atree.Value, error) {
+
+	newFields := NewStringValueOrderedMap()
+	for pair := v.Fields.Oldest(); pair != nil; pair = pair.Next() {
+		fieldName := pair.Key
+		fieldValue := pair.Value
+
+		fieldValueCopy, err := fieldValue.DeepCopy(storage)
+		if err != nil {
+			return nil, err
+		}
+
+		newFields.Set(fieldName, fieldValueCopy.(Value))
+	}
+
+	newValue := NewCompositeValue(
+		storage,
+		v.Location,
+		v.QualifiedIdentifier,
+		v.Kind,
+		newFields,
+		// NOTE: new value has no owner
+		nil,
+	)
+
+	newValue.InjectedFields = v.InjectedFields
+	newValue.ComputedFields = v.ComputedFields
+	newValue.NestedVariables = v.NestedVariables
+	newValue.Functions = v.Functions
+	newValue.Destructor = v.Destructor
+	newValue.destroyed = v.destroyed
+	newValue.stringer = v.stringer
+
+	return newValue, nil
 }
 
 func (v *CompositeValue) ByteSize() uint32 {
@@ -7687,25 +7584,6 @@ func (v *DictionaryValue) StaticType() StaticType {
 	return v.Type
 }
 
-func (v *DictionaryValue) Copy() Value {
-
-	newKeys := v.keys.Copy().(*ArrayValue)
-
-	newEntries := NewStringValueOrderedMap()
-
-	v.entries.Foreach(func(key string, value Value) {
-		newEntries.Set(key, value.Copy())
-	})
-
-	return &DictionaryValue{
-		Type:    v.Type,
-		keys:    newKeys,
-		entries: newEntries,
-		// NOTE: new value has no owner
-		Owner: nil,
-	}
-}
-
 func (v *DictionaryValue) GetOwner() *common.Address {
 	return v.Owner
 }
@@ -7826,19 +7704,28 @@ func (v *DictionaryValue) RecursiveString(seenReferences SeenReferences) string 
 	return format.Dictionary(pairs)
 }
 
-func (v *DictionaryValue) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
+func (v *DictionaryValue) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
 	switch name {
 	case "length":
 		return NewIntValueFromInt64(int64(v.Count()))
 
 	case "keys":
-		return v.keys.Copy()
+		keys, err := v.keys.DeepCopy(interpreter.Storage)
+		if err != nil {
+			panic(ExternalError{err})
+		}
+		return keys.(Value)
 
 	case "values":
 		dictionaryValues := make([]Value, v.Count())
 		i := 0
 		v.entries.Foreach(func(_ string, value Value) {
-			dictionaryValues[i] = value.Copy()
+			valueCopy, err := value.DeepCopy(interpreter.Storage)
+			if err != nil {
+				panic(ExternalError{err})
+			}
+
+			dictionaryValues[i] = valueCopy.(Value)
 			i++
 		})
 
@@ -7846,7 +7733,7 @@ func (v *DictionaryValue) GetMember(_ *Interpreter, _ func() LocationRange, name
 			VariableSizedStaticType{
 				Type: v.Type.ValueType,
 			},
-			v.keys.storage,
+			interpreter.Storage,
 			dictionaryValues...,
 		)
 
@@ -8116,8 +8003,46 @@ func (v *DictionaryValue) Storable() atree.Storable {
 }
 
 func (v *DictionaryValue) DeepCopy(storage atree.SlabStorage) (atree.Value, error) {
-	// TODO:
-	return v.Copy(), nil
+
+	result := NewDictionaryValueUnownedNonCopying(v.Type, storage)
+
+	iterator, err := v.keys.array.Iterator()
+	if err != nil {
+		return nil, err
+	}
+
+	index := 0
+	for {
+		value, err := iterator.Next()
+		if err != nil {
+			return nil, err
+		}
+		if value == nil {
+			break
+		}
+
+		valueCopy, err := value.DeepCopy(storage)
+		if err != nil {
+			return nil, err
+		}
+
+		result.keys.Insert(index, valueCopy.(Value), ReturnEmptyLocationRange)
+		index++
+	}
+
+	for pair := v.entries.Oldest(); pair != nil; pair = pair.Next() {
+		key := pair.Key
+		value := pair.Value
+
+		valueCopy, err := value.DeepCopy(storage)
+		if err != nil {
+			return nil, err
+		}
+
+		result.entries.Set(key, valueCopy.(Value))
+	}
+
+	return result, nil
 }
 
 // OptionalValue
@@ -8158,10 +8083,6 @@ func (NilValue) StaticType() StaticType {
 }
 
 func (NilValue) isOptionalValue() {}
-
-func (v NilValue) Copy() Value {
-	return v
-}
 
 func (NilValue) GetOwner() *common.Address {
 	// value is never owned
@@ -8291,14 +8212,6 @@ func (v *SomeValue) StaticType() StaticType {
 
 func (*SomeValue) isOptionalValue() {}
 
-func (v *SomeValue) Copy() Value {
-	return &SomeValue{
-		Value: v.Value.Copy(),
-		// NOTE: new value has no owner
-		Owner: nil,
-	}
-}
-
 func (v *SomeValue) GetOwner() *common.Address {
 	return v.Owner
 }
@@ -8389,8 +8302,19 @@ func (v *SomeValue) Storable() atree.Storable {
 
 func (v *SomeValue) DeepCopy(storage atree.SlabStorage) (atree.Value, error) {
 	// TODO:
-	return v.Copy(), nil
+
+	valueCopy, err := v.Value.DeepCopy(storage)
+	if err != nil {
+		return nil, err
+	}
+
+	return &SomeValue{
+		Value: valueCopy.(Value),
+		// NOTE: new value has no owner
+		Owner: nil,
+	}, nil
 }
+
 func (v *SomeValue) ByteSize() uint32 {
 	// TODO: optimize
 	return storableSize(v)
@@ -8461,15 +8385,6 @@ func (v *StorageReferenceValue) StaticType() StaticType {
 	return ReferenceStaticType{
 		Authorized: v.Authorized,
 		Type:       borrowedType,
-	}
-}
-
-func (v *StorageReferenceValue) Copy() Value {
-	return &StorageReferenceValue{
-		Authorized:           v.Authorized,
-		TargetStorageAddress: v.TargetStorageAddress,
-		TargetKey:            v.TargetKey,
-		BorrowedType:         v.BorrowedType,
 	}
 }
 
@@ -8607,7 +8522,7 @@ func (v *StorageReferenceValue) Storable() atree.Storable {
 }
 
 func (v *StorageReferenceValue) DeepCopy(_ atree.SlabStorage) (atree.Value, error) {
-	return v.Copy(), nil
+	return v, nil
 }
 
 // EphemeralReferenceValue
@@ -8675,14 +8590,6 @@ func (v *EphemeralReferenceValue) StaticType() StaticType {
 	return ReferenceStaticType{
 		Authorized: v.Authorized,
 		Type:       borrowedType,
-	}
-}
-
-func (v *EphemeralReferenceValue) Copy() Value {
-	return &EphemeralReferenceValue{
-		Authorized:   v.Authorized,
-		Value:        v.Value,
-		BorrowedType: v.BorrowedType,
 	}
 }
 
@@ -8827,11 +8734,11 @@ func (v *EphemeralReferenceValue) Storable() atree.Storable {
 }
 
 func (v *EphemeralReferenceValue) DeepCopy(_ atree.SlabStorage) (atree.Value, error) {
-	return v.Copy(), nil
+	return v, nil
 }
 
 // AddressValue
-
+//
 type AddressValue common.Address
 
 func NewAddressValue(a common.Address) AddressValue {
@@ -8879,10 +8786,6 @@ func (AddressValue) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
 
 func (AddressValue) StaticType() StaticType {
 	return PrimitiveStaticTypeAddress
-}
-
-func (v AddressValue) Copy() Value {
-	return v
 }
 
 func (v AddressValue) KeyString() string {
@@ -9204,10 +9107,6 @@ func (v PathValue) StaticType() StaticType {
 	}
 }
 
-func (v PathValue) Copy() Value {
-	return v
-}
-
 func (PathValue) GetOwner() *common.Address {
 	// value is never owned
 	return nil
@@ -9329,10 +9228,6 @@ func (v CapabilityValue) StaticType() StaticType {
 	return CapabilityStaticType{
 		BorrowType: v.BorrowType,
 	}
-}
-
-func (v CapabilityValue) Copy() Value {
-	return v
 }
 
 func (CapabilityValue) GetOwner() *common.Address {
@@ -9469,10 +9364,6 @@ func (LinkValue) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
 
 func (LinkValue) StaticType() StaticType {
 	return nil
-}
-
-func (v LinkValue) Copy() Value {
-	return v
 }
 
 func (LinkValue) GetOwner() *common.Address {
