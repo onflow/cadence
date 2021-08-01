@@ -59,10 +59,6 @@ func (DeployedContractValue) StaticType() StaticType {
 	return PrimitiveStaticTypeDeployedContract
 }
 
-func (v DeployedContractValue) Copy() Value {
-	return v
-}
-
 func (DeployedContractValue) GetOwner() *common.Address {
 	// value is never owned
 	return nil

@@ -91,10 +91,6 @@ func (f InterpretedFunctionValue) StaticType() StaticType {
 	return nil
 }
 
-func (f InterpretedFunctionValue) Copy() Value {
-	return f
-}
-
 func (InterpretedFunctionValue) GetOwner() *common.Address {
 	// value is never owned
 	return nil
@@ -193,10 +189,6 @@ func (HostFunctionValue) StaticType() StaticType {
 	return nil
 }
 
-func (f HostFunctionValue) Copy() Value {
-	return f
-}
-
 func (HostFunctionValue) GetOwner() *common.Address {
 	// value is never owned
 	return nil
@@ -281,10 +273,6 @@ func (BoundFunctionValue) DynamicType(_ *Interpreter, _ DynamicTypeResults) Dyna
 
 func (f BoundFunctionValue) StaticType() StaticType {
 	return f.Function.StaticType()
-}
-
-func (f BoundFunctionValue) Copy() Value {
-	return f
 }
 
 func (BoundFunctionValue) GetOwner() *common.Address {
