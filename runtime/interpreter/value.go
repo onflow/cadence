@@ -356,7 +356,7 @@ func (v BoolValue) Negate() BoolValue {
 	return !v
 }
 
-func (v BoolValue) Equal(other Value, _ *Interpreter, _ bool) bool {
+func (v BoolValue) Equal(other Value, _ func() LocationRange) bool {
 	otherBool, ok := other.(BoolValue)
 	if !ok {
 		return false
@@ -487,7 +487,7 @@ func (v *StringValue) KeyString() string {
 	return v.Str
 }
 
-func (v *StringValue) Equal(other Value, _ *Interpreter, _ bool) bool {
+func (v *StringValue) Equal(other Value, _ func() LocationRange) bool {
 	otherString, ok := other.(*StringValue)
 	if !ok {
 		return false
