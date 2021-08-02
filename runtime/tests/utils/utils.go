@@ -25,6 +25,7 @@ import (
 	"testing"
 
 	"github.com/go-test/deep"
+	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/onflow/cadence/runtime/common"
@@ -41,10 +42,6 @@ const ImportedLocation = common.StringLocation("imported")
 // If the objects are not equal, this function prints a human-readable diff.
 func AssertEqualWithDiff(t *testing.T, expected, actual interface{}) {
 	if !assert.Equal(t, expected, actual) {
-		// the maximum levels of a struct to recurse into
-		// this prevents infinite recursion from circular references
-		deep.MaxDepth = 100
-
 		diff := deep.Equal(expected, actual)
 
 		if len(diff) != 0 {
@@ -121,4 +118,72 @@ func UpdateTransaction(name string, contract []byte) []byte {
 		name,
 		hex.EncodeToString(contract),
 	))
+}
+
+func ValuesAreEqual(expected, actual interpreter.Value) bool {
+	if expected == nil {
+		return actual == nil
+	}
+
+	if a, ok := expected.(interpreter.EquatableValue); ok {
+		return a.Equal(actual, interpreter.ReturnEmptyLocationRange)
+	}
+
+	return assert.ObjectsAreEqual(expected, actual)
+}
+
+func AssertValuesEqual(t testing.TB, expected, actual interpreter.Value) bool {
+	if !ValuesAreEqual(expected, actual) {
+		diff := deep.Equal(expected, actual)
+
+		var message string
+
+		if len(diff) != 0 {
+			s := strings.Builder{}
+			_, _ = fmt.Fprintf(&s,
+				"Not equal: \n"+
+					"expected: %s\n"+
+					"actual  : %s\n\n",
+				expected,
+				actual,
+			)
+
+			for i, d := range diff {
+				if i == 0 {
+					s.WriteString("diff    : ")
+				} else {
+					s.WriteString("          ")
+				}
+
+				s.WriteString(d)
+				s.WriteString("\n")
+			}
+
+			message = s.String()
+		}
+
+		return assert.Fail(t, message)
+	}
+
+	return true
+}
+
+func RequireValuesEqual(t testing.TB, expected, actual interpreter.Value) {
+	if !AssertValuesEqual(t, expected, actual) {
+		t.FailNow()
+	}
+}
+
+func AssertValueSlicesEqual(t testing.TB, expected, actual []interpreter.Value) bool {
+	if !assert.Equal(t, len(expected), len(actual)) {
+		return false
+	}
+
+	for i, value := range expected {
+		if !AssertValuesEqual(t, value, actual[i]) {
+			return false
+		}
+	}
+
+	return true
 }

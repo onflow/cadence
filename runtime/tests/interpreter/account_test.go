@@ -23,6 +23,7 @@ import (
 	"testing"
 
 	"github.com/fxamacker/atree"
+	. "github.com/onflow/cadence/runtime/tests/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -144,7 +145,7 @@ func TestInterpretAuthAccount_save(t *testing.T) {
 
 		address := interpreter.NewAddressValueFromBytes([]byte{42})
 
-		inter, storedValues := testAccount(
+		inter, storedStorables := testAccount(
 			t,
 			address,
 			true,
@@ -165,8 +166,11 @@ func TestInterpretAuthAccount_save(t *testing.T) {
 			_, err := inter.Invoke("test")
 			require.NoError(t, err)
 
-			require.Len(t, storedValues, 1)
-			for _, value := range storedValues {
+			require.Len(t, storedStorables, 1)
+			for _, storable := range storedStorables {
+
+				value, err := storable.StoredValue(inter.Storage)
+				require.NoError(t, err)
 
 				assert.IsType(t, &interpreter.CompositeValue{}, value)
 			}
@@ -191,7 +195,7 @@ func TestInterpretAuthAccount_save(t *testing.T) {
 
 		address := interpreter.NewAddressValueFromBytes([]byte{42})
 
-		inter, storedValues := testAccount(
+		inter, storedStorables := testAccount(
 			t,
 			address,
 			true,
@@ -212,8 +216,11 @@ func TestInterpretAuthAccount_save(t *testing.T) {
 			_, err := inter.Invoke("test")
 			require.NoError(t, err)
 
-			require.Len(t, storedValues, 1)
-			for _, value := range storedValues {
+			require.Len(t, storedStorables, 1)
+			for _, storable := range storedStorables {
+
+				value, err := storable.StoredValue(inter.Storage)
+				require.NoError(t, err)
 
 				assert.IsType(t, &interpreter.CompositeValue{}, value)
 			}
@@ -243,7 +250,7 @@ func TestInterpretAuthAccount_load(t *testing.T) {
 
 		address := interpreter.NewAddressValueFromBytes([]byte{42})
 
-		inter, storedValues := testAccount(
+		inter, storedStorables := testAccount(
 			t,
 			address,
 			true,
@@ -274,7 +281,7 @@ func TestInterpretAuthAccount_load(t *testing.T) {
 			_, err := inter.Invoke("save")
 			require.NoError(t, err)
 
-			require.Len(t, storedValues, 1)
+			require.Len(t, storedStorables, 1)
 
 			// first load
 
@@ -288,7 +295,7 @@ func TestInterpretAuthAccount_load(t *testing.T) {
 			assert.IsType(t, &interpreter.CompositeValue{}, innerValue)
 
 			// NOTE: check loaded value was removed from storage
-			require.Len(t, storedValues, 0)
+			require.Len(t, storedStorables, 0)
 
 			// second load
 
@@ -305,7 +312,7 @@ func TestInterpretAuthAccount_load(t *testing.T) {
 			_, err := inter.Invoke("save")
 			require.NoError(t, err)
 
-			require.Len(t, storedValues, 1)
+			require.Len(t, storedStorables, 1)
 
 			// load
 
@@ -315,7 +322,7 @@ func TestInterpretAuthAccount_load(t *testing.T) {
 			require.IsType(t, interpreter.NilValue{}, value)
 
 			// NOTE: check loaded value was *not* removed from storage
-			require.Len(t, storedValues, 1)
+			require.Len(t, storedStorables, 1)
 		})
 	})
 
@@ -587,7 +594,10 @@ func TestInterpretAuthAccount_borrow(t *testing.T) {
 			value, err = inter.Invoke("foo")
 			require.NoError(t, err)
 
-			require.Equal(t, interpreter.NewIntValueFromInt64(42), value)
+			RequireValuesEqual(t,
+				interpreter.NewIntValueFromInt64(42),
+				value,
+			)
 
 			// NOTE: check loaded value was *not* removed from storage
 			require.Len(t, storedValues, 1)
@@ -714,7 +724,10 @@ func TestInterpretAuthAccount_borrow(t *testing.T) {
 			value, err = inter.Invoke("foo")
 			require.NoError(t, err)
 
-			require.Equal(t, interpreter.NewIntValueFromInt64(42), value)
+			RequireValuesEqual(t,
+				interpreter.NewIntValueFromInt64(42),
+				value,
+			)
 
 			// NOTE: check loaded value was *not* removed from storage
 			require.Len(t, storedValues, 1)
@@ -824,7 +837,7 @@ func TestInterpretAuthAccount_link(t *testing.T) {
 						},
 					)
 
-					require.Equal(t,
+					RequireValuesEqual(t,
 						interpreter.CapabilityValue{
 							Address: address,
 							Path: interpreter.PathValue{
@@ -870,7 +883,7 @@ func TestInterpretAuthAccount_link(t *testing.T) {
 						},
 					)
 
-					require.Equal(t,
+					RequireValuesEqual(t,
 						interpreter.CapabilityValue{
 							Address: address,
 							Path: interpreter.PathValue{
@@ -970,7 +983,7 @@ func TestInterpretAuthAccount_link(t *testing.T) {
 						},
 					)
 
-					require.Equal(t,
+					RequireValuesEqual(t,
 						interpreter.CapabilityValue{
 							Address: address,
 							Path: interpreter.PathValue{
@@ -1017,7 +1030,7 @@ func TestInterpretAuthAccount_link(t *testing.T) {
 						},
 					)
 
-					require.Equal(t,
+					RequireValuesEqual(t,
 						interpreter.CapabilityValue{
 							Address: address,
 							Path: interpreter.PathValue{
@@ -1254,7 +1267,7 @@ func TestInterpretAccount_getLinkTarget(t *testing.T) {
 
 				innerValue := value.(*interpreter.SomeValue).Value
 
-				assert.Equal(t,
+				AssertValuesEqual(t,
 					interpreter.PathValue{
 						Domain:     common.PathDomainStorage,
 						Identifier: "r",
@@ -1270,7 +1283,7 @@ func TestInterpretAccount_getLinkTarget(t *testing.T) {
 				value, err := inter.Invoke("nonExisting")
 				require.NoError(t, err)
 
-				require.Equal(t, interpreter.NilValue{}, value)
+				RequireValuesEqual(t, interpreter.NilValue{}, value)
 
 				require.Len(t, storedValues, 1)
 			})
@@ -1325,7 +1338,7 @@ func TestInterpretAccount_getLinkTarget(t *testing.T) {
 
 				innerValue := value.(*interpreter.SomeValue).Value
 
-				assert.Equal(t,
+				AssertValuesEqual(t,
 					interpreter.PathValue{
 						Domain:     common.PathDomainStorage,
 						Identifier: "s",
@@ -1341,7 +1354,7 @@ func TestInterpretAccount_getLinkTarget(t *testing.T) {
 				value, err := inter.Invoke("nonExisting")
 				require.NoError(t, err)
 
-				require.Equal(t, interpreter.NilValue{}, value)
+				RequireValuesEqual(t, interpreter.NilValue{}, value)
 
 				require.Len(t, storedValues, 1)
 			})
@@ -1498,7 +1511,7 @@ func TestInterpretAccount_BalanceFields(t *testing.T) {
 				value, err := inter.Invoke("test")
 				require.NoError(t, err)
 
-				assert.Equal(t, interpreter.UFix64Value(0), value)
+				AssertValuesEqual(t, interpreter.UFix64Value(0), value)
 			})
 		}
 	}
@@ -1546,7 +1559,7 @@ func TestInterpretAccount_StorageFields(t *testing.T) {
 				value, err := inter.Invoke("test")
 				require.NoError(t, err)
 
-				assert.Equal(t, interpreter.UInt64Value(0), value)
+				AssertValuesEqual(t, interpreter.UInt64Value(0), value)
 			})
 		}
 	}

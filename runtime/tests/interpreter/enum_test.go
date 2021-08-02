@@ -21,6 +21,7 @@ package interpreter_test
 import (
 	"testing"
 
+	. "github.com/onflow/cadence/runtime/tests/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -96,12 +97,12 @@ func TestInterpretEnumCaseRawValue(t *testing.T) {
       let b = E.b.rawValue
     `)
 
-	require.Equal(t,
+	RequireValuesEqual(t,
 		interpreter.Int64Value(0),
 		inter.Globals["a"].GetValue(),
 	)
 
-	require.Equal(t,
+	RequireValuesEqual(t,
 		interpreter.Int64Value(1),
 		inter.Globals["b"].GetValue(),
 	)
@@ -126,7 +127,7 @@ func TestInterpretEnumCaseEquality(t *testing.T) {
 
 	storage := interpreter.NewInMemoryStorage()
 
-	require.Equal(t,
+	RequireValuesEqual(t,
 		interpreter.NewArrayValueUnownedNonCopying(
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeBool,
@@ -160,7 +161,7 @@ func TestInterpretEnumConstructor(t *testing.T) {
 
 	storage := interpreter.NewInMemoryStorage()
 
-	require.Equal(t,
+	RequireValuesEqual(t,
 		interpreter.NewArrayValueUnownedNonCopying(
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeBool,
@@ -193,7 +194,7 @@ func TestInterpretEnumInstance(t *testing.T) {
 
 	storage := interpreter.NewInMemoryStorage()
 
-	require.Equal(t,
+	RequireValuesEqual(t,
 		interpreter.NewArrayValueUnownedNonCopying(
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeBool,
@@ -246,7 +247,7 @@ func TestInterpretEnumInContract(t *testing.T) {
 	rawValue, present := enumCase.Fields.Get("rawValue")
 	require.True(t, present)
 
-	require.Equal(t,
+	RequireValuesEqual(t,
 		interpreter.UInt8Value(0),
 		rawValue,
 	)

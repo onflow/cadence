@@ -21,6 +21,7 @@ package interpreter_test
 import (
 	"testing"
 
+	. "github.com/onflow/cadence/runtime/tests/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -135,7 +136,7 @@ func TestInterpretVirtualImport(t *testing.T) {
 	value, err := inter.Invoke("test")
 	require.NoError(t, err)
 
-	assert.Equal(t,
+	AssertValuesEqual(t,
 		interpreter.UInt64Value(42),
 		value,
 	)
@@ -304,7 +305,7 @@ func TestInterpretImportMultipleProgramsFromLocation(t *testing.T) {
 	value, err := inter.Invoke("test")
 	require.NoError(t, err)
 
-	assert.Equal(t,
+	AssertValuesEqual(t,
 		interpreter.NewIntValueFromInt64(3),
 		value,
 	)

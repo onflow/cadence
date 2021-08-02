@@ -21,9 +21,8 @@ package interpreter_test
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-
 	"github.com/onflow/cadence/runtime/interpreter"
+	. "github.com/onflow/cadence/runtime/tests/utils"
 	"github.com/stretchr/testify/require"
 )
 
@@ -46,7 +45,7 @@ func TestInterpretResourceReferenceInstanceOf(t *testing.T) {
 	value, err := inter.Invoke("test")
 	require.NoError(t, err)
 
-	assert.Equal(t,
+	AssertValuesEqual(t,
 		interpreter.BoolValue(true),
 		value,
 	)
@@ -76,7 +75,7 @@ func TestInterpretResourceReferenceFieldComparison(t *testing.T) {
 	value, err := inter.Invoke("test")
 	require.NoError(t, err)
 
-	assert.Equal(t,
+	AssertValuesEqual(t,
 		interpreter.BoolValue(true),
 		value,
 	)

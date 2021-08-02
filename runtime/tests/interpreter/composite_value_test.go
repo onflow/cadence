@@ -27,7 +27,7 @@ import (
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
-	"github.com/onflow/cadence/runtime/tests/utils"
+	. "github.com/onflow/cadence/runtime/tests/utils"
 )
 
 func TestInterpretCompositeValue(t *testing.T) {
@@ -49,12 +49,12 @@ func TestInterpretCompositeValue(t *testing.T) {
             `,
 		)
 
-		require.Equal(t,
+		RequireValuesEqual(t,
 			interpreter.NewStringValue("Apple"),
 			inter.Globals["name"].GetValue(),
 		)
 
-		require.Equal(t,
+		RequireValuesEqual(t,
 			interpreter.NewStringValue("Red"),
 			inter.Globals["color"].GetValue(),
 		)
@@ -70,7 +70,7 @@ func testCompositeValue(t *testing.T, code string) *interpreter.Interpreter {
 
 	// 'fruit' composite type
 	fruitType := &sema.CompositeType{
-		Location:   utils.TestLocation,
+		Location:   TestLocation,
 		Identifier: "Fruit",
 		Kind:       common.CompositeKindStructure,
 	}
@@ -96,7 +96,7 @@ func testCompositeValue(t *testing.T, code string) *interpreter.Interpreter {
 
 	value := interpreter.NewCompositeValue(
 		storage,
-		utils.TestLocation,
+		TestLocation,
 		fruitType.Identifier,
 		common.CompositeKindStructure,
 		fields,

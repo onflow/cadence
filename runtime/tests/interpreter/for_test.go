@@ -21,7 +21,7 @@ package interpreter_test
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	. "github.com/onflow/cadence/runtime/tests/utils"
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/runtime/interpreter"
@@ -44,7 +44,7 @@ func TestInterpretForStatement(t *testing.T) {
 	value, err := inter.Invoke("test")
 	require.NoError(t, err)
 
-	assert.Equal(t,
+	AssertValuesEqual(t,
 		interpreter.NewIntValueFromInt64(10),
 		value,
 	)
@@ -68,7 +68,7 @@ func TestInterpretForStatementWithReturn(t *testing.T) {
 	value, err := inter.Invoke("test")
 	require.NoError(t, err)
 
-	assert.Equal(t,
+	AssertValuesEqual(t,
 		interpreter.NewIntValueFromInt64(4),
 		value,
 	)
@@ -97,7 +97,7 @@ func TestInterpretForStatementWithContinue(t *testing.T) {
 	require.IsType(t, value, &interpreter.ArrayValue{})
 	arrayValue := value.(*interpreter.ArrayValue)
 
-	assert.Equal(t,
+	AssertValueSlicesEqual(t,
 		[]interpreter.Value{
 			interpreter.NewIntValueFromInt64(4),
 			interpreter.NewIntValueFromInt64(5),
@@ -126,7 +126,7 @@ func TestInterpretForStatementWithBreak(t *testing.T) {
 	value, err := inter.Invoke("test")
 	require.NoError(t, err)
 
-	assert.Equal(t,
+	AssertValuesEqual(t,
 		interpreter.NewIntValueFromInt64(4),
 		value,
 	)
@@ -149,7 +149,7 @@ func TestInterpretForStatementEmpty(t *testing.T) {
 	value, err := inter.Invoke("test")
 	require.NoError(t, err)
 
-	assert.Equal(t,
+	AssertValuesEqual(t,
 		interpreter.BoolValue(false),
 		value,
 	)
