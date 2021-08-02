@@ -21,6 +21,7 @@ package interpreter_test
 import (
 	"testing"
 
+	. "github.com/onflow/cadence/runtime/tests/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -67,7 +68,7 @@ func TestInterpretSwitchStatement(t *testing.T) {
 			actual, err := inter.Invoke("test", argument)
 			require.NoError(t, err)
 
-			assert.Equal(t, expected, actual)
+			AssertValuesEqual(t, expected, actual)
 		}
 	})
 
@@ -107,7 +108,7 @@ func TestInterpretSwitchStatement(t *testing.T) {
 			actual, err := inter.Invoke("test", argument)
 			require.NoError(t, err)
 
-			assert.Equal(t, expected, actual)
+			AssertValuesEqual(t, expected, actual)
 		}
 	})
 
@@ -148,7 +149,7 @@ func TestInterpretSwitchStatement(t *testing.T) {
 			actual, err := inter.Invoke("test", argument)
 			require.NoError(t, err)
 
-			assert.Equal(t, expected, actual)
+			AssertValuesEqual(t, expected, actual)
 		}
 	})
 
@@ -190,7 +191,7 @@ func TestInterpretSwitchStatement(t *testing.T) {
 			require.IsType(t, actual, &interpreter.ArrayValue{})
 			arrayValue := actual.(*interpreter.ArrayValue)
 
-			assert.Equal(t,
+			AssertValueSlicesEqual(t,
 				expectedValues,
 				elements(arrayValue),
 			)
@@ -264,7 +265,7 @@ func TestInterpretSwitchStatement(t *testing.T) {
 			actual, err := inter.Invoke("test", testCase.arguments...)
 			require.NoError(t, err)
 
-			assert.Equal(t, testCase.expected, actual)
+			AssertValuesEqual(t, testCase.expected, actual)
 		}
 	})
 }

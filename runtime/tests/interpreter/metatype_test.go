@@ -21,14 +21,13 @@ package interpreter_test
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
-	"github.com/onflow/cadence/runtime/tests/utils"
+	. "github.com/onflow/cadence/runtime/tests/utils"
 )
 
 func TestInterpretMetaTypeEquality(t *testing.T) {
@@ -43,7 +42,7 @@ func TestInterpretMetaTypeEquality(t *testing.T) {
            let result = Type<Int>() == Type<Int>()
         `)
 
-		assert.Equal(t,
+		AssertValuesEqual(t,
 			interpreter.BoolValue(true),
 			inter.Globals["result"].GetValue(),
 		)
@@ -57,7 +56,7 @@ func TestInterpretMetaTypeEquality(t *testing.T) {
            let result = Type<Int>() == Type<String>()
         `)
 
-		assert.Equal(t,
+		AssertValuesEqual(t,
 			interpreter.BoolValue(false),
 			inter.Globals["result"].GetValue(),
 		)
@@ -71,7 +70,7 @@ func TestInterpretMetaTypeEquality(t *testing.T) {
            let result = Type<Int>() == Type<Int?>()
         `)
 
-		assert.Equal(t,
+		AssertValuesEqual(t,
 			interpreter.BoolValue(false),
 			inter.Globals["result"].GetValue(),
 		)
@@ -85,7 +84,7 @@ func TestInterpretMetaTypeEquality(t *testing.T) {
            let result = Type<&Int>() == Type<&Int>()
         `)
 
-		assert.Equal(t,
+		AssertValuesEqual(t,
 			interpreter.BoolValue(true),
 			inter.Globals["result"].GetValue(),
 		)
@@ -99,7 +98,7 @@ func TestInterpretMetaTypeEquality(t *testing.T) {
            let result = Type<&Int>() == Type<&String>()
         `)
 
-		assert.Equal(t,
+		AssertValuesEqual(t,
 			interpreter.BoolValue(false),
 			inter.Globals["result"].GetValue(),
 		)
@@ -138,7 +137,7 @@ func TestInterpretMetaTypeEquality(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		assert.Equal(t,
+		AssertValuesEqual(t,
 			interpreter.BoolValue(false),
 			inter.Globals["result"].GetValue(),
 		)
@@ -185,7 +184,7 @@ func TestInterpretMetaTypeEquality(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		assert.Equal(t,
+		AssertValuesEqual(t,
 			interpreter.BoolValue(false),
 			inter.Globals["result"].GetValue(),
 		)
@@ -205,7 +204,7 @@ func TestInterpretMetaTypeIdentifier(t *testing.T) {
           let identifier = type.identifier
         `)
 
-		assert.Equal(t,
+		AssertValuesEqual(t,
 			interpreter.NewStringValue("[Int]"),
 			inter.Globals["identifier"].GetValue(),
 		)
@@ -222,7 +221,7 @@ func TestInterpretMetaTypeIdentifier(t *testing.T) {
           let identifier = type.identifier
         `)
 
-		assert.Equal(t,
+		AssertValuesEqual(t,
 			interpreter.NewStringValue("S.test.S"),
 			inter.Globals["identifier"].GetValue(),
 		)
@@ -261,7 +260,7 @@ func TestInterpretMetaTypeIdentifier(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		assert.Equal(t,
+		AssertValuesEqual(t,
 			interpreter.NewStringValue(""),
 			inter.Globals["identifier"].GetValue(),
 		)
@@ -383,7 +382,7 @@ func TestInterpretIsInstance(t *testing.T) {
 			})
 			require.NoError(t, err)
 
-			assert.Equal(t,
+			AssertValuesEqual(t,
 				interpreter.BoolValue(testCase.result),
 				inter.Globals["result"].GetValue(),
 			)
@@ -428,7 +427,7 @@ func TestInterpretGetType(t *testing.T) {
             `,
 			result: interpreter.TypeValue{
 				Type: interpreter.CompositeStaticType{
-					Location:            utils.TestLocation,
+					Location:            TestLocation,
 					QualifiedIdentifier: "R",
 				},
 			},
@@ -556,7 +555,7 @@ func TestInterpretGetType(t *testing.T) {
 			)
 			require.NoError(t, err)
 
-			assert.Equal(t,
+			AssertValuesEqual(t,
 				testCase.result,
 				inter.Globals["result"].GetValue(),
 			)

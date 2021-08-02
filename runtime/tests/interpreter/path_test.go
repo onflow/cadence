@@ -22,10 +22,9 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
+	. "github.com/onflow/cadence/runtime/tests/utils"
 )
 
 func TestInterpretPath(t *testing.T) {
@@ -45,7 +44,7 @@ func TestInterpretPath(t *testing.T) {
 				),
 			)
 
-			assert.Equal(t,
+			AssertValuesEqual(t,
 				interpreter.PathValue{
 					Domain:     domain,
 					Identifier: "random",

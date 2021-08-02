@@ -21,6 +21,7 @@ package interpreter_test
 import (
 	"testing"
 
+	. "github.com/onflow/cadence/runtime/tests/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -107,7 +108,10 @@ func TestInterpretTransactions(t *testing.T) {
 		var conditionErr interpreter.ConditionError
 		require.ErrorAs(t, err, &conditionErr)
 
-		assert.Equal(t, conditionErr.ConditionKind, ast.ConditionKindPre)
+		assert.Equal(t,
+			ast.ConditionKindPre,
+			conditionErr.ConditionKind,
+		)
 	})
 
 	t.Run("PostConditions", func(t *testing.T) {
@@ -159,7 +163,10 @@ func TestInterpretTransactions(t *testing.T) {
 		var conditionErr interpreter.ConditionError
 		require.ErrorAs(t, err, &conditionErr)
 
-		assert.Equal(t, conditionErr.ConditionKind, ast.ConditionKindPost)
+		assert.Equal(t,
+			ast.ConditionKindPost,
+			conditionErr.ConditionKind,
+		)
 	})
 
 	t.Run("MultipleTransactions", func(t *testing.T) {
@@ -299,7 +306,7 @@ func TestInterpretTransactions(t *testing.T) {
 
 		require.IsType(t, &interpreter.ArrayValue{}, values)
 
-		assert.Equal(t,
+		AssertValueSlicesEqual(t,
 			[]interpreter.Value{
 				interpreter.AddressValue{},
 				interpreter.BoolValue(true),

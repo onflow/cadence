@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	"github.com/onflow/cadence/runtime/interpreter"
+	. "github.com/onflow/cadence/runtime/tests/utils"
 	"github.com/stretchr/testify/require"
 )
 
@@ -42,13 +43,13 @@ func TestInterpretRecursiveValueString(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Equal(t,
-		`{"mapRef": {"mapRef": {"mapRef": ...}}}`,
+		`{"mapRef": {"mapRef": ...}}`,
 		mapValue.String(),
 	)
 
 	require.IsType(t, &interpreter.DictionaryValue{}, mapValue)
 	require.Equal(t,
-		`{"mapRef": {"mapRef": ...}}`,
+		`{"mapRef": ...}`,
 		mapValue.(*interpreter.DictionaryValue).
 			Get(inter, nil, interpreter.NewStringValue("mapRef")).
 			String(),
@@ -68,7 +69,7 @@ func TestInterpretStringFunction(t *testing.T) {
 	result, err := inter.Invoke("test")
 	require.NoError(t, err)
 
-	require.Equal(t,
+	RequireValuesEqual(t,
 		interpreter.NewStringValue(""),
 		result,
 	)
@@ -87,7 +88,7 @@ func TestInterpretStringDecodeHex(t *testing.T) {
 	result, err := inter.Invoke("test")
 	require.NoError(t, err)
 
-	require.Equal(t,
+	RequireValuesEqual(t,
 		interpreter.NewArrayValueUnownedNonCopying(
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeUInt8,
@@ -114,7 +115,7 @@ func TestInterpretStringEncodeHex(t *testing.T) {
 	result, err := inter.Invoke("test")
 	require.NoError(t, err)
 
-	require.Equal(t,
+	RequireValuesEqual(t,
 		interpreter.NewStringValue("010203cade"),
 		result,
 	)
@@ -133,7 +134,7 @@ func TestInterpretStringUtf8Field(t *testing.T) {
 	result, err := inter.Invoke("test")
 	require.NoError(t, err)
 
-	require.Equal(t,
+	RequireValuesEqual(t,
 		interpreter.NewArrayValueUnownedNonCopying(
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeUInt8,

@@ -24,7 +24,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	. "github.com/onflow/cadence/runtime/tests/utils"
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/runtime/interpreter"
@@ -88,7 +88,7 @@ func TestInterpretPlusOperator(t *testing.T) {
 				),
 			)
 
-			assert.Equal(t,
+			AssertValuesEqual(t,
 				value,
 				inter.Globals["c"].GetValue(),
 			)
@@ -115,7 +115,7 @@ func TestInterpretMinusOperator(t *testing.T) {
 				),
 			)
 
-			assert.Equal(t,
+			AssertValuesEqual(t,
 				value,
 				inter.Globals["c"].GetValue(),
 			)
@@ -142,7 +142,7 @@ func TestInterpretMulOperator(t *testing.T) {
 				),
 			)
 
-			assert.Equal(t,
+			AssertValuesEqual(t,
 				value,
 				inter.Globals["c"].GetValue(),
 			)
@@ -169,7 +169,7 @@ func TestInterpretDivOperator(t *testing.T) {
 				),
 			)
 
-			assert.Equal(t,
+			AssertValuesEqual(t,
 				value,
 				inter.Globals["c"].GetValue(),
 			)
@@ -196,7 +196,7 @@ func TestInterpretModOperator(t *testing.T) {
 				),
 			)
 
-			assert.Equal(t,
+			AssertValuesEqual(t,
 				value,
 				inter.Globals["c"].GetValue(),
 			)

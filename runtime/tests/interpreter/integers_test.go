@@ -23,7 +23,7 @@ import (
 	"math"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	. "github.com/onflow/cadence/runtime/tests/utils"
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/runtime/interpreter"
@@ -87,17 +87,17 @@ func TestInterpretIntegerConversions(t *testing.T) {
 				),
 			)
 
-			assert.Equal(t,
+			AssertValuesEqual(t,
 				value,
 				inter.Globals["x"].GetValue(),
 			)
 
-			assert.Equal(t,
+			AssertValuesEqual(t,
 				value,
 				inter.Globals["y"].GetValue(),
 			)
 
-			assert.Equal(t,
+			AssertValuesEqual(t,
 				interpreter.BoolValue(true),
 				inter.Globals["z"].GetValue(),
 			)
@@ -115,14 +115,14 @@ func TestInterpretAddressConversion(t *testing.T) {
       let y = Address(0x2)
     `)
 
-	assert.Equal(t,
+	AssertValuesEqual(t,
 		interpreter.AddressValue{
 			0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
 		},
 		inter.Globals["x"].GetValue(),
 	)
 
-	assert.Equal(t,
+	AssertValuesEqual(t,
 		interpreter.AddressValue{
 			0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2,
 		},
@@ -147,7 +147,7 @@ func TestInterpretIntegerLiteralTypeConversionInVariableDeclaration(t *testing.T
 				),
 			)
 
-			assert.Equal(t,
+			AssertValuesEqual(t,
 				value,
 				inter.Globals["x"].GetValue(),
 			)
@@ -173,7 +173,7 @@ func TestInterpretIntegerLiteralTypeConversionInVariableDeclarationOptional(t *t
 				),
 			)
 
-			assert.Equal(t,
+			AssertValuesEqual(t,
 				interpreter.NewSomeValueOwningNonCopying(value),
 				inter.Globals["x"].GetValue(),
 			)
@@ -201,7 +201,7 @@ func TestInterpretIntegerLiteralTypeConversionInAssignment(t *testing.T) {
 				),
 			)
 
-			assert.Equal(t,
+			AssertValuesEqual(t,
 				value,
 				inter.Globals["x"].GetValue(),
 			)
@@ -210,7 +210,7 @@ func TestInterpretIntegerLiteralTypeConversionInAssignment(t *testing.T) {
 			require.NoError(t, err)
 
 			numberValue := value.(interpreter.NumberValue)
-			assert.Equal(t,
+			AssertValuesEqual(t,
 				numberValue.Plus(numberValue),
 				inter.Globals["x"].GetValue(),
 			)
@@ -238,7 +238,7 @@ func TestInterpretIntegerLiteralTypeConversionInAssignmentOptional(t *testing.T)
 				),
 			)
 
-			assert.Equal(t,
+			AssertValuesEqual(t,
 				interpreter.NewSomeValueOwningNonCopying(value),
 				inter.Globals["x"].GetValue(),
 			)
@@ -248,7 +248,7 @@ func TestInterpretIntegerLiteralTypeConversionInAssignmentOptional(t *testing.T)
 
 			numberValue := value.(interpreter.NumberValue)
 
-			assert.Equal(t,
+			AssertValuesEqual(t,
 				interpreter.NewSomeValueOwningNonCopying(
 					numberValue.Plus(numberValue),
 				),
@@ -278,7 +278,7 @@ func TestInterpretIntegerLiteralTypeConversionInFunctionCallArgument(t *testing.
 				),
 			)
 
-			assert.Equal(t,
+			AssertValuesEqual(t,
 				value,
 				inter.Globals["x"].GetValue(),
 			)
@@ -306,7 +306,7 @@ func TestInterpretIntegerLiteralTypeConversionInFunctionCallArgumentOptional(t *
 				),
 			)
 
-			assert.Equal(t,
+			AssertValuesEqual(t,
 				interpreter.NewSomeValueOwningNonCopying(value),
 				inter.Globals["x"].GetValue(),
 			)
@@ -336,7 +336,7 @@ func TestInterpretIntegerLiteralTypeConversionInReturn(t *testing.T) {
 			result, err := inter.Invoke("test")
 			require.NoError(t, err)
 
-			assert.Equal(t,
+			AssertValuesEqual(t,
 				value,
 				result,
 			)
@@ -366,7 +366,7 @@ func TestInterpretIntegerLiteralTypeConversionInReturnOptional(t *testing.T) {
 			result, err := inter.Invoke("test")
 			require.NoError(t, err)
 
-			assert.Equal(t,
+			AssertValuesEqual(t,
 				interpreter.NewSomeValueOwningNonCopying(value),
 				result,
 			)
@@ -395,7 +395,7 @@ func TestInterpretIntegerMinMax(t *testing.T) {
 			),
 		)
 
-		require.Equal(t,
+		RequireValuesEqual(t,
 			expected,
 			inter.Globals["x"].GetValue(),
 		)

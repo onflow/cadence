@@ -24,7 +24,7 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	. "github.com/onflow/cadence/runtime/tests/utils"
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/runtime/interpreter"
@@ -39,7 +39,7 @@ func TestInterpretNegativeZeroFixedPoint(t *testing.T) {
       let x = -0.42
     `)
 
-	assert.Equal(t,
+	AssertValuesEqual(t,
 		interpreter.Fix64Value(-42000000),
 		inter.Globals["x"].GetValue(),
 	)
@@ -83,17 +83,17 @@ func TestInterpretFixedPointConversionAndAddition(t *testing.T) {
 				),
 			)
 
-			assert.Equal(t,
+			AssertValuesEqual(t,
 				value,
 				inter.Globals["x"].GetValue(),
 			)
 
-			assert.Equal(t,
+			AssertValuesEqual(t,
 				value,
 				inter.Globals["y"].GetValue(),
 			)
 
-			assert.Equal(t,
+			AssertValuesEqual(t,
 				interpreter.BoolValue(true),
 				inter.Globals["z"].GetValue(),
 			)
@@ -146,12 +146,12 @@ func TestInterpretFixedPointConversions(t *testing.T) {
 					),
 				)
 
-				assert.Equal(t,
+				AssertValuesEqual(t,
 					fixedPointValue,
 					inter.Globals["x"].GetValue(),
 				)
 
-				assert.Equal(t,
+				AssertValuesEqual(t,
 					integerValue,
 					inter.Globals["y"].GetValue(),
 				)
@@ -181,12 +181,12 @@ func TestInterpretFixedPointConversions(t *testing.T) {
 
 				expected := interpreter.UFix64Value(value * sema.Fix64Factor)
 
-				assert.Equal(t,
+				AssertValuesEqual(t,
 					expected,
 					inter.Globals["x"].GetValue(),
 				)
 
-				assert.Equal(t,
+				AssertValuesEqual(t,
 					expected,
 					inter.Globals["y"].GetValue(),
 				)
@@ -217,12 +217,12 @@ func TestInterpretFixedPointConversions(t *testing.T) {
 
 				expected := interpreter.Fix64Value(value * sema.Fix64Factor)
 
-				assert.Equal(t,
+				AssertValuesEqual(t,
 					expected,
 					inter.Globals["x"].GetValue(),
 				)
 
-				assert.Equal(t,
+				AssertValuesEqual(t,
 					expected,
 					inter.Globals["y"].GetValue(),
 				)
@@ -246,12 +246,12 @@ func TestInterpretFixedPointConversions(t *testing.T) {
 
 				inter := parseCheckAndInterpret(t, code)
 
-				assert.Equal(t,
+				AssertValuesEqual(t,
 					interpreter.Fix64Value(value*sema.Fix64Factor),
 					inter.Globals["x"].GetValue(),
 				)
 
-				assert.Equal(t,
+				AssertValuesEqual(t,
 					interpreter.UFix64Value(value*sema.Fix64Factor),
 					inter.Globals["y"].GetValue(),
 				)
@@ -275,12 +275,12 @@ func TestInterpretFixedPointConversions(t *testing.T) {
 
 				inter := parseCheckAndInterpret(t, code)
 
-				assert.Equal(t,
+				AssertValuesEqual(t,
 					interpreter.UFix64Value(value*sema.Fix64Factor),
 					inter.Globals["x"].GetValue(),
 				)
 
-				assert.Equal(t,
+				AssertValuesEqual(t,
 					interpreter.Fix64Value(value*sema.Fix64Factor),
 					inter.Globals["y"].GetValue(),
 				)
@@ -519,11 +519,11 @@ func TestInterpretFixedPointMinMax(t *testing.T) {
 			),
 		)
 
-		require.Equal(t,
+		RequireValuesEqual(t,
 			test.min,
 			inter.Globals["min"].GetValue(),
 		)
-		require.Equal(t,
+		RequireValuesEqual(t,
 			test.max,
 			inter.Globals["max"].GetValue(),
 		)

@@ -22,7 +22,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	. "github.com/onflow/cadence/runtime/tests/utils"
 
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
@@ -46,7 +46,7 @@ func TestInterpretToString(t *testing.T) {
 				),
 			)
 
-			assert.Equal(t,
+			AssertValuesEqual(t,
 				interpreter.NewStringValue("42"),
 				inter.Globals["y"].GetValue(),
 			)
@@ -62,7 +62,7 @@ func TestInterpretToString(t *testing.T) {
           let y = x.toString()
         `)
 
-		assert.Equal(t,
+		AssertValuesEqual(t,
 			interpreter.NewStringValue("0x42"),
 			inter.Globals["y"].GetValue(),
 		)
@@ -96,7 +96,7 @@ func TestInterpretToString(t *testing.T) {
 				),
 			)
 
-			assert.Equal(t,
+			AssertValuesEqual(t,
 				expected,
 				inter.Globals["y"].GetValue(),
 			)
@@ -117,7 +117,7 @@ func TestInterpretToBytes(t *testing.T) {
           let y = x.toBytes()
         `)
 
-		assert.Equal(t,
+		AssertValuesEqual(t,
 			interpreter.NewArrayValueUnownedNonCopying(
 				interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeUInt8,
@@ -333,7 +333,7 @@ func TestInterpretToBigEndianBytes(t *testing.T) {
 
 				storage := interpreter.NewInMemoryStorage()
 
-				assert.Equal(t,
+				AssertValuesEqual(t,
 					interpreter.ByteSliceToByteArrayValue(storage, expected),
 					inter.Globals["result"].GetValue(),
 				)

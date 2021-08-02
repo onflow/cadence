@@ -22,10 +22,9 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
+	. "github.com/onflow/cadence/runtime/tests/utils"
 )
 
 var bitwiseTestValueFunctions = map[string]func(int) interpreter.NumberValue{
@@ -121,7 +120,7 @@ func TestInterpretBitwiseOr(t *testing.T) {
 				),
 			)
 
-			assert.Equal(t,
+			AssertValuesEqual(t,
 				valueFunc(0b00010101),
 				inter.Globals["c"].GetValue(),
 			)
@@ -148,7 +147,7 @@ func TestInterpretBitwiseXor(t *testing.T) {
 				),
 			)
 
-			assert.Equal(t,
+			AssertValuesEqual(t,
 				valueFunc(0b00000101),
 				inter.Globals["c"].GetValue(),
 			)
@@ -175,7 +174,7 @@ func TestInterpretBitwiseAnd(t *testing.T) {
 				),
 			)
 
-			assert.Equal(t,
+			AssertValuesEqual(t,
 				valueFunc(0b00010000),
 				inter.Globals["c"].GetValue(),
 			)
@@ -202,7 +201,7 @@ func TestInterpretBitwiseLeftShift(t *testing.T) {
 				),
 			)
 
-			assert.Equal(t,
+			AssertValuesEqual(t,
 				valueFunc(0b01100000),
 				inter.Globals["c"].GetValue(),
 			)
@@ -229,7 +228,7 @@ func TestInterpretBitwiseRightShift(t *testing.T) {
 				),
 			)
 
-			assert.Equal(t,
+			AssertValuesEqual(t,
 				valueFunc(0b00001100),
 				inter.Globals["c"].GetValue(),
 			)

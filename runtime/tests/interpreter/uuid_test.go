@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package interpreter
+package interpreter_test
 
 import (
 	"testing"
@@ -139,7 +139,7 @@ func TestInterpretResourceUUID(t *testing.T) {
 
 		uuidValue, present := res.Fields.Get(sema.ResourceUUIDFieldName)
 		require.True(t, present)
-		require.Equal(t,
+		RequireValuesEqual(t,
 			interpreter.UInt64Value(i),
 			uuidValue,
 		)
