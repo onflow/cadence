@@ -129,8 +129,8 @@ type TypeValue struct {
 }
 
 var _ Value = TypeValue{}
-
 var _ atree.Storable = TypeValue{}
+var _ EquatableValue = TypeValue{}
 
 func (TypeValue) IsValue() {}
 
@@ -242,8 +242,8 @@ func (v TypeValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 type VoidValue struct{}
 
 var _ Value = VoidValue{}
-
 var _ atree.Storable = VoidValue{}
+var _ EquatableValue = VoidValue{}
 
 func (VoidValue) IsValue() {}
 
@@ -291,6 +291,11 @@ func (VoidValue) IsStorable() bool {
 	return true
 }
 
+func (v VoidValue) Equal(other Value, _ func() LocationRange) bool {
+	_, ok := other.(VoidValue)
+	return ok
+}
+
 func (v VoidValue) Storable(_ atree.SlabStorage) atree.Storable {
 	return v
 }
@@ -313,8 +318,8 @@ func (v VoidValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 type BoolValue bool
 
 var _ Value = BoolValue(false)
-
 var _ atree.Storable = BoolValue(false)
+var _ EquatableValue = BoolValue(false)
 
 func (BoolValue) IsValue() {}
 
@@ -420,8 +425,8 @@ func NewStringValue(str string) *StringValue {
 }
 
 var _ Value = &StringValue{}
-
 var _ atree.Storable = &StringValue{}
+var _ EquatableValue = &StringValue{}
 
 func (v *StringValue) prepareGraphemes() {
 	if v.graphemes == nil {
@@ -705,6 +710,8 @@ func NewArrayValueUnownedNonCopying(
 }
 
 var _ Value = &ArrayValue{}
+var _ atree.Value = &ArrayValue{}
+var _ EquatableValue = &ArrayValue{}
 
 func (*ArrayValue) IsValue() {}
 
@@ -1259,8 +1266,8 @@ func ConvertInt(value Value) IntValue {
 }
 
 var _ Value = IntValue{}
-
 var _ atree.Storable = IntValue{}
+var _ EquatableValue = IntValue{}
 
 func (v IntValue) IsValue() {}
 
@@ -1495,8 +1502,8 @@ func (v IntValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 type Int8Value int8
 
 var _ Value = Int8Value(0)
-
 var _ atree.Storable = Int8Value(0)
+var _ EquatableValue = Int8Value(0)
 
 func (Int8Value) IsValue() {}
 
@@ -1811,8 +1818,8 @@ func (v Int8Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 type Int16Value int16
 
 var _ Value = Int16Value(0)
-
 var _ atree.Storable = Int16Value(0)
+var _ EquatableValue = Int16Value(0)
 
 func (Int16Value) IsValue() {}
 
@@ -2129,8 +2136,8 @@ func (v Int16Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 type Int32Value int32
 
 var _ Value = Int32Value(0)
-
 var _ atree.Storable = Int32Value(0)
+var _ EquatableValue = Int32Value(0)
 
 func (Int32Value) IsValue() {}
 
@@ -2447,8 +2454,8 @@ func (v Int32Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 type Int64Value int64
 
 var _ Value = Int64Value(0)
-
 var _ atree.Storable = Int64Value(0)
+var _ EquatableValue = Int64Value(0)
 
 func (Int64Value) IsValue() {}
 
@@ -2774,8 +2781,8 @@ func NewInt128ValueFromBigInt(value *big.Int) Int128Value {
 }
 
 var _ Value = Int128Value{}
-
 var _ atree.Storable = Int128Value{}
+var _ EquatableValue = Int128Value{}
 
 func (v Int128Value) IsValue() {}
 
@@ -3161,8 +3168,8 @@ func NewInt256ValueFromBigInt(value *big.Int) Int256Value {
 }
 
 var _ Value = Int256Value{}
-
 var _ atree.Storable = Int256Value{}
+var _ EquatableValue = Int256Value{}
 
 func (v Int256Value) IsValue() {}
 
@@ -3569,8 +3576,8 @@ func ConvertUInt(value Value) UIntValue {
 }
 
 var _ Value = UIntValue{}
-
 var _ atree.Storable = UIntValue{}
+var _ EquatableValue = UIntValue{}
 
 func (v UIntValue) IsValue() {}
 
@@ -3816,8 +3823,8 @@ func (v UIntValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 type UInt8Value uint8
 
 var _ Value = UInt8Value(0)
-
 var _ atree.Storable = UInt8Value(0)
+var _ EquatableValue = UInt8Value(0)
 
 func (UInt8Value) IsValue() {}
 
@@ -4063,8 +4070,8 @@ func (v UInt8Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 type UInt16Value uint16
 
 var _ Value = UInt16Value(0)
-
 var _ atree.Storable = UInt16Value(0)
+var _ EquatableValue = UInt16Value(0)
 
 func (UInt16Value) IsValue() {}
 
@@ -4311,8 +4318,8 @@ func (v UInt16Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 type UInt32Value uint32
 
 var _ Value = UInt32Value(0)
-
 var _ atree.Storable = UInt32Value(0)
+var _ EquatableValue = UInt32Value(0)
 
 func (UInt32Value) IsValue() {}
 
@@ -4559,8 +4566,8 @@ func (v UInt32Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 type UInt64Value uint64
 
 var _ Value = UInt64Value(0)
-
 var _ atree.Storable = UInt64Value(0)
+var _ EquatableValue = UInt64Value(0)
 
 func (UInt64Value) IsValue() {}
 
@@ -4820,8 +4827,8 @@ func NewUInt128ValueFromBigInt(value *big.Int) UInt128Value {
 }
 
 var _ Value = UInt128Value{}
-
 var _ atree.Storable = UInt128Value{}
+var _ EquatableValue = UInt128Value{}
 
 func (v UInt128Value) IsValue() {}
 
@@ -5149,8 +5156,8 @@ func NewUInt256ValueFromBigInt(value *big.Int) UInt256Value {
 }
 
 var _ Value = UInt256Value{}
-
 var _ atree.Storable = UInt256Value{}
+var _ EquatableValue = UInt256Value{}
 
 func (v UInt256Value) IsValue() {}
 
@@ -5468,8 +5475,8 @@ func (v UInt256Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 type Word8Value uint8
 
 var _ Value = Word8Value(0)
-
 var _ atree.Storable = Word8Value(0)
+var _ EquatableValue = Word8Value(0)
 
 func (Word8Value) IsValue() {}
 
@@ -5660,8 +5667,8 @@ func (v Word8Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 type Word16Value uint16
 
 var _ Value = Word16Value(0)
-
 var _ atree.Storable = Word16Value(0)
+var _ EquatableValue = Word16Value(0)
 
 func (Word16Value) IsValue() {}
 
@@ -5853,8 +5860,8 @@ func (v Word16Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 type Word32Value uint32
 
 var _ Value = Word32Value(0)
-
 var _ atree.Storable = Word32Value(0)
+var _ EquatableValue = Word32Value(0)
 
 func (Word32Value) IsValue() {}
 
@@ -6046,8 +6053,8 @@ func (v Word32Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 type Word64Value uint64
 
 var _ Value = Word64Value(0)
-
 var _ atree.Storable = Word64Value(0)
+var _ EquatableValue = Word64Value(0)
 
 func (Word64Value) IsValue() {}
 
@@ -6255,8 +6262,8 @@ func NewFix64ValueWithInteger(integer int64) Fix64Value {
 }
 
 var _ Value = Fix64Value(0)
-
 var _ atree.Storable = Fix64Value(0)
+var _ EquatableValue = Fix64Value(0)
 
 func (Fix64Value) IsValue() {}
 
@@ -6546,8 +6553,8 @@ func NewUFix64ValueWithInteger(integer uint64) UFix64Value {
 }
 
 var _ Value = UFix64Value(0)
-
 var _ atree.Storable = UFix64Value(0)
+var _ EquatableValue = UFix64Value(0)
 
 func (UFix64Value) IsValue() {}
 
@@ -6881,8 +6888,8 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, getLocationRange func
 }
 
 var _ Value = &CompositeValue{}
-
 var _ atree.Storable = &CompositeValue{}
+var _ EquatableValue = &CompositeValue{}
 
 func (*CompositeValue) IsValue() {}
 
@@ -7345,8 +7352,8 @@ func NewDictionaryValueUnownedNonCopying(
 }
 
 var _ Value = &DictionaryValue{}
-
 var _ atree.Storable = &DictionaryValue{}
+var _ EquatableValue = &DictionaryValue{}
 
 func (*DictionaryValue) IsValue() {}
 
@@ -7856,8 +7863,8 @@ type OptionalValue interface {
 type NilValue struct{}
 
 var _ Value = NilValue{}
-
 var _ atree.Storable = NilValue{}
+var _ EquatableValue = NilValue{}
 
 func (NilValue) IsValue() {}
 
@@ -7969,8 +7976,8 @@ func NewSomeValueOwningNonCopying(value Value) *SomeValue {
 }
 
 var _ Value = &SomeValue{}
-
 var _ atree.Storable = &SomeValue{}
+var _ EquatableValue = &SomeValue{}
 
 func (*SomeValue) IsValue() {}
 
@@ -8126,6 +8133,7 @@ type StorageReferenceValue struct {
 }
 
 var _ Value = &StorageReferenceValue{}
+var _ EquatableValue = &StorageReferenceValue{}
 
 func (*StorageReferenceValue) IsValue() {}
 
@@ -8317,6 +8325,7 @@ type EphemeralReferenceValue struct {
 }
 
 var _ Value = &EphemeralReferenceValue{}
+var _ EquatableValue = &EphemeralReferenceValue{}
 
 func (*EphemeralReferenceValue) IsValue() {}
 
@@ -8547,8 +8556,8 @@ func ConvertAddress(value Value) AddressValue {
 }
 
 var _ Value = AddressValue{}
-
 var _ atree.Storable = AddressValue{}
+var _ EquatableValue = AddressValue{}
 
 func (AddressValue) IsValue() {}
 
@@ -8838,8 +8847,8 @@ type PathValue struct {
 }
 
 var _ Value = PathValue{}
-
 var _ atree.Storable = PathValue{}
+var _ EquatableValue = PathValue{}
 
 func (PathValue) IsValue() {}
 
@@ -8966,8 +8975,8 @@ type CapabilityValue struct {
 }
 
 var _ Value = CapabilityValue{}
-
 var _ atree.Storable = CapabilityValue{}
+var _ EquatableValue = CapabilityValue{}
 
 func (CapabilityValue) IsValue() {}
 
@@ -9107,6 +9116,7 @@ type LinkValue struct {
 }
 
 var _ Value = LinkValue{}
+var _ EquatableValue = LinkValue{}
 
 func (LinkValue) IsValue() {}
 
