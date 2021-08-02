@@ -4183,7 +4183,7 @@ func TestInterpretReferenceFailableDowncasting(t *testing.T) {
 		valueDeclarations := standardLibraryFunctions.ToSemaValueDeclarations()
 		values := standardLibraryFunctions.ToInterpreterValueDeclarations()
 
-		var r interpreter.Value
+		storage := interpreter.NewInMemoryStorage()
 
 		var err error
 		inter, err = parseCheckAndInterpretWithOptions(t,
@@ -4217,35 +4217,21 @@ func TestInterpretReferenceFailableDowncasting(t *testing.T) {
 				},
 				Options: []interpreter.Option{
 					interpreter.WithPredeclaredValues(values),
-					// TODO:
-					//interpreter.WithStorageReadHandler(
-					//	func(
-					//		inter *interpreter.Interpreter,
-					//		address common.Address,
-					//		key string,
-					//		deferred bool,
-					//	) interpreter.OptionalValue {
-					//
-					//		if address != storageAddress || key != storageKey {
-					//			return interpreter.NilValue{}
-					//		}
-					//
-					//		// When the storage reference is dereferenced,
-					//		// return r (a resource of type R)
-					//
-					//		return interpreter.NewSomeValueOwningNonCopying(r)
-					//	},
-					//),
+					interpreter.WithStorage(storage),
 				},
 			},
 		)
 		require.NoError(t, err)
 
-		r, err = inter.Invoke("createR")
+		r, err := inter.Invoke("createR")
 		require.NoError(t, err)
 
-		// TODO:
-		_ = r
+		storage.Write(
+			nil,
+			storageAddress,
+			storageKey,
+			interpreter.NewSomeValueOwningNonCopying(r),
+		)
 
 		result, err := inter.Invoke("testInvalidUnauthorized")
 		require.NoError(t, err)

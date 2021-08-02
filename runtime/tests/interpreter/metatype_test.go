@@ -394,6 +394,20 @@ func TestInterpretGetType(t *testing.T) {
 
 	t.Parallel()
 
+	storage := interpreter.NewInMemoryStorage()
+
+	storageAddress := common.BytesToAddress([]byte{0x42})
+	const storageKey = "test storage key"
+
+	storage.Write(
+		nil,
+		storageAddress,
+		storageKey,
+		interpreter.NewSomeValueOwningNonCopying(
+			interpreter.NewIntValueFromInt64(2),
+		),
+	)
+
 	cases := []struct {
 		name   string
 		code   string
@@ -490,9 +504,6 @@ func TestInterpretGetType(t *testing.T) {
 			// Inject a function that returns a storage reference value,
 			// which is borrowed as: `auth &Int`
 
-			storageAddress := common.BytesToAddress([]byte{0x42})
-			const storageKey = "test storage key"
-
 			standardLibraryFunctions :=
 				stdlib.StandardLibraryFunctions{
 					{
@@ -530,26 +541,7 @@ func TestInterpretGetType(t *testing.T) {
 					},
 					Options: []interpreter.Option{
 						interpreter.WithPredeclaredValues(values),
-						// TODO:
-						//interpreter.WithStorageReadHandler(
-						//	func(
-						//		inter *interpreter.Interpreter,
-						//		address common.Address,
-						//		key string,
-						//		deferred bool,
-						//	) interpreter.OptionalValue {
-						//
-						//		if address != storageAddress || key != storageKey {
-						//			return interpreter.NilValue{}
-						//		}
-						//
-						//		// When the storage reference is dereferenced,
-						//
-						//		return interpreter.NewSomeValueOwningNonCopying(
-						//			interpreter.NewIntValueFromInt64(2),
-						//		)
-						//	},
-						//),
+						interpreter.WithStorage(storage),
 					},
 				},
 			)
