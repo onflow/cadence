@@ -16,13 +16,14 @@
  * limitations under the License.
  */
 
-package interpreter
+package interpreter_test
 
 import (
 	"math"
 	"math/big"
 	"testing"
 
+	. "github.com/onflow/cadence/runtime/interpreter"
 	"github.com/stretchr/testify/require"
 )
 

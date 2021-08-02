@@ -16,17 +16,17 @@
  * limitations under the License.
  */
 
-package interpreter
+package interpreter_test
 
 import (
 	"fmt"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-
+	. "github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/tests/utils"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestInterpreterOptionalBoxing(t *testing.T) {
@@ -42,7 +42,7 @@ func TestInterpreterOptionalBoxing(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("Bool to Bool?", func(t *testing.T) {
-		value := inter.boxOptional(
+		value := inter.BoxOptional(
 			BoolValue(true),
 			sema.BoolType,
 			&sema.OptionalType{Type: sema.BoolType},
@@ -54,7 +54,7 @@ func TestInterpreterOptionalBoxing(t *testing.T) {
 	})
 
 	t.Run("Bool? to Bool?", func(t *testing.T) {
-		value := inter.boxOptional(
+		value := inter.BoxOptional(
 			NewSomeValueOwningNonCopying(BoolValue(true)),
 			&sema.OptionalType{Type: sema.BoolType},
 			&sema.OptionalType{Type: sema.BoolType},
@@ -66,7 +66,7 @@ func TestInterpreterOptionalBoxing(t *testing.T) {
 	})
 
 	t.Run("Bool? to Bool??", func(t *testing.T) {
-		value := inter.boxOptional(
+		value := inter.BoxOptional(
 			NewSomeValueOwningNonCopying(BoolValue(true)),
 			&sema.OptionalType{Type: sema.BoolType},
 			&sema.OptionalType{Type: &sema.OptionalType{Type: sema.BoolType}},
@@ -81,7 +81,7 @@ func TestInterpreterOptionalBoxing(t *testing.T) {
 
 	t.Run("nil (Never?) to Bool??", func(t *testing.T) {
 		// NOTE:
-		value := inter.boxOptional(
+		value := inter.BoxOptional(
 			NilValue{},
 			&sema.OptionalType{Type: sema.NeverType},
 			&sema.OptionalType{Type: &sema.OptionalType{Type: sema.BoolType}},
@@ -94,7 +94,7 @@ func TestInterpreterOptionalBoxing(t *testing.T) {
 
 	t.Run("nil (Some(nil): Never??) to Bool??", func(t *testing.T) {
 		// NOTE:
-		value := inter.boxOptional(
+		value := inter.BoxOptional(
 			NewSomeValueOwningNonCopying(NilValue{}),
 			&sema.OptionalType{Type: &sema.OptionalType{Type: sema.NeverType}},
 			&sema.OptionalType{Type: &sema.OptionalType{Type: sema.BoolType}},
@@ -131,7 +131,7 @@ func TestInterpreterBoxing(t *testing.T) {
 					NewSomeValueOwningNonCopying(
 						BoolValue(true),
 					),
-					inter.convertAndBox(
+					inter.ConvertAndBox(
 						BoolValue(true),
 						sema.BoolType,
 						&sema.OptionalType{Type: anyType},
@@ -146,7 +146,7 @@ func TestInterpreterBoxing(t *testing.T) {
 					NewSomeValueOwningNonCopying(
 						BoolValue(true),
 					),
-					inter.convertAndBox(
+					inter.ConvertAndBox(
 						NewSomeValueOwningNonCopying(BoolValue(true)),
 						&sema.OptionalType{Type: sema.BoolType},
 						&sema.OptionalType{Type: anyType},

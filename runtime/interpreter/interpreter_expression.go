@@ -228,7 +228,7 @@ func (interpreter *Interpreter) VisitBinaryExpression(expression *ast.BinaryExpr
 		resultType := interpreter.Program.Elaboration.BinaryExpressionResultTypes[expression]
 
 		// NOTE: important to convert both any and optional
-		return interpreter.convertAndBox(value, rightType, resultType)
+		return interpreter.ConvertAndBox(value, rightType, resultType)
 	}
 
 	panic(&unsupportedOperation{
@@ -707,7 +707,7 @@ func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingEx
 
 	case ast.OperationCast:
 		staticValueType := interpreter.Program.Elaboration.CastingStaticValueTypes[expression]
-		return interpreter.convertAndBox(value, staticValueType, expectedType)
+		return interpreter.ConvertAndBox(value, staticValueType, expectedType)
 
 	default:
 		panic(errors.NewUnreachableError())

@@ -55,6 +55,6 @@ func NewAuthAccountContractsValue(
 		Kind:                sema.AuthAccountContractsType.Kind,
 		Fields:              fields,
 		ComputedFields:      computedFields,
-		stringer:            stringer,
+		Stringer:            stringer,
 	}
 }

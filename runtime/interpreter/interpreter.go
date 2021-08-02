@@ -749,7 +749,7 @@ func (interpreter *Interpreter) prepareInvoke(
 		}
 
 		// converts the argument into the parameter type declared by the function
-		preparedArguments[i] = interpreter.convertAndBox(argument, nil, parameterType)
+		preparedArguments[i] = interpreter.ConvertAndBox(argument, nil, parameterType)
 	}
 
 	// NOTE: can't fill argument types, as they are unknown
@@ -1777,7 +1777,7 @@ func (interpreter *Interpreter) copyAndConvert(
 		panic(ExternalError{err})
 	}
 
-	result := interpreter.convertAndBox(valueCopy.(Value), valueType, targetType)
+	result := interpreter.ConvertAndBox(valueCopy.(Value), valueType, targetType)
 
 	if !interpreter.checkValueTransferTargetType(result, targetType) {
 		panic(ValueTransferTypeError{
@@ -1789,10 +1789,10 @@ func (interpreter *Interpreter) copyAndConvert(
 	return result
 }
 
-// convertAndBox converts a value to a target type, and boxes in optionals and any value, if necessary
-func (interpreter *Interpreter) convertAndBox(value Value, valueType, targetType sema.Type) Value {
+// ConvertAndBox converts a value to a target type, and boxes in optionals and any value, if necessary
+func (interpreter *Interpreter) ConvertAndBox(value Value, valueType, targetType sema.Type) Value {
 	value = interpreter.convert(value, valueType, targetType)
-	return interpreter.boxOptional(value, valueType, targetType)
+	return interpreter.BoxOptional(value, valueType, targetType)
 }
 
 func (interpreter *Interpreter) convert(value Value, valueType, targetType sema.Type) Value {
@@ -1923,8 +1923,8 @@ func (interpreter *Interpreter) convert(value Value, valueType, targetType sema.
 	return value
 }
 
-// boxOptional boxes a value in optionals, if necessary
-func (interpreter *Interpreter) boxOptional(value Value, valueType, targetType sema.Type) Value {
+// BoxOptional boxes a value in optionals, if necessary
+func (interpreter *Interpreter) BoxOptional(value Value, valueType, targetType sema.Type) Value {
 	inner := value
 	for {
 		optionalType, ok := targetType.(*sema.OptionalType)

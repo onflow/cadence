@@ -6816,7 +6816,7 @@ type CompositeValue struct {
 	Destructor      FunctionValue
 	Owner           *common.Address
 	destroyed       bool
-	stringer        func(seenReferences SeenReferences) string
+	Stringer        func(seenReferences SeenReferences) string
 	StorageID       atree.StorageID
 }
 
@@ -7061,8 +7061,8 @@ func (v *CompositeValue) String() string {
 }
 
 func (v *CompositeValue) RecursiveString(seenReferences SeenReferences) string {
-	if v.stringer != nil {
-		return v.stringer(seenReferences)
+	if v.Stringer != nil {
+		return v.Stringer(seenReferences)
 	}
 
 	return formatComposite(string(v.TypeID()), v.Fields, seenReferences)
@@ -7275,7 +7275,7 @@ func (v *CompositeValue) DeepCopy(storage atree.SlabStorage) (atree.Value, error
 	newValue.Functions = v.Functions
 	newValue.Destructor = v.Destructor
 	newValue.destroyed = v.destroyed
-	newValue.stringer = v.stringer
+	newValue.Stringer = v.Stringer
 
 	return newValue, nil
 }
@@ -8745,7 +8745,7 @@ func NewAuthAccountValue(
 		Kind:                sema.AuthAccountType.Kind,
 		Fields:              fields,
 		ComputedFields:      computedFields,
-		stringer:            stringer,
+		Stringer:            stringer,
 	}
 }
 
@@ -8835,7 +8835,7 @@ func NewPublicAccountValue(
 		Kind:                sema.PublicAccountType.Kind,
 		Fields:              fields,
 		ComputedFields:      computedFields,
-		stringer:            stringer,
+		Stringer:            stringer,
 	}
 }
 
@@ -9264,7 +9264,7 @@ func NewPublicKeyValue(
 
 	// Public key value to string should include the key even though it is a computed field
 	var stringerFields *StringValueOrderedMap
-	publicKeyValue.stringer = func(seenReferences SeenReferences) string {
+	publicKeyValue.Stringer = func(seenReferences SeenReferences) string {
 		if stringerFields == nil {
 			stringerFields = NewStringValueOrderedMap()
 
