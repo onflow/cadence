@@ -163,11 +163,7 @@ func TestInterpretAuthAccount_save(t *testing.T) {
 			require.Len(t, storedValues, 1)
 			for _, value := range storedValues {
 
-				require.IsType(t, &interpreter.SomeValue{}, value)
-
-				innerValue := value.(*interpreter.SomeValue).Value
-
-				assert.IsType(t, &interpreter.CompositeValue{}, innerValue)
+				assert.IsType(t, &interpreter.CompositeValue{}, value)
 			}
 
 		})
@@ -214,11 +210,7 @@ func TestInterpretAuthAccount_save(t *testing.T) {
 			require.Len(t, storedValues, 1)
 			for _, value := range storedValues {
 
-				require.IsType(t, &interpreter.SomeValue{}, value)
-
-				innerValue := value.(*interpreter.SomeValue).Value
-
-				assert.IsType(t, &interpreter.CompositeValue{}, innerValue)
+				assert.IsType(t, &interpreter.CompositeValue{}, value)
 			}
 
 		})
