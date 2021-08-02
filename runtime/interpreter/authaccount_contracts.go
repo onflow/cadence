@@ -47,6 +47,6 @@ func NewAuthAccountContractsValue(
 		QualifiedIdentifier: sema.AuthAccountContractsType.QualifiedIdentifier(),
 		Kind:                sema.AuthAccountContractsType.Kind,
 		Fields:              fields,
-		stringer:            stringer,
+		Stringer:            stringer,
 	}
 }

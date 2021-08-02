@@ -195,110 +195,110 @@ func (d *DecoderV5) decodeValue(path []string) (Value, error) {
 
 		switch num {
 
-		case cborTagVoidValue:
+		case CBORTagVoidValue:
 			err := d.decoder.Skip()
 			if err != nil {
 				return nil, err
 			}
 			value = VoidValue{}
 
-		case cborTagDictionaryValue:
+		case CBORTagDictionaryValue:
 			value, err = d.decodeDictionary(path)
 
-		case cborTagSomeValue:
+		case CBORTagSomeValue:
 			value, err = d.decodeSome(path)
 
-		case cborTagAddressValue:
+		case CBORTagAddressValue:
 			value, err = d.decodeAddress()
 
-		case cborTagCompositeValue:
+		case CBORTagCompositeValue:
 			value, err = d.decodeComposite(path)
 
-		case cborTagArrayValue:
+		case CBORRTagArrayValue:
 			value, err = d.decodeArray(path)
 
 		// Int*
 
-		case cborTagIntValue:
+		case CBORTagIntValue:
 			value, err = d.decodeInt()
 
-		case cborTagInt8Value:
+		case CBORTagInt8Value:
 			value, err = d.decodeInt8()
 
-		case cborTagInt16Value:
+		case CBORTagInt16Value:
 			value, err = d.decodeInt16()
 
-		case cborTagInt32Value:
+		case CBORTagInt32Value:
 			value, err = d.decodeInt32()
 
-		case cborTagInt64Value:
+		case CBORTagInt64Value:
 			value, err = d.decodeInt64()
 
-		case cborTagInt128Value:
+		case CBORTagInt128Value:
 			value, err = d.decodeInt128()
 
-		case cborTagInt256Value:
+		case CBORTagInt256Value:
 			value, err = d.decodeInt256()
 
 		// UInt*
 
-		case cborTagUIntValue:
+		case CBORTagUIntValue:
 			value, err = d.decodeUInt()
 
-		case cborTagUInt8Value:
+		case CBORTagUInt8Value:
 			value, err = d.decodeUInt8()
 
-		case cborTagUInt16Value:
+		case CBORTagUInt16Value:
 			value, err = d.decodeUInt16()
 
-		case cborTagUInt32Value:
+		case CBORTagUInt32Value:
 			value, err = d.decodeUInt32()
 
-		case cborTagUInt64Value:
+		case CBORTagUInt64Value:
 			value, err = d.decodeUInt64()
 
-		case cborTagUInt128Value:
+		case CBORTagUInt128Value:
 			value, err = d.decodeUInt128()
 
-		case cborTagUInt256Value:
+		case CBORTagUInt256Value:
 			value, err = d.decodeUInt256()
 
 		// Word*
 
-		case cborTagWord8Value:
+		case CBORTagWord8Value:
 			value, err = d.decodeWord8()
 
-		case cborTagWord16Value:
+		case CBORTagWord16Value:
 			value, err = d.decodeWord16()
 
-		case cborTagWord32Value:
+		case CBORTagWord32Value:
 			value, err = d.decodeWord32()
 
-		case cborTagWord64Value:
+		case CBORTagWord64Value:
 			value, err = d.decodeWord64()
 
 		// Fix*
 
-		case cborTagFix64Value:
+		case CBORTagFix64Value:
 			value, err = d.decodeFix64()
 
 		// UFix*
 
-		case cborTagUFix64Value:
+		case CBORTagUFix64Value:
 			value, err = d.decodeUFix64()
 
 		// Storage
 
-		case cborTagPathValue:
+		case CBORTagPathValue:
 			value, err = d.decodePath()
 
-		case cborTagCapabilityValue:
+		case CBORTagCapabilityValue:
 			value, err = d.decodeCapability()
 
-		case cborTagLinkValue:
+		case CBORTagLinkValue:
 			value, err = d.decodeLink()
 
-		case cborTagTypeValue:
+		case CBORTagTypeValue:
 			value, err = d.decodeType()
 
 		default:
@@ -442,13 +442,13 @@ func (d *DecoderV5) decodeLocation() (common.Location, error) {
 	}
 
 	switch number {
-	case cborTagAddressLocation:
+	case CBORTagAddressLocation:
 		return d.decodeAddressLocation()
 
-	case cborTagStringLocation:
+	case CBORTagStringLocation:
 		return d.decodeStringLocation()
 
-	case cborTagIdentifierLocation:
+	case CBORTagIdentifierLocation:
 		return d.decodeIdentifierLocation()
 
 	default:
@@ -990,7 +990,7 @@ func (d *DecoderV5) decodeCapability() (CapabilityValue, error) {
 	if err != nil {
 		return CapabilityValue{}, fmt.Errorf("invalid capability address: %w", err)
 	}
-	if num != cborTagAddressValue {
+	if num != CBORTagAddressValue {
 		return CapabilityValue{}, fmt.Errorf("invalid capability address: wrong tag %d", num)
 	}
 	address, err := d.decodeAddress()
@@ -1005,7 +1005,7 @@ func (d *DecoderV5) decodeCapability() (CapabilityValue, error) {
 	if err != nil {
 		return CapabilityValue{}, fmt.Errorf("invalid capability path: %w", err)
 	}
-	if num != cborTagPathValue {
+	if num != CBORTagPathValue {
 		return CapabilityValue{}, fmt.Errorf("invalid capability path: wrong tag %d", num)
 	}
 	path, err := d.decodePath()
@@ -1069,8 +1069,8 @@ func (d *DecoderV5) decodeLink() (LinkValue, error) {
 	if err != nil {
 		return LinkValue{}, fmt.Errorf("invalid link target path encoding: %w", err)
 	}
-	if num != cborTagPathValue {
-		return LinkValue{}, fmt.Errorf("invalid link target path encoding: expected CBOR tag %d, got %d", cborTagPathValue, num)
+	if num != CBORTagPathValue {
+		return LinkValue{}, fmt.Errorf("invalid link target path encoding: expected CBOR tag %d, got %d", CBORTagPathValue, num)
 	}
 	pathValue, err := d.decodePath()
 	if err != nil {
@@ -1099,34 +1099,34 @@ func (d *DecoderV5) decodeStaticType() (StaticType, error) {
 	}
 
 	switch number {
-	case cborTagPrimitiveStaticType:
+	case CBORTagPrimitiveStaticType:
 		return d.decodePrimitiveStaticType()
 
-	case cborTagOptionalStaticType:
+	case CBORTagOptionalStaticType:
 		return d.decodeOptionalStaticType()
 
-	case cborTagCompositeStaticType:
+	case CBORTagCompositeStaticType:
 		return d.decodeCompositeStaticType()
 
-	case cborTagInterfaceStaticType:
+	case CBORTagInterfaceStaticType:
 		return d.decodeInterfaceStaticType()
 
-	case cborTagVariableSizedStaticType:
+	case CBORTagVariableSizedStaticType:
 		return d.decodeVariableSizedStaticType()
 
-	case cborTagConstantSizedStaticType:
+	case CBORTagConstantSizedStaticType:
 		return d.decodeConstantSizedStaticType()
 
-	case cborTagReferenceStaticType:
+	case CBORTagReferenceStaticType:
 		return d.decodeReferenceStaticType()
 
-	case cborTagDictionaryStaticType:
+	case CBORTagDictionaryStaticType:
 		return d.decodeDictionaryStaticType()
 
-	case cborTagRestrictedStaticType:
+	case CBORTagRestrictedStaticType:
 		return d.decodeRestrictedStaticType()
 
-	case cborTagCapabilityStaticType:
+	case CBORTagCapabilityStaticType:
 		return d.decodeCapabilityStaticType()
 
 	default:
@@ -1447,8 +1447,8 @@ func (d *DecoderV5) decodeRestrictedStaticType() (StaticType, error) {
 			return nil, fmt.Errorf("invalid restricted static type restriction encoding: %w", err)
 		}
 
-		if number != cborTagInterfaceStaticType {
-			return nil, fmt.Errorf("invalid restricted static type restriction encoding: expected CBOR tag %d, got %d", cborTagInterfaceStaticType, number)
+		if number != CBORTagInterfaceStaticType {
+			return nil, fmt.Errorf("invalid restricted static type restriction encoding: expected CBOR tag %d, got %d", CBORTagInterfaceStaticType, number)
 		}
 
 		restriction, err := d.decodeInterfaceStaticType()
@@ -1833,7 +1833,7 @@ func (d *DecoderV5) decodeDictionary(path []string) (*DictionaryValue, error) {
 //		)
 //	}
 //
-//	if num != cborTagArrayValue {
+//	if num != CBORRTagArrayValue {
 //		return fmt.Errorf(
 //			"invalid dictionary keys encoding (@ %s)",
 //			strings.Join(v.valuePath, "."),

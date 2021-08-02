@@ -16,11 +16,12 @@
  * limitations under the License.
  */
 
-package interpreter
+package interpreter_test
 
 import (
 	"testing"
 
+	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -29,14 +30,14 @@ func TestPrependMagic(t *testing.T) {
 	t.Run("empty", func(t *testing.T) {
 		assert.Equal(t,
 			[]byte{0x0, 0xCA, 0xDE, 0x0, 0x1},
-			PrependMagic([]byte{}, 1),
+			interpreter.PrependMagic([]byte{}, 1),
 		)
 	})
 
 	t.Run("1, 2, 3", func(t *testing.T) {
 		assert.Equal(t,
 			[]byte{0x0, 0xCA, 0xDE, 0x0, 0x4, 1, 2, 3},
-			PrependMagic([]byte{1, 2, 3}, 4),
+			interpreter.PrependMagic([]byte{1, 2, 3}, 4),
 		)
 	})
 }

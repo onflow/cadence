@@ -16,16 +16,16 @@
  * limitations under the License.
  */
 
-package interpreter
+package interpreter_test
 
 import (
 	"math"
 	"math/big"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-
+	. "github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestNegate(t *testing.T) {

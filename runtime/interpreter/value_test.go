@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package interpreter
+package interpreter_test
 
 import (
 	"fmt"
@@ -26,6 +26,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/runtime/common"
+	. "github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 	checkerUtils "github.com/onflow/cadence/runtime/tests/checker"
 	"github.com/onflow/cadence/runtime/tests/utils"
@@ -478,7 +479,7 @@ func TestSetOwnerCompositeCopy(t *testing.T) {
 	const fieldName = "test"
 
 	composite.Fields.Set(fieldName, value)
-	composite.stringer = func(_ StringResults) string {
+	composite.Stringer = func(_ StringResults) string {
 		return "random string"
 	}
 
@@ -492,8 +493,8 @@ func TestSetOwnerCompositeCopy(t *testing.T) {
 	assert.Nil(t, valueCopy.GetOwner())
 	assert.Equal(t, &oldOwner, value.GetOwner())
 	assert.Equal(t,
-		composite.stringer(StringResults{}),
-		compositeCopy.stringer(StringResults{}),
+		composite.String(),
+		compositeCopy.String(),
 	)
 }
 
@@ -684,7 +685,7 @@ func TestStringer(t *testing.T) {
 					nil,
 				)
 
-				compositeValue.stringer = func(_ StringResults) string {
+				compositeValue.Stringer = func(_ StringResults) string {
 					return "y --> bar"
 				}
 

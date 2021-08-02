@@ -16,15 +16,15 @@
  * limitations under the License.
  */
 
-package interpreter
+package interpreter_test
 
 import (
 	"testing"
 
-	"github.com/stretchr/testify/require"
-
 	"github.com/onflow/cadence/runtime/common"
+	. "github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/tests/utils"
+	"github.com/stretchr/testify/require"
 )
 
 func TestCapabilityStaticType_Equal(t *testing.T) {
