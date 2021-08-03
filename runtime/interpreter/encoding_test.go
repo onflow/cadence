@@ -49,6 +49,8 @@ var testOwner = common.BytesToAddress([]byte{0x42})
 
 func testEncodeDecode(t *testing.T, test encodeDecodeTest) {
 
+	t.Parallel()
+
 	var encoded []byte
 	if test.value != nil && !test.decodeOnly {
 		test.value.SetOwner(&testOwner)
@@ -93,8 +95,6 @@ func testEncodeDecode(t *testing.T, test encodeDecodeTest) {
 
 func TestEncodeDecodeNilValue(t *testing.T) {
 
-	t.Parallel()
-
 	testEncodeDecode(t,
 		encodeDecodeTest{
 			value: NilValue{},
@@ -107,8 +107,6 @@ func TestEncodeDecodeNilValue(t *testing.T) {
 }
 
 func TestEncodeDecodeVoidValue(t *testing.T) {
-
-	t.Parallel()
 
 	testEncodeDecode(t,
 		encodeDecodeTest{
@@ -129,8 +127,6 @@ func TestEncodeDecodeBool(t *testing.T) {
 
 	t.Run("false", func(t *testing.T) {
 
-		t.Parallel()
-
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				value: BoolValue(false),
@@ -143,8 +139,6 @@ func TestEncodeDecodeBool(t *testing.T) {
 	})
 
 	t.Run("true", func(t *testing.T) {
-
-		t.Parallel()
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
