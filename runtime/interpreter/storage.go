@@ -71,8 +71,11 @@ func (i InMemoryStorage) Write(_ *Interpreter, address common.Address, key strin
 var _ Storage = InMemoryStorage{}
 
 func NewInMemoryStorage() InMemoryStorage {
+	slabStorage := atree.NewBasicSlabStorage(CBOREncMode)
+	slabStorage.DecodeStorable = DecodeStorableV6
+
 	return InMemoryStorage{
-		BasicSlabStorage: atree.NewBasicSlabStorage(CBOREncMode),
+		BasicSlabStorage: slabStorage,
 		Data:             make(map[InMemoryStorageKey]atree.Storable),
 	}
 }

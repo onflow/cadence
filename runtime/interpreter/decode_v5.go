@@ -61,15 +61,14 @@ func (e UnsupportedTagDecodingError) Error() string {
 	)
 }
 
-// DecodeValue returns a value decoded from its CBOR-encoded representation,
-// for the given owner (can be `nil`).  It can decode storage format
-// version 4 and later.
+// DecodeValueV5 returns a value decoded from its CBOR-encoded representation,
+// for the given owner (can be `nil`).
 //
 // The given path is used to identify values in the object graph.
 // For example, path elements are appended for array elements (the index),
 // dictionary values (the key), and composites (the field name).
 //
-func DecodeValue(
+func DecodeValueV5(
 	data []byte,
 	owner *common.Address,
 	path []string,
@@ -79,7 +78,7 @@ func DecodeValue(
 	Value,
 	error,
 ) {
-	decoder, err := NewByteDecoder(data, owner, version, decodeCallback)
+	decoder, err := NewByteDecoderV5(data, owner, version, decodeCallback)
 	if err != nil {
 		return nil, err
 	}
@@ -92,12 +91,12 @@ func DecodeValue(
 	return v, nil
 }
 
-// NewDecoder initializes a DecoderV5 that will decode CBOR-encoded bytes from the
+// NewDecoderV5 initializes a DecoderV5 that will decode CBOR-encoded bytes from the
 // given io.Reader.
 //
 // It sets the given address as the owner (can be `nil`).
 //
-func NewDecoder(
+func NewDecoderV5(
 	reader io.Reader,
 	owner *common.Address,
 	version uint16,
@@ -107,7 +106,7 @@ func NewDecoder(
 	error,
 ) {
 	return &DecoderV5{
-		decoder:        decMode.NewStreamDecoder(reader),
+		decoder:        DecMode.NewStreamDecoder(reader),
 		owner:          owner,
 		version:        version,
 		decodeCallback: decodeCallback,
@@ -115,7 +114,7 @@ func NewDecoder(
 	}, nil
 }
 
-func NewByteDecoder(
+func NewByteDecoderV5(
 	data []byte,
 	owner *common.Address,
 	version uint16,
@@ -125,7 +124,7 @@ func NewByteDecoder(
 	error,
 ) {
 	return &DecoderV5{
-		decoder:        decMode.NewByteStreamDecoder(data),
+		decoder:        DecMode.NewByteStreamDecoder(data),
 		owner:          owner,
 		version:        version,
 		decodeCallback: decodeCallback,
@@ -133,7 +132,7 @@ func NewByteDecoder(
 	}, nil
 }
 
-var decMode = func() cbor.DecMode {
+var DecMode = func() cbor.DecMode {
 	decMode, err := cbor.DecOptions{
 		IntDec:           cbor.IntDecConvertNone,
 		MaxArrayElements: maxInt,
