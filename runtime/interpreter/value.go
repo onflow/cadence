@@ -93,7 +93,7 @@ type ConcatenatableValue interface {
 // AllAppendableValue
 
 type AllAppendableValue interface {
-	AppendAll(other AllAppendableValue)
+	AppendAll(inter *Interpreter, getLocationRange func() LocationRange, other AllAppendableValue)
 }
 
 // EquatableValue
@@ -813,13 +813,15 @@ func (v *ArrayValue) Get(_ *Interpreter, getLocationRange func() LocationRange, 
 	return v.Elements()[index]
 }
 
-func (v *ArrayValue) Set(_ *Interpreter, getLocationRange func() LocationRange, key Value, value Value) {
+func (v *ArrayValue) Set(inter *Interpreter, getLocationRange func() LocationRange, key Value, value Value) {
 	index := key.(NumberValue).ToInt()
-	v.SetIndex(index, value, getLocationRange)
+	v.SetIndex(inter, index, value, getLocationRange)
 }
 
-func (v *ArrayValue) SetIndex(index int, value Value, getLocationRange func() LocationRange) {
+func (v *ArrayValue) SetIndex(inter *Interpreter, index int, value Value, getLocationRange func() LocationRange) {
 	v.checkBounds(index, getLocationRange)
+
+	checkContainerMutation(inter, v.Type.ElementType(), value, getLocationRange)
 
 	v.modified = true
 	value.SetOwner(v.Owner)
@@ -854,7 +856,9 @@ func (v *ArrayValue) RecursiveString(results StringResults) string {
 	return format.Array(values)
 }
 
-func (v *ArrayValue) Append(element Value) {
+func (v *ArrayValue) Append(inter *Interpreter, getLocationRange func() LocationRange, element Value) {
+	checkContainerMutation(inter, v.Type.ElementType(), element, getLocationRange)
+
 	v.modified = true
 
 	element.SetOwner(v.Owner)
@@ -863,11 +867,15 @@ func (v *ArrayValue) Append(element Value) {
 	v.values = append(v.values, element)
 }
 
-func (v *ArrayValue) AppendAll(other AllAppendableValue) {
-	v.modified = true
-
+func (v *ArrayValue) AppendAll(inter *Interpreter, getLocationRange func() LocationRange, other AllAppendableValue) {
 	otherArray := other.(*ArrayValue)
 	otherElements := otherArray.Elements()
+
+	for _, element := range otherElements {
+		checkContainerMutation(inter, v.Type.ElementType(), element, getLocationRange)
+	}
+
+	v.modified = true
 
 	for _, element := range otherElements {
 		element.SetOwner(v.Owner)
@@ -877,7 +885,7 @@ func (v *ArrayValue) AppendAll(other AllAppendableValue) {
 	v.values = append(v.values, otherElements...)
 }
 
-func (v *ArrayValue) Insert(index int, element Value, getLocationRange func() LocationRange) {
+func (v *ArrayValue) Insert(inter *Interpreter, getLocationRange func() LocationRange, index int, element Value) {
 	count := v.Count()
 
 	// NOTE: index may be equal to count
@@ -888,6 +896,8 @@ func (v *ArrayValue) Insert(index int, element Value, getLocationRange func() Lo
 			LocationRange: getLocationRange(),
 		})
 	}
+
+	checkContainerMutation(inter, v.Type.ElementType(), element, getLocationRange)
 
 	v.modified = true
 
@@ -964,7 +974,7 @@ func (v *ArrayValue) Contains(needleValue Value) BoolValue {
 	return false
 }
 
-func (v *ArrayValue) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
+func (v *ArrayValue) GetMember(inter *Interpreter, getLocationRange func() LocationRange, name string) Value {
 	switch name {
 	case "length":
 		return NewIntValueFromInt64(int64(v.Count()))
@@ -972,7 +982,7 @@ func (v *ArrayValue) GetMember(_ *Interpreter, _ func() LocationRange, name stri
 	case "append":
 		return NewHostFunctionValue(
 			func(invocation Invocation) Value {
-				v.Append(invocation.Arguments[0])
+				v.Append(inter, getLocationRange, invocation.Arguments[0])
 				return VoidValue{}
 			},
 		)
@@ -981,7 +991,7 @@ func (v *ArrayValue) GetMember(_ *Interpreter, _ func() LocationRange, name stri
 		return NewHostFunctionValue(
 			func(invocation Invocation) Value {
 				otherArray := invocation.Arguments[0].(AllAppendableValue)
-				v.AppendAll(otherArray)
+				v.AppendAll(inter, getLocationRange, otherArray)
 				return VoidValue{}
 			},
 		)
@@ -999,7 +1009,7 @@ func (v *ArrayValue) GetMember(_ *Interpreter, _ func() LocationRange, name stri
 			func(invocation Invocation) Value {
 				index := invocation.Arguments[0].(NumberValue).ToInt()
 				element := invocation.Arguments[1]
-				v.Insert(index, element, invocation.GetLocationRange)
+				v.Insert(inter, invocation.GetLocationRange, index, element)
 				return VoidValue{}
 			},
 		)
@@ -7676,6 +7686,9 @@ func dictionaryKey(keyValue Value) string {
 func (v *DictionaryValue) Set(inter *Interpreter, getLocationRange func() LocationRange, keyValue Value, value Value) {
 	v.modified = true
 
+	checkContainerMutation(inter, v.Type.KeyType, keyValue, getLocationRange)
+	checkContainerMutation(inter, v.Type.ValueType, value, getLocationRange)
+
 	switch typedValue := value.(type) {
 	case *SomeValue:
 		_ = v.Insert(inter, getLocationRange, keyValue, typedValue.Value)
@@ -7850,6 +7863,9 @@ func (v *DictionaryValue) Remove(inter *Interpreter, getLocationRange func() Loc
 }
 
 func (v *DictionaryValue) Insert(inter *Interpreter, locationRangeGetter func() LocationRange, keyValue, value Value) OptionalValue {
+	checkContainerMutation(inter, v.Type.KeyType, keyValue, locationRangeGetter)
+	checkContainerMutation(inter, v.Type.ValueType, value, locationRangeGetter)
+
 	v.modified = true
 
 	v.ensureLoaded()
@@ -7875,7 +7891,7 @@ func (v *DictionaryValue) Insert(inter *Interpreter, locationRangeGetter func() 
 		return existingValue
 
 	case NilValue:
-		v.keys.Append(keyValue)
+		v.keys.Append(inter, locationRangeGetter, keyValue)
 		return existingValue
 
 	default:
@@ -9506,5 +9522,24 @@ func NewPublicAccountKeysValue(getFunction FunctionValue) *CompositeValue {
 		qualifiedIdentifier: sema.PublicAccountKeysType.QualifiedIdentifier(),
 		kind:                sema.PublicAccountKeysType.Kind,
 		fields:              fields,
+	}
+}
+
+func checkContainerMutation(
+	inter *Interpreter,
+	memberStaticType StaticType,
+	value Value,
+	getLocationRange func() LocationRange,
+) {
+
+	value = inter.unbox(value)
+
+	memberType := inter.ConvertStaticToSemaType(memberStaticType)
+
+	if !inter.IsSubType(value.DynamicType(inter, DynamicTypeResults{}), memberType) {
+		panic(ContainerMutationError{
+			ExpectedType:  memberType,
+			LocationRange: getLocationRange(),
+		})
 	}
 }

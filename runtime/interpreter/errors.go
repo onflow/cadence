@@ -437,3 +437,17 @@ func (e ValueTransferTypeError) Error() string {
 		e.TargetType.QualifiedString(),
 	)
 }
+
+// ContainerMutationError
+
+type ContainerMutationError struct {
+	ExpectedType sema.Type
+	LocationRange
+}
+
+func (e ContainerMutationError) Error() string {
+	return fmt.Sprintf(
+		"invalid container update: expected a subtype of '%s'",
+		e.ExpectedType.QualifiedString(),
+	)
+}

@@ -3752,6 +3752,12 @@ func prepareLargeTestValue() Value {
 			Type: PrimitiveStaticTypeAnyStruct,
 		},
 	)
+
+	inter, _ := NewInterpreter(
+		nil,
+		utils.TestLocation,
+	)
+
 	for i := 0; i < 100; i++ {
 		dict := NewDictionaryValueUnownedNonCopying(
 			DictionaryStaticType{
@@ -3764,7 +3770,7 @@ func prepareLargeTestValue() Value {
 			value := NewInt256ValueFromInt64(int64(i))
 			dict.Set(nil, ReturnEmptyLocationRange, key, NewSomeValueOwningNonCopying(value))
 		}
-		values.Append(dict)
+		values.Append(inter, nil, dict)
 	}
 	return values
 }
