@@ -53,8 +53,10 @@ func withWritesToStorage(
 		},
 	)
 
+	inter, _ := interpreter.NewInterpreter(nil, utils.TestLocation)
+
 	for i := 0; i < arrayElementCount; i++ {
-		array.Append(interpreter.NewIntValueFromInt64(int64(i)))
+		array.Append(inter, nil, interpreter.NewIntValueFromInt64(int64(i)))
 	}
 
 	address := common.BytesToAddress([]byte{0x1})

@@ -725,6 +725,7 @@ func (v *ArrayValue) DynamicType(interpreter *Interpreter, results DynamicTypeRe
 }
 
 func (v *ArrayValue) StaticType() StaticType {
+	v.ensureMetaInfoLoaded()
 	return v.Type
 }
 
@@ -821,7 +822,10 @@ func (v *ArrayValue) Set(inter *Interpreter, getLocationRange func() LocationRan
 func (v *ArrayValue) SetIndex(inter *Interpreter, index int, value Value, getLocationRange func() LocationRange) {
 	v.checkBounds(index, getLocationRange)
 
-	checkContainerMutation(inter, v.Type.ElementType(), value, getLocationRange)
+	// Use the getter, to make sure lazily decoded values are properly loaded.
+	arrayStaticType := v.StaticType().(ArrayStaticType)
+
+	checkContainerMutation(inter, arrayStaticType.ElementType(), value, getLocationRange)
 
 	v.modified = true
 	value.SetOwner(v.Owner)
@@ -857,7 +861,11 @@ func (v *ArrayValue) RecursiveString(results StringResults) string {
 }
 
 func (v *ArrayValue) Append(inter *Interpreter, getLocationRange func() LocationRange, element Value) {
-	checkContainerMutation(inter, v.Type.ElementType(), element, getLocationRange)
+
+	// Use the getter, to make sure lazily decoded values are properly loaded.
+	arrayStaticType := v.StaticType().(ArrayStaticType)
+
+	checkContainerMutation(inter, arrayStaticType.ElementType(), element, getLocationRange)
 
 	v.modified = true
 
@@ -871,8 +879,11 @@ func (v *ArrayValue) AppendAll(inter *Interpreter, getLocationRange func() Locat
 	otherArray := other.(*ArrayValue)
 	otherElements := otherArray.Elements()
 
+	// Use the getter, to make sure lazily decoded values are properly loaded.
+	arrayStaticType := v.StaticType().(ArrayStaticType)
+
 	for _, element := range otherElements {
-		checkContainerMutation(inter, v.Type.ElementType(), element, getLocationRange)
+		checkContainerMutation(inter, arrayStaticType.ElementType(), element, getLocationRange)
 	}
 
 	v.modified = true
@@ -897,7 +908,10 @@ func (v *ArrayValue) Insert(inter *Interpreter, getLocationRange func() Location
 		})
 	}
 
-	checkContainerMutation(inter, v.Type.ElementType(), element, getLocationRange)
+	// Use the getter, to make sure lazily decoded values are properly loaded.
+	arrayStaticType := v.StaticType().(ArrayStaticType)
+
+	checkContainerMutation(inter, arrayStaticType.ElementType(), element, getLocationRange)
 
 	v.modified = true
 
@@ -7500,6 +7514,7 @@ func (v *DictionaryValue) DynamicType(interpreter *Interpreter, results DynamicT
 }
 
 func (v *DictionaryValue) StaticType() StaticType {
+	v.ensureMetaInfoLoaded()
 	return v.Type
 }
 
@@ -7686,8 +7701,11 @@ func dictionaryKey(keyValue Value) string {
 func (v *DictionaryValue) Set(inter *Interpreter, getLocationRange func() LocationRange, keyValue Value, value Value) {
 	v.modified = true
 
-	checkContainerMutation(inter, v.Type.KeyType, keyValue, getLocationRange)
-	checkContainerMutation(inter, v.Type.ValueType, value, getLocationRange)
+	// Use the getter, to make sure lazily decoded values are properly loaded.
+	dictionaryStaticType := v.StaticType().(DictionaryStaticType)
+
+	checkContainerMutation(inter, dictionaryStaticType.KeyType, keyValue, getLocationRange)
+	checkContainerMutation(inter, dictionaryStaticType.ValueType, value, getLocationRange)
 
 	switch typedValue := value.(type) {
 	case *SomeValue:
@@ -7863,8 +7881,12 @@ func (v *DictionaryValue) Remove(inter *Interpreter, getLocationRange func() Loc
 }
 
 func (v *DictionaryValue) Insert(inter *Interpreter, locationRangeGetter func() LocationRange, keyValue, value Value) OptionalValue {
-	checkContainerMutation(inter, v.Type.KeyType, keyValue, locationRangeGetter)
-	checkContainerMutation(inter, v.Type.ValueType, value, locationRangeGetter)
+
+	// Use the getter, to make sure lazily decoded values are properly loaded.
+	dictionaryStaticType := v.StaticType().(DictionaryStaticType)
+
+	checkContainerMutation(inter, dictionaryStaticType.KeyType, keyValue, locationRangeGetter)
+	checkContainerMutation(inter, dictionaryStaticType.ValueType, value, locationRangeGetter)
 
 	v.modified = true
 
