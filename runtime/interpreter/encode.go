@@ -63,7 +63,7 @@ const (
 	CBORTagAddressValue
 	CBORTagCompositeValue
 	CBORTagTypeValue
-	CBORRTagArrayValue
+	CBORTagArrayValue
 	_
 	_
 	_

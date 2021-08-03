@@ -214,7 +214,7 @@ func (d *DecoderV5) decodeValue(path []string) (Value, error) {
 		case CBORTagCompositeValue:
 			value, err = d.decodeComposite(path)
 
-		case CBORRTagArrayValue:
+		case CBORTagArrayValue:
 			value, err = d.decodeArray(path)
 
 		// Int*
@@ -1833,7 +1833,7 @@ func (d *DecoderV5) decodeDictionary(path []string) (*DictionaryValue, error) {
 //		)
 //	}
 //
-//	if num != CBORRTagArrayValue {
+//	if num != CBORTagArrayValue {
 //		return fmt.Errorf(
 //			"invalid dictionary keys encoding (@ %s)",
 //			strings.Join(v.valuePath, "."),
