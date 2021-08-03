@@ -436,7 +436,12 @@ func (interpreter *Interpreter) VisitDictionaryExpression(expression *ast.Dictio
 
 		getLocationRange := locationRangeGetter(interpreter.Location, expression)
 
-		_ = dictionary.Insert(interpreter, getLocationRange, key, value)
+		_ = dictionary.Insert(
+			interpreter.Storage,
+			getLocationRange,
+			key,
+			value,
+		)
 	}
 
 	return dictionary

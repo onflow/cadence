@@ -36,6 +36,7 @@ import (
 
 type encodeDecodeTest struct {
 	value                 Value
+	storable              atree.Storable
 	encoded               []byte
 	invalid               bool
 	decodedValue          Value
@@ -49,16 +50,19 @@ var testOwner = common.BytesToAddress([]byte{0x42})
 
 func testEncodeDecode(t *testing.T, test encodeDecodeTest) {
 
-	t.Parallel()
-
 	var encoded []byte
-	if test.value != nil && !test.decodeOnly {
-		test.value.SetOwner(&testOwner)
-
+	if (test.value != nil || test.storable != nil) && !test.decodeOnly {
 		storage := NewInMemoryStorage()
 
+		if test.value != nil {
+			test.value.SetOwner(&testOwner)
+			if test.storable == nil {
+				test.storable = test.value.Storable(storage)
+			}
+		}
+
 		var err error
-		encoded, err = atree.Encode(test.value.Storable(storage), storage)
+		encoded, err = atree.Encode(test.storable, storage)
 		require.NoError(t, err)
 
 		if test.encoded != nil {
@@ -95,6 +99,8 @@ func testEncodeDecode(t *testing.T, test encodeDecodeTest) {
 
 func TestEncodeDecodeNilValue(t *testing.T) {
 
+	t.Parallel()
+
 	testEncodeDecode(t,
 		encodeDecodeTest{
 			value: NilValue{},
@@ -107,6 +113,8 @@ func TestEncodeDecodeNilValue(t *testing.T) {
 }
 
 func TestEncodeDecodeVoidValue(t *testing.T) {
+
+	t.Parallel()
 
 	testEncodeDecode(t,
 		encodeDecodeTest{
@@ -127,6 +135,8 @@ func TestEncodeDecodeBool(t *testing.T) {
 
 	t.Run("false", func(t *testing.T) {
 
+		t.Parallel()
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				value: BoolValue(false),
@@ -139,6 +149,8 @@ func TestEncodeDecodeBool(t *testing.T) {
 	})
 
 	t.Run("true", func(t *testing.T) {
+
+		t.Parallel()
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
@@ -159,6 +171,8 @@ func TestEncodeDecodeString(t *testing.T) {
 	t.Run("empty", func(t *testing.T) {
 		expected := NewStringValue("")
 
+		t.Parallel()
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				value: expected,
@@ -171,6 +185,8 @@ func TestEncodeDecodeString(t *testing.T) {
 
 	t.Run("non-empty", func(t *testing.T) {
 		expected := NewStringValue("foo")
+
+		t.Parallel()
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
@@ -186,436 +202,512 @@ func TestEncodeDecodeString(t *testing.T) {
 	})
 }
 
-// TODO
-//func TestEncodeDecodeArray(t *testing.T) {
-//
-//	t.Parallel()
-//
-//	t.Run("empty", func(t *testing.T) {
-//
-//		expected := NewArrayValueUnownedNonCopying(
-//			ConstantSizedStaticType{
-//				Type: PrimitiveStaticTypeAnyStruct,
-//				Size: 0,
-//			},
-//			storage,
-//		)
-//
-//		testEncodeDecode(t,
-//			encodeDecodeTest{
-//				value: expected,
-//				encoded: []byte{
-//					// cbor Array Value tag
-//					0xd8, CBORRTagArrayValue,
-//
-//					// array, 2 items follow
-//					0x82,
-//
-//					// Type info
-//
-//					// array type tag
-//					0xd8, CBORTagConstantSizedStaticType,
-//
-//					// array, 2 items follow
-//					0x82,
-//
-//					// size (0)
-//					0x0,
-//
-//					// element type
-//					0xd8, CBORTagPrimitiveStaticType, byte(PrimitiveStaticTypeAnyStruct),
-//
-//					// Elements
-//
-//					// array, 0 items follow
-//					0x80,
-//				},
-//			})
-//	})
-//
-//	t.Run("string and bool", func(t *testing.T) {
-//		expectedString := NewStringValue("test")
-//
-//		expected := NewArrayValueUnownedNonCopying(
-//			VariableSizedStaticType{
-//				Type: PrimitiveStaticTypeAnyStruct,
-//			},
-//			expectedString,
-//			BoolValue(true),
-//		)
-//		expected.modified = false
-//
-//		testEncodeDecode(t,
-//			encodeDecodeTest{
-//				value: expected,
-//				encoded: []byte{
-//					// cbor Array Value tag
-//					0xd8, CBORRTagArrayValue,
-//
-//					// array, 2 items follow
-//					0x82,
-//
-//					// Type info
-//
-//					// array type tag
-//					0xd8, CBORTagVariableSizedStaticType,
-//
-//					// element type
-//					0xd8, CBORTagPrimitiveStaticType, byte(PrimitiveStaticTypeAnyStruct),
-//
-//					// Elements
-//
-//					// array, 2 items follow
-//					0x82,
-//					// UTF-8 string, length 4
-//					0x64,
-//					// t, e, s, t
-//					0x74, 0x65, 0x73, 0x74,
-//					// true
-//					0xf5,
-//				},
-//			},
-//		)
-//	})
-//}
+func TestEncodeDecodeArray(t *testing.T) {
 
-//func TestEncodeDecodeDictionary(t *testing.T) {
-//
-//	t.Parallel()
-//
-//	t.Run("empty", func(t *testing.T) {
-//
-//		expected := NewDictionaryValueUnownedNonCopying(
-//			DictionaryStaticType{
-//				KeyType:   PrimitiveStaticTypeString,
-//				ValueType: PrimitiveStaticTypeAnyStruct,
-//			},
-//		)
-//		expected.modified = false
-//		expected.Keys().modified = false
-//
-//		encoded := []byte{
-//			// tag
-//			0xd8, CBORTagDictionaryValue,
-//			// array, 3 items follow
-//			0x83,
-//
-//			// dictionary type tag
-//			0xd8, CBORTagDictionaryStaticType,
-//			// array, 2 items follow
-//			0x82,
-//			// key type
-//			0xd8, CBORTagPrimitiveStaticType, byte(PrimitiveStaticTypeString),
-//			// value type
-//			0xd8, CBORTagPrimitiveStaticType, byte(PrimitiveStaticTypeAnyStruct),
-//
-//			// cbor Array Value tag
-//			0xd8, CBORRTagArrayValue,
-//
-//			// array, 2 items follow
-//			0x82,
-//
-//			// Type info
-//
-//			// array type tag
-//			0xd8, CBORTagVariableSizedStaticType,
-//
-//			// element type
-//			0xd8, CBORTagPrimitiveStaticType, byte(PrimitiveStaticTypeString),
-//
-//			// Element: array, 0 items follow
-//			0x80,
-//
-//			// array, 0 items follow
-//			0x80,
-//		}
-//
-//		testEncodeDecode(t,
-//			encodeDecodeTest{
-//				value:   expected,
-//				encoded: encoded,
-//			},
-//		)
-//	})
-//
-//	t.Run("non-empty", func(t *testing.T) {
-//		key1 := NewStringValue("test")
-//		value1 := NewArrayValueUnownedNonCopying(
-//			VariableSizedStaticType{
-//				Type: PrimitiveStaticTypeAnyStruct,
-//			},
-//		)
-//
-//		key2 := BoolValue(true)
-//		value2 := BoolValue(false)
-//
-//		key3 := NewStringValue("foo")
-//		value3 := NewStringValue("bar")
-//
-//		expected := NewDictionaryValueUnownedNonCopying(
-//			DictionaryStaticType{
-//				KeyType:   PrimitiveStaticTypeAnyStruct,
-//				ValueType: PrimitiveStaticTypeAnyStruct,
-//			},
-//			key1, value1,
-//			key2, value2,
-//			key3, value3,
-//		)
-//
-//		expected.modified = false
-//		expected.Keys().modified = false
-//
-//		value1.modified = false
-//
-//		encoded := []byte{
-//			// tag
-//			0xd8, CBORTagDictionaryValue,
-//			// array, 3 items follow
-//			0x83,
-//
-//			// dictionary type tag
-//			0xd8, CBORTagDictionaryStaticType,
-//			// array, 2 items follow
-//			0x82,
-//			// key type
-//			0xd8, CBORTagPrimitiveStaticType, byte(PrimitiveStaticTypeAnyStruct),
-//			// value type
-//			0xd8, CBORTagPrimitiveStaticType, byte(PrimitiveStaticTypeAnyStruct),
-//
-//			// Keys
-//
-//			// cbor Array Value tag
-//			0xd8, CBORRTagArrayValue,
-//
-//			// array, 2 items follow
-//			0x82,
-//
-//			// Type info
-//
-//			// array type tag
-//			0xd8, CBORTagVariableSizedStaticType,
-//
-//			// element type
-//			0xd8, CBORTagPrimitiveStaticType, byte(PrimitiveStaticTypeAnyStruct),
-//
-//			// array, 3 items follow
-//			0x83,
-//			// UTF-8 string, length 4
-//			0x64,
-//			// t, e, s, t
-//			0x74, 0x65, 0x73, 0x74,
-//			// true
-//			0xf5,
-//			// UTF-8 string, length 3
-//			0x63,
-//			// f, o, o
-//			0x66, 0x6f, 0x6f,
-//
-//			// Values
-//
-//			// array, 3 items follow
-//			0x83,
-//
-//			// cbor Array Value tag
-//			0xd8, CBORRTagArrayValue,
-//
-//			// array, 2 items follow
-//			0x82,
-//
-//			// Type info
-//
-//			// array type tag
-//			0xd8, CBORTagVariableSizedStaticType,
-//
-//			// element type
-//			0xd8, CBORTagPrimitiveStaticType, byte(PrimitiveStaticTypeAnyStruct),
-//
-//			// Elements. array, 0 items follow
-//			0x80,
-//
-//			// false
-//			0xf4,
-//			// UTF-8 string, length 3
-//			0x63,
-//			// b, a, r
-//			0x62, 0x61, 0x72,
-//		}
-//
-//		testEncodeDecode(t,
-//			encodeDecodeTest{
-//				value:   expected,
-//				encoded: encoded,
-//			},
-//		)
-//	})
-//}
-//
-//func TestEncodeDecodeComposite(t *testing.T) {
-//
-//	t.Parallel()
-//
-//	t.Run("empty structure, string location, qualified identifier", func(t *testing.T) {
-//		expected := NewCompositeValue(
-//			utils.TestLocation,
-//			"TestStruct",
-//			common.CompositeKindStructure,
-//			NewStringValueOrderedMap(),
-//			nil,
-//		)
-//		expected.modified = false
-//
-//		encoded := []byte{
-//			// tag
-//			0xd8, CBORTagCompositeValue,
-//			// array, 4 items follow
-//			0x84,
-//
-//			// tag
-//			0xd8, CBORTagStringLocation,
-//			// UTF-8 string, length 4
-//			0x64,
-//			// t, e, s, t
-//			0x74, 0x65, 0x73, 0x74,
-//
-//			// positive integer 1
-//			0x1,
-//
-//			// array, 0 items follow
-//			0x80,
-//
-//			// UTF-8 string, length 10
-//			0x6a,
-//			0x54, 0x65, 0x73, 0x74, 0x53, 0x74, 0x72, 0x75, 0x63, 0x74,
-//		}
-//
-//		testEncodeDecode(t,
-//			encodeDecodeTest{
-//				value:   expected,
-//				encoded: encoded,
-//			},
-//		)
-//	})
-//
-//	t.Run("non-empty resource, qualified identifier", func(t *testing.T) {
-//		stringValue := NewStringValue("test")
-//
-//		members := NewStringValueOrderedMap()
-//		members.Set("string", stringValue)
-//		members.Set("true", BoolValue(true))
-//
-//		expected := NewCompositeValue(
-//			utils.TestLocation,
-//			"TestResource",
-//			common.CompositeKindResource,
-//			members,
-//			nil,
-//		)
-//		expected.modified = false
-//
-//		encoded := []byte{
-//			// tag
-//			0xd8, CBORTagCompositeValue,
-//			// array, 4 items follow
-//			0x84,
-//
-//			// tag
-//			0xd8, CBORTagStringLocation,
-//			// UTF-8 string, length 4
-//			0x64,
-//			// t, e, s, t
-//			0x74, 0x65, 0x73, 0x74,
-//
-//			// positive integer 2
-//			0x2,
-//
-//			// array, 4 items follow
-//			0x84,
-//			// UTF-8 string, length 6
-//			0x66,
-//			// s, t, r, i, n, g
-//			0x73, 0x74, 0x72, 0x69, 0x6e, 0x67,
-//			// UTF-8 string, length 4
-//			0x64,
-//			// t, e, s, t
-//			0x74, 0x65, 0x73, 0x74,
-//			// UTF-8 string, length 4
-//			0x64,
-//			// t, r, u, e
-//			0x74, 0x72, 0x75, 0x65,
-//			// true
-//			0xf5,
-//
-//			// UTF-8 string, length 12
-//			0x6c,
-//			0x54, 0x65, 0x73, 0x74, 0x52, 0x65, 0x73, 0x6f, 0x75, 0x72, 0x63, 0x65,
-//		}
-//
-//		testEncodeDecode(t,
-//			encodeDecodeTest{
-//				value:   expected,
-//				encoded: encoded,
-//			},
-//		)
-//	})
-//
-//	t.Run("empty, address location", func(t *testing.T) {
-//		expected := NewCompositeValue(
-//			common.AddressLocation{
-//				Address: common.BytesToAddress([]byte{0x1}),
-//				Name:    "TestStruct",
-//			},
-//			"TestStruct",
-//			common.CompositeKindStructure,
-//			NewStringValueOrderedMap(),
-//			nil,
-//		)
-//		expected.modified = false
-//
-//		encoded := []byte{
-//			// tag
-//			0xd8, CBORTagCompositeValue,
-//			// array, 4 items follow
-//			0x84,
-//
-//			// tag
-//			0xd8, CBORTagAddressLocation,
-//			// array, 2 items follow
-//			0x82,
-//			// byte sequence, length 1
-//			0x41,
-//			// positive integer 1
-//			0x1,
-//			// UTF-8 string, length 10
-//			0x6a,
-//			0x54, 0x65, 0x73, 0x74, 0x53, 0x74, 0x72, 0x75,
-//			0x63, 0x74,
-//
-//			// positive integer 1
-//			0x1,
-//
-//			// array, 0 items follow
-//			0x80,
-//
-//			// UTF-8 string, length 10
-//			0x6a,
-//			0x54, 0x65, 0x73, 0x74, 0x53, 0x74, 0x72, 0x75,
-//			0x63, 0x74,
-//		}
-//
-//		testEncodeDecode(t,
-//			encodeDecodeTest{
-//				value:   expected,
-//				encoded: encoded,
-//			},
-//		)
-//	})
-//}
+	t.Parallel()
+
+	t.Run("empty", func(t *testing.T) {
+
+		storage := NewInMemoryStorage()
+
+		expected := NewArrayValueUnownedNonCopying(
+			ConstantSizedStaticType{
+				Type: PrimitiveStaticTypeAnyStruct,
+				Size: 0,
+			},
+			storage,
+		)
+
+		t.Parallel()
+
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				value: expected,
+				encoded: []byte{
+					// tag
+					0xd8, atree.CBORTagStorageID,
+
+					// storage ID
+					0x1,
+				},
+			})
+	})
+
+	t.Run("string and bool", func(t *testing.T) {
+
+		storage := NewInMemoryStorage()
+
+		expectedString := NewStringValue("test")
+
+		expected := NewArrayValueUnownedNonCopying(
+			VariableSizedStaticType{
+				Type: PrimitiveStaticTypeAnyStruct,
+			},
+			storage,
+			expectedString,
+			BoolValue(true),
+		)
+
+		t.Parallel()
+
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				value: expected,
+				encoded: []byte{
+					// tag
+					0xd8, atree.CBORTagStorageID,
+
+					// storage ID
+					0x1,
+				},
+			},
+		)
+	})
+}
+
+func TestEncodeDecodeDictionary(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("empty", func(t *testing.T) {
+
+		t.Parallel()
+
+		storage := NewInMemoryStorage()
+
+		expected := NewDictionaryValueUnownedNonCopying(
+			DictionaryStaticType{
+				KeyType:   PrimitiveStaticTypeString,
+				ValueType: PrimitiveStaticTypeAnyStruct,
+			},
+			storage,
+		)
+
+		encodedValue := []byte{
+			// tag
+			0xd8, atree.CBORTagStorageID,
+
+			// storage ID
+			1,
+		}
+
+		encodedStorable := []byte{
+			// tag
+			0xd8, CBORTagDictionaryValue,
+			// array, 3 items follow
+			0x83,
+
+			// dictionary type tag
+			0xd8, CBORTagDictionaryStaticType,
+			// array, 2 items follow
+			0x82,
+			// key type
+			0xd8, CBORTagPrimitiveStaticType, byte(PrimitiveStaticTypeString),
+			// value type
+			0xd8, CBORTagPrimitiveStaticType, byte(PrimitiveStaticTypeAnyStruct),
+
+			// cbor Array Value tag
+			0xd8, CBORTagArrayValue,
+
+			// array, 2 items follow
+			0x82,
+
+			// Type info
+
+			// array type tag
+			0xd8, CBORTagVariableSizedStaticType,
+
+			// element type
+			0xd8, CBORTagPrimitiveStaticType, byte(PrimitiveStaticTypeString),
+
+			// Element: array, 0 items follow
+			0x80,
+
+			// array, 0 items follow
+			0x80,
+		}
+
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				value:   expected,
+				encoded: encodedValue,
+			},
+		)
+
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				storable: DictionaryStorable{
+					Dictionary: expected,
+				},
+				encoded: encodedStorable,
+			},
+		)
+	})
+
+	t.Run("non-empty", func(t *testing.T) {
+
+		t.Parallel()
+
+		storage := NewInMemoryStorage()
+
+		key1 := NewStringValue("test")
+		value1 := NewArrayValueUnownedNonCopying(
+			VariableSizedStaticType{
+				Type: PrimitiveStaticTypeAnyStruct,
+			},
+			storage,
+		)
+
+		key2 := BoolValue(true)
+		value2 := BoolValue(false)
+
+		key3 := NewStringValue("foo")
+		value3 := NewStringValue("bar")
+
+		expected := NewDictionaryValueUnownedNonCopying(
+			DictionaryStaticType{
+				KeyType:   PrimitiveStaticTypeAnyStruct,
+				ValueType: PrimitiveStaticTypeAnyStruct,
+			},
+			storage,
+			key1, value1,
+			key2, value2,
+			key3, value3,
+		)
+
+		encodedValue := []byte{
+			// tag
+			0xd8, atree.CBORTagStorageID,
+
+			// storage ID.
+			// 2 instead of 1, because array for dictionary keys has storage ID 1
+			2,
+		}
+
+		encodedStorable := []byte{
+			// tag
+			0xd8, CBORTagDictionaryValue,
+			// array, 3 items follow
+			0x83,
+
+			// dictionary type tag
+			0xd8, CBORTagDictionaryStaticType,
+			// array, 2 items follow
+			0x82,
+			// key type
+			0xd8, CBORTagPrimitiveStaticType, byte(PrimitiveStaticTypeAnyStruct),
+			// value type
+			0xd8, CBORTagPrimitiveStaticType, byte(PrimitiveStaticTypeAnyStruct),
+
+			// Keys
+
+			// cbor Array Value tag
+			0xd8, CBORTagArrayValue,
+
+			// array, 2 items follow
+			0x82,
+
+			// Type info
+
+			// array type tag
+			0xd8, CBORTagVariableSizedStaticType,
+
+			// element type
+			0xd8, CBORTagPrimitiveStaticType, byte(PrimitiveStaticTypeAnyStruct),
+
+			// array, 3 items follow
+			0x83,
+			// UTF-8 string, length 4
+			0x64,
+			// t, e, s, t
+			0x74, 0x65, 0x73, 0x74,
+			// true
+			0xf5,
+			// UTF-8 string, length 3
+			0x63,
+			// f, o, o
+			0x66, 0x6f, 0x6f,
+
+			// Values
+
+			// array, 3 items follow
+			0x83,
+
+			// cbor Array Value tag
+			0xd8, CBORTagArrayValue,
+
+			// array, 2 items follow
+			0x82,
+
+			// Type info
+
+			// array type tag
+			0xd8, CBORTagVariableSizedStaticType,
+
+			// element type
+			0xd8, CBORTagPrimitiveStaticType, byte(PrimitiveStaticTypeAnyStruct),
+
+			// Elements. array, 0 items follow
+			0x80,
+
+			// false
+			0xf4,
+			// UTF-8 string, length 3
+			0x63,
+			// b, a, r
+			0x62, 0x61, 0x72,
+		}
+
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				value:   expected,
+				encoded: encodedValue,
+			},
+		)
+
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				storable: DictionaryStorable{Dictionary: expected},
+				encoded:  encodedStorable,
+			},
+		)
+	})
+}
+
+func TestEncodeDecodeComposite(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("empty structure, string location, qualified identifier", func(t *testing.T) {
+
+		t.Parallel()
+
+		storage := NewInMemoryStorage()
+
+		expected := NewCompositeValue(
+			storage,
+			utils.TestLocation,
+			"TestStruct",
+			common.CompositeKindStructure,
+			NewStringValueOrderedMap(),
+			nil,
+		)
+
+		encodedValue := []byte{
+			// tag
+			0xd8, atree.CBORTagStorageID,
+
+			// storage ID
+			1,
+		}
+
+		encodedStorable := []byte{
+			// tag
+			0xd8, CBORTagCompositeValue,
+			// array, 4 items follow
+			0x84,
+
+			// tag
+			0xd8, CBORTagStringLocation,
+			// UTF-8 string, length 4
+			0x64,
+			// t, e, s, t
+			0x74, 0x65, 0x73, 0x74,
+
+			// positive integer 1
+			0x1,
+
+			// array, 0 items follow
+			0x80,
+
+			// UTF-8 string, length 10
+			0x6a,
+			0x54, 0x65, 0x73, 0x74, 0x53, 0x74, 0x72, 0x75, 0x63, 0x74,
+		}
+
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				storable: CompositeStorable{
+					Composite: expected,
+				},
+				encoded: encodedStorable,
+			},
+		)
+
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				value:   expected,
+				encoded: encodedValue,
+			},
+		)
+	})
+
+	t.Run("non-empty resource, qualified identifier", func(t *testing.T) {
+
+		t.Parallel()
+
+		storage := NewInMemoryStorage()
+
+		stringValue := NewStringValue("test")
+
+		members := NewStringValueOrderedMap()
+		members.Set("string", stringValue)
+		members.Set("true", BoolValue(true))
+
+		expected := NewCompositeValue(
+			storage,
+			utils.TestLocation,
+			"TestResource",
+			common.CompositeKindResource,
+			members,
+			nil,
+		)
+
+		encodedValue := []byte{
+			// tag
+			0xd8, atree.CBORTagStorageID,
+
+			// storage ID
+			1,
+		}
+
+		encodedStorable := []byte{
+			// tag
+			0xd8, CBORTagCompositeValue,
+			// array, 4 items follow
+			0x84,
+
+			// tag
+			0xd8, CBORTagStringLocation,
+			// UTF-8 string, length 4
+			0x64,
+			// t, e, s, t
+			0x74, 0x65, 0x73, 0x74,
+
+			// positive integer 2
+			0x2,
+
+			// array, 4 items follow
+			0x84,
+			// UTF-8 string, length 6
+			0x66,
+			// s, t, r, i, n, g
+			0x73, 0x74, 0x72, 0x69, 0x6e, 0x67,
+			// UTF-8 string, length 4
+			0x64,
+			// t, e, s, t
+			0x74, 0x65, 0x73, 0x74,
+			// UTF-8 string, length 4
+			0x64,
+			// t, r, u, e
+			0x74, 0x72, 0x75, 0x65,
+			// true
+			0xf5,
+
+			// UTF-8 string, length 12
+			0x6c,
+			0x54, 0x65, 0x73, 0x74, 0x52, 0x65, 0x73, 0x6f, 0x75, 0x72, 0x63, 0x65,
+		}
+
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				storable: CompositeStorable{
+					Composite: expected,
+				},
+				encoded: encodedStorable,
+			},
+		)
+
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				value:   expected,
+				encoded: encodedValue,
+			},
+		)
+	})
+
+	t.Run("empty, address location", func(t *testing.T) {
+
+		t.Parallel()
+
+		storage := NewInMemoryStorage()
+
+		expected := NewCompositeValue(
+			storage,
+			common.AddressLocation{
+				Address: common.BytesToAddress([]byte{0x1}),
+				Name:    "TestStruct",
+			},
+			"TestStruct",
+			common.CompositeKindStructure,
+			NewStringValueOrderedMap(),
+			nil,
+		)
+
+		encodedValue := []byte{
+			// tag
+			0xd8, atree.CBORTagStorageID,
+
+			// storage ID
+			1,
+		}
+
+		encodedStorable := []byte{
+			// tag
+			0xd8, CBORTagCompositeValue,
+			// array, 4 items follow
+			0x84,
+
+			// tag
+			0xd8, CBORTagAddressLocation,
+			// array, 2 items follow
+			0x82,
+			// byte sequence, length 1
+			0x41,
+			// positive integer 1
+			0x1,
+			// UTF-8 string, length 10
+			0x6a,
+			0x54, 0x65, 0x73, 0x74, 0x53, 0x74, 0x72, 0x75,
+			0x63, 0x74,
+
+			// positive integer 1
+			0x1,
+
+			// array, 0 items follow
+			0x80,
+
+			// UTF-8 string, length 10
+			0x6a,
+			0x54, 0x65, 0x73, 0x74, 0x53, 0x74, 0x72, 0x75,
+			0x63, 0x74,
+		}
+
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				value:   expected,
+				encoded: encodedValue,
+			},
+		)
+
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				storable: CompositeStorable{
+					Composite: expected,
+				},
+				encoded: encodedStorable,
+			},
+		)
+	})
+}
 
 func TestEncodeDecodeIntValue(t *testing.T) {
 
 	t.Parallel()
 
 	t.Run("zero", func(t *testing.T) {
+		t.Parallel()
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				value: NewIntValueFromInt64(0),
@@ -631,6 +723,8 @@ func TestEncodeDecodeIntValue(t *testing.T) {
 	})
 
 	t.Run("positive", func(t *testing.T) {
+		t.Parallel()
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				value: NewIntValueFromInt64(42),
@@ -647,6 +741,8 @@ func TestEncodeDecodeIntValue(t *testing.T) {
 	})
 
 	t.Run("negative one", func(t *testing.T) {
+		t.Parallel()
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				value: NewIntValueFromInt64(-1),
@@ -662,6 +758,8 @@ func TestEncodeDecodeIntValue(t *testing.T) {
 	})
 
 	t.Run("negative", func(t *testing.T) {
+		t.Parallel()
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				value: NewIntValueFromInt64(-42),
@@ -684,6 +782,8 @@ func TestEncodeDecodeIntValue(t *testing.T) {
 		setString, ok := new(big.Int).SetString("-18446744073709551617", 10)
 		require.True(t, ok)
 
+		t.Parallel()
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				value: NewIntValueFromBigInt(setString),
@@ -702,6 +802,8 @@ func TestEncodeDecodeIntValue(t *testing.T) {
 	t.Run("positive, large (> 64 bit)", func(t *testing.T) {
 		bigInt, ok := new(big.Int).SetString("18446744073709551616", 10)
 		require.True(t, ok)
+
+		t.Parallel()
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
@@ -725,6 +827,8 @@ func TestEncodeDecodeInt8Value(t *testing.T) {
 	t.Parallel()
 
 	t.Run("zero", func(t *testing.T) {
+		t.Parallel()
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				value: Int8Value(0),
@@ -739,6 +843,8 @@ func TestEncodeDecodeInt8Value(t *testing.T) {
 	})
 
 	t.Run("negative", func(t *testing.T) {
+		t.Parallel()
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				value: Int8Value(-42),
@@ -754,6 +860,8 @@ func TestEncodeDecodeInt8Value(t *testing.T) {
 	})
 
 	t.Run("positive", func(t *testing.T) {
+		t.Parallel()
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				value: Int8Value(42),
@@ -769,6 +877,8 @@ func TestEncodeDecodeInt8Value(t *testing.T) {
 	})
 
 	t.Run("min", func(t *testing.T) {
+		t.Parallel()
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				value: Int8Value(math.MinInt8),
@@ -784,6 +894,8 @@ func TestEncodeDecodeInt8Value(t *testing.T) {
 	})
 
 	t.Run("<min", func(t *testing.T) {
+		t.Parallel()
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				encoded: []byte{
@@ -799,6 +911,8 @@ func TestEncodeDecodeInt8Value(t *testing.T) {
 	})
 
 	t.Run("max", func(t *testing.T) {
+		t.Parallel()
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				value: Int8Value(math.MaxInt8),
@@ -814,6 +928,8 @@ func TestEncodeDecodeInt8Value(t *testing.T) {
 	})
 
 	t.Run(">max", func(t *testing.T) {
+		t.Parallel()
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				encoded: []byte{
@@ -834,6 +950,8 @@ func TestEncodeDecodeInt16Value(t *testing.T) {
 	t.Parallel()
 
 	t.Run("zero", func(t *testing.T) {
+		t.Parallel()
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				value: Int16Value(0),
@@ -848,6 +966,8 @@ func TestEncodeDecodeInt16Value(t *testing.T) {
 	})
 
 	t.Run("negative", func(t *testing.T) {
+		t.Parallel()
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				value: Int16Value(-42),
@@ -863,6 +983,8 @@ func TestEncodeDecodeInt16Value(t *testing.T) {
 	})
 
 	t.Run("positive", func(t *testing.T) {
+		t.Parallel()
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				value: Int16Value(42),
@@ -878,6 +1000,8 @@ func TestEncodeDecodeInt16Value(t *testing.T) {
 	})
 
 	t.Run("min", func(t *testing.T) {
+		t.Parallel()
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				value: Int16Value(math.MinInt16),
@@ -893,6 +1017,8 @@ func TestEncodeDecodeInt16Value(t *testing.T) {
 	})
 
 	t.Run("<min", func(t *testing.T) {
+		t.Parallel()
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				encoded: []byte{
@@ -908,6 +1034,8 @@ func TestEncodeDecodeInt16Value(t *testing.T) {
 	})
 
 	t.Run("max", func(t *testing.T) {
+		t.Parallel()
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				value: Int16Value(math.MaxInt16),
@@ -923,6 +1051,8 @@ func TestEncodeDecodeInt16Value(t *testing.T) {
 	})
 
 	t.Run(">max", func(t *testing.T) {
+		t.Parallel()
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				encoded: []byte{
@@ -943,6 +1073,8 @@ func TestEncodeDecodeInt32Value(t *testing.T) {
 	t.Parallel()
 
 	t.Run("zero", func(t *testing.T) {
+		t.Parallel()
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				value: Int32Value(0),
@@ -957,6 +1089,8 @@ func TestEncodeDecodeInt32Value(t *testing.T) {
 	})
 
 	t.Run("negative", func(t *testing.T) {
+		t.Parallel()
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				value: Int32Value(-42),
@@ -972,6 +1106,8 @@ func TestEncodeDecodeInt32Value(t *testing.T) {
 	})
 
 	t.Run("positive", func(t *testing.T) {
+		t.Parallel()
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				value: Int32Value(42),
@@ -987,6 +1123,8 @@ func TestEncodeDecodeInt32Value(t *testing.T) {
 	})
 
 	t.Run("min", func(t *testing.T) {
+		t.Parallel()
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				value: Int32Value(math.MinInt32),
@@ -1002,6 +1140,8 @@ func TestEncodeDecodeInt32Value(t *testing.T) {
 	})
 
 	t.Run("<min", func(t *testing.T) {
+		t.Parallel()
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				encoded: []byte{
@@ -1017,6 +1157,8 @@ func TestEncodeDecodeInt32Value(t *testing.T) {
 	})
 
 	t.Run("max", func(t *testing.T) {
+		t.Parallel()
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				value: Int32Value(math.MaxInt32),
@@ -1032,6 +1174,8 @@ func TestEncodeDecodeInt32Value(t *testing.T) {
 	})
 
 	t.Run(">max", func(t *testing.T) {
+		t.Parallel()
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				encoded: []byte{
@@ -1052,6 +1196,8 @@ func TestEncodeDecodeInt64Value(t *testing.T) {
 	t.Parallel()
 
 	t.Run("zero", func(t *testing.T) {
+		t.Parallel()
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				value: Int64Value(0),
@@ -1066,6 +1212,8 @@ func TestEncodeDecodeInt64Value(t *testing.T) {
 	})
 
 	t.Run("negative", func(t *testing.T) {
+		t.Parallel()
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				value: Int64Value(-42),
@@ -1081,6 +1229,8 @@ func TestEncodeDecodeInt64Value(t *testing.T) {
 	})
 
 	t.Run("positive", func(t *testing.T) {
+		t.Parallel()
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				value: Int64Value(42),
@@ -1096,6 +1246,8 @@ func TestEncodeDecodeInt64Value(t *testing.T) {
 	})
 
 	t.Run("min", func(t *testing.T) {
+		t.Parallel()
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				value: Int64Value(math.MinInt64),
@@ -1111,6 +1263,8 @@ func TestEncodeDecodeInt64Value(t *testing.T) {
 	})
 
 	t.Run("<min", func(t *testing.T) {
+		t.Parallel()
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				encoded: []byte{
@@ -1126,6 +1280,8 @@ func TestEncodeDecodeInt64Value(t *testing.T) {
 	})
 
 	t.Run("max", func(t *testing.T) {
+		t.Parallel()
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				value: Int64Value(math.MaxInt64),
@@ -1141,6 +1297,8 @@ func TestEncodeDecodeInt64Value(t *testing.T) {
 	})
 
 	t.Run(">max", func(t *testing.T) {
+		t.Parallel()
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				encoded: []byte{
@@ -1161,6 +1319,8 @@ func TestEncodeDecodeInt128Value(t *testing.T) {
 	t.Parallel()
 
 	t.Run("zero", func(t *testing.T) {
+		t.Parallel()
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				value: NewInt128ValueFromInt64(0),
@@ -1176,6 +1336,8 @@ func TestEncodeDecodeInt128Value(t *testing.T) {
 	})
 
 	t.Run("positive", func(t *testing.T) {
+		t.Parallel()
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				value: NewInt128ValueFromInt64(42),
@@ -1192,6 +1354,8 @@ func TestEncodeDecodeInt128Value(t *testing.T) {
 	})
 
 	t.Run("negative one", func(t *testing.T) {
+		t.Parallel()
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				value: NewInt128ValueFromInt64(-1),
@@ -1207,6 +1371,8 @@ func TestEncodeDecodeInt128Value(t *testing.T) {
 	})
 
 	t.Run("negative", func(t *testing.T) {
+		t.Parallel()
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				value: NewInt128ValueFromInt64(-42),
@@ -1223,6 +1389,8 @@ func TestEncodeDecodeInt128Value(t *testing.T) {
 	})
 
 	t.Run("min", func(t *testing.T) {
+		t.Parallel()
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				value: NewInt128ValueFromBigInt(sema.Int128TypeMinIntBig),
@@ -1240,6 +1408,8 @@ func TestEncodeDecodeInt128Value(t *testing.T) {
 	})
 
 	t.Run("<min", func(t *testing.T) {
+		t.Parallel()
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				encoded: []byte{
@@ -1257,6 +1427,8 @@ func TestEncodeDecodeInt128Value(t *testing.T) {
 	})
 
 	t.Run("max", func(t *testing.T) {
+		t.Parallel()
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				value: NewInt128ValueFromBigInt(sema.Int128TypeMaxIntBig),
@@ -1274,6 +1446,8 @@ func TestEncodeDecodeInt128Value(t *testing.T) {
 	})
 
 	t.Run(">max", func(t *testing.T) {
+		t.Parallel()
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				encoded: []byte{
@@ -1293,6 +1467,8 @@ func TestEncodeDecodeInt128Value(t *testing.T) {
 	t.Run("RFC", func(t *testing.T) {
 		rfcValue, ok := new(big.Int).SetString("18446744073709551616", 10)
 		require.True(t, ok)
+
+		t.Parallel()
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
@@ -1316,6 +1492,8 @@ func TestEncodeDecodeInt256Value(t *testing.T) {
 	t.Parallel()
 
 	t.Run("zero", func(t *testing.T) {
+		t.Parallel()
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				value: NewInt256ValueFromInt64(0),
@@ -1331,6 +1509,8 @@ func TestEncodeDecodeInt256Value(t *testing.T) {
 	})
 
 	t.Run("positive", func(t *testing.T) {
+		t.Parallel()
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				value: NewInt256ValueFromInt64(42),
@@ -1347,6 +1527,8 @@ func TestEncodeDecodeInt256Value(t *testing.T) {
 	})
 
 	t.Run("negative one", func(t *testing.T) {
+		t.Parallel()
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				value: NewInt256ValueFromInt64(-1),
@@ -1362,6 +1544,8 @@ func TestEncodeDecodeInt256Value(t *testing.T) {
 	})
 
 	t.Run("negative", func(t *testing.T) {
+		t.Parallel()
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				value: NewInt256ValueFromInt64(-42),
@@ -1378,6 +1562,8 @@ func TestEncodeDecodeInt256Value(t *testing.T) {
 	})
 
 	t.Run("min", func(t *testing.T) {
+		t.Parallel()
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				value: NewInt256ValueFromBigInt(sema.Int256TypeMinIntBig),
@@ -1397,6 +1583,8 @@ func TestEncodeDecodeInt256Value(t *testing.T) {
 	})
 
 	t.Run("<min", func(t *testing.T) {
+		t.Parallel()
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				encoded: []byte{
@@ -1416,6 +1604,8 @@ func TestEncodeDecodeInt256Value(t *testing.T) {
 	})
 
 	t.Run("max", func(t *testing.T) {
+		t.Parallel()
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				value: NewInt256ValueFromBigInt(sema.Int256TypeMaxIntBig),
@@ -1435,6 +1625,8 @@ func TestEncodeDecodeInt256Value(t *testing.T) {
 	})
 
 	t.Run(">max", func(t *testing.T) {
+		t.Parallel()
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				encoded: []byte{
@@ -1457,6 +1649,8 @@ func TestEncodeDecodeInt256Value(t *testing.T) {
 
 		rfcValue, ok := new(big.Int).SetString("18446744073709551616", 10)
 		require.True(t, ok)
+
+		t.Parallel()
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
@@ -1480,6 +1674,8 @@ func TestEncodeDecodeUIntValue(t *testing.T) {
 	t.Parallel()
 
 	t.Run("zero", func(t *testing.T) {
+		t.Parallel()
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				value: NewUIntValueFromUint64(0),
@@ -1495,6 +1691,8 @@ func TestEncodeDecodeUIntValue(t *testing.T) {
 	})
 
 	t.Run("negative", func(t *testing.T) {
+		t.Parallel()
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				encoded: []byte{
@@ -1511,6 +1709,8 @@ func TestEncodeDecodeUIntValue(t *testing.T) {
 	})
 
 	t.Run("positive", func(t *testing.T) {
+		t.Parallel()
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				value: NewUIntValueFromUint64(42),
@@ -1530,6 +1730,8 @@ func TestEncodeDecodeUIntValue(t *testing.T) {
 
 		rfcValue, ok := new(big.Int).SetString("18446744073709551616", 10)
 		require.True(t, ok)
+
+		t.Parallel()
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
@@ -1553,6 +1755,8 @@ func TestEncodeDecodeUInt8Value(t *testing.T) {
 	t.Parallel()
 
 	t.Run("zero", func(t *testing.T) {
+		t.Parallel()
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				value: UInt8Value(0),
@@ -1567,6 +1771,8 @@ func TestEncodeDecodeUInt8Value(t *testing.T) {
 	})
 
 	t.Run("negative", func(t *testing.T) {
+		t.Parallel()
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				encoded: []byte{
@@ -1582,6 +1788,8 @@ func TestEncodeDecodeUInt8Value(t *testing.T) {
 	})
 
 	t.Run("positive", func(t *testing.T) {
+		t.Parallel()
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				value: UInt8Value(42),
@@ -1597,6 +1805,8 @@ func TestEncodeDecodeUInt8Value(t *testing.T) {
 	})
 
 	t.Run("max", func(t *testing.T) {
+		t.Parallel()
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				value: UInt8Value(math.MaxUint8),
@@ -1612,6 +1822,8 @@ func TestEncodeDecodeUInt8Value(t *testing.T) {
 	})
 
 	t.Run(">max", func(t *testing.T) {
+		t.Parallel()
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				encoded: []byte{
@@ -1632,6 +1844,8 @@ func TestEncodeDecodeUInt16Value(t *testing.T) {
 	t.Parallel()
 
 	t.Run("zero", func(t *testing.T) {
+		t.Parallel()
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				value: UInt16Value(0),
@@ -1646,6 +1860,8 @@ func TestEncodeDecodeUInt16Value(t *testing.T) {
 	})
 
 	t.Run("negative", func(t *testing.T) {
+		t.Parallel()
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				encoded: []byte{
@@ -1661,6 +1877,8 @@ func TestEncodeDecodeUInt16Value(t *testing.T) {
 	})
 
 	t.Run("positive", func(t *testing.T) {
+		t.Parallel()
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				value: UInt16Value(42),
@@ -1676,6 +1894,8 @@ func TestEncodeDecodeUInt16Value(t *testing.T) {
 	})
 
 	t.Run("max", func(t *testing.T) {
+		t.Parallel()
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				value: UInt16Value(math.MaxUint16),
@@ -1691,6 +1911,8 @@ func TestEncodeDecodeUInt16Value(t *testing.T) {
 	})
 
 	t.Run(">max", func(t *testing.T) {
+		t.Parallel()
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				encoded: []byte{
@@ -1711,6 +1933,8 @@ func TestEncodeDecodeUInt32Value(t *testing.T) {
 	t.Parallel()
 
 	t.Run("zero", func(t *testing.T) {
+		t.Parallel()
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				value: UInt32Value(0),
@@ -1725,6 +1949,8 @@ func TestEncodeDecodeUInt32Value(t *testing.T) {
 	})
 
 	t.Run("negative", func(t *testing.T) {
+		t.Parallel()
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				encoded: []byte{
@@ -1740,6 +1966,8 @@ func TestEncodeDecodeUInt32Value(t *testing.T) {
 	})
 
 	t.Run("positive", func(t *testing.T) {
+		t.Parallel()
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				value: UInt32Value(42),
@@ -1755,6 +1983,8 @@ func TestEncodeDecodeUInt32Value(t *testing.T) {
 	})
 
 	t.Run("max", func(t *testing.T) {
+		t.Parallel()
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				value: UInt32Value(math.MaxUint32),
@@ -1770,6 +2000,8 @@ func TestEncodeDecodeUInt32Value(t *testing.T) {
 	})
 
 	t.Run(">max", func(t *testing.T) {
+		t.Parallel()
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				encoded: []byte{
@@ -1790,6 +2022,8 @@ func TestEncodeDecodeUInt64Value(t *testing.T) {
 	t.Parallel()
 
 	t.Run("zero", func(t *testing.T) {
+		t.Parallel()
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				value: UInt64Value(0),
@@ -1804,6 +2038,8 @@ func TestEncodeDecodeUInt64Value(t *testing.T) {
 	})
 
 	t.Run("negative", func(t *testing.T) {
+		t.Parallel()
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				encoded: []byte{
@@ -1819,6 +2055,8 @@ func TestEncodeDecodeUInt64Value(t *testing.T) {
 	})
 
 	t.Run("positive", func(t *testing.T) {
+		t.Parallel()
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				value: UInt64Value(42),
@@ -1834,6 +2072,8 @@ func TestEncodeDecodeUInt64Value(t *testing.T) {
 	})
 
 	t.Run("max", func(t *testing.T) {
+		t.Parallel()
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				value: UInt64Value(math.MaxUint64),
@@ -1854,6 +2094,8 @@ func TestEncodeDecodeUInt128Value(t *testing.T) {
 	t.Parallel()
 
 	t.Run("zero", func(t *testing.T) {
+		t.Parallel()
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				value: NewUInt128ValueFromUint64(0),
@@ -1869,6 +2111,8 @@ func TestEncodeDecodeUInt128Value(t *testing.T) {
 	})
 
 	t.Run("positive", func(t *testing.T) {
+		t.Parallel()
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				value: NewUInt128ValueFromUint64(42),
@@ -1885,6 +2129,8 @@ func TestEncodeDecodeUInt128Value(t *testing.T) {
 	})
 
 	t.Run("max", func(t *testing.T) {
+		t.Parallel()
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				value: NewUInt128ValueFromBigInt(sema.UInt128TypeMaxIntBig),
@@ -1902,6 +2148,8 @@ func TestEncodeDecodeUInt128Value(t *testing.T) {
 	})
 
 	t.Run("negative", func(t *testing.T) {
+		t.Parallel()
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				encoded: []byte{
@@ -1918,6 +2166,8 @@ func TestEncodeDecodeUInt128Value(t *testing.T) {
 	})
 
 	t.Run(">max", func(t *testing.T) {
+		t.Parallel()
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				encoded: []byte{
@@ -1938,6 +2188,8 @@ func TestEncodeDecodeUInt128Value(t *testing.T) {
 	t.Run("RFC", func(t *testing.T) {
 		rfcValue, ok := new(big.Int).SetString("18446744073709551616", 10)
 		require.True(t, ok)
+
+		t.Parallel()
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
@@ -1961,6 +2213,8 @@ func TestEncodeDecodeUInt256Value(t *testing.T) {
 	t.Parallel()
 
 	t.Run("zero", func(t *testing.T) {
+		t.Parallel()
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				value: NewUInt256ValueFromUint64(0),
@@ -1976,6 +2230,8 @@ func TestEncodeDecodeUInt256Value(t *testing.T) {
 	})
 
 	t.Run("positive", func(t *testing.T) {
+		t.Parallel()
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				value: NewUInt256ValueFromUint64(42),
@@ -1992,6 +2248,8 @@ func TestEncodeDecodeUInt256Value(t *testing.T) {
 	})
 
 	t.Run("negative", func(t *testing.T) {
+		t.Parallel()
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				encoded: []byte{
@@ -2008,6 +2266,8 @@ func TestEncodeDecodeUInt256Value(t *testing.T) {
 	})
 
 	t.Run(">max", func(t *testing.T) {
+		t.Parallel()
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				encoded: []byte{
@@ -2035,6 +2295,8 @@ func TestEncodeDecodeUInt256Value(t *testing.T) {
 		rfcValue, ok := new(big.Int).SetString("18446744073709551616", 10)
 		require.True(t, ok)
 
+		t.Parallel()
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				value: NewUInt256ValueFromBigInt(rfcValue),
@@ -2057,6 +2319,8 @@ func TestEncodeDecodeWord8Value(t *testing.T) {
 	t.Parallel()
 
 	t.Run("zero", func(t *testing.T) {
+		t.Parallel()
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				value: Word8Value(0),
@@ -2071,6 +2335,8 @@ func TestEncodeDecodeWord8Value(t *testing.T) {
 	})
 
 	t.Run("negative", func(t *testing.T) {
+		t.Parallel()
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				encoded: []byte{
@@ -2086,6 +2352,8 @@ func TestEncodeDecodeWord8Value(t *testing.T) {
 	})
 
 	t.Run("positive", func(t *testing.T) {
+		t.Parallel()
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				value: Word8Value(42),
@@ -2101,6 +2369,8 @@ func TestEncodeDecodeWord8Value(t *testing.T) {
 	})
 
 	t.Run("max", func(t *testing.T) {
+		t.Parallel()
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				value: Word8Value(math.MaxUint8),
@@ -2116,6 +2386,8 @@ func TestEncodeDecodeWord8Value(t *testing.T) {
 	})
 
 	t.Run(">max", func(t *testing.T) {
+		t.Parallel()
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				encoded: []byte{
@@ -2136,6 +2408,8 @@ func TestEncodeDecodeWord16Value(t *testing.T) {
 	t.Parallel()
 
 	t.Run("zero", func(t *testing.T) {
+		t.Parallel()
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				value: Word16Value(0),
@@ -2150,6 +2424,8 @@ func TestEncodeDecodeWord16Value(t *testing.T) {
 	})
 
 	t.Run("positive", func(t *testing.T) {
+		t.Parallel()
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				value: Word16Value(42),
@@ -2165,6 +2441,8 @@ func TestEncodeDecodeWord16Value(t *testing.T) {
 	})
 
 	t.Run("max", func(t *testing.T) {
+		t.Parallel()
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				value: Word16Value(math.MaxUint16),
@@ -2180,6 +2458,8 @@ func TestEncodeDecodeWord16Value(t *testing.T) {
 	})
 
 	t.Run(">max", func(t *testing.T) {
+		t.Parallel()
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				encoded: []byte{
@@ -2200,6 +2480,8 @@ func TestEncodeDecodeWord32Value(t *testing.T) {
 	t.Parallel()
 
 	t.Run("zero", func(t *testing.T) {
+		t.Parallel()
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				value: Word32Value(0),
@@ -2214,6 +2496,8 @@ func TestEncodeDecodeWord32Value(t *testing.T) {
 	})
 
 	t.Run("positive", func(t *testing.T) {
+		t.Parallel()
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				value: Word32Value(42),
@@ -2229,6 +2513,8 @@ func TestEncodeDecodeWord32Value(t *testing.T) {
 	})
 
 	t.Run("max", func(t *testing.T) {
+		t.Parallel()
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				value: Word32Value(math.MaxUint32),
@@ -2244,6 +2530,8 @@ func TestEncodeDecodeWord32Value(t *testing.T) {
 	})
 
 	t.Run(">max", func(t *testing.T) {
+		t.Parallel()
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				encoded: []byte{
@@ -2264,6 +2552,8 @@ func TestEncodeDecodeWord64Value(t *testing.T) {
 	t.Parallel()
 
 	t.Run("zero", func(t *testing.T) {
+		t.Parallel()
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				value: Word64Value(0),
@@ -2278,6 +2568,8 @@ func TestEncodeDecodeWord64Value(t *testing.T) {
 	})
 
 	t.Run("positive", func(t *testing.T) {
+		t.Parallel()
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				value: Word64Value(42),
@@ -2293,6 +2585,8 @@ func TestEncodeDecodeWord64Value(t *testing.T) {
 	})
 
 	t.Run("max", func(t *testing.T) {
+		t.Parallel()
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				value: Word64Value(math.MaxUint64),
@@ -2313,6 +2607,8 @@ func TestEncodeDecodeSomeValue(t *testing.T) {
 	t.Parallel()
 
 	t.Run("nil", func(t *testing.T) {
+		t.Parallel()
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				value: &SomeValue{
@@ -2330,6 +2626,8 @@ func TestEncodeDecodeSomeValue(t *testing.T) {
 
 	t.Run("string", func(t *testing.T) {
 		expectedString := NewStringValue("test")
+
+		t.Parallel()
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
@@ -2349,6 +2647,8 @@ func TestEncodeDecodeSomeValue(t *testing.T) {
 	})
 
 	t.Run("bool", func(t *testing.T) {
+		t.Parallel()
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				value: &SomeValue{
@@ -2370,6 +2670,8 @@ func TestEncodeDecodeFix64Value(t *testing.T) {
 	t.Parallel()
 
 	t.Run("zero", func(t *testing.T) {
+		t.Parallel()
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				value: Fix64Value(0),
@@ -2384,6 +2686,8 @@ func TestEncodeDecodeFix64Value(t *testing.T) {
 	})
 
 	t.Run("negative", func(t *testing.T) {
+		t.Parallel()
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				value: Fix64Value(-42),
@@ -2399,6 +2703,8 @@ func TestEncodeDecodeFix64Value(t *testing.T) {
 	})
 
 	t.Run("positive", func(t *testing.T) {
+		t.Parallel()
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				value: Fix64Value(42),
@@ -2414,6 +2720,8 @@ func TestEncodeDecodeFix64Value(t *testing.T) {
 	})
 
 	t.Run("min", func(t *testing.T) {
+		t.Parallel()
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				value: Fix64Value(math.MinInt64),
@@ -2429,6 +2737,8 @@ func TestEncodeDecodeFix64Value(t *testing.T) {
 	})
 
 	t.Run("<min", func(t *testing.T) {
+		t.Parallel()
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				encoded: []byte{
@@ -2444,6 +2754,8 @@ func TestEncodeDecodeFix64Value(t *testing.T) {
 	})
 
 	t.Run("max", func(t *testing.T) {
+		t.Parallel()
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				value: Fix64Value(math.MaxInt64),
@@ -2459,6 +2771,8 @@ func TestEncodeDecodeFix64Value(t *testing.T) {
 	})
 
 	t.Run(">max", func(t *testing.T) {
+		t.Parallel()
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				encoded: []byte{
@@ -2480,6 +2794,8 @@ func TestEncodeDecodeUFix64Value(t *testing.T) {
 	t.Parallel()
 
 	t.Run("zero", func(t *testing.T) {
+		t.Parallel()
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				value: UFix64Value(0),
@@ -2494,6 +2810,8 @@ func TestEncodeDecodeUFix64Value(t *testing.T) {
 	})
 
 	t.Run("negative", func(t *testing.T) {
+		t.Parallel()
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				encoded: []byte{
@@ -2509,6 +2827,8 @@ func TestEncodeDecodeUFix64Value(t *testing.T) {
 	})
 
 	t.Run("positive", func(t *testing.T) {
+		t.Parallel()
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				value: UFix64Value(42),
@@ -2524,6 +2844,8 @@ func TestEncodeDecodeUFix64Value(t *testing.T) {
 	})
 
 	t.Run("max", func(t *testing.T) {
+		t.Parallel()
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				value: UFix64Value(math.MaxUint64),
@@ -2544,6 +2866,8 @@ func TestEncodeDecodeAddressValue(t *testing.T) {
 	t.Parallel()
 
 	t.Run("empty", func(t *testing.T) {
+		t.Parallel()
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				value: AddressValue{},
@@ -2558,6 +2882,8 @@ func TestEncodeDecodeAddressValue(t *testing.T) {
 	})
 
 	t.Run("non-empty", func(t *testing.T) {
+		t.Parallel()
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				value: AddressValue(common.BytesToAddress([]byte{0x42})),
@@ -2574,6 +2900,8 @@ func TestEncodeDecodeAddressValue(t *testing.T) {
 	})
 
 	t.Run("with leading zeros", func(t *testing.T) {
+		t.Parallel()
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				value: AddressValue(common.BytesToAddress([]byte{0x0, 0x42})),
@@ -2590,6 +2918,8 @@ func TestEncodeDecodeAddressValue(t *testing.T) {
 	})
 
 	t.Run("with zeros in-between and at and", func(t *testing.T) {
+		t.Parallel()
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				value: AddressValue(common.BytesToAddress([]byte{0x0, 0x42, 0x0, 0x43, 0x0})),
@@ -2606,6 +2936,8 @@ func TestEncodeDecodeAddressValue(t *testing.T) {
 	})
 
 	t.Run("too long", func(t *testing.T) {
+		t.Parallel()
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				encoded: []byte{
@@ -2639,6 +2971,9 @@ func TestEncodeDecodePathValue(t *testing.T) {
 	t.Parallel()
 
 	t.Run("private", func(t *testing.T) {
+
+		t.Parallel()
+
 		encoded := []byte{
 			// tag
 			0xd8, CBORTagPathValue,
@@ -2661,6 +2996,9 @@ func TestEncodeDecodePathValue(t *testing.T) {
 	})
 
 	t.Run("public", func(t *testing.T) {
+
+		t.Parallel()
+
 		encoded := []byte{
 			// tag
 			0xd8, CBORTagPathValue,
@@ -2688,6 +3026,8 @@ func TestEncodeDecodeCapabilityValue(t *testing.T) {
 	t.Parallel()
 
 	t.Run("private path, untyped capability, new format", func(t *testing.T) {
+
+		t.Parallel()
 
 		value := CapabilityValue{
 			Address: NewAddressValueFromBytes([]byte{0x2}),
@@ -2728,6 +3068,8 @@ func TestEncodeDecodeCapabilityValue(t *testing.T) {
 	})
 
 	t.Run("private path, typed capability", func(t *testing.T) {
+
+		t.Parallel()
 
 		value := CapabilityValue{
 			Address:    NewAddressValueFromBytes([]byte{0x2}),
@@ -2771,6 +3113,9 @@ func TestEncodeDecodeCapabilityValue(t *testing.T) {
 	})
 
 	t.Run("public path, untyped capability, new format", func(t *testing.T) {
+
+		t.Parallel()
+
 		value := CapabilityValue{
 			Address: NewAddressValueFromBytes([]byte{0x3}),
 			Path:    publicPathValue,
@@ -2811,6 +3156,8 @@ func TestEncodeDecodeCapabilityValue(t *testing.T) {
 	})
 
 	t.Run("public path, typed capability", func(t *testing.T) {
+
+		t.Parallel()
 
 		value := CapabilityValue{
 			Address:    NewAddressValueFromBytes([]byte{0x3}),
@@ -2855,6 +3202,8 @@ func TestEncodeDecodeCapabilityValue(t *testing.T) {
 
 	// For testing backward compatibility for native composite types
 	t.Run("public path, public account typed capability", func(t *testing.T) {
+
+		t.Parallel()
 
 		capabilityValue := CapabilityValue{
 			Address:    NewAddressValueFromBytes([]byte{0x3}),
@@ -2921,6 +3270,9 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 	}
 
 	t.Run("primitive, Bool", func(t *testing.T) {
+
+		t.Parallel()
+
 		value := LinkValue{
 			TargetPath: publicPathValue,
 			Type:       ConvertSemaToPrimitiveStaticType(sema.BoolType),
@@ -2943,6 +3295,9 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 	})
 
 	t.Run("optional, primitive, bool", func(t *testing.T) {
+
+		t.Parallel()
+
 		value := LinkValue{
 			TargetPath: publicPathValue,
 			Type: OptionalStaticType{
@@ -2973,6 +3328,9 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 	})
 
 	t.Run("composite, struct, qualified identifier", func(t *testing.T) {
+
+		t.Parallel()
+
 		value := LinkValue{
 			TargetPath: publicPathValue,
 			Type: CompositeStaticType{
@@ -3009,6 +3367,9 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 	})
 
 	t.Run("interface, struct, qualified identifier", func(t *testing.T) {
+
+		t.Parallel()
+
 		value := LinkValue{
 			TargetPath: publicPathValue,
 			Type: InterfaceStaticType{
@@ -3045,6 +3406,9 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 	})
 
 	t.Run("variable-sized, bool", func(t *testing.T) {
+
+		t.Parallel()
+
 		value := LinkValue{
 			TargetPath: publicPathValue,
 			Type: VariableSizedStaticType{
@@ -3071,6 +3435,9 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 	})
 
 	t.Run("constant-sized, bool", func(t *testing.T) {
+
+		t.Parallel()
+
 		value := LinkValue{
 			TargetPath: publicPathValue,
 			Type: ConstantSizedStaticType{
@@ -3102,6 +3469,9 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 	})
 
 	t.Run("reference type, authorized, bool", func(t *testing.T) {
+
+		t.Parallel()
+
 		value := LinkValue{
 			TargetPath: publicPathValue,
 			Type: ReferenceStaticType{
@@ -3133,6 +3503,9 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 	})
 
 	t.Run("reference type, unauthorized, bool", func(t *testing.T) {
+
+		t.Parallel()
+
 		value := LinkValue{
 			TargetPath: publicPathValue,
 			Type: ReferenceStaticType{
@@ -3164,6 +3537,9 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 	})
 
 	t.Run("dictionary, bool, string", func(t *testing.T) {
+
+		t.Parallel()
+
 		value := LinkValue{
 			TargetPath: publicPathValue,
 			Type: DictionaryStaticType{
@@ -3196,6 +3572,9 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 	})
 
 	t.Run("restricted", func(t *testing.T) {
+
+		t.Parallel()
+
 		value := LinkValue{
 			TargetPath: publicPathValue,
 			Type: &RestrictedStaticType{
@@ -3278,6 +3657,9 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 	})
 
 	t.Run("capability, none", func(t *testing.T) {
+
+		t.Parallel()
+
 		value := LinkValue{
 			TargetPath: publicPathValue,
 			Type:       CapabilityStaticType{},
@@ -3301,6 +3683,9 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 	})
 
 	t.Run("capability, primitive, bool", func(t *testing.T) {
+
+		t.Parallel()
+
 		value := LinkValue{
 			TargetPath: publicPathValue,
 			Type: CapabilityStaticType{
@@ -3332,6 +3717,9 @@ func TestEncodeDecodeTypeValue(t *testing.T) {
 	t.Parallel()
 
 	t.Run("primitive, Bool", func(t *testing.T) {
+
+		t.Parallel()
+
 		value := TypeValue{
 			Type: ConvertSemaToPrimitiveStaticType(sema.BoolType),
 		}
@@ -3356,6 +3744,9 @@ func TestEncodeDecodeTypeValue(t *testing.T) {
 	})
 
 	t.Run("primitive, Int", func(t *testing.T) {
+
+		t.Parallel()
+
 		value := TypeValue{
 			Type: ConvertSemaToPrimitiveStaticType(sema.IntType),
 		}
@@ -3380,9 +3771,13 @@ func TestEncodeDecodeTypeValue(t *testing.T) {
 	})
 
 	t.Run("without static type", func(t *testing.T) {
+
+		t.Parallel()
+
 		value := TypeValue{
 			Type: nil,
 		}
+
 		encoded := []byte{
 			// tag
 			0xd8, CBORTagTypeValue,
@@ -3447,7 +3842,7 @@ func TestEncodeDecodeTypeValue(t *testing.T) {
 //	utils.AssertEqualWithDiff(t,
 //		[]byte{
 //			// cbor Array Value tag
-//			0xd8, CBORRTagArrayValue,
+//			0xd8, CBORTagArrayValue,
 //
 //			// array, 2 items follow
 //			0x82,
@@ -3476,7 +3871,7 @@ func TestEncodeDecodeTypeValue(t *testing.T) {
 //
 //	data := []byte{
 //		// cbor Array Value tag
-//		0xd8, CBORRTagArrayValue,
+//		0xd8, CBORTagArrayValue,
 //
 //		// array, 2 items follow
 //		0x82,

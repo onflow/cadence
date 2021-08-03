@@ -185,13 +185,13 @@ func (v TypeValue) Equal(other Value, _ func() LocationRange) bool {
 	return staticType.Equal(otherStaticType)
 }
 
-func (v TypeValue) GetMember(inter *Interpreter, _ func() LocationRange, name string) Value {
+func (v TypeValue) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
 	switch name {
 	case "identifier":
 		var typeID string
 		staticType := v.Type
 		if staticType != nil {
-			typeID = string(inter.ConvertStaticToSemaType(staticType).ID())
+			typeID = string(interpreter.ConvertStaticToSemaType(staticType).ID())
 		}
 		return NewStringValue(typeID)
 	}
@@ -674,11 +674,11 @@ type ArrayValue struct {
 
 func NewArrayValueUnownedNonCopying(
 	arrayType ArrayStaticType,
-	slabStorage atree.SlabStorage,
+	storage atree.SlabStorage,
 	values ...Value,
 ) *ArrayValue {
 
-	array, err := atree.NewArray(slabStorage)
+	array, err := atree.NewArray(storage)
 	if err != nil {
 		panic(ExternalError{err})
 	}
@@ -1098,8 +1098,8 @@ func (v *ArrayValue) Equal(other Value, getLocationRange func() LocationRange) b
 	return true
 }
 
-func (v *ArrayValue) Storable(storage atree.SlabStorage) atree.Storable {
-	return v.array.Storable(storage)
+func (v *ArrayValue) Storable(_ atree.SlabStorage) atree.Storable {
+	return atree.StorageIDStorable(v.array.StorageID())
 }
 
 func (v *ArrayValue) DeepCopy(storage atree.SlabStorage) (atree.Value, error) {
@@ -6796,7 +6796,7 @@ type CompositeValue struct {
 type ComputedField func(*Interpreter) Value
 
 func NewCompositeValue(
-	slabStorage atree.SlabStorage,
+	storage atree.SlabStorage,
 	location common.Location,
 	qualifiedIdentifier string,
 	kind common.CompositeKind,
@@ -6804,7 +6804,7 @@ func NewCompositeValue(
 	owner *common.Address,
 ) *CompositeValue {
 
-	storageID := slabStorage.GenerateStorageID()
+	storageID := storage.GenerateStorageID()
 
 	// TODO: only allocate when setting a field
 	if fields == nil {
@@ -6820,17 +6820,23 @@ func NewCompositeValue(
 		StorageID:           storageID,
 	}
 
-	if err := slabStorage.Store(
-		storageID,
+	v.store(storage)
+
+	return v
+}
+
+func (v *CompositeValue) store(storage atree.SlabStorage) {
+	if err := storage.Store(
+		v.StorageID,
 		atree.StorableSlab{
-			StorageID: storageID,
-			Storable:  v,
+			StorageID: v.StorageID,
+			Storable: CompositeStorable{
+				Composite: v,
+			},
 		},
 	); err != nil {
 		panic(ExternalError{err})
 	}
-
-	return v
 }
 
 func (v *CompositeValue) Destroy(interpreter *Interpreter, getLocationRange func() LocationRange) {
@@ -6857,11 +6863,10 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, getLocationRange func
 
 	v.destroyed = true
 
-	// TODO: update in storage
+	v.store(interpreter.Storage)
 }
 
 var _ Value = &CompositeValue{}
-var _ atree.Storable = &CompositeValue{}
 var _ EquatableValue = &CompositeValue{}
 
 func (*CompositeValue) IsValue() {}
@@ -7029,14 +7034,19 @@ func (v *CompositeValue) OwnerValue(interpreter *Interpreter) OptionalValue {
 	return NewSomeValueOwningNonCopying(ownerAccount)
 }
 
-func (v *CompositeValue) SetMember(_ *Interpreter, getLocationRange func() LocationRange, name string, value Value) {
+func (v *CompositeValue) SetMember(
+	interpreter *Interpreter,
+	getLocationRange func() LocationRange,
+	name string,
+	value Value,
+) {
 	v.checkStatus(getLocationRange)
-
-	// TODO: update in storage
 
 	value.SetOwner(v.Owner)
 
 	v.Fields.Set(name, value)
+
+	v.store(interpreter.Storage)
 }
 
 func (v *CompositeValue) String() string {
@@ -7264,13 +7274,19 @@ func (v *CompositeValue) DeepCopy(storage atree.SlabStorage) (atree.Value, error
 	return newValue, nil
 }
 
-func (v *CompositeValue) ByteSize(storage atree.SlabStorage) uint32 {
-	// TODO: optimize
-	return storableSize(v, storage)
+type CompositeStorable struct {
+	Composite *CompositeValue
 }
 
-func (v *CompositeValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
-	return v, nil
+var _ atree.Storable = CompositeStorable{}
+
+func (s CompositeStorable) ByteSize(storage atree.SlabStorage) uint32 {
+	// TODO: optimize
+	return storableSize(s, storage)
+}
+
+func (s CompositeStorable) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
+	return s.Composite, nil
 }
 
 func NewEnumCaseValue(
@@ -7303,26 +7319,27 @@ type DictionaryValue struct {
 
 func NewDictionaryValueUnownedNonCopying(
 	dictionaryType DictionaryStaticType,
-	slabStorage atree.SlabStorage,
+	storage atree.SlabStorage,
 	keysAndValues ...Value,
 ) *DictionaryValue {
 
-	// TODO: store in storage
+	storageID := storage.GenerateStorageID()
 
 	keysAndValuesCount := len(keysAndValues)
 	if keysAndValuesCount%2 != 0 {
 		panic("uneven number of keys and values")
 	}
 
-	result := &DictionaryValue{
+	v := &DictionaryValue{
 		Type: dictionaryType,
 		Keys: NewArrayValueUnownedNonCopying(
 			VariableSizedStaticType{
 				Type: dictionaryType.KeyType,
 			},
-			slabStorage,
+			storage,
 		),
-		Entries: NewStringValueOrderedMap(),
+		Entries:   NewStringValueOrderedMap(),
+		StorageID: storageID,
 		// NOTE: new value has no owner
 		Owner: nil,
 	}
@@ -7330,14 +7347,15 @@ func NewDictionaryValueUnownedNonCopying(
 	for i := 0; i < keysAndValuesCount; i += 2 {
 		key := keysAndValues[i]
 		value := keysAndValues[i+1]
-		_ = result.Insert(nil, ReturnEmptyLocationRange, key, value)
+		_ = v.Insert(storage, ReturnEmptyLocationRange, key, value)
 	}
 
-	return result
+	v.store(storage)
+
+	return v
 }
 
 var _ Value = &DictionaryValue{}
-var _ atree.Storable = &DictionaryValue{}
 var _ EquatableValue = &DictionaryValue{}
 
 func (*DictionaryValue) IsValue() {}
@@ -7403,21 +7421,21 @@ func (v *DictionaryValue) SetOwner(owner *common.Address) {
 	})
 }
 
-func maybeDestroy(inter *Interpreter, getLocationRange func() LocationRange, value Value) {
+func maybeDestroy(interpreter *Interpreter, getLocationRange func() LocationRange, value Value) {
 	destroyableValue, ok := value.(DestroyableValue)
 	if !ok {
 		return
 	}
 
-	destroyableValue.Destroy(inter, getLocationRange)
+	destroyableValue.Destroy(interpreter, getLocationRange)
 }
 
-func (v *DictionaryValue) Destroy(inter *Interpreter, getLocationRange func() LocationRange) {
+func (v *DictionaryValue) Destroy(interpreter *Interpreter, getLocationRange func() LocationRange) {
 
 	v.Keys.Walk(func(keyValue Value) {
-		maybeDestroy(inter, getLocationRange, keyValue)
-		value := v.Get(inter, getLocationRange, keyValue)
-		maybeDestroy(inter, getLocationRange, value)
+		maybeDestroy(interpreter, getLocationRange, keyValue)
+		value, _, _ := v.GetKey(keyValue)
+		maybeDestroy(interpreter, getLocationRange, value)
 	})
 }
 
@@ -7427,10 +7445,14 @@ func (v *DictionaryValue) ContainsKey(keyValue Value) BoolValue {
 	return BoolValue(ok)
 }
 
-func (v *DictionaryValue) Get(_ *Interpreter, _ func() LocationRange, keyValue Value) Value {
+func (v *DictionaryValue) GetKey(keyValue Value) (Value, string, bool) {
 	key := dictionaryKey(keyValue)
-
 	value, ok := v.Entries.Get(key)
+	return value, key, ok
+}
+
+func (v *DictionaryValue) Get(_ *Interpreter, _ func() LocationRange, keyValue Value) Value {
+	value, _, ok := v.GetKey(keyValue)
 	if ok {
 		return NewSomeValueOwningNonCopying(value)
 	}
@@ -7446,17 +7468,18 @@ func dictionaryKey(keyValue Value) string {
 	return hasKeyString.KeyString()
 }
 
-func (v *DictionaryValue) Set(inter *Interpreter, getLocationRange func() LocationRange, keyValue Value, value Value) {
-
-	// TODO: update in storage
-
-	switch typedValue := value.(type) {
+func (v *DictionaryValue) Set(
+	interpreter *Interpreter,
+	getLocationRange func() LocationRange,
+	keyValue Value,
+	value Value,
+) {
+	switch value := value.(type) {
 	case *SomeValue:
-		_ = v.Insert(inter, getLocationRange, keyValue, typedValue.Value)
+		_ = v.Insert(interpreter.Storage, getLocationRange, keyValue, value.Value)
 
 	case NilValue:
-		_ = v.Remove(inter, getLocationRange, keyValue)
-		return
+		_ = v.Remove(interpreter.Storage, getLocationRange, keyValue)
 
 	default:
 		panic(errors.NewUnreachableError())
@@ -7531,7 +7554,7 @@ func (v *DictionaryValue) GetMember(interpreter *Interpreter, _ func() LocationR
 				keyValue := invocation.Arguments[0]
 
 				return v.Remove(
-					invocation.Interpreter,
+					invocation.Interpreter.Storage,
 					invocation.GetLocationRange,
 					keyValue,
 				)
@@ -7545,7 +7568,7 @@ func (v *DictionaryValue) GetMember(interpreter *Interpreter, _ func() LocationR
 				newValue := invocation.Arguments[1]
 
 				return v.Insert(
-					invocation.Interpreter,
+					invocation.Interpreter.Storage,
 					invocation.GetLocationRange,
 					keyValue,
 					newValue,
@@ -7575,63 +7598,63 @@ func (v *DictionaryValue) Count() int {
 }
 
 // TODO: unset owner?
-func (v *DictionaryValue) Remove(inter *Interpreter, getLocationRange func() LocationRange, keyValue Value) OptionalValue {
+func (v *DictionaryValue) Remove(
+	storage atree.SlabStorage,
+	getLocationRange func() LocationRange,
+	keyValue Value,
+) OptionalValue {
 
-	// TODO: update in storage
+	value, key, ok := v.GetKey(keyValue)
+	if !ok {
+		return NilValue{}
+	}
 
-	// Don't use `Entries` here: the value might be deferred and needs to be loaded
-	value := v.Get(inter, getLocationRange, keyValue)
+	v.Entries.Delete(key)
 
-	key := dictionaryKey(keyValue)
-
-	switch value := value.(type) {
-	case *SomeValue:
-		v.Entries.Delete(key)
-
-		// TODO: optimize linear scan
-		iterator, err := v.Keys.array.Iterator()
+	// TODO: optimize linear scan
+	iterator, err := v.Keys.array.Iterator()
+	if err != nil {
+		panic(ExternalError{err})
+	}
+	index := 0
+	for {
+		keyValue, err := iterator.Next()
 		if err != nil {
 			panic(ExternalError{err})
 		}
-		index := 0
-		for {
-			keyValue, err := iterator.Next()
-			if err != nil {
-				panic(ExternalError{err})
-			}
-			if keyValue == nil {
-				break
-			}
-
-			if dictionaryKey(keyValue.(Value)) == key {
-				v.Keys.Remove(index, getLocationRange)
-				return value
-			}
-			index++
+		if keyValue == nil {
+			break
 		}
 
-		// Should never occur, the key should have been found
-		panic(errors.NewUnreachableError())
+		if dictionaryKey(keyValue.(Value)) == key {
+			v.Keys.Remove(index, getLocationRange)
 
-	case NilValue:
-		return value
+			v.store(storage)
 
-	default:
-		panic(errors.NewUnreachableError())
+			return NewSomeValueOwningNonCopying(value)
+		}
+		index++
 	}
+
+	// Should never occur, the key should have been found
+	panic(errors.NewUnreachableError())
 }
 
-func (v *DictionaryValue) Insert(inter *Interpreter, locationRangeGetter func() LocationRange, keyValue, value Value) OptionalValue {
+func (v *DictionaryValue) Insert(
+	storage atree.SlabStorage,
+	locationRangeGetter func() LocationRange,
+	keyValue, value Value,
+) OptionalValue {
 
-	// TODO: update in storage
-
-	existingValue := v.Get(inter, locationRangeGetter, keyValue)
+	existingValue := v.Get(nil, locationRangeGetter, keyValue)
 
 	key := dictionaryKey(keyValue)
 
 	value.SetOwner(v.Owner)
 
 	v.Entries.Set(key, value)
+
+	v.store(storage)
 
 	switch existingValue := existingValue.(type) {
 	case *SomeValue:
@@ -7761,17 +7784,22 @@ func (v *DictionaryValue) Equal(other Value, getLocationRange func() LocationRan
 	return true
 }
 
-func (v *DictionaryValue) ByteSize(storage atree.SlabStorage) uint32 {
-	return storableSize(v, storage)
-}
-
-func (v *DictionaryValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
-	return v, nil
+func (v *DictionaryValue) store(storage atree.SlabStorage) {
+	if err := storage.Store(
+		v.StorageID,
+		atree.StorableSlab{
+			StorageID: v.StorageID,
+			Storable: DictionaryStorable{
+				Dictionary: v,
+			},
+		},
+	); err != nil {
+		panic(ExternalError{err})
+	}
 }
 
 func (v *DictionaryValue) Storable(_ atree.SlabStorage) atree.Storable {
-	// TODO: store in storage and return StorageIDStorable
-	return v
+	return atree.StorageIDStorable(v.StorageID)
 }
 
 func (v *DictionaryValue) DeepCopy(storage atree.SlabStorage) (atree.Value, error) {
@@ -7815,6 +7843,20 @@ func (v *DictionaryValue) DeepCopy(storage atree.SlabStorage) (atree.Value, erro
 	}
 
 	return result, nil
+}
+
+type DictionaryStorable struct {
+	Dictionary *DictionaryValue
+}
+
+var _ atree.Storable = DictionaryStorable{}
+
+func (s DictionaryStorable) ByteSize(storage atree.SlabStorage) uint32 {
+	return storableSize(s, storage)
+}
+
+func (s DictionaryStorable) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
+	return s.Dictionary, nil
 }
 
 // OptionalValue
@@ -8984,10 +9026,10 @@ func (v CapabilityValue) Walk(walkChild func(Value)) {
 	walkChild(v.Path)
 }
 
-func (v CapabilityValue) DynamicType(inter *Interpreter, _ DynamicTypeResults) DynamicType {
+func (v CapabilityValue) DynamicType(interpreter *Interpreter, _ DynamicTypeResults) DynamicType {
 	var borrowType *sema.ReferenceType
 	if v.BorrowType != nil {
-		borrowType = inter.ConvertStaticToSemaType(v.BorrowType).(*sema.ReferenceType)
+		borrowType = interpreter.ConvertStaticToSemaType(v.BorrowType).(*sema.ReferenceType)
 	}
 
 	return CapabilityDynamicType{
@@ -9030,21 +9072,21 @@ func (v CapabilityValue) RecursiveString(results StringResults) string {
 	)
 }
 
-func (v CapabilityValue) GetMember(inter *Interpreter, _ func() LocationRange, name string) Value {
+func (v CapabilityValue) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
 	switch name {
 	case "borrow":
 		var borrowType *sema.ReferenceType
 		if v.BorrowType != nil {
-			borrowType = inter.ConvertStaticToSemaType(v.BorrowType).(*sema.ReferenceType)
+			borrowType = interpreter.ConvertStaticToSemaType(v.BorrowType).(*sema.ReferenceType)
 		}
-		return inter.capabilityBorrowFunction(v.Address, v.Path, borrowType)
+		return interpreter.capabilityBorrowFunction(v.Address, v.Path, borrowType)
 
 	case "check":
 		var borrowType *sema.ReferenceType
 		if v.BorrowType != nil {
-			borrowType = inter.ConvertStaticToSemaType(v.BorrowType).(*sema.ReferenceType)
+			borrowType = interpreter.ConvertStaticToSemaType(v.BorrowType).(*sema.ReferenceType)
 		}
-		return inter.capabilityCheckFunction(v.Address, v.Path, borrowType)
+		return interpreter.capabilityCheckFunction(v.Address, v.Path, borrowType)
 
 	case "address":
 		return v.Address
