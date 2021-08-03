@@ -22,6 +22,7 @@ import (
 	"fmt"
 
 	"github.com/fxamacker/atree"
+	"github.com/fxamacker/cbor/v2"
 	"github.com/onflow/cadence/runtime/common"
 )
 
@@ -168,6 +169,21 @@ const (
 	CBORTagRestrictedStaticType
 	CBORTagCapabilityStaticType
 )
+
+// CBOREncMode
+//
+// See https://github.com/fxamacker/cbor:
+// "For best performance, reuse EncMode and DecMode after creating them."
+//
+var CBOREncMode = func() cbor.EncMode {
+	options := cbor.CanonicalEncOptions()
+	options.BigIntConvert = cbor.BigIntConvertNone
+	encMode, err := options.EncMode()
+	if err != nil {
+		panic(err)
+	}
+	return encMode
+}()
 
 // Encode encodes the value as a CBOR nil
 //
