@@ -72,7 +72,7 @@ var _ Storage = InMemoryStorage{}
 
 func NewInMemoryStorage() InMemoryStorage {
 	return InMemoryStorage{
-		BasicSlabStorage: atree.NewBasicSlabStorage(),
+		BasicSlabStorage: atree.NewBasicSlabStorage(CBOREncMode),
 		Data:             make(map[InMemoryStorageKey]atree.Storable),
 	}
 }
