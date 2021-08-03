@@ -332,8 +332,15 @@ func TestSetOwnerDictionarySetIndex(t *testing.T) {
 	assert.Equal(t, &newOwner, dictionary.GetOwner())
 	assert.Equal(t, &oldOwner, value.GetOwner())
 
+	inter, err := NewInterpreter(
+		nil,
+		utils.TestLocation,
+		WithStorage(storage),
+	)
+	require.NoError(t, err)
+
 	dictionary.Set(
-		newTestInterpreterWithTestStruct(t),
+		inter,
 		ReturnEmptyLocationRange,
 		keyValue,
 		NewSomeValueOwningNonCopying(value),
@@ -370,7 +377,19 @@ func TestSetOwnerDictionaryInsert(t *testing.T) {
 	assert.Equal(t, &newOwner, dictionary.GetOwner())
 	assert.Equal(t, &oldOwner, value.GetOwner())
 
-	dictionary.Insert(inter, ReturnEmptyLocationRange, keyValue, value)
+	inter, err := NewInterpreter(
+		nil,
+		utils.TestLocation,
+		WithStorage(storage),
+	)
+	require.NoError(t, err)
+
+	dictionary.Insert(
+		inter,
+		ReturnEmptyLocationRange,
+		keyValue,
+		value,
+	)
 
 	assert.Equal(t, &newOwner, dictionary.GetOwner())
 	assert.Equal(t, &newOwner, value.GetOwner())
@@ -529,8 +548,15 @@ func TestSetOwnerCompositeSetMember(t *testing.T) {
 	assert.Equal(t, &newOwner, composite.GetOwner())
 	assert.Equal(t, &oldOwner, value.GetOwner())
 
-	composite.SetMember(
+	inter, err := NewInterpreter(
 		nil,
+		utils.TestLocation,
+		WithStorage(storage),
+	)
+	require.NoError(t, err)
+
+	composite.SetMember(
+		inter,
 		ReturnEmptyLocationRange,
 		fieldName,
 		value,

@@ -569,143 +569,50 @@ const (
 //				encodedDictionaryValueEntriesFieldKeyV6: []interface{}(entries),
 //			},
 // }
-func (v *DictionaryValue) Encode(e *atree.Encoder) error {
-	// TODO:
-	//	// Encode CBOR tag number
-	//	err := e.CBOR.EncodeRawBytes([]byte{
-	//		// tag number
-	//		0xd8, CBORTagDictionaryValue,
-	//	})
-	//	if err != nil {
-	//		return err
-	//	}
-	//
-	//	if v.content != nil {
-	//		err := e.CBOR.EncodeRawBytes(v.content)
-	//		if err != nil {
-	//			return err
-	//		}
-	//
-	//		return nil
-	//	}
-	//
-	//	// Encode array head
-	//	err = e.CBOR.EncodeRawBytes([]byte{
-	//		// array, 3 items follow
-	//		0x83,
-	//	})
-	//	if err != nil {
-	//		return err
-	//	}
-	//
-	//	//nolint:gocritic
-	//	keysPath := append(path, dictionaryKeyPathPrefix)
-	//
-	//	// (1) Encode dictionary static type at array index encodedDictionaryValueTypeFieldKeyV6
-	//	err = e.encodeStaticType(v.StaticType())
-	//	if err != nil {
-	//		return err
-	//	}
-	//
-	//	// (2) Encode keys (as array) at array index encodedDictionaryValueKeysFieldKeyV6
-	//	err = e.encodeArray(v.Keys(), keysPath, deferrals)
-	//	if err != nil {
-	//		return err
-	//	}
-	//
-	//	// Deferring the encoding of values is only supported if all
-	//	// values are resources: resource typed dictionaries are moved
-	//
-	//	deferred := e.deferred
-	//	if deferred {
-	//
-	//		// Iterating over the map in a non-deterministic way is OK,
-	//		// we only determine check if all values are resources.
-	//
-	//		for pair := v.Entries().Oldest(); pair != nil; pair = pair.Next() {
-	//			compositeValue, ok := pair.Value.(*CompositeValue)
-	//			if !ok || compositeValue.Kind() != common.CompositeKindResource {
-	//				deferred = false
-	//				break
-	//			}
-	//		}
-	//	}
-	//
-	//	// entries is empty if encoding of values is deferred,
-	//	// otherwise entries size is the same as keys size.
-	//	keys := v.Keys().Elements()
-	//	entriesLength := len(keys)
-	//	if deferred {
-	//		entriesLength = 0
-	//	}
-	//
-	//	// (3) Encode values (as array) at array index encodedDictionaryValueEntriesFieldKeyV6
-	//	err = e.CBOR.EncodeArrayHead(uint64(entriesLength))
-	//	if err != nil {
-	//		return err
-	//	}
-	//
-	//	// Pre-allocate and reuse valuePath.
-	//	//nolint:gocritic
-	//	valuePath := append(path, dictionaryValuePathPrefix, "")
-	//
-	//	lastValuePathIndex := len(path) + 1
-	//
-	//	for _, keyValue := range keys {
-	//		key := dictionaryKey(keyValue)
-	//		entryValue, _ := v.Entries().Get(key)
-	//		valuePath[lastValuePathIndex] = key
-	//
-	//		if deferred {
-	//
-	//			var isDeferred bool
-	//			if v.deferredKeys != nil {
-	//				_, isDeferred = v.deferredKeys.Get(key)
-	//			}
-	//
-	//			// If the value is not deferred, i.e. it is in memory,
-	//			// then it must be stored under a separate storage key
-	//			// in the owner's storage.
-	//
-	//			if !isDeferred {
-	//				deferrals.Values = append(deferrals.Values,
-	//					EncodingDeferralValue{
-	//						Key:   joinPath(valuePath),
-	//						Value: entryValue,
-	//					},
-	//				)
-	//			} else {
-	//
-	//				// If the value is deferred, and the deferred value
-	//				// is stored in another account's storage,
-	//				// it must be moved.
-	//
-	//				deferredOwner := *v.deferredOwner
-	//				owner := *v.Owner
-	//
-	//				if deferredOwner != owner {
-	//
-	//					deferredStorageKey := joinPathElements(v.deferredStorageKeyBase, key)
-	//
-	//					deferrals.Moves = append(deferrals.Moves,
-	//						EncodingDeferralMove{
-	//							DeferredOwner:      deferredOwner,
-	//							DeferredStorageKey: deferredStorageKey,
-	//							NewOwner:           owner,
-	//							NewStorageKey:      joinPath(valuePath),
-	//						},
-	//					)
-	//				}
-	//			}
-	//		} else {
-	//			// Encode value as element in values array
-	//			err = e.Encode(entryValue, valuePath, deferrals)
-	//			if err != nil {
-	//				return err
-	//			}
-	//		}
-	//	}
-	//
+func (s DictionaryStorable) Encode(e *atree.Encoder) error {
+	// Encode CBOR tag number
+	err := e.CBOR.EncodeRawBytes([]byte{
+		// tag number
+		0xd8, CBORTagDictionaryValue,
+	})
+	if err != nil {
+		return err
+	}
+
+	// Encode array head
+	err = e.CBOR.EncodeRawBytes([]byte{
+		// array, 3 items follow
+		0x83,
+	})
+	if err != nil {
+		return err
+	}
+
+	// (1) Encode dictionary static type at array index encodedDictionaryValueTypeFieldKeyV6
+	err = EncodeStaticType(e, s.Dictionary.StaticType())
+	if err != nil {
+		return err
+	}
+
+	// (2) Encode keys (as StorageID) at array index encodedDictionaryValueKeysFieldKeyV6
+	err = s.Dictionary.Keys.array.Storable(e.Storage).Encode(e)
+	if err != nil {
+		return err
+	}
+
+	// (3) Encode values (as array) at array index encodedDictionaryValueEntriesFieldKeyV6
+	err = e.CBOR.EncodeArrayHead(uint64(s.Dictionary.Count()))
+	if err != nil {
+		return err
+	}
+
+	for pair := s.Dictionary.Entries.Oldest(); pair != nil; pair = pair.Next() {
+		err = pair.Value.Storable(e.Storage).Encode(e)
+		if err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -733,7 +640,7 @@ const (
 //			encodedCompositeValueQualifiedIdentifierFieldKeyV6: string(v.QualifiedIdentifier),
 //		},
 // }
-func (v *CompositeValue) Encode(e *atree.Encoder) error {
+func (s CompositeStorable) Encode(e *atree.Encoder) error {
 
 	// Encode CBOR tag number
 	err := e.CBOR.EncodeRawBytes([]byte{
@@ -755,20 +662,20 @@ func (v *CompositeValue) Encode(e *atree.Encoder) error {
 	}
 
 	// Encode location at array index encodedCompositeValueLocationFieldKeyV6
-	err = EncodeLocation(e, v.Location)
+	err = EncodeLocation(e, s.Composite.Location)
 	if err != nil {
 		return err
 	}
 
 	// Encode kind at array index encodedCompositeValueKindFieldKeyV6
-	err = e.CBOR.EncodeUint(uint(v.Kind))
+	err = e.CBOR.EncodeUint(uint(s.Composite.Kind))
 	if err != nil {
 		return err
 	}
 
 	// Encode fields (as array) at array index encodedCompositeValueFieldsFieldKeyV6
 
-	fields := v.Fields
+	fields := s.Composite.Fields
 	err = e.CBOR.EncodeArrayHead(uint64(fields.Len() * 2))
 	if err != nil {
 		return err
@@ -793,7 +700,7 @@ func (v *CompositeValue) Encode(e *atree.Encoder) error {
 	}
 
 	// Encode qualified identifier at array index encodedCompositeValueQualifiedIdentifierFieldKeyV6
-	err = e.CBOR.EncodeString(v.QualifiedIdentifier)
+	err = e.CBOR.EncodeString(s.Composite.QualifiedIdentifier)
 	if err != nil {
 		return err
 	}

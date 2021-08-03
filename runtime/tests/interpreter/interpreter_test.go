@@ -7870,7 +7870,12 @@ func TestInterpretCompositeValueFieldEncodingOrder(t *testing.T) {
 			0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
 		})
 
-		encoded, err := atree.Encode(test, inter.Storage)
+		encoded, err := atree.Encode(
+			interpreter.CompositeStorable{
+				Composite: test,
+			},
+			inter.Storage,
+		)
 		require.NoError(t, err)
 
 		expected := expectedPrefix[:]
@@ -7931,7 +7936,12 @@ func TestInterpretDictionaryValueEncodingOrder(t *testing.T) {
 		}
 
 		test.SetOwner(owner)
-		encoded, err := atree.Encode(test, inter.Storage)
+		encoded, err := atree.Encode(
+			interpreter.DictionaryStorable{
+				Dictionary: test,
+			},
+			inter.Storage,
+		)
 		require.NoError(t, err)
 
 		// TODO:
