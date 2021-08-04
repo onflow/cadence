@@ -43,8 +43,11 @@ func (i *FlowIntegration) initialize(initializationOptions interface{}) error {
 	if err != nil {
 		return err
 	}
-
-	host := state.Networks().ByName("emulator").Host
+	network, err := state.Networks().ByName("emulator")
+	if err != nil {
+		return err
+	}
+	host := network.Host
 	logger := output.NewStdoutLogger(output.NoneLog)
 
 	grpcGateway, err := gateway.NewGrpcGateway(host)
