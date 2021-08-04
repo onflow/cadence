@@ -3777,10 +3777,11 @@ func prepareLargeTestValue(tb testing.TB) Value {
 		},
 	)
 
-	inter, _ := NewInterpreter(
+	inter, err := NewInterpreter(
 		nil,
 		utils.TestLocation,
 	)
+	require.NoError(tb, err)
 
 	for i := 0; i < 100; i++ {
 		dict := NewDictionaryValueUnownedNonCopying(

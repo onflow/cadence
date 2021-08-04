@@ -816,10 +816,10 @@ func (v *ArrayValue) Get(_ *Interpreter, getLocationRange func() LocationRange, 
 
 func (v *ArrayValue) Set(inter *Interpreter, getLocationRange func() LocationRange, key Value, value Value) {
 	index := key.(NumberValue).ToInt()
-	v.SetIndex(inter, index, value, getLocationRange)
+	v.SetIndex(inter, getLocationRange, index, value)
 }
 
-func (v *ArrayValue) SetIndex(inter *Interpreter, index int, value Value, getLocationRange func() LocationRange) {
+func (v *ArrayValue) SetIndex(inter *Interpreter, getLocationRange func() LocationRange, index int, value Value) {
 	v.checkBounds(index, getLocationRange)
 
 	// Use the getter, to make sure lazily decoded values are properly loaded.

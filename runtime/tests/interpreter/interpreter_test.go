@@ -578,7 +578,7 @@ func TestInterpretArrayIndexingAssignment(t *testing.T) {
 		interpreter.NewIntValueFromInt64(0),
 		interpreter.NewIntValueFromInt64(3),
 	).Copy().(*interpreter.ArrayValue)
-	expectedArray.SetIndex(inter, 1, interpreter.NewIntValueFromInt64(2), nil)
+	expectedArray.SetIndex(inter, nil, 1, interpreter.NewIntValueFromInt64(2))
 
 	require.Equal(t,
 		expectedArray,

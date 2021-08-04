@@ -734,14 +734,7 @@ func TestStringer(t *testing.T) {
 					},
 				)
 				arrayRef := &EphemeralReferenceValue{Value: array}
-
-				inter, err := NewInterpreter(
-					nil,
-					utils.TestLocation,
-				)
-				require.NoError(t, err)
-
-				array.Insert(inter, nil, 0, arrayRef)
+				array.Insert(newTestInterpreter(t), nil, 0, arrayRef)
 				return array
 			}(),
 			expected: `[[...]]`,
