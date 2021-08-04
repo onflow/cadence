@@ -94,7 +94,7 @@ func (i InMemoryStorage) Write(_ *Interpreter, address common.Address, key strin
 var _ Storage = InMemoryStorage{}
 
 func NewInMemoryStorage() InMemoryStorage {
-	slabStorage := atree.NewBasicSlabStorage(CBOREncMode)
+	slabStorage := atree.NewBasicSlabStorage(CBOREncMode, CBORDecMode)
 	slabStorage.DecodeStorable = DecodeStorableV6
 
 	return InMemoryStorage{
@@ -103,8 +103,8 @@ func NewInMemoryStorage() InMemoryStorage {
 	}
 }
 
-func storableSize(storable atree.Storable, slabStorage atree.SlabStorage) uint32 {
-	encode, err := atree.Encode(storable, slabStorage)
+func storableSize(storable atree.Storable) uint32 {
+	encode, err := atree.Encode(storable, CBOREncMode)
 	if err != nil {
 		panic(err)
 	}

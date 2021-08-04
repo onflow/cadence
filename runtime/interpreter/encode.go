@@ -560,7 +560,7 @@ const (
 	encodedDictionaryValueLength = 3
 )
 
-// Encode encodes DictionaryValue as
+// Encode encodes DictionaryStorable as
 // cbor.Tag{
 //			Number: CBORTagDictionaryValue,
 //			Content: cborArray{
@@ -589,25 +589,25 @@ func (s DictionaryStorable) Encode(e *atree.Encoder) error {
 	}
 
 	// (1) Encode dictionary static type at array index encodedDictionaryValueTypeFieldKeyV6
-	err = EncodeStaticType(e, s.Dictionary.StaticType())
+	err = EncodeStaticType(e, s.Type)
 	if err != nil {
 		return err
 	}
 
 	// (2) Encode keys (as StorageID) at array index encodedDictionaryValueKeysFieldKeyV6
-	err = s.Dictionary.Keys.Storable(e.Storage).Encode(e)
+	err = s.Keys.Encode(e)
 	if err != nil {
 		return err
 	}
 
 	// (3) Encode values (as array) at array index encodedDictionaryValueEntriesFieldKeyV6
-	err = e.CBOR.EncodeArrayHead(uint64(s.Dictionary.Count()))
+	err = e.CBOR.EncodeArrayHead(uint64(len(s.Values)))
 	if err != nil {
 		return err
 	}
 
-	for pair := s.Dictionary.Entries.Oldest(); pair != nil; pair = pair.Next() {
-		err = pair.Value.Storable(e.Storage).Encode(e)
+	for _, value := range s.Values {
+		err = value.Encode(e)
 		if err != nil {
 			return err
 		}
@@ -630,7 +630,7 @@ const (
 	encodedCompositeValueLength = 4
 )
 
-// Encode encodes CompositeValue as
+// Encode encodes CompositeStorable as
 // cbor.Tag{
 //		Number: CBORTagCompositeValue,
 //		Content: cborArray{
@@ -713,7 +713,7 @@ func (s CompositeStorable) Encode(e *atree.Encoder) error {
 //		Number: CBORTagSomeValue,
 //		Content: Value(v.Value),
 // }
-func (v *SomeValue) Encode(e *atree.Encoder) error {
+func (s SomeStorable) Encode(e *atree.Encoder) error {
 	err := e.CBOR.EncodeRawBytes([]byte{
 		// tag number
 		0xd8, CBORTagSomeValue,
@@ -721,7 +721,7 @@ func (v *SomeValue) Encode(e *atree.Encoder) error {
 	if err != nil {
 		return err
 	}
-	return v.Value.Storable(e.Storage).Encode(e)
+	return s.Storable.Encode(e)
 }
 
 // Encode encodes AddressValue as
