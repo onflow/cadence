@@ -35,15 +35,16 @@ import (
 )
 
 type encodeDecodeTest struct {
-	value        Value
-	storable     atree.Storable
-	encoded      []byte
-	invalid      bool
-	decodedValue Value
-	decodeOnly   bool
-	deepEquality bool
-	storage      Storage
-	storageID    atree.StorageID
+	value         Value
+	storable      atree.Storable
+	encoded       []byte
+	invalid       bool
+	decodedValue  Value
+	decodeOnly    bool
+	deepEquality  bool
+	storage       Storage
+	slabStorageID atree.StorageID
+	check         func(actual Value)
 }
 
 var testOwner = common.BytesToAddress([]byte{0x42})
@@ -76,7 +77,7 @@ func testEncodeDecode(t *testing.T, test encodeDecodeTest) {
 	}
 
 	decoder := CBORDecMode.NewByteStreamDecoder(encoded)
-	decoded, err := DecodeStorableV6(decoder, test.storageID)
+	decoded, err := DecodeStorableV6(decoder, test.slabStorageID)
 
 	if test.invalid {
 		require.Error(t, err)
@@ -91,10 +92,15 @@ func testEncodeDecode(t *testing.T, test encodeDecodeTest) {
 			test.decodedValue.SetOwner(&testOwner)
 			expectedValue = test.decodedValue
 		}
+
 		if test.deepEquality {
 			assert.Equal(t, expectedValue, decodedValue)
 		} else {
 			AssertValuesEqual(t, expectedValue, decodedValue.(Value))
+		}
+
+		if test.check != nil {
+			test.check(decodedValue.(Value))
 		}
 	}
 }
@@ -275,7 +281,6 @@ func TestEncodeDecodeArray(t *testing.T) {
 func TestEncodeDecodeDictionary(t *testing.T) {
 
 	// TODO: owner
-	// TODO: storage ID
 
 	t.Parallel()
 
@@ -332,15 +337,32 @@ func TestEncodeDecodeDictionary(t *testing.T) {
 				storage: storage,
 				value:   expected,
 				encoded: encodedValue,
+				check: func(actual Value) {
+					// Storage ID is not checked by value equality,
+					// so assert manually
+					require.Equal(t,
+						expected.StorageID,
+						actual.(*DictionaryValue).StorageID,
+					)
+				},
 			},
 		)
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
-				storage:      storage,
-				storable:     expected.ExternalStorable(storage),
-				encoded:      encodedStorable,
-				decodedValue: expected,
+				storage:       storage,
+				storable:      expected.ExternalStorable(storage),
+				encoded:       encodedStorable,
+				decodedValue:  expected,
+				slabStorageID: expected.StorageID,
+				check: func(actual Value) {
+					// Storage ID is not checked by value equality,
+					// so assert manually
+					require.Equal(t,
+						expected.StorageID,
+						actual.(*DictionaryValue).StorageID,
+					)
+				},
 			},
 		)
 	})
@@ -418,15 +440,32 @@ func TestEncodeDecodeDictionary(t *testing.T) {
 				storage: storage,
 				value:   expected,
 				encoded: encodedValue,
+				check: func(actual Value) {
+					// Storage ID is not checked by value equality,
+					// so assert manually
+					require.Equal(t,
+						expected.StorageID,
+						actual.(*DictionaryValue).StorageID,
+					)
+				},
 			},
 		)
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
-				storage:      storage,
-				storable:     expected.ExternalStorable(storage),
-				encoded:      encodedStorable,
-				decodedValue: expected,
+				storage:       storage,
+				storable:      expected.ExternalStorable(storage),
+				encoded:       encodedStorable,
+				decodedValue:  expected,
+				slabStorageID: expected.StorageID,
+				check: func(actual Value) {
+					// Storage ID is not checked by value equality,
+					// so assert manually
+					require.Equal(t,
+						expected.StorageID,
+						actual.(*DictionaryValue).StorageID,
+					)
+				},
 			},
 		)
 	})
