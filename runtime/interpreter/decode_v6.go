@@ -815,21 +815,24 @@ func (d DecoderV6) decodeUFix64() (UFix64Value, error) {
 }
 
 func (d DecoderV6) decodeSome() (*SomeValue, error) {
-	// TODO:
-	return nil, nil
-	//
-	//value, err := d.decodeValue()
-	//if err != nil {
-	//	return nil, fmt.Errorf(
-	//		"invalid some value encoding: %w",
-	//		err,
-	//	)
-	//}
-	//
-	//return &SomeValue{
-	//	Value: value,
-	//	Owner: d.owner,
-	//}, nil
+
+	storable, err := d.decodeStorable()
+	if err != nil {
+		return nil, fmt.Errorf(
+			"invalid some value encoding: %w",
+			err,
+		)
+	}
+
+	value, err := StoredValue(storable, d.storage)
+	if err != nil {
+		return nil, fmt.Errorf(
+			"invalid some value encoding: %w",
+			err,
+		)
+	}
+
+	return NewSomeValueOwningNonCopying(value), nil
 }
 
 func (d DecoderV6) checkAddressLength(addressBytes []byte) error {

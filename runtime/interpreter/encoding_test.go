@@ -2578,12 +2578,10 @@ func TestEncodeDecodeWord64Value(t *testing.T) {
 
 func TestEncodeDecodeSomeValue(t *testing.T) {
 
-	// TODO:
-	t.Skip()
-
 	t.Parallel()
 
 	t.Run("nil", func(t *testing.T) {
+
 		t.Parallel()
 
 		testEncodeDecode(t,
@@ -2602,9 +2600,9 @@ func TestEncodeDecodeSomeValue(t *testing.T) {
 	})
 
 	t.Run("string", func(t *testing.T) {
-		expectedString := NewStringValue("test")
-
 		t.Parallel()
+
+		expectedString := NewStringValue("test")
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
