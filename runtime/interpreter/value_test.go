@@ -110,7 +110,7 @@ func TestSetOwnerArrayCopy(t *testing.T) {
 	assert.Equal(t, &newOwner, value.GetOwner())
 }
 
-func SkipTestSetOwnerArraySetIndex(t *testing.T) {
+func TestSetOwnerArraySetIndex(t *testing.T) {
 
 	t.Parallel()
 
@@ -132,7 +132,17 @@ func SkipTestSetOwnerArraySetIndex(t *testing.T) {
 	assert.Equal(t, &newOwner, value1.GetOwner())
 	assert.Equal(t, &oldOwner, value2.GetOwner())
 
-	inter, err := NewInterpreter(nil, utils.TestLocation)
+	code := `
+        struct Test {
+        }
+    `
+	checker, err := checkerUtils.ParseAndCheckWithOptions(t,
+		code,
+		checkerUtils.ParseAndCheckOptions{},
+	)
+	require.NoError(t, err)
+
+	inter, err := NewInterpreter(ProgramFromChecker(checker), utils.TestLocation)
 	require.NoError(t, err)
 
 	array.Set(inter, ReturnEmptyLocationRange, NewIntValueFromInt64(0), value2)
@@ -161,8 +171,18 @@ func TestSetOwnerArrayAppend(t *testing.T) {
 	assert.Equal(t, &newOwner, array.GetOwner())
 	assert.Equal(t, &oldOwner, value.GetOwner())
 
+	code := `
+        struct Test {
+        }
+    `
+	checker, err := checkerUtils.ParseAndCheckWithOptions(t,
+		code,
+		checkerUtils.ParseAndCheckOptions{},
+	)
+	require.NoError(t, err)
+
 	inter, err := NewInterpreter(
-		nil,
+		ProgramFromChecker(checker),
 		utils.TestLocation,
 	)
 
@@ -193,8 +213,18 @@ func TestSetOwnerArrayInsert(t *testing.T) {
 	assert.Equal(t, &newOwner, array.GetOwner())
 	assert.Equal(t, &oldOwner, value.GetOwner())
 
+	code := `
+        struct Test {
+        }
+    `
+	checker, err := checkerUtils.ParseAndCheckWithOptions(t,
+		code,
+		checkerUtils.ParseAndCheckOptions{},
+	)
+	require.NoError(t, err)
+
 	inter, err := NewInterpreter(
-		nil,
+		ProgramFromChecker(checker),
 		utils.TestLocation,
 	)
 	require.NoError(t, err)

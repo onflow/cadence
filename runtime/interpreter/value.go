@@ -7705,7 +7705,14 @@ func (v *DictionaryValue) Set(inter *Interpreter, getLocationRange func() Locati
 	dictionaryStaticType := v.StaticType().(DictionaryStaticType)
 
 	checkContainerMutation(inter, dictionaryStaticType.KeyType, keyValue, getLocationRange)
-	checkContainerMutation(inter, dictionaryStaticType.ValueType, value, getLocationRange)
+	checkContainerMutation(
+		inter,
+		OptionalStaticType{
+			Type: dictionaryStaticType.ValueType,
+		},
+		value,
+		getLocationRange,
+	)
 
 	switch typedValue := value.(type) {
 	case *SomeValue:
@@ -9554,7 +9561,11 @@ func checkContainerMutation(
 	getLocationRange func() LocationRange,
 ) {
 
-	value = inter.unbox(value)
+	if inter == nil {
+		return
+	}
+
+	//value = inter.unbox(value)
 
 	memberType := inter.ConvertStaticToSemaType(memberStaticType)
 

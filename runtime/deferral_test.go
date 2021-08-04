@@ -408,7 +408,7 @@ func TestRuntimeStorageDeferredResourceDictionaryValues(t *testing.T) {
           prepare(signer: AuthAccount) {
               let c = signer.borrow<&Test.C>(from: /storage/c)!
               log(c.rs["b"]?.value)
-              let existing <- c.rs.remove(key: "b")
+              let existing <- c.rs["b"] <- nil
               destroy existing
               log(c.rs["b"]?.value)
           }

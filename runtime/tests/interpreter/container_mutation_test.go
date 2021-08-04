@@ -19,7 +19,6 @@
 package interpreter_test
 
 import (
-	"fmt"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/stretchr/testify/assert"
@@ -36,14 +35,23 @@ func TestArrayMutation(t *testing.T) {
 		t.Parallel()
 
 		inter := parseCheckAndInterpret(t, `
-            fun test() {
+            fun test(): [String] {
                 let names: [String] = ["foo", "bar"]
                 names[0] = "baz"
+                return names
             }
         `)
 
-		_, err := inter.Invoke("test")
+		value, err := inter.Invoke("test")
 		require.NoError(t, err)
+
+		require.IsType(t, &interpreter.ArrayValue{}, value)
+		array := value.(*interpreter.ArrayValue)
+
+		elements := array.Elements()
+		require.Len(t, elements, 2)
+		assert.Equal(t, interpreter.NewStringValue("baz"), elements[0])
+		assert.Equal(t, interpreter.NewStringValue("bar"), elements[1])
 	})
 
 	t.Run("simple array invalid", func(t *testing.T) {
@@ -88,14 +96,24 @@ func TestArrayMutation(t *testing.T) {
 		t.Parallel()
 
 		inter := parseCheckAndInterpret(t, `
-            fun test() {
+            fun test(): [AnyStruct] {
                 let names: [AnyStruct] = ["foo", "bar"] as [String]
                 names.append("baz")
+                return names
             }
         `)
 
-		_, err := inter.Invoke("test")
+		value, err := inter.Invoke("test")
 		require.NoError(t, err)
+
+		require.IsType(t, &interpreter.ArrayValue{}, value)
+		array := value.(*interpreter.ArrayValue)
+
+		elements := array.Elements()
+		require.Len(t, elements, 3)
+		assert.Equal(t, interpreter.NewStringValue("foo"), elements[0])
+		assert.Equal(t, interpreter.NewStringValue("bar"), elements[1])
+		assert.Equal(t, interpreter.NewStringValue("baz"), elements[2])
 	})
 
 	t.Run("array append invalid", func(t *testing.T) {
@@ -140,14 +158,24 @@ func TestArrayMutation(t *testing.T) {
 		t.Parallel()
 
 		inter := parseCheckAndInterpret(t, `
-            fun test() {
+            fun test(): [AnyStruct] {
                 let names: [AnyStruct] = ["foo", "bar"] as [String]
                 names.insert(at: 1, "baz")
+                return names
             }
         `)
 
-		_, err := inter.Invoke("test")
+		value, err := inter.Invoke("test")
 		require.NoError(t, err)
+
+		require.IsType(t, &interpreter.ArrayValue{}, value)
+		array := value.(*interpreter.ArrayValue)
+
+		elements := array.Elements()
+		require.Len(t, elements, 3)
+		assert.Equal(t, interpreter.NewStringValue("foo"), elements[0])
+		assert.Equal(t, interpreter.NewStringValue("baz"), elements[1])
+		assert.Equal(t, interpreter.NewStringValue("bar"), elements[2])
 	})
 
 	t.Run("array insert invalid", func(t *testing.T) {
@@ -169,21 +197,45 @@ func TestArrayMutation(t *testing.T) {
 		assert.Equal(t, sema.StringType, mutationError.ExpectedType)
 	})
 
-	t.Run("array concat invalid", func(t *testing.T) {
+	t.Run("array concat mismatching values", func(t *testing.T) {
 		t.Parallel()
 
 		inter := parseCheckAndInterpret(t, `
+            let names: [AnyStruct] = ["foo", "bar"] as [String]
+            
             fun test(): [AnyStruct] {
-                let names: [AnyStruct] = ["foo", "bar"] as [String]
                 return names.concat(["baz", 5] as [AnyStruct])
             }
         `)
 
-		_, err := inter.Invoke("test")
+		value, err := inter.Invoke("test")
 
 		// This should not give errors, since resulting array is a new array.
 		// It doesn't mutate the existing array.
 		require.NoError(t, err)
+
+		// check resulting array
+
+		require.IsType(t, &interpreter.ArrayValue{}, value)
+		array := value.(*interpreter.ArrayValue)
+
+		elements := array.Elements()
+		require.Len(t, elements, 4)
+		assert.Equal(t, interpreter.NewStringValue("foo"), elements[0])
+		assert.Equal(t, interpreter.NewStringValue("bar"), elements[1])
+		assert.Equal(t, interpreter.NewStringValue("baz"), elements[2])
+		assert.Equal(t, interpreter.NewIntValueFromInt64(5), elements[3])
+
+		// Check original array
+
+		namesVal := inter.Globals["names"].GetValue()
+		require.IsType(t, &interpreter.ArrayValue{}, namesVal)
+		namesValArray := namesVal.(*interpreter.ArrayValue)
+
+		names := namesValArray.Elements()
+		require.Len(t, names, 2)
+		assert.Equal(t, interpreter.NewStringValue("foo"), names[0])
+		assert.Equal(t, interpreter.NewStringValue("bar"), names[1])
 	})
 }
 
@@ -195,14 +247,25 @@ func TestDictionaryMutation(t *testing.T) {
 		t.Parallel()
 
 		inter := parseCheckAndInterpret(t, `
-            fun test() {
+            fun test(): {String: String} {
                 let names: {String: String} = {"foo": "bar"}
                 names["foo"] = "baz"
+                return names
             }
         `)
 
-		_, err := inter.Invoke("test")
+		value, err := inter.Invoke("test")
 		require.NoError(t, err)
+
+		require.IsType(t, &interpreter.DictionaryValue{}, value)
+		array := value.(*interpreter.DictionaryValue)
+
+		entries := array.Entries()
+		require.Equal(t, 1, entries.Len())
+
+		val, present := entries.Get("foo")
+		assert.True(t, present)
+		assert.Equal(t, interpreter.NewStringValue("baz"), val)
 	})
 
 	t.Run("simple dictionary invalid", func(t *testing.T) {
@@ -221,35 +284,58 @@ func TestDictionaryMutation(t *testing.T) {
 		mutationError := &interpreter.ContainerMutationError{}
 		require.ErrorAs(t, err, mutationError)
 
-		assert.Equal(t, sema.StringType, mutationError.ExpectedType)
+		assert.Equal(t,
+			&sema.OptionalType{
+				Type: sema.StringType,
+			},
+			mutationError.ExpectedType,
+		)
 	})
 
 	t.Run("optional dictionary valid", func(t *testing.T) {
 		t.Parallel()
 
 		inter := parseCheckAndInterpret(t, `
-            fun test() {
-                let names: {String: String?} = {"foo": nil}
+            fun test(): {String: String?} {
+                let names: {String: String?} = {"foo": "bar"}
                 names["foo"] = nil
+                return names
             }
         `)
 
-		_, err := inter.Invoke("test")
+		value, err := inter.Invoke("test")
 		require.NoError(t, err)
+
+		require.IsType(t, &interpreter.DictionaryValue{}, value)
+		array := value.(*interpreter.DictionaryValue)
+
+		entries := array.Entries()
+		require.Equal(t, 0, entries.Len())
 	})
 
 	t.Run("dictionary insert valid", func(t *testing.T) {
 		t.Parallel()
 
 		inter := parseCheckAndInterpret(t, `
-            fun test() {
+            fun test(): {String: AnyStruct} {
                 let names: {String: AnyStruct} = {"foo": "bar"} as {String: String}
                 names.insert(key: "foo", "baz")
+                return names
             }
         `)
 
-		_, err := inter.Invoke("test")
+		value, err := inter.Invoke("test")
 		require.NoError(t, err)
+
+		require.IsType(t, &interpreter.DictionaryValue{}, value)
+		array := value.(*interpreter.DictionaryValue)
+
+		entries := array.Entries()
+		require.Equal(t, 1, entries.Len())
+
+		val, present := entries.Get("foo")
+		assert.True(t, present)
+		assert.Equal(t, interpreter.NewStringValue("baz"), val)
 	})
 
 	t.Run("dictionary insert invalid", func(t *testing.T) {
@@ -288,63 +374,5 @@ func TestDictionaryMutation(t *testing.T) {
 		require.ErrorAs(t, err, mutationError)
 
 		assert.Equal(t, sema.PublicPathType, mutationError.ExpectedType)
-	})
-
-	t.Run("dictionary insert invalid key", func(t *testing.T) {
-		t.Parallel()
-
-		inter := parseCheckAndInterpret(t, `
-			pub resource R {
-
-				pub var value: Int
-		
-				init(_ value: Int) {
-					self.value = value
-				}
-		
-				pub fun increment() {
-					self.value = self.value + 1
-				}
-		
-				destroy() {
-				}
-			}
-		
-			pub fun createR(_ value: Int): @R {
-				return <-create R(value)
-			}
-
-			pub fun foo():Int? {
-				let rs: @{String:R} <- {}
-			
-				let existing <- rs["foo"] <- createR(4)
-			
-				var val: Int = rs.length
-			
-				destroy existing
-				destroy rs
-			
-				return val
-			}
-			
-			pub fun bar(): Int? {
-				let rs: @[R] <- []
-			
-				let existing <- rs[0] <- createR(4)
-			
-				var val: Int = rs.length
-			
-				destroy existing
-				destroy rs
-			
-				return val
-			}
-        `)
-
-		value, err := inter.Invoke("foo")
-		//require.Error(t, err)
-
-		fmt.Println(err)
-		fmt.Println(value)
 	})
 }

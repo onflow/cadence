@@ -741,11 +741,7 @@ func (interpreter *Interpreter) evalPotentialResourceMoveIndexExpression(express
 
 	getterSetter := interpreter.indexExpressionGetterSetter(resourceMoveIndexExpression)
 	value := getterSetter.get()
-
-	// No need to reset the value to nil (its not allowed anymore)
-	// Checker always guarantees the value at the index is replaced,
-	// by a another resource value. (i.e: swap or shift statement.)
-
+	getterSetter.set(NilValue{})
 	return value
 }
 
