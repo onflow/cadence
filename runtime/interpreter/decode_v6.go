@@ -228,7 +228,10 @@ func (d DecoderV6) decodeLocation() (common.Location, error) {
 	number, err := d.decoder.DecodeTagNumber()
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
-			return nil, fmt.Errorf("invalid location encoding: %s", e.ActualType.String())
+			return nil, fmt.Errorf(
+				"invalid location encoding: %s",
+				e.ActualType.String(),
+			)
 		}
 		return nil, err
 	}
@@ -252,7 +255,10 @@ func (d DecoderV6) decodeStringLocation() (common.Location, error) {
 	s, err := d.decoder.DecodeString()
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
-			return nil, fmt.Errorf("invalid string location encoding: %s", e.ActualType.String())
+			return nil, fmt.Errorf(
+				"invalid string location encoding: %s",
+				e.ActualType.String(),
+			)
 		}
 		return nil, err
 	}
@@ -263,7 +269,10 @@ func (d DecoderV6) decodeIdentifierLocation() (common.Location, error) {
 	s, err := d.decoder.DecodeString()
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
-			return nil, fmt.Errorf("invalid identifier location encoding: %s", e.ActualType.String())
+			return nil, fmt.Errorf(
+				"invalid identifier location encoding: %s",
+				e.ActualType.String(),
+			)
 		}
 		return nil, err
 	}
@@ -278,7 +287,8 @@ func (d DecoderV6) decodeAddressLocation() (common.Location, error) {
 
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
-			return nil, fmt.Errorf("invalid address location encoding: expected [%d]interface{}, got %s",
+			return nil, fmt.Errorf(
+				"invalid address location encoding: expected [%d]interface{}, got %s",
 				expectedLength,
 				e.ActualType.String(),
 			)
@@ -299,7 +309,10 @@ func (d DecoderV6) decodeAddressLocation() (common.Location, error) {
 	encodedAddress, err := d.decoder.DecodeBytes()
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
-			return nil, fmt.Errorf("invalid address location address encoding: %s", e.ActualType.String())
+			return nil, fmt.Errorf(
+				"invalid address location address encoding: %s",
+				e.ActualType.String(),
+			)
 		}
 		return nil, err
 	}
@@ -315,7 +328,10 @@ func (d DecoderV6) decodeAddressLocation() (common.Location, error) {
 	name, err := d.decoder.DecodeString()
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
-			return nil, fmt.Errorf("invalid address location name encoding: %s", e.ActualType.String())
+			return nil, fmt.Errorf(
+				"invalid address location name encoding: %s",
+				e.ActualType.String(),
+			)
 		}
 		return nil, err
 	}
@@ -333,7 +349,8 @@ func (d DecoderV6) decodeComposite() (*CompositeValue, error) {
 	size, err := d.decoder.DecodeArrayHead()
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
-			return nil, fmt.Errorf("invalid composite encoding: expected [%d]interface{}, got %s",
+			return nil, fmt.Errorf(
+				"invalid composite encoding: expected [%d]interface{}, got %s",
 				expectedLength,
 				e.ActualType.String(),
 			)
@@ -342,7 +359,8 @@ func (d DecoderV6) decodeComposite() (*CompositeValue, error) {
 	}
 
 	if size != expectedLength {
-		return nil, fmt.Errorf("invalid composite encoding: expected [%d]interface{}, got [%d]interface{}",
+		return nil, fmt.Errorf(
+			"invalid composite encoding: expected [%d]interface{}, got [%d]interface{}",
 			expectedLength,
 			size,
 		)
@@ -831,7 +849,10 @@ func (d DecoderV6) decodeAddress() (AddressValue, error) {
 	addressBytes, err := d.decoder.DecodeBytes()
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
-			return AddressValue{}, fmt.Errorf("invalid address encoding: %s", e.ActualType.String())
+			return AddressValue{}, fmt.Errorf(
+				"invalid address encoding: %s",
+				e.ActualType.String(),
+			)
 		}
 		return AddressValue{}, err
 	}
@@ -852,7 +873,8 @@ func (d DecoderV6) decodePath() (PathValue, error) {
 	size, err := d.decoder.DecodeArrayHead()
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
-			return PathValue{}, fmt.Errorf("invalid path encoding: expected [%d]interface{}, got %s",
+			return PathValue{}, fmt.Errorf(
+				"invalid path encoding: expected [%d]interface{}, got %s",
 				expectedLength,
 				e.ActualType.String(),
 			)
@@ -861,7 +883,8 @@ func (d DecoderV6) decodePath() (PathValue, error) {
 	}
 
 	if size != expectedLength {
-		return PathValue{}, fmt.Errorf("invalid path encoding: expected [%d]interface{}, got [%d]interface{}",
+		return PathValue{}, fmt.Errorf(
+			"invalid path encoding: expected [%d]interface{}, got [%d]interface{}",
 			expectedLength,
 			size,
 		)
@@ -871,7 +894,10 @@ func (d DecoderV6) decodePath() (PathValue, error) {
 	domain, err := d.decoder.DecodeUint64()
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
-			return PathValue{}, fmt.Errorf("invalid path domain encoding: %s", e.ActualType.String())
+			return PathValue{}, fmt.Errorf(
+				"invalid path domain encoding: %s",
+				e.ActualType.String(),
+			)
 		}
 		return PathValue{}, err
 	}
@@ -880,7 +906,10 @@ func (d DecoderV6) decodePath() (PathValue, error) {
 	identifier, err := d.decoder.DecodeString()
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
-			return PathValue{}, fmt.Errorf("invalid path identifier encoding: %s", e.ActualType.String())
+			return PathValue{}, fmt.Errorf(
+				"invalid path identifier encoding: %s",
+				e.ActualType.String(),
+			)
 		}
 		return PathValue{}, err
 	}
@@ -898,7 +927,8 @@ func (d DecoderV6) decodeCapability() (CapabilityValue, error) {
 	size, err := d.decoder.DecodeArrayHead()
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
-			return CapabilityValue{}, fmt.Errorf("invalid capability encoding: expected [%d]interface{}, got %s",
+			return CapabilityValue{}, fmt.Errorf(
+				"invalid capability encoding: expected [%d]interface{}, got %s",
 				expectedLength,
 				e.ActualType.String(),
 			)
@@ -907,7 +937,8 @@ func (d DecoderV6) decodeCapability() (CapabilityValue, error) {
 	}
 
 	if size != expectedLength {
-		return CapabilityValue{}, fmt.Errorf("invalid capability encoding: expected [%d]interface{}, got [%d]interface{}",
+		return CapabilityValue{}, fmt.Errorf(
+			"invalid capability encoding: expected [%d]interface{}, got [%d]interface{}",
 			expectedLength,
 			size,
 		)
@@ -919,14 +950,23 @@ func (d DecoderV6) decodeCapability() (CapabilityValue, error) {
 	var num uint64
 	num, err = d.decoder.DecodeTagNumber()
 	if err != nil {
-		return CapabilityValue{}, fmt.Errorf("invalid capability address: %w", err)
+		return CapabilityValue{}, fmt.Errorf(
+			"invalid capability address: %w",
+			err,
+		)
 	}
 	if num != CBORTagAddressValue {
-		return CapabilityValue{}, fmt.Errorf("invalid capability address: wrong tag %d", num)
+		return CapabilityValue{}, fmt.Errorf(
+			"invalid capability address: wrong tag %d",
+			num,
+		)
 	}
 	address, err := d.decodeAddress()
 	if err != nil {
-		return CapabilityValue{}, fmt.Errorf("invalid capability address: %w", err)
+		return CapabilityValue{}, fmt.Errorf(
+			"invalid capability address: %w",
+			err,
+		)
 	}
 
 	// path
@@ -980,7 +1020,8 @@ func (d DecoderV6) decodeLink() (LinkValue, error) {
 	size, err := d.decoder.DecodeArrayHead()
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
-			return LinkValue{}, fmt.Errorf("invalid link encoding: expected [%d]interface{}, got %s",
+			return LinkValue{}, fmt.Errorf(
+				"invalid link encoding: expected [%d]interface{}, got %s",
 				expectedLength,
 				e.ActualType.String(),
 			)
@@ -989,7 +1030,8 @@ func (d DecoderV6) decodeLink() (LinkValue, error) {
 	}
 
 	if size != expectedLength {
-		return LinkValue{}, fmt.Errorf("invalid link encoding: expected [%d]interface{}, got [%d]interface{}",
+		return LinkValue{}, fmt.Errorf(
+			"invalid link encoding: expected [%d]interface{}, got [%d]interface{}",
 			expectedLength,
 			size,
 		)
@@ -1024,7 +1066,10 @@ func (d DecoderV6) decodeStaticType() (StaticType, error) {
 	number, err := d.decoder.DecodeTagNumber()
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
-			return nil, fmt.Errorf("invalid static type encoding: %s", e.ActualType.String())
+			return nil, fmt.Errorf(
+				"invalid static type encoding: %s",
+				e.ActualType.String(),
+			)
 		}
 		return nil, err
 	}
@@ -1080,7 +1125,10 @@ func (d DecoderV6) decodePrimitiveStaticType() (PrimitiveStaticType, error) {
 func (d DecoderV6) decodeOptionalStaticType() (StaticType, error) {
 	staticType, err := d.decodeStaticType()
 	if err != nil {
-		return nil, fmt.Errorf("invalid optional static type inner type encoding: %w", err)
+		return nil, fmt.Errorf(
+			"invalid optional static type inner type encoding: %w",
+			err,
+		)
 	}
 	return OptionalStaticType{
 		Type: staticType,
@@ -1094,7 +1142,8 @@ func (d DecoderV6) decodeCompositeStaticType() (StaticType, error) {
 
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
-			return nil, fmt.Errorf("invalid composite static type encoding: expected [%d]interface{}, got %s",
+			return nil, fmt.Errorf(
+				"invalid composite static type encoding: expected [%d]interface{}, got %s",
 				expectedLength,
 				e.ActualType.String(),
 			)
@@ -1103,7 +1152,8 @@ func (d DecoderV6) decodeCompositeStaticType() (StaticType, error) {
 	}
 
 	if size != expectedLength {
-		return nil, fmt.Errorf("invalid composite static type encoding: expected [%d]interface{}, got [%d]interface{}",
+		return nil, fmt.Errorf(
+			"invalid composite static type encoding: expected [%d]interface{}, got [%d]interface{}",
 			expectedLength,
 			size,
 		)
@@ -1141,7 +1191,8 @@ func (d DecoderV6) decodeInterfaceStaticType() (InterfaceStaticType, error) {
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
 			return InterfaceStaticType{},
-				fmt.Errorf("invalid interface static type encoding: expected [%d]interface{}, got %s",
+				fmt.Errorf(
+					"invalid interface static type encoding: expected [%d]interface{}, got %s",
 					expectedLength,
 					e.ActualType.String(),
 				)
@@ -1151,7 +1202,8 @@ func (d DecoderV6) decodeInterfaceStaticType() (InterfaceStaticType, error) {
 
 	if size != expectedLength {
 		return InterfaceStaticType{},
-			fmt.Errorf("invalid interface static type encoding: expected [%d]interface{}, got [%d]interface{}",
+			fmt.Errorf(
+				"invalid interface static type encoding: expected [%d]interface{}, got [%d]interface{}",
 				expectedLength,
 				size,
 			)
@@ -1160,7 +1212,10 @@ func (d DecoderV6) decodeInterfaceStaticType() (InterfaceStaticType, error) {
 	// Decode location at array index encodedInterfaceStaticTypeLocationFieldKeyV6
 	location, err := d.decodeLocation()
 	if err != nil {
-		return InterfaceStaticType{}, fmt.Errorf("invalid interface static type location encoding: %w", err)
+		return InterfaceStaticType{}, fmt.Errorf(
+			"invalid interface static type location encoding: %w",
+			err,
+		)
 	}
 
 	// Decode qualified identifier at array index encodedInterfaceStaticTypeQualifiedIdentifierFieldKeyV6
@@ -1185,7 +1240,10 @@ func (d DecoderV6) decodeInterfaceStaticType() (InterfaceStaticType, error) {
 func (d DecoderV6) decodeVariableSizedStaticType() (StaticType, error) {
 	staticType, err := d.decodeStaticType()
 	if err != nil {
-		return nil, fmt.Errorf("invalid variable-sized static type encoding: %w", err)
+		return nil, fmt.Errorf(
+			"invalid variable-sized static type encoding: %w",
+			err,
+		)
 	}
 	return VariableSizedStaticType{
 		Type: staticType,
@@ -1200,7 +1258,8 @@ func (d DecoderV6) decodeConstantSizedStaticType() (StaticType, error) {
 
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
-			return nil, fmt.Errorf("invalid constant-sized static type encoding: expected [%d]interface{}, got %s",
+			return nil, fmt.Errorf(
+				"invalid constant-sized static type encoding: expected [%d]interface{}, got %s",
 				expectedLength,
 				e.ActualType.String(),
 			)
@@ -1209,7 +1268,8 @@ func (d DecoderV6) decodeConstantSizedStaticType() (StaticType, error) {
 	}
 
 	if arraySize != expectedLength {
-		return nil, fmt.Errorf("invalid constant-sized static type encoding: expected [%d]interface{}, got [%d]interface{}",
+		return nil, fmt.Errorf(
+			"invalid constant-sized static type encoding: expected [%d]interface{}, got [%d]interface{}",
 			expectedLength,
 			arraySize,
 		)
@@ -1219,7 +1279,10 @@ func (d DecoderV6) decodeConstantSizedStaticType() (StaticType, error) {
 	size, err := d.decoder.DecodeUint64()
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
-			return nil, fmt.Errorf("invalid constant-sized static type size encoding: %s", e.ActualType.String())
+			return nil, fmt.Errorf(
+				"invalid constant-sized static type size encoding: %s",
+				e.ActualType.String(),
+			)
 		}
 		return nil, err
 	}
@@ -1236,7 +1299,10 @@ func (d DecoderV6) decodeConstantSizedStaticType() (StaticType, error) {
 	// Decode type at array index encodedConstantSizedStaticTypeTypeFieldKeyV6
 	staticType, err := d.decodeStaticType()
 	if err != nil {
-		return nil, fmt.Errorf("invalid constant-sized static type inner type encoding: %w", err)
+		return nil, fmt.Errorf(
+			"invalid constant-sized static type inner type encoding: %w",
+			err,
+		)
 	}
 
 	return ConstantSizedStaticType{
@@ -1252,7 +1318,8 @@ func (d DecoderV6) decodeReferenceStaticType() (StaticType, error) {
 
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
-			return nil, fmt.Errorf("invalid reference static type encoding: expected [%d]interface{}, got %s",
+			return nil, fmt.Errorf(
+				"invalid reference static type encoding: expected [%d]interface{}, got %s",
 				expectedLength,
 				e.ActualType.String(),
 			)
@@ -1261,7 +1328,8 @@ func (d DecoderV6) decodeReferenceStaticType() (StaticType, error) {
 	}
 
 	if arraySize != expectedLength {
-		return nil, fmt.Errorf("invalid reference static type encoding: expected [%d]interface{}, got [%d]interface{}",
+		return nil, fmt.Errorf(
+			"invalid reference static type encoding: expected [%d]interface{}, got [%d]interface{}",
 			expectedLength,
 			arraySize,
 		)
@@ -1271,7 +1339,10 @@ func (d DecoderV6) decodeReferenceStaticType() (StaticType, error) {
 	authorized, err := d.decoder.DecodeBool()
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
-			return nil, fmt.Errorf("invalid reference static type authorized encoding: %s", e.ActualType.String())
+			return nil, fmt.Errorf(
+				"invalid reference static type authorized encoding: %s",
+				e.ActualType.String(),
+			)
 		}
 		return nil, err
 	}
@@ -1279,7 +1350,10 @@ func (d DecoderV6) decodeReferenceStaticType() (StaticType, error) {
 	// Decode type at array index encodedReferenceStaticTypeTypeFieldKeyV6
 	staticType, err := d.decodeStaticType()
 	if err != nil {
-		return nil, fmt.Errorf("invalid reference static type inner type encoding: %w", err)
+		return nil, fmt.Errorf(
+			"invalid reference static type inner type encoding: %w",
+			err,
+		)
 	}
 
 	return ReferenceStaticType{
@@ -1295,7 +1369,8 @@ func (d DecoderV6) decodeDictionaryStaticType() (StaticType, error) {
 
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
-			return nil, fmt.Errorf("invalid dictionary static type encoding: expected [%d]interface{}, got %s",
+			return nil, fmt.Errorf(
+				"invalid dictionary static type encoding: expected [%d]interface{}, got %s",
 				expectedLength,
 				e.ActualType.String(),
 			)
@@ -1304,7 +1379,8 @@ func (d DecoderV6) decodeDictionaryStaticType() (StaticType, error) {
 	}
 
 	if arraySize != expectedLength {
-		return nil, fmt.Errorf("invalid dictionary static type encoding: expected [%d]interface{}, got [%d]interface{}",
+		return nil, fmt.Errorf(
+			"invalid dictionary static type encoding: expected [%d]interface{}, got [%d]interface{}",
 			expectedLength,
 			arraySize,
 		)
@@ -1313,13 +1389,19 @@ func (d DecoderV6) decodeDictionaryStaticType() (StaticType, error) {
 	// Decode key type at array index encodedDictionaryStaticTypeKeyTypeFieldKeyV6
 	keyType, err := d.decodeStaticType()
 	if err != nil {
-		return nil, fmt.Errorf("invalid dictionary static type key type encoding: %w", err)
+		return nil, fmt.Errorf(
+			"invalid dictionary static type key type encoding: %w",
+			err,
+		)
 	}
 
 	// Decode value type at array index encodedDictionaryStaticTypeValueTypeFieldKeyV6
 	valueType, err := d.decodeStaticType()
 	if err != nil {
-		return nil, fmt.Errorf("invalid dictionary static type value type encoding: %w", err)
+		return nil, fmt.Errorf(
+			"invalid dictionary static type value type encoding: %w",
+			err,
+		)
 	}
 
 	return DictionaryStaticType{
@@ -1335,7 +1417,8 @@ func (d DecoderV6) decodeRestrictedStaticType() (StaticType, error) {
 
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
-			return nil, fmt.Errorf("invalid restricted static type encoding: expected [%d]interface{}, got %s",
+			return nil, fmt.Errorf(
+				"invalid restricted static type encoding: expected [%d]interface{}, got %s",
 				expectedLength,
 				e.ActualType.String(),
 			)
@@ -1344,7 +1427,8 @@ func (d DecoderV6) decodeRestrictedStaticType() (StaticType, error) {
 	}
 
 	if arraySize != expectedLength {
-		return nil, fmt.Errorf("invalid restricted static type encoding: expected [%d]interface{}, got [%d]interface{}",
+		return nil, fmt.Errorf(
+			"invalid restricted static type encoding: expected [%d]interface{}, got [%d]interface{}",
 			expectedLength,
 			arraySize,
 		)
@@ -1353,14 +1437,18 @@ func (d DecoderV6) decodeRestrictedStaticType() (StaticType, error) {
 	// Decode restricted type at array index encodedRestrictedStaticTypeTypeFieldKeyV6
 	restrictedType, err := d.decodeStaticType()
 	if err != nil {
-		return nil, fmt.Errorf("invalid restricted static type key type encoding: %w", err)
+		return nil, fmt.Errorf(
+			"invalid restricted static type key type encoding: %w",
+			err,
+		)
 	}
 
 	// Decode restrictions at array index encodedRestrictedStaticTypeRestrictionsFieldKeyV6
 	restrictionSize, err := d.decoder.DecodeArrayHead()
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
-			return nil, fmt.Errorf("invalid restricted static type restrictions encoding: %s",
+			return nil, fmt.Errorf(
+				"invalid restricted static type restrictions encoding: %s",
 				e.ActualType.String(),
 			)
 		}
@@ -1373,18 +1461,31 @@ func (d DecoderV6) decodeRestrictedStaticType() (StaticType, error) {
 		number, err := d.decoder.DecodeTagNumber()
 		if err != nil {
 			if e, ok := err.(*cbor.WrongTypeError); ok {
-				return nil, fmt.Errorf("invalid restricted static type restriction encoding: expected CBOR tag, got %s", e.ActualType.String())
+				return nil, fmt.Errorf(
+					"invalid restricted static type restriction encoding: expected CBOR tag, got %s",
+					e.ActualType.String(),
+				)
 			}
-			return nil, fmt.Errorf("invalid restricted static type restriction encoding: %w", err)
+			return nil, fmt.Errorf(
+				"invalid restricted static type restriction encoding: %w",
+				err,
+			)
 		}
 
 		if number != CBORTagInterfaceStaticType {
-			return nil, fmt.Errorf("invalid restricted static type restriction encoding: expected CBOR tag %d, got %d", CBORTagInterfaceStaticType, number)
+			return nil, fmt.Errorf(
+				"invalid restricted static type restriction encoding: expected CBOR tag %d, got %d",
+				CBORTagInterfaceStaticType,
+				number,
+			)
 		}
 
 		restriction, err := d.decodeInterfaceStaticType()
 		if err != nil {
-			return nil, fmt.Errorf("invalid restricted static type restriction encoding: %w", err)
+			return nil, fmt.Errorf(
+				"invalid restricted static type restriction encoding: %w",
+				err,
+			)
 		}
 
 		restrictions[i] = restriction
@@ -1403,7 +1504,8 @@ func (d DecoderV6) decodeType() (TypeValue, error) {
 
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
-			return TypeValue{}, fmt.Errorf("invalid type encoding: expected [%d]interface{}, got %s",
+			return TypeValue{}, fmt.Errorf(
+				"invalid type encoding: expected [%d]interface{}, got %s",
 				expectedLength,
 				e.ActualType.String(),
 			)
@@ -1412,7 +1514,8 @@ func (d DecoderV6) decodeType() (TypeValue, error) {
 	}
 
 	if arraySize != expectedLength {
-		return TypeValue{}, fmt.Errorf("invalid type encoding: expected [%d]interface{}, got [%d]interface{}",
+		return TypeValue{}, fmt.Errorf(
+			"invalid type encoding: expected [%d]interface{}, got [%d]interface{}",
 			expectedLength,
 			arraySize,
 		)
@@ -1446,7 +1549,10 @@ func (d DecoderV6) decodeCapabilityStaticType() (StaticType, error) {
 	}
 
 	if err != nil {
-		return nil, fmt.Errorf("invalid capability static type borrow type encoding: %w", err)
+		return nil, fmt.Errorf(
+			"invalid capability static type borrow type encoding: %w",
+			err,
+		)
 	}
 
 	return CapabilityStaticType{
@@ -1455,236 +1561,124 @@ func (d DecoderV6) decodeCapabilityStaticType() (StaticType, error) {
 }
 
 func (d DecoderV6) decodeDictionary() (*DictionaryValue, error) {
-	// TODO:
-	return nil, nil
-}
 
-// TODO:
-//func decodeDictionaryMetaInfo(v *DictionaryValue, content []byte) error {
-//
-//
-//	const expectedLength = encodedDictionaryValueLength
-//
-//	size, err := d.decoder.DecodeArrayHead()
-//
-//	if err != nil {
-//		if e, ok := err.(*cbor.WrongTypeError); ok {
-//			return fmt.Errorf("invalid dictionary encoding (@ %s): expected [%d]interface{}, got %s",
-//				strings.Join(v.valuePath, "."),
-//				expectedLength,
-//				e.ActualType.String(),
-//			)
-//		}
-//		return err
-//	}
-//
-//	if size != expectedLength {
-//		return fmt.Errorf("invalid dictionary encoding (@ %s): expected [%d]interface{}, got [%d]interface{}",
-//			strings.Join(v.valuePath, "."),
-//			expectedLength,
-//			size,
-//		)
-//	}
-//
-//	// Decode type
-//	staticType, err := d.decodeStaticType()
-//	if err != nil {
-//		return err
-//	}
-//
-//	dictionaryStaticType, ok := staticType.(DictionaryStaticType)
-//	if !ok {
-//		return fmt.Errorf(
-//			"invalid dictionary static type encoding (@ %s): %s",
-//			strings.Join(v.valuePath, "."),
-//			staticType.String(),
-//		)
-//	}
-//
-//	// Lazily decode keys
-//
-//	var keysContent []byte
-//	if d.isByteDecoder {
-//		// Use the zero-copy method if available, for better performance.
-//		keysContent, err = d.decoder.DecodeRawBytesZeroCopy()
-//	} else {
-//		keysContent, err = d.decoder.DecodeRawBytes()
-//	}
-//
-//	if err != nil {
-//		if e, ok := err.(*cbor.WrongTypeError); ok {
-//			return fmt.Errorf(
-//				"invalid dictionary keys encoding (@ %s): %s",
-//				strings.Join(v.valuePath, "."),
-//				e.ActualType.String(),
-//			)
-//		}
-//		return err
-//	}
-//
-//	// Lazily decode values
-//
-//	var valuesContent []byte
-//	if d.isByteDecoder {
-//		// Use the zero-copy method if available, for better performance.
-//		valuesContent, err = d.decoder.DecodeRawBytesZeroCopy()
-//	} else {
-//		valuesContent, err = d.decoder.DecodeRawBytes()
-//	}
-//
-//	if err != nil {
-//		if e, ok := err.(*cbor.WrongTypeError); ok {
-//			return fmt.Errorf(
-//				"invalid dictionary values encoding (@ %s): %s",
-//				strings.Join(v.valuePath, "."),
-//				e.ActualType.String(),
-//			)
-//		}
-//		return err
-//	}
-//
-//	keysContent = append(keysContent, valuesContent...)
-//
-//	v.entriesContent = keysContent
-//	v.Type = dictionaryStaticType
-//
-//	return nil
-//}
-//
-//func decodeDictionaryEntries(v *DictionaryValue, content []byte) error {
-//	if v.encodingVersion < 5 {
-//		return decodeDictionaryEntriesV4(v, content)
-//	}
-//
-//	d, err := NewByteDecoder(content, v.Owner, v.encodingVersion, v.decodeCallback)
-//	if err != nil {
-//		return err
-//	}
-//
-//	// Decode keys at array index encodedDictionaryValueKeysFieldKeyV6
-//	//nolint:gocritic
-//	keysPath := append(v.valuePath, dictionaryKeyPathPrefix)
-//
-//	// Since the keys are always accessed below, do not defer
-//	// the decoding for keys, as it can be an overhead.
-//
-//	num, err := d.decoder.DecodeTagNumber()
-//	if err != nil {
-//		return fmt.Errorf(
-//			"invalid dictionary keys encoding (@ %s): %w",
-//			strings.Join(v.valuePath, "."),
-//			err,
-//		)
-//	}
-//
-//	if num != CBORTagArrayValue {
-//		return fmt.Errorf(
-//			"invalid dictionary keys encoding (@ %s)",
-//			strings.Join(v.valuePath, "."),
-//		)
-//	}
-//
-//	keys, err := d.decodeArray(keysPath, false)
-//	if err != nil {
-//		return fmt.Errorf(
-//			"invalid dictionary keys encoding (@ %s): %w",
-//			strings.Join(v.valuePath, "."),
-//			err,
-//		)
-//	}
-//
-//	// Decode entries at array index encodedDictionaryValueEntriesFieldKeyV6
-//	entryCount, err := d.decoder.DecodeArrayHead()
-//	if err != nil {
-//		if e, ok := err.(*cbor.WrongTypeError); ok {
-//			return fmt.Errorf("invalid dictionary entries encoding (@ %s): %s",
-//				strings.Join(v.valuePath, "."),
-//				e.ActualType.String(),
-//			)
-//		}
-//		return err
-//	}
-//
-//	keyCount := keys.Count()
-//
-//	// The number of entries must either match the number of keys,
-//	// or be zero in case the values are deferred
-//
-//	countMismatch := int(entryCount) != keyCount
-//	if countMismatch && entryCount != 0 {
-//		return fmt.Errorf(
-//			"invalid dictionary encoding (@ %s): key and entry count mismatch: expected %d, got %d",
-//			strings.Join(v.valuePath, "."),
-//			keyCount,
-//			entryCount,
-//		)
-//	}
-//
-//	entries := NewStringValueOrderedMap()
-//
-//	var deferred *orderedmap.StringStructOrderedMap
-//	var deferredStorageKeyBase string
-//
-//	// Are the values in the dictionary deferred, i.e. are they encoded
-//	// separately and stored in separate storage keys?
-//
-//	isDeferred := countMismatch && entryCount == 0
-//
-//	if isDeferred {
-//
-//		deferred = orderedmap.NewStringStructOrderedMap()
-//		deferredStorageKeyBase = joinPath(append(v.valuePath, dictionaryValuePathPrefix))
-//		for _, keyValue := range keys.Elements() {
-//			key := dictionaryKey(keyValue)
-//			deferred.Set(key, struct{}{})
-//		}
-//
-//	} else {
-//
-//		// Pre-allocate and reuse valuePath.
-//		//nolint:gocritic
-//		valuePath := append(v.valuePath, dictionaryValuePathPrefix, "")
-//
-//		lastValuePathIndex := len(v.valuePath) + 1
-//
-//		keyIndex := 0
-//
-//		for _, keyValue := range keys.Elements() {
-//			keyStringValue, ok := keyValue.(HasKeyString)
-//			if !ok {
-//				return fmt.Errorf(
-//					"invalid dictionary key encoding (@ %s, %d): %T",
-//					strings.Join(v.valuePath, "."),
-//					keyIndex,
-//					keyValue,
-//				)
-//			}
-//
-//			keyString := keyStringValue.KeyString()
-//			valuePath[lastValuePathIndex] = keyString
-//
-//			decodedValue, err := d.decodeValue(valuePath)
-//			if err != nil {
-//				return fmt.Errorf(
-//					"invalid dictionary value encoding (@ %s, %s): %w",
-//					strings.Join(v.valuePath, "."),
-//					keyString,
-//					err,
-//				)
-//			}
-//
-//			entries.Set(keyString, decodedValue)
-//
-//			keyIndex++
-//		}
-//
-//		v.deferredOwner = nil
-//	}
-//
-//	v.keys = keys
-//	v.entries = entries
-//	v.deferredKeys = deferred
-//	v.deferredStorageKeyBase = deferredStorageKeyBase
-//
-//	return nil
-//}
+	const expectedLength = encodedDictionaryValueLength
+
+	size, err := d.decoder.DecodeArrayHead()
+
+	if err != nil {
+		if e, ok := err.(*cbor.WrongTypeError); ok {
+			return nil, fmt.Errorf(
+				"invalid dictionary encoding: expected [%d]interface{}, got %s",
+				expectedLength,
+				e.ActualType.String(),
+			)
+		}
+		return nil, err
+	}
+
+	if size != expectedLength {
+		return nil, fmt.Errorf(
+			"invalid dictionary encoding: expected [%d]interface{}, got [%d]interface{}",
+			expectedLength,
+			size,
+		)
+	}
+
+	// Decode type
+	staticType, err := d.decodeStaticType()
+	if err != nil {
+		return nil, err
+	}
+
+	dictionaryStaticType, ok := staticType.(DictionaryStaticType)
+	if !ok {
+		return nil, fmt.Errorf(
+			"invalid dictionary static type encoding: %s",
+			staticType.String(),
+		)
+	}
+
+	// Decode keys at array index encodedDictionaryValueKeysFieldKeyV6
+	keysStorable, err := d.decodeStorable()
+	if err != nil {
+		return nil, fmt.Errorf(
+			"invalid dictionary keys encoding: %w",
+			err,
+		)
+	}
+
+	keysStorableIDStorable, ok := keysStorable.(atree.StorageIDStorable)
+	if !ok {
+		return nil, fmt.Errorf(
+			"invalid dictionary keys encoding: %T",
+			keysStorableIDStorable,
+		)
+	}
+
+	keysValue, err := StoredValue(keysStorableIDStorable, d.storage)
+	if err != nil {
+		return nil, fmt.Errorf(
+			"invalid dictionary keys encoding: %w",
+			err,
+		)
+	}
+
+	keys, ok := keysValue.(*ArrayValue)
+	if !ok {
+		return nil, fmt.Errorf(
+			"invalid dictionary keys encoding: %T",
+			keysValue,
+		)
+	}
+
+	// Decode entries at array index encodedDictionaryValueEntriesFieldKeyV6
+	entryCount, err := d.decoder.DecodeArrayHead()
+	if err != nil {
+		if e, ok := err.(*cbor.WrongTypeError); ok {
+			return nil, fmt.Errorf("invalid dictionary entries encoding: %s",
+				e.ActualType.String(),
+			)
+		}
+		return nil, err
+	}
+
+	entries := NewStringValueOrderedMap()
+
+	// TODO:
+	_ = entryCount
+	//for _, keyValue := range keys.Elements() {
+	//	keyStringValue, ok := keyValue.(HasKeyString)
+	//	if !ok {
+	//		return nil, fmt.Errorf(
+	//			"invalid dictionary key encoding (%d): %T",
+	//			keyIndex,
+	//			keyValue,
+	//		)
+	//	}
+	//
+	//	keyString := keyStringValue.KeyString()
+	//	valuePath[lastValuePathIndex] = keyString
+	//
+	//	decodedValue, err := d.decodeValue(valuePath)
+	//	if err != nil {
+	//		return nil, fmt.Errorf(
+	//			"invalid dictionary value encoding (%s): %w",
+	//			keyString,
+	//			err,
+	//		)
+	//	}
+	//
+	//	entries.Set(keyString, decodedValue)
+	//
+	//	keyIndex++
+	//}
+
+	return &DictionaryValue{
+		Type:    dictionaryStaticType,
+		Keys:    keys,
+		Entries: entries,
+		// TODO: Owner
+		// TODO: StorageID
+	}, nil
+}

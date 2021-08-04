@@ -205,6 +205,9 @@ func TestEncodeDecodeString(t *testing.T) {
 
 func TestEncodeDecodeArray(t *testing.T) {
 
+	// TODO: type
+	// TODO: owner
+
 	t.Parallel()
 
 	t.Run("empty", func(t *testing.T) {
@@ -269,6 +272,10 @@ func TestEncodeDecodeArray(t *testing.T) {
 }
 
 func TestEncodeDecodeDictionary(t *testing.T) {
+
+	// TODO: type
+	// TODO: owner
+	// TODO: storage ID
 
 	t.Parallel()
 
@@ -346,19 +353,11 @@ func TestEncodeDecodeDictionary(t *testing.T) {
 
 		storage := NewInMemoryStorage()
 
-		key1 := NewStringValue("test")
-		value1 := NewArrayValueUnownedNonCopying(
-			VariableSizedStaticType{
-				Type: PrimitiveStaticTypeAnyStruct,
-			},
-			storage,
-		)
+		key1 := BoolValue(true)
+		value1 := BoolValue(false)
 
-		key2 := BoolValue(true)
-		value2 := BoolValue(false)
-
-		key3 := NewStringValue("foo")
-		value3 := NewStringValue("bar")
+		key2 := NewStringValue("foo")
+		value2 := NewStringValue("bar")
 
 		expected := NewDictionaryValueUnownedNonCopying(
 			DictionaryStaticType{
@@ -368,7 +367,6 @@ func TestEncodeDecodeDictionary(t *testing.T) {
 			storage,
 			key1, value1,
 			key2, value2,
-			key3, value3,
 		)
 
 		encodedValue := []byte{
@@ -376,8 +374,7 @@ func TestEncodeDecodeDictionary(t *testing.T) {
 			0xd8, atree.CBORTagStorageID,
 
 			// storage ID.
-			// 2 instead of 1, because array for dictionary keys has storage ID 1
-			2,
+			1,
 		}
 
 		encodedStorable := []byte{
@@ -398,56 +395,20 @@ func TestEncodeDecodeDictionary(t *testing.T) {
 			// Keys
 
 			// cbor Array Value tag
-			0xd8, CBORTagArrayValue,
+			0xd8, atree.CBORTagStorageID,
 
-			// array, 2 items follow
-			0x82,
-
-			// Type info
-
-			// array type tag
-			0xd8, CBORTagVariableSizedStaticType,
-
-			// element type
-			0xd8, CBORTagPrimitiveStaticType, byte(PrimitiveStaticTypeAnyStruct),
-
-			// array, 3 items follow
-			0x83,
-			// UTF-8 string, length 4
-			0x64,
-			// t, e, s, t
-			0x74, 0x65, 0x73, 0x74,
-			// true
-			0xf5,
-			// UTF-8 string, length 3
-			0x63,
-			// f, o, o
-			0x66, 0x6f, 0x6f,
+			// storage ID.
+			// 2 instead of 1, because dictionary has storage ID 1
+			0x2,
 
 			// Values
 
-			// array, 3 items follow
-			0x83,
-
-			// cbor Array Value tag
-			0xd8, CBORTagArrayValue,
-
 			// array, 2 items follow
 			0x82,
 
-			// Type info
-
-			// array type tag
-			0xd8, CBORTagVariableSizedStaticType,
-
-			// element type
-			0xd8, CBORTagPrimitiveStaticType, byte(PrimitiveStaticTypeAnyStruct),
-
-			// Elements. array, 0 items follow
-			0x80,
-
 			// false
 			0xf4,
+
 			// UTF-8 string, length 3
 			0x63,
 			// b, a, r
@@ -477,7 +438,8 @@ func TestEncodeDecodeDictionary(t *testing.T) {
 
 func TestEncodeDecodeComposite(t *testing.T) {
 
-	// TODO: check owner is properly set after decoding
+	// TODO: owner
+	// TODO: storage ID
 
 	t.Parallel()
 
