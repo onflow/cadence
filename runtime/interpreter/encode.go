@@ -595,7 +595,7 @@ func (s DictionaryStorable) Encode(e *atree.Encoder) error {
 	}
 
 	// (2) Encode keys (as StorageID) at array index encodedDictionaryValueKeysFieldKeyV6
-	err = s.Dictionary.Keys.array.Storable(e.Storage).Encode(e)
+	err = s.Dictionary.Keys.Storable(e.Storage).Encode(e)
 	if err != nil {
 		return err
 	}

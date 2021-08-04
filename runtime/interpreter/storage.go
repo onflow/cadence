@@ -19,9 +19,32 @@
 package interpreter
 
 import (
+	"fmt"
+
 	"github.com/fxamacker/atree"
 	"github.com/onflow/cadence/runtime/common"
 )
+
+func StoredValue(storable atree.Storable, storage atree.SlabStorage) (Value, error) {
+	storedValue, err := storable.StoredValue(storage)
+	if err != nil {
+		return nil, err
+	}
+	switch storedValue := storedValue.(type) {
+	case *atree.Array:
+		return &ArrayValue{
+			array: storedValue,
+			// TODO: type
+			// TODO: owner
+		}, nil
+
+	case Value:
+		return storedValue, nil
+
+	default:
+		return nil, fmt.Errorf("invalid stored value: %T", storedValue)
+	}
+}
 
 type InMemoryStorageKey struct {
 	Address common.Address
@@ -44,7 +67,7 @@ func (i InMemoryStorage) Read(_ *Interpreter, address common.Address, key string
 		return NilValue{}
 	}
 
-	value, err := storable.StoredValue(i.BasicSlabStorage)
+	value, err := StoredValue(storable, i.BasicSlabStorage)
 	if err != nil {
 		panic(ExternalError{err})
 	}
