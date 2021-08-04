@@ -106,7 +106,7 @@ func NewDecoderV5(
 	error,
 ) {
 	return &DecoderV5{
-		decoder:        DecMode.NewStreamDecoder(reader),
+		decoder:        CBORDecMode.NewStreamDecoder(reader),
 		owner:          owner,
 		version:        version,
 		decodeCallback: decodeCallback,
@@ -124,7 +124,7 @@ func NewByteDecoderV5(
 	error,
 ) {
 	return &DecoderV5{
-		decoder:        DecMode.NewByteStreamDecoder(data),
+		decoder:        CBORDecMode.NewByteStreamDecoder(data),
 		owner:          owner,
 		version:        version,
 		decodeCallback: decodeCallback,
@@ -132,7 +132,7 @@ func NewByteDecoderV5(
 	}, nil
 }
 
-var DecMode = func() cbor.DecMode {
+var CBORDecMode = func() cbor.DecMode {
 	decMode, err := cbor.DecOptions{
 		IntDec:           cbor.IntDecConvertNone,
 		MaxArrayElements: maxInt,
