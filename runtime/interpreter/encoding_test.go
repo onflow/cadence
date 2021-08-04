@@ -43,6 +43,7 @@ type encodeDecodeTest struct {
 	decodeOnly   bool
 	deepEquality bool
 	storage      Storage
+	storageID    atree.StorageID
 }
 
 var testOwner = common.BytesToAddress([]byte{0x42})
@@ -64,7 +65,7 @@ func testEncodeDecode(t *testing.T, test encodeDecodeTest) {
 		}
 
 		var err error
-		encoded, err = atree.Encode(test.storable, test.storage)
+		encoded, err = atree.Encode(test.storable, CBOREncMode)
 		require.NoError(t, err)
 
 		if test.encoded != nil {
@@ -74,8 +75,8 @@ func testEncodeDecode(t *testing.T, test encodeDecodeTest) {
 		encoded = test.encoded
 	}
 
-	decoder := DecMode.NewByteStreamDecoder(encoded)
-	decoded, err := DecodeStorableV6(decoder, test.storage)
+	decoder := CBORDecMode.NewByteStreamDecoder(encoded)
+	decoded, err := DecodeStorableV6(decoder, test.storageID)
 
 	if test.invalid {
 		require.Error(t, err)
@@ -273,7 +274,6 @@ func TestEncodeDecodeArray(t *testing.T) {
 
 func TestEncodeDecodeDictionary(t *testing.T) {
 
-	// TODO: type
 	// TODO: owner
 	// TODO: storage ID
 
@@ -337,10 +337,8 @@ func TestEncodeDecodeDictionary(t *testing.T) {
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
-				storage: storage,
-				storable: DictionaryStorable{
-					Dictionary: expected,
-				},
+				storage:      storage,
+				storable:     expected.ExternalStorable(storage),
 				encoded:      encodedStorable,
 				decodedValue: expected,
 			},
@@ -425,10 +423,8 @@ func TestEncodeDecodeDictionary(t *testing.T) {
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
-				storage: storage,
-				storable: DictionaryStorable{
-					Dictionary: expected,
-				},
+				storage:      storage,
+				storable:     expected.ExternalStorable(storage),
 				encoded:      encodedStorable,
 				decodedValue: expected,
 			},

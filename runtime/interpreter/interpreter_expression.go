@@ -436,6 +436,7 @@ func (interpreter *Interpreter) VisitDictionaryExpression(expression *ast.Dictio
 
 		getLocationRange := locationRangeGetter(interpreter.Location, expression)
 
+		// TODO: batch insert to avoid store on each insert
 		_ = dictionary.Insert(
 			interpreter.Storage,
 			getLocationRange,
