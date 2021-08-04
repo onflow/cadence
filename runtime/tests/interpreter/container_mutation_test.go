@@ -237,6 +237,26 @@ func TestArrayMutation(t *testing.T) {
 		assert.Equal(t, interpreter.NewStringValue("foo"), names[0])
 		assert.Equal(t, interpreter.NewStringValue("bar"), names[1])
 	})
+
+	t.Run("invalid update through reference", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            fun test() {
+                let names: [AnyStruct] = ["foo", "bar"] as [String]
+                let namesRef = &names as &[AnyStruct]
+                namesRef[0] = 5
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		require.Error(t, err)
+
+		mutationError := &interpreter.ContainerMutationError{}
+		require.ErrorAs(t, err, mutationError)
+
+		assert.Equal(t, sema.StringType, mutationError.ExpectedType)
+	})
 }
 
 func TestDictionaryMutation(t *testing.T) {
@@ -374,5 +394,30 @@ func TestDictionaryMutation(t *testing.T) {
 		require.ErrorAs(t, err, mutationError)
 
 		assert.Equal(t, sema.PublicPathType, mutationError.ExpectedType)
+	})
+
+	t.Run("invalid update through reference", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            fun test() {
+                let names: {String: AnyStruct} = {"foo": "bar"} as {String: String}
+                let namesRef = &names as &{String: AnyStruct}
+                namesRef["foo"] = 5
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		require.Error(t, err)
+
+		mutationError := &interpreter.ContainerMutationError{}
+		require.ErrorAs(t, err, mutationError)
+
+		assert.Equal(t,
+			&sema.OptionalType{
+				Type: sema.StringType,
+			},
+			mutationError.ExpectedType,
+		)
 	})
 }
