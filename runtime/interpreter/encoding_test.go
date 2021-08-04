@@ -30,6 +30,7 @@ import (
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/common/orderedmap"
 	"github.com/onflow/cadence/runtime/sema"
+	checkerUtils "github.com/onflow/cadence/runtime/tests/checker"
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
@@ -292,6 +293,7 @@ func TestEncodeDecodeDictionary(t *testing.T) {
 	t.Run("empty", func(t *testing.T) {
 
 		expected := NewDictionaryValueUnownedNonCopying(
+			newTestInterpreter(t),
 			DictionaryStaticType{
 				KeyType:   PrimitiveStaticTypeString,
 				ValueType: PrimitiveStaticTypeAnyStruct,
@@ -359,6 +361,7 @@ func TestEncodeDecodeDictionary(t *testing.T) {
 		value3 := NewStringValue("bar")
 
 		expected := NewDictionaryValueUnownedNonCopying(
+			newTestInterpreter(t),
 			DictionaryStaticType{
 				KeyType:   PrimitiveStaticTypeAnyStruct,
 				ValueType: PrimitiveStaticTypeAnyStruct,
@@ -3357,7 +3360,27 @@ func TestEncodeDecodeDictionaryDeferred(t *testing.T) {
 		)
 		value2.modified = false
 
+		code := `
+            resource R {
+            }
+
+            resource R2 {
+            }
+        `
+		checker, err := checkerUtils.ParseAndCheckWithOptions(t,
+			code,
+			checkerUtils.ParseAndCheckOptions{},
+		)
+		require.NoError(t, err)
+
+		inter, err := NewInterpreter(
+			ProgramFromChecker(checker),
+			utils.TestLocation,
+		)
+		require.NoError(t, err)
+
 		expected := NewDictionaryValueUnownedNonCopying(
+			inter,
 			DictionaryStaticType{
 				KeyType:   PrimitiveStaticTypeAnyStruct,
 				ValueType: PrimitiveStaticTypeAnyResource,
@@ -3448,6 +3471,7 @@ func TestEncodeDecodeDictionaryDeferred(t *testing.T) {
 		value2 := BoolValue(false)
 
 		expected := NewDictionaryValueUnownedNonCopying(
+			newTestInterpreter(t),
 			DictionaryStaticType{
 				KeyType:   PrimitiveStaticTypeAnyStruct,
 				ValueType: PrimitiveStaticTypeAnyStruct,
@@ -3719,7 +3743,7 @@ func TestDecodeCallback(t *testing.T) {
 
 func BenchmarkEncoding(b *testing.B) {
 
-	value := prepareLargeTestValue()
+	value := prepareLargeTestValue(b)
 
 	b.ReportAllocs()
 	b.ResetTimer()
@@ -3732,7 +3756,7 @@ func BenchmarkEncoding(b *testing.B) {
 
 func BenchmarkDecoding(b *testing.B) {
 
-	value := prepareLargeTestValue()
+	value := prepareLargeTestValue(b)
 
 	encoded, _, err := EncodeValue(value, nil, false, nil)
 	require.NoError(b, err)
@@ -3746,7 +3770,7 @@ func BenchmarkDecoding(b *testing.B) {
 	}
 }
 
-func prepareLargeTestValue() Value {
+func prepareLargeTestValue(tb testing.TB) Value {
 	values := NewArrayValueUnownedNonCopying(
 		VariableSizedStaticType{
 			Type: PrimitiveStaticTypeAnyStruct,
@@ -3760,6 +3784,7 @@ func prepareLargeTestValue() Value {
 
 	for i := 0; i < 100; i++ {
 		dict := NewDictionaryValueUnownedNonCopying(
+			newTestInterpreter(tb),
 			DictionaryStaticType{
 				KeyType:   PrimitiveStaticTypeString,
 				ValueType: PrimitiveStaticTypeInt256,
@@ -3831,6 +3856,7 @@ func TestDecodeV4EncodeV5(t *testing.T) {
 		t.Parallel()
 
 		dictionary := NewDictionaryValueUnownedNonCopying(
+			newTestInterpreter(t),
 			DictionaryStaticType{
 				KeyType:   PrimitiveStaticTypeString,
 				ValueType: PrimitiveStaticTypeInt,

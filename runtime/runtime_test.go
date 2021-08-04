@@ -918,33 +918,6 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
 			expectedLogs: []string{"42"},
 		},
 		{
-			label: "Invalid dictionary",
-			script: `
-			  transaction(x: {String:String}) {
-				execute {
-				  log(x["y"])
-				}
-			  }
-			`,
-			args: [][]byte{
-				jsoncdc.MustEncode(
-					cadence.NewDictionary(
-						[]cadence.KeyValuePair{
-							{
-								Key:   cadence.NewString("y"),
-								Value: cadence.NewInt(42),
-							},
-						},
-					),
-				),
-			},
-			check: func(t *testing.T, err error) {
-				assert.Error(t, err)
-				assert.IsType(t, &InvalidEntryPointArgumentError{}, errors.Unwrap(err))
-				assert.IsType(t, &InvalidValueTypeError{}, errors.Unwrap(errors.Unwrap(err)))
-			},
-		},
-		{
 			label: "Struct",
 			script: `
 			  pub struct Foo {
@@ -1205,31 +1178,6 @@ func TestRuntimeScriptArguments(t *testing.T) {
 				),
 			},
 			expectedLogs: []string{"42"},
-		},
-		{
-			label: "Invalid dictionary",
-			script: `
-				pub fun main(x: {String:String}) {
-					log(x["y"])
-				}
-			`,
-			args: [][]byte{
-				jsoncdc.MustEncode(
-					cadence.NewDictionary(
-						[]cadence.KeyValuePair{
-							{
-								Key:   cadence.NewString("y"),
-								Value: cadence.NewInt(42),
-							},
-						},
-					),
-				),
-			},
-			check: func(t *testing.T, err error) {
-				assert.Error(t, err)
-				assert.IsType(t, &InvalidEntryPointArgumentError{}, errors.Unwrap(err))
-				assert.IsType(t, &InvalidValueTypeError{}, errors.Unwrap(errors.Unwrap(err)))
-			},
 		},
 		{
 			label: "Struct",

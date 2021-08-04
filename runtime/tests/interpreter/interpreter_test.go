@@ -3598,6 +3598,7 @@ func TestInterpretDictionary(t *testing.T) {
     `)
 
 	expectedDict := interpreter.NewDictionaryValueUnownedNonCopying(
+		newTestInterpreter(t),
 		interpreter.DictionaryStaticType{
 			KeyType:   interpreter.PrimitiveStaticTypeString,
 			ValueType: interpreter.PrimitiveStaticTypeInt,
@@ -3625,6 +3626,7 @@ func TestInterpretDictionaryInsertionOrder(t *testing.T) {
     `)
 
 	expectedDict := interpreter.NewDictionaryValueUnownedNonCopying(
+		newTestInterpreter(t),
 		interpreter.DictionaryStaticType{
 			KeyType:   interpreter.PrimitiveStaticTypeString,
 			ValueType: interpreter.PrimitiveStaticTypeInt,
@@ -3799,6 +3801,7 @@ func TestInterpretDictionaryIndexingAssignmentNew(t *testing.T) {
 	)
 
 	expectedDict := interpreter.NewDictionaryValueUnownedNonCopying(
+		newTestInterpreter(t),
 		interpreter.DictionaryStaticType{
 			KeyType:   interpreter.PrimitiveStaticTypeString,
 			ValueType: interpreter.PrimitiveStaticTypeInt,
@@ -3869,6 +3872,7 @@ func TestInterpretDictionaryIndexingAssignmentNil(t *testing.T) {
 	)
 
 	expectedDict := interpreter.NewDictionaryValueUnownedNonCopying(
+		newTestInterpreter(t),
 		interpreter.DictionaryStaticType{
 			KeyType:   interpreter.PrimitiveStaticTypeString,
 			ValueType: interpreter.PrimitiveStaticTypeInt,
@@ -6053,6 +6057,7 @@ func TestInterpretEmitEventParameterTypes(t *testing.T) {
 			tests[fmt.Sprintf("{%[1]s: %[1]s}", validType)] =
 				testValue{
 					value: interpreter.NewDictionaryValueUnownedNonCopying(
+						newTestInterpreter(t),
 						interpreter.DictionaryStaticType{
 							KeyType:   interpreter.ConvertSemaToStaticType(testCase.ty),
 							ValueType: interpreter.ConvertSemaToStaticType(testCase.ty),
@@ -8249,6 +8254,7 @@ func TestInterpretInternalAssignment(t *testing.T) {
 				Type: stringIntDictionaryStaticType,
 			},
 			interpreter.NewDictionaryValueUnownedNonCopying(
+				newTestInterpreter(t),
 				stringIntDictionaryStaticType,
 				interpreter.NewStringValue("a"),
 				interpreter.NewIntValueFromInt64(1),
@@ -8256,6 +8262,7 @@ func TestInterpretInternalAssignment(t *testing.T) {
 				interpreter.NewIntValueFromInt64(2),
 			),
 			interpreter.NewDictionaryValueUnownedNonCopying(
+				newTestInterpreter(t),
 				stringIntDictionaryStaticType,
 				interpreter.NewStringValue("a"),
 				interpreter.NewIntValueFromInt64(1),
@@ -8289,6 +8296,7 @@ func TestInterpretCopyOnReturn(t *testing.T) {
 
 	assert.Equal(t,
 		interpreter.NewDictionaryValueUnownedNonCopying(
+			newTestInterpreter(t),
 			interpreter.DictionaryStaticType{
 				KeyType:   interpreter.PrimitiveStaticTypeString,
 				ValueType: interpreter.PrimitiveStaticTypeString,
@@ -8423,4 +8431,11 @@ func BenchmarkNewInterpreter(b *testing.B) {
 			require.NoError(b, err)
 		}
 	})
+}
+
+func newTestInterpreter(tb testing.TB) *interpreter.Interpreter {
+	inter, err := interpreter.NewInterpreter(nil, TestLocation)
+	require.NoError(tb, err)
+
+	return inter
 }

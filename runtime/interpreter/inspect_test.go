@@ -35,8 +35,11 @@ func TestInspectValue(t *testing.T) {
 	}
 	dictValueKey := NewStringValue("hello world")
 	dictValueValue := NewInt256ValueFromInt64(1)
-	dictValue := NewDictionaryValueUnownedNonCopying(dictionaryStaticType,
-		dictValueKey, dictValueValue,
+	dictValue := NewDictionaryValueUnownedNonCopying(
+		newTestInterpreter(t),
+		dictionaryStaticType,
+		dictValueKey,
+		dictValueValue,
 	)
 
 	arrayValue := NewArrayValueUnownedNonCopying(

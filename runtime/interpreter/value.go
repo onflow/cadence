@@ -7389,6 +7389,7 @@ type DictionaryValue struct {
 }
 
 func NewDictionaryValueUnownedNonCopying(
+	interpreter *Interpreter,
 	dictionaryType DictionaryStaticType,
 	keysAndValues ...Value,
 ) *DictionaryValue {
@@ -7416,7 +7417,7 @@ func NewDictionaryValueUnownedNonCopying(
 	}
 
 	for i := 0; i < keysAndValuesCount; i += 2 {
-		_ = result.Insert(nil, ReturnEmptyLocationRange, keysAndValues[i], keysAndValues[i+1])
+		_ = result.Insert(interpreter, ReturnEmptyLocationRange, keysAndValues[i], keysAndValues[i+1])
 	}
 
 	return result
@@ -9560,12 +9561,6 @@ func checkContainerMutation(
 	value Value,
 	getLocationRange func() LocationRange,
 ) {
-
-	if inter == nil {
-		return
-	}
-
-	//value = inter.unbox(value)
 
 	memberType := inter.ConvertStaticToSemaType(memberStaticType)
 

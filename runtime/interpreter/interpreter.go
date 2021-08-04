@@ -2636,6 +2636,10 @@ func defineStringFunction(activation *VariableActivation) {
 // - Block
 
 func (interpreter *Interpreter) IsSubType(subType DynamicType, superType sema.Type) bool {
+	if superType == sema.AnyType {
+		return true
+	}
+
 	switch typedSubType := subType.(type) {
 	case MetaTypeDynamicType:
 		switch superType {
