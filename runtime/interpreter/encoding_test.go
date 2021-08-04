@@ -75,14 +75,14 @@ func testEncodeDecode(t *testing.T, test encodeDecodeTest) {
 	}
 
 	decoder := DecMode.NewByteStreamDecoder(encoded)
-	decoded, err := DecodeStorableV6(decoder)
+	decoded, err := DecodeStorableV6(decoder, test.storage)
 
 	if test.invalid {
 		require.Error(t, err)
 	} else {
 		require.NoError(t, err)
 
-		decodedValue, err := decoded.StoredValue(test.storage)
+		decodedValue, err := StoredValue(decoded, test.storage)
 		require.NoError(t, err)
 
 		expectedValue := test.value
@@ -205,9 +205,6 @@ func TestEncodeDecodeString(t *testing.T) {
 
 func TestEncodeDecodeArray(t *testing.T) {
 
-	// TODO:
-	t.Skip()
-
 	t.Parallel()
 
 	t.Run("empty", func(t *testing.T) {
@@ -273,9 +270,6 @@ func TestEncodeDecodeArray(t *testing.T) {
 
 func TestEncodeDecodeDictionary(t *testing.T) {
 
-	// TODO:
-	t.Skip()
-
 	t.Parallel()
 
 	t.Run("empty", func(t *testing.T) {
@@ -316,21 +310,11 @@ func TestEncodeDecodeDictionary(t *testing.T) {
 			0xd8, CBORTagPrimitiveStaticType, byte(PrimitiveStaticTypeAnyStruct),
 
 			// cbor Array Value tag
-			0xd8, CBORTagArrayValue,
+			0xd8, atree.CBORTagStorageID,
 
-			// array, 2 items follow
-			0x82,
-
-			// Type info
-
-			// array type tag
-			0xd8, CBORTagVariableSizedStaticType,
-
-			// element type
-			0xd8, CBORTagPrimitiveStaticType, byte(PrimitiveStaticTypeString),
-
-			// Element: array, 0 items follow
-			0x80,
+			// storage ID.
+			// 2 instead of 1, because dictionary has storage ID 1
+			0x2,
 
 			// array, 0 items follow
 			0x80,
@@ -350,7 +334,8 @@ func TestEncodeDecodeDictionary(t *testing.T) {
 				storable: DictionaryStorable{
 					Dictionary: expected,
 				},
-				encoded: encodedStorable,
+				encoded:      encodedStorable,
+				decodedValue: expected,
 			},
 		)
 	})
@@ -479,9 +464,12 @@ func TestEncodeDecodeDictionary(t *testing.T) {
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
-				storage:  storage,
-				storable: DictionaryStorable{Dictionary: expected},
-				encoded:  encodedStorable,
+				storage: storage,
+				storable: DictionaryStorable{
+					Dictionary: expected,
+				},
+				encoded:      encodedStorable,
+				decodedValue: expected,
 			},
 		)
 	})
@@ -489,8 +477,7 @@ func TestEncodeDecodeDictionary(t *testing.T) {
 
 func TestEncodeDecodeComposite(t *testing.T) {
 
-	// TODO:
-	t.Skip()
+	// TODO: check owner is properly set after decoding
 
 	t.Parallel()
 
@@ -547,7 +534,8 @@ func TestEncodeDecodeComposite(t *testing.T) {
 				storable: CompositeStorable{
 					Composite: expected,
 				},
-				encoded: encodedStorable,
+				encoded:      encodedStorable,
+				decodedValue: expected,
 			},
 		)
 
@@ -633,7 +621,8 @@ func TestEncodeDecodeComposite(t *testing.T) {
 				storable: CompositeStorable{
 					Composite: expected,
 				},
-				encoded: encodedStorable,
+				encoded:      encodedStorable,
+				decodedValue: expected,
 			},
 		)
 
@@ -717,7 +706,8 @@ func TestEncodeDecodeComposite(t *testing.T) {
 				storable: CompositeStorable{
 					Composite: expected,
 				},
-				encoded: encodedStorable,
+				encoded:      encodedStorable,
+				decodedValue: expected,
 			},
 		)
 	})
@@ -3823,332 +3813,3 @@ func TestEncodeDecodeTypeValue(t *testing.T) {
 		)
 	})
 }
-
-// TODO:
-//
-//func TestEncodePrepareCallback(t *testing.T) {
-//
-//	value := NewArrayValueUnownedNonCopying(
-//		VariableSizedStaticType{
-//			Type: PrimitiveStaticTypeInt8,
-//		},
-//		Int8Value(42),
-//	)
-//
-//	type prepareCallback struct {
-//		value Value
-//		path  []string
-//	}
-//
-//	var prepareCallbacks []prepareCallback
-//
-//	data, _, err := EncodeValue(value, nil, false, func(value Value, path []string) {
-//		prepareCallbacks = append(prepareCallbacks, prepareCallback{
-//			value: value,
-//			path:  path,
-//		})
-//	})
-//	require.NoError(t, err)
-//
-//	require.Equal(t,
-//		[]prepareCallback{
-//			{
-//				value: value,
-//				path:  nil,
-//			},
-//			{
-//				value: elements(value)[0],
-//				path:  []string{"0"},
-//			},
-//		},
-//		prepareCallbacks,
-//	)
-//
-//	utils.AssertEqualWithDiff(t,
-//		[]byte{
-//			// cbor Array Value tag
-//			0xd8, CBORTagArrayValue,
-//
-//			// array, 2 items follow
-//			0x82,
-//
-//			// Type info
-//
-//			// array type tag
-//			0xd8, CBORTagVariableSizedStaticType,
-//
-//			// element type
-//			0xd8, CBORTagPrimitiveStaticType, 0x18, byte(PrimitiveStaticTypeInt8),
-//
-//			// elements: array with 1 item follow
-//			0x81,
-//			// tag
-//			0xd8, CBORTagInt8Value,
-//			// positive integer 42
-//			0x18,
-//			0x2a,
-//		},
-//		data,
-//	)
-//}
-//
-//func TestDecodeCallback(t *testing.T) {
-//
-//	data := []byte{
-//		// cbor Array Value tag
-//		0xd8, CBORTagArrayValue,
-//
-//		// array, 2 items follow
-//		0x82,
-//
-//		// Type info
-//		// array type tag
-//		0xd8, CBORTagVariableSizedStaticType,
-//
-//		// element type
-//		0xd8, CBORTagPrimitiveStaticType, 0x18, byte(PrimitiveStaticTypeInt8),
-//
-//		// array with 1 item follow
-//		0x81,
-//		// tag
-//		0xd8, CBORTagInt8Value,
-//		// positive integer 42
-//		0x18,
-//		0x2a,
-//	}
-//
-//	type decodeCallback struct {
-//		value interface{}
-//		path  []string
-//	}
-//
-//	var decodeCallbacks []decodeCallback
-//
-//	decoded, err := DecodeValue(data, nil, nil, CurrentEncodingVersion, func(value interface{}, path []string) {
-//		decodeCallbacks = append(decodeCallbacks, decodeCallback{
-//			value: value,
-//			path:  path,
-//		})
-//	})
-//	require.NoError(t, err)
-//
-//	// build the content
-//	_ = decoded.String()
-//
-//	require.Equal(t,
-//		[]decodeCallback{
-//			{
-//				value: &ArrayValue{
-//					values: []Value{Int8Value(42)},
-//					Type: VariableSizedStaticType{
-//						Type: PrimitiveStaticTypeInt8,
-//					},
-//				},
-//				path: nil,
-//			},
-//			{
-//				value: Int8Value(42),
-//				path:  []string{"0"},
-//			},
-//		},
-//		decodeCallbacks,
-//	)
-//}
-//
-//func BenchmarkEncoding(b *testing.B) {
-//
-//	value := prepareLargeTestValue()
-//
-//	b.ReportAllocs()
-//	b.ResetTimer()
-//
-//	for i := 0; i < b.N; i++ {
-//		_, _, err := EncodeValue(value, nil, false, nil)
-//		require.NoError(b, err)
-//	}
-//}
-//
-//func BenchmarkDecoding(b *testing.B) {
-//
-//	value := prepareLargeTestValue()
-//
-//	encoded, _, err := EncodeValue(value, nil, false, nil)
-//	require.NoError(b, err)
-//
-//	b.ReportAllocs()
-//	b.ResetTimer()
-//
-//	for i := 0; i < b.N; i++ {
-//		_, err = DecodeValue(encoded, nil, nil, CurrentEncodingVersion, nil)
-//		require.NoError(b, err)
-//	}
-//}
-//
-//func prepareLargeTestValue() Value {
-//	values := NewArrayValueUnownedNonCopying(
-//		VariableSizedStaticType{
-//			Type: PrimitiveStaticTypeAnyStruct,
-//		},
-//	)
-//	for i := 0; i < 100; i++ {
-//		dict := NewDictionaryValueUnownedNonCopying(
-//			DictionaryStaticType{
-//				KeyType:   PrimitiveStaticTypeString,
-//				ValueType: PrimitiveStaticTypeInt256,
-//			},
-//		)
-//		for i := 0; i < 100; i++ {
-//			key := NewStringValue(fmt.Sprintf("hello world %d", i))
-//			value := NewInt256ValueFromInt64(int64(i))
-//			dict.Set(nil, ReturnEmptyLocationRange, key, NewSomeValueOwningNonCopying(value))
-//		}
-//		values.Append(dict)
-//	}
-//	return values
-//}
-//
-//func TestDecodeV4EncodeV5(t *testing.T) {
-//
-//	t.Parallel()
-//
-//	const encodingVersion = 4
-//
-//	t.Run("Array", func(t *testing.T) {
-//		t.Parallel()
-//
-//		array := NewArrayValueUnownedNonCopying(
-//			VariableSizedStaticType{
-//				Type: PrimitiveStaticTypeAnyStruct,
-//			},
-//			NewStringValue("value1"),
-//			NewStringValue("value2"),
-//		)
-//		array.SetModified(false)
-//
-//		// Encode
-//		encodedV4, _, err := EncodeValueV4(array, nil, true, nil)
-//		require.NoError(t, err)
-//
-//		// Decode
-//		decodedV4, err := DecodeValueV4(encodedV4, &testOwner, nil, encodingVersion, nil)
-//		require.NoError(t, err)
-//
-//		require.IsType(t, &ArrayValue{}, decodedV4)
-//		decodedArrayV4 := decodedV4.(*ArrayValue)
-//
-//		// NOTE: Mock enriching type information.
-//		// This would be done during state migration using context type.
-//		decodedArrayV4.ensureElementsLoaded()
-//		decodedArrayV4.Type = array.Type
-//
-//		// Encode
-//		encodedV5, _, err := EncodeValue(decodedArrayV4, nil, true, nil)
-//		require.NoError(t, err)
-//
-//		// Decode
-//		decodedV5, err := DecodeValue(encodedV5, nil, nil, CurrentEncodingVersion, nil)
-//		require.NoError(t, err)
-//
-//		// Check decoded value after round trip
-//
-//		require.IsType(t, &ArrayValue{}, decodedV5)
-//		decodedArrayV5 := decodedV5.(*ArrayValue)
-//
-//		decodedArrayV5.ensureElementsLoaded()
-//
-//		assert.Equal(t, array, decodedArrayV5)
-//	})
-//
-//	t.Run("Dictionary", func(t *testing.T) {
-//		t.Parallel()
-//
-//		dictionary := NewDictionaryValueUnownedNonCopying(
-//			DictionaryStaticType{
-//				KeyType:   PrimitiveStaticTypeString,
-//				ValueType: PrimitiveStaticTypeInt,
-//			},
-//			NewStringValue("key1"),
-//			NewIntValueFromInt64(4),
-//			NewStringValue("key2"),
-//			NewIntValueFromInt64(6),
-//		)
-//		dictionary.SetModified(false)
-//		dictionary.keys.SetModified(false)
-//
-//		// Encode from v4
-//		encodedV4, _, err := EncodeValueV4(dictionary, nil, true, nil)
-//		require.NoError(t, err)
-//
-//		// Decode from v4
-//		decodedV4, err := DecodeValueV4(encodedV4, &testOwner, nil, encodingVersion, nil)
-//		require.NoError(t, err)
-//
-//		require.IsType(t, &DictionaryValue{}, decodedV4)
-//		decodedDictionaryV4 := decodedV4.(*DictionaryValue)
-//
-//		// NOTE: Mock enriching type information.
-//		// This would be done during state migration using context type.
-//		decodedDictionaryV4.ensureLoaded()
-//		decodedDictionaryV4.Type = dictionary.Type
-//		decodedDictionaryV4.keys.Type = dictionary.keys.Type
-//
-//		// Encode from v5
-//		encodedV5, _, err := EncodeValue(decodedDictionaryV4, nil, true, nil)
-//		require.NoError(t, err)
-//
-//		// Decode from v5
-//		decodedV5, err := DecodeValue(encodedV5, nil, nil, CurrentEncodingVersion, nil)
-//		require.NoError(t, err)
-//
-//		// Check decoded value after round trip
-//
-//		require.IsType(t, &DictionaryValue{}, decodedV5)
-//		decodedDictionaryV5 := decodedV5.(*DictionaryValue)
-//
-//		decodedDictionaryV5.ensureLoaded()
-//
-//		assert.Equal(t, dictionary, decodedDictionaryV5)
-//	})
-//
-//	t.Run("Composite", func(t *testing.T) {
-//		t.Parallel()
-//
-//		compositeValue := newTestLargeCompositeValue(4)
-//		compositeValue.SetModified(false)
-//		compositeValue.Fields.Foreach(func(_ string, value Value) {
-//			value.SetModified(false)
-//		})
-//
-//		// Encode to v4
-//		encodedV4, _, err := EncodeValueV4(compositeValue, nil, true, nil)
-//		require.NoError(t, err)
-//
-//		// Decode from v4
-//		decodedV4, err := DecodeValueV4(encodedV4, &testOwner, nil, encodingVersion, nil)
-//		require.NoError(t, err)
-//
-//		require.IsType(t, &CompositeValue{}, decodedV4)
-//		decodedCompositeV4 := decodedV4.(*CompositeValue)
-//
-//		// Make sure the content is decoded.
-//		_ = decodedCompositeV4.String()
-//
-//		// Encode to v5
-//		encodedV5, _, err := EncodeValue(decodedV4, nil, true, nil)
-//		require.NoError(t, err)
-//
-//		// Decode from v5
-//		decodedV5, err := DecodeValue(encodedV5, nil, nil, CurrentEncodingVersion, nil)
-//		require.NoError(t, err)
-//
-//		// Check decoded value after round trip
-//
-//		require.IsType(t, &CompositeValue{}, decodedV5)
-//		decodedCompositeV5 := decodedV5.(*CompositeValue)
-//
-//		// Make sure the content is decoded.
-//		_ = decodedCompositeV5.String()
-//
-//		assert.Equal(t, compositeValue, decodedCompositeV5)
-//	})
-//}
