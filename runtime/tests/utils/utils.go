@@ -125,8 +125,8 @@ func ValuesAreEqual(expected, actual interpreter.Value) bool {
 		return actual == nil
 	}
 
-	if a, ok := expected.(interpreter.EquatableValue); ok {
-		return a.Equal(actual, interpreter.ReturnEmptyLocationRange)
+	if expected, ok := expected.(interpreter.EquatableValue); ok {
+		return expected.Equal(actual, interpreter.ReturnEmptyLocationRange)
 	}
 
 	return assert.ObjectsAreEqual(expected, actual)
