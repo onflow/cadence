@@ -212,7 +212,7 @@ func (TypeValue) IsStorable() bool {
 	return true
 }
 
-func (v TypeValue) Storable(_ atree.SlabStorage) atree.Storable {
+func (v TypeValue) Storable(_ atree.SlabStorage, _ atree.Address) atree.Storable {
 	// TODO: store in storage and return StorageIDStorable if size > max element inline size
 	return v
 }
@@ -288,7 +288,7 @@ func (v VoidValue) Equal(other Value, _ func() LocationRange) bool {
 	return ok
 }
 
-func (v VoidValue) Storable(_ atree.SlabStorage) atree.Storable {
+func (v VoidValue) Storable(_ atree.SlabStorage, _ atree.Address) atree.Storable {
 	return v
 }
 
@@ -378,7 +378,7 @@ func (BoolValue) IsStorable() bool {
 	return true
 }
 
-func (v BoolValue) Storable(_ atree.SlabStorage) atree.Storable {
+func (v BoolValue) Storable(_ atree.SlabStorage, _ atree.Address) atree.Storable {
 	return v
 }
 
@@ -618,7 +618,7 @@ func (*StringValue) IsStorable() bool {
 	return true
 }
 
-func (v *StringValue) Storable(_ atree.SlabStorage) atree.Storable {
+func (v *StringValue) Storable(_ atree.SlabStorage, _ atree.Address) atree.Storable {
 	// TODO: store in storage and return StorageIDStorable if size > max element inline size
 	return v
 }
@@ -1103,7 +1103,7 @@ func (v *ArrayValue) Equal(other Value, getLocationRange func() LocationRange) b
 	return true
 }
 
-func (v *ArrayValue) Storable(_ atree.SlabStorage) atree.Storable {
+func (v *ArrayValue) Storable(_ atree.SlabStorage, _ atree.Address) atree.Storable {
 	return atree.StorageIDStorable(v.array.StorageID())
 }
 
@@ -1457,7 +1457,7 @@ func (IntValue) IsStorable() bool {
 	return true
 }
 
-func (v IntValue) Storable(_ atree.SlabStorage) atree.Storable {
+func (v IntValue) Storable(_ atree.SlabStorage, _ atree.Address) atree.Storable {
 	// TODO: store in storage and return StorageIDStorable if size > max element inline size
 	return v
 }
@@ -1774,7 +1774,7 @@ func (Int8Value) IsStorable() bool {
 	return true
 }
 
-func (v Int8Value) Storable(_ atree.SlabStorage) atree.Storable {
+func (v Int8Value) Storable(_ atree.SlabStorage, _ atree.Address) atree.Storable {
 	return v
 }
 
@@ -2092,7 +2092,7 @@ func (Int16Value) IsStorable() bool {
 	return true
 }
 
-func (v Int16Value) Storable(_ atree.SlabStorage) atree.Storable {
+func (v Int16Value) Storable(_ atree.SlabStorage, _ atree.Address) atree.Storable {
 	return v
 }
 
@@ -2410,7 +2410,7 @@ func (Int32Value) IsStorable() bool {
 	return true
 }
 
-func (v Int32Value) Storable(_ atree.SlabStorage) atree.Storable {
+func (v Int32Value) Storable(_ atree.SlabStorage, _ atree.Address) atree.Storable {
 	return v
 }
 
@@ -2727,7 +2727,7 @@ func (Int64Value) IsStorable() bool {
 	return true
 }
 
-func (v Int64Value) Storable(_ atree.SlabStorage) atree.Storable {
+func (v Int64Value) Storable(_ atree.SlabStorage, _ atree.Address) atree.Storable {
 	return v
 }
 
@@ -3114,7 +3114,7 @@ func (Int128Value) IsStorable() bool {
 	return true
 }
 
-func (v Int128Value) Storable(_ atree.SlabStorage) atree.Storable {
+func (v Int128Value) Storable(_ atree.SlabStorage, _ atree.Address) atree.Storable {
 	return v
 }
 
@@ -3501,7 +3501,7 @@ func (Int256Value) IsStorable() bool {
 	return true
 }
 
-func (v Int256Value) Storable(_ atree.SlabStorage) atree.Storable {
+func (v Int256Value) Storable(_ atree.SlabStorage, _ atree.Address) atree.Storable {
 	return v
 }
 
@@ -3778,7 +3778,7 @@ func (UIntValue) IsStorable() bool {
 	return true
 }
 
-func (v UIntValue) Storable(_ atree.SlabStorage) atree.Storable {
+func (v UIntValue) Storable(_ atree.SlabStorage, _ atree.Address) atree.Storable {
 	// TODO: store in storage and return StorageIDStorable if size > max element inline size
 	return v
 }
@@ -4026,7 +4026,7 @@ func (UInt8Value) IsStorable() bool {
 	return true
 }
 
-func (v UInt8Value) Storable(_ atree.SlabStorage) atree.Storable {
+func (v UInt8Value) Storable(_ atree.SlabStorage, _ atree.Address) atree.Storable {
 	return v
 }
 
@@ -4274,7 +4274,7 @@ func (UInt16Value) IsStorable() bool {
 	return true
 }
 
-func (v UInt16Value) Storable(_ atree.SlabStorage) atree.Storable {
+func (v UInt16Value) Storable(_ atree.SlabStorage, _ atree.Address) atree.Storable {
 	return v
 }
 
@@ -4522,7 +4522,7 @@ func (UInt32Value) IsStorable() bool {
 	return true
 }
 
-func (v UInt32Value) Storable(_ atree.SlabStorage) atree.Storable {
+func (v UInt32Value) Storable(_ atree.SlabStorage, _ atree.Address) atree.Storable {
 	return v
 }
 
@@ -4773,7 +4773,7 @@ func (UInt64Value) IsStorable() bool {
 	return true
 }
 
-func (v UInt64Value) Storable(_ atree.SlabStorage) atree.Storable {
+func (v UInt64Value) Storable(_ atree.SlabStorage, _ atree.Address) atree.Storable {
 	return v
 }
 
@@ -5102,7 +5102,7 @@ func (UInt128Value) IsStorable() bool {
 	return true
 }
 
-func (v UInt128Value) Storable(_ atree.SlabStorage) atree.Storable {
+func (v UInt128Value) Storable(_ atree.SlabStorage, _ atree.Address) atree.Storable {
 	return v
 }
 
@@ -5431,7 +5431,7 @@ func (UInt256Value) IsStorable() bool {
 	return true
 }
 
-func (v UInt256Value) Storable(_ atree.SlabStorage) atree.Storable {
+func (v UInt256Value) Storable(_ atree.SlabStorage, _ atree.Address) atree.Storable {
 	return v
 }
 
@@ -5623,7 +5623,7 @@ func (Word8Value) IsStorable() bool {
 	return true
 }
 
-func (v Word8Value) Storable(_ atree.SlabStorage) atree.Storable {
+func (v Word8Value) Storable(_ atree.SlabStorage, _ atree.Address) atree.Storable {
 	return v
 }
 
@@ -5816,7 +5816,7 @@ func (Word16Value) IsStorable() bool {
 	return true
 }
 
-func (v Word16Value) Storable(_ atree.SlabStorage) atree.Storable {
+func (v Word16Value) Storable(_ atree.SlabStorage, _ atree.Address) atree.Storable {
 	return v
 }
 
@@ -6010,7 +6010,7 @@ func (Word32Value) IsStorable() bool {
 	return true
 }
 
-func (v Word32Value) Storable(_ atree.SlabStorage) atree.Storable {
+func (v Word32Value) Storable(_ atree.SlabStorage, _ atree.Address) atree.Storable {
 	return v
 }
 
@@ -6203,7 +6203,7 @@ func (Word64Value) IsStorable() bool {
 	return true
 }
 
-func (v Word64Value) Storable(_ atree.SlabStorage) atree.Storable {
+func (v Word64Value) Storable(_ atree.SlabStorage, _ atree.Address) atree.Storable {
 	return v
 }
 
@@ -6499,7 +6499,7 @@ func (Fix64Value) IsStorable() bool {
 	return true
 }
 
-func (v Fix64Value) Storable(_ atree.SlabStorage) atree.Storable {
+func (v Fix64Value) Storable(_ atree.SlabStorage, _ atree.Address) atree.Storable {
 	return v
 }
 
@@ -6761,7 +6761,7 @@ func (UFix64Value) IsStorable() bool {
 	return true
 }
 
-func (v UFix64Value) Storable(_ atree.SlabStorage) atree.Storable {
+func (v UFix64Value) Storable(_ atree.SlabStorage, _ atree.Address) atree.Storable {
 	return v
 }
 
@@ -7237,7 +7237,7 @@ func (v *CompositeValue) IsStorable() bool {
 	return true
 }
 
-func (v *CompositeValue) Storable(_ atree.SlabStorage) atree.Storable {
+func (v *CompositeValue) Storable(_ atree.SlabStorage, _ atree.Address) atree.Storable {
 	return atree.StorageIDStorable(v.StorageID)
 }
 
@@ -7248,7 +7248,7 @@ func (v *CompositeValue) ExternalStorable(storage atree.SlabStorage) atree.Stora
 	v.Fields.Foreach(func(key string, value Value) {
 		fields = append(fields, CompositeStorableField{
 			Name:     key,
-			Storable: value.Storable(storage),
+			Storable: value.Storable(storage, v.StorageID.Address),
 		})
 	})
 
@@ -7853,7 +7853,7 @@ func (v *DictionaryValue) store(storage atree.SlabStorage) {
 	}
 }
 
-func (v *DictionaryValue) Storable(_ atree.SlabStorage) atree.Storable {
+func (v *DictionaryValue) Storable(_ atree.SlabStorage, _ atree.Address) atree.Storable {
 	return atree.StorageIDStorable(v.StorageID)
 }
 
@@ -7862,13 +7862,13 @@ func (v *DictionaryValue) ExternalStorable(storage atree.SlabStorage) atree.Stor
 	values := make([]atree.Storable, v.Count())
 	i := 0
 	v.Entries.Foreach(func(_ string, value Value) {
-		values[i] = value.Storable(storage)
+		values[i] = value.Storable(storage, v.StorageID.Address)
 		i++
 	})
 
 	return DictionaryStorable{
 		Type:      v.Type,
-		Keys:      v.Keys.Storable(storage),
+		Keys:      v.Keys.Storable(storage, v.StorageID.Address),
 		Values:    values,
 		StorageID: v.StorageID,
 	}
@@ -8076,7 +8076,7 @@ func (NilValue) IsStorable() bool {
 	return true
 }
 
-func (v NilValue) Storable(_ atree.SlabStorage) atree.Storable {
+func (v NilValue) Storable(_ atree.SlabStorage, _ atree.Address) atree.Storable {
 	return v
 }
 
@@ -8225,10 +8225,10 @@ func (v *SomeValue) IsStorable() bool {
 	return v.Value.IsStorable()
 }
 
-func (v *SomeValue) Storable(storage atree.SlabStorage) atree.Storable {
+func (v *SomeValue) Storable(storage atree.SlabStorage, address atree.Address) atree.Storable {
 	// TODO: store in storage and return StorageIDStorable if size > max element inline size
 	return SomeStorable{
-		Storable: v.Value.Storable(storage),
+		Storable: v.Value.Storable(storage, address),
 	}
 }
 
@@ -8479,7 +8479,7 @@ func (*StorageReferenceValue) IsStorable() bool {
 	return false
 }
 
-func (v *StorageReferenceValue) Storable(_ atree.SlabStorage) atree.Storable {
+func (v *StorageReferenceValue) Storable(_ atree.SlabStorage, _ atree.Address) atree.Storable {
 	return atree.NonStorable{Value: v}
 }
 
@@ -8693,7 +8693,7 @@ func (*EphemeralReferenceValue) IsStorable() bool {
 	return false
 }
 
-func (v *EphemeralReferenceValue) Storable(_ atree.SlabStorage) atree.Storable {
+func (v *EphemeralReferenceValue) Storable(_ atree.SlabStorage, _ atree.Address) atree.Storable {
 	return atree.NonStorable{Value: v}
 }
 
@@ -8829,7 +8829,7 @@ func (AddressValue) IsStorable() bool {
 	return true
 }
 
-func (v AddressValue) Storable(_ atree.SlabStorage) atree.Storable {
+func (v AddressValue) Storable(_ atree.SlabStorage, _ atree.Address) atree.Storable {
 	return v
 }
 
@@ -9121,7 +9121,7 @@ func (PathValue) IsStorable() bool {
 	return true
 }
 
-func (v PathValue) Storable(_ atree.SlabStorage) atree.Storable {
+func (v PathValue) Storable(_ atree.SlabStorage, _ atree.Address) atree.Storable {
 	// TODO: store in storage and return StorageIDStorable if size > max element inline size
 	return v
 }
@@ -9263,7 +9263,7 @@ func (CapabilityValue) IsStorable() bool {
 	return true
 }
 
-func (v CapabilityValue) Storable(_ atree.SlabStorage) atree.Storable {
+func (v CapabilityValue) Storable(_ atree.SlabStorage, _ atree.Address) atree.Storable {
 	// TODO: store in storage and return StorageIDStorable if size > max element inline size
 	return v
 }
@@ -9353,7 +9353,7 @@ func (LinkValue) IsStorable() bool {
 	return true
 }
 
-func (v LinkValue) Storable(_ atree.SlabStorage) atree.Storable {
+func (v LinkValue) Storable(_ atree.SlabStorage, _ atree.Address) atree.Storable {
 	// TODO: store in storage and return StorageIDStorable if size > max element inline size
 	return v
 }

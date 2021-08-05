@@ -113,7 +113,7 @@ func (DeployedContractValue) IsStorable() bool {
 	return false
 }
 
-func (v DeployedContractValue) Storable(_ atree.SlabStorage) atree.Storable {
+func (v DeployedContractValue) Storable(_ atree.SlabStorage, _ atree.Address) atree.Storable {
 	return atree.NonStorable{Value: v}
 }
 

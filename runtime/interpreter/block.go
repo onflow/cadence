@@ -125,7 +125,7 @@ func (BlockValue) IsStorable() bool {
 	return false
 }
 
-func (v BlockValue) Storable(_ atree.SlabStorage) atree.Storable {
+func (v BlockValue) Storable(_ atree.SlabStorage, _ atree.Address) atree.Storable {
 	return atree.NonStorable{Value: v}
 }
 

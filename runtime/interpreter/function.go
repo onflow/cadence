@@ -131,7 +131,7 @@ func (InterpretedFunctionValue) IsStorable() bool {
 	return false
 }
 
-func (f InterpretedFunctionValue) Storable(_ atree.SlabStorage) atree.Storable {
+func (f InterpretedFunctionValue) Storable(_ atree.SlabStorage, _ atree.Address) atree.Storable {
 	return atree.NonStorable{Value: f}
 }
 
@@ -228,7 +228,7 @@ func (HostFunctionValue) IsStorable() bool {
 	return false
 }
 
-func (f HostFunctionValue) Storable(_ atree.SlabStorage) atree.Storable {
+func (f HostFunctionValue) Storable(_ atree.SlabStorage, _ atree.Address) atree.Storable {
 	return atree.NonStorable{Value: f}
 }
 
@@ -301,7 +301,7 @@ func (BoundFunctionValue) IsStorable() bool {
 	return false
 }
 
-func (f BoundFunctionValue) Storable(_ atree.SlabStorage) atree.Storable {
+func (f BoundFunctionValue) Storable(_ atree.SlabStorage, _ atree.Address) atree.Storable {
 	return atree.NonStorable{Value: f}
 }
 
