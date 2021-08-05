@@ -28,8 +28,6 @@ import (
 
 func TestInspectValue(t *testing.T) {
 
-	t.Parallel()
-
 	storage := NewInMemoryStorage()
 
 	dictionaryStaticType := DictionaryStaticType{
@@ -60,8 +58,6 @@ func TestInspectValue(t *testing.T) {
 
 	t.Run("dict", func(t *testing.T) {
 
-		t.Parallel()
-
 		var inspectedValues []Value
 
 		InspectValue(
@@ -86,8 +82,6 @@ func TestInspectValue(t *testing.T) {
 	})
 
 	t.Run("composite", func(t *testing.T) {
-
-		t.Parallel()
 
 		var inspectedValues []Value
 

@@ -61,7 +61,7 @@ func testEncodeDecode(t *testing.T, test encodeDecodeTest) {
 		if test.value != nil {
 			test.value.SetOwner(&testOwner)
 			if test.storable == nil {
-				test.storable = test.value.Storable(test.storage)
+				test.storable = test.value.Storable(test.storage, atree.Address(testOwner))
 			}
 		}
 

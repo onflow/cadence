@@ -6,7 +6,7 @@ require (
 	github.com/bytecodealliance/wasmtime-go v0.22.0
 	github.com/c-bata/go-prompt v0.2.5
 	github.com/cheekybits/genny v1.0.0
-	github.com/fxamacker/atree v0.0.0-20210805014435-0b6038f493ef
+	github.com/fxamacker/atree v0.0.0-20210805174243-d19fc739b805
 	github.com/fxamacker/cbor/v2 v2.2.1-0.20210510192846-c3f3c69e7bc8
 	github.com/go-test/deep v1.0.5
 	github.com/logrusorgru/aurora v0.0.0-20200102142835-e9ef32dff381

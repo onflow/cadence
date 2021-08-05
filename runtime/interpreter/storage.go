@@ -84,7 +84,7 @@ func (i InMemoryStorage) Write(_ *Interpreter, address common.Address, key strin
 	switch value := value.(type) {
 	case *SomeValue:
 
-		i.Data[storageKey] = value.Value.(atree.Value).Storable(i)
+		i.Data[storageKey] = value.Value.(atree.Value).Storable(i, atree.Address(address))
 
 	case NilValue:
 		delete(i.Data, storageKey)
