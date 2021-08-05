@@ -7871,9 +7871,7 @@ func TestInterpretCompositeValueFieldEncodingOrder(t *testing.T) {
 		})
 
 		encoded, err := atree.Encode(
-			interpreter.CompositeStorable{
-				Composite: test,
-			},
+			test.ExternalStorable(inter.Storage),
 			inter.Storage,
 		)
 		require.NoError(t, err)
