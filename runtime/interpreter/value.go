@@ -728,11 +728,15 @@ func (v *ArrayValue) Accept(interpreter *Interpreter, visitor Visitor) {
 }
 
 func (v *ArrayValue) Walk(walkChild func(Value)) {
-	_ = v.array.Iterate(func(element atree.Value) (resume bool, err error) {
-
+	err := v.array.Iterate(func(element atree.Value) (resume bool, err error) {
 		walkChild(element.(Value))
 		return true, nil
 	})
+	// the iteration closure above will never return an errror,
+	// but the Iterate function itself might
+	if err != nil {
+		panic(err)
+	}
 }
 
 func (v *ArrayValue) DynamicType(interpreter *Interpreter, seenReferences SeenReferences) DynamicType {
