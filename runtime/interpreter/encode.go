@@ -19,6 +19,7 @@
 package interpreter
 
 import (
+	"bytes"
 	"fmt"
 
 	"github.com/fxamacker/atree"
@@ -943,6 +944,28 @@ func (v LinkValue) Encode(e *atree.Encoder) error {
 	}
 	// Encode type at array index encodedLinkValueTypeFieldKeyV6
 	return EncodeStaticType(e, v.Type)
+}
+
+func StaticTypeToBytes(t StaticType) ([]byte, error) {
+	var buf bytes.Buffer
+	enc := atree.NewEncoder(&buf, CBOREncMode)
+
+	err := EncodeStaticType(enc, t)
+	if err != nil {
+		return nil, err
+	}
+
+	err = enc.CBOR.Flush()
+	if err != nil {
+		return nil, err
+	}
+
+	return buf.Bytes(), nil
+}
+
+func StaticTypeFromBytes(data []byte) (StaticType, error) {
+	decoder := CBORDecMode.NewByteStreamDecoder(data)
+	return DecoderV6{decoder: decoder}.decodeStaticType()
 }
 
 func EncodeStaticType(e *atree.Encoder, t StaticType) error {

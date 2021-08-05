@@ -32,9 +32,22 @@ func StoredValue(storable atree.Storable, storage atree.SlabStorage) (Value, err
 	}
 	switch storedValue := storedValue.(type) {
 	case *atree.Array:
+		staticType, err := StaticTypeFromBytes([]byte(storedValue.Type()))
+		if err != nil {
+			return nil, err
+		}
+
+		arrayType, ok := staticType.(ArrayStaticType)
+		if !ok {
+			return nil, fmt.Errorf(
+				"invalid array static type: %v",
+				staticType,
+			)
+		}
+
 		return &ArrayValue{
 			array: storedValue,
-			// TODO: type
+			Type:  arrayType,
 			// TODO: owner
 		}, nil
 
