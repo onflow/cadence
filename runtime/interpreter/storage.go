@@ -96,8 +96,11 @@ func (i InMemoryStorage) Write(_ *Interpreter, address common.Address, key strin
 
 	switch value := value.(type) {
 	case *SomeValue:
-
-		i.Data[storageKey] = value.Value.(atree.Value).Storable(i, atree.Address(address))
+		storable, err := value.Value.(atree.Value).Storable(i, atree.Address(address))
+		if err != nil {
+			panic(ExternalError{err})
+		}
+		i.Data[storageKey] = storable
 
 	case NilValue:
 		delete(i.Data, storageKey)

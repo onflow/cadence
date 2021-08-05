@@ -60,7 +60,9 @@ func testEncodeDecode(t *testing.T, test encodeDecodeTest) {
 
 		if test.value != nil {
 			if test.storable == nil {
-				test.storable = test.value.Storable(test.storage, testOwner)
+				storable, err := test.value.Storable(test.storage, testOwner)
+				require.NoError(t, err)
+				test.storable = storable
 			}
 		}
 
@@ -345,10 +347,13 @@ func TestEncodeDecodeDictionary(t *testing.T) {
 			},
 		)
 
+		storable, err := expected.ExternalStorable(storage)
+		require.NoError(t, err)
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				storage:       storage,
-				storable:      expected.ExternalStorable(storage),
+				storable:      storable,
 				encoded:       encodedStorable,
 				decodedValue:  expected,
 				slabStorageID: expected.StorageID,
@@ -448,10 +453,13 @@ func TestEncodeDecodeDictionary(t *testing.T) {
 			},
 		)
 
+		storable, err := expected.ExternalStorable(storage)
+		require.NoError(t, err)
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				storage:       storage,
-				storable:      expected.ExternalStorable(storage),
+				storable:      storable,
 				encoded:       encodedStorable,
 				decodedValue:  expected,
 				slabStorageID: expected.StorageID,
@@ -537,10 +545,13 @@ func TestEncodeDecodeComposite(t *testing.T) {
 			},
 		)
 
+		storable, err := expected.ExternalStorable(storage)
+		require.NoError(t, err)
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				storage:       storage,
-				storable:      expected.ExternalStorable(storage),
+				storable:      storable,
 				encoded:       encodedStorable,
 				decodedValue:  expected,
 				slabStorageID: expected.StorageID,
@@ -639,10 +650,13 @@ func TestEncodeDecodeComposite(t *testing.T) {
 			},
 		)
 
+		storable, err := expected.ExternalStorable(storage)
+		require.NoError(t, err)
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				storage:       storage,
-				storable:      expected.ExternalStorable(storage),
+				storable:      storable,
 				encoded:       encodedStorable,
 				decodedValue:  expected,
 				slabStorageID: expected.StorageID,
@@ -731,10 +745,13 @@ func TestEncodeDecodeComposite(t *testing.T) {
 			},
 		)
 
+		storable, err := expected.ExternalStorable(storage)
+		require.NoError(t, err)
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				storage:       storage,
-				storable:      expected.ExternalStorable(storage),
+				storable:      storable,
 				encoded:       encodedStorable,
 				decodedValue:  expected,
 				slabStorageID: expected.StorageID,
