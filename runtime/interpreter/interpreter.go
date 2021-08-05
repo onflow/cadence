@@ -2283,7 +2283,8 @@ func (interpreter *Interpreter) ReadStored(storageAddress common.Address, key st
 }
 
 func (interpreter *Interpreter) writeStored(storageAddress common.Address, key string, value OptionalValue) {
-	value.SetOwner(&storageAddress)
+	// TODO:
+	//value.SetOwner(&storageAddress)
 
 	interpreter.Storage.Write(interpreter, storageAddress, key, value)
 }

@@ -2352,7 +2352,8 @@ func (r *interpreterRuntime) updateAccountContractCode(
 			return err
 		}
 
-		contractValue.SetOwner(&address)
+		// TODO:
+		//contractValue.SetOwner(&address)
 	}
 
 	// NOTE: only update account code if contract instantiation succeeded

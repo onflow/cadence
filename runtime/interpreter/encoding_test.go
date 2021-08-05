@@ -59,7 +59,6 @@ func testEncodeDecode(t *testing.T, test encodeDecodeTest) {
 	if (test.value != nil || test.storable != nil) && !test.decodeOnly {
 
 		if test.value != nil {
-			test.value.SetOwner(&testOwner)
 			if test.storable == nil {
 				test.storable = test.value.Storable(test.storage, atree.Address(testOwner))
 			}
@@ -89,7 +88,6 @@ func testEncodeDecode(t *testing.T, test encodeDecodeTest) {
 
 		expectedValue := test.value
 		if test.decodedValue != nil {
-			test.decodedValue.SetOwner(&testOwner)
 			expectedValue = test.decodedValue
 		}
 
