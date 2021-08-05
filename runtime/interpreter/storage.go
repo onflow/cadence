@@ -128,3 +128,34 @@ func storableSize(storable atree.Storable) uint32 {
 	// TODO: check!
 	return uint32(len(encode))
 }
+
+// maybeStoreExternally either returns the given immutable storable
+// if it it can be inlined, or else stores it in a separate slab
+// and returns a StorageIDStorable.
+//
+func maybeLargeImmutableStorable(
+	storable atree.Storable,
+	storage atree.SlabStorage,
+	address atree.Address,
+) (
+	atree.Storable,
+	error,
+) {
+
+	if storable.ByteSize() < uint32(atree.MaxInlineElementSize) {
+		return storable, nil
+	}
+
+	storageID := storage.GenerateStorageID(address)
+	slab := &atree.StorableSlab{
+		StorageID: storageID,
+		Storable:  storable,
+	}
+
+	err := storage.Store(storageID, slab)
+	if err != nil {
+		return nil, err
+	}
+
+	return atree.StorageIDStorable(storageID), nil
+}
