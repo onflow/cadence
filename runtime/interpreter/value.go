@@ -1066,6 +1066,10 @@ func (v *ArrayValue) DeepCopy(storage atree.SlabStorage, address atree.Address) 
 	}, nil
 }
 
+func (v *ArrayValue) StorageID() atree.StorageID {
+	return v.array.StorageID()
+}
+
 // NumberValue
 //
 type NumberValue interface {
