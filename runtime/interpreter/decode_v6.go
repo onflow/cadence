@@ -335,24 +335,24 @@ func (d DecoderV6) decodeAddressLocation() (common.Location, error) {
 	}, nil
 }
 
-func (d DecoderV6) decodeComposite() (*CompositeValue, error) {
+func (d DecoderV6) decodeComposite() (CompositeStorable, error) {
 
 	const expectedLength = encodedCompositeValueLength
 
 	size, err := d.decoder.DecodeArrayHead()
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
-			return nil, fmt.Errorf(
+			return CompositeStorable{}, fmt.Errorf(
 				"invalid composite encoding: expected [%d]interface{}, got %s",
 				expectedLength,
 				e.ActualType.String(),
 			)
 		}
-		return nil, err
+		return CompositeStorable{}, err
 	}
 
 	if size != expectedLength {
-		return nil, fmt.Errorf(
+		return CompositeStorable{}, fmt.Errorf(
 			"invalid composite encoding: expected [%d]interface{}, got [%d]interface{}",
 			expectedLength,
 			size,
@@ -364,7 +364,7 @@ func (d DecoderV6) decodeComposite() (*CompositeValue, error) {
 	// Decode location at array index encodedCompositeValueLocationFieldKeyV6
 	location, err := d.decodeLocation()
 	if err != nil {
-		return nil, fmt.Errorf(
+		return CompositeStorable{}, fmt.Errorf(
 			"invalid composite location encoding: %w",
 			err,
 		)
@@ -376,16 +376,16 @@ func (d DecoderV6) decodeComposite() (*CompositeValue, error) {
 	encodedKind, err := d.decoder.DecodeUint64()
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
-			return nil, fmt.Errorf(
+			return CompositeStorable{}, fmt.Errorf(
 				"invalid composite kind encoding: %s",
 				e.ActualType.String(),
 			)
 		}
-		return nil, err
+		return CompositeStorable{}, err
 	}
 
 	if encodedKind >= uint64(common.CompositeKindCount()) {
-		return nil, fmt.Errorf(
+		return CompositeStorable{}, fmt.Errorf(
 			"invalid composite kind: %d",
 			encodedKind,
 		)
@@ -399,23 +399,23 @@ func (d DecoderV6) decodeComposite() (*CompositeValue, error) {
 	fieldsSize, err := d.decoder.DecodeArrayHead()
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
-			return nil, fmt.Errorf(
+			return CompositeStorable{}, fmt.Errorf(
 				"invalid composite fields encoding: %s",
 				e.ActualType.String(),
 			)
 		}
 
-		return nil, err
+		return CompositeStorable{}, err
 	}
 
 	if fieldsSize%2 == 1 {
-		return nil, fmt.Errorf(
+		return CompositeStorable{}, fmt.Errorf(
 			"invalid composite fields encoding: fields should have even number of elements: got %d",
 			fieldsSize,
 		)
 	}
 
-	fields := NewStringValueOrderedMap()
+	fields := make([]CompositeStorableField, fieldsSize/2)
 
 	for i := 0; i < int(fieldsSize); i += 2 {
 
@@ -423,36 +423,30 @@ func (d DecoderV6) decodeComposite() (*CompositeValue, error) {
 		fieldName, err := d.decoder.DecodeString()
 		if err != nil {
 			if e, ok := err.(*cbor.WrongTypeError); ok {
-				return nil, fmt.Errorf(
+				return CompositeStorable{}, fmt.Errorf(
 					"invalid composite field name encoding (%d): %s",
 					i/2,
 					e.ActualType.String(),
 				)
 			}
-			return nil, err
+			return CompositeStorable{}, err
 		}
 
 		// field value
 
 		decodedStorable, err := d.decodeStorable()
 		if err != nil {
-			return nil, fmt.Errorf(
+			return CompositeStorable{}, fmt.Errorf(
 				"invalid composite field value encoding (%s): %w",
 				fieldName,
 				err,
 			)
 		}
 
-		value, err := StoredValue(decodedStorable, d.storage)
-		if err != nil {
-			return nil, fmt.Errorf(
-				"failed to decode composite field value (%s): %w",
-				fieldName,
-				err,
-			)
+		fields[i/2] = CompositeStorableField{
+			Name:     fieldName,
+			Storable: decodedStorable,
 		}
-
-		fields.Set(fieldName, value)
 	}
 
 	// Qualified identifier
@@ -461,21 +455,24 @@ func (d DecoderV6) decodeComposite() (*CompositeValue, error) {
 	qualifiedIdentifier, err := d.decoder.DecodeString()
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
-			return nil, fmt.Errorf(
+			return CompositeStorable{}, fmt.Errorf(
 				"invalid composite qualified identifier encoding: %s",
 				e.ActualType.String(),
 			)
 		}
-		return nil, err
+		return CompositeStorable{}, err
 	}
 
-	return &CompositeValue{
-		// TODO: StorageID
+	if d.slabStorageID == atree.StorageIDUndefined {
+		return CompositeStorable{}, errors.New("invalid inline composite")
+	}
+
+	return CompositeStorable{
+		StorageID:           d.slabStorageID,
 		Location:            location,
 		QualifiedIdentifier: qualifiedIdentifier,
 		Kind:                kind,
 		Fields:              fields,
-		// TODO: Owner
 	}, nil
 }
 

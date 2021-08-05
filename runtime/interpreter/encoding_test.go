@@ -474,7 +474,6 @@ func TestEncodeDecodeDictionary(t *testing.T) {
 func TestEncodeDecodeComposite(t *testing.T) {
 
 	// TODO: owner
-	// TODO: storage ID
 
 	t.Parallel()
 
@@ -528,19 +527,34 @@ func TestEncodeDecodeComposite(t *testing.T) {
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				storage: storage,
-				storable: CompositeStorable{
-					Composite: expected,
+				value:   expected,
+				encoded: encodedValue,
+				check: func(actual Value) {
+					// Storage ID is not checked by value equality,
+					// so assert manually
+					require.Equal(t,
+						expected.StorageID,
+						actual.(*CompositeValue).StorageID,
+					)
 				},
-				encoded:      encodedStorable,
-				decodedValue: expected,
 			},
 		)
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
-				storage: storage,
-				value:   expected,
-				encoded: encodedValue,
+				storage:       storage,
+				storable:      expected.ExternalStorable(storage),
+				encoded:       encodedStorable,
+				decodedValue:  expected,
+				slabStorageID: expected.StorageID,
+				check: func(actual Value) {
+					// Storage ID is not checked by value equality,
+					// so assert manually
+					require.Equal(t,
+						expected.StorageID,
+						actual.(*CompositeValue).StorageID,
+					)
+				},
 			},
 		)
 	})
@@ -615,19 +629,34 @@ func TestEncodeDecodeComposite(t *testing.T) {
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				storage: storage,
-				storable: CompositeStorable{
-					Composite: expected,
+				value:   expected,
+				encoded: encodedValue,
+				check: func(actual Value) {
+					// Storage ID is not checked by value equality,
+					// so assert manually
+					require.Equal(t,
+						expected.StorageID,
+						actual.(*CompositeValue).StorageID,
+					)
 				},
-				encoded:      encodedStorable,
-				decodedValue: expected,
 			},
 		)
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
-				storage: storage,
-				value:   expected,
-				encoded: encodedValue,
+				storage:       storage,
+				storable:      expected.ExternalStorable(storage),
+				encoded:       encodedStorable,
+				decodedValue:  expected,
+				slabStorageID: expected.StorageID,
+				check: func(actual Value) {
+					// Storage ID is not checked by value equality,
+					// so assert manually
+					require.Equal(t,
+						expected.StorageID,
+						actual.(*CompositeValue).StorageID,
+					)
+				},
 			},
 		)
 	})
@@ -694,17 +723,32 @@ func TestEncodeDecodeComposite(t *testing.T) {
 				storage: storage,
 				value:   expected,
 				encoded: encodedValue,
+				check: func(actual Value) {
+					// Storage ID is not checked by value equality,
+					// so assert manually
+					require.Equal(t,
+						expected.StorageID,
+						actual.(*CompositeValue).StorageID,
+					)
+				},
 			},
 		)
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
-				storage: storage,
-				storable: CompositeStorable{
-					Composite: expected,
+				storage:       storage,
+				storable:      expected.ExternalStorable(storage),
+				encoded:       encodedStorable,
+				decodedValue:  expected,
+				slabStorageID: expected.StorageID,
+				check: func(actual Value) {
+					// Storage ID is not checked by value equality,
+					// so assert manually
+					require.Equal(t,
+						expected.StorageID,
+						actual.(*CompositeValue).StorageID,
+					)
 				},
-				encoded:      encodedStorable,
-				decodedValue: expected,
 			},
 		)
 	})
