@@ -686,8 +686,12 @@ func NewArrayValueUnownedNonCopying(
 	values ...Value,
 ) *ArrayValue {
 
-	// TODO: type info
-	array, err := atree.NewArray(storage, atree.Address{}, "")
+	typeInfo, err := StaticTypeToBytes(arrayType)
+	if err != nil {
+		panic(ExternalError{err})
+	}
+
+	array, err := atree.NewArray(storage, atree.Address{}, string(typeInfo))
 	if err != nil {
 		panic(ExternalError{err})
 	}

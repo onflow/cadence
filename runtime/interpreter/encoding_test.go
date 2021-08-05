@@ -212,7 +212,6 @@ func TestEncodeDecodeString(t *testing.T) {
 
 func TestEncodeDecodeArray(t *testing.T) {
 
-	// TODO: type
 	// TODO: owner
 
 	t.Parallel()
