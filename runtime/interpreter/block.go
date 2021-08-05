@@ -129,6 +129,6 @@ func (v BlockValue) Storable(_ atree.SlabStorage) atree.Storable {
 	return atree.NonStorable{Value: v}
 }
 
-func (v BlockValue) DeepCopy(_ atree.SlabStorage) (atree.Value, error) {
+func (v BlockValue) DeepCopy(_ atree.SlabStorage, _ atree.Address) (atree.Value, error) {
 	return v, nil
 }

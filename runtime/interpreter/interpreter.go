@@ -1772,7 +1772,7 @@ func (interpreter *Interpreter) copyAndConvert(
 	getLocationRange func() LocationRange,
 ) Value {
 
-	valueCopy, err := value.DeepCopy(interpreter.Storage)
+	valueCopy, err := value.DeepCopy(interpreter.Storage, atree.Address{})
 	if err != nil {
 		panic(ExternalError{err})
 	}

@@ -19,6 +19,7 @@
 package interpreter
 
 import (
+	"github.com/fxamacker/atree"
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/sema"
 )
@@ -80,7 +81,7 @@ func (interpreter *Interpreter) invokeFunctionValue(
 			getLocationRange := locationRangeGetter(interpreter.Location, locationPos)
 			argumentCopies[i] = interpreter.copyAndConvert(argument, argumentType, parameterType, getLocationRange)
 		} else {
-			argumentCopy, err := argument.DeepCopy(interpreter.Storage)
+			argumentCopy, err := argument.DeepCopy(interpreter.Storage, atree.Address{})
 			if err != nil {
 				panic(err)
 			}

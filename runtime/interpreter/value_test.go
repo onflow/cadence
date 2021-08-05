@@ -25,6 +25,7 @@ import (
 
 	"golang.org/x/tools/go/packages"
 
+	"github.com/fxamacker/atree"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -116,7 +117,7 @@ func TestSetOwnerArrayCopy(t *testing.T) {
 
 	array.SetOwner(&newOwner)
 
-	copyResult, err := array.DeepCopy(storage)
+	copyResult, err := array.DeepCopy(storage, atree.Address{})
 	require.NoError(t, err)
 
 	arrayCopy := copyResult.(*ArrayValue)
@@ -296,7 +297,7 @@ func TestSetOwnerDictionaryCopy(t *testing.T) {
 	)
 	dictionary.SetOwner(&newOwner)
 
-	copyResult, err := dictionary.DeepCopy(storage)
+	copyResult, err := dictionary.DeepCopy(storage, atree.Address{})
 	require.NoError(t, err)
 
 	dictionaryCopy := copyResult.(*DictionaryValue)
@@ -450,7 +451,7 @@ func TestSetOwnerSomeCopy(t *testing.T) {
 	some := NewSomeValueOwningNonCopying(value)
 	some.SetOwner(&newOwner)
 
-	copyResult, err := some.DeepCopy(storage)
+	copyResult, err := some.DeepCopy(storage, atree.Address{})
 	require.NoError(t, err)
 
 	someCopy := copyResult.(*SomeValue)
@@ -514,7 +515,7 @@ func TestSetOwnerCompositeCopy(t *testing.T) {
 		return "random string"
 	}
 
-	copyResult, err := composite.DeepCopy(storage)
+	copyResult, err := composite.DeepCopy(storage, atree.Address{})
 	require.NoError(t, err)
 
 	compositeCopy := copyResult.(*CompositeValue)

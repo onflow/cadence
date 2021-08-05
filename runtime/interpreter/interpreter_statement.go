@@ -19,6 +19,7 @@
 package interpreter
 
 import (
+	"github.com/fxamacker/atree"
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/errors"
 )
@@ -249,7 +250,7 @@ func (interpreter *Interpreter) VisitForStatement(statement *ast.ForStatement) a
 	)
 
 	valueCopy, err := interpreter.evalExpression(statement.Value).
-		DeepCopy(interpreter.Storage)
+		DeepCopy(interpreter.Storage, atree.Address{})
 	if err != nil {
 		panic(ExternalError{err})
 	}
