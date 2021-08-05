@@ -662,45 +662,41 @@ func (s CompositeStorable) Encode(e *atree.Encoder) error {
 	}
 
 	// Encode location at array index encodedCompositeValueLocationFieldKeyV6
-	err = EncodeLocation(e, s.Composite.Location)
+	err = EncodeLocation(e, s.Location)
 	if err != nil {
 		return err
 	}
 
 	// Encode kind at array index encodedCompositeValueKindFieldKeyV6
-	err = e.CBOR.EncodeUint(uint(s.Composite.Kind))
+	err = e.CBOR.EncodeUint(uint(s.Kind))
 	if err != nil {
 		return err
 	}
 
 	// Encode fields (as array) at array index encodedCompositeValueFieldsFieldKeyV6
 
-	fields := s.Composite.Fields
-	err = e.CBOR.EncodeArrayHead(uint64(fields.Len() * 2))
+	err = e.CBOR.EncodeArrayHead(uint64(len(s.Fields) * 2))
 	if err != nil {
 		return err
 	}
 
-	for pair := fields.Oldest(); pair != nil; pair = pair.Next() {
-		fieldName := pair.Key
+	for _, field := range s.Fields {
 
 		// Encode field name as fields array element
-		err := e.CBOR.EncodeString(fieldName)
+		err := e.CBOR.EncodeString(field.Name)
 		if err != nil {
 			return err
 		}
 
-		value := pair.Value
-
 		// Encode value as fields array element
-		err = value.Storable(e.Storage).Encode(e)
+		err = field.Storable.Encode(e)
 		if err != nil {
 			return err
 		}
 	}
 
 	// Encode qualified identifier at array index encodedCompositeValueQualifiedIdentifierFieldKeyV6
-	err = e.CBOR.EncodeString(s.Composite.QualifiedIdentifier)
+	err = e.CBOR.EncodeString(s.QualifiedIdentifier)
 	if err != nil {
 		return err
 	}

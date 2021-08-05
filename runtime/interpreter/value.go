@@ -6857,9 +6857,7 @@ func (v *CompositeValue) store(storage atree.SlabStorage) {
 		v.StorageID,
 		atree.StorableSlab{
 			StorageID: v.StorageID,
-			Storable: CompositeStorable{
-				Composite: v,
-			},
+			Storable:  v.ExternalStorable(storage),
 		},
 	); err != nil {
 		panic(ExternalError{err})
@@ -7254,6 +7252,26 @@ func (v *CompositeValue) Storable(_ atree.SlabStorage) atree.Storable {
 	return atree.StorageIDStorable(v.StorageID)
 }
 
+func (v *CompositeValue) ExternalStorable(storage atree.SlabStorage) atree.Storable {
+
+	fields := make([]CompositeStorableField, 0, v.Fields.Len())
+
+	v.Fields.Foreach(func(key string, value Value) {
+		fields = append(fields, CompositeStorableField{
+			Name:     key,
+			Storable: value.Storable(storage),
+		})
+	})
+
+	return CompositeStorable{
+		Location:            v.Location,
+		QualifiedIdentifier: v.QualifiedIdentifier,
+		Kind:                v.Kind,
+		Fields:              fields,
+		StorageID:           v.StorageID,
+	}
+}
+
 func (v *CompositeValue) DeepCopy(storage atree.SlabStorage) (atree.Value, error) {
 
 	newFields := NewStringValueOrderedMap()
@@ -7290,8 +7308,17 @@ func (v *CompositeValue) DeepCopy(storage atree.SlabStorage) (atree.Value, error
 	return newValue, nil
 }
 
+type CompositeStorableField struct {
+	Name     string
+	Storable atree.Storable
+}
+
 type CompositeStorable struct {
-	Composite *CompositeValue
+	Location            common.Location
+	QualifiedIdentifier string
+	Kind                common.CompositeKind
+	Fields              []CompositeStorableField
+	StorageID           atree.StorageID
 }
 
 var _ atree.Storable = CompositeStorable{}
@@ -7301,8 +7328,29 @@ func (s CompositeStorable) ByteSize() uint32 {
 	return storableSize(s)
 }
 
-func (s CompositeStorable) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
-	return s.Composite, nil
+func (s CompositeStorable) StoredValue(storage atree.SlabStorage) (atree.Value, error) {
+
+	fields := NewStringValueOrderedMap()
+
+	for _, field := range s.Fields {
+		value, err := StoredValue(field.Storable, storage)
+		if err != nil {
+			return nil, err
+		}
+
+		fields.Set(field.Name, value)
+	}
+
+	v := &CompositeValue{
+		Location:            s.Location,
+		QualifiedIdentifier: s.QualifiedIdentifier,
+		Kind:                s.Kind,
+		Fields:              fields,
+		// TODO: Owner
+		StorageID: s.StorageID,
+	}
+
+	return v, nil
 }
 
 func NewEnumCaseValue(
