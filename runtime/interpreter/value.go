@@ -209,9 +209,8 @@ func (TypeValue) IsStorable() bool {
 	return true
 }
 
-func (v TypeValue) Storable(_ atree.SlabStorage, _ atree.Address) (atree.Storable, error) {
-	// TODO: store in storage and return StorageIDStorable if size > max element inline size
-	return v, nil
+func (v TypeValue) Storable(storage atree.SlabStorage, address atree.Address) (atree.Storable, error) {
+	return maybeLargeImmutableStorable(v, storage, address)
 }
 
 func (v TypeValue) DeepCopy(_ atree.SlabStorage, _ atree.Address) (atree.Value, error) {
@@ -588,9 +587,8 @@ func (*StringValue) IsStorable() bool {
 	return true
 }
 
-func (v *StringValue) Storable(_ atree.SlabStorage, _ atree.Address) (atree.Storable, error) {
-	// TODO: store in storage and return StorageIDStorable if size > max element inline size
-	return v, nil
+func (v *StringValue) Storable(storage atree.SlabStorage, address atree.Address) (atree.Storable, error) {
+	return maybeLargeImmutableStorable(v, storage, address)
 }
 
 func (v *StringValue) DeepCopy(_ atree.SlabStorage, _ atree.Address) (atree.Value, error) {
@@ -1417,9 +1415,8 @@ func (IntValue) IsStorable() bool {
 	return true
 }
 
-func (v IntValue) Storable(_ atree.SlabStorage, _ atree.Address) (atree.Storable, error) {
-	// TODO: store in storage and return StorageIDStorable if size > max element inline size
-	return v, nil
+func (v IntValue) Storable(storage atree.SlabStorage, address atree.Address) (atree.Storable, error) {
+	return maybeLargeImmutableStorable(v, storage, address)
 }
 
 func (v IntValue) DeepCopy(_ atree.SlabStorage, _ atree.Address) (atree.Value, error) {
@@ -3675,9 +3672,8 @@ func (UIntValue) IsStorable() bool {
 	return true
 }
 
-func (v UIntValue) Storable(_ atree.SlabStorage, _ atree.Address) (atree.Storable, error) {
-	// TODO: store in storage and return StorageIDStorable if size > max element inline size
-	return v, nil
+func (v UIntValue) Storable(storage atree.SlabStorage, address atree.Address) (atree.Storable, error) {
+	return maybeLargeImmutableStorable(v, storage, address)
 }
 
 func (v UIntValue) DeepCopy(_ atree.SlabStorage, _ atree.Address) (atree.Value, error) {
@@ -8007,15 +8003,22 @@ func (v *SomeValue) IsStorable() bool {
 }
 
 func (v *SomeValue) Storable(storage atree.SlabStorage, address atree.Address) (atree.Storable, error) {
-	// TODO: store in storage and return StorageIDStorable if size > max element inline size
+	if !v.IsStorable() {
+		return atree.NonStorable{Value: v}, nil
+	}
 
 	storable, err := v.Value.Storable(storage, address)
 	if err != nil {
 		return nil, err
 	}
-	return SomeStorable{
-		Storable: storable,
-	}, nil
+
+	return maybeLargeImmutableStorable(
+		SomeStorable{
+			Storable: storable,
+		},
+		storage,
+		address,
+	)
 }
 
 func (v *SomeValue) DeepCopy(storage atree.SlabStorage, address atree.Address) (atree.Value, error) {
@@ -8840,9 +8843,8 @@ func (PathValue) IsStorable() bool {
 	return true
 }
 
-func (v PathValue) Storable(_ atree.SlabStorage, _ atree.Address) (atree.Storable, error) {
-	// TODO: store in storage and return StorageIDStorable if size > max element inline size
-	return v, nil
+func (v PathValue) Storable(storage atree.SlabStorage, address atree.Address) (atree.Storable, error) {
+	return maybeLargeImmutableStorable(v, storage, address)
 }
 
 func (v PathValue) DeepCopy(_ atree.SlabStorage, _ atree.Address) (atree.Value, error) {
@@ -8973,9 +8975,8 @@ func (CapabilityValue) IsStorable() bool {
 	return true
 }
 
-func (v CapabilityValue) Storable(_ atree.SlabStorage, _ atree.Address) (atree.Storable, error) {
-	// TODO: store in storage and return StorageIDStorable if size > max element inline size
-	return v, nil
+func (v CapabilityValue) Storable(storage atree.SlabStorage, address atree.Address) (atree.Storable, error) {
+	return maybeLargeImmutableStorable(v, storage, address)
 }
 
 func (v CapabilityValue) DeepCopy(_ atree.SlabStorage, _ atree.Address) (atree.Value, error) {
@@ -9050,9 +9051,8 @@ func (LinkValue) IsStorable() bool {
 	return true
 }
 
-func (v LinkValue) Storable(_ atree.SlabStorage, _ atree.Address) (atree.Storable, error) {
-	// TODO: store in storage and return StorageIDStorable if size > max element inline size
-	return v, nil
+func (v LinkValue) Storable(storage atree.SlabStorage, address atree.Address) (atree.Storable, error) {
+	return maybeLargeImmutableStorable(v, storage, address)
 }
 
 func (v LinkValue) DeepCopy(_ atree.SlabStorage, _ atree.Address) (atree.Value, error) {
