@@ -22,7 +22,6 @@ import (
 	"fmt"
 
 	"github.com/fxamacker/atree"
-	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/sema"
 )
@@ -57,19 +56,6 @@ func (DeployedContractValue) DynamicType(_ *Interpreter, _ DynamicTypeResults) D
 
 func (DeployedContractValue) StaticType() StaticType {
 	return PrimitiveStaticTypeDeployedContract
-}
-
-func (DeployedContractValue) GetOwner() *common.Address {
-	// value is never owned
-	return nil
-}
-
-func (DeployedContractValue) SetOwner(_ *common.Address) {
-	// NO-OP: value cannot be owned
-}
-
-func (v DeployedContractValue) Destroy(_ *Interpreter, _ func() LocationRange) {
-	// NO-OP
 }
 
 func (v DeployedContractValue) String() string {

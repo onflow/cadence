@@ -23,7 +23,6 @@ import (
 
 	"github.com/fxamacker/atree"
 	"github.com/onflow/cadence/runtime/ast"
-	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/sema"
 )
@@ -89,15 +88,6 @@ func (InterpretedFunctionValue) DynamicType(_ *Interpreter, _ DynamicTypeResults
 func (f InterpretedFunctionValue) StaticType() StaticType {
 	// TODO: add function static type, convert f.Type
 	return nil
-}
-
-func (InterpretedFunctionValue) GetOwner() *common.Address {
-	// value is never owned
-	return nil
-}
-
-func (InterpretedFunctionValue) SetOwner(_ *common.Address) {
-	// NO-OP: value cannot be owned
 }
 
 func (InterpretedFunctionValue) isFunctionValue() {}
@@ -188,15 +178,6 @@ func (HostFunctionValue) StaticType() StaticType {
 	return nil
 }
 
-func (HostFunctionValue) GetOwner() *common.Address {
-	// value is never owned
-	return nil
-}
-
-func (HostFunctionValue) SetOwner(_ *common.Address) {
-	// NO-OP: value cannot be owned
-}
-
 func (HostFunctionValue) isFunctionValue() {}
 
 func (f HostFunctionValue) Invoke(invocation Invocation) Value {
@@ -271,15 +252,6 @@ func (BoundFunctionValue) DynamicType(_ *Interpreter, _ DynamicTypeResults) Dyna
 
 func (f BoundFunctionValue) StaticType() StaticType {
 	return f.Function.StaticType()
-}
-
-func (BoundFunctionValue) GetOwner() *common.Address {
-	// value is never owned
-	return nil
-}
-
-func (BoundFunctionValue) SetOwner(_ *common.Address) {
-	// NO-OP: value cannot be owned
 }
 
 func (BoundFunctionValue) isFunctionValue() {}

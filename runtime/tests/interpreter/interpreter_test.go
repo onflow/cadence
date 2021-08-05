@@ -7839,9 +7839,10 @@ func TestInterpretCompositeValueFieldEncodingOrder(t *testing.T) {
 
 		test := inter.Globals["test"].GetValue().(*interpreter.CompositeValue)
 
-		test.SetOwner(&common.Address{
-			0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
-		})
+		// TODO:
+		//test.SetOwner(&common.Address{
+		//	0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
+		//})
 
 		encoded, err := atree.Encode(
 			test.ExternalStorable(inter.Storage),
@@ -7902,11 +7903,13 @@ func TestInterpretDictionaryValueEncodingOrder(t *testing.T) {
 
 		test := inter.Globals["test"].GetValue().(*interpreter.DictionaryValue)
 
-		owner := &common.Address{
-			0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
-		}
+		// TODO:
+		//owner := &common.Address{
+		//	0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
+		//}
+		//
+		//test.SetOwner(owner)
 
-		test.SetOwner(owner)
 		encoded, err := atree.Encode(
 			test.ExternalStorable(inter.Storage),
 			interpreter.CBOREncMode,

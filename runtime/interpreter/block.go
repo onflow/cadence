@@ -22,7 +22,6 @@ import (
 	"fmt"
 
 	"github.com/fxamacker/atree"
-	"github.com/onflow/cadence/runtime/common"
 	runtimeErrors "github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/sema"
 )
@@ -59,15 +58,6 @@ func (BlockValue) DynamicType(_ *Interpreter, _ DynamicTypeResults) DynamicType 
 
 func (BlockValue) StaticType() StaticType {
 	return PrimitiveStaticTypeBlock
-}
-
-func (BlockValue) GetOwner() *common.Address {
-	// value is never owned
-	return nil
-}
-
-func (BlockValue) SetOwner(_ *common.Address) {
-	// NO-OP: value cannot be owned
 }
 
 func (v BlockValue) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {

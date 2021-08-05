@@ -59,8 +59,6 @@ type Value interface {
 	Accept(interpreter *Interpreter, visitor Visitor)
 	Walk(walkChild func(Value))
 	DynamicType(interpreter *Interpreter, results DynamicTypeResults) DynamicType
-	GetOwner() *common.Address
-	SetOwner(address *common.Address)
 	StaticType() StaticType
 	ConformsToDynamicType(interpreter *Interpreter, dynamicType DynamicType, results TypeConformanceResults) bool
 	RecursiveString(results StringResults) string
@@ -142,15 +140,6 @@ func (TypeValue) DynamicType(_ *Interpreter, _ DynamicTypeResults) DynamicType {
 
 func (TypeValue) StaticType() StaticType {
 	return PrimitiveStaticTypeMetaType
-}
-
-func (TypeValue) GetOwner() *common.Address {
-	// value is never owned
-	return nil
-}
-
-func (TypeValue) SetOwner(_ *common.Address) {
-	// NO-OP: value cannot be owned
 }
 
 func (v TypeValue) String() string {
@@ -257,15 +246,6 @@ func (VoidValue) StaticType() StaticType {
 	return PrimitiveStaticTypeVoid
 }
 
-func (VoidValue) GetOwner() *common.Address {
-	// value is never owned
-	return nil
-}
-
-func (VoidValue) SetOwner(_ *common.Address) {
-	// NO-OP: value cannot be owned
-}
-
 func (VoidValue) String() string {
 	return format.Void
 }
@@ -331,15 +311,6 @@ func (BoolValue) DynamicType(_ *Interpreter, _ DynamicTypeResults) DynamicType {
 
 func (BoolValue) StaticType() StaticType {
 	return PrimitiveStaticTypeBool
-}
-
-func (BoolValue) GetOwner() *common.Address {
-	// value is never owned
-	return nil
-}
-
-func (BoolValue) SetOwner(_ *common.Address) {
-	// NO-OP: value cannot be owned
 }
 
 func (v BoolValue) Negate() BoolValue {
@@ -446,15 +417,6 @@ func (*StringValue) DynamicType(_ *Interpreter, _ DynamicTypeResults) DynamicTyp
 
 func (*StringValue) StaticType() StaticType {
 	return PrimitiveStaticTypeString
-}
-
-func (*StringValue) GetOwner() *common.Address {
-	// value is never owned
-	return nil
-}
-
-func (*StringValue) SetOwner(_ *common.Address) {
-	// NO-OP: value cannot be owned
 }
 
 func (v *StringValue) String() string {
@@ -668,7 +630,6 @@ func (*StringValue) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicTyp
 
 type ArrayValue struct {
 	Type  ArrayStaticType
-	Owner *common.Address
 	array *atree.Array
 }
 
@@ -688,22 +649,18 @@ func NewArrayValueUnownedNonCopying(
 		panic(ExternalError{err})
 	}
 
-	for i, value := range values {
-		// NOTE: new value has no owner
-		value.SetOwner(nil)
-
-		err := array.Insert(uint64(i), value.(atree.Value))
-		if err != nil {
-			panic(ExternalError{err})
-		}
-	}
-
-	return &ArrayValue{
+	v := &ArrayValue{
 		Type:  arrayType,
 		array: array,
-		// NOTE: new value has no owner
-		Owner: nil,
 	}
+
+	for i, value := range values {
+		// TODO: deep copy
+
+		v.Insert(i, value, ReturnEmptyLocationRange)
+	}
+
+	return v
 }
 
 var _ Value = &ArrayValue{}
@@ -755,22 +712,6 @@ func (v *ArrayValue) StaticType() StaticType {
 	return v.Type
 }
 
-func (v *ArrayValue) GetOwner() *common.Address {
-	return v.Owner
-}
-
-func (v *ArrayValue) SetOwner(owner *common.Address) {
-	if v.Owner == owner {
-		return
-	}
-
-	v.Owner = owner
-
-	v.Walk(func(element Value) {
-		element.SetOwner(owner)
-	})
-}
-
 func (v *ArrayValue) Destroy(interpreter *Interpreter, getLocationRange func() LocationRange) {
 	v.Walk(func(element Value) {
 		maybeDestroy(interpreter, getLocationRange, element)
@@ -812,7 +753,8 @@ func (v *ArrayValue) Set(_ *Interpreter, getLocationRange func() LocationRange, 
 func (v *ArrayValue) SetIndex(index int, value Value, getLocationRange func() LocationRange) {
 	v.checkBounds(index, getLocationRange)
 
-	value.SetOwner(v.Owner)
+	// TODO: deep copy
+	// TODO: set owner
 
 	err := v.array.Set(uint64(index), value.(atree.Value))
 	if err != nil {
@@ -849,7 +791,9 @@ func (v *ArrayValue) RecursiveString(results StringResults) string {
 }
 
 func (v *ArrayValue) Append(element Value) {
-	element.SetOwner(v.Owner)
+
+	// TODO: deep copy
+	// TODO: set owner
 
 	err := v.array.Append(element.(atree.Value))
 	if err != nil {
@@ -861,8 +805,6 @@ func (v *ArrayValue) AppendAll(other AllAppendableValue) {
 	otherArray := other.(*ArrayValue)
 
 	otherArray.Walk(func(element Value) {
-		element.SetOwner(v.Owner)
-
 		err := v.array.Append(element.(atree.Value))
 		if err != nil {
 			panic(ExternalError{err})
@@ -882,7 +824,8 @@ func (v *ArrayValue) Insert(index int, element Value, getLocationRange func() Lo
 		})
 	}
 
-	element.SetOwner(v.Owner)
+	// TODO: deep copy
+	// TODO: set owner
 
 	err := v.array.Insert(uint64(index), element.(atree.Value))
 	if err != nil {
@@ -890,9 +833,11 @@ func (v *ArrayValue) Insert(index int, element Value, getLocationRange func() Lo
 	}
 }
 
-// TODO: unset owner?
 func (v *ArrayValue) Remove(index int, getLocationRange func() LocationRange) Value {
 	v.checkBounds(index, getLocationRange)
+
+	// TODO: unset owner
+	// TODO: deep remove
 
 	element, err := v.array.Remove(uint64(index))
 	if err != nil {
@@ -1120,9 +1065,7 @@ func (v *ArrayValue) DeepCopy(storage atree.SlabStorage, address atree.Address) 
 	}
 
 	return &ArrayValue{
-		Type: v.Type,
-		// NOTE: new value has no owner
-		Owner: nil,
+		Type:  v.Type,
 		array: copiedValue.(*atree.Array),
 	}, nil
 }
@@ -1269,15 +1212,6 @@ func (IntValue) DynamicType(_ *Interpreter, _ DynamicTypeResults) DynamicType {
 
 func (IntValue) StaticType() StaticType {
 	return PrimitiveStaticTypeInt
-}
-
-func (IntValue) GetOwner() *common.Address {
-	// value is never owned
-	return nil
-}
-
-func (IntValue) SetOwner(_ *common.Address) {
-	// NO-OP: value cannot be owned
 }
 
 func (v IntValue) ToInt() int {
@@ -1505,15 +1439,6 @@ func (Int8Value) DynamicType(_ *Interpreter, _ DynamicTypeResults) DynamicType {
 
 func (Int8Value) StaticType() StaticType {
 	return PrimitiveStaticTypeInt8
-}
-
-func (Int8Value) GetOwner() *common.Address {
-	// value is never owned
-	return nil
-}
-
-func (Int8Value) SetOwner(_ *common.Address) {
-	// NO-OP: value cannot be owned
 }
 
 func (v Int8Value) String() string {
@@ -1821,15 +1746,6 @@ func (Int16Value) DynamicType(_ *Interpreter, _ DynamicTypeResults) DynamicType 
 
 func (Int16Value) StaticType() StaticType {
 	return PrimitiveStaticTypeInt16
-}
-
-func (Int16Value) GetOwner() *common.Address {
-	// value is never owned
-	return nil
-}
-
-func (Int16Value) SetOwner(_ *common.Address) {
-	// NO-OP: value cannot be owned
 }
 
 func (v Int16Value) String() string {
@@ -2141,15 +2057,6 @@ func (Int32Value) StaticType() StaticType {
 	return PrimitiveStaticTypeInt32
 }
 
-func (Int32Value) GetOwner() *common.Address {
-	// value is never owned
-	return nil
-}
-
-func (Int32Value) SetOwner(_ *common.Address) {
-	// NO-OP: value cannot be owned
-}
-
 func (v Int32Value) String() string {
 	return format.Int(int64(v))
 }
@@ -2457,15 +2364,6 @@ func (Int64Value) DynamicType(_ *Interpreter, _ DynamicTypeResults) DynamicType 
 
 func (Int64Value) StaticType() StaticType {
 	return PrimitiveStaticTypeInt64
-}
-
-func (Int64Value) GetOwner() *common.Address {
-	// value is never owned
-	return nil
-}
-
-func (Int64Value) SetOwner(_ *common.Address) {
-	// NO-OP: value cannot be owned
 }
 
 func (v Int64Value) String() string {
@@ -2784,15 +2682,6 @@ func (Int128Value) DynamicType(_ *Interpreter, _ DynamicTypeResults) DynamicType
 
 func (Int128Value) StaticType() StaticType {
 	return PrimitiveStaticTypeInt128
-}
-
-func (Int128Value) GetOwner() *common.Address {
-	// value is never owned
-	return nil
-}
-
-func (Int128Value) SetOwner(_ *common.Address) {
-	// NO-OP: value cannot be owned
 }
 
 func (v Int128Value) ToInt() int {
@@ -3171,15 +3060,6 @@ func (Int256Value) DynamicType(_ *Interpreter, _ DynamicTypeResults) DynamicType
 
 func (Int256Value) StaticType() StaticType {
 	return PrimitiveStaticTypeInt256
-}
-
-func (Int256Value) GetOwner() *common.Address {
-	// value is never owned
-	return nil
-}
-
-func (Int256Value) SetOwner(_ *common.Address) {
-	// NO-OP: value cannot be owned
 }
 
 func (v Int256Value) ToInt() int {
@@ -3581,15 +3461,6 @@ func (UIntValue) StaticType() StaticType {
 	return PrimitiveStaticTypeUInt
 }
 
-func (UIntValue) GetOwner() *common.Address {
-	// value is never owned
-	return nil
-}
-
-func (UIntValue) SetOwner(_ *common.Address) {
-	// NO-OP: value cannot be owned
-}
-
 func (v UIntValue) ToInt() int {
 	// TODO: handle overflow
 	return int(v.BigInt.Int64())
@@ -3828,15 +3699,6 @@ func (UInt8Value) StaticType() StaticType {
 	return PrimitiveStaticTypeUInt8
 }
 
-func (UInt8Value) GetOwner() *common.Address {
-	// value is never owned
-	return nil
-}
-
-func (UInt8Value) SetOwner(_ *common.Address) {
-	// NO-OP: value cannot be owned
-}
-
 func (v UInt8Value) String() string {
 	return format.Uint(uint64(v))
 }
@@ -4073,15 +3935,6 @@ func (UInt16Value) DynamicType(_ *Interpreter, _ DynamicTypeResults) DynamicType
 
 func (UInt16Value) StaticType() StaticType {
 	return PrimitiveStaticTypeUInt16
-}
-
-func (UInt16Value) GetOwner() *common.Address {
-	// value is never owned
-	return nil
-}
-
-func (UInt16Value) SetOwner(_ *common.Address) {
-	// NO-OP: value cannot be owned
 }
 
 func (v UInt16Value) String() string {
@@ -4323,15 +4176,6 @@ func (UInt32Value) StaticType() StaticType {
 	return PrimitiveStaticTypeUInt32
 }
 
-func (UInt32Value) GetOwner() *common.Address {
-	// value is never owned
-	return nil
-}
-
-func (UInt32Value) SetOwner(_ *common.Address) {
-	// NO-OP: value cannot be owned
-}
-
 func (v UInt32Value) String() string {
 	return format.Uint(uint64(v))
 }
@@ -4569,15 +4413,6 @@ func (UInt64Value) DynamicType(_ *Interpreter, _ DynamicTypeResults) DynamicType
 
 func (UInt64Value) StaticType() StaticType {
 	return PrimitiveStaticTypeUInt64
-}
-
-func (UInt64Value) GetOwner() *common.Address {
-	// value is never owned
-	return nil
-}
-
-func (UInt64Value) SetOwner(_ *common.Address) {
-	// NO-OP: value cannot be owned
 }
 
 func (v UInt64Value) String() string {
@@ -4830,15 +4665,6 @@ func (UInt128Value) DynamicType(_ *Interpreter, _ DynamicTypeResults) DynamicTyp
 
 func (UInt128Value) StaticType() StaticType {
 	return PrimitiveStaticTypeUInt128
-}
-
-func (UInt128Value) GetOwner() *common.Address {
-	// value is never owned
-	return nil
-}
-
-func (UInt128Value) SetOwner(_ *common.Address) {
-	// NO-OP: value cannot be owned
 }
 
 func (v UInt128Value) ToInt() int {
@@ -5161,15 +4987,6 @@ func (UInt256Value) StaticType() StaticType {
 	return PrimitiveStaticTypeUInt256
 }
 
-func (UInt256Value) GetOwner() *common.Address {
-	// value is never owned
-	return nil
-}
-
-func (UInt256Value) SetOwner(_ *common.Address) {
-	// NO-OP: value cannot be owned
-}
-
 func (v UInt256Value) ToInt() int {
 	// TODO: handle overflow
 	return int(v.BigInt.Int64())
@@ -5480,15 +5297,6 @@ func (Word8Value) StaticType() StaticType {
 	return PrimitiveStaticTypeWord8
 }
 
-func (Word8Value) GetOwner() *common.Address {
-	// value is never owned
-	return nil
-}
-
-func (Word8Value) SetOwner(_ *common.Address) {
-	// NO-OP: value cannot be owned
-}
-
 func (v Word8Value) String() string {
 	return format.Uint(uint64(v))
 }
@@ -5670,15 +5478,6 @@ func (Word16Value) DynamicType(_ *Interpreter, _ DynamicTypeResults) DynamicType
 
 func (Word16Value) StaticType() StaticType {
 	return PrimitiveStaticTypeWord16
-}
-
-func (Word16Value) GetOwner() *common.Address {
-	// value is never owned
-	return nil
-}
-
-func (Word16Value) SetOwner(_ *common.Address) {
-	// NO-OP: value cannot be owned
 }
 
 func (v Word16Value) String() string {
@@ -5865,15 +5664,6 @@ func (Word32Value) StaticType() StaticType {
 	return PrimitiveStaticTypeWord32
 }
 
-func (Word32Value) GetOwner() *common.Address {
-	// value is never owned
-	return nil
-}
-
-func (Word32Value) SetOwner(_ *common.Address) {
-	// NO-OP: value cannot be owned
-}
-
 func (v Word32Value) String() string {
 	return format.Uint(uint64(v))
 }
@@ -6056,15 +5846,6 @@ func (Word64Value) DynamicType(_ *Interpreter, _ DynamicTypeResults) DynamicType
 
 func (Word64Value) StaticType() StaticType {
 	return PrimitiveStaticTypeWord64
-}
-
-func (Word64Value) GetOwner() *common.Address {
-	// value is never owned
-	return nil
-}
-
-func (Word64Value) SetOwner(_ *common.Address) {
-	// NO-OP: value cannot be owned
 }
 
 func (v Word64Value) String() string {
@@ -6265,15 +6046,6 @@ func (Fix64Value) DynamicType(_ *Interpreter, _ DynamicTypeResults) DynamicType 
 
 func (Fix64Value) StaticType() StaticType {
 	return PrimitiveStaticTypeFix64
-}
-
-func (Fix64Value) GetOwner() *common.Address {
-	// value is never owned
-	return nil
-}
-
-func (Fix64Value) SetOwner(_ *common.Address) {
-	// NO-OP: value cannot be owned
 }
 
 func (v Fix64Value) String() string {
@@ -6556,15 +6328,6 @@ func (UFix64Value) DynamicType(_ *Interpreter, _ DynamicTypeResults) DynamicType
 
 func (UFix64Value) StaticType() StaticType {
 	return PrimitiveStaticTypeUFix64
-}
-
-func (UFix64Value) GetOwner() *common.Address {
-	// value is never owned
-	return nil
-}
-
-func (UFix64Value) SetOwner(_ *common.Address) {
-	// NO-OP: value cannot be owned
 }
 
 func (v UFix64Value) String() string {
@@ -6922,18 +6685,6 @@ func (v *CompositeValue) GetOwner() *common.Address {
 	return v.Owner
 }
 
-func (v *CompositeValue) SetOwner(owner *common.Address) {
-	if v.Owner == owner {
-		return
-	}
-
-	v.Owner = owner
-
-	v.Fields.Foreach(func(_ string, value Value) {
-		value.SetOwner(owner)
-	})
-}
-
 func (v *CompositeValue) GetMember(interpreter *Interpreter, getLocationRange func() LocationRange, name string) Value {
 	v.checkStatus(getLocationRange)
 
@@ -7049,7 +6800,8 @@ func (v *CompositeValue) SetMember(
 ) {
 	v.checkStatus(getLocationRange)
 
-	value.SetOwner(v.Owner)
+	// TODO: deep copy
+	// TODO: set owner
 
 	v.Fields.Set(name, value)
 
@@ -7371,7 +7123,6 @@ type DictionaryValue struct {
 	Type      DictionaryStaticType
 	Keys      *ArrayValue
 	Entries   *StringValueOrderedMap
-	Owner     *common.Address
 	StorageID atree.StorageID
 }
 
@@ -7398,8 +7149,6 @@ func NewDictionaryValueUnownedNonCopying(
 		),
 		Entries:   NewStringValueOrderedMap(),
 		StorageID: storageID,
-		// NOTE: new value has no owner
-		Owner: nil,
 	}
 
 	for i := 0; i < keysAndValuesCount; i += 2 {
@@ -7460,24 +7209,6 @@ func (v *DictionaryValue) DynamicType(interpreter *Interpreter, results DynamicT
 
 func (v *DictionaryValue) StaticType() StaticType {
 	return v.Type
-}
-
-func (v *DictionaryValue) GetOwner() *common.Address {
-	return v.Owner
-}
-
-func (v *DictionaryValue) SetOwner(owner *common.Address) {
-	if v.Owner == owner {
-		return
-	}
-
-	v.Owner = owner
-
-	v.Keys.SetOwner(owner)
-
-	v.Entries.Foreach(func(_ string, value Value) {
-		value.SetOwner(owner)
-	})
 }
 
 func maybeDestroy(interpreter *Interpreter, getLocationRange func() LocationRange, value Value) {
@@ -7656,12 +7387,14 @@ func (v *DictionaryValue) Count() int {
 	return v.Keys.Count()
 }
 
-// TODO: unset owner?
 func (v *DictionaryValue) Remove(
 	storage atree.SlabStorage,
 	getLocationRange func() LocationRange,
 	keyValue Value,
 ) OptionalValue {
+
+	// TODO: unset owner
+	// TODO: deep remove
 
 	value, key, ok := v.GetKey(keyValue)
 	if !ok {
@@ -7709,7 +7442,8 @@ func (v *DictionaryValue) Insert(
 
 	key := dictionaryKey(keyValue)
 
-	value.SetOwner(v.Owner)
+	// TODO: deep copy
+	// TODO: set owner
 
 	v.Entries.Set(key, value)
 
@@ -8028,15 +7762,6 @@ func (NilValue) StaticType() StaticType {
 
 func (NilValue) isOptionalValue() {}
 
-func (NilValue) GetOwner() *common.Address {
-	// value is never owned
-	return nil
-}
-
-func (NilValue) SetOwner(_ *common.Address) {
-	// NO-OP
-}
-
 func (v NilValue) Destroy(_ *Interpreter, _ func() LocationRange) {
 	// NO-OP
 }
@@ -8103,13 +7828,11 @@ func (v NilValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 
 type SomeValue struct {
 	Value Value
-	Owner *common.Address
 }
 
 func NewSomeValueOwningNonCopying(value Value) *SomeValue {
 	return &SomeValue{
 		Value: value,
-		Owner: value.GetOwner(),
 	}
 }
 
@@ -8146,20 +7869,6 @@ func (v *SomeValue) StaticType() StaticType {
 }
 
 func (*SomeValue) isOptionalValue() {}
-
-func (v *SomeValue) GetOwner() *common.Address {
-	return v.Owner
-}
-
-func (v *SomeValue) SetOwner(owner *common.Address) {
-	if v.Owner == owner {
-		return
-	}
-
-	v.Owner = owner
-
-	v.Value.SetOwner(owner)
-}
 
 func (v *SomeValue) Destroy(interpreter *Interpreter, getLocationRange func() LocationRange) {
 	maybeDestroy(interpreter, getLocationRange, v.Value)
@@ -8248,8 +7957,6 @@ func (v *SomeValue) DeepCopy(storage atree.SlabStorage, address atree.Address) (
 
 	return &SomeValue{
 		Value: valueCopy.(Value),
-		// NOTE: new value has no owner
-		Owner: nil,
 	}, nil
 }
 
@@ -8337,15 +8044,6 @@ func (v *StorageReferenceValue) StaticType() StaticType {
 		Authorized: v.Authorized,
 		Type:       borrowedType,
 	}
-}
-
-func (v *StorageReferenceValue) GetOwner() *common.Address {
-	// value is never owned
-	return nil
-}
-
-func (v *StorageReferenceValue) SetOwner(_ *common.Address) {
-	// NO-OP: value cannot be owned
 }
 
 func (v *StorageReferenceValue) ReferencedValue(interpreter *Interpreter) *Value {
@@ -8564,15 +8262,6 @@ func (v *EphemeralReferenceValue) StaticType() StaticType {
 	}
 }
 
-func (v *EphemeralReferenceValue) GetOwner() *common.Address {
-	// value is never owned
-	return nil
-}
-
-func (v *EphemeralReferenceValue) SetOwner(_ *common.Address) {
-	// NO-OP: value cannot be owned
-}
-
 func (v *EphemeralReferenceValue) ReferencedValue() *Value {
 	// Just like for storage references, references to optionals are unwrapped,
 	// i.e. a reference to `nil` aborts when dereferenced.
@@ -8773,15 +8462,6 @@ func (v AddressValue) String() string {
 
 func (v AddressValue) RecursiveString(_ StringResults) string {
 	return v.String()
-}
-
-func (AddressValue) GetOwner() *common.Address {
-	// value is never owned
-	return nil
-}
-
-func (AddressValue) SetOwner(_ *common.Address) {
-	// NO-OP: value cannot be owned
 }
 
 func (v AddressValue) Equal(other Value, _ func() LocationRange) bool {
@@ -9068,15 +8748,6 @@ func (v PathValue) StaticType() StaticType {
 	}
 }
 
-func (PathValue) GetOwner() *common.Address {
-	// value is never owned
-	return nil
-}
-
-func (PathValue) SetOwner(_ *common.Address) {
-	// NO-OP: value cannot be owned
-}
-
 func (v PathValue) Destroy(_ *Interpreter, _ func() LocationRange) {
 	// NO-OP
 }
@@ -9182,15 +8853,6 @@ func (v CapabilityValue) StaticType() StaticType {
 	return CapabilityStaticType{
 		BorrowType: v.BorrowType,
 	}
-}
-
-func (CapabilityValue) GetOwner() *common.Address {
-	// value is never owned
-	return nil
-}
-
-func (CapabilityValue) SetOwner(_ *common.Address) {
-	// NO-OP: value cannot be owned
 }
 
 func (v CapabilityValue) Destroy(_ *Interpreter, _ func() LocationRange) {
@@ -9312,19 +8974,6 @@ func (LinkValue) DynamicType(_ *Interpreter, _ DynamicTypeResults) DynamicType {
 
 func (LinkValue) StaticType() StaticType {
 	return nil
-}
-
-func (LinkValue) GetOwner() *common.Address {
-	// value is never owned
-	return nil
-}
-
-func (LinkValue) SetOwner(_ *common.Address) {
-	// NO-OP: value cannot be owned
-}
-
-func (v LinkValue) Destroy(_ *Interpreter, _ func() LocationRange) {
-	// NO-OP
 }
 
 func (v LinkValue) String() string {

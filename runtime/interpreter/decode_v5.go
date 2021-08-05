@@ -359,11 +359,9 @@ func (d *DecoderV5) decodeArray(path []string) (*ArrayValue, error) {
 	// TODO: create new array
 	_ = arrayStaticType
 	_ = elements
-	return &ArrayValue{
-		//values: elements,
-		Owner: d.owner,
-		Type:  arrayStaticType,
-	}, nil
+	_ = d.owner
+
+	return nil, nil
 }
 
 func (d *DecoderV5) decodeArrayValueHead(valuePath []string) error {
@@ -876,10 +874,10 @@ func (d *DecoderV5) decodeSome(path []string) (*SomeValue, error) {
 		)
 	}
 
-	return &SomeValue{
-		Value: value,
-		Owner: d.owner,
-	}, nil
+	// TODO: create some value
+	_ = value
+	_ = d.owner
+	return nil, nil
 }
 
 func (d *DecoderV5) checkAddressLength(addressBytes []byte) error {
