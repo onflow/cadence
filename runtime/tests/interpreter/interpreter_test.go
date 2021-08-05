@@ -7477,27 +7477,6 @@ func TestInterpretResourceOwnerFieldUse(t *testing.T) {
 
 	t.Parallel()
 
-	// NOTE: Getter and Setter are very naive for testing purposes and don't remove nil values
-	//
-
-	// TODO:
-	//checker := func(_ *interpreter.Interpreter, _ common.Address, key string) bool {
-	//	_, ok := storedValues[key]
-	//	return ok
-	//}
-	//
-	//getter := func(_ *interpreter.Interpreter, _ common.Address, key string, _ bool) interpreter.OptionalValue {
-	//	value, ok := storedValues[key]
-	//	if !ok {
-	//		return interpreter.NilValue{}
-	//	}
-	//	return value
-	//}
-	//
-	//setter := func(_ *interpreter.Interpreter, _ common.Address, key string, value interpreter.OptionalValue) {
-	//	storedValues[key] = value
-	//}
-
 	address := common.Address{
 		0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
 	}
@@ -8303,6 +8282,9 @@ func TestInterpretNestedDestroy(t *testing.T) {
 // is not possible, because the value that is assigned into is a copy
 //
 func TestInterpretInternalAssignment(t *testing.T) {
+
+	// TODO:
+	t.FailNow()
 
 	t.Parallel()
 
