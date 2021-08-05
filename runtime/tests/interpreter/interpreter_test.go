@@ -580,7 +580,7 @@ func TestInterpretArrayIndexingAssignment(t *testing.T) {
 		inter.Storage,
 		interpreter.NewIntValueFromInt64(0),
 		interpreter.NewIntValueFromInt64(3),
-	).DeepCopy(inter.Storage)
+	).DeepCopy(inter.Storage, atree.Address{})
 	require.NoError(t, err)
 
 	expectedArray := expected.(*interpreter.ArrayValue)
@@ -3632,7 +3632,7 @@ func TestInterpretDictionary(t *testing.T) {
 		inter.Storage,
 		interpreter.NewStringValue("a"), interpreter.NewIntValueFromInt64(1),
 		interpreter.NewStringValue("b"), interpreter.NewIntValueFromInt64(2),
-	).DeepCopy(inter.Storage)
+	).DeepCopy(inter.Storage, atree.Address{})
 	require.NoError(t, err)
 
 	expectedDict := expectedValue.(*interpreter.DictionaryValue)
@@ -3663,7 +3663,7 @@ func TestInterpretDictionaryInsertionOrder(t *testing.T) {
 		interpreter.NewStringValue("c"), interpreter.NewIntValueFromInt64(3),
 		interpreter.NewStringValue("a"), interpreter.NewIntValueFromInt64(1),
 		interpreter.NewStringValue("b"), interpreter.NewIntValueFromInt64(2),
-	).DeepCopy(inter.Storage)
+	).DeepCopy(inter.Storage, atree.Address{})
 	require.NoError(t, err)
 
 	expectedDict := expectedValue.(*interpreter.DictionaryValue)
@@ -3838,7 +3838,7 @@ func TestInterpretDictionaryIndexingAssignmentNew(t *testing.T) {
 		},
 		inter.Storage,
 		interpreter.NewStringValue("def"), interpreter.NewIntValueFromInt64(42),
-	).DeepCopy(inter.Storage)
+	).DeepCopy(inter.Storage, atree.Address{})
 	require.NoError(t, err)
 
 	expectedDict := expectedValue.(*interpreter.DictionaryValue)
@@ -3913,7 +3913,7 @@ func TestInterpretDictionaryIndexingAssignmentNil(t *testing.T) {
 		inter.Storage,
 		interpreter.NewStringValue("def"), interpreter.NewIntValueFromInt64(42),
 		interpreter.NewStringValue("abc"), interpreter.NewIntValueFromInt64(23),
-	).DeepCopy(inter.Storage)
+	).DeepCopy(inter.Storage, atree.Address{})
 	require.NoError(t, err)
 
 	expectedDict := expectedValue.(*interpreter.DictionaryValue)
@@ -6104,7 +6104,7 @@ func TestInterpretEmitEventParameterTypes(t *testing.T) {
 				},
 				storage,
 				testCase.value, testCase.value,
-			).DeepCopy(storage)
+			).DeepCopy(storage, atree.Address{})
 			require.NoError(t, err)
 
 			tests[fmt.Sprintf("{%[1]s: %[1]s}", validType)] =
@@ -7845,7 +7845,7 @@ func TestInterpretCompositeValueFieldEncodingOrder(t *testing.T) {
 
 		encoded, err := atree.Encode(
 			test.ExternalStorable(inter.Storage),
-			inter.Storage,
+			interpreter.CBOREncMode,
 		)
 		require.NoError(t, err)
 
@@ -7908,10 +7908,8 @@ func TestInterpretDictionaryValueEncodingOrder(t *testing.T) {
 
 		test.SetOwner(owner)
 		encoded, err := atree.Encode(
-			interpreter.DictionaryStorable{
-				Dictionary: test,
-			},
-			inter.Storage,
+			test.ExternalStorable(inter.Storage),
+			interpreter.CBOREncMode,
 		)
 		require.NoError(t, err)
 
