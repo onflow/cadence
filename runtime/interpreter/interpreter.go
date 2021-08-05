@@ -1368,18 +1368,19 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 				fields.Set(sema.ResourceUUIDFieldName, UInt64Value(uuid))
 			}
 
-			// TODO: store in storage
-			value := &CompositeValue{
-				Location:            location,
-				QualifiedIdentifier: qualifiedIdentifier,
-				Kind:                declaration.CompositeKind,
-				Fields:              fields,
-				InjectedFields:      injectedFields,
-				Functions:           functions,
-				Destructor:          destructorFunction,
-				// NOTE: new value has no owner
-				Owner: nil,
-			}
+			value := NewCompositeValue(
+				interpreter.Storage,
+				location,
+				qualifiedIdentifier,
+				declaration.CompositeKind,
+				fields,
+				// TODO:
+				atree.Address{},
+			)
+
+			value.InjectedFields = injectedFields
+			value.Functions = functions
+			value.Destructor = destructorFunction
 
 			invocation.Self = value
 
@@ -1464,15 +1465,15 @@ func (interpreter *Interpreter) declareEnumConstructor(
 		caseValueFields := NewStringValueOrderedMap()
 		caseValueFields.Set(sema.EnumRawValueFieldName, rawValue)
 
-		// TODO: store in storage
-		caseValue := &CompositeValue{
-			Location:            location,
-			QualifiedIdentifier: qualifiedIdentifier,
-			Kind:                declaration.CompositeKind,
-			Fields:              caseValueFields,
-			// NOTE: new value has no owner
-			Owner: nil,
-		}
+		caseValue := NewCompositeValue(
+			interpreter.Storage,
+			location,
+			qualifiedIdentifier,
+			declaration.CompositeKind,
+			caseValueFields,
+			// TODO:
+			atree.Address{},
+		)
 		caseValues[i] = caseValue
 
 		constructorNestedVariables.Set(
