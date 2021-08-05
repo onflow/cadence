@@ -1242,7 +1242,7 @@ var _ Value = IntValue{}
 var _ atree.Storable = IntValue{}
 var _ EquatableValue = IntValue{}
 
-func (v IntValue) IsValue() {}
+func (IntValue) IsValue() {}
 
 func (v IntValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitIntValue(interpreter, v)
@@ -2757,7 +2757,7 @@ var _ Value = Int128Value{}
 var _ atree.Storable = Int128Value{}
 var _ EquatableValue = Int128Value{}
 
-func (v Int128Value) IsValue() {}
+func (Int128Value) IsValue() {}
 
 func (v Int128Value) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitInt128Value(interpreter, v)
@@ -3144,7 +3144,7 @@ var _ Value = Int256Value{}
 var _ atree.Storable = Int256Value{}
 var _ EquatableValue = Int256Value{}
 
-func (v Int256Value) IsValue() {}
+func (Int256Value) IsValue() {}
 
 func (v Int256Value) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitInt256Value(interpreter, v)
@@ -3552,7 +3552,7 @@ var _ Value = UIntValue{}
 var _ atree.Storable = UIntValue{}
 var _ EquatableValue = UIntValue{}
 
-func (v UIntValue) IsValue() {}
+func (UIntValue) IsValue() {}
 
 func (v UIntValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitUIntValue(interpreter, v)
@@ -4803,7 +4803,7 @@ var _ Value = UInt128Value{}
 var _ atree.Storable = UInt128Value{}
 var _ EquatableValue = UInt128Value{}
 
-func (v UInt128Value) IsValue() {}
+func (UInt128Value) IsValue() {}
 
 func (v UInt128Value) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitUInt128Value(interpreter, v)
@@ -5132,7 +5132,7 @@ var _ Value = UInt256Value{}
 var _ atree.Storable = UInt256Value{}
 var _ EquatableValue = UInt256Value{}
 
-func (v UInt256Value) IsValue() {}
+func (UInt256Value) IsValue() {}
 
 func (v UInt256Value) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitUInt256Value(interpreter, v)
