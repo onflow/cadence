@@ -217,7 +217,7 @@ func (v TypeValue) Storable(_ atree.SlabStorage) atree.Storable {
 	return v
 }
 
-func (v TypeValue) DeepCopy(_ atree.SlabStorage) (atree.Value, error) {
+func (v TypeValue) DeepCopy(_ atree.SlabStorage, _ atree.Address) (atree.Value, error) {
 	return v, nil
 }
 
@@ -292,7 +292,7 @@ func (v VoidValue) Storable(_ atree.SlabStorage) atree.Storable {
 	return v
 }
 
-func (v VoidValue) DeepCopy(_ atree.SlabStorage) (atree.Value, error) {
+func (v VoidValue) DeepCopy(_ atree.SlabStorage, _ atree.Address) (atree.Value, error) {
 	return v, nil
 }
 
@@ -382,7 +382,7 @@ func (v BoolValue) Storable(_ atree.SlabStorage) atree.Storable {
 	return v
 }
 
-func (v BoolValue) DeepCopy(_ atree.SlabStorage) (atree.Value, error) {
+func (v BoolValue) DeepCopy(_ atree.SlabStorage, _ atree.Address) (atree.Value, error) {
 	return v, nil
 }
 
@@ -623,7 +623,7 @@ func (v *StringValue) Storable(_ atree.SlabStorage) atree.Storable {
 	return v
 }
 
-func (v *StringValue) DeepCopy(_ atree.SlabStorage) (atree.Value, error) {
+func (v *StringValue) DeepCopy(_ atree.SlabStorage, _ atree.Address) (atree.Value, error) {
 	return v, nil
 }
 
@@ -678,7 +678,8 @@ func NewArrayValueUnownedNonCopying(
 	values ...Value,
 ) *ArrayValue {
 
-	array, err := atree.NewArray(storage)
+	// TODO: type info
+	array, err := atree.NewArray(storage, atree.Address{}, "")
 	if err != nil {
 		panic(ExternalError{err})
 	}
@@ -770,7 +771,7 @@ func (v *ArrayValue) Destroy(interpreter *Interpreter, getLocationRange func() L
 
 func (v *ArrayValue) Concat(other ConcatenatableValue, storage Storage) Value {
 	otherArray := other.(*ArrayValue)
-	newValue, err := v.DeepCopy(storage)
+	newValue, err := v.DeepCopy(storage, atree.Address{})
 	if err != nil {
 		panic(ExternalError{err})
 	}
@@ -1102,10 +1103,10 @@ func (v *ArrayValue) Storable(_ atree.SlabStorage) atree.Storable {
 	return atree.StorageIDStorable(v.array.StorageID())
 }
 
-func (v *ArrayValue) DeepCopy(storage atree.SlabStorage) (atree.Value, error) {
+func (v *ArrayValue) DeepCopy(storage atree.SlabStorage, address atree.Address) (atree.Value, error) {
 	// TODO: optimize, use copy-on-write
 
-	copiedValue, err := v.array.DeepCopy(storage)
+	copiedValue, err := v.array.DeepCopy(storage, address)
 	if err != nil {
 		return nil, err
 	}
@@ -1457,7 +1458,7 @@ func (v IntValue) Storable(_ atree.SlabStorage) atree.Storable {
 	return v
 }
 
-func (v IntValue) DeepCopy(_ atree.SlabStorage) (atree.Value, error) {
+func (v IntValue) DeepCopy(_ atree.SlabStorage, _ atree.Address) (atree.Value, error) {
 	return IntValue{new(big.Int).Set(v.BigInt)}, nil
 }
 
@@ -1773,7 +1774,7 @@ func (v Int8Value) Storable(_ atree.SlabStorage) atree.Storable {
 	return v
 }
 
-func (v Int8Value) DeepCopy(_ atree.SlabStorage) (atree.Value, error) {
+func (v Int8Value) DeepCopy(_ atree.SlabStorage, _ atree.Address) (atree.Value, error) {
 	return v, nil
 }
 
@@ -2091,7 +2092,7 @@ func (v Int16Value) Storable(_ atree.SlabStorage) atree.Storable {
 	return v
 }
 
-func (v Int16Value) DeepCopy(_ atree.SlabStorage) (atree.Value, error) {
+func (v Int16Value) DeepCopy(_ atree.SlabStorage, _ atree.Address) (atree.Value, error) {
 	return v, nil
 }
 
@@ -2409,7 +2410,7 @@ func (v Int32Value) Storable(_ atree.SlabStorage) atree.Storable {
 	return v
 }
 
-func (v Int32Value) DeepCopy(_ atree.SlabStorage) (atree.Value, error) {
+func (v Int32Value) DeepCopy(_ atree.SlabStorage, _ atree.Address) (atree.Value, error) {
 	return v, nil
 }
 
@@ -2726,7 +2727,7 @@ func (v Int64Value) Storable(_ atree.SlabStorage) atree.Storable {
 	return v
 }
 
-func (v Int64Value) DeepCopy(_ atree.SlabStorage) (atree.Value, error) {
+func (v Int64Value) DeepCopy(_ atree.SlabStorage, _ atree.Address) (atree.Value, error) {
 	return v, nil
 }
 
@@ -3113,7 +3114,7 @@ func (v Int128Value) Storable(_ atree.SlabStorage) atree.Storable {
 	return v
 }
 
-func (v Int128Value) DeepCopy(_ atree.SlabStorage) (atree.Value, error) {
+func (v Int128Value) DeepCopy(_ atree.SlabStorage, _ atree.Address) (atree.Value, error) {
 	return Int128Value{BigInt: new(big.Int).Set(v.BigInt)}, nil
 }
 
@@ -3500,7 +3501,7 @@ func (v Int256Value) Storable(_ atree.SlabStorage) atree.Storable {
 	return v
 }
 
-func (v Int256Value) DeepCopy(_ atree.SlabStorage) (atree.Value, error) {
+func (v Int256Value) DeepCopy(_ atree.SlabStorage, _ atree.Address) (atree.Value, error) {
 	return Int256Value{new(big.Int).Set(v.BigInt)}, nil
 }
 
@@ -3778,7 +3779,7 @@ func (v UIntValue) Storable(_ atree.SlabStorage) atree.Storable {
 	return v
 }
 
-func (v UIntValue) DeepCopy(_ atree.SlabStorage) (atree.Value, error) {
+func (v UIntValue) DeepCopy(_ atree.SlabStorage, _ atree.Address) (atree.Value, error) {
 	return UIntValue{new(big.Int).Set(v.BigInt)}, nil
 }
 
@@ -4025,7 +4026,7 @@ func (v UInt8Value) Storable(_ atree.SlabStorage) atree.Storable {
 	return v
 }
 
-func (v UInt8Value) DeepCopy(_ atree.SlabStorage) (atree.Value, error) {
+func (v UInt8Value) DeepCopy(_ atree.SlabStorage, _ atree.Address) (atree.Value, error) {
 	return v, nil
 }
 
@@ -4273,7 +4274,7 @@ func (v UInt16Value) Storable(_ atree.SlabStorage) atree.Storable {
 	return v
 }
 
-func (v UInt16Value) DeepCopy(_ atree.SlabStorage) (atree.Value, error) {
+func (v UInt16Value) DeepCopy(_ atree.SlabStorage, _ atree.Address) (atree.Value, error) {
 	return v, nil
 }
 
@@ -4521,7 +4522,7 @@ func (v UInt32Value) Storable(_ atree.SlabStorage) atree.Storable {
 	return v
 }
 
-func (v UInt32Value) DeepCopy(_ atree.SlabStorage) (atree.Value, error) {
+func (v UInt32Value) DeepCopy(_ atree.SlabStorage, _ atree.Address) (atree.Value, error) {
 	return v, nil
 }
 
@@ -4772,7 +4773,7 @@ func (v UInt64Value) Storable(_ atree.SlabStorage) atree.Storable {
 	return v
 }
 
-func (v UInt64Value) DeepCopy(_ atree.SlabStorage) (atree.Value, error) {
+func (v UInt64Value) DeepCopy(_ atree.SlabStorage, _ atree.Address) (atree.Value, error) {
 	return v, nil
 }
 
@@ -5101,7 +5102,7 @@ func (v UInt128Value) Storable(_ atree.SlabStorage) atree.Storable {
 	return v
 }
 
-func (v UInt128Value) DeepCopy(_ atree.SlabStorage) (atree.Value, error) {
+func (v UInt128Value) DeepCopy(_ atree.SlabStorage, _ atree.Address) (atree.Value, error) {
 	return UInt128Value{new(big.Int).Set(v.BigInt)}, nil
 }
 
@@ -5430,7 +5431,7 @@ func (v UInt256Value) Storable(_ atree.SlabStorage) atree.Storable {
 	return v
 }
 
-func (v UInt256Value) DeepCopy(_ atree.SlabStorage) (atree.Value, error) {
+func (v UInt256Value) DeepCopy(_ atree.SlabStorage, _ atree.Address) (atree.Value, error) {
 	return UInt256Value{new(big.Int).Set(v.BigInt)}, nil
 }
 
@@ -5622,7 +5623,7 @@ func (v Word8Value) Storable(_ atree.SlabStorage) atree.Storable {
 	return v
 }
 
-func (v Word8Value) DeepCopy(_ atree.SlabStorage) (atree.Value, error) {
+func (v Word8Value) DeepCopy(_ atree.SlabStorage, _ atree.Address) (atree.Value, error) {
 	return v, nil
 }
 
@@ -5815,7 +5816,7 @@ func (v Word16Value) Storable(_ atree.SlabStorage) atree.Storable {
 	return v
 }
 
-func (v Word16Value) DeepCopy(_ atree.SlabStorage) (atree.Value, error) {
+func (v Word16Value) DeepCopy(_ atree.SlabStorage, _ atree.Address) (atree.Value, error) {
 	return v, nil
 }
 
@@ -6009,7 +6010,7 @@ func (v Word32Value) Storable(_ atree.SlabStorage) atree.Storable {
 	return v
 }
 
-func (v Word32Value) DeepCopy(_ atree.SlabStorage) (atree.Value, error) {
+func (v Word32Value) DeepCopy(_ atree.SlabStorage, _ atree.Address) (atree.Value, error) {
 	return v, nil
 }
 
@@ -6202,7 +6203,7 @@ func (v Word64Value) Storable(_ atree.SlabStorage) atree.Storable {
 	return v
 }
 
-func (v Word64Value) DeepCopy(_ atree.SlabStorage) (atree.Value, error) {
+func (v Word64Value) DeepCopy(_ atree.SlabStorage, _ atree.Address) (atree.Value, error) {
 	return v, nil
 }
 
@@ -6498,7 +6499,7 @@ func (v Fix64Value) Storable(_ atree.SlabStorage) atree.Storable {
 	return v
 }
 
-func (v Fix64Value) DeepCopy(_ atree.SlabStorage) (atree.Value, error) {
+func (v Fix64Value) DeepCopy(_ atree.SlabStorage, _ atree.Address) (atree.Value, error) {
 	return v, nil
 }
 
@@ -6760,7 +6761,7 @@ func (v UFix64Value) Storable(_ atree.SlabStorage) atree.Storable {
 	return v
 }
 
-func (v UFix64Value) DeepCopy(_ atree.SlabStorage) (atree.Value, error) {
+func (v UFix64Value) DeepCopy(_ atree.SlabStorage, _ atree.Address) (atree.Value, error) {
 	return v, nil
 }
 
@@ -6804,7 +6805,7 @@ func NewCompositeValue(
 	owner *common.Address,
 ) *CompositeValue {
 
-	storageID := storage.GenerateStorageID()
+	storageID := storage.GenerateStorageID(atree.Address{})
 
 	// TODO: only allocate when setting a field
 	if fields == nil {
@@ -7256,14 +7257,14 @@ func (v *CompositeValue) ExternalStorable(storage atree.SlabStorage) atree.Stora
 	}
 }
 
-func (v *CompositeValue) DeepCopy(storage atree.SlabStorage) (atree.Value, error) {
+func (v *CompositeValue) DeepCopy(storage atree.SlabStorage, address atree.Address) (atree.Value, error) {
 
 	newFields := NewStringValueOrderedMap()
 	for pair := v.Fields.Oldest(); pair != nil; pair = pair.Next() {
 		fieldName := pair.Key
 		fieldValue := pair.Value
 
-		fieldValueCopy, err := fieldValue.DeepCopy(storage)
+		fieldValueCopy, err := fieldValue.DeepCopy(storage, address)
 		if err != nil {
 			return nil, err
 		}
@@ -7371,7 +7372,7 @@ func NewDictionaryValueUnownedNonCopying(
 	keysAndValues ...Value,
 ) *DictionaryValue {
 
-	storageID := storage.GenerateStorageID()
+	storageID := storage.GenerateStorageID(atree.Address{})
 
 	keysAndValuesCount := len(keysAndValues)
 	if keysAndValuesCount%2 != 0 {
@@ -7570,7 +7571,7 @@ func (v *DictionaryValue) GetMember(interpreter *Interpreter, _ func() LocationR
 		return NewIntValueFromInt64(int64(v.Count()))
 
 	case "keys":
-		keys, err := v.Keys.DeepCopy(interpreter.Storage)
+		keys, err := v.Keys.DeepCopy(interpreter.Storage, atree.Address{})
 		if err != nil {
 			panic(ExternalError{err})
 		}
@@ -7580,7 +7581,7 @@ func (v *DictionaryValue) GetMember(interpreter *Interpreter, _ func() LocationR
 		dictionaryValues := make([]Value, v.Count())
 		i := 0
 		v.Entries.Foreach(func(_ string, value Value) {
-			valueCopy, err := value.DeepCopy(interpreter.Storage)
+			valueCopy, err := value.DeepCopy(interpreter.Storage, atree.Address{})
 			if err != nil {
 				panic(ExternalError{err})
 			}
@@ -7869,7 +7870,7 @@ func (v *DictionaryValue) ExternalStorable(storage atree.SlabStorage) atree.Stor
 	}
 }
 
-func (v *DictionaryValue) DeepCopy(storage atree.SlabStorage) (atree.Value, error) {
+func (v *DictionaryValue) DeepCopy(storage atree.SlabStorage, address atree.Address) (atree.Value, error) {
 
 	result := NewDictionaryValueUnownedNonCopying(v.Type, storage)
 
@@ -7888,7 +7889,7 @@ func (v *DictionaryValue) DeepCopy(storage atree.SlabStorage) (atree.Value, erro
 			break
 		}
 
-		valueCopy, err := value.DeepCopy(storage)
+		valueCopy, err := value.DeepCopy(storage, address)
 		if err != nil {
 			return nil, err
 		}
@@ -7901,7 +7902,7 @@ func (v *DictionaryValue) DeepCopy(storage atree.SlabStorage) (atree.Value, erro
 		key := pair.Key
 		value := pair.Value
 
-		valueCopy, err := value.DeepCopy(storage)
+		valueCopy, err := value.DeepCopy(storage, address)
 		if err != nil {
 			return nil, err
 		}
@@ -8075,7 +8076,7 @@ func (v NilValue) Storable(_ atree.SlabStorage) atree.Storable {
 	return v
 }
 
-func (v NilValue) DeepCopy(_ atree.SlabStorage) (atree.Value, error) {
+func (v NilValue) DeepCopy(_ atree.SlabStorage, _ atree.Address) (atree.Value, error) {
 	return v, nil
 }
 
@@ -8227,10 +8228,10 @@ func (v *SomeValue) Storable(storage atree.SlabStorage) atree.Storable {
 	}
 }
 
-func (v *SomeValue) DeepCopy(storage atree.SlabStorage) (atree.Value, error) {
+func (v *SomeValue) DeepCopy(storage atree.SlabStorage, address atree.Address) (atree.Value, error) {
 	// TODO:
 
-	valueCopy, err := v.Value.DeepCopy(storage)
+	valueCopy, err := v.Value.DeepCopy(storage, address)
 	if err != nil {
 		return nil, err
 	}
@@ -8478,7 +8479,7 @@ func (v *StorageReferenceValue) Storable(_ atree.SlabStorage) atree.Storable {
 	return atree.NonStorable{Value: v}
 }
 
-func (v *StorageReferenceValue) DeepCopy(_ atree.SlabStorage) (atree.Value, error) {
+func (v *StorageReferenceValue) DeepCopy(_ atree.SlabStorage, _ atree.Address) (atree.Value, error) {
 	return v, nil
 }
 
@@ -8692,7 +8693,7 @@ func (v *EphemeralReferenceValue) Storable(_ atree.SlabStorage) atree.Storable {
 	return atree.NonStorable{Value: v}
 }
 
-func (v *EphemeralReferenceValue) DeepCopy(_ atree.SlabStorage) (atree.Value, error) {
+func (v *EphemeralReferenceValue) DeepCopy(_ atree.SlabStorage, _ atree.Address) (atree.Value, error) {
 	return v, nil
 }
 
@@ -8828,7 +8829,7 @@ func (v AddressValue) Storable(_ atree.SlabStorage) atree.Storable {
 	return v
 }
 
-func (v AddressValue) DeepCopy(_ atree.SlabStorage) (atree.Value, error) {
+func (v AddressValue) DeepCopy(_ atree.SlabStorage, _ atree.Address) (atree.Value, error) {
 	return v, nil
 }
 
@@ -9121,7 +9122,7 @@ func (v PathValue) Storable(_ atree.SlabStorage) atree.Storable {
 	return v
 }
 
-func (v PathValue) DeepCopy(_ atree.SlabStorage) (atree.Value, error) {
+func (v PathValue) DeepCopy(_ atree.SlabStorage, _ atree.Address) (atree.Value, error) {
 	return v, nil
 }
 
@@ -9263,7 +9264,7 @@ func (v CapabilityValue) Storable(_ atree.SlabStorage) atree.Storable {
 	return v
 }
 
-func (v CapabilityValue) DeepCopy(_ atree.SlabStorage) (atree.Value, error) {
+func (v CapabilityValue) DeepCopy(_ atree.SlabStorage, _ atree.Address) (atree.Value, error) {
 	return v, nil
 }
 
@@ -9353,7 +9354,7 @@ func (v LinkValue) Storable(_ atree.SlabStorage) atree.Storable {
 	return v
 }
 
-func (v LinkValue) DeepCopy(_ atree.SlabStorage) (atree.Value, error) {
+func (v LinkValue) DeepCopy(_ atree.SlabStorage, _ atree.Address) (atree.Value, error) {
 	return v, nil
 }
 
@@ -9402,7 +9403,7 @@ func NewPublicKeyValue(
 	computedFields.Set(
 		sema.PublicKeyPublicKeyField,
 		func(interpreter *Interpreter) Value {
-			keyCopy, err := publicKey.DeepCopy(storage)
+			keyCopy, err := publicKey.DeepCopy(storage, atree.Address{})
 			if err != nil {
 				panic(err)
 			}
@@ -9435,7 +9436,7 @@ func NewPublicKeyValue(
 		if stringerFields == nil {
 			stringerFields = NewStringValueOrderedMap()
 
-			keyCopy, err := publicKey.DeepCopy(storage)
+			keyCopy, err := publicKey.DeepCopy(storage, atree.Address{})
 			if err != nil {
 				panic(err)
 			}
