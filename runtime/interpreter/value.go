@@ -8003,6 +8003,7 @@ func (v *SomeValue) IsStorable() bool {
 }
 
 func (v *SomeValue) Storable(storage atree.SlabStorage, address atree.Address) (atree.Storable, error) {
+	// TODO: do we need this also for other containers (arrays, composites, dictionaries)?
 	if !v.IsStorable() {
 		return atree.NonStorable{Value: v}, nil
 	}

@@ -2650,3 +2650,47 @@ func newTestInterpreterWithTestStruct(tb testing.TB) *Interpreter {
 
 	return inter
 }
+
+func TestNonStorable(t *testing.T) {
+
+	t.Parallel()
+
+	storage := NewInMemoryStorage()
+
+	code := `
+      pub struct Foo {
+
+          let bar: &Int?
+
+          init() {
+              self.bar = &1 as &Int
+          }
+      }
+
+      fun foo(): &Int? {
+          return Foo().bar
+      }
+    `
+
+	checker, err := checkerUtils.ParseAndCheckWithOptions(t,
+		code,
+		checkerUtils.ParseAndCheckOptions{},
+	)
+
+	require.NoError(t, err)
+
+	inter, err := NewInterpreter(
+		ProgramFromChecker(checker),
+		checker.Location,
+		WithStorage(storage),
+	)
+
+	require.NoError(t, err)
+
+	err = inter.Interpret()
+	require.NoError(t, err)
+
+	_, err = inter.Invoke("foo")
+	require.NoError(t, err)
+
+}
