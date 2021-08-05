@@ -663,8 +663,6 @@ func NewArrayValueUnownedNonCopying(
 	}
 
 	for i, value := range values {
-		// TODO: deep copy
-
 		v.Insert(i, value, ReturnEmptyLocationRange)
 	}
 
@@ -6583,7 +6581,6 @@ type CompositeValue struct {
 	NestedVariables *StringVariableOrderedMap
 	Functions       map[string]FunctionValue
 	Destructor      FunctionValue
-	Owner           *common.Address
 	destroyed       bool
 	Stringer        func(seenReferences SeenReferences) string
 	StorageID       atree.StorageID
@@ -6597,10 +6594,10 @@ func NewCompositeValue(
 	qualifiedIdentifier string,
 	kind common.CompositeKind,
 	fields *StringValueOrderedMap,
-	owner *common.Address,
+	address atree.Address,
 ) *CompositeValue {
 
-	storageID := storage.GenerateStorageID(atree.Address{})
+	storageID := storage.GenerateStorageID(address)
 
 	// TODO: only allocate when setting a field
 	if fields == nil {
@@ -6612,7 +6609,6 @@ func NewCompositeValue(
 		QualifiedIdentifier: qualifiedIdentifier,
 		Kind:                kind,
 		Fields:              fields,
-		Owner:               owner,
 		StorageID:           storageID,
 	}
 
@@ -6705,10 +6701,6 @@ func (v *CompositeValue) checkStatus(getLocationRange func() LocationRange) {
 	}
 }
 
-func (v *CompositeValue) GetOwner() *common.Address {
-	return v.Owner
-}
-
 func (v *CompositeValue) GetMember(interpreter *Interpreter, getLocationRange func() LocationRange, name string) Value {
 	v.checkStatus(getLocationRange)
 
@@ -6793,12 +6785,13 @@ func (v *CompositeValue) InitializeFunctions(interpreter *Interpreter) {
 }
 
 func (v *CompositeValue) OwnerValue(interpreter *Interpreter) OptionalValue {
-	if v.Owner == nil {
+	address := v.StorageID.Address
+
+	if address == (atree.Address{}) {
 		return NilValue{}
 	}
 
-	address := AddressValue(*v.Owner)
-	ownerAccount := interpreter.accountHandler(address)
+	ownerAccount := interpreter.accountHandler(AddressValue(address))
 
 	// Owner must be of `PublicAccount` type.
 	interpreter.ExpectType(ownerAccount, sema.PublicAccountType, nil)
@@ -7045,15 +7038,13 @@ func (v *CompositeValue) DeepCopy(storage atree.SlabStorage, address atree.Addre
 		newFields.Set(fieldName, fieldValueCopy.(Value))
 	}
 
-	// TODO: use address
 	newValue := NewCompositeValue(
 		storage,
 		v.Location,
 		v.QualifiedIdentifier,
 		v.Kind,
 		newFields,
-		// NOTE: new value has no owner
-		nil,
+		address,
 	)
 
 	newValue.InjectedFields = v.InjectedFields
@@ -7145,8 +7136,22 @@ func NewDictionaryValueUnownedNonCopying(
 	storage atree.SlabStorage,
 	keysAndValues ...Value,
 ) *DictionaryValue {
+	return NewDictionaryValueUnownedNonCopyingWithAddress(
+		dictionaryType,
+		storage,
+		atree.Address{},
+		keysAndValues...,
+	)
+}
 
-	storageID := storage.GenerateStorageID(atree.Address{})
+func NewDictionaryValueUnownedNonCopyingWithAddress(
+	dictionaryType DictionaryStaticType,
+	storage atree.SlabStorage,
+	address atree.Address,
+	keysAndValues ...Value,
+) *DictionaryValue {
+
+	storageID := storage.GenerateStorageID(address)
 
 	keysAndValuesCount := len(keysAndValues)
 	if keysAndValuesCount%2 != 0 {
@@ -7648,8 +7653,7 @@ func (v *DictionaryValue) ExternalStorable(storage atree.SlabStorage) atree.Stor
 
 func (v *DictionaryValue) DeepCopy(storage atree.SlabStorage, address atree.Address) (atree.Value, error) {
 
-	// TODO: use address
-	result := NewDictionaryValueUnownedNonCopying(v.Type, storage)
+	result := NewDictionaryValueUnownedNonCopyingWithAddress(v.Type, storage, address)
 
 	iterator, err := v.Keys.array.Iterator()
 	if err != nil {

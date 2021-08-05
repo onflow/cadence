@@ -21,7 +21,7 @@ package interpreter_test
 import (
 	"testing"
 
-	"github.com/onflow/cadence/runtime/common"
+	"github.com/fxamacker/atree"
 	. "github.com/onflow/cadence/runtime/interpreter"
 	"github.com/stretchr/testify/assert"
 )
@@ -53,7 +53,7 @@ func TestInspectValue(t *testing.T) {
 
 	optionalValue := NewSomeValueOwningNonCopying(arrayValue)
 
-	compositeValue := newTestCompositeValue(storage, common.Address{})
+	compositeValue := newTestCompositeValue(storage, atree.Address{})
 	compositeValue.Fields.Set("value", optionalValue)
 
 	t.Run("dict", func(t *testing.T) {

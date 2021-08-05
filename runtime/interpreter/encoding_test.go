@@ -47,7 +47,7 @@ type encodeDecodeTest struct {
 	check         func(actual Value)
 }
 
-var testOwner = common.BytesToAddress([]byte{0x42})
+var testOwner = atree.Address(common.BytesToAddress([]byte{0x42}))
 
 func testEncodeDecode(t *testing.T, test encodeDecodeTest) {
 
@@ -60,7 +60,7 @@ func testEncodeDecode(t *testing.T, test encodeDecodeTest) {
 
 		if test.value != nil {
 			if test.storable == nil {
-				test.storable = test.value.Storable(test.storage, atree.Address(testOwner))
+				test.storable = test.value.Storable(test.storage, testOwner)
 			}
 		}
 
@@ -486,7 +486,7 @@ func TestEncodeDecodeComposite(t *testing.T) {
 			"TestStruct",
 			common.CompositeKindStructure,
 			NewStringValueOrderedMap(),
-			nil,
+			testOwner,
 		)
 
 		encodedValue := []byte{
@@ -494,7 +494,7 @@ func TestEncodeDecodeComposite(t *testing.T) {
 			0xd8, atree.CBORTagStorageID,
 
 			// storage ID
-			0x50, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
+			0x50, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x42, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
 		}
 
 		encodedStorable := []byte{
@@ -574,7 +574,7 @@ func TestEncodeDecodeComposite(t *testing.T) {
 			"TestResource",
 			common.CompositeKindResource,
 			members,
-			nil,
+			testOwner,
 		)
 
 		encodedValue := []byte{
@@ -582,7 +582,7 @@ func TestEncodeDecodeComposite(t *testing.T) {
 			0xd8, atree.CBORTagStorageID,
 
 			// storage ID
-			0x50, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
+			0x50, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x42, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
 		}
 
 		encodedStorable := []byte{
@@ -673,7 +673,7 @@ func TestEncodeDecodeComposite(t *testing.T) {
 			"TestStruct",
 			common.CompositeKindStructure,
 			NewStringValueOrderedMap(),
-			nil,
+			testOwner,
 		)
 
 		encodedValue := []byte{
@@ -681,7 +681,7 @@ func TestEncodeDecodeComposite(t *testing.T) {
 			0xd8, atree.CBORTagStorageID,
 
 			// storage ID
-			0x50, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
+			0x50, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x42, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
 		}
 
 		encodedStorable := []byte{

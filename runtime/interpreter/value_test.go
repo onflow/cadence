@@ -36,14 +36,14 @@ import (
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
-func newTestCompositeValue(storage Storage, owner common.Address) *CompositeValue {
+func newTestCompositeValue(storage Storage, owner atree.Address) *CompositeValue {
 	return NewCompositeValue(
 		storage,
 		utils.TestLocation,
 		"Test",
 		common.CompositeKindStructure,
 		NewStringValueOrderedMap(),
-		&owner,
+		owner,
 	)
 }
 
@@ -711,7 +711,7 @@ func TestStringer(t *testing.T) {
 					"Foo",
 					common.CompositeKindResource,
 					members,
-					nil,
+					atree.Address{},
 				)
 			}(),
 			expected: "S.test.Foo(y: \"bar\")",
@@ -727,7 +727,7 @@ func TestStringer(t *testing.T) {
 					"Foo",
 					common.CompositeKindResource,
 					members,
-					nil,
+					atree.Address{},
 				)
 
 				compositeValue.Stringer = func(_ SeenReferences) string {
@@ -874,7 +874,7 @@ func TestVisitor(t *testing.T) {
 		"Foo",
 		common.CompositeKindStructure,
 		members,
-		nil,
+		atree.Address{},
 	)
 
 	value.Accept(inter, visitor)
@@ -997,7 +997,7 @@ func TestKeyString(t *testing.T) {
 					"Foo",
 					common.CompositeKindEnum,
 					members,
-					nil,
+					atree.Address{},
 				)
 			}(),
 			expected: "42",
@@ -2138,7 +2138,7 @@ func TestCompositeValue_Equal(t *testing.T) {
 				"X",
 				common.CompositeKindStructure,
 				fields1,
-				nil,
+				atree.Address{},
 			).Equal(
 				NewCompositeValue(
 					storage,
@@ -2146,7 +2146,7 @@ func TestCompositeValue_Equal(t *testing.T) {
 					"X",
 					common.CompositeKindStructure,
 					fields2,
-					nil,
+					atree.Address{},
 				),
 				ReturnEmptyLocationRange,
 			),
@@ -2172,7 +2172,7 @@ func TestCompositeValue_Equal(t *testing.T) {
 				"X",
 				common.CompositeKindStructure,
 				fields1,
-				nil,
+				atree.Address{},
 			).Equal(
 				NewCompositeValue(
 					storage,
@@ -2180,7 +2180,7 @@ func TestCompositeValue_Equal(t *testing.T) {
 					"X",
 					common.CompositeKindStructure,
 					fields2,
-					nil,
+					atree.Address{},
 				),
 				ReturnEmptyLocationRange,
 			),
@@ -2206,7 +2206,7 @@ func TestCompositeValue_Equal(t *testing.T) {
 				"X",
 				common.CompositeKindStructure,
 				fields1,
-				nil,
+				atree.Address{},
 			).Equal(
 				NewCompositeValue(
 					storage,
@@ -2214,7 +2214,7 @@ func TestCompositeValue_Equal(t *testing.T) {
 					"Y",
 					common.CompositeKindStructure,
 					fields2,
-					nil,
+					atree.Address{},
 				),
 				ReturnEmptyLocationRange,
 			),
@@ -2240,7 +2240,7 @@ func TestCompositeValue_Equal(t *testing.T) {
 				"X",
 				common.CompositeKindStructure,
 				fields1,
-				nil,
+				atree.Address{},
 			).Equal(
 				NewCompositeValue(
 					storage,
@@ -2248,7 +2248,7 @@ func TestCompositeValue_Equal(t *testing.T) {
 					"X",
 					common.CompositeKindStructure,
 					fields2,
-					nil,
+					atree.Address{},
 				),
 				ReturnEmptyLocationRange,
 			),
@@ -2275,7 +2275,7 @@ func TestCompositeValue_Equal(t *testing.T) {
 				"X",
 				common.CompositeKindStructure,
 				fields1,
-				nil,
+				atree.Address{},
 			).Equal(
 				NewCompositeValue(
 					storage,
@@ -2283,7 +2283,7 @@ func TestCompositeValue_Equal(t *testing.T) {
 					"X",
 					common.CompositeKindStructure,
 					fields2,
-					nil,
+					atree.Address{},
 				),
 				ReturnEmptyLocationRange,
 			),
@@ -2310,7 +2310,7 @@ func TestCompositeValue_Equal(t *testing.T) {
 				"X",
 				common.CompositeKindStructure,
 				fields1,
-				nil,
+				atree.Address{},
 			).Equal(
 				NewCompositeValue(
 					storage,
@@ -2318,7 +2318,7 @@ func TestCompositeValue_Equal(t *testing.T) {
 					"X",
 					common.CompositeKindStructure,
 					fields2,
-					nil,
+					atree.Address{},
 				),
 				ReturnEmptyLocationRange,
 			),
@@ -2344,7 +2344,7 @@ func TestCompositeValue_Equal(t *testing.T) {
 				"X",
 				common.CompositeKindStructure,
 				fields1,
-				nil,
+				atree.Address{},
 			).Equal(
 				NewCompositeValue(
 					storage,
@@ -2352,7 +2352,7 @@ func TestCompositeValue_Equal(t *testing.T) {
 					"X",
 					common.CompositeKindResource,
 					fields2,
-					nil,
+					atree.Address{},
 				),
 				ReturnEmptyLocationRange,
 			),
@@ -2375,7 +2375,7 @@ func TestCompositeValue_Equal(t *testing.T) {
 				"X",
 				common.CompositeKindStructure,
 				fields1,
-				nil,
+				atree.Address{},
 			).Equal(
 				NewStringValue("test"),
 				ReturnEmptyLocationRange,
