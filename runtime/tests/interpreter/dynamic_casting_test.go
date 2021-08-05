@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/fxamacker/atree"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -1275,7 +1276,7 @@ func TestInterpretDynamicCastingDictionary(t *testing.T) {
 							},
 							storage,
 							interpreter.NewStringValue("test"), interpreter.NewIntValueFromInt64(42),
-						).DeepCopy(storage)
+						).DeepCopy(storage, atree.Address{})
 						require.NoError(t, err)
 
 						expectedDictionary := expectedValue.(interpreter.Value)

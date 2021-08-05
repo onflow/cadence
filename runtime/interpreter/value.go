@@ -7296,6 +7296,7 @@ func (v *CompositeValue) DeepCopy(storage atree.SlabStorage, address atree.Addre
 		newFields.Set(fieldName, fieldValueCopy.(Value))
 	}
 
+	// TODO: use address
 	newValue := NewCompositeValue(
 		storage,
 		v.Location,
@@ -7916,6 +7917,7 @@ func (v *DictionaryValue) ExternalStorable(storage atree.SlabStorage) atree.Stor
 
 func (v *DictionaryValue) DeepCopy(storage atree.SlabStorage, address atree.Address) (atree.Value, error) {
 
+	// TODO: use address
 	result := NewDictionaryValueUnownedNonCopying(v.Type, storage)
 
 	iterator, err := v.Keys.array.Iterator()
