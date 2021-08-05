@@ -121,8 +121,8 @@ func (InterpretedFunctionValue) IsStorable() bool {
 	return false
 }
 
-func (f InterpretedFunctionValue) Storable(_ atree.SlabStorage, _ atree.Address) atree.Storable {
-	return atree.NonStorable{Value: f}
+func (f InterpretedFunctionValue) Storable(_ atree.SlabStorage, _ atree.Address) (atree.Storable, error) {
+	return atree.NonStorable{Value: f}, nil
 }
 
 func (f InterpretedFunctionValue) DeepCopy(_ atree.SlabStorage, _ atree.Address) (atree.Value, error) {
@@ -209,8 +209,8 @@ func (HostFunctionValue) IsStorable() bool {
 	return false
 }
 
-func (f HostFunctionValue) Storable(_ atree.SlabStorage, _ atree.Address) atree.Storable {
-	return atree.NonStorable{Value: f}
+func (f HostFunctionValue) Storable(_ atree.SlabStorage, _ atree.Address) (atree.Storable, error) {
+	return atree.NonStorable{Value: f}, nil
 }
 
 func (f HostFunctionValue) DeepCopy(_ atree.SlabStorage, _ atree.Address) (atree.Value, error) {
@@ -273,8 +273,8 @@ func (BoundFunctionValue) IsStorable() bool {
 	return false
 }
 
-func (f BoundFunctionValue) Storable(_ atree.SlabStorage, _ atree.Address) atree.Storable {
-	return atree.NonStorable{Value: f}
+func (f BoundFunctionValue) Storable(_ atree.SlabStorage, _ atree.Address) (atree.Storable, error) {
+	return atree.NonStorable{Value: f}, nil
 }
 
 func (f BoundFunctionValue) DeepCopy(_ atree.SlabStorage, _ atree.Address) (atree.Value, error) {

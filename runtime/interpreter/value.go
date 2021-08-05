@@ -201,9 +201,9 @@ func (TypeValue) IsStorable() bool {
 	return true
 }
 
-func (v TypeValue) Storable(_ atree.SlabStorage, _ atree.Address) atree.Storable {
+func (v TypeValue) Storable(_ atree.SlabStorage, _ atree.Address) (atree.Storable, error) {
 	// TODO: store in storage and return StorageIDStorable if size > max element inline size
-	return v
+	return v, nil
 }
 
 func (v TypeValue) DeepCopy(_ atree.SlabStorage, _ atree.Address) (atree.Value, error) {
@@ -268,8 +268,8 @@ func (v VoidValue) Equal(other Value, _ func() LocationRange) bool {
 	return ok
 }
 
-func (v VoidValue) Storable(_ atree.SlabStorage, _ atree.Address) atree.Storable {
-	return v
+func (v VoidValue) Storable(_ atree.SlabStorage, _ atree.Address) (atree.Storable, error) {
+	return v, nil
 }
 
 func (v VoidValue) DeepCopy(_ atree.SlabStorage, _ atree.Address) (atree.Value, error) {
@@ -349,8 +349,8 @@ func (BoolValue) IsStorable() bool {
 	return true
 }
 
-func (v BoolValue) Storable(_ atree.SlabStorage, _ atree.Address) atree.Storable {
-	return v
+func (v BoolValue) Storable(_ atree.SlabStorage, _ atree.Address) (atree.Storable, error) {
+	return v, nil
 }
 
 func (v BoolValue) DeepCopy(_ atree.SlabStorage, _ atree.Address) (atree.Value, error) {
@@ -580,9 +580,9 @@ func (*StringValue) IsStorable() bool {
 	return true
 }
 
-func (v *StringValue) Storable(_ atree.SlabStorage, _ atree.Address) atree.Storable {
+func (v *StringValue) Storable(_ atree.SlabStorage, _ atree.Address) (atree.Storable, error) {
 	// TODO: store in storage and return StorageIDStorable if size > max element inline size
-	return v
+	return v, nil
 }
 
 func (v *StringValue) DeepCopy(_ atree.SlabStorage, _ atree.Address) (atree.Value, error) {
@@ -1050,8 +1050,8 @@ func (v *ArrayValue) Equal(other Value, getLocationRange func() LocationRange) b
 	return true
 }
 
-func (v *ArrayValue) Storable(_ atree.SlabStorage, _ atree.Address) atree.Storable {
-	return atree.StorageIDStorable(v.array.StorageID())
+func (v *ArrayValue) Storable(_ atree.SlabStorage, _ atree.Address) (atree.Storable, error) {
+	return atree.StorageIDStorable(v.array.StorageID()), nil
 }
 
 func (v *ArrayValue) DeepCopy(storage atree.SlabStorage, address atree.Address) (atree.Value, error) {
@@ -1393,9 +1393,9 @@ func (IntValue) IsStorable() bool {
 	return true
 }
 
-func (v IntValue) Storable(_ atree.SlabStorage, _ atree.Address) atree.Storable {
+func (v IntValue) Storable(_ atree.SlabStorage, _ atree.Address) (atree.Storable, error) {
 	// TODO: store in storage and return StorageIDStorable if size > max element inline size
-	return v
+	return v, nil
 }
 
 func (v IntValue) DeepCopy(_ atree.SlabStorage, _ atree.Address) (atree.Value, error) {
@@ -1701,8 +1701,8 @@ func (Int8Value) IsStorable() bool {
 	return true
 }
 
-func (v Int8Value) Storable(_ atree.SlabStorage, _ atree.Address) atree.Storable {
-	return v
+func (v Int8Value) Storable(_ atree.SlabStorage, _ atree.Address) (atree.Storable, error) {
+	return v, nil
 }
 
 func (v Int8Value) DeepCopy(_ atree.SlabStorage, _ atree.Address) (atree.Value, error) {
@@ -2010,8 +2010,8 @@ func (Int16Value) IsStorable() bool {
 	return true
 }
 
-func (v Int16Value) Storable(_ atree.SlabStorage, _ atree.Address) atree.Storable {
-	return v
+func (v Int16Value) Storable(_ atree.SlabStorage, _ atree.Address) (atree.Storable, error) {
+	return v, nil
 }
 
 func (v Int16Value) DeepCopy(_ atree.SlabStorage, _ atree.Address) (atree.Value, error) {
@@ -2319,8 +2319,8 @@ func (Int32Value) IsStorable() bool {
 	return true
 }
 
-func (v Int32Value) Storable(_ atree.SlabStorage, _ atree.Address) atree.Storable {
-	return v
+func (v Int32Value) Storable(_ atree.SlabStorage, _ atree.Address) (atree.Storable, error) {
+	return v, nil
 }
 
 func (v Int32Value) DeepCopy(_ atree.SlabStorage, _ atree.Address) (atree.Value, error) {
@@ -2627,8 +2627,8 @@ func (Int64Value) IsStorable() bool {
 	return true
 }
 
-func (v Int64Value) Storable(_ atree.SlabStorage, _ atree.Address) atree.Storable {
-	return v
+func (v Int64Value) Storable(_ atree.SlabStorage, _ atree.Address) (atree.Storable, error) {
+	return v, nil
 }
 
 func (v Int64Value) DeepCopy(_ atree.SlabStorage, _ atree.Address) (atree.Value, error) {
@@ -3005,8 +3005,8 @@ func (Int128Value) IsStorable() bool {
 	return true
 }
 
-func (v Int128Value) Storable(_ atree.SlabStorage, _ atree.Address) atree.Storable {
-	return v
+func (v Int128Value) Storable(_ atree.SlabStorage, _ atree.Address) (atree.Storable, error) {
+	return v, nil
 }
 
 func (v Int128Value) DeepCopy(_ atree.SlabStorage, _ atree.Address) (atree.Value, error) {
@@ -3383,8 +3383,8 @@ func (Int256Value) IsStorable() bool {
 	return true
 }
 
-func (v Int256Value) Storable(_ atree.SlabStorage, _ atree.Address) atree.Storable {
-	return v
+func (v Int256Value) Storable(_ atree.SlabStorage, _ atree.Address) (atree.Storable, error) {
+	return v, nil
 }
 
 func (v Int256Value) DeepCopy(_ atree.SlabStorage, _ atree.Address) (atree.Value, error) {
@@ -3651,9 +3651,9 @@ func (UIntValue) IsStorable() bool {
 	return true
 }
 
-func (v UIntValue) Storable(_ atree.SlabStorage, _ atree.Address) atree.Storable {
+func (v UIntValue) Storable(_ atree.SlabStorage, _ atree.Address) (atree.Storable, error) {
 	// TODO: store in storage and return StorageIDStorable if size > max element inline size
-	return v
+	return v, nil
 }
 
 func (v UIntValue) DeepCopy(_ atree.SlabStorage, _ atree.Address) (atree.Value, error) {
@@ -3890,8 +3890,8 @@ func (UInt8Value) IsStorable() bool {
 	return true
 }
 
-func (v UInt8Value) Storable(_ atree.SlabStorage, _ atree.Address) atree.Storable {
-	return v
+func (v UInt8Value) Storable(_ atree.SlabStorage, _ atree.Address) (atree.Storable, error) {
+	return v, nil
 }
 
 func (v UInt8Value) DeepCopy(_ atree.SlabStorage, _ atree.Address) (atree.Value, error) {
@@ -4129,8 +4129,8 @@ func (UInt16Value) IsStorable() bool {
 	return true
 }
 
-func (v UInt16Value) Storable(_ atree.SlabStorage, _ atree.Address) atree.Storable {
-	return v
+func (v UInt16Value) Storable(_ atree.SlabStorage, _ atree.Address) (atree.Storable, error) {
+	return v, nil
 }
 
 func (v UInt16Value) DeepCopy(_ atree.SlabStorage, _ atree.Address) (atree.Value, error) {
@@ -4368,8 +4368,8 @@ func (UInt32Value) IsStorable() bool {
 	return true
 }
 
-func (v UInt32Value) Storable(_ atree.SlabStorage, _ atree.Address) atree.Storable {
-	return v
+func (v UInt32Value) Storable(_ atree.SlabStorage, _ atree.Address) (atree.Storable, error) {
+	return v, nil
 }
 
 func (v UInt32Value) DeepCopy(_ atree.SlabStorage, _ atree.Address) (atree.Value, error) {
@@ -4610,8 +4610,8 @@ func (UInt64Value) IsStorable() bool {
 	return true
 }
 
-func (v UInt64Value) Storable(_ atree.SlabStorage, _ atree.Address) atree.Storable {
-	return v
+func (v UInt64Value) Storable(_ atree.SlabStorage, _ atree.Address) (atree.Storable, error) {
+	return v, nil
 }
 
 func (v UInt64Value) DeepCopy(_ atree.SlabStorage, _ atree.Address) (atree.Value, error) {
@@ -4930,8 +4930,8 @@ func (UInt128Value) IsStorable() bool {
 	return true
 }
 
-func (v UInt128Value) Storable(_ atree.SlabStorage, _ atree.Address) atree.Storable {
-	return v
+func (v UInt128Value) Storable(_ atree.SlabStorage, _ atree.Address) (atree.Storable, error) {
+	return v, nil
 }
 
 func (v UInt128Value) DeepCopy(_ atree.SlabStorage, _ atree.Address) (atree.Value, error) {
@@ -5250,8 +5250,8 @@ func (UInt256Value) IsStorable() bool {
 	return true
 }
 
-func (v UInt256Value) Storable(_ atree.SlabStorage, _ atree.Address) atree.Storable {
-	return v
+func (v UInt256Value) Storable(_ atree.SlabStorage, _ atree.Address) (atree.Storable, error) {
+	return v, nil
 }
 
 func (v UInt256Value) DeepCopy(_ atree.SlabStorage, _ atree.Address) (atree.Value, error) {
@@ -5433,8 +5433,8 @@ func (Word8Value) IsStorable() bool {
 	return true
 }
 
-func (v Word8Value) Storable(_ atree.SlabStorage, _ atree.Address) atree.Storable {
-	return v
+func (v Word8Value) Storable(_ atree.SlabStorage, _ atree.Address) (atree.Storable, error) {
+	return v, nil
 }
 
 func (v Word8Value) DeepCopy(_ atree.SlabStorage, _ atree.Address) (atree.Value, error) {
@@ -5617,8 +5617,8 @@ func (Word16Value) IsStorable() bool {
 	return true
 }
 
-func (v Word16Value) Storable(_ atree.SlabStorage, _ atree.Address) atree.Storable {
-	return v
+func (v Word16Value) Storable(_ atree.SlabStorage, _ atree.Address) (atree.Storable, error) {
+	return v, nil
 }
 
 func (v Word16Value) DeepCopy(_ atree.SlabStorage, _ atree.Address) (atree.Value, error) {
@@ -5802,8 +5802,8 @@ func (Word32Value) IsStorable() bool {
 	return true
 }
 
-func (v Word32Value) Storable(_ atree.SlabStorage, _ atree.Address) atree.Storable {
-	return v
+func (v Word32Value) Storable(_ atree.SlabStorage, _ atree.Address) (atree.Storable, error) {
+	return v, nil
 }
 
 func (v Word32Value) DeepCopy(_ atree.SlabStorage, _ atree.Address) (atree.Value, error) {
@@ -5986,8 +5986,8 @@ func (Word64Value) IsStorable() bool {
 	return true
 }
 
-func (v Word64Value) Storable(_ atree.SlabStorage, _ atree.Address) atree.Storable {
-	return v
+func (v Word64Value) Storable(_ atree.SlabStorage, _ atree.Address) (atree.Storable, error) {
+	return v, nil
 }
 
 func (v Word64Value) DeepCopy(_ atree.SlabStorage, _ atree.Address) (atree.Value, error) {
@@ -6273,8 +6273,8 @@ func (Fix64Value) IsStorable() bool {
 	return true
 }
 
-func (v Fix64Value) Storable(_ atree.SlabStorage, _ atree.Address) atree.Storable {
-	return v
+func (v Fix64Value) Storable(_ atree.SlabStorage, _ atree.Address) (atree.Storable, error) {
+	return v, nil
 }
 
 func (v Fix64Value) DeepCopy(_ atree.SlabStorage, _ atree.Address) (atree.Value, error) {
@@ -6526,8 +6526,8 @@ func (UFix64Value) IsStorable() bool {
 	return true
 }
 
-func (v UFix64Value) Storable(_ atree.SlabStorage, _ atree.Address) atree.Storable {
-	return v
+func (v UFix64Value) Storable(_ atree.SlabStorage, _ atree.Address) (atree.Storable, error) {
+	return v, nil
 }
 
 func (v UFix64Value) DeepCopy(_ atree.SlabStorage, _ atree.Address) (atree.Value, error) {
@@ -6594,13 +6594,19 @@ func NewCompositeValue(
 }
 
 func (v *CompositeValue) store(storage atree.SlabStorage) {
-	if err := storage.Store(
+	storable, err := v.ExternalStorable(storage)
+	if err != nil {
+		panic(ExternalError{err})
+	}
+
+	err = storage.Store(
 		v.StorageID,
 		atree.StorableSlab{
 			StorageID: v.StorageID,
-			Storable:  v.ExternalStorable(storage),
+			Storable:  storable,
 		},
-	); err != nil {
+	)
+	if err != nil {
 		panic(ExternalError{err})
 	}
 }
@@ -6986,20 +6992,27 @@ func (v *CompositeValue) IsStorable() bool {
 	return true
 }
 
-func (v *CompositeValue) Storable(_ atree.SlabStorage, _ atree.Address) atree.Storable {
-	return atree.StorageIDStorable(v.StorageID)
+func (v *CompositeValue) Storable(_ atree.SlabStorage, _ atree.Address) (atree.Storable, error) {
+	return atree.StorageIDStorable(v.StorageID), nil
 }
 
-func (v *CompositeValue) ExternalStorable(storage atree.SlabStorage) atree.Storable {
+func (v *CompositeValue) ExternalStorable(storage atree.SlabStorage) (atree.Storable, error) {
 
 	fields := make([]CompositeStorableField, 0, v.Fields.Len())
 
-	v.Fields.Foreach(func(key string, value Value) {
+	for pair := v.Fields.Oldest(); pair != nil; pair = pair.Next() {
+		fieldName := pair.Key
+		fieldValue := pair.Value
+
+		storable, err := fieldValue.Storable(storage, v.StorageID.Address)
+		if err != nil {
+			return nil, err
+		}
 		fields = append(fields, CompositeStorableField{
-			Name:     key,
-			Storable: value.Storable(storage, v.StorageID.Address),
+			Name:     fieldName,
+			Storable: storable,
 		})
-	})
+	}
 
 	return CompositeStorable{
 		Location:            v.Location,
@@ -7007,7 +7020,7 @@ func (v *CompositeValue) ExternalStorable(storage atree.SlabStorage) atree.Stora
 		Kind:                v.Kind,
 		Fields:              fields,
 		StorageID:           v.StorageID,
-	}
+	}, nil
 }
 
 func (v *CompositeValue) DeepCopy(storage atree.SlabStorage, address atree.Address) (atree.Value, error) {
@@ -7586,36 +7599,52 @@ func (v *DictionaryValue) Equal(other Value, getLocationRange func() LocationRan
 }
 
 func (v *DictionaryValue) store(storage atree.SlabStorage) {
-	if err := storage.Store(
+	storable, err := v.ExternalStorable(storage)
+	if err != nil {
+		panic(ExternalError{err})
+	}
+
+	err = storage.Store(
 		v.StorageID,
 		atree.StorableSlab{
 			StorageID: v.StorageID,
-			Storable:  v.ExternalStorable(storage),
+			Storable:  storable,
 		},
-	); err != nil {
+	)
+	if err != nil {
 		panic(ExternalError{err})
 	}
 }
 
-func (v *DictionaryValue) Storable(_ atree.SlabStorage, _ atree.Address) atree.Storable {
-	return atree.StorageIDStorable(v.StorageID)
+func (v *DictionaryValue) Storable(_ atree.SlabStorage, _ atree.Address) (atree.Storable, error) {
+	return atree.StorageIDStorable(v.StorageID), nil
 }
 
-func (v *DictionaryValue) ExternalStorable(storage atree.SlabStorage) atree.Storable {
+func (v *DictionaryValue) ExternalStorable(storage atree.SlabStorage) (atree.Storable, error) {
 
 	values := make([]atree.Storable, v.Count())
 	i := 0
-	v.Entries.Foreach(func(_ string, value Value) {
-		values[i] = value.Storable(storage, v.StorageID.Address)
+	for pair := v.Entries.Oldest(); pair != nil; pair = pair.Next() {
+		value := pair.Value
+		storable, err := value.Storable(storage, v.StorageID.Address)
+		if err != nil {
+			return nil, err
+		}
+		values[i] = storable
 		i++
-	})
+	}
+
+	keys, err := v.Keys.Storable(storage, v.StorageID.Address)
+	if err != nil {
+		return nil, err
+	}
 
 	return DictionaryStorable{
 		Type:      v.Type,
-		Keys:      v.Keys.Storable(storage, v.StorageID.Address),
+		Keys:      keys,
 		Values:    values,
 		StorageID: v.StorageID,
-	}
+	}, nil
 }
 
 func (v *DictionaryValue) DeepCopy(storage atree.SlabStorage, address atree.Address) (atree.Value, error) {
@@ -7811,8 +7840,8 @@ func (NilValue) IsStorable() bool {
 	return true
 }
 
-func (v NilValue) Storable(_ atree.SlabStorage, _ atree.Address) atree.Storable {
-	return v
+func (v NilValue) Storable(_ atree.SlabStorage, _ atree.Address) (atree.Storable, error) {
+	return v, nil
 }
 
 func (v NilValue) DeepCopy(_ atree.SlabStorage, _ atree.Address) (atree.Value, error) {
@@ -7944,11 +7973,16 @@ func (v *SomeValue) IsStorable() bool {
 	return v.Value.IsStorable()
 }
 
-func (v *SomeValue) Storable(storage atree.SlabStorage, address atree.Address) atree.Storable {
+func (v *SomeValue) Storable(storage atree.SlabStorage, address atree.Address) (atree.Storable, error) {
 	// TODO: store in storage and return StorageIDStorable if size > max element inline size
-	return SomeStorable{
-		Storable: v.Value.Storable(storage, address),
+
+	storable, err := v.Value.Storable(storage, address)
+	if err != nil {
+		return nil, err
 	}
+	return SomeStorable{
+		Storable: storable,
+	}, nil
 }
 
 func (v *SomeValue) DeepCopy(storage atree.SlabStorage, address atree.Address) (atree.Value, error) {
@@ -8187,8 +8221,8 @@ func (*StorageReferenceValue) IsStorable() bool {
 	return false
 }
 
-func (v *StorageReferenceValue) Storable(_ atree.SlabStorage, _ atree.Address) atree.Storable {
-	return atree.NonStorable{Value: v}
+func (v *StorageReferenceValue) Storable(_ atree.SlabStorage, _ atree.Address) (atree.Storable, error) {
+	return atree.NonStorable{Value: v}, nil
 }
 
 func (v *StorageReferenceValue) DeepCopy(_ atree.SlabStorage, _ atree.Address) (atree.Value, error) {
@@ -8392,8 +8426,8 @@ func (*EphemeralReferenceValue) IsStorable() bool {
 	return false
 }
 
-func (v *EphemeralReferenceValue) Storable(_ atree.SlabStorage, _ atree.Address) atree.Storable {
-	return atree.NonStorable{Value: v}
+func (v *EphemeralReferenceValue) Storable(_ atree.SlabStorage, _ atree.Address) (atree.Storable, error) {
+	return atree.NonStorable{Value: v}, nil
 }
 
 func (v *EphemeralReferenceValue) DeepCopy(_ atree.SlabStorage, _ atree.Address) (atree.Value, error) {
@@ -8519,8 +8553,8 @@ func (AddressValue) IsStorable() bool {
 	return true
 }
 
-func (v AddressValue) Storable(_ atree.SlabStorage, _ atree.Address) atree.Storable {
-	return v
+func (v AddressValue) Storable(_ atree.SlabStorage, _ atree.Address) (atree.Storable, error) {
+	return v, nil
 }
 
 func (v AddressValue) DeepCopy(_ atree.SlabStorage, _ atree.Address) (atree.Value, error) {
@@ -8802,9 +8836,9 @@ func (PathValue) IsStorable() bool {
 	return true
 }
 
-func (v PathValue) Storable(_ atree.SlabStorage, _ atree.Address) atree.Storable {
+func (v PathValue) Storable(_ atree.SlabStorage, _ atree.Address) (atree.Storable, error) {
 	// TODO: store in storage and return StorageIDStorable if size > max element inline size
-	return v
+	return v, nil
 }
 
 func (v PathValue) DeepCopy(_ atree.SlabStorage, _ atree.Address) (atree.Value, error) {
@@ -8935,9 +8969,9 @@ func (CapabilityValue) IsStorable() bool {
 	return true
 }
 
-func (v CapabilityValue) Storable(_ atree.SlabStorage, _ atree.Address) atree.Storable {
+func (v CapabilityValue) Storable(_ atree.SlabStorage, _ atree.Address) (atree.Storable, error) {
 	// TODO: store in storage and return StorageIDStorable if size > max element inline size
-	return v
+	return v, nil
 }
 
 func (v CapabilityValue) DeepCopy(_ atree.SlabStorage, _ atree.Address) (atree.Value, error) {
@@ -9012,9 +9046,9 @@ func (LinkValue) IsStorable() bool {
 	return true
 }
 
-func (v LinkValue) Storable(_ atree.SlabStorage, _ atree.Address) atree.Storable {
+func (v LinkValue) Storable(_ atree.SlabStorage, _ atree.Address) (atree.Storable, error) {
 	// TODO: store in storage and return StorageIDStorable if size > max element inline size
-	return v
+	return v, nil
 }
 
 func (v LinkValue) DeepCopy(_ atree.SlabStorage, _ atree.Address) (atree.Value, error) {
