@@ -6788,7 +6788,7 @@ func (v *CompositeValue) OwnerValue(interpreter *Interpreter) OptionalValue {
 		})
 	}
 
-	return NewSomeValueOwningNonCopying(ownerAccount)
+	return NewSomeValueNonCopying(ownerAccount)
 }
 
 func (v *CompositeValue) SetMember(
@@ -7262,7 +7262,7 @@ func (v *DictionaryValue) GetKey(keyValue Value) (Value, string, bool) {
 func (v *DictionaryValue) Get(_ *Interpreter, _ func() LocationRange, keyValue Value) Value {
 	value, _, ok := v.GetKey(keyValue)
 	if ok {
-		return NewSomeValueOwningNonCopying(value)
+		return NewSomeValueNonCopying(value)
 	}
 
 	return NilValue{}
@@ -7441,7 +7441,7 @@ func (v *DictionaryValue) Remove(
 
 			v.store(storage)
 
-			return NewSomeValueOwningNonCopying(value)
+			return NewSomeValueNonCopying(value)
 		}
 		index++
 	}
@@ -7863,7 +7863,7 @@ type SomeValue struct {
 	Value Value
 }
 
-func NewSomeValueOwningNonCopying(value Value) *SomeValue {
+func NewSomeValueNonCopying(value Value) *SomeValue {
 	return &SomeValue{
 		Value: value,
 	}
@@ -7934,7 +7934,7 @@ func (v *SomeValue) GetMember(_ *Interpreter, _ func() LocationRange, name strin
 
 				newValue := transformFunction.Invoke(transformInvocation)
 
-				return NewSomeValueOwningNonCopying(newValue)
+				return NewSomeValueNonCopying(newValue)
 			},
 		)
 	}
@@ -8022,7 +8022,7 @@ func (s SomeStorable) StoredValue(storage atree.SlabStorage) (atree.Value, error
 	if err != nil {
 		return nil, err
 	}
-	return NewSomeValueOwningNonCopying(value), nil
+	return NewSomeValueNonCopying(value), nil
 }
 
 // StorageReferenceValue

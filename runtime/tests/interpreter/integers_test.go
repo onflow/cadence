@@ -174,7 +174,7 @@ func TestInterpretIntegerLiteralTypeConversionInVariableDeclarationOptional(t *t
 			)
 
 			AssertValuesEqual(t,
-				interpreter.NewSomeValueOwningNonCopying(value),
+				interpreter.NewSomeValueNonCopying(value),
 				inter.Globals["x"].GetValue(),
 			)
 		})
@@ -239,7 +239,7 @@ func TestInterpretIntegerLiteralTypeConversionInAssignmentOptional(t *testing.T)
 			)
 
 			AssertValuesEqual(t,
-				interpreter.NewSomeValueOwningNonCopying(value),
+				interpreter.NewSomeValueNonCopying(value),
 				inter.Globals["x"].GetValue(),
 			)
 
@@ -249,7 +249,7 @@ func TestInterpretIntegerLiteralTypeConversionInAssignmentOptional(t *testing.T)
 			numberValue := value.(interpreter.NumberValue)
 
 			AssertValuesEqual(t,
-				interpreter.NewSomeValueOwningNonCopying(
+				interpreter.NewSomeValueNonCopying(
 					numberValue.Plus(numberValue),
 				),
 				inter.Globals["x"].GetValue(),
@@ -307,7 +307,7 @@ func TestInterpretIntegerLiteralTypeConversionInFunctionCallArgumentOptional(t *
 			)
 
 			AssertValuesEqual(t,
-				interpreter.NewSomeValueOwningNonCopying(value),
+				interpreter.NewSomeValueNonCopying(value),
 				inter.Globals["x"].GetValue(),
 			)
 		})
@@ -367,7 +367,7 @@ func TestInterpretIntegerLiteralTypeConversionInReturnOptional(t *testing.T) {
 			require.NoError(t, err)
 
 			AssertValuesEqual(t,
-				interpreter.NewSomeValueOwningNonCopying(value),
+				interpreter.NewSomeValueNonCopying(value),
 				result,
 			)
 		})

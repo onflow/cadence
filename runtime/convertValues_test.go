@@ -59,7 +59,7 @@ var exportTests = []exportTest{
 	},
 	{
 		label:    "SomeValue",
-		value:    interpreter.NewSomeValueOwningNonCopying(interpreter.NewIntValueFromInt64(42)),
+		value:    interpreter.NewSomeValueNonCopying(interpreter.NewIntValueFromInt64(42)),
 		expected: cadence.NewOptional(cadence.NewInt(42)),
 		expectedType: &sema.OptionalType{
 			Type: sema.IntType,

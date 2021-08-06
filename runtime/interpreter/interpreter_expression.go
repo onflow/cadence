@@ -478,7 +478,7 @@ func (interpreter *Interpreter) VisitMemberExpression(expression *ast.MemberExpr
 
 	if expression.Optional {
 		if _, ok := resultValue.(OptionalValue); !ok {
-			resultValue = NewSomeValueOwningNonCopying(resultValue)
+			resultValue = NewSomeValueNonCopying(resultValue)
 		}
 	}
 
@@ -562,7 +562,7 @@ func (interpreter *Interpreter) VisitInvocationExpression(invocationExpression *
 	// as an optional, as the result is expected to be an optional
 
 	if isOptionalChaining {
-		resultValue = NewSomeValueOwningNonCopying(resultValue)
+		resultValue = NewSomeValueNonCopying(resultValue)
 	}
 
 	return resultValue
@@ -652,7 +652,7 @@ func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingEx
 				return NilValue{}
 			}
 
-			return NewSomeValueOwningNonCopying(value)
+			return NewSomeValueNonCopying(value)
 
 		case ast.OperationForceCast:
 			if !isSubType {

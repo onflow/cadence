@@ -108,7 +108,7 @@ func TestDictionaryStorage(t *testing.T) {
 			inter,
 			ReturnEmptyLocationRange,
 			NewStringValue("test"),
-			NewSomeValueOwningNonCopying(BoolValue(true)),
+			NewSomeValueNonCopying(BoolValue(true)),
 		)
 
 		require.Equal(t, 2, storage.BasicSlabStorage.Count())
@@ -142,7 +142,7 @@ func TestDictionaryStorage(t *testing.T) {
 			},
 			storage,
 			NewStringValue("test"),
-			NewSomeValueOwningNonCopying(BoolValue(true)),
+			NewSomeValueNonCopying(BoolValue(true)),
 		)
 
 		require.NotEqual(t, atree.StorageIDUndefined, value.StorageID)
@@ -192,7 +192,7 @@ func TestDictionaryStorage(t *testing.T) {
 			},
 			storage,
 			NewStringValue("test"),
-			NewSomeValueOwningNonCopying(BoolValue(true)),
+			NewSomeValueNonCopying(BoolValue(true)),
 		)
 
 		require.NotEqual(t, atree.StorageIDUndefined, value.StorageID)
@@ -255,7 +255,7 @@ func TestDictionaryStorage(t *testing.T) {
 			inter.Storage,
 			ReturnEmptyLocationRange,
 			NewStringValue("test"),
-			NewSomeValueOwningNonCopying(BoolValue(true)),
+			NewSomeValueNonCopying(BoolValue(true)),
 		)
 
 		require.Equal(t, 2, storage.BasicSlabStorage.Count())

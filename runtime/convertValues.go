@@ -429,7 +429,7 @@ func importOptionalValue(inter *interpreter.Interpreter, v cadence.Optional, exp
 	}
 
 	innerValue := importValue(inter, v.Value, innerType)
-	return interpreter.NewSomeValueOwningNonCopying(innerValue)
+	return interpreter.NewSomeValueNonCopying(innerValue)
 }
 
 func importArrayValue(inter *interpreter.Interpreter, v cadence.Array, expectedType sema.Type) *interpreter.ArrayValue {

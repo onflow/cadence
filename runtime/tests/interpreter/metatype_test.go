@@ -403,7 +403,7 @@ func TestInterpretGetType(t *testing.T) {
 		nil,
 		storageAddress,
 		storageKey,
-		interpreter.NewSomeValueOwningNonCopying(
+		interpreter.NewSomeValueNonCopying(
 			interpreter.NewIntValueFromInt64(2),
 		),
 	)
