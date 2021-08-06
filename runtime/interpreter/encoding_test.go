@@ -21,6 +21,7 @@ package interpreter_test
 import (
 	"math"
 	"math/big"
+	"strings"
 	"testing"
 
 	"github.com/fxamacker/atree"
@@ -204,6 +205,26 @@ func TestEncodeDecodeString(t *testing.T) {
 					0x63,
 					// f, o, o
 					0x66, 0x6f, 0x6f,
+				},
+			},
+		)
+	})
+
+	t.Run("larger than max inline size", func(t *testing.T) {
+
+		t.Parallel()
+
+		expected := NewStringValue(strings.Repeat("x", int(atree.MaxInlineElementSize+1)))
+
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				value: expected,
+				encoded: []byte{
+					// tag
+					0xd8, atree.CBORTagStorageID,
+
+					// storage ID
+					0x50, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x42, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
 				},
 			},
 		)
@@ -883,6 +904,30 @@ func TestEncodeDecodeIntValue(t *testing.T) {
 					// byte string, length 9
 					0x49,
 					0x01, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+				},
+			},
+		)
+	})
+
+	t.Run("larger than max inline size", func(t *testing.T) {
+
+		t.Parallel()
+
+		expected := NewIntValueFromInt64(1_000_000_000)
+
+		for len(expected.BigInt.Bytes()) < int(atree.MaxInlineElementSize+1) {
+			expected = expected.Mul(expected).(IntValue)
+		}
+
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				value: expected,
+				encoded: []byte{
+					// tag
+					0xd8, atree.CBORTagStorageID,
+
+					// storage ID
+					0x50, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x42, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
 				},
 			},
 		)
@@ -1815,6 +1860,30 @@ func TestEncodeDecodeUIntValue(t *testing.T) {
 			},
 		)
 	})
+
+	t.Run("larger than max inline size", func(t *testing.T) {
+
+		t.Parallel()
+
+		expected := NewUIntValueFromUint64(1_000_000_000)
+
+		for len(expected.BigInt.Bytes()) < int(atree.MaxInlineElementSize+1) {
+			expected = expected.Mul(expected).(UIntValue)
+		}
+
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				value: expected,
+				encoded: []byte{
+					// tag
+					0xd8, atree.CBORTagStorageID,
+
+					// storage ID
+					0x50, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x42, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
+				},
+			},
+		)
+	})
 }
 
 func TestEncodeDecodeUInt8Value(t *testing.T) {
@@ -2731,6 +2800,31 @@ func TestEncodeDecodeSomeValue(t *testing.T) {
 			},
 		)
 	})
+
+	t.Run("larger than max inline size", func(t *testing.T) {
+
+		t.Parallel()
+
+		str := NewStringValue(strings.Repeat("x", int(atree.MaxInlineElementSize+1)))
+
+		expected := NewSomeValueNonCopying(str)
+
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				value: expected,
+				encoded: []byte{
+					// tag
+					0xd8, CBORTagSomeValue,
+
+					// tag
+					0xd8, atree.CBORTagStorageID,
+
+					// storage ID
+					0x50, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x42, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
+				},
+			},
+		)
+	})
 }
 
 func TestEncodeDecodeFix64Value(t *testing.T) {
@@ -3087,6 +3181,31 @@ func TestEncodeDecodePathValue(t *testing.T) {
 			},
 		)
 	})
+
+	t.Run("larger than max inline size", func(t *testing.T) {
+
+		t.Parallel()
+
+		identifier := strings.Repeat("x", int(atree.MaxInlineElementSize+1))
+
+		expected := PathValue{
+			Domain:     common.PathDomainStorage,
+			Identifier: identifier,
+		}
+
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				value: expected,
+				encoded: []byte{
+					// tag
+					0xd8, atree.CBORTagStorageID,
+
+					// storage ID
+					0x50, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x42, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
+				},
+			},
+		)
+	})
 }
 
 func TestEncodeDecodeCapabilityValue(t *testing.T) {
@@ -3312,6 +3431,35 @@ func TestEncodeDecodeCapabilityValue(t *testing.T) {
 			encodeDecodeTest{
 				value:   capabilityValue,
 				encoded: encoded,
+			},
+		)
+	})
+
+	t.Run("larger than max inline size", func(t *testing.T) {
+
+		t.Parallel()
+
+		identifier := strings.Repeat("x", int(atree.MaxInlineElementSize+1))
+
+		path := PathValue{
+			Domain:     common.PathDomainStorage,
+			Identifier: identifier,
+		}
+
+		expected := CapabilityValue{
+			Path: path,
+		}
+
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				value: expected,
+				encoded: []byte{
+					// tag
+					0xd8, atree.CBORTagStorageID,
+
+					// storage ID
+					0x50, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x42, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
+				},
 			},
 		)
 	})
@@ -3778,6 +3926,36 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 			},
 		)
 	})
+
+	t.Run("larger than max inline size", func(t *testing.T) {
+
+		t.Parallel()
+
+		identifier := strings.Repeat("x", int(atree.MaxInlineElementSize+1))
+
+		path := PathValue{
+			Domain:     common.PathDomainStorage,
+			Identifier: identifier,
+		}
+
+		expected := LinkValue{
+			TargetPath: path,
+			Type:       PrimitiveStaticTypeNever,
+		}
+
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				value: expected,
+				encoded: []byte{
+					// tag
+					0xd8, atree.CBORTagStorageID,
+
+					// storage ID
+					0x50, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x42, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
+				},
+			},
+		)
+	})
 }
 
 func TestEncodeDecodeTypeValue(t *testing.T) {
@@ -3862,6 +4040,33 @@ func TestEncodeDecodeTypeValue(t *testing.T) {
 				// type values without a static type are not semantically equal,
 				// so check deep equality
 				deepEquality: true,
+			},
+		)
+	})
+
+	t.Run("larger than max inline size", func(t *testing.T) {
+
+		t.Parallel()
+
+		identifier := strings.Repeat("x", int(atree.MaxInlineElementSize+1))
+
+		expected := TypeValue{
+			Type: CompositeStaticType{
+				Location:            common.AddressLocation{},
+				QualifiedIdentifier: identifier,
+			},
+		}
+
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				value: expected,
+				encoded: []byte{
+					// tag
+					0xd8, atree.CBORTagStorageID,
+
+					// storage ID
+					0x50, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x42, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
+				},
 			},
 		)
 	})
