@@ -8283,9 +8283,6 @@ func TestInterpretNestedDestroy(t *testing.T) {
 //
 func TestInterpretInternalAssignment(t *testing.T) {
 
-	// TODO:
-	t.FailNow()
-
 	t.Parallel()
 
 	inter := parseCheckAndInterpret(t, `

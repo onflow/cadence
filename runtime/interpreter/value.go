@@ -114,6 +114,15 @@ type DestroyableValue interface {
 	Destroy(interpreter *Interpreter, getLocationRange func() LocationRange)
 }
 
+func maybeDestroy(interpreter *Interpreter, getLocationRange func() LocationRange, value Value) {
+	destroyableValue, ok := value.(DestroyableValue)
+	if !ok {
+		return
+	}
+
+	destroyableValue.Destroy(interpreter, getLocationRange)
+}
+
 // HasKeyString
 
 type HasKeyString interface {
@@ -807,10 +816,12 @@ func (v *ArrayValue) Append(inter *Interpreter, getLocationRange func() Location
 
 	inter.checkContainerMutation(arrayStaticType.ElementType(), element, getLocationRange)
 
-	// TODO: deep copy
-	// TODO: set owner
+	value, err := element.DeepCopy(v.array.Storage, v.array.Address())
+	if err != nil {
+		panic(err)
+	}
 
-	err := v.array.Append(element.(atree.Value))
+	err = v.array.Append(value)
 	if err != nil {
 		panic(ExternalError{err})
 	}
@@ -818,13 +829,7 @@ func (v *ArrayValue) Append(inter *Interpreter, getLocationRange func() Location
 
 func (v *ArrayValue) AppendAll(inter *Interpreter, getLocationRange func() LocationRange, other AllAppendableValue) {
 	otherArray := other.(*ArrayValue)
-
-	otherArray.Walk(func(element Value) {
-		err := v.array.Append(element.(atree.Value))
-		if err != nil {
-			panic(ExternalError{err})
-		}
-	})
+	otherArray.Walk(v.Append)
 }
 
 func (v *ArrayValue) Insert(inter *Interpreter, getLocationRange func() LocationRange, index int, element Value) {
@@ -844,10 +849,12 @@ func (v *ArrayValue) Insert(inter *Interpreter, getLocationRange func() Location
 
 	inter.checkContainerMutation(arrayStaticType.ElementType(), element, getLocationRange)
 
-	// TODO: deep copy
-	// TODO: set owner
+	value, err := element.DeepCopy(v.array.Storage, v.array.Address())
+	if err != nil {
+		panic(err)
+	}
 
-	err := v.array.Insert(uint64(index), element.(atree.Value))
+	err = v.array.Insert(uint64(index), value)
 	if err != nil {
 		panic(ExternalError{err})
 	}
@@ -856,15 +863,19 @@ func (v *ArrayValue) Insert(inter *Interpreter, getLocationRange func() Location
 func (v *ArrayValue) Remove(index int, getLocationRange func() LocationRange) Value {
 	v.checkBounds(index, getLocationRange)
 
-	// TODO: unset owner
-	// TODO: deep remove
-
 	element, err := v.array.Remove(uint64(index))
 	if err != nil {
 		panic(ExternalError{err})
 	}
 
-	return element.(Value)
+	value, err := element.DeepCopy(v.array.Storage, atree.Address{})
+	if err != nil {
+		panic(ExternalError{err})
+	}
+
+	// TODO: deep remove
+
+	return value.(Value)
 }
 
 func (v *ArrayValue) RemoveFirst(getLocationRange func() LocationRange) Value {
@@ -6813,12 +6824,21 @@ func (v *CompositeValue) SetMember(
 ) {
 	v.checkStatus(getLocationRange)
 
-	// TODO: deep copy
-	// TODO: set owner
+	valueCopy, err := value.DeepCopy(interpreter.Storage, v.StorageID.Address)
+	if err != nil {
+		panic(ExternalError{err})
+	}
 
-	v.Fields.Set(name, value)
+	existingValue, existed := v.Fields.Get(name)
+
+	v.Fields.Set(name, valueCopy.(Value))
 
 	v.store(interpreter.Storage)
+
+	if existed {
+		// TODO: deep remove
+		_ = existingValue
+	}
 }
 
 func (v *CompositeValue) String() string {
@@ -7109,8 +7129,7 @@ func (s CompositeStorable) StoredValue(storage atree.SlabStorage) (atree.Value, 
 		QualifiedIdentifier: s.QualifiedIdentifier,
 		Kind:                s.Kind,
 		Fields:              fields,
-		// TODO: Owner
-		StorageID: s.StorageID,
+		StorageID:           s.StorageID,
 	}
 
 	return v, nil
@@ -7243,18 +7262,9 @@ func (v *DictionaryValue) StaticType() StaticType {
 	return v.Type
 }
 
-func maybeDestroy(interpreter *Interpreter, getLocationRange func() LocationRange, value Value) {
-	destroyableValue, ok := value.(DestroyableValue)
-	if !ok {
-		return
-	}
-
-	destroyableValue.Destroy(interpreter, getLocationRange)
-}
-
 func (v *DictionaryValue) Destroy(interpreter *Interpreter, getLocationRange func() LocationRange) {
-
 	v.Keys.Walk(func(keyValue Value) {
+		// Resources cannot be keys at the moment, so should theoretically not be needed
 		maybeDestroy(interpreter, getLocationRange, keyValue)
 		value, _, _ := v.GetKey(keyValue)
 		maybeDestroy(interpreter, getLocationRange, value)
@@ -7439,9 +7449,6 @@ func (v *DictionaryValue) Remove(
 	keyValue Value,
 ) OptionalValue {
 
-	// TODO: unset owner
-	// TODO: deep remove
-
 	value, key, ok := v.GetKey(keyValue)
 	if !ok {
 		return NilValue{}
@@ -7469,7 +7476,14 @@ func (v *DictionaryValue) Remove(
 
 			v.store(storage)
 
-			return NewSomeValueNonCopying(value)
+			valueCopy, err := value.DeepCopy(storage, atree.Address{})
+			if err != nil {
+				panic(ExternalError{err})
+			}
+
+			// TODO: deep remove
+
+			return NewSomeValueNonCopying(valueCopy.(Value))
 		}
 		index++
 	}
@@ -7493,10 +7507,12 @@ func (v *DictionaryValue) Insert(
 
 	key := dictionaryKey(keyValue)
 
-	// TODO: deep copy
-	// TODO: set owner
+	valueCopy, err := value.DeepCopy(storage, v.StorageID.Address)
+	if err != nil {
+		panic(ExternalError{err})
+	}
 
-	v.Entries.Set(key, value)
+	v.Entries.Set(key, valueCopy.(Value))
 
 	var result OptionalValue
 	switch existingValue := existingValue.(type) {
@@ -7513,7 +7529,14 @@ func (v *DictionaryValue) Insert(
 	// NOTE: ensure key was added before storing
 	v.store(storage)
 
-	return result
+	resultCopy, err := result.DeepCopy(storage, atree.Address{})
+	if err != nil {
+		panic(ExternalError{err})
+	}
+
+	// TODO: deep remove
+
+	return resultCopy.(OptionalValue)
 }
 
 func (v *DictionaryValue) IsStorable() bool {
@@ -7699,14 +7722,13 @@ func (v *DictionaryValue) DeepCopy(storage atree.SlabStorage, address atree.Addr
 			break
 		}
 
-		valueCopy, err := value.DeepCopy(storage, address)
-		if err != nil {
-			return nil, err
-		}
-
-		result.Keys.Insert(index, valueCopy.(Value), ReturnEmptyLocationRange)
+		// NOTE: Insert already deep copies
+		result.Keys.Insert(index, value.(Value), ReturnEmptyLocationRange)
 		index++
 	}
+
+	// Copy values. Manually update Entries to avoid storage write
+	// for each insert (which incurs a conversion of the dictionary to a storable)
 
 	for pair := v.Entries.Oldest(); pair != nil; pair = pair.Next() {
 		key := pair.Key
@@ -7719,6 +7741,10 @@ func (v *DictionaryValue) DeepCopy(storage atree.SlabStorage, address atree.Addr
 
 		result.Entries.Set(key, valueCopy.(Value))
 	}
+
+	// NOTE: important: write dictionary to storage,
+	// because Entries were modified manually
+	result.store(storage)
 
 	return result, nil
 }
@@ -7781,10 +7807,9 @@ func (s DictionaryStorable) StoredValue(storage atree.SlabStorage) (atree.Value,
 	}
 
 	return &DictionaryValue{
-		Type:    s.Type,
-		Keys:    keysArray,
-		Entries: entries,
-		// TODO: Owner
+		Type:      s.Type,
+		Keys:      keysArray,
+		Entries:   entries,
 		StorageID: s.StorageID,
 	}, nil
 }
