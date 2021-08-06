@@ -479,7 +479,7 @@ func importOptionalValue(
 		return nil, err
 	}
 
-	return interpreter.NewSomeValueOwningNonCopying(innerValue), nil
+	return interpreter.NewSomeValueNonCopying(innerValue), nil
 }
 
 func importArrayValue(

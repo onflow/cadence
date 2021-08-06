@@ -340,7 +340,7 @@ func newTestCompositeValue(storage Storage, owner atree.Address) *CompositeValue
 //		inter,
 //		ReturnEmptyLocationRange,
 //		keyValue,
-//		NewSomeValueOwningNonCopying(value),
+//		NewSomeValueNonCopying(value),
 //	)
 //
 //	assert.Equal(t, &newOwner, dictionary.GetOwner())
@@ -401,7 +401,7 @@ func newTestCompositeValue(storage Storage, owner atree.Address) *CompositeValue
 //
 //	assert.Equal(t, &oldOwner, value.GetOwner())
 //
-//	any := NewSomeValueOwningNonCopying(value)
+//	any := NewSomeValueNonCopying(value)
 //
 //	assert.Equal(t, &oldOwner, any.GetOwner())
 //	assert.Equal(t, &oldOwner, value.GetOwner())
@@ -420,7 +420,7 @@ func newTestCompositeValue(storage Storage, owner atree.Address) *CompositeValue
 //
 //	assert.Equal(t, &oldOwner, value.GetOwner())
 //
-//	any := NewSomeValueOwningNonCopying(value)
+//	any := NewSomeValueNonCopying(value)
 //
 //	any.SetOwner(&newOwner)
 //
@@ -441,7 +441,7 @@ func newTestCompositeValue(storage Storage, owner atree.Address) *CompositeValue
 //
 //	assert.Equal(t, &oldOwner, value.GetOwner())
 //
-//	some := NewSomeValueOwningNonCopying(value)
+//	some := NewSomeValueNonCopying(value)
 //	some.SetOwner(&newOwner)
 //
 //	copyResult, err := some.DeepCopy(storage, atree.Address{})
@@ -661,7 +661,7 @@ func TestStringer(t *testing.T) {
 			expected: "false",
 		},
 		"some": {
-			value:    NewSomeValueOwningNonCopying(BoolValue(true)),
+			value:    NewSomeValueNonCopying(BoolValue(true)),
 			expected: "true",
 		},
 		"nil": {
@@ -846,7 +846,7 @@ func TestVisitor(t *testing.T) {
 
 	var value Value
 	value = NewIntValueFromInt64(42)
-	value = NewSomeValueOwningNonCopying(value)
+	value = NewSomeValueNonCopying(value)
 	value = NewArrayValueUnownedNonCopying(
 		VariableSizedStaticType{
 			Type: PrimitiveStaticTypeAnyStruct,
@@ -1439,8 +1439,8 @@ func TestSomeValue_Equal(t *testing.T) {
 		t.Parallel()
 
 		require.True(t,
-			NewSomeValueOwningNonCopying(NewStringValue("test")).Equal(
-				NewSomeValueOwningNonCopying(NewStringValue("test")),
+			NewSomeValueNonCopying(NewStringValue("test")).Equal(
+				NewSomeValueNonCopying(NewStringValue("test")),
 				ReturnEmptyLocationRange,
 			),
 		)
@@ -1451,8 +1451,8 @@ func TestSomeValue_Equal(t *testing.T) {
 		t.Parallel()
 
 		require.False(t,
-			NewSomeValueOwningNonCopying(NewStringValue("test")).Equal(
-				NewSomeValueOwningNonCopying(NewStringValue("foo")),
+			NewSomeValueNonCopying(NewStringValue("test")).Equal(
+				NewSomeValueNonCopying(NewStringValue("foo")),
 				ReturnEmptyLocationRange,
 			),
 		)
@@ -1463,7 +1463,7 @@ func TestSomeValue_Equal(t *testing.T) {
 		t.Parallel()
 
 		require.False(t,
-			NewSomeValueOwningNonCopying(NewStringValue("1")).Equal(
+			NewSomeValueNonCopying(NewStringValue("1")).Equal(
 				UInt8Value(1),
 				ReturnEmptyLocationRange,
 			),

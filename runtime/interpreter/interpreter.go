@@ -1537,7 +1537,7 @@ func EnumConstructorFunction(
 				return NilValue{}
 			}
 
-			return NewSomeValueOwningNonCopying(caseValue)
+			return NewSomeValueNonCopying(caseValue)
 		},
 	)
 
@@ -1942,7 +1942,7 @@ func (interpreter *Interpreter) BoxOptional(value Value, valueType, targetType s
 			return inner
 
 		default:
-			value = NewSomeValueOwningNonCopying(value)
+			value = NewSomeValueNonCopying(value)
 			valueType = &sema.OptionalType{
 				Type: valueType,
 			}
@@ -2877,7 +2877,7 @@ func (interpreter *Interpreter) authAccountSaveFunction(addressValue AddressValu
 		interpreter.writeStored(
 			address,
 			key,
-			NewSomeValueOwningNonCopying(value),
+			NewSomeValueNonCopying(value),
 		)
 
 		return VoidValue{}
@@ -2971,7 +2971,7 @@ func (interpreter *Interpreter) authAccountBorrowFunction(addressValue AddressVa
 			return NilValue{}
 		}
 
-		return NewSomeValueOwningNonCopying(reference)
+		return NewSomeValueNonCopying(reference)
 	})
 }
 
@@ -3000,7 +3000,7 @@ func (interpreter *Interpreter) authAccountLinkFunction(addressValue AddressValu
 
 		borrowStaticType := ConvertSemaToStaticType
 
-		storedValue := NewSomeValueOwningNonCopying(
+		storedValue := NewSomeValueNonCopying(
 			LinkValue{
 				TargetPath: targetPath,
 				Type:       borrowStaticType(borrowType),
@@ -3013,7 +3013,7 @@ func (interpreter *Interpreter) authAccountLinkFunction(addressValue AddressValu
 			storedValue,
 		)
 
-		return NewSomeValueOwningNonCopying(
+		return NewSomeValueNonCopying(
 			CapabilityValue{
 				Address:    addressValue,
 				Path:       newCapabilityPath,
@@ -3045,7 +3045,7 @@ func (interpreter *Interpreter) accountGetLinkTargetFunction(addressValue Addres
 				return NilValue{}
 			}
 
-			return NewSomeValueOwningNonCopying(link.TargetPath)
+			return NewSomeValueNonCopying(link.TargetPath)
 
 		default:
 			panic(errors.NewUnreachableError())
@@ -3126,7 +3126,7 @@ func (interpreter *Interpreter) capabilityBorrowFunction(
 				return NilValue{}
 			}
 
-			return NewSomeValueOwningNonCopying(reference)
+			return NewSomeValueNonCopying(reference)
 		},
 	)
 }

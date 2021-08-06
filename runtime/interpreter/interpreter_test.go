@@ -48,32 +48,32 @@ func TestInterpreterOptionalBoxing(t *testing.T) {
 			&sema.OptionalType{Type: sema.BoolType},
 		)
 		assert.Equal(t,
-			NewSomeValueOwningNonCopying(BoolValue(true)),
+			NewSomeValueNonCopying(BoolValue(true)),
 			value,
 		)
 	})
 
 	t.Run("Bool? to Bool?", func(t *testing.T) {
 		value := inter.BoxOptional(
-			NewSomeValueOwningNonCopying(BoolValue(true)),
+			NewSomeValueNonCopying(BoolValue(true)),
 			&sema.OptionalType{Type: sema.BoolType},
 			&sema.OptionalType{Type: sema.BoolType},
 		)
 		assert.Equal(t,
-			NewSomeValueOwningNonCopying(BoolValue(true)),
+			NewSomeValueNonCopying(BoolValue(true)),
 			value,
 		)
 	})
 
 	t.Run("Bool? to Bool??", func(t *testing.T) {
 		value := inter.BoxOptional(
-			NewSomeValueOwningNonCopying(BoolValue(true)),
+			NewSomeValueNonCopying(BoolValue(true)),
 			&sema.OptionalType{Type: sema.BoolType},
 			&sema.OptionalType{Type: &sema.OptionalType{Type: sema.BoolType}},
 		)
 		assert.Equal(t,
-			NewSomeValueOwningNonCopying(
-				NewSomeValueOwningNonCopying(BoolValue(true)),
+			NewSomeValueNonCopying(
+				NewSomeValueNonCopying(BoolValue(true)),
 			),
 			value,
 		)
@@ -95,7 +95,7 @@ func TestInterpreterOptionalBoxing(t *testing.T) {
 	t.Run("nil (Some(nil): Never??) to Bool??", func(t *testing.T) {
 		// NOTE:
 		value := inter.BoxOptional(
-			NewSomeValueOwningNonCopying(NilValue{}),
+			NewSomeValueNonCopying(NilValue{}),
 			&sema.OptionalType{Type: &sema.OptionalType{Type: sema.NeverType}},
 			&sema.OptionalType{Type: &sema.OptionalType{Type: sema.BoolType}},
 		)
@@ -128,7 +128,7 @@ func TestInterpreterBoxing(t *testing.T) {
 			t.Run(fmt.Sprintf("Bool to %s?", anyType), func(t *testing.T) {
 
 				assert.Equal(t,
-					NewSomeValueOwningNonCopying(
+					NewSomeValueNonCopying(
 						BoolValue(true),
 					),
 					inter.ConvertAndBox(
@@ -143,11 +143,11 @@ func TestInterpreterBoxing(t *testing.T) {
 			t.Run(fmt.Sprintf("Bool? to %s?", anyType), func(t *testing.T) {
 
 				assert.Equal(t,
-					NewSomeValueOwningNonCopying(
+					NewSomeValueNonCopying(
 						BoolValue(true),
 					),
 					inter.ConvertAndBox(
-						NewSomeValueOwningNonCopying(BoolValue(true)),
+						NewSomeValueNonCopying(BoolValue(true)),
 						&sema.OptionalType{Type: sema.BoolType},
 						&sema.OptionalType{Type: anyType},
 					),

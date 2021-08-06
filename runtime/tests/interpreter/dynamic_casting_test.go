@@ -117,7 +117,7 @@ func TestInterpretDynamicCastingNumber(t *testing.T) {
 								)
 
 								AssertValuesEqual(t,
-									interpreter.NewSomeValueOwningNonCopying(
+									interpreter.NewSomeValueNonCopying(
 										test.expected,
 									),
 									inter.Globals["z"].GetValue(),
@@ -208,7 +208,7 @@ func TestInterpretDynamicCastingVoid(t *testing.T) {
 						)
 
 						AssertValuesEqual(t,
-							interpreter.NewSomeValueOwningNonCopying(
+							interpreter.NewSomeValueNonCopying(
 								interpreter.VoidValue{},
 							),
 							inter.Globals["y"].GetValue(),
@@ -294,7 +294,7 @@ func TestInterpretDynamicCastingString(t *testing.T) {
 						)
 
 						AssertValuesEqual(t,
-							interpreter.NewSomeValueOwningNonCopying(
+							interpreter.NewSomeValueNonCopying(
 								interpreter.NewStringValue("test"),
 							),
 							inter.Globals["y"].GetValue(),
@@ -379,7 +379,7 @@ func TestInterpretDynamicCastingBool(t *testing.T) {
 						)
 
 						AssertValuesEqual(t,
-							interpreter.NewSomeValueOwningNonCopying(
+							interpreter.NewSomeValueNonCopying(
 								interpreter.BoolValue(true),
 							),
 							inter.Globals["y"].GetValue(),
@@ -468,7 +468,7 @@ func TestInterpretDynamicCastingAddress(t *testing.T) {
 						)
 
 						AssertValuesEqual(t,
-							interpreter.NewSomeValueOwningNonCopying(
+							interpreter.NewSomeValueNonCopying(
 								addressValue,
 							),
 							inter.Globals["z"].GetValue(),
@@ -1032,7 +1032,7 @@ func TestInterpretDynamicCastingSome(t *testing.T) {
 							),
 						)
 
-						expectedValue := interpreter.NewSomeValueOwningNonCopying(
+						expectedValue := interpreter.NewSomeValueNonCopying(
 							interpreter.NewIntValueFromInt64(42),
 						)
 
@@ -1050,7 +1050,7 @@ func TestInterpretDynamicCastingSome(t *testing.T) {
 
 						} else {
 							AssertValuesEqual(t,
-								interpreter.NewSomeValueOwningNonCopying(
+								interpreter.NewSomeValueNonCopying(
 									expectedValue,
 								),
 								inter.Globals["z"].GetValue(),
@@ -1287,7 +1287,7 @@ func TestInterpretDynamicCastingDictionary(t *testing.T) {
 						)
 
 						AssertValuesEqual(t,
-							interpreter.NewSomeValueOwningNonCopying(
+							interpreter.NewSomeValueNonCopying(
 								expectedDictionary,
 							),
 							inter.Globals["z"].GetValue(),
@@ -3467,7 +3467,7 @@ func TestInterpretDynamicCastingCapability(t *testing.T) {
 						)
 
 						AssertValuesEqual(t,
-							interpreter.NewSomeValueOwningNonCopying(
+							interpreter.NewSomeValueNonCopying(
 								capabilityValue,
 							),
 							inter.Globals["y"].GetValue(),

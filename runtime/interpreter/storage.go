@@ -85,7 +85,7 @@ func (i InMemoryStorage) Read(_ *Interpreter, address common.Address, key string
 		panic(ExternalError{err})
 	}
 
-	return NewSomeValueOwningNonCopying(value.(Value))
+	return NewSomeValueNonCopying(value.(Value))
 }
 
 func (i InMemoryStorage) Write(_ *Interpreter, address common.Address, key string, value OptionalValue) {

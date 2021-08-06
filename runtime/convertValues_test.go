@@ -75,7 +75,7 @@ func TestExportValue(t *testing.T) {
 		},
 		{
 			label: "SomeValue",
-			value: interpreter.NewSomeValueOwningNonCopying(
+			value: interpreter.NewSomeValueNonCopying(
 				interpreter.NewIntValueFromInt64(42),
 			),
 			expected: cadence.NewOptional(cadence.NewInt(42)),

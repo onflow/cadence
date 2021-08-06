@@ -230,7 +230,7 @@ func TestInterpretIfStatementTestWithDeclarationNestedOptionals(t *testing.T) {
 		)
 		require.NoError(t, err)
 		AssertValuesEqual(t,
-			interpreter.NewSomeValueOwningNonCopying(
+			interpreter.NewSomeValueNonCopying(
 				interpreter.NewIntValueFromInt64(2),
 			),
 			value,
@@ -246,7 +246,7 @@ func TestInterpretIfStatementTestWithDeclarationNestedOptionals(t *testing.T) {
 		require.NoError(t, err)
 
 		AssertValuesEqual(t,
-			interpreter.NewSomeValueOwningNonCopying(
+			interpreter.NewSomeValueNonCopying(
 				interpreter.NewIntValueFromInt64(0),
 			),
 			value,
@@ -283,7 +283,7 @@ func TestInterpretIfStatementTestWithDeclarationNestedOptionalsExplicitAnnotatio
 		)
 		require.NoError(t, err)
 		AssertValuesEqual(t,
-			interpreter.NewSomeValueOwningNonCopying(
+			interpreter.NewSomeValueNonCopying(
 				interpreter.NewIntValueFromInt64(2),
 			),
 			value,
@@ -299,7 +299,7 @@ func TestInterpretIfStatementTestWithDeclarationNestedOptionalsExplicitAnnotatio
 		value, err := inter.Invoke("test", interpreter.NilValue{})
 		require.NoError(t, err)
 		AssertValuesEqual(t,
-			interpreter.NewSomeValueOwningNonCopying(
+			interpreter.NewSomeValueNonCopying(
 				interpreter.NewIntValueFromInt64(0),
 			),
 			value,

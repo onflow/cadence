@@ -232,10 +232,10 @@ func TestInterpretSwitchStatement(t *testing.T) {
 		for _, testCase := range []testCase{
 			{
 				[]interpreter.Value{
-					interpreter.NewSomeValueOwningNonCopying(
+					interpreter.NewSomeValueNonCopying(
 						interpreter.NewIntValueFromInt64(1),
 					),
-					interpreter.NewSomeValueOwningNonCopying(
+					interpreter.NewSomeValueNonCopying(
 						interpreter.NewIntValueFromInt64(1),
 					),
 				},
@@ -244,7 +244,7 @@ func TestInterpretSwitchStatement(t *testing.T) {
 			{
 				[]interpreter.Value{
 					interpreter.NilValue{},
-					interpreter.NewSomeValueOwningNonCopying(
+					interpreter.NewSomeValueNonCopying(
 						interpreter.NewIntValueFromInt64(1),
 					),
 				},
@@ -252,10 +252,10 @@ func TestInterpretSwitchStatement(t *testing.T) {
 			},
 			{
 				[]interpreter.Value{
-					interpreter.NewSomeValueOwningNonCopying(
+					interpreter.NewSomeValueNonCopying(
 						interpreter.NewIntValueFromInt64(1),
 					),
-					interpreter.NewSomeValueOwningNonCopying(
+					interpreter.NewSomeValueNonCopying(
 						interpreter.NewIntValueFromInt64(2),
 					),
 				},

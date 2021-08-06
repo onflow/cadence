@@ -1927,7 +1927,7 @@ func (r *interpreterRuntime) newGetBlockFunction(runtimeInterface Interface) int
 			return interpreter.NilValue{}
 		}
 
-		return interpreter.NewSomeValueOwningNonCopying(*block)
+		return interpreter.NewSomeValueNonCopying(*block)
 	}
 }
 
@@ -2400,7 +2400,7 @@ func (r *interpreterRuntime) newAccountContractsGetFunction(
 			}
 
 			if len(code) > 0 {
-				return interpreter.NewSomeValueOwningNonCopying(
+				return interpreter.NewSomeValueNonCopying(
 					interpreter.DeployedContractValue{
 						Address: addressValue,
 						Name:    nameValue,
@@ -2491,7 +2491,7 @@ func (r *interpreterRuntime) newAuthAccountContractsRemoveFunction(
 					},
 				)
 
-				return interpreter.NewSomeValueOwningNonCopying(
+				return interpreter.NewSomeValueNonCopying(
 					interpreter.DeployedContractValue{
 						Address: addressValue,
 						Name:    nameValue,
