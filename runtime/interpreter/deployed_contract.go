@@ -106,3 +106,8 @@ func (v DeployedContractValue) Storable(_ atree.SlabStorage, _ atree.Address) (a
 func (v DeployedContractValue) DeepCopy(_ atree.SlabStorage, _ atree.Address) (atree.Value, error) {
 	return v, nil
 }
+
+func (DeployedContractValue) DeepRemove(_ atree.SlabStorage) error {
+	// NO-OP
+	return nil
+}
