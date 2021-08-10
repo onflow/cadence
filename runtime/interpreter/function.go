@@ -129,6 +129,11 @@ func (f InterpretedFunctionValue) DeepCopy(_ atree.SlabStorage, _ atree.Address)
 	return f, nil
 }
 
+func (InterpretedFunctionValue) DeepRemove(_ atree.SlabStorage) error {
+	// NO-OP
+	return nil
+}
+
 // HostFunctionValue
 
 type HostFunction func(invocation Invocation) Value
@@ -217,6 +222,11 @@ func (f HostFunctionValue) DeepCopy(_ atree.SlabStorage, _ atree.Address) (atree
 	return f, nil
 }
 
+func (HostFunctionValue) DeepRemove(_ atree.SlabStorage) error {
+	// NO-OP
+	return nil
+}
+
 // BoundFunctionValue
 
 type BoundFunctionValue struct {
@@ -279,4 +289,9 @@ func (f BoundFunctionValue) Storable(_ atree.SlabStorage, _ atree.Address) (atre
 
 func (f BoundFunctionValue) DeepCopy(_ atree.SlabStorage, _ atree.Address) (atree.Value, error) {
 	return f, nil
+}
+
+func (BoundFunctionValue) DeepRemove(_ atree.SlabStorage) error {
+	// NO-OP
+	return nil
 }

@@ -218,6 +218,11 @@ func (v TypeValue) DeepCopy(_ atree.SlabStorage, _ atree.Address) (atree.Value, 
 	return v, nil
 }
 
+func (TypeValue) DeepRemove(_ atree.SlabStorage) error {
+	// NO-OP
+	return nil
+}
+
 func (v TypeValue) ByteSize() uint32 {
 	return StorableSize(v)
 }
@@ -282,6 +287,11 @@ func (v VoidValue) Storable(_ atree.SlabStorage, _ atree.Address) (atree.Storabl
 
 func (v VoidValue) DeepCopy(_ atree.SlabStorage, _ atree.Address) (atree.Value, error) {
 	return v, nil
+}
+
+func (VoidValue) DeepRemove(_ atree.SlabStorage) error {
+	// NO-OP
+	return nil
 }
 
 func (v VoidValue) ByteSize() uint32 {
@@ -369,6 +379,10 @@ func (v BoolValue) ByteSize() uint32 {
 	// TODO: improve
 	return StorableSize(v)
 }
+
+func (BoolValue) DeepRemove(_ atree.SlabStorage) error {
+	// NO-OP
+	return nil
 }
 
 func (v BoolValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
@@ -601,6 +615,9 @@ func (v *StringValue) ByteSize() uint32 {
 	return StorableSize(v)
 }
 
+func (*StringValue) DeepRemove(_ atree.SlabStorage) error {
+	// NO-OP
+	return nil
 }
 
 func (v *StringValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
@@ -1080,6 +1097,10 @@ func (v *ArrayValue) DeepCopy(storage atree.SlabStorage, address atree.Address) 
 	}, nil
 }
 
+func (a *ArrayValue) DeepRemove(storage atree.SlabStorage) error {
+	return a.array.DeepRemove(storage)
+}
+
 func (v *ArrayValue) StorageID() atree.StorageID {
 	return v.array.StorageID()
 }
@@ -1417,6 +1438,11 @@ func (v IntValue) DeepCopy(_ atree.SlabStorage, _ atree.Address) (atree.Value, e
 	return IntValue{new(big.Int).Set(v.BigInt)}, nil
 }
 
+func (IntValue) DeepRemove(_ atree.SlabStorage) error {
+	// NO-OP
+	return nil
+}
+
 func (v IntValue) ByteSize() uint32 {
 	// TODO: optimize
 	return StorableSize(v)
@@ -1724,6 +1750,10 @@ func (v Int8Value) DeepCopy(_ atree.SlabStorage, _ atree.Address) (atree.Value, 
 	return v, nil
 }
 
+func (Int8Value) DeepRemove(_ atree.SlabStorage) error {
+	// NO-OP
+	return nil
+}
 
 func (v Int8Value) ByteSize() uint32 {
 	// TODO: optimize
@@ -2032,6 +2062,11 @@ func (v Int16Value) Storable(_ atree.SlabStorage, _ atree.Address) (atree.Storab
 
 func (v Int16Value) DeepCopy(_ atree.SlabStorage, _ atree.Address) (atree.Value, error) {
 	return v, nil
+}
+
+func (Int16Value) DeepRemove(_ atree.SlabStorage) error {
+	// NO-OP
+	return nil
 }
 
 func (v Int16Value) ByteSize() uint32 {
@@ -2343,6 +2378,11 @@ func (v Int32Value) DeepCopy(_ atree.SlabStorage, _ atree.Address) (atree.Value,
 	return v, nil
 }
 
+func (Int32Value) DeepRemove(_ atree.SlabStorage) error {
+	// NO-OP
+	return nil
+}
+
 func (v Int32Value) ByteSize() uint32 {
 	// TODO: optimize
 	return StorableSize(v)
@@ -2649,6 +2689,11 @@ func (v Int64Value) Storable(_ atree.SlabStorage, _ atree.Address) (atree.Storab
 
 func (v Int64Value) DeepCopy(_ atree.SlabStorage, _ atree.Address) (atree.Value, error) {
 	return v, nil
+}
+
+func (Int64Value) DeepRemove(_ atree.SlabStorage) error {
+	// NO-OP
+	return nil
 }
 
 func (v Int64Value) ByteSize() uint32 {
@@ -3029,6 +3074,11 @@ func (v Int128Value) DeepCopy(_ atree.SlabStorage, _ atree.Address) (atree.Value
 	return Int128Value{BigInt: new(big.Int).Set(v.BigInt)}, nil
 }
 
+func (Int128Value) DeepRemove(_ atree.SlabStorage) error {
+	// NO-OP
+	return nil
+}
+
 func (v Int128Value) ByteSize() uint32 {
 	// TODO: optimize
 	return StorableSize(v)
@@ -3407,6 +3457,11 @@ func (v Int256Value) DeepCopy(_ atree.SlabStorage, _ atree.Address) (atree.Value
 	return Int256Value{new(big.Int).Set(v.BigInt)}, nil
 }
 
+func (Int256Value) DeepRemove(_ atree.SlabStorage) error {
+	// NO-OP
+	return nil
+}
+
 func (v Int256Value) ByteSize() uint32 {
 	// TODO: optimize
 	return StorableSize(v)
@@ -3675,6 +3730,11 @@ func (v UIntValue) DeepCopy(_ atree.SlabStorage, _ atree.Address) (atree.Value, 
 	return UIntValue{new(big.Int).Set(v.BigInt)}, nil
 }
 
+func (UIntValue) DeepRemove(_ atree.SlabStorage) error {
+	// NO-OP
+	return nil
+}
+
 func (v UIntValue) ByteSize() uint32 {
 	// TODO: optimize
 	return StorableSize(v)
@@ -3911,6 +3971,11 @@ func (v UInt8Value) Storable(_ atree.SlabStorage, _ atree.Address) (atree.Storab
 
 func (v UInt8Value) DeepCopy(_ atree.SlabStorage, _ atree.Address) (atree.Value, error) {
 	return v, nil
+}
+
+func (UInt8Value) DeepRemove(_ atree.SlabStorage) error {
+	// NO-OP
+	return nil
 }
 
 func (v UInt8Value) ByteSize() uint32 {
@@ -4152,6 +4217,11 @@ func (v UInt16Value) DeepCopy(_ atree.SlabStorage, _ atree.Address) (atree.Value
 	return v, nil
 }
 
+func (UInt16Value) DeepRemove(_ atree.SlabStorage) error {
+	// NO-OP
+	return nil
+}
+
 func (v UInt16Value) ByteSize() uint32 {
 	// TODO: optimize
 	return StorableSize(v)
@@ -4389,6 +4459,11 @@ func (v UInt32Value) Storable(_ atree.SlabStorage, _ atree.Address) (atree.Stora
 
 func (v UInt32Value) DeepCopy(_ atree.SlabStorage, _ atree.Address) (atree.Value, error) {
 	return v, nil
+}
+
+func (UInt32Value) DeepRemove(_ atree.SlabStorage) error {
+	// NO-OP
+	return nil
 }
 
 func (v UInt32Value) ByteSize() uint32 {
@@ -4631,6 +4706,11 @@ func (v UInt64Value) Storable(_ atree.SlabStorage, _ atree.Address) (atree.Stora
 
 func (v UInt64Value) DeepCopy(_ atree.SlabStorage, _ atree.Address) (atree.Value, error) {
 	return v, nil
+}
+
+func (UInt64Value) DeepRemove(_ atree.SlabStorage) error {
+	// NO-OP
+	return nil
 }
 
 func (v UInt64Value) ByteSize() uint32 {
@@ -4953,6 +5033,11 @@ func (v UInt128Value) DeepCopy(_ atree.SlabStorage, _ atree.Address) (atree.Valu
 	return UInt128Value{new(big.Int).Set(v.BigInt)}, nil
 }
 
+func (UInt128Value) DeepRemove(_ atree.SlabStorage) error {
+	// NO-OP
+	return nil
+}
+
 func (v UInt128Value) ByteSize() uint32 {
 	// TODO: optimize
 	return StorableSize(v)
@@ -5273,6 +5358,11 @@ func (v UInt256Value) DeepCopy(_ atree.SlabStorage, _ atree.Address) (atree.Valu
 	return UInt256Value{new(big.Int).Set(v.BigInt)}, nil
 }
 
+func (UInt256Value) DeepRemove(_ atree.SlabStorage) error {
+	// NO-OP
+	return nil
+}
+
 func (v UInt256Value) ByteSize() uint32 {
 	// TODO: optimize
 	return StorableSize(v)
@@ -5454,6 +5544,11 @@ func (v Word8Value) Storable(_ atree.SlabStorage, _ atree.Address) (atree.Storab
 
 func (v Word8Value) DeepCopy(_ atree.SlabStorage, _ atree.Address) (atree.Value, error) {
 	return v, nil
+}
+
+func (Word8Value) DeepRemove(_ atree.SlabStorage) error {
+	// NO-OP
+	return nil
 }
 
 func (v Word8Value) ByteSize() uint32 {
@@ -5640,6 +5735,11 @@ func (v Word16Value) DeepCopy(_ atree.SlabStorage, _ atree.Address) (atree.Value
 	return v, nil
 }
 
+func (Word16Value) DeepRemove(_ atree.SlabStorage) error {
+	// NO-OP
+	return nil
+}
+
 func (v Word16Value) ByteSize() uint32 {
 	// TODO: optimize
 	return StorableSize(v)
@@ -5823,6 +5923,11 @@ func (v Word32Value) Storable(_ atree.SlabStorage, _ atree.Address) (atree.Stora
 
 func (v Word32Value) DeepCopy(_ atree.SlabStorage, _ atree.Address) (atree.Value, error) {
 	return v, nil
+}
+
+func (Word32Value) DeepRemove(_ atree.SlabStorage) error {
+	// NO-OP
+	return nil
 }
 
 func (v Word32Value) ByteSize() uint32 {
@@ -6014,6 +6119,9 @@ func (v Word64Value) ByteSize() uint32 {
 	return StorableSize(v)
 }
 
+func (Word64Value) DeepRemove(_ atree.SlabStorage) error {
+	// NO-OP
+	return nil
 }
 
 func (v Word64Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
@@ -6298,6 +6406,11 @@ func (v Fix64Value) DeepCopy(_ atree.SlabStorage, _ atree.Address) (atree.Value,
 	return v, nil
 }
 
+func (Fix64Value) DeepRemove(_ atree.SlabStorage) error {
+	// NO-OP
+	return nil
+}
+
 func (v Fix64Value) ByteSize() uint32 {
 	// TODO: optimize
 	return StorableSize(v)
@@ -6549,6 +6662,11 @@ func (v UFix64Value) Storable(_ atree.SlabStorage, _ atree.Address) (atree.Stora
 
 func (v UFix64Value) DeepCopy(_ atree.SlabStorage, _ atree.Address) (atree.Value, error) {
 	return v, nil
+}
+
+func (UFix64Value) DeepRemove(_ atree.SlabStorage) error {
+	// NO-OP
+	return nil
 }
 
 func (v UFix64Value) ByteSize() uint32 {
@@ -7034,10 +7152,14 @@ func (v *CompositeValue) ExternalStorable(storage atree.SlabStorage) (atree.Stor
 		if err != nil {
 			return nil, err
 		}
-		fields = append(fields, CompositeStorableField{
-			Name:     fieldName,
-			Storable: storable,
-		})
+
+		fields = append(
+			fields,
+			CompositeStorableField{
+				Name:     fieldName,
+				Storable: storable,
+			},
+		)
 	}
 
 	return CompositeStorable{
@@ -7084,6 +7206,31 @@ func (v *CompositeValue) DeepCopy(storage atree.SlabStorage, address atree.Addre
 	return newValue, nil
 }
 
+func (v *CompositeValue) DeepRemove(storage atree.SlabStorage) error {
+
+	// Remove nested values
+
+	for pair := v.Fields.Oldest(); pair != nil; pair = pair.Next() {
+		fieldValue := pair.Value
+
+		err := fieldValue.DeepRemove(storage)
+		if err != nil {
+			return err
+		}
+	}
+
+	// Remove storable itself
+
+	slab, _, err := storage.Retrieve(v.StorageID)
+	if err != nil {
+		return err
+	}
+
+	return slab.(atree.StorableSlab).
+		Storable.(CompositeStorable).
+		DeepRemove(storage)
+}
+
 type CompositeStorableField struct {
 	Name     string
 	Storable atree.Storable
@@ -7095,6 +7242,23 @@ type CompositeStorable struct {
 	Kind                common.CompositeKind
 	Fields              []CompositeStorableField
 	StorageID           atree.StorageID
+}
+
+func (s CompositeStorable) DeepRemove(storage atree.SlabStorage) error {
+
+	// Remove nested storables
+
+	for _, field := range s.Fields {
+
+		err := field.Storable.DeepRemove(storage)
+		if err != nil {
+			return err
+		}
+	}
+
+	// Slab will be removed by parent
+
+	return nil
 }
 
 var _ atree.Storable = CompositeStorable{}
@@ -7722,6 +7886,38 @@ func (v *DictionaryValue) DeepCopy(storage atree.SlabStorage, address atree.Addr
 	return result, nil
 }
 
+func (v *DictionaryValue) DeepRemove(storage atree.SlabStorage) error {
+
+	// Remove keys
+
+	err := v.Keys.DeepRemove(storage)
+	if err != nil {
+		return err
+	}
+
+	// Remove nested values
+
+	for pair := v.Entries.Oldest(); pair != nil; pair = pair.Next() {
+		entryValue := pair.Value
+
+		err = entryValue.DeepRemove(storage)
+		if err != nil {
+			return err
+		}
+	}
+
+	// Remove storable itself
+
+	slab, _, err := storage.Retrieve(v.StorageID)
+	if err != nil {
+		return err
+	}
+
+	return slab.(atree.StorableSlab).
+		Storable.(DictionaryStorable).
+		DeepRemove(storage)
+}
+
 type DictionaryStorable struct {
 	Type      DictionaryStaticType
 	Keys      atree.Storable
@@ -7730,6 +7926,22 @@ type DictionaryStorable struct {
 }
 
 var _ atree.Storable = DictionaryStorable{}
+
+func (s DictionaryStorable) DeepRemove(storage atree.SlabStorage) error {
+
+	// Remove nested storables
+
+	for _, value := range s.Values {
+		err := value.DeepRemove(storage)
+		if err != nil {
+			return err
+		}
+	}
+
+	// Slab will be removed by parent
+
+	return nil
+}
 
 func (s DictionaryStorable) ByteSize() uint32 {
 	return StorableSize(s)
@@ -7877,6 +8089,11 @@ func (v NilValue) Storable(_ atree.SlabStorage, _ atree.Address) (atree.Storable
 
 func (v NilValue) DeepCopy(_ atree.SlabStorage, _ atree.Address) (atree.Value, error) {
 	return v, nil
+}
+
+func (NilValue) DeepRemove(_ atree.SlabStorage) error {
+	// NO-OP
+	return nil
 }
 
 func (v NilValue) ByteSize() uint32 {
@@ -8037,6 +8254,15 @@ func (v *SomeValue) DeepCopy(storage atree.SlabStorage, address atree.Address) (
 	}, nil
 }
 
+func (v *SomeValue) DeepRemove(storage atree.SlabStorage) error {
+	err := v.Value.DeepRemove(storage)
+	if err != nil {
+		return err
+	}
+
+	return v.valueStorable.DeepRemove(storage)
+}
+
 type SomeStorable struct {
 	Storable atree.Storable
 }
@@ -8060,6 +8286,8 @@ func (s SomeStorable) StoredValue(storage atree.SlabStorage) (atree.Value, error
 	}, nil
 }
 
+func (s SomeStorable) DeepRemove(storage atree.SlabStorage) error {
+	return s.Storable.DeepRemove(storage)
 }
 
 // StorageReferenceValue
@@ -8274,6 +8502,11 @@ func (v *StorageReferenceValue) DeepCopy(_ atree.SlabStorage, _ atree.Address) (
 	return v, nil
 }
 
+func (*StorageReferenceValue) DeepRemove(_ atree.SlabStorage) error {
+	// NO-OP
+	return nil
+}
+
 // EphemeralReferenceValue
 
 type EphemeralReferenceValue struct {
@@ -8479,6 +8712,11 @@ func (v *EphemeralReferenceValue) DeepCopy(_ atree.SlabStorage, _ atree.Address)
 	return v, nil
 }
 
+func (*EphemeralReferenceValue) DeepRemove(_ atree.SlabStorage) error {
+	// NO-OP
+	return nil
+}
+
 // AddressValue
 //
 type AddressValue common.Address
@@ -8604,6 +8842,11 @@ func (v AddressValue) Storable(_ atree.SlabStorage, _ atree.Address) (atree.Stor
 
 func (v AddressValue) DeepCopy(_ atree.SlabStorage, _ atree.Address) (atree.Value, error) {
 	return v, nil
+}
+
+func (AddressValue) DeepRemove(_ atree.SlabStorage) error {
+	// NO-OP
+	return nil
 }
 
 func (v AddressValue) ByteSize() uint32 {
@@ -8889,6 +9132,11 @@ func (v PathValue) DeepCopy(_ atree.SlabStorage, _ atree.Address) (atree.Value, 
 	return v, nil
 }
 
+func (PathValue) DeepRemove(_ atree.SlabStorage) error {
+	// NO-OP
+	return nil
+}
+
 func (v PathValue) ByteSize() uint32 {
 	return StorableSize(v)
 }
@@ -9057,6 +9305,30 @@ func (v CapabilityValue) DeepCopy(storage atree.SlabStorage, address atree.Addre
 	}, nil
 }
 
+func (v CapabilityValue) DeepRemove(storage atree.SlabStorage) error {
+	err := v.Address.DeepRemove(storage)
+	if err != nil {
+		return err
+	}
+
+	err = v.Path.DeepRemove(storage)
+	if err != nil {
+		return err
+	}
+
+	err = v.addressStorable.DeepRemove(storage)
+	if err != nil {
+		return err
+	}
+
+	err = v.pathStorable.DeepRemove(storage)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 type CapabilityStorable struct {
 	Address    atree.Storable
 	Path       atree.Storable
@@ -9097,6 +9369,18 @@ func (s CapabilityStorable) StoredValue(storage atree.SlabStorage) (atree.Value,
 	}, nil
 }
 
+func (s CapabilityStorable) DeepRemove(storage atree.SlabStorage) error {
+	err := s.Address.DeepRemove(storage)
+	if err != nil {
+		return err
+	}
+
+	err = s.Path.DeepRemove(storage)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // LinkValue
@@ -9165,6 +9449,11 @@ func (v LinkValue) Storable(storage atree.SlabStorage, address atree.Address) (a
 
 func (v LinkValue) DeepCopy(_ atree.SlabStorage, _ atree.Address) (atree.Value, error) {
 	return v, nil
+}
+
+func (LinkValue) DeepRemove(_ atree.SlabStorage) error {
+	// NO-OP
+	return nil
 }
 
 func (v LinkValue) ByteSize() uint32 {
