@@ -2805,9 +2805,54 @@ func TestEncodeDecodeSomeValue(t *testing.T) {
 
 		t.Parallel()
 
-		str := NewStringValue(strings.Repeat("x", int(atree.MaxInlineElementSize+1)))
+		// Generate a strings that has an encoding size just below the max inline element size.
+		// It will not get inlined, but the outer value will
 
-		expected := NewSomeValueNonCopying(str)
+		var str *StringValue
+		for i := uint64(0); i < atree.MaxInlineElementSize; i++ {
+
+			str = NewStringValue(strings.Repeat("x", int(atree.MaxInlineElementSize-i)))
+			if uint64(StorableSize(str)) == atree.MaxInlineElementSize-1 {
+				break
+			}
+		}
+
+		expected := &SomeValue{
+			Value: str,
+		}
+
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				value: expected,
+				encoded: []byte{
+					// tag
+					0xd8, atree.CBORTagStorageID,
+
+					// storage ID
+					0x50, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x42, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
+				},
+			},
+		)
+	})
+
+	t.Run("inner path stored separately", func(t *testing.T) {
+
+		t.Parallel()
+
+		// Generate a string that has an encoding size just above the max inline element size
+
+		var str *StringValue
+		for i := uint64(0); i < atree.MaxInlineElementSize; i++ {
+			str = NewStringValue(strings.Repeat("x", int(atree.MaxInlineElementSize-i)))
+
+			if uint64(StorableSize(str)) == atree.MaxInlineElementSize+1 {
+				break
+			}
+		}
+
+		expected := &SomeValue{
+			Value: str,
+		}
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
@@ -2815,10 +2860,8 @@ func TestEncodeDecodeSomeValue(t *testing.T) {
 				encoded: []byte{
 					// tag
 					0xd8, CBORTagSomeValue,
-
-					// tag
+					// value
 					0xd8, atree.CBORTagStorageID,
-
 					// storage ID
 					0x50, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x42, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
 				},
@@ -3439,11 +3482,21 @@ func TestEncodeDecodeCapabilityValue(t *testing.T) {
 
 		t.Parallel()
 
-		identifier := strings.Repeat("x", int(atree.MaxInlineElementSize+1))
+		// Generate a path that has an encoding size just below the max inline element size.
+		// It will not get inlined, but the outer capability will
 
-		path := PathValue{
-			Domain:     common.PathDomainStorage,
-			Identifier: identifier,
+		var path PathValue
+		for i := uint64(0); i < atree.MaxInlineElementSize; i++ {
+			identifier := strings.Repeat("x", int(atree.MaxInlineElementSize-i))
+
+			path = PathValue{
+				Domain:     common.PathDomainStorage,
+				Identifier: identifier,
+			}
+
+			if uint64(StorableSize(path)) == atree.MaxInlineElementSize-1 {
+				break
+			}
 		}
 
 		expected := CapabilityValue{
@@ -3459,6 +3512,53 @@ func TestEncodeDecodeCapabilityValue(t *testing.T) {
 
 					// storage ID
 					0x50, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x42, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
+				},
+			},
+		)
+	})
+
+	t.Run("inner path stored separately", func(t *testing.T) {
+
+		t.Parallel()
+
+		// Generate a path that has an encoding size just above the max inline element size
+
+		var path PathValue
+		for i := uint64(0); i < atree.MaxInlineElementSize; i++ {
+			identifier := strings.Repeat("x", int(atree.MaxInlineElementSize-i))
+
+			path = PathValue{
+				Domain:     common.PathDomainStorage,
+				Identifier: identifier,
+			}
+
+			if uint64(StorableSize(path)) == atree.MaxInlineElementSize+1 {
+				break
+			}
+		}
+
+		expected := CapabilityValue{
+			Path: path,
+		}
+
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				value: expected,
+				encoded: []byte{
+					// tag
+					0xd8, CBORTagCapabilityValue,
+					// array, 3 items follow
+					0x83,
+					// tag for address
+					0xd8, CBORTagAddressValue,
+					// byte sequence, length 1
+					0x40,
+					// path
+					0xd8, atree.CBORTagStorageID,
+					// storage ID
+					0x50, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x42, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
+					// type: nil
+					0xf6,
 				},
 			},
 		)

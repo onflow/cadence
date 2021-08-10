@@ -705,7 +705,7 @@ func (s CompositeStorable) Encode(e *atree.Encoder) error {
 	return nil
 }
 
-// Encode encodes SomeValue as
+// Encode encodes SomeStorable as
 // cbor.Tag{
 //		Number: CBORTagSomeValue,
 //		Content: Value(v.Value),
@@ -792,7 +792,7 @@ const (
 	encodedCapabilityValueLength = 3
 )
 
-// Encode encodes CapabilityValue as
+// Encode encodes CapabilityStorable as
 // cbor.Tag{
 //			Number: CBORTagCapabilityValue,
 //			Content: []interface{}{
@@ -801,7 +801,7 @@ const (
 // 					encodedCapabilityValueBorrowTypeFieldKeyV6: StaticType(v.BorrowType),
 // 				},
 // }
-func (v CapabilityValue) Encode(e *atree.Encoder) error {
+func (s CapabilityStorable) Encode(e *atree.Encoder) error {
 	// Encode tag number and array head
 	err := e.CBOR.EncodeRawBytes([]byte{
 		// tag number
@@ -814,19 +814,19 @@ func (v CapabilityValue) Encode(e *atree.Encoder) error {
 	}
 
 	// Encode address at array index encodedCapabilityValueAddressFieldKeyV6
-	err = v.Address.Encode(e)
+	err = s.Address.Encode(e)
 	if err != nil {
 		return err
 	}
 
 	// Encode path at array index encodedCapabilityValuePathFieldKeyV6
-	err = v.Path.Encode(e)
+	err = s.Path.Encode(e)
 	if err != nil {
 		return err
 	}
 
 	// Encode borrow type at array index encodedCapabilityValueBorrowTypeFieldKeyV6
-	return EncodeStaticType(e, v.BorrowType)
+	return EncodeStaticType(e, s.BorrowType)
 }
 
 // NOTE: NEVER change, only add/increment; ensure uint64

@@ -119,7 +119,7 @@ func NewInMemoryStorage() InMemoryStorage {
 	}
 }
 
-func storableSize(storable atree.Storable) uint32 {
+func StorableSize(storable atree.Storable) uint32 {
 	// TODO: reduce allocation by encoding to encoder which only increases length counter
 	encode, err := atree.Encode(storable, CBOREncMode)
 	if err != nil {
