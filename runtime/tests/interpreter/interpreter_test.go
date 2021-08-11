@@ -6434,7 +6434,7 @@ func TestInterpretReferenceDereferenceFailure(t *testing.T) {
 
 	_, err := inter.Invoke("test")
 
-	require.ErrorAs(t, err, &interpreter.DestroyedCompositeError{})
+	require.ErrorAs(t, err, &interpreter.InvalidatedValueError{})
 }
 
 func TestInterpretVariableDeclarationSecondValue(t *testing.T) {
@@ -7203,7 +7203,7 @@ func TestInterpretNonStorageReferenceAfterDestruction(t *testing.T) {
 	_, err := inter.Invoke("test")
 	require.Error(t, err)
 
-	require.ErrorAs(t, err, &interpreter.DestroyedCompositeError{})
+	require.ErrorAs(t, err, &interpreter.InvalidatedValueError{})
 }
 
 func TestInterpretNonStorageReferenceToOptional(t *testing.T) {
@@ -7449,6 +7449,80 @@ func TestInterpretOptionalChainingOptionalFieldRead(t *testing.T) {
 		},
 		inter.Globals["x"].GetValue(),
 	)
+}
+
+func TestInterpretReferenceUseAfterCopy(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("resource", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+          resource R {
+              var name: String
+              init(name: String) {
+                  self.name = name
+              }
+          }
+
+          fun test(): String {
+              let r <- create R(name: "1")
+              let ref = &r as &R
+              let container <- [<-r]
+              ref.name = "2"
+              let r2 <- container.remove(at: 0)
+              let name = r2.name
+              destroy container
+              destroy r2
+              return name
+          }
+        `)
+
+		_, err := inter.Invoke("test")
+		require.Error(t, err)
+
+		require.ErrorAs(t, err, &interpreter.InvalidatedValueError{})
+	})
+
+	t.Run("struct", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+          struct S {
+              var name: String
+              init(name: String) {
+                  self.name = name
+              }
+          }
+
+          fun test(): [String] {
+              let s = S(name: "1")
+              let ref = &s as &S
+              let container = [s]
+              ref.name = "2"
+              let s2 = container.remove(at: 0)
+              return [s.name, s2.name]
+          }
+        `)
+
+		result, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(t,
+			interpreter.NewArrayValue(
+				interpreter.VariableSizedStaticType{
+					Type: interpreter.PrimitiveStaticTypeString,
+				},
+				inter.Storage,
+				interpreter.NewStringValue("2"),
+				interpreter.NewStringValue("1"),
+			),
+			result,
+		)
+	})
 }
 
 func TestInterpretResourceOwnerFieldUse(t *testing.T) {
