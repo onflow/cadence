@@ -232,7 +232,7 @@ func (TypeValue) DeepRemove(_ atree.SlabStorage) error {
 }
 
 func (v TypeValue) ByteSize() uint32 {
-	return StorableSize(v)
+	return mustStorableSize(v)
 }
 
 func (v TypeValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
@@ -304,7 +304,7 @@ func (VoidValue) DeepRemove(_ atree.SlabStorage) error {
 
 func (v VoidValue) ByteSize() uint32 {
 	// TODO: improve
-	return StorableSize(v)
+	return mustStorableSize(v)
 }
 
 func (v VoidValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
@@ -385,7 +385,7 @@ func (v BoolValue) DeepCopy(_ atree.SlabStorage, _ atree.Address) (atree.Value, 
 
 func (v BoolValue) ByteSize() uint32 {
 	// TODO: improve
-	return StorableSize(v)
+	return mustStorableSize(v)
 }
 
 func (BoolValue) DeepRemove(_ atree.SlabStorage) error {
@@ -620,7 +620,7 @@ func (v *StringValue) DeepCopy(_ atree.SlabStorage, _ atree.Address) (atree.Valu
 }
 
 func (v *StringValue) ByteSize() uint32 {
-	return StorableSize(v)
+	return mustStorableSize(v)
 }
 
 func (*StringValue) DeepRemove(_ atree.SlabStorage) error {
@@ -1502,7 +1502,7 @@ func (IntValue) DeepRemove(_ atree.SlabStorage) error {
 
 func (v IntValue) ByteSize() uint32 {
 	// TODO: optimize
-	return StorableSize(v)
+	return mustStorableSize(v)
 }
 
 func (v IntValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
@@ -1814,7 +1814,7 @@ func (Int8Value) DeepRemove(_ atree.SlabStorage) error {
 
 func (v Int8Value) ByteSize() uint32 {
 	// TODO: optimize
-	return StorableSize(v)
+	return mustStorableSize(v)
 }
 
 func (v Int8Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
@@ -2128,7 +2128,7 @@ func (Int16Value) DeepRemove(_ atree.SlabStorage) error {
 
 func (v Int16Value) ByteSize() uint32 {
 	// TODO: optimize
-	return StorableSize(v)
+	return mustStorableSize(v)
 }
 
 func (v Int16Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
@@ -2442,7 +2442,7 @@ func (Int32Value) DeepRemove(_ atree.SlabStorage) error {
 
 func (v Int32Value) ByteSize() uint32 {
 	// TODO: optimize
-	return StorableSize(v)
+	return mustStorableSize(v)
 }
 
 func (v Int32Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
@@ -2755,7 +2755,7 @@ func (Int64Value) DeepRemove(_ atree.SlabStorage) error {
 
 func (v Int64Value) ByteSize() uint32 {
 	// TODO: optimize
-	return StorableSize(v)
+	return mustStorableSize(v)
 }
 
 func (v Int64Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
@@ -3138,7 +3138,7 @@ func (Int128Value) DeepRemove(_ atree.SlabStorage) error {
 
 func (v Int128Value) ByteSize() uint32 {
 	// TODO: optimize
-	return StorableSize(v)
+	return mustStorableSize(v)
 }
 
 func (v Int128Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
@@ -3521,7 +3521,7 @@ func (Int256Value) DeepRemove(_ atree.SlabStorage) error {
 
 func (v Int256Value) ByteSize() uint32 {
 	// TODO: optimize
-	return StorableSize(v)
+	return mustStorableSize(v)
 }
 
 func (v Int256Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
@@ -3794,7 +3794,7 @@ func (UIntValue) DeepRemove(_ atree.SlabStorage) error {
 
 func (v UIntValue) ByteSize() uint32 {
 	// TODO: optimize
-	return StorableSize(v)
+	return mustStorableSize(v)
 }
 
 func (v UIntValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
@@ -4037,7 +4037,7 @@ func (UInt8Value) DeepRemove(_ atree.SlabStorage) error {
 
 func (v UInt8Value) ByteSize() uint32 {
 	// TODO: optimize
-	return StorableSize(v)
+	return mustStorableSize(v)
 }
 
 func (v UInt8Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
@@ -4281,7 +4281,7 @@ func (UInt16Value) DeepRemove(_ atree.SlabStorage) error {
 
 func (v UInt16Value) ByteSize() uint32 {
 	// TODO: optimize
-	return StorableSize(v)
+	return mustStorableSize(v)
 }
 
 func (v UInt16Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
@@ -4525,7 +4525,7 @@ func (UInt32Value) DeepRemove(_ atree.SlabStorage) error {
 
 func (v UInt32Value) ByteSize() uint32 {
 	// TODO: optimize
-	return StorableSize(v)
+	return mustStorableSize(v)
 }
 
 func (v UInt32Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
@@ -4772,7 +4772,7 @@ func (UInt64Value) DeepRemove(_ atree.SlabStorage) error {
 
 func (v UInt64Value) ByteSize() uint32 {
 	// TODO: optimize
-	return StorableSize(v)
+	return mustStorableSize(v)
 }
 
 func (v UInt64Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
@@ -5097,7 +5097,7 @@ func (UInt128Value) DeepRemove(_ atree.SlabStorage) error {
 
 func (v UInt128Value) ByteSize() uint32 {
 	// TODO: optimize
-	return StorableSize(v)
+	return mustStorableSize(v)
 }
 
 func (v UInt128Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
@@ -5422,7 +5422,7 @@ func (UInt256Value) DeepRemove(_ atree.SlabStorage) error {
 
 func (v UInt256Value) ByteSize() uint32 {
 	// TODO: optimize
-	return StorableSize(v)
+	return mustStorableSize(v)
 }
 
 func (v UInt256Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
@@ -5610,7 +5610,7 @@ func (Word8Value) DeepRemove(_ atree.SlabStorage) error {
 
 func (v Word8Value) ByteSize() uint32 {
 	// TODO: optimize
-	return StorableSize(v)
+	return mustStorableSize(v)
 }
 
 func (v Word8Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
@@ -5799,7 +5799,7 @@ func (Word16Value) DeepRemove(_ atree.SlabStorage) error {
 
 func (v Word16Value) ByteSize() uint32 {
 	// TODO: optimize
-	return StorableSize(v)
+	return mustStorableSize(v)
 }
 
 func (v Word16Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
@@ -5989,7 +5989,7 @@ func (Word32Value) DeepRemove(_ atree.SlabStorage) error {
 
 func (v Word32Value) ByteSize() uint32 {
 	// TODO: optimize
-	return StorableSize(v)
+	return mustStorableSize(v)
 }
 func (v Word32Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 	return v, nil
@@ -6173,7 +6173,7 @@ func (v Word64Value) DeepCopy(_ atree.SlabStorage, _ atree.Address) (atree.Value
 
 func (v Word64Value) ByteSize() uint32 {
 	// TODO: optimize
-	return StorableSize(v)
+	return mustStorableSize(v)
 }
 
 func (Word64Value) DeepRemove(_ atree.SlabStorage) error {
@@ -6470,7 +6470,7 @@ func (Fix64Value) DeepRemove(_ atree.SlabStorage) error {
 
 func (v Fix64Value) ByteSize() uint32 {
 	// TODO: optimize
-	return StorableSize(v)
+	return mustStorableSize(v)
 }
 
 func (v Fix64Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
@@ -6728,7 +6728,7 @@ func (UFix64Value) DeepRemove(_ atree.SlabStorage) error {
 
 func (v UFix64Value) ByteSize() uint32 {
 	// TODO: optimize
-	return StorableSize(v)
+	return mustStorableSize(v)
 }
 
 func (v UFix64Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
@@ -7318,7 +7318,7 @@ var _ atree.Storable = CompositeStorable{}
 
 func (s CompositeStorable) ByteSize() uint32 {
 	// TODO: optimize
-	return StorableSize(s)
+	return mustStorableSize(s)
 }
 
 func (s CompositeStorable) StoredValue(storage atree.SlabStorage) (atree.Value, error) {
@@ -8039,7 +8039,7 @@ func (s DictionaryStorable) DeepRemove(storage atree.SlabStorage) error {
 }
 
 func (s DictionaryStorable) ByteSize() uint32 {
-	return StorableSize(s)
+	return mustStorableSize(s)
 }
 
 func (s DictionaryStorable) StoredValue(storage atree.SlabStorage) (atree.Value, error) {
@@ -8193,7 +8193,7 @@ func (NilValue) DeepRemove(_ atree.SlabStorage) error {
 
 func (v NilValue) ByteSize() uint32 {
 	// TODO: optimize
-	return StorableSize(v)
+	return mustStorableSize(v)
 }
 
 func (v NilValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
@@ -8373,7 +8373,7 @@ var _ atree.Storable = SomeStorable{}
 
 func (s SomeStorable) ByteSize() uint32 {
 	// TODO: optimize
-	return StorableSize(s)
+	return mustStorableSize(s)
 }
 
 func (s SomeStorable) StoredValue(storage atree.SlabStorage) (atree.Value, error) {
@@ -8917,8 +8917,8 @@ func (AddressValue) DeepRemove(_ atree.SlabStorage) error {
 }
 
 func (v AddressValue) ByteSize() uint32 {
-	// TOD O: optimize
-	return StorableSize(v)
+	// TODO: optimize
+	return mustStorableSize(v)
 }
 
 func (v AddressValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
@@ -9211,7 +9211,7 @@ func (PathValue) DeepRemove(_ atree.SlabStorage) error {
 }
 
 func (v PathValue) ByteSize() uint32 {
-	return StorableSize(v)
+	return mustStorableSize(v)
 }
 
 func (v PathValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
@@ -9409,7 +9409,7 @@ type CapabilityStorable struct {
 }
 
 func (s CapabilityStorable) ByteSize() uint32 {
-	return StorableSize(s)
+	return mustStorableSize(s)
 }
 
 func (s CapabilityStorable) StoredValue(storage atree.SlabStorage) (atree.Value, error) {
@@ -9530,7 +9530,7 @@ func (LinkValue) DeepRemove(_ atree.SlabStorage) error {
 }
 
 func (v LinkValue) ByteSize() uint32 {
-	return StorableSize(v)
+	return mustStorableSize(v)
 }
 
 func (v LinkValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
