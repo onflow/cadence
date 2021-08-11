@@ -32,31 +32,46 @@ func TestInspectValue(t *testing.T) {
 
 	storage := NewInMemoryStorage()
 
-	dictionaryStaticType := DictionaryStaticType{
-		KeyType:   PrimitiveStaticTypeString,
-		ValueType: PrimitiveStaticTypeInt256,
+	// Prepare composite value
+
+	var compositeValue *CompositeValue
+	{
+		dictionaryStaticType := DictionaryStaticType{
+			KeyType:   PrimitiveStaticTypeString,
+			ValueType: PrimitiveStaticTypeInt256,
+		}
+		dictValueKey := NewStringValue("hello world")
+		dictValueValue := NewInt256ValueFromInt64(1)
+		dictValue := NewDictionaryValue(
+			newTestInterpreter(t),
+			dictionaryStaticType,
+			storage,
+			dictValueKey, dictValueValue,
+		)
+
+		arrayValue := NewArrayValue(
+			VariableSizedStaticType{
+				Type: dictionaryStaticType,
+			},
+			storage,
+			dictValue,
+		)
+
+		optionalValue := NewSomeValueNonCopying(arrayValue)
+
+		compositeValue = newTestCompositeValue(storage, atree.Address{})
+		compositeValue.Fields.Set("value", optionalValue)
 	}
+
+	// Get actually stored values.
+	// The values above were removed when they were inserted into the containers.
+
+	optionalValue := compositeValue.GetField("value").(*SomeValue)
+	arrayValue := optionalValue.Value.(*ArrayValue)
+	dictValue := arrayValue.GetIndex(0, ReturnEmptyLocationRange).(*DictionaryValue)
 	dictValueKey := NewStringValue("hello world")
-	dictValueValue := NewInt256ValueFromInt64(1)
-	dictValue := NewDictionaryValue(
-		newTestInterpreter(t),
-		dictionaryStaticType,
-		storage,
-		dictValueKey, dictValueValue,
-	)
 
-	arrayValue := NewArrayValue(
-		VariableSizedStaticType{
-			Type: dictionaryStaticType,
-		},
-		storage,
-		dictValue,
-	)
-
-	optionalValue := NewSomeValueNonCopying(arrayValue)
-
-	compositeValue := newTestCompositeValue(storage, atree.Address{})
-	compositeValue.Fields.Set("value", optionalValue)
+	dictValueValue, _, _ := dictValue.GetKey(dictValueKey)
 
 	t.Run("dict", func(t *testing.T) {
 
