@@ -223,7 +223,11 @@ func decodeBool(valueJSON interface{}) cadence.Bool {
 }
 
 func decodeString(valueJSON interface{}) cadence.String {
-	return cadence.NewString(toString(valueJSON))
+	str, err := cadence.NewString(toString(valueJSON))
+	if err != nil {
+		panic(err)
+	}
+	return str
 }
 
 func decodeAddress(valueJSON interface{}) cadence.Address {
@@ -310,15 +314,33 @@ func decodeInt64(valueJSON interface{}) cadence.Int64 {
 }
 
 func decodeInt128(valueJSON interface{}) cadence.Int128 {
-	return cadence.NewInt128FromBig(decodeBigInt(valueJSON))
+	bigInt := decodeBigInt(valueJSON)
+	value, err := cadence.NewInt128FromBig(bigInt)
+	if err != nil {
+		// TODO: improve error message
+		panic(ErrInvalidJSONCadence)
+	}
+	return value
 }
 
 func decodeInt256(valueJSON interface{}) cadence.Int256 {
-	return cadence.NewInt256FromBig(decodeBigInt(valueJSON))
+	bigInt := decodeBigInt(valueJSON)
+	value, err := cadence.NewInt256FromBig(bigInt)
+	if err != nil {
+		// TODO: improve error message
+		panic(ErrInvalidJSONCadence)
+	}
+	return value
 }
 
 func decodeUInt(valueJSON interface{}) cadence.UInt {
-	return cadence.NewUIntFromBig(decodeBigInt(valueJSON))
+	bigInt := decodeBigInt(valueJSON)
+	value, err := cadence.NewUIntFromBig(bigInt)
+	if err != nil {
+		// TODO: improve error message
+		panic(ErrInvalidJSONCadence)
+	}
+	return value
 }
 
 func decodeUInt8(valueJSON interface{}) cadence.UInt8 {
@@ -370,11 +392,23 @@ func decodeUInt64(valueJSON interface{}) cadence.UInt64 {
 }
 
 func decodeUInt128(valueJSON interface{}) cadence.UInt128 {
-	return cadence.NewUInt128FromBig(decodeBigInt(valueJSON))
+	bigInt := decodeBigInt(valueJSON)
+	value, err := cadence.NewUInt128FromBig(bigInt)
+	if err != nil {
+		// TODO: improve error message
+		panic(ErrInvalidJSONCadence)
+	}
+	return value
 }
 
 func decodeUInt256(valueJSON interface{}) cadence.UInt256 {
-	return cadence.NewUInt256FromBig(decodeBigInt(valueJSON))
+	bigInt := decodeBigInt(valueJSON)
+	value, err := cadence.NewUInt256FromBig(bigInt)
+	if err != nil {
+		// TODO: improve error message
+		panic(ErrInvalidJSONCadence)
+	}
+	return value
 }
 
 func decodeWord8(valueJSON interface{}) cadence.Word8 {

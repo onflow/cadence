@@ -7277,28 +7277,28 @@ func TestInterpretHexDecode(t *testing.T) {
                       panic("Input must have even number of characters")
                   }
                   let table: {String: UInt8} = {
-                          "0" : 0 as UInt8,
-                          "1" : 1 as UInt8,
-                          "2" : 2 as UInt8,
-                          "3" : 3 as UInt8,
-                          "4" : 4 as UInt8,
-                          "5" : 5 as UInt8,
-                          "6" : 6 as UInt8,
-                          "7" : 7 as UInt8,
-                          "8" : 8 as UInt8,
-                          "9" : 9 as UInt8,
-                          "a" : 10 as UInt8,
-                          "A" : 10 as UInt8,
-                          "b" : 11 as UInt8,
-                          "B" : 11 as UInt8,
-                          "c" : 12 as UInt8,
-                          "C" : 12 as UInt8,
-                          "d" : 13 as UInt8,
-                          "D" : 13 as UInt8,
-                          "e" : 14 as UInt8,
-                          "E" : 14 as UInt8,
-                          "f" : 15 as UInt8,
-                          "F" : 15 as UInt8
+                          "0" : 0,
+                          "1" : 1,
+                          "2" : 2,
+                          "3" : 3,
+                          "4" : 4,
+                          "5" : 5,
+                          "6" : 6,
+                          "7" : 7,
+                          "8" : 8,
+                          "9" : 9,
+                          "a" : 10,
+                          "A" : 10,
+                          "b" : 11,
+                          "B" : 11,
+                          "c" : 12,
+                          "C" : 12,
+                          "d" : 13,
+                          "D" : 13,
+                          "e" : 14,
+                          "E" : 14,
+                          "f" : 15,
+                          "F" : 15
                       }
                   let length = s.length / 2
                   var i = 0
@@ -7494,6 +7494,11 @@ func TestInterpretResourceOwnerFieldUse(t *testing.T) {
 							},
 							interpreter.NewPublicAccountKeysValue(
 								panicFunction,
+							),
+							interpreter.NewPublicAccountContractsValue(
+								address,
+								nil,
+								nil,
 							),
 						)
 					},

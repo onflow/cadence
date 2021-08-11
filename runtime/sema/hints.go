@@ -100,3 +100,19 @@ func (h *AlwaysSucceedingForceCastHint) Hint() string {
 }
 
 func (*AlwaysSucceedingForceCastHint) isHint() {}
+
+// UnnecessaryCastHint
+
+type UnnecessaryCastHint struct {
+	TargetType Type
+	ast.Range
+}
+
+func (h *UnnecessaryCastHint) Hint() string {
+	return fmt.Sprintf(
+		"cast to `%s` is redundant",
+		h.TargetType,
+	)
+}
+
+func (*UnnecessaryCastHint) isHint() {}

@@ -32,6 +32,7 @@ func NewAuthAccountContractsValue(
 	updateFunction FunctionValue,
 	getFunction FunctionValue,
 	removeFunction FunctionValue,
+	namesGet func() *ArrayValue,
 ) *CompositeValue {
 	fields := NewStringValueOrderedMap()
 	fields.Set(sema.AuthAccountContractsTypeAddFunctionName, addFunction)
@@ -39,7 +40,13 @@ func NewAuthAccountContractsValue(
 	fields.Set(sema.AuthAccountContractsTypeRemoveFunctionName, removeFunction)
 	fields.Set(sema.AuthAccountContractsTypeUpdateExperimentalFunctionName, updateFunction)
 
-	stringer := func(_ StringResults) string {
+	computedFields := NewStringComputedFieldOrderedMap()
+
+	computedFields.Set(sema.AuthAccountContractsTypeNamesField, func(*Interpreter) Value {
+		return namesGet()
+	})
+
+	stringer := func(_ SeenReferences) string {
 		return fmt.Sprintf("AuthAccount.Contracts(%s)", address)
 	}
 
@@ -47,6 +54,7 @@ func NewAuthAccountContractsValue(
 		qualifiedIdentifier: sema.AuthAccountContractsType.QualifiedIdentifier(),
 		kind:                sema.AuthAccountContractsType.Kind,
 		fields:              fields,
+		ComputedFields:      computedFields,
 		stringer:            stringer,
 	}
 }
