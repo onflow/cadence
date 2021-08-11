@@ -7226,12 +7226,6 @@ func (v *CompositeValue) ExternalStorable(storage atree.SlabStorage) (atree.Stor
 
 func (v *CompositeValue) DeepCopy(storage atree.SlabStorage, address atree.Address) (atree.Value, error) {
 
-	// Deep copying occurs when a value is transferred.
-	// When a resource is transferred, the source is invalidated.
-	if v.Kind == common.CompositeKindResource {
-		v.invalidated = true
-	}
-
 	newFields := NewStringValueOrderedMap()
 	for pair := v.Fields.Oldest(); pair != nil; pair = pair.Next() {
 		fieldName := pair.Key
@@ -7261,6 +7255,12 @@ func (v *CompositeValue) DeepCopy(storage atree.SlabStorage, address atree.Addre
 	newValue.Destructor = v.Destructor
 	newValue.invalidated = v.invalidated
 	newValue.Stringer = v.Stringer
+
+	// Deep copying occurs when a value is transferred.
+	// When a resource is transferred, the source is invalidated.
+	if v.Kind == common.CompositeKindResource {
+		v.invalidated = true
+	}
 
 	return newValue, nil
 }
