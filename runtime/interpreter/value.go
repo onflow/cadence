@@ -6749,7 +6749,7 @@ type CompositeValue struct {
 	NestedVariables *StringVariableOrderedMap
 	Functions       map[string]FunctionValue
 	Destructor      FunctionValue
-	destroyed       bool
+	invalidated     bool
 	Stringer        func(seenReferences SeenReferences) string
 	StorageID       atree.StorageID
 }
@@ -6825,7 +6825,7 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, getLocationRange func
 		destructor.Invoke(invocation)
 	}
 
-	v.destroyed = true
+	v.invalidated = true
 
 	v.store(interpreter.Storage)
 }
@@ -6866,9 +6866,9 @@ func (v *CompositeValue) StaticType() StaticType {
 	}
 }
 
-func (v *CompositeValue) checkStatus(getLocationRange func() LocationRange) {
-	if v.destroyed {
-		panic(DestroyedCompositeError{
+func (v *CompositeValue) checkNotInvalidated(getLocationRange func() LocationRange) {
+	if v.invalidated {
+		panic(InvalidatedValueError{
 			CompositeKind: v.Kind,
 			LocationRange: getLocationRange(),
 		})
@@ -6876,7 +6876,7 @@ func (v *CompositeValue) checkStatus(getLocationRange func() LocationRange) {
 }
 
 func (v *CompositeValue) GetMember(interpreter *Interpreter, getLocationRange func() LocationRange, name string) Value {
-	v.checkStatus(getLocationRange)
+	v.checkNotInvalidated(getLocationRange)
 
 	if v.Kind == common.CompositeKindResource &&
 		name == sema.ResourceOwnerFieldName {
@@ -6979,7 +6979,7 @@ func (v *CompositeValue) SetMember(
 	name string,
 	value Value,
 ) {
-	v.checkStatus(getLocationRange)
+	v.checkNotInvalidated(getLocationRange)
 
 	valueCopy, err := value.DeepCopy(interpreter.Storage, v.StorageID.Address)
 	if err != nil {
@@ -7226,6 +7226,12 @@ func (v *CompositeValue) ExternalStorable(storage atree.SlabStorage) (atree.Stor
 
 func (v *CompositeValue) DeepCopy(storage atree.SlabStorage, address atree.Address) (atree.Value, error) {
 
+	// Deep copying occurs when a value is transferred.
+	// When a resource is transferred, the source is invalidated.
+	if v.Kind == common.CompositeKindResource {
+		v.invalidated = true
+	}
+
 	newFields := NewStringValueOrderedMap()
 	for pair := v.Fields.Oldest(); pair != nil; pair = pair.Next() {
 		fieldName := pair.Key
@@ -7253,7 +7259,7 @@ func (v *CompositeValue) DeepCopy(storage atree.SlabStorage, address atree.Addre
 	newValue.NestedVariables = v.NestedVariables
 	newValue.Functions = v.Functions
 	newValue.Destructor = v.Destructor
-	newValue.destroyed = v.destroyed
+	newValue.invalidated = v.invalidated
 	newValue.Stringer = v.Stringer
 
 	return newValue, nil

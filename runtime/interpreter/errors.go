@@ -207,15 +207,15 @@ func (e DivisionByZeroError) Error() string {
 	return "division by zero"
 }
 
-// DestroyedCompositeError
+// InvalidatedValueError
 
-type DestroyedCompositeError struct {
+type InvalidatedValueError struct {
 	CompositeKind common.CompositeKind
 	LocationRange
 }
 
-func (e DestroyedCompositeError) Error() string {
-	return fmt.Sprintf("%s is destroyed and cannot be accessed anymore", e.CompositeKind.Name())
+func (e InvalidatedValueError) Error() string {
+	return fmt.Sprintf("%s is invalidated and cannot be accessed anymore", e.CompositeKind.Name())
 }
 
 // ForceAssignmentToNonNilResourceError
