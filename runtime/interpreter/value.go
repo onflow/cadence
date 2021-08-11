@@ -641,7 +641,7 @@ func (v *StringValue) DecodeHex(storage Storage) *ArrayValue {
 		values[i] = UInt8Value(b)
 	}
 
-	return NewArrayValueUnownedNonCopying(ByteArrayStaticType, storage, values...)
+	return NewArrayValue(ByteArrayStaticType, storage, values...)
 }
 
 func (*StringValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -660,9 +660,23 @@ type ArrayValue struct {
 	array *atree.Array
 }
 
-func NewArrayValueUnownedNonCopying(
+func NewArrayValue(
 	arrayType ArrayStaticType,
 	storage atree.SlabStorage,
+	values ...Value,
+) *ArrayValue {
+	return NewArrayValueWithAddress(
+		arrayType,
+		storage,
+		atree.Address{},
+		values...,
+	)
+}
+
+func NewArrayValueWithAddress(
+	arrayType ArrayStaticType,
+	storage atree.SlabStorage,
+	address atree.Address,
 	values ...Value,
 ) *ArrayValue {
 
@@ -671,7 +685,7 @@ func NewArrayValueUnownedNonCopying(
 		panic(ExternalError{err})
 	}
 
-	array, err := atree.NewArray(storage, atree.Address{}, string(typeInfo))
+	array, err := atree.NewArray(storage, address, string(typeInfo))
 	if err != nil {
 		panic(ExternalError{err})
 	}
@@ -817,9 +831,16 @@ func (v *ArrayValue) RecursiveString(results StringResults) string {
 
 func (v *ArrayValue) Append(element Value) {
 
-	value, err := element.DeepCopy(v.array.Storage, v.array.Address())
+	storage := v.array.Storage
+
+	value, err := element.DeepCopy(storage, v.array.Address())
 	if err != nil {
 		panic(err)
+	}
+
+	err = element.DeepRemove(storage)
+	if err != nil {
+		panic(ExternalError{err})
 	}
 
 	err = v.array.Append(value)
@@ -845,9 +866,16 @@ func (v *ArrayValue) Insert(index int, element Value, getLocationRange func() Lo
 		})
 	}
 
-	value, err := element.DeepCopy(v.array.Storage, v.array.Address())
+	storage := v.array.Storage
+
+	value, err := element.DeepCopy(storage, v.array.Address())
 	if err != nil {
 		panic(err)
+	}
+
+	err = element.DeepRemove(storage)
+	if err != nil {
+		panic(ExternalError{err})
 	}
 
 	err = v.array.Insert(uint64(index), value)
@@ -864,12 +892,17 @@ func (v *ArrayValue) Remove(index int, getLocationRange func() LocationRange) Va
 		panic(ExternalError{err})
 	}
 
-	value, err := element.DeepCopy(v.array.Storage, atree.Address{})
+	storage := v.array.Storage
+
+	value, err := element.DeepCopy(storage, atree.Address{})
 	if err != nil {
 		panic(ExternalError{err})
 	}
 
-	// TODO: deep remove
+	err = element.DeepRemove(storage)
+	if err != nil {
+		panic(ExternalError{err})
+	}
 
 	return value.(Value)
 }
@@ -6939,16 +6972,23 @@ func (v *CompositeValue) SetMember(
 		panic(ExternalError{err})
 	}
 
+	err = value.DeepRemove(interpreter.Storage)
+	if err != nil {
+		panic(ExternalError{err})
+	}
+
 	existingValue, existed := v.Fields.Get(name)
 
 	v.Fields.Set(name, valueCopy.(Value))
 
-	v.store(interpreter.Storage)
-
 	if existed {
-		// TODO: deep remove
-		_ = existingValue
+		err = existingValue.DeepRemove(interpreter.Storage)
+		if err != nil {
+			panic(ExternalError{err})
+		}
 	}
+
+	v.store(interpreter.Storage)
 }
 
 func (v *CompositeValue) String() string {
@@ -7319,12 +7359,12 @@ type DictionaryValue struct {
 	StorageID atree.StorageID
 }
 
-func NewDictionaryValueUnownedNonCopying(
+func NewDictionaryValue(
 	dictionaryType DictionaryStaticType,
 	storage atree.SlabStorage,
 	keysAndValues ...Value,
 ) *DictionaryValue {
-	return NewDictionaryValueUnownedNonCopyingWithAddress(
+	return NewDictionaryValueWithAddress(
 		dictionaryType,
 		storage,
 		atree.Address{},
@@ -7332,7 +7372,7 @@ func NewDictionaryValueUnownedNonCopying(
 	)
 }
 
-func NewDictionaryValueUnownedNonCopyingWithAddress(
+func NewDictionaryValueWithAddress(
 	dictionaryType DictionaryStaticType,
 	storage atree.SlabStorage,
 	address atree.Address,
@@ -7348,7 +7388,7 @@ func NewDictionaryValueUnownedNonCopyingWithAddress(
 
 	v := &DictionaryValue{
 		Type: dictionaryType,
-		Keys: NewArrayValueUnownedNonCopying(
+		Keys: NewArrayValue(
 			VariableSizedStaticType{
 				Type: dictionaryType.KeyType,
 			},
@@ -7528,7 +7568,7 @@ func (v *DictionaryValue) GetMember(interpreter *Interpreter, _ func() LocationR
 			i++
 		})
 
-		return NewArrayValueUnownedNonCopying(
+		return NewArrayValue(
 			VariableSizedStaticType{
 				Type: v.Type.ValueType,
 			},
@@ -7616,14 +7656,17 @@ func (v *DictionaryValue) Remove(
 		if dictionaryKey(keyValue.(Value)) == key {
 			v.Keys.Remove(index, getLocationRange)
 
-			v.store(storage)
-
 			valueCopy, err := value.DeepCopy(storage, atree.Address{})
 			if err != nil {
 				panic(ExternalError{err})
 			}
 
-			// TODO: deep remove
+			err = value.DeepRemove(storage)
+			if err != nil {
+				panic(ExternalError{err})
+			}
+
+			v.store(storage)
 
 			return NewSomeValueNonCopying(valueCopy.(Value))
 		}
@@ -7649,6 +7692,11 @@ func (v *DictionaryValue) Insert(
 		panic(ExternalError{err})
 	}
 
+	err = value.DeepRemove(storage)
+	if err != nil {
+		panic(ExternalError{err})
+	}
+
 	v.Entries.Set(key, valueCopy.(Value))
 
 	var result OptionalValue
@@ -7663,15 +7711,18 @@ func (v *DictionaryValue) Insert(
 		panic(errors.NewUnreachableError())
 	}
 
-	// NOTE: ensure key was added before storing
-	v.store(storage)
-
 	resultCopy, err := result.DeepCopy(storage, atree.Address{})
 	if err != nil {
 		panic(ExternalError{err})
 	}
 
-	// TODO: deep remove
+	err = result.DeepRemove(storage)
+	if err != nil {
+		panic(ExternalError{err})
+	}
+
+	// NOTE: ensure key was added before storing
+	v.store(storage)
 
 	return resultCopy.(OptionalValue)
 }
@@ -7842,7 +7893,7 @@ func (v *DictionaryValue) ExternalStorable(storage atree.SlabStorage) (atree.Sto
 
 func (v *DictionaryValue) DeepCopy(storage atree.SlabStorage, address atree.Address) (atree.Value, error) {
 
-	result := NewDictionaryValueUnownedNonCopyingWithAddress(v.Type, storage, address)
+	result := NewDictionaryValueWithAddress(v.Type, storage, address)
 
 	iterator, err := v.Keys.array.Iterator()
 	if err != nil {
@@ -7891,6 +7942,17 @@ func (v *DictionaryValue) DeepRemove(storage atree.SlabStorage) error {
 	// Remove keys
 
 	err := v.Keys.DeepRemove(storage)
+	if err != nil {
+		return err
+	}
+
+	// This dictionary is the parent for the key array,
+	// and as parents must remove the potential slab of a children,
+	// do so by assuming the dictionary has a storage ID "pointer"
+	// to the key array
+
+	err = atree.StorageIDStorable(v.Keys.StorageID()).
+		DeepRemove(storage)
 	if err != nil {
 		return err
 	}
@@ -8260,7 +8322,14 @@ func (v *SomeValue) DeepRemove(storage atree.SlabStorage) error {
 		return err
 	}
 
-	return v.valueStorable.DeepRemove(storage)
+	if v.valueStorable != nil {
+		err = v.valueStorable.DeepRemove(storage)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 type SomeStorable struct {

@@ -1814,7 +1814,7 @@ func TestImportExportArrayValue(t *testing.T) {
 
 		t.Parallel()
 
-		value := interpreter.NewArrayValueUnownedNonCopying(
+		value := interpreter.NewArrayValue(
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeAnyStruct,
 			},
@@ -1841,7 +1841,7 @@ func TestImportExportArrayValue(t *testing.T) {
 			},
 		)
 		assert.Equal(t,
-			interpreter.NewArrayValueUnownedNonCopying(
+			interpreter.NewArrayValue(
 				interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeUInt8,
 				},
@@ -1854,7 +1854,7 @@ func TestImportExportArrayValue(t *testing.T) {
 
 		t.Parallel()
 
-		value := interpreter.NewArrayValueUnownedNonCopying(
+		value := interpreter.NewArrayValue(
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeAnyStruct,
 			},
@@ -1889,7 +1889,7 @@ func TestImportExportArrayValue(t *testing.T) {
 			},
 		)
 		assert.Equal(t,
-			interpreter.NewArrayValueUnownedNonCopying(
+			interpreter.NewArrayValue(
 				interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeAnyStruct,
 				},
@@ -1909,7 +1909,7 @@ func TestImportExportDictionaryValue(t *testing.T) {
 
 		t.Parallel()
 
-		value := interpreter.NewDictionaryValueUnownedNonCopying(
+		value := interpreter.NewDictionaryValue(
 			interpreter.DictionaryStaticType{
 				KeyType:   interpreter.PrimitiveStaticTypeString,
 				ValueType: interpreter.PrimitiveStaticTypeInt,
@@ -1938,7 +1938,7 @@ func TestImportExportDictionaryValue(t *testing.T) {
 			},
 		)
 		assert.Equal(t,
-			interpreter.NewDictionaryValueUnownedNonCopying(
+			interpreter.NewDictionaryValue(
 				interpreter.DictionaryStaticType{
 					KeyType:   interpreter.PrimitiveStaticTypeString,
 					ValueType: interpreter.PrimitiveStaticTypeUInt8,
@@ -1952,7 +1952,7 @@ func TestImportExportDictionaryValue(t *testing.T) {
 
 		t.Parallel()
 
-		value := interpreter.NewDictionaryValueUnownedNonCopying(
+		value := interpreter.NewDictionaryValue(
 			interpreter.DictionaryStaticType{
 				KeyType:   interpreter.PrimitiveStaticTypeString,
 				ValueType: interpreter.PrimitiveStaticTypeInt,
@@ -2001,7 +2001,7 @@ func TestImportExportDictionaryValue(t *testing.T) {
 			},
 		)
 		assert.Equal(t,
-			interpreter.NewDictionaryValueUnownedNonCopying(
+			interpreter.NewDictionaryValue(
 				interpreter.DictionaryStaticType{
 					KeyType:   interpreter.PrimitiveStaticTypeString,
 					ValueType: interpreter.PrimitiveStaticTypeInt,
@@ -2661,7 +2661,7 @@ func TestImportExportComplex(t *testing.T) {
 		ElementType: cadence.AnyStructType{},
 	}
 
-	internalArrayValue := interpreter.NewArrayValueUnownedNonCopying(
+	internalArrayValue := interpreter.NewArrayValue(
 		staticArrayType,
 		interpreter.NewIntValueFromInt64(42),
 		interpreter.NewStringValue("foo"),
@@ -2689,7 +2689,7 @@ func TestImportExportComplex(t *testing.T) {
 		ElementType: externalArrayType,
 	}
 
-	internalDictionaryValue := interpreter.NewDictionaryValueUnownedNonCopying(
+	internalDictionaryValue := interpreter.NewDictionaryValue(
 		staticDictionaryType,
 		interpreter.NewStringValue("a"), internalArrayValue,
 	)

@@ -128,7 +128,7 @@ func TestInterpretEnumCaseEquality(t *testing.T) {
 	storage := interpreter.NewInMemoryStorage()
 
 	RequireValuesEqual(t,
-		interpreter.NewArrayValueUnownedNonCopying(
+		interpreter.NewArrayValue(
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeBool,
 			},
@@ -162,7 +162,7 @@ func TestInterpretEnumConstructor(t *testing.T) {
 	storage := interpreter.NewInMemoryStorage()
 
 	RequireValuesEqual(t,
-		interpreter.NewArrayValueUnownedNonCopying(
+		interpreter.NewArrayValue(
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeBool,
 			},
@@ -195,7 +195,7 @@ func TestInterpretEnumInstance(t *testing.T) {
 	storage := interpreter.NewInMemoryStorage()
 
 	RequireValuesEqual(t,
-		interpreter.NewArrayValueUnownedNonCopying(
+		interpreter.NewArrayValue(
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeBool,
 			},

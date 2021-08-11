@@ -118,7 +118,7 @@ func TestInterpretToBytes(t *testing.T) {
         `)
 
 		AssertValuesEqual(t,
-			interpreter.NewArrayValueUnownedNonCopying(
+			interpreter.NewArrayValue(
 				interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeUInt8,
 				},

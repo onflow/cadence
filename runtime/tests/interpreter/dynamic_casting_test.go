@@ -1266,7 +1266,7 @@ func TestInterpretDynamicCastingDictionary(t *testing.T) {
 
 						storage := interpreter.NewInMemoryStorage()
 
-						expectedValue, err := interpreter.NewDictionaryValueUnownedNonCopying(
+						expectedValue, err := interpreter.NewDictionaryValue(
 							interpreter.DictionaryStaticType{
 								KeyType:   interpreter.PrimitiveStaticTypeString,
 								ValueType: interpreter.PrimitiveStaticTypeInt,

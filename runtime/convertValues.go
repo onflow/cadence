@@ -451,7 +451,7 @@ func importArrayValue(inter *interpreter.Interpreter, v cadence.Array, expectedT
 		staticArrayType = interpreter.ConvertSemaArrayTypeToStaticArrayType(arrayType)
 	}
 
-	return interpreter.NewArrayValueUnownedNonCopying(staticArrayType, values...)
+	return interpreter.NewArrayValue(staticArrayType, values...)
 }
 
 func importDictionaryValue(
@@ -480,7 +480,7 @@ func importDictionaryValue(
 		dictionaryStaticType = interpreter.ConvertSemaDictionaryTypeToStaticDictionaryType(dictionaryType)
 	}
 
-	return interpreter.NewDictionaryValueUnownedNonCopying(
+	return interpreter.NewDictionaryValue(
 		dictionaryStaticType,
 		keysAndValues...,
 	)
