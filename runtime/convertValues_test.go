@@ -40,10 +40,9 @@ func TestExportValue(t *testing.T) {
 	t.Parallel()
 
 	type exportTest struct {
-		label        string
-		value        interpreter.Value
-		expected     cadence.Value
-		expectedType sema.Type
+		label    string
+		value    interpreter.Value
+		expected cadence.Value
 	}
 
 	test := func(tt exportTest) {
@@ -65,18 +64,14 @@ func TestExportValue(t *testing.T) {
 
 	for _, tt := range []exportTest{
 		{
-			label:        "Void",
-			value:        interpreter.VoidValue{},
-			expected:     cadence.NewVoid(),
-			expectedType: sema.VoidType,
+			label:    "Void",
+			value:    interpreter.VoidValue{},
+			expected: cadence.NewVoid(),
 		},
 		{
 			label:    "Nil",
 			value:    interpreter.NilValue{},
 			expected: cadence.NewOptional(nil),
-			expectedType: &sema.OptionalType{
-				Type: sema.AnyStructType,
-			},
 		},
 		{
 			label: "SomeValue",
@@ -84,35 +79,28 @@ func TestExportValue(t *testing.T) {
 				interpreter.NewIntValueFromInt64(42),
 			),
 			expected: cadence.NewOptional(cadence.NewInt(42)),
-			expectedType: &sema.OptionalType{
-				Type: sema.IntType,
-			},
 		},
 		{
-			label:        "Bool true",
-			value:        interpreter.BoolValue(true),
-			expected:     cadence.NewBool(true),
-			expectedType: sema.BoolType,
+			label:    "Bool true",
+			value:    interpreter.BoolValue(true),
+			expected: cadence.NewBool(true),
 		},
 
 		{
-			label:        "Bool false",
-			value:        interpreter.BoolValue(false),
-			expected:     cadence.NewBool(false),
-			expectedType: sema.BoolType,
+			label:    "Bool false",
+			value:    interpreter.BoolValue(false),
+			expected: cadence.NewBool(false),
 		},
 
 		{
-			label:        "String empty",
-			value:        interpreter.NewStringValue(""),
-			expected:     cadence.String(""),
-			expectedType: sema.StringType,
+			label:    "String empty",
+			value:    interpreter.NewStringValue(""),
+			expected: cadence.String(""),
 		},
 		{
-			label:        "String non-empty",
-			value:        interpreter.NewStringValue("foo"),
-			expected:     cadence.String("foo"),
-			expectedType: sema.StringType,
+			label:    "String non-empty",
+			value:    interpreter.NewStringValue("foo"),
+			expected: cadence.String("foo"),
 		},
 		{
 			label: "Array empty",
@@ -178,22 +166,19 @@ func TestExportValue(t *testing.T) {
 			expected: cadence.NewAddress([8]byte{0, 0, 0, 0, 0, 0, 0, 1}),
 		},
 		{
-			label:        "Int",
-			value:        interpreter.NewIntValueFromInt64(42),
-			expected:     cadence.NewInt(42),
-			expectedType: sema.IntType,
+			label:    "Int",
+			value:    interpreter.NewIntValueFromInt64(42),
+			expected: cadence.NewInt(42),
 		},
 		{
-			label:        "Int8",
-			value:        interpreter.Int8Value(42),
-			expected:     cadence.NewInt8(42),
-			expectedType: sema.Int8Type,
+			label:    "Int8",
+			value:    interpreter.Int8Value(42),
+			expected: cadence.NewInt8(42),
 		},
 		{
-			label:        "Int16",
-			value:        interpreter.Int16Value(42),
-			expected:     cadence.NewInt16(42),
-			expectedType: sema.Int16Type,
+			label:    "Int16",
+			value:    interpreter.Int16Value(42),
+			expected: cadence.NewInt16(42),
 		},
 		{
 			label:    "Int32",
@@ -431,7 +416,7 @@ func TestImportValue(t *testing.T) {
 			),
 			value: cadence.NewDictionary([]cadence.KeyValuePair{}),
 			expectedType: &sema.DictionaryType{
-				KeyType: sema.StringType,
+				KeyType:   sema.StringType,
 				ValueType: sema.AnyStructType,
 			},
 		},
@@ -458,7 +443,7 @@ func TestImportValue(t *testing.T) {
 				},
 			}),
 			expectedType: &sema.DictionaryType{
-				KeyType: sema.StringType,
+				KeyType:   sema.StringType,
 				ValueType: sema.AnyStructType,
 			},
 		},
