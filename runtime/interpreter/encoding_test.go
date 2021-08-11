@@ -2810,9 +2810,10 @@ func TestEncodeDecodeSomeValue(t *testing.T) {
 
 		var str *StringValue
 		for i := uint64(0); i < atree.MaxInlineElementSize; i++ {
-
 			str = NewStringValue(strings.Repeat("x", int(atree.MaxInlineElementSize-i)))
-			if uint64(StorableSize(str)) == atree.MaxInlineElementSize-1 {
+			size, err := StorableSize(str)
+			require.NoError(t, err)
+			if uint64(size) == atree.MaxInlineElementSize-1 {
 				break
 			}
 		}
@@ -2844,8 +2845,9 @@ func TestEncodeDecodeSomeValue(t *testing.T) {
 		var str *StringValue
 		for i := uint64(0); i < atree.MaxInlineElementSize; i++ {
 			str = NewStringValue(strings.Repeat("x", int(atree.MaxInlineElementSize-i)))
-
-			if uint64(StorableSize(str)) == atree.MaxInlineElementSize+1 {
+			size, err := StorableSize(str)
+			require.NoError(t, err)
+			if uint64(size) == atree.MaxInlineElementSize+1 {
 				break
 			}
 		}
@@ -3494,7 +3496,10 @@ func TestEncodeDecodeCapabilityValue(t *testing.T) {
 				Identifier: identifier,
 			}
 
-			if uint64(StorableSize(path)) == atree.MaxInlineElementSize-1 {
+			size, err := StorableSize(path)
+			require.NoError(t, err)
+
+			if uint64(size) == atree.MaxInlineElementSize-1 {
 				break
 			}
 		}
@@ -3532,7 +3537,10 @@ func TestEncodeDecodeCapabilityValue(t *testing.T) {
 				Identifier: identifier,
 			}
 
-			if uint64(StorableSize(path)) == atree.MaxInlineElementSize+1 {
+			size, err := StorableSize(path)
+			require.NoError(t, err)
+
+			if uint64(size) == atree.MaxInlineElementSize+1 {
 				break
 			}
 		}

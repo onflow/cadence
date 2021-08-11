@@ -20,6 +20,7 @@ package interpreter
 
 import (
 	"fmt"
+	"math"
 
 	"github.com/fxamacker/atree"
 	"github.com/onflow/cadence/runtime/common"
@@ -119,14 +120,44 @@ func NewInMemoryStorage() InMemoryStorage {
 	}
 }
 
-func StorableSize(storable atree.Storable) uint32 {
-	// TODO: reduce allocation by encoding to encoder which only increases length counter
-	encode, err := atree.Encode(storable, CBOREncMode)
+type writeCounter struct {
+	length uint64
+}
+
+func (w *writeCounter) Write(p []byte) (n int, err error) {
+	n = len(p)
+	w.length += uint64(n)
+	return n, nil
+}
+
+func mustStorableSize(storable atree.Storable) uint32 {
+	size, err := StorableSize(storable)
 	if err != nil {
 		panic(err)
 	}
-	// TODO: check!
-	return uint32(len(encode))
+	return size
+}
+
+func StorableSize(storable atree.Storable) (uint32, error) {
+	var writer writeCounter
+	enc := atree.NewEncoder(&writer, CBOREncMode)
+
+	err := storable.Encode(enc)
+	if err != nil {
+		return 0, err
+	}
+
+	err = enc.CBOR.Flush()
+	if err != nil {
+		return 0, err
+	}
+
+	size := writer.length
+	if size > math.MaxUint32 {
+		return 0, fmt.Errorf("storable size is too large: expected max uint32, got %d", size)
+	}
+
+	return uint32(size), nil
 }
 
 // maybeStoreExternally either returns the given immutable storable
@@ -142,7 +173,7 @@ func maybeLargeImmutableStorable(
 	error,
 ) {
 
-	if storable.ByteSize() < uint32(atree.MaxInlineElementSize) {
+	if uint64(storable.ByteSize()) < atree.MaxInlineElementSize {
 		return storable, nil
 	}
 
