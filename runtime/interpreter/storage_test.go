@@ -87,7 +87,7 @@ func TestDictionaryStorage(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		value := NewDictionaryValueUnownedNonCopying(
+		value := NewDictionaryValue(
 			DictionaryStaticType{
 				KeyType:   PrimitiveStaticTypeString,
 				ValueType: PrimitiveStaticTypeAnyStruct,
@@ -135,7 +135,7 @@ func TestDictionaryStorage(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		value := NewDictionaryValueUnownedNonCopying(
+		value := NewDictionaryValue(
 			DictionaryStaticType{
 				KeyType:   PrimitiveStaticTypeString,
 				ValueType: PrimitiveStaticTypeAnyStruct,
@@ -185,7 +185,7 @@ func TestDictionaryStorage(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		value := NewDictionaryValueUnownedNonCopying(
+		value := NewDictionaryValue(
 			DictionaryStaticType{
 				KeyType:   PrimitiveStaticTypeString,
 				ValueType: PrimitiveStaticTypeAnyStruct,
@@ -234,7 +234,7 @@ func TestDictionaryStorage(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		value := NewDictionaryValueUnownedNonCopying(
+		value := NewDictionaryValue(
 			DictionaryStaticType{
 				KeyType:   PrimitiveStaticTypeString,
 				ValueType: PrimitiveStaticTypeAnyStruct,

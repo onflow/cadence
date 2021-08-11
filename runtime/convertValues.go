@@ -515,7 +515,7 @@ func importArrayValue(
 		}
 	}
 
-	return interpreter.NewArrayValueUnownedNonCopying(staticArrayType, values...), nil
+	return interpreter.NewArrayValue(staticArrayType, values...), nil
 }
 
 func importDictionaryValue(
@@ -606,7 +606,7 @@ func importDictionaryValue(
 		}
 	}
 
-	return interpreter.NewDictionaryValueUnownedNonCopying(
+	return interpreter.NewDictionaryValue(
 		inter,
 		dictionaryStaticType,
 		keysAndValues...,

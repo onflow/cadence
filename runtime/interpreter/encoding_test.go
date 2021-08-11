@@ -241,7 +241,7 @@ func TestEncodeDecodeArray(t *testing.T) {
 
 		storage := NewInMemoryStorage()
 
-		expected := NewArrayValueUnownedNonCopying(
+		expected := NewArrayValue(
 			ConstantSizedStaticType{
 				Type: PrimitiveStaticTypeAnyStruct,
 				Size: 0,
@@ -271,7 +271,7 @@ func TestEncodeDecodeArray(t *testing.T) {
 
 		expectedString := NewStringValue("test")
 
-		expected := NewArrayValueUnownedNonCopying(
+		expected := NewArrayValue(
 			VariableSizedStaticType{
 				Type: PrimitiveStaticTypeAnyStruct,
 			},
@@ -310,7 +310,7 @@ func TestEncodeDecodeDictionary(t *testing.T) {
 
 		storage := NewInMemoryStorage()
 
-		expected := NewDictionaryValueUnownedNonCopying(
+		expected := NewDictionaryValue(
 			DictionaryStaticType{
 				KeyType:   PrimitiveStaticTypeString,
 				ValueType: PrimitiveStaticTypeAnyStruct,
@@ -402,7 +402,7 @@ func TestEncodeDecodeDictionary(t *testing.T) {
 		key2 := NewStringValue("foo")
 		value2 := NewStringValue("bar")
 
-		expected := NewDictionaryValueUnownedNonCopying(
+		expected := NewDictionaryValue(
 			DictionaryStaticType{
 				KeyType:   PrimitiveStaticTypeAnyStruct,
 				ValueType: PrimitiveStaticTypeAnyStruct,

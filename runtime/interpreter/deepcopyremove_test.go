@@ -19,16 +19,19 @@
 package interpreter_test
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/fxamacker/atree"
 	. "github.com/onflow/cadence/runtime/interpreter"
-	. "github.com/onflow/cadence/runtime/tests/utils"
+	"github.com/stretchr/testify/require"
 )
 
-func TestInspectValue(t *testing.T) {
+func TestValueDeepCopyAndDeepRemove(t *testing.T) {
 
 	t.Parallel()
+
+	address := atree.Address{0x1}
 
 	storage := NewInMemoryStorage()
 
@@ -36,10 +39,11 @@ func TestInspectValue(t *testing.T) {
 		KeyType:   PrimitiveStaticTypeString,
 		ValueType: PrimitiveStaticTypeInt256,
 	}
-	dictValueKey := NewStringValue("hello world")
+
+	dictValueKey := NewStringValue(strings.Repeat("x", int(atree.MaxInlineElementSize+1)))
+
 	dictValueValue := NewInt256ValueFromInt64(1)
 	dictValue := NewDictionaryValue(
-		newTestInterpreter(t),
 		dictionaryStaticType,
 		storage,
 		dictValueKey, dictValueValue,
@@ -55,62 +59,21 @@ func TestInspectValue(t *testing.T) {
 
 	optionalValue := NewSomeValueNonCopying(arrayValue)
 
-	compositeValue := newTestCompositeValue(storage, atree.Address{})
+	compositeValue := newTestCompositeValue(storage, address)
 	compositeValue.Fields.Set("value", optionalValue)
 
-	t.Run("dict", func(t *testing.T) {
+	err := compositeValue.DeepRemove(storage)
+	require.NoError(t, err)
 
-		var inspectedValues []Value
+	// Only count non-temporary slabs,
+	// i.e. ones which have a non-empty address
 
-		InspectValue(
-			dictValue,
-			func(value Value) bool {
-				inspectedValues = append(inspectedValues, value)
-				return true
-			},
-		)
+	count := 0
+	for id := range storage.Slabs {
+		if id.Address != (atree.Address{}) {
+			count++
+		}
+	}
 
-		AssertValueSlicesEqual(t,
-			[]Value{
-				dictValue,
-				dictValueKey,
-				nil, // end key
-				dictValueValue,
-				nil, // end value
-				nil, // end dict
-			},
-			inspectedValues,
-		)
-	})
-
-	t.Run("composite", func(t *testing.T) {
-
-		var inspectedValues []Value
-
-		InspectValue(
-			compositeValue,
-			func(value Value) bool {
-				inspectedValues = append(inspectedValues, value)
-				return true
-			},
-		)
-
-		AssertValueSlicesEqual(t,
-			[]Value{
-				compositeValue,
-				optionalValue,
-				arrayValue,
-				dictValue,
-				dictValueKey,
-				nil, // end key
-				dictValueValue,
-				nil, // end value
-				nil, // end dict
-				nil, // end array
-				nil, // end optional
-				nil, // end composite
-			},
-			inspectedValues,
-		)
-	})
+	require.Equal(t, 1, count)
 }

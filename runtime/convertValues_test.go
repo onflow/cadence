@@ -2297,7 +2297,7 @@ func TestImportExportArrayValue(t *testing.T) {
 
 		t.Parallel()
 
-		value := interpreter.NewArrayValueUnownedNonCopying(
+		value := interpreter.NewArrayValue(
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeAnyStruct,
 			},
@@ -2328,7 +2328,7 @@ func TestImportExportArrayValue(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t,
-			interpreter.NewArrayValueUnownedNonCopying(
+			interpreter.NewArrayValue(
 				interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeUInt8,
 				},
@@ -2341,7 +2341,7 @@ func TestImportExportArrayValue(t *testing.T) {
 
 		t.Parallel()
 
-		value := interpreter.NewArrayValueUnownedNonCopying(
+		value := interpreter.NewArrayValue(
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeAnyStruct,
 			},
@@ -2380,7 +2380,7 @@ func TestImportExportArrayValue(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t,
-			interpreter.NewArrayValueUnownedNonCopying(
+			interpreter.NewArrayValue(
 				interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeAnyStruct,
 				},
@@ -2452,7 +2452,7 @@ func TestImportExportDictionaryValue(t *testing.T) {
 
 		t.Parallel()
 
-		value := interpreter.NewDictionaryValueUnownedNonCopying(
+		value := interpreter.NewDictionaryValue(
 			newTestInterpreter(t),
 			interpreter.DictionaryStaticType{
 				KeyType:   interpreter.PrimitiveStaticTypeString,
@@ -2486,7 +2486,7 @@ func TestImportExportDictionaryValue(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t,
-			interpreter.NewDictionaryValueUnownedNonCopying(
+			interpreter.NewDictionaryValue(
 				newTestInterpreter(t),
 				interpreter.DictionaryStaticType{
 					KeyType:   interpreter.PrimitiveStaticTypeString,
@@ -2501,7 +2501,7 @@ func TestImportExportDictionaryValue(t *testing.T) {
 
 		t.Parallel()
 
-		value := interpreter.NewDictionaryValueUnownedNonCopying(
+		value := interpreter.NewDictionaryValue(
 			newTestInterpreter(t),
 			interpreter.DictionaryStaticType{
 				KeyType:   interpreter.PrimitiveStaticTypeString,
@@ -2555,7 +2555,7 @@ func TestImportExportDictionaryValue(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t,
-			interpreter.NewDictionaryValueUnownedNonCopying(
+			interpreter.NewDictionaryValue(
 				newTestInterpreter(t),
 				interpreter.DictionaryStaticType{
 					KeyType:   interpreter.PrimitiveStaticTypeString,
@@ -3310,7 +3310,7 @@ func TestImportExportComplex(t *testing.T) {
 		ElementType: cadence.AnyStructType{},
 	}
 
-	internalArrayValue := interpreter.NewArrayValueUnownedNonCopying(
+	internalArrayValue := interpreter.NewArrayValue(
 		staticArrayType,
 		interpreter.NewIntValueFromInt64(42),
 		interpreter.NewStringValue("foo"),
@@ -3338,7 +3338,7 @@ func TestImportExportComplex(t *testing.T) {
 		ElementType: externalArrayType,
 	}
 
-	internalDictionaryValue := interpreter.NewDictionaryValueUnownedNonCopying(
+	internalDictionaryValue := interpreter.NewDictionaryValue(
 		newTestInterpreter(t),
 		staticDictionaryType,
 		interpreter.NewStringValue("a"), internalArrayValue,

@@ -89,7 +89,7 @@ func TestInterpretStringDecodeHex(t *testing.T) {
 	require.NoError(t, err)
 
 	RequireValuesEqual(t,
-		interpreter.NewArrayValueUnownedNonCopying(
+		interpreter.NewArrayValue(
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeUInt8,
 			},
@@ -135,7 +135,7 @@ func TestInterpretStringUtf8Field(t *testing.T) {
 	require.NoError(t, err)
 
 	RequireValuesEqual(t,
-		interpreter.NewArrayValueUnownedNonCopying(
+		interpreter.NewArrayValue(
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeUInt8,
 			},

@@ -61,7 +61,7 @@ func newTestCompositeValue(storage Storage, owner atree.Address) *CompositeValue
 //
 //	assert.Equal(t, &oldOwner, value.GetOwner())
 //
-//	array := NewArrayValueUnownedNonCopying(
+//	array := NewArrayValue(
 //		VariableSizedStaticType{
 //			Type: PrimitiveStaticTypeAnyStruct,
 //		},
@@ -84,7 +84,7 @@ func newTestCompositeValue(storage Storage, owner atree.Address) *CompositeValue
 //
 //	value := newTestCompositeValue(storage, oldOwner)
 //
-//	array := NewArrayValueUnownedNonCopying(
+//	array := NewArrayValue(
 //		VariableSizedStaticType{
 //			Type: PrimitiveStaticTypeAnyStruct,
 //		},
@@ -109,7 +109,7 @@ func newTestCompositeValue(storage Storage, owner atree.Address) *CompositeValue
 //
 //	value := newTestCompositeValue(storage, oldOwner)
 //
-//	array := NewArrayValueUnownedNonCopying(
+//	array := NewArrayValue(
 //		VariableSizedStaticType{
 //			Type: PrimitiveStaticTypeAnyStruct,
 //		},
@@ -142,7 +142,7 @@ func newTestCompositeValue(storage Storage, owner atree.Address) *CompositeValue
 //	value1 := newTestCompositeValue(storage, oldOwner)
 //	value2 := newTestCompositeValue(storage, oldOwner)
 //
-//	array := NewArrayValueUnownedNonCopying(
+//	array := NewArrayValue(
 //		VariableSizedStaticType{
 //			Type: PrimitiveStaticTypeAnyStruct,
 //		},
@@ -173,7 +173,7 @@ func newTestCompositeValue(storage Storage, owner atree.Address) *CompositeValue
 //
 //	value := newTestCompositeValue(storage, oldOwner)
 //
-//	array := NewArrayValueUnownedNonCopying(
+//	array := NewArrayValue(
 //		VariableSizedStaticType{
 //			Type: PrimitiveStaticTypeAnyStruct,
 //		},
@@ -201,7 +201,7 @@ func newTestCompositeValue(storage Storage, owner atree.Address) *CompositeValue
 //
 //	value := newTestCompositeValue(storage, oldOwner)
 //
-//	array := NewArrayValueUnownedNonCopying(
+//	array := NewArrayValue(
 //		VariableSizedStaticType{
 //			Type: PrimitiveStaticTypeAnyStruct,
 //		},
@@ -231,7 +231,7 @@ func newTestCompositeValue(storage Storage, owner atree.Address) *CompositeValue
 //
 //	assert.Equal(t, &oldOwner, value.GetOwner())
 //
-//	dictionary := NewDictionaryValueUnownedNonCopying(
+//	dictionary := NewDictionaryValue(
 //		DictionaryStaticType{
 //			KeyType:   PrimitiveStaticTypeString,
 //			ValueType: PrimitiveStaticTypeAnyStruct,
@@ -257,7 +257,7 @@ func newTestCompositeValue(storage Storage, owner atree.Address) *CompositeValue
 //	keyValue := NewStringValue("test")
 //	value := newTestCompositeValue(storage, oldOwner)
 //
-//	dictionary := NewDictionaryValueUnownedNonCopying(
+//	dictionary := NewDictionaryValue(
 //		DictionaryStaticType{
 //			KeyType:   PrimitiveStaticTypeString,
 //			ValueType: PrimitiveStaticTypeAnyStruct,
@@ -284,7 +284,7 @@ func newTestCompositeValue(storage Storage, owner atree.Address) *CompositeValue
 //	keyValue := NewStringValue("test")
 //	value := newTestCompositeValue(storage, oldOwner)
 //
-//	dictionary := NewDictionaryValueUnownedNonCopying(
+//	dictionary := NewDictionaryValue(
 //		DictionaryStaticType{
 //			KeyType:   PrimitiveStaticTypeString,
 //			ValueType: PrimitiveStaticTypeAnyStruct,
@@ -317,7 +317,7 @@ func newTestCompositeValue(storage Storage, owner atree.Address) *CompositeValue
 //	keyValue := NewStringValue("test")
 //	value := newTestCompositeValue(storage, oldOwner)
 //
-//	dictionary := NewDictionaryValueUnownedNonCopying(
+//	dictionary := NewDictionaryValue(
 //		DictionaryStaticType{
 //			KeyType:   PrimitiveStaticTypeString,
 //			ValueType: PrimitiveStaticTypeAnyStruct,
@@ -359,7 +359,7 @@ func newTestCompositeValue(storage Storage, owner atree.Address) *CompositeValue
 //	keyValue := NewStringValue("test")
 //	value := newTestCompositeValue(storage, oldOwner)
 //
-//	dictionary := NewDictionaryValueUnownedNonCopying(
+//	dictionary := NewDictionaryValue(
 //		DictionaryStaticType{
 //			KeyType:   PrimitiveStaticTypeString,
 //			ValueType: PrimitiveStaticTypeAnyStruct,
@@ -673,7 +673,7 @@ func TestStringer(t *testing.T) {
 			expected: "\"Flow ridah!\"",
 		},
 		"Array": {
-			value: NewArrayValueUnownedNonCopying(
+			value: NewArrayValue(
 				VariableSizedStaticType{
 					Type: PrimitiveStaticTypeAnyStruct,
 				},
@@ -781,7 +781,7 @@ func TestStringer(t *testing.T) {
 			expected: "Capability(address: 0x102030405, path: /storage/foo)",
 		},
 		"Dictionary": {
-			value: NewDictionaryValueUnownedNonCopying(
+			value: NewDictionaryValue(
 				newTestInterpreter(t),
 				DictionaryStaticType{
 					KeyType:   PrimitiveStaticTypeString,
@@ -795,7 +795,7 @@ func TestStringer(t *testing.T) {
 		},
 		"Recursive ephemeral reference (array)": {
 			value: func() Value {
-				array := NewArrayValueUnownedNonCopying(
+				array := NewArrayValue(
 					VariableSizedStaticType{
 						Type: PrimitiveStaticTypeAnyStruct,
 					},
@@ -847,7 +847,7 @@ func TestVisitor(t *testing.T) {
 	var value Value
 	value = NewIntValueFromInt64(42)
 	value = NewSomeValueNonCopying(value)
-	value = NewArrayValueUnownedNonCopying(
+	value = NewArrayValue(
 		VariableSizedStaticType{
 			Type: PrimitiveStaticTypeAnyStruct,
 		},
@@ -857,7 +857,7 @@ func TestVisitor(t *testing.T) {
 
 	inter := newTestInterpreter(t)
 
-	value = NewDictionaryValueUnownedNonCopying(
+	value = NewDictionaryValue(
 		inter,
 		DictionaryStaticType{
 			KeyType:   PrimitiveStaticTypeString,
@@ -1040,7 +1040,7 @@ func TestBlockValue(t *testing.T) {
 	block := BlockValue{
 		Height: 4,
 		View:   5,
-		ID: NewArrayValueUnownedNonCopying(
+		ID: NewArrayValue(
 			ByteArrayStaticType,
 			storage,
 		),
@@ -1715,13 +1715,13 @@ func TestArrayValue_Equal(t *testing.T) {
 		storage := NewInMemoryStorage()
 
 		require.True(t,
-			NewArrayValueUnownedNonCopying(
+			NewArrayValue(
 				uint8ArrayStaticType,
 				storage,
 				UInt8Value(1),
 				UInt8Value(2),
 			).Equal(
-				NewArrayValueUnownedNonCopying(
+				NewArrayValue(
 					uint8ArrayStaticType,
 					storage,
 					UInt8Value(1),
@@ -1739,13 +1739,13 @@ func TestArrayValue_Equal(t *testing.T) {
 		storage := NewInMemoryStorage()
 
 		require.False(t,
-			NewArrayValueUnownedNonCopying(
+			NewArrayValue(
 				uint8ArrayStaticType,
 				storage,
 				UInt8Value(1),
 				UInt8Value(2),
 			).Equal(
-				NewArrayValueUnownedNonCopying(
+				NewArrayValue(
 					uint8ArrayStaticType,
 					storage,
 					UInt8Value(2),
@@ -1763,12 +1763,12 @@ func TestArrayValue_Equal(t *testing.T) {
 		storage := NewInMemoryStorage()
 
 		require.False(t,
-			NewArrayValueUnownedNonCopying(
+			NewArrayValue(
 				uint8ArrayStaticType,
 				storage,
 				UInt8Value(1),
 			).Equal(
-				NewArrayValueUnownedNonCopying(
+				NewArrayValue(
 					uint8ArrayStaticType,
 					storage,
 					UInt8Value(1),
@@ -1786,13 +1786,13 @@ func TestArrayValue_Equal(t *testing.T) {
 		storage := NewInMemoryStorage()
 
 		require.False(t,
-			NewArrayValueUnownedNonCopying(
+			NewArrayValue(
 				uint8ArrayStaticType,
 				storage,
 				UInt8Value(1),
 				UInt8Value(2),
 			).Equal(
-				NewArrayValueUnownedNonCopying(
+				NewArrayValue(
 					uint8ArrayStaticType,
 					storage,
 					UInt8Value(1),
@@ -1813,11 +1813,11 @@ func TestArrayValue_Equal(t *testing.T) {
 		}
 
 		require.False(t,
-			NewArrayValueUnownedNonCopying(
+			NewArrayValue(
 				uint8ArrayStaticType,
 				storage,
 			).Equal(
-				NewArrayValueUnownedNonCopying(
+				NewArrayValue(
 					uint16ArrayStaticType,
 					storage,
 				),
@@ -1833,11 +1833,11 @@ func TestArrayValue_Equal(t *testing.T) {
 		storage := NewInMemoryStorage()
 
 		require.False(t,
-			NewArrayValueUnownedNonCopying(
+			NewArrayValue(
 				nil,
 				storage,
 			).Equal(
-				NewArrayValueUnownedNonCopying(
+				NewArrayValue(
 					uint8ArrayStaticType,
 					storage,
 				),
@@ -1853,11 +1853,11 @@ func TestArrayValue_Equal(t *testing.T) {
 		storage := NewInMemoryStorage()
 
 		require.False(t,
-			NewArrayValueUnownedNonCopying(
+			NewArrayValue(
 				uint8ArrayStaticType,
 				storage,
 			).Equal(
-				NewArrayValueUnownedNonCopying(
+				NewArrayValue(
 					nil,
 					storage,
 				),
@@ -1873,11 +1873,11 @@ func TestArrayValue_Equal(t *testing.T) {
 		storage := NewInMemoryStorage()
 
 		require.True(t,
-			NewArrayValueUnownedNonCopying(
+			NewArrayValue(
 				nil,
 				storage,
 			).Equal(
-				NewArrayValueUnownedNonCopying(
+				NewArrayValue(
 					nil,
 					storage,
 				),
@@ -1893,7 +1893,7 @@ func TestArrayValue_Equal(t *testing.T) {
 		storage := NewInMemoryStorage()
 
 		require.False(t,
-			NewArrayValueUnownedNonCopying(
+			NewArrayValue(
 				uint8ArrayStaticType,
 				storage,
 				UInt8Value(1),
@@ -1921,7 +1921,7 @@ func TestDictionaryValue_Equal(t *testing.T) {
 		storage := NewInMemoryStorage()
 
 		require.True(t,
-			NewDictionaryValueUnownedNonCopying(
+			NewDictionaryValue(
 				newTestInterpreter(t),
 				byteStringDictionaryType,
 				storage,
@@ -1930,7 +1930,7 @@ func TestDictionaryValue_Equal(t *testing.T) {
 				UInt8Value(2),
 				NewStringValue("2"),
 			).Equal(
-				NewDictionaryValueUnownedNonCopying(
+				NewDictionaryValue(
 					newTestInterpreter(t),
 					byteStringDictionaryType,
 					storage,
@@ -1951,7 +1951,7 @@ func TestDictionaryValue_Equal(t *testing.T) {
 		storage := NewInMemoryStorage()
 
 		require.False(t,
-			NewDictionaryValueUnownedNonCopying(
+			NewDictionaryValue(
 				newTestInterpreter(t),
 				byteStringDictionaryType,
 				storage,
@@ -1960,7 +1960,7 @@ func TestDictionaryValue_Equal(t *testing.T) {
 				UInt8Value(2),
 				NewStringValue("2"),
 			).Equal(
-				NewDictionaryValueUnownedNonCopying(
+				NewDictionaryValue(
 					newTestInterpreter(t),
 					byteStringDictionaryType,
 					storage,
@@ -1981,7 +1981,7 @@ func TestDictionaryValue_Equal(t *testing.T) {
 		storage := NewInMemoryStorage()
 
 		require.False(t,
-			NewDictionaryValueUnownedNonCopying(
+			NewDictionaryValue(
 				newTestInterpreter(t),
 				byteStringDictionaryType,
 				storage,
@@ -1990,7 +1990,7 @@ func TestDictionaryValue_Equal(t *testing.T) {
 				UInt8Value(2),
 				NewStringValue("2"),
 			).Equal(
-				NewDictionaryValueUnownedNonCopying(
+				NewDictionaryValue(
 					newTestInterpreter(t),
 					byteStringDictionaryType,
 					storage,
@@ -2011,14 +2011,14 @@ func TestDictionaryValue_Equal(t *testing.T) {
 		storage := NewInMemoryStorage()
 
 		require.False(t,
-			NewDictionaryValueUnownedNonCopying(
+			NewDictionaryValue(
 				newTestInterpreter(t),
 				byteStringDictionaryType,
 				storage,
 				UInt8Value(1),
 				NewStringValue("1"),
 			).Equal(
-				NewDictionaryValueUnownedNonCopying(
+				NewDictionaryValue(
 					newTestInterpreter(t),
 					byteStringDictionaryType,
 					storage,
@@ -2039,7 +2039,7 @@ func TestDictionaryValue_Equal(t *testing.T) {
 		storage := NewInMemoryStorage()
 
 		require.False(t,
-			NewDictionaryValueUnownedNonCopying(
+			NewDictionaryValue(
 				newTestInterpreter(t),
 				byteStringDictionaryType,
 				storage,
@@ -2048,7 +2048,7 @@ func TestDictionaryValue_Equal(t *testing.T) {
 				UInt8Value(2),
 				NewStringValue("2"),
 			).Equal(
-				NewDictionaryValueUnownedNonCopying(
+				NewDictionaryValue(
 					newTestInterpreter(t),
 					byteStringDictionaryType,
 					storage,
@@ -2072,12 +2072,12 @@ func TestDictionaryValue_Equal(t *testing.T) {
 		}
 
 		require.False(t,
-			NewDictionaryValueUnownedNonCopying(
+			NewDictionaryValue(
 				newTestInterpreter(t),
 				byteStringDictionaryType,
 				storage,
 			).Equal(
-				NewDictionaryValueUnownedNonCopying(
+				NewDictionaryValue(
 					newTestInterpreter(t),
 					stringByteDictionaryStaticType,
 					storage,
@@ -2094,7 +2094,7 @@ func TestDictionaryValue_Equal(t *testing.T) {
 		storage := NewInMemoryStorage()
 
 		require.False(t,
-			NewDictionaryValueUnownedNonCopying(
+			NewDictionaryValue(
 				newTestInterpreter(t),
 				byteStringDictionaryType,
 				storage,
@@ -2103,7 +2103,7 @@ func TestDictionaryValue_Equal(t *testing.T) {
 				UInt8Value(2),
 				NewStringValue("2"),
 			).Equal(
-				NewArrayValueUnownedNonCopying(
+				NewArrayValue(
 					ByteArrayStaticType,
 					storage,
 					UInt8Value(1),
@@ -2468,7 +2468,7 @@ func TestPublicKeyValue(t *testing.T) {
 
 		storage := NewInMemoryStorage()
 
-		publicKey := NewArrayValueUnownedNonCopying(
+		publicKey := NewArrayValue(
 			VariableSizedStaticType{
 				Type: PrimitiveStaticTypeInt,
 			},

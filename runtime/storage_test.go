@@ -47,7 +47,7 @@ func withWritesToStorage(
 
 	runtimeStorage := newRuntimeStorage(runtimeInterface)
 
-	array := interpreter.NewArrayValueUnownedNonCopying(
+	array := interpreter.NewArrayValue(
 		interpreter.VariableSizedStaticType{
 			Type: interpreter.PrimitiveStaticTypeInt,
 		},

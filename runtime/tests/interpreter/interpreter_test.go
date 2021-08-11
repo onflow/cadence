@@ -207,7 +207,7 @@ func TestInterpretConstantAndVariableDeclarations(t *testing.T) {
 	)
 
 	AssertValuesEqual(t,
-		interpreter.NewArrayValueUnownedNonCopying(
+		interpreter.NewArrayValue(
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeInt,
 			},
@@ -573,7 +573,7 @@ func TestInterpretArrayIndexingAssignment(t *testing.T) {
 
 	actualArray := inter.Globals["z"].GetValue()
 
-	expected, err := interpreter.NewArrayValueUnownedNonCopying(
+	expected, err := interpreter.NewArrayValue(
 		interpreter.VariableSizedStaticType{
 			Type: interpreter.PrimitiveStaticTypeInt,
 		},
@@ -2115,7 +2115,7 @@ func TestInterpretStructCopyOnDeclaration(t *testing.T) {
 	require.NoError(t, err)
 
 	AssertValuesEqual(t,
-		interpreter.NewArrayValueUnownedNonCopying(
+		interpreter.NewArrayValue(
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeBool,
 			},
@@ -2158,7 +2158,7 @@ func TestInterpretStructCopyOnDeclarationModifiedWithStructFunction(t *testing.T
 	require.NoError(t, err)
 
 	AssertValuesEqual(t,
-		interpreter.NewArrayValueUnownedNonCopying(
+		interpreter.NewArrayValue(
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeBool,
 			},
@@ -2196,7 +2196,7 @@ func TestInterpretStructCopyOnIdentifierAssignment(t *testing.T) {
 	require.NoError(t, err)
 
 	AssertValuesEqual(t,
-		interpreter.NewArrayValueUnownedNonCopying(
+		interpreter.NewArrayValue(
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeBool,
 			},
@@ -2234,7 +2234,7 @@ func TestInterpretStructCopyOnIndexingAssignment(t *testing.T) {
 	require.NoError(t, err)
 
 	AssertValuesEqual(t,
-		interpreter.NewArrayValueUnownedNonCopying(
+		interpreter.NewArrayValue(
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeBool,
 			},
@@ -2279,7 +2279,7 @@ func TestInterpretStructCopyOnMemberAssignment(t *testing.T) {
 	require.NoError(t, err)
 
 	AssertValuesEqual(t,
-		interpreter.NewArrayValueUnownedNonCopying(
+		interpreter.NewArrayValue(
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeBool,
 			},
@@ -2349,7 +2349,7 @@ func TestInterpretArrayCopy(t *testing.T) {
 	require.NoError(t, err)
 
 	AssertValuesEqual(t,
-		interpreter.NewArrayValueUnownedNonCopying(
+		interpreter.NewArrayValue(
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeInt,
 			},
@@ -2386,7 +2386,7 @@ func TestInterpretStructCopyInArray(t *testing.T) {
 	require.NoError(t, err)
 
 	AssertValuesEqual(t,
-		interpreter.NewArrayValueUnownedNonCopying(
+		interpreter.NewArrayValue(
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeInt,
 			},
@@ -3624,7 +3624,7 @@ func TestInterpretDictionary(t *testing.T) {
       let x = {"a": 1, "b": 2}
     `)
 
-	expectedValue, err := interpreter.NewDictionaryValueUnownedNonCopying(
+	expectedValue, err := interpreter.NewDictionaryValue(
 		newTestInterpreter(t),
 		interpreter.DictionaryStaticType{
 			KeyType:   interpreter.PrimitiveStaticTypeString,
@@ -3655,7 +3655,7 @@ func TestInterpretDictionaryInsertionOrder(t *testing.T) {
       let x = {"c": 3, "a": 1, "b": 2}
     `)
 
-	expectedValue, err := interpreter.NewDictionaryValueUnownedNonCopying(
+	expectedValue, err := interpreter.NewDictionaryValue(
 		newTestInterpreter(t),
 		interpreter.DictionaryStaticType{
 			KeyType:   interpreter.PrimitiveStaticTypeString,
@@ -3833,7 +3833,7 @@ func TestInterpretDictionaryIndexingAssignmentNew(t *testing.T) {
 		value,
 	)
 
-	expectedValue, err := interpreter.NewDictionaryValueUnownedNonCopying(
+	expectedValue, err := interpreter.NewDictionaryValue(
 		newTestInterpreter(t),
 		interpreter.DictionaryStaticType{
 			KeyType:   interpreter.PrimitiveStaticTypeString,
@@ -3908,7 +3908,7 @@ func TestInterpretDictionaryIndexingAssignmentNil(t *testing.T) {
 		value,
 	)
 
-	expectedValue, err := interpreter.NewDictionaryValueUnownedNonCopying(
+	expectedValue, err := interpreter.NewDictionaryValue(
 		newTestInterpreter(t),
 		interpreter.DictionaryStaticType{
 			KeyType:   interpreter.PrimitiveStaticTypeString,
@@ -5464,7 +5464,7 @@ func TestInterpretSwapVariables(t *testing.T) {
 	require.NoError(t, err)
 
 	AssertValuesEqual(t,
-		interpreter.NewArrayValueUnownedNonCopying(
+		interpreter.NewArrayValue(
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeInt,
 			},
@@ -5501,7 +5501,7 @@ func TestInterpretSwapArrayAndField(t *testing.T) {
 	require.NoError(t, err)
 
 	AssertValuesEqual(t,
-		interpreter.NewArrayValueUnownedNonCopying(
+		interpreter.NewArrayValue(
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeInt,
 			},
@@ -6093,7 +6093,7 @@ func TestInterpretEmitEventParameterTypes(t *testing.T) {
 
 		tests[fmt.Sprintf("[%s]", validType)] =
 			testValue{
-				value: interpreter.NewArrayValueUnownedNonCopying(
+				value: interpreter.NewArrayValue(
 					interpreter.VariableSizedStaticType{
 						Type: interpreter.ConvertSemaToStaticType(testCase.ty),
 					},
@@ -6105,7 +6105,7 @@ func TestInterpretEmitEventParameterTypes(t *testing.T) {
 
 		tests[fmt.Sprintf("[%s; 1]", validType)] =
 			testValue{
-				value: interpreter.NewArrayValueUnownedNonCopying(
+				value: interpreter.NewArrayValue(
 					interpreter.ConstantSizedStaticType{
 						Type: interpreter.ConvertSemaToStaticType(testCase.ty),
 						Size: 1,
@@ -6118,7 +6118,7 @@ func TestInterpretEmitEventParameterTypes(t *testing.T) {
 
 		if !testCase.notAsDictionaryKey {
 
-			value, err := interpreter.NewDictionaryValueUnownedNonCopying(
+			value, err := interpreter.NewDictionaryValue(
 				newTestInterpreter(t),
 				interpreter.DictionaryStaticType{
 					KeyType:   interpreter.ConvertSemaToStaticType(testCase.ty),
@@ -6376,7 +6376,7 @@ func TestInterpretReferenceUse(t *testing.T) {
 	require.NoError(t, err)
 
 	AssertValuesEqual(t,
-		interpreter.NewArrayValueUnownedNonCopying(
+		interpreter.NewArrayValue(
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeInt,
 			},
@@ -6424,7 +6424,7 @@ func TestInterpretReferenceUseAccess(t *testing.T) {
 	require.NoError(t, err)
 
 	AssertValuesEqual(t,
-		interpreter.NewArrayValueUnownedNonCopying(
+		interpreter.NewArrayValue(
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeInt,
 			},
@@ -6931,7 +6931,7 @@ func TestInterpretFungibleTokenContract(t *testing.T) {
 	require.NoError(t, err)
 
 	AssertValuesEqual(t,
-		interpreter.NewArrayValueUnownedNonCopying(
+		interpreter.NewArrayValue(
 			interpreter.ConstantSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeInt,
 				Size: 2,
@@ -8315,12 +8315,12 @@ func TestInterpretInternalAssignment(t *testing.T) {
 	}
 
 	AssertValuesEqual(t,
-		interpreter.NewArrayValueUnownedNonCopying(
+		interpreter.NewArrayValue(
 			interpreter.VariableSizedStaticType{
 				Type: stringIntDictionaryStaticType,
 			},
 			inter.Storage,
-			interpreter.NewDictionaryValueUnownedNonCopying(
+			interpreter.NewDictionaryValue(
 				newTestInterpreter(t),
 				stringIntDictionaryStaticType,
 				inter.Storage,
@@ -8329,7 +8329,7 @@ func TestInterpretInternalAssignment(t *testing.T) {
 				interpreter.NewStringValue("b"),
 				interpreter.NewIntValueFromInt64(2),
 			),
-			interpreter.NewDictionaryValueUnownedNonCopying(
+			interpreter.NewDictionaryValue(
 				newTestInterpreter(t),
 				stringIntDictionaryStaticType,
 				inter.Storage,
@@ -8364,7 +8364,7 @@ func TestInterpretCopyOnReturn(t *testing.T) {
 	require.NoError(t, err)
 
 	AssertValuesEqual(t,
-		interpreter.NewDictionaryValueUnownedNonCopying(
+		interpreter.NewDictionaryValue(
 			newTestInterpreter(t),
 			interpreter.DictionaryStaticType{
 				KeyType:   interpreter.PrimitiveStaticTypeString,
