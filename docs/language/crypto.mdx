@@ -171,7 +171,7 @@ The inputs to `verify()` depend on the signature scheme used:
      The signature is 64 bytes-long for both curves.
    - `signedData` is the arbitrary message to verify the signature against.
    - `domainSeparationTag` is the domain tag used for signing. The interface only accepts the the user tag `"FLOW-V0.0-user"`.
-   - `hashAlgorithm` is the algorithm used to hash the message along with the given tag (check `hashWithTag` [function](./crypto.mdx#hashing) for more details).
+   - `hashAlgorithm` is the algorithm used to hash the message along with the given tag (check the [`hashWithTag` function](#hashing) for more details).
      Only `SHA2_256` or `SHA3_256` are accepted.
 
 - BLS (`BLS_BLS_12_381`):

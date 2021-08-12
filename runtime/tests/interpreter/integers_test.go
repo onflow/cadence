@@ -110,24 +110,72 @@ func TestInterpretAddressConversion(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
-      let x: Address = 0x1
-      let y = Address(0x2)
-    `)
+	t.Run("implicit through variable declaration", func(t *testing.T) {
 
-	assert.Equal(t,
-		interpreter.AddressValue{
-			0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
-		},
-		inter.Globals["x"].GetValue(),
-	)
+		t.Parallel()
 
-	assert.Equal(t,
-		interpreter.AddressValue{
-			0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2,
-		},
-		inter.Globals["y"].GetValue(),
-	)
+		inter := parseCheckAndInterpret(t, `
+          let x: Address = 0x1
+        `)
+
+		assert.Equal(t,
+			interpreter.AddressValue{
+				0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
+			},
+			inter.Globals["x"].GetValue(),
+		)
+
+	})
+
+	t.Run("conversion function", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+          let x = Address(0x2)
+        `)
+
+		assert.Equal(t,
+			interpreter.AddressValue{
+				0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2,
+			},
+			inter.Globals["x"].GetValue(),
+		)
+	})
+
+	t.Run("conversion function, Int, overflow", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+          fun test() {
+              let y = 0x1111111111111111111
+              let x = Address(y)
+          }
+        `)
+
+		_, err := inter.Invoke("test")
+		require.Error(t, err)
+
+		require.ErrorAs(t, err, &interpreter.OverflowError{})
+	})
+
+	t.Run("conversion function, underflow", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+          fun test() {
+              let y = -0x1
+              let x = Address(y)
+          }
+        `)
+
+		_, err := inter.Invoke("test")
+		require.Error(t, err)
+
+		require.ErrorAs(t, err, &interpreter.UnderflowError{})
+	})
 }
 
 func TestInterpretIntegerLiteralTypeConversionInVariableDeclaration(t *testing.T) {

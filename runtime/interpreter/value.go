@@ -38,16 +38,19 @@ import (
 	"github.com/onflow/cadence/runtime/sema"
 )
 
-type DynamicTypeResults map[Value]DynamicType
+type TypeConformanceResults map[typeConformanceResultEntry]bool
 
-type TypeConformanceResults map[valueDynamicTypePair]bool
-
-type StringResults map[Value]struct{}
-
-type valueDynamicTypePair struct {
-	value       Value
-	dynamicType DynamicType
+type typeConformanceResultEntry struct {
+	EphemeralReferenceValue       *EphemeralReferenceValue
+	EphemeralReferenceDynamicType EphemeralReferenceDynamicType
 }
+
+// SeenReferences is a set of seen references.
+//
+// NOTE: Do not generalize to map[interpreter.Value],
+// as not all values are Go hashable, i.e. this might lead to run-time panics
+//
+type SeenReferences map[*EphemeralReferenceValue]struct{}
 
 // Value
 
@@ -58,7 +61,7 @@ type Value interface {
 	IsValue()
 	Accept(interpreter *Interpreter, visitor Visitor)
 	Walk(walkChild func(Value))
-	DynamicType(interpreter *Interpreter, results DynamicTypeResults) DynamicType
+	DynamicType(interpreter *Interpreter, seenReferences SeenReferences) DynamicType
 	Copy() Value
 	GetOwner() *common.Address
 	SetOwner(address *common.Address)
@@ -66,7 +69,7 @@ type Value interface {
 	SetModified(modified bool)
 	StaticType() StaticType
 	ConformsToDynamicType(interpreter *Interpreter, dynamicType DynamicType, results TypeConformanceResults) bool
-	RecursiveString(results StringResults) string
+	RecursiveString(seenReferences SeenReferences) string
 	IsStorable() bool
 }
 
@@ -133,7 +136,7 @@ func (TypeValue) Walk(_ func(Value)) {
 
 var metaTypeDynamicType DynamicType = MetaTypeDynamicType{}
 
-func (TypeValue) DynamicType(_ *Interpreter, _ DynamicTypeResults) DynamicType {
+func (TypeValue) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
 	return metaTypeDynamicType
 }
 
@@ -172,7 +175,7 @@ func (v TypeValue) String() string {
 	return format.TypeValue(typeString)
 }
 
-func (v TypeValue) RecursiveString(_ StringResults) string {
+func (v TypeValue) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
@@ -237,7 +240,7 @@ func (VoidValue) Walk(_ func(Value)) {
 
 var voidDynamicType DynamicType = VoidDynamicType{}
 
-func (VoidValue) DynamicType(_ *Interpreter, _ DynamicTypeResults) DynamicType {
+func (VoidValue) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
 	return voidDynamicType
 }
 
@@ -270,7 +273,7 @@ func (VoidValue) String() string {
 	return format.Void
 }
 
-func (v VoidValue) RecursiveString(_ StringResults) string {
+func (v VoidValue) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
@@ -299,7 +302,7 @@ func (BoolValue) Walk(_ func(Value)) {
 
 var boolDynamicType DynamicType = BoolDynamicType{}
 
-func (BoolValue) DynamicType(_ *Interpreter, _ DynamicTypeResults) DynamicType {
+func (BoolValue) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
 	return boolDynamicType
 }
 
@@ -344,7 +347,7 @@ func (v BoolValue) String() string {
 	return format.Bool(bool(v))
 }
 
-func (v BoolValue) RecursiveString(_ StringResults) string {
+func (v BoolValue) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
@@ -404,7 +407,7 @@ func (*StringValue) Walk(_ func(Value)) {
 
 var stringDynamicType DynamicType = StringDynamicType{}
 
-func (*StringValue) DynamicType(_ *Interpreter, _ DynamicTypeResults) DynamicType {
+func (*StringValue) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
 	return stringDynamicType
 }
 
@@ -437,7 +440,7 @@ func (v *StringValue) String() string {
 	return format.String(v.Str)
 }
 
-func (v *StringValue) RecursiveString(_ StringResults) string {
+func (v *StringValue) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
@@ -710,15 +713,15 @@ func (v *ArrayValue) Walk(walkChild func(Value)) {
 	}
 }
 
-func (v *ArrayValue) DynamicType(interpreter *Interpreter, results DynamicTypeResults) DynamicType {
+func (v *ArrayValue) DynamicType(interpreter *Interpreter, seenReferences SeenReferences) DynamicType {
 	elements := v.Elements()
 	elementTypes := make([]DynamicType, len(elements))
 
 	for i, value := range elements {
-		elementTypes[i] = value.DynamicType(interpreter, results)
+		elementTypes[i] = value.DynamicType(interpreter, seenReferences)
 	}
 
-	return ArrayDynamicType{
+	return &ArrayDynamicType{
 		ElementTypes: elementTypes,
 		StaticType:   v.Type,
 	}
@@ -841,15 +844,15 @@ func (v *ArrayValue) checkBounds(index int, getLocationRange func() LocationRang
 }
 
 func (v *ArrayValue) String() string {
-	return v.RecursiveString(StringResults{})
+	return v.RecursiveString(SeenReferences{})
 }
 
-func (v *ArrayValue) RecursiveString(results StringResults) string {
+func (v *ArrayValue) RecursiveString(seenReferences SeenReferences) string {
 	elements := v.Elements()
 	values := make([]string, len(elements))
 
 	for i, value := range elements {
-		values[i] = value.RecursiveString(results)
+		values[i] = value.RecursiveString(seenReferences)
 	}
 	return format.Array(values)
 }
@@ -1052,7 +1055,7 @@ func (v *ArrayValue) ConformsToDynamicType(
 	results TypeConformanceResults,
 ) bool {
 
-	arrayType, ok := dynamicType.(ArrayDynamicType)
+	arrayType, ok := dynamicType.(*ArrayDynamicType)
 
 	elements := v.Elements()
 
@@ -1302,7 +1305,7 @@ func (IntValue) Walk(_ func(Value)) {
 
 var intDynamicType DynamicType = NumberDynamicType{sema.IntType}
 
-func (IntValue) DynamicType(_ *Interpreter, _ DynamicTypeResults) DynamicType {
+func (IntValue) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
 	return intDynamicType
 }
 
@@ -1344,7 +1347,7 @@ func (v IntValue) String() string {
 	return format.BigInt(v.BigInt)
 }
 
-func (v IntValue) RecursiveString(_ StringResults) string {
+func (v IntValue) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
@@ -1528,7 +1531,7 @@ func (Int8Value) Walk(_ func(Value)) {
 
 var int8DynamicType DynamicType = NumberDynamicType{sema.Int8Type}
 
-func (Int8Value) DynamicType(_ *Interpreter, _ DynamicTypeResults) DynamicType {
+func (Int8Value) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
 	return int8DynamicType
 }
 
@@ -1561,7 +1564,7 @@ func (v Int8Value) String() string {
 	return format.Int(int64(v))
 }
 
-func (v Int8Value) RecursiveString(_ StringResults) string {
+func (v Int8Value) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
@@ -1835,7 +1838,7 @@ func (Int16Value) Walk(_ func(Value)) {
 
 var int16DynamicType DynamicType = NumberDynamicType{sema.Int16Type}
 
-func (Int16Value) DynamicType(_ *Interpreter, _ DynamicTypeResults) DynamicType {
+func (Int16Value) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
 	return int16DynamicType
 }
 
@@ -1868,7 +1871,7 @@ func (v Int16Value) String() string {
 	return format.Int(int64(v))
 }
 
-func (v Int16Value) RecursiveString(_ StringResults) string {
+func (v Int16Value) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
@@ -2144,7 +2147,7 @@ func (Int32Value) Walk(_ func(Value)) {
 
 var int32DynamicType DynamicType = NumberDynamicType{sema.Int32Type}
 
-func (Int32Value) DynamicType(_ *Interpreter, _ DynamicTypeResults) DynamicType {
+func (Int32Value) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
 	return int32DynamicType
 }
 
@@ -2177,7 +2180,7 @@ func (v Int32Value) String() string {
 	return format.Int(int64(v))
 }
 
-func (v Int32Value) RecursiveString(_ StringResults) string {
+func (v Int32Value) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
@@ -2453,7 +2456,7 @@ func (Int64Value) Walk(_ func(Value)) {
 
 var int64DynamicType DynamicType = NumberDynamicType{sema.Int64Type}
 
-func (Int64Value) DynamicType(_ *Interpreter, _ DynamicTypeResults) DynamicType {
+func (Int64Value) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
 	return int64DynamicType
 }
 
@@ -2486,7 +2489,7 @@ func (v Int64Value) String() string {
 	return format.Int(int64(v))
 }
 
-func (v Int64Value) RecursiveString(_ StringResults) string {
+func (v Int64Value) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
@@ -2770,7 +2773,7 @@ func (Int128Value) Walk(_ func(Value)) {
 
 var int128DynamicType DynamicType = NumberDynamicType{sema.Int128Type}
 
-func (Int128Value) DynamicType(_ *Interpreter, _ DynamicTypeResults) DynamicType {
+func (Int128Value) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
 	return int128DynamicType
 }
 
@@ -2812,7 +2815,7 @@ func (v Int128Value) String() string {
 	return format.BigInt(v.BigInt)
 }
 
-func (v Int128Value) RecursiveString(_ StringResults) string {
+func (v Int128Value) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
@@ -3148,7 +3151,7 @@ func (Int256Value) Walk(_ func(Value)) {
 
 var int256DynamicType DynamicType = NumberDynamicType{sema.Int256Type}
 
-func (Int256Value) DynamicType(_ *Interpreter, _ DynamicTypeResults) DynamicType {
+func (Int256Value) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
 	return int256DynamicType
 }
 
@@ -3190,7 +3193,7 @@ func (v Int256Value) String() string {
 	return format.BigInt(v.BigInt)
 }
 
-func (v Int256Value) RecursiveString(_ StringResults) string {
+func (v Int256Value) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
@@ -3547,7 +3550,7 @@ func (UIntValue) Walk(_ func(Value)) {
 
 var uintDynamicType DynamicType = NumberDynamicType{sema.UIntType}
 
-func (UIntValue) DynamicType(_ *Interpreter, _ DynamicTypeResults) DynamicType {
+func (UIntValue) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
 	return uintDynamicType
 }
 
@@ -3589,7 +3592,7 @@ func (v UIntValue) String() string {
 	return format.BigInt(v.BigInt)
 }
 
-func (v UIntValue) RecursiveString(_ StringResults) string {
+func (v UIntValue) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
@@ -3784,7 +3787,7 @@ func (UInt8Value) Walk(_ func(Value)) {
 
 var uint8DynamicType DynamicType = NumberDynamicType{sema.UInt8Type}
 
-func (UInt8Value) DynamicType(_ *Interpreter, _ DynamicTypeResults) DynamicType {
+func (UInt8Value) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
 	return uint8DynamicType
 }
 
@@ -3817,7 +3820,7 @@ func (v UInt8Value) String() string {
 	return format.Uint(uint64(v))
 }
 
-func (v UInt8Value) RecursiveString(_ StringResults) string {
+func (v UInt8Value) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
@@ -4022,7 +4025,7 @@ func (UInt16Value) Walk(_ func(Value)) {
 
 var uint16DynamicType DynamicType = NumberDynamicType{sema.UInt16Type}
 
-func (UInt16Value) DynamicType(_ *Interpreter, _ DynamicTypeResults) DynamicType {
+func (UInt16Value) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
 	return uint16DynamicType
 }
 
@@ -4054,7 +4057,7 @@ func (v UInt16Value) String() string {
 	return format.Uint(uint64(v))
 }
 
-func (v UInt16Value) RecursiveString(_ StringResults) string {
+func (v UInt16Value) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
@@ -4260,7 +4263,7 @@ func (UInt32Value) Walk(_ func(Value)) {
 
 var uint32DynamicType DynamicType = NumberDynamicType{sema.UInt32Type}
 
-func (UInt32Value) DynamicType(_ *Interpreter, _ DynamicTypeResults) DynamicType {
+func (UInt32Value) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
 	return uint32DynamicType
 }
 
@@ -4293,7 +4296,7 @@ func (v UInt32Value) String() string {
 	return format.Uint(uint64(v))
 }
 
-func (v UInt32Value) RecursiveString(_ StringResults) string {
+func (v UInt32Value) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
@@ -4499,7 +4502,7 @@ func (UInt64Value) Walk(_ func(Value)) {
 
 var uint64DynamicType DynamicType = NumberDynamicType{sema.UInt64Type}
 
-func (UInt64Value) DynamicType(_ *Interpreter, _ DynamicTypeResults) DynamicType {
+func (UInt64Value) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
 	return uint64DynamicType
 }
 
@@ -4532,7 +4535,7 @@ func (v UInt64Value) String() string {
 	return format.Uint(uint64(v))
 }
 
-func (v UInt64Value) RecursiveString(_ StringResults) string {
+func (v UInt64Value) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
@@ -4751,7 +4754,7 @@ func (UInt128Value) Walk(_ func(Value)) {
 
 var uint128DynamicType DynamicType = NumberDynamicType{sema.UInt128Type}
 
-func (UInt128Value) DynamicType(_ *Interpreter, _ DynamicTypeResults) DynamicType {
+func (UInt128Value) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
 	return uint128DynamicType
 }
 
@@ -4793,7 +4796,7 @@ func (v UInt128Value) String() string {
 	return format.BigInt(v.BigInt)
 }
 
-func (v UInt128Value) RecursiveString(_ StringResults) string {
+func (v UInt128Value) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
@@ -5071,7 +5074,7 @@ func (UInt256Value) Walk(_ func(Value)) {
 
 var uint256DynamicType DynamicType = NumberDynamicType{sema.UInt256Type}
 
-func (UInt256Value) DynamicType(_ *Interpreter, _ DynamicTypeResults) DynamicType {
+func (UInt256Value) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
 	return uint256DynamicType
 }
 
@@ -5113,7 +5116,7 @@ func (v UInt256Value) String() string {
 	return format.BigInt(v.BigInt)
 }
 
-func (v UInt256Value) RecursiveString(_ StringResults) string {
+func (v UInt256Value) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
@@ -5381,7 +5384,7 @@ func (Word8Value) Walk(_ func(Value)) {
 
 var word8DynamicType DynamicType = NumberDynamicType{sema.Word8Type}
 
-func (Word8Value) DynamicType(_ *Interpreter, _ DynamicTypeResults) DynamicType {
+func (Word8Value) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
 	return word8DynamicType
 }
 
@@ -5414,7 +5417,7 @@ func (v Word8Value) String() string {
 	return format.Uint(uint64(v))
 }
 
-func (v Word8Value) RecursiveString(_ StringResults) string {
+func (v Word8Value) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
@@ -5564,7 +5567,7 @@ func (Word16Value) Walk(_ func(Value)) {
 
 var word16DynamicType DynamicType = NumberDynamicType{sema.Word16Type}
 
-func (Word16Value) DynamicType(_ *Interpreter, _ DynamicTypeResults) DynamicType {
+func (Word16Value) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
 	return word16DynamicType
 }
 
@@ -5596,7 +5599,7 @@ func (v Word16Value) String() string {
 	return format.Uint(uint64(v))
 }
 
-func (v Word16Value) RecursiveString(_ StringResults) string {
+func (v Word16Value) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
@@ -5747,7 +5750,7 @@ func (Word32Value) Walk(_ func(Value)) {
 
 var word32DynamicType DynamicType = NumberDynamicType{sema.Word32Type}
 
-func (Word32Value) DynamicType(_ *Interpreter, _ DynamicTypeResults) DynamicType {
+func (Word32Value) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
 	return word32DynamicType
 }
 
@@ -5780,7 +5783,7 @@ func (v Word32Value) String() string {
 	return format.Uint(uint64(v))
 }
 
-func (v Word32Value) RecursiveString(_ StringResults) string {
+func (v Word32Value) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
@@ -5932,7 +5935,7 @@ func (Word64Value) Walk(_ func(Value)) {
 
 var word64DynamicType DynamicType = NumberDynamicType{sema.Word64Type}
 
-func (Word64Value) DynamicType(_ *Interpreter, _ DynamicTypeResults) DynamicType {
+func (Word64Value) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
 	return word64DynamicType
 }
 
@@ -5965,7 +5968,7 @@ func (v Word64Value) String() string {
 	return format.Uint(uint64(v))
 }
 
-func (v Word64Value) RecursiveString(_ StringResults) string {
+func (v Word64Value) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
@@ -6132,7 +6135,7 @@ func (Fix64Value) Walk(_ func(Value)) {
 
 var fix64DynamicType DynamicType = NumberDynamicType{sema.Fix64Type}
 
-func (Fix64Value) DynamicType(_ *Interpreter, _ DynamicTypeResults) DynamicType {
+func (Fix64Value) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
 	return fix64DynamicType
 }
 
@@ -6165,7 +6168,7 @@ func (v Fix64Value) String() string {
 	return format.Fix64(int64(v))
 }
 
-func (v Fix64Value) RecursiveString(_ StringResults) string {
+func (v Fix64Value) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
@@ -6414,7 +6417,7 @@ func (UFix64Value) Walk(_ func(Value)) {
 
 var ufix64DynamicType DynamicType = NumberDynamicType{sema.UFix64Type}
 
-func (UFix64Value) DynamicType(_ *Interpreter, _ DynamicTypeResults) DynamicType {
+func (UFix64Value) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
 	return ufix64DynamicType
 }
 
@@ -6447,7 +6450,7 @@ func (v UFix64Value) String() string {
 	return format.UFix64(uint64(v))
 }
 
-func (v UFix64Value) RecursiveString(_ StringResults) string {
+func (v UFix64Value) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
@@ -6658,7 +6661,7 @@ type CompositeValue struct {
 	Owner           *common.Address
 	destroyed       bool
 	modified        bool
-	stringer        func(results StringResults) string
+	stringer        func(seenReferences SeenReferences) string
 
 	// Raw-content cache for decoded values.
 	// Includes meta-info (type info, etc) as well as the fields content.
@@ -6768,7 +6771,7 @@ func (v *CompositeValue) Walk(walkChild func(Value)) {
 	})
 }
 
-func (v *CompositeValue) DynamicType(interpreter *Interpreter, _ DynamicTypeResults) DynamicType {
+func (v *CompositeValue) DynamicType(interpreter *Interpreter, _ SeenReferences) DynamicType {
 	staticType := interpreter.getCompositeType(v.Location(), v.QualifiedIdentifier())
 	return CompositeDynamicType{
 		StaticType: staticType,
@@ -7005,8 +7008,7 @@ func (v *CompositeValue) OwnerValue(interpreter *Interpreter) OptionalValue {
 
 	// Owner must be of `PublicAccount` type.
 
-	dynamicTypeResults := DynamicTypeResults{}
-	dynamicType := ownerAccount.DynamicType(interpreter, dynamicTypeResults)
+	dynamicType := ownerAccount.DynamicType(interpreter, SeenReferences{})
 
 	compositeDynamicType, ok := dynamicType.(CompositeDynamicType)
 
@@ -7030,18 +7032,18 @@ func (v *CompositeValue) SetMember(_ *Interpreter, getLocationRange func() Locat
 }
 
 func (v *CompositeValue) String() string {
-	return v.RecursiveString(StringResults{})
+	return v.RecursiveString(SeenReferences{})
 }
 
-func (v *CompositeValue) RecursiveString(results StringResults) string {
+func (v *CompositeValue) RecursiveString(seenReferences SeenReferences) string {
 	if v.stringer != nil {
-		return v.stringer(results)
+		return v.stringer(seenReferences)
 	}
 
-	return formatComposite(string(v.TypeID()), v.Fields(), results)
+	return formatComposite(string(v.TypeID()), v.Fields(), seenReferences)
 }
 
-func formatComposite(typeId string, fields *StringValueOrderedMap, results StringResults) string {
+func formatComposite(typeId string, fields *StringValueOrderedMap, seenReferences SeenReferences) string {
 	preparedFields := make([]struct {
 		Name  string
 		Value string
@@ -7054,7 +7056,7 @@ func formatComposite(typeId string, fields *StringValueOrderedMap, results Strin
 				Value string
 			}{
 				Name:  fieldName,
-				Value: value.RecursiveString(results),
+				Value: value.RecursiveString(seenReferences),
 			},
 		)
 	})
@@ -7168,8 +7170,7 @@ func (v *CompositeValue) ConformsToDynamicType(
 			return false
 		}
 
-		dynamicTypeResults := DynamicTypeResults{}
-		fieldDynamicType := field.DynamicType(interpreter, dynamicTypeResults)
+		fieldDynamicType := field.DynamicType(interpreter, SeenReferences{})
 
 		if !interpreter.IsSubType(fieldDynamicType, member.TypeAnnotation.Type) {
 			return false
@@ -7468,7 +7469,7 @@ func (v *DictionaryValue) Walk(walkChild func(Value)) {
 	})
 }
 
-func (v *DictionaryValue) DynamicType(interpreter *Interpreter, results DynamicTypeResults) DynamicType {
+func (v *DictionaryValue) DynamicType(interpreter *Interpreter, seenReferences SeenReferences) DynamicType {
 	keys := v.Keys().Elements()
 	entryTypes := make([]DictionaryStaticTypeEntry, len(keys))
 
@@ -7478,12 +7479,12 @@ func (v *DictionaryValue) DynamicType(interpreter *Interpreter, results DynamicT
 		value := v.Get(interpreter, ReturnEmptyLocationRange, key).(*SomeValue).Value
 		entryTypes[i] =
 			DictionaryStaticTypeEntry{
-				KeyType:   key.DynamicType(interpreter, results),
-				ValueType: value.DynamicType(interpreter, results),
+				KeyType:   key.DynamicType(interpreter, seenReferences),
+				ValueType: value.DynamicType(interpreter, seenReferences),
 			}
 	}
 
-	return DictionaryDynamicType{
+	return &DictionaryDynamicType{
 		EntryTypes: entryTypes,
 		StaticType: v.Type,
 	}
@@ -7690,10 +7691,10 @@ func (v *DictionaryValue) Set(inter *Interpreter, getLocationRange func() Locati
 }
 
 func (v *DictionaryValue) String() string {
-	return v.RecursiveString(StringResults{})
+	return v.RecursiveString(SeenReferences{})
 }
 
-func (v *DictionaryValue) RecursiveString(results StringResults) string {
+func (v *DictionaryValue) RecursiveString(seenReferences SeenReferences) string {
 	v.ensureLoaded()
 	keys := v.keys.Elements()
 
@@ -7713,14 +7714,14 @@ func (v *DictionaryValue) RecursiveString(results StringResults) string {
 		if value == nil {
 			valueString = "..."
 		} else {
-			valueString = value.RecursiveString(results)
+			valueString = value.RecursiveString(seenReferences)
 		}
 
 		pairs[i] = struct {
 			Key   string
 			Value string
 		}{
-			Key:   keyValue.RecursiveString(results),
+			Key:   keyValue.RecursiveString(seenReferences),
 			Value: valueString,
 		}
 	}
@@ -7938,7 +7939,7 @@ func (v *DictionaryValue) ConformsToDynamicType(
 
 	v.ensureLoaded()
 
-	dictionaryType, ok := dynamicType.(DictionaryDynamicType)
+	dictionaryType, ok := dynamicType.(*DictionaryDynamicType)
 	if !ok || v.Count() != len(dictionaryType.EntryTypes) {
 		return false
 	}
@@ -8083,7 +8084,7 @@ func (NilValue) Walk(_ func(Value)) {
 
 var nilDynamicType DynamicType = NilDynamicType{}
 
-func (NilValue) DynamicType(_ *Interpreter, _ DynamicTypeResults) DynamicType {
+func (NilValue) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
 	return nilDynamicType
 }
 
@@ -8124,7 +8125,7 @@ func (NilValue) String() string {
 	return format.Nil
 }
 
-func (v NilValue) RecursiveString(_ StringResults) string {
+func (v NilValue) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
@@ -8189,8 +8190,8 @@ func (v *SomeValue) Walk(walkChild func(Value)) {
 	walkChild(v.Value)
 }
 
-func (v *SomeValue) DynamicType(interpreter *Interpreter, results DynamicTypeResults) DynamicType {
-	innerType := v.Value.DynamicType(interpreter, results)
+func (v *SomeValue) DynamicType(interpreter *Interpreter, seenReferences SeenReferences) DynamicType {
+	innerType := v.Value.DynamicType(interpreter, seenReferences)
 	return SomeDynamicType{InnerType: innerType}
 }
 
@@ -8241,11 +8242,11 @@ func (v *SomeValue) Destroy(interpreter *Interpreter, getLocationRange func() Lo
 }
 
 func (v *SomeValue) String() string {
-	return v.RecursiveString(StringResults{})
+	return v.RecursiveString(SeenReferences{})
 }
 
-func (v *SomeValue) RecursiveString(results StringResults) string {
-	return v.Value.RecursiveString(results)
+func (v *SomeValue) RecursiveString(seenReferences SeenReferences) string {
+	return v.Value.RecursiveString(seenReferences)
 }
 
 func (v *SomeValue) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
@@ -8330,33 +8331,23 @@ func (*StorageReferenceValue) String() string {
 	return "StorageReference()"
 }
 
-func (v *StorageReferenceValue) RecursiveString(_ StringResults) string {
+func (v *StorageReferenceValue) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
-func (v *StorageReferenceValue) DynamicType(interpreter *Interpreter, results DynamicTypeResults) DynamicType {
+func (v *StorageReferenceValue) DynamicType(interpreter *Interpreter, seenReferences SeenReferences) DynamicType {
 	referencedValue := v.ReferencedValue(interpreter)
 	if referencedValue == nil {
 		panic(DereferenceError{})
 	}
 
-	if result, ok := results[v]; ok {
-		return result
-	}
+	innerType := (*referencedValue).DynamicType(interpreter, seenReferences)
 
-	results[v] = nil
-
-	innerType := (*referencedValue).DynamicType(interpreter, results)
-
-	result := StorageReferenceDynamicType{
+	return StorageReferenceDynamicType{
 		authorized:   v.Authorized,
 		innerType:    innerType,
 		borrowedType: v.BorrowedType,
 	}
-
-	results[v] = result
-
-	return result
 }
 
 func (v *StorageReferenceValue) StaticType() StaticType {
@@ -8402,8 +8393,7 @@ func (v *StorageReferenceValue) ReferencedValue(interpreter *Interpreter) *Value
 		value := referenced.Value
 
 		if v.BorrowedType != nil {
-			dynamicTypeResults := DynamicTypeResults{}
-			dynamicType := value.DynamicType(interpreter, dynamicTypeResults)
+			dynamicType := value.DynamicType(interpreter, SeenReferences{})
 			if !interpreter.IsSubType(dynamicType, v.BorrowedType) {
 				interpreter.IsSubType(dynamicType, v.BorrowedType)
 				return nil
@@ -8509,24 +8499,7 @@ func (v *StorageReferenceValue) ConformsToDynamicType(
 		return false
 	}
 
-	valueTypePair := valueDynamicTypePair{
-		value:       v,
-		dynamicType: dynamicType,
-	}
-
-	if result, contains := results[valueTypePair]; contains {
-		return result
-	}
-
-	// It is safe to set 'true' here even this is not checked yet, because the final result
-	// doesn't depend on this. It depends on the rest of values of the object tree.
-	results[valueTypePair] = true
-
-	result := (*referencedValue).ConformsToDynamicType(interpreter, refType.InnerType(), results)
-
-	results[valueTypePair] = result
-
-	return result
+	return (*referencedValue).ConformsToDynamicType(interpreter, refType.InnerType(), results)
 }
 
 func (*StorageReferenceValue) IsStorable() bool {
@@ -8553,41 +8526,39 @@ func (*EphemeralReferenceValue) Walk(_ func(Value)) {
 }
 
 func (v *EphemeralReferenceValue) String() string {
-	return v.RecursiveString(StringResults{})
+	return v.RecursiveString(SeenReferences{})
 }
 
-func (v *EphemeralReferenceValue) RecursiveString(results StringResults) string {
-	if _, ok := results[v]; ok {
+func (v *EphemeralReferenceValue) RecursiveString(seenReferences SeenReferences) string {
+	if _, ok := seenReferences[v]; ok {
 		return "..."
 	}
-	results[v] = struct{}{}
-	defer delete(results, v)
-	return v.Value.RecursiveString(results)
+	seenReferences[v] = struct{}{}
+	defer delete(seenReferences, v)
+
+	return v.Value.RecursiveString(seenReferences)
 }
 
-func (v *EphemeralReferenceValue) DynamicType(interpreter *Interpreter, results DynamicTypeResults) DynamicType {
+func (v *EphemeralReferenceValue) DynamicType(interpreter *Interpreter, seenReferences SeenReferences) DynamicType {
 	referencedValue := v.ReferencedValue()
 	if referencedValue == nil {
 		panic(DereferenceError{})
 	}
 
-	if result, ok := results[v]; ok {
-		return result
+	if _, ok := seenReferences[v]; ok {
+		return nil
 	}
 
-	results[v] = nil
+	seenReferences[v] = struct{}{}
+	defer delete(seenReferences, v)
 
-	innerType := (*referencedValue).DynamicType(interpreter, results)
+	innerType := (*referencedValue).DynamicType(interpreter, seenReferences)
 
-	result := EphemeralReferenceDynamicType{
+	return EphemeralReferenceDynamicType{
 		authorized:   v.Authorized,
 		innerType:    innerType,
 		borrowedType: v.BorrowedType,
 	}
-
-	results[v] = result
-
-	return result
 }
 
 func (v *EphemeralReferenceValue) StaticType() StaticType {
@@ -8728,22 +8699,22 @@ func (v *EphemeralReferenceValue) ConformsToDynamicType(
 		return false
 	}
 
-	valueTypePair := valueDynamicTypePair{
-		value:       v,
-		dynamicType: dynamicType,
+	entry := typeConformanceResultEntry{
+		EphemeralReferenceValue:       v,
+		EphemeralReferenceDynamicType: refType,
 	}
 
-	if result, contains := results[valueTypePair]; contains {
+	if result, contains := results[entry]; contains {
 		return result
 	}
 
 	// It is safe to set 'true' here even this is not checked yet, because the final result
 	// doesn't depend on this. It depends on the rest of values of the object tree.
-	results[valueTypePair] = true
+	results[entry] = true
 
 	result := (*referencedValue).ConformsToDynamicType(interpreter, refType.InnerType(), results)
 
-	results[valueTypePair] = result
+	results[entry] = result
 
 	return result
 }
@@ -8767,20 +8738,15 @@ func NewAddressValueFromBytes(b []byte) AddressValue {
 }
 
 func ConvertAddress(value Value) AddressValue {
-	// TODO: https://github.com/dapperlabs/flow-go/issues/2141
-	result := AddressValue{}
-	if intValue, ok := value.(IntValue); ok {
-		bigEndianBytes := intValue.BigInt.Bytes()
-		copy(
-			result[common.AddressLength-len(bigEndianBytes):common.AddressLength],
-			bigEndianBytes,
-		)
-	} else {
-		binary.BigEndian.PutUint64(
-			result[common.AddressLength-8:common.AddressLength],
-			uint64(value.(NumberValue).ToInt()),
-		)
-	}
+	var result AddressValue
+
+	uint64Value := ConvertUInt64(value)
+
+	binary.BigEndian.PutUint64(
+		result[:common.AddressLength],
+		uint64(uint64Value),
+	)
+
 	return result
 }
 
@@ -8796,7 +8762,7 @@ func (AddressValue) Walk(_ func(Value)) {
 
 var addressDynamicType DynamicType = AddressDynamicType{}
 
-func (AddressValue) DynamicType(_ *Interpreter, _ DynamicTypeResults) DynamicType {
+func (AddressValue) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
 	return addressDynamicType
 }
 
@@ -8816,7 +8782,7 @@ func (v AddressValue) String() string {
 	return format.Address(common.Address(v))
 }
 
-func (v AddressValue) RecursiveString(_ StringResults) string {
+func (v AddressValue) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
@@ -8866,8 +8832,8 @@ func (v AddressValue) GetMember(_ *Interpreter, _ func() LocationRange, name str
 	case sema.AddressTypeToBytesFunctionName:
 		return NewHostFunctionValue(
 			func(invocation Invocation) Value {
-				bytes := common.Address(v)
-				return ByteSliceToByteArrayValue(bytes[:])
+				address := common.Address(v)
+				return ByteSliceToByteArrayValue(address[:])
 			},
 		)
 	}
@@ -8905,7 +8871,7 @@ func NewAuthAccountValue(
 	fields.Set(sema.AuthAccountAddressField, address)
 	fields.Set(sema.AuthAccountAddPublicKeyField, addPublicKeyFunction)
 	fields.Set(sema.AuthAccountRemovePublicKeyField, removePublicKeyFunction)
-	fields.Set(sema.AuthAccountGetCapabilityField, accountGetCapabilityFunction(address))
+	fields.Set(sema.AuthAccountGetCapabilityField, accountGetCapabilityFunction(address, sema.CapabilityPathType))
 	fields.Set(sema.AuthAccountContractsField, contracts)
 	fields.Set(sema.AuthAccountKeysField, keys)
 
@@ -8956,7 +8922,7 @@ func NewAuthAccountValue(
 		return inter.accountGetLinkTargetFunction(address)
 	})
 
-	stringer := func(_ StringResults) string {
+	stringer := func(_ SeenReferences) string {
 		return fmt.Sprintf("AuthAccount(%s)", address)
 	}
 
@@ -8969,14 +8935,18 @@ func NewAuthAccountValue(
 	}
 }
 
-func accountGetCapabilityFunction(
-	addressValue AddressValue,
-) HostFunctionValue {
-
+func accountGetCapabilityFunction(addressValue AddressValue, pathType sema.Type) *HostFunctionValue {
 	return NewHostFunctionValue(
 		func(invocation Invocation) Value {
 
 			path := invocation.Arguments[0].(PathValue)
+			pathDynamicType := path.DynamicType(invocation.Interpreter, SeenReferences{})
+			if !invocation.Interpreter.IsSubType(pathDynamicType, pathType) {
+				panic(TypeMismatchError{
+					ExpectedType:  pathType,
+					LocationRange: invocation.GetLocationRange(),
+				})
+			}
 
 			// NOTE: the type parameter is optional, for backwards compatibility
 
@@ -9009,12 +8979,14 @@ func NewPublicAccountValue(
 	storageUsedGet func(interpreter *Interpreter) UInt64Value,
 	storageCapacityGet func() UInt64Value,
 	keys *CompositeValue,
+	contracts *CompositeValue,
 ) *CompositeValue {
 
 	fields := NewStringValueOrderedMap()
 	fields.Set(sema.PublicAccountAddressField, address)
-	fields.Set(sema.PublicAccountGetCapabilityField, accountGetCapabilityFunction(address))
+	fields.Set(sema.PublicAccountGetCapabilityField, accountGetCapabilityFunction(address, sema.PublicPathType))
 	fields.Set(sema.PublicAccountKeysField, keys)
+	fields.Set(sema.PublicAccountContractsField, contracts)
 
 	// Computed fields
 	computedFields := NewStringComputedFieldOrderedMap()
@@ -9040,7 +9012,7 @@ func NewPublicAccountValue(
 	})
 
 	// Stringer function
-	stringer := func(_ StringResults) string {
+	stringer := func(_ SeenReferences) string {
 		return fmt.Sprintf("PublicAccount(%s)", address)
 	}
 
@@ -9074,7 +9046,7 @@ var storagePathDynamicType DynamicType = StoragePathDynamicType{}
 var publicPathDynamicType DynamicType = PublicPathDynamicType{}
 var privatePathDynamicType DynamicType = PrivatePathDynamicType{}
 
-func (v PathValue) DynamicType(_ *Interpreter, _ DynamicTypeResults) DynamicType {
+func (v PathValue) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
 	switch v.Domain {
 	case common.PathDomainStorage:
 		return storagePathDynamicType
@@ -9132,7 +9104,7 @@ func (v PathValue) String() string {
 	)
 }
 
-func (v PathValue) RecursiveString(_ StringResults) string {
+func (v PathValue) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
@@ -9190,7 +9162,7 @@ func (v CapabilityValue) Walk(walkChild func(Value)) {
 	walkChild(v.Path)
 }
 
-func (v CapabilityValue) DynamicType(inter *Interpreter, _ DynamicTypeResults) DynamicType {
+func (v CapabilityValue) DynamicType(inter *Interpreter, _ SeenReferences) DynamicType {
 	var borrowType *sema.ReferenceType
 	if v.BorrowType != nil {
 		borrowType = inter.ConvertStaticToSemaType(v.BorrowType).(*sema.ReferenceType)
@@ -9233,18 +9205,18 @@ func (v CapabilityValue) Destroy(_ *Interpreter, _ func() LocationRange) {
 }
 
 func (v CapabilityValue) String() string {
-	return v.RecursiveString(StringResults{})
+	return v.RecursiveString(SeenReferences{})
 }
 
-func (v CapabilityValue) RecursiveString(results StringResults) string {
+func (v CapabilityValue) RecursiveString(seenReferences SeenReferences) string {
 	var borrowType string
 	if v.BorrowType != nil {
 		borrowType = v.BorrowType.String()
 	}
 	return format.Capability(
 		borrowType,
-		v.Address.RecursiveString(results),
-		v.Path.RecursiveString(results),
+		v.Address.RecursiveString(seenReferences),
+		v.Path.RecursiveString(seenReferences),
 	)
 }
 
@@ -9321,7 +9293,7 @@ func (v LinkValue) Walk(walkChild func(Value)) {
 	walkChild(v.TargetPath)
 }
 
-func (LinkValue) DynamicType(_ *Interpreter, _ DynamicTypeResults) DynamicType {
+func (LinkValue) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
 	return nil
 }
 
@@ -9355,13 +9327,13 @@ func (v LinkValue) Destroy(_ *Interpreter, _ func() LocationRange) {
 }
 
 func (v LinkValue) String() string {
-	return v.RecursiveString(StringResults{})
+	return v.RecursiveString(SeenReferences{})
 }
 
-func (v LinkValue) RecursiveString(results StringResults) string {
+func (v LinkValue) RecursiveString(seenReferences SeenReferences) string {
 	return format.Link(
 		v.Type.String(),
-		v.TargetPath.RecursiveString(results),
+		v.TargetPath.RecursiveString(seenReferences),
 	)
 }
 
@@ -9447,7 +9419,7 @@ func NewPublicKeyValue(
 
 	// Public key value to string should include the key even though it is a computed field
 	var stringerFields *StringValueOrderedMap
-	publicKeyValue.stringer = func(results StringResults) string {
+	publicKeyValue.stringer = func(seenReferences SeenReferences) string {
 		if stringerFields == nil {
 			stringerFields = NewStringValueOrderedMap()
 			stringerFields.Set(sema.PublicKeyPublicKeyField, publicKey.Copy())
@@ -9458,7 +9430,7 @@ func NewPublicKeyValue(
 		return formatComposite(
 			string(publicKeyValue.TypeID()),
 			stringerFields,
-			results,
+			seenReferences,
 		)
 	}
 
@@ -9506,5 +9478,34 @@ func NewPublicAccountKeysValue(getFunction FunctionValue) *CompositeValue {
 		qualifiedIdentifier: sema.PublicAccountKeysType.QualifiedIdentifier(),
 		kind:                sema.PublicAccountKeysType.Kind,
 		fields:              fields,
+	}
+}
+
+// PublicAccountContractsValue
+
+func NewPublicAccountContractsValue(
+	address AddressValue,
+	getFunction FunctionValue,
+	namesGet func() *ArrayValue,
+) *CompositeValue {
+
+	fields := NewStringValueOrderedMap()
+	fields.Set(sema.PublicAccountContractsTypeGetFunctionName, getFunction)
+
+	computedFields := NewStringComputedFieldOrderedMap()
+	computedFields.Set(sema.PublicAccountContractsTypeNamesField, func(*Interpreter) Value {
+		return namesGet()
+	})
+
+	stringer := func(_ SeenReferences) string {
+		return fmt.Sprintf("PublicAccount.Contracts(%s)", address)
+	}
+
+	return &CompositeValue{
+		qualifiedIdentifier: sema.PublicAccountContractsType.QualifiedIdentifier(),
+		kind:                sema.PublicAccountContractsType.Kind,
+		fields:              fields,
+		ComputedFields:      computedFields,
+		stringer:            stringer,
 	}
 }

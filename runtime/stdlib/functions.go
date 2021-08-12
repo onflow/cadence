@@ -33,7 +33,7 @@ type StandardLibraryFunction struct {
 	Name           string
 	Type           sema.InvokableType
 	DocString      string
-	Function       interpreter.HostFunctionValue
+	Function       *interpreter.HostFunctionValue
 	ArgumentLabels []string
 	Available      func(common.Location) bool
 }

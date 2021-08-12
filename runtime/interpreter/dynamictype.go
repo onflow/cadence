@@ -82,9 +82,9 @@ type ArrayDynamicType struct {
 	StaticType   ArrayStaticType
 }
 
-func (ArrayDynamicType) IsDynamicType() {}
+func (*ArrayDynamicType) IsDynamicType() {}
 
-func (t ArrayDynamicType) IsImportable() bool {
+func (t *ArrayDynamicType) IsImportable() bool {
 	for _, elementType := range t.ElementTypes {
 		if !elementType.IsImportable() {
 			return false
@@ -130,9 +130,9 @@ type DictionaryDynamicType struct {
 	StaticType DictionaryStaticType
 }
 
-func (DictionaryDynamicType) IsDynamicType() {}
+func (*DictionaryDynamicType) IsDynamicType() {}
 
-func (t DictionaryDynamicType) IsImportable() bool {
+func (t *DictionaryDynamicType) IsImportable() bool {
 	for _, entryType := range t.EntryTypes {
 		if !entryType.KeyType.IsImportable() ||
 			!entryType.ValueType.IsImportable() {
