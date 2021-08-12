@@ -1758,7 +1758,11 @@ func (interpreter *Interpreter) copyAndConvert(
 		panic(ExternalError{err})
 	}
 
-	result := interpreter.ConvertAndBox(valueCopy.(Value), valueType, targetType)
+	result := interpreter.ConvertAndBox(
+		MustConvertStoredValue(valueCopy),
+		valueType,
+		targetType,
+	)
 
 	if !interpreter.checkValueTransferTargetType(result, targetType) {
 		panic(ValueTransferTypeError{

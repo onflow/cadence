@@ -257,7 +257,7 @@ func (interpreter *Interpreter) VisitForStatement(statement *ast.ForStatement) a
 
 		interpreter.reportLoopIteration(statement)
 
-		variable.SetValue(value.(Value))
+		variable.SetValue(MustConvertStoredValue(value))
 
 		result := statement.Block.Accept(interpreter)
 

@@ -97,11 +97,11 @@ func testEncodeDecode(t *testing.T, test encodeDecodeTest) {
 		if test.deepEquality {
 			assert.Equal(t, expectedValue, decodedValue)
 		} else {
-			AssertValuesEqual(t, expectedValue, decodedValue.(Value))
+			AssertValuesEqual(t, expectedValue, MustConvertStoredValue(decodedValue))
 		}
 
 		if test.check != nil {
-			test.check(decodedValue.(Value))
+			test.check(MustConvertStoredValue(decodedValue))
 		}
 	}
 }
