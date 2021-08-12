@@ -789,13 +789,32 @@ func (v *ArrayValue) Set(_ *Interpreter, getLocationRange func() LocationRange, 
 	v.SetIndex(index, value, getLocationRange)
 }
 
-func (v *ArrayValue) SetIndex(index int, value Value, getLocationRange func() LocationRange) {
+func (v *ArrayValue) SetIndex(index int, element Value, getLocationRange func() LocationRange) {
 	v.checkBounds(index, getLocationRange)
 
-	// TODO: deep copy
-	// TODO: set owner
+	storage := v.array.Storage
 
-	err := v.array.Set(uint64(index), value.(atree.Value))
+	existing, err := v.array.Get(uint64(index))
+	if err != nil {
+		panic(err)
+	}
+
+	value, err := element.DeepCopy(storage, v.array.Address())
+	if err != nil {
+		panic(err)
+	}
+
+	err = element.DeepRemove(storage)
+	if err != nil {
+		panic(ExternalError{err})
+	}
+
+	err = existing.DeepRemove(storage)
+	if err != nil {
+		panic(ExternalError{err})
+	}
+
+	err = v.array.Set(uint64(index), value)
 	if err != nil {
 		panic(ExternalError{err})
 	}
