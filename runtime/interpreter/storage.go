@@ -31,9 +31,23 @@ func StoredValue(storable atree.Storable, storage atree.SlabStorage) (Value, err
 	if err != nil {
 		return nil, err
 	}
-	switch storedValue := storedValue.(type) {
+
+	return convertStoredValue(storedValue)
+}
+
+func MustConvertStoredValue(value atree.Value) Value {
+	converted, err := convertStoredValue(value)
+	if err != nil {
+		panic(ExternalError{err})
+	}
+	return converted
+}
+
+func convertStoredValue(value atree.Value) (Value, error) {
+	switch value := value.(type) {
 	case *atree.Array:
-		staticType, err := StaticTypeFromBytes([]byte(storedValue.Type()))
+		// TODO: optimize
+		staticType, err := StaticTypeFromBytes([]byte(value.Type()))
 		if err != nil {
 			return nil, err
 		}
@@ -47,16 +61,15 @@ func StoredValue(storable atree.Storable, storage atree.SlabStorage) (Value, err
 		}
 
 		return &ArrayValue{
-			array: storedValue,
+			array: value,
 			Type:  arrayType,
-			// TODO: owner
 		}, nil
 
 	case Value:
-		return storedValue, nil
+		return value, nil
 
 	default:
-		return nil, fmt.Errorf("invalid stored value: %T", storedValue)
+		return nil, fmt.Errorf("cannot convert stored value: %T", value)
 	}
 }
 
@@ -86,7 +99,7 @@ func (i InMemoryStorage) Read(_ *Interpreter, address common.Address, key string
 		panic(ExternalError{err})
 	}
 
-	return NewSomeValueNonCopying(value.(Value))
+	return NewSomeValueNonCopying(MustConvertStoredValue(value))
 }
 
 func (i InMemoryStorage) Write(_ *Interpreter, address common.Address, key string, value OptionalValue) {

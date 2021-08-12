@@ -729,10 +729,10 @@ func (v *ArrayValue) Accept(interpreter *Interpreter, visitor Visitor) {
 
 func (v *ArrayValue) Walk(walkChild func(Value)) {
 	err := v.array.Iterate(func(element atree.Value) (resume bool, err error) {
-		walkChild(element.(Value))
+		walkChild(MustConvertStoredValue(element))
 		return true, nil
 	})
-	// the iteration closure above will never return an errror,
+	// the iteration closure above will never return an error,
 	// but the Iterate function itself might
 	if err != nil {
 		panic(err)
@@ -790,7 +790,7 @@ func (v *ArrayValue) GetIndex(index int, getLocationRange func() LocationRange) 
 		panic(ExternalError{err})
 	}
 
-	return element.(Value)
+	return MustConvertStoredValue(element)
 }
 
 func (v *ArrayValue) Set(inter *Interpreter, getLocationRange func() LocationRange, key Value, value Value) {
@@ -928,7 +928,7 @@ func (v *ArrayValue) Remove(index int, getLocationRange func() LocationRange) Va
 		panic(ExternalError{err})
 	}
 
-	return value.(Value)
+	return MustConvertStoredValue(value)
 }
 
 func (v *ArrayValue) RemoveFirst(getLocationRange func() LocationRange) Value {
@@ -945,7 +945,7 @@ func (v *ArrayValue) Contains(needleValue Value) BoolValue {
 	var result bool
 	err := v.array.Iterate(func(element atree.Value) (resume bool, err error) {
 
-		if needleEquatable.Equal(element.(Value), ReturnEmptyLocationRange) {
+		if needleEquatable.Equal(MustConvertStoredValue(element), ReturnEmptyLocationRange) {
 			result = true
 			// stop iteration
 			return false, nil
@@ -1068,7 +1068,7 @@ func (v *ArrayValue) ConformsToDynamicType(
 			return true
 		}
 
-		if !value.(Value).ConformsToDynamicType(interpreter, arrayType.ElementTypes[index], results) {
+		if !MustConvertStoredValue(value).ConformsToDynamicType(interpreter, arrayType.ElementTypes[index], results) {
 			return false
 		}
 
@@ -1093,7 +1093,7 @@ func (v *ArrayValue) IsStorable() bool {
 			return true
 		}
 
-		if !value.(Value).IsStorable() {
+		if !MustConvertStoredValue(value).IsStorable() {
 			return false
 		}
 
@@ -6993,7 +6993,7 @@ func (v *CompositeValue) SetMember(
 
 	existingValue, existed := v.Fields.Get(name)
 
-	v.Fields.Set(name, valueCopy.(Value))
+	v.Fields.Set(name, MustConvertStoredValue(valueCopy))
 
 	if existed {
 		err = existingValue.DeepRemove(interpreter.Storage)
@@ -7236,7 +7236,7 @@ func (v *CompositeValue) DeepCopy(storage atree.SlabStorage, address atree.Addre
 			return nil, err
 		}
 
-		newFields.Set(fieldName, fieldValueCopy.(Value))
+		newFields.Set(fieldName, MustConvertStoredValue(fieldValueCopy))
 	}
 
 	newValue := NewCompositeValue(
@@ -7587,7 +7587,7 @@ func (v *DictionaryValue) GetMember(interpreter *Interpreter, _ func() LocationR
 		if err != nil {
 			panic(ExternalError{err})
 		}
-		return keys.(Value)
+		return MustConvertStoredValue(keys)
 
 	case "values":
 		dictionaryValues := make([]Value, v.Count())
@@ -7598,7 +7598,7 @@ func (v *DictionaryValue) GetMember(interpreter *Interpreter, _ func() LocationR
 				panic(ExternalError{err})
 			}
 
-			dictionaryValues[i] = valueCopy.(Value)
+			dictionaryValues[i] = MustConvertStoredValue(valueCopy)
 			i++
 		})
 
@@ -7687,7 +7687,7 @@ func (v *DictionaryValue) Remove(
 			break
 		}
 
-		if dictionaryKey(keyValue.(Value)) == key {
+		if dictionaryKey(MustConvertStoredValue(keyValue)) == key {
 			v.Keys.Remove(index, getLocationRange)
 
 			valueCopy, err := value.DeepCopy(storage, atree.Address{})
@@ -7702,7 +7702,7 @@ func (v *DictionaryValue) Remove(
 
 			v.store(storage)
 
-			return NewSomeValueNonCopying(valueCopy.(Value))
+			return NewSomeValueNonCopying(MustConvertStoredValue(valueCopy))
 		}
 		index++
 	}
@@ -7736,7 +7736,7 @@ func (v *DictionaryValue) Insert(
 		panic(ExternalError{err})
 	}
 
-	v.Entries.Set(key, valueCopy.(Value))
+	v.Entries.Set(key, MustConvertStoredValue(valueCopy))
 
 	var result OptionalValue
 	switch existingValue := existingValue.(type) {
@@ -7782,7 +7782,7 @@ func (v *DictionaryValue) IsStorable() bool {
 			break
 		}
 
-		if !keyValue.(Value).IsStorable() {
+		if !MustConvertStoredValue(keyValue).IsStorable() {
 			return false
 		}
 	}
@@ -7829,7 +7829,7 @@ func (v *DictionaryValue) ConformsToDynamicType(
 
 		entryType := dictionaryType.EntryTypes[index]
 
-		entryKey := keyValue.(Value)
+		entryKey := MustConvertStoredValue(keyValue)
 
 		// Check the key
 		if !entryKey.ConformsToDynamicType(interpreter, entryType.KeyType, results) {
@@ -7950,7 +7950,7 @@ func (v *DictionaryValue) DeepCopy(storage atree.SlabStorage, address atree.Addr
 		}
 
 		// NOTE: Insert already deep copies
-		result.Keys.Insert(index, value.(Value), ReturnEmptyLocationRange)
+		result.Keys.Insert(index, MustConvertStoredValue(value), ReturnEmptyLocationRange)
 		index++
 	}
 
@@ -7966,7 +7966,7 @@ func (v *DictionaryValue) DeepCopy(storage atree.SlabStorage, address atree.Addr
 			return nil, err
 		}
 
-		result.Entries.Set(key, valueCopy.(Value))
+		result.Entries.Set(key, MustConvertStoredValue(valueCopy))
 	}
 
 	// NOTE: important: write dictionary to storage,
@@ -8351,7 +8351,7 @@ func (v *SomeValue) DeepCopy(storage atree.SlabStorage, address atree.Address) (
 	}
 
 	return &SomeValue{
-		Value: valueCopy.(Value),
+		Value: MustConvertStoredValue(valueCopy),
 	}, nil
 }
 
@@ -9584,7 +9584,7 @@ func NewPublicKeyValue(
 			if err != nil {
 				panic(err)
 			}
-			return keyCopy.(Value)
+			return MustConvertStoredValue(keyCopy)
 		},
 	)
 
@@ -9618,7 +9618,7 @@ func NewPublicKeyValue(
 				panic(err)
 			}
 
-			stringerFields.Set(sema.PublicKeyPublicKeyField, keyCopy.(Value))
+			stringerFields.Set(sema.PublicKeyPublicKeyField, MustConvertStoredValue(keyCopy))
 			publicKeyValue.Fields.Foreach(func(key string, value Value) {
 				stringerFields.Set(key, value)
 			})

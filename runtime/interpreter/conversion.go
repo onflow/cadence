@@ -46,7 +46,7 @@ func ByteArrayValueToByteSlice(value Value) ([]byte, error) {
 			return result, nil
 		}
 
-		b, err := ByteValueToByte(value.(Value))
+		b, err := ByteValueToByte(MustConvertStoredValue(value))
 		if err != nil {
 			return nil, err
 		}

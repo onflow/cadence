@@ -85,7 +85,7 @@ func (interpreter *Interpreter) invokeFunctionValue(
 			if err != nil {
 				panic(err)
 			}
-			argumentCopies[i] = argumentCopy.(Value)
+			argumentCopies[i] = MustConvertStoredValue(argumentCopy)
 		}
 	}
 
