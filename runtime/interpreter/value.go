@@ -806,10 +806,29 @@ func (v *ArrayValue) SetIndex(inter *Interpreter, getLocationRange func() Locati
 
 	inter.checkContainerMutation(arrayStaticType.ElementType(), value, getLocationRange)
 
-	// TODO: deep copy
-	// TODO: set owner
+	storage := v.array.Storage
 
-	err := v.array.Set(uint64(index), value.(atree.Value))
+	existing, err := v.array.Get(uint64(index))
+	if err != nil {
+		panic(err)
+	}
+
+	value, err := element.DeepCopy(storage, v.array.Address())
+	if err != nil {
+		panic(err)
+	}
+
+	err = element.DeepRemove(storage)
+	if err != nil {
+		panic(ExternalError{err})
+	}
+
+	err = existing.DeepRemove(storage)
+	if err != nil {
+		panic(ExternalError{err})
+	}
+
+	err = v.array.Set(uint64(index), value)
 	if err != nil {
 		panic(ExternalError{err})
 	}
