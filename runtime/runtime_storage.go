@@ -48,17 +48,31 @@ type CacheEntry struct {
 type ContractUpdates map[StorageKey]interpreter.Value
 
 type runtimeStorage struct {
+	*atree.PersistentSlabStorage
 	runtimeInterface Interface
 	cache            Cache
 	contractUpdates  ContractUpdates
 }
 
+
+// TODO (ramtin) deal with calling Commit at the end of execution
 func newRuntimeStorage(runtimeInterface Interface) *runtimeStorage {
+	ledgerStorage := atree.NewLedgerBaseStorage(runtimeInterface)
+	slabStorage := atree.NewPersistentSlabStorage(ledgerStorage, CBOREncMode, CBORDecMode)
+	slabStorage.DecodeStorable = DecodeStorableV6
 	return &runtimeStorage{
+		PersistentSlabStorage: slabStorage
 		runtimeInterface: runtimeInterface,
 		cache:            Cache{},
 		contractUpdates:  ContractUpdates{},
 	}
+}
+
+// // TODO deal with the address and key
+
+func (s *runtimeStorage) Exists(_ *Interpreter, address common.Address, key string) bool {
+	// TODO more things with interpreter
+	return runtimeInterface.valueExists(address, key)
 }
 
 // valueExists is the StorageExistenceHandlerFunc for the interpreter.
@@ -105,6 +119,23 @@ func (s *runtimeStorage) valueExists(
 
 	return exists
 }
+
+
+func (s *runtimeStorage) Read(_ *Interpreter, address common.Address, key string) OptionalValue {
+	// TODO (Ramtin) what to do with deferred
+	storable, ok := s.readValue(address, key, false)
+	if !ok {
+		return NilValue{}
+	}
+
+	value, err := StoredValue(storable, i.BasicSlabStorage)
+	if err != nil {
+		panic(ExternalError{err})
+	}
+
+	return NewSomeValueNonCopying(MustConvertStoredValue(value))
+}
+
 
 // readValue is the StorageReadHandlerFunc for the interpreter.
 //
@@ -188,6 +219,28 @@ func (s *runtimeStorage) readValue(
 
 	return interpreter.NewSomeValueOwningNonCopying(storedValue)
 }
+
+
+func (s *runtimeStorage) Write(_ *Interpreter, address common.Address, key string, value OptionalValue) {
+	storageKey := InMemoryStorageKey{
+		Address: address,
+		Key:     key,
+	}
+
+	switch value := value.(type) {
+	case *SomeValue:
+		storable, err := value.Value.(atree.Value).Storable(i, atree.Address(address))
+		if err != nil {
+			panic(ExternalError{err})
+		}
+		// TODO (ramtin) we need error return 
+		s.writeValue(address, key, storable)
+
+	case NilValue:
+		delete(i.Data, storageKey)
+	}
+}
+
 
 // writeValue is the StorageWriteHandlerFunc for the interpreter.
 //
