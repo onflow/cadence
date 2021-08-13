@@ -271,11 +271,10 @@ func (d *DecoderV4) decodeValue(path []string) (Value, error) {
 			value, err = d.decodeType()
 
 		default:
-			return nil, fmt.Errorf(
-				"unsupported decoded tag (@ %s): %d",
-				strings.Join(path, "."),
-				num,
-			)
+			return nil, UnsupportedTagDecodingError{
+				Path: path[:],
+				Tag:  num,
+			}
 		}
 
 	default:
@@ -1542,7 +1541,7 @@ func (d *DecoderV4) decodeCapabilityStaticType() (StaticType, error) {
 	}, nil
 }
 
-// decodeCompositeMetaInfo decodes the meta info from the byte content and updates the composite value.
+// decodeCompositeMetaInfoV4 decodes the meta info from the byte content and updates the composite value.
 // Meta info includes:
 //    - location
 //    - qualifiedIdentifier
@@ -1658,7 +1657,7 @@ func decodeCompositeMetaInfoV4(v *CompositeValue, content []byte) error {
 	return nil
 }
 
-// decodeCompositeFields decodes fields from the byte content and updates the composite value.
+// decodeCompositeFieldsV4 decodes fields from the byte content and updates the composite value.
 //
 func decodeCompositeFieldsV4(v *CompositeValue, content []byte) error {
 	d, err := NewByteDecoderV4(content, v.Owner, v.encodingVersion, v.decodeCallback)

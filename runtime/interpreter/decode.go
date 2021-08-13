@@ -49,6 +49,19 @@ type DecoderV5 struct {
 // maxInt is math.MaxInt32 or math.MaxInt64 depending on arch.
 const maxInt = 1<<(bits.UintSize-1) - 1
 
+type UnsupportedTagDecodingError struct {
+	Path []string
+	Tag  uint64
+}
+
+func (e UnsupportedTagDecodingError) Error() string {
+	return fmt.Sprintf(
+		"unsupported decoded tag (@ %s): %d",
+		strings.Join(e.Path, "."),
+		e.Tag,
+	)
+}
+
 // DecodeValue returns a value decoded from its CBOR-encoded representation,
 // for the given owner (can be `nil`).  It can decode storage format
 // version 4 and later.
@@ -290,11 +303,10 @@ func (d *DecoderV5) decodeValue(path []string) (Value, error) {
 			value, err = d.decodeType()
 
 		default:
-			return nil, fmt.Errorf(
-				"unsupported decoded tag (@ %s): %d",
-				strings.Join(path, "."),
-				num,
-			)
+			return nil, UnsupportedTagDecodingError{
+				Path: path[:],
+				Tag:  num,
+			}
 		}
 
 	default:
@@ -1258,12 +1270,6 @@ func (d *DecoderV5) decodeCompositeStaticType() (StaticType, error) {
 		return nil, fmt.Errorf("invalid composite static type location encoding: %w", err)
 	}
 
-	// Skip obsolete element at array index encodedCompositeStaticTypeTypeIDFieldKeyV5
-	err = d.decoder.Skip()
-	if err != nil {
-		return nil, err
-	}
-
 	// Decode qualified identifier at array index encodedCompositeStaticTypeQualifiedIdentifierFieldKeyV5
 	qualifiedIdentifier, err := d.decoder.DecodeString()
 	if err != nil {
@@ -1310,12 +1316,6 @@ func (d *DecoderV5) decodeInterfaceStaticType() (InterfaceStaticType, error) {
 	location, err := d.decodeLocation()
 	if err != nil {
 		return InterfaceStaticType{}, fmt.Errorf("invalid interface static type location encoding: %w", err)
-	}
-
-	// Skip obsolete element at array index encodedInterfaceStaticTypeTypeIDFieldKeyV5
-	err = d.decoder.Skip()
-	if err != nil {
-		return InterfaceStaticType{}, err
 	}
 
 	// Decode qualified identifier at array index encodedInterfaceStaticTypeQualifiedIdentifierFieldKeyV5
@@ -1660,12 +1660,6 @@ func decodeCompositeMetaInfo(v *CompositeValue, content []byte) error {
 			strings.Join(v.valuePath, "."),
 			err,
 		)
-	}
-
-	// Skip obsolete element at array index encodedCompositeValueTypeIDFieldKeyV5
-	err = d.decoder.Skip()
-	if err != nil {
-		return err
 	}
 
 	// Kind

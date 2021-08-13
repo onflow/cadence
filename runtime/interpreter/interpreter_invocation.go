@@ -96,7 +96,7 @@ func (interpreter *Interpreter) invokeFunctionValue(
 }
 
 func (interpreter *Interpreter) invokeInterpretedFunction(
-	function InterpretedFunctionValue,
+	function *InterpretedFunctionValue,
 	invocation Invocation,
 ) Value {
 
@@ -116,7 +116,7 @@ func (interpreter *Interpreter) invokeInterpretedFunction(
 // NOTE: assumes the function's activation (or an extension of it) is pushed!
 //
 func (interpreter *Interpreter) invokeInterpretedFunctionActivated(
-	function InterpretedFunctionValue,
+	function *InterpretedFunctionValue,
 	arguments []Value,
 ) Value {
 	defer interpreter.activations.Pop()

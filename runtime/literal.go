@@ -142,9 +142,7 @@ func integerLiteralValue(expression ast.Expression, ty sema.Type) (cadence.Value
 		return nil, err
 	}
 
-	result := ExportValue(convertedValue, nil)
-
-	return result, nil
+	return ExportValue(convertedValue, nil)
 }
 
 func convertIntValue(intValue interpreter.IntValue, ty sema.Type) (interpreter.Value, error) {
@@ -307,7 +305,7 @@ func LiteralValue(expression ast.Expression, ty sema.Type) (cadence.Value, error
 			return nil, LiteralExpressionTypeError
 		}
 
-		return cadence.NewString(expression.Value), nil
+		return cadence.NewString(expression.Value)
 	}
 
 	switch {
