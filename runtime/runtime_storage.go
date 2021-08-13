@@ -222,11 +222,6 @@ func (s *runtimeStorage) readValue(
 
 
 func (s *runtimeStorage) Write(_ *Interpreter, address common.Address, key string, value OptionalValue) {
-	storageKey := InMemoryStorageKey{
-		Address: address,
-		Key:     key,
-	}
-
 	switch value := value.(type) {
 	case *SomeValue:
 		storable, err := value.Value.(atree.Value).Storable(i, atree.Address(address))
