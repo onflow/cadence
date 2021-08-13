@@ -5860,7 +5860,7 @@ func TestInterpretEmitEvent(t *testing.T) {
 			TestLocation.QualifiedIdentifier(transferEventType.ID()),
 			common.CompositeKindEvent,
 			members1,
-			atree.Address{},
+			common.Address{},
 		),
 		interpreter.NewCompositeValue(
 			inter.Storage,
@@ -5868,7 +5868,7 @@ func TestInterpretEmitEvent(t *testing.T) {
 			TestLocation.QualifiedIdentifier(transferEventType.ID()),
 			common.CompositeKindEvent,
 			members2,
-			atree.Address{},
+			common.Address{},
 		),
 		interpreter.NewCompositeValue(
 			inter.Storage,
@@ -5876,7 +5876,7 @@ func TestInterpretEmitEvent(t *testing.T) {
 			TestLocation.QualifiedIdentifier(transferAmountEventType.ID()),
 			common.CompositeKindEvent,
 			members3,
-			atree.Address{},
+			common.Address{},
 		),
 	}
 
@@ -5923,7 +5923,7 @@ func TestInterpretEmitEventParameterTypes(t *testing.T) {
 		"S",
 		common.CompositeKindStructure,
 		interpreter.NewStringValueOrderedMap(),
-		atree.Address{},
+		common.Address{},
 	)
 	sValue.Functions = map[string]interpreter.FunctionValue{}
 
@@ -6186,7 +6186,7 @@ func TestInterpretEmitEventParameterTypes(t *testing.T) {
 					TestLocation.QualifiedIdentifier(testType.ID()),
 					common.CompositeKindEvent,
 					members,
-					atree.Address{},
+					common.Address{},
 				),
 			}
 
@@ -8648,7 +8648,7 @@ func TestInterpretMissingMember(t *testing.T) {
 		typeName,
 		common.CompositeKindStructure,
 		interpreter.NewStringValueOrderedMap(),
-		atree.Address{},
+		common.Address{},
 	)
 
 	predeclaredValues :=

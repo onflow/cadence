@@ -21,7 +21,6 @@ package interpreter_test
 import (
 	"testing"
 
-	"github.com/fxamacker/atree"
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/runtime/common"
@@ -101,7 +100,7 @@ func testCompositeValue(t *testing.T, code string) *interpreter.Interpreter {
 		fruitType.Identifier,
 		common.CompositeKindStructure,
 		fields,
-		atree.Address{},
+		common.Address{},
 	)
 
 	value.ComputedFields = interpreter.NewStringComputedFieldOrderedMap()

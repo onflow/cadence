@@ -658,7 +658,7 @@ func NewArrayValue(
 	return NewArrayValueWithAddress(
 		arrayType,
 		storage,
-		atree.Address{},
+		common.Address{},
 		values...,
 	)
 }
@@ -666,7 +666,7 @@ func NewArrayValue(
 func NewArrayValueWithAddress(
 	arrayType ArrayStaticType,
 	storage atree.SlabStorage,
-	address atree.Address,
+	address common.Address,
 	values ...Value,
 ) *ArrayValue {
 
@@ -675,7 +675,7 @@ func NewArrayValueWithAddress(
 		panic(ExternalError{err})
 	}
 
-	array, err := atree.NewArray(storage, address, string(typeInfo))
+	array, err := atree.NewArray(storage, atree.Address(address), string(typeInfo))
 	if err != nil {
 		panic(ExternalError{err})
 	}
@@ -773,10 +773,10 @@ func (v *ArrayValue) Concat(other *ArrayValue) Value {
 
 func (v *ArrayValue) Get(_ *Interpreter, getLocationRange func() LocationRange, key Value) Value {
 	index := key.(NumberValue).ToInt()
-	return v.GetIndex(index, getLocationRange)
+	return v.GetIndex(getLocationRange, index)
 }
 
-func (v *ArrayValue) GetIndex(index int, getLocationRange func() LocationRange) Value {
+func (v *ArrayValue) GetIndex(getLocationRange func() LocationRange, index int) Value {
 	v.checkBounds(index, getLocationRange)
 
 	element, err := v.array.Get(uint64(index))
@@ -1133,8 +1133,8 @@ func (v *ArrayValue) Equal(other Value, getLocationRange func() LocationRange) b
 	}
 
 	for i := 0; i < count; i++ {
-		value := v.GetIndex(i, getLocationRange)
-		otherValue := otherArray.GetIndex(i, getLocationRange)
+		value := v.GetIndex(getLocationRange, i)
+		otherValue := otherArray.GetIndex(getLocationRange, i)
 
 		equatableValue, ok := value.(EquatableValue)
 		if !ok || !equatableValue.Equal(otherValue, getLocationRange) {
@@ -1172,6 +1172,10 @@ func (a *ArrayValue) DeepRemove(storage atree.SlabStorage) error {
 
 func (v *ArrayValue) StorageID() atree.StorageID {
 	return v.array.StorageID()
+}
+
+func (v *ArrayValue) GetOwner() common.Address {
+	return common.Address(v.StorageID().Address)
 }
 
 // NumberValue
@@ -6778,10 +6782,10 @@ func NewCompositeValue(
 	qualifiedIdentifier string,
 	kind common.CompositeKind,
 	fields *StringValueOrderedMap,
-	address atree.Address,
+	address common.Address,
 ) *CompositeValue {
 
-	storageID := storage.GenerateStorageID(address)
+	storageID := storage.GenerateStorageID(atree.Address(address))
 
 	// TODO: only allocate when setting a field
 	if fields == nil {
@@ -7271,7 +7275,7 @@ func (v *CompositeValue) DeepCopy(storage atree.SlabStorage, address atree.Addre
 		v.QualifiedIdentifier,
 		v.Kind,
 		newFields,
-		address,
+		common.Address(address),
 	)
 
 	newValue.InjectedFields = v.InjectedFields
@@ -7308,6 +7312,10 @@ func (v *CompositeValue) DeepRemove(storage atree.SlabStorage) error {
 	return slab.(atree.StorableSlab).
 		Storable.(CompositeStorable).
 		DeepRemove(storage)
+}
+
+func (v *CompositeValue) GetOwner() common.Address {
+	return common.Address(v.StorageID.Address)
 }
 
 type CompositeStorableField struct {
@@ -7408,7 +7416,7 @@ func NewDictionaryValue(
 	return NewDictionaryValueWithAddress(
 		dictionaryType,
 		storage,
-		atree.Address{},
+		common.Address{},
 		keysAndValues...,
 	)
 }
@@ -7416,11 +7424,11 @@ func NewDictionaryValue(
 func NewDictionaryValueWithAddress(
 	dictionaryType DictionaryStaticType,
 	storage atree.SlabStorage,
-	address atree.Address,
+	address common.Address,
 	keysAndValues ...Value,
 ) *DictionaryValue {
 
-	storageID := storage.GenerateStorageID(address)
+	storageID := storage.GenerateStorageID(atree.Address(address))
 
 	keysAndValuesCount := len(keysAndValues)
 	if keysAndValuesCount%2 != 0 {
@@ -7951,7 +7959,11 @@ func (v *DictionaryValue) DeepCopy(storage atree.SlabStorage, address atree.Addr
 
 	v.isCopied = true
 
-	result := NewDictionaryValueWithAddress(v.Type, storage, address)
+	result := NewDictionaryValueWithAddress(
+		v.Type,
+		storage,
+		common.Address(address),
+	)
 
 	iterator, err := v.Keys.array.Iterator()
 	if err != nil {
@@ -8098,7 +8110,7 @@ func (s DictionaryStorable) StoredValue(storage atree.SlabStorage) (atree.Value,
 			return nil, err
 		}
 
-		keyValue := keysArray.GetIndex(index, ReturnEmptyLocationRange)
+		keyValue := keysArray.GetIndex(ReturnEmptyLocationRange, index)
 
 		keyStringValue, ok := keyValue.(HasKeyString)
 		if !ok {
