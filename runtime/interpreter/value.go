@@ -6917,7 +6917,7 @@ func (v *CompositeValue) StaticType() StaticType {
 	}
 }
 
-func (v *CompositeValue) GetMember(interpreter *Interpreter, getLocationRange func() LocationRange, name string) Value {
+func (v *CompositeValue) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
 
 	if v.Kind == common.CompositeKindResource &&
 		name == sema.ResourceOwnerFieldName {
@@ -7016,7 +7016,7 @@ func (v *CompositeValue) OwnerValue(interpreter *Interpreter) OptionalValue {
 
 func (v *CompositeValue) SetMember(
 	interpreter *Interpreter,
-	getLocationRange func() LocationRange,
+	_ func() LocationRange,
 	name string,
 	value Value,
 ) {
@@ -7629,7 +7629,7 @@ func (v *DictionaryValue) RecursiveString(seenReferences SeenReferences) string 
 	return format.Dictionary(pairs)
 }
 
-func (v *DictionaryValue) GetMember(interpreter *Interpreter, getLocationRange func() LocationRange, name string) Value {
+func (v *DictionaryValue) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
 
 	switch name {
 	case "length":
@@ -8083,6 +8083,10 @@ func (v *DictionaryValue) DeepRemove(storage atree.SlabStorage) error {
 	return slab.(atree.StorableSlab).
 		Storable.(DictionaryStorable).
 		DeepRemove(storage)
+}
+
+func (v *DictionaryValue) GetOwner() common.Address {
+	return common.Address(v.StorageID.Address)
 }
 
 type DictionaryStorable struct {

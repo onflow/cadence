@@ -128,7 +128,7 @@ func TestOwnerArrayElement(t *testing.T) {
 	assert.Equal(t, newOwner, value.GetOwner())
 }
 
-func TestSetOwnerArraySetIndex(t *testing.T) {
+func TestOwnerArraySetIndex(t *testing.T) {
 
 	t.Parallel()
 
@@ -164,403 +164,457 @@ func TestSetOwnerArraySetIndex(t *testing.T) {
 	assert.Equal(t, newOwner, value2.GetOwner())
 }
 
-//func TestSetOwnerArrayAppend(t *testing.T) {
-//
-//	t.Parallel()
-//
-//	storage := NewInMemoryStorage()
-//
-//	oldOwner := common.Address{0x1}
-//	newOwner := common.Address{0x2}
-//
-//	value := newTestCompositeValue(storage, oldOwner)
-//
-//	array := NewArrayValue(
-//		VariableSizedStaticType{
-//			Type: PrimitiveStaticTypeAnyStruct,
-//		},
-//		storage,
-//	)
-//	array.SetOwner(&newOwner)
-//
-//	assert.Equal(t, &newOwner, array.GetOwner())
-//	assert.Equal(t, &oldOwner, value.GetOwner())
-//
-//	array.Append(value)
-//
-//	assert.Equal(t, &newOwner, array.GetOwner())
-//	assert.Equal(t, &newOwner, value.GetOwner())
-//}
-//
-//func TestSetOwnerArrayInsert(t *testing.T) {
-//
-//	t.Parallel()
-//
-//	storage := NewInMemoryStorage()
-//
-//	oldOwner := common.Address{0x1}
-//	newOwner := common.Address{0x2}
-//
-//	value := newTestCompositeValue(storage, oldOwner)
-//
-//	array := NewArrayValue(
-//		VariableSizedStaticType{
-//			Type: PrimitiveStaticTypeAnyStruct,
-//		},
-//		storage,
-//	)
-//	array.SetOwner(&newOwner)
-//
-//	assert.Equal(t, &newOwner, array.GetOwner())
-//	assert.Equal(t, &oldOwner, value.GetOwner())
-//
-//	array.Insert(0, value, nil)
-//
-//	assert.Equal(t, &newOwner, array.GetOwner())
-//	assert.Equal(t, &newOwner, value.GetOwner())
-//}
-//
-//func TestOwnerNewDictionary(t *testing.T) {
-//
-//	t.Parallel()
-//
-//	storage := NewInMemoryStorage()
-//
-//	oldOwner := common.Address{0x1}
-//
-//	keyValue := NewStringValue("test")
-//	value := newTestCompositeValue(storage, oldOwner)
-//
-//	assert.Equal(t, &oldOwner, value.GetOwner())
-//
-//	dictionary := NewDictionaryValue(
-//		DictionaryStaticType{
-//			KeyType:   PrimitiveStaticTypeString,
-//			ValueType: PrimitiveStaticTypeAnyStruct,
-//		},
-//		storage,
-//		keyValue, value,
-//	)
-//
-//	assert.Nil(t, dictionary.GetOwner())
-//	// NOTE: keyValue is string, has no owner
-//	assert.Nil(t, value.GetOwner())
-//}
-//
-//func TestSetOwnerDictionary(t *testing.T) {
-//
-//	t.Parallel()
-//
-//	storage := NewInMemoryStorage()
-//
-//	oldOwner := common.Address{0x1}
-//	newOwner := common.Address{0x2}
-//
-//	keyValue := NewStringValue("test")
-//	value := newTestCompositeValue(storage, oldOwner)
-//
-//	dictionary := NewDictionaryValue(
-//		DictionaryStaticType{
-//			KeyType:   PrimitiveStaticTypeString,
-//			ValueType: PrimitiveStaticTypeAnyStruct,
-//		},
-//		storage,
-//		keyValue, value,
-//	)
-//
-//	dictionary.SetOwner(&newOwner)
-//
-//	assert.Equal(t, &newOwner, dictionary.GetOwner())
-//	assert.Equal(t, &newOwner, value.GetOwner())
-//}
-//
-//func TestSetOwnerDictionaryCopy(t *testing.T) {
-//
-//	t.Parallel()
-//
-//	storage := NewInMemoryStorage()
-//
-//	oldOwner := common.Address{0x1}
-//	newOwner := common.Address{0x2}
-//
-//	keyValue := NewStringValue("test")
-//	value := newTestCompositeValue(storage, oldOwner)
-//
-//	dictionary := NewDictionaryValue(
-//		DictionaryStaticType{
-//			KeyType:   PrimitiveStaticTypeString,
-//			ValueType: PrimitiveStaticTypeAnyStruct,
-//		},
-//		storage,
-//		keyValue, value,
-//	)
-//	dictionary.SetOwner(&newOwner)
-//
-//	copyResult, err := dictionary.DeepCopy(storage, atree.Address{})
-//	require.NoError(t, err)
-//
-//	dictionaryCopy := copyResult.(*DictionaryValue)
-//	valueCopy := dictionaryCopy.Get(nil, ReturnEmptyLocationRange, keyValue)
-//
-//	assert.Nil(t, dictionaryCopy.GetOwner())
-//	assert.Nil(t, valueCopy.GetOwner())
-//	assert.Equal(t, &newOwner, value.GetOwner())
-//}
-//
-//func TestSetOwnerDictionarySetIndex(t *testing.T) {
-//
-//	t.Parallel()
-//
-//	storage := NewInMemoryStorage()
-//
-//	oldOwner := common.Address{0x1}
-//	newOwner := common.Address{0x2}
-//
-//	keyValue := NewStringValue("test")
-//	value := newTestCompositeValue(storage, oldOwner)
-//
-//	dictionary := NewDictionaryValue(
-//		DictionaryStaticType{
-//			KeyType:   PrimitiveStaticTypeString,
-//			ValueType: PrimitiveStaticTypeAnyStruct,
-//		},
-//		storage,
-//	)
-//	dictionary.SetOwner(&newOwner)
-//
-//	assert.Equal(t, &newOwner, dictionary.GetOwner())
-//	assert.Equal(t, &oldOwner, value.GetOwner())
-//
-//	inter, err := NewInterpreter(
-//		nil,
-//		utils.TestLocation,
-//		WithStorage(storage),
-//	)
-//	require.NoError(t, err)
-//
-//	dictionary.Set(
-//		inter,
-//		ReturnEmptyLocationRange,
-//		keyValue,
-//		NewSomeValueNonCopying(value),
-//	)
-//
-//	assert.Equal(t, &newOwner, dictionary.GetOwner())
-//	assert.Equal(t, &newOwner, value.GetOwner())
-//}
-//
-//func TestSetOwnerDictionaryInsert(t *testing.T) {
-//
-//	t.Parallel()
-//
-//	storage := NewInMemoryStorage()
-//
-//	oldOwner := common.Address{0x1}
-//	newOwner := common.Address{0x2}
-//
-//	keyValue := NewStringValue("test")
-//	value := newTestCompositeValue(storage, oldOwner)
-//
-//	dictionary := NewDictionaryValue(
-//		DictionaryStaticType{
-//			KeyType:   PrimitiveStaticTypeString,
-//			ValueType: PrimitiveStaticTypeAnyStruct,
-//		},
-//		storage,
-//	)
-//	dictionary.SetOwner(&newOwner)
-//
-//	assert.Equal(t, &newOwner, dictionary.GetOwner())
-//	assert.Equal(t, &oldOwner, value.GetOwner())
-//
-//	inter, err := NewInterpreter(
-//		nil,
-//		utils.TestLocation,
-//		WithStorage(storage),
-//	)
-//	require.NoError(t, err)
-//
-//	dictionary.Insert(
-//		inter.Storage,
-//		ReturnEmptyLocationRange,
-//		keyValue,
-//		value,
-//	)
-//
-//	assert.Equal(t, &newOwner, dictionary.GetOwner())
-//	assert.Equal(t, &newOwner, value.GetOwner())
-//}
-//
-//func TestOwnerNewSome(t *testing.T) {
-//
-//	t.Parallel()
-//
-//	storage := NewInMemoryStorage()
-//
-//	oldOwner := common.Address{0x1}
-//
-//	value := newTestCompositeValue(storage, oldOwner)
-//
-//	assert.Equal(t, &oldOwner, value.GetOwner())
-//
-//	any := NewSomeValueNonCopying(value)
-//
-//	assert.Equal(t, &oldOwner, any.GetOwner())
-//	assert.Equal(t, &oldOwner, value.GetOwner())
-//}
-//
-//func TestSetOwnerSome(t *testing.T) {
-//
-//	t.Parallel()
-//
-//	storage := NewInMemoryStorage()
-//
-//	oldOwner := common.Address{0x1}
-//	newOwner := common.Address{0x2}
-//
-//	value := newTestCompositeValue(storage, oldOwner)
-//
-//	assert.Equal(t, &oldOwner, value.GetOwner())
-//
-//	any := NewSomeValueNonCopying(value)
-//
-//	any.SetOwner(&newOwner)
-//
-//	assert.Equal(t, &newOwner, any.GetOwner())
-//	assert.Equal(t, &newOwner, value.GetOwner())
-//}
-//
-//func TestSetOwnerSomeCopy(t *testing.T) {
-//
-//	t.Parallel()
-//
-//	storage := NewInMemoryStorage()
-//
-//	oldOwner := common.Address{0x1}
-//	newOwner := common.Address{0x2}
-//
-//	value := newTestCompositeValue(storage, oldOwner)
-//
-//	assert.Equal(t, &oldOwner, value.GetOwner())
-//
-//	some := NewSomeValueNonCopying(value)
-//	some.SetOwner(&newOwner)
-//
-//	copyResult, err := some.DeepCopy(storage, atree.Address{})
-//	require.NoError(t, err)
-//
-//	someCopy := copyResult.(*SomeValue)
-//	valueCopy := someCopy.Value
-//
-//	assert.Nil(t, someCopy.GetOwner())
-//	assert.Nil(t, valueCopy.GetOwner())
-//	assert.Equal(t, &newOwner, value.GetOwner())
-//}
-//
-//func TestOwnerNewComposite(t *testing.T) {
-//
-//	t.Parallel()
-//
-//	storage := NewInMemoryStorage()
-//
-//	oldOwner := common.Address{0x1}
-//
-//	composite := newTestCompositeValue(storage, oldOwner)
-//
-//	assert.Equal(t, &oldOwner, composite.GetOwner())
-//}
-//
-//func TestSetOwnerComposite(t *testing.T) {
-//
-//	t.Parallel()
-//
-//	storage := NewInMemoryStorage()
-//
-//	oldOwner := common.Address{0x1}
-//	newOwner := common.Address{0x2}
-//
-//	value := newTestCompositeValue(storage, oldOwner)
-//	composite := newTestCompositeValue(storage, oldOwner)
-//
-//	const fieldName = "test"
-//
-//	composite.Fields.Set(fieldName, value)
-//
-//	composite.SetOwner(&newOwner)
-//
-//	assert.Equal(t, &newOwner, composite.GetOwner())
-//	assert.Equal(t, &newOwner, value.GetOwner())
-//}
-//
-//func TestSetOwnerCompositeCopy(t *testing.T) {
-//
-//	t.Parallel()
-//
-//	storage := NewInMemoryStorage()
-//
-//	oldOwner := common.Address{0x1}
-//
-//	value := newTestCompositeValue(storage, oldOwner)
-//	composite := newTestCompositeValue(storage, oldOwner)
-//
-//	const fieldName = "test"
-//
-//	composite.Fields.Set(fieldName, value)
-//	composite.Stringer = func(_ StringResults) string {
-//		return "random string"
-//	}
-//
-//	copyResult, err := composite.DeepCopy(storage, atree.Address{})
-//	require.NoError(t, err)
-//
-//	compositeCopy := copyResult.(*CompositeValue)
-//	valueCopy, _ := compositeCopy.Fields.Get(fieldName)
-//
-//	assert.Nil(t, compositeCopy.GetOwner())
-//	assert.Nil(t, valueCopy.GetOwner())
-//	assert.Equal(t, &oldOwner, value.GetOwner())
-//	assert.Equal(t,
-//		composite.String(),
-//		compositeCopy.String(),
-//	)
-//}
-//
-//func TestSetOwnerCompositeSetMember(t *testing.T) {
-//
-//	t.Parallel()
-//
-//	storage := NewInMemoryStorage()
-//
-//	oldOwner := common.Address{0x1}
-//	newOwner := common.Address{0x2}
-//
-//	value := newTestCompositeValue(storage, oldOwner)
-//	composite := newTestCompositeValue(storage, oldOwner)
-//
-//	const fieldName = "test"
-//
-//	composite.SetOwner(&newOwner)
-//
-//	assert.Equal(t, &newOwner, composite.GetOwner())
-//	assert.Equal(t, &oldOwner, value.GetOwner())
-//
-//	inter, err := NewInterpreter(
-//		nil,
-//		utils.TestLocation,
-//		WithStorage(storage),
-//	)
-//	require.NoError(t, err)
-//
-//	composite.SetMember(
-//		inter,
-//		ReturnEmptyLocationRange,
-//		fieldName,
-//		value,
-//	)
-//
-//	assert.Equal(t, &newOwner, composite.GetOwner())
-//	assert.Equal(t, &newOwner, value.GetOwner())
-//}
+func TestOwnerArrayAppend(t *testing.T) {
+
+	t.Parallel()
+
+	storage := NewInMemoryStorage()
+
+	oldOwner := common.Address{0x1}
+	newOwner := common.Address{0x2}
+
+	value := newTestCompositeValue(storage, oldOwner)
+
+	array := NewArrayValueWithAddress(
+		VariableSizedStaticType{
+			Type: PrimitiveStaticTypeAnyStruct,
+		},
+		storage,
+		newOwner,
+	)
+
+	assert.Equal(t, newOwner, array.GetOwner())
+	assert.Equal(t, oldOwner, value.GetOwner())
+
+	array.Append(value)
+
+	value = array.GetIndex(ReturnEmptyLocationRange, 0).(*CompositeValue)
+
+	assert.Equal(t, newOwner, array.GetOwner())
+	assert.Equal(t, newOwner, value.GetOwner())
+}
+
+func TestOwnerArrayInsert(t *testing.T) {
+
+	t.Parallel()
+
+	storage := NewInMemoryStorage()
+
+	oldOwner := common.Address{0x1}
+	newOwner := common.Address{0x2}
+
+	value := newTestCompositeValue(storage, oldOwner)
+
+	array := NewArrayValueWithAddress(
+		VariableSizedStaticType{
+			Type: PrimitiveStaticTypeAnyStruct,
+		},
+		storage,
+		newOwner,
+	)
+
+	assert.Equal(t, newOwner, array.GetOwner())
+	assert.Equal(t, oldOwner, value.GetOwner())
+
+	array.Insert(ReturnEmptyLocationRange, 0, value)
+
+	value = array.GetIndex(ReturnEmptyLocationRange, 0).(*CompositeValue)
+
+	assert.Equal(t, newOwner, array.GetOwner())
+	assert.Equal(t, newOwner, value.GetOwner())
+}
+
+func TestOwnerArrayRemove(t *testing.T) {
+
+	t.Parallel()
+
+	storage := NewInMemoryStorage()
+
+	owner := common.Address{0x1}
+
+	value := newTestCompositeValue(storage, owner)
+
+	array := NewArrayValueWithAddress(
+		VariableSizedStaticType{
+			Type: PrimitiveStaticTypeAnyStruct,
+		},
+		storage,
+		owner,
+		value,
+	)
+
+	assert.Equal(t, owner, array.GetOwner())
+	assert.Equal(t, owner, value.GetOwner())
+
+	value = array.Remove(ReturnEmptyLocationRange, 0).(*CompositeValue)
+
+	assert.Equal(t, owner, array.GetOwner())
+	assert.Equal(t, common.Address{}, value.GetOwner())
+}
+
+func TestOwnerNewDictionary(t *testing.T) {
+
+	t.Parallel()
+
+	storage := NewInMemoryStorage()
+
+	oldOwner := common.Address{0x1}
+
+	keyValue := NewStringValue("test")
+	value := newTestCompositeValue(storage, oldOwner)
+
+	assert.Equal(t, oldOwner, value.GetOwner())
+
+	dictionary := NewDictionaryValue(
+		DictionaryStaticType{
+			KeyType:   PrimitiveStaticTypeString,
+			ValueType: PrimitiveStaticTypeAnyStruct,
+		},
+		storage,
+		keyValue, value,
+	)
+
+	// NOTE: keyValue is string, has no owner
+
+	queriedValue, _, _ := dictionary.GetKey(keyValue)
+	value = queriedValue.(*CompositeValue)
+
+	assert.Equal(t, common.Address{}, dictionary.GetOwner())
+	assert.Equal(t, common.Address{}, value.GetOwner())
+}
+
+func TestOwnerDictionary(t *testing.T) {
+
+	t.Parallel()
+
+	storage := NewInMemoryStorage()
+
+	oldOwner := common.Address{0x1}
+	newOwner := common.Address{0x2}
+
+	keyValue := NewStringValue("test")
+	value := newTestCompositeValue(storage, oldOwner)
+
+	dictionary := NewDictionaryValueWithAddress(
+		DictionaryStaticType{
+			KeyType:   PrimitiveStaticTypeString,
+			ValueType: PrimitiveStaticTypeAnyStruct,
+		},
+		storage,
+		newOwner,
+		keyValue, value,
+	)
+
+	// NOTE: keyValue is string, has no owner
+
+	queriedValue, _, _ := dictionary.GetKey(keyValue)
+	value = queriedValue.(*CompositeValue)
+
+	assert.Equal(t, newOwner, dictionary.GetOwner())
+	assert.Equal(t, newOwner, value.GetOwner())
+}
+
+func TestOwnerDictionaryCopy(t *testing.T) {
+
+	t.Parallel()
+
+	storage := NewInMemoryStorage()
+
+	oldOwner := common.Address{0x1}
+	newOwner := common.Address{0x2}
+
+	keyValue := NewStringValue("test")
+	value := newTestCompositeValue(storage, oldOwner)
+
+	dictionary := NewDictionaryValueWithAddress(
+		DictionaryStaticType{
+			KeyType:   PrimitiveStaticTypeString,
+			ValueType: PrimitiveStaticTypeAnyStruct,
+		},
+		storage,
+		newOwner,
+		keyValue, value,
+	)
+
+	copyResult, err := dictionary.DeepCopy(storage, atree.Address{})
+	require.NoError(t, err)
+
+	dictionaryCopy := copyResult.(*DictionaryValue)
+
+	queriedValue, _, _ := dictionaryCopy.GetKey(keyValue)
+	value = queriedValue.(*CompositeValue)
+
+	assert.Equal(t, common.Address{}, dictionaryCopy.GetOwner())
+	assert.Equal(t, common.Address{}, value.GetOwner())
+}
+
+func TestOwnerDictionarySetSome(t *testing.T) {
+
+	t.Parallel()
+
+	storage := NewInMemoryStorage()
+
+	oldOwner := common.Address{0x1}
+	newOwner := common.Address{0x2}
+
+	keyValue := NewStringValue("test")
+	value := newTestCompositeValue(storage, oldOwner)
+
+	dictionary := NewDictionaryValueWithAddress(
+		DictionaryStaticType{
+			KeyType:   PrimitiveStaticTypeString,
+			ValueType: PrimitiveStaticTypeAnyStruct,
+		},
+		storage,
+		newOwner,
+	)
+
+	assert.Equal(t, newOwner, dictionary.GetOwner())
+	assert.Equal(t, oldOwner, value.GetOwner())
+
+	inter, err := NewInterpreter(
+		nil,
+		utils.TestLocation,
+		WithStorage(storage),
+	)
+	require.NoError(t, err)
+
+	dictionary.Set(
+		inter,
+		ReturnEmptyLocationRange,
+		keyValue,
+		NewSomeValueNonCopying(value),
+	)
+
+	queriedValue, _, _ := dictionary.GetKey(keyValue)
+	value = queriedValue.(*CompositeValue)
+
+	assert.Equal(t, newOwner, dictionary.GetOwner())
+	assert.Equal(t, newOwner, value.GetOwner())
+}
+
+func TestOwnerDictionaryInsertNonExisting(t *testing.T) {
+
+	t.Parallel()
+
+	storage := NewInMemoryStorage()
+
+	oldOwner := common.Address{0x1}
+	newOwner := common.Address{0x2}
+
+	keyValue := NewStringValue("test")
+	value := newTestCompositeValue(storage, oldOwner)
+
+	dictionary := NewDictionaryValueWithAddress(
+		DictionaryStaticType{
+			KeyType:   PrimitiveStaticTypeString,
+			ValueType: PrimitiveStaticTypeAnyStruct,
+		},
+		storage,
+		newOwner,
+	)
+
+	assert.Equal(t, newOwner, dictionary.GetOwner())
+	assert.Equal(t, oldOwner, value.GetOwner())
+
+	inter, err := NewInterpreter(
+		nil,
+		utils.TestLocation,
+		WithStorage(storage),
+	)
+	require.NoError(t, err)
+
+	existingValue := dictionary.Insert(
+		inter.Storage,
+		ReturnEmptyLocationRange,
+		keyValue,
+		value,
+	)
+	assert.Equal(t, NilValue{}, existingValue)
+
+	queriedValue, _, _ := dictionary.GetKey(keyValue)
+	value = queriedValue.(*CompositeValue)
+
+	assert.Equal(t, newOwner, dictionary.GetOwner())
+	assert.Equal(t, newOwner, value.GetOwner())
+}
+
+func TestOwnerDictionaryRemove(t *testing.T) {
+
+	t.Parallel()
+
+	storage := NewInMemoryStorage()
+
+	oldOwner := common.Address{0x1}
+	newOwner := common.Address{0x2}
+
+	keyValue := NewStringValue("test")
+	value1 := newTestCompositeValue(storage, oldOwner)
+	value2 := newTestCompositeValue(storage, oldOwner)
+
+	dictionary := NewDictionaryValueWithAddress(
+		DictionaryStaticType{
+			KeyType:   PrimitiveStaticTypeString,
+			ValueType: PrimitiveStaticTypeAnyStruct,
+		},
+		storage,
+		newOwner,
+		keyValue, value1,
+	)
+
+	assert.Equal(t, newOwner, dictionary.GetOwner())
+	assert.Equal(t, oldOwner, value1.GetOwner())
+	assert.Equal(t, oldOwner, value2.GetOwner())
+
+	inter, err := NewInterpreter(
+		nil,
+		utils.TestLocation,
+		WithStorage(storage),
+	)
+	require.NoError(t, err)
+
+	existingValue := dictionary.Insert(
+		inter.Storage,
+		ReturnEmptyLocationRange,
+		keyValue,
+		value2,
+	)
+	require.IsType(t, &SomeValue{}, existingValue)
+	value1 = existingValue.(*SomeValue).Value.(*CompositeValue)
+
+	queriedValue, _, _ := dictionary.GetKey(keyValue)
+	value2 = queriedValue.(*CompositeValue)
+
+	assert.Equal(t, newOwner, dictionary.GetOwner())
+	assert.Equal(t, common.Address{}, value1.GetOwner())
+	assert.Equal(t, newOwner, value2.GetOwner())
+}
+
+func TestOwnerDictionaryInsertExisting(t *testing.T) {
+
+	t.Parallel()
+
+	storage := NewInMemoryStorage()
+
+	oldOwner := common.Address{0x1}
+	newOwner := common.Address{0x2}
+
+	keyValue := NewStringValue("test")
+	value := newTestCompositeValue(storage, oldOwner)
+
+	dictionary := NewDictionaryValueWithAddress(
+		DictionaryStaticType{
+			KeyType:   PrimitiveStaticTypeString,
+			ValueType: PrimitiveStaticTypeAnyStruct,
+		},
+		storage,
+		newOwner,
+		keyValue, value,
+	)
+
+	assert.Equal(t, newOwner, dictionary.GetOwner())
+	assert.Equal(t, oldOwner, value.GetOwner())
+
+	inter, err := NewInterpreter(
+		nil,
+		utils.TestLocation,
+		WithStorage(storage),
+	)
+	require.NoError(t, err)
+
+	existingValue := dictionary.Remove(
+		inter.Storage,
+		ReturnEmptyLocationRange,
+		keyValue,
+	)
+	require.IsType(t, &SomeValue{}, existingValue)
+	value = existingValue.(*SomeValue).Value.(*CompositeValue)
+
+	assert.Equal(t, newOwner, dictionary.GetOwner())
+	assert.Equal(t, common.Address{}, value.GetOwner())
+}
+
+func TestOwnerNewComposite(t *testing.T) {
+
+	t.Parallel()
+
+	storage := NewInMemoryStorage()
+
+	oldOwner := common.Address{0x1}
+
+	composite := newTestCompositeValue(storage, oldOwner)
+
+	assert.Equal(t, oldOwner, composite.GetOwner())
+}
+
+func TestOwnerCompositeSet(t *testing.T) {
+
+	t.Parallel()
+
+	storage := NewInMemoryStorage()
+
+	oldOwner := common.Address{0x1}
+	newOwner := common.Address{0x2}
+
+	value := newTestCompositeValue(storage, oldOwner)
+	composite := newTestCompositeValue(storage, newOwner)
+
+	assert.Equal(t, oldOwner, value.GetOwner())
+	assert.Equal(t, newOwner, composite.GetOwner())
+
+	inter, err := NewInterpreter(
+		nil,
+		utils.TestLocation,
+		WithStorage(storage),
+	)
+	require.NoError(t, err)
+
+	const fieldName = "test"
+
+	composite.SetMember(inter, ReturnEmptyLocationRange, fieldName, value)
+
+	value = composite.GetMember(inter, ReturnEmptyLocationRange, fieldName).(*CompositeValue)
+
+	assert.Equal(t, newOwner, composite.GetOwner())
+	assert.Equal(t, newOwner, value.GetOwner())
+}
+
+func TestOwnerCompositeCopy(t *testing.T) {
+
+	t.Parallel()
+
+	storage := NewInMemoryStorage()
+
+	oldOwner := common.Address{0x1}
+
+	value := newTestCompositeValue(storage, oldOwner)
+	composite := newTestCompositeValue(storage, oldOwner)
+
+	inter, err := NewInterpreter(
+		nil,
+		utils.TestLocation,
+		WithStorage(storage),
+	)
+	require.NoError(t, err)
+
+	const fieldName = "test"
+
+	composite.SetMember(
+		inter,
+		ReturnEmptyLocationRange,
+		fieldName,
+		value,
+	)
+
+	copyResult, err := composite.DeepCopy(storage, atree.Address{})
+	require.NoError(t, err)
+	composite = copyResult.(*CompositeValue)
+
+	value = composite.GetMember(inter, ReturnEmptyLocationRange, fieldName).(*CompositeValue)
+
+	assert.Equal(t, common.Address{}, composite.GetOwner())
+	assert.Equal(t, common.Address{}, value.GetOwner())
+}
 
 func TestStringer(t *testing.T) {
 
