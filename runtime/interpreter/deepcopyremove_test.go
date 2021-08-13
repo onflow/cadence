@@ -23,6 +23,7 @@ import (
 	"testing"
 
 	"github.com/fxamacker/atree"
+	"github.com/onflow/cadence/runtime/common"
 	. "github.com/onflow/cadence/runtime/interpreter"
 	"github.com/stretchr/testify/require"
 )
@@ -31,7 +32,7 @@ func TestValueDeepCopyAndDeepRemove(t *testing.T) {
 
 	t.Parallel()
 
-	address := atree.Address{0x1}
+	address := common.Address{0x1}
 
 	storage := NewInMemoryStorage()
 

@@ -21,7 +21,6 @@ package interpreter_test
 import (
 	"testing"
 
-	"github.com/fxamacker/atree"
 	. "github.com/onflow/cadence/runtime/tests/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -91,8 +90,7 @@ func TestInterpretVirtualImport(t *testing.T) {
 							"Foo",
 							common.CompositeKindContract,
 							interpreter.NewStringValueOrderedMap(),
-							// TODO:
-							atree.Address{},
+							common.Address{},
 						)
 
 						value.Functions = map[string]interpreter.FunctionValue{

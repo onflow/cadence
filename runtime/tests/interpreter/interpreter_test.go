@@ -584,7 +584,11 @@ func TestInterpretArrayIndexingAssignment(t *testing.T) {
 	require.NoError(t, err)
 
 	expectedArray := expected.(*interpreter.ArrayValue)
-	expectedArray.SetIndex(1, interpreter.NewIntValueFromInt64(2), nil)
+	expectedArray.SetIndex(
+		interpreter.ReturnEmptyLocationRange,
+		1,
+		interpreter.NewIntValueFromInt64(2),
+	)
 
 	RequireValuesEqual(t,
 		expectedArray,
@@ -5856,7 +5860,7 @@ func TestInterpretEmitEvent(t *testing.T) {
 			TestLocation.QualifiedIdentifier(transferEventType.ID()),
 			common.CompositeKindEvent,
 			members1,
-			atree.Address{},
+			common.Address{},
 		),
 		interpreter.NewCompositeValue(
 			inter.Storage,
@@ -5864,7 +5868,7 @@ func TestInterpretEmitEvent(t *testing.T) {
 			TestLocation.QualifiedIdentifier(transferEventType.ID()),
 			common.CompositeKindEvent,
 			members2,
-			atree.Address{},
+			common.Address{},
 		),
 		interpreter.NewCompositeValue(
 			inter.Storage,
@@ -5872,7 +5876,7 @@ func TestInterpretEmitEvent(t *testing.T) {
 			TestLocation.QualifiedIdentifier(transferAmountEventType.ID()),
 			common.CompositeKindEvent,
 			members3,
-			atree.Address{},
+			common.Address{},
 		),
 	}
 
@@ -5919,7 +5923,7 @@ func TestInterpretEmitEventParameterTypes(t *testing.T) {
 		"S",
 		common.CompositeKindStructure,
 		interpreter.NewStringValueOrderedMap(),
-		atree.Address{},
+		common.Address{},
 	)
 	sValue.Functions = map[string]interpreter.FunctionValue{}
 
@@ -6182,7 +6186,7 @@ func TestInterpretEmitEventParameterTypes(t *testing.T) {
 					TestLocation.QualifiedIdentifier(testType.ID()),
 					common.CompositeKindEvent,
 					members,
-					atree.Address{},
+					common.Address{},
 				),
 			}
 
@@ -6296,9 +6300,9 @@ func TestInterpretReferenceExpression(t *testing.T) {
 	t.Parallel()
 
 	inter := parseCheckAndInterpret(t, `
-      pub resource R {}
+      resource R {}
 
-      pub fun test(): &R {
+      fun test(): &R {
           let r <- create R()
           let ref = &r as &R
           destroy r
@@ -6433,8 +6437,9 @@ func TestInterpretReferenceDereferenceFailure(t *testing.T) {
     `)
 
 	_, err := inter.Invoke("test")
+	require.Error(t, err)
 
-	require.ErrorAs(t, err, &interpreter.InvalidatedValueError{})
+	require.ErrorAs(t, err, &interpreter.InvalidatedResourceError{})
 }
 
 func TestInterpretVariableDeclarationSecondValue(t *testing.T) {
@@ -7203,7 +7208,7 @@ func TestInterpretNonStorageReferenceAfterDestruction(t *testing.T) {
 	_, err := inter.Invoke("test")
 	require.Error(t, err)
 
-	require.ErrorAs(t, err, &interpreter.InvalidatedValueError{})
+	require.ErrorAs(t, err, &interpreter.InvalidatedResourceError{})
 }
 
 func TestInterpretNonStorageReferenceToOptional(t *testing.T) {
@@ -7455,7 +7460,34 @@ func TestInterpretReferenceUseAfterCopy(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("resource", func(t *testing.T) {
+	t.Run("resource, field write", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+          resource R {
+              var name: String
+              init(name: String) {
+                  self.name = name
+              }
+          }
+
+          fun test() {
+              let r <- create R(name: "1")
+              let ref = &r as &R
+              let container <- [<-r]
+              ref.name = "2"
+              destroy container
+          }
+        `)
+
+		_, err := inter.Invoke("test")
+		require.Error(t, err)
+
+		require.ErrorAs(t, err, &interpreter.InvalidatedResourceError{})
+	})
+
+	t.Run("resource, field read", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -7471,11 +7503,8 @@ func TestInterpretReferenceUseAfterCopy(t *testing.T) {
               let r <- create R(name: "1")
               let ref = &r as &R
               let container <- [<-r]
-              ref.name = "2"
-              let r2 <- container.remove(at: 0)
-              let name = r2.name
+              let name = ref.name
               destroy container
-              destroy r2
               return name
           }
         `)
@@ -7483,10 +7512,146 @@ func TestInterpretReferenceUseAfterCopy(t *testing.T) {
 		_, err := inter.Invoke("test")
 		require.Error(t, err)
 
-		require.ErrorAs(t, err, &interpreter.InvalidatedValueError{})
+		require.ErrorAs(t, err, &interpreter.InvalidatedResourceError{})
 	})
 
-	t.Run("struct", func(t *testing.T) {
+	t.Run("resource array, insert", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+          resource R {}
+
+          fun test() {
+              let rs <- [<-create R()]
+              let ref = &rs as &[R]
+              let container <- [<-rs]
+              ref.insert(at: 1, <-create R())
+              destroy container
+          }
+        `)
+
+		_, err := inter.Invoke("test")
+		require.Error(t, err)
+
+		require.ErrorAs(t, err, &interpreter.InvalidatedResourceError{})
+	})
+
+	t.Run("resource array, append", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+          resource R {}
+
+          fun test() {
+              let rs <- [<-create R()]
+              let ref = &rs as &[R]
+              let container <- [<-rs]
+              ref.append(<-create R())
+              destroy container
+          }
+        `)
+
+		_, err := inter.Invoke("test")
+		require.Error(t, err)
+
+		require.ErrorAs(t, err, &interpreter.InvalidatedResourceError{})
+	})
+
+	t.Run("resource array, get/set", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+          resource R {}
+
+          fun test() {
+              let rs <- [<-create R()]
+              let ref = &rs as &[R]
+              let container <- [<-rs]
+              var r <- create R()
+              ref[0] <-> r
+              destroy container
+              destroy r
+          }
+        `)
+
+		_, err := inter.Invoke("test")
+		require.Error(t, err)
+
+		require.ErrorAs(t, err, &interpreter.InvalidatedResourceError{})
+	})
+
+	t.Run("resource array, remove", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+          resource R {}
+
+          fun test() {
+              let rs <- [<-create R()]
+              let ref = &rs as &[R]
+              let container <- [<-rs]
+              let r <- ref.remove(at: 0)
+              destroy container
+              destroy r
+          }
+        `)
+
+		_, err := inter.Invoke("test")
+		require.Error(t, err)
+
+		require.ErrorAs(t, err, &interpreter.InvalidatedResourceError{})
+	})
+
+	t.Run("resource dictionary, insert", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+          resource R {}
+
+          fun test() {
+              let rs <- {0: <-create R()}
+              let ref = &rs as &{Int: R}
+              let container <- [<-rs]
+              ref[1] <-! create R()
+              destroy container
+          }
+        `)
+
+		_, err := inter.Invoke("test")
+		require.Error(t, err)
+
+		require.ErrorAs(t, err, &interpreter.InvalidatedResourceError{})
+	})
+
+	t.Run("resource dictionary, remove", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+          resource R {}
+
+          fun test() {
+              let rs <- {0: <-create R()}
+              let ref = &rs as &{Int: R}
+              let container <- [<-rs]
+              let r <- ref.remove(key: 0)
+              destroy container
+              destroy r
+          }
+        `)
+
+		_, err := inter.Invoke("test")
+		require.Error(t, err)
+
+		require.ErrorAs(t, err, &interpreter.InvalidatedResourceError{})
+	})
+
+	t.Run("struct, field write and read", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -7503,6 +7668,7 @@ func TestInterpretReferenceUseAfterCopy(t *testing.T) {
               let ref = &s as &S
               let container = [s]
               ref.name = "2"
+              container[0].name = "3"
               let s2 = container.remove(at: 0)
               return [s.name, s2.name]
           }
@@ -7518,7 +7684,7 @@ func TestInterpretReferenceUseAfterCopy(t *testing.T) {
 				},
 				inter.Storage,
 				interpreter.NewStringValue("2"),
-				interpreter.NewStringValue("1"),
+				interpreter.NewStringValue("3"),
 			),
 			result,
 		)
@@ -8482,7 +8648,7 @@ func TestInterpretMissingMember(t *testing.T) {
 		typeName,
 		common.CompositeKindStructure,
 		interpreter.NewStringValueOrderedMap(),
-		atree.Address{},
+		common.Address{},
 	)
 
 	predeclaredValues :=

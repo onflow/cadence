@@ -110,6 +110,7 @@ func (i InMemoryStorage) Write(_ *Interpreter, address common.Address, key strin
 
 	switch value := value.(type) {
 	case *SomeValue:
+		// TODO: deep copy + deep remove on new, deep remove on old
 		storable, err := value.Value.(atree.Value).Storable(i, atree.Address(address))
 		if err != nil {
 			panic(ExternalError{err})

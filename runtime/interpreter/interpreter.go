@@ -1374,8 +1374,7 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 				qualifiedIdentifier,
 				declaration.CompositeKind,
 				fields,
-				// TODO:
-				atree.Address{},
+				common.Address{},
 			)
 
 			value.InjectedFields = injectedFields
@@ -1471,8 +1470,7 @@ func (interpreter *Interpreter) declareEnumConstructor(
 			qualifiedIdentifier,
 			declaration.CompositeKind,
 			caseValueFields,
-			// TODO:
-			atree.Address{},
+			common.Address{},
 		)
 		caseValues[i] = caseValue
 
@@ -3403,4 +3401,19 @@ func (interpreter *Interpreter) getTypeFunction(self Value) HostFunctionValue {
 
 func (interpreter *Interpreter) setMember(self Value, getLocationRange func() LocationRange, identifier string, value Value) {
 	self.(MemberAccessibleValue).SetMember(interpreter, getLocationRange, identifier, value)
+}
+
+func (interpreter *Interpreter) checkResourceNotDestroyedOrCopied(value Value, getLocationRange func() LocationRange) {
+	resourceKindedValue, ok := value.(ResourceKindedValue)
+	if !ok {
+		return
+	}
+
+	if resourceKindedValue.IsDestroyed() || (resourceKindedValue.IsCopied() &&
+		interpreter.ConvertStaticToSemaType(value.StaticType()).IsResourceType()) {
+
+		panic(InvalidatedResourceError{
+			LocationRange: getLocationRange(),
+		})
+	}
 }

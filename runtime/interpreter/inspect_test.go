@@ -21,7 +21,7 @@ package interpreter_test
 import (
 	"testing"
 
-	"github.com/fxamacker/atree"
+	"github.com/onflow/cadence/runtime/common"
 	. "github.com/onflow/cadence/runtime/interpreter"
 	. "github.com/onflow/cadence/runtime/tests/utils"
 )
@@ -58,7 +58,7 @@ func TestInspectValue(t *testing.T) {
 
 		optionalValue := NewSomeValueNonCopying(arrayValue)
 
-		compositeValue = newTestCompositeValue(storage, atree.Address{})
+		compositeValue = newTestCompositeValue(storage, common.Address{})
 		compositeValue.Fields.Set("value", optionalValue)
 	}
 
@@ -67,7 +67,7 @@ func TestInspectValue(t *testing.T) {
 
 	optionalValue := compositeValue.GetField("value").(*SomeValue)
 	arrayValue := optionalValue.Value.(*ArrayValue)
-	dictValue := arrayValue.GetIndex(0, ReturnEmptyLocationRange).(*DictionaryValue)
+	dictValue := arrayValue.GetIndex(ReturnEmptyLocationRange, 0).(*DictionaryValue)
 	dictValueKey := NewStringValue("hello world")
 	dictValueValue, _, _ := dictValue.GetKey(dictValueKey)
 

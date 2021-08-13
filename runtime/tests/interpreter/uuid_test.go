@@ -132,7 +132,7 @@ func TestInterpretResourceUUID(t *testing.T) {
 	require.Equal(t, length, array.Count())
 
 	for i := 0; i < length; i++ {
-		element := array.GetIndex(i, interpreter.ReturnEmptyLocationRange)
+		element := array.GetIndex(interpreter.ReturnEmptyLocationRange, i)
 
 		require.IsType(t, &interpreter.CompositeValue{}, element)
 		res := element.(*interpreter.CompositeValue)

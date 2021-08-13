@@ -48,7 +48,7 @@ type encodeDecodeTest struct {
 	check         func(actual Value)
 }
 
-var testOwner = atree.Address(common.BytesToAddress([]byte{0x42}))
+var testOwner = common.BytesToAddress([]byte{0x42})
 
 func testEncodeDecode(t *testing.T, test encodeDecodeTest) {
 
@@ -61,7 +61,7 @@ func testEncodeDecode(t *testing.T, test encodeDecodeTest) {
 
 		if test.value != nil {
 			if test.storable == nil {
-				storable, err := test.value.Storable(test.storage, testOwner)
+				storable, err := test.value.Storable(test.storage, atree.Address(testOwner))
 				require.NoError(t, err)
 				test.storable = storable
 			}
@@ -97,11 +97,11 @@ func testEncodeDecode(t *testing.T, test encodeDecodeTest) {
 		if test.deepEquality {
 			assert.Equal(t, expectedValue, decodedValue)
 		} else {
-			AssertValuesEqual(t, expectedValue, MustConvertStoredValue(decodedValue))
+			AssertValuesEqual(t, expectedValue, decodedValue)
 		}
 
 		if test.check != nil {
-			test.check(MustConvertStoredValue(decodedValue))
+			test.check(decodedValue)
 		}
 	}
 }
@@ -2748,9 +2748,7 @@ func TestEncodeDecodeSomeValue(t *testing.T) {
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
-				value: &SomeValue{
-					Value: NilValue{},
-				},
+				value: NewSomeValueNonCopying(NilValue{}),
 				encoded: []byte{
 					// tag
 					0xd8, CBORTagSomeValue,
@@ -2768,9 +2766,7 @@ func TestEncodeDecodeSomeValue(t *testing.T) {
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
-				value: &SomeValue{
-					Value: expectedString,
-				},
+				value: NewSomeValueNonCopying(expectedString),
 				encoded: []byte{
 					// tag
 					0xd8, CBORTagSomeValue,
@@ -2788,9 +2784,7 @@ func TestEncodeDecodeSomeValue(t *testing.T) {
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
-				value: &SomeValue{
-					Value: BoolValue(true),
-				},
+				value: NewSomeValueNonCopying(BoolValue(true)),
 				encoded: []byte{
 					// tag
 					0xd8, CBORTagSomeValue,
@@ -2818,9 +2812,7 @@ func TestEncodeDecodeSomeValue(t *testing.T) {
 			}
 		}
 
-		expected := &SomeValue{
-			Value: str,
-		}
+		expected := NewSomeValueNonCopying(str)
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
@@ -2852,9 +2844,7 @@ func TestEncodeDecodeSomeValue(t *testing.T) {
 			}
 		}
 
-		expected := &SomeValue{
-			Value: str,
-		}
+		expected := NewSomeValueNonCopying(str)
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
