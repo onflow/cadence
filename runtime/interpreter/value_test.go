@@ -36,7 +36,7 @@ import (
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
-func newTestCompositeValue(storage Storage, owner atree.Address) *CompositeValue {
+func newTestCompositeValue(storage Storage, owner common.Address) *CompositeValue {
 	return NewCompositeValue(
 		storage,
 		utils.TestLocation,
@@ -47,121 +47,123 @@ func newTestCompositeValue(storage Storage, owner atree.Address) *CompositeValue
 	)
 }
 
-// TODO:
-//
-//func TestOwnerNewArray(t *testing.T) {
-//
-//	t.Parallel()
-//
-//	storage := NewInMemoryStorage()
-//
-//	oldOwner := common.Address{0x1}
-//
-//	value := newTestCompositeValue(storage, oldOwner)
-//
-//	assert.Equal(t, &oldOwner, value.GetOwner())
-//
-//	array := NewArrayValue(
-//		VariableSizedStaticType{
-//			Type: PrimitiveStaticTypeAnyStruct,
-//		},
-//		storage,
-//		value,
-//	)
-//
-//	assert.Nil(t, array.GetOwner())
-//	assert.Nil(t, value.GetOwner())
-//}
-//
-//func TestSetOwnerArray(t *testing.T) {
-//
-//	t.Parallel()
-//
-//	storage := NewInMemoryStorage()
-//
-//	oldOwner := common.Address{0x1}
-//	newOwner := common.Address{0x2}
-//
-//	value := newTestCompositeValue(storage, oldOwner)
-//
-//	array := NewArrayValue(
-//		VariableSizedStaticType{
-//			Type: PrimitiveStaticTypeAnyStruct,
-//		},
-//		storage,
-//		value,
-//	)
-//
-//	array.SetOwner(&newOwner)
-//
-//	assert.Equal(t, &newOwner, array.GetOwner())
-//	assert.Equal(t, &newOwner, value.GetOwner())
-//}
-//
-//func TestSetOwnerArrayCopy(t *testing.T) {
-//
-//	t.Parallel()
-//
-//	storage := NewInMemoryStorage()
-//
-//	oldOwner := common.Address{0x1}
-//	newOwner := common.Address{0x2}
-//
-//	value := newTestCompositeValue(storage, oldOwner)
-//
-//	array := NewArrayValue(
-//		VariableSizedStaticType{
-//			Type: PrimitiveStaticTypeAnyStruct,
-//		},
-//		storage,
-//		value,
-//	)
-//
-//	array.SetOwner(&newOwner)
-//
-//	copyResult, err := array.DeepCopy(storage, atree.Address{})
-//	require.NoError(t, err)
-//
-//	arrayCopy := copyResult.(*ArrayValue)
-//	valueCopy := arrayCopy.GetIndex(0, ReturnEmptyLocationRange)
-//
-//	assert.Nil(t, arrayCopy.GetOwner())
-//	assert.Nil(t, valueCopy.GetOwner())
-//	assert.Equal(t, &newOwner, value.GetOwner())
-//}
-//
-//func TestSetOwnerArraySetIndex(t *testing.T) {
-//
-//	t.Parallel()
-//
-//	storage := NewInMemoryStorage()
-//
-//	oldOwner := common.Address{0x1}
-//	newOwner := common.Address{0x2}
-//
-//	value1 := newTestCompositeValue(storage, oldOwner)
-//	value2 := newTestCompositeValue(storage, oldOwner)
-//
-//	array := NewArrayValue(
-//		VariableSizedStaticType{
-//			Type: PrimitiveStaticTypeAnyStruct,
-//		},
-//		storage,
-//		value1,
-//	)
-//	array.SetOwner(&newOwner)
-//
-//	assert.Equal(t, &newOwner, array.GetOwner())
-//	assert.Equal(t, &newOwner, value1.GetOwner())
-//	assert.Equal(t, &oldOwner, value2.GetOwner())
-//
-//	array.SetIndex(0, value2, ReturnEmptyLocationRange)
-//
-//	assert.Equal(t, &newOwner, array.GetOwner())
-//	assert.Equal(t, &newOwner, value1.GetOwner())
-//	assert.Equal(t, &newOwner, value2.GetOwner())
-//}
-//
+func TestOwnerNewArray(t *testing.T) {
+
+	t.Parallel()
+
+	storage := NewInMemoryStorage()
+
+	oldOwner := common.Address{0x1}
+
+	value := newTestCompositeValue(storage, oldOwner)
+
+	assert.Equal(t, oldOwner, value.GetOwner())
+
+	array := NewArrayValue(
+		VariableSizedStaticType{
+			Type: PrimitiveStaticTypeAnyStruct,
+		},
+		storage,
+		value,
+	)
+
+	value = array.GetIndex(ReturnEmptyLocationRange, 0).(*CompositeValue)
+
+	assert.Equal(t, common.Address{}, array.GetOwner())
+	assert.Equal(t, common.Address{}, value.GetOwner())
+}
+
+func TestOwnerArrayDeepCopy(t *testing.T) {
+
+	t.Parallel()
+
+	storage := NewInMemoryStorage()
+
+	oldOwner := common.Address{0x1}
+	newOwner := common.Address{0x2}
+
+	value := newTestCompositeValue(storage, oldOwner)
+
+	array := NewArrayValue(
+		VariableSizedStaticType{
+			Type: PrimitiveStaticTypeAnyStruct,
+		},
+		storage,
+		value,
+	)
+
+	arrayCopy, err := array.DeepCopy(storage, atree.Address(newOwner))
+	require.NoError(t, err)
+	array = arrayCopy.(*ArrayValue)
+
+	value = array.GetIndex(ReturnEmptyLocationRange, 0).(*CompositeValue)
+
+	assert.Equal(t, newOwner, array.GetOwner())
+	assert.Equal(t, newOwner, value.GetOwner())
+}
+
+func TestOwnerArrayElement(t *testing.T) {
+
+	t.Parallel()
+
+	storage := NewInMemoryStorage()
+
+	oldOwner := common.Address{0x1}
+	newOwner := common.Address{0x2}
+
+	value := newTestCompositeValue(storage, oldOwner)
+
+	array := NewArrayValueWithAddress(
+		VariableSizedStaticType{
+			Type: PrimitiveStaticTypeAnyStruct,
+		},
+		storage,
+		newOwner,
+		value,
+	)
+
+	value = array.GetIndex(ReturnEmptyLocationRange, 0).(*CompositeValue)
+
+	assert.Equal(t, newOwner, array.GetOwner())
+	assert.Equal(t, newOwner, value.GetOwner())
+}
+
+func TestSetOwnerArraySetIndex(t *testing.T) {
+
+	t.Parallel()
+
+	storage := NewInMemoryStorage()
+
+	oldOwner := common.Address{0x1}
+	newOwner := common.Address{0x2}
+
+	value1 := newTestCompositeValue(storage, oldOwner)
+	value2 := newTestCompositeValue(storage, oldOwner)
+
+	array := NewArrayValueWithAddress(
+		VariableSizedStaticType{
+			Type: PrimitiveStaticTypeAnyStruct,
+		},
+		storage,
+		newOwner,
+		value1,
+	)
+
+	value1 = array.GetIndex(ReturnEmptyLocationRange, 0).(*CompositeValue)
+
+	assert.Equal(t, newOwner, array.GetOwner())
+	assert.Equal(t, newOwner, value1.GetOwner())
+	assert.Equal(t, oldOwner, value2.GetOwner())
+
+	array.SetIndex(ReturnEmptyLocationRange, 0, value2)
+
+	value2 = array.GetIndex(ReturnEmptyLocationRange, 0).(*CompositeValue)
+
+	assert.Equal(t, newOwner, array.GetOwner())
+	assert.Equal(t, newOwner, value1.GetOwner())
+	assert.Equal(t, newOwner, value2.GetOwner())
+}
+
 //func TestSetOwnerArrayAppend(t *testing.T) {
 //
 //	t.Parallel()
@@ -711,7 +713,7 @@ func TestStringer(t *testing.T) {
 					"Foo",
 					common.CompositeKindResource,
 					members,
-					atree.Address{},
+					common.Address{},
 				)
 			}(),
 			expected: "S.test.Foo(y: \"bar\")",
@@ -727,7 +729,7 @@ func TestStringer(t *testing.T) {
 					"Foo",
 					common.CompositeKindResource,
 					members,
-					atree.Address{},
+					common.Address{},
 				)
 
 				compositeValue.Stringer = func(_ SeenReferences) string {
@@ -874,7 +876,7 @@ func TestVisitor(t *testing.T) {
 		"Foo",
 		common.CompositeKindStructure,
 		members,
-		atree.Address{},
+		common.Address{},
 	)
 
 	value.Accept(inter, visitor)
@@ -997,7 +999,7 @@ func TestKeyString(t *testing.T) {
 					"Foo",
 					common.CompositeKindEnum,
 					members,
-					atree.Address{},
+					common.Address{},
 				)
 			}(),
 			expected: "42",
@@ -2138,7 +2140,7 @@ func TestCompositeValue_Equal(t *testing.T) {
 				"X",
 				common.CompositeKindStructure,
 				fields1,
-				atree.Address{},
+				common.Address{},
 			).Equal(
 				NewCompositeValue(
 					storage,
@@ -2146,7 +2148,7 @@ func TestCompositeValue_Equal(t *testing.T) {
 					"X",
 					common.CompositeKindStructure,
 					fields2,
-					atree.Address{},
+					common.Address{},
 				),
 				ReturnEmptyLocationRange,
 			),
@@ -2172,7 +2174,7 @@ func TestCompositeValue_Equal(t *testing.T) {
 				"X",
 				common.CompositeKindStructure,
 				fields1,
-				atree.Address{},
+				common.Address{},
 			).Equal(
 				NewCompositeValue(
 					storage,
@@ -2180,7 +2182,7 @@ func TestCompositeValue_Equal(t *testing.T) {
 					"X",
 					common.CompositeKindStructure,
 					fields2,
-					atree.Address{},
+					common.Address{},
 				),
 				ReturnEmptyLocationRange,
 			),
@@ -2206,7 +2208,7 @@ func TestCompositeValue_Equal(t *testing.T) {
 				"X",
 				common.CompositeKindStructure,
 				fields1,
-				atree.Address{},
+				common.Address{},
 			).Equal(
 				NewCompositeValue(
 					storage,
@@ -2214,7 +2216,7 @@ func TestCompositeValue_Equal(t *testing.T) {
 					"Y",
 					common.CompositeKindStructure,
 					fields2,
-					atree.Address{},
+					common.Address{},
 				),
 				ReturnEmptyLocationRange,
 			),
@@ -2240,7 +2242,7 @@ func TestCompositeValue_Equal(t *testing.T) {
 				"X",
 				common.CompositeKindStructure,
 				fields1,
-				atree.Address{},
+				common.Address{},
 			).Equal(
 				NewCompositeValue(
 					storage,
@@ -2248,7 +2250,7 @@ func TestCompositeValue_Equal(t *testing.T) {
 					"X",
 					common.CompositeKindStructure,
 					fields2,
-					atree.Address{},
+					common.Address{},
 				),
 				ReturnEmptyLocationRange,
 			),
@@ -2275,7 +2277,7 @@ func TestCompositeValue_Equal(t *testing.T) {
 				"X",
 				common.CompositeKindStructure,
 				fields1,
-				atree.Address{},
+				common.Address{},
 			).Equal(
 				NewCompositeValue(
 					storage,
@@ -2283,7 +2285,7 @@ func TestCompositeValue_Equal(t *testing.T) {
 					"X",
 					common.CompositeKindStructure,
 					fields2,
-					atree.Address{},
+					common.Address{},
 				),
 				ReturnEmptyLocationRange,
 			),
@@ -2310,7 +2312,7 @@ func TestCompositeValue_Equal(t *testing.T) {
 				"X",
 				common.CompositeKindStructure,
 				fields1,
-				atree.Address{},
+				common.Address{},
 			).Equal(
 				NewCompositeValue(
 					storage,
@@ -2318,7 +2320,7 @@ func TestCompositeValue_Equal(t *testing.T) {
 					"X",
 					common.CompositeKindStructure,
 					fields2,
-					atree.Address{},
+					common.Address{},
 				),
 				ReturnEmptyLocationRange,
 			),
@@ -2344,7 +2346,7 @@ func TestCompositeValue_Equal(t *testing.T) {
 				"X",
 				common.CompositeKindStructure,
 				fields1,
-				atree.Address{},
+				common.Address{},
 			).Equal(
 				NewCompositeValue(
 					storage,
@@ -2352,7 +2354,7 @@ func TestCompositeValue_Equal(t *testing.T) {
 					"X",
 					common.CompositeKindResource,
 					fields2,
-					atree.Address{},
+					common.Address{},
 				),
 				ReturnEmptyLocationRange,
 			),
@@ -2375,7 +2377,7 @@ func TestCompositeValue_Equal(t *testing.T) {
 				"X",
 				common.CompositeKindStructure,
 				fields1,
-				atree.Address{},
+				common.Address{},
 			).Equal(
 				NewStringValue("test"),
 				ReturnEmptyLocationRange,

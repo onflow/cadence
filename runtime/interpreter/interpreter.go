@@ -1393,8 +1393,7 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 				qualifiedIdentifier,
 				declaration.CompositeKind,
 				fields,
-				// TODO:
-				atree.Address{},
+				common.Address{},
 			)
 
 			value.InjectedFields = injectedFields
@@ -1490,8 +1489,7 @@ func (interpreter *Interpreter) declareEnumConstructor(
 			qualifiedIdentifier,
 			declaration.CompositeKind,
 			caseValueFields,
-			// TODO:
-			atree.Address{},
+			common.Address{},
 		)
 		caseValues[i] = caseValue
 
