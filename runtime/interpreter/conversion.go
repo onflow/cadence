@@ -46,6 +46,8 @@ func ByteArrayValueToByteSlice(value Value) ([]byte, error) {
 			return result, nil
 		}
 
+		// atree.Array iterator returns low-level atree.Value,
+		// convert to high-level interpreter.Value
 		b, err := ByteValueToByte(MustConvertStoredValue(value))
 		if err != nil {
 			return nil, err

@@ -3469,3 +3469,18 @@ func (interpreter *Interpreter) checkContainerMutation(
 		})
 	}
 }
+
+func (interpreter *Interpreter) checkResourceNotDestroyedOrCopied(value Value, getLocationRange func() LocationRange) {
+	resourceKindedValue, ok := value.(ResourceKindedValue)
+	if !ok {
+		return
+	}
+
+	if resourceKindedValue.IsDestroyed() || (resourceKindedValue.IsCopied() &&
+		interpreter.ConvertStaticToSemaType(value.StaticType()).IsResourceType()) {
+
+		panic(InvalidatedResourceError{
+			LocationRange: getLocationRange(),
+		})
+	}
+}

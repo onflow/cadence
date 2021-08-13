@@ -729,7 +729,7 @@ func (interpreter *Interpreter) VisitDestroyExpression(expression *ast.DestroyEx
 
 	getLocationRange := locationRangeGetter(interpreter.Location, expression)
 
-	value.(DestroyableValue).Destroy(interpreter, getLocationRange)
+	value.(ResourceKindedValue).Destroy(interpreter, getLocationRange)
 
 	return VoidValue{}
 }

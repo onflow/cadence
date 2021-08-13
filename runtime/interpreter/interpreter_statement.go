@@ -272,6 +272,8 @@ func (interpreter *Interpreter) VisitForStatement(statement *ast.ForStatement) a
 
 		interpreter.reportLoopIteration(statement)
 
+		// atree.Array iterator returns low-level atree.Value,
+		// convert to high-level interpreter.Value
 		variable.SetValue(MustConvertStoredValue(value))
 
 		result := statement.Block.Accept(interpreter)
