@@ -128,7 +128,7 @@ func (s *runtimeStorage) Read(_ *Interpreter, address common.Address, key string
 		return NilValue{}
 	}
 
-	value, err := StoredValue(storable, i.BasicSlabStorage)
+	value, err := StoredValue(storable, s.PersistentSlabStorage)
 	if err != nil {
 		panic(ExternalError{err})
 	}
@@ -237,7 +237,7 @@ func (s *runtimeStorage) Write(_ *Interpreter, address common.Address, key strin
 		s.writeValue(address, key, storable)
 
 	case NilValue:
-		delete(i.Data, storageKey)
+		s.writeValue(address, key, nil)
 	}
 }
 
