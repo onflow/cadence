@@ -55,7 +55,7 @@ type runtimeStorage struct {
 }
 
 
-// TODO (ramtin) deal with calling Commit at the end of execution
+
 func newRuntimeStorage(runtimeInterface Interface) *runtimeStorage {
 	ledgerStorage := atree.NewLedgerBaseStorage(runtimeInterface)
 	slabStorage := atree.NewPersistentSlabStorage(ledgerStorage, CBOREncMode, CBORDecMode)
@@ -67,6 +67,7 @@ func newRuntimeStorage(runtimeInterface Interface) *runtimeStorage {
 		contractUpdates:  ContractUpdates{},
 	}
 }
+
 
 // // TODO deal with the address and key
 
@@ -385,6 +386,9 @@ func (s *runtimeStorage) writeCached(inter *interpreter.Interpreter) error {
 		}
 		batch = newBatch
 	}
+
+	// Commit slabs
+	s.Commit()
 
 	return nil
 }
