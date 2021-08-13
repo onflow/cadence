@@ -785,7 +785,7 @@ func TestStringer(t *testing.T) {
 					storage,
 				)
 				arrayRef := &EphemeralReferenceValue{Value: array}
-				array.Insert(0, arrayRef, nil)
+				array.Insert(ReturnEmptyLocationRange, 0, arrayRef)
 				return array
 			}(),
 			expected: `[[...]]`,

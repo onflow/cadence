@@ -79,18 +79,6 @@ type MemberAccessibleValue interface {
 	SetMember(interpreter *Interpreter, getLocationRange func() LocationRange, name string, value Value)
 }
 
-// ConcatenatableValue
-
-type ConcatenatableValue interface {
-	Concat(other ConcatenatableValue, storage Storage) Value
-}
-
-// AllAppendableValue
-
-type AllAppendableValue interface {
-	AppendAll(other AllAppendableValue)
-}
-
 // EquatableValue
 
 type EquatableValue interface {
@@ -100,19 +88,21 @@ type EquatableValue interface {
 	Equal(other Value, getLocationRange func() LocationRange) bool
 }
 
-// DestroyableValue
+// ResourceKindedValue
 
-type DestroyableValue interface {
+type ResourceKindedValue interface {
 	Destroy(interpreter *Interpreter, getLocationRange func() LocationRange)
+	IsDestroyed() bool
+	IsCopied() bool
 }
 
 func maybeDestroy(interpreter *Interpreter, getLocationRange func() LocationRange, value Value) {
-	destroyableValue, ok := value.(DestroyableValue)
+	resourceKindedValue, ok := value.(ResourceKindedValue)
 	if !ok {
 		return
 	}
 
-	destroyableValue.Destroy(interpreter, getLocationRange)
+	resourceKindedValue.Destroy(interpreter, getLocationRange)
 }
 
 // HasKeyString
@@ -466,13 +456,11 @@ func (v *StringValue) NormalForm() string {
 	return norm.NFC.String(v.Str)
 }
 
-func (v *StringValue) Concat(other ConcatenatableValue, _ Storage) Value {
-	otherString := other.(*StringValue)
-
+func (v *StringValue) Concat(other *StringValue) Value {
 	var sb strings.Builder
 
 	sb.WriteString(v.Str)
-	sb.WriteString(otherString.Str)
+	sb.WriteString(other.Str)
 
 	return NewStringValue(sb.String())
 }
@@ -560,8 +548,8 @@ func (v *StringValue) GetMember(interpreter *Interpreter, _ func() LocationRange
 	case "concat":
 		return NewHostFunctionValue(
 			func(invocation Invocation) Value {
-				otherValue := invocation.Arguments[0].(ConcatenatableValue)
-				return v.Concat(otherValue, invocation.Interpreter.Storage)
+				otherArray := invocation.Arguments[0].(*StringValue)
+				return v.Concat(otherArray)
 			},
 		)
 
@@ -656,8 +644,10 @@ func (*StringValue) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicTyp
 // ArrayValue
 
 type ArrayValue struct {
-	Type  ArrayStaticType
-	array *atree.Array
+	Type        ArrayStaticType
+	array       *atree.Array
+	isCopied    bool
+	isDestroyed bool
 }
 
 func NewArrayValue(
@@ -696,7 +686,7 @@ func NewArrayValueWithAddress(
 	}
 
 	for i, value := range values {
-		v.Insert(i, value, ReturnEmptyLocationRange)
+		v.Insert(ReturnEmptyLocationRange, i, value)
 	}
 
 	return v
@@ -721,6 +711,8 @@ func (v *ArrayValue) Accept(interpreter *Interpreter, visitor Visitor) {
 
 func (v *ArrayValue) Walk(walkChild func(Value)) {
 	err := v.array.Iterate(func(element atree.Value) (resume bool, err error) {
+		// atree.Array iteration provides low-level atree.Value,
+		// convert to high-level interpreter.Value
 		walkChild(MustConvertStoredValue(element))
 		return true, nil
 	})
@@ -755,16 +747,27 @@ func (v *ArrayValue) Destroy(interpreter *Interpreter, getLocationRange func() L
 	v.Walk(func(element Value) {
 		maybeDestroy(interpreter, getLocationRange, element)
 	})
+
+	v.isDestroyed = true
 }
 
-func (v *ArrayValue) Concat(other ConcatenatableValue, storage Storage) Value {
-	otherArray := other.(*ArrayValue)
+func (v *ArrayValue) IsDestroyed() bool {
+	return v.isDestroyed
+}
+
+func (v *ArrayValue) IsCopied() bool {
+	return v.isCopied
+}
+
+func (v *ArrayValue) Concat(other *ArrayValue) Value {
+	storage := v.array.Storage
+
 	newValue, err := v.DeepCopy(storage, atree.Address{})
 	if err != nil {
 		panic(ExternalError{err})
 	}
 	newArray := newValue.(*ArrayValue)
-	newArray.AppendAll(otherArray)
+	newArray.AppendAll(other)
 	return newArray
 }
 
@@ -781,15 +784,17 @@ func (v *ArrayValue) GetIndex(index int, getLocationRange func() LocationRange) 
 		panic(ExternalError{err})
 	}
 
+	// atree.Array's Get function returns low-level atree.Value,
+	// convert to high-level interpreter.Value
 	return MustConvertStoredValue(element)
 }
 
 func (v *ArrayValue) Set(_ *Interpreter, getLocationRange func() LocationRange, key Value, value Value) {
 	index := key.(NumberValue).ToInt()
-	v.SetIndex(index, value, getLocationRange)
+	v.SetIndex(getLocationRange, index, value)
 }
 
-func (v *ArrayValue) SetIndex(index int, element Value, getLocationRange func() LocationRange) {
+func (v *ArrayValue) SetIndex(getLocationRange func() LocationRange, index int, element Value) {
 	v.checkBounds(index, getLocationRange)
 
 	storage := v.array.Storage
@@ -849,7 +854,6 @@ func (v *ArrayValue) RecursiveString(results StringResults) string {
 }
 
 func (v *ArrayValue) Append(element Value) {
-
 	storage := v.array.Storage
 
 	value, err := element.DeepCopy(storage, v.array.Address())
@@ -868,12 +872,12 @@ func (v *ArrayValue) Append(element Value) {
 	}
 }
 
-func (v *ArrayValue) AppendAll(other AllAppendableValue) {
-	otherArray := other.(*ArrayValue)
-	otherArray.Walk(v.Append)
+func (v *ArrayValue) AppendAll(other *ArrayValue) {
+	other.Walk(v.Append)
 }
 
-func (v *ArrayValue) Insert(index int, element Value, getLocationRange func() LocationRange) {
+func (v *ArrayValue) Insert(getLocationRange func() LocationRange, index int, element Value) {
+
 	count := v.Count()
 
 	// NOTE: index may be equal to count
@@ -903,7 +907,7 @@ func (v *ArrayValue) Insert(index int, element Value, getLocationRange func() Lo
 	}
 }
 
-func (v *ArrayValue) Remove(index int, getLocationRange func() LocationRange) Value {
+func (v *ArrayValue) Remove(getLocationRange func() LocationRange, index int) Value {
 	v.checkBounds(index, getLocationRange)
 
 	element, err := v.array.Remove(uint64(index))
@@ -913,7 +917,10 @@ func (v *ArrayValue) Remove(index int, getLocationRange func() LocationRange) Va
 
 	storage := v.array.Storage
 
-	value, err := element.DeepCopy(storage, atree.Address{})
+	// atree.Array's Remove function returns low-level atree.Value,
+	// convert to high-level interpreter.Value
+	value, err := MustConvertStoredValue(element).
+		DeepCopy(storage, atree.Address{})
 	if err != nil {
 		panic(ExternalError{err})
 	}
@@ -927,19 +934,21 @@ func (v *ArrayValue) Remove(index int, getLocationRange func() LocationRange) Va
 }
 
 func (v *ArrayValue) RemoveFirst(getLocationRange func() LocationRange) Value {
-	return v.Remove(0, getLocationRange)
+	return v.Remove(getLocationRange, 0)
 }
 
 func (v *ArrayValue) RemoveLast(getLocationRange func() LocationRange) Value {
-	return v.Remove(v.Count()-1, getLocationRange)
+	return v.Remove(getLocationRange, v.Count()-1)
 }
 
 func (v *ArrayValue) Contains(needleValue Value) BoolValue {
+
 	needleEquatable := needleValue.(EquatableValue)
 
 	var result bool
 	err := v.array.Iterate(func(element atree.Value) (resume bool, err error) {
-
+		// atree.Array iteration provides low-level atree.Value,
+		// convert to high-level interpreter.Value
 		if needleEquatable.Equal(MustConvertStoredValue(element), ReturnEmptyLocationRange) {
 			result = true
 			// stop iteration
@@ -955,7 +964,8 @@ func (v *ArrayValue) Contains(needleValue Value) BoolValue {
 	return BoolValue(result)
 }
 
-func (v *ArrayValue) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
+func (v *ArrayValue) GetMember(_ *Interpreter, getLocationRange func() LocationRange, name string) Value {
+
 	switch name {
 	case "length":
 		return NewIntValueFromInt64(int64(v.Count()))
@@ -971,7 +981,7 @@ func (v *ArrayValue) GetMember(_ *Interpreter, _ func() LocationRange, name stri
 	case "appendAll":
 		return NewHostFunctionValue(
 			func(invocation Invocation) Value {
-				otherArray := invocation.Arguments[0].(AllAppendableValue)
+				otherArray := invocation.Arguments[0].(*ArrayValue)
 				v.AppendAll(otherArray)
 				return VoidValue{}
 			},
@@ -980,8 +990,8 @@ func (v *ArrayValue) GetMember(_ *Interpreter, _ func() LocationRange, name stri
 	case "concat":
 		return NewHostFunctionValue(
 			func(invocation Invocation) Value {
-				otherArray := invocation.Arguments[0].(ConcatenatableValue)
-				return v.Concat(otherArray, invocation.Interpreter.Storage)
+				otherArray := invocation.Arguments[0].(*ArrayValue)
+				return v.Concat(otherArray)
 			},
 		)
 
@@ -990,7 +1000,7 @@ func (v *ArrayValue) GetMember(_ *Interpreter, _ func() LocationRange, name stri
 			func(invocation Invocation) Value {
 				index := invocation.Arguments[0].(NumberValue).ToInt()
 				element := invocation.Arguments[1]
-				v.Insert(index, element, invocation.GetLocationRange)
+				v.Insert(invocation.GetLocationRange, index, element)
 				return VoidValue{}
 			},
 		)
@@ -998,8 +1008,8 @@ func (v *ArrayValue) GetMember(_ *Interpreter, _ func() LocationRange, name stri
 	case "remove":
 		return NewHostFunctionValue(
 			func(invocation Invocation) Value {
-				i := invocation.Arguments[0].(NumberValue).ToInt()
-				return v.Remove(i, invocation.GetLocationRange)
+				index := invocation.Arguments[0].(NumberValue).ToInt()
+				return v.Remove(invocation.GetLocationRange, index)
 			},
 		)
 
@@ -1063,6 +1073,8 @@ func (v *ArrayValue) ConformsToDynamicType(
 			return true
 		}
 
+		// atree.Array iteration provides low-level atree.Value,
+		// convert to high-level interpreter.Value
 		if !MustConvertStoredValue(value).ConformsToDynamicType(interpreter, arrayType.ElementTypes[index], results) {
 			return false
 		}
@@ -1088,6 +1100,8 @@ func (v *ArrayValue) IsStorable() bool {
 			return true
 		}
 
+		// atree.Array iteration provides low-level atree.Value,
+		// convert to high-level interpreter.Value
 		if !MustConvertStoredValue(value).IsStorable() {
 			return false
 		}
@@ -1143,9 +1157,12 @@ func (v *ArrayValue) DeepCopy(storage atree.SlabStorage, address atree.Address) 
 		return nil, err
 	}
 
+	v.isCopied = true
+
 	return &ArrayValue{
-		Type:  v.Type,
-		array: copiedValue.(*atree.Array),
+		Type:        v.Type,
+		array:       copiedValue.(*atree.Array),
+		isDestroyed: v.isDestroyed,
 	}, nil
 }
 
@@ -1179,7 +1196,7 @@ type NumberValue interface {
 	ToBigEndianBytes() []byte
 }
 
-func getNumberValueMember(v NumberValue, name string, storage Storage) Value {
+func getNumberValueMember(v NumberValue, name string) Value {
 	switch name {
 
 	case sema.ToStringFunctionName:
@@ -1192,7 +1209,10 @@ func getNumberValueMember(v NumberValue, name string, storage Storage) Value {
 	case sema.ToBigEndianBytesFunctionName:
 		return NewHostFunctionValue(
 			func(invocation Invocation) Value {
-				return ByteSliceToByteArrayValue(storage, v.ToBigEndianBytes())
+				return ByteSliceToByteArrayValue(
+					invocation.Interpreter.Storage,
+					v.ToBigEndianBytes(),
+				)
 			},
 		)
 
@@ -1461,8 +1481,8 @@ func (v IntValue) BitwiseRightShift(other IntegerValue) IntegerValue {
 	return IntValue{res}
 }
 
-func (v IntValue) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name, interpreter.Storage)
+func (v IntValue) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
+	return getNumberValueMember(v, name)
 }
 
 func (IntValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -1773,8 +1793,8 @@ func (v Int8Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 	return v >> o
 }
 
-func (v Int8Value) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name, interpreter.Storage)
+func (v Int8Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
+	return getNumberValueMember(v, name)
 }
 
 func (Int8Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -2085,8 +2105,8 @@ func (v Int16Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 	return v >> o
 }
 
-func (v Int16Value) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name, interpreter.Storage)
+func (v Int16Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
+	return getNumberValueMember(v, name)
 }
 
 func (Int16Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -2399,8 +2419,8 @@ func (v Int32Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 	return v >> o
 }
 
-func (v Int32Value) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name, interpreter.Storage)
+func (v Int32Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
+	return getNumberValueMember(v, name)
 }
 
 func (Int32Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -2712,8 +2732,8 @@ func (v Int64Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 	return v >> o
 }
 
-func (v Int64Value) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name, interpreter.Storage)
+func (v Int64Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
+	return getNumberValueMember(v, name)
 }
 
 func (Int64Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -3097,8 +3117,8 @@ func (v Int128Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 	return Int128Value{res}
 }
 
-func (v Int128Value) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name, interpreter.Storage)
+func (v Int128Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
+	return getNumberValueMember(v, name)
 }
 
 func (Int128Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -3480,8 +3500,8 @@ func (v Int256Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 	return Int256Value{res}
 }
 
-func (v Int256Value) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name, interpreter.Storage)
+func (v Int256Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
+	return getNumberValueMember(v, name)
 }
 
 func (Int256Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -3753,8 +3773,8 @@ func (v UIntValue) BitwiseRightShift(other IntegerValue) IntegerValue {
 	return UIntValue{res}
 }
 
-func (v UIntValue) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name, interpreter.Storage)
+func (v UIntValue) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
+	return getNumberValueMember(v, name)
 }
 
 func (UIntValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -3996,8 +4016,8 @@ func (v UInt8Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 	return v >> o
 }
 
-func (v UInt8Value) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name, interpreter.Storage)
+func (v UInt8Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
+	return getNumberValueMember(v, name)
 }
 
 func (UInt8Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -4238,8 +4258,8 @@ func (v UInt16Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 	return v >> o
 }
 
-func (v UInt16Value) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name, interpreter.Storage)
+func (v UInt16Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
+	return getNumberValueMember(v, name)
 }
 
 func (UInt16Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -4482,8 +4502,8 @@ func (v UInt32Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 	return v >> o
 }
 
-func (v UInt32Value) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name, interpreter.Storage)
+func (v UInt32Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
+	return getNumberValueMember(v, name)
 }
 
 func (UInt32Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -4729,8 +4749,8 @@ func (v UInt64Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 	return v >> o
 }
 
-func (v UInt64Value) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name, interpreter.Storage)
+func (v UInt64Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
+	return getNumberValueMember(v, name)
 }
 
 func (UInt64Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -5056,8 +5076,8 @@ func (v UInt128Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 	return UInt128Value{res}
 }
 
-func (v UInt128Value) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name, interpreter.Storage)
+func (v UInt128Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
+	return getNumberValueMember(v, name)
 }
 
 func (UInt128Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -5381,8 +5401,8 @@ func (v UInt256Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 	return UInt256Value{res}
 }
 
-func (v UInt256Value) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name, interpreter.Storage)
+func (v UInt256Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
+	return getNumberValueMember(v, name)
 }
 
 func (UInt256Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -5569,8 +5589,8 @@ func (v Word8Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 	return v >> o
 }
 
-func (v Word8Value) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name, interpreter.Storage)
+func (v Word8Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
+	return getNumberValueMember(v, name)
 }
 
 func (Word8Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -5756,8 +5776,8 @@ func (v Word16Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 	return v >> o
 }
 
-func (v Word16Value) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name, interpreter.Storage)
+func (v Word16Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
+	return getNumberValueMember(v, name)
 }
 
 func (Word16Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -5946,8 +5966,8 @@ func (v Word32Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 	return v >> o
 }
 
-func (v Word32Value) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name, interpreter.Storage)
+func (v Word32Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
+	return getNumberValueMember(v, name)
 }
 
 func (Word32Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -6135,8 +6155,8 @@ func (v Word64Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 	return v >> o
 }
 
-func (v Word64Value) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name, interpreter.Storage)
+func (v Word64Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
+	return getNumberValueMember(v, name)
 }
 
 func (Word64Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -6427,8 +6447,8 @@ func ConvertFix64(value Value) Fix64Value {
 	}
 }
 
-func (v Fix64Value) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name, interpreter.Storage)
+func (v Fix64Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
+	return getNumberValueMember(v, name)
 }
 
 func (Fix64Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -6685,8 +6705,8 @@ func ConvertUFix64(value Value) UFix64Value {
 	}
 }
 
-func (v UFix64Value) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name, interpreter.Storage)
+func (v UFix64Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
+	return getNumberValueMember(v, name)
 }
 
 func (UFix64Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -6744,7 +6764,8 @@ type CompositeValue struct {
 	NestedVariables *StringVariableOrderedMap
 	Functions       map[string]FunctionValue
 	Destructor      FunctionValue
-	invalidated     bool
+	isDestroyed     bool
+	isCopied        bool
 	Stringer        func(results StringResults) string
 	StorageID       atree.StorageID
 }
@@ -6798,6 +6819,14 @@ func (v *CompositeValue) store(storage atree.SlabStorage) {
 	}
 }
 
+func (v *CompositeValue) IsDestroyed() bool {
+	return v.isDestroyed
+}
+
+func (v *CompositeValue) IsCopied() bool {
+	return v.isCopied
+}
+
 func (v *CompositeValue) Destroy(interpreter *Interpreter, getLocationRange func() LocationRange) {
 	interpreter = v.getInterpreter(interpreter)
 
@@ -6820,7 +6849,7 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, getLocationRange func
 		destructor.Invoke(invocation)
 	}
 
-	v.invalidated = true
+	v.isDestroyed = true
 
 	v.store(interpreter.Storage)
 }
@@ -6861,17 +6890,7 @@ func (v *CompositeValue) StaticType() StaticType {
 	}
 }
 
-func (v *CompositeValue) checkNotInvalidated(getLocationRange func() LocationRange) {
-	if v.invalidated {
-		panic(InvalidatedValueError{
-			CompositeKind: v.Kind,
-			LocationRange: getLocationRange(),
-		})
-	}
-}
-
 func (v *CompositeValue) GetMember(interpreter *Interpreter, getLocationRange func() LocationRange, name string) Value {
-	v.checkNotInvalidated(getLocationRange)
 
 	if v.Kind == common.CompositeKindResource &&
 		name == sema.ResourceOwnerFieldName {
@@ -6984,7 +7003,6 @@ func (v *CompositeValue) SetMember(
 	name string,
 	value Value,
 ) {
-	v.checkNotInvalidated(getLocationRange)
 
 	valueCopy, err := value.DeepCopy(interpreter.Storage, v.StorageID.Address)
 	if err != nil {
@@ -7245,6 +7263,8 @@ func (v *CompositeValue) DeepCopy(storage atree.SlabStorage, address atree.Addre
 		newFields.Set(fieldName, MustConvertStoredValue(fieldValueCopy))
 	}
 
+	v.isCopied = true
+
 	newValue := NewCompositeValue(
 		storage,
 		v.Location,
@@ -7259,14 +7279,8 @@ func (v *CompositeValue) DeepCopy(storage atree.SlabStorage, address atree.Addre
 	newValue.NestedVariables = v.NestedVariables
 	newValue.Functions = v.Functions
 	newValue.Destructor = v.Destructor
-	newValue.invalidated = v.invalidated
+	newValue.isDestroyed = v.isDestroyed
 	newValue.Stringer = v.Stringer
-
-	// Deep copying occurs when a value is transferred.
-	// When a resource is transferred, the source is invalidated.
-	if v.Kind == common.CompositeKindResource {
-		v.invalidated = true
-	}
 
 	return newValue, nil
 }
@@ -7378,10 +7392,12 @@ func NewEnumCaseValue(
 // DictionaryValue
 
 type DictionaryValue struct {
-	Type      DictionaryStaticType
-	Keys      *ArrayValue
-	Entries   *StringValueOrderedMap
-	StorageID atree.StorageID
+	Type        DictionaryStaticType
+	Keys        *ArrayValue
+	Entries     *StringValueOrderedMap
+	StorageID   atree.StorageID
+	isCopied    bool
+	isDestroyed bool
 }
 
 func NewDictionaryValue(
@@ -7483,6 +7499,14 @@ func (v *DictionaryValue) StaticType() StaticType {
 	return v.Type
 }
 
+func (v *DictionaryValue) IsDestroyed() bool {
+	return v.isDestroyed
+}
+
+func (v *DictionaryValue) IsCopied() bool {
+	return v.isCopied
+}
+
 func (v *DictionaryValue) Destroy(interpreter *Interpreter, getLocationRange func() LocationRange) {
 	v.Keys.Walk(func(keyValue Value) {
 		// Resources cannot be keys at the moment, so should theoretically not be needed
@@ -7490,6 +7514,8 @@ func (v *DictionaryValue) Destroy(interpreter *Interpreter, getLocationRange fun
 		value, _, _ := v.GetKey(keyValue)
 		maybeDestroy(interpreter, getLocationRange, value)
 	})
+
+	v.isDestroyed = true
 }
 
 func (v *DictionaryValue) ContainsKey(keyValue Value) BoolValue {
@@ -7568,7 +7594,8 @@ func (v *DictionaryValue) RecursiveString(results StringResults) string {
 	return format.Dictionary(pairs)
 }
 
-func (v *DictionaryValue) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
+func (v *DictionaryValue) GetMember(interpreter *Interpreter, getLocationRange func() LocationRange, name string) Value {
+
 	switch name {
 	case "length":
 		return NewIntValueFromInt64(int64(v.Count()))
@@ -7679,7 +7706,7 @@ func (v *DictionaryValue) Remove(
 		}
 
 		if dictionaryKey(MustConvertStoredValue(keyValue)) == key {
-			v.Keys.Remove(index, getLocationRange)
+			v.Keys.Remove(getLocationRange, index)
 
 			valueCopy, err := value.DeepCopy(storage, atree.Address{})
 			if err != nil {
@@ -7704,11 +7731,11 @@ func (v *DictionaryValue) Remove(
 
 func (v *DictionaryValue) Insert(
 	storage atree.SlabStorage,
-	locationRangeGetter func() LocationRange,
+	getLocationRange func() LocationRange,
 	keyValue, value Value,
 ) OptionalValue {
 
-	existingValue := v.Get(nil, locationRangeGetter, keyValue)
+	existingValue := v.Get(nil, getLocationRange, keyValue)
 
 	key := dictionaryKey(keyValue)
 
@@ -7768,6 +7795,8 @@ func (v *DictionaryValue) IsStorable() bool {
 			break
 		}
 
+		// atree.Array iteration provides low-level atree.Value,
+		// convert to high-level interpreter.Value
 		if !MustConvertStoredValue(keyValue).IsStorable() {
 			return false
 		}
@@ -7815,6 +7844,8 @@ func (v *DictionaryValue) ConformsToDynamicType(
 
 		entryType := dictionaryType.EntryTypes[index]
 
+		// atree.Array iteration provides low-level atree.Value,
+		// convert to high-level interpreter.Value
 		entryKey := MustConvertStoredValue(keyValue)
 
 		// Check the key
@@ -7918,6 +7949,8 @@ func (v *DictionaryValue) ExternalStorable(storage atree.SlabStorage) (atree.Sto
 
 func (v *DictionaryValue) DeepCopy(storage atree.SlabStorage, address atree.Address) (atree.Value, error) {
 
+	v.isCopied = true
+
 	result := NewDictionaryValueWithAddress(v.Type, storage, address)
 
 	iterator, err := v.Keys.array.Iterator()
@@ -7935,8 +7968,11 @@ func (v *DictionaryValue) DeepCopy(storage atree.SlabStorage, address atree.Addr
 			break
 		}
 
+		// atree.Array iteration provides low-level atree.Value,
+		// convert to high-level interpreter.Value
+
 		// NOTE: Insert already deep copies
-		result.Keys.Insert(index, MustConvertStoredValue(value), ReturnEmptyLocationRange)
+		result.Keys.Insert(ReturnEmptyLocationRange, index, MustConvertStoredValue(value))
 		index++
 	}
 
@@ -8125,6 +8161,14 @@ func (NilValue) StaticType() StaticType {
 
 func (NilValue) isOptionalValue() {}
 
+func (NilValue) IsDestroyed() bool {
+	return false
+}
+
+func (NilValue) IsCopied() bool {
+	return false
+}
+
 func (v NilValue) Destroy(_ *Interpreter, _ func() LocationRange) {
 	// NO-OP
 }
@@ -8197,6 +8241,8 @@ func (v NilValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 type SomeValue struct {
 	Value         Value
 	valueStorable atree.Storable
+	isCopied      bool
+	isDestroyed   bool
 }
 
 func NewSomeValueNonCopying(value Value) *SomeValue {
@@ -8239,8 +8285,17 @@ func (v *SomeValue) StaticType() StaticType {
 
 func (*SomeValue) isOptionalValue() {}
 
+func (v *SomeValue) IsDestroyed() bool {
+	return v.isDestroyed
+}
+
+func (v *SomeValue) IsCopied() bool {
+	return v.isCopied
+}
+
 func (v *SomeValue) Destroy(interpreter *Interpreter, getLocationRange func() LocationRange) {
 	maybeDestroy(interpreter, getLocationRange, v.Value)
+	v.isDestroyed = true
 }
 
 func (v *SomeValue) String() string {
@@ -8331,14 +8386,17 @@ func (v *SomeValue) Storable(storage atree.SlabStorage, address atree.Address) (
 }
 
 func (v *SomeValue) DeepCopy(storage atree.SlabStorage, address atree.Address) (atree.Value, error) {
+	v.isCopied = true
+
 	valueCopy, err := v.Value.DeepCopy(storage, address)
 	if err != nil {
 		return nil, err
 	}
 
-	return &SomeValue{
-		Value: MustConvertStoredValue(valueCopy),
-	}, nil
+	result := NewSomeValueNonCopying(MustConvertStoredValue(valueCopy))
+	result.isDestroyed = v.isDestroyed
+
+	return result, nil
 }
 
 func (v *SomeValue) DeepRemove(storage atree.SlabStorage) error {
@@ -8475,7 +8533,11 @@ func (v *StorageReferenceValue) ReferencedValue(interpreter *Interpreter) *Value
 	}
 }
 
-func (v *StorageReferenceValue) GetMember(interpreter *Interpreter, getLocationRange func() LocationRange, name string) Value {
+func (v *StorageReferenceValue) GetMember(
+	interpreter *Interpreter,
+	getLocationRange func() LocationRange,
+	name string,
+) Value {
 	referencedValue := v.ReferencedValue(interpreter)
 	if referencedValue == nil {
 		panic(DereferenceError{
@@ -8483,10 +8545,19 @@ func (v *StorageReferenceValue) GetMember(interpreter *Interpreter, getLocationR
 		})
 	}
 
-	return interpreter.getMember(*referencedValue, getLocationRange, name)
+	self := *referencedValue
+
+	interpreter.checkResourceNotDestroyedOrCopied(self, getLocationRange)
+
+	return interpreter.getMember(self, getLocationRange, name)
 }
 
-func (v *StorageReferenceValue) SetMember(interpreter *Interpreter, getLocationRange func() LocationRange, name string, value Value) {
+func (v *StorageReferenceValue) SetMember(
+	interpreter *Interpreter,
+	getLocationRange func() LocationRange,
+	name string,
+	value Value,
+) {
 	referencedValue := v.ReferencedValue(interpreter)
 	if referencedValue == nil {
 		panic(DereferenceError{
@@ -8494,10 +8565,18 @@ func (v *StorageReferenceValue) SetMember(interpreter *Interpreter, getLocationR
 		})
 	}
 
-	interpreter.setMember(*referencedValue, getLocationRange, name, value)
+	self := *referencedValue
+
+	interpreter.checkResourceNotDestroyedOrCopied(self, getLocationRange)
+
+	interpreter.setMember(self, getLocationRange, name, value)
 }
 
-func (v *StorageReferenceValue) Get(interpreter *Interpreter, getLocationRange func() LocationRange, key Value) Value {
+func (v *StorageReferenceValue) Get(
+	interpreter *Interpreter,
+	getLocationRange func() LocationRange,
+	key Value,
+) Value {
 	referencedValue := v.ReferencedValue(interpreter)
 	if referencedValue == nil {
 		panic(DereferenceError{
@@ -8505,11 +8584,20 @@ func (v *StorageReferenceValue) Get(interpreter *Interpreter, getLocationRange f
 		})
 	}
 
-	return (*referencedValue).(ValueIndexableValue).
+	self := *referencedValue
+
+	interpreter.checkResourceNotDestroyedOrCopied(self, getLocationRange)
+
+	return self.(ValueIndexableValue).
 		Get(interpreter, getLocationRange, key)
 }
 
-func (v *StorageReferenceValue) Set(interpreter *Interpreter, getLocationRange func() LocationRange, key Value, value Value) {
+func (v *StorageReferenceValue) Set(
+	interpreter *Interpreter,
+	getLocationRange func() LocationRange,
+	key Value,
+	value Value,
+) {
 	referencedValue := v.ReferencedValue(interpreter)
 	if referencedValue == nil {
 		panic(DereferenceError{
@@ -8517,7 +8605,11 @@ func (v *StorageReferenceValue) Set(interpreter *Interpreter, getLocationRange f
 		})
 	}
 
-	(*referencedValue).(ValueIndexableValue).
+	self := *referencedValue
+
+	interpreter.checkResourceNotDestroyedOrCopied(self, getLocationRange)
+
+	self.(ValueIndexableValue).
 		Set(interpreter, getLocationRange, key, value)
 }
 
@@ -8686,7 +8778,11 @@ func (v *EphemeralReferenceValue) ReferencedValue() *Value {
 	}
 }
 
-func (v *EphemeralReferenceValue) GetMember(interpreter *Interpreter, getLocationRange func() LocationRange, name string) Value {
+func (v *EphemeralReferenceValue) GetMember(
+	interpreter *Interpreter,
+	getLocationRange func() LocationRange,
+	name string,
+) Value {
 	referencedValue := v.ReferencedValue()
 	if referencedValue == nil {
 		panic(DereferenceError{
@@ -8694,10 +8790,19 @@ func (v *EphemeralReferenceValue) GetMember(interpreter *Interpreter, getLocatio
 		})
 	}
 
-	return interpreter.getMember(*referencedValue, getLocationRange, name)
+	self := *referencedValue
+
+	interpreter.checkResourceNotDestroyedOrCopied(self, getLocationRange)
+
+	return interpreter.getMember(self, getLocationRange, name)
 }
 
-func (v *EphemeralReferenceValue) SetMember(interpreter *Interpreter, getLocationRange func() LocationRange, name string, value Value) {
+func (v *EphemeralReferenceValue) SetMember(
+	interpreter *Interpreter,
+	getLocationRange func() LocationRange,
+	name string,
+	value Value,
+) {
 	referencedValue := v.ReferencedValue()
 	if referencedValue == nil {
 		panic(DereferenceError{
@@ -8705,10 +8810,18 @@ func (v *EphemeralReferenceValue) SetMember(interpreter *Interpreter, getLocatio
 		})
 	}
 
-	interpreter.setMember(*referencedValue, getLocationRange, name, value)
+	self := *referencedValue
+
+	interpreter.checkResourceNotDestroyedOrCopied(self, getLocationRange)
+
+	interpreter.setMember(self, getLocationRange, name, value)
 }
 
-func (v *EphemeralReferenceValue) Get(interpreter *Interpreter, getLocationRange func() LocationRange, key Value) Value {
+func (v *EphemeralReferenceValue) Get(
+	interpreter *Interpreter,
+	getLocationRange func() LocationRange,
+	key Value,
+) Value {
 	referencedValue := v.ReferencedValue()
 	if referencedValue == nil {
 		panic(DereferenceError{
@@ -8716,11 +8829,20 @@ func (v *EphemeralReferenceValue) Get(interpreter *Interpreter, getLocationRange
 		})
 	}
 
-	return (*referencedValue).(ValueIndexableValue).
+	self := *referencedValue
+
+	interpreter.checkResourceNotDestroyedOrCopied(self, getLocationRange)
+
+	return self.(ValueIndexableValue).
 		Get(interpreter, getLocationRange, key)
 }
 
-func (v *EphemeralReferenceValue) Set(interpreter *Interpreter, getLocationRange func() LocationRange, key Value, value Value) {
+func (v *EphemeralReferenceValue) Set(
+	interpreter *Interpreter,
+	getLocationRange func() LocationRange,
+	key Value,
+	value Value,
+) {
 	referencedValue := v.ReferencedValue()
 	if referencedValue == nil {
 		panic(DereferenceError{
@@ -8728,7 +8850,11 @@ func (v *EphemeralReferenceValue) Set(interpreter *Interpreter, getLocationRange
 		})
 	}
 
-	(*referencedValue).(ValueIndexableValue).
+	self := *referencedValue
+
+	interpreter.checkResourceNotDestroyedOrCopied(self, getLocationRange)
+
+	self.(ValueIndexableValue).
 		Set(interpreter, getLocationRange, key, value)
 }
 
@@ -9168,10 +9294,6 @@ func (v PathValue) StaticType() StaticType {
 	}
 }
 
-func (v PathValue) Destroy(_ *Interpreter, _ func() LocationRange) {
-	// NO-OP
-}
-
 func (v PathValue) String() string {
 	return format.Path(
 		v.Domain.Identifier(),
@@ -9278,10 +9400,6 @@ func (v CapabilityValue) StaticType() StaticType {
 	return CapabilityStaticType{
 		BorrowType: v.BorrowType,
 	}
-}
-
-func (v CapabilityValue) Destroy(_ *Interpreter, _ func() LocationRange) {
-	// NO-OP
 }
 
 func (v CapabilityValue) String() string {
@@ -9627,13 +9745,7 @@ func NewPublicKeyValue(
 	publicKeyValue.Stringer = func(results StringResults) string {
 		if stringerFields == nil {
 			stringerFields = NewStringValueOrderedMap()
-
-			keyCopy, err := publicKey.DeepCopy(storage, atree.Address{})
-			if err != nil {
-				panic(err)
-			}
-
-			stringerFields.Set(sema.PublicKeyPublicKeyField, MustConvertStoredValue(keyCopy))
+			stringerFields.Set(sema.PublicKeyPublicKeyField, publicKey)
 			publicKeyValue.Fields.Foreach(func(key string, value Value) {
 				stringerFields.Set(key, value)
 			})
