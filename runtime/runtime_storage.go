@@ -24,6 +24,7 @@ import (
 	"sort"
 	"time"
 
+	"github.com/fxamacker/atree"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
@@ -54,26 +55,23 @@ type runtimeStorage struct {
 	contractUpdates  ContractUpdates
 }
 
-
-
 func newRuntimeStorage(runtimeInterface Interface) *runtimeStorage {
 	ledgerStorage := atree.NewLedgerBaseStorage(runtimeInterface)
-	slabStorage := atree.NewPersistentSlabStorage(ledgerStorage, CBOREncMode, CBORDecMode)
-	slabStorage.DecodeStorable = DecodeStorableV6
+	slabStorage := atree.NewPersistentSlabStorage(ledgerStorage, interpreter.CBOREncMode, interpreter.CBORDecMode)
+	slabStorage.DecodeStorable = interpreter.DecodeStorableV6
 	return &runtimeStorage{
-		PersistentSlabStorage: slabStorage
-		runtimeInterface: runtimeInterface,
-		cache:            Cache{},
-		contractUpdates:  ContractUpdates{},
+		PersistentSlabStorage: slabStorage,
+		runtimeInterface:      runtimeInterface,
+		cache:                 Cache{},
+		contractUpdates:       ContractUpdates{},
 	}
 }
 
-
 // // TODO deal with the address and key
 
-func (s *runtimeStorage) Exists(_ *Interpreter, address common.Address, key string) bool {
+func (s *runtimeStorage) Exists(_ *interpreter.Interpreter, address common.Address, key string) bool {
 	// TODO more things with interpreter
-	return runtimeInterface.valueExists(address, key)
+	return s.valueExists(address, key)
 }
 
 // valueExists is the StorageExistenceHandlerFunc for the interpreter.
@@ -121,22 +119,20 @@ func (s *runtimeStorage) valueExists(
 	return exists
 }
 
-
-func (s *runtimeStorage) Read(_ *Interpreter, address common.Address, key string) OptionalValue {
+func (s *runtimeStorage) Read(_ *interpreter.Interpreter, address common.Address, key string) interpreter.OptionalValue {
 	// TODO (Ramtin) what to do with deferred
-	storable, ok := s.readValue(address, key, false)
-	if !ok {
-		return NilValue{}
-	}
+	storable := s.readValue(address, key, false)
+	// if !ok {
+	// 	return interpreter.NilValue{}
+	// }
 
-	value, err := StoredValue(storable, s.PersistentSlabStorage)
+	value, err := interpreter.StoredValue(storable, s.PersistentSlabStorage)
 	if err != nil {
-		panic(ExternalError{err})
+		panic(interpreter.ExternalError{err})
 	}
 
-	return NewSomeValueNonCopying(MustConvertStoredValue(value))
+	return interpreter.NewSomeValueNonCopying(interpreter.MustConvertStoredValue(value))
 }
-
 
 // readValue is the StorageReadHandlerFunc for the interpreter.
 //
@@ -221,22 +217,20 @@ func (s *runtimeStorage) readValue(
 	return interpreter.NewSomeValueOwningNonCopying(storedValue)
 }
 
-
-func (s *runtimeStorage) Write(_ *Interpreter, address common.Address, key string, value OptionalValue) {
+func (s *runtimeStorage) Write(_ *interpreter.Interpreter, address common.Address, key string, value interpreter.OptionalValue) {
 	switch value := value.(type) {
-	case *SomeValue:
+	case *interpreter.SomeValue:
 		storable, err := value.Value.(atree.Value).Storable(i, atree.Address(address))
 		if err != nil {
-			panic(ExternalError{err})
+			panic(interpreter.ExternalError{err})
 		}
-		// TODO (ramtin) we need error return 
+		// TODO (ramtin) we need error return
 		s.writeValue(address, key, storable)
 
-	case NilValue:
+	case interpreter.NilValue:
 		s.writeValue(address, key, nil)
 	}
 }
-
 
 // writeValue is the StorageWriteHandlerFunc for the interpreter.
 //
