@@ -2286,9 +2286,6 @@ func (interpreter *Interpreter) ReadStored(storageAddress common.Address, key st
 }
 
 func (interpreter *Interpreter) writeStored(storageAddress common.Address, key string, value OptionalValue) {
-	// TODO:
-	//value.SetOwner(&storageAddress)
-
 	interpreter.Storage.Write(interpreter, storageAddress, key, value)
 }
 
@@ -2874,12 +2871,22 @@ func (interpreter *Interpreter) authAccountSaveFunction(addressValue AddressValu
 			)
 		}
 
+		valueCopy, err := value.DeepCopy(interpreter.Storage, atree.Address(address))
+		if err != nil {
+			panic(ExternalError{err})
+		}
+
+		err = value.DeepRemove(interpreter.Storage)
+		if err != nil {
+			panic(ExternalError{err})
+		}
+
 		// Write new value
 
 		interpreter.writeStored(
 			address,
 			key,
-			NewSomeValueNonCopying(value),
+			NewSomeValueNonCopying(MustConvertStoredValue(valueCopy)),
 		)
 
 		return VoidValue{}
@@ -2926,14 +2933,23 @@ func (interpreter *Interpreter) authAccountReadFunction(addressValue AddressValu
 				return NilValue{}
 			}
 
+			valueCopy, err := value.DeepCopy(interpreter.Storage, atree.Address{})
+			if err != nil {
+				panic(ExternalError{err})
+			}
+
+			// Remove the value from storage,
+			// but only if the type check succeeded.
 			if clear {
-				// Remove the value from storage,
-				// but only if the type check succeeded.
+				err = value.DeepRemove(interpreter.Storage)
+				if err != nil {
+					panic(ExternalError{err})
+				}
 
 				interpreter.writeStored(address, key, NilValue{})
 			}
 
-			return value
+			return MustConvertStoredValue(valueCopy)
 
 		default:
 			panic(errors.NewUnreachableError())
