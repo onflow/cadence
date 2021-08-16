@@ -47,6 +47,7 @@ func newRuntimeStorage(runtimeInterface Interface) *runtimeStorage {
 		interpreter.CBOREncMode,
 		interpreter.CBORDecMode,
 	)
+	persistentSlabStorage.DecodeStorable = interpreter.DecodeStorableV6
 	return &runtimeStorage{
 		PersistentSlabStorage: persistentSlabStorage,
 		runtimeInterface:      runtimeInterface,
@@ -265,8 +266,10 @@ func (s *runtimeStorage) commit() error {
 	// TODO: bring back concurrent encoding
 	for _, entry := range accountStorageEntries {
 		var encoded []byte
+		address := entry.storageKey.Address
+
 		if entry.value != nil {
-			storable, err := entry.value.Storable(s, atree.Address(entry.storageKey.Address))
+			storable, err := entry.value.Storable(s, atree.Address(address))
 			if err != nil {
 				return err
 			}
@@ -277,13 +280,19 @@ func (s *runtimeStorage) commit() error {
 			if err != nil {
 				return err
 			}
+
+			err = encoder.CBOR.Flush()
+			if err != nil {
+				return err
+			}
+
 			encoded = buf.Bytes()
 		}
 
 		var err error
 		wrapPanic(func() {
 			err = s.runtimeInterface.SetValue(
-				entry.storageKey.Address[:],
+				address[:],
 				[]byte(entry.storageKey.Key),
 				encoded,
 			)
