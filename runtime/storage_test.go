@@ -167,7 +167,7 @@ func BenchmarkRuntimeStorageWriteCached(b *testing.B) {
 	})
 }
 
-func TestRuntimeMagic(t *testing.T) {
+func TestRuntimeStorageWrite(t *testing.T) {
 
 	t.Parallel()
 
@@ -219,8 +219,6 @@ func TestRuntimeMagic(t *testing.T) {
 				[]byte{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1},
 				[]byte("storage\x1fone"),
 				[]byte{
-					// magic
-					0x0, 0xCA, 0xDE, 0x0, 0x5,
 					// CBOR
 					// - tag
 					0xd8, 0x98,
