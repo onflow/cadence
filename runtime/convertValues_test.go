@@ -32,7 +32,7 @@ import (
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/parser2"
 	"github.com/onflow/cadence/runtime/sema"
-	"github.com/onflow/cadence/runtime/tests/utils"
+	. "github.com/onflow/cadence/runtime/tests/utils"
 )
 
 func TestExportValue(t *testing.T) {
@@ -813,7 +813,7 @@ func TestExportNestedResourceValueFromScript(t *testing.T) {
 	t.Parallel()
 
 	barResourceType := &cadence.ResourceType{
-		Location:            utils.TestLocation,
+		Location:            TestLocation,
 		QualifiedIdentifier: "Bar",
 		Fields: []cadence.Field{
 			{
@@ -828,7 +828,7 @@ func TestExportNestedResourceValueFromScript(t *testing.T) {
 	}
 
 	fooResourceType := &cadence.ResourceType{
-		Location:            utils.TestLocation,
+		Location:            TestLocation,
 		QualifiedIdentifier: "Foo",
 		Fields: []cadence.Field{
 			{
@@ -921,7 +921,7 @@ func exportEventFromScript(t *testing.T, script string) cadence.Event {
 		},
 		Context{
 			Interface: inter,
-			Location:  utils.TestLocation,
+			Location:  TestLocation,
 		},
 	)
 
@@ -1140,7 +1140,7 @@ func TestExportTypeValue(t *testing.T) {
         `)
 		require.NoError(t, err)
 
-		checker, err := sema.NewChecker(program, utils.TestLocation)
+		checker, err := sema.NewChecker(program, TestLocation)
 		require.NoError(t, err)
 
 		err = checker.Check()
@@ -1158,12 +1158,12 @@ func TestExportTypeValue(t *testing.T) {
 		ty := interpreter.TypeValue{
 			Type: &interpreter.RestrictedStaticType{
 				Type: interpreter.CompositeStaticType{
-					Location:            utils.TestLocation,
+					Location:            TestLocation,
 					QualifiedIdentifier: "S",
 				},
 				Restrictions: []interpreter.InterfaceStaticType{
 					{
-						Location:            utils.TestLocation,
+						Location:            TestLocation,
 						QualifiedIdentifier: "SI",
 					},
 				},
@@ -1219,7 +1219,7 @@ func TestExportCapabilityValue(t *testing.T) {
 		program, err := parser2.ParseProgram(`pub struct S {}`)
 		require.NoError(t, err)
 
-		checker, err := sema.NewChecker(program, utils.TestLocation)
+		checker, err := sema.NewChecker(program, TestLocation)
 		require.NoError(t, err)
 
 		err = checker.Check()
@@ -1241,7 +1241,7 @@ func TestExportCapabilityValue(t *testing.T) {
 				Identifier: "foo",
 			},
 			BorrowType: interpreter.CompositeStaticType{
-				Location:            utils.TestLocation,
+				Location:            TestLocation,
 				QualifiedIdentifier: "S",
 			},
 		}
@@ -1319,7 +1319,7 @@ func TestExportLinkValue(t *testing.T) {
 		program, err := parser2.ParseProgram(`pub struct S {}`)
 		require.NoError(t, err)
 
-		checker, err := sema.NewChecker(program, utils.TestLocation)
+		checker, err := sema.NewChecker(program, TestLocation)
 		require.NoError(t, err)
 
 		err = checker.Check()
@@ -1340,7 +1340,7 @@ func TestExportLinkValue(t *testing.T) {
 				Identifier: "foo",
 			},
 			Type: interpreter.CompositeStaticType{
-				Location:            utils.TestLocation,
+				Location:            TestLocation,
 				QualifiedIdentifier: "S",
 			},
 		}
@@ -1426,19 +1426,19 @@ var fooResourceFields = []cadence.Field{
 }
 
 var fooStructType = &cadence.StructType{
-	Location:            utils.TestLocation,
+	Location:            TestLocation,
 	QualifiedIdentifier: "Foo",
 	Fields:              fooFields,
 }
 
 var fooResourceType = &cadence.ResourceType{
-	Location:            utils.TestLocation,
+	Location:            TestLocation,
 	QualifiedIdentifier: "Foo",
 	Fields:              fooResourceFields,
 }
 
 var fooEventType = &cadence.EventType{
-	Location:            utils.TestLocation,
+	Location:            TestLocation,
 	QualifiedIdentifier: "Foo",
 	Fields:              fooFields,
 }
@@ -1449,7 +1449,7 @@ func TestRuntimeEnumValue(t *testing.T) {
 
 	enumValue := cadence.Enum{
 		EnumType: &cadence.EnumType{
-			Location:            utils.TestLocation,
+			Location:            TestLocation,
 			QualifiedIdentifier: "Direction",
 			Fields: []cadence.Field{
 				{
@@ -1528,7 +1528,7 @@ func executeTestScript(t *testing.T, script string, arg cadence.Value) (cadence.
 		},
 		Context{
 			Interface: runtimeInterface,
-			Location:  utils.TestLocation,
+			Location:  TestLocation,
 		},
 	)
 }
@@ -1801,7 +1801,7 @@ func TestRuntimeComplexStructArgumentPassing(t *testing.T) {
 	// Complex struct value
 	complexStructValue := cadence.Struct{
 		StructType: &cadence.StructType{
-			Location:            utils.TestLocation,
+			Location:            TestLocation,
 			QualifiedIdentifier: "Foo",
 			Fields: []cadence.Field{
 				{
@@ -1946,7 +1946,7 @@ func TestRuntimeComplexStructWithAnyStructFields(t *testing.T) {
 	// Complex struct value
 	complexStructValue := cadence.Struct{
 		StructType: &cadence.StructType{
-			Location:            utils.TestLocation,
+			Location:            TestLocation,
 			QualifiedIdentifier: "Foo",
 			Fields: []cadence.Field{
 				{
@@ -2047,7 +2047,7 @@ func TestRuntimeMalformedArgumentPassing(t *testing.T) {
 	// Struct with wrong field type
 
 	malformedStructType1 := &cadence.StructType{
-		Location:            utils.TestLocation,
+		Location:            TestLocation,
 		QualifiedIdentifier: "Foo",
 		Fields: []cadence.Field{
 			{
@@ -2068,7 +2068,7 @@ func TestRuntimeMalformedArgumentPassing(t *testing.T) {
 
 	malformedStruct2 := cadence.Struct{
 		StructType: &cadence.StructType{
-			Location:            utils.TestLocation,
+			Location:            TestLocation,
 			QualifiedIdentifier: "Foo",
 			Fields: []cadence.Field{
 				{
@@ -2085,7 +2085,7 @@ func TestRuntimeMalformedArgumentPassing(t *testing.T) {
 	// Struct with nested malformed array value
 	malformedStruct3 := cadence.Struct{
 		StructType: &cadence.StructType{
-			Location:            utils.TestLocation,
+			Location:            TestLocation,
 			QualifiedIdentifier: "Bar",
 			Fields: []cadence.Field{
 				{
@@ -2106,7 +2106,7 @@ func TestRuntimeMalformedArgumentPassing(t *testing.T) {
 	// Struct with nested malformed dictionary value
 	malformedStruct4 := cadence.Struct{
 		StructType: &cadence.StructType{
-			Location:            utils.TestLocation,
+			Location:            TestLocation,
 			QualifiedIdentifier: "Baz",
 			Fields: []cadence.Field{
 				{
@@ -2131,7 +2131,7 @@ func TestRuntimeMalformedArgumentPassing(t *testing.T) {
 	// Struct with nested array with mismatching element type
 	malformedStruct5 := cadence.Struct{
 		StructType: &cadence.StructType{
-			Location:            utils.TestLocation,
+			Location:            TestLocation,
 			QualifiedIdentifier: "Bar",
 			Fields: []cadence.Field{
 				{
@@ -2334,7 +2334,7 @@ func TestRuntimeImportExportArrayValue(t *testing.T) {
 
 		inter, err := interpreter.NewInterpreter(
 			nil,
-			utils.TestLocation,
+			TestLocation,
 			interpreter.WithStorage(storage),
 		)
 		require.NoError(t, err)
@@ -2348,7 +2348,7 @@ func TestRuntimeImportExportArrayValue(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		assert.Equal(t,
+		AssertValuesEqual(t,
 			interpreter.NewArrayValue(
 				interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeUInt8,
@@ -2399,7 +2399,7 @@ func TestRuntimeImportExportArrayValue(t *testing.T) {
 
 		inter, err := interpreter.NewInterpreter(
 			nil,
-			utils.TestLocation,
+			TestLocation,
 			interpreter.WithStorage(storage),
 		)
 		require.NoError(t, err)
@@ -2413,7 +2413,7 @@ func TestRuntimeImportExportArrayValue(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		assert.Equal(t,
+		AssertValuesEqual(t,
 			interpreter.NewArrayValue(
 				interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeAnyStruct,
@@ -2517,7 +2517,7 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 
 		inter, err := interpreter.NewInterpreter(
 			nil,
-			utils.TestLocation,
+			TestLocation,
 			interpreter.WithStorage(storage),
 		)
 		require.NoError(t, err)
@@ -2532,7 +2532,7 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		assert.Equal(t,
+		AssertValuesEqual(t,
 			interpreter.NewDictionaryValue(
 				newTestInterpreter(t),
 				interpreter.DictionaryStaticType{
@@ -2599,7 +2599,7 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 
 		inter, err := interpreter.NewInterpreter(
 			nil,
-			utils.TestLocation,
+			TestLocation,
 			interpreter.WithStorage(storage),
 		)
 		require.NoError(t, err)
@@ -2614,7 +2614,7 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		assert.Equal(t,
+		AssertValuesEqual(t,
 			interpreter.NewDictionaryValue(
 				newTestInterpreter(t),
 				interpreter.DictionaryStaticType{
@@ -2835,7 +2835,7 @@ func TestRuntimeStringValueImport(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  utils.TestLocation,
+				Location:  TestLocation,
 			},
 		)
 
@@ -2868,7 +2868,7 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  utils.TestLocation,
+				Location:  TestLocation,
 			},
 		)
 	}
@@ -3242,7 +3242,7 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  utils.TestLocation,
+				Location:  TestLocation,
 			},
 		)
 		require.Error(t, err)
@@ -3314,7 +3314,7 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  utils.TestLocation,
+				Location:  TestLocation,
 			},
 		)
 
@@ -3400,7 +3400,7 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  utils.TestLocation,
+				Location:  TestLocation,
 			},
 		)
 
@@ -3476,7 +3476,7 @@ func TestRuntimeImportExportComplex(t *testing.T) {
 	// Composite
 
 	semaCompositeType := &sema.CompositeType{
-		Location:   utils.TestLocation,
+		Location:   TestLocation,
 		Identifier: "Foo",
 		Kind:       common.CompositeKindStructure,
 		Members:    sema.NewStringMemberOrderedMap(),
@@ -3494,7 +3494,7 @@ func TestRuntimeImportExportComplex(t *testing.T) {
 	)
 
 	externalCompositeType := &cadence.StructType{
-		Location:            utils.TestLocation,
+		Location:            TestLocation,
 		QualifiedIdentifier: "Foo",
 		Fields: []cadence.Field{
 			{
@@ -3509,7 +3509,7 @@ func TestRuntimeImportExportComplex(t *testing.T) {
 
 	internalCompositeValue := interpreter.NewCompositeValue(
 		storage,
-		utils.TestLocation,
+		TestLocation,
 		"Foo",
 		common.CompositeKindStructure,
 		internalCompositeValueFields,
@@ -3535,7 +3535,7 @@ func TestRuntimeImportExportComplex(t *testing.T) {
 
 		inter, err := interpreter.NewInterpreter(
 			&program,
-			utils.TestLocation,
+			TestLocation,
 			interpreter.WithStorage(storage),
 		)
 		require.NoError(t, err)
@@ -3563,7 +3563,7 @@ func TestRuntimeImportExportComplex(t *testing.T) {
 
 		inter, err := interpreter.NewInterpreter(
 			&program,
-			utils.TestLocation,
+			TestLocation,
 			interpreter.WithStorage(storage),
 		)
 		require.NoError(t, err)
@@ -3604,7 +3604,7 @@ func TestRuntimeStaticTypeAvailability(t *testing.T) {
 
 		structValue := cadence.Struct{
 			StructType: &cadence.StructType{
-				Location:            utils.TestLocation,
+				Location:            TestLocation,
 				QualifiedIdentifier: "Foo",
 				Fields: []cadence.Field{
 					{
@@ -3642,7 +3642,7 @@ func TestRuntimeStaticTypeAvailability(t *testing.T) {
 
 		structValue := cadence.Struct{
 			StructType: &cadence.StructType{
-				Location:            utils.TestLocation,
+				Location:            TestLocation,
 				QualifiedIdentifier: "Foo",
 				Fields: []cadence.Field{
 					{

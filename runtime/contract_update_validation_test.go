@@ -32,7 +32,7 @@ import (
 	"github.com/onflow/cadence/runtime/sema"
 )
 
-func TestContractUpdateValidation(t *testing.T) {
+func TestRuntimeContractUpdateValidation(t *testing.T) {
 
 	t.Parallel()
 
