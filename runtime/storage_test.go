@@ -1945,9 +1945,6 @@ func TestRuntimeStorageUnlink(t *testing.T) {
 
 func TestRuntimeStorageSaveCapability(t *testing.T) {
 
-	// TODO:
-	t.Skip("TODO")
-
 	t.Parallel()
 
 	runtime := NewInterpreterRuntime()

@@ -816,7 +816,7 @@ func TestStringer(t *testing.T) {
 			expected: "Type<Int>()",
 		},
 		"Capability with borrow type": {
-			value: CapabilityValue{
+			value: &CapabilityValue{
 				Path: PathValue{
 					Domain:     common.PathDomainStorage,
 					Identifier: "foo",
@@ -827,7 +827,7 @@ func TestStringer(t *testing.T) {
 			expected: "Capability<Int>(address: 0x102030405, path: /storage/foo)",
 		},
 		"Capability without borrow type": {
-			value: CapabilityValue{
+			value: &CapabilityValue{
 				Path: PathValue{
 					Domain:     common.PathDomainStorage,
 					Identifier: "foo",
@@ -1179,15 +1179,15 @@ func TestCapabilityValue_Equal(t *testing.T) {
 		t.Parallel()
 
 		require.True(t,
-			CapabilityValue{
+			(&CapabilityValue{
 				Address: AddressValue{0x1},
 				Path: PathValue{
 					Domain:     common.PathDomainStorage,
 					Identifier: "test",
 				},
 				BorrowType: PrimitiveStaticTypeInt,
-			}.Equal(
-				CapabilityValue{
+			}).Equal(
+				&CapabilityValue{
 					Address: AddressValue{0x1},
 					Path: PathValue{
 						Domain:     common.PathDomainStorage,
@@ -1205,14 +1205,14 @@ func TestCapabilityValue_Equal(t *testing.T) {
 		t.Parallel()
 
 		require.True(t,
-			CapabilityValue{
+			(&CapabilityValue{
 				Address: AddressValue{0x1},
 				Path: PathValue{
 					Domain:     common.PathDomainStorage,
 					Identifier: "test",
 				},
-			}.Equal(
-				CapabilityValue{
+			}).Equal(
+				&CapabilityValue{
 					Address: AddressValue{0x1},
 					Path: PathValue{
 						Domain:     common.PathDomainStorage,
@@ -1229,15 +1229,15 @@ func TestCapabilityValue_Equal(t *testing.T) {
 		t.Parallel()
 
 		require.False(t,
-			CapabilityValue{
+			(&CapabilityValue{
 				Address: AddressValue{0x1},
 				Path: PathValue{
 					Domain:     common.PathDomainStorage,
 					Identifier: "test1",
 				},
 				BorrowType: PrimitiveStaticTypeInt,
-			}.Equal(
-				CapabilityValue{
+			}).Equal(
+				&CapabilityValue{
 					Address: AddressValue{0x1},
 					Path: PathValue{
 						Domain:     common.PathDomainStorage,
@@ -1255,15 +1255,15 @@ func TestCapabilityValue_Equal(t *testing.T) {
 		t.Parallel()
 
 		require.False(t,
-			CapabilityValue{
+			(&CapabilityValue{
 				Address: AddressValue{0x1},
 				Path: PathValue{
 					Domain:     common.PathDomainStorage,
 					Identifier: "test",
 				},
 				BorrowType: PrimitiveStaticTypeInt,
-			}.Equal(
-				CapabilityValue{
+			}).Equal(
+				&CapabilityValue{
 					Address: AddressValue{0x2},
 					Path: PathValue{
 						Domain:     common.PathDomainStorage,
@@ -1281,15 +1281,15 @@ func TestCapabilityValue_Equal(t *testing.T) {
 		t.Parallel()
 
 		require.False(t,
-			CapabilityValue{
+			(&CapabilityValue{
 				Address: AddressValue{0x1},
 				Path: PathValue{
 					Domain:     common.PathDomainStorage,
 					Identifier: "test",
 				},
 				BorrowType: PrimitiveStaticTypeInt,
-			}.Equal(
-				CapabilityValue{
+			}).Equal(
+				&CapabilityValue{
 					Address: AddressValue{0x1},
 					Path: PathValue{
 						Domain:     common.PathDomainStorage,
@@ -1307,14 +1307,14 @@ func TestCapabilityValue_Equal(t *testing.T) {
 		t.Parallel()
 
 		require.False(t,
-			CapabilityValue{
+			(&CapabilityValue{
 				Address: AddressValue{0x1},
 				Path: PathValue{
 					Domain:     common.PathDomainStorage,
 					Identifier: "test",
 				},
 				BorrowType: PrimitiveStaticTypeInt,
-			}.Equal(
+			}).Equal(
 				NewStringValue("test"),
 				ReturnEmptyLocationRange,
 			),

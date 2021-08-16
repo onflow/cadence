@@ -3032,7 +3032,7 @@ func (interpreter *Interpreter) authAccountLinkFunction(addressValue AddressValu
 		)
 
 		return NewSomeValueNonCopying(
-			CapabilityValue{
+			&CapabilityValue{
 				Address:    addressValue,
 				Path:       newCapabilityPath,
 				BorrowType: borrowStaticType(borrowType),

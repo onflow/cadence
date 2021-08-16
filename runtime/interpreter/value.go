@@ -9206,7 +9206,7 @@ func accountGetCapabilityFunction(addressValue AddressValue, pathType sema.Type)
 				borrowStaticType = ConvertSemaToStaticType(borrowType)
 			}
 
-			return CapabilityValue{
+			return &CapabilityValue{
 				Address:    addressValue,
 				Path:       path,
 				BorrowType: borrowStaticType,
@@ -9397,21 +9397,21 @@ type CapabilityValue struct {
 	pathStorable    atree.Storable
 }
 
-var _ Value = CapabilityValue{}
-var _ EquatableValue = CapabilityValue{}
+var _ Value = &CapabilityValue{}
+var _ EquatableValue = &CapabilityValue{}
 
-func (CapabilityValue) IsValue() {}
+func (*CapabilityValue) IsValue() {}
 
-func (v CapabilityValue) Accept(interpreter *Interpreter, visitor Visitor) {
+func (v *CapabilityValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	visitor.VisitCapabilityValue(interpreter, v)
 }
 
-func (v CapabilityValue) Walk(walkChild func(Value)) {
+func (v *CapabilityValue) Walk(walkChild func(Value)) {
 	walkChild(v.Address)
 	walkChild(v.Path)
 }
 
-func (v CapabilityValue) DynamicType(inter *Interpreter, _ SeenReferences) DynamicType {
+func (v *CapabilityValue) DynamicType(inter *Interpreter, _ SeenReferences) DynamicType {
 	var borrowType *sema.ReferenceType
 	if v.BorrowType != nil {
 		borrowType = inter.ConvertStaticToSemaType(v.BorrowType).(*sema.ReferenceType)
@@ -9422,17 +9422,17 @@ func (v CapabilityValue) DynamicType(inter *Interpreter, _ SeenReferences) Dynam
 	}
 }
 
-func (v CapabilityValue) StaticType() StaticType {
+func (v *CapabilityValue) StaticType() StaticType {
 	return CapabilityStaticType{
 		BorrowType: v.BorrowType,
 	}
 }
 
-func (v CapabilityValue) String() string {
+func (v *CapabilityValue) String() string {
 	return v.RecursiveString(SeenReferences{})
 }
 
-func (v CapabilityValue) RecursiveString(seenReferences SeenReferences) string {
+func (v *CapabilityValue) RecursiveString(seenReferences SeenReferences) string {
 	var borrowType string
 	if v.BorrowType != nil {
 		borrowType = v.BorrowType.String()
@@ -9444,7 +9444,7 @@ func (v CapabilityValue) RecursiveString(seenReferences SeenReferences) string {
 	)
 }
 
-func (v CapabilityValue) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
+func (v *CapabilityValue) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
 	switch name {
 	case "borrow":
 		var borrowType *sema.ReferenceType
@@ -9467,17 +9467,17 @@ func (v CapabilityValue) GetMember(interpreter *Interpreter, _ func() LocationRa
 	return nil
 }
 
-func (CapabilityValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
+func (*CapabilityValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
 	panic(errors.NewUnreachableError())
 }
 
-func (v CapabilityValue) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType, _ TypeConformanceResults) bool {
+func (v *CapabilityValue) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType, _ TypeConformanceResults) bool {
 	_, ok := dynamicType.(CapabilityDynamicType)
 	return ok
 }
 
-func (v CapabilityValue) Equal(other Value, getLocationRange func() LocationRange) bool {
-	otherCapability, ok := other.(CapabilityValue)
+func (v *CapabilityValue) Equal(other Value, getLocationRange func() LocationRange) bool {
+	otherCapability, ok := other.(*CapabilityValue)
 	if !ok {
 		return false
 	}
@@ -9496,13 +9496,11 @@ func (v CapabilityValue) Equal(other Value, getLocationRange func() LocationRang
 		otherCapability.Path.Equal(v.Path, getLocationRange)
 }
 
-func (CapabilityValue) IsStorable() bool {
+func (*CapabilityValue) IsStorable() bool {
 	return true
 }
 
-func (v CapabilityValue) Storable(storage atree.SlabStorage, address atree.Address) (atree.Storable, error) {
-	// TODO: make pointer value. pointer receiver enough?
-
+func (v *CapabilityValue) Storable(storage atree.SlabStorage, address atree.Address) (atree.Storable, error) {
 	var err error
 	v.addressStorable, err = v.Address.Storable(storage, address)
 	if err != nil {
@@ -9525,7 +9523,7 @@ func (v CapabilityValue) Storable(storage atree.SlabStorage, address atree.Addre
 	)
 }
 
-func (v CapabilityValue) DeepCopy(storage atree.SlabStorage, address atree.Address) (atree.Value, error) {
+func (v *CapabilityValue) DeepCopy(storage atree.SlabStorage, address atree.Address) (atree.Value, error) {
 	addressCopy, err := v.Address.DeepCopy(storage, address)
 	if err != nil {
 		return nil, err
@@ -9536,14 +9534,14 @@ func (v CapabilityValue) DeepCopy(storage atree.SlabStorage, address atree.Addre
 		return nil, err
 	}
 
-	return CapabilityValue{
+	return &CapabilityValue{
 		Address:    addressCopy.(AddressValue),
 		Path:       pathCopy.(PathValue),
 		BorrowType: v.BorrowType,
 	}, nil
 }
 
-func (v CapabilityValue) DeepRemove(storage atree.SlabStorage) error {
+func (v *CapabilityValue) DeepRemove(storage atree.SlabStorage) error {
 	err := v.Address.DeepRemove(storage)
 	if err != nil {
 		return err
@@ -9554,14 +9552,18 @@ func (v CapabilityValue) DeepRemove(storage atree.SlabStorage) error {
 		return err
 	}
 
-	err = v.addressStorable.DeepRemove(storage)
-	if err != nil {
-		return err
+	if v.addressStorable != nil {
+		err = v.addressStorable.DeepRemove(storage)
+		if err != nil {
+			return err
+		}
 	}
 
-	err = v.pathStorable.DeepRemove(storage)
-	if err != nil {
-		return err
+	if v.pathStorable != nil {
+		err = v.pathStorable.DeepRemove(storage)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -9598,7 +9600,7 @@ func (s CapabilityStorable) StoredValue(storage atree.SlabStorage) (atree.Value,
 		return nil, fmt.Errorf("invalid capability path: %T", address)
 	}
 
-	return CapabilityValue{
+	return &CapabilityValue{
 		Address:         addressValue,
 		Path:            pathValue,
 		BorrowType:      s.BorrowType,

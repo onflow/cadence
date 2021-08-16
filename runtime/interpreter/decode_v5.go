@@ -957,23 +957,25 @@ func (d *DecoderV5) decodePath() (PathValue, error) {
 	}, nil
 }
 
-func (d *DecoderV5) decodeCapability() (CapabilityValue, error) {
+func (d *DecoderV5) decodeCapability() (*CapabilityValue, error) {
 
 	const expectedLength = encodedCapabilityValueLength
 
 	size, err := d.decoder.DecodeArrayHead()
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
-			return CapabilityValue{}, fmt.Errorf("invalid capability encoding: expected [%d]interface{}, got %s",
+			return nil, fmt.Errorf(
+				"invalid capability encoding: expected [%d]interface{}, got %s",
 				expectedLength,
 				e.ActualType.String(),
 			)
 		}
-		return CapabilityValue{}, err
+		return nil, err
 	}
 
 	if size != expectedLength {
-		return CapabilityValue{}, fmt.Errorf("invalid capability encoding: expected [%d]interface{}, got [%d]interface{}",
+		return nil, fmt.Errorf(
+			"invalid capability encoding: expected [%d]interface{}, got [%d]interface{}",
 			expectedLength,
 			size,
 		)
@@ -985,14 +987,14 @@ func (d *DecoderV5) decodeCapability() (CapabilityValue, error) {
 	var num uint64
 	num, err = d.decoder.DecodeTagNumber()
 	if err != nil {
-		return CapabilityValue{}, fmt.Errorf("invalid capability address: %w", err)
+		return nil, fmt.Errorf("invalid capability address: %w", err)
 	}
 	if num != CBORTagAddressValue {
-		return CapabilityValue{}, fmt.Errorf("invalid capability address: wrong tag %d", num)
+		return nil, fmt.Errorf("invalid capability address: wrong tag %d", num)
 	}
 	address, err := d.decodeAddress()
 	if err != nil {
-		return CapabilityValue{}, fmt.Errorf("invalid capability address: %w", err)
+		return nil, fmt.Errorf("invalid capability address: %w", err)
 	}
 
 	// path
@@ -1000,14 +1002,14 @@ func (d *DecoderV5) decodeCapability() (CapabilityValue, error) {
 	// Decode path at array index encodedCapabilityValuePathFieldKeyV5
 	num, err = d.decoder.DecodeTagNumber()
 	if err != nil {
-		return CapabilityValue{}, fmt.Errorf("invalid capability path: %w", err)
+		return nil, fmt.Errorf("invalid capability path: %w", err)
 	}
 	if num != CBORTagPathValue {
-		return CapabilityValue{}, fmt.Errorf("invalid capability path: wrong tag %d", num)
+		return nil, fmt.Errorf("invalid capability path: wrong tag %d", num)
 	}
 	path, err := d.decodePath()
 	if err != nil {
-		return CapabilityValue{}, fmt.Errorf("invalid capability path: %w", err)
+		return nil, fmt.Errorf("invalid capability path: %w", err)
 	}
 
 	// Decode borrow type at array index encodedCapabilityValueBorrowTypeFieldKeyV5
@@ -1029,10 +1031,10 @@ func (d *DecoderV5) decodeCapability() (CapabilityValue, error) {
 	}
 
 	if err != nil {
-		return CapabilityValue{}, fmt.Errorf("invalid capability borrow type encoding: %w", err)
+		return nil, fmt.Errorf("invalid capability borrow type encoding: %w", err)
 	}
 
-	return CapabilityValue{
+	return &CapabilityValue{
 		Address:    address,
 		Path:       path,
 		BorrowType: borrowType,
