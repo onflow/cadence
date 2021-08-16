@@ -212,9 +212,9 @@ func (c TypeCodes) Merge(codes TypeCodes) {
 
 type Storage interface {
 	atree.SlabStorage
-	Exists(interpreter *Interpreter, address common.Address, key string) bool
-	Read(interpreter *Interpreter, address common.Address, key string) OptionalValue
-	Write(interpreter *Interpreter, address common.Address, key string, value OptionalValue)
+	ValueExists(interpreter *Interpreter, address common.Address, key string) bool
+	ReadValue(interpreter *Interpreter, address common.Address, key string) OptionalValue
+	WriteValue(interpreter *Interpreter, address common.Address, key string, value OptionalValue)
 }
 
 type Interpreter struct {
@@ -2250,15 +2250,15 @@ func (interpreter *Interpreter) NewSubInterpreter(
 }
 
 func (interpreter *Interpreter) storedValueExists(storageAddress common.Address, key string) bool {
-	return interpreter.Storage.Exists(interpreter, storageAddress, key)
+	return interpreter.Storage.ValueExists(interpreter, storageAddress, key)
 }
 
 func (interpreter *Interpreter) ReadStored(storageAddress common.Address, key string) OptionalValue {
-	return interpreter.Storage.Read(interpreter, storageAddress, key)
+	return interpreter.Storage.ReadValue(interpreter, storageAddress, key)
 }
 
 func (interpreter *Interpreter) writeStored(storageAddress common.Address, key string, value OptionalValue) {
-	interpreter.Storage.Write(interpreter, storageAddress, key, value)
+	interpreter.Storage.WriteValue(interpreter, storageAddress, key, value)
 }
 
 type valueConverterDeclaration struct {
@@ -2807,12 +2807,12 @@ func (interpreter *Interpreter) IsSubType(subType DynamicType, superType sema.Ty
 	return false
 }
 
-// StorageKey returns the storage identifier with the proper prefix
+// PathToStorageKey returns the storage identifier with the proper prefix
 // for the given path.
 //
 // \x1F = Information Separator One
 //
-func StorageKey(path PathValue) string {
+func PathToStorageKey(path PathValue) string {
 	return fmt.Sprintf("%s\x1F%s", path.Domain.Identifier(), path.Identifier)
 }
 
@@ -2823,7 +2823,7 @@ func (interpreter *Interpreter) authAccountSaveFunction(addressValue AddressValu
 		path := invocation.Arguments[1].(PathValue)
 
 		address := addressValue.ToAddress()
-		key := StorageKey(path)
+		key := PathToStorageKey(path)
 
 		// Prevent an overwrite
 
@@ -2874,7 +2874,7 @@ func (interpreter *Interpreter) authAccountReadFunction(addressValue AddressValu
 		address := addressValue.ToAddress()
 
 		path := invocation.Arguments[0].(PathValue)
-		key := StorageKey(path)
+		key := PathToStorageKey(path)
 
 		value := interpreter.ReadStored(address, key)
 
@@ -2931,7 +2931,7 @@ func (interpreter *Interpreter) authAccountBorrowFunction(addressValue AddressVa
 		address := addressValue.ToAddress()
 
 		path := invocation.Arguments[0].(PathValue)
-		key := StorageKey(path)
+		key := PathToStorageKey(path)
 
 		typeParameterPair := invocation.TypeParameterTypes.Oldest()
 		if typeParameterPair == nil {
@@ -2976,7 +2976,7 @@ func (interpreter *Interpreter) authAccountLinkFunction(addressValue AddressValu
 		newCapabilityPath := invocation.Arguments[0].(PathValue)
 		targetPath := invocation.Arguments[1].(PathValue)
 
-		newCapabilityKey := StorageKey(newCapabilityPath)
+		newCapabilityKey := PathToStorageKey(newCapabilityPath)
 
 		if interpreter.storedValueExists(address, newCapabilityKey) {
 			return NilValue{}
@@ -3016,7 +3016,7 @@ func (interpreter *Interpreter) accountGetLinkTargetFunction(addressValue Addres
 
 		capabilityPath := invocation.Arguments[0].(PathValue)
 
-		capabilityKey := StorageKey(capabilityPath)
+		capabilityKey := PathToStorageKey(capabilityPath)
 
 		value := interpreter.ReadStored(address, capabilityKey)
 
@@ -3045,7 +3045,7 @@ func (interpreter *Interpreter) authAccountUnlinkFunction(addressValue AddressVa
 		address := addressValue.ToAddress()
 
 		capabilityPath := invocation.Arguments[0].(PathValue)
-		capabilityKey := StorageKey(capabilityPath)
+		capabilityKey := PathToStorageKey(capabilityPath)
 
 		// Write new value
 
@@ -3186,7 +3186,7 @@ func (interpreter *Interpreter) GetCapabilityFinalTargetStorageKey(
 	authorized bool,
 	err error,
 ) {
-	key := StorageKey(path)
+	key := PathToStorageKey(path)
 
 	wantedReferenceType := wantedBorrowType
 
@@ -3224,7 +3224,7 @@ func (interpreter *Interpreter) GetCapabilityFinalTargetStorageKey(
 
 				targetPath := link.TargetPath
 				paths = append(paths, targetPath)
-				key = StorageKey(targetPath)
+				key = PathToStorageKey(targetPath)
 
 			} else {
 				return key, wantedReferenceType.Authorized, nil

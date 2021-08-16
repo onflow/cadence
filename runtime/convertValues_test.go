@@ -570,12 +570,18 @@ func exportEventFromScript(t *testing.T, script string) cadence.Event {
 func exportValueFromScript(t *testing.T, script string) cadence.Value {
 	rt := NewInterpreterRuntime()
 
+	storage := newTestStorage(nil, nil)
+
+	runtimeInterface := &testRuntimeInterface{
+		storage: storage,
+	}
+
 	value, err := rt.ExecuteScript(
 		Script{
 			Source: []byte(script),
 		},
 		Context{
-			Interface: NewEmptyRuntimeInterface(),
+			Interface: runtimeInterface,
 			Location:  utils.TestLocation,
 		},
 	)
@@ -938,7 +944,7 @@ var fooEventType = &cadence.EventType{
 	Fields:              fooFields,
 }
 
-func TestEnumValue(t *testing.T) {
+func TestRuntimeEnumValue(t *testing.T) {
 
 	t.Parallel()
 
@@ -1007,7 +1013,10 @@ func executeTestScript(t *testing.T, script string, arg cadence.Value) (cadence.
 
 	rt := NewInterpreterRuntime()
 
+	storage := newTestStorage(nil, nil)
+
 	runtimeInterface := &testRuntimeInterface{
+		storage: storage,
 		decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
 			return json.Decode(b)
 		},
@@ -1025,7 +1034,7 @@ func executeTestScript(t *testing.T, script string, arg cadence.Value) (cadence.
 	)
 }
 
-func TestArgumentPassing(t *testing.T) {
+func TestRuntimeArgumentPassing(t *testing.T) {
 
 	t.Parallel()
 
@@ -1286,7 +1295,7 @@ func TestArgumentPassing(t *testing.T) {
 	}
 }
 
-func TestComplexStructArgumentPassing(t *testing.T) {
+func TestRuntimeComplexStructArgumentPassing(t *testing.T) {
 
 	t.Parallel()
 
@@ -1431,7 +1440,7 @@ func TestComplexStructArgumentPassing(t *testing.T) {
 
 }
 
-func TestComplexStructWithAnyStructFields(t *testing.T) {
+func TestRuntimeComplexStructWithAnyStructFields(t *testing.T) {
 
 	t.Parallel()
 
@@ -1532,7 +1541,7 @@ func TestComplexStructWithAnyStructFields(t *testing.T) {
 	assert.Equal(t, complexStructValue, actual)
 }
 
-func TestMalformedArgumentPassing(t *testing.T) {
+func TestRuntimeMalformedArgumentPassing(t *testing.T) {
 
 	t.Parallel()
 
@@ -1806,7 +1815,7 @@ func TestMalformedArgumentPassing(t *testing.T) {
 	}
 }
 
-func TestImportExportArrayValue(t *testing.T) {
+func TestRuntimeImportExportArrayValue(t *testing.T) {
 
 	t.Parallel()
 
@@ -1814,10 +1823,13 @@ func TestImportExportArrayValue(t *testing.T) {
 
 		t.Parallel()
 
+		storage := interpreter.NewInMemoryStorage()
+
 		value := interpreter.NewArrayValue(
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeAnyStruct,
 			},
+			storage,
 		)
 
 		actual := exportValueWithInterpreter(value, nil, exportResults{})
@@ -1831,10 +1843,19 @@ func TestImportExportArrayValue(t *testing.T) {
 
 		t.Parallel()
 
+		storage := interpreter.NewInMemoryStorage()
+
 		value := cadence.NewArray([]cadence.Value{})
 
-		actual := importValue(
+		inter, err := interpreter.NewInterpreter(
 			nil,
+			utils.TestLocation,
+			interpreter.WithStorage(storage),
+		)
+		require.NoError(t, err)
+
+		actual := importValue(
+			inter,
 			value,
 			&sema.VariableSizedType{
 				Type: sema.UInt8Type,
@@ -1845,6 +1866,7 @@ func TestImportExportArrayValue(t *testing.T) {
 				interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeUInt8,
 				},
+				storage,
 			),
 			actual,
 		)
@@ -1854,10 +1876,13 @@ func TestImportExportArrayValue(t *testing.T) {
 
 		t.Parallel()
 
+		storage := interpreter.NewInMemoryStorage()
+
 		value := interpreter.NewArrayValue(
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeAnyStruct,
 			},
+			storage,
 			interpreter.NewIntValueFromInt64(42),
 			interpreter.NewStringValue("foo"),
 		)
@@ -1876,13 +1901,22 @@ func TestImportExportArrayValue(t *testing.T) {
 
 		t.Parallel()
 
+		storage := interpreter.NewInMemoryStorage()
+
 		value := cadence.NewArray([]cadence.Value{
 			cadence.NewInt(42),
 			cadence.NewString("foo"),
 		})
 
-		actual := importValue(
+		inter, err := interpreter.NewInterpreter(
 			nil,
+			utils.TestLocation,
+			interpreter.WithStorage(storage),
+		)
+		require.NoError(t, err)
+
+		actual := importValue(
+			inter,
 			value,
 			&sema.VariableSizedType{
 				Type: sema.AnyStructType,
@@ -1893,6 +1927,7 @@ func TestImportExportArrayValue(t *testing.T) {
 				interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeAnyStruct,
 				},
+				storage,
 				interpreter.NewIntValueFromInt64(42),
 				interpreter.NewStringValue("foo"),
 			),
@@ -1901,7 +1936,7 @@ func TestImportExportArrayValue(t *testing.T) {
 	})
 }
 
-func TestImportExportDictionaryValue(t *testing.T) {
+func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 
 	t.Parallel()
 
@@ -1909,11 +1944,14 @@ func TestImportExportDictionaryValue(t *testing.T) {
 
 		t.Parallel()
 
+		storage := interpreter.NewInMemoryStorage()
+
 		value := interpreter.NewDictionaryValue(
 			interpreter.DictionaryStaticType{
 				KeyType:   interpreter.PrimitiveStaticTypeString,
 				ValueType: interpreter.PrimitiveStaticTypeInt,
 			},
+			storage,
 		)
 
 		actual := exportValueWithInterpreter(value, nil, exportResults{})
@@ -1927,10 +1965,19 @@ func TestImportExportDictionaryValue(t *testing.T) {
 
 		t.Parallel()
 
+		storage := interpreter.NewInMemoryStorage()
+
 		value := cadence.NewDictionary([]cadence.KeyValuePair{})
 
-		actual := importValue(
+		inter, err := interpreter.NewInterpreter(
 			nil,
+			utils.TestLocation,
+			interpreter.WithStorage(storage),
+		)
+		require.NoError(t, err)
+
+		actual := importValue(
+			inter,
 			value,
 			&sema.DictionaryType{
 				KeyType:   sema.StringType,
@@ -1943,6 +1990,7 @@ func TestImportExportDictionaryValue(t *testing.T) {
 					KeyType:   interpreter.PrimitiveStaticTypeString,
 					ValueType: interpreter.PrimitiveStaticTypeUInt8,
 				},
+				storage,
 			),
 			actual,
 		)
@@ -1952,11 +2000,14 @@ func TestImportExportDictionaryValue(t *testing.T) {
 
 		t.Parallel()
 
+		storage := interpreter.NewInMemoryStorage()
+
 		value := interpreter.NewDictionaryValue(
 			interpreter.DictionaryStaticType{
 				KeyType:   interpreter.PrimitiveStaticTypeString,
 				ValueType: interpreter.PrimitiveStaticTypeInt,
 			},
+			storage,
 			interpreter.NewStringValue("a"), interpreter.NewIntValueFromInt64(1),
 			interpreter.NewStringValue("b"), interpreter.NewIntValueFromInt64(2),
 		)
@@ -1981,6 +2032,8 @@ func TestImportExportDictionaryValue(t *testing.T) {
 
 		t.Parallel()
 
+		storage := interpreter.NewInMemoryStorage()
+
 		value := cadence.NewDictionary([]cadence.KeyValuePair{
 			{
 				Key:   cadence.NewString("a"),
@@ -1992,8 +2045,15 @@ func TestImportExportDictionaryValue(t *testing.T) {
 			},
 		})
 
-		actual := importValue(
+		inter, err := interpreter.NewInterpreter(
 			nil,
+			utils.TestLocation,
+			interpreter.WithStorage(storage),
+		)
+		require.NoError(t, err)
+
+		actual := importValue(
+			inter,
 			value,
 			&sema.DictionaryType{
 				KeyType:   sema.StringType,
@@ -2006,6 +2066,7 @@ func TestImportExportDictionaryValue(t *testing.T) {
 					KeyType:   interpreter.PrimitiveStaticTypeString,
 					ValueType: interpreter.PrimitiveStaticTypeInt,
 				},
+				storage,
 				interpreter.NewStringValue("a"), interpreter.NewIntValueFromInt64(1),
 				interpreter.NewStringValue("b"), interpreter.NewIntValueFromInt64(2),
 			),
@@ -2014,7 +2075,7 @@ func TestImportExportDictionaryValue(t *testing.T) {
 	})
 }
 
-func TestStringValueImport(t *testing.T) {
+func TestRuntimeStringValueImport(t *testing.T) {
 
 	t.Parallel()
 
@@ -2068,7 +2129,7 @@ func TestStringValueImport(t *testing.T) {
 	})
 }
 
-func TestPublicKeyImport(t *testing.T) {
+func TestRuntimePublicKeyImport(t *testing.T) {
 
 	t.Parallel()
 
@@ -2136,7 +2197,10 @@ func TestPublicKeyImport(t *testing.T) {
 
 					publicKeyValidated := false
 
+					storage := newTestStorage(nil, nil)
+
 					runtimeInterface := &testRuntimeInterface{
+						storage: storage,
 						decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
 							return json.Decode(b)
 						},
@@ -2197,11 +2261,13 @@ func TestPublicKeyImport(t *testing.T) {
 
 		verifyInvoked := false
 
+		storage := newTestStorage(nil, nil)
+
 		runtimeInterface := &testRuntimeInterface{
+			storage: storage,
 			decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
 				return json.Decode(b)
 			},
-
 			verifySignature: func(
 				signature []byte,
 				tag string,
@@ -2221,12 +2287,6 @@ func TestPublicKeyImport(t *testing.T) {
 		assert.True(t, verifyInvoked)
 		assert.Equal(t, actual, cadence.NewBool(true))
 	})
-
-	runtimeInterface := &testRuntimeInterface{
-		decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
-			return json.Decode(b)
-		},
-	}
 
 	t.Run("Invalid raw public key", func(t *testing.T) {
 		script := `
@@ -2265,6 +2325,15 @@ func TestPublicKeyImport(t *testing.T) {
 			)
 		}()
 
+		storage := newTestStorage(nil, nil)
+
+		runtimeInterface := &testRuntimeInterface{
+			storage: storage,
+			decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+				return json.Decode(b)
+			},
+		}
+
 		_, err := executeScript(t, script, publicKey, runtimeInterface)
 		require.Error(t, err)
 	})
@@ -2292,6 +2361,15 @@ func TestPublicKeyImport(t *testing.T) {
 				cadence.NewBool(true),
 			},
 		).WithType(PublicKeyType)
+
+		storage := newTestStorage(nil, nil)
+
+		runtimeInterface := &testRuntimeInterface{
+			storage: storage,
+			decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+				return json.Decode(b)
+			},
+		}
 
 		_, err := executeScript(t, script, publicKey, runtimeInterface)
 		require.Error(t, err)
@@ -2341,6 +2419,15 @@ func TestPublicKeyImport(t *testing.T) {
 			)
 		}()
 
+		storage := newTestStorage(nil, nil)
+
+		runtimeInterface := &testRuntimeInterface{
+			storage: storage,
+			decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+				return json.Decode(b)
+			},
+		}
+
 		_, err := executeScript(t, script, publicKey, runtimeInterface)
 		require.Error(t, err)
 	})
@@ -2365,6 +2452,15 @@ func TestPublicKeyImport(t *testing.T) {
 				cadence.NewBool(true),
 			},
 		).WithType(PublicKeyType)
+
+		storage := newTestStorage(nil, nil)
+
+		runtimeInterface := &testRuntimeInterface{
+			storage: storage,
+			decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+				return json.Decode(b)
+			},
+		}
 
 		_, err := executeScript(t, script, publicKey, runtimeInterface)
 		require.Error(t, err)
@@ -2464,6 +2560,15 @@ func TestPublicKeyImport(t *testing.T) {
 			)
 		}()
 
+		storage := newTestStorage(nil, nil)
+
+		runtimeInterface := &testRuntimeInterface{
+			storage: storage,
+			decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+				return json.Decode(b)
+			},
+		}
+
 		_, err := rt.ExecuteScript(
 			Script{
 				Source: []byte(script),
@@ -2540,6 +2645,15 @@ func TestPublicKeyImport(t *testing.T) {
 			)
 		}()
 
+		storage := newTestStorage(nil, nil)
+
+		runtimeInterface := &testRuntimeInterface{
+			storage: storage,
+			decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+				return json.Decode(b)
+			},
+		}
+
 		value, err := rt.ExecuteScript(
 			Script{
 				Source: []byte(script),
@@ -2613,11 +2727,13 @@ func TestPublicKeyImport(t *testing.T) {
 
 		publicKeyValidated := false
 
+		storage := newTestStorage(nil, nil)
+
 		runtimeInterface := &testRuntimeInterface{
+			storage: storage,
 			decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
 				return json.Decode(b)
 			},
-
 			validatePublicKey: func(publicKey *PublicKey) (bool, error) {
 				publicKeyValidated = true
 				return true, nil
@@ -2643,9 +2759,11 @@ func TestPublicKeyImport(t *testing.T) {
 	})
 }
 
-func TestImportExportComplex(t *testing.T) {
+func TestRuntimeImportExportComplex(t *testing.T) {
 
 	t.Parallel()
+
+	storage := interpreter.NewInMemoryStorage()
 
 	// Array
 
@@ -2663,6 +2781,7 @@ func TestImportExportComplex(t *testing.T) {
 
 	internalArrayValue := interpreter.NewArrayValue(
 		staticArrayType,
+		storage,
 		interpreter.NewIntValueFromInt64(42),
 		interpreter.NewStringValue("foo"),
 	)
@@ -2691,6 +2810,7 @@ func TestImportExportComplex(t *testing.T) {
 
 	internalDictionaryValue := interpreter.NewDictionaryValue(
 		staticDictionaryType,
+		storage,
 		interpreter.NewStringValue("a"), internalArrayValue,
 	)
 
@@ -2736,11 +2856,12 @@ func TestImportExportComplex(t *testing.T) {
 	internalCompositeValueFields.Set("dictionary", internalDictionaryValue)
 
 	internalCompositeValue := interpreter.NewCompositeValue(
+		storage,
 		utils.TestLocation,
 		"Foo",
 		common.CompositeKindStructure,
 		internalCompositeValueFields,
-		nil,
+		common.Address{},
 	)
 
 	externalCompositeValue := cadence.Struct{
@@ -2807,7 +2928,8 @@ func TestImportExportComplex(t *testing.T) {
 	})
 }
 
-func TestStaticTypeAvailability(t *testing.T) {
+func TestRuntimeStaticTypeAvailability(t *testing.T) {
+
 	t.Parallel()
 
 	t.Run("inner array", func(t *testing.T) {

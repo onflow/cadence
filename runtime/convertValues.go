@@ -170,12 +170,14 @@ func exportSomeValue(v *interpreter.SomeValue, inter *interpreter.Interpreter, r
 }
 
 func exportArrayValue(v *interpreter.ArrayValue, inter *interpreter.Interpreter, results exportResults) cadence.Array {
-	elements := v.Elements()
-	values := make([]cadence.Value, len(elements))
+	values := make([]cadence.Value, 0, v.Count())
 
-	for i, value := range elements {
-		values[i] = exportValueWithInterpreter(value, inter, results)
-	}
+	v.Walk(func(value interpreter.Value) {
+		values = append(
+			values,
+			exportValueWithInterpreter(value, inter, results),
+		)
+	})
 
 	return cadence.NewArray(values)
 }
@@ -247,9 +249,9 @@ func exportDictionaryValue(
 	results exportResults,
 ) cadence.Dictionary {
 
-	pairs := make([]cadence.KeyValuePair, v.Count())
+	pairs := make([]cadence.KeyValuePair, 0, v.Count())
 
-	for i, keyValue := range v.Keys().Elements() {
+	v.Keys.Walk(func(keyValue interpreter.Value) {
 
 		// NOTE: use `Get` instead of accessing `Entries`,
 		// so that the potentially deferred values are loaded from storage
@@ -259,11 +261,14 @@ func exportDictionaryValue(
 		convertedKey := exportValueWithInterpreter(keyValue, inter, results)
 		convertedValue := exportValueWithInterpreter(value, inter, results)
 
-		pairs[i] = cadence.KeyValuePair{
-			Key:   convertedKey,
-			Value: convertedValue,
-		}
-	}
+		pairs = append(
+			pairs,
+			cadence.KeyValuePair{
+				Key:   convertedKey,
+				Value: convertedValue,
+			},
+		)
+	})
 
 	return cadence.NewDictionary(pairs)
 }
@@ -317,7 +322,7 @@ func importValue(inter *interpreter.Interpreter, value cadence.Value, expectedTy
 	case cadence.String:
 		return interpreter.NewStringValue(string(v))
 	case cadence.Bytes:
-		return interpreter.ByteSliceToByteArrayValue(v)
+		return interpreter.ByteSliceToByteArrayValue(inter.Storage, v)
 	case cadence.Address:
 		return interpreter.NewAddressValueFromBytes(v.Bytes())
 	case cadence.Int:
@@ -451,7 +456,11 @@ func importArrayValue(inter *interpreter.Interpreter, v cadence.Array, expectedT
 		staticArrayType = interpreter.ConvertSemaArrayTypeToStaticArrayType(arrayType)
 	}
 
-	return interpreter.NewArrayValue(staticArrayType, values...)
+	return interpreter.NewArrayValue(
+		staticArrayType,
+		inter.Storage,
+		values...,
+	)
 }
 
 func importDictionaryValue(
@@ -482,6 +491,7 @@ func importDictionaryValue(
 
 	return interpreter.NewDictionaryValue(
 		dictionaryStaticType,
+		inter.Storage,
 		keysAndValues...,
 	)
 }
@@ -541,11 +551,12 @@ func importCompositeValue(
 	}
 
 	return interpreter.NewCompositeValue(
+		inter.Storage,
 		location,
 		qualifiedIdentifier,
 		kind,
 		fields,
-		nil,
+		common.Address{},
 	)
 }
 

@@ -4230,7 +4230,7 @@ func TestInterpretReferenceFailableDowncasting(t *testing.T) {
 		r, err := inter.Invoke("createR")
 		require.NoError(t, err)
 
-		storage.Write(
+		storage.WriteValue(
 			nil,
 			storageAddress,
 			storageKey,

@@ -73,53 +73,14 @@ func convertStoredValue(value atree.Value) (Value, error) {
 	}
 }
 
-type InMemoryStorageKey struct {
+type StorageKey struct {
 	Address common.Address
 	Key     string
 }
 
 type InMemoryStorage struct {
 	*atree.BasicSlabStorage
-	Data map[InMemoryStorageKey]atree.Storable
-}
-
-func (i InMemoryStorage) Exists(_ *Interpreter, address common.Address, key string) bool {
-	_, ok := i.Data[InMemoryStorageKey{Address: address, Key: key}]
-	return ok
-}
-
-func (i InMemoryStorage) Read(_ *Interpreter, address common.Address, key string) OptionalValue {
-	storable, ok := i.Data[InMemoryStorageKey{Address: address, Key: key}]
-	if !ok {
-		return NilValue{}
-	}
-
-	value, err := StoredValue(storable, i.BasicSlabStorage)
-	if err != nil {
-		panic(ExternalError{err})
-	}
-
-	return NewSomeValueNonCopying(MustConvertStoredValue(value))
-}
-
-func (i InMemoryStorage) Write(_ *Interpreter, address common.Address, key string, value OptionalValue) {
-	storageKey := InMemoryStorageKey{
-		Address: address,
-		Key:     key,
-	}
-
-	switch value := value.(type) {
-	case *SomeValue:
-		// TODO: deep copy + deep remove on new, deep remove on old
-		storable, err := value.Value.(atree.Value).Storable(i, atree.Address(address))
-		if err != nil {
-			panic(ExternalError{err})
-		}
-		i.Data[storageKey] = storable
-
-	case NilValue:
-		delete(i.Data, storageKey)
-	}
+	AccountValues map[StorageKey]Value
 }
 
 var _ Storage = InMemoryStorage{}
@@ -130,7 +91,45 @@ func NewInMemoryStorage() InMemoryStorage {
 
 	return InMemoryStorage{
 		BasicSlabStorage: slabStorage,
-		Data:             make(map[InMemoryStorageKey]atree.Storable),
+		AccountValues:    make(map[StorageKey]Value),
+	}
+}
+
+func (i InMemoryStorage) ValueExists(_ *Interpreter, address common.Address, key string) bool {
+	storageKey := StorageKey{
+		Address: address,
+		Key:     key,
+	}
+	_, ok := i.AccountValues[storageKey]
+	return ok
+}
+
+func (i InMemoryStorage) ReadValue(_ *Interpreter, address common.Address, key string) OptionalValue {
+	storageKey := StorageKey{
+		Address: address,
+		Key:     key,
+	}
+
+	value, ok := i.AccountValues[storageKey]
+	if !ok {
+		return NilValue{}
+	}
+
+	return NewSomeValueNonCopying(MustConvertStoredValue(value))
+}
+
+func (i InMemoryStorage) WriteValue(_ *Interpreter, address common.Address, key string, value OptionalValue) {
+	storageKey := StorageKey{
+		Address: address,
+		Key:     key,
+	}
+
+	switch value := value.(type) {
+	case *SomeValue:
+		i.AccountValues[storageKey] = value.Value
+
+	case NilValue:
+		delete(i.AccountValues, storageKey)
 	}
 }
 

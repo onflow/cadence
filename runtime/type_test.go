@@ -92,7 +92,7 @@ func TestRuntimeTypeStorage(t *testing.T) {
 	assert.Equal(t, `"Int"`, loggedMessage)
 }
 
-func TestBlockTimestamp(t *testing.T) {
+func TestRuntimeBlockTimestamp(t *testing.T) {
 
 	t.Parallel()
 
@@ -119,7 +119,10 @@ func TestBlockTimestamp(t *testing.T) {
 
 		var loggedMessage string
 
+		storage := newTestStorage(nil, nil)
+
 		runtimeInterface := &testRuntimeInterface{
+			storage: storage,
 			getSigningAccounts: func() ([]Address, error) {
 				return nil, nil
 			},
@@ -163,12 +166,18 @@ func TestBlockTimestamp(t *testing.T) {
 			}
         `)
 
+		storage := newTestStorage(nil, nil)
+
+		runtimeInterface := &testRuntimeInterface{
+			storage: storage,
+		}
+
 		value, err := runtime.ExecuteScript(
 			Script{
 				Source: script,
 			},
 			Context{
-				Interface: &testRuntimeInterface{},
+				Interface: runtimeInterface,
 				Location:  common.ScriptLocation{},
 			},
 		)
