@@ -493,7 +493,7 @@ func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
 	})
 }
 
-func TestTransactionParameterTypeValidation(t *testing.T) {
+func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
 
 	t.Parallel()
 

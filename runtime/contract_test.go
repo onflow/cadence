@@ -64,8 +64,8 @@ func TestRuntimeContract(t *testing.T) {
 		addTx := []byte(
 			fmt.Sprintf(
 				`
-	              transaction {
-	                  prepare(signer: AuthAccount) {
+                  transaction {
+                      prepare(signer: AuthAccount) {
                           let contract1 = signer.contracts.add(name: %[1]q, code: "%[2]s".decodeHex())
                           log(contract1.name)
                           log(contract1.code)
@@ -76,9 +76,9 @@ func TestRuntimeContract(t *testing.T) {
 
                           let contract3 = signer.contracts.get(name: "Unknown")
                           log(contract3)
-	                  }
-	               }
-	            `,
+                      }
+                   }
+                `,
 				tc.name,
 				hex.EncodeToString([]byte(tc.code)),
 			),
@@ -87,23 +87,23 @@ func TestRuntimeContract(t *testing.T) {
 		updateTx := []byte(
 			fmt.Sprintf(
 				`
-		         transaction {
-		             prepare(signer: AuthAccount) {
+                 transaction {
+                     prepare(signer: AuthAccount) {
 
                          let contract1 = signer.contracts.get(name: %[1]q)
                          log(contract1?.name)
                          log(contract1?.code)
 
-		                 let contract2 = signer.contracts.update__experimental(name: %[1]q, code: "%[2]s".decodeHex())
-		                 log(contract2.name)
-		                 log(contract2.code)
+                         let contract2 = signer.contracts.update__experimental(name: %[1]q, code: "%[2]s".decodeHex())
+                         log(contract2.name)
+                         log(contract2.code)
 
-		                 let contract3 = signer.contracts.get(name: %[1]q)
-		                 log(contract3?.name)
-		                 log(contract3?.code)
-		             }
-		          }
-		       `,
+                         let contract3 = signer.contracts.get(name: %[1]q)
+                         log(contract3?.name)
+                         log(contract3?.code)
+                     }
+                  }
+               `,
 				tc.name,
 				hex.EncodeToString([]byte(tc.code2)),
 			),
@@ -112,8 +112,8 @@ func TestRuntimeContract(t *testing.T) {
 		removeTx := []byte(
 			fmt.Sprintf(
 				`
-	              transaction {
-	                  prepare(signer: AuthAccount) {
+                  transaction {
+                      prepare(signer: AuthAccount) {
                           let contract1 = signer.contracts.get(name: %[1]q)
                           log(contract1?.name)
                           log(contract1?.code)
@@ -124,9 +124,9 @@ func TestRuntimeContract(t *testing.T) {
 
                           let contract3 = signer.contracts.get(name: %[1]q)
                           log(contract3)
-	                  }
-	               }
-	            `,
+                      }
+                   }
+                `,
 				tc.name,
 			),
 		)
@@ -473,26 +473,26 @@ func TestRuntimeImportMultipleContracts(t *testing.T) {
     `
 
 	contractC := `
-	  import A, B from 0x1
+      import A, B from 0x1
 
-	  pub contract C {
+      pub contract C {
 
-	      pub fun c(): Int {
-	          return A.a() + B.b()
-	      }
-	  }
-	`
+          pub fun c(): Int {
+              return A.a() + B.b()
+          }
+      }
+    `
 
 	addTx := func(name, code string) []byte {
 		return []byte(
 			fmt.Sprintf(
 				`
-	              transaction {
-	                  prepare(signer: AuthAccount) {
+                  transaction {
+                      prepare(signer: AuthAccount) {
                           signer.contracts.add(name: %[1]q, code: "%[2]s".decodeHex())
-	                  }
-	               }
-	            `,
+                      }
+                   }
+                `,
 				name,
 				hex.EncodeToString([]byte(code)),
 			),
@@ -608,14 +608,14 @@ func TestRuntimeImportMultipleContracts(t *testing.T) {
 
 	t.Run("use B", func(t *testing.T) {
 		tx := []byte(`
-	     import B from 0x1
+         import B from 0x1
 
-	     transaction {
-	         prepare(signer: AuthAccount) {
-	             log(B.b())
-	         }
-	     }
-	   `)
+         transaction {
+             prepare(signer: AuthAccount) {
+                 log(B.b())
+             }
+         }
+       `)
 
 		loggedMessages = nil
 
@@ -633,14 +633,14 @@ func TestRuntimeImportMultipleContracts(t *testing.T) {
 
 	t.Run("use C", func(t *testing.T) {
 		tx := []byte(`
-	      import C from 0x1
+          import C from 0x1
 
-	      transaction {
-	          prepare(signer: AuthAccount) {
-	              log(C.c())
-	          }
-	      }
-	    `)
+          transaction {
+              prepare(signer: AuthAccount) {
+                  log(C.c())
+              }
+          }
+        `)
 
 		loggedMessages = nil
 
