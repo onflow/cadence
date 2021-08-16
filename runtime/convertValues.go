@@ -139,7 +139,7 @@ func exportValueWithInterpreter(
 			return exportPathValue(v)
 		case interpreter.TypeValue:
 			return exportTypeValue(v, inter)
-		case interpreter.CapabilityValue:
+		case *interpreter.CapabilityValue:
 			return exportCapabilityValue(v, inter)
 		case *interpreter.EphemeralReferenceValue:
 			return exportValueWithInterpreter(v.Value, inter, results)
@@ -297,7 +297,7 @@ func exportTypeValue(v interpreter.TypeValue, inter *interpreter.Interpreter) ca
 	}
 }
 
-func exportCapabilityValue(v interpreter.CapabilityValue, inter *interpreter.Interpreter) cadence.Capability {
+func exportCapabilityValue(v *interpreter.CapabilityValue, inter *interpreter.Interpreter) cadence.Capability {
 	var borrowType string
 	if v.BorrowType != nil {
 		borrowType = string(inter.ConvertStaticToSemaType(v.BorrowType).ID())

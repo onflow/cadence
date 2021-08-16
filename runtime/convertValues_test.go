@@ -706,7 +706,7 @@ func TestExportCapabilityValue(t *testing.T) {
 
 	t.Run("Int", func(t *testing.T) {
 
-		capability := interpreter.CapabilityValue{
+		capability := &interpreter.CapabilityValue{
 			Address: interpreter.AddressValue{0x1},
 			Path: interpreter.PathValue{
 				Domain:     common.PathDomainStorage,
@@ -748,7 +748,7 @@ func TestExportCapabilityValue(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		capability := interpreter.CapabilityValue{
+		capability := &interpreter.CapabilityValue{
 			Address: interpreter.AddressValue{0x1},
 			Path: interpreter.PathValue{
 				Domain:     common.PathDomainStorage,
@@ -774,7 +774,7 @@ func TestExportCapabilityValue(t *testing.T) {
 
 	t.Run("no borrow type", func(t *testing.T) {
 
-		capability := interpreter.CapabilityValue{
+		capability := &interpreter.CapabilityValue{
 			Address: interpreter.AddressValue{0x1},
 			Path: interpreter.PathValue{
 				Domain:     common.PathDomainStorage,

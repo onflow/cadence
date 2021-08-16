@@ -3399,7 +3399,7 @@ func TestInterpretDynamicCastingCapability(t *testing.T) {
 		sema.AnyStructType,
 	}
 
-	capabilityValue := interpreter.CapabilityValue{
+	capabilityValue := &interpreter.CapabilityValue{
 		Address: interpreter.AddressValue{},
 		Path:    interpreter.PathValue{},
 		BorrowType: interpreter.ConvertSemaToStaticType(

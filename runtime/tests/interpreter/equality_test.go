@@ -38,7 +38,7 @@ func TestInterpretEquality(t *testing.T) {
 
 		t.Parallel()
 
-		capabilityValue := interpreter.CapabilityValue{
+		capabilityValue := &interpreter.CapabilityValue{
 			Address: interpreter.NewAddressValue(common.BytesToAddress([]byte{0x1})),
 			Path: interpreter.PathValue{
 				Domain:     common.PathDomainStorage,
