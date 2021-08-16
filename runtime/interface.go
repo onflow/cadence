@@ -21,6 +21,7 @@ package runtime
 import (
 	"time"
 
+	"github.com/fxamacker/atree"
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
@@ -50,6 +51,10 @@ type Interface interface {
 	GetValue(owner, key []byte) (value []byte, err error)
 	// SetValue sets a value for the given key in the storage, owned by the given account.
 	SetValue(owner, key, value []byte) (err error)
+	// ValueExists returns true if the given key exists in the storage, owned by the given account.
+	ValueExists(owner, key []byte) (exists bool, err error)
+	// AllocateStorageIndex Allocates a new storage index under the given account.
+	AllocateStorageIndex(owner []byte) atree.StorageIndex
 	// CreateAccount creates a new account.
 	CreateAccount(payer Address) (address Address, err error)
 	// AddEncodedAccountKey appends an encoded key to an account.
@@ -60,7 +65,7 @@ type Interface interface {
 	AddAccountKey(address Address, publicKey *PublicKey, hashAlgo HashAlgorithm, weight int) (*AccountKey, error)
 	// GetAccountKey retrieves a key from an account by index.
 	GetAccountKey(address Address, index int) (*AccountKey, error)
-	// RemoveAccountKey removes a key from an account by index.
+	// RevokeAccountKey removes a key from an account by index.
 	RevokeAccountKey(address Address, index int) (*AccountKey, error)
 	// UpdateAccountContractCode updates the code associated with an account contract.
 	UpdateAccountContractCode(address Address, name string, code []byte) (err error)
@@ -74,8 +79,6 @@ type Interface interface {
 	ProgramLog(string) error
 	// EmitEvent is called when an event is emitted by the runtime.
 	EmitEvent(cadence.Event) error
-	// ValueExists returns true if the given key exists in the storage, owned by the given account.
-	ValueExists(owner, key []byte) (exists bool, err error)
 	// GenerateUUID is called to generate a UUID.
 	GenerateUUID() (uint64, error)
 	// GetComputationLimit returns the computation limit. A value <= 0 means there is no limit
@@ -165,6 +168,10 @@ func (i *emptyRuntimeInterface) GetCode(_ Location) ([]byte, error) {
 
 func (i *emptyRuntimeInterface) ValueExists(_, _ []byte) (exists bool, err error) {
 	return false, nil
+}
+
+func (i *emptyRuntimeInterface) AllocateStorageIndex(_ []byte) atree.StorageIndex {
+	return atree.StorageIndex{}
 }
 
 func (i *emptyRuntimeInterface) GetValue(_, _ []byte) (value []byte, err error) {

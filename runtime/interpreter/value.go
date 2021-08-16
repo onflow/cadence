@@ -6829,6 +6829,10 @@ func NewCompositeValue(
 }
 
 func (v *CompositeValue) store(storage atree.SlabStorage) {
+	if !v.IsStorable() {
+		return
+	}
+
 	storable, err := v.ExternalStorable(storage)
 	if err != nil {
 		panic(ExternalError{err})
@@ -7230,6 +7234,10 @@ func (v *CompositeValue) IsStorable() bool {
 }
 
 func (v *CompositeValue) Storable(_ atree.SlabStorage, _ atree.Address) (atree.Storable, error) {
+	if !v.IsStorable() {
+		return atree.NonStorable{Value: v}, nil
+	}
+
 	return atree.StorageIDStorable(v.StorageID), nil
 }
 
@@ -8413,7 +8421,6 @@ func (v *SomeValue) IsStorable() bool {
 }
 
 func (v *SomeValue) Storable(storage atree.SlabStorage, address atree.Address) (atree.Storable, error) {
-	// TODO: do we need this also for other containers (arrays, composites, dictionaries)?
 	if !v.IsStorable() {
 		return atree.NonStorable{Value: v}, nil
 	}

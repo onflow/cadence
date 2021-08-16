@@ -841,6 +841,7 @@ const (
 	encodedAddressLocationLength = 2
 )
 
+// TODO: add support for nil location
 func EncodeLocation(e *atree.Encoder, l common.Location) error {
 	switch l := l.(type) {
 

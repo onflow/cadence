@@ -399,7 +399,7 @@ func TestInterpretGetType(t *testing.T) {
 	storageAddress := common.BytesToAddress([]byte{0x42})
 	const storageKey = "test storage key"
 
-	storage.Write(
+	storage.WriteValue(
 		nil,
 		storageAddress,
 		storageKey,

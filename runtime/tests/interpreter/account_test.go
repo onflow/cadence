@@ -22,7 +22,6 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/fxamacker/atree"
 	. "github.com/onflow/cadence/runtime/tests/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -42,7 +41,7 @@ func testAccount(
 	code string,
 ) (
 	*interpreter.Interpreter,
-	map[interpreter.InMemoryStorageKey]atree.Storable,
+	map[interpreter.StorageKey]interpreter.Value,
 ) {
 
 	var valueDeclarations stdlib.StandardLibraryValues
@@ -124,7 +123,7 @@ func testAccount(
 	)
 	require.NoError(t, err)
 
-	return inter, inter.Storage.(interpreter.InMemoryStorage).Data
+	return inter, inter.Storage.(interpreter.InMemoryStorage).AccountValues
 }
 
 func returnZeroUInt64() interpreter.UInt64Value {
@@ -145,7 +144,7 @@ func TestInterpretAuthAccount_save(t *testing.T) {
 
 		address := interpreter.NewAddressValueFromBytes([]byte{42})
 
-		inter, storedStorables := testAccount(
+		inter, storedValues := testAccount(
 			t,
 			address,
 			true,
@@ -166,12 +165,8 @@ func TestInterpretAuthAccount_save(t *testing.T) {
 			_, err := inter.Invoke("test")
 			require.NoError(t, err)
 
-			require.Len(t, storedStorables, 1)
-			for _, storable := range storedStorables {
-
-				value, err := interpreter.StoredValue(storable, inter.Storage)
-				require.NoError(t, err)
-
+			require.Len(t, storedValues, 1)
+			for _, value := range storedValues {
 				assert.IsType(t, &interpreter.CompositeValue{}, value)
 			}
 
@@ -195,7 +190,7 @@ func TestInterpretAuthAccount_save(t *testing.T) {
 
 		address := interpreter.NewAddressValueFromBytes([]byte{42})
 
-		inter, storedStorables := testAccount(
+		inter, storedValues := testAccount(
 			t,
 			address,
 			true,
@@ -216,11 +211,8 @@ func TestInterpretAuthAccount_save(t *testing.T) {
 			_, err := inter.Invoke("test")
 			require.NoError(t, err)
 
-			require.Len(t, storedStorables, 1)
-			for _, storable := range storedStorables {
-
-				value, err := interpreter.StoredValue(storable, inter.Storage)
-				require.NoError(t, err)
+			require.Len(t, storedValues, 1)
+			for _, value := range storedValues {
 
 				assert.IsType(t, &interpreter.CompositeValue{}, value)
 			}
@@ -250,7 +242,7 @@ func TestInterpretAuthAccount_load(t *testing.T) {
 
 		address := interpreter.NewAddressValueFromBytes([]byte{42})
 
-		inter, storedStorables := testAccount(
+		inter, storedValues := testAccount(
 			t,
 			address,
 			true,
@@ -281,7 +273,7 @@ func TestInterpretAuthAccount_load(t *testing.T) {
 			_, err := inter.Invoke("save")
 			require.NoError(t, err)
 
-			require.Len(t, storedStorables, 1)
+			require.Len(t, storedValues, 1)
 
 			// first load
 
@@ -295,7 +287,7 @@ func TestInterpretAuthAccount_load(t *testing.T) {
 			assert.IsType(t, &interpreter.CompositeValue{}, innerValue)
 
 			// NOTE: check loaded value was removed from storage
-			require.Len(t, storedStorables, 0)
+			require.Len(t, storedValues, 0)
 
 			// second load
 
@@ -312,7 +304,7 @@ func TestInterpretAuthAccount_load(t *testing.T) {
 			_, err := inter.Invoke("save")
 			require.NoError(t, err)
 
-			require.Len(t, storedStorables, 1)
+			require.Len(t, storedValues, 1)
 
 			// load
 
@@ -322,7 +314,7 @@ func TestInterpretAuthAccount_load(t *testing.T) {
 			require.IsType(t, interpreter.NilValue{}, value)
 
 			// NOTE: check loaded value was *not* removed from storage
-			require.Len(t, storedStorables, 1)
+			require.Len(t, storedValues, 1)
 		})
 	})
 

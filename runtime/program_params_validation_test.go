@@ -30,7 +30,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestScriptParameterTypeValidation(t *testing.T) {
+func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
 
 	t.Parallel()
 

@@ -172,16 +172,18 @@ func exportArrayValue(
 	cadence.Array,
 	error,
 ) {
-	elements := v.Elements()
-	values := make([]cadence.Value, len(elements))
+	values := make([]cadence.Value, 0, v.Count())
 
-	for i, value := range elements {
+	v.Walk(func(value interpreter.Value) {
 		exportedValue, err := exportValueWithInterpreter(value, inter, seenReferences)
 		if err != nil {
 			return cadence.Array{}, err
 		}
-		values[i] = exportedValue
-	}
+		values = append(
+			values,
+			exportedValue,
+		)
+	})
 
 	return cadence.NewArray(values), nil
 }
@@ -264,9 +266,9 @@ func exportDictionaryValue(
 	cadence.Dictionary,
 	error,
 ) {
-	pairs := make([]cadence.KeyValuePair, v.Count())
+	pairs := make([]cadence.KeyValuePair, 0, v.Count())
 
-	for i, keyValue := range v.Keys().Elements() {
+	v.Keys.Walk(func(keyValue interpreter.Value) {
 
 		// NOTE: use `Get` instead of accessing `Entries`,
 		// so that the potentially deferred values are loaded from storage
@@ -282,11 +284,14 @@ func exportDictionaryValue(
 			return cadence.Dictionary{}, err
 		}
 
-		pairs[i] = cadence.KeyValuePair{
-			Key:   convertedKey,
-			Value: convertedValue,
-		}
-	}
+		pairs = append(
+			pairs,
+			cadence.KeyValuePair{
+				Key:   convertedKey,
+				Value: convertedValue,
+			},
+		)
+	})
 
 	return cadence.NewDictionary(pairs), nil
 }
@@ -356,7 +361,7 @@ func importValue(inter *interpreter.Interpreter, value cadence.Value, expectedTy
 	case cadence.String:
 		return interpreter.NewStringValue(string(v)), nil
 	case cadence.Bytes:
-		return interpreter.ByteSliceToByteArrayValue(v), nil
+		return interpreter.ByteSliceToByteArrayValue(inter.Storage, v), nil
 	case cadence.Address:
 		return interpreter.NewAddressValue(common.Address(v)), nil
 	case cadence.Int:
@@ -515,7 +520,11 @@ func importArrayValue(
 		}
 	}
 
-	return interpreter.NewArrayValue(staticArrayType, values...), nil
+	return interpreter.NewArrayValue(
+		staticArrayType,
+		inter.Storage,
+		values...,
+	), nil
 }
 
 func importDictionaryValue(
@@ -609,6 +618,7 @@ func importDictionaryValue(
 	return interpreter.NewDictionaryValue(
 		inter,
 		dictionaryStaticType,
+		inter.Storage,
 		keysAndValues...,
 	), nil
 }
@@ -677,11 +687,12 @@ func importCompositeValue(
 	}
 
 	return interpreter.NewCompositeValue(
+		inter.Storage,
 		location,
 		qualifiedIdentifier,
 		kind,
 		fields,
-		nil,
+		common.Address{},
 	), nil
 }
 
