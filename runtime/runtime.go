@@ -236,7 +236,7 @@ func (r *interpreterRuntime) ExecuteScript(script Script, context Context) (cade
 		context.Interface,
 	)
 
-	value, inter, err := r.interpret(
+	value, _, err := r.interpret(
 		program,
 		context,
 		runtimeStorage,
@@ -255,7 +255,7 @@ func (r *interpreterRuntime) ExecuteScript(script Script, context Context) (cade
 	// Even though this function is `ExecuteScript`, that doesn't imply the changes
 	// to storage will be actually persisted
 
-	err = runtimeStorage.commit(inter)
+	err = runtimeStorage.commit()
 	if err != nil {
 		return nil, newError(err, context)
 	}
@@ -463,7 +463,7 @@ func (r *interpreterRuntime) InvokeContractFunction(
 	}
 
 	// Write back all stored values, which were actually just cached, back into storage
-	err = runtimeStorage.commit(inter)
+	err = runtimeStorage.commit()
 	if err != nil {
 		return nil, newError(err, context)
 	}
@@ -578,7 +578,7 @@ func (r *interpreterRuntime) ExecuteTransaction(script Script, context Context) 
 		)
 	}
 
-	_, inter, err := r.interpret(
+	_, _, err = r.interpret(
 		program,
 		context,
 		runtimeStorage,
@@ -598,7 +598,7 @@ func (r *interpreterRuntime) ExecuteTransaction(script Script, context Context) 
 	}
 
 	// Write back all stored values, which were actually just cached, back into storage
-	err = runtimeStorage.commit(inter)
+	err = runtimeStorage.commit()
 	if err != nil {
 		return newError(err, context)
 	}
@@ -1503,7 +1503,7 @@ func storageUsedGetFunction(
 
 		// NOTE: flush the cached values, so the host environment
 		// can properly calculate the amount of storage used by the account
-		err := runtimeStorage.commit(inter)
+		err := runtimeStorage.commit()
 		if err != nil {
 			panic(err)
 		}
