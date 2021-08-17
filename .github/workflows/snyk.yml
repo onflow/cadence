@@ -10,8 +10,8 @@ on:
     - cron: '0 0 * * FRI' # Every Friday at 00:00am
 
 jobs:
-  snyk-scan-nba-project:
-    name: Snyk Scan NBA Project 
+  snyk-scan-project:
+    name: Snyk Scan Project 
     runs-on: 
       - self-hosted
       - Linux
