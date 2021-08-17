@@ -490,7 +490,8 @@ func TestRuntimePublicAccountKeys(t *testing.T) {
 		require.IsType(t, cadence.Optional{}, value)
 		optionalValue := value.(cadence.Optional)
 
-		expectedValue := accountKeyExportedValue(1,
+		expectedValue := accountKeyExportedValue(
+			1,
 			[]byte{4, 5, 6},
 			sema.SignatureAlgorithmECDSA_secp256k1,
 			sema.HashAlgorithmSHA3_256,
@@ -568,9 +569,6 @@ func TestRuntimePublicAccountKeys(t *testing.T) {
 
 func TestRuntimeHashAlgorithm(t *testing.T) {
 
-	// TODO:
-	t.Skip("TODO")
-
 	t.Parallel()
 
 	rt := NewInterpreterRuntime()
@@ -586,7 +584,11 @@ func TestRuntimeHashAlgorithm(t *testing.T) {
       	}
 	`)
 
-	runtimeInterface := &testRuntimeInterface{}
+	storage := newTestStorage(nil, nil)
+
+	runtimeInterface := &testRuntimeInterface{
+		storage: storage,
+	}
 
 	nextTransactionLocation := newTransactionLocationGenerator()
 
@@ -641,9 +643,6 @@ func TestRuntimeHashAlgorithm(t *testing.T) {
 
 func TestRuntimeSignatureAlgorithm(t *testing.T) {
 
-	// TODO: static type may include native type, i.e. composite type with no location
-	t.Skip("TODO")
-
 	t.Parallel()
 
 	rt := NewInterpreterRuntime()
@@ -659,7 +658,11 @@ func TestRuntimeSignatureAlgorithm(t *testing.T) {
 		}
 	`)
 
-	runtimeInterface := &testRuntimeInterface{}
+	storage := newTestStorage(nil, nil)
+
+	runtimeInterface := &testRuntimeInterface{
+		storage: storage,
+	}
 
 	nextTransactionLocation := newTransactionLocationGenerator()
 

@@ -629,7 +629,7 @@ func importPublicKey(
 	}
 
 	return interpreter.NewPublicKeyValue(
-		inter.Storage,
+		inter,
 		publicKeyValue,
 		signAlgoValue,
 		inter.PublicKeyValidationHandler,

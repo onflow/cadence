@@ -9725,7 +9725,7 @@ func NewAccountKeyValue(
 
 // NewPublicKeyValue constructs a PublicKey value.
 func NewPublicKeyValue(
-	storage Storage,
+	inter *Interpreter,
 	publicKey *ArrayValue,
 	signAlgo *CompositeValue,
 	validatePublicKey PublicKeyValidationHandlerFunc,
@@ -9738,7 +9738,7 @@ func NewPublicKeyValue(
 	computedFields.Set(
 		sema.PublicKeyPublicKeyField,
 		func(interpreter *Interpreter) Value {
-			keyCopy, err := publicKey.DeepCopy(storage, atree.Address{})
+			keyCopy, err := publicKey.DeepCopy(interpreter.Storage, atree.Address{})
 			if err != nil {
 				panic(err)
 			}
@@ -9762,7 +9762,7 @@ func NewPublicKeyValue(
 
 	publicKeyValue.Fields.Set(
 		sema.PublicKeyIsValidField,
-		validatePublicKey(publicKeyValue),
+		validatePublicKey(inter, publicKeyValue),
 	)
 
 	// Public key value to string should include the key even though it is a computed field
@@ -9794,6 +9794,7 @@ var publicKeyVerifyFunction = NewHostFunctionValue(
 		publicKey := invocation.Self
 
 		return invocation.Interpreter.SignatureVerificationHandler(
+			invocation.Interpreter,
 			signatureValue,
 			signedDataValue,
 			domainSeparationTag,

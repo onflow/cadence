@@ -1025,12 +1025,13 @@ func (r *interpreterRuntime) newInterpreter(
 			},
 		),
 		interpreter.WithPublicKeyValidationHandler(
-			func(publicKey *interpreter.CompositeValue) interpreter.BoolValue {
-				return validatePublicKey(publicKey, context.Interface)
+			func(inter *interpreter.Interpreter, publicKey *interpreter.CompositeValue) interpreter.BoolValue {
+				return validatePublicKey(inter, publicKey, context.Interface)
 			},
 		),
 		interpreter.WithSignatureVerificationHandler(
 			func(
+				inter *interpreter.Interpreter,
 				signature *interpreter.ArrayValue,
 				signedData *interpreter.ArrayValue,
 				domainSeparationTag *interpreter.StringValue,
@@ -1038,6 +1039,7 @@ func (r *interpreterRuntime) newInterpreter(
 				publicKey *interpreter.CompositeValue,
 			) interpreter.BoolValue {
 				return verifySignature(
+					inter,
 					signature,
 					signedData,
 					domainSeparationTag,
@@ -1412,11 +1414,13 @@ func (r *interpreterRuntime) newCreateAccountFunction(
 
 		addressValue := interpreter.NewAddressValue(address)
 
+		inter := invocation.Interpreter
+
 		r.emitAccountEvent(
 			stdlib.AccountCreatedEventType,
 			context.Interface,
 			[]exportableValue{
-				newExportableValue(addressValue, nil),
+				newExportableValue(addressValue, inter),
 			},
 		)
 
@@ -1527,12 +1531,14 @@ func (r *interpreterRuntime) newAddPublicKeyFunction(
 				panic(err)
 			}
 
+			inter := invocation.Interpreter
+
 			r.emitAccountEvent(
 				stdlib.AccountKeyAddedEventType,
 				runtimeInterface,
 				[]exportableValue{
-					newExportableValue(addressValue, nil),
-					newExportableValue(publicKeyValue, nil),
+					newExportableValue(addressValue, inter),
+					newExportableValue(publicKeyValue, inter),
 				},
 			)
 
@@ -1558,8 +1564,10 @@ func (r *interpreterRuntime) newRemovePublicKeyFunction(
 				panic(err)
 			}
 
+			inter := invocation.Interpreter
+
 			publicKeyValue := interpreter.ByteSliceToByteArrayValue(
-				invocation.Interpreter.Storage,
+				inter.Storage,
 				publicKey,
 			)
 
@@ -1567,8 +1575,8 @@ func (r *interpreterRuntime) newRemovePublicKeyFunction(
 				stdlib.AccountKeyRemovedEventType,
 				runtimeInterface,
 				[]exportableValue{
-					newExportableValue(addressValue, nil),
-					newExportableValue(publicKeyValue, nil),
+					newExportableValue(addressValue, inter),
+					newExportableValue(publicKeyValue, inter),
 				},
 			)
 
@@ -2225,12 +2233,14 @@ func (r *interpreterRuntime) newAuthAccountContractsChangeFunction(
 				panic(err)
 			}
 
-			codeHashValue := CodeToHashValue(invocation.Interpreter.Storage, code)
+			inter := invocation.Interpreter
+
+			codeHashValue := CodeToHashValue(inter.Storage, code)
 
 			eventArguments := []exportableValue{
-				newExportableValue(addressValue, nil),
-				newExportableValue(codeHashValue, nil),
-				newExportableValue(nameValue, nil),
+				newExportableValue(addressValue, inter),
+				newExportableValue(codeHashValue, inter),
+				newExportableValue(nameValue, inter),
 			}
 
 			if isUpdate {
@@ -2390,6 +2400,7 @@ func (r *interpreterRuntime) newAuthAccountContractsRemoveFunction(
 	return interpreter.NewHostFunctionValue(
 		func(invocation interpreter.Invocation) interpreter.Value {
 
+			inter := invocation.Interpreter
 			nameValue := invocation.Arguments[0].(*interpreter.StringValue)
 
 			address := addressValue.ToAddress()
@@ -2447,7 +2458,7 @@ func (r *interpreterRuntime) newAuthAccountContractsRemoveFunction(
 					nil,
 				)
 
-				storage := invocation.Interpreter.Storage
+				storage := inter.Storage
 
 				codeHashValue := CodeToHashValue(storage, code)
 
@@ -2455,9 +2466,9 @@ func (r *interpreterRuntime) newAuthAccountContractsRemoveFunction(
 					stdlib.AccountContractRemovedEventType,
 					runtimeInterface,
 					[]exportableValue{
-						newExportableValue(addressValue, nil),
-						newExportableValue(codeHashValue, nil),
-						newExportableValue(nameValue, nil),
+						newExportableValue(addressValue, inter),
+						newExportableValue(codeHashValue, inter),
+						newExportableValue(nameValue, inter),
 					},
 				)
 
@@ -2590,7 +2601,9 @@ func (r *interpreterRuntime) newAccountKeysAddFunction(
 		func(invocation interpreter.Invocation) interpreter.Value {
 			publicKeyValue := invocation.Arguments[0].(*interpreter.CompositeValue)
 
-			publicKey, err := NewPublicKeyFromValue(publicKeyValue)
+			inter := invocation.Interpreter
+
+			publicKey, err := NewPublicKeyFromValue(inter, publicKeyValue)
 			if err != nil {
 				panic(err)
 			}
@@ -2611,14 +2624,13 @@ func (r *interpreterRuntime) newAccountKeysAddFunction(
 				stdlib.AccountKeyAddedEventType,
 				runtimeInterface,
 				[]exportableValue{
-					newExportableValue(addressValue, nil),
-					newExportableValue(publicKeyValue, nil),
+					newExportableValue(addressValue, inter),
+					newExportableValue(publicKeyValue, inter),
 				},
 			)
 
-			inter := invocation.Interpreter
 			return NewAccountKeyValue(
-				inter.Storage,
+				inter,
 				accountKey,
 				inter.PublicKeyValidationHandler,
 			)
@@ -2652,12 +2664,12 @@ func (r *interpreterRuntime) newAccountKeysGetFunction(
 				return interpreter.NilValue{}
 			}
 
-			nter := invocation.Interpreter
+			inter := invocation.Interpreter
 
 			return NewAccountKeyValue(
-				nter.Storage,
+				inter,
 				accountKey,
-				nter.PublicKeyValidationHandler,
+				inter.PublicKeyValidationHandler,
 			)
 		},
 	)
@@ -2689,19 +2701,19 @@ func (r *interpreterRuntime) newAccountKeysRevokeFunction(
 				return interpreter.NilValue{}
 			}
 
+			inter := invocation.Interpreter
+
 			r.emitAccountEvent(
 				stdlib.AccountKeyRemovedEventType,
 				runtimeInterface,
 				[]exportableValue{
-					newExportableValue(addressValue, nil),
-					newExportableValue(indexValue, nil),
+					newExportableValue(addressValue, inter),
+					newExportableValue(indexValue, inter),
 				},
 			)
 
-			inter := invocation.Interpreter
-
 			return NewAccountKeyValue(
-				inter.Storage,
+				inter,
 				accountKey,
 				inter.PublicKeyValidationHandler,
 			)
@@ -2718,7 +2730,13 @@ func (r *interpreterRuntime) newPublicAccountKeys(addressValue interpreter.Addre
 	)
 }
 
-func NewPublicKeyFromValue(publicKey *interpreter.CompositeValue) (*PublicKey, error) {
+func NewPublicKeyFromValue(
+	inter *interpreter.Interpreter,
+	publicKey *interpreter.CompositeValue,
+) (
+	*PublicKey,
+	error,
+) {
 
 	fields := publicKey.Fields
 
@@ -2728,9 +2746,7 @@ func NewPublicKeyFromValue(publicKey *interpreter.CompositeValue) (*PublicKey, e
 		return nil, fmt.Errorf("public key value is not set")
 	}
 
-	// Interpreter is not available at this point.
-	// For now its safe to pass a nil interpreter here, as the publicKey field doesn't use it.
-	key := publicKeyFieldGetter(nil)
+	key := publicKeyFieldGetter(inter)
 
 	byteArray, err := interpreter.ByteArrayValueToByteSlice(key)
 	if err != nil {
@@ -2780,37 +2796,37 @@ func NewPublicKeyFromValue(publicKey *interpreter.CompositeValue) (*PublicKey, e
 }
 
 func NewPublicKeyValue(
-	storage interpreter.Storage,
+	inter *interpreter.Interpreter,
 	publicKey *PublicKey,
 	validatePublicKey interpreter.PublicKeyValidationHandlerFunc,
 ) *interpreter.CompositeValue {
 	return interpreter.NewPublicKeyValue(
-		storage,
+		inter,
 		interpreter.ByteSliceToByteArrayValue(
-			storage,
+			inter.Storage,
 			publicKey.PublicKey,
 		),
 		stdlib.NewSignatureAlgorithmCase(publicKey.SignAlgo.RawValue()),
-		func(publicKeyValue *interpreter.CompositeValue) interpreter.BoolValue {
+		func(inter *interpreter.Interpreter, publicKeyValue *interpreter.CompositeValue) interpreter.BoolValue {
 			// If the public key is already validated, avoid re-validating, and return the cached result.
 			if publicKey.Validated {
 				return interpreter.BoolValue(publicKey.IsValid)
 			}
 
-			return validatePublicKey(publicKeyValue)
+			return validatePublicKey(inter, publicKeyValue)
 		},
 	)
 }
 
 func NewAccountKeyValue(
-	storage interpreter.Storage,
+	inter *interpreter.Interpreter,
 	accountKey *AccountKey,
 	validatePublicKey interpreter.PublicKeyValidationHandlerFunc,
 ) *interpreter.CompositeValue {
 	return interpreter.NewAccountKeyValue(
 		interpreter.NewIntValueFromInt64(int64(accountKey.KeyIndex)),
 		NewPublicKeyValue(
-			storage,
+			inter,
 			accountKey.PublicKey,
 			validatePublicKey,
 		),
@@ -2833,8 +2849,13 @@ func NewHashAlgorithmFromValue(value interpreter.Value) HashAlgorithm {
 	return HashAlgorithm(hashAlgoRawValue.ToInt())
 }
 
-func validatePublicKey(publicKeyValue *interpreter.CompositeValue, runtimeInterface Interface) interpreter.BoolValue {
-	publicKey, err := NewPublicKeyFromValue(publicKeyValue)
+func validatePublicKey(
+	inter *interpreter.Interpreter,
+	publicKeyValue *interpreter.CompositeValue,
+	runtimeInterface Interface,
+) interpreter.BoolValue {
+
+	publicKey, err := NewPublicKeyFromValue(inter, publicKeyValue)
 	if err != nil {
 		return false
 	}
@@ -2852,6 +2873,7 @@ func validatePublicKey(publicKeyValue *interpreter.CompositeValue, runtimeInterf
 }
 
 func verifySignature(
+	inter *interpreter.Interpreter,
 	signatureValue *interpreter.ArrayValue,
 	signedDataValue *interpreter.ArrayValue,
 	domainSeparationTagValue *interpreter.StringValue,
@@ -2874,7 +2896,7 @@ func verifySignature(
 
 	hashAlgorithm := NewHashAlgorithmFromValue(hashAlgorithmValue)
 
-	publicKey, err := NewPublicKeyFromValue(publicKeyValue)
+	publicKey, err := NewPublicKeyFromValue(inter, publicKeyValue)
 	if err != nil {
 		return false
 	}

@@ -96,9 +96,6 @@ func TestRuntimeStorageWriteCached(t *testing.T) {
 
 func TestRuntimeStorageWriteCachedIsDeterministic(t *testing.T) {
 
-	// TODO:
-	t.Skip("TODO")
-
 	t.Parallel()
 
 	var writes []testWrite
