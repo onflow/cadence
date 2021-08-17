@@ -2202,9 +2202,6 @@ func TestRuntimeStorageNonStorable(t *testing.T) {
 
 func TestRuntimeStorageRecursiveReference(t *testing.T) {
 
-	// TODO:
-	t.Skip("TODO")
-
 	t.Parallel()
 
 	runtime := NewInterpreterRuntime()
