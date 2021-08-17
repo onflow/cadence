@@ -3577,7 +3577,7 @@ func TestRuntimeImportExportComplex(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		assert.Equal(t,
+		AssertValuesEqual(t,
 			internalCompositeValue,
 			actual,
 		)

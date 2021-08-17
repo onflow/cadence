@@ -36,9 +36,6 @@ import (
 
 func TestRuntimeContract(t *testing.T) {
 
-	// TODO:
-	t.Skip("TODO")
-
 	t.Parallel()
 
 	type testCase struct {
@@ -176,11 +173,8 @@ func TestRuntimeContract(t *testing.T) {
 
 		contractKey := []byte(formatContractKey("Test"))
 
-		// TODO:
-		var interpreterStorage interpreter.Storage
-
+		interpreterStorage := interpreter.NewInMemoryStorage()
 		codeArrayString := interpreter.ByteSliceToByteArrayValue(interpreterStorage, []byte(tc.code)).String()
-
 		code2ArrayString := interpreter.ByteSliceToByteArrayValue(interpreterStorage, []byte(tc.code2)).String()
 
 		t.Run("add", func(t *testing.T) {
