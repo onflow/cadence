@@ -33,9 +33,6 @@ import (
 
 func TestRuntimeCrypto_verify(t *testing.T) {
 
-	// TODO:
-	t.Skip("TODO")
-
 	t.Parallel()
 
 	runtime := NewInterpreterRuntime()
