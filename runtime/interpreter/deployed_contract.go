@@ -100,7 +100,7 @@ func (DeployedContractValue) IsStorable() bool {
 }
 
 func (v DeployedContractValue) Storable(_ atree.SlabStorage, _ atree.Address) (atree.Storable, error) {
-	return atree.NonStorable{Value: v}, nil
+	return NonStorable{Value: v}, nil
 }
 
 func (v DeployedContractValue) DeepCopy(_ atree.SlabStorage, _ atree.Address) (atree.Value, error) {
