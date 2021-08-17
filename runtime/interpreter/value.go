@@ -8047,7 +8047,8 @@ func (v *DictionaryValue) DeepCopy(storage atree.SlabStorage, address atree.Addr
 
 	index := 0
 	for {
-		value, err := iterator.Next()
+		var value atree.Value
+		value, err = iterator.Next()
 		if err != nil {
 			return nil, err
 		}
@@ -8058,8 +8059,14 @@ func (v *DictionaryValue) DeepCopy(storage atree.SlabStorage, address atree.Addr
 		// atree.Array iteration provides low-level atree.Value,
 		// convert to high-level interpreter.Value
 
-		// NOTE: Insert already deep copies
-		result.Keys.Insert(ReturnEmptyLocationRange, index, MustConvertStoredValue(value))
+		var valueCopy atree.Value
+		valueCopy, err = MustConvertStoredValue(value).
+			DeepCopy(storage, atree.Address{})
+		if err != nil {
+			return nil, err
+		}
+
+		result.Keys.Insert(ReturnEmptyLocationRange, index, MustConvertStoredValue(valueCopy))
 		index++
 	}
 
