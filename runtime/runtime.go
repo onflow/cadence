@@ -1000,14 +1000,14 @@ func (r *interpreterRuntime) newInterpreter(
 			func(
 				inter *interpreter.Interpreter,
 				compositeType *sema.CompositeType,
-				constructor interpreter.FunctionValue,
+				constructorGenerator func(common.Address) interpreter.HostFunctionValue,
 				invocationRange ast.Range,
 			) *interpreter.CompositeValue {
 
 				return r.loadContract(
 					inter,
 					compositeType,
-					constructor,
+					constructorGenerator,
 					invocationRange,
 					runtimeStorage,
 				)
@@ -1603,7 +1603,7 @@ func formatContractKey(name string) string {
 func (r *interpreterRuntime) loadContract(
 	inter *interpreter.Interpreter,
 	compositeType *sema.CompositeType,
-	constructor interpreter.FunctionValue,
+	constructorGenerator func(common.Address) interpreter.HostFunctionValue,
 	invocationRange ast.Range,
 	runtimeStorage *runtimeStorage,
 ) *interpreter.CompositeValue {
@@ -1612,7 +1612,7 @@ func (r *interpreterRuntime) loadContract(
 	case stdlib.CryptoChecker.Location:
 		contract, err := stdlib.NewCryptoContract(
 			inter,
-			constructor,
+			constructorGenerator(common.Address{}),
 			invocationRange,
 		)
 		if err != nil {
@@ -1648,6 +1648,7 @@ func (r *interpreterRuntime) loadContract(
 func (r *interpreterRuntime) instantiateContract(
 	program *interpreter.Program,
 	context Context,
+	address common.Address,
 	contractType *sema.CompositeType,
 	constructorArguments []interpreter.Value,
 	argumentTypes []sema.Type,
@@ -1720,9 +1721,11 @@ func (r *interpreterRuntime) instantiateContract(
 			func(
 				inter *interpreter.Interpreter,
 				compositeType *sema.CompositeType,
-				constructor interpreter.FunctionValue,
+				constructorGenerator func(common.Address) interpreter.HostFunctionValue,
 				invocationRange ast.Range,
 			) *interpreter.CompositeValue {
+
+				constructor := constructorGenerator(address)
 
 				// If the contract is the deployed contract, instantiate it using
 				// the provided constructor and given arguments
@@ -1748,7 +1751,7 @@ func (r *interpreterRuntime) instantiateContract(
 				return r.loadContract(
 					inter,
 					compositeType,
-					constructor,
+					constructorGenerator,
 					invocationRange,
 					runtimeStorage,
 				)
@@ -2302,6 +2305,7 @@ func (r *interpreterRuntime) updateAccountContractCode(
 		contractValue, err = r.instantiateContract(
 			program,
 			context,
+			address,
 			contractType,
 			constructorArguments,
 			constructorArgumentTypes,
@@ -2315,9 +2319,6 @@ func (r *interpreterRuntime) updateAccountContractCode(
 		if err != nil {
 			return err
 		}
-
-		// TODO:
-		//contractValue.SetOwner(&address)
 	}
 
 	// NOTE: only update account code if contract instantiation succeeded
