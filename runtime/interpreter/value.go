@@ -6785,8 +6785,6 @@ func NewCompositeValue(
 	address common.Address,
 ) *CompositeValue {
 
-	storageID := storage.GenerateStorageID(atree.Address(address))
-
 	// TODO: only allocate when setting a field
 	if fields == nil {
 		fields = NewStringValueOrderedMap()
@@ -6797,10 +6795,12 @@ func NewCompositeValue(
 		QualifiedIdentifier: qualifiedIdentifier,
 		Kind:                kind,
 		Fields:              fields,
-		StorageID:           storageID,
 	}
 
-	v.store(storage)
+	if v.IsStorable() {
+		v.StorageID = storage.GenerateStorageID(atree.Address(address))
+		v.store(storage)
+	}
 
 	return v
 }
@@ -7311,15 +7311,22 @@ func (v *CompositeValue) DeepRemove(storage atree.SlabStorage) error {
 	}
 
 	// Remove storable itself
+	if v.StorageID != atree.StorageIDUndefined {
 
-	slab, _, err := storage.Retrieve(v.StorageID)
-	if err != nil {
-		return err
+		slab, _, err := storage.Retrieve(v.StorageID)
+		if err != nil {
+			return err
+		}
+
+		err = slab.(atree.StorableSlab).
+			Storable.(CompositeStorable).
+			DeepRemove(storage)
+		if err != nil {
+			return err
+		}
 	}
 
-	return slab.(atree.StorableSlab).
-		Storable.(CompositeStorable).
-		DeepRemove(storage)
+	return nil
 }
 
 func (v *CompositeValue) GetOwner() common.Address {
