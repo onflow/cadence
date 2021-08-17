@@ -46,6 +46,7 @@ func newRuntimeStorage(runtimeInterface Interface) *runtimeStorage {
 		ledgerStorage,
 		interpreter.CBOREncMode,
 		interpreter.CBORDecMode,
+		atree.WithNoAutoCommit(),
 	)
 	persistentSlabStorage.DecodeStorable = interpreter.DecodeStorableV6
 	return &runtimeStorage{
