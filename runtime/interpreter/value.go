@@ -675,7 +675,7 @@ func NewArrayValueWithAddress(
 		panic(ExternalError{err})
 	}
 
-	array, err := atree.NewArray(storage, atree.Address(address), string(typeInfo))
+	array, err := atree.NewArray(storage, atree.Address(address), typeInfo)
 	if err != nil {
 		panic(ExternalError{err})
 	}
