@@ -187,15 +187,6 @@ func (s *runtimeStorage) WriteValue(
 	case interpreter.NilValue:
 		writtenValue = nil
 
-		// TODO: remove existing value's slabs from storage
-		//existingValue, ok := s.accountValues[storageKey]
-		//if ok && existingValue != nil {
-		//	err := existingValue.DeepRemove(s)
-		//	if err != nil {
-		//		panic(err)
-		//	}
-		//}
-
 	default:
 		panic(errors.NewUnreachableError())
 	}
