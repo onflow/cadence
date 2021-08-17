@@ -2293,6 +2293,14 @@ func (interpreter *Interpreter) ReadStored(storageAddress common.Address, key st
 }
 
 func (interpreter *Interpreter) writeStored(storageAddress common.Address, key string, value OptionalValue) {
+
+	if existingValue, ok := interpreter.ReadStored(storageAddress, key).(*SomeValue); ok {
+		err := existingValue.Value.DeepRemove(interpreter.Storage)
+		if err != nil {
+			panic(err)
+		}
+	}
+
 	interpreter.Storage.WriteValue(interpreter, storageAddress, key, value)
 }
 
@@ -2948,11 +2956,6 @@ func (interpreter *Interpreter) authAccountReadFunction(addressValue AddressValu
 			// Remove the value from storage,
 			// but only if the type check succeeded.
 			if clear {
-				err = value.DeepRemove(interpreter.Storage)
-				if err != nil {
-					panic(ExternalError{err})
-				}
-
 				interpreter.writeStored(address, key, NilValue{})
 			}
 
