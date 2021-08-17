@@ -25,6 +25,7 @@ import (
 	"testing"
 
 	"github.com/fxamacker/atree"
+	"github.com/fxamacker/cbor/v2"
 	. "github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/stretchr/testify/assert"
@@ -4167,5 +4168,42 @@ func TestEncodeDecodeTypeValue(t *testing.T) {
 				},
 			},
 		)
+	})
+}
+
+func TestEncodeDecodeStaticType(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("composite, struct, no location", func(t *testing.T) {
+
+		t.Parallel()
+
+		ty := CompositeStaticType{
+			QualifiedIdentifier: "PublicKey",
+		}
+
+		encoded := cbor.RawMessage{
+			// tag
+			0xd8, CBORTagCompositeStaticType,
+			// array, 2 items follow
+			0x82,
+			// location: nil
+			0xf6,
+			// UTF-8 string, length 9
+			0x69,
+			// PublicKey
+			0x50, 0x75, 0x62, 0x6c, 0x69, 0x63, 0x4b, 0x65, 0x79,
+		}
+
+		actualEncoded, err := StaticTypeToBytes(ty)
+		require.NoError(t, err)
+
+		AssertEqualWithDiff(t, encoded, actualEncoded)
+
+		actualType, err := StaticTypeFromBytes(encoded)
+		require.NoError(t, err)
+
+		require.Equal(t, ty, actualType)
 	})
 }
