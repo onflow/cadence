@@ -2984,9 +2984,6 @@ func TestRuntimeContractAccount(t *testing.T) {
 
 func TestRuntimeInvokeContractFunction(t *testing.T) {
 
-	// TODO:
-	t.Skip("TODO")
-
 	t.Parallel()
 
 	runtime := NewInterpreterRuntime()
