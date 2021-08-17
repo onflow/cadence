@@ -947,7 +947,7 @@ func (v LinkValue) Encode(e *atree.Encoder) error {
 	return EncodeStaticType(e, v.Type)
 }
 
-func StaticTypeToBytes(t StaticType) ([]byte, error) {
+func StaticTypeToBytes(t StaticType) (cbor.RawMessage, error) {
 	var buf bytes.Buffer
 	enc := atree.NewEncoder(&buf, CBOREncMode)
 
