@@ -156,9 +156,11 @@ func (s *runtimeStorage) ReadValue(
 		panic(err)
 	}
 
-	return interpreter.NewSomeValueNonCopying(
-		interpreter.MustConvertStoredValue(storedValue),
-	)
+	value := interpreter.MustConvertStoredValue(storedValue)
+
+	s.accountValues[storageKey] = value
+
+	return interpreter.NewSomeValueNonCopying(value)
 }
 
 func (s *runtimeStorage) WriteValue(
