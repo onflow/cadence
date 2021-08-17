@@ -2921,7 +2921,7 @@ func TestRuntimeImportExportComplex(t *testing.T) {
 			externalCompositeValue,
 			semaCompositeType,
 		)
-		assert.Equal(t,
+		AssertValuesEqual(t,
 			internalCompositeValue,
 			actual,
 		)
