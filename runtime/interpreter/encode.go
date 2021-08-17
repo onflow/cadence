@@ -841,8 +841,11 @@ const (
 	encodedAddressLocationLength = 2
 )
 
-// TODO: add support for nil location
 func EncodeLocation(e *atree.Encoder, l common.Location) error {
+	if l == nil {
+		return e.CBOR.EncodeNil()
+	}
+
 	switch l := l.(type) {
 
 	case common.StringLocation:

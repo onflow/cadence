@@ -218,6 +218,17 @@ func (d DecoderV6) decodeString(v string) *StringValue {
 }
 
 func (d DecoderV6) decodeLocation() (common.Location, error) {
+	// Location can be CBOR nil.
+	err := d.decoder.DecodeNil()
+	if err == nil {
+		return nil, nil
+	}
+
+	_, ok := err.(*cbor.WrongTypeError)
+	if !ok {
+		return nil, err
+	}
+
 	number, err := d.decoder.DecodeTagNumber()
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
