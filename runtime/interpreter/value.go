@@ -51,6 +51,33 @@ type typeConformanceResultEntry struct {
 //
 type SeenReferences map[*EphemeralReferenceValue]struct{}
 
+// NonStorable represents a value that cannot be stored
+//
+type NonStorable struct {
+	Value Value
+}
+
+var _ atree.Storable = NonStorable{}
+
+func (s NonStorable) Encode(_ *atree.Encoder) error {
+	return NonStorableValueError{
+		Value: s.Value,
+	}
+}
+
+func (s NonStorable) ByteSize() uint32 {
+	return 1
+}
+
+func (s NonStorable) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
+	return s.Value, nil
+}
+
+func (NonStorable) DeepRemove(_ atree.SlabStorage) error {
+	// NO-OP
+	return nil
+}
+
 // Value
 
 type Value interface {
@@ -7235,7 +7262,7 @@ func (v *CompositeValue) IsStorable() bool {
 
 func (v *CompositeValue) Storable(_ atree.SlabStorage, _ atree.Address) (atree.Storable, error) {
 	if !v.IsStorable() {
-		return atree.NonStorable{Value: v}, nil
+		return NonStorable{Value: v}, nil
 	}
 
 	return atree.StorageIDStorable(v.StorageID), nil
@@ -8429,7 +8456,7 @@ func (v *SomeValue) IsStorable() bool {
 
 func (v *SomeValue) Storable(storage atree.SlabStorage, address atree.Address) (atree.Storable, error) {
 	if !v.IsStorable() {
-		return atree.NonStorable{Value: v}, nil
+		return NonStorable{Value: v}, nil
 	}
 
 	var err error
@@ -8715,7 +8742,7 @@ func (*StorageReferenceValue) IsStorable() bool {
 }
 
 func (v *StorageReferenceValue) Storable(_ atree.SlabStorage, _ atree.Address) (atree.Storable, error) {
-	return atree.NonStorable{Value: v}, nil
+	return NonStorable{Value: v}, nil
 }
 
 func (v *StorageReferenceValue) DeepCopy(_ atree.SlabStorage, _ atree.Address) (atree.Value, error) {
@@ -8957,7 +8984,7 @@ func (*EphemeralReferenceValue) IsStorable() bool {
 }
 
 func (v *EphemeralReferenceValue) Storable(_ atree.SlabStorage, _ atree.Address) (atree.Storable, error) {
-	return atree.NonStorable{Value: v}, nil
+	return NonStorable{Value: v}, nil
 }
 
 func (v *EphemeralReferenceValue) DeepCopy(_ atree.SlabStorage, _ atree.Address) (atree.Value, error) {

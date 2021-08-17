@@ -495,3 +495,16 @@ func (e ContainerMutationError) Error() string {
 		e.ExpectedType.QualifiedString(),
 	)
 }
+
+// NonStorableValueError
+//
+type NonStorableValueError struct {
+	Value Value
+}
+
+func (e NonStorableValueError) Error() string {
+	return fmt.Sprintf(
+		"cannot store non-storable value: %s",
+		e.Value,
+	)
+}

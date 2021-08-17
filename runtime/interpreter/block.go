@@ -116,7 +116,7 @@ func (BlockValue) IsStorable() bool {
 }
 
 func (v BlockValue) Storable(_ atree.SlabStorage, _ atree.Address) (atree.Storable, error) {
-	return atree.NonStorable{Value: v}, nil
+	return NonStorable{Value: v}, nil
 }
 
 func (v BlockValue) DeepCopy(_ atree.SlabStorage, _ atree.Address) (atree.Value, error) {

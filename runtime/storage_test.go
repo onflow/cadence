@@ -2197,7 +2197,7 @@ func TestRuntimeStorageNonStorable(t *testing.T) {
 			)
 			require.Error(t, err)
 
-			require.Contains(t, err.Error(), "cannot write non-storable value")
+			require.Contains(t, err.Error(), "cannot store non-storable value")
 		})
 	}
 }
@@ -2240,5 +2240,5 @@ func TestRuntimeStorageRecursiveReference(t *testing.T) {
 	)
 	require.Error(t, err)
 
-	require.Contains(t, err.Error(), "cannot write non-storable value")
+	require.Contains(t, err.Error(), "cannot store non-storable value")
 }
