@@ -7479,11 +7479,12 @@ func NewDictionaryValueWithAddress(
 
 	v := &DictionaryValue{
 		Type: dictionaryType,
-		Keys: NewArrayValue(
+		Keys: NewArrayValueWithAddress(
 			VariableSizedStaticType{
 				Type: dictionaryType.KeyType,
 			},
 			storage,
+			address,
 		),
 		Entries:   NewStringValueOrderedMap(),
 		StorageID: storageID,
