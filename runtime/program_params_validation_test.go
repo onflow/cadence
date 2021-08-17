@@ -76,7 +76,10 @@ func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
 
 		rt := NewInterpreterRuntime()
 
+		storage := newTestStorage(nil, nil)
+
 		runtimeInterface := &testRuntimeInterface{
+			storage: storage,
 			decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
 				return json.Decode(b)
 			},
@@ -547,7 +550,10 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
 
 		rt := NewInterpreterRuntime()
 
+		storage := newTestStorage(nil, nil)
+
 		runtimeInterface := &testRuntimeInterface{
+			storage: storage,
 			decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
 				return json.Decode(b)
 			},
