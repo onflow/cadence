@@ -2552,7 +2552,7 @@ func TestPublicKeyValue(t *testing.T) {
 			utils.TestLocation,
 			WithStorage(storage),
 			WithPublicKeyValidationHandler(
-				func(publicKey *CompositeValue) BoolValue {
+				func(_ *Interpreter, _ *CompositeValue) BoolValue {
 					return true
 				},
 			),
@@ -2560,7 +2560,7 @@ func TestPublicKeyValue(t *testing.T) {
 		require.NoError(t, err)
 
 		key := NewPublicKeyValue(
-			interpreter.Storage,
+			interpreter,
 			publicKey,
 			sigAlgo(),
 			interpreter.PublicKeyValidationHandler,

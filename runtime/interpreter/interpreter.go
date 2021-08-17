@@ -137,10 +137,14 @@ type AccountHandlerFunc func(
 type UUIDHandlerFunc func() (uint64, error)
 
 // PublicKeyValidationHandlerFunc is a function that validates a given public key.
-type PublicKeyValidationHandlerFunc func(publicKey *CompositeValue) BoolValue
+type PublicKeyValidationHandlerFunc func(
+	interpreter *Interpreter,
+	publicKey *CompositeValue,
+) BoolValue
 
 // SignatureVerificationHandlerFunc is a function that validates a signature.
 type SignatureVerificationHandlerFunc func(
+	interpreter *Interpreter,
 	signature *ArrayValue,
 	signedData *ArrayValue,
 	domainSeparationTag *StringValue,

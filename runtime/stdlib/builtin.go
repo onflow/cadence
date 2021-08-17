@@ -170,7 +170,7 @@ var CreatePublicKeyFunction = NewStandardLibraryFunction(
 		inter := invocation.Interpreter
 
 		return interpreter.NewPublicKeyValue(
-			inter.Storage,
+			inter,
 			publicKey,
 			signAlgo,
 			inter.PublicKeyValidationHandler,

@@ -2369,9 +2369,6 @@ func TestRuntimeScriptReturnTypeNotReturnableError(t *testing.T) {
 
 	t.Run("recursive reference", func(t *testing.T) {
 
-		// TODO:
-		t.Skip("TODO")
-
 		t.Parallel()
 
 		test(t,
