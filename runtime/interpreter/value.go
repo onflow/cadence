@@ -8143,10 +8143,17 @@ var _ atree.Storable = DictionaryStorable{}
 
 func (s DictionaryStorable) DeepRemove(storage atree.SlabStorage) error {
 
+	// Remove keys storable
+
+	err := s.Keys.DeepRemove(storage)
+	if err != nil {
+		return err
+	}
+
 	// Remove nested storables
 
 	for _, value := range s.Values {
-		err := value.DeepRemove(storage)
+		err = value.DeepRemove(storage)
 		if err != nil {
 			return err
 		}
