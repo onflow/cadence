@@ -5388,7 +5388,9 @@ func TestRuntimeContractWriteback(t *testing.T) {
 
 	assert.NotNil(t, accountCode)
 
-	assert.Len(t, writes, 1)
+	assert.Len(t, writes, 2)
+
+	writes = nil
 
 	err = runtime.ExecuteTransaction(
 		Script{
@@ -5402,6 +5404,8 @@ func TestRuntimeContractWriteback(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Len(t, writes, 1)
+
+	writes = nil
 
 	err = runtime.ExecuteTransaction(
 		Script{
@@ -5510,7 +5514,9 @@ func TestRuntimeStorageWriteback(t *testing.T) {
 
 	assert.NotNil(t, accountCode)
 
-	assert.Len(t, writes, 1)
+	assert.Len(t, writes, 2)
+
+	writes = nil
 
 	err = runtime.ExecuteTransaction(
 		Script{
@@ -5523,7 +5529,7 @@ func TestRuntimeStorageWriteback(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	assert.Len(t, writes, 2)
+	assert.Len(t, writes, 3)
 
 	readTx := []byte(`
      import Test from 0xCADE
@@ -5536,6 +5542,8 @@ func TestRuntimeStorageWriteback(t *testing.T) {
       }
     `)
 
+	writes = nil
+
 	err = runtime.ExecuteTransaction(
 		Script{
 			Source: readTx,
@@ -5547,7 +5555,7 @@ func TestRuntimeStorageWriteback(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	assert.Len(t, writes, 2)
+	assert.Len(t, writes, 1)
 
 	writeTx := []byte(`
      import Test from 0xCADE
@@ -5561,6 +5569,8 @@ func TestRuntimeStorageWriteback(t *testing.T) {
       }
     `)
 
+	writes = nil
+
 	err = runtime.ExecuteTransaction(
 		Script{
 			Source: writeTx,
@@ -5572,7 +5582,7 @@ func TestRuntimeStorageWriteback(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	assert.Len(t, writes, 3)
+	assert.Len(t, writes, 2)
 }
 
 func TestRuntimeExternalError(t *testing.T) {
