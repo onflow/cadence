@@ -115,7 +115,7 @@ type InjectedCompositeFieldsHandlerFunc func(
 type ContractValueHandlerFunc func(
 	inter *Interpreter,
 	compositeType *sema.CompositeType,
-	constructor FunctionValue,
+	constructorGenerator func(common.Address) HostFunctionValue,
 	invocationRange ast.Range,
 ) *CompositeValue
 
@@ -1343,86 +1343,88 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 
 	qualifiedIdentifier := compositeType.QualifiedIdentifier()
 
-	constructor := NewHostFunctionValue(
-		func(invocation Invocation) Value {
+	constructorGenerator := func(address common.Address) HostFunctionValue {
+		return NewHostFunctionValue(
+			func(invocation Invocation) Value {
 
-			// Check that the resource is constructed
-			// in the same location as it was declared
+				// Check that the resource is constructed
+				// in the same location as it was declared
 
-			if compositeType.Kind == common.CompositeKindResource &&
-				!common.LocationsMatch(invocation.Interpreter.Location, compositeType.Location) {
+				if compositeType.Kind == common.CompositeKindResource &&
+					!common.LocationsMatch(invocation.Interpreter.Location, compositeType.Location) {
 
-				panic(ResourceConstructionError{
-					CompositeType: compositeType,
-					LocationRange: invocation.GetLocationRange(),
-				})
-			}
-
-			// Load injected fields
-			var injectedFields *StringValueOrderedMap
-			if interpreter.injectedCompositeFieldsHandler != nil {
-				injectedFields = interpreter.injectedCompositeFieldsHandler(
-					interpreter,
-					location,
-					qualifiedIdentifier,
-					declaration.CompositeKind,
-				)
-			}
-
-			fields := NewStringValueOrderedMap()
-
-			if declaration.CompositeKind == common.CompositeKindResource {
-
-				if interpreter.uuidHandler == nil {
-					panic(UUIDUnavailableError{
+					panic(ResourceConstructionError{
+						CompositeType: compositeType,
 						LocationRange: invocation.GetLocationRange(),
 					})
 				}
 
-				uuid, err := interpreter.uuidHandler()
-				if err != nil {
-					panic(err)
+				// Load injected fields
+				var injectedFields *StringValueOrderedMap
+				if interpreter.injectedCompositeFieldsHandler != nil {
+					injectedFields = interpreter.injectedCompositeFieldsHandler(
+						interpreter,
+						location,
+						qualifiedIdentifier,
+						declaration.CompositeKind,
+					)
 				}
 
-				fields.Set(sema.ResourceUUIDFieldName, UInt64Value(uuid))
-			}
+				fields := NewStringValueOrderedMap()
 
-			value := NewCompositeValue(
-				interpreter.Storage,
-				location,
-				qualifiedIdentifier,
-				declaration.CompositeKind,
-				fields,
-				common.Address{},
-			)
+				if declaration.CompositeKind == common.CompositeKindResource {
 
-			value.InjectedFields = injectedFields
-			value.Functions = functions
-			value.Destructor = destructorFunction
+					if interpreter.uuidHandler == nil {
+						panic(UUIDUnavailableError{
+							LocationRange: invocation.GetLocationRange(),
+						})
+					}
 
-			invocation.Self = value
+					uuid, err := interpreter.uuidHandler()
+					if err != nil {
+						panic(err)
+					}
 
-			if declaration.CompositeKind == common.CompositeKindContract {
-				// NOTE: set the variable value immediately, as the contract value
-				// needs to be available for nested declarations
+					fields.Set(sema.ResourceUUIDFieldName, UInt64Value(uuid))
+				}
 
-				variable.SetValue(value)
+				value := NewCompositeValue(
+					interpreter.Storage,
+					location,
+					qualifiedIdentifier,
+					declaration.CompositeKind,
+					fields,
+					address,
+				)
 
-				// Also, immediately set the nested values,
-				// as the initializer of the contract may use nested declarations
+				value.InjectedFields = injectedFields
+				value.Functions = functions
+				value.Destructor = destructorFunction
 
-				value.NestedVariables = nestedVariables
-			}
+				invocation.Self = value
 
-			if initializerFunction != nil {
-				// NOTE: arguments are already properly boxed by invocation expression
+				if declaration.CompositeKind == common.CompositeKindContract {
+					// NOTE: set the variable value immediately, as the contract value
+					// needs to be available for nested declarations
 
-				_ = initializerFunction.Invoke(invocation)
-			}
+					variable.SetValue(value)
 
-			return value
-		},
-	)
+					// Also, immediately set the nested values,
+					// as the initializer of the contract may use nested declarations
+
+					value.NestedVariables = nestedVariables
+				}
+
+				if initializerFunction != nil {
+					// NOTE: arguments are already properly boxed by invocation expression
+
+					_ = initializerFunction.Invoke(invocation)
+				}
+
+				return value
+			},
+		)
+	}
 
 	// Contract declarations declare a value / instance (singleton),
 	// for all other composite kinds, the constructor is declared
@@ -1433,13 +1435,14 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 			contract := interpreter.contractValueHandler(
 				interpreter,
 				compositeType,
-				constructor,
+				constructorGenerator,
 				positioned,
 			)
 			contract.NestedVariables = nestedVariables
 			return contract
 		}
 	} else {
+		constructor := constructorGenerator(common.Address{})
 		constructor.NestedVariables = nestedVariables
 		variable.SetValue(constructor)
 	}
