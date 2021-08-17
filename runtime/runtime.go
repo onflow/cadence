@@ -250,6 +250,10 @@ func (r *interpreterRuntime) ExecuteScript(script Script, context Context) (cade
 		return nil, newError(err, context)
 	}
 
+	// Export before committing storage
+
+	result := exportValue(value)
+
 	// Write back all stored values, which were actually just cached, back into storage.
 
 	// Even though this function is `ExecuteScript`, that doesn't imply the changes
@@ -260,7 +264,7 @@ func (r *interpreterRuntime) ExecuteScript(script Script, context Context) (cade
 		return nil, newError(err, context)
 	}
 
-	return exportValue(value)
+	return result, nil
 }
 
 type interpretFunc func(inter *interpreter.Interpreter) (interpreter.Value, error)
