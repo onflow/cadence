@@ -270,7 +270,16 @@ func (s *runtimeStorage) commit() error {
 
 			var buf bytes.Buffer
 			encoder := atree.NewEncoder(&buf, interpreter.CBOREncMode)
-			err = storable.Encode(encoder)
+
+			reportMetric(
+				func() {
+					err = storable.Encode(encoder)
+				},
+				s.runtimeInterface,
+				func(metrics Metrics, duration time.Duration) {
+					metrics.ValueEncoded(duration)
+				},
+			)
 			if err != nil {
 				return err
 			}
@@ -299,5 +308,6 @@ func (s *runtimeStorage) commit() error {
 	// Commit the underlying slab storage's deltas
 
 	// TODO: bring back concurrent encoding
+	// TODO: report encoding metric for all encoded slabs
 	return s.PersistentSlabStorage.Commit()
 }
