@@ -21,11 +21,32 @@ package interpreter
 import (
 	"bytes"
 	"fmt"
+	"math"
 
 	"github.com/fxamacker/cbor/v2"
 	"github.com/onflow/atree"
 	"github.com/onflow/cadence/runtime/common"
 )
+
+func getIntCBORSize(v int64) uint32 {
+	return getUintCBORSize(uint64(-v - 1))
+}
+
+func getUintCBORSize(v uint64) uint32 {
+	if v <= 23 {
+		return 1
+	}
+	if v <= math.MaxUint8 {
+		return 2
+	}
+	if v <= math.MaxUint16 {
+		return 3
+	}
+	if v <= math.MaxUint32 {
+		return 5
+	}
+	return 9
+}
 
 // Cadence needs to encode different kinds of objects in CBOR, for instance,
 // dictionaries, structs, resources, etc.
@@ -189,12 +210,14 @@ var CBOREncMode = func() cbor.EncMode {
 // Encode encodes the value as a CBOR nil
 //
 func (v NilValue) Encode(e *atree.Encoder) error {
+	// NOTE: when updating, also update NilValue.ByteSize
 	return e.CBOR.EncodeNil()
 }
 
 // Encode encodes the value as a CBOR bool
 //
 func (v BoolValue) Encode(e *atree.Encoder) error {
+	// NOTE: when updating, also update BoolValue.ByteSize
 	return e.CBOR.EncodeBool(bool(v))
 }
 
