@@ -87,7 +87,7 @@ var _ Storage = InMemoryStorage{}
 
 func NewInMemoryStorage() InMemoryStorage {
 	slabStorage := atree.NewBasicSlabStorage(CBOREncMode, CBORDecMode)
-	slabStorage.DecodeStorable = DecodeStorableV6
+	slabStorage.DecodeStorable = DecodeStorable
 
 	return InMemoryStorage{
 		BasicSlabStorage: slabStorage,

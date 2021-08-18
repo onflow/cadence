@@ -84,7 +84,7 @@ func testEncodeDecode(t *testing.T, test encodeDecodeTest) {
 	}
 
 	decoder := CBORDecMode.NewByteStreamDecoder(encoded)
-	decoded, err := DecodeStorableV6(decoder, test.slabStorageID)
+	decoded, err := DecodeStorable(decoder, test.slabStorageID)
 
 	if test.invalid {
 		require.Error(t, err)
