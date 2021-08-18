@@ -22,8 +22,8 @@ import (
 	"bytes"
 	"fmt"
 
-	"github.com/onflow/atree"
 	"github.com/fxamacker/cbor/v2"
+	"github.com/onflow/atree"
 	"github.com/onflow/cadence/runtime/common"
 )
 
@@ -550,9 +550,9 @@ func (v UFix64Value) Encode(e *atree.Encoder) error {
 
 // NOTE: NEVER change, only add/increment; ensure uint64
 const (
-	// encodedDictionaryValueTypeFieldKeyV6    uint64 = 0
-	// encodedDictionaryValueKeysFieldKeyV6    uint64 = 1
-	// encodedDictionaryValueEntriesFieldKeyV6 uint64 = 2
+	// encodedDictionaryValueTypeFieldKey    uint64 = 0
+	// encodedDictionaryValueKeysFieldKey    uint64 = 1
+	// encodedDictionaryValueEntriesFieldKey uint64 = 2
 
 	// !!! *WARNING* !!!
 	//
@@ -565,9 +565,9 @@ const (
 // cbor.Tag{
 //			Number: CBORTagDictionaryValue,
 //			Content: cborArray{
-// 				encodedDictionaryValueTypeFieldKeyV6:    []interface{}(type),
-//				encodedDictionaryValueKeysFieldKeyV6:    []interface{}(keys),
-//				encodedDictionaryValueEntriesFieldKeyV6: []interface{}(entries),
+// 				encodedDictionaryValueTypeFieldKey:    []interface{}(type),
+//				encodedDictionaryValueKeysFieldKey:    []interface{}(keys),
+//				encodedDictionaryValueEntriesFieldKey: []interface{}(entries),
 //			},
 // }
 func (s DictionaryStorable) Encode(e *atree.Encoder) error {
@@ -589,19 +589,19 @@ func (s DictionaryStorable) Encode(e *atree.Encoder) error {
 		return err
 	}
 
-	// (1) Encode dictionary static type at array index encodedDictionaryValueTypeFieldKeyV6
+	// (1) Encode dictionary static type at array index encodedDictionaryValueTypeFieldKey
 	err = EncodeStaticType(e, s.Type)
 	if err != nil {
 		return err
 	}
 
-	// (2) Encode keys (as StorageID) at array index encodedDictionaryValueKeysFieldKeyV6
+	// (2) Encode keys (as StorageID) at array index encodedDictionaryValueKeysFieldKey
 	err = s.Keys.Encode(e)
 	if err != nil {
 		return err
 	}
 
-	// (3) Encode values (as array) at array index encodedDictionaryValueEntriesFieldKeyV6
+	// (3) Encode values (as array) at array index encodedDictionaryValueEntriesFieldKey
 	err = e.CBOR.EncodeArrayHead(uint64(len(s.Values)))
 	if err != nil {
 		return err
@@ -619,10 +619,10 @@ func (s DictionaryStorable) Encode(e *atree.Encoder) error {
 
 // NOTE: NEVER change, only add/increment; ensure uint64
 const (
-	// encodedCompositeValueLocationFieldKeyV6            uint64 = 0
-	// encodedCompositeValueKindFieldKeyV6                uint64 = 1
-	// encodedCompositeValueFieldsFieldKeyV6              uint64 = 2
-	// encodedCompositeValueQualifiedIdentifierFieldKeyV6 uint64 = 3
+	// encodedCompositeValueLocationFieldKey            uint64 = 0
+	// encodedCompositeValueKindFieldKey                uint64 = 1
+	// encodedCompositeValueFieldsFieldKey              uint64 = 2
+	// encodedCompositeValueQualifiedIdentifierFieldKey uint64 = 3
 
 	// !!! *WARNING* !!!
 	//
@@ -635,10 +635,10 @@ const (
 // cbor.Tag{
 //		Number: CBORTagCompositeValue,
 //		Content: cborArray{
-//			encodedCompositeValueLocationFieldKeyV6:            common.Location(location),
-//			encodedCompositeValueKindFieldKeyV6:                uint(v.Kind),
-//			encodedCompositeValueFieldsFieldKeyV6:              []interface{}(fields),
-//			encodedCompositeValueQualifiedIdentifierFieldKeyV6: string(v.QualifiedIdentifier),
+//			encodedCompositeValueLocationFieldKey:            common.Location(location),
+//			encodedCompositeValueKindFieldKey:                uint(v.Kind),
+//			encodedCompositeValueFieldsFieldKey:              []interface{}(fields),
+//			encodedCompositeValueQualifiedIdentifierFieldKey: string(v.QualifiedIdentifier),
 //		},
 // }
 func (s CompositeStorable) Encode(e *atree.Encoder) error {
@@ -662,19 +662,19 @@ func (s CompositeStorable) Encode(e *atree.Encoder) error {
 		return err
 	}
 
-	// Encode location at array index encodedCompositeValueLocationFieldKeyV6
+	// Encode location at array index encodedCompositeValueLocationFieldKey
 	err = EncodeLocation(e, s.Location)
 	if err != nil {
 		return err
 	}
 
-	// Encode kind at array index encodedCompositeValueKindFieldKeyV6
+	// Encode kind at array index encodedCompositeValueKindFieldKey
 	err = e.CBOR.EncodeUint(uint(s.Kind))
 	if err != nil {
 		return err
 	}
 
-	// Encode fields (as array) at array index encodedCompositeValueFieldsFieldKeyV6
+	// Encode fields (as array) at array index encodedCompositeValueFieldsFieldKey
 
 	err = e.CBOR.EncodeArrayHead(uint64(len(s.Fields) * 2))
 	if err != nil {
@@ -696,7 +696,7 @@ func (s CompositeStorable) Encode(e *atree.Encoder) error {
 		}
 	}
 
-	// Encode qualified identifier at array index encodedCompositeValueQualifiedIdentifierFieldKeyV6
+	// Encode qualified identifier at array index encodedCompositeValueQualifiedIdentifierFieldKey
 	err = e.CBOR.EncodeString(s.QualifiedIdentifier)
 	if err != nil {
 		return err
@@ -739,8 +739,8 @@ func (v AddressValue) Encode(e *atree.Encoder) error {
 
 // NOTE: NEVER change, only add/increment; ensure uint64
 const (
-	// encodedPathValueDomainFieldKeyV6     uint64 = 0
-	// encodedPathValueIdentifierFieldKeyV6 uint64 = 1
+	// encodedPathValueDomainFieldKey     uint64 = 0
+	// encodedPathValueIdentifierFieldKey uint64 = 1
 
 	// !!! *WARNING* !!!
 	//
@@ -753,8 +753,8 @@ const (
 // cbor.Tag{
 //			Number: CBORTagPathValue,
 //			Content: []interface{}{
-//				encodedPathValueDomainFieldKeyV6:     uint(v.Domain),
-//				encodedPathValueIdentifierFieldKeyV6: string(v.Identifier),
+//				encodedPathValueDomainFieldKey:     uint(v.Domain),
+//				encodedPathValueIdentifierFieldKey: string(v.Identifier),
 //			},
 // }
 func (v PathValue) Encode(e *atree.Encoder) error {
@@ -769,21 +769,21 @@ func (v PathValue) Encode(e *atree.Encoder) error {
 		return err
 	}
 
-	// Encode domain at array index encodedPathValueDomainFieldKeyV6
+	// Encode domain at array index encodedPathValueDomainFieldKey
 	err = e.CBOR.EncodeUint(uint(v.Domain))
 	if err != nil {
 		return err
 	}
 
-	// Encode identifier at array index encodedPathValueIdentifierFieldKeyV6
+	// Encode identifier at array index encodedPathValueIdentifierFieldKey
 	return e.CBOR.EncodeString(v.Identifier)
 }
 
 // NOTE: NEVER change, only add/increment; ensure uint64
 const (
-	// encodedCapabilityValueAddressFieldKeyV6    uint64 = 0
-	// encodedCapabilityValuePathFieldKeyV6       uint64 = 1
-	// encodedCapabilityValueBorrowTypeFieldKeyV6 uint64 = 2
+	// encodedCapabilityValueAddressFieldKey    uint64 = 0
+	// encodedCapabilityValuePathFieldKey       uint64 = 1
+	// encodedCapabilityValueBorrowTypeFieldKey uint64 = 2
 
 	// !!! *WARNING* !!!
 	//
@@ -796,9 +796,9 @@ const (
 // cbor.Tag{
 //			Number: CBORTagCapabilityValue,
 //			Content: []interface{}{
-//					encodedCapabilityValueAddressFieldKeyV6:    AddressValue(v.Address),
-// 					encodedCapabilityValuePathFieldKeyV6:       PathValue(v.Path),
-// 					encodedCapabilityValueBorrowTypeFieldKeyV6: StaticType(v.BorrowType),
+//					encodedCapabilityValueAddressFieldKey:    AddressValue(v.Address),
+// 					encodedCapabilityValuePathFieldKey:       PathValue(v.Path),
+// 					encodedCapabilityValueBorrowTypeFieldKey: StaticType(v.BorrowType),
 // 				},
 // }
 func (s CapabilityStorable) Encode(e *atree.Encoder) error {
@@ -813,26 +813,26 @@ func (s CapabilityStorable) Encode(e *atree.Encoder) error {
 		return err
 	}
 
-	// Encode address at array index encodedCapabilityValueAddressFieldKeyV6
+	// Encode address at array index encodedCapabilityValueAddressFieldKey
 	err = s.Address.Encode(e)
 	if err != nil {
 		return err
 	}
 
-	// Encode path at array index encodedCapabilityValuePathFieldKeyV6
+	// Encode path at array index encodedCapabilityValuePathFieldKey
 	err = s.Path.Encode(e)
 	if err != nil {
 		return err
 	}
 
-	// Encode borrow type at array index encodedCapabilityValueBorrowTypeFieldKeyV6
+	// Encode borrow type at array index encodedCapabilityValueBorrowTypeFieldKey
 	return EncodeStaticType(e, s.BorrowType)
 }
 
 // NOTE: NEVER change, only add/increment; ensure uint64
 const (
-	// encodedAddressLocationAddressFieldKeyV6 uint64 = 0
-	// encodedAddressLocationNameFieldKeyV6    uint64 = 1
+	// encodedAddressLocationAddressFieldKey uint64 = 0
+	// encodedAddressLocationNameFieldKey    uint64 = 1
 
 	// !!! *WARNING* !!!
 	//
@@ -883,8 +883,8 @@ func EncodeLocation(e *atree.Encoder, l common.Location) error {
 		// cbor.Tag{
 		//		Number: CBORTagAddressLocation,
 		//		Content: []interface{}{
-		//			encodedAddressLocationAddressFieldKeyV6: []byte{l.Address.Bytes()},
-		//			encodedAddressLocationNameFieldKeyV6:    string(l.Name),
+		//			encodedAddressLocationAddressFieldKey: []byte{l.Address.Bytes()},
+		//			encodedAddressLocationNameFieldKey:    string(l.Name),
 		//		},
 		// }
 		// Encode tag number and array head
@@ -897,12 +897,12 @@ func EncodeLocation(e *atree.Encoder, l common.Location) error {
 		if err != nil {
 			return err
 		}
-		// Encode address at array index encodedAddressLocationAddressFieldKeyV6
+		// Encode address at array index encodedAddressLocationAddressFieldKey
 		err = e.CBOR.EncodeBytes(l.Address.Bytes())
 		if err != nil {
 			return err
 		}
-		// Encode name at array index encodedAddressLocationNameFieldKeyV6
+		// Encode name at array index encodedAddressLocationNameFieldKey
 		return e.CBOR.EncodeString(l.Name)
 
 	default:
@@ -912,8 +912,8 @@ func EncodeLocation(e *atree.Encoder, l common.Location) error {
 
 // NOTE: NEVER change, only add/increment; ensure uint64
 const (
-	// encodedLinkValueTargetPathFieldKeyV6 uint64 = 0
-	// encodedLinkValueTypeFieldKeyV6       uint64 = 1
+	// encodedLinkValueTargetPathFieldKey uint64 = 0
+	// encodedLinkValueTypeFieldKey       uint64 = 1
 
 	// !!! *WARNING* !!!
 	//
@@ -926,8 +926,8 @@ const (
 // cbor.Tag{
 //			Number: CBORTagLinkValue,
 //			Content: []interface{}{
-//				encodedLinkValueTargetPathFieldKeyV6: PathValue(v.TargetPath),
-//				encodedLinkValueTypeFieldKeyV6:       StaticType(v.Type),
+//				encodedLinkValueTargetPathFieldKey: PathValue(v.TargetPath),
+//				encodedLinkValueTypeFieldKey:       StaticType(v.Type),
 //			},
 // }
 func (v LinkValue) Encode(e *atree.Encoder) error {
@@ -941,12 +941,12 @@ func (v LinkValue) Encode(e *atree.Encoder) error {
 	if err != nil {
 		return err
 	}
-	// Encode path at array index encodedLinkValueTargetPathFieldKeyV6
+	// Encode path at array index encodedLinkValueTargetPathFieldKey
 	err = v.TargetPath.Encode(e)
 	if err != nil {
 		return err
 	}
-	// Encode type at array index encodedLinkValueTypeFieldKeyV6
+	// Encode type at array index encodedLinkValueTypeFieldKey
 	return EncodeStaticType(e, v.Type)
 }
 
@@ -969,7 +969,7 @@ func StaticTypeToBytes(t StaticType) (cbor.RawMessage, error) {
 
 func StaticTypeFromBytes(data []byte) (StaticType, error) {
 	decoder := CBORDecMode.NewByteStreamDecoder(data)
-	return DecoderV6{decoder: decoder}.decodeStaticType()
+	return Decoder{decoder: decoder}.decodeStaticType()
 }
 
 func EncodeStaticType(e *atree.Encoder, t StaticType) error {
@@ -1014,8 +1014,8 @@ func (t OptionalStaticType) Encode(e *atree.Encoder) error {
 
 // NOTE: NEVER change, only add/increment; ensure uint64
 const (
-	// encodedCompositeStaticTypeLocationFieldKeyV6            uint64 = 0
-	// encodedCompositeStaticTypeQualifiedIdentifierFieldKeyV6 uint64 = 1
+	// encodedCompositeStaticTypeLocationFieldKey            uint64 = 0
+	// encodedCompositeStaticTypeQualifiedIdentifierFieldKey uint64 = 1
 
 	// !!! *WARNING* !!!
 	//
@@ -1028,8 +1028,8 @@ const (
 // cbor.Tag{
 //			Number: CBORTagCompositeStaticType,
 // 			Content: cborArray{
-//				encodedCompositeStaticTypeLocationFieldKeyV6:            Location(v.Location),
-//				encodedCompositeStaticTypeQualifiedIdentifierFieldKeyV6: string(v.QualifiedIdentifier),
+//				encodedCompositeStaticTypeLocationFieldKey:            Location(v.Location),
+//				encodedCompositeStaticTypeQualifiedIdentifierFieldKey: string(v.QualifiedIdentifier),
 //		},
 // }
 func (t CompositeStaticType) Encode(e *atree.Encoder) error {
@@ -1044,20 +1044,20 @@ func (t CompositeStaticType) Encode(e *atree.Encoder) error {
 		return err
 	}
 
-	// Encode location at array index encodedCompositeStaticTypeLocationFieldKeyV6
+	// Encode location at array index encodedCompositeStaticTypeLocationFieldKey
 	err = EncodeLocation(e, t.Location)
 	if err != nil {
 		return err
 	}
 
-	// Encode qualified identifier at array index encodedCompositeStaticTypeQualifiedIdentifierFieldKeyV6
+	// Encode qualified identifier at array index encodedCompositeStaticTypeQualifiedIdentifierFieldKey
 	return e.CBOR.EncodeString(t.QualifiedIdentifier)
 }
 
 // NOTE: NEVER change, only add/increment; ensure uint64
 const (
-	// encodedInterfaceStaticTypeLocationFieldKeyV6            uint64 = 0
-	// encodedInterfaceStaticTypeQualifiedIdentifierFieldKeyV6 uint64 = 1
+	// encodedInterfaceStaticTypeLocationFieldKey            uint64 = 0
+	// encodedInterfaceStaticTypeQualifiedIdentifierFieldKey uint64 = 1
 
 	// !!! *WARNING* !!!
 	//
@@ -1070,8 +1070,8 @@ const (
 // cbor.Tag{
 //		Number: CBORTagInterfaceStaticType,
 //		Content: cborArray{
-//				encodedInterfaceStaticTypeLocationFieldKeyV6:            Location(v.Location),
-//				encodedInterfaceStaticTypeQualifiedIdentifierFieldKeyV6: string(v.QualifiedIdentifier),
+//				encodedInterfaceStaticTypeLocationFieldKey:            Location(v.Location),
+//				encodedInterfaceStaticTypeQualifiedIdentifierFieldKey: string(v.QualifiedIdentifier),
 //		},
 // }
 func (t InterfaceStaticType) Encode(e *atree.Encoder) error {
@@ -1086,13 +1086,13 @@ func (t InterfaceStaticType) Encode(e *atree.Encoder) error {
 		return err
 	}
 
-	// Encode location at array index encodedInterfaceStaticTypeLocationFieldKeyV6
+	// Encode location at array index encodedInterfaceStaticTypeLocationFieldKey
 	err = EncodeLocation(e, t.Location)
 	if err != nil {
 		return err
 	}
 
-	// Encode qualified identifier at array index encodedInterfaceStaticTypeQualifiedIdentifierFieldKeyV6
+	// Encode qualified identifier at array index encodedInterfaceStaticTypeQualifiedIdentifierFieldKey
 	return e.CBOR.EncodeString(t.QualifiedIdentifier)
 }
 
@@ -1114,8 +1114,8 @@ func (t VariableSizedStaticType) Encode(e *atree.Encoder) error {
 
 // NOTE: NEVER change, only add/increment; ensure uint64
 const (
-	// encodedConstantSizedStaticTypeSizeFieldKeyV6 uint64 = 0
-	// encodedConstantSizedStaticTypeTypeFieldKeyV6 uint64 = 1
+	// encodedConstantSizedStaticTypeSizeFieldKey uint64 = 0
+	// encodedConstantSizedStaticTypeTypeFieldKey uint64 = 1
 
 	// !!! *WARNING* !!!
 	//
@@ -1128,8 +1128,8 @@ const (
 // cbor.Tag{
 //		Number: CBORTagConstantSizedStaticType,
 //		Content: cborArray{
-//				encodedConstantSizedStaticTypeSizeFieldKeyV6: int64(v.Size),
-//				encodedConstantSizedStaticTypeTypeFieldKeyV6: StaticType(v.Type),
+//				encodedConstantSizedStaticTypeSizeFieldKey: int64(v.Size),
+//				encodedConstantSizedStaticTypeTypeFieldKey: StaticType(v.Type),
 //		},
 // }
 func (t ConstantSizedStaticType) Encode(e *atree.Encoder) error {
@@ -1143,19 +1143,19 @@ func (t ConstantSizedStaticType) Encode(e *atree.Encoder) error {
 	if err != nil {
 		return err
 	}
-	// Encode size at array index encodedConstantSizedStaticTypeSizeFieldKeyV6
+	// Encode size at array index encodedConstantSizedStaticTypeSizeFieldKey
 	err = e.CBOR.EncodeInt64(t.Size)
 	if err != nil {
 		return err
 	}
-	// Encode type at array index encodedConstantSizedStaticTypeTypeFieldKeyV6
+	// Encode type at array index encodedConstantSizedStaticTypeTypeFieldKey
 	return EncodeStaticType(e, t.Type)
 }
 
 // NOTE: NEVER change, only add/increment; ensure uint64
 const (
-	// encodedReferenceStaticTypeAuthorizedFieldKeyV6 uint64 = 0
-	// encodedReferenceStaticTypeTypeFieldKeyV6       uint64 = 1
+	// encodedReferenceStaticTypeAuthorizedFieldKey uint64 = 0
+	// encodedReferenceStaticTypeTypeFieldKey       uint64 = 1
 
 	// !!! *WARNING* !!!
 	//
@@ -1168,8 +1168,8 @@ const (
 // cbor.Tag{
 //		Number: CBORTagReferenceStaticType,
 //		Content: cborArray{
-//				encodedReferenceStaticTypeAuthorizedFieldKeyV6: bool(v.Authorized),
-//				encodedReferenceStaticTypeTypeFieldKeyV6:       StaticType(v.Type),
+//				encodedReferenceStaticTypeAuthorizedFieldKey: bool(v.Authorized),
+//				encodedReferenceStaticTypeTypeFieldKey:       StaticType(v.Type),
 //		},
 //	}
 func (t ReferenceStaticType) Encode(e *atree.Encoder) error {
@@ -1183,19 +1183,19 @@ func (t ReferenceStaticType) Encode(e *atree.Encoder) error {
 	if err != nil {
 		return err
 	}
-	// Encode authorized at array index encodedReferenceStaticTypeAuthorizedFieldKeyV6
+	// Encode authorized at array index encodedReferenceStaticTypeAuthorizedFieldKey
 	err = e.CBOR.EncodeBool(t.Authorized)
 	if err != nil {
 		return err
 	}
-	// Encode type at array index encodedReferenceStaticTypeTypeFieldKeyV6
+	// Encode type at array index encodedReferenceStaticTypeTypeFieldKey
 	return EncodeStaticType(e, t.Type)
 }
 
 // NOTE: NEVER change, only add/increment; ensure uint64
 const (
-	// encodedDictionaryStaticTypeKeyTypeFieldKeyV6   uint64 = 0
-	// encodedDictionaryStaticTypeValueTypeFieldKeyV6 uint64 = 1
+	// encodedDictionaryStaticTypeKeyTypeFieldKey   uint64 = 0
+	// encodedDictionaryStaticTypeValueTypeFieldKey uint64 = 1
 
 	// !!! *WARNING* !!!
 	//
@@ -1208,8 +1208,8 @@ const (
 // cbor.Tag{
 //		Number: CBORTagDictionaryStaticType,
 // 		Content: []interface{}{
-//				encodedDictionaryStaticTypeKeyTypeFieldKeyV6:   StaticType(v.KeyType),
-//				encodedDictionaryStaticTypeValueTypeFieldKeyV6: StaticType(v.ValueType),
+//				encodedDictionaryStaticTypeKeyTypeFieldKey:   StaticType(v.KeyType),
+//				encodedDictionaryStaticTypeValueTypeFieldKey: StaticType(v.ValueType),
 //		},
 // }
 func (t DictionaryStaticType) Encode(e *atree.Encoder) error {
@@ -1223,19 +1223,19 @@ func (t DictionaryStaticType) Encode(e *atree.Encoder) error {
 	if err != nil {
 		return err
 	}
-	// Encode key type at array index encodedDictionaryStaticTypeKeyTypeFieldKeyV6
+	// Encode key type at array index encodedDictionaryStaticTypeKeyTypeFieldKey
 	err = EncodeStaticType(e, t.KeyType)
 	if err != nil {
 		return err
 	}
-	// Encode value type at array index encodedDictionaryStaticTypeValueTypeFieldKeyV6
+	// Encode value type at array index encodedDictionaryStaticTypeValueTypeFieldKey
 	return EncodeStaticType(e, t.ValueType)
 }
 
 // NOTE: NEVER change, only add/increment; ensure uint64
 const (
-	// encodedRestrictedStaticTypeTypeFieldKeyV6         uint64 = 0
-	// encodedRestrictedStaticTypeRestrictionsFieldKeyV6 uint64 = 1
+	// encodedRestrictedStaticTypeTypeFieldKey         uint64 = 0
+	// encodedRestrictedStaticTypeRestrictionsFieldKey uint64 = 1
 
 	// !!! *WARNING* !!!
 	//
@@ -1248,8 +1248,8 @@ const (
 // cbor.Tag{
 //		Number: CBORTagRestrictedStaticType,
 //		Content: cborArray{
-//				encodedRestrictedStaticTypeTypeFieldKeyV6:         StaticType(v.Type),
-//				encodedRestrictedStaticTypeRestrictionsFieldKeyV6: []interface{}(v.Restrictions),
+//				encodedRestrictedStaticTypeTypeFieldKey:         StaticType(v.Type),
+//				encodedRestrictedStaticTypeRestrictionsFieldKey: []interface{}(v.Restrictions),
 //		},
 // }
 func (t *RestrictedStaticType) Encode(e *atree.Encoder) error {
@@ -1263,12 +1263,12 @@ func (t *RestrictedStaticType) Encode(e *atree.Encoder) error {
 	if err != nil {
 		return err
 	}
-	// Encode type at array index encodedRestrictedStaticTypeTypeFieldKeyV6
+	// Encode type at array index encodedRestrictedStaticTypeTypeFieldKey
 	err = EncodeStaticType(e, t.Type)
 	if err != nil {
 		return err
 	}
-	// Encode restrictions (as array) at array index encodedRestrictedStaticTypeRestrictionsFieldKeyV6
+	// Encode restrictions (as array) at array index encodedRestrictedStaticTypeRestrictionsFieldKey
 	err = e.CBOR.EncodeArrayHead(uint64(len(t.Restrictions)))
 	if err != nil {
 		return err
@@ -1285,7 +1285,7 @@ func (t *RestrictedStaticType) Encode(e *atree.Encoder) error {
 
 // NOTE: NEVER change, only add/increment; ensure uint64
 const (
-	// encodedTypeValueTypeFieldKeyV6 uint64 = 0
+	// encodedTypeValueTypeFieldKey uint64 = 0
 
 	// !!! *WARNING* !!!
 	//
@@ -1298,7 +1298,7 @@ const (
 // cbor.Tag{
 //			Number: CBORTagTypeValue,
 //			Content: cborArray{
-//				encodedTypeValueTypeFieldKeyV6: StaticType(v.Type),
+//				encodedTypeValueTypeFieldKey: StaticType(v.Type),
 //			},
 //	}
 func (v TypeValue) Encode(e *atree.Encoder) error {
@@ -1313,7 +1313,7 @@ func (v TypeValue) Encode(e *atree.Encoder) error {
 		return err
 	}
 
-	// Encode type at array index encodedTypeValueTypeFieldKeyV6
+	// Encode type at array index encodedTypeValueTypeFieldKey
 	return EncodeStaticType(e, v.Type)
 }
 

@@ -23,28 +23,52 @@ import (
 	"fmt"
 	"math"
 
-	"github.com/onflow/atree"
 	"github.com/fxamacker/cbor/v2"
+	"github.com/onflow/atree"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/sema"
 )
 
-func DecodeStorableV6(
+var CBORDecMode = func() cbor.DecMode {
+	decMode, err := cbor.DecOptions{
+		IntDec:           cbor.IntDecConvertNone,
+		MaxArrayElements: math.MaxInt64,
+		MaxMapPairs:      math.MaxInt64,
+		MaxNestedLevels:  math.MaxInt16,
+	}.DecMode()
+	if err != nil {
+		panic(err)
+	}
+	return decMode
+}()
+
+type UnsupportedTagDecodingError struct {
+	Tag uint64
+}
+
+func (e UnsupportedTagDecodingError) Error() string {
+	return fmt.Sprintf(
+		"unsupported decoded tag: %d",
+		e.Tag,
+	)
+}
+
+func DecodeStorable(
 	decoder *cbor.StreamDecoder,
 	slabStorageID atree.StorageID,
 ) (atree.Storable, error) {
-	return DecoderV6{
+	return Decoder{
 		decoder:       decoder,
 		slabStorageID: slabStorageID,
 	}.decodeStorable()
 }
 
-type DecoderV6 struct {
+type Decoder struct {
 	decoder       *cbor.StreamDecoder
 	slabStorageID atree.StorageID
 }
 
-func (d DecoderV6) decodeStorable() (atree.Storable, error) {
+func (d Decoder) decodeStorable() (atree.Storable, error) {
 	var storable atree.Storable
 	var err error
 
@@ -213,11 +237,11 @@ func (d DecoderV6) decodeStorable() (atree.Storable, error) {
 	return storable, nil
 }
 
-func (d DecoderV6) decodeString(v string) *StringValue {
+func (d Decoder) decodeString(v string) *StringValue {
 	return NewStringValue(v)
 }
 
-func (d DecoderV6) decodeLocation() (common.Location, error) {
+func (d Decoder) decodeLocation() (common.Location, error) {
 	// Location can be CBOR nil.
 	err := d.decoder.DecodeNil()
 	if err == nil {
@@ -255,7 +279,7 @@ func (d DecoderV6) decodeLocation() (common.Location, error) {
 	}
 }
 
-func (d DecoderV6) decodeStringLocation() (common.Location, error) {
+func (d Decoder) decodeStringLocation() (common.Location, error) {
 	s, err := d.decoder.DecodeString()
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
@@ -269,7 +293,7 @@ func (d DecoderV6) decodeStringLocation() (common.Location, error) {
 	return common.StringLocation(s), nil
 }
 
-func (d DecoderV6) decodeIdentifierLocation() (common.Location, error) {
+func (d Decoder) decodeIdentifierLocation() (common.Location, error) {
 	s, err := d.decoder.DecodeString()
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
@@ -283,7 +307,7 @@ func (d DecoderV6) decodeIdentifierLocation() (common.Location, error) {
 	return common.IdentifierLocation(s), nil
 }
 
-func (d DecoderV6) decodeAddressLocation() (common.Location, error) {
+func (d Decoder) decodeAddressLocation() (common.Location, error) {
 
 	const expectedLength = encodedAddressLocationLength
 
@@ -309,7 +333,7 @@ func (d DecoderV6) decodeAddressLocation() (common.Location, error) {
 
 	// Address
 
-	// Decode address at array index encodedAddressLocationAddressFieldKeyV6
+	// Decode address at array index encodedAddressLocationAddressFieldKey
 	encodedAddress, err := d.decoder.DecodeBytes()
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
@@ -328,7 +352,7 @@ func (d DecoderV6) decodeAddressLocation() (common.Location, error) {
 
 	// Name
 
-	// Decode name at array index encodedAddressLocationNameFieldKeyV6
+	// Decode name at array index encodedAddressLocationNameFieldKey
 	name, err := d.decoder.DecodeString()
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
@@ -346,7 +370,7 @@ func (d DecoderV6) decodeAddressLocation() (common.Location, error) {
 	}, nil
 }
 
-func (d DecoderV6) decodeComposite() (CompositeStorable, error) {
+func (d Decoder) decodeComposite() (CompositeStorable, error) {
 
 	const expectedLength = encodedCompositeValueLength
 
@@ -372,7 +396,7 @@ func (d DecoderV6) decodeComposite() (CompositeStorable, error) {
 
 	// Location
 
-	// Decode location at array index encodedCompositeValueLocationFieldKeyV6
+	// Decode location at array index encodedCompositeValueLocationFieldKey
 	location, err := d.decodeLocation()
 	if err != nil {
 		return CompositeStorable{}, fmt.Errorf(
@@ -383,7 +407,7 @@ func (d DecoderV6) decodeComposite() (CompositeStorable, error) {
 
 	// Kind
 
-	// Decode kind at array index encodedCompositeValueKindFieldKeyV6
+	// Decode kind at array index encodedCompositeValueKindFieldKey
 	encodedKind, err := d.decoder.DecodeUint64()
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
@@ -406,7 +430,7 @@ func (d DecoderV6) decodeComposite() (CompositeStorable, error) {
 
 	// Fields
 
-	// Decode fields at array index encodedCompositeValueFieldsFieldKeyV6
+	// Decode fields at array index encodedCompositeValueFieldsFieldKey
 	fieldsSize, err := d.decoder.DecodeArrayHead()
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
@@ -462,7 +486,7 @@ func (d DecoderV6) decodeComposite() (CompositeStorable, error) {
 
 	// Qualified identifier
 
-	// Decode qualified identifier at array index encodedCompositeValueQualifiedIdentifierFieldKeyV6
+	// Decode qualified identifier at array index encodedCompositeValueQualifiedIdentifierFieldKey
 	qualifiedIdentifier, err := d.decoder.DecodeString()
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
@@ -487,7 +511,7 @@ func (d DecoderV6) decodeComposite() (CompositeStorable, error) {
 	}, nil
 }
 
-func (d DecoderV6) decodeInt() (IntValue, error) {
+func (d Decoder) decodeInt() (IntValue, error) {
 	bigInt, err := d.decoder.DecodeBigInt()
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
@@ -499,7 +523,7 @@ func (d DecoderV6) decodeInt() (IntValue, error) {
 	return NewIntValueFromBigInt(bigInt), nil
 }
 
-func (d DecoderV6) decodeInt8() (Int8Value, error) {
+func (d Decoder) decodeInt8() (Int8Value, error) {
 	v, err := d.decoder.DecodeInt64()
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
@@ -522,7 +546,7 @@ func (d DecoderV6) decodeInt8() (Int8Value, error) {
 	return Int8Value(v), nil
 }
 
-func (d DecoderV6) decodeInt16() (Int16Value, error) {
+func (d Decoder) decodeInt16() (Int16Value, error) {
 	v, err := d.decoder.DecodeInt64()
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
@@ -544,7 +568,7 @@ func (d DecoderV6) decodeInt16() (Int16Value, error) {
 	return Int16Value(v), nil
 }
 
-func (d DecoderV6) decodeInt32() (Int32Value, error) {
+func (d Decoder) decodeInt32() (Int32Value, error) {
 	v, err := d.decoder.DecodeInt64()
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
@@ -565,7 +589,7 @@ func (d DecoderV6) decodeInt32() (Int32Value, error) {
 	return Int32Value(v), nil
 }
 
-func (d DecoderV6) decodeInt64() (Int64Value, error) {
+func (d Decoder) decodeInt64() (Int64Value, error) {
 	v, err := d.decoder.DecodeInt64()
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
@@ -577,7 +601,7 @@ func (d DecoderV6) decodeInt64() (Int64Value, error) {
 	return Int64Value(v), nil
 }
 
-func (d DecoderV6) decodeInt128() (Int128Value, error) {
+func (d Decoder) decodeInt128() (Int128Value, error) {
 	bigInt, err := d.decoder.DecodeBigInt()
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
@@ -599,7 +623,7 @@ func (d DecoderV6) decodeInt128() (Int128Value, error) {
 	return NewInt128ValueFromBigInt(bigInt), nil
 }
 
-func (d DecoderV6) decodeInt256() (Int256Value, error) {
+func (d Decoder) decodeInt256() (Int256Value, error) {
 	bigInt, err := d.decoder.DecodeBigInt()
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
@@ -621,7 +645,7 @@ func (d DecoderV6) decodeInt256() (Int256Value, error) {
 	return NewInt256ValueFromBigInt(bigInt), nil
 }
 
-func (d DecoderV6) decodeUInt() (UIntValue, error) {
+func (d Decoder) decodeUInt() (UIntValue, error) {
 	bigInt, err := d.decoder.DecodeBigInt()
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
@@ -637,7 +661,7 @@ func (d DecoderV6) decodeUInt() (UIntValue, error) {
 	return NewUIntValueFromBigInt(bigInt), nil
 }
 
-func (d DecoderV6) decodeUInt8() (UInt8Value, error) {
+func (d Decoder) decodeUInt8() (UInt8Value, error) {
 	value, err := d.decoder.DecodeUint64()
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
@@ -652,7 +676,7 @@ func (d DecoderV6) decodeUInt8() (UInt8Value, error) {
 	return UInt8Value(value), nil
 }
 
-func (d DecoderV6) decodeUInt16() (UInt16Value, error) {
+func (d Decoder) decodeUInt16() (UInt16Value, error) {
 	value, err := d.decoder.DecodeUint64()
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
@@ -668,7 +692,7 @@ func (d DecoderV6) decodeUInt16() (UInt16Value, error) {
 	return UInt16Value(value), nil
 }
 
-func (d DecoderV6) decodeUInt32() (UInt32Value, error) {
+func (d Decoder) decodeUInt32() (UInt32Value, error) {
 	value, err := d.decoder.DecodeUint64()
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
@@ -684,7 +708,7 @@ func (d DecoderV6) decodeUInt32() (UInt32Value, error) {
 	return UInt32Value(value), nil
 }
 
-func (d DecoderV6) decodeUInt64() (UInt64Value, error) {
+func (d Decoder) decodeUInt64() (UInt64Value, error) {
 	value, err := d.decoder.DecodeUint64()
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
@@ -695,7 +719,7 @@ func (d DecoderV6) decodeUInt64() (UInt64Value, error) {
 	return UInt64Value(value), nil
 }
 
-func (d DecoderV6) decodeUInt128() (UInt128Value, error) {
+func (d Decoder) decodeUInt128() (UInt128Value, error) {
 	bigInt, err := d.decoder.DecodeBigInt()
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
@@ -716,7 +740,7 @@ func (d DecoderV6) decodeUInt128() (UInt128Value, error) {
 	return NewUInt128ValueFromBigInt(bigInt), nil
 }
 
-func (d DecoderV6) decodeUInt256() (UInt256Value, error) {
+func (d Decoder) decodeUInt256() (UInt256Value, error) {
 	bigInt, err := d.decoder.DecodeBigInt()
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
@@ -737,7 +761,7 @@ func (d DecoderV6) decodeUInt256() (UInt256Value, error) {
 	return NewUInt256ValueFromBigInt(bigInt), nil
 }
 
-func (d DecoderV6) decodeWord8() (Word8Value, error) {
+func (d Decoder) decodeWord8() (Word8Value, error) {
 	value, err := d.decoder.DecodeUint64()
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
@@ -752,7 +776,7 @@ func (d DecoderV6) decodeWord8() (Word8Value, error) {
 	return Word8Value(value), nil
 }
 
-func (d DecoderV6) decodeWord16() (Word16Value, error) {
+func (d Decoder) decodeWord16() (Word16Value, error) {
 	value, err := d.decoder.DecodeUint64()
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
@@ -767,7 +791,7 @@ func (d DecoderV6) decodeWord16() (Word16Value, error) {
 	return Word16Value(value), nil
 }
 
-func (d DecoderV6) decodeWord32() (Word32Value, error) {
+func (d Decoder) decodeWord32() (Word32Value, error) {
 	value, err := d.decoder.DecodeUint64()
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
@@ -782,7 +806,7 @@ func (d DecoderV6) decodeWord32() (Word32Value, error) {
 	return Word32Value(value), nil
 }
 
-func (d DecoderV6) decodeWord64() (Word64Value, error) {
+func (d Decoder) decodeWord64() (Word64Value, error) {
 	value, err := d.decoder.DecodeUint64()
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
@@ -793,7 +817,7 @@ func (d DecoderV6) decodeWord64() (Word64Value, error) {
 	return Word64Value(value), nil
 }
 
-func (d DecoderV6) decodeFix64() (Fix64Value, error) {
+func (d Decoder) decodeFix64() (Fix64Value, error) {
 	value, err := d.decoder.DecodeInt64()
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
@@ -804,7 +828,7 @@ func (d DecoderV6) decodeFix64() (Fix64Value, error) {
 	return Fix64Value(value), nil
 }
 
-func (d DecoderV6) decodeUFix64() (UFix64Value, error) {
+func (d Decoder) decodeUFix64() (UFix64Value, error) {
 	value, err := d.decoder.DecodeUint64()
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
@@ -815,7 +839,7 @@ func (d DecoderV6) decodeUFix64() (UFix64Value, error) {
 	return UFix64Value(value), nil
 }
 
-func (d DecoderV6) decodeSome() (SomeStorable, error) {
+func (d Decoder) decodeSome() (SomeStorable, error) {
 	storable, err := d.decodeStorable()
 	if err != nil {
 		return SomeStorable{}, fmt.Errorf(
@@ -829,7 +853,7 @@ func (d DecoderV6) decodeSome() (SomeStorable, error) {
 	}, nil
 }
 
-func (d DecoderV6) checkAddressLength(addressBytes []byte) error {
+func (d Decoder) checkAddressLength(addressBytes []byte) error {
 	actualLength := len(addressBytes)
 	const expectedLength = common.AddressLength
 	if actualLength > expectedLength {
@@ -842,7 +866,7 @@ func (d DecoderV6) checkAddressLength(addressBytes []byte) error {
 	return nil
 }
 
-func (d DecoderV6) decodeAddress() (AddressValue, error) {
+func (d Decoder) decodeAddress() (AddressValue, error) {
 	addressBytes, err := d.decoder.DecodeBytes()
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
@@ -863,7 +887,7 @@ func (d DecoderV6) decodeAddress() (AddressValue, error) {
 	return address, nil
 }
 
-func (d DecoderV6) decodePath() (PathValue, error) {
+func (d Decoder) decodePath() (PathValue, error) {
 
 	const expectedLength = encodedPathValueLength
 
@@ -887,7 +911,7 @@ func (d DecoderV6) decodePath() (PathValue, error) {
 		)
 	}
 
-	// Decode domain at array index encodedPathValueDomainFieldKeyV6
+	// Decode domain at array index encodedPathValueDomainFieldKey
 	domain, err := d.decoder.DecodeUint64()
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
@@ -899,7 +923,7 @@ func (d DecoderV6) decodePath() (PathValue, error) {
 		return PathValue{}, err
 	}
 
-	// Decode identifier at array index encodedPathValueIdentifierFieldKeyV6
+	// Decode identifier at array index encodedPathValueIdentifierFieldKey
 	identifier, err := d.decoder.DecodeString()
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
@@ -917,7 +941,7 @@ func (d DecoderV6) decodePath() (PathValue, error) {
 	}, nil
 }
 
-func (d DecoderV6) decodeCapability() (CapabilityStorable, error) {
+func (d Decoder) decodeCapability() (CapabilityStorable, error) {
 
 	const expectedLength = encodedCapabilityValueLength
 
@@ -943,7 +967,7 @@ func (d DecoderV6) decodeCapability() (CapabilityStorable, error) {
 
 	// address
 
-	// Decode address at array index encodedCapabilityValueAddressFieldKeyV6
+	// Decode address at array index encodedCapabilityValueAddressFieldKey
 	var num uint64
 	num, err = d.decoder.DecodeTagNumber()
 	if err != nil {
@@ -968,13 +992,13 @@ func (d DecoderV6) decodeCapability() (CapabilityStorable, error) {
 
 	// path
 
-	// Decode path at array index encodedCapabilityValuePathFieldKeyV6
+	// Decode path at array index encodedCapabilityValuePathFieldKey
 	path, err := d.decodeStorable()
 	if err != nil {
 		return CapabilityStorable{}, fmt.Errorf("invalid capability path: %w", err)
 	}
 
-	// Decode borrow type at array index encodedCapabilityValueBorrowTypeFieldKeyV6
+	// Decode borrow type at array index encodedCapabilityValueBorrowTypeFieldKey
 
 	// borrow type (optional, for backwards compatibility)
 	// Capabilities used to be untyped, i.e. they didn't have a borrow type.
@@ -1003,7 +1027,7 @@ func (d DecoderV6) decodeCapability() (CapabilityStorable, error) {
 	}, nil
 }
 
-func (d DecoderV6) decodeLink() (LinkValue, error) {
+func (d Decoder) decodeLink() (LinkValue, error) {
 
 	const expectedLength = encodedLinkValueLength
 
@@ -1027,7 +1051,7 @@ func (d DecoderV6) decodeLink() (LinkValue, error) {
 		)
 	}
 
-	// Decode path at array index encodedLinkValueTargetPathFieldKeyV6
+	// Decode path at array index encodedLinkValueTargetPathFieldKey
 	num, err := d.decoder.DecodeTagNumber()
 	if err != nil {
 		return LinkValue{}, fmt.Errorf("invalid link target path encoding: %w", err)
@@ -1040,7 +1064,7 @@ func (d DecoderV6) decodeLink() (LinkValue, error) {
 		return LinkValue{}, fmt.Errorf("invalid link target path encoding: %w", err)
 	}
 
-	// Decode type at array index encodedLinkValueTypeFieldKeyV6
+	// Decode type at array index encodedLinkValueTypeFieldKey
 	staticType, err := d.decodeStaticType()
 	if err != nil {
 		return LinkValue{}, fmt.Errorf("invalid link type encoding: %w", err)
@@ -1052,7 +1076,7 @@ func (d DecoderV6) decodeLink() (LinkValue, error) {
 	}, nil
 }
 
-func (d DecoderV6) decodeStaticType() (StaticType, error) {
+func (d Decoder) decodeStaticType() (StaticType, error) {
 	number, err := d.decoder.DecodeTagNumber()
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
@@ -1100,7 +1124,7 @@ func (d DecoderV6) decodeStaticType() (StaticType, error) {
 	}
 }
 
-func (d DecoderV6) decodePrimitiveStaticType() (PrimitiveStaticType, error) {
+func (d Decoder) decodePrimitiveStaticType() (PrimitiveStaticType, error) {
 	encoded, err := d.decoder.DecodeUint64()
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
@@ -1112,7 +1136,7 @@ func (d DecoderV6) decodePrimitiveStaticType() (PrimitiveStaticType, error) {
 	return PrimitiveStaticType(encoded), nil
 }
 
-func (d DecoderV6) decodeOptionalStaticType() (StaticType, error) {
+func (d Decoder) decodeOptionalStaticType() (StaticType, error) {
 	staticType, err := d.decodeStaticType()
 	if err != nil {
 		return nil, fmt.Errorf(
@@ -1125,7 +1149,7 @@ func (d DecoderV6) decodeOptionalStaticType() (StaticType, error) {
 	}, nil
 }
 
-func (d DecoderV6) decodeCompositeStaticType() (StaticType, error) {
+func (d Decoder) decodeCompositeStaticType() (StaticType, error) {
 	const expectedLength = encodedCompositeStaticTypeLength
 
 	size, err := d.decoder.DecodeArrayHead()
@@ -1149,13 +1173,13 @@ func (d DecoderV6) decodeCompositeStaticType() (StaticType, error) {
 		)
 	}
 
-	// Decode location at array index encodedCompositeStaticTypeLocationFieldKeyV6
+	// Decode location at array index encodedCompositeStaticTypeLocationFieldKey
 	location, err := d.decodeLocation()
 	if err != nil {
 		return nil, fmt.Errorf("invalid composite static type location encoding: %w", err)
 	}
 
-	// Decode qualified identifier at array index encodedCompositeStaticTypeQualifiedIdentifierFieldKeyV6
+	// Decode qualified identifier at array index encodedCompositeStaticTypeQualifiedIdentifierFieldKey
 	qualifiedIdentifier, err := d.decoder.DecodeString()
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
@@ -1173,7 +1197,7 @@ func (d DecoderV6) decodeCompositeStaticType() (StaticType, error) {
 	}, nil
 }
 
-func (d DecoderV6) decodeInterfaceStaticType() (InterfaceStaticType, error) {
+func (d Decoder) decodeInterfaceStaticType() (InterfaceStaticType, error) {
 	const expectedLength = encodedInterfaceStaticTypeLength
 
 	size, err := d.decoder.DecodeArrayHead()
@@ -1199,7 +1223,7 @@ func (d DecoderV6) decodeInterfaceStaticType() (InterfaceStaticType, error) {
 			)
 	}
 
-	// Decode location at array index encodedInterfaceStaticTypeLocationFieldKeyV6
+	// Decode location at array index encodedInterfaceStaticTypeLocationFieldKey
 	location, err := d.decodeLocation()
 	if err != nil {
 		return InterfaceStaticType{}, fmt.Errorf(
@@ -1208,7 +1232,7 @@ func (d DecoderV6) decodeInterfaceStaticType() (InterfaceStaticType, error) {
 		)
 	}
 
-	// Decode qualified identifier at array index encodedInterfaceStaticTypeQualifiedIdentifierFieldKeyV6
+	// Decode qualified identifier at array index encodedInterfaceStaticTypeQualifiedIdentifierFieldKey
 	qualifiedIdentifier, err := d.decoder.DecodeString()
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
@@ -1227,7 +1251,7 @@ func (d DecoderV6) decodeInterfaceStaticType() (InterfaceStaticType, error) {
 	}, nil
 }
 
-func (d DecoderV6) decodeVariableSizedStaticType() (StaticType, error) {
+func (d Decoder) decodeVariableSizedStaticType() (StaticType, error) {
 	staticType, err := d.decodeStaticType()
 	if err != nil {
 		return nil, fmt.Errorf(
@@ -1240,7 +1264,7 @@ func (d DecoderV6) decodeVariableSizedStaticType() (StaticType, error) {
 	}, nil
 }
 
-func (d DecoderV6) decodeConstantSizedStaticType() (StaticType, error) {
+func (d Decoder) decodeConstantSizedStaticType() (StaticType, error) {
 
 	const expectedLength = encodedConstantSizedStaticTypeLength
 
@@ -1265,7 +1289,7 @@ func (d DecoderV6) decodeConstantSizedStaticType() (StaticType, error) {
 		)
 	}
 
-	// Decode size at array index encodedConstantSizedStaticTypeSizeFieldKeyV6
+	// Decode size at array index encodedConstantSizedStaticTypeSizeFieldKey
 	size, err := d.decoder.DecodeUint64()
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
@@ -1286,7 +1310,7 @@ func (d DecoderV6) decodeConstantSizedStaticType() (StaticType, error) {
 		)
 	}
 
-	// Decode type at array index encodedConstantSizedStaticTypeTypeFieldKeyV6
+	// Decode type at array index encodedConstantSizedStaticTypeTypeFieldKey
 	staticType, err := d.decodeStaticType()
 	if err != nil {
 		return nil, fmt.Errorf(
@@ -1301,7 +1325,7 @@ func (d DecoderV6) decodeConstantSizedStaticType() (StaticType, error) {
 	}, nil
 }
 
-func (d DecoderV6) decodeReferenceStaticType() (StaticType, error) {
+func (d Decoder) decodeReferenceStaticType() (StaticType, error) {
 	const expectedLength = encodedReferenceStaticTypeLength
 
 	arraySize, err := d.decoder.DecodeArrayHead()
@@ -1325,7 +1349,7 @@ func (d DecoderV6) decodeReferenceStaticType() (StaticType, error) {
 		)
 	}
 
-	// Decode authorized at array index encodedReferenceStaticTypeAuthorizedFieldKeyV6
+	// Decode authorized at array index encodedReferenceStaticTypeAuthorizedFieldKey
 	authorized, err := d.decoder.DecodeBool()
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
@@ -1337,7 +1361,7 @@ func (d DecoderV6) decodeReferenceStaticType() (StaticType, error) {
 		return nil, err
 	}
 
-	// Decode type at array index encodedReferenceStaticTypeTypeFieldKeyV6
+	// Decode type at array index encodedReferenceStaticTypeTypeFieldKey
 	staticType, err := d.decodeStaticType()
 	if err != nil {
 		return nil, fmt.Errorf(
@@ -1352,7 +1376,7 @@ func (d DecoderV6) decodeReferenceStaticType() (StaticType, error) {
 	}, nil
 }
 
-func (d DecoderV6) decodeDictionaryStaticType() (StaticType, error) {
+func (d Decoder) decodeDictionaryStaticType() (StaticType, error) {
 	const expectedLength = encodedDictionaryStaticTypeLength
 
 	arraySize, err := d.decoder.DecodeArrayHead()
@@ -1376,7 +1400,7 @@ func (d DecoderV6) decodeDictionaryStaticType() (StaticType, error) {
 		)
 	}
 
-	// Decode key type at array index encodedDictionaryStaticTypeKeyTypeFieldKeyV6
+	// Decode key type at array index encodedDictionaryStaticTypeKeyTypeFieldKey
 	keyType, err := d.decodeStaticType()
 	if err != nil {
 		return nil, fmt.Errorf(
@@ -1385,7 +1409,7 @@ func (d DecoderV6) decodeDictionaryStaticType() (StaticType, error) {
 		)
 	}
 
-	// Decode value type at array index encodedDictionaryStaticTypeValueTypeFieldKeyV6
+	// Decode value type at array index encodedDictionaryStaticTypeValueTypeFieldKey
 	valueType, err := d.decodeStaticType()
 	if err != nil {
 		return nil, fmt.Errorf(
@@ -1400,7 +1424,7 @@ func (d DecoderV6) decodeDictionaryStaticType() (StaticType, error) {
 	}, nil
 }
 
-func (d DecoderV6) decodeRestrictedStaticType() (StaticType, error) {
+func (d Decoder) decodeRestrictedStaticType() (StaticType, error) {
 	const expectedLength = encodedRestrictedStaticTypeLength
 
 	arraySize, err := d.decoder.DecodeArrayHead()
@@ -1424,7 +1448,7 @@ func (d DecoderV6) decodeRestrictedStaticType() (StaticType, error) {
 		)
 	}
 
-	// Decode restricted type at array index encodedRestrictedStaticTypeTypeFieldKeyV6
+	// Decode restricted type at array index encodedRestrictedStaticTypeTypeFieldKey
 	restrictedType, err := d.decodeStaticType()
 	if err != nil {
 		return nil, fmt.Errorf(
@@ -1433,7 +1457,7 @@ func (d DecoderV6) decodeRestrictedStaticType() (StaticType, error) {
 		)
 	}
 
-	// Decode restrictions at array index encodedRestrictedStaticTypeRestrictionsFieldKeyV6
+	// Decode restrictions at array index encodedRestrictedStaticTypeRestrictionsFieldKey
 	restrictionSize, err := d.decoder.DecodeArrayHead()
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
@@ -1487,7 +1511,7 @@ func (d DecoderV6) decodeRestrictedStaticType() (StaticType, error) {
 	}, nil
 }
 
-func (d DecoderV6) decodeType() (TypeValue, error) {
+func (d Decoder) decodeType() (TypeValue, error) {
 	const expectedLength = encodedTypeValueTypeLength
 
 	arraySize, err := d.decoder.DecodeArrayHead()
@@ -1511,7 +1535,7 @@ func (d DecoderV6) decodeType() (TypeValue, error) {
 		)
 	}
 
-	// Decode type at array index encodedTypeValueTypeFieldKeyV6
+	// Decode type at array index encodedTypeValueTypeFieldKey
 	var staticType StaticType
 
 	// Optional type can be CBOR nil.
@@ -1529,7 +1553,7 @@ func (d DecoderV6) decodeType() (TypeValue, error) {
 	}, nil
 }
 
-func (d DecoderV6) decodeCapabilityStaticType() (StaticType, error) {
+func (d Decoder) decodeCapabilityStaticType() (StaticType, error) {
 	var borrowStaticType StaticType
 
 	// Optional borrow type can be CBOR nil.
@@ -1550,7 +1574,7 @@ func (d DecoderV6) decodeCapabilityStaticType() (StaticType, error) {
 	}, nil
 }
 
-func (d DecoderV6) decodeDictionary() (DictionaryStorable, error) {
+func (d Decoder) decodeDictionary() (DictionaryStorable, error) {
 
 	const expectedLength = encodedDictionaryValueLength
 
@@ -1589,7 +1613,7 @@ func (d DecoderV6) decodeDictionary() (DictionaryStorable, error) {
 		)
 	}
 
-	// Decode keys at array index encodedDictionaryValueKeysFieldKeyV6
+	// Decode keys at array index encodedDictionaryValueKeysFieldKey
 	keysStorable, err := d.decodeStorable()
 	if err != nil {
 		return DictionaryStorable{}, fmt.Errorf(
@@ -1606,7 +1630,7 @@ func (d DecoderV6) decodeDictionary() (DictionaryStorable, error) {
 		)
 	}
 
-	// Decode entries at array index encodedDictionaryValueEntriesFieldKeyV6
+	// Decode entries at array index encodedDictionaryValueEntriesFieldKey
 	valueCount, err := d.decoder.DecodeArrayHead()
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {

@@ -48,7 +48,7 @@ func newRuntimeStorage(runtimeInterface Interface) *runtimeStorage {
 		interpreter.CBORDecMode,
 		atree.WithNoAutoCommit(),
 	)
-	persistentSlabStorage.DecodeStorable = interpreter.DecodeStorableV6
+	persistentSlabStorage.DecodeStorable = interpreter.DecodeStorable
 	return &runtimeStorage{
 		PersistentSlabStorage: persistentSlabStorage,
 		runtimeInterface:      runtimeInterface,
@@ -141,7 +141,7 @@ func (s *runtimeStorage) ReadValue(
 
 	reportMetric(
 		func() {
-			storable, err = interpreter.DecodeStorableV6(decoder, atree.StorageIDUndefined)
+			storable, err = interpreter.DecodeStorable(decoder, atree.StorageIDUndefined)
 		},
 		s.runtimeInterface,
 		func(metrics Metrics, duration time.Duration) {
