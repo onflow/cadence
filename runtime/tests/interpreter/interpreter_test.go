@@ -8061,11 +8061,6 @@ func TestInterpretCompositeValueFieldEncodingOrder(t *testing.T) {
 
 		test := inter.Globals["test"].GetValue().(*interpreter.CompositeValue)
 
-		// TODO:
-		//test.SetOwner(&common.Address{
-		//	0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
-		//})
-
 		storable, err := test.ExternalStorable(inter.Storage)
 		require.NoError(t, err)
 
@@ -8126,16 +8121,9 @@ func TestInterpretDictionaryValueEncodingOrder(t *testing.T) {
 
 		inter := parseCheckAndInterpret(t, codeBuilder.String())
 
-		test := inter.Globals["test"].GetValue().(*interpreter.DictionaryValue)
+		value := inter.Globals["test"].GetValue().(*interpreter.DictionaryValue)
 
-		// TODO:
-		//owner := &common.Address{
-		//	0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
-		//}
-		//
-		//test.SetOwner(owner)
-
-		storable, err := test.ExternalStorable(inter.Storage)
+		storable, err := value.ExternalStorable(inter.Storage)
 		require.NoError(t, err)
 
 		encoded, err := atree.Encode(
@@ -8144,21 +8132,16 @@ func TestInterpretDictionaryValueEncodingOrder(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		// TODO:
-		_ = encoded
-		//
-		//decoder, err := interpreter.NewDecoder(
-		//	bytes.NewReader(encoded),
-		//	owner,
-		//	interpreter.CurrentEncodingVersion,
-		//	nil,
-		//)
-		//require.NoError(t, err)
-		//
-		//decoded, err := decoder.Decode(path)
-		//require.NoError(t, err)
-		//
-		//require.Equal(t, test, decoded)
+		decoder := interpreter.CBORDecMode.NewByteStreamDecoder(encoded)
+
+		testStorageID := atree.NewStorageID(atree.Address{}, atree.StorageIndex{0x1})
+		decodedStorable, err := interpreter.DecodeStorable(decoder, testStorageID)
+		require.NoError(t, err)
+
+		decodedValue, err := interpreter.StoredValue(decodedStorable, inter.Storage)
+		require.NoError(t, err)
+
+		AssertValuesEqual(t, value, decodedValue)
 	}
 }
 
