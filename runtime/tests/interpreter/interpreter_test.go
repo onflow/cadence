@@ -576,37 +576,18 @@ func TestInterpretArrayIndexingAssignment(t *testing.T) {
 
 	actualArray := inter.Globals["z"].GetValue()
 
-	expected, err := interpreter.NewArrayValue(
+	expectedArray := interpreter.NewArrayValue(
 		interpreter.VariableSizedStaticType{
 			Type: interpreter.PrimitiveStaticTypeInt,
 		},
 		inter.Storage,
 		interpreter.NewIntValueFromInt64(0),
-		interpreter.NewIntValueFromInt64(3),
-	).DeepCopy(inter.Storage, atree.Address{})
-	require.NoError(t, err)
-
-	expectedArray := expected.(*interpreter.ArrayValue)
-	expectedArray.SetIndex(
-		inter,
-		interpreter.ReturnEmptyLocationRange,
-		1,
 		interpreter.NewIntValueFromInt64(2),
 	)
 
 	RequireValuesEqual(t,
 		expectedArray,
 		actualArray,
-	)
-
-	// TODO: assert actualArray was updated in storage
-
-	AssertValueSlicesEqual(t,
-		[]interpreter.Value{
-			interpreter.NewIntValueFromInt64(0),
-			interpreter.NewIntValueFromInt64(2),
-		},
-		elements(actualArray.(*interpreter.ArrayValue)),
 	)
 }
 
@@ -2017,8 +1998,6 @@ func TestInterpretStructureFieldAssignment(t *testing.T) {
 
 	test := inter.Globals["test"].GetValue().(*interpreter.CompositeValue)
 
-	// TODO: assert test was updated in storage
-
 	AssertValuesEqual(t,
 		interpreter.NewIntValueFromInt64(1),
 		test.GetField("foo"),
@@ -2026,8 +2005,6 @@ func TestInterpretStructureFieldAssignment(t *testing.T) {
 
 	value, err := inter.Invoke("callTest")
 	require.NoError(t, err)
-
-	// TODO: assert test was updated in storage
 
 	AssertValuesEqual(t,
 		interpreter.VoidValue{},
@@ -3632,7 +3609,7 @@ func TestInterpretDictionary(t *testing.T) {
       let x = {"a": 1, "b": 2}
     `)
 
-	expectedValue, err := interpreter.NewDictionaryValue(
+	expectedDict := interpreter.NewDictionaryValue(
 		newTestInterpreter(t),
 		interpreter.DictionaryStaticType{
 			KeyType:   interpreter.PrimitiveStaticTypeString,
@@ -3641,18 +3618,14 @@ func TestInterpretDictionary(t *testing.T) {
 		inter.Storage,
 		interpreter.NewStringValue("a"), interpreter.NewIntValueFromInt64(1),
 		interpreter.NewStringValue("b"), interpreter.NewIntValueFromInt64(2),
-	).DeepCopy(inter.Storage, atree.Address{})
-	require.NoError(t, err)
+	)
 
-	expectedDict := expectedValue.(*interpreter.DictionaryValue)
 	actualDict := inter.Globals["x"].GetValue()
 
 	AssertValuesEqual(t,
 		expectedDict,
 		actualDict,
 	)
-
-	// TODO: assert actualDict was updated in storage
 }
 
 func TestInterpretDictionaryInsertionOrder(t *testing.T) {
@@ -3663,7 +3636,7 @@ func TestInterpretDictionaryInsertionOrder(t *testing.T) {
       let x = {"c": 3, "a": 1, "b": 2}
     `)
 
-	expectedValue, err := interpreter.NewDictionaryValue(
+	expectedDict := interpreter.NewDictionaryValue(
 		newTestInterpreter(t),
 		interpreter.DictionaryStaticType{
 			KeyType:   interpreter.PrimitiveStaticTypeString,
@@ -3673,18 +3646,14 @@ func TestInterpretDictionaryInsertionOrder(t *testing.T) {
 		interpreter.NewStringValue("c"), interpreter.NewIntValueFromInt64(3),
 		interpreter.NewStringValue("a"), interpreter.NewIntValueFromInt64(1),
 		interpreter.NewStringValue("b"), interpreter.NewIntValueFromInt64(2),
-	).DeepCopy(inter.Storage, atree.Address{})
-	require.NoError(t, err)
+	)
 
-	expectedDict := expectedValue.(*interpreter.DictionaryValue)
 	actualDict := inter.Globals["x"].GetValue()
 
 	AssertValuesEqual(t,
 		expectedDict,
 		actualDict,
 	)
-
-	// TODO: assert actualDict was updated in storage
 }
 
 func TestInterpretDictionaryIndexingString(t *testing.T) {
@@ -3818,8 +3787,6 @@ func TestInterpretDictionaryIndexingAssignmentExisting(t *testing.T) {
 		},
 		elements(actualDict.Keys),
 	)
-
-	// TODO: assert actualDict was updated in storage
 }
 
 func TestInterpretDictionaryIndexingAssignmentNew(t *testing.T) {
@@ -3841,7 +3808,7 @@ func TestInterpretDictionaryIndexingAssignmentNew(t *testing.T) {
 		value,
 	)
 
-	expectedValue, err := interpreter.NewDictionaryValue(
+	expectedDict := interpreter.NewDictionaryValue(
 		newTestInterpreter(t),
 		interpreter.DictionaryStaticType{
 			KeyType:   interpreter.PrimitiveStaticTypeString,
@@ -3849,17 +3816,7 @@ func TestInterpretDictionaryIndexingAssignmentNew(t *testing.T) {
 		},
 		inter.Storage,
 		interpreter.NewStringValue("def"), interpreter.NewIntValueFromInt64(42),
-	).DeepCopy(inter.Storage, atree.Address{})
-	require.NoError(t, err)
-
-	expectedDict := expectedValue.(*interpreter.DictionaryValue)
-	expectedDict.Set(
-		inter,
-		interpreter.ReturnEmptyLocationRange,
-		interpreter.NewStringValue("abc"),
-		interpreter.NewSomeValueNonCopying(
-			interpreter.NewIntValueFromInt64(23),
-		),
+		interpreter.NewStringValue("abc"), interpreter.NewIntValueFromInt64(23),
 	)
 
 	actualDict := inter.Globals["x"].GetValue().(*interpreter.DictionaryValue)
@@ -3893,8 +3850,6 @@ func TestInterpretDictionaryIndexingAssignmentNew(t *testing.T) {
 		},
 		elements(actualDict.Keys),
 	)
-
-	// TODO: assert actualDict was updated in storage
 }
 
 func TestInterpretDictionaryIndexingAssignmentNil(t *testing.T) {
@@ -3916,24 +3871,14 @@ func TestInterpretDictionaryIndexingAssignmentNil(t *testing.T) {
 		value,
 	)
 
-	expectedValue, err := interpreter.NewDictionaryValue(
+	expectedDict := interpreter.NewDictionaryValue(
 		newTestInterpreter(t),
 		interpreter.DictionaryStaticType{
 			KeyType:   interpreter.PrimitiveStaticTypeString,
 			ValueType: interpreter.PrimitiveStaticTypeInt,
 		},
 		inter.Storage,
-		interpreter.NewStringValue("def"), interpreter.NewIntValueFromInt64(42),
 		interpreter.NewStringValue("abc"), interpreter.NewIntValueFromInt64(23),
-	).DeepCopy(inter.Storage, atree.Address{})
-	require.NoError(t, err)
-
-	expectedDict := expectedValue.(*interpreter.DictionaryValue)
-	expectedDict.Set(
-		inter,
-		interpreter.ReturnEmptyLocationRange,
-		interpreter.NewStringValue("def"),
-		interpreter.NilValue{},
 	)
 
 	actualDict := inter.Globals["x"].GetValue().(*interpreter.DictionaryValue)
@@ -3965,8 +3910,6 @@ func TestInterpretDictionaryIndexingAssignmentNil(t *testing.T) {
 		},
 		elements(actualDict.Keys),
 	)
-
-	// TODO: assert actualDict was updated in storage
 }
 
 func TestInterpretOptionalAnyStruct(t *testing.T) {
@@ -4396,8 +4339,6 @@ func TestInterpretArrayAppend(t *testing.T) {
 
 	actualArray := inter.Globals["xs"].GetValue()
 
-	// TODO: assert actualArray was updated in storage
-
 	arrayValue := actualArray.(*interpreter.ArrayValue)
 	AssertValueSlicesEqual(t,
 		[]interpreter.Value{
@@ -4408,7 +4349,6 @@ func TestInterpretArrayAppend(t *testing.T) {
 		},
 		elements(arrayValue),
 	)
-	// TODO: assert arrayValue was updated in storage
 }
 
 func TestInterpretArrayAppendBound(t *testing.T) {
@@ -4437,7 +4377,6 @@ func TestInterpretArrayAppendBound(t *testing.T) {
 		},
 		elements(arrayValue),
 	)
-	// TODO: assert arrayValue was updated in storage
 }
 
 func TestInterpretArrayAppendAll(t *testing.T) {
@@ -4465,7 +4404,6 @@ func TestInterpretArrayAppendAll(t *testing.T) {
 		},
 		elements(arrayValue),
 	)
-	// TODO: assert arrayValue was updated in storage
 }
 
 func TestInterpretArrayAppendAllBound(t *testing.T) {
@@ -4494,7 +4432,6 @@ func TestInterpretArrayAppendAllBound(t *testing.T) {
 		},
 		elements(arrayValue),
 	)
-	// TODO: assert arrayValue was updated in storage
 }
 
 func TestInterpretArrayConcat(t *testing.T) {
@@ -4521,7 +4458,6 @@ func TestInterpretArrayConcat(t *testing.T) {
 		},
 		elements(arrayValue),
 	)
-	// TODO: assert arrayValue was updated in storage
 }
 
 func TestInterpretArrayConcatBound(t *testing.T) {
@@ -4549,7 +4485,6 @@ func TestInterpretArrayConcatBound(t *testing.T) {
 		},
 		elements(arrayValue),
 	)
-	// TODO: assert arrayValue was updated in storage
 }
 
 func TestInterpretArrayConcatDoesNotModifyOriginalArray(t *testing.T) {
@@ -4575,7 +4510,6 @@ func TestInterpretArrayConcatDoesNotModifyOriginalArray(t *testing.T) {
 		},
 		elements(arrayValue),
 	)
-	// TODO: assert arrayValue was updated in storage
 }
 
 func TestInterpretArrayInsert(t *testing.T) {
@@ -4637,8 +4571,6 @@ func TestInterpretArrayInsert(t *testing.T) {
 			actualArray := inter.Globals["x"].GetValue()
 
 			require.IsType(t, &interpreter.ArrayValue{}, actualArray)
-
-			// TODO: assert actualArray was updated in storage
 
 			AssertValueSlicesEqual(t,
 				testCase.expectedValues,
@@ -4710,7 +4642,7 @@ func TestInterpretArrayRemove(t *testing.T) {
 		},
 		elements(arrayValue),
 	)
-	// TODO: assert value was updated in storage
+
 	AssertValuesEqual(t,
 		interpreter.NewIntValueFromInt64(2),
 		inter.Globals["y"].GetValue(),
@@ -4779,7 +4711,7 @@ func TestInterpretArrayRemoveFirst(t *testing.T) {
 		},
 		elements(arrayValue),
 	)
-	// TODO: assert value was updated in storage
+
 	AssertValuesEqual(t,
 		interpreter.NewIntValueFromInt64(1),
 		inter.Globals["y"].GetValue(),
@@ -4839,7 +4771,6 @@ func TestInterpretArrayRemoveLast(t *testing.T) {
 		},
 		elements(arrayValue),
 	)
-	// TODO: assert arrayValue was updated in storage
 
 	AssertValuesEqual(t,
 		interpreter.NewIntValueFromInt64(3),
@@ -5022,8 +4953,6 @@ func TestInterpretDictionaryRemove(t *testing.T) {
 		elements(actualDict.Keys),
 	)
 
-	// TODO: assert actualDict was updated in storage
-
 	AssertValuesEqual(t,
 		interpreter.NewSomeValueNonCopying(
 			interpreter.NewIntValueFromInt64(1),
@@ -5062,8 +4991,6 @@ func TestInterpretDictionaryInsert(t *testing.T) {
 		},
 		elements(actualDict.Keys),
 	)
-
-	// TODO: assert actualDict was updated in storage
 
 	AssertValuesEqual(t,
 		interpreter.NewSomeValueNonCopying(
