@@ -25,6 +25,9 @@ import (
 	"testing"
 	"unicode/utf8"
 
+	"github.com/onflow/cadence/runtime"
+	"github.com/onflow/cadence/runtime/interpreter"
+	"github.com/onflow/cadence/runtime/tests/checker"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -669,105 +672,125 @@ func TestEncodeDictionary(t *testing.T) {
 	)
 }
 
+func exportFromScript(t *testing.T, code string) cadence.Value {
+	checker, err := checker.ParseAndCheck(t, code)
+	require.NoError(t, err)
+
+	var uuid uint64 = 0
+
+	inter, err := interpreter.NewInterpreter(
+		interpreter.ProgramFromChecker(checker),
+		checker.Location,
+		interpreter.WithUUIDHandler(
+			func() (uint64, error) {
+				uuid++
+				return uuid, nil
+			},
+		),
+		interpreter.WithStorage(
+			interpreter.NewInMemoryStorage(),
+		),
+	)
+	require.NoError(t, err)
+
+	err = inter.Interpret()
+	require.NoError(t, err)
+
+	result, err := inter.Invoke("main")
+	require.NoError(t, err)
+
+	return runtime.ExportValue(result, inter)
+}
+
 func TestEncodeResource(t *testing.T) {
 
 	t.Parallel()
 
-	// TODO:
-	//t.Run("Simple", func(t *testing.T) {
-	//
-	//	t.Parallel()
-	//
-	//	script := `
-	//		pub resource Foo {
-	//			pub let bar: Int
-	//
-	//			init(bar: Int) {
-	//				self.bar = bar
-	//			}
-	//		}
-	//
-	//		pub fun main(): @Foo {
-	//			return <- create Foo(bar: 42)
-	//		}
-	//	`
-	//
-	//	expectedJSON := `{"type":"Resource","value":{"id":"S.test.Foo","fields":[{"name":"uuid","value":{"type":"UInt64","value":"0"}},{"name":"bar","value":{"type":"Int","value":"42"}}]}}`
-	//
-	//	v := convertValueFromScript(t, script)
-	//
-	//	testEncodeAndDecode(t, v, expectedJSON)
-	//})
-	//
-	//t.Run("With function member", func(t *testing.T) {
-	//
-	//	t.Parallel()
-	//
-	//	script := `
-	//		pub resource Foo {
-	//			pub let bar: Int
-	//
-	//			pub fun foo(): String {
-	//				return "foo"
-	//			}
-	//
-	//			init(bar: Int) {
-	//				self.bar = bar
-	//			}
-	//		}
-	//
-	//		pub fun main(): @Foo {
-	//			return <- create Foo(bar: 42)
-	//		}
-	//	`
-	//
-	//	// function "foo" should be omitted from resulting JSON
-	//	expectedJSON := `{"type":"Resource","value":{"id":"S.test.Foo","fields":[{"name":"uuid","value":{"type":"UInt64","value":"0"}},{"name":"bar","value":{"type":"Int","value":"42"}}]}}`
-	//
-	//	v := convertValueFromScript(t, script)
-	//
-	//	actualJSON, err := json.Encode(v)
-	//	require.NoError(t, err)
-	//
-	//	assert.JSONEq(t, expectedJSON, string(actualJSON))
-	//})
-	//
-	//t.Run("Nested resource", func(t *testing.T) {
-	//
-	//	t.Parallel()
-	//
-	//	script := `
-	//		pub resource Bar {
-	//			pub let x: Int
-	//
-	//			init(x: Int) {
-	//				self.x = x
-	//			}
-	//		}
-	//
-	//		pub resource Foo {
-	//			pub let bar: @Bar
-	//
-	//			init(bar: @Bar) {
-	//				self.bar <- bar
-	//			}
-	//
-	//			destroy() {
-	//				destroy self.bar
-	//			}
-	//		}
-	//
-	//		pub fun main(): @Foo {
-	//			return <- create Foo(bar: <- create Bar(x: 42))
-	//		}
-	//	`
-	//
-	//	expectedJSON := `{"type":"Resource","value":{"id":"S.test.Foo","fields":[{"name":"uuid","value":{"type":"UInt64","value":"0"}},{"name":"bar","value":{"type":"Resource","value":{"id":"S.test.Bar","fields":[{"name":"uuid","value":{"type":"UInt64","value":"0"}},{"name":"x","value":{"type":"Int","value":"42"}}]}}}]}}`
-	//
-	//	v := convertValueFromScript(t, script)
-	//
-	//	testEncodeAndDecode(t, v, expectedJSON)
-	//})
+	t.Run("Simple", func(t *testing.T) {
+
+		t.Parallel()
+
+		actual := exportFromScript(t, `
+			resource Foo {
+				let bar: Int
+	
+				init(bar: Int) {
+					self.bar = bar
+				}
+			}
+	
+			fun main(): @Foo {
+				return <- create Foo(bar: 42)
+			}
+		`)
+
+		expectedJSON := `{"type":"Resource","value":{"id":"S.test.Foo","fields":[{"name":"uuid","value":{"type":"UInt64","value":"1"}},{"name":"bar","value":{"type":"Int","value":"42"}}]}}`
+
+		testEncodeAndDecode(t, actual, expectedJSON)
+	})
+
+	t.Run("With function member", func(t *testing.T) {
+
+		t.Parallel()
+
+		actual := exportFromScript(t, `
+			resource Foo {
+				let bar: Int
+	
+				fun foo(): String {
+					return "foo"
+				}
+	
+				init(bar: Int) {
+					self.bar = bar
+				}
+			}
+	
+			fun main(): @Foo {
+				return <- create Foo(bar: 42)
+			}
+		`)
+
+		// function "foo" should be omitted from resulting JSON
+		expectedJSON := `{"type":"Resource","value":{"id":"S.test.Foo","fields":[{"name":"uuid","value":{"type":"UInt64","value":"1"}},{"name":"bar","value":{"type":"Int","value":"42"}}]}}`
+
+		testEncodeAndDecode(t, actual, expectedJSON)
+	})
+
+	t.Run("Nested resource", func(t *testing.T) {
+
+		t.Parallel()
+
+		actual := exportFromScript(t, `
+			resource Bar {
+				let x: Int
+	
+				init(x: Int) {
+					self.x = x
+				}
+			}
+	
+			resource Foo {
+				let bar: @Bar
+	
+				init(bar: @Bar) {
+					self.bar <- bar
+				}
+	
+				destroy() {
+					destroy self.bar
+				}
+			}
+	
+			fun main(): @Foo {
+				return <- create Foo(bar: <- create Bar(x: 42))
+			}
+		`)
+
+		expectedJSON := `{"type":"Resource","value":{"id":"S.test.Foo","fields":[{"name":"uuid","value":{"type":"UInt64","value":"2"}},{"name":"bar","value":{"type":"Resource","value":{"id":"S.test.Bar","fields":[{"name":"uuid","value":{"type":"UInt64","value":"1"}},{"name":"x","value":{"type":"Int","value":"42"}}]}}}]}}`
+
+		testEncodeAndDecode(t, actual, expectedJSON)
+	})
 }
 
 func TestEncodeStruct(t *testing.T) {
