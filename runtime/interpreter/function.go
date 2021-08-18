@@ -21,7 +21,7 @@ package interpreter
 import (
 	"fmt"
 
-	"github.com/fxamacker/atree"
+	"github.com/onflow/atree"
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/sema"
@@ -122,7 +122,7 @@ func (*InterpretedFunctionValue) IsStorable() bool {
 	return false
 }
 
-func (f InterpretedFunctionValue) Storable(_ atree.SlabStorage, _ atree.Address) (atree.Storable, error) {
+func (f InterpretedFunctionValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
 	return NonStorable{Value: f}, nil
 }
 
@@ -216,7 +216,7 @@ func (*HostFunctionValue) IsStorable() bool {
 	return false
 }
 
-func (f HostFunctionValue) Storable(_ atree.SlabStorage, _ atree.Address) (atree.Storable, error) {
+func (f HostFunctionValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
 	return NonStorable{Value: f}, nil
 }
 
@@ -308,7 +308,7 @@ func (BoundFunctionValue) IsStorable() bool {
 	return false
 }
 
-func (f BoundFunctionValue) Storable(_ atree.SlabStorage, _ atree.Address) (atree.Storable, error) {
+func (f BoundFunctionValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
 	return NonStorable{Value: f}, nil
 }
 

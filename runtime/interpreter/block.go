@@ -21,7 +21,7 @@ package interpreter
 import (
 	"fmt"
 
-	"github.com/fxamacker/atree"
+	"github.com/onflow/atree"
 	runtimeErrors "github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/sema"
 )
@@ -115,7 +115,7 @@ func (BlockValue) IsStorable() bool {
 	return false
 }
 
-func (v BlockValue) Storable(_ atree.SlabStorage, _ atree.Address) (atree.Storable, error) {
+func (v BlockValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
 	return NonStorable{Value: v}, nil
 }
 

@@ -24,8 +24,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/fxamacker/atree"
 	"github.com/fxamacker/cbor/v2"
+	"github.com/onflow/atree"
 	. "github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/stretchr/testify/assert"
@@ -62,7 +62,11 @@ func testEncodeDecode(t *testing.T, test encodeDecodeTest) {
 
 		if test.value != nil {
 			if test.storable == nil {
-				storable, err := test.value.Storable(test.storage, atree.Address(testOwner))
+				storable, err := test.value.Storable(
+					test.storage,
+					atree.Address(testOwner),
+					atree.MaxInlineElementSize,
+				)
 				require.NoError(t, err)
 				test.storable = storable
 			}

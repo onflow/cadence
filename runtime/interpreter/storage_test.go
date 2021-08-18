@@ -21,7 +21,7 @@ package interpreter_test
 import (
 	"testing"
 
-	"github.com/fxamacker/atree"
+	"github.com/onflow/atree"
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/runtime/common"

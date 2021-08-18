@@ -22,7 +22,7 @@ import (
 	"fmt"
 	"math"
 
-	"github.com/fxamacker/atree"
+	"github.com/onflow/atree"
 	"github.com/onflow/cadence/runtime/common"
 )
 
@@ -181,22 +181,27 @@ func maybeLargeImmutableStorable(
 	storable atree.Storable,
 	storage atree.SlabStorage,
 	address atree.Address,
+	maxInlineSize uint64,
 ) (
 	atree.Storable,
 	error,
 ) {
 
-	if uint64(storable.ByteSize()) < atree.MaxInlineElementSize {
+	if uint64(storable.ByteSize()) < maxInlineSize {
 		return storable, nil
 	}
 
-	storageID := storage.GenerateStorageID(address)
+	storageID, err := storage.GenerateStorageID(address)
+	if err != nil {
+		return nil, err
+	}
+
 	slab := &atree.StorableSlab{
 		StorageID: storageID,
 		Storable:  storable,
 	}
 
-	err := storage.Store(storageID, slab)
+	err = storage.Store(storageID, slab)
 	if err != nil {
 		return nil, err
 	}

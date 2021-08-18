@@ -21,7 +21,7 @@ package runtime
 import (
 	"time"
 
-	"github.com/fxamacker/atree"
+	"github.com/onflow/atree"
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
@@ -54,7 +54,7 @@ type Interface interface {
 	// ValueExists returns true if the given key exists in the storage, owned by the given account.
 	ValueExists(owner, key []byte) (exists bool, err error)
 	// AllocateStorageIndex Allocates a new storage index under the given account.
-	AllocateStorageIndex(owner []byte) atree.StorageIndex
+	AllocateStorageIndex(owner []byte) (atree.StorageIndex, error)
 	// CreateAccount creates a new account.
 	CreateAccount(payer Address) (address Address, err error)
 	// AddEncodedAccountKey appends an encoded key to an account.
@@ -128,179 +128,4 @@ type Metrics interface {
 	ProgramInterpreted(location common.Location, duration time.Duration)
 	ValueEncoded(duration time.Duration)
 	ValueDecoded(duration time.Duration)
-}
-
-type emptyRuntimeInterface struct {
-	programs map[common.LocationID]*interpreter.Program
-}
-
-// emptyRuntimeInterface should implement Interface
-var _ Interface = &emptyRuntimeInterface{}
-
-func NewEmptyRuntimeInterface() Interface {
-	return &emptyRuntimeInterface{
-		programs: map[common.LocationID]*interpreter.Program{},
-	}
-}
-
-func (i *emptyRuntimeInterface) ResolveLocation(identifiers []Identifier, location Location) ([]ResolvedLocation, error) {
-	return []ResolvedLocation{
-		{
-			Location:    location,
-			Identifiers: identifiers,
-		},
-	}, nil
-}
-
-func (i *emptyRuntimeInterface) SetProgram(location Location, program *interpreter.Program) error {
-	i.programs[location.ID()] = program
-
-	return nil
-}
-
-func (i *emptyRuntimeInterface) GetProgram(location Location) (*interpreter.Program, error) {
-	return i.programs[location.ID()], nil
-}
-
-func (i *emptyRuntimeInterface) GetCode(_ Location) ([]byte, error) {
-	return nil, nil
-}
-
-func (i *emptyRuntimeInterface) ValueExists(_, _ []byte) (exists bool, err error) {
-	return false, nil
-}
-
-func (i *emptyRuntimeInterface) AllocateStorageIndex(_ []byte) atree.StorageIndex {
-	return atree.StorageIndex{}
-}
-
-func (i *emptyRuntimeInterface) GetValue(_, _ []byte) (value []byte, err error) {
-	return nil, nil
-}
-
-func (i *emptyRuntimeInterface) SetValue(_, _, _ []byte) error {
-	return nil
-}
-
-func (i *emptyRuntimeInterface) CreateAccount(_ Address) (address Address, err error) {
-	return Address{}, nil
-}
-
-func (i *emptyRuntimeInterface) AddEncodedAccountKey(_ Address, _ []byte) error {
-	return nil
-}
-
-func (i *emptyRuntimeInterface) RevokeEncodedAccountKey(_ Address, _ int) ([]byte, error) {
-	return nil, nil
-}
-
-func (i *emptyRuntimeInterface) AddAccountKey(_ Address, _ *PublicKey, _ HashAlgorithm, _ int) (*AccountKey, error) {
-	return nil, nil
-}
-
-func (i *emptyRuntimeInterface) RevokeAccountKey(_ Address, _ int) (*AccountKey, error) {
-	return nil, nil
-}
-
-func (i *emptyRuntimeInterface) GetAccountKey(_ Address, _ int) (*AccountKey, error) {
-	return nil, nil
-}
-
-func (i *emptyRuntimeInterface) UpdateAccountContractCode(_ Address, _ string, _ []byte) (err error) {
-	return nil
-}
-
-func (i *emptyRuntimeInterface) GetAccountContractCode(_ Address, _ string) (code []byte, err error) {
-	return nil, nil
-}
-
-func (i *emptyRuntimeInterface) RemoveAccountContractCode(_ Address, _ string) (err error) {
-	return nil
-}
-
-func (i *emptyRuntimeInterface) GetSigningAccounts() ([]Address, error) {
-	return nil, nil
-}
-
-func (i *emptyRuntimeInterface) ProgramLog(_ string) error {
-	return nil
-}
-
-func (i *emptyRuntimeInterface) EmitEvent(_ cadence.Event) error {
-	return nil
-}
-
-func (i *emptyRuntimeInterface) GenerateUUID() (uint64, error) {
-	return 0, nil
-}
-
-func (i *emptyRuntimeInterface) GetComputationLimit() uint64 {
-	return 0
-}
-
-func (i *emptyRuntimeInterface) SetComputationUsed(uint64) error {
-	return nil
-}
-
-func (i *emptyRuntimeInterface) DecodeArgument(_ []byte, _ cadence.Type) (cadence.Value, error) {
-	return nil, nil
-}
-
-func (i *emptyRuntimeInterface) GetCurrentBlockHeight() (uint64, error) {
-	return 0, nil
-}
-
-func (i *emptyRuntimeInterface) GetBlockAtHeight(_ uint64) (block Block, exists bool, err error) {
-	return
-}
-
-func (i *emptyRuntimeInterface) UnsafeRandom() (uint64, error) {
-	return 0, nil
-}
-
-func (i *emptyRuntimeInterface) ImplementationDebugLog(_ string) error {
-	return nil
-}
-
-func (i *emptyRuntimeInterface) VerifySignature(
-	_ []byte,
-	_ string,
-	_ []byte,
-	_ []byte,
-	_ SignatureAlgorithm,
-	_ HashAlgorithm,
-) (bool, error) {
-	return false, nil
-}
-
-func (i *emptyRuntimeInterface) Hash(
-	_ []byte,
-	_ string,
-	_ HashAlgorithm,
-) ([]byte, error) {
-	return nil, nil
-}
-
-func (i emptyRuntimeInterface) GetAccountBalance(_ Address) (uint64, error) {
-	return 0, nil
-}
-
-func (i emptyRuntimeInterface) GetAccountAvailableBalance(_ Address) (uint64, error) {
-	return 0, nil
-}
-
-func (i emptyRuntimeInterface) GetStorageUsed(_ Address) (uint64, error) {
-	return 0, nil
-}
-
-func (i emptyRuntimeInterface) GetStorageCapacity(_ Address) (uint64, error) {
-	return 0, nil
-}
-
-func (i *emptyRuntimeInterface) ValidatePublicKey(_ *PublicKey) (bool, error) {
-	return false, nil
-}
-
-func (i *emptyRuntimeInterface) GetAccountContractNames(_ Address) ([]string, error) {
-	return nil, nil
 }
