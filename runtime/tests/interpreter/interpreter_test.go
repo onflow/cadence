@@ -24,7 +24,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/fxamacker/atree"
+	"github.com/onflow/atree"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 

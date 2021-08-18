@@ -23,7 +23,7 @@ import (
 	"sort"
 	"time"
 
-	"github.com/fxamacker/atree"
+	"github.com/onflow/atree"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
@@ -263,7 +263,7 @@ func (s *runtimeStorage) commit() error {
 		address := entry.storageKey.Address
 
 		if entry.value != nil {
-			storable, err := entry.value.Storable(s, atree.Address(address))
+			storable, err := entry.value.Storable(s, atree.Address(address), atree.MaxInlineElementSize)
 			if err != nil {
 				return err
 			}

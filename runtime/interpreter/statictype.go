@@ -22,7 +22,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/fxamacker/atree"
+	"github.com/onflow/atree"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/sema"

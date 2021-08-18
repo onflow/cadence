@@ -532,22 +532,17 @@ func TestExportEventValue(t *testing.T) {
 	assert.Equal(t, expected, actual)
 }
 
-// mock runtime.Interface to capture events
-type eventCapturingInterface struct {
-	emptyRuntimeInterface
-	events []cadence.Event
-}
-
-func (t *eventCapturingInterface) EmitEvent(event cadence.Event) error {
-	t.events = append(t.events, event)
-	return nil
-}
-
 func exportEventFromScript(t *testing.T, script string) cadence.Event {
 	rt := NewInterpreterRuntime()
 
-	inter := &eventCapturingInterface{}
-	inter.programs = map[common.LocationID]*interpreter.Program{}
+	var events []cadence.Event
+
+	inter := &testRuntimeInterface{
+		emitEvent: func(event cadence.Event) error {
+			events = append(events, event)
+			return nil
+		},
+	}
 
 	_, err := rt.ExecuteScript(
 		Script{
@@ -560,9 +555,9 @@ func exportEventFromScript(t *testing.T, script string) cadence.Event {
 	)
 
 	require.NoError(t, err)
-	require.Len(t, inter.events, 1)
+	require.Len(t, events, 1)
 
-	event := inter.events[0]
+	event := events[0]
 
 	return event
 }

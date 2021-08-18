@@ -22,7 +22,7 @@ import (
 	"bytes"
 	"fmt"
 
-	"github.com/fxamacker/atree"
+	"github.com/onflow/atree"
 	"github.com/fxamacker/cbor/v2"
 	"github.com/onflow/cadence/runtime/common"
 )

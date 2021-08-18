@@ -30,7 +30,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/fxamacker/atree"
+	"github.com/onflow/atree"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -50,7 +50,7 @@ type testRuntimeInterfaceStorage struct {
 	valueExists          func(owner, key []byte) (exists bool, err error)
 	getValue             func(owner, key []byte) (value []byte, err error)
 	setValue             func(owner, key, value []byte) (err error)
-	allocateStorageIndex func(owner []byte) atree.StorageIndex
+	allocateStorageIndex func(owner []byte) (atree.StorageIndex, error)
 }
 
 func newTestStorage(
@@ -86,7 +86,7 @@ func newTestStorage(
 			}
 			return nil
 		},
-		allocateStorageIndex: func(owner []byte) (result atree.StorageIndex) {
+		allocateStorageIndex: func(owner []byte) (result atree.StorageIndex, err error) {
 			index := storageIndices[string(owner)] + 1
 			storageIndices[string(owner)] = index
 			binary.BigEndian.PutUint64(result[:], index)
@@ -200,7 +200,7 @@ func (i *testRuntimeInterface) SetValue(owner, key, value []byte) (err error) {
 	return i.storage.setValue(owner, key, value)
 }
 
-func (i *testRuntimeInterface) AllocateStorageIndex(owner []byte) atree.StorageIndex {
+func (i *testRuntimeInterface) AllocateStorageIndex(owner []byte) (atree.StorageIndex, error) {
 	return i.storage.allocateStorageIndex(owner)
 }
 
