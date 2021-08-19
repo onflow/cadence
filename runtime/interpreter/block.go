@@ -111,10 +111,6 @@ func (v BlockValue) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicTyp
 	return ok
 }
 
-func (BlockValue) IsStorable() bool {
-	return false
-}
-
 func (v BlockValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
 	return NonStorable{Value: v}, nil
 }

@@ -117,10 +117,6 @@ func (f InterpretedFunctionValue) ConformsToDynamicType(_ *Interpreter, _ Dynami
 	return false
 }
 
-func (InterpretedFunctionValue) IsStorable() bool {
-	return false
-}
-
 func (f InterpretedFunctionValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
 	return NonStorable{Value: f}, nil
 }
@@ -210,10 +206,6 @@ func (f HostFunctionValue) ConformsToDynamicType(_ *Interpreter, _ DynamicType, 
 	return false
 }
 
-func (HostFunctionValue) IsStorable() bool {
-	return false
-}
-
 func (f HostFunctionValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
 	return NonStorable{Value: f}, nil
 }
@@ -277,10 +269,6 @@ func (f BoundFunctionValue) ConformsToDynamicType(
 	results TypeConformanceResults,
 ) bool {
 	return f.Function.ConformsToDynamicType(interpreter, dynamicType, results)
-}
-
-func (BoundFunctionValue) IsStorable() bool {
-	return false
 }
 
 func (f BoundFunctionValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {

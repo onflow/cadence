@@ -95,10 +95,6 @@ func (v DeployedContractValue) ConformsToDynamicType(_ *Interpreter, dynamicType
 	return ok
 }
 
-func (DeployedContractValue) IsStorable() bool {
-	return false
-}
-
 func (v DeployedContractValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
 	return NonStorable{Value: v}, nil
 }

@@ -734,6 +734,7 @@ func (s CompositeStorable) Encode(e *atree.Encoder) error {
 //		Content: Value(v.Value),
 // }
 func (s SomeStorable) Encode(e *atree.Encoder) error {
+	// NOTE: when updating, also update SomeStorable.ByteSize
 	err := e.CBOR.EncodeRawBytes([]byte{
 		// tag number
 		0xd8, CBORTagSomeValue,
