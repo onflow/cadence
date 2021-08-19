@@ -90,4 +90,4 @@ jobs:
           # labels: A comma or newline-separated list of labels.
           # assignees: A comma or newline-separated list of assignees (GitHub usernames).
           # reviewers: A comma or newline-separated list of reviewers (GitHub usernames) to request a review from.
-          assignees: janezpodhostnik,ramtinms,turbolent
+          assignees: janezpodhostnik,ramtinms,turbolent,SupunS
