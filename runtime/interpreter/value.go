@@ -92,7 +92,6 @@ type Value interface {
 	StaticType() StaticType
 	ConformsToDynamicType(interpreter *Interpreter, dynamicType DynamicType, results TypeConformanceResults) bool
 	RecursiveString(seenReferences SeenReferences) string
-	IsStorable() bool
 }
 
 // ValueIndexableValue
@@ -230,10 +229,6 @@ func (v TypeValue) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType
 	return ok
 }
 
-func (TypeValue) IsStorable() bool {
-	return true
-}
-
 func (v TypeValue) Storable(
 	storage atree.SlabStorage,
 	address atree.Address,
@@ -303,10 +298,6 @@ func (v VoidValue) RecursiveString(_ SeenReferences) string {
 func (v VoidValue) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType, _ TypeConformanceResults) bool {
 	_, ok := dynamicType.(VoidDynamicType)
 	return ok
-}
-
-func (VoidValue) IsStorable() bool {
-	return true
 }
 
 func (v VoidValue) Equal(other Value, _ func() LocationRange) bool {
@@ -393,10 +384,6 @@ func (v BoolValue) KeyString() string {
 func (v BoolValue) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType, _ TypeConformanceResults) bool {
 	_, ok := dynamicType.(BoolDynamicType)
 	return ok
-}
-
-func (BoolValue) IsStorable() bool {
-	return true
 }
 
 func (v BoolValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
@@ -626,10 +613,6 @@ func (v *StringValue) Length() int {
 		v.length = length
 	}
 	return v.length
-}
-
-func (*StringValue) IsStorable() bool {
-	return true
 }
 
 func (v *StringValue) Storable(storage atree.SlabStorage, address atree.Address, maxInlineSize uint64) (atree.Storable, error) {
@@ -1140,33 +1123,6 @@ func (v *ArrayValue) ConformsToDynamicType(
 	}
 }
 
-func (v *ArrayValue) IsStorable() bool {
-
-	iterator, err := v.array.Iterator()
-	if err != nil {
-		panic(ExternalError{err})
-	}
-
-	index := 0
-	for {
-		value, err := iterator.Next()
-		if err != nil {
-			panic(ExternalError{err})
-		}
-		if value == nil {
-			return true
-		}
-
-		// atree.Array iteration provides low-level atree.Value,
-		// convert to high-level interpreter.Value
-		if !MustConvertStoredValue(value).IsStorable() {
-			return false
-		}
-
-		index++
-	}
-}
-
 func (v *ArrayValue) Equal(other Value, getLocationRange func() LocationRange) bool {
 	otherArray, ok := other.(*ArrayValue)
 	if !ok {
@@ -1559,10 +1515,6 @@ func (v IntValue) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType,
 	return ok && sema.IntType.Equal(numberType.StaticType)
 }
 
-func (IntValue) IsStorable() bool {
-	return true
-}
-
 func (v IntValue) Storable(storage atree.SlabStorage, address atree.Address, maxInlineSize uint64) (atree.Storable, error) {
 	return maybeLargeImmutableStorable(v, storage, address, maxInlineSize)
 }
@@ -1869,10 +1821,6 @@ func (v Int8Value) ToBigEndianBytes() []byte {
 func (v Int8Value) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType, _ TypeConformanceResults) bool {
 	numberType, ok := dynamicType.(NumberDynamicType)
 	return ok && sema.Int8Type.Equal(numberType.StaticType)
-}
-
-func (Int8Value) IsStorable() bool {
-	return true
 }
 
 func (v Int8Value) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
@@ -2184,10 +2132,6 @@ func (v Int16Value) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicTyp
 	return ok && sema.Int16Type.Equal(numberType.StaticType)
 }
 
-func (Int16Value) IsStorable() bool {
-	return true
-}
-
 func (v Int16Value) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
 	return v, nil
 }
@@ -2497,10 +2441,6 @@ func (v Int32Value) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicTyp
 	return ok && sema.Int32Type.Equal(numberType.StaticType)
 }
 
-func (Int32Value) IsStorable() bool {
-	return true
-}
-
 func (v Int32Value) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
 	return v, nil
 }
@@ -2807,10 +2747,6 @@ func (v Int64Value) ToBigEndianBytes() []byte {
 func (v Int64Value) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType, _ TypeConformanceResults) bool {
 	numberType, ok := dynamicType.(NumberDynamicType)
 	return ok && sema.Int64Type.Equal(numberType.StaticType)
-}
-
-func (Int64Value) IsStorable() bool {
-	return true
 }
 
 func (v Int64Value) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
@@ -3189,10 +3125,6 @@ func (v Int128Value) ToBigEndianBytes() []byte {
 func (v Int128Value) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType, _ TypeConformanceResults) bool {
 	numberType, ok := dynamicType.(NumberDynamicType)
 	return ok && sema.Int128Type.Equal(numberType.StaticType)
-}
-
-func (Int128Value) IsStorable() bool {
-	return true
 }
 
 func (v Int128Value) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
@@ -3574,10 +3506,6 @@ func (v Int256Value) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicTy
 	return ok && sema.Int256Type.Equal(numberType.StaticType)
 }
 
-func (Int256Value) IsStorable() bool {
-	return true
-}
-
 func (v Int256Value) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
 	return v, nil
 }
@@ -3847,10 +3775,6 @@ func (v UIntValue) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType
 	return ok && sema.UIntType.Equal(numberType.StaticType)
 }
 
-func (UIntValue) IsStorable() bool {
-	return true
-}
-
 func (v UIntValue) Storable(storage atree.SlabStorage, address atree.Address, maxInlineSize uint64) (atree.Storable, error) {
 	return maybeLargeImmutableStorable(v, storage, address, maxInlineSize)
 }
@@ -4088,10 +4012,6 @@ func (v UInt8Value) ToBigEndianBytes() []byte {
 func (v UInt8Value) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType, _ TypeConformanceResults) bool {
 	numberType, ok := dynamicType.(NumberDynamicType)
 	return ok && sema.UInt8Type.Equal(numberType.StaticType)
-}
-
-func (UInt8Value) IsStorable() bool {
-	return true
 }
 
 func (v UInt8Value) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
@@ -7247,15 +7167,6 @@ func (v *CompositeValue) IsStorable() bool {
 		return false
 	}
 
-	// If this composite value has a field which is non-storable,
-	// then the composite value is not storable.
-
-	for pair := v.Fields.Oldest(); pair != nil; pair = pair.Next() {
-		if !pair.Value.IsStorable() {
-			return false
-		}
-	}
-
 	return true
 }
 
@@ -7868,38 +7779,6 @@ func (v *DictionaryValue) Insert(
 	return resultCopy.(OptionalValue)
 }
 
-func (v *DictionaryValue) IsStorable() bool {
-
-	iterator, err := v.Keys.array.Iterator()
-	if err != nil {
-		panic(ExternalError{err})
-	}
-
-	for {
-		keyValue, err := iterator.Next()
-		if err != nil {
-			panic(ExternalError{err})
-		}
-		if keyValue == nil {
-			break
-		}
-
-		// atree.Array iteration provides low-level atree.Value,
-		// convert to high-level interpreter.Value
-		if !MustConvertStoredValue(keyValue).IsStorable() {
-			return false
-		}
-	}
-
-	for pair := v.Entries.Oldest(); pair != nil; pair = pair.Next() {
-		if !pair.Value.IsStorable() {
-			return false
-		}
-	}
-
-	return true
-}
-
 type DictionaryEntryValues struct {
 	Key   Value
 	Value Value
@@ -8478,18 +8357,11 @@ func (v *SomeValue) Equal(other Value, getLocationRange func() LocationRange) bo
 	return equatableValue.Equal(otherSome.Value, getLocationRange)
 }
 
-func (v *SomeValue) IsStorable() bool {
-	return v.Value.IsStorable()
-}
-
 func (v *SomeValue) Storable(
 	storage atree.SlabStorage,
 	address atree.Address,
 	maxInlineSize uint64,
 ) (atree.Storable, error) {
-	if !v.IsStorable() {
-		return NonStorable{Value: v}, nil
-	}
 
 	var err error
 	v.valueStorable, err = v.Value.Storable(
@@ -8548,8 +8420,7 @@ type SomeStorable struct {
 var _ atree.Storable = SomeStorable{}
 
 func (s SomeStorable) ByteSize() uint32 {
-	// TODO: optimize
-	return mustStorableSize(s)
+	return 2 + s.Storable.ByteSize()
 }
 
 func (s SomeStorable) StoredValue(storage atree.SlabStorage) (atree.Value, error) {

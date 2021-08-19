@@ -118,19 +118,15 @@ func (f *InterpretedFunctionValue) ConformsToDynamicType(_ *Interpreter, _ Dynam
 	return false
 }
 
-func (*InterpretedFunctionValue) IsStorable() bool {
-	return false
-}
-
-func (f InterpretedFunctionValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
+func (f *InterpretedFunctionValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
 	return NonStorable{Value: f}, nil
 }
 
-func (f InterpretedFunctionValue) DeepCopy(_ atree.SlabStorage, _ atree.Address) (atree.Value, error) {
+func (f *InterpretedFunctionValue) DeepCopy(_ atree.SlabStorage, _ atree.Address) (atree.Value, error) {
 	return f, nil
 }
 
-func (InterpretedFunctionValue) DeepRemove(_ atree.SlabStorage) error {
+func (*InterpretedFunctionValue) DeepRemove(_ atree.SlabStorage) error {
 	// NO-OP
 	return nil
 }
@@ -212,19 +208,15 @@ func (f *HostFunctionValue) ConformsToDynamicType(_ *Interpreter, _ DynamicType,
 	return false
 }
 
-func (*HostFunctionValue) IsStorable() bool {
-	return false
-}
-
-func (f HostFunctionValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
+func (f *HostFunctionValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
 	return NonStorable{Value: f}, nil
 }
 
-func (f HostFunctionValue) DeepCopy(_ atree.SlabStorage, _ atree.Address) (atree.Value, error) {
+func (f *HostFunctionValue) DeepCopy(_ atree.SlabStorage, _ atree.Address) (atree.Value, error) {
 	return f, nil
 }
 
-func (HostFunctionValue) DeepRemove(_ atree.SlabStorage) error {
+func (*HostFunctionValue) DeepRemove(_ atree.SlabStorage) error {
 	// NO-OP
 	return nil
 }
@@ -302,10 +294,6 @@ func (f BoundFunctionValue) ConformsToDynamicType(
 	results TypeConformanceResults,
 ) bool {
 	return f.Function.ConformsToDynamicType(interpreter, dynamicType, results)
-}
-
-func (BoundFunctionValue) IsStorable() bool {
-	return false
 }
 
 func (f BoundFunctionValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
