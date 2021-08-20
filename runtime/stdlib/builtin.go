@@ -215,6 +215,8 @@ func BuiltinValues() StandardLibraryValues {
 
 func NewSignatureAlgorithmCase(rawValue uint8) *interpreter.CompositeValue {
 	return interpreter.NewEnumCaseValue(
+		// NOTE: no storage needed, as SignatureAlgorithm type is non-storable (has no location)
+		nil,
 		sema.SignatureAlgorithmType,
 		interpreter.UInt8Value(rawValue),
 		nil,
@@ -228,6 +230,8 @@ var hashAlgorithmFunctions = map[string]interpreter.FunctionValue{
 
 func NewHashAlgorithmCase(rawValue uint8) *interpreter.CompositeValue {
 	return interpreter.NewEnumCaseValue(
+		// NOTE: no storage needed, as HashAlgorithm type is non-storable (has no location)
+		nil,
 		sema.HashAlgorithmType,
 		interpreter.UInt8Value(rawValue),
 		hashAlgorithmFunctions,

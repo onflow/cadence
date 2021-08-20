@@ -593,7 +593,7 @@ const (
 //				encodedDictionaryValueEntriesFieldKey: []interface{}(entries),
 //			},
 // }
-func (s DictionaryStorable) Encode(e *atree.Encoder) error {
+func (s *DictionaryStorable) Encode(e *atree.Encoder) error {
 	// Encode CBOR tag number
 	err := e.CBOR.EncodeRawBytes([]byte{
 		// tag number
@@ -624,14 +624,19 @@ func (s DictionaryStorable) Encode(e *atree.Encoder) error {
 		return err
 	}
 
-	// (3) Encode values (as array) at array index encodedDictionaryValueEntriesFieldKey
-	err = e.CBOR.EncodeArrayHead(uint64(len(s.Values)))
+	// (3) Encode entries (as array) at array index encodedDictionaryValueEntriesFieldKey
+	err = e.CBOR.EncodeArrayHead(uint64(s.Entries.Len() * 2))
 	if err != nil {
 		return err
 	}
 
-	for _, value := range s.Values {
-		err = value.Encode(e)
+	for pair := s.Entries.Oldest(); pair != nil; pair = pair.Next() {
+		err = e.CBOR.EncodeString(pair.Key)
+		if err != nil {
+			return err
+		}
+
+		err = pair.Value.Encode(e)
 		if err != nil {
 			return err
 		}
@@ -664,7 +669,7 @@ const (
 //			encodedCompositeValueQualifiedIdentifierFieldKey: string(v.QualifiedIdentifier),
 //		},
 // }
-func (s CompositeStorable) Encode(e *atree.Encoder) error {
+func (s *CompositeStorable) Encode(e *atree.Encoder) error {
 
 	// Encode CBOR tag number
 	err := e.CBOR.EncodeRawBytes([]byte{
@@ -699,21 +704,23 @@ func (s CompositeStorable) Encode(e *atree.Encoder) error {
 
 	// Encode fields (as array) at array index encodedCompositeValueFieldsFieldKey
 
-	err = e.CBOR.EncodeArrayHead(uint64(len(s.Fields) * 2))
+	err = e.CBOR.EncodeArrayHead(uint64(s.Fields.Len() * 2))
 	if err != nil {
 		return err
 	}
 
-	for _, field := range s.Fields {
+	for pair := s.Fields.Oldest(); pair != nil; pair = pair.Next() {
+		fieldName := pair.Key
+		fieldStorable := pair.Value
 
 		// Encode field name as fields array element
-		err := e.CBOR.EncodeString(field.Name)
+		err := e.CBOR.EncodeString(fieldName)
 		if err != nil {
 			return err
 		}
 
 		// Encode value as fields array element
-		err = field.Storable.Encode(e)
+		err = fieldStorable.Encode(e)
 		if err != nil {
 			return err
 		}

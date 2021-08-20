@@ -370,24 +370,24 @@ func (d Decoder) decodeAddressLocation() (common.Location, error) {
 	}, nil
 }
 
-func (d Decoder) decodeComposite() (CompositeStorable, error) {
+func (d Decoder) decodeComposite() (*CompositeStorable, error) {
 
 	const expectedLength = encodedCompositeValueLength
 
 	size, err := d.decoder.DecodeArrayHead()
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
-			return CompositeStorable{}, fmt.Errorf(
+			return nil, fmt.Errorf(
 				"invalid composite encoding: expected [%d]interface{}, got %s",
 				expectedLength,
 				e.ActualType.String(),
 			)
 		}
-		return CompositeStorable{}, err
+		return nil, err
 	}
 
 	if size != expectedLength {
-		return CompositeStorable{}, fmt.Errorf(
+		return nil, fmt.Errorf(
 			"invalid composite encoding: expected [%d]interface{}, got [%d]interface{}",
 			expectedLength,
 			size,
@@ -399,7 +399,7 @@ func (d Decoder) decodeComposite() (CompositeStorable, error) {
 	// Decode location at array index encodedCompositeValueLocationFieldKey
 	location, err := d.decodeLocation()
 	if err != nil {
-		return CompositeStorable{}, fmt.Errorf(
+		return nil, fmt.Errorf(
 			"invalid composite location encoding: %w",
 			err,
 		)
@@ -411,16 +411,16 @@ func (d Decoder) decodeComposite() (CompositeStorable, error) {
 	encodedKind, err := d.decoder.DecodeUint64()
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
-			return CompositeStorable{}, fmt.Errorf(
+			return nil, fmt.Errorf(
 				"invalid composite kind encoding: %s",
 				e.ActualType.String(),
 			)
 		}
-		return CompositeStorable{}, err
+		return nil, err
 	}
 
 	if encodedKind >= uint64(common.CompositeKindCount()) {
-		return CompositeStorable{}, fmt.Errorf(
+		return nil, fmt.Errorf(
 			"invalid composite kind: %d",
 			encodedKind,
 		)
@@ -434,23 +434,23 @@ func (d Decoder) decodeComposite() (CompositeStorable, error) {
 	fieldsSize, err := d.decoder.DecodeArrayHead()
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
-			return CompositeStorable{}, fmt.Errorf(
+			return nil, fmt.Errorf(
 				"invalid composite fields encoding: %s",
 				e.ActualType.String(),
 			)
 		}
 
-		return CompositeStorable{}, err
+		return nil, err
 	}
 
 	if fieldsSize%2 == 1 {
-		return CompositeStorable{}, fmt.Errorf(
+		return nil, fmt.Errorf(
 			"invalid composite fields encoding: fields should have even number of elements: got %d",
 			fieldsSize,
 		)
 	}
 
-	fields := make([]CompositeStorableField, fieldsSize/2)
+	fields := NewStringAtreeStorableOrderedMap()
 
 	for i := 0; i < int(fieldsSize); i += 2 {
 
@@ -458,30 +458,27 @@ func (d Decoder) decodeComposite() (CompositeStorable, error) {
 		fieldName, err := d.decoder.DecodeString()
 		if err != nil {
 			if e, ok := err.(*cbor.WrongTypeError); ok {
-				return CompositeStorable{}, fmt.Errorf(
+				return nil, fmt.Errorf(
 					"invalid composite field name encoding (%d): %s",
 					i/2,
 					e.ActualType.String(),
 				)
 			}
-			return CompositeStorable{}, err
+			return nil, err
 		}
 
 		// field value
 
 		decodedStorable, err := d.decodeStorable()
 		if err != nil {
-			return CompositeStorable{}, fmt.Errorf(
+			return nil, fmt.Errorf(
 				"invalid composite field value encoding (%s): %w",
 				fieldName,
 				err,
 			)
 		}
 
-		fields[i/2] = CompositeStorableField{
-			Name:     fieldName,
-			Storable: decodedStorable,
-		}
+		fields.Set(fieldName, decodedStorable)
 	}
 
 	// Qualified identifier
@@ -490,19 +487,19 @@ func (d Decoder) decodeComposite() (CompositeStorable, error) {
 	qualifiedIdentifier, err := d.decoder.DecodeString()
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
-			return CompositeStorable{}, fmt.Errorf(
+			return nil, fmt.Errorf(
 				"invalid composite qualified identifier encoding: %s",
 				e.ActualType.String(),
 			)
 		}
-		return CompositeStorable{}, err
+		return nil, err
 	}
 
 	if d.slabStorageID == atree.StorageIDUndefined {
-		return CompositeStorable{}, errors.New("invalid inline composite")
+		return nil, errors.New("invalid inline composite")
 	}
 
-	return CompositeStorable{
+	return &CompositeStorable{
 		StorageID:           d.slabStorageID,
 		Location:            location,
 		QualifiedIdentifier: qualifiedIdentifier,
@@ -1002,7 +999,7 @@ func (d Decoder) decodeCapability() (CapabilityStorable, error) {
 
 	// borrow type (optional, for backwards compatibility)
 	// Capabilities used to be untyped, i.e. they didn't have a borrow type.
-	// Later an optional type paramater, the borrow type, was added to it,
+	// Later an optional type parameter, the borrow type, was added to it,
 	// which specifies as what type the capability should be borrowed.
 	//
 	// The decoding must be backwards-compatible and support both capability values
@@ -1574,7 +1571,7 @@ func (d Decoder) decodeCapabilityStaticType() (StaticType, error) {
 	}, nil
 }
 
-func (d Decoder) decodeDictionary() (DictionaryStorable, error) {
+func (d Decoder) decodeDictionary() (*DictionaryStorable, error) {
 
 	const expectedLength = encodedDictionaryValueLength
 
@@ -1582,17 +1579,17 @@ func (d Decoder) decodeDictionary() (DictionaryStorable, error) {
 
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
-			return DictionaryStorable{}, fmt.Errorf(
+			return nil, fmt.Errorf(
 				"invalid dictionary encoding: expected [%d]interface{}, got %s",
 				expectedLength,
 				e.ActualType.String(),
 			)
 		}
-		return DictionaryStorable{}, err
+		return nil, err
 	}
 
 	if size != expectedLength {
-		return DictionaryStorable{}, fmt.Errorf(
+		return nil, fmt.Errorf(
 			"invalid dictionary encoding: expected [%d]interface{}, got [%d]interface{}",
 			expectedLength,
 			size,
@@ -1602,12 +1599,12 @@ func (d Decoder) decodeDictionary() (DictionaryStorable, error) {
 	// Decode type
 	staticType, err := d.decodeStaticType()
 	if err != nil {
-		return DictionaryStorable{}, err
+		return nil, err
 	}
 
 	dictionaryStaticType, ok := staticType.(DictionaryStaticType)
 	if !ok {
-		return DictionaryStorable{}, fmt.Errorf(
+		return nil, fmt.Errorf(
 			"invalid dictionary static type encoding: %s",
 			staticType.String(),
 		)
@@ -1616,7 +1613,7 @@ func (d Decoder) decodeDictionary() (DictionaryStorable, error) {
 	// Decode keys at array index encodedDictionaryValueKeysFieldKey
 	keysStorable, err := d.decodeStorable()
 	if err != nil {
-		return DictionaryStorable{}, fmt.Errorf(
+		return nil, fmt.Errorf(
 			"invalid dictionary keys encoding: %w",
 			err,
 		)
@@ -1624,46 +1621,56 @@ func (d Decoder) decodeDictionary() (DictionaryStorable, error) {
 
 	keysStorableIDStorable, ok := keysStorable.(atree.StorageIDStorable)
 	if !ok {
-		return DictionaryStorable{}, fmt.Errorf(
+		return nil, fmt.Errorf(
 			"invalid dictionary keys encoding: %T",
 			keysStorableIDStorable,
 		)
 	}
 
 	// Decode entries at array index encodedDictionaryValueEntriesFieldKey
-	valueCount, err := d.decoder.DecodeArrayHead()
+	arrayCount, err := d.decoder.DecodeArrayHead()
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
-			return DictionaryStorable{}, fmt.Errorf(
+			return nil, fmt.Errorf(
 				"invalid dictionary entries encoding: %s",
 				e.ActualType.String(),
 			)
 		}
-		return DictionaryStorable{}, err
+		return nil, err
 	}
 
-	values := make([]atree.Storable, valueCount)
+	entries := NewStringAtreeStorableOrderedMap()
 
-	for valueIndex := uint64(0); valueIndex < valueCount; valueIndex++ {
-		valueStorable, err := d.decodeStorable()
+	for entryIndex := uint64(0); entryIndex < arrayCount/2; entryIndex++ {
+		keyString, err := d.decoder.DecodeString()
 		if err != nil {
-			return DictionaryStorable{}, fmt.Errorf(
-				"invalid dictionary value encoding (%d): %w",
-				valueIndex,
+			return nil, fmt.Errorf(
+				"invalid dictionary key string encoding (%d): %w",
+				entryIndex,
 				err,
 			)
 		}
-		values[valueIndex] = valueStorable
+
+		valueStorable, err := d.decodeStorable()
+		if err != nil {
+			return nil, fmt.Errorf(
+				"invalid dictionary value encoding (%d): %w",
+				entryIndex,
+				err,
+			)
+		}
+
+		entries.Set(keyString, valueStorable)
 	}
 
 	if d.slabStorageID == atree.StorageIDUndefined {
-		return DictionaryStorable{}, errors.New("invalid inline dictionary")
+		return nil, errors.New("invalid inline dictionary")
 	}
 
-	return DictionaryStorable{
+	return &DictionaryStorable{
 		StorageID: d.slabStorageID,
 		Type:      dictionaryStaticType,
 		Keys:      keysStorableIDStorable,
-		Values:    values,
+		Entries:   entries,
 	}, nil
 }

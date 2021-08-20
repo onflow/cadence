@@ -1997,7 +1997,10 @@ func (r *interpreterRuntime) newAuthAccountContracts(
 	)
 }
 
-func (r *interpreterRuntime) newAuthAccountKeys(addressValue interpreter.AddressValue, runtimeInterface Interface) *interpreter.CompositeValue {
+func (r *interpreterRuntime) newAuthAccountKeys(
+	addressValue interpreter.AddressValue,
+	runtimeInterface Interface,
+) *interpreter.CompositeValue {
 	return interpreter.NewAuthAccountKeysValue(
 		r.newAccountKeysAddFunction(
 			addressValue,
@@ -2895,7 +2898,9 @@ func NewPublicKeyValue(
 			inter.Storage,
 			publicKey.PublicKey,
 		),
-		stdlib.NewSignatureAlgorithmCase(publicKey.SignAlgo.RawValue()),
+		stdlib.NewSignatureAlgorithmCase(
+			publicKey.SignAlgo.RawValue(),
+		),
 		func(inter *interpreter.Interpreter, publicKeyValue *interpreter.CompositeValue) interpreter.BoolValue {
 			// If the public key is already validated, avoid re-validating, and return the cached result.
 			if publicKey.Validated {

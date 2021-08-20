@@ -6722,20 +6722,18 @@ func (v UFix64Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 
 type CompositeValue struct {
 	// Storable fields
-	Location            common.Location
-	QualifiedIdentifier string
-	Kind                common.CompositeKind
-	Fields              *StringValueOrderedMap
+	*CompositeStorable
+	Fields *StringValueOrderedMap
 	// Non-storable fields
 	InjectedFields  *StringValueOrderedMap
 	ComputedFields  *StringComputedFieldOrderedMap
 	NestedVariables *StringVariableOrderedMap
 	Functions       map[string]FunctionValue
 	Destructor      FunctionValue
-	isDestroyed     bool
-	isCopied        bool
 	Stringer        func(seenReferences SeenReferences) string
-	StorageID       atree.StorageID
+	// TODO: move isDestroyed and isCopied to CompositeStorable
+	isDestroyed bool
+	isCopied    bool
 }
 
 type ComputedField func(*Interpreter) Value
@@ -6745,29 +6743,54 @@ func NewCompositeValue(
 	location common.Location,
 	qualifiedIdentifier string,
 	kind common.CompositeKind,
-	fields *StringValueOrderedMap,
+	fieldValues *StringValueOrderedMap,
 	address common.Address,
 ) *CompositeValue {
 
-	// TODO: only allocate when setting a field
-	if fields == nil {
-		fields = NewStringValueOrderedMap()
+	if fieldValues == nil {
+		fieldValues = NewStringValueOrderedMap()
 	}
 
 	v := &CompositeValue{
-		Location:            location,
-		QualifiedIdentifier: qualifiedIdentifier,
-		Kind:                kind,
-		Fields:              fields,
+		CompositeStorable: &CompositeStorable{
+			Location:            location,
+			QualifiedIdentifier: qualifiedIdentifier,
+			Kind:                kind,
+		},
+		Fields: fieldValues,
 	}
 
 	if v.IsStorable() {
+		// Get field storables
+
+		fieldStorables := NewStringAtreeStorableOrderedMap()
+
+		for pair := fieldValues.Oldest(); pair != nil; pair = pair.Next() {
+			fieldName := pair.Key
+			fieldValue := pair.Value
+
+			storable, err := fieldValue.Storable(
+				storage,
+				atree.Address(address),
+				atree.MaxInlineElementSize,
+			)
+			if err != nil {
+				panic(ExternalError{err})
+			}
+
+			fieldStorables.Set(fieldName, storable)
+		}
+		v.CompositeStorable.Fields = fieldStorables
+
+		// Generate storage ID and store in storage
+
 		storageID, err := storage.GenerateStorageID(atree.Address(address))
 		if err != nil {
 			panic(ExternalError{err})
 		}
 
 		v.StorageID = storageID
+
 		v.store(storage)
 	}
 
@@ -6775,20 +6798,11 @@ func NewCompositeValue(
 }
 
 func (v *CompositeValue) store(storage atree.SlabStorage) {
-	if !v.IsStorable() {
-		return
-	}
-
-	storable, err := v.ExternalStorable(storage)
-	if err != nil {
-		panic(ExternalError{err})
-	}
-
-	err = storage.Store(
+	err := storage.Store(
 		v.StorageID,
 		atree.StorableSlab{
 			StorageID: v.StorageID,
-			Storable:  storable,
+			Storable:  v.CompositeStorable,
 		},
 	)
 	if err != nil {
@@ -6827,8 +6841,6 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, getLocationRange func
 	}
 
 	v.isDestroyed = true
-
-	v.store(interpreter.Storage)
 }
 
 var _ Value = &CompositeValue{}
@@ -6971,7 +6983,9 @@ func (v *CompositeValue) SetMember(
 	value Value,
 ) {
 
-	valueCopy, err := value.DeepCopy(interpreter.Storage, v.StorageID.Address)
+	address := v.StorageID.Address
+
+	valueCopy, err := value.DeepCopy(interpreter.Storage, address)
 	if err != nil {
 		panic(ExternalError{err})
 	}
@@ -6984,6 +6998,17 @@ func (v *CompositeValue) SetMember(
 	existingValue, existed := v.Fields.Get(name)
 
 	v.Fields.Set(name, MustConvertStoredValue(valueCopy))
+
+	storable, err := valueCopy.Storable(
+		interpreter.Storage,
+		address,
+		atree.MaxInlineElementSize,
+	)
+	if err != nil {
+		panic(ExternalError{err})
+	}
+
+	v.CompositeStorable.Fields.Set(name, storable)
 
 	if existed {
 		err = existingValue.DeepRemove(interpreter.Storage)
@@ -7178,41 +7203,6 @@ func (v *CompositeValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64
 	return atree.StorageIDStorable(v.StorageID), nil
 }
 
-func (v *CompositeValue) ExternalStorable(storage atree.SlabStorage) (atree.Storable, error) {
-
-	fields := make([]CompositeStorableField, 0, v.Fields.Len())
-
-	for pair := v.Fields.Oldest(); pair != nil; pair = pair.Next() {
-		fieldName := pair.Key
-		fieldValue := pair.Value
-
-		storable, err := fieldValue.Storable(
-			storage,
-			v.StorageID.Address,
-			atree.MaxInlineElementSize,
-		)
-		if err != nil {
-			return nil, err
-		}
-
-		fields = append(
-			fields,
-			CompositeStorableField{
-				Name:     fieldName,
-				Storable: storable,
-			},
-		)
-	}
-
-	return CompositeStorable{
-		Location:            v.Location,
-		QualifiedIdentifier: v.QualifiedIdentifier,
-		Kind:                v.Kind,
-		Fields:              fields,
-		StorageID:           v.StorageID,
-	}, nil
-}
-
 func (v *CompositeValue) DeepCopy(storage atree.SlabStorage, address atree.Address) (atree.Value, error) {
 
 	newFields := NewStringValueOrderedMap()
@@ -7272,7 +7262,7 @@ func (v *CompositeValue) DeepRemove(storage atree.SlabStorage) error {
 		}
 
 		err = slab.(atree.StorableSlab).
-			Storable.(CompositeStorable).
+			Storable.(*CompositeStorable).
 			DeepRemove(storage)
 		if err != nil {
 			return err
@@ -7286,26 +7276,20 @@ func (v *CompositeValue) GetOwner() common.Address {
 	return common.Address(v.StorageID.Address)
 }
 
-type CompositeStorableField struct {
-	Name     string
-	Storable atree.Storable
-}
-
 type CompositeStorable struct {
 	Location            common.Location
 	QualifiedIdentifier string
 	Kind                common.CompositeKind
-	Fields              []CompositeStorableField
+	Fields              *StringAtreeStorableOrderedMap
 	StorageID           atree.StorageID
 }
 
-func (s CompositeStorable) DeepRemove(storage atree.SlabStorage) error {
+func (s *CompositeStorable) DeepRemove(storage atree.SlabStorage) error {
 
 	// Remove nested storables
 
-	for _, field := range s.Fields {
-
-		err := field.Storable.DeepRemove(storage)
+	for pair := s.Fields.Oldest(); pair != nil; pair = pair.Next() {
+		err := pair.Value.DeepRemove(storage)
 		if err != nil {
 			return err
 		}
@@ -7316,38 +7300,36 @@ func (s CompositeStorable) DeepRemove(storage atree.SlabStorage) error {
 	return nil
 }
 
-var _ atree.Storable = CompositeStorable{}
+var _ atree.Storable = &CompositeStorable{}
 
-func (s CompositeStorable) ByteSize() uint32 {
+func (s *CompositeStorable) ByteSize() uint32 {
 	// TODO: optimize
 	return mustStorableSize(s)
 }
 
-func (s CompositeStorable) StoredValue(storage atree.SlabStorage) (atree.Value, error) {
+func (s *CompositeStorable) StoredValue(storage atree.SlabStorage) (atree.Value, error) {
 
 	fields := NewStringValueOrderedMap()
 
-	for _, field := range s.Fields {
-		value, err := StoredValue(field.Storable, storage)
+	for pair := s.Fields.Oldest(); pair != nil; pair = pair.Next() {
+		value, err := StoredValue(pair.Value, storage)
 		if err != nil {
 			return nil, err
 		}
 
-		fields.Set(field.Name, value)
+		fields.Set(pair.Key, value)
 	}
 
 	v := &CompositeValue{
-		Location:            s.Location,
-		QualifiedIdentifier: s.QualifiedIdentifier,
-		Kind:                s.Kind,
-		Fields:              fields,
-		StorageID:           s.StorageID,
+		CompositeStorable: s,
+		Fields:            fields,
 	}
 
 	return v, nil
 }
 
 func NewEnumCaseValue(
+	storage Storage,
 	enumType *sema.CompositeType,
 	rawValue NumberValue,
 	functions map[string]FunctionValue,
@@ -7356,24 +7338,29 @@ func NewEnumCaseValue(
 	fields := NewStringValueOrderedMap()
 	fields.Set(sema.EnumRawValueFieldName, rawValue)
 
-	return &CompositeValue{
-		Location:            enumType.Location,
-		QualifiedIdentifier: enumType.QualifiedIdentifier(),
-		Kind:                enumType.Kind,
-		Fields:              fields,
-		Functions:           functions,
-	}
+	v := NewCompositeValue(
+		storage,
+		enumType.Location,
+		enumType.QualifiedIdentifier(),
+		enumType.Kind,
+		fields,
+		common.Address{},
+	)
+
+	v.Functions = functions
+
+	return v
 }
 
 // DictionaryValue
 
 type DictionaryValue struct {
-	Type        DictionaryStaticType
-	Keys        *ArrayValue
-	Entries     *StringValueOrderedMap
-	StorageID   atree.StorageID
-	isCopied    bool
+	*DictionaryStorable
+	Keys    *ArrayValue
+	Entries *StringValueOrderedMap
+	// TODO: move isDestroyed and isCopied to CompositeStorable
 	isDestroyed bool
+	isCopied    bool
 }
 
 func NewDictionaryValue(
@@ -7407,29 +7394,54 @@ func NewDictionaryValueWithAddress(
 		panic("uneven number of keys and values")
 	}
 
-	v := &DictionaryValue{
-		Type: dictionaryType,
-		Keys: NewArrayValueWithAddress(
-			VariableSizedStaticType{
-				Type: dictionaryType.KeyType,
-			},
-			storage,
-			address,
-		),
-		Entries:   NewStringValueOrderedMap(),
-		StorageID: storageID,
-	}
+	keys := NewArrayValueWithAddress(
+		VariableSizedStaticType{
+			Type: dictionaryType.KeyType,
+		},
+		storage,
+		address,
+	)
 
-	for i := 0; i < keysAndValuesCount; i += 2 {
-		key := keysAndValues[i]
-		value := keysAndValues[i+1]
-		// TODO: batch insert to avoid store on each insert
-		_ = v.Insert(interpreter, ReturnEmptyLocationRange, key, value)
+	keysStorable, err := keys.Storable(
+		storage,
+		atree.Address(address),
+		atree.MaxInlineElementSize,
+	)
+
+	v := &DictionaryValue{
+		DictionaryStorable: &DictionaryStorable{
+			Type:      dictionaryType,
+			Keys:      keysStorable,
+			Entries:   NewStringAtreeStorableOrderedMap(),
+			StorageID: storageID,
+		},
+		Keys:    keys,
+		Entries: NewStringValueOrderedMap(),
 	}
 
 	v.store(storage)
 
+	for i := 0; i < keysAndValuesCount; i += 2 {
+		key := keysAndValues[i]
+		value := keysAndValues[i+1]
+		// TODO: handle existing value
+		_ = v.Insert(interpreter, ReturnEmptyLocationRange, key, value)
+	}
+
 	return v
+}
+
+func (v *DictionaryValue) store(storage atree.SlabStorage) {
+	err := storage.Store(
+		v.StorageID,
+		atree.StorableSlab{
+			StorageID: v.StorageID,
+			Storable:  v.DictionaryStorable,
+		},
+	)
+	if err != nil {
+		panic(ExternalError{err})
+	}
 }
 
 var _ Value = &DictionaryValue{}
@@ -7713,6 +7725,12 @@ func (v *DictionaryValue) Remove(
 				panic(ExternalError{err})
 			}
 
+			storable, _ := v.DictionaryStorable.Entries.Delete(key)
+			err = storable.DeepRemove(storage)
+			if err != nil {
+				panic(ExternalError{err})
+			}
+
 			v.store(storage)
 
 			return NewSomeValueNonCopying(MustConvertStoredValue(valueCopy))
@@ -7735,11 +7753,13 @@ func (v *DictionaryValue) Insert(
 	inter.checkContainerMutation(dictionaryStaticType.KeyType, keyValue, locationRangeGetter)
 	inter.checkContainerMutation(dictionaryStaticType.ValueType, value, locationRangeGetter)
 
+	address := v.StorageID.Address
+
 	existingValue := v.Get(nil, getLocationRange, keyValue)
 
 	key := dictionaryKey(keyValue)
 
-	valueCopy, err := value.DeepCopy(storage, v.StorageID.Address)
+	valueCopy, err := value.DeepCopy(storage, address)
 	if err != nil {
 		panic(ExternalError{err})
 	}
@@ -7750,6 +7770,17 @@ func (v *DictionaryValue) Insert(
 	}
 
 	v.Entries.Set(key, MustConvertStoredValue(valueCopy))
+
+	storable, err := valueCopy.Storable(
+		storage,
+		address,
+		atree.MaxInlineElementSize,
+	)
+	if err != nil {
+		panic(ExternalError{err})
+	}
+
+	existingStorable, _ := v.DictionaryStorable.Entries.Set(key, storable)
 
 	var result OptionalValue
 	switch existingValue := existingValue.(type) {
@@ -7773,7 +7804,13 @@ func (v *DictionaryValue) Insert(
 		panic(ExternalError{err})
 	}
 
-	// NOTE: ensure key was added before storing
+	if existingStorable != nil {
+		err = existingStorable.DeepRemove(storage)
+		if err != nil {
+			panic(ExternalError{err})
+		}
+	}
+
 	v.store(storage)
 
 	return resultCopy.(OptionalValue)
@@ -7866,61 +7903,8 @@ func (v *DictionaryValue) Equal(other Value, getLocationRange func() LocationRan
 	return true
 }
 
-func (v *DictionaryValue) store(storage atree.SlabStorage) {
-	storable, err := v.ExternalStorable(storage)
-	if err != nil {
-		panic(ExternalError{err})
-	}
-
-	err = storage.Store(
-		v.StorageID,
-		atree.StorableSlab{
-			StorageID: v.StorageID,
-			Storable:  storable,
-		},
-	)
-	if err != nil {
-		panic(ExternalError{err})
-	}
-}
-
 func (v *DictionaryValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
 	return atree.StorageIDStorable(v.StorageID), nil
-}
-
-func (v *DictionaryValue) ExternalStorable(storage atree.SlabStorage) (atree.Storable, error) {
-
-	values := make([]atree.Storable, v.Count())
-	i := 0
-	for pair := v.Entries.Oldest(); pair != nil; pair = pair.Next() {
-		value := pair.Value
-		storable, err := value.Storable(
-			storage,
-			v.StorageID.Address,
-			atree.MaxInlineElementSize,
-		)
-		if err != nil {
-			return nil, err
-		}
-		values[i] = storable
-		i++
-	}
-
-	keys, err := v.Keys.Storable(
-		storage,
-		v.StorageID.Address,
-		atree.MaxInlineElementSize,
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	return DictionaryStorable{
-		Type:      v.Type,
-		Keys:      keys,
-		Values:    values,
-		StorageID: v.StorageID,
-	}, nil
 }
 
 func (v *DictionaryValue) DeepCopy(storage atree.SlabStorage, address atree.Address) (atree.Value, error) {
@@ -7938,49 +7922,46 @@ func (v *DictionaryValue) DeepCopy(storage atree.SlabStorage, address atree.Addr
 		return nil, err
 	}
 
-	index := 0
+	pair := v.Entries.Oldest()
 	for {
-		var value atree.Value
-		value, err = iterator.Next()
+		var keyValue atree.Value
+		keyValue, err = iterator.Next()
 		if err != nil {
 			return nil, err
 		}
-		if value == nil {
+		if keyValue == nil {
 			break
+		}
+
+		if pair == nil {
+			panic(errors.NewUnreachableError())
 		}
 
 		// atree.Array iteration provides low-level atree.Value,
 		// convert to high-level interpreter.Value
 
-		var valueCopy atree.Value
-		valueCopy, err = MustConvertStoredValue(value).
+		var keyValueCopy atree.Value
+		keyValueCopy, err = MustConvertStoredValue(keyValue).
 			DeepCopy(storage, atree.Address{})
 		if err != nil {
 			return nil, err
 		}
 
-		result.Keys.Insert(ReturnEmptyLocationRange, index, MustConvertStoredValue(valueCopy))
-		index++
-	}
-
-	// Copy values. Manually update Entries to avoid storage write
-	// for each insert (which incurs a conversion of the dictionary to a storable)
-
-	for pair := v.Entries.Oldest(); pair != nil; pair = pair.Next() {
-		key := pair.Key
-		value := pair.Value
-
-		valueCopy, err := value.DeepCopy(storage, address)
+		var valueCopy atree.Value
+		valueCopy, err = pair.Value.DeepCopy(storage, atree.Address{})
 		if err != nil {
 			return nil, err
 		}
 
-		result.Entries.Set(key, MustConvertStoredValue(valueCopy))
-	}
+		result.Insert(
+			storage,
+			ReturnEmptyLocationRange,
+			MustConvertStoredValue(keyValueCopy),
+			MustConvertStoredValue(valueCopy),
+		)
 
-	// NOTE: important: write dictionary to storage,
-	// because Entries were modified manually
-	result.store(storage)
+		pair = pair.Next()
+	}
 
 	return result, nil
 }
@@ -8024,7 +8005,7 @@ func (v *DictionaryValue) DeepRemove(storage atree.SlabStorage) error {
 	}
 
 	return slab.(atree.StorableSlab).
-		Storable.(DictionaryStorable).
+		Storable.(*DictionaryStorable).
 		DeepRemove(storage)
 }
 
@@ -8035,13 +8016,13 @@ func (v *DictionaryValue) GetOwner() common.Address {
 type DictionaryStorable struct {
 	Type      DictionaryStaticType
 	Keys      atree.Storable
-	Values    []atree.Storable
+	Entries   *StringAtreeStorableOrderedMap
 	StorageID atree.StorageID
 }
 
-var _ atree.Storable = DictionaryStorable{}
+var _ atree.Storable = &DictionaryStorable{}
 
-func (s DictionaryStorable) DeepRemove(storage atree.SlabStorage) error {
+func (s *DictionaryStorable) DeepRemove(storage atree.SlabStorage) error {
 
 	// Remove keys storable
 
@@ -8052,8 +8033,9 @@ func (s DictionaryStorable) DeepRemove(storage atree.SlabStorage) error {
 
 	// Remove nested storables
 
-	for _, value := range s.Values {
-		err = value.DeepRemove(storage)
+	for pair := s.Entries.Oldest(); pair != nil; pair = pair.Next() {
+		storable := pair.Value
+		err = storable.DeepRemove(storage)
 		if err != nil {
 			return err
 		}
@@ -8064,11 +8046,11 @@ func (s DictionaryStorable) DeepRemove(storage atree.SlabStorage) error {
 	return nil
 }
 
-func (s DictionaryStorable) ByteSize() uint32 {
+func (s *DictionaryStorable) ByteSize() uint32 {
 	return mustStorableSize(s)
 }
 
-func (s DictionaryStorable) StoredValue(storage atree.SlabStorage) (atree.Value, error) {
+func (s *DictionaryStorable) StoredValue(storage atree.SlabStorage) (atree.Value, error) {
 	keys, err := StoredValue(s.Keys, storage)
 	if err != nil {
 		return nil, err
@@ -8080,17 +8062,19 @@ func (s DictionaryStorable) StoredValue(storage atree.SlabStorage) (atree.Value,
 	}
 
 	keyCount := keysArray.Count()
-	if len(s.Values) != keyCount {
+	if s.Entries.Len() != keyCount {
 		return nil, fmt.Errorf(
 			"invalid dictionary values: expected %d values, got %d",
 			keyCount,
-			len(s.Values),
+			s.Entries.Len(),
 		)
 	}
 
 	entries := NewStringValueOrderedMap()
 
-	for index, valueStorable := range s.Values {
+	index := 0
+	for pair := s.Entries.Oldest(); pair != nil; pair = pair.Next() {
+		valueStorable := pair.Value
 		value, err := StoredValue(valueStorable, storage)
 		if err != nil {
 			return nil, err
@@ -8110,13 +8094,14 @@ func (s DictionaryStorable) StoredValue(storage atree.SlabStorage) (atree.Value,
 		keyString := keyStringValue.KeyString()
 
 		entries.Set(keyString, value)
+
+		index++
 	}
 
 	return &DictionaryValue{
-		Type:      s.Type,
-		Keys:      keysArray,
-		Entries:   entries,
-		StorageID: s.StorageID,
+		DictionaryStorable: s,
+		Keys:               keysArray,
+		Entries:            entries,
 	}, nil
 }
 
@@ -9112,13 +9097,20 @@ func NewAuthAccountValue(
 		return fmt.Sprintf("AuthAccount(%s)", address)
 	}
 
-	return &CompositeValue{
-		QualifiedIdentifier: sema.AuthAccountType.QualifiedIdentifier(),
-		Kind:                sema.AuthAccountType.Kind,
-		Fields:              fields,
-		ComputedFields:      computedFields,
-		Stringer:            stringer,
-	}
+	v := NewCompositeValue(
+		// NOTE: no storage needed, as AuthAccount type is non-storable (has no location)
+		nil,
+		nil,
+		sema.AuthAccountType.QualifiedIdentifier(),
+		sema.AuthAccountType.Kind,
+		fields,
+		common.Address{},
+	)
+
+	v.ComputedFields = computedFields
+	v.Stringer = stringer
+
+	return v
 }
 
 func accountGetCapabilityFunction(addressValue AddressValue, pathType sema.Type) *HostFunctionValue {
@@ -9202,13 +9194,20 @@ func NewPublicAccountValue(
 		return fmt.Sprintf("PublicAccount(%s)", address)
 	}
 
-	return &CompositeValue{
-		QualifiedIdentifier: sema.PublicAccountType.QualifiedIdentifier(),
-		Kind:                sema.PublicAccountType.Kind,
-		Fields:              fields,
-		ComputedFields:      computedFields,
-		Stringer:            stringer,
-	}
+	v := NewCompositeValue(
+		// NOTE: no storage needed, as PublicAccount.Contracts type is non-storable (has no location)
+		nil,
+		nil,
+		sema.PublicAccountType.QualifiedIdentifier(),
+		sema.PublicAccountType.Kind,
+		fields,
+		common.Address{},
+	)
+
+	v.ComputedFields = computedFields
+	v.Stringer = stringer
+
+	return v
 }
 
 // PathValue
@@ -9671,11 +9670,15 @@ func NewAccountKeyValue(
 	fields.Set(sema.AccountKeyWeightField, weight)
 	fields.Set(sema.AccountKeyIsRevokedField, isRevoked)
 
-	return &CompositeValue{
-		QualifiedIdentifier: sema.AccountKeyType.QualifiedIdentifier(),
-		Kind:                sema.AccountKeyType.Kind,
-		Fields:              fields,
-	}
+	return NewCompositeValue(
+		// NOTE: no storage needed, as Account.Key type is non-storable (has no location)
+		nil,
+		nil,
+		sema.AccountKeyType.QualifiedIdentifier(),
+		sema.AccountKeyType.Kind,
+		fields,
+		common.Address{},
+	)
 }
 
 // NewPublicKeyValue constructs a PublicKey value.
@@ -9705,13 +9708,17 @@ func NewPublicKeyValue(
 		sema.PublicKeyVerifyFunction: publicKeyVerifyFunction,
 	}
 
-	publicKeyValue := &CompositeValue{
-		QualifiedIdentifier: sema.PublicKeyType.QualifiedIdentifier(),
-		Kind:                sema.PublicKeyType.Kind,
-		Fields:              fields,
-		ComputedFields:      computedFields,
-		Functions:           functions,
-	}
+	publicKeyValue := NewCompositeValue(
+		inter.Storage,
+		nil,
+		sema.PublicKeyType.QualifiedIdentifier(),
+		sema.PublicKeyType.Kind,
+		fields,
+		common.Address{},
+	)
+
+	publicKeyValue.ComputedFields = computedFields
+	publicKeyValue.Functions = functions
 
 	// Validate the public key, and initialize 'isValid' field.
 
@@ -9766,17 +9773,25 @@ var publicKeyVerifyFunction = NewHostFunctionValue(
 )
 
 // NewAuthAccountKeysValue constructs a AuthAccount.Keys value.
-func NewAuthAccountKeysValue(addFunction FunctionValue, getFunction FunctionValue, revokeFunction FunctionValue) *CompositeValue {
+func NewAuthAccountKeysValue(
+	addFunction FunctionValue,
+	getFunction FunctionValue,
+	revokeFunction FunctionValue,
+) *CompositeValue {
 	fields := NewStringValueOrderedMap()
 	fields.Set(sema.AccountKeysAddFunctionName, addFunction)
 	fields.Set(sema.AccountKeysGetFunctionName, getFunction)
 	fields.Set(sema.AccountKeysRevokeFunctionName, revokeFunction)
 
-	return &CompositeValue{
-		QualifiedIdentifier: sema.AuthAccountKeysType.QualifiedIdentifier(),
-		Kind:                sema.AuthAccountKeysType.Kind,
-		Fields:              fields,
-	}
+	return NewCompositeValue(
+		// NOTE: no storage needed, as AuthAccount.Keys type is non-storable (has no location)
+		nil,
+		nil,
+		sema.AuthAccountKeysType.QualifiedIdentifier(),
+		sema.AuthAccountKeysType.Kind,
+		fields,
+		common.Address{},
+	)
 }
 
 // NewPublicAccountKeysValue constructs a PublicAccount.Keys value.
@@ -9784,11 +9799,15 @@ func NewPublicAccountKeysValue(getFunction FunctionValue) *CompositeValue {
 	fields := NewStringValueOrderedMap()
 	fields.Set(sema.AccountKeysGetFunctionName, getFunction)
 
-	return &CompositeValue{
-		QualifiedIdentifier: sema.PublicAccountKeysType.QualifiedIdentifier(),
-		Kind:                sema.PublicAccountKeysType.Kind,
-		Fields:              fields,
-	}
+	return NewCompositeValue(
+		// NOTE: no storage needed, as PublicAccount.Keys type is non-storable (has no location)
+		nil,
+		nil,
+		sema.PublicAccountKeysType.QualifiedIdentifier(),
+		sema.PublicAccountKeysType.Kind,
+		fields,
+		common.Address{},
+	)
 }
 
 // PublicAccountContractsValue

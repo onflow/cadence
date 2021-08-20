@@ -24,6 +24,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -51,6 +52,14 @@ type testRuntimeInterfaceStorage struct {
 	getValue             func(owner, key []byte) (value []byte, err error)
 	setValue             func(owner, key, value []byte) (err error)
 	allocateStorageIndex func(owner []byte) (atree.StorageIndex, error)
+}
+
+func (s testRuntimeInterfaceStorage) Dump() {
+	for key, data := range s.storedValues {
+		fmt.Printf("%s:\n", strconv.Quote(key))
+		fmt.Printf("%s\n", hex.Dump(data))
+		println()
+	}
 }
 
 func newTestStorage(

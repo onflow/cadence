@@ -2540,11 +2540,14 @@ func TestPublicKeyValue(t *testing.T) {
 			fields := NewStringValueOrderedMap()
 			fields.Set(sema.EnumRawValueFieldName, UInt8Value(sema.SignatureAlgorithmECDSA_secp256k1.RawValue()))
 
-			return &CompositeValue{
-				QualifiedIdentifier: sema.SignatureAlgorithmType.QualifiedIdentifier(),
-				Kind:                sema.SignatureAlgorithmType.Kind,
-				Fields:              fields,
-			}
+			return NewCompositeValue(
+				storage,
+				nil,
+				sema.SignatureAlgorithmType.QualifiedIdentifier(),
+				sema.SignatureAlgorithmType.Kind,
+				fields,
+				common.Address{},
+			)
 		}
 
 		interpreter, err := NewInterpreter(

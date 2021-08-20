@@ -20,6 +20,7 @@ package interpreter
 
 import (
 	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/sema"
 )
 
@@ -51,10 +52,15 @@ func (interpreter *Interpreter) declareTransactionEntryPoint(declaration *ast.Tr
 	postConditionsRewrite :=
 		interpreter.Program.Elaboration.PostConditionsRewrite[declaration.PostConditions]
 
-	self := &CompositeValue{
-		Location: interpreter.Location,
-		Fields:   NewStringValueOrderedMap(),
-	}
+	self := NewCompositeValue(
+		interpreter.Storage,
+		interpreter.Location,
+		"",
+		// TODO:
+		common.CompositeKindStructure,
+		nil,
+		common.Address{},
+	)
 
 	transactionFunction := NewHostFunctionValue(
 		func(invocation Invocation) Value {
