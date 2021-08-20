@@ -61,7 +61,7 @@ func withWritesToStorage(
 	address := common.BytesToAddress([]byte{0x1})
 
 	for i := 0; i < storageItemCount; i++ {
-		runtimeStorage.accountValues[interpreter.StorageKey{
+		runtimeStorage.deltas[interpreter.StorageKey{
 			Address: address,
 			Key:     strconv.Itoa(i),
 		}] = array

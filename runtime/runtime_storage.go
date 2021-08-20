@@ -33,7 +33,8 @@ type runtimeStorage struct {
 	*atree.PersistentSlabStorage
 	runtimeInterface Interface
 	// NOTE: temporary, will be refactored to dictionary
-	accountValues   map[interpreter.StorageKey]interpreter.Value
+	deltas          map[interpreter.StorageKey]interpreter.Value
+	cache           map[interpreter.StorageKey]interpreter.Value
 	contractUpdates map[interpreter.StorageKey]interpreter.Value
 }
 
@@ -52,7 +53,8 @@ func newRuntimeStorage(runtimeInterface Interface) *runtimeStorage {
 	return &runtimeStorage{
 		PersistentSlabStorage: persistentSlabStorage,
 		runtimeInterface:      runtimeInterface,
-		accountValues:         map[interpreter.StorageKey]interpreter.Value{},
+		deltas:                map[interpreter.StorageKey]interpreter.Value{},
+		cache:                 map[interpreter.StorageKey]interpreter.Value{},
 		contractUpdates:       map[interpreter.StorageKey]interpreter.Value{},
 	}
 }
@@ -72,7 +74,11 @@ func (s *runtimeStorage) ValueExists(
 
 	// Check locally
 
-	if value, ok := s.accountValues[storageKey]; ok {
+	if value, ok := s.deltas[storageKey]; ok {
+		return value != nil
+	}
+
+	if value, ok := s.cache[storageKey]; ok {
 		return value != nil
 	}
 
@@ -88,7 +94,7 @@ func (s *runtimeStorage) ValueExists(
 	}
 
 	if !exists {
-		s.accountValues[storageKey] = nil
+		s.cache[storageKey] = nil
 	}
 
 	return exists
@@ -109,7 +115,15 @@ func (s *runtimeStorage) ReadValue(
 
 	// Check locally
 
-	if value, ok := s.accountValues[storageKey]; ok {
+	if value, ok := s.deltas[storageKey]; ok {
+		if value == nil {
+			return interpreter.NilValue{}
+		}
+
+		return interpreter.NewSomeValueNonCopying(value)
+	}
+
+	if value, ok := s.cache[storageKey]; ok {
 		if value == nil {
 			return interpreter.NilValue{}
 		}
@@ -130,7 +144,7 @@ func (s *runtimeStorage) ReadValue(
 	}
 
 	if len(storedData) == 0 {
-		s.accountValues[storageKey] = nil
+		s.cache[storageKey] = nil
 		return interpreter.NilValue{}
 	}
 
@@ -159,7 +173,7 @@ func (s *runtimeStorage) ReadValue(
 
 	value := interpreter.MustConvertStoredValue(storedValue)
 
-	s.accountValues[storageKey] = value
+	s.cache[storageKey] = value
 
 	return interpreter.NewSomeValueNonCopying(value)
 }
@@ -191,7 +205,7 @@ func (s *runtimeStorage) WriteValue(
 		panic(errors.NewUnreachableError())
 	}
 
-	s.accountValues[storageKey] = writtenValue
+	s.deltas[storageKey] = writtenValue
 }
 
 func (s *runtimeStorage) recordContractUpdate(
@@ -221,7 +235,7 @@ func (s *runtimeStorage) commit() error {
 
 	// First, write all values in the account storage and the contract updates
 
-	for storageKey, value := range s.accountValues { //nolint:maprangecheck
+	for storageKey, value := range s.deltas { //nolint:maprangecheck
 		accountStorageEntries = append(
 			accountStorageEntries,
 			accountStorageEntry{
