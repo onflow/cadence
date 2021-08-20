@@ -21,6 +21,7 @@ package interpreter
 import (
 	"fmt"
 
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/sema"
 )
 
@@ -43,10 +44,17 @@ func NewAuthAccountContractsValue(
 		return fmt.Sprintf("AuthAccount.Contracts(%s)", address)
 	}
 
-	return &CompositeValue{
-		QualifiedIdentifier: sema.AuthAccountContractsType.QualifiedIdentifier(),
-		Kind:                sema.AuthAccountContractsType.Kind,
-		Fields:              fields,
-		Stringer:            stringer,
-	}
+	v := NewCompositeValue(
+		// NOTE: no storage needed, as AuthAccount.Contracts type is non-storable (has no location)
+		nil,
+		nil,
+		sema.AuthAccountContractsType.QualifiedIdentifier(),
+		sema.AuthAccountContractsType.Kind,
+		fields,
+		common.Address{},
+	)
+
+	v.Stringer = stringer
+
+	return v
 }

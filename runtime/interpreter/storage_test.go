@@ -26,7 +26,7 @@ import (
 
 	"github.com/onflow/cadence/runtime/common"
 	. "github.com/onflow/cadence/runtime/interpreter"
-	"github.com/onflow/cadence/runtime/tests/utils"
+	. "github.com/onflow/cadence/runtime/tests/utils"
 )
 
 func TestCompositeStorage(t *testing.T) {
@@ -44,7 +44,7 @@ func TestCompositeStorage(t *testing.T) {
 
 	value := NewCompositeValue(
 		storage,
-		utils.TestLocation,
+		TestLocation,
 		"TestStruct",
 		common.CompositeKindStructure,
 		NewStringValueOrderedMap(),
@@ -55,19 +55,30 @@ func TestCompositeStorage(t *testing.T) {
 
 	require.Equal(t, 1, storage.BasicSlabStorage.Count())
 
-	storable1, ok, err := storage.BasicSlabStorage.Retrieve(value.StorageID)
+	_, ok, err := storage.BasicSlabStorage.Retrieve(value.StorageID)
 	require.NoError(t, err)
 	require.True(t, ok)
 
-	value.SetMember(inter, ReturnEmptyLocationRange, "test", BoolValue(true))
+	const fieldName = "test"
+
+	value.SetMember(inter, ReturnEmptyLocationRange, fieldName, BoolValue(true))
 
 	require.Equal(t, 1, storage.BasicSlabStorage.Count())
 
-	storable2, ok, err := storage.BasicSlabStorage.Retrieve(value.StorageID)
+	retrievedStorable, ok, err := storage.BasicSlabStorage.Retrieve(value.StorageID)
 	require.NoError(t, err)
 	require.True(t, ok)
 
-	require.NotEqual(t, storable1, storable2)
+	storedValue, err := StoredValue(retrievedStorable, storage)
+	require.NoError(t, err)
+
+	require.IsType(t, storedValue, &CompositeValue{})
+	storedComposite := storedValue.(*CompositeValue)
+
+	RequireValuesEqual(t,
+		BoolValue(true),
+		storedComposite.GetField(fieldName),
+	)
 }
 
 func TestDictionaryStorage(t *testing.T) {
@@ -100,26 +111,38 @@ func TestDictionaryStorage(t *testing.T) {
 		// nested keys array + dictionary itself
 		require.Equal(t, 2, storage.BasicSlabStorage.Count())
 
-		dictStorable1, ok, err := storage.BasicSlabStorage.Retrieve(value.StorageID)
+		_, ok, err := storage.BasicSlabStorage.Retrieve(value.StorageID)
 		require.NoError(t, err)
 		require.True(t, ok)
+
+		entryKey := NewStringValue("test")
+		entryValue := BoolValue(true)
 
 		value.Set(
 			inter,
 			ReturnEmptyLocationRange,
-			NewStringValue("test"),
-			NewSomeValueNonCopying(BoolValue(true)),
+			entryKey,
+			NewSomeValueNonCopying(entryValue),
 		)
 
 		require.Equal(t, 2, storage.BasicSlabStorage.Count())
 
-		dictStorable2, ok, err := storage.BasicSlabStorage.Retrieve(value.StorageID)
+		retrievedStorable, ok, err := storage.BasicSlabStorage.Retrieve(value.StorageID)
 		require.NoError(t, err)
 		require.True(t, ok)
 
-		require.NotEqual(t, dictStorable1, dictStorable2)
+		storedValue, err := StoredValue(retrievedStorable, storage)
+		require.NoError(t, err)
 
-		require.True(t, bool(value.Keys.Contains(NewStringValue("test"))))
+		require.IsType(t, storedValue, &DictionaryValue{})
+		storedDictionary := storedValue.(*DictionaryValue)
+
+		actual, _, ok := storedDictionary.GetKey(entryKey)
+		require.True(t, ok)
+
+		RequireValuesEqual(t, entryValue, actual)
+
+		require.True(t, bool(storedDictionary.Keys.Contains(entryKey)))
 	})
 
 	t.Run("set nil", func(t *testing.T) {
@@ -150,7 +173,7 @@ func TestDictionaryStorage(t *testing.T) {
 		// nested keys array + dictionary itself
 		require.Equal(t, 2, storage.BasicSlabStorage.Count())
 
-		dictStorable1, ok, err := storage.BasicSlabStorage.Retrieve(value.StorageID)
+		_, ok, err := storage.BasicSlabStorage.Retrieve(value.StorageID)
 		require.NoError(t, err)
 		require.True(t, ok)
 
@@ -163,13 +186,17 @@ func TestDictionaryStorage(t *testing.T) {
 
 		require.Equal(t, 2, storage.BasicSlabStorage.Count())
 
-		dictStorable2, ok, err := storage.BasicSlabStorage.Retrieve(value.StorageID)
+		retrievedStorable, ok, err := storage.BasicSlabStorage.Retrieve(value.StorageID)
 		require.NoError(t, err)
 		require.True(t, ok)
 
-		require.NotEqual(t, dictStorable1, dictStorable2)
+		storedValue, err := StoredValue(retrievedStorable, storage)
+		require.NoError(t, err)
 
-		require.False(t, bool(value.Keys.Contains(NewStringValue("test"))))
+		require.IsType(t, storedValue, &DictionaryValue{})
+		storedDictionary := storedValue.(*DictionaryValue)
+
+		require.False(t, bool(storedDictionary.Keys.Contains(NewStringValue("test"))))
 	})
 
 	t.Run("remove", func(t *testing.T) {
@@ -200,7 +227,7 @@ func TestDictionaryStorage(t *testing.T) {
 		// nested keys array + dictionary itself
 		require.Equal(t, 2, storage.BasicSlabStorage.Count())
 
-		dictStorable1, ok, err := storage.BasicSlabStorage.Retrieve(value.StorageID)
+		_, ok, err := storage.BasicSlabStorage.Retrieve(value.StorageID)
 		require.NoError(t, err)
 		require.True(t, ok)
 
@@ -212,13 +239,17 @@ func TestDictionaryStorage(t *testing.T) {
 
 		require.Equal(t, 2, storage.BasicSlabStorage.Count())
 
-		dictStorable2, ok, err := storage.BasicSlabStorage.Retrieve(value.StorageID)
+		retrievedStorable, ok, err := storage.BasicSlabStorage.Retrieve(value.StorageID)
 		require.NoError(t, err)
 		require.True(t, ok)
 
-		require.NotEqual(t, dictStorable1, dictStorable2)
+		storedValue, err := StoredValue(retrievedStorable, storage)
+		require.NoError(t, err)
 
-		require.False(t, bool(value.Keys.Contains(NewStringValue("test"))))
+		require.IsType(t, storedValue, &DictionaryValue{})
+		storedDictionary := storedValue.(*DictionaryValue)
+
+		require.False(t, bool(storedDictionary.Keys.Contains(NewStringValue("test"))))
 	})
 
 	t.Run("insert", func(t *testing.T) {
@@ -247,7 +278,7 @@ func TestDictionaryStorage(t *testing.T) {
 		// nested keys array + dictionary itself
 		require.Equal(t, 2, storage.BasicSlabStorage.Count())
 
-		dictStorable1, ok, err := storage.BasicSlabStorage.Retrieve(value.StorageID)
+		_, ok, err := storage.BasicSlabStorage.Retrieve(value.StorageID)
 		require.NoError(t, err)
 		require.True(t, ok)
 
@@ -260,12 +291,16 @@ func TestDictionaryStorage(t *testing.T) {
 
 		require.Equal(t, 2, storage.BasicSlabStorage.Count())
 
-		dictStorable2, ok, err := storage.BasicSlabStorage.Retrieve(value.StorageID)
+		retrievedStorable, ok, err := storage.BasicSlabStorage.Retrieve(value.StorageID)
 		require.NoError(t, err)
 		require.True(t, ok)
 
-		require.NotEqual(t, dictStorable1, dictStorable2)
+		storedValue, err := StoredValue(retrievedStorable, storage)
+		require.NoError(t, err)
 
-		require.True(t, bool(value.Keys.Contains(NewStringValue("test"))))
+		require.IsType(t, storedValue, &DictionaryValue{})
+		storedDictionary := storedValue.(*DictionaryValue)
+
+		require.True(t, bool(storedDictionary.Keys.Contains(NewStringValue("test"))))
 	})
 }
