@@ -5423,7 +5423,7 @@ func TestRuntimeContractWriteback(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	assert.Len(t, writes, 1)
+	assert.Len(t, writes, 0)
 
 	writes = nil
 
@@ -5438,7 +5438,7 @@ func TestRuntimeContractWriteback(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	assert.Len(t, writes, 2)
+	assert.Len(t, writes, 1)
 }
 
 func TestRuntimeStorageWriteback(t *testing.T) {
@@ -5549,7 +5549,7 @@ func TestRuntimeStorageWriteback(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	assert.Len(t, writes, 3)
+	assert.Len(t, writes, 2)
 
 	readTx := []byte(`
      import Test from 0xCADE
@@ -5575,7 +5575,7 @@ func TestRuntimeStorageWriteback(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	assert.Len(t, writes, 1)
+	assert.Len(t, writes, 0)
 
 	writeTx := []byte(`
      import Test from 0xCADE
@@ -5602,7 +5602,7 @@ func TestRuntimeStorageWriteback(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	assert.Len(t, writes, 2)
+	assert.Len(t, writes, 1)
 }
 
 func TestRuntimeExternalError(t *testing.T) {
