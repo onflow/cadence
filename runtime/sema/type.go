@@ -5805,6 +5805,7 @@ func init() {
 		AuthAccountContractsType,
 		PublicAccountType,
 		PublicAccountKeysType,
+		PublicAccountContractsType,
 	}
 
 	for _, semaType := range types {
