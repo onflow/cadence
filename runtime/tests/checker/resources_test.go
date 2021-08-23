@@ -3909,10 +3909,13 @@ func TestCheckInvalidResourceMethodBinding(t *testing.T) {
 
 	t.Parallel()
 
+	// TODO: replace AnyStruct return type with ([@R]#(@R): Void)
+	//   once bound function types are supported
+
 	_, err := ParseAndCheck(t, `
       resource R {}
 
-      fun test(): ((@R): Void) {
+      fun test(): AnyStruct {
           let rs <- [<-create R()]
           let append = rs.append
           destroy rs

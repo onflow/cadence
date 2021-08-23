@@ -169,17 +169,19 @@ func TestCheckOptionalChainingFunctionRead(t *testing.T) {
 
 	require.NoError(t, err)
 
-	assert.True(t,
-		RequireGlobalValue(t, checker.Elaboration, "x").Equal(
-			&sema.OptionalType{
-				Type: &sema.FunctionType{
-					ReturnTypeAnnotation: &sema.TypeAnnotation{
-						Type: sema.IntType,
-					},
-				},
+	xType := RequireGlobalValue(t, checker.Elaboration, "x")
+	testType := RequireGlobalType(t, checker.Elaboration, "Test")
+
+	expectedType := &sema.OptionalType{
+		Type: &sema.FunctionType{
+			ReceiverType: testType,
+			ReturnTypeAnnotation: &sema.TypeAnnotation{
+				Type: sema.IntType,
 			},
-		),
-	)
+		},
+	}
+
+	assert.True(t, xType.Equal(expectedType))
 }
 
 func TestCheckOptionalChainingFunctionCall(t *testing.T) {
@@ -249,4 +251,56 @@ func TestCheckInvalidOptionalChainingFieldAssignment(t *testing.T) {
 	errs := ExpectCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.UnsupportedOptionalChainingAssignmentError{}, errs[0])
+}
+
+func TestCheckFunctionTypeReceiverType(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("valid", func(t *testing.T) {
+
+		t.Parallel()
+
+		checker, err := ParseAndCheck(t, `
+          struct S {
+              fun f() {}
+          }
+
+          let s = S()
+          let f = s.f
+        `)
+
+		require.NoError(t, err)
+
+		sType := RequireGlobalType(t, checker.Elaboration, "S")
+
+		assert.Equal(t,
+			&sema.FunctionType{
+				ReceiverType: sType,
+				Parameters:   []*sema.Parameter{},
+				ReturnTypeAnnotation: sema.NewTypeAnnotation(
+					sema.VoidType,
+				),
+			},
+			RequireGlobalValue(t, checker.Elaboration, "f"),
+		)
+	})
+
+	t.Run("invalid cast of bound function type", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          struct S {
+              fun f() {}
+          }
+
+          let s = S()
+          let f = s.f as ((): Void)
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	})
 }

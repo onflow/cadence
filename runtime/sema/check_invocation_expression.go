@@ -60,12 +60,22 @@ func (checker *Checker) checkInvocationExpression(invocationExpression *ast.Invo
 	invokedExpression := invocationExpression.InvokedExpression
 	expressionType := checker.VisitExpression(invokedExpression, nil)
 
+	// Get the member from the invoked value
+	// based on the use of optional chaining syntax
+
 	isOptionalChainingResult := false
 	if memberExpression, ok := invokedExpression.(*ast.MemberExpression); ok {
-		var member *Member
-		_, member, isOptionalChainingResult = checker.visitMember(memberExpression)
-		if member != nil {
-			expressionType = member.TypeAnnotation.Type
+
+		// If the member expression is using optional chaining,
+		// check if the invoked type is optional
+
+		isOptionalChainingResult = memberExpression.Optional
+		if isOptionalChainingResult {
+			if optionalExpressionType, ok := expressionType.(*OptionalType); ok {
+
+				// The invoked type is optional, get the type from the wrapped type
+				expressionType = optionalExpressionType.Type
+			}
 		}
 	}
 
@@ -74,7 +84,7 @@ func (checker *Checker) checkInvocationExpression(invocationExpression *ast.Invo
 		checker.Elaboration.InvocationExpressionArgumentTypes[invocationExpression] = argumentTypes
 	}()
 
-	invokableType, ok := expressionType.(InvokableType)
+	functionType, ok := expressionType.(*FunctionType)
 	if !ok {
 		if !expressionType.IsInvalidType() {
 			checker.report(
@@ -105,8 +115,6 @@ func (checker *Checker) checkInvocationExpression(invocationExpression *ast.Invo
 	// is only potential, i.e. the invocation will not always
 
 	var returnType Type
-
-	functionType := invokableType.InvocationFunctionType()
 
 	checkInvocation := func() {
 		argumentTypes, returnType =
@@ -164,7 +172,7 @@ func (checker *Checker) checkInvocationExpression(invocationExpression *ast.Invo
 
 	checker.checkConstructorInvocationWithResourceResult(
 		invocationExpression,
-		invokableType,
+		functionType,
 		returnType,
 		inCreate,
 	)
@@ -238,11 +246,11 @@ func (checker *Checker) checkMemberInvocationResourceInvalidation(invokedExpress
 
 func (checker *Checker) checkConstructorInvocationWithResourceResult(
 	invocationExpression *ast.InvocationExpression,
-	invokableType InvokableType,
+	functionType *FunctionType,
 	returnType Type,
 	inCreate bool,
 ) {
-	if _, ok := invokableType.(*ConstructorFunctionType); !ok {
+	if !functionType.IsConstructor {
 		return
 	}
 
@@ -471,6 +479,7 @@ func (checker *Checker) checkInvocation(
 
 	// Save types in the elaboration
 
+	checker.Elaboration.InvocationExpressionReceiverTypes[invocationExpression] = functionType.ReceiverType
 	checker.Elaboration.InvocationExpressionTypeArguments[invocationExpression] = typeArguments
 	checker.Elaboration.InvocationExpressionParameterTypes[invocationExpression] = parameterTypes
 	checker.Elaboration.InvocationExpressionReturnTypes[invocationExpression] = returnType

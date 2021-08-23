@@ -38,14 +38,14 @@ func (interpreter *Interpreter) declareTransactionEntryPoint(declaration *ast.Tr
 	var prepareFunctionType *sema.FunctionType
 	if declaration.Prepare != nil {
 		prepareFunction = declaration.Prepare.FunctionDeclaration
-		prepareFunctionType = transactionType.PrepareFunctionType().InvocationFunctionType()
+		prepareFunctionType = transactionType.PrepareFunctionType()
 	}
 
 	var executeFunction *ast.FunctionDeclaration
 	var executeFunctionType *sema.FunctionType
 	if declaration.Execute != nil {
 		executeFunction = declaration.Execute.FunctionDeclaration
-		executeFunctionType = transactionType.ExecuteFunctionType().InvocationFunctionType()
+		executeFunctionType = transactionType.ExecuteFunctionType()
 	}
 
 	postConditionsRewrite :=

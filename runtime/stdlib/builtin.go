@@ -238,6 +238,12 @@ var hashAlgorithmHashFunction = interpreter.NewHostFunctionValue(
 		dataValue := invocation.Arguments[0].(*interpreter.ArrayValue)
 		hashAlgoValue := invocation.Self
 
+		invocation.Interpreter.ExpectType(
+			hashAlgoValue,
+			sema.HashAlgorithmType,
+			invocation.GetLocationRange,
+		)
+
 		return invocation.Interpreter.HashHandler(dataValue, nil, hashAlgoValue)
 	},
 )
@@ -248,6 +254,12 @@ var hashAlgorithmHashWithTagFunction = interpreter.NewHostFunctionValue(
 		tagValue := invocation.Arguments[1].(*interpreter.StringValue)
 		hashAlgoValue := invocation.Self
 
+		invocation.Interpreter.ExpectType(
+			hashAlgoValue,
+			sema.HashAlgorithmType,
+			invocation.GetLocationRange,
+		)
+
 		return invocation.Interpreter.HashHandler(
 			dataValue,
 			tagValue,
@@ -256,7 +268,7 @@ var hashAlgorithmHashWithTagFunction = interpreter.NewHostFunctionValue(
 	},
 )
 
-func cryptoAlgorithmEnumType(enumType *sema.CompositeType, enumCases []sema.CryptoAlgorithm) *sema.ConstructorFunctionType {
+func cryptoAlgorithmEnumType(enumType *sema.CompositeType, enumCases []sema.CryptoAlgorithm) *sema.FunctionType {
 	members := make([]*sema.Member, len(enumCases))
 	for i, algo := range enumCases {
 		members[i] = sema.NewPublicConstantFieldMember(
@@ -267,21 +279,20 @@ func cryptoAlgorithmEnumType(enumType *sema.CompositeType, enumCases []sema.Cryp
 		)
 	}
 
-	constructorType := &sema.ConstructorFunctionType{
-		FunctionType: &sema.FunctionType{
-			Parameters: []*sema.Parameter{
-				{
-					Identifier:     sema.EnumRawValueFieldName,
-					TypeAnnotation: sema.NewTypeAnnotation(enumType.EnumRawType),
-				},
+	constructorType := &sema.FunctionType{
+		IsConstructor: true,
+		Parameters: []*sema.Parameter{
+			{
+				Identifier:     sema.EnumRawValueFieldName,
+				TypeAnnotation: sema.NewTypeAnnotation(enumType.EnumRawType),
 			},
-			ReturnTypeAnnotation: sema.NewTypeAnnotation(
-				&sema.OptionalType{
-					Type: enumType,
-				},
-			),
-			Members: sema.GetMembersAsMap(members),
 		},
+		ReturnTypeAnnotation: sema.NewTypeAnnotation(
+			&sema.OptionalType{
+				Type: enumType,
+			},
+		),
+		Members: sema.GetMembersAsMap(members),
 	}
 
 	return constructorType
