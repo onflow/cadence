@@ -1012,6 +1012,26 @@ func (e *DuplicateConformanceError) Error() string {
 
 func (*DuplicateConformanceError) isSemanticError() {}
 
+// MultipleInterfaceDefaultImplementationsError
+
+// TODO: just make this a warning?
+
+type MultipleInterfaceDefaultImplementationsError struct {
+	CompositeType *CompositeType
+	Member        *Member
+}
+
+func (e *MultipleInterfaceDefaultImplementationsError) Error() string {
+	return fmt.Sprintf(
+		"%s `%s` has multiple interface default implementations for function `%s`",
+		e.CompositeType.Kind.Name(),
+		e.CompositeType.QualifiedString(),
+		e.Member.Identifier.Identifier,
+	)
+}
+
+func (*MultipleInterfaceDefaultImplementationsError) isSemanticError() {}
+
 // MissingConformanceError
 
 type MissingConformanceError struct {

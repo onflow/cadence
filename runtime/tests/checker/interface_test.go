@@ -133,7 +133,7 @@ func TestCheckInterfaceWithFunctionImplementationAndConditions(t *testing.T) {
 	}
 }
 
-func TestCheckInvalidInterfaceWithFunctionImplementation(t *testing.T) {
+func TestCheckInterfaceWithFunctionImplementation(t *testing.T) {
 
 	t.Parallel()
 
@@ -145,17 +145,26 @@ func TestCheckInvalidInterfaceWithFunctionImplementation(t *testing.T) {
 					`
                       %s interface Test {
                           fun test(): Int {
+							  pre{
+
+							  }
+							  post{
+
+							  }
                              return 1
                           }
                       }
+					  
+					  %s TestUser: Test{
+
+					  }
                     `,
-					kind.Keyword(),
+					kind.Keyword(), kind.Keyword(),
 				),
 			)
 
-			errs := ExpectCheckerErrors(t, err, 1)
+			require.NoError(t, err)
 
-			assert.IsType(t, &sema.InvalidImplementationError{}, errs[0])
 		})
 	}
 }
@@ -210,7 +219,7 @@ func TestCheckInterfaceWithInitializer(t *testing.T) {
 	}
 }
 
-func TestCheckInvalidInterfaceWithInitializerImplementation(t *testing.T) {
+func TestCheckInterfaceWithInitializerImplementation(t *testing.T) {
 
 	t.Parallel()
 
@@ -230,9 +239,8 @@ func TestCheckInvalidInterfaceWithInitializerImplementation(t *testing.T) {
 				),
 			)
 
-			errs := ExpectCheckerErrors(t, err, 1)
+			require.NoError(t, err)
 
-			assert.IsType(t, &sema.InvalidImplementationError{}, errs[0])
 		})
 	}
 }
@@ -1620,7 +1628,7 @@ func TestCheckContractInterfaceTypeRequirement(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestCheckInvalidContractInterfaceTypeRequirementFunctionImplementation(t *testing.T) {
+func TestCheckContractInterfaceTypeRequirementFunctionImplementation(t *testing.T) {
 
 	t.Parallel()
 
@@ -1636,9 +1644,8 @@ func TestCheckInvalidContractInterfaceTypeRequirementFunctionImplementation(t *t
         `,
 	)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+	require.NoError(t, err)
 
-	assert.IsType(t, &sema.InvalidImplementationError{}, errs[0])
 }
 
 func TestCheckInvalidContractInterfaceTypeRequirementMissingFunction(t *testing.T) {
@@ -1990,4 +1997,118 @@ func TestCheckInvalidInterfaceUseAsTypeSuggestion(t *testing.T) {
 		},
 		errs[0].(*sema.InvalidInterfaceTypeError).ExpectedType,
 	)
+}
+
+//MultipleInterfaceDefaultImplementation
+func TestCheckInvalidMultipleInterfaceDefaultImplementation(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+	struct interface InterfaceA {
+		fun test(): Int{
+			return 41
+		}
+	}
+
+	struct interface InterfaceB {
+		fun test(): Int{
+			return 41
+		}
+	}
+	
+	struct Test:  InterfaceA, InterfaceB   {
+
+	}
+
+    `)
+
+	errs := ExpectCheckerErrors(t, err, 1)
+
+	require.IsType(t, &sema.MultipleInterfaceDefaultImplementationsError{}, errs[0])
+
+}
+
+func TestCheckMultipleInterfaceDefaultImplementationWhenOverriden(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+	struct interface InterfaceA {
+		fun test(): Int{
+			return 41
+		}
+	}
+
+	struct interface InterfaceB {
+		fun test(): Int{
+			return 41
+		}
+	}
+	
+	struct Test:  InterfaceA, InterfaceB   {
+		fun test(): Int{
+			return 42
+		}
+	}
+
+
+    `)
+
+	require.NoError(t, err)
+
+}
+
+func TestCheckMultipleInterfaceSingleInterfaceDefaultImplementation(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+	struct interface InterfaceA {
+		fun test(): Int{
+			return 41
+		}
+	}
+
+	struct interface InterfaceB {
+		fun test(): Int
+	}
+	
+	struct Test:  InterfaceA, InterfaceB  {
+
+	}
+
+    `)
+
+	errs := ExpectCheckerErrors(t, err, 1)
+
+	require.IsType(t, &sema.ConformanceError{}, errs[0])
+
+}
+
+func TestCheckMultipleInterfaceSingleInterfaceDefaultImplementationWhenOverridden(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+	struct interface InterfaceA {
+		fun test(): Int{
+			return 41
+		}
+	}
+
+	struct interface InterfaceB {
+		fun test(): Int
+	}
+	
+	struct Test:  InterfaceA, InterfaceB   {
+		fun test(): Int{
+			return 42
+		}
+	}
+
+
+    `)
+	require.NoError(t, err)
+
 }
