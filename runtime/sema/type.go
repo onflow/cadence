@@ -4884,10 +4884,8 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 			) {
 				return false
 			}
-		} else {
-			if typedSuperType.ReturnTypeAnnotation != nil {
-				return false
-			}
+		} else if typedSuperType.ReturnTypeAnnotation != nil {
+			return false
 		}
 
 		// Receiver type
