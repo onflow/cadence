@@ -828,7 +828,7 @@ func (v *ArrayValue) SetIndex(inter *Interpreter, getLocationRange func() Locati
 	// Use the getter, to make sure lazily decoded values are properly loaded.
 	arrayStaticType := v.StaticType().(ArrayStaticType)
 
-	checkContainerMutation(inter, arrayStaticType.ElementType(), value, getLocationRange)
+	inter.checkContainerMutation(arrayStaticType.ElementType(), value, getLocationRange)
 
 	v.modified = true
 	value.SetOwner(v.Owner)
@@ -868,7 +868,7 @@ func (v *ArrayValue) Append(inter *Interpreter, getLocationRange func() Location
 	// Use the getter, to make sure lazily decoded values are properly loaded.
 	arrayStaticType := v.StaticType().(ArrayStaticType)
 
-	checkContainerMutation(inter, arrayStaticType.ElementType(), element, getLocationRange)
+	inter.checkContainerMutation(arrayStaticType.ElementType(), element, getLocationRange)
 
 	v.modified = true
 
@@ -886,7 +886,7 @@ func (v *ArrayValue) AppendAll(inter *Interpreter, getLocationRange func() Locat
 	arrayStaticType := v.StaticType().(ArrayStaticType)
 
 	for _, element := range otherElements {
-		checkContainerMutation(inter, arrayStaticType.ElementType(), element, getLocationRange)
+		inter.checkContainerMutation(arrayStaticType.ElementType(), element, getLocationRange)
 	}
 
 	v.modified = true
@@ -914,7 +914,7 @@ func (v *ArrayValue) Insert(inter *Interpreter, getLocationRange func() Location
 	// Use the getter, to make sure lazily decoded values are properly loaded.
 	arrayStaticType := v.StaticType().(ArrayStaticType)
 
-	checkContainerMutation(inter, arrayStaticType.ElementType(), element, getLocationRange)
+	inter.checkContainerMutation(arrayStaticType.ElementType(), element, getLocationRange)
 
 	v.modified = true
 
@@ -7706,9 +7706,8 @@ func (v *DictionaryValue) Set(inter *Interpreter, getLocationRange func() Locati
 	// Use the getter, to make sure lazily decoded values are properly loaded.
 	dictionaryStaticType := v.StaticType().(DictionaryStaticType)
 
-	checkContainerMutation(inter, dictionaryStaticType.KeyType, keyValue, getLocationRange)
-	checkContainerMutation(
-		inter,
+	inter.checkContainerMutation(dictionaryStaticType.KeyType, keyValue, getLocationRange)
+	inter.checkContainerMutation(
 		OptionalStaticType{
 			Type: dictionaryStaticType.ValueType,
 		},
@@ -7894,8 +7893,8 @@ func (v *DictionaryValue) Insert(inter *Interpreter, locationRangeGetter func() 
 	// Use the getter, to make sure lazily decoded values are properly loaded.
 	dictionaryStaticType := v.StaticType().(DictionaryStaticType)
 
-	checkContainerMutation(inter, dictionaryStaticType.KeyType, keyValue, locationRangeGetter)
-	checkContainerMutation(inter, dictionaryStaticType.ValueType, value, locationRangeGetter)
+	inter.checkContainerMutation(dictionaryStaticType.KeyType, keyValue, locationRangeGetter)
+	inter.checkContainerMutation(dictionaryStaticType.ValueType, value, locationRangeGetter)
 
 	v.modified = true
 
@@ -9553,22 +9552,5 @@ func NewPublicAccountContractsValue(
 		fields:              fields,
 		ComputedFields:      computedFields,
 		stringer:            stringer,
-	}
-}
-
-func checkContainerMutation(
-	inter *Interpreter,
-	memberStaticType StaticType,
-	value Value,
-	getLocationRange func() LocationRange,
-) {
-
-	memberType := inter.ConvertStaticToSemaType(memberStaticType)
-
-	if !inter.IsSubType(value.DynamicType(inter, SeenReferences{}), memberType) {
-		panic(ContainerMutationError{
-			ExpectedType:  memberType,
-			LocationRange: getLocationRange(),
-		})
 	}
 }
