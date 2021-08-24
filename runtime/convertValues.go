@@ -492,10 +492,9 @@ func importArrayValue(
 ) {
 	values := make([]interpreter.Value, len(v.Values))
 
-	var arrayType sema.ArrayType
 	var elementType sema.Type
-	if expectedArrayType, ok := expectedType.(sema.ArrayType); ok {
-		arrayType = expectedArrayType
+	arrayType, ok := expectedType.(sema.ArrayType)
+	if ok {
 		elementType = arrayType.ElementType(false)
 	}
 
@@ -510,6 +509,10 @@ func importArrayValue(
 	var staticArrayType interpreter.ArrayStaticType
 	if arrayType != nil {
 		staticArrayType = interpreter.ConvertSemaArrayTypeToStaticArrayType(arrayType)
+	} else {
+		staticArrayType = interpreter.VariableSizedStaticType{
+			Type: interpreter.PrimitiveStaticTypeAnyStruct,
+		}
 	}
 
 	return interpreter.NewArrayValueUnownedNonCopying(staticArrayType, values...), nil
@@ -525,11 +528,11 @@ func importDictionaryValue(
 ) {
 	keysAndValues := make([]interpreter.Value, len(v.Pairs)*2)
 
-	var dictionaryType *sema.DictionaryType
 	var keyType sema.Type
 	var valueType sema.Type
-	if expectedDictionaryType, ok := expectedType.(*sema.DictionaryType); ok {
-		dictionaryType = expectedDictionaryType
+
+	dictionaryType, ok := expectedType.(*sema.DictionaryType)
+	if ok {
 		keyType = dictionaryType.KeyType
 		valueType = dictionaryType.ValueType
 	}
@@ -551,6 +554,56 @@ func importDictionaryValue(
 	var dictionaryStaticType interpreter.DictionaryStaticType
 	if dictionaryType != nil {
 		dictionaryStaticType = interpreter.ConvertSemaDictionaryTypeToStaticDictionaryType(dictionaryType)
+	} else {
+		var keyStaticType, valueStaticType interpreter.StaticType
+
+		if len(keysAndValues) == 0 {
+			keyStaticType = interpreter.PrimitiveStaticTypeNever
+			valueStaticType = interpreter.PrimitiveStaticTypeNever
+		} else {
+			// Infer the keys type from the first entry
+
+			key := keysAndValues[0]
+			keyStaticType = key.StaticType()
+			keySemaType := inter.ConvertStaticToSemaType(keyStaticType)
+
+			// Dictionary Keys could be a mix of numeric sub-types or path sub-types, and can be still valid.
+			// So always go for the safest option, by inferring the most generic type for numbers/paths.
+			// e.g: sending a value similar to: `var map: {Number:String} = {1: "int", 2.3: "fixed-point"}`
+
+			if sema.IsSubType(keySemaType, sema.NumberType) {
+				keyStaticType = interpreter.PrimitiveStaticTypeNumber
+			} else if sema.IsSubType(keySemaType, sema.PathType) {
+				keyStaticType = interpreter.PrimitiveStaticTypePath
+			} else if sema.IsValidDictionaryKeyType(keySemaType) {
+				// NO-OP. Use 'keyStaticType' as static type for keys
+			} else {
+				return nil, fmt.Errorf(
+					"cannot import dictionary: unsupported key: %v",
+					key,
+				)
+			}
+
+			// Make sure all keys are subtype of the inferred key-type
+
+			inferredKeySemaType := inter.ConvertStaticToSemaType(keyStaticType)
+
+			for i := 1; i < len(v.Pairs); i++ {
+				keySemaType := inter.ConvertStaticToSemaType(keysAndValues[i*2].StaticType())
+				if !sema.IsSubType(keySemaType, inferredKeySemaType) {
+					return nil, fmt.Errorf(
+						"cannot import dictionary: keys does not belong to the same type",
+					)
+				}
+			}
+
+			valueStaticType = interpreter.PrimitiveStaticTypeAnyStruct
+		}
+
+		dictionaryStaticType = interpreter.DictionaryStaticType{
+			KeyType:   keyStaticType,
+			ValueType: valueStaticType,
+		}
 	}
 
 	return interpreter.NewDictionaryValueUnownedNonCopying(
