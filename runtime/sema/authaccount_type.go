@@ -472,37 +472,6 @@ var authAccountTypeGetCapabilityFunctionType = func() *FunctionType {
 	}
 }()
 
-var publicAccountTypeGetCapabilityFunctionType = func() *FunctionType {
-
-	typeParameter := &TypeParameter{
-		TypeBound: &ReferenceType{
-			Type: AnyType,
-		},
-		Name:     "T",
-		Optional: true,
-	}
-
-	return &FunctionType{
-		TypeParameters: []*TypeParameter{
-			typeParameter,
-		},
-		Parameters: []*Parameter{
-			{
-				Label:          ArgumentLabelNotRequired,
-				Identifier:     "capabilityPath",
-				TypeAnnotation: NewTypeAnnotation(PublicPathType),
-			},
-		},
-		ReturnTypeAnnotation: NewTypeAnnotation(
-			&CapabilityType{
-				BorrowType: &GenericType{
-					TypeParameter: typeParameter,
-				},
-			},
-		),
-	}
-}()
-
 const authAccountTypeGetCapabilityFunctionDocString = `
 Returns the capability at the given private or public path, or nil if it does not exist
 `

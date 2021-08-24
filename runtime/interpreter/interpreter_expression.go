@@ -615,7 +615,7 @@ func (interpreter *Interpreter) VisitFunctionExpression(expression *ast.Function
 
 	statements := expression.FunctionBlock.Block.Statements
 
-	return InterpretedFunctionValue{
+	return &InterpretedFunctionValue{
 		Interpreter:      interpreter,
 		ParameterList:    expression.ParameterList,
 		Type:             functionType,
@@ -634,8 +634,7 @@ func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingEx
 
 	switch expression.Operation {
 	case ast.OperationFailableCast, ast.OperationForceCast:
-		dynamicTypeResults := DynamicTypeResults{}
-		dynamicType := value.DynamicType(interpreter, dynamicTypeResults)
+		dynamicType := value.DynamicType(interpreter, SeenReferences{})
 		isSubType := interpreter.IsSubType(dynamicType, expectedType)
 
 		switch expression.Operation {

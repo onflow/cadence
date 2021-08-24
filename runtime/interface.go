@@ -115,6 +115,8 @@ type Interface interface {
 	ImplementationDebugLog(message string) error
 	// ValidatePublicKey verifies the validity of a public key.
 	ValidatePublicKey(key *PublicKey) (bool, error)
+	// GetAccountContractNames returns the names of all contracts deployed in an account.
+	GetAccountContractNames(address Address) ([]string, error)
 }
 
 type Metrics interface {
@@ -290,4 +292,8 @@ func (i emptyRuntimeInterface) GetStorageCapacity(_ Address) (uint64, error) {
 
 func (i *emptyRuntimeInterface) ValidatePublicKey(_ *PublicKey) (bool, error) {
 	return false, nil
+}
+
+func (i *emptyRuntimeInterface) GetAccountContractNames(_ Address) ([]string, error) {
+	return nil, nil
 }

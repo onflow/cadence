@@ -55,8 +55,8 @@ type Visitor interface {
 	VisitPathValue(interpreter *Interpreter, value PathValue)
 	VisitCapabilityValue(interpreter *Interpreter, value CapabilityValue)
 	VisitLinkValue(interpreter *Interpreter, value LinkValue)
-	VisitInterpretedFunctionValue(interpreter *Interpreter, value InterpretedFunctionValue)
-	VisitHostFunctionValue(interpreter *Interpreter, value HostFunctionValue)
+	VisitInterpretedFunctionValue(interpreter *Interpreter, value *InterpretedFunctionValue)
+	VisitHostFunctionValue(interpreter *Interpreter, value *HostFunctionValue)
 	VisitBoundFunctionValue(interpreter *Interpreter, value BoundFunctionValue)
 	VisitDeployedContractValue(interpreter *Interpreter, value DeployedContractValue)
 }
@@ -98,8 +98,8 @@ type EmptyVisitor struct {
 	PathValueVisitor                func(interpreter *Interpreter, value PathValue)
 	CapabilityValueVisitor          func(interpreter *Interpreter, value CapabilityValue)
 	LinkValueVisitor                func(interpreter *Interpreter, value LinkValue)
-	InterpretedFunctionValueVisitor func(interpreter *Interpreter, value InterpretedFunctionValue)
-	HostFunctionValueVisitor        func(interpreter *Interpreter, value HostFunctionValue)
+	InterpretedFunctionValueVisitor func(interpreter *Interpreter, value *InterpretedFunctionValue)
+	HostFunctionValueVisitor        func(interpreter *Interpreter, value *HostFunctionValue)
 	BoundFunctionValueVisitor       func(interpreter *Interpreter, value BoundFunctionValue)
 	DeployedContractValueVisitor    func(interpreter *Interpreter, value DeployedContractValue)
 }
@@ -358,14 +358,14 @@ func (v EmptyVisitor) VisitLinkValue(interpreter *Interpreter, value LinkValue) 
 	v.LinkValueVisitor(interpreter, value)
 }
 
-func (v EmptyVisitor) VisitInterpretedFunctionValue(interpreter *Interpreter, value InterpretedFunctionValue) {
+func (v EmptyVisitor) VisitInterpretedFunctionValue(interpreter *Interpreter, value *InterpretedFunctionValue) {
 	if v.InterpretedFunctionValueVisitor == nil {
 		return
 	}
 	v.InterpretedFunctionValueVisitor(interpreter, value)
 }
 
-func (v EmptyVisitor) VisitHostFunctionValue(interpreter *Interpreter, value HostFunctionValue) {
+func (v EmptyVisitor) VisitHostFunctionValue(interpreter *Interpreter, value *HostFunctionValue) {
 	if v.HostFunctionValueVisitor == nil {
 		return
 	}

@@ -20,7 +20,10 @@ package interpreter
 
 import (
 	"fmt"
+	"go/types"
 	"testing"
+
+	"golang.org/x/tools/go/packages"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -432,7 +435,7 @@ func TestSetOwnerCompositeCopy(t *testing.T) {
 	const fieldName = "test"
 
 	composite.fields.Set(fieldName, value)
-	composite.stringer = func(_ StringResults) string {
+	composite.stringer = func(_ SeenReferences) string {
 		return "random string"
 	}
 
@@ -443,8 +446,8 @@ func TestSetOwnerCompositeCopy(t *testing.T) {
 	assert.Nil(t, valueCopy.GetOwner())
 	assert.Equal(t, &oldOwner, value.GetOwner())
 	assert.Equal(t,
-		composite.stringer(StringResults{}),
-		compositeCopy.stringer(StringResults{}),
+		composite.stringer(SeenReferences{}),
+		compositeCopy.stringer(SeenReferences{}),
 	)
 }
 
@@ -640,7 +643,7 @@ func TestStringer(t *testing.T) {
 					nil,
 				)
 
-				compositeValue.stringer = func(_ StringResults) string {
+				compositeValue.stringer = func(_ SeenReferences) string {
 					return "y --> bar"
 				}
 
@@ -981,12 +984,12 @@ func TestEphemeralReferenceTypeConformance(t *testing.T) {
 	code := `
         pub fun getEphemeralRef(): &Foo {
             var foo = Foo()
-            var foo_ref = &foo as &Foo
+            var fooRef = &foo as &Foo
 
             // Create the cyclic reference
-            foo_ref.bar = foo_ref
+            fooRef.bar = fooRef
 
-            return foo_ref
+            return fooRef
         }
 
         pub struct Foo {
@@ -1019,7 +1022,7 @@ func TestEphemeralReferenceTypeConformance(t *testing.T) {
 	require.NoError(t, err)
 	require.IsType(t, &EphemeralReferenceValue{}, value)
 
-	dynamicType := value.DynamicType(inter, DynamicTypeResults{})
+	dynamicType := value.DynamicType(inter, SeenReferences{})
 
 	// Check the dynamic type conformance on a cyclic value.
 	conforms := value.ConformsToDynamicType(inter, dynamicType, TypeConformanceResults{})
@@ -2383,6 +2386,113 @@ func TestPublicKeyValue(t *testing.T) {
 			publicKeyString,
 		)
 	})
+}
+
+func TestHashable(t *testing.T) {
+
+	// Assert that all Value and DynamicType implementations are hashable
+
+	pkgs, err := packages.Load(
+		&packages.Config{
+			// https://github.com/golang/go/issues/45218
+			Mode: packages.NeedImports | packages.NeedTypes,
+		},
+		"github.com/onflow/cadence/runtime/interpreter",
+	)
+	require.NoError(t, err)
+
+	pkg := pkgs[0]
+	scope := pkg.Types.Scope()
+
+	test := func(interfaceName string) {
+
+		t.Run(interfaceName, func(t *testing.T) {
+
+			interfaceType, ok := scope.Lookup(interfaceName).Type().Underlying().(*types.Interface)
+			require.True(t, ok)
+
+			for _, name := range scope.Names() {
+				object := scope.Lookup(name)
+				_, ok := object.(*types.TypeName)
+				if !ok {
+					continue
+				}
+
+				implementationType := object.Type()
+				if !types.Implements(implementationType, interfaceType) {
+					continue
+				}
+
+				err := checkHashable(implementationType)
+				if !assert.NoError(t,
+					err,
+					"%s implementation is not hashable: %s",
+					interfaceType.String(),
+					implementationType,
+				) {
+					continue
+				}
+			}
+		})
+	}
+
+	test("Value")
+	test("DynamicType")
+}
+
+func checkHashable(ty types.Type) error {
+
+	// TODO: extend the notion of unhashable types,
+	//  see https://github.com/golang/go/blob/a22e3172200d4bdd0afcbbe6564dbb67fea4b03a/src/runtime/alg.go#L144
+
+	switch ty := ty.(type) {
+	case *types.Basic:
+		switch ty.Kind() {
+		case types.Bool,
+			types.Int,
+			types.Int8,
+			types.Int16,
+			types.Int32,
+			types.Int64,
+			types.Uint,
+			types.Uint8,
+			types.Uint16,
+			types.Uint32,
+			types.Uint64,
+			types.Float32,
+			types.Float64,
+			types.String:
+			return nil
+		}
+	case *types.Pointer,
+		*types.Array,
+		*types.Interface:
+		return nil
+
+	case *types.Struct:
+		numFields := ty.NumFields()
+		for i := 0; i < numFields; i++ {
+			field := ty.Field(i)
+			fieldTy := field.Type()
+			err := checkHashable(fieldTy)
+			if err != nil {
+				return fmt.Errorf(
+					"struct type has unhashable field %s: %w",
+					field.Name(),
+					err,
+				)
+			}
+		}
+		return nil
+
+	case *types.Named:
+		return checkHashable(ty.Underlying())
+	}
+
+	return fmt.Errorf(
+		"type %s is potentially not hashable",
+		ty.String(),
+	)
 }
 
 func newTestInterpreter(tb testing.TB) *Interpreter {

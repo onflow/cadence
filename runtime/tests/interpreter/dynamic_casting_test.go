@@ -3507,3 +3507,30 @@ func TestInterpretDynamicCastingCapability(t *testing.T) {
 		})
 	}
 }
+
+func TestInterpretResourceConstructorCast(t *testing.T) {
+
+	t.Parallel()
+
+	for operation, returnsOptional := range dynamicCastingOperations {
+		inter := parseCheckAndInterpret(t,
+			fmt.Sprintf(`
+                  resource R {}
+
+                  fun test(): AnyStruct {
+                      return R %s ((): @R)
+                  }
+                `,
+				operation.Symbol(),
+			),
+		)
+
+		result, err := inter.Invoke("test")
+		if returnsOptional {
+			require.NoError(t, err)
+			require.Equal(t, interpreter.NilValue{}, result)
+		} else {
+			require.Error(t, err)
+		}
+	}
+}
