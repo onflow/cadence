@@ -2649,6 +2649,10 @@ func defineStringFunction(activation *VariableActivation) {
 // - Block
 
 func (interpreter *Interpreter) IsSubType(subType DynamicType, superType sema.Type) bool {
+	if superType == sema.AnyType {
+		return true
+	}
+
 	switch typedSubType := subType.(type) {
 	case MetaTypeDynamicType:
 		switch superType {
@@ -3458,4 +3462,20 @@ func (interpreter *Interpreter) getTypeFunction(self Value) *HostFunctionValue {
 
 func (interpreter *Interpreter) setMember(self Value, getLocationRange func() LocationRange, identifier string, value Value) {
 	self.(MemberAccessibleValue).SetMember(interpreter, getLocationRange, identifier, value)
+}
+
+func (interpreter *Interpreter) checkContainerMutation(
+	memberStaticType StaticType,
+	value Value,
+	getLocationRange func() LocationRange,
+) {
+
+	memberType := interpreter.ConvertStaticToSemaType(memberStaticType)
+
+	if !interpreter.IsSubType(value.DynamicType(interpreter, SeenReferences{}), memberType) {
+		panic(ContainerMutationError{
+			ExpectedType:  memberType,
+			LocationRange: getLocationRange(),
+		})
+	}
 }

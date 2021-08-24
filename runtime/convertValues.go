@@ -607,6 +607,7 @@ func importDictionaryValue(
 	}
 
 	return interpreter.NewDictionaryValueUnownedNonCopying(
+		inter,
 		dictionaryStaticType,
 		keysAndValues...,
 	), nil

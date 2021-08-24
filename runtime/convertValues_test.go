@@ -130,6 +130,7 @@ func TestExportValue(t *testing.T) {
 		{
 			label: "Dictionary",
 			value: interpreter.NewDictionaryValueUnownedNonCopying(
+				newTestInterpreter(t),
 				interpreter.DictionaryStaticType{
 					KeyType:   interpreter.PrimitiveStaticTypeString,
 					ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
@@ -140,6 +141,7 @@ func TestExportValue(t *testing.T) {
 		{
 			label: "Dictionary (non-empty)",
 			value: interpreter.NewDictionaryValueUnownedNonCopying(
+				newTestInterpreter(t),
 				interpreter.DictionaryStaticType{
 					KeyType:   interpreter.PrimitiveStaticTypeString,
 					ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
@@ -409,6 +411,7 @@ func TestImportValue(t *testing.T) {
 		{
 			label: "Dictionary",
 			expected: interpreter.NewDictionaryValueUnownedNonCopying(
+				newTestInterpreter(t),
 				interpreter.DictionaryStaticType{
 					KeyType:   interpreter.PrimitiveStaticTypeString,
 					ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
@@ -423,6 +426,7 @@ func TestImportValue(t *testing.T) {
 		{
 			label: "Dictionary (non-empty)",
 			expected: interpreter.NewDictionaryValueUnownedNonCopying(
+				newTestInterpreter(t),
 				interpreter.DictionaryStaticType{
 					KeyType:   interpreter.PrimitiveStaticTypeString,
 					ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
@@ -2214,22 +2218,6 @@ func TestMalformedArgumentPassing(t *testing.T) {
 			}),
 			expectedErrType: &MalformedValueError{},
 		},
-		{
-			label:         "Nested dictionary with mismatching element",
-			typeSignature: "{String: {String: String}}",
-			exportedValue: cadence.NewDictionary([]cadence.KeyValuePair{
-				{
-					Key: cadence.String("hello"),
-					Value: cadence.NewDictionary([]cadence.KeyValuePair{
-						{
-							Key:   cadence.String("hello"),
-							Value: cadence.NewInt(6),
-						},
-					}),
-				},
-			}),
-			expectedErrType: &InvalidValueTypeError{},
-		},
 	}
 
 	testArgumentPassing := func(test argumentPassingTest) {
@@ -2456,6 +2444,7 @@ func TestImportExportDictionaryValue(t *testing.T) {
 		t.Parallel()
 
 		value := interpreter.NewDictionaryValueUnownedNonCopying(
+			newTestInterpreter(t),
 			interpreter.DictionaryStaticType{
 				KeyType:   interpreter.PrimitiveStaticTypeString,
 				ValueType: interpreter.PrimitiveStaticTypeInt,
@@ -2489,6 +2478,7 @@ func TestImportExportDictionaryValue(t *testing.T) {
 
 		assert.Equal(t,
 			interpreter.NewDictionaryValueUnownedNonCopying(
+				newTestInterpreter(t),
 				interpreter.DictionaryStaticType{
 					KeyType:   interpreter.PrimitiveStaticTypeString,
 					ValueType: interpreter.PrimitiveStaticTypeUInt8,
@@ -2503,6 +2493,7 @@ func TestImportExportDictionaryValue(t *testing.T) {
 		t.Parallel()
 
 		value := interpreter.NewDictionaryValueUnownedNonCopying(
+			newTestInterpreter(t),
 			interpreter.DictionaryStaticType{
 				KeyType:   interpreter.PrimitiveStaticTypeString,
 				ValueType: interpreter.PrimitiveStaticTypeInt,
@@ -2556,6 +2547,7 @@ func TestImportExportDictionaryValue(t *testing.T) {
 
 		assert.Equal(t,
 			interpreter.NewDictionaryValueUnownedNonCopying(
+				newTestInterpreter(t),
 				interpreter.DictionaryStaticType{
 					KeyType:   interpreter.PrimitiveStaticTypeString,
 					ValueType: interpreter.PrimitiveStaticTypeInt,
@@ -2615,6 +2607,7 @@ func TestImportExportDictionaryValue(t *testing.T) {
 
 		assert.Equal(t,
 			interpreter.NewDictionaryValueUnownedNonCopying(
+				newTestInterpreter(t),
 				interpreter.DictionaryStaticType{
 					KeyType:   interpreter.PrimitiveStaticTypeString,
 					ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
@@ -2622,6 +2615,7 @@ func TestImportExportDictionaryValue(t *testing.T) {
 
 				interpreter.NewStringValue("a"),
 				interpreter.NewDictionaryValueUnownedNonCopying(
+					newTestInterpreter(t),
 					interpreter.DictionaryStaticType{
 						KeyType:   interpreter.PrimitiveStaticTypeNumber,
 						ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
@@ -2632,6 +2626,7 @@ func TestImportExportDictionaryValue(t *testing.T) {
 
 				interpreter.NewStringValue("b"),
 				interpreter.NewDictionaryValueUnownedNonCopying(
+					newTestInterpreter(t),
 					interpreter.DictionaryStaticType{
 						KeyType:   interpreter.PrimitiveStaticTypeNumber,
 						ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
@@ -2692,6 +2687,37 @@ func TestImportExportDictionaryValue(t *testing.T) {
 		require.ErrorAs(t, err, &argErr)
 
 		assert.Contains(t, argErr.Error(), "cannot import dictionary: keys does not belong to the same type")
+	})
+
+	t.Run("nested dictionary with mismatching element", func(t *testing.T) {
+		t.Parallel()
+
+		script :=
+			`pub fun main(arg: {String: {String: String}}) {
+            }
+            `
+
+		dictionary := cadence.NewDictionary(
+			[]cadence.KeyValuePair{
+				{
+					Key: cadence.String("hello"),
+					Value: cadence.NewDictionary(
+						[]cadence.KeyValuePair{
+							{
+								Key:   cadence.String("hello"),
+								Value: cadence.NewInt(6),
+							},
+						},
+					),
+				},
+			},
+		)
+
+		_, err := executeTestScript(t, script, dictionary)
+		require.Error(t, err)
+
+		var argErr interpreter.ContainerMutationError
+		require.ErrorAs(t, err, &argErr)
 	})
 }
 
@@ -3304,6 +3330,7 @@ func TestImportExportComplex(t *testing.T) {
 	}
 
 	internalDictionaryValue := interpreter.NewDictionaryValueUnownedNonCopying(
+		newTestInterpreter(t),
 		staticDictionaryType,
 		interpreter.NewStringValue("a"), internalArrayValue,
 	)
@@ -3491,4 +3518,11 @@ func TestStaticTypeAvailability(t *testing.T) {
 		_, err := executeTestScript(t, script, structValue)
 		require.NoError(t, err)
 	})
+}
+
+func newTestInterpreter(t *testing.T) *interpreter.Interpreter {
+	inter, err := interpreter.NewInterpreter(nil, utils.TestLocation)
+	require.NoError(t, err)
+
+	return inter
 }

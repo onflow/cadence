@@ -26,6 +26,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/runtime/common"
+	checkerUtils "github.com/onflow/cadence/runtime/tests/checker"
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
@@ -804,7 +805,7 @@ func TestDictionaryDeferredDecoding(t *testing.T) {
 	t.Run("Simple dictionary", func(t *testing.T) {
 		t.Parallel()
 
-		dictionary := newTestDictionaryValue(10)
+		dictionary := newTestDictionaryValue(t, 10)
 
 		encoded, _, err := EncodeValue(dictionary, nil, true, nil)
 		require.NoError(t, err)
@@ -838,7 +839,7 @@ func TestDictionaryDeferredDecoding(t *testing.T) {
 	t.Run("Round trip - without loading", func(t *testing.T) {
 		t.Parallel()
 
-		dictionary := newTestDictionaryValue(2)
+		dictionary := newTestDictionaryValue(t, 2)
 
 		// Encode
 		encoded, _, err := EncodeValue(dictionary, nil, true, nil)
@@ -884,7 +885,7 @@ func TestDictionaryDeferredDecoding(t *testing.T) {
 	t.Run("re-encoding", func(t *testing.T) {
 		t.Parallel()
 
-		dictionary := newTestDictionaryValue(2)
+		dictionary := newTestDictionaryValue(t, 2)
 
 		// Encode
 		encoded, _, err := EncodeValue(dictionary, nil, true, nil)
@@ -951,7 +952,24 @@ func TestDictionaryDeferredDecoding(t *testing.T) {
 			values[i*2+1] = testResource
 		}
 
+		code := `
+            resource TestResource {
+            }
+        `
+		checker, err := checkerUtils.ParseAndCheckWithOptions(t,
+			code,
+			checkerUtils.ParseAndCheckOptions{},
+		)
+		require.NoError(t, err)
+
+		inter, err := NewInterpreter(
+			ProgramFromChecker(checker),
+			utils.TestLocation,
+		)
+		require.NoError(t, err)
+
 		dictionary := NewDictionaryValueUnownedNonCopying(
+			inter,
 			DictionaryStaticType{
 				KeyType: PrimitiveStaticTypeString,
 				ValueType: CompositeStaticType{
@@ -978,8 +996,6 @@ func TestDictionaryDeferredDecoding(t *testing.T) {
 		assert.Nil(t, decodedDictionary.entries)
 		assert.NotNil(t, decodedDictionary.content)
 
-		// Create a dummy interpreter for 'get' function
-		inter, err := NewInterpreter(nil, utils.TestLocation)
 		require.NoError(t, err)
 		inter.storageReadHandler = func(
 			inter *Interpreter,
@@ -1008,7 +1024,7 @@ func TestDictionaryDeferredDecoding(t *testing.T) {
 	t.Run("storable and modified", func(t *testing.T) {
 		t.Parallel()
 
-		dictionary := newTestDictionaryValue(2)
+		dictionary := newTestDictionaryValue(t, 2)
 
 		encoded, _, err := EncodeValue(dictionary, nil, true, nil)
 		require.NoError(t, err)
@@ -1031,7 +1047,7 @@ func TestDictionaryDeferredDecoding(t *testing.T) {
 	t.Run("Decode with V4", func(t *testing.T) {
 		t.Parallel()
 
-		dictionary := newTestDictionaryValue(2)
+		dictionary := newTestDictionaryValue(t, 2)
 
 		// Encode
 		encoded, _, err := EncodeValueV4(dictionary, nil, true, nil)
@@ -1059,7 +1075,7 @@ func TestDictionaryDeferredDecoding(t *testing.T) {
 	})
 }
 
-func newTestDictionaryValue(size int) *DictionaryValue {
+func newTestDictionaryValue(t testing.TB, size int) *DictionaryValue {
 	values := make([]Value, size*2)
 
 	for i := 0; i < size; i++ {
@@ -1068,6 +1084,7 @@ func newTestDictionaryValue(size int) *DictionaryValue {
 	}
 
 	return NewDictionaryValueUnownedNonCopying(
+		newTestInterpreter(t),
 		DictionaryStaticType{
 			KeyType:   PrimitiveStaticTypeString,
 			ValueType: PrimitiveStaticTypeString,
@@ -1080,7 +1097,7 @@ func BenchmarkDictionaryDeferredDecoding(b *testing.B) {
 
 	const size = 100
 
-	encoded, _, err := EncodeValue(newTestDictionaryValue(size), nil, true, nil)
+	encoded, _, err := EncodeValue(newTestDictionaryValue(b, size), nil, true, nil)
 	require.NoError(b, err)
 
 	b.Run("Simply decode", func(b *testing.B) {

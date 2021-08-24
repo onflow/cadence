@@ -135,7 +135,9 @@ func TestSetOwnerArraySetIndex(t *testing.T) {
 	assert.Equal(t, &newOwner, value1.GetOwner())
 	assert.Equal(t, &oldOwner, value2.GetOwner())
 
-	array.Set(nil, ReturnEmptyLocationRange, NewIntValueFromInt64(0), value2)
+	inter := newTestInterpreterWithTestStruct(t)
+
+	array.Set(inter, ReturnEmptyLocationRange, NewIntValueFromInt64(0), value2)
 
 	assert.Equal(t, &newOwner, array.GetOwner())
 	assert.Equal(t, &newOwner, value1.GetOwner())
@@ -161,7 +163,7 @@ func TestSetOwnerArrayAppend(t *testing.T) {
 	assert.Equal(t, &newOwner, array.GetOwner())
 	assert.Equal(t, &oldOwner, value.GetOwner())
 
-	array.Append(value)
+	array.Append(newTestInterpreterWithTestStruct(t), nil, value)
 
 	assert.Equal(t, &newOwner, array.GetOwner())
 	assert.Equal(t, &newOwner, value.GetOwner())
@@ -186,7 +188,7 @@ func TestSetOwnerArrayInsert(t *testing.T) {
 	assert.Equal(t, &newOwner, array.GetOwner())
 	assert.Equal(t, &oldOwner, value.GetOwner())
 
-	array.Insert(0, value, nil)
+	array.Insert(newTestInterpreterWithTestStruct(t), nil, 0, value)
 
 	assert.Equal(t, &newOwner, array.GetOwner())
 	assert.Equal(t, &newOwner, value.GetOwner())
@@ -204,6 +206,7 @@ func TestOwnerNewDictionary(t *testing.T) {
 	assert.Equal(t, &oldOwner, value.GetOwner())
 
 	dictionary := NewDictionaryValueUnownedNonCopying(
+		newTestInterpreterWithTestStruct(t),
 		DictionaryStaticType{
 			KeyType:   PrimitiveStaticTypeString,
 			ValueType: PrimitiveStaticTypeAnyStruct,
@@ -227,6 +230,7 @@ func TestSetOwnerDictionary(t *testing.T) {
 	value := newTestCompositeValue(oldOwner)
 
 	dictionary := NewDictionaryValueUnownedNonCopying(
+		newTestInterpreterWithTestStruct(t),
 		DictionaryStaticType{
 			KeyType:   PrimitiveStaticTypeString,
 			ValueType: PrimitiveStaticTypeAnyStruct,
@@ -251,6 +255,7 @@ func TestSetOwnerDictionaryCopy(t *testing.T) {
 	value := newTestCompositeValue(oldOwner)
 
 	dictionary := NewDictionaryValueUnownedNonCopying(
+		newTestInterpreterWithTestStruct(t),
 		DictionaryStaticType{
 			KeyType:   PrimitiveStaticTypeString,
 			ValueType: PrimitiveStaticTypeAnyStruct,
@@ -278,6 +283,7 @@ func TestSetOwnerDictionarySetIndex(t *testing.T) {
 	value := newTestCompositeValue(oldOwner)
 
 	dictionary := NewDictionaryValueUnownedNonCopying(
+		newTestInterpreterWithTestStruct(t),
 		DictionaryStaticType{
 			KeyType:   PrimitiveStaticTypeString,
 			ValueType: PrimitiveStaticTypeAnyStruct,
@@ -289,7 +295,7 @@ func TestSetOwnerDictionarySetIndex(t *testing.T) {
 	assert.Equal(t, &oldOwner, value.GetOwner())
 
 	dictionary.Set(
-		nil,
+		newTestInterpreterWithTestStruct(t),
 		ReturnEmptyLocationRange,
 		keyValue,
 		NewSomeValueOwningNonCopying(value),
@@ -309,7 +315,10 @@ func TestSetOwnerDictionaryInsert(t *testing.T) {
 	keyValue := NewStringValue("test")
 	value := newTestCompositeValue(oldOwner)
 
+	inter := newTestInterpreterWithTestStruct(t)
+
 	dictionary := NewDictionaryValueUnownedNonCopying(
+		inter,
 		DictionaryStaticType{
 			KeyType:   PrimitiveStaticTypeString,
 			ValueType: PrimitiveStaticTypeAnyStruct,
@@ -320,7 +329,7 @@ func TestSetOwnerDictionaryInsert(t *testing.T) {
 	assert.Equal(t, &newOwner, dictionary.GetOwner())
 	assert.Equal(t, &oldOwner, value.GetOwner())
 
-	dictionary.Insert(nil, ReturnEmptyLocationRange, keyValue, value)
+	dictionary.Insert(inter, ReturnEmptyLocationRange, keyValue, value)
 
 	assert.Equal(t, &newOwner, dictionary.GetOwner())
 	assert.Equal(t, &newOwner, value.GetOwner())
@@ -592,6 +601,7 @@ func TestStringer(t *testing.T) {
 		},
 		"Dictionary": {
 			value: NewDictionaryValueUnownedNonCopying(
+				newTestInterpreter(t),
 				DictionaryStaticType{
 					KeyType:   PrimitiveStaticTypeString,
 					ValueType: PrimitiveStaticTypeString,
@@ -685,6 +695,7 @@ func TestStringer(t *testing.T) {
 		},
 		"Dictionary with non-deferred values": {
 			value: NewDictionaryValueUnownedNonCopying(
+				newTestInterpreter(t),
 				DictionaryStaticType{
 					KeyType:   PrimitiveStaticTypeString,
 					ValueType: PrimitiveStaticTypeUInt8,
@@ -726,7 +737,7 @@ func TestStringer(t *testing.T) {
 					},
 				)
 				arrayRef := &EphemeralReferenceValue{Value: array}
-				array.Insert(0, arrayRef, nil)
+				array.Insert(newTestInterpreter(t), nil, 0, arrayRef)
 				return array
 			}(),
 			expected: `[[...]]`,
@@ -775,7 +786,11 @@ func TestVisitor(t *testing.T) {
 		},
 		value,
 	)
+
+	inter := newTestInterpreter(t)
+
 	value = NewDictionaryValueUnownedNonCopying(
+		inter,
 		DictionaryStaticType{
 			KeyType:   PrimitiveStaticTypeString,
 			ValueType: PrimitiveStaticTypeAny,
@@ -792,7 +807,7 @@ func TestVisitor(t *testing.T) {
 		nil,
 	)
 
-	value.Accept(nil, visitor)
+	value.Accept(inter, visitor)
 
 	require.Equal(t, 1, intVisits)
 	require.Equal(t, 1, stringVisits)
@@ -1830,6 +1845,7 @@ func TestDictionaryValue_Equal(t *testing.T) {
 
 		require.True(t,
 			NewDictionaryValueUnownedNonCopying(
+				newTestInterpreter(t),
 				byteStringDictionaryType,
 				UInt8Value(1),
 				NewStringValue("1"),
@@ -1837,6 +1853,7 @@ func TestDictionaryValue_Equal(t *testing.T) {
 				NewStringValue("2"),
 			).Equal(
 				NewDictionaryValueUnownedNonCopying(
+					newTestInterpreter(t),
 					byteStringDictionaryType,
 					UInt8Value(1),
 					NewStringValue("1"),
@@ -1855,6 +1872,7 @@ func TestDictionaryValue_Equal(t *testing.T) {
 
 		require.False(t,
 			NewDictionaryValueUnownedNonCopying(
+				newTestInterpreter(t),
 				byteStringDictionaryType,
 				UInt8Value(1),
 				NewStringValue("1"),
@@ -1862,6 +1880,7 @@ func TestDictionaryValue_Equal(t *testing.T) {
 				NewStringValue("2"),
 			).Equal(
 				NewDictionaryValueUnownedNonCopying(
+					newTestInterpreter(t),
 					byteStringDictionaryType,
 					UInt8Value(2),
 					NewStringValue("1"),
@@ -1880,6 +1899,7 @@ func TestDictionaryValue_Equal(t *testing.T) {
 
 		require.False(t,
 			NewDictionaryValueUnownedNonCopying(
+				newTestInterpreter(t),
 				byteStringDictionaryType,
 				UInt8Value(1),
 				NewStringValue("1"),
@@ -1887,6 +1907,7 @@ func TestDictionaryValue_Equal(t *testing.T) {
 				NewStringValue("2"),
 			).Equal(
 				NewDictionaryValueUnownedNonCopying(
+					newTestInterpreter(t),
 					byteStringDictionaryType,
 					UInt8Value(1),
 					NewStringValue("2"),
@@ -1905,12 +1926,14 @@ func TestDictionaryValue_Equal(t *testing.T) {
 
 		require.False(t,
 			NewDictionaryValueUnownedNonCopying(
+				newTestInterpreter(t),
 				byteStringDictionaryType,
 
 				UInt8Value(1),
 				NewStringValue("1"),
 			).Equal(
 				NewDictionaryValueUnownedNonCopying(
+					newTestInterpreter(t),
 					byteStringDictionaryType,
 					UInt8Value(1),
 					NewStringValue("1"),
@@ -1929,6 +1952,7 @@ func TestDictionaryValue_Equal(t *testing.T) {
 
 		require.False(t,
 			NewDictionaryValueUnownedNonCopying(
+				newTestInterpreter(t),
 				byteStringDictionaryType,
 				UInt8Value(1),
 				NewStringValue("1"),
@@ -1936,6 +1960,7 @@ func TestDictionaryValue_Equal(t *testing.T) {
 				NewStringValue("2"),
 			).Equal(
 				NewDictionaryValueUnownedNonCopying(
+					newTestInterpreter(t),
 					byteStringDictionaryType,
 					UInt8Value(1),
 					NewStringValue("1"),
@@ -1957,9 +1982,11 @@ func TestDictionaryValue_Equal(t *testing.T) {
 
 		require.False(t,
 			NewDictionaryValueUnownedNonCopying(
+				newTestInterpreter(t),
 				byteStringDictionaryType,
 			).Equal(
 				NewDictionaryValueUnownedNonCopying(
+					newTestInterpreter(t),
 					stringByteDictionaryStaticType,
 				),
 				nil,
@@ -1974,6 +2001,7 @@ func TestDictionaryValue_Equal(t *testing.T) {
 
 		require.False(t,
 			NewDictionaryValueUnownedNonCopying(
+				newTestInterpreter(t),
 				byteStringDictionaryType,
 				UInt8Value(1),
 				NewStringValue("1"),
@@ -2465,4 +2493,31 @@ func checkHashable(ty types.Type) error {
 		"type %s is potentially not hashable",
 		ty.String(),
 	)
+}
+
+func newTestInterpreter(tb testing.TB) *Interpreter {
+	inter, err := NewInterpreter(nil, utils.TestLocation)
+	require.NoError(tb, err)
+
+	return inter
+}
+
+func newTestInterpreterWithTestStruct(tb testing.TB) *Interpreter {
+	code := `
+        struct Test {
+        }
+    `
+	checker, err := checkerUtils.ParseAndCheckWithOptions(tb,
+		code,
+		checkerUtils.ParseAndCheckOptions{},
+	)
+	require.NoError(tb, err)
+
+	inter, err := NewInterpreter(
+		ProgramFromChecker(checker),
+		utils.TestLocation,
+	)
+	require.NoError(tb, err)
+
+	return inter
 }
