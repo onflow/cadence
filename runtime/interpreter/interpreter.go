@@ -731,15 +731,13 @@ func (interpreter *Interpreter) invokeVariable(
 	ty := functionVariable.Type
 
 	// function must be invokable
-	invokableType, ok := ty.(sema.InvokableType)
+	functionType, ok := ty.(*sema.FunctionType)
 
 	if !ok {
 		return nil, NotInvokableError{
 			Value: variableValue,
 		}
 	}
-
-	functionType := invokableType.InvocationFunctionType()
 
 	return interpreter.prepareInvoke(functionValue, functionType, arguments)
 }
@@ -1603,7 +1601,7 @@ func (interpreter *Interpreter) compositeInitializerFunction(
 	}
 
 	initializer = initializers[0]
-	functionType := interpreter.Program.Elaboration.ConstructorFunctionTypes[initializer].FunctionType
+	functionType := interpreter.Program.Elaboration.ConstructorFunctionTypes[initializer]
 
 	parameterList := initializer.FunctionDeclaration.ParameterList
 
@@ -2260,6 +2258,14 @@ func (interpreter *Interpreter) ensureLoadedWithLocationHandler(
 
 		subInterpreter.typeCodes.
 			Merge(virtualImport.TypeCodes)
+
+		// Virtual import does not register interpreter itself,
+		// unlike InterpreterImport
+		interpreter.allInterpreters[locationID] = subInterpreter
+
+		subInterpreter.Program = &Program{
+			Elaboration: virtualImport.Elaboration,
+		}
 
 		return subInterpreter
 
@@ -3462,6 +3468,20 @@ func (interpreter *Interpreter) getTypeFunction(self Value) *HostFunctionValue {
 
 func (interpreter *Interpreter) setMember(self Value, getLocationRange func() LocationRange, identifier string, value Value) {
 	self.(MemberAccessibleValue).SetMember(interpreter, getLocationRange, identifier, value)
+}
+
+func (interpreter *Interpreter) ExpectType(
+	value Value,
+	expectedType sema.Type,
+	getLocationRange func() LocationRange,
+) {
+	dynamicType := value.DynamicType(interpreter, SeenReferences{})
+	if !interpreter.IsSubType(dynamicType, expectedType) {
+		panic(TypeMismatchError{
+			ExpectedType:  expectedType,
+			LocationRange: getLocationRange(),
+		})
+	}
 }
 
 func (interpreter *Interpreter) checkContainerMutation(

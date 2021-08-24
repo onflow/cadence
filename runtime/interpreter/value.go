@@ -9490,6 +9490,12 @@ var publicKeyVerifyFunction = NewHostFunctionValue(
 		hashAlgo := invocation.Arguments[3].(*CompositeValue)
 		publicKey := invocation.Self
 
+		invocation.Interpreter.ExpectType(
+			publicKey,
+			sema.PublicKeyType,
+			invocation.GetLocationRange,
+		)
+
 		return invocation.Interpreter.SignatureVerificationHandler(
 			signatureValue,
 			signedDataValue,

@@ -84,6 +84,23 @@ func (checker *Checker) VisitMemberExpression(expression *ast.MemberExpression) 
 
 	memberType := member.TypeAnnotation.Type
 
+	// If the member access is for a function,
+	// return a function type for a bound function,
+	// i.e. one with a receiver
+
+	if functionType, ok := memberType.(*FunctionType); ok && functionType != nil {
+
+		receiverType := accessedType
+		if isOptional {
+			receiverType = receiverType.(*OptionalType).Type
+		}
+
+		// Copy the function type and add the receiver (the accessed type)
+		functionTypeWithReceiver := *functionType
+		functionTypeWithReceiver.ReceiverType = receiverType
+		memberType = &functionTypeWithReceiver
+	}
+
 	// If the member access is optional chaining, only wrap the result value
 	// in an optional, if it is not already an optional value
 
@@ -92,6 +109,7 @@ func (checker *Checker) VisitMemberExpression(expression *ast.MemberExpression) 
 			return &OptionalType{Type: memberType}
 		}
 	}
+
 	return memberType
 }
 

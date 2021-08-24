@@ -2019,15 +2019,6 @@ func (t *ConstantSizedType) Resolve(typeArguments *TypeParameterTypeOrderedMap) 
 	}
 }
 
-// InvokableType
-
-type InvokableType interface {
-	Type
-	InvocationFunctionType() *FunctionType
-	CheckArgumentExpressions(checker *Checker, argumentExpressions []ast.Expression, invocationRange ast.Range)
-	ArgumentLabels() []string
-}
-
 // Parameter
 
 func formatParameter(spaces bool, label, identifier, typeAnnotation string) string {
@@ -2162,6 +2153,7 @@ func (p TypeParameter) checkTypeBound(ty Type, typeRange ast.Range) error {
 
 func formatFunctionType(
 	spaces bool,
+	receiverType string,
 	typeParameters []string,
 	parameters []string,
 	returnTypeAnnotation string,
@@ -2169,6 +2161,12 @@ func formatFunctionType(
 
 	var builder strings.Builder
 	builder.WriteRune('(')
+
+	if receiverType != "" {
+		builder.WriteString(receiverType)
+		builder.WriteRune('#')
+	}
+
 	if len(typeParameters) > 0 {
 		builder.WriteRune('<')
 		for i, typeParameter := range typeParameters {
@@ -2204,6 +2202,8 @@ func formatFunctionType(
 // FunctionType
 //
 type FunctionType struct {
+	ReceiverType             Type
+	IsConstructor            bool
 	TypeParameters           []*TypeParameter
 	Parameters               []*Parameter
 	ReturnTypeAnnotation     *TypeAnnotation
@@ -2218,10 +2218,6 @@ func RequiredArgumentCount(count int) *int {
 
 func (*FunctionType) IsType() {}
 
-func (t *FunctionType) InvocationFunctionType() *FunctionType {
-	return t
-}
-
 func (t *FunctionType) CheckArgumentExpressions(
 	checker *Checker,
 	argumentExpressions []ast.Expression,
@@ -2234,6 +2230,11 @@ func (t *FunctionType) CheckArgumentExpressions(
 }
 
 func (t *FunctionType) String() string {
+
+	var receiverType string
+	if t.ReceiverType != nil {
+		receiverType = t.ReceiverType.String()
+	}
 
 	typeParameters := make([]string, len(t.TypeParameters))
 
@@ -2251,6 +2252,7 @@ func (t *FunctionType) String() string {
 
 	return formatFunctionType(
 		true,
+		receiverType,
 		typeParameters,
 		parameters,
 		returnTypeAnnotation,
@@ -2258,6 +2260,11 @@ func (t *FunctionType) String() string {
 }
 
 func (t *FunctionType) QualifiedString() string {
+
+	var receiverType string
+	if t.ReceiverType != nil {
+		receiverType = t.ReceiverType.QualifiedString()
+	}
 
 	typeParameters := make([]string, len(t.TypeParameters))
 
@@ -2275,6 +2282,7 @@ func (t *FunctionType) QualifiedString() string {
 
 	return formatFunctionType(
 		true,
+		receiverType,
 		typeParameters,
 		parameters,
 		returnTypeAnnotation,
@@ -2283,6 +2291,12 @@ func (t *FunctionType) QualifiedString() string {
 
 // NOTE: parameter names and argument labels are *not* part of the ID!
 func (t *FunctionType) ID() TypeID {
+
+	var receiverType string
+	if t.ReceiverType != nil {
+		receiverType = string(t.ReceiverType.ID())
+	}
+
 	typeParameters := make([]string, len(t.TypeParameters))
 
 	for i, typeParameter := range t.TypeParameters {
@@ -2300,6 +2314,7 @@ func (t *FunctionType) ID() TypeID {
 	return TypeID(
 		formatFunctionType(
 			false,
+			receiverType,
 			typeParameters,
 			parameters,
 			returnTypeAnnotation,
@@ -2342,7 +2357,33 @@ func (t *FunctionType) Equal(other Type) bool {
 
 	// return type
 
-	return t.ReturnTypeAnnotation.Equal(otherFunction.ReturnTypeAnnotation)
+	if !t.ReturnTypeAnnotation.Type.
+		Equal(otherFunction.ReturnTypeAnnotation.Type) {
+		return false
+	}
+
+	// receiver type
+
+	if t.ReceiverType != nil {
+		if otherFunction.ReceiverType == nil {
+			return false
+		}
+
+		if !t.ReceiverType.Equal(otherFunction.ReceiverType) {
+			return false
+		}
+
+	} else if otherFunction.ReceiverType != nil {
+		return false
+	}
+
+	// constructors
+
+	if t.IsConstructor != otherFunction.IsConstructor {
+		return false
+	}
+
+	return true
 }
 
 func (t *FunctionType) HasSameArgumentLabels(other *FunctionType) bool {
@@ -2631,24 +2672,6 @@ func (t *FunctionType) GetMembers() map[string]MemberResolver {
 	return withBuiltinMembers(t, members)
 }
 
-// ConstructorFunctionType is the the type representing a constructor function
-
-type ConstructorFunctionType struct {
-	*FunctionType
-}
-
-func (t *ConstructorFunctionType) Equal(other Type) bool {
-	// NOTE: this function is important:
-	// it ensures that a constructor function type
-	// is NOT equal to a function type with the same parameters, return type, etc.
-
-	otherConstructor, ok := other.(*ConstructorFunctionType)
-	return ok && t.FunctionType.Equal(otherConstructor.FunctionType)
-}
-
-// CheckedFunctionType is the the type representing a function that checks the arguments,
-// e.g., integer functions
-
 type ArgumentExpressionsCheck func(
 	checker *Checker,
 	argumentExpressions []ast.Expression,
@@ -2921,7 +2944,7 @@ func numberConversionDocString(targetDescription string) string {
 	)
 }
 
-func baseFunctionVariable(name string, ty InvokableType, docString string) *Variable {
+func baseFunctionVariable(name string, ty *FunctionType, docString string) *Variable {
 	return &Variable{
 		Identifier:      name,
 		DeclarationKind: common.DeclarationKindFunction,
@@ -3567,7 +3590,7 @@ type Member struct {
 func NewPublicFunctionMember(
 	containerType Type,
 	identifier string,
-	invokableType InvokableType,
+	functionType *FunctionType,
 	docString string,
 ) *Member {
 
@@ -3577,8 +3600,8 @@ func NewPublicFunctionMember(
 		Identifier:      ast.Identifier{Identifier: identifier},
 		DeclarationKind: common.DeclarationKindFunction,
 		VariableKind:    ast.VariableKindConstant,
-		TypeAnnotation:  NewTypeAnnotation(invokableType),
-		ArgumentLabels:  invokableType.ArgumentLabels(),
+		TypeAnnotation:  NewTypeAnnotation(functionType),
+		ArgumentLabels:  functionType.ArgumentLabels(),
 		DocString:       docString,
 	}
 }
@@ -4764,6 +4787,19 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 			}
 
 		case *CompositeType:
+
+			// The supertype composite type might be a type requirement.
+			// Check if the subtype composite type implicitly conforms to it.
+
+			if typedInnerSubType, ok := typedSubType.Type.(*CompositeType); ok {
+
+				for _, conformance := range typedInnerSubType.ImplicitTypeRequirementConformances {
+					if conformance == typedInnerSuperType {
+						return true
+					}
+				}
+			}
+
 			// An unauthorized reference is not a subtype of a reference to a composite type `&V`
 			// (e.g. reference to a restricted type `&T{Us}`, or reference to an interface type `&T`)
 			//
@@ -4830,20 +4866,33 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 
 		// Functions are covariant in their return type
 
-		if typedSubType.ReturnTypeAnnotation != nil &&
-			typedSuperType.ReturnTypeAnnotation != nil {
-
-			return IsSubType(
-				typedSubType.ReturnTypeAnnotation.Type,
-				typedSuperType.ReturnTypeAnnotation.Type,
-			)
+		if !IsSubType(
+			typedSubType.ReturnTypeAnnotation.Type,
+			typedSuperType.ReturnTypeAnnotation.Type,
+		) {
+			return false
 		}
 
-		if typedSubType.ReturnTypeAnnotation == nil &&
-			typedSuperType.ReturnTypeAnnotation == nil {
+		if typedSubType.ReceiverType != nil {
+			if typedSuperType.ReceiverType == nil {
+				return false
+			}
 
-			return true
+			if !typedSubType.ReceiverType.Equal(typedSuperType.ReceiverType) {
+				return false
+			}
+
+		} else if typedSuperType.ReceiverType != nil {
+			return false
 		}
+
+		// Constructors?
+
+		if typedSubType.IsConstructor != typedSuperType.IsConstructor {
+			return false
+		}
+
+		return true
 
 	case *RestrictedType:
 
@@ -5148,21 +5197,19 @@ func (t *TransactionType) EntryPointFunctionType() *FunctionType {
 	}
 }
 
-func (t *TransactionType) PrepareFunctionType() *ConstructorFunctionType {
-	return &ConstructorFunctionType{
-		FunctionType: &FunctionType{
-			Parameters:           t.PrepareParameters,
-			ReturnTypeAnnotation: NewTypeAnnotation(VoidType),
-		},
+func (t *TransactionType) PrepareFunctionType() *FunctionType {
+	return &FunctionType{
+		IsConstructor:        true,
+		Parameters:           t.PrepareParameters,
+		ReturnTypeAnnotation: NewTypeAnnotation(VoidType),
 	}
 }
 
-func (*TransactionType) ExecuteFunctionType() *ConstructorFunctionType {
-	return &ConstructorFunctionType{
-		FunctionType: &FunctionType{
-			Parameters:           []*Parameter{},
-			ReturnTypeAnnotation: NewTypeAnnotation(VoidType),
-		},
+func (*TransactionType) ExecuteFunctionType() *FunctionType {
+	return &FunctionType{
+		IsConstructor:        true,
+		Parameters:           []*Parameter{},
+		ReturnTypeAnnotation: NewTypeAnnotation(VoidType),
 	}
 }
 
