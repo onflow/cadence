@@ -682,9 +682,11 @@ func NewDeferredArrayValue(
 	callback DecodingCallback,
 	version uint16,
 ) *ArrayValue {
+
+	// Note: static type for deferred arrays gets populated when the meta info is loaded.
+	// i.e: at `ensureMetaInfoLoaded()` method
+
 	return &ArrayValue{
-		// TODO: type
-		Type:            nil,
 		valuePath:       path,
 		content:         content,
 		Owner:           owner,
@@ -7431,9 +7433,11 @@ func NewDeferredDictionaryValue(
 	decodeCallback DecodingCallback,
 	version uint16,
 ) *DictionaryValue {
+
+	// Note: static type for deferred dictionaries gets populated when the meta info is loaded.
+	// i.e: at `ensureMetaInfoLoaded()` method
+
 	return &DictionaryValue{
-		// TODO: type
-		Type:            DictionaryStaticType{},
 		Owner:           owner,
 		deferredOwner:   owner,
 		modified:        false,
