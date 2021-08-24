@@ -567,6 +567,10 @@ func importDictionaryValue(
 			keyStaticType = key.StaticType()
 			keySemaType := inter.ConvertStaticToSemaType(keyStaticType)
 
+			// Dictionary Keys could be a mix of numeric sub-types or path sub-types, and can be still valid.
+			// So always go for the safest option, by inferring the most generic type for numbers/paths.
+			// e.g: sending a value similar to: `var map: {Number:String} = {1: "int", 2.3: "fixed-point"}`
+
 			if sema.IsSubType(keySemaType, sema.NumberType) {
 				keyStaticType = interpreter.PrimitiveStaticTypeNumber
 			} else if sema.IsSubType(keySemaType, sema.PathType) {
