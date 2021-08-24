@@ -20,6 +20,7 @@ package runtime
 
 import (
 	"bytes"
+	"runtime"
 	"sort"
 	"time"
 
@@ -47,7 +48,6 @@ func newRuntimeStorage(runtimeInterface Interface) *runtimeStorage {
 		ledgerStorage,
 		interpreter.CBOREncMode,
 		interpreter.CBORDecMode,
-		atree.WithNoAutoCommit(),
 	)
 	persistentSlabStorage.DecodeStorable = interpreter.DecodeStorable
 	return &runtimeStorage{
@@ -321,7 +321,6 @@ func (s *runtimeStorage) commit() error {
 
 	// Commit the underlying slab storage's deltas
 
-	// TODO: bring back concurrent encoding
 	// TODO: report encoding metric for all encoded slabs
-	return s.PersistentSlabStorage.Commit()
+	return s.PersistentSlabStorage.FastCommit(runtime.NumCPU())
 }
