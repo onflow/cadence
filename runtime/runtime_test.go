@@ -6511,7 +6511,7 @@ func TestRuntimeGetCapability(t *testing.T) {
 
 		script := []byte(`
           pub fun main(): Capability {
-              let dict: {Int: PublicAccount} = {}
+              let dict: {Int: AuthAccount} = {}
               let ref = &dict as &{Int: AnyStruct}
               ref[0] = getAccount(0x01) as AnyStruct
               return dict.values[0].getCapability(/public/xxx)
@@ -6534,7 +6534,7 @@ func TestRuntimeGetCapability(t *testing.T) {
 
 		require.Error(t, err)
 
-		var typeErr interpreter.TypeMismatchError
+		var typeErr interpreter.ContainerMutationError
 		require.ErrorAs(t, err, &typeErr)
 	})
 
