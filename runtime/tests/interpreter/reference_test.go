@@ -155,8 +155,8 @@ func TestInterpretContainerVariance(t *testing.T) {
 		_, err := inter.Invoke("test")
 		require.Error(t, err)
 
-		var typeMismatchErr interpreter.TypeMismatchError
-		require.ErrorAs(t, err, &typeMismatchErr)
+		var containerMutationError interpreter.ContainerMutationError
+		require.ErrorAs(t, err, &containerMutationError)
 	})
 
 	t.Run("field write", func(t *testing.T) {
@@ -199,7 +199,7 @@ func TestInterpretContainerVariance(t *testing.T) {
 		_, err := inter.Invoke("test")
 		require.Error(t, err)
 
-		var typeMismatchErr interpreter.TypeMismatchError
-		require.ErrorAs(t, err, &typeMismatchErr)
+		var containerMutationError interpreter.ContainerMutationError
+		require.ErrorAs(t, err, &containerMutationError)
 	})
 }
