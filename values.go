@@ -908,8 +908,8 @@ func (v UFix64) String() string {
 // Array
 
 type Array struct {
-	typ    Type
-	Values []Value
+	ArrayType ArrayType
+	Values    []Value
 }
 
 func NewArray(values []Value) Array {
@@ -919,7 +919,12 @@ func NewArray(values []Value) Array {
 func (Array) isValue() {}
 
 func (v Array) Type() Type {
-	return v.typ
+	return v.ArrayType
+}
+
+func (v Array) WithType(arrayType ArrayType) Array {
+	v.ArrayType = arrayType
+	return v
 }
 
 func (v Array) ToGoValue() interface{} {
@@ -943,8 +948,8 @@ func (v Array) String() string {
 // Dictionary
 
 type Dictionary struct {
-	typ   Type
-	Pairs []KeyValuePair
+	DictionaryType Type
+	Pairs          []KeyValuePair
 }
 
 func NewDictionary(pairs []KeyValuePair) Dictionary {
@@ -954,7 +959,12 @@ func NewDictionary(pairs []KeyValuePair) Dictionary {
 func (Dictionary) isValue() {}
 
 func (v Dictionary) Type() Type {
-	return v.typ
+	return v.DictionaryType
+}
+
+func (v Dictionary) WithType(dictionaryType DictionaryType) Dictionary {
+	v.DictionaryType = dictionaryType
+	return v
 }
 
 func (v Dictionary) ToGoValue() interface{} {

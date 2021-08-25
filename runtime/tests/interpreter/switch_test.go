@@ -169,25 +169,31 @@ func TestInterpretSwitchStatement(t *testing.T) {
           }
         `)
 
-		for argument, expected := range map[interpreter.Value]interpreter.Value{
-			interpreter.NewIntValueFromInt64(1): interpreter.NewArrayValueUnownedNonCopying(
+		for argument, expectedValues := range map[interpreter.Value][]interpreter.Value{
+			interpreter.NewIntValueFromInt64(1): {
 				interpreter.NewStringValue("1"),
-			),
-			interpreter.NewIntValueFromInt64(2): interpreter.NewArrayValueUnownedNonCopying(
+			},
+			interpreter.NewIntValueFromInt64(2): {
 				interpreter.NewStringValue("2"),
-			),
-			interpreter.NewIntValueFromInt64(3): interpreter.NewArrayValueUnownedNonCopying(
+			},
+			interpreter.NewIntValueFromInt64(3): {
 				interpreter.NewStringValue("3"),
-			),
-			interpreter.NewIntValueFromInt64(4): interpreter.NewArrayValueUnownedNonCopying(
+			},
+			interpreter.NewIntValueFromInt64(4): {
 				interpreter.NewStringValue("3"),
-			),
+			},
 		} {
 
 			actual, err := inter.Invoke("test", argument)
 			require.NoError(t, err)
 
-			assert.Equal(t, expected, actual)
+			require.IsType(t, actual, &interpreter.ArrayValue{})
+			arrayValue := actual.(*interpreter.ArrayValue)
+
+			assert.Equal(t,
+				expectedValues,
+				arrayValue.Elements(),
+			)
 		}
 	})
 

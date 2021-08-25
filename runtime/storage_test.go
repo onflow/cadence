@@ -35,17 +35,28 @@ import (
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
-func withWritesToStorage(arrayElementCount int, storageItemCount int, onWrite func(owner, key, value []byte), handler func(runtimeStorage *runtimeStorage)) {
+func withWritesToStorage(
+	arrayElementCount int,
+	storageItemCount int,
+	onWrite func(owner, key, value []byte),
+	handler func(runtimeStorage *runtimeStorage),
+) {
 	runtimeInterface := &testRuntimeInterface{
 		storage: newTestStorage(nil, onWrite),
 	}
 
 	runtimeStorage := newRuntimeStorage(runtimeInterface)
 
-	array := interpreter.NewArrayValueUnownedNonCopying()
+	array := interpreter.NewArrayValueUnownedNonCopying(
+		interpreter.VariableSizedStaticType{
+			Type: interpreter.PrimitiveStaticTypeInt,
+		},
+	)
+
+	inter, _ := interpreter.NewInterpreter(nil, utils.TestLocation)
 
 	for i := 0; i < arrayElementCount; i++ {
-		array.Append(interpreter.NewIntValueFromInt64(int64(i)))
+		array.Append(inter, nil, interpreter.NewIntValueFromInt64(int64(i)))
 	}
 
 	address := common.BytesToAddress([]byte{0x1})
@@ -208,7 +219,7 @@ func TestRuntimeMagic(t *testing.T) {
 				[]byte("storage\x1fone"),
 				[]byte{
 					// magic
-					0x0, 0xCA, 0xDE, 0x0, 0x4,
+					0x0, 0xCA, 0xDE, 0x0, 0x5,
 					// CBOR
 					// - tag
 					0xd8, 0x98,

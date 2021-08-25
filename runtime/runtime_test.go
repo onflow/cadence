@@ -949,8 +949,8 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
 			},
 			check: func(t *testing.T, err error) {
 				assert.Error(t, err)
-				assert.IsType(t, &InvalidEntryPointArgumentError{}, errors.Unwrap(err))
-				assert.IsType(t, &InvalidValueTypeError{}, errors.Unwrap(errors.Unwrap(err)))
+				var argErr interpreter.ContainerMutationError
+				require.ErrorAs(t, err, &argErr)
 			},
 		},
 		{
@@ -1236,8 +1236,8 @@ func TestRuntimeScriptArguments(t *testing.T) {
 			},
 			check: func(t *testing.T, err error) {
 				assert.Error(t, err)
-				assert.IsType(t, &InvalidEntryPointArgumentError{}, errors.Unwrap(err))
-				assert.IsType(t, &InvalidValueTypeError{}, errors.Unwrap(errors.Unwrap(err)))
+				var argErr interpreter.ContainerMutationError
+				require.ErrorAs(t, err, &argErr)
 			},
 		},
 		{
@@ -6497,7 +6497,7 @@ func TestRuntimeGetCapability(t *testing.T) {
 			},
 		)
 
-		var typeErr interpreter.TypeMismatchError
+		var typeErr interpreter.ContainerMutationError
 		require.ErrorAs(t, err, &typeErr)
 	})
 
@@ -6509,7 +6509,7 @@ func TestRuntimeGetCapability(t *testing.T) {
 
 		script := []byte(`
           pub fun main(): Capability {
-              let dict: {Int: AuthAccount} = {}
+              let dict: {Int: PublicAccount} = {}
               let ref = &dict as &{Int: AnyStruct}
               ref[0] = getAccount(0x01) as AnyStruct
               return dict.values[0].getCapability(/public/xxx)

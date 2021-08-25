@@ -177,9 +177,7 @@ var authAccountTypeAddPublicKeyFunctionType = &FunctionType{
 			Label:      ArgumentLabelNotRequired,
 			Identifier: "key",
 			TypeAnnotation: NewTypeAnnotation(
-				&VariableSizedType{
-					Type: UInt8Type,
-				},
+				ByteArrayType,
 			),
 		},
 	},

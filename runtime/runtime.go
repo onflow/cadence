@@ -700,7 +700,7 @@ func validateArgumentParams(
 			}
 		}
 
-		arg, err := importValue(inter, value)
+		arg, err := importValue(inter, value, parameterType)
 		if err != nil {
 			return nil, &InvalidEntryPointArgumentError{
 				Index: i,
@@ -718,7 +718,7 @@ func validateArgumentParams(
 		}
 
 		// Check that decoded value is a subtype of static parameter type
-		if !interpreter.IsSubType(dynamicType, parameterType) {
+		if !inter.IsSubType(dynamicType, parameterType) {
 			return nil, &InvalidEntryPointArgumentError{
 				Index: i,
 				Err: &InvalidValueTypeError{
@@ -738,10 +738,47 @@ func validateArgumentParams(
 			}
 		}
 
+		// Ensure static type info is available for all values
+		interpreter.InspectValue(arg, func(value interpreter.Value) bool {
+			if value == nil {
+				return true
+			}
+
+			if !hasValidStaticType(value) {
+				panic(fmt.Errorf("invalid static type for argument: %d", i))
+			}
+
+			return true
+		})
+
 		argumentValues[i] = arg
 	}
 
 	return argumentValues, nil
+}
+
+func hasValidStaticType(value interpreter.Value) bool {
+	switch value := value.(type) {
+	case *interpreter.ArrayValue:
+		switch value.StaticType().(type) {
+		case interpreter.ConstantSizedStaticType, interpreter.VariableSizedStaticType:
+			return true
+		default:
+			return false
+		}
+	case *interpreter.DictionaryValue:
+		dictionaryType, ok := value.StaticType().(interpreter.DictionaryStaticType)
+		if !ok {
+			return false
+		}
+
+		return dictionaryType.KeyType != nil &&
+			dictionaryType.ValueType != nil
+	default:
+		// For other values, static type is NOT inferred.
+		// Hence no need to validate it here.
+		return value.StaticType() != nil
+	}
 }
 
 // ParseAndCheckProgram parses the given code and checks it.
@@ -2488,7 +2525,12 @@ func (r *interpreterRuntime) newAccountContractsGetNamesFunction(
 			values[i] = interpreter.NewStringValue(name)
 		}
 
-		return interpreter.NewArrayValueUnownedNonCopying(values...)
+		return interpreter.NewArrayValueUnownedNonCopying(
+			interpreter.VariableSizedStaticType{
+				Type: interpreter.PrimitiveStaticTypeString,
+			},
+			values...,
+		)
 	}
 }
 
@@ -2553,9 +2595,7 @@ func (r *interpreterRuntime) ReadLinked(address common.Address, path cadence.Pat
 				&sema.ReferenceType{
 					Type: sema.AnyType,
 				},
-				func() interpreter.LocationRange {
-					return interpreter.LocationRange{}
-				},
+				interpreter.ReturnEmptyLocationRange,
 			)
 			if err != nil {
 				return nil, err
@@ -2580,7 +2620,10 @@ func NewBlockValue(block Block) interpreter.BlockValue {
 	for i, b := range block.Hash {
 		values[i] = interpreter.UInt8Value(b)
 	}
-	idValue := interpreter.NewArrayValue(values)
+	idValue := interpreter.NewArrayValueUnownedNonCopying(
+		interpreter.ByteArrayStaticType,
+		values...,
+	)
 
 	// timestamp
 	// TODO: verify

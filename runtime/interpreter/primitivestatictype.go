@@ -167,7 +167,7 @@ const (
 	PrimitiveStaticTypePublicAccountContracts
 )
 
-func (PrimitiveStaticType) IsStaticType() {}
+func (PrimitiveStaticType) isStaticType() {}
 
 func (i PrimitiveStaticType) SemaType() sema.Type {
 	switch i {

@@ -115,7 +115,7 @@ func TestInterpretContainerVariance(t *testing.T) {
 
 		_, err := inter.Invoke("test")
 
-		var invocationReceiverTypeErr interpreter.InvocationReceiverTypeError
+		var invocationReceiverTypeErr interpreter.ContainerMutationError
 		require.ErrorAs(t, err, &invocationReceiverTypeErr)
 	})
 
