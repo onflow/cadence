@@ -337,6 +337,14 @@ func (checker *Checker) declareTypeDeclaration(declaration TypeDeclaration) {
 		},
 	)
 	checker.report(err)
+
+	switch ty := ty.(type) {
+	case *CompositeType:
+		checker.Elaboration.CompositeTypes[ty.ID()] = ty
+	case *InterfaceType:
+		checker.Elaboration.InterfaceTypes[ty.ID()] = ty
+	}
+
 	if checker.positionInfoEnabled {
 		checker.recordVariableDeclarationOccurrence(identifier.Identifier, variable)
 	}
@@ -2184,11 +2192,15 @@ func (checker *Checker) checkTypeAnnotation(typeAnnotation *TypeAnnotation, pos 
 		)
 	}
 
-	rewrittenType, rewritten := typeAnnotation.Type.RewriteWithRestrictedTypes()
+	checker.checkInvalidInterfaceAsType(typeAnnotation.Type, pos)
+}
+
+func (checker *Checker) checkInvalidInterfaceAsType(ty Type, pos ast.HasPosition) {
+	rewrittenType, rewritten := ty.RewriteWithRestrictedTypes()
 	if rewritten {
 		checker.report(
 			&InvalidInterfaceTypeError{
-				ActualType:   typeAnnotation.Type,
+				ActualType:   ty,
 				ExpectedType: rewrittenType,
 				Range: ast.Range{
 					StartPos: pos.StartPosition(),

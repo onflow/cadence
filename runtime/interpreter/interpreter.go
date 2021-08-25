@@ -63,8 +63,9 @@ var emptyFunctionType = &sema.FunctionType{
 //
 
 type getterSetter struct {
-	get func() Value
-	set func(Value)
+	target Value
+	get    func() Value
+	set    func(Value)
 }
 
 // Visit-methods for statement which return a non-nil value
@@ -1167,6 +1168,14 @@ func (interpreter *Interpreter) visitAssignment(
 	getterSetter := interpreter.assignmentGetterSetter(targetExpression)
 
 	getLocationRange := locationRangeGetter(interpreter.Location, position)
+
+	if targetMemberExpression, ok := targetExpression.(*ast.MemberExpression); ok {
+		interpreter.checkMemberAccessedType(
+			targetMemberExpression,
+			getterSetter.target,
+			getLocationRange,
+		)
+	}
 
 	// If the assignment is a forced move,
 	// ensure that the target is nil,
@@ -3477,9 +3486,13 @@ func (interpreter *Interpreter) ExpectType(
 ) {
 	dynamicType := value.DynamicType(interpreter, SeenReferences{})
 	if !interpreter.IsSubType(dynamicType, expectedType) {
+		var locationRange LocationRange
+		if getLocationRange != nil {
+			locationRange = getLocationRange()
+		}
 		panic(TypeMismatchError{
 			ExpectedType:  expectedType,
-			LocationRange: getLocationRange(),
+			LocationRange: locationRange,
 		})
 	}
 }

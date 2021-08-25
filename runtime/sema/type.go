@@ -2355,6 +2355,13 @@ func (t *FunctionType) Equal(other Type) bool {
 		}
 	}
 
+	// Ensures that a constructor function type is
+	// NOT equal to a function type with the same parameters, return type, etc.
+
+	if t.IsConstructor != otherFunction.IsConstructor {
+		return false
+	}
+
 	// return type
 
 	if !t.ReturnTypeAnnotation.Type.
@@ -4866,12 +4873,22 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 
 		// Functions are covariant in their return type
 
-		if !IsSubType(
-			typedSubType.ReturnTypeAnnotation.Type,
-			typedSuperType.ReturnTypeAnnotation.Type,
-		) {
+		if typedSubType.ReturnTypeAnnotation != nil {
+			if typedSuperType.ReturnTypeAnnotation == nil {
+				return false
+			}
+
+			if !IsSubType(
+				typedSubType.ReturnTypeAnnotation.Type,
+				typedSuperType.ReturnTypeAnnotation.Type,
+			) {
+				return false
+			}
+		} else if typedSuperType.ReturnTypeAnnotation != nil {
 			return false
 		}
+
+		// Receiver type
 
 		if typedSubType.ReceiverType != nil {
 			if typedSuperType.ReceiverType == nil {
@@ -5053,15 +5070,6 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 
 		switch typedSubType := subType.(type) {
 		case *CompositeType:
-
-			// Resources are not subtypes of resource interfaces.
-			// (Use `AnyResource` / `AnyStruct` / `Any` with restriction instead).
-
-			if typedSuperType.CompositeKind == common.CompositeKindResource ||
-				typedSuperType.CompositeKind == common.CompositeKindStructure {
-
-				return false
-			}
 
 			// A composite type `T` is a subtype of a interface type `V`:
 			// if `T` conforms to `V`, and `V` and `T` are of the same kind
@@ -5792,8 +5800,10 @@ func init() {
 		SignatureAlgorithmType,
 		AuthAccountType,
 		AuthAccountKeysType,
+		AuthAccountContractsType,
 		PublicAccountType,
 		PublicAccountKeysType,
+		PublicAccountContractsType,
 	}
 
 	for _, semaType := range types {

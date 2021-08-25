@@ -76,6 +76,7 @@ type Value interface {
 // ValueIndexableValue
 
 type ValueIndexableValue interface {
+	Value
 	Get(interpreter *Interpreter, getLocationRange func() LocationRange, key Value) Value
 	Set(interpreter *Interpreter, getLocationRange func() LocationRange, key Value, value Value)
 }
@@ -83,6 +84,7 @@ type ValueIndexableValue interface {
 // MemberAccessibleValue
 
 type MemberAccessibleValue interface {
+	Value
 	GetMember(interpreter *Interpreter, getLocationRange func() LocationRange, name string) Value
 	SetMember(interpreter *Interpreter, getLocationRange func() LocationRange, name string, value Value)
 }
@@ -90,12 +92,14 @@ type MemberAccessibleValue interface {
 // ConcatenatableValue
 
 type ConcatenatableValue interface {
+	Value
 	Concat(other ConcatenatableValue) Value
 }
 
 // AllAppendableValue
 
 type AllAppendableValue interface {
+	Value
 	AppendAll(inter *Interpreter, getLocationRange func() LocationRange, other AllAppendableValue)
 }
 
@@ -109,6 +113,7 @@ type EquatableValue interface {
 // DestroyableValue
 
 type DestroyableValue interface {
+	Value
 	Destroy(interpreter *Interpreter, getLocationRange func() LocationRange)
 }
 
@@ -7033,16 +7038,7 @@ func (v *CompositeValue) OwnerValue(interpreter *Interpreter) OptionalValue {
 	ownerAccount := interpreter.accountHandler(address)
 
 	// Owner must be of `PublicAccount` type.
-
-	dynamicType := ownerAccount.DynamicType(interpreter, SeenReferences{})
-
-	compositeDynamicType, ok := dynamicType.(CompositeDynamicType)
-
-	if !ok || !sema.PublicAccountType.Equal(compositeDynamicType.StaticType) {
-		panic(&TypeMismatchError{
-			ExpectedType: sema.PublicAccountType,
-		})
-	}
+	interpreter.ExpectType(ownerAccount, sema.PublicAccountType, nil)
 
 	return NewSomeValueOwningNonCopying(ownerAccount)
 }

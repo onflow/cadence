@@ -6468,7 +6468,7 @@ func TestRuntimeGetCapability(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("invalid", func(t *testing.T) {
+	t.Run("invalid: private path, public account used as auth account", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -6497,11 +6497,48 @@ func TestRuntimeGetCapability(t *testing.T) {
 			},
 		)
 
+		require.Error(t, err)
+
 		var typeErr interpreter.ContainerMutationError
 		require.ErrorAs(t, err, &typeErr)
 	})
 
-	t.Run("valid", func(t *testing.T) {
+	t.Run("invalid: public path, public account used as auth account", func(t *testing.T) {
+
+		t.Parallel()
+
+		runtime := NewInterpreterRuntime()
+
+		script := []byte(`
+          pub fun main(): Capability {
+              let dict: {Int: AuthAccount} = {}
+              let ref = &dict as &{Int: AnyStruct}
+              ref[0] = getAccount(0x01) as AnyStruct
+              return dict.values[0].getCapability(/public/xxx)
+          }
+        `)
+
+		runtimeInterface := &testRuntimeInterface{}
+
+		nextTransactionLocation := newTransactionLocationGenerator()
+
+		_, err := runtime.ExecuteScript(
+			Script{
+				Source: script,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+
+		require.Error(t, err)
+
+		var typeErr interpreter.ContainerMutationError
+		require.ErrorAs(t, err, &typeErr)
+	})
+
+	t.Run("valid: public path, public account used as public account", func(t *testing.T) {
 
 		t.Parallel()
 
