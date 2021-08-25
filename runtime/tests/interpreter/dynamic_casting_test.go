@@ -1190,6 +1190,7 @@ func TestInterpretDynamicCastingArray(t *testing.T) {
 								result,
 							)
 						} else {
+							require.Error(t, err)
 							require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
 						}
 					})
@@ -1219,7 +1220,8 @@ func TestInterpretDynamicCastingArray(t *testing.T) {
 						result,
 					)
 				} else {
-					require.ErrorAs(t, err, &interpreter.TypeMismatchError{})
+					require.Error(t, err)
+					require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
 				}
 			})
 		})
@@ -1318,6 +1320,7 @@ func TestInterpretDynamicCastingDictionary(t *testing.T) {
 								result,
 							)
 						} else {
+							require.Error(t, err)
 							require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
 						}
 					})
@@ -1347,7 +1350,8 @@ func TestInterpretDynamicCastingDictionary(t *testing.T) {
 						result,
 					)
 				} else {
-					require.ErrorAs(t, err, &interpreter.TypeMismatchError{})
+					require.Error(t, err)
+					require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
 				}
 			})
 		})
