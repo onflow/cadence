@@ -400,7 +400,7 @@ func (interpreter *Interpreter) VisitArrayExpression(expression *ast.ArrayExpres
 
 	arrayStaticType := ConvertSemaArrayTypeToStaticArrayType(arrayType)
 
-	return NewArrayValue(arrayStaticType, interpreter.Storage, copies...)
+	return NewArrayValue(interpreter, arrayStaticType, copies...)
 }
 
 func (interpreter *Interpreter) VisitDictionaryExpression(expression *ast.DictionaryExpression) ast.Repr {
@@ -411,7 +411,7 @@ func (interpreter *Interpreter) VisitDictionaryExpression(expression *ast.Dictio
 
 	dictionaryStaticType := ConvertSemaDictionaryTypeToStaticDictionaryType(dictionaryType)
 
-	dictionary := NewDictionaryValue(interpreter, dictionaryStaticType, interpreter.Storage)
+	dictionary := NewDictionaryValue(interpreter, dictionaryStaticType)
 
 	for i, dictionaryEntryValues := range values {
 		entryType := entryTypes[i]
@@ -440,7 +440,7 @@ func (interpreter *Interpreter) VisitDictionaryExpression(expression *ast.Dictio
 
 		// TODO: batch insert to avoid store on each insert
 		_ = dictionary.Insert(
-			interpreter.Storage,
+			interpreter,
 			getLocationRange,
 			key,
 			value,
@@ -515,8 +515,8 @@ func (interpreter *Interpreter) checkMemberAccessedType(
 	case *CompositeValue:
 		// Ignore for example transactions
 		// TODO: find a better solution to declare/detect transactions
-		if self.kind == common.CompositeKindUnknown ||
-			self.QualifiedIdentifier() == "" {
+		if self.Kind == common.CompositeKindUnknown ||
+			self.QualifiedIdentifier == "" {
 			break
 		}
 		interpreter.ExpectType(self, accessedType, getLocationRange)

@@ -115,7 +115,7 @@ type InjectedCompositeFieldsHandlerFunc func(
 type ContractValueHandlerFunc func(
 	inter *Interpreter,
 	compositeType *sema.CompositeType,
-	constructorGenerator func(common.Address) HostFunctionValue,
+	constructorGenerator func(common.Address) *HostFunctionValue,
 	invocationRange ast.Range,
 ) *CompositeValue
 
@@ -1347,7 +1347,7 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 
 	qualifiedIdentifier := compositeType.QualifiedIdentifier()
 
-	constructorGenerator := func(address common.Address) HostFunctionValue {
+	constructorGenerator := func(address common.Address) *HostFunctionValue {
 		return NewHostFunctionValue(
 			func(invocation Invocation) Value {
 

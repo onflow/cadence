@@ -92,15 +92,15 @@ func ByteValueToByte(element Value) (byte, error) {
 	return b, nil
 }
 
-func ByteSliceToByteArrayValue(storage Storage, buf []byte) *ArrayValue {
+func ByteSliceToByteArrayValue(interpreter *Interpreter, buf []byte) *ArrayValue {
 	values := make([]Value, len(buf))
 	for i, b := range buf {
 		values[i] = UInt8Value(b)
 	}
 
 	return NewArrayValue(
+		interpreter,
 		ByteArrayStaticType,
-		storage,
 		values...,
 	)
 }

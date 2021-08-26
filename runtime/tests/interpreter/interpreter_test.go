@@ -154,7 +154,7 @@ func makeContractValueHandler(
 		func(
 			inter *interpreter.Interpreter,
 			compositeType *sema.CompositeType,
-			constructorGenerator func(common.Address) interpreter.HostFunctionValue,
+			constructorGenerator func(common.Address) *interpreter.HostFunctionValue,
 			invocationRange ast.Range,
 		) *interpreter.CompositeValue {
 

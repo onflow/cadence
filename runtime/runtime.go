@@ -1027,7 +1027,7 @@ func (r *interpreterRuntime) newInterpreter(
 			func(
 				inter *interpreter.Interpreter,
 				compositeType *sema.CompositeType,
-				constructorGenerator func(common.Address) interpreter.HostFunctionValue,
+				constructorGenerator func(common.Address) *interpreter.HostFunctionValue,
 				invocationRange ast.Range,
 			) *interpreter.CompositeValue {
 
@@ -1642,7 +1642,7 @@ func formatContractKey(name string) string {
 func (r *interpreterRuntime) loadContract(
 	inter *interpreter.Interpreter,
 	compositeType *sema.CompositeType,
-	constructorGenerator func(common.Address) interpreter.HostFunctionValue,
+	constructorGenerator func(common.Address) *interpreter.HostFunctionValue,
 	invocationRange ast.Range,
 	runtimeStorage *runtimeStorage,
 ) *interpreter.CompositeValue {
@@ -1760,7 +1760,7 @@ func (r *interpreterRuntime) instantiateContract(
 			func(
 				inter *interpreter.Interpreter,
 				compositeType *sema.CompositeType,
-				constructorGenerator func(common.Address) interpreter.HostFunctionValue,
+				constructorGenerator func(common.Address) *interpreter.HostFunctionValue,
 				invocationRange ast.Range,
 			) *interpreter.CompositeValue {
 

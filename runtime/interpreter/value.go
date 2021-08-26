@@ -571,7 +571,7 @@ func (v *StringValue) GetMember(interpreter *Interpreter, _ func() LocationRange
 		return NewIntValueFromInt64(int64(length))
 
 	case "utf8":
-		return ByteSliceToByteArrayValue(interpreter.Storage, []byte(v.Str))
+		return ByteSliceToByteArrayValue(interpreter, []byte(v.Str))
 
 	case "concat":
 		return NewHostFunctionValue(
@@ -593,7 +593,7 @@ func (v *StringValue) GetMember(interpreter *Interpreter, _ func() LocationRange
 	case "decodeHex":
 		return NewHostFunctionValue(
 			func(invocation Invocation) Value {
-				return v.DecodeHex(invocation.Interpreter.Storage)
+				return v.DecodeHex(invocation.Interpreter)
 			},
 		)
 	}
@@ -640,7 +640,7 @@ var ByteArrayStaticType = ConvertSemaArrayTypeToStaticArrayType(sema.ByteArrayTy
 
 // DecodeHex hex-decodes this string and returns an array of UInt8 values
 //
-func (v *StringValue) DecodeHex(storage Storage) *ArrayValue {
+func (v *StringValue) DecodeHex(interpreter *Interpreter) *ArrayValue {
 	str := v.Str
 
 	bs, err := hex.DecodeString(str)
@@ -653,7 +653,7 @@ func (v *StringValue) DecodeHex(storage Storage) *ArrayValue {
 		values[i] = UInt8Value(b)
 	}
 
-	return NewArrayValue(ByteArrayStaticType, storage, values...)
+	return NewArrayValue(interpreter, ByteArrayStaticType, values...)
 }
 
 func (*StringValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -675,21 +675,21 @@ type ArrayValue struct {
 }
 
 func NewArrayValue(
+	interpreter *Interpreter,
 	arrayType ArrayStaticType,
-	storage atree.SlabStorage,
 	values ...Value,
 ) *ArrayValue {
 	return NewArrayValueWithAddress(
+		interpreter,
 		arrayType,
-		storage,
 		common.Address{},
 		values...,
 	)
 }
 
 func NewArrayValueWithAddress(
+	interpreter *Interpreter,
 	arrayType ArrayStaticType,
-	storage atree.SlabStorage,
 	address common.Address,
 	values ...Value,
 ) *ArrayValue {
@@ -699,7 +699,7 @@ func NewArrayValueWithAddress(
 		panic(ExternalError{err})
 	}
 
-	array, err := atree.NewArray(storage, atree.Address(address), typeInfo)
+	array, err := atree.NewArray(interpreter.Storage, atree.Address(address), typeInfo)
 	if err != nil {
 		panic(ExternalError{err})
 	}
@@ -710,7 +710,7 @@ func NewArrayValueWithAddress(
 	}
 
 	for i, value := range values {
-		v.Insert(ReturnEmptyLocationRange, i, value)
+		v.Insert(interpreter, ReturnEmptyLocationRange, i, value)
 	}
 
 	return v
@@ -764,7 +764,6 @@ func (v *ArrayValue) DynamicType(interpreter *Interpreter, seenReferences SeenRe
 }
 
 func (v *ArrayValue) StaticType() StaticType {
-	v.ensureMetaInfoLoaded()
 	return v.Type
 }
 
@@ -784,7 +783,7 @@ func (v *ArrayValue) IsCopied() bool {
 	return v.isCopied
 }
 
-func (v *ArrayValue) Concat(other *ArrayValue) Value {
+func (v *ArrayValue) Concat(inter *Interpreter, getLocationRange func() LocationRange, other *ArrayValue) Value {
 	storage := v.array.Storage
 
 	newValue, err := v.DeepCopy(storage, atree.Address{})
@@ -792,7 +791,7 @@ func (v *ArrayValue) Concat(other *ArrayValue) Value {
 		panic(ExternalError{err})
 	}
 	newArray := newValue.(*ArrayValue)
-	newArray.AppendAll(other)
+	newArray.AppendAll(inter, getLocationRange, other)
 	return newArray
 }
 
@@ -819,14 +818,14 @@ func (v *ArrayValue) Set(inter *Interpreter, getLocationRange func() LocationRan
 	v.SetIndex(inter, getLocationRange, index, value)
 }
 
-func (v *ArrayValue) SetIndex(inter *Interpreter, getLocationRange func() LocationRange, index int, value Value) {
+func (v *ArrayValue) SetIndex(inter *Interpreter, getLocationRange func() LocationRange, index int, element Value) {
 
 	v.checkBounds(index, getLocationRange)
 
 	// Use the getter, to make sure lazily decoded values are properly loaded.
 	arrayStaticType := v.StaticType().(ArrayStaticType)
 
-	inter.checkContainerMutation(arrayStaticType.ElementType(), value, getLocationRange)
+	inter.checkContainerMutation(arrayStaticType.ElementType(), element, getLocationRange)
 
 	storage := v.array.Storage
 
@@ -909,8 +908,10 @@ func (v *ArrayValue) Append(inter *Interpreter, getLocationRange func() Location
 	}
 }
 
-func (v *ArrayValue) AppendAll(nter *Interpreter, getLocationRange func() LocationRange, other *ArrayValue) {
-	other.Walk(v.Append)
+func (v *ArrayValue) AppendAll(inter *Interpreter, getLocationRange func() LocationRange, other *ArrayValue) {
+	other.Walk(func(value Value) {
+		v.Append(inter, getLocationRange, value)
+	})
 }
 
 func (v *ArrayValue) Insert(inter *Interpreter, getLocationRange func() LocationRange, index int, element Value) {
@@ -1031,7 +1032,11 @@ func (v *ArrayValue) GetMember(inter *Interpreter, getLocationRange func() Locat
 		return NewHostFunctionValue(
 			func(invocation Invocation) Value {
 				otherArray := invocation.Arguments[0].(*ArrayValue)
-				return v.Concat(otherArray)
+				return v.Concat(
+					invocation.Interpreter,
+					invocation.GetLocationRange,
+					otherArray,
+				)
 			},
 		)
 
@@ -1040,7 +1045,12 @@ func (v *ArrayValue) GetMember(inter *Interpreter, getLocationRange func() Locat
 			func(invocation Invocation) Value {
 				index := invocation.Arguments[0].(NumberValue).ToInt()
 				element := invocation.Arguments[1]
-				v.Insert(inter, invocation.GetLocationRange, index, element)
+				v.Insert(
+					inter,
+					invocation.GetLocationRange,
+					index,
+					element,
+				)
 				return VoidValue{}
 			},
 		)
@@ -1227,7 +1237,7 @@ func getNumberValueMember(v NumberValue, name string) Value {
 		return NewHostFunctionValue(
 			func(invocation Invocation) Value {
 				return ByteSliceToByteArrayValue(
-					invocation.Interpreter.Storage,
+					invocation.Interpreter,
 					v.ToBigEndianBytes(),
 				)
 			},
@@ -7366,23 +7376,24 @@ type DictionaryValue struct {
 func NewDictionaryValue(
 	interpreter *Interpreter,
 	dictionaryType DictionaryStaticType,
-	storage atree.SlabStorage,
 	keysAndValues ...Value,
 ) *DictionaryValue {
 	return NewDictionaryValueWithAddress(
+		interpreter,
 		dictionaryType,
-		storage,
 		common.Address{},
 		keysAndValues...,
 	)
 }
 
 func NewDictionaryValueWithAddress(
+	interpreter *Interpreter,
 	dictionaryType DictionaryStaticType,
-	storage atree.SlabStorage,
 	address common.Address,
 	keysAndValues ...Value,
 ) *DictionaryValue {
+
+	storage := interpreter.Storage
 
 	storageID, err := storage.GenerateStorageID(atree.Address(address))
 	if err != nil {
@@ -7395,10 +7406,10 @@ func NewDictionaryValueWithAddress(
 	}
 
 	keys := NewArrayValueWithAddress(
+		interpreter,
 		VariableSizedStaticType{
 			Type: dictionaryType.KeyType,
 		},
-		storage,
 		address,
 	)
 
@@ -7561,7 +7572,7 @@ func (v *DictionaryValue) Set(
 
 	switch value := value.(type) {
 	case *SomeValue:
-		_ = v.Insert(interpreter.Storage, getLocationRange, keyValue, value.Value)
+		_ = v.Insert(interpreter, getLocationRange, keyValue, value.Value)
 
 	case NilValue:
 		_ = v.Remove(interpreter.Storage, getLocationRange, keyValue)
@@ -7628,10 +7639,10 @@ func (v *DictionaryValue) GetMember(interpreter *Interpreter, _ func() LocationR
 		})
 
 		return NewArrayValue(
+			interpreter,
 			VariableSizedStaticType{
 				Type: v.Type.ValueType,
 			},
-			interpreter.Storage,
 			dictionaryValues...,
 		)
 
@@ -7655,7 +7666,7 @@ func (v *DictionaryValue) GetMember(interpreter *Interpreter, _ func() LocationR
 				newValue := invocation.Arguments[1]
 
 				return v.Insert(
-					invocation.Interpreter.Storage,
+					invocation.Interpreter,
 					invocation.GetLocationRange,
 					keyValue,
 					newValue,
@@ -7750,14 +7761,16 @@ func (v *DictionaryValue) Insert(
 	// Use the getter, to make sure lazily decoded values are properly loaded.
 	dictionaryStaticType := v.StaticType().(DictionaryStaticType)
 
-	inter.checkContainerMutation(dictionaryStaticType.KeyType, keyValue, locationRangeGetter)
-	inter.checkContainerMutation(dictionaryStaticType.ValueType, value, locationRangeGetter)
+	inter.checkContainerMutation(dictionaryStaticType.KeyType, keyValue, getLocationRange)
+	inter.checkContainerMutation(dictionaryStaticType.ValueType, value, getLocationRange)
 
 	address := v.StorageID.Address
 
 	existingValue := v.Get(nil, getLocationRange, keyValue)
 
 	key := dictionaryKey(keyValue)
+
+	storage := inter.Storage
 
 	valueCopy, err := value.DeepCopy(storage, address)
 	if err != nil {
@@ -7787,7 +7800,7 @@ func (v *DictionaryValue) Insert(
 	case *SomeValue:
 		result = existingValue
 	case NilValue:
-		v.Keys.Append(inter, locationRangeGetter, keyValue)
+		v.Keys.Append(inter, getLocationRange, keyValue)
 		result = existingValue
 
 	default:
@@ -7912,8 +7925,8 @@ func (v *DictionaryValue) DeepCopy(storage atree.SlabStorage, address atree.Addr
 	v.isCopied = true
 
 	result := NewDictionaryValueWithAddress(
+		inter,
 		v.Type,
-		storage,
 		common.Address(address),
 	)
 
@@ -7954,7 +7967,7 @@ func (v *DictionaryValue) DeepCopy(storage atree.SlabStorage, address atree.Addr
 		}
 
 		result.Insert(
-			storage,
+			inter,
 			ReturnEmptyLocationRange,
 			MustConvertStoredValue(keyValueCopy),
 			MustConvertStoredValue(valueCopy),
@@ -8982,7 +8995,7 @@ func (v AddressValue) GetMember(interpreter *Interpreter, _ func() LocationRange
 		return NewHostFunctionValue(
 			func(invocation Invocation) Value {
 				address := common.Address(v)
-				return ByteSliceToByteArrayValue(interpreter.Storage, address[:])
+				return ByteSliceToByteArrayValue(interpreter, address[:])
 			},
 		)
 	}
@@ -9830,11 +9843,19 @@ func NewPublicAccountContractsValue(
 		return fmt.Sprintf("PublicAccount.Contracts(%s)", address)
 	}
 
-	return &CompositeValue{
-		qualifiedIdentifier: sema.PublicAccountContractsType.QualifiedIdentifier(),
-		kind:                sema.PublicAccountContractsType.Kind,
-		fields:              fields,
-		ComputedFields:      computedFields,
-		stringer:            stringer,
-	}
+	v := NewCompositeValue(
+		// NOTE: no storage needed, as AuthAccount.Contracts type is non-storable (has no location)
+		nil,
+		nil,
+		sema.PublicAccountContractsType.QualifiedIdentifier(),
+		sema.PublicAccountContractsType.Kind,
+		fields,
+		common.Address{},
+
+	)
+
+	v.Stringer = stringer
+	v.ComputedFields = computedFields
+
+	return v
 }
