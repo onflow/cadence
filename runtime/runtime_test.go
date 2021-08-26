@@ -6583,3 +6583,310 @@ func TestRuntimeGetCapability(t *testing.T) {
 		)
 	})
 }
+
+func TestStackOverflow(t *testing.T) {
+
+	t.Parallel()
+
+	runtime := NewInterpreterRuntime()
+
+	accountCodes := map[common.LocationID]string{
+
+		"A.1d7e57aa55817448.NonFungibleToken": `
+
+pub contract interface NonFungibleToken {
+
+    // The total number of tokens of this type in existence
+    pub var totalSupply: UInt64
+
+    // Event that emitted when the NFT contract is initialized
+    //
+    pub event ContractInitialized()
+
+    // Event that is emitted when a token is withdrawn,
+    // indicating the owner of the collection that it was withdrawn from.
+    //
+    pub event Withdraw(id: UInt64, from: Address?)
+
+    // Event that emitted when a token is deposited to a collection.
+    //
+    // It indicates the owner of the collection that it was deposited to.
+    //
+    pub event Deposit(id: UInt64, to: Address?)
+
+    // Interface that the NFTs have to conform to
+    //
+    pub resource interface INFT {
+        // The unique ID that each NFT has
+        pub let id: UInt64
+    }
+
+    // Requirement that all conforming NFT smart contracts have
+    // to define a resource called NFT that conforms to INFT
+    pub resource NFT: INFT {
+        pub let id: UInt64
+    }
+
+    // Interface to mediate withdraws from the Collection
+    //
+    pub resource interface Provider {
+        // withdraw removes an NFT from the collection and moves it to the caller
+        pub fun withdraw(withdrawID: UInt64): @NFT {
+            post {
+                result.id == withdrawID: "The ID of the withdrawn token must be the same as the requested ID"
+            }
+        }
+    }
+
+    // Interface to mediate deposits to the Collection
+    //
+    pub resource interface Receiver {
+
+        // deposit takes an NFT as an argument and adds it to the Collection
+        //
+		pub fun deposit(token: @NFT)
+    }
+
+    // Interface that an account would commonly
+    // publish for their collection
+    pub resource interface CollectionPublic {
+        pub fun deposit(token: @NFT)
+        pub fun getIDs(): [UInt64]
+        pub fun borrowNFT(id: UInt64): &NFT
+    }
+
+    // Requirement for the the concrete resource type
+    // to be declared in the implementing contract
+    //
+    pub resource Collection: Provider, Receiver, CollectionPublic {
+
+        // Dictionary to hold the NFTs in the Collection
+        pub var ownedNFTs: @{UInt64: NFT}
+
+        // withdraw removes an NFT from the collection and moves it to the caller
+        pub fun withdraw(withdrawID: UInt64): @NFT
+
+        // deposit takes a NFT and adds it to the collections dictionary
+        // and adds the ID to the id array
+        pub fun deposit(token: @NFT)
+
+        // getIDs returns an array of the IDs that are in the collection
+        pub fun getIDs(): [UInt64]
+
+        // Returns a borrowed reference to an NFT in the collection
+        // so that the caller can read data and call methods from it
+        pub fun borrowNFT(id: UInt64): &NFT {
+            pre {
+                self.ownedNFTs[id] != nil: "NFT does not exist in the collection!"
+            }
+        }
+    }
+
+    // createEmptyCollection creates an empty Collection
+    // and returns it to the caller so that they can own NFTs
+    pub fun createEmptyCollection(): @Collection {
+        post {
+            result.getIDs().length == 0: "The created collection must be empty!"
+        }
+    }
+}
+`,
+	}
+
+	const fooEventsContract = `
+import NonFungibleToken from 0x1d7e57aa55817448
+
+pub contract FooEvents: NonFungibleToken {
+
+    pub event ContractInitialized()
+    pub event Withdraw(id: UInt64, from: Address?)
+    pub event Deposit(id: UInt64, to: Address?)
+    pub event Minted(id: UInt64, typeID: UInt64)
+
+    pub var totalSupply: UInt64
+    pub var totalEvents: UInt64
+
+    pub resource EventsCollection {
+
+        pub fun getIDs(): [UInt64] {
+            return []
+        }
+
+        init () {
+        }
+    }
+
+    pub resource NFT: NonFungibleToken.INFT {
+        
+		pub let id: UInt64
+        
+		pub let typeID: UInt64
+
+        pub let section: UInt64
+
+        pub let row: UInt64
+
+        pub let seat: UInt64
+
+        // initializer
+        //
+        init(initID: UInt64, initTypeID: UInt64, initSection: UInt64, initRow: UInt64, initSeat: UInt64) {
+            self.id = initID
+            self.typeID = initTypeID
+            self.section = initSection
+            self.row = initRow
+            self.seat = initSeat
+        }
+    }
+
+    pub resource interface TicketsCollectionPublic {
+        pub fun depositTicket(token: @NonFungibleToken.NFT, metadata: {String : String}) {
+            post {
+                 (nil == nil): "Cannot borrow Ticket reference: The ID of the returned reference is incorrect"
+            }
+        }
+    }
+
+    pub resource Collection: TicketsCollectionPublic, NonFungibleToken.Provider, NonFungibleToken.Receiver, NonFungibleToken.CollectionPublic {
+        pub var ownedNFTs: @{UInt64: NonFungibleToken.NFT}
+
+        pub var metadataObjs: {UInt64: { String : String }}
+
+        pub fun withdraw(withdrawID: UInt64): @NonFungibleToken.NFT {
+            let token <- self.ownedNFTs.remove(key: withdrawID) ?? panic("missing NFT")
+
+            emit Withdraw(id: token.id, from: self.owner?.address)
+
+            return <-token
+        }
+
+        pub fun deposit(token: @NonFungibleToken.NFT) {
+
+            destroy token
+        }
+
+        pub fun depositTicket(token: @NonFungibleToken.NFT, metadata: {String : String}) {
+            destroy token
+        }
+
+        pub fun getIDs(): [UInt64] {
+            return self.ownedNFTs.keys
+        }
+
+        pub fun borrowNFT(id: UInt64): &NonFungibleToken.NFT {
+            return &self.ownedNFTs[id] as &NonFungibleToken.NFT
+        }
+
+        pub fun borrowTicket(id: UInt64): &FooEvents.NFT? {
+                return nil
+        }
+
+        destroy() {
+            destroy self.ownedNFTs
+        }
+
+        init () {
+            self.ownedNFTs <- {}
+            self.metadataObjs = {}
+        }
+    }
+
+    pub fun createEmptyCollection(): @NonFungibleToken.Collection {
+        return <- FooEvents.createEmptyCollection()
+    }
+
+    priv fun createEmptyEventCollection(): @FooEvents.EventsCollection {
+        return <- FooEvents.createEmptyEventCollection()
+    }
+
+    pub resource NFTMinter {
+
+		pub fun mintNFT(recipient: &{NonFungibleToken.CollectionPublic}, typeID: UInt64, section: UInt64, row: UInt64, seat: UInt64) {
+		}
+	}
+
+    pub fun fetch(_ from: Address, itemID: UInt64): &FooEvents.NFT? {
+		return nil
+    }
+
+	init() {
+        // Initialize the total supply
+        self.totalSupply = 0
+        self.totalEvents = 0
+        
+        // Create a Minter resource and save it to storage
+        let eventCollection <- FooEvents.createEmptyEventCollection()
+        self.account.save(<-eventCollection, to: /storage/FooEventsCollection)
+	}
+}
+`
+
+	deployTx := utils.DeploymentTransaction("FooEvents", []byte(fooEventsContract))
+
+	topShotAddress, err := common.HexToAddress("0x0b2a3299cc857e29")
+	require.NoError(t, err)
+
+	var events []cadence.Event
+	var loggedMessages []string
+
+	var signerAddress common.Address
+
+	var contractValueReads = 0
+
+	onRead := func(owner, key, value []byte) {
+		if bytes.Equal(key, []byte(formatContractKey("FooEvents"))) {
+			contractValueReads++
+		}
+	}
+
+	runtimeInterface := &testRuntimeInterface{
+		storage: newTestStorage(onRead, nil),
+		getSigningAccounts: func() ([]Address, error) {
+			return []Address{signerAddress}, nil
+		},
+		resolveLocation: singleIdentifierLocationResolver(t),
+		updateAccountContractCode: func(address Address, name string, code []byte) error {
+			location := common.AddressLocation{
+				Address: address,
+				Name:    name,
+			}
+			accountCodes[location.ID()] = string(code)
+			return nil
+		},
+		getAccountContractCode: func(address Address, name string) (code []byte, err error) {
+			location := common.AddressLocation{
+				Address: address,
+				Name:    name,
+			}
+			code = []byte(accountCodes[location.ID()])
+			return code, nil
+		},
+		emitEvent: func(event cadence.Event) error {
+			events = append(events, event)
+			return nil
+		},
+		decodeArgument: func(b []byte, t cadence.Type) (cadence.Value, error) {
+			return jsoncdc.Decode(b)
+		},
+		log: func(message string) {
+			loggedMessages = append(loggedMessages, message)
+		},
+	}
+
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	// Deploy TopShot contract
+
+	signerAddress = topShotAddress
+
+	err = runtime.ExecuteTransaction(
+		Script{
+			Source: deployTx,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+}
