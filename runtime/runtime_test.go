@@ -568,7 +568,7 @@ func TestRuntimeProgramSetAndGet(t *testing.T) {
           prepare() {}
           execute {}
       }
-	`)
+    `)
 	importedScriptLocation := common.StringLocation("imported")
 
 	runtime := NewInterpreterRuntime()
@@ -604,7 +604,7 @@ func TestRuntimeProgramSetAndGet(t *testing.T) {
               prepare() {}
               execute {}
           }
-		`)
+        `)
 		scriptLocation := common.StringLocation("placeholder")
 
 		// Initial call, should parse script, store program.
@@ -635,7 +635,7 @@ func TestRuntimeProgramSetAndGet(t *testing.T) {
               prepare() {}
               execute {}
           }
-		`)
+        `)
 		scriptLocation := common.StringLocation("placeholder")
 
 		// Call a second time to hit stored programs.
@@ -661,7 +661,7 @@ func TestRuntimeProgramSetAndGet(t *testing.T) {
               prepare() {}
               execute {}
           }
-		`)
+        `)
 		scriptLocation := common.StringLocation("placeholder")
 
 		// Call a second time to hit the stored programs
@@ -782,12 +782,12 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
 		{
 			label: "Single argument",
 			script: `
-			  transaction(x: Int) {
-				execute {
-				  log(x)
-				}
-			  }
-			`,
+              transaction(x: Int) {
+                execute {
+                  log(x)
+                }
+              }
+            `,
 			args: [][]byte{
 				jsoncdc.MustEncode(cadence.NewInt(42)),
 			},
@@ -796,16 +796,16 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
 		{
 			label: "Single argument with authorizer",
 			script: `
-			  transaction(x: Int) {
-				prepare(signer: AuthAccount) {
-				  log(signer.address)
-				}
+              transaction(x: Int) {
+                prepare(signer: AuthAccount) {
+                  log(signer.address)
+                }
 
-				execute {
-				  log(x)
-				}
-			  }
-			`,
+                execute {
+                  log(x)
+                }
+              }
+            `,
 			args: [][]byte{
 				jsoncdc.MustEncode(cadence.NewInt(42)),
 			},
@@ -815,13 +815,13 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
 		{
 			label: "Multiple arguments",
 			script: `
-			  transaction(x: Int, y: String) {
-				execute {
-				  log(x)
-				  log(y)
-				}
-			  }
-			`,
+              transaction(x: Int, y: String) {
+                execute {
+                  log(x)
+                  log(y)
+                }
+              }
+            `,
 			args: [][]byte{
 				jsoncdc.MustEncode(cadence.NewInt(42)),
 				jsoncdc.MustEncode(cadence.String("foo")),
@@ -831,8 +831,8 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
 		{
 			label: "Invalid bytes",
 			script: `
-			  transaction(x: Int) { execute {} }
-			`,
+              transaction(x: Int) { execute {} }
+            `,
 			args: [][]byte{
 				{1, 2, 3, 4}, // not valid JSON-CDC
 			},
@@ -844,12 +844,12 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
 		{
 			label: "Type mismatch",
 			script: `
-			  transaction(x: Int) {
-				execute {
-				  log(x)
-				}
-			  }
-			`,
+              transaction(x: Int) {
+                execute {
+                  log(x)
+                }
+              }
+            `,
 			args: [][]byte{
 				jsoncdc.MustEncode(cadence.String("foo")),
 			},
@@ -862,13 +862,13 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
 		{
 			label: "Address",
 			script: `
-			  transaction(x: Address) {
-				execute {
-				  let acct = getAccount(x)
-				  log(acct.address)
-				}
-			  }
-			`,
+              transaction(x: Address) {
+                execute {
+                  let acct = getAccount(x)
+                  log(acct.address)
+                }
+              }
+            `,
 			args: [][]byte{
 				jsoncdc.MustEncode(
 					cadence.BytesToAddress(
@@ -884,12 +884,12 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
 		{
 			label: "Array",
 			script: `
-			  transaction(x: [Int]) {
-				execute {
-				  log(x)
-				}
-			  }
-			`,
+              transaction(x: [Int]) {
+                execute {
+                  log(x)
+                }
+              }
+            `,
 			args: [][]byte{
 				jsoncdc.MustEncode(
 					cadence.NewArray(
@@ -906,12 +906,12 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
 		{
 			label: "Dictionary",
 			script: `
-			  transaction(x: {String:Int}) {
-				execute {
-				  log(x["y"])
-				}
-			  }
-			`,
+              transaction(x: {String:Int}) {
+                execute {
+                  log(x["y"])
+                }
+              }
+            `,
 			args: [][]byte{
 				jsoncdc.MustEncode(
 					cadence.NewDictionary(
@@ -929,12 +929,12 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
 		{
 			label: "Invalid dictionary",
 			script: `
-			  transaction(x: {String:String}) {
-				execute {
-				  log(x["y"])
-				}
-			  }
-			`,
+              transaction(x: {String:String}) {
+                execute {
+                  log(x["y"])
+                }
+              }
+            `,
 			args: [][]byte{
 				jsoncdc.MustEncode(
 					cadence.NewDictionary(
@@ -956,20 +956,20 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
 		{
 			label: "Struct",
 			script: `
-			  pub struct Foo {
-				pub var y: String
+              pub struct Foo {
+                pub var y: String
 
-				init() {
-				  self.y = "initial string"
-				}
- 			  }
+                init() {
+                  self.y = "initial string"
+                }
+               }
 
-			  transaction(x: Foo) {
-				execute {
-				  log(x.y)
-				}
-			  }
-			`,
+              transaction(x: Foo) {
+                execute {
+                  log(x.y)
+                }
+              }
+            `,
 			args: [][]byte{
 				jsoncdc.MustEncode(
 					cadence.
@@ -991,21 +991,21 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
 		{
 			label: "Struct in array",
 			script: `
-			  pub struct Foo {
-				pub var y: String
+              pub struct Foo {
+                pub var y: String
 
-				init() {
-				  self.y = "initial string"
-				}
- 			  }
+                init() {
+                  self.y = "initial string"
+                }
+               }
 
-			  transaction(f: [Foo]) {
-				execute {
-				  let x = f[0]
-				  log(x.y)
-				}
-			  }
-			`,
+              transaction(f: [Foo]) {
+                execute {
+                  let x = f[0]
+                  log(x.y)
+                }
+              }
+            `,
 			args: [][]byte{
 				jsoncdc.MustEncode(
 					cadence.NewArray([]cadence.Value{
@@ -1093,20 +1093,20 @@ func TestRuntimeScriptArguments(t *testing.T) {
 		{
 			label: "No arguments",
 			script: `
-				pub fun main() {
-					log("t")
-				}
-			`,
+                pub fun main() {
+                    log("t")
+                }
+            `,
 			args:         nil,
 			expectedLogs: []string{`"t"`},
 		},
 		{
 			label: "Single argument",
 			script: `
-				pub fun main(x: Int) {
-					log(x)
-				}
-			`,
+                pub fun main(x: Int) {
+                    log(x)
+                }
+            `,
 			args: [][]byte{
 				jsoncdc.MustEncode(cadence.NewInt(42)),
 			},
@@ -1115,11 +1115,11 @@ func TestRuntimeScriptArguments(t *testing.T) {
 		{
 			label: "Multiple arguments",
 			script: `
-				pub fun main(x: Int, y: String) {
-					log(x)
-					log(y)
-				}
-			`,
+                pub fun main(x: Int, y: String) {
+                    log(x)
+                    log(y)
+                }
+            `,
 			args: [][]byte{
 				jsoncdc.MustEncode(cadence.NewInt(42)),
 				jsoncdc.MustEncode(cadence.String("foo")),
@@ -1129,8 +1129,8 @@ func TestRuntimeScriptArguments(t *testing.T) {
 		{
 			label: "Invalid bytes",
 			script: `
-				pub fun main(x: Int) { }
-			`,
+                pub fun main(x: Int) { }
+            `,
 			args: [][]byte{
 				{1, 2, 3, 4}, // not valid JSON-CDC
 			},
@@ -1142,10 +1142,10 @@ func TestRuntimeScriptArguments(t *testing.T) {
 		{
 			label: "Type mismatch",
 			script: `
-				pub fun main(x: Int) {
-					log(x)
-				}
-			`,
+                pub fun main(x: Int) {
+                    log(x)
+                }
+            `,
 			args: [][]byte{
 				jsoncdc.MustEncode(cadence.String("foo")),
 			},
@@ -1158,10 +1158,10 @@ func TestRuntimeScriptArguments(t *testing.T) {
 		{
 			label: "Address",
 			script: `
-				pub fun main(x: Address) {
-					log(x)
-				}
-			`,
+                pub fun main(x: Address) {
+                    log(x)
+                }
+            `,
 			args: [][]byte{
 				jsoncdc.MustEncode(
 					cadence.BytesToAddress(
@@ -1177,10 +1177,10 @@ func TestRuntimeScriptArguments(t *testing.T) {
 		{
 			label: "Array",
 			script: `
-				pub fun main(x: [Int]) {
-					log(x)
-				}
-			`,
+                pub fun main(x: [Int]) {
+                    log(x)
+                }
+            `,
 			args: [][]byte{
 				jsoncdc.MustEncode(
 					cadence.NewArray(
@@ -1197,10 +1197,10 @@ func TestRuntimeScriptArguments(t *testing.T) {
 		{
 			label: "Dictionary",
 			script: `
-				pub fun main(x: {String:Int}) {
-					log(x["y"])
-				}
-			`,
+                pub fun main(x: {String:Int}) {
+                    log(x["y"])
+                }
+            `,
 			args: [][]byte{
 				jsoncdc.MustEncode(
 					cadence.NewDictionary(
@@ -1218,10 +1218,10 @@ func TestRuntimeScriptArguments(t *testing.T) {
 		{
 			label: "Invalid dictionary",
 			script: `
-				pub fun main(x: {String:String}) {
-					log(x["y"])
-				}
-			`,
+                pub fun main(x: {String:String}) {
+                    log(x["y"])
+                }
+            `,
 			args: [][]byte{
 				jsoncdc.MustEncode(
 					cadence.NewDictionary(
@@ -1243,18 +1243,18 @@ func TestRuntimeScriptArguments(t *testing.T) {
 		{
 			label: "Struct",
 			script: `
-				pub struct Foo {
-					pub var y: String
+                pub struct Foo {
+                    pub var y: String
 
-					init() {
-						self.y = "initial string"
-					}
-				}
+                    init() {
+                        self.y = "initial string"
+                    }
+                }
 
-				pub fun main(x: Foo) {
-					log(x.y)
-				}
-			`,
+                pub fun main(x: Foo) {
+                    log(x.y)
+                }
+            `,
 			args: [][]byte{
 				jsoncdc.MustEncode(
 					cadence.
@@ -1276,19 +1276,19 @@ func TestRuntimeScriptArguments(t *testing.T) {
 		{
 			label: "Struct in array",
 			script: `
-				pub struct Foo {
-					pub var y: String
+                pub struct Foo {
+                    pub var y: String
 
-					init() {
-						self.y = "initial string"
-					}
-				}
+                    init() {
+                        self.y = "initial string"
+                    }
+                }
 
-				pub fun main(f: [Foo]) {
-					let x = f[0]
-					log(x.y)
-				}
-			`,
+                pub fun main(f: [Foo]) {
+                    let x = f[0]
+                    log(x.y)
+                }
+            `,
 			args: [][]byte{
 				jsoncdc.MustEncode(
 					cadence.NewArray([]cadence.Value{
@@ -1442,41 +1442,41 @@ func TestRuntimeStorage(t *testing.T) {
           log(s2 != nil)
         `,
 		"resource array": `
-		  let rs <- signer.load<@[R]>(from: /storage/rs)
-		  log(rs == nil)
-		  destroy rs
+          let rs <- signer.load<@[R]>(from: /storage/rs)
+          log(rs == nil)
+          destroy rs
 
-		  signer.save(<-[<-createR()], to: /storage/rs)
-		  let rs2 <- signer.load<@[R]>(from: /storage/rs)
-		  log(rs2 != nil)
-		  destroy rs2
-		`,
+          signer.save(<-[<-createR()], to: /storage/rs)
+          let rs2 <- signer.load<@[R]>(from: /storage/rs)
+          log(rs2 != nil)
+          destroy rs2
+        `,
 		"struct array": `
-		  let s = signer.load<[S]>(from: /storage/s)
-		  log(s == nil)
+          let s = signer.load<[S]>(from: /storage/s)
+          log(s == nil)
 
-		  signer.save([S()], to: /storage/s)
-		  let s2 = signer.load<[S]>(from: /storage/s)
-		  log(s2 != nil)
-		`,
+          signer.save([S()], to: /storage/s)
+          let s2 = signer.load<[S]>(from: /storage/s)
+          log(s2 != nil)
+        `,
 		"resource dictionary": `
-		  let rs <- signer.load<@{String: R}>(from: /storage/rs)
-		  log(rs == nil)
-		  destroy rs
+          let rs <- signer.load<@{String: R}>(from: /storage/rs)
+          log(rs == nil)
+          destroy rs
 
           signer.save(<-{"r": <-createR()}, to: /storage/rs)
-		  let rs2 <- signer.load<@{String: R}>(from: /storage/rs)
-		  log(rs2 != nil)
-		  destroy rs2
-		`,
+          let rs2 <- signer.load<@{String: R}>(from: /storage/rs)
+          log(rs2 != nil)
+          destroy rs2
+        `,
 		"struct dictionary": `
-		  let s = signer.load<{String: S}>(from: /storage/s)
-		  log(s == nil)
+          let s = signer.load<{String: S}>(from: /storage/s)
+          log(s == nil)
 
           signer.save({"s": S()}, to: /storage/s)
-		  let rs2 = signer.load<{String: S}>(from: /storage/s)
-		  log(rs2 != nil)
-		`,
+          let rs2 = signer.load<{String: S}>(from: /storage/s)
+          log(rs2 != nil)
+        `,
 	}
 
 	for name, code := range tests {
@@ -2460,7 +2460,7 @@ func TestScriptParameterTypeNotImportableError(t *testing.T) {
 
 	script := []byte(`
       pub fun main(x: ((): Int)) {
-		return
+        return
       }
     `)
 
@@ -2968,22 +2968,22 @@ func TestInvokeContractFunction(t *testing.T) {
 
 	contract := []byte(`
         pub contract Test {
-			pub fun hello() {
-				log("Hello World!")
-			}
-			pub fun helloArg(_ arg: String) {
-				log("Hello ".concat(arg))
-			}
-			pub fun helloMultiArg(arg1: String, arg2: Int, arg3: Address) {
-				log("Hello ".concat(arg1).concat(" ").concat(arg2.toString()).concat(" from ").concat(arg3.toString()))
-			}
-			pub fun helloReturn(_ arg: String): String {
-				log("Hello return!")
-				return arg
-			}
-			pub fun helloAuthAcc(account: AuthAccount) {
-				log("Hello ".concat(account.address.toString()))
-			}
+            pub fun hello() {
+                log("Hello World!")
+            }
+            pub fun helloArg(_ arg: String) {
+                log("Hello ".concat(arg))
+            }
+            pub fun helloMultiArg(arg1: String, arg2: Int, arg3: Address) {
+                log("Hello ".concat(arg1).concat(" ").concat(arg2.toString()).concat(" from ").concat(arg3.toString()))
+            }
+            pub fun helloReturn(_ arg: String): String {
+                log("Hello return!")
+                return arg
+            }
+            pub fun helloAuthAcc(account: AuthAccount) {
+                log("Hello ".concat(account.address.toString()))
+            }
         }
     `)
 
@@ -3219,15 +3219,15 @@ func TestRuntimeContractNestedResource(t *testing.T) {
     `)
 
 	tx := []byte(`
-		import Test from 0x01
+        import Test from 0x01
 
-		transaction {
+        transaction {
 
-			prepare(acct: AuthAccount) {
-				log(acct.borrow<&Test.R>(from: /storage/r)?.hello())
-			}
-		}
-	`)
+            prepare(acct: AuthAccount) {
+                log(acct.borrow<&Test.R>(from: /storage/r)?.hello())
+            }
+        }
+    `)
 
 	deploy := utils.DeploymentTransaction("Test", contract)
 
@@ -3315,16 +3315,16 @@ func TestRuntimeStorageLoadedDestructionConcreteType(t *testing.T) {
     `)
 
 	tx := []byte(`
-		import Test from 0x01
+        import Test from 0x01
 
-		transaction {
+        transaction {
 
-			prepare(acct: AuthAccount) {
+            prepare(acct: AuthAccount) {
                 let r <- acct.load<@Test.R>(from: /storage/r)
-				destroy r
-			}
-		}
-	`)
+                destroy r
+            }
+        }
+    `)
 
 	deploy := utils.DeploymentTransaction("Test", contract)
 
@@ -3412,14 +3412,14 @@ func TestRuntimeStorageLoadedDestructionAnyResource(t *testing.T) {
         // NOTE: *not* importing concrete implementation.
         //   Should be imported automatically when loading the value from storage
 
-		transaction {
+        transaction {
 
-			prepare(acct: AuthAccount) {
+            prepare(acct: AuthAccount) {
                 let r <- acct.load<@AnyResource>(from: /storage/r)
-				destroy r
-			}
-		}
-	`)
+                destroy r
+            }
+        }
+    `)
 
 	deploy := utils.DeploymentTransaction("Test", contract)
 
@@ -3508,14 +3508,14 @@ func TestRuntimeStorageLoadedDestructionAfterRemoval(t *testing.T) {
         // NOTE: *not* importing concrete implementation.
         //   Should be imported automatically when loading the value from storage
 
-		transaction {
+        transaction {
 
-			prepare(acct: AuthAccount) {
+            prepare(acct: AuthAccount) {
                 let r <- acct.load<@AnyResource>(from: /storage/r)
-				destroy r
-			}
-		}
-	`)
+                destroy r
+            }
+        }
+    `)
 
 	deploy := utils.DeploymentTransaction("Test", contract)
 	removal := utils.RemovalTransaction("Test")
@@ -4001,55 +4001,55 @@ func TestRuntimeInvokeStoredInterfaceFunction(t *testing.T) {
               }
           }
       }
-	`
+    `
 
 	contractCode := `
-	  import TestContractInterface from 0x2
+      import TestContractInterface from 0x2
 
-	  pub contract TestContract: TestContractInterface {
+      pub contract TestContract: TestContractInterface {
 
-	      pub resource R: TestContractInterface.RInterface {
+          pub resource R: TestContractInterface.RInterface {
 
-	          pub fun check(a: Int, b: Int) {
-	              pre { a < 3 }
+              pub fun check(a: Int, b: Int) {
+                  pre { a < 3 }
                   post { b < 3 }
-	          }
-	      }
+              }
+          }
 
-	      pub fun createR(): @R {
-	          return <-create R()
-	      }
-	   }
-	`
+          pub fun createR(): @R {
+              return <-create R()
+          }
+       }
+    `
 
 	setupCode := []byte(`
-	  import TestContractInterface from 0x2
-	  import TestContract from 0x3
+      import TestContractInterface from 0x2
+      import TestContract from 0x3
 
-	  transaction {
-	      prepare(signer: AuthAccount) {
-	          signer.save(<-TestContract.createR(), to: /storage/r)
-	      }
-	  }
-	`)
+      transaction {
+          prepare(signer: AuthAccount) {
+              signer.save(<-TestContract.createR(), to: /storage/r)
+          }
+      }
+    `)
 
 	makeUseCode := func(a int, b int) []byte {
 		return []byte(
 			fmt.Sprintf(
 				`
-	              import TestContractInterface from 0x2
+                  import TestContractInterface from 0x2
 
                   // NOTE: *not* importing concrete implementation.
                   //   Should be imported automatically when loading the value from storage
 
-	              // import TestContract from 0x3
+                  // import TestContract from 0x3
 
-	              transaction {
-	                  prepare(signer: AuthAccount) {
-	                      signer.borrow<&AnyResource{TestContractInterface.RInterface}>(from: /storage/r)?.check(a: %d, b: %d)
-	                  }
-	              }
-	            `,
+                  transaction {
+                      prepare(signer: AuthAccount) {
+                          signer.borrow<&AnyResource{TestContractInterface.RInterface}>(from: /storage/r)?.check(a: %d, b: %d)
+                      }
+                  }
+                `,
 				a,
 				b,
 			),
@@ -6443,7 +6443,7 @@ func TestPanics(t *testing.T) {
 
 	script := []byte(`
       pub fun main() {
-		[1][1]
+        [1][1]
       }
     `)
 
@@ -6586,252 +6586,29 @@ func TestRuntimeGetCapability(t *testing.T) {
 
 func TestStackOverflow(t *testing.T) {
 
-	t.Parallel()
-
 	runtime := NewInterpreterRuntime()
 
-	accountCodes := map[common.LocationID]string{
+	const contract = `
 
-		"A.1d7e57aa55817448.NonFungibleToken": `
+        pub contract Recurse {
 
-pub contract interface NonFungibleToken {
+            priv fun recurse() {
+                self.recurse()
+            }
 
-    // The total number of tokens of this type in existence
-    pub var totalSupply: UInt64
-
-    // Event that emitted when the NFT contract is initialized
-    //
-    pub event ContractInitialized()
-
-    // Event that is emitted when a token is withdrawn,
-    // indicating the owner of the collection that it was withdrawn from.
-    //
-    pub event Withdraw(id: UInt64, from: Address?)
-
-    // Event that emitted when a token is deposited to a collection.
-    //
-    // It indicates the owner of the collection that it was deposited to.
-    //
-    pub event Deposit(id: UInt64, to: Address?)
-
-    // Interface that the NFTs have to conform to
-    //
-    pub resource interface INFT {
-        // The unique ID that each NFT has
-        pub let id: UInt64
-    }
-
-    // Requirement that all conforming NFT smart contracts have
-    // to define a resource called NFT that conforms to INFT
-    pub resource NFT: INFT {
-        pub let id: UInt64
-    }
-
-    // Interface to mediate withdraws from the Collection
-    //
-    pub resource interface Provider {
-        // withdraw removes an NFT from the collection and moves it to the caller
-        pub fun withdraw(withdrawID: UInt64): @NFT {
-            post {
-                result.id == withdrawID: "The ID of the withdrawn token must be the same as the requested ID"
+            init() {
+                self.recurse()
             }
         }
-    }
+    `
 
-    // Interface to mediate deposits to the Collection
-    //
-    pub resource interface Receiver {
-
-        // deposit takes an NFT as an argument and adds it to the Collection
-        //
-		pub fun deposit(token: @NFT)
-    }
-
-    // Interface that an account would commonly
-    // publish for their collection
-    pub resource interface CollectionPublic {
-        pub fun deposit(token: @NFT)
-        pub fun getIDs(): [UInt64]
-        pub fun borrowNFT(id: UInt64): &NFT
-    }
-
-    // Requirement for the the concrete resource type
-    // to be declared in the implementing contract
-    //
-    pub resource Collection: Provider, Receiver, CollectionPublic {
-
-        // Dictionary to hold the NFTs in the Collection
-        pub var ownedNFTs: @{UInt64: NFT}
-
-        // withdraw removes an NFT from the collection and moves it to the caller
-        pub fun withdraw(withdrawID: UInt64): @NFT
-
-        // deposit takes a NFT and adds it to the collections dictionary
-        // and adds the ID to the id array
-        pub fun deposit(token: @NFT)
-
-        // getIDs returns an array of the IDs that are in the collection
-        pub fun getIDs(): [UInt64]
-
-        // Returns a borrowed reference to an NFT in the collection
-        // so that the caller can read data and call methods from it
-        pub fun borrowNFT(id: UInt64): &NFT {
-            pre {
-                self.ownedNFTs[id] != nil: "NFT does not exist in the collection!"
-            }
-        }
-    }
-
-    // createEmptyCollection creates an empty Collection
-    // and returns it to the caller so that they can own NFTs
-    pub fun createEmptyCollection(): @Collection {
-        post {
-            result.getIDs().length == 0: "The created collection must be empty!"
-        }
-    }
-}
-`,
-	}
-
-	const fooEventsContract = `
-import NonFungibleToken from 0x1d7e57aa55817448
-
-pub contract FooEvents: NonFungibleToken {
-
-    pub event ContractInitialized()
-    pub event Withdraw(id: UInt64, from: Address?)
-    pub event Deposit(id: UInt64, to: Address?)
-    pub event Minted(id: UInt64, typeID: UInt64)
-
-    pub var totalSupply: UInt64
-    pub var totalEvents: UInt64
-
-    pub resource EventsCollection {
-
-        pub fun getIDs(): [UInt64] {
-            return []
-        }
-
-        init () {
-        }
-    }
-
-    pub resource NFT: NonFungibleToken.INFT {
-        
-		pub let id: UInt64
-        
-		pub let typeID: UInt64
-
-        pub let section: UInt64
-
-        pub let row: UInt64
-
-        pub let seat: UInt64
-
-        // initializer
-        //
-        init(initID: UInt64, initTypeID: UInt64, initSection: UInt64, initRow: UInt64, initSeat: UInt64) {
-            self.id = initID
-            self.typeID = initTypeID
-            self.section = initSection
-            self.row = initRow
-            self.seat = initSeat
-        }
-    }
-
-    pub resource interface TicketsCollectionPublic {
-        pub fun depositTicket(token: @NonFungibleToken.NFT, metadata: {String : String}) {
-            post {
-                 (nil == nil): "Cannot borrow Ticket reference: The ID of the returned reference is incorrect"
-            }
-        }
-    }
-
-    pub resource Collection: TicketsCollectionPublic, NonFungibleToken.Provider, NonFungibleToken.Receiver, NonFungibleToken.CollectionPublic {
-        pub var ownedNFTs: @{UInt64: NonFungibleToken.NFT}
-
-        pub var metadataObjs: {UInt64: { String : String }}
-
-        pub fun withdraw(withdrawID: UInt64): @NonFungibleToken.NFT {
-            let token <- self.ownedNFTs.remove(key: withdrawID) ?? panic("missing NFT")
-
-            emit Withdraw(id: token.id, from: self.owner?.address)
-
-            return <-token
-        }
-
-        pub fun deposit(token: @NonFungibleToken.NFT) {
-
-            destroy token
-        }
-
-        pub fun depositTicket(token: @NonFungibleToken.NFT, metadata: {String : String}) {
-            destroy token
-        }
-
-        pub fun getIDs(): [UInt64] {
-            return self.ownedNFTs.keys
-        }
-
-        pub fun borrowNFT(id: UInt64): &NonFungibleToken.NFT {
-            return &self.ownedNFTs[id] as &NonFungibleToken.NFT
-        }
-
-        pub fun borrowTicket(id: UInt64): &FooEvents.NFT? {
-                return nil
-        }
-
-        destroy() {
-            destroy self.ownedNFTs
-        }
-
-        init () {
-            self.ownedNFTs <- {}
-            self.metadataObjs = {}
-        }
-    }
-
-    pub fun createEmptyCollection(): @NonFungibleToken.Collection {
-        return <- FooEvents.createEmptyCollection()
-    }
-
-    priv fun createEmptyEventCollection(): @FooEvents.EventsCollection {
-        return <- FooEvents.createEmptyEventCollection()
-    }
-
-    pub resource NFTMinter {
-
-		pub fun mintNFT(recipient: &{NonFungibleToken.CollectionPublic}, typeID: UInt64, section: UInt64, row: UInt64, seat: UInt64) {
-		}
-	}
-
-    pub fun fetch(_ from: Address, itemID: UInt64): &FooEvents.NFT? {
-		return nil
-    }
-
-	init() {
-        // Initialize the total supply
-        self.totalSupply = 0
-        self.totalEvents = 0
-        
-        // Create a Minter resource and save it to storage
-        let eventCollection <- FooEvents.createEmptyEventCollection()
-        self.account.save(<-eventCollection, to: /storage/FooEventsCollection)
-	}
-}
-`
-
-	deployTx := utils.DeploymentTransaction("FooEvents", []byte(fooEventsContract))
-
-	topShotAddress, err := common.HexToAddress("0x0b2a3299cc857e29")
-	require.NoError(t, err)
+	deployTx := utils.DeploymentTransaction("Recurse", []byte(contract))
 
 	var events []cadence.Event
 	var loggedMessages []string
-
 	var signerAddress common.Address
-
 	var contractValueReads = 0
+	accountCodes := map[common.LocationID]string{}
 
 	onRead := func(owner, key, value []byte) {
 		if bytes.Equal(key, []byte(formatContractKey("FooEvents"))) {
@@ -6871,15 +6648,14 @@ pub contract FooEvents: NonFungibleToken {
 		log: func(message string) {
 			loggedMessages = append(loggedMessages, message)
 		},
+		computationLimit: 9999,
 	}
 
 	nextTransactionLocation := newTransactionLocationGenerator()
 
-	// Deploy TopShot contract
+	// Deploy
 
-	signerAddress = topShotAddress
-
-	err = runtime.ExecuteTransaction(
+	err := runtime.ExecuteTransaction(
 		Script{
 			Source: deployTx,
 		},
@@ -6888,5 +6664,8 @@ pub contract FooEvents: NonFungibleToken {
 			Location:  nextTransactionLocation(),
 		},
 	)
-	require.NoError(t, err)
+	require.Error(t, err)
+
+	var callStackLimitExceededErr CallStackLimitExceededError
+	require.ErrorAs(t, err, &callStackLimitExceededErr)
 }

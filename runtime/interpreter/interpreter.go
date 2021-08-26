@@ -100,6 +100,13 @@ type OnFunctionInvocationFunc func(
 	line int,
 )
 
+// OnInvokedFunctionReturnFunc is a function that is triggered when an invoked function returned.
+//
+type OnInvokedFunctionReturnFunc func(
+	inter *Interpreter,
+	line int,
+)
+
 // StorageExistenceHandlerFunc is a function that handles storage existence checks.
 //
 type StorageExistenceHandlerFunc func(
@@ -250,6 +257,7 @@ type Interpreter struct {
 	onStatement                    OnStatementFunc
 	onLoopIteration                OnLoopIterationFunc
 	onFunctionInvocation           OnFunctionInvocationFunc
+	onInvokedFunctionReturn        OnInvokedFunctionReturnFunc
 	storageExistenceHandler        StorageExistenceHandlerFunc
 	storageReadHandler             StorageReadHandlerFunc
 	storageWriteHandler            StorageWriteHandlerFunc
@@ -298,12 +306,22 @@ func WithOnLoopIterationHandler(handler OnLoopIterationFunc) Option {
 	}
 }
 
-// WithOnLoopIterationHandler returns an interpreter option which sets
-// the given function as the loop iteration handler.
+// WithOnFunctionInvocationHandler returns an interpreter option which sets
+// the given function as the function invocation handler.
 //
 func WithOnFunctionInvocationHandler(handler OnFunctionInvocationFunc) Option {
 	return func(interpreter *Interpreter) error {
 		interpreter.SetOnFunctionInvocationHandler(handler)
+		return nil
+	}
+}
+
+// WithOnInvokedFunctionReturnHandler returns an interpreter option which sets
+// the given function as the invoked function return handler.
+//
+func WithOnInvokedFunctionReturnHandler(handler OnInvokedFunctionReturnFunc) Option {
+	return func(interpreter *Interpreter) error {
+		interpreter.SetOnInvokedFunctionReturnHandler(handler)
 		return nil
 	}
 }
@@ -534,10 +552,16 @@ func (interpreter *Interpreter) SetOnLoopIterationHandler(function OnLoopIterati
 	interpreter.onLoopIteration = function
 }
 
-// SetOnFunctionInvocationHandler sets the function that is triggered when a loop iteration is about to be executed.
+// SetOnFunctionInvocationHandler sets the function that is triggered when a function invocation is about to be executed.
 //
 func (interpreter *Interpreter) SetOnFunctionInvocationHandler(function OnFunctionInvocationFunc) {
 	interpreter.onFunctionInvocation = function
+}
+
+// SetOnInvokedFunctionReturnHandler sets the function that is triggered when an invoked function returned.
+//
+func (interpreter *Interpreter) SetOnInvokedFunctionReturnHandler(function OnInvokedFunctionReturnFunc) {
+	interpreter.onInvokedFunctionReturn = function
 }
 
 // SetStorageExistenceHandler sets the function that is used when a storage key is checked for existence.
@@ -2298,6 +2322,7 @@ func (interpreter *Interpreter) NewSubInterpreter(
 		WithOnStatementHandler(interpreter.onStatement),
 		WithOnLoopIterationHandler(interpreter.onLoopIteration),
 		WithOnFunctionInvocationHandler(interpreter.onFunctionInvocation),
+		WithOnInvokedFunctionReturnHandler(interpreter.onInvokedFunctionReturn),
 		WithStorageExistenceHandler(interpreter.storageExistenceHandler),
 		WithStorageReadHandler(interpreter.storageReadHandler),
 		WithStorageWriteHandler(interpreter.storageWriteHandler),
@@ -3407,13 +3432,20 @@ func (interpreter *Interpreter) reportLoopIteration(pos ast.HasPosition) {
 	interpreter.onLoopIteration(interpreter, line)
 }
 
-func (interpreter *Interpreter) reportFunctionInvocation(pos ast.HasPosition) {
+func (interpreter *Interpreter) reportFunctionInvocation(line int) {
 	if interpreter.onFunctionInvocation == nil {
 		return
 	}
 
-	line := pos.StartPosition().Line
 	interpreter.onFunctionInvocation(interpreter, line)
+}
+
+func (interpreter *Interpreter) reportInvokedFunctionReturn(line int) {
+	if interpreter.onInvokedFunctionReturn == nil {
+		return
+	}
+
+	interpreter.onInvokedFunctionReturn(interpreter, line)
 }
 
 // getMember gets the member value by the given identifier from the given Value depending on its type.
