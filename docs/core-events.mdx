@@ -191,7 +191,7 @@ pub event TokensWithdrawn(amount: UFix64, from: Address?)
 | Field             | Type   | Description                                                            |
 | ----------------- | ------ | ---------------------------------------------------------------------- |
 | amount       | UFix64 | The amount of tokens withdrawn |
-| from       | Address? | Optional address of the account to withdraw from |
+| from       | Address? | Optional address of the account that owns the vault where tokens were withdrawn from. `nil` if the vault is not in an account's storage
 
 
 ### Tokens Deposited
@@ -209,7 +209,7 @@ pub event TokensDeposited(amount: UFix64, to: Address?)
 | Field             | Type   | Description                                                            |
 | ----------------- | ------ | ---------------------------------------------------------------------- |
 | amount       | UFix64 | The amount of tokens withdrawn |
-| to       | Address? | Optional address of the account the amount is deposited to |
+| to       | Address? | Optional address of the account that owns the vault where tokens were deposited to. `nil` if the vault is not in an account's storage |
 
 ### Tokens Minted
 
