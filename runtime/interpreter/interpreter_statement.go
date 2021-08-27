@@ -34,6 +34,10 @@ func (interpreter *Interpreter) evalStatement(statement ast.Statement) interface
 
 	interpreter.statement = statement
 
+	if interpreter.debugger != nil {
+		interpreter.debugger.onStatement(interpreter, statement)
+	}
+
 	if interpreter.onStatement != nil {
 		interpreter.onStatement(interpreter, statement)
 	}
