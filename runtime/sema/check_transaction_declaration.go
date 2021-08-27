@@ -208,7 +208,7 @@ func (checker *Checker) checkTransactionPrepareFunctionParameters(
 		parameterType := parameters[i].TypeAnnotation.Type
 
 		if !parameterType.IsInvalidType() &&
-			!IsSubType(parameterType, AuthAccountType) {
+			!IsSameTypeKind(parameterType, AuthAccountType) {
 
 			checker.report(
 				&InvalidTransactionPrepareParameterTypeError{

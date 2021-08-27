@@ -587,19 +587,12 @@ func (checker *Checker) checkTypeCompatibility(expression ast.Expression, valueT
 	case *ast.IntegerExpression:
 		unwrappedTargetType := UnwrapOptionalType(targetType)
 
-		// If the target type is `Never`, the checks below will be performed
-		// (as `Never` is the subtype of all types), but the checks are not valid
-
-		if IsSubType(unwrappedTargetType, NeverType) {
-			break
-		}
-
-		if IsSubType(unwrappedTargetType, IntegerType) {
+		if IsSameTypeKind(unwrappedTargetType, IntegerType) {
 			CheckIntegerLiteral(typedExpression, unwrappedTargetType, checker.report)
 
 			return true
 
-		} else if IsSubType(unwrappedTargetType, &AddressType{}) {
+		} else if IsSameTypeKind(unwrappedTargetType, &AddressType{}) {
 			CheckAddressLiteral(typedExpression, checker.report)
 
 			return true
@@ -608,16 +601,9 @@ func (checker *Checker) checkTypeCompatibility(expression ast.Expression, valueT
 	case *ast.FixedPointExpression:
 		unwrappedTargetType := UnwrapOptionalType(targetType)
 
-		// If the target type is `Never`, the checks below will be performed
-		// (as `Never` is the subtype of all types), but the checks are not valid
-
-		if IsSubType(unwrappedTargetType, NeverType) {
-			break
-		}
-
 		valueTypeOK := CheckFixedPointLiteral(typedExpression, valueType, checker.report)
 
-		if IsSubType(unwrappedTargetType, FixedPointType) {
+		if IsSameTypeKind(unwrappedTargetType, FixedPointType) {
 			if valueTypeOK {
 				CheckFixedPointLiteral(typedExpression, unwrappedTargetType, checker.report)
 			}
@@ -662,7 +648,7 @@ func (checker *Checker) checkTypeCompatibility(expression ast.Expression, valueT
 	case *ast.StringExpression:
 		unwrappedTargetType := UnwrapOptionalType(targetType)
 
-		if IsSubType(unwrappedTargetType, CharacterType) {
+		if IsSameTypeKind(unwrappedTargetType, CharacterType) {
 			checker.checkCharacterLiteral(typedExpression)
 
 			return true

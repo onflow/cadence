@@ -459,13 +459,6 @@ func TestCheckNeverInvocationExits(t *testing.T) {
 				exits:             false,
 				valueDeclarations: valueDeclarations,
 			},
-			{
-				body: `
-                  false || panic("")
-                `,
-				exits:             false,
-				valueDeclarations: valueDeclarations,
-			},
 		},
 	)
 }

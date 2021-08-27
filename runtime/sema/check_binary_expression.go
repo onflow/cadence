@@ -206,8 +206,8 @@ func (checker *Checker) checkBinaryExpressionArithmeticOrNonEqualityComparisonOr
 		panic(errors.NewUnreachableError())
 	}
 
-	leftIsNumber := IsSubType(leftType, expectedSuperType)
-	rightIsNumber := IsSubType(rightType, expectedSuperType)
+	leftIsNumber := IsSameTypeKind(leftType, expectedSuperType)
+	rightIsNumber := IsSameTypeKind(rightType, expectedSuperType)
 
 	reportedInvalidOperands := false
 
@@ -319,8 +319,8 @@ func (checker *Checker) checkBinaryExpressionBooleanLogic(
 ) Type {
 	// check both types are boolean subtypes
 
-	leftIsBool := IsSubType(leftType, BoolType)
-	rightIsBool := IsSubType(rightType, BoolType)
+	leftIsBool := IsSameTypeKind(leftType, BoolType)
+	rightIsBool := IsSameTypeKind(rightType, BoolType)
 
 	if !leftIsBool && !rightIsBool {
 		if !anyInvalid {

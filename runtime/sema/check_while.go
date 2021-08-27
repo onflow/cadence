@@ -25,20 +25,7 @@ import (
 
 func (checker *Checker) VisitWhileStatement(statement *ast.WhileStatement) ast.Repr {
 
-	testExpression := statement.Test
-	testType := checker.VisitExpression(testExpression, nil)
-
-	if !testType.IsInvalidType() &&
-		!IsSubType(testType, BoolType) {
-
-		checker.report(
-			&TypeMismatchError{
-				ExpectedType: BoolType,
-				ActualType:   testType,
-				Range:        ast.NewRangeFromPositioned(testExpression),
-			},
-		)
-	}
+	checker.VisitExpression(statement.Test, BoolType)
 
 	// The body of the loop will maybe be evaluated.
 	// That means that resource invalidations and

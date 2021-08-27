@@ -170,11 +170,9 @@ func (checker *Checker) VisitIntegerExpression(expression *ast.IntegerExpression
 	isAddress := false
 
 	// If the contextually expected type is a subtype of Integer or Address, then take that.
-	if expectedType == nil || IsSubType(expectedType, NeverType) {
-		actualType = IntType
-	} else if IsSubType(expectedType, IntegerType) {
+	if IsSameTypeKind(expectedType, IntegerType) {
 		actualType = expectedType
-	} else if IsSubType(expectedType, &AddressType{}) {
+	} else if IsSameTypeKind(expectedType, &AddressType{}) {
 		isAddress = true
 		CheckAddressLiteral(expression, checker.report)
 		actualType = expectedType
@@ -202,9 +200,7 @@ func (checker *Checker) VisitFixedPointExpression(expression *ast.FixedPointExpr
 
 	var actualType Type
 
-	if expectedType != nil &&
-		!IsSubType(expectedType, NeverType) &&
-		IsSubType(expectedType, FixedPointType) {
+	if IsSameTypeKind(expectedType, FixedPointType) {
 		actualType = expectedType
 	} else if expression.Negative {
 		actualType = Fix64Type
@@ -222,7 +218,7 @@ func (checker *Checker) VisitFixedPointExpression(expression *ast.FixedPointExpr
 func (checker *Checker) VisitStringExpression(expression *ast.StringExpression) ast.Repr {
 	expectedType := UnwrapOptionalType(checker.expectedType)
 
-	if expectedType != nil && IsSubType(expectedType, CharacterType) {
+	if IsSameTypeKind(expectedType, CharacterType) {
 		checker.checkCharacterLiteral(expression)
 		return expectedType
 	}

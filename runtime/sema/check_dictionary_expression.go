@@ -109,8 +109,8 @@ func IsValidDictionaryKeyType(keyType Type) bool {
 		case NeverType, BoolType, CharacterType, StringType:
 			return true
 		default:
-			return IsSubType(keyType, NumberType) ||
-				IsSubType(keyType, PathType)
+			return IsSameTypeKind(keyType, NumberType) ||
+				IsSameTypeKind(keyType, PathType)
 		}
 	}
 }
