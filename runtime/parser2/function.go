@@ -51,6 +51,9 @@ func parseParameterList(p *parser) (parameterList *ast.ParameterList) {
 		p.skipSpaceAndComments(true)
 		switch p.current.Type {
 		case lexer.TokenIdentifier:
+			if !expectParameter {
+				panic("expected comma, got start of parameter")
+			}
 			parameter := parseParameter(p)
 			parameters = append(parameters, parameter)
 			expectParameter = false
