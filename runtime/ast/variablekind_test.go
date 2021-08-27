@@ -19,7 +19,6 @@
 package ast
 
 import (
-	"encoding/json"
 	"fmt"
 	"testing"
 
@@ -32,7 +31,7 @@ func TestVariableKind_MarshalJSON(t *testing.T) {
 	t.Parallel()
 
 	for variableKind := VariableKind(0); variableKind < VariableKind(VariableKindCount()); variableKind++ {
-		actual, err := json.Marshal(variableKind)
+		actual, err := jsonMarshalAndVerify(variableKind)
 		require.NoError(t, err)
 
 		assert.JSONEq(t, fmt.Sprintf(`"%s"`, variableKind), string(actual))

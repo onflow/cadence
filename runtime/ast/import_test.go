@@ -19,7 +19,6 @@
 package ast
 
 import (
-	"encoding/json"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -47,7 +46,7 @@ func TestImportDeclaration_MarshalJSON(t *testing.T) {
 		},
 	}
 
-	actual, err := json.Marshal(ty)
+	actual, err := jsonMarshalAndVerify(ty)
 	require.NoError(t, err)
 
 	assert.JSONEq(t,

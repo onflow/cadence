@@ -19,7 +19,6 @@
 package ast
 
 import (
-	"encoding/json"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -45,7 +44,7 @@ func TestArgument_MarshalJSON(t *testing.T) {
 			TrailingSeparatorPos: Position{Offset: 7, Line: 8, Column: 9},
 		}
 
-		actual, err := json.Marshal(argument)
+		actual, err := jsonMarshalAndVerify(argument)
 		require.NoError(t, err)
 
 		assert.JSONEq(t,
@@ -84,7 +83,7 @@ func TestArgument_MarshalJSON(t *testing.T) {
 			TrailingSeparatorPos: Position{Offset: 13, Line: 14, Column: 15},
 		}
 
-		actual, err := json.Marshal(argument)
+		actual, err := jsonMarshalAndVerify(argument)
 		require.NoError(t, err)
 
 		assert.JSONEq(t,

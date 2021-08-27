@@ -19,7 +19,6 @@
 package ast
 
 import (
-	"encoding/json"
 	"math/big"
 	"testing"
 
@@ -42,7 +41,7 @@ func TestTypeAnnotation_MarshalJSON(t *testing.T) {
 		StartPos: Position{Offset: 4, Line: 5, Column: 6},
 	}
 
-	actual, err := json.Marshal(ty)
+	actual, err := jsonMarshalAndVerify(ty)
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
@@ -84,7 +83,7 @@ func TestNominalType_MarshalJSON(t *testing.T) {
 		},
 	}
 
-	actual, err := json.Marshal(ty)
+	actual, err := jsonMarshalAndVerify(ty)
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
@@ -125,7 +124,7 @@ func TestOptionalType_MarshalJSON(t *testing.T) {
 		EndPos: Position{Offset: 4, Line: 5, Column: 6},
 	}
 
-	actual, err := json.Marshal(ty)
+	actual, err := jsonMarshalAndVerify(ty)
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
@@ -167,7 +166,7 @@ func TestVariableSizedType_MarshalJSON(t *testing.T) {
 		},
 	}
 
-	actual, err := json.Marshal(ty)
+	actual, err := jsonMarshalAndVerify(ty)
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
@@ -217,7 +216,7 @@ func TestConstantSizedType_MarshalJSON(t *testing.T) {
 		},
 	}
 
-	actual, err := json.Marshal(ty)
+	actual, err := jsonMarshalAndVerify(ty)
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
@@ -272,7 +271,7 @@ func TestDictionaryType_MarshalJSON(t *testing.T) {
 		},
 	}
 
-	actual, err := json.Marshal(ty)
+	actual, err := jsonMarshalAndVerify(ty)
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
@@ -340,7 +339,7 @@ func TestFunctionType_MarshalJSON(t *testing.T) {
 		},
 	}
 
-	actual, err := json.Marshal(ty)
+	actual, err := jsonMarshalAndVerify(ty)
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
@@ -402,7 +401,7 @@ func TestReferenceType_MarshalJSON(t *testing.T) {
 		StartPos: Position{Offset: 4, Line: 5, Column: 6},
 	}
 
-	actual, err := json.Marshal(ty)
+	actual, err := jsonMarshalAndVerify(ty)
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
@@ -459,7 +458,7 @@ func TestRestrictedType_MarshalJSON(t *testing.T) {
 		},
 	}
 
-	actual, err := json.Marshal(ty)
+	actual, err := jsonMarshalAndVerify(ty)
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
@@ -543,7 +542,7 @@ func TestInstantiationType_MarshalJSON(t *testing.T) {
 		EndPos:                Position{Offset: 19, Line: 20, Column: 21},
 	}
 
-	actual, err := json.Marshal(ty)
+	actual, err := jsonMarshalAndVerify(ty)
 	require.NoError(t, err)
 
 	assert.JSONEq(t,

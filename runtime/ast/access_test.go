@@ -19,7 +19,6 @@
 package ast
 
 import (
-	"encoding/json"
 	"fmt"
 	"testing"
 
@@ -32,7 +31,7 @@ func TestAccess_MarshalJSON(t *testing.T) {
 	t.Parallel()
 
 	for access := Access(0); access < Access(AccessCount()); access++ {
-		actual, err := json.Marshal(access)
+		actual, err := jsonMarshalAndVerify(access)
 		require.NoError(t, err)
 
 		assert.JSONEq(t, fmt.Sprintf(`"%s"`, access), string(actual))

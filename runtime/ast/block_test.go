@@ -19,7 +19,6 @@
 package ast
 
 import (
-	"encoding/json"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -48,7 +47,7 @@ func TestBlock_MarshalJSON(t *testing.T) {
 		},
 	}
 
-	actual, err := json.Marshal(block)
+	actual, err := jsonMarshalAndVerify(block)
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
@@ -104,7 +103,7 @@ func TestFunctionBlock_MarshalJSON(t *testing.T) {
 			},
 		}
 
-		actual, err := json.Marshal(block)
+		actual, err := jsonMarshalAndVerify(block)
 		require.NoError(t, err)
 
 		assert.JSONEq(t,
@@ -189,7 +188,7 @@ func TestFunctionBlock_MarshalJSON(t *testing.T) {
 			},
 		}
 
-		actual, err := json.Marshal(block)
+		actual, err := jsonMarshalAndVerify(block)
 		require.NoError(t, err)
 
 		assert.JSONEq(t,

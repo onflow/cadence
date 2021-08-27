@@ -19,7 +19,6 @@
 package ast
 
 import (
-	"encoding/json"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -35,7 +34,7 @@ func TestTransfer_MarshalJSON(t *testing.T) {
 		Pos:       Position{Offset: 1, Line: 2, Column: 3},
 	}
 
-	actual, err := json.Marshal(expr)
+	actual, err := jsonMarshalAndVerify(expr)
 	require.NoError(t, err)
 
 	assert.JSONEq(t,

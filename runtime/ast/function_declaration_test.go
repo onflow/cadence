@@ -19,7 +19,6 @@
 package ast
 
 import (
-	"encoding/json"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -89,7 +88,7 @@ func TestFunctionDeclaration_MarshalJSON(t *testing.T) {
 		StartPos:  Position{Offset: 34, Line: 35, Column: 36},
 	}
 
-	actual, err := json.Marshal(expr)
+	actual, err := jsonMarshalAndVerify(expr)
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
@@ -232,7 +231,7 @@ func TestSpecialFunctionDeclaration_MarshalJSON(t *testing.T) {
 		},
 	}
 
-	actual, err := json.Marshal(expr)
+	actual, err := jsonMarshalAndVerify(expr)
 	require.NoError(t, err)
 
 	assert.JSONEq(t,

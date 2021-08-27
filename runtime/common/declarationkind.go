@@ -20,6 +20,8 @@ package common
 
 import (
 	"encoding/json"
+	"fmt"
+	"strings"
 
 	"github.com/onflow/cadence/runtime/errors"
 )
@@ -189,4 +191,42 @@ func (k DeclarationKind) Keywords() string {
 
 func (k DeclarationKind) MarshalJSON() ([]byte, error) {
 	return json.Marshal(k.String())
+}
+
+var declarationKindMap = map[string]DeclarationKind{
+	"DeclarationKindUnknown":            DeclarationKindUnknown,
+	"DeclarationKindValue":              DeclarationKindValue,
+	"DeclarationKindFunction":           DeclarationKindFunction,
+	"DeclarationKindVariable":           DeclarationKindVariable,
+	"DeclarationKindConstant":           DeclarationKindConstant,
+	"DeclarationKindType":               DeclarationKindType,
+	"DeclarationKindParameter":          DeclarationKindParameter,
+	"DeclarationKindArgumentLabel":      DeclarationKindArgumentLabel,
+	"DeclarationKindStructure":          DeclarationKindStructure,
+	"DeclarationKindResource":           DeclarationKindResource,
+	"DeclarationKindContract":           DeclarationKindContract,
+	"DeclarationKindEvent":              DeclarationKindEvent,
+	"DeclarationKindField":              DeclarationKindField,
+	"DeclarationKindInitializer":        DeclarationKindInitializer,
+	"DeclarationKindDestructor":         DeclarationKindDestructor,
+	"DeclarationKindStructureInterface": DeclarationKindStructureInterface,
+	"DeclarationKindResourceInterface":  DeclarationKindResourceInterface,
+	"DeclarationKindContractInterface":  DeclarationKindContractInterface,
+	"DeclarationKindImport":             DeclarationKindImport,
+	"DeclarationKindSelf":               DeclarationKindSelf,
+	"DeclarationKindTransaction":        DeclarationKindTransaction,
+	"DeclarationKindPrepare":            DeclarationKindPrepare,
+	"DeclarationKindExecute":            DeclarationKindExecute,
+	"DeclarationKindTypeParameter":      DeclarationKindTypeParameter,
+	"DeclarationKindPragma":             DeclarationKindPragma,
+	"DeclarationKindEnum":               DeclarationKindEnum,
+	"DeclarationKindEnumCase":           DeclarationKindEnumCase,
+}
+
+func (a *DeclarationKind) UnmarshalJSON(b []byte) error {
+	if c, ok := declarationKindMap[strings.Trim(string(b), `"`)]; ok {
+		*a = c
+		return nil
+	}
+	return fmt.Errorf("unknown DeclarationKind")
 }

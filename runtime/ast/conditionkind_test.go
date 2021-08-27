@@ -19,7 +19,6 @@
 package ast
 
 import (
-	"encoding/json"
 	"fmt"
 	"testing"
 
@@ -32,7 +31,7 @@ func TestConditionKind_MarshalJSON(t *testing.T) {
 	t.Parallel()
 
 	for conditionKind := ConditionKind(0); conditionKind < ConditionKind(ConditionKindCount()); conditionKind++ {
-		actual, err := json.Marshal(conditionKind)
+		actual, err := jsonMarshalAndVerify(conditionKind)
 		require.NoError(t, err)
 
 		assert.JSONEq(t, fmt.Sprintf(`"%s"`, conditionKind), string(actual))
