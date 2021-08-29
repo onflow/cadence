@@ -478,8 +478,9 @@ func TestInterpretGetType(t *testing.T) {
               let result = [].getType()
             `,
 			result: interpreter.TypeValue{
-				// TODO: not yet supported
-				Type: nil,
+				Type: interpreter.VariableSizedStaticType{
+					Type: interpreter.PrimitiveStaticTypeNever,
+				},
 			},
 		},
 	}

@@ -117,8 +117,8 @@ func TestInterpretContainerVariance(t *testing.T) {
 		_, err := inter.Invoke("test")
 		require.Error(t, err)
 
-		var typeMismatchErr interpreter.TypeMismatchError
-		require.ErrorAs(t, err, &typeMismatchErr)
+		var containerMutationErr interpreter.ContainerMutationError
+		require.ErrorAs(t, err, &containerMutationErr)
 	})
 
 	t.Run("invocation of struct function, value", func(t *testing.T) {
@@ -151,8 +151,8 @@ func TestInterpretContainerVariance(t *testing.T) {
 		_, err := inter.Invoke("test")
 		require.Error(t, err)
 
-		var typeMismatchErr interpreter.TypeMismatchError
-		require.ErrorAs(t, err, &typeMismatchErr)
+		var containerMutationErr interpreter.ContainerMutationError
+		require.ErrorAs(t, err, &containerMutationErr)
 	})
 
 	t.Run("field read, reference", func(t *testing.T) {
@@ -160,38 +160,38 @@ func TestInterpretContainerVariance(t *testing.T) {
 		t.Parallel()
 
 		inter := parseCheckAndInterpret(t, `
-          struct S1 {
-              var value: Int
+         struct S1 {
+             var value: Int
 
-              init() {
-                  self.value = 0
-              }
-          }
+             init() {
+                 self.value = 0
+             }
+         }
 
-          struct S2 {
-              priv var value: Int
+         struct S2 {
+             priv var value: Int
 
-              init() {
-                  self.value = 1
-              }
-          }
+             init() {
+                 self.value = 1
+             }
+         }
 
-          fun test(): Int {
-              let dict: {Int: &S1} = {}
-              let dictRef = &dict as &{Int: &AnyStruct}
+         fun test(): Int {
+             let dict: {Int: &S1} = {}
+             let dictRef = &dict as &{Int: &AnyStruct}
 
-              let s2 = S2()
-              dictRef[0] = &s2 as &AnyStruct
+             let s2 = S2()
+             dictRef[0] = &s2 as &AnyStruct
 
-              return dict.values[0].value
-          }
-        `)
+             return dict.values[0].value
+         }
+       `)
 
 		_, err := inter.Invoke("test")
 		require.Error(t, err)
 
-		var typeMismatchErr interpreter.TypeMismatchError
-		require.ErrorAs(t, err, &typeMismatchErr)
+		var containerMutationError interpreter.ContainerMutationError
+		require.ErrorAs(t, err, &containerMutationError)
 	})
 
 	t.Run("field read, value", func(t *testing.T) {
@@ -199,6 +199,44 @@ func TestInterpretContainerVariance(t *testing.T) {
 		t.Parallel()
 
 		inter := parseCheckAndInterpret(t, `
+         struct S1 {
+             var value: Int
+
+             init() {
+                 self.value = 0
+             }
+         }
+
+         struct S2 {
+             priv var value: Int
+
+             init() {
+                 self.value = 1
+             }
+         }
+
+         fun test(): Int {
+             let dict: {Int: S1} = {}
+             let dictRef = &dict as &{Int: AnyStruct}
+
+             dictRef[0] = S2()
+
+             return dict.values[0].value
+         }
+       `)
+
+		_, err := inter.Invoke("test")
+		require.Error(t, err)
+
+		var containerMutationError interpreter.ContainerMutationError
+		require.ErrorAs(t, err, &containerMutationError)
+	})
+
+	t.Run("field write, reference", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
           struct S1 {
               var value: Int
 
@@ -208,72 +246,34 @@ func TestInterpretContainerVariance(t *testing.T) {
           }
 
           struct S2 {
-              priv var value: Int
+              // field is only publicly readable, not writeable
+              pub var value: Int
 
               init() {
-                  self.value = 1
+                  self.value = 0
               }
           }
 
-          fun test(): Int {
-              let dict: {Int: S1} = {}
-              let dictRef = &dict as &{Int: AnyStruct}
+          fun test() {
+              let dict: {Int: &S1} = {}
 
-              dictRef[0] = S2()
+              let s2 = S2()
 
-              return dict.values[0].value
+              let dictRef = &dict as &{Int: &AnyStruct}
+              dictRef[0] = &s2 as &AnyStruct
+
+              dict.values[0].value = 1
+
+             // NOTE: intentionally not reading,
+             // the test checks writes
           }
         `)
 
 		_, err := inter.Invoke("test")
 		require.Error(t, err)
 
-		var typeMismatchErr interpreter.TypeMismatchError
-		require.ErrorAs(t, err, &typeMismatchErr)
-	})
-
-	t.Run("field write, reference", func(t *testing.T) {
-
-		t.Parallel()
-
-		inter := parseCheckAndInterpret(t, `
-	     struct S1 {
-	         var value: Int
-
-	         init() {
-	             self.value = 0
-	         }
-	     }
-
-	     struct S2 {
-	         // field is only publicly readable, not writeable
-	         pub var value: Int
-
-	         init() {
-	             self.value = 0
-	         }
-	     }
-
-	     fun test() {
-	         let dict: {Int: &S1} = {}
-
-	         let s2 = S2()
-
-	         let dictRef = &dict as &{Int: &AnyStruct}
-	         dictRef[0] = &s2 as &AnyStruct
-
-	         dict.values[0].value = 1
-
-             // NOTE: intentionally not reading,
-             // the test checks writes
-         }
-	   `)
-
-		_, err := inter.Invoke("test")
-		require.Error(t, err)
-
-		var typeMismatchErr interpreter.TypeMismatchError
-		require.ErrorAs(t, err, &typeMismatchErr)
+		var containerMutationError interpreter.ContainerMutationError
+		require.ErrorAs(t, err, &containerMutationError)
 	})
 
 	t.Run("field write, value", func(t *testing.T) {
@@ -281,41 +281,41 @@ func TestInterpretContainerVariance(t *testing.T) {
 		t.Parallel()
 
 		inter := parseCheckAndInterpret(t, `
-	     struct S1 {
-	         var value: Int
+          struct S1 {
+              var value: Int
 
-	         init() {
-	             self.value = 0
-	         }
-	     }
+              init() {
+                  self.value = 0
+              }
+          }
 
-	     struct S2 {
-	         // field is only publicly readable, not writeable
-	         pub var value: Int
+          struct S2 {
+              // field is only publicly readable, not writeable
+              pub var value: Int
 
-	         init() {
-	             self.value = 0
-	         }
-	     }
+              init() {
+                  self.value = 0
+              }
+          }
 
-	     fun test() {
-	         let dict: {Int: S1} = {}
-	         let dictRef = &dict as &{Int: AnyStruct}
+          fun test() {
+              let dict: {Int: S1} = {}
+              let dictRef = &dict as &{Int: AnyStruct}
 
-	         dictRef[0] = S2()
+              dictRef[0] = S2()
 
-	         dict.values[0].value = 1
+              dict.values[0].value = 1
 
              // NOTE: intentionally not reading,
              // the test checks writes
-         }
-	   `)
+          }
+        `)
 
 		_, err := inter.Invoke("test")
 		require.Error(t, err)
 
-		var typeMismatchErr interpreter.TypeMismatchError
-		require.ErrorAs(t, err, &typeMismatchErr)
+		var containerMutationError interpreter.ContainerMutationError
+		require.ErrorAs(t, err, &containerMutationError)
 	})
 
 	t.Run("value transfer", func(t *testing.T) {
@@ -342,8 +342,8 @@ func TestInterpretContainerVariance(t *testing.T) {
 		_, err := inter.Invoke("test")
 		require.Error(t, err)
 
-		var valueTransferTypeErr interpreter.ValueTransferTypeError
-		require.ErrorAs(t, err, &valueTransferTypeErr)
+		var containerMutationError interpreter.ContainerMutationError
+		require.ErrorAs(t, err, &containerMutationError)
 	})
 
 	t.Run("invocation of function, value", func(t *testing.T) {
@@ -372,8 +372,8 @@ func TestInterpretContainerVariance(t *testing.T) {
 		_, err := inter.Invoke("test")
 		require.Error(t, err)
 
-		var valueTransferTypeErr interpreter.ValueTransferTypeError
-		require.ErrorAs(t, err, &valueTransferTypeErr)
+		var containerMutationError interpreter.ContainerMutationError
+		require.ErrorAs(t, err, &containerMutationError)
 	})
 
 	t.Run("interpreted function argument", func(t *testing.T) {
@@ -396,8 +396,8 @@ func TestInterpretContainerVariance(t *testing.T) {
 		_, err := inter.Invoke("test")
 		require.Error(t, err)
 
-		var valueTransferTypeErr interpreter.ValueTransferTypeError
-		require.ErrorAs(t, err, &valueTransferTypeErr)
+		var containerMutationError interpreter.ContainerMutationError
+		require.ErrorAs(t, err, &containerMutationError)
 	})
 
 	t.Run("native function argument", func(t *testing.T) {
@@ -420,8 +420,8 @@ func TestInterpretContainerVariance(t *testing.T) {
 		_, err := inter.Invoke("test")
 		require.Error(t, err)
 
-		var valueTransferTypeErr interpreter.ValueTransferTypeError
-		require.ErrorAs(t, err, &valueTransferTypeErr)
+		var containerMutationError interpreter.ContainerMutationError
+		require.ErrorAs(t, err, &containerMutationError)
 	})
 
 }

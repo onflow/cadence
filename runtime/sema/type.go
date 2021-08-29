@@ -360,9 +360,7 @@ const ToBigEndianBytesFunctionName = "toBigEndianBytes"
 
 var toBigEndianBytesFunctionType = &FunctionType{
 	ReturnTypeAnnotation: NewTypeAnnotation(
-		&VariableSizedType{
-			Type: UInt8Type,
-		},
+		ByteArrayType,
 	),
 }
 
@@ -2357,6 +2355,13 @@ func (t *FunctionType) Equal(other Type) bool {
 		}
 	}
 
+	// Ensures that a constructor function type is
+	// NOT equal to a function type with the same parameters, return type, etc.
+
+	if t.IsConstructor != otherFunction.IsConstructor {
+		return false
+	}
+
 	// return type
 
 	if !t.ReturnTypeAnnotation.Type.
@@ -3065,9 +3070,7 @@ func init() {
 					Label:      ArgumentLabelNotRequired,
 					Identifier: "data",
 					TypeAnnotation: NewTypeAnnotation(
-						&VariableSizedType{
-							Type: UInt8Type,
-						},
+						ByteArrayType,
 					),
 				},
 			},
@@ -4480,9 +4483,7 @@ const AddressTypeToBytesFunctionName = `toBytes`
 
 var arrayTypeToBytesFunctionType = &FunctionType{
 	ReturnTypeAnnotation: NewTypeAnnotation(
-		&VariableSizedType{
-			Type: UInt8Type,
-		},
+		ByteArrayType,
 	),
 }
 
@@ -4872,12 +4873,22 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 
 		// Functions are covariant in their return type
 
-		if !IsSubType(
-			typedSubType.ReturnTypeAnnotation.Type,
-			typedSuperType.ReturnTypeAnnotation.Type,
-		) {
+		if typedSubType.ReturnTypeAnnotation != nil {
+			if typedSuperType.ReturnTypeAnnotation == nil {
+				return false
+			}
+
+			if !IsSubType(
+				typedSubType.ReturnTypeAnnotation.Type,
+				typedSuperType.ReturnTypeAnnotation.Type,
+			) {
+				return false
+			}
+		} else if typedSuperType.ReturnTypeAnnotation != nil {
 			return false
 		}
+
+		// Receiver type
 
 		if typedSubType.ReceiverType != nil {
 			if typedSuperType.ReceiverType == nil {
@@ -5792,6 +5803,7 @@ func init() {
 		AuthAccountContractsType,
 		PublicAccountType,
 		PublicAccountKeysType,
+		PublicAccountContractsType,
 	}
 
 	for _, semaType := range types {
@@ -5931,17 +5943,13 @@ var publicKeyVerifyFunctionType = &FunctionType{
 		{
 			Identifier: "signature",
 			TypeAnnotation: NewTypeAnnotation(
-				&VariableSizedType{
-					Type: UInt8Type,
-				},
+				ByteArrayType,
 			),
 		},
 		{
 			Identifier: "signedData",
 			TypeAnnotation: NewTypeAnnotation(
-				&VariableSizedType{
-					Type: UInt8Type,
-				},
+				ByteArrayType,
 			),
 		},
 		{

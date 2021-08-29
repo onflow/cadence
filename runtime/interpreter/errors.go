@@ -467,3 +467,32 @@ func (e ValueTransferTypeError) Error() string {
 		e.TargetType.QualifiedString(),
 	)
 }
+
+// ResourceConstructionError
+//
+type ResourceConstructionError struct {
+	CompositeType *sema.CompositeType
+	LocationRange
+}
+
+func (e ResourceConstructionError) Error() string {
+	return fmt.Sprintf(
+		"cannot create resource %s: outside of declaring location %s",
+		e.CompositeType.QualifiedString(),
+		e.CompositeType.Location.String(),
+	)
+}
+
+// ContainerMutationError
+//
+type ContainerMutationError struct {
+	ExpectedType sema.Type
+	LocationRange
+}
+
+func (e ContainerMutationError) Error() string {
+	return fmt.Sprintf(
+		"invalid container update: expected a subtype of '%s'",
+		e.ExpectedType.QualifiedString(),
+	)
+}

@@ -385,7 +385,8 @@ func (interpreter *Interpreter) VisitArrayExpression(expression *ast.ArrayExpres
 	values := interpreter.visitExpressionsNonCopying(expression.Values)
 
 	argumentTypes := interpreter.Program.Elaboration.ArrayExpressionArgumentTypes[expression]
-	elementType := interpreter.Program.Elaboration.ArrayExpressionElementType[expression]
+	arrayType := interpreter.Program.Elaboration.ArrayExpressionArrayType[expression]
+	elementType := arrayType.ElementType(false)
 
 	copies := make([]Value, len(values))
 	for i, argument := range values {
@@ -395,7 +396,9 @@ func (interpreter *Interpreter) VisitArrayExpression(expression *ast.ArrayExpres
 		copies[i] = interpreter.copyAndConvert(argument, argumentType, elementType, getLocationRange)
 	}
 
-	return NewArrayValueUnownedNonCopying(copies...)
+	arrayStaticType := ConvertSemaArrayTypeToStaticArrayType(arrayType)
+
+	return NewArrayValueUnownedNonCopying(arrayStaticType, copies...)
 }
 
 func (interpreter *Interpreter) VisitDictionaryExpression(expression *ast.DictionaryExpression) ast.Repr {
@@ -404,7 +407,10 @@ func (interpreter *Interpreter) VisitDictionaryExpression(expression *ast.Dictio
 	entryTypes := interpreter.Program.Elaboration.DictionaryExpressionEntryTypes[expression]
 	dictionaryType := interpreter.Program.Elaboration.DictionaryExpressionType[expression]
 
-	dictionary := NewDictionaryValueUnownedNonCopying()
+	dictionaryStaticType := ConvertSemaDictionaryTypeToStaticDictionaryType(dictionaryType)
+
+	dictionary := NewDictionaryValueUnownedNonCopying(interpreter, dictionaryStaticType)
+
 	for i, dictionaryEntryValues := range values {
 		entryType := entryTypes[i]
 		entry := expression.Entries[i]
@@ -672,7 +678,7 @@ func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingEx
 	switch expression.Operation {
 	case ast.OperationFailableCast, ast.OperationForceCast:
 		dynamicType := value.DynamicType(interpreter, SeenReferences{})
-		isSubType := IsSubType(dynamicType, expectedType)
+		isSubType := interpreter.IsSubType(dynamicType, expectedType)
 
 		switch expression.Operation {
 		case ast.OperationFailableCast:

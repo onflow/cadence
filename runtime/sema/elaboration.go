@@ -58,7 +58,7 @@ type Elaboration struct {
 	MemberExpressionMemberInfos         map[*ast.MemberExpression]MemberInfo
 	MemberExpressionExpectedTypes       map[*ast.MemberExpression]Type
 	ArrayExpressionArgumentTypes        map[*ast.ArrayExpression][]Type
-	ArrayExpressionElementType          map[*ast.ArrayExpression]Type
+	ArrayExpressionArrayType            map[*ast.ArrayExpression]ArrayType
 	DictionaryExpressionType            map[*ast.DictionaryExpression]*DictionaryType
 	DictionaryExpressionEntryTypes      map[*ast.DictionaryExpression][]DictionaryEntryType
 	IntegerExpressionType               map[*ast.IntegerExpression]Type
@@ -113,7 +113,7 @@ func NewElaboration() *Elaboration {
 		MemberExpressionMemberInfos:         map[*ast.MemberExpression]MemberInfo{},
 		MemberExpressionExpectedTypes:       map[*ast.MemberExpression]Type{},
 		ArrayExpressionArgumentTypes:        map[*ast.ArrayExpression][]Type{},
-		ArrayExpressionElementType:          map[*ast.ArrayExpression]Type{},
+		ArrayExpressionArrayType:            map[*ast.ArrayExpression]ArrayType{},
 		DictionaryExpressionType:            map[*ast.DictionaryExpression]*DictionaryType{},
 		DictionaryExpressionEntryTypes:      map[*ast.DictionaryExpression][]DictionaryEntryType{},
 		IntegerExpressionType:               map[*ast.IntegerExpression]Type{},

@@ -131,6 +131,7 @@ type testRuntimeInterface struct {
 	programs                   map[common.LocationID]*interpreter.Program
 	implementationDebugLog     func(message string) error
 	validatePublicKey          func(publicKey *PublicKey) (bool, error)
+	getAccountContractNames    func(address Address) ([]string, error)
 }
 
 // testRuntimeInterface should implement Interface
@@ -389,6 +390,14 @@ func (i *testRuntimeInterface) ValidatePublicKey(key *PublicKey) (bool, error) {
 	}
 
 	return i.validatePublicKey(key)
+}
+
+func (i *testRuntimeInterface) GetAccountContractNames(address Address) ([]string, error) {
+	if i.getAccountContractNames == nil {
+		return []string{}, nil
+	}
+
+	return i.getAccountContractNames(address)
 }
 
 func TestRuntimeImport(t *testing.T) {
@@ -940,8 +949,8 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
 			},
 			check: func(t *testing.T, err error) {
 				assert.Error(t, err)
-				assert.IsType(t, &InvalidEntryPointArgumentError{}, errors.Unwrap(err))
-				assert.IsType(t, &InvalidValueTypeError{}, errors.Unwrap(errors.Unwrap(err)))
+				var argErr interpreter.ContainerMutationError
+				require.ErrorAs(t, err, &argErr)
 			},
 		},
 		{
@@ -1227,8 +1236,8 @@ func TestRuntimeScriptArguments(t *testing.T) {
 			},
 			check: func(t *testing.T, err error) {
 				assert.Error(t, err)
-				assert.IsType(t, &InvalidEntryPointArgumentError{}, errors.Unwrap(err))
-				assert.IsType(t, &InvalidValueTypeError{}, errors.Unwrap(errors.Unwrap(err)))
+				var argErr interpreter.ContainerMutationError
+				require.ErrorAs(t, err, &argErr)
 			},
 		},
 		{
@@ -6493,7 +6502,7 @@ func TestRuntimeGetCapability(t *testing.T) {
 
 		require.Error(t, err)
 
-		var typeErr interpreter.TypeMismatchError
+		var typeErr interpreter.ContainerMutationError
 		require.ErrorAs(t, err, &typeErr)
 	})
 
@@ -6528,7 +6537,7 @@ func TestRuntimeGetCapability(t *testing.T) {
 
 		require.Error(t, err)
 
-		var typeErr interpreter.TypeMismatchError
+		var typeErr interpreter.ContainerMutationError
 		require.ErrorAs(t, err, &typeErr)
 	})
 

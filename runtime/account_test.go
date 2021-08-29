@@ -1263,3 +1263,284 @@ func TestPublicKey(t *testing.T) {
 	})
 
 }
+
+func TestAuthAccountContracts(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("get names", func(t *testing.T) {
+		t.Parallel()
+
+		rt := NewInterpreterRuntime()
+
+		script := []byte(`
+            transaction {
+                prepare(signer: AuthAccount) {
+                    let names = signer.contracts.names
+
+                    assert(names.isInstance(Type<[String]>()))
+                    assert(names.length == 2)
+                }
+            }
+        `)
+
+		invoked := false
+
+		runtimeInterface := &testRuntimeInterface{
+			getSigningAccounts: func() ([]Address, error) {
+				return []Address{{42}}, nil
+			},
+			getAccountContractNames: func(_ Address) ([]string, error) {
+				invoked = true
+				return []string{"foo", "bar"}, nil
+			},
+		}
+
+		nextTransactionLocation := newTransactionLocationGenerator()
+
+		err := rt.ExecuteTransaction(
+			Script{
+				Source: script,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+
+		require.NoError(t, err)
+		assert.True(t, invoked)
+	})
+
+	t.Run("update names", func(t *testing.T) {
+		t.Parallel()
+
+		rt := NewInterpreterRuntime()
+
+		script := []byte(`
+            transaction {
+                prepare(signer: AuthAccount) {
+                    signer.contracts.names[0] = "baz"
+                    assert(signer.contracts.names[0] == "foo")
+                }
+            }
+        `)
+
+		runtimeInterface := &testRuntimeInterface{
+			getSigningAccounts: func() ([]Address, error) {
+				return []Address{{42}}, nil
+			},
+			getAccountContractNames: func(_ Address) ([]string, error) {
+				return []string{"foo", "bar"}, nil
+			},
+		}
+
+		nextTransactionLocation := newTransactionLocationGenerator()
+
+		err := rt.ExecuteTransaction(
+			Script{
+				Source: script,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+
+		require.NoError(t, err)
+	})
+}
+
+func TestPublicAccountContracts(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("get contract", func(t *testing.T) {
+		t.Parallel()
+
+		rt := NewInterpreterRuntime()
+
+		script := []byte(`
+            pub fun main(): [AnyStruct] {
+                let acc = getAccount(0x02)
+                let deployedContract: DeployedContract? = acc.contracts.get(name: "foo")
+
+                return [deployedContract!.name, deployedContract!.code]
+            }
+        `)
+
+		invoked := false
+
+		runtimeInterface := &testRuntimeInterface{
+			getSigningAccounts: func() ([]Address, error) {
+				return []Address{{42}}, nil
+			},
+			getAccountContractCode: func(address Address, name string) ([]byte, error) {
+				invoked = true
+				return []byte{1, 2}, nil
+			},
+		}
+
+		nextTransactionLocation := newTransactionLocationGenerator()
+
+		result, err := rt.ExecuteScript(
+			Script{
+				Source: script,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+
+		require.NoError(t, err)
+		assert.True(t, invoked)
+
+		require.IsType(t, cadence.Array{}, result)
+		array := result.(cadence.Array)
+
+		require.Len(t, array.Values, 2)
+
+		assert.Equal(t, cadence.String("foo"), array.Values[0])
+		assert.Equal(t,
+			cadence.Array{
+				Values: []cadence.Value{
+					cadence.UInt8(1),
+					cadence.UInt8(2),
+				},
+			},
+			array.Values[1],
+		)
+	})
+
+	t.Run("get non existing contract", func(t *testing.T) {
+		t.Parallel()
+
+		rt := NewInterpreterRuntime()
+
+		script := []byte(`
+            pub fun main() {
+                let acc = getAccount(0x02)
+                assert(acc.contracts.get(name: "foo") == nil)
+            }
+        `)
+
+		invoked := false
+
+		runtimeInterface := &testRuntimeInterface{
+			getSigningAccounts: func() ([]Address, error) {
+				return []Address{{42}}, nil
+			},
+			getAccountContractCode: func(address Address, name string) ([]byte, error) {
+				invoked = true
+				return nil, nil
+			},
+		}
+
+		nextTransactionLocation := newTransactionLocationGenerator()
+
+		_, err := rt.ExecuteScript(
+			Script{
+				Source: script,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+
+		require.NoError(t, err)
+		assert.True(t, invoked)
+	})
+
+	t.Run("get names", func(t *testing.T) {
+		t.Parallel()
+
+		rt := NewInterpreterRuntime()
+
+		script := []byte(`
+            pub fun main(): [String] {
+                let acc = getAccount(0x02)
+                return acc.contracts.names
+            }
+        `)
+
+		invoked := false
+
+		runtimeInterface := &testRuntimeInterface{
+			getSigningAccounts: func() ([]Address, error) {
+				return []Address{{42}}, nil
+			},
+			getAccountContractNames: func(_ Address) ([]string, error) {
+				invoked = true
+				return []string{"foo", "bar"}, nil
+			},
+		}
+
+		nextTransactionLocation := newTransactionLocationGenerator()
+
+		result, err := rt.ExecuteScript(
+			Script{
+				Source: script,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+
+		require.NoError(t, err)
+		assert.True(t, invoked)
+
+		require.IsType(t, cadence.Array{}, result)
+		array := result.(cadence.Array)
+
+		require.Len(t, array.Values, 2)
+		assert.Equal(t, cadence.String("foo"), array.Values[0])
+		assert.Equal(t, cadence.String("bar"), array.Values[1])
+	})
+
+	t.Run("update names", func(t *testing.T) {
+		t.Parallel()
+
+		rt := NewInterpreterRuntime()
+
+		script := []byte(`
+            pub fun main(): [String] {
+                let acc = getAccount(0x02)
+                acc.contracts.names[0] = "baz"
+                return acc.contracts.names
+            }
+        `)
+
+		runtimeInterface := &testRuntimeInterface{
+			getSigningAccounts: func() ([]Address, error) {
+				return []Address{{42}}, nil
+			},
+			getAccountContractNames: func(_ Address) ([]string, error) {
+				return []string{"foo", "bar"}, nil
+			},
+		}
+
+		nextTransactionLocation := newTransactionLocationGenerator()
+
+		result, err := rt.ExecuteScript(
+			Script{
+				Source: script,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+
+		require.NoError(t, err)
+
+		require.IsType(t, cadence.Array{}, result)
+		array := result.(cadence.Array)
+
+		require.Len(t, array.Values, 2)
+		assert.Equal(t, cadence.String("foo"), array.Values[0])
+		assert.Equal(t, cadence.String("bar"), array.Values[1])
+	})
+}

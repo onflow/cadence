@@ -70,7 +70,7 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 
 		codeHashValue := event.Fields[codeHashParameterIndex]
 
-		codeHash, err := importValue(nil, codeHashValue)
+		codeHash, err := importValue(nil, codeHashValue, sema.ByteArrayType)
 		require.NoError(t, err)
 
 		actualCodeHash, err := interpreter.ByteArrayValueToByteSlice(codeHash)

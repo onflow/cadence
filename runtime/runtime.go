@@ -196,7 +196,7 @@ func (r *interpreterRuntime) ExecuteScript(script Script, context Context) (cade
 		script.Source,
 		context,
 		functions,
-		stdlib.BuiltinValues,
+		stdlib.BuiltinValues(),
 		checkerOptions,
 		true,
 		importResolutionResults{},
@@ -241,7 +241,7 @@ func (r *interpreterRuntime) ExecuteScript(script Script, context Context) (cade
 		context,
 		runtimeStorage,
 		functions,
-		stdlib.BuiltinValues,
+		stdlib.BuiltinValues(),
 		interpreterOptions,
 		checkerOptions,
 		interpret,
@@ -404,7 +404,7 @@ func (r *interpreterRuntime) InvokeContractFunction(
 		context,
 		runtimeStorage,
 		functions,
-		stdlib.BuiltinValues,
+		stdlib.BuiltinValues(),
 		interpreterOptions,
 		checkerOptions,
 		nil,
@@ -514,7 +514,7 @@ func (r *interpreterRuntime) ExecuteTransaction(script Script, context Context) 
 		script.Source,
 		context,
 		functions,
-		stdlib.BuiltinValues,
+		stdlib.BuiltinValues(),
 		checkerOptions,
 		true,
 		importResolutionResults{},
@@ -583,7 +583,7 @@ func (r *interpreterRuntime) ExecuteTransaction(script Script, context Context) 
 		context,
 		runtimeStorage,
 		functions,
-		stdlib.BuiltinValues,
+		stdlib.BuiltinValues(),
 		interpreterOptions,
 		checkerOptions,
 		r.transactionExecutionFunction(
@@ -700,7 +700,7 @@ func validateArgumentParams(
 			}
 		}
 
-		arg, err := importValue(inter, value)
+		arg, err := importValue(inter, value, parameterType)
 		if err != nil {
 			return nil, &InvalidEntryPointArgumentError{
 				Index: i,
@@ -718,7 +718,7 @@ func validateArgumentParams(
 		}
 
 		// Check that decoded value is a subtype of static parameter type
-		if !interpreter.IsSubType(dynamicType, parameterType) {
+		if !inter.IsSubType(dynamicType, parameterType) {
 			return nil, &InvalidEntryPointArgumentError{
 				Index: i,
 				Err: &InvalidValueTypeError{
@@ -738,10 +738,47 @@ func validateArgumentParams(
 			}
 		}
 
+		// Ensure static type info is available for all values
+		interpreter.InspectValue(arg, func(value interpreter.Value) bool {
+			if value == nil {
+				return true
+			}
+
+			if !hasValidStaticType(value) {
+				panic(fmt.Errorf("invalid static type for argument: %d", i))
+			}
+
+			return true
+		})
+
 		argumentValues[i] = arg
 	}
 
 	return argumentValues, nil
+}
+
+func hasValidStaticType(value interpreter.Value) bool {
+	switch value := value.(type) {
+	case *interpreter.ArrayValue:
+		switch value.StaticType().(type) {
+		case interpreter.ConstantSizedStaticType, interpreter.VariableSizedStaticType:
+			return true
+		default:
+			return false
+		}
+	case *interpreter.DictionaryValue:
+		dictionaryType, ok := value.StaticType().(interpreter.DictionaryStaticType)
+		if !ok {
+			return false
+		}
+
+		return dictionaryType.KeyType != nil &&
+			dictionaryType.ValueType != nil
+	default:
+		// For other values, static type is NOT inferred.
+		// Hence no need to validate it here.
+		return value.StaticType() != nil
+	}
 }
 
 // ParseAndCheckProgram parses the given code and checks it.
@@ -766,7 +803,7 @@ func (r *interpreterRuntime) ParseAndCheckProgram(code []byte, context Context) 
 		code,
 		context,
 		functions,
-		stdlib.BuiltinValues,
+		stdlib.BuiltinValues(),
 		checkerOptions,
 		true,
 		importResolutionResults{},
@@ -1813,6 +1850,7 @@ func (r *interpreterRuntime) getPublicAccount(
 		storageUsedGetFunction(accountAddress, runtimeInterface, runtimeStorage),
 		storageCapacityGetFunction(accountAddress, runtimeInterface),
 		r.newPublicAccountKeys(accountAddress, runtimeInterface),
+		r.newPublicAccountContracts(accountAddress, runtimeInterface),
 	)
 }
 
@@ -1932,7 +1970,7 @@ func (r *interpreterRuntime) newAuthAccountContracts(
 			checkerOptions,
 			true,
 		),
-		r.newAuthAccountContractsGetFunction(
+		r.newAccountContractsGetFunction(
 			addressValue,
 			context.Interface,
 		),
@@ -1940,6 +1978,10 @@ func (r *interpreterRuntime) newAuthAccountContracts(
 			addressValue,
 			context.Interface,
 			runtimeStorage,
+		),
+		r.newAccountContractsGetNamesFunction(
+			addressValue,
+			context.Interface,
 		),
 	)
 }
@@ -2085,7 +2127,7 @@ func (r *interpreterRuntime) newAuthAccountContractsChangeFunction(
 				code,
 				context,
 				functions,
-				stdlib.BuiltinValues,
+				stdlib.BuiltinValues(),
 				checkerOptions,
 				storeProgram,
 				importResolutionResults{},
@@ -2291,7 +2333,7 @@ func (r *interpreterRuntime) updateAccountContractCode(
 	if createContract {
 
 		functions := r.standardLibraryFunctions(context, runtimeStorage, interpreterOptions, checkerOptions)
-		values := stdlib.BuiltinValues
+		values := stdlib.BuiltinValues()
 
 		contractValue, err = r.instantiateContract(
 			program,
@@ -2336,7 +2378,7 @@ func (r *interpreterRuntime) updateAccountContractCode(
 	return nil
 }
 
-func (r *interpreterRuntime) newAuthAccountContractsGetFunction(
+func (r *interpreterRuntime) newAccountContractsGetFunction(
 	addressValue interpreter.AddressValue,
 	runtimeInterface Interface,
 ) *interpreter.HostFunctionValue {
@@ -2462,6 +2504,36 @@ func (r *interpreterRuntime) newAuthAccountContractsRemoveFunction(
 	)
 }
 
+func (r *interpreterRuntime) newAccountContractsGetNamesFunction(
+	addressValue interpreter.AddressValue,
+	runtimeInterface Interface,
+) func() *interpreter.ArrayValue {
+	address := addressValue.ToAddress()
+
+	return func() *interpreter.ArrayValue {
+		var names []string
+		var err error
+		wrapPanic(func() {
+			names, err = runtimeInterface.GetAccountContractNames(address)
+		})
+		if err != nil {
+			panic(err)
+		}
+
+		values := make([]interpreter.Value, len(names))
+		for i, name := range names {
+			values[i] = interpreter.NewStringValue(name)
+		}
+
+		return interpreter.NewArrayValueUnownedNonCopying(
+			interpreter.VariableSizedStaticType{
+				Type: interpreter.PrimitiveStaticTypeString,
+			},
+			values...,
+		)
+	}
+}
+
 func (r *interpreterRuntime) onStatementHandler() interpreter.OnStatementFunc {
 	if r.coverageReport == nil {
 		return nil
@@ -2523,9 +2595,7 @@ func (r *interpreterRuntime) ReadLinked(address common.Address, path cadence.Pat
 				&sema.ReferenceType{
 					Type: sema.AnyType,
 				},
-				func() interpreter.LocationRange {
-					return interpreter.LocationRange{}
-				},
+				interpreter.ReturnEmptyLocationRange,
 			)
 			if err != nil {
 				return nil, err
@@ -2550,7 +2620,10 @@ func NewBlockValue(block Block) interpreter.BlockValue {
 	for i, b := range block.Hash {
 		values[i] = interpreter.UInt8Value(b)
 	}
-	idValue := interpreter.NewArrayValue(values)
+	idValue := interpreter.NewArrayValueUnownedNonCopying(
+		interpreter.ByteArrayStaticType,
+		values...,
+	)
 
 	// timestamp
 	// TODO: verify
@@ -2692,6 +2765,23 @@ func (r *interpreterRuntime) newPublicAccountKeys(addressValue interpreter.Addre
 		r.newAccountKeysGetFunction(
 			addressValue,
 			runtimeInterface,
+		),
+	)
+}
+
+func (r *interpreterRuntime) newPublicAccountContracts(
+	addressValue interpreter.AddressValue,
+	inter Interface,
+) *interpreter.CompositeValue {
+	return interpreter.NewPublicAccountContractsValue(
+		addressValue,
+		r.newAccountContractsGetFunction(
+			addressValue,
+			inter,
+		),
+		r.newAccountContractsGetNamesFunction(
+			addressValue,
+			inter,
 		),
 	)
 }

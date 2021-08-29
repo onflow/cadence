@@ -65,9 +65,7 @@ var DeployedContractType = &SimpleType{
 					return NewPublicConstantFieldMember(
 						t,
 						identifier,
-						&VariableSizedType{
-							Type: UInt8Type,
-						},
+						ByteArrayType,
 						deployedContractTypeCodeFieldDocString,
 					)
 				},

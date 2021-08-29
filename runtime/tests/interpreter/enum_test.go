@@ -118,6 +118,9 @@ func TestInterpretEnumCaseEquality(t *testing.T) {
 
 	require.Equal(t,
 		interpreter.NewArrayValueUnownedNonCopying(
+			interpreter.VariableSizedStaticType{
+				Type: interpreter.PrimitiveStaticTypeBool,
+			},
 			interpreter.BoolValue(true),
 			interpreter.BoolValue(true),
 			interpreter.BoolValue(true),
@@ -144,6 +147,9 @@ func TestInterpretEnumConstructor(t *testing.T) {
 
 	require.Equal(t,
 		interpreter.NewArrayValueUnownedNonCopying(
+			interpreter.VariableSizedStaticType{
+				Type: interpreter.PrimitiveStaticTypeBool,
+			},
 			interpreter.BoolValue(true),
 			interpreter.BoolValue(true),
 			interpreter.BoolValue(true),
@@ -169,6 +175,9 @@ func TestInterpretEnumInstance(t *testing.T) {
 
 	require.Equal(t,
 		interpreter.NewArrayValueUnownedNonCopying(
+			interpreter.VariableSizedStaticType{
+				Type: interpreter.PrimitiveStaticTypeBool,
+			},
 			interpreter.BoolValue(true),
 			interpreter.BoolValue(true),
 		),

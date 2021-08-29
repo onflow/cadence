@@ -56,9 +56,10 @@ func _() {
 	_ = x[PrimitiveStaticTypePublicAccount-91]
 	_ = x[PrimitiveStaticTypeDeployedContract-92]
 	_ = x[PrimitiveStaticTypeAuthAccountContracts-93]
+	_ = x[PrimitiveStaticTypePublicAccountContracts-94]
 }
 
-const _PrimitiveStaticType_name = "UnknownVoidAnyNeverAnyStructAnyResourceBoolAddressStringCharacterMetaTypeBlockNumberSignedNumberIntegerSignedIntegerFixedPointSignedFixedPointIntInt8Int16Int32Int64Int128Int256UIntUInt8UInt16UInt32UInt64UInt128UInt256Word8Word16Word32Word64Fix64UFix64PathCapabilityStoragePathCapabilityPathPublicPathPrivatePathAuthAccountPublicAccountDeployedContractAuthAccountContracts"
+const _PrimitiveStaticType_name = "UnknownVoidAnyNeverAnyStructAnyResourceBoolAddressStringCharacterMetaTypeBlockNumberSignedNumberIntegerSignedIntegerFixedPointSignedFixedPointIntInt8Int16Int32Int64Int128Int256UIntUInt8UInt16UInt32UInt64UInt128UInt256Word8Word16Word32Word64Fix64UFix64PathCapabilityStoragePathCapabilityPathPublicPathPrivatePathAuthAccountPublicAccountDeployedContractAuthAccountContractsPublicAccountContracts"
 
 var _PrimitiveStaticType_map = map[PrimitiveStaticType]string{
 	0:  _PrimitiveStaticType_name[0:7],
@@ -109,6 +110,7 @@ var _PrimitiveStaticType_map = map[PrimitiveStaticType]string{
 	91: _PrimitiveStaticType_name[322:335],
 	92: _PrimitiveStaticType_name[335:351],
 	93: _PrimitiveStaticType_name[351:371],
+	94: _PrimitiveStaticType_name[371:393],
 }
 
 func (i PrimitiveStaticType) String() string {

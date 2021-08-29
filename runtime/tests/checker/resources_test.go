@@ -4955,3 +4955,50 @@ func TestCheckFunctionDefinitelyHaltedNoResourceLoss(t *testing.T) {
 		require.NoError(t, err)
 	})
 }
+
+func TestCheckOptionalResourceBindingWithSecondValue(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+      resource R {
+          let field: Int
+
+          init() {
+              self.field = 1
+          }
+      }
+
+      resource Test {
+
+          var r: @R?
+
+          init() {
+              self.r <- create R()
+          }
+
+          destroy () {
+              destroy self.r
+          }
+
+          fun duplicate(): @R? {
+              if let r <- self.r <- nil {
+                  let r2 <- self.r <- nil
+                  self.r <-! r2
+                  return <-r
+              } else {
+                  return nil
+              }
+          }
+      }
+
+      fun test() {
+          let test <- create Test()
+          let copy <- test.duplicate()
+
+          destroy copy
+          destroy test
+      }
+    `)
+	require.NoError(t, err)
+}

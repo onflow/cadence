@@ -1121,8 +1121,9 @@ func TestInterpretDynamicCastingArray(t *testing.T) {
 						inter := parseCheckAndInterpret(t,
 							fmt.Sprintf(
 								`
-                                  let x: %[1]s = [42]
-                                  let y: %[2]s? = x %[3]s %[2]s
+                                  let x: [Int] = [42]
+                                  let y: %[1]s = x
+                                  let z: %[2]s? = y %[3]s %[2]s
                                 `,
 								fromType,
 								targetType,
@@ -1130,20 +1131,30 @@ func TestInterpretDynamicCastingArray(t *testing.T) {
 							),
 						)
 
-						expectedValue := interpreter.NewArrayValueUnownedNonCopying(
+						expectedElements := []interpreter.Value{
 							interpreter.NewIntValueFromInt64(42),
-						)
+						}
+
+						yValue := inter.Globals["y"].GetValue()
+						require.IsType(t, yValue, &interpreter.ArrayValue{})
+						yArray := yValue.(*interpreter.ArrayValue)
 
 						assert.Equal(t,
-							expectedValue,
-							inter.Globals["x"].GetValue(),
+							expectedElements,
+							yArray.Elements(),
 						)
 
+						zValue := inter.Globals["z"].GetValue()
+						require.IsType(t, zValue, &interpreter.SomeValue{})
+						zSome := zValue.(*interpreter.SomeValue)
+
+						innerValue := zSome.Value
+						require.IsType(t, innerValue, &interpreter.ArrayValue{})
+						innerArray := innerValue.(*interpreter.ArrayValue)
+
 						assert.Equal(t,
-							interpreter.NewSomeValueOwningNonCopying(
-								expectedValue,
-							),
-							inter.Globals["y"].GetValue(),
+							expectedElements,
+							innerArray.Elements(),
 						)
 					})
 				}
@@ -1179,11 +1190,40 @@ func TestInterpretDynamicCastingArray(t *testing.T) {
 								result,
 							)
 						} else {
+							require.Error(t, err)
 							require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
 						}
 					})
 				}
 			}
+
+			t.Run("invalid upcast", func(t *testing.T) {
+
+				inter := parseCheckAndInterpret(t,
+					fmt.Sprintf(
+						`
+		                  fun test(): [Int]? {
+		                      let x: [AnyStruct] = []
+		                      return x %s [Int]
+		                  }
+		                `,
+						operation.Symbol(),
+					),
+				)
+
+				result, err := inter.Invoke("test")
+
+				if returnsOptional {
+					require.NoError(t, err)
+					assert.Equal(t,
+						interpreter.NilValue{},
+						result,
+					)
+				} else {
+					require.Error(t, err)
+					require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
+				}
+			})
 		})
 	}
 }
@@ -1226,6 +1266,11 @@ func TestInterpretDynamicCastingDictionary(t *testing.T) {
 						)
 
 						expectedValue := interpreter.NewDictionaryValueUnownedNonCopying(
+							newTestInterpreter(t),
+							interpreter.DictionaryStaticType{
+								KeyType:   interpreter.PrimitiveStaticTypeString,
+								ValueType: interpreter.PrimitiveStaticTypeInt,
+							},
 							interpreter.NewStringValue("test"), interpreter.NewIntValueFromInt64(42),
 						).Copy()
 
@@ -1275,11 +1320,40 @@ func TestInterpretDynamicCastingDictionary(t *testing.T) {
 								result,
 							)
 						} else {
+							require.Error(t, err)
 							require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
 						}
 					})
 				}
 			}
+
+			t.Run("invalid upcast", func(t *testing.T) {
+
+				inter := parseCheckAndInterpret(t,
+					fmt.Sprintf(
+						`
+		                  fun test(): {Int: String}? {
+		                      let x: {Int: AnyStruct} = {}
+		                      return x %s {Int: String}
+		                  }
+		                `,
+						operation.Symbol(),
+					),
+				)
+
+				result, err := inter.Invoke("test")
+
+				if returnsOptional {
+					require.NoError(t, err)
+					assert.Equal(t,
+						interpreter.NilValue{},
+						result,
+					)
+				} else {
+					require.Error(t, err)
+					require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
+				}
+			})
 		})
 	}
 }
@@ -3435,5 +3509,32 @@ func TestInterpretDynamicCastingCapability(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestInterpretResourceConstructorCast(t *testing.T) {
+
+	t.Parallel()
+
+	for operation, returnsOptional := range dynamicCastingOperations {
+		inter := parseCheckAndInterpret(t,
+			fmt.Sprintf(`
+                  resource R {}
+
+                  fun test(): AnyStruct {
+                      return R %s ((): @R)
+                  }
+                `,
+				operation.Symbol(),
+			),
+		)
+
+		result, err := inter.Invoke("test")
+		if returnsOptional {
+			require.NoError(t, err)
+			require.Equal(t, interpreter.NilValue{}, result)
+		} else {
+			require.Error(t, err)
+		}
 	}
 }

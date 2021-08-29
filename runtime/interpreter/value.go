@@ -100,7 +100,7 @@ type ConcatenatableValue interface {
 
 type AllAppendableValue interface {
 	Value
-	AppendAll(other AllAppendableValue)
+	AppendAll(inter *Interpreter, getLocationRange func() LocationRange, other AllAppendableValue)
 }
 
 // EquatableValue
@@ -602,6 +602,8 @@ func (*StringValue) IsStorable() bool {
 	return true
 }
 
+var ByteArrayStaticType = ConvertSemaArrayTypeToStaticArrayType(sema.ByteArrayType)
+
 // DecodeHex hex-decodes this string and returns an array of UInt8 values
 //
 func (v *StringValue) DecodeHex() *ArrayValue {
@@ -617,7 +619,7 @@ func (v *StringValue) DecodeHex() *ArrayValue {
 		values[i] = UInt8Value(b)
 	}
 
-	return NewArrayValueUnownedNonCopying(values...)
+	return NewArrayValueUnownedNonCopying(ByteArrayStaticType, values...)
 }
 
 func (*StringValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -632,13 +634,19 @@ func (*StringValue) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicTyp
 // ArrayValue
 
 type ArrayValue struct {
+	Type     ArrayStaticType
 	values   []Value
 	Owner    *common.Address
 	modified bool
 
 	// Raw element content cache for decoded values.
-	// Only available for decoded values who's elements are not loaded yet.
+	// Includes meta-info (type info, etc) as well as the elements content.
+	// Only available for decoded arrays who's elements are not loaded yet.
 	content []byte
+
+	// Raw content cache for elements.
+	// Only available for decoded arrays who's elements are not loaded yet.
+	elementsContent []byte
 
 	// Value's path to be used during decoding.
 	// Only available for decoded values who's elements are not loaded yet.
@@ -653,13 +661,7 @@ type ArrayValue struct {
 	encodingVersion uint16
 }
 
-func NewArrayValue(values []Value) *ArrayValue {
-	return &ArrayValue{
-		values: values,
-	}
-}
-
-func NewArrayValueUnownedNonCopying(values ...Value) *ArrayValue {
+func NewArrayValueUnownedNonCopying(arrayType ArrayStaticType, values ...Value) *ArrayValue {
 	// NOTE: new value has no owner
 
 	for _, value := range values {
@@ -671,6 +673,7 @@ func NewArrayValueUnownedNonCopying(values ...Value) *ArrayValue {
 	}
 
 	return &ArrayValue{
+		Type:     arrayType,
 		values:   values,
 		modified: true,
 		Owner:    nil,
@@ -684,6 +687,10 @@ func NewDeferredArrayValue(
 	callback DecodingCallback,
 	version uint16,
 ) *ArrayValue {
+
+	// Note: static type for deferred arrays gets populated when the meta info is loaded.
+	// i.e: at `ensureMetaInfoLoaded()` method
+
 	return &ArrayValue{
 		valuePath:       path,
 		content:         content,
@@ -723,12 +730,13 @@ func (v *ArrayValue) DynamicType(interpreter *Interpreter, seenReferences SeenRe
 
 	return &ArrayDynamicType{
 		ElementTypes: elementTypes,
+		StaticType:   v.Type,
 	}
 }
 
 func (v *ArrayValue) StaticType() StaticType {
-	// TODO: store static type in array values
-	return nil
+	v.ensureMetaInfoLoaded()
+	return v.Type
 }
 
 func (v *ArrayValue) Copy() Value {
@@ -736,6 +744,7 @@ func (v *ArrayValue) Copy() Value {
 
 	if v.content != nil {
 		value := &ArrayValue{
+			Type:            v.Type,
 			values:          nil,
 			modified:        true,
 			Owner:           nil,
@@ -752,7 +761,7 @@ func (v *ArrayValue) Copy() Value {
 	for i, value := range v.values {
 		copies[i] = value.Copy()
 	}
-	return NewArrayValueUnownedNonCopying(copies...)
+	return NewArrayValueUnownedNonCopying(v.Type, copies...)
 }
 
 func (v *ArrayValue) GetOwner() *common.Address {
@@ -815,13 +824,18 @@ func (v *ArrayValue) Get(_ *Interpreter, getLocationRange func() LocationRange, 
 	return v.Elements()[index]
 }
 
-func (v *ArrayValue) Set(_ *Interpreter, getLocationRange func() LocationRange, key Value, value Value) {
+func (v *ArrayValue) Set(inter *Interpreter, getLocationRange func() LocationRange, key Value, value Value) {
 	index := key.(NumberValue).ToInt()
-	v.SetIndex(index, value, getLocationRange)
+	v.SetIndex(inter, getLocationRange, index, value)
 }
 
-func (v *ArrayValue) SetIndex(index int, value Value, getLocationRange func() LocationRange) {
+func (v *ArrayValue) SetIndex(inter *Interpreter, getLocationRange func() LocationRange, index int, value Value) {
 	v.checkBounds(index, getLocationRange)
+
+	// Use the getter, to make sure lazily decoded values are properly loaded.
+	arrayStaticType := v.StaticType().(ArrayStaticType)
+
+	inter.checkContainerMutation(arrayStaticType.ElementType(), value, getLocationRange)
 
 	v.modified = true
 	value.SetOwner(v.Owner)
@@ -856,7 +870,13 @@ func (v *ArrayValue) RecursiveString(seenReferences SeenReferences) string {
 	return format.Array(values)
 }
 
-func (v *ArrayValue) Append(element Value) {
+func (v *ArrayValue) Append(inter *Interpreter, getLocationRange func() LocationRange, element Value) {
+
+	// Use the getter, to make sure lazily decoded values are properly loaded.
+	arrayStaticType := v.StaticType().(ArrayStaticType)
+
+	inter.checkContainerMutation(arrayStaticType.ElementType(), element, getLocationRange)
+
 	v.modified = true
 
 	element.SetOwner(v.Owner)
@@ -865,11 +885,18 @@ func (v *ArrayValue) Append(element Value) {
 	v.values = append(v.values, element)
 }
 
-func (v *ArrayValue) AppendAll(other AllAppendableValue) {
-	v.modified = true
-
+func (v *ArrayValue) AppendAll(inter *Interpreter, getLocationRange func() LocationRange, other AllAppendableValue) {
 	otherArray := other.(*ArrayValue)
 	otherElements := otherArray.Elements()
+
+	// Use the getter, to make sure lazily decoded values are properly loaded.
+	arrayStaticType := v.StaticType().(ArrayStaticType)
+
+	for _, element := range otherElements {
+		inter.checkContainerMutation(arrayStaticType.ElementType(), element, getLocationRange)
+	}
+
+	v.modified = true
 
 	for _, element := range otherElements {
 		element.SetOwner(v.Owner)
@@ -879,7 +906,7 @@ func (v *ArrayValue) AppendAll(other AllAppendableValue) {
 	v.values = append(v.values, otherElements...)
 }
 
-func (v *ArrayValue) Insert(index int, element Value, getLocationRange func() LocationRange) {
+func (v *ArrayValue) Insert(inter *Interpreter, getLocationRange func() LocationRange, index int, element Value) {
 	count := v.Count()
 
 	// NOTE: index may be equal to count
@@ -890,6 +917,11 @@ func (v *ArrayValue) Insert(index int, element Value, getLocationRange func() Lo
 			LocationRange: getLocationRange(),
 		})
 	}
+
+	// Use the getter, to make sure lazily decoded values are properly loaded.
+	arrayStaticType := v.StaticType().(ArrayStaticType)
+
+	inter.checkContainerMutation(arrayStaticType.ElementType(), element, getLocationRange)
 
 	v.modified = true
 
@@ -966,7 +998,7 @@ func (v *ArrayValue) Contains(needleValue Value) BoolValue {
 	return false
 }
 
-func (v *ArrayValue) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
+func (v *ArrayValue) GetMember(inter *Interpreter, getLocationRange func() LocationRange, name string) Value {
 	switch name {
 	case "length":
 		return NewIntValueFromInt64(int64(v.Count()))
@@ -974,7 +1006,7 @@ func (v *ArrayValue) GetMember(_ *Interpreter, _ func() LocationRange, name stri
 	case "append":
 		return NewHostFunctionValue(
 			func(invocation Invocation) Value {
-				v.Append(invocation.Arguments[0])
+				v.Append(inter, getLocationRange, invocation.Arguments[0])
 				return VoidValue{}
 			},
 		)
@@ -983,7 +1015,7 @@ func (v *ArrayValue) GetMember(_ *Interpreter, _ func() LocationRange, name stri
 		return NewHostFunctionValue(
 			func(invocation Invocation) Value {
 				otherArray := invocation.Arguments[0].(AllAppendableValue)
-				v.AppendAll(otherArray)
+				v.AppendAll(inter, getLocationRange, otherArray)
 				return VoidValue{}
 			},
 		)
@@ -1001,7 +1033,7 @@ func (v *ArrayValue) GetMember(_ *Interpreter, _ func() LocationRange, name stri
 			func(invocation Invocation) Value {
 				index := invocation.Arguments[0].(NumberValue).ToInt()
 				element := invocation.Arguments[1]
-				v.Insert(index, element, invocation.GetLocationRange)
+				v.Insert(inter, invocation.GetLocationRange, index, element)
 				return VoidValue{}
 			},
 		)
@@ -1104,6 +1136,16 @@ func (v *ArrayValue) Equal(other Value, interpreter *Interpreter, loadDeferred b
 		return false
 	}
 
+	if v.Type == nil {
+		if otherArray.Type != nil {
+			return false
+		}
+	} else if otherArray.Type == nil ||
+		!v.Type.Equal(otherArray.Type) {
+
+		return false
+	}
+
 	for i, value := range elements {
 		otherValue := otherElements[i]
 
@@ -1121,19 +1163,42 @@ func (v *ArrayValue) Elements() []Value {
 	return v.values
 }
 
-// Ensures the elements of this array value are loaded.
-func (v *ArrayValue) ensureElementsLoaded() {
+// ensureMetaInfoLoaded ensures loading the meta information of this array value.
+// If the meta info is already loaded, then calling this function won't have any effect.
+// Otherwise, the values are decoded form the cached raw-content.
+//
+// Meta info includes:
+//    - static type
+//
+func (v *ArrayValue) ensureMetaInfoLoaded() {
 	if v.content == nil {
 		return
 	}
 
-	err := decodeArrayElements(v, v.content)
+	err := decodeArrayMetaInfo(v, v.content)
+	if err != nil {
+		panic(err)
+	}
+
+	// Raw content is no longer needed. Clear the cache and free-up the memory.
+	v.content = nil
+}
+
+// Ensures the elements of this array value are loaded.
+func (v *ArrayValue) ensureElementsLoaded() {
+	v.ensureMetaInfoLoaded()
+
+	if v.elementsContent == nil {
+		return
+	}
+
+	err := decodeArrayElements(v, v.elementsContent)
 	if err != nil {
 		panic(err)
 	}
 
 	// Reset the cache
-	v.content = nil
+	v.elementsContent = nil
 	v.valuePath = nil
 	v.decodeCallback = nil
 	v.encodingVersion = 0
@@ -7129,7 +7194,7 @@ func (v *CompositeValue) ConformsToDynamicType(
 
 		fieldDynamicType := field.DynamicType(interpreter, SeenReferences{})
 
-		if !IsSubType(fieldDynamicType, member.TypeAnnotation.Type) {
+		if !interpreter.IsSubType(fieldDynamicType, member.TypeAnnotation.Type) {
 			return false
 		}
 
@@ -7274,6 +7339,7 @@ func NewEnumCaseValue(
 // DictionaryValue
 
 type DictionaryValue struct {
+	Type     DictionaryStaticType
 	keys     *ArrayValue
 	entries  *StringValueOrderedMap
 	Owner    *common.Address
@@ -7304,6 +7370,10 @@ type DictionaryValue struct {
 	// Only available for decoded values who's entries are not loaded yet.
 	content []byte
 
+	// Raw content cache for entries.
+	// Only available for decoded values who's entries are not loaded yet.
+	entriesContent []byte
+
 	// Value's path to be used during decoding.
 	// Only available for decoded values who's entries are not loaded yet.
 	valuePath []string
@@ -7317,14 +7387,24 @@ type DictionaryValue struct {
 	encodingVersion uint16
 }
 
-func NewDictionaryValueUnownedNonCopying(keysAndValues ...Value) *DictionaryValue {
+func NewDictionaryValueUnownedNonCopying(
+	interpreter *Interpreter,
+	dictionaryType DictionaryStaticType,
+	keysAndValues ...Value,
+) *DictionaryValue {
+
 	keysAndValuesCount := len(keysAndValues)
 	if keysAndValuesCount%2 != 0 {
 		panic("uneven number of keys and values")
 	}
 
 	result := &DictionaryValue{
-		keys:    NewArrayValueUnownedNonCopying(),
+		Type: dictionaryType,
+		keys: NewArrayValueUnownedNonCopying(
+			VariableSizedStaticType{
+				Type: dictionaryType.KeyType,
+			},
+		),
 		entries: NewStringValueOrderedMap(),
 		// NOTE: new value has no owner
 		Owner:                  nil,
@@ -7336,7 +7416,7 @@ func NewDictionaryValueUnownedNonCopying(keysAndValues ...Value) *DictionaryValu
 	}
 
 	for i := 0; i < keysAndValuesCount; i += 2 {
-		_ = result.Insert(nil, ReturnEmptyLocationRange, keysAndValues[i], keysAndValues[i+1])
+		_ = result.Insert(interpreter, ReturnEmptyLocationRange, keysAndValues[i], keysAndValues[i+1])
 	}
 
 	return result
@@ -7349,6 +7429,10 @@ func NewDeferredDictionaryValue(
 	decodeCallback DecodingCallback,
 	version uint16,
 ) *DictionaryValue {
+
+	// Note: static type for deferred dictionaries gets populated when the meta info is loaded.
+	// i.e: at `ensureMetaInfoLoaded()` method
+
 	return &DictionaryValue{
 		Owner:           owner,
 		deferredOwner:   owner,
@@ -7412,14 +7496,14 @@ func (v *DictionaryValue) Walk(walkChild func(Value)) {
 
 func (v *DictionaryValue) DynamicType(interpreter *Interpreter, seenReferences SeenReferences) DynamicType {
 	keys := v.Keys().Elements()
-	entryTypes := make([]struct{ KeyType, ValueType DynamicType }, len(keys))
+	entryTypes := make([]DictionaryStaticTypeEntry, len(keys))
 
 	for i, key := range keys {
 		// NOTE: Force unwrap, otherwise dynamic type check is for optional type.
 		// This is safe because we are iterating over the keys.
 		value := v.Get(interpreter, ReturnEmptyLocationRange, key).(*SomeValue).Value
 		entryTypes[i] =
-			struct{ KeyType, ValueType DynamicType }{
+			DictionaryStaticTypeEntry{
 				KeyType:   key.DynamicType(interpreter, seenReferences),
 				ValueType: value.DynamicType(interpreter, seenReferences),
 			}
@@ -7427,17 +7511,19 @@ func (v *DictionaryValue) DynamicType(interpreter *Interpreter, seenReferences S
 
 	return &DictionaryDynamicType{
 		EntryTypes: entryTypes,
+		StaticType: v.Type,
 	}
 }
 
 func (v *DictionaryValue) StaticType() StaticType {
-	// TODO: store static type in dictionary values
-	return nil
+	v.ensureMetaInfoLoaded()
+	return v.Type
 }
 
 func (v *DictionaryValue) Copy() Value {
 	if v.content != nil {
 		return &DictionaryValue{
+			Type:                   v.Type,
 			keys:                   v.keys,
 			entries:                v.entries,
 			deferredOwner:          v.deferredOwner,
@@ -7463,6 +7549,7 @@ func (v *DictionaryValue) Copy() Value {
 	})
 
 	return &DictionaryValue{
+		Type:                   v.Type,
 		keys:                   newKeys,
 		entries:                newEntries,
 		deferredOwner:          v.deferredOwner,
@@ -7616,6 +7703,18 @@ func dictionaryKey(keyValue Value) string {
 func (v *DictionaryValue) Set(inter *Interpreter, getLocationRange func() LocationRange, keyValue Value, value Value) {
 	v.modified = true
 
+	// Use the getter, to make sure lazily decoded values are properly loaded.
+	dictionaryStaticType := v.StaticType().(DictionaryStaticType)
+
+	inter.checkContainerMutation(dictionaryStaticType.KeyType, keyValue, getLocationRange)
+	inter.checkContainerMutation(
+		OptionalStaticType{
+			Type: dictionaryStaticType.ValueType,
+		},
+		value,
+		getLocationRange,
+	)
+
 	switch typedValue := value.(type) {
 	case *SomeValue:
 		_ = v.Insert(inter, getLocationRange, keyValue, typedValue.Value)
@@ -7686,7 +7785,13 @@ func (v *DictionaryValue) GetMember(interpreter *Interpreter, getLocationRange f
 			dictionaryValues[i] = value.Copy()
 			i++
 		}
-		return NewArrayValueUnownedNonCopying(dictionaryValues...)
+
+		return NewArrayValueUnownedNonCopying(
+			VariableSizedStaticType{
+				Type: v.Type.ValueType,
+			},
+			dictionaryValues...,
+		)
 
 	case "remove":
 		return NewHostFunctionValue(
@@ -7784,6 +7889,13 @@ func (v *DictionaryValue) Remove(inter *Interpreter, getLocationRange func() Loc
 }
 
 func (v *DictionaryValue) Insert(inter *Interpreter, locationRangeGetter func() LocationRange, keyValue, value Value) OptionalValue {
+
+	// Use the getter, to make sure lazily decoded values are properly loaded.
+	dictionaryStaticType := v.StaticType().(DictionaryStaticType)
+
+	inter.checkContainerMutation(dictionaryStaticType.KeyType, keyValue, locationRangeGetter)
+	inter.checkContainerMutation(dictionaryStaticType.ValueType, value, locationRangeGetter)
+
 	v.modified = true
 
 	v.ensureLoaded()
@@ -7809,7 +7921,7 @@ func (v *DictionaryValue) Insert(inter *Interpreter, locationRangeGetter func() 
 		return existingValue
 
 	case NilValue:
-		v.keys.Append(keyValue)
+		v.keys.Append(inter, locationRangeGetter, keyValue)
 		return existingValue
 
 	default:
@@ -7912,6 +8024,10 @@ func (v *DictionaryValue) Equal(other Value, interpreter *Interpreter, loadDefer
 	v.ensureLoaded()
 	otherDictionary.ensureLoaded()
 
+	if !v.Type.Equal(otherDictionary.Type) {
+		return false
+	}
+
 	if !v.keys.Equal(otherDictionary.keys, interpreter, loadDeferred) {
 		return false
 	}
@@ -7949,19 +8065,42 @@ func (v *DictionaryValue) Equal(other Value, interpreter *Interpreter, loadDefer
 	return true
 }
 
-// ensureLoaded ensures the entries of this dictionary value are loaded.
-func (v *DictionaryValue) ensureLoaded() {
+// ensureMetaInfoLoaded ensures loading the meta information of this dictionary value.
+// If the meta info is already loaded, then calling this function won't have any effect.
+// Otherwise, the values are decoded form the cached raw-content.
+//
+// Meta info includes:
+//    - static type
+//
+func (v *DictionaryValue) ensureMetaInfoLoaded() {
 	if v.content == nil {
 		return
 	}
 
-	err := decodeDictionaryEntries(v, v.content)
+	err := decodeDictionaryMetaInfo(v, v.content)
+	if err != nil {
+		panic(err)
+	}
+
+	// Raw content is no longer needed. Clear the cache and free-up the memory.
+	v.content = nil
+}
+
+// ensureLoaded ensures the entries of this dictionary value are loaded.
+func (v *DictionaryValue) ensureLoaded() {
+	v.ensureMetaInfoLoaded()
+
+	if v.entriesContent == nil {
+		return
+	}
+
+	err := decodeDictionaryEntries(v, v.entriesContent)
 	if err != nil {
 		panic(err)
 	}
 
 	// Reset the cache
-	v.content = nil
+	v.entriesContent = nil
 	v.valuePath = nil
 	v.decodeCallback = nil
 	v.encodingVersion = 0
@@ -8300,8 +8439,8 @@ func (v *StorageReferenceValue) ReferencedValue(interpreter *Interpreter) *Value
 
 		if v.BorrowedType != nil {
 			dynamicType := value.DynamicType(interpreter, SeenReferences{})
-			if !IsSubType(dynamicType, v.BorrowedType) {
-				IsSubType(dynamicType, v.BorrowedType)
+			if !interpreter.IsSubType(dynamicType, v.BorrowedType) {
+				interpreter.IsSubType(dynamicType, v.BorrowedType)
 				return nil
 			}
 		}
@@ -8644,20 +8783,15 @@ func NewAddressValueFromBytes(b []byte) AddressValue {
 }
 
 func ConvertAddress(value Value) AddressValue {
-	// TODO: https://github.com/dapperlabs/flow-go/issues/2141
-	result := AddressValue{}
-	if intValue, ok := value.(IntValue); ok {
-		bigEndianBytes := intValue.BigInt.Bytes()
-		copy(
-			result[common.AddressLength-len(bigEndianBytes):common.AddressLength],
-			bigEndianBytes,
-		)
-	} else {
-		binary.BigEndian.PutUint64(
-			result[common.AddressLength-8:common.AddressLength],
-			uint64(value.(NumberValue).ToInt()),
-		)
-	}
+	var result AddressValue
+
+	uint64Value := ConvertUInt64(value)
+
+	binary.BigEndian.PutUint64(
+		result[:common.AddressLength],
+		uint64(uint64Value),
+	)
+
 	return result
 }
 
@@ -8852,7 +8986,7 @@ func accountGetCapabilityFunction(addressValue AddressValue, pathType sema.Type)
 
 			path := invocation.Arguments[0].(PathValue)
 			pathDynamicType := path.DynamicType(invocation.Interpreter, SeenReferences{})
-			if !IsSubType(pathDynamicType, pathType) {
+			if !invocation.Interpreter.IsSubType(pathDynamicType, pathType) {
 				panic(TypeMismatchError{
 					ExpectedType:  pathType,
 					LocationRange: invocation.GetLocationRange(),
@@ -8890,12 +9024,14 @@ func NewPublicAccountValue(
 	storageUsedGet func(interpreter *Interpreter) UInt64Value,
 	storageCapacityGet func() UInt64Value,
 	keys *CompositeValue,
+	contracts *CompositeValue,
 ) *CompositeValue {
 
 	fields := NewStringValueOrderedMap()
 	fields.Set(sema.PublicAccountAddressField, address)
 	fields.Set(sema.PublicAccountGetCapabilityField, accountGetCapabilityFunction(address, sema.PublicPathType))
 	fields.Set(sema.PublicAccountKeysField, keys)
+	fields.Set(sema.PublicAccountContractsField, contracts)
 
 	// Computed fields
 	computedFields := NewStringComputedFieldOrderedMap()
@@ -9393,5 +9529,34 @@ func NewPublicAccountKeysValue(getFunction FunctionValue) *CompositeValue {
 		qualifiedIdentifier: sema.PublicAccountKeysType.QualifiedIdentifier(),
 		kind:                sema.PublicAccountKeysType.Kind,
 		fields:              fields,
+	}
+}
+
+// PublicAccountContractsValue
+
+func NewPublicAccountContractsValue(
+	address AddressValue,
+	getFunction FunctionValue,
+	namesGet func() *ArrayValue,
+) *CompositeValue {
+
+	fields := NewStringValueOrderedMap()
+	fields.Set(sema.PublicAccountContractsTypeGetFunctionName, getFunction)
+
+	computedFields := NewStringComputedFieldOrderedMap()
+	computedFields.Set(sema.PublicAccountContractsTypeNamesField, func(*Interpreter) Value {
+		return namesGet()
+	})
+
+	stringer := func(_ SeenReferences) string {
+		return fmt.Sprintf("PublicAccount.Contracts(%s)", address)
+	}
+
+	return &CompositeValue{
+		qualifiedIdentifier: sema.PublicAccountContractsType.QualifiedIdentifier(),
+		kind:                sema.PublicAccountContractsType.Kind,
+		fields:              fields,
+		ComputedFields:      computedFields,
+		stringer:            stringer,
 	}
 }

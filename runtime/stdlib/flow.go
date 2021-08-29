@@ -347,9 +347,7 @@ var AccountEventCodeHashParameter = &sema.Parameter{
 var AccountEventPublicKeyParameter = &sema.Parameter{
 	Identifier: "publicKey",
 	TypeAnnotation: sema.NewTypeAnnotation(
-		&sema.VariableSizedType{
-			Type: sema.UInt8Type,
-		},
+		sema.ByteArrayType,
 	),
 }
 

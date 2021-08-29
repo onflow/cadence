@@ -179,22 +179,37 @@ var CreatePublicKeyFunction = NewStandardLibraryFunction(
 
 // BuiltinValues
 
-var BuiltinValues = StandardLibraryValues{
-	SignatureAlgorithmValue,
-	HashAlgorithmValue,
-}
+func BuiltinValues() StandardLibraryValues {
+	signatureAlgorithmValue := StandardLibraryValue{
+		Name: sema.SignatureAlgorithmTypeName,
+		Type: cryptoAlgorithmEnumType(
+			sema.SignatureAlgorithmType,
+			sema.SignatureAlgorithms,
+		),
+		Value: cryptoAlgorithmEnumValue(
+			sema.SignatureAlgorithms,
+			NewSignatureAlgorithmCase,
+		),
+		Kind: common.DeclarationKindEnum,
+	}
 
-var SignatureAlgorithmValue = StandardLibraryValue{
-	Name: sema.SignatureAlgorithmTypeName,
-	Type: cryptoAlgorithmEnumType(
-		sema.SignatureAlgorithmType,
-		sema.SignatureAlgorithms,
-	),
-	Value: cryptoAlgorithmEnumValue(
-		sema.SignatureAlgorithms,
-		NewSignatureAlgorithmCase,
-	),
-	Kind: common.DeclarationKindEnum,
+	hashAlgorithmValue := StandardLibraryValue{
+		Name: sema.HashAlgorithmTypeName,
+		Type: cryptoAlgorithmEnumType(
+			sema.HashAlgorithmType,
+			sema.HashAlgorithms,
+		),
+		Value: cryptoAlgorithmEnumValue(
+			sema.HashAlgorithms,
+			NewHashAlgorithmCase,
+		),
+		Kind: common.DeclarationKindEnum,
+	}
+
+	return StandardLibraryValues{
+		signatureAlgorithmValue,
+		hashAlgorithmValue,
+	}
 }
 
 func NewSignatureAlgorithmCase(rawValue uint8) *interpreter.CompositeValue {
@@ -216,19 +231,6 @@ func NewHashAlgorithmCase(rawValue uint8) *interpreter.CompositeValue {
 		interpreter.UInt8Value(rawValue),
 		hashAlgorithmFunctions,
 	)
-}
-
-var HashAlgorithmValue = StandardLibraryValue{
-	Name: sema.HashAlgorithmTypeName,
-	Type: cryptoAlgorithmEnumType(
-		sema.HashAlgorithmType,
-		sema.HashAlgorithms,
-	),
-	Value: cryptoAlgorithmEnumValue(
-		sema.HashAlgorithms,
-		NewHashAlgorithmCase,
-	),
-	Kind: common.DeclarationKindEnum,
 }
 
 var hashAlgorithmHashFunction = interpreter.NewHostFunctionValue(

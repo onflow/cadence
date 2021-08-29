@@ -27,6 +27,7 @@ const AuthAccountContractsTypeAddFunctionName = "add"
 const AuthAccountContractsTypeGetFunctionName = "get"
 const AuthAccountContractsTypeRemoveFunctionName = "remove"
 const AuthAccountContractsTypeUpdateExperimentalFunctionName = "update__experimental"
+const AuthAccountContractsTypeNamesField = "names"
 
 // AuthAccountContractsType represents the type `AuthAccount.Contracts`
 //
@@ -62,6 +63,14 @@ var AuthAccountContractsType = func() *CompositeType {
 			AuthAccountContractsTypeRemoveFunctionName,
 			authAccountContractsTypeRemoveFunctionType,
 			authAccountContractsTypeRemoveFunctionDocString,
+		),
+		NewPublicConstantFieldMember(
+			authAccountContractsType,
+			AuthAccountContractsTypeNamesField,
+			&VariableSizedType{
+				Type: StringType,
+			},
+			authAccountContractsTypeGetNamesDocString,
 		),
 	}
 
@@ -103,9 +112,7 @@ var authAccountContractsTypeAddFunctionType = &FunctionType{
 		{
 			Identifier: "code",
 			TypeAnnotation: NewTypeAnnotation(
-				&VariableSizedType{
-					Type: UInt8Type,
-				},
+				ByteArrayType,
 			),
 		},
 	},
@@ -146,9 +153,7 @@ var authAccountContractsTypeUpdateExperimentalFunctionType = &FunctionType{
 		{
 			Identifier: "code",
 			TypeAnnotation: NewTypeAnnotation(
-				&VariableSizedType{
-					Type: UInt8Type,
-				},
+				ByteArrayType,
 			),
 		},
 	},
@@ -200,3 +205,7 @@ var authAccountContractsTypeRemoveFunctionType = &FunctionType{
 		},
 	),
 }
+
+const authAccountContractsTypeGetNamesDocString = `
+Names of all contracts deployed in the account.
+`

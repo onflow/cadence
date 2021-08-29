@@ -18,6 +18,9 @@ Every account can be accessed through two types:
       let storageUsed: UInt64
       let storageCapacity: UInt64
 
+      // Contracts
+      let contracts: PublicAccount.Contracts
+
       // Keys
       let keys: PublicAccount.Keys
 
@@ -25,6 +28,13 @@ Every account can be accessed through two types:
 
       fun getCapability<T>(_ path: PublicPath): Capability<T>
       fun getLinkTarget(_ path: CapabilityPath): Path?
+
+      struct Contracts {
+
+          let names: [String]
+
+          fun get(name: String): DeployedContract?
+      }
 
       struct Keys {
           // Returns the key at the given index, if it exists.
@@ -97,6 +107,9 @@ Every account can be accessed through two types:
       fun unlink(_ path: CapabilityPath)
 
       struct Contracts {
+
+          let names: [String]
+
           fun add(
               name: String,
               code: [UInt8],

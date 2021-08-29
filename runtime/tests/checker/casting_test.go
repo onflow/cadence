@@ -5897,6 +5897,42 @@ func TestCheckCastAuthorizedNonCompositeReferenceType(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestCheckResourceConstructorCast(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t,
+		`
+          resource R {}
+
+          let c = R as ((): @R)
+        `,
+	)
+
+	errs := ExpectCheckerErrors(t, err, 1)
+
+	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+}
+
+func TestCheckResourceConstructorReturn(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t,
+		`
+          resource R {}
+
+          fun test(): ((): @R) {
+              return R
+          }
+        `,
+	)
+
+	errs := ExpectCheckerErrors(t, err, 1)
+
+	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+}
+
 func TestCheckUnnecessaryCasts(t *testing.T) {
 
 	t.Parallel()
