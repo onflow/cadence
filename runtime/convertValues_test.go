@@ -3039,10 +3039,8 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 		_, err := executeScript(t, script, publicKey, runtimeInterface)
 		require.Error(t, err)
 
-		var valueErr *MalformedValueError
-		require.ErrorAs(t, err, &valueErr)
-
-		assert.Equal(t, sema.PublicKeyType, valueErr.ExpectedType)
+		var containerMutationErr interpreter.ContainerMutationError
+		require.ErrorAs(t, err, &containerMutationErr)
 	})
 
 	t.Run("Invalid sign algo", func(t *testing.T) {
