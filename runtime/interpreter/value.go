@@ -7074,21 +7074,13 @@ func (v *CompositeValue) SetMember(
 
 	address := v.StorageID.Address
 
-	valueCopy, err := value.DeepCopy(interpreter.Storage, address)
-	if err != nil {
-		panic(ExternalError{err})
-	}
-
-	err = value.DeepRemove(interpreter.Storage)
-	if err != nil {
-		panic(ExternalError{err})
-	}
+	value = interpreter.TransferValue(value, nil, address)
 
 	existingValue, existed := v.Fields.Get(name)
 
-	v.Fields.Set(name, MustConvertStoredValue(valueCopy))
+	v.Fields.Set(name, value)
 
-	storable, err := valueCopy.Storable(
+	storable, err := value.Storable(
 		interpreter.Storage,
 		address,
 		atree.MaxInlineElementSize,
@@ -7100,10 +7092,9 @@ func (v *CompositeValue) SetMember(
 	v.CompositeStorable.Fields.Set(name, storable)
 
 	if existed {
-		err = existingValue.DeepRemove(interpreter.Storage)
-		if err != nil {
-			panic(ExternalError{err})
-		}
+		// TODO: will this work for e.g. a swap? only when copied
+		existingValue.DeepRemove(interpreter)
+		// TODO: also deep remove storable
 	}
 
 	v.store(interpreter.Storage)
@@ -7292,25 +7283,37 @@ func (v *CompositeValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64
 	return atree.StorageIDStorable(v.StorageID), nil
 }
 
-func (v *CompositeValue) DeepCopy(storage atree.SlabStorage, address atree.Address) (atree.Value, error) {
+func (v *CompositeValue) NeedsCopy(_ *Interpreter, address atree.Address) bool {
+	if v.StorageID.Address != address {
+		return true
+	}
+
+	switch v.Kind {
+	// TODO: can copying be skipped for other kinds?
+	case common.CompositeKindResource,
+		common.CompositeKindContract:
+		return false
+	}
+
+	return true
+}
+
+func (v *CompositeValue) DeepCopy(interpreter *Interpreter, address atree.Address) Value {
 
 	newFields := NewStringValueOrderedMap()
 	for pair := v.Fields.Oldest(); pair != nil; pair = pair.Next() {
 		fieldName := pair.Key
 		fieldValue := pair.Value
 
-		fieldValueCopy, err := fieldValue.DeepCopy(storage, address)
-		if err != nil {
-			return nil, err
-		}
+		fieldValueCopy := interpreter.CopyValue(fieldValue, address)
 
-		newFields.Set(fieldName, MustConvertStoredValue(fieldValueCopy))
+		newFields.Set(fieldName, fieldValueCopy)
 	}
 
 	v.isCopied = true
 
 	newValue := NewCompositeValue(
-		storage,
+		interpreter.Storage,
 		v.Location,
 		v.QualifiedIdentifier,
 		v.Kind,
@@ -7326,39 +7329,30 @@ func (v *CompositeValue) DeepCopy(storage atree.SlabStorage, address atree.Addre
 	newValue.isDestroyed = v.isDestroyed
 	newValue.Stringer = v.Stringer
 
-	return newValue, nil
+	return newValue
 }
 
-func (v *CompositeValue) DeepRemove(storage atree.SlabStorage) error {
+func (v *CompositeValue) DeepRemove(interpreter *Interpreter) {
 
 	// Remove nested values
 
 	for pair := v.Fields.Oldest(); pair != nil; pair = pair.Next() {
 		fieldValue := pair.Value
 
-		err := fieldValue.DeepRemove(storage)
-		if err != nil {
-			return err
+		fieldValue.DeepRemove(interpreter)
+	}
+
+	// Remove nested storables, if any (composite may be non-storable)
+
+	if v.CompositeStorable.Fields != nil {
+		for pair := v.CompositeStorable.Fields.Oldest(); pair != nil; pair = pair.Next() {
+			fieldStorable := pair.Value
+
+			interpreter.removeReferencedSlab(fieldStorable)
 		}
 	}
 
-	// Remove storable itself
-	if v.StorageID != atree.StorageIDUndefined {
-
-		slab, _, err := storage.Retrieve(v.StorageID)
-		if err != nil {
-			return err
-		}
-
-		err = slab.(atree.StorableSlab).
-			Storable.(*CompositeStorable).
-			DeepRemove(storage)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
+	// Slab will be removed by parent
 }
 
 func (v *CompositeValue) GetOwner() common.Address {
@@ -7371,22 +7365,6 @@ type CompositeStorable struct {
 	Kind                common.CompositeKind
 	Fields              *StringAtreeStorableOrderedMap
 	StorageID           atree.StorageID
-}
-
-func (s *CompositeStorable) DeepRemove(storage atree.SlabStorage) error {
-
-	// Remove nested storables
-
-	for pair := s.Fields.Oldest(); pair != nil; pair = pair.Next() {
-		err := pair.Value.DeepRemove(storage)
-		if err != nil {
-			return err
-		}
-	}
-
-	// Slab will be removed by parent
-
-	return nil
 }
 
 var _ atree.Storable = &CompositeStorable{}
