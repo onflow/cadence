@@ -25,6 +25,7 @@ import (
 	"github.com/onflow/atree"
 	"github.com/onflow/cadence/runtime/common"
 	. "github.com/onflow/cadence/runtime/interpreter"
+	"github.com/onflow/cadence/runtime/tests/utils"
 	"github.com/stretchr/testify/require"
 )
 
@@ -36,25 +37,34 @@ func TestValueDeepCopyAndDeepRemove(t *testing.T) {
 
 	storage := NewInMemoryStorage()
 
+	inter, err := NewInterpreter(
+		nil,
+		utils.TestLocation,
+		WithStorage(storage),
+	)
+	require.NoError(t, err)
+
 	dictionaryStaticType := DictionaryStaticType{
 		KeyType:   PrimitiveStaticTypeString,
 		ValueType: PrimitiveStaticTypeInt256,
 	}
 
-	dictValueKey := NewStringValue(strings.Repeat("x", int(atree.MaxInlineElementSize+1)))
+	dictValueKey := NewStringValue(
+		strings.Repeat("x", int(atree.MaxInlineElementSize+1)),
+	)
 
 	dictValueValue := NewInt256ValueFromInt64(1)
 	dictValue := NewDictionaryValue(
+		inter,
 		dictionaryStaticType,
-		storage,
 		dictValueKey, dictValueValue,
 	)
 
 	arrayValue := NewArrayValue(
+		inter,
 		VariableSizedStaticType{
 			Type: dictionaryStaticType,
 		},
-		storage,
 		dictValue,
 	)
 
@@ -63,8 +73,7 @@ func TestValueDeepCopyAndDeepRemove(t *testing.T) {
 	compositeValue := newTestCompositeValue(storage, address)
 	compositeValue.Fields.Set("value", optionalValue)
 
-	err := compositeValue.DeepRemove(storage)
-	require.NoError(t, err)
+	compositeValue.DeepRemove(inter)
 
 	// Only count non-temporary slabs,
 	// i.e. ones which have a non-empty address
