@@ -1319,7 +1319,14 @@ func TestExportLinkValue(t *testing.T) {
 		err = checker.Check()
 		require.NoError(t, err)
 
-		inter := newTestInterpreter(t)
+		storage := interpreter.NewInMemoryStorage()
+
+		inter, err := interpreter.NewInterpreter(
+			interpreter.ProgramFromChecker(checker),
+			TestLocation,
+			interpreter.WithStorage(storage),
+		)
+		require.NoError(t, err)
 
 		capability := interpreter.LinkValue{
 			TargetPath: interpreter.PathValue{
