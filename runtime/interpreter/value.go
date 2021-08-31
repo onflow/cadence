@@ -9882,15 +9882,15 @@ func NewPublicAccountKeysValue(getFunction FunctionValue) *CompositeValue {
 func NewPublicAccountContractsValue(
 	address AddressValue,
 	getFunction FunctionValue,
-	namesGet func() *ArrayValue,
+	namesGetter func(interpreter *Interpreter) *ArrayValue,
 ) *CompositeValue {
 
 	fields := NewStringValueOrderedMap()
 	fields.Set(sema.PublicAccountContractsTypeGetFunctionName, getFunction)
 
 	computedFields := NewStringComputedFieldOrderedMap()
-	computedFields.Set(sema.PublicAccountContractsTypeNamesField, func(*Interpreter) Value {
-		return namesGet()
+	computedFields.Set(sema.PublicAccountContractsTypeNamesField, func(interpreter *Interpreter) Value {
+		return namesGetter(interpreter)
 	})
 
 	stringer := func(_ SeenReferences) string {
@@ -9905,7 +9905,6 @@ func NewPublicAccountContractsValue(
 		sema.PublicAccountContractsType.Kind,
 		fields,
 		common.Address{},
-
 	)
 
 	v.Stringer = stringer
