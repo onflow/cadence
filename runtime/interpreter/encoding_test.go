@@ -244,21 +244,21 @@ func TestEncodeDecodeArray(t *testing.T) {
 
 	t.Run("empty", func(t *testing.T) {
 
-		storage := NewInMemoryStorage()
+		t.Parallel()
+
+		inter := newTestInterpreter(t)
 
 		expected := NewArrayValue(
+			inter,
 			ConstantSizedStaticType{
 				Type: PrimitiveStaticTypeAnyStruct,
 				Size: 0,
 			},
-			storage,
 		)
-
-		t.Parallel()
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
-				storage: storage,
+				storage: inter.Storage,
 				value:   expected,
 				encoded: []byte{
 					// tag
@@ -272,24 +272,24 @@ func TestEncodeDecodeArray(t *testing.T) {
 
 	t.Run("string and bool", func(t *testing.T) {
 
-		storage := NewInMemoryStorage()
+		t.Parallel()
+
+		inter := newTestInterpreter(t)
 
 		expectedString := NewStringValue("test")
 
 		expected := NewArrayValue(
+			inter,
 			VariableSizedStaticType{
 				Type: PrimitiveStaticTypeAnyStruct,
 			},
-			storage,
 			expectedString,
 			BoolValue(true),
 		)
 
-		t.Parallel()
-
 		testEncodeDecode(t,
 			encodeDecodeTest{
-				storage: storage,
+				storage: inter.Storage,
 				value:   expected,
 				encoded: []byte{
 					// tag
@@ -313,14 +313,14 @@ func TestEncodeDecodeDictionary(t *testing.T) {
 
 		t.Parallel()
 
-		storage := NewInMemoryStorage()
+		inter := newTestInterpreter(t)
 
 		expected := NewDictionaryValue(
+			inter,
 			DictionaryStaticType{
 				KeyType:   PrimitiveStaticTypeString,
 				ValueType: PrimitiveStaticTypeAnyStruct,
 			},
-			storage,
 		)
 
 		encodedValue := []byte{
@@ -359,7 +359,7 @@ func TestEncodeDecodeDictionary(t *testing.T) {
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
-				storage: storage,
+				storage: inter.Storage,
 				value:   expected,
 				encoded: encodedValue,
 				check: func(actual Value) {
@@ -375,7 +375,7 @@ func TestEncodeDecodeDictionary(t *testing.T) {
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
-				storage:       storage,
+				storage:       inter.Storage,
 				storable:      expected.DictionaryStorable,
 				encoded:       encodedStorable,
 				decodedValue:  expected,
@@ -396,7 +396,7 @@ func TestEncodeDecodeDictionary(t *testing.T) {
 
 		t.Parallel()
 
-		storage := NewInMemoryStorage()
+		inter := newTestInterpreter(t)
 
 		key1 := BoolValue(true)
 		value1 := BoolValue(false)
@@ -405,11 +405,11 @@ func TestEncodeDecodeDictionary(t *testing.T) {
 		value2 := NewStringValue("bar")
 
 		expected := NewDictionaryValue(
+			inter,
 			DictionaryStaticType{
 				KeyType:   PrimitiveStaticTypeAnyStruct,
 				ValueType: PrimitiveStaticTypeAnyStruct,
 			},
-			storage,
 			key1, value1,
 			key2, value2,
 		)
@@ -472,7 +472,7 @@ func TestEncodeDecodeDictionary(t *testing.T) {
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
-				storage: storage,
+				storage: inter.Storage,
 				value:   expected,
 				encoded: encodedValue,
 				check: func(actual Value) {
@@ -488,7 +488,7 @@ func TestEncodeDecodeDictionary(t *testing.T) {
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
-				storage:       storage,
+				storage:       inter.Storage,
 				storable:      expected.DictionaryStorable,
 				encoded:       encodedStorable,
 				decodedValue:  expected,

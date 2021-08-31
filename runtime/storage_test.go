@@ -47,14 +47,18 @@ func withWritesToStorage(
 
 	runtimeStorage := newRuntimeStorage(runtimeInterface)
 
+	inter, _ := interpreter.NewInterpreter(
+		nil,
+		utils.TestLocation,
+		interpreter.WithStorage(runtimeStorage),
+	)
+
 	array := interpreter.NewArrayValue(
+		inter,
 		interpreter.VariableSizedStaticType{
 			Type: interpreter.PrimitiveStaticTypeInt,
 		},
-		runtimeStorage,
 	)
-
-	inter, _ := interpreter.NewInterpreter(nil, utils.TestLocation)
 
 	for i := 0; i < arrayElementCount; i++ {
 		array.Append(inter, nil, interpreter.NewIntValueFromInt64(int64(i)))

@@ -66,8 +66,6 @@ func testCompositeValue(t *testing.T, code string) *interpreter.Interpreter {
 
 	storage := interpreter.NewInMemoryStorage()
 
-	var valueDeclarations stdlib.StandardLibraryValues
-
 	// 'fruit' composite type
 	fruitType := &sema.CompositeType{
 		Location:   TestLocation,
@@ -110,7 +108,7 @@ func testCompositeValue(t *testing.T, code string) *interpreter.Interpreter {
 
 	valueDeclarations := stdlib.StandardLibraryValues{
 		{
-			Name:  value.QualifiedIdentifier,
+			Name:  "fruit",
 			Type:  fruitType,
 			Value: value,
 			Kind:  common.DeclarationKindConstant,

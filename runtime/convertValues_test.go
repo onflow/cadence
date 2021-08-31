@@ -104,23 +104,23 @@ func TestExportValue(t *testing.T) {
 		},
 		{
 			label: "Array empty",
-			value: interpreter.NewArrayValueUnownedNonCopying(
+			value: interpreter.NewArrayValue(
+				newTestInterpreter(t),
 				interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeAnyStruct,
 				},
-				[]interpreter.Value{}...),
+			),
 			expected: cadence.NewArray([]cadence.Value{}),
 		},
 		{
 			label: "Array (non-empty)",
-			value: interpreter.NewArrayValueUnownedNonCopying(
+			value: interpreter.NewArrayValue(
+				newTestInterpreter(t),
 				interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeAnyStruct,
 				},
-				[]interpreter.Value{
-					interpreter.NewIntValueFromInt64(42),
-					interpreter.NewStringValue("foo"),
-				}...,
+				interpreter.NewIntValueFromInt64(42),
+				interpreter.NewStringValue("foo"),
 			),
 			expected: cadence.NewArray([]cadence.Value{
 				cadence.NewInt(42),
@@ -129,7 +129,7 @@ func TestExportValue(t *testing.T) {
 		},
 		{
 			label: "Dictionary",
-			value: interpreter.NewDictionaryValueUnownedNonCopying(
+			value: interpreter.NewDictionaryValue(
 				newTestInterpreter(t),
 				interpreter.DictionaryStaticType{
 					KeyType:   interpreter.PrimitiveStaticTypeString,
@@ -140,7 +140,7 @@ func TestExportValue(t *testing.T) {
 		},
 		{
 			label: "Dictionary (non-empty)",
-			value: interpreter.NewDictionaryValueUnownedNonCopying(
+			value: interpreter.NewDictionaryValue(
 				newTestInterpreter(t),
 				interpreter.DictionaryStaticType{
 					KeyType:   interpreter.PrimitiveStaticTypeString,
@@ -303,7 +303,10 @@ func TestExportValue(t *testing.T) {
 			value: interpreter.DeployedContractValue{
 				Address: interpreter.AddressValue{},
 				Name:    interpreter.NewStringValue("C"),
-				Code:    interpreter.NewArrayValueUnownedNonCopying(nil),
+				Code: interpreter.NewArrayValue(
+					newTestInterpreter(t),
+					interpreter.ByteArrayStaticType,
+				),
 			},
 			expected: nil,
 		},
@@ -330,7 +333,9 @@ func TestImportValue(t *testing.T) {
 
 			t.Parallel()
 
-			actual, err := importValue(nil, tt.value, tt.expectedType)
+			inter := newTestInterpreter(t)
+
+			actual, err := importValue(inter, tt.value, tt.expectedType)
 
 			if tt.expected == nil {
 				require.Error(t, err)
@@ -353,9 +358,11 @@ func TestImportValue(t *testing.T) {
 			expected: interpreter.NilValue{},
 		},
 		{
-			label:    "SomeValue",
-			value:    cadence.NewOptional(cadence.NewInt(42)),
-			expected: interpreter.NewSomeValueOwningNonCopying(interpreter.NewIntValueFromInt64(42)),
+			label: "SomeValue",
+			value: cadence.NewOptional(cadence.NewInt(42)),
+			expected: interpreter.NewSomeValueNonCopying(
+				interpreter.NewIntValueFromInt64(42),
+			),
 		},
 		{
 			label:    "Bool true",
@@ -380,11 +387,12 @@ func TestImportValue(t *testing.T) {
 		{
 			label: "Array empty",
 			value: cadence.NewArray([]cadence.Value{}),
-			expected: interpreter.NewArrayValueUnownedNonCopying(
+			expected: interpreter.NewArrayValue(
+				newTestInterpreter(t),
 				interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeAnyStruct,
 				},
-				[]interpreter.Value{}...),
+			),
 			expectedType: &sema.VariableSizedType{
 				Type: sema.AnyStructType,
 			},
@@ -395,14 +403,13 @@ func TestImportValue(t *testing.T) {
 				cadence.NewInt(42),
 				cadence.String("foo"),
 			}),
-			expected: interpreter.NewArrayValueUnownedNonCopying(
+			expected: interpreter.NewArrayValue(
+				newTestInterpreter(t),
 				interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeAnyStruct,
 				},
-				[]interpreter.Value{
-					interpreter.NewIntValueFromInt64(42),
-					interpreter.NewStringValue("foo"),
-				}...,
+				interpreter.NewIntValueFromInt64(42),
+				interpreter.NewStringValue("foo"),
 			),
 			expectedType: &sema.VariableSizedType{
 				Type: sema.AnyStructType,
@@ -410,7 +417,7 @@ func TestImportValue(t *testing.T) {
 		},
 		{
 			label: "Dictionary",
-			expected: interpreter.NewDictionaryValueUnownedNonCopying(
+			expected: interpreter.NewDictionaryValue(
 				newTestInterpreter(t),
 				interpreter.DictionaryStaticType{
 					KeyType:   interpreter.PrimitiveStaticTypeString,
@@ -425,7 +432,7 @@ func TestImportValue(t *testing.T) {
 		},
 		{
 			label: "Dictionary (non-empty)",
-			expected: interpreter.NewDictionaryValueUnownedNonCopying(
+			expected: interpreter.NewDictionaryValue(
 				newTestInterpreter(t),
 				interpreter.DictionaryStaticType{
 					KeyType:   interpreter.PrimitiveStaticTypeString,
@@ -937,7 +944,7 @@ func exportValueFromScript(t *testing.T, script string) cadence.Value {
 		},
 		Context{
 			Interface: &testRuntimeInterface{},
-			Location:  utils.TestLocation,
+			Location:  TestLocation,
 		},
 	)
 
@@ -1041,12 +1048,6 @@ func TestExportReferenceValue(t *testing.T) {
             }
         `
 
-		storage := newTestStorage(nil, nil)
-
-		runtimeInterface := &testRuntimeInterface{
-			storage: storage,
-		}
-
 		actual, err := rt.ExecuteScript(
 			Script{
 				Source: []byte(script),
@@ -1065,6 +1066,9 @@ func TestExportReferenceValue(t *testing.T) {
 }
 
 func TestExportTypeValue(t *testing.T) {
+
+	// TODO:
+	t.Skip("TODO")
 
 	t.Parallel()
 
@@ -1141,14 +1145,7 @@ func TestExportTypeValue(t *testing.T) {
 		err = checker.Check()
 		require.NoError(t, err)
 
-		storage := interpreter.NewInMemoryStorage()
-
-		inter, err := interpreter.NewInterpreter(
-			interpreter.ProgramFromChecker(checker),
-			checker.Location,
-			interpreter.WithStorage(storage),
-		)
-		require.NoError(t, err)
+		inter := newTestInterpreter(t)
 
 		ty := interpreter.TypeValue{
 			Type: &interpreter.RestrictedStaticType{
@@ -1179,6 +1176,9 @@ func TestExportTypeValue(t *testing.T) {
 }
 
 func TestExportCapabilityValue(t *testing.T) {
+
+	// TODO:
+	t.Skip("TODO")
 
 	t.Parallel()
 
@@ -1220,14 +1220,7 @@ func TestExportCapabilityValue(t *testing.T) {
 		err = checker.Check()
 		require.NoError(t, err)
 
-		storage := interpreter.NewInMemoryStorage()
-
-		inter, err := interpreter.NewInterpreter(
-			interpreter.ProgramFromChecker(checker),
-			checker.Location,
-			interpreter.WithStorage(storage),
-		)
-		require.NoError(t, err)
+		inter := newTestInterpreter(t)
 
 		capability := &interpreter.CapabilityValue{
 			Address: interpreter.AddressValue{0x1},
@@ -1311,6 +1304,9 @@ func TestExportLinkValue(t *testing.T) {
 
 	t.Run("Struct", func(t *testing.T) {
 
+		// TODO:
+		t.Skip("TODO")
+
 		program, err := parser2.ParseProgram(`pub struct S {}`)
 		require.NoError(t, err)
 
@@ -1320,14 +1316,7 @@ func TestExportLinkValue(t *testing.T) {
 		err = checker.Check()
 		require.NoError(t, err)
 
-		storage := interpreter.NewInMemoryStorage()
-
-		inter, err := interpreter.NewInterpreter(
-			interpreter.ProgramFromChecker(checker),
-			checker.Location,
-			interpreter.WithStorage(storage),
-		)
-		require.NoError(t, err)
+		inter := newTestInterpreter(t)
 
 		capability := interpreter.LinkValue{
 			TargetPath: interpreter.PathValue{
@@ -2301,16 +2290,16 @@ func TestRuntimeImportExportArrayValue(t *testing.T) {
 
 		t.Parallel()
 
-		storage := interpreter.NewInMemoryStorage()
+		inter := newTestInterpreter(t)
 
 		value := interpreter.NewArrayValue(
+			inter,
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeAnyStruct,
 			},
-			storage,
 		)
 
-		actual, err := exportValueWithInterpreter(value, nil, seenReferences{})
+		actual, err := exportValueWithInterpreter(value, inter, seenReferences{})
 		require.NoError(t, err)
 
 		assert.Equal(t,
@@ -2323,18 +2312,11 @@ func TestRuntimeImportExportArrayValue(t *testing.T) {
 
 		t.Parallel()
 
-		storage := interpreter.NewInMemoryStorage()
-
 		value := cadence.NewArray([]cadence.Value{})
 
-		inter, err := interpreter.NewInterpreter(
-			nil,
-			TestLocation,
-			interpreter.WithStorage(storage),
-		)
-		require.NoError(t, err)
+		inter := newTestInterpreter(t)
 
-		actual := importValue(
+		actual, err := importValue(
 			inter,
 			value,
 			&sema.VariableSizedType{
@@ -2345,10 +2327,10 @@ func TestRuntimeImportExportArrayValue(t *testing.T) {
 
 		AssertValuesEqual(t,
 			interpreter.NewArrayValue(
+				inter,
 				interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeUInt8,
 				},
-				storage,
 			),
 			actual,
 		)
@@ -2358,13 +2340,11 @@ func TestRuntimeImportExportArrayValue(t *testing.T) {
 
 		t.Parallel()
 
-		storage := interpreter.NewInMemoryStorage()
-
 		value := interpreter.NewArrayValue(
+			newTestInterpreter(t),
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeAnyStruct,
 			},
-			storage,
 			interpreter.NewIntValueFromInt64(42),
 			interpreter.NewStringValue("foo"),
 		)
@@ -2385,21 +2365,14 @@ func TestRuntimeImportExportArrayValue(t *testing.T) {
 
 		t.Parallel()
 
-		storage := interpreter.NewInMemoryStorage()
-
 		value := cadence.NewArray([]cadence.Value{
 			cadence.NewInt(42),
 			cadence.String("foo"),
 		})
 
-		inter, err := interpreter.NewInterpreter(
-			nil,
-			TestLocation,
-			interpreter.WithStorage(storage),
-		)
-		require.NoError(t, err)
+		inter := newTestInterpreter(t)
 
-		actual := importValue(
+		actual, err := importValue(
 			inter,
 			value,
 			&sema.VariableSizedType{
@@ -2410,10 +2383,10 @@ func TestRuntimeImportExportArrayValue(t *testing.T) {
 
 		AssertValuesEqual(t,
 			interpreter.NewArrayValue(
+				inter,
 				interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeAnyStruct,
 				},
-				storage,
 				interpreter.NewIntValueFromInt64(42),
 				interpreter.NewStringValue("foo"),
 			),
@@ -2436,11 +2409,7 @@ func TestRuntimeImportExportArrayValue(t *testing.T) {
 			}),
 		})
 
-		inter, err := interpreter.NewInterpreter(
-			nil,
-			utils.TestLocation,
-		)
-		require.NoError(t, err)
+		inter := newTestInterpreter(t)
 
 		actual, err := importValue(
 			inter,
@@ -2450,18 +2419,21 @@ func TestRuntimeImportExportArrayValue(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t,
-			interpreter.NewArrayValueUnownedNonCopying(
+			interpreter.NewArrayValue(
+				inter,
 				interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeAnyStruct,
 				},
-				interpreter.NewArrayValueUnownedNonCopying(
+				interpreter.NewArrayValue(
+					inter,
 					interpreter.VariableSizedStaticType{
 						Type: interpreter.PrimitiveStaticTypeAnyStruct,
 					},
 					interpreter.Int8Value(4),
 					interpreter.Int8Value(3),
 				),
-				interpreter.NewArrayValueUnownedNonCopying(
+				interpreter.NewArrayValue(
+					inter,
 					interpreter.VariableSizedStaticType{
 						Type: interpreter.PrimitiveStaticTypeAnyStruct,
 					},
@@ -2482,15 +2454,12 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 
 		t.Parallel()
 
-		storage := interpreter.NewInMemoryStorage()
-
 		value := interpreter.NewDictionaryValue(
 			newTestInterpreter(t),
 			interpreter.DictionaryStaticType{
 				KeyType:   interpreter.PrimitiveStaticTypeString,
 				ValueType: interpreter.PrimitiveStaticTypeInt,
 			},
-			storage,
 		)
 
 		actual, err := exportValueWithInterpreter(value, nil, seenReferences{})
@@ -2506,18 +2475,11 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 
 		t.Parallel()
 
-		storage := interpreter.NewInMemoryStorage()
-
 		value := cadence.NewDictionary([]cadence.KeyValuePair{})
 
-		inter, err := interpreter.NewInterpreter(
-			nil,
-			TestLocation,
-			interpreter.WithStorage(storage),
-		)
-		require.NoError(t, err)
+		inter := newTestInterpreter(t)
 
-		actual := importValue(
+		actual, err := importValue(
 			inter,
 			value,
 			&sema.DictionaryType{
@@ -2529,12 +2491,11 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 
 		AssertValuesEqual(t,
 			interpreter.NewDictionaryValue(
-				newTestInterpreter(t),
+				inter,
 				interpreter.DictionaryStaticType{
 					KeyType:   interpreter.PrimitiveStaticTypeString,
 					ValueType: interpreter.PrimitiveStaticTypeUInt8,
 				},
-				storage,
 			),
 			actual,
 		)
@@ -2544,15 +2505,12 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 
 		t.Parallel()
 
-		storage := interpreter.NewInMemoryStorage()
-
 		value := interpreter.NewDictionaryValue(
 			newTestInterpreter(t),
 			interpreter.DictionaryStaticType{
 				KeyType:   interpreter.PrimitiveStaticTypeString,
 				ValueType: interpreter.PrimitiveStaticTypeInt,
 			},
-			storage,
 			interpreter.NewStringValue("a"), interpreter.NewIntValueFromInt64(1),
 			interpreter.NewStringValue("b"), interpreter.NewIntValueFromInt64(2),
 		)
@@ -2579,8 +2537,6 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 
 		t.Parallel()
 
-		storage := interpreter.NewInMemoryStorage()
-
 		value := cadence.NewDictionary([]cadence.KeyValuePair{
 			{
 				Key:   cadence.String("a"),
@@ -2592,14 +2548,9 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 			},
 		})
 
-		inter, err := interpreter.NewInterpreter(
-			nil,
-			TestLocation,
-			interpreter.WithStorage(storage),
-		)
-		require.NoError(t, err)
+		inter := newTestInterpreter(t)
 
-		actual := importValue(
+		actual, err := importValue(
 			inter,
 			value,
 			&sema.DictionaryType{
@@ -2611,12 +2562,11 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 
 		AssertValuesEqual(t,
 			interpreter.NewDictionaryValue(
-				newTestInterpreter(t),
+				inter,
 				interpreter.DictionaryStaticType{
 					KeyType:   interpreter.PrimitiveStaticTypeString,
 					ValueType: interpreter.PrimitiveStaticTypeInt,
 				},
-				storage,
 				interpreter.NewStringValue("a"), interpreter.NewIntValueFromInt64(1),
 				interpreter.NewStringValue("b"), interpreter.NewIntValueFromInt64(2),
 			),
@@ -2657,11 +2607,7 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 			},
 		})
 
-		inter, err := interpreter.NewInterpreter(
-			nil,
-			utils.TestLocation,
-		)
-		require.NoError(t, err)
+		inter := newTestInterpreter(t)
 
 		actual, err := importValue(
 			inter,
@@ -2671,16 +2617,16 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t,
-			interpreter.NewDictionaryValueUnownedNonCopying(
-				newTestInterpreter(t),
+			interpreter.NewDictionaryValue(
+				inter,
 				interpreter.DictionaryStaticType{
 					KeyType:   interpreter.PrimitiveStaticTypeString,
 					ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
 				},
 
 				interpreter.NewStringValue("a"),
-				interpreter.NewDictionaryValueUnownedNonCopying(
-					newTestInterpreter(t),
+				interpreter.NewDictionaryValue(
+					inter,
 					interpreter.DictionaryStaticType{
 						KeyType:   interpreter.PrimitiveStaticTypeNumber,
 						ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
@@ -2690,8 +2636,8 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 				),
 
 				interpreter.NewStringValue("b"),
-				interpreter.NewDictionaryValueUnownedNonCopying(
-					newTestInterpreter(t),
+				interpreter.NewDictionaryValue(
+					inter,
 					interpreter.DictionaryStaticType{
 						KeyType:   interpreter.PrimitiveStaticTypeNumber,
 						ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
@@ -2722,7 +2668,7 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 		// Struct with nested malformed dictionary value
 		malformedStruct := cadence.Struct{
 			StructType: &cadence.StructType{
-				Location:            utils.TestLocation,
+				Location:            TestLocation,
 				QualifiedIdentifier: "Foo",
 				Fields: []cadence.Field{
 					{
@@ -3020,7 +2966,6 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 			},
 		).WithType(PublicKeyType)
 
-
 		storage := newTestStorage(nil, nil)
 
 		runtimeInterface := &testRuntimeInterface{
@@ -3095,7 +3040,6 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 				cadence.NewBool(true),
 			},
 		).WithType(PublicKeyType)
-
 
 		storage := newTestStorage(nil, nil)
 
@@ -3409,7 +3353,7 @@ func TestRuntimeImportExportComplex(t *testing.T) {
 
 	t.Parallel()
 
-	storage := interpreter.NewInMemoryStorage()
+	inter := newTestInterpreter(t)
 
 	// Array
 
@@ -3426,8 +3370,8 @@ func TestRuntimeImportExportComplex(t *testing.T) {
 	}
 
 	internalArrayValue := interpreter.NewArrayValue(
+		inter,
 		staticArrayType,
-		storage,
 		interpreter.NewIntValueFromInt64(42),
 		interpreter.NewStringValue("foo"),
 	)
@@ -3455,9 +3399,8 @@ func TestRuntimeImportExportComplex(t *testing.T) {
 	}
 
 	internalDictionaryValue := interpreter.NewDictionaryValue(
-		newTestInterpreter(t),
+		inter,
 		staticDictionaryType,
-		storage,
 		interpreter.NewStringValue("a"), internalArrayValue,
 	)
 
@@ -3503,7 +3446,7 @@ func TestRuntimeImportExportComplex(t *testing.T) {
 	internalCompositeValueFields.Set("dictionary", internalDictionaryValue)
 
 	internalCompositeValue := interpreter.NewCompositeValue(
-		storage,
+		inter.Storage,
 		TestLocation,
 		"Foo",
 		common.CompositeKindStructure,
@@ -3663,7 +3606,13 @@ func TestRuntimeStaticTypeAvailability(t *testing.T) {
 }
 
 func newTestInterpreter(t *testing.T) *interpreter.Interpreter {
-	inter, err := interpreter.NewInterpreter(nil, utils.TestLocation)
+	storage := interpreter.NewInMemoryStorage()
+
+	inter, err := interpreter.NewInterpreter(
+		nil,
+		TestLocation,
+		interpreter.WithStorage(storage),
+	)
 	require.NoError(t, err)
 
 	return inter

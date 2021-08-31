@@ -21,6 +21,7 @@ package interpreter_test
 import (
 	"testing"
 
+	"github.com/onflow/cadence/runtime/tests/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -49,10 +50,17 @@ func TestArrayMutation(t *testing.T) {
 		require.IsType(t, &interpreter.ArrayValue{}, value)
 		array := value.(*interpreter.ArrayValue)
 
-		elements := array.Elements()
-		require.Len(t, elements, 2)
-		assert.Equal(t, interpreter.NewStringValue("baz"), elements[0])
-		assert.Equal(t, interpreter.NewStringValue("bar"), elements[1])
+		utils.RequireValuesEqual(t,
+			interpreter.NewArrayValue(
+				inter,
+				interpreter.VariableSizedStaticType{
+					Type: interpreter.PrimitiveStaticTypeString,
+				},
+				interpreter.NewStringValue("baz"),
+				interpreter.NewStringValue("bar"),
+			),
+			array,
+		)
 	})
 
 	t.Run("simple array invalid", func(t *testing.T) {
@@ -110,11 +118,18 @@ func TestArrayMutation(t *testing.T) {
 		require.IsType(t, &interpreter.ArrayValue{}, value)
 		array := value.(*interpreter.ArrayValue)
 
-		elements := array.Elements()
-		require.Len(t, elements, 3)
-		assert.Equal(t, interpreter.NewStringValue("foo"), elements[0])
-		assert.Equal(t, interpreter.NewStringValue("bar"), elements[1])
-		assert.Equal(t, interpreter.NewStringValue("baz"), elements[2])
+		utils.RequireValuesEqual(t,
+			interpreter.NewArrayValue(
+				inter,
+				interpreter.VariableSizedStaticType{
+					Type: interpreter.PrimitiveStaticTypeString,
+				},
+				interpreter.NewStringValue("foo"),
+				interpreter.NewStringValue("bar"),
+				interpreter.NewStringValue("baz"),
+			),
+			array,
+		)
 	})
 
 	t.Run("array append invalid", func(t *testing.T) {
@@ -172,11 +187,18 @@ func TestArrayMutation(t *testing.T) {
 		require.IsType(t, &interpreter.ArrayValue{}, value)
 		array := value.(*interpreter.ArrayValue)
 
-		elements := array.Elements()
-		require.Len(t, elements, 3)
-		assert.Equal(t, interpreter.NewStringValue("foo"), elements[0])
-		assert.Equal(t, interpreter.NewStringValue("baz"), elements[1])
-		assert.Equal(t, interpreter.NewStringValue("bar"), elements[2])
+		utils.RequireValuesEqual(t,
+			interpreter.NewArrayValue(
+				inter,
+				interpreter.VariableSizedStaticType{
+					Type: interpreter.PrimitiveStaticTypeString,
+				},
+				interpreter.NewStringValue("foo"),
+				interpreter.NewStringValue("baz"),
+				interpreter.NewStringValue("bar"),
+			),
+			array,
+		)
 	})
 
 	t.Run("array insert invalid", func(t *testing.T) {
@@ -199,6 +221,7 @@ func TestArrayMutation(t *testing.T) {
 	})
 
 	t.Run("array concat mismatching values", func(t *testing.T) {
+
 		t.Parallel()
 
 		inter := parseCheckAndInterpret(t, `
@@ -220,12 +243,19 @@ func TestArrayMutation(t *testing.T) {
 		require.IsType(t, &interpreter.ArrayValue{}, value)
 		array := value.(*interpreter.ArrayValue)
 
-		elements := array.Elements()
-		require.Len(t, elements, 4)
-		assert.Equal(t, interpreter.NewStringValue("foo"), elements[0])
-		assert.Equal(t, interpreter.NewStringValue("bar"), elements[1])
-		assert.Equal(t, interpreter.NewStringValue("baz"), elements[2])
-		assert.Equal(t, interpreter.NewIntValueFromInt64(5), elements[3])
+		utils.RequireValuesEqual(t,
+			interpreter.NewArrayValue(
+				inter,
+				interpreter.VariableSizedStaticType{
+					Type: interpreter.PrimitiveStaticTypeAnyStruct,
+				},
+				interpreter.NewStringValue("foo"),
+				interpreter.NewStringValue("bar"),
+				interpreter.NewStringValue("baz"),
+				interpreter.NewIntValueFromInt64(5),
+			),
+			array,
+		)
 
 		// Check original array
 
@@ -233,10 +263,17 @@ func TestArrayMutation(t *testing.T) {
 		require.IsType(t, &interpreter.ArrayValue{}, namesVal)
 		namesValArray := namesVal.(*interpreter.ArrayValue)
 
-		names := namesValArray.Elements()
-		require.Len(t, names, 2)
-		assert.Equal(t, interpreter.NewStringValue("foo"), names[0])
-		assert.Equal(t, interpreter.NewStringValue("bar"), names[1])
+		utils.RequireValuesEqual(t,
+			interpreter.NewArrayValue(
+				inter,
+				interpreter.VariableSizedStaticType{
+					Type: interpreter.PrimitiveStaticTypeAnyStruct,
+				},
+				interpreter.NewStringValue("foo"),
+				interpreter.NewStringValue("bar"),
+			),
+			namesValArray,
+		)
 	})
 
 	t.Run("invalid update through reference", func(t *testing.T) {
@@ -281,7 +318,7 @@ func TestDictionaryMutation(t *testing.T) {
 		require.IsType(t, &interpreter.DictionaryValue{}, value)
 		array := value.(*interpreter.DictionaryValue)
 
-		entries := array.Entries()
+		entries := array.Entries
 		require.Equal(t, 1, entries.Len())
 
 		val, present := entries.Get("foo")
@@ -330,7 +367,7 @@ func TestDictionaryMutation(t *testing.T) {
 		require.IsType(t, &interpreter.DictionaryValue{}, value)
 		array := value.(*interpreter.DictionaryValue)
 
-		entries := array.Entries()
+		entries := array.Entries
 		require.Equal(t, 0, entries.Len())
 	})
 
@@ -351,7 +388,7 @@ func TestDictionaryMutation(t *testing.T) {
 		require.IsType(t, &interpreter.DictionaryValue{}, value)
 		array := value.(*interpreter.DictionaryValue)
 
-		entries := array.Entries()
+		entries := array.Entries
 		require.Equal(t, 1, entries.Len())
 
 		val, present := entries.Get("foo")

@@ -22,10 +22,9 @@ import (
 	"fmt"
 	"testing"
 
-	. "github.com/onflow/cadence/runtime/tests/utils"
-
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
+	. "github.com/onflow/cadence/runtime/tests/utils"
 )
 
 func TestInterpretToString(t *testing.T) {
@@ -119,10 +118,10 @@ func TestInterpretToBytes(t *testing.T) {
 
 		AssertValuesEqual(t,
 			interpreter.NewArrayValue(
+				inter,
 				interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeUInt8,
 				},
-				inter.Storage,
 				interpreter.UInt8Value(0x0),
 				interpreter.UInt8Value(0x0),
 				interpreter.UInt8Value(0x0),
@@ -331,10 +330,8 @@ func TestInterpretToBigEndianBytes(t *testing.T) {
 					),
 				)
 
-				storage := interpreter.NewInMemoryStorage()
-
 				AssertValuesEqual(t,
-					interpreter.ByteSliceToByteArrayValue(storage, expected),
+					interpreter.ByteSliceToByteArrayValue(inter, expected),
 					inter.Globals["result"].GetValue(),
 				)
 			})

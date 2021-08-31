@@ -99,11 +99,11 @@ func TestDictionaryStorage(t *testing.T) {
 		require.NoError(t, err)
 
 		value := NewDictionaryValue(
+			inter,
 			DictionaryStaticType{
 				KeyType:   PrimitiveStaticTypeString,
 				ValueType: PrimitiveStaticTypeAnyStruct,
 			},
-			storage,
 		)
 
 		require.NotEqual(t, atree.StorageIDUndefined, value.StorageID)
@@ -159,11 +159,11 @@ func TestDictionaryStorage(t *testing.T) {
 		require.NoError(t, err)
 
 		value := NewDictionaryValue(
+			inter,
 			DictionaryStaticType{
 				KeyType:   PrimitiveStaticTypeString,
 				ValueType: PrimitiveStaticTypeAnyStruct,
 			},
-			storage,
 			NewStringValue("test"),
 			NewSomeValueNonCopying(BoolValue(true)),
 		)
@@ -213,11 +213,11 @@ func TestDictionaryStorage(t *testing.T) {
 		require.NoError(t, err)
 
 		value := NewDictionaryValue(
+			inter,
 			DictionaryStaticType{
 				KeyType:   PrimitiveStaticTypeString,
 				ValueType: PrimitiveStaticTypeAnyStruct,
 			},
-			storage,
 			NewStringValue("test"),
 			NewSomeValueNonCopying(BoolValue(true)),
 		)
@@ -232,7 +232,7 @@ func TestDictionaryStorage(t *testing.T) {
 		require.True(t, ok)
 
 		value.Remove(
-			inter.Storage,
+			inter,
 			ReturnEmptyLocationRange,
 			NewStringValue("test"),
 		)
@@ -266,11 +266,11 @@ func TestDictionaryStorage(t *testing.T) {
 		require.NoError(t, err)
 
 		value := NewDictionaryValue(
+			inter,
 			DictionaryStaticType{
 				KeyType:   PrimitiveStaticTypeString,
 				ValueType: PrimitiveStaticTypeAnyStruct,
 			},
-			storage,
 		)
 
 		require.NotEqual(t, atree.StorageIDUndefined, value.StorageID)
@@ -283,7 +283,7 @@ func TestDictionaryStorage(t *testing.T) {
 		require.True(t, ok)
 
 		value.Insert(
-			inter.Storage,
+			inter,
 			ReturnEmptyLocationRange,
 			NewStringValue("test"),
 			NewSomeValueNonCopying(BoolValue(true)),

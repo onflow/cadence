@@ -30,12 +30,12 @@ func TestInspectValue(t *testing.T) {
 
 	t.Parallel()
 
-	storage := NewInMemoryStorage()
-
 	// Prepare composite value
 
 	var compositeValue *CompositeValue
 	{
+		inter := newTestInterpreter(t)
+
 		dictionaryStaticType := DictionaryStaticType{
 			KeyType:   PrimitiveStaticTypeString,
 			ValueType: PrimitiveStaticTypeInt256,
@@ -43,23 +43,22 @@ func TestInspectValue(t *testing.T) {
 		dictValueKey := NewStringValue("hello world")
 		dictValueValue := NewInt256ValueFromInt64(1)
 		dictValue := NewDictionaryValue(
-			newTestInterpreter(t),
+			inter,
 			dictionaryStaticType,
-			storage,
 			dictValueKey, dictValueValue,
 		)
 
 		arrayValue := NewArrayValue(
+			inter,
 			VariableSizedStaticType{
 				Type: dictionaryStaticType,
 			},
-			storage,
 			dictValue,
 		)
 
 		optionalValue := NewSomeValueNonCopying(arrayValue)
 
-		compositeValue = newTestCompositeValue(storage, common.Address{})
+		compositeValue = newTestCompositeValue(inter.Storage, common.Address{})
 		compositeValue.Fields.Set("value", optionalValue)
 	}
 

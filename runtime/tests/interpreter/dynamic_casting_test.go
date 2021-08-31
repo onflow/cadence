@@ -22,7 +22,6 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/onflow/atree"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -1266,20 +1265,14 @@ func TestInterpretDynamicCastingDictionary(t *testing.T) {
 							),
 						)
 
-						storage := interpreter.NewInMemoryStorage()
-
-						expectedValue, err := interpreter.NewDictionaryValue(
-							newTestInterpreter(t),
+						expectedDictionary := interpreter.NewDictionaryValue(
+							inter,
 							interpreter.DictionaryStaticType{
 								KeyType:   interpreter.PrimitiveStaticTypeString,
 								ValueType: interpreter.PrimitiveStaticTypeInt,
 							},
-							storage,
 							interpreter.NewStringValue("test"), interpreter.NewIntValueFromInt64(42),
-						).DeepCopy(storage, atree.Address{})
-						require.NoError(t, err)
-
-						expectedDictionary := expectedValue.(interpreter.Value)
+						)
 
 						AssertValuesEqual(t,
 							expectedDictionary,
