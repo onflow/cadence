@@ -400,7 +400,11 @@ func (interpreter *Interpreter) VisitArrayExpression(expression *ast.ArrayExpres
 
 	arrayStaticType := ConvertSemaArrayTypeToStaticArrayType(arrayType)
 
-	return NewArrayValue(interpreter, arrayStaticType, copies...)
+	return NewArrayValue(
+		interpreter,
+		arrayStaticType,
+		copies...,
+	)
 }
 
 func (interpreter *Interpreter) VisitDictionaryExpression(expression *ast.DictionaryExpression) ast.Repr {

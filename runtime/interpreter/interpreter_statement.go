@@ -249,11 +249,8 @@ func (interpreter *Interpreter) VisitForStatement(statement *ast.ForStatement) a
 		nil,
 	)
 
-	valueCopy, err := interpreter.evalExpression(statement.Value).
-		DeepCopy(interpreter.Storage, atree.Address{})
-	if err != nil {
-		panic(ExternalError{err})
-	}
+	value := interpreter.evalExpression(statement.Value)
+	valueCopy := interpreter.CopyValue(value, atree.Address{})
 
 	iterator, err := valueCopy.(*ArrayValue).array.Iterator()
 	if err != nil {
@@ -261,12 +258,13 @@ func (interpreter *Interpreter) VisitForStatement(statement *ast.ForStatement) a
 	}
 
 	for {
-		value, err := iterator.Next()
+		var atreeValue atree.Value
+		atreeValue, err = iterator.Next()
 		if err != nil {
 			panic(ExternalError{err})
 		}
 
-		if value == nil {
+		if atreeValue == nil {
 			return nil
 		}
 
@@ -274,7 +272,9 @@ func (interpreter *Interpreter) VisitForStatement(statement *ast.ForStatement) a
 
 		// atree.Array iterator returns low-level atree.Value,
 		// convert to high-level interpreter.Value
-		variable.SetValue(MustConvertStoredValue(value))
+		value := MustConvertStoredValue(atreeValue)
+
+		variable.SetValue(value)
 
 		result := statement.Block.Accept(interpreter)
 

@@ -154,6 +154,7 @@ type SignatureVerificationHandlerFunc func(
 
 // HashHandlerFunc is a function that hashes.
 type HashHandlerFunc func(
+	inter *Interpreter,
 	data *ArrayValue,
 	tag *StringValue,
 	hashAlgorithm *CompositeValue,
@@ -1778,13 +1779,10 @@ func (interpreter *Interpreter) copyAndConvert(
 	getLocationRange func() LocationRange,
 ) Value {
 
-	valueCopy, err := value.DeepCopy(interpreter.Storage, atree.Address{})
-	if err != nil {
-		panic(ExternalError{err})
-	}
+	valueCopy := interpreter.CopyValue(value, atree.Address{})
 
 	result := interpreter.ConvertAndBox(
-		MustConvertStoredValue(valueCopy),
+		valueCopy,
 		valueType,
 		targetType,
 	)
@@ -2295,10 +2293,7 @@ func (interpreter *Interpreter) ReadStored(storageAddress common.Address, key st
 func (interpreter *Interpreter) writeStored(storageAddress common.Address, key string, value OptionalValue) {
 
 	if existingValue, ok := interpreter.ReadStored(storageAddress, key).(*SomeValue); ok {
-		err := existingValue.Value.DeepRemove(interpreter.Storage)
-		if err != nil {
-			panic(err)
-		}
+		existingValue.Value.DeepRemove(interpreter)
 	}
 
 	interpreter.Storage.WriteValue(interpreter, storageAddress, key, value)
@@ -2886,22 +2881,14 @@ func (interpreter *Interpreter) authAccountSaveFunction(addressValue AddressValu
 			)
 		}
 
-		valueCopy, err := value.DeepCopy(interpreter.Storage, atree.Address(address))
-		if err != nil {
-			panic(ExternalError{err})
-		}
-
-		err = value.DeepRemove(interpreter.Storage)
-		if err != nil {
-			panic(ExternalError{err})
-		}
+		value = interpreter.TransferValue(value, nil, atree.Address(address))
 
 		// Write new value
 
 		interpreter.writeStored(
 			address,
 			key,
-			NewSomeValueNonCopying(MustConvertStoredValue(valueCopy)),
+			NewSomeValueNonCopying(value),
 		)
 
 		return VoidValue{}
@@ -2948,10 +2935,7 @@ func (interpreter *Interpreter) authAccountReadFunction(addressValue AddressValu
 				return NilValue{}
 			}
 
-			valueCopy, err := value.DeepCopy(interpreter.Storage, atree.Address{})
-			if err != nil {
-				panic(ExternalError{err})
-			}
+			valueCopy := interpreter.CopyValue(value, atree.Address{})
 
 			// Remove the value from storage,
 			// but only if the type check succeeded.
@@ -2959,7 +2943,7 @@ func (interpreter *Interpreter) authAccountReadFunction(addressValue AddressValu
 				interpreter.writeStored(address, key, NilValue{})
 			}
 
-			return MustConvertStoredValue(valueCopy)
+			return valueCopy
 
 		default:
 			panic(errors.NewUnreachableError())
@@ -3506,5 +3490,41 @@ func (interpreter *Interpreter) checkResourceNotDestroyedOrCopied(value Value, g
 		panic(InvalidatedResourceError{
 			LocationRange: getLocationRange(),
 		})
+	}
+}
+
+func (interpreter *Interpreter) CopyValue(value Value, address atree.Address) Value {
+
+	if !value.NeedsCopy(interpreter, address) {
+		return value
+	}
+
+	return value.DeepCopy(interpreter, address)
+}
+
+func (interpreter *Interpreter) TransferValue(value Value, storable atree.Storable, address atree.Address) Value {
+
+	if !value.NeedsCopy(interpreter, address) {
+		return value
+	}
+
+	valueCopy := value.DeepCopy(interpreter, address)
+
+	value.DeepRemove(interpreter)
+
+	interpreter.removeReferencedSlab(storable)
+
+	return valueCopy
+}
+
+func (interpreter *Interpreter) removeReferencedSlab(storable atree.Storable) {
+	storageIDStorable, ok := storable.(atree.StorageIDStorable)
+	if !ok {
+		return
+	}
+
+	err := interpreter.Storage.Remove(atree.StorageID(storageIDStorable))
+	if err != nil {
+		panic(ExternalError{err})
 	}
 }
