@@ -243,13 +243,20 @@ var hashAlgorithmHashFunction = interpreter.NewHostFunctionValue(
 		dataValue := invocation.Arguments[0].(*interpreter.ArrayValue)
 		hashAlgoValue := invocation.Self
 
-		invocation.Interpreter.ExpectType(
+		inter := invocation.Interpreter
+
+		inter.ExpectType(
 			hashAlgoValue,
 			sema.HashAlgorithmType,
 			invocation.GetLocationRange,
 		)
 
-		return invocation.Interpreter.HashHandler(dataValue, nil, hashAlgoValue)
+		return inter.HashHandler(
+			inter,
+			dataValue,
+			nil,
+			hashAlgoValue,
+		)
 	},
 )
 
@@ -259,13 +266,16 @@ var hashAlgorithmHashWithTagFunction = interpreter.NewHostFunctionValue(
 		tagValue := invocation.Arguments[1].(*interpreter.StringValue)
 		hashAlgoValue := invocation.Self
 
-		invocation.Interpreter.ExpectType(
+		inter := invocation.Interpreter
+
+		inter.ExpectType(
 			hashAlgoValue,
 			sema.HashAlgorithmType,
 			invocation.GetLocationRange,
 		)
 
-		return invocation.Interpreter.HashHandler(
+		return inter.HashHandler(
+			inter,
 			dataValue,
 			tagValue,
 			hashAlgoValue,

@@ -252,8 +252,10 @@ func (r *interpreterRuntime) ExecuteScript(script Script, context Context) (cade
 
 	// Export before committing storage
 
-	result := exportValue(value)
-
+	result, err := exportValue(value)
+	if err != nil {
+		return nil, newError(err, context)
+	}
 	// Write back all stored values, which were actually just cached, back into storage.
 
 	// Even though this function is `ExecuteScript`, that doesn't imply the changes
@@ -764,20 +766,10 @@ func validateArgumentParams(
 func hasValidStaticType(value interpreter.Value) bool {
 	switch value := value.(type) {
 	case *interpreter.ArrayValue:
-		switch value.StaticType().(type) {
-		case interpreter.ConstantSizedStaticType, interpreter.VariableSizedStaticType:
-			return true
-		default:
-			return false
-		}
+		return value.Type != nil
 	case *interpreter.DictionaryValue:
-		dictionaryType, ok := value.StaticType().(interpreter.DictionaryStaticType)
-		if !ok {
-			return false
-		}
-
-		return dictionaryType.KeyType != nil &&
-			dictionaryType.ValueType != nil
+		return value.Type.KeyType != nil &&
+			value.Type.ValueType != nil
 	default:
 		// For other values, static type is NOT inferred.
 		// Hence no need to validate it here.
@@ -1078,12 +1070,13 @@ func (r *interpreterRuntime) newInterpreter(
 		),
 		interpreter.WithHashHandler(
 			func(
+				inter *interpreter.Interpreter,
 				data *interpreter.ArrayValue,
 				tag *interpreter.StringValue,
 				hashAlgorithm *interpreter.CompositeValue,
 			) *interpreter.ArrayValue {
 				return hash(
-					runtimeStorage,
+					inter,
 					data,
 					tag,
 					hashAlgorithm,
@@ -1405,9 +1398,9 @@ func (r *interpreterRuntime) emitAccountEvent(
 	}
 }
 
-func CodeToHashValue(storage interpreter.Storage, code []byte) *interpreter.ArrayValue {
+func CodeToHashValue(inter *interpreter.Interpreter, code []byte) *interpreter.ArrayValue {
 	codeHash := sha3.Sum256(code)
-	return interpreter.ByteSliceToByteArrayValue(storage, codeHash[:])
+	return interpreter.ByteSliceToByteArrayValue(inter, codeHash[:])
 }
 
 func (r *interpreterRuntime) newCreateAccountFunction(
@@ -1598,7 +1591,7 @@ func (r *interpreterRuntime) newRemovePublicKeyFunction(
 			inter := invocation.Interpreter
 
 			publicKeyValue := interpreter.ByteSliceToByteArrayValue(
-				inter.Storage,
+				inter,
 				publicKey,
 			)
 
@@ -1798,7 +1791,7 @@ func (r *interpreterRuntime) instantiateContract(
 		),
 	)
 
-	_, interpeter, err := r.interpret(
+	_, inter, err := r.interpret(
 		program,
 		context,
 		runtimeStorage,
@@ -1813,7 +1806,7 @@ func (r *interpreterRuntime) instantiateContract(
 		return nil, err
 	}
 
-	variable, ok := interpeter.Globals.Get(contractType.Identifier)
+	variable, ok := inter.Globals.Get(contractType.Identifier)
 	if !ok {
 		return nil, fmt.Errorf(
 			"cannot find contract: `%s`",
@@ -1874,7 +1867,7 @@ func (r *interpreterRuntime) getCurrentBlockHeight(runtimeInterface Interface) (
 func (r *interpreterRuntime) getBlockAtHeight(
 	height uint64,
 	runtimeInterface Interface,
-	storage interpreter.Storage,
+	inter *interpreter.Interpreter,
 ) (
 	*interpreter.BlockValue,
 	error,
@@ -1896,7 +1889,7 @@ func (r *interpreterRuntime) getBlockAtHeight(
 		return nil, nil
 	}
 
-	blockValue := NewBlockValue(storage, block)
+	blockValue := NewBlockValue(inter, block)
 	return &blockValue, nil
 }
 
@@ -1913,7 +1906,7 @@ func (r *interpreterRuntime) newGetCurrentBlockFunction(runtimeInterface Interfa
 		block, err := r.getBlockAtHeight(
 			height,
 			runtimeInterface,
-			invocation.Interpreter.Storage,
+			invocation.Interpreter,
 		)
 		if err != nil {
 			panic(err)
@@ -1928,7 +1921,7 @@ func (r *interpreterRuntime) newGetBlockFunction(runtimeInterface Interface) int
 		block, err := r.getBlockAtHeight(
 			height,
 			runtimeInterface,
-			invocation.Interpreter.Storage,
+			invocation.Interpreter,
 		)
 		if err != nil {
 			panic(err)
@@ -2274,7 +2267,7 @@ func (r *interpreterRuntime) newAuthAccountContractsChangeFunction(
 
 			inter := invocation.Interpreter
 
-			codeHashValue := CodeToHashValue(inter.Storage, code)
+			codeHashValue := CodeToHashValue(inter, code)
 
 			eventArguments := []exportableValue{
 				newExportableValue(addressValue, inter),
@@ -2419,7 +2412,7 @@ func (r *interpreterRuntime) newAccountContractsGetFunction(
 						Address: addressValue,
 						Name:    nameValue,
 						Code: interpreter.ByteSliceToByteArrayValue(
-							invocation.Interpreter.Storage,
+							invocation.Interpreter,
 							code,
 						),
 					},
@@ -2497,9 +2490,7 @@ func (r *interpreterRuntime) newAuthAccountContractsRemoveFunction(
 					nil,
 				)
 
-				storage := inter.Storage
-
-				codeHashValue := CodeToHashValue(storage, code)
+				codeHashValue := CodeToHashValue(inter, code)
 
 				r.emitAccountEvent(
 					stdlib.AccountContractRemovedEventType,
@@ -2516,7 +2507,7 @@ func (r *interpreterRuntime) newAuthAccountContractsRemoveFunction(
 						Address: addressValue,
 						Name:    nameValue,
 						Code: interpreter.ByteSliceToByteArrayValue(
-							storage,
+							inter,
 							code,
 						),
 					},
@@ -2531,10 +2522,10 @@ func (r *interpreterRuntime) newAuthAccountContractsRemoveFunction(
 func (r *interpreterRuntime) newAccountContractsGetNamesFunction(
 	addressValue interpreter.AddressValue,
 	runtimeInterface Interface,
-) func() *interpreter.ArrayValue {
+) func(inter *interpreter.Interpreter) *interpreter.ArrayValue {
 	address := addressValue.ToAddress()
 
-	return func() *interpreter.ArrayValue {
+	return func(inter *interpreter.Interpreter) *interpreter.ArrayValue {
 		var names []string
 		var err error
 		wrapPanic(func() {
@@ -2549,7 +2540,8 @@ func (r *interpreterRuntime) newAccountContractsGetNamesFunction(
 			values[i] = interpreter.NewStringValue(name)
 		}
 
-		return interpreter.NewArrayValueUnownedNonCopying(
+		return interpreter.NewArrayValue(
+			inter,
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeString,
 			},
@@ -2631,7 +2623,7 @@ func (r *interpreterRuntime) ReadLinked(address common.Address, path cadence.Pat
 	)
 }
 
-func NewBlockValue(storage interpreter.Storage, block Block) interpreter.BlockValue {
+func NewBlockValue(inter *interpreter.Interpreter, block Block) interpreter.BlockValue {
 
 	// height
 	heightValue := interpreter.UInt64Value(block.Height)
@@ -2645,8 +2637,8 @@ func NewBlockValue(storage interpreter.Storage, block Block) interpreter.BlockVa
 		values[i] = interpreter.UInt8Value(b)
 	}
 	idValue := interpreter.NewArrayValue(
+		inter,
 		interpreter.ByteArrayStaticType,
-		storage,
 		values...,
 	)
 
@@ -2735,7 +2727,7 @@ func (r *interpreterRuntime) newAccountKeysGetFunction(
 
 			inter := invocation.Interpreter
 
-			return interpreter.NewSomeValueOwningNonCopying(
+			return interpreter.NewSomeValueNonCopying(
 				NewAccountKeyValue(
 					inter,
 					accountKey,
@@ -2783,9 +2775,7 @@ func (r *interpreterRuntime) newAccountKeysRevokeFunction(
 				},
 			)
 
-			inter := invocation.Interpreter
-
-			return interpreter.NewSomeValueOwningNonCopying(
+			return interpreter.NewSomeValueNonCopying(
 				NewAccountKeyValue(
 					inter,
 					accountKey,
@@ -2895,7 +2885,7 @@ func NewPublicKeyValue(
 	return interpreter.NewPublicKeyValue(
 		inter,
 		interpreter.ByteSliceToByteArrayValue(
-			inter.Storage,
+			inter,
 			publicKey.PublicKey,
 		),
 		stdlib.NewSignatureAlgorithmCase(
@@ -3015,7 +3005,7 @@ func verifySignature(
 }
 
 func hash(
-	storage interpreter.Storage,
+	inter *interpreter.Interpreter,
 	dataValue *interpreter.ArrayValue,
 	tagValue *interpreter.StringValue,
 	hashAlgorithmValue *interpreter.CompositeValue,
@@ -3042,5 +3032,5 @@ func hash(
 		panic(err)
 	}
 
-	return interpreter.ByteSliceToByteArrayValue(storage, result)
+	return interpreter.ByteSliceToByteArrayValue(inter, result)
 }
