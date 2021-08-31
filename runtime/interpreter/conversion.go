@@ -21,6 +21,8 @@ package interpreter
 import (
 	"errors"
 	"math"
+
+	"github.com/onflow/atree"
 )
 
 func ByteArrayValueToByteSlice(value Value) ([]byte, error) {
@@ -38,17 +40,20 @@ func ByteArrayValueToByteSlice(value Value) ([]byte, error) {
 
 	index := 0
 	for {
-		value, err := iterator.Next()
+		var atreeValue atree.Value
+		atreeValue, err = iterator.Next()
 		if err != nil {
 			return nil, ExternalError{err}
 		}
-		if value == nil {
+		if atreeValue == nil {
 			return result, nil
 		}
 
 		// atree.Array iterator returns low-level atree.Value,
 		// convert to high-level interpreter.Value
-		b, err := ByteValueToByte(MustConvertStoredValue(value))
+		value := MustConvertStoredValue(atreeValue)
+
+		b, err := ByteValueToByte(value)
 		if err != nil {
 			return nil, err
 		}
