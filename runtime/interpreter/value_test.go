@@ -47,23 +47,42 @@ func newTestCompositeValue(storage Storage, owner common.Address) *CompositeValu
 	)
 }
 
+var testCompositeValueType = &sema.CompositeType{
+	Location:   utils.TestLocation,
+	Identifier: "Test",
+	Kind:       common.CompositeKindStructure,
+	Members:    sema.NewStringMemberOrderedMap(),
+}
+
 func TestOwnerNewArray(t *testing.T) {
 
 	t.Parallel()
 
 	storage := NewInMemoryStorage()
 
+	elaboration := sema.NewElaboration()
+	elaboration.CompositeTypes[testCompositeValueType.ID()] = testCompositeValueType
+
+	inter, err := NewInterpreter(
+		&Program{
+			Elaboration: elaboration,
+		},
+		utils.TestLocation,
+		WithStorage(storage),
+	)
+	require.NoError(t, err)
+
 	oldOwner := common.Address{0x1}
 
-	value := newTestCompositeValue(storage, oldOwner)
+	value := newTestCompositeValue(inter.Storage, oldOwner)
 
 	assert.Equal(t, oldOwner, value.GetOwner())
 
 	array := NewArrayValue(
+		inter,
 		VariableSizedStaticType{
 			Type: PrimitiveStaticTypeAnyStruct,
 		},
-		storage,
 		value,
 	)
 
@@ -79,21 +98,32 @@ func TestOwnerArrayDeepCopy(t *testing.T) {
 
 	storage := NewInMemoryStorage()
 
+	elaboration := sema.NewElaboration()
+	elaboration.CompositeTypes[testCompositeValueType.ID()] = testCompositeValueType
+
+	inter, err := NewInterpreter(
+		&Program{
+			Elaboration: elaboration,
+		},
+		utils.TestLocation,
+		WithStorage(storage),
+	)
+	require.NoError(t, err)
+
 	oldOwner := common.Address{0x1}
 	newOwner := common.Address{0x2}
 
-	value := newTestCompositeValue(storage, oldOwner)
+	value := newTestCompositeValue(inter.Storage, oldOwner)
 
 	array := NewArrayValue(
+		inter,
 		VariableSizedStaticType{
 			Type: PrimitiveStaticTypeAnyStruct,
 		},
-		storage,
 		value,
 	)
 
-	arrayCopy, err := array.DeepCopy(storage, atree.Address(newOwner))
-	require.NoError(t, err)
+	arrayCopy := array.DeepCopy(inter, atree.Address(newOwner))
 	array = arrayCopy.(*ArrayValue)
 
 	value = array.GetIndex(ReturnEmptyLocationRange, 0).(*CompositeValue)
@@ -108,16 +138,28 @@ func TestOwnerArrayElement(t *testing.T) {
 
 	storage := NewInMemoryStorage()
 
+	elaboration := sema.NewElaboration()
+	elaboration.CompositeTypes[testCompositeValueType.ID()] = testCompositeValueType
+
+	inter, err := NewInterpreter(
+		&Program{
+			Elaboration: elaboration,
+		},
+		utils.TestLocation,
+		WithStorage(storage),
+	)
+	require.NoError(t, err)
+
 	oldOwner := common.Address{0x1}
 	newOwner := common.Address{0x2}
 
-	value := newTestCompositeValue(storage, oldOwner)
+	value := newTestCompositeValue(inter.Storage, oldOwner)
 
 	array := NewArrayValueWithAddress(
+		inter,
 		VariableSizedStaticType{
 			Type: PrimitiveStaticTypeAnyStruct,
 		},
-		storage,
 		newOwner,
 		value,
 	)
@@ -134,17 +176,29 @@ func TestOwnerArraySetIndex(t *testing.T) {
 
 	storage := NewInMemoryStorage()
 
+	elaboration := sema.NewElaboration()
+	elaboration.CompositeTypes[testCompositeValueType.ID()] = testCompositeValueType
+
+	inter, err := NewInterpreter(
+		&Program{
+			Elaboration: elaboration,
+		},
+		utils.TestLocation,
+		WithStorage(storage),
+	)
+	require.NoError(t, err)
+
 	oldOwner := common.Address{0x1}
 	newOwner := common.Address{0x2}
 
-	value1 := newTestCompositeValue(storage, oldOwner)
-	value2 := newTestCompositeValue(storage, oldOwner)
+	value1 := newTestCompositeValue(inter.Storage, oldOwner)
+	value2 := newTestCompositeValue(inter.Storage, oldOwner)
 
 	array := NewArrayValueWithAddress(
+		inter,
 		VariableSizedStaticType{
 			Type: PrimitiveStaticTypeAnyStruct,
 		},
-		storage,
 		newOwner,
 		value1,
 	)
@@ -155,7 +209,7 @@ func TestOwnerArraySetIndex(t *testing.T) {
 	assert.Equal(t, newOwner, value1.GetOwner())
 	assert.Equal(t, oldOwner, value2.GetOwner())
 
-	array.SetIndex(ReturnEmptyLocationRange, 0, value2)
+	array.SetIndex(inter, ReturnEmptyLocationRange, 0, value2)
 
 	value2 = array.GetIndex(ReturnEmptyLocationRange, 0).(*CompositeValue)
 
@@ -170,23 +224,35 @@ func TestOwnerArrayAppend(t *testing.T) {
 
 	storage := NewInMemoryStorage()
 
+	elaboration := sema.NewElaboration()
+	elaboration.CompositeTypes[testCompositeValueType.ID()] = testCompositeValueType
+
+	inter, err := NewInterpreter(
+		&Program{
+			Elaboration: elaboration,
+		},
+		utils.TestLocation,
+		WithStorage(storage),
+	)
+	require.NoError(t, err)
+
 	oldOwner := common.Address{0x1}
 	newOwner := common.Address{0x2}
 
-	value := newTestCompositeValue(storage, oldOwner)
+	value := newTestCompositeValue(inter.Storage, oldOwner)
 
 	array := NewArrayValueWithAddress(
+		inter,
 		VariableSizedStaticType{
 			Type: PrimitiveStaticTypeAnyStruct,
 		},
-		storage,
 		newOwner,
 	)
 
 	assert.Equal(t, newOwner, array.GetOwner())
 	assert.Equal(t, oldOwner, value.GetOwner())
 
-	array.Append(value)
+	array.Append(inter, ReturnEmptyLocationRange, value)
 
 	value = array.GetIndex(ReturnEmptyLocationRange, 0).(*CompositeValue)
 
@@ -200,23 +266,35 @@ func TestOwnerArrayInsert(t *testing.T) {
 
 	storage := NewInMemoryStorage()
 
+	elaboration := sema.NewElaboration()
+	elaboration.CompositeTypes[testCompositeValueType.ID()] = testCompositeValueType
+
+	inter, err := NewInterpreter(
+		&Program{
+			Elaboration: elaboration,
+		},
+		utils.TestLocation,
+		WithStorage(storage),
+	)
+	require.NoError(t, err)
+
 	oldOwner := common.Address{0x1}
 	newOwner := common.Address{0x2}
 
-	value := newTestCompositeValue(storage, oldOwner)
+	value := newTestCompositeValue(inter.Storage, oldOwner)
 
 	array := NewArrayValueWithAddress(
+		inter,
 		VariableSizedStaticType{
 			Type: PrimitiveStaticTypeAnyStruct,
 		},
-		storage,
 		newOwner,
 	)
 
 	assert.Equal(t, newOwner, array.GetOwner())
 	assert.Equal(t, oldOwner, value.GetOwner())
 
-	array.Insert(ReturnEmptyLocationRange, 0, value)
+	array.Insert(inter, ReturnEmptyLocationRange, 0, value)
 
 	value = array.GetIndex(ReturnEmptyLocationRange, 0).(*CompositeValue)
 
@@ -230,15 +308,27 @@ func TestOwnerArrayRemove(t *testing.T) {
 
 	storage := NewInMemoryStorage()
 
+	elaboration := sema.NewElaboration()
+	elaboration.CompositeTypes[testCompositeValueType.ID()] = testCompositeValueType
+
+	inter, err := NewInterpreter(
+		&Program{
+			Elaboration: elaboration,
+		},
+		utils.TestLocation,
+		WithStorage(storage),
+	)
+	require.NoError(t, err)
+
 	owner := common.Address{0x1}
 
-	value := newTestCompositeValue(storage, owner)
+	value := newTestCompositeValue(inter.Storage, owner)
 
 	array := NewArrayValueWithAddress(
+		inter,
 		VariableSizedStaticType{
 			Type: PrimitiveStaticTypeAnyStruct,
 		},
-		storage,
 		owner,
 		value,
 	)
@@ -246,7 +336,7 @@ func TestOwnerArrayRemove(t *testing.T) {
 	assert.Equal(t, owner, array.GetOwner())
 	assert.Equal(t, owner, value.GetOwner())
 
-	value = array.Remove(ReturnEmptyLocationRange, 0).(*CompositeValue)
+	value = array.Remove(inter, ReturnEmptyLocationRange, 0).(*CompositeValue)
 
 	assert.Equal(t, owner, array.GetOwner())
 	assert.Equal(t, common.Address{}, value.GetOwner())
@@ -258,19 +348,31 @@ func TestOwnerNewDictionary(t *testing.T) {
 
 	storage := NewInMemoryStorage()
 
+	elaboration := sema.NewElaboration()
+	elaboration.CompositeTypes[testCompositeValueType.ID()] = testCompositeValueType
+
+	inter, err := NewInterpreter(
+		&Program{
+			Elaboration: elaboration,
+		},
+		utils.TestLocation,
+		WithStorage(storage),
+	)
+	require.NoError(t, err)
+
 	oldOwner := common.Address{0x1}
 
 	keyValue := NewStringValue("test")
-	value := newTestCompositeValue(storage, oldOwner)
+	value := newTestCompositeValue(inter.Storage, oldOwner)
 
 	assert.Equal(t, oldOwner, value.GetOwner())
 
 	dictionary := NewDictionaryValue(
+		inter,
 		DictionaryStaticType{
 			KeyType:   PrimitiveStaticTypeString,
 			ValueType: PrimitiveStaticTypeAnyStruct,
 		},
-		storage,
 		keyValue, value,
 	)
 
@@ -289,18 +391,30 @@ func TestOwnerDictionary(t *testing.T) {
 
 	storage := NewInMemoryStorage()
 
+	elaboration := sema.NewElaboration()
+	elaboration.CompositeTypes[testCompositeValueType.ID()] = testCompositeValueType
+
+	inter, err := NewInterpreter(
+		&Program{
+			Elaboration: elaboration,
+		},
+		utils.TestLocation,
+		WithStorage(storage),
+	)
+	require.NoError(t, err)
+
 	oldOwner := common.Address{0x1}
 	newOwner := common.Address{0x2}
 
 	keyValue := NewStringValue("test")
-	value := newTestCompositeValue(storage, oldOwner)
+	value := newTestCompositeValue(inter.Storage, oldOwner)
 
 	dictionary := NewDictionaryValueWithAddress(
+		inter,
 		DictionaryStaticType{
 			KeyType:   PrimitiveStaticTypeString,
 			ValueType: PrimitiveStaticTypeAnyStruct,
 		},
-		storage,
 		newOwner,
 		keyValue, value,
 	)
@@ -320,24 +434,35 @@ func TestOwnerDictionaryCopy(t *testing.T) {
 
 	storage := NewInMemoryStorage()
 
+	elaboration := sema.NewElaboration()
+	elaboration.CompositeTypes[testCompositeValueType.ID()] = testCompositeValueType
+
+	inter, err := NewInterpreter(
+		&Program{
+			Elaboration: elaboration,
+		},
+		utils.TestLocation,
+		WithStorage(storage),
+	)
+	require.NoError(t, err)
+
 	oldOwner := common.Address{0x1}
 	newOwner := common.Address{0x2}
 
 	keyValue := NewStringValue("test")
-	value := newTestCompositeValue(storage, oldOwner)
+	value := newTestCompositeValue(inter.Storage, oldOwner)
 
 	dictionary := NewDictionaryValueWithAddress(
+		inter,
 		DictionaryStaticType{
 			KeyType:   PrimitiveStaticTypeString,
 			ValueType: PrimitiveStaticTypeAnyStruct,
 		},
-		storage,
 		newOwner,
 		keyValue, value,
 	)
 
-	copyResult, err := dictionary.DeepCopy(storage, atree.Address{})
-	require.NoError(t, err)
+	copyResult := inter.CopyValue(dictionary, atree.Address{})
 
 	dictionaryCopy := copyResult.(*DictionaryValue)
 
@@ -354,6 +479,18 @@ func TestOwnerDictionarySetSome(t *testing.T) {
 
 	storage := NewInMemoryStorage()
 
+	elaboration := sema.NewElaboration()
+	elaboration.CompositeTypes[testCompositeValueType.ID()] = testCompositeValueType
+
+	inter, err := NewInterpreter(
+		&Program{
+			Elaboration: elaboration,
+		},
+		utils.TestLocation,
+		WithStorage(storage),
+	)
+	require.NoError(t, err)
+
 	oldOwner := common.Address{0x1}
 	newOwner := common.Address{0x2}
 
@@ -361,23 +498,16 @@ func TestOwnerDictionarySetSome(t *testing.T) {
 	value := newTestCompositeValue(storage, oldOwner)
 
 	dictionary := NewDictionaryValueWithAddress(
+		inter,
 		DictionaryStaticType{
 			KeyType:   PrimitiveStaticTypeString,
 			ValueType: PrimitiveStaticTypeAnyStruct,
 		},
-		storage,
 		newOwner,
 	)
 
 	assert.Equal(t, newOwner, dictionary.GetOwner())
 	assert.Equal(t, oldOwner, value.GetOwner())
-
-	inter, err := NewInterpreter(
-		nil,
-		utils.TestLocation,
-		WithStorage(storage),
-	)
-	require.NoError(t, err)
 
 	dictionary.Set(
 		inter,
@@ -399,6 +529,18 @@ func TestOwnerDictionaryInsertNonExisting(t *testing.T) {
 
 	storage := NewInMemoryStorage()
 
+	elaboration := sema.NewElaboration()
+	elaboration.CompositeTypes[testCompositeValueType.ID()] = testCompositeValueType
+
+	inter, err := NewInterpreter(
+		&Program{
+			Elaboration: elaboration,
+		},
+		utils.TestLocation,
+		WithStorage(storage),
+	)
+	require.NoError(t, err)
+
 	oldOwner := common.Address{0x1}
 	newOwner := common.Address{0x2}
 
@@ -406,26 +548,19 @@ func TestOwnerDictionaryInsertNonExisting(t *testing.T) {
 	value := newTestCompositeValue(storage, oldOwner)
 
 	dictionary := NewDictionaryValueWithAddress(
+		inter,
 		DictionaryStaticType{
 			KeyType:   PrimitiveStaticTypeString,
 			ValueType: PrimitiveStaticTypeAnyStruct,
 		},
-		storage,
 		newOwner,
 	)
 
 	assert.Equal(t, newOwner, dictionary.GetOwner())
 	assert.Equal(t, oldOwner, value.GetOwner())
 
-	inter, err := NewInterpreter(
-		nil,
-		utils.TestLocation,
-		WithStorage(storage),
-	)
-	require.NoError(t, err)
-
 	existingValue := dictionary.Insert(
-		inter.Storage,
+		inter,
 		ReturnEmptyLocationRange,
 		keyValue,
 		value,
@@ -445,19 +580,31 @@ func TestOwnerDictionaryRemove(t *testing.T) {
 
 	storage := NewInMemoryStorage()
 
+	elaboration := sema.NewElaboration()
+	elaboration.CompositeTypes[testCompositeValueType.ID()] = testCompositeValueType
+
+	inter, err := NewInterpreter(
+		&Program{
+			Elaboration: elaboration,
+		},
+		utils.TestLocation,
+		WithStorage(storage),
+	)
+	require.NoError(t, err)
+
 	oldOwner := common.Address{0x1}
 	newOwner := common.Address{0x2}
 
 	keyValue := NewStringValue("test")
-	value1 := newTestCompositeValue(storage, oldOwner)
-	value2 := newTestCompositeValue(storage, oldOwner)
+	value1 := newTestCompositeValue(inter.Storage, oldOwner)
+	value2 := newTestCompositeValue(inter.Storage, oldOwner)
 
 	dictionary := NewDictionaryValueWithAddress(
+		inter,
 		DictionaryStaticType{
 			KeyType:   PrimitiveStaticTypeString,
 			ValueType: PrimitiveStaticTypeAnyStruct,
 		},
-		storage,
 		newOwner,
 		keyValue, value1,
 	)
@@ -466,15 +613,8 @@ func TestOwnerDictionaryRemove(t *testing.T) {
 	assert.Equal(t, oldOwner, value1.GetOwner())
 	assert.Equal(t, oldOwner, value2.GetOwner())
 
-	inter, err := NewInterpreter(
-		nil,
-		utils.TestLocation,
-		WithStorage(storage),
-	)
-	require.NoError(t, err)
-
 	existingValue := dictionary.Insert(
-		inter.Storage,
+		inter,
 		ReturnEmptyLocationRange,
 		keyValue,
 		value2,
@@ -496,18 +636,30 @@ func TestOwnerDictionaryInsertExisting(t *testing.T) {
 
 	storage := NewInMemoryStorage()
 
+	elaboration := sema.NewElaboration()
+	elaboration.CompositeTypes[testCompositeValueType.ID()] = testCompositeValueType
+
+	inter, err := NewInterpreter(
+		&Program{
+			Elaboration: elaboration,
+		},
+		utils.TestLocation,
+		WithStorage(storage),
+	)
+	require.NoError(t, err)
+
 	oldOwner := common.Address{0x1}
 	newOwner := common.Address{0x2}
 
 	keyValue := NewStringValue("test")
-	value := newTestCompositeValue(storage, oldOwner)
+	value := newTestCompositeValue(inter.Storage, oldOwner)
 
 	dictionary := NewDictionaryValueWithAddress(
+		inter,
 		DictionaryStaticType{
 			KeyType:   PrimitiveStaticTypeString,
 			ValueType: PrimitiveStaticTypeAnyStruct,
 		},
-		storage,
 		newOwner,
 		keyValue, value,
 	)
@@ -515,15 +667,8 @@ func TestOwnerDictionaryInsertExisting(t *testing.T) {
 	assert.Equal(t, newOwner, dictionary.GetOwner())
 	assert.Equal(t, oldOwner, value.GetOwner())
 
-	inter, err := NewInterpreter(
-		nil,
-		utils.TestLocation,
-		WithStorage(storage),
-	)
-	require.NoError(t, err)
-
 	existingValue := dictionary.Remove(
-		inter.Storage,
+		inter,
 		ReturnEmptyLocationRange,
 		keyValue,
 	)
@@ -551,23 +696,16 @@ func TestOwnerCompositeSet(t *testing.T) {
 
 	t.Parallel()
 
-	storage := NewInMemoryStorage()
+	inter := newTestInterpreter(t)
 
 	oldOwner := common.Address{0x1}
 	newOwner := common.Address{0x2}
 
-	value := newTestCompositeValue(storage, oldOwner)
-	composite := newTestCompositeValue(storage, newOwner)
+	value := newTestCompositeValue(inter.Storage, oldOwner)
+	composite := newTestCompositeValue(inter.Storage, newOwner)
 
 	assert.Equal(t, oldOwner, value.GetOwner())
 	assert.Equal(t, newOwner, composite.GetOwner())
-
-	inter, err := NewInterpreter(
-		nil,
-		utils.TestLocation,
-		WithStorage(storage),
-	)
-	require.NoError(t, err)
 
 	const fieldName = "test"
 
@@ -606,9 +744,7 @@ func TestOwnerCompositeCopy(t *testing.T) {
 		value,
 	)
 
-	copyResult, err := composite.DeepCopy(storage, atree.Address{})
-	require.NoError(t, err)
-	composite = copyResult.(*CompositeValue)
+	composite = inter.CopyValue(composite, atree.Address{}).(*CompositeValue)
 
 	value = composite.GetMember(inter, ReturnEmptyLocationRange, fieldName).(*CompositeValue)
 
@@ -619,8 +755,6 @@ func TestOwnerCompositeCopy(t *testing.T) {
 func TestStringer(t *testing.T) {
 
 	t.Parallel()
-
-	storage := NewInMemoryStorage()
 
 	type testCase struct {
 		value    Value
@@ -730,27 +864,26 @@ func TestStringer(t *testing.T) {
 		},
 		"Array": {
 			value: NewArrayValue(
+				newTestInterpreter(t),
 				VariableSizedStaticType{
 					Type: PrimitiveStaticTypeAnyStruct,
 				},
-				storage,
 				NewIntValueFromInt64(10),
 				NewStringValue("TEST"),
 			),
 			expected: "[10, \"TEST\"]",
 		},
 		"Dictionary": {
-			value: NewDictionaryValueUnownedNonCopying(
+			value: NewDictionaryValue(
 				newTestInterpreter(t),
 				DictionaryStaticType{
 					KeyType:   PrimitiveStaticTypeString,
-					ValueType: PrimitiveStaticTypeString,
+					ValueType: PrimitiveStaticTypeUInt8,
 				},
-				storage,
-				NewStringValue("key"),
-				NewStringValue("value"),
+				NewStringValue("a"), UInt8Value(42),
+				NewStringValue("b"), UInt8Value(99),
 			),
-			expected: "{\"key\": \"value\"}",
+			expected: `{"a": 42, "b": 99}`,
 		},
 		"Address": {
 			value:    NewAddressValue(common.Address{0, 0, 0, 0, 0, 0, 0, 1}),
@@ -762,7 +895,7 @@ func TestStringer(t *testing.T) {
 				members.Set("y", NewStringValue("bar"))
 
 				return NewCompositeValue(
-					storage,
+					NewInMemoryStorage(),
 					utils.TestLocation,
 					"Foo",
 					common.CompositeKindResource,
@@ -778,7 +911,7 @@ func TestStringer(t *testing.T) {
 				members.Set("y", NewStringValue("bar"))
 
 				compositeValue := NewCompositeValue(
-					storage,
+					NewInMemoryStorage(),
 					utils.TestLocation,
 					"Foo",
 					common.CompositeKindResource,
@@ -836,26 +969,13 @@ func TestStringer(t *testing.T) {
 			},
 			expected: "Capability(address: 0x102030405, path: /storage/foo)",
 		},
-		"Dictionary": {
-			value: NewDictionaryValue(
-				newTestInterpreter(t),
-				DictionaryStaticType{
-					KeyType:   PrimitiveStaticTypeString,
-					ValueType: PrimitiveStaticTypeUInt8,
-				},
-				storage,
-				NewStringValue("a"), UInt8Value(42),
-				NewStringValue("b"), UInt8Value(99),
-			),
-			expected: `{"a": 42, "b": 99}`,
-		},
 		"Recursive ephemeral reference (array)": {
 			value: func() Value {
 				array := NewArrayValue(
+					newTestInterpreter(t),
 					VariableSizedStaticType{
 						Type: PrimitiveStaticTypeAnyStruct,
 					},
-					storage,
 				)
 				arrayRef := &EphemeralReferenceValue{Value: array}
 				array.Insert(newTestInterpreter(t), ReturnEmptyLocationRange, 0, arrayRef)
@@ -887,7 +1007,7 @@ func TestVisitor(t *testing.T) {
 
 	t.Parallel()
 
-	storage := NewInMemoryStorage()
+	inter := newTestInterpreter(t)
 
 	var intVisits, stringVisits int
 
@@ -904,14 +1024,12 @@ func TestVisitor(t *testing.T) {
 	value = NewIntValueFromInt64(42)
 	value = NewSomeValueNonCopying(value)
 	value = NewArrayValue(
+		inter,
 		VariableSizedStaticType{
 			Type: PrimitiveStaticTypeAnyStruct,
 		},
-		storage,
 		value,
 	)
-
-	inter := newTestInterpreter(t)
 
 	value = NewDictionaryValue(
 		inter,
@@ -919,13 +1037,12 @@ func TestVisitor(t *testing.T) {
 			KeyType:   PrimitiveStaticTypeString,
 			ValueType: PrimitiveStaticTypeAny,
 		},
-		storage,
 		NewStringValue("42"), value,
 	)
 	members := NewStringValueOrderedMap()
 	members.Set("foo", value)
 	value = NewCompositeValue(
-		storage,
+		inter.Storage,
 		utils.TestLocation,
 		"Foo",
 		common.CompositeKindStructure,
@@ -1091,15 +1208,12 @@ func TestBlockValue(t *testing.T) {
 
 	t.Parallel()
 
-	storage := NewInMemoryStorage()
+	inter := newTestInterpreter(t)
 
 	block := BlockValue{
-		Height: 4,
-		View:   5,
-		ID: NewArrayValue(
-			ByteArrayStaticType,
-			storage,
-		),
+		Height:    4,
+		View:      5,
+		ID:        NewArrayValue(inter, ByteArrayStaticType),
 		Timestamp: 5.0,
 	}
 
@@ -1768,18 +1882,18 @@ func TestArrayValue_Equal(t *testing.T) {
 
 		t.Parallel()
 
-		storage := NewInMemoryStorage()
+		inter := newTestInterpreter(t)
 
 		require.True(t,
 			NewArrayValue(
+				inter,
 				uint8ArrayStaticType,
-				storage,
 				UInt8Value(1),
 				UInt8Value(2),
 			).Equal(
 				NewArrayValue(
+					inter,
 					uint8ArrayStaticType,
-					storage,
 					UInt8Value(1),
 					UInt8Value(2),
 				),
@@ -1792,18 +1906,18 @@ func TestArrayValue_Equal(t *testing.T) {
 
 		t.Parallel()
 
-		storage := NewInMemoryStorage()
+		inter := newTestInterpreter(t)
 
 		require.False(t,
 			NewArrayValue(
+				inter,
 				uint8ArrayStaticType,
-				storage,
 				UInt8Value(1),
 				UInt8Value(2),
 			).Equal(
 				NewArrayValue(
+					inter,
 					uint8ArrayStaticType,
-					storage,
 					UInt8Value(2),
 					UInt8Value(3),
 				),
@@ -1816,17 +1930,17 @@ func TestArrayValue_Equal(t *testing.T) {
 
 		t.Parallel()
 
-		storage := NewInMemoryStorage()
+		inter := newTestInterpreter(t)
 
 		require.False(t,
 			NewArrayValue(
+				inter,
 				uint8ArrayStaticType,
-				storage,
 				UInt8Value(1),
 			).Equal(
 				NewArrayValue(
+					inter,
 					uint8ArrayStaticType,
-					storage,
 					UInt8Value(1),
 					UInt8Value(2),
 				),
@@ -1839,18 +1953,18 @@ func TestArrayValue_Equal(t *testing.T) {
 
 		t.Parallel()
 
-		storage := NewInMemoryStorage()
+		inter := newTestInterpreter(t)
 
 		require.False(t,
 			NewArrayValue(
+				inter,
 				uint8ArrayStaticType,
-				storage,
 				UInt8Value(1),
 				UInt8Value(2),
 			).Equal(
 				NewArrayValue(
+					inter,
 					uint8ArrayStaticType,
-					storage,
 					UInt8Value(1),
 				),
 				ReturnEmptyLocationRange,
@@ -1862,7 +1976,7 @@ func TestArrayValue_Equal(t *testing.T) {
 
 		t.Parallel()
 
-		storage := NewInMemoryStorage()
+		inter := newTestInterpreter(t)
 
 		uint16ArrayStaticType := VariableSizedStaticType{
 			Type: PrimitiveStaticTypeUInt16,
@@ -1870,12 +1984,12 @@ func TestArrayValue_Equal(t *testing.T) {
 
 		require.False(t,
 			NewArrayValue(
+				inter,
 				uint8ArrayStaticType,
-				storage,
 			).Equal(
 				NewArrayValue(
+					inter,
 					uint16ArrayStaticType,
-					storage,
 				),
 				ReturnEmptyLocationRange,
 			),
@@ -1886,16 +2000,16 @@ func TestArrayValue_Equal(t *testing.T) {
 
 		t.Parallel()
 
-		storage := NewInMemoryStorage()
+		inter := newTestInterpreter(t)
 
 		require.False(t,
 			NewArrayValue(
+				inter,
 				nil,
-				storage,
 			).Equal(
 				NewArrayValue(
+					inter,
 					uint8ArrayStaticType,
-					storage,
 				),
 				ReturnEmptyLocationRange,
 			),
@@ -1906,16 +2020,16 @@ func TestArrayValue_Equal(t *testing.T) {
 
 		t.Parallel()
 
-		storage := NewInMemoryStorage()
+		inter := newTestInterpreter(t)
 
 		require.False(t,
 			NewArrayValue(
+				inter,
 				uint8ArrayStaticType,
-				storage,
 			).Equal(
 				NewArrayValue(
+					inter,
 					nil,
-					storage,
 				),
 				ReturnEmptyLocationRange,
 			),
@@ -1926,16 +2040,16 @@ func TestArrayValue_Equal(t *testing.T) {
 
 		t.Parallel()
 
-		storage := NewInMemoryStorage()
+		inter := newTestInterpreter(t)
 
 		require.True(t,
 			NewArrayValue(
+				inter,
 				nil,
-				storage,
 			).Equal(
 				NewArrayValue(
+					inter,
 					nil,
-					storage,
 				),
 				ReturnEmptyLocationRange,
 			),
@@ -1946,12 +2060,12 @@ func TestArrayValue_Equal(t *testing.T) {
 
 		t.Parallel()
 
-		storage := NewInMemoryStorage()
+		inter := newTestInterpreter(t)
 
 		require.False(t,
 			NewArrayValue(
+				inter,
 				uint8ArrayStaticType,
-				storage,
 				UInt8Value(1),
 			).Equal(
 				UInt8Value(1),
@@ -1974,22 +2088,20 @@ func TestDictionaryValue_Equal(t *testing.T) {
 
 		t.Parallel()
 
-		storage := NewInMemoryStorage()
+		inter := newTestInterpreter(t)
 
 		require.True(t,
 			NewDictionaryValue(
-				newTestInterpreter(t),
+				inter,
 				byteStringDictionaryType,
-				storage,
 				UInt8Value(1),
 				NewStringValue("1"),
 				UInt8Value(2),
 				NewStringValue("2"),
 			).Equal(
 				NewDictionaryValue(
-					newTestInterpreter(t),
+					inter,
 					byteStringDictionaryType,
-					storage,
 					UInt8Value(1),
 					NewStringValue("1"),
 					UInt8Value(2),
@@ -2004,22 +2116,20 @@ func TestDictionaryValue_Equal(t *testing.T) {
 
 		t.Parallel()
 
-		storage := NewInMemoryStorage()
+		inter := newTestInterpreter(t)
 
 		require.False(t,
 			NewDictionaryValue(
-				newTestInterpreter(t),
+				inter,
 				byteStringDictionaryType,
-				storage,
 				UInt8Value(1),
 				NewStringValue("1"),
 				UInt8Value(2),
 				NewStringValue("2"),
 			).Equal(
 				NewDictionaryValue(
-					newTestInterpreter(t),
+					inter,
 					byteStringDictionaryType,
-					storage,
 					UInt8Value(2),
 					NewStringValue("1"),
 					UInt8Value(3),
@@ -2034,22 +2144,20 @@ func TestDictionaryValue_Equal(t *testing.T) {
 
 		t.Parallel()
 
-		storage := NewInMemoryStorage()
+		inter := newTestInterpreter(t)
 
 		require.False(t,
 			NewDictionaryValue(
-				newTestInterpreter(t),
+				inter,
 				byteStringDictionaryType,
-				storage,
 				UInt8Value(1),
 				NewStringValue("1"),
 				UInt8Value(2),
 				NewStringValue("2"),
 			).Equal(
 				NewDictionaryValue(
-					newTestInterpreter(t),
+					inter,
 					byteStringDictionaryType,
-					storage,
 					UInt8Value(1),
 					NewStringValue("2"),
 					UInt8Value(2),
@@ -2064,20 +2172,18 @@ func TestDictionaryValue_Equal(t *testing.T) {
 
 		t.Parallel()
 
-		storage := NewInMemoryStorage()
+		inter := newTestInterpreter(t)
 
 		require.False(t,
 			NewDictionaryValue(
-				newTestInterpreter(t),
+				inter,
 				byteStringDictionaryType,
-				storage,
 				UInt8Value(1),
 				NewStringValue("1"),
 			).Equal(
 				NewDictionaryValue(
-					newTestInterpreter(t),
+					inter,
 					byteStringDictionaryType,
-					storage,
 					UInt8Value(1),
 					NewStringValue("1"),
 					UInt8Value(2),
@@ -2092,22 +2198,20 @@ func TestDictionaryValue_Equal(t *testing.T) {
 
 		t.Parallel()
 
-		storage := NewInMemoryStorage()
+		inter := newTestInterpreter(t)
 
 		require.False(t,
 			NewDictionaryValue(
-				newTestInterpreter(t),
+				inter,
 				byteStringDictionaryType,
-				storage,
 				UInt8Value(1),
 				NewStringValue("1"),
 				UInt8Value(2),
 				NewStringValue("2"),
 			).Equal(
 				NewDictionaryValue(
-					newTestInterpreter(t),
+					inter,
 					byteStringDictionaryType,
-					storage,
 					UInt8Value(1),
 					NewStringValue("1"),
 				),
@@ -2120,7 +2224,7 @@ func TestDictionaryValue_Equal(t *testing.T) {
 
 		t.Parallel()
 
-		storage := NewInMemoryStorage()
+		inter := newTestInterpreter(t)
 
 		stringByteDictionaryStaticType := DictionaryStaticType{
 			KeyType:   PrimitiveStaticTypeString,
@@ -2129,14 +2233,12 @@ func TestDictionaryValue_Equal(t *testing.T) {
 
 		require.False(t,
 			NewDictionaryValue(
-				newTestInterpreter(t),
+				inter,
 				byteStringDictionaryType,
-				storage,
 			).Equal(
 				NewDictionaryValue(
-					newTestInterpreter(t),
+					inter,
 					stringByteDictionaryStaticType,
-					storage,
 				),
 				ReturnEmptyLocationRange,
 			),
@@ -2147,21 +2249,20 @@ func TestDictionaryValue_Equal(t *testing.T) {
 
 		t.Parallel()
 
-		storage := NewInMemoryStorage()
+		inter := newTestInterpreter(t)
 
 		require.False(t,
 			NewDictionaryValue(
-				newTestInterpreter(t),
+				inter,
 				byteStringDictionaryType,
-				storage,
 				UInt8Value(1),
 				NewStringValue("1"),
 				UInt8Value(2),
 				NewStringValue("2"),
 			).Equal(
 				NewArrayValue(
+					inter,
 					ByteArrayStaticType,
-					storage,
 					UInt8Value(1),
 					UInt8Value(2),
 				),
@@ -2524,11 +2625,23 @@ func TestPublicKeyValue(t *testing.T) {
 
 		storage := NewInMemoryStorage()
 
+		inter, err := NewInterpreter(
+			nil,
+			utils.TestLocation,
+			WithStorage(storage),
+			WithPublicKeyValidationHandler(
+				func(_ *Interpreter, _ *CompositeValue) BoolValue {
+					return true
+				},
+			),
+		)
+		require.NoError(t, err)
+
 		publicKey := NewArrayValue(
+			inter,
 			VariableSizedStaticType{
 				Type: PrimitiveStaticTypeInt,
 			},
-			storage,
 			NewIntValueFromInt64(1),
 			NewIntValueFromInt64(7),
 			NewIntValueFromInt64(3),
@@ -2541,7 +2654,7 @@ func TestPublicKeyValue(t *testing.T) {
 			fields.Set(sema.EnumRawValueFieldName, UInt8Value(sema.SignatureAlgorithmECDSA_secp256k1.RawValue()))
 
 			return NewCompositeValue(
-				storage,
+				inter.Storage,
 				nil,
 				sema.SignatureAlgorithmType.QualifiedIdentifier(),
 				sema.SignatureAlgorithmType.Kind,
@@ -2550,23 +2663,11 @@ func TestPublicKeyValue(t *testing.T) {
 			)
 		}
 
-		interpreter, err := NewInterpreter(
-			nil,
-			utils.TestLocation,
-			WithStorage(storage),
-			WithPublicKeyValidationHandler(
-				func(_ *Interpreter, _ *CompositeValue) BoolValue {
-					return true
-				},
-			),
-		)
-		require.NoError(t, err)
-
 		key := NewPublicKeyValue(
-			interpreter,
+			inter,
 			publicKey,
 			sigAlgo(),
-			interpreter.PublicKeyValidationHandler,
+			inter.PublicKeyValidationHandler,
 		)
 
 		require.Contains(t,
@@ -2684,7 +2785,14 @@ func checkHashable(ty types.Type) error {
 }
 
 func newTestInterpreter(tb testing.TB) *Interpreter {
-	inter, err := NewInterpreter(nil, utils.TestLocation)
+
+	storage := NewInMemoryStorage()
+
+	inter, err := NewInterpreter(
+		nil,
+		utils.TestLocation,
+		WithStorage(storage),
+	)
 	require.NoError(tb, err)
 
 	return inter
