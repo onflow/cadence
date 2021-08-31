@@ -115,7 +115,11 @@ func (v BlockValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (at
 	return NonStorable{Value: v}, nil
 }
 
-func (BlockValue) NeedsCopy(_ *Interpreter, _ atree.Address) bool {
+func (BlockValue) IsResourceKinded(_ *Interpreter) bool {
+	return false
+}
+
+func (BlockValue) NeedsStoreToAddress(_ *Interpreter, _ atree.Address) bool {
 	return false
 }
 

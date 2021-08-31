@@ -3495,7 +3495,9 @@ func (interpreter *Interpreter) checkResourceNotDestroyedOrCopied(value Value, g
 
 func (interpreter *Interpreter) CopyValue(value Value, address atree.Address) Value {
 
-	if !value.NeedsCopy(interpreter, address) {
+	if !value.NeedsStoreToAddress(interpreter, address) &&
+		value.IsResourceKinded(interpreter) {
+
 		return value
 	}
 
@@ -3504,7 +3506,9 @@ func (interpreter *Interpreter) CopyValue(value Value, address atree.Address) Va
 
 func (interpreter *Interpreter) TransferValue(value Value, storable atree.Storable, address atree.Address) Value {
 
-	if !value.NeedsCopy(interpreter, address) {
+	if !value.NeedsStoreToAddress(interpreter, address) &&
+		value.IsResourceKinded(interpreter) {
+
 		return value
 	}
 

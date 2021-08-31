@@ -122,7 +122,11 @@ func (f *InterpretedFunctionValue) Storable(_ atree.SlabStorage, _ atree.Address
 	return NonStorable{Value: f}, nil
 }
 
-func (*InterpretedFunctionValue) NeedsCopy(_ *Interpreter, _ atree.Address) bool {
+func (*InterpretedFunctionValue) IsResourceKinded(_ *Interpreter) bool {
+	return false
+}
+
+func (*InterpretedFunctionValue) NeedsStoreToAddress(_ *Interpreter, _ atree.Address) bool {
 	return false
 }
 
@@ -214,7 +218,11 @@ func (f *HostFunctionValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uin
 	return NonStorable{Value: f}, nil
 }
 
-func (*HostFunctionValue) NeedsCopy(_ *Interpreter, _ atree.Address) bool {
+func (*HostFunctionValue) IsResourceKinded(_ *Interpreter) bool {
+	return false
+}
+
+func (*HostFunctionValue) NeedsStoreToAddress(_ *Interpreter, _ atree.Address) bool {
 	return false
 }
 
@@ -305,7 +313,11 @@ func (f BoundFunctionValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uin
 	return NonStorable{Value: f}, nil
 }
 
-func (BoundFunctionValue) NeedsCopy(_ *Interpreter, _ atree.Address) bool {
+func (BoundFunctionValue) IsResourceKinded(_ *Interpreter) bool {
+	return false
+}
+
+func (BoundFunctionValue) NeedsStoreToAddress(_ *Interpreter, _ atree.Address) bool {
 	return false
 }
 

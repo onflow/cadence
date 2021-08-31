@@ -99,7 +99,11 @@ func (v DeployedContractValue) Storable(_ atree.SlabStorage, _ atree.Address, _ 
 	return NonStorable{Value: v}, nil
 }
 
-func (DeployedContractValue) NeedsCopy(_ *Interpreter, _ atree.Address) bool {
+func (DeployedContractValue) IsResourceKinded(_ *Interpreter) bool {
+	return false
+}
+
+func (DeployedContractValue) NeedsStoreToAddress(_ *Interpreter, _ atree.Address) bool {
 	return false
 }
 
