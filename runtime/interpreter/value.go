@@ -7614,14 +7614,10 @@ func (v *DictionaryValue) Set(
 	keyValue Value,
 	value Value,
 ) {
-
-	// Use the getter, to make sure lazily decoded values are properly loaded.
-	dictionaryStaticType := v.StaticType().(DictionaryStaticType)
-
-	interpreter.checkContainerMutation(dictionaryStaticType.KeyType, keyValue, getLocationRange)
+	interpreter.checkContainerMutation(v.Type.KeyType, keyValue, getLocationRange)
 	interpreter.checkContainerMutation(
 		OptionalStaticType{
-			Type: dictionaryStaticType.ValueType,
+			Type: v.Type.ValueType,
 		},
 		value,
 		getLocationRange,
@@ -7632,7 +7628,7 @@ func (v *DictionaryValue) Set(
 		_ = v.Insert(interpreter, getLocationRange, keyValue, value.Value)
 
 	case NilValue:
-		_ = v.Remove(interpreter.Storage, getLocationRange, keyValue)
+		_ = v.Remove(interpreter, getLocationRange, keyValue)
 
 	default:
 		panic(errors.NewUnreachableError())
@@ -7676,22 +7672,20 @@ func (v *DictionaryValue) GetMember(interpreter *Interpreter, _ func() LocationR
 		return NewIntValueFromInt64(int64(v.Count()))
 
 	case "keys":
-		keys, err := v.Keys.DeepCopy(interpreter.Storage, atree.Address{})
-		if err != nil {
-			panic(ExternalError{err})
-		}
+		// We can directly call DeepCopy on the keys array value, instead of potentially skipping copying
+		// by using interpreter.copyValue, as the keys value is only ever struct-kinded,
+		// which always must be copied
+		keys := v.Keys.DeepCopy(interpreter, atree.Address{})
 		return MustConvertStoredValue(keys)
 
 	case "values":
 		dictionaryValues := make([]Value, v.Count())
 		i := 0
 		v.Entries.Foreach(func(_ string, value Value) {
-			valueCopy, err := value.DeepCopy(interpreter.Storage, atree.Address{})
-			if err != nil {
-				panic(ExternalError{err})
-			}
-
-			dictionaryValues[i] = MustConvertStoredValue(valueCopy)
+			// We can directly call DeepCopy on the valye, instead of potentially skipping copying
+			// by using interpreter.copyValue, as the dictionary values returned by the values field here
+			// are only ever struct-kinded, which always must be copied
+			dictionaryValues[i] = value.DeepCopy(interpreter, atree.Address{})
 			i++
 		})
 
@@ -7709,7 +7703,7 @@ func (v *DictionaryValue) GetMember(interpreter *Interpreter, _ func() LocationR
 				keyValue := invocation.Arguments[0]
 
 				return v.Remove(
-					invocation.Interpreter.Storage,
+					invocation.Interpreter,
 					invocation.GetLocationRange,
 					keyValue,
 				)
@@ -7753,7 +7747,7 @@ func (v *DictionaryValue) Count() int {
 }
 
 func (v *DictionaryValue) Remove(
-	storage atree.SlabStorage,
+	interpreter *Interpreter,
 	getLocationRange func() LocationRange,
 	keyValue Value,
 ) OptionalValue {
@@ -7766,48 +7760,37 @@ func (v *DictionaryValue) Remove(
 	v.Entries.Delete(key)
 
 	// TODO: optimize linear scan
-	iterator, err := v.Keys.array.Iterator()
-	if err != nil {
-		panic(ExternalError{err})
-	}
+
+	var result *SomeValue
+
 	index := 0
-	for {
-		keyValue, err := iterator.Next()
-		if err != nil {
-			panic(ExternalError{err})
-		}
-		if keyValue == nil {
-			break
-		}
+	v.Keys.Iterate(func(keyValue Value) (resume bool) {
 
-		if dictionaryKey(MustConvertStoredValue(keyValue)) == key {
-			v.Keys.Remove(getLocationRange, index)
-
-			valueCopy, err := value.DeepCopy(storage, atree.Address{})
-			if err != nil {
-				panic(ExternalError{err})
-			}
-
-			err = value.DeepRemove(storage)
-			if err != nil {
-				panic(ExternalError{err})
-			}
+		if dictionaryKey(keyValue) == key {
+			v.Keys.Remove(interpreter, getLocationRange, index)
 
 			storable, _ := v.DictionaryStorable.Entries.Delete(key)
-			err = storable.DeepRemove(storage)
-			if err != nil {
-				panic(ExternalError{err})
-			}
 
-			v.store(storage)
+			value = interpreter.TransferValue(value, storable, atree.Address{})
 
-			return NewSomeValueNonCopying(MustConvertStoredValue(valueCopy))
+			v.store(interpreter.Storage)
+
+			result = NewSomeValueNonCopying(value)
+
+			return false
 		}
 		index++
+
+		return true
+	})
+
+	if result == nil {
+
+		// Should never occur, the key should have been found
+		panic(errors.NewUnreachableError())
 	}
 
-	// Should never occur, the key should have been found
-	panic(errors.NewUnreachableError())
+	return result
 }
 
 func (v *DictionaryValue) Insert(
@@ -7815,11 +7798,9 @@ func (v *DictionaryValue) Insert(
 	getLocationRange func() LocationRange,
 	keyValue, value Value,
 ) OptionalValue {
-	// Use the getter, to make sure lazily decoded values are properly loaded.
-	dictionaryStaticType := v.StaticType().(DictionaryStaticType)
 
-	inter.checkContainerMutation(dictionaryStaticType.KeyType, keyValue, getLocationRange)
-	inter.checkContainerMutation(dictionaryStaticType.ValueType, value, getLocationRange)
+	inter.checkContainerMutation(v.Type.KeyType, keyValue, getLocationRange)
+	inter.checkContainerMutation(v.Type.ValueType, value, getLocationRange)
 
 	address := v.StorageID.Address
 
@@ -7827,22 +7808,12 @@ func (v *DictionaryValue) Insert(
 
 	key := dictionaryKey(keyValue)
 
-	storage := inter.Storage
+	value = inter.TransferValue(value, nil, address)
 
-	valueCopy, err := value.DeepCopy(storage, address)
-	if err != nil {
-		panic(ExternalError{err})
-	}
+	v.Entries.Set(key, value)
 
-	err = value.DeepRemove(storage)
-	if err != nil {
-		panic(ExternalError{err})
-	}
-
-	v.Entries.Set(key, MustConvertStoredValue(valueCopy))
-
-	storable, err := valueCopy.Storable(
-		storage,
+	storable, err := value.Storable(
+		inter.Storage,
 		address,
 		atree.MaxInlineElementSize,
 	)
@@ -7864,24 +7835,9 @@ func (v *DictionaryValue) Insert(
 		panic(errors.NewUnreachableError())
 	}
 
-	resultCopy, err := result.DeepCopy(storage, atree.Address{})
-	if err != nil {
-		panic(ExternalError{err})
-	}
+	resultCopy := inter.TransferValue(result, existingStorable, atree.Address{})
 
-	err = result.DeepRemove(storage)
-	if err != nil {
-		panic(ExternalError{err})
-	}
-
-	if existingStorable != nil {
-		err = existingStorable.DeepRemove(storage)
-		if err != nil {
-			panic(ExternalError{err})
-		}
-	}
-
-	v.store(storage)
+	v.store(inter.Storage)
 
 	return resultCopy.(OptionalValue)
 }
@@ -7977,19 +7933,24 @@ func (v *DictionaryValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint6
 	return atree.StorageIDStorable(v.StorageID), nil
 }
 
-func (v *DictionaryValue) DeepCopy(storage atree.SlabStorage, address atree.Address) (atree.Value, error) {
+func (*DictionaryValue) NeedsCopy(_ *Interpreter, _ atree.Address) bool {
+	// TODO: not necessary if resource-kinded and in same address
+	return true
+}
+
+func (v *DictionaryValue) DeepCopy(interpreter *Interpreter, address atree.Address) Value {
 
 	v.isCopied = true
 
 	result := NewDictionaryValueWithAddress(
-		inter,
+		interpreter,
 		v.Type,
 		common.Address(address),
 	)
 
 	iterator, err := v.Keys.array.Iterator()
 	if err != nil {
-		return nil, err
+		panic(ExternalError{err})
 	}
 
 	pair := v.Entries.Oldest()
@@ -7997,7 +7958,7 @@ func (v *DictionaryValue) DeepCopy(storage atree.SlabStorage, address atree.Addr
 		var keyValue atree.Value
 		keyValue, err = iterator.Next()
 		if err != nil {
-			return nil, err
+			panic(ExternalError{err})
 		}
 		if keyValue == nil {
 			break
@@ -8007,76 +7968,57 @@ func (v *DictionaryValue) DeepCopy(storage atree.SlabStorage, address atree.Addr
 			panic(errors.NewUnreachableError())
 		}
 
+		// TODO: optimize by inserting directly, by directly copying to target address and manually inserting,
+		//   instead of copying to temporary address, then again to target address inside of Insert
+
 		// atree.Array iteration provides low-level atree.Value,
 		// convert to high-level interpreter.Value
 
-		var keyValueCopy atree.Value
-		keyValueCopy, err = MustConvertStoredValue(keyValue).
-			DeepCopy(storage, atree.Address{})
-		if err != nil {
-			return nil, err
-		}
-
-		var valueCopy atree.Value
-		valueCopy, err = pair.Value.DeepCopy(storage, atree.Address{})
-		if err != nil {
-			return nil, err
-		}
+		keyValueCopy := interpreter.CopyValue(MustConvertStoredValue(keyValue), atree.Address{})
+		valueCopy := interpreter.CopyValue(pair.Value, atree.Address{})
 
 		result.Insert(
-			inter,
+			interpreter,
 			ReturnEmptyLocationRange,
-			MustConvertStoredValue(keyValueCopy),
-			MustConvertStoredValue(valueCopy),
+			keyValueCopy,
+			valueCopy,
 		)
 
 		pair = pair.Next()
 	}
 
-	return result, nil
+	return result
 }
 
-func (v *DictionaryValue) DeepRemove(storage atree.SlabStorage) error {
+func (v *DictionaryValue) DeepRemove(interpreter *Interpreter) {
 
 	// Remove keys
 
-	err := v.Keys.DeepRemove(storage)
-	if err != nil {
-		return err
-	}
+	v.Keys.DeepRemove(interpreter)
 
 	// This dictionary is the parent for the key array,
 	// and as parents must remove the potential slab of a children,
 	// do so by assuming the dictionary has a storage ID "pointer"
 	// to the key array
 
-	err = atree.StorageIDStorable(v.Keys.StorageID()).
-		DeepRemove(storage)
-	if err != nil {
-		return err
-	}
+	interpreter.removeReferencedSlab(atree.StorageIDStorable(v.Keys.StorageID()))
 
 	// Remove nested values
 
 	for pair := v.Entries.Oldest(); pair != nil; pair = pair.Next() {
 		entryValue := pair.Value
 
-		err = entryValue.DeepRemove(storage)
-		if err != nil {
-			return err
-		}
+		entryValue.DeepRemove(interpreter)
 	}
 
-	// Remove storable itself
+	// Remove nested storables
 
-	slab, _, err := storage.Retrieve(v.StorageID)
-	if err != nil {
-		return err
+	for pair := v.DictionaryStorable.Entries.Oldest(); pair != nil; pair = pair.Next() {
+		storable := pair.Value
+		interpreter.removeReferencedSlab(storable)
 	}
 
-	return slab.(atree.StorableSlab).
-		Storable.(*DictionaryStorable).
-		DeepRemove(storage)
+	// Slab will be removed by parent
 }
 
 func (v *DictionaryValue) GetOwner() common.Address {
@@ -8091,30 +8033,6 @@ type DictionaryStorable struct {
 }
 
 var _ atree.Storable = &DictionaryStorable{}
-
-func (s *DictionaryStorable) DeepRemove(storage atree.SlabStorage) error {
-
-	// Remove keys storable
-
-	err := s.Keys.DeepRemove(storage)
-	if err != nil {
-		return err
-	}
-
-	// Remove nested storables
-
-	for pair := s.Entries.Oldest(); pair != nil; pair = pair.Next() {
-		storable := pair.Value
-		err = storable.DeepRemove(storage)
-		if err != nil {
-			return err
-		}
-	}
-
-	// Slab will be removed by parent
-
-	return nil
-}
 
 func (s *DictionaryStorable) ByteSize() uint32 {
 	return mustStorableSize(s)
@@ -9743,11 +9661,9 @@ func NewPublicKeyValue(
 	computedFields.Set(
 		sema.PublicKeyPublicKeyField,
 		func(interpreter *Interpreter) Value {
-			keyCopy, err := publicKey.DeepCopy(interpreter.Storage, atree.Address{})
-			if err != nil {
-				panic(err)
-			}
-			return MustConvertStoredValue(keyCopy)
+			// We can directly call DeepCopy on the key array, instead of potentially skipping copying
+			// by using interpreter.copyValue, as the key array is always struct-kinded, which always must be copied
+			return publicKey.DeepCopy(interpreter, atree.Address{})
 		},
 	)
 
