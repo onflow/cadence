@@ -733,18 +733,25 @@ func (v *ArrayValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	})
 }
 
-func (v *ArrayValue) Walk(walkChild func(Value)) {
+func (v *ArrayValue) Iterate(f func(element Value) (resume bool)) {
 	err := v.array.Iterate(func(element atree.Value) (resume bool, err error) {
 		// atree.Array iteration provides low-level atree.Value,
 		// convert to high-level interpreter.Value
-		walkChild(MustConvertStoredValue(element))
-		return true, nil
+
+		resume = f(MustConvertStoredValue(element))
+
+		return resume, nil
 	})
-	// the iteration closure above will never return an error,
-	// but the Iterate function itself might
 	if err != nil {
-		panic(err)
+		panic(ExternalError{err})
 	}
+}
+
+func (v *ArrayValue) Walk(walkChild func(Value)) {
+	v.Iterate(func(element Value) (resume bool) {
+		walkChild(element)
+		return true
+	})
 }
 
 func (v *ArrayValue) DynamicType(interpreter *Interpreter, seenReferences SeenReferences) DynamicType {

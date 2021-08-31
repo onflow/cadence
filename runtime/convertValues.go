@@ -174,16 +174,22 @@ func exportArrayValue(
 ) {
 	values := make([]cadence.Value, 0, v.Count())
 
-	v.Walk(func(value interpreter.Value) {
-		exportedValue, err := exportValueWithInterpreter(value, inter, seenReferences)
+	var err error
+	v.Iterate(func(value interpreter.Value) (resume bool) {
+		var exportedValue cadence.Value
+		exportedValue, err = exportValueWithInterpreter(value, inter, seenReferences)
 		if err != nil {
-			return cadence.Array{}, err
+			return false
 		}
 		values = append(
 			values,
 			exportedValue,
 		)
+		return true
 	})
+	if err != nil {
+		return cadence.Array{}, err
+	}
 
 	return cadence.NewArray(values), nil
 }
@@ -268,20 +274,24 @@ func exportDictionaryValue(
 ) {
 	pairs := make([]cadence.KeyValuePair, 0, v.Count())
 
-	v.Keys.Walk(func(keyValue interpreter.Value) {
+	var err error
+	v.Keys.Iterate(func(keyValue interpreter.Value) (resume bool) {
 
 		// NOTE: use `Get` instead of accessing `Entries`,
 		// so that the potentially deferred values are loaded from storage
 
 		value := v.Get(inter, interpreter.ReturnEmptyLocationRange, keyValue).(*interpreter.SomeValue).Value
 
-		convertedKey, err := exportValueWithInterpreter(keyValue, inter, seenReferences)
+		var convertedKey cadence.Value
+		convertedKey, err = exportValueWithInterpreter(keyValue, inter, seenReferences)
 		if err != nil {
-			return cadence.Dictionary{}, err
+			return false
 		}
-		convertedValue, err := exportValueWithInterpreter(value, inter, seenReferences)
+
+		var convertedValue cadence.Value
+		convertedValue, err = exportValueWithInterpreter(value, inter, seenReferences)
 		if err != nil {
-			return cadence.Dictionary{}, err
+			return false
 		}
 
 		pairs = append(
@@ -291,7 +301,13 @@ func exportDictionaryValue(
 				Value: convertedValue,
 			},
 		)
+
+		return true
 	})
+
+	if err != nil {
+		return cadence.Dictionary{}, err
+	}
 
 	return cadence.NewDictionary(pairs), nil
 }
@@ -361,7 +377,7 @@ func importValue(inter *interpreter.Interpreter, value cadence.Value, expectedTy
 	case cadence.String:
 		return interpreter.NewStringValue(string(v)), nil
 	case cadence.Bytes:
-		return interpreter.ByteSliceToByteArrayValue(inter.Storage, v), nil
+		return interpreter.ByteSliceToByteArrayValue(inter, v), nil
 	case cadence.Address:
 		return interpreter.NewAddressValue(common.Address(v)), nil
 	case cadence.Int:
@@ -521,8 +537,8 @@ func importArrayValue(
 	}
 
 	return interpreter.NewArrayValue(
+		inter,
 		staticArrayType,
-		inter.Storage,
 		values...,
 	), nil
 }
@@ -618,7 +634,6 @@ func importDictionaryValue(
 	return interpreter.NewDictionaryValue(
 		inter,
 		dictionaryStaticType,
-		inter.Storage,
 		keysAndValues...,
 	), nil
 }
