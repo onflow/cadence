@@ -341,7 +341,7 @@ func TestImportValue(t *testing.T) {
 				require.Error(t, err)
 			} else {
 				require.NoError(t, err)
-				assert.Equal(t, tt.expected, actual)
+				AssertValuesEqual(t, tt.expected, actual)
 			}
 		})
 	}
@@ -988,9 +988,7 @@ func TestExportReferenceValue(t *testing.T) {
 		actual := exportValueFromScript(t, script)
 		expected := cadence.NewArray([]cadence.Value{
 			cadence.NewArray([]cadence.Value{
-				cadence.NewArray([]cadence.Value{
-					nil,
-				}),
+				nil,
 			}),
 		})
 
@@ -1067,9 +1065,6 @@ func TestExportReferenceValue(t *testing.T) {
 
 func TestExportTypeValue(t *testing.T) {
 
-	// TODO:
-	t.Skip("TODO")
-
 	t.Parallel()
 
 	t.Run("Int", func(t *testing.T) {
@@ -1145,7 +1140,14 @@ func TestExportTypeValue(t *testing.T) {
 		err = checker.Check()
 		require.NoError(t, err)
 
-		inter := newTestInterpreter(t)
+		storage := interpreter.NewInMemoryStorage()
+
+		inter, err := interpreter.NewInterpreter(
+			interpreter.ProgramFromChecker(checker),
+			TestLocation,
+			interpreter.WithStorage(storage),
+		)
+		require.NoError(t, err)
 
 		ty := interpreter.TypeValue{
 			Type: &interpreter.RestrictedStaticType{
@@ -1176,9 +1178,6 @@ func TestExportTypeValue(t *testing.T) {
 }
 
 func TestExportCapabilityValue(t *testing.T) {
-
-	// TODO:
-	t.Skip("TODO")
 
 	t.Parallel()
 
@@ -1220,7 +1219,14 @@ func TestExportCapabilityValue(t *testing.T) {
 		err = checker.Check()
 		require.NoError(t, err)
 
-		inter := newTestInterpreter(t)
+		storage := interpreter.NewInMemoryStorage()
+
+		inter, err := interpreter.NewInterpreter(
+			interpreter.ProgramFromChecker(checker),
+			TestLocation,
+			interpreter.WithStorage(storage),
+		)
+		require.NoError(t, err)
 
 		capability := &interpreter.CapabilityValue{
 			Address: interpreter.AddressValue{0x1},
@@ -1303,9 +1309,6 @@ func TestExportLinkValue(t *testing.T) {
 	})
 
 	t.Run("Struct", func(t *testing.T) {
-
-		// TODO:
-		t.Skip("TODO")
 
 		program, err := parser2.ParseProgram(`pub struct S {}`)
 		require.NoError(t, err)
@@ -2418,7 +2421,7 @@ func TestRuntimeImportExportArrayValue(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		assert.Equal(t,
+		AssertValuesEqual(t,
 			interpreter.NewArrayValue(
 				inter,
 				interpreter.VariableSizedStaticType{
@@ -2616,7 +2619,7 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		assert.Equal(t,
+		AssertValuesEqual(t,
 			interpreter.NewDictionaryValue(
 				inter,
 				interpreter.DictionaryStaticType{

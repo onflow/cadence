@@ -2390,9 +2390,7 @@ func TestRuntimeScriptReturnTypeNotReturnableError(t *testing.T) {
             `,
 			cadence.NewArray([]cadence.Value{
 				cadence.NewArray([]cadence.Value{
-					cadence.NewArray([]cadence.Value{
-						nil,
-					}),
+					nil,
 				}),
 			}),
 		)
