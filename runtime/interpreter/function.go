@@ -122,13 +122,16 @@ func (f *InterpretedFunctionValue) Storable(_ atree.SlabStorage, _ atree.Address
 	return NonStorable{Value: f}, nil
 }
 
-func (f *InterpretedFunctionValue) DeepCopy(_ atree.SlabStorage, _ atree.Address) (atree.Value, error) {
-	return f, nil
+func (*InterpretedFunctionValue) NeedsCopy(_ *Interpreter, _ atree.Address) bool {
+	return false
 }
 
-func (*InterpretedFunctionValue) DeepRemove(_ atree.SlabStorage) error {
+func (f *InterpretedFunctionValue) DeepCopy(_ *Interpreter, _ atree.Address) Value {
+	return f
+}
+
+func (*InterpretedFunctionValue) DeepRemove(_ *Interpreter) {
 	// NO-OP
-	return nil
 }
 
 // HostFunctionValue
@@ -180,7 +183,6 @@ func (*HostFunctionValue) StaticType() StaticType {
 	return nil
 }
 
-
 func (*HostFunctionValue) isFunctionValue() {}
 
 func (f *HostFunctionValue) Invoke(invocation Invocation) Value {
@@ -212,13 +214,16 @@ func (f *HostFunctionValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uin
 	return NonStorable{Value: f}, nil
 }
 
-func (f *HostFunctionValue) DeepCopy(_ atree.SlabStorage, _ atree.Address) (atree.Value, error) {
-	return f, nil
+func (*HostFunctionValue) NeedsCopy(_ *Interpreter, _ atree.Address) bool {
+	return false
 }
 
-func (*HostFunctionValue) DeepRemove(_ atree.SlabStorage) error {
+func (f *HostFunctionValue) DeepCopy(_ *Interpreter, _ atree.Address) Value {
+	return f
+}
+
+func (*HostFunctionValue) DeepRemove(_ *Interpreter) {
 	// NO-OP
-	return nil
 }
 
 // BoundFunctionValue
@@ -300,11 +305,14 @@ func (f BoundFunctionValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uin
 	return NonStorable{Value: f}, nil
 }
 
-func (f BoundFunctionValue) DeepCopy(_ atree.SlabStorage, _ atree.Address) (atree.Value, error) {
-	return f, nil
+func (BoundFunctionValue) NeedsCopy(_ *Interpreter, _ atree.Address) bool {
+	return false
 }
 
-func (BoundFunctionValue) DeepRemove(_ atree.SlabStorage) error {
+func (f BoundFunctionValue) DeepCopy(_ *Interpreter, _ atree.Address) Value {
+	return f
+}
+
+func (BoundFunctionValue) DeepRemove(_ *Interpreter) {
 	// NO-OP
-	return nil
 }

@@ -99,11 +99,14 @@ func (v DeployedContractValue) Storable(_ atree.SlabStorage, _ atree.Address, _ 
 	return NonStorable{Value: v}, nil
 }
 
-func (v DeployedContractValue) DeepCopy(_ atree.SlabStorage, _ atree.Address) (atree.Value, error) {
-	return v, nil
+func (DeployedContractValue) NeedsCopy(_ *Interpreter, _ atree.Address) bool {
+	return false
 }
 
-func (DeployedContractValue) DeepRemove(_ atree.SlabStorage) error {
+func (v DeployedContractValue) DeepCopy(_ *Interpreter, _ atree.Address) Value {
+	return v
+}
+
+func (DeployedContractValue) DeepRemove(_ *Interpreter) {
 	// NO-OP
-	return nil
 }

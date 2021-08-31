@@ -115,11 +115,14 @@ func (v BlockValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (at
 	return NonStorable{Value: v}, nil
 }
 
-func (v BlockValue) DeepCopy(_ atree.SlabStorage, _ atree.Address) (atree.Value, error) {
-	return v, nil
+func (BlockValue) NeedsCopy(_ *Interpreter, _ atree.Address) bool {
+	return false
 }
 
-func (BlockValue) DeepRemove(_ atree.SlabStorage) error {
+func (v BlockValue) DeepCopy(_ *Interpreter, _ atree.Address) Value {
+	return v
+}
+
+func (BlockValue) DeepRemove(_ *Interpreter) {
 	// NO-OP
-	return nil
 }
