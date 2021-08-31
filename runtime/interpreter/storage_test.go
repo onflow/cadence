@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	"github.com/onflow/atree"
+	"github.com/onflow/cadence/runtime/sema"
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/runtime/common"
@@ -79,6 +80,138 @@ func TestCompositeStorage(t *testing.T) {
 		BoolValue(true),
 		storedComposite.GetField(fieldName),
 	)
+}
+
+func TestArrayStorage(t *testing.T) {
+
+	t.Parallel()
+
+	importLocationHandlerFunc := func(inter *Interpreter, location common.Location) Import {
+		elaboration := sema.NewElaboration()
+		elaboration.CompositeTypes[testCompositeValueType.ID()] = testCompositeValueType
+		return VirtualImport{Elaboration: elaboration}
+	}
+
+	t.Run("insert", func(t *testing.T) {
+
+		t.Parallel()
+
+		storage := NewInMemoryStorage()
+
+		inter, err := NewInterpreter(
+			nil,
+			common.AddressLocation{},
+			WithStorage(storage),
+			WithImportLocationHandler(importLocationHandlerFunc),
+		)
+		require.NoError(t, err)
+
+		element := newTestCompositeValue(inter.Storage, common.Address{})
+
+		require.Equal(t, 1, storage.BasicSlabStorage.Count())
+
+		value := NewArrayValue(
+			inter,
+			VariableSizedStaticType{
+				Type: element.StaticType(),
+			},
+		)
+
+		require.NotEqual(t, atree.StorageIDUndefined, value.StorageID())
+
+		// array + composite
+		require.Equal(t, 2, storage.BasicSlabStorage.Count())
+
+		_, ok, err := storage.BasicSlabStorage.Retrieve(value.StorageID())
+		require.NoError(t, err)
+		require.True(t, ok)
+
+		require.False(t, bool(value.Contains(element)))
+
+		value.Insert(
+			inter,
+			ReturnEmptyLocationRange,
+			0,
+			element,
+		)
+
+		require.True(t, bool(value.Contains(element)))
+
+		// array + original composite element + new copy of composite element
+		require.Equal(t, 3, storage.BasicSlabStorage.Count())
+
+		retrievedStorable, ok, err := storage.BasicSlabStorage.Retrieve(value.StorageID())
+		require.NoError(t, err)
+		require.True(t, ok)
+
+		storedValue, err := StoredValue(retrievedStorable, storage)
+		require.NoError(t, err)
+
+		require.IsType(t, storedValue, &ArrayValue{})
+		storedArray := storedValue.(*ArrayValue)
+
+		actual := storedArray.GetIndex(ReturnEmptyLocationRange, 0)
+
+		RequireValuesEqual(t, element, actual)
+	})
+
+	t.Run("remove", func(t *testing.T) {
+
+		t.Parallel()
+
+		storage := NewInMemoryStorage()
+
+		inter, err := NewInterpreter(
+			nil,
+			common.AddressLocation{},
+			WithStorage(storage),
+			WithImportLocationHandler(importLocationHandlerFunc),
+		)
+		require.NoError(t, err)
+
+		element := newTestCompositeValue(inter.Storage, common.Address{})
+
+		require.Equal(t, 1, storage.BasicSlabStorage.Count())
+
+		value := NewArrayValue(
+			inter,
+			VariableSizedStaticType{
+				Type: element.StaticType(),
+			},
+			element,
+		)
+
+		require.True(t, bool(value.Contains(element)))
+
+		require.NotEqual(t, atree.StorageIDUndefined, value.StorageID())
+
+		// array + original composite element + new copy of composite element
+		require.Equal(t, 3, storage.BasicSlabStorage.Count())
+
+		_, ok, err := storage.BasicSlabStorage.Retrieve(value.StorageID())
+		require.NoError(t, err)
+		require.True(t, ok)
+
+		value.Remove(
+			inter,
+			ReturnEmptyLocationRange,
+			0,
+		)
+
+		require.Equal(t, 3, storage.BasicSlabStorage.Count())
+
+		retrievedStorable, ok, err := storage.BasicSlabStorage.Retrieve(value.StorageID())
+		require.NoError(t, err)
+		require.True(t, ok)
+
+		storedValue, err := StoredValue(retrievedStorable, storage)
+		require.NoError(t, err)
+
+		require.IsType(t, storedValue, &ArrayValue{})
+		storedArray := storedValue.(*ArrayValue)
+
+		require.False(t, bool(storedArray.Contains(element)))
+	})
 }
 
 func TestDictionaryStorage(t *testing.T) {
