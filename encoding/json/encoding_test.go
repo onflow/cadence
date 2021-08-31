@@ -699,7 +699,10 @@ func exportFromScript(t *testing.T, code string) cadence.Value {
 	result, err := inter.Invoke("main")
 	require.NoError(t, err)
 
-	return runtime.ExportValue(result, inter)
+	exported, err := runtime.ExportValue(result, inter)
+	require.NoError(t, err)
+
+	return exported
 }
 
 func TestEncodeResource(t *testing.T) {
