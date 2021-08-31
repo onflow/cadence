@@ -119,7 +119,6 @@ type EquatableValue interface {
 
 // ResourceKindedValue
 
-
 type ResourceKindedValue interface {
 	Value
 	Destroy(interpreter *Interpreter, getLocationRange func() LocationRange)
@@ -663,7 +662,11 @@ func (v *StringValue) DecodeHex(interpreter *Interpreter) *ArrayValue {
 		values[i] = UInt8Value(b)
 	}
 
-	return NewArrayValue(interpreter, ByteArrayStaticType, values...)
+	return NewArrayValue(
+		interpreter,
+		ByteArrayStaticType,
+		values...,
+	)
 }
 
 func (*StringValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -709,7 +712,11 @@ func NewArrayValueWithAddress(
 		panic(ExternalError{err})
 	}
 
-	array, err := atree.NewArray(interpreter.Storage, atree.Address(address), typeInfo)
+	array, err := atree.NewArray(
+		interpreter.Storage,
+		atree.Address(address),
+		typeInfo,
+	)
 	if err != nil {
 		panic(ExternalError{err})
 	}
@@ -719,8 +726,12 @@ func NewArrayValueWithAddress(
 		array: array,
 	}
 
-	for i, value := range values {
-		v.Insert(interpreter, ReturnEmptyLocationRange, i, value)
+	for _, value := range values {
+		v.Append(
+			interpreter,
+			ReturnEmptyLocationRange,
+			value,
+		)
 	}
 
 	return v
@@ -800,15 +811,12 @@ func (v *ArrayValue) IsCopied() bool {
 	return v.isCopied
 }
 
-func (v *ArrayValue) Concat(inter *Interpreter, getLocationRange func() LocationRange, other *ArrayValue) Value {
-	storage := v.array.Storage
-
-	newValue, err := v.DeepCopy(storage, atree.Address{})
-	if err != nil {
-		panic(ExternalError{err})
-	}
-	newArray := newValue.(*ArrayValue)
-	newArray.AppendAll(inter, getLocationRange, other)
+func (v *ArrayValue) Concat(interpreter *Interpreter, getLocationRange func() LocationRange, other *ArrayValue) Value {
+	// We can directly call DeepCopy on the value, instead of potentially skipping copying
+	// by using interpreter.copyValue, as concatenation is only supported for struct-kinded arrays,
+	// which always must be copied
+	newArray := v.DeepCopy(interpreter, atree.Address{}).(*ArrayValue)
+	newArray.AppendAll(interpreter, getLocationRange, other)
 	return newArray
 }
 
@@ -830,43 +838,32 @@ func (v *ArrayValue) GetIndex(getLocationRange func() LocationRange, index int) 
 	return MustConvertStoredValue(element)
 }
 
-func (v *ArrayValue) Set(inter *Interpreter, getLocationRange func() LocationRange, key Value, value Value) {
+func (v *ArrayValue) Set(interpreter *Interpreter, getLocationRange func() LocationRange, key Value, value Value) {
 	index := key.(NumberValue).ToInt()
-	v.SetIndex(inter, getLocationRange, index, value)
+	v.SetIndex(interpreter, getLocationRange, index, value)
 }
 
-func (v *ArrayValue) SetIndex(inter *Interpreter, getLocationRange func() LocationRange, index int, element Value) {
+func (v *ArrayValue) SetIndex(interpreter *Interpreter, getLocationRange func() LocationRange, index int, element Value) {
 
 	v.checkBounds(index, getLocationRange)
 
-	// Use the getter, to make sure lazily decoded values are properly loaded.
-	arrayStaticType := v.StaticType().(ArrayStaticType)
-
-	inter.checkContainerMutation(arrayStaticType.ElementType(), element, getLocationRange)
-
-	storage := v.array.Storage
+	interpreter.checkContainerMutation(v.Type.ElementType(), element, getLocationRange)
 
 	existing, err := v.array.Get(uint64(index))
 	if err != nil {
-		panic(err)
-	}
-
-	value, err := element.DeepCopy(storage, v.array.Address())
-	if err != nil {
-		panic(err)
-	}
-
-	err = element.DeepRemove(storage)
-	if err != nil {
 		panic(ExternalError{err})
 	}
 
-	err = existing.DeepRemove(storage)
-	if err != nil {
-		panic(ExternalError{err})
-	}
+	// atree.Array's Get function returns low-level atree.Value,
+	// convert to high-level interpreter.Value
+	MustConvertStoredValue(existing).
+		// TODO: will this work for e.g. a swap? only when copied
+		DeepRemove(interpreter)
+	// TODO: also remove storable
 
-	err = v.array.Set(uint64(index), value)
+	element = interpreter.TransferValue(element, nil, v.array.Address())
+
+	err = v.array.Set(uint64(index), element)
 	if err != nil {
 		panic(ExternalError{err})
 	}
@@ -900,26 +897,13 @@ func (v *ArrayValue) RecursiveString(seenReferences SeenReferences) string {
 	return format.Array(values)
 }
 
-func (v *ArrayValue) Append(inter *Interpreter, getLocationRange func() LocationRange, element Value) {
+func (v *ArrayValue) Append(interpreter *Interpreter, getLocationRange func() LocationRange, element Value) {
 
-	// Use the getter, to make sure lazily decoded values are properly loaded.
-	arrayStaticType := v.StaticType().(ArrayStaticType)
+	interpreter.checkContainerMutation(v.Type.ElementType(), element, getLocationRange)
 
-	inter.checkContainerMutation(arrayStaticType.ElementType(), element, getLocationRange)
+	element = interpreter.TransferValue(element, nil, v.array.Address())
 
-	storage := v.array.Storage
-
-	value, err := element.DeepCopy(storage, v.array.Address())
-	if err != nil {
-		panic(err)
-	}
-
-	err = element.DeepRemove(storage)
-	if err != nil {
-		panic(ExternalError{err})
-	}
-
-	err = v.array.Append(value)
+	err := v.array.Append(element)
 	if err != nil {
 		panic(ExternalError{err})
 	}
@@ -931,7 +915,8 @@ func (v *ArrayValue) AppendAll(inter *Interpreter, getLocationRange func() Locat
 	})
 }
 
-func (v *ArrayValue) Insert(inter *Interpreter, getLocationRange func() LocationRange, index int, element Value) {
+func (v *ArrayValue) Insert(interpreter *Interpreter, getLocationRange func() LocationRange, index int, element Value) {
+
 	count := v.Count()
 
 	// NOTE: index may be equal to count
@@ -943,61 +928,42 @@ func (v *ArrayValue) Insert(inter *Interpreter, getLocationRange func() Location
 		})
 	}
 
-	// Use the getter, to make sure lazily decoded values are properly loaded.
-	arrayStaticType := v.StaticType().(ArrayStaticType)
+	interpreter.checkContainerMutation(v.Type.ElementType(), element, getLocationRange)
 
-	inter.checkContainerMutation(arrayStaticType.ElementType(), element, getLocationRange)
+	element = interpreter.TransferValue(element, nil, v.array.Address())
 
-	storage := v.array.Storage
-
-	value, err := element.DeepCopy(storage, v.array.Address())
-	if err != nil {
-		panic(err)
-	}
-
-	err = element.DeepRemove(storage)
-	if err != nil {
-		panic(ExternalError{err})
-	}
-
-	err = v.array.Insert(uint64(index), value)
+	err := v.array.Insert(uint64(index), element)
 	if err != nil {
 		panic(ExternalError{err})
 	}
 }
 
-func (v *ArrayValue) Remove(getLocationRange func() LocationRange, index int) Value {
+func (v *ArrayValue) Remove(interpreter *Interpreter, getLocationRange func() LocationRange, index int) Value {
 	v.checkBounds(index, getLocationRange)
+
+	storable, err := v.array.GetStorable(uint64(index))
+	if err != nil {
+		panic(ExternalError{err})
+	}
 
 	element, err := v.array.Remove(uint64(index))
 	if err != nil {
 		panic(ExternalError{err})
 	}
 
-	storage := v.array.Storage
-
 	// atree.Array's Remove function returns low-level atree.Value,
 	// convert to high-level interpreter.Value
-	value, err := MustConvertStoredValue(element).
-		DeepCopy(storage, atree.Address{})
-	if err != nil {
-		panic(ExternalError{err})
-	}
+	value := MustConvertStoredValue(element)
 
-	err = element.DeepRemove(storage)
-	if err != nil {
-		panic(ExternalError{err})
-	}
-
-	return MustConvertStoredValue(value)
+	return interpreter.TransferValue(value, storable, atree.Address{})
 }
 
-func (v *ArrayValue) RemoveFirst(getLocationRange func() LocationRange) Value {
-	return v.Remove(getLocationRange, 0)
+func (v *ArrayValue) RemoveFirst(interpreter *Interpreter, getLocationRange func() LocationRange) Value {
+	return v.Remove(interpreter, getLocationRange, 0)
 }
 
-func (v *ArrayValue) RemoveLast(getLocationRange func() LocationRange) Value {
-	return v.Remove(getLocationRange, v.Count()-1)
+func (v *ArrayValue) RemoveLast(interpreter *Interpreter, getLocationRange func() LocationRange) Value {
+	return v.Remove(interpreter, getLocationRange, v.Count()-1)
 }
 
 func (v *ArrayValue) Contains(needleValue Value) BoolValue {
@@ -1005,25 +971,20 @@ func (v *ArrayValue) Contains(needleValue Value) BoolValue {
 	needleEquatable := needleValue.(EquatableValue)
 
 	var result bool
-	err := v.array.Iterate(func(element atree.Value) (resume bool, err error) {
-		// atree.Array iteration provides low-level atree.Value,
-		// convert to high-level interpreter.Value
-		if needleEquatable.Equal(MustConvertStoredValue(element), ReturnEmptyLocationRange) {
+	v.Iterate(func(element Value) (resume bool) {
+		if needleEquatable.Equal(element, ReturnEmptyLocationRange) {
 			result = true
 			// stop iteration
-			return false, nil
+			return false
 		}
 		// continue iteration
-		return true, nil
+		return true
 	})
-	if err != nil {
-		panic(ExternalError{err})
-	}
 
 	return BoolValue(result)
 }
 
-func (v *ArrayValue) GetMember(inter *Interpreter, getLocationRange func() LocationRange, name string) Value {
+func (v *ArrayValue) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
 	switch name {
 	case "length":
 		return NewIntValueFromInt64(int64(v.Count()))
@@ -1031,7 +992,11 @@ func (v *ArrayValue) GetMember(inter *Interpreter, getLocationRange func() Locat
 	case "append":
 		return NewHostFunctionValue(
 			func(invocation Invocation) Value {
-				v.Append(inter, getLocationRange, invocation.Arguments[0])
+				v.Append(
+					invocation.Interpreter,
+					invocation.GetLocationRange,
+					invocation.Arguments[0],
+				)
 				return VoidValue{}
 			},
 		)
@@ -1040,7 +1005,11 @@ func (v *ArrayValue) GetMember(inter *Interpreter, getLocationRange func() Locat
 		return NewHostFunctionValue(
 			func(invocation Invocation) Value {
 				otherArray := invocation.Arguments[0].(*ArrayValue)
-				v.AppendAll(inter, getLocationRange, otherArray)
+				v.AppendAll(
+					invocation.Interpreter,
+					invocation.GetLocationRange,
+					otherArray,
+				)
 				return VoidValue{}
 			},
 		)
@@ -1063,7 +1032,7 @@ func (v *ArrayValue) GetMember(inter *Interpreter, getLocationRange func() Locat
 				index := invocation.Arguments[0].(NumberValue).ToInt()
 				element := invocation.Arguments[1]
 				v.Insert(
-					inter,
+					invocation.Interpreter,
 					invocation.GetLocationRange,
 					index,
 					element,
@@ -1076,21 +1045,31 @@ func (v *ArrayValue) GetMember(inter *Interpreter, getLocationRange func() Locat
 		return NewHostFunctionValue(
 			func(invocation Invocation) Value {
 				index := invocation.Arguments[0].(NumberValue).ToInt()
-				return v.Remove(invocation.GetLocationRange, index)
+				return v.Remove(
+					invocation.Interpreter,
+					invocation.GetLocationRange,
+					index,
+				)
 			},
 		)
 
 	case "removeFirst":
 		return NewHostFunctionValue(
 			func(invocation Invocation) Value {
-				return v.RemoveFirst(invocation.GetLocationRange)
+				return v.RemoveFirst(
+					invocation.Interpreter,
+					invocation.GetLocationRange,
+				)
 			},
 		)
 
 	case "removeLast":
 		return NewHostFunctionValue(
 			func(invocation Invocation) Value {
-				return v.RemoveLast(invocation.GetLocationRange)
+				return v.RemoveLast(
+					invocation.Interpreter,
+					invocation.GetLocationRange,
+				)
 			},
 		)
 
@@ -1125,29 +1104,21 @@ func (v *ArrayValue) ConformsToDynamicType(
 		return false
 	}
 
-	iterator, err := v.array.Iterator()
-	if err != nil {
-		panic(ExternalError{err})
-	}
-
+	result := true
 	index := 0
-	for {
-		value, err := iterator.Next()
-		if err != nil {
-			panic(ExternalError{err})
-		}
-		if value == nil {
-			return true
-		}
 
-		// atree.Array iteration provides low-level atree.Value,
-		// convert to high-level interpreter.Value
-		if !MustConvertStoredValue(value).ConformsToDynamicType(interpreter, arrayType.ElementTypes[index], results) {
+	v.Iterate(func(element Value) (resume bool) {
+		if !element.ConformsToDynamicType(interpreter, arrayType.ElementTypes[index], results) {
+			result = false
 			return false
 		}
 
 		index++
-	}
+
+		return true
+	})
+
+	return result
 }
 
 func (v *ArrayValue) Equal(other Value, getLocationRange func() LocationRange) bool {
@@ -1189,25 +1160,56 @@ func (v *ArrayValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (a
 	return atree.StorageIDStorable(v.array.StorageID()), nil
 }
 
-func (v *ArrayValue) DeepCopy(storage atree.SlabStorage, address atree.Address) (atree.Value, error) {
-	// TODO: optimize, use copy-on-write
+func (*ArrayValue) NeedsCopy(_ *Interpreter, _ atree.Address) bool {
+	// TODO: not necessary if resource-kinded and in same address
+	return true
+}
 
-	copiedValue, err := v.array.DeepCopy(storage, address)
+func (v *ArrayValue) DeepCopy(inter *Interpreter, address atree.Address) Value {
+
+	array, err := atree.NewArray(inter.Storage, address, v.array.Type())
 	if err != nil {
-		return nil, err
+		panic(ExternalError{err})
 	}
+	result := &ArrayValue{
+		Type:        v.Type,
+		array:       array,
+		isDestroyed: v.isDestroyed,
+	}
+
+	var index int
+	v.Iterate(func(element Value) (resume bool) {
+
+		value := element.DeepCopy(inter, address)
+
+		result.Insert(inter, ReturnEmptyLocationRange, index, value)
+
+		index++
+
+		return true
+	})
 
 	v.isCopied = true
 
-	return &ArrayValue{
-		Type:        v.Type,
-		array:       copiedValue.(*atree.Array),
-		isDestroyed: v.isDestroyed,
-	}, nil
+	return result
 }
 
-func (a *ArrayValue) DeepRemove(storage atree.SlabStorage) error {
-	return a.array.DeepRemove(storage)
+func (v *ArrayValue) DeepRemove(inter *Interpreter) {
+	// TODO: use backward iterator
+	for prevIndex := v.Count(); prevIndex > 0; prevIndex-- {
+		index := prevIndex - 1
+
+		storable, err := v.array.GetStorable(uint64(index))
+		if err != nil {
+			panic(ExternalError{err})
+		}
+
+		value := v.Remove(inter, ReturnEmptyLocationRange, index)
+
+		value.DeepRemove(inter)
+
+		inter.removeReferencedSlab(storable)
+	}
 }
 
 func (v *ArrayValue) StorageID() atree.StorageID {
