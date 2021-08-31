@@ -2144,42 +2144,43 @@ func TestRuntimeMalformedArgumentPassing(t *testing.T) {
 	}
 
 	type argumentPassingTest struct {
-		label           string
-		typeSignature   string
-		exportedValue   cadence.Value
-		expectedErrType error
+		label                                    string
+		typeSignature                            string
+		exportedValue                            cadence.Value
+		expectedInvalidEntryPointArgumentErrType error
+		expectedContainerMutationError           bool
 	}
 
 	var argumentPassingTests = []argumentPassingTest{
 		{
-			label:           "Malformed Struct field type",
-			typeSignature:   "Foo",
-			exportedValue:   malformedStruct1,
-			expectedErrType: &MalformedValueError{},
+			label:                                    "Malformed Struct field type",
+			typeSignature:                            "Foo",
+			exportedValue:                            malformedStruct1,
+			expectedInvalidEntryPointArgumentErrType: &MalformedValueError{},
 		},
 		{
-			label:           "Malformed Struct field name",
-			typeSignature:   "Foo",
-			exportedValue:   malformedStruct2,
-			expectedErrType: &MalformedValueError{},
+			label:                                    "Malformed Struct field name",
+			typeSignature:                            "Foo",
+			exportedValue:                            malformedStruct2,
+			expectedInvalidEntryPointArgumentErrType: &MalformedValueError{},
 		},
 		{
-			label:           "Malformed AnyStruct",
-			typeSignature:   "AnyStruct",
-			exportedValue:   malformedStruct1,
-			expectedErrType: &MalformedValueError{},
+			label:                                    "Malformed AnyStruct",
+			typeSignature:                            "AnyStruct",
+			exportedValue:                            malformedStruct1,
+			expectedInvalidEntryPointArgumentErrType: &MalformedValueError{},
 		},
 		{
-			label:           "Malformed nested struct array",
-			typeSignature:   "Bar",
-			exportedValue:   malformedStruct3,
-			expectedErrType: &MalformedValueError{},
+			label:                                    "Malformed nested struct array",
+			typeSignature:                            "Bar",
+			exportedValue:                            malformedStruct3,
+			expectedInvalidEntryPointArgumentErrType: &MalformedValueError{},
 		},
 		{
-			label:           "Malformed nested struct dictionary",
-			typeSignature:   "Baz",
-			exportedValue:   malformedStruct4,
-			expectedErrType: &MalformedValueError{},
+			label:                                    "Malformed nested struct dictionary",
+			typeSignature:                            "Baz",
+			exportedValue:                            malformedStruct4,
+			expectedInvalidEntryPointArgumentErrType: &MalformedValueError{},
 		},
 		{
 			label:         "Array with malformed member",
@@ -2187,7 +2188,7 @@ func TestRuntimeMalformedArgumentPassing(t *testing.T) {
 			exportedValue: cadence.NewArray([]cadence.Value{
 				malformedStruct1,
 			}),
-			expectedErrType: &MalformedValueError{},
+			expectedInvalidEntryPointArgumentErrType: &MalformedValueError{},
 		},
 		{
 			label:         "Array with wrong size",
@@ -2195,7 +2196,7 @@ func TestRuntimeMalformedArgumentPassing(t *testing.T) {
 			exportedValue: cadence.NewArray([]cadence.Value{
 				malformedStruct1,
 			}),
-			expectedErrType: &InvalidValueTypeError{},
+			expectedContainerMutationError: true,
 		},
 		{
 			label:         "Nested array with mismatching element",
@@ -2205,19 +2206,19 @@ func TestRuntimeMalformedArgumentPassing(t *testing.T) {
 					cadence.NewInt(5),
 				}),
 			}),
-			expectedErrType: &InvalidValueTypeError{},
+			expectedContainerMutationError: true,
 		},
 		{
-			label:           "Inner array with mismatching element",
-			typeSignature:   "Bar",
-			exportedValue:   malformedStruct5,
-			expectedErrType: &MalformedValueError{},
+			label:                          "Inner array with mismatching element",
+			typeSignature:                  "Bar",
+			exportedValue:                  malformedStruct5,
+			expectedContainerMutationError: true,
 		},
 		{
-			label:           "Malformed Optional",
-			typeSignature:   "Foo?",
-			exportedValue:   cadence.NewOptional(malformedStruct1),
-			expectedErrType: &MalformedValueError{},
+			label:                                    "Malformed Optional",
+			typeSignature:                            "Foo?",
+			exportedValue:                            cadence.NewOptional(malformedStruct1),
+			expectedInvalidEntryPointArgumentErrType: &MalformedValueError{},
 		},
 		{
 			label:         "Malformed dictionary",
@@ -2228,7 +2229,7 @@ func TestRuntimeMalformedArgumentPassing(t *testing.T) {
 					Value: malformedStruct1,
 				},
 			}),
-			expectedErrType: &MalformedValueError{},
+			expectedInvalidEntryPointArgumentErrType: &MalformedValueError{},
 		},
 	}
 
@@ -2275,15 +2276,25 @@ func TestRuntimeMalformedArgumentPassing(t *testing.T) {
 			)
 
 			_, err := executeTestScript(t, script, test.exportedValue)
-			require.Error(t, err)
 
-			require.IsType(t, Error{}, err)
-			runtimeError := err.(Error)
+			if test.expectedInvalidEntryPointArgumentErrType != nil {
+				require.Error(t, err)
 
-			require.IsType(t, &InvalidEntryPointArgumentError{}, runtimeError.Err)
-			argError := runtimeError.Err.(*InvalidEntryPointArgumentError)
+				var invalidEntryPointArgumentError *InvalidEntryPointArgumentError
+				require.ErrorAs(t, err, &invalidEntryPointArgumentError)
 
-			require.IsType(t, test.expectedErrType, argError.Err)
+				require.IsType(t,
+					test.expectedInvalidEntryPointArgumentErrType,
+					invalidEntryPointArgumentError.Err,
+				)
+			} else if test.expectedContainerMutationError {
+				require.Error(t, err)
+
+				var containerMutationError interpreter.ContainerMutationError
+				require.ErrorAs(t, err, &containerMutationError)
+			} else {
+				require.NoError(t, err)
+			}
 		})
 	}
 
