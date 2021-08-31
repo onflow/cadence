@@ -232,30 +232,10 @@ func TestArrayMutation(t *testing.T) {
             }
         `)
 
-		value, err := inter.Invoke("test")
+		_, err := inter.Invoke("test")
+		require.Error(t, err)
 
-		// This should not give errors, since resulting array is a new array.
-		// It doesn't mutate the existing array.
-		require.NoError(t, err)
-
-		// check resulting array
-
-		require.IsType(t, &interpreter.ArrayValue{}, value)
-		array := value.(*interpreter.ArrayValue)
-
-		utils.RequireValuesEqual(t,
-			interpreter.NewArrayValue(
-				inter,
-				interpreter.VariableSizedStaticType{
-					Type: interpreter.PrimitiveStaticTypeAnyStruct,
-				},
-				interpreter.NewStringValue("foo"),
-				interpreter.NewStringValue("bar"),
-				interpreter.NewStringValue("baz"),
-				interpreter.NewIntValueFromInt64(5),
-			),
-			array,
-		)
+		require.ErrorAs(t, err, &interpreter.ContainerMutationError{})
 
 		// Check original array
 
@@ -267,7 +247,7 @@ func TestArrayMutation(t *testing.T) {
 			interpreter.NewArrayValue(
 				inter,
 				interpreter.VariableSizedStaticType{
-					Type: interpreter.PrimitiveStaticTypeAnyStruct,
+					Type: interpreter.PrimitiveStaticTypeString,
 				},
 				interpreter.NewStringValue("foo"),
 				interpreter.NewStringValue("bar"),
