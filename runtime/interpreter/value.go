@@ -8493,12 +8493,12 @@ func (v *SomeValue) Storable(
 	)
 }
 
-func (*SomeValue) IsResourceKinded(_ *Interpreter) bool {
-	return false
+func (v *SomeValue) IsResourceKinded(interpreter *Interpreter) bool {
+	return v.Value.IsResourceKinded(interpreter)
 }
 
-func (*SomeValue) NeedsStoreToAddress(_ *Interpreter, _ atree.Address) bool {
-	return true
+func (v *SomeValue) NeedsStoreToAddress(interpreter *Interpreter, address atree.Address) bool {
+	return v.Value.NeedsStoreToAddress(interpreter, address)
 }
 
 func (v *SomeValue) DeepCopy(interpreter *Interpreter, address atree.Address) Value {
