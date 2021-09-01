@@ -450,7 +450,7 @@ func (d Decoder) decodeComposite() (*CompositeStorable, error) {
 		)
 	}
 
-	fields := NewStringAtreeStorableOrderedMap()
+	fieldStorables := NewStringAtreeStorableOrderedMap()
 
 	for i := 0; i < int(fieldsSize); i += 2 {
 
@@ -478,7 +478,7 @@ func (d Decoder) decodeComposite() (*CompositeStorable, error) {
 			)
 		}
 
-		fields.Set(fieldName, decodedStorable)
+		fieldStorables.Set(fieldName, decodedStorable)
 	}
 
 	// Qualified identifier
@@ -504,7 +504,7 @@ func (d Decoder) decodeComposite() (*CompositeStorable, error) {
 		Location:            location,
 		QualifiedIdentifier: qualifiedIdentifier,
 		Kind:                kind,
-		Fields:              fields,
+		FieldStorables:      fieldStorables,
 	}, nil
 }
 

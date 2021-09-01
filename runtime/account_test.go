@@ -1060,15 +1060,15 @@ func TestRuntimePublicKey(t *testing.T) {
 	t.Run("IsValid", func(t *testing.T) {
 		for _, validity := range []bool{true, false} {
 			script := `
-            pub fun main(): Bool {
-                let publicKey =  PublicKey(
-                    publicKey: "0102".decodeHex(),
-                    signatureAlgorithm: SignatureAlgorithm.ECDSA_P256
-                )
+              pub fun main(): Bool {
+                  let publicKey = PublicKey(
+                      publicKey: "0102".decodeHex(),
+                      signatureAlgorithm: SignatureAlgorithm.ECDSA_P256
+                  )
 
-                return publicKey.isValid
-            }
-        `
+                  return publicKey.isValid
+              }
+            `
 			invoked := false
 			validateMethodReturnValue := validity
 
@@ -1097,14 +1097,17 @@ func TestRuntimePublicKey(t *testing.T) {
 		storage.keys = append(storage.keys, accountKeyA, accountKeyB)
 
 		for index, key := range storage.keys {
-			script := fmt.Sprintf(`
-                pub fun main(): Bool {
-                    // Get a public key from host env
-                    let acc = getAccount(0x02)
-                    let publicKey = acc.keys.get(keyIndex: %d)!.publicKey
-                    return publicKey.isValid
-                }
-            `, index)
+			script := fmt.Sprintf(
+				`
+                  pub fun main(): Bool {
+                      // Get a public key from host env
+                      let acc = getAccount(0x02)
+                      let publicKey = acc.keys.get(keyIndex: %d)!.publicKey
+                      return publicKey.isValid
+                  }
+                `,
+				index,
+			)
 
 			invoked := false
 			validateMethodReturnValue := true

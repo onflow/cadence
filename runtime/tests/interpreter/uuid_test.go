@@ -137,8 +137,12 @@ func TestInterpretResourceUUID(t *testing.T) {
 		require.IsType(t, &interpreter.CompositeValue{}, element)
 		res := element.(*interpreter.CompositeValue)
 
-		uuidValue, present := res.Fields.Get(sema.ResourceUUIDFieldName)
-		require.True(t, present)
+		uuidValue := res.GetMember(
+			inter,
+			interpreter.ReturnEmptyLocationRange,
+			sema.ResourceUUIDFieldName,
+		)
+
 		RequireValuesEqual(t,
 			interpreter.UInt64Value(i),
 			uuidValue,

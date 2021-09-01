@@ -71,7 +71,13 @@ func TestValueDeepCopyAndDeepRemove(t *testing.T) {
 	optionalValue := NewSomeValueNonCopying(arrayValue)
 
 	compositeValue := newTestCompositeValue(storage, address)
-	compositeValue.Fields.Set("value", optionalValue)
+
+	compositeValue.SetMember(
+		inter,
+		ReturnEmptyLocationRange,
+		"value",
+		optionalValue,
+	)
 
 	compositeValue.DeepRemove(inter)
 

@@ -3761,27 +3761,23 @@ func TestInterpretDictionaryIndexingAssignmentExisting(t *testing.T) {
 	actualValue := inter.Globals["x"].GetValue()
 	actualDict := actualValue.(*interpreter.DictionaryValue)
 
-	newValue := actualDict.
-		Get(inter, interpreter.ReturnEmptyLocationRange, interpreter.NewStringValue("abc"))
+	newValue := actualDict.Get(
+		inter,
+		interpreter.ReturnEmptyLocationRange,
+		interpreter.NewStringValue("abc"),
+	)
 
 	AssertValuesEqual(t,
 		interpreter.NewSomeValueNonCopying(interpreter.NewIntValueFromInt64(23)),
 		newValue,
 	)
 
-	expectedEntries := interpreter.NewStringValueOrderedMap()
-	expectedEntries.Set("abc", interpreter.NewIntValueFromInt64(23))
-
-	assert.Equal(t,
-		expectedEntries,
-		actualDict.Entries,
-	)
-
 	AssertValueSlicesEqual(t,
 		[]interpreter.Value{
 			interpreter.NewStringValue("abc"),
+			interpreter.NewIntValueFromInt64(23),
 		},
-		elements(actualDict.Keys),
+		keyValues(actualDict),
 	)
 }
 
@@ -3821,29 +3817,25 @@ func TestInterpretDictionaryIndexingAssignmentNew(t *testing.T) {
 		actualDict,
 	)
 
-	newValue := actualDict.
-		Get(inter, interpreter.ReturnEmptyLocationRange, interpreter.NewStringValue("abc"))
+	newValue := actualDict.Get(
+		inter,
+		interpreter.ReturnEmptyLocationRange,
+		interpreter.NewStringValue("abc"),
+	)
 
 	AssertValuesEqual(t,
 		interpreter.NewSomeValueNonCopying(interpreter.NewIntValueFromInt64(23)),
 		newValue,
 	)
 
-	expectedEntries := interpreter.NewStringValueOrderedMap()
-	expectedEntries.Set("def", interpreter.NewIntValueFromInt64(42))
-	expectedEntries.Set("abc", interpreter.NewIntValueFromInt64(23))
-
-	assert.Equal(t,
-		expectedEntries,
-		actualDict.Entries,
-	)
-
 	AssertValueSlicesEqual(t,
 		[]interpreter.Value{
 			interpreter.NewStringValue("def"),
+			interpreter.NewIntValueFromInt64(42),
 			interpreter.NewStringValue("abc"),
+			interpreter.NewIntValueFromInt64(23),
 		},
-		elements(actualDict.Keys),
+		keyValues(actualDict),
 	)
 }
 
@@ -3882,27 +3874,23 @@ func TestInterpretDictionaryIndexingAssignmentNil(t *testing.T) {
 		actualDict,
 	)
 
-	newValue := actualDict.
-		Get(inter, interpreter.ReturnEmptyLocationRange, interpreter.NewStringValue("def"))
+	newValue := actualDict.Get(
+		inter,
+		interpreter.ReturnEmptyLocationRange,
+		interpreter.NewStringValue("def"),
+	)
 
 	AssertValuesEqual(t,
 		interpreter.NilValue{},
 		newValue,
 	)
 
-	expectedEntries := interpreter.NewStringValueOrderedMap()
-	expectedEntries.Set("abc", interpreter.NewIntValueFromInt64(23))
-
-	assert.Equal(t,
-		expectedEntries,
-		actualDict.Entries,
-	)
-
 	AssertValueSlicesEqual(t,
 		[]interpreter.Value{
 			interpreter.NewStringValue("abc"),
+			interpreter.NewIntValueFromInt64(23),
 		},
-		elements(actualDict.Keys),
+		keyValues(actualDict),
 	)
 }
 
@@ -4932,19 +4920,12 @@ func TestInterpretDictionaryRemove(t *testing.T) {
 	require.IsType(t, actualValue, &interpreter.DictionaryValue{})
 	actualDict := actualValue.(*interpreter.DictionaryValue)
 
-	expectedEntries := interpreter.NewStringValueOrderedMap()
-	expectedEntries.Set("def", interpreter.NewIntValueFromInt64(2))
-
-	assert.Equal(t,
-		expectedEntries,
-		actualDict.Entries,
-	)
-
 	AssertValueSlicesEqual(t,
 		[]interpreter.Value{
 			interpreter.NewStringValue("def"),
+			interpreter.NewIntValueFromInt64(2),
 		},
-		elements(actualDict.Keys),
+		keyValues(actualDict),
 	)
 
 	AssertValuesEqual(t,
@@ -4969,21 +4950,14 @@ func TestInterpretDictionaryInsert(t *testing.T) {
 	require.IsType(t, actualValue, &interpreter.DictionaryValue{})
 	actualDict := actualValue.(*interpreter.DictionaryValue)
 
-	expectedEntries := interpreter.NewStringValueOrderedMap()
-	expectedEntries.Set("abc", interpreter.NewIntValueFromInt64(3))
-	expectedEntries.Set("def", interpreter.NewIntValueFromInt64(2))
-
-	assert.Equal(t,
-		expectedEntries,
-		actualDict.Entries,
-	)
-
 	AssertValueSlicesEqual(t,
 		[]interpreter.Value{
 			interpreter.NewStringValue("abc"),
+			interpreter.NewIntValueFromInt64(3),
 			interpreter.NewStringValue("def"),
+			interpreter.NewIntValueFromInt64(2),
 		},
-		elements(actualDict.Keys),
+		keyValues(actualDict),
 	)
 
 	AssertValuesEqual(t,
@@ -6917,29 +6891,8 @@ func TestInterpretContractAccountFieldUse(t *testing.T) {
 						_ common.CompositeKind,
 					) *interpreter.StringValueOrderedMap {
 
-						panicFunction := interpreter.NewHostFunctionValue(
-							func(invocation interpreter.Invocation) interpreter.Value {
-								panic(errors.NewUnreachableError())
-							},
-						)
-
 						injectedMembers := interpreter.NewStringValueOrderedMap()
-						injectedMembers.Set(
-							"account",
-							interpreter.NewAuthAccountValue(
-								addressValue,
-								returnZeroUFix64,
-								returnZeroUFix64,
-								func(interpreter *interpreter.Interpreter) interpreter.UInt64Value {
-									return 0
-								},
-								returnZeroUInt64,
-								panicFunction,
-								panicFunction,
-								&interpreter.CompositeValue{},
-								&interpreter.CompositeValue{},
-							),
-						)
+						injectedMembers.Set("account", newTestAuthAccountValue(addressValue))
 						return injectedMembers
 					},
 				),
@@ -7650,12 +7603,6 @@ func TestInterpretResourceOwnerFieldUse(t *testing.T) {
 
 	t.Parallel()
 
-	address := common.Address{
-		0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
-	}
-
-	addressValue := interpreter.AddressValue(address)
-
 	code := `
       pub resource R {}
 
@@ -7673,30 +7620,19 @@ func TestInterpretResourceOwnerFieldUse(t *testing.T) {
           return addresses
       }
     `
-
-	panicFunction := interpreter.NewHostFunctionValue(func(invocation interpreter.Invocation) interpreter.Value {
-		panic(errors.NewUnreachableError())
-	})
-
 	// `authAccount`
 
+	address := common.Address{
+		0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
+	}
+
+	accountValue := newTestAuthAccountValue(interpreter.AddressValue(address))
+
 	valueDeclaration := stdlib.StandardLibraryValue{
-		Name: "account",
-		Type: sema.AuthAccountType,
-		Value: interpreter.NewAuthAccountValue(
-			addressValue,
-			returnZeroUFix64,
-			returnZeroUFix64,
-			func(interpreter *interpreter.Interpreter) interpreter.UInt64Value {
-				return 0
-			},
-			returnZeroUInt64,
-			panicFunction,
-			panicFunction,
-			&interpreter.CompositeValue{},
-			&interpreter.CompositeValue{},
-		),
-		Kind: common.DeclarationKindConstant,
+		Name:  "account",
+		Type:  sema.AuthAccountType,
+		Value: accountValue,
+		Kind:  common.DeclarationKindConstant,
 	}
 
 	inter, err := parseCheckAndInterpretWithOptions(t,
@@ -7713,25 +7649,7 @@ func TestInterpretResourceOwnerFieldUse(t *testing.T) {
 				}),
 				interpreter.WithAccountHandlerFunc(
 					func(address interpreter.AddressValue) *interpreter.CompositeValue {
-						return interpreter.NewPublicAccountValue(
-							address,
-							returnZeroUFix64,
-							returnZeroUFix64,
-							func(interpreter *interpreter.Interpreter) interpreter.UInt64Value {
-								panic(errors.NewUnreachableError())
-							},
-							func() interpreter.UInt64Value {
-								panic(errors.NewUnreachableError())
-							},
-							interpreter.NewPublicAccountKeysValue(
-								panicFunction,
-							),
-							interpreter.NewPublicAccountContractsValue(
-								address,
-								nil,
-								nil,
-							),
-						)
+						return newTestPublicAccountValue(address)
 					},
 				),
 			},
@@ -7748,6 +7666,85 @@ func TestInterpretResourceOwnerFieldUse(t *testing.T) {
 			interpreter.NewSomeValueNonCopying(interpreter.AddressValue(address)),
 		},
 		elements(result.(*interpreter.ArrayValue)),
+	)
+}
+
+func newTestAuthAccountValue(addressValue interpreter.AddressValue) *interpreter.CompositeValue {
+
+	panicFunction := interpreter.NewHostFunctionValue(func(invocation interpreter.Invocation) interpreter.Value {
+		panic(errors.NewUnreachableError())
+	})
+
+	contractsValue := interpreter.NewAuthAccountContractsValue(
+		addressValue,
+		panicFunction,
+		panicFunction,
+		panicFunction,
+		panicFunction,
+		func(inter *interpreter.Interpreter) *interpreter.ArrayValue {
+			return interpreter.NewArrayValue(
+				inter,
+				interpreter.VariableSizedStaticType{
+					Type: interpreter.PrimitiveStaticTypeString,
+				},
+			)
+		},
+	)
+
+	keysValue := interpreter.NewAuthAccountKeysValue(
+		panicFunction,
+		panicFunction,
+		panicFunction,
+	)
+
+	return interpreter.NewAuthAccountValue(
+		addressValue,
+		returnZeroUFix64,
+		returnZeroUFix64,
+		func(interpreter *interpreter.Interpreter) interpreter.UInt64Value {
+			return 0
+		},
+		returnZeroUInt64,
+		panicFunction,
+		panicFunction,
+		contractsValue,
+		keysValue,
+	)
+}
+
+func newTestPublicAccountValue(addressValue interpreter.AddressValue) *interpreter.CompositeValue {
+
+	panicFunction := interpreter.NewHostFunctionValue(func(invocation interpreter.Invocation) interpreter.Value {
+		panic(errors.NewUnreachableError())
+	})
+
+	keysValue := interpreter.NewPublicAccountKeysValue(
+		panicFunction,
+	)
+
+	contractsValue := interpreter.NewPublicAccountContractsValue(
+		addressValue,
+		panicFunction,
+		func(inter *interpreter.Interpreter) *interpreter.ArrayValue {
+			return interpreter.NewArrayValue(
+				inter,
+				interpreter.VariableSizedStaticType{
+					Type: interpreter.PrimitiveStaticTypeString,
+				},
+			)
+		},
+	)
+
+	return interpreter.NewPublicAccountValue(
+		addressValue,
+		returnZeroUFix64,
+		returnZeroUFix64,
+		func(interpreter *interpreter.Interpreter) interpreter.UInt64Value {
+			return 0
+		},
+		returnZeroUInt64,
+		keysValue,
+		contractsValue,
 	)
 }
 
@@ -8582,7 +8579,7 @@ func TestInterpretMissingMember(t *testing.T) {
 
 	// Remove field `y`
 	compositeValue := inter.Globals["x"].GetValue().(*interpreter.CompositeValue)
-	compositeValue.Fields.Delete("y")
+	compositeValue.FieldStorables.Delete("y")
 
 	_, err := inter.Invoke("test")
 	require.Error(t, err)

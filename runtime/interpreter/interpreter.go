@@ -1267,7 +1267,12 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 			func(invocation Invocation) Value {
 				for i, argument := range invocation.Arguments {
 					parameter := compositeType.ConstructorParameters[i]
-					invocation.Self.Fields.Set(parameter.Identifier, argument)
+					invocation.Self.SetMember(
+						invocation.Interpreter,
+						invocation.GetLocationRange,
+						parameter.Identifier,
+						argument,
+					)
 				}
 				return nil
 			},
@@ -1523,10 +1528,7 @@ func EnumConstructorFunction(
 	lookupTable := make(map[string]*CompositeValue)
 
 	for _, caseValue := range caseValues {
-		rawValue, ok := caseValue.Fields.Get(sema.EnumRawValueFieldName)
-		if !ok {
-			panic(errors.NewUnreachableError())
-		}
+		rawValue := caseValue.GetField(sema.EnumRawValueFieldName)
 		rawValueBigEndianBytes := rawValue.(IntegerValue).ToBigEndianBytes()
 		lookupTable[string(rawValueBigEndianBytes)] = caseValue
 	}
@@ -3527,7 +3529,8 @@ func (interpreter *Interpreter) removeReferencedSlab(storable atree.Storable) {
 		return
 	}
 
-	err := interpreter.Storage.Remove(atree.StorageID(storageIDStorable))
+	storageID := atree.StorageID(storageIDStorable)
+	err := interpreter.Storage.Remove(storageID)
 	if err != nil {
 		panic(ExternalError{err})
 	}

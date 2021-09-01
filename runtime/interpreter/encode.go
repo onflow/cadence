@@ -704,12 +704,12 @@ func (s *CompositeStorable) Encode(e *atree.Encoder) error {
 
 	// Encode fields (as array) at array index encodedCompositeValueFieldsFieldKey
 
-	err = e.CBOR.EncodeArrayHead(uint64(s.Fields.Len() * 2))
+	err = e.CBOR.EncodeArrayHead(uint64(s.FieldStorables.Len() * 2))
 	if err != nil {
 		return err
 	}
 
-	for pair := s.Fields.Oldest(); pair != nil; pair = pair.Next() {
+	for pair := s.FieldStorables.Oldest(); pair != nil; pair = pair.Next() {
 		fieldName := pair.Key
 		fieldStorable := pair.Value
 

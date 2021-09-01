@@ -26,7 +26,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/runtime/ast"
-	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
 )
 
@@ -208,10 +207,6 @@ func TestInterpretTransactions(t *testing.T) {
 		assert.IsType(t, interpreter.ArgumentCountError{}, err)
 	})
 
-	panicFunction := interpreter.NewHostFunctionValue(func(invocation interpreter.Invocation) interpreter.Value {
-		panic(errors.NewUnreachableError())
-	})
-
 	t.Run("TooManyArguments", func(t *testing.T) {
 		inter := parseCheckAndInterpret(t, `
           transaction {
@@ -225,31 +220,11 @@ func TestInterpretTransactions(t *testing.T) {
           }
         `)
 
-		signer1 := interpreter.NewAuthAccountValue(
+		signer1 := newTestAuthAccountValue(
 			interpreter.AddressValue{0, 0, 0, 0, 0, 0, 0, 1},
-			returnZeroUFix64,
-			returnZeroUFix64,
-			func(interpreter *interpreter.Interpreter) interpreter.UInt64Value {
-				return 0
-			},
-			returnZeroUInt64,
-			panicFunction,
-			panicFunction,
-			&interpreter.CompositeValue{},
-			&interpreter.CompositeValue{},
 		)
-		signer2 := interpreter.NewAuthAccountValue(
+		signer2 := newTestAuthAccountValue(
 			interpreter.AddressValue{0, 0, 0, 0, 0, 0, 0, 2},
-			returnZeroUFix64,
-			returnZeroUFix64,
-			func(interpreter *interpreter.Interpreter) interpreter.UInt64Value {
-				return 0
-			},
-			returnZeroUInt64,
-			panicFunction,
-			panicFunction,
-			&interpreter.CompositeValue{},
-			&interpreter.CompositeValue{},
 		)
 
 		// first transaction
@@ -282,18 +257,8 @@ func TestInterpretTransactions(t *testing.T) {
 		}
 
 		prepareArguments := []interpreter.Value{
-			interpreter.NewAuthAccountValue(
+			newTestAuthAccountValue(
 				interpreter.AddressValue{},
-				returnZeroUFix64,
-				returnZeroUFix64,
-				func(interpreter *interpreter.Interpreter) interpreter.UInt64Value {
-					return 0
-				},
-				returnZeroUInt64,
-				panicFunction,
-				panicFunction,
-				&interpreter.CompositeValue{},
-				&interpreter.CompositeValue{},
 			),
 		}
 

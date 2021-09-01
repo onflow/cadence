@@ -214,12 +214,18 @@ func exportCompositeValue(
 	fieldNames := t.CompositeFields()
 	fields := make([]cadence.Value, len(fieldNames))
 
-	fieldsMap := v.Fields
 	for i, field := range fieldNames {
 		fieldName := field.Identifier
-		fieldValue, ok := fieldsMap.Get(fieldName)
 
-		if !ok && v.ComputedFields != nil {
+		var fieldValue interpreter.Value
+		fieldStorable, ok := v.FieldStorables.Get(fieldName)
+		if ok {
+			var err error
+			fieldValue, err = interpreter.StoredValue(fieldStorable, inter.Storage)
+			if err != nil {
+				panic(interpreter.ExternalError{Recovered: err})
+			}
+		} else if v.ComputedFields != nil {
 			if computedField, ok := v.ComputedFields.Get(fieldName); ok {
 				fieldValue = computedField(inter)
 			}

@@ -27,7 +27,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
@@ -46,55 +45,23 @@ func testAccount(
 
 	var valueDeclarations stdlib.StandardLibraryValues
 
-	panicFunction := interpreter.NewHostFunctionValue(func(invocation interpreter.Invocation) interpreter.Value {
-		panic(errors.NewUnreachableError())
-	})
-
 	// `authAccount`
 
 	authAccountValueDeclaration := stdlib.StandardLibraryValue{
-		Name: "authAccount",
-		Type: sema.AuthAccountType,
-		Value: interpreter.NewAuthAccountValue(
-			address,
-			returnZeroUFix64,
-			returnZeroUFix64,
-			func(interpreter *interpreter.Interpreter) interpreter.UInt64Value {
-				return 0
-			},
-			returnZeroUInt64,
-			panicFunction,
-			panicFunction,
-			&interpreter.CompositeValue{},
-			&interpreter.CompositeValue{},
-		),
-		Kind: common.DeclarationKindConstant,
+		Name:  "authAccount",
+		Type:  sema.AuthAccountType,
+		Value: newTestAuthAccountValue(address),
+		Kind:  common.DeclarationKindConstant,
 	}
 	valueDeclarations = append(valueDeclarations, authAccountValueDeclaration)
 
 	// `pubAccount`
 
 	pubAccountValueDeclaration := stdlib.StandardLibraryValue{
-		Name: "pubAccount",
-		Type: sema.PublicAccountType,
-		Value: interpreter.NewPublicAccountValue(
-			address,
-			returnZeroUFix64,
-			returnZeroUFix64,
-			func(interpreter *interpreter.Interpreter) interpreter.UInt64Value {
-				return 0
-			},
-			returnZeroUInt64,
-			interpreter.NewPublicAccountKeysValue(
-				nil,
-			),
-			interpreter.NewPublicAccountContractsValue(
-				address,
-				nil,
-				nil,
-			),
-		),
-		Kind: common.DeclarationKindConstant,
+		Name:  "pubAccount",
+		Type:  sema.PublicAccountType,
+		Value: newTestPublicAccountValue(address),
+		Kind:  common.DeclarationKindConstant,
 	}
 	valueDeclarations = append(valueDeclarations, pubAccountValueDeclaration)
 

@@ -30,3 +30,16 @@ func elements(array *interpreter.ArrayValue) []interpreter.Value {
 	}
 	return result
 }
+
+func keyValues(dict *interpreter.DictionaryValue) []interpreter.Value {
+	count := dict.Count() * 2
+	result := make([]interpreter.Value, count)
+	i := 0
+	dict.Keys.Walk(func(keyValue interpreter.Value) {
+		result[i*2] = keyValue
+		value, _, _ := dict.GetKey(keyValue)
+		result[i*2+1] = value
+		i++
+	})
+	return result
+}

@@ -3372,7 +3372,18 @@ func TestRuntimeImportExportComplex(t *testing.T) {
 
 	t.Parallel()
 
-	inter := newTestInterpreter(t)
+	program := interpreter.Program{
+		Elaboration: sema.NewElaboration(),
+	}
+
+	storage := interpreter.NewInMemoryStorage()
+
+	inter, err := interpreter.NewInterpreter(
+		&program,
+		TestLocation,
+		interpreter.WithStorage(storage),
+	)
+	require.NoError(t, err)
 
 	// Array
 
@@ -3440,6 +3451,8 @@ func TestRuntimeImportExportComplex(t *testing.T) {
 		Fields:     []string{"dictionary"},
 	}
 
+	program.Elaboration.CompositeTypes[semaCompositeType.ID()] = semaCompositeType
+
 	semaCompositeType.Members.Set(
 		"dictionary",
 		sema.NewPublicConstantFieldMember(
@@ -3483,21 +3496,6 @@ func TestRuntimeImportExportComplex(t *testing.T) {
 	t.Run("export", func(t *testing.T) {
 
 		t.Parallel()
-
-		program := interpreter.Program{
-			Elaboration: sema.NewElaboration(),
-		}
-
-		storage := interpreter.NewInMemoryStorage()
-
-		inter, err := interpreter.NewInterpreter(
-			&program,
-			TestLocation,
-			interpreter.WithStorage(storage),
-		)
-		require.NoError(t, err)
-
-		program.Elaboration.CompositeTypes[semaCompositeType.ID()] = semaCompositeType
 
 		actual, err := exportValueWithInterpreter(internalCompositeValue, inter, seenReferences{})
 		require.NoError(t, err)

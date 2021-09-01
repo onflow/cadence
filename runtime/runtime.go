@@ -1343,9 +1343,8 @@ func (r *interpreterRuntime) emitEvent(
 ) error {
 	fields := make([]exportableValue, len(eventType.ConstructorParameters))
 
-	eventFields := event.Fields
 	for i, parameter := range eventType.ConstructorParameters {
-		value, _ := eventFields.Get(parameter.Identifier)
+		value := event.GetField(parameter.Identifier)
 		fields[i] = newExportableValue(value, inter)
 	}
 
@@ -1420,8 +1419,8 @@ func (r *interpreterRuntime) newCreateAccountFunction(
 			))
 		}
 
-		payerAddressValue, ok := payer.Fields.Get(sema.AuthAccountAddressField)
-		if !ok {
+		payerAddressValue := payer.GetField(sema.AuthAccountAddressField)
+		if payerAddressValue == nil {
 			panic("address is not set")
 		}
 
@@ -2820,8 +2819,6 @@ func NewPublicKeyFromValue(
 	error,
 ) {
 
-	fields := publicKey.Fields
-
 	// publicKey field
 	publicKeyFieldGetter, ok := publicKey.ComputedFields.Get(sema.PublicKeyPublicKeyField)
 	if !ok {
@@ -2836,8 +2833,8 @@ func NewPublicKeyFromValue(
 	}
 
 	// sign algo field
-	signAlgoField, ok := fields.Get(sema.PublicKeySignAlgoField)
-	if !ok {
+	signAlgoField := publicKey.GetField(sema.PublicKeySignAlgoField)
+	if signAlgoField == nil {
 		return nil, errors.New("sign algorithm is not set")
 	}
 
@@ -2849,9 +2846,9 @@ func NewPublicKeyFromValue(
 		)
 	}
 
-	rawValue, ok := signAlgoValue.Fields.Get(sema.EnumRawValueFieldName)
-	if !ok {
-		return nil, errors.New("cannot find sign algorithm raw value")
+	rawValue := signAlgoValue.GetField(sema.EnumRawValueFieldName)
+	if rawValue == nil {
+		return nil, errors.New("sign algorithm raw value is not set")
 	}
 
 	signAlgoRawValue, ok := rawValue.(interpreter.UInt8Value)
@@ -2864,7 +2861,8 @@ func NewPublicKeyFromValue(
 
 	// `valid` and `validated` fields
 	var valid, validated bool
-	validField, validated := fields.Get(sema.PublicKeyIsValidField)
+	validField := publicKey.GetField(sema.PublicKeyIsValidField)
+	validated = validField != nil
 	if validated {
 		valid = bool(validField.(interpreter.BoolValue))
 	}
@@ -2923,8 +2921,8 @@ func NewAccountKeyValue(
 func NewHashAlgorithmFromValue(value interpreter.Value) HashAlgorithm {
 	hashAlgoValue := value.(*interpreter.CompositeValue)
 
-	rawValue, ok := hashAlgoValue.Fields.Get(sema.EnumRawValueFieldName)
-	if !ok {
+	rawValue := hashAlgoValue.GetField(sema.EnumRawValueFieldName)
+	if rawValue == nil {
 		panic("cannot find hash algorithm raw value")
 	}
 

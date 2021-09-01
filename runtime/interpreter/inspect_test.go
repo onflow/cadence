@@ -59,7 +59,12 @@ func TestInspectValue(t *testing.T) {
 		optionalValue := NewSomeValueNonCopying(arrayValue)
 
 		compositeValue = newTestCompositeValue(inter.Storage, common.Address{})
-		compositeValue.Fields.Set("value", optionalValue)
+		compositeValue.SetMember(
+			inter,
+			ReturnEmptyLocationRange,
+			"value",
+			optionalValue,
+		)
 	}
 
 	// Get actually stored values.
