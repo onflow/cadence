@@ -421,6 +421,7 @@ func (r *interpreterRuntime) InvokeContractFunction(
 			arguments[i],
 			argumentType,
 			context,
+
 			runtimeStorage,
 			interpreterOptions,
 			checkerOptions,
@@ -489,6 +490,15 @@ func (r *interpreterRuntime) convertArgument(
 				runtimeStorage,
 				interpreterOptions,
 				checkerOptions,
+			)
+		}
+	case sema.PublicAccountType:
+		// convert addresses to public accounts so there is no need to construct a public account value for the caller
+		if addressValue, ok := argument.(interpreter.AddressValue); ok {
+			return r.getPublicAccount(
+				interpreter.NewAddressValue(addressValue.ToAddress()),
+				context.Interface,
+				runtimeStorage,
 			)
 		}
 	}
