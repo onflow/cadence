@@ -9,7 +9,7 @@ require (
 	github.com/fxamacker/cbor/v2 v2.2.1-0.20210510192846-c3f3c69e7bc8
 	github.com/go-test/deep v1.0.5
 	github.com/logrusorgru/aurora v0.0.0-20200102142835-e9ef32dff381
-	github.com/onflow/atree v0.0.0-20210827211716-97888c87e47e
+	github.com/onflow/atree v0.0.0-20210902012151-6107da580c6b
 	github.com/rivo/uniseg v0.2.0
 	github.com/stretchr/testify v1.7.0
 	go.uber.org/goleak v1.1.10
@@ -22,5 +22,3 @@ require (
 	gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15 // indirect
 
 )
-
-replace github.com/onflow/atree => ../atree
