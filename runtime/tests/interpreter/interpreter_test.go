@@ -7363,9 +7363,6 @@ func TestInterpretOptionalChainingOptionalFieldRead(t *testing.T) {
 
 func TestInterpretReferenceUseAfterCopy(t *testing.T) {
 
-	// TODO:
-	t.Skip("TODO")
-
 	t.Parallel()
 
 	t.Run("resource, field write", func(t *testing.T) {
@@ -7390,9 +7387,8 @@ func TestInterpretReferenceUseAfterCopy(t *testing.T) {
         `)
 
 		_, err := inter.Invoke("test")
-		require.Error(t, err)
+		require.NoError(t, err)
 
-		require.ErrorAs(t, err, &interpreter.InvalidatedResourceError{})
 	})
 
 	t.Run("resource, field read", func(t *testing.T) {
@@ -7418,9 +7414,7 @@ func TestInterpretReferenceUseAfterCopy(t *testing.T) {
         `)
 
 		_, err := inter.Invoke("test")
-		require.Error(t, err)
-
-		require.ErrorAs(t, err, &interpreter.InvalidatedResourceError{})
+		require.NoError(t, err)
 	})
 
 	t.Run("resource array, insert", func(t *testing.T) {
@@ -7440,9 +7434,7 @@ func TestInterpretReferenceUseAfterCopy(t *testing.T) {
         `)
 
 		_, err := inter.Invoke("test")
-		require.Error(t, err)
-
-		require.ErrorAs(t, err, &interpreter.InvalidatedResourceError{})
+		require.NoError(t, err)
 	})
 
 	t.Run("resource array, append", func(t *testing.T) {
@@ -7462,9 +7454,7 @@ func TestInterpretReferenceUseAfterCopy(t *testing.T) {
         `)
 
 		_, err := inter.Invoke("test")
-		require.Error(t, err)
-
-		require.ErrorAs(t, err, &interpreter.InvalidatedResourceError{})
+		require.NoError(t, err)
 	})
 
 	t.Run("resource array, get/set", func(t *testing.T) {
@@ -7486,9 +7476,7 @@ func TestInterpretReferenceUseAfterCopy(t *testing.T) {
         `)
 
 		_, err := inter.Invoke("test")
-		require.Error(t, err)
-
-		require.ErrorAs(t, err, &interpreter.InvalidatedResourceError{})
+		require.NoError(t, err)
 	})
 
 	t.Run("resource array, remove", func(t *testing.T) {
@@ -7509,9 +7497,7 @@ func TestInterpretReferenceUseAfterCopy(t *testing.T) {
         `)
 
 		_, err := inter.Invoke("test")
-		require.Error(t, err)
-
-		require.ErrorAs(t, err, &interpreter.InvalidatedResourceError{})
+		require.NoError(t, err)
 	})
 
 	t.Run("resource dictionary, insert", func(t *testing.T) {
@@ -7531,9 +7517,7 @@ func TestInterpretReferenceUseAfterCopy(t *testing.T) {
         `)
 
 		_, err := inter.Invoke("test")
-		require.Error(t, err)
-
-		require.ErrorAs(t, err, &interpreter.InvalidatedResourceError{})
+		require.NoError(t, err)
 	})
 
 	t.Run("resource dictionary, remove", func(t *testing.T) {
@@ -7554,9 +7538,7 @@ func TestInterpretReferenceUseAfterCopy(t *testing.T) {
         `)
 
 		_, err := inter.Invoke("test")
-		require.Error(t, err)
-
-		require.ErrorAs(t, err, &interpreter.InvalidatedResourceError{})
+		require.NoError(t, err)
 	})
 
 	t.Run("struct, field write and read", func(t *testing.T) {
