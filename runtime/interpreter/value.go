@@ -877,24 +877,14 @@ func (v *ArrayValue) SetIndex(interpreter *Interpreter, getLocationRange func() 
 	// convert to high-level interpreter.Value
 	existingValue := MustConvertStoredValue(existingAtreeValue)
 
-	// If the value is struct-kinded, i.e. not resource-kinded,
-	// then deep remove the existing value and its storable.
-	//
-	// We cannot deep remove the existing value and its storable
-	// if the value is resource-kinded,
-	// because the value may be used elsewhere.
-
-	if !existingValue.IsResourceKinded(interpreter) {
-
-		existingStorable, err := v.array.GetStorable(uint64(index))
-		if err != nil {
-			panic(ExternalError{err})
-		}
-
-		existingValue.DeepRemove(interpreter)
-
-		interpreter.removeReferencedSlab(existingStorable)
+	existingStorable, err := v.array.GetStorable(uint64(index))
+	if err != nil {
+		panic(ExternalError{err})
 	}
+
+	existingValue.DeepRemove(interpreter)
+
+	interpreter.removeReferencedSlab(existingStorable)
 
 	element = interpreter.TransferValue(element, nil, v.array.Address())
 
@@ -7224,11 +7214,9 @@ func (v *CompositeValue) SetMember(
 			panic(ExternalError{err})
 		}
 
-		if !existingValue.IsResourceKinded(interpreter) {
-			existingValue.DeepRemove(interpreter)
+		existingValue.DeepRemove(interpreter)
 
-			interpreter.removeReferencedSlab(existingStorable)
-		}
+		interpreter.removeReferencedSlab(existingStorable)
 	}
 
 	v.store(interpreter.Storage)
