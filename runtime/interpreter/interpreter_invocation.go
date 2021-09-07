@@ -95,7 +95,7 @@ func (interpreter *Interpreter) invokeFunctionValue(
 		Interpreter:        interpreter,
 	}
 
-	return function.Invoke(invocation)
+	return function.invoke(invocation)
 }
 
 func (interpreter *Interpreter) invokeInterpretedFunction(

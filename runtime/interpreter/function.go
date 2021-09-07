@@ -44,7 +44,10 @@ type Invocation struct {
 type FunctionValue interface {
 	Value
 	isFunctionValue()
-	Invoke(Invocation) Value
+	// invoke evaluates the function.
+	// Only used internally by the interpreter.
+	// Use Interpreter.InvokeFunctionValue if you want to invoke the function externally
+	invoke(Invocation) Value
 }
 
 // InterpretedFunctionValue
@@ -85,8 +88,7 @@ func (*InterpretedFunctionValue) DynamicType(_ *Interpreter, _ SeenReferences) D
 }
 
 func (f *InterpretedFunctionValue) StaticType() StaticType {
-	// TODO: add function static type, convert f.Type
-	return nil
+	return ConvertSemaToStaticType(f.Type)
 }
 
 func (f *InterpretedFunctionValue) Copy() Value {
@@ -112,21 +114,10 @@ func (*InterpretedFunctionValue) SetModified(_ bool) {
 
 func (*InterpretedFunctionValue) isFunctionValue() {}
 
-func (f *InterpretedFunctionValue) Invoke(invocation Invocation) Value {
+func (f *InterpretedFunctionValue) invoke(invocation Invocation) Value {
 
-	// Check arguments' dynamic types match parameter types
-
-	for i, argument := range invocation.Arguments {
-		parameterType := f.Type.Parameters[i].TypeAnnotation.Type
-
-		if !f.Interpreter.checkValueTransferTargetType(argument, parameterType) {
-			panic(InvocationArgumentTypeError{
-				Index:         i,
-				ParameterType: parameterType,
-				LocationRange: invocation.GetLocationRange(),
-			})
-		}
-	}
+	// The check that arguments' dynamic types match the parameter types
+	// was already performed by the interpreter's checkValueTransferTargetType function
 
 	return f.Interpreter.invokeInterpretedFunction(f, invocation)
 }
@@ -211,7 +202,11 @@ func (*HostFunctionValue) SetModified(_ bool) {
 
 func (*HostFunctionValue) isFunctionValue() {}
 
-func (f *HostFunctionValue) Invoke(invocation Invocation) Value {
+func (f *HostFunctionValue) invoke(invocation Invocation) Value {
+
+	// The check that arguments' dynamic types match the parameter types
+	// was already performed by the interpreter's checkValueTransferTargetType function
+
 	return f.Function(invocation)
 }
 
@@ -298,7 +293,7 @@ func (BoundFunctionValue) SetModified(_ bool) {
 
 func (BoundFunctionValue) isFunctionValue() {}
 
-func (f BoundFunctionValue) Invoke(invocation Invocation) Value {
+func (f BoundFunctionValue) invoke(invocation Invocation) Value {
 	self := f.Self
 	receiverType := invocation.ReceiverType
 
@@ -323,7 +318,7 @@ func (f BoundFunctionValue) Invoke(invocation Invocation) Value {
 	}
 
 	invocation.Self = self
-	return f.Function.Invoke(invocation)
+	return f.Function.invoke(invocation)
 }
 
 func (f BoundFunctionValue) ConformsToDynamicType(
