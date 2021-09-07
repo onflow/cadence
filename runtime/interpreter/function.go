@@ -88,8 +88,7 @@ func (*InterpretedFunctionValue) DynamicType(_ *Interpreter, _ SeenReferences) D
 }
 
 func (f *InterpretedFunctionValue) StaticType() StaticType {
-	// TODO: add function static type, convert f.Type
-	return nil
+	return ConvertSemaToStaticType(f.Type)
 }
 
 func (f *InterpretedFunctionValue) Copy() Value {
