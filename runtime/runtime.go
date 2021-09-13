@@ -260,7 +260,13 @@ func (r *interpreterRuntime) ExecuteScript(script Script, context Context) (cade
 		return nil, newError(err, context)
 	}
 
-	return exportValue(value)
+	var exportedValue cadence.Value
+	exportedValue, err = exportValue(value)
+	if err != nil {
+		return nil, newError(err, context)
+	}
+
+	return exportedValue, nil
 }
 
 type interpretFunc func(inter *interpreter.Interpreter) (interpreter.Value, error)
@@ -468,7 +474,13 @@ func (r *interpreterRuntime) InvokeContractFunction(
 		return nil, newError(err, context)
 	}
 
-	return ExportValue(value, inter)
+	var exportedValue cadence.Value
+	exportedValue, err = ExportValue(value, inter)
+	if err != nil {
+		return nil, newError(err, context)
+	}
+
+	return exportedValue, nil
 }
 
 func (r *interpreterRuntime) convertArgument(
