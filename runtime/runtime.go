@@ -1296,7 +1296,7 @@ func (r *interpreterRuntime) meteringInterpreterOptions(runtimeInterface Interfa
 
 	callStackDepth := 0
 	// TODO: make runtime interface function
-	const callStackDepthLimit = 1000
+	const callStackDepthLimit = 2000
 
 	checkCallStackDepth := func() {
 
