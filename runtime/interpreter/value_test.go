@@ -86,7 +86,7 @@ func TestOwnerNewArray(t *testing.T) {
 		value,
 	)
 
-	value = array.GetIndex(ReturnEmptyLocationRange, 0).(*CompositeValue)
+	value = array.GetIndex(inter, ReturnEmptyLocationRange, 0).(*CompositeValue)
 
 	assert.Equal(t, common.Address{}, array.GetOwner())
 	assert.Equal(t, common.Address{}, value.GetOwner())
@@ -126,7 +126,7 @@ func TestOwnerArrayDeepCopy(t *testing.T) {
 	arrayCopy := array.DeepCopy(inter, atree.Address(newOwner))
 	array = arrayCopy.(*ArrayValue)
 
-	value = array.GetIndex(ReturnEmptyLocationRange, 0).(*CompositeValue)
+	value = array.GetIndex(inter, ReturnEmptyLocationRange, 0).(*CompositeValue)
 
 	assert.Equal(t, newOwner, array.GetOwner())
 	assert.Equal(t, newOwner, value.GetOwner())
@@ -164,7 +164,7 @@ func TestOwnerArrayElement(t *testing.T) {
 		value,
 	)
 
-	value = array.GetIndex(ReturnEmptyLocationRange, 0).(*CompositeValue)
+	value = array.GetIndex(inter, ReturnEmptyLocationRange, 0).(*CompositeValue)
 
 	assert.Equal(t, newOwner, array.GetOwner())
 	assert.Equal(t, newOwner, value.GetOwner())
@@ -203,7 +203,7 @@ func TestOwnerArraySetIndex(t *testing.T) {
 		value1,
 	)
 
-	value1 = array.GetIndex(ReturnEmptyLocationRange, 0).(*CompositeValue)
+	value1 = array.GetIndex(inter, ReturnEmptyLocationRange, 0).(*CompositeValue)
 
 	assert.Equal(t, newOwner, array.GetOwner())
 	assert.Equal(t, newOwner, value1.GetOwner())
@@ -211,7 +211,7 @@ func TestOwnerArraySetIndex(t *testing.T) {
 
 	array.SetIndex(inter, ReturnEmptyLocationRange, 0, value2)
 
-	value2 = array.GetIndex(ReturnEmptyLocationRange, 0).(*CompositeValue)
+	value2 = array.GetIndex(inter, ReturnEmptyLocationRange, 0).(*CompositeValue)
 
 	assert.Equal(t, newOwner, array.GetOwner())
 	assert.Equal(t, newOwner, value1.GetOwner())
@@ -254,7 +254,7 @@ func TestOwnerArrayAppend(t *testing.T) {
 
 	array.Append(inter, ReturnEmptyLocationRange, value)
 
-	value = array.GetIndex(ReturnEmptyLocationRange, 0).(*CompositeValue)
+	value = array.GetIndex(inter, ReturnEmptyLocationRange, 0).(*CompositeValue)
 
 	assert.Equal(t, newOwner, array.GetOwner())
 	assert.Equal(t, newOwner, value.GetOwner())
@@ -296,7 +296,7 @@ func TestOwnerArrayInsert(t *testing.T) {
 
 	array.Insert(inter, ReturnEmptyLocationRange, 0, value)
 
-	value = array.GetIndex(ReturnEmptyLocationRange, 0).(*CompositeValue)
+	value = array.GetIndex(inter, ReturnEmptyLocationRange, 0).(*CompositeValue)
 
 	assert.Equal(t, newOwner, array.GetOwner())
 	assert.Equal(t, newOwner, value.GetOwner())
@@ -1292,6 +1292,8 @@ func TestCapabilityValue_Equal(t *testing.T) {
 
 		t.Parallel()
 
+		inter := newTestInterpreter(t)
+
 		require.True(t,
 			(&CapabilityValue{
 				Address: AddressValue{0x1},
@@ -1301,6 +1303,8 @@ func TestCapabilityValue_Equal(t *testing.T) {
 				},
 				BorrowType: PrimitiveStaticTypeInt,
 			}).Equal(
+				inter,
+				ReturnEmptyLocationRange,
 				&CapabilityValue{
 					Address: AddressValue{0x1},
 					Path: PathValue{
@@ -1309,7 +1313,6 @@ func TestCapabilityValue_Equal(t *testing.T) {
 					},
 					BorrowType: PrimitiveStaticTypeInt,
 				},
-				ReturnEmptyLocationRange,
 			),
 		)
 	})
@@ -1317,6 +1320,8 @@ func TestCapabilityValue_Equal(t *testing.T) {
 	t.Run("equal, no borrow type", func(t *testing.T) {
 
 		t.Parallel()
+
+		inter := newTestInterpreter(t)
 
 		require.True(t,
 			(&CapabilityValue{
@@ -1326,6 +1331,8 @@ func TestCapabilityValue_Equal(t *testing.T) {
 					Identifier: "test",
 				},
 			}).Equal(
+				inter,
+				ReturnEmptyLocationRange,
 				&CapabilityValue{
 					Address: AddressValue{0x1},
 					Path: PathValue{
@@ -1333,7 +1340,6 @@ func TestCapabilityValue_Equal(t *testing.T) {
 						Identifier: "test",
 					},
 				},
-				ReturnEmptyLocationRange,
 			),
 		)
 	})
@@ -1341,6 +1347,8 @@ func TestCapabilityValue_Equal(t *testing.T) {
 	t.Run("different paths", func(t *testing.T) {
 
 		t.Parallel()
+
+		inter := newTestInterpreter(t)
 
 		require.False(t,
 			(&CapabilityValue{
@@ -1351,6 +1359,8 @@ func TestCapabilityValue_Equal(t *testing.T) {
 				},
 				BorrowType: PrimitiveStaticTypeInt,
 			}).Equal(
+				inter,
+				ReturnEmptyLocationRange,
 				&CapabilityValue{
 					Address: AddressValue{0x1},
 					Path: PathValue{
@@ -1359,7 +1369,6 @@ func TestCapabilityValue_Equal(t *testing.T) {
 					},
 					BorrowType: PrimitiveStaticTypeInt,
 				},
-				ReturnEmptyLocationRange,
 			),
 		)
 	})
@@ -1368,6 +1377,8 @@ func TestCapabilityValue_Equal(t *testing.T) {
 
 		t.Parallel()
 
+		inter := newTestInterpreter(t)
+
 		require.False(t,
 			(&CapabilityValue{
 				Address: AddressValue{0x1},
@@ -1377,6 +1388,8 @@ func TestCapabilityValue_Equal(t *testing.T) {
 				},
 				BorrowType: PrimitiveStaticTypeInt,
 			}).Equal(
+				inter,
+				ReturnEmptyLocationRange,
 				&CapabilityValue{
 					Address: AddressValue{0x2},
 					Path: PathValue{
@@ -1385,7 +1398,6 @@ func TestCapabilityValue_Equal(t *testing.T) {
 					},
 					BorrowType: PrimitiveStaticTypeInt,
 				},
-				ReturnEmptyLocationRange,
 			),
 		)
 	})
@@ -1394,6 +1406,8 @@ func TestCapabilityValue_Equal(t *testing.T) {
 
 		t.Parallel()
 
+		inter := newTestInterpreter(t)
+
 		require.False(t,
 			(&CapabilityValue{
 				Address: AddressValue{0x1},
@@ -1403,6 +1417,8 @@ func TestCapabilityValue_Equal(t *testing.T) {
 				},
 				BorrowType: PrimitiveStaticTypeInt,
 			}).Equal(
+				inter,
+				ReturnEmptyLocationRange,
 				&CapabilityValue{
 					Address: AddressValue{0x1},
 					Path: PathValue{
@@ -1411,7 +1427,6 @@ func TestCapabilityValue_Equal(t *testing.T) {
 					},
 					BorrowType: PrimitiveStaticTypeString,
 				},
-				ReturnEmptyLocationRange,
 			),
 		)
 	})
@@ -1419,6 +1434,8 @@ func TestCapabilityValue_Equal(t *testing.T) {
 	t.Run("different kind", func(t *testing.T) {
 
 		t.Parallel()
+
+		inter := newTestInterpreter(t)
 
 		require.False(t,
 			(&CapabilityValue{
@@ -1429,8 +1446,9 @@ func TestCapabilityValue_Equal(t *testing.T) {
 				},
 				BorrowType: PrimitiveStaticTypeInt,
 			}).Equal(
-				NewStringValue("test"),
+				inter,
 				ReturnEmptyLocationRange,
+				NewStringValue("test"),
 			),
 		)
 	})
@@ -1444,10 +1462,13 @@ func TestAddressValue_Equal(t *testing.T) {
 
 		t.Parallel()
 
+		inter := newTestInterpreter(t)
+
 		require.True(t,
 			AddressValue{0x1}.Equal(
-				AddressValue{0x1},
+				inter,
 				ReturnEmptyLocationRange,
+				AddressValue{0x1},
 			),
 		)
 	})
@@ -1456,10 +1477,13 @@ func TestAddressValue_Equal(t *testing.T) {
 
 		t.Parallel()
 
+		inter := newTestInterpreter(t)
+
 		require.False(t,
 			AddressValue{0x1}.Equal(
-				AddressValue{0x2},
+				inter,
 				ReturnEmptyLocationRange,
+				AddressValue{0x2},
 			),
 		)
 	})
@@ -1468,10 +1492,13 @@ func TestAddressValue_Equal(t *testing.T) {
 
 		t.Parallel()
 
+		inter := newTestInterpreter(t)
+
 		require.False(t,
 			AddressValue{0x1}.Equal(
-				UInt8Value(1),
+				inter,
 				ReturnEmptyLocationRange,
+				UInt8Value(1),
 			),
 		)
 	})
@@ -1485,10 +1512,13 @@ func TestBoolValue_Equal(t *testing.T) {
 
 		t.Parallel()
 
+		inter := newTestInterpreter(t)
+
 		require.True(t,
 			BoolValue(true).Equal(
-				BoolValue(true),
+				inter,
 				ReturnEmptyLocationRange,
+				BoolValue(true),
 			),
 		)
 	})
@@ -1497,10 +1527,13 @@ func TestBoolValue_Equal(t *testing.T) {
 
 		t.Parallel()
 
+		inter := newTestInterpreter(t)
+
 		require.True(t,
 			BoolValue(false).Equal(
-				BoolValue(false),
+				inter,
 				ReturnEmptyLocationRange,
+				BoolValue(false),
 			),
 		)
 	})
@@ -1509,10 +1542,13 @@ func TestBoolValue_Equal(t *testing.T) {
 
 		t.Parallel()
 
+		inter := newTestInterpreter(t)
+
 		require.False(t,
 			BoolValue(true).Equal(
-				BoolValue(false),
+				inter,
 				ReturnEmptyLocationRange,
+				BoolValue(false),
 			),
 		)
 	})
@@ -1521,10 +1557,13 @@ func TestBoolValue_Equal(t *testing.T) {
 
 		t.Parallel()
 
+		inter := newTestInterpreter(t)
+
 		require.False(t,
 			BoolValue(true).Equal(
-				UInt8Value(1),
+				inter,
 				ReturnEmptyLocationRange,
+				UInt8Value(1),
 			),
 		)
 	})
@@ -1538,10 +1577,13 @@ func TestStringValue_Equal(t *testing.T) {
 
 		t.Parallel()
 
+		inter := newTestInterpreter(t)
+
 		require.True(t,
 			NewStringValue("test").Equal(
-				NewStringValue("test"),
+				inter,
 				ReturnEmptyLocationRange,
+				NewStringValue("test"),
 			),
 		)
 	})
@@ -1550,10 +1592,13 @@ func TestStringValue_Equal(t *testing.T) {
 
 		t.Parallel()
 
+		inter := newTestInterpreter(t)
+
 		require.False(t,
 			NewStringValue("test").Equal(
-				NewStringValue("foo"),
+				inter,
 				ReturnEmptyLocationRange,
+				NewStringValue("foo"),
 			),
 		)
 	})
@@ -1562,10 +1607,13 @@ func TestStringValue_Equal(t *testing.T) {
 
 		t.Parallel()
 
+		inter := newTestInterpreter(t)
+
 		require.False(t,
 			NewStringValue("1").Equal(
-				UInt8Value(1),
+				inter,
 				ReturnEmptyLocationRange,
+				UInt8Value(1),
 			),
 		)
 	})
@@ -1579,10 +1627,13 @@ func TestNilValue_Equal(t *testing.T) {
 
 		t.Parallel()
 
+		inter := newTestInterpreter(t)
+
 		require.True(t,
 			NilValue{}.Equal(
-				NilValue{},
+				inter,
 				ReturnEmptyLocationRange,
+				NilValue{},
 			),
 		)
 	})
@@ -1591,10 +1642,13 @@ func TestNilValue_Equal(t *testing.T) {
 
 		t.Parallel()
 
+		inter := newTestInterpreter(t)
+
 		require.False(t,
 			NilValue{}.Equal(
-				UInt8Value(0),
+				inter,
 				ReturnEmptyLocationRange,
+				UInt8Value(0),
 			),
 		)
 	})
@@ -1608,10 +1662,13 @@ func TestSomeValue_Equal(t *testing.T) {
 
 		t.Parallel()
 
+		inter := newTestInterpreter(t)
+
 		require.True(t,
 			NewSomeValueNonCopying(NewStringValue("test")).Equal(
-				NewSomeValueNonCopying(NewStringValue("test")),
+				inter,
 				ReturnEmptyLocationRange,
+				NewSomeValueNonCopying(NewStringValue("test")),
 			),
 		)
 	})
@@ -1620,10 +1677,13 @@ func TestSomeValue_Equal(t *testing.T) {
 
 		t.Parallel()
 
+		inter := newTestInterpreter(t)
+
 		require.False(t,
 			NewSomeValueNonCopying(NewStringValue("test")).Equal(
-				NewSomeValueNonCopying(NewStringValue("foo")),
+				inter,
 				ReturnEmptyLocationRange,
+				NewSomeValueNonCopying(NewStringValue("foo")),
 			),
 		)
 	})
@@ -1632,10 +1692,13 @@ func TestSomeValue_Equal(t *testing.T) {
 
 		t.Parallel()
 
+		inter := newTestInterpreter(t)
+
 		require.False(t,
 			NewSomeValueNonCopying(NewStringValue("1")).Equal(
-				UInt8Value(1),
+				inter,
 				ReturnEmptyLocationRange,
+				UInt8Value(1),
 			),
 		)
 	})
@@ -1649,14 +1712,17 @@ func TestTypeValue_Equal(t *testing.T) {
 
 		t.Parallel()
 
+		inter := newTestInterpreter(t)
+
 		require.True(t,
 			TypeValue{
 				Type: PrimitiveStaticTypeString,
 			}.Equal(
+				inter,
+				ReturnEmptyLocationRange,
 				TypeValue{
 					Type: PrimitiveStaticTypeString,
 				},
-				ReturnEmptyLocationRange,
 			),
 		)
 	})
@@ -1665,14 +1731,17 @@ func TestTypeValue_Equal(t *testing.T) {
 
 		t.Parallel()
 
+		inter := newTestInterpreter(t)
+
 		require.False(t,
 			TypeValue{
 				Type: PrimitiveStaticTypeString,
 			}.Equal(
+				inter,
+				ReturnEmptyLocationRange,
 				TypeValue{
 					Type: PrimitiveStaticTypeInt,
 				},
-				ReturnEmptyLocationRange,
 			),
 		)
 	})
@@ -1681,12 +1750,15 @@ func TestTypeValue_Equal(t *testing.T) {
 
 		t.Parallel()
 
+		inter := newTestInterpreter(t)
+
 		require.False(t,
 			TypeValue{
 				Type: PrimitiveStaticTypeString,
 			}.Equal(
-				NewStringValue("String"),
+				inter,
 				ReturnEmptyLocationRange,
+				NewStringValue("String"),
 			),
 		)
 	})
@@ -1700,16 +1772,19 @@ func TestPathValue_Equal(t *testing.T) {
 
 		t.Run(fmt.Sprintf("equal, %s", domain), func(t *testing.T) {
 
+			inter := newTestInterpreter(t)
+
 			require.True(t,
 				PathValue{
 					Domain:     domain,
 					Identifier: "test",
 				}.Equal(
+					inter,
+					ReturnEmptyLocationRange,
 					PathValue{
 						Domain:     domain,
 						Identifier: "test",
 					},
-					ReturnEmptyLocationRange,
 				),
 			)
 		})
@@ -1724,16 +1799,19 @@ func TestPathValue_Equal(t *testing.T) {
 
 			t.Run(fmt.Sprintf("different domains %s %s", domain, otherDomain), func(t *testing.T) {
 
+				inter := newTestInterpreter(t)
+
 				require.False(t,
 					PathValue{
 						Domain:     domain,
 						Identifier: "test",
 					}.Equal(
+						inter,
+						ReturnEmptyLocationRange,
 						PathValue{
 							Domain:     otherDomain,
 							Identifier: "test",
 						},
-						ReturnEmptyLocationRange,
 					),
 				)
 			})
@@ -1744,16 +1822,19 @@ func TestPathValue_Equal(t *testing.T) {
 
 		t.Run(fmt.Sprintf("different identifiers, %s", domain), func(t *testing.T) {
 
+			inter := newTestInterpreter(t)
+
 			require.False(t,
 				PathValue{
 					Domain:     domain,
 					Identifier: "test1",
 				}.Equal(
+					inter,
+					ReturnEmptyLocationRange,
 					PathValue{
 						Domain:     domain,
 						Identifier: "test2",
 					},
-					ReturnEmptyLocationRange,
 				),
 			)
 		})
@@ -1763,13 +1844,16 @@ func TestPathValue_Equal(t *testing.T) {
 
 		t.Parallel()
 
+		inter := newTestInterpreter(t)
+
 		require.False(t,
 			PathValue{
 				Domain:     common.PathDomainStorage,
 				Identifier: "test",
 			}.Equal(
-				NewStringValue("/storage/test"),
+				inter,
 				ReturnEmptyLocationRange,
+				NewStringValue("/storage/test"),
 			),
 		)
 	})
@@ -1783,6 +1867,8 @@ func TestLinkValue_Equal(t *testing.T) {
 
 		t.Parallel()
 
+		inter := newTestInterpreter(t)
+
 		require.True(t,
 			LinkValue{
 				TargetPath: PathValue{
@@ -1791,6 +1877,8 @@ func TestLinkValue_Equal(t *testing.T) {
 				},
 				Type: PrimitiveStaticTypeInt,
 			}.Equal(
+				inter,
+				ReturnEmptyLocationRange,
 				LinkValue{
 					TargetPath: PathValue{
 						Domain:     common.PathDomainStorage,
@@ -1798,7 +1886,6 @@ func TestLinkValue_Equal(t *testing.T) {
 					},
 					Type: PrimitiveStaticTypeInt,
 				},
-				ReturnEmptyLocationRange,
 			),
 		)
 	})
@@ -1806,6 +1893,8 @@ func TestLinkValue_Equal(t *testing.T) {
 	t.Run("different paths", func(t *testing.T) {
 
 		t.Parallel()
+
+		inter := newTestInterpreter(t)
 
 		require.False(t,
 			LinkValue{
@@ -1815,6 +1904,8 @@ func TestLinkValue_Equal(t *testing.T) {
 				},
 				Type: PrimitiveStaticTypeInt,
 			}.Equal(
+				inter,
+				ReturnEmptyLocationRange,
 				LinkValue{
 					TargetPath: PathValue{
 						Domain:     common.PathDomainStorage,
@@ -1822,7 +1913,6 @@ func TestLinkValue_Equal(t *testing.T) {
 					},
 					Type: PrimitiveStaticTypeInt,
 				},
-				ReturnEmptyLocationRange,
 			),
 		)
 	})
@@ -1831,6 +1921,8 @@ func TestLinkValue_Equal(t *testing.T) {
 
 		t.Parallel()
 
+		inter := newTestInterpreter(t)
+
 		require.False(t,
 			LinkValue{
 				TargetPath: PathValue{
@@ -1839,6 +1931,8 @@ func TestLinkValue_Equal(t *testing.T) {
 				},
 				Type: PrimitiveStaticTypeInt,
 			}.Equal(
+				inter,
+				ReturnEmptyLocationRange,
 				LinkValue{
 					TargetPath: PathValue{
 						Domain:     common.PathDomainStorage,
@@ -1846,7 +1940,6 @@ func TestLinkValue_Equal(t *testing.T) {
 					},
 					Type: PrimitiveStaticTypeString,
 				},
-				ReturnEmptyLocationRange,
 			),
 		)
 	})
@@ -1855,6 +1948,8 @@ func TestLinkValue_Equal(t *testing.T) {
 
 		t.Parallel()
 
+		inter := newTestInterpreter(t)
+
 		require.False(t,
 			LinkValue{
 				TargetPath: PathValue{
@@ -1863,8 +1958,9 @@ func TestLinkValue_Equal(t *testing.T) {
 				},
 				Type: PrimitiveStaticTypeInt,
 			}.Equal(
-				NewStringValue("test"),
+				inter,
 				ReturnEmptyLocationRange,
+				NewStringValue("test"),
 			),
 		)
 	})
@@ -1891,13 +1987,14 @@ func TestArrayValue_Equal(t *testing.T) {
 				UInt8Value(1),
 				UInt8Value(2),
 			).Equal(
+				inter,
+				ReturnEmptyLocationRange,
 				NewArrayValue(
 					inter,
 					uint8ArrayStaticType,
 					UInt8Value(1),
 					UInt8Value(2),
 				),
-				ReturnEmptyLocationRange,
 			),
 		)
 	})
@@ -1915,13 +2012,14 @@ func TestArrayValue_Equal(t *testing.T) {
 				UInt8Value(1),
 				UInt8Value(2),
 			).Equal(
+				inter,
+				ReturnEmptyLocationRange,
 				NewArrayValue(
 					inter,
 					uint8ArrayStaticType,
 					UInt8Value(2),
 					UInt8Value(3),
 				),
-				ReturnEmptyLocationRange,
 			),
 		)
 	})
@@ -1938,13 +2036,14 @@ func TestArrayValue_Equal(t *testing.T) {
 				uint8ArrayStaticType,
 				UInt8Value(1),
 			).Equal(
+				inter,
+				ReturnEmptyLocationRange,
 				NewArrayValue(
 					inter,
 					uint8ArrayStaticType,
 					UInt8Value(1),
 					UInt8Value(2),
 				),
-				ReturnEmptyLocationRange,
 			),
 		)
 	})
@@ -1962,12 +2061,13 @@ func TestArrayValue_Equal(t *testing.T) {
 				UInt8Value(1),
 				UInt8Value(2),
 			).Equal(
+				inter,
+				ReturnEmptyLocationRange,
 				NewArrayValue(
 					inter,
 					uint8ArrayStaticType,
 					UInt8Value(1),
 				),
-				ReturnEmptyLocationRange,
 			),
 		)
 	})
@@ -1987,11 +2087,12 @@ func TestArrayValue_Equal(t *testing.T) {
 				inter,
 				uint8ArrayStaticType,
 			).Equal(
+				inter,
+				ReturnEmptyLocationRange,
 				NewArrayValue(
 					inter,
 					uint16ArrayStaticType,
 				),
-				ReturnEmptyLocationRange,
 			),
 		)
 	})
@@ -2007,11 +2108,12 @@ func TestArrayValue_Equal(t *testing.T) {
 				inter,
 				nil,
 			).Equal(
+				inter,
+				ReturnEmptyLocationRange,
 				NewArrayValue(
 					inter,
 					uint8ArrayStaticType,
 				),
-				ReturnEmptyLocationRange,
 			),
 		)
 	})
@@ -2027,11 +2129,12 @@ func TestArrayValue_Equal(t *testing.T) {
 				inter,
 				uint8ArrayStaticType,
 			).Equal(
+				inter,
+				ReturnEmptyLocationRange,
 				NewArrayValue(
 					inter,
 					nil,
 				),
-				ReturnEmptyLocationRange,
 			),
 		)
 	})
@@ -2047,11 +2150,12 @@ func TestArrayValue_Equal(t *testing.T) {
 				inter,
 				nil,
 			).Equal(
+				inter,
+				ReturnEmptyLocationRange,
 				NewArrayValue(
 					inter,
 					nil,
 				),
-				ReturnEmptyLocationRange,
 			),
 		)
 	})
@@ -2068,8 +2172,9 @@ func TestArrayValue_Equal(t *testing.T) {
 				uint8ArrayStaticType,
 				UInt8Value(1),
 			).Equal(
-				UInt8Value(1),
+				inter,
 				ReturnEmptyLocationRange,
+				UInt8Value(1),
 			),
 		)
 	})
@@ -2099,6 +2204,8 @@ func TestDictionaryValue_Equal(t *testing.T) {
 				UInt8Value(2),
 				NewStringValue("2"),
 			).Equal(
+				inter,
+				ReturnEmptyLocationRange,
 				NewDictionaryValue(
 					inter,
 					byteStringDictionaryType,
@@ -2107,7 +2214,6 @@ func TestDictionaryValue_Equal(t *testing.T) {
 					UInt8Value(2),
 					NewStringValue("2"),
 				),
-				ReturnEmptyLocationRange,
 			),
 		)
 	})
@@ -2127,6 +2233,8 @@ func TestDictionaryValue_Equal(t *testing.T) {
 				UInt8Value(2),
 				NewStringValue("2"),
 			).Equal(
+				inter,
+				ReturnEmptyLocationRange,
 				NewDictionaryValue(
 					inter,
 					byteStringDictionaryType,
@@ -2135,7 +2243,6 @@ func TestDictionaryValue_Equal(t *testing.T) {
 					UInt8Value(3),
 					NewStringValue("2"),
 				),
-				ReturnEmptyLocationRange,
 			),
 		)
 	})
@@ -2155,6 +2262,8 @@ func TestDictionaryValue_Equal(t *testing.T) {
 				UInt8Value(2),
 				NewStringValue("2"),
 			).Equal(
+				inter,
+				ReturnEmptyLocationRange,
 				NewDictionaryValue(
 					inter,
 					byteStringDictionaryType,
@@ -2163,7 +2272,6 @@ func TestDictionaryValue_Equal(t *testing.T) {
 					UInt8Value(2),
 					NewStringValue("3"),
 				),
-				ReturnEmptyLocationRange,
 			),
 		)
 	})
@@ -2181,6 +2289,8 @@ func TestDictionaryValue_Equal(t *testing.T) {
 				UInt8Value(1),
 				NewStringValue("1"),
 			).Equal(
+				inter,
+				ReturnEmptyLocationRange,
 				NewDictionaryValue(
 					inter,
 					byteStringDictionaryType,
@@ -2189,7 +2299,6 @@ func TestDictionaryValue_Equal(t *testing.T) {
 					UInt8Value(2),
 					NewStringValue("2"),
 				),
-				ReturnEmptyLocationRange,
 			),
 		)
 	})
@@ -2209,13 +2318,14 @@ func TestDictionaryValue_Equal(t *testing.T) {
 				UInt8Value(2),
 				NewStringValue("2"),
 			).Equal(
+				inter,
+				ReturnEmptyLocationRange,
 				NewDictionaryValue(
 					inter,
 					byteStringDictionaryType,
 					UInt8Value(1),
 					NewStringValue("1"),
 				),
-				ReturnEmptyLocationRange,
 			),
 		)
 	})
@@ -2236,11 +2346,12 @@ func TestDictionaryValue_Equal(t *testing.T) {
 				inter,
 				byteStringDictionaryType,
 			).Equal(
+				inter,
+				ReturnEmptyLocationRange,
 				NewDictionaryValue(
 					inter,
 					stringByteDictionaryStaticType,
 				),
-				ReturnEmptyLocationRange,
 			),
 		)
 	})
@@ -2260,13 +2371,14 @@ func TestDictionaryValue_Equal(t *testing.T) {
 				UInt8Value(2),
 				NewStringValue("2"),
 			).Equal(
+				inter,
+				ReturnEmptyLocationRange,
 				NewArrayValue(
 					inter,
 					ByteArrayStaticType,
 					UInt8Value(1),
 					UInt8Value(2),
 				),
-				ReturnEmptyLocationRange,
 			),
 		)
 	})
@@ -2280,7 +2392,7 @@ func TestCompositeValue_Equal(t *testing.T) {
 
 		t.Parallel()
 
-		storage := NewInMemoryStorage()
+		inter := newTestInterpreter(t)
 
 		fields1 := NewStringValueOrderedMap()
 		fields1.Set("a", NewStringValue("a"))
@@ -2290,22 +2402,23 @@ func TestCompositeValue_Equal(t *testing.T) {
 
 		require.True(t,
 			NewCompositeValue(
-				storage,
+				inter.Storage,
 				utils.TestLocation,
 				"X",
 				common.CompositeKindStructure,
 				fields1,
 				common.Address{},
 			).Equal(
+				inter,
+				ReturnEmptyLocationRange,
 				NewCompositeValue(
-					storage,
+					inter.Storage,
 					utils.TestLocation,
 					"X",
 					common.CompositeKindStructure,
 					fields2,
 					common.Address{},
 				),
-				ReturnEmptyLocationRange,
 			),
 		)
 	})
@@ -2314,7 +2427,7 @@ func TestCompositeValue_Equal(t *testing.T) {
 
 		t.Parallel()
 
-		storage := NewInMemoryStorage()
+		inter := newTestInterpreter(t)
 
 		fields1 := NewStringValueOrderedMap()
 		fields1.Set("a", NewStringValue("a"))
@@ -2324,22 +2437,23 @@ func TestCompositeValue_Equal(t *testing.T) {
 
 		require.False(t,
 			NewCompositeValue(
-				storage,
+				inter.Storage,
 				common.IdentifierLocation("A"),
 				"X",
 				common.CompositeKindStructure,
 				fields1,
 				common.Address{},
 			).Equal(
+				inter,
+				ReturnEmptyLocationRange,
 				NewCompositeValue(
-					storage,
+					inter.Storage,
 					common.IdentifierLocation("B"),
 					"X",
 					common.CompositeKindStructure,
 					fields2,
 					common.Address{},
 				),
-				ReturnEmptyLocationRange,
 			),
 		)
 	})
@@ -2348,7 +2462,7 @@ func TestCompositeValue_Equal(t *testing.T) {
 
 		t.Parallel()
 
-		storage := NewInMemoryStorage()
+		inter := newTestInterpreter(t)
 
 		fields1 := NewStringValueOrderedMap()
 		fields1.Set("a", NewStringValue("a"))
@@ -2358,22 +2472,23 @@ func TestCompositeValue_Equal(t *testing.T) {
 
 		require.False(t,
 			NewCompositeValue(
-				storage,
+				inter.Storage,
 				common.IdentifierLocation("A"),
 				"X",
 				common.CompositeKindStructure,
 				fields1,
 				common.Address{},
 			).Equal(
+				inter,
+				ReturnEmptyLocationRange,
 				NewCompositeValue(
-					storage,
+					inter.Storage,
 					common.IdentifierLocation("A"),
 					"Y",
 					common.CompositeKindStructure,
 					fields2,
 					common.Address{},
 				),
-				ReturnEmptyLocationRange,
 			),
 		)
 	})
@@ -2382,7 +2497,7 @@ func TestCompositeValue_Equal(t *testing.T) {
 
 		t.Parallel()
 
-		storage := NewInMemoryStorage()
+		inter := newTestInterpreter(t)
 
 		fields1 := NewStringValueOrderedMap()
 		fields1.Set("a", NewStringValue("a"))
@@ -2392,22 +2507,23 @@ func TestCompositeValue_Equal(t *testing.T) {
 
 		require.False(t,
 			NewCompositeValue(
-				storage,
+				inter.Storage,
 				common.IdentifierLocation("A"),
 				"X",
 				common.CompositeKindStructure,
 				fields1,
 				common.Address{},
 			).Equal(
+				inter,
+				ReturnEmptyLocationRange,
 				NewCompositeValue(
-					storage,
+					inter.Storage,
 					common.IdentifierLocation("A"),
 					"X",
 					common.CompositeKindStructure,
 					fields2,
 					common.Address{},
 				),
-				ReturnEmptyLocationRange,
 			),
 		)
 	})
@@ -2416,7 +2532,7 @@ func TestCompositeValue_Equal(t *testing.T) {
 
 		t.Parallel()
 
-		storage := NewInMemoryStorage()
+		inter := newTestInterpreter(t)
 
 		fields1 := NewStringValueOrderedMap()
 		fields1.Set("a", NewStringValue("a"))
@@ -2427,22 +2543,23 @@ func TestCompositeValue_Equal(t *testing.T) {
 
 		require.False(t,
 			NewCompositeValue(
-				storage,
+				inter.Storage,
 				common.IdentifierLocation("A"),
 				"X",
 				common.CompositeKindStructure,
 				fields1,
 				common.Address{},
 			).Equal(
+				inter,
+				ReturnEmptyLocationRange,
 				NewCompositeValue(
-					storage,
+					inter.Storage,
 					common.IdentifierLocation("A"),
 					"X",
 					common.CompositeKindStructure,
 					fields2,
 					common.Address{},
 				),
-				ReturnEmptyLocationRange,
 			),
 		)
 	})
@@ -2451,7 +2568,7 @@ func TestCompositeValue_Equal(t *testing.T) {
 
 		t.Parallel()
 
-		storage := NewInMemoryStorage()
+		inter := newTestInterpreter(t)
 
 		fields1 := NewStringValueOrderedMap()
 		fields1.Set("a", NewStringValue("a"))
@@ -2462,22 +2579,23 @@ func TestCompositeValue_Equal(t *testing.T) {
 
 		require.False(t,
 			NewCompositeValue(
-				storage,
+				inter.Storage,
 				common.IdentifierLocation("A"),
 				"X",
 				common.CompositeKindStructure,
 				fields1,
 				common.Address{},
 			).Equal(
+				inter,
+				ReturnEmptyLocationRange,
 				NewCompositeValue(
-					storage,
+					inter.Storage,
 					common.IdentifierLocation("A"),
 					"X",
 					common.CompositeKindStructure,
 					fields2,
 					common.Address{},
 				),
-				ReturnEmptyLocationRange,
 			),
 		)
 	})
@@ -2486,7 +2604,7 @@ func TestCompositeValue_Equal(t *testing.T) {
 
 		t.Parallel()
 
-		storage := NewInMemoryStorage()
+		inter := newTestInterpreter(t)
 
 		fields1 := NewStringValueOrderedMap()
 		fields1.Set("a", NewStringValue("a"))
@@ -2496,22 +2614,23 @@ func TestCompositeValue_Equal(t *testing.T) {
 
 		require.False(t,
 			NewCompositeValue(
-				storage,
+				inter.Storage,
 				common.IdentifierLocation("A"),
 				"X",
 				common.CompositeKindStructure,
 				fields1,
 				common.Address{},
 			).Equal(
+				inter,
+				ReturnEmptyLocationRange,
 				NewCompositeValue(
-					storage,
+					inter.Storage,
 					common.IdentifierLocation("A"),
 					"X",
 					common.CompositeKindResource,
 					fields2,
 					common.Address{},
 				),
-				ReturnEmptyLocationRange,
 			),
 		)
 	})
@@ -2520,22 +2639,23 @@ func TestCompositeValue_Equal(t *testing.T) {
 
 		t.Parallel()
 
-		storage := NewInMemoryStorage()
+		inter := newTestInterpreter(t)
 
 		fields1 := NewStringValueOrderedMap()
 		fields1.Set("a", NewStringValue("a"))
 
 		require.False(t,
 			NewCompositeValue(
-				storage,
+				inter.Storage,
 				common.IdentifierLocation("A"),
 				"X",
 				common.CompositeKindStructure,
 				fields1,
 				common.Address{},
 			).Equal(
-				NewStringValue("test"),
+				inter,
 				ReturnEmptyLocationRange,
+				NewStringValue("test"),
 			),
 		)
 	})
@@ -2571,10 +2691,13 @@ func TestNumberValue_Equal(t *testing.T) {
 
 		t.Run(fmt.Sprintf("equal, %s", name), func(t *testing.T) {
 
+			inter := newTestInterpreter(t)
+
 			require.True(t,
 				value.Equal(
-					value,
+					inter,
 					ReturnEmptyLocationRange,
+					value,
 				),
 			)
 		})
@@ -2589,10 +2712,13 @@ func TestNumberValue_Equal(t *testing.T) {
 
 			t.Run(fmt.Sprintf("unequal, %s %s", name, otherName), func(t *testing.T) {
 
+				inter := newTestInterpreter(t)
+
 				require.False(t,
 					value.Equal(
-						otherValue,
+						inter,
 						ReturnEmptyLocationRange,
+						otherValue,
 					),
 				)
 			})
@@ -2603,12 +2729,13 @@ func TestNumberValue_Equal(t *testing.T) {
 
 		t.Run(fmt.Sprintf("different kind, %s", name), func(t *testing.T) {
 
-			t.Parallel()
+			inter := newTestInterpreter(t)
 
 			require.False(t,
 				value.Equal(
-					AddressValue{0x1},
+					inter,
 					ReturnEmptyLocationRange,
+					AddressValue{0x1},
 				),
 			)
 		})
@@ -2792,26 +2919,6 @@ func newTestInterpreter(tb testing.TB) *Interpreter {
 		nil,
 		utils.TestLocation,
 		WithStorage(storage),
-	)
-	require.NoError(tb, err)
-
-	return inter
-}
-
-func newTestInterpreterWithTestStruct(tb testing.TB) *Interpreter {
-	code := `
-        struct Test {
-        }
-    `
-	checker, err := checkerUtils.ParseAndCheckWithOptions(tb,
-		code,
-		checkerUtils.ParseAndCheckOptions{},
-	)
-	require.NoError(tb, err)
-
-	inter, err := NewInterpreter(
-		ProgramFromChecker(checker),
-		utils.TestLocation,
 	)
 	require.NoError(tb, err)
 

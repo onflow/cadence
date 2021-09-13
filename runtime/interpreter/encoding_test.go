@@ -91,8 +91,7 @@ func testEncodeDecode(t *testing.T, test encodeDecodeTest) {
 	} else {
 		require.NoError(t, err)
 
-		decodedValue, err := StoredValue(decoded, test.storage)
-		require.NoError(t, err)
+		decodedValue := StoredValue(decoded, test.storage)
 
 		expectedValue := test.value
 		if test.decodedValue != nil {
@@ -102,7 +101,9 @@ func testEncodeDecode(t *testing.T, test encodeDecodeTest) {
 		if test.deepEquality {
 			assert.Equal(t, expectedValue, decodedValue)
 		} else {
-			AssertValuesEqual(t, expectedValue, decodedValue)
+			inter, err := NewInterpreter(nil, TestLocation, WithStorage(test.storage))
+			require.NoError(t, err)
+			AssertValuesEqual(t, inter, expectedValue, decodedValue)
 		}
 
 		if test.check != nil {

@@ -42,7 +42,9 @@ func TestInterpretMetaTypeEquality(t *testing.T) {
            let result = Type<Int>() == Type<Int>()
         `)
 
-		AssertValuesEqual(t,
+		AssertValuesEqual(
+			t,
+			inter,
 			interpreter.BoolValue(true),
 			inter.Globals["result"].GetValue(),
 		)
@@ -56,7 +58,9 @@ func TestInterpretMetaTypeEquality(t *testing.T) {
            let result = Type<Int>() == Type<String>()
         `)
 
-		AssertValuesEqual(t,
+		AssertValuesEqual(
+			t,
+			inter,
 			interpreter.BoolValue(false),
 			inter.Globals["result"].GetValue(),
 		)
@@ -70,7 +74,9 @@ func TestInterpretMetaTypeEquality(t *testing.T) {
            let result = Type<Int>() == Type<Int?>()
         `)
 
-		AssertValuesEqual(t,
+		AssertValuesEqual(
+			t,
+			inter,
 			interpreter.BoolValue(false),
 			inter.Globals["result"].GetValue(),
 		)
@@ -84,7 +90,9 @@ func TestInterpretMetaTypeEquality(t *testing.T) {
            let result = Type<&Int>() == Type<&Int>()
         `)
 
-		AssertValuesEqual(t,
+		AssertValuesEqual(
+			t,
+			inter,
 			interpreter.BoolValue(true),
 			inter.Globals["result"].GetValue(),
 		)
@@ -98,7 +106,9 @@ func TestInterpretMetaTypeEquality(t *testing.T) {
            let result = Type<&Int>() == Type<&String>()
         `)
 
-		AssertValuesEqual(t,
+		AssertValuesEqual(
+			t,
+			inter,
 			interpreter.BoolValue(false),
 			inter.Globals["result"].GetValue(),
 		)
@@ -137,7 +147,9 @@ func TestInterpretMetaTypeEquality(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		AssertValuesEqual(t,
+		AssertValuesEqual(
+			t,
+			inter,
 			interpreter.BoolValue(false),
 			inter.Globals["result"].GetValue(),
 		)
@@ -184,7 +196,9 @@ func TestInterpretMetaTypeEquality(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		AssertValuesEqual(t,
+		AssertValuesEqual(
+			t,
+			inter,
 			interpreter.BoolValue(false),
 			inter.Globals["result"].GetValue(),
 		)
@@ -204,7 +218,9 @@ func TestInterpretMetaTypeIdentifier(t *testing.T) {
           let identifier = type.identifier
         `)
 
-		AssertValuesEqual(t,
+		AssertValuesEqual(
+			t,
+			inter,
 			interpreter.NewStringValue("[Int]"),
 			inter.Globals["identifier"].GetValue(),
 		)
@@ -221,7 +237,9 @@ func TestInterpretMetaTypeIdentifier(t *testing.T) {
           let identifier = type.identifier
         `)
 
-		AssertValuesEqual(t,
+		AssertValuesEqual(
+			t,
+			inter,
 			interpreter.NewStringValue("S.test.S"),
 			inter.Globals["identifier"].GetValue(),
 		)
@@ -260,7 +278,9 @@ func TestInterpretMetaTypeIdentifier(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		AssertValuesEqual(t,
+		AssertValuesEqual(
+			t,
+			inter,
 			interpreter.NewStringValue(""),
 			inter.Globals["identifier"].GetValue(),
 		)
@@ -382,7 +402,9 @@ func TestInterpretIsInstance(t *testing.T) {
 			})
 			require.NoError(t, err)
 
-			AssertValuesEqual(t,
+			AssertValuesEqual(
+				t,
+				inter,
 				interpreter.BoolValue(testCase.result),
 				inter.Globals["result"].GetValue(),
 			)
@@ -547,7 +569,9 @@ func TestInterpretGetType(t *testing.T) {
 			)
 			require.NoError(t, err)
 
-			AssertValuesEqual(t,
+			AssertValuesEqual(
+				t,
+				inter,
 				testCase.result,
 				inter.Globals["result"].GetValue(),
 			)

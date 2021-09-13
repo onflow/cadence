@@ -341,7 +341,7 @@ func TestImportValue(t *testing.T) {
 				require.Error(t, err)
 			} else {
 				require.NoError(t, err)
-				AssertValuesEqual(t, tt.expected, actual)
+				AssertValuesEqual(t, inter, tt.expected, actual)
 			}
 		})
 	}
@@ -2346,7 +2346,9 @@ func TestRuntimeImportExportArrayValue(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		AssertValuesEqual(t,
+		AssertValuesEqual(
+			t,
+			inter,
 			interpreter.NewArrayValue(
 				inter,
 				interpreter.VariableSizedStaticType{
@@ -2402,7 +2404,9 @@ func TestRuntimeImportExportArrayValue(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		AssertValuesEqual(t,
+		AssertValuesEqual(
+			t,
+			inter,
 			interpreter.NewArrayValue(
 				inter,
 				interpreter.VariableSizedStaticType{
@@ -2439,7 +2443,9 @@ func TestRuntimeImportExportArrayValue(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		AssertValuesEqual(t,
+		AssertValuesEqual(
+			t,
+			inter,
 			interpreter.NewArrayValue(
 				inter,
 				interpreter.VariableSizedStaticType{
@@ -2510,7 +2516,9 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		AssertValuesEqual(t,
+		AssertValuesEqual(
+			t,
+			inter,
 			interpreter.NewDictionaryValue(
 				inter,
 				interpreter.DictionaryStaticType{
@@ -2581,7 +2589,9 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		AssertValuesEqual(t,
+		AssertValuesEqual(
+			t,
+			inter,
 			interpreter.NewDictionaryValue(
 				inter,
 				interpreter.DictionaryStaticType{
@@ -2637,7 +2647,9 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		AssertValuesEqual(t,
+		AssertValuesEqual(
+			t,
+			inter,
 			interpreter.NewDictionaryValue(
 				inter,
 				interpreter.DictionaryStaticType{
@@ -3532,7 +3544,9 @@ func TestRuntimeImportExportComplex(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		AssertValuesEqual(t,
+		AssertValuesEqual(
+			t,
+			inter,
 			internalCompositeValue,
 			actual,
 		)

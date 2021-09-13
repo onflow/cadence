@@ -101,7 +101,9 @@ func TestInterpretIfStatement(t *testing.T) {
 			value, err := inter.Invoke(name)
 			require.NoError(t, err)
 
-			AssertValuesEqual(t,
+			AssertValuesEqual(
+				t,
+				inter,
 				interpreter.NewIntValueFromInt64(expected),
 				value,
 			)
@@ -133,11 +135,15 @@ func TestInterpretIfStatementTestWithDeclaration(t *testing.T) {
 			interpreter.NewIntValueFromInt64(2),
 		)
 		require.NoError(t, err)
-		AssertValuesEqual(t,
+		AssertValuesEqual(
+			t,
+			inter,
 			interpreter.NewIntValueFromInt64(2),
 			value,
 		)
-		AssertValuesEqual(t,
+		AssertValuesEqual(
+			t,
+			inter,
 			interpreter.NewIntValueFromInt64(1),
 			inter.Globals["branch"].GetValue(),
 		)
@@ -146,11 +152,15 @@ func TestInterpretIfStatementTestWithDeclaration(t *testing.T) {
 	t.Run("nil", func(t *testing.T) {
 		value, err := inter.Invoke("test", interpreter.NilValue{})
 		require.NoError(t, err)
-		AssertValuesEqual(t,
+		AssertValuesEqual(
+			t,
+			inter,
 			interpreter.NewIntValueFromInt64(0),
 			value,
 		)
-		AssertValuesEqual(t,
+		AssertValuesEqual(
+			t,
+			inter,
 			interpreter.NewIntValueFromInt64(2),
 			inter.Globals["branch"].GetValue(),
 		)
@@ -180,11 +190,15 @@ func TestInterpretIfStatementTestWithDeclarationAndElse(t *testing.T) {
 			interpreter.NewIntValueFromInt64(2),
 		)
 		require.NoError(t, err)
-		AssertValuesEqual(t,
+		AssertValuesEqual(
+			t,
+			inter,
 			interpreter.NewIntValueFromInt64(2),
 			value,
 		)
-		AssertValuesEqual(t,
+		AssertValuesEqual(
+			t,
+			inter,
 			interpreter.NewIntValueFromInt64(1),
 			inter.Globals["branch"].GetValue(),
 		)
@@ -193,11 +207,15 @@ func TestInterpretIfStatementTestWithDeclarationAndElse(t *testing.T) {
 	t.Run("nil", func(t *testing.T) {
 		value, err := inter.Invoke("test", interpreter.NilValue{})
 		require.NoError(t, err)
-		AssertValuesEqual(t,
+		AssertValuesEqual(
+			t,
+			inter,
 			interpreter.NewIntValueFromInt64(0),
 			value,
 		)
-		AssertValuesEqual(t,
+		AssertValuesEqual(
+			t,
+			inter,
 			interpreter.NewIntValueFromInt64(2),
 			inter.Globals["branch"].GetValue(),
 		)
@@ -229,13 +247,17 @@ func TestInterpretIfStatementTestWithDeclarationNestedOptionals(t *testing.T) {
 			interpreter.NewIntValueFromInt64(2),
 		)
 		require.NoError(t, err)
-		AssertValuesEqual(t,
+		AssertValuesEqual(
+			t,
+			inter,
 			interpreter.NewSomeValueNonCopying(
 				interpreter.NewIntValueFromInt64(2),
 			),
 			value,
 		)
-		AssertValuesEqual(t,
+		AssertValuesEqual(
+			t,
+			inter,
 			interpreter.NewIntValueFromInt64(1),
 			inter.Globals["branch"].GetValue(),
 		)
@@ -245,13 +267,17 @@ func TestInterpretIfStatementTestWithDeclarationNestedOptionals(t *testing.T) {
 		value, err := inter.Invoke("test", interpreter.NilValue{})
 		require.NoError(t, err)
 
-		AssertValuesEqual(t,
+		AssertValuesEqual(
+			t,
+			inter,
 			interpreter.NewSomeValueNonCopying(
 				interpreter.NewIntValueFromInt64(0),
 			),
 			value,
 		)
-		AssertValuesEqual(t,
+		AssertValuesEqual(
+			t,
+			inter,
 			interpreter.NewIntValueFromInt64(2),
 			inter.Globals["branch"].GetValue(),
 		)
@@ -282,13 +308,17 @@ func TestInterpretIfStatementTestWithDeclarationNestedOptionalsExplicitAnnotatio
 			interpreter.NewIntValueFromInt64(2),
 		)
 		require.NoError(t, err)
-		AssertValuesEqual(t,
+		AssertValuesEqual(
+			t,
+			inter,
 			interpreter.NewSomeValueNonCopying(
 				interpreter.NewIntValueFromInt64(2),
 			),
 			value,
 		)
-		AssertValuesEqual(t,
+		AssertValuesEqual(
+			t,
+			inter,
 			interpreter.NewIntValueFromInt64(1),
 			inter.Globals["branch"].GetValue(),
 		)
@@ -298,13 +328,17 @@ func TestInterpretIfStatementTestWithDeclarationNestedOptionalsExplicitAnnotatio
 	t.Run("nil", func(t *testing.T) {
 		value, err := inter.Invoke("test", interpreter.NilValue{})
 		require.NoError(t, err)
-		AssertValuesEqual(t,
+		AssertValuesEqual(
+			t,
+			inter,
 			interpreter.NewSomeValueNonCopying(
 				interpreter.NewIntValueFromInt64(0),
 			),
 			value,
 		)
-		AssertValuesEqual(t,
+		AssertValuesEqual(
+			t,
+			inter,
 			interpreter.NewIntValueFromInt64(2),
 			inter.Globals["branch"].GetValue(),
 		)

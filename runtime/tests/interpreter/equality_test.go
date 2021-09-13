@@ -75,12 +75,16 @@ func TestInterpretEquality(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		AssertValuesEqual(t,
+		AssertValuesEqual(
+			t,
+			inter,
 			interpreter.BoolValue(true),
 			inter.Globals["res1"].GetValue(),
 		)
 
-		AssertValuesEqual(t,
+		AssertValuesEqual(
+			t,
+			inter,
 			interpreter.BoolValue(true),
 			inter.Globals["res2"].GetValue(),
 		)
@@ -99,12 +103,16 @@ func TestInterpretEquality(t *testing.T) {
           let res2 = maybeFuncNil == nil
 		`)
 
-		AssertValuesEqual(t,
+		AssertValuesEqual(
+			t,
+			inter,
 			interpreter.BoolValue(true),
 			inter.Globals["res1"].GetValue(),
 		)
 
-		AssertValuesEqual(t,
+		AssertValuesEqual(
+			t,
+			inter,
 			interpreter.BoolValue(true),
 			inter.Globals["res2"].GetValue(),
 		)
@@ -119,7 +127,9 @@ func TestInterpretEquality(t *testing.T) {
           let res = nil == n
 		`)
 
-		AssertValuesEqual(t,
+		AssertValuesEqual(
+			t,
+			inter,
 			interpreter.BoolValue(false),
 			inter.Globals["res"].GetValue(),
 		)

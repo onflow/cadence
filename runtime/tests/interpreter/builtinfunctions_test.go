@@ -45,7 +45,9 @@ func TestInterpretToString(t *testing.T) {
 				),
 			)
 
-			AssertValuesEqual(t,
+			AssertValuesEqual(
+				t,
+				inter,
 				interpreter.NewStringValue("42"),
 				inter.Globals["y"].GetValue(),
 			)
@@ -61,7 +63,9 @@ func TestInterpretToString(t *testing.T) {
           let y = x.toString()
         `)
 
-		AssertValuesEqual(t,
+		AssertValuesEqual(
+			t,
+			inter,
 			interpreter.NewStringValue("0x42"),
 			inter.Globals["y"].GetValue(),
 		)
@@ -95,7 +99,9 @@ func TestInterpretToString(t *testing.T) {
 				),
 			)
 
-			AssertValuesEqual(t,
+			AssertValuesEqual(
+				t,
+				inter,
 				expected,
 				inter.Globals["y"].GetValue(),
 			)
@@ -116,7 +122,9 @@ func TestInterpretToBytes(t *testing.T) {
           let y = x.toBytes()
         `)
 
-		AssertValuesEqual(t,
+		AssertValuesEqual(
+			t,
+			inter,
 			interpreter.NewArrayValue(
 				inter,
 				interpreter.VariableSizedStaticType{
@@ -330,7 +338,9 @@ func TestInterpretToBigEndianBytes(t *testing.T) {
 					),
 				)
 
-				AssertValuesEqual(t,
+				AssertValuesEqual(
+					t,
+					inter,
 					interpreter.ByteSliceToByteArrayValue(inter, expected),
 					inter.Globals["result"].GetValue(),
 				)

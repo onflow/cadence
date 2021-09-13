@@ -69,7 +69,9 @@ func TestInterpretStringFunction(t *testing.T) {
 	result, err := inter.Invoke("test")
 	require.NoError(t, err)
 
-	RequireValuesEqual(t,
+	RequireValuesEqual(
+		t,
+		inter,
 		interpreter.NewStringValue(""),
 		result,
 	)
@@ -88,7 +90,9 @@ func TestInterpretStringDecodeHex(t *testing.T) {
 	result, err := inter.Invoke("test")
 	require.NoError(t, err)
 
-	RequireValuesEqual(t,
+	RequireValuesEqual(
+		t,
+		inter,
 		interpreter.NewArrayValue(
 			inter,
 			interpreter.VariableSizedStaticType{
@@ -115,7 +119,9 @@ func TestInterpretStringEncodeHex(t *testing.T) {
 	result, err := inter.Invoke("test")
 	require.NoError(t, err)
 
-	RequireValuesEqual(t,
+	RequireValuesEqual(
+		t,
+		inter,
 		interpreter.NewStringValue("010203cade"),
 		result,
 	)
@@ -134,7 +140,9 @@ func TestInterpretStringUtf8Field(t *testing.T) {
 	result, err := inter.Invoke("test")
 	require.NoError(t, err)
 
-	RequireValuesEqual(t,
+	RequireValuesEqual(
+		t,
+		inter,
 		interpreter.NewArrayValue(
 			inter,
 			interpreter.VariableSizedStaticType{

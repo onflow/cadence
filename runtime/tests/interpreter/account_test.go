@@ -553,7 +553,9 @@ func TestInterpretAuthAccount_borrow(t *testing.T) {
 			value, err = inter.Invoke("foo")
 			require.NoError(t, err)
 
-			RequireValuesEqual(t,
+			RequireValuesEqual(
+				t,
+				inter,
 				interpreter.NewIntValueFromInt64(42),
 				value,
 			)
@@ -683,7 +685,9 @@ func TestInterpretAuthAccount_borrow(t *testing.T) {
 			value, err = inter.Invoke("foo")
 			require.NoError(t, err)
 
-			RequireValuesEqual(t,
+			RequireValuesEqual(
+				t,
+				inter,
 				interpreter.NewIntValueFromInt64(42),
 				value,
 			)
@@ -796,7 +800,9 @@ func TestInterpretAuthAccount_link(t *testing.T) {
 						},
 					)
 
-					RequireValuesEqual(t,
+					RequireValuesEqual(
+						t,
+						inter,
 						&interpreter.CapabilityValue{
 							Address: address,
 							Path: interpreter.PathValue{
@@ -842,7 +848,9 @@ func TestInterpretAuthAccount_link(t *testing.T) {
 						},
 					)
 
-					RequireValuesEqual(t,
+					RequireValuesEqual(
+						t,
+						inter,
 						&interpreter.CapabilityValue{
 							Address: address,
 							Path: interpreter.PathValue{
@@ -942,7 +950,9 @@ func TestInterpretAuthAccount_link(t *testing.T) {
 						},
 					)
 
-					RequireValuesEqual(t,
+					RequireValuesEqual(
+						t,
+						inter,
 						&interpreter.CapabilityValue{
 							Address: address,
 							Path: interpreter.PathValue{
@@ -989,7 +999,9 @@ func TestInterpretAuthAccount_link(t *testing.T) {
 						},
 					)
 
-					RequireValuesEqual(t,
+					RequireValuesEqual(
+						t,
+						inter,
 						&interpreter.CapabilityValue{
 							Address: address,
 							Path: interpreter.PathValue{
@@ -1226,7 +1238,9 @@ func TestInterpretAccount_getLinkTarget(t *testing.T) {
 
 				innerValue := value.(*interpreter.SomeValue).Value
 
-				AssertValuesEqual(t,
+				AssertValuesEqual(
+					t,
+					inter,
 					interpreter.PathValue{
 						Domain:     common.PathDomainStorage,
 						Identifier: "r",
@@ -1242,7 +1256,12 @@ func TestInterpretAccount_getLinkTarget(t *testing.T) {
 				value, err := inter.Invoke("nonExisting")
 				require.NoError(t, err)
 
-				RequireValuesEqual(t, interpreter.NilValue{}, value)
+				RequireValuesEqual(
+					t,
+					inter,
+					interpreter.NilValue{},
+					value,
+				)
 
 				require.Len(t, storedValues, 1)
 			})
@@ -1297,7 +1316,9 @@ func TestInterpretAccount_getLinkTarget(t *testing.T) {
 
 				innerValue := value.(*interpreter.SomeValue).Value
 
-				AssertValuesEqual(t,
+				AssertValuesEqual(
+					t,
+					inter,
 					interpreter.PathValue{
 						Domain:     common.PathDomainStorage,
 						Identifier: "s",
@@ -1313,7 +1334,12 @@ func TestInterpretAccount_getLinkTarget(t *testing.T) {
 				value, err := inter.Invoke("nonExisting")
 				require.NoError(t, err)
 
-				RequireValuesEqual(t, interpreter.NilValue{}, value)
+				RequireValuesEqual(
+					t,
+					inter,
+					interpreter.NilValue{},
+					value,
+				)
 
 				require.Len(t, storedValues, 1)
 			})
@@ -1470,7 +1496,12 @@ func TestInterpretAccount_BalanceFields(t *testing.T) {
 				value, err := inter.Invoke("test")
 				require.NoError(t, err)
 
-				AssertValuesEqual(t, interpreter.UFix64Value(0), value)
+				AssertValuesEqual(
+					t,
+					inter,
+					interpreter.UFix64Value(0),
+					value,
+				)
 			})
 		}
 	}
@@ -1518,7 +1549,12 @@ func TestInterpretAccount_StorageFields(t *testing.T) {
 				value, err := inter.Invoke("test")
 				require.NoError(t, err)
 
-				AssertValuesEqual(t, interpreter.UInt64Value(0), value)
+				AssertValuesEqual(
+					t,
+					inter,
+					interpreter.UInt64Value(0),
+					value,
+				)
 			})
 		}
 	}

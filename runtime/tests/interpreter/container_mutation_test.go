@@ -50,7 +50,9 @@ func TestArrayMutation(t *testing.T) {
 		require.IsType(t, &interpreter.ArrayValue{}, value)
 		array := value.(*interpreter.ArrayValue)
 
-		utils.RequireValuesEqual(t,
+		utils.RequireValuesEqual(
+			t,
+			inter,
 			interpreter.NewArrayValue(
 				inter,
 				interpreter.VariableSizedStaticType{
@@ -118,7 +120,9 @@ func TestArrayMutation(t *testing.T) {
 		require.IsType(t, &interpreter.ArrayValue{}, value)
 		array := value.(*interpreter.ArrayValue)
 
-		utils.RequireValuesEqual(t,
+		utils.RequireValuesEqual(
+			t,
+			inter,
 			interpreter.NewArrayValue(
 				inter,
 				interpreter.VariableSizedStaticType{
@@ -187,7 +191,9 @@ func TestArrayMutation(t *testing.T) {
 		require.IsType(t, &interpreter.ArrayValue{}, value)
 		array := value.(*interpreter.ArrayValue)
 
-		utils.RequireValuesEqual(t,
+		utils.RequireValuesEqual(
+			t,
+			inter,
 			interpreter.NewArrayValue(
 				inter,
 				interpreter.VariableSizedStaticType{
@@ -243,7 +249,9 @@ func TestArrayMutation(t *testing.T) {
 		require.IsType(t, &interpreter.ArrayValue{}, namesVal)
 		namesValArray := namesVal.(*interpreter.ArrayValue)
 
-		utils.RequireValuesEqual(t,
+		utils.RequireValuesEqual(
+			t,
+			inter,
 			interpreter.NewArrayValue(
 				inter,
 				interpreter.VariableSizedStaticType{

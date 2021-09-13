@@ -132,7 +132,7 @@ func TestInterpretResourceUUID(t *testing.T) {
 	require.Equal(t, length, array.Count())
 
 	for i := 0; i < length; i++ {
-		element := array.GetIndex(interpreter.ReturnEmptyLocationRange, i)
+		element := array.GetIndex(inter, interpreter.ReturnEmptyLocationRange, i)
 
 		require.IsType(t, &interpreter.CompositeValue{}, element)
 		res := element.(*interpreter.CompositeValue)
@@ -143,7 +143,9 @@ func TestInterpretResourceUUID(t *testing.T) {
 			sema.ResourceUUIDFieldName,
 		)
 
-		RequireValuesEqual(t,
+		RequireValuesEqual(
+			t,
+			inter,
 			interpreter.UInt64Value(i),
 			uuidValue,
 		)

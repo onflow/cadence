@@ -694,5 +694,5 @@ func BenchmarkRuntimeFungibleTokenTransfer(b *testing.B) {
 		sum = sum.Plus(value).(interpreter.UFix64Value)
 	}
 
-	require.True(b, mintAmountValue.Equal(sum, nil))
+	utils.RequireValuesEqual(b, nil, mintAmountValue, sum)
 }

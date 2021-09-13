@@ -70,13 +70,14 @@ func TestCompositeStorage(t *testing.T) {
 	require.NoError(t, err)
 	require.True(t, ok)
 
-	storedValue, err := StoredValue(retrievedStorable, storage)
-	require.NoError(t, err)
+	storedValue := StoredValue(retrievedStorable, storage)
 
 	require.IsType(t, storedValue, &CompositeValue{})
 	storedComposite := storedValue.(*CompositeValue)
 
-	RequireValuesEqual(t,
+	RequireValuesEqual(
+		t,
+		inter,
 		BoolValue(true),
 		storedComposite.GetField(fieldName),
 	)
@@ -126,7 +127,7 @@ func TestArrayStorage(t *testing.T) {
 		require.NoError(t, err)
 		require.True(t, ok)
 
-		require.False(t, bool(value.Contains(element)))
+		require.False(t, bool(value.Contains(nil, nil, element)))
 
 		value.Insert(
 			inter,
@@ -135,7 +136,7 @@ func TestArrayStorage(t *testing.T) {
 			element,
 		)
 
-		require.True(t, bool(value.Contains(element)))
+		require.True(t, bool(value.Contains(nil, nil, element)))
 
 		// array + original composite element + new copy of composite element
 		require.Equal(t, 3, storage.BasicSlabStorage.Count())
@@ -144,15 +145,14 @@ func TestArrayStorage(t *testing.T) {
 		require.NoError(t, err)
 		require.True(t, ok)
 
-		storedValue, err := StoredValue(retrievedStorable, storage)
-		require.NoError(t, err)
+		storedValue := StoredValue(retrievedStorable, storage)
 
 		require.IsType(t, storedValue, &ArrayValue{})
 		storedArray := storedValue.(*ArrayValue)
 
-		actual := storedArray.GetIndex(ReturnEmptyLocationRange, 0)
+		actual := storedArray.GetIndex(inter, ReturnEmptyLocationRange, 0)
 
-		RequireValuesEqual(t, element, actual)
+		RequireValuesEqual(t, inter, element, actual)
 	})
 
 	t.Run("remove", func(t *testing.T) {
@@ -181,7 +181,7 @@ func TestArrayStorage(t *testing.T) {
 			element,
 		)
 
-		require.True(t, bool(value.Contains(element)))
+		require.True(t, bool(value.Contains(nil, nil, element)))
 
 		require.NotEqual(t, atree.StorageIDUndefined, value.StorageID())
 
@@ -204,13 +204,12 @@ func TestArrayStorage(t *testing.T) {
 		require.NoError(t, err)
 		require.True(t, ok)
 
-		storedValue, err := StoredValue(retrievedStorable, storage)
-		require.NoError(t, err)
+		storedValue := StoredValue(retrievedStorable, storage)
 
 		require.IsType(t, storedValue, &ArrayValue{})
 		storedArray := storedValue.(*ArrayValue)
 
-		require.False(t, bool(storedArray.Contains(element)))
+		require.False(t, bool(storedArray.Contains(nil, nil, element)))
 	})
 }
 
@@ -264,8 +263,7 @@ func TestDictionaryStorage(t *testing.T) {
 		require.NoError(t, err)
 		require.True(t, ok)
 
-		storedValue, err := StoredValue(retrievedStorable, storage)
-		require.NoError(t, err)
+		storedValue := StoredValue(retrievedStorable, storage)
 
 		require.IsType(t, storedValue, &DictionaryValue{})
 		storedDictionary := storedValue.(*DictionaryValue)
@@ -273,9 +271,9 @@ func TestDictionaryStorage(t *testing.T) {
 		actual, _, ok := storedDictionary.GetKey(entryKey)
 		require.True(t, ok)
 
-		RequireValuesEqual(t, entryValue, actual)
+		RequireValuesEqual(t, inter, entryValue, actual)
 
-		require.True(t, bool(storedDictionary.Keys.Contains(entryKey)))
+		require.True(t, bool(storedDictionary.Keys.Contains(nil, nil, entryKey)))
 	})
 
 	t.Run("set nil", func(t *testing.T) {
@@ -323,13 +321,12 @@ func TestDictionaryStorage(t *testing.T) {
 		require.NoError(t, err)
 		require.True(t, ok)
 
-		storedValue, err := StoredValue(retrievedStorable, storage)
-		require.NoError(t, err)
+		storedValue := StoredValue(retrievedStorable, storage)
 
 		require.IsType(t, storedValue, &DictionaryValue{})
 		storedDictionary := storedValue.(*DictionaryValue)
 
-		require.False(t, bool(storedDictionary.Keys.Contains(NewStringValue("test"))))
+		require.False(t, bool(storedDictionary.Keys.Contains(nil, nil, NewStringValue("test"))))
 	})
 
 	t.Run("remove", func(t *testing.T) {
@@ -376,13 +373,12 @@ func TestDictionaryStorage(t *testing.T) {
 		require.NoError(t, err)
 		require.True(t, ok)
 
-		storedValue, err := StoredValue(retrievedStorable, storage)
-		require.NoError(t, err)
+		storedValue := StoredValue(retrievedStorable, storage)
 
 		require.IsType(t, storedValue, &DictionaryValue{})
 		storedDictionary := storedValue.(*DictionaryValue)
 
-		require.False(t, bool(storedDictionary.Keys.Contains(NewStringValue("test"))))
+		require.False(t, bool(storedDictionary.Keys.Contains(nil, nil, NewStringValue("test"))))
 	})
 
 	t.Run("insert", func(t *testing.T) {
@@ -428,12 +424,11 @@ func TestDictionaryStorage(t *testing.T) {
 		require.NoError(t, err)
 		require.True(t, ok)
 
-		storedValue, err := StoredValue(retrievedStorable, storage)
-		require.NoError(t, err)
+		storedValue := StoredValue(retrievedStorable, storage)
 
 		require.IsType(t, storedValue, &DictionaryValue{})
 		storedDictionary := storedValue.(*DictionaryValue)
 
-		require.True(t, bool(storedDictionary.Keys.Contains(NewStringValue("test"))))
+		require.True(t, bool(storedDictionary.Keys.Contains(nil, nil, NewStringValue("test"))))
 	})
 }

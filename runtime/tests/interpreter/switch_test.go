@@ -68,7 +68,7 @@ func TestInterpretSwitchStatement(t *testing.T) {
 			actual, err := inter.Invoke("test", argument)
 			require.NoError(t, err)
 
-			AssertValuesEqual(t, expected, actual)
+			AssertValuesEqual(t, inter, expected, actual)
 		}
 	})
 
@@ -108,7 +108,7 @@ func TestInterpretSwitchStatement(t *testing.T) {
 			actual, err := inter.Invoke("test", argument)
 			require.NoError(t, err)
 
-			AssertValuesEqual(t, expected, actual)
+			AssertValuesEqual(t, inter, expected, actual)
 		}
 	})
 
@@ -149,7 +149,7 @@ func TestInterpretSwitchStatement(t *testing.T) {
 			actual, err := inter.Invoke("test", argument)
 			require.NoError(t, err)
 
-			AssertValuesEqual(t, expected, actual)
+			AssertValuesEqual(t, inter, expected, actual)
 		}
 	})
 
@@ -191,9 +191,11 @@ func TestInterpretSwitchStatement(t *testing.T) {
 			require.IsType(t, actual, &interpreter.ArrayValue{})
 			arrayValue := actual.(*interpreter.ArrayValue)
 
-			AssertValueSlicesEqual(t,
+			AssertValueSlicesEqual(
+				t,
+				inter,
 				expectedValues,
-				elements(arrayValue),
+				arrayElements(inter, arrayValue),
 			)
 		}
 	})
@@ -265,7 +267,7 @@ func TestInterpretSwitchStatement(t *testing.T) {
 			actual, err := inter.Invoke("test", testCase.arguments...)
 			require.NoError(t, err)
 
-			AssertValuesEqual(t, testCase.expected, actual)
+			AssertValuesEqual(t, inter, testCase.expected, actual)
 		}
 	})
 }

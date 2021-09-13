@@ -30,12 +30,12 @@ func TestInspectValue(t *testing.T) {
 
 	t.Parallel()
 
+	inter := newTestInterpreter(t)
+
 	// Prepare composite value
 
 	var compositeValue *CompositeValue
 	{
-		inter := newTestInterpreter(t)
-
 		dictionaryStaticType := DictionaryStaticType{
 			KeyType:   PrimitiveStaticTypeString,
 			ValueType: PrimitiveStaticTypeInt256,
@@ -72,7 +72,7 @@ func TestInspectValue(t *testing.T) {
 
 	optionalValue := compositeValue.GetField("value").(*SomeValue)
 	arrayValue := optionalValue.Value.(*ArrayValue)
-	dictValue := arrayValue.GetIndex(ReturnEmptyLocationRange, 0).(*DictionaryValue)
+	dictValue := arrayValue.GetIndex(inter, ReturnEmptyLocationRange, 0).(*DictionaryValue)
 	dictValueKey := NewStringValue("hello world")
 
 	dictValueValue, _, _ := dictValue.GetKey(dictValueKey)
@@ -89,7 +89,9 @@ func TestInspectValue(t *testing.T) {
 			},
 		)
 
-		AssertValueSlicesEqual(t,
+		AssertValueSlicesEqual(
+			t,
+			inter,
 			[]Value{
 				dictValue,
 				dictValueKey,
@@ -114,7 +116,9 @@ func TestInspectValue(t *testing.T) {
 			},
 		)
 
-		AssertValueSlicesEqual(t,
+		AssertValueSlicesEqual(
+			t,
+			inter,
 			[]Value{
 				compositeValue,
 				optionalValue,

@@ -45,7 +45,9 @@ func TestInterpretResourceReferenceInstanceOf(t *testing.T) {
 	value, err := inter.Invoke("test")
 	require.NoError(t, err)
 
-	AssertValuesEqual(t,
+	AssertValuesEqual(
+		t,
+		inter,
 		interpreter.BoolValue(true),
 		value,
 	)
@@ -75,7 +77,9 @@ func TestInterpretResourceReferenceFieldComparison(t *testing.T) {
 	value, err := inter.Invoke("test")
 	require.NoError(t, err)
 
-	AssertValuesEqual(t,
+	AssertValuesEqual(
+		t,
+		inter,
 		interpreter.BoolValue(true),
 		value,
 	)
