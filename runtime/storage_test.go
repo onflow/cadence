@@ -1858,6 +1858,278 @@ pub contract TopShot: NonFungibleToken {
 	require.Equal(t, 0, contractValueReads)
 }
 
+func TestRuntimeBatchMintAndTransfer(t *testing.T) {
+
+	t.Parallel()
+
+	runtime := NewInterpreterRuntime()
+
+	const contract = `
+      pub contract Test {
+
+          pub resource interface INFT {}
+
+          pub resource NFT: INFT {}
+
+          pub resource Collection {
+
+              pub var ownedNFTs: @{UInt64: NFT}
+
+              init() {
+                  self.ownedNFTs <- {}
+              }
+
+              pub fun withdraw(id: UInt64): @NFT {
+                  let token <- self.ownedNFTs.remove(key: id)
+                      ?? panic("Cannot withdraw: NFT does not exist in the collection")
+
+                  return <-token
+              }
+
+              pub fun deposit(token: @NFT) {
+                  let oldToken <- self.ownedNFTs[token.uuid] <- token
+                  destroy oldToken
+              }
+
+              pub fun batchDeposit(collection: @Collection) {
+                  let ids = collection.getIDs()
+
+                  for id in ids {
+                      self.deposit(token: <-collection.withdraw(id: id))
+                  }
+
+                  destroy collection
+              }
+
+              pub fun batchWithdraw(ids: [UInt64]): @Collection {
+                  let collection <- create Collection()
+
+                  for id in ids {
+                      collection.deposit(token: <-self.withdraw(id: id))
+                  }
+
+                  return <-collection
+              }
+
+              pub fun getIDs(): [UInt64] {
+                  return self.ownedNFTs.keys
+              }
+
+              destroy() {
+                  destroy self.ownedNFTs
+              }
+          }
+
+          init() {
+              self.account.save(
+                 <-Test.createEmptyCollection(),
+                 to: /storage/MainCollection
+              )
+              self.account.link<&Collection>(
+                 /public/MainCollection,
+                 target: /storage/MainCollection
+              )
+          }
+
+          pub fun mint(): @NFT {
+              return <- create NFT()
+          }
+
+          pub fun createEmptyCollection(): @Collection {
+              return <- create Collection()
+          }
+
+          pub fun batchMint(count: UInt64): @Collection {
+              let collection <- create Collection()
+
+              var i: UInt64 = 0
+              while i < count {
+                  collection.deposit(token: <-self.mint())
+                  i = i + 1
+              }
+              return <-collection
+          }
+      }
+    `
+
+	deployTx := utils.DeploymentTransaction("Test", []byte(contract))
+
+	contractAddress := common.BytesToAddress([]byte{0x1})
+
+	var events []cadence.Event
+	var loggedMessages []string
+
+	var signerAddress common.Address
+
+	accountCodes := map[common.LocationID]string{}
+
+	var uuid uint64
+
+	runtimeInterface := &testRuntimeInterface{
+		generateUUID: func() (uint64, error) {
+			uuid++
+			return uuid, nil
+		},
+		storage: newTestStorage(nil, nil),
+		getSigningAccounts: func() ([]Address, error) {
+			return []Address{signerAddress}, nil
+		},
+		resolveLocation: singleIdentifierLocationResolver(t),
+		updateAccountContractCode: func(address Address, name string, code []byte) error {
+			location := common.AddressLocation{
+				Address: address,
+				Name:    name,
+			}
+			accountCodes[location.ID()] = string(code)
+			return nil
+		},
+		getAccountContractCode: func(address Address, name string) (code []byte, err error) {
+			location := common.AddressLocation{
+				Address: address,
+				Name:    name,
+			}
+			code = []byte(accountCodes[location.ID()])
+			return code, nil
+		},
+		emitEvent: func(event cadence.Event) error {
+			events = append(events, event)
+			return nil
+		},
+		decodeArgument: func(b []byte, t cadence.Type) (cadence.Value, error) {
+			return json.Decode(b)
+		},
+		log: func(message string) {
+			loggedMessages = append(loggedMessages, message)
+		},
+	}
+
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	// Deploy contract
+
+	signerAddress = contractAddress
+
+	err := runtime.ExecuteTransaction(
+		Script{
+			Source: deployTx,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	// Mint moments
+
+	err = runtime.ExecuteTransaction(
+		Script{
+			Source: []byte(`
+              import Test from 0x1
+
+              transaction {
+
+                  prepare(signer: AuthAccount) {
+                      let collection <- Test.batchMint(count: 1000)
+
+                      log(collection.getIDs())
+
+                      signer.borrow<&Test.Collection>(from: /storage/MainCollection)!
+                          .batchDeposit(collection: <-collection)
+                  }
+              }
+            `),
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	// Set up receiver
+
+	const setupTx = `
+      import Test from 0x1
+
+      transaction {
+
+          prepare(signer: AuthAccount) {
+              signer.save(
+                 <-Test.createEmptyCollection(),
+                 to: /storage/TestCollection
+              )
+              signer.link<&Test.Collection>(
+                 /public/TestCollection,
+                 target: /storage/TestCollection
+              )
+          }
+      }
+    `
+
+	signerAddress = common.BytesToAddress([]byte{0x2})
+
+	err = runtime.ExecuteTransaction(
+		Script{
+			Source: []byte(setupTx),
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+
+	require.NoError(t, err)
+
+	// Transfer
+
+	signerAddress = contractAddress
+
+	const transferTx = `
+      import Test from 0x1
+
+      transaction(ids: [UInt64]) {
+          let collection: @Test.Collection
+
+          prepare(signer: AuthAccount) {
+              self.collection <- signer.borrow<&Test.Collection>(from: /storage/MainCollection)!
+                  .batchWithdraw(ids: ids)
+          }
+
+          execute {
+              getAccount(0x2)
+                  .getCapability(/public/TestCollection)
+                  .borrow<&Test.Collection>()!
+                  .batchDeposit(collection: <-self.collection)
+          }
+      }
+    `
+
+	var values []cadence.Value
+
+	const startID uint64 = 10
+	const count = 20
+
+	for id := startID; id <= startID+count; id++ {
+		values = append(values, cadence.NewUInt64(id))
+	}
+
+	encodedArg, err := json.Encode(cadence.NewArray(values))
+	require.NoError(t, err)
+
+	err = runtime.ExecuteTransaction(
+		Script{
+			Source:    []byte(transferTx),
+			Arguments: [][]byte{encodedArg},
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+}
+
 func TestRuntimeStorageUnlink(t *testing.T) {
 
 	t.Parallel()
