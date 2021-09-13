@@ -3153,6 +3153,7 @@ func TestRuntimeInvokeContractFunction(t *testing.T) {
 
 		assert.Equal(tt, `"Hello number 42 from 0x1"`, loggedMessage)
 	})
+
 	t.Run("function with not enough arguments panics", func(tt *testing.T) {
 		assert.Panics(tt, func() {
 			_, _ = runtime.InvokeContractFunction(
@@ -3176,6 +3177,7 @@ func TestRuntimeInvokeContractFunction(t *testing.T) {
 			)
 		})
 	})
+
 	t.Run("function with incorrect argument type errors", func(tt *testing.T) {
 		_, err = runtime.InvokeContractFunction(
 			common.AddressLocation{
@@ -3194,8 +3196,9 @@ func TestRuntimeInvokeContractFunction(t *testing.T) {
 				Location:  nextTransactionLocation(),
 			},
 		)
-		require.ErrorAs(tt, err, &interpreter.InvocationArgumentTypeError{})
+		require.ErrorAs(tt, err, &interpreter.ValueTransferTypeError{})
 	})
+
 	t.Run("function with auth account works", func(tt *testing.T) {
 		_, err = runtime.InvokeContractFunction(
 			common.AddressLocation{

@@ -49,6 +49,8 @@ type CompositeStaticType struct {
 	QualifiedIdentifier string
 }
 
+var _ StaticType = CompositeStaticType{}
+
 func (CompositeStaticType) isStaticType() {}
 
 func (t CompositeStaticType) String() string {
@@ -74,6 +76,8 @@ type InterfaceStaticType struct {
 	Location            common.Location
 	QualifiedIdentifier string
 }
+
+var _ StaticType = InterfaceStaticType{}
 
 func (InterfaceStaticType) isStaticType() {}
 
@@ -108,6 +112,8 @@ type VariableSizedStaticType struct {
 	Type StaticType
 }
 
+var _ ArrayStaticType = VariableSizedStaticType{}
+
 func (VariableSizedStaticType) isStaticType() {}
 
 func (VariableSizedStaticType) isArrayStaticType() {}
@@ -135,6 +141,8 @@ type ConstantSizedStaticType struct {
 	Type StaticType
 	Size int64
 }
+
+var _ ArrayStaticType = ConstantSizedStaticType{}
 
 func (ConstantSizedStaticType) isStaticType() {}
 
@@ -165,6 +173,8 @@ type DictionaryStaticType struct {
 	ValueType StaticType
 }
 
+var _ StaticType = DictionaryStaticType{}
+
 func (DictionaryStaticType) isStaticType() {}
 
 func (t DictionaryStaticType) String() string {
@@ -187,6 +197,8 @@ type OptionalStaticType struct {
 	Type StaticType
 }
 
+var _ StaticType = OptionalStaticType{}
+
 func (OptionalStaticType) isStaticType() {}
 
 func (t OptionalStaticType) String() string {
@@ -208,6 +220,8 @@ type RestrictedStaticType struct {
 	Type         StaticType
 	Restrictions []InterfaceStaticType
 }
+
+var _ StaticType = &RestrictedStaticType{}
 
 // NOTE: must be pointer receiver, as static types get used in type values,
 // which are used as keys in maps when exporting.
@@ -253,6 +267,8 @@ type ReferenceStaticType struct {
 	Type       StaticType
 }
 
+var _ StaticType = ReferenceStaticType{}
+
 func (ReferenceStaticType) isStaticType() {}
 
 func (t ReferenceStaticType) String() string {
@@ -279,6 +295,8 @@ func (t ReferenceStaticType) Equal(other StaticType) bool {
 type CapabilityStaticType struct {
 	BorrowType StaticType
 }
+
+var _ StaticType = CapabilityStaticType{}
 
 func (CapabilityStaticType) isStaticType() {}
 
@@ -350,6 +368,11 @@ func ConvertSemaToStaticType(t sema.Type) StaticType {
 			result.BorrowType = ConvertSemaToStaticType(t.BorrowType)
 		}
 		return result
+
+	case *sema.FunctionType:
+		return FunctionStaticType{
+			Type: t,
+		}
 	}
 
 	primitiveStaticType := ConvertSemaToPrimitiveStaticType(t)
@@ -460,10 +483,107 @@ func ConvertStaticToSemaType(
 			BorrowType: borrowType,
 		}
 
+	case FunctionStaticType:
+		return t.Type
+
 	case PrimitiveStaticType:
 		return t.SemaType()
 
 	default:
 		panic(errors.NewUnreachableError())
 	}
+}
+
+// FunctionStaticType
+
+type FunctionStaticType struct {
+	Type *sema.FunctionType
+}
+
+var _ StaticType = FunctionStaticType{}
+
+func (t FunctionStaticType) ReceiverType() StaticType {
+	var receiverType StaticType
+	if t.Type.ReceiverType != nil {
+		receiverType = ConvertSemaToStaticType(t.Type.ReceiverType)
+	}
+	return receiverType
+}
+
+func (t FunctionStaticType) TypeParameters() []*TypeParameter {
+	typeParameters := make([]*TypeParameter, len(t.Type.TypeParameters))
+	for i, typeParameter := range t.Type.TypeParameters {
+		typeParameters[i] = &TypeParameter{
+			Name:      typeParameter.Name,
+			TypeBound: ConvertSemaToStaticType(typeParameter.TypeBound),
+			Optional:  typeParameter.Optional,
+		}
+	}
+
+	return typeParameters
+}
+
+func (t FunctionStaticType) ParameterTypes() []StaticType {
+	parameterTypes := make([]StaticType, len(t.Type.Parameters))
+	for i, parameter := range t.Type.Parameters {
+		parameterTypes[i] = ConvertSemaToStaticType(parameter.TypeAnnotation.Type)
+	}
+
+	return parameterTypes
+}
+
+func (t FunctionStaticType) ReturnType() StaticType {
+	var returnType StaticType
+	if t.Type.ReturnTypeAnnotation != nil {
+		returnType = ConvertSemaToStaticType(t.Type.ReturnTypeAnnotation.Type)
+	}
+
+	return returnType
+}
+
+func (FunctionStaticType) isStaticType() {}
+
+func (t FunctionStaticType) String() string {
+	return t.Type.String()
+}
+
+func (t FunctionStaticType) Equal(other StaticType) bool {
+	otherFunction, ok := other.(*FunctionStaticType)
+	if !ok {
+		return false
+	}
+
+	return t.Type.Equal(otherFunction.Type)
+}
+
+type TypeParameter struct {
+	Name      string
+	TypeBound StaticType
+	Optional  bool
+}
+
+func (p TypeParameter) Equal(other *TypeParameter) bool {
+	if p.TypeBound == nil {
+		if other.TypeBound != nil {
+			return false
+		}
+	} else {
+		if other.TypeBound == nil ||
+			!p.TypeBound.Equal(other.TypeBound) {
+
+			return false
+		}
+	}
+
+	return p.Optional == other.Optional
+}
+
+func (p TypeParameter) String() string {
+	var builder strings.Builder
+	builder.WriteString(p.Name)
+	if p.TypeBound != nil {
+		builder.WriteString(": ")
+		builder.WriteString(p.TypeBound.String())
+	}
+	return builder.String()
 }

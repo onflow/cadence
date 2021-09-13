@@ -26,6 +26,7 @@ import (
 	"github.com/fxamacker/cbor/v2"
 	"github.com/onflow/atree"
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/errors"
 )
 
 func getIntCBORSize(v int64) uint32 {
@@ -85,7 +86,7 @@ const (
 	CBORTagAddressValue
 	CBORTagCompositeValue
 	CBORTagTypeValue
-	CBORTagArrayValue
+	_ // NOTE: Do *NOT* re-use. Previously used for arrays
 	_
 	_
 	_
@@ -981,6 +982,40 @@ func (v LinkValue) Encode(e *atree.Encoder) error {
 	return EncodeStaticType(e, v.Type)
 }
 
+// NOTE: NEVER change, only add/increment; ensure uint64
+const (
+	// encodedTypeValueTypeFieldKey uint64 = 0
+
+	// !!! *WARNING* !!!
+	//
+	// encodedTypeValueTypeLength MUST be updated when new element is added.
+	// It is used to verify encoded type length during decoding.
+	encodedTypeValueTypeLength = 1
+)
+
+// Encode encodes TypeValue as
+// cbor.Tag{
+//			Number: CBORTagTypeValue,
+//			Content: cborArray{
+//				encodedTypeValueTypeFieldKey: StaticType(v.Type),
+//			},
+//	}
+func (v TypeValue) Encode(e *atree.Encoder) error {
+	// Encode tag number and array head
+	err := e.CBOR.EncodeRawBytes([]byte{
+		// tag number
+		0xd8, CBORTagTypeValue,
+		// array, 1 item follow
+		0x81,
+	})
+	if err != nil {
+		return err
+	}
+
+	// Encode type at array index encodedTypeValueTypeFieldKey
+	return EncodeStaticType(e, v.Type)
+}
+
 func StaticTypeToBytes(t StaticType) (cbor.RawMessage, error) {
 	var buf bytes.Buffer
 	enc := atree.NewEncoder(&buf, CBOREncMode)
@@ -1314,46 +1349,12 @@ func (t *RestrictedStaticType) Encode(e *atree.Encoder) error {
 	return nil
 }
 
-// NOTE: NEVER change, only add/increment; ensure uint64
-const (
-	// encodedTypeValueTypeFieldKey uint64 = 0
-
-	// !!! *WARNING* !!!
-	//
-	// encodedTypeValueTypeLength MUST be updated when new element is added.
-	// It is used to verify encoded type length during decoding.
-	encodedTypeValueTypeLength = 1
-)
-
-// Encode encodes TypeValue as
-// cbor.Tag{
-//			Number: CBORTagTypeValue,
-//			Content: cborArray{
-//				encodedTypeValueTypeFieldKey: StaticType(v.Type),
-//			},
-//	}
-func (v TypeValue) Encode(e *atree.Encoder) error {
-	// Encode tag number and array head
-	err := e.CBOR.EncodeRawBytes([]byte{
-		// tag number
-		0xd8, CBORTagTypeValue,
-		// array, 1 item follow
-		0x81,
-	})
-	if err != nil {
-		return err
-	}
-
-	// Encode type at array index encodedTypeValueTypeFieldKey
-	return EncodeStaticType(e, v.Type)
-}
-
 // Encode encodes CapabilityStaticType as
 // cbor.Tag{
 //		Number:  CBORTagCapabilityStaticType,
 //		Content: StaticType(v.BorrowType),
 // }
-func (v CapabilityStaticType) Encode(e *atree.Encoder) error {
+func (t CapabilityStaticType) Encode(e *atree.Encoder) error {
 	err := e.CBOR.EncodeRawBytes([]byte{
 		// tag number
 		0xd8, CBORTagCapabilityStaticType,
@@ -1361,5 +1362,9 @@ func (v CapabilityStaticType) Encode(e *atree.Encoder) error {
 	if err != nil {
 		return err
 	}
-	return EncodeStaticType(e, v.BorrowType)
+	return EncodeStaticType(e, t.BorrowType)
+}
+
+func (t FunctionStaticType) Encode(_ *atree.Encoder) error {
+	panic(errors.NewUnreachableError())
 }

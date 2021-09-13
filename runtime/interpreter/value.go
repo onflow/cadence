@@ -7014,7 +7014,7 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, getLocationRange func
 			Interpreter:      interpreter,
 		}
 
-		destructor.Invoke(invocation)
+		destructor.invoke(invocation)
 	}
 
 	v.isDestroyed = true
@@ -8339,7 +8339,7 @@ func (v *SomeValue) GetMember(_ *Interpreter, _ func() LocationRange, name strin
 					Interpreter:      invocation.Interpreter,
 				}
 
-				newValue := transformFunction.Invoke(transformInvocation)
+				newValue := transformFunction.invoke(transformInvocation)
 
 				return NewSomeValueNonCopying(newValue)
 			},
