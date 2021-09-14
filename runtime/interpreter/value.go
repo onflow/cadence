@@ -7478,7 +7478,7 @@ func (v *DictionaryValue) Accept(interpreter *Interpreter, visitor Visitor) {
 
 func (v *DictionaryValue) Iterate(f func(key, value Value) (resume bool)) {
 	err := v.dictionary.Iterate(func(key, value atree.Value) (resume bool, err error) {
-		// atree.Array iteration provides low-level atree.Value,
+		// atree.OrderedMap iteration provides low-level atree.Value,
 		// convert to high-level interpreter.Value
 
 		resume = f(
