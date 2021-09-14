@@ -124,7 +124,6 @@ type ResourceKindedValue interface {
 	Value
 	Destroy(interpreter *Interpreter, getLocationRange func() LocationRange)
 	IsDestroyed() bool
-	IsCopied() bool
 }
 
 func maybeDestroy(interpreter *Interpreter, getLocationRange func() LocationRange, value Value) {
@@ -700,7 +699,6 @@ func (*StringValue) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicTyp
 type ArrayValue struct {
 	Type        ArrayStaticType
 	array       *atree.Array
-	isCopied    bool
 	isDestroyed bool
 }
 
@@ -822,10 +820,6 @@ func (v *ArrayValue) Destroy(interpreter *Interpreter, getLocationRange func() L
 
 func (v *ArrayValue) IsDestroyed() bool {
 	return v.isDestroyed
-}
-
-func (v *ArrayValue) IsCopied() bool {
-	return v.isCopied
 }
 
 func (v *ArrayValue) Concat(interpreter *Interpreter, getLocationRange func() LocationRange, other *ArrayValue) Value {
@@ -1198,8 +1192,6 @@ func (v *ArrayValue) DeepCopy(inter *Interpreter, address atree.Address) Value {
 
 		index++
 	})
-
-	v.isCopied = true
 
 	return result
 }
@@ -6911,9 +6903,8 @@ type CompositeValue struct {
 	Functions       map[string]FunctionValue
 	Destructor      FunctionValue
 	Stringer        func(seenReferences SeenReferences) string
-	// TODO: move isDestroyed and isCopied to CompositeStorable
+	// TODO: move isDestroyed to CompositeStorable ?
 	isDestroyed bool
-	isCopied    bool
 }
 
 type ComputedField func(*Interpreter) Value
@@ -6989,10 +6980,6 @@ func (v *CompositeValue) store(storage atree.SlabStorage) {
 
 func (v *CompositeValue) IsDestroyed() bool {
 	return v.isDestroyed
-}
-
-func (v *CompositeValue) IsCopied() bool {
-	return v.isCopied
 }
 
 func (v *CompositeValue) Destroy(interpreter *Interpreter, getLocationRange func() LocationRange) {
@@ -7159,7 +7146,6 @@ func (v *CompositeValue) SetMember(
 	name string,
 	value Value,
 ) {
-
 	address := v.StorageID.Address
 
 	value = interpreter.TransferValue(value, nil, address)
@@ -7412,8 +7398,6 @@ func (v *CompositeValue) DeepCopy(interpreter *Interpreter, address atree.Addres
 		newFieldStorables.Set(fieldName, fieldValueCopy)
 	}
 
-	v.isCopied = true
-
 	newValue := NewCompositeValue(
 		interpreter.Storage,
 		v.Location,
@@ -7516,9 +7500,8 @@ func NewEnumCaseValue(
 type DictionaryValue struct {
 	*DictionaryStorable
 	Keys *ArrayValue
-	// TODO: move isDestroyed and isCopied to CompositeStorable
+	// TODO: move isDestroyed to CompositeStorable ?
 	isDestroyed bool
-	isCopied    bool
 }
 
 func NewDictionaryValue(
@@ -7652,10 +7635,6 @@ func (v *DictionaryValue) StaticType() StaticType {
 
 func (v *DictionaryValue) IsDestroyed() bool {
 	return v.isDestroyed
-}
-
-func (v *DictionaryValue) IsCopied() bool {
-	return v.isCopied
 }
 
 func (v *DictionaryValue) Destroy(interpreter *Interpreter, getLocationRange func() LocationRange) {
@@ -8037,8 +8016,6 @@ func (v *DictionaryValue) NeedsStoreToAddress(_ *Interpreter, address atree.Addr
 
 func (v *DictionaryValue) DeepCopy(interpreter *Interpreter, address atree.Address) Value {
 
-	v.isCopied = true
-
 	result := NewDictionaryValueWithAddress(
 		interpreter,
 		v.Type,
@@ -8175,10 +8152,6 @@ func (NilValue) IsDestroyed() bool {
 	return false
 }
 
-func (NilValue) IsCopied() bool {
-	return false
-}
-
 func (v NilValue) Destroy(_ *Interpreter, _ func() LocationRange) {
 	// NO-OP
 }
@@ -8257,8 +8230,8 @@ func (v NilValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 type SomeValue struct {
 	Value         Value
 	valueStorable atree.Storable
-	isCopied      bool
-	isDestroyed   bool
+	// TODO: Store isDestroyed in SomeStorable?
+	isDestroyed bool
 }
 
 func NewSomeValueNonCopying(value Value) *SomeValue {
@@ -8303,10 +8276,6 @@ func (*SomeValue) isOptionalValue() {}
 
 func (v *SomeValue) IsDestroyed() bool {
 	return v.isDestroyed
-}
-
-func (v *SomeValue) IsCopied() bool {
-	return v.isCopied
 }
 
 func (v *SomeValue) Destroy(interpreter *Interpreter, getLocationRange func() LocationRange) {
@@ -8411,8 +8380,6 @@ func (v *SomeValue) NeedsStoreToAddress(interpreter *Interpreter, address atree.
 }
 
 func (v *SomeValue) DeepCopy(interpreter *Interpreter, address atree.Address) Value {
-	v.isCopied = true
-
 	valueCopy := interpreter.CopyValue(v.Value, address)
 
 	result := NewSomeValueNonCopying(valueCopy)
@@ -8541,7 +8508,7 @@ func (v *StorageReferenceValue) GetMember(
 
 	self := *referencedValue
 
-	interpreter.checkResourceNotDestroyedOrCopied(self, getLocationRange)
+	interpreter.checkResourceNotDestroyed(self, getLocationRange)
 
 	return interpreter.getMember(self, getLocationRange, name)
 }
@@ -8561,7 +8528,7 @@ func (v *StorageReferenceValue) SetMember(
 
 	self := *referencedValue
 
-	interpreter.checkResourceNotDestroyedOrCopied(self, getLocationRange)
+	interpreter.checkResourceNotDestroyed(self, getLocationRange)
 
 	interpreter.setMember(self, getLocationRange, name, value)
 }
@@ -8580,7 +8547,7 @@ func (v *StorageReferenceValue) Get(
 
 	self := *referencedValue
 
-	interpreter.checkResourceNotDestroyedOrCopied(self, getLocationRange)
+	interpreter.checkResourceNotDestroyed(self, getLocationRange)
 
 	return self.(ValueIndexableValue).
 		Get(interpreter, getLocationRange, key)
@@ -8601,7 +8568,7 @@ func (v *StorageReferenceValue) Set(
 
 	self := *referencedValue
 
-	interpreter.checkResourceNotDestroyedOrCopied(self, getLocationRange)
+	interpreter.checkResourceNotDestroyed(self, getLocationRange)
 
 	self.(ValueIndexableValue).
 		Set(interpreter, getLocationRange, key, value)
@@ -8774,7 +8741,7 @@ func (v *EphemeralReferenceValue) GetMember(
 
 	self := *referencedValue
 
-	interpreter.checkResourceNotDestroyedOrCopied(self, getLocationRange)
+	interpreter.checkResourceNotDestroyed(self, getLocationRange)
 
 	return interpreter.getMember(self, getLocationRange, name)
 }
@@ -8794,7 +8761,7 @@ func (v *EphemeralReferenceValue) SetMember(
 
 	self := *referencedValue
 
-	interpreter.checkResourceNotDestroyedOrCopied(self, getLocationRange)
+	interpreter.checkResourceNotDestroyed(self, getLocationRange)
 
 	interpreter.setMember(self, getLocationRange, name, value)
 }
@@ -8813,7 +8780,7 @@ func (v *EphemeralReferenceValue) Get(
 
 	self := *referencedValue
 
-	interpreter.checkResourceNotDestroyedOrCopied(self, getLocationRange)
+	interpreter.checkResourceNotDestroyed(self, getLocationRange)
 
 	return self.(ValueIndexableValue).
 		Get(interpreter, getLocationRange, key)
@@ -8834,7 +8801,7 @@ func (v *EphemeralReferenceValue) Set(
 
 	self := *referencedValue
 
-	interpreter.checkResourceNotDestroyedOrCopied(self, getLocationRange)
+	interpreter.checkResourceNotDestroyed(self, getLocationRange)
 
 	self.(ValueIndexableValue).
 		Set(interpreter, getLocationRange, key, value)
