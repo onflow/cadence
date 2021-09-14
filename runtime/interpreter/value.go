@@ -7966,40 +7966,8 @@ func (v *DictionaryValue) GetOwner() common.Address {
 	return common.Address(v.StorageID.Address)
 }
 
-type DictionaryStorable struct {
-	Type      DictionaryStaticType
-	Keys      atree.Storable
-	Entries   *StringAtreeStorableOrderedMap
-	StorageID atree.StorageID
-}
-
-var _ atree.Storable = &DictionaryStorable{}
-
-func (s *DictionaryStorable) ByteSize() uint32 {
-	return mustStorableSize(s)
-}
-
-func (s *DictionaryStorable) StoredValue(storage atree.SlabStorage) (atree.Value, error) {
-	keysValue := StoredValue(s.Keys, storage)
-
-	keysArray, ok := keysValue.(*ArrayValue)
-	if !ok {
-		return nil, fmt.Errorf("invalid dictionary keys: %T", keysValue)
-	}
-
-	keyCount := keysArray.Count()
-	if s.Entries.Len() != keyCount {
-		return nil, fmt.Errorf(
-			"invalid dictionary values: expected %d values, got %d",
-			keyCount,
-			s.Entries.Len(),
-		)
-	}
-
-	return &DictionaryValue{
-		DictionaryStorable: s,
-		Keys:               keysArray,
-	}, nil
+func (v *DictionaryValue) StorageID() atree.StorageID {
+	return v.dictionary.StorageID()
 }
 
 // OptionalValue
