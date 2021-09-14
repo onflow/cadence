@@ -81,7 +81,7 @@ const CBORTagBase = 128
 
 const (
 	CBORTagVoidValue = CBORTagBase + iota
-	CBORTagDictionaryValue
+	_                // NOTE: Do *NOT* re-use. Previously used for dictionaries
 	CBORTagSomeValue
 	CBORTagAddressValue
 	CBORTagCompositeValue
@@ -584,67 +584,6 @@ const (
 	// It is used to verify encoded dictionaries length during decoding.
 	encodedDictionaryValueLength = 3
 )
-
-// Encode encodes DictionaryStorable as
-// cbor.Tag{
-//			Number: CBORTagDictionaryValue,
-//			Content: cborArray{
-// 				encodedDictionaryValueTypeFieldKey:    []interface{}(type),
-//				encodedDictionaryValueKeysFieldKey:    []interface{}(keys),
-//				encodedDictionaryValueEntriesFieldKey: []interface{}(entries),
-//			},
-// }
-func (s *DictionaryStorable) Encode(e *atree.Encoder) error {
-	// Encode CBOR tag number
-	err := e.CBOR.EncodeRawBytes([]byte{
-		// tag number
-		0xd8, CBORTagDictionaryValue,
-	})
-	if err != nil {
-		return err
-	}
-
-	// Encode array head
-	err = e.CBOR.EncodeRawBytes([]byte{
-		// array, 3 items follow
-		0x83,
-	})
-	if err != nil {
-		return err
-	}
-
-	// (1) Encode dictionary static type at array index encodedDictionaryValueTypeFieldKey
-	err = EncodeStaticType(e, s.Type)
-	if err != nil {
-		return err
-	}
-
-	// (2) Encode keys (as StorageID) at array index encodedDictionaryValueKeysFieldKey
-	err = s.Keys.Encode(e)
-	if err != nil {
-		return err
-	}
-
-	// (3) Encode entries (as array) at array index encodedDictionaryValueEntriesFieldKey
-	err = e.CBOR.EncodeArrayHead(uint64(s.Entries.Len() * 2))
-	if err != nil {
-		return err
-	}
-
-	for pair := s.Entries.Oldest(); pair != nil; pair = pair.Next() {
-		err = e.CBOR.EncodeString(pair.Key)
-		if err != nil {
-			return err
-		}
-
-		err = pair.Value.Encode(e)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
 
 // NOTE: NEVER change, only add/increment; ensure uint64
 const (

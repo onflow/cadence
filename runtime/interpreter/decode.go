@@ -121,9 +121,6 @@ func (d Decoder) decodeStorable() (atree.Storable, error) {
 			}
 			storable = VoidValue{}
 
-		case CBORTagDictionaryValue:
-			storable, err = d.decodeDictionary()
-
 		case CBORTagSomeValue:
 			storable, err = d.decodeSome()
 
@@ -1568,109 +1565,5 @@ func (d Decoder) decodeCapabilityStaticType() (StaticType, error) {
 
 	return CapabilityStaticType{
 		BorrowType: borrowStaticType,
-	}, nil
-}
-
-func (d Decoder) decodeDictionary() (*DictionaryStorable, error) {
-
-	const expectedLength = encodedDictionaryValueLength
-
-	size, err := d.decoder.DecodeArrayHead()
-
-	if err != nil {
-		if e, ok := err.(*cbor.WrongTypeError); ok {
-			return nil, fmt.Errorf(
-				"invalid dictionary encoding: expected [%d]interface{}, got %s",
-				expectedLength,
-				e.ActualType.String(),
-			)
-		}
-		return nil, err
-	}
-
-	if size != expectedLength {
-		return nil, fmt.Errorf(
-			"invalid dictionary encoding: expected [%d]interface{}, got [%d]interface{}",
-			expectedLength,
-			size,
-		)
-	}
-
-	// Decode type
-	staticType, err := d.decodeStaticType()
-	if err != nil {
-		return nil, err
-	}
-
-	dictionaryStaticType, ok := staticType.(DictionaryStaticType)
-	if !ok {
-		return nil, fmt.Errorf(
-			"invalid dictionary static type encoding: %s",
-			staticType.String(),
-		)
-	}
-
-	// Decode keys at array index encodedDictionaryValueKeysFieldKey
-	keysStorable, err := d.decodeStorable()
-	if err != nil {
-		return nil, fmt.Errorf(
-			"invalid dictionary keys encoding: %w",
-			err,
-		)
-	}
-
-	keysStorableIDStorable, ok := keysStorable.(atree.StorageIDStorable)
-	if !ok {
-		return nil, fmt.Errorf(
-			"invalid dictionary keys encoding: %T",
-			keysStorableIDStorable,
-		)
-	}
-
-	// Decode entries at array index encodedDictionaryValueEntriesFieldKey
-	arrayCount, err := d.decoder.DecodeArrayHead()
-	if err != nil {
-		if e, ok := err.(*cbor.WrongTypeError); ok {
-			return nil, fmt.Errorf(
-				"invalid dictionary entries encoding: %s",
-				e.ActualType.String(),
-			)
-		}
-		return nil, err
-	}
-
-	entries := NewStringAtreeStorableOrderedMap()
-
-	for entryIndex := uint64(0); entryIndex < arrayCount/2; entryIndex++ {
-		keyString, err := d.decoder.DecodeString()
-		if err != nil {
-			return nil, fmt.Errorf(
-				"invalid dictionary key string encoding (%d): %w",
-				entryIndex,
-				err,
-			)
-		}
-
-		valueStorable, err := d.decodeStorable()
-		if err != nil {
-			return nil, fmt.Errorf(
-				"invalid dictionary value encoding (%d): %w",
-				entryIndex,
-				err,
-			)
-		}
-
-		entries.Set(keyString, valueStorable)
-	}
-
-	if d.slabStorageID == atree.StorageIDUndefined {
-		return nil, errors.New("invalid inline dictionary")
-	}
-
-	return &DictionaryStorable{
-		StorageID: d.slabStorageID,
-		Type:      dictionaryStaticType,
-		Keys:      keysStorableIDStorable,
-		Entries:   entries,
 	}, nil
 }
