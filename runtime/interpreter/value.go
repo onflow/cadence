@@ -7399,9 +7399,8 @@ func NewEnumCaseValue(
 // DictionaryValue
 
 type DictionaryValue struct {
-	*DictionaryStorable
-	Keys *ArrayValue
-	// TODO: move isDestroyed to CompositeStorable ?
+	Type        DictionaryStaticType
+	dictionary  *atree.OrderedMap
 	isDestroyed bool
 }
 
@@ -7425,9 +7424,7 @@ func NewDictionaryValueWithAddress(
 	keysAndValues ...Value,
 ) *DictionaryValue {
 
-	storage := interpreter.Storage
-
-	storageID, err := storage.GenerateStorageID(atree.Address(address))
+	typeInfo, err := StaticTypeToBytes(dictionaryType)
 	if err != nil {
 		panic(ExternalError{err})
 	}
@@ -7437,31 +7434,20 @@ func NewDictionaryValueWithAddress(
 		panic("uneven number of keys and values")
 	}
 
-	keys := NewArrayValueWithAddress(
-		interpreter,
-		VariableSizedStaticType{
-			Type: dictionaryType.KeyType,
-		},
-		address,
-	)
-
-	keysStorable, err := keys.Storable(
-		storage,
+	dictionary, err := atree.NewMap(
+		interpreter.Storage,
 		atree.Address(address),
-		atree.MaxInlineElementSize,
+		atree.NewDefaultDigesterBuilder(),
+		typeInfo,
 	)
-
-	v := &DictionaryValue{
-		DictionaryStorable: &DictionaryStorable{
-			Type:      dictionaryType,
-			Keys:      keysStorable,
-			Entries:   NewStringAtreeStorableOrderedMap(),
-			StorageID: storageID,
-		},
-		Keys: keys,
+	if err != nil {
+		panic(ExternalError{err})
 	}
 
-	v.store(storage)
+	v := &DictionaryValue{
+		Type:       dictionaryType,
+		dictionary: dictionary,
+	}
 
 	for i := 0; i < keysAndValuesCount; i += 2 {
 		key := keysAndValues[i]
@@ -7473,20 +7459,8 @@ func NewDictionaryValueWithAddress(
 	return v
 }
 
-func (v *DictionaryValue) store(storage atree.SlabStorage) {
-	err := storage.Store(
-		v.StorageID,
-		atree.StorableSlab{
-			StorageID: v.StorageID,
-			Storable:  v.DictionaryStorable,
-		},
-	)
-	if err != nil {
-		panic(ExternalError{err})
-	}
-}
-
 var _ Value = &DictionaryValue{}
+var _ atree.Value = &DictionaryValue{}
 var _ EquatableValue = &DictionaryValue{}
 
 func (*DictionaryValue) IsValue() {}
@@ -7502,26 +7476,43 @@ func (v *DictionaryValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	})
 }
 
+func (v *DictionaryValue) Iterate(f func(key, value Value) (resume bool)) {
+	err := v.dictionary.Iterate(func(key, value atree.Value) (resume bool, err error) {
+		// atree.Array iteration provides low-level atree.Value,
+		// convert to high-level interpreter.Value
+
+		resume = f(
+			MustConvertStoredValue(key),
+			MustConvertStoredValue(value),
+		)
+
+		return resume, nil
+	})
+	if err != nil {
+		panic(ExternalError{err})
+	}
+}
+
 func (v *DictionaryValue) Walk(walkChild func(Value)) {
-	v.Keys.Walk(walkChild)
-	v.Entries.Foreach(func(_ string, storable atree.Storable) {
-		value := StoredValue(storable, v.Keys.array.Storage)
+	v.Iterate(func(key, value Value) (resume bool) {
+		walkChild(key)
 		walkChild(value)
+		return true
 	})
 }
 
 func (v *DictionaryValue) DynamicType(interpreter *Interpreter, seenReferences SeenReferences) DynamicType {
-	entryTypes := make([]DictionaryStaticTypeEntry, v.Keys.Count())
+	entryTypes := make([]DictionaryStaticTypeEntry, v.Count())
 
 	index := 0
-	v.Keys.Walk(func(keyValue Value) {
-		value, _, _ := v.GetKey(keyValue)
+	v.Iterate(func(key, value Value) (resume bool) {
 		entryTypes[index] =
 			DictionaryStaticTypeEntry{
-				KeyType:   keyValue.DynamicType(interpreter, seenReferences),
+				KeyType:   key.DynamicType(interpreter, seenReferences),
 				ValueType: value.DynamicType(interpreter, seenReferences),
 			}
 		index++
+		return true
 	})
 
 	return &DictionaryDynamicType{
@@ -7539,35 +7530,43 @@ func (v *DictionaryValue) IsDestroyed() bool {
 }
 
 func (v *DictionaryValue) Destroy(interpreter *Interpreter, getLocationRange func() LocationRange) {
-	v.Keys.Walk(func(keyValue Value) {
+	v.Iterate(func(key, value Value) (resume bool) {
 		// Resources cannot be keys at the moment, so should theoretically not be needed
-		maybeDestroy(interpreter, getLocationRange, keyValue)
-		value, _, _ := v.GetKey(keyValue)
+		maybeDestroy(interpreter, getLocationRange, key)
 		maybeDestroy(interpreter, getLocationRange, value)
+		return true
 	})
 
 	v.isDestroyed = true
 }
 
 func (v *DictionaryValue) ContainsKey(keyValue Value) BoolValue {
-	key := dictionaryKey(keyValue)
-	_, ok := v.Entries.Get(key)
-	return BoolValue(ok)
+	_, err := v.dictionary.Get(keyValue)
+	if err != nil {
+		if _, ok := err.(*atree.KeyNotFoundError); ok {
+			return false
+		}
+		panic(ExternalError{err})
+	}
+	return true
 }
 
-func (v *DictionaryValue) GetKey(keyValue Value) (Value, string, bool) {
-	key := dictionaryKey(keyValue)
-	storable, ok := v.Entries.Get(key)
-	if !ok {
-		return nil, key, false
+func (v *DictionaryValue) GetKey(keyValue Value) (Value, bool) {
+	storable, err := v.dictionary.Get(keyValue)
+	if err != nil {
+		if _, ok := err.(*atree.KeyNotFoundError); ok {
+			return nil, false
+		}
+		panic(ExternalError{err})
 	}
-	storage := v.Keys.array.Storage
+
+	storage := v.dictionary.Storage
 	value := StoredValue(storable, storage)
-	return value, key, ok
+	return value, true
 }
 
 func (v *DictionaryValue) Get(_ *Interpreter, _ func() LocationRange, keyValue Value) Value {
-	value, _, ok := v.GetKey(keyValue)
+	value, ok := v.GetKey(keyValue)
 	if ok {
 		return NewSomeValueNonCopying(value)
 	}
@@ -7611,21 +7610,21 @@ func (v *DictionaryValue) RecursiveString(seenReferences SeenReferences) string 
 	pairs := make([]struct {
 		Key   string
 		Value string
-	}, v.Keys.Count())
+	}, v.Count())
 
 	index := 0
-	v.Keys.Walk(func(keyValue Value) {
-		value, _, _ := v.GetKey(keyValue)
-
+	v.Iterate(func(key, value Value) (resume bool) {
 		pairs[index] = struct {
 			Key   string
 			Value string
 		}{
-			Key:   keyValue.RecursiveString(seenReferences),
+			Key:   key.RecursiveString(seenReferences),
 			Value: value.RecursiveString(seenReferences),
 		}
 
 		index++
+
+		return true
 	})
 
 	return format.Dictionary(pairs)
@@ -7712,7 +7711,7 @@ func (v *DictionaryValue) SetMember(_ *Interpreter, _ func() LocationRange, _ st
 }
 
 func (v *DictionaryValue) Count() int {
-	return v.Keys.Count()
+	return int(v.dictionary.Count())
 }
 
 func (v *DictionaryValue) Remove(
@@ -7721,45 +7720,29 @@ func (v *DictionaryValue) Remove(
 	keyValue Value,
 ) OptionalValue {
 
-	value, key, ok := v.GetKey(keyValue)
-	if !ok {
-		return NilValue{}
-	}
-
-	v.Entries.Delete(key)
-
-	// TODO: optimize linear scan
-
-	var result *SomeValue
-
-	index := 0
-	v.Keys.Iterate(func(keyValue Value) (resume bool) {
-
-		if dictionaryKey(keyValue) == key {
-			v.Keys.Remove(interpreter, getLocationRange, index)
-
-			storable, _ := v.DictionaryStorable.Entries.Delete(key)
-
-			value = interpreter.TransferValue(value, storable, atree.Address{})
-
-			v.store(interpreter.Storage)
-
-			result = NewSomeValueNonCopying(value)
-
-			return false
+	existingKeyStorable, existingValueStorable, err :=
+		v.dictionary.Remove(keyValue)
+	if err != nil {
+		if _, ok := err.(*atree.KeyNotFoundError); ok {
+			return NilValue{}
 		}
-		index++
-
-		return true
-	})
-
-	if result == nil {
-
-		// Should never occur, the key should have been found
-		panic(errors.NewUnreachableError())
+		panic(ExternalError{err})
 	}
 
-	return result
+	storage := interpreter.Storage
+
+	// Key
+
+	existingKeyValue := StoredValue(existingKeyStorable, storage)
+	existingKeyValue.DeepRemove(interpreter)
+	interpreter.removeReferencedSlab(existingKeyStorable)
+
+	// Value
+
+	existingValue := StoredValue(existingValueStorable, storage)
+	existingValue = interpreter.TransferValue(existingValue, existingValueStorable, atree.Address{})
+
+	return NewSomeValueNonCopying(existingValue)
 }
 
 func (v *DictionaryValue) Insert(
@@ -7771,33 +7754,18 @@ func (v *DictionaryValue) Insert(
 	inter.checkContainerMutation(v.Type.KeyType, keyValue, getLocationRange)
 	inter.checkContainerMutation(v.Type.ValueType, value, getLocationRange)
 
-	address := v.StorageID.Address
+	value = inter.TransferValue(value, nil, v.dictionary.Address())
 
-	key := dictionaryKey(keyValue)
+	// TODO: get and handle existing key storable
 
-	value = inter.TransferValue(value, nil, address)
-
-	storable, err := value.Storable(
-		inter.Storage,
-		address,
-		atree.MaxInlineElementSize,
-	)
+	existingValueStorable, err := v.dictionary.Set(keyValue, value)
 	if err != nil {
 		panic(ExternalError{err})
 	}
 
-	existingStorable, existed := v.Entries.Set(key, storable)
+	existingValue := StoredValue(existingValueStorable, inter.Storage)
 
-	v.store(inter.Storage)
-
-	if !existed {
-		v.Keys.Append(inter, getLocationRange, keyValue)
-		return NilValue{}
-	}
-
-	existingValue := StoredValue(existingStorable, inter.Storage)
-
-	resultCopy := inter.TransferValue(existingValue, existingStorable, atree.Address{})
+	resultCopy := inter.TransferValue(existingValue, existingValueStorable, atree.Address{})
 
 	return NewSomeValueNonCopying(resultCopy)
 }
@@ -7818,36 +7786,38 @@ func (v *DictionaryValue) ConformsToDynamicType(
 		return false
 	}
 
-	iterator, err := v.Keys.array.Iterator()
+	iterator, err := v.dictionary.Iterator()
 	if err != nil {
 		panic(ExternalError{err})
 	}
 
 	index := 0
 	for {
-		keyValue, err := iterator.Next()
+		key, value, err := iterator.Next()
 		if err != nil {
 			panic(ExternalError{err})
 		}
-		if keyValue == nil {
+		if key == nil {
 			return true
 		}
 
 		entryType := dictionaryType.EntryTypes[index]
 
-		// atree.Array iteration provides low-level atree.Value,
-		// convert to high-level interpreter.Value
-		entryKey := MustConvertStoredValue(keyValue)
-
 		// Check the key
+
+		// atree.OrderedMap iteration provides low-level atree.Value,
+		// convert to high-level interpreter.Value
+		entryKey := MustConvertStoredValue(key)
 		if !entryKey.ConformsToDynamicType(interpreter, entryType.KeyType, results) {
 			return false
 		}
 
-		// Check the value. Here it is assumed an imported value can only have
-		// static entries, but not deferred keys/values.
-		entryValue, _, ok := v.GetKey(entryKey)
-		if !ok || !entryValue.ConformsToDynamicType(interpreter, entryType.ValueType, results) {
+		// Check the value
+
+		// atree.OrderedMap iteration provides low-level atree.Value,
+		// convert to high-level interpreter.Value
+		entryValue := MustConvertStoredValue(value)
+		if !entryValue.ConformsToDynamicType(interpreter, entryType.ValueType, results) {
 			return false
 		}
 
@@ -7856,10 +7826,13 @@ func (v *DictionaryValue) ConformsToDynamicType(
 }
 
 func (v *DictionaryValue) Equal(interpreter *Interpreter, getLocationRange func() LocationRange, other Value) bool {
-	storage := v.Keys.array.Storage
 
 	otherDictionary, ok := other.(*DictionaryValue)
 	if !ok {
+		return false
+	}
+
+	if v.Count() != otherDictionary.Count() {
 		return false
 	}
 
@@ -7867,35 +7840,35 @@ func (v *DictionaryValue) Equal(interpreter *Interpreter, getLocationRange func(
 		return false
 	}
 
-	if !v.Keys.Equal(interpreter, getLocationRange, otherDictionary.Keys) {
-		return false
+	iterator, err := v.dictionary.Iterator()
+	if err != nil {
+		panic(ExternalError{err})
 	}
 
-	for pair := v.Entries.Oldest(); pair != nil; pair = pair.Next() {
-		key := pair.Key
+	for {
+		key, value, err := iterator.Next()
+		if err != nil {
+			panic(ExternalError{err})
+		}
+		if key == nil {
+			return true
+		}
 
-		storable, valueExists := v.Entries.Get(key)
-		otherStorable, otherValueExists := otherDictionary.Entries.Get(key)
+		otherValue, otherValueExists := otherDictionary.GetKey(key)
 
-		if valueExists {
-			value := StoredValue(storable, storage)
+		if !otherValueExists {
+			return false
+		}
 
-			otherValue := StoredValue(otherStorable, storage)
-
-			equatableValue, ok := value.(EquatableValue)
-			if !ok || !equatableValue.Equal(interpreter, getLocationRange, otherValue) {
-				return false
-			}
-		} else if otherValueExists {
+		equatableValue, ok := value.(EquatableValue)
+		if !ok || !equatableValue.Equal(interpreter, getLocationRange, otherValue) {
 			return false
 		}
 	}
-
-	return true
 }
 
 func (v *DictionaryValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
-	return atree.StorageIDStorable(v.StorageID), nil
+	return atree.StorageIDStorable(v.StorageID()), nil
 }
 
 func (v *DictionaryValue) IsResourceKinded(inter *Interpreter) bool {
@@ -7904,29 +7877,41 @@ func (v *DictionaryValue) IsResourceKinded(inter *Interpreter) bool {
 }
 
 func (v *DictionaryValue) NeedsStoreToAddress(_ *Interpreter, address atree.Address) bool {
-	return v.StorageID.Address != address
+	return v.StorageID().Address != address
 }
 
 func (v *DictionaryValue) DeepCopy(interpreter *Interpreter, address atree.Address) Value {
 
-	result := NewDictionaryValueWithAddress(
-		interpreter,
-		v.Type,
-		common.Address(address),
+	dictionary, err := atree.NewMap(
+		interpreter.Storage,
+		address,
+		atree.NewDefaultDigesterBuilder(),
+		v.dictionary.Type(),
 	)
+	if err != nil {
+		panic(ExternalError{err})
+	}
 
-	v.Keys.Walk(func(keyValue Value) {
-		keyValueCopy := interpreter.CopyValue(keyValue, atree.Address{})
+	result := &DictionaryValue{
+		Type:        v.Type,
+		dictionary:  dictionary,
+		isDestroyed: v.isDestroyed,
+	}
 
-		value, _, _ := v.GetKey(keyValue)
+	v.Iterate(func(key, value Value) (resume bool) {
+		// TODO: optimize
+		// NOTE: copy to temporary value, then insert
+		keyCopy := interpreter.CopyValue(key, atree.Address{})
 		valueCopy := interpreter.CopyValue(value, atree.Address{})
 
 		result.Insert(
 			interpreter,
 			ReturnEmptyLocationRange,
-			keyValueCopy,
+			keyCopy,
 			valueCopy,
 		)
+
+		return true
 	})
 
 	return result
@@ -7934,36 +7919,19 @@ func (v *DictionaryValue) DeepCopy(interpreter *Interpreter, address atree.Addre
 
 func (v *DictionaryValue) DeepRemove(interpreter *Interpreter) {
 
-	storage := v.Keys.array.Storage
-
-	// Remove keys
-
-	v.Keys.DeepRemove(interpreter)
-
-	// This dictionary is the parent for the key array,
-	// and as parents must remove the potential slab of a children,
-	// do so by assuming the dictionary has a storage ID "pointer"
-	// to the key array
-
-	interpreter.removeReferencedSlab(atree.StorageIDStorable(v.Keys.StorageID()))
+	storage := interpreter.Storage
 
 	// Remove nested values and storables
 
-	for pair := v.Entries.Oldest(); pair != nil; pair = pair.Next() {
-		storable := pair.Value
-
-		value := StoredValue(storable, storage)
-
-		value.DeepRemove(interpreter)
-
+	v.Walk(func(child Value) {
+		child.DeepRemove(interpreter)
+		// TODO: iterator should provide storable
 		interpreter.removeReferencedSlab(storable)
-	}
-
-	// Slab will be removed by parent
+	})
 }
 
 func (v *DictionaryValue) GetOwner() common.Address {
-	return common.Address(v.StorageID.Address)
+	return common.Address(v.StorageID().Address)
 }
 
 func (v *DictionaryValue) StorageID() atree.StorageID {
