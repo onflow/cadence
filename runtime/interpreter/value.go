@@ -135,12 +135,6 @@ func maybeDestroy(interpreter *Interpreter, getLocationRange func() LocationRang
 	resourceKindedValue.Destroy(interpreter, getLocationRange)
 }
 
-// HasKeyString
-
-type HasKeyString interface {
-	KeyString() string
-}
-
 // TypeValue
 
 type TypeValue struct {
@@ -384,14 +378,6 @@ func (v BoolValue) String() string {
 func (v BoolValue) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
-
-func (v BoolValue) KeyString() string {
-	if v {
-		return "true"
-	}
-	return "false"
-}
-
 func (v BoolValue) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType, _ TypeConformanceResults) bool {
 	_, ok := dynamicType.(BoolDynamicType)
 	return ok
@@ -484,10 +470,6 @@ func (v *StringValue) String() string {
 
 func (v *StringValue) RecursiveString(_ SeenReferences) string {
 	return v.String()
-}
-
-func (v *StringValue) KeyString() string {
-	return v.Str
 }
 
 func (v *StringValue) Equal(_ *Interpreter, _ func() LocationRange, other Value) bool {
@@ -1393,10 +1375,6 @@ func (v IntValue) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
-func (v IntValue) KeyString() string {
-	return v.BigInt.String()
-}
-
 func (v IntValue) Negate() NumberValue {
 	return NewIntValueFromBigInt(new(big.Int).Neg(v.BigInt))
 }
@@ -1616,10 +1594,6 @@ func (v Int8Value) String() string {
 
 func (v Int8Value) RecursiveString(_ SeenReferences) string {
 	return v.String()
-}
-
-func (v Int8Value) KeyString() string {
-	return strconv.FormatInt(int64(v), 10)
 }
 
 func (v Int8Value) ToInt() int {
@@ -1930,10 +1904,6 @@ func (v Int16Value) String() string {
 
 func (v Int16Value) RecursiveString(_ SeenReferences) string {
 	return v.String()
-}
-
-func (v Int16Value) KeyString() string {
-	return strconv.FormatInt(int64(v), 10)
 }
 
 func (v Int16Value) ToInt() int {
@@ -2248,10 +2218,6 @@ func (v Int32Value) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
-func (v Int32Value) KeyString() string {
-	return strconv.FormatInt(int64(v), 10)
-}
-
 func (v Int32Value) ToInt() int {
 	return int(v)
 }
@@ -2562,10 +2528,6 @@ func (v Int64Value) String() string {
 
 func (v Int64Value) RecursiveString(_ SeenReferences) string {
 	return v.String()
-}
-
-func (v Int64Value) KeyString() string {
-	return strconv.FormatInt(int64(v), 10)
 }
 
 func (v Int64Value) ToInt() int {
@@ -2896,10 +2858,6 @@ func (v Int128Value) String() string {
 
 func (v Int128Value) RecursiveString(_ SeenReferences) string {
 	return v.String()
-}
-
-func (v Int128Value) KeyString() string {
-	return v.BigInt.String()
 }
 
 func (v Int128Value) Negate() NumberValue {
@@ -3282,10 +3240,6 @@ func (v Int256Value) String() string {
 
 func (v Int256Value) RecursiveString(_ SeenReferences) string {
 	return v.String()
-}
-
-func (v Int256Value) KeyString() string {
-	return v.BigInt.String()
 }
 
 func (v Int256Value) Negate() NumberValue {
@@ -3691,10 +3645,6 @@ func (v UIntValue) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
-func (v UIntValue) KeyString() string {
-	return v.BigInt.String()
-}
-
 func (v UIntValue) Negate() NumberValue {
 	panic(errors.NewUnreachableError())
 }
@@ -3925,10 +3875,6 @@ func (v UInt8Value) String() string {
 
 func (v UInt8Value) RecursiveString(_ SeenReferences) string {
 	return v.String()
-}
-
-func (v UInt8Value) KeyString() string {
-	return strconv.FormatUint(uint64(v), 10)
 }
 
 func (v UInt8Value) ToInt() int {
@@ -4170,10 +4116,6 @@ func (v UInt16Value) String() string {
 
 func (v UInt16Value) RecursiveString(_ SeenReferences) string {
 	return v.String()
-}
-
-func (v UInt16Value) KeyString() string {
-	return strconv.FormatUint(uint64(v), 10)
 }
 
 func (v UInt16Value) ToInt() int {
@@ -4422,10 +4364,6 @@ func (v UInt32Value) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
-func (v UInt32Value) KeyString() string {
-	return strconv.FormatUint(uint64(v), 10)
-}
-
 func (v UInt32Value) ToInt() int {
 	return int(v)
 }
@@ -4670,10 +4608,6 @@ func (v UInt64Value) String() string {
 
 func (v UInt64Value) RecursiveString(_ SeenReferences) string {
 	return v.String()
-}
-
-func (v UInt64Value) KeyString() string {
-	return strconv.FormatUint(uint64(v), 10)
 }
 
 func (v UInt64Value) ToInt() int {
@@ -4942,10 +4876,6 @@ func (v UInt128Value) String() string {
 
 func (v UInt128Value) RecursiveString(_ SeenReferences) string {
 	return v.String()
-}
-
-func (v UInt128Value) KeyString() string {
-	return v.BigInt.String()
 }
 
 func (v UInt128Value) Negate() NumberValue {
@@ -5276,10 +5206,6 @@ func (v UInt256Value) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
-func (v UInt256Value) KeyString() string {
-	return v.BigInt.String()
-}
-
 func (v UInt256Value) Negate() NumberValue {
 	panic(errors.NewUnreachableError())
 }
@@ -5589,10 +5515,6 @@ func (v Word8Value) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
-func (v Word8Value) KeyString() string {
-	return strconv.FormatUint(uint64(v), 10)
-}
-
 func (v Word8Value) ToInt() int {
 	return int(v)
 }
@@ -5781,10 +5703,6 @@ func (v Word16Value) String() string {
 
 func (v Word16Value) RecursiveString(_ SeenReferences) string {
 	return v.String()
-}
-
-func (v Word16Value) KeyString() string {
-	return strconv.FormatUint(uint64(v), 10)
 }
 
 func (v Word16Value) ToInt() int {
@@ -5978,10 +5896,6 @@ func (v Word32Value) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
-func (v Word32Value) KeyString() string {
-	return strconv.FormatUint(uint64(v), 10)
-}
-
 func (v Word32Value) ToInt() int {
 	return int(v)
 }
@@ -6172,10 +6086,6 @@ func (v Word64Value) String() string {
 
 func (v Word64Value) RecursiveString(_ SeenReferences) string {
 	return v.String()
-}
-
-func (v Word64Value) KeyString() string {
-	return strconv.FormatUint(uint64(v), 10)
 }
 
 func (v Word64Value) ToInt() int {
@@ -6382,10 +6292,6 @@ func (v Fix64Value) String() string {
 }
 
 func (v Fix64Value) RecursiveString(_ SeenReferences) string {
-	return v.String()
-}
-
-func (v Fix64Value) KeyString() string {
 	return v.String()
 }
 
@@ -6675,10 +6581,6 @@ func (v UFix64Value) String() string {
 }
 
 func (v UFix64Value) RecursiveString(_ SeenReferences) string {
-	return v.String()
-}
-
-func (v UFix64Value) KeyString() string {
 	return v.String()
 }
 
@@ -7268,15 +7170,6 @@ func (v *CompositeValue) Equal(interpreter *Interpreter, getLocationRange func()
 	return true
 }
 
-func (v *CompositeValue) KeyString() string {
-	if v.Kind == common.CompositeKindEnum {
-		rawValue := v.GetField(sema.EnumRawValueFieldName)
-		return rawValue.String()
-	}
-
-	panic(errors.NewUnreachableError())
-}
-
 func (v *CompositeValue) TypeID() common.TypeID {
 	location := v.Location
 	if location == nil {
@@ -7678,14 +7571,6 @@ func (v *DictionaryValue) Get(_ *Interpreter, _ func() LocationRange, keyValue V
 	}
 
 	return NilValue{}
-}
-
-func dictionaryKey(keyValue Value) string {
-	hasKeyString, ok := keyValue.(HasKeyString)
-	if !ok {
-		panic(errors.NewUnreachableError())
-	}
-	return hasKeyString.KeyString()
 }
 
 func (v *DictionaryValue) Set(
@@ -8950,10 +8835,6 @@ func (AddressValue) StaticType() StaticType {
 	return PrimitiveStaticTypeAddress
 }
 
-func (v AddressValue) KeyString() string {
-	return common.Address(v).ShortHexWithPrefix()
-}
-
 func (v AddressValue) String() string {
 	return format.Address(common.Address(v))
 }
@@ -9287,14 +9168,6 @@ func (v PathValue) String() string {
 
 func (v PathValue) RecursiveString(_ SeenReferences) string {
 	return v.String()
-}
-
-func (v PathValue) KeyString() string {
-	return fmt.Sprintf(
-		"/%s/%s",
-		v.Domain,
-		v.Identifier,
-	)
 }
 
 func (v PathValue) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType, _ TypeConformanceResults) bool {

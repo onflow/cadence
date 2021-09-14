@@ -1063,7 +1063,7 @@ func TestKeyString(t *testing.T) {
 	storage := NewInMemoryStorage()
 
 	type testCase struct {
-		value    HasKeyString
+		value    Value
 		expected string
 	}
 
