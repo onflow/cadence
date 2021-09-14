@@ -7637,24 +7637,45 @@ func (v *DictionaryValue) GetMember(interpreter *Interpreter, _ func() LocationR
 		return NewIntValueFromInt64(int64(v.Count()))
 
 	case "keys":
-		// We can directly call DeepCopy on the keys array value, instead of potentially skipping copying
-		// by using interpreter.copyValue, as the keys value is only ever struct-kinded,
-		// which always must be copied
-		keys := v.Keys.DeepCopy(interpreter, atree.Address{})
-		return MustConvertStoredValue(keys)
+		dictionaryKeys := make([]Value, v.Count())
+
+		i := 0
+		v.dictionary.IterateKeys(func(key atree.Value) (resume bool) {
+
+			// We can directly call DeepCopy on the keys array value, instead of potentially skipping copying
+			// by using interpreter.copyValue, as the keys value is only ever struct-kinded,
+			// which always must be copied
+
+			dictionaryKeys[i] = MustConvertStoredValue(key).
+				DeepCopy(interpreter, atree.Address{})
+			i++
+
+			return true
+		})
+
+		return NewArrayValue(
+			interpreter,
+			VariableSizedStaticType{
+				Type: v.Type.KeyType,
+			},
+			dictionaryKeys...,
+		)
 
 	case "values":
-		storage := v.Keys.array.Storage
 		dictionaryValues := make([]Value, v.Count())
+
 		i := 0
-		v.Entries.Foreach(func(_ string, storable atree.Storable) {
-			value := StoredValue(storable, storage)
+		v.dictionary.IterateValues(func(value atree.Value) (resume bool) {
 
 			// We can directly call DeepCopy on the value, instead of potentially skipping copying
 			// by using interpreter.copyValue, as the dictionary values returned by the values field here
 			// are only ever struct-kinded, which always must be copied
-			dictionaryValues[i] = value.DeepCopy(interpreter, atree.Address{})
+
+			dictionaryValues[i] = MustConvertStoredValue(value).
+				DeepCopy(interpreter, atree.Address{})
 			i++
+
+			return true
 		})
 
 		return NewArrayValue(
