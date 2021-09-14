@@ -1145,7 +1145,7 @@ func (v *ArrayValue) Equal(interpreter *Interpreter, getLocationRange func() Loc
 }
 
 func (v *ArrayValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
-	return atree.StorageIDStorable(v.array.StorageID()), nil
+	return atree.StorageIDStorable(v.StorageID()), nil
 }
 
 func (v *ArrayValue) IsResourceKinded(inter *Interpreter) bool {
@@ -1186,6 +1186,10 @@ func (v *ArrayValue) DeepCopy(inter *Interpreter, address atree.Address) Value {
 
 func (v *ArrayValue) DeepRemove(inter *Interpreter) {
 
+	storage := inter.Storage
+
+	// Remove nested values and storables
+
 	// TODO: use backward iterator
 	for prevIndex := v.Count(); prevIndex > 0; prevIndex-- {
 		index := prevIndex - 1
@@ -1195,10 +1199,8 @@ func (v *ArrayValue) DeepRemove(inter *Interpreter) {
 			panic(ExternalError{err})
 		}
 
-		value := StoredValue(storable, inter.Storage)
-
+		value := StoredValue(storable, storage)
 		value.DeepRemove(inter)
-
 		inter.removeReferencedSlab(storable)
 	}
 }
