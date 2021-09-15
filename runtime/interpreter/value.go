@@ -7640,7 +7640,7 @@ func (v *DictionaryValue) GetMember(interpreter *Interpreter, _ func() LocationR
 		dictionaryKeys := make([]Value, v.Count())
 
 		i := 0
-		v.dictionary.IterateKeys(func(key atree.Value) (resume bool) {
+		err := v.dictionary.IterateKeys(func(key atree.Value) (resume bool, err error) {
 
 			// We can directly call DeepCopy on the keys array value, instead of potentially skipping copying
 			// by using interpreter.copyValue, as the keys value is only ever struct-kinded,
@@ -7650,8 +7650,11 @@ func (v *DictionaryValue) GetMember(interpreter *Interpreter, _ func() LocationR
 				DeepCopy(interpreter, atree.Address{})
 			i++
 
-			return true
+			return true, nil
 		})
+		if err != nil {
+			panic(ExternalError{err})
+		}
 
 		return NewArrayValue(
 			interpreter,
@@ -7665,7 +7668,7 @@ func (v *DictionaryValue) GetMember(interpreter *Interpreter, _ func() LocationR
 		dictionaryValues := make([]Value, v.Count())
 
 		i := 0
-		v.dictionary.IterateValues(func(value atree.Value) (resume bool) {
+		err := v.dictionary.IterateValues(func(value atree.Value) (resume bool, err error) {
 
 			// We can directly call DeepCopy on the value, instead of potentially skipping copying
 			// by using interpreter.copyValue, as the dictionary values returned by the values field here
@@ -7675,8 +7678,11 @@ func (v *DictionaryValue) GetMember(interpreter *Interpreter, _ func() LocationR
 				DeepCopy(interpreter, atree.Address{})
 			i++
 
-			return true
+			return true, nil
 		})
+		if err != nil {
+			panic(ExternalError{err})
+		}
 
 		return NewArrayValue(
 			interpreter,
