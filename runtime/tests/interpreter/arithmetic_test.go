@@ -88,7 +88,9 @@ func TestInterpretPlusOperator(t *testing.T) {
 				),
 			)
 
-			AssertValuesEqual(t,
+			AssertValuesEqual(
+				t,
+				inter,
 				value,
 				inter.Globals["c"].GetValue(),
 			)
@@ -115,7 +117,9 @@ func TestInterpretMinusOperator(t *testing.T) {
 				),
 			)
 
-			AssertValuesEqual(t,
+			AssertValuesEqual(
+				t,
+				inter,
 				value,
 				inter.Globals["c"].GetValue(),
 			)
@@ -142,7 +146,9 @@ func TestInterpretMulOperator(t *testing.T) {
 				),
 			)
 
-			AssertValuesEqual(t,
+			AssertValuesEqual(
+				t,
+				inter,
 				value,
 				inter.Globals["c"].GetValue(),
 			)
@@ -169,7 +175,9 @@ func TestInterpretDivOperator(t *testing.T) {
 				),
 			)
 
-			AssertValuesEqual(t,
+			AssertValuesEqual(
+				t,
+				inter,
 				value,
 				inter.Globals["c"].GetValue(),
 			)
@@ -196,7 +204,9 @@ func TestInterpretModOperator(t *testing.T) {
 				),
 			)
 
-			AssertValuesEqual(t,
+			AssertValuesEqual(
+				t,
+				inter,
 				value,
 				inter.Globals["c"].GetValue(),
 			)
@@ -808,7 +818,7 @@ func TestInterpretSaturatedArithmeticFunctions(t *testing.T) {
 				require.NoError(t, err)
 
 				require.True(t,
-					call.expected.Equal(result, interpreter.ReturnEmptyLocationRange),
+					call.expected.Equal(inter, interpreter.ReturnEmptyLocationRange, result),
 					fmt.Sprintf(
 						"%s(%s, %s) = %s != %s",
 						method, call.left, call.right, result, call.expected,

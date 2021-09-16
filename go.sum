@@ -31,8 +31,8 @@ github.com/mattn/go-runewidth v0.0.9 h1:Lm995f3rfxdpd6TSmuVCHVb/QhupuXlYr8sCI/Qd
 github.com/mattn/go-runewidth v0.0.9/go.mod h1:H031xJmbD/WCDINGzjvQ9THkh0rPKHF+m2gUSrubnMI=
 github.com/mattn/go-tty v0.0.3 h1:5OfyWorkyO7xP52Mq7tB36ajHDG5OHrmBGIS/DtakQI=
 github.com/mattn/go-tty v0.0.3/go.mod h1:ihxohKRERHTVzN+aSVRwACLCeqIoZAWpoICkkvrWyR0=
-github.com/onflow/atree v0.0.0-20210827211716-97888c87e47e h1:bAX70JCfHaJjMEMAH+yvEq10z2FPI0WVU7TBscODHb8=
-github.com/onflow/atree v0.0.0-20210827211716-97888c87e47e/go.mod h1:4GP4dQ2RCWtqHj2FE1LhNNNgLJiJht2Hv97dSDXbtVc=
+github.com/onflow/atree v0.0.0-20210903151759-94b860d1f7fc h1:PI4rhnl8L9r/G4HS1jXT4TXZlzQ0u231lkv0YOO9Rms=
+github.com/onflow/atree v0.0.0-20210903151759-94b860d1f7fc/go.mod h1:4GP4dQ2RCWtqHj2FE1LhNNNgLJiJht2Hv97dSDXbtVc=
 github.com/opentracing/opentracing-go v1.2.0 h1:uEJPy/1a5RIPAJ0Ov+OIO8OxWu77jEv+1B0VhjKrZUs=
 github.com/opentracing/opentracing-go v1.2.0/go.mod h1:GxEUsuufX4nBwe+T+Wl9TAgYrxe9dPLANfrWvHYVTgc=
 github.com/pkg/term v1.1.0 h1:xIAAdCMh3QIAy+5FrE8Ad8XoDhEU4ufwbaSozViP9kk=

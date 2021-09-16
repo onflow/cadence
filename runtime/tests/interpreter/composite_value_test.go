@@ -49,12 +49,16 @@ func TestInterpretCompositeValue(t *testing.T) {
             `,
 		)
 
-		RequireValuesEqual(t,
+		RequireValuesEqual(
+			t,
+			inter,
 			interpreter.NewStringValue("Apple"),
 			inter.Globals["name"].GetValue(),
 		)
 
-		RequireValuesEqual(t,
+		RequireValuesEqual(
+			t,
+			inter,
 			interpreter.NewStringValue("Red"),
 			inter.Globals["color"].GetValue(),
 		)

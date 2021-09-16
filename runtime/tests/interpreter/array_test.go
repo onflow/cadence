@@ -22,16 +22,16 @@ import (
 	"github.com/onflow/cadence/runtime/interpreter"
 )
 
-func elements(array *interpreter.ArrayValue) []interpreter.Value {
+func arrayElements(inter *interpreter.Interpreter, array *interpreter.ArrayValue) []interpreter.Value {
 	count := array.Count()
 	result := make([]interpreter.Value, count)
 	for i := 0; i < count; i++ {
-		result[i] = array.GetIndex(interpreter.ReturnEmptyLocationRange, i)
+		result[i] = array.GetIndex(inter, interpreter.ReturnEmptyLocationRange, i)
 	}
 	return result
 }
 
-func keyValues(dict *interpreter.DictionaryValue) []interpreter.Value {
+func dictionaryKeyValues(dict *interpreter.DictionaryValue) []interpreter.Value {
 	count := dict.Count() * 2
 	result := make([]interpreter.Value, count)
 	i := 0

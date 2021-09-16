@@ -44,7 +44,9 @@ func TestInterpretPath(t *testing.T) {
 				),
 			)
 
-			AssertValuesEqual(t,
+			AssertValuesEqual(
+				t,
+				inter,
 				interpreter.PathValue{
 					Domain:     domain,
 					Identifier: "random",

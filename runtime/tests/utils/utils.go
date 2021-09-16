@@ -120,20 +120,20 @@ func UpdateTransaction(name string, contract []byte) []byte {
 	))
 }
 
-func ValuesAreEqual(expected, actual interpreter.Value) bool {
+func ValuesAreEqual(inter *interpreter.Interpreter, expected, actual interpreter.Value) bool {
 	if expected == nil {
 		return actual == nil
 	}
 
 	if expected, ok := expected.(interpreter.EquatableValue); ok {
-		return expected.Equal(actual, interpreter.ReturnEmptyLocationRange)
+		return expected.Equal(inter, interpreter.ReturnEmptyLocationRange, actual)
 	}
 
 	return assert.ObjectsAreEqual(expected, actual)
 }
 
-func AssertValuesEqual(t testing.TB, expected, actual interpreter.Value) bool {
-	if !ValuesAreEqual(expected, actual) {
+func AssertValuesEqual(t testing.TB, interpreter *interpreter.Interpreter, expected, actual interpreter.Value) bool {
+	if !ValuesAreEqual(interpreter, expected, actual) {
 		diff := deep.Equal(expected, actual)
 
 		var message string
@@ -168,19 +168,19 @@ func AssertValuesEqual(t testing.TB, expected, actual interpreter.Value) bool {
 	return true
 }
 
-func RequireValuesEqual(t testing.TB, expected, actual interpreter.Value) {
-	if !AssertValuesEqual(t, expected, actual) {
+func RequireValuesEqual(t testing.TB, inter *interpreter.Interpreter, expected, actual interpreter.Value) {
+	if !AssertValuesEqual(t, inter, expected, actual) {
 		t.FailNow()
 	}
 }
 
-func AssertValueSlicesEqual(t testing.TB, expected, actual []interpreter.Value) bool {
+func AssertValueSlicesEqual(t testing.TB, inter *interpreter.Interpreter, expected, actual []interpreter.Value) bool {
 	if !assert.Equal(t, len(expected), len(actual)) {
 		return false
 	}
 
 	for i, value := range expected {
-		if !AssertValuesEqual(t, value, actual[i]) {
+		if !AssertValuesEqual(t, inter, value, actual[i]) {
 			return false
 		}
 	}

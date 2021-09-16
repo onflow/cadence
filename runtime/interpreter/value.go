@@ -115,7 +115,7 @@ type EquatableValue interface {
 	Value
 	// Equal returns true if the given value is equal to this value.
 	// If no location range is available, pass e.g. ReturnEmptyLocationRange
-	Equal(other Value, getLocationRange func() LocationRange) bool
+	Equal(interpreter *Interpreter, getLocationRange func() LocationRange, other Value) bool
 }
 
 // ResourceKindedValue
@@ -124,7 +124,6 @@ type ResourceKindedValue interface {
 	Value
 	Destroy(interpreter *Interpreter, getLocationRange func() LocationRange)
 	IsDestroyed() bool
-	IsCopied() bool
 }
 
 func maybeDestroy(interpreter *Interpreter, getLocationRange func() LocationRange, value Value) {
@@ -186,7 +185,7 @@ func (v TypeValue) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
-func (v TypeValue) Equal(other Value, _ func() LocationRange) bool {
+func (v TypeValue) Equal(_ *Interpreter, _ func() LocationRange, other Value) bool {
 	otherTypeValue, ok := other.(TypeValue)
 	if !ok {
 		return false
@@ -305,7 +304,7 @@ func (v VoidValue) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType
 	return ok
 }
 
-func (v VoidValue) Equal(other Value, _ func() LocationRange) bool {
+func (v VoidValue) Equal(_ *Interpreter, _ func() LocationRange, other Value) bool {
 	_, ok := other.(VoidValue)
 	return ok
 }
@@ -370,7 +369,7 @@ func (v BoolValue) Negate() BoolValue {
 	return !v
 }
 
-func (v BoolValue) Equal(other Value, _ func() LocationRange) bool {
+func (v BoolValue) Equal(_ *Interpreter, _ func() LocationRange, other Value) bool {
 	otherBool, ok := other.(BoolValue)
 	if !ok {
 		return false
@@ -491,7 +490,7 @@ func (v *StringValue) KeyString() string {
 	return v.Str
 }
 
-func (v *StringValue) Equal(other Value, _ func() LocationRange) bool {
+func (v *StringValue) Equal(_ *Interpreter, _ func() LocationRange, other Value) bool {
 	otherString, ok := other.(*StringValue)
 	if !ok {
 		return false
@@ -700,7 +699,6 @@ func (*StringValue) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicTyp
 type ArrayValue struct {
 	Type        ArrayStaticType
 	array       *atree.Array
-	isCopied    bool
 	isDestroyed bool
 }
 
@@ -824,10 +822,6 @@ func (v *ArrayValue) IsDestroyed() bool {
 	return v.isDestroyed
 }
 
-func (v *ArrayValue) IsCopied() bool {
-	return v.isCopied
-}
-
 func (v *ArrayValue) Concat(interpreter *Interpreter, getLocationRange func() LocationRange, other *ArrayValue) Value {
 	// We can directly call DeepCopy on the value, instead of potentially skipping copying
 	// by using interpreter.copyValue, as concatenation is only supported for struct-kinded arrays,
@@ -837,24 +831,26 @@ func (v *ArrayValue) Concat(interpreter *Interpreter, getLocationRange func() Lo
 	return newArray
 }
 
-func (v *ArrayValue) Get(_ *Interpreter, getLocationRange func() LocationRange, key Value) Value {
+func (v *ArrayValue) Get(interpreter *Interpreter, getLocationRange func() LocationRange, key Value) Value {
 	index := key.(NumberValue).ToInt()
-	return v.GetIndex(getLocationRange, index)
+	return v.GetIndex(interpreter, getLocationRange, index)
 }
 
-func (v *ArrayValue) GetIndex(getLocationRange func() LocationRange, index int) Value {
-	v.checkBounds(index, getLocationRange)
-
-	element, err := v.array.Get(uint64(index))
+func (v *ArrayValue) GetIndex(interpreter *Interpreter, getLocationRange func() LocationRange, index int) Value {
+	storable, err := v.array.Get(uint64(index))
 	if err != nil {
+		if _, ok := err.(*atree.IndexOutOfBoundsError); ok {
+			panic(ArrayIndexOutOfBoundsError{
+				Index:         index,
+				Size:          v.Count(),
+				LocationRange: getLocationRange(),
+			})
+		}
+
 		panic(ExternalError{err})
 	}
 
-	//
-
-	// atree.Array's Get function returns low-level atree.Value,
-	// convert to high-level interpreter.Value
-	return MustConvertStoredValue(element)
+	return StoredValue(storable, interpreter.Storage)
 }
 
 func (v *ArrayValue) Set(interpreter *Interpreter, getLocationRange func() LocationRange, key Value, value Value) {
@@ -864,46 +860,28 @@ func (v *ArrayValue) Set(interpreter *Interpreter, getLocationRange func() Locat
 
 func (v *ArrayValue) SetIndex(interpreter *Interpreter, getLocationRange func() LocationRange, index int, element Value) {
 
-	v.checkBounds(index, getLocationRange)
-
 	interpreter.checkContainerMutation(v.Type.ElementType(), element, getLocationRange)
 
-	existingAtreeValue, err := v.array.Get(uint64(index))
+	element = interpreter.TransferValue(element, nil, v.array.Address())
+
+	existingStorable, err := v.array.Set(uint64(index), element)
 	if err != nil {
+		if _, ok := err.(*atree.IndexOutOfBoundsError); ok {
+			panic(ArrayIndexOutOfBoundsError{
+				Index:         index,
+				Size:          v.Count(),
+				LocationRange: getLocationRange(),
+			})
+		}
+
 		panic(ExternalError{err})
 	}
 
-	// atree.Array's Get function returns low-level atree.Value,
-	// convert to high-level interpreter.Value
-	existingValue := MustConvertStoredValue(existingAtreeValue)
-
-	existingStorable, err := v.array.GetStorable(uint64(index))
-	if err != nil {
-		panic(ExternalError{err})
-	}
+	existingValue := StoredValue(existingStorable, interpreter.Storage)
 
 	existingValue.DeepRemove(interpreter)
 
 	interpreter.removeReferencedSlab(existingStorable)
-
-	element = interpreter.TransferValue(element, nil, v.array.Address())
-
-	err = v.array.Set(uint64(index), element)
-	if err != nil {
-		panic(ExternalError{err})
-	}
-}
-
-func (v *ArrayValue) checkBounds(index int, getLocationRange func() LocationRange) {
-	count := v.Count()
-
-	if index < 0 || index >= count {
-		panic(ArrayIndexOutOfBoundsError{
-			Index:         index,
-			Size:          count,
-			LocationRange: getLocationRange(),
-		})
-	}
 }
 
 func (v *ArrayValue) String() string {
@@ -964,21 +942,20 @@ func (v *ArrayValue) Insert(interpreter *Interpreter, getLocationRange func() Lo
 }
 
 func (v *ArrayValue) Remove(interpreter *Interpreter, getLocationRange func() LocationRange, index int) Value {
-	v.checkBounds(index, getLocationRange)
-
-	storable, err := v.array.GetStorable(uint64(index))
+	storable, err := v.array.Remove(uint64(index))
 	if err != nil {
+		if _, ok := err.(*atree.IndexOutOfBoundsError); ok {
+			panic(ArrayIndexOutOfBoundsError{
+				Index:         index,
+				Size:          v.Count(),
+				LocationRange: getLocationRange(),
+			})
+		}
+
 		panic(ExternalError{err})
 	}
 
-	element, err := v.array.Remove(uint64(index))
-	if err != nil {
-		panic(ExternalError{err})
-	}
-
-	// atree.Array's Remove function returns low-level atree.Value,
-	// convert to high-level interpreter.Value
-	value := MustConvertStoredValue(element)
+	value := StoredValue(storable, interpreter.Storage)
 
 	return interpreter.TransferValue(value, storable, atree.Address{})
 }
@@ -991,13 +968,13 @@ func (v *ArrayValue) RemoveLast(interpreter *Interpreter, getLocationRange func(
 	return v.Remove(interpreter, getLocationRange, v.Count()-1)
 }
 
-func (v *ArrayValue) Contains(needleValue Value) BoolValue {
+func (v *ArrayValue) Contains(interpreter *Interpreter, getLocationRange func() LocationRange, needleValue Value) BoolValue {
 
 	needleEquatable := needleValue.(EquatableValue)
 
 	var result bool
 	v.Iterate(func(element Value) (resume bool) {
-		if needleEquatable.Equal(element, ReturnEmptyLocationRange) {
+		if needleEquatable.Equal(interpreter, getLocationRange, element) {
 			result = true
 			// stop iteration
 			return false
@@ -1101,7 +1078,11 @@ func (v *ArrayValue) GetMember(_ *Interpreter, _ func() LocationRange, name stri
 	case "contains":
 		return NewHostFunctionValue(
 			func(invocation Invocation) Value {
-				return v.Contains(invocation.Arguments[0])
+				return v.Contains(
+					invocation.Interpreter,
+					invocation.GetLocationRange,
+					invocation.Arguments[0],
+				)
 			},
 		)
 	}
@@ -1146,7 +1127,7 @@ func (v *ArrayValue) ConformsToDynamicType(
 	return result
 }
 
-func (v *ArrayValue) Equal(other Value, getLocationRange func() LocationRange) bool {
+func (v *ArrayValue) Equal(interpreter *Interpreter, getLocationRange func() LocationRange, other Value) bool {
 	otherArray, ok := other.(*ArrayValue)
 	if !ok {
 		return false
@@ -1169,11 +1150,11 @@ func (v *ArrayValue) Equal(other Value, getLocationRange func() LocationRange) b
 	}
 
 	for i := 0; i < count; i++ {
-		value := v.GetIndex(getLocationRange, i)
-		otherValue := otherArray.GetIndex(getLocationRange, i)
+		value := v.GetIndex(interpreter, getLocationRange, i)
+		otherValue := otherArray.GetIndex(interpreter, getLocationRange, i)
 
 		equatableValue, ok := value.(EquatableValue)
-		if !ok || !equatableValue.Equal(otherValue, getLocationRange) {
+		if !ok || !equatableValue.Equal(interpreter, getLocationRange, otherValue) {
 			return false
 		}
 	}
@@ -1218,8 +1199,6 @@ func (v *ArrayValue) DeepCopy(inter *Interpreter, address atree.Address) Value {
 		index++
 	})
 
-	v.isCopied = true
-
 	return result
 }
 
@@ -1229,21 +1208,12 @@ func (v *ArrayValue) DeepRemove(inter *Interpreter) {
 	for prevIndex := v.Count(); prevIndex > 0; prevIndex-- {
 		index := prevIndex - 1
 
-		// TODO: ideally atree.Array.Remove also (only?) returns storable
-
-		storable, err := v.array.GetStorable(uint64(index))
+		storable, err := v.array.Remove(uint64(index))
 		if err != nil {
 			panic(ExternalError{err})
 		}
 
-		element, err := v.array.Remove(uint64(index))
-		if err != nil {
-			panic(ExternalError{err})
-		}
-
-		// atree.Array's Remove function returns low-level atree.Value,
-		// convert to high-level interpreter.Value
-		value := MustConvertStoredValue(element)
+		value := StoredValue(storable, inter.Storage)
 
 		value.DeepRemove(inter)
 
@@ -1510,7 +1480,7 @@ func (v IntValue) GreaterEqual(other NumberValue) BoolValue {
 	return cmp >= 0
 }
 
-func (v IntValue) Equal(other Value, _ func() LocationRange) bool {
+func (v IntValue) Equal(_ *Interpreter, _ func() LocationRange, other Value) bool {
 	otherInt, ok := other.(IntValue)
 	if !ok {
 		return false
@@ -1819,7 +1789,7 @@ func (v Int8Value) GreaterEqual(other NumberValue) BoolValue {
 	return v >= other.(Int8Value)
 }
 
-func (v Int8Value) Equal(other Value, _ func() LocationRange) bool {
+func (v Int8Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) bool {
 	otherInt8, ok := other.(Int8Value)
 	if !ok {
 		return false
@@ -2133,7 +2103,7 @@ func (v Int16Value) GreaterEqual(other NumberValue) BoolValue {
 	return v >= other.(Int16Value)
 }
 
-func (v Int16Value) Equal(other Value, _ func() LocationRange) bool {
+func (v Int16Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) bool {
 	otherInt16, ok := other.(Int16Value)
 	if !ok {
 		return false
@@ -2449,7 +2419,7 @@ func (v Int32Value) GreaterEqual(other NumberValue) BoolValue {
 	return v >= other.(Int32Value)
 }
 
-func (v Int32Value) Equal(other Value, _ func() LocationRange) bool {
+func (v Int32Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) bool {
 	otherInt32, ok := other.(Int32Value)
 	if !ok {
 		return false
@@ -2769,7 +2739,7 @@ func (v Int64Value) GreaterEqual(other NumberValue) BoolValue {
 	return v >= other.(Int64Value)
 }
 
-func (v Int64Value) Equal(other Value, _ func() LocationRange) bool {
+func (v Int64Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) bool {
 	otherInt64, ok := other.(Int64Value)
 	if !ok {
 		return false
@@ -3134,7 +3104,7 @@ func (v Int128Value) GreaterEqual(other NumberValue) BoolValue {
 	return cmp >= 0
 }
 
-func (v Int128Value) Equal(other Value, _ func() LocationRange) bool {
+func (v Int128Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) bool {
 	otherInt, ok := other.(Int128Value)
 	if !ok {
 		return false
@@ -3520,7 +3490,7 @@ func (v Int256Value) GreaterEqual(other NumberValue) BoolValue {
 	return cmp >= 0
 }
 
-func (v Int256Value) Equal(other Value, _ func() LocationRange) bool {
+func (v Int256Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) bool {
 	otherInt, ok := other.(Int256Value)
 	if !ok {
 		return false
@@ -3819,7 +3789,7 @@ func (v UIntValue) GreaterEqual(other NumberValue) BoolValue {
 	return cmp >= 0
 }
 
-func (v UIntValue) Equal(other Value, _ func() LocationRange) bool {
+func (v UIntValue) Equal(_ *Interpreter, _ func() LocationRange, other Value) bool {
 	otherUInt, ok := other.(UIntValue)
 	if !ok {
 		return false
@@ -4059,7 +4029,7 @@ func (v UInt8Value) GreaterEqual(other NumberValue) BoolValue {
 	return v >= other.(UInt8Value)
 }
 
-func (v UInt8Value) Equal(other Value, _ func() LocationRange) bool {
+func (v UInt8Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) bool {
 	otherUInt8, ok := other.(UInt8Value)
 	if !ok {
 		return false
@@ -4303,7 +4273,7 @@ func (v UInt16Value) GreaterEqual(other NumberValue) BoolValue {
 	return v >= other.(UInt16Value)
 }
 
-func (v UInt16Value) Equal(other Value, _ func() LocationRange) bool {
+func (v UInt16Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) bool {
 	otherUInt16, ok := other.(UInt16Value)
 	if !ok {
 		return false
@@ -4553,7 +4523,7 @@ func (v UInt32Value) GreaterEqual(other NumberValue) BoolValue {
 	return v >= other.(UInt32Value)
 }
 
-func (v UInt32Value) Equal(other Value, _ func() LocationRange) bool {
+func (v UInt32Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) bool {
 	otherUInt32, ok := other.(UInt32Value)
 	if !ok {
 		return false
@@ -4808,7 +4778,7 @@ func (v UInt64Value) GreaterEqual(other NumberValue) BoolValue {
 	return v >= other.(UInt64Value)
 }
 
-func (v UInt64Value) Equal(other Value, _ func() LocationRange) bool {
+func (v UInt64Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) bool {
 	otherUInt64, ok := other.(UInt64Value)
 	if !ok {
 		return false
@@ -5122,7 +5092,7 @@ func (v UInt128Value) GreaterEqual(other NumberValue) BoolValue {
 	return cmp >= 0
 }
 
-func (v UInt128Value) Equal(other Value, _ func() LocationRange) bool {
+func (v UInt128Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) bool {
 	otherInt, ok := other.(UInt128Value)
 	if !ok {
 		return false
@@ -5454,7 +5424,7 @@ func (v UInt256Value) GreaterEqual(other NumberValue) BoolValue {
 	return cmp >= 0
 }
 
-func (v UInt256Value) Equal(other Value, _ func() LocationRange) bool {
+func (v UInt256Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) bool {
 	otherInt, ok := other.(UInt256Value)
 	if !ok {
 		return false
@@ -5691,7 +5661,7 @@ func (v Word8Value) GreaterEqual(other NumberValue) BoolValue {
 	return v >= other.(Word8Value)
 }
 
-func (v Word8Value) Equal(other Value, _ func() LocationRange) bool {
+func (v Word8Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) bool {
 	otherWord8, ok := other.(Word8Value)
 	if !ok {
 		return false
@@ -5884,7 +5854,7 @@ func (v Word16Value) GreaterEqual(other NumberValue) BoolValue {
 	return v >= other.(Word16Value)
 }
 
-func (v Word16Value) Equal(other Value, _ func() LocationRange) bool {
+func (v Word16Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) bool {
 	otherWord16, ok := other.(Word16Value)
 	if !ok {
 		return false
@@ -6080,7 +6050,7 @@ func (v Word32Value) GreaterEqual(other NumberValue) BoolValue {
 	return v >= other.(Word32Value)
 }
 
-func (v Word32Value) Equal(other Value, _ func() LocationRange) bool {
+func (v Word32Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) bool {
 	otherWord32, ok := other.(Word32Value)
 	if !ok {
 		return false
@@ -6276,7 +6246,7 @@ func (v Word64Value) GreaterEqual(other NumberValue) BoolValue {
 	return v >= other.(Word64Value)
 }
 
-func (v Word64Value) Equal(other Value, _ func() LocationRange) bool {
+func (v Word64Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) bool {
 	otherWord64, ok := other.(Word64Value)
 	if !ok {
 		return false
@@ -6568,7 +6538,7 @@ func (v Fix64Value) GreaterEqual(other NumberValue) BoolValue {
 	return v >= other.(Fix64Value)
 }
 
-func (v Fix64Value) Equal(other Value, _ func() LocationRange) bool {
+func (v Fix64Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) bool {
 	otherFix64, ok := other.(Fix64Value)
 	if !ok {
 		return false
@@ -6825,7 +6795,7 @@ func (v UFix64Value) GreaterEqual(other NumberValue) BoolValue {
 	return v >= other.(UFix64Value)
 }
 
-func (v UFix64Value) Equal(other Value, _ func() LocationRange) bool {
+func (v UFix64Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) bool {
 	otherUFix64, ok := other.(UFix64Value)
 	if !ok {
 		return false
@@ -6939,9 +6909,8 @@ type CompositeValue struct {
 	Functions       map[string]FunctionValue
 	Destructor      FunctionValue
 	Stringer        func(seenReferences SeenReferences) string
-	// TODO: move isDestroyed and isCopied to CompositeStorable
+	// TODO: move isDestroyed to CompositeStorable ?
 	isDestroyed bool
-	isCopied    bool
 }
 
 type ComputedField func(*Interpreter) Value
@@ -7019,10 +6988,6 @@ func (v *CompositeValue) IsDestroyed() bool {
 	return v.isDestroyed
 }
 
-func (v *CompositeValue) IsCopied() bool {
-	return v.isCopied
-}
-
 func (v *CompositeValue) Destroy(interpreter *Interpreter, getLocationRange func() LocationRange) {
 	interpreter = v.getInterpreter(interpreter)
 
@@ -7042,7 +7007,7 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, getLocationRange func
 			Interpreter:      interpreter,
 		}
 
-		destructor.Invoke(invocation)
+		destructor.invoke(invocation)
 	}
 
 	v.isDestroyed = true
@@ -7094,11 +7059,7 @@ func (v *CompositeValue) GetMember(interpreter *Interpreter, _ func() LocationRa
 
 	storable, ok := v.FieldStorables.Get(name)
 	if ok {
-		value, err := StoredValue(storable, interpreter.Storage)
-		if err != nil {
-			panic(ExternalError{err})
-		}
-		return value
+		return StoredValue(storable, interpreter.Storage)
 	}
 
 	if v.NestedVariables != nil {
@@ -7191,7 +7152,6 @@ func (v *CompositeValue) SetMember(
 	name string,
 	value Value,
 ) {
-
 	address := v.StorageID.Address
 
 	value = interpreter.TransferValue(value, nil, address)
@@ -7208,11 +7168,7 @@ func (v *CompositeValue) SetMember(
 	existingStorable, existed := v.FieldStorables.Set(name, storable)
 
 	if existed {
-
-		existingValue, err := StoredValue(existingStorable, interpreter.Storage)
-		if err != nil {
-			panic(ExternalError{err})
-		}
+		existingValue := StoredValue(existingStorable, interpreter.Storage)
 
 		existingValue.DeepRemove(interpreter)
 
@@ -7237,10 +7193,7 @@ func (v *CompositeValue) RecursiveString(seenReferences SeenReferences) string {
 		fieldName := pair.Key
 		fieldStorable := pair.Value
 
-		value, err := StoredValue(fieldStorable, v.Storage)
-		if err != nil {
-			panic(ExternalError{err})
-		}
+		value := StoredValue(fieldStorable, v.Storage)
 
 		fields.Set(fieldName, value)
 	}
@@ -7274,14 +7227,11 @@ func (v *CompositeValue) GetField(name string) Value {
 	if !ok {
 		return nil
 	}
-	value, err := StoredValue(storable, v.Storage)
-	if err != nil {
-		panic(ExternalError{err})
-	}
-	return value
+
+	return StoredValue(storable, v.Storage)
 }
 
-func (v *CompositeValue) Equal(other Value, getLocationRange func() LocationRange) bool {
+func (v *CompositeValue) Equal(interpreter *Interpreter, getLocationRange func() LocationRange, other Value) bool {
 	otherComposite, ok := other.(*CompositeValue)
 	if !ok {
 		return false
@@ -7306,18 +7256,11 @@ func (v *CompositeValue) Equal(other Value, getLocationRange func() LocationRang
 			return false
 		}
 
-		value, err := StoredValue(storable, v.Storage)
-		if err != nil {
-			panic(ExternalError{err})
-		}
-
-		otherValue, err := StoredValue(otherStorable, v.Storage)
-		if err != nil {
-			panic(ExternalError{err})
-		}
+		value := StoredValue(storable, v.Storage)
+		otherValue := StoredValue(otherStorable, v.Storage)
 
 		equatableValue, ok := value.(EquatableValue)
-		if !ok || !equatableValue.Equal(otherValue, getLocationRange) {
+		if !ok || !equatableValue.Equal(interpreter, getLocationRange, otherValue) {
 			return false
 		}
 	}
@@ -7374,11 +7317,7 @@ func (v *CompositeValue) ConformsToDynamicType(
 		var value Value
 		storable, ok := v.FieldStorables.Get(fieldName)
 		if ok {
-			var err error
-			value, err = StoredValue(storable, v.Storage)
-			if err != nil {
-				panic(ExternalError{err})
-			}
+			value = StoredValue(storable, v.Storage)
 		} else {
 			if v.ComputedFields == nil {
 				return false
@@ -7458,17 +7397,12 @@ func (v *CompositeValue) DeepCopy(interpreter *Interpreter, address atree.Addres
 		fieldName := pair.Key
 		fieldStorable := pair.Value
 
-		fieldValue, err := StoredValue(fieldStorable, v.Storage)
-		if err != nil {
-			panic(ExternalError{err})
-		}
+		fieldValue := StoredValue(fieldStorable, v.Storage)
 
 		fieldValueCopy := interpreter.CopyValue(fieldValue, address)
 
 		newFieldStorables.Set(fieldName, fieldValueCopy)
 	}
-
-	v.isCopied = true
 
 	newValue := NewCompositeValue(
 		interpreter.Storage,
@@ -7497,10 +7431,7 @@ func (v *CompositeValue) DeepRemove(interpreter *Interpreter) {
 	for pair := v.FieldStorables.Oldest(); pair != nil; pair = pair.Next() {
 		fieldStorable := pair.Value
 
-		fieldValue, err := StoredValue(fieldStorable, v.Storage)
-		if err != nil {
-			panic(ExternalError{err})
-		}
+		fieldValue := StoredValue(fieldStorable, v.Storage)
 
 		fieldValue.DeepRemove(interpreter)
 
@@ -7575,9 +7506,8 @@ func NewEnumCaseValue(
 type DictionaryValue struct {
 	*DictionaryStorable
 	Keys *ArrayValue
-	// TODO: move isDestroyed and isCopied to CompositeStorable
+	// TODO: move isDestroyed to CompositeStorable ?
 	isDestroyed bool
-	isCopied    bool
 }
 
 func NewDictionaryValue(
@@ -7680,10 +7610,7 @@ func (v *DictionaryValue) Accept(interpreter *Interpreter, visitor Visitor) {
 func (v *DictionaryValue) Walk(walkChild func(Value)) {
 	v.Keys.Walk(walkChild)
 	v.Entries.Foreach(func(_ string, storable atree.Storable) {
-		value, err := StoredValue(storable, v.Keys.array.Storage)
-		if err != nil {
-			panic(err)
-		}
+		value := StoredValue(storable, v.Keys.array.Storage)
 		walkChild(value)
 	})
 }
@@ -7716,10 +7643,6 @@ func (v *DictionaryValue) IsDestroyed() bool {
 	return v.isDestroyed
 }
 
-func (v *DictionaryValue) IsCopied() bool {
-	return v.isCopied
-}
-
 func (v *DictionaryValue) Destroy(interpreter *Interpreter, getLocationRange func() LocationRange) {
 	v.Keys.Walk(func(keyValue Value) {
 		// Resources cannot be keys at the moment, so should theoretically not be needed
@@ -7743,10 +7666,8 @@ func (v *DictionaryValue) GetKey(keyValue Value) (Value, string, bool) {
 	if !ok {
 		return nil, key, false
 	}
-	value, err := StoredValue(storable, v.Keys.array.Storage)
-	if err != nil {
-		panic(ExternalError{err})
-	}
+	storage := v.Keys.array.Storage
+	value := StoredValue(storable, storage)
 	return value, key, ok
 }
 
@@ -7841,10 +7762,8 @@ func (v *DictionaryValue) GetMember(interpreter *Interpreter, _ func() LocationR
 		dictionaryValues := make([]Value, v.Count())
 		i := 0
 		v.Entries.Foreach(func(_ string, storable atree.Storable) {
-			value, err := StoredValue(storable, storage)
-			if err != nil {
-				panic(ExternalError{err})
-			}
+			value := StoredValue(storable, storage)
+
 			// We can directly call DeepCopy on the value, instead of potentially skipping copying
 			// by using interpreter.copyValue, as the dictionary values returned by the values field here
 			// are only ever struct-kinded, which always must be copied
@@ -7989,10 +7908,7 @@ func (v *DictionaryValue) Insert(
 		return NilValue{}
 	}
 
-	existingValue, err := StoredValue(existingStorable, v.Keys.array.Storage)
-	if err != nil {
-		panic(ExternalError{err})
-	}
+	existingValue := StoredValue(existingStorable, inter.Storage)
 
 	resultCopy := inter.TransferValue(existingValue, existingStorable, atree.Address{})
 
@@ -8052,7 +7968,9 @@ func (v *DictionaryValue) ConformsToDynamicType(
 	}
 }
 
-func (v *DictionaryValue) Equal(other Value, getLocationRange func() LocationRange) bool {
+func (v *DictionaryValue) Equal(interpreter *Interpreter, getLocationRange func() LocationRange, other Value) bool {
+	storage := v.Keys.array.Storage
+
 	otherDictionary, ok := other.(*DictionaryValue)
 	if !ok {
 		return false
@@ -8062,7 +7980,7 @@ func (v *DictionaryValue) Equal(other Value, getLocationRange func() LocationRan
 		return false
 	}
 
-	if !v.Keys.Equal(otherDictionary.Keys, getLocationRange) {
+	if !v.Keys.Equal(interpreter, getLocationRange, otherDictionary.Keys) {
 		return false
 	}
 
@@ -8073,18 +7991,12 @@ func (v *DictionaryValue) Equal(other Value, getLocationRange func() LocationRan
 		otherStorable, otherValueExists := otherDictionary.Entries.Get(key)
 
 		if valueExists {
-			value, err := StoredValue(storable, v.Keys.array.Storage)
-			if err != nil {
-				panic(ExternalError{err})
-			}
+			value := StoredValue(storable, storage)
 
-			otherValue, err := StoredValue(otherStorable, v.Keys.array.Storage)
-			if err != nil {
-				panic(ExternalError{err})
-			}
+			otherValue := StoredValue(otherStorable, storage)
 
 			equatableValue, ok := value.(EquatableValue)
-			if !ok || !equatableValue.Equal(otherValue, getLocationRange) {
+			if !ok || !equatableValue.Equal(interpreter, getLocationRange, otherValue) {
 				return false
 			}
 		} else if otherValueExists {
@@ -8109,8 +8021,6 @@ func (v *DictionaryValue) NeedsStoreToAddress(_ *Interpreter, address atree.Addr
 }
 
 func (v *DictionaryValue) DeepCopy(interpreter *Interpreter, address atree.Address) Value {
-
-	v.isCopied = true
 
 	result := NewDictionaryValueWithAddress(
 		interpreter,
@@ -8155,10 +8065,7 @@ func (v *DictionaryValue) DeepRemove(interpreter *Interpreter) {
 	for pair := v.Entries.Oldest(); pair != nil; pair = pair.Next() {
 		storable := pair.Value
 
-		value, err := StoredValue(storable, storage)
-		if err != nil {
-			panic(ExternalError{err})
-		}
+		value := StoredValue(storable, storage)
 
 		value.DeepRemove(interpreter)
 
@@ -8186,14 +8093,11 @@ func (s *DictionaryStorable) ByteSize() uint32 {
 }
 
 func (s *DictionaryStorable) StoredValue(storage atree.SlabStorage) (atree.Value, error) {
-	keys, err := StoredValue(s.Keys, storage)
-	if err != nil {
-		return nil, err
-	}
+	keysValue := StoredValue(s.Keys, storage)
 
-	keysArray, ok := keys.(*ArrayValue)
+	keysArray, ok := keysValue.(*ArrayValue)
 	if !ok {
-		return nil, fmt.Errorf("invalid dictionary keys: %T", keys)
+		return nil, fmt.Errorf("invalid dictionary keys: %T", keysValue)
 	}
 
 	keyCount := keysArray.Count()
@@ -8254,10 +8158,6 @@ func (NilValue) IsDestroyed() bool {
 	return false
 }
 
-func (NilValue) IsCopied() bool {
-	return false
-}
-
 func (v NilValue) Destroy(_ *Interpreter, _ func() LocationRange) {
 	// NO-OP
 }
@@ -8294,7 +8194,7 @@ func (v NilValue) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType,
 	return ok
 }
 
-func (v NilValue) Equal(other Value, _ func() LocationRange) bool {
+func (v NilValue) Equal(_ *Interpreter, _ func() LocationRange, other Value) bool {
 	_, ok := other.(NilValue)
 	return ok
 }
@@ -8336,8 +8236,8 @@ func (v NilValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 type SomeValue struct {
 	Value         Value
 	valueStorable atree.Storable
-	isCopied      bool
-	isDestroyed   bool
+	// TODO: Store isDestroyed in SomeStorable?
+	isDestroyed bool
 }
 
 func NewSomeValueNonCopying(value Value) *SomeValue {
@@ -8384,10 +8284,6 @@ func (v *SomeValue) IsDestroyed() bool {
 	return v.isDestroyed
 }
 
-func (v *SomeValue) IsCopied() bool {
-	return v.isCopied
-}
-
 func (v *SomeValue) Destroy(interpreter *Interpreter, getLocationRange func() LocationRange) {
 	maybeDestroy(interpreter, getLocationRange, v.Value)
 	v.isDestroyed = true
@@ -8418,7 +8314,7 @@ func (v *SomeValue) GetMember(_ *Interpreter, _ func() LocationRange, name strin
 					Interpreter:      invocation.Interpreter,
 				}
 
-				newValue := transformFunction.Invoke(transformInvocation)
+				newValue := transformFunction.invoke(transformInvocation)
 
 				return NewSomeValueNonCopying(newValue)
 			},
@@ -8441,7 +8337,7 @@ func (v SomeValue) ConformsToDynamicType(
 	return ok && v.Value.ConformsToDynamicType(interpreter, someType.InnerType, results)
 }
 
-func (v *SomeValue) Equal(other Value, getLocationRange func() LocationRange) bool {
+func (v *SomeValue) Equal(interpreter *Interpreter, getLocationRange func() LocationRange, other Value) bool {
 	otherSome, ok := other.(*SomeValue)
 	if !ok {
 		return false
@@ -8452,7 +8348,7 @@ func (v *SomeValue) Equal(other Value, getLocationRange func() LocationRange) bo
 		return false
 	}
 
-	return equatableValue.Equal(otherSome.Value, getLocationRange)
+	return equatableValue.Equal(interpreter, getLocationRange, otherSome.Value)
 }
 
 func (v *SomeValue) Storable(
@@ -8490,8 +8386,6 @@ func (v *SomeValue) NeedsStoreToAddress(interpreter *Interpreter, address atree.
 }
 
 func (v *SomeValue) DeepCopy(interpreter *Interpreter, address atree.Address) Value {
-	v.isCopied = true
-
 	valueCopy := interpreter.CopyValue(v.Value, address)
 
 	result := NewSomeValueNonCopying(valueCopy)
@@ -8518,10 +8412,7 @@ func (s SomeStorable) ByteSize() uint32 {
 }
 
 func (s SomeStorable) StoredValue(storage atree.SlabStorage) (atree.Value, error) {
-	value, err := StoredValue(s.Storable, storage)
-	if err != nil {
-		return nil, err
-	}
+	value := StoredValue(s.Storable, storage)
 
 	return &SomeValue{
 		Value:         value,
@@ -8623,7 +8514,7 @@ func (v *StorageReferenceValue) GetMember(
 
 	self := *referencedValue
 
-	interpreter.checkResourceNotDestroyedOrCopied(self, getLocationRange)
+	interpreter.checkResourceNotDestroyed(self, getLocationRange)
 
 	return interpreter.getMember(self, getLocationRange, name)
 }
@@ -8643,7 +8534,7 @@ func (v *StorageReferenceValue) SetMember(
 
 	self := *referencedValue
 
-	interpreter.checkResourceNotDestroyedOrCopied(self, getLocationRange)
+	interpreter.checkResourceNotDestroyed(self, getLocationRange)
 
 	interpreter.setMember(self, getLocationRange, name, value)
 }
@@ -8662,7 +8553,7 @@ func (v *StorageReferenceValue) Get(
 
 	self := *referencedValue
 
-	interpreter.checkResourceNotDestroyedOrCopied(self, getLocationRange)
+	interpreter.checkResourceNotDestroyed(self, getLocationRange)
 
 	return self.(ValueIndexableValue).
 		Get(interpreter, getLocationRange, key)
@@ -8683,13 +8574,13 @@ func (v *StorageReferenceValue) Set(
 
 	self := *referencedValue
 
-	interpreter.checkResourceNotDestroyedOrCopied(self, getLocationRange)
+	interpreter.checkResourceNotDestroyed(self, getLocationRange)
 
 	self.(ValueIndexableValue).
 		Set(interpreter, getLocationRange, key, value)
 }
 
-func (v *StorageReferenceValue) Equal(other Value, _ func() LocationRange) bool {
+func (v *StorageReferenceValue) Equal(_ *Interpreter, _ func() LocationRange, other Value) bool {
 	otherReference, ok := other.(*StorageReferenceValue)
 	if !ok ||
 		v.TargetStorageAddress != otherReference.TargetStorageAddress ||
@@ -8856,7 +8747,7 @@ func (v *EphemeralReferenceValue) GetMember(
 
 	self := *referencedValue
 
-	interpreter.checkResourceNotDestroyedOrCopied(self, getLocationRange)
+	interpreter.checkResourceNotDestroyed(self, getLocationRange)
 
 	return interpreter.getMember(self, getLocationRange, name)
 }
@@ -8876,7 +8767,7 @@ func (v *EphemeralReferenceValue) SetMember(
 
 	self := *referencedValue
 
-	interpreter.checkResourceNotDestroyedOrCopied(self, getLocationRange)
+	interpreter.checkResourceNotDestroyed(self, getLocationRange)
 
 	interpreter.setMember(self, getLocationRange, name, value)
 }
@@ -8895,7 +8786,7 @@ func (v *EphemeralReferenceValue) Get(
 
 	self := *referencedValue
 
-	interpreter.checkResourceNotDestroyedOrCopied(self, getLocationRange)
+	interpreter.checkResourceNotDestroyed(self, getLocationRange)
 
 	return self.(ValueIndexableValue).
 		Get(interpreter, getLocationRange, key)
@@ -8916,13 +8807,13 @@ func (v *EphemeralReferenceValue) Set(
 
 	self := *referencedValue
 
-	interpreter.checkResourceNotDestroyedOrCopied(self, getLocationRange)
+	interpreter.checkResourceNotDestroyed(self, getLocationRange)
 
 	self.(ValueIndexableValue).
 		Set(interpreter, getLocationRange, key, value)
 }
 
-func (v *EphemeralReferenceValue) Equal(other Value, _ func() LocationRange) bool {
+func (v *EphemeralReferenceValue) Equal(_ *Interpreter, _ func() LocationRange, other Value) bool {
 	otherReference, ok := other.(*EphemeralReferenceValue)
 	if !ok ||
 		v.Value != otherReference.Value ||
@@ -9071,7 +8962,7 @@ func (v AddressValue) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
-func (v AddressValue) Equal(other Value, _ func() LocationRange) bool {
+func (v AddressValue) Equal(_ *Interpreter, _ func() LocationRange, other Value) bool {
 	otherAddress, ok := other.(AddressValue)
 	if !ok {
 		return false
@@ -9419,7 +9310,7 @@ func (v PathValue) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType
 	}
 }
 
-func (v PathValue) Equal(other Value, _ func() LocationRange) bool {
+func (v PathValue) Equal(_ *Interpreter, _ func() LocationRange, other Value) bool {
 	otherPath, ok := other.(PathValue)
 	if !ok {
 		return false
@@ -9559,7 +9450,7 @@ func (v *CapabilityValue) ConformsToDynamicType(_ *Interpreter, dynamicType Dyna
 	return ok
 }
 
-func (v *CapabilityValue) Equal(other Value, getLocationRange func() LocationRange) bool {
+func (v *CapabilityValue) Equal(interpreter *Interpreter, getLocationRange func() LocationRange, other Value) bool {
 	otherCapability, ok := other.(*CapabilityValue)
 	if !ok {
 		return false
@@ -9575,8 +9466,8 @@ func (v *CapabilityValue) Equal(other Value, getLocationRange func() LocationRan
 		return false
 	}
 
-	return otherCapability.Address.Equal(v.Address, getLocationRange) &&
-		otherCapability.Path.Equal(v.Path, getLocationRange)
+	return otherCapability.Address.Equal(interpreter, getLocationRange, v.Address) &&
+		otherCapability.Path.Equal(interpreter, getLocationRange, v.Path)
 }
 
 func (*CapabilityValue) IsStorable() bool {
@@ -9653,25 +9544,24 @@ func (s CapabilityStorable) ByteSize() uint32 {
 }
 
 func (s CapabilityStorable) StoredValue(storage atree.SlabStorage) (atree.Value, error) {
-	address, err := StoredValue(s.Address, storage)
-	if err != nil {
-		return nil, err
-	}
 
+	// Address
+
+	address := StoredValue(s.Address, storage)
 	addressValue, ok := address.(AddressValue)
 	if !ok {
 		return nil, fmt.Errorf("invalid capability address: %T", address)
 	}
 
-	path, err := StoredValue(s.Path, storage)
-	if err != nil {
-		return nil, err
-	}
+	// Path
 
+	path := StoredValue(s.Path, storage)
 	pathValue, ok := path.(PathValue)
 	if !ok {
 		return nil, fmt.Errorf("invalid capability path: %T", address)
 	}
+
+	// Result
 
 	return &CapabilityValue{
 		Address:         addressValue,
@@ -9728,13 +9618,13 @@ func (v LinkValue) ConformsToDynamicType(_ *Interpreter, _ DynamicType, _ TypeCo
 	return false
 }
 
-func (v LinkValue) Equal(other Value, getLocationRange func() LocationRange) bool {
+func (v LinkValue) Equal(interpreter *Interpreter, getLocationRange func() LocationRange, other Value) bool {
 	otherLink, ok := other.(LinkValue)
 	if !ok {
 		return false
 	}
 
-	return otherLink.TargetPath.Equal(v.TargetPath, getLocationRange) &&
+	return otherLink.TargetPath.Equal(interpreter, getLocationRange, v.TargetPath) &&
 		otherLink.Type.Equal(v.Type)
 }
 

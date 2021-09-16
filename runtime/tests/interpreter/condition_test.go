@@ -58,7 +58,7 @@ func TestInterpretFunctionPreCondition(t *testing.T) {
 	value, err := inter.Invoke("test", zero)
 	require.NoError(t, err)
 
-	AssertValuesEqual(t, zero, value)
+	AssertValuesEqual(t, inter, zero, value)
 }
 
 func TestInterpretFunctionPostCondition(t *testing.T) {
@@ -86,7 +86,7 @@ func TestInterpretFunctionPostCondition(t *testing.T) {
 	value, err := inter.Invoke("test", zero)
 	require.NoError(t, err)
 
-	AssertValuesEqual(t, zero, value)
+	AssertValuesEqual(t, inter, zero, value)
 }
 
 func TestInterpretFunctionWithResultAndPostConditionWithResult(t *testing.T) {
@@ -114,7 +114,7 @@ func TestInterpretFunctionWithResultAndPostConditionWithResult(t *testing.T) {
 	value, err := inter.Invoke("test", zero)
 	require.NoError(t, err)
 
-	AssertValuesEqual(t, zero, value)
+	AssertValuesEqual(t, inter, zero, value)
 }
 
 func TestInterpretFunctionWithoutResultAndPostConditionWithResult(t *testing.T) {
@@ -133,7 +133,9 @@ func TestInterpretFunctionWithoutResultAndPostConditionWithResult(t *testing.T) 
 	value, err := inter.Invoke("test")
 	require.NoError(t, err)
 
-	AssertValuesEqual(t,
+	AssertValuesEqual(
+		t,
+		inter,
 		interpreter.VoidValue{},
 		value,
 	)
@@ -160,7 +162,9 @@ func TestInterpretFunctionPostConditionWithBefore(t *testing.T) {
 	value, err := inter.Invoke("test")
 	require.NoError(t, err)
 
-	AssertValuesEqual(t,
+	AssertValuesEqual(
+		t,
+		inter,
 		interpreter.VoidValue{},
 		value,
 	)
@@ -255,7 +259,12 @@ func TestInterpretFunctionPostConditionWithMessageUsingStringLiteral(t *testing.
 	value, err := inter.Invoke("test", zero)
 	require.NoError(t, err)
 
-	AssertValuesEqual(t, zero, value)
+	AssertValuesEqual(
+		t,
+		inter,
+		zero,
+		value,
+	)
 }
 
 func TestInterpretFunctionPostConditionWithMessageUsingResult(t *testing.T) {
@@ -288,7 +297,9 @@ func TestInterpretFunctionPostConditionWithMessageUsingResult(t *testing.T) {
 	value, err := inter.Invoke("test", zero)
 	require.NoError(t, err)
 
-	AssertValuesEqual(t,
+	AssertValuesEqual(
+		t,
+		inter,
 		interpreter.NewStringValue("return value"),
 		value,
 	)
@@ -424,7 +435,9 @@ func TestInterpretInterfaceFunctionUseWithPreCondition(t *testing.T) {
 			value, err := inter.Invoke("callTest", interpreter.NewIntValueFromInt64(1))
 			require.NoError(t, err)
 
-			AssertValuesEqual(t,
+			AssertValuesEqual(
+				t,
+				inter,
 				interpreter.NewIntValueFromInt64(1),
 				value,
 			)

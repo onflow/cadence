@@ -136,7 +136,9 @@ func TestInterpretVirtualImport(t *testing.T) {
 	value, err := inter.Invoke("test")
 	require.NoError(t, err)
 
-	AssertValuesEqual(t,
+	AssertValuesEqual(
+		t,
+		inter,
 		interpreter.UInt64Value(42),
 		value,
 	)
@@ -305,7 +307,9 @@ func TestInterpretImportMultipleProgramsFromLocation(t *testing.T) {
 	value, err := inter.Invoke("test")
 	require.NoError(t, err)
 
-	AssertValuesEqual(t,
+	AssertValuesEqual(
+		t,
+		inter,
 		interpreter.NewIntValueFromInt64(3),
 		value,
 	)

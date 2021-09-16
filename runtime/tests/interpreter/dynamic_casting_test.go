@@ -105,17 +105,23 @@ func TestInterpretDynamicCastingNumber(t *testing.T) {
 									),
 								)
 
-								AssertValuesEqual(t,
+								AssertValuesEqual(
+									t,
+									inter,
 									test.expected,
 									inter.Globals["x"].GetValue(),
 								)
 
-								AssertValuesEqual(t,
+								AssertValuesEqual(
+									t,
+									inter,
 									test.expected,
 									inter.Globals["y"].GetValue(),
 								)
 
-								AssertValuesEqual(t,
+								AssertValuesEqual(
+									t,
+									inter,
 									interpreter.NewSomeValueNonCopying(
 										test.expected,
 									),
@@ -153,7 +159,9 @@ func TestInterpretDynamicCastingNumber(t *testing.T) {
 
 								if returnsOptional {
 									require.NoError(t, err)
-									AssertValuesEqual(t,
+									AssertValuesEqual(
+										t,
+										inter,
 										interpreter.NilValue{},
 										result,
 									)
@@ -201,12 +209,16 @@ func TestInterpretDynamicCastingVoid(t *testing.T) {
 							),
 						)
 
-						AssertValuesEqual(t,
+						AssertValuesEqual(
+							t,
+							inter,
 							interpreter.VoidValue{},
 							inter.Globals["x"].GetValue(),
 						)
 
-						AssertValuesEqual(t,
+						AssertValuesEqual(
+							t,
+							inter,
 							interpreter.NewSomeValueNonCopying(
 								interpreter.VoidValue{},
 							),
@@ -243,7 +255,9 @@ func TestInterpretDynamicCastingVoid(t *testing.T) {
 
 						if returnsOptional {
 							require.NoError(t, err)
-							AssertValuesEqual(t,
+							AssertValuesEqual(
+								t,
+								inter,
 								interpreter.NilValue{},
 								result,
 							)
@@ -287,12 +301,16 @@ func TestInterpretDynamicCastingString(t *testing.T) {
 							),
 						)
 
-						AssertValuesEqual(t,
+						AssertValuesEqual(
+							t,
+							inter,
 							interpreter.NewStringValue("test"),
 							inter.Globals["x"].GetValue(),
 						)
 
-						AssertValuesEqual(t,
+						AssertValuesEqual(
+							t,
+							inter,
 							interpreter.NewSomeValueNonCopying(
 								interpreter.NewStringValue("test"),
 							),
@@ -328,7 +346,9 @@ func TestInterpretDynamicCastingString(t *testing.T) {
 
 						if returnsOptional {
 							require.NoError(t, err)
-							AssertValuesEqual(t,
+							AssertValuesEqual(
+								t,
+								inter,
 								interpreter.NilValue{},
 								result,
 							)
@@ -372,12 +392,16 @@ func TestInterpretDynamicCastingBool(t *testing.T) {
 							),
 						)
 
-						AssertValuesEqual(t,
+						AssertValuesEqual(
+							t,
+							inter,
 							interpreter.BoolValue(true),
 							inter.Globals["x"].GetValue(),
 						)
 
-						AssertValuesEqual(t,
+						AssertValuesEqual(
+							t,
+							inter,
 							interpreter.NewSomeValueNonCopying(
 								interpreter.BoolValue(true),
 							),
@@ -413,7 +437,9 @@ func TestInterpretDynamicCastingBool(t *testing.T) {
 
 						if returnsOptional {
 							require.NoError(t, err)
-							AssertValuesEqual(t,
+							AssertValuesEqual(
+								t,
+								inter,
 								interpreter.NilValue{},
 								result,
 							)
@@ -461,12 +487,16 @@ func TestInterpretDynamicCastingAddress(t *testing.T) {
 						addressValue := interpreter.AddressValue{
 							0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
 						}
-						AssertValuesEqual(t,
+						AssertValuesEqual(
+							t,
+							inter,
 							addressValue,
 							inter.Globals["y"].GetValue(),
 						)
 
-						AssertValuesEqual(t,
+						AssertValuesEqual(
+							t,
+							inter,
 							interpreter.NewSomeValueNonCopying(
 								addressValue,
 							),
@@ -503,7 +533,9 @@ func TestInterpretDynamicCastingAddress(t *testing.T) {
 
 						if returnsOptional {
 							require.NoError(t, err)
-							AssertValuesEqual(t,
+							AssertValuesEqual(
+								t,
+								inter,
 								interpreter.NilValue{},
 								result,
 							)
@@ -590,7 +622,9 @@ func TestInterpretDynamicCastingStruct(t *testing.T) {
 
 					if returnsOptional {
 						require.NoError(t, err)
-						AssertValuesEqual(t,
+						AssertValuesEqual(
+							t,
+							inter,
 							interpreter.NilValue{},
 							result,
 						)
@@ -629,7 +663,9 @@ func TestInterpretDynamicCastingStruct(t *testing.T) {
 
 						if returnsOptional {
 							require.NoError(t, err)
-							AssertValuesEqual(t,
+							AssertValuesEqual(
+								t,
+								inter,
 								interpreter.NilValue{},
 								result,
 							)
@@ -1035,20 +1071,26 @@ func TestInterpretDynamicCastingSome(t *testing.T) {
 							interpreter.NewIntValueFromInt64(42),
 						)
 
-						AssertValuesEqual(t,
+						AssertValuesEqual(
+							t,
+							inter,
 							expectedValue,
 							inter.Globals["y"].GetValue(),
 						)
 
 						if targetType == sema.AnyStructType && !returnsOptional {
 
-							AssertValuesEqual(t,
+							AssertValuesEqual(
+								t,
+								inter,
 								expectedValue,
 								inter.Globals["z"].GetValue(),
 							)
 
 						} else {
-							AssertValuesEqual(t,
+							AssertValuesEqual(
+								t,
+								inter,
 								interpreter.NewSomeValueNonCopying(
 									expectedValue,
 								),
@@ -1085,7 +1127,9 @@ func TestInterpretDynamicCastingSome(t *testing.T) {
 
 						if returnsOptional {
 							require.NoError(t, err)
-							AssertValuesEqual(t,
+							AssertValuesEqual(
+								t,
+								inter,
 								interpreter.NilValue{},
 								result,
 							)
@@ -1139,9 +1183,11 @@ func TestInterpretDynamicCastingArray(t *testing.T) {
 						require.IsType(t, yValue, &interpreter.ArrayValue{})
 						yArray := yValue.(*interpreter.ArrayValue)
 
-						AssertValueSlicesEqual(t,
+						AssertValueSlicesEqual(
+							t,
+							inter,
 							expectedElements,
-							elements(yArray),
+							arrayElements(inter, yArray),
 						)
 
 						zValue := inter.Globals["z"].GetValue()
@@ -1152,9 +1198,11 @@ func TestInterpretDynamicCastingArray(t *testing.T) {
 						require.IsType(t, innerValue, &interpreter.ArrayValue{})
 						innerArray := innerValue.(*interpreter.ArrayValue)
 
-						AssertValueSlicesEqual(t,
+						AssertValueSlicesEqual(
+							t,
+							inter,
 							expectedElements,
-							elements(innerArray),
+							arrayElements(inter, innerArray),
 						)
 					})
 				}
@@ -1185,7 +1233,9 @@ func TestInterpretDynamicCastingArray(t *testing.T) {
 
 						if returnsOptional {
 							require.NoError(t, err)
-							AssertValuesEqual(t,
+							AssertValuesEqual(
+								t,
+								inter,
 								interpreter.NilValue{},
 								result,
 							)
@@ -1215,7 +1265,10 @@ func TestInterpretDynamicCastingArray(t *testing.T) {
 
 				if returnsOptional {
 					require.NoError(t, err)
-					AssertValuesEqual(t,
+					AssertValuesEqual(
+						t,
+						inter,
+
 						interpreter.NilValue{},
 						result,
 					)
@@ -1274,12 +1327,16 @@ func TestInterpretDynamicCastingDictionary(t *testing.T) {
 							interpreter.NewStringValue("test"), interpreter.NewIntValueFromInt64(42),
 						)
 
-						AssertValuesEqual(t,
+						AssertValuesEqual(
+							t,
+							inter,
 							expectedDictionary,
 							inter.Globals["y"].GetValue(),
 						)
 
-						AssertValuesEqual(t,
+						AssertValuesEqual(
+							t,
+							inter,
 							interpreter.NewSomeValueNonCopying(
 								expectedDictionary,
 							),
@@ -1315,7 +1372,9 @@ func TestInterpretDynamicCastingDictionary(t *testing.T) {
 
 						if returnsOptional {
 							require.NoError(t, err)
-							AssertValuesEqual(t,
+							AssertValuesEqual(
+								t,
+								inter,
 								interpreter.NilValue{},
 								result,
 							)
@@ -1345,7 +1404,9 @@ func TestInterpretDynamicCastingDictionary(t *testing.T) {
 
 				if returnsOptional {
 					require.NoError(t, err)
-					AssertValuesEqual(t,
+					AssertValuesEqual(
+						t,
+						inter,
 						interpreter.NilValue{},
 						result,
 					)
@@ -3454,12 +3515,16 @@ func TestInterpretDynamicCastingCapability(t *testing.T) {
 						)
 						require.NoError(t, err)
 
-						AssertValuesEqual(t,
+						AssertValuesEqual(
+							t,
+							inter,
 							capabilityValue,
 							inter.Globals["x"].GetValue(),
 						)
 
-						AssertValuesEqual(t,
+						AssertValuesEqual(
+							t,
+							inter,
 							interpreter.NewSomeValueNonCopying(
 								capabilityValue,
 							),
@@ -3498,7 +3563,9 @@ func TestInterpretDynamicCastingCapability(t *testing.T) {
 
 						if returnsOptional {
 							require.NoError(t, err)
-							AssertValuesEqual(t,
+							AssertValuesEqual(
+								t,
+								inter,
 								interpreter.NilValue{},
 								result,
 							)

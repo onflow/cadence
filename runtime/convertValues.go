@@ -220,11 +220,7 @@ func exportCompositeValue(
 		var fieldValue interpreter.Value
 		fieldStorable, ok := v.FieldStorables.Get(fieldName)
 		if ok {
-			var err error
-			fieldValue, err = interpreter.StoredValue(fieldStorable, inter.Storage)
-			if err != nil {
-				panic(interpreter.ExternalError{Recovered: err})
-			}
+			fieldValue = interpreter.StoredValue(fieldStorable, inter.Storage)
 		} else if v.ComputedFields != nil {
 			if computedField, ok := v.ComputedFields.Get(fieldName); ok {
 				fieldValue = computedField(inter)

@@ -120,7 +120,9 @@ func TestInterpretBitwiseOr(t *testing.T) {
 				),
 			)
 
-			AssertValuesEqual(t,
+			AssertValuesEqual(
+				t,
+				inter,
 				valueFunc(0b00010101),
 				inter.Globals["c"].GetValue(),
 			)
@@ -147,7 +149,9 @@ func TestInterpretBitwiseXor(t *testing.T) {
 				),
 			)
 
-			AssertValuesEqual(t,
+			AssertValuesEqual(
+				t,
+				inter,
 				valueFunc(0b00000101),
 				inter.Globals["c"].GetValue(),
 			)
@@ -174,7 +178,9 @@ func TestInterpretBitwiseAnd(t *testing.T) {
 				),
 			)
 
-			AssertValuesEqual(t,
+			AssertValuesEqual(
+				t,
+				inter,
 				valueFunc(0b00010000),
 				inter.Globals["c"].GetValue(),
 			)
@@ -201,7 +207,9 @@ func TestInterpretBitwiseLeftShift(t *testing.T) {
 				),
 			)
 
-			AssertValuesEqual(t,
+			AssertValuesEqual(
+				t,
+				inter,
 				valueFunc(0b01100000),
 				inter.Globals["c"].GetValue(),
 			)
@@ -228,7 +236,9 @@ func TestInterpretBitwiseRightShift(t *testing.T) {
 				),
 			)
 
-			AssertValuesEqual(t,
+			AssertValuesEqual(
+				t,
+				inter,
 				valueFunc(0b00001100),
 				inter.Globals["c"].GetValue(),
 			)

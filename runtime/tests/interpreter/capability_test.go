@@ -146,7 +146,9 @@ func TestInterpretCapability_borrow(t *testing.T) {
 			value, err := inter.Invoke("single")
 			require.NoError(t, err)
 
-			RequireValuesEqual(t,
+			RequireValuesEqual(
+				t,
+				inter,
 				interpreter.NewIntValueFromInt64(42),
 				value,
 			)
@@ -157,7 +159,9 @@ func TestInterpretCapability_borrow(t *testing.T) {
 			value, err := inter.Invoke("singleR2")
 			require.NoError(t, err)
 
-			RequireValuesEqual(t,
+			RequireValuesEqual(
+				t,
+				inter,
 				interpreter.NilValue{},
 				value,
 			)
@@ -168,7 +172,9 @@ func TestInterpretCapability_borrow(t *testing.T) {
 			value, err := inter.Invoke("singleS")
 			require.NoError(t, err)
 
-			RequireValuesEqual(t,
+			RequireValuesEqual(
+				t,
+				inter,
 				interpreter.NilValue{},
 				value,
 			)
@@ -179,7 +185,9 @@ func TestInterpretCapability_borrow(t *testing.T) {
 			value, err := inter.Invoke("singleAuth")
 			require.NoError(t, err)
 
-			RequireValuesEqual(t,
+			RequireValuesEqual(
+				t,
+				inter,
 				interpreter.NilValue{},
 				value,
 			)
@@ -190,7 +198,9 @@ func TestInterpretCapability_borrow(t *testing.T) {
 			value, err := inter.Invoke("double")
 			require.NoError(t, err)
 
-			RequireValuesEqual(t,
+			RequireValuesEqual(
+				t,
+				inter,
 				interpreter.NewIntValueFromInt64(42),
 				value,
 			)
@@ -223,7 +233,9 @@ func TestInterpretCapability_borrow(t *testing.T) {
 			value, err := inter.Invoke("singleTyped")
 			require.NoError(t, err)
 
-			RequireValuesEqual(t,
+			RequireValuesEqual(
+				t,
+				inter,
 				interpreter.NewIntValueFromInt64(42),
 				value,
 			)
@@ -359,7 +371,9 @@ func TestInterpretCapability_borrow(t *testing.T) {
 			value, err := inter.Invoke("single")
 			require.NoError(t, err)
 
-			RequireValuesEqual(t,
+			RequireValuesEqual(
+				t,
+				inter,
 				interpreter.NewIntValueFromInt64(42),
 				value,
 			)
@@ -370,7 +384,9 @@ func TestInterpretCapability_borrow(t *testing.T) {
 			value, err := inter.Invoke("singleS2")
 			require.NoError(t, err)
 
-			RequireValuesEqual(t,
+			RequireValuesEqual(
+				t,
+				inter,
 				interpreter.NilValue{},
 				value,
 			)
@@ -381,7 +397,9 @@ func TestInterpretCapability_borrow(t *testing.T) {
 			value, err := inter.Invoke("singleR")
 			require.NoError(t, err)
 
-			RequireValuesEqual(t,
+			RequireValuesEqual(
+				t,
+				inter,
 				interpreter.NilValue{},
 				value,
 			)
@@ -392,7 +410,9 @@ func TestInterpretCapability_borrow(t *testing.T) {
 			value, err := inter.Invoke("singleAuth")
 			require.NoError(t, err)
 
-			RequireValuesEqual(t,
+			RequireValuesEqual(
+				t,
+				inter,
 				interpreter.NilValue{},
 				value,
 			)
@@ -403,7 +423,9 @@ func TestInterpretCapability_borrow(t *testing.T) {
 			value, err := inter.Invoke("double")
 			require.NoError(t, err)
 
-			RequireValuesEqual(t,
+			RequireValuesEqual(
+				t,
+				inter,
 				interpreter.NewIntValueFromInt64(42),
 				value,
 			)
@@ -436,7 +458,9 @@ func TestInterpretCapability_borrow(t *testing.T) {
 			value, err := inter.Invoke("singleTyped")
 			require.NoError(t, err)
 
-			RequireValuesEqual(t,
+			RequireValuesEqual(
+				t,
+				inter,
 				interpreter.NewIntValueFromInt64(42),
 				value,
 			)
@@ -565,7 +589,9 @@ func TestInterpretCapability_check(t *testing.T) {
 			value, err := inter.Invoke("single")
 			require.NoError(t, err)
 
-			RequireValuesEqual(t,
+			RequireValuesEqual(
+				t,
+				inter,
 				interpreter.BoolValue(true),
 				value,
 			)
@@ -576,7 +602,9 @@ func TestInterpretCapability_check(t *testing.T) {
 			value, err := inter.Invoke("singleAuth")
 			require.NoError(t, err)
 
-			RequireValuesEqual(t,
+			RequireValuesEqual(
+				t,
+				inter,
 				interpreter.BoolValue(false),
 				value,
 			)
@@ -587,7 +615,9 @@ func TestInterpretCapability_check(t *testing.T) {
 			value, err := inter.Invoke("singleR2")
 			require.NoError(t, err)
 
-			RequireValuesEqual(t,
+			RequireValuesEqual(
+				t,
+				inter,
 				interpreter.BoolValue(false),
 				value,
 			)
@@ -598,7 +628,9 @@ func TestInterpretCapability_check(t *testing.T) {
 			value, err := inter.Invoke("singleS")
 			require.NoError(t, err)
 
-			RequireValuesEqual(t,
+			RequireValuesEqual(
+				t,
+				inter,
 				interpreter.BoolValue(false),
 				value,
 			)
@@ -609,7 +641,9 @@ func TestInterpretCapability_check(t *testing.T) {
 			value, err := inter.Invoke("double")
 			require.NoError(t, err)
 
-			RequireValuesEqual(t,
+			RequireValuesEqual(
+				t,
+				inter,
 				interpreter.BoolValue(true),
 				value,
 			)
@@ -620,7 +654,9 @@ func TestInterpretCapability_check(t *testing.T) {
 			value, err := inter.Invoke("nonExistent")
 			require.NoError(t, err)
 
-			RequireValuesEqual(t,
+			RequireValuesEqual(
+				t,
+				inter,
 				interpreter.BoolValue(false),
 				value,
 			)
@@ -645,7 +681,9 @@ func TestInterpretCapability_check(t *testing.T) {
 			value, err := inter.Invoke("singleTyped")
 			require.NoError(t, err)
 
-			RequireValuesEqual(t,
+			RequireValuesEqual(
+				t,
+				inter,
 				interpreter.BoolValue(true),
 				value,
 			)
@@ -656,7 +694,9 @@ func TestInterpretCapability_check(t *testing.T) {
 			value, err := inter.Invoke("r2")
 			require.NoError(t, err)
 
-			RequireValuesEqual(t,
+			RequireValuesEqual(
+				t,
+				inter,
 				interpreter.BoolValue(false),
 				value,
 			)
@@ -766,7 +806,9 @@ func TestInterpretCapability_check(t *testing.T) {
 			value, err := inter.Invoke("single")
 			require.NoError(t, err)
 
-			RequireValuesEqual(t,
+			RequireValuesEqual(
+				t,
+				inter,
 				interpreter.BoolValue(true),
 				value,
 			)
@@ -777,7 +819,9 @@ func TestInterpretCapability_check(t *testing.T) {
 			value, err := inter.Invoke("singleAuth")
 			require.NoError(t, err)
 
-			RequireValuesEqual(t,
+			RequireValuesEqual(
+				t,
+				inter,
 				interpreter.BoolValue(false),
 				value,
 			)
@@ -788,7 +832,9 @@ func TestInterpretCapability_check(t *testing.T) {
 			value, err := inter.Invoke("singleS2")
 			require.NoError(t, err)
 
-			RequireValuesEqual(t,
+			RequireValuesEqual(
+				t,
+				inter,
 				interpreter.BoolValue(false),
 				value,
 			)
@@ -799,7 +845,9 @@ func TestInterpretCapability_check(t *testing.T) {
 			value, err := inter.Invoke("singleR")
 			require.NoError(t, err)
 
-			RequireValuesEqual(t,
+			RequireValuesEqual(
+				t,
+				inter,
 				interpreter.BoolValue(false),
 				value,
 			)
@@ -810,7 +858,9 @@ func TestInterpretCapability_check(t *testing.T) {
 			value, err := inter.Invoke("double")
 			require.NoError(t, err)
 
-			RequireValuesEqual(t,
+			RequireValuesEqual(
+				t,
+				inter,
 				interpreter.BoolValue(true),
 				value,
 			)
@@ -821,7 +871,9 @@ func TestInterpretCapability_check(t *testing.T) {
 			value, err := inter.Invoke("nonExistent")
 			require.NoError(t, err)
 
-			RequireValuesEqual(t,
+			RequireValuesEqual(
+				t,
+				inter,
 				interpreter.BoolValue(false),
 				value,
 			)
@@ -846,7 +898,9 @@ func TestInterpretCapability_check(t *testing.T) {
 			value, err := inter.Invoke("singleTyped")
 			require.NoError(t, err)
 
-			RequireValuesEqual(t,
+			RequireValuesEqual(
+				t,
+				inter,
 				interpreter.BoolValue(true),
 				value,
 			)
@@ -857,7 +911,9 @@ func TestInterpretCapability_check(t *testing.T) {
 			value, err := inter.Invoke("s2")
 			require.NoError(t, err)
 
-			RequireValuesEqual(t,
+			RequireValuesEqual(
+				t,
+				inter,
 				interpreter.BoolValue(false),
 				value,
 			)

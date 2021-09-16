@@ -250,7 +250,7 @@ func (interpreter *Interpreter) testEqual(left, right Value, hasPosition ast.Has
 
 	getLocationRange := locationRangeGetter(interpreter.Location, hasPosition)
 
-	return BoolValue(leftEquatable.Equal(right, getLocationRange))
+	return BoolValue(leftEquatable.Equal(interpreter, getLocationRange, right))
 }
 
 func (interpreter *Interpreter) VisitUnaryExpression(expression *ast.UnaryExpression) ast.Repr {

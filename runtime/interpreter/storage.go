@@ -26,13 +26,13 @@ import (
 	"github.com/onflow/cadence/runtime/common"
 )
 
-func StoredValue(storable atree.Storable, storage atree.SlabStorage) (Value, error) {
+func StoredValue(storable atree.Storable, storage atree.SlabStorage) Value {
 	storedValue, err := storable.StoredValue(storage)
 	if err != nil {
-		return nil, err
+		panic(err)
 	}
 
-	return convertStoredValue(storedValue)
+	return MustConvertStoredValue(storedValue)
 }
 
 func MustConvertStoredValue(value atree.Value) Value {

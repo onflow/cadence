@@ -271,13 +271,15 @@ func TestInterpretTransactions(t *testing.T) {
 
 		require.IsType(t, &interpreter.ArrayValue{}, values)
 
-		AssertValueSlicesEqual(t,
+		AssertValueSlicesEqual(
+			t,
+			inter,
 			[]interpreter.Value{
 				interpreter.AddressValue{},
 				interpreter.BoolValue(true),
 				interpreter.NewIntValueFromInt64(1),
 			},
-			elements(values.(*interpreter.ArrayValue)),
+			arrayElements(inter, values.(*interpreter.ArrayValue)),
 		)
 	})
 
