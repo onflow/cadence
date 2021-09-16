@@ -24,7 +24,6 @@ import (
 	"fmt"
 	"math"
 	"math/big"
-	"strconv"
 	"strings"
 
 	"github.com/onflow/atree"
@@ -116,6 +115,13 @@ type EquatableValue interface {
 	// Equal returns true if the given value is equal to this value.
 	// If no location range is available, pass e.g. ReturnEmptyLocationRange
 	Equal(interpreter *Interpreter, getLocationRange func() LocationRange, other Value) bool
+}
+
+// HashableValue
+
+type HashableValue interface {
+	Value
+	GetHashInput(scratch []byte) ([]byte, error)
 }
 
 // ResourceKindedValue
@@ -338,6 +344,7 @@ type BoolValue bool
 var _ Value = BoolValue(false)
 var _ atree.Storable = BoolValue(false)
 var _ EquatableValue = BoolValue(false)
+var _ HashableValue = BoolValue(false)
 
 func (BoolValue) IsValue() {}
 
@@ -369,6 +376,15 @@ func (v BoolValue) Equal(_ *Interpreter, _ func() LocationRange, other Value) bo
 		return false
 	}
 	return bool(v) == bool(otherBool)
+}
+
+func (v BoolValue) GetHashInput(scratch []byte) ([]byte, error) {
+	if v {
+		scratch[0] = 1
+	} else {
+		scratch[0] = 0
+	}
+	return scratch[:1], nil
 }
 
 func (v BoolValue) String() string {
@@ -435,6 +451,7 @@ func NewStringValue(str string) *StringValue {
 var _ Value = &StringValue{}
 var _ atree.Storable = &StringValue{}
 var _ EquatableValue = &StringValue{}
+var _ HashableValue = &StringValue{}
 
 func (v *StringValue) prepareGraphemes() {
 	if v.graphemes == nil {
@@ -478,6 +495,10 @@ func (v *StringValue) Equal(_ *Interpreter, _ func() LocationRange, other Value)
 		return false
 	}
 	return v.NormalForm() == otherString.NormalForm()
+}
+
+func (v *StringValue) GetHashInput(_ []byte) ([]byte, error) {
+	return []byte(v.Str), nil
 }
 
 func (v *StringValue) NormalForm() string {
@@ -1339,6 +1360,7 @@ func ConvertInt(value Value) IntValue {
 var _ Value = IntValue{}
 var _ atree.Storable = IntValue{}
 var _ EquatableValue = IntValue{}
+var _ HashableValue = IntValue{}
 
 func (IntValue) IsValue() {}
 
@@ -1469,6 +1491,11 @@ func (v IntValue) Equal(_ *Interpreter, _ func() LocationRange, other Value) boo
 	return cmp == 0
 }
 
+func (v IntValue) GetHashInput(_ []byte) ([]byte, error) {
+	// TODO: optimize?
+	return SignedBigIntToBigEndianBytes(v.BigInt), nil
+}
+
 func (v IntValue) BitwiseOr(other IntegerValue) IntegerValue {
 	o := other.(IntValue)
 	res := new(big.Int)
@@ -1569,6 +1596,7 @@ type Int8Value int8
 var _ Value = Int8Value(0)
 var _ atree.Storable = Int8Value(0)
 var _ EquatableValue = Int8Value(0)
+var _ HashableValue = Int8Value(0)
 
 func (Int8Value) IsValue() {}
 
@@ -1773,6 +1801,11 @@ func (v Int8Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) bo
 	return v == otherInt8
 }
 
+func (v Int8Value) GetHashInput(scratch []byte) ([]byte, error) {
+	scratch[0] = byte(v)
+	return scratch[:1], nil
+}
+
 func ConvertInt8(value Value) Int8Value {
 	var res int8
 
@@ -1879,6 +1912,7 @@ type Int16Value int16
 var _ Value = Int16Value(0)
 var _ atree.Storable = Int16Value(0)
 var _ EquatableValue = Int16Value(0)
+var _ HashableValue = Int16Value(0)
 
 func (Int16Value) IsValue() {}
 
@@ -2083,6 +2117,11 @@ func (v Int16Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) b
 	return v == otherInt16
 }
 
+func (v Int16Value) GetHashInput(scratch []byte) ([]byte, error) {
+	binary.BigEndian.PutUint16(scratch, uint16(v))
+	return scratch[:2], nil
+}
+
 func ConvertInt16(value Value) Int16Value {
 	var res int16
 
@@ -2191,6 +2230,7 @@ type Int32Value int32
 var _ Value = Int32Value(0)
 var _ atree.Storable = Int32Value(0)
 var _ EquatableValue = Int32Value(0)
+var _ HashableValue = Int32Value(0)
 
 func (Int32Value) IsValue() {}
 
@@ -2395,6 +2435,11 @@ func (v Int32Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) b
 	return v == otherInt32
 }
 
+func (v Int32Value) GetHashInput(scratch []byte) ([]byte, error) {
+	binary.BigEndian.PutUint32(scratch, uint32(v))
+	return scratch[:4], nil
+}
+
 func ConvertInt32(value Value) Int32Value {
 	var res int32
 
@@ -2503,6 +2548,7 @@ type Int64Value int64
 var _ Value = Int64Value(0)
 var _ atree.Storable = Int64Value(0)
 var _ EquatableValue = Int64Value(0)
+var _ HashableValue = Int64Value(0)
 
 func (Int64Value) IsValue() {}
 
@@ -2711,6 +2757,11 @@ func (v Int64Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) b
 	return v == otherInt64
 }
 
+func (v Int64Value) GetHashInput(scratch []byte) ([]byte, error) {
+	binary.BigEndian.PutUint64(scratch, uint64(v))
+	return scratch[:8], nil
+}
+
 func ConvertInt64(value Value) Int64Value {
 	var res int64
 
@@ -2824,6 +2875,7 @@ func NewInt128ValueFromBigInt(value *big.Int) Int128Value {
 var _ Value = Int128Value{}
 var _ atree.Storable = Int128Value{}
 var _ EquatableValue = Int128Value{}
+var _ HashableValue = Int128Value{}
 
 func (Int128Value) IsValue() {}
 
@@ -3073,6 +3125,11 @@ func (v Int128Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) 
 	return cmp == 0
 }
 
+func (v Int128Value) GetHashInput(_ []byte) ([]byte, error) {
+	// TODO: optimize?
+	return SignedBigIntToBigEndianBytes(v.BigInt), nil
+}
+
 func ConvertInt128(value Value) Int128Value {
 	var v *big.Int
 
@@ -3206,6 +3263,7 @@ func NewInt256ValueFromBigInt(value *big.Int) Int256Value {
 var _ Value = Int256Value{}
 var _ atree.Storable = Int256Value{}
 var _ EquatableValue = Int256Value{}
+var _ HashableValue = Int256Value{}
 
 func (Int256Value) IsValue() {}
 
@@ -3455,6 +3513,11 @@ func (v Int256Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) 
 	return cmp == 0
 }
 
+func (v Int256Value) GetHashInput(_ []byte) ([]byte, error) {
+	// TODO: optimize?
+	return SignedBigIntToBigEndianBytes(v.BigInt), nil
+}
+
 func ConvertInt256(value Value) Int256Value {
 	var v *big.Int
 
@@ -3609,6 +3672,7 @@ func ConvertUInt(value Value) UIntValue {
 var _ Value = UIntValue{}
 var _ atree.Storable = UIntValue{}
 var _ EquatableValue = UIntValue{}
+var _ HashableValue = UIntValue{}
 
 func (UIntValue) IsValue() {}
 
@@ -3750,6 +3814,11 @@ func (v UIntValue) Equal(_ *Interpreter, _ func() LocationRange, other Value) bo
 	return cmp == 0
 }
 
+func (v UIntValue) GetHashInput(_ []byte) ([]byte, error) {
+	// TODO: optimize?
+	return UnsignedBigIntToBigEndianBytes(v.BigInt), nil
+}
+
 func (v UIntValue) BitwiseOr(other IntegerValue) IntegerValue {
 	o := other.(UIntValue)
 	res := new(big.Int)
@@ -3850,6 +3919,7 @@ type UInt8Value uint8
 var _ Value = UInt8Value(0)
 var _ atree.Storable = UInt8Value(0)
 var _ EquatableValue = UInt8Value(0)
+var _ HashableValue = UInt8Value(0)
 
 func (UInt8Value) IsValue() {}
 
@@ -3985,6 +4055,11 @@ func (v UInt8Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) b
 	return v == otherUInt8
 }
 
+func (v UInt8Value) GetHashInput(scratch []byte) ([]byte, error) {
+	scratch[0] = byte(v)
+	return scratch[:1], nil
+}
+
 func ConvertUInt8(value Value) UInt8Value {
 	var res uint8
 
@@ -4091,6 +4166,7 @@ type UInt16Value uint16
 var _ Value = UInt16Value(0)
 var _ atree.Storable = UInt16Value(0)
 var _ EquatableValue = UInt16Value(0)
+var _ HashableValue = UInt16Value(0)
 
 func (UInt16Value) IsValue() {}
 
@@ -4225,6 +4301,11 @@ func (v UInt16Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) 
 	return v == otherUInt16
 }
 
+func (v UInt16Value) GetHashInput(scratch []byte) ([]byte, error) {
+	binary.BigEndian.PutUint16(scratch, uint16(v))
+	return scratch[:2], nil
+}
+
 func ConvertUInt16(value Value) UInt16Value {
 	var res uint16
 
@@ -4337,6 +4418,7 @@ type UInt32Value uint32
 var _ Value = UInt32Value(0)
 var _ atree.Storable = UInt32Value(0)
 var _ EquatableValue = UInt32Value(0)
+var _ HashableValue = UInt32Value(0)
 
 func (UInt32Value) IsValue() {}
 
@@ -4471,6 +4553,11 @@ func (v UInt32Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) 
 	return v == otherUInt32
 }
 
+func (v UInt32Value) GetHashInput(scratch []byte) ([]byte, error) {
+	binary.BigEndian.PutUint32(scratch, uint32(v))
+	return scratch[:4], nil
+}
+
 func ConvertUInt32(value Value) UInt32Value {
 	var res uint32
 
@@ -4583,6 +4670,7 @@ type UInt64Value uint64
 var _ Value = UInt64Value(0)
 var _ atree.Storable = UInt64Value(0)
 var _ EquatableValue = UInt64Value(0)
+var _ HashableValue = UInt64Value(0)
 
 func (UInt64Value) IsValue() {}
 
@@ -4722,6 +4810,11 @@ func (v UInt64Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) 
 	return v == otherUInt64
 }
 
+func (v UInt64Value) GetHashInput(scratch []byte) ([]byte, error) {
+	binary.BigEndian.PutUint64(scratch, uint64(v))
+	return scratch[:8], nil
+}
+
 func ConvertUInt64(value Value) UInt64Value {
 	var res uint64
 
@@ -4842,6 +4935,7 @@ func NewUInt128ValueFromBigInt(value *big.Int) UInt128Value {
 var _ Value = UInt128Value{}
 var _ atree.Storable = UInt128Value{}
 var _ EquatableValue = UInt128Value{}
+var _ HashableValue = UInt128Value{}
 
 func (UInt128Value) IsValue() {}
 
@@ -5033,6 +5127,11 @@ func (v UInt128Value) Equal(_ *Interpreter, _ func() LocationRange, other Value)
 	return cmp == 0
 }
 
+func (v UInt128Value) GetHashInput(_ []byte) ([]byte, error) {
+	// TODO: optimize?
+	return UnsignedBigIntToBigEndianBytes(v.BigInt), nil
+}
+
 func ConvertUInt128(value Value) UInt128Value {
 	var v *big.Int
 
@@ -5170,6 +5269,7 @@ func NewUInt256ValueFromBigInt(value *big.Int) UInt256Value {
 var _ Value = UInt256Value{}
 var _ atree.Storable = UInt256Value{}
 var _ EquatableValue = UInt256Value{}
+var _ HashableValue = UInt256Value{}
 
 func (UInt256Value) IsValue() {}
 
@@ -5361,6 +5461,11 @@ func (v UInt256Value) Equal(_ *Interpreter, _ func() LocationRange, other Value)
 	return cmp == 0
 }
 
+func (v UInt256Value) GetHashInput(_ []byte) ([]byte, error) {
+	// TODO: optimize?
+	return UnsignedBigIntToBigEndianBytes(v.BigInt), nil
+}
+
 func ConvertUInt256(value Value) UInt256Value {
 	var v *big.Int
 
@@ -5488,6 +5593,7 @@ type Word8Value uint8
 var _ Value = Word8Value(0)
 var _ atree.Storable = Word8Value(0)
 var _ EquatableValue = Word8Value(0)
+var _ HashableValue = Word8Value(0)
 
 func (Word8Value) IsValue() {}
 
@@ -5593,6 +5699,11 @@ func (v Word8Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) b
 	return v == otherWord8
 }
 
+func (v Word8Value) GetHashInput(scratch []byte) ([]byte, error) {
+	scratch[0] = byte(v)
+	return scratch[:1], nil
+}
+
 func ConvertWord8(value Value) Word8Value {
 	return Word8Value(ConvertUInt8(value))
 }
@@ -5678,6 +5789,7 @@ type Word16Value uint16
 var _ Value = Word16Value(0)
 var _ atree.Storable = Word16Value(0)
 var _ EquatableValue = Word16Value(0)
+var _ HashableValue = Word16Value(0)
 
 func (Word16Value) IsValue() {}
 
@@ -5782,6 +5894,11 @@ func (v Word16Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) 
 	return v == otherWord16
 }
 
+func (v Word16Value) GetHashInput(scratch []byte) ([]byte, error) {
+	binary.BigEndian.PutUint16(scratch, uint16(v))
+	return scratch[:2], nil
+}
+
 func ConvertWord16(value Value) Word16Value {
 	return Word16Value(ConvertUInt16(value))
 }
@@ -5869,6 +5986,7 @@ type Word32Value uint32
 var _ Value = Word32Value(0)
 var _ atree.Storable = Word32Value(0)
 var _ EquatableValue = Word32Value(0)
+var _ HashableValue = Word32Value(0)
 
 func (Word32Value) IsValue() {}
 
@@ -5974,6 +6092,11 @@ func (v Word32Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) 
 	return v == otherWord32
 }
 
+func (v Word32Value) GetHashInput(scratch []byte) ([]byte, error) {
+	binary.BigEndian.PutUint32(scratch, uint32(v))
+	return scratch[:4], nil
+}
+
 func ConvertWord32(value Value) Word32Value {
 	return Word32Value(ConvertUInt32(value))
 }
@@ -6061,6 +6184,7 @@ type Word64Value uint64
 var _ Value = Word64Value(0)
 var _ atree.Storable = Word64Value(0)
 var _ EquatableValue = Word64Value(0)
+var _ HashableValue = Word64Value(0)
 
 func (Word64Value) IsValue() {}
 
@@ -6166,6 +6290,11 @@ func (v Word64Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) 
 	return v == otherWord64
 }
 
+func (v Word64Value) GetHashInput(scratch []byte) ([]byte, error) {
+	binary.BigEndian.PutUint64(scratch, uint64(v))
+	return scratch[:8], nil
+}
+
 func ConvertWord64(value Value) Word64Value {
 	return Word64Value(ConvertUInt64(value))
 }
@@ -6268,6 +6397,7 @@ func NewFix64ValueWithInteger(integer int64) Fix64Value {
 var _ Value = Fix64Value(0)
 var _ atree.Storable = Fix64Value(0)
 var _ EquatableValue = Fix64Value(0)
+var _ HashableValue = Fix64Value(0)
 
 func (Fix64Value) IsValue() {}
 
@@ -6454,6 +6584,11 @@ func (v Fix64Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) b
 	return v == otherFix64
 }
 
+func (v Fix64Value) GetHashInput(scratch []byte) ([]byte, error) {
+	binary.BigEndian.PutUint64(scratch, uint64(v))
+	return scratch[:8], nil
+}
+
 func ConvertFix64(value Value) Fix64Value {
 	switch value := value.(type) {
 	case Fix64Value:
@@ -6557,6 +6692,7 @@ func NewUFix64ValueWithInteger(integer uint64) UFix64Value {
 var _ Value = UFix64Value(0)
 var _ atree.Storable = UFix64Value(0)
 var _ EquatableValue = UFix64Value(0)
+var _ HashableValue = UFix64Value(0)
 
 func (UFix64Value) IsValue() {}
 
@@ -6705,6 +6841,11 @@ func (v UFix64Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) 
 		return false
 	}
 	return v == otherUFix64
+}
+
+func (v UFix64Value) GetHashInput(scratch []byte) ([]byte, error) {
+	binary.BigEndian.PutUint64(scratch, uint64(v))
+	return scratch[:8], nil
 }
 
 func ConvertUFix64(value Value) UFix64Value {
@@ -6919,6 +7060,7 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, getLocationRange func
 
 var _ Value = &CompositeValue{}
 var _ EquatableValue = &CompositeValue{}
+var _ HashableValue = &CompositeValue{}
 
 func (*CompositeValue) IsValue() {}
 
@@ -7170,6 +7312,15 @@ func (v *CompositeValue) Equal(interpreter *Interpreter, getLocationRange func()
 	}
 
 	return true
+}
+
+func (v *CompositeValue) GetHashInput(scratch []byte) ([]byte, error) {
+	if v.Kind == common.CompositeKindEnum {
+		rawValue := v.GetField(sema.EnumRawValueFieldName)
+		return rawValue.(HashableValue).GetHashInput(scratch)
+	}
+
+	panic(errors.NewUnreachableError())
 }
 
 func (v *CompositeValue) TypeID() common.TypeID {
@@ -8779,6 +8930,7 @@ func ConvertAddress(value Value) AddressValue {
 var _ Value = AddressValue{}
 var _ atree.Storable = AddressValue{}
 var _ EquatableValue = AddressValue{}
+var _ HashableValue = AddressValue{}
 
 func (AddressValue) IsValue() {}
 
@@ -8814,6 +8966,10 @@ func (v AddressValue) Equal(_ *Interpreter, _ func() LocationRange, other Value)
 		return false
 	}
 	return v == otherAddress
+}
+
+func (v AddressValue) GetHashInput(_ []byte) ([]byte, error) {
+	return v[:], nil
 }
 
 func (v AddressValue) Hex() string {
@@ -9083,6 +9239,7 @@ type PathValue struct {
 var _ Value = PathValue{}
 var _ atree.Storable = PathValue{}
 var _ EquatableValue = PathValue{}
+var _ HashableValue = PathValue{}
 
 func (PathValue) IsValue() {}
 
@@ -9156,6 +9313,11 @@ func (v PathValue) Equal(_ *Interpreter, _ func() LocationRange, other Value) bo
 
 	return otherPath.Identifier == v.Identifier &&
 		otherPath.Domain == v.Domain
+}
+
+func (v PathValue) GetHashInput(scratch []byte) ([]byte, error) {
+	scratch[0] = byte(v.Domain)
+	return append(scratch[:1], []byte(v.Identifier)...), nil
 }
 
 func (PathValue) IsStorable() bool {

@@ -1056,112 +1056,112 @@ func TestVisitor(t *testing.T) {
 	require.Equal(t, 1, stringVisits)
 }
 
-func TestKeyString(t *testing.T) {
+func TestGetHashInput(t *testing.T) {
 
 	t.Parallel()
 
 	storage := NewInMemoryStorage()
 
 	type testCase struct {
-		value    Value
-		expected string
+		value    HashableValue
+		expected []byte
 	}
 
 	stringerTests := map[string]testCase{
 		"UInt": {
 			value:    NewUIntValueFromUint64(10),
-			expected: "10",
+			expected: []byte{10},
 		},
 		"UInt8": {
 			value:    UInt8Value(8),
-			expected: "8",
+			expected: []byte{8},
 		},
 		"UInt16": {
 			value:    UInt16Value(16),
-			expected: "16",
+			expected: []byte{0, 16},
 		},
 		"UInt32": {
 			value:    UInt32Value(32),
-			expected: "32",
+			expected: []byte{0, 0, 0, 32},
 		},
 		"UInt64": {
 			value:    UInt64Value(64),
-			expected: "64",
+			expected: []byte{0, 0, 0, 0, 0, 0, 0, 64},
 		},
 		"UInt128": {
 			value:    NewUInt128ValueFromUint64(128),
-			expected: "128",
+			expected: []byte{128},
 		},
 		"UInt256": {
 			value:    NewUInt256ValueFromUint64(256),
-			expected: "256",
+			expected: []byte{1, 0},
 		},
 		"Int8": {
 			value:    Int8Value(-8),
-			expected: "-8",
+			expected: []byte{0xf8},
 		},
 		"Int16": {
 			value:    Int16Value(-16),
-			expected: "-16",
+			expected: []byte{0xff, 0xf0},
 		},
 		"Int32": {
 			value:    Int32Value(-32),
-			expected: "-32",
+			expected: []byte{0xff, 0xff, 0xff, 0xe0},
 		},
 		"Int64": {
 			value:    Int64Value(-64),
-			expected: "-64",
+			expected: []byte{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xc0},
 		},
 		"Int128": {
 			value:    NewInt128ValueFromInt64(-128),
-			expected: "-128",
+			expected: []byte{0x80},
 		},
 		"Int256": {
 			value:    NewInt256ValueFromInt64(-256),
-			expected: "-256",
+			expected: []byte{0xff, 0x0},
 		},
 		"Word8": {
 			value:    Word8Value(8),
-			expected: "8",
+			expected: []byte{8},
 		},
 		"Word16": {
 			value:    Word16Value(16),
-			expected: "16",
+			expected: []byte{0, 16},
 		},
 		"Word32": {
 			value:    Word32Value(32),
-			expected: "32",
+			expected: []byte{0, 0, 0, 32},
 		},
 		"Word64": {
 			value:    Word64Value(64),
-			expected: "64",
+			expected: []byte{0, 0, 0, 0, 0, 0, 0, 64},
 		},
 		"UFix64": {
 			value:    NewUFix64ValueWithInteger(64),
-			expected: "64.00000000",
+			expected: []byte{0x0, 0x0, 0x0, 0x1, 0x7d, 0x78, 0x40, 0x0},
 		},
 		"Fix64": {
 			value:    NewFix64ValueWithInteger(-32),
-			expected: "-32.00000000",
+			expected: []byte{0xff, 0xff, 0xff, 0xff, 0x41, 0x43, 0xe0, 0x0},
 		},
 		"true": {
 			value:    BoolValue(true),
-			expected: "true",
+			expected: []byte{1},
 		},
 		"false": {
 			value:    BoolValue(false),
-			expected: "false",
+			expected: []byte{0},
 		},
 		"String": {
 			value:    NewStringValue("Flow ridah!"),
-			expected: "Flow ridah!",
+			expected: []byte{0x46, 0x6c, 0x6f, 0x77, 0x20, 0x72, 0x69, 0x64, 0x61, 0x68, 0x21},
 		},
 		"Address": {
 			value:    NewAddressValue(common.Address{0, 0, 0, 0, 0, 0, 0, 1}),
-			expected: "0x1",
+			expected: []byte{0, 0, 0, 0, 0, 0, 0, 1},
 		},
 		"enum": {
-			value: func() HasKeyString {
+			value: func() HashableValue {
 				members := NewStringValueOrderedMap()
 				members.Set("rawValue", UInt8Value(42))
 				return NewCompositeValue(
@@ -1173,16 +1173,19 @@ func TestKeyString(t *testing.T) {
 					common.Address{},
 				)
 			}(),
-			expected: "42",
+			expected: []byte{42},
 		},
 		"Path": {
 			value: PathValue{
 				Domain:     common.PathDomainStorage,
 				Identifier: "foo",
 			},
-			// NOTE: this is an unfortunate mistake,
-			// the KeyString function should have been using Domain.Identifier()
-			expected: "/PathDomainStorage/foo",
+			expected: []byte{
+				// domain: storage
+				0x1,
+				// identifier: "foo"
+				0x66, 0x6f, 0x6f,
+			},
 		},
 	}
 
@@ -1192,9 +1195,14 @@ func TestKeyString(t *testing.T) {
 
 			t.Parallel()
 
+			var scratch [32]byte
+
+			actual, err := testCase.value.GetHashInput(scratch[:])
+			require.NoError(t, err)
+
 			assert.Equal(t,
 				testCase.expected,
-				testCase.value.KeyString(),
+				actual,
 			)
 		})
 	}
