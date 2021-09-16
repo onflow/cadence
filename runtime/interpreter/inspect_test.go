@@ -75,7 +75,7 @@ func TestInspectValue(t *testing.T) {
 	dictValue := arrayValue.GetIndex(inter, ReturnEmptyLocationRange, 0).(*DictionaryValue)
 	dictValueKey := NewStringValue("hello world")
 
-	dictValueValue, _, _ := dictValue.GetKey(dictValueKey)
+	dictValueValue, _ := dictValue.GetKey(dictValueKey)
 
 	t.Run("dict", func(t *testing.T) {
 

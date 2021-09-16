@@ -378,7 +378,7 @@ func TestOwnerNewDictionary(t *testing.T) {
 
 	// NOTE: keyValue is string, has no owner
 
-	queriedValue, _, _ := dictionary.GetKey(keyValue)
+	queriedValue, _ := dictionary.GetKey(keyValue)
 	value = queriedValue.(*CompositeValue)
 
 	assert.Equal(t, common.Address{}, dictionary.GetOwner())
@@ -421,7 +421,7 @@ func TestOwnerDictionary(t *testing.T) {
 
 	// NOTE: keyValue is string, has no owner
 
-	queriedValue, _, _ := dictionary.GetKey(keyValue)
+	queriedValue, _ := dictionary.GetKey(keyValue)
 	value = queriedValue.(*CompositeValue)
 
 	assert.Equal(t, newOwner, dictionary.GetOwner())
@@ -466,7 +466,7 @@ func TestOwnerDictionaryCopy(t *testing.T) {
 
 	dictionaryCopy := copyResult.(*DictionaryValue)
 
-	queriedValue, _, _ := dictionaryCopy.GetKey(keyValue)
+	queriedValue, _ := dictionaryCopy.GetKey(keyValue)
 	value = queriedValue.(*CompositeValue)
 
 	assert.Equal(t, common.Address{}, dictionaryCopy.GetOwner())
@@ -516,7 +516,7 @@ func TestOwnerDictionarySetSome(t *testing.T) {
 		NewSomeValueNonCopying(value),
 	)
 
-	queriedValue, _, _ := dictionary.GetKey(keyValue)
+	queriedValue, _ := dictionary.GetKey(keyValue)
 	value = queriedValue.(*CompositeValue)
 
 	assert.Equal(t, newOwner, dictionary.GetOwner())
@@ -567,7 +567,7 @@ func TestOwnerDictionaryInsertNonExisting(t *testing.T) {
 	)
 	assert.Equal(t, NilValue{}, existingValue)
 
-	queriedValue, _, _ := dictionary.GetKey(keyValue)
+	queriedValue, _ := dictionary.GetKey(keyValue)
 	value = queriedValue.(*CompositeValue)
 
 	assert.Equal(t, newOwner, dictionary.GetOwner())
@@ -622,7 +622,7 @@ func TestOwnerDictionaryRemove(t *testing.T) {
 	require.IsType(t, &SomeValue{}, existingValue)
 	value1 = existingValue.(*SomeValue).Value.(*CompositeValue)
 
-	queriedValue, _, _ := dictionary.GetKey(keyValue)
+	queriedValue, _ := dictionary.GetKey(keyValue)
 	value2 = queriedValue.(*CompositeValue)
 
 	assert.Equal(t, newOwner, dictionary.GetOwner())
