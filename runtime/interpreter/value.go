@@ -9161,6 +9161,24 @@ func (v PathValue) KeyString() string {
 	)
 }
 
+func (v PathValue) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
+	switch name {
+
+	case sema.ToStringFunctionName:
+		return NewHostFunctionValue(
+			func(invocation Invocation) Value {
+				return NewStringValue(v.String())
+			},
+		)
+	}
+
+	return nil
+}
+
+func (PathValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
+	panic(errors.NewUnreachableError())
+}
+
 func (v PathValue) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType, _ TypeConformanceResults) bool {
 	switch dynamicType.(type) {
 	case PublicPathDynamicType:
