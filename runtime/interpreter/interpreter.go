@@ -106,6 +106,7 @@ type OnFunctionInvocationFunc func(
 //
 type OnFunctionInvocatedFunc func(
 	inter *Interpreter,
+	functionName string,
 	duration time.Duration,
 )
 
@@ -3408,11 +3409,11 @@ func (interpreter *Interpreter) reportFunctionInvocation(pos ast.HasPosition) {
 	interpreter.onFunctionInvocation(interpreter, line)
 }
 
-func (interpreter *Interpreter) reportFunctionInvocated(took time.Duration) {
+func (interpreter *Interpreter) reportFunctionInvocated(functionName string, duration time.Duration) {
 	if interpreter.onFunctionInvocated == nil {
 		return
 	}
-	interpreter.onFunctionInvocated(interpreter, took)
+	interpreter.onFunctionInvocated(interpreter, functionName, duration)
 }
 
 // getMember gets the member value by the given identifier from the given Value depending on its type.

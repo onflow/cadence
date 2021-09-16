@@ -616,7 +616,7 @@ func (interpreter *Interpreter) VisitInvocationExpression(invocationExpression *
 		resultValue = NewSomeValueNonCopying(resultValue)
 	}
 
-	interpreter.reportFunctionInvocated(time.Since(startTime))
+	interpreter.reportFunctionInvocated("function."+invocationExpression.InvokedExpression.String(), time.Since(startTime))
 
 	return resultValue
 }

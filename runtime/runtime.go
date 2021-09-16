@@ -1288,8 +1288,8 @@ func (r *interpreterRuntime) meteringInterpreterOptions(runtimeInterface Interfa
 			},
 		),
 		interpreter.WithOnFunctionInvocatedHandler(
-			func(intr *interpreter.Interpreter, duration time.Duration) {
-				runtimeInterface.RecordTrace(intr.Location.String(), intr.Location, duration, nil)
+			func(intr *interpreter.Interpreter, functionName string, duration time.Duration) {
+				runtimeInterface.RecordTrace(functionName, intr.Location, duration, nil)
 			},
 		),
 
