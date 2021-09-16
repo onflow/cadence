@@ -47,7 +47,7 @@ func convertStoredValue(value atree.Value) (Value, error) {
 	switch value := value.(type) {
 	case *atree.Array:
 		// TODO: optimize
-		staticType, err := StaticTypeFromBytes([]byte(value.Type()))
+		staticType, err := StaticTypeFromBytes(value.Type())
 		if err != nil {
 			return nil, err
 		}
@@ -63,6 +63,26 @@ func convertStoredValue(value atree.Value) (Value, error) {
 		return &ArrayValue{
 			array: value,
 			Type:  arrayType,
+		}, nil
+
+	case *atree.OrderedMap:
+		// TODO: optimize
+		staticType, err := StaticTypeFromBytes(value.Type())
+		if err != nil {
+			return nil, err
+		}
+
+		dictionaryType, ok := staticType.(DictionaryStaticType)
+		if !ok {
+			return nil, fmt.Errorf(
+				"invalid dictionary static type: %v",
+				staticType,
+			)
+		}
+
+		return &DictionaryValue{
+			dictionary: value,
+			Type:       dictionaryType,
 		}, nil
 
 	case Value:
