@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"math"
 	goRuntime "runtime"
+	"time"
 
 	"github.com/onflow/atree"
 	"github.com/onflow/cadence/runtime/ast"
@@ -99,6 +100,13 @@ type OnLoopIterationFunc func(
 type OnFunctionInvocationFunc func(
 	inter *Interpreter,
 	line int,
+)
+
+// OnFunctionInvocatedFunc is a function that is triggered when a function invocation is complete.
+//
+type OnFunctionInvocatedFunc func(
+	inter *Interpreter,
+	duration time.Duration,
 )
 
 // InjectedCompositeFieldsHandlerFunc is a function that handles storage reads.
@@ -238,6 +246,7 @@ type Interpreter struct {
 	onStatement                    OnStatementFunc
 	onLoopIteration                OnLoopIterationFunc
 	onFunctionInvocation           OnFunctionInvocationFunc
+	onFunctionInvocated            OnFunctionInvocatedFunc
 	injectedCompositeFieldsHandler InjectedCompositeFieldsHandlerFunc
 	contractValueHandler           ContractValueHandlerFunc
 	importLocationHandler          ImportLocationHandlerFunc
@@ -284,11 +293,21 @@ func WithOnLoopIterationHandler(handler OnLoopIterationFunc) Option {
 }
 
 // WithOnLoopIterationHandler returns an interpreter option which sets
-// the given function as the loop iteration handler.
+// the given function as the function invocation handler.
 //
 func WithOnFunctionInvocationHandler(handler OnFunctionInvocationFunc) Option {
 	return func(interpreter *Interpreter) error {
 		interpreter.SetOnFunctionInvocationHandler(handler)
+		return nil
+	}
+}
+
+// WithOnLoopIterationHandler returns an interpreter option which sets
+// the given function as the function invocated handler.
+//
+func WithOnFunctionInvocatedHandler(handler OnFunctionInvocatedFunc) Option {
+	return func(interpreter *Interpreter) error {
+		interpreter.SetOnFunctionInvocatedHandler(handler)
 		return nil
 	}
 }
@@ -499,10 +518,16 @@ func (interpreter *Interpreter) SetOnLoopIterationHandler(function OnLoopIterati
 	interpreter.onLoopIteration = function
 }
 
-// SetOnFunctionInvocationHandler sets the function that is triggered when a loop iteration is about to be executed.
+// SetOnFunctionInvocationHandler sets the function that is triggered when a function is about to be invocated.
 //
 func (interpreter *Interpreter) SetOnFunctionInvocationHandler(function OnFunctionInvocationFunc) {
 	interpreter.onFunctionInvocation = function
+}
+
+// SetOnFunctionInvocatedHandler sets the function that is triggered when a function invocation is complete.
+//
+func (interpreter *Interpreter) SetOnFunctionInvocatedHandler(function OnFunctionInvocatedFunc) {
+	interpreter.onFunctionInvocated = function
 }
 
 // SetStorage sets the value that is used for storage operations.
@@ -3381,6 +3406,13 @@ func (interpreter *Interpreter) reportFunctionInvocation(pos ast.HasPosition) {
 
 	line := pos.StartPosition().Line
 	interpreter.onFunctionInvocation(interpreter, line)
+}
+
+func (interpreter *Interpreter) reportFunctionInvocated(took time.Duration) {
+	if interpreter.onFunctionInvocated == nil {
+		return
+	}
+	interpreter.onFunctionInvocated(interpreter, took)
 }
 
 // getMember gets the member value by the given identifier from the given Value depending on its type.

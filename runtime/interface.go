@@ -21,6 +21,8 @@ package runtime
 import (
 	"time"
 
+	opentracing "github.com/opentracing/opentracing-go"
+
 	"github.com/onflow/atree"
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/runtime/common"
@@ -120,6 +122,8 @@ type Interface interface {
 	ValidatePublicKey(key *PublicKey) (bool, error)
 	// GetAccountContractNames returns the names of all contracts deployed in an account.
 	GetAccountContractNames(address Address) ([]string, error)
+	// RecordTrace records a opentracing trace
+	RecordTrace(operation string, location common.Location, duration time.Duration, logs []opentracing.LogRecord)
 }
 
 type Metrics interface {

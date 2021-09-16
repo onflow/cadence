@@ -1287,6 +1287,12 @@ func (r *interpreterRuntime) meteringInterpreterOptions(runtimeInterface Interfa
 				checkLimit()
 			},
 		),
+		interpreter.WithOnFunctionInvocatedHandler(
+			func(intr *interpreter.Interpreter, duration time.Duration) {
+				runtimeInterface.RecordTrace(intr.Location.String(), intr.Location, duration, nil)
+			},
+		),
+
 		interpreter.WithExitHandler(
 			func() error {
 				return runtimeInterface.SetComputationUsed(used)

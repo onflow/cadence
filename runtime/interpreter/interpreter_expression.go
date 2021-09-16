@@ -20,6 +20,7 @@ package interpreter
 
 import (
 	"math/big"
+	"time"
 
 	"github.com/onflow/cadence/fixedpoint"
 	"github.com/onflow/cadence/runtime/ast"
@@ -546,6 +547,9 @@ func (interpreter *Interpreter) VisitConditionalExpression(expression *ast.Condi
 }
 
 func (interpreter *Interpreter) VisitInvocationExpression(invocationExpression *ast.InvocationExpression) ast.Repr {
+
+	startTime := time.Now()
+
 	// interpret the invoked expression
 	result := interpreter.evalExpression(invocationExpression.InvokedExpression)
 
@@ -611,6 +615,8 @@ func (interpreter *Interpreter) VisitInvocationExpression(invocationExpression *
 	if isOptionalChaining {
 		resultValue = NewSomeValueNonCopying(resultValue)
 	}
+
+	interpreter.reportFunctionInvocated(time.Since(startTime))
 
 	return resultValue
 }
