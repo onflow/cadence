@@ -562,6 +562,7 @@ func (v *StringValue) GetMember(_ *Interpreter, _ func() LocationRange, name str
 				otherValue := invocation.Arguments[0].(ConcatenatableValue)
 				return v.Concat(otherValue)
 			},
+			sema.StringTypeConcatFunctionType,
 		)
 
 	case "slice":
@@ -571,6 +572,7 @@ func (v *StringValue) GetMember(_ *Interpreter, _ func() LocationRange, name str
 				to := invocation.Arguments[1].(IntValue)
 				return v.Slice(from, to, invocation.GetLocationRange)
 			},
+			sema.StringTypeSliceFunctionType,
 		)
 
 	case "decodeHex":
@@ -578,6 +580,7 @@ func (v *StringValue) GetMember(_ *Interpreter, _ func() LocationRange, name str
 			func(invocation Invocation) Value {
 				return v.DecodeHex()
 			},
+			sema.StringTypeDecodeHexFunctionType,
 		)
 	}
 
@@ -1009,6 +1012,7 @@ func (v *ArrayValue) GetMember(inter *Interpreter, getLocationRange func() Locat
 				v.Append(inter, getLocationRange, invocation.Arguments[0])
 				return VoidValue{}
 			},
+			sema.ArrayAppendFunctionType(inter.ConvertStaticToSemaType(v.Type.ElementType())),
 		)
 
 	case "appendAll":
@@ -1018,6 +1022,7 @@ func (v *ArrayValue) GetMember(inter *Interpreter, getLocationRange func() Locat
 				v.AppendAll(inter, getLocationRange, otherArray)
 				return VoidValue{}
 			},
+			sema.ArrayAppendAllFunctionType(inter.ConvertStaticToSemaType(v.Type)),
 		)
 
 	case "concat":
@@ -1026,6 +1031,7 @@ func (v *ArrayValue) GetMember(inter *Interpreter, getLocationRange func() Locat
 				otherArray := invocation.Arguments[0].(ConcatenatableValue)
 				return v.Concat(otherArray)
 			},
+			sema.ArrayConcatFunctionType(inter.ConvertStaticToSemaType(v.Type)),
 		)
 
 	case "insert":
@@ -1036,6 +1042,7 @@ func (v *ArrayValue) GetMember(inter *Interpreter, getLocationRange func() Locat
 				v.Insert(inter, invocation.GetLocationRange, index, element)
 				return VoidValue{}
 			},
+			sema.ArrayInsertFunctionType(inter.ConvertStaticToSemaType(v.Type.ElementType())),
 		)
 
 	case "remove":
@@ -1044,6 +1051,7 @@ func (v *ArrayValue) GetMember(inter *Interpreter, getLocationRange func() Locat
 				i := invocation.Arguments[0].(NumberValue).ToInt()
 				return v.Remove(i, invocation.GetLocationRange)
 			},
+			sema.ArrayRemoveFunctionType(inter.ConvertStaticToSemaType(v.Type.ElementType())),
 		)
 
 	case "removeFirst":
@@ -1051,6 +1059,7 @@ func (v *ArrayValue) GetMember(inter *Interpreter, getLocationRange func() Locat
 			func(invocation Invocation) Value {
 				return v.RemoveFirst(invocation.GetLocationRange)
 			},
+			sema.ArrayRemoveFirstFunctionType(inter.ConvertStaticToSemaType(v.Type.ElementType())),
 		)
 
 	case "removeLast":
@@ -1058,6 +1067,7 @@ func (v *ArrayValue) GetMember(inter *Interpreter, getLocationRange func() Locat
 			func(invocation Invocation) Value {
 				return v.RemoveLast(invocation.GetLocationRange)
 			},
+			sema.ArrayRemoveLastFunctionType(inter.ConvertStaticToSemaType(v.Type.ElementType())),
 		)
 
 	case "contains":
@@ -1065,6 +1075,7 @@ func (v *ArrayValue) GetMember(inter *Interpreter, getLocationRange func() Locat
 			func(invocation Invocation) Value {
 				return v.Contains(invocation.Arguments[0])
 			},
+			sema.ArrayContainsFunctionType(inter.ConvertStaticToSemaType(v.Type.ElementType())),
 		)
 
 	}
@@ -8294,7 +8305,7 @@ func (v *SomeValue) RecursiveString(seenReferences SeenReferences) string {
 	return v.Value.RecursiveString(seenReferences)
 }
 
-func (v *SomeValue) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
+func (v *SomeValue) GetMember(inter *Interpreter, _ func() LocationRange, name string) Value {
 	switch name {
 	case "map":
 		return NewHostFunctionValue(
@@ -8315,6 +8326,7 @@ func (v *SomeValue) GetMember(_ *Interpreter, _ func() LocationRange, name strin
 
 				return NewSomeValueOwningNonCopying(newValue)
 			},
+			sema.OptionalTypeMapFunctionType(inter.ConvertStaticToSemaType(v.Value.StaticType())),
 		)
 	}
 
@@ -8880,6 +8892,7 @@ func (v AddressValue) GetMember(_ *Interpreter, _ func() LocationRange, name str
 				address := common.Address(v)
 				return ByteSliceToByteArrayValue(address[:])
 			},
+			sema.ArrayTypeToBytesFunctionType,
 		)
 	}
 
@@ -8916,7 +8929,14 @@ func NewAuthAccountValue(
 	fields.Set(sema.AuthAccountAddressField, address)
 	fields.Set(sema.AuthAccountAddPublicKeyField, addPublicKeyFunction)
 	fields.Set(sema.AuthAccountRemovePublicKeyField, removePublicKeyFunction)
-	fields.Set(sema.AuthAccountGetCapabilityField, accountGetCapabilityFunction(address, sema.CapabilityPathType))
+	fields.Set(
+		sema.AuthAccountGetCapabilityField,
+		accountGetCapabilityFunction(
+			address,
+			sema.CapabilityPathType,
+			sema.AuthAccountTypeGetCapabilityFunctionType,
+		),
+	)
 	fields.Set(sema.AuthAccountContractsField, contracts)
 	fields.Set(sema.AuthAccountKeysField, keys)
 
@@ -8980,7 +9000,7 @@ func NewAuthAccountValue(
 	}
 }
 
-func accountGetCapabilityFunction(addressValue AddressValue, pathType sema.Type) *HostFunctionValue {
+func accountGetCapabilityFunction(addressValue AddressValue, pathType sema.Type, funcType *sema.FunctionType) *HostFunctionValue {
 	return NewHostFunctionValue(
 		func(invocation Invocation) Value {
 
@@ -9013,6 +9033,7 @@ func accountGetCapabilityFunction(addressValue AddressValue, pathType sema.Type)
 				BorrowType: borrowStaticType,
 			}
 		},
+		funcType,
 	)
 }
 
@@ -9029,7 +9050,14 @@ func NewPublicAccountValue(
 
 	fields := NewStringValueOrderedMap()
 	fields.Set(sema.PublicAccountAddressField, address)
-	fields.Set(sema.PublicAccountGetCapabilityField, accountGetCapabilityFunction(address, sema.PublicPathType))
+	fields.Set(
+		sema.PublicAccountGetCapabilityField,
+		accountGetCapabilityFunction(
+			address,
+			sema.PublicPathType,
+			sema.PublicAccountTypeGetCapabilityFunctionType,
+		),
+	)
 	fields.Set(sema.PublicAccountKeysField, keys)
 	fields.Set(sema.PublicAccountContractsField, contracts)
 
@@ -9504,6 +9532,7 @@ var publicKeyVerifyFunction = NewHostFunctionValue(
 			publicKey,
 		)
 	},
+	sema.PublicKeyVerifyFunctionType,
 )
 
 // NewAuthAccountKeysValue constructs a AuthAccount.Keys value.

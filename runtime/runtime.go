@@ -1609,6 +1609,7 @@ func (r *interpreterRuntime) newAddPublicKeyFunction(
 
 			return interpreter.VoidValue{}
 		},
+		sema.AuthAccountTypeAddPublicKeyFunctionType,
 	)
 }
 
@@ -1642,6 +1643,7 @@ func (r *interpreterRuntime) newRemovePublicKeyFunction(
 
 			return interpreter.VoidValue{}
 		},
+		sema.AuthAccountTypeRemovePublicKeyFunctionType,
 	)
 }
 
@@ -2308,6 +2310,7 @@ func (r *interpreterRuntime) newAuthAccountContractsChangeFunction(
 				Code:    newCodeValue,
 			}
 		},
+		sema.AuthAccountContractsTypeAddFunctionType,
 	)
 }
 
@@ -2432,6 +2435,7 @@ func (r *interpreterRuntime) newAccountContractsGetFunction(
 				return interpreter.NilValue{}
 			}
 		},
+		sema.AuthAccountContractsTypeGetFunctionType,
 	)
 }
 
@@ -2523,6 +2527,7 @@ func (r *interpreterRuntime) newAuthAccountContractsRemoveFunction(
 				return interpreter.NilValue{}
 			}
 		},
+		sema.AuthAccountContractsTypeRemoveFunctionType,
 	)
 }
 
@@ -2698,6 +2703,7 @@ func (r *interpreterRuntime) newAccountKeysAddFunction(
 				invocation.Interpreter.PublicKeyValidationHandler,
 			)
 		},
+		sema.AuthAccountKeysTypeAddFunctionType,
 	)
 }
 
@@ -2734,6 +2740,7 @@ func (r *interpreterRuntime) newAccountKeysGetFunction(
 				),
 			)
 		},
+		sema.AccountKeysTypeGetFunctionType,
 	)
 }
 
@@ -2779,6 +2786,7 @@ func (r *interpreterRuntime) newAccountKeysRevokeFunction(
 				),
 			)
 		},
+		sema.AuthAccountKeysTypeRevokeFunctionType,
 	)
 }
 

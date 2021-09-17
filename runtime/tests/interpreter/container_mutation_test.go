@@ -19,6 +19,7 @@
 package interpreter_test
 
 import (
+	"github.com/onflow/cadence/runtime/stdlib"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -251,6 +252,48 @@ func TestArrayMutation(t *testing.T) {
         `)
 
 		_, err := inter.Invoke("test")
+		require.Error(t, err)
+
+		mutationError := &interpreter.ContainerMutationError{}
+		require.ErrorAs(t, err, mutationError)
+
+		assert.Equal(t, sema.StringType, mutationError.ExpectedType)
+	})
+
+	t.Run("function array", func(t *testing.T) {
+		t.Parallel()
+
+		standardLibraryFunctions :=
+			stdlib.StandardLibraryFunctions{
+				stdlib.LogFunction,
+			}
+
+		valueDeclarations := standardLibraryFunctions.ToSemaValueDeclarations()
+		values := standardLibraryFunctions.ToInterpreterValueDeclarations()
+
+		inter, err := parseCheckAndInterpretWithOptions(t, `
+                fun test() {
+                    let array: [((AnyStruct):Void)?] = [nil]
+
+                    let x = 5
+                    array[0] =  log
+
+					 array[0]!(x)
+                }
+            `,
+			ParseCheckAndInterpretOptions{
+				CheckerOptions: []sema.Option{
+					sema.WithPredeclaredValues(valueDeclarations),
+				},
+				Options: []interpreter.Option{
+					interpreter.WithPredeclaredValues(values),
+				},
+			},
+		)
+
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("test")
 		require.Error(t, err)
 
 		mutationError := &interpreter.ContainerMutationError{}

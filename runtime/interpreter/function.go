@@ -139,6 +139,7 @@ type HostFunction func(invocation Invocation) Value
 type HostFunctionValue struct {
 	Function        HostFunction
 	NestedVariables *StringVariableOrderedMap
+	Type            *sema.FunctionType
 }
 
 func (f *HostFunctionValue) String() string {
@@ -152,9 +153,11 @@ func (f *HostFunctionValue) RecursiveString(_ SeenReferences) string {
 
 func NewHostFunctionValue(
 	function HostFunction,
+	funcType *sema.FunctionType,
 ) *HostFunctionValue {
 	return &HostFunctionValue{
 		Function: function,
+		Type:     funcType,
 	}
 }
 
@@ -174,9 +177,8 @@ func (*HostFunctionValue) DynamicType(_ *Interpreter, _ SeenReferences) DynamicT
 	return hostFunctionDynamicType
 }
 
-func (*HostFunctionValue) StaticType() StaticType {
-	// TODO: add function static type, store static type in host function value
-	return nil
+func (f *HostFunctionValue) StaticType() StaticType {
+	return ConvertSemaToStaticType(f.Type)
 }
 
 func (f *HostFunctionValue) Copy() Value {
