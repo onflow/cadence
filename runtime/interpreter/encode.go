@@ -84,7 +84,7 @@ const (
 	_                // NOTE: Do *NOT* re-use. Previously used for dictionaries
 	CBORTagSomeValue
 	CBORTagAddressValue
-	CBORTagCompositeValue
+	_ // NOTE: Do *NOT* re-use. Previously used for composites
 	CBORTagTypeValue
 	_ // NOTE: Do *NOT* re-use. Previously used for arrays
 	_
@@ -599,82 +599,6 @@ const (
 	encodedCompositeValueLength = 4
 )
 
-// Encode encodes CompositeStorable as
-// cbor.Tag{
-//		Number: CBORTagCompositeValue,
-//		Content: cborArray{
-//			encodedCompositeValueLocationFieldKey:            common.Location(location),
-//			encodedCompositeValueKindFieldKey:                uint(v.Kind),
-//			encodedCompositeValueFieldsFieldKey:              []interface{}(fields),
-//			encodedCompositeValueQualifiedIdentifierFieldKey: string(v.QualifiedIdentifier),
-//		},
-// }
-func (s *CompositeStorable) Encode(e *atree.Encoder) error {
-
-	// Encode CBOR tag number
-	err := e.CBOR.EncodeRawBytes([]byte{
-		// tag number
-		0xd8, CBORTagCompositeValue,
-	})
-
-	if err != nil {
-		return err
-	}
-
-	// Encode array head
-	err = e.CBOR.EncodeRawBytes([]byte{
-		// array, 4 items follow
-		0x84,
-	})
-	if err != nil {
-		return err
-	}
-
-	// Encode location at array index encodedCompositeValueLocationFieldKey
-	err = EncodeLocation(e, s.Location)
-	if err != nil {
-		return err
-	}
-
-	// Encode kind at array index encodedCompositeValueKindFieldKey
-	err = e.CBOR.EncodeUint(uint(s.Kind))
-	if err != nil {
-		return err
-	}
-
-	// Encode fields (as array) at array index encodedCompositeValueFieldsFieldKey
-
-	err = e.CBOR.EncodeArrayHead(uint64(s.FieldStorables.Len() * 2))
-	if err != nil {
-		return err
-	}
-
-	for pair := s.FieldStorables.Oldest(); pair != nil; pair = pair.Next() {
-		fieldName := pair.Key
-		fieldStorable := pair.Value
-
-		// Encode field name as fields array element
-		err := e.CBOR.EncodeString(fieldName)
-		if err != nil {
-			return err
-		}
-
-		// Encode value as fields array element
-		err = fieldStorable.Encode(e)
-		if err != nil {
-			return err
-		}
-	}
-
-	// Encode qualified identifier at array index encodedCompositeValueQualifiedIdentifierFieldKey
-	err = e.CBOR.EncodeString(s.QualifiedIdentifier)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
 // Encode encodes SomeStorable as
 // cbor.Tag{
 //		Number: CBORTagSomeValue,
@@ -812,9 +736,9 @@ const (
 	encodedAddressLocationLength = 2
 )
 
-func EncodeLocation(e *atree.Encoder, l common.Location) error {
+func EncodeLocation(e *cbor.StreamEncoder, l common.Location) error {
 	if l == nil {
-		return e.CBOR.EncodeNil()
+		return e.EncodeNil()
 	}
 
 	switch l := l.(type) {
@@ -825,14 +749,14 @@ func EncodeLocation(e *atree.Encoder, l common.Location) error {
 		//		Number:  CBORTagStringLocation,
 		//		Content: string(l),
 		// }
-		err := e.CBOR.EncodeRawBytes([]byte{
+		err := e.EncodeRawBytes([]byte{
 			// tag number
 			0xd8, CBORTagStringLocation,
 		})
 		if err != nil {
 			return err
 		}
-		return e.CBOR.EncodeString(string(l))
+		return e.EncodeString(string(l))
 
 	case common.IdentifierLocation:
 		// common.IdentifierLocation is encoded as
@@ -840,14 +764,14 @@ func EncodeLocation(e *atree.Encoder, l common.Location) error {
 		//		Number:  CBORTagIdentifierLocation,
 		//		Content: string(l),
 		// }
-		err := e.CBOR.EncodeRawBytes([]byte{
+		err := e.EncodeRawBytes([]byte{
 			// tag number
 			0xd8, CBORTagIdentifierLocation,
 		})
 		if err != nil {
 			return err
 		}
-		return e.CBOR.EncodeString(string(l))
+		return e.EncodeString(string(l))
 
 	case common.AddressLocation:
 		// common.AddressLocation is encoded as
@@ -859,7 +783,7 @@ func EncodeLocation(e *atree.Encoder, l common.Location) error {
 		//		},
 		// }
 		// Encode tag number and array head
-		err := e.CBOR.EncodeRawBytes([]byte{
+		err := e.EncodeRawBytes([]byte{
 			// tag number
 			0xd8, CBORTagAddressLocation,
 			// array, 2 items follow
@@ -869,12 +793,12 @@ func EncodeLocation(e *atree.Encoder, l common.Location) error {
 			return err
 		}
 		// Encode address at array index encodedAddressLocationAddressFieldKey
-		err = e.CBOR.EncodeBytes(l.Address.Bytes())
+		err = e.EncodeBytes(l.Address.Bytes())
 		if err != nil {
 			return err
 		}
 		// Encode name at array index encodedAddressLocationNameFieldKey
-		return e.CBOR.EncodeString(l.Name)
+		return e.EncodeString(l.Name)
 
 	default:
 		return fmt.Errorf("unsupported location: %T", l)
@@ -1050,7 +974,7 @@ func (t CompositeStaticType) Encode(e *atree.Encoder) error {
 	}
 
 	// Encode location at array index encodedCompositeStaticTypeLocationFieldKey
-	err = EncodeLocation(e, t.Location)
+	err = EncodeLocation(e.CBOR, t.Location)
 	if err != nil {
 		return err
 	}
@@ -1092,7 +1016,7 @@ func (t InterfaceStaticType) Encode(e *atree.Encoder) error {
 	}
 
 	// Encode location at array index encodedInterfaceStaticTypeLocationFieldKey
-	err = EncodeLocation(e, t.Location)
+	err = EncodeLocation(e.CBOR, t.Location)
 	if err != nil {
 		return err
 	}

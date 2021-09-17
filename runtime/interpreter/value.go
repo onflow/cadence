@@ -19,6 +19,7 @@
 package interpreter
 
 import (
+	"bytes"
 	"encoding/binary"
 	"encoding/hex"
 	"fmt"
@@ -26,6 +27,7 @@ import (
 	"math/big"
 	"strings"
 
+	"github.com/fxamacker/cbor/v2"
 	"github.com/onflow/atree"
 	"github.com/rivo/uniseg"
 	"golang.org/x/text/unicode/norm"
@@ -117,11 +119,19 @@ type EquatableValue interface {
 	Equal(interpreter *Interpreter, getLocationRange func() LocationRange, other Value) bool
 }
 
+func newValueComparator(interpreter *Interpreter, getLocationRange func() LocationRange) atree.Comparator {
+	return func(storage atree.SlabStorage, atreeValue atree.Value, otherStorable atree.Storable) (bool, error) {
+		value := MustConvertStoredValue(atreeValue)
+		otherValue := StoredValue(otherStorable, storage)
+		return value.(EquatableValue).Equal(interpreter, getLocationRange, otherValue), nil
+	}
+}
+
 // HashableValue
 
 type HashableValue interface {
 	Value
-	GetHashInput(scratch []byte) ([]byte, error)
+	HashInput(interpreter *Interpreter, scratch []byte) []byte
 }
 
 // ResourceKindedValue
@@ -378,13 +388,13 @@ func (v BoolValue) Equal(_ *Interpreter, _ func() LocationRange, other Value) bo
 	return bool(v) == bool(otherBool)
 }
 
-func (v BoolValue) GetHashInput(scratch []byte) ([]byte, error) {
+func (v BoolValue) HashInput(_ *Interpreter, scratch []byte) []byte {
 	if v {
 		scratch[0] = 1
 	} else {
 		scratch[0] = 0
 	}
-	return scratch[:1], nil
+	return scratch[:1]
 }
 
 func (v BoolValue) String() string {
@@ -497,8 +507,8 @@ func (v *StringValue) Equal(_ *Interpreter, _ func() LocationRange, other Value)
 	return v.NormalForm() == otherString.NormalForm()
 }
 
-func (v *StringValue) GetHashInput(_ []byte) ([]byte, error) {
-	return []byte(v.Str), nil
+func (v *StringValue) HashInput(_ *Interpreter, _ []byte) []byte {
+	return []byte(v.Str)
 }
 
 func (v *StringValue) NormalForm() string {
@@ -915,9 +925,9 @@ func (v *ArrayValue) Append(interpreter *Interpreter, getLocationRange func() Lo
 	}
 }
 
-func (v *ArrayValue) AppendAll(inter *Interpreter, getLocationRange func() LocationRange, other *ArrayValue) {
+func (v *ArrayValue) AppendAll(interpreter *Interpreter, getLocationRange func() LocationRange, other *ArrayValue) {
 	other.Walk(func(value Value) {
-		v.Append(inter, getLocationRange, value)
+		v.Append(interpreter, getLocationRange, value)
 	})
 }
 
@@ -1169,8 +1179,8 @@ func (v *ArrayValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (a
 	return atree.StorageIDStorable(v.StorageID()), nil
 }
 
-func (v *ArrayValue) IsResourceKinded(inter *Interpreter) bool {
-	ty := inter.ConvertStaticToSemaType(v.StaticType())
+func (v *ArrayValue) IsResourceKinded(interpreter *Interpreter) bool {
+	ty := interpreter.ConvertStaticToSemaType(v.StaticType())
 	return ty.IsResourceType()
 }
 
@@ -1178,9 +1188,9 @@ func (v *ArrayValue) NeedsStoreToAddress(_ *Interpreter, address atree.Address) 
 	return v.StorageID().Address != address
 }
 
-func (v *ArrayValue) DeepCopy(inter *Interpreter, address atree.Address) Value {
+func (v *ArrayValue) DeepCopy(interpreter *Interpreter, address atree.Address) Value {
 
-	array, err := atree.NewArray(inter.Storage, address, v.array.Type())
+	array, err := atree.NewArray(interpreter.Storage, address, v.array.Type())
 	if err != nil {
 		panic(ExternalError{err})
 	}
@@ -1195,9 +1205,9 @@ func (v *ArrayValue) DeepCopy(inter *Interpreter, address atree.Address) Value {
 
 		// TODO: optimize
 		// NOTE: copy to temporary value, then insert
-		value := inter.CopyValue(element, atree.Address{})
+		value := interpreter.CopyValue(element, atree.Address{})
 
-		result.Insert(inter, ReturnEmptyLocationRange, index, value)
+		result.Insert(interpreter, ReturnEmptyLocationRange, index, value)
 
 		index++
 	})
@@ -1205,24 +1215,19 @@ func (v *ArrayValue) DeepCopy(inter *Interpreter, address atree.Address) Value {
 	return result
 }
 
-func (v *ArrayValue) DeepRemove(inter *Interpreter) {
-
-	storage := inter.Storage
+func (v *ArrayValue) DeepRemove(interpreter *Interpreter) {
 
 	// Remove nested values and storables
 
-	// TODO: use backward iterator
-	for prevIndex := v.Count(); prevIndex > 0; prevIndex-- {
-		index := prevIndex - 1
+	storage := v.array.Storage
 
-		storable, err := v.array.Remove(uint64(index))
-		if err != nil {
-			panic(ExternalError{err})
-		}
-
+	err := v.array.PopIterate(func(storable atree.Storable) {
 		value := StoredValue(storable, storage)
-		value.DeepRemove(inter)
-		inter.removeReferencedSlab(storable)
+		value.DeepRemove(interpreter)
+		interpreter.removeReferencedSlab(storable)
+	})
+	if err != nil {
+		panic(ExternalError{err})
 	}
 }
 
@@ -1491,9 +1496,9 @@ func (v IntValue) Equal(_ *Interpreter, _ func() LocationRange, other Value) boo
 	return cmp == 0
 }
 
-func (v IntValue) GetHashInput(_ []byte) ([]byte, error) {
+func (v IntValue) HashInput(_ *Interpreter, _ []byte) []byte {
 	// TODO: optimize?
-	return SignedBigIntToBigEndianBytes(v.BigInt), nil
+	return SignedBigIntToBigEndianBytes(v.BigInt)
 }
 
 func (v IntValue) BitwiseOr(other IntegerValue) IntegerValue {
@@ -1801,9 +1806,9 @@ func (v Int8Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) bo
 	return v == otherInt8
 }
 
-func (v Int8Value) GetHashInput(scratch []byte) ([]byte, error) {
+func (v Int8Value) HashInput(_ *Interpreter, scratch []byte) []byte {
 	scratch[0] = byte(v)
-	return scratch[:1], nil
+	return scratch[:1]
 }
 
 func ConvertInt8(value Value) Int8Value {
@@ -2117,9 +2122,9 @@ func (v Int16Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) b
 	return v == otherInt16
 }
 
-func (v Int16Value) GetHashInput(scratch []byte) ([]byte, error) {
+func (v Int16Value) HashInput(_ *Interpreter, scratch []byte) []byte {
 	binary.BigEndian.PutUint16(scratch, uint16(v))
-	return scratch[:2], nil
+	return scratch[:2]
 }
 
 func ConvertInt16(value Value) Int16Value {
@@ -2435,9 +2440,9 @@ func (v Int32Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) b
 	return v == otherInt32
 }
 
-func (v Int32Value) GetHashInput(scratch []byte) ([]byte, error) {
+func (v Int32Value) HashInput(_ *Interpreter, scratch []byte) []byte {
 	binary.BigEndian.PutUint32(scratch, uint32(v))
-	return scratch[:4], nil
+	return scratch[:4]
 }
 
 func ConvertInt32(value Value) Int32Value {
@@ -2757,9 +2762,9 @@ func (v Int64Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) b
 	return v == otherInt64
 }
 
-func (v Int64Value) GetHashInput(scratch []byte) ([]byte, error) {
+func (v Int64Value) HashInput(_ *Interpreter, scratch []byte) []byte {
 	binary.BigEndian.PutUint64(scratch, uint64(v))
-	return scratch[:8], nil
+	return scratch[:8]
 }
 
 func ConvertInt64(value Value) Int64Value {
@@ -3125,9 +3130,9 @@ func (v Int128Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) 
 	return cmp == 0
 }
 
-func (v Int128Value) GetHashInput(_ []byte) ([]byte, error) {
+func (v Int128Value) HashInput(_ *Interpreter, _ []byte) []byte {
 	// TODO: optimize?
-	return SignedBigIntToBigEndianBytes(v.BigInt), nil
+	return SignedBigIntToBigEndianBytes(v.BigInt)
 }
 
 func ConvertInt128(value Value) Int128Value {
@@ -3513,9 +3518,9 @@ func (v Int256Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) 
 	return cmp == 0
 }
 
-func (v Int256Value) GetHashInput(_ []byte) ([]byte, error) {
+func (v Int256Value) HashInput(_ *Interpreter, _ []byte) []byte {
 	// TODO: optimize?
-	return SignedBigIntToBigEndianBytes(v.BigInt), nil
+	return SignedBigIntToBigEndianBytes(v.BigInt)
 }
 
 func ConvertInt256(value Value) Int256Value {
@@ -3814,9 +3819,9 @@ func (v UIntValue) Equal(_ *Interpreter, _ func() LocationRange, other Value) bo
 	return cmp == 0
 }
 
-func (v UIntValue) GetHashInput(_ []byte) ([]byte, error) {
+func (v UIntValue) HashInput(_ *Interpreter, _ []byte) []byte {
 	// TODO: optimize?
-	return UnsignedBigIntToBigEndianBytes(v.BigInt), nil
+	return UnsignedBigIntToBigEndianBytes(v.BigInt)
 }
 
 func (v UIntValue) BitwiseOr(other IntegerValue) IntegerValue {
@@ -4055,9 +4060,9 @@ func (v UInt8Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) b
 	return v == otherUInt8
 }
 
-func (v UInt8Value) GetHashInput(scratch []byte) ([]byte, error) {
+func (v UInt8Value) HashInput(_ *Interpreter, scratch []byte) []byte {
 	scratch[0] = byte(v)
-	return scratch[:1], nil
+	return scratch[:1]
 }
 
 func ConvertUInt8(value Value) UInt8Value {
@@ -4301,9 +4306,9 @@ func (v UInt16Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) 
 	return v == otherUInt16
 }
 
-func (v UInt16Value) GetHashInput(scratch []byte) ([]byte, error) {
+func (v UInt16Value) HashInput(_ *Interpreter, scratch []byte) []byte {
 	binary.BigEndian.PutUint16(scratch, uint16(v))
-	return scratch[:2], nil
+	return scratch[:2]
 }
 
 func ConvertUInt16(value Value) UInt16Value {
@@ -4553,9 +4558,9 @@ func (v UInt32Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) 
 	return v == otherUInt32
 }
 
-func (v UInt32Value) GetHashInput(scratch []byte) ([]byte, error) {
+func (v UInt32Value) HashInput(_ *Interpreter, scratch []byte) []byte {
 	binary.BigEndian.PutUint32(scratch, uint32(v))
-	return scratch[:4], nil
+	return scratch[:4]
 }
 
 func ConvertUInt32(value Value) UInt32Value {
@@ -4810,9 +4815,9 @@ func (v UInt64Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) 
 	return v == otherUInt64
 }
 
-func (v UInt64Value) GetHashInput(scratch []byte) ([]byte, error) {
+func (v UInt64Value) HashInput(_ *Interpreter, scratch []byte) []byte {
 	binary.BigEndian.PutUint64(scratch, uint64(v))
-	return scratch[:8], nil
+	return scratch[:8]
 }
 
 func ConvertUInt64(value Value) UInt64Value {
@@ -5127,9 +5132,9 @@ func (v UInt128Value) Equal(_ *Interpreter, _ func() LocationRange, other Value)
 	return cmp == 0
 }
 
-func (v UInt128Value) GetHashInput(_ []byte) ([]byte, error) {
+func (v UInt128Value) HashInput(_ *Interpreter, _ []byte) []byte {
 	// TODO: optimize?
-	return UnsignedBigIntToBigEndianBytes(v.BigInt), nil
+	return UnsignedBigIntToBigEndianBytes(v.BigInt)
 }
 
 func ConvertUInt128(value Value) UInt128Value {
@@ -5461,9 +5466,9 @@ func (v UInt256Value) Equal(_ *Interpreter, _ func() LocationRange, other Value)
 	return cmp == 0
 }
 
-func (v UInt256Value) GetHashInput(_ []byte) ([]byte, error) {
+func (v UInt256Value) HashInput(_ *Interpreter, _ []byte) []byte {
 	// TODO: optimize?
-	return UnsignedBigIntToBigEndianBytes(v.BigInt), nil
+	return UnsignedBigIntToBigEndianBytes(v.BigInt)
 }
 
 func ConvertUInt256(value Value) UInt256Value {
@@ -5699,9 +5704,9 @@ func (v Word8Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) b
 	return v == otherWord8
 }
 
-func (v Word8Value) GetHashInput(scratch []byte) ([]byte, error) {
+func (v Word8Value) HashInput(_ *Interpreter, scratch []byte) []byte {
 	scratch[0] = byte(v)
-	return scratch[:1], nil
+	return scratch[:1]
 }
 
 func ConvertWord8(value Value) Word8Value {
@@ -5894,9 +5899,9 @@ func (v Word16Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) 
 	return v == otherWord16
 }
 
-func (v Word16Value) GetHashInput(scratch []byte) ([]byte, error) {
+func (v Word16Value) HashInput(_ *Interpreter, scratch []byte) []byte {
 	binary.BigEndian.PutUint16(scratch, uint16(v))
-	return scratch[:2], nil
+	return scratch[:2]
 }
 
 func ConvertWord16(value Value) Word16Value {
@@ -6092,9 +6097,9 @@ func (v Word32Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) 
 	return v == otherWord32
 }
 
-func (v Word32Value) GetHashInput(scratch []byte) ([]byte, error) {
+func (v Word32Value) HashInput(_ *Interpreter, scratch []byte) []byte {
 	binary.BigEndian.PutUint32(scratch, uint32(v))
-	return scratch[:4], nil
+	return scratch[:4]
 }
 
 func ConvertWord32(value Value) Word32Value {
@@ -6290,9 +6295,9 @@ func (v Word64Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) 
 	return v == otherWord64
 }
 
-func (v Word64Value) GetHashInput(scratch []byte) ([]byte, error) {
+func (v Word64Value) HashInput(_ *Interpreter, scratch []byte) []byte {
 	binary.BigEndian.PutUint64(scratch, uint64(v))
-	return scratch[:8], nil
+	return scratch[:8]
 }
 
 func ConvertWord64(value Value) Word64Value {
@@ -6584,9 +6589,9 @@ func (v Fix64Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) b
 	return v == otherFix64
 }
 
-func (v Fix64Value) GetHashInput(scratch []byte) ([]byte, error) {
+func (v Fix64Value) HashInput(_ *Interpreter, scratch []byte) []byte {
 	binary.BigEndian.PutUint64(scratch, uint64(v))
-	return scratch[:8], nil
+	return scratch[:8]
 }
 
 func ConvertFix64(value Value) Fix64Value {
@@ -6843,9 +6848,9 @@ func (v UFix64Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) 
 	return v == otherUFix64
 }
 
-func (v UFix64Value) GetHashInput(scratch []byte) ([]byte, error) {
+func (v UFix64Value) HashInput(_ *Interpreter, scratch []byte) []byte {
 	binary.BigEndian.PutUint64(scratch, uint64(v))
-	return scratch[:8], nil
+	return scratch[:8]
 }
 
 func ConvertUFix64(value Value) UFix64Value {
@@ -6944,118 +6949,105 @@ func (v UFix64Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 // CompositeValue
 
 type CompositeValue struct {
-	// Storable fields
-	*CompositeStorable
-	// Non-storable fields
-	Storage         atree.SlabStorage
-	InjectedFields  *StringValueOrderedMap
-	ComputedFields  *StringComputedFieldOrderedMap
-	NestedVariables *StringVariableOrderedMap
-	Functions       map[string]FunctionValue
-	Destructor      FunctionValue
-	Stringer        func(seenReferences SeenReferences) string
-	// TODO: move isDestroyed to CompositeStorable ?
-	isDestroyed bool
+	dictionary          *atree.OrderedMap
+	Location            common.Location
+	QualifiedIdentifier string
+	Kind                common.CompositeKind
+	InjectedFields      map[string]Value
+	ComputedFields      map[string]ComputedField
+	NestedVariables     map[string]*Variable
+	Functions           map[string]FunctionValue
+	Destructor          FunctionValue
+	Stringer            func(seenReferences SeenReferences) string
+	isDestroyed         bool
 }
 
 type ComputedField func(*Interpreter) Value
 
-func NewCompositeValue(
-	storage atree.SlabStorage,
+func CompositeTypeToBytes(
 	location common.Location,
 	qualifiedIdentifier string,
 	kind common.CompositeKind,
-	fieldValues *StringValueOrderedMap,
+) (
+	cbor.RawMessage,
+	error,
+) {
+	var buf bytes.Buffer
+	enc := atree.NewEncoder(&buf, CBOREncMode)
+
+	err := EncodeLocation(enc.CBOR, location)
+	if err != nil {
+		return nil, err
+	}
+
+	err = enc.CBOR.EncodeString(qualifiedIdentifier)
+	if err != nil {
+		return nil, err
+	}
+
+	err = enc.CBOR.EncodeUint(uint(kind))
+	if err != nil {
+		return nil, err
+	}
+
+	err = enc.CBOR.Flush()
+	if err != nil {
+		return nil, err
+	}
+
+	return buf.Bytes(), nil
+}
+
+type CompositeField struct {
+	Name  string
+	Value Value
+}
+
+func NewCompositeValue(
+	interpreter *Interpreter,
+	location common.Location,
+	qualifiedIdentifier string,
+	kind common.CompositeKind,
+	fields []CompositeField,
 	address common.Address,
 ) *CompositeValue {
 
-	v := &CompositeValue{
-		Storage: storage,
-		CompositeStorable: &CompositeStorable{
-			Location:            location,
-			QualifiedIdentifier: qualifiedIdentifier,
-			Kind:                kind,
-			FieldStorables:      NewStringAtreeStorableOrderedMap(),
-		},
-	}
-
-	// Get field storables
-
-	if fieldValues != nil {
-		for pair := fieldValues.Oldest(); pair != nil; pair = pair.Next() {
-			fieldName := pair.Key
-			fieldValue := pair.Value
-
-			storable, err := fieldValue.Storable(
-				storage,
-				atree.Address(address),
-				atree.MaxInlineElementSize,
-			)
-			if err != nil {
-				panic(ExternalError{err})
-			}
-
-			v.FieldStorables.Set(fieldName, storable)
-		}
-	}
-
-	if v.IsStorable() {
-
-		// Generate storage ID and store in storage
-
-		storageID, err := storage.GenerateStorageID(atree.Address(address))
-		if err != nil {
-			panic(ExternalError{err})
-		}
-
-		v.StorageID = storageID
-
-		v.store(storage)
-	}
-
-	return v
-}
-
-func (v *CompositeValue) store(storage atree.SlabStorage) {
-	err := storage.Store(
-		v.StorageID,
-		atree.StorableSlab{
-			StorageID: v.StorageID,
-			Storable:  v.CompositeStorable,
-		},
+	typeInfo, err := CompositeTypeToBytes(
+		location,
+		qualifiedIdentifier,
+		kind,
 	)
 	if err != nil {
 		panic(ExternalError{err})
 	}
-}
 
-func (v *CompositeValue) IsDestroyed() bool {
-	return v.isDestroyed
-}
-
-func (v *CompositeValue) Destroy(interpreter *Interpreter, getLocationRange func() LocationRange) {
-	interpreter = v.getInterpreter(interpreter)
-
-	// if composite was deserialized, dynamically link in the destructor
-	if v.Destructor == nil {
-		v.Destructor = interpreter.typeCodes.CompositeCodes[v.TypeID()].DestructorFunction
+	dictionary, err := atree.NewMap(
+		interpreter.Storage,
+		atree.Address(address),
+		atree.NewDefaultDigesterBuilder(),
+		typeInfo,
+	)
+	if err != nil {
+		panic(ExternalError{err})
 	}
 
-	destructor := v.Destructor
-
-	if destructor != nil {
-		invocation := Invocation{
-			Self:             v,
-			Arguments:        nil,
-			ArgumentTypes:    nil,
-			GetLocationRange: getLocationRange,
-			Interpreter:      interpreter,
-		}
-
-		destructor.invoke(invocation)
+	v := &CompositeValue{
+		dictionary:          dictionary,
+		Location:            location,
+		QualifiedIdentifier: qualifiedIdentifier,
+		Kind:                kind,
 	}
 
-	v.isDestroyed = true
+	for _, field := range fields {
+		v.SetMember(
+			interpreter,
+			ReturnEmptyLocationRange,
+			field.Name,
+			field.Value,
+		)
+	}
+
+	return v
 }
 
 var _ Value = &CompositeValue{}
@@ -7095,7 +7087,36 @@ func (v *CompositeValue) StaticType() StaticType {
 	}
 }
 
-func (v *CompositeValue) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
+func (v *CompositeValue) IsDestroyed() bool {
+	return v.isDestroyed
+}
+
+func (v *CompositeValue) Destroy(interpreter *Interpreter, getLocationRange func() LocationRange) {
+	interpreter = v.getInterpreter(interpreter)
+
+	// if composite was deserialized, dynamically link in the destructor
+	if v.Destructor == nil {
+		v.Destructor = interpreter.typeCodes.CompositeCodes[v.TypeID()].DestructorFunction
+	}
+
+	destructor := v.Destructor
+
+	if destructor != nil {
+		invocation := Invocation{
+			Self:             v,
+			Arguments:        nil,
+			ArgumentTypes:    nil,
+			GetLocationRange: getLocationRange,
+			Interpreter:      interpreter,
+		}
+
+		destructor.invoke(invocation)
+	}
+
+	v.isDestroyed = true
+}
+
+func (v *CompositeValue) GetMember(interpreter *Interpreter, getLocationRange func() LocationRange, name string) Value {
 
 	if v.Kind == common.CompositeKindResource &&
 		name == sema.ResourceOwnerFieldName {
@@ -7103,13 +7124,20 @@ func (v *CompositeValue) GetMember(interpreter *Interpreter, _ func() LocationRa
 		return v.OwnerValue(interpreter)
 	}
 
-	storable, ok := v.FieldStorables.Get(name)
-	if ok {
+	valueComparator := newValueComparator(interpreter, getLocationRange)
+
+	storable, err := v.dictionary.Get(valueComparator, interpreter.getHashInput, NewStringValue(name))
+	if err != nil {
+		if _, ok := err.(*atree.KeyNotFoundError); !ok {
+			panic(ExternalError{err})
+		}
+	}
+	if storable != nil {
 		return StoredValue(storable, interpreter.Storage)
 	}
 
 	if v.NestedVariables != nil {
-		variable, ok := v.NestedVariables.Get(name)
+		variable, ok := v.NestedVariables[name]
 		if ok {
 			return variable.GetValue()
 		}
@@ -7118,7 +7146,7 @@ func (v *CompositeValue) GetMember(interpreter *Interpreter, _ func() LocationRa
 	interpreter = v.getInterpreter(interpreter)
 
 	if v.ComputedFields != nil {
-		if computedField, ok := v.ComputedFields.Get(name); ok {
+		if computedField, ok := v.ComputedFields[name]; ok {
 			return computedField(interpreter)
 		}
 	}
@@ -7138,7 +7166,7 @@ func (v *CompositeValue) GetMember(interpreter *Interpreter, _ func() LocationRa
 	}
 
 	if v.InjectedFields != nil {
-		value, ok := v.InjectedFields.Get(name)
+		value, ok := v.InjectedFields[name]
 		if ok {
 			return value
 		}
@@ -7178,7 +7206,7 @@ func (v *CompositeValue) InitializeFunctions(interpreter *Interpreter) {
 }
 
 func (v *CompositeValue) OwnerValue(interpreter *Interpreter) OptionalValue {
-	address := v.StorageID.Address
+	address := v.StorageID().Address
 
 	if address == (atree.Address{}) {
 		return NilValue{}
@@ -7194,34 +7222,33 @@ func (v *CompositeValue) OwnerValue(interpreter *Interpreter) OptionalValue {
 
 func (v *CompositeValue) SetMember(
 	interpreter *Interpreter,
-	_ func() LocationRange,
+	getLocationRange func() LocationRange,
 	name string,
 	value Value,
 ) {
-	address := v.StorageID.Address
+	address := v.StorageID().Address
 
 	value = interpreter.TransferValue(value, nil, address)
 
-	storable, err := value.Storable(
-		interpreter.Storage,
-		address,
-		atree.MaxInlineElementSize,
+	valueComparator := newValueComparator(interpreter, getLocationRange)
+
+	existingStorable, err := v.dictionary.Set(
+		valueComparator,
+		interpreter.getHashInput,
+		NewStringValue(name),
+		value,
 	)
 	if err != nil {
 		panic(ExternalError{err})
 	}
 
-	existingStorable, existed := v.FieldStorables.Set(name, storable)
-
-	if existed {
+	if existingStorable != nil {
 		existingValue := StoredValue(existingStorable, interpreter.Storage)
 
 		existingValue.DeepRemove(interpreter)
 
 		interpreter.removeReferencedSlab(existingStorable)
 	}
-
-	v.store(interpreter.Storage)
 }
 
 func (v *CompositeValue) String() string {
@@ -7233,48 +7260,64 @@ func (v *CompositeValue) RecursiveString(seenReferences SeenReferences) string {
 		return v.Stringer(seenReferences)
 	}
 
-	fields := NewStringValueOrderedMap()
+	var fields []CompositeField
 
-	for pair := v.FieldStorables.Oldest(); pair != nil; pair = pair.Next() {
-		fieldName := pair.Key
-		fieldStorable := pair.Value
-
-		value := StoredValue(fieldStorable, v.Storage)
-
-		fields.Set(fieldName, value)
-	}
-
-	return formatComposite(string(v.TypeID()), fields, seenReferences)
-}
-
-func formatComposite(typeId string, fields *StringValueOrderedMap, seenReferences SeenReferences) string {
-	preparedFields := make([]struct {
-		Name  string
-		Value string
-	}, 0, fields.Len())
-
-	fields.Foreach(func(fieldName string, value Value) {
-		preparedFields = append(preparedFields,
-			struct {
-				Name  string
-				Value string
-			}{
-				Name:  fieldName,
-				Value: value.RecursiveString(seenReferences),
+	v.ForEachField(func(name string, value Value) {
+		fields = append(
+			fields,
+			CompositeField{
+				Name:  name,
+				Value: value,
 			},
 		)
 	})
 
+	return formatComposite(string(v.TypeID()), fields, seenReferences)
+}
+
+func formatComposite(typeId string, fields []CompositeField, seenReferences SeenReferences) string {
+	preparedFields := make(
+		[]struct {
+			Name  string
+			Value string
+		},
+		0,
+		len(fields),
+	)
+
+	for _, field := range fields {
+		preparedFields = append(
+			preparedFields,
+			struct {
+				Name  string
+				Value string
+			}{
+				Name:  field.Name,
+				Value: field.Value.RecursiveString(seenReferences),
+			},
+		)
+	}
+
 	return format.Composite(typeId, preparedFields)
 }
 
-func (v *CompositeValue) GetField(name string) Value {
-	storable, ok := v.FieldStorables.Get(name)
-	if !ok {
-		return nil
+func (v *CompositeValue) GetField(interpreter *Interpreter, getLocationRange func() LocationRange, name string) Value {
+
+	valueComparator := newValueComparator(interpreter, getLocationRange)
+
+	storable, err := v.dictionary.Get(
+		valueComparator,
+		interpreter.getHashInput,
+		NewStringValue(name),
+	)
+	if err != nil {
+		if _, ok := err.(*atree.KeyNotFoundError); ok {
+			return nil
+		}
+		panic(ExternalError{err})
 	}
 
-	return StoredValue(storable, v.Storage)
+	return StoredValue(storable, v.dictionary.Storage)
 }
 
 func (v *CompositeValue) Equal(interpreter *Interpreter, getLocationRange func() LocationRange, other Value) bool {
@@ -7283,29 +7326,36 @@ func (v *CompositeValue) Equal(interpreter *Interpreter, getLocationRange func()
 		return false
 	}
 
-	fieldStorables := v.FieldStorables
-	otherFieldStorables := otherComposite.FieldStorables
-
 	if !v.StaticType().Equal(otherComposite.StaticType()) ||
 		v.Kind != otherComposite.Kind ||
-		fieldStorables.Len() != otherFieldStorables.Len() {
+		v.dictionary.Count() != otherComposite.dictionary.Count() {
 
 		return false
 	}
 
-	for pair := fieldStorables.Oldest(); pair != nil; pair = pair.Next() {
-		fieldName := pair.Key
-		storable := pair.Value
+	iterator, err := v.dictionary.Iterator()
+	if err != nil {
+		panic(ExternalError{err})
+	}
 
-		otherStorable, ok := otherFieldStorables.Get(fieldName)
-		if !ok {
-			return false
+	for {
+		key, value, err := iterator.Next()
+		if err != nil {
+			panic(ExternalError{err})
+		}
+		if key == nil {
+			return true
 		}
 
-		value := StoredValue(storable, v.Storage)
-		otherValue := StoredValue(otherStorable, v.Storage)
+		fieldName := MustConvertStoredValue(key).(*StringValue).Str
 
-		equatableValue, ok := value.(EquatableValue)
+		otherValue := otherComposite.GetField(
+			interpreter,
+			getLocationRange,
+			fieldName,
+		)
+
+		equatableValue, ok := MustConvertStoredValue(value).(EquatableValue)
 		if !ok || !equatableValue.Equal(interpreter, getLocationRange, otherValue) {
 			return false
 		}
@@ -7314,10 +7364,10 @@ func (v *CompositeValue) Equal(interpreter *Interpreter, getLocationRange func()
 	return true
 }
 
-func (v *CompositeValue) GetHashInput(scratch []byte) ([]byte, error) {
+func (v *CompositeValue) HashInput(interpreter *Interpreter, scratch []byte) []byte {
 	if v.Kind == common.CompositeKindEnum {
-		rawValue := v.GetField(sema.EnumRawValueFieldName)
-		return rawValue.(HashableValue).GetHashInput(scratch)
+		rawValue := v.GetField(interpreter, ReturnEmptyLocationRange, sema.EnumRawValueFieldName)
+		return rawValue.(HashableValue).HashInput(interpreter, scratch)
 	}
 
 	panic(errors.NewUnreachableError())
@@ -7350,9 +7400,9 @@ func (v *CompositeValue) ConformsToDynamicType(
 		return false
 	}
 
-	fieldsLen := v.FieldStorables.Len()
+	fieldsLen := int(v.dictionary.Count())
 	if v.ComputedFields != nil {
-		fieldsLen += v.ComputedFields.Len()
+		fieldsLen += len(v.ComputedFields)
 	}
 
 	if fieldsLen != len(compositeType.Fields) {
@@ -7360,16 +7410,13 @@ func (v *CompositeValue) ConformsToDynamicType(
 	}
 
 	for _, fieldName := range compositeType.Fields {
-		var value Value
-		storable, ok := v.FieldStorables.Get(fieldName)
-		if ok {
-			value = StoredValue(storable, v.Storage)
-		} else {
+		value := v.GetField(interpreter, ReturnEmptyLocationRange, fieldName)
+		if value == nil {
 			if v.ComputedFields == nil {
 				return false
 			}
 
-			fieldGetter, ok := v.ComputedFields.Get(fieldName)
+			fieldGetter, ok := v.ComputedFields[fieldName]
 			if !ok {
 				return false
 			}
@@ -7425,7 +7472,7 @@ func (v *CompositeValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64
 		return NonStorable{Value: v}, nil
 	}
 
-	return atree.StorageIDStorable(v.StorageID), nil
+	return atree.StorageIDStorable(v.StorageID()), nil
 }
 
 func (v *CompositeValue) IsResourceKinded(_ *Interpreter) bool {
@@ -7433,29 +7480,31 @@ func (v *CompositeValue) IsResourceKinded(_ *Interpreter) bool {
 }
 
 func (v *CompositeValue) NeedsStoreToAddress(_ *Interpreter, address atree.Address) bool {
-	return v.StorageID.Address != address
+	return v.StorageID().Address != address
 }
 
 func (v *CompositeValue) DeepCopy(interpreter *Interpreter, address atree.Address) Value {
 
-	newFieldStorables := NewStringValueOrderedMap()
-	for pair := v.FieldStorables.Oldest(); pair != nil; pair = pair.Next() {
-		fieldName := pair.Key
-		fieldStorable := pair.Value
+	var newFields []CompositeField
 
-		fieldValue := StoredValue(fieldStorable, v.Storage)
+	v.ForEachField(func(name string, value Value) {
+		valueCopy := interpreter.CopyValue(value, address)
 
-		fieldValueCopy := interpreter.CopyValue(fieldValue, address)
-
-		newFieldStorables.Set(fieldName, fieldValueCopy)
-	}
+		newFields = append(
+			newFields,
+			CompositeField{
+				Name:  name,
+				Value: valueCopy,
+			},
+		)
+	})
 
 	newValue := NewCompositeValue(
-		interpreter.Storage,
+		interpreter,
 		v.Location,
 		v.QualifiedIdentifier,
 		v.Kind,
-		newFieldStorables,
+		newFields,
 		common.Address(address),
 	)
 
@@ -7474,67 +7523,60 @@ func (v *CompositeValue) DeepRemove(interpreter *Interpreter) {
 
 	// Remove nested values and storables
 
-	for pair := v.FieldStorables.Oldest(); pair != nil; pair = pair.Next() {
-		fieldStorable := pair.Value
+	storage := v.dictionary.Storage
 
-		fieldValue := StoredValue(fieldStorable, v.Storage)
+	err := v.dictionary.PopIterate(func(nameStorable atree.Storable, valueStorable atree.Storable) {
 
-		fieldValue.DeepRemove(interpreter)
+		name := StoredValue(nameStorable, storage)
+		name.DeepRemove(interpreter)
+		interpreter.removeReferencedSlab(nameStorable)
 
-		interpreter.removeReferencedSlab(fieldStorable)
+		value := StoredValue(valueStorable, storage)
+		value.DeepRemove(interpreter)
+		interpreter.removeReferencedSlab(valueStorable)
+	})
+	if err != nil {
+		panic(ExternalError{err})
 	}
-
-	// Slab will be removed by parent
 }
 
 func (v *CompositeValue) GetOwner() common.Address {
-	return common.Address(v.StorageID.Address)
+	return common.Address(v.StorageID().Address)
 }
 
 func (v *CompositeValue) ForEachField(f func(_ string, value Value)) {
-	for pair := v.FieldStorables.Oldest(); pair != nil; pair = pair.Next() {
-		fieldName := pair.Key
-		f(fieldName, v.GetField(fieldName))
+	err := v.dictionary.Iterate(func(key atree.Value, value atree.Value) (resume bool, err error) {
+		f(
+			MustConvertStoredValue(key).(*StringValue).Str,
+			MustConvertStoredValue(value),
+		)
+		return true, nil
+	})
+	if err != nil {
+		panic(ExternalError{err})
 	}
 }
 
-type CompositeStorable struct {
-	Location            common.Location
-	QualifiedIdentifier string
-	Kind                common.CompositeKind
-	FieldStorables      *StringAtreeStorableOrderedMap
-	StorageID           atree.StorageID
-}
-
-var _ atree.Storable = &CompositeStorable{}
-
-func (s *CompositeStorable) ByteSize() uint32 {
-	// TODO: optimize
-	return mustStorableSize(s)
-}
-
-func (s *CompositeStorable) StoredValue(storage atree.SlabStorage) (atree.Value, error) {
-
-	v := &CompositeValue{
-		CompositeStorable: s,
-		Storage:           storage,
-	}
-
-	return v, nil
+func (v *CompositeValue) StorageID() atree.StorageID {
+	return v.dictionary.StorageID()
 }
 
 func NewEnumCaseValue(
-	storage Storage,
+	interpreter *Interpreter,
 	enumType *sema.CompositeType,
 	rawValue NumberValue,
 	functions map[string]FunctionValue,
 ) *CompositeValue {
 
-	fields := NewStringValueOrderedMap()
-	fields.Set(sema.EnumRawValueFieldName, rawValue)
+	fields := []CompositeField{
+		{
+			Name:  sema.EnumRawValueFieldName,
+			Value: rawValue,
+		},
+	}
 
 	v := NewCompositeValue(
-		storage,
+		interpreter,
 		enumType.Location,
 		enumType.QualifiedIdentifier(),
 		enumType.Kind,
@@ -7691,8 +7733,19 @@ func (v *DictionaryValue) Destroy(interpreter *Interpreter, getLocationRange fun
 	v.isDestroyed = true
 }
 
-func (v *DictionaryValue) ContainsKey(keyValue Value) BoolValue {
-	_, err := v.dictionary.Get(keyValue)
+func (v *DictionaryValue) ContainsKey(
+	interpreter *Interpreter,
+	getLocationRange func() LocationRange,
+	keyValue Value,
+) BoolValue {
+
+	valueComparator := newValueComparator(interpreter, getLocationRange)
+
+	_, err := v.dictionary.Get(
+		valueComparator,
+		interpreter.getHashInput,
+		keyValue,
+	)
 	if err != nil {
 		if _, ok := err.(*atree.KeyNotFoundError); ok {
 			return false
@@ -7702,8 +7755,19 @@ func (v *DictionaryValue) ContainsKey(keyValue Value) BoolValue {
 	return true
 }
 
-func (v *DictionaryValue) GetKey(keyValue Value) (Value, bool) {
-	storable, err := v.dictionary.Get(keyValue)
+func (v *DictionaryValue) GetKey(
+	interpreter *Interpreter,
+	getLocationRange func() LocationRange,
+	keyValue Value,
+) (Value, bool) {
+
+	valueComparator := newValueComparator(interpreter, getLocationRange)
+
+	storable, err := v.dictionary.Get(
+		valueComparator,
+		interpreter.getHashInput,
+		keyValue,
+	)
 	if err != nil {
 		if _, ok := err.(*atree.KeyNotFoundError); ok {
 			return nil, false
@@ -7716,8 +7780,8 @@ func (v *DictionaryValue) GetKey(keyValue Value) (Value, bool) {
 	return value, true
 }
 
-func (v *DictionaryValue) Get(_ *Interpreter, _ func() LocationRange, keyValue Value) Value {
-	value, ok := v.GetKey(keyValue)
+func (v *DictionaryValue) Get(interpreter *Interpreter, getLocationRange func() LocationRange, keyValue Value) Value {
+	value, ok := v.GetKey(interpreter, getLocationRange, keyValue)
 	if ok {
 		return NewSomeValueNonCopying(value)
 	}
@@ -7874,7 +7938,11 @@ func (v *DictionaryValue) GetMember(interpreter *Interpreter, _ func() LocationR
 	case "containsKey":
 		return NewHostFunctionValue(
 			func(invocation Invocation) Value {
-				return v.ContainsKey(invocation.Arguments[0])
+				return v.ContainsKey(
+					invocation.Interpreter,
+					invocation.GetLocationRange,
+					invocation.Arguments[0],
+				)
 			},
 		)
 
@@ -7898,8 +7966,13 @@ func (v *DictionaryValue) Remove(
 	keyValue Value,
 ) OptionalValue {
 
-	existingKeyStorable, existingValueStorable, err :=
-		v.dictionary.Remove(keyValue)
+	valueComparator := newValueComparator(interpreter, getLocationRange)
+
+	existingKeyStorable, existingValueStorable, err := v.dictionary.Remove(
+		valueComparator,
+		interpreter.getHashInput,
+		keyValue,
+	)
 	if err != nil {
 		if _, ok := err.(*atree.KeyNotFoundError); ok {
 			return NilValue{}
@@ -7924,26 +7997,26 @@ func (v *DictionaryValue) Remove(
 }
 
 func (v *DictionaryValue) Insert(
-	inter *Interpreter,
+	interpreter *Interpreter,
 	getLocationRange func() LocationRange,
 	keyValue, value Value,
 ) OptionalValue {
 
-	inter.checkContainerMutation(v.Type.KeyType, keyValue, getLocationRange)
-	inter.checkContainerMutation(v.Type.ValueType, value, getLocationRange)
+	interpreter.checkContainerMutation(v.Type.KeyType, keyValue, getLocationRange)
+	interpreter.checkContainerMutation(v.Type.ValueType, value, getLocationRange)
 
-	value = inter.TransferValue(value, nil, v.dictionary.Address())
+	value = interpreter.TransferValue(value, nil, v.dictionary.Address())
 
-	// TODO: get and handle existing key storable
+	valueComparator := newValueComparator(interpreter, getLocationRange)
 
-	existingValueStorable, err := v.dictionary.Set(keyValue, value)
+	existingValueStorable, err := v.dictionary.Set(valueComparator, interpreter.getHashInput, keyValue, value)
 	if err != nil {
 		panic(ExternalError{err})
 	}
 
-	existingValue := StoredValue(existingValueStorable, inter.Storage)
+	existingValue := StoredValue(existingValueStorable, interpreter.Storage)
 
-	resultCopy := inter.TransferValue(existingValue, existingValueStorable, atree.Address{})
+	resultCopy := interpreter.TransferValue(existingValue, existingValueStorable, atree.Address{})
 
 	return NewSomeValueNonCopying(resultCopy)
 }
@@ -8032,13 +8105,18 @@ func (v *DictionaryValue) Equal(interpreter *Interpreter, getLocationRange func(
 			return true
 		}
 
-		otherValue, otherValueExists := otherDictionary.GetKey(key)
+		otherValue, otherValueExists :=
+			otherDictionary.GetKey(
+				interpreter,
+				getLocationRange,
+				MustConvertStoredValue(key),
+			)
 
 		if !otherValueExists {
 			return false
 		}
 
-		equatableValue, ok := value.(EquatableValue)
+		equatableValue, ok := MustConvertStoredValue(value).(EquatableValue)
 		if !ok || !equatableValue.Equal(interpreter, getLocationRange, otherValue) {
 			return false
 		}
@@ -8049,8 +8127,8 @@ func (v *DictionaryValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint6
 	return atree.StorageIDStorable(v.StorageID()), nil
 }
 
-func (v *DictionaryValue) IsResourceKinded(inter *Interpreter) bool {
-	ty := inter.ConvertStaticToSemaType(v.StaticType())
+func (v *DictionaryValue) IsResourceKinded(interpreter *Interpreter) bool {
+	ty := interpreter.ConvertStaticToSemaType(v.StaticType())
 	return ty.IsResourceType()
 }
 
@@ -8097,15 +8175,24 @@ func (v *DictionaryValue) DeepCopy(interpreter *Interpreter, address atree.Addre
 
 func (v *DictionaryValue) DeepRemove(interpreter *Interpreter) {
 
-	storage := interpreter.Storage
-
 	// Remove nested values and storables
 
-	v.Walk(func(child Value) {
-		child.DeepRemove(interpreter)
-		// TODO: iterator should provide storable
-		interpreter.removeReferencedSlab(storable)
+	storage := v.dictionary.Storage
+
+	err := v.dictionary.PopIterate(func(keyStorable atree.Storable, valueStorable atree.Storable) {
+
+		key := StoredValue(keyStorable, storage)
+		key.DeepRemove(interpreter)
+		interpreter.removeReferencedSlab(keyStorable)
+
+		value := StoredValue(valueStorable, storage)
+		value.DeepRemove(interpreter)
+		interpreter.removeReferencedSlab(valueStorable)
 	})
+	if err != nil {
+		panic(ExternalError{err})
+	}
+
 }
 
 func (v *DictionaryValue) GetOwner() common.Address {
@@ -8968,8 +9055,8 @@ func (v AddressValue) Equal(_ *Interpreter, _ func() LocationRange, other Value)
 	return v == otherAddress
 }
 
-func (v AddressValue) GetHashInput(_ []byte) ([]byte, error) {
-	return v[:], nil
+func (v AddressValue) HashInput(_ *Interpreter, _ []byte) []byte {
+	return v[:]
 }
 
 func (v AddressValue) Hex() string {
@@ -9046,6 +9133,7 @@ func (v AddressValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 
 // NewAuthAccountValue constructs an auth account value.
 func NewAuthAccountValue(
+	interpreter *Interpreter,
 	address AddressValue,
 	accountBalanceGet func() UFix64Value,
 	accountAvailableBalanceGet func() UFix64Value,
@@ -9057,68 +9145,76 @@ func NewAuthAccountValue(
 	keys *CompositeValue,
 ) *CompositeValue {
 
-	fields := NewStringValueOrderedMap()
-	fields.Set(sema.AuthAccountAddressField, address)
-	fields.Set(sema.AuthAccountAddPublicKeyField, addPublicKeyFunction)
-	fields.Set(sema.AuthAccountRemovePublicKeyField, removePublicKeyFunction)
-	fields.Set(sema.AuthAccountGetCapabilityField, accountGetCapabilityFunction(address, sema.CapabilityPathType))
-	fields.Set(sema.AuthAccountContractsField, contracts)
-	fields.Set(sema.AuthAccountKeysField, keys)
+	fields := []CompositeField{
+		{
+			Name:  sema.AuthAccountAddressField,
+			Value: address,
+		},
+		{
+			Name:  sema.AuthAccountAddPublicKeyField,
+			Value: addPublicKeyFunction,
+		},
+		{
+			Name:  sema.AuthAccountRemovePublicKeyField,
+			Value: removePublicKeyFunction,
+		},
+		{
+			Name:  sema.AuthAccountGetCapabilityField,
+			Value: accountGetCapabilityFunction(address, sema.CapabilityPathType),
+		},
+		{
+			Name:  sema.AuthAccountContractsField,
+			Value: contracts,
+		},
+		{
+			Name:  sema.AuthAccountKeysField,
+			Value: keys,
+		},
+	}
 
 	// Computed fields
-	computedFields := NewStringComputedFieldOrderedMap()
-
-	computedFields.Set(sema.AuthAccountBalanceField, func(*Interpreter) Value {
-		return accountBalanceGet()
-	})
-
-	computedFields.Set(sema.AuthAccountAvailableBalanceField, func(*Interpreter) Value {
-		return accountAvailableBalanceGet()
-	})
-
-	computedFields.Set(sema.AuthAccountStorageUsedField, func(inter *Interpreter) Value {
-		return storageUsedGet(inter)
-	})
-
-	computedFields.Set(sema.AuthAccountStorageCapacityField, func(*Interpreter) Value {
-		return storageCapacityGet()
-	})
-
-	computedFields.Set(sema.AuthAccountLoadField, func(inter *Interpreter) Value {
-		return inter.authAccountLoadFunction(address)
-	})
-
-	computedFields.Set(sema.AuthAccountCopyField, func(inter *Interpreter) Value {
-		return inter.authAccountCopyFunction(address)
-	})
-
-	computedFields.Set(sema.AuthAccountSaveField, func(inter *Interpreter) Value {
-		return inter.authAccountSaveFunction(address)
-	})
-
-	computedFields.Set(sema.AuthAccountBorrowField, func(inter *Interpreter) Value {
-		return inter.authAccountBorrowFunction(address)
-	})
-
-	computedFields.Set(sema.AuthAccountLinkField, func(inter *Interpreter) Value {
-		return inter.authAccountLinkFunction(address)
-	})
-
-	computedFields.Set(sema.AuthAccountUnlinkField, func(inter *Interpreter) Value {
-		return inter.authAccountUnlinkFunction(address)
-	})
-
-	computedFields.Set(sema.AuthAccountGetLinkTargetField, func(inter *Interpreter) Value {
-		return inter.accountGetLinkTargetFunction(address)
-	})
+	computedFields := map[string]ComputedField{
+		sema.AuthAccountBalanceField: func(*Interpreter) Value {
+			return accountBalanceGet()
+		},
+		sema.AuthAccountAvailableBalanceField: func(*Interpreter) Value {
+			return accountAvailableBalanceGet()
+		},
+		sema.AuthAccountStorageUsedField: func(inter *Interpreter) Value {
+			return storageUsedGet(inter)
+		},
+		sema.AuthAccountStorageCapacityField: func(*Interpreter) Value {
+			return storageCapacityGet()
+		},
+		sema.AuthAccountLoadField: func(inter *Interpreter) Value {
+			return inter.authAccountLoadFunction(address)
+		},
+		sema.AuthAccountCopyField: func(inter *Interpreter) Value {
+			return inter.authAccountCopyFunction(address)
+		},
+		sema.AuthAccountSaveField: func(inter *Interpreter) Value {
+			return inter.authAccountSaveFunction(address)
+		},
+		sema.AuthAccountBorrowField: func(inter *Interpreter) Value {
+			return inter.authAccountBorrowFunction(address)
+		},
+		sema.AuthAccountLinkField: func(inter *Interpreter) Value {
+			return inter.authAccountLinkFunction(address)
+		},
+		sema.AuthAccountUnlinkField: func(inter *Interpreter) Value {
+			return inter.authAccountUnlinkFunction(address)
+		},
+		sema.AuthAccountGetLinkTargetField: func(inter *Interpreter) Value {
+			return inter.accountGetLinkTargetFunction(address)
+		},
+	}
 
 	stringer := func(_ SeenReferences) string {
 		return fmt.Sprintf("AuthAccount(%s)", address)
 	}
 
 	v := NewCompositeValue(
-		// NOTE: no storage needed, as AuthAccount type is non-storable (has no location)
-		nil,
+		interpreter,
 		nil,
 		sema.AuthAccountType.QualifiedIdentifier(),
 		sema.AuthAccountType.Kind,
@@ -9170,6 +9266,7 @@ func accountGetCapabilityFunction(addressValue AddressValue, pathType sema.Type)
 
 // NewPublicAccountValue constructs a public account value.
 func NewPublicAccountValue(
+	interpreter *Interpreter,
 	address AddressValue,
 	accountBalanceGet func() UFix64Value,
 	accountAvailableBalanceGet func() UFix64Value,
@@ -9179,34 +9276,43 @@ func NewPublicAccountValue(
 	contracts *CompositeValue,
 ) *CompositeValue {
 
-	fields := NewStringValueOrderedMap()
-	fields.Set(sema.PublicAccountAddressField, address)
-	fields.Set(sema.PublicAccountGetCapabilityField, accountGetCapabilityFunction(address, sema.PublicPathType))
-	fields.Set(sema.PublicAccountKeysField, keys)
-	fields.Set(sema.PublicAccountContractsField, contracts)
+	fields := []CompositeField{
+		{
+			Name:  sema.PublicAccountAddressField,
+			Value: address,
+		},
+		{
+			Name:  sema.PublicAccountGetCapabilityField,
+			Value: accountGetCapabilityFunction(address, sema.PublicPathType),
+		},
+		{
+			Name:  sema.PublicAccountKeysField,
+			Value: keys,
+		},
+		{
+			Name:  sema.PublicAccountContractsField,
+			Value: contracts,
+		},
+	}
 
 	// Computed fields
-	computedFields := NewStringComputedFieldOrderedMap()
-
-	computedFields.Set(sema.PublicAccountBalanceField, func(*Interpreter) Value {
-		return accountBalanceGet()
-	})
-
-	computedFields.Set(sema.PublicAccountAvailableBalanceField, func(*Interpreter) Value {
-		return accountAvailableBalanceGet()
-	})
-
-	computedFields.Set(sema.PublicAccountStorageUsedField, func(inter *Interpreter) Value {
-		return storageUsedGet(inter)
-	})
-
-	computedFields.Set(sema.PublicAccountStorageCapacityField, func(*Interpreter) Value {
-		return storageCapacityGet()
-	})
-
-	computedFields.Set(sema.PublicAccountGetTargetLinkField, func(inter *Interpreter) Value {
-		return inter.accountGetLinkTargetFunction(address)
-	})
+	computedFields := map[string]ComputedField{
+		sema.PublicAccountBalanceField: func(*Interpreter) Value {
+			return accountBalanceGet()
+		},
+		sema.PublicAccountAvailableBalanceField: func(*Interpreter) Value {
+			return accountAvailableBalanceGet()
+		},
+		sema.PublicAccountStorageUsedField: func(inter *Interpreter) Value {
+			return storageUsedGet(inter)
+		},
+		sema.PublicAccountStorageCapacityField: func(*Interpreter) Value {
+			return storageCapacityGet()
+		},
+		sema.PublicAccountGetTargetLinkField: func(inter *Interpreter) Value {
+			return inter.accountGetLinkTargetFunction(address)
+		},
+	}
 
 	// Stringer function
 	stringer := func(_ SeenReferences) string {
@@ -9214,8 +9320,7 @@ func NewPublicAccountValue(
 	}
 
 	v := NewCompositeValue(
-		// NOTE: no storage needed, as PublicAccount.Contracts type is non-storable (has no location)
-		nil,
+		interpreter,
 		nil,
 		sema.PublicAccountType.QualifiedIdentifier(),
 		sema.PublicAccountType.Kind,
@@ -9315,9 +9420,9 @@ func (v PathValue) Equal(_ *Interpreter, _ func() LocationRange, other Value) bo
 		otherPath.Domain == v.Domain
 }
 
-func (v PathValue) GetHashInput(scratch []byte) ([]byte, error) {
+func (v PathValue) HashInput(_ *Interpreter, scratch []byte) []byte {
 	scratch[0] = byte(v.Domain)
-	return append(scratch[:1], []byte(v.Identifier)...), nil
+	return append(scratch[:1], []byte(v.Identifier)...)
 }
 
 func (PathValue) IsStorable() bool {
@@ -9385,10 +9490,10 @@ func (v *CapabilityValue) Walk(walkChild func(Value)) {
 	walkChild(v.Path)
 }
 
-func (v *CapabilityValue) DynamicType(inter *Interpreter, _ SeenReferences) DynamicType {
+func (v *CapabilityValue) DynamicType(interpreter *Interpreter, _ SeenReferences) DynamicType {
 	var borrowType *sema.ReferenceType
 	if v.BorrowType != nil {
-		borrowType = inter.ConvertStaticToSemaType(v.BorrowType).(*sema.ReferenceType)
+		borrowType = interpreter.ConvertStaticToSemaType(v.BorrowType).(*sema.ReferenceType)
 	}
 
 	return CapabilityDynamicType{
@@ -9662,22 +9767,38 @@ func (v LinkValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 
 // NewAccountKeyValue constructs an AccountKey value.
 func NewAccountKeyValue(
+	interpreter *Interpreter,
 	keyIndex IntValue,
 	publicKey *CompositeValue,
 	hashAlgo *CompositeValue,
 	weight UFix64Value,
 	isRevoked BoolValue,
 ) *CompositeValue {
-	fields := NewStringValueOrderedMap()
-	fields.Set(sema.AccountKeyKeyIndexField, keyIndex)
-	fields.Set(sema.AccountKeyPublicKeyField, publicKey)
-	fields.Set(sema.AccountKeyHashAlgoField, hashAlgo)
-	fields.Set(sema.AccountKeyWeightField, weight)
-	fields.Set(sema.AccountKeyIsRevokedField, isRevoked)
+	fields := []CompositeField{
+		{
+			Name:  sema.AccountKeyKeyIndexField,
+			Value: keyIndex,
+		},
+		{
+			Name:  sema.AccountKeyPublicKeyField,
+			Value: publicKey,
+		},
+		{
+			Name:  sema.AccountKeyHashAlgoField,
+			Value: hashAlgo,
+		},
+		{
+			Name:  sema.AccountKeyWeightField,
+			Value: weight,
+		},
+		{
+			Name:  sema.AccountKeyIsRevokedField,
+			Value: isRevoked,
+		},
+	}
 
 	return NewCompositeValue(
-		// NOTE: no storage needed, as Account.Key type is non-storable (has no location)
-		nil,
+		interpreter,
 		nil,
 		sema.AccountKeyType.QualifiedIdentifier(),
 		sema.AccountKeyType.Kind,
@@ -9688,31 +9809,33 @@ func NewAccountKeyValue(
 
 // NewPublicKeyValue constructs a PublicKey value.
 func NewPublicKeyValue(
-	inter *Interpreter,
+	interpreter *Interpreter,
 	publicKey *ArrayValue,
 	signAlgo *CompositeValue,
 	validatePublicKey PublicKeyValidationHandlerFunc,
 ) *CompositeValue {
 
-	fields := NewStringValueOrderedMap()
-	fields.Set(sema.PublicKeySignAlgoField, signAlgo)
+	fields := []CompositeField{
+		{
+			Name:  sema.PublicKeySignAlgoField,
+			Value: signAlgo,
+		},
+	}
 
-	computedFields := NewStringComputedFieldOrderedMap()
-	computedFields.Set(
-		sema.PublicKeyPublicKeyField,
-		func(interpreter *Interpreter) Value {
+	computedFields := map[string]ComputedField{
+		sema.PublicKeyPublicKeyField: func(interpreter *Interpreter) Value {
 			// We can directly call DeepCopy on the key array, instead of potentially skipping copying
 			// by using interpreter.copyValue, as the key array is always struct-kinded, which always must be copied
 			return publicKey.DeepCopy(interpreter, atree.Address{})
 		},
-	)
+	}
 
 	functions := map[string]FunctionValue{
 		sema.PublicKeyVerifyFunction: publicKeyVerifyFunction,
 	}
 
 	publicKeyValue := NewCompositeValue(
-		inter.Storage,
+		interpreter,
 		nil,
 		sema.PublicKeyType.QualifiedIdentifier(),
 		sema.PublicKeyType.Kind,
@@ -9725,19 +9848,31 @@ func NewPublicKeyValue(
 
 	// Validate the public key, and initialize 'isValid' field.
 
-	publicKeyValue.FieldStorables.Set(
+	publicKeyValue.SetMember(
+		interpreter,
+		ReturnEmptyLocationRange,
 		sema.PublicKeyIsValidField,
-		validatePublicKey(inter, publicKeyValue),
+		validatePublicKey(interpreter, publicKeyValue),
 	)
 
 	// Public key value to string should include the key even though it is a computed field
-	var stringerFields *StringValueOrderedMap
+	var stringerFields []CompositeField
 	publicKeyValue.Stringer = func(seenReferences SeenReferences) string {
 		if stringerFields == nil {
-			stringerFields = NewStringValueOrderedMap()
-			stringerFields.Set(sema.PublicKeyPublicKeyField, publicKey)
-			publicKeyValue.ForEachField(func(key string, value Value) {
-				stringerFields.Set(key, value)
+			stringerFields = []CompositeField{
+				{
+					Name:  sema.PublicKeyPublicKeyField,
+					Value: publicKey,
+				},
+			}
+			publicKeyValue.ForEachField(func(name string, value Value) {
+				stringerFields = append(
+					stringerFields,
+					CompositeField{
+						Name:  name,
+						Value: value,
+					},
+				)
 			})
 		}
 		return formatComposite(
@@ -9777,18 +9912,29 @@ var publicKeyVerifyFunction = NewHostFunctionValue(
 
 // NewAuthAccountKeysValue constructs a AuthAccount.Keys value.
 func NewAuthAccountKeysValue(
+	interpreter *Interpreter,
 	addFunction FunctionValue,
 	getFunction FunctionValue,
 	revokeFunction FunctionValue,
 ) *CompositeValue {
-	fields := NewStringValueOrderedMap()
-	fields.Set(sema.AccountKeysAddFunctionName, addFunction)
-	fields.Set(sema.AccountKeysGetFunctionName, getFunction)
-	fields.Set(sema.AccountKeysRevokeFunctionName, revokeFunction)
+
+	fields := []CompositeField{
+		{
+			Name:  sema.AccountKeysAddFunctionName,
+			Value: addFunction,
+		},
+		{
+			Name:  sema.AccountKeysGetFunctionName,
+			Value: getFunction,
+		},
+		{
+			Name:  sema.AccountKeysRevokeFunctionName,
+			Value: revokeFunction,
+		},
+	}
 
 	return NewCompositeValue(
-		// NOTE: no storage needed, as AuthAccount.Keys type is non-storable (has no location)
-		nil,
+		interpreter,
 		nil,
 		sema.AuthAccountKeysType.QualifiedIdentifier(),
 		sema.AuthAccountKeysType.Kind,
@@ -9798,13 +9944,20 @@ func NewAuthAccountKeysValue(
 }
 
 // NewPublicAccountKeysValue constructs a PublicAccount.Keys value.
-func NewPublicAccountKeysValue(getFunction FunctionValue) *CompositeValue {
-	fields := NewStringValueOrderedMap()
-	fields.Set(sema.AccountKeysGetFunctionName, getFunction)
+func NewPublicAccountKeysValue(
+	interpreter *Interpreter,
+	getFunction FunctionValue,
+) *CompositeValue {
+
+	fields := []CompositeField{
+		{
+			Name:  sema.AccountKeysGetFunctionName,
+			Value: getFunction,
+		},
+	}
 
 	return NewCompositeValue(
-		// NOTE: no storage needed, as PublicAccount.Keys type is non-storable (has no location)
-		nil,
+		interpreter,
 		nil,
 		sema.PublicAccountKeysType.QualifiedIdentifier(),
 		sema.PublicAccountKeysType.Kind,
@@ -9816,26 +9969,31 @@ func NewPublicAccountKeysValue(getFunction FunctionValue) *CompositeValue {
 // PublicAccountContractsValue
 
 func NewPublicAccountContractsValue(
+	interpreter *Interpreter,
 	address AddressValue,
 	getFunction FunctionValue,
 	namesGetter func(interpreter *Interpreter) *ArrayValue,
 ) *CompositeValue {
 
-	fields := NewStringValueOrderedMap()
-	fields.Set(sema.PublicAccountContractsTypeGetFunctionName, getFunction)
+	fields := []CompositeField{
+		{
+			Name:  sema.PublicAccountContractsTypeGetFunctionName,
+			Value: getFunction,
+		},
+	}
 
-	computedFields := NewStringComputedFieldOrderedMap()
-	computedFields.Set(sema.PublicAccountContractsTypeNamesField, func(interpreter *Interpreter) Value {
-		return namesGetter(interpreter)
-	})
+	computedFields := map[string]ComputedField{
+		sema.PublicAccountContractsTypeNamesField: func(interpreter *Interpreter) Value {
+			return namesGetter(interpreter)
+		},
+	}
 
 	stringer := func(_ SeenReferences) string {
 		return fmt.Sprintf("PublicAccount.Contracts(%s)", address)
 	}
 
 	v := NewCompositeValue(
-		// NOTE: no storage needed, as AuthAccount.Contracts type is non-storable (has no location)
-		nil,
+		interpreter,
 		nil,
 		sema.PublicAccountContractsType.QualifiedIdentifier(),
 		sema.PublicAccountContractsType.Kind,

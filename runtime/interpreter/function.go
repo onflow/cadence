@@ -135,7 +135,7 @@ type HostFunction func(invocation Invocation) Value
 
 type HostFunctionValue struct {
 	Function        HostFunction
-	NestedVariables *StringVariableOrderedMap
+	NestedVariables map[string]*Variable
 }
 
 func (f *HostFunctionValue) String() string {
@@ -190,7 +190,7 @@ func (f *HostFunctionValue) invoke(invocation Invocation) Value {
 
 func (f *HostFunctionValue) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
 	if f.NestedVariables != nil {
-		if variable, ok := f.NestedVariables.Get(name); ok {
+		if variable, ok := f.NestedVariables[name]; ok {
 			return variable.GetValue()
 		}
 	}

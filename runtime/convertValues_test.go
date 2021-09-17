@@ -3486,11 +3486,15 @@ func TestRuntimeImportExportComplex(t *testing.T) {
 		},
 	}
 
-	internalCompositeValueFields := interpreter.NewStringValueOrderedMap()
-	internalCompositeValueFields.Set("dictionary", internalDictionaryValue)
+	internalCompositeValueFields := []interpreter.CompositeField{
+		{
+			Name:  "dictionary",
+			Value: internalDictionaryValue,
+		},
+	}
 
 	internalCompositeValue := interpreter.NewCompositeValue(
-		inter.Storage,
+		inter,
 		TestLocation,
 		"Foo",
 		common.CompositeKindStructure,

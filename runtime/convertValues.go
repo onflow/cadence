@@ -217,12 +217,9 @@ func exportCompositeValue(
 	for i, field := range fieldNames {
 		fieldName := field.Identifier
 
-		var fieldValue interpreter.Value
-		fieldStorable, ok := v.FieldStorables.Get(fieldName)
-		if ok {
-			fieldValue = interpreter.StoredValue(fieldStorable, inter.Storage)
-		} else if v.ComputedFields != nil {
-			if computedField, ok := v.ComputedFields.Get(fieldName); ok {
+		fieldValue := v.GetField(inter, interpreter.ReturnEmptyLocationRange, fieldName)
+		if fieldValue == nil && v.ComputedFields != nil {
+			if computedField, ok := v.ComputedFields[fieldName]; ok {
 				fieldValue = computedField(inter)
 			}
 		}
@@ -277,15 +274,10 @@ func exportDictionaryValue(
 	pairs := make([]cadence.KeyValuePair, 0, v.Count())
 
 	var err error
-	v.Keys.Iterate(func(keyValue interpreter.Value) (resume bool) {
-
-		// NOTE: use `Get` instead of accessing `Entries`,
-		// so that the potentially deferred values are loaded from storage
-
-		value := v.Get(inter, interpreter.ReturnEmptyLocationRange, keyValue).(*interpreter.SomeValue).Value
+	v.Iterate(func(key, value interpreter.Value) (resume bool) {
 
 		var convertedKey cadence.Value
-		convertedKey, err = exportValueWithInterpreter(keyValue, inter, seenReferences)
+		convertedKey, err = exportValueWithInterpreter(key, inter, seenReferences)
 		if err != nil {
 			return false
 		}
@@ -652,7 +644,7 @@ func importCompositeValue(
 	*interpreter.CompositeValue,
 	error,
 ) {
-	fields := interpreter.NewStringValueOrderedMap()
+	var fields []interpreter.CompositeField
 
 	expectedCompositeType, ok := expectedType.(*sema.CompositeType)
 
@@ -674,9 +666,11 @@ func importCompositeValue(
 			return nil, err
 		}
 
-		fields.Set(
-			fieldType.Identifier,
-			importedFieldValue,
+		fields = append(fields,
+			interpreter.CompositeField{
+				fieldType.Identifier,
+				importedFieldValue,
+			},
 		)
 	}
 
@@ -704,7 +698,7 @@ func importCompositeValue(
 	}
 
 	return interpreter.NewCompositeValue(
-		inter.Storage,
+		inter,
 		location,
 		qualifiedIdentifier,
 		kind,
@@ -715,7 +709,7 @@ func importCompositeValue(
 
 func importPublicKey(
 	inter *interpreter.Interpreter,
-	fields *interpreter.StringValueOrderedMap,
+	fields []interpreter.CompositeField,
 ) (
 	*interpreter.CompositeValue,
 	error,
@@ -726,29 +720,29 @@ func importPublicKey(
 
 	ty := sema.PublicKeyType
 
-	err := fields.ForeachWithError(func(fieldName string, value interpreter.Value) error {
-		switch fieldName {
+	for _, field := range fields {
+		switch field.Name {
 		case sema.PublicKeyPublicKeyField:
-			arrayValue, ok := value.(*interpreter.ArrayValue)
+			arrayValue, ok := field.Value.(*interpreter.ArrayValue)
 			if !ok {
-				return fmt.Errorf(
+				return nil, fmt.Errorf(
 					"cannot import value of type '%s'. invalid value for field '%s': %v",
 					ty,
-					fieldName,
-					value,
+					field.Name,
+					field.Value,
 				)
 			}
 
 			publicKeyValue = arrayValue
 
 		case sema.PublicKeySignAlgoField:
-			compositeValue, ok := value.(*interpreter.CompositeValue)
+			compositeValue, ok := field.Value.(*interpreter.CompositeValue)
 			if !ok {
-				return fmt.Errorf(
+				return nil, fmt.Errorf(
 					"cannot import value of type '%s'. invalid value for field '%s': %v",
 					ty,
-					fieldName,
-					value,
+					field.Name,
+					field.Value,
 				)
 			}
 
@@ -759,17 +753,13 @@ func importPublicKey(
 			// This is calculated when creating the public key.
 
 		default:
-			return fmt.Errorf(
+			return nil, fmt.Errorf(
 				"cannot import value of type '%s'. invalid field '%s'",
 				ty,
-				fieldName,
+				field.Name,
 			)
 		}
 
-		return nil
-	})
-	if err != nil {
-		return nil, err
 	}
 
 	if publicKeyValue == nil {
@@ -797,7 +787,7 @@ func importPublicKey(
 }
 
 func importHashAlgorithm(
-	fields *interpreter.StringValueOrderedMap,
+	fields []interpreter.CompositeField,
 ) (
 	*interpreter.CompositeValue,
 	error,
@@ -808,31 +798,26 @@ func importHashAlgorithm(
 
 	ty := sema.HashAlgorithmType
 
-	err := fields.ForeachWithError(func(fieldName string, value interpreter.Value) error {
-		switch fieldName {
+	for _, field := range fields {
+		switch field.Name {
 		case sema.EnumRawValueFieldName:
-			rawValue, foundRawValue = value.(interpreter.UInt8Value)
+			rawValue, foundRawValue = field.Value.(interpreter.UInt8Value)
 			if !foundRawValue {
-				return fmt.Errorf(
+				return nil, fmt.Errorf(
 					"cannot import value of type '%s'. invalid value for field '%s': %v",
 					ty,
-					fieldName,
-					value,
+					field.Name,
+					field.Value,
 				)
 			}
 
 		default:
-			return fmt.Errorf(
+			return nil, fmt.Errorf(
 				"cannot import value of type '%s'. invalid field '%s'",
 				ty,
-				fieldName,
+				field.Name,
 			)
 		}
-
-		return nil
-	})
-	if err != nil {
-		return nil, err
 	}
 
 	if !foundRawValue {

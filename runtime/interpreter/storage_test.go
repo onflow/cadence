@@ -44,11 +44,11 @@ func TestCompositeStorage(t *testing.T) {
 	require.NoError(t, err)
 
 	value := NewCompositeValue(
-		storage,
+		inter,
 		TestLocation,
 		"TestStruct",
 		common.CompositeKindStructure,
-		NewStringValueOrderedMap(),
+		nil,
 		testOwner,
 	)
 
@@ -56,7 +56,7 @@ func TestCompositeStorage(t *testing.T) {
 
 	require.Equal(t, 1, storage.BasicSlabStorage.Count())
 
-	_, ok, err := storage.BasicSlabStorage.Retrieve(value.StorageID)
+	_, ok, err := storage.BasicSlabStorage.Retrieve(value.StorageID())
 	require.NoError(t, err)
 	require.True(t, ok)
 
@@ -66,7 +66,7 @@ func TestCompositeStorage(t *testing.T) {
 
 	require.Equal(t, 1, storage.BasicSlabStorage.Count())
 
-	retrievedStorable, ok, err := storage.BasicSlabStorage.Retrieve(value.StorageID)
+	retrievedStorable, ok, err := storage.BasicSlabStorage.Retrieve(value.StorageID())
 	require.NoError(t, err)
 	require.True(t, ok)
 
@@ -79,7 +79,7 @@ func TestCompositeStorage(t *testing.T) {
 		t,
 		inter,
 		BoolValue(true),
-		storedComposite.GetField(fieldName),
+		storedComposite.GetField(inter, ReturnEmptyLocationRange, fieldName),
 	)
 }
 
@@ -107,7 +107,7 @@ func TestArrayStorage(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		element := newTestCompositeValue(inter.Storage, common.Address{})
+		element := newTestCompositeValue(inter, common.Address{})
 
 		require.Equal(t, 1, storage.BasicSlabStorage.Count())
 
@@ -169,7 +169,7 @@ func TestArrayStorage(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		element := newTestCompositeValue(inter.Storage, common.Address{})
+		element := newTestCompositeValue(inter, common.Address{})
 
 		require.Equal(t, 1, storage.BasicSlabStorage.Count())
 
@@ -267,7 +267,7 @@ func TestDictionaryStorage(t *testing.T) {
 		require.IsType(t, storedValue, &DictionaryValue{})
 		storedDictionary := storedValue.(*DictionaryValue)
 
-		actual, ok := storedDictionary.GetKey(entryKey)
+		actual, ok := storedDictionary.GetKey(inter, ReturnEmptyLocationRange, entryKey)
 		require.True(t, ok)
 
 		RequireValuesEqual(t, inter, entryValue, actual)

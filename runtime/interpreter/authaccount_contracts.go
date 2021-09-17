@@ -28,6 +28,7 @@ import (
 // AuthAccountContractsValue
 
 func NewAuthAccountContractsValue(
+	interpreter *Interpreter,
 	address AddressValue,
 	addFunction FunctionValue,
 	updateFunction FunctionValue,
@@ -35,25 +36,37 @@ func NewAuthAccountContractsValue(
 	removeFunction FunctionValue,
 	namesGetter func(interpreter *Interpreter) *ArrayValue,
 ) *CompositeValue {
-	fields := NewStringValueOrderedMap()
-	fields.Set(sema.AuthAccountContractsTypeAddFunctionName, addFunction)
-	fields.Set(sema.AuthAccountContractsTypeGetFunctionName, getFunction)
-	fields.Set(sema.AuthAccountContractsTypeRemoveFunctionName, removeFunction)
-	fields.Set(sema.AuthAccountContractsTypeUpdateExperimentalFunctionName, updateFunction)
 
-	computedFields := NewStringComputedFieldOrderedMap()
-
-	computedFields.Set(sema.AuthAccountContractsTypeNamesField, func(interpreter *Interpreter) Value {
-		return namesGetter(interpreter)
-	})
+	fields := []CompositeField{
+		{
+			Name:  sema.AuthAccountContractsTypeAddFunctionName,
+			Value: addFunction,
+		},
+		{
+			Name:  sema.AuthAccountContractsTypeGetFunctionName,
+			Value: getFunction,
+		},
+		{
+			Name:  sema.AuthAccountContractsTypeRemoveFunctionName,
+			Value: removeFunction,
+		},
+		{
+			Name:  sema.AuthAccountContractsTypeUpdateExperimentalFunctionName,
+			Value: updateFunction,
+		},
+	}
+	computedFields := map[string]ComputedField{
+		sema.AuthAccountContractsTypeNamesField: func(interpreter *Interpreter) Value {
+			return namesGetter(interpreter)
+		},
+	}
 
 	stringer := func(_ SeenReferences) string {
 		return fmt.Sprintf("AuthAccount.Contracts(%s)", address)
 	}
 
 	v := NewCompositeValue(
-		// NOTE: no storage needed, as AuthAccount.Contracts type is non-storable (has no location)
-		nil,
+		interpreter,
 		nil,
 		sema.AuthAccountContractsType.QualifiedIdentifier(),
 		sema.AuthAccountContractsType.Kind,

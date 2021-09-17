@@ -108,7 +108,7 @@ type InjectedCompositeFieldsHandlerFunc func(
 	location common.Location,
 	qualifiedIdentifier string,
 	compositeKind common.CompositeKind,
-) *StringValueOrderedMap
+) map[string]Value
 
 // ContractValueHandlerFunc is a function that handles contract values.
 //
@@ -1217,7 +1217,7 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 	// Evaluate nested declarations in a new scope, so values
 	// of nested declarations won't be visible after the containing declaration
 
-	nestedVariables := NewStringVariableOrderedMap()
+	nestedVariables := map[string]*Variable{}
 
 	(func() {
 		interpreter.activations.PushNewWithCurrent()
@@ -1255,7 +1255,7 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 				interpreter.declareCompositeValue(nestedCompositeDeclaration, lexicalScope)
 
 			memberIdentifier := nestedCompositeDeclaration.Identifier.Identifier
-			nestedVariables.Set(memberIdentifier, nestedVariable)
+			nestedVariables[memberIdentifier] = nestedVariable
 		}
 	})()
 
@@ -1370,7 +1370,7 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 				}
 
 				// Load injected fields
-				var injectedFields *StringValueOrderedMap
+				var injectedFields map[string]Value
 				if interpreter.injectedCompositeFieldsHandler != nil {
 					injectedFields = interpreter.injectedCompositeFieldsHandler(
 						interpreter,
@@ -1380,7 +1380,7 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 					)
 				}
 
-				fields := NewStringValueOrderedMap()
+				var fields []CompositeField
 
 				if declaration.CompositeKind == common.CompositeKindResource {
 
@@ -1395,11 +1395,17 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 						panic(err)
 					}
 
-					fields.Set(sema.ResourceUUIDFieldName, UInt64Value(uuid))
+					fields = append(
+						fields,
+						CompositeField{
+							Name:  sema.ResourceUUIDFieldName,
+							Value: UInt64Value(uuid),
+						},
+					)
 				}
 
 				value := NewCompositeValue(
-					interpreter.Storage,
+					interpreter,
 					location,
 					qualifiedIdentifier,
 					declaration.CompositeKind,
@@ -1483,7 +1489,7 @@ func (interpreter *Interpreter) declareEnumConstructor(
 	enumCases := declaration.Members.EnumCases()
 	caseValues := make([]*CompositeValue, len(enumCases))
 
-	constructorNestedVariables := NewStringVariableOrderedMap()
+	constructorNestedVariables := map[string]*Variable{}
 
 	for i, enumCase := range enumCases {
 
@@ -1493,11 +1499,15 @@ func (interpreter *Interpreter) declareEnumConstructor(
 			compositeType.EnumRawType,
 		)
 
-		caseValueFields := NewStringValueOrderedMap()
-		caseValueFields.Set(sema.EnumRawValueFieldName, rawValue)
+		caseValueFields := []CompositeField{
+			{
+				Name:  sema.EnumRawValueFieldName,
+				Value: rawValue,
+			},
+		}
 
 		caseValue := NewCompositeValue(
-			interpreter.Storage,
+			interpreter,
 			location,
 			qualifiedIdentifier,
 			declaration.CompositeKind,
@@ -1506,21 +1516,25 @@ func (interpreter *Interpreter) declareEnumConstructor(
 		)
 		caseValues[i] = caseValue
 
-		constructorNestedVariables.Set(
-			enumCase.Identifier.Identifier,
-			NewVariableWithValue(caseValue),
-		)
+		constructorNestedVariables[enumCase.Identifier.Identifier] =
+			NewVariableWithValue(caseValue)
 	}
 
-	value := EnumConstructorFunction(caseValues, constructorNestedVariables)
+	value := EnumConstructorFunction(
+		interpreter,
+		caseValues,
+		constructorNestedVariables,
+	)
+
 	variable.SetValue(value)
 
 	return lexicalScope, variable
 }
 
 func EnumConstructorFunction(
+	interpreter *Interpreter,
 	caseValues []*CompositeValue,
-	nestedVariables *StringVariableOrderedMap,
+	nestedVariables map[string]*Variable,
 ) *HostFunctionValue {
 
 	// Prepare a lookup table based on the big-endian byte representation
@@ -1528,7 +1542,7 @@ func EnumConstructorFunction(
 	lookupTable := make(map[string]*CompositeValue)
 
 	for _, caseValue := range caseValues {
-		rawValue := caseValue.GetField(sema.EnumRawValueFieldName)
+		rawValue := caseValue.GetField(interpreter, ReturnEmptyLocationRange, sema.EnumRawValueFieldName)
 		rawValueBigEndianBytes := rawValue.(IntegerValue).ToBigEndianBytes()
 		lookupTable[string(rawValueBigEndianBytes)] = caseValue
 	}
@@ -1550,6 +1564,7 @@ func EnumConstructorFunction(
 	)
 
 	constructor.NestedVariables = nestedVariables
+
 	return constructor
 }
 
@@ -2530,9 +2545,9 @@ var converterFunctionValues = func() []converterFunction {
 
 		addMember := func(name string, value Value) {
 			if converterFunctionValue.NestedVariables == nil {
-				converterFunctionValue.NestedVariables = NewStringVariableOrderedMap()
+				converterFunctionValue.NestedVariables = map[string]*Variable{}
 			}
-			converterFunctionValue.NestedVariables.Set(name, NewVariableWithValue(value))
+			converterFunctionValue.NestedVariables[name] = NewVariableWithValue(value)
 		}
 
 		if declaration.min != nil {
@@ -2598,9 +2613,9 @@ var stringFunction = func() Value {
 
 	addMember := func(name string, value Value) {
 		if functionValue.NestedVariables == nil {
-			functionValue.NestedVariables = NewStringVariableOrderedMap()
+			functionValue.NestedVariables = map[string]*Variable{}
 		}
-		functionValue.NestedVariables.Set(name, NewVariableWithValue(value))
+		functionValue.NestedVariables[name] = NewVariableWithValue(value)
 	}
 
 	addMember(
@@ -3530,4 +3545,10 @@ func (interpreter *Interpreter) removeReferencedSlab(storable atree.Storable) {
 	if err != nil {
 		panic(ExternalError{err})
 	}
+}
+
+func (interpreter *Interpreter) getHashInput(value atree.Value, scratch []byte) ([]byte, error) {
+	hashInput := MustConvertStoredValue(value).(HashableValue).
+		HashInput(interpreter, scratch)
+	return hashInput, nil
 }
