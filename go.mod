@@ -6,10 +6,13 @@ require (
 	github.com/bytecodealliance/wasmtime-go v0.22.0
 	github.com/c-bata/go-prompt v0.2.5
 	github.com/cheekybits/genny v1.0.0
+	github.com/dapperlabs/nba-smart-contracts/lib/go/contracts v0.2.1-0.20210125204614-484f243aae7c // indirect
 	github.com/fxamacker/cbor/v2 v2.2.1-0.20210510192846-c3f3c69e7bc8
 	github.com/go-test/deep v1.0.5
+	github.com/kevinburke/go-bindata v3.22.0+incompatible // indirect
 	github.com/logrusorgru/aurora v0.0.0-20200102142835-e9ef32dff381
 	github.com/onflow/atree v0.0.0-20210903151759-94b860d1f7fc
+	github.com/onflow/flow-nft/lib/go/contracts v0.0.0-20210113153210-aa62b6702e0d // indirect
 	github.com/rivo/uniseg v0.2.0
 	github.com/stretchr/testify v1.7.0
 	go.uber.org/goleak v1.1.10
