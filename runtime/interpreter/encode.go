@@ -159,8 +159,8 @@ const (
 	CBORTagAddressLocation
 	CBORTagStringLocation
 	CBORTagIdentifierLocation
-	_
-	_
+	CBORTagTransactionLocation
+	CBORTagScriptLocation
 	_
 	_
 	_
@@ -729,6 +729,7 @@ func encodeLocation(e *cbor.StreamEncoder, l common.Location) error {
 		if err != nil {
 			return err
 		}
+
 		return e.EncodeString(string(l))
 
 	case common.IdentifierLocation:
@@ -744,6 +745,7 @@ func encodeLocation(e *cbor.StreamEncoder, l common.Location) error {
 		if err != nil {
 			return err
 		}
+
 		return e.EncodeString(string(l))
 
 	case common.AddressLocation:
@@ -765,13 +767,49 @@ func encodeLocation(e *cbor.StreamEncoder, l common.Location) error {
 		if err != nil {
 			return err
 		}
+
 		// Encode address at array index encodedAddressLocationAddressFieldKey
 		err = e.EncodeBytes(l.Address.Bytes())
 		if err != nil {
 			return err
 		}
+
 		// Encode name at array index encodedAddressLocationNameFieldKey
 		return e.EncodeString(l.Name)
+
+	case common.TransactionLocation:
+		// common.TransactionLocation is encoded as
+		// cbor.Tag{
+		//		Number: CBORTagTransactionLocation,
+		//		Content: []byte(l),
+		// }
+		// Encode tag number and array head
+		err := e.EncodeRawBytes([]byte{
+			// tag number
+			0xd8, CBORTagTransactionLocation,
+		})
+		if err != nil {
+			return err
+		}
+
+		return e.EncodeBytes(l)
+
+	case common.ScriptLocation:
+		// common.ScriptLocation is encoded as
+		// cbor.Tag{
+		//		Number: CBORTagScriptLocation,
+		//		Content: []byte(l),
+		// }
+		// Encode tag number and array head
+		err := e.EncodeRawBytes([]byte{
+			// tag number
+			0xd8, CBORTagScriptLocation,
+		})
+		if err != nil {
+			return err
+		}
+
+		return e.EncodeBytes(l)
 
 	default:
 		return fmt.Errorf("unsupported location: %T", l)

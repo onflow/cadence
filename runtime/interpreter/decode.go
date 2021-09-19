@@ -267,6 +267,12 @@ func decodeLocation(dec *cbor.StreamDecoder) (common.Location, error) {
 	case CBORTagIdentifierLocation:
 		return decodeIdentifierLocation(dec)
 
+	case CBORTagTransactionLocation:
+		return decodeTransactionLocation(dec)
+
+	case CBORTagScriptLocation:
+		return decodeScriptLocation(dec)
+
 	default:
 		return nil, fmt.Errorf("invalid location encoding tag: %d", number)
 	}
@@ -283,6 +289,7 @@ func decodeStringLocation(dec *cbor.StreamDecoder) (common.Location, error) {
 		}
 		return nil, err
 	}
+
 	return common.StringLocation(s), nil
 }
 
@@ -297,6 +304,7 @@ func decodeIdentifierLocation(dec *cbor.StreamDecoder) (common.Location, error) 
 		}
 		return nil, err
 	}
+
 	return common.IdentifierLocation(s), nil
 }
 
@@ -361,6 +369,36 @@ func decodeAddressLocation(dec *cbor.StreamDecoder) (common.Location, error) {
 		Address: common.BytesToAddress(encodedAddress),
 		Name:    name,
 	}, nil
+}
+
+func decodeTransactionLocation(dec *cbor.StreamDecoder) (common.Location, error) {
+	s, err := dec.DecodeBytes()
+	if err != nil {
+		if e, ok := err.(*cbor.WrongTypeError); ok {
+			return nil, fmt.Errorf(
+				"invalid transaction location encoding: %s",
+				e.ActualType.String(),
+			)
+		}
+		return nil, err
+	}
+
+	return common.TransactionLocation(s), nil
+}
+
+func decodeScriptLocation(dec *cbor.StreamDecoder) (common.Location, error) {
+	s, err := dec.DecodeBytes()
+	if err != nil {
+		if e, ok := err.(*cbor.WrongTypeError); ok {
+			return nil, fmt.Errorf(
+				"invalid script location encoding: %s",
+				e.ActualType.String(),
+			)
+		}
+		return nil, err
+	}
+
+	return common.ScriptLocation(s), nil
 }
 
 func (d Decoder) decodeInt() (IntValue, error) {

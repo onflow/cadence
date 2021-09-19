@@ -2276,12 +2276,12 @@ func (interpreter *Interpreter) NewSubInterpreter(
 ) {
 
 	defaultOptions := []Option{
+		WithStorage(interpreter.Storage),
 		WithPredeclaredValues(interpreter.PredeclaredValues),
 		WithOnEventEmittedHandler(interpreter.onEventEmitted),
 		WithOnStatementHandler(interpreter.onStatement),
 		WithOnLoopIterationHandler(interpreter.onLoopIteration),
 		WithOnFunctionInvocationHandler(interpreter.onFunctionInvocation),
-		WithStorage(interpreter.Storage),
 		WithInjectedCompositeFieldsHandler(interpreter.injectedCompositeFieldsHandler),
 		WithContractValueHandler(interpreter.contractValueHandler),
 		WithImportLocationHandler(interpreter.importLocationHandler),
