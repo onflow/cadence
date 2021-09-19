@@ -76,6 +76,7 @@ type getterSetter struct {
 //
 type OnEventEmittedFunc func(
 	inter *Interpreter,
+	getLocationRange func() LocationRange,
 	event *CompositeValue,
 	eventType *sema.CompositeType,
 ) error
@@ -140,12 +141,14 @@ type UUIDHandlerFunc func() (uint64, error)
 // PublicKeyValidationHandlerFunc is a function that validates a given public key.
 type PublicKeyValidationHandlerFunc func(
 	interpreter *Interpreter,
+	getLocationRange func() LocationRange,
 	publicKey *CompositeValue,
 ) BoolValue
 
 // SignatureVerificationHandlerFunc is a function that validates a signature.
 type SignatureVerificationHandlerFunc func(
 	interpreter *Interpreter,
+	getLocationRange func() LocationRange,
 	signature *ArrayValue,
 	signedData *ArrayValue,
 	domainSeparationTag *StringValue,
@@ -156,6 +159,7 @@ type SignatureVerificationHandlerFunc func(
 // HashHandlerFunc is a function that hashes.
 type HashHandlerFunc func(
 	inter *Interpreter,
+	getLocationRange func() LocationRange,
 	data *ArrayValue,
 	tag *StringValue,
 	hashAlgorithm *CompositeValue,

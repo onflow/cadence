@@ -2847,7 +2847,7 @@ func TestPublicKeyValue(t *testing.T) {
 			utils.TestLocation,
 			WithStorage(storage),
 			WithPublicKeyValidationHandler(
-				func(_ *Interpreter, _ *CompositeValue) BoolValue {
+				func(_ *Interpreter, _ func() LocationRange, _ *CompositeValue) BoolValue {
 					return true
 				},
 			),
@@ -2886,6 +2886,7 @@ func TestPublicKeyValue(t *testing.T) {
 
 		key := NewPublicKeyValue(
 			inter,
+			ReturnEmptyLocationRange,
 			publicKey,
 			sigAlgo(),
 			inter.PublicKeyValidationHandler,

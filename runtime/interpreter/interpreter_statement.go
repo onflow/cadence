@@ -298,13 +298,15 @@ func (interpreter *Interpreter) VisitEmitStatement(statement *ast.EmitStatement)
 
 	eventType := interpreter.Program.Elaboration.EmitStatementEventTypes[statement]
 
+	getLocationRange := locationRangeGetter(interpreter.Location, statement)
+
 	if interpreter.onEventEmitted == nil {
 		panic(EventEmissionUnavailableError{
-			LocationRange: locationRangeGetter(interpreter.Location, statement)(),
+			LocationRange: getLocationRange(),
 		})
 	}
 
-	err := interpreter.onEventEmitted(interpreter, event, eventType)
+	err := interpreter.onEventEmitted(interpreter, getLocationRange, event, eventType)
 	if err != nil {
 		panic(err)
 	}

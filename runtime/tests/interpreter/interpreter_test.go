@@ -6238,7 +6238,12 @@ func TestInterpretEmitEvent(t *testing.T) {
 	)
 
 	inter.SetOnEventEmittedHandler(
-		func(_ *interpreter.Interpreter, event *interpreter.CompositeValue, eventType *sema.CompositeType) error {
+		func(
+			_ *interpreter.Interpreter,
+			_ func() interpreter.LocationRange,
+			event *interpreter.CompositeValue,
+			eventType *sema.CompositeType,
+		) error {
 			actualEvents = append(actualEvents, event)
 			return nil
 		},
@@ -6589,7 +6594,12 @@ func TestInterpretEmitEventParameterTypes(t *testing.T) {
 			var actualEvents []interpreter.Value
 
 			inter.SetOnEventEmittedHandler(
-				func(_ *interpreter.Interpreter, event *interpreter.CompositeValue, eventType *sema.CompositeType) error {
+				func(
+					_ *interpreter.Interpreter,
+					_ func() interpreter.LocationRange,
+					event *interpreter.CompositeValue,
+					eventType *sema.CompositeType,
+				) error {
 					actualEvents = append(actualEvents, event)
 					return nil
 				},

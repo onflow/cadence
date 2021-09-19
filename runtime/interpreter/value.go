@@ -9805,6 +9805,7 @@ func NewAccountKeyValue(
 // NewPublicKeyValue constructs a PublicKey value.
 func NewPublicKeyValue(
 	interpreter *Interpreter,
+	getLocationRange func() LocationRange,
 	publicKey *ArrayValue,
 	signAlgo *CompositeValue,
 	validatePublicKey PublicKeyValidationHandlerFunc,
@@ -9847,7 +9848,7 @@ func NewPublicKeyValue(
 		interpreter,
 		ReturnEmptyLocationRange,
 		sema.PublicKeyIsValidField,
-		validatePublicKey(interpreter, publicKeyValue),
+		validatePublicKey(interpreter, getLocationRange, publicKeyValue),
 	)
 
 	// Public key value to string should include the key even though it is a computed field
@@ -9888,14 +9889,19 @@ var publicKeyVerifyFunction = NewHostFunctionValue(
 		hashAlgo := invocation.Arguments[3].(*CompositeValue)
 		publicKey := invocation.Self
 
-		invocation.Interpreter.ExpectType(
+		interpreter := invocation.Interpreter
+
+		getLocationRange := invocation.GetLocationRange
+
+		interpreter.ExpectType(
 			publicKey,
 			sema.PublicKeyType,
-			invocation.GetLocationRange,
+			getLocationRange,
 		)
 
-		return invocation.Interpreter.SignatureVerificationHandler(
-			invocation.Interpreter,
+		return interpreter.SignatureVerificationHandler(
+			interpreter,
+			getLocationRange,
 			signatureValue,
 			signedDataValue,
 			domainSeparationTag,

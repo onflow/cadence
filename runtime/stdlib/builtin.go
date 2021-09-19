@@ -171,6 +171,7 @@ var CreatePublicKeyFunction = NewStandardLibraryFunction(
 
 		return interpreter.NewPublicKeyValue(
 			inter,
+			invocation.GetLocationRange,
 			publicKey,
 			signAlgo,
 			inter.PublicKeyValidationHandler,
@@ -219,10 +220,9 @@ func BuiltinValues() StandardLibraryValues {
 	}
 }
 
-func NewSignatureAlgorithmCase(rawValue uint8) *interpreter.CompositeValue {
+func NewSignatureAlgorithmCase(inter *interpreter.Interpreter, rawValue uint8) *interpreter.CompositeValue {
 	return interpreter.NewEnumCaseValue(
-		// NOTE: no storage needed, as SignatureAlgorithm type is non-storable (has no location)
-		nil,
+		inter,
 		sema.SignatureAlgorithmType,
 		interpreter.UInt8Value(rawValue),
 		nil,
@@ -234,10 +234,9 @@ var hashAlgorithmFunctions = map[string]interpreter.FunctionValue{
 	sema.HashAlgorithmTypeHashWithTagFunctionName: hashAlgorithmHashWithTagFunction,
 }
 
-func NewHashAlgorithmCase(rawValue uint8) *interpreter.CompositeValue {
+func NewHashAlgorithmCase(inter *interpreter.Interpreter, rawValue uint8) *interpreter.CompositeValue {
 	return interpreter.NewEnumCaseValue(
-		// NOTE: no storage needed, as HashAlgorithm type is non-storable (has no location)
-		nil,
+		inter,
 		sema.HashAlgorithmType,
 		interpreter.UInt8Value(rawValue),
 		hashAlgorithmFunctions,
@@ -251,14 +250,17 @@ var hashAlgorithmHashFunction = interpreter.NewHostFunctionValue(
 
 		inter := invocation.Interpreter
 
+		getLocationRange := invocation.GetLocationRange
+
 		inter.ExpectType(
 			hashAlgoValue,
 			sema.HashAlgorithmType,
-			invocation.GetLocationRange,
+			getLocationRange,
 		)
 
 		return inter.HashHandler(
 			inter,
+			getLocationRange,
 			dataValue,
 			nil,
 			hashAlgoValue,
@@ -274,14 +276,17 @@ var hashAlgorithmHashWithTagFunction = interpreter.NewHostFunctionValue(
 
 		inter := invocation.Interpreter
 
+		getLocationRange := invocation.GetLocationRange
+
 		inter.ExpectType(
 			hashAlgoValue,
 			sema.HashAlgorithmType,
-			invocation.GetLocationRange,
+			getLocationRange,
 		)
 
 		return inter.HashHandler(
 			inter,
+			getLocationRange,
 			dataValue,
 			tagValue,
 			hashAlgoValue,
@@ -322,7 +327,7 @@ func cryptoAlgorithmEnumType(enumType *sema.CompositeType, enumCases []sema.Cryp
 func cryptoAlgorithmEnumValue(
 	inter *interpreter.Interpreter,
 	enumCases []sema.CryptoAlgorithm,
-	caseConstructor func(rawValue uint8) *interpreter.CompositeValue,
+	caseConstructor func(inter *interpreter.Interpreter, rawValue uint8) *interpreter.CompositeValue,
 ) interpreter.Value {
 
 	caseCount := len(enumCases)
@@ -331,7 +336,7 @@ func cryptoAlgorithmEnumValue(
 
 	for i, enumCase := range enumCases {
 		rawValue := enumCase.RawValue()
-		caseValue := caseConstructor(rawValue)
+		caseValue := caseConstructor(inter, rawValue)
 		caseValues[i] = caseValue
 		constructorNestedVariables[enumCase.Name()] =
 			interpreter.NewVariableWithValue(caseValue)

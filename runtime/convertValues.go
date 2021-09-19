@@ -780,6 +780,7 @@ func importPublicKey(
 
 	return interpreter.NewPublicKeyValue(
 		inter,
+		interpreter.ReturnEmptyLocationRange,
 		publicKeyValue,
 		signAlgoValue,
 		inter.PublicKeyValidationHandler,
