@@ -323,6 +323,8 @@ func encodeDictionaryOrderedMapTypeInfo(dictionaryType DictionaryStaticType) cbo
 	return buf.Bytes()
 }
 
+const encodedCompositeOrderedMapTypeInfoLength = 3
+
 func encodeCompositeOrderedMapTypeInfo(
 	location common.Location,
 	qualifiedIdentifier string,
@@ -332,6 +334,11 @@ func encodeCompositeOrderedMapTypeInfo(
 	enc := CBOREncMode.NewStreamEncoder(&buf)
 
 	err := enc.EncodeTagHead(CBORTagCompositeValue)
+	if err != nil {
+		panic(ExternalError{err})
+	}
+
+	err = enc.EncodeArrayHead(encodedCompositeOrderedMapTypeInfoLength)
 	if err != nil {
 		panic(ExternalError{err})
 	}
@@ -400,6 +407,19 @@ func decodeDictionaryOrderedMapTypeInfo(dec *cbor.StreamDecoder) (orderedMapType
 }
 
 func decodeCompositeOrderedMapTypeInfo(dec *cbor.StreamDecoder) (orderedMapTypeInfo, error) {
+
+	length, err := dec.DecodeArrayHead()
+	if err != nil {
+		return nil, err
+	}
+
+	if length != encodedCompositeOrderedMapTypeInfoLength {
+		return nil, fmt.Errorf(
+			"invalid composite ordered map type info: expected %d elements, got %d",
+			encodedCompositeOrderedMapTypeInfoLength, length,
+		)
+	}
+
 	location, err := decodeLocation(dec)
 	if err != nil {
 		panic(err)
