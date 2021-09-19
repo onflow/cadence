@@ -19,9 +19,11 @@
 package interpreter
 
 import (
+	"bytes"
 	"fmt"
 	"math"
 
+	"github.com/fxamacker/cbor/v2"
 	"github.com/onflow/atree"
 	"github.com/onflow/cadence/runtime/common"
 )
@@ -38,7 +40,7 @@ func StoredValue(storable atree.Storable, storage atree.SlabStorage) Value {
 func MustConvertStoredValue(value atree.Value) Value {
 	converted, err := convertStoredValue(value)
 	if err != nil {
-		panic(ExternalError{err})
+		panic(err)
 	}
 	return converted
 }
@@ -47,17 +49,9 @@ func convertStoredValue(value atree.Value) (Value, error) {
 	switch value := value.(type) {
 	case *atree.Array:
 		// TODO: optimize
-		staticType, err := StaticTypeFromBytes(value.Type())
+		arrayType, err := decodeArrayTypeInfo(value.Type())
 		if err != nil {
 			return nil, err
-		}
-
-		arrayType, ok := staticType.(ArrayStaticType)
-		if !ok {
-			return nil, fmt.Errorf(
-				"invalid array static type: %v",
-				staticType,
-			)
 		}
 
 		return &ArrayValue{
@@ -67,23 +61,32 @@ func convertStoredValue(value atree.Value) (Value, error) {
 
 	case *atree.OrderedMap:
 		// TODO: optimize
-		staticType, err := StaticTypeFromBytes(value.Type())
+		info, err := decodeOrderedMapTypeInfo(value.Type())
 		if err != nil {
 			return nil, err
 		}
 
-		dictionaryType, ok := staticType.(DictionaryStaticType)
-		if !ok {
+		switch info := info.(type) {
+		case dictionaryOrderedMapTypeInfo:
+			return &DictionaryValue{
+				dictionary: value,
+				Type:       DictionaryStaticType(info),
+			}, nil
+
+		case compositeOrderedMapTypeInfo:
+			return &CompositeValue{
+				dictionary:          value,
+				Location:            info.location,
+				QualifiedIdentifier: info.qualifiedIdentifier,
+				Kind:                info.kind,
+			}, nil
+
+		default:
 			return nil, fmt.Errorf(
-				"invalid dictionary static type: %v",
-				staticType,
+				"invalid ordered map info: %T",
+				info,
 			)
 		}
-
-		return &DictionaryValue{
-			dictionary: value,
-			Type:       dictionaryType,
-		}, nil
 
 	case Value:
 		return value, nil
@@ -227,4 +230,201 @@ func maybeLargeImmutableStorable(
 	}
 
 	return atree.StorageIDStorable(storageID), nil
+}
+
+func encodeArrayTypeInfo(arrayType ArrayStaticType) cbor.RawMessage {
+	var buf bytes.Buffer
+	enc := CBOREncMode.NewStreamEncoder(&buf)
+
+	err := enc.EncodeTagHead(CBORTagArrayValue)
+	if err != nil {
+		panic(ExternalError{err})
+	}
+
+	err = EncodeStaticType(enc, arrayType)
+	if err != nil {
+		panic(ExternalError{err})
+	}
+
+	err = enc.Flush()
+	if err != nil {
+		panic(ExternalError{err})
+	}
+
+	return buf.Bytes()
+}
+
+func decodeArrayTypeInfo(typeInfo cbor.RawMessage) (ArrayStaticType, error) {
+	dec := CBORDecMode.NewByteStreamDecoder(typeInfo)
+
+	tagNumber, err := dec.DecodeTagNumber()
+	if err != nil {
+		panic(ExternalError{err})
+	}
+
+	if tagNumber != CBORTagArrayValue {
+		return nil, fmt.Errorf(
+			"invalid array type info: expected tag %d, got %d",
+			CBORTagArrayValue, tagNumber,
+		)
+	}
+
+	staticType, err := decodeStaticType(dec)
+	if err != nil {
+		return nil, err
+	}
+
+	arrayType, ok := staticType.(ArrayStaticType)
+	if !ok {
+		return nil, fmt.Errorf(
+			"invalid array static type in array type info: %T",
+			staticType,
+		)
+	}
+
+	return arrayType, nil
+}
+
+type orderedMapTypeInfo interface {
+	isOrderedMapTypeInfo()
+}
+
+type dictionaryOrderedMapTypeInfo DictionaryStaticType
+
+func (dictionaryOrderedMapTypeInfo) isOrderedMapTypeInfo() {}
+
+type compositeOrderedMapTypeInfo struct {
+	location            common.Location
+	qualifiedIdentifier string
+	kind                common.CompositeKind
+}
+
+func (compositeOrderedMapTypeInfo) isOrderedMapTypeInfo() {}
+
+func encodeDictionaryOrderedMapTypeInfo(dictionaryType DictionaryStaticType) cbor.RawMessage {
+	var buf bytes.Buffer
+	enc := CBOREncMode.NewStreamEncoder(&buf)
+
+	err := enc.EncodeTagHead(CBORTagDictionaryValue)
+	if err != nil {
+		panic(ExternalError{err})
+	}
+
+	err = EncodeStaticType(enc, dictionaryType)
+	if err != nil {
+		panic(ExternalError{err})
+	}
+
+	err = enc.Flush()
+	if err != nil {
+		panic(ExternalError{err})
+	}
+
+	return buf.Bytes()
+}
+
+func encodeCompositeOrderedMapTypeInfo(
+	location common.Location,
+	qualifiedIdentifier string,
+	kind common.CompositeKind,
+) cbor.RawMessage {
+	var buf bytes.Buffer
+	enc := CBOREncMode.NewStreamEncoder(&buf)
+
+	err := enc.EncodeTagHead(CBORTagCompositeValue)
+	if err != nil {
+		panic(ExternalError{err})
+	}
+
+	err = encodeLocation(enc, location)
+	if err != nil {
+		panic(err)
+	}
+
+	err = enc.EncodeString(qualifiedIdentifier)
+	if err != nil {
+		panic(ExternalError{err})
+	}
+
+	err = enc.EncodeUint64(uint64(kind))
+	if err != nil {
+		panic(ExternalError{err})
+	}
+
+	err = enc.Flush()
+	if err != nil {
+		panic(ExternalError{err})
+	}
+
+	return buf.Bytes()
+}
+
+func decodeOrderedMapTypeInfo(typeInfo cbor.RawMessage) (orderedMapTypeInfo, error) {
+	dec := CBORDecMode.NewByteStreamDecoder(typeInfo)
+
+	tagNumber, err := dec.DecodeTagNumber()
+	if err != nil {
+		panic(ExternalError{err})
+	}
+
+	switch tagNumber {
+	case CBORTagDictionaryValue:
+		return decodeDictionaryOrderedMapTypeInfo(dec)
+
+	case CBORTagCompositeValue:
+		return decodeCompositeOrderedMapTypeInfo(dec)
+
+	default:
+		return nil, fmt.Errorf(
+			"invalid array type info: expected tag %d, got %d",
+			CBORTagArrayValue, tagNumber,
+		)
+	}
+}
+
+func decodeDictionaryOrderedMapTypeInfo(dec *cbor.StreamDecoder) (orderedMapTypeInfo, error) {
+	staticType, err := decodeStaticType(dec)
+	if err != nil {
+		return nil, err
+	}
+
+	dictionaryType, ok := staticType.(DictionaryStaticType)
+	if !ok {
+		return nil, fmt.Errorf(
+			"invalid array static type in array type info: %T",
+			staticType,
+		)
+	}
+
+	return dictionaryOrderedMapTypeInfo(dictionaryType), nil
+}
+
+func decodeCompositeOrderedMapTypeInfo(dec *cbor.StreamDecoder) (orderedMapTypeInfo, error) {
+	location, err := decodeLocation(dec)
+	if err != nil {
+		panic(err)
+	}
+
+	qualifiedIdentifier, err := dec.DecodeString()
+	if err != nil {
+		return nil, err
+	}
+
+	kind, err := dec.DecodeUint64()
+	if err != nil {
+		return nil, err
+	}
+
+	if kind >= uint64(common.CompositeKindCount()) {
+		return nil, fmt.Errorf(
+			"invalid composite ordered map type info: invalid kind %d",
+			kind,
+		)
+	}
+
+	return compositeOrderedMapTypeInfo{
+		location:            location,
+		qualifiedIdentifier: qualifiedIdentifier,
+		kind:                common.CompositeKind(kind),
+	}, nil
 }

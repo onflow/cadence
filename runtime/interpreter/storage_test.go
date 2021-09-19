@@ -52,7 +52,7 @@ func TestCompositeStorage(t *testing.T) {
 		testOwner,
 	)
 
-	require.NotEqual(t, atree.StorageIDUndefined, value.StorageID)
+	require.NotEqual(t, atree.StorageIDUndefined, value.StorageID())
 
 	require.Equal(t, 1, storage.BasicSlabStorage.Count())
 

@@ -19,7 +19,6 @@
 package interpreter
 
 import (
-	"bytes"
 	"encoding/binary"
 	"encoding/hex"
 	"fmt"
@@ -27,7 +26,6 @@ import (
 	"math/big"
 	"strings"
 
-	"github.com/fxamacker/cbor/v2"
 	"github.com/onflow/atree"
 	"github.com/rivo/uniseg"
 	"golang.org/x/text/unicode/norm"
@@ -735,10 +733,7 @@ func NewArrayValueWithAddress(
 	values ...Value,
 ) *ArrayValue {
 
-	typeInfo, err := StaticTypeToBytes(arrayType)
-	if err != nil {
-		panic(ExternalError{err})
-	}
+	typeInfo := encodeArrayTypeInfo(arrayType)
 
 	array, err := atree.NewArray(
 		interpreter.Storage,
@@ -6964,40 +6959,6 @@ type CompositeValue struct {
 
 type ComputedField func(*Interpreter) Value
 
-func CompositeTypeToBytes(
-	location common.Location,
-	qualifiedIdentifier string,
-	kind common.CompositeKind,
-) (
-	cbor.RawMessage,
-	error,
-) {
-	var buf bytes.Buffer
-	enc := atree.NewEncoder(&buf, CBOREncMode)
-
-	err := EncodeLocation(enc.CBOR, location)
-	if err != nil {
-		return nil, err
-	}
-
-	err = enc.CBOR.EncodeString(qualifiedIdentifier)
-	if err != nil {
-		return nil, err
-	}
-
-	err = enc.CBOR.EncodeUint(uint(kind))
-	if err != nil {
-		return nil, err
-	}
-
-	err = enc.CBOR.Flush()
-	if err != nil {
-		return nil, err
-	}
-
-	return buf.Bytes(), nil
-}
-
 type CompositeField struct {
 	Name  string
 	Value Value
@@ -7012,14 +6973,11 @@ func NewCompositeValue(
 	address common.Address,
 ) *CompositeValue {
 
-	typeInfo, err := CompositeTypeToBytes(
+	typeInfo := encodeCompositeOrderedMapTypeInfo(
 		location,
 		qualifiedIdentifier,
 		kind,
 	)
-	if err != nil {
-		panic(ExternalError{err})
-	}
 
 	dictionary, err := atree.NewMap(
 		interpreter.Storage,
@@ -7617,10 +7575,7 @@ func NewDictionaryValueWithAddress(
 	keysAndValues ...Value,
 ) *DictionaryValue {
 
-	typeInfo, err := StaticTypeToBytes(dictionaryType)
-	if err != nil {
-		panic(ExternalError{err})
-	}
+	typeInfo := encodeDictionaryOrderedMapTypeInfo(dictionaryType)
 
 	keysAndValuesCount := len(keysAndValues)
 	if keysAndValuesCount%2 != 0 {
@@ -8012,6 +7967,10 @@ func (v *DictionaryValue) Insert(
 	existingValueStorable, err := v.dictionary.Set(valueComparator, interpreter.getHashInput, keyValue, value)
 	if err != nil {
 		panic(ExternalError{err})
+	}
+
+	if existingValueStorable == nil {
+		return NilValue{}
 	}
 
 	existingValue := StoredValue(existingValueStorable, interpreter.Storage)
