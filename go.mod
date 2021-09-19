@@ -9,7 +9,7 @@ require (
 	github.com/fxamacker/cbor/v2 v2.2.1-0.20210510192846-c3f3c69e7bc8
 	github.com/go-test/deep v1.0.5
 	github.com/logrusorgru/aurora v0.0.0-20200102142835-e9ef32dff381
-	github.com/onflow/atree v0.0.0-20210917165259-e453ff8ae3ee
+	github.com/onflow/atree v0.0.0-20210919210728-8c390238cbcd
 	github.com/rivo/uniseg v0.2.0
 	github.com/stretchr/testify v1.7.0
 	go.uber.org/goleak v1.1.10
