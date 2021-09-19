@@ -153,12 +153,12 @@ func TestExportValue(t *testing.T) {
 			),
 			expected: cadence.NewDictionary([]cadence.KeyValuePair{
 				{
-					Key:   cadence.String("a"),
-					Value: cadence.NewInt(1),
-				},
-				{
 					Key:   cadence.String("b"),
 					Value: cadence.NewInt(2),
+				},
+				{
+					Key:   cadence.String("a"),
+					Value: cadence.NewInt(1),
 				},
 			}),
 		},
@@ -2550,12 +2550,12 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 		assert.Equal(t,
 			cadence.NewDictionary([]cadence.KeyValuePair{
 				{
-					Key:   cadence.String("a"),
-					Value: cadence.NewInt(1),
-				},
-				{
 					Key:   cadence.String("b"),
 					Value: cadence.NewInt(2),
+				},
+				{
+					Key:   cadence.String("a"),
+					Value: cadence.NewInt(1),
 				},
 			}),
 			actual,
