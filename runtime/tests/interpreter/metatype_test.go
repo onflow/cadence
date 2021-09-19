@@ -122,8 +122,10 @@ func TestInterpretMetaTypeEquality(t *testing.T) {
 			{
 				Name: "unknownType",
 				Type: sema.MetaType,
-				Value: interpreter.TypeValue{
-					Type: nil,
+				ValueFactory: func(i *interpreter.Interpreter) interpreter.Value {
+					return interpreter.TypeValue{
+						Type: nil,
+					}
 				},
 				Kind: common.DeclarationKindConstant,
 			},
@@ -163,16 +165,20 @@ func TestInterpretMetaTypeEquality(t *testing.T) {
 			{
 				Name: "unknownType1",
 				Type: sema.MetaType,
-				Value: interpreter.TypeValue{
-					Type: nil,
+				ValueFactory: func(i *interpreter.Interpreter) interpreter.Value {
+					return interpreter.TypeValue{
+						Type: nil,
+					}
 				},
 				Kind: common.DeclarationKindConstant,
 			},
 			{
 				Name: "unknownType2",
 				Type: sema.MetaType,
-				Value: interpreter.TypeValue{
-					Type: nil,
+				ValueFactory: func(i *interpreter.Interpreter) interpreter.Value {
+					return interpreter.TypeValue{
+						Type: nil,
+					}
 				},
 				Kind: common.DeclarationKindConstant,
 			},
@@ -253,8 +259,10 @@ func TestInterpretMetaTypeIdentifier(t *testing.T) {
 			{
 				Name: "unknownType",
 				Type: sema.MetaType,
-				Value: interpreter.TypeValue{
-					Type: nil,
+				ValueFactory: func(i *interpreter.Interpreter) interpreter.Value {
+					return interpreter.TypeValue{
+						Type: nil,
+					}
 				},
 				Kind: common.DeclarationKindConstant,
 			},
@@ -380,8 +388,10 @@ func TestInterpretIsInstance(t *testing.T) {
 		{
 			Name: "unknownType",
 			Type: sema.MetaType,
-			Value: interpreter.TypeValue{
-				Type: nil,
+			ValueFactory: func(i *interpreter.Interpreter) interpreter.Value {
+				return interpreter.TypeValue{
+					Type: nil,
+				}
 			},
 			Kind: common.DeclarationKindConstant,
 		},

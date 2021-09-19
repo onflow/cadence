@@ -304,12 +304,15 @@ func TestDictionaryMutation(t *testing.T) {
 		require.NoError(t, err)
 
 		require.IsType(t, &interpreter.DictionaryValue{}, value)
-		array := value.(*interpreter.DictionaryValue)
+		dictionary := value.(*interpreter.DictionaryValue)
 
-		entries := array.Entries
-		require.Equal(t, 1, entries.Len())
+		require.Equal(t, 1, dictionary.Count())
 
-		val, present := entries.Get("foo")
+		val, present := dictionary.GetKey(
+			inter,
+			interpreter.ReturnEmptyLocationRange,
+			interpreter.NewStringValue("foo"),
+		)
 		assert.True(t, present)
 		assert.Equal(t, interpreter.NewStringValue("baz"), val)
 	})
@@ -353,10 +356,9 @@ func TestDictionaryMutation(t *testing.T) {
 		require.NoError(t, err)
 
 		require.IsType(t, &interpreter.DictionaryValue{}, value)
-		array := value.(*interpreter.DictionaryValue)
+		dictionary := value.(*interpreter.DictionaryValue)
 
-		entries := array.Entries
-		require.Equal(t, 0, entries.Len())
+		require.Equal(t, 0, dictionary.Count())
 	})
 
 	t.Run("dictionary insert valid", func(t *testing.T) {
@@ -374,12 +376,15 @@ func TestDictionaryMutation(t *testing.T) {
 		require.NoError(t, err)
 
 		require.IsType(t, &interpreter.DictionaryValue{}, value)
-		array := value.(*interpreter.DictionaryValue)
+		dictionary := value.(*interpreter.DictionaryValue)
 
-		entries := array.Entries
-		require.Equal(t, 1, entries.Len())
+		require.Equal(t, 1, dictionary.Count())
 
-		val, present := entries.Get("foo")
+		val, present := dictionary.GetKey(
+			inter,
+			interpreter.ReturnEmptyLocationRange,
+			interpreter.NewStringValue("foo"),
+		)
 		assert.True(t, present)
 		assert.Equal(t, interpreter.NewStringValue("baz"), val)
 	})

@@ -1084,16 +1084,18 @@ func TestInterpretFunctionWithPostConditionAndResourceResult(t *testing.T) {
 					sema.VoidType,
 				),
 			},
-			Value: interpreter.NewHostFunctionValue(
-				func(invocation interpreter.Invocation) interpreter.Value {
-					checkCalled = true
+			ValueFactory: func(_ *interpreter.Interpreter) interpreter.Value {
+				return interpreter.NewHostFunctionValue(
+					func(invocation interpreter.Invocation) interpreter.Value {
+						checkCalled = true
 
-					argument := invocation.Arguments[0]
-					require.IsType(t, &interpreter.EphemeralReferenceValue{}, argument)
+						argument := invocation.Arguments[0]
+						require.IsType(t, &interpreter.EphemeralReferenceValue{}, argument)
 
-					return interpreter.VoidValue{}
-				},
-			),
+						return interpreter.VoidValue{}
+					},
+				)
+			},
 			Kind: common.DeclarationKindConstant,
 		},
 	}

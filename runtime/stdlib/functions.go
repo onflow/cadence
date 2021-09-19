@@ -42,7 +42,7 @@ func (f StandardLibraryFunction) ValueDeclarationName() string {
 	return f.Name
 }
 
-func (f StandardLibraryFunction) ValueDeclarationValue() interpreter.Value {
+func (f StandardLibraryFunction) ValueDeclarationValue(_ *interpreter.Interpreter) interpreter.Value {
 	return f.Function
 }
 

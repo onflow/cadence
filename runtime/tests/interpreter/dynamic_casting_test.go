@@ -3474,8 +3474,10 @@ func TestInterpretDynamicCastingCapability(t *testing.T) {
 				Type: structType,
 			},
 		},
-		Value: capabilityValue,
-		Kind:  common.DeclarationKindConstant,
+		ValueFactory: func(_ *interpreter.Interpreter) interpreter.Value {
+			return capabilityValue
+		},
+		Kind: common.DeclarationKindConstant,
 	}
 
 	options := ParseCheckAndInterpretOptions{

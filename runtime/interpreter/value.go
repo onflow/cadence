@@ -7170,7 +7170,7 @@ func (v *CompositeValue) OwnerValue(interpreter *Interpreter) OptionalValue {
 		return NilValue{}
 	}
 
-	ownerAccount := interpreter.accountHandler(AddressValue(address))
+	ownerAccount := interpreter.accountHandler(interpreter, AddressValue(address))
 
 	// Owner must be of `PublicAccount` type.
 	interpreter.ExpectType(ownerAccount, sema.PublicAccountType, nil)
@@ -7517,6 +7517,42 @@ func (v *CompositeValue) ForEachField(f func(_ string, value Value)) {
 
 func (v *CompositeValue) StorageID() atree.StorageID {
 	return v.dictionary.StorageID()
+}
+
+func (v *CompositeValue) RemoveField(
+	interpreter *Interpreter,
+	getLocationRange func() LocationRange,
+	name string,
+) {
+	keyValue := NewStringValue(name)
+
+	valueComparator := newValueComparator(interpreter, getLocationRange)
+
+	existingKeyStorable, existingValueStorable, err := v.dictionary.Remove(
+		valueComparator,
+		interpreter.getHashInput,
+		keyValue,
+	)
+	if err != nil {
+		if _, ok := err.(*atree.KeyNotFoundError); ok {
+			return
+		}
+		panic(ExternalError{err})
+	}
+
+	storage := interpreter.Storage
+
+	// Key
+
+	existingKeyValue := StoredValue(existingKeyStorable, storage)
+	existingKeyValue.DeepRemove(interpreter)
+	interpreter.removeReferencedSlab(existingKeyStorable)
+
+	// Value
+
+	existingValue := StoredValue(existingValueStorable, storage)
+	existingValue.DeepRemove(interpreter)
+	interpreter.removeReferencedSlab(existingValueStorable)
 }
 
 func NewEnumCaseValue(

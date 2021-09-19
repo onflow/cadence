@@ -38,19 +38,19 @@ func TestInterpretEquality(t *testing.T) {
 
 		t.Parallel()
 
-		capabilityValue := &interpreter.CapabilityValue{
-			Address: interpreter.NewAddressValue(common.BytesToAddress([]byte{0x1})),
-			Path: interpreter.PathValue{
-				Domain:     common.PathDomainStorage,
-				Identifier: "something",
-			},
-		}
-
 		capabilityValueDeclaration := stdlib.StandardLibraryValue{
-			Name:  "cap",
-			Type:  &sema.CapabilityType{},
-			Value: capabilityValue,
-			Kind:  common.DeclarationKindConstant,
+			Name: "cap",
+			Type: &sema.CapabilityType{},
+			ValueFactory: func(_ *interpreter.Interpreter) interpreter.Value {
+				return &interpreter.CapabilityValue{
+					Address: interpreter.NewAddressValue(common.BytesToAddress([]byte{0x1})),
+					Path: interpreter.PathValue{
+						Domain:     common.PathDomainStorage,
+						Identifier: "something",
+					},
+				}
+			},
+			Kind: common.DeclarationKindConstant,
 		}
 
 		inter, err := parseCheckAndInterpretWithOptions(t,

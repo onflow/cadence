@@ -187,10 +187,13 @@ func BuiltinValues() StandardLibraryValues {
 			sema.SignatureAlgorithmType,
 			sema.SignatureAlgorithms,
 		),
-		Value: cryptoAlgorithmEnumValue(
-			sema.SignatureAlgorithms,
-			NewSignatureAlgorithmCase,
-		),
+		ValueFactory: func(inter *interpreter.Interpreter) interpreter.Value {
+			return cryptoAlgorithmEnumValue(
+				inter,
+				sema.SignatureAlgorithms,
+				NewSignatureAlgorithmCase,
+			)
+		},
 		Kind: common.DeclarationKindEnum,
 	}
 
@@ -200,10 +203,13 @@ func BuiltinValues() StandardLibraryValues {
 			sema.HashAlgorithmType,
 			sema.HashAlgorithms,
 		),
-		Value: cryptoAlgorithmEnumValue(
-			sema.HashAlgorithms,
-			NewHashAlgorithmCase,
-		),
+		ValueFactory: func(inter *interpreter.Interpreter) interpreter.Value {
+			return cryptoAlgorithmEnumValue(
+				inter,
+				sema.HashAlgorithms,
+				NewHashAlgorithmCase,
+			)
+		},
 		Kind: common.DeclarationKindEnum,
 	}
 
@@ -314,23 +320,26 @@ func cryptoAlgorithmEnumType(enumType *sema.CompositeType, enumCases []sema.Cryp
 }
 
 func cryptoAlgorithmEnumValue(
+	inter *interpreter.Interpreter,
 	enumCases []sema.CryptoAlgorithm,
 	caseConstructor func(rawValue uint8) *interpreter.CompositeValue,
 ) interpreter.Value {
 
 	caseCount := len(enumCases)
 	caseValues := make([]*interpreter.CompositeValue, caseCount)
-	constructorNestedVariables := interpreter.NewStringVariableOrderedMap()
+	constructorNestedVariables := map[string]*interpreter.Variable{}
 
 	for i, enumCase := range enumCases {
 		rawValue := enumCase.RawValue()
 		caseValue := caseConstructor(rawValue)
 		caseValues[i] = caseValue
-		constructorNestedVariables.Set(
-			enumCase.Name(),
-			interpreter.NewVariableWithValue(caseValue),
-		)
+		constructorNestedVariables[enumCase.Name()] =
+			interpreter.NewVariableWithValue(caseValue)
 	}
 
-	return interpreter.EnumConstructorFunction(caseValues, constructorNestedVariables)
+	return interpreter.EnumConstructorFunction(
+		inter,
+		caseValues,
+		constructorNestedVariables,
+	)
 }

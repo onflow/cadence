@@ -130,6 +130,7 @@ type ImportLocationHandlerFunc func(
 // The account returned must be of type `PublicAccount`.
 //
 type AccountHandlerFunc func(
+	inter *Interpreter,
 	address AddressValue,
 ) *CompositeValue
 
@@ -1098,7 +1099,7 @@ func (interpreter *Interpreter) declareValue(declaration ValueDeclaration) *Vari
 
 	return interpreter.declareVariable(
 		declaration.ValueDeclarationName(),
-		declaration.ValueDeclarationValue(),
+		declaration.ValueDeclarationValue(interpreter),
 	)
 }
 
