@@ -142,8 +142,8 @@ func testCompositeValue(t *testing.T, code string) *interpreter.Interpreter {
 				sema.WithPredeclaredTypes(typeDeclarations),
 			},
 			Options: []interpreter.Option{
-				interpreter.WithPredeclaredValues(valueDeclarations.ToInterpreterValueDeclarations()),
 				interpreter.WithStorage(storage),
+				interpreter.WithPredeclaredValues(valueDeclarations.ToInterpreterValueDeclarations()),
 			},
 		},
 	)

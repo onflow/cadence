@@ -684,7 +684,7 @@ func importCompositeValue(
 		case sema.HashAlgorithmType:
 			// HashAlgorithmType has a dedicated constructor
 			// (e.g. it has host functions)
-			return importHashAlgorithm(fields)
+			return importHashAlgorithm(inter, fields)
 
 		case sema.SignatureAlgorithmType:
 			// continue in the normal path
@@ -788,6 +788,7 @@ func importPublicKey(
 }
 
 func importHashAlgorithm(
+	inter *interpreter.Interpreter,
 	fields []interpreter.CompositeField,
 ) (
 	*interpreter.CompositeValue,
@@ -829,5 +830,5 @@ func importHashAlgorithm(
 		)
 	}
 
-	return stdlib.NewHashAlgorithmCase(uint8(rawValue)), nil
+	return stdlib.NewHashAlgorithmCase(inter, uint8(rawValue)), nil
 }

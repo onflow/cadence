@@ -1011,8 +1011,8 @@ func (r *interpreterRuntime) newInterpreter(
 	}
 
 	defaultOptions := []interpreter.Option{
-		interpreter.WithPredeclaredValues(preDeclaredValues),
 		interpreter.WithStorage(runtimeStorage),
+		interpreter.WithPredeclaredValues(preDeclaredValues),
 		interpreter.WithOnEventEmittedHandler(
 			func(
 				inter *interpreter.Interpreter,
@@ -2969,6 +2969,7 @@ func NewPublicKeyValue(
 			publicKey.PublicKey,
 		),
 		stdlib.NewSignatureAlgorithmCase(
+			inter,
 			publicKey.SignAlgo.RawValue(),
 		),
 		func(
@@ -3001,7 +3002,7 @@ func NewAccountKeyValue(
 			accountKey.PublicKey,
 			validatePublicKey,
 		),
-		stdlib.NewHashAlgorithmCase(accountKey.HashAlgo.RawValue()),
+		stdlib.NewHashAlgorithmCase(inter, accountKey.HashAlgo.RawValue()),
 		interpreter.NewUFix64ValueWithInteger(uint64(accountKey.Weight)),
 		interpreter.BoolValue(accountKey.IsRevoked),
 	)

@@ -4516,8 +4516,8 @@ func TestInterpretReferenceFailableDowncasting(t *testing.T) {
 					sema.WithPredeclaredValues(valueDeclarations),
 				},
 				Options: []interpreter.Option{
-					interpreter.WithPredeclaredValues(values),
 					interpreter.WithStorage(storage),
+					interpreter.WithPredeclaredValues(values),
 				},
 			},
 		)
