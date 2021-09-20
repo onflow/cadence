@@ -1213,29 +1213,38 @@ func (v *ArrayValue) NeedsStoreToAddress(_ *Interpreter, address atree.Address) 
 
 func (v *ArrayValue) DeepCopy(interpreter *Interpreter, address atree.Address) Value {
 
-	array, err := atree.NewArray(interpreter.Storage, address, v.array.Type())
+	iterator, err := v.array.Iterator()
 	if err != nil {
 		panic(ExternalError{err})
 	}
-	result := &ArrayValue{
+
+	array, err := atree.NewArrayFromBatchData(
+		interpreter.Storage,
+		address,
+		v.array.Type(),
+		func() (atree.Value, error) {
+			value, err := iterator.Next()
+			if err != nil {
+				return nil, err
+			}
+			if value == nil {
+				return nil, nil
+			}
+
+			element := MustConvertStoredValue(value)
+
+			return interpreter.CopyValue(element, address), nil
+		},
+	)
+	if err != nil {
+		panic(ExternalError{err})
+	}
+
+	return &ArrayValue{
 		Type:        v.Type,
 		array:       array,
 		isDestroyed: v.isDestroyed,
 	}
-
-	var index int
-	v.Walk(func(element Value) {
-
-		// TODO: optimize
-		// NOTE: copy to temporary value, then insert
-		value := interpreter.CopyValue(element, atree.Address{})
-
-		result.Insert(interpreter, ReturnEmptyLocationRange, index, value)
-
-		index++
-	})
-
-	return result
 }
 
 func (v *ArrayValue) DeepRemove(interpreter *Interpreter) {

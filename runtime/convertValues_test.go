@@ -2206,13 +2206,13 @@ func TestRuntimeMalformedArgumentPassing(t *testing.T) {
 					cadence.NewInt(5),
 				}),
 			}),
-			expectedContainerMutationError: true,
+			expectedInvalidEntryPointArgumentErrType: &InvalidValueTypeError{},
 		},
 		{
-			label:                          "Inner array with mismatching element",
-			typeSignature:                  "Bar",
-			exportedValue:                  malformedStruct5,
-			expectedContainerMutationError: true,
+			label:                                    "Inner array with mismatching element",
+			typeSignature:                            "Bar",
+			exportedValue:                            malformedStruct5,
+			expectedInvalidEntryPointArgumentErrType: &MalformedValueError{},
 		},
 		{
 			label:                                    "Malformed Optional",
@@ -3051,8 +3051,8 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 		_, err := executeScript(t, script, publicKey, runtimeInterface)
 		require.Error(t, err)
 
-		var containerMutationErr interpreter.ContainerMutationError
-		require.ErrorAs(t, err, &containerMutationErr)
+		var argErr *InvalidEntryPointArgumentError
+		require.ErrorAs(t, err, &argErr)
 	})
 
 	t.Run("Invalid sign algo", func(t *testing.T) {
