@@ -49,6 +49,14 @@ func getUintCBORSize(v uint64) uint32 {
 	return 9
 }
 
+func getBytesCBORSize(b []byte) uint32 {
+	length := len(b)
+	if length == 0 {
+		return 1
+	}
+	return getUintCBORSize(uint64(length)) + uint32(length)
+}
+
 // Cadence needs to encode different kinds of objects in CBOR, for instance,
 // dictionaries, structs, resources, etc.
 //

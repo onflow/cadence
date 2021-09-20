@@ -676,7 +676,7 @@ func (*StringValue) DeepRemove(_ *Interpreter) {
 }
 
 func (v *StringValue) ByteSize() uint32 {
-	return mustStorableSize(v)
+	return getBytesCBORSize([]byte(v.Str))
 }
 
 func (v *StringValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
@@ -9246,8 +9246,7 @@ func (AddressValue) DeepRemove(_ *Interpreter) {
 }
 
 func (v AddressValue) ByteSize() uint32 {
-	// TODO: optimize
-	return mustStorableSize(v)
+	return 2 + getBytesCBORSize(v.ToAddress().Bytes())
 }
 
 func (v AddressValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
