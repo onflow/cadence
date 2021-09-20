@@ -26,7 +26,7 @@ func arrayElements(inter *interpreter.Interpreter, array *interpreter.ArrayValue
 	count := array.Count()
 	result := make([]interpreter.Value, count)
 	for i := 0; i < count; i++ {
-		result[i] = array.GetIndex(inter, interpreter.ReturnEmptyLocationRange, i)
+		result[i] = array.Get(inter, interpreter.ReturnEmptyLocationRange, i)
 	}
 	return result
 }
@@ -35,11 +35,12 @@ func dictionaryKeyValues(dict *interpreter.DictionaryValue) []interpreter.Value 
 	count := dict.Count() * 2
 	result := make([]interpreter.Value, count)
 	i := 0
-	dict.Keys.Walk(func(keyValue interpreter.Value) {
-		result[i*2] = keyValue
-		value, _, _ := dict.GetKey(keyValue)
+	dict.Iterate(func(key, value interpreter.Value) (resume bool) {
+		result[i*2] = key
 		result[i*2+1] = value
 		i++
+
+		return true
 	})
 	return result
 }

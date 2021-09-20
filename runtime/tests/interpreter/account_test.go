@@ -48,20 +48,24 @@ func testAccount(
 	// `authAccount`
 
 	authAccountValueDeclaration := stdlib.StandardLibraryValue{
-		Name:  "authAccount",
-		Type:  sema.AuthAccountType,
-		Value: newTestAuthAccountValue(address),
-		Kind:  common.DeclarationKindConstant,
+		Name: "authAccount",
+		Type: sema.AuthAccountType,
+		ValueFactory: func(inter *interpreter.Interpreter) interpreter.Value {
+			return newTestAuthAccountValue(inter, address)
+		},
+		Kind: common.DeclarationKindConstant,
 	}
 	valueDeclarations = append(valueDeclarations, authAccountValueDeclaration)
 
 	// `pubAccount`
 
 	pubAccountValueDeclaration := stdlib.StandardLibraryValue{
-		Name:  "pubAccount",
-		Type:  sema.PublicAccountType,
-		Value: newTestPublicAccountValue(address),
-		Kind:  common.DeclarationKindConstant,
+		Name: "pubAccount",
+		Type: sema.PublicAccountType,
+		ValueFactory: func(inter *interpreter.Interpreter) interpreter.Value {
+			return newTestPublicAccountValue(inter, address)
+		},
+		Kind: common.DeclarationKindConstant,
 	}
 	valueDeclarations = append(valueDeclarations, pubAccountValueDeclaration)
 

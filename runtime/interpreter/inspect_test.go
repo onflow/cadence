@@ -58,7 +58,7 @@ func TestInspectValue(t *testing.T) {
 
 		optionalValue := NewSomeValueNonCopying(arrayValue)
 
-		compositeValue = newTestCompositeValue(inter.Storage, common.Address{})
+		compositeValue = newTestCompositeValue(inter, common.Address{})
 		compositeValue.SetMember(
 			inter,
 			ReturnEmptyLocationRange,
@@ -70,12 +70,12 @@ func TestInspectValue(t *testing.T) {
 	// Get actually stored values.
 	// The values above were removed when they were inserted into the containers.
 
-	optionalValue := compositeValue.GetField("value").(*SomeValue)
+	optionalValue := compositeValue.GetField(inter, ReturnEmptyLocationRange, "value").(*SomeValue)
 	arrayValue := optionalValue.Value.(*ArrayValue)
-	dictValue := arrayValue.GetIndex(inter, ReturnEmptyLocationRange, 0).(*DictionaryValue)
+	dictValue := arrayValue.Get(inter, ReturnEmptyLocationRange, 0).(*DictionaryValue)
 	dictValueKey := NewStringValue("hello world")
 
-	dictValueValue, _, _ := dictValue.GetKey(dictValueKey)
+	dictValueValue, _ := dictValue.Get(inter, ReturnEmptyLocationRange, dictValueKey)
 
 	t.Run("dict", func(t *testing.T) {
 

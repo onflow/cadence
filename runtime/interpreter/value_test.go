@@ -36,13 +36,13 @@ import (
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
-func newTestCompositeValue(storage Storage, owner common.Address) *CompositeValue {
+func newTestCompositeValue(inter *Interpreter, owner common.Address) *CompositeValue {
 	return NewCompositeValue(
-		storage,
+		inter,
 		utils.TestLocation,
 		"Test",
 		common.CompositeKindStructure,
-		NewStringValueOrderedMap(),
+		nil,
 		owner,
 	)
 }
@@ -74,7 +74,7 @@ func TestOwnerNewArray(t *testing.T) {
 
 	oldOwner := common.Address{0x1}
 
-	value := newTestCompositeValue(inter.Storage, oldOwner)
+	value := newTestCompositeValue(inter, oldOwner)
 
 	assert.Equal(t, oldOwner, value.GetOwner())
 
@@ -86,7 +86,7 @@ func TestOwnerNewArray(t *testing.T) {
 		value,
 	)
 
-	value = array.GetIndex(inter, ReturnEmptyLocationRange, 0).(*CompositeValue)
+	value = array.Get(inter, ReturnEmptyLocationRange, 0).(*CompositeValue)
 
 	assert.Equal(t, common.Address{}, array.GetOwner())
 	assert.Equal(t, common.Address{}, value.GetOwner())
@@ -113,7 +113,7 @@ func TestOwnerArrayDeepCopy(t *testing.T) {
 	oldOwner := common.Address{0x1}
 	newOwner := common.Address{0x2}
 
-	value := newTestCompositeValue(inter.Storage, oldOwner)
+	value := newTestCompositeValue(inter, oldOwner)
 
 	array := NewArrayValue(
 		inter,
@@ -126,7 +126,7 @@ func TestOwnerArrayDeepCopy(t *testing.T) {
 	arrayCopy := array.DeepCopy(inter, atree.Address(newOwner))
 	array = arrayCopy.(*ArrayValue)
 
-	value = array.GetIndex(inter, ReturnEmptyLocationRange, 0).(*CompositeValue)
+	value = array.Get(inter, ReturnEmptyLocationRange, 0).(*CompositeValue)
 
 	assert.Equal(t, newOwner, array.GetOwner())
 	assert.Equal(t, newOwner, value.GetOwner())
@@ -153,7 +153,7 @@ func TestOwnerArrayElement(t *testing.T) {
 	oldOwner := common.Address{0x1}
 	newOwner := common.Address{0x2}
 
-	value := newTestCompositeValue(inter.Storage, oldOwner)
+	value := newTestCompositeValue(inter, oldOwner)
 
 	array := NewArrayValueWithAddress(
 		inter,
@@ -164,7 +164,7 @@ func TestOwnerArrayElement(t *testing.T) {
 		value,
 	)
 
-	value = array.GetIndex(inter, ReturnEmptyLocationRange, 0).(*CompositeValue)
+	value = array.Get(inter, ReturnEmptyLocationRange, 0).(*CompositeValue)
 
 	assert.Equal(t, newOwner, array.GetOwner())
 	assert.Equal(t, newOwner, value.GetOwner())
@@ -191,8 +191,8 @@ func TestOwnerArraySetIndex(t *testing.T) {
 	oldOwner := common.Address{0x1}
 	newOwner := common.Address{0x2}
 
-	value1 := newTestCompositeValue(inter.Storage, oldOwner)
-	value2 := newTestCompositeValue(inter.Storage, oldOwner)
+	value1 := newTestCompositeValue(inter, oldOwner)
+	value2 := newTestCompositeValue(inter, oldOwner)
 
 	array := NewArrayValueWithAddress(
 		inter,
@@ -203,15 +203,15 @@ func TestOwnerArraySetIndex(t *testing.T) {
 		value1,
 	)
 
-	value1 = array.GetIndex(inter, ReturnEmptyLocationRange, 0).(*CompositeValue)
+	value1 = array.Get(inter, ReturnEmptyLocationRange, 0).(*CompositeValue)
 
 	assert.Equal(t, newOwner, array.GetOwner())
 	assert.Equal(t, newOwner, value1.GetOwner())
 	assert.Equal(t, oldOwner, value2.GetOwner())
 
-	array.SetIndex(inter, ReturnEmptyLocationRange, 0, value2)
+	array.Set(inter, ReturnEmptyLocationRange, 0, value2)
 
-	value2 = array.GetIndex(inter, ReturnEmptyLocationRange, 0).(*CompositeValue)
+	value2 = array.Get(inter, ReturnEmptyLocationRange, 0).(*CompositeValue)
 
 	assert.Equal(t, newOwner, array.GetOwner())
 	assert.Equal(t, newOwner, value1.GetOwner())
@@ -239,7 +239,7 @@ func TestOwnerArrayAppend(t *testing.T) {
 	oldOwner := common.Address{0x1}
 	newOwner := common.Address{0x2}
 
-	value := newTestCompositeValue(inter.Storage, oldOwner)
+	value := newTestCompositeValue(inter, oldOwner)
 
 	array := NewArrayValueWithAddress(
 		inter,
@@ -254,7 +254,7 @@ func TestOwnerArrayAppend(t *testing.T) {
 
 	array.Append(inter, ReturnEmptyLocationRange, value)
 
-	value = array.GetIndex(inter, ReturnEmptyLocationRange, 0).(*CompositeValue)
+	value = array.Get(inter, ReturnEmptyLocationRange, 0).(*CompositeValue)
 
 	assert.Equal(t, newOwner, array.GetOwner())
 	assert.Equal(t, newOwner, value.GetOwner())
@@ -281,7 +281,7 @@ func TestOwnerArrayInsert(t *testing.T) {
 	oldOwner := common.Address{0x1}
 	newOwner := common.Address{0x2}
 
-	value := newTestCompositeValue(inter.Storage, oldOwner)
+	value := newTestCompositeValue(inter, oldOwner)
 
 	array := NewArrayValueWithAddress(
 		inter,
@@ -296,7 +296,7 @@ func TestOwnerArrayInsert(t *testing.T) {
 
 	array.Insert(inter, ReturnEmptyLocationRange, 0, value)
 
-	value = array.GetIndex(inter, ReturnEmptyLocationRange, 0).(*CompositeValue)
+	value = array.Get(inter, ReturnEmptyLocationRange, 0).(*CompositeValue)
 
 	assert.Equal(t, newOwner, array.GetOwner())
 	assert.Equal(t, newOwner, value.GetOwner())
@@ -322,7 +322,7 @@ func TestOwnerArrayRemove(t *testing.T) {
 
 	owner := common.Address{0x1}
 
-	value := newTestCompositeValue(inter.Storage, owner)
+	value := newTestCompositeValue(inter, owner)
 
 	array := NewArrayValueWithAddress(
 		inter,
@@ -363,7 +363,7 @@ func TestOwnerNewDictionary(t *testing.T) {
 	oldOwner := common.Address{0x1}
 
 	keyValue := NewStringValue("test")
-	value := newTestCompositeValue(inter.Storage, oldOwner)
+	value := newTestCompositeValue(inter, oldOwner)
 
 	assert.Equal(t, oldOwner, value.GetOwner())
 
@@ -378,7 +378,7 @@ func TestOwnerNewDictionary(t *testing.T) {
 
 	// NOTE: keyValue is string, has no owner
 
-	queriedValue, _, _ := dictionary.GetKey(keyValue)
+	queriedValue, _ := dictionary.Get(inter, ReturnEmptyLocationRange, keyValue)
 	value = queriedValue.(*CompositeValue)
 
 	assert.Equal(t, common.Address{}, dictionary.GetOwner())
@@ -407,7 +407,7 @@ func TestOwnerDictionary(t *testing.T) {
 	newOwner := common.Address{0x2}
 
 	keyValue := NewStringValue("test")
-	value := newTestCompositeValue(inter.Storage, oldOwner)
+	value := newTestCompositeValue(inter, oldOwner)
 
 	dictionary := NewDictionaryValueWithAddress(
 		inter,
@@ -421,7 +421,7 @@ func TestOwnerDictionary(t *testing.T) {
 
 	// NOTE: keyValue is string, has no owner
 
-	queriedValue, _, _ := dictionary.GetKey(keyValue)
+	queriedValue, _ := dictionary.Get(inter, ReturnEmptyLocationRange, keyValue)
 	value = queriedValue.(*CompositeValue)
 
 	assert.Equal(t, newOwner, dictionary.GetOwner())
@@ -450,7 +450,7 @@ func TestOwnerDictionaryCopy(t *testing.T) {
 	newOwner := common.Address{0x2}
 
 	keyValue := NewStringValue("test")
-	value := newTestCompositeValue(inter.Storage, oldOwner)
+	value := newTestCompositeValue(inter, oldOwner)
 
 	dictionary := NewDictionaryValueWithAddress(
 		inter,
@@ -466,7 +466,7 @@ func TestOwnerDictionaryCopy(t *testing.T) {
 
 	dictionaryCopy := copyResult.(*DictionaryValue)
 
-	queriedValue, _, _ := dictionaryCopy.GetKey(keyValue)
+	queriedValue, _ := dictionaryCopy.Get(inter, ReturnEmptyLocationRange, keyValue)
 	value = queriedValue.(*CompositeValue)
 
 	assert.Equal(t, common.Address{}, dictionaryCopy.GetOwner())
@@ -495,7 +495,7 @@ func TestOwnerDictionarySetSome(t *testing.T) {
 	newOwner := common.Address{0x2}
 
 	keyValue := NewStringValue("test")
-	value := newTestCompositeValue(storage, oldOwner)
+	value := newTestCompositeValue(inter, oldOwner)
 
 	dictionary := NewDictionaryValueWithAddress(
 		inter,
@@ -509,14 +509,14 @@ func TestOwnerDictionarySetSome(t *testing.T) {
 	assert.Equal(t, newOwner, dictionary.GetOwner())
 	assert.Equal(t, oldOwner, value.GetOwner())
 
-	dictionary.Set(
+	dictionary.SetKey(
 		inter,
 		ReturnEmptyLocationRange,
 		keyValue,
 		NewSomeValueNonCopying(value),
 	)
 
-	queriedValue, _, _ := dictionary.GetKey(keyValue)
+	queriedValue, _ := dictionary.Get(inter, ReturnEmptyLocationRange, keyValue)
 	value = queriedValue.(*CompositeValue)
 
 	assert.Equal(t, newOwner, dictionary.GetOwner())
@@ -545,7 +545,7 @@ func TestOwnerDictionaryInsertNonExisting(t *testing.T) {
 	newOwner := common.Address{0x2}
 
 	keyValue := NewStringValue("test")
-	value := newTestCompositeValue(storage, oldOwner)
+	value := newTestCompositeValue(inter, oldOwner)
 
 	dictionary := NewDictionaryValueWithAddress(
 		inter,
@@ -567,7 +567,7 @@ func TestOwnerDictionaryInsertNonExisting(t *testing.T) {
 	)
 	assert.Equal(t, NilValue{}, existingValue)
 
-	queriedValue, _, _ := dictionary.GetKey(keyValue)
+	queriedValue, _ := dictionary.Get(inter, ReturnEmptyLocationRange, keyValue)
 	value = queriedValue.(*CompositeValue)
 
 	assert.Equal(t, newOwner, dictionary.GetOwner())
@@ -596,8 +596,8 @@ func TestOwnerDictionaryRemove(t *testing.T) {
 	newOwner := common.Address{0x2}
 
 	keyValue := NewStringValue("test")
-	value1 := newTestCompositeValue(inter.Storage, oldOwner)
-	value2 := newTestCompositeValue(inter.Storage, oldOwner)
+	value1 := newTestCompositeValue(inter, oldOwner)
+	value2 := newTestCompositeValue(inter, oldOwner)
 
 	dictionary := NewDictionaryValueWithAddress(
 		inter,
@@ -622,7 +622,7 @@ func TestOwnerDictionaryRemove(t *testing.T) {
 	require.IsType(t, &SomeValue{}, existingValue)
 	value1 = existingValue.(*SomeValue).Value.(*CompositeValue)
 
-	queriedValue, _, _ := dictionary.GetKey(keyValue)
+	queriedValue, _ := dictionary.Get(inter, ReturnEmptyLocationRange, keyValue)
 	value2 = queriedValue.(*CompositeValue)
 
 	assert.Equal(t, newOwner, dictionary.GetOwner())
@@ -652,7 +652,7 @@ func TestOwnerDictionaryInsertExisting(t *testing.T) {
 	newOwner := common.Address{0x2}
 
 	keyValue := NewStringValue("test")
-	value := newTestCompositeValue(inter.Storage, oldOwner)
+	value := newTestCompositeValue(inter, oldOwner)
 
 	dictionary := NewDictionaryValueWithAddress(
 		inter,
@@ -683,11 +683,11 @@ func TestOwnerNewComposite(t *testing.T) {
 
 	t.Parallel()
 
-	storage := NewInMemoryStorage()
+	inter := newTestInterpreter(t)
 
 	oldOwner := common.Address{0x1}
 
-	composite := newTestCompositeValue(storage, oldOwner)
+	composite := newTestCompositeValue(inter, oldOwner)
 
 	assert.Equal(t, oldOwner, composite.GetOwner())
 }
@@ -701,8 +701,8 @@ func TestOwnerCompositeSet(t *testing.T) {
 	oldOwner := common.Address{0x1}
 	newOwner := common.Address{0x2}
 
-	value := newTestCompositeValue(inter.Storage, oldOwner)
-	composite := newTestCompositeValue(inter.Storage, newOwner)
+	value := newTestCompositeValue(inter, oldOwner)
+	composite := newTestCompositeValue(inter, newOwner)
 
 	assert.Equal(t, oldOwner, value.GetOwner())
 	assert.Equal(t, newOwner, composite.GetOwner())
@@ -721,19 +721,12 @@ func TestOwnerCompositeCopy(t *testing.T) {
 
 	t.Parallel()
 
-	storage := NewInMemoryStorage()
+	inter := newTestInterpreter(t)
 
 	oldOwner := common.Address{0x1}
 
-	value := newTestCompositeValue(storage, oldOwner)
-	composite := newTestCompositeValue(storage, oldOwner)
-
-	inter, err := NewInterpreter(
-		nil,
-		utils.TestLocation,
-		WithStorage(storage),
-	)
-	require.NoError(t, err)
+	value := newTestCompositeValue(inter, oldOwner)
+	composite := newTestCompositeValue(inter, oldOwner)
 
 	const fieldName = "test"
 
@@ -883,7 +876,7 @@ func TestStringer(t *testing.T) {
 				NewStringValue("a"), UInt8Value(42),
 				NewStringValue("b"), UInt8Value(99),
 			),
-			expected: `{"a": 42, "b": 99}`,
+			expected: `{"b": 99, "a": 42}`,
 		},
 		"Address": {
 			value:    NewAddressValue(common.Address{0, 0, 0, 0, 0, 0, 0, 1}),
@@ -891,15 +884,21 @@ func TestStringer(t *testing.T) {
 		},
 		"composite": {
 			value: func() Value {
-				members := NewStringValueOrderedMap()
-				members.Set("y", NewStringValue("bar"))
+				inter := newTestInterpreter(t)
+
+				fields := []CompositeField{
+					{
+						Name:  "y",
+						Value: NewStringValue("bar"),
+					},
+				}
 
 				return NewCompositeValue(
-					NewInMemoryStorage(),
+					inter,
 					utils.TestLocation,
 					"Foo",
 					common.CompositeKindResource,
-					members,
+					fields,
 					common.Address{},
 				)
 			}(),
@@ -907,15 +906,21 @@ func TestStringer(t *testing.T) {
 		},
 		"composite with custom stringer": {
 			value: func() Value {
-				members := NewStringValueOrderedMap()
-				members.Set("y", NewStringValue("bar"))
+				inter := newTestInterpreter(t)
+
+				fields := []CompositeField{
+					{
+						Name:  "y",
+						Value: NewStringValue("bar"),
+					},
+				}
 
 				compositeValue := NewCompositeValue(
-					NewInMemoryStorage(),
+					inter,
 					utils.TestLocation,
 					"Foo",
 					common.CompositeKindResource,
-					members,
+					fields,
 					common.Address{},
 				)
 
@@ -1039,14 +1044,20 @@ func TestVisitor(t *testing.T) {
 		},
 		NewStringValue("42"), value,
 	)
-	members := NewStringValueOrderedMap()
-	members.Set("foo", value)
+
+	fields := []CompositeField{
+		{
+			Name:  "foo",
+			Value: value,
+		},
+	}
+
 	value = NewCompositeValue(
-		inter.Storage,
+		inter,
 		utils.TestLocation,
 		"Foo",
 		common.CompositeKindStructure,
-		members,
+		fields,
 		common.Address{},
 	)
 
@@ -1056,133 +1067,140 @@ func TestVisitor(t *testing.T) {
 	require.Equal(t, 1, stringVisits)
 }
 
-func TestKeyString(t *testing.T) {
+func TestGetHashInput(t *testing.T) {
 
 	t.Parallel()
 
-	storage := NewInMemoryStorage()
-
 	type testCase struct {
-		value    HasKeyString
-		expected string
+		value    HashableValue
+		expected []byte
 	}
 
 	stringerTests := map[string]testCase{
 		"UInt": {
 			value:    NewUIntValueFromUint64(10),
-			expected: "10",
+			expected: []byte{10},
 		},
 		"UInt8": {
 			value:    UInt8Value(8),
-			expected: "8",
+			expected: []byte{8},
 		},
 		"UInt16": {
 			value:    UInt16Value(16),
-			expected: "16",
+			expected: []byte{0, 16},
 		},
 		"UInt32": {
 			value:    UInt32Value(32),
-			expected: "32",
+			expected: []byte{0, 0, 0, 32},
 		},
 		"UInt64": {
 			value:    UInt64Value(64),
-			expected: "64",
+			expected: []byte{0, 0, 0, 0, 0, 0, 0, 64},
 		},
 		"UInt128": {
 			value:    NewUInt128ValueFromUint64(128),
-			expected: "128",
+			expected: []byte{128},
 		},
 		"UInt256": {
 			value:    NewUInt256ValueFromUint64(256),
-			expected: "256",
+			expected: []byte{1, 0},
 		},
 		"Int8": {
 			value:    Int8Value(-8),
-			expected: "-8",
+			expected: []byte{0xf8},
 		},
 		"Int16": {
 			value:    Int16Value(-16),
-			expected: "-16",
+			expected: []byte{0xff, 0xf0},
 		},
 		"Int32": {
 			value:    Int32Value(-32),
-			expected: "-32",
+			expected: []byte{0xff, 0xff, 0xff, 0xe0},
 		},
 		"Int64": {
 			value:    Int64Value(-64),
-			expected: "-64",
+			expected: []byte{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xc0},
 		},
 		"Int128": {
 			value:    NewInt128ValueFromInt64(-128),
-			expected: "-128",
+			expected: []byte{0x80},
 		},
 		"Int256": {
 			value:    NewInt256ValueFromInt64(-256),
-			expected: "-256",
+			expected: []byte{0xff, 0x0},
 		},
 		"Word8": {
 			value:    Word8Value(8),
-			expected: "8",
+			expected: []byte{8},
 		},
 		"Word16": {
 			value:    Word16Value(16),
-			expected: "16",
+			expected: []byte{0, 16},
 		},
 		"Word32": {
 			value:    Word32Value(32),
-			expected: "32",
+			expected: []byte{0, 0, 0, 32},
 		},
 		"Word64": {
 			value:    Word64Value(64),
-			expected: "64",
+			expected: []byte{0, 0, 0, 0, 0, 0, 0, 64},
 		},
 		"UFix64": {
 			value:    NewUFix64ValueWithInteger(64),
-			expected: "64.00000000",
+			expected: []byte{0x0, 0x0, 0x0, 0x1, 0x7d, 0x78, 0x40, 0x0},
 		},
 		"Fix64": {
 			value:    NewFix64ValueWithInteger(-32),
-			expected: "-32.00000000",
+			expected: []byte{0xff, 0xff, 0xff, 0xff, 0x41, 0x43, 0xe0, 0x0},
 		},
 		"true": {
 			value:    BoolValue(true),
-			expected: "true",
+			expected: []byte{1},
 		},
 		"false": {
 			value:    BoolValue(false),
-			expected: "false",
+			expected: []byte{0},
 		},
 		"String": {
 			value:    NewStringValue("Flow ridah!"),
-			expected: "Flow ridah!",
+			expected: []byte{0x46, 0x6c, 0x6f, 0x77, 0x20, 0x72, 0x69, 0x64, 0x61, 0x68, 0x21},
 		},
 		"Address": {
 			value:    NewAddressValue(common.Address{0, 0, 0, 0, 0, 0, 0, 1}),
-			expected: "0x1",
+			expected: []byte{0, 0, 0, 0, 0, 0, 0, 1},
 		},
 		"enum": {
-			value: func() HasKeyString {
-				members := NewStringValueOrderedMap()
-				members.Set("rawValue", UInt8Value(42))
+			value: func() HashableValue {
+				inter := newTestInterpreter(t)
+
+				fields := []CompositeField{
+					{
+						Name:  "rawValue",
+						Value: UInt8Value(42),
+					},
+				}
 				return NewCompositeValue(
-					storage,
+					inter,
 					utils.TestLocation,
 					"Foo",
 					common.CompositeKindEnum,
-					members,
+					fields,
 					common.Address{},
 				)
 			}(),
-			expected: "42",
+			expected: []byte{42},
 		},
 		"Path": {
 			value: PathValue{
 				Domain:     common.PathDomainStorage,
 				Identifier: "foo",
 			},
-			// NOTE: this is an unfortunate mistake,
-			// the KeyString function should have been using Domain.Identifier()
-			expected: "/PathDomainStorage/foo",
+			expected: []byte{
+				// domain: storage
+				0x1,
+				// identifier: "foo"
+				0x66, 0x6f, 0x6f,
+			},
 		},
 	}
 
@@ -1192,9 +1210,15 @@ func TestKeyString(t *testing.T) {
 
 			t.Parallel()
 
+			var scratch [32]byte
+
+			inter := newTestInterpreter(t)
+
+			actual := testCase.value.HashInput(inter, scratch[:])
+
 			assert.Equal(t,
 				testCase.expected,
-				testCase.value.KeyString(),
+				actual,
 			)
 		})
 	}
@@ -2394,15 +2418,23 @@ func TestCompositeValue_Equal(t *testing.T) {
 
 		inter := newTestInterpreter(t)
 
-		fields1 := NewStringValueOrderedMap()
-		fields1.Set("a", NewStringValue("a"))
+		fields1 := []CompositeField{
+			{
+				Name:  "a",
+				Value: NewStringValue("a"),
+			},
+		}
 
-		fields2 := NewStringValueOrderedMap()
-		fields2.Set("a", NewStringValue("a"))
+		fields2 := []CompositeField{
+			{
+				Name:  "a",
+				Value: NewStringValue("a"),
+			},
+		}
 
 		require.True(t,
 			NewCompositeValue(
-				inter.Storage,
+				inter,
 				utils.TestLocation,
 				"X",
 				common.CompositeKindStructure,
@@ -2412,7 +2444,7 @@ func TestCompositeValue_Equal(t *testing.T) {
 				inter,
 				ReturnEmptyLocationRange,
 				NewCompositeValue(
-					inter.Storage,
+					inter,
 					utils.TestLocation,
 					"X",
 					common.CompositeKindStructure,
@@ -2429,15 +2461,23 @@ func TestCompositeValue_Equal(t *testing.T) {
 
 		inter := newTestInterpreter(t)
 
-		fields1 := NewStringValueOrderedMap()
-		fields1.Set("a", NewStringValue("a"))
+		fields1 := []CompositeField{
+			{
+				Name:  "a",
+				Value: NewStringValue("a"),
+			},
+		}
 
-		fields2 := NewStringValueOrderedMap()
-		fields2.Set("a", NewStringValue("a"))
+		fields2 := []CompositeField{
+			{
+				Name:  "a",
+				Value: NewStringValue("a"),
+			},
+		}
 
 		require.False(t,
 			NewCompositeValue(
-				inter.Storage,
+				inter,
 				common.IdentifierLocation("A"),
 				"X",
 				common.CompositeKindStructure,
@@ -2447,7 +2487,7 @@ func TestCompositeValue_Equal(t *testing.T) {
 				inter,
 				ReturnEmptyLocationRange,
 				NewCompositeValue(
-					inter.Storage,
+					inter,
 					common.IdentifierLocation("B"),
 					"X",
 					common.CompositeKindStructure,
@@ -2464,15 +2504,23 @@ func TestCompositeValue_Equal(t *testing.T) {
 
 		inter := newTestInterpreter(t)
 
-		fields1 := NewStringValueOrderedMap()
-		fields1.Set("a", NewStringValue("a"))
+		fields1 := []CompositeField{
+			{
+				Name:  "a",
+				Value: NewStringValue("a"),
+			},
+		}
 
-		fields2 := NewStringValueOrderedMap()
-		fields2.Set("a", NewStringValue("a"))
+		fields2 := []CompositeField{
+			{
+				Name:  "a",
+				Value: NewStringValue("a"),
+			},
+		}
 
 		require.False(t,
 			NewCompositeValue(
-				inter.Storage,
+				inter,
 				common.IdentifierLocation("A"),
 				"X",
 				common.CompositeKindStructure,
@@ -2482,7 +2530,7 @@ func TestCompositeValue_Equal(t *testing.T) {
 				inter,
 				ReturnEmptyLocationRange,
 				NewCompositeValue(
-					inter.Storage,
+					inter,
 					common.IdentifierLocation("A"),
 					"Y",
 					common.CompositeKindStructure,
@@ -2499,15 +2547,23 @@ func TestCompositeValue_Equal(t *testing.T) {
 
 		inter := newTestInterpreter(t)
 
-		fields1 := NewStringValueOrderedMap()
-		fields1.Set("a", NewStringValue("a"))
+		fields1 := []CompositeField{
+			{
+				Name:  "a",
+				Value: NewStringValue("a"),
+			},
+		}
 
-		fields2 := NewStringValueOrderedMap()
-		fields2.Set("a", NewStringValue("b"))
+		fields2 := []CompositeField{
+			{
+				Name:  "a",
+				Value: NewStringValue("b"),
+			},
+		}
 
 		require.False(t,
 			NewCompositeValue(
-				inter.Storage,
+				inter,
 				common.IdentifierLocation("A"),
 				"X",
 				common.CompositeKindStructure,
@@ -2517,7 +2573,7 @@ func TestCompositeValue_Equal(t *testing.T) {
 				inter,
 				ReturnEmptyLocationRange,
 				NewCompositeValue(
-					inter.Storage,
+					inter,
 					common.IdentifierLocation("A"),
 					"X",
 					common.CompositeKindStructure,
@@ -2534,16 +2590,27 @@ func TestCompositeValue_Equal(t *testing.T) {
 
 		inter := newTestInterpreter(t)
 
-		fields1 := NewStringValueOrderedMap()
-		fields1.Set("a", NewStringValue("a"))
+		fields1 := []CompositeField{
+			{
+				Name:  "a",
+				Value: NewStringValue("a"),
+			},
+		}
 
-		fields2 := NewStringValueOrderedMap()
-		fields2.Set("a", NewStringValue("a"))
-		fields2.Set("b", NewStringValue("b"))
+		fields2 := []CompositeField{
+			{
+				Name:  "a",
+				Value: NewStringValue("a"),
+			},
+			{
+				Name:  "b",
+				Value: NewStringValue("b"),
+			},
+		}
 
 		require.False(t,
 			NewCompositeValue(
-				inter.Storage,
+				inter,
 				common.IdentifierLocation("A"),
 				"X",
 				common.CompositeKindStructure,
@@ -2553,7 +2620,7 @@ func TestCompositeValue_Equal(t *testing.T) {
 				inter,
 				ReturnEmptyLocationRange,
 				NewCompositeValue(
-					inter.Storage,
+					inter,
 					common.IdentifierLocation("A"),
 					"X",
 					common.CompositeKindStructure,
@@ -2570,16 +2637,27 @@ func TestCompositeValue_Equal(t *testing.T) {
 
 		inter := newTestInterpreter(t)
 
-		fields1 := NewStringValueOrderedMap()
-		fields1.Set("a", NewStringValue("a"))
-		fields1.Set("b", NewStringValue("b"))
+		fields1 := []CompositeField{
+			{
+				Name:  "a",
+				Value: NewStringValue("a"),
+			},
+			{
+				Name:  "b",
+				Value: NewStringValue("b"),
+			},
+		}
 
-		fields2 := NewStringValueOrderedMap()
-		fields2.Set("a", NewStringValue("a"))
+		fields2 := []CompositeField{
+			{
+				Name:  "a",
+				Value: NewStringValue("a"),
+			},
+		}
 
 		require.False(t,
 			NewCompositeValue(
-				inter.Storage,
+				inter,
 				common.IdentifierLocation("A"),
 				"X",
 				common.CompositeKindStructure,
@@ -2589,7 +2667,7 @@ func TestCompositeValue_Equal(t *testing.T) {
 				inter,
 				ReturnEmptyLocationRange,
 				NewCompositeValue(
-					inter.Storage,
+					inter,
 					common.IdentifierLocation("A"),
 					"X",
 					common.CompositeKindStructure,
@@ -2606,15 +2684,23 @@ func TestCompositeValue_Equal(t *testing.T) {
 
 		inter := newTestInterpreter(t)
 
-		fields1 := NewStringValueOrderedMap()
-		fields1.Set("a", NewStringValue("a"))
+		fields1 := []CompositeField{
+			{
+				Name:  "a",
+				Value: NewStringValue("a"),
+			},
+		}
 
-		fields2 := NewStringValueOrderedMap()
-		fields2.Set("a", NewStringValue("a"))
+		fields2 := []CompositeField{
+			{
+				Name:  "a",
+				Value: NewStringValue("a"),
+			},
+		}
 
 		require.False(t,
 			NewCompositeValue(
-				inter.Storage,
+				inter,
 				common.IdentifierLocation("A"),
 				"X",
 				common.CompositeKindStructure,
@@ -2624,7 +2710,7 @@ func TestCompositeValue_Equal(t *testing.T) {
 				inter,
 				ReturnEmptyLocationRange,
 				NewCompositeValue(
-					inter.Storage,
+					inter,
 					common.IdentifierLocation("A"),
 					"X",
 					common.CompositeKindResource,
@@ -2641,12 +2727,16 @@ func TestCompositeValue_Equal(t *testing.T) {
 
 		inter := newTestInterpreter(t)
 
-		fields1 := NewStringValueOrderedMap()
-		fields1.Set("a", NewStringValue("a"))
+		fields1 := []CompositeField{
+			{
+				Name:  "a",
+				Value: NewStringValue("a"),
+			},
+		}
 
 		require.False(t,
 			NewCompositeValue(
-				inter.Storage,
+				inter,
 				common.IdentifierLocation("A"),
 				"X",
 				common.CompositeKindStructure,
@@ -2757,7 +2847,7 @@ func TestPublicKeyValue(t *testing.T) {
 			utils.TestLocation,
 			WithStorage(storage),
 			WithPublicKeyValidationHandler(
-				func(_ *Interpreter, _ *CompositeValue) BoolValue {
+				func(_ *Interpreter, _ func() LocationRange, _ *CompositeValue) BoolValue {
 					return true
 				},
 			),
@@ -2777,11 +2867,15 @@ func TestPublicKeyValue(t *testing.T) {
 		publicKeyString := "[1, 7, 3]"
 
 		sigAlgo := func() *CompositeValue {
-			fields := NewStringValueOrderedMap()
-			fields.Set(sema.EnumRawValueFieldName, UInt8Value(sema.SignatureAlgorithmECDSA_secp256k1.RawValue()))
+			fields := []CompositeField{
+				{
+					Name:  sema.EnumRawValueFieldName,
+					Value: UInt8Value(sema.SignatureAlgorithmECDSA_secp256k1.RawValue()),
+				},
+			}
 
 			return NewCompositeValue(
-				inter.Storage,
+				inter,
 				nil,
 				sema.SignatureAlgorithmType.QualifiedIdentifier(),
 				sema.SignatureAlgorithmType.Kind,
@@ -2792,6 +2886,7 @@ func TestPublicKeyValue(t *testing.T) {
 
 		key := NewPublicKeyValue(
 			inter,
+			ReturnEmptyLocationRange,
 			publicKey,
 			sigAlgo(),
 			inter.PublicKeyValidationHandler,

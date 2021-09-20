@@ -153,12 +153,12 @@ func TestExportValue(t *testing.T) {
 			),
 			expected: cadence.NewDictionary([]cadence.KeyValuePair{
 				{
-					Key:   cadence.String("a"),
-					Value: cadence.NewInt(1),
-				},
-				{
 					Key:   cadence.String("b"),
 					Value: cadence.NewInt(2),
+				},
+				{
+					Key:   cadence.String("a"),
+					Value: cadence.NewInt(1),
 				},
 			}),
 		},
@@ -1399,7 +1399,7 @@ func TestExportJsonDeterministic(t *testing.T) {
 	bytes, err := json.Encode(event)
 
 	assert.NoError(t, err)
-	assert.Equal(t, "{\"type\":\"Event\",\"value\":{\"id\":\"S.test.Foo\",\"fields\":[{\"name\":\"bar\",\"value\":{\"type\":\"Int\",\"value\":\"2\"}},{\"name\":\"aaa\",\"value\":{\"type\":\"Dictionary\",\"value\":[{\"key\":{\"type\":\"Int\",\"value\":\"2\"},\"value\":{\"type\":\"Dictionary\",\"value\":[{\"key\":{\"type\":\"Int\",\"value\":\"7\"},\"value\":{\"type\":\"String\",\"value\":\"d\"}},{\"key\":{\"type\":\"Int\",\"value\":\"1\"},\"value\":{\"type\":\"String\",\"value\":\"c\"}},{\"key\":{\"type\":\"Int\",\"value\":\"3\"},\"value\":{\"type\":\"String\",\"value\":\"b\"}}]}},{\"key\":{\"type\":\"Int\",\"value\":\"1\"},\"value\":{\"type\":\"Dictionary\",\"value\":[{\"key\":{\"type\":\"Int\",\"value\":\"3\"},\"value\":{\"type\":\"String\",\"value\":\"a\"}},{\"key\":{\"type\":\"Int\",\"value\":\"7\"},\"value\":{\"type\":\"String\",\"value\":\"b\"}},{\"key\":{\"type\":\"Int\",\"value\":\"2\"},\"value\":{\"type\":\"String\",\"value\":\"a\"}},{\"key\":{\"type\":\"Int\",\"value\":\"1\"},\"value\":{\"type\":\"String\",\"value\":\"\"}}]}},{\"key\":{\"type\":\"Int\",\"value\":\"0\"},\"value\":{\"type\":\"Dictionary\",\"value\":[{\"key\":{\"type\":\"Int\",\"value\":\"3\"},\"value\":{\"type\":\"String\",\"value\":\"c\"}},{\"key\":{\"type\":\"Int\",\"value\":\"2\"},\"value\":{\"type\":\"String\",\"value\":\"c\"}},{\"key\":{\"type\":\"Int\",\"value\":\"1\"},\"value\":{\"type\":\"String\",\"value\":\"a\"}},{\"key\":{\"type\":\"Int\",\"value\":\"0\"},\"value\":{\"type\":\"String\",\"value\":\"a\"}}]}}]}}]}}\n", string(bytes))
+	assert.Equal(t, "{\"type\":\"Event\",\"value\":{\"id\":\"S.test.Foo\",\"fields\":[{\"name\":\"bar\",\"value\":{\"type\":\"Int\",\"value\":\"2\"}},{\"name\":\"aaa\",\"value\":{\"type\":\"Dictionary\",\"value\":[{\"key\":{\"type\":\"Int\",\"value\":\"0\"},\"value\":{\"type\":\"Dictionary\",\"value\":[{\"key\":{\"type\":\"Int\",\"value\":\"1\"},\"value\":{\"type\":\"String\",\"value\":\"a\"}},{\"key\":{\"type\":\"Int\",\"value\":\"3\"},\"value\":{\"type\":\"String\",\"value\":\"c\"}},{\"key\":{\"type\":\"Int\",\"value\":\"0\"},\"value\":{\"type\":\"String\",\"value\":\"a\"}},{\"key\":{\"type\":\"Int\",\"value\":\"2\"},\"value\":{\"type\":\"String\",\"value\":\"c\"}}]}},{\"key\":{\"type\":\"Int\",\"value\":\"2\"},\"value\":{\"type\":\"Dictionary\",\"value\":[{\"key\":{\"type\":\"Int\",\"value\":\"3\"},\"value\":{\"type\":\"String\",\"value\":\"b\"}},{\"key\":{\"type\":\"Int\",\"value\":\"1\"},\"value\":{\"type\":\"String\",\"value\":\"c\"}},{\"key\":{\"type\":\"Int\",\"value\":\"7\"},\"value\":{\"type\":\"String\",\"value\":\"d\"}}]}},{\"key\":{\"type\":\"Int\",\"value\":\"1\"},\"value\":{\"type\":\"Dictionary\",\"value\":[{\"key\":{\"type\":\"Int\",\"value\":\"3\"},\"value\":{\"type\":\"String\",\"value\":\"a\"}},{\"key\":{\"type\":\"Int\",\"value\":\"1\"},\"value\":{\"type\":\"String\",\"value\":\"\"}},{\"key\":{\"type\":\"Int\",\"value\":\"7\"},\"value\":{\"type\":\"String\",\"value\":\"b\"}},{\"key\":{\"type\":\"Int\",\"value\":\"2\"},\"value\":{\"type\":\"String\",\"value\":\"a\"}}]}}]}}]}}\n", string(bytes))
 }
 
 var fooFields = []cadence.Field{
@@ -2196,7 +2196,7 @@ func TestRuntimeMalformedArgumentPassing(t *testing.T) {
 			exportedValue: cadence.NewArray([]cadence.Value{
 				malformedStruct1,
 			}),
-			expectedContainerMutationError: true,
+			expectedInvalidEntryPointArgumentErrType: &InvalidValueTypeError{},
 		},
 		{
 			label:         "Nested array with mismatching element",
@@ -2206,13 +2206,13 @@ func TestRuntimeMalformedArgumentPassing(t *testing.T) {
 					cadence.NewInt(5),
 				}),
 			}),
-			expectedContainerMutationError: true,
+			expectedInvalidEntryPointArgumentErrType: &InvalidValueTypeError{},
 		},
 		{
-			label:                          "Inner array with mismatching element",
-			typeSignature:                  "Bar",
-			exportedValue:                  malformedStruct5,
-			expectedContainerMutationError: true,
+			label:                                    "Inner array with mismatching element",
+			typeSignature:                            "Bar",
+			exportedValue:                            malformedStruct5,
+			expectedInvalidEntryPointArgumentErrType: &MalformedValueError{},
 		},
 		{
 			label:                                    "Malformed Optional",
@@ -2550,12 +2550,12 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 		assert.Equal(t,
 			cadence.NewDictionary([]cadence.KeyValuePair{
 				{
-					Key:   cadence.String("a"),
-					Value: cadence.NewInt(1),
-				},
-				{
 					Key:   cadence.String("b"),
 					Value: cadence.NewInt(2),
+				},
+				{
+					Key:   cadence.String("a"),
+					Value: cadence.NewInt(1),
 				},
 			}),
 			actual,
@@ -3051,8 +3051,8 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 		_, err := executeScript(t, script, publicKey, runtimeInterface)
 		require.Error(t, err)
 
-		var containerMutationErr interpreter.ContainerMutationError
-		require.ErrorAs(t, err, &containerMutationErr)
+		var argErr *InvalidEntryPointArgumentError
+		require.ErrorAs(t, err, &argErr)
 	})
 
 	t.Run("Invalid sign algo", func(t *testing.T) {
@@ -3486,11 +3486,15 @@ func TestRuntimeImportExportComplex(t *testing.T) {
 		},
 	}
 
-	internalCompositeValueFields := interpreter.NewStringValueOrderedMap()
-	internalCompositeValueFields.Set("dictionary", internalDictionaryValue)
+	internalCompositeValueFields := []interpreter.CompositeField{
+		{
+			Name:  "dictionary",
+			Value: internalDictionaryValue,
+		},
+	}
 
 	internalCompositeValue := interpreter.NewCompositeValue(
-		inter.Storage,
+		inter,
 		TestLocation,
 		"Foo",
 		common.CompositeKindStructure,

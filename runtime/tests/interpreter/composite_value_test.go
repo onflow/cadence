@@ -93,29 +93,36 @@ func testCompositeValue(t *testing.T, code string) *interpreter.Interpreter {
 		"This is the color",
 	))
 
-	fields := interpreter.NewStringValueOrderedMap()
-	fields.Set("name", interpreter.NewStringValue("Apple"))
-
-	value := interpreter.NewCompositeValue(
-		storage,
-		TestLocation,
-		fruitType.Identifier,
-		common.CompositeKindStructure,
-		fields,
-		common.Address{},
-	)
-
-	value.ComputedFields = interpreter.NewStringComputedFieldOrderedMap()
-	value.ComputedFields.Set("color", func(*interpreter.Interpreter) interpreter.Value {
-		return interpreter.NewStringValue("Red")
-	})
-
 	valueDeclarations := stdlib.StandardLibraryValues{
 		{
-			Name:  "fruit",
-			Type:  fruitType,
-			Value: value,
-			Kind:  common.DeclarationKindConstant,
+			Name: "fruit",
+			Type: fruitType,
+			ValueFactory: func(inter *interpreter.Interpreter) interpreter.Value {
+				fields := []interpreter.CompositeField{
+					{
+						Name:  "name",
+						Value: interpreter.NewStringValue("Apple"),
+					},
+				}
+
+				value := interpreter.NewCompositeValue(
+					inter,
+					TestLocation,
+					fruitType.Identifier,
+					common.CompositeKindStructure,
+					fields,
+					common.Address{},
+				)
+
+				value.ComputedFields = map[string]interpreter.ComputedField{
+					"color": func(*interpreter.Interpreter) interpreter.Value {
+						return interpreter.NewStringValue("Red")
+					},
+				}
+
+				return value
+			},
+			Kind: common.DeclarationKindConstant,
 		},
 	}
 
@@ -135,8 +142,8 @@ func testCompositeValue(t *testing.T, code string) *interpreter.Interpreter {
 				sema.WithPredeclaredTypes(typeDeclarations),
 			},
 			Options: []interpreter.Option{
-				interpreter.WithPredeclaredValues(valueDeclarations.ToInterpreterValueDeclarations()),
 				interpreter.WithStorage(storage),
+				interpreter.WithPredeclaredValues(valueDeclarations.ToInterpreterValueDeclarations()),
 			},
 		},
 	)

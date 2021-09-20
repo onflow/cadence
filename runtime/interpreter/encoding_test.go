@@ -239,8 +239,6 @@ func TestEncodeDecodeString(t *testing.T) {
 
 func TestEncodeDecodeArray(t *testing.T) {
 
-	// TODO: owner
-
 	t.Parallel()
 
 	t.Run("empty", func(t *testing.T) {
@@ -304,212 +302,7 @@ func TestEncodeDecodeArray(t *testing.T) {
 	})
 }
 
-func TestEncodeDecodeDictionary(t *testing.T) {
-
-	// TODO: owner
-
-	t.Parallel()
-
-	t.Run("empty", func(t *testing.T) {
-
-		t.Parallel()
-
-		inter := newTestInterpreter(t)
-
-		expected := NewDictionaryValue(
-			inter,
-			DictionaryStaticType{
-				KeyType:   PrimitiveStaticTypeString,
-				ValueType: PrimitiveStaticTypeAnyStruct,
-			},
-		)
-
-		encodedValue := []byte{
-			// tag
-			0xd8, atree.CBORTagStorageID,
-
-			// storage ID
-			0x50, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
-		}
-
-		encodedStorable := []byte{
-			// tag
-			0xd8, CBORTagDictionaryValue,
-			// array, 3 items follow
-			0x83,
-
-			// dictionary type tag
-			0xd8, CBORTagDictionaryStaticType,
-			// array, 2 items follow
-			0x82,
-			// key type
-			0xd8, CBORTagPrimitiveStaticType, byte(PrimitiveStaticTypeString),
-			// value type
-			0xd8, CBORTagPrimitiveStaticType, byte(PrimitiveStaticTypeAnyStruct),
-
-			// cbor Array Value tag
-			0xd8, atree.CBORTagStorageID,
-
-			// storage ID.
-			// 2 instead of 1, because dictionary has storage ID 1
-			0x50, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2,
-
-			// array, 0 items follow
-			0x80,
-		}
-
-		testEncodeDecode(t,
-			encodeDecodeTest{
-				storage: inter.Storage,
-				value:   expected,
-				encoded: encodedValue,
-				check: func(actual Value) {
-					// Storage ID is not checked by value equality,
-					// so assert manually
-					require.Equal(t,
-						expected.StorageID,
-						actual.(*DictionaryValue).StorageID,
-					)
-				},
-			},
-		)
-
-		testEncodeDecode(t,
-			encodeDecodeTest{
-				storage:       inter.Storage,
-				storable:      expected.DictionaryStorable,
-				encoded:       encodedStorable,
-				decodedValue:  expected,
-				slabStorageID: expected.StorageID,
-				check: func(actual Value) {
-					// Storage ID is not checked by value equality,
-					// so assert manually
-					require.Equal(t,
-						expected.StorageID,
-						actual.(*DictionaryValue).StorageID,
-					)
-				},
-			},
-		)
-	})
-
-	t.Run("non-empty", func(t *testing.T) {
-
-		t.Parallel()
-
-		inter := newTestInterpreter(t)
-
-		key1 := BoolValue(true)
-		value1 := BoolValue(false)
-
-		key2 := NewStringValue("foo")
-		value2 := NewStringValue("bar")
-
-		expected := NewDictionaryValue(
-			inter,
-			DictionaryStaticType{
-				KeyType:   PrimitiveStaticTypeAnyStruct,
-				ValueType: PrimitiveStaticTypeAnyStruct,
-			},
-			key1, value1,
-			key2, value2,
-		)
-
-		encodedValue := []byte{
-			// tag
-			0xd8, atree.CBORTagStorageID,
-
-			// storage ID.
-			0x50, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
-		}
-
-		encodedStorable := []byte{
-			// tag
-			0xd8, CBORTagDictionaryValue,
-			// array, 3 items follow
-			0x83,
-
-			// dictionary type tag
-			0xd8, CBORTagDictionaryStaticType,
-			// array, 2 items follow
-			0x82,
-			// key type
-			0xd8, CBORTagPrimitiveStaticType, byte(PrimitiveStaticTypeAnyStruct),
-			// value type
-			0xd8, CBORTagPrimitiveStaticType, byte(PrimitiveStaticTypeAnyStruct),
-
-			// Keys
-
-			// cbor Array Value tag
-			0xd8, atree.CBORTagStorageID,
-
-			// storage ID.
-			// 2 instead of 1, because dictionary has storage ID 1
-			0x50, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2,
-
-			// Entries
-
-			// array, 4 items follow
-			0x84,
-
-			// UTF-8 string, length 4
-			0x64,
-			// true
-			0x74, 0x72, 0x75, 0x65,
-
-			// false
-			0xf4,
-
-			// UTF-8 string, length 3
-			0x63,
-			// true
-			0x66, 0x6f, 0x6f,
-
-			// UTF-8 string, length 3
-			0x63,
-			// b, a, r
-			0x62, 0x61, 0x72,
-		}
-
-		testEncodeDecode(t,
-			encodeDecodeTest{
-				storage: inter.Storage,
-				value:   expected,
-				encoded: encodedValue,
-				check: func(actual Value) {
-					// Storage ID is not checked by value equality,
-					// so assert manually
-					require.Equal(t,
-						expected.StorageID,
-						actual.(*DictionaryValue).StorageID,
-					)
-				},
-			},
-		)
-
-		testEncodeDecode(t,
-			encodeDecodeTest{
-				storage:       inter.Storage,
-				storable:      expected.DictionaryStorable,
-				encoded:       encodedStorable,
-				decodedValue:  expected,
-				slabStorageID: expected.StorageID,
-				check: func(actual Value) {
-					// Storage ID is not checked by value equality,
-					// so assert manually
-					require.Equal(t,
-						expected.StorageID,
-						actual.(*DictionaryValue).StorageID,
-					)
-				},
-			},
-		)
-	})
-}
-
 func TestEncodeDecodeComposite(t *testing.T) {
-
-	// TODO: owner
 
 	t.Parallel()
 
@@ -517,79 +310,27 @@ func TestEncodeDecodeComposite(t *testing.T) {
 
 		t.Parallel()
 
-		storage := NewInMemoryStorage()
+		inter := newTestInterpreter(t)
 
 		expected := NewCompositeValue(
-			storage,
+			inter,
 			utils.TestLocation,
 			"TestStruct",
 			common.CompositeKindStructure,
-			NewStringValueOrderedMap(),
+			nil,
 			testOwner,
 		)
 
-		encodedValue := []byte{
-			// tag
-			0xd8, atree.CBORTagStorageID,
-
-			// storage ID
-			0x50, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x42, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
-		}
-
-		encodedStorable := []byte{
-			// tag
-			0xd8, CBORTagCompositeValue,
-			// array, 4 items follow
-			0x84,
-
-			// tag
-			0xd8, CBORTagStringLocation,
-			// UTF-8 string, length 4
-			0x64,
-			// t, e, s, t
-			0x74, 0x65, 0x73, 0x74,
-
-			// positive integer 1
-			0x1,
-
-			// array, 0 items follow
-			0x80,
-
-			// UTF-8 string, length 10
-			0x6a,
-			0x54, 0x65, 0x73, 0x74, 0x53, 0x74, 0x72, 0x75, 0x63, 0x74,
-		}
-
 		testEncodeDecode(t,
 			encodeDecodeTest{
-				storage: storage,
+				storage: inter.Storage,
 				value:   expected,
-				encoded: encodedValue,
-				check: func(actual Value) {
-					// Storage ID is not checked by value equality,
-					// so assert manually
-					require.Equal(t,
-						expected.StorageID,
-						actual.(*CompositeValue).StorageID,
-					)
-				},
-			},
-		)
+				encoded: []byte{
+					// tag
+					0xd8, atree.CBORTagStorageID,
 
-		testEncodeDecode(t,
-			encodeDecodeTest{
-				storage:       storage,
-				storable:      expected.CompositeStorable,
-				encoded:       encodedStorable,
-				decodedValue:  expected,
-				slabStorageID: expected.StorageID,
-				check: func(actual Value) {
-					// Storage ID is not checked by value equality,
-					// so assert manually
-					require.Equal(t,
-						expected.StorageID,
-						actual.(*CompositeValue).StorageID,
-					)
+					// storage ID
+					0x50, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x42, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
 				},
 			},
 		)
@@ -599,191 +340,34 @@ func TestEncodeDecodeComposite(t *testing.T) {
 
 		t.Parallel()
 
-		storage := NewInMemoryStorage()
+		inter := newTestInterpreter(t)
 
 		stringValue := NewStringValue("test")
 
-		members := NewStringValueOrderedMap()
-		members.Set("string", stringValue)
-		members.Set("true", BoolValue(true))
+		fields := []CompositeField{
+			{Name: "string", Value: stringValue},
+			{Name: "true", Value: BoolValue(true)},
+		}
 
 		expected := NewCompositeValue(
-			storage,
+			inter,
 			utils.TestLocation,
 			"TestResource",
 			common.CompositeKindResource,
-			members,
+			fields,
 			testOwner,
 		)
 
-		encodedValue := []byte{
-			// tag
-			0xd8, atree.CBORTagStorageID,
-
-			// storage ID
-			0x50, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x42, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
-		}
-
-		encodedStorable := []byte{
-			// tag
-			0xd8, CBORTagCompositeValue,
-			// array, 4 items follow
-			0x84,
-
-			// tag
-			0xd8, CBORTagStringLocation,
-			// UTF-8 string, length 4
-			0x64,
-			// t, e, s, t
-			0x74, 0x65, 0x73, 0x74,
-
-			// positive integer 2
-			0x2,
-
-			// array, 4 items follow
-			0x84,
-			// UTF-8 string, length 6
-			0x66,
-			// s, t, r, i, n, g
-			0x73, 0x74, 0x72, 0x69, 0x6e, 0x67,
-			// UTF-8 string, length 4
-			0x64,
-			// t, e, s, t
-			0x74, 0x65, 0x73, 0x74,
-			// UTF-8 string, length 4
-			0x64,
-			// t, r, u, e
-			0x74, 0x72, 0x75, 0x65,
-			// true
-			0xf5,
-
-			// UTF-8 string, length 12
-			0x6c,
-			0x54, 0x65, 0x73, 0x74, 0x52, 0x65, 0x73, 0x6f, 0x75, 0x72, 0x63, 0x65,
-		}
-
 		testEncodeDecode(t,
 			encodeDecodeTest{
-				storage: storage,
+				storage: inter.Storage,
 				value:   expected,
-				encoded: encodedValue,
-				check: func(actual Value) {
-					// Storage ID is not checked by value equality,
-					// so assert manually
-					require.Equal(t,
-						expected.StorageID,
-						actual.(*CompositeValue).StorageID,
-					)
-				},
-			},
-		)
+				encoded: []byte{
+					// tag
+					0xd8, atree.CBORTagStorageID,
 
-		testEncodeDecode(t,
-			encodeDecodeTest{
-				storage:       storage,
-				storable:      expected.CompositeStorable,
-				encoded:       encodedStorable,
-				decodedValue:  expected,
-				slabStorageID: expected.StorageID,
-				check: func(actual Value) {
-					// Storage ID is not checked by value equality,
-					// so assert manually
-					require.Equal(t,
-						expected.StorageID,
-						actual.(*CompositeValue).StorageID,
-					)
-				},
-			},
-		)
-	})
-
-	t.Run("empty, address location", func(t *testing.T) {
-
-		t.Parallel()
-
-		storage := NewInMemoryStorage()
-
-		expected := NewCompositeValue(
-			storage,
-			common.AddressLocation{
-				Address: common.BytesToAddress([]byte{0x1}),
-				Name:    "TestStruct",
-			},
-			"TestStruct",
-			common.CompositeKindStructure,
-			NewStringValueOrderedMap(),
-			testOwner,
-		)
-
-		encodedValue := []byte{
-			// tag
-			0xd8, atree.CBORTagStorageID,
-
-			// storage ID
-			0x50, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x42, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
-		}
-
-		encodedStorable := []byte{
-			// tag
-			0xd8, CBORTagCompositeValue,
-			// array, 4 items follow
-			0x84,
-
-			// tag
-			0xd8, CBORTagAddressLocation,
-			// array, 2 items follow
-			0x82,
-			// byte sequence, length 1
-			0x41,
-			// positive integer 1
-			0x1,
-			// UTF-8 string, length 10
-			0x6a,
-			0x54, 0x65, 0x73, 0x74, 0x53, 0x74, 0x72, 0x75,
-			0x63, 0x74,
-
-			// positive integer 1
-			0x1,
-
-			// array, 0 items follow
-			0x80,
-
-			// UTF-8 string, length 10
-			0x6a,
-			0x54, 0x65, 0x73, 0x74, 0x53, 0x74, 0x72, 0x75,
-			0x63, 0x74,
-		}
-
-		testEncodeDecode(t,
-			encodeDecodeTest{
-				storage: storage,
-				value:   expected,
-				encoded: encodedValue,
-				check: func(actual Value) {
-					// Storage ID is not checked by value equality,
-					// so assert manually
-					require.Equal(t,
-						expected.StorageID,
-						actual.(*CompositeValue).StorageID,
-					)
-				},
-			},
-		)
-
-		testEncodeDecode(t,
-			encodeDecodeTest{
-				storage:       storage,
-				storable:      expected.CompositeStorable,
-				encoded:       encodedStorable,
-				decodedValue:  expected,
-				slabStorageID: expected.StorageID,
-				check: func(actual Value) {
-					// Storage ID is not checked by value equality,
-					// so assert manually
-					require.Equal(t,
-						expected.StorageID,
-						actual.(*CompositeValue).StorageID,
-					)
+					// storage ID
+					0x50, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x42, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
 				},
 			},
 		)

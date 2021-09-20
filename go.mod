@@ -9,8 +9,7 @@ require (
 	github.com/fxamacker/cbor/v2 v2.2.1-0.20210510192846-c3f3c69e7bc8
 	github.com/go-test/deep v1.0.5
 	github.com/logrusorgru/aurora v0.0.0-20200102142835-e9ef32dff381
-	github.com/onflow/atree v0.0.0-20210903151759-94b860d1f7fc
-	github.com/opentracing/opentracing-go v1.2.0 // indirect
+	github.com/onflow/atree v0.0.0-20210920142625-a3dcea1b9d3e
 	github.com/rivo/uniseg v0.2.0
 	github.com/stretchr/testify v1.7.0
 	go.uber.org/goleak v1.1.10
@@ -20,6 +19,5 @@ require (
 	golang.org/x/text v0.3.6
 	golang.org/x/tools v0.0.0-20200828161849-5deb26317202
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 // indirect
-	gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15 // indirect
 
 )

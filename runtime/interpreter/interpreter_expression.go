@@ -32,19 +32,27 @@ import (
 // assignmentGetterSetter returns a getter/setter function pair
 // for the target expression
 //
-func (interpreter *Interpreter) assignmentGetterSetter(target ast.Expression) getterSetter {
-	switch target := target.(type) {
+func (interpreter *Interpreter) assignmentGetterSetter(expression ast.Expression) getterSetter {
+	switch expression := expression.(type) {
 	case *ast.IdentifierExpression:
-		return interpreter.identifierExpressionGetterSetter(target)
+		return interpreter.identifierExpressionGetterSetter(expression)
 
 	case *ast.IndexExpression:
-		return interpreter.indexExpressionGetterSetter(target)
+		return interpreter.indexExpressionGetterSetter(expression)
 
 	case *ast.MemberExpression:
-		return interpreter.memberExpressionGetterSetter(target)
-	}
+		return interpreter.memberExpressionGetterSetter(expression)
 
-	panic(errors.NewUnreachableError())
+	default:
+		return getterSetter{
+			get: func(_ bool) Value {
+				return interpreter.evalExpression(expression)
+			},
+			set: func(_ Value) {
+				panic(errors.NewUnreachableError())
+			},
+		}
+	}
 }
 
 // identifierExpressionGetterSetter returns a getter/setter function pair
@@ -53,7 +61,7 @@ func (interpreter *Interpreter) assignmentGetterSetter(target ast.Expression) ge
 func (interpreter *Interpreter) identifierExpressionGetterSetter(identifierExpression *ast.IdentifierExpression) getterSetter {
 	variable := interpreter.findVariable(identifierExpression.Identifier.Identifier)
 	return getterSetter{
-		get: func() Value {
+		get: func(_ bool) Value {
 			return variable.GetValue()
 		},
 		set: func(value Value) {
@@ -69,13 +77,22 @@ func (interpreter *Interpreter) indexExpressionGetterSetter(indexExpression *ast
 	target := interpreter.evalExpression(indexExpression.TargetExpression).(ValueIndexableValue)
 	indexingValue := interpreter.evalExpression(indexExpression.IndexingExpression)
 	getLocationRange := locationRangeGetter(interpreter.Location, indexExpression)
+	isResourceMoveIndexExpression := interpreter.Program.Elaboration.IsResourceMoveIndexExpression[indexExpression]
 	return getterSetter{
 		target: target,
-		get: func() Value {
-			return target.Get(interpreter, getLocationRange, indexingValue)
+		get: func(_ bool) Value {
+			if isResourceMoveIndexExpression {
+				return target.RemoveKey(interpreter, getLocationRange, indexingValue)
+			} else {
+				return target.GetKey(interpreter, getLocationRange, indexingValue)
+			}
 		},
 		set: func(value Value) {
-			target.Set(interpreter, getLocationRange, indexingValue, value)
+			if isResourceMoveIndexExpression {
+				target.InsertKey(interpreter, getLocationRange, indexingValue, value)
+			} else {
+				target.SetKey(interpreter, getLocationRange, indexingValue, value)
+			}
 		},
 	}
 }
@@ -89,8 +106,46 @@ func (interpreter *Interpreter) memberExpressionGetterSetter(memberExpression *a
 	getLocationRange := locationRangeGetter(interpreter.Location, memberExpression)
 	return getterSetter{
 		target: target,
-		get: func() Value {
-			return interpreter.getMember(target, getLocationRange, identifier)
+		get: func(allowMissing bool) Value {
+			isOptional := memberExpression.Optional
+
+			if isOptional {
+				switch typeSelf := target.(type) {
+				case NilValue:
+					return typeSelf
+
+				case *SomeValue:
+					target = typeSelf.Value
+
+				default:
+					panic(errors.NewUnreachableError())
+				}
+			}
+
+			interpreter.checkMemberAccessedType(
+				memberExpression,
+				target,
+				getLocationRange,
+			)
+
+			resultValue := interpreter.getMember(target, getLocationRange, identifier)
+			if resultValue == nil && !allowMissing {
+				panic(MissingMemberValueError{
+					Name:          identifier,
+					LocationRange: getLocationRange(),
+				})
+			}
+
+			// If the member access is optional chaining, only wrap the result value
+			// in an optional, if it is not already an optional value
+
+			if isOptional {
+				if _, ok := resultValue.(OptionalValue); !ok {
+					resultValue = NewSomeValueNonCopying(resultValue)
+				}
+			}
+
+			return resultValue
 		},
 		set: func(value Value) {
 			interpreter.setMember(target, getLocationRange, identifier, value)
@@ -456,47 +511,8 @@ func (interpreter *Interpreter) VisitDictionaryExpression(expression *ast.Dictio
 }
 
 func (interpreter *Interpreter) VisitMemberExpression(expression *ast.MemberExpression) ast.Repr {
-	self := interpreter.evalExpression(expression.Expression)
-	if expression.Optional {
-		switch typeSelf := self.(type) {
-		case NilValue:
-			return typeSelf
-
-		case *SomeValue:
-			self = typeSelf.Value
-
-		default:
-			panic(errors.NewUnreachableError())
-		}
-	}
-
-	getLocationRange := locationRangeGetter(interpreter.Location, expression)
-	identifier := expression.Identifier.Identifier
-
-	interpreter.checkMemberAccessedType(
-		expression,
-		self,
-		getLocationRange,
-	)
-
-	resultValue := interpreter.getMember(self, getLocationRange, identifier)
-	if resultValue == nil {
-		panic(MissingMemberValueError{
-			Name:          identifier,
-			LocationRange: getLocationRange(),
-		})
-	}
-
-	// If the member access is optional chaining, only wrap the result value
-	// in an optional, if it is not already an optional value
-
-	if expression.Optional {
-		if _, ok := resultValue.(OptionalValue); !ok {
-			resultValue = NewSomeValueNonCopying(resultValue)
-		}
-	}
-
-	return resultValue
+	const allowMissing = false
+	return interpreter.memberExpressionGetterSetter(expression).get(allowMissing)
 }
 
 // checkMemberAccessedType checks that the dynamic type of the accessed value
@@ -534,7 +550,7 @@ func (interpreter *Interpreter) VisitIndexExpression(expression *ast.IndexExpres
 	typedResult := interpreter.evalExpression(expression.TargetExpression).(ValueIndexableValue)
 	indexingValue := interpreter.evalExpression(expression.IndexingExpression)
 	getLocationRange := locationRangeGetter(interpreter.Location, expression)
-	return typedResult.Get(interpreter, getLocationRange, indexingValue)
+	return typedResult.GetKey(interpreter, getLocationRange, indexingValue)
 }
 
 func (interpreter *Interpreter) VisitConditionalExpression(expression *ast.ConditionalExpression) ast.Repr {
@@ -789,25 +805,4 @@ func (interpreter *Interpreter) VisitPathExpression(expression *ast.PathExpressi
 		Domain:     domain,
 		Identifier: expression.Identifier.Identifier,
 	}
-}
-
-func (interpreter *Interpreter) evalPotentialResourceMoveIndexExpression(expression ast.Expression) Value {
-	resourceMoveIndexExpression := interpreter.resourceMoveIndexExpression(expression)
-	if resourceMoveIndexExpression == nil {
-		return interpreter.evalExpression(expression)
-	}
-
-	getterSetter := interpreter.indexExpressionGetterSetter(resourceMoveIndexExpression)
-	value := getterSetter.get()
-	getterSetter.set(NilValue{})
-	return value
-}
-
-func (interpreter *Interpreter) resourceMoveIndexExpression(expression ast.Expression) *ast.IndexExpression {
-	indexExpression, ok := expression.(*ast.IndexExpression)
-	if !ok || !interpreter.Program.Elaboration.IsResourceMoveIndexExpression[indexExpression] {
-		return nil
-	}
-
-	return indexExpression
 }

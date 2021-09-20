@@ -36,8 +36,6 @@ func TestInterpretVirtualImport(t *testing.T) {
 
 	t.Parallel()
 
-	storage := interpreter.NewInMemoryStorage()
-
 	fooType := &sema.CompositeType{
 		Location:   common.IdentifierLocation("Foo"),
 		Identifier: "Foo",
@@ -85,11 +83,11 @@ func TestInterpretVirtualImport(t *testing.T) {
 						)
 
 						value := interpreter.NewCompositeValue(
-							storage,
+							inter,
 							location,
 							"Foo",
 							common.CompositeKindContract,
-							interpreter.NewStringValueOrderedMap(),
+							nil,
 							common.Address{},
 						)
 

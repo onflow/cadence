@@ -24,7 +24,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/onflow/atree"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -2172,7 +2171,7 @@ func TestInterpretStructureFieldAssignment(t *testing.T) {
 		t,
 		inter,
 		interpreter.NewIntValueFromInt64(1),
-		test.GetField("foo"),
+		test.GetField(inter, interpreter.ReturnEmptyLocationRange, "foo"),
 	)
 
 	value, err := inter.Invoke("callTest")
@@ -2189,7 +2188,7 @@ func TestInterpretStructureFieldAssignment(t *testing.T) {
 		t,
 		inter,
 		interpreter.NewIntValueFromInt64(3),
-		test.GetField("foo"),
+		test.GetField(inter, interpreter.ReturnEmptyLocationRange, "foo"),
 	)
 }
 
@@ -4083,7 +4082,7 @@ func TestInterpretDictionaryIndexingAssignmentExisting(t *testing.T) {
 	actualValue := inter.Globals["x"].GetValue()
 	actualDict := actualValue.(*interpreter.DictionaryValue)
 
-	newValue := actualDict.Get(
+	newValue := actualDict.GetKey(
 		inter,
 		interpreter.ReturnEmptyLocationRange,
 		interpreter.NewStringValue("abc"),
@@ -4147,7 +4146,7 @@ func TestInterpretDictionaryIndexingAssignmentNew(t *testing.T) {
 		actualDict,
 	)
 
-	newValue := actualDict.Get(
+	newValue := actualDict.GetKey(
 		inter,
 		interpreter.ReturnEmptyLocationRange,
 		interpreter.NewStringValue("abc"),
@@ -4213,7 +4212,7 @@ func TestInterpretDictionaryIndexingAssignmentNil(t *testing.T) {
 		actualDict,
 	)
 
-	newValue := actualDict.Get(
+	newValue := actualDict.GetKey(
 		inter,
 		interpreter.ReturnEmptyLocationRange,
 		interpreter.NewStringValue("def"),
@@ -4517,8 +4516,8 @@ func TestInterpretReferenceFailableDowncasting(t *testing.T) {
 					sema.WithPredeclaredValues(valueDeclarations),
 				},
 				Options: []interpreter.Option{
-					interpreter.WithPredeclaredValues(values),
 					interpreter.WithStorage(storage),
+					interpreter.WithPredeclaredValues(values),
 				},
 			},
 		)
@@ -5381,12 +5380,11 @@ func TestInterpretDictionaryInsert(t *testing.T) {
 	AssertValueSlicesEqual(
 		t,
 		inter,
-
 		[]interpreter.Value{
-			interpreter.NewStringValue("abc"),
-			interpreter.NewIntValueFromInt64(3),
 			interpreter.NewStringValue("def"),
 			interpreter.NewIntValueFromInt64(2),
+			interpreter.NewStringValue("abc"),
+			interpreter.NewIntValueFromInt64(3),
 		},
 		dictionaryKeyValues(actualDict),
 	)
@@ -5424,8 +5422,8 @@ func TestInterpretDictionaryKeys(t *testing.T) {
 
 		[]interpreter.Value{
 			interpreter.NewStringValue("def"),
-			interpreter.NewStringValue("abc"),
 			interpreter.NewStringValue("a"),
+			interpreter.NewStringValue("abc"),
 		},
 		arrayElements(inter, arrayValue),
 	)
@@ -5451,11 +5449,10 @@ func TestInterpretDictionaryValues(t *testing.T) {
 	AssertValueSlicesEqual(
 		t,
 		inter,
-
 		[]interpreter.Value{
 			interpreter.NewIntValueFromInt64(2),
-			interpreter.NewIntValueFromInt64(1),
 			interpreter.NewIntValueFromInt64(3),
+			interpreter.NewIntValueFromInt64(1),
 		},
 		arrayElements(inter, arrayValue),
 	)
@@ -6241,7 +6238,12 @@ func TestInterpretEmitEvent(t *testing.T) {
 	)
 
 	inter.SetOnEventEmittedHandler(
-		func(_ *interpreter.Interpreter, event *interpreter.CompositeValue, eventType *sema.CompositeType) error {
+		func(
+			_ *interpreter.Interpreter,
+			_ func() interpreter.LocationRange,
+			event *interpreter.CompositeValue,
+			eventType *sema.CompositeType,
+		) error {
 			actualEvents = append(actualEvents, event)
 			return nil
 		},
@@ -6253,42 +6255,45 @@ func TestInterpretEmitEvent(t *testing.T) {
 	transferEventType := checker.RequireGlobalType(t, inter.Program.Elaboration, "Transfer")
 	transferAmountEventType := checker.RequireGlobalType(t, inter.Program.Elaboration, "TransferAmount")
 
-	members1 := interpreter.NewStringValueOrderedMap()
-	members1.Set("to", interpreter.NewIntValueFromInt64(1))
-	members1.Set("from", interpreter.NewIntValueFromInt64(2))
+	fields1 := []interpreter.CompositeField{
+		{"to", interpreter.NewIntValueFromInt64(1)},
+		{"from", interpreter.NewIntValueFromInt64(2)},
+	}
 
-	members2 := interpreter.NewStringValueOrderedMap()
-	members2.Set("to", interpreter.NewIntValueFromInt64(3))
-	members2.Set("from", interpreter.NewIntValueFromInt64(4))
+	fields2 := []interpreter.CompositeField{
+		{"to", interpreter.NewIntValueFromInt64(3)},
+		{"from", interpreter.NewIntValueFromInt64(4)},
+	}
 
-	members3 := interpreter.NewStringValueOrderedMap()
-	members3.Set("to", interpreter.NewIntValueFromInt64(1))
-	members3.Set("from", interpreter.NewIntValueFromInt64(2))
-	members3.Set("amount", interpreter.NewIntValueFromInt64(100))
+	fields3 := []interpreter.CompositeField{
+		{"to", interpreter.NewIntValueFromInt64(1)},
+		{"from", interpreter.NewIntValueFromInt64(2)},
+		{"amount", interpreter.NewIntValueFromInt64(100)},
+	}
 
 	expectedEvents := []interpreter.Value{
 		interpreter.NewCompositeValue(
-			inter.Storage,
+			inter,
 			TestLocation,
 			TestLocation.QualifiedIdentifier(transferEventType.ID()),
 			common.CompositeKindEvent,
-			members1,
+			fields1,
 			common.Address{},
 		),
 		interpreter.NewCompositeValue(
-			inter.Storage,
+			inter,
 			TestLocation,
 			TestLocation.QualifiedIdentifier(transferEventType.ID()),
 			common.CompositeKindEvent,
-			members2,
+			fields2,
 			common.Address{},
 		),
 		interpreter.NewCompositeValue(
-			inter.Storage,
+			inter,
 			TestLocation,
 			TestLocation.QualifiedIdentifier(transferAmountEventType.ID()),
 			common.CompositeKindEvent,
-			members3,
+			fields3,
 			common.Address{},
 		),
 	}
@@ -6341,11 +6346,11 @@ func TestInterpretEmitEventParameterTypes(t *testing.T) {
 	require.NoError(t, err)
 
 	sValue := interpreter.NewCompositeValue(
-		storage,
+		inter,
 		TestLocation,
 		"S",
 		common.CompositeKindStructure,
-		interpreter.NewStringValueOrderedMap(),
+		nil,
 		common.Address{},
 	)
 	sValue.Functions = map[string]interpreter.FunctionValue{}
@@ -6559,10 +6564,12 @@ func TestInterpretEmitEventParameterTypes(t *testing.T) {
 
 			valueDeclarations := stdlib.StandardLibraryValues{
 				{
-					Name:  "s",
-					Type:  sType,
-					Value: sValue,
-					Kind:  common.DeclarationKindConstant,
+					Name: "s",
+					Type: sType,
+					ValueFactory: func(i *interpreter.Interpreter) interpreter.Value {
+						return sValue
+					},
+					Kind: common.DeclarationKindConstant,
 				},
 			}
 
@@ -6587,7 +6594,12 @@ func TestInterpretEmitEventParameterTypes(t *testing.T) {
 			var actualEvents []interpreter.Value
 
 			inter.SetOnEventEmittedHandler(
-				func(_ *interpreter.Interpreter, event *interpreter.CompositeValue, eventType *sema.CompositeType) error {
+				func(
+					_ *interpreter.Interpreter,
+					_ func() interpreter.LocationRange,
+					event *interpreter.CompositeValue,
+					eventType *sema.CompositeType,
+				) error {
 					actualEvents = append(actualEvents, event)
 					return nil
 				},
@@ -6598,16 +6610,20 @@ func TestInterpretEmitEventParameterTypes(t *testing.T) {
 
 			testType := checker.RequireGlobalType(t, inter.Program.Elaboration, "Test")
 
-			members := interpreter.NewStringValueOrderedMap()
-			members.Set("value", testCase.value)
+			fields := []interpreter.CompositeField{
+				{
+					Name:  "value",
+					Value: testCase.value,
+				},
+			}
 
 			expectedEvents := []interpreter.Value{
 				interpreter.NewCompositeValue(
-					storage,
+					inter,
 					TestLocation,
 					TestLocation.QualifiedIdentifier(testType.ID()),
 					common.CompositeKindEvent,
-					members,
+					fields,
 					common.Address{},
 				),
 			}
@@ -6679,7 +6695,7 @@ func TestInterpretSwapResourceDictionaryElementReturnDictionary(t *testing.T) {
 	)
 
 	foo := value.(*interpreter.DictionaryValue).
-		Get(inter, interpreter.ReturnEmptyLocationRange, interpreter.NewStringValue("foo"))
+		GetKey(inter, interpreter.ReturnEmptyLocationRange, interpreter.NewStringValue("foo"))
 
 	require.IsType(t,
 		&interpreter.SomeValue{},
@@ -6928,7 +6944,7 @@ func TestInterpretVariableDeclarationSecondValue(t *testing.T) {
 		t,
 		inter,
 		interpreter.NewIntValueFromInt64(2),
-		firstResource.GetField("id"),
+		firstResource.GetField(inter, interpreter.ReturnEmptyLocationRange, "id"),
 	)
 
 	require.IsType(t,
@@ -6949,7 +6965,7 @@ func TestInterpretVariableDeclarationSecondValue(t *testing.T) {
 		t,
 		inter,
 		interpreter.NewIntValueFromInt64(1),
-		secondResource.GetField("id"),
+		secondResource.GetField(inter, interpreter.ReturnEmptyLocationRange, "id"),
 	)
 }
 
@@ -7416,15 +7432,14 @@ func TestInterpretContractAccountFieldUse(t *testing.T) {
 				makeContractValueHandler(nil, nil, nil),
 				interpreter.WithInjectedCompositeFieldsHandler(
 					func(
-						_ *interpreter.Interpreter,
+						inter *interpreter.Interpreter,
 						_ common.Location,
 						_ string,
 						_ common.CompositeKind,
-					) *interpreter.StringValueOrderedMap {
-
-						injectedMembers := interpreter.NewStringValueOrderedMap()
-						injectedMembers.Set("account", newTestAuthAccountValue(addressValue))
-						return injectedMembers
+					) map[string]interpreter.Value {
+						return map[string]interpreter.Value{
+							"account": newTestAuthAccountValue(inter, addressValue),
+						}
 					},
 				),
 			},
@@ -8014,9 +8029,6 @@ func TestInterpretReferenceUseAfterCopy(t *testing.T) {
 
 	t.Run("resource array, get/set", func(t *testing.T) {
 
-		// TODO: fix swap (interpreter.Interpreter.VisitSwapStatement)
-		t.Skip("TODO")
-
 		t.Parallel()
 
 		inter := parseCheckAndInterpret(t, `
@@ -8168,13 +8180,13 @@ func TestInterpretResourceOwnerFieldUse(t *testing.T) {
 		0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
 	}
 
-	accountValue := newTestAuthAccountValue(interpreter.AddressValue(address))
-
 	valueDeclaration := stdlib.StandardLibraryValue{
-		Name:  "account",
-		Type:  sema.AuthAccountType,
-		Value: accountValue,
-		Kind:  common.DeclarationKindConstant,
+		Name: "account",
+		Type: sema.AuthAccountType,
+		ValueFactory: func(inter *interpreter.Interpreter) interpreter.Value {
+			return newTestAuthAccountValue(inter, interpreter.AddressValue(address))
+		},
+		Kind: common.DeclarationKindConstant,
 	}
 
 	inter, err := parseCheckAndInterpretWithOptions(t,
@@ -8190,8 +8202,8 @@ func TestInterpretResourceOwnerFieldUse(t *testing.T) {
 					valueDeclaration,
 				}),
 				interpreter.WithAccountHandlerFunc(
-					func(address interpreter.AddressValue) *interpreter.CompositeValue {
-						return newTestPublicAccountValue(address)
+					func(inter *interpreter.Interpreter, address interpreter.AddressValue) *interpreter.CompositeValue {
+						return newTestPublicAccountValue(inter, address)
 					},
 				),
 			},
@@ -8213,13 +8225,19 @@ func TestInterpretResourceOwnerFieldUse(t *testing.T) {
 	)
 }
 
-func newTestAuthAccountValue(addressValue interpreter.AddressValue) *interpreter.CompositeValue {
+func newTestAuthAccountValue(
+	inter *interpreter.Interpreter,
+	addressValue interpreter.AddressValue,
+) *interpreter.CompositeValue {
 
-	panicFunction := interpreter.NewHostFunctionValue(func(invocation interpreter.Invocation) interpreter.Value {
-		panic(errors.NewUnreachableError())
-	})
+	panicFunction := interpreter.NewHostFunctionValue(
+		func(invocation interpreter.Invocation) interpreter.Value {
+			panic(errors.NewUnreachableError())
+		},
+	)
 
 	contractsValue := interpreter.NewAuthAccountContractsValue(
+		inter,
 		addressValue,
 		panicFunction,
 		panicFunction,
@@ -8236,12 +8254,14 @@ func newTestAuthAccountValue(addressValue interpreter.AddressValue) *interpreter
 	)
 
 	keysValue := interpreter.NewAuthAccountKeysValue(
+		inter,
 		panicFunction,
 		panicFunction,
 		panicFunction,
 	)
 
 	return interpreter.NewAuthAccountValue(
+		inter,
 		addressValue,
 		returnZeroUFix64,
 		returnZeroUFix64,
@@ -8256,17 +8276,24 @@ func newTestAuthAccountValue(addressValue interpreter.AddressValue) *interpreter
 	)
 }
 
-func newTestPublicAccountValue(addressValue interpreter.AddressValue) *interpreter.CompositeValue {
+func newTestPublicAccountValue(
+	inter *interpreter.Interpreter,
+	addressValue interpreter.AddressValue,
+) *interpreter.CompositeValue {
 
-	panicFunction := interpreter.NewHostFunctionValue(func(invocation interpreter.Invocation) interpreter.Value {
-		panic(errors.NewUnreachableError())
-	})
+	panicFunction := interpreter.NewHostFunctionValue(
+		func(invocation interpreter.Invocation) interpreter.Value {
+			panic(errors.NewUnreachableError())
+		},
+	)
 
 	keysValue := interpreter.NewPublicAccountKeysValue(
+		inter,
 		panicFunction,
 	)
 
 	contractsValue := interpreter.NewPublicAccountContractsValue(
+		inter,
 		addressValue,
 		panicFunction,
 		func(inter *interpreter.Interpreter) *interpreter.ArrayValue {
@@ -8280,6 +8307,7 @@ func newTestPublicAccountValue(addressValue interpreter.AddressValue) *interpret
 	)
 
 	return interpreter.NewPublicAccountValue(
+		inter,
 		addressValue,
 		returnZeroUFix64,
 		returnZeroUFix64,
@@ -8473,182 +8501,6 @@ func permutations(xs [][]byte) (res [][][]byte) {
 	f(xs, 0)
 
 	return res
-}
-
-// TODO:
-//func TestInterpretCompositeValueFieldEncodingOrder(t *testing.T) {
-//
-//	t.Parallel()
-//
-//	fieldValues := map[byte]byte{
-//		'a': 1,
-//		'b': 2,
-//		'c': 3,
-//	}
-//
-//	// prepare initialization statements
-//
-//	initializations := make([][]byte, 0, len(fieldValues))
-//	expectedEncodings := make([][]byte, 0, len(fieldValues))
-//
-//	for name, value := range fieldValues {
-//		initialization := fmt.Sprintf("self.%c = %d", name, value)
-//		initializations = append(initializations, []byte(initialization))
-//
-//		expectedEncodings = append(expectedEncodings, []byte{
-//			// UTF-8 string, length 1
-//			0x61,
-//			name,
-//			// tag
-//			0xD8, 0x98,
-//			// - positive bignum
-//			0xc2,
-//			// - byte string, length 1
-//			0x41,
-//			value,
-//		})
-//	}
-//
-//	allInitializations := permutations(initializations)
-//	allExpectedEncodings := permutations(expectedEncodings)
-//
-//	expectedPrefix := []byte{
-//		// tag
-//		0xd8, 0x84,
-//		// array, 4 items follow
-//		0x84,
-//
-//		// tag
-//		0xd8, 0xc1,
-//		// UTF-8 string, length 4
-//		0x64,
-//		// t, e, s, t
-//		0x74, 0x65, 0x73, 0x74,
-//
-//		// positive integer 1
-//		0x1,
-//
-//		// array, 6 items follow
-//		0x86,
-//	}
-//
-//	expectedSuffix := []byte{
-//		// UTF-8 string, length 4
-//		0x64,
-//		0x54, 0x65, 0x73, 0x74,
-//	}
-//
-//	for i, initialization := range allInitializations {
-//
-//		var codeBuilder strings.Builder
-//		codeBuilder.WriteString(`
-//          struct Test {
-//              let a: Int
-//              let b: Int
-//              let c: Int
-//
-//              init() {
-//        `)
-//
-//		for _, statement := range initialization {
-//			codeBuilder.Write(statement)
-//			codeBuilder.WriteRune('\n')
-//		}
-//
-//		codeBuilder.WriteString(`
-//              }
-//          }
-//
-//          let test = Test()
-//        `)
-//
-//		// TODO:
-//		//inter := parseCheckAndInterpret(t, codeBuilder.String())
-//		//
-//		//test := inter.Globals["test"].GetValue().(*interpreter.CompositeValue)
-//		//
-//		//storable, err := test.ExternalStorable(inter.Storage)
-//		//require.NoError(t, err)
-//		//
-//		//encoded, err := atree.Encode(
-//		//	storable,
-//		//	interpreter.CBOREncMode,
-//		//)
-//		//require.NoError(t, err)
-//		//
-//		//expected := expectedPrefix[:]
-//		//
-//		//for _, expectedEncoding := range allExpectedEncodings[i] {
-//		//	expected = append(expected, expectedEncoding...)
-//		//}
-//		//
-//		//expected = append(expected, expectedSuffix...)
-//		//
-//		//assert.Equal(t, expected, encoded)
-//	}
-//}
-
-func TestInterpretDictionaryValueEncodingOrder(t *testing.T) {
-
-	t.Parallel()
-
-	fieldValues := map[string]int{
-		"a": 1,
-		"b": 2,
-		"c": 3,
-	}
-
-	initializations := make([][]byte, 0, len(fieldValues))
-
-	for name, value := range fieldValues {
-		initialization := fmt.Sprintf(`xs["%s"] = %d`, name, value)
-		initializations = append(initializations, []byte(initialization))
-	}
-
-	for _, initialization := range permutations(initializations) {
-
-		var codeBuilder strings.Builder
-		codeBuilder.WriteString(`
-          fun construct(): {String: Int} {
-              let xs: {String: Int} = {}
-        `)
-
-		for _, statement := range initialization {
-			codeBuilder.Write(statement)
-			codeBuilder.WriteRune('\n')
-		}
-
-		codeBuilder.WriteString(`
-              return xs
-          }
-
-          let test = construct()
-        `)
-
-		inter := parseCheckAndInterpret(t, codeBuilder.String())
-
-		value := inter.Globals["test"].GetValue().(*interpreter.DictionaryValue)
-
-		storable := value.DictionaryStorable
-
-		encoded, err := atree.Encode(
-			storable,
-			interpreter.CBOREncMode,
-		)
-		require.NoError(t, err)
-
-		decoder := interpreter.CBORDecMode.NewByteStreamDecoder(encoded)
-
-		testStorageID := atree.NewStorageID(atree.Address{}, atree.StorageIndex{0x1})
-		decodedStorable, err := interpreter.DecodeStorable(decoder, testStorageID)
-		require.NoError(t, err)
-
-		decodedValue := interpreter.StoredValue(decodedStorable, inter.Storage)
-
-		AssertValuesEqual(
-			t,
-			inter, value, decodedValue)
-	}
 }
 
 func TestInterpretEphemeralReferenceToOptional(t *testing.T) {
@@ -9140,7 +8992,7 @@ func TestInterpretMissingMember(t *testing.T) {
 
 	// Remove field `y`
 	compositeValue := inter.Globals["x"].GetValue().(*interpreter.CompositeValue)
-	compositeValue.FieldStorables.Delete("y")
+	compositeValue.RemoveField(inter, interpreter.ReturnEmptyLocationRange, "y")
 
 	_, err := inter.Invoke("test")
 	require.Error(t, err)
