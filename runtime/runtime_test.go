@@ -2984,6 +2984,9 @@ func TestInvokeContractFunction(t *testing.T) {
             pub fun helloAuthAcc(account: AuthAccount) {
                 log("Hello ".concat(account.address.toString()))
             }
+            pub fun helloPublicAcc(account: PublicAccount) {
+                log("Hello pub ".concat(account.address.toString()))
+            }
         }
     `)
 
@@ -3188,6 +3191,28 @@ func TestInvokeContractFunction(t *testing.T) {
 		require.NoError(tt, err)
 
 		assert.Equal(tt, `"Hello 0x1"`, loggedMessage)
+	})
+	t.Run("function with public account works", func(tt *testing.T) {
+		_, err = runtime.InvokeContractFunction(
+			common.AddressLocation{
+				Address: addressValue,
+				Name:    "Test",
+			},
+			"helloPublicAcc",
+			[]interpreter.Value{
+				interpreter.AddressValue(addressValue),
+			},
+			[]sema.Type{
+				sema.PublicAccountType,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+		require.NoError(tt, err)
+
+		assert.Equal(tt, `"Hello pub 0x1"`, loggedMessage)
 	})
 }
 

@@ -816,13 +816,6 @@ func (interpreter *Interpreter) prepareInvoke(
 	preparedArguments := make([]Value, len(arguments))
 	for i, argument := range arguments {
 		parameterType := parameters[i].TypeAnnotation.Type
-		// TODO: value type is not known, reject for now
-		switch parameterType {
-		case sema.AnyStructType, sema.AnyResourceType:
-			return nil, NotInvokableError{
-				Value: functionValue,
-			}
-		}
 
 		// converts the argument into the parameter type declared by the function
 		preparedArguments[i] = interpreter.convertAndBox(argument, nil, parameterType)
