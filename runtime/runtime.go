@@ -518,6 +518,7 @@ func (r *interpreterRuntime) convertArgument(
 		// convert addresses to public accounts so there is no need to construct a public account value for the caller
 		if addressValue, ok := argument.(interpreter.AddressValue); ok {
 			return r.getPublicAccount(
+				inter,
 				interpreter.NewAddressValue(addressValue.ToAddress()),
 				context.Interface,
 				runtimeStorage,
