@@ -4139,6 +4139,7 @@ func TestInterpretReferenceFailableDowncasting(t *testing.T) {
 								},
 							}
 						},
+						nil,
 					),
 				},
 			}
@@ -6928,6 +6929,7 @@ func TestInterpretContractAccountFieldUse(t *testing.T) {
 							func(invocation interpreter.Invocation) interpreter.Value {
 								panic(errors.NewUnreachableError())
 							},
+							nil,
 						)
 
 						injectedMembers := interpreter.NewStringValueOrderedMap()
@@ -7462,9 +7464,12 @@ func TestInterpretResourceOwnerFieldUse(t *testing.T) {
       }
     `
 
-	panicFunction := interpreter.NewHostFunctionValue(func(invocation interpreter.Invocation) interpreter.Value {
-		panic(errors.NewUnreachableError())
-	})
+	panicFunction := interpreter.NewHostFunctionValue(
+		func(invocation interpreter.Invocation) interpreter.Value {
+			panic(errors.NewUnreachableError())
+		},
+		nil,
+	)
 
 	// `authAccount`
 

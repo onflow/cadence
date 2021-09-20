@@ -1237,7 +1237,7 @@ type NumberValue interface {
 	ToBigEndianBytes() []byte
 }
 
-func getNumberValueMember(v NumberValue, name string) Value {
+func getNumberValueMember(v NumberValue, name string, typ sema.Type) Value {
 	switch name {
 
 	case sema.ToStringFunctionName:
@@ -1245,12 +1245,18 @@ func getNumberValueMember(v NumberValue, name string) Value {
 			func(invocation Invocation) Value {
 				return NewStringValue(v.String())
 			},
+			sema.ToStringFunctionType,
 		)
 
 	case sema.ToBigEndianBytesFunctionName:
 		return NewHostFunctionValue(
 			func(invocation Invocation) Value {
 				return ByteSliceToByteArrayValue(v.ToBigEndianBytes())
+			},
+			&sema.FunctionType{
+				ReturnTypeAnnotation: sema.NewTypeAnnotation(
+					sema.ByteArrayType,
+				),
 			},
 		)
 
@@ -1260,6 +1266,11 @@ func getNumberValueMember(v NumberValue, name string) Value {
 				other := invocation.Arguments[0].(NumberValue)
 				return v.SaturatingPlus(other)
 			},
+			&sema.FunctionType{
+				ReturnTypeAnnotation: sema.NewTypeAnnotation(
+					typ,
+				),
+			},
 		)
 
 	case sema.NumericTypeSaturatingSubtractFunctionName:
@@ -1267,6 +1278,11 @@ func getNumberValueMember(v NumberValue, name string) Value {
 			func(invocation Invocation) Value {
 				other := invocation.Arguments[0].(NumberValue)
 				return v.SaturatingMinus(other)
+			},
+			&sema.FunctionType{
+				ReturnTypeAnnotation: sema.NewTypeAnnotation(
+					typ,
+				),
 			},
 		)
 
@@ -1276,6 +1292,11 @@ func getNumberValueMember(v NumberValue, name string) Value {
 				other := invocation.Arguments[0].(NumberValue)
 				return v.SaturatingMul(other)
 			},
+			&sema.FunctionType{
+				ReturnTypeAnnotation: sema.NewTypeAnnotation(
+					typ,
+				),
+			},
 		)
 
 	case sema.NumericTypeSaturatingDivideFunctionName:
@@ -1283,6 +1304,11 @@ func getNumberValueMember(v NumberValue, name string) Value {
 			func(invocation Invocation) Value {
 				other := invocation.Arguments[0].(NumberValue)
 				return v.SaturatingDiv(other)
+			},
+			&sema.FunctionType{
+				ReturnTypeAnnotation: sema.NewTypeAnnotation(
+					typ,
+				),
 			},
 		)
 	}
@@ -1537,7 +1563,7 @@ func (v IntValue) BitwiseRightShift(other IntegerValue) IntegerValue {
 }
 
 func (v IntValue) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name)
+	return getNumberValueMember(v, name, sema.IntType)
 }
 
 func (IntValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -1844,7 +1870,7 @@ func (v Int8Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 }
 
 func (v Int8Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name)
+	return getNumberValueMember(v, name, sema.Int8Type)
 }
 
 func (Int8Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -2151,7 +2177,7 @@ func (v Int16Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 }
 
 func (v Int16Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name)
+	return getNumberValueMember(v, name, sema.Int16Type)
 }
 
 func (Int16Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -2460,7 +2486,7 @@ func (v Int32Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 }
 
 func (v Int32Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name)
+	return getNumberValueMember(v, name, sema.Int32Type)
 }
 
 func (Int32Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -2768,7 +2794,7 @@ func (v Int64Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 }
 
 func (v Int64Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name)
+	return getNumberValueMember(v, name, sema.Int64Type)
 }
 
 func (Int64Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -3147,7 +3173,7 @@ func (v Int128Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 }
 
 func (v Int128Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name)
+	return getNumberValueMember(v, name, sema.Int128Type)
 }
 
 func (Int128Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -3525,7 +3551,7 @@ func (v Int256Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 }
 
 func (v Int256Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name)
+	return getNumberValueMember(v, name, sema.Int256Type)
 }
 
 func (Int256Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -3793,7 +3819,7 @@ func (v UIntValue) BitwiseRightShift(other IntegerValue) IntegerValue {
 }
 
 func (v UIntValue) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name)
+	return getNumberValueMember(v, name, sema.UIntType)
 }
 
 func (UIntValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -4031,7 +4057,7 @@ func (v UInt8Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 }
 
 func (v UInt8Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name)
+	return getNumberValueMember(v, name, sema.UInt8Type)
 }
 
 func (UInt8Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -4267,7 +4293,7 @@ func (v UInt16Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 }
 
 func (v UInt16Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name)
+	return getNumberValueMember(v, name, sema.UInt16Type)
 }
 
 func (UInt16Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -4506,7 +4532,7 @@ func (v UInt32Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 }
 
 func (v UInt32Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name)
+	return getNumberValueMember(v, name, sema.UInt32Type)
 }
 
 func (UInt32Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -4748,7 +4774,7 @@ func (v UInt64Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 }
 
 func (v UInt64Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name)
+	return getNumberValueMember(v, name, sema.UInt64Type)
 }
 
 func (UInt64Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -5070,7 +5096,7 @@ func (v UInt128Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 }
 
 func (v UInt128Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name)
+	return getNumberValueMember(v, name, sema.UInt128Type)
 }
 
 func (UInt128Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -5390,7 +5416,7 @@ func (v UInt256Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 }
 
 func (v UInt256Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name)
+	return getNumberValueMember(v, name, sema.UInt256Type)
 }
 
 func (UInt256Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -5573,7 +5599,7 @@ func (v Word8Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 }
 
 func (v Word8Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name)
+	return getNumberValueMember(v, name, sema.Word8Type)
 }
 
 func (Word8Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -5754,7 +5780,7 @@ func (v Word16Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 }
 
 func (v Word16Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name)
+	return getNumberValueMember(v, name, sema.Word16Type)
 }
 
 func (Word16Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -5939,7 +5965,7 @@ func (v Word32Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 }
 
 func (v Word32Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name)
+	return getNumberValueMember(v, name, sema.Word32Type)
 }
 
 func (Word32Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -6124,7 +6150,7 @@ func (v Word64Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 }
 
 func (v Word64Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name)
+	return getNumberValueMember(v, name, sema.Word64Type)
 }
 
 func (Word64Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -6411,7 +6437,7 @@ func ConvertFix64(value Value) Fix64Value {
 }
 
 func (v Fix64Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name)
+	return getNumberValueMember(v, name, sema.Fix64Type)
 }
 
 func (Fix64Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -6664,7 +6690,7 @@ func ConvertUFix64(value Value) UFix64Value {
 }
 
 func (v UFix64Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name)
+	return getNumberValueMember(v, name, sema.UFix64Type)
 }
 
 func (UFix64Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -7815,6 +7841,9 @@ func (v *DictionaryValue) GetMember(interpreter *Interpreter, getLocationRange f
 					keyValue,
 				)
 			},
+			sema.DictionaryRemoveFunctionType(
+				interpreter.ConvertStaticToSemaType(v.StaticType()).(*sema.DictionaryType),
+			),
 		)
 
 	case "insert":
@@ -7830,6 +7859,9 @@ func (v *DictionaryValue) GetMember(interpreter *Interpreter, getLocationRange f
 					newValue,
 				)
 			},
+			sema.DictionaryInsertFunctionType(
+				interpreter.ConvertStaticToSemaType(v.StaticType()).(*sema.DictionaryType),
+			),
 		)
 
 	case "containsKey":
@@ -7837,6 +7869,9 @@ func (v *DictionaryValue) GetMember(interpreter *Interpreter, getLocationRange f
 			func(invocation Invocation) Value {
 				return v.ContainsKey(invocation.Arguments[0])
 			},
+			sema.DictionaryContainsKeyFunctionType(
+				interpreter.ConvertStaticToSemaType(v.StaticType()).(*sema.DictionaryType),
+			),
 		)
 
 	}
@@ -8188,6 +8223,11 @@ func (v NilValue) RecursiveString(_ SeenReferences) string {
 var nilValueMapFunction = NewHostFunctionValue(
 	func(invocation Invocation) Value {
 		return NilValue{}
+	},
+	&sema.FunctionType{
+		ReturnTypeAnnotation: sema.NewTypeAnnotation(
+			sema.NeverType,
+		),
 	},
 )
 
@@ -8884,6 +8924,7 @@ func (v AddressValue) GetMember(_ *Interpreter, _ func() LocationRange, name str
 			func(invocation Invocation) Value {
 				return NewStringValue(v.String())
 			},
+			sema.ToStringFunctionType,
 		)
 
 	case sema.AddressTypeToBytesFunctionName:
@@ -8892,7 +8933,7 @@ func (v AddressValue) GetMember(_ *Interpreter, _ func() LocationRange, name str
 				address := common.Address(v)
 				return ByteSliceToByteArrayValue(address[:])
 			},
-			sema.ArrayTypeToBytesFunctionType,
+			sema.AddressTypeToBytesFunctionType,
 		)
 	}
 

@@ -260,7 +260,7 @@ func TestArrayMutation(t *testing.T) {
 		assert.Equal(t, sema.StringType, mutationError.ExpectedType)
 	})
 
-	t.Run("function array", func(t *testing.T) {
+	t.Run("function array mutation", func(t *testing.T) {
 		t.Parallel()
 
 		standardLibraryFunctions :=
@@ -273,12 +273,10 @@ func TestArrayMutation(t *testing.T) {
 
 		inter, err := parseCheckAndInterpretWithOptions(t, `
                 fun test() {
-                    let array: [((AnyStruct):Void)?] = [nil]
+                    let array: [AnyStruct] = [nil] as [((AnyStruct):Void)?]
 
                     let x = 5
                     array[0] =  log
-
-					 array[0]!(x)
                 }
             `,
 			ParseCheckAndInterpretOptions{
@@ -293,13 +291,72 @@ func TestArrayMutation(t *testing.T) {
 
 		require.NoError(t, err)
 
+		// TODO: Shouldn't throw an error
 		_, err = inter.Invoke("test")
 		require.Error(t, err)
 
 		mutationError := &interpreter.ContainerMutationError{}
 		require.ErrorAs(t, err, mutationError)
 
-		assert.Equal(t, sema.StringType, mutationError.ExpectedType)
+		require.IsType(t, &sema.OptionalType{}, mutationError.ExpectedType)
+		optionalType := mutationError.ExpectedType.(*sema.OptionalType)
+
+		require.IsType(t, &sema.FunctionType{}, optionalType.Type)
+		funcType := optionalType.Type.(*sema.FunctionType)
+
+		assert.Equal(t, sema.VoidType, funcType.ReturnTypeAnnotation.Type)
+		assert.Nil(t, funcType.ReceiverType)
+		assert.Len(t, funcType.Parameters, 1)
+		assert.Equal(t, sema.AnyStructType, funcType.Parameters[0].TypeAnnotation.Type)
+	})
+
+	t.Run("invalid function array mutation", func(t *testing.T) {
+		t.Parallel()
+
+		standardLibraryFunctions :=
+			stdlib.StandardLibraryFunctions{
+				stdlib.LogFunction,
+			}
+
+		valueDeclarations := standardLibraryFunctions.ToSemaValueDeclarations()
+		values := standardLibraryFunctions.ToInterpreterValueDeclarations()
+
+		inter, err := parseCheckAndInterpretWithOptions(t, `
+                fun test() {
+                    let array: [AnyStruct] = [nil] as [(():Void)?]
+
+                    let x = 5
+                    array[0] =  log
+                }
+            `,
+			ParseCheckAndInterpretOptions{
+				CheckerOptions: []sema.Option{
+					sema.WithPredeclaredValues(valueDeclarations),
+				},
+				Options: []interpreter.Option{
+					interpreter.WithPredeclaredValues(values),
+				},
+			},
+		)
+
+		require.NoError(t, err)
+
+		// TODO: Shouldn't throw an error
+		_, err = inter.Invoke("test")
+		require.Error(t, err)
+
+		mutationError := &interpreter.ContainerMutationError{}
+		require.ErrorAs(t, err, mutationError)
+
+		require.IsType(t, &sema.OptionalType{}, mutationError.ExpectedType)
+		optionalType := mutationError.ExpectedType.(*sema.OptionalType)
+
+		require.IsType(t, &sema.FunctionType{}, optionalType.Type)
+		funcType := optionalType.Type.(*sema.FunctionType)
+
+		assert.Equal(t, sema.VoidType, funcType.ReturnTypeAnnotation.Type)
+		assert.Nil(t, funcType.ReceiverType)
+		assert.Empty(t, funcType.Parameters)
 	})
 }
 

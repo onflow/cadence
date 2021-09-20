@@ -1301,6 +1301,15 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 
 	compositeType := interpreter.Program.Elaboration.CompositeDeclarationTypes[declaration]
 
+	constructorType := &sema.FunctionType{
+		IsConstructor: true,
+		Parameters:    compositeType.ConstructorParameters,
+		ReturnTypeAnnotation: &sema.TypeAnnotation{
+			Type: compositeType,
+		},
+		RequiredArgumentCount: nil,
+	}
+
 	var initializerFunction FunctionValue
 	if declaration.CompositeKind == common.CompositeKindEvent {
 		initializerFunction = NewHostFunctionValue(
@@ -1311,6 +1320,7 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 				}
 				return nil
 			},
+			constructorType,
 		)
 	} else {
 		compositeInitializerFunction := interpreter.compositeInitializerFunction(declaration, lexicalScope)
@@ -1467,6 +1477,7 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 
 			return value
 		},
+		constructorType,
 	)
 
 	// Contract declarations declare a value / instance (singleton),
@@ -1545,13 +1556,14 @@ func (interpreter *Interpreter) declareEnumConstructor(
 		)
 	}
 
-	value := EnumConstructorFunction(caseValues, constructorNestedVariables)
+	value := EnumConstructorFunction(compositeType, caseValues, constructorNestedVariables)
 	variable.SetValue(value)
 
 	return lexicalScope, variable
 }
 
 func EnumConstructorFunction(
+	enumType *sema.CompositeType,
 	caseValues []*CompositeValue,
 	nestedVariables *StringVariableOrderedMap,
 ) *HostFunctionValue {
@@ -1583,6 +1595,7 @@ func EnumConstructorFunction(
 
 			return NewSomeValueOwningNonCopying(caseValue)
 		},
+		sema.EnumConstructorType(enumType),
 	)
 
 	constructor.NestedVariables = nestedVariables
@@ -2151,50 +2164,55 @@ func (interpreter *Interpreter) functionConditionsWrapper(
 	}
 
 	return func(inner FunctionValue) FunctionValue {
-		return NewHostFunctionValue(func(invocation Invocation) Value {
-			// Start a new activation record.
-			// Lexical scope: use the function declaration's activation record,
-			// not the current one (which would be dynamic scope)
-			interpreter.activations.PushNewWithParent(lexicalScope)
-			defer interpreter.activations.Pop()
+		return NewHostFunctionValue(
+			func(invocation Invocation) Value {
+				// Start a new activation record.
+				// Lexical scope: use the function declaration's activation record,
+				// not the current one (which would be dynamic scope)
+				interpreter.activations.PushNewWithParent(lexicalScope)
+				defer interpreter.activations.Pop()
 
-			if declaration.ParameterList != nil {
-				interpreter.bindParameterArguments(
-					declaration.ParameterList,
-					invocation.Arguments,
-				)
-			}
-
-			if invocation.Self != nil {
-				interpreter.declareVariable(sema.SelfIdentifier, invocation.Self)
-			}
-
-			// NOTE: The `inner` function might be nil.
-			//   This is the case if the conforming type did not declare a function.
-
-			var body func() controlReturn
-			if inner != nil {
-				// NOTE: It is important to wrap the invocation in a trampoline,
-				//  so the inner function isn't invoked here
-
-				body = func() controlReturn {
-
-					// NOTE: It is important to actually return the value returned
-					//   from the inner function, otherwise it is lost
-
-					returnValue := inner.invoke(invocation)
-					return functionReturn{returnValue}
+				if declaration.ParameterList != nil {
+					interpreter.bindParameterArguments(
+						declaration.ParameterList,
+						invocation.Arguments,
+					)
 				}
-			}
 
-			return interpreter.visitFunctionBody(
-				beforeStatements,
-				preConditions,
-				body,
-				rewrittenPostConditions,
-				returnType,
-			)
-		})
+				if invocation.Self != nil {
+					interpreter.declareVariable(sema.SelfIdentifier, invocation.Self)
+				}
+
+				// NOTE: The `inner` function might be nil.
+				//   This is the case if the conforming type did not declare a function.
+
+				var body func() controlReturn
+				if inner != nil {
+					// NOTE: It is important to wrap the invocation in a trampoline,
+					//  so the inner function isn't invoked here
+
+					body = func() controlReturn {
+
+						// NOTE: It is important to actually return the value returned
+						//   from the inner function, otherwise it is lost
+
+						returnValue := inner.invoke(invocation)
+						return functionReturn{returnValue}
+					}
+				}
+
+				return interpreter.visitFunctionBody(
+					beforeStatements,
+					preConditions,
+					body,
+					rewrittenPostConditions,
+					returnType,
+				)
+			},
+
+			// This is an internally created and used function, and can
+			// never pass around as a value. Hence, type is not required.
+			nil)
 	}
 }
 
@@ -2555,6 +2573,10 @@ var converterFunctionValues = func() []converterFunction {
 			func(invocation Invocation) Value {
 				return convert(invocation.Arguments[0])
 			},
+
+			// Converter functions are not pass around as values.
+			// Hence, type is not required.
+			nil,
 		)
 
 		addMember := func(name string, value Value) {
@@ -2603,6 +2625,9 @@ var typeFunction = NewHostFunctionValue(
 			Type: ConvertSemaToStaticType(ty),
 		}
 	},
+
+	// TODO: How to add when there are generics?
+	nil,
 )
 
 func defineTypeFunction(activation *VariableActivation) {
@@ -2622,6 +2647,11 @@ var stringFunction = func() Value {
 	functionValue := NewHostFunctionValue(
 		func(invocation Invocation) Value {
 			return NewStringValue("")
+		},
+		&sema.FunctionType{
+			ReturnTypeAnnotation: sema.NewTypeAnnotation(
+				sema.StringType,
+			),
 		},
 	)
 

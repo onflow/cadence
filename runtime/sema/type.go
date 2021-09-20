@@ -344,7 +344,7 @@ Returns the type of the value
 
 const ToStringFunctionName = "toString"
 
-var toStringFunctionType = &FunctionType{
+var ToStringFunctionType = &FunctionType{
 	ReturnTypeAnnotation: NewTypeAnnotation(
 		StringType,
 	),
@@ -411,7 +411,7 @@ func withBuiltinMembers(ty Type, members map[string]MemberResolver) map[string]M
 				return NewPublicFunctionMember(
 					ty,
 					identifier,
-					toStringFunctionType,
+					ToStringFunctionType,
 					toStringFunctionDocString,
 				)
 			},
@@ -4122,18 +4122,7 @@ func (t *DictionaryType) initializeMemberResolvers() {
 					return NewPublicFunctionMember(
 						t,
 						identifier,
-						&FunctionType{
-							Parameters: []*Parameter{
-								{
-									Label:          ArgumentLabelNotRequired,
-									Identifier:     "key",
-									TypeAnnotation: NewTypeAnnotation(t.KeyType),
-								},
-							},
-							ReturnTypeAnnotation: NewTypeAnnotation(
-								BoolType,
-							),
-						},
+						DictionaryContainsKeyFunctionType(t),
 						dictionaryTypeContainsKeyFunctionDocString,
 					)
 				},
@@ -4200,24 +4189,7 @@ func (t *DictionaryType) initializeMemberResolvers() {
 				Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
 					return NewPublicFunctionMember(t,
 						identifier,
-						&FunctionType{
-							Parameters: []*Parameter{
-								{
-									Identifier:     "key",
-									TypeAnnotation: NewTypeAnnotation(t.KeyType),
-								},
-								{
-									Label:          ArgumentLabelNotRequired,
-									Identifier:     "value",
-									TypeAnnotation: NewTypeAnnotation(t.ValueType),
-								},
-							},
-							ReturnTypeAnnotation: NewTypeAnnotation(
-								&OptionalType{
-									Type: t.ValueType,
-								},
-							),
-						},
+						DictionaryInsertFunctionType(t),
 						dictionaryTypeInsertFunctionDocString,
 					)
 				},
@@ -4227,25 +4199,65 @@ func (t *DictionaryType) initializeMemberResolvers() {
 				Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
 					return NewPublicFunctionMember(t,
 						identifier,
-						&FunctionType{
-							Parameters: []*Parameter{
-								{
-									Identifier:     "key",
-									TypeAnnotation: NewTypeAnnotation(t.KeyType),
-								},
-							},
-							ReturnTypeAnnotation: NewTypeAnnotation(
-								&OptionalType{
-									Type: t.ValueType,
-								},
-							),
-						},
+						DictionaryRemoveFunctionType(t),
 						dictionaryTypeRemoveFunctionDocString,
 					)
 				},
 			},
 		})
 	})
+}
+
+func DictionaryContainsKeyFunctionType(t *DictionaryType) *FunctionType {
+	return &FunctionType{
+		Parameters: []*Parameter{
+			{
+				Label:          ArgumentLabelNotRequired,
+				Identifier:     "key",
+				TypeAnnotation: NewTypeAnnotation(t.KeyType),
+			},
+		},
+		ReturnTypeAnnotation: NewTypeAnnotation(
+			BoolType,
+		),
+	}
+}
+
+func DictionaryInsertFunctionType(t *DictionaryType) *FunctionType {
+	return &FunctionType{
+		Parameters: []*Parameter{
+			{
+				Identifier:     "key",
+				TypeAnnotation: NewTypeAnnotation(t.KeyType),
+			},
+			{
+				Label:          ArgumentLabelNotRequired,
+				Identifier:     "value",
+				TypeAnnotation: NewTypeAnnotation(t.ValueType),
+			},
+		},
+		ReturnTypeAnnotation: NewTypeAnnotation(
+			&OptionalType{
+				Type: t.ValueType,
+			},
+		),
+	}
+}
+
+func DictionaryRemoveFunctionType(t *DictionaryType) *FunctionType {
+	return &FunctionType{
+		Parameters: []*Parameter{
+			{
+				Identifier:     "key",
+				TypeAnnotation: NewTypeAnnotation(t.KeyType),
+			},
+		},
+		ReturnTypeAnnotation: NewTypeAnnotation(
+			&OptionalType{
+				Type: t.ValueType,
+			},
+		),
+	}
 }
 
 func (*DictionaryType) isValueIndexableType() bool {
@@ -4518,13 +4530,13 @@ func (t *AddressType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
 
 const AddressTypeToBytesFunctionName = `toBytes`
 
-var ArrayTypeToBytesFunctionType = &FunctionType{
+var AddressTypeToBytesFunctionType = &FunctionType{
 	ReturnTypeAnnotation: NewTypeAnnotation(
 		ByteArrayType,
 	),
 }
 
-const arrayTypeToBytesFunctionDocString = `
+const addressTypeToBytesFunctionDocString = `
 Returns an array containing the byte representation of the address
 `
 
@@ -4535,8 +4547,8 @@ func (t *AddressType) GetMembers() map[string]MemberResolver {
 				return NewPublicFunctionMember(
 					t,
 					identifier,
-					ArrayTypeToBytesFunctionType,
-					arrayTypeToBytesFunctionDocString,
+					AddressTypeToBytesFunctionType,
+					addressTypeToBytesFunctionDocString,
 				)
 			},
 		},
