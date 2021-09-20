@@ -96,8 +96,9 @@ type Value interface {
 
 type ValueIndexableValue interface {
 	Value
-	Get(interpreter *Interpreter, getLocationRange func() LocationRange, key Value) Value
-	Set(interpreter *Interpreter, getLocationRange func() LocationRange, key Value, value Value)
+	GetKey(interpreter *Interpreter, getLocationRange func() LocationRange, key Value) Value
+	SetKey(interpreter *Interpreter, getLocationRange func() LocationRange, key Value, value Value)
+	RemoveKey(interpreter *Interpreter, getLocationRange func() LocationRange, key Value) Value
 }
 
 // MemberAccessibleValue
@@ -460,6 +461,7 @@ var _ Value = &StringValue{}
 var _ atree.Storable = &StringValue{}
 var _ EquatableValue = &StringValue{}
 var _ HashableValue = &StringValue{}
+var _ ValueIndexableValue = &StringValue{}
 
 func (v *StringValue) prepareGraphemes() {
 	if v.graphemes == nil {
@@ -574,7 +576,7 @@ func (v *StringValue) checkBoundsInclusiveLength(index int, getLocationRange fun
 	}
 }
 
-func (v *StringValue) Get(_ *Interpreter, getLocationRange func() LocationRange, key Value) Value {
+func (v *StringValue) GetKey(_ *Interpreter, getLocationRange func() LocationRange, key Value) Value {
 	index := key.(NumberValue).ToInt()
 	v.checkBounds(index, getLocationRange)
 
@@ -589,7 +591,11 @@ func (v *StringValue) Get(_ *Interpreter, getLocationRange func() LocationRange,
 	return NewStringValue(char)
 }
 
-func (v *StringValue) Set(_ *Interpreter, _ func() LocationRange, _ Value, _ Value) {
+func (*StringValue) SetKey(_ *Interpreter, _ func() LocationRange, _ Value, _ Value) {
+	panic(errors.NewUnreachableError())
+}
+
+func (*StringValue) RemoveKey(_ *Interpreter, _ func() LocationRange, _ Value) Value {
 	panic(errors.NewUnreachableError())
 }
 
@@ -763,6 +769,7 @@ func NewArrayValueWithAddress(
 var _ Value = &ArrayValue{}
 var _ atree.Value = &ArrayValue{}
 var _ EquatableValue = &ArrayValue{}
+var _ ValueIndexableValue = &ArrayValue{}
 
 func (*ArrayValue) IsValue() {}
 
@@ -839,12 +846,12 @@ func (v *ArrayValue) Concat(interpreter *Interpreter, getLocationRange func() Lo
 	return newArray
 }
 
-func (v *ArrayValue) Get(interpreter *Interpreter, getLocationRange func() LocationRange, key Value) Value {
+func (v *ArrayValue) GetKey(interpreter *Interpreter, getLocationRange func() LocationRange, key Value) Value {
 	index := key.(NumberValue).ToInt()
-	return v.GetIndex(interpreter, getLocationRange, index)
+	return v.Get(interpreter, getLocationRange, index)
 }
 
-func (v *ArrayValue) GetIndex(interpreter *Interpreter, getLocationRange func() LocationRange, index int) Value {
+func (v *ArrayValue) Get(interpreter *Interpreter, getLocationRange func() LocationRange, index int) Value {
 	storable, err := v.array.Get(uint64(index))
 	if err != nil {
 		if _, ok := err.(*atree.IndexOutOfBoundsError); ok {
@@ -861,12 +868,12 @@ func (v *ArrayValue) GetIndex(interpreter *Interpreter, getLocationRange func() 
 	return StoredValue(storable, interpreter.Storage)
 }
 
-func (v *ArrayValue) Set(interpreter *Interpreter, getLocationRange func() LocationRange, key Value, value Value) {
+func (v *ArrayValue) SetKey(interpreter *Interpreter, getLocationRange func() LocationRange, key Value, value Value) {
 	index := key.(NumberValue).ToInt()
-	v.SetIndex(interpreter, getLocationRange, index, value)
+	v.Set(interpreter, getLocationRange, index, value)
 }
 
-func (v *ArrayValue) SetIndex(interpreter *Interpreter, getLocationRange func() LocationRange, index int, element Value) {
+func (v *ArrayValue) Set(interpreter *Interpreter, getLocationRange func() LocationRange, index int, element Value) {
 
 	interpreter.checkContainerMutation(v.Type.ElementType(), element, getLocationRange)
 
@@ -947,6 +954,11 @@ func (v *ArrayValue) Insert(interpreter *Interpreter, getLocationRange func() Lo
 	if err != nil {
 		panic(ExternalError{err})
 	}
+}
+
+func (v *ArrayValue) RemoveKey(interpreter *Interpreter, getLocationRange func() LocationRange, key Value) Value {
+	index := key.(NumberValue).ToInt()
+	return v.Remove(interpreter, getLocationRange, index)
 }
 
 func (v *ArrayValue) Remove(interpreter *Interpreter, getLocationRange func() LocationRange, index int) Value {
@@ -1158,8 +1170,8 @@ func (v *ArrayValue) Equal(interpreter *Interpreter, getLocationRange func() Loc
 	}
 
 	for i := 0; i < count; i++ {
-		value := v.GetIndex(interpreter, getLocationRange, i)
-		otherValue := otherArray.GetIndex(interpreter, getLocationRange, i)
+		value := v.Get(interpreter, getLocationRange, i)
+		otherValue := otherArray.Get(interpreter, getLocationRange, i)
 
 		equatableValue, ok := value.(EquatableValue)
 		if !ok || !equatableValue.Equal(interpreter, getLocationRange, otherValue) {
@@ -7646,6 +7658,7 @@ func NewDictionaryValueWithAddress(
 var _ Value = &DictionaryValue{}
 var _ atree.Value = &DictionaryValue{}
 var _ EquatableValue = &DictionaryValue{}
+var _ ValueIndexableValue = &DictionaryValue{}
 
 func (*DictionaryValue) IsValue() {}
 
@@ -7746,7 +7759,7 @@ func (v *DictionaryValue) ContainsKey(
 	return true
 }
 
-func (v *DictionaryValue) GetKey(
+func (v *DictionaryValue) Get(
 	interpreter *Interpreter,
 	getLocationRange func() LocationRange,
 	keyValue Value,
@@ -7771,8 +7784,8 @@ func (v *DictionaryValue) GetKey(
 	return value, true
 }
 
-func (v *DictionaryValue) Get(interpreter *Interpreter, getLocationRange func() LocationRange, keyValue Value) Value {
-	value, ok := v.GetKey(interpreter, getLocationRange, keyValue)
+func (v *DictionaryValue) GetKey(interpreter *Interpreter, getLocationRange func() LocationRange, keyValue Value) Value {
+	value, ok := v.Get(interpreter, getLocationRange, keyValue)
 	if ok {
 		return NewSomeValueNonCopying(value)
 	}
@@ -7780,7 +7793,7 @@ func (v *DictionaryValue) Get(interpreter *Interpreter, getLocationRange func() 
 	return NilValue{}
 }
 
-func (v *DictionaryValue) Set(
+func (v *DictionaryValue) SetKey(
 	interpreter *Interpreter,
 	getLocationRange func() LocationRange,
 	keyValue Value,
@@ -7951,6 +7964,14 @@ func (v *DictionaryValue) Count() int {
 	return int(v.dictionary.Count())
 }
 
+func (v *DictionaryValue) RemoveKey(
+	interpreter *Interpreter,
+	getLocationRange func() LocationRange,
+	key Value,
+) Value {
+	return v.Remove(interpreter, getLocationRange, key)
+}
+
 func (v *DictionaryValue) Remove(
 	interpreter *Interpreter,
 	getLocationRange func() LocationRange,
@@ -8101,7 +8122,7 @@ func (v *DictionaryValue) Equal(interpreter *Interpreter, getLocationRange func(
 		}
 
 		otherValue, otherValueExists :=
-			otherDictionary.GetKey(
+			otherDictionary.Get(
 				interpreter,
 				getLocationRange,
 				MustConvertStoredValue(key),
@@ -8514,6 +8535,7 @@ type StorageReferenceValue struct {
 
 var _ Value = &StorageReferenceValue{}
 var _ EquatableValue = &StorageReferenceValue{}
+var _ ValueIndexableValue = &StorageReferenceValue{}
 
 func (*StorageReferenceValue) IsValue() {}
 
@@ -8622,7 +8644,7 @@ func (v *StorageReferenceValue) SetMember(
 	interpreter.setMember(self, getLocationRange, name, value)
 }
 
-func (v *StorageReferenceValue) Get(
+func (v *StorageReferenceValue) GetKey(
 	interpreter *Interpreter,
 	getLocationRange func() LocationRange,
 	key Value,
@@ -8639,10 +8661,10 @@ func (v *StorageReferenceValue) Get(
 	interpreter.checkResourceNotDestroyed(self, getLocationRange)
 
 	return self.(ValueIndexableValue).
-		Get(interpreter, getLocationRange, key)
+		GetKey(interpreter, getLocationRange, key)
 }
 
-func (v *StorageReferenceValue) Set(
+func (v *StorageReferenceValue) SetKey(
 	interpreter *Interpreter,
 	getLocationRange func() LocationRange,
 	key Value,
@@ -8660,7 +8682,27 @@ func (v *StorageReferenceValue) Set(
 	interpreter.checkResourceNotDestroyed(self, getLocationRange)
 
 	self.(ValueIndexableValue).
-		Set(interpreter, getLocationRange, key, value)
+		SetKey(interpreter, getLocationRange, key, value)
+}
+
+func (v *StorageReferenceValue) RemoveKey(
+	interpreter *Interpreter,
+	getLocationRange func() LocationRange,
+	key Value,
+) Value {
+	referencedValue := v.ReferencedValue(interpreter)
+	if referencedValue == nil {
+		panic(DereferenceError{
+			LocationRange: getLocationRange(),
+		})
+	}
+
+	self := *referencedValue
+
+	interpreter.checkResourceNotDestroyed(self, getLocationRange)
+
+	return self.(ValueIndexableValue).
+		RemoveKey(interpreter, getLocationRange, key)
 }
 
 func (v *StorageReferenceValue) Equal(_ *Interpreter, _ func() LocationRange, other Value) bool {
@@ -8743,6 +8785,7 @@ type EphemeralReferenceValue struct {
 
 var _ Value = &EphemeralReferenceValue{}
 var _ EquatableValue = &EphemeralReferenceValue{}
+var _ ValueIndexableValue = &EphemeralReferenceValue{}
 
 func (*EphemeralReferenceValue) IsValue() {}
 
@@ -8855,7 +8898,7 @@ func (v *EphemeralReferenceValue) SetMember(
 	interpreter.setMember(self, getLocationRange, name, value)
 }
 
-func (v *EphemeralReferenceValue) Get(
+func (v *EphemeralReferenceValue) GetKey(
 	interpreter *Interpreter,
 	getLocationRange func() LocationRange,
 	key Value,
@@ -8872,10 +8915,10 @@ func (v *EphemeralReferenceValue) Get(
 	interpreter.checkResourceNotDestroyed(self, getLocationRange)
 
 	return self.(ValueIndexableValue).
-		Get(interpreter, getLocationRange, key)
+		GetKey(interpreter, getLocationRange, key)
 }
 
-func (v *EphemeralReferenceValue) Set(
+func (v *EphemeralReferenceValue) SetKey(
 	interpreter *Interpreter,
 	getLocationRange func() LocationRange,
 	key Value,
@@ -8893,7 +8936,27 @@ func (v *EphemeralReferenceValue) Set(
 	interpreter.checkResourceNotDestroyed(self, getLocationRange)
 
 	self.(ValueIndexableValue).
-		Set(interpreter, getLocationRange, key, value)
+		SetKey(interpreter, getLocationRange, key, value)
+}
+
+func (v *EphemeralReferenceValue) RemoveKey(
+	interpreter *Interpreter,
+	getLocationRange func() LocationRange,
+	key Value,
+) Value {
+	referencedValue := v.ReferencedValue()
+	if referencedValue == nil {
+		panic(DereferenceError{
+			LocationRange: getLocationRange(),
+		})
+	}
+
+	self := *referencedValue
+
+	interpreter.checkResourceNotDestroyed(self, getLocationRange)
+
+	return self.(ValueIndexableValue).
+		RemoveKey(interpreter, getLocationRange, key)
 }
 
 func (v *EphemeralReferenceValue) Equal(_ *Interpreter, _ func() LocationRange, other Value) bool {

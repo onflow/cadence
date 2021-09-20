@@ -308,7 +308,7 @@ func TestDictionaryMutation(t *testing.T) {
 
 		require.Equal(t, 1, dictionary.Count())
 
-		val, present := dictionary.GetKey(
+		val, present := dictionary.Get(
 			inter,
 			interpreter.ReturnEmptyLocationRange,
 			interpreter.NewStringValue("foo"),
@@ -380,7 +380,7 @@ func TestDictionaryMutation(t *testing.T) {
 
 		require.Equal(t, 1, dictionary.Count())
 
-		val, present := dictionary.GetKey(
+		val, present := dictionary.Get(
 			inter,
 			interpreter.ReturnEmptyLocationRange,
 			interpreter.NewStringValue("foo"),

@@ -72,10 +72,10 @@ func TestInspectValue(t *testing.T) {
 
 	optionalValue := compositeValue.GetField(inter, ReturnEmptyLocationRange, "value").(*SomeValue)
 	arrayValue := optionalValue.Value.(*ArrayValue)
-	dictValue := arrayValue.GetIndex(inter, ReturnEmptyLocationRange, 0).(*DictionaryValue)
+	dictValue := arrayValue.Get(inter, ReturnEmptyLocationRange, 0).(*DictionaryValue)
 	dictValueKey := NewStringValue("hello world")
 
-	dictValueValue, _ := dictValue.GetKey(inter, ReturnEmptyLocationRange, dictValueKey)
+	dictValueValue, _ := dictValue.Get(inter, ReturnEmptyLocationRange, dictValueKey)
 
 	t.Run("dict", func(t *testing.T) {
 

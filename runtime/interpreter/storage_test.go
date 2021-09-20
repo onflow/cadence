@@ -150,7 +150,7 @@ func TestArrayStorage(t *testing.T) {
 		require.IsType(t, storedValue, &ArrayValue{})
 		storedArray := storedValue.(*ArrayValue)
 
-		actual := storedArray.GetIndex(inter, ReturnEmptyLocationRange, 0)
+		actual := storedArray.Get(inter, ReturnEmptyLocationRange, 0)
 
 		RequireValuesEqual(t, inter, element, actual)
 	})
@@ -249,7 +249,7 @@ func TestDictionaryStorage(t *testing.T) {
 		entryKey := NewStringValue("test")
 		entryValue := BoolValue(true)
 
-		value.Set(
+		value.SetKey(
 			inter,
 			ReturnEmptyLocationRange,
 			entryKey,
@@ -267,7 +267,7 @@ func TestDictionaryStorage(t *testing.T) {
 		require.IsType(t, storedValue, &DictionaryValue{})
 		storedDictionary := storedValue.(*DictionaryValue)
 
-		actual, ok := storedDictionary.GetKey(inter, ReturnEmptyLocationRange, entryKey)
+		actual, ok := storedDictionary.Get(inter, ReturnEmptyLocationRange, entryKey)
 		require.True(t, ok)
 
 		RequireValuesEqual(t, inter, entryValue, actual)
@@ -304,7 +304,7 @@ func TestDictionaryStorage(t *testing.T) {
 		require.NoError(t, err)
 		require.True(t, ok)
 
-		value.Set(
+		value.SetKey(
 			inter,
 			ReturnEmptyLocationRange,
 			NewStringValue("test"),

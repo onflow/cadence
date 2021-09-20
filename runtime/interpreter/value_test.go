@@ -86,7 +86,7 @@ func TestOwnerNewArray(t *testing.T) {
 		value,
 	)
 
-	value = array.GetIndex(inter, ReturnEmptyLocationRange, 0).(*CompositeValue)
+	value = array.Get(inter, ReturnEmptyLocationRange, 0).(*CompositeValue)
 
 	assert.Equal(t, common.Address{}, array.GetOwner())
 	assert.Equal(t, common.Address{}, value.GetOwner())
@@ -126,7 +126,7 @@ func TestOwnerArrayDeepCopy(t *testing.T) {
 	arrayCopy := array.DeepCopy(inter, atree.Address(newOwner))
 	array = arrayCopy.(*ArrayValue)
 
-	value = array.GetIndex(inter, ReturnEmptyLocationRange, 0).(*CompositeValue)
+	value = array.Get(inter, ReturnEmptyLocationRange, 0).(*CompositeValue)
 
 	assert.Equal(t, newOwner, array.GetOwner())
 	assert.Equal(t, newOwner, value.GetOwner())
@@ -164,7 +164,7 @@ func TestOwnerArrayElement(t *testing.T) {
 		value,
 	)
 
-	value = array.GetIndex(inter, ReturnEmptyLocationRange, 0).(*CompositeValue)
+	value = array.Get(inter, ReturnEmptyLocationRange, 0).(*CompositeValue)
 
 	assert.Equal(t, newOwner, array.GetOwner())
 	assert.Equal(t, newOwner, value.GetOwner())
@@ -203,15 +203,15 @@ func TestOwnerArraySetIndex(t *testing.T) {
 		value1,
 	)
 
-	value1 = array.GetIndex(inter, ReturnEmptyLocationRange, 0).(*CompositeValue)
+	value1 = array.Get(inter, ReturnEmptyLocationRange, 0).(*CompositeValue)
 
 	assert.Equal(t, newOwner, array.GetOwner())
 	assert.Equal(t, newOwner, value1.GetOwner())
 	assert.Equal(t, oldOwner, value2.GetOwner())
 
-	array.SetIndex(inter, ReturnEmptyLocationRange, 0, value2)
+	array.Set(inter, ReturnEmptyLocationRange, 0, value2)
 
-	value2 = array.GetIndex(inter, ReturnEmptyLocationRange, 0).(*CompositeValue)
+	value2 = array.Get(inter, ReturnEmptyLocationRange, 0).(*CompositeValue)
 
 	assert.Equal(t, newOwner, array.GetOwner())
 	assert.Equal(t, newOwner, value1.GetOwner())
@@ -254,7 +254,7 @@ func TestOwnerArrayAppend(t *testing.T) {
 
 	array.Append(inter, ReturnEmptyLocationRange, value)
 
-	value = array.GetIndex(inter, ReturnEmptyLocationRange, 0).(*CompositeValue)
+	value = array.Get(inter, ReturnEmptyLocationRange, 0).(*CompositeValue)
 
 	assert.Equal(t, newOwner, array.GetOwner())
 	assert.Equal(t, newOwner, value.GetOwner())
@@ -296,7 +296,7 @@ func TestOwnerArrayInsert(t *testing.T) {
 
 	array.Insert(inter, ReturnEmptyLocationRange, 0, value)
 
-	value = array.GetIndex(inter, ReturnEmptyLocationRange, 0).(*CompositeValue)
+	value = array.Get(inter, ReturnEmptyLocationRange, 0).(*CompositeValue)
 
 	assert.Equal(t, newOwner, array.GetOwner())
 	assert.Equal(t, newOwner, value.GetOwner())
@@ -378,7 +378,7 @@ func TestOwnerNewDictionary(t *testing.T) {
 
 	// NOTE: keyValue is string, has no owner
 
-	queriedValue, _ := dictionary.GetKey(inter, ReturnEmptyLocationRange, keyValue)
+	queriedValue, _ := dictionary.Get(inter, ReturnEmptyLocationRange, keyValue)
 	value = queriedValue.(*CompositeValue)
 
 	assert.Equal(t, common.Address{}, dictionary.GetOwner())
@@ -421,7 +421,7 @@ func TestOwnerDictionary(t *testing.T) {
 
 	// NOTE: keyValue is string, has no owner
 
-	queriedValue, _ := dictionary.GetKey(inter, ReturnEmptyLocationRange, keyValue)
+	queriedValue, _ := dictionary.Get(inter, ReturnEmptyLocationRange, keyValue)
 	value = queriedValue.(*CompositeValue)
 
 	assert.Equal(t, newOwner, dictionary.GetOwner())
@@ -466,7 +466,7 @@ func TestOwnerDictionaryCopy(t *testing.T) {
 
 	dictionaryCopy := copyResult.(*DictionaryValue)
 
-	queriedValue, _ := dictionaryCopy.GetKey(inter, ReturnEmptyLocationRange, keyValue)
+	queriedValue, _ := dictionaryCopy.Get(inter, ReturnEmptyLocationRange, keyValue)
 	value = queriedValue.(*CompositeValue)
 
 	assert.Equal(t, common.Address{}, dictionaryCopy.GetOwner())
@@ -509,14 +509,14 @@ func TestOwnerDictionarySetSome(t *testing.T) {
 	assert.Equal(t, newOwner, dictionary.GetOwner())
 	assert.Equal(t, oldOwner, value.GetOwner())
 
-	dictionary.Set(
+	dictionary.SetKey(
 		inter,
 		ReturnEmptyLocationRange,
 		keyValue,
 		NewSomeValueNonCopying(value),
 	)
 
-	queriedValue, _ := dictionary.GetKey(inter, ReturnEmptyLocationRange, keyValue)
+	queriedValue, _ := dictionary.Get(inter, ReturnEmptyLocationRange, keyValue)
 	value = queriedValue.(*CompositeValue)
 
 	assert.Equal(t, newOwner, dictionary.GetOwner())
@@ -567,7 +567,7 @@ func TestOwnerDictionaryInsertNonExisting(t *testing.T) {
 	)
 	assert.Equal(t, NilValue{}, existingValue)
 
-	queriedValue, _ := dictionary.GetKey(inter, ReturnEmptyLocationRange, keyValue)
+	queriedValue, _ := dictionary.Get(inter, ReturnEmptyLocationRange, keyValue)
 	value = queriedValue.(*CompositeValue)
 
 	assert.Equal(t, newOwner, dictionary.GetOwner())
@@ -622,7 +622,7 @@ func TestOwnerDictionaryRemove(t *testing.T) {
 	require.IsType(t, &SomeValue{}, existingValue)
 	value1 = existingValue.(*SomeValue).Value.(*CompositeValue)
 
-	queriedValue, _ := dictionary.GetKey(inter, ReturnEmptyLocationRange, keyValue)
+	queriedValue, _ := dictionary.Get(inter, ReturnEmptyLocationRange, keyValue)
 	value2 = queriedValue.(*CompositeValue)
 
 	assert.Equal(t, newOwner, dictionary.GetOwner())

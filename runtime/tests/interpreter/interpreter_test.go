@@ -4082,7 +4082,7 @@ func TestInterpretDictionaryIndexingAssignmentExisting(t *testing.T) {
 	actualValue := inter.Globals["x"].GetValue()
 	actualDict := actualValue.(*interpreter.DictionaryValue)
 
-	newValue := actualDict.Get(
+	newValue := actualDict.GetKey(
 		inter,
 		interpreter.ReturnEmptyLocationRange,
 		interpreter.NewStringValue("abc"),
@@ -4146,7 +4146,7 @@ func TestInterpretDictionaryIndexingAssignmentNew(t *testing.T) {
 		actualDict,
 	)
 
-	newValue := actualDict.Get(
+	newValue := actualDict.GetKey(
 		inter,
 		interpreter.ReturnEmptyLocationRange,
 		interpreter.NewStringValue("abc"),
@@ -4212,7 +4212,7 @@ func TestInterpretDictionaryIndexingAssignmentNil(t *testing.T) {
 		actualDict,
 	)
 
-	newValue := actualDict.Get(
+	newValue := actualDict.GetKey(
 		inter,
 		interpreter.ReturnEmptyLocationRange,
 		interpreter.NewStringValue("def"),
@@ -6695,7 +6695,7 @@ func TestInterpretSwapResourceDictionaryElementReturnDictionary(t *testing.T) {
 	)
 
 	foo := value.(*interpreter.DictionaryValue).
-		Get(inter, interpreter.ReturnEmptyLocationRange, interpreter.NewStringValue("foo"))
+		GetKey(inter, interpreter.ReturnEmptyLocationRange, interpreter.NewStringValue("foo"))
 
 	require.IsType(t,
 		&interpreter.SomeValue{},

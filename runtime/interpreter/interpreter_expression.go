@@ -71,10 +71,10 @@ func (interpreter *Interpreter) indexExpressionGetterSetter(indexExpression *ast
 	return getterSetter{
 		target: target,
 		get: func() Value {
-			return target.Get(interpreter, getLocationRange, indexingValue)
+			return target.GetKey(interpreter, getLocationRange, indexingValue)
 		},
 		set: func(value Value) {
-			target.Set(interpreter, getLocationRange, indexingValue, value)
+			target.SetKey(interpreter, getLocationRange, indexingValue, value)
 		},
 	}
 }
@@ -533,7 +533,7 @@ func (interpreter *Interpreter) VisitIndexExpression(expression *ast.IndexExpres
 	typedResult := interpreter.evalExpression(expression.TargetExpression).(ValueIndexableValue)
 	indexingValue := interpreter.evalExpression(expression.IndexingExpression)
 	getLocationRange := locationRangeGetter(interpreter.Location, expression)
-	return typedResult.Get(interpreter, getLocationRange, indexingValue)
+	return typedResult.GetKey(interpreter, getLocationRange, indexingValue)
 }
 
 func (interpreter *Interpreter) VisitConditionalExpression(expression *ast.ConditionalExpression) ast.Repr {
@@ -791,10 +791,11 @@ func (interpreter *Interpreter) evalPotentialResourceMoveIndexExpression(express
 		return interpreter.evalExpression(expression)
 	}
 
-	getterSetter := interpreter.indexExpressionGetterSetter(resourceMoveIndexExpression)
-	value := getterSetter.get()
-	getterSetter.set(NilValue{})
-	return value
+	target := interpreter.evalExpression(resourceMoveIndexExpression.TargetExpression).(ValueIndexableValue)
+	indexingValue := interpreter.evalExpression(resourceMoveIndexExpression.IndexingExpression)
+	getLocationRange := locationRangeGetter(interpreter.Location, resourceMoveIndexExpression)
+
+	return target.RemoveKey(interpreter, getLocationRange, indexingValue)
 }
 
 func (interpreter *Interpreter) resourceMoveIndexExpression(expression ast.Expression) *ast.IndexExpression {
