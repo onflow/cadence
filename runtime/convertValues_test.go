@@ -2196,7 +2196,7 @@ func TestRuntimeMalformedArgumentPassing(t *testing.T) {
 			exportedValue: cadence.NewArray([]cadence.Value{
 				malformedStruct1,
 			}),
-			expectedContainerMutationError: true,
+			expectedInvalidEntryPointArgumentErrType: &InvalidValueTypeError{},
 		},
 		{
 			label:         "Nested array with mismatching element",

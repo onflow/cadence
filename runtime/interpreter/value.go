@@ -746,29 +746,35 @@ func NewArrayValueWithAddress(
 
 	typeInfo := encodeArrayTypeInfo(arrayType)
 
-	array, err := atree.NewArray(
+	var index int
+	count := len(values)
+
+	array, err := atree.NewArrayFromBatchData(
 		interpreter.Storage,
 		atree.Address(address),
 		typeInfo,
+		func() (atree.Value, error) {
+			if index >= count {
+				return nil, nil
+			}
+
+			value := values[index]
+
+			index++
+
+			value = interpreter.TransferValue(value, nil, atree.Address(address))
+
+			return value, nil
+		},
 	)
 	if err != nil {
 		panic(ExternalError{err})
 	}
 
-	v := &ArrayValue{
+	return &ArrayValue{
 		Type:  arrayType,
 		array: array,
 	}
-
-	for _, value := range values {
-		v.Append(
-			interpreter,
-			ReturnEmptyLocationRange,
-			value,
-		)
-	}
-
-	return v
 }
 
 var _ Value = &ArrayValue{}
