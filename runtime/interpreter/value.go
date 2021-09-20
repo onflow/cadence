@@ -99,6 +99,7 @@ type ValueIndexableValue interface {
 	GetKey(interpreter *Interpreter, getLocationRange func() LocationRange, key Value) Value
 	SetKey(interpreter *Interpreter, getLocationRange func() LocationRange, key Value, value Value)
 	RemoveKey(interpreter *Interpreter, getLocationRange func() LocationRange, key Value) Value
+	InsertKey(interpreter *Interpreter, getLocationRange func() LocationRange, key Value, value Value)
 }
 
 // MemberAccessibleValue
@@ -595,6 +596,10 @@ func (*StringValue) SetKey(_ *Interpreter, _ func() LocationRange, _ Value, _ Va
 	panic(errors.NewUnreachableError())
 }
 
+func (*StringValue) InsertKey(_ *Interpreter, _ func() LocationRange, _ Value, _ Value) {
+	panic(errors.NewUnreachableError())
+}
+
 func (*StringValue) RemoveKey(_ *Interpreter, _ func() LocationRange, _ Value) Value {
 	panic(errors.NewUnreachableError())
 }
@@ -931,6 +936,11 @@ func (v *ArrayValue) AppendAll(interpreter *Interpreter, getLocationRange func()
 	other.Walk(func(value Value) {
 		v.Append(interpreter, getLocationRange, value)
 	})
+}
+
+func (v *ArrayValue) InsertKey(interpreter *Interpreter, getLocationRange func() LocationRange, key Value, value Value) {
+	index := key.(NumberValue).ToInt()
+	v.Insert(interpreter, getLocationRange, index, value)
 }
 
 func (v *ArrayValue) Insert(interpreter *Interpreter, getLocationRange func() LocationRange, index int, element Value) {
@@ -8008,6 +8018,14 @@ func (v *DictionaryValue) Remove(
 	return NewSomeValueNonCopying(existingValue)
 }
 
+func (v *DictionaryValue) InsertKey(
+	interpreter *Interpreter,
+	getLocationRange func() LocationRange,
+	key, value Value,
+) {
+	v.SetKey(interpreter, getLocationRange, key, value)
+}
+
 func (v *DictionaryValue) Insert(
 	interpreter *Interpreter,
 	getLocationRange func() LocationRange,
@@ -8021,7 +8039,12 @@ func (v *DictionaryValue) Insert(
 
 	valueComparator := newValueComparator(interpreter, getLocationRange)
 
-	existingValueStorable, err := v.dictionary.Set(valueComparator, interpreter.getHashInput, keyValue, value)
+	existingValueStorable, err := v.dictionary.Set(
+		valueComparator,
+		interpreter.getHashInput,
+		keyValue,
+		value,
+	)
 	if err != nil {
 		panic(ExternalError{err})
 	}
@@ -8685,6 +8708,27 @@ func (v *StorageReferenceValue) SetKey(
 		SetKey(interpreter, getLocationRange, key, value)
 }
 
+func (v *StorageReferenceValue) InsertKey(
+	interpreter *Interpreter,
+	getLocationRange func() LocationRange,
+	key Value,
+	value Value,
+) {
+	referencedValue := v.ReferencedValue(interpreter)
+	if referencedValue == nil {
+		panic(DereferenceError{
+			LocationRange: getLocationRange(),
+		})
+	}
+
+	self := *referencedValue
+
+	interpreter.checkResourceNotDestroyed(self, getLocationRange)
+
+	self.(ValueIndexableValue).
+		InsertKey(interpreter, getLocationRange, key, value)
+}
+
 func (v *StorageReferenceValue) RemoveKey(
 	interpreter *Interpreter,
 	getLocationRange func() LocationRange,
@@ -8937,6 +8981,27 @@ func (v *EphemeralReferenceValue) SetKey(
 
 	self.(ValueIndexableValue).
 		SetKey(interpreter, getLocationRange, key, value)
+}
+
+func (v *EphemeralReferenceValue) InsertKey(
+	interpreter *Interpreter,
+	getLocationRange func() LocationRange,
+	key Value,
+	value Value,
+) {
+	referencedValue := v.ReferencedValue()
+	if referencedValue == nil {
+		panic(DereferenceError{
+			LocationRange: getLocationRange(),
+		})
+	}
+
+	self := *referencedValue
+
+	interpreter.checkResourceNotDestroyed(self, getLocationRange)
+
+	self.(ValueIndexableValue).
+		InsertKey(interpreter, getLocationRange, key, value)
 }
 
 func (v *EphemeralReferenceValue) RemoveKey(

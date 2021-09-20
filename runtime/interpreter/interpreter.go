@@ -65,7 +65,7 @@ var emptyFunctionType = &sema.FunctionType{
 
 type getterSetter struct {
 	target Value
-	get    func() Value
+	get    func(allowMissing bool) Value
 	set    func(Value)
 }
 
@@ -1140,11 +1140,13 @@ func (interpreter *Interpreter) visitAssignment(
 	// otherwise panic
 
 	if transferOperation == ast.TransferOperationMoveForced {
-		target := getterSetter.get()
 
-		// The value may be a NilValue or nil.
-		// The latter case exists when the force-move assignment is the initialization of a field
-		// in an initializer, in which case there is no prior value for the field.
+		// If the force-move assignment is used for the initialization of a field,
+		// then there is no prior value for the field, so allow missing
+
+		const allowMissing = true
+
+		target := getterSetter.get(allowMissing)
 
 		if _, ok := target.(NilValue); !ok && target != nil {
 			getLocationRange := locationRangeGetter(interpreter.Location, position)

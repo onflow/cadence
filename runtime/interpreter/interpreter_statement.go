@@ -348,7 +348,8 @@ func (interpreter *Interpreter) visitVariableDeclaration(
 	valueType := interpreter.Program.Elaboration.VariableDeclarationValueTypes[declaration]
 	secondValueType := interpreter.Program.Elaboration.VariableDeclarationSecondValueTypes[declaration]
 
-	result := interpreter.evalPotentialResourceMoveIndexExpression(declaration.Value)
+	const allowMissing = false
+	result := interpreter.assignmentGetterSetter(declaration.Value).get(allowMissing)
 	if result == nil {
 		panic(errors.NewUnreachableError())
 	}
@@ -398,23 +399,19 @@ func (interpreter *Interpreter) VisitSwapStatement(swap *ast.SwapStatement) ast.
 	leftType := interpreter.Program.Elaboration.SwapStatementLeftTypes[swap]
 	rightType := interpreter.Program.Elaboration.SwapStatementRightTypes[swap]
 
+	const allowMissing = false
+
 	// Evaluate the left expression
 	leftGetterSetter := interpreter.assignmentGetterSetter(swap.Left)
-	leftValue := leftGetterSetter.get()
+	leftValue := leftGetterSetter.get(allowMissing)
 	interpreter.checkSwapValue(leftValue, swap.Left)
-	if interpreter.resourceMoveIndexExpression(swap.Left) != nil {
-		leftGetterSetter.set(NilValue{})
-	}
 
 	// Evaluate the right expression
 	rightGetterSetter := interpreter.assignmentGetterSetter(swap.Right)
-	rightValue := rightGetterSetter.get()
+	rightValue := rightGetterSetter.get(allowMissing)
 	interpreter.checkSwapValue(rightValue, swap.Right)
-	if interpreter.resourceMoveIndexExpression(swap.Right) != nil {
-		rightGetterSetter.set(NilValue{})
-	}
 
-	// Add right value to left target
+	// Set right value to left target
 	// and left value to right target
 
 	getLocationRange := locationRangeGetter(interpreter.Location, swap.Right)

@@ -8029,9 +8029,6 @@ func TestInterpretReferenceUseAfterCopy(t *testing.T) {
 
 	t.Run("resource array, get/set", func(t *testing.T) {
 
-		// TODO: fix swap (interpreter.Interpreter.VisitSwapStatement)
-		t.Skip("TODO")
-
 		t.Parallel()
 
 		inter := parseCheckAndInterpret(t, `
