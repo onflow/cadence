@@ -6992,6 +6992,8 @@ type CompositeValue struct {
 	Destructor          FunctionValue
 	Stringer            func(seenReferences SeenReferences) string
 	isDestroyed         bool
+	typeID              common.TypeID
+	dynamicType         DynamicType
 }
 
 type ComputedField func(*Interpreter) Value
@@ -7069,10 +7071,18 @@ func (v *CompositeValue) Walk(walkChild func(Value)) {
 }
 
 func (v *CompositeValue) DynamicType(interpreter *Interpreter, _ SeenReferences) DynamicType {
-	staticType := interpreter.getCompositeType(v.Location, v.QualifiedIdentifier)
-	return CompositeDynamicType{
-		StaticType: staticType,
+	if v.dynamicType == nil {
+		var staticType sema.Type
+		if v.Location == nil {
+			staticType = interpreter.getNativeCompositeType(v.QualifiedIdentifier)
+		} else {
+			staticType = interpreter.getUserCompositeType(v.Location, v.TypeID())
+		}
+		v.dynamicType = CompositeDynamicType{
+			StaticType: staticType,
+		}
 	}
+	return v.dynamicType
 }
 
 func (v *CompositeValue) StaticType() StaticType {
@@ -7367,12 +7377,15 @@ func (v *CompositeValue) HashInput(interpreter *Interpreter, scratch []byte) []b
 }
 
 func (v *CompositeValue) TypeID() common.TypeID {
-	location := v.Location
-	if location == nil {
-		return common.TypeID(v.QualifiedIdentifier)
+	if v.typeID == "" {
+		location := v.Location
+		qualifiedIdentifier := v.QualifiedIdentifier
+		if location == nil {
+			return common.TypeID(qualifiedIdentifier)
+		}
+		v.typeID = location.TypeID(qualifiedIdentifier)
 	}
-
-	return location.TypeID(v.QualifiedIdentifier)
+	return v.typeID
 }
 
 func (v *CompositeValue) ConformsToDynamicType(

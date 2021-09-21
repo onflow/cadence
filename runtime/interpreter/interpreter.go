@@ -3332,18 +3332,15 @@ func (interpreter *Interpreter) GetContractComposite(contractLocation common.Add
 
 func (interpreter *Interpreter) getCompositeType(location common.Location, qualifiedIdentifier string) *sema.CompositeType {
 	if location == nil {
-		ty := sema.NativeCompositeTypes[qualifiedIdentifier]
-		if ty == nil {
-			panic(TypeLoadingError{
-				TypeID: common.TypeID(qualifiedIdentifier),
-			})
-		}
-
-		return ty
+		return interpreter.getNativeCompositeType(qualifiedIdentifier)
 	}
 
 	typeID := location.TypeID(qualifiedIdentifier)
 
+	return interpreter.getUserCompositeType(location, typeID)
+}
+
+func (interpreter *Interpreter) getUserCompositeType(location common.Location, typeID common.TypeID) *sema.CompositeType {
 	elaboration := interpreter.getElaboration(location)
 	if elaboration == nil {
 		panic(TypeLoadingError{
@@ -3355,6 +3352,17 @@ func (interpreter *Interpreter) getCompositeType(location common.Location, quali
 	if ty == nil {
 		panic(TypeLoadingError{
 			TypeID: typeID,
+		})
+	}
+
+	return ty
+}
+
+func (interpreter *Interpreter) getNativeCompositeType(qualifiedIdentifier string) *sema.CompositeType {
+	ty := sema.NativeCompositeTypes[qualifiedIdentifier]
+	if ty == nil {
+		panic(TypeLoadingError{
+			TypeID: common.TypeID(qualifiedIdentifier),
 		})
 	}
 
