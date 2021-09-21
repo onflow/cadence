@@ -121,12 +121,6 @@ func (interpreter *Interpreter) memberExpressionGetterSetter(memberExpression *a
 				}
 			}
 
-			interpreter.checkMemberAccessedType(
-				memberExpression,
-				target,
-				getLocationRange,
-			)
-
 			resultValue := interpreter.getMember(target, getLocationRange, identifier)
 			if resultValue == nil && !allowMissing {
 				panic(MissingMemberValueError{
@@ -512,37 +506,6 @@ func (interpreter *Interpreter) VisitDictionaryExpression(expression *ast.Dictio
 func (interpreter *Interpreter) VisitMemberExpression(expression *ast.MemberExpression) ast.Repr {
 	const allowMissing = false
 	return interpreter.memberExpressionGetterSetter(expression).get(allowMissing)
-}
-
-// checkMemberAccessedType checks that the dynamic type of the accessed value
-// of the member access matches the expected static type
-//
-func (interpreter *Interpreter) checkMemberAccessedType(
-	memberExpression *ast.MemberExpression,
-	self Value,
-	getLocationRange func() LocationRange,
-) {
-	memberInfo := interpreter.Program.Elaboration.MemberExpressionMemberInfos[memberExpression]
-	accessedType := memberInfo.AccessedType
-	if memberExpression.Optional {
-		accessedType = accessedType.(*sema.OptionalType).Type
-	}
-
-	switch self := self.(type) {
-	case *HostFunctionValue, *ArrayValue, *DictionaryValue:
-		// TODO: dynamic type information incomplete
-		break
-	case *CompositeValue:
-		// Ignore for example transactions
-		// TODO: find a better solution to declare/detect transactions
-		if self.Kind == common.CompositeKindUnknown ||
-			self.QualifiedIdentifier == "" {
-			break
-		}
-		interpreter.ExpectType(self, accessedType, getLocationRange)
-	default:
-		interpreter.ExpectType(self, accessedType, getLocationRange)
-	}
 }
 
 func (interpreter *Interpreter) VisitIndexExpression(expression *ast.IndexExpression) ast.Repr {

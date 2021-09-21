@@ -1137,19 +1137,10 @@ func (interpreter *Interpreter) visitAssignment(
 	valueExpression ast.Expression, valueType sema.Type,
 	position ast.HasPosition,
 ) {
-
 	// First evaluate the target, which results in a getter/setter function pair
 	getterSetter := interpreter.assignmentGetterSetter(targetExpression)
 
 	getLocationRange := locationRangeGetter(interpreter.Location, position)
-
-	if targetMemberExpression, ok := targetExpression.(*ast.MemberExpression); ok {
-		interpreter.checkMemberAccessedType(
-			targetMemberExpression,
-			getterSetter.target,
-			getLocationRange,
-		)
-	}
 
 	// If the assignment is a forced move,
 	// ensure that the target is nil,
