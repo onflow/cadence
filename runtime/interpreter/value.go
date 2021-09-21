@@ -26,6 +26,7 @@ import (
 	"math/big"
 	"strings"
 
+	"github.com/fxamacker/cbor/v2"
 	"github.com/onflow/atree"
 	"github.com/rivo/uniseg"
 	"golang.org/x/text/unicode/norm"
@@ -7011,12 +7012,34 @@ func NewCompositeValue(
 	fields []CompositeField,
 	address common.Address,
 ) *CompositeValue {
-
-	typeInfo := encodeCompositeOrderedMapTypeInfo(
+	return NewCompositeValueWithTypeInfo(
+		interpreter,
 		location,
 		qualifiedIdentifier,
 		kind,
+		fields,
+		address,
+		nil,
 	)
+}
+
+func NewCompositeValueWithTypeInfo(
+	interpreter *Interpreter,
+	location common.Location,
+	qualifiedIdentifier string,
+	kind common.CompositeKind,
+	fields []CompositeField,
+	address common.Address,
+	typeInfo cbor.RawMessage,
+) *CompositeValue {
+
+	if typeInfo == nil {
+		typeInfo = encodeCompositeOrderedMapTypeInfo(
+			location,
+			qualifiedIdentifier,
+			kind,
+		)
+	}
 
 	dictionary, err := atree.NewMap(
 		interpreter.Storage,
@@ -7505,13 +7528,14 @@ func (v *CompositeValue) DeepCopy(interpreter *Interpreter, address atree.Addres
 		)
 	})
 
-	newValue := NewCompositeValue(
+	newValue := NewCompositeValueWithTypeInfo(
 		interpreter,
 		v.Location,
 		v.QualifiedIdentifier,
 		v.Kind,
 		newFields,
 		common.Address(address),
+		v.dictionary.Type(),
 	)
 
 	newValue.InjectedFields = v.InjectedFields
@@ -9275,6 +9299,15 @@ func (v AddressValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 	return v, nil
 }
 
+var authAccountLocation common.Location = nil
+var authAccountQualifiedIdentifier = sema.AuthAccountType.QualifiedIdentifier()
+var authAccountCompositeKind = sema.AuthAccountType.Kind
+var authAccountTypeInfo = encodeCompositeOrderedMapTypeInfo(
+	authAccountLocation,
+	authAccountQualifiedIdentifier,
+	authAccountCompositeKind,
+)
+
 // NewAuthAccountValue constructs an auth account value.
 func NewAuthAccountValue(
 	interpreter *Interpreter,
@@ -9318,16 +9351,16 @@ func NewAuthAccountValue(
 
 	// Computed fields
 	computedFields := map[string]ComputedField{
-		sema.AuthAccountBalanceField: func(*Interpreter) Value {
+		sema.AuthAccountBalanceField: func(_ *Interpreter) Value {
 			return accountBalanceGet()
 		},
-		sema.AuthAccountAvailableBalanceField: func(*Interpreter) Value {
+		sema.AuthAccountAvailableBalanceField: func(_ *Interpreter) Value {
 			return accountAvailableBalanceGet()
 		},
 		sema.AuthAccountStorageUsedField: func(inter *Interpreter) Value {
 			return storageUsedGet(inter)
 		},
-		sema.AuthAccountStorageCapacityField: func(*Interpreter) Value {
+		sema.AuthAccountStorageCapacityField: func(_ *Interpreter) Value {
 			return storageCapacityGet()
 		},
 		sema.AuthAccountLoadField: func(inter *Interpreter) Value {
@@ -9357,13 +9390,14 @@ func NewAuthAccountValue(
 		return fmt.Sprintf("AuthAccount(%s)", address)
 	}
 
-	v := NewCompositeValue(
+	v := NewCompositeValueWithTypeInfo(
 		interpreter,
-		nil,
-		sema.AuthAccountType.QualifiedIdentifier(),
-		sema.AuthAccountType.Kind,
+		authAccountLocation,
+		authAccountQualifiedIdentifier,
+		authAccountCompositeKind,
 		fields,
 		common.Address{},
+		authAccountTypeInfo,
 	)
 
 	v.ComputedFields = computedFields
@@ -9408,6 +9442,15 @@ func accountGetCapabilityFunction(addressValue AddressValue, pathType sema.Type)
 	)
 }
 
+var publicAccountLocation common.Location = nil
+var publicAccountQualifiedIdentifier = sema.PublicAccountType.QualifiedIdentifier()
+var publicAccountCompositeKind = sema.PublicAccountType.Kind
+var publicAccountTypeInfo = encodeCompositeOrderedMapTypeInfo(
+	publicAccountLocation,
+	publicAccountQualifiedIdentifier,
+	publicAccountCompositeKind,
+)
+
 // NewPublicAccountValue constructs a public account value.
 func NewPublicAccountValue(
 	interpreter *Interpreter,
@@ -9441,16 +9484,16 @@ func NewPublicAccountValue(
 
 	// Computed fields
 	computedFields := map[string]ComputedField{
-		sema.PublicAccountBalanceField: func(*Interpreter) Value {
+		sema.PublicAccountBalanceField: func(_ *Interpreter) Value {
 			return accountBalanceGet()
 		},
-		sema.PublicAccountAvailableBalanceField: func(*Interpreter) Value {
+		sema.PublicAccountAvailableBalanceField: func(_ *Interpreter) Value {
 			return accountAvailableBalanceGet()
 		},
 		sema.PublicAccountStorageUsedField: func(inter *Interpreter) Value {
 			return storageUsedGet(inter)
 		},
-		sema.PublicAccountStorageCapacityField: func(*Interpreter) Value {
+		sema.PublicAccountStorageCapacityField: func(_ *Interpreter) Value {
 			return storageCapacityGet()
 		},
 		sema.PublicAccountGetTargetLinkField: func(inter *Interpreter) Value {
@@ -9463,13 +9506,14 @@ func NewPublicAccountValue(
 		return fmt.Sprintf("PublicAccount(%s)", address)
 	}
 
-	v := NewCompositeValue(
+	v := NewCompositeValueWithTypeInfo(
 		interpreter,
-		nil,
-		sema.PublicAccountType.QualifiedIdentifier(),
-		sema.PublicAccountType.Kind,
+		publicAccountLocation,
+		publicAccountQualifiedIdentifier,
+		publicAccountCompositeKind,
 		fields,
 		common.Address{},
+		publicAccountTypeInfo,
 	)
 
 	v.ComputedFields = computedFields
@@ -9909,6 +9953,15 @@ func (v LinkValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 	return v, nil
 }
 
+var accountKeyLocation common.Location = nil
+var accountKeyQualifiedIdentifier = sema.AccountKeyType.QualifiedIdentifier()
+var accountKeyCompositeKind = sema.AccountKeyType.Kind
+var accountKeyTypeInfo = encodeCompositeOrderedMapTypeInfo(
+	accountKeyLocation,
+	accountKeyQualifiedIdentifier,
+	accountKeyCompositeKind,
+)
+
 // NewAccountKeyValue constructs an AccountKey value.
 func NewAccountKeyValue(
 	interpreter *Interpreter,
@@ -9941,15 +9994,25 @@ func NewAccountKeyValue(
 		},
 	}
 
-	return NewCompositeValue(
+	return NewCompositeValueWithTypeInfo(
 		interpreter,
-		nil,
-		sema.AccountKeyType.QualifiedIdentifier(),
-		sema.AccountKeyType.Kind,
+		accountKeyLocation,
+		accountKeyQualifiedIdentifier,
+		accountKeyCompositeKind,
 		fields,
 		common.Address{},
+		accountKeyTypeInfo,
 	)
 }
+
+var publicKeyLocation common.Location = nil
+var publicKeyQualifiedIdentifier = sema.PublicKeyType.QualifiedIdentifier()
+var publicKeyCompositeKind = sema.PublicKeyType.Kind
+var publicKeyTypeInfo = encodeCompositeOrderedMapTypeInfo(
+	publicKeyLocation,
+	publicKeyQualifiedIdentifier,
+	publicKeyCompositeKind,
+)
 
 // NewPublicKeyValue constructs a PublicKey value.
 func NewPublicKeyValue(
@@ -9979,13 +10042,14 @@ func NewPublicKeyValue(
 		sema.PublicKeyVerifyFunction: publicKeyVerifyFunction,
 	}
 
-	publicKeyValue := NewCompositeValue(
+	publicKeyValue := NewCompositeValueWithTypeInfo(
 		interpreter,
-		nil,
-		sema.PublicKeyType.QualifiedIdentifier(),
-		sema.PublicKeyType.Kind,
+		publicKeyLocation,
+		publicKeyQualifiedIdentifier,
+		publicKeyCompositeKind,
 		fields,
 		common.Address{},
+		publicKeyTypeInfo,
 	)
 
 	publicKeyValue.ComputedFields = computedFields
@@ -10060,6 +10124,15 @@ var publicKeyVerifyFunction = NewHostFunctionValue(
 	},
 )
 
+var authAccountKeysLocation common.Location = nil
+var authAccountKeysQualifiedIdentifier = sema.AuthAccountKeysType.QualifiedIdentifier()
+var authAccountKeysCompositeKind = sema.AuthAccountKeysType.Kind
+var authAccountKeysTypeInfo = encodeCompositeOrderedMapTypeInfo(
+	authAccountKeysLocation,
+	authAccountKeysQualifiedIdentifier,
+	authAccountKeysCompositeKind,
+)
+
 // NewAuthAccountKeysValue constructs a AuthAccount.Keys value.
 func NewAuthAccountKeysValue(
 	interpreter *Interpreter,
@@ -10083,15 +10156,25 @@ func NewAuthAccountKeysValue(
 		},
 	}
 
-	return NewCompositeValue(
+	return NewCompositeValueWithTypeInfo(
 		interpreter,
-		nil,
-		sema.AuthAccountKeysType.QualifiedIdentifier(),
-		sema.AuthAccountKeysType.Kind,
+		authAccountKeysLocation,
+		authAccountKeysQualifiedIdentifier,
+		authAccountKeysCompositeKind,
 		fields,
 		common.Address{},
+		authAccountKeysTypeInfo,
 	)
 }
+
+var publicAccountKeysLocation common.Location = nil
+var publicAccountKeysQualifiedIdentifier = sema.PublicAccountKeysType.QualifiedIdentifier()
+var publicAccountKeysCompositeKind = sema.PublicAccountKeysType.Kind
+var publicAccountKeysTypeInfo = encodeCompositeOrderedMapTypeInfo(
+	publicAccountKeysLocation,
+	publicAccountKeysQualifiedIdentifier,
+	publicAccountKeysCompositeKind,
+)
 
 // NewPublicAccountKeysValue constructs a PublicAccount.Keys value.
 func NewPublicAccountKeysValue(
@@ -10106,53 +10189,13 @@ func NewPublicAccountKeysValue(
 		},
 	}
 
-	return NewCompositeValue(
+	return NewCompositeValueWithTypeInfo(
 		interpreter,
-		nil,
-		sema.PublicAccountKeysType.QualifiedIdentifier(),
-		sema.PublicAccountKeysType.Kind,
+		publicAccountKeysLocation,
+		publicAccountKeysQualifiedIdentifier,
+		publicAccountKeysCompositeKind,
 		fields,
 		common.Address{},
+		publicAccountKeysTypeInfo,
 	)
-}
-
-// PublicAccountContractsValue
-
-func NewPublicAccountContractsValue(
-	interpreter *Interpreter,
-	address AddressValue,
-	getFunction FunctionValue,
-	namesGetter func(interpreter *Interpreter) *ArrayValue,
-) *CompositeValue {
-
-	fields := []CompositeField{
-		{
-			Name:  sema.PublicAccountContractsTypeGetFunctionName,
-			Value: getFunction,
-		},
-	}
-
-	computedFields := map[string]ComputedField{
-		sema.PublicAccountContractsTypeNamesField: func(interpreter *Interpreter) Value {
-			return namesGetter(interpreter)
-		},
-	}
-
-	stringer := func(_ SeenReferences) string {
-		return fmt.Sprintf("PublicAccount.Contracts(%s)", address)
-	}
-
-	v := NewCompositeValue(
-		interpreter,
-		nil,
-		sema.PublicAccountContractsType.QualifiedIdentifier(),
-		sema.PublicAccountContractsType.Kind,
-		fields,
-		common.Address{},
-	)
-
-	v.Stringer = stringer
-	v.ComputedFields = computedFields
-
-	return v
 }
