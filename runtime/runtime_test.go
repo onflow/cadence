@@ -32,6 +32,7 @@ import (
 	"time"
 
 	"github.com/onflow/atree"
+	opentracing "github.com/opentracing/opentracing-go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -151,6 +152,7 @@ type testRuntimeInterface struct {
 	implementationDebugLog     func(message string) error
 	validatePublicKey          func(publicKey *PublicKey) (bool, error)
 	getAccountContractNames    func(address Address) ([]string, error)
+	recordTrace                func(operation string, location common.Location, duration time.Duration, logs []opentracing.LogRecord)
 }
 
 // testRuntimeInterface should implement Interface
@@ -423,6 +425,13 @@ func (i *testRuntimeInterface) GetAccountContractNames(address Address) ([]strin
 	return i.getAccountContractNames(address)
 }
 
+func (i *testRuntimeInterface) RecordTrace(operation string, location common.Location, duration time.Duration, logs []opentracing.LogRecord) {
+	if i.recordTrace == nil {
+		return
+	}
+	i.recordTrace(operation, location, duration, logs)
+}
+
 func TestRuntimeImport(t *testing.T) {
 
 	t.Parallel()
@@ -430,22 +439,22 @@ func TestRuntimeImport(t *testing.T) {
 	runtime := NewInterpreterRuntime()
 
 	importedScript := []byte(`
-      pub fun answer(): Int {
-          return 42
-      }
-    `)
+	   pub fun answer(): Int {
+		   return 42
+	   }
+	 `)
 
 	script := []byte(`
-      import "imported"
-
-      pub fun main(): Int {
-          let answer = answer()
-          if answer != 42 {
-            panic("?!")
-          }
-          return answer
-        }
-    `)
+	   import "imported"
+ 
+	   pub fun main(): Int {
+		   let answer = answer()
+		   if answer != 42 {
+			 panic("?!")
+		   }
+		   return answer
+		 }
+	 `)
 
 	var checkCount int
 
@@ -491,22 +500,22 @@ func TestRuntimeConcurrentImport(t *testing.T) {
 	runtime := NewInterpreterRuntime()
 
 	importedScript := []byte(`
-      pub fun answer(): Int {
-          return 42
-      }
-    `)
+	   pub fun answer(): Int {
+		   return 42
+	   }
+	 `)
 
 	script := []byte(`
-      import "imported"
-
-      pub fun main(): Int {
-          let answer = answer()
-          if answer != 42 {
-            panic("?!")
-          }
-          return answer
-        }
-    `)
+	   import "imported"
+ 
+	   pub fun main(): Int {
+		   let answer = answer()
+		   if answer != 42 {
+			 panic("?!")
+		   }
+		   return answer
+		 }
+	 `)
 
 	var checkCount uint64
 	var programsLock sync.RWMutex
@@ -587,11 +596,11 @@ func TestRuntimeProgramSetAndGet(t *testing.T) {
 	programsHits := make(map[common.LocationID]bool)
 
 	importedScript := []byte(`
-      transaction {
-          prepare() {}
-          execute {}
-      }
-	`)
+	   transaction {
+		   prepare() {}
+		   execute {}
+	   }
+	 `)
 	importedScriptLocation := common.StringLocation("imported")
 
 	runtime := NewInterpreterRuntime()
@@ -621,13 +630,13 @@ func TestRuntimeProgramSetAndGet(t *testing.T) {
 	t.Run("empty programs, miss", func(t *testing.T) {
 
 		script := []byte(`
-          import "imported"
-
-          transaction {
-              prepare() {}
-              execute {}
-          }
-		`)
+		   import "imported"
+ 
+		   transaction {
+			   prepare() {}
+			   execute {}
+		   }
+		 `)
 		scriptLocation := common.StringLocation("placeholder")
 
 		// Initial call, should parse script, store program.
@@ -652,13 +661,13 @@ func TestRuntimeProgramSetAndGet(t *testing.T) {
 	t.Run("program previously parsed, hit", func(t *testing.T) {
 
 		script := []byte(`
-          import "imported"
-
-          transaction {
-              prepare() {}
-              execute {}
-          }
-		`)
+		   import "imported"
+ 
+		   transaction {
+			   prepare() {}
+			   execute {}
+		   }
+		 `)
 		scriptLocation := common.StringLocation("placeholder")
 
 		// Call a second time to hit stored programs.
@@ -678,13 +687,13 @@ func TestRuntimeProgramSetAndGet(t *testing.T) {
 	t.Run("imported program previously parsed, hit", func(t *testing.T) {
 
 		script := []byte(`
-          import "imported"
-
-          transaction {
-              prepare() {}
-              execute {}
-          }
-		`)
+		   import "imported"
+ 
+		   transaction {
+			   prepare() {}
+			   execute {}
+		   }
+		 `)
 		scriptLocation := common.StringLocation("placeholder")
 
 		// Call a second time to hit the stored programs
@@ -719,11 +728,11 @@ func TestRuntimeInvalidTransactionArgumentAccount(t *testing.T) {
 	runtime := NewInterpreterRuntime()
 
 	script := []byte(`
-      transaction {
-        prepare() {}
-        execute {}
-      }
-    `)
+	   transaction {
+		 prepare() {}
+		 execute {}
+	   }
+	 `)
 
 	runtimeInterface := &testRuntimeInterface{
 		getSigningAccounts: func() ([]Address, error) {
@@ -752,12 +761,12 @@ func TestRuntimeTransactionWithAccount(t *testing.T) {
 	runtime := NewInterpreterRuntime()
 
 	script := []byte(`
-      transaction {
-        prepare(signer: AuthAccount) {
-          log(signer.address)
-        }
-      }
-    `)
+	   transaction {
+		 prepare(signer: AuthAccount) {
+		   log(signer.address)
+		 }
+	   }
+	 `)
 
 	var loggedMessage string
 
@@ -805,12 +814,12 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
 		{
 			label: "Single argument",
 			script: `
-			  transaction(x: Int) {
-				execute {
-				  log(x)
-				}
-			  }
-			`,
+			   transaction(x: Int) {
+				 execute {
+				   log(x)
+				 }
+			   }
+			 `,
 			args: [][]byte{
 				jsoncdc.MustEncode(cadence.NewInt(42)),
 			},
@@ -819,16 +828,16 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
 		{
 			label: "Single argument with authorizer",
 			script: `
-			  transaction(x: Int) {
-				prepare(signer: AuthAccount) {
-				  log(signer.address)
-				}
-
-				execute {
-				  log(x)
-				}
-			  }
-			`,
+			   transaction(x: Int) {
+				 prepare(signer: AuthAccount) {
+				   log(signer.address)
+				 }
+ 
+				 execute {
+				   log(x)
+				 }
+			   }
+			 `,
 			args: [][]byte{
 				jsoncdc.MustEncode(cadence.NewInt(42)),
 			},
@@ -838,13 +847,13 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
 		{
 			label: "Multiple arguments",
 			script: `
-			  transaction(x: Int, y: String) {
-				execute {
-				  log(x)
-				  log(y)
-				}
-			  }
-			`,
+			   transaction(x: Int, y: String) {
+				 execute {
+				   log(x)
+				   log(y)
+				 }
+			   }
+			 `,
 			args: [][]byte{
 				jsoncdc.MustEncode(cadence.NewInt(42)),
 				jsoncdc.MustEncode(cadence.String("foo")),
@@ -854,8 +863,8 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
 		{
 			label: "Invalid bytes",
 			script: `
-			  transaction(x: Int) { execute {} }
-			`,
+			   transaction(x: Int) { execute {} }
+			 `,
 			args: [][]byte{
 				{1, 2, 3, 4}, // not valid JSON-CDC
 			},
@@ -867,12 +876,12 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
 		{
 			label: "Type mismatch",
 			script: `
-			  transaction(x: Int) {
-				execute {
-				  log(x)
-				}
-			  }
-			`,
+			   transaction(x: Int) {
+				 execute {
+				   log(x)
+				 }
+			   }
+			 `,
 			args: [][]byte{
 				jsoncdc.MustEncode(cadence.String("foo")),
 			},
@@ -885,13 +894,13 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
 		{
 			label: "Address",
 			script: `
-			  transaction(x: Address) {
-				execute {
-				  let acct = getAccount(x)
-				  log(acct.address)
-				}
-			  }
-			`,
+			   transaction(x: Address) {
+				 execute {
+				   let acct = getAccount(x)
+				   log(acct.address)
+				 }
+			   }
+			 `,
 			args: [][]byte{
 				jsoncdc.MustEncode(
 					cadence.BytesToAddress(
@@ -907,12 +916,12 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
 		{
 			label: "Array",
 			script: `
-			  transaction(x: [Int]) {
-				execute {
-				  log(x)
-				}
-			  }
-			`,
+			   transaction(x: [Int]) {
+				 execute {
+				   log(x)
+				 }
+			   }
+			 `,
 			args: [][]byte{
 				jsoncdc.MustEncode(
 					cadence.NewArray(
@@ -929,12 +938,12 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
 		{
 			label: "Dictionary",
 			script: `
-			  transaction(x: {String:Int}) {
-				execute {
-				  log(x["y"])
-				}
-			  }
-			`,
+			   transaction(x: {String:Int}) {
+				 execute {
+				   log(x["y"])
+				 }
+			   }
+			 `,
 			args: [][]byte{
 				jsoncdc.MustEncode(
 					cadence.NewDictionary(
@@ -952,12 +961,12 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
 		{
 			label: "Invalid dictionary",
 			script: `
-			  transaction(x: {String:String}) {
-				execute {
-				  log(x["y"])
-				}
-			  }
-			`,
+			   transaction(x: {String:String}) {
+				 execute {
+				   log(x["y"])
+				 }
+			   }
+			 `,
 			args: [][]byte{
 				jsoncdc.MustEncode(
 					cadence.NewDictionary(
@@ -979,20 +988,20 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
 		{
 			label: "Struct",
 			script: `
-			  pub struct Foo {
-				pub var y: String
-
-				init() {
-				  self.y = "initial string"
+			   pub struct Foo {
+				 pub var y: String
+ 
+				 init() {
+				   self.y = "initial string"
+				 }
 				}
- 			  }
-
-			  transaction(x: Foo) {
-				execute {
-				  log(x.y)
-				}
-			  }
-			`,
+ 
+			   transaction(x: Foo) {
+				 execute {
+				   log(x.y)
+				 }
+			   }
+			 `,
 			args: [][]byte{
 				jsoncdc.MustEncode(
 					cadence.
@@ -1014,21 +1023,21 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
 		{
 			label: "Struct in array",
 			script: `
-			  pub struct Foo {
-				pub var y: String
-
-				init() {
-				  self.y = "initial string"
+			   pub struct Foo {
+				 pub var y: String
+ 
+				 init() {
+				   self.y = "initial string"
+				 }
 				}
- 			  }
-
-			  transaction(f: [Foo]) {
-				execute {
-				  let x = f[0]
-				  log(x.y)
-				}
-			  }
-			`,
+ 
+			   transaction(f: [Foo]) {
+				 execute {
+				   let x = f[0]
+				   log(x.y)
+				 }
+			   }
+			 `,
 			args: [][]byte{
 				jsoncdc.MustEncode(
 					cadence.NewArray([]cadence.Value{
@@ -1119,20 +1128,20 @@ func TestRuntimeScriptArguments(t *testing.T) {
 		{
 			label: "No arguments",
 			script: `
-				pub fun main() {
-					log("t")
-				}
-			`,
+				 pub fun main() {
+					 log("t")
+				 }
+			 `,
 			args:         nil,
 			expectedLogs: []string{`"t"`},
 		},
 		{
 			label: "Single argument",
 			script: `
-				pub fun main(x: Int) {
-					log(x)
-				}
-			`,
+				 pub fun main(x: Int) {
+					 log(x)
+				 }
+			 `,
 			args: [][]byte{
 				jsoncdc.MustEncode(cadence.NewInt(42)),
 			},
@@ -1141,11 +1150,11 @@ func TestRuntimeScriptArguments(t *testing.T) {
 		{
 			label: "Multiple arguments",
 			script: `
-				pub fun main(x: Int, y: String) {
-					log(x)
-					log(y)
-				}
-			`,
+				 pub fun main(x: Int, y: String) {
+					 log(x)
+					 log(y)
+				 }
+			 `,
 			args: [][]byte{
 				jsoncdc.MustEncode(cadence.NewInt(42)),
 				jsoncdc.MustEncode(cadence.String("foo")),
@@ -1155,8 +1164,8 @@ func TestRuntimeScriptArguments(t *testing.T) {
 		{
 			label: "Invalid bytes",
 			script: `
-				pub fun main(x: Int) { }
-			`,
+				 pub fun main(x: Int) { }
+			 `,
 			args: [][]byte{
 				{1, 2, 3, 4}, // not valid JSON-CDC
 			},
@@ -1168,10 +1177,10 @@ func TestRuntimeScriptArguments(t *testing.T) {
 		{
 			label: "Type mismatch",
 			script: `
-				pub fun main(x: Int) {
-					log(x)
-				}
-			`,
+				 pub fun main(x: Int) {
+					 log(x)
+				 }
+			 `,
 			args: [][]byte{
 				jsoncdc.MustEncode(cadence.String("foo")),
 			},
@@ -1184,10 +1193,10 @@ func TestRuntimeScriptArguments(t *testing.T) {
 		{
 			label: "Address",
 			script: `
-				pub fun main(x: Address) {
-					log(x)
-				}
-			`,
+				 pub fun main(x: Address) {
+					 log(x)
+				 }
+			 `,
 			args: [][]byte{
 				jsoncdc.MustEncode(
 					cadence.BytesToAddress(
@@ -1203,10 +1212,10 @@ func TestRuntimeScriptArguments(t *testing.T) {
 		{
 			label: "Array",
 			script: `
-				pub fun main(x: [Int]) {
-					log(x)
-				}
-			`,
+				 pub fun main(x: [Int]) {
+					 log(x)
+				 }
+			 `,
 			args: [][]byte{
 				jsoncdc.MustEncode(
 					cadence.NewArray(
@@ -1223,10 +1232,10 @@ func TestRuntimeScriptArguments(t *testing.T) {
 		{
 			label: "Dictionary",
 			script: `
-				pub fun main(x: {String:Int}) {
-					log(x["y"])
-				}
-			`,
+				 pub fun main(x: {String:Int}) {
+					 log(x["y"])
+				 }
+			 `,
 			args: [][]byte{
 				jsoncdc.MustEncode(
 					cadence.NewDictionary(
@@ -1244,10 +1253,10 @@ func TestRuntimeScriptArguments(t *testing.T) {
 		{
 			label: "Invalid dictionary",
 			script: `
-				pub fun main(x: {String:String}) {
-					log(x["y"])
-				}
-			`,
+				 pub fun main(x: {String:String}) {
+					 log(x["y"])
+				 }
+			 `,
 			args: [][]byte{
 				jsoncdc.MustEncode(
 					cadence.NewDictionary(
@@ -1269,18 +1278,18 @@ func TestRuntimeScriptArguments(t *testing.T) {
 		{
 			label: "Struct",
 			script: `
-				pub struct Foo {
-					pub var y: String
-
-					init() {
-						self.y = "initial string"
-					}
-				}
-
-				pub fun main(x: Foo) {
-					log(x.y)
-				}
-			`,
+				 pub struct Foo {
+					 pub var y: String
+ 
+					 init() {
+						 self.y = "initial string"
+					 }
+				 }
+ 
+				 pub fun main(x: Foo) {
+					 log(x.y)
+				 }
+			 `,
 			args: [][]byte{
 				jsoncdc.MustEncode(
 					cadence.
@@ -1302,19 +1311,19 @@ func TestRuntimeScriptArguments(t *testing.T) {
 		{
 			label: "Struct in array",
 			script: `
-				pub struct Foo {
-					pub var y: String
-
-					init() {
-						self.y = "initial string"
-					}
-				}
-
-				pub fun main(f: [Foo]) {
-					let x = f[0]
-					log(x.y)
-				}
-			`,
+				 pub struct Foo {
+					 pub var y: String
+ 
+					 init() {
+						 self.y = "initial string"
+					 }
+				 }
+ 
+				 pub fun main(f: [Foo]) {
+					 let x = f[0]
+					 log(x.y)
+				 }
+			 `,
 			args: [][]byte{
 				jsoncdc.MustEncode(
 					cadence.NewArray([]cadence.Value{
@@ -1395,8 +1404,8 @@ func TestRuntimeProgramWithNoTransaction(t *testing.T) {
 	runtime := NewInterpreterRuntime()
 
 	script := []byte(`
-      pub fun main() {}
-    `)
+	   pub fun main() {}
+	 `)
 
 	runtimeInterface := &testRuntimeInterface{}
 
@@ -1422,13 +1431,13 @@ func TestRuntimeProgramWithMultipleTransaction(t *testing.T) {
 	runtime := NewInterpreterRuntime()
 
 	script := []byte(`
-      transaction {
-        execute {}
-      }
-      transaction {
-        execute {}
-      }
-    `)
+	   transaction {
+		 execute {}
+	   }
+	   transaction {
+		 execute {}
+	   }
+	 `)
 
 	runtimeInterface := &testRuntimeInterface{}
 
@@ -1453,59 +1462,59 @@ func TestRuntimeStorage(t *testing.T) {
 
 	tests := map[string]string{
 		"resource": `
-          let r <- signer.load<@R>(from: /storage/r)
-          log(r == nil)
-          destroy r
-
-          signer.save(<-createR(), to: /storage/r)
-          let r2 <- signer.load<@R>(from: /storage/r)
-          log(r2 != nil)
-          destroy r2
-        `,
+		   let r <- signer.load<@R>(from: /storage/r)
+		   log(r == nil)
+		   destroy r
+ 
+		   signer.save(<-createR(), to: /storage/r)
+		   let r2 <- signer.load<@R>(from: /storage/r)
+		   log(r2 != nil)
+		   destroy r2
+		 `,
 		"struct": `
-          let s = signer.load<S>(from: /storage/s)
-          log(s == nil)
-
-          signer.save(S(), to: /storage/s)
-          let s2 = signer.load<S>(from: /storage/s)
-          log(s2 != nil)
-        `,
+		   let s = signer.load<S>(from: /storage/s)
+		   log(s == nil)
+ 
+		   signer.save(S(), to: /storage/s)
+		   let s2 = signer.load<S>(from: /storage/s)
+		   log(s2 != nil)
+		 `,
 		"resource array": `
-		  let rs <- signer.load<@[R]>(from: /storage/rs)
-		  log(rs == nil)
-		  destroy rs
-
-		  signer.save(<-[<-createR()], to: /storage/rs)
-		  let rs2 <- signer.load<@[R]>(from: /storage/rs)
-		  log(rs2 != nil)
-		  destroy rs2
-		`,
+		   let rs <- signer.load<@[R]>(from: /storage/rs)
+		   log(rs == nil)
+		   destroy rs
+ 
+		   signer.save(<-[<-createR()], to: /storage/rs)
+		   let rs2 <- signer.load<@[R]>(from: /storage/rs)
+		   log(rs2 != nil)
+		   destroy rs2
+		 `,
 		"struct array": `
-		  let s = signer.load<[S]>(from: /storage/s)
-		  log(s == nil)
-
-		  signer.save([S()], to: /storage/s)
-		  let s2 = signer.load<[S]>(from: /storage/s)
-		  log(s2 != nil)
-		`,
+		   let s = signer.load<[S]>(from: /storage/s)
+		   log(s == nil)
+ 
+		   signer.save([S()], to: /storage/s)
+		   let s2 = signer.load<[S]>(from: /storage/s)
+		   log(s2 != nil)
+		 `,
 		"resource dictionary": `
-		  let rs <- signer.load<@{String: R}>(from: /storage/rs)
-		  log(rs == nil)
-		  destroy rs
-
-          signer.save(<-{"r": <-createR()}, to: /storage/rs)
-		  let rs2 <- signer.load<@{String: R}>(from: /storage/rs)
-		  log(rs2 != nil)
-		  destroy rs2
-		`,
+		   let rs <- signer.load<@{String: R}>(from: /storage/rs)
+		   log(rs == nil)
+		   destroy rs
+ 
+		   signer.save(<-{"r": <-createR()}, to: /storage/rs)
+		   let rs2 <- signer.load<@{String: R}>(from: /storage/rs)
+		   log(rs2 != nil)
+		   destroy rs2
+		 `,
 		"struct dictionary": `
-		  let s = signer.load<{String: S}>(from: /storage/s)
-		  log(s == nil)
-
-          signer.save({"s": S()}, to: /storage/s)
-		  let rs2 = signer.load<{String: S}>(from: /storage/s)
-		  log(rs2 != nil)
-		`,
+		   let s = signer.load<{String: S}>(from: /storage/s)
+		   log(s == nil)
+ 
+		   signer.save({"s": S()}, to: /storage/s)
+		   let rs2 = signer.load<{String: S}>(from: /storage/s)
+		   log(rs2 != nil)
+		 `,
 	}
 
 	for name, code := range tests {
@@ -1513,24 +1522,24 @@ func TestRuntimeStorage(t *testing.T) {
 			runtime := NewInterpreterRuntime()
 
 			imported := []byte(`
-              pub resource R {}
-
-              pub fun createR(): @R {
-                return <-create R()
-              }
-
-              pub struct S {}
-            `)
+			   pub resource R {}
+ 
+			   pub fun createR(): @R {
+				 return <-create R()
+			   }
+ 
+			   pub struct S {}
+			 `)
 
 			script := []byte(fmt.Sprintf(`
-                  import "imported"
-
-                  transaction {
-                    prepare(signer: AuthAccount) {
-                      %s
-                    }
-                  }
-                `,
+				   import "imported"
+ 
+				   transaction {
+					 prepare(signer: AuthAccount) {
+					   %s
+					 }
+				   }
+				 `,
 				code,
 			))
 
@@ -1579,63 +1588,63 @@ func TestRuntimeStorageMultipleTransactionsResourceWithArray(t *testing.T) {
 	runtime := NewInterpreterRuntime()
 
 	container := []byte(`
-      pub resource Container {
-        pub let values: [Int]
-
-        init() {
-          self.values = []
-        }
-      }
-
-      pub fun createContainer(): @Container {
-        return <-create Container()
-      }
-    `)
+	   pub resource Container {
+		 pub let values: [Int]
+ 
+		 init() {
+		   self.values = []
+		 }
+	   }
+ 
+	   pub fun createContainer(): @Container {
+		 return <-create Container()
+	   }
+	 `)
 
 	script1 := []byte(`
-      import "container"
-
-      transaction {
-
-        prepare(signer: AuthAccount) {
-          signer.save(<-createContainer(), to: /storage/container)
-          signer.link<&Container>(/public/container, target: /storage/container)
-        }
-      }
-    `)
+	   import "container"
+ 
+	   transaction {
+ 
+		 prepare(signer: AuthAccount) {
+		   signer.save(<-createContainer(), to: /storage/container)
+		   signer.link<&Container>(/public/container, target: /storage/container)
+		 }
+	   }
+	 `)
 
 	script2 := []byte(`
-      import "container"
-
-      transaction {
-        prepare(signer: AuthAccount) {
-          let publicAccount = getAccount(signer.address)
-          let ref = publicAccount.getCapability(/public/container)
-              .borrow<&Container>()!
-
-          let length = ref.values.length
-          ref.values.append(1)
-          let length2 = ref.values.length
-        }
-      }
-    `)
+	   import "container"
+ 
+	   transaction {
+		 prepare(signer: AuthAccount) {
+		   let publicAccount = getAccount(signer.address)
+		   let ref = publicAccount.getCapability(/public/container)
+			   .borrow<&Container>()!
+ 
+		   let length = ref.values.length
+		   ref.values.append(1)
+		   let length2 = ref.values.length
+		 }
+	   }
+	 `)
 
 	script3 := []byte(`
-      import "container"
-
-      transaction {
-        prepare(signer: AuthAccount) {
-          let publicAccount = getAccount(signer.address)
-          let ref = publicAccount
-              .getCapability(/public/container)
-              .borrow<&Container>()!
-
-          let length = ref.values.length
-          ref.values.append(2)
-          let length2 = ref.values.length
-        }
-      }
-    `)
+	   import "container"
+ 
+	   transaction {
+		 prepare(signer: AuthAccount) {
+		   let publicAccount = getAccount(signer.address)
+		   let ref = publicAccount
+			   .getCapability(/public/container)
+			   .borrow<&Container>()!
+ 
+		   let length = ref.values.length
+		   ref.values.append(2)
+		   let length2 = ref.values.length
+		 }
+	   }
+	 `)
 
 	var loggedMessages []string
 
@@ -1703,39 +1712,39 @@ func TestRuntimeStorageMultipleTransactionsResourceFunction(t *testing.T) {
 	runtime := NewInterpreterRuntime()
 
 	deepThought := []byte(`
-      pub resource DeepThought {
-
-        pub fun answer(): Int {
-          return 42
-        }
-      }
-
-      pub fun createDeepThought(): @DeepThought {
-        return <-create DeepThought()
-      }
-    `)
+	   pub resource DeepThought {
+ 
+		 pub fun answer(): Int {
+		   return 42
+		 }
+	   }
+ 
+	   pub fun createDeepThought(): @DeepThought {
+		 return <-create DeepThought()
+	   }
+	 `)
 
 	script1 := []byte(`
-      import "deep-thought"
-
-      transaction {
-
-        prepare(signer: AuthAccount) {
-          signer.save(<-createDeepThought(), to: /storage/deepThought)
-        }
-      }
-    `)
+	   import "deep-thought"
+ 
+	   transaction {
+ 
+		 prepare(signer: AuthAccount) {
+		   signer.save(<-createDeepThought(), to: /storage/deepThought)
+		 }
+	   }
+	 `)
 
 	script2 := []byte(`
-      import "deep-thought"
-
-      transaction {
-        prepare(signer: AuthAccount) {
-          let answer = signer.borrow<&DeepThought>(from: /storage/deepThought)?.answer()
-          log(answer ?? 0)
-        }
-      }
-    `)
+	   import "deep-thought"
+ 
+	   transaction {
+		 prepare(signer: AuthAccount) {
+		   let answer = signer.borrow<&DeepThought>(from: /storage/deepThought)?.answer()
+		   log(answer ?? 0)
+		 }
+	   }
+	 `)
 
 	var loggedMessages []string
 
@@ -1794,40 +1803,40 @@ func TestRuntimeStorageMultipleTransactionsResourceField(t *testing.T) {
 	runtime := NewInterpreterRuntime()
 
 	imported := []byte(`
-      pub resource SomeNumber {
-        pub(set) var n: Int
-        init(_ n: Int) {
-          self.n = n
-        }
-      }
-
-      pub fun createNumber(_ n: Int): @SomeNumber {
-        return <-create SomeNumber(n)
-      }
-    `)
+	   pub resource SomeNumber {
+		 pub(set) var n: Int
+		 init(_ n: Int) {
+		   self.n = n
+		 }
+	   }
+ 
+	   pub fun createNumber(_ n: Int): @SomeNumber {
+		 return <-create SomeNumber(n)
+	   }
+	 `)
 
 	script1 := []byte(`
-      import "imported"
-
-      transaction {
-        prepare(signer: AuthAccount) {
-          signer.save(<-createNumber(42), to: /storage/number)
-        }
-      }
-    `)
+	   import "imported"
+ 
+	   transaction {
+		 prepare(signer: AuthAccount) {
+		   signer.save(<-createNumber(42), to: /storage/number)
+		 }
+	   }
+	 `)
 
 	script2 := []byte(`
-      import "imported"
-
-      transaction {
-        prepare(signer: AuthAccount) {
-          if let number <- signer.load<@SomeNumber>(from: /storage/number) {
-            log(number.n)
-            destroy number
-          }
-        }
-      }
-    `)
+	   import "imported"
+ 
+	   transaction {
+		 prepare(signer: AuthAccount) {
+		   if let number <- signer.load<@SomeNumber>(from: /storage/number) {
+			 log(number.n)
+			 destroy number
+		   }
+		 }
+	   }
+	 `)
 
 	var loggedMessages []string
 
@@ -1887,42 +1896,42 @@ func TestRuntimeCompositeFunctionInvocationFromImportingProgram(t *testing.T) {
 	runtime := NewInterpreterRuntime()
 
 	imported := []byte(`
-      // function must have arguments
-      pub fun x(x: Int) {}
-
-      // invocation must be in composite
-      pub resource Y {
-        pub fun x() {
-          x(x: 1)
-        }
-      }
-
-      pub fun createY(): @Y {
-        return <-create Y()
-      }
-    `)
+	   // function must have arguments
+	   pub fun x(x: Int) {}
+ 
+	   // invocation must be in composite
+	   pub resource Y {
+		 pub fun x() {
+		   x(x: 1)
+		 }
+	   }
+ 
+	   pub fun createY(): @Y {
+		 return <-create Y()
+	   }
+	 `)
 
 	script1 := []byte(`
-      import Y, createY from "imported"
-
-      transaction {
-        prepare(signer: AuthAccount) {
-          signer.save(<-createY(), to: /storage/y)
-        }
-      }
-    `)
+	   import Y, createY from "imported"
+ 
+	   transaction {
+		 prepare(signer: AuthAccount) {
+		   signer.save(<-createY(), to: /storage/y)
+		 }
+	   }
+	 `)
 
 	script2 := []byte(`
-      import Y from "imported"
-
-      transaction {
-        prepare(signer: AuthAccount) {
-          let y <- signer.load<@Y>(from: /storage/y)
-          y?.x()
-          destroy y
-        }
-      }
-    `)
+	   import Y from "imported"
+ 
+	   transaction {
+		 prepare(signer: AuthAccount) {
+		   let y <- signer.load<@Y>(from: /storage/y)
+		   y?.x()
+		   destroy y
+		 }
+	   }
+	 `)
 
 	runtimeInterface := &testRuntimeInterface{
 		getCode: func(location Location) (bytes []byte, err error) {
@@ -1971,39 +1980,39 @@ func TestRuntimeResourceContractUseThroughReference(t *testing.T) {
 	runtime := NewInterpreterRuntime()
 
 	imported := []byte(`
-      pub resource R {
-        pub fun x() {
-          log("x!")
-        }
-      }
-
-      pub fun createR(): @R {
-        return <- create R()
-      }
-    `)
+	   pub resource R {
+		 pub fun x() {
+		   log("x!")
+		 }
+	   }
+ 
+	   pub fun createR(): @R {
+		 return <- create R()
+	   }
+	 `)
 
 	script1 := []byte(`
-      import R, createR from "imported"
-
-      transaction {
-
-        prepare(signer: AuthAccount) {
-          signer.save(<-createR(), to: /storage/r)
-        }
-      }
-    `)
+	   import R, createR from "imported"
+ 
+	   transaction {
+ 
+		 prepare(signer: AuthAccount) {
+		   signer.save(<-createR(), to: /storage/r)
+		 }
+	   }
+	 `)
 
 	script2 := []byte(`
-      import R from "imported"
-
-      transaction {
-
-        prepare(signer: AuthAccount) {
-          let ref = signer.borrow<&R>(from: /storage/r)!
-          ref.x()
-        }
-      }
-    `)
+	   import R from "imported"
+ 
+	   transaction {
+ 
+		 prepare(signer: AuthAccount) {
+		   let ref = signer.borrow<&R>(from: /storage/r)!
+		   ref.x()
+		 }
+	   }
+	 `)
 
 	var loggedMessages []string
 
@@ -2059,42 +2068,42 @@ func TestRuntimeResourceContractUseThroughLink(t *testing.T) {
 	runtime := NewInterpreterRuntime()
 
 	imported := []byte(`
-      pub resource R {
-        pub fun x() {
-          log("x!")
-        }
-      }
-
-      pub fun createR(): @R {
-          return <- create R()
-      }
-    `)
+	   pub resource R {
+		 pub fun x() {
+		   log("x!")
+		 }
+	   }
+ 
+	   pub fun createR(): @R {
+		   return <- create R()
+	   }
+	 `)
 
 	script1 := []byte(`
-      import R, createR from "imported"
-
-      transaction {
-
-        prepare(signer: AuthAccount) {
-          signer.save(<-createR(), to: /storage/r)
-          signer.link<&R>(/public/r, target: /storage/r)
-        }
-      }
-    `)
+	   import R, createR from "imported"
+ 
+	   transaction {
+ 
+		 prepare(signer: AuthAccount) {
+		   signer.save(<-createR(), to: /storage/r)
+		   signer.link<&R>(/public/r, target: /storage/r)
+		 }
+	   }
+	 `)
 
 	script2 := []byte(`
-      import R from "imported"
-
-      transaction {
-        prepare(signer: AuthAccount) {
-          let publicAccount = getAccount(signer.address)
-          let ref = publicAccount
-              .getCapability(/public/r)
-              .borrow<&R>()!
-          ref.x()
-        }
-      }
-    `)
+	   import R from "imported"
+ 
+	   transaction {
+		 prepare(signer: AuthAccount) {
+		   let publicAccount = getAccount(signer.address)
+		   let ref = publicAccount
+			   .getCapability(/public/r)
+			   .borrow<&R>()!
+		   ref.x()
+		 }
+	   }
+	 `)
 
 	var loggedMessages []string
 
@@ -2150,54 +2159,54 @@ func TestRuntimeResourceContractWithInterface(t *testing.T) {
 	runtime := NewInterpreterRuntime()
 
 	imported1 := []byte(`
-      pub resource interface RI {
-        pub fun x()
-      }
-    `)
+	   pub resource interface RI {
+		 pub fun x()
+	   }
+	 `)
 
 	imported2 := []byte(`
-      import RI from "imported1"
-
-      pub resource R: RI {
-        pub fun x() {
-          log("x!")
-        }
-      }
-
-      pub fun createR(): @R {
-        return <- create R()
-      }
-    `)
+	   import RI from "imported1"
+ 
+	   pub resource R: RI {
+		 pub fun x() {
+		   log("x!")
+		 }
+	   }
+ 
+	   pub fun createR(): @R {
+		 return <- create R()
+	   }
+	 `)
 
 	script1 := []byte(`
-      import RI from "imported1"
-      import R, createR from "imported2"
-
-      transaction {
-        prepare(signer: AuthAccount) {
-          signer.save(<-createR(), to: /storage/r)
-          signer.link<&AnyResource{RI}>(/public/r, target: /storage/r)
-        }
-      }
-    `)
+	   import RI from "imported1"
+	   import R, createR from "imported2"
+ 
+	   transaction {
+		 prepare(signer: AuthAccount) {
+		   signer.save(<-createR(), to: /storage/r)
+		   signer.link<&AnyResource{RI}>(/public/r, target: /storage/r)
+		 }
+	   }
+	 `)
 
 	// TODO: Get rid of the requirement that the underlying type must be imported.
 	//   This requires properly initializing Interpreter.CompositeFunctions.
 	//   Also initialize Interpreter.DestructorFunctions
 
 	script2 := []byte(`
-      import RI from "imported1"
-      import R from "imported2"
-
-      transaction {
-        prepare(signer: AuthAccount) {
-          let ref = signer
-              .getCapability(/public/r)
-              .borrow<&AnyResource{RI}>()!
-          ref.x()
-        }
-      }
-    `)
+	   import RI from "imported1"
+	   import R from "imported2"
+ 
+	   transaction {
+		 prepare(signer: AuthAccount) {
+		   let ref = signer
+			   .getCapability(/public/r)
+			   .borrow<&AnyResource{RI}>()!
+		   ref.x()
+		 }
+	   }
+	 `)
 
 	var loggedMessages []string
 
@@ -2351,12 +2360,12 @@ func TestRuntimeScriptReturnTypeNotReturnableError(t *testing.T) {
 
 		test(t,
 			`
-              pub fun main(): ((): Int) {
-                  return fun (): Int {
-                      return 0
-                  }
-              }
-            `,
+			   pub fun main(): ((): Int) {
+				   return fun (): Int {
+					   return 0
+				   }
+			   }
+			 `,
 			nil,
 		)
 	})
@@ -2367,11 +2376,11 @@ func TestRuntimeScriptReturnTypeNotReturnableError(t *testing.T) {
 
 		test(t,
 			`
-              pub fun main(): &Address {
-                  let a: Address = 0x1
-                  return &a as &Address
-              }
-            `,
+			   pub fun main(): &Address {
+				   let a: Address = 0x1
+				   return &a as &Address
+			   }
+			 `,
 			cadence.Address{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1},
 		)
 	})
@@ -2382,12 +2391,12 @@ func TestRuntimeScriptReturnTypeNotReturnableError(t *testing.T) {
 
 		test(t,
 			`
-              pub fun main(): [&AnyStruct] {
-                  let refs: [&AnyStruct] = []
-                  refs.append(&refs as &AnyStruct)
-                  return refs
-              }
-            `,
+			   pub fun main(): [&AnyStruct] {
+				   let refs: [&AnyStruct] = []
+				   refs.append(&refs as &AnyStruct)
+				   return refs
+			   }
+			 `,
 			cadence.NewArray([]cadence.Value{
 				cadence.NewArray([]cadence.Value{
 					nil,
@@ -2402,10 +2411,10 @@ func TestRuntimeScriptReturnTypeNotReturnableError(t *testing.T) {
 
 		test(t,
 			`
-              pub fun main(): StoragePath {
-                  return /storage/foo
-              }
-            `,
+			   pub fun main(): StoragePath {
+				   return /storage/foo
+			   }
+			 `,
 			cadence.Path{
 				Domain:     "storage",
 				Identifier: "foo",
@@ -2419,10 +2428,10 @@ func TestRuntimeScriptReturnTypeNotReturnableError(t *testing.T) {
 
 		test(t,
 			`
-              pub fun main(): PublicPath {
-                  return /public/foo
-              }
-            `,
+			   pub fun main(): PublicPath {
+				   return /public/foo
+			   }
+			 `,
 			cadence.Path{
 				Domain:     "public",
 				Identifier: "foo",
@@ -2436,10 +2445,10 @@ func TestRuntimeScriptReturnTypeNotReturnableError(t *testing.T) {
 
 		test(t,
 			`
-              pub fun main(): PrivatePath {
-                  return /private/foo
-              }
-            `,
+			   pub fun main(): PrivatePath {
+				   return /private/foo
+			   }
+			 `,
 			cadence.Path{
 				Domain:     "private",
 				Identifier: "foo",
@@ -2453,10 +2462,10 @@ func TestRuntimeScriptReturnTypeNotReturnableError(t *testing.T) {
 
 		test(t,
 			`
-              pub fun main(): CapabilityPath {
-                  return /public/foo
-              }
-            `,
+			   pub fun main(): CapabilityPath {
+				   return /public/foo
+			   }
+			 `,
 			cadence.Path{
 				Domain:     "public",
 				Identifier: "foo",
@@ -2470,10 +2479,10 @@ func TestRuntimeScriptReturnTypeNotReturnableError(t *testing.T) {
 
 		test(t,
 			`
-              pub fun main(): Path {
-                  return /storage/foo
-              }
-            `,
+			   pub fun main(): Path {
+				   return /storage/foo
+			   }
+			 `,
 			cadence.Path{
 				Domain:     "storage",
 				Identifier: "foo",
@@ -2489,10 +2498,10 @@ func TestRuntimeScriptParameterTypeNotImportableError(t *testing.T) {
 	runtime := NewInterpreterRuntime()
 
 	script := []byte(`
-      pub fun main(x: ((): Int)) {
-		return
-      }
-    `)
+	   pub fun main(x: ((): Int)) {
+		 return
+	   }
+	 `)
 
 	runtimeInterface := &testRuntimeInterface{
 		getSigningAccounts: func() ([]Address, error) {
@@ -2523,10 +2532,10 @@ func TestRuntimeSyntaxError(t *testing.T) {
 	runtime := NewInterpreterRuntime()
 
 	script := []byte(`
-      pub fun main(): String {
-          return "Hello World!
-      }
-    `)
+	   pub fun main(): String {
+		   return "Hello World!
+	   }
+	 `)
 
 	runtimeInterface := &testRuntimeInterface{
 		getSigningAccounts: func() ([]Address, error) {
@@ -2555,42 +2564,42 @@ func TestRuntimeStorageChanges(t *testing.T) {
 	runtime := NewInterpreterRuntime()
 
 	imported := []byte(`
-      pub resource X {
-        pub(set) var x: Int
-
-        init() {
-          self.x = 0
-        }
-      }
-
-      pub fun createX(): @X {
-          return <-create X()
-      }
-    `)
+	   pub resource X {
+		 pub(set) var x: Int
+ 
+		 init() {
+		   self.x = 0
+		 }
+	   }
+ 
+	   pub fun createX(): @X {
+		   return <-create X()
+	   }
+	 `)
 
 	script1 := []byte(`
-      import X, createX from "imported"
-
-      transaction {
-        prepare(signer: AuthAccount) {
-          signer.save(<-createX(), to: /storage/x)
-
-          let ref = signer.borrow<&X>(from: /storage/x)!
-          ref.x = 1
-        }
-      }
-    `)
+	   import X, createX from "imported"
+ 
+	   transaction {
+		 prepare(signer: AuthAccount) {
+		   signer.save(<-createX(), to: /storage/x)
+ 
+		   let ref = signer.borrow<&X>(from: /storage/x)!
+		   ref.x = 1
+		 }
+	   }
+	 `)
 
 	script2 := []byte(`
-      import X from "imported"
-
-      transaction {
-        prepare(signer: AuthAccount) {
-          let ref = signer.borrow<&X>(from: /storage/x)!
-          log(ref.x)
-        }
-      }
-    `)
+	   import X from "imported"
+ 
+	   transaction {
+		 prepare(signer: AuthAccount) {
+		   let ref = signer.borrow<&X>(from: /storage/x)!
+		   log(ref.x)
+		 }
+	   }
+	 `)
 
 	var loggedMessages []string
 
@@ -2646,12 +2655,12 @@ func TestRuntimeAccountAddress(t *testing.T) {
 	runtime := NewInterpreterRuntime()
 
 	script := []byte(`
-      transaction {
-        prepare(signer: AuthAccount) {
-          log(signer.address)
-        }
-      }
-    `)
+	   transaction {
+		 prepare(signer: AuthAccount) {
+		   log(signer.address)
+		 }
+	   }
+	 `)
 
 	var loggedMessages []string
 
@@ -2689,12 +2698,12 @@ func TestRuntimePublicAccountAddress(t *testing.T) {
 	runtime := NewInterpreterRuntime()
 
 	script := []byte(`
-      transaction {
-        prepare() {
-          log(getAccount(0x42).address)
-        }
-      }
-    `)
+	   transaction {
+		 prepare() {
+		   log(getAccount(0x42).address)
+		 }
+	   }
+	 `)
 
 	var loggedMessages []string
 
@@ -2737,42 +2746,42 @@ func TestRuntimeAccountPublishAndAccess(t *testing.T) {
 	runtime := NewInterpreterRuntime()
 
 	imported := []byte(`
-      pub resource R {
-        pub fun test(): Int {
-          return 42
-        }
-      }
-
-      pub fun createR(): @R {
-        return <-create R()
-      }
-    `)
+	   pub resource R {
+		 pub fun test(): Int {
+		   return 42
+		 }
+	   }
+ 
+	   pub fun createR(): @R {
+		 return <-create R()
+	   }
+	 `)
 
 	script1 := []byte(`
-      import "imported"
-
-      transaction {
-        prepare(signer: AuthAccount) {
-          signer.save(<-createR(), to: /storage/r)
-          signer.link<&R>(/public/r, target: /storage/r)
-        }
-      }
-    `)
+	   import "imported"
+ 
+	   transaction {
+		 prepare(signer: AuthAccount) {
+		   signer.save(<-createR(), to: /storage/r)
+		   signer.link<&R>(/public/r, target: /storage/r)
+		 }
+	   }
+	 `)
 
 	address := common.BytesToAddress([]byte{42})
 
 	script2 := []byte(
 		fmt.Sprintf(
 			`
-              import "imported"
-
-              transaction {
-
-                prepare(signer: AuthAccount) {
-                  log(getAccount(0x%s).getCapability(/public/r).borrow<&R>()!.test())
-                }
-              }
-            `,
+			   import "imported"
+ 
+			   transaction {
+ 
+				 prepare(signer: AuthAccount) {
+				   log(getAccount(0x%s).getCapability(/public/r).borrow<&R>()!.test())
+				 }
+			   }
+			 `,
 			address,
 		),
 	)
@@ -2831,12 +2840,12 @@ func TestRuntimeTransaction_CreateAccount(t *testing.T) {
 	runtime := NewInterpreterRuntime()
 
 	script := []byte(`
-      transaction {
-        prepare(signer: AuthAccount) {
-          AuthAccount(payer: signer)
-        }
-      }
-    `)
+	   transaction {
+		 prepare(signer: AuthAccount) {
+		   AuthAccount(payer: signer)
+		 }
+	   }
+	 `)
 
 	var events []cadence.Event
 
@@ -2880,38 +2889,38 @@ func TestRuntimeContractAccount(t *testing.T) {
 	addressValue := cadence.BytesToAddress([]byte{0xCA, 0xDE})
 
 	contract := []byte(`
-      pub contract Test {
-          pub let address: Address
-
-          init() {
-              // field 'account' can be used, as it is considered initialized
-              self.address = self.account.address
-          }
-
-          // test that both functions are linked back into restored composite values,
-          // and also injected fields are injected back into restored composite values
-          //
-          pub fun test(): Address {
-              return self.account.address
-          }
-      }
-    `)
+	   pub contract Test {
+		   pub let address: Address
+ 
+		   init() {
+			   // field 'account' can be used, as it is considered initialized
+			   self.address = self.account.address
+		   }
+ 
+		   // test that both functions are linked back into restored composite values,
+		   // and also injected fields are injected back into restored composite values
+		   //
+		   pub fun test(): Address {
+			   return self.account.address
+		   }
+	   }
+	 `)
 
 	script1 := []byte(`
-      import Test from 0xCADE
-
-      pub fun main(): Address {
-          return Test.address
-      }
-    `)
+	   import Test from 0xCADE
+ 
+	   pub fun main(): Address {
+		   return Test.address
+	   }
+	 `)
 
 	script2 := []byte(`
-      import Test from 0xCADE
-
-      pub fun main(): Address {
-          return Test.test()
-      }
-    `)
+	   import Test from 0xCADE
+ 
+	   pub fun main(): Address {
+		   return Test.test()
+	   }
+	 `)
 
 	deploy := utils.DeploymentTransaction("Test", contract)
 
@@ -2997,28 +3006,28 @@ func TestRuntimeInvokeContractFunction(t *testing.T) {
 	}
 
 	contract := []byte(`
-        pub contract Test {
-			pub fun hello() {
-				log("Hello World!")
-			}
-			pub fun helloArg(_ arg: String) {
-				log("Hello ".concat(arg))
-			}
-			pub fun helloMultiArg(arg1: String, arg2: Int, arg3: Address) {
-				log("Hello ".concat(arg1).concat(" ").concat(arg2.toString()).concat(" from ").concat(arg3.toString()))
-			}
-			pub fun helloReturn(_ arg: String): String {
-				log("Hello return!")
-				return arg
-			}
-			pub fun helloAuthAcc(account: AuthAccount) {
-				log("Hello ".concat(account.address.toString()))
-			}
-			pub fun helloPublicAcc(account: PublicAccount) {
-				log("Hello pub ".concat(account.address.toString()))
-			}
-        }
-    `)
+		 pub contract Test {
+			 pub fun hello() {
+				 log("Hello World!")
+			 }
+			 pub fun helloArg(_ arg: String) {
+				 log("Hello ".concat(arg))
+			 }
+			 pub fun helloMultiArg(arg1: String, arg2: Int, arg3: Address) {
+				 log("Hello ".concat(arg1).concat(" ").concat(arg2.toString()).concat(" from ").concat(arg3.toString()))
+			 }
+			 pub fun helloReturn(_ arg: String): String {
+				 log("Hello return!")
+				 return arg
+			 }
+			 pub fun helloAuthAcc(account: AuthAccount) {
+				 log("Hello ".concat(account.address.toString()))
+			 }
+			 pub fun helloPublicAcc(account: PublicAccount) {
+				 log("Hello pub ".concat(account.address.toString()))
+			 }
+		 }
+	 `)
 
 	deploy := utils.DeploymentTransaction("Test", contract)
 
@@ -3259,32 +3268,32 @@ func TestRuntimeContractNestedResource(t *testing.T) {
 	}
 
 	contract := []byte(`
-        pub contract Test {
-            pub resource R {
-                // test that the hello function is linked back into the nested resource
-                // after being loaded from storage
-                pub fun hello(): String {
-                    return "Hello World!"
-                }
-            }
-
-            init() {
-                // store nested resource in account on deployment
-                self.account.save(<-create R(), to: /storage/r)
-            }
-        }
-    `)
+		 pub contract Test {
+			 pub resource R {
+				 // test that the hello function is linked back into the nested resource
+				 // after being loaded from storage
+				 pub fun hello(): String {
+					 return "Hello World!"
+				 }
+			 }
+ 
+			 init() {
+				 // store nested resource in account on deployment
+				 self.account.save(<-create R(), to: /storage/r)
+			 }
+		 }
+	 `)
 
 	tx := []byte(`
-		import Test from 0x01
-
-		transaction {
-
-			prepare(acct: AuthAccount) {
-				log(acct.borrow<&Test.R>(from: /storage/r)?.hello())
-			}
-		}
-	`)
+		 import Test from 0x01
+ 
+		 transaction {
+ 
+			 prepare(acct: AuthAccount) {
+				 log(acct.borrow<&Test.R>(from: /storage/r)?.hello())
+			 }
+		 }
+	 `)
 
 	deploy := utils.DeploymentTransaction("Test", contract)
 
@@ -3355,33 +3364,33 @@ func TestRuntimeStorageLoadedDestructionConcreteType(t *testing.T) {
 	}
 
 	contract := []byte(`
-        pub contract Test {
-            pub resource R {
-                // test that the destructor is linked back into the nested resource
-                // after being loaded from storage
-                destroy() {
-                    log("destroyed")
-                }
-            }
-
-            init() {
-                // store nested resource in account on deployment
-                self.account.save(<-create R(), to: /storage/r)
-            }
-        }
-    `)
+		 pub contract Test {
+			 pub resource R {
+				 // test that the destructor is linked back into the nested resource
+				 // after being loaded from storage
+				 destroy() {
+					 log("destroyed")
+				 }
+			 }
+ 
+			 init() {
+				 // store nested resource in account on deployment
+				 self.account.save(<-create R(), to: /storage/r)
+			 }
+		 }
+	 `)
 
 	tx := []byte(`
-		import Test from 0x01
-
-		transaction {
-
-			prepare(acct: AuthAccount) {
-                let r <- acct.load<@Test.R>(from: /storage/r)
-				destroy r
-			}
-		}
-	`)
+		 import Test from 0x01
+ 
+		 transaction {
+ 
+			 prepare(acct: AuthAccount) {
+				 let r <- acct.load<@Test.R>(from: /storage/r)
+				 destroy r
+			 }
+		 }
+	 `)
 
 	deploy := utils.DeploymentTransaction("Test", contract)
 
@@ -3449,34 +3458,34 @@ func TestRuntimeStorageLoadedDestructionAnyResource(t *testing.T) {
 	}
 
 	contract := []byte(`
-        pub contract Test {
-            pub resource R {
-                // test that the destructor is linked back into the nested resource
-                // after being loaded from storage
-                destroy() {
-                    log("destroyed")
-                }
-            }
-
-            init() {
-                // store nested resource in account on deployment
-                self.account.save(<-create R(), to: /storage/r)
-            }
-        }
-    `)
+		 pub contract Test {
+			 pub resource R {
+				 // test that the destructor is linked back into the nested resource
+				 // after being loaded from storage
+				 destroy() {
+					 log("destroyed")
+				 }
+			 }
+ 
+			 init() {
+				 // store nested resource in account on deployment
+				 self.account.save(<-create R(), to: /storage/r)
+			 }
+		 }
+	 `)
 
 	tx := []byte(`
-        // NOTE: *not* importing concrete implementation.
-        //   Should be imported automatically when loading the value from storage
-
-		transaction {
-
-			prepare(acct: AuthAccount) {
-                let r <- acct.load<@AnyResource>(from: /storage/r)
-				destroy r
-			}
-		}
-	`)
+		 // NOTE: *not* importing concrete implementation.
+		 //   Should be imported automatically when loading the value from storage
+ 
+		 transaction {
+ 
+			 prepare(acct: AuthAccount) {
+				 let r <- acct.load<@AnyResource>(from: /storage/r)
+				 destroy r
+			 }
+		 }
+	 `)
 
 	deploy := utils.DeploymentTransaction("Test", contract)
 
@@ -3545,34 +3554,34 @@ func TestRuntimeStorageLoadedDestructionAfterRemoval(t *testing.T) {
 	}
 
 	contract := []byte(`
-        pub contract Test {
-            pub resource R {
-                // test that the destructor is linked back into the nested resource
-                // after being loaded from storage
-                destroy() {
-                    log("destroyed")
-                }
-            }
-
-            init() {
-                // store nested resource in account on deployment
-                self.account.save(<-create R(), to: /storage/r)
-            }
-        }
-    `)
+		 pub contract Test {
+			 pub resource R {
+				 // test that the destructor is linked back into the nested resource
+				 // after being loaded from storage
+				 destroy() {
+					 log("destroyed")
+				 }
+			 }
+ 
+			 init() {
+				 // store nested resource in account on deployment
+				 self.account.save(<-create R(), to: /storage/r)
+			 }
+		 }
+	 `)
 
 	tx := []byte(`
-        // NOTE: *not* importing concrete implementation.
-        //   Should be imported automatically when loading the value from storage
-
-		transaction {
-
-			prepare(acct: AuthAccount) {
-                let r <- acct.load<@AnyResource>(from: /storage/r)
-				destroy r
-			}
-		}
-	`)
+		 // NOTE: *not* importing concrete implementation.
+		 //   Should be imported automatically when loading the value from storage
+ 
+		 transaction {
+ 
+			 prepare(acct: AuthAccount) {
+				 let r <- acct.load<@AnyResource>(from: /storage/r)
+				 destroy r
+			 }
+		 }
+	 `)
 
 	deploy := utils.DeploymentTransaction("Test", contract)
 	removal := utils.RemovalTransaction("Test")
@@ -3656,99 +3665,99 @@ func TestRuntimeStorageLoadedDestructionAfterRemoval(t *testing.T) {
 }
 
 const basicFungibleTokenContract = `
-pub contract FungibleToken {
-
-    pub resource interface Provider {
-        pub fun withdraw(amount: Int): @Vault {
-            pre {
-                amount > 0:
-                    "Withdrawal amount must be positive"
-            }
-            post {
-                result.balance == amount:
-                    "Incorrect amount returned"
-            }
-        }
-    }
-
-    pub resource interface Receiver {
-        pub balance: Int
-
-        init(balance: Int) {
-            pre {
-                balance >= 0:
-                    "Initial balance must be non-negative"
-            }
-            post {
-                self.balance == balance:
-                    "Balance must be initialized to the initial balance"
-            }
-        }
-
-        pub fun deposit(from: @AnyResource{Receiver}) {
-            pre {
-                from.balance > 0:
-                    "Deposit balance needs to be positive!"
-            }
-            post {
-                self.balance == before(self.balance) + before(from.balance):
-                    "Incorrect amount removed"
-            }
-        }
-    }
-
-    pub resource Vault: Provider, Receiver {
-
-        pub var balance: Int
-
-        init(balance: Int) {
-            self.balance = balance
-        }
-
-        pub fun withdraw(amount: Int): @Vault {
-            self.balance = self.balance - amount
-            return <-create Vault(balance: amount)
-        }
-
-        // transfer combines withdraw and deposit into one function call
-        pub fun transfer(to: &AnyResource{Receiver}, amount: Int) {
-            pre {
-                amount <= self.balance:
-                    "Insufficient funds"
-            }
-            post {
-                self.balance == before(self.balance) - amount:
-                    "Incorrect amount removed"
-            }
-            to.deposit(from: <-self.withdraw(amount: amount))
-        }
-
-        pub fun deposit(from: @AnyResource{Receiver}) {
-            self.balance = self.balance + from.balance
-            destroy from
-        }
-
-        pub fun createEmptyVault(): @Vault {
-            return <-create Vault(balance: 0)
-        }
-    }
-
-    pub fun createEmptyVault(): @Vault {
-        return <-create Vault(balance: 0)
-    }
-
-    pub resource VaultMinter {
-        pub fun mintTokens(amount: Int, recipient: &AnyResource{Receiver}) {
-            recipient.deposit(from: <-create Vault(balance: amount))
-        }
-    }
-
-    init() {
-        self.account.save(<-create Vault(balance: 30), to: /storage/vault)
-        self.account.save(<-create VaultMinter(), to: /storage/minter)
-    }
-}
-`
+ pub contract FungibleToken {
+ 
+	 pub resource interface Provider {
+		 pub fun withdraw(amount: Int): @Vault {
+			 pre {
+				 amount > 0:
+					 "Withdrawal amount must be positive"
+			 }
+			 post {
+				 result.balance == amount:
+					 "Incorrect amount returned"
+			 }
+		 }
+	 }
+ 
+	 pub resource interface Receiver {
+		 pub balance: Int
+ 
+		 init(balance: Int) {
+			 pre {
+				 balance >= 0:
+					 "Initial balance must be non-negative"
+			 }
+			 post {
+				 self.balance == balance:
+					 "Balance must be initialized to the initial balance"
+			 }
+		 }
+ 
+		 pub fun deposit(from: @AnyResource{Receiver}) {
+			 pre {
+				 from.balance > 0:
+					 "Deposit balance needs to be positive!"
+			 }
+			 post {
+				 self.balance == before(self.balance) + before(from.balance):
+					 "Incorrect amount removed"
+			 }
+		 }
+	 }
+ 
+	 pub resource Vault: Provider, Receiver {
+ 
+		 pub var balance: Int
+ 
+		 init(balance: Int) {
+			 self.balance = balance
+		 }
+ 
+		 pub fun withdraw(amount: Int): @Vault {
+			 self.balance = self.balance - amount
+			 return <-create Vault(balance: amount)
+		 }
+ 
+		 // transfer combines withdraw and deposit into one function call
+		 pub fun transfer(to: &AnyResource{Receiver}, amount: Int) {
+			 pre {
+				 amount <= self.balance:
+					 "Insufficient funds"
+			 }
+			 post {
+				 self.balance == before(self.balance) - amount:
+					 "Incorrect amount removed"
+			 }
+			 to.deposit(from: <-self.withdraw(amount: amount))
+		 }
+ 
+		 pub fun deposit(from: @AnyResource{Receiver}) {
+			 self.balance = self.balance + from.balance
+			 destroy from
+		 }
+ 
+		 pub fun createEmptyVault(): @Vault {
+			 return <-create Vault(balance: 0)
+		 }
+	 }
+ 
+	 pub fun createEmptyVault(): @Vault {
+		 return <-create Vault(balance: 0)
+	 }
+ 
+	 pub resource VaultMinter {
+		 pub fun mintTokens(amount: Int, recipient: &AnyResource{Receiver}) {
+			 recipient.deposit(from: <-create Vault(balance: amount))
+		 }
+	 }
+ 
+	 init() {
+		 self.account.save(<-create Vault(balance: 30), to: /storage/vault)
+		 self.account.save(<-create VaultMinter(), to: /storage/minter)
+	 }
+ }
+ `
 
 func TestRuntimeFungibleTokenUpdateAccountCode(t *testing.T) {
 
@@ -3767,48 +3776,48 @@ func TestRuntimeFungibleTokenUpdateAccountCode(t *testing.T) {
 	deploy := utils.DeploymentTransaction("FungibleToken", []byte(basicFungibleTokenContract))
 
 	setup1Transaction := []byte(`
-      import FungibleToken from 0x01
-
-      transaction {
-
-          prepare(acct: AuthAccount) {
-
-              acct.link<&AnyResource{FungibleToken.Receiver}>(
-                  /public/receiver,
-                  target: /storage/vault
-              )
-
-              acct.link<&FungibleToken.Vault>(
-                  /private/vault,
-                  target: /storage/vault
-              )
-          }
-      }
-    `)
+	   import FungibleToken from 0x01
+ 
+	   transaction {
+ 
+		   prepare(acct: AuthAccount) {
+ 
+			   acct.link<&AnyResource{FungibleToken.Receiver}>(
+				   /public/receiver,
+				   target: /storage/vault
+			   )
+ 
+			   acct.link<&FungibleToken.Vault>(
+				   /private/vault,
+				   target: /storage/vault
+			   )
+		   }
+	   }
+	 `)
 
 	setup2Transaction := []byte(`
-      // NOTE: import location not the same as in setup1Transaction
-      import FungibleToken from 0x01
-
-      transaction {
-
-          prepare(acct: AuthAccount) {
-              let vault <- FungibleToken.createEmptyVault()
-
-              acct.save(<-vault, to: /storage/vault)
-
-              acct.link<&AnyResource{FungibleToken.Receiver}>(
-                  /public/receiver,
-                  target: /storage/vault
-              )
-
-              acct.link<&FungibleToken.Vault>(
-                  /private/vault,
-                  target: /storage/vault
-              )
-          }
-      }
-    `)
+	   // NOTE: import location not the same as in setup1Transaction
+	   import FungibleToken from 0x01
+ 
+	   transaction {
+ 
+		   prepare(acct: AuthAccount) {
+			   let vault <- FungibleToken.createEmptyVault()
+ 
+			   acct.save(<-vault, to: /storage/vault)
+ 
+			   acct.link<&AnyResource{FungibleToken.Receiver}>(
+				   /public/receiver,
+				   target: /storage/vault
+			   )
+ 
+			   acct.link<&FungibleToken.Vault>(
+				   /private/vault,
+				   target: /storage/vault
+			   )
+		   }
+	   }
+	 `)
 
 	accountCodes := map[common.LocationID][]byte{}
 	var events []cadence.Event
@@ -3899,58 +3908,58 @@ func TestRuntimeFungibleTokenCreateAccount(t *testing.T) {
 
 	deploy := []byte(fmt.Sprintf(
 		`
-          transaction {
-            prepare(signer: AuthAccount) {
-                let acct = AuthAccount(payer: signer)
-                acct.contracts.add(name: "FungibleToken", code: "%s".decodeHex())
-            }
-          }
-        `,
+		   transaction {
+			 prepare(signer: AuthAccount) {
+				 let acct = AuthAccount(payer: signer)
+				 acct.contracts.add(name: "FungibleToken", code: "%s".decodeHex())
+			 }
+		   }
+		 `,
 		hex.EncodeToString([]byte(basicFungibleTokenContract)),
 	))
 
 	setup1Transaction := []byte(`
-      import FungibleToken from 0x2
-
-      transaction {
-
-          prepare(acct: AuthAccount) {
-              acct.link<&AnyResource{FungibleToken.Receiver}>(
-                  /public/receiver,
-                  target: /storage/vault
-              )
-
-              acct.link<&FungibleToken.Vault>(
-                  /private/vault,
-                  target: /storage/vault
-              )
-          }
-      }
-    `)
+	   import FungibleToken from 0x2
+ 
+	   transaction {
+ 
+		   prepare(acct: AuthAccount) {
+			   acct.link<&AnyResource{FungibleToken.Receiver}>(
+				   /public/receiver,
+				   target: /storage/vault
+			   )
+ 
+			   acct.link<&FungibleToken.Vault>(
+				   /private/vault,
+				   target: /storage/vault
+			   )
+		   }
+	   }
+	 `)
 
 	setup2Transaction := []byte(`
-      // NOTE: import location not the same as in setup1Transaction
-      import FungibleToken from 0x02
-
-      transaction {
-
-          prepare(acct: AuthAccount) {
-              let vault <- FungibleToken.createEmptyVault()
-
-              acct.save(<-vault, to: /storage/vault)
-
-              acct.link<&AnyResource{FungibleToken.Receiver}>(
-                  /public/receiver,
-                  target: /storage/vault
-              )
-
-              acct.link<&FungibleToken.Vault>(
-                  /private/vault,
-                  target: /storage/vault
-              )
-          }
-      }
-    `)
+	   // NOTE: import location not the same as in setup1Transaction
+	   import FungibleToken from 0x02
+ 
+	   transaction {
+ 
+		   prepare(acct: AuthAccount) {
+			   let vault <- FungibleToken.createEmptyVault()
+ 
+			   acct.save(<-vault, to: /storage/vault)
+ 
+			   acct.link<&AnyResource{FungibleToken.Receiver}>(
+				   /public/receiver,
+				   target: /storage/vault
+			   )
+ 
+			   acct.link<&FungibleToken.Vault>(
+				   /private/vault,
+				   target: /storage/vault
+			   )
+		   }
+	   }
+	 `)
 
 	accountCodes := map[common.LocationID][]byte{}
 	var events []cadence.Event
@@ -4035,78 +4044,78 @@ func TestRuntimeInvokeStoredInterfaceFunction(t *testing.T) {
 	makeDeployTransaction := func(name, code string) []byte {
 		return []byte(fmt.Sprintf(
 			`
-              transaction {
-                prepare(signer: AuthAccount) {
-                  let acct = AuthAccount(payer: signer)
-                  acct.contracts.add(name: "%s", code: "%s".decodeHex())
-                }
-              }
-            `,
+			   transaction {
+				 prepare(signer: AuthAccount) {
+				   let acct = AuthAccount(payer: signer)
+				   acct.contracts.add(name: "%s", code: "%s".decodeHex())
+				 }
+			   }
+			 `,
 			name,
 			hex.EncodeToString([]byte(code)),
 		))
 	}
 
 	contractInterfaceCode := `
-      pub contract interface TestContractInterface {
-
-          pub resource interface RInterface {
-
-              pub fun check(a: Int, b: Int) {
-                  pre { a > 1 }
-                  post { b > 1 }
-              }
-          }
-      }
-	`
+	   pub contract interface TestContractInterface {
+ 
+		   pub resource interface RInterface {
+ 
+			   pub fun check(a: Int, b: Int) {
+				   pre { a > 1 }
+				   post { b > 1 }
+			   }
+		   }
+	   }
+	 `
 
 	contractCode := `
-	  import TestContractInterface from 0x2
-
-	  pub contract TestContract: TestContractInterface {
-
-	      pub resource R: TestContractInterface.RInterface {
-
-	          pub fun check(a: Int, b: Int) {
-	              pre { a < 3 }
-                  post { b < 3 }
-	          }
-	      }
-
-	      pub fun createR(): @R {
-	          return <-create R()
-	      }
-	   }
-	`
+	   import TestContractInterface from 0x2
+ 
+	   pub contract TestContract: TestContractInterface {
+ 
+		   pub resource R: TestContractInterface.RInterface {
+ 
+			   pub fun check(a: Int, b: Int) {
+				   pre { a < 3 }
+				   post { b < 3 }
+			   }
+		   }
+ 
+		   pub fun createR(): @R {
+			   return <-create R()
+		   }
+		}
+	 `
 
 	setupCode := []byte(`
-	  import TestContractInterface from 0x2
-	  import TestContract from 0x3
-
-	  transaction {
-	      prepare(signer: AuthAccount) {
-	          signer.save(<-TestContract.createR(), to: /storage/r)
-	      }
-	  }
-	`)
+	   import TestContractInterface from 0x2
+	   import TestContract from 0x3
+ 
+	   transaction {
+		   prepare(signer: AuthAccount) {
+			   signer.save(<-TestContract.createR(), to: /storage/r)
+		   }
+	   }
+	 `)
 
 	makeUseCode := func(a int, b int) []byte {
 		return []byte(
 			fmt.Sprintf(
 				`
-	              import TestContractInterface from 0x2
-
-                  // NOTE: *not* importing concrete implementation.
-                  //   Should be imported automatically when loading the value from storage
-
-	              // import TestContract from 0x3
-
-	              transaction {
-	                  prepare(signer: AuthAccount) {
-	                      signer.borrow<&AnyResource{TestContractInterface.RInterface}>(from: /storage/r)?.check(a: %d, b: %d)
-	                  }
-	              }
-	            `,
+				   import TestContractInterface from 0x2
+ 
+				   // NOTE: *not* importing concrete implementation.
+				   //   Should be imported automatically when loading the value from storage
+ 
+				   // import TestContract from 0x3
+ 
+				   transaction {
+					   prepare(signer: AuthAccount) {
+						   signer.borrow<&AnyResource{TestContractInterface.RInterface}>(from: /storage/r)?.check(a: %d, b: %d)
+					   }
+				   }
+				 `,
 				a,
 				b,
 			),
@@ -4224,24 +4233,24 @@ func TestRuntimeBlock(t *testing.T) {
 	runtime := NewInterpreterRuntime()
 
 	script := []byte(`
-      transaction {
-        prepare() {
-          let block = getCurrentBlock()
-          log(block)
-          log(block.height)
-          log(block.view)
-          log(block.id)
-          log(block.timestamp)
-
-          let nextBlock = getBlock(at: block.height + UInt64(1))
-          log(nextBlock)
-          log(nextBlock?.height)
-          log(nextBlock?.view)
-          log(nextBlock?.id)
-          log(nextBlock?.timestamp)
-        }
-      }
-    `)
+	   transaction {
+		 prepare() {
+		   let block = getCurrentBlock()
+		   log(block)
+		   log(block.height)
+		   log(block.view)
+		   log(block.id)
+		   log(block.timestamp)
+ 
+		   let nextBlock = getBlock(at: block.height + UInt64(1))
+		   log(nextBlock)
+		   log(nextBlock?.height)
+		   log(nextBlock?.view)
+		   log(nextBlock?.id)
+		   log(nextBlock?.timestamp)
+		 }
+	   }
+	 `)
 
 	var loggedMessages []string
 
@@ -4294,13 +4303,13 @@ func TestRuntimeUnsafeRandom(t *testing.T) {
 	runtime := NewInterpreterRuntime()
 
 	script := []byte(`
-      transaction {
-        prepare() {
-          let rand = unsafeRandom()
-          log(rand)
-        }
-      }
-    `)
+	   transaction {
+		 prepare() {
+		   let rand = unsafeRandom()
+		   log(rand)
+		 }
+	   }
+	 `)
 
 	var loggedMessages []string
 
@@ -4342,10 +4351,10 @@ func TestRuntimeTransactionTopLevelDeclarations(t *testing.T) {
 		runtime := NewInterpreterRuntime()
 
 		script := []byte(`
-          pub fun test() {}
-
-          transaction {}
-        `)
+		   pub fun test() {}
+ 
+		   transaction {}
+		 `)
 
 		runtimeInterface := &testRuntimeInterface{
 			getSigningAccounts: func() ([]Address, error) {
@@ -4371,10 +4380,10 @@ func TestRuntimeTransactionTopLevelDeclarations(t *testing.T) {
 		runtime := NewInterpreterRuntime()
 
 		script := []byte(`
-          pub resource R {}
-
-          transaction {}
-        `)
+		   pub resource R {}
+ 
+		   transaction {}
+		 `)
 
 		runtimeInterface := &testRuntimeInterface{
 			getSigningAccounts: func() ([]Address, error) {
@@ -4423,15 +4432,15 @@ func TestRuntimeStoreIntegerTypes(t *testing.T) {
 			contract := []byte(
 				fmt.Sprintf(
 					`
-                      pub contract Test {
-
-                          pub let n: %s
-
-                          init() {
-                              self.n = 42
-                          }
-                      }
-                    `,
+					   pub contract Test {
+ 
+						   pub let n: %s
+ 
+						   init() {
+							   self.n = 42
+						   }
+					   }
+					 `,
 					typeName,
 				),
 			)
@@ -4491,74 +4500,74 @@ func TestRuntimeResourceOwnerFieldUseComposite(t *testing.T) {
 	}
 
 	contract := []byte(`
-      pub contract Test {
-
-          pub resource R {
-
-              pub fun logOwnerAddress() {
-                log(self.owner?.address)
-              }
-          }
-
-          pub fun createR(): @R {
-              return <-create R()
-          }
-      }
-    `)
+	   pub contract Test {
+ 
+		   pub resource R {
+ 
+			   pub fun logOwnerAddress() {
+				 log(self.owner?.address)
+			   }
+		   }
+ 
+		   pub fun createR(): @R {
+			   return <-create R()
+		   }
+	   }
+	 `)
 
 	deploy := utils.DeploymentTransaction("Test", contract)
 
 	tx := []byte(`
-      import Test from 0x1
-
-      transaction {
-
-          prepare(signer: AuthAccount) {
-
-              let r <- Test.createR()
-              log(r.owner?.address)
-              r.logOwnerAddress()
-
-              signer.save(<-r, to: /storage/r)
-              signer.link<&Test.R>(/public/r, target: /storage/r)
-
-              let ref1 = signer.borrow<&Test.R>(from: /storage/r)!
-              log(ref1.owner?.address)
-              ref1.logOwnerAddress()
-
-              let publicAccount = getAccount(0x01)
-              let ref2 = publicAccount.getCapability(/public/r).borrow<&Test.R>()!
-              log(ref2.owner?.address)
-              ref2.logOwnerAddress()
-          }
-      }
-    `)
+	   import Test from 0x1
+ 
+	   transaction {
+ 
+		   prepare(signer: AuthAccount) {
+ 
+			   let r <- Test.createR()
+			   log(r.owner?.address)
+			   r.logOwnerAddress()
+ 
+			   signer.save(<-r, to: /storage/r)
+			   signer.link<&Test.R>(/public/r, target: /storage/r)
+ 
+			   let ref1 = signer.borrow<&Test.R>(from: /storage/r)!
+			   log(ref1.owner?.address)
+			   ref1.logOwnerAddress()
+ 
+			   let publicAccount = getAccount(0x01)
+			   let ref2 = publicAccount.getCapability(/public/r).borrow<&Test.R>()!
+			   log(ref2.owner?.address)
+			   ref2.logOwnerAddress()
+		   }
+	   }
+	 `)
 
 	tx2 := []byte(`
-      import Test from 0x1
-
-      transaction {
-
-          prepare(signer: AuthAccount) {
-              let ref1 = signer.borrow<&Test.R>(from: /storage/r)!
-              log(ref1.owner?.address)
-              log(ref1.owner?.balance)
-              log(ref1.owner?.availableBalance)
-              log(ref1.owner?.storageUsed)
-              log(ref1.owner?.storageCapacity)
-              ref1.logOwnerAddress()
-
-              let publicAccount = getAccount(0x01)
-              let ref2 = publicAccount.getCapability(/public/r).borrow<&Test.R>()!
-              log(ref2.owner?.address)
-              log(ref2.owner?.balance)
-              log(ref2.owner?.availableBalance)
-              log(ref2.owner?.storageUsed)
-              log(ref2.owner?.storageCapacity)
-              ref2.logOwnerAddress()
-          }
-      }
-    `)
+	   import Test from 0x1
+ 
+	   transaction {
+ 
+		   prepare(signer: AuthAccount) {
+			   let ref1 = signer.borrow<&Test.R>(from: /storage/r)!
+			   log(ref1.owner?.address)
+			   log(ref1.owner?.balance)
+			   log(ref1.owner?.availableBalance)
+			   log(ref1.owner?.storageUsed)
+			   log(ref1.owner?.storageCapacity)
+			   ref1.logOwnerAddress()
+ 
+			   let publicAccount = getAccount(0x01)
+			   let ref2 = publicAccount.getCapability(/public/r).borrow<&Test.R>()!
+			   log(ref2.owner?.address)
+			   log(ref2.owner?.balance)
+			   log(ref2.owner?.availableBalance)
+			   log(ref2.owner?.storageUsed)
+			   log(ref2.owner?.storageCapacity)
+			   ref2.logOwnerAddress()
+		   }
+	   }
+	 `)
 
 	accountCodes := map[common.LocationID][]byte{}
 	var events []cadence.Event
@@ -4693,79 +4702,79 @@ func TestRuntimeResourceOwnerFieldUseArray(t *testing.T) {
 	}
 
 	contract := []byte(`
-      pub contract Test {
-
-          pub resource R {
-
-              pub fun logOwnerAddress() {
-                log(self.owner?.address)
-              }
-          }
-
-          pub fun createR(): @R {
-              return <-create R()
-          }
-      }
-    `)
+	   pub contract Test {
+ 
+		   pub resource R {
+ 
+			   pub fun logOwnerAddress() {
+				 log(self.owner?.address)
+			   }
+		   }
+ 
+		   pub fun createR(): @R {
+			   return <-create R()
+		   }
+	   }
+	 `)
 
 	deploy := utils.DeploymentTransaction("Test", contract)
 
 	tx := []byte(`
-      import Test from 0x1
-
-      transaction {
-
-          prepare(signer: AuthAccount) {
-
-              let rs <- [
-                  <-Test.createR(),
-                  <-Test.createR()
-              ]
-              log(rs[0].owner?.address)
-              log(rs[1].owner?.address)
-              rs[0].logOwnerAddress()
-              rs[1].logOwnerAddress()
-
-              signer.save(<-rs, to: /storage/rs)
-              signer.link<&[Test.R]>(/public/rs, target: /storage/rs)
-
-              let ref1 = signer.borrow<&[Test.R]>(from: /storage/rs)!
-              log(ref1[0].owner?.address)
-              log(ref1[1].owner?.address)
-              ref1[0].logOwnerAddress()
-              ref1[1].logOwnerAddress()
-
-              let publicAccount = getAccount(0x01)
-              let ref2 = publicAccount.getCapability(/public/rs).borrow<&[Test.R]>()!
-              log(ref2[0].owner?.address)
-              log(ref2[1].owner?.address)
-              ref2[0].logOwnerAddress()
-              ref2[1].logOwnerAddress()
-          }
-      }
-    `)
+	   import Test from 0x1
+ 
+	   transaction {
+ 
+		   prepare(signer: AuthAccount) {
+ 
+			   let rs <- [
+				   <-Test.createR(),
+				   <-Test.createR()
+			   ]
+			   log(rs[0].owner?.address)
+			   log(rs[1].owner?.address)
+			   rs[0].logOwnerAddress()
+			   rs[1].logOwnerAddress()
+ 
+			   signer.save(<-rs, to: /storage/rs)
+			   signer.link<&[Test.R]>(/public/rs, target: /storage/rs)
+ 
+			   let ref1 = signer.borrow<&[Test.R]>(from: /storage/rs)!
+			   log(ref1[0].owner?.address)
+			   log(ref1[1].owner?.address)
+			   ref1[0].logOwnerAddress()
+			   ref1[1].logOwnerAddress()
+ 
+			   let publicAccount = getAccount(0x01)
+			   let ref2 = publicAccount.getCapability(/public/rs).borrow<&[Test.R]>()!
+			   log(ref2[0].owner?.address)
+			   log(ref2[1].owner?.address)
+			   ref2[0].logOwnerAddress()
+			   ref2[1].logOwnerAddress()
+		   }
+	   }
+	 `)
 
 	tx2 := []byte(`
-      import Test from 0x1
-
-      transaction {
-
-          prepare(signer: AuthAccount) {
-              let ref1 = signer.borrow<&[Test.R]>(from: /storage/rs)!
-              log(ref1[0].owner?.address)
-              log(ref1[1].owner?.address)
-              ref1[0].logOwnerAddress()
-              ref1[1].logOwnerAddress()
-
-              let publicAccount = getAccount(0x01)
-              let ref2 = publicAccount.getCapability(/public/rs).borrow<&[Test.R]>()!
-              log(ref2[0].owner?.address)
-              log(ref2[1].owner?.address)
-              ref2[0].logOwnerAddress()
-              ref2[1].logOwnerAddress()
-          }
-      }
-    `)
+	   import Test from 0x1
+ 
+	   transaction {
+ 
+		   prepare(signer: AuthAccount) {
+			   let ref1 = signer.borrow<&[Test.R]>(from: /storage/rs)!
+			   log(ref1[0].owner?.address)
+			   log(ref1[1].owner?.address)
+			   ref1[0].logOwnerAddress()
+			   ref1[1].logOwnerAddress()
+ 
+			   let publicAccount = getAccount(0x01)
+			   let ref2 = publicAccount.getCapability(/public/rs).borrow<&[Test.R]>()!
+			   log(ref2[0].owner?.address)
+			   log(ref2[1].owner?.address)
+			   ref2[0].logOwnerAddress()
+			   ref2[1].logOwnerAddress()
+		   }
+	   }
+	 `)
 
 	accountCodes := map[common.LocationID][]byte{}
 	var events []cadence.Event
@@ -4874,79 +4883,79 @@ func TestRuntimeResourceOwnerFieldUseDictionary(t *testing.T) {
 	}
 
 	contract := []byte(`
-      pub contract Test {
-
-          pub resource R {
-
-              pub fun logOwnerAddress() {
-                log(self.owner?.address)
-              }
-          }
-
-          pub fun createR(): @R {
-              return <-create R()
-          }
-      }
-    `)
+	   pub contract Test {
+ 
+		   pub resource R {
+ 
+			   pub fun logOwnerAddress() {
+				 log(self.owner?.address)
+			   }
+		   }
+ 
+		   pub fun createR(): @R {
+			   return <-create R()
+		   }
+	   }
+	 `)
 
 	deploy := utils.DeploymentTransaction("Test", contract)
 
 	tx := []byte(`
-      import Test from 0x1
-
-      transaction {
-
-          prepare(signer: AuthAccount) {
-
-              let rs <- {
-                  "a": <-Test.createR(),
-                  "b": <-Test.createR()
-              }
-              log(rs["a"]?.owner?.address)
-              log(rs["b"]?.owner?.address)
-              rs["a"]?.logOwnerAddress()
-              rs["b"]?.logOwnerAddress()
-
-              signer.save(<-rs, to: /storage/rs)
-              signer.link<&{String: Test.R}>(/public/rs, target: /storage/rs)
-
-              let ref1 = signer.borrow<&{String: Test.R}>(from: /storage/rs)!
-              log(ref1["a"]?.owner?.address)
-              log(ref1["b"]?.owner?.address)
-              ref1["a"]?.logOwnerAddress()
-              ref1["b"]?.logOwnerAddress()
-
-              let publicAccount = getAccount(0x01)
-              let ref2 = publicAccount.getCapability(/public/rs).borrow<&{String: Test.R}>()!
-              log(ref2["a"]?.owner?.address)
-              log(ref2["b"]?.owner?.address)
-              ref2["a"]?.logOwnerAddress()
-              ref2["b"]?.logOwnerAddress()
-          }
-      }
-    `)
+	   import Test from 0x1
+ 
+	   transaction {
+ 
+		   prepare(signer: AuthAccount) {
+ 
+			   let rs <- {
+				   "a": <-Test.createR(),
+				   "b": <-Test.createR()
+			   }
+			   log(rs["a"]?.owner?.address)
+			   log(rs["b"]?.owner?.address)
+			   rs["a"]?.logOwnerAddress()
+			   rs["b"]?.logOwnerAddress()
+ 
+			   signer.save(<-rs, to: /storage/rs)
+			   signer.link<&{String: Test.R}>(/public/rs, target: /storage/rs)
+ 
+			   let ref1 = signer.borrow<&{String: Test.R}>(from: /storage/rs)!
+			   log(ref1["a"]?.owner?.address)
+			   log(ref1["b"]?.owner?.address)
+			   ref1["a"]?.logOwnerAddress()
+			   ref1["b"]?.logOwnerAddress()
+ 
+			   let publicAccount = getAccount(0x01)
+			   let ref2 = publicAccount.getCapability(/public/rs).borrow<&{String: Test.R}>()!
+			   log(ref2["a"]?.owner?.address)
+			   log(ref2["b"]?.owner?.address)
+			   ref2["a"]?.logOwnerAddress()
+			   ref2["b"]?.logOwnerAddress()
+		   }
+	   }
+	 `)
 
 	tx2 := []byte(`
-      import Test from 0x1
-
-      transaction {
-
-          prepare(signer: AuthAccount) {
-              let ref1 = signer.borrow<&{String: Test.R}>(from: /storage/rs)!
-              log(ref1["a"]?.owner?.address)
-              log(ref1["b"]?.owner?.address)
-              ref1["a"]?.logOwnerAddress()
-              ref1["b"]?.logOwnerAddress()
-
-              let publicAccount = getAccount(0x01)
-              let ref2 = publicAccount.getCapability(/public/rs).borrow<&{String: Test.R}>()!
-              log(ref2["a"]?.owner?.address)
-              log(ref2["b"]?.owner?.address)
-              ref2["a"]?.logOwnerAddress()
-              ref2["b"]?.logOwnerAddress()
-          }
-      }
-    `)
+	   import Test from 0x1
+ 
+	   transaction {
+ 
+		   prepare(signer: AuthAccount) {
+			   let ref1 = signer.borrow<&{String: Test.R}>(from: /storage/rs)!
+			   log(ref1["a"]?.owner?.address)
+			   log(ref1["b"]?.owner?.address)
+			   ref1["a"]?.logOwnerAddress()
+			   ref1["b"]?.logOwnerAddress()
+ 
+			   let publicAccount = getAccount(0x01)
+			   let ref2 = publicAccount.getCapability(/public/rs).borrow<&{String: Test.R}>()!
+			   log(ref2["a"]?.owner?.address)
+			   log(ref2["b"]?.owner?.address)
+			   ref2["a"]?.logOwnerAddress()
+			   ref2["b"]?.logOwnerAddress()
+		   }
+	   }
+	 `)
 
 	accountCodes := map[common.LocationID][]byte{}
 	var events []cadence.Event
@@ -5060,32 +5069,32 @@ func TestRuntimeComputationLimit(t *testing.T) {
 		{
 			name: "Infinite while loop",
 			code: `
-              while true {}
-            `,
+			   while true {}
+			 `,
 			ok: false,
 		},
 		{
 			name: "Limited while loop",
 			code: `
-              var i = 0
-              while i < 5 {
-                  i = i + 1
-              }
-            `,
+			   var i = 0
+			   while i < 5 {
+				   i = i + 1
+			   }
+			 `,
 			ok: false,
 		},
 		{
 			name: "Too many for-in loop iterations",
 			code: `
-              for i in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] {}
-            `,
+			   for i in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] {}
+			 `,
 			ok: false,
 		},
 		{
 			name: "Some for-in loop iterations",
 			code: `
-              for i in [1, 2, 3, 4] {}
-            `,
+			   for i in [1, 2, 3, 4] {}
+			 `,
 			ok: true,
 		},
 	}
@@ -5097,12 +5106,12 @@ func TestRuntimeComputationLimit(t *testing.T) {
 			script := []byte(
 				fmt.Sprintf(
 					`
-                      transaction {
-                          prepare() {
-                              %s
-                          }
-                      }
-                    `,
+					   transaction {
+						   prepare() {
+							   %s
+						   }
+					   }
+					 `,
 					test.code,
 				),
 			)
@@ -5156,40 +5165,40 @@ func TestRuntimeMetrics(t *testing.T) {
 	imported1Location := common.StringLocation("imported1")
 
 	importedScript1 := []byte(`
-      pub fun generate(): [Int] {
-        return [1, 2, 3]
-      }
-    `)
+	   pub fun generate(): [Int] {
+		 return [1, 2, 3]
+	   }
+	 `)
 
 	imported2Location := common.StringLocation("imported2")
 
 	importedScript2 := []byte(`
-      pub fun getPath(): StoragePath {
-        return /storage/foo
-      }
-    `)
+	   pub fun getPath(): StoragePath {
+		 return /storage/foo
+	   }
+	 `)
 
 	script1 := []byte(`
-      import "imported1"
-
-      transaction {
-          prepare(signer: AuthAccount) {
-              signer.save(generate(), to: /storage/foo)
-          }
-          execute {}
-      }
-    `)
+	   import "imported1"
+ 
+	   transaction {
+		   prepare(signer: AuthAccount) {
+			   signer.save(generate(), to: /storage/foo)
+		   }
+		   execute {}
+	   }
+	 `)
 
 	script2 := []byte(`
-      import "imported2"
-
-      transaction {
-          prepare(signer: AuthAccount) {
-              signer.load<[Int]>(from: getPath())
-          }
-          execute {}
-      }
-    `)
+	   import "imported2"
+ 
+	   transaction {
+		   prepare(signer: AuthAccount) {
+			   signer.load<[Int]>(from: getPath())
+		   }
+		   execute {}
+	   }
+	 `)
 
 	storage := newTestStorage(nil, nil)
 
@@ -5347,39 +5356,39 @@ func TestRuntimeContractWriteback(t *testing.T) {
 	addressValue := cadence.BytesToAddress([]byte{0xCA, 0xDE})
 
 	contract := []byte(`
-      pub contract Test {
-
-          pub(set) var test: Int
-
-          init() {
-              self.test = 1
-          }
-      }
-    `)
+	   pub contract Test {
+ 
+		   pub(set) var test: Int
+ 
+		   init() {
+			   self.test = 1
+		   }
+	   }
+	 `)
 
 	deploy := utils.DeploymentTransaction("Test", contract)
 
 	readTx := []byte(`
-      import Test from 0xCADE
-
-       transaction {
-
-          prepare(signer: AuthAccount) {
-              log(Test.test)
-          }
-       }
-    `)
+	   import Test from 0xCADE
+ 
+		transaction {
+ 
+		   prepare(signer: AuthAccount) {
+			   log(Test.test)
+		   }
+		}
+	 `)
 
 	writeTx := []byte(`
-      import Test from 0xCADE
-
-       transaction {
-
-          prepare(signer: AuthAccount) {
-              Test.test = 2
-          }
-       }
-    `)
+	   import Test from 0xCADE
+ 
+		transaction {
+ 
+		   prepare(signer: AuthAccount) {
+			   Test.test = 2
+		   }
+		}
+	 `)
 
 	var accountCode []byte
 	var events []cadence.Event
@@ -5476,36 +5485,36 @@ func TestRuntimeStorageWriteback(t *testing.T) {
 	addressValue := cadence.BytesToAddress([]byte{0xCA, 0xDE})
 
 	contract := []byte(`
-      pub contract Test {
-
-          pub resource R {
-
-              pub(set) var test: Int
-
-              init() {
-                  self.test = 1
-              }
-          }
-
-
-          pub fun createR(): @R {
-              return <-create R()
-          }
-      }
-    `)
+	   pub contract Test {
+ 
+		   pub resource R {
+ 
+			   pub(set) var test: Int
+ 
+			   init() {
+				   self.test = 1
+			   }
+		   }
+ 
+ 
+		   pub fun createR(): @R {
+			   return <-create R()
+		   }
+	   }
+	 `)
 
 	deploy := utils.DeploymentTransaction("Test", contract)
 
 	setupTx := []byte(`
-      import Test from 0xCADE
-
-       transaction {
-
-          prepare(signer: AuthAccount) {
-              signer.save(<-Test.createR(), to: /storage/r)
-          }
-       }
-    `)
+	   import Test from 0xCADE
+ 
+		transaction {
+ 
+		   prepare(signer: AuthAccount) {
+			   signer.save(<-Test.createR(), to: /storage/r)
+		   }
+		}
+	 `)
 
 	var accountCode []byte
 	var events []cadence.Event
@@ -5578,15 +5587,15 @@ func TestRuntimeStorageWriteback(t *testing.T) {
 	assert.Len(t, writes, 2)
 
 	readTx := []byte(`
-     import Test from 0xCADE
-
-      transaction {
-
-         prepare(signer: AuthAccount) {
-             log(signer.borrow<&Test.R>(from: /storage/r)!.test)
-         }
-      }
-    `)
+	  import Test from 0xCADE
+ 
+	   transaction {
+ 
+		  prepare(signer: AuthAccount) {
+			  log(signer.borrow<&Test.R>(from: /storage/r)!.test)
+		  }
+	   }
+	 `)
 
 	writes = nil
 
@@ -5604,16 +5613,16 @@ func TestRuntimeStorageWriteback(t *testing.T) {
 	assert.Len(t, writes, 0)
 
 	writeTx := []byte(`
-     import Test from 0xCADE
-
-      transaction {
-
-         prepare(signer: AuthAccount) {
-             let r = signer.borrow<&Test.R>(from: /storage/r)!
-             r.test = 2
-         }
-      }
-    `)
+	  import Test from 0xCADE
+ 
+	   transaction {
+ 
+		  prepare(signer: AuthAccount) {
+			  let r = signer.borrow<&Test.R>(from: /storage/r)!
+			  r.test = 2
+		  }
+	   }
+	 `)
 
 	writes = nil
 
@@ -5638,12 +5647,12 @@ func TestRuntimeExternalError(t *testing.T) {
 	runtime := NewInterpreterRuntime()
 
 	script := []byte(`
-      transaction {
-        prepare() {
-          log("ok")
-        }
-      }
-    `)
+	   transaction {
+		 prepare() {
+		   log("ok")
+		 }
+	   }
+	 `)
 
 	type logPanic struct{}
 
@@ -5681,37 +5690,37 @@ func TestRuntimeDeployCodeCaching(t *testing.T) {
 	t.Parallel()
 
 	const helloWorldContract = `
-      pub contract HelloWorld {
-
-          pub let greeting: String
-
-          init() {
-              self.greeting = "Hello, World!"
-          }
-
-          pub fun hello(): String {
-              return self.greeting
-          }
-      }
-    `
+	   pub contract HelloWorld {
+ 
+		   pub let greeting: String
+ 
+		   init() {
+			   self.greeting = "Hello, World!"
+		   }
+ 
+		   pub fun hello(): String {
+			   return self.greeting
+		   }
+	   }
+	 `
 
 	const callHelloTxTemplate = `
-        import HelloWorld from 0x%s
-
-        transaction {
-            prepare(signer: AuthAccount) {
-                assert(HelloWorld.hello() == "Hello, World!")
-            }
-        }
-    `
+		 import HelloWorld from 0x%s
+ 
+		 transaction {
+			 prepare(signer: AuthAccount) {
+				 assert(HelloWorld.hello() == "Hello, World!")
+			 }
+		 }
+	 `
 
 	createAccountTx := []byte(`
-        transaction {
-            prepare(signer: AuthAccount) {
-                AuthAccount(payer: signer)
-            }
-        }
-    `)
+		 transaction {
+			 prepare(signer: AuthAccount) {
+				 AuthAccount(payer: signer)
+			 }
+		 }
+	 `)
 
 	deployTx := utils.DeploymentTransaction("HelloWorld", []byte(helloWorldContract))
 
@@ -5811,38 +5820,38 @@ func TestRuntimeUpdateCodeCaching(t *testing.T) {
 	t.Parallel()
 
 	const helloWorldContract1 = `
-      pub contract HelloWorld {
-
-          pub fun hello(): String {
-              return "1"
-          }
-      }
-    `
+	   pub contract HelloWorld {
+ 
+		   pub fun hello(): String {
+			   return "1"
+		   }
+	   }
+	 `
 
 	const helloWorldContract2 = `
-      pub contract HelloWorld {
-
-          pub fun hello(): String {
-              return "2"
-          }
-      }
-    `
+	   pub contract HelloWorld {
+ 
+		   pub fun hello(): String {
+			   return "2"
+		   }
+	   }
+	 `
 
 	const callHelloScriptTemplate = `
-        import HelloWorld from 0x%s
-
-        pub fun main(): String {
-            return HelloWorld.hello()
-        }
-    `
+		 import HelloWorld from 0x%s
+ 
+		 pub fun main(): String {
+			 return HelloWorld.hello()
+		 }
+	 `
 
 	createAccountTx := []byte(`
-        transaction {
-            prepare(signer: AuthAccount) {
-                AuthAccount(payer: signer)
-            }
-        }
-    `)
+		 transaction {
+			 prepare(signer: AuthAccount) {
+				 AuthAccount(payer: signer)
+			 }
+		 }
+	 `)
 
 	deployTx := utils.DeploymentTransaction("HelloWorld", []byte(helloWorldContract1))
 	updateTx := utils.UpdateTransaction("HelloWorld", []byte(helloWorldContract2))
@@ -6028,37 +6037,37 @@ func TestRuntimeNoProgramsHitForToplevelPrograms(t *testing.T) {
 	t.Parallel()
 
 	const helloWorldContract = `
-      pub contract HelloWorld {
-
-          pub let greeting: String
-
-          init() {
-              self.greeting = "Hello, World!"
-          }
-
-          pub fun hello(): String {
-              return self.greeting
-          }
-      }
-    `
+	   pub contract HelloWorld {
+ 
+		   pub let greeting: String
+ 
+		   init() {
+			   self.greeting = "Hello, World!"
+		   }
+ 
+		   pub fun hello(): String {
+			   return self.greeting
+		   }
+	   }
+	 `
 
 	const callHelloTxTemplate = `
-        import HelloWorld from 0x%s
-
-        transaction {
-            prepare(signer: AuthAccount) {
-                assert(HelloWorld.hello() == "Hello, World!")
-            }
-        }
-    `
+		 import HelloWorld from 0x%s
+ 
+		 transaction {
+			 prepare(signer: AuthAccount) {
+				 assert(HelloWorld.hello() == "Hello, World!")
+			 }
+		 }
+	 `
 
 	createAccountTx := []byte(`
-        transaction {
-            prepare(signer: AuthAccount) {
-                AuthAccount(payer: signer)
-            }
-        }
-    `)
+		 transaction {
+			 prepare(signer: AuthAccount) {
+				 AuthAccount(payer: signer)
+			 }
+		 }
+	 `)
 
 	deployTx := utils.DeploymentTransaction("HelloWorld", []byte(helloWorldContract))
 
@@ -6178,62 +6187,62 @@ func TestRuntimeTransaction_ContractUpdate(t *testing.T) {
 	runtime := NewInterpreterRuntime()
 
 	const contract1 = `
-      pub contract Test {
-
-          pub resource R {
-
-              pub let name: String
-
-              init(name: String) {
-                  self.name = name
-              }
-
-              pub fun hello(): Int {
-                  return 1
-              }
-          }
-
-          pub var rs: @{String: R}
-
-          pub fun hello(): Int {
-              return 1
-          }
-
-          init() {
-              self.rs <- {}
-              self.rs["r1"] <-! create R(name: "1")
-          }
-      }
-    `
+	   pub contract Test {
+ 
+		   pub resource R {
+ 
+			   pub let name: String
+ 
+			   init(name: String) {
+				   self.name = name
+			   }
+ 
+			   pub fun hello(): Int {
+				   return 1
+			   }
+		   }
+ 
+		   pub var rs: @{String: R}
+ 
+		   pub fun hello(): Int {
+			   return 1
+		   }
+ 
+		   init() {
+			   self.rs <- {}
+			   self.rs["r1"] <-! create R(name: "1")
+		   }
+	   }
+	 `
 
 	const contract2 = `
-      pub contract Test {
-
-          pub resource R {
-
-              pub let name: String
-
-              init(name: String) {
-                  self.name = name
-              }
-
-              pub fun hello(): Int {
-                  return 2
-              }
-          }
-
-          pub var rs: @{String: R}
-
-          pub fun hello(): Int {
-              return 2
-          }
-
-          init() {
-              self.rs <- {}
-              panic("should never be executed")
-          }
-      }
-    `
+	   pub contract Test {
+ 
+		   pub resource R {
+ 
+			   pub let name: String
+ 
+			   init(name: String) {
+				   self.name = name
+			   }
+ 
+			   pub fun hello(): Int {
+				   return 2
+			   }
+		   }
+ 
+		   pub var rs: @{String: R}
+ 
+		   pub fun hello(): Int {
+			   return 2
+		   }
+ 
+		   init() {
+			   self.rs <- {}
+			   panic("should never be executed")
+		   }
+	   }
+	 `
 
 	var accountCode []byte
 	var events []cadence.Event
@@ -6324,20 +6333,20 @@ func TestRuntimeTransaction_ContractUpdate(t *testing.T) {
 	// Use the Test contract
 
 	script1 := []byte(`
-      import 0x42
-
-      pub fun main() {
-          // Check stored data
-
-          assert(Test.rs.length == 1)
-          assert(Test.rs["r1"]?.name == "1")
-
-          // Check functions
-
-          assert(Test.rs["r1"]?.hello() == 1)
-          assert(Test.hello() == 1)
-      }
-    `)
+	   import 0x42
+ 
+	   pub fun main() {
+		   // Check stored data
+ 
+		   assert(Test.rs.length == 1)
+		   assert(Test.rs["r1"]?.name == "1")
+ 
+		   // Check functions
+ 
+		   assert(Test.rs["r1"]?.hello() == 1)
+		   assert(Test.hello() == 1)
+	   }
+	 `)
 
 	_, err = runtime.ExecuteScript(
 		Script{
@@ -6388,21 +6397,21 @@ func TestRuntimeTransaction_ContractUpdate(t *testing.T) {
 	// Use the new Test contract
 
 	script2 := []byte(`
-      import 0x42
-
-      pub fun main() {
-          // Existing data is still available and the same as before
-
-          assert(Test.rs.length == 1)
-          assert(Test.rs["r1"]?.name == "1")
-
-          // New function code is executed.
-          // Compare with script1 above, which checked 1.
-
-          assert(Test.rs["r1"]?.hello() == 2)
-          assert(Test.hello() == 2)
-      }
-    `)
+	   import 0x42
+ 
+	   pub fun main() {
+		   // Existing data is still available and the same as before
+ 
+		   assert(Test.rs.length == 1)
+		   assert(Test.rs["r1"]?.name == "1")
+ 
+		   // New function code is executed.
+		   // Compare with script1 above, which checked 1.
+ 
+		   assert(Test.rs["r1"]?.hello() == 2)
+		   assert(Test.hello() == 2)
+	   }
+	 `)
 
 	_, err = runtime.ExecuteScript(
 		Script{
@@ -6423,8 +6432,8 @@ func TestRuntimeExecuteScriptArguments(t *testing.T) {
 	runtime := NewInterpreterRuntime()
 
 	script := []byte(`
-      pub fun main(num: Int) {}
-    `)
+	   pub fun main(num: Int) {}
+	 `)
 
 	type testCase struct {
 		name      string
@@ -6518,10 +6527,10 @@ func TestRuntimePanics(t *testing.T) {
 	runtime := NewInterpreterRuntime()
 
 	script := []byte(`
-      pub fun main() {
-		[1][1]
-      }
-    `)
+	   pub fun main() {
+		 [1][1]
+	   }
+	 `)
 
 	storage := newTestStorage(nil, nil)
 
@@ -6557,13 +6566,13 @@ func TestRuntimeGetCapability(t *testing.T) {
 		runtime := NewInterpreterRuntime()
 
 		script := []byte(`
-          pub fun main(): Capability {
-              let dict: {Int: AuthAccount} = {}
-              let ref = &dict as &{Int: AnyStruct}
-              ref[0] = getAccount(0x01) as AnyStruct
-              return dict.values[0].getCapability(/private/xxx)
-          }
-        `)
+		   pub fun main(): Capability {
+			   let dict: {Int: AuthAccount} = {}
+			   let ref = &dict as &{Int: AnyStruct}
+			   ref[0] = getAccount(0x01) as AnyStruct
+			   return dict.values[0].getCapability(/private/xxx)
+		   }
+		 `)
 
 		runtimeInterface := &testRuntimeInterface{}
 
@@ -6592,13 +6601,13 @@ func TestRuntimeGetCapability(t *testing.T) {
 		runtime := NewInterpreterRuntime()
 
 		script := []byte(`
-          pub fun main(): Capability {
-              let dict: {Int: AuthAccount} = {}
-              let ref = &dict as &{Int: AnyStruct}
-              ref[0] = getAccount(0x01) as AnyStruct
-              return dict.values[0].getCapability(/public/xxx)
-          }
-        `)
+		   pub fun main(): Capability {
+			   let dict: {Int: AuthAccount} = {}
+			   let ref = &dict as &{Int: AnyStruct}
+			   ref[0] = getAccount(0x01) as AnyStruct
+			   return dict.values[0].getCapability(/public/xxx)
+		   }
+		 `)
 
 		runtimeInterface := &testRuntimeInterface{}
 
@@ -6627,13 +6636,13 @@ func TestRuntimeGetCapability(t *testing.T) {
 		runtime := NewInterpreterRuntime()
 
 		script := []byte(`
-          pub fun main(): Capability {
-              let dict: {Int: PublicAccount} = {}
-              let ref = &dict as &{Int: AnyStruct}
-              ref[0] = getAccount(0x01) as AnyStruct
-              return dict.values[0].getCapability(/public/xxx)
-          }
-        `)
+		   pub fun main(): Capability {
+			   let dict: {Int: PublicAccount} = {}
+			   let ref = &dict as &{Int: AnyStruct}
+			   ref[0] = getAccount(0x01) as AnyStruct
+			   return dict.values[0].getCapability(/public/xxx)
+		   }
+		 `)
 
 		runtimeInterface := &testRuntimeInterface{}
 
