@@ -47,9 +47,26 @@ type StaticType interface {
 type CompositeStaticType struct {
 	Location            common.Location
 	QualifiedIdentifier string
+	TypeID              common.TypeID
 }
 
 var _ StaticType = CompositeStaticType{}
+
+func NewCompositeStaticType(location common.Location, qualifiedIdentifier string) CompositeStaticType {
+
+	var typeID common.TypeID
+	if location == nil {
+		typeID = common.TypeID(qualifiedIdentifier)
+	} else {
+		typeID = location.TypeID(qualifiedIdentifier)
+	}
+
+	return CompositeStaticType{
+		Location:            location,
+		QualifiedIdentifier: qualifiedIdentifier,
+		TypeID:              typeID,
+	}
+}
 
 func (CompositeStaticType) isStaticType() {}
 
@@ -57,7 +74,7 @@ func (t CompositeStaticType) String() string {
 	if t.Location == nil {
 		return t.QualifiedIdentifier
 	}
-	return string(t.Location.TypeID(t.QualifiedIdentifier))
+	return string(t.TypeID)
 }
 
 func (t CompositeStaticType) Equal(other StaticType) bool {
@@ -66,8 +83,7 @@ func (t CompositeStaticType) Equal(other StaticType) bool {
 		return false
 	}
 
-	return common.LocationsMatch(otherCompositeType.Location, t.Location) &&
-		otherCompositeType.QualifiedIdentifier == t.QualifiedIdentifier
+	return otherCompositeType.TypeID == t.TypeID
 }
 
 // InterfaceStaticType
@@ -331,6 +347,7 @@ func ConvertSemaToStaticType(t sema.Type) StaticType {
 		return CompositeStaticType{
 			Location:            t.Location,
 			QualifiedIdentifier: t.QualifiedIdentifier(),
+			TypeID:              t.ID(),
 		}
 
 	case *sema.InterfaceType:
@@ -424,11 +441,11 @@ func ConvertSemaInterfaceTypeToStaticInterfaceType(t *sema.InterfaceType) Interf
 func ConvertStaticToSemaType(
 	typ StaticType,
 	getInterface func(location common.Location, qualifiedIdentifier string) *sema.InterfaceType,
-	getComposite func(location common.Location, qualifiedIdentifier string) *sema.CompositeType,
+	getComposite func(location common.Location, qualifiedIdentifier string, typeID common.TypeID) *sema.CompositeType,
 ) sema.Type {
 	switch t := typ.(type) {
 	case CompositeStaticType:
-		return getComposite(t.Location, t.QualifiedIdentifier)
+		return getComposite(t.Location, t.QualifiedIdentifier, t.TypeID)
 
 	case InterfaceStaticType:
 		return getInterface(t.Location, t.QualifiedIdentifier)

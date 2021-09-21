@@ -7112,6 +7112,7 @@ func (v *CompositeValue) StaticType() StaticType {
 	return CompositeStaticType{
 		Location:            v.Location,
 		QualifiedIdentifier: v.QualifiedIdentifier,
+		TypeID:              v.TypeID(),
 	}
 }
 

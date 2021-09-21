@@ -472,10 +472,7 @@ func TestInterpretGetType(t *testing.T) {
               let result = r.getType()
             `,
 			result: interpreter.TypeValue{
-				Type: interpreter.CompositeStaticType{
-					Location:            TestLocation,
-					QualifiedIdentifier: "R",
-				},
+				Type: interpreter.NewCompositeStaticType(TestLocation, "R"),
 			},
 		},
 		{

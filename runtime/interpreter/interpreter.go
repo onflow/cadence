@@ -3300,8 +3300,12 @@ func (interpreter *Interpreter) ConvertStaticToSemaType(staticType StaticType) s
 		func(location common.Location, qualifiedIdentifier string) *sema.InterfaceType {
 			return interpreter.getInterfaceType(location, qualifiedIdentifier)
 		},
-		func(location common.Location, qualifiedIdentifier string) *sema.CompositeType {
-			return interpreter.getCompositeType(location, qualifiedIdentifier)
+		func(location common.Location, qualifiedIdentifier string, typeID common.TypeID) *sema.CompositeType {
+			if location == nil {
+				return interpreter.getNativeCompositeType(qualifiedIdentifier)
+			}
+
+			return interpreter.getUserCompositeType(location, typeID)
 		},
 	)
 }
@@ -3343,16 +3347,6 @@ func (interpreter *Interpreter) GetContractComposite(contractLocation common.Add
 	}
 
 	return contractValue, nil
-}
-
-func (interpreter *Interpreter) getCompositeType(location common.Location, qualifiedIdentifier string) *sema.CompositeType {
-	if location == nil {
-		return interpreter.getNativeCompositeType(qualifiedIdentifier)
-	}
-
-	typeID := location.TypeID(qualifiedIdentifier)
-
-	return interpreter.getUserCompositeType(location, typeID)
 }
 
 func (interpreter *Interpreter) getUserCompositeType(location common.Location, typeID common.TypeID) *sema.CompositeType {
@@ -3510,16 +3504,16 @@ func (interpreter *Interpreter) ExpectType(
 }
 
 func (interpreter *Interpreter) checkContainerMutation(
-	memberStaticType StaticType,
-	value Value,
+	elementType StaticType,
+	element Value,
 	getLocationRange func() LocationRange,
 ) {
+	expectedType := interpreter.ConvertStaticToSemaType(elementType)
+	actualType := element.DynamicType(interpreter, SeenReferences{})
 
-	memberType := interpreter.ConvertStaticToSemaType(memberStaticType)
-
-	if !interpreter.IsSubType(value.DynamicType(interpreter, SeenReferences{}), memberType) {
+	if !interpreter.IsSubType(actualType, expectedType) {
 		panic(ContainerMutationError{
-			ExpectedType:  memberType,
+			ExpectedType:  expectedType,
 			LocationRange: getLocationRange(),
 		})
 	}

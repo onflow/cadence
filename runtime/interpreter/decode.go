@@ -1130,10 +1130,7 @@ func decodeCompositeStaticType(dec *cbor.StreamDecoder) (StaticType, error) {
 		return nil, err
 	}
 
-	return CompositeStaticType{
-		Location:            location,
-		QualifiedIdentifier: qualifiedIdentifier,
-	}, nil
+	return NewCompositeStaticType(location, qualifiedIdentifier), nil
 }
 
 func decodeInterfaceStaticType(dec *cbor.StreamDecoder) (InterfaceStaticType, error) {
