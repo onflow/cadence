@@ -668,8 +668,8 @@ func importCompositeValue(
 
 		fields = append(fields,
 			interpreter.CompositeField{
-				fieldType.Identifier,
-				importedFieldValue,
+				Name:  fieldType.Identifier,
+				Value: importedFieldValue,
 			},
 		)
 	}
@@ -687,7 +687,9 @@ func importCompositeValue(
 			return importHashAlgorithm(inter, fields)
 
 		case sema.SignatureAlgorithmType:
-			// continue in the normal path
+			// SignatureAlgorithmType has a dedicated constructor
+			// (e.g. it has host functions)
+			return importSignatureAlgorithm(inter, fields)
 
 		default:
 			return nil, fmt.Errorf(
@@ -831,4 +833,50 @@ func importHashAlgorithm(
 	}
 
 	return stdlib.NewHashAlgorithmCase(inter, uint8(rawValue)), nil
+}
+
+func importSignatureAlgorithm(
+	inter *interpreter.Interpreter,
+	fields []interpreter.CompositeField,
+) (
+	*interpreter.CompositeValue,
+	error,
+) {
+
+	var foundRawValue bool
+	var rawValue interpreter.UInt8Value
+
+	ty := sema.SignatureAlgorithmType
+
+	for _, field := range fields {
+		switch field.Name {
+		case sema.EnumRawValueFieldName:
+			rawValue, foundRawValue = field.Value.(interpreter.UInt8Value)
+			if !foundRawValue {
+				return nil, fmt.Errorf(
+					"cannot import value of type '%s'. invalid value for field '%s': %v",
+					ty,
+					field.Name,
+					field.Value,
+				)
+			}
+
+		default:
+			return nil, fmt.Errorf(
+				"cannot import value of type '%s'. invalid field '%s'",
+				ty,
+				field.Name,
+			)
+		}
+	}
+
+	if !foundRawValue {
+		return nil, fmt.Errorf(
+			"cannot import value of type '%s'. missing field '%s'",
+			ty,
+			sema.EnumRawValueFieldName,
+		)
+	}
+
+	return stdlib.NewSignatureAlgorithmCase(inter, uint8(rawValue)), nil
 }

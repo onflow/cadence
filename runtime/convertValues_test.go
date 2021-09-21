@@ -3121,10 +3121,8 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 		_, err := executeScript(t, script, publicKey, runtimeInterface)
 		require.Error(t, err)
 
-		var valueErr *MalformedValueError
-		require.ErrorAs(t, err, &valueErr)
-
-		assert.Equal(t, sema.PublicKeyType, valueErr.ExpectedType)
+		var argErr *InvalidEntryPointArgumentError
+		require.ErrorAs(t, err, &argErr)
 	})
 
 	t.Run("Extra field", func(t *testing.T) {
