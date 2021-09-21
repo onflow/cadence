@@ -448,3 +448,28 @@ func decodeCompositeOrderedMapTypeInfo(dec *cbor.StreamDecoder) (orderedMapTypeI
 		kind:                common.CompositeKind(kind),
 	}, nil
 }
+
+type stringAtreeValue string
+
+var _ atree.Value = stringAtreeValue("")
+var _ atree.Storable = stringAtreeValue("")
+
+func (v stringAtreeValue) Storable(storage atree.SlabStorage, address atree.Address, maxInlineSize uint64) (atree.Storable, error) {
+	return maybeLargeImmutableStorable(v, storage, address, maxInlineSize)
+}
+
+func (v stringAtreeValue) ByteSize() uint32 {
+	return getBytesCBORSize([]byte(v))
+}
+
+func (v stringAtreeValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
+	return v, nil
+}
+
+func stringAtreeHashInput(v atree.Value, _ []byte) ([]byte, error) {
+	return []byte(v.(stringAtreeValue)), nil
+}
+
+func stringAtreeComparator(_ atree.SlabStorage, v atree.Value, o atree.Storable) (bool, error) {
+	return v.(stringAtreeValue) == o.(stringAtreeValue), nil
+}

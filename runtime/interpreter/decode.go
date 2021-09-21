@@ -94,6 +94,13 @@ func (d Decoder) decodeStorable() (atree.Storable, error) {
 		}
 		storable = NilValue{}
 
+	case cbor.TextStringType:
+		v, err := d.decoder.DecodeString()
+		if err != nil {
+			return nil, err
+		}
+		storable = stringAtreeValue(v)
+
 	case cbor.TagType:
 		var num uint64
 		num, err = d.decoder.DecodeTagNumber()

@@ -243,6 +243,12 @@ func (v *StringValue) Encode(e *atree.Encoder) error {
 	return e.CBOR.EncodeString(v.Str)
 }
 
+// Encode encodes the value as a CBOR string
+//
+func (v stringAtreeValue) Encode(e *atree.Encoder) error {
+	return e.CBOR.EncodeString(string(v))
+}
+
 // cborVoidValue represents the CBOR value:
 //
 // 	cbor.Tag{
