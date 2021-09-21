@@ -676,7 +676,7 @@ func (*StringValue) DeepRemove(_ *Interpreter) {
 }
 
 func (v *StringValue) ByteSize() uint32 {
-	return getBytesCBORSize([]byte(v.Str))
+	return 2 + getBytesCBORSize([]byte(v.Str))
 }
 
 func (v *StringValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {

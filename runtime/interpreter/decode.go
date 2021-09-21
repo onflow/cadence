@@ -87,13 +87,6 @@ func (d Decoder) decodeStorable() (atree.Storable, error) {
 		}
 		storable = BoolValue(v)
 
-	case cbor.TextStringType:
-		v, err := d.decoder.DecodeString()
-		if err != nil {
-			return nil, err
-		}
-		storable = d.decodeString(v)
-
 	case cbor.NilType:
 		err := d.decoder.DecodeNil()
 		if err != nil {
@@ -119,6 +112,13 @@ func (d Decoder) decodeStorable() (atree.Storable, error) {
 				return nil, err
 			}
 			storable = VoidValue{}
+
+		case CBORTagStringValue:
+			v, err := d.decoder.DecodeString()
+			if err != nil {
+				return nil, err
+			}
+			storable = d.decodeString(v)
 
 		case CBORTagSomeValue:
 			storable, err = d.decodeSome()

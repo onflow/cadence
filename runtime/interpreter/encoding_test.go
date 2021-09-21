@@ -184,14 +184,18 @@ func TestEncodeDecodeString(t *testing.T) {
 	t.Parallel()
 
 	t.Run("empty", func(t *testing.T) {
-		expected := NewStringValue("")
 
 		t.Parallel()
+
+		expected := NewStringValue("")
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				value: expected,
 				encoded: []byte{
+					// tag
+					0xd8, CBORTagStringValue,
+
 					//  UTF-8 string, 0 bytes follow
 					0x60,
 				},
@@ -199,14 +203,18 @@ func TestEncodeDecodeString(t *testing.T) {
 	})
 
 	t.Run("non-empty", func(t *testing.T) {
-		expected := NewStringValue("foo")
 
 		t.Parallel()
+
+		expected := NewStringValue("foo")
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				value: expected,
 				encoded: []byte{
+					// tag
+					0xd8, CBORTagStringValue,
+
 					// UTF-8 string, 3 bytes follow
 					0x63,
 					// f, o, o
@@ -452,10 +460,11 @@ func TestEncodeDecodeIntValue(t *testing.T) {
 	})
 
 	t.Run("negative, large (> 64 bit)", func(t *testing.T) {
-		setString, ok := new(big.Int).SetString("-18446744073709551617", 10)
-		require.True(t, ok)
 
 		t.Parallel()
+
+		setString, ok := new(big.Int).SetString("-18446744073709551617", 10)
+		require.True(t, ok)
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
@@ -473,10 +482,11 @@ func TestEncodeDecodeIntValue(t *testing.T) {
 	})
 
 	t.Run("positive, large (> 64 bit)", func(t *testing.T) {
-		bigInt, ok := new(big.Int).SetString("18446744073709551616", 10)
-		require.True(t, ok)
 
 		t.Parallel()
+
+		bigInt, ok := new(big.Int).SetString("18446744073709551616", 10)
+		require.True(t, ok)
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
@@ -1162,10 +1172,11 @@ func TestEncodeDecodeInt128Value(t *testing.T) {
 	})
 
 	t.Run("RFC", func(t *testing.T) {
-		rfcValue, ok := new(big.Int).SetString("18446744073709551616", 10)
-		require.True(t, ok)
 
 		t.Parallel()
+
+		rfcValue, ok := new(big.Int).SetString("18446744073709551616", 10)
+		require.True(t, ok)
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
@@ -1344,10 +1355,10 @@ func TestEncodeDecodeInt256Value(t *testing.T) {
 
 	t.Run("RFC", func(t *testing.T) {
 
+		t.Parallel()
+
 		rfcValue, ok := new(big.Int).SetString("18446744073709551616", 10)
 		require.True(t, ok)
-
-		t.Parallel()
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
@@ -1425,10 +1436,10 @@ func TestEncodeDecodeUIntValue(t *testing.T) {
 
 	t.Run("RFC", func(t *testing.T) {
 
+		t.Parallel()
+
 		rfcValue, ok := new(big.Int).SetString("18446744073709551616", 10)
 		require.True(t, ok)
-
-		t.Parallel()
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
@@ -1907,10 +1918,11 @@ func TestEncodeDecodeUInt128Value(t *testing.T) {
 	})
 
 	t.Run("RFC", func(t *testing.T) {
-		rfcValue, ok := new(big.Int).SetString("18446744073709551616", 10)
-		require.True(t, ok)
 
 		t.Parallel()
+
+		rfcValue, ok := new(big.Int).SetString("18446744073709551616", 10)
+		require.True(t, ok)
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
@@ -2013,10 +2025,11 @@ func TestEncodeDecodeUInt256Value(t *testing.T) {
 	})
 
 	t.Run("RFC", func(t *testing.T) {
-		rfcValue, ok := new(big.Int).SetString("18446744073709551616", 10)
-		require.True(t, ok)
 
 		t.Parallel()
+
+		rfcValue, ok := new(big.Int).SetString("18446744073709551616", 10)
+		require.True(t, ok)
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
@@ -2355,6 +2368,10 @@ func TestEncodeDecodeSomeValue(t *testing.T) {
 				encoded: []byte{
 					// tag
 					0xd8, CBORTagSomeValue,
+
+					// tag
+					0xd8, CBORTagStringValue,
+
 					// UTF-8 string, length 4
 					0x64,
 					// t, e, s, t

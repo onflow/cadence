@@ -95,7 +95,7 @@ const (
 	CBORTagCompositeValue
 	CBORTagTypeValue
 	CBORTagArrayValue
-	_
+	CBORTagStringValue
 	_
 	_
 	_
@@ -233,6 +233,13 @@ func (v BoolValue) Encode(e *atree.Encoder) error {
 // Encode encodes the value as a CBOR string
 //
 func (v *StringValue) Encode(e *atree.Encoder) error {
+	err := e.CBOR.EncodeRawBytes([]byte{
+		// tag number
+		0xd8, CBORTagStringValue,
+	})
+	if err != nil {
+		return err
+	}
 	return e.CBOR.EncodeString(v.Str)
 }
 
