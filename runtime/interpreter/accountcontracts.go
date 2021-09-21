@@ -27,7 +27,7 @@ import (
 
 // AuthAccountContractsValue
 
-var authAccountContractsLocation common.Location = nil
+var authAccountContractsLocation = sema.AuthAccountContractsType.Location
 var authAccountContractsQualifiedIdentifier = sema.AuthAccountContractsType.QualifiedIdentifier()
 var authAccountContractsCompositeKind = sema.AuthAccountContractsType.Kind
 var authAccountContractsTypeInfo = encodeCompositeOrderedMapTypeInfo(
@@ -92,7 +92,7 @@ func NewAuthAccountContractsValue(
 
 // PublicAccountContractsValue
 
-var publicAccountContractsLocation common.Location = nil
+var publicAccountContractsLocation = sema.PublicAccountContractsType.Location
 var publicAccountContractsQualifiedIdentifier = sema.PublicAccountContractsType.QualifiedIdentifier()
 var publicAccountContractsCompositeKind = sema.PublicAccountContractsType.Kind
 var publicAccountContractsTypeInfo = encodeCompositeOrderedMapTypeInfo(

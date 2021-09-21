@@ -7626,6 +7626,7 @@ func (v *CompositeValue) RemoveField(
 func NewEnumCaseValue(
 	interpreter *Interpreter,
 	enumType *sema.CompositeType,
+	typeInfo cbor.RawMessage,
 	rawValue NumberValue,
 	functions map[string]FunctionValue,
 ) *CompositeValue {
@@ -7637,13 +7638,14 @@ func NewEnumCaseValue(
 		},
 	}
 
-	v := NewCompositeValue(
+	v := NewCompositeValueWithTypeInfo(
 		interpreter,
 		enumType.Location,
 		enumType.QualifiedIdentifier(),
 		enumType.Kind,
 		fields,
 		common.Address{},
+		typeInfo,
 	)
 
 	v.Functions = functions
@@ -9299,7 +9301,7 @@ func (v AddressValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 	return v, nil
 }
 
-var authAccountLocation common.Location = nil
+var authAccountLocation = sema.AuthAccountType.Location
 var authAccountQualifiedIdentifier = sema.AuthAccountType.QualifiedIdentifier()
 var authAccountCompositeKind = sema.AuthAccountType.Kind
 var authAccountTypeInfo = encodeCompositeOrderedMapTypeInfo(
@@ -9442,7 +9444,7 @@ func accountGetCapabilityFunction(addressValue AddressValue, pathType sema.Type)
 	)
 }
 
-var publicAccountLocation common.Location = nil
+var publicAccountLocation = sema.PublicAccountType.Location
 var publicAccountQualifiedIdentifier = sema.PublicAccountType.QualifiedIdentifier()
 var publicAccountCompositeKind = sema.PublicAccountType.Kind
 var publicAccountTypeInfo = encodeCompositeOrderedMapTypeInfo(
@@ -9953,7 +9955,7 @@ func (v LinkValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 	return v, nil
 }
 
-var accountKeyLocation common.Location = nil
+var accountKeyLocation = sema.AccountKeyType.Location
 var accountKeyQualifiedIdentifier = sema.AccountKeyType.QualifiedIdentifier()
 var accountKeyCompositeKind = sema.AccountKeyType.Kind
 var accountKeyTypeInfo = encodeCompositeOrderedMapTypeInfo(
@@ -10005,7 +10007,7 @@ func NewAccountKeyValue(
 	)
 }
 
-var publicKeyLocation common.Location = nil
+var publicKeyLocation = sema.PublicKeyType.Location
 var publicKeyQualifiedIdentifier = sema.PublicKeyType.QualifiedIdentifier()
 var publicKeyCompositeKind = sema.PublicKeyType.Kind
 var publicKeyTypeInfo = encodeCompositeOrderedMapTypeInfo(
@@ -10124,7 +10126,7 @@ var publicKeyVerifyFunction = NewHostFunctionValue(
 	},
 )
 
-var authAccountKeysLocation common.Location = nil
+var authAccountKeysLocation = sema.AuthAccountKeysType.Location
 var authAccountKeysQualifiedIdentifier = sema.AuthAccountKeysType.QualifiedIdentifier()
 var authAccountKeysCompositeKind = sema.AuthAccountKeysType.Kind
 var authAccountKeysTypeInfo = encodeCompositeOrderedMapTypeInfo(
@@ -10167,7 +10169,7 @@ func NewAuthAccountKeysValue(
 	)
 }
 
-var publicAccountKeysLocation common.Location = nil
+var publicAccountKeysLocation = sema.PublicAccountKeysType.Location
 var publicAccountKeysQualifiedIdentifier = sema.PublicAccountKeysType.QualifiedIdentifier()
 var publicAccountKeysCompositeKind = sema.PublicAccountKeysType.Kind
 var publicAccountKeysTypeInfo = encodeCompositeOrderedMapTypeInfo(
@@ -10199,3 +10201,15 @@ func NewPublicAccountKeysValue(
 		publicAccountKeysTypeInfo,
 	)
 }
+
+var SignatureAlgorithmTypeInfo = encodeCompositeOrderedMapTypeInfo(
+	sema.SignatureAlgorithmType.Location,
+	sema.SignatureAlgorithmType.QualifiedIdentifier(),
+	sema.SignatureAlgorithmType.Kind,
+)
+
+var HashAlgorithmTypeInfo = encodeCompositeOrderedMapTypeInfo(
+	sema.HashAlgorithmType.Location,
+	sema.HashAlgorithmType.QualifiedIdentifier(),
+	sema.HashAlgorithmType.Kind,
+)
