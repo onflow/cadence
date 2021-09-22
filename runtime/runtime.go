@@ -768,7 +768,12 @@ func validateArgumentParams(
 
 		// Check whether the decoded value conforms to the type associated with the value
 		conformanceResults := interpreter.TypeConformanceResults{}
-		if !arg.ConformsToDynamicType(inter, dynamicType, conformanceResults) {
+		if !arg.ConformsToDynamicType(
+			inter,
+			interpreter.ReturnEmptyLocationRange,
+			dynamicType,
+			conformanceResults,
+		) {
 			return nil, &InvalidEntryPointArgumentError{
 				Index: i,
 				Err: &MalformedValueError{
@@ -2933,7 +2938,7 @@ func NewPublicKeyFromValue(
 		return nil, fmt.Errorf("public key value is not set")
 	}
 
-	key := publicKeyFieldGetter(inter)
+	key := publicKeyFieldGetter(inter, getLocationRange)
 
 	byteArray, err := interpreter.ByteArrayValueToByteSlice(key)
 	if err != nil {

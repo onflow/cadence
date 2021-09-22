@@ -106,7 +106,12 @@ func (v BlockValue) RecursiveString(seenReferences SeenReferences) string {
 	)
 }
 
-func (v BlockValue) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType, _ TypeConformanceResults) bool {
+func (v BlockValue) ConformsToDynamicType(
+	_ *Interpreter,
+	_ func() LocationRange,
+	dynamicType DynamicType,
+	_ TypeConformanceResults,
+) bool {
 	_, ok := dynamicType.(BlockDynamicType)
 	return ok
 }
@@ -123,7 +128,7 @@ func (BlockValue) NeedsStoreToAddress(_ *Interpreter, _ atree.Address) bool {
 	return false
 }
 
-func (v BlockValue) DeepCopy(_ *Interpreter, _ atree.Address) Value {
+func (v BlockValue) DeepCopy(_ *Interpreter, _ func() LocationRange, _ atree.Address) Value {
 	return v
 }
 

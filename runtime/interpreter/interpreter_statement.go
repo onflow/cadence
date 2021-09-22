@@ -249,8 +249,10 @@ func (interpreter *Interpreter) VisitForStatement(statement *ast.ForStatement) a
 		nil,
 	)
 
+	getLocationRange := locationRangeGetter(interpreter.Location, statement)
+
 	value := interpreter.evalExpression(statement.Value)
-	valueCopy := interpreter.CopyValue(value, atree.Address{})
+	valueCopy := interpreter.CopyValue(getLocationRange, value, atree.Address{})
 
 	iterator, err := valueCopy.(*ArrayValue).array.Iterator()
 	if err != nil {

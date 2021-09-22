@@ -65,7 +65,7 @@ func NewAuthAccountContractsValue(
 		},
 	}
 	computedFields := map[string]ComputedField{
-		sema.AuthAccountContractsTypeNamesField: func(interpreter *Interpreter) Value {
+		sema.AuthAccountContractsTypeNamesField: func(interpreter *Interpreter, _ func() LocationRange) Value {
 			return namesGetter(interpreter)
 		},
 	}
@@ -116,7 +116,7 @@ func NewPublicAccountContractsValue(
 	}
 
 	computedFields := map[string]ComputedField{
-		sema.PublicAccountContractsTypeNamesField: func(interpreter *Interpreter) Value {
+		sema.PublicAccountContractsTypeNamesField: func(interpreter *Interpreter, _ func() LocationRange) Value {
 			return namesGetter(interpreter)
 		},
 	}

@@ -115,7 +115,7 @@ func testCompositeValue(t *testing.T, code string) *interpreter.Interpreter {
 				)
 
 				value.ComputedFields = map[string]interpreter.ComputedField{
-					"color": func(*interpreter.Interpreter) interpreter.Value {
+					"color": func(_ *interpreter.Interpreter, _ func() interpreter.LocationRange) interpreter.Value {
 						return interpreter.NewStringValue("Red")
 					},
 				}

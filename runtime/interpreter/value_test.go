@@ -123,10 +123,18 @@ func TestOwnerArrayDeepCopy(t *testing.T) {
 		value,
 	)
 
-	arrayCopy := array.DeepCopy(inter, atree.Address(newOwner))
+	arrayCopy := array.DeepCopy(
+		inter,
+		ReturnEmptyLocationRange,
+		atree.Address(newOwner),
+	)
 	array = arrayCopy.(*ArrayValue)
 
-	value = array.Get(inter, ReturnEmptyLocationRange, 0).(*CompositeValue)
+	value = array.Get(
+		inter,
+		ReturnEmptyLocationRange,
+		0,
+	).(*CompositeValue)
 
 	assert.Equal(t, newOwner, array.GetOwner())
 	assert.Equal(t, newOwner, value.GetOwner())
@@ -462,11 +470,19 @@ func TestOwnerDictionaryCopy(t *testing.T) {
 		keyValue, value,
 	)
 
-	copyResult := inter.CopyValue(dictionary, atree.Address{})
+	copyResult := inter.CopyValue(
+		ReturnEmptyLocationRange,
+		dictionary,
+		atree.Address{},
+	)
 
 	dictionaryCopy := copyResult.(*DictionaryValue)
 
-	queriedValue, _ := dictionaryCopy.Get(inter, ReturnEmptyLocationRange, keyValue)
+	queriedValue, _ := dictionaryCopy.Get(
+		inter,
+		ReturnEmptyLocationRange,
+		keyValue,
+	)
 	value = queriedValue.(*CompositeValue)
 
 	assert.Equal(t, common.Address{}, dictionaryCopy.GetOwner())
@@ -737,9 +753,17 @@ func TestOwnerCompositeCopy(t *testing.T) {
 		value,
 	)
 
-	composite = inter.CopyValue(composite, atree.Address{}).(*CompositeValue)
+	composite = inter.CopyValue(
+		ReturnEmptyLocationRange,
+		composite,
+		atree.Address{},
+	).(*CompositeValue)
 
-	value = composite.GetMember(inter, ReturnEmptyLocationRange, fieldName).(*CompositeValue)
+	value = composite.GetMember(
+		inter,
+		ReturnEmptyLocationRange,
+		fieldName,
+	).(*CompositeValue)
 
 	assert.Equal(t, common.Address{}, composite.GetOwner())
 	assert.Equal(t, common.Address{}, value.GetOwner())
@@ -1214,7 +1238,7 @@ func TestGetHashInput(t *testing.T) {
 
 			inter := newTestInterpreter(t)
 
-			actual := testCase.value.HashInput(inter, scratch[:])
+			actual := testCase.value.HashInput(inter, ReturnEmptyLocationRange, scratch[:])
 
 			assert.Equal(t,
 				testCase.expected,
@@ -1300,11 +1324,21 @@ func TestEphemeralReferenceTypeConformance(t *testing.T) {
 	dynamicType := value.DynamicType(inter, SeenReferences{})
 
 	// Check the dynamic type conformance on a cyclic value.
-	conforms := value.ConformsToDynamicType(inter, dynamicType, TypeConformanceResults{})
+	conforms := value.ConformsToDynamicType(
+		inter,
+		ReturnEmptyLocationRange,
+		dynamicType,
+		TypeConformanceResults{},
+	)
 	assert.True(t, conforms)
 
 	// Check against a non-conforming type
-	conforms = value.ConformsToDynamicType(inter, EphemeralReferenceDynamicType{}, TypeConformanceResults{})
+	conforms = value.ConformsToDynamicType(
+		inter,
+		ReturnEmptyLocationRange,
+		EphemeralReferenceDynamicType{},
+		TypeConformanceResults{},
+	)
 	assert.False(t, conforms)
 }
 

@@ -68,20 +68,21 @@ func (interpreter *Interpreter) invokeFunctionValue(
 
 	for i, argument := range arguments {
 		argumentType := argumentTypes[i]
+
+		var locationPos ast.HasPosition
+		if i < len(expressions) {
+			locationPos = expressions[i]
+		} else {
+			locationPos = invocationPosition
+		}
+
+		getLocationRange := locationRangeGetter(interpreter.Location, locationPos)
+
 		if i < parameterTypeCount {
 			parameterType := parameterTypes[i]
-
-			var locationPos ast.HasPosition
-			if i < len(expressions) {
-				locationPos = expressions[i]
-			} else {
-				locationPos = invocationPosition
-			}
-
-			getLocationRange := locationRangeGetter(interpreter.Location, locationPos)
 			argumentCopies[i] = interpreter.copyAndConvert(argument, argumentType, parameterType, getLocationRange)
 		} else {
-			argumentCopies[i] = interpreter.CopyValue(argument, atree.Address{})
+			argumentCopies[i] = interpreter.CopyValue(getLocationRange, argument, atree.Address{})
 		}
 	}
 

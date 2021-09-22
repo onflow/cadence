@@ -1810,7 +1810,7 @@ func (interpreter *Interpreter) copyAndConvert(
 	getLocationRange func() LocationRange,
 ) Value {
 
-	valueCopy := interpreter.CopyValue(value, atree.Address{})
+	valueCopy := interpreter.CopyValue(getLocationRange, value, atree.Address{})
 
 	result := interpreter.ConvertAndBox(
 		valueCopy,
@@ -2903,17 +2903,24 @@ func (interpreter *Interpreter) authAccountSaveFunction(addressValue AddressValu
 
 		// Prevent an overwrite
 
+		getLocationRange := invocation.GetLocationRange
+
 		if interpreter.storedValueExists(address, key) {
 			panic(
 				OverwriteError{
 					Address:       addressValue,
 					Path:          path,
-					LocationRange: invocation.GetLocationRange(),
+					LocationRange: getLocationRange(),
 				},
 			)
 		}
 
-		value = interpreter.TransferValue(value, nil, atree.Address(address))
+		value = interpreter.TransferValue(
+			getLocationRange,
+			value,
+			nil,
+			atree.Address(address),
+		)
 
 		// Write new value
 
@@ -2967,7 +2974,7 @@ func (interpreter *Interpreter) authAccountReadFunction(addressValue AddressValu
 				return NilValue{}
 			}
 
-			valueCopy := interpreter.CopyValue(value, atree.Address{})
+			valueCopy := interpreter.CopyValue(invocation.GetLocationRange, value, atree.Address{})
 
 			// Remove the value from storage,
 			// but only if the type check succeeded.
@@ -3530,7 +3537,11 @@ func (interpreter *Interpreter) checkResourceNotDestroyed(value Value, getLocati
 	})
 }
 
-func (interpreter *Interpreter) CopyValue(value Value, address atree.Address) Value {
+func (interpreter *Interpreter) CopyValue(
+	getLocationRange func() LocationRange,
+	value Value,
+	address atree.Address,
+) Value {
 
 	if !value.NeedsStoreToAddress(interpreter, address) &&
 		value.IsResourceKinded(interpreter) {
@@ -3538,10 +3549,15 @@ func (interpreter *Interpreter) CopyValue(value Value, address atree.Address) Va
 		return value
 	}
 
-	return value.DeepCopy(interpreter, address)
+	return value.DeepCopy(interpreter, getLocationRange, address)
 }
 
-func (interpreter *Interpreter) TransferValue(value Value, storable atree.Storable, address atree.Address) Value {
+func (interpreter *Interpreter) TransferValue(
+	getLocationRange func() LocationRange,
+	value Value,
+	storable atree.Storable,
+	address atree.Address,
+) Value {
 
 	if !value.NeedsStoreToAddress(interpreter, address) &&
 		value.IsResourceKinded(interpreter) {
@@ -3549,7 +3565,7 @@ func (interpreter *Interpreter) TransferValue(value Value, storable atree.Storab
 		return value
 	}
 
-	valueCopy := value.DeepCopy(interpreter, address)
+	valueCopy := value.DeepCopy(interpreter, getLocationRange, address)
 
 	value.DeepRemove(interpreter)
 
@@ -3569,10 +3585,4 @@ func (interpreter *Interpreter) removeReferencedSlab(storable atree.Storable) {
 	if err != nil {
 		panic(ExternalError{err})
 	}
-}
-
-func (interpreter *Interpreter) getHashInput(value atree.Value, scratch []byte) ([]byte, error) {
-	hashInput := MustConvertStoredValue(value).(HashableValue).
-		HashInput(interpreter, scratch)
-	return hashInput, nil
 }

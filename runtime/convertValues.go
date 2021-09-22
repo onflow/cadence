@@ -217,10 +217,12 @@ func exportCompositeValue(
 	for i, field := range fieldNames {
 		fieldName := field.Identifier
 
+		// TODO: provide proper location range
 		fieldValue := v.GetField(inter, interpreter.ReturnEmptyLocationRange, fieldName)
 		if fieldValue == nil && v.ComputedFields != nil {
 			if computedField, ok := v.ComputedFields[fieldName]; ok {
-				fieldValue = computedField(inter)
+				// TODO: provide proper location range
+				fieldValue = computedField(inter, interpreter.ReturnEmptyLocationRange)
 			}
 		}
 
@@ -780,6 +782,7 @@ func importPublicKey(
 		)
 	}
 
+	// TODO: provide proper location range
 	return interpreter.NewPublicKeyValue(
 		inter,
 		interpreter.ReturnEmptyLocationRange,

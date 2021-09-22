@@ -90,7 +90,12 @@ func (DeployedContractValue) SetMember(_ *Interpreter, _ func() LocationRange, _
 	panic(errors.NewUnreachableError())
 }
 
-func (v DeployedContractValue) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType, _ TypeConformanceResults) bool {
+func (v DeployedContractValue) ConformsToDynamicType(
+	_ *Interpreter,
+	_ func() LocationRange,
+	dynamicType DynamicType,
+	_ TypeConformanceResults,
+) bool {
 	_, ok := dynamicType.(DeployedContractDynamicType)
 	return ok
 }
@@ -107,7 +112,7 @@ func (DeployedContractValue) NeedsStoreToAddress(_ *Interpreter, _ atree.Address
 	return false
 }
 
-func (v DeployedContractValue) DeepCopy(_ *Interpreter, _ atree.Address) Value {
+func (v DeployedContractValue) DeepCopy(_ *Interpreter, _ func() LocationRange, _ atree.Address) Value {
 	return v
 }
 
