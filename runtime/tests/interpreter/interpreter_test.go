@@ -8291,7 +8291,6 @@ func newTestPublicAccountValue(
 	)
 
 	contractsValue := interpreter.NewPublicAccountContractsValue(
-		inter,
 		addressValue,
 		panicFunction,
 		func(inter *interpreter.Interpreter) *interpreter.ArrayValue {
@@ -8428,6 +8427,8 @@ func TestInterpretForce(t *testing.T) {
 
 	t.Run("non-nil", func(t *testing.T) {
 
+		t.Parallel()
+
 		inter := parseCheckAndInterpret(t, `
           let x: Int? = 1
           let y = x!
@@ -8452,6 +8453,8 @@ func TestInterpretForce(t *testing.T) {
 
 	t.Run("nil", func(t *testing.T) {
 
+		t.Parallel()
+
 		inter := parseCheckAndInterpret(t, `
           let x: Int? = nil
 
@@ -8468,6 +8471,8 @@ func TestInterpretForce(t *testing.T) {
 
 	t.Run("non-optional", func(t *testing.T) {
 
+		t.Parallel()
+
 		inter := parseCheckAndInterpret(t, `
           let x: Int = 1
           let y = x!
@@ -8480,25 +8485,6 @@ func TestInterpretForce(t *testing.T) {
 			inter.Globals["y"].GetValue(),
 		)
 	})
-}
-
-func permutations(xs [][]byte) (res [][][]byte) {
-	var f func([][]byte, int)
-	f = func(a [][]byte, k int) {
-		if k == len(a) {
-			res = append(res, append([][]byte{}, a...))
-		} else {
-			for i := k; i < len(xs); i++ {
-				a[k], a[i] = a[i], a[k]
-				f(a, k+1)
-				a[k], a[i] = a[i], a[k]
-			}
-		}
-	}
-
-	f(xs, 0)
-
-	return res
 }
 
 func TestInterpretEphemeralReferenceToOptional(t *testing.T) {
@@ -8545,6 +8531,9 @@ func TestInterpretNestedDeclarationOrder(t *testing.T) {
 	t.Parallel()
 
 	t.Run("A, B", func(t *testing.T) {
+
+		t.Parallel()
+
 		_, err := parseCheckAndInterpretWithOptions(t,
 			`
               pub contract Test {
@@ -8576,6 +8565,8 @@ func TestInterpretNestedDeclarationOrder(t *testing.T) {
 	})
 
 	t.Run("B, A", func(t *testing.T) {
+
+		t.Parallel()
 
 		_, err := parseCheckAndInterpretWithOptions(t,
 			`

@@ -21,7 +21,6 @@ package interpreter
 import (
 	"fmt"
 
-	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/sema"
 )
 
@@ -78,28 +77,20 @@ func NewAuthAccountContractsValue(
 
 // PublicAccountContractsValue
 
-var publicAccountContractsLocation = sema.PublicAccountContractsType.Location
-var publicAccountContractsQualifiedIdentifier = sema.PublicAccountContractsType.QualifiedIdentifier()
-var publicAccountContractsCompositeKind = sema.PublicAccountContractsType.Kind
-
-var publicAccountContractsTypeInfo = encodeCompositeOrderedMapTypeInfo(
-	publicAccountContractsLocation,
-	publicAccountContractsQualifiedIdentifier,
-	publicAccountContractsCompositeKind,
-)
+var publicAccountContractsTypeID = sema.PublicAccountContractsType.ID()
+var publicAccountContractsStaticType StaticType = PrimitiveStaticTypePublicAccountContracts
+var publicAccountContractsDynamicType DynamicType = CompositeDynamicType{
+	StaticType: sema.PublicAccountContractsType,
+}
 
 func NewPublicAccountContractsValue(
-	interpreter *Interpreter,
 	address AddressValue,
 	getFunction FunctionValue,
 	namesGetter func(interpreter *Interpreter) *ArrayValue,
-) *CompositeValue {
+) Value {
 
-	fields := []CompositeField{
-		{
-			Name:  sema.PublicAccountContractsTypeGetFunctionName,
-			Value: getFunction,
-		},
+	fields := map[string]Value{
+		sema.PublicAccountContractsTypeGetFunctionName: getFunction,
 	}
 
 	computedFields := map[string]ComputedField{
@@ -108,22 +99,22 @@ func NewPublicAccountContractsValue(
 		},
 	}
 
+	var str string
 	stringer := func(_ SeenReferences) string {
-		return fmt.Sprintf("PublicAccount.Contracts(%s)", address)
+		if str == "" {
+			str = fmt.Sprintf("PublicAccount.Contracts(%s)", address)
+		}
+		return str
 	}
 
-	v := NewCompositeValueWithTypeInfo(
-		interpreter,
-		publicAccountContractsLocation,
-		publicAccountContractsQualifiedIdentifier,
-		publicAccountContractsCompositeKind,
+	return NewSimpleCompositeValue(
+		publicAccountContractsTypeID,
+		publicAccountContractsStaticType,
+		publicAccountContractsDynamicType,
+		nil,
 		fields,
-		common.Address{},
-		publicAccountContractsTypeInfo,
+		computedFields,
+		nil,
+		stringer,
 	)
-
-	v.Stringer = stringer
-	v.ComputedFields = computedFields
-
-	return v
 }

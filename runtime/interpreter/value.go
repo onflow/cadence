@@ -9746,7 +9746,7 @@ func NewPublicAccountValue(
 	storageUsedGet func(interpreter *Interpreter) UInt64Value,
 	storageCapacityGet func() UInt64Value,
 	keys *CompositeValue,
-	contracts *CompositeValue,
+	contracts Value,
 ) *CompositeValue {
 
 	fields := []CompositeField{

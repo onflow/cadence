@@ -1934,7 +1934,7 @@ func (r *interpreterRuntime) getPublicAccount(
 		storageUsedGetFunction(accountAddress, runtimeInterface, runtimeStorage),
 		storageCapacityGetFunction(accountAddress, runtimeInterface),
 		r.newPublicAccountKeys(inter, accountAddress, runtimeInterface),
-		r.newPublicAccountContracts(inter, accountAddress, runtimeInterface),
+		r.newPublicAccountContracts(accountAddress, runtimeInterface),
 	)
 }
 
@@ -2901,12 +2901,10 @@ func (r *interpreterRuntime) newPublicAccountKeys(
 }
 
 func (r *interpreterRuntime) newPublicAccountContracts(
-	inter *interpreter.Interpreter,
 	addressValue interpreter.AddressValue,
 	runtimeInterface Interface,
-) *interpreter.CompositeValue {
+) interpreter.Value {
 	return interpreter.NewPublicAccountContractsValue(
-		inter,
 		addressValue,
 		r.newAccountContractsGetFunction(
 			addressValue,
