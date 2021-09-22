@@ -7437,7 +7437,7 @@ func TestInterpretContractAccountFieldUse(t *testing.T) {
 						_ common.CompositeKind,
 					) map[string]interpreter.Value {
 						return map[string]interpreter.Value{
-							"account": newTestAuthAccountValue(inter, addressValue),
+							"account": newTestAuthAccountValue(addressValue),
 						}
 					},
 				),
@@ -8183,7 +8183,7 @@ func TestInterpretResourceOwnerFieldUse(t *testing.T) {
 		Name: "account",
 		Type: sema.AuthAccountType,
 		ValueFactory: func(inter *interpreter.Interpreter) interpreter.Value {
-			return newTestAuthAccountValue(inter, interpreter.AddressValue(address))
+			return newTestAuthAccountValue(interpreter.AddressValue(address))
 		},
 		Kind: common.DeclarationKindConstant,
 	}
@@ -8200,9 +8200,9 @@ func TestInterpretResourceOwnerFieldUse(t *testing.T) {
 				interpreter.WithPredeclaredValues([]interpreter.ValueDeclaration{
 					valueDeclaration,
 				}),
-				interpreter.WithAccountHandlerFunc(
-					func(inter *interpreter.Interpreter, address interpreter.AddressValue) *interpreter.CompositeValue {
-						return newTestPublicAccountValue(inter, address)
+				interpreter.WithPublicAccountHandlerFunc(
+					func(_ *interpreter.Interpreter, address interpreter.AddressValue) interpreter.Value {
+						return newTestPublicAccountValue(address)
 					},
 				),
 			},
@@ -8225,9 +8225,8 @@ func TestInterpretResourceOwnerFieldUse(t *testing.T) {
 }
 
 func newTestAuthAccountValue(
-	inter *interpreter.Interpreter,
 	addressValue interpreter.AddressValue,
-) *interpreter.CompositeValue {
+) interpreter.Value {
 
 	panicFunction := interpreter.NewHostFunctionValue(
 		func(invocation interpreter.Invocation) interpreter.Value {
@@ -8259,7 +8258,6 @@ func newTestAuthAccountValue(
 	)
 
 	return interpreter.NewAuthAccountValue(
-		inter,
 		addressValue,
 		returnZeroUFix64,
 		returnZeroUFix64,
@@ -8275,9 +8273,8 @@ func newTestAuthAccountValue(
 }
 
 func newTestPublicAccountValue(
-	inter *interpreter.Interpreter,
 	addressValue interpreter.AddressValue,
-) *interpreter.CompositeValue {
+) interpreter.Value {
 
 	panicFunction := interpreter.NewHostFunctionValue(
 		func(invocation interpreter.Invocation) interpreter.Value {
@@ -8304,7 +8301,6 @@ func newTestPublicAccountValue(
 	)
 
 	return interpreter.NewPublicAccountValue(
-		inter,
 		addressValue,
 		returnZeroUFix64,
 		returnZeroUFix64,

@@ -134,13 +134,13 @@ type ImportLocationHandlerFunc func(
 	location common.Location,
 ) Import
 
-// AccountHandlerFunc is a function that handles retrieving a public account at a given address.
+// PublicAccountHandlerFunc is a function that handles retrieving a public account at a given address.
 // The account returned must be of type `PublicAccount`.
 //
-type AccountHandlerFunc func(
+type PublicAccountHandlerFunc func(
 	inter *Interpreter,
 	address AddressValue,
-) *CompositeValue
+) Value
 
 // UUIDHandlerFunc is a function that handles the generation of UUIDs.
 type UUIDHandlerFunc func() (uint64, error)
@@ -254,7 +254,7 @@ type Interpreter struct {
 	injectedCompositeFieldsHandler InjectedCompositeFieldsHandlerFunc
 	contractValueHandler           ContractValueHandlerFunc
 	importLocationHandler          ImportLocationHandlerFunc
-	accountHandler                 AccountHandlerFunc
+	publicAccountHandler           PublicAccountHandlerFunc
 	uuidHandler                    UUIDHandlerFunc
 	PublicKeyValidationHandler     PublicKeyValidationHandlerFunc
 	SignatureVerificationHandler   SignatureVerificationHandlerFunc
@@ -377,12 +377,12 @@ func WithImportLocationHandler(handler ImportLocationHandlerFunc) Option {
 	}
 }
 
-// WithAccountHandlerFunc returns an interpreter option which sets the given function
+// WithPublicAccountHandlerFunc returns an interpreter option which sets the given function
 // as the function that is used to handle public accounts.
 //
-func WithAccountHandlerFunc(handler AccountHandlerFunc) Option {
+func WithPublicAccountHandlerFunc(handler PublicAccountHandlerFunc) Option {
 	return func(interpreter *Interpreter) error {
-		interpreter.SetAccountHandler(handler)
+		interpreter.SetPublicAccountHandler(handler)
 		return nil
 	}
 }
@@ -558,10 +558,10 @@ func (interpreter *Interpreter) SetImportLocationHandler(function ImportLocation
 	interpreter.importLocationHandler = function
 }
 
-// SetAccountHandler sets the function that is used to handle accounts.
+// SetPublicAccountHandler sets the function that is used to handle accounts.
 //
-func (interpreter *Interpreter) SetAccountHandler(function AccountHandlerFunc) {
-	interpreter.accountHandler = function
+func (interpreter *Interpreter) SetPublicAccountHandler(function PublicAccountHandlerFunc) {
+	interpreter.publicAccountHandler = function
 }
 
 // SetUUIDHandler sets the function that is used to handle the generation of UUIDs.
@@ -2298,7 +2298,7 @@ func (interpreter *Interpreter) NewSubInterpreter(
 		WithUUIDHandler(interpreter.uuidHandler),
 		WithAllInterpreters(interpreter.allInterpreters),
 		withTypeCodes(interpreter.typeCodes),
-		WithAccountHandlerFunc(interpreter.accountHandler),
+		WithPublicAccountHandlerFunc(interpreter.publicAccountHandler),
 		WithPublicKeyValidationHandler(interpreter.PublicKeyValidationHandler),
 		WithSignatureVerificationHandler(interpreter.SignatureVerificationHandler),
 		WithHashHandler(interpreter.HashHandler),

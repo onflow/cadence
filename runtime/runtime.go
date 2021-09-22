@@ -358,15 +358,13 @@ func (r *interpreterRuntime) interpret(
 }
 
 func (r *interpreterRuntime) newAuthAccountValue(
-	inter *interpreter.Interpreter,
 	addressValue interpreter.AddressValue,
 	context Context,
 	runtimeStorage *runtimeStorage,
 	interpreterOptions []interpreter.Option,
 	checkerOptions []sema.Option,
-) *interpreter.CompositeValue {
+) interpreter.Value {
 	return interpreter.NewAuthAccountValue(
-		inter,
 		addressValue,
 		accountBalanceGetFunction(addressValue, context.Interface),
 		accountAvailableBalanceGetFunction(addressValue, context.Interface),
@@ -504,7 +502,6 @@ func (r *interpreterRuntime) convertArgument(
 		// convert addresses to auth accounts so there is no need to construct an auth account value for the caller
 		if addressValue, ok := argument.(interpreter.AddressValue); ok {
 			return r.newAuthAccountValue(
-				inter,
 				interpreter.NewAddressValue(addressValue.ToAddress()),
 				context,
 				runtimeStorage,
@@ -516,7 +513,6 @@ func (r *interpreterRuntime) convertArgument(
 		// convert addresses to public accounts so there is no need to construct a public account value for the caller
 		if addressValue, ok := argument.(interpreter.AddressValue); ok {
 			return r.getPublicAccount(
-				inter,
 				interpreter.NewAddressValue(addressValue.ToAddress()),
 				context.Interface,
 				runtimeStorage,
@@ -603,7 +599,6 @@ func (r *interpreterRuntime) ExecuteTransaction(script Script, context Context) 
 
 		for i, address := range authorizers {
 			authorizerValues[i] = r.newAuthAccountValue(
-				inter,
 				interpreter.NewAddressValue(address),
 				context,
 				runtimeStorage,
@@ -1081,10 +1076,9 @@ func (r *interpreterRuntime) newInterpreter(
 		interpreter.WithOnStatementHandler(
 			r.onStatementHandler(),
 		),
-		interpreter.WithAccountHandlerFunc(
-			func(inter *interpreter.Interpreter, address interpreter.AddressValue) *interpreter.CompositeValue {
+		interpreter.WithPublicAccountHandlerFunc(
+			func(_ *interpreter.Interpreter, address interpreter.AddressValue) interpreter.Value {
 				return r.getPublicAccount(
-					inter,
 					address,
 					context.Interface,
 					runtimeStorage,
@@ -1280,7 +1274,6 @@ func (r *interpreterRuntime) injectedCompositeFieldsHandler(
 
 				return map[string]interpreter.Value{
 					"account": r.newAuthAccountValue(
-						inter,
 						addressValue,
 						context,
 						runtimeStorage,
@@ -1493,18 +1486,20 @@ func (r *interpreterRuntime) newCreateAccountFunction(
 ) interpreter.HostFunction {
 	return func(invocation interpreter.Invocation) interpreter.Value {
 
-		payer := invocation.Arguments[0].(*interpreter.CompositeValue)
+		payer := invocation.Arguments[0].(interpreter.MemberAccessibleValue)
 
-		if payer.QualifiedIdentifier != sema.AuthAccountType.QualifiedIdentifier() {
-			panic(fmt.Sprintf(
-				"%[1]s requires the first argument (payer) to be an %[1]s",
-				sema.AuthAccountType,
-			))
-		}
+		inter := invocation.Interpreter
+		getLocationRange := invocation.GetLocationRange
 
-		payerAddressValue := payer.GetField(
-			invocation.Interpreter,
-			invocation.GetLocationRange,
+		invocation.Interpreter.ExpectType(
+			payer,
+			sema.AuthAccountType,
+			getLocationRange,
+		)
+
+		payerAddressValue := payer.GetMember(
+			inter,
+			getLocationRange,
 			sema.AuthAccountAddressField,
 		)
 		if payerAddressValue == nil {
@@ -1524,8 +1519,6 @@ func (r *interpreterRuntime) newCreateAccountFunction(
 
 		addressValue := interpreter.NewAddressValue(address)
 
-		inter := invocation.Interpreter
-
 		r.emitAccountEvent(
 			stdlib.AccountCreatedEventType,
 			context.Interface,
@@ -1535,7 +1528,6 @@ func (r *interpreterRuntime) newCreateAccountFunction(
 		)
 
 		return r.newAuthAccountValue(
-			inter,
 			addressValue,
 			context,
 			runtimeStorage,
@@ -1910,7 +1902,6 @@ func (r *interpreterRuntime) newGetAccountFunction(runtimeInterface Interface, r
 	return func(invocation interpreter.Invocation) interpreter.Value {
 		accountAddress := invocation.Arguments[0].(interpreter.AddressValue)
 		return r.getPublicAccount(
-			invocation.Interpreter,
 			accountAddress,
 			runtimeInterface,
 			runtimeStorage,
@@ -1919,14 +1910,12 @@ func (r *interpreterRuntime) newGetAccountFunction(runtimeInterface Interface, r
 }
 
 func (r *interpreterRuntime) getPublicAccount(
-	inter *interpreter.Interpreter,
 	accountAddress interpreter.AddressValue,
 	runtimeInterface Interface,
 	runtimeStorage *runtimeStorage,
-) *interpreter.CompositeValue {
+) interpreter.Value {
 
 	return interpreter.NewPublicAccountValue(
-		inter,
 		accountAddress,
 		accountBalanceGetFunction(accountAddress, runtimeInterface),
 		accountAvailableBalanceGetFunction(accountAddress, runtimeInterface),

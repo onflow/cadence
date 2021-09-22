@@ -7413,7 +7413,7 @@ func (v *CompositeValue) OwnerValue(interpreter *Interpreter, getLocationRange f
 		return NilValue{}
 	}
 
-	ownerAccount := interpreter.accountHandler(interpreter, AddressValue(address))
+	ownerAccount := interpreter.publicAccountHandler(interpreter, AddressValue(address))
 
 	// Owner must be of `PublicAccount` type.
 	interpreter.ExpectType(ownerAccount, sema.PublicAccountType, getLocationRange)
@@ -9585,113 +9585,6 @@ func (v AddressValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 	return v, nil
 }
 
-var authAccountLocation = sema.AuthAccountType.Location
-var authAccountQualifiedIdentifier = sema.AuthAccountType.QualifiedIdentifier()
-var authAccountCompositeKind = sema.AuthAccountType.Kind
-var authAccountTypeInfo = encodeCompositeOrderedMapTypeInfo(
-	authAccountLocation,
-	authAccountQualifiedIdentifier,
-	authAccountCompositeKind,
-)
-
-// NewAuthAccountValue constructs an auth account value.
-func NewAuthAccountValue(
-	interpreter *Interpreter,
-	address AddressValue,
-	accountBalanceGet func() UFix64Value,
-	accountAvailableBalanceGet func() UFix64Value,
-	storageUsedGet func(interpreter *Interpreter) UInt64Value,
-	storageCapacityGet func() UInt64Value,
-	addPublicKeyFunction FunctionValue,
-	removePublicKeyFunction FunctionValue,
-	contracts Value,
-	keys Value,
-) *CompositeValue {
-
-	fields := []CompositeField{
-		{
-			Name:  sema.AuthAccountAddressField,
-			Value: address,
-		},
-		{
-			Name:  sema.AuthAccountAddPublicKeyField,
-			Value: addPublicKeyFunction,
-		},
-		{
-			Name:  sema.AuthAccountRemovePublicKeyField,
-			Value: removePublicKeyFunction,
-		},
-		{
-			Name:  sema.AuthAccountGetCapabilityField,
-			Value: accountGetCapabilityFunction(address, sema.CapabilityPathType),
-		},
-		{
-			Name:  sema.AuthAccountContractsField,
-			Value: contracts,
-		},
-		{
-			Name:  sema.AuthAccountKeysField,
-			Value: keys,
-		},
-	}
-
-	// Computed fields
-	computedFields := map[string]ComputedField{
-		sema.AuthAccountBalanceField: func(_ *Interpreter, _ func() LocationRange) Value {
-			return accountBalanceGet()
-		},
-		sema.AuthAccountAvailableBalanceField: func(_ *Interpreter, _ func() LocationRange) Value {
-			return accountAvailableBalanceGet()
-		},
-		sema.AuthAccountStorageUsedField: func(inter *Interpreter, _ func() LocationRange) Value {
-			return storageUsedGet(inter)
-		},
-		sema.AuthAccountStorageCapacityField: func(_ *Interpreter, _ func() LocationRange) Value {
-			return storageCapacityGet()
-		},
-		sema.AuthAccountLoadField: func(inter *Interpreter, _ func() LocationRange) Value {
-			return inter.authAccountLoadFunction(address)
-		},
-		sema.AuthAccountCopyField: func(inter *Interpreter, _ func() LocationRange) Value {
-			return inter.authAccountCopyFunction(address)
-		},
-		sema.AuthAccountSaveField: func(inter *Interpreter, _ func() LocationRange) Value {
-			return inter.authAccountSaveFunction(address)
-		},
-		sema.AuthAccountBorrowField: func(inter *Interpreter, _ func() LocationRange) Value {
-			return inter.authAccountBorrowFunction(address)
-		},
-		sema.AuthAccountLinkField: func(inter *Interpreter, _ func() LocationRange) Value {
-			return inter.authAccountLinkFunction(address)
-		},
-		sema.AuthAccountUnlinkField: func(inter *Interpreter, _ func() LocationRange) Value {
-			return inter.authAccountUnlinkFunction(address)
-		},
-		sema.AuthAccountGetLinkTargetField: func(inter *Interpreter, _ func() LocationRange) Value {
-			return inter.accountGetLinkTargetFunction(address)
-		},
-	}
-
-	stringer := func(_ SeenReferences) string {
-		return fmt.Sprintf("AuthAccount(%s)", address)
-	}
-
-	v := NewCompositeValueWithTypeInfo(
-		interpreter,
-		authAccountLocation,
-		authAccountQualifiedIdentifier,
-		authAccountCompositeKind,
-		fields,
-		common.Address{},
-		authAccountTypeInfo,
-	)
-
-	v.ComputedFields = computedFields
-	v.Stringer = stringer
-
-	return v
-}
-
 func accountGetCapabilityFunction(addressValue AddressValue, pathType sema.Type) *HostFunctionValue {
 	return NewHostFunctionValue(
 		func(invocation Invocation) Value {
@@ -9726,86 +9619,6 @@ func accountGetCapabilityFunction(addressValue AddressValue, pathType sema.Type)
 			}
 		},
 	)
-}
-
-var publicAccountLocation = sema.PublicAccountType.Location
-var publicAccountQualifiedIdentifier = sema.PublicAccountType.QualifiedIdentifier()
-var publicAccountCompositeKind = sema.PublicAccountType.Kind
-var publicAccountTypeInfo = encodeCompositeOrderedMapTypeInfo(
-	publicAccountLocation,
-	publicAccountQualifiedIdentifier,
-	publicAccountCompositeKind,
-)
-
-// NewPublicAccountValue constructs a public account value.
-func NewPublicAccountValue(
-	interpreter *Interpreter,
-	address AddressValue,
-	accountBalanceGet func() UFix64Value,
-	accountAvailableBalanceGet func() UFix64Value,
-	storageUsedGet func(interpreter *Interpreter) UInt64Value,
-	storageCapacityGet func() UInt64Value,
-	keys Value,
-	contracts Value,
-) *CompositeValue {
-
-	fields := []CompositeField{
-		{
-			Name:  sema.PublicAccountAddressField,
-			Value: address,
-		},
-		{
-			Name:  sema.PublicAccountGetCapabilityField,
-			Value: accountGetCapabilityFunction(address, sema.PublicPathType),
-		},
-		{
-			Name:  sema.PublicAccountKeysField,
-			Value: keys,
-		},
-		{
-			Name:  sema.PublicAccountContractsField,
-			Value: contracts,
-		},
-	}
-
-	// Computed fields
-	computedFields := map[string]ComputedField{
-		sema.PublicAccountBalanceField: func(_ *Interpreter, _ func() LocationRange) Value {
-			return accountBalanceGet()
-		},
-		sema.PublicAccountAvailableBalanceField: func(_ *Interpreter, _ func() LocationRange) Value {
-			return accountAvailableBalanceGet()
-		},
-		sema.PublicAccountStorageUsedField: func(inter *Interpreter, _ func() LocationRange) Value {
-			return storageUsedGet(inter)
-		},
-		sema.PublicAccountStorageCapacityField: func(_ *Interpreter, _ func() LocationRange) Value {
-			return storageCapacityGet()
-		},
-		sema.PublicAccountGetTargetLinkField: func(inter *Interpreter, _ func() LocationRange) Value {
-			return inter.accountGetLinkTargetFunction(address)
-		},
-	}
-
-	// Stringer function
-	stringer := func(_ SeenReferences) string {
-		return fmt.Sprintf("PublicAccount(%s)", address)
-	}
-
-	v := NewCompositeValueWithTypeInfo(
-		interpreter,
-		publicAccountLocation,
-		publicAccountQualifiedIdentifier,
-		publicAccountCompositeKind,
-		fields,
-		common.Address{},
-		publicAccountTypeInfo,
-	)
-
-	v.ComputedFields = computedFields
-	v.Stringer = stringer
-
-	return v
 }
 
 // PathValue
