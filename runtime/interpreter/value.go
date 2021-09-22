@@ -7700,39 +7700,57 @@ func (v *CompositeValue) DeepCopy(
 	address atree.Address,
 ) Value {
 
-	var newFields []CompositeField
+	iterator, err := v.dictionary.Iterator()
+	if err != nil {
+		panic(ExternalError{err})
+	}
 
-	v.ForEachField(func(name string, value Value) {
-		valueCopy := interpreter.CopyValue(getLocationRange, value, address)
-
-		newFields = append(
-			newFields,
-			CompositeField{
-				Name:  name,
-				Value: valueCopy,
-			},
-		)
-	})
-
-	newValue := NewCompositeValueWithTypeInfo(
-		interpreter,
-		v.Location,
-		v.QualifiedIdentifier,
-		v.Kind,
-		newFields,
-		common.Address(address),
+	dictionary, err := atree.NewMapFromBatchData(
+		interpreter.Storage,
+		address,
+		atree.NewDefaultDigesterBuilder(),
 		v.dictionary.Type(),
+		stringAtreeComparator,
+		stringAtreeHashInput,
+		v.dictionary.Seed(),
+		func() (atree.Value, atree.Value, error) {
+
+			atreeKey, atreeValue, err := iterator.Next()
+			if err != nil {
+				return nil, nil, err
+			}
+			if atreeKey == nil || atreeValue == nil {
+				return nil, nil, nil
+			}
+
+			// NOTE: key is stringAtreeValue
+			// and does not need to be converted or copied
+
+			value := MustConvertStoredValue(atreeValue)
+			valueCopy := interpreter.CopyValue(getLocationRange, value, address)
+
+			return atreeKey, valueCopy, nil
+		},
 	)
+	if err != nil {
+		panic(ExternalError{err})
+	}
 
-	newValue.InjectedFields = v.InjectedFields
-	newValue.ComputedFields = v.ComputedFields
-	newValue.NestedVariables = v.NestedVariables
-	newValue.Functions = v.Functions
-	newValue.Destructor = v.Destructor
-	newValue.isDestroyed = v.isDestroyed
-	newValue.Stringer = v.Stringer
-
-	return newValue
+	return &CompositeValue{
+		dictionary:          dictionary,
+		Location:            v.Location,
+		QualifiedIdentifier: v.QualifiedIdentifier,
+		Kind:                v.Kind,
+		InjectedFields:      v.InjectedFields,
+		ComputedFields:      v.ComputedFields,
+		NestedVariables:     v.NestedVariables,
+		Functions:           v.Functions,
+		Destructor:          v.Destructor,
+		Stringer:            v.Stringer,
+		isDestroyed:         v.isDestroyed,
+		typeID:              v.typeID,
+		dynamicType:         v.dynamicType,
+	}
 }
 
 func (v *CompositeValue) DeepRemove(interpreter *Interpreter) {
