@@ -9605,7 +9605,7 @@ func NewAuthAccountValue(
 	addPublicKeyFunction FunctionValue,
 	removePublicKeyFunction FunctionValue,
 	contracts Value,
-	keys *CompositeValue,
+	keys Value,
 ) *CompositeValue {
 
 	fields := []CompositeField{
@@ -9745,7 +9745,7 @@ func NewPublicAccountValue(
 	accountAvailableBalanceGet func() UFix64Value,
 	storageUsedGet func(interpreter *Interpreter) UInt64Value,
 	storageCapacityGet func() UInt64Value,
-	keys *CompositeValue,
+	keys Value,
 	contracts Value,
 ) *CompositeValue {
 
@@ -10428,82 +10428,6 @@ var publicKeyVerifyFunction = NewHostFunctionValue(
 		)
 	},
 )
-
-var authAccountKeysLocation = sema.AuthAccountKeysType.Location
-var authAccountKeysQualifiedIdentifier = sema.AuthAccountKeysType.QualifiedIdentifier()
-var authAccountKeysCompositeKind = sema.AuthAccountKeysType.Kind
-var authAccountKeysTypeInfo = encodeCompositeOrderedMapTypeInfo(
-	authAccountKeysLocation,
-	authAccountKeysQualifiedIdentifier,
-	authAccountKeysCompositeKind,
-)
-
-// NewAuthAccountKeysValue constructs a AuthAccount.Keys value.
-func NewAuthAccountKeysValue(
-	interpreter *Interpreter,
-	addFunction FunctionValue,
-	getFunction FunctionValue,
-	revokeFunction FunctionValue,
-) *CompositeValue {
-
-	fields := []CompositeField{
-		{
-			Name:  sema.AccountKeysAddFunctionName,
-			Value: addFunction,
-		},
-		{
-			Name:  sema.AccountKeysGetFunctionName,
-			Value: getFunction,
-		},
-		{
-			Name:  sema.AccountKeysRevokeFunctionName,
-			Value: revokeFunction,
-		},
-	}
-
-	return NewCompositeValueWithTypeInfo(
-		interpreter,
-		authAccountKeysLocation,
-		authAccountKeysQualifiedIdentifier,
-		authAccountKeysCompositeKind,
-		fields,
-		common.Address{},
-		authAccountKeysTypeInfo,
-	)
-}
-
-var publicAccountKeysLocation = sema.PublicAccountKeysType.Location
-var publicAccountKeysQualifiedIdentifier = sema.PublicAccountKeysType.QualifiedIdentifier()
-var publicAccountKeysCompositeKind = sema.PublicAccountKeysType.Kind
-var publicAccountKeysTypeInfo = encodeCompositeOrderedMapTypeInfo(
-	publicAccountKeysLocation,
-	publicAccountKeysQualifiedIdentifier,
-	publicAccountKeysCompositeKind,
-)
-
-// NewPublicAccountKeysValue constructs a PublicAccount.Keys value.
-func NewPublicAccountKeysValue(
-	interpreter *Interpreter,
-	getFunction FunctionValue,
-) *CompositeValue {
-
-	fields := []CompositeField{
-		{
-			Name:  sema.AccountKeysGetFunctionName,
-			Value: getFunction,
-		},
-	}
-
-	return NewCompositeValueWithTypeInfo(
-		interpreter,
-		publicAccountKeysLocation,
-		publicAccountKeysQualifiedIdentifier,
-		publicAccountKeysCompositeKind,
-		fields,
-		common.Address{},
-		publicAccountKeysTypeInfo,
-	)
-}
 
 var SignatureAlgorithmTypeInfo = encodeCompositeOrderedMapTypeInfo(
 	sema.SignatureAlgorithmType.Location,

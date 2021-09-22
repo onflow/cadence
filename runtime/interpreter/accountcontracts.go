@@ -55,7 +55,6 @@ func NewAuthAccountContractsValue(
 	}
 
 	var str string
-
 	stringer := func(_ SeenReferences) string {
 		if str == "" {
 			str = fmt.Sprintf("AuthAccount.Contracts(%s)", address)

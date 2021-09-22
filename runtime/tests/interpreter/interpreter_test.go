@@ -8252,7 +8252,7 @@ func newTestAuthAccountValue(
 	)
 
 	keysValue := interpreter.NewAuthAccountKeysValue(
-		inter,
+		addressValue,
 		panicFunction,
 		panicFunction,
 		panicFunction,
@@ -8286,7 +8286,7 @@ func newTestPublicAccountValue(
 	)
 
 	keysValue := interpreter.NewPublicAccountKeysValue(
-		inter,
+		addressValue,
 		panicFunction,
 	)
 
