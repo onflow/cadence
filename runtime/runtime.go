@@ -1282,59 +1282,82 @@ func (r *interpreterRuntime) storageInterpreterOptions(runtimeStorage *runtimeSt
 }
 
 func (r *interpreterRuntime) meteringInterpreterOptions(runtimeInterface Interface) []interpreter.Option {
-	var limit uint64
+	var computationLimit uint64
 	wrapPanic(func() {
-		limit = runtimeInterface.GetComputationLimit()
+		computationLimit = runtimeInterface.GetComputationLimit()
 	})
-	if limit == 0 {
+	if computationLimit == 0 {
 		return nil
 	}
 
-	if limit == math.MaxUint64 {
-		limit--
+	if computationLimit == math.MaxUint64 {
+		computationLimit--
 	}
 
-	var used uint64
+	var computationUsed uint64
 
-	checkLimit := func() {
-		used++
+	checkComputationLimit := func(increase uint64) {
+		computationUsed += increase
 
-		if used <= limit {
+		if computationUsed <= computationLimit {
 			return
 		}
 
 		var err error
 		wrapPanic(func() {
-			err = runtimeInterface.SetComputationUsed(used)
+			err = runtimeInterface.SetComputationUsed(computationUsed)
 		})
 		if err != nil {
 			panic(err)
 		}
 
 		panic(ComputationLimitExceededError{
-			Limit: limit,
+			Limit: computationLimit,
+		})
+	}
+
+	callStackDepth := 0
+	// TODO: make runtime interface function
+	const callStackDepthLimit = 2000
+
+	checkCallStackDepth := func() {
+
+		if callStackDepth <= callStackDepthLimit {
+			return
+		}
+
+		panic(CallStackLimitExceededError{
+			Limit: callStackDepthLimit,
 		})
 	}
 
 	return []interpreter.Option{
 		interpreter.WithOnStatementHandler(
 			func(_ *interpreter.Interpreter, _ ast.Statement) {
-				checkLimit()
+				checkComputationLimit(1)
 			},
 		),
 		interpreter.WithOnLoopIterationHandler(
 			func(_ *interpreter.Interpreter, _ int) {
-				checkLimit()
+				checkComputationLimit(1)
 			},
 		),
 		interpreter.WithOnFunctionInvocationHandler(
 			func(_ *interpreter.Interpreter, _ int) {
-				checkLimit()
+				callStackDepth++
+				checkCallStackDepth()
+
+				checkComputationLimit(1)
+			},
+		),
+		interpreter.WithOnInvokedFunctionReturnHandler(
+			func(_ *interpreter.Interpreter, _ int) {
+				callStackDepth--
 			},
 		),
 		interpreter.WithExitHandler(
 			func() error {
-				return runtimeInterface.SetComputationUsed(used)
+				return runtimeInterface.SetComputationUsed(computationUsed)
 			},
 		),
 	}

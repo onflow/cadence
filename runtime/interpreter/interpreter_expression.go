@@ -580,7 +580,9 @@ func (interpreter *Interpreter) VisitInvocationExpression(invocationExpression *
 	parameterTypes :=
 		interpreter.Program.Elaboration.InvocationExpressionParameterTypes[invocationExpression]
 
-	interpreter.reportFunctionInvocation(invocationExpression)
+	line := invocationExpression.StartPosition().Line
+
+	interpreter.reportFunctionInvocation(line)
 
 	resultValue := interpreter.invokeFunctionValue(
 		function,
@@ -592,6 +594,8 @@ func (interpreter *Interpreter) VisitInvocationExpression(invocationExpression *
 		typeParameterTypes,
 		invocationExpression,
 	)
+
+	interpreter.reportInvokedFunctionReturn(line)
 
 	// If this is invocation is optional chaining, wrap the result
 	// as an optional, as the result is expected to be an optional
