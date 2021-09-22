@@ -6663,7 +6663,9 @@ func TestRuntimeGetCapability(t *testing.T) {
 	})
 }
 
-func TestStackOverflow(t *testing.T) {
+func TestRuntimeStackOverflow(t *testing.T) {
+
+	t.Parallel()
 
 	runtime := NewInterpreterRuntime()
 

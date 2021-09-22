@@ -299,15 +299,15 @@ func TestExportValue(t *testing.T) {
 			expected: nil,
 		},
 		{
-			label: "Deployed contract",
-			value: interpreter.DeployedContractValue{
-				Address: interpreter.AddressValue{},
-				Name:    interpreter.NewStringValue("C"),
-				Code: interpreter.NewArrayValue(
+			label: "Deployed contract (invalid)",
+			value: interpreter.NewDeployedContractValue(
+				interpreter.AddressValue{},
+				interpreter.NewStringValue("C"),
+				interpreter.NewArrayValue(
 					newTestInterpreter(t),
 					interpreter.ByteArrayStaticType,
 				),
-			},
+			),
 			expected: nil,
 		},
 	} {

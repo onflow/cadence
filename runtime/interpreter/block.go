@@ -42,7 +42,7 @@ func NewBlockValue(
 	timestamp UFix64Value,
 ) *SimpleCompositeValue {
 	return NewSimpleCompositeValue(
-		sema.BlockType.ID(),
+		sema.BlockType.TypeID,
 		blockStaticType,
 		blockDynamicType,
 		blockFieldNames,

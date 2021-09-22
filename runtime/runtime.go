@@ -2388,11 +2388,11 @@ func (r *interpreterRuntime) newAuthAccountContractsChangeFunction(
 				)
 			}
 
-			return interpreter.DeployedContractValue{
-				Address: addressValue,
-				Name:    nameValue,
-				Code:    newCodeValue,
-			}
+			return interpreter.NewDeployedContractValue(
+				addressValue,
+				nameValue,
+				newCodeValue,
+			)
 		},
 	)
 }
@@ -2507,14 +2507,14 @@ func (r *interpreterRuntime) newAccountContractsGetFunction(
 
 			if len(code) > 0 {
 				return interpreter.NewSomeValueNonCopying(
-					interpreter.DeployedContractValue{
-						Address: addressValue,
-						Name:    nameValue,
-						Code: interpreter.ByteSliceToByteArrayValue(
+					interpreter.NewDeployedContractValue(
+						addressValue,
+						nameValue,
+						interpreter.ByteSliceToByteArrayValue(
 							invocation.Interpreter,
 							code,
 						),
-					},
+					),
 				)
 			} else {
 				return interpreter.NilValue{}
@@ -2602,14 +2602,14 @@ func (r *interpreterRuntime) newAuthAccountContractsRemoveFunction(
 				)
 
 				return interpreter.NewSomeValueNonCopying(
-					interpreter.DeployedContractValue{
-						Address: addressValue,
-						Name:    nameValue,
-						Code: interpreter.ByteSliceToByteArrayValue(
+					interpreter.NewDeployedContractValue(
+						addressValue,
+						nameValue,
+						interpreter.ByteSliceToByteArrayValue(
 							inter,
 							code,
 						),
-					},
+					),
 				)
 			} else {
 				return interpreter.NilValue{}
