@@ -1258,15 +1258,15 @@ func TestBlockValue(t *testing.T) {
 
 	inter := newTestInterpreter(t)
 
-	block := BlockValue{
-		Height:    4,
-		View:      5,
-		ID:        NewArrayValue(inter, ByteArrayStaticType),
-		Timestamp: 5.0,
-	}
+	block := NewBlockValue(
+		4,
+		5,
+		NewArrayValue(inter, ByteArrayStaticType),
+		5.0,
+	)
 
 	// static type test
-	var actualTs = block.Timestamp
+	var actualTs = block.Fields[sema.BlockTypeTimestampFieldName]
 	const expectedTs UFix64Value = 5.0
 	assert.Equal(t, expectedTs, actualTs)
 }

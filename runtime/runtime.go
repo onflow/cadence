@@ -1965,7 +1965,7 @@ func (r *interpreterRuntime) getBlockAtHeight(
 	runtimeInterface Interface,
 	inter *interpreter.Interpreter,
 ) (
-	*interpreter.BlockValue,
+	interpreter.Value,
 	error,
 ) {
 
@@ -1985,8 +1985,7 @@ func (r *interpreterRuntime) getBlockAtHeight(
 		return nil, nil
 	}
 
-	blockValue := NewBlockValue(inter, block)
-	return &blockValue, nil
+	return NewBlockValue(inter, block), nil
 }
 
 func (r *interpreterRuntime) newGetCurrentBlockFunction(runtimeInterface Interface) interpreter.HostFunction {
@@ -2007,7 +2006,7 @@ func (r *interpreterRuntime) newGetCurrentBlockFunction(runtimeInterface Interfa
 		if err != nil {
 			panic(err)
 		}
-		return *block
+		return block
 	}
 }
 
@@ -2027,7 +2026,7 @@ func (r *interpreterRuntime) newGetBlockFunction(runtimeInterface Interface) int
 			return interpreter.NilValue{}
 		}
 
-		return interpreter.NewSomeValueNonCopying(*block)
+		return interpreter.NewSomeValueNonCopying(block)
 	}
 }
 
@@ -2723,7 +2722,7 @@ func (r *interpreterRuntime) ReadLinked(address common.Address, path cadence.Pat
 	)
 }
 
-func NewBlockValue(inter *interpreter.Interpreter, block Block) interpreter.BlockValue {
+func NewBlockValue(inter *interpreter.Interpreter, block Block) interpreter.Value {
 
 	// height
 	heightValue := interpreter.UInt64Value(block.Height)
@@ -2746,12 +2745,12 @@ func NewBlockValue(inter *interpreter.Interpreter, block Block) interpreter.Bloc
 	// TODO: verify
 	timestampValue := interpreter.NewUFix64ValueWithInteger(uint64(time.Unix(0, block.Timestamp).Unix()))
 
-	return interpreter.BlockValue{
-		Height:    heightValue,
-		View:      viewValue,
-		ID:        idValue,
-		Timestamp: timestampValue,
-	}
+	return interpreter.NewBlockValue(
+		heightValue,
+		viewValue,
+		idValue,
+		timestampValue,
+	)
 }
 
 func (r *interpreterRuntime) newAccountKeysAddFunction(

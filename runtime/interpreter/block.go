@@ -21,117 +21,46 @@ package interpreter
 import (
 	"fmt"
 
-	"github.com/onflow/atree"
-	runtimeErrors "github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/sema"
 )
 
 // Block
 
-type BlockValue struct {
-	Height    UInt64Value
-	View      UInt64Value
-	ID        *ArrayValue
-	Timestamp UFix64Value
-}
-
-var _ Value = BlockValue{}
-
-func (BlockValue) IsValue() {}
-
-func (v BlockValue) Accept(interpreter *Interpreter, visitor Visitor) {
-	visitor.VisitValue(interpreter, v)
-}
-
-func (v BlockValue) Walk(walkChild func(Value)) {
-	walkChild(v.Height)
-	walkChild(v.View)
-	walkChild(v.ID)
-	walkChild(v.Timestamp)
-}
-
 var blockDynamicType DynamicType = BlockDynamicType{}
-
-func (BlockValue) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
-	return blockDynamicType
+var blockStaticType StaticType = PrimitiveStaticTypeBlock
+var blockFieldNames = []string{
+	sema.BlockTypeHeightFieldName,
+	sema.BlockTypeViewFieldName,
+	sema.BlockTypeIDFieldName,
+	sema.BlockTypeTimestampFieldName,
 }
 
-func (BlockValue) StaticType() StaticType {
-	return PrimitiveStaticTypeBlock
-}
-
-func (v BlockValue) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	switch name {
-	case "height":
-		return v.Height
-
-	case "view":
-		return v.View
-
-	case "id":
-		return v.ID
-
-	case "timestamp":
-		return v.Timestamp
-	}
-
-	return nil
-}
-
-func (v BlockValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
-	panic(runtimeErrors.NewUnreachableError())
-}
-
-func (v BlockValue) IDAsByteArray() [sema.BlockIDSize]byte {
-	var byteArray [sema.BlockIDSize]byte
-	i := 0
-	v.ID.Walk(func(b Value) {
-		byteArray[i] = byte(b.(UInt8Value))
-		i++
-	})
-	return byteArray
-}
-
-func (v BlockValue) String() string {
-	return v.RecursiveString(SeenReferences{})
-}
-
-func (v BlockValue) RecursiveString(seenReferences SeenReferences) string {
-	return fmt.Sprintf(
-		"Block(height: %s, view: %s, id: 0x%x, timestamp: %s)",
-		v.Height.RecursiveString(seenReferences),
-		v.View.RecursiveString(seenReferences),
-		v.IDAsByteArray(),
-		v.Timestamp.RecursiveString(seenReferences),
+func NewBlockValue(
+	height UInt64Value,
+	view UInt64Value,
+	id *ArrayValue,
+	timestamp UFix64Value,
+) *SimpleCompositeValue {
+	return NewSimpleCompositeValue(
+		sema.BlockType.ID(),
+		blockStaticType,
+		blockDynamicType,
+		blockFieldNames,
+		map[string]Value{
+			sema.BlockTypeHeightFieldName:    height,
+			sema.BlockTypeViewFieldName:      view,
+			sema.BlockTypeIDFieldName:        id,
+			sema.BlockTypeTimestampFieldName: timestamp,
+		},
+		nil,
+		map[string]func(Value, SeenReferences) string{
+			sema.BlockTypeIDFieldName: func(value Value, references SeenReferences) string {
+				bytes, err := ByteArrayValueToByteSlice(value)
+				if err != nil {
+					panic(err)
+				}
+				return fmt.Sprintf("0x%x", bytes)
+			},
+		},
 	)
-}
-
-func (v BlockValue) ConformsToDynamicType(
-	_ *Interpreter,
-	_ func() LocationRange,
-	dynamicType DynamicType,
-	_ TypeConformanceResults,
-) bool {
-	_, ok := dynamicType.(BlockDynamicType)
-	return ok
-}
-
-func (v BlockValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
-	return NonStorable{Value: v}, nil
-}
-
-func (BlockValue) IsResourceKinded(_ *Interpreter) bool {
-	return false
-}
-
-func (BlockValue) NeedsStoreToAddress(_ *Interpreter, _ atree.Address) bool {
-	return false
-}
-
-func (v BlockValue) DeepCopy(_ *Interpreter, _ func() LocationRange, _ atree.Address) Value {
-	return v
-}
-
-func (BlockValue) DeepRemove(_ *Interpreter) {
-	// NO-OP
 }

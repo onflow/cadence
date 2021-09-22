@@ -7778,7 +7778,7 @@ func (v *CompositeValue) GetOwner() common.Address {
 	return common.Address(v.StorageID().Address)
 }
 
-func (v *CompositeValue) ForEachField(f func(_ string, value Value)) {
+func (v *CompositeValue) ForEachField(f func(fieldName string, fieldValue Value)) {
 	err := v.dictionary.Iterate(func(key atree.Value, value atree.Value) (resume bool, err error) {
 		f(
 			string(key.(stringAtreeValue)),

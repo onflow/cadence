@@ -279,8 +279,8 @@ func TestExportValue(t *testing.T) {
 			},
 		},
 		{
-			label:    "Block (invalid)",
-			value:    interpreter.BlockValue{},
+			label:    "Simple composite value (invalid)",
+			value:    &interpreter.SimpleCompositeValue{},
 			expected: nil,
 		},
 		{
