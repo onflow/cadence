@@ -19,7 +19,6 @@
 package interpreter_test
 
 import (
-	"github.com/onflow/cadence/runtime/stdlib"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -27,6 +26,7 @@ import (
 
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
+	"github.com/onflow/cadence/runtime/stdlib"
 )
 
 func TestArrayMutation(t *testing.T) {
@@ -291,7 +291,7 @@ func TestArrayMutation(t *testing.T) {
 
 		require.NoError(t, err)
 
-		// TODO: Shouldn't throw an error
+		// TODO: Shouldn't throw an error once dynamic subtyping for functions is implemented.
 		_, err = inter.Invoke("test")
 		require.Error(t, err)
 
@@ -341,7 +341,6 @@ func TestArrayMutation(t *testing.T) {
 
 		require.NoError(t, err)
 
-		// TODO: Shouldn't throw an error
 		_, err = inter.Invoke("test")
 		require.Error(t, err)
 

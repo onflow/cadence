@@ -2212,7 +2212,8 @@ func (interpreter *Interpreter) functionConditionsWrapper(
 
 			// This is an internally created and used function, and can
 			// never pass around as a value. Hence, type is not required.
-			nil)
+			nil,
+		)
 	}
 }
 
@@ -2626,8 +2627,9 @@ var typeFunction = NewHostFunctionValue(
 		}
 	},
 
-	// TODO: How to add when there are generics?
-	nil,
+	&sema.FunctionType{
+		ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.MetaType),
+	},
 )
 
 func defineTypeFunction(activation *VariableActivation) {
@@ -3012,7 +3014,9 @@ func (interpreter *Interpreter) authAccountReadFunction(addressValue AddressValu
 				panic(errors.NewUnreachableError())
 			}
 		},
-		nil,
+
+		// same as sema.AuthAccountTypeCopyFunctionType
+		sema.AuthAccountTypeLoadFunctionType,
 	)
 }
 

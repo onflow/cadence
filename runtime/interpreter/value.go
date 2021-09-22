@@ -9041,7 +9041,12 @@ func NewAuthAccountValue(
 	}
 }
 
-func accountGetCapabilityFunction(addressValue AddressValue, pathType sema.Type, funcType *sema.FunctionType) *HostFunctionValue {
+func accountGetCapabilityFunction(
+	addressValue AddressValue,
+	pathType sema.Type,
+	funcType *sema.FunctionType,
+) *HostFunctionValue {
+
 	return NewHostFunctionValue(
 		func(invocation Invocation) Value {
 
