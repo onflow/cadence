@@ -8234,29 +8234,6 @@ func newTestAuthAccountValue(
 		},
 	)
 
-	contractsValue := interpreter.NewAuthAccountContractsValue(
-		addressValue,
-		panicFunction,
-		panicFunction,
-		panicFunction,
-		panicFunction,
-		func(inter *interpreter.Interpreter) *interpreter.ArrayValue {
-			return interpreter.NewArrayValue(
-				inter,
-				interpreter.VariableSizedStaticType{
-					Type: interpreter.PrimitiveStaticTypeString,
-				},
-			)
-		},
-	)
-
-	keysValue := interpreter.NewAuthAccountKeysValue(
-		addressValue,
-		panicFunction,
-		panicFunction,
-		panicFunction,
-	)
-
 	return interpreter.NewAuthAccountValue(
 		addressValue,
 		returnZeroUFix64,
@@ -8267,8 +8244,31 @@ func newTestAuthAccountValue(
 		returnZeroUInt64,
 		panicFunction,
 		panicFunction,
-		contractsValue,
-		keysValue,
+		func() interpreter.Value {
+			return interpreter.NewAuthAccountContractsValue(
+				addressValue,
+				panicFunction,
+				panicFunction,
+				panicFunction,
+				panicFunction,
+				func(inter *interpreter.Interpreter) *interpreter.ArrayValue {
+					return interpreter.NewArrayValue(
+						inter,
+						interpreter.VariableSizedStaticType{
+							Type: interpreter.PrimitiveStaticTypeString,
+						},
+					)
+				},
+			)
+		},
+		func() interpreter.Value {
+			return interpreter.NewAuthAccountKeysValue(
+				addressValue,
+				panicFunction,
+				panicFunction,
+				panicFunction,
+			)
+		},
 	)
 }
 
@@ -8282,24 +8282,6 @@ func newTestPublicAccountValue(
 		},
 	)
 
-	keysValue := interpreter.NewPublicAccountKeysValue(
-		addressValue,
-		panicFunction,
-	)
-
-	contractsValue := interpreter.NewPublicAccountContractsValue(
-		addressValue,
-		panicFunction,
-		func(inter *interpreter.Interpreter) *interpreter.ArrayValue {
-			return interpreter.NewArrayValue(
-				inter,
-				interpreter.VariableSizedStaticType{
-					Type: interpreter.PrimitiveStaticTypeString,
-				},
-			)
-		},
-	)
-
 	return interpreter.NewPublicAccountValue(
 		addressValue,
 		returnZeroUFix64,
@@ -8308,8 +8290,26 @@ func newTestPublicAccountValue(
 			return 0
 		},
 		returnZeroUInt64,
-		keysValue,
-		contractsValue,
+		func() interpreter.Value {
+			return interpreter.NewPublicAccountKeysValue(
+				addressValue,
+				panicFunction,
+			)
+		},
+		func() interpreter.Value {
+			return interpreter.NewPublicAccountContractsValue(
+				addressValue,
+				panicFunction,
+				func(inter *interpreter.Interpreter) *interpreter.ArrayValue {
+					return interpreter.NewArrayValue(
+						inter,
+						interpreter.VariableSizedStaticType{
+							Type: interpreter.PrimitiveStaticTypeString,
+						},
+					)
+				},
+			)
+		},
 	)
 }
 

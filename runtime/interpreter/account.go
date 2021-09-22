@@ -33,6 +33,8 @@ var authAccountDynamicType DynamicType = CompositeDynamicType{
 }
 var authAccountFieldNames = []string{
 	sema.AuthAccountAddressField,
+	sema.AuthAccountContractsField,
+	sema.AuthAccountKeysField,
 }
 
 // NewAuthAccountValue constructs an auth account value.
@@ -44,8 +46,8 @@ func NewAuthAccountValue(
 	storageCapacityGet func() UInt64Value,
 	addPublicKeyFunction FunctionValue,
 	removePublicKeyFunction FunctionValue,
-	contracts Value,
-	keys Value,
+	contractsConstructor func() Value,
+	keysConstructor func() Value,
 ) Value {
 
 	fields := map[string]Value{
@@ -53,11 +55,24 @@ func NewAuthAccountValue(
 		sema.AuthAccountAddPublicKeyField:    addPublicKeyFunction,
 		sema.AuthAccountRemovePublicKeyField: removePublicKeyFunction,
 		sema.AuthAccountGetCapabilityField:   accountGetCapabilityFunction(address, sema.CapabilityPathType),
-		sema.AuthAccountContractsField:       contracts,
-		sema.AuthAccountKeysField:            keys,
 	}
 
+	var contracts Value
+	var keys Value
+
 	computedFields := map[string]ComputedField{
+		sema.AuthAccountContractsField: func(_ *Interpreter, _ func() LocationRange) Value {
+			if contracts == nil {
+				contracts = contractsConstructor()
+			}
+			return contracts
+		},
+		sema.AuthAccountKeysField: func(_ *Interpreter, _ func() LocationRange) Value {
+			if keys == nil {
+				keys = keysConstructor()
+			}
+			return keys
+		},
 		sema.AuthAccountBalanceField: func(_ *Interpreter, _ func() LocationRange) Value {
 			return accountBalanceGet()
 		},
@@ -122,6 +137,8 @@ var publicAccountDynamicType DynamicType = CompositeDynamicType{
 }
 var publicAccountFieldNames = []string{
 	sema.PublicAccountAddressField,
+	sema.PublicAccountContractsField,
+	sema.PublicAccountKeysField,
 }
 
 // NewPublicAccountValue constructs a public account value.
@@ -131,18 +148,31 @@ func NewPublicAccountValue(
 	accountAvailableBalanceGet func() UFix64Value,
 	storageUsedGet func(interpreter *Interpreter) UInt64Value,
 	storageCapacityGet func() UInt64Value,
-	keys Value,
-	contracts Value,
+	keysConstructor func() Value,
+	contractsConstructor func() Value,
 ) Value {
 
 	fields := map[string]Value{
 		sema.PublicAccountAddressField:       address,
 		sema.PublicAccountGetCapabilityField: accountGetCapabilityFunction(address, sema.PublicPathType),
-		sema.PublicAccountKeysField:          keys,
-		sema.PublicAccountContractsField:     contracts,
 	}
 
+	var keys Value
+	var contracts Value
+
 	computedFields := map[string]ComputedField{
+		sema.PublicAccountKeysField: func(_ *Interpreter, _ func() LocationRange) Value {
+			if keys == nil {
+				keys = keysConstructor()
+			}
+			return keys
+		},
+		sema.PublicAccountContractsField: func(_ *Interpreter, _ func() LocationRange) Value {
+			if contracts == nil {
+				contracts = contractsConstructor()
+			}
+			return contracts
+		},
 		sema.PublicAccountBalanceField: func(_ *Interpreter, _ func() LocationRange) Value {
 			return accountBalanceGet()
 		},

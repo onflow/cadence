@@ -372,17 +372,21 @@ func (r *interpreterRuntime) newAuthAccountValue(
 		storageCapacityGetFunction(addressValue, context.Interface),
 		r.newAddPublicKeyFunction(addressValue, context.Interface),
 		r.newRemovePublicKeyFunction(addressValue, context.Interface),
-		r.newAuthAccountContracts(
-			addressValue,
-			context,
-			runtimeStorage,
-			interpreterOptions,
-			checkerOptions,
-		),
-		r.newAuthAccountKeys(
-			addressValue,
-			context.Interface,
-		),
+		func() interpreter.Value {
+			return r.newAuthAccountContracts(
+				addressValue,
+				context,
+				runtimeStorage,
+				interpreterOptions,
+				checkerOptions,
+			)
+		},
+		func() interpreter.Value {
+			return r.newAuthAccountKeys(
+				addressValue,
+				context.Interface,
+			)
+		},
 	)
 }
 
@@ -1921,8 +1925,12 @@ func (r *interpreterRuntime) getPublicAccount(
 		accountAvailableBalanceGetFunction(accountAddress, runtimeInterface),
 		storageUsedGetFunction(accountAddress, runtimeInterface, runtimeStorage),
 		storageCapacityGetFunction(accountAddress, runtimeInterface),
-		r.newPublicAccountKeys(accountAddress, runtimeInterface),
-		r.newPublicAccountContracts(accountAddress, runtimeInterface),
+		func() interpreter.Value {
+			return r.newPublicAccountKeys(accountAddress, runtimeInterface)
+		},
+		func() interpreter.Value {
+			return r.newPublicAccountContracts(accountAddress, runtimeInterface)
+		},
 	)
 }
 
