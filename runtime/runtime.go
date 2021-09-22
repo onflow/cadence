@@ -375,7 +375,6 @@ func (r *interpreterRuntime) newAuthAccountValue(
 		r.newAddPublicKeyFunction(addressValue, context.Interface),
 		r.newRemovePublicKeyFunction(addressValue, context.Interface),
 		r.newAuthAccountContracts(
-			inter,
 			addressValue,
 			context,
 			runtimeStorage,
@@ -2045,15 +2044,13 @@ func (r *interpreterRuntime) newUnsafeRandomFunction(runtimeInterface Interface)
 }
 
 func (r *interpreterRuntime) newAuthAccountContracts(
-	inter *interpreter.Interpreter,
 	addressValue interpreter.AddressValue,
 	context Context,
 	runtimeStorage *runtimeStorage,
 	interpreterOptions []interpreter.Option,
 	checkerOptions []sema.Option,
-) *interpreter.CompositeValue {
+) interpreter.Value {
 	return interpreter.NewAuthAccountContractsValue(
-		inter,
 		addressValue,
 		r.newAuthAccountContractsChangeFunction(
 			addressValue,
@@ -2932,7 +2929,7 @@ func NewPublicKeyFromValue(
 ) {
 
 	// publicKey field
-	publicKeyFieldGetter, ok := publicKey.ComputedFields[sema.PublicKeyPublicKeyField]
+	publicKeyFieldGetter, ok := publicKey.ComputedFields[sema.PublicKeyPublicKeyFieldName]
 	if !ok {
 		return nil, fmt.Errorf("public key value is not set")
 	}
@@ -2948,7 +2945,7 @@ func NewPublicKeyFromValue(
 	signAlgoField := publicKey.GetField(
 		inter,
 		getLocationRange,
-		sema.PublicKeySignAlgoField,
+		sema.PublicKeySignAlgoFieldName,
 	)
 	if signAlgoField == nil {
 		return nil, errors.New("sign algorithm is not set")
@@ -2984,7 +2981,7 @@ func NewPublicKeyFromValue(
 	validField := publicKey.GetField(
 		inter,
 		getLocationRange,
-		sema.PublicKeyIsValidField,
+		sema.PublicKeyIsValidFieldName,
 	)
 	validated = validField != nil
 	if validated {

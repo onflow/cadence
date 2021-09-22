@@ -8236,7 +8236,6 @@ func newTestAuthAccountValue(
 	)
 
 	contractsValue := interpreter.NewAuthAccountContractsValue(
-		inter,
 		addressValue,
 		panicFunction,
 		panicFunction,

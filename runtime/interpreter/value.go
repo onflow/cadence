@@ -9604,7 +9604,7 @@ func NewAuthAccountValue(
 	storageCapacityGet func() UInt64Value,
 	addPublicKeyFunction FunctionValue,
 	removePublicKeyFunction FunctionValue,
-	contracts *CompositeValue,
+	contracts Value,
 	keys *CompositeValue,
 ) *CompositeValue {
 
@@ -10278,23 +10278,23 @@ func NewAccountKeyValue(
 ) *CompositeValue {
 	fields := []CompositeField{
 		{
-			Name:  sema.AccountKeyKeyIndexField,
+			Name:  sema.AccountKeyKeyIndexFieldName,
 			Value: keyIndex,
 		},
 		{
-			Name:  sema.AccountKeyPublicKeyField,
+			Name:  sema.AccountKeyPublicKeyFieldName,
 			Value: publicKey,
 		},
 		{
-			Name:  sema.AccountKeyHashAlgoField,
+			Name:  sema.AccountKeyHashAlgoFieldName,
 			Value: hashAlgo,
 		},
 		{
-			Name:  sema.AccountKeyWeightField,
+			Name:  sema.AccountKeyWeightFieldName,
 			Value: weight,
 		},
 		{
-			Name:  sema.AccountKeyIsRevokedField,
+			Name:  sema.AccountKeyIsRevokedFieldName,
 			Value: isRevoked,
 		},
 	}
@@ -10330,13 +10330,13 @@ func NewPublicKeyValue(
 
 	fields := []CompositeField{
 		{
-			Name:  sema.PublicKeySignAlgoField,
+			Name:  sema.PublicKeySignAlgoFieldName,
 			Value: signAlgo,
 		},
 	}
 
 	computedFields := map[string]ComputedField{
-		sema.PublicKeyPublicKeyField: func(interpreter *Interpreter, getLocationRange func() LocationRange) Value {
+		sema.PublicKeyPublicKeyFieldName: func(interpreter *Interpreter, getLocationRange func() LocationRange) Value {
 			// We can directly call DeepCopy on the key array, instead of potentially skipping copying
 			// by using interpreter.copyValue, as the key array is always struct-kinded, which always must be copied
 			return publicKey.DeepCopy(interpreter, getLocationRange, atree.Address{})
@@ -10344,7 +10344,7 @@ func NewPublicKeyValue(
 	}
 
 	functions := map[string]FunctionValue{
-		sema.PublicKeyVerifyFunction: publicKeyVerifyFunction,
+		sema.PublicKeyVerifyFunctionName: publicKeyVerifyFunction,
 	}
 
 	publicKeyValue := NewCompositeValueWithTypeInfo(
@@ -10365,7 +10365,7 @@ func NewPublicKeyValue(
 	publicKeyValue.SetMember(
 		interpreter,
 		getLocationRange,
-		sema.PublicKeyIsValidField,
+		sema.PublicKeyIsValidFieldName,
 		validatePublicKey(interpreter, getLocationRange, publicKeyValue),
 	)
 
@@ -10375,7 +10375,7 @@ func NewPublicKeyValue(
 		if stringerFields == nil {
 			stringerFields = []CompositeField{
 				{
-					Name:  sema.PublicKeyPublicKeyField,
+					Name:  sema.PublicKeyPublicKeyFieldName,
 					Value: publicKey,
 				},
 			}

@@ -49,5 +49,6 @@ func NewDeployedContractValue(
 		},
 		nil,
 		nil,
+		nil,
 	)
 }

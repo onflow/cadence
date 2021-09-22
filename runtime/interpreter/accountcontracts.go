@@ -27,67 +27,53 @@ import (
 
 // AuthAccountContractsValue
 
-var authAccountContractsLocation = sema.AuthAccountContractsType.Location
-var authAccountContractsQualifiedIdentifier = sema.AuthAccountContractsType.QualifiedIdentifier()
-var authAccountContractsCompositeKind = sema.AuthAccountContractsType.Kind
-var authAccountContractsTypeInfo = encodeCompositeOrderedMapTypeInfo(
-	authAccountContractsLocation,
-	authAccountContractsQualifiedIdentifier,
-	authAccountContractsCompositeKind,
-)
+var authAccountContractsTypeID = sema.AuthAccountContractsType.ID()
+var authAccountContractsStaticType StaticType = PrimitiveStaticTypeAuthAccountContracts
+var authAccountContractsDynamicType DynamicType = CompositeDynamicType{
+	StaticType: sema.AuthAccountContractsType,
+}
 
 func NewAuthAccountContractsValue(
-	interpreter *Interpreter,
 	address AddressValue,
 	addFunction FunctionValue,
 	updateFunction FunctionValue,
 	getFunction FunctionValue,
 	removeFunction FunctionValue,
 	namesGetter func(interpreter *Interpreter) *ArrayValue,
-) *CompositeValue {
+) Value {
 
-	fields := []CompositeField{
-		{
-			Name:  sema.AuthAccountContractsTypeAddFunctionName,
-			Value: addFunction,
-		},
-		{
-			Name:  sema.AuthAccountContractsTypeGetFunctionName,
-			Value: getFunction,
-		},
-		{
-			Name:  sema.AuthAccountContractsTypeRemoveFunctionName,
-			Value: removeFunction,
-		},
-		{
-			Name:  sema.AuthAccountContractsTypeUpdateExperimentalFunctionName,
-			Value: updateFunction,
-		},
+	fields := map[string]Value{
+		sema.AuthAccountContractsTypeAddFunctionName:                addFunction,
+		sema.AuthAccountContractsTypeGetFunctionName:                getFunction,
+		sema.AuthAccountContractsTypeRemoveFunctionName:             removeFunction,
+		sema.AuthAccountContractsTypeUpdateExperimentalFunctionName: updateFunction,
 	}
+
 	computedFields := map[string]ComputedField{
 		sema.AuthAccountContractsTypeNamesField: func(interpreter *Interpreter, _ func() LocationRange) Value {
 			return namesGetter(interpreter)
 		},
 	}
 
+	var str string
+
 	stringer := func(_ SeenReferences) string {
-		return fmt.Sprintf("AuthAccount.Contracts(%s)", address)
+		if str == "" {
+			str = fmt.Sprintf("AuthAccount.Contracts(%s)", address)
+		}
+		return str
 	}
 
-	v := NewCompositeValueWithTypeInfo(
-		interpreter,
-		authAccountContractsLocation,
-		authAccountContractsQualifiedIdentifier,
-		authAccountContractsCompositeKind,
+	return NewSimpleCompositeValue(
+		authAccountContractsTypeID,
+		authAccountContractsStaticType,
+		authAccountContractsDynamicType,
+		nil,
 		fields,
-		common.Address{},
-		authAccountContractsTypeInfo,
+		computedFields,
+		nil,
+		stringer,
 	)
-
-	v.Stringer = stringer
-	v.ComputedFields = computedFields
-
-	return v
 }
 
 // PublicAccountContractsValue
@@ -95,6 +81,7 @@ func NewAuthAccountContractsValue(
 var publicAccountContractsLocation = sema.PublicAccountContractsType.Location
 var publicAccountContractsQualifiedIdentifier = sema.PublicAccountContractsType.QualifiedIdentifier()
 var publicAccountContractsCompositeKind = sema.PublicAccountContractsType.Kind
+
 var publicAccountContractsTypeInfo = encodeCompositeOrderedMapTypeInfo(
 	publicAccountContractsLocation,
 	publicAccountContractsQualifiedIdentifier,

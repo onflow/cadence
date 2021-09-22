@@ -35,6 +35,7 @@ type SimpleCompositeValue struct {
 	Fields          map[string]Value
 	ComputedFields  map[string]ComputedField
 	fieldFormatters map[string]func(Value, SeenReferences) string
+	stringer        func(SeenReferences) string
 }
 
 var _ Value = &SimpleCompositeValue{}
@@ -47,6 +48,7 @@ func NewSimpleCompositeValue(
 	fields map[string]Value,
 	computedFields map[string]ComputedField,
 	fieldFormatters map[string]func(Value, SeenReferences) string,
+	stringer func(SeenReferences) string,
 ) *SimpleCompositeValue {
 	return &SimpleCompositeValue{
 		TypeID:          typeID,
@@ -56,6 +58,7 @@ func NewSimpleCompositeValue(
 		Fields:          fields,
 		ComputedFields:  computedFields,
 		fieldFormatters: fieldFormatters,
+		stringer:        stringer,
 	}
 }
 
@@ -116,6 +119,11 @@ func (v *SimpleCompositeValue) String() string {
 }
 
 func (v *SimpleCompositeValue) RecursiveString(seenReferences SeenReferences) string {
+
+	if v.stringer != nil {
+		return v.stringer(seenReferences)
+	}
+
 	var fields []struct {
 		Name  string
 		Value string
