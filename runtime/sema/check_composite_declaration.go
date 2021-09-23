@@ -740,38 +740,23 @@ func (checker *Checker) declareEnumConstructor(
 
 	enumCases := declaration.Members.EnumCases()
 
-	constructorMembers := NewStringMemberOrderedMap()
-
 	var constructorOrigins map[string]*Origin
 	if checker.positionInfoEnabled {
 		constructorOrigins = make(map[string]*Origin, len(enumCases))
 	}
 
-	constructorType := &FunctionType{
-		IsConstructor: true,
-		Parameters: []*Parameter{
-			{
-				Identifier:     EnumRawValueFieldName,
-				TypeAnnotation: NewTypeAnnotation(compositeType.EnumRawType),
-			},
-		},
-		ReturnTypeAnnotation: NewTypeAnnotation(
-			&OptionalType{
-				Type: compositeType,
-			},
-		),
-		Members: constructorMembers,
-	}
+	constructorType := EnumConstructorType(compositeType)
 
 	memberCaseTypeAnnotation := NewTypeAnnotation(compositeType)
 
 	for _, enumCase := range enumCases {
 		caseName := enumCase.Identifier.Identifier
 
-		if _, ok := constructorMembers.Get(caseName); ok {
+		if _, ok := constructorType.Members.Get(caseName); ok {
 			continue
 		}
-		constructorMembers.Set(
+
+		constructorType.Members.Set(
 			caseName,
 			&Member{
 				ContainerType: constructorType,
@@ -810,6 +795,24 @@ func (checker *Checker) declareEnumConstructor(
 		argumentLabels: []string{EnumRawValueFieldName},
 	})
 	checker.report(err)
+}
+
+func EnumConstructorType(compositeType *CompositeType) *FunctionType {
+	return &FunctionType{
+		IsConstructor: true,
+		Parameters: []*Parameter{
+			{
+				Identifier:     EnumRawValueFieldName,
+				TypeAnnotation: NewTypeAnnotation(compositeType.EnumRawType),
+			},
+		},
+		ReturnTypeAnnotation: NewTypeAnnotation(
+			&OptionalType{
+				Type: compositeType,
+			},
+		),
+		Members: NewStringMemberOrderedMap(),
+	}
 }
 
 // checkMemberStorability check that all fields have a type that is storable.

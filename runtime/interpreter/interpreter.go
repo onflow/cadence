@@ -1325,6 +1325,15 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 
 	compositeType := interpreter.Program.Elaboration.CompositeDeclarationTypes[declaration]
 
+	constructorType := &sema.FunctionType{
+		IsConstructor: true,
+		Parameters:    compositeType.ConstructorParameters,
+		ReturnTypeAnnotation: &sema.TypeAnnotation{
+			Type: compositeType,
+		},
+		RequiredArgumentCount: nil,
+	}
+
 	var initializerFunction FunctionValue
 	if declaration.CompositeKind == common.CompositeKindEvent {
 		initializerFunction = NewHostFunctionValue(
@@ -1335,6 +1344,7 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 				}
 				return nil
 			},
+			constructorType,
 		)
 	} else {
 		compositeInitializerFunction := interpreter.compositeInitializerFunction(declaration, lexicalScope)
@@ -1491,6 +1501,7 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 
 			return value
 		},
+		constructorType,
 	)
 
 	// Contract declarations declare a value / instance (singleton),
@@ -1569,13 +1580,14 @@ func (interpreter *Interpreter) declareEnumConstructor(
 		)
 	}
 
-	value := EnumConstructorFunction(caseValues, constructorNestedVariables)
+	value := EnumConstructorFunction(compositeType, caseValues, constructorNestedVariables)
 	variable.SetValue(value)
 
 	return lexicalScope, variable
 }
 
 func EnumConstructorFunction(
+	enumType *sema.CompositeType,
 	caseValues []*CompositeValue,
 	nestedVariables *StringVariableOrderedMap,
 ) *HostFunctionValue {
@@ -1607,6 +1619,7 @@ func EnumConstructorFunction(
 
 			return NewSomeValueOwningNonCopying(caseValue)
 		},
+		sema.EnumConstructorType(enumType),
 	)
 
 	constructor.NestedVariables = nestedVariables
@@ -2175,50 +2188,56 @@ func (interpreter *Interpreter) functionConditionsWrapper(
 	}
 
 	return func(inner FunctionValue) FunctionValue {
-		return NewHostFunctionValue(func(invocation Invocation) Value {
-			// Start a new activation record.
-			// Lexical scope: use the function declaration's activation record,
-			// not the current one (which would be dynamic scope)
-			interpreter.activations.PushNewWithParent(lexicalScope)
-			defer interpreter.activations.Pop()
+		return NewHostFunctionValue(
+			func(invocation Invocation) Value {
+				// Start a new activation record.
+				// Lexical scope: use the function declaration's activation record,
+				// not the current one (which would be dynamic scope)
+				interpreter.activations.PushNewWithParent(lexicalScope)
+				defer interpreter.activations.Pop()
 
-			if declaration.ParameterList != nil {
-				interpreter.bindParameterArguments(
-					declaration.ParameterList,
-					invocation.Arguments,
-				)
-			}
-
-			if invocation.Self != nil {
-				interpreter.declareVariable(sema.SelfIdentifier, invocation.Self)
-			}
-
-			// NOTE: The `inner` function might be nil.
-			//   This is the case if the conforming type did not declare a function.
-
-			var body func() controlReturn
-			if inner != nil {
-				// NOTE: It is important to wrap the invocation in a trampoline,
-				//  so the inner function isn't invoked here
-
-				body = func() controlReturn {
-
-					// NOTE: It is important to actually return the value returned
-					//   from the inner function, otherwise it is lost
-
-					returnValue := inner.invoke(invocation)
-					return functionReturn{returnValue}
+				if declaration.ParameterList != nil {
+					interpreter.bindParameterArguments(
+						declaration.ParameterList,
+						invocation.Arguments,
+					)
 				}
-			}
 
-			return interpreter.visitFunctionBody(
-				beforeStatements,
-				preConditions,
-				body,
-				rewrittenPostConditions,
-				returnType,
-			)
-		})
+				if invocation.Self != nil {
+					interpreter.declareVariable(sema.SelfIdentifier, invocation.Self)
+				}
+
+				// NOTE: The `inner` function might be nil.
+				//   This is the case if the conforming type did not declare a function.
+
+				var body func() controlReturn
+				if inner != nil {
+					// NOTE: It is important to wrap the invocation in a trampoline,
+					//  so the inner function isn't invoked here
+
+					body = func() controlReturn {
+
+						// NOTE: It is important to actually return the value returned
+						//   from the inner function, otherwise it is lost
+
+						returnValue := inner.invoke(invocation)
+						return functionReturn{returnValue}
+					}
+				}
+
+				return interpreter.visitFunctionBody(
+					beforeStatements,
+					preConditions,
+					body,
+					rewrittenPostConditions,
+					returnType,
+				)
+			},
+
+			// This is an internally created and used function, and can
+			// never be passed around as a value. Hence, the type is not required.
+			nil,
+		)
 	}
 }
 
@@ -2580,6 +2599,10 @@ var converterFunctionValues = func() []converterFunction {
 			func(invocation Invocation) Value {
 				return convert(invocation.Arguments[0])
 			},
+
+			// Converter functions are not passed around as values.
+			// Hence, the type is not required.
+			nil,
 		)
 
 		addMember := func(name string, value Value) {
@@ -2628,6 +2651,10 @@ var typeFunction = NewHostFunctionValue(
 			Type: ConvertSemaToStaticType(ty),
 		}
 	},
+
+	&sema.FunctionType{
+		ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.MetaType),
+	},
 )
 
 func defineTypeFunction(activation *VariableActivation) {
@@ -2648,6 +2675,11 @@ var stringFunction = func() Value {
 		func(invocation Invocation) Value {
 			return NewStringValue("")
 		},
+		&sema.FunctionType{
+			ReturnTypeAnnotation: sema.NewTypeAnnotation(
+				sema.StringType,
+			),
+		},
 	)
 
 	addMember := func(name string, value Value) {
@@ -2665,6 +2697,7 @@ var stringFunction = func() Value {
 				bytes, _ := ByteArrayValueToByteSlice(argument)
 				return NewStringValue(hex.EncodeToString(bytes))
 			},
+			sema.StringTypeEncodeHexFunctionType,
 		),
 	)
 
@@ -2917,36 +2950,39 @@ func StorageKey(path PathValue) string {
 }
 
 func (interpreter *Interpreter) authAccountSaveFunction(addressValue AddressValue) *HostFunctionValue {
-	return NewHostFunctionValue(func(invocation Invocation) Value {
+	return NewHostFunctionValue(
+		func(invocation Invocation) Value {
 
-		value := invocation.Arguments[0]
-		path := invocation.Arguments[1].(PathValue)
+			value := invocation.Arguments[0]
+			path := invocation.Arguments[1].(PathValue)
 
-		address := addressValue.ToAddress()
-		key := StorageKey(path)
+			address := addressValue.ToAddress()
+			key := StorageKey(path)
 
-		// Prevent an overwrite
+			// Prevent an overwrite
 
-		if interpreter.storedValueExists(address, key) {
-			panic(
-				OverwriteError{
-					Address:       addressValue,
-					Path:          path,
-					LocationRange: invocation.GetLocationRange(),
-				},
+			if interpreter.storedValueExists(address, key) {
+				panic(
+					OverwriteError{
+						Address:       addressValue,
+						Path:          path,
+						LocationRange: invocation.GetLocationRange(),
+					},
+				)
+			}
+
+			// Write new value
+
+			interpreter.writeStored(
+				address,
+				key,
+				NewSomeValueOwningNonCopying(value),
 			)
-		}
 
-		// Write new value
-
-		interpreter.writeStored(
-			address,
-			key,
-			NewSomeValueOwningNonCopying(value),
-		)
-
-		return VoidValue{}
-	})
+			return VoidValue{}
+		},
+		sema.AuthAccountTypeSaveFunctionType,
+	)
 }
 
 func (interpreter *Interpreter) authAccountLoadFunction(addressValue AddressValue) *HostFunctionValue {
@@ -2959,23 +2995,64 @@ func (interpreter *Interpreter) authAccountCopyFunction(addressValue AddressValu
 
 func (interpreter *Interpreter) authAccountReadFunction(addressValue AddressValue, clear bool) *HostFunctionValue {
 
-	return NewHostFunctionValue(func(invocation Invocation) Value {
+	return NewHostFunctionValue(
+		func(invocation Invocation) Value {
 
-		address := addressValue.ToAddress()
+			address := addressValue.ToAddress()
 
-		path := invocation.Arguments[0].(PathValue)
-		key := StorageKey(path)
+			path := invocation.Arguments[0].(PathValue)
+			key := StorageKey(path)
 
-		value := interpreter.ReadStored(address, key, false)
+			value := interpreter.ReadStored(address, key, false)
 
-		switch value := value.(type) {
-		case NilValue:
-			return value
+			switch value := value.(type) {
+			case NilValue:
+				return value
 
-		case *SomeValue:
+			case *SomeValue:
 
-			// If there is value stored for the given path,
-			// check that it satisfies the type given as the type argument.
+				// If there is value stored for the given path,
+				// check that it satisfies the type given as the type argument.
+
+				typeParameterPair := invocation.TypeParameterTypes.Oldest()
+				if typeParameterPair == nil {
+					panic(errors.NewUnreachableError())
+				}
+
+				ty := typeParameterPair.Value
+
+				dynamicType := value.Value.DynamicType(interpreter, SeenReferences{})
+				if !interpreter.IsSubType(dynamicType, ty) {
+					return NilValue{}
+				}
+
+				if clear {
+					// Remove the value from storage,
+					// but only if the type check succeeded.
+
+					interpreter.writeStored(address, key, NilValue{})
+				}
+
+				return value
+
+			default:
+				panic(errors.NewUnreachableError())
+			}
+		},
+
+		// same as sema.AuthAccountTypeCopyFunctionType
+		sema.AuthAccountTypeLoadFunctionType,
+	)
+}
+
+func (interpreter *Interpreter) authAccountBorrowFunction(addressValue AddressValue) *HostFunctionValue {
+	return NewHostFunctionValue(
+		func(invocation Invocation) Value {
+
+			address := addressValue.ToAddress()
+
+			path := invocation.Arguments[0].(PathValue)
+			key := StorageKey(path)
 
 			typeParameterPair := invocation.TypeParameterTypes.Oldest()
 			if typeParameterPair == nil {
@@ -2984,158 +3061,134 @@ func (interpreter *Interpreter) authAccountReadFunction(addressValue AddressValu
 
 			ty := typeParameterPair.Value
 
-			dynamicType := value.Value.DynamicType(interpreter, SeenReferences{})
-			if !interpreter.IsSubType(dynamicType, ty) {
+			referenceType := ty.(*sema.ReferenceType)
+
+			reference := &StorageReferenceValue{
+				Authorized:           referenceType.Authorized,
+				TargetStorageAddress: address,
+				TargetKey:            key,
+				BorrowedType:         referenceType.Type,
+			}
+
+			// Attempt to dereference,
+			// which reads the stored value
+			// and performs a dynamic type check
+
+			if reference.ReferencedValue(interpreter) == nil {
 				return NilValue{}
 			}
 
-			if clear {
-				// Remove the value from storage,
-				// but only if the type check succeeded.
-
-				interpreter.writeStored(address, key, NilValue{})
-			}
-
-			return value
-
-		default:
-			panic(errors.NewUnreachableError())
-		}
-	})
-}
-
-func (interpreter *Interpreter) authAccountBorrowFunction(addressValue AddressValue) *HostFunctionValue {
-	return NewHostFunctionValue(func(invocation Invocation) Value {
-
-		address := addressValue.ToAddress()
-
-		path := invocation.Arguments[0].(PathValue)
-		key := StorageKey(path)
-
-		typeParameterPair := invocation.TypeParameterTypes.Oldest()
-		if typeParameterPair == nil {
-			panic(errors.NewUnreachableError())
-		}
-
-		ty := typeParameterPair.Value
-
-		referenceType := ty.(*sema.ReferenceType)
-
-		reference := &StorageReferenceValue{
-			Authorized:           referenceType.Authorized,
-			TargetStorageAddress: address,
-			TargetKey:            key,
-			BorrowedType:         referenceType.Type,
-		}
-
-		// Attempt to dereference,
-		// which reads the stored value
-		// and performs a dynamic type check
-
-		if reference.ReferencedValue(interpreter) == nil {
-			return NilValue{}
-		}
-
-		return NewSomeValueOwningNonCopying(reference)
-	})
+			return NewSomeValueOwningNonCopying(reference)
+		},
+		sema.AuthAccountTypeBorrowFunctionType,
+	)
 }
 
 func (interpreter *Interpreter) authAccountLinkFunction(addressValue AddressValue) *HostFunctionValue {
-	return NewHostFunctionValue(func(invocation Invocation) Value {
+	return NewHostFunctionValue(
+		func(invocation Invocation) Value {
 
-		address := addressValue.ToAddress()
+			address := addressValue.ToAddress()
 
-		typeParameterPair := invocation.TypeParameterTypes.Oldest()
-		if typeParameterPair == nil {
-			panic(errors.NewUnreachableError())
-		}
+			typeParameterPair := invocation.TypeParameterTypes.Oldest()
+			if typeParameterPair == nil {
+				panic(errors.NewUnreachableError())
+			}
 
-		borrowType := typeParameterPair.Value.(*sema.ReferenceType)
+			borrowType := typeParameterPair.Value.(*sema.ReferenceType)
 
-		newCapabilityPath := invocation.Arguments[0].(PathValue)
-		targetPath := invocation.Arguments[1].(PathValue)
+			newCapabilityPath := invocation.Arguments[0].(PathValue)
+			targetPath := invocation.Arguments[1].(PathValue)
 
-		newCapabilityKey := StorageKey(newCapabilityPath)
+			newCapabilityKey := StorageKey(newCapabilityPath)
 
-		if interpreter.storedValueExists(address, newCapabilityKey) {
-			return NilValue{}
-		}
-
-		// Write new value
-
-		borrowStaticType := ConvertSemaToStaticType
-
-		storedValue := NewSomeValueOwningNonCopying(
-			LinkValue{
-				TargetPath: targetPath,
-				Type:       borrowStaticType(borrowType),
-			},
-		)
-
-		interpreter.writeStored(
-			address,
-			newCapabilityKey,
-			storedValue,
-		)
-
-		return NewSomeValueOwningNonCopying(
-			CapabilityValue{
-				Address:    addressValue,
-				Path:       newCapabilityPath,
-				BorrowType: borrowStaticType(borrowType),
-			},
-		)
-	})
-}
-
-func (interpreter *Interpreter) accountGetLinkTargetFunction(addressValue AddressValue) *HostFunctionValue {
-	return NewHostFunctionValue(func(invocation Invocation) Value {
-
-		address := addressValue.ToAddress()
-
-		capabilityPath := invocation.Arguments[0].(PathValue)
-
-		capabilityKey := StorageKey(capabilityPath)
-
-		value := interpreter.ReadStored(address, capabilityKey, false)
-
-		switch value := value.(type) {
-		case NilValue:
-			return value
-
-		case *SomeValue:
-
-			link, ok := value.Value.(LinkValue)
-			if !ok {
+			if interpreter.storedValueExists(address, newCapabilityKey) {
 				return NilValue{}
 			}
 
-			return NewSomeValueOwningNonCopying(link.TargetPath)
+			// Write new value
 
-		default:
-			panic(errors.NewUnreachableError())
-		}
-	})
+			borrowStaticType := ConvertSemaToStaticType
+
+			storedValue := NewSomeValueOwningNonCopying(
+				LinkValue{
+					TargetPath: targetPath,
+					Type:       borrowStaticType(borrowType),
+				},
+			)
+
+			interpreter.writeStored(
+				address,
+				newCapabilityKey,
+				storedValue,
+			)
+
+			return NewSomeValueOwningNonCopying(
+				CapabilityValue{
+					Address:    addressValue,
+					Path:       newCapabilityPath,
+					BorrowType: borrowStaticType(borrowType),
+				},
+			)
+		},
+		sema.AuthAccountTypeLinkFunctionType,
+	)
+}
+
+func (interpreter *Interpreter) accountGetLinkTargetFunction(addressValue AddressValue) *HostFunctionValue {
+	return NewHostFunctionValue(
+		func(invocation Invocation) Value {
+
+			address := addressValue.ToAddress()
+
+			capabilityPath := invocation.Arguments[0].(PathValue)
+
+			capabilityKey := StorageKey(capabilityPath)
+
+			value := interpreter.ReadStored(address, capabilityKey, false)
+
+			switch value := value.(type) {
+			case NilValue:
+				return value
+
+			case *SomeValue:
+
+				link, ok := value.Value.(LinkValue)
+				if !ok {
+					return NilValue{}
+				}
+
+				return NewSomeValueOwningNonCopying(link.TargetPath)
+
+			default:
+				panic(errors.NewUnreachableError())
+			}
+		},
+		sema.AccountTypeGetLinkTargetFunctionType,
+	)
 }
 
 func (interpreter *Interpreter) authAccountUnlinkFunction(addressValue AddressValue) *HostFunctionValue {
-	return NewHostFunctionValue(func(invocation Invocation) Value {
+	return NewHostFunctionValue(
+		func(invocation Invocation) Value {
 
-		address := addressValue.ToAddress()
+			address := addressValue.ToAddress()
 
-		capabilityPath := invocation.Arguments[0].(PathValue)
-		capabilityKey := StorageKey(capabilityPath)
+			capabilityPath := invocation.Arguments[0].(PathValue)
+			capabilityKey := StorageKey(capabilityPath)
 
-		// Write new value
+			// Write new value
 
-		interpreter.writeStored(
-			address,
-			capabilityKey,
-			NilValue{},
-		)
+			interpreter.writeStored(
+				address,
+				capabilityKey,
+				NilValue{},
+			)
 
-		return VoidValue{}
-	})
+			return VoidValue{}
+		},
+		sema.AuthAccountTypeUnlinkFunctionType,
+	)
 }
 
 func (interpreter *Interpreter) capabilityBorrowFunction(
@@ -3193,6 +3246,7 @@ func (interpreter *Interpreter) capabilityBorrowFunction(
 
 			return NewSomeValueOwningNonCopying(reference)
 		},
+		sema.CapabilityTypeBorrowFunctionType(borrowType),
 	)
 }
 
@@ -3252,6 +3306,7 @@ func (interpreter *Interpreter) capabilityCheckFunction(
 
 			return BoolValue(true)
 		},
+		sema.CapabilityTypeCheckFunctionType(borrowType),
 	)
 }
 
@@ -3487,6 +3542,7 @@ func (interpreter *Interpreter) isInstanceFunction(self Value) *HostFunctionValu
 			result := interpreter.IsSubType(dynamicType, semaType)
 			return BoolValue(result)
 		},
+		sema.IsInstanceFunctionType,
 	)
 }
 
@@ -3497,6 +3553,7 @@ func (interpreter *Interpreter) getTypeFunction(self Value) *HostFunctionValue {
 				Type: self.StaticType(),
 			}
 		},
+		sema.GetTypeFunctionType,
 	)
 }
 

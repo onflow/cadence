@@ -307,7 +307,7 @@ func NewTypeAnnotation(ty Type) *TypeAnnotation {
 
 const IsInstanceFunctionName = "isInstance"
 
-var isInstanceFunctionType = &FunctionType{
+var IsInstanceFunctionType = &FunctionType{
 	Parameters: []*Parameter{
 		{
 			Label:      ArgumentLabelNotRequired,
@@ -330,7 +330,7 @@ Returns true if the object conforms to the given type at runtime
 
 const GetTypeFunctionName = "getType"
 
-var getTypeFunctionType = &FunctionType{
+var GetTypeFunctionType = &FunctionType{
 	ReturnTypeAnnotation: NewTypeAnnotation(
 		MetaType,
 	),
@@ -344,7 +344,7 @@ Returns the type of the value
 
 const ToStringFunctionName = "toString"
 
-var toStringFunctionType = &FunctionType{
+var ToStringFunctionType = &FunctionType{
 	ReturnTypeAnnotation: NewTypeAnnotation(
 		StringType,
 	),
@@ -381,7 +381,7 @@ func withBuiltinMembers(ty Type, members map[string]MemberResolver) map[string]M
 			return NewPublicFunctionMember(
 				ty,
 				identifier,
-				isInstanceFunctionType,
+				IsInstanceFunctionType,
 				isInstanceFunctionDocString,
 			)
 		},
@@ -395,7 +395,7 @@ func withBuiltinMembers(ty Type, members map[string]MemberResolver) map[string]M
 			return NewPublicFunctionMember(
 				ty,
 				identifier,
-				getTypeFunctionType,
+				GetTypeFunctionType,
 				getTypeFunctionDocString,
 			)
 		},
@@ -411,7 +411,7 @@ func withBuiltinMembers(ty Type, members map[string]MemberResolver) map[string]M
 				return NewPublicFunctionMember(
 					ty,
 					identifier,
-					toStringFunctionType,
+					ToStringFunctionType,
 					toStringFunctionDocString,
 				)
 			},
@@ -567,47 +567,10 @@ func (t *OptionalType) GetMembers() map[string]MemberResolver {
 					)
 				}
 
-				typeParameter := &TypeParameter{
-					Name: "T",
-				}
-
-				resultType := &GenericType{
-					TypeParameter: typeParameter,
-				}
-
 				return NewPublicFunctionMember(
 					t,
 					identifier,
-					&FunctionType{
-						TypeParameters: []*TypeParameter{
-							typeParameter,
-						},
-						Parameters: []*Parameter{
-							{
-								Label:      ArgumentLabelNotRequired,
-								Identifier: "transform",
-								TypeAnnotation: NewTypeAnnotation(
-									&FunctionType{
-										Parameters: []*Parameter{
-											{
-												Label:          ArgumentLabelNotRequired,
-												Identifier:     "value",
-												TypeAnnotation: NewTypeAnnotation(t.Type),
-											},
-										},
-										ReturnTypeAnnotation: NewTypeAnnotation(
-											resultType,
-										),
-									},
-								),
-							},
-						},
-						ReturnTypeAnnotation: NewTypeAnnotation(
-							&OptionalType{
-								Type: resultType,
-							},
-						),
-					},
+					OptionalTypeMapFunctionType(t.Type),
 					optionalTypeMapFunctionDocString,
 				)
 			},
@@ -615,6 +578,47 @@ func (t *OptionalType) GetMembers() map[string]MemberResolver {
 	}
 
 	return withBuiltinMembers(t, members)
+}
+
+func OptionalTypeMapFunctionType(typ Type) *FunctionType {
+	typeParameter := &TypeParameter{
+		Name: "T",
+	}
+
+	resultType := &GenericType{
+		TypeParameter: typeParameter,
+	}
+
+	return &FunctionType{
+		TypeParameters: []*TypeParameter{
+			typeParameter,
+		},
+		Parameters: []*Parameter{
+			{
+				Label:      ArgumentLabelNotRequired,
+				Identifier: "transform",
+				TypeAnnotation: NewTypeAnnotation(
+					&FunctionType{
+						Parameters: []*Parameter{
+							{
+								Label:          ArgumentLabelNotRequired,
+								Identifier:     "value",
+								TypeAnnotation: NewTypeAnnotation(typ),
+							},
+						},
+						ReturnTypeAnnotation: NewTypeAnnotation(
+							resultType,
+						),
+					},
+				),
+			},
+		},
+		ReturnTypeAnnotation: NewTypeAnnotation(
+			&OptionalType{
+				Type: resultType,
+			},
+		),
+	}
 }
 
 // GenericType
@@ -1534,18 +1538,7 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 				return NewPublicFunctionMember(
 					arrayType,
 					identifier,
-					&FunctionType{
-						Parameters: []*Parameter{
-							{
-								Label:          ArgumentLabelNotRequired,
-								Identifier:     "element",
-								TypeAnnotation: NewTypeAnnotation(elementType),
-							},
-						},
-						ReturnTypeAnnotation: NewTypeAnnotation(
-							BoolType,
-						),
-					},
+					ArrayContainsFunctionType(elementType),
 					arrayTypeContainsFunctionDocString,
 				)
 			},
@@ -1574,18 +1567,7 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 				return NewPublicFunctionMember(
 					arrayType,
 					identifier,
-					&FunctionType{
-						Parameters: []*Parameter{
-							{
-								Label:          ArgumentLabelNotRequired,
-								Identifier:     "element",
-								TypeAnnotation: NewTypeAnnotation(elementType),
-							},
-						},
-						ReturnTypeAnnotation: NewTypeAnnotation(
-							VoidType,
-						),
-					},
+					ArrayAppendFunctionType(elementType),
 					arrayTypeAppendFunctionDocString,
 				)
 			},
@@ -1610,16 +1592,7 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 				return NewPublicFunctionMember(
 					arrayType,
 					identifier,
-					&FunctionType{
-						Parameters: []*Parameter{
-							{
-								Label:          ArgumentLabelNotRequired,
-								Identifier:     "other",
-								TypeAnnotation: NewTypeAnnotation(arrayType),
-							},
-						},
-						ReturnTypeAnnotation: NewTypeAnnotation(VoidType),
-					},
+					ArrayAppendAllFunctionType(arrayType),
 					arrayTypeAppendAllFunctionDocString,
 				)
 			},
@@ -1643,21 +1616,10 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 					)
 				}
 
-				typeAnnotation := NewTypeAnnotation(arrayType)
-
 				return NewPublicFunctionMember(
 					arrayType,
 					identifier,
-					&FunctionType{
-						Parameters: []*Parameter{
-							{
-								Label:          ArgumentLabelNotRequired,
-								Identifier:     "other",
-								TypeAnnotation: typeAnnotation,
-							},
-						},
-						ReturnTypeAnnotation: typeAnnotation,
-					},
+					ArrayConcatFunctionType(arrayType),
 					arrayTypeConcatFunctionDocString,
 				)
 			},
@@ -1672,22 +1634,7 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 				return NewPublicFunctionMember(
 					arrayType,
 					identifier,
-					&FunctionType{
-						Parameters: []*Parameter{
-							{
-								Identifier:     "at",
-								TypeAnnotation: NewTypeAnnotation(IntegerType),
-							},
-							{
-								Label:          ArgumentLabelNotRequired,
-								Identifier:     "element",
-								TypeAnnotation: NewTypeAnnotation(elementType),
-							},
-						},
-						ReturnTypeAnnotation: NewTypeAnnotation(
-							VoidType,
-						),
-					},
+					ArrayInsertFunctionType(elementType),
 					arrayTypeInsertFunctionDocString,
 				)
 			},
@@ -1702,17 +1649,7 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 				return NewPublicFunctionMember(
 					arrayType,
 					identifier,
-					&FunctionType{
-						Parameters: []*Parameter{
-							{
-								Identifier:     "at",
-								TypeAnnotation: NewTypeAnnotation(IntegerType),
-							},
-						},
-						ReturnTypeAnnotation: NewTypeAnnotation(
-							elementType,
-						),
-					},
+					ArrayRemoveFunctionType(elementType),
 					arrayTypeRemoveFunctionDocString,
 				)
 			},
@@ -1727,11 +1664,7 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 				return NewPublicFunctionMember(
 					arrayType,
 					identifier,
-					&FunctionType{
-						ReturnTypeAnnotation: NewTypeAnnotation(
-							elementType,
-						),
-					},
+					ArrayRemoveFirstFunctionType(elementType),
 
 					arrayTypeRemoveFirstFunctionDocString,
 				)
@@ -1747,11 +1680,7 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 				return NewPublicFunctionMember(
 					arrayType,
 					identifier,
-					&FunctionType{
-						ReturnTypeAnnotation: NewTypeAnnotation(
-							elementType,
-						),
-					},
+					ArrayRemoveLastFunctionType(elementType),
 					arrayTypeRemoveLastFunctionDocString,
 				)
 			},
@@ -1759,6 +1688,112 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 	}
 
 	return withBuiltinMembers(arrayType, members)
+}
+
+func ArrayRemoveLastFunctionType(elementType Type) *FunctionType {
+	return &FunctionType{
+		ReturnTypeAnnotation: NewTypeAnnotation(
+			elementType,
+		),
+	}
+}
+
+func ArrayRemoveFirstFunctionType(elementType Type) *FunctionType {
+	return &FunctionType{
+		ReturnTypeAnnotation: NewTypeAnnotation(
+			elementType,
+		),
+	}
+}
+
+func ArrayRemoveFunctionType(elementType Type) *FunctionType {
+	return &FunctionType{
+		Parameters: []*Parameter{
+			{
+				Identifier:     "at",
+				TypeAnnotation: NewTypeAnnotation(IntegerType),
+			},
+		},
+		ReturnTypeAnnotation: NewTypeAnnotation(
+			elementType,
+		),
+	}
+}
+
+func ArrayInsertFunctionType(elementType Type) *FunctionType {
+	return &FunctionType{
+		Parameters: []*Parameter{
+			{
+				Identifier:     "at",
+				TypeAnnotation: NewTypeAnnotation(IntegerType),
+			},
+			{
+				Label:          ArgumentLabelNotRequired,
+				Identifier:     "element",
+				TypeAnnotation: NewTypeAnnotation(elementType),
+			},
+		},
+		ReturnTypeAnnotation: NewTypeAnnotation(
+			VoidType,
+		),
+	}
+}
+
+func ArrayConcatFunctionType(arrayType Type) *FunctionType {
+	typeAnnotation := NewTypeAnnotation(arrayType)
+	return &FunctionType{
+		Parameters: []*Parameter{
+			{
+				Label:          ArgumentLabelNotRequired,
+				Identifier:     "other",
+				TypeAnnotation: typeAnnotation,
+			},
+		},
+		ReturnTypeAnnotation: typeAnnotation,
+	}
+}
+
+func ArrayContainsFunctionType(elementType Type) *FunctionType {
+	return &FunctionType{
+		Parameters: []*Parameter{
+			{
+				Label:          ArgumentLabelNotRequired,
+				Identifier:     "element",
+				TypeAnnotation: NewTypeAnnotation(elementType),
+			},
+		},
+		ReturnTypeAnnotation: NewTypeAnnotation(
+			BoolType,
+		),
+	}
+}
+
+func ArrayAppendAllFunctionType(arrayType Type) *FunctionType {
+	return &FunctionType{
+		Parameters: []*Parameter{
+			{
+				Label:          ArgumentLabelNotRequired,
+				Identifier:     "other",
+				TypeAnnotation: NewTypeAnnotation(arrayType),
+			},
+		},
+		ReturnTypeAnnotation: NewTypeAnnotation(VoidType),
+	}
+}
+
+func ArrayAppendFunctionType(elementType Type) *FunctionType {
+	return &FunctionType{
+		Parameters: []*Parameter{
+			{
+				Label:          ArgumentLabelNotRequired,
+				Identifier:     "element",
+				TypeAnnotation: NewTypeAnnotation(elementType),
+			},
+		},
+		ReturnTypeAnnotation: NewTypeAnnotation(
+			VoidType,
+		),
+	}
 }
 
 // VariableSizedType is a variable sized array type
@@ -3064,20 +3099,7 @@ func init() {
 	addMember(NewPublicFunctionMember(
 		functionType,
 		StringTypeEncodeHexFunctionName,
-		&FunctionType{
-			Parameters: []*Parameter{
-				{
-					Label:      ArgumentLabelNotRequired,
-					Identifier: "data",
-					TypeAnnotation: NewTypeAnnotation(
-						ByteArrayType,
-					),
-				},
-			},
-			ReturnTypeAnnotation: NewTypeAnnotation(
-				StringType,
-			),
-		},
+		StringTypeEncodeHexFunctionType,
 		StringTypeEncodeHexFunctionDocString,
 	))
 
@@ -3089,6 +3111,21 @@ func init() {
 			"Creates an empty string",
 		),
 	)
+}
+
+var StringTypeEncodeHexFunctionType = &FunctionType{
+	Parameters: []*Parameter{
+		{
+			Label:      ArgumentLabelNotRequired,
+			Identifier: "data",
+			TypeAnnotation: NewTypeAnnotation(
+				ByteArrayType,
+			),
+		},
+	},
+	ReturnTypeAnnotation: NewTypeAnnotation(
+		StringType,
+	),
 }
 
 func suggestIntegerLiteralConversionReplacement(
@@ -4085,18 +4122,7 @@ func (t *DictionaryType) initializeMemberResolvers() {
 					return NewPublicFunctionMember(
 						t,
 						identifier,
-						&FunctionType{
-							Parameters: []*Parameter{
-								{
-									Label:          ArgumentLabelNotRequired,
-									Identifier:     "key",
-									TypeAnnotation: NewTypeAnnotation(t.KeyType),
-								},
-							},
-							ReturnTypeAnnotation: NewTypeAnnotation(
-								BoolType,
-							),
-						},
+						DictionaryContainsKeyFunctionType(t),
 						dictionaryTypeContainsKeyFunctionDocString,
 					)
 				},
@@ -4163,24 +4189,7 @@ func (t *DictionaryType) initializeMemberResolvers() {
 				Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
 					return NewPublicFunctionMember(t,
 						identifier,
-						&FunctionType{
-							Parameters: []*Parameter{
-								{
-									Identifier:     "key",
-									TypeAnnotation: NewTypeAnnotation(t.KeyType),
-								},
-								{
-									Label:          ArgumentLabelNotRequired,
-									Identifier:     "value",
-									TypeAnnotation: NewTypeAnnotation(t.ValueType),
-								},
-							},
-							ReturnTypeAnnotation: NewTypeAnnotation(
-								&OptionalType{
-									Type: t.ValueType,
-								},
-							),
-						},
+						DictionaryInsertFunctionType(t),
 						dictionaryTypeInsertFunctionDocString,
 					)
 				},
@@ -4190,25 +4199,65 @@ func (t *DictionaryType) initializeMemberResolvers() {
 				Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
 					return NewPublicFunctionMember(t,
 						identifier,
-						&FunctionType{
-							Parameters: []*Parameter{
-								{
-									Identifier:     "key",
-									TypeAnnotation: NewTypeAnnotation(t.KeyType),
-								},
-							},
-							ReturnTypeAnnotation: NewTypeAnnotation(
-								&OptionalType{
-									Type: t.ValueType,
-								},
-							),
-						},
+						DictionaryRemoveFunctionType(t),
 						dictionaryTypeRemoveFunctionDocString,
 					)
 				},
 			},
 		})
 	})
+}
+
+func DictionaryContainsKeyFunctionType(t *DictionaryType) *FunctionType {
+	return &FunctionType{
+		Parameters: []*Parameter{
+			{
+				Label:          ArgumentLabelNotRequired,
+				Identifier:     "key",
+				TypeAnnotation: NewTypeAnnotation(t.KeyType),
+			},
+		},
+		ReturnTypeAnnotation: NewTypeAnnotation(
+			BoolType,
+		),
+	}
+}
+
+func DictionaryInsertFunctionType(t *DictionaryType) *FunctionType {
+	return &FunctionType{
+		Parameters: []*Parameter{
+			{
+				Identifier:     "key",
+				TypeAnnotation: NewTypeAnnotation(t.KeyType),
+			},
+			{
+				Label:          ArgumentLabelNotRequired,
+				Identifier:     "value",
+				TypeAnnotation: NewTypeAnnotation(t.ValueType),
+			},
+		},
+		ReturnTypeAnnotation: NewTypeAnnotation(
+			&OptionalType{
+				Type: t.ValueType,
+			},
+		),
+	}
+}
+
+func DictionaryRemoveFunctionType(t *DictionaryType) *FunctionType {
+	return &FunctionType{
+		Parameters: []*Parameter{
+			{
+				Identifier:     "key",
+				TypeAnnotation: NewTypeAnnotation(t.KeyType),
+			},
+		},
+		ReturnTypeAnnotation: NewTypeAnnotation(
+			&OptionalType{
+				Type: t.ValueType,
+			},
+		),
+	}
 }
 
 func (*DictionaryType) isValueIndexableType() bool {
@@ -4481,13 +4530,13 @@ func (t *AddressType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
 
 const AddressTypeToBytesFunctionName = `toBytes`
 
-var arrayTypeToBytesFunctionType = &FunctionType{
+var AddressTypeToBytesFunctionType = &FunctionType{
 	ReturnTypeAnnotation: NewTypeAnnotation(
 		ByteArrayType,
 	),
 }
 
-const arrayTypeToBytesFunctionDocString = `
+const addressTypeToBytesFunctionDocString = `
 Returns an array containing the byte representation of the address
 `
 
@@ -4498,8 +4547,8 @@ func (t *AddressType) GetMembers() map[string]MemberResolver {
 				return NewPublicFunctionMember(
 					t,
 					identifier,
-					arrayTypeToBytesFunctionType,
-					arrayTypeToBytesFunctionDocString,
+					AddressTypeToBytesFunctionType,
+					addressTypeToBytesFunctionDocString,
 				)
 			},
 		},
@@ -5691,7 +5740,7 @@ func (t *CapabilityType) TypeArguments() []Type {
 	}
 }
 
-func capabilityTypeBorrowFunctionType(borrowType Type) *FunctionType {
+func CapabilityTypeBorrowFunctionType(borrowType Type) *FunctionType {
 
 	var typeParameters []*TypeParameter
 
@@ -5717,7 +5766,7 @@ func capabilityTypeBorrowFunctionType(borrowType Type) *FunctionType {
 	}
 }
 
-func capabilityTypeCheckFunctionType(borrowType Type) *FunctionType {
+func CapabilityTypeCheckFunctionType(borrowType Type) *FunctionType {
 
 	var typeParameters []*TypeParameter
 
@@ -5759,7 +5808,7 @@ func (t *CapabilityType) initializeMemberResolvers() {
 					return NewPublicFunctionMember(
 						t,
 						identifier,
-						capabilityTypeBorrowFunctionType(t.BorrowType),
+						CapabilityTypeBorrowFunctionType(t.BorrowType),
 						capabilityTypeBorrowFunctionDocString,
 					)
 				},
@@ -5770,7 +5819,7 @@ func (t *CapabilityType) initializeMemberResolvers() {
 					return NewPublicFunctionMember(
 						t,
 						identifier,
-						capabilityTypeCheckFunctionType(t.BorrowType),
+						CapabilityTypeCheckFunctionType(t.BorrowType),
 						capabilityTypeCheckFunctionDocString,
 					)
 				},
@@ -5926,7 +5975,7 @@ var PublicKeyType = func() *CompositeType {
 		NewPublicFunctionMember(
 			publicKeyType,
 			PublicKeyVerifyFunction,
-			publicKeyVerifyFunctionType,
+			PublicKeyVerifyFunctionType,
 			publicKeyVerifyFunctionDocString,
 		),
 	}
@@ -5937,7 +5986,7 @@ var PublicKeyType = func() *CompositeType {
 	return publicKeyType
 }()
 
-var publicKeyVerifyFunctionType = &FunctionType{
+var PublicKeyVerifyFunctionType = &FunctionType{
 	TypeParameters: []*TypeParameter{},
 	Parameters: []*Parameter{
 		{
