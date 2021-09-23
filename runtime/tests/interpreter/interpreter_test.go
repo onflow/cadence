@@ -5146,7 +5146,7 @@ func TestInterpretDictionaryKeyTypes(t *testing.T) {
 	}
 }
 
-func TestPathToString(t *testing.T) {
+func TestInterpretPathToString(t *testing.T) {
 
 	t.Parallel()
 
