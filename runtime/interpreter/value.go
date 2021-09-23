@@ -1101,7 +1101,9 @@ func (v *ArrayValue) GetMember(inter *Interpreter, _ func() LocationRange, name 
 				return VoidValue{}
 			},
 			sema.ArrayAppendFunctionType(
-				inter.ConvertStaticToSemaType(v.Type.ElementType()),
+				inter.ConvertStaticToSemaType(
+					v.StaticType().(ArrayStaticType).ElementType(),
+				),
 			),
 		)
 
@@ -1117,7 +1119,7 @@ func (v *ArrayValue) GetMember(inter *Interpreter, _ func() LocationRange, name 
 				return VoidValue{}
 			},
 			sema.ArrayAppendAllFunctionType(
-				inter.ConvertStaticToSemaType(v.Type),
+				inter.ConvertStaticToSemaType(v.StaticType()),
 			),
 		)
 
@@ -1132,7 +1134,7 @@ func (v *ArrayValue) GetMember(inter *Interpreter, _ func() LocationRange, name 
 				)
 			},
 			sema.ArrayConcatFunctionType(
-				inter.ConvertStaticToSemaType(v.Type),
+				inter.ConvertStaticToSemaType(v.StaticType()),
 			),
 		)
 
@@ -1150,7 +1152,9 @@ func (v *ArrayValue) GetMember(inter *Interpreter, _ func() LocationRange, name 
 				return VoidValue{}
 			},
 			sema.ArrayInsertFunctionType(
-				inter.ConvertStaticToSemaType(v.Type.ElementType()),
+				inter.ConvertStaticToSemaType(
+					v.StaticType().(ArrayStaticType).ElementType(),
+				),
 			),
 		)
 
@@ -1165,7 +1169,9 @@ func (v *ArrayValue) GetMember(inter *Interpreter, _ func() LocationRange, name 
 				)
 			},
 			sema.ArrayRemoveFunctionType(
-				inter.ConvertStaticToSemaType(v.Type.ElementType()),
+				inter.ConvertStaticToSemaType(
+					v.StaticType().(ArrayStaticType).ElementType(),
+				),
 			),
 		)
 
@@ -1178,7 +1184,9 @@ func (v *ArrayValue) GetMember(inter *Interpreter, _ func() LocationRange, name 
 				)
 			},
 			sema.ArrayRemoveFirstFunctionType(
-				inter.ConvertStaticToSemaType(v.Type.ElementType()),
+				inter.ConvertStaticToSemaType(
+					v.StaticType().(ArrayStaticType).ElementType(),
+				),
 			),
 		)
 
@@ -1191,7 +1199,9 @@ func (v *ArrayValue) GetMember(inter *Interpreter, _ func() LocationRange, name 
 				)
 			},
 			sema.ArrayRemoveLastFunctionType(
-				inter.ConvertStaticToSemaType(v.Type.ElementType()),
+				inter.ConvertStaticToSemaType(
+					v.StaticType().(ArrayStaticType).ElementType(),
+				),
 			),
 		)
 
@@ -1205,7 +1215,9 @@ func (v *ArrayValue) GetMember(inter *Interpreter, _ func() LocationRange, name 
 				)
 			},
 			sema.ArrayContainsFunctionType(
-				inter.ConvertStaticToSemaType(v.Type.ElementType()),
+				inter.ConvertStaticToSemaType(
+					v.StaticType().(ArrayStaticType).ElementType(),
+				),
 			),
 		)
 	}
