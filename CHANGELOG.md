@@ -1,9 +1,3 @@
-# XXXXXXX
-
-## ⭐ Features
-
-- The function `fun toString(): String` was added to all path types. It returns the textual representation of the type.
-
 # v0.16.0 (2021-04-21)
 
 ## 💥 Breaking Changes
