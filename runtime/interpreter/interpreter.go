@@ -2235,7 +2235,7 @@ func (interpreter *Interpreter) functionConditionsWrapper(
 			},
 
 			// This is an internally created and used function, and can
-			// never pass around as a value. Hence, type is not required.
+			// never be passed around as a value. Hence, the type is not required.
 			nil,
 		)
 	}
@@ -2600,8 +2600,8 @@ var converterFunctionValues = func() []converterFunction {
 				return convert(invocation.Arguments[0])
 			},
 
-			// Converter functions are not pass around as values.
-			// Hence, type is not required.
+			// Converter functions are not passed around as values.
+			// Hence, the type is not required.
 			nil,
 		)
 
