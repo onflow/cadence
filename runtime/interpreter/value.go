@@ -1012,7 +1012,11 @@ func (v *ArrayValue) GetMember(inter *Interpreter, getLocationRange func() Locat
 				v.Append(inter, getLocationRange, invocation.Arguments[0])
 				return VoidValue{}
 			},
-			sema.ArrayAppendFunctionType(inter.ConvertStaticToSemaType(v.Type.ElementType())),
+			sema.ArrayAppendFunctionType(
+				inter.ConvertStaticToSemaType(
+					v.StaticType().(ArrayStaticType).ElementType(),
+				),
+			),
 		)
 
 	case "appendAll":
@@ -1022,7 +1026,7 @@ func (v *ArrayValue) GetMember(inter *Interpreter, getLocationRange func() Locat
 				v.AppendAll(inter, getLocationRange, otherArray)
 				return VoidValue{}
 			},
-			sema.ArrayAppendAllFunctionType(inter.ConvertStaticToSemaType(v.Type)),
+			sema.ArrayAppendAllFunctionType(inter.ConvertStaticToSemaType(v.StaticType())),
 		)
 
 	case "concat":
@@ -1031,7 +1035,9 @@ func (v *ArrayValue) GetMember(inter *Interpreter, getLocationRange func() Locat
 				otherArray := invocation.Arguments[0].(ConcatenatableValue)
 				return v.Concat(otherArray)
 			},
-			sema.ArrayConcatFunctionType(inter.ConvertStaticToSemaType(v.Type)),
+			sema.ArrayConcatFunctionType(
+				inter.ConvertStaticToSemaType(v.StaticType()),
+			),
 		)
 
 	case "insert":
@@ -1042,7 +1048,11 @@ func (v *ArrayValue) GetMember(inter *Interpreter, getLocationRange func() Locat
 				v.Insert(inter, invocation.GetLocationRange, index, element)
 				return VoidValue{}
 			},
-			sema.ArrayInsertFunctionType(inter.ConvertStaticToSemaType(v.Type.ElementType())),
+			sema.ArrayInsertFunctionType(
+				inter.ConvertStaticToSemaType(
+					v.StaticType().(ArrayStaticType).ElementType(),
+				),
+			),
 		)
 
 	case "remove":
@@ -1051,7 +1061,11 @@ func (v *ArrayValue) GetMember(inter *Interpreter, getLocationRange func() Locat
 				i := invocation.Arguments[0].(NumberValue).ToInt()
 				return v.Remove(i, invocation.GetLocationRange)
 			},
-			sema.ArrayRemoveFunctionType(inter.ConvertStaticToSemaType(v.Type.ElementType())),
+			sema.ArrayRemoveFunctionType(
+				inter.ConvertStaticToSemaType(
+					v.StaticType().(ArrayStaticType).ElementType(),
+				),
+			),
 		)
 
 	case "removeFirst":
@@ -1059,7 +1073,11 @@ func (v *ArrayValue) GetMember(inter *Interpreter, getLocationRange func() Locat
 			func(invocation Invocation) Value {
 				return v.RemoveFirst(invocation.GetLocationRange)
 			},
-			sema.ArrayRemoveFirstFunctionType(inter.ConvertStaticToSemaType(v.Type.ElementType())),
+			sema.ArrayRemoveFirstFunctionType(
+				inter.ConvertStaticToSemaType(
+					v.StaticType().(ArrayStaticType).ElementType(),
+				),
+			),
 		)
 
 	case "removeLast":
@@ -1067,7 +1085,11 @@ func (v *ArrayValue) GetMember(inter *Interpreter, getLocationRange func() Locat
 			func(invocation Invocation) Value {
 				return v.RemoveLast(invocation.GetLocationRange)
 			},
-			sema.ArrayRemoveLastFunctionType(inter.ConvertStaticToSemaType(v.Type.ElementType())),
+			sema.ArrayRemoveLastFunctionType(
+				inter.ConvertStaticToSemaType(
+					v.StaticType().(ArrayStaticType).ElementType(),
+				),
+			),
 		)
 
 	case "contains":
@@ -1075,7 +1097,11 @@ func (v *ArrayValue) GetMember(inter *Interpreter, getLocationRange func() Locat
 			func(invocation Invocation) Value {
 				return v.Contains(invocation.Arguments[0])
 			},
-			sema.ArrayContainsFunctionType(inter.ConvertStaticToSemaType(v.Type.ElementType())),
+			sema.ArrayContainsFunctionType(
+				inter.ConvertStaticToSemaType(
+					v.StaticType().(ArrayStaticType).ElementType(),
+				),
+			),
 		)
 
 	}
