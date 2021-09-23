@@ -297,6 +297,7 @@ func TestRuntimeAuthAccountKeys(t *testing.T) {
                 transaction {
                     prepare(signer: AuthAccount) {
                         let key = signer.keys.get(keyIndex: 0) ?? panic("unexpectedly nil")
+                        log(key)
                         assert(!key.isRevoked)
                     }
                 }`,
@@ -308,6 +309,13 @@ func TestRuntimeAuthAccountKeys(t *testing.T) {
 
 		assert.Equal(t, []*AccountKey{accountKeyA}, storage.keys)
 		assert.Equal(t, accountKeyA, storage.returnedKey)
+		assert.Equal(
+			t,
+			[]string{
+				"AccountKey(hashAlgorithm: HashAlgorithm(rawValue: 3), isRevoked: false, keyIndex: 0, weight: 100.00000000, publicKey: PublicKey(publicKey: [1, 2, 3], signatureAlgorithm: SignatureAlgorithm(rawValue: 1), isValid: false))",
+			},
+			storage.logs,
+		)
 	})
 
 	t.Run("get non-existing key", func(t *testing.T) {
@@ -873,6 +881,9 @@ func getAccountKeyTestRuntimeInterface(storage *testAccountKeyStorage) *testRunt
 
 			return accountKey, nil
 		},
+		log: func(message string) {
+			storage.logs = append(storage.logs, message)
+		},
 		emitEvent: func(event cadence.Event) error {
 			storage.events = append(storage.events, event)
 			return nil
@@ -976,6 +987,7 @@ type testAccountKeyStorage struct {
 	events      []cadence.Event
 	keys        []*AccountKey
 	returnedKey *AccountKey
+	logs        []string
 }
 
 func TestRuntimePublicKey(t *testing.T) {

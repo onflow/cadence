@@ -7160,7 +7160,7 @@ type CompositeValue struct {
 	NestedVariables     map[string]*Variable
 	Functions           map[string]FunctionValue
 	Destructor          FunctionValue
-	Stringer            func(seenReferences SeenReferences) string
+	Stringer            func(value *CompositeValue, seenReferences SeenReferences) string
 	isDestroyed         bool
 	typeID              common.TypeID
 	dynamicType         DynamicType
@@ -7461,7 +7461,7 @@ func (v *CompositeValue) String() string {
 
 func (v *CompositeValue) RecursiveString(seenReferences SeenReferences) string {
 	if v.Stringer != nil {
-		return v.Stringer(seenReferences)
+		return v.Stringer(v, seenReferences)
 	}
 
 	var fields []CompositeField
@@ -10148,18 +10148,6 @@ func NewPublicKeyValue(
 		},
 	}
 
-	computedFields := map[string]ComputedField{
-		sema.PublicKeyPublicKeyFieldName: func(interpreter *Interpreter, getLocationRange func() LocationRange) Value {
-			// We can directly call DeepCopy on the key array, instead of potentially skipping copying
-			// by using interpreter.copyValue, as the key array is always struct-kinded, which always must be copied
-			return publicKey.DeepCopy(interpreter, getLocationRange, atree.Address{})
-		},
-	}
-
-	functions := map[string]FunctionValue{
-		sema.PublicKeyVerifyFunctionName: publicKeyVerifyFunction,
-	}
-
 	publicKeyValue := NewCompositeValueWithTypeInfo(
 		interpreter,
 		publicKeyLocation,
@@ -10170,8 +10158,16 @@ func NewPublicKeyValue(
 		publicKeyTypeInfo,
 	)
 
-	publicKeyValue.ComputedFields = computedFields
-	publicKeyValue.Functions = functions
+	publicKeyValue.ComputedFields = map[string]ComputedField{
+		sema.PublicKeyPublicKeyFieldName: func(interpreter *Interpreter, getLocationRange func() LocationRange) Value {
+			// We can directly call DeepCopy on the key array, instead of potentially skipping copying
+			// by using interpreter.copyValue, as the key array is always struct-kinded, which always must be copied
+			return publicKey.DeepCopy(interpreter, getLocationRange, atree.Address{})
+		},
+	}
+	publicKeyValue.Functions = map[string]FunctionValue{
+		sema.PublicKeyVerifyFunctionName: publicKeyVerifyFunction,
+	}
 
 	// Validate the public key, and initialize 'isValid' field.
 
@@ -10183,25 +10179,22 @@ func NewPublicKeyValue(
 	)
 
 	// Public key value to string should include the key even though it is a computed field
-	var stringerFields []CompositeField
-	publicKeyValue.Stringer = func(seenReferences SeenReferences) string {
-		if stringerFields == nil {
-			stringerFields = []CompositeField{
-				{
-					Name:  sema.PublicKeyPublicKeyFieldName,
-					Value: publicKey,
-				},
-			}
-			publicKeyValue.ForEachField(func(name string, value Value) {
-				stringerFields = append(
-					stringerFields,
-					CompositeField{
-						Name:  name,
-						Value: value,
-					},
-				)
-			})
+	publicKeyValue.Stringer = func(publicKeyValue *CompositeValue, seenReferences SeenReferences) string {
+		stringerFields := []CompositeField{
+			{
+				Name:  sema.PublicKeyPublicKeyFieldName,
+				Value: publicKey,
+			},
 		}
+		publicKeyValue.ForEachField(func(name string, value Value) {
+			stringerFields = append(
+				stringerFields,
+				CompositeField{
+					Name:  name,
+					Value: value,
+				},
+			)
+		})
 		return formatComposite(
 			string(publicKeyValue.TypeID()),
 			stringerFields,

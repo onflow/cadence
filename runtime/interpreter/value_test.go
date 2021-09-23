@@ -948,7 +948,7 @@ func TestStringer(t *testing.T) {
 					common.Address{},
 				)
 
-				compositeValue.Stringer = func(_ SeenReferences) string {
+				compositeValue.Stringer = func(_ *CompositeValue, _ SeenReferences) string {
 					return "y --> bar"
 				}
 
@@ -2898,37 +2898,31 @@ func TestPublicKeyValue(t *testing.T) {
 			NewIntValueFromInt64(3),
 		)
 
-		publicKeyString := "[1, 7, 3]"
-
-		sigAlgo := func() *CompositeValue {
-			fields := []CompositeField{
+		sigAlgo := NewCompositeValue(
+			inter,
+			nil,
+			sema.SignatureAlgorithmType.QualifiedIdentifier(),
+			sema.SignatureAlgorithmType.Kind,
+			[]CompositeField{
 				{
 					Name:  sema.EnumRawValueFieldName,
 					Value: UInt8Value(sema.SignatureAlgorithmECDSA_secp256k1.RawValue()),
 				},
-			}
-
-			return NewCompositeValue(
-				inter,
-				nil,
-				sema.SignatureAlgorithmType.QualifiedIdentifier(),
-				sema.SignatureAlgorithmType.Kind,
-				fields,
-				common.Address{},
-			)
-		}
+			},
+			common.Address{},
+		)
 
 		key := NewPublicKeyValue(
 			inter,
 			ReturnEmptyLocationRange,
 			publicKey,
-			sigAlgo(),
+			sigAlgo,
 			inter.PublicKeyValidationHandler,
 		)
 
-		require.Contains(t,
+		require.Equal(t,
+			"PublicKey(publicKey: [1, 7, 3], signatureAlgorithm: SignatureAlgorithm(rawValue: 2), isValid: true)",
 			key.String(),
-			publicKeyString,
 		)
 	})
 }
