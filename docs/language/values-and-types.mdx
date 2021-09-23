@@ -1477,15 +1477,3 @@ are hashable and equatable, so can be used as keys in dictionaries.
 Paths represent locations in account storage that objects can be stored and accessed at.
 
 They consist of a domain (`storage`, `private`, or `public`) and an identifier separated by forward slashes. e.g. `/storage/MyProjectCollectionResource` .
-
-### Path functions
-
-- `cadence•fun toString(): String`
-
-  Returns the string representation of the path.
-
-  ```cadence
-  let storagePath = /storage/path
-
-  storagePath.toString()  // is "/storage/path"
-  ```
