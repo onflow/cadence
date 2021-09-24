@@ -128,7 +128,12 @@ func (interpreter *Interpreter) declareTransactionEntryPoint(declaration *ast.Tr
 				postConditionsRewrite.RewrittenPostConditions,
 				sema.VoidType,
 			)
-		})
+		},
+
+		// This is an internally used function.
+		// So ideally wouldn't need to perform type checks.
+		nil,
+	)
 
 	interpreter.Transactions = append(
 		interpreter.Transactions,

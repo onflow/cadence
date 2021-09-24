@@ -54,7 +54,11 @@ func NewAuthAccountValue(
 		sema.AuthAccountAddressField:         address,
 		sema.AuthAccountAddPublicKeyField:    addPublicKeyFunction,
 		sema.AuthAccountRemovePublicKeyField: removePublicKeyFunction,
-		sema.AuthAccountGetCapabilityField:   accountGetCapabilityFunction(address, sema.CapabilityPathType),
+		sema.AuthAccountGetCapabilityField: accountGetCapabilityFunction(
+			address,
+			sema.CapabilityPathType,
+			sema.AuthAccountTypeGetCapabilityFunctionType,
+		),
 	}
 
 	var contracts Value
@@ -153,8 +157,12 @@ func NewPublicAccountValue(
 ) Value {
 
 	fields := map[string]Value{
-		sema.PublicAccountAddressField:       address,
-		sema.PublicAccountGetCapabilityField: accountGetCapabilityFunction(address, sema.PublicPathType),
+		sema.PublicAccountAddressField: address,
+		sema.PublicAccountGetCapabilityField: accountGetCapabilityFunction(
+			address,
+			sema.PublicPathType,
+			sema.PublicAccountTypeGetCapabilityFunctionType,
+		),
 	}
 
 	var keys Value

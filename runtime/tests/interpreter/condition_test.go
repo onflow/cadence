@@ -1094,6 +1094,7 @@ func TestInterpretFunctionWithPostConditionAndResourceResult(t *testing.T) {
 
 						return interpreter.VoidValue{}
 					},
+					nil,
 				)
 			},
 			Kind: common.DeclarationKindConstant,

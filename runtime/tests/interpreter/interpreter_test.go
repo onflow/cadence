@@ -4475,6 +4475,7 @@ func TestInterpretReferenceFailableDowncasting(t *testing.T) {
 								},
 							}
 						},
+						nil,
 					),
 				},
 			}
@@ -8232,6 +8233,7 @@ func newTestAuthAccountValue(
 		func(invocation interpreter.Invocation) interpreter.Value {
 			panic(errors.NewUnreachableError())
 		},
+		stdlib.PanicFunction.Type,
 	)
 
 	return interpreter.NewAuthAccountValue(
@@ -8280,6 +8282,7 @@ func newTestPublicAccountValue(
 		func(invocation interpreter.Invocation) interpreter.Value {
 			panic(errors.NewUnreachableError())
 		},
+		stdlib.PanicFunction.Type,
 	)
 
 	return interpreter.NewPublicAccountValue(
@@ -9012,5 +9015,95 @@ func BenchmarkNewInterpreter(b *testing.B) {
 			_, err := inter.NewSubInterpreter(nil, nil)
 			require.NoError(b, err)
 		}
+	})
+}
+
+func newTestInterpreter(tb testing.TB) *interpreter.Interpreter {
+	inter, err := interpreter.NewInterpreter(nil, TestLocation)
+	require.NoError(tb, err)
+
+	return inter
+}
+
+func TestHostFunctionStaticType(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("toString function", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            let x = 5
+            let y = x.toString
+        `)
+
+		value := inter.Globals["y"].GetValue()
+		assert.Equal(
+			t,
+			interpreter.ConvertSemaToStaticType(sema.ToStringFunctionType),
+			value.StaticType(),
+		)
+	})
+
+	t.Run("Type function", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            let x = Type
+            let y = x<Int8>()
+        `)
+
+		value := inter.Globals["x"].GetValue()
+		assert.Equal(
+			t,
+			interpreter.ConvertSemaToStaticType(
+				&sema.FunctionType{
+					ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.MetaType),
+				},
+			),
+			value.StaticType(),
+		)
+
+		value = inter.Globals["y"].GetValue()
+		assert.Equal(
+			t,
+			interpreter.PrimitiveStaticTypeMetaType,
+			value.StaticType(),
+		)
+
+		require.IsType(t, interpreter.TypeValue{}, value)
+		typeValue := value.(interpreter.TypeValue)
+		assert.Equal(t, interpreter.PrimitiveStaticTypeInt8, typeValue.Type)
+	})
+
+	t.Run("toString function", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            let a: Int8 = 5
+            let b: Fix64 = 4.0
+
+            let x = a.toString
+            let y = b.toString
+        `)
+
+		// Both `x` and `y` are two functions that returns a string.
+		// Hence, their types are equal. i.e: Receivers shouldn't matter.
+
+		xValue := inter.Globals["x"].GetValue()
+		assert.Equal(
+			t,
+			interpreter.ConvertSemaToStaticType(sema.ToStringFunctionType),
+			xValue.StaticType(),
+		)
+
+		yValue := inter.Globals["y"].GetValue()
+		assert.Equal(
+			t,
+			interpreter.ConvertSemaToStaticType(sema.ToStringFunctionType),
+			yValue.StaticType(),
+		)
+
+		assert.Equal(t, xValue.StaticType(), yValue.StaticType())
 	})
 }

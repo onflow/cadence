@@ -68,7 +68,7 @@ var getAccountFunctionType = &sema.FunctionType{
 	),
 }
 
-var logFunctionType = &sema.FunctionType{
+var LogFunctionType = &sema.FunctionType{
 	Parameters: []*sema.Parameter{
 		{
 			Label:      sema.ArgumentLabelNotRequired,
@@ -157,7 +157,7 @@ func FlowBuiltInFunctions(impls FlowBuiltinImpls) StandardLibraryFunctions {
 		),
 		NewStandardLibraryFunction(
 			"log",
-			logFunctionType,
+			LogFunctionType,
 			logFunctionDocString,
 			impls.Log,
 		),
