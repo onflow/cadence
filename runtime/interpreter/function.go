@@ -20,6 +20,7 @@ package interpreter
 
 import (
 	"fmt"
+	"sync"
 
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
@@ -61,6 +62,8 @@ type InterpretedFunctionValue struct {
 	PreConditions    ast.Conditions
 	Statements       []ast.Statement
 	PostConditions   ast.Conditions
+	staticType       StaticType
+	staticTypeOnce   sync.Once
 }
 
 func (f *InterpretedFunctionValue) String() string {
@@ -88,7 +91,11 @@ func (*InterpretedFunctionValue) DynamicType(_ *Interpreter, _ SeenReferences) D
 }
 
 func (f *InterpretedFunctionValue) StaticType() StaticType {
-	return ConvertSemaToStaticType(f.Type)
+	f.staticTypeOnce.Do(func() {
+		f.staticType = ConvertSemaToStaticType(f.Type)
+	})
+
+	return f.staticType
 }
 
 func (f *InterpretedFunctionValue) Copy() Value {
@@ -140,6 +147,8 @@ type HostFunctionValue struct {
 	Function        HostFunction
 	NestedVariables *StringVariableOrderedMap
 	Type            *sema.FunctionType
+	staticType      StaticType
+	staticTypeOnce  sync.Once
 }
 
 func (f *HostFunctionValue) String() string {
@@ -178,7 +187,11 @@ func (*HostFunctionValue) DynamicType(_ *Interpreter, _ SeenReferences) DynamicT
 }
 
 func (f *HostFunctionValue) StaticType() StaticType {
-	return ConvertSemaToStaticType(f.Type)
+	f.staticTypeOnce.Do(func() {
+		f.staticType = ConvertSemaToStaticType(f.Type)
+	})
+
+	return f.staticType
 }
 
 func (f *HostFunctionValue) Copy() Value {

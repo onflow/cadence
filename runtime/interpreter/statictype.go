@@ -21,6 +21,7 @@ package interpreter
 import (
 	"fmt"
 	"strings"
+	"sync"
 
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
@@ -351,7 +352,7 @@ func ConvertSemaToStaticType(t sema.Type) StaticType {
 
 	case *sema.FunctionType:
 		return FunctionStaticType{
-			Type: t,
+			funcType: t,
 		}
 	}
 
@@ -464,7 +465,7 @@ func ConvertStaticToSemaType(
 		}
 
 	case FunctionStaticType:
-		return t.Type
+		return t.funcType
 
 	case PrimitiveStaticType:
 		return t.SemaType()
@@ -477,52 +478,72 @@ func ConvertStaticToSemaType(
 // FunctionStaticType
 
 type FunctionStaticType struct {
-	Type *sema.FunctionType
+	funcType *sema.FunctionType
+
+	receiverType     StaticType
+	receiverTypeOnce sync.Once
+
+	typeParameters     []*TypeParameter
+	typeParametersOnce sync.Once
+
+	parameterTypes     []StaticType
+	parameterTypesOnce sync.Once
+
+	returnType     StaticType
+	returnTypeOnce sync.Once
 }
 
 func (t FunctionStaticType) ReceiverType() StaticType {
-	var receiverType StaticType
-	if t.Type.ReceiverType != nil {
-		receiverType = ConvertSemaToStaticType(t.Type.ReceiverType)
-	}
-	return receiverType
+	t.receiverTypeOnce.Do(func() {
+		if t.funcType.ReceiverType != nil {
+			t.receiverType = ConvertSemaToStaticType(t.funcType.ReceiverType)
+		}
+	})
+
+	return t.receiverType
 }
 
 func (t FunctionStaticType) TypeParameters() []*TypeParameter {
-	typeParameters := make([]*TypeParameter, len(t.Type.TypeParameters))
-	for i, typeParameter := range t.Type.TypeParameters {
-		typeParameters[i] = &TypeParameter{
-			Name:      typeParameter.Name,
-			TypeBound: ConvertSemaToStaticType(typeParameter.TypeBound),
-			Optional:  typeParameter.Optional,
+	t.typeParametersOnce.Do(func() {
+		t.typeParameters = make([]*TypeParameter, len(t.funcType.TypeParameters))
+		for i, typeParameter := range t.funcType.TypeParameters {
+			t.typeParameters[i] = &TypeParameter{
+				Name:      typeParameter.Name,
+				TypeBound: ConvertSemaToStaticType(typeParameter.TypeBound),
+				Optional:  typeParameter.Optional,
+			}
 		}
-	}
 
-	return typeParameters
+	})
+
+	return t.typeParameters
 }
 
 func (t FunctionStaticType) ParameterTypes() []StaticType {
-	parameterTypes := make([]StaticType, len(t.Type.Parameters))
-	for i, parameter := range t.Type.Parameters {
-		parameterTypes[i] = ConvertSemaToStaticType(parameter.TypeAnnotation.Type)
-	}
+	t.parameterTypesOnce.Do(func() {
+		t.parameterTypes = make([]StaticType, len(t.funcType.Parameters))
+		for i, parameter := range t.funcType.Parameters {
+			t.parameterTypes[i] = ConvertSemaToStaticType(parameter.TypeAnnotation.Type)
+		}
+	})
 
-	return parameterTypes
+	return t.parameterTypes
 }
 
 func (t FunctionStaticType) ReturnType() StaticType {
-	var returnType StaticType
-	if t.Type.ReturnTypeAnnotation != nil {
-		returnType = ConvertSemaToStaticType(t.Type.ReturnTypeAnnotation.Type)
-	}
+	t.returnTypeOnce.Do(func() {
+		if t.funcType.ReturnTypeAnnotation != nil {
+			t.returnType = ConvertSemaToStaticType(t.funcType.ReturnTypeAnnotation.Type)
+		}
+	})
 
-	return returnType
+	return t.returnType
 }
 
 func (FunctionStaticType) isStaticType() {}
 
 func (t FunctionStaticType) String() string {
-	return t.Type.String()
+	return t.funcType.String()
 }
 
 func (t FunctionStaticType) Equal(other StaticType) bool {
@@ -531,7 +552,7 @@ func (t FunctionStaticType) Equal(other StaticType) bool {
 		return false
 	}
 
-	return t.Type.Equal(otherFunction.Type)
+	return t.funcType.Equal(otherFunction.funcType)
 }
 
 type TypeParameter struct {
