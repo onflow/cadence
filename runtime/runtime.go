@@ -3036,9 +3036,8 @@ func NewAccountKeyValue(
 	getLocationRange func() interpreter.LocationRange,
 	accountKey *AccountKey,
 	validatePublicKey interpreter.PublicKeyValidationHandlerFunc,
-) *interpreter.CompositeValue {
+) interpreter.Value {
 	return interpreter.NewAccountKeyValue(
-		inter,
 		interpreter.NewIntValueFromInt64(int64(accountKey.KeyIndex)),
 		NewPublicKeyValue(
 			inter,

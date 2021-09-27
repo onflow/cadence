@@ -10154,58 +10154,6 @@ func (v LinkValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 	return v, nil
 }
 
-var accountKeyLocation = sema.AccountKeyType.Location
-var accountKeyQualifiedIdentifier = sema.AccountKeyType.QualifiedIdentifier()
-var accountKeyCompositeKind = sema.AccountKeyType.Kind
-var accountKeyTypeInfo = encodeCompositeOrderedMapTypeInfo(
-	accountKeyLocation,
-	accountKeyQualifiedIdentifier,
-	accountKeyCompositeKind,
-)
-
-// NewAccountKeyValue constructs an AccountKey value.
-func NewAccountKeyValue(
-	interpreter *Interpreter,
-	keyIndex IntValue,
-	publicKey *CompositeValue,
-	hashAlgo *CompositeValue,
-	weight UFix64Value,
-	isRevoked BoolValue,
-) *CompositeValue {
-	fields := []CompositeField{
-		{
-			Name:  sema.AccountKeyKeyIndexFieldName,
-			Value: keyIndex,
-		},
-		{
-			Name:  sema.AccountKeyPublicKeyFieldName,
-			Value: publicKey,
-		},
-		{
-			Name:  sema.AccountKeyHashAlgoFieldName,
-			Value: hashAlgo,
-		},
-		{
-			Name:  sema.AccountKeyWeightFieldName,
-			Value: weight,
-		},
-		{
-			Name:  sema.AccountKeyIsRevokedFieldName,
-			Value: isRevoked,
-		},
-	}
-
-	return NewCompositeValueWithTypeInfo(
-		interpreter,
-		accountKeyLocation,
-		accountKeyQualifiedIdentifier,
-		accountKeyCompositeKind,
-		fields,
-		common.Address{},
-		accountKeyTypeInfo,
-	)
-}
-
 var publicKeyLocation = sema.PublicKeyType.Location
 var publicKeyQualifiedIdentifier = sema.PublicKeyType.QualifiedIdentifier()
 var publicKeyCompositeKind = sema.PublicKeyType.Kind

@@ -24,6 +24,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/onflow/cadence/encoding/json"
+	"github.com/onflow/cadence/runtime/stdlib"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -40,9 +41,10 @@ func TestExportValue(t *testing.T) {
 	t.Parallel()
 
 	type exportTest struct {
-		label    string
-		value    interpreter.Value
-		expected cadence.Value
+		label        string
+		value        interpreter.Value
+		valueFactory func(*interpreter.Interpreter) interpreter.Value
+		expected     cadence.Value
 	}
 
 	test := func(tt exportTest) {
@@ -51,7 +53,13 @@ func TestExportValue(t *testing.T) {
 
 			t.Parallel()
 
-			actual, err := exportValueWithInterpreter(tt.value, nil, seenReferences{})
+			inter := newTestInterpreter(t)
+
+			value := tt.value
+			if tt.valueFactory != nil {
+				value = tt.valueFactory(inter)
+			}
+			actual, err := exportValueWithInterpreter(value, inter, seenReferences{})
 			if tt.expected == nil {
 				require.Error(t, err)
 			} else {
@@ -60,6 +68,48 @@ func TestExportValue(t *testing.T) {
 				assert.Equal(t, tt.expected, actual)
 			}
 		})
+	}
+
+	signatureAlgorithmType := &cadence.EnumType{
+		QualifiedIdentifier: "SignatureAlgorithm",
+		RawType:             cadence.UInt8Type{},
+		Fields: []cadence.Field{
+			{
+				Identifier: "rawValue",
+				Type:       cadence.UInt8Type{},
+			},
+		},
+	}
+
+	publicKeyType := &cadence.StructType{
+		QualifiedIdentifier: "PublicKey",
+		Fields: []cadence.Field{
+			{
+				Identifier: "publicKey",
+				Type: cadence.VariableSizedArrayType{
+					ElementType: cadence.UInt8Type{},
+				},
+			},
+			{
+				Identifier: "signatureAlgorithm",
+				Type:       signatureAlgorithmType,
+			},
+			{
+				Identifier: "isValid",
+				Type:       cadence.BoolType{},
+			},
+		},
+	}
+
+	hashAlgorithmType := &cadence.EnumType{
+		QualifiedIdentifier: "HashAlgorithm",
+		RawType:             cadence.UInt8Type{},
+		Fields: []cadence.Field{
+			{
+				Identifier: "rawValue",
+				Type:       cadence.UInt8Type{},
+			},
+		},
 	}
 
 	for _, tt := range []exportTest{
@@ -104,26 +154,30 @@ func TestExportValue(t *testing.T) {
 		},
 		{
 			label: "Array empty",
-			value: interpreter.NewArrayValue(
-				newTestInterpreter(t),
-				interpreter.VariableSizedStaticType{
-					Type: interpreter.PrimitiveStaticTypeAnyStruct,
-				},
-				common.Address{},
-			),
+			valueFactory: func(inter *interpreter.Interpreter) interpreter.Value {
+				return interpreter.NewArrayValue(
+					inter,
+					interpreter.VariableSizedStaticType{
+						Type: interpreter.PrimitiveStaticTypeAnyStruct,
+					},
+					common.Address{},
+				)
+			},
 			expected: cadence.NewArray([]cadence.Value{}),
 		},
 		{
 			label: "Array (non-empty)",
-			value: interpreter.NewArrayValue(
-				newTestInterpreter(t),
-				interpreter.VariableSizedStaticType{
-					Type: interpreter.PrimitiveStaticTypeAnyStruct,
-				},
-				common.Address{},
-				interpreter.NewIntValueFromInt64(42),
-				interpreter.NewStringValue("foo"),
-			),
+			valueFactory: func(inter *interpreter.Interpreter) interpreter.Value {
+				return interpreter.NewArrayValue(
+					inter,
+					interpreter.VariableSizedStaticType{
+						Type: interpreter.PrimitiveStaticTypeAnyStruct,
+					},
+					common.Address{},
+					interpreter.NewIntValueFromInt64(42),
+					interpreter.NewStringValue("foo"),
+				)
+			},
 			expected: cadence.NewArray([]cadence.Value{
 				cadence.NewInt(42),
 				cadence.String("foo"),
@@ -131,28 +185,32 @@ func TestExportValue(t *testing.T) {
 		},
 		{
 			label: "Dictionary",
-			value: interpreter.NewDictionaryValue(
-				newTestInterpreter(t),
-				interpreter.DictionaryStaticType{
-					KeyType:   interpreter.PrimitiveStaticTypeString,
-					ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
-				},
-			),
+			valueFactory: func(inter *interpreter.Interpreter) interpreter.Value {
+				return interpreter.NewDictionaryValue(
+					inter,
+					interpreter.DictionaryStaticType{
+						KeyType:   interpreter.PrimitiveStaticTypeString,
+						ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
+					},
+				)
+			},
 			expected: cadence.NewDictionary([]cadence.KeyValuePair{}),
 		},
 		{
 			label: "Dictionary (non-empty)",
-			value: interpreter.NewDictionaryValue(
-				newTestInterpreter(t),
-				interpreter.DictionaryStaticType{
-					KeyType:   interpreter.PrimitiveStaticTypeString,
-					ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
-				},
-				interpreter.NewStringValue("a"),
-				interpreter.NewIntValueFromInt64(1),
-				interpreter.NewStringValue("b"),
-				interpreter.NewIntValueFromInt64(2),
-			),
+			valueFactory: func(inter *interpreter.Interpreter) interpreter.Value {
+				return interpreter.NewDictionaryValue(
+					inter,
+					interpreter.DictionaryStaticType{
+						KeyType:   interpreter.PrimitiveStaticTypeString,
+						ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
+					},
+					interpreter.NewStringValue("a"),
+					interpreter.NewIntValueFromInt64(1),
+					interpreter.NewStringValue("b"),
+					interpreter.NewIntValueFromInt64(2),
+				)
+			},
 			expected: cadence.NewDictionary([]cadence.KeyValuePair{
 				{
 					Key:   cadence.String("b"),
@@ -281,11 +339,6 @@ func TestExportValue(t *testing.T) {
 			},
 		},
 		{
-			label:    "Simple composite value (invalid)",
-			value:    &interpreter.SimpleCompositeValue{},
-			expected: nil,
-		},
-		{
 			label:    "Interpreted Function (invalid)",
 			value:    &interpreter.InterpretedFunctionValue{},
 			expected: nil,
@@ -299,6 +352,89 @@ func TestExportValue(t *testing.T) {
 			label:    "Bound Function (invalid)",
 			value:    interpreter.BoundFunctionValue{},
 			expected: nil,
+		},
+		{
+			label: "Account key",
+			valueFactory: func(inter *interpreter.Interpreter) interpreter.Value {
+				return interpreter.NewAccountKeyValue(
+					interpreter.NewIntValueFromInt64(1),
+					NewPublicKeyValue(
+						inter,
+						interpreter.ReturnEmptyLocationRange,
+						&PublicKey{
+							PublicKey: []byte{1, 2, 3},
+							SignAlgo:  2,
+							IsValid:   true,
+							Validated: true,
+						},
+						func(
+							_ *interpreter.Interpreter,
+							_ func() interpreter.LocationRange,
+							_ *interpreter.CompositeValue,
+						) interpreter.BoolValue {
+							return true
+						},
+					),
+					stdlib.NewHashAlgorithmCase(inter, 1),
+					interpreter.NewUFix64ValueWithInteger(10),
+					false,
+				)
+			},
+			expected: cadence.Struct{
+				StructType: &cadence.StructType{
+					QualifiedIdentifier: "AccountKey",
+					Fields: []cadence.Field{
+						{
+							Identifier: "keyIndex",
+							Type:       cadence.IntType{},
+						},
+						{
+							Identifier: "publicKey",
+							Type:       publicKeyType,
+						},
+						{
+							Identifier: "hashAlgorithm",
+							Type:       hashAlgorithmType,
+						},
+						{
+							Identifier: "weight",
+							Type:       cadence.UFix64Type{},
+						},
+						{
+							Identifier: "isRevoked",
+							Type:       cadence.BoolType{},
+						},
+					},
+				},
+				Fields: []cadence.Value{
+					cadence.NewInt(1),
+					cadence.Struct{
+						StructType: publicKeyType,
+						Fields: []cadence.Value{
+							cadence.NewArray([]cadence.Value{
+								cadence.NewUInt8(1),
+								cadence.NewUInt8(2),
+								cadence.NewUInt8(3),
+							}),
+							cadence.Enum{
+								EnumType: signatureAlgorithmType,
+								Fields: []cadence.Value{
+									cadence.UInt8(2),
+								},
+							},
+							cadence.Bool(true),
+						},
+					},
+					cadence.Enum{
+						EnumType: hashAlgorithmType,
+						Fields: []cadence.Value{
+							cadence.UInt8(1),
+						},
+					},
+					cadence.UFix64(10_00000000),
+					cadence.Bool(false),
+				},
+			},
 		},
 		{
 			label: "Deployed contract (invalid)",

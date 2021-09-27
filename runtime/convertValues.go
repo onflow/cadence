@@ -112,6 +112,8 @@ func exportValueWithInterpreter(
 		return cadence.UFix64(v), nil
 	case *interpreter.CompositeValue:
 		return exportCompositeValue(v, inter, seenReferences)
+	case *interpreter.SimpleCompositeValue:
+		return exportSimpleCompositeValue(v, inter, seenReferences)
 	case *interpreter.DictionaryValue:
 		return exportDictionaryValue(v, inter, seenReferences)
 	case interpreter.AddressValue:
@@ -219,6 +221,80 @@ func exportCompositeValue(
 
 		// TODO: provide proper location range
 		fieldValue := v.GetField(inter, interpreter.ReturnEmptyLocationRange, fieldName)
+		if fieldValue == nil && v.ComputedFields != nil {
+			if computedField, ok := v.ComputedFields[fieldName]; ok {
+				// TODO: provide proper location range
+				fieldValue = computedField(inter, interpreter.ReturnEmptyLocationRange)
+			}
+		}
+
+		exportedFieldValue, err := exportValueWithInterpreter(fieldValue, inter, seenReferences)
+		if err != nil {
+			return nil, err
+		}
+		fields[i] = exportedFieldValue
+	}
+
+	// NOTE: when modifying the cases below,
+	// also update the error message below!
+
+	switch staticType.Kind {
+	case common.CompositeKindStructure:
+		return cadence.NewStruct(fields).WithType(t.(*cadence.StructType)), nil
+	case common.CompositeKindResource:
+		return cadence.NewResource(fields).WithType(t.(*cadence.ResourceType)), nil
+	case common.CompositeKindEvent:
+		return cadence.NewEvent(fields).WithType(t.(*cadence.EventType)), nil
+	case common.CompositeKindContract:
+		return cadence.NewContract(fields).WithType(t.(*cadence.ContractType)), nil
+	case common.CompositeKindEnum:
+		return cadence.NewEnum(fields).WithType(t.(*cadence.EnumType)), nil
+	}
+
+	return nil, fmt.Errorf(
+		"invalid composite kind `%s`, must be %s",
+		staticType.Kind,
+		common.EnumerateWords(
+			[]string{
+				common.CompositeKindStructure.Name(),
+				common.CompositeKindResource.Name(),
+				common.CompositeKindEvent.Name(),
+				common.CompositeKindContract.Name(),
+				common.CompositeKindEnum.Name(),
+			},
+			"or",
+		),
+	)
+}
+
+func exportSimpleCompositeValue(
+	v *interpreter.SimpleCompositeValue,
+	inter *interpreter.Interpreter,
+	seenReferences seenReferences,
+) (
+	cadence.Value,
+	error,
+) {
+	dynamicType, ok := v.DynamicType(inter, interpreter.SeenReferences{}).(interpreter.CompositeDynamicType)
+	if !ok {
+		return nil, fmt.Errorf(
+			"unexportable composite value: %s", dynamicType.StaticType,
+		)
+	}
+	staticType := dynamicType.StaticType.(*sema.CompositeType)
+	// TODO: consider making the results map "global", by moving it up to exportValueWithInterpreter
+	t := exportCompositeType(staticType, map[sema.TypeID]cadence.Type{})
+
+	// NOTE: use the exported type's fields to ensure fields in type
+	// and value are in sync
+
+	fieldNames := t.CompositeFields()
+	fields := make([]cadence.Value, len(fieldNames))
+
+	for i, field := range fieldNames {
+		fieldName := field.Identifier
+
+		fieldValue := v.Fields[fieldName]
 		if fieldValue == nil && v.ComputedFields != nil {
 			if computedField, ok := v.ComputedFields[fieldName]; ok {
 				// TODO: provide proper location range

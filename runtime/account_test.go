@@ -312,7 +312,7 @@ func TestRuntimeAuthAccountKeys(t *testing.T) {
 		assert.Equal(
 			t,
 			[]string{
-				"AccountKey(hashAlgorithm: HashAlgorithm(rawValue: 3), isRevoked: false, keyIndex: 0, weight: 100.00000000, publicKey: PublicKey(publicKey: [1, 2, 3], signatureAlgorithm: SignatureAlgorithm(rawValue: 1), isValid: false))",
+				"AccountKey(keyIndex: 0, publicKey: PublicKey(publicKey: [1, 2, 3], signatureAlgorithm: SignatureAlgorithm(rawValue: 1), isValid: false), hashAlgorithm: HashAlgorithm(rawValue: 3), weight: 100.00000000, isRevoked: false)",
 			},
 			storage.logs,
 		)
