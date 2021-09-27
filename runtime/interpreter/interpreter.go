@@ -3093,12 +3093,12 @@ func (interpreter *Interpreter) authAccountLinkFunction(addressValue AddressValu
 
 			// Write new value
 
-			borrowStaticType := ConvertSemaToStaticType
+			borrowStaticType := ConvertSemaToStaticType(borrowType)
 
 			storedValue := NewSomeValueNonCopying(
 				LinkValue{
 					TargetPath: targetPath,
-					Type:       borrowStaticType(borrowType),
+					Type:       borrowStaticType,
 				},
 			)
 
@@ -3112,7 +3112,7 @@ func (interpreter *Interpreter) authAccountLinkFunction(addressValue AddressValu
 				&CapabilityValue{
 					Address:    addressValue,
 					Path:       newCapabilityPath,
-					BorrowType: borrowStaticType(borrowType),
+					BorrowType: borrowStaticType,
 				},
 			)
 
