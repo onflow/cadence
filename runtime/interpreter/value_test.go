@@ -83,6 +83,7 @@ func TestOwnerNewArray(t *testing.T) {
 		VariableSizedStaticType{
 			Type: PrimitiveStaticTypeAnyStruct,
 		},
+		common.Address{},
 		value,
 	)
 
@@ -120,6 +121,7 @@ func TestOwnerArrayDeepCopy(t *testing.T) {
 		VariableSizedStaticType{
 			Type: PrimitiveStaticTypeAnyStruct,
 		},
+		common.Address{},
 		value,
 	)
 
@@ -163,7 +165,7 @@ func TestOwnerArrayElement(t *testing.T) {
 
 	value := newTestCompositeValue(inter, oldOwner)
 
-	array := NewArrayValueWithAddress(
+	array := NewArrayValue(
 		inter,
 		VariableSizedStaticType{
 			Type: PrimitiveStaticTypeAnyStruct,
@@ -202,7 +204,7 @@ func TestOwnerArraySetIndex(t *testing.T) {
 	value1 := newTestCompositeValue(inter, oldOwner)
 	value2 := newTestCompositeValue(inter, oldOwner)
 
-	array := NewArrayValueWithAddress(
+	array := NewArrayValue(
 		inter,
 		VariableSizedStaticType{
 			Type: PrimitiveStaticTypeAnyStruct,
@@ -249,7 +251,7 @@ func TestOwnerArrayAppend(t *testing.T) {
 
 	value := newTestCompositeValue(inter, oldOwner)
 
-	array := NewArrayValueWithAddress(
+	array := NewArrayValue(
 		inter,
 		VariableSizedStaticType{
 			Type: PrimitiveStaticTypeAnyStruct,
@@ -291,7 +293,7 @@ func TestOwnerArrayInsert(t *testing.T) {
 
 	value := newTestCompositeValue(inter, oldOwner)
 
-	array := NewArrayValueWithAddress(
+	array := NewArrayValue(
 		inter,
 		VariableSizedStaticType{
 			Type: PrimitiveStaticTypeAnyStruct,
@@ -332,7 +334,7 @@ func TestOwnerArrayRemove(t *testing.T) {
 
 	value := newTestCompositeValue(inter, owner)
 
-	array := NewArrayValueWithAddress(
+	array := NewArrayValue(
 		inter,
 		VariableSizedStaticType{
 			Type: PrimitiveStaticTypeAnyStruct,
@@ -885,6 +887,7 @@ func TestStringer(t *testing.T) {
 				VariableSizedStaticType{
 					Type: PrimitiveStaticTypeAnyStruct,
 				},
+				common.Address{},
 				NewIntValueFromInt64(10),
 				NewStringValue("TEST"),
 			),
@@ -1005,6 +1008,7 @@ func TestStringer(t *testing.T) {
 					VariableSizedStaticType{
 						Type: PrimitiveStaticTypeAnyStruct,
 					},
+					common.Address{},
 				)
 				arrayRef := &EphemeralReferenceValue{Value: array}
 				array.Insert(newTestInterpreter(t), ReturnEmptyLocationRange, 0, arrayRef)
@@ -1057,6 +1061,7 @@ func TestVisitor(t *testing.T) {
 		VariableSizedStaticType{
 			Type: PrimitiveStaticTypeAnyStruct,
 		},
+		common.Address{},
 		value,
 	)
 
@@ -1261,7 +1266,7 @@ func TestBlockValue(t *testing.T) {
 	block := NewBlockValue(
 		4,
 		5,
-		NewArrayValue(inter, ByteArrayStaticType),
+		NewArrayValue(inter, ByteArrayStaticType, common.Address{}),
 		5.0,
 	)
 
@@ -2042,6 +2047,7 @@ func TestArrayValue_Equal(t *testing.T) {
 			NewArrayValue(
 				inter,
 				uint8ArrayStaticType,
+				common.Address{},
 				UInt8Value(1),
 				UInt8Value(2),
 			).Equal(
@@ -2050,6 +2056,7 @@ func TestArrayValue_Equal(t *testing.T) {
 				NewArrayValue(
 					inter,
 					uint8ArrayStaticType,
+					common.Address{},
 					UInt8Value(1),
 					UInt8Value(2),
 				),
@@ -2067,6 +2074,7 @@ func TestArrayValue_Equal(t *testing.T) {
 			NewArrayValue(
 				inter,
 				uint8ArrayStaticType,
+				common.Address{},
 				UInt8Value(1),
 				UInt8Value(2),
 			).Equal(
@@ -2075,6 +2083,7 @@ func TestArrayValue_Equal(t *testing.T) {
 				NewArrayValue(
 					inter,
 					uint8ArrayStaticType,
+					common.Address{},
 					UInt8Value(2),
 					UInt8Value(3),
 				),
@@ -2092,6 +2101,7 @@ func TestArrayValue_Equal(t *testing.T) {
 			NewArrayValue(
 				inter,
 				uint8ArrayStaticType,
+				common.Address{},
 				UInt8Value(1),
 			).Equal(
 				inter,
@@ -2099,6 +2109,7 @@ func TestArrayValue_Equal(t *testing.T) {
 				NewArrayValue(
 					inter,
 					uint8ArrayStaticType,
+					common.Address{},
 					UInt8Value(1),
 					UInt8Value(2),
 				),
@@ -2116,6 +2127,7 @@ func TestArrayValue_Equal(t *testing.T) {
 			NewArrayValue(
 				inter,
 				uint8ArrayStaticType,
+				common.Address{},
 				UInt8Value(1),
 				UInt8Value(2),
 			).Equal(
@@ -2124,6 +2136,7 @@ func TestArrayValue_Equal(t *testing.T) {
 				NewArrayValue(
 					inter,
 					uint8ArrayStaticType,
+					common.Address{},
 					UInt8Value(1),
 				),
 			),
@@ -2144,12 +2157,14 @@ func TestArrayValue_Equal(t *testing.T) {
 			NewArrayValue(
 				inter,
 				uint8ArrayStaticType,
+				common.Address{},
 			).Equal(
 				inter,
 				ReturnEmptyLocationRange,
 				NewArrayValue(
 					inter,
 					uint16ArrayStaticType,
+					common.Address{},
 				),
 			),
 		)
@@ -2165,12 +2180,14 @@ func TestArrayValue_Equal(t *testing.T) {
 			NewArrayValue(
 				inter,
 				nil,
+				common.Address{},
 			).Equal(
 				inter,
 				ReturnEmptyLocationRange,
 				NewArrayValue(
 					inter,
 					uint8ArrayStaticType,
+					common.Address{},
 				),
 			),
 		)
@@ -2186,12 +2203,14 @@ func TestArrayValue_Equal(t *testing.T) {
 			NewArrayValue(
 				inter,
 				uint8ArrayStaticType,
+				common.Address{},
 			).Equal(
 				inter,
 				ReturnEmptyLocationRange,
 				NewArrayValue(
 					inter,
 					nil,
+					common.Address{},
 				),
 			),
 		)
@@ -2207,12 +2226,14 @@ func TestArrayValue_Equal(t *testing.T) {
 			NewArrayValue(
 				inter,
 				nil,
+				common.Address{},
 			).Equal(
 				inter,
 				ReturnEmptyLocationRange,
 				NewArrayValue(
 					inter,
 					nil,
+					common.Address{},
 				),
 			),
 		)
@@ -2228,6 +2249,7 @@ func TestArrayValue_Equal(t *testing.T) {
 			NewArrayValue(
 				inter,
 				uint8ArrayStaticType,
+				common.Address{},
 				UInt8Value(1),
 			).Equal(
 				inter,
@@ -2434,6 +2456,7 @@ func TestDictionaryValue_Equal(t *testing.T) {
 				NewArrayValue(
 					inter,
 					ByteArrayStaticType,
+					common.Address{},
 					UInt8Value(1),
 					UInt8Value(2),
 				),
@@ -2893,6 +2916,7 @@ func TestPublicKeyValue(t *testing.T) {
 			VariableSizedStaticType{
 				Type: PrimitiveStaticTypeInt,
 			},
+			common.Address{},
 			NewIntValueFromInt64(1),
 			NewIntValueFromInt64(7),
 			NewIntValueFromInt64(3),

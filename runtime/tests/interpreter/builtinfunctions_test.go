@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 	. "github.com/onflow/cadence/runtime/tests/utils"
@@ -130,6 +131,7 @@ func TestInterpretToBytes(t *testing.T) {
 				interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeUInt8,
 				},
+				common.Address{},
 				interpreter.UInt8Value(0x0),
 				interpreter.UInt8Value(0x0),
 				interpreter.UInt8Value(0x0),

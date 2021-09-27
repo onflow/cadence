@@ -224,6 +224,7 @@ func TestInterpretConstantAndVariableDeclarations(t *testing.T) {
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeInt,
 			},
+			common.Address{},
 			interpreter.NewIntValueFromInt64(1),
 			interpreter.NewIntValueFromInt64(2),
 		),
@@ -630,6 +631,7 @@ func TestInterpretArrayIndexingAssignment(t *testing.T) {
 		interpreter.VariableSizedStaticType{
 			Type: interpreter.PrimitiveStaticTypeInt,
 		},
+		common.Address{},
 		interpreter.NewIntValueFromInt64(0),
 		interpreter.NewIntValueFromInt64(2),
 	)
@@ -2286,6 +2288,7 @@ func TestInterpretStructCopyOnDeclaration(t *testing.T) {
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeBool,
 			},
+			common.Address{},
 			interpreter.BoolValue(false),
 			interpreter.BoolValue(true),
 		),
@@ -2329,6 +2332,7 @@ func TestInterpretStructCopyOnDeclarationModifiedWithStructFunction(t *testing.T
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeBool,
 			},
+			common.Address{},
 			interpreter.BoolValue(false),
 			interpreter.BoolValue(true),
 		),
@@ -2369,6 +2373,7 @@ func TestInterpretStructCopyOnIdentifierAssignment(t *testing.T) {
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeBool,
 			},
+			common.Address{},
 			interpreter.BoolValue(false),
 			interpreter.BoolValue(true),
 		),
@@ -2409,6 +2414,7 @@ func TestInterpretStructCopyOnIndexingAssignment(t *testing.T) {
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeBool,
 			},
+			common.Address{},
 			interpreter.BoolValue(false),
 			interpreter.BoolValue(true),
 		),
@@ -2456,6 +2462,7 @@ func TestInterpretStructCopyOnMemberAssignment(t *testing.T) {
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeBool,
 			},
+			common.Address{},
 			interpreter.BoolValue(false),
 			interpreter.BoolValue(true),
 		),
@@ -2530,6 +2537,7 @@ func TestInterpretArrayCopy(t *testing.T) {
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeInt,
 			},
+			common.Address{},
 			interpreter.NewIntValueFromInt64(0),
 			interpreter.NewIntValueFromInt64(1),
 		),
@@ -2569,6 +2577,7 @@ func TestInterpretStructCopyInArray(t *testing.T) {
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeInt,
 			},
+			common.Address{},
 			interpreter.NewIntValueFromInt64(2),
 			interpreter.NewIntValueFromInt64(3),
 			interpreter.NewIntValueFromInt64(1),
@@ -5832,6 +5841,7 @@ func TestInterpretSwapVariables(t *testing.T) {
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeInt,
 			},
+			common.Address{},
 			interpreter.NewIntValueFromInt64(3),
 			interpreter.NewIntValueFromInt64(2),
 		),
@@ -5871,6 +5881,7 @@ func TestInterpretSwapArrayAndField(t *testing.T) {
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeInt,
 			},
+			common.Address{},
 			interpreter.NewIntValueFromInt64(2),
 			interpreter.NewIntValueFromInt64(1),
 		),
@@ -6509,6 +6520,7 @@ func TestInterpretEmitEventParameterTypes(t *testing.T) {
 					interpreter.VariableSizedStaticType{
 						Type: interpreter.ConvertSemaToStaticType(testCase.ty),
 					},
+					common.Address{},
 					testCase.value,
 				),
 				literal: fmt.Sprintf("[%s as %s]", testCase, validType),
@@ -6522,6 +6534,7 @@ func TestInterpretEmitEventParameterTypes(t *testing.T) {
 						Type: interpreter.ConvertSemaToStaticType(testCase.ty),
 						Size: 1,
 					},
+					common.Address{},
 					testCase.value,
 				),
 				literal: fmt.Sprintf("[%s as %s]", testCase, validType),
@@ -6808,6 +6821,7 @@ func TestInterpretReferenceUse(t *testing.T) {
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeInt,
 			},
+			common.Address{},
 			interpreter.NewIntValueFromInt64(1),
 			interpreter.NewIntValueFromInt64(2),
 			interpreter.NewIntValueFromInt64(2),
@@ -6858,6 +6872,7 @@ func TestInterpretReferenceUseAccess(t *testing.T) {
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeInt,
 			},
+			common.Address{},
 			interpreter.NewIntValueFromInt64(0),
 			interpreter.NewIntValueFromInt64(1),
 			interpreter.NewIntValueFromInt64(2),
@@ -7393,6 +7408,7 @@ func TestInterpretFungibleTokenContract(t *testing.T) {
 				Type: interpreter.PrimitiveStaticTypeInt,
 				Size: 2,
 			},
+			common.Address{},
 			interpreter.NewIntValueFromInt64(40),
 			interpreter.NewIntValueFromInt64(60),
 		),
@@ -8145,6 +8161,7 @@ func TestInterpretReferenceUseAfterCopy(t *testing.T) {
 				interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeString,
 				},
+				common.Address{},
 				interpreter.NewStringValue("2"),
 				interpreter.NewStringValue("3"),
 			),
@@ -8259,6 +8276,7 @@ func newTestAuthAccountValue(
 						interpreter.VariableSizedStaticType{
 							Type: interpreter.PrimitiveStaticTypeString,
 						},
+						common.Address{},
 					)
 				},
 			)
@@ -8309,6 +8327,7 @@ func newTestPublicAccountValue(
 						interpreter.VariableSizedStaticType{
 							Type: interpreter.PrimitiveStaticTypeString,
 						},
+						common.Address{},
 					)
 				},
 			)
@@ -8873,6 +8892,7 @@ func TestInterpretInternalAssignment(t *testing.T) {
 			interpreter.VariableSizedStaticType{
 				Type: stringIntDictionaryStaticType,
 			},
+			common.Address{},
 			interpreter.NewDictionaryValue(
 				inter,
 				stringIntDictionaryStaticType,

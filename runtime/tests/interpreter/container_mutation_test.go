@@ -21,6 +21,7 @@ package interpreter_test
 import (
 	"testing"
 
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/tests/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -59,6 +60,7 @@ func TestArrayMutation(t *testing.T) {
 				interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeString,
 				},
+				common.Address{},
 				interpreter.NewStringValue("baz"),
 				interpreter.NewStringValue("bar"),
 			),
@@ -129,6 +131,7 @@ func TestArrayMutation(t *testing.T) {
 				interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeString,
 				},
+				common.Address{},
 				interpreter.NewStringValue("foo"),
 				interpreter.NewStringValue("bar"),
 				interpreter.NewStringValue("baz"),
@@ -200,6 +203,7 @@ func TestArrayMutation(t *testing.T) {
 				interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeString,
 				},
+				common.Address{},
 				interpreter.NewStringValue("foo"),
 				interpreter.NewStringValue("baz"),
 				interpreter.NewStringValue("bar"),
@@ -258,6 +262,7 @@ func TestArrayMutation(t *testing.T) {
 				interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeString,
 				},
+				common.Address{},
 				interpreter.NewStringValue("foo"),
 				interpreter.NewStringValue("bar"),
 			),

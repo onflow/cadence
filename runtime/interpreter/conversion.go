@@ -23,6 +23,7 @@ import (
 	"math"
 
 	"github.com/onflow/atree"
+	"github.com/onflow/cadence/runtime/common"
 )
 
 func ByteArrayValueToByteSlice(value Value) ([]byte, error) {
@@ -97,15 +98,19 @@ func ByteValueToByte(element Value) (byte, error) {
 	return b, nil
 }
 
+var byteArrayTypeInfo = encodeArrayTypeInfo(ByteArrayStaticType)
+
 func ByteSliceToByteArrayValue(interpreter *Interpreter, buf []byte) *ArrayValue {
 	values := make([]Value, len(buf))
 	for i, b := range buf {
 		values[i] = UInt8Value(b)
 	}
 
-	return NewArrayValue(
+	return NewArrayValueWithTypeInfo(
 		interpreter,
 		ByteArrayStaticType,
+		common.Address{},
+		byteArrayTypeInfo,
 		values...,
 	)
 }

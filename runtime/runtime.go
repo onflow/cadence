@@ -2642,6 +2642,7 @@ func (r *interpreterRuntime) newAccountContractsGetNamesFunction(
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeString,
 			},
+			common.Address{},
 			values...,
 		)
 	}
@@ -2736,6 +2737,7 @@ func NewBlockValue(inter *interpreter.Interpreter, block Block) interpreter.Valu
 	idValue := interpreter.NewArrayValue(
 		inter,
 		interpreter.ByteArrayStaticType,
+		common.Address{},
 		values...,
 	)
 

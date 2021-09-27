@@ -137,6 +137,7 @@ func TestInterpretEnumCaseEquality(t *testing.T) {
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeBool,
 			},
+			common.Address{},
 			interpreter.BoolValue(true),
 			interpreter.BoolValue(true),
 			interpreter.BoolValue(true),
@@ -171,6 +172,7 @@ func TestInterpretEnumConstructor(t *testing.T) {
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeBool,
 			},
+			common.Address{},
 			interpreter.BoolValue(true),
 			interpreter.BoolValue(true),
 			interpreter.BoolValue(true),
@@ -204,6 +206,7 @@ func TestInterpretEnumInstance(t *testing.T) {
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeBool,
 			},
+			common.Address{},
 			interpreter.BoolValue(true),
 			interpreter.BoolValue(true),
 		),

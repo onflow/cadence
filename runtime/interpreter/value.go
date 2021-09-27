@@ -732,9 +732,11 @@ func (v *StringValue) DecodeHex(interpreter *Interpreter) *ArrayValue {
 		values[i] = UInt8Value(b)
 	}
 
-	return NewArrayValue(
+	return NewArrayValueWithTypeInfo(
 		interpreter,
 		ByteArrayStaticType,
+		common.Address{},
+		byteArrayTypeInfo,
 		values...,
 	)
 }
@@ -764,24 +766,27 @@ type ArrayValue struct {
 func NewArrayValue(
 	interpreter *Interpreter,
 	arrayType ArrayStaticType,
+	address common.Address,
 	values ...Value,
 ) *ArrayValue {
-	return NewArrayValueWithAddress(
+	typeInfo := encodeArrayTypeInfo(arrayType)
+
+	return NewArrayValueWithTypeInfo(
 		interpreter,
 		arrayType,
-		common.Address{},
+		address,
+		typeInfo,
 		values...,
 	)
 }
 
-func NewArrayValueWithAddress(
+func NewArrayValueWithTypeInfo(
 	interpreter *Interpreter,
 	arrayType ArrayStaticType,
 	address common.Address,
+	typeInfo cbor.RawMessage,
 	values ...Value,
 ) *ArrayValue {
-
-	typeInfo := encodeArrayTypeInfo(arrayType)
 
 	var index int
 	count := len(values)
@@ -8203,6 +8208,7 @@ func (v *DictionaryValue) GetMember(
 			VariableSizedStaticType{
 				Type: v.Type.KeyType,
 			},
+			common.Address{},
 			dictionaryKeys...,
 		)
 
@@ -8232,6 +8238,7 @@ func (v *DictionaryValue) GetMember(
 			VariableSizedStaticType{
 				Type: v.Type.ValueType,
 			},
+			common.Address{},
 			dictionaryValues...,
 		)
 

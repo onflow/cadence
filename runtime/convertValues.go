@@ -535,6 +535,7 @@ func importArrayValue(
 	return interpreter.NewArrayValue(
 		inter,
 		staticArrayType,
+		common.Address{},
 		values...,
 	), nil
 }

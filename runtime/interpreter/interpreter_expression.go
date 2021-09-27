@@ -447,11 +447,13 @@ func (interpreter *Interpreter) VisitArrayExpression(expression *ast.ArrayExpres
 		copies[i] = interpreter.copyAndConvert(argument, argumentType, elementType, getLocationRange)
 	}
 
+	// TODO: cache
 	arrayStaticType := ConvertSemaArrayTypeToStaticArrayType(arrayType)
 
 	return NewArrayValue(
 		interpreter,
 		arrayStaticType,
+		common.Address{},
 		copies...,
 	)
 }

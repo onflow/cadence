@@ -116,6 +116,7 @@ func TestArrayStorage(t *testing.T) {
 			VariableSizedStaticType{
 				Type: element.StaticType(),
 			},
+			common.Address{},
 		)
 
 		require.NotEqual(t, atree.StorageIDUndefined, value.StorageID())
@@ -178,6 +179,7 @@ func TestArrayStorage(t *testing.T) {
 			VariableSizedStaticType{
 				Type: element.StaticType(),
 			},
+			common.Address{},
 			element,
 		)
 

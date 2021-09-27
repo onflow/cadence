@@ -23,6 +23,7 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/onflow/cadence/runtime/common"
 	. "github.com/onflow/cadence/runtime/interpreter"
 	"github.com/stretchr/testify/require"
 )
@@ -44,6 +45,7 @@ func TestByteArrayValueToByteSlice(t *testing.T) {
 				VariableSizedStaticType{
 					Type: PrimitiveStaticTypeUInt64,
 				},
+				common.Address{},
 				UInt64Value(500),
 			),
 			NewArrayValue(
@@ -51,6 +53,7 @@ func TestByteArrayValueToByteSlice(t *testing.T) {
 				VariableSizedStaticType{
 					Type: PrimitiveStaticTypeInt256,
 				},
+				common.Address{},
 				NewInt256ValueFromBigInt(largeBigInt),
 			),
 			UInt64Value(500),
@@ -74,12 +77,14 @@ func TestByteArrayValueToByteSlice(t *testing.T) {
 				VariableSizedStaticType{
 					Type: PrimitiveStaticTypeInteger,
 				},
+				common.Address{},
 			): {},
 			NewArrayValue(
 				inter,
 				VariableSizedStaticType{
 					Type: PrimitiveStaticTypeInteger,
 				},
+				common.Address{},
 				UInt64Value(2),
 				NewUInt128ValueFromUint64(3),
 			): {2, 3},
@@ -88,6 +93,7 @@ func TestByteArrayValueToByteSlice(t *testing.T) {
 				VariableSizedStaticType{
 					Type: PrimitiveStaticTypeInteger,
 				},
+				common.Address{},
 				UInt8Value(4),
 				NewIntValueFromInt64(5),
 			): {4, 5},

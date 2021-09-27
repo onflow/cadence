@@ -109,6 +109,7 @@ func TestExportValue(t *testing.T) {
 				interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeAnyStruct,
 				},
+				common.Address{},
 			),
 			expected: cadence.NewArray([]cadence.Value{}),
 		},
@@ -119,6 +120,7 @@ func TestExportValue(t *testing.T) {
 				interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeAnyStruct,
 				},
+				common.Address{},
 				interpreter.NewIntValueFromInt64(42),
 				interpreter.NewStringValue("foo"),
 			),
@@ -306,6 +308,7 @@ func TestExportValue(t *testing.T) {
 				interpreter.NewArrayValue(
 					newTestInterpreter(t),
 					interpreter.ByteArrayStaticType,
+					common.Address{},
 				),
 			),
 			expected: nil,
@@ -392,6 +395,7 @@ func TestImportValue(t *testing.T) {
 				interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeAnyStruct,
 				},
+				common.Address{},
 			),
 			expectedType: &sema.VariableSizedType{
 				Type: sema.AnyStructType,
@@ -408,6 +412,7 @@ func TestImportValue(t *testing.T) {
 				interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeAnyStruct,
 				},
+				common.Address{},
 				interpreter.NewIntValueFromInt64(42),
 				interpreter.NewStringValue("foo"),
 			),
@@ -2309,6 +2314,7 @@ func TestRuntimeImportExportArrayValue(t *testing.T) {
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeAnyStruct,
 			},
+			common.Address{},
 		)
 
 		actual, err := exportValueWithInterpreter(value, inter, seenReferences{})
@@ -2345,6 +2351,7 @@ func TestRuntimeImportExportArrayValue(t *testing.T) {
 				interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeUInt8,
 				},
+				common.Address{},
 			),
 			actual,
 		)
@@ -2359,6 +2366,7 @@ func TestRuntimeImportExportArrayValue(t *testing.T) {
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeAnyStruct,
 			},
+			common.Address{},
 			interpreter.NewIntValueFromInt64(42),
 			interpreter.NewStringValue("foo"),
 		)
@@ -2403,6 +2411,7 @@ func TestRuntimeImportExportArrayValue(t *testing.T) {
 				interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeAnyStruct,
 				},
+				common.Address{},
 				interpreter.NewIntValueFromInt64(42),
 				interpreter.NewStringValue("foo"),
 			),
@@ -2442,11 +2451,13 @@ func TestRuntimeImportExportArrayValue(t *testing.T) {
 				interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeAnyStruct,
 				},
+				common.Address{},
 				interpreter.NewArrayValue(
 					inter,
 					interpreter.VariableSizedStaticType{
 						Type: interpreter.PrimitiveStaticTypeAnyStruct,
 					},
+					common.Address{},
 					interpreter.Int8Value(4),
 					interpreter.Int8Value(3),
 				),
@@ -2455,6 +2466,7 @@ func TestRuntimeImportExportArrayValue(t *testing.T) {
 					interpreter.VariableSizedStaticType{
 						Type: interpreter.PrimitiveStaticTypeAnyStruct,
 					},
+					common.Address{},
 					interpreter.Int8Value(42),
 					interpreter.Int8Value(54),
 				),
@@ -3403,6 +3415,7 @@ func TestRuntimeImportExportComplex(t *testing.T) {
 	internalArrayValue := interpreter.NewArrayValue(
 		inter,
 		staticArrayType,
+		common.Address{},
 		interpreter.NewIntValueFromInt64(42),
 		interpreter.NewStringValue("foo"),
 	)

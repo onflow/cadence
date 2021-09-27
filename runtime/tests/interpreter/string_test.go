@@ -21,6 +21,7 @@ package interpreter_test
 import (
 	"testing"
 
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
 	. "github.com/onflow/cadence/runtime/tests/utils"
 	"github.com/stretchr/testify/require"
@@ -98,6 +99,7 @@ func TestInterpretStringDecodeHex(t *testing.T) {
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeUInt8,
 			},
+			common.Address{},
 			interpreter.UInt8Value(1),
 			interpreter.UInt8Value(0xCA),
 			interpreter.UInt8Value(0xDE),
@@ -148,6 +150,7 @@ func TestInterpretStringUtf8Field(t *testing.T) {
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeUInt8,
 			},
+			common.Address{},
 			// Flowers
 			interpreter.UInt8Value(70),
 			interpreter.UInt8Value(108),

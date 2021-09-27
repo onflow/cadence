@@ -58,6 +58,7 @@ func withWritesToStorage(
 		interpreter.VariableSizedStaticType{
 			Type: interpreter.PrimitiveStaticTypeInt,
 		},
+		common.Address{},
 	)
 
 	for i := 0; i < arrayElementCount; i++ {
