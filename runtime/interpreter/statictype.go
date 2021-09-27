@@ -351,7 +351,7 @@ func ConvertSemaToStaticType(t sema.Type) StaticType {
 		return result
 
 	case *sema.FunctionType:
-		return FunctionStaticType{
+		return &FunctionStaticType{
 			funcType: t,
 		}
 	}
@@ -464,7 +464,7 @@ func ConvertStaticToSemaType(
 			BorrowType: borrowType,
 		}
 
-	case FunctionStaticType:
+	case *FunctionStaticType:
 		return t.funcType
 
 	case PrimitiveStaticType:
@@ -493,7 +493,7 @@ type FunctionStaticType struct {
 	returnTypeOnce sync.Once
 }
 
-func (t FunctionStaticType) ReceiverType() StaticType {
+func (t *FunctionStaticType) ReceiverType() StaticType {
 	t.receiverTypeOnce.Do(func() {
 		if t.funcType.ReceiverType != nil {
 			t.receiverType = ConvertSemaToStaticType(t.funcType.ReceiverType)
@@ -503,7 +503,7 @@ func (t FunctionStaticType) ReceiverType() StaticType {
 	return t.receiverType
 }
 
-func (t FunctionStaticType) TypeParameters() []*TypeParameter {
+func (t *FunctionStaticType) TypeParameters() []*TypeParameter {
 	t.typeParametersOnce.Do(func() {
 		t.typeParameters = make([]*TypeParameter, len(t.funcType.TypeParameters))
 		for i, typeParameter := range t.funcType.TypeParameters {
@@ -519,7 +519,7 @@ func (t FunctionStaticType) TypeParameters() []*TypeParameter {
 	return t.typeParameters
 }
 
-func (t FunctionStaticType) ParameterTypes() []StaticType {
+func (t *FunctionStaticType) ParameterTypes() []StaticType {
 	t.parameterTypesOnce.Do(func() {
 		t.parameterTypes = make([]StaticType, len(t.funcType.Parameters))
 		for i, parameter := range t.funcType.Parameters {
@@ -530,7 +530,7 @@ func (t FunctionStaticType) ParameterTypes() []StaticType {
 	return t.parameterTypes
 }
 
-func (t FunctionStaticType) ReturnType() StaticType {
+func (t *FunctionStaticType) ReturnType() StaticType {
 	t.returnTypeOnce.Do(func() {
 		if t.funcType.ReturnTypeAnnotation != nil {
 			t.returnType = ConvertSemaToStaticType(t.funcType.ReturnTypeAnnotation.Type)
@@ -540,13 +540,13 @@ func (t FunctionStaticType) ReturnType() StaticType {
 	return t.returnType
 }
 
-func (FunctionStaticType) isStaticType() {}
+func (*FunctionStaticType) isStaticType() {}
 
-func (t FunctionStaticType) String() string {
+func (t *FunctionStaticType) String() string {
 	return t.funcType.String()
 }
 
-func (t FunctionStaticType) Equal(other StaticType) bool {
+func (t *FunctionStaticType) Equal(other StaticType) bool {
 	otherFunction, ok := other.(*FunctionStaticType)
 	if !ok {
 		return false
@@ -561,7 +561,7 @@ type TypeParameter struct {
 	Optional  bool
 }
 
-func (p TypeParameter) Equal(other *TypeParameter) bool {
+func (p *TypeParameter) Equal(other *TypeParameter) bool {
 	if p.TypeBound == nil {
 		if other.TypeBound != nil {
 			return false
@@ -577,7 +577,7 @@ func (p TypeParameter) Equal(other *TypeParameter) bool {
 	return p.Optional == other.Optional
 }
 
-func (p TypeParameter) String() string {
+func (p *TypeParameter) String() string {
 	var builder strings.Builder
 	builder.WriteString(p.Name)
 	if p.TypeBound != nil {

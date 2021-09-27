@@ -757,7 +757,7 @@ func TestArrayDeferredDecoding(t *testing.T) {
 		// Static types are not built at this point
 		member := decodedArray.GetMember(inter, nil, "append")
 		assert.IsType(t, &HostFunctionValue{}, member)
-		assert.IsType(t, FunctionStaticType{}, member.StaticType())
+		assert.IsType(t, &FunctionStaticType{}, member.StaticType())
 	})
 }
 
@@ -1115,7 +1115,7 @@ func TestDictionaryDeferredDecoding(t *testing.T) {
 		// Static types are not built at this point
 		member := decodedDictionary.GetMember(inter, nil, "remove")
 		assert.IsType(t, &HostFunctionValue{}, member)
-		assert.IsType(t, FunctionStaticType{}, member.StaticType())
+		assert.IsType(t, &FunctionStaticType{}, member.StaticType())
 	})
 }
 
