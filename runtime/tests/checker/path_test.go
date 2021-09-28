@@ -64,8 +64,34 @@ func TestCheckPath(t *testing.T) {
 		})
 	}
 
+	testPathToString := func(domain common.PathDomain) {
+
+		t.Run(fmt.Sprintf("toString: %s", domain.Identifier()), func(t *testing.T) {
+
+			t.Parallel()
+
+			checker, err := ParseAndCheck(t,
+				fmt.Sprintf(
+					`
+                      let x = /%[1]s/foo
+                      let y = x.toString()
+                    `,
+					domain.Identifier(),
+				),
+			)
+
+			require.NoError(t, err)
+
+			assert.IsType(t,
+				sema.StringType,
+				RequireGlobalValue(t, checker.Elaboration, "y"),
+			)
+		})
+	}
+
 	for _, domain := range common.AllPathDomainsByIdentifier {
 		test(domain)
+		testPathToString(domain)
 	}
 
 	t.Run("invalid: unsupported domain", func(t *testing.T) {

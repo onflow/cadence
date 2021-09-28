@@ -5147,6 +5147,38 @@ func TestInterpretDictionaryKeyTypes(t *testing.T) {
 	}
 }
 
+func TestInterpretPathToString(t *testing.T) {
+
+	t.Parallel()
+
+	tests := map[string]string{
+		"Path":           `/storage/a`,
+		"StoragePath":    `/storage/a`,
+		"PublicPath":     `/public/a`,
+		"PrivatePath":    `/private/a`,
+		"CapabilityPath": `/private/a`,
+	}
+
+	for ty, val := range tests {
+		t.Run(ty, func(t *testing.T) {
+			inter := parseCheckAndInterpret(t,
+				fmt.Sprintf(
+					`
+					  let x: %s = %s
+					  let y: String = x.toString()
+					`,
+					ty,
+					val,
+				))
+
+			assert.Equal(t,
+				interpreter.NewStringValue(val),
+				inter.Globals["y"].GetValue(),
+			)
+		})
+	}
+}
+
 func TestInterpretIndirectDestroy(t *testing.T) {
 
 	t.Parallel()
