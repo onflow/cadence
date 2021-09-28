@@ -164,6 +164,15 @@ func WithContractUpdateValidationEnabled(enabled bool) Option {
 	}
 }
 
+// WithAtreeValidationEnabled returns a runtime option
+// that configures if atree validation is enabled.
+//
+func WithAtreeValidationEnabled(enabled bool) Option {
+	return func(runtime Runtime) {
+		runtime.SetAtreeValidationEnabled(enabled)
+	}
+}
+
 // NewInterpreterRuntime returns a interpreter-based version of the Flow runtime.
 func NewInterpreterRuntime(options ...Option) Runtime {
 	runtime := &interpreterRuntime{}
