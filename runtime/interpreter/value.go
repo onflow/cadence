@@ -9269,6 +9269,7 @@ func (v PathValue) GetMember(_ *Interpreter, _ func() LocationRange, name string
 			func(invocation Invocation) Value {
 				return NewStringValue(v.String())
 			},
+			sema.ToStringFunctionType,
 		)
 	}
 
