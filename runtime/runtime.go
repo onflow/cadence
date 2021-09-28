@@ -85,6 +85,9 @@ type Runtime interface {
 	//
 	SetContractUpdateValidationEnabled(enabled bool)
 
+	// SetAtreeValidationEnabled configures if atree validation is enabled.
+	SetAtreeValidationEnabled(enabled bool)
+
 	// ReadStored reads the value stored at the given path
 	//
 	ReadStored(address common.Address, path cadence.Path, context Context) (cadence.Value, error)
@@ -147,6 +150,7 @@ func reportMetric(
 type interpreterRuntime struct {
 	coverageReport                  *CoverageReport
 	contractUpdateValidationEnabled bool
+	atreeValidationEnabled          bool
 }
 
 type Option func(Runtime)
@@ -175,6 +179,10 @@ func (r *interpreterRuntime) SetCoverageReport(coverageReport *CoverageReport) {
 
 func (r *interpreterRuntime) SetContractUpdateValidationEnabled(enabled bool) {
 	r.contractUpdateValidationEnabled = enabled
+}
+
+func (r *interpreterRuntime) SetAtreeValidationEnabled(enabled bool) {
+	r.atreeValidationEnabled = enabled
 }
 
 func (r *interpreterRuntime) ExecuteScript(script Script, context Context) (cadence.Value, error) {
@@ -1143,6 +1151,7 @@ func (r *interpreterRuntime) newInterpreter(
 				)
 			},
 		),
+		interpreter.WithAtreeValidationEnabled(r.atreeValidationEnabled),
 	}
 
 	defaultOptions = append(defaultOptions,
