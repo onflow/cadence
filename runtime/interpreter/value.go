@@ -9719,6 +9719,25 @@ func (v PathValue) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
+func (v PathValue) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
+	switch name {
+
+	case sema.ToStringFunctionName:
+		return NewHostFunctionValue(
+			func(invocation Invocation) Value {
+				return NewStringValue(v.String())
+			},
+			sema.ToStringFunctionType,
+		)
+	}
+
+	return nil
+}
+
+func (PathValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
+	panic(errors.NewUnreachableError())
+}
+
 func (v PathValue) ConformsToDynamicType(
 	_ *Interpreter,
 	_ func() LocationRange,

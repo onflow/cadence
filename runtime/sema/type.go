@@ -401,9 +401,9 @@ func withBuiltinMembers(ty Type, members map[string]MemberResolver) map[string]M
 		},
 	}
 
-	// All number types and addresses have a `toString` function
+	// All number types, addresses, and path types have a `toString` function
 
-	if IsSubType(ty, NumberType) || IsSubType(ty, &AddressType{}) {
+	if IsSubType(ty, NumberType) || IsSubType(ty, &AddressType{}) || IsSubType(ty, PathType) {
 
 		members[ToStringFunctionName] = MemberResolver{
 			Kind: common.DeclarationKindFunction,
