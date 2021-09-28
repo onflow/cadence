@@ -262,6 +262,7 @@ type Interpreter struct {
 	ExitHandler                    ExitHandlerFunc
 	interpreted                    bool
 	statement                      ast.Statement
+	atreeValidationEnabled         bool
 }
 
 type Option func(*Interpreter) error
@@ -447,6 +448,16 @@ func WithAllInterpreters(allInterpreters map[common.LocationID]*Interpreter) Opt
 	}
 }
 
+// WithAtreeValidationEnabled returns an interpreter option which sets
+// the atree validation option.
+//
+func WithAtreeValidationEnabled(enabled bool) Option {
+	return func(interpreter *Interpreter) error {
+		interpreter.SetAtreeValidationEnabled(enabled)
+		return nil
+	}
+}
+
 // withTypeCodes returns an interpreter option which sets the type codes.
 //
 func withTypeCodes(typeCodes TypeCodes) Option {
@@ -604,6 +615,12 @@ func (interpreter *Interpreter) SetAllInterpreters(allInterpreters map[common.Lo
 		locationID := interpreter.Location.ID()
 		interpreter.allInterpreters[locationID] = interpreter
 	}
+}
+
+// SetAtreeValidationEnabled sets the atree validation option.
+//
+func (interpreter *Interpreter) SetAtreeValidationEnabled(enabled bool) {
+	interpreter.atreeValidationEnabled = enabled
 }
 
 // setTypeCodes sets the type codes.
@@ -2315,6 +2332,7 @@ func (interpreter *Interpreter) NewSubInterpreter(
 		WithImportLocationHandler(interpreter.importLocationHandler),
 		WithUUIDHandler(interpreter.uuidHandler),
 		WithAllInterpreters(interpreter.allInterpreters),
+		WithAtreeValidationEnabled(interpreter.atreeValidationEnabled),
 		withTypeCodes(interpreter.typeCodes),
 		WithPublicAccountHandlerFunc(interpreter.publicAccountHandler),
 		WithPublicKeyValidationHandler(interpreter.PublicKeyValidationHandler),
@@ -3639,6 +3657,46 @@ func (interpreter *Interpreter) removeReferencedSlab(storable atree.Storable) {
 
 	storageID := atree.StorageID(storageIDStorable)
 	err := interpreter.Storage.Remove(storageID)
+	if err != nil {
+		panic(ExternalError{err})
+	}
+}
+
+func (interpreter *Interpreter) checkAtreeValue(v atree.Value) {
+	if !interpreter.atreeValidationEnabled {
+		return
+	}
+
+	tic := func(info atree.TypeInfo, other atree.TypeInfo) bool {
+		switch info := info.(type) {
+		case ConstantSizedStaticType:
+			return info.Equal(other.(StaticType))
+		case VariableSizedStaticType:
+			return info.Equal(other.(StaticType))
+		case DictionaryStaticType:
+			return info.Equal(other.(StaticType))
+		case compositeTypeInfo:
+			return info.Equal(other)
+		}
+		panic(errors.NewUnreachableError())
+	}
+
+	defaultHIP := newHashInputProvider(interpreter, ReturnEmptyLocationRange)
+
+	hip := func(value atree.Value, buffer []byte) ([]byte, error) {
+		if _, ok := value.(stringAtreeValue); ok {
+			return stringAtreeHashInput(value, buffer)
+		}
+		return defaultHIP(value, buffer)
+	}
+
+	var err error
+	switch v := v.(type) {
+	case *atree.Array:
+		err = atree.ValidArray(v, v.Type(), tic, hip)
+	case *atree.OrderedMap:
+		err = atree.ValidMap(v, v.Type(), tic, hip)
+	}
 	if err != nil {
 		panic(ExternalError{err})
 	}
