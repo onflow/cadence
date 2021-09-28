@@ -10146,7 +10146,7 @@ func NewPublicKeyValue(
 
 	fields := []CompositeField{
 		{
-			Name:  sema.PublicKeySignAlgoFieldName,
+			Name:  sema.PublicKeySignAlgoField,
 			Value: signAlgo,
 		},
 	}
@@ -10161,14 +10161,14 @@ func NewPublicKeyValue(
 	)
 
 	publicKeyValue.ComputedFields = map[string]ComputedField{
-		sema.PublicKeyPublicKeyFieldName: func(interpreter *Interpreter, getLocationRange func() LocationRange) Value {
+		sema.PublicKeyPublicKeyField: func(interpreter *Interpreter, getLocationRange func() LocationRange) Value {
 			// We can directly call DeepCopy on the key array, instead of potentially skipping copying
 			// by using interpreter.copyValue, as the key array is always struct-kinded, which always must be copied
 			return publicKey.DeepCopy(interpreter, getLocationRange, atree.Address{})
 		},
 	}
 	publicKeyValue.Functions = map[string]FunctionValue{
-		sema.PublicKeyVerifyFunctionName: publicKeyVerifyFunction,
+		sema.PublicKeyVerifyFunction: publicKeyVerifyFunction,
 	}
 
 	// Validate the public key, and initialize 'isValid' field.
@@ -10176,7 +10176,7 @@ func NewPublicKeyValue(
 	publicKeyValue.SetMember(
 		interpreter,
 		getLocationRange,
-		sema.PublicKeyIsValidFieldName,
+		sema.PublicKeyIsValidField,
 		validatePublicKey(interpreter, getLocationRange, publicKeyValue),
 	)
 
@@ -10184,7 +10184,7 @@ func NewPublicKeyValue(
 	publicKeyValue.Stringer = func(publicKeyValue *CompositeValue, seenReferences SeenReferences) string {
 		stringerFields := []CompositeField{
 			{
-				Name:  sema.PublicKeyPublicKeyFieldName,
+				Name:  sema.PublicKeyPublicKeyField,
 				Value: publicKey,
 			},
 		}

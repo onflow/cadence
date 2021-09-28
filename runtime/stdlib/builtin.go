@@ -152,11 +152,11 @@ var CreatePublicKeyFunction = NewStandardLibraryFunction(
 	&sema.FunctionType{
 		Parameters: []*sema.Parameter{
 			{
-				Identifier:     sema.PublicKeyPublicKeyFieldName,
+				Identifier:     sema.PublicKeyPublicKeyField,
 				TypeAnnotation: sema.NewTypeAnnotation(&sema.VariableSizedType{Type: sema.UInt8Type}),
 			},
 			{
-				Identifier:     sema.PublicKeySignAlgoFieldName,
+				Identifier:     sema.PublicKeySignAlgoField,
 				TypeAnnotation: sema.NewTypeAnnotation(sema.SignatureAlgorithmType),
 			},
 		},

@@ -529,15 +529,15 @@ var AuthAccountKeysType = func() *CompositeType {
 var AuthAccountKeysTypeAddFunctionType = &FunctionType{
 	Parameters: []*Parameter{
 		{
-			Identifier:     AccountKeyPublicKeyFieldName,
+			Identifier:     AccountKeyPublicKeyField,
 			TypeAnnotation: NewTypeAnnotation(PublicKeyType),
 		},
 		{
-			Identifier:     AccountKeyHashAlgoFieldName,
+			Identifier:     AccountKeyHashAlgoField,
 			TypeAnnotation: NewTypeAnnotation(HashAlgorithmType),
 		},
 		{
-			Identifier:     AccountKeyWeightFieldName,
+			Identifier:     AccountKeyWeightField,
 			TypeAnnotation: NewTypeAnnotation(UFix64Type),
 		},
 	},
@@ -548,7 +548,7 @@ var AuthAccountKeysTypeAddFunctionType = &FunctionType{
 var AccountKeysTypeGetFunctionType = &FunctionType{
 	Parameters: []*Parameter{
 		{
-			Identifier:     AccountKeyKeyIndexFieldName,
+			Identifier:     AccountKeyKeyIndexField,
 			TypeAnnotation: NewTypeAnnotation(IntType),
 		},
 	},
@@ -559,7 +559,7 @@ var AccountKeysTypeGetFunctionType = &FunctionType{
 var AuthAccountKeysTypeRevokeFunctionType = &FunctionType{
 	Parameters: []*Parameter{
 		{
-			Identifier:     AccountKeyKeyIndexFieldName,
+			Identifier:     AccountKeyKeyIndexField,
 			TypeAnnotation: NewTypeAnnotation(IntType),
 		},
 	},

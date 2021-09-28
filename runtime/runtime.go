@@ -2932,7 +2932,7 @@ func NewPublicKeyFromValue(
 ) {
 
 	// publicKey field
-	publicKeyFieldGetter, ok := publicKey.ComputedFields[sema.PublicKeyPublicKeyFieldName]
+	publicKeyFieldGetter, ok := publicKey.ComputedFields[sema.PublicKeyPublicKeyField]
 	if !ok {
 		return nil, fmt.Errorf("public key value is not set")
 	}
@@ -2948,7 +2948,7 @@ func NewPublicKeyFromValue(
 	signAlgoField := publicKey.GetField(
 		inter,
 		getLocationRange,
-		sema.PublicKeySignAlgoFieldName,
+		sema.PublicKeySignAlgoField,
 	)
 	if signAlgoField == nil {
 		return nil, errors.New("sign algorithm is not set")
@@ -2984,7 +2984,7 @@ func NewPublicKeyFromValue(
 	validField := publicKey.GetField(
 		inter,
 		getLocationRange,
-		sema.PublicKeyIsValidFieldName,
+		sema.PublicKeyIsValidField,
 	)
 	validated = validField != nil
 	if validated {

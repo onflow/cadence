@@ -5861,11 +5861,11 @@ func init() {
 }
 
 const AccountKeyTypeName = "AccountKey"
-const AccountKeyKeyIndexFieldName = "keyIndex"
-const AccountKeyPublicKeyFieldName = "publicKey"
-const AccountKeyHashAlgoFieldName = "hashAlgorithm"
-const AccountKeyWeightFieldName = "weight"
-const AccountKeyIsRevokedFieldName = "isRevoked"
+const AccountKeyKeyIndexField = "keyIndex"
+const AccountKeyPublicKeyField = "publicKey"
+const AccountKeyHashAlgoField = "hashAlgorithm"
+const AccountKeyWeightField = "weight"
+const AccountKeyIsRevokedField = "isRevoked"
 
 // AccountKeyType represents the key associated with an account.
 var AccountKeyType = func() *CompositeType {
@@ -5885,31 +5885,31 @@ var AccountKeyType = func() *CompositeType {
 	var members = []*Member{
 		NewPublicConstantFieldMember(
 			accountKeyType,
-			AccountKeyKeyIndexFieldName,
+			AccountKeyKeyIndexField,
 			IntType,
 			accountKeyIndexFieldDocString,
 		),
 		NewPublicConstantFieldMember(
 			accountKeyType,
-			AccountKeyPublicKeyFieldName,
+			AccountKeyPublicKeyField,
 			PublicKeyType,
 			accountKeyPublicKeyFieldDocString,
 		),
 		NewPublicConstantFieldMember(
 			accountKeyType,
-			AccountKeyHashAlgoFieldName,
+			AccountKeyHashAlgoField,
 			HashAlgorithmType,
 			accountKeyHashAlgorithmFieldDocString,
 		),
 		NewPublicConstantFieldMember(
 			accountKeyType,
-			AccountKeyWeightFieldName,
+			AccountKeyWeightField,
 			UFix64Type,
 			accountKeyWeightFieldDocString,
 		),
 		NewPublicConstantFieldMember(
 			accountKeyType,
-			AccountKeyIsRevokedFieldName,
+			AccountKeyIsRevokedField,
 			BoolType,
 			accountKeyIsRevokedFieldDocString,
 		),
@@ -5921,10 +5921,10 @@ var AccountKeyType = func() *CompositeType {
 }()
 
 const PublicKeyTypeName = "PublicKey"
-const PublicKeyPublicKeyFieldName = "publicKey"
-const PublicKeySignAlgoFieldName = "signatureAlgorithm"
-const PublicKeyIsValidFieldName = "isValid"
-const PublicKeyVerifyFunctionName = "verify"
+const PublicKeyPublicKeyField = "publicKey"
+const PublicKeySignAlgoField = "signatureAlgorithm"
+const PublicKeyIsValidField = "isValid"
+const PublicKeyVerifyFunction = "verify"
 
 const publicKeyKeyFieldDocString = `
 The public key
@@ -5956,25 +5956,25 @@ var PublicKeyType = func() *CompositeType {
 	var members = []*Member{
 		NewPublicConstantFieldMember(
 			publicKeyType,
-			PublicKeyPublicKeyFieldName,
+			PublicKeyPublicKeyField,
 			&VariableSizedType{Type: UInt8Type},
 			publicKeyKeyFieldDocString,
 		),
 		NewPublicConstantFieldMember(
 			publicKeyType,
-			PublicKeySignAlgoFieldName,
+			PublicKeySignAlgoField,
 			SignatureAlgorithmType,
 			publicKeySignAlgoFieldDocString,
 		),
 		NewPublicConstantFieldMember(
 			publicKeyType,
-			PublicKeyIsValidFieldName,
+			PublicKeyIsValidField,
 			BoolType,
 			publicKeyIsValidFieldDocString,
 		),
 		NewPublicFunctionMember(
 			publicKeyType,
-			PublicKeyVerifyFunctionName,
+			PublicKeyVerifyFunction,
 			PublicKeyVerifyFunctionType,
 			publicKeyVerifyFunctionDocString,
 		),

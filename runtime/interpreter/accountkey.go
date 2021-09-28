@@ -28,11 +28,11 @@ var accountKeyDynamicType DynamicType = CompositeDynamicType{
 	StaticType: sema.AccountKeyType,
 }
 var accountKeyFieldNames = []string{
-	sema.AccountKeyKeyIndexFieldName,
-	sema.AccountKeyPublicKeyFieldName,
-	sema.AccountKeyHashAlgoFieldName,
-	sema.AccountKeyWeightFieldName,
-	sema.AccountKeyIsRevokedFieldName,
+	sema.AccountKeyKeyIndexField,
+	sema.AccountKeyPublicKeyField,
+	sema.AccountKeyHashAlgoField,
+	sema.AccountKeyWeightField,
+	sema.AccountKeyIsRevokedField,
 }
 
 // NewAccountKeyValue constructs an AccountKey value.
@@ -44,11 +44,11 @@ func NewAccountKeyValue(
 	isRevoked BoolValue,
 ) *SimpleCompositeValue {
 	fields := map[string]Value{
-		sema.AccountKeyKeyIndexFieldName:  keyIndex,
-		sema.AccountKeyPublicKeyFieldName: publicKey,
-		sema.AccountKeyHashAlgoFieldName:  hashAlgo,
-		sema.AccountKeyWeightFieldName:    weight,
-		sema.AccountKeyIsRevokedFieldName: isRevoked,
+		sema.AccountKeyKeyIndexField:  keyIndex,
+		sema.AccountKeyPublicKeyField: publicKey,
+		sema.AccountKeyHashAlgoField:  hashAlgo,
+		sema.AccountKeyWeightField:    weight,
+		sema.AccountKeyIsRevokedField: isRevoked,
 	}
 
 	return NewSimpleCompositeValue(
