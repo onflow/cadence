@@ -935,7 +935,7 @@ func (v *ArrayValue) Set(interpreter *Interpreter, getLocationRange func() Locat
 
 		panic(ExternalError{err})
 	}
-	interpreter.checkAtreeValue(v.array)
+	interpreter.maybeCheckAtreeValue(v.array)
 
 	existingValue := StoredValue(existingStorable, interpreter.Storage)
 
@@ -975,7 +975,7 @@ func (v *ArrayValue) Append(interpreter *Interpreter, getLocationRange func() Lo
 	if err != nil {
 		panic(ExternalError{err})
 	}
-	interpreter.checkAtreeValue(v.array)
+	interpreter.maybeCheckAtreeValue(v.array)
 }
 
 func (v *ArrayValue) AppendAll(interpreter *Interpreter, getLocationRange func() LocationRange, other *ArrayValue) {
@@ -1015,7 +1015,7 @@ func (v *ArrayValue) Insert(interpreter *Interpreter, getLocationRange func() Lo
 	if err != nil {
 		panic(ExternalError{err})
 	}
-	interpreter.checkAtreeValue(v.array)
+	interpreter.maybeCheckAtreeValue(v.array)
 }
 
 func (v *ArrayValue) RemoveKey(interpreter *Interpreter, getLocationRange func() LocationRange, key Value) Value {
@@ -1036,7 +1036,7 @@ func (v *ArrayValue) Remove(interpreter *Interpreter, getLocationRange func() Lo
 
 		panic(ExternalError{err})
 	}
-	interpreter.checkAtreeValue(v.array)
+	interpreter.maybeCheckAtreeValue(v.array)
 
 	value := StoredValue(storable, interpreter.Storage)
 
@@ -1347,7 +1347,7 @@ func (v *ArrayValue) DeepRemove(interpreter *Interpreter) {
 	if err != nil {
 		panic(ExternalError{err})
 	}
-	interpreter.checkAtreeValue(v.array)
+	interpreter.maybeCheckAtreeValue(v.array)
 }
 
 func (v *ArrayValue) StorageID() atree.StorageID {
@@ -7464,7 +7464,7 @@ func (v *CompositeValue) SetMember(
 	if err != nil {
 		panic(ExternalError{err})
 	}
-	interpreter.checkAtreeValue(v.dictionary)
+	interpreter.maybeCheckAtreeValue(v.dictionary)
 
 	if existingStorable != nil {
 		existingValue := StoredValue(existingStorable, interpreter.Storage)
@@ -7792,7 +7792,7 @@ func (v *CompositeValue) DeepRemove(interpreter *Interpreter) {
 	if err != nil {
 		panic(ExternalError{err})
 	}
-	interpreter.checkAtreeValue(v.dictionary)
+	interpreter.maybeCheckAtreeValue(v.dictionary)
 }
 
 func (v *CompositeValue) GetOwner() common.Address {
@@ -7832,7 +7832,7 @@ func (v *CompositeValue) RemoveField(
 		}
 		panic(ExternalError{err})
 	}
-	interpreter.checkAtreeValue(v.dictionary)
+	interpreter.maybeCheckAtreeValue(v.dictionary)
 
 	storage := interpreter.Storage
 
@@ -8292,7 +8292,7 @@ func (v *DictionaryValue) Remove(
 		}
 		panic(ExternalError{err})
 	}
-	interpreter.checkAtreeValue(v.dictionary)
+	interpreter.maybeCheckAtreeValue(v.dictionary)
 
 	storage := interpreter.Storage
 
@@ -8351,7 +8351,7 @@ func (v *DictionaryValue) Insert(
 	if err != nil {
 		panic(ExternalError{err})
 	}
-	interpreter.checkAtreeValue(v.dictionary)
+	interpreter.maybeCheckAtreeValue(v.dictionary)
 
 	if existingValueStorable == nil {
 		return NilValue{}
@@ -8566,7 +8566,7 @@ func (v *DictionaryValue) DeepRemove(interpreter *Interpreter) {
 	if err != nil {
 		panic(ExternalError{err})
 	}
-	interpreter.checkAtreeValue(v.dictionary)
+	interpreter.maybeCheckAtreeValue(v.dictionary)
 }
 
 func (v *DictionaryValue) GetOwner() common.Address {

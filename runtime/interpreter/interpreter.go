@@ -3662,11 +3662,13 @@ func (interpreter *Interpreter) removeReferencedSlab(storable atree.Storable) {
 	}
 }
 
-func (interpreter *Interpreter) checkAtreeValue(v atree.Value) {
-	if !interpreter.atreeValidationEnabled {
-		return
+func (interpreter *Interpreter) maybeCheckAtreeValue(v atree.Value) {
+	if interpreter.atreeValidationEnabled {
+		interpreter.checkAtreeValue(v)
 	}
+}
 
+func (interpreter *Interpreter) checkAtreeValue(v atree.Value) {
 	tic := func(info atree.TypeInfo, other atree.TypeInfo) bool {
 		switch info := info.(type) {
 		case ConstantSizedStaticType:
