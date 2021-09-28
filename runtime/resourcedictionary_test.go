@@ -117,7 +117,7 @@ func TestRuntimeResourceDictionaryValues(t *testing.T) {
 		getAccountContractCode: func(_ Address, _ string) (bytes []byte, err error) {
 			return accountCode, nil
 		},
-		storage: newTestStorage(nil, nil),
+		storage: newTestLedger(nil, nil),
 		getSigningAccounts: func() ([]Address, error) {
 			return []Address{common.BytesToAddress(addressValue.Bytes())}, nil
 		},
@@ -473,7 +473,7 @@ func TestRuntimeResourceDictionaryValues_Nested(t *testing.T) {
 		getCode: func(_ Location) (bytes []byte, err error) {
 			return accountCode, nil
 		},
-		storage: newTestStorage(nil, nil),
+		storage: newTestLedger(nil, nil),
 		getSigningAccounts: func() ([]Address, error) {
 			return []Address{common.BytesToAddress(addressValue.Bytes())}, nil
 		},
@@ -653,7 +653,7 @@ func TestRuntimeResourceDictionaryValues_DictionaryTransfer(t *testing.T) {
 		getCode: func(_ Location) (bytes []byte, err error) {
 			return accountCode, nil
 		},
-		storage: newTestStorage(nil, nil),
+		storage: newTestLedger(nil, nil),
 		getSigningAccounts: func() ([]Address, error) {
 			return []Address{
 				signer1,
@@ -793,7 +793,7 @@ func TestRuntimeResourceDictionaryValues_Removal(t *testing.T) {
 		getCode: func(_ Location) (bytes []byte, err error) {
 			return accountCode, nil
 		},
-		storage: newTestStorage(nil, nil),
+		storage: newTestLedger(nil, nil),
 		getSigningAccounts: func() ([]Address, error) {
 			return []Address{signer}, nil
 		},
@@ -907,7 +907,7 @@ func TestRuntimeSResourceDictionaryValues_Destruction(t *testing.T) {
 		getCode: func(_ Location) (bytes []byte, err error) {
 			return accountCode, nil
 		},
-		storage: newTestStorage(nil, nil),
+		storage: newTestLedger(nil, nil),
 		getSigningAccounts: func() ([]Address, error) {
 			return []Address{signer}, nil
 		},
@@ -1048,7 +1048,7 @@ func TestRuntimeResourceDictionaryValues_Insertion(t *testing.T) {
 		getCode: func(_ Location) (bytes []byte, err error) {
 			return accountCode, nil
 		},
-		storage: newTestStorage(nil, nil),
+		storage: newTestLedger(nil, nil),
 		getSigningAccounts: func() ([]Address, error) {
 			return []Address{signer}, nil
 		},
@@ -1195,7 +1195,7 @@ func TestRuntimeResourceDictionaryValues_ValueTransferAndDestroy(t *testing.T) {
 
 	var signers []Address
 
-	testStorage := newTestStorage(nil, nil)
+	testStorage := newTestLedger(nil, nil)
 
 	runtimeInterface := &testRuntimeInterface{
 		getCode: func(_ Location) (bytes []byte, err error) {
@@ -1336,7 +1336,7 @@ func BenchmarkRuntimeResourceDictionaryValues(b *testing.B) {
 	var accountCode []byte
 	var events []cadence.Event
 
-	storage := newTestStorage(nil, nil)
+	storage := newTestLedger(nil, nil)
 
 	runtimeInterface := &testRuntimeInterface{
 		resolveLocation: singleIdentifierLocationResolver(b),

@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"strconv"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -39,13 +40,15 @@ func withWritesToStorage(
 	arrayElementCount int,
 	storageItemCount int,
 	onWrite func(owner, key, value []byte),
-	handler func(runtimeStorage *runtimeStorage),
+	handler func(runtimeStorage *Storage),
 ) {
-	runtimeInterface := &testRuntimeInterface{
-		storage: newTestStorage(nil, onWrite),
-	}
 
-	runtimeStorage := newRuntimeStorage(runtimeInterface)
+	runtimeStorage := newStorage(
+		newTestLedger(nil, onWrite),
+		func(f func(), _ func(metrics Metrics, duration time.Duration)) {
+			f()
+		},
+	)
 
 	inter, _ := interpreter.NewInterpreter(
 		nil,
@@ -93,7 +96,7 @@ func TestRuntimeStorageWriteCached(t *testing.T) {
 
 	const arrayElementCount = 100
 	const storageItemCount = 100
-	withWritesToStorage(arrayElementCount, storageItemCount, onWrite, func(runtimeStorage *runtimeStorage) {
+	withWritesToStorage(arrayElementCount, storageItemCount, onWrite, func(runtimeStorage *Storage) {
 		err := runtimeStorage.commit()
 		require.NoError(t, err)
 
@@ -117,7 +120,7 @@ func TestRuntimeStorageWriteCachedIsDeterministic(t *testing.T) {
 
 	const arrayElementCount = 100
 	const storageItemCount = 100
-	withWritesToStorage(arrayElementCount, storageItemCount, onWrite, func(runtimeStorage *runtimeStorage) {
+	withWritesToStorage(arrayElementCount, storageItemCount, onWrite, func(runtimeStorage *Storage) {
 		err := runtimeStorage.commit()
 		require.NoError(t, err)
 
@@ -155,7 +158,7 @@ func BenchmarkRuntimeStorageWriteCached(b *testing.B) {
 
 	const arrayElementCount = 100
 	const storageItemCount = 100
-	withWritesToStorage(arrayElementCount, storageItemCount, onWrite, func(runtimeStorage *runtimeStorage) {
+	withWritesToStorage(arrayElementCount, storageItemCount, onWrite, func(runtimeStorage *Storage) {
 		b.ReportAllocs()
 		b.ResetTimer()
 
@@ -196,7 +199,7 @@ func TestRuntimeStorageWrite(t *testing.T) {
 	}
 
 	runtimeInterface := &testRuntimeInterface{
-		storage: newTestStorage(nil, onWrite),
+		storage: newTestLedger(nil, onWrite),
 		getSigningAccounts: func() ([]Address, error) {
 			return []Address{address}, nil
 		},
@@ -255,7 +258,7 @@ func TestRuntimeAccountStorage(t *testing.T) {
 
 	var loggedMessages []string
 
-	storage := newTestStorage(nil, nil)
+	storage := newTestLedger(nil, nil)
 
 	runtimeInterface := &testRuntimeInterface{
 		storage: storage,
@@ -547,7 +550,7 @@ func TestRuntimePublicCapabilityBorrowTypeConfusion(t *testing.T) {
 	var loggedMessages []string
 
 	runtimeInterface := &testRuntimeInterface{
-		storage: newTestStorage(nil, nil),
+		storage: newTestLedger(nil, nil),
 		getSigningAccounts: func() ([]Address, error) {
 			return []Address{signingAddress}, nil
 		},
@@ -657,7 +660,7 @@ func TestRuntimeStorageReadAndBorrow(t *testing.T) {
 
 	runtime := NewInterpreterRuntime()
 
-	storage := newTestStorage(nil, nil)
+	storage := newTestLedger(nil, nil)
 
 	signer := common.BytesToAddress([]byte{0x42})
 
@@ -780,7 +783,7 @@ func TestRuntimeTopShotContractDeployment(t *testing.T) {
 	events := make([]cadence.Event, 0)
 
 	runtimeInterface := &testRuntimeInterface{
-		storage: newTestStorage(nil, nil),
+		storage: newTestLedger(nil, nil),
 		getSigningAccounts: func() ([]Address, error) {
 			return []Address{testAddress}, nil
 		},
@@ -882,7 +885,7 @@ func TestRuntimeTopShotBatchTransfer(t *testing.T) {
 	}
 
 	runtimeInterface := &testRuntimeInterface{
-		storage: newTestStorage(onRead, nil),
+		storage: newTestLedger(onRead, nil),
 		getSigningAccounts: func() ([]Address, error) {
 			return []Address{signerAddress}, nil
 		},
@@ -1173,7 +1176,7 @@ func TestRuntimeBatchMintAndTransfer(t *testing.T) {
 			uuid++
 			return uuid, nil
 		},
-		storage: newTestStorage(nil, nil),
+		storage: newTestLedger(nil, nil),
 		getSigningAccounts: func() ([]Address, error) {
 			return []Address{signerAddress}, nil
 		},
@@ -1339,7 +1342,7 @@ func TestRuntimeStorageUnlink(t *testing.T) {
 
 	runtime := NewInterpreterRuntime()
 
-	storage := newTestStorage(nil, nil)
+	storage := newTestLedger(nil, nil)
 
 	signer := common.BytesToAddress([]byte{0x42})
 
@@ -1425,7 +1428,7 @@ func TestRuntimeStorageSaveCapability(t *testing.T) {
 
 	runtime := NewInterpreterRuntime()
 
-	storage := newTestStorage(nil, nil)
+	storage := newTestLedger(nil, nil)
 
 	signer := common.BytesToAddress([]byte{0x42})
 
@@ -1538,7 +1541,7 @@ func TestRuntimeStorageReferenceCast(t *testing.T) {
 	var loggedMessages []string
 
 	runtimeInterface := &testRuntimeInterface{
-		storage: newTestStorage(nil, nil),
+		storage: newTestLedger(nil, nil),
 		getSigningAccounts: func() ([]Address, error) {
 			return []Address{signerAddress}, nil
 		},
@@ -1657,7 +1660,7 @@ func TestRuntimeStorageNonStorable(t *testing.T) {
 			)
 
 			runtimeInterface := &testRuntimeInterface{
-				storage: newTestStorage(nil, nil),
+				storage: newTestLedger(nil, nil),
 				getSigningAccounts: func() ([]Address, error) {
 					return []Address{address}, nil
 				},
@@ -1700,7 +1703,7 @@ func TestRuntimeStorageRecursiveReference(t *testing.T) {
     `
 
 	runtimeInterface := &testRuntimeInterface{
-		storage: newTestStorage(nil, nil),
+		storage: newTestLedger(nil, nil),
 		getSigningAccounts: func() ([]Address, error) {
 			return []Address{address}, nil
 		},

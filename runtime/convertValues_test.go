@@ -1160,7 +1160,7 @@ func TestExportReferenceValue(t *testing.T) {
 		require.NoError(t, err)
 
 		runtimeInterface := &testRuntimeInterface{
-			storage: newTestStorage(nil, nil),
+			storage: newTestLedger(nil, nil),
 			getSigningAccounts: func() ([]Address, error) {
 				return []Address{
 					address,
@@ -1638,7 +1638,7 @@ func executeTestScript(t *testing.T, script string, arg cadence.Value) (cadence.
 
 	rt := NewInterpreterRuntime()
 
-	storage := newTestStorage(nil, nil)
+	storage := newTestLedger(nil, nil)
 
 	runtimeInterface := &testRuntimeInterface{
 		storage: storage,
@@ -3026,7 +3026,7 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 
 					publicKeyValidated := false
 
-					storage := newTestStorage(nil, nil)
+					storage := newTestLedger(nil, nil)
 
 					runtimeInterface := &testRuntimeInterface{
 						storage: storage,
@@ -3090,7 +3090,7 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 
 		verifyInvoked := false
 
-		storage := newTestStorage(nil, nil)
+		storage := newTestLedger(nil, nil)
 
 		runtimeInterface := &testRuntimeInterface{
 			storage: storage,
@@ -3138,7 +3138,7 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 			},
 		).WithType(PublicKeyType)
 
-		storage := newTestStorage(nil, nil)
+		storage := newTestLedger(nil, nil)
 
 		runtimeInterface := &testRuntimeInterface{
 			storage: storage,
@@ -3178,7 +3178,7 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 			},
 		).WithType(PublicKeyType)
 
-		storage := newTestStorage(nil, nil)
+		storage := newTestLedger(nil, nil)
 
 		runtimeInterface := &testRuntimeInterface{
 			storage: storage,
@@ -3211,7 +3211,7 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 			},
 		).WithType(PublicKeyType)
 
-		storage := newTestStorage(nil, nil)
+		storage := newTestLedger(nil, nil)
 
 		runtimeInterface := &testRuntimeInterface{
 			storage: storage,
@@ -3248,7 +3248,7 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 			},
 		).WithType(PublicKeyType)
 
-		storage := newTestStorage(nil, nil)
+		storage := newTestLedger(nil, nil)
 
 		runtimeInterface := &testRuntimeInterface{
 			storage: storage,
@@ -3331,7 +3331,7 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 
 		rt := NewInterpreterRuntime()
 
-		storage := newTestStorage(nil, nil)
+		storage := newTestLedger(nil, nil)
 
 		runtimeInterface := &testRuntimeInterface{
 			storage: storage,
@@ -3403,7 +3403,7 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 
 		rt := NewInterpreterRuntime()
 
-		storage := newTestStorage(nil, nil)
+		storage := newTestLedger(nil, nil)
 
 		runtimeInterface := &testRuntimeInterface{
 			storage: storage,
@@ -3485,7 +3485,7 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 
 		publicKeyValidated := false
 
-		storage := newTestStorage(nil, nil)
+		storage := newTestLedger(nil, nil)
 
 		runtimeInterface := &testRuntimeInterface{
 			storage: storage,

@@ -69,7 +69,7 @@ func TestRuntimeCrypto_verify(t *testing.T) {
 
 	called := false
 
-	storage := newTestStorage(nil, nil)
+	storage := newTestLedger(nil, nil)
 
 	runtimeInterface := &testRuntimeInterface{
 		storage: storage,
@@ -140,7 +140,7 @@ func TestRuntimeHashAlgorithm_hash(t *testing.T) {
 
 		var loggedMessages []string
 
-		storage := newTestStorage(nil, nil)
+		storage := newTestLedger(nil, nil)
 
 		runtimeInterface := &testRuntimeInterface{
 			storage: storage,
@@ -182,7 +182,7 @@ func TestRuntimeHashAlgorithm_hash(t *testing.T) {
 		called := false
 		hashTag := "non-empty-string"
 
-		storage := newTestStorage(nil, nil)
+		storage := newTestLedger(nil, nil)
 
 		runtimeInterface := &testRuntimeInterface{
 			storage: storage,
@@ -213,7 +213,7 @@ func TestRuntimeHashAlgorithm_hash(t *testing.T) {
 		called := false
 		hashTag := ""
 
-		storage := newTestStorage(nil, nil)
+		storage := newTestLedger(nil, nil)
 
 		runtimeInterface := &testRuntimeInterface{
 			storage: storage,
@@ -387,7 +387,7 @@ func TestRuntimeHashAlgorithmImport(t *testing.T) {
 		var logs []string
 		var hashCalls int
 
-		storage := newTestStorage(nil, nil)
+		storage := newTestLedger(nil, nil)
 
 		runtime := NewInterpreterRuntime()
 		runtimeInterface := &testRuntimeInterface{

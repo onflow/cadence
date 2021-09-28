@@ -519,7 +519,7 @@ func BenchmarkRuntimeFungibleTokenTransfer(b *testing.B) {
 		getCode: func(location Location) (bytes []byte, err error) {
 			return accountCodes[location.ID()], nil
 		},
-		storage: newTestStorage(nil, nil),
+		storage: newTestLedger(nil, nil),
 		getSigningAccounts: func() ([]Address, error) {
 			return []Address{signerAccount}, nil
 		},

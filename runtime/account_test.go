@@ -100,7 +100,7 @@ func TestRuntimeTransaction_AddPublicKey(t *testing.T) {
 		var keys [][]byte
 
 		runtimeInterface := &testRuntimeInterface{
-			storage: newTestStorage(nil, nil),
+			storage: newTestLedger(nil, nil),
 			getSigningAccounts: func() ([]Address, error) {
 				return []Address{{42}}, nil
 			},
@@ -629,7 +629,7 @@ func TestRuntimeHashAlgorithm(t *testing.T) {
           }
     `)
 
-	storage := newTestStorage(nil, nil)
+	storage := newTestLedger(nil, nil)
 
 	runtimeInterface := &testRuntimeInterface{
 		storage: storage,
@@ -703,7 +703,7 @@ func TestRuntimeSignatureAlgorithm(t *testing.T) {
         }
     `)
 
-	storage := newTestStorage(nil, nil)
+	storage := newTestLedger(nil, nil)
 
 	runtimeInterface := &testRuntimeInterface{
 		storage: storage,
@@ -836,7 +836,7 @@ func accountKeyExportedValue(
 
 func getAccountKeyTestRuntimeInterface(storage *testAccountKeyStorage) *testRuntimeInterface {
 	return &testRuntimeInterface{
-		storage: newTestStorage(nil, nil),
+		storage: newTestLedger(nil, nil),
 		getSigningAccounts: func() ([]Address, error) {
 			return []Address{{42}}, nil
 		},
@@ -1020,7 +1020,7 @@ func TestRuntimePublicKey(t *testing.T) {
             }
         `
 
-		storage := newTestStorage(nil, nil)
+		storage := newTestLedger(nil, nil)
 
 		runtimeInterface := &testRuntimeInterface{
 			storage: storage,
@@ -1084,7 +1084,7 @@ func TestRuntimePublicKey(t *testing.T) {
 			invoked := false
 			validateMethodReturnValue := validity
 
-			storage := newTestStorage(nil, nil)
+			storage := newTestLedger(nil, nil)
 
 			runtimeInterface := &testRuntimeInterface{
 				storage: storage,
@@ -1165,7 +1165,7 @@ func TestRuntimePublicKey(t *testing.T) {
         `
 		invoked := false
 
-		storage := newTestStorage(nil, nil)
+		storage := newTestLedger(nil, nil)
 
 		runtimeInterface := &testRuntimeInterface{
 			storage: storage,
@@ -1246,7 +1246,7 @@ func TestRuntimePublicKey(t *testing.T) {
             }
         `
 
-		storage := newTestStorage(nil, nil)
+		storage := newTestLedger(nil, nil)
 
 		runtimeInterface := &testRuntimeInterface{
 			storage: storage,
@@ -1283,7 +1283,7 @@ func TestRuntimePublicKey(t *testing.T) {
             }
         `
 
-		storage := newTestStorage(nil, nil)
+		storage := newTestLedger(nil, nil)
 
 		runtimeInterface := &testRuntimeInterface{
 			storage: storage,

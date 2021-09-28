@@ -76,7 +76,7 @@ func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
 
 		rt := NewInterpreterRuntime()
 
-		storage := newTestStorage(nil, nil)
+		storage := newTestLedger(nil, nil)
 
 		runtimeInterface := &testRuntimeInterface{
 			storage: storage,
@@ -543,7 +543,7 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
 
 		rt := NewInterpreterRuntime()
 
-		storage := newTestStorage(nil, nil)
+		storage := newTestLedger(nil, nil)
 
 		runtimeInterface := &testRuntimeInterface{
 			storage: storage,

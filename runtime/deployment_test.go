@@ -155,7 +155,7 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 		var events []cadence.Event
 
 		runtimeInterface := &testRuntimeInterface{
-			storage: newTestStorage(nil, nil),
+			storage: newTestLedger(nil, nil),
 			getSigningAccounts: func() ([]Address, error) {
 				return []Address{{42}}, nil
 			},

@@ -46,7 +46,7 @@ import (
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
-type testRuntimeInterfaceStorage struct {
+type testLedger struct {
 	storedValues         map[string][]byte
 	valueExists          func(owner, key []byte) (exists bool, err error)
 	getValue             func(owner, key []byte) (value []byte, err error)
@@ -54,7 +54,25 @@ type testRuntimeInterfaceStorage struct {
 	allocateStorageIndex func(owner []byte) (atree.StorageIndex, error)
 }
 
-func (s testRuntimeInterfaceStorage) Dump() {
+var _ atree.Ledger = testLedger{}
+
+func (s testLedger) GetValue(owner, key []byte) (value []byte, err error) {
+	return s.getValue(owner, key)
+}
+
+func (s testLedger) SetValue(owner, key, value []byte) (err error) {
+	return s.setValue(owner, key, value)
+}
+
+func (s testLedger) ValueExists(owner, key []byte) (exists bool, err error) {
+	return s.valueExists(owner, key)
+}
+
+func (s testLedger) AllocateStorageIndex(owner []byte) (atree.StorageIndex, error) {
+	return s.allocateStorageIndex(owner)
+}
+
+func (s testLedger) Dump() {
 	for key, data := range s.storedValues {
 		fmt.Printf("%s:\n", strconv.Quote(key))
 		fmt.Printf("%s\n", hex.Dump(data))
@@ -62,10 +80,10 @@ func (s testRuntimeInterfaceStorage) Dump() {
 	}
 }
 
-func newTestStorage(
+func newTestLedger(
 	onRead func(owner, key, value []byte),
 	onWrite func(owner, key, value []byte),
-) testRuntimeInterfaceStorage {
+) testLedger {
 
 	storageKey := func(owner, key string) string {
 		return strings.Join([]string{owner, key}, "|")
@@ -75,7 +93,7 @@ func newTestStorage(
 
 	storageIndices := map[string]uint64{}
 
-	storage := testRuntimeInterfaceStorage{
+	storage := testLedger{
 		storedValues: storedValues,
 		valueExists: func(owner, key []byte) (bool, error) {
 			value := storedValues[storageKey(string(owner), string(key))]
@@ -111,7 +129,7 @@ type testRuntimeInterface struct {
 	getCode                   func(_ Location) ([]byte, error)
 	getProgram                func(Location) (*interpreter.Program, error)
 	setProgram                func(Location, *interpreter.Program) error
-	storage                   testRuntimeInterfaceStorage
+	storage                   testLedger
 	createAccount             func(payer Address) (address Address, err error)
 	addEncodedAccountKey      func(address Address, publicKey []byte) error
 	removeEncodedAccountKey   func(address Address, index int) (publicKey []byte, err error)
@@ -1059,7 +1077,7 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
 
 			var loggedMessages []string
 
-			storage := newTestStorage(nil, nil)
+			storage := newTestLedger(nil, nil)
 
 			runtimeInterface := &testRuntimeInterface{
 				storage: storage,
@@ -1347,7 +1365,7 @@ func TestRuntimeScriptArguments(t *testing.T) {
 
 			var loggedMessages []string
 
-			storage := newTestStorage(nil, nil)
+			storage := newTestLedger(nil, nil)
 
 			runtimeInterface := &testRuntimeInterface{
 				storage: storage,
@@ -1545,7 +1563,7 @@ func TestRuntimeStorage(t *testing.T) {
 						return nil, fmt.Errorf("unknown import location: %s", location)
 					}
 				},
-				storage: newTestStorage(nil, nil),
+				storage: newTestLedger(nil, nil),
 				getSigningAccounts: func() ([]Address, error) {
 					return []Address{{42}}, nil
 				},
@@ -1648,7 +1666,7 @@ func TestRuntimeStorageMultipleTransactionsResourceWithArray(t *testing.T) {
 				return nil, fmt.Errorf("unknown import location: %s", location)
 			}
 		},
-		storage: newTestStorage(nil, nil),
+		storage: newTestLedger(nil, nil),
 		getSigningAccounts: func() ([]Address, error) {
 			return []Address{{42}}, nil
 		},
@@ -1748,7 +1766,7 @@ func TestRuntimeStorageMultipleTransactionsResourceFunction(t *testing.T) {
 				return nil, fmt.Errorf("unknown import location: %s", location)
 			}
 		},
-		storage: newTestStorage(nil, nil),
+		storage: newTestLedger(nil, nil),
 		getSigningAccounts: func() ([]Address, error) {
 			return []Address{{42}}, nil
 		},
@@ -1840,7 +1858,7 @@ func TestRuntimeStorageMultipleTransactionsResourceField(t *testing.T) {
 				return nil, fmt.Errorf("unknown import location: %s", location)
 			}
 		},
-		storage: newTestStorage(nil, nil),
+		storage: newTestLedger(nil, nil),
 		getSigningAccounts: func() ([]Address, error) {
 			return []Address{{42}}, nil
 		},
@@ -1933,7 +1951,7 @@ func TestRuntimeCompositeFunctionInvocationFromImportingProgram(t *testing.T) {
 				return nil, fmt.Errorf("unknown import location: %s", location)
 			}
 		},
-		storage: newTestStorage(nil, nil),
+		storage: newTestLedger(nil, nil),
 		getSigningAccounts: func() ([]Address, error) {
 			return []Address{{42}}, nil
 		},
@@ -2016,7 +2034,7 @@ func TestRuntimeResourceContractUseThroughReference(t *testing.T) {
 				return nil, fmt.Errorf("unknown import location: %s", location)
 			}
 		},
-		storage: newTestStorage(nil, nil),
+		storage: newTestLedger(nil, nil),
 		getSigningAccounts: func() ([]Address, error) {
 			return []Address{{42}}, nil
 		},
@@ -2107,7 +2125,7 @@ func TestRuntimeResourceContractUseThroughLink(t *testing.T) {
 				return nil, fmt.Errorf("unknown import location: %s", location)
 			}
 		},
-		storage: newTestStorage(nil, nil),
+		storage: newTestLedger(nil, nil),
 		getSigningAccounts: func() ([]Address, error) {
 			return []Address{{42}}, nil
 		},
@@ -2212,7 +2230,7 @@ func TestRuntimeResourceContractWithInterface(t *testing.T) {
 				return nil, fmt.Errorf("unknown import location: %s", location)
 			}
 		},
-		storage: newTestStorage(nil, nil),
+		storage: newTestLedger(nil, nil),
 		getSigningAccounts: func() ([]Address, error) {
 			return []Address{{42}}, nil
 		},
@@ -2315,7 +2333,7 @@ func TestRuntimeScriptReturnTypeNotReturnableError(t *testing.T) {
 
 		runtime := NewInterpreterRuntime()
 
-		storage := newTestStorage(nil, nil)
+		storage := newTestLedger(nil, nil)
 
 		runtimeInterface := &testRuntimeInterface{
 			storage: storage,
@@ -2603,7 +2621,7 @@ func TestRuntimeStorageChanges(t *testing.T) {
 				return nil, fmt.Errorf("unknown import location: %s", location)
 			}
 		},
-		storage: newTestStorage(nil, nil),
+		storage: newTestLedger(nil, nil),
 		getSigningAccounts: func() ([]Address, error) {
 			return []Address{{42}}, nil
 		},
@@ -2788,7 +2806,7 @@ func TestRuntimeAccountPublishAndAccess(t *testing.T) {
 				return nil, fmt.Errorf("unknown import location: %s", location)
 			}
 		},
-		storage: newTestStorage(nil, nil),
+		storage: newTestLedger(nil, nil),
 		getSigningAccounts: func() ([]Address, error) {
 			return []Address{address}, nil
 		},
@@ -2841,7 +2859,7 @@ func TestRuntimeTransaction_CreateAccount(t *testing.T) {
 	var events []cadence.Event
 
 	runtimeInterface := &testRuntimeInterface{
-		storage: newTestStorage(nil, nil),
+		storage: newTestLedger(nil, nil),
 		getSigningAccounts: func() ([]Address, error) {
 			return []Address{{42}}, nil
 		},
@@ -2922,7 +2940,7 @@ func TestRuntimeContractAccount(t *testing.T) {
 		getCode: func(_ Location) (bytes []byte, err error) {
 			return accountCode, nil
 		},
-		storage: newTestStorage(nil, nil),
+		storage: newTestLedger(nil, nil),
 		getSigningAccounts: func() ([]Address, error) {
 			return []Address{common.BytesToAddress(addressValue.Bytes())}, nil
 		},
@@ -3025,7 +3043,7 @@ func TestRuntimeInvokeContractFunction(t *testing.T) {
 	var accountCode []byte
 	var loggedMessage string
 
-	storage := newTestStorage(nil, nil)
+	storage := newTestLedger(nil, nil)
 
 	runtimeInterface := &testRuntimeInterface{
 		storage: storage,
@@ -3295,7 +3313,7 @@ func TestRuntimeContractNestedResource(t *testing.T) {
 		getCode: func(_ Location) (bytes []byte, err error) {
 			return accountCode, nil
 		},
-		storage: newTestStorage(nil, nil),
+		storage: newTestLedger(nil, nil),
 		getSigningAccounts: func() ([]Address, error) {
 			return []Address{addressValue}, nil
 		},
@@ -3392,7 +3410,7 @@ func TestRuntimeStorageLoadedDestructionConcreteType(t *testing.T) {
 		getCode: func(_ Location) (bytes []byte, err error) {
 			return accountCode, nil
 		},
-		storage: newTestStorage(nil, nil),
+		storage: newTestLedger(nil, nil),
 		getSigningAccounts: func() ([]Address, error) {
 			return []Address{addressValue}, nil
 		},
@@ -3487,7 +3505,7 @@ func TestRuntimeStorageLoadedDestructionAnyResource(t *testing.T) {
 		getCode: func(_ Location) (bytes []byte, err error) {
 			return accountCode, nil
 		},
-		storage: newTestStorage(nil, nil),
+		storage: newTestLedger(nil, nil),
 		getSigningAccounts: func() ([]Address, error) {
 			return []Address{addressValue}, nil
 		},
@@ -3583,7 +3601,7 @@ func TestRuntimeStorageLoadedDestructionAfterRemoval(t *testing.T) {
 		getCode: func(_ Location) (bytes []byte, err error) {
 			return accountCode, nil
 		},
-		storage: newTestStorage(nil, nil),
+		storage: newTestLedger(nil, nil),
 		getSigningAccounts: func() ([]Address, error) {
 			return []Address{addressValue}, nil
 		},
@@ -3819,7 +3837,7 @@ func TestRuntimeFungibleTokenUpdateAccountCode(t *testing.T) {
 		getCode: func(location Location) (bytes []byte, err error) {
 			return accountCodes[location.ID()], nil
 		},
-		storage: newTestStorage(nil, nil),
+		storage: newTestLedger(nil, nil),
 		getSigningAccounts: func() ([]Address, error) {
 			return []Address{signerAccount}, nil
 		},
@@ -3961,7 +3979,7 @@ func TestRuntimeFungibleTokenCreateAccount(t *testing.T) {
 		getCode: func(location Location) (bytes []byte, err error) {
 			return accountCodes[location.ID()], nil
 		},
-		storage: newTestStorage(nil, nil),
+		storage: newTestLedger(nil, nil),
 		createAccount: func(payer Address) (address Address, err error) {
 			return address2Value, nil
 		},
@@ -4122,7 +4140,7 @@ func TestRuntimeInvokeStoredInterfaceFunction(t *testing.T) {
 		getCode: func(location Location) (bytes []byte, err error) {
 			return accountCodes[location.ID()], nil
 		},
-		storage: newTestStorage(nil, nil),
+		storage: newTestLedger(nil, nil),
 		createAccount: func(payer Address) (address Address, err error) {
 			result := interpreter.NewAddressValueFromBytes([]byte{nextAccount})
 			nextAccount++
@@ -4245,7 +4263,7 @@ func TestRuntimeBlock(t *testing.T) {
 
 	var loggedMessages []string
 
-	storage := newTestStorage(nil, nil)
+	storage := newTestLedger(nil, nil)
 
 	runtimeInterface := &testRuntimeInterface{
 		storage: storage,
@@ -4445,7 +4463,7 @@ func TestRuntimeStoreIntegerTypes(t *testing.T) {
 				getCode: func(_ Location) (bytes []byte, err error) {
 					return accountCode, nil
 				},
-				storage: newTestStorage(nil, nil),
+				storage: newTestLedger(nil, nil),
 				getSigningAccounts: func() ([]Address, error) {
 					return []Address{addressValue.ToAddress()}, nil
 				},
@@ -4564,7 +4582,7 @@ func TestRuntimeResourceOwnerFieldUseComposite(t *testing.T) {
 	var events []cadence.Event
 	var loggedMessages []string
 
-	storage := newTestStorage(nil, nil)
+	storage := newTestLedger(nil, nil)
 
 	runtimeInterface := &testRuntimeInterface{
 		getCode: func(location Location) (bytes []byte, err error) {
@@ -4775,7 +4793,7 @@ func TestRuntimeResourceOwnerFieldUseArray(t *testing.T) {
 		getCode: func(location Location) (bytes []byte, err error) {
 			return accountCodes[location.ID()], nil
 		},
-		storage: newTestStorage(nil, nil),
+		storage: newTestLedger(nil, nil),
 		getSigningAccounts: func() ([]Address, error) {
 			return []Address{address}, nil
 		},
@@ -4956,7 +4974,7 @@ func TestRuntimeResourceOwnerFieldUseDictionary(t *testing.T) {
 		getCode: func(location Location) (bytes []byte, err error) {
 			return accountCodes[location.ID()], nil
 		},
-		storage: newTestStorage(nil, nil),
+		storage: newTestLedger(nil, nil),
 		getSigningAccounts: func() ([]Address, error) {
 			return []Address{address}, nil
 		},
@@ -5109,7 +5127,7 @@ func TestRuntimeComputationLimit(t *testing.T) {
 
 			runtime := NewInterpreterRuntime()
 
-			storage := newTestStorage(nil, nil)
+			storage := newTestLedger(nil, nil)
 
 			runtimeInterface := &testRuntimeInterface{
 				storage: storage,
@@ -5191,7 +5209,7 @@ func TestRuntimeMetrics(t *testing.T) {
       }
     `)
 
-	storage := newTestStorage(nil, nil)
+	storage := newTestLedger(nil, nil)
 
 	type reports struct {
 		programParsed      map[common.LocationID]int
@@ -5398,7 +5416,7 @@ func TestRuntimeContractWriteback(t *testing.T) {
 		getCode: func(_ Location) (bytes []byte, err error) {
 			return accountCode, nil
 		},
-		storage: newTestStorage(nil, onWrite),
+		storage: newTestLedger(nil, onWrite),
 		getSigningAccounts: func() ([]Address, error) {
 			return []Address{common.BytesToAddress(addressValue.Bytes())}, nil
 		},
@@ -5524,7 +5542,7 @@ func TestRuntimeStorageWriteback(t *testing.T) {
 		getCode: func(_ Location) (bytes []byte, err error) {
 			return accountCode, nil
 		},
-		storage: newTestStorage(nil, onWrite),
+		storage: newTestLedger(nil, onWrite),
 		getSigningAccounts: func() ([]Address, error) {
 			return []Address{common.BytesToAddress(addressValue.Bytes())}, nil
 		},
@@ -5732,7 +5750,7 @@ func TestRuntimeDeployCodeCaching(t *testing.T) {
 		getCode: func(location Location) (bytes []byte, err error) {
 			return accountCodes[location.ID()], nil
 		},
-		storage: newTestStorage(nil, nil),
+		storage: newTestLedger(nil, nil),
 		getSigningAccounts: func() ([]Address, error) {
 			return signerAddresses, nil
 		},
@@ -5868,7 +5886,7 @@ func TestRuntimeUpdateCodeCaching(t *testing.T) {
 		getCode: func(location Location) (bytes []byte, err error) {
 			return accountCodes[location.ID()], nil
 		},
-		storage: newTestStorage(nil, nil),
+		storage: newTestLedger(nil, nil),
 		getSigningAccounts: func() ([]Address, error) {
 			return signerAddresses, nil
 		},
@@ -6091,7 +6109,7 @@ func TestRuntimeNoProgramsHitForToplevelPrograms(t *testing.T) {
 			programsHits = append(programsHits, string(location.ID()))
 			return programs[location.ID()], nil
 		},
-		storage: newTestStorage(nil, nil),
+		storage: newTestLedger(nil, nil),
 		getSigningAccounts: func() ([]Address, error) {
 			return signerAddresses, nil
 		},
@@ -6243,7 +6261,7 @@ func TestRuntimeTransaction_ContractUpdate(t *testing.T) {
 	signerAddress := common.BytesToAddress([]byte{0x42})
 
 	runtimeInterface := &testRuntimeInterface{
-		storage: newTestStorage(nil, nil),
+		storage: newTestLedger(nil, nil),
 		getSigningAccounts: func() ([]Address, error) {
 			return []Address{signerAddress}, nil
 		},
@@ -6438,7 +6456,7 @@ func TestRuntimeExecuteScriptArguments(t *testing.T) {
 			// NOTE: to parallelize this sub-test,
 			// access to `programs` must be made thread-safe first
 
-			storage := newTestStorage(nil, nil)
+			storage := newTestLedger(nil, nil)
 
 			runtimeInterface := &testRuntimeInterface{
 				storage: storage,
@@ -6523,7 +6541,7 @@ func TestRuntimePanics(t *testing.T) {
       }
     `)
 
-	storage := newTestStorage(nil, nil)
+	storage := newTestLedger(nil, nil)
 
 	runtimeInterface := &testRuntimeInterface{
 		storage: storage,
@@ -6698,7 +6716,7 @@ func TestRuntimeStackOverflow(t *testing.T) {
 	}
 
 	runtimeInterface := &testRuntimeInterface{
-		storage: newTestStorage(onRead, nil),
+		storage: newTestLedger(onRead, nil),
 		getSigningAccounts: func() ([]Address, error) {
 			return []Address{signerAddress}, nil
 		},

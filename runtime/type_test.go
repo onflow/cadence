@@ -54,7 +54,7 @@ func TestRuntimeTypeStorage(t *testing.T) {
 	var loggedMessage string
 
 	runtimeInterface := &testRuntimeInterface{
-		storage: newTestStorage(nil, nil),
+		storage: newTestLedger(nil, nil),
 		getSigningAccounts: func() ([]Address, error) {
 			return []Address{
 				common.BytesToAddress([]byte{42}),
@@ -119,7 +119,7 @@ func TestRuntimeBlockTimestamp(t *testing.T) {
 
 		var loggedMessage string
 
-		storage := newTestStorage(nil, nil)
+		storage := newTestLedger(nil, nil)
 
 		runtimeInterface := &testRuntimeInterface{
 			storage: storage,
@@ -166,7 +166,7 @@ func TestRuntimeBlockTimestamp(t *testing.T) {
 			}
         `)
 
-		storage := newTestStorage(nil, nil)
+		storage := newTestLedger(nil, nil)
 
 		runtimeInterface := &testRuntimeInterface{
 			storage: storage,
