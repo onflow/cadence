@@ -43,7 +43,7 @@ type Storage struct {
 var _ atree.SlabStorage = &Storage{}
 var _ interpreter.Storage = &Storage{}
 
-func newStorage(
+func NewStorage(
 	ledger atree.Ledger,
 	reportMetric func(f func(), report func(metrics Metrics, duration time.Duration)),
 ) *Storage {

@@ -2923,7 +2923,7 @@ func (r *interpreterRuntime) newPublicAccountContracts(
 }
 
 func (r *interpreterRuntime) newStorage(runtimeInterface Interface) *Storage {
-	return newStorage(
+	return NewStorage(
 		runtimeInterface,
 		func(f func(), report func(metrics Metrics, duration time.Duration)) {
 			reportMetric(f, runtimeInterface, report)

@@ -43,7 +43,7 @@ func withWritesToStorage(
 	handler func(runtimeStorage *Storage),
 ) {
 
-	runtimeStorage := newStorage(
+	runtimeStorage := NewStorage(
 		newTestLedger(nil, onWrite),
 		func(f func(), _ func(metrics Metrics, duration time.Duration)) {
 			f()
