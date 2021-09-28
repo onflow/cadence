@@ -40,10 +40,10 @@ func withWritesToStorage(
 	arrayElementCount int,
 	storageItemCount int,
 	onWrite func(owner, key, value []byte),
-	handler func(runtimeStorage *Storage),
+	handler func(storage *Storage),
 ) {
 
-	runtimeStorage := NewStorage(
+	storage := NewStorage(
 		newTestLedger(nil, onWrite),
 		func(f func(), _ func(metrics Metrics, duration time.Duration)) {
 			f()
@@ -53,7 +53,7 @@ func withWritesToStorage(
 	inter, _ := interpreter.NewInterpreter(
 		nil,
 		utils.TestLocation,
-		interpreter.WithStorage(runtimeStorage),
+		interpreter.WithStorage(storage),
 	)
 
 	array := interpreter.NewArrayValue(
@@ -71,13 +71,13 @@ func withWritesToStorage(
 	address := common.BytesToAddress([]byte{0x1})
 
 	for i := 0; i < storageItemCount; i++ {
-		runtimeStorage.deltas[interpreter.StorageKey{
+		storage.deltas[interpreter.StorageKey{
 			Address: address,
 			Key:     strconv.Itoa(i),
 		}] = array
 	}
 
-	handler(runtimeStorage)
+	handler(storage)
 }
 
 func TestRuntimeStorageWriteCached(t *testing.T) {
@@ -96,8 +96,8 @@ func TestRuntimeStorageWriteCached(t *testing.T) {
 
 	const arrayElementCount = 100
 	const storageItemCount = 100
-	withWritesToStorage(arrayElementCount, storageItemCount, onWrite, func(runtimeStorage *Storage) {
-		err := runtimeStorage.commit()
+	withWritesToStorage(arrayElementCount, storageItemCount, onWrite, func(storage *Storage) {
+		err := storage.Commit()
 		require.NoError(t, err)
 
 		require.Len(t, writes, storageItemCount)
@@ -120,8 +120,8 @@ func TestRuntimeStorageWriteCachedIsDeterministic(t *testing.T) {
 
 	const arrayElementCount = 100
 	const storageItemCount = 100
-	withWritesToStorage(arrayElementCount, storageItemCount, onWrite, func(runtimeStorage *Storage) {
-		err := runtimeStorage.commit()
+	withWritesToStorage(arrayElementCount, storageItemCount, onWrite, func(storage *Storage) {
+		err := storage.Commit()
 		require.NoError(t, err)
 
 		previousWrites := make([]testWrite, len(writes))
@@ -131,7 +131,7 @@ func TestRuntimeStorageWriteCachedIsDeterministic(t *testing.T) {
 		for i := 0; i < 10; i++ {
 			// test that writing again should produce the same result
 			writes = nil
-			err := runtimeStorage.commit()
+			err := storage.Commit()
 			require.NoError(t, err)
 
 			for i, previousWrite := range previousWrites {
@@ -158,13 +158,13 @@ func BenchmarkRuntimeStorageWriteCached(b *testing.B) {
 
 	const arrayElementCount = 100
 	const storageItemCount = 100
-	withWritesToStorage(arrayElementCount, storageItemCount, onWrite, func(runtimeStorage *Storage) {
+	withWritesToStorage(arrayElementCount, storageItemCount, onWrite, func(storage *Storage) {
 		b.ReportAllocs()
 		b.ResetTimer()
 
 		for i := 0; i < b.N; i++ {
 			writes = nil
-			err := runtimeStorage.commit()
+			err := storage.Commit()
 			require.NoError(b, err)
 
 			require.Len(b, writes, storageItemCount)

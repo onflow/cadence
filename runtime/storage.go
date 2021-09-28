@@ -195,7 +195,7 @@ func (s *Storage) WriteValue(
 	}
 
 	// Only write locally.
-	// The value is eventually written back through the runtime interface in `commit`.
+	// The value is eventually written back through the runtime interface in `Commit`.
 
 	var writtenValue interpreter.Value
 
@@ -232,9 +232,9 @@ type accountStorageEntry struct {
 }
 
 // TODO: bring back concurrent encoding
-// commit serializes/saves all values in the cache in storage (through the runtime interface).
+// Commit serializes/saves all values in the cache in storage (through the runtime interface).
 //
-func (s *Storage) commit() error {
+func (s *Storage) Commit() error {
 
 	var accountStorageEntries []accountStorageEntry
 
