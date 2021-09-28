@@ -98,19 +98,16 @@ func ByteValueToByte(element Value) (byte, error) {
 	return b, nil
 }
 
-var byteArrayTypeInfo = encodeArrayTypeInfo(ByteArrayStaticType)
-
 func ByteSliceToByteArrayValue(interpreter *Interpreter, buf []byte) *ArrayValue {
 	values := make([]Value, len(buf))
 	for i, b := range buf {
 		values[i] = UInt8Value(b)
 	}
 
-	return NewArrayValueWithTypeInfo(
+	return NewArrayValue(
 		interpreter,
 		ByteArrayStaticType,
 		common.Address{},
-		byteArrayTypeInfo,
 		values...,
 	)
 }

@@ -23,6 +23,7 @@ import (
 	"strings"
 
 	"github.com/fxamacker/cbor/v2"
+	"github.com/onflow/atree"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/sema"
@@ -129,6 +130,7 @@ type VariableSizedStaticType struct {
 }
 
 var _ ArrayStaticType = VariableSizedStaticType{}
+var _ atree.TypeInfo = VariableSizedStaticType{}
 
 func (VariableSizedStaticType) isStaticType() {}
 
@@ -159,6 +161,7 @@ type ConstantSizedStaticType struct {
 }
 
 var _ ArrayStaticType = ConstantSizedStaticType{}
+var _ atree.TypeInfo = ConstantSizedStaticType{}
 
 func (ConstantSizedStaticType) isStaticType() {}
 
@@ -190,6 +193,7 @@ type DictionaryStaticType struct {
 }
 
 var _ StaticType = DictionaryStaticType{}
+var _ atree.TypeInfo = DictionaryStaticType{}
 
 func (DictionaryStaticType) isStaticType() {}
 

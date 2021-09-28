@@ -226,7 +226,6 @@ func NewSignatureAlgorithmCase(inter *interpreter.Interpreter, rawValue uint8) *
 	return interpreter.NewEnumCaseValue(
 		inter,
 		sema.SignatureAlgorithmType,
-		interpreter.SignatureAlgorithmTypeInfo,
 		interpreter.UInt8Value(rawValue),
 		nil,
 	)
@@ -241,7 +240,6 @@ func NewHashAlgorithmCase(inter *interpreter.Interpreter, rawValue uint8) *inter
 	return interpreter.NewEnumCaseValue(
 		inter,
 		sema.HashAlgorithmType,
-		interpreter.HashAlgorithmTypeInfo,
 		interpreter.UInt8Value(rawValue),
 		hashAlgorithmFunctions,
 	)

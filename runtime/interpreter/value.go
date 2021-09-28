@@ -26,7 +26,6 @@ import (
 	"math/big"
 	"strings"
 
-	"github.com/fxamacker/cbor/v2"
 	"github.com/onflow/atree"
 	"github.com/rivo/uniseg"
 	"golang.org/x/text/unicode/norm"
@@ -732,11 +731,10 @@ func (v *StringValue) DecodeHex(interpreter *Interpreter) *ArrayValue {
 		values[i] = UInt8Value(b)
 	}
 
-	return NewArrayValueWithTypeInfo(
+	return NewArrayValue(
 		interpreter,
 		ByteArrayStaticType,
 		common.Address{},
-		byteArrayTypeInfo,
 		values...,
 	)
 }
@@ -769,24 +767,6 @@ func NewArrayValue(
 	address common.Address,
 	values ...Value,
 ) *ArrayValue {
-	typeInfo := encodeArrayTypeInfo(arrayType)
-
-	return NewArrayValueWithTypeInfo(
-		interpreter,
-		arrayType,
-		address,
-		typeInfo,
-		values...,
-	)
-}
-
-func NewArrayValueWithTypeInfo(
-	interpreter *Interpreter,
-	arrayType ArrayStaticType,
-	address common.Address,
-	typeInfo cbor.RawMessage,
-	values ...Value,
-) *ArrayValue {
 
 	var index int
 	count := len(values)
@@ -794,7 +774,7 @@ func NewArrayValueWithTypeInfo(
 	array, err := atree.NewArrayFromBatchData(
 		interpreter.Storage,
 		atree.Address(address),
-		typeInfo,
+		arrayType,
 		func() (atree.Value, error) {
 			if index >= count {
 				return nil, nil
@@ -7239,40 +7219,16 @@ func NewCompositeValue(
 	fields []CompositeField,
 	address common.Address,
 ) *CompositeValue {
-	return NewCompositeValueWithTypeInfo(
-		interpreter,
-		location,
-		qualifiedIdentifier,
-		kind,
-		fields,
-		address,
-		nil,
-	)
-}
-
-func NewCompositeValueWithTypeInfo(
-	interpreter *Interpreter,
-	location common.Location,
-	qualifiedIdentifier string,
-	kind common.CompositeKind,
-	fields []CompositeField,
-	address common.Address,
-	typeInfo cbor.RawMessage,
-) *CompositeValue {
-
-	if typeInfo == nil {
-		typeInfo = encodeCompositeOrderedMapTypeInfo(
-			location,
-			qualifiedIdentifier,
-			kind,
-		)
-	}
 
 	dictionary, err := atree.NewMap(
 		interpreter.Storage,
 		atree.Address(address),
 		atree.NewDefaultDigesterBuilder(),
-		typeInfo,
+		compositeTypeInfo{
+			location:            location,
+			qualifiedIdentifier: qualifiedIdentifier,
+			kind:                kind,
+		},
 	)
 	if err != nil {
 		panic(ExternalError{err})
@@ -7888,7 +7844,6 @@ func (v *CompositeValue) RemoveField(
 func NewEnumCaseValue(
 	interpreter *Interpreter,
 	enumType *sema.CompositeType,
-	typeInfo cbor.RawMessage,
 	rawValue NumberValue,
 	functions map[string]FunctionValue,
 ) *CompositeValue {
@@ -7900,14 +7855,13 @@ func NewEnumCaseValue(
 		},
 	}
 
-	v := NewCompositeValueWithTypeInfo(
+	v := NewCompositeValue(
 		interpreter,
 		enumType.Location,
 		enumType.QualifiedIdentifier(),
 		enumType.Kind,
 		fields,
 		common.Address{},
-		typeInfo,
 	)
 
 	v.Functions = functions
@@ -7943,8 +7897,6 @@ func NewDictionaryValueWithAddress(
 	keysAndValues ...Value,
 ) *DictionaryValue {
 
-	typeInfo := encodeDictionaryOrderedMapTypeInfo(dictionaryType)
-
 	keysAndValuesCount := len(keysAndValues)
 	if keysAndValuesCount%2 != 0 {
 		panic("uneven number of keys and values")
@@ -7954,7 +7906,7 @@ func NewDictionaryValueWithAddress(
 		interpreter.Storage,
 		atree.Address(address),
 		atree.NewDefaultDigesterBuilder(),
-		typeInfo,
+		dictionaryType,
 	)
 	if err != nil {
 		panic(ExternalError{err})
@@ -10154,15 +10106,6 @@ func (v LinkValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 	return v, nil
 }
 
-var publicKeyLocation = sema.PublicKeyType.Location
-var publicKeyQualifiedIdentifier = sema.PublicKeyType.QualifiedIdentifier()
-var publicKeyCompositeKind = sema.PublicKeyType.Kind
-var publicKeyTypeInfo = encodeCompositeOrderedMapTypeInfo(
-	publicKeyLocation,
-	publicKeyQualifiedIdentifier,
-	publicKeyCompositeKind,
-)
-
 // NewPublicKeyValue constructs a PublicKey value.
 func NewPublicKeyValue(
 	interpreter *Interpreter,
@@ -10179,14 +10122,13 @@ func NewPublicKeyValue(
 		},
 	}
 
-	publicKeyValue := NewCompositeValueWithTypeInfo(
+	publicKeyValue := NewCompositeValue(
 		interpreter,
-		publicKeyLocation,
-		publicKeyQualifiedIdentifier,
-		publicKeyCompositeKind,
+		sema.PublicKeyType.Location,
+		sema.PublicKeyType.QualifiedIdentifier(),
+		sema.PublicKeyType.Kind,
 		fields,
 		common.Address{},
-		publicKeyTypeInfo,
 	)
 
 	publicKeyValue.ComputedFields = map[string]ComputedField{
@@ -10265,16 +10207,4 @@ var publicKeyVerifyFunction = NewHostFunctionValue(
 		)
 	},
 	sema.PublicKeyVerifyFunctionType,
-)
-
-var SignatureAlgorithmTypeInfo = encodeCompositeOrderedMapTypeInfo(
-	sema.SignatureAlgorithmType.Location,
-	sema.SignatureAlgorithmType.QualifiedIdentifier(),
-	sema.SignatureAlgorithmType.Kind,
-)
-
-var HashAlgorithmTypeInfo = encodeCompositeOrderedMapTypeInfo(
-	sema.HashAlgorithmType.Location,
-	sema.HashAlgorithmType.QualifiedIdentifier(),
-	sema.HashAlgorithmType.Kind,
 )

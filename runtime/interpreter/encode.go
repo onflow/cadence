@@ -89,12 +89,12 @@ const CBORTagBase = 128
 
 const (
 	CBORTagVoidValue = CBORTagBase + iota
-	CBORTagDictionaryValue
+	_                // DO *NOT* REPLACE. Previously used for dictionary values
 	CBORTagSomeValue
 	CBORTagAddressValue
 	CBORTagCompositeValue
 	CBORTagTypeValue
-	CBORTagArrayValue
+	_ // DO *NOT* REPLACE. Previously used for array values
 	CBORTagStringValue
 	_
 	_
