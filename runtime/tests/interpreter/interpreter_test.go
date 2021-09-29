@@ -2173,7 +2173,7 @@ func TestInterpretStructureFieldAssignment(t *testing.T) {
 		t,
 		inter,
 		interpreter.NewIntValueFromInt64(1),
-		test.GetField(inter, interpreter.ReturnEmptyLocationRange, "foo"),
+		test.GetField("foo"),
 	)
 
 	value, err := inter.Invoke("callTest")
@@ -2190,7 +2190,7 @@ func TestInterpretStructureFieldAssignment(t *testing.T) {
 		t,
 		inter,
 		interpreter.NewIntValueFromInt64(3),
-		test.GetField(inter, interpreter.ReturnEmptyLocationRange, "foo"),
+		test.GetField("foo"),
 	)
 }
 
@@ -6991,7 +6991,7 @@ func TestInterpretVariableDeclarationSecondValue(t *testing.T) {
 		t,
 		inter,
 		interpreter.NewIntValueFromInt64(2),
-		firstResource.GetField(inter, interpreter.ReturnEmptyLocationRange, "id"),
+		firstResource.GetField("id"),
 	)
 
 	require.IsType(t,
@@ -7012,7 +7012,7 @@ func TestInterpretVariableDeclarationSecondValue(t *testing.T) {
 		t,
 		inter,
 		interpreter.NewIntValueFromInt64(1),
-		secondResource.GetField(inter, interpreter.ReturnEmptyLocationRange, "id"),
+		secondResource.GetField("id"),
 	)
 }
 

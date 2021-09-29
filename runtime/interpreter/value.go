@@ -7525,7 +7525,7 @@ func formatComposite(typeId string, fields []CompositeField, seenReferences Seen
 	return format.Composite(typeId, preparedFields)
 }
 
-func (v *CompositeValue) GetField(_ *Interpreter, _ func() LocationRange, name string) Value {
+func (v *CompositeValue) GetField(name string) Value {
 
 	storable, err := v.dictionary.Get(
 		stringAtreeComparator,
@@ -7571,11 +7571,7 @@ func (v *CompositeValue) Equal(interpreter *Interpreter, getLocationRange func()
 
 		fieldName := string(key.(stringAtreeValue))
 
-		otherValue := otherComposite.GetField(
-			interpreter,
-			getLocationRange,
-			fieldName,
-		)
+		otherValue := otherComposite.GetField(fieldName)
 
 		equatableValue, ok := MustConvertStoredValue(value).(EquatableValue)
 		if !ok || !equatableValue.Equal(interpreter, getLocationRange, otherValue) {
@@ -7588,7 +7584,7 @@ func (v *CompositeValue) Equal(interpreter *Interpreter, getLocationRange func()
 
 func (v *CompositeValue) HashInput(interpreter *Interpreter, getLocationRange func() LocationRange, scratch []byte) []byte {
 	if v.Kind == common.CompositeKindEnum {
-		rawValue := v.GetField(interpreter, getLocationRange, sema.EnumRawValueFieldName)
+		rawValue := v.GetField(sema.EnumRawValueFieldName)
 		return rawValue.(HashableValue).HashInput(interpreter, getLocationRange, scratch)
 	}
 
@@ -7636,7 +7632,7 @@ func (v *CompositeValue) ConformsToDynamicType(
 	}
 
 	for _, fieldName := range compositeType.Fields {
-		value := v.GetField(interpreter, getLocationRange, fieldName)
+		value := v.GetField(fieldName)
 		if value == nil {
 			if v.ComputedFields == nil {
 				return false
@@ -10196,6 +10192,7 @@ func NewPublicKeyValue(
 				Value: publicKeyValue.GetField(sema.PublicKeyIsValidField),
 			},
 		}
+
 		return formatComposite(
 			string(publicKeyValue.TypeID()),
 			stringerFields,
