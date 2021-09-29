@@ -516,6 +516,7 @@ func TestInterpretGetType(t *testing.T) {
 									BorrowedType:         sema.IntType,
 								}
 							},
+							nil,
 						),
 					},
 				}

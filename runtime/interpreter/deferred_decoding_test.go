@@ -737,6 +737,28 @@ func TestArrayDeferredDecoding(t *testing.T) {
 			assert.Equal(t, expected, decodeFieldValue)
 		}
 	})
+
+	t.Run("Get function member", func(t *testing.T) {
+		t.Parallel()
+
+		array := newTestArrayValue(10)
+
+		encoded, _, err := EncodeValue(array, nil, true, nil)
+		require.NoError(t, err)
+
+		decoded, err := DecodeValue(encoded, &testOwner, nil, CurrentEncodingVersion, nil)
+		require.NoError(t, err)
+
+		require.IsType(t, &ArrayValue{}, decoded)
+		decodedArray := decoded.(*ArrayValue)
+
+		inter := newTestInterpreter(t)
+
+		// Static types are not built at this point
+		member := decodedArray.GetMember(inter, nil, "append")
+		assert.IsType(t, &HostFunctionValue{}, member)
+		assert.IsType(t, FunctionStaticType{}, member.StaticType())
+	})
 }
 
 func BenchmarkArrayDeferredDecoding(b *testing.B) {
@@ -1072,6 +1094,28 @@ func TestDictionaryDeferredDecoding(t *testing.T) {
 			assert.Equal(t, NewStringValue(fmt.Sprintf("value%d", i)), value)
 			i++
 		})
+	})
+
+	t.Run("Get function member", func(t *testing.T) {
+		t.Parallel()
+
+		dictionary := newTestDictionaryValue(t, 2)
+
+		encoded, _, err := EncodeValue(dictionary, nil, true, nil)
+		require.NoError(t, err)
+
+		decoded, err := DecodeValue(encoded, &testOwner, nil, CurrentEncodingVersion, nil)
+		require.NoError(t, err)
+
+		require.IsType(t, &DictionaryValue{}, decoded)
+		decodedDictionary := decoded.(*DictionaryValue)
+
+		inter := newTestInterpreter(t)
+
+		// Static types are not built at this point
+		member := decodedDictionary.GetMember(inter, nil, "remove")
+		assert.IsType(t, &HostFunctionValue{}, member)
+		assert.IsType(t, FunctionStaticType{}, member.StaticType())
 	})
 }
 

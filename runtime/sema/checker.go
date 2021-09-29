@@ -2015,7 +2015,7 @@ func (checker *Checker) predeclaredMembers(containerType Type) []*Member {
 
 	addPredeclaredMember(
 		IsInstanceFunctionName,
-		isInstanceFunctionType,
+		IsInstanceFunctionType,
 		common.DeclarationKindFunction,
 		ast.AccessPublic,
 		true,
@@ -2026,7 +2026,7 @@ func (checker *Checker) predeclaredMembers(containerType Type) []*Member {
 
 	addPredeclaredMember(
 		GetTypeFunctionName,
-		getTypeFunctionType,
+		GetTypeFunctionType,
 		common.DeclarationKindFunction,
 		ast.AccessPublic,
 		true,

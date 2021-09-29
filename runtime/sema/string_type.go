@@ -59,7 +59,7 @@ func init() {
 					return NewPublicFunctionMember(
 						t,
 						identifier,
-						stringTypeConcatFunctionType,
+						StringTypeConcatFunctionType,
 						stringTypeConcatFunctionDocString,
 					)
 				},
@@ -70,7 +70,7 @@ func init() {
 					return NewPublicFunctionMember(
 						t,
 						identifier,
-						stringTypeSliceFunctionType,
+						StringTypeSliceFunctionType,
 						stringTypeSliceFunctionDocString,
 					)
 				},
@@ -81,7 +81,7 @@ func init() {
 					return NewPublicFunctionMember(
 						t,
 						identifier,
-						stringTypeDecodeHexFunctionType,
+						StringTypeDecodeHexFunctionType,
 						stringTypeDecodeHexFunctionDocString,
 					)
 				},
@@ -112,7 +112,7 @@ func init() {
 	}
 }
 
-var stringTypeConcatFunctionType = &FunctionType{
+var StringTypeConcatFunctionType = &FunctionType{
 	Parameters: []*Parameter{
 		{
 			Label:          ArgumentLabelNotRequired,
@@ -129,7 +129,7 @@ const stringTypeConcatFunctionDocString = `
 Returns a new string which contains the given string concatenated to the end of the original string, but does not modify the original string
 `
 
-var stringTypeSliceFunctionType = &FunctionType{
+var StringTypeSliceFunctionType = &FunctionType{
 	Parameters: []*Parameter{
 		{
 			Identifier:     "from",
@@ -157,7 +157,7 @@ var ByteArrayType = &VariableSizedType{
 	Type: UInt8Type,
 }
 
-var stringTypeDecodeHexFunctionType = &FunctionType{
+var StringTypeDecodeHexFunctionType = &FunctionType{
 	ReturnTypeAnnotation: NewTypeAnnotation(ByteArrayType),
 }
 

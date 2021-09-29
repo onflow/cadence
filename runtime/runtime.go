@@ -260,7 +260,13 @@ func (r *interpreterRuntime) ExecuteScript(script Script, context Context) (cade
 		return nil, newError(err, context)
 	}
 
-	return exportValue(value)
+	var exportedValue cadence.Value
+	exportedValue, err = exportValue(value)
+	if err != nil {
+		return nil, newError(err, context)
+	}
+
+	return exportedValue, nil
 }
 
 type interpretFunc func(inter *interpreter.Interpreter) (interpreter.Value, error)
@@ -421,6 +427,7 @@ func (r *interpreterRuntime) InvokeContractFunction(
 			arguments[i],
 			argumentType,
 			context,
+
 			runtimeStorage,
 			interpreterOptions,
 			checkerOptions,
@@ -468,7 +475,13 @@ func (r *interpreterRuntime) InvokeContractFunction(
 		return nil, newError(err, context)
 	}
 
-	return ExportValue(value, inter)
+	var exportedValue cadence.Value
+	exportedValue, err = ExportValue(value, inter)
+	if err != nil {
+		return nil, newError(err, context)
+	}
+
+	return exportedValue, nil
 }
 
 func (r *interpreterRuntime) convertArgument(
@@ -489,6 +502,15 @@ func (r *interpreterRuntime) convertArgument(
 				runtimeStorage,
 				interpreterOptions,
 				checkerOptions,
+			)
+		}
+	case sema.PublicAccountType:
+		// convert addresses to public accounts so there is no need to construct a public account value for the caller
+		if addressValue, ok := argument.(interpreter.AddressValue); ok {
+			return r.getPublicAccount(
+				interpreter.NewAddressValue(addressValue.ToAddress()),
+				context.Interface,
+				runtimeStorage,
 			)
 		}
 	}
@@ -1260,59 +1282,82 @@ func (r *interpreterRuntime) storageInterpreterOptions(runtimeStorage *runtimeSt
 }
 
 func (r *interpreterRuntime) meteringInterpreterOptions(runtimeInterface Interface) []interpreter.Option {
-	var limit uint64
+	var computationLimit uint64
 	wrapPanic(func() {
-		limit = runtimeInterface.GetComputationLimit()
+		computationLimit = runtimeInterface.GetComputationLimit()
 	})
-	if limit == 0 {
+	if computationLimit == 0 {
 		return nil
 	}
 
-	if limit == math.MaxUint64 {
-		limit--
+	if computationLimit == math.MaxUint64 {
+		computationLimit--
 	}
 
-	var used uint64
+	var computationUsed uint64
 
-	checkLimit := func() {
-		used++
+	checkComputationLimit := func(increase uint64) {
+		computationUsed += increase
 
-		if used <= limit {
+		if computationUsed <= computationLimit {
 			return
 		}
 
 		var err error
 		wrapPanic(func() {
-			err = runtimeInterface.SetComputationUsed(used)
+			err = runtimeInterface.SetComputationUsed(computationUsed)
 		})
 		if err != nil {
 			panic(err)
 		}
 
 		panic(ComputationLimitExceededError{
-			Limit: limit,
+			Limit: computationLimit,
+		})
+	}
+
+	callStackDepth := 0
+	// TODO: make runtime interface function
+	const callStackDepthLimit = 2000
+
+	checkCallStackDepth := func() {
+
+		if callStackDepth <= callStackDepthLimit {
+			return
+		}
+
+		panic(CallStackLimitExceededError{
+			Limit: callStackDepthLimit,
 		})
 	}
 
 	return []interpreter.Option{
 		interpreter.WithOnStatementHandler(
 			func(_ *interpreter.Interpreter, _ ast.Statement) {
-				checkLimit()
+				checkComputationLimit(1)
 			},
 		),
 		interpreter.WithOnLoopIterationHandler(
 			func(_ *interpreter.Interpreter, _ int) {
-				checkLimit()
+				checkComputationLimit(1)
 			},
 		),
 		interpreter.WithOnFunctionInvocationHandler(
 			func(_ *interpreter.Interpreter, _ int) {
-				checkLimit()
+				callStackDepth++
+				checkCallStackDepth()
+
+				checkComputationLimit(1)
+			},
+		),
+		interpreter.WithOnInvokedFunctionReturnHandler(
+			func(_ *interpreter.Interpreter, _ int) {
+				callStackDepth--
 			},
 		),
 		interpreter.WithExitHandler(
 			func() error {
-				return runtimeInterface.SetComputationUsed(used)
+				return runtimeInterface.SetComputationUsed(computationUsed)
 			},
 		),
 	}
@@ -1587,6 +1632,7 @@ func (r *interpreterRuntime) newAddPublicKeyFunction(
 
 			return interpreter.VoidValue{}
 		},
+		sema.AuthAccountTypeAddPublicKeyFunctionType,
 	)
 }
 
@@ -1620,6 +1666,7 @@ func (r *interpreterRuntime) newRemovePublicKeyFunction(
 
 			return interpreter.VoidValue{}
 		},
+		sema.AuthAccountTypeRemovePublicKeyFunctionType,
 	)
 }
 
@@ -2286,6 +2333,7 @@ func (r *interpreterRuntime) newAuthAccountContractsChangeFunction(
 				Code:    newCodeValue,
 			}
 		},
+		sema.AuthAccountContractsTypeAddFunctionType,
 	)
 }
 
@@ -2410,6 +2458,7 @@ func (r *interpreterRuntime) newAccountContractsGetFunction(
 				return interpreter.NilValue{}
 			}
 		},
+		sema.AuthAccountContractsTypeGetFunctionType,
 	)
 }
 
@@ -2501,6 +2550,7 @@ func (r *interpreterRuntime) newAuthAccountContractsRemoveFunction(
 				return interpreter.NilValue{}
 			}
 		},
+		sema.AuthAccountContractsTypeRemoveFunctionType,
 	)
 }
 
@@ -2676,6 +2726,7 @@ func (r *interpreterRuntime) newAccountKeysAddFunction(
 				invocation.Interpreter.PublicKeyValidationHandler,
 			)
 		},
+		sema.AuthAccountKeysTypeAddFunctionType,
 	)
 }
 
@@ -2712,6 +2763,7 @@ func (r *interpreterRuntime) newAccountKeysGetFunction(
 				),
 			)
 		},
+		sema.AccountKeysTypeGetFunctionType,
 	)
 }
 
@@ -2757,6 +2809,7 @@ func (r *interpreterRuntime) newAccountKeysRevokeFunction(
 				),
 			)
 		},
+		sema.AuthAccountKeysTypeRevokeFunctionType,
 	)
 }
 

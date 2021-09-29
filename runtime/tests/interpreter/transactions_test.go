@@ -201,9 +201,12 @@ func TestInterpretTransactions(t *testing.T) {
 		assert.IsType(t, interpreter.ArgumentCountError{}, err)
 	})
 
-	panicFunction := interpreter.NewHostFunctionValue(func(invocation interpreter.Invocation) interpreter.Value {
-		panic(errors.NewUnreachableError())
-	})
+	panicFunction := interpreter.NewHostFunctionValue(
+		func(invocation interpreter.Invocation) interpreter.Value {
+			panic(errors.NewUnreachableError())
+		},
+		nil,
+	)
 
 	t.Run("TooManyArguments", func(t *testing.T) {
 		inter := parseCheckAndInterpret(t, `

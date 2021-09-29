@@ -45,9 +45,12 @@ func testAccount(
 
 	var valueDeclarations stdlib.StandardLibraryValues
 
-	panicFunction := interpreter.NewHostFunctionValue(func(invocation interpreter.Invocation) interpreter.Value {
-		panic(errors.NewUnreachableError())
-	})
+	panicFunction := interpreter.NewHostFunctionValue(
+		func(invocation interpreter.Invocation) interpreter.Value {
+			panic(errors.NewUnreachableError())
+		},
+		nil,
+	)
 
 	// `authAccount`
 
