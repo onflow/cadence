@@ -10187,16 +10187,15 @@ func NewPublicKeyValue(
 				Name:  sema.PublicKeyPublicKeyField,
 				Value: publicKey,
 			},
+			{
+				Name:  sema.PublicKeySignAlgoField,
+				Value: publicKeyValue.GetField(sema.PublicKeySignAlgoField),
+			},
+			{
+				Name:  sema.PublicKeyIsValidField,
+				Value: publicKeyValue.GetField(sema.PublicKeyIsValidField),
+			},
 		}
-		publicKeyValue.ForEachField(func(name string, value Value) {
-			stringerFields = append(
-				stringerFields,
-				CompositeField{
-					Name:  name,
-					Value: value,
-				},
-			)
-		})
 		return formatComposite(
 			string(publicKeyValue.TypeID()),
 			stringerFields,

@@ -903,7 +903,7 @@ func TestStringer(t *testing.T) {
 				NewStringValue("a"), UInt8Value(42),
 				NewStringValue("b"), UInt8Value(99),
 			),
-			expected: `{"b": 99, "a": 42}`,
+			expected: `{"a": 42, "b": 99}`,
 		},
 		"Address": {
 			value:    NewAddressValue(common.Address{0, 0, 0, 0, 0, 0, 0, 1}),
