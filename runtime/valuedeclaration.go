@@ -48,7 +48,7 @@ func (v ValueDeclaration) ValueDeclarationDocString() string {
 	return v.DocString
 }
 
-func (v ValueDeclaration) ValueDeclarationValue(interpreter *interpreter.Interpreter) interpreter.Value {
+func (v ValueDeclaration) ValueDeclarationValue(_ *interpreter.Interpreter) interpreter.Value {
 	return v.Value
 }
 

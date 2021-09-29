@@ -9070,13 +9070,6 @@ func BenchmarkNewInterpreter(b *testing.B) {
 	})
 }
 
-func newTestInterpreter(tb testing.TB) *interpreter.Interpreter {
-	inter, err := interpreter.NewInterpreter(nil, TestLocation)
-	require.NoError(tb, err)
-
-	return inter
-}
-
 func TestHostFunctionStaticType(t *testing.T) {
 
 	t.Parallel()

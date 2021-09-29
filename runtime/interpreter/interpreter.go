@@ -1562,7 +1562,6 @@ func (interpreter *Interpreter) declareEnumConstructor(
 	}
 
 	value := EnumConstructorFunction(
-		interpreter,
 		compositeType,
 		caseValues,
 		constructorNestedVariables,
@@ -1573,7 +1572,6 @@ func (interpreter *Interpreter) declareEnumConstructor(
 }
 
 func EnumConstructorFunction(
-	interpreter *Interpreter,
 	enumType *sema.CompositeType,
 	caseValues []*CompositeValue,
 	nestedVariables map[string]*Variable,

@@ -352,7 +352,6 @@ func cryptoAlgorithmEnumValue(
 	}
 
 	return interpreter.EnumConstructorFunction(
-		inter,
 		enumType,
 		caseValues,
 		constructorNestedVariables,
