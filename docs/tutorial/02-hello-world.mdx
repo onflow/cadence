@@ -34,7 +34,7 @@ Before you get started with Flow, you need to understand how accounts and transa
 
 Like most other blockchains, the programming model in Flow is centered around accounts and transactions.
 All state that persists permanentely is stored in [accounts](/cadence/language/accounts)
-and there is only one type of account (all accounts can be for any number of users, smart contracts, and data)
+and there is only one type of account (all accounts can be for any number of users, smart contracts, and data).
 
 The interfaces to this state (the ways to interact with it) are also stored in accounts.
 All code execution takes place within [transactions](/cadence/language/transactions), which are blocks of code
@@ -56,14 +56,14 @@ An account is divided into two main areas:
    This area cannot be directly accessed in a transaction unless the transaction is just reading a copy of the code deployed to an account.
    The owner of an account can directly add, remove, or update/overwrite contracts that are stored in it.
 
-2. The second area is the account filesystem. This area is where an account stores the objects
+2. The second area is the account storage. This area is where an account stores the objects
    that they own and the capabilities for controlling how these objects can be accessed.
 
-### Account Filesystem
+### Account Storage
 
-The account filesystem functions similar to a traditional filesystem;
+The account storage functions similar to a traditional filesystem;
 Data is stored in paths, links can be created between paths that define different permissions and functionality,
-and only the owner of the filesystem has "root" access to modify any of the data or links.
+and only the owner of the account has "root" access to modify any of the data or links.
 
 Objects, which can be as simple as an integer to as complex as a `struct` or `resource`(an important type that we'll discuss later!),
 are stored under [paths in the account filesystem](/cadence/language/accounts/#paths). Paths consist of a domain and an identifier.
@@ -71,7 +71,7 @@ are stored under [paths in the account filesystem](/cadence/language/accounts/#p
 Paths start with the character `/`, followed by the domain, the path separator `/`, and finally the identifier.
 For example, the path `/storage/test` has the domain `storage` and the identifier `test`.
 
-There are only three valid domains which represent the three areas in the account filesystem: `storage`, `private`, and `public`.
+There are only three valid domains which represent the three areas in the account storage: `storage`, `private`, and `public`.
 
 Identifiers are custom and can be any name you want them to be to indicate what is stored in that path.
 
