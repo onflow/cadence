@@ -4172,10 +4172,10 @@ func TestInterpretDictionaryIndexingAssignmentNew(t *testing.T) {
 		t,
 		inter,
 		[]interpreter.Value{
-			interpreter.NewStringValue("def"),
-			interpreter.NewIntValueFromInt64(42),
 			interpreter.NewStringValue("abc"),
 			interpreter.NewIntValueFromInt64(23),
+			interpreter.NewStringValue("def"),
+			interpreter.NewIntValueFromInt64(42),
 		},
 		dictionaryKeyValues(actualDict),
 	)
@@ -5390,10 +5390,10 @@ func TestInterpretDictionaryInsert(t *testing.T) {
 		t,
 		inter,
 		[]interpreter.Value{
-			interpreter.NewStringValue("def"),
-			interpreter.NewIntValueFromInt64(2),
 			interpreter.NewStringValue("abc"),
 			interpreter.NewIntValueFromInt64(3),
+			interpreter.NewStringValue("def"),
+			interpreter.NewIntValueFromInt64(2),
 		},
 		dictionaryKeyValues(actualDict),
 	)
@@ -5430,9 +5430,9 @@ func TestInterpretDictionaryKeys(t *testing.T) {
 		inter,
 
 		[]interpreter.Value{
-			interpreter.NewStringValue("a"),
-			interpreter.NewStringValue("def"),
 			interpreter.NewStringValue("abc"),
+			interpreter.NewStringValue("def"),
+			interpreter.NewStringValue("a"),
 		},
 		arrayElements(inter, arrayValue),
 	)
@@ -5459,9 +5459,9 @@ func TestInterpretDictionaryValues(t *testing.T) {
 		t,
 		inter,
 		[]interpreter.Value{
-			interpreter.NewIntValueFromInt64(3),
-			interpreter.NewIntValueFromInt64(2),
 			interpreter.NewIntValueFromInt64(1),
+			interpreter.NewIntValueFromInt64(2),
+			interpreter.NewIntValueFromInt64(3),
 		},
 		arrayElements(inter, arrayValue),
 	)

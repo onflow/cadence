@@ -575,7 +575,7 @@ func TestInterpretContainerMutationAfterNilCoalescing(t *testing.T) {
 
 	require.Equal(
 		t,
-		interpreter.NewSomeValueOwningNonCopying(
+		interpreter.NewSomeValueNonCopying(
 			interpreter.NewStringValue("test"),
 		),
 		result,

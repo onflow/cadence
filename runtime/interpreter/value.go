@@ -132,21 +132,6 @@ func newValueComparator(interpreter *Interpreter, getLocationRange func() Locati
 	}
 }
 
-// HashableValue
-
-type HashableValue interface {
-	Value
-	HashInput(interpreter *Interpreter, getLocationRange func() LocationRange, scratch []byte) []byte
-}
-
-func newHashInputProvider(interpreter *Interpreter, getLocationRange func() LocationRange) atree.HashInputProvider {
-	return func(value atree.Value, scratch []byte) ([]byte, error) {
-		hashInput := MustConvertStoredValue(value).(HashableValue).
-			HashInput(interpreter, getLocationRange, scratch)
-		return hashInput, nil
-	}
-}
-
 // ResourceKindedValue
 
 type ResourceKindedValue interface {
@@ -412,12 +397,13 @@ func (v BoolValue) Equal(_ *Interpreter, _ func() LocationRange, other Value) bo
 }
 
 func (v BoolValue) HashInput(_ *Interpreter, _ func() LocationRange, scratch []byte) []byte {
+	scratch[0] = HashInputTypeBool
 	if v {
-		scratch[0] = 1
+		scratch[1] = 1
 	} else {
-		scratch[0] = 0
+		scratch[1] = 0
 	}
-	return scratch[:1]
+	return scratch[:2]
 }
 
 func (v BoolValue) String() string {
@@ -537,7 +523,10 @@ func (v *StringValue) Equal(_ *Interpreter, _ func() LocationRange, other Value)
 }
 
 func (v *StringValue) HashInput(_ *Interpreter, _ func() LocationRange, _ []byte) []byte {
-	return []byte(v.Str)
+	return append(
+		[]byte{HashInputTypeString},
+		v.Str...,
+	)
 }
 
 func (v *StringValue) NormalForm() string {
@@ -1643,7 +1632,10 @@ func (v IntValue) Equal(_ *Interpreter, _ func() LocationRange, other Value) boo
 
 func (v IntValue) HashInput(_ *Interpreter, _ func() LocationRange, _ []byte) []byte {
 	// TODO: optimize?
-	return SignedBigIntToBigEndianBytes(v.BigInt)
+	return append(
+		[]byte{HashInputTypeInt},
+		SignedBigIntToBigEndianBytes(v.BigInt)...,
+	)
 }
 
 func (v IntValue) BitwiseOr(other IntegerValue) IntegerValue {
@@ -1957,8 +1949,9 @@ func (v Int8Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) bo
 }
 
 func (v Int8Value) HashInput(_ *Interpreter, _ func() LocationRange, scratch []byte) []byte {
-	scratch[0] = byte(v)
-	return scratch[:1]
+	scratch[0] = HashInputTypeInt8
+	scratch[1] = byte(v)
+	return scratch[:2]
 }
 
 func ConvertInt8(value Value) Int8Value {
@@ -2278,8 +2271,9 @@ func (v Int16Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) b
 }
 
 func (v Int16Value) HashInput(_ *Interpreter, _ func() LocationRange, scratch []byte) []byte {
-	binary.BigEndian.PutUint16(scratch, uint16(v))
-	return scratch[:2]
+	scratch[0] = HashInputTypeInt16
+	binary.BigEndian.PutUint16(scratch[1:], uint16(v))
+	return scratch[:3]
 }
 
 func ConvertInt16(value Value) Int16Value {
@@ -2601,8 +2595,9 @@ func (v Int32Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) b
 }
 
 func (v Int32Value) HashInput(_ *Interpreter, _ func() LocationRange, scratch []byte) []byte {
-	binary.BigEndian.PutUint32(scratch, uint32(v))
-	return scratch[:4]
+	scratch[0] = HashInputTypeInt32
+	binary.BigEndian.PutUint32(scratch[1:], uint32(v))
+	return scratch[:5]
 }
 
 func ConvertInt32(value Value) Int32Value {
@@ -2928,8 +2923,9 @@ func (v Int64Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) b
 }
 
 func (v Int64Value) HashInput(_ *Interpreter, _ func() LocationRange, scratch []byte) []byte {
-	binary.BigEndian.PutUint64(scratch, uint64(v))
-	return scratch[:8]
+	scratch[0] = HashInputTypeInt64
+	binary.BigEndian.PutUint64(scratch[1:], uint64(v))
+	return scratch[:9]
 }
 
 func ConvertInt64(value Value) Int64Value {
@@ -3302,7 +3298,10 @@ func (v Int128Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) 
 
 func (v Int128Value) HashInput(_ *Interpreter, _ func() LocationRange, _ []byte) []byte {
 	// TODO: optimize?
-	return SignedBigIntToBigEndianBytes(v.BigInt)
+	return append(
+		[]byte{HashInputTypeInt128},
+		SignedBigIntToBigEndianBytes(v.BigInt)...,
+	)
 }
 
 func ConvertInt128(value Value) Int128Value {
@@ -3695,7 +3694,10 @@ func (v Int256Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) 
 
 func (v Int256Value) HashInput(_ *Interpreter, _ func() LocationRange, _ []byte) []byte {
 	// TODO: optimize?
-	return SignedBigIntToBigEndianBytes(v.BigInt)
+	return append(
+		[]byte{HashInputTypeInt256},
+		SignedBigIntToBigEndianBytes(v.BigInt)...,
+	)
 }
 
 func ConvertInt256(value Value) Int256Value {
@@ -4001,7 +4003,10 @@ func (v UIntValue) Equal(_ *Interpreter, _ func() LocationRange, other Value) bo
 
 func (v UIntValue) HashInput(_ *Interpreter, _ func() LocationRange, _ []byte) []byte {
 	// TODO: optimize?
-	return UnsignedBigIntToBigEndianBytes(v.BigInt)
+	return append(
+		[]byte{HashInputTypeUInt},
+		UnsignedBigIntToBigEndianBytes(v.BigInt)...,
+	)
 }
 
 func (v UIntValue) BitwiseOr(other IntegerValue) IntegerValue {
@@ -4246,8 +4251,9 @@ func (v UInt8Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) b
 }
 
 func (v UInt8Value) HashInput(_ *Interpreter, _ func() LocationRange, scratch []byte) []byte {
-	scratch[0] = byte(v)
-	return scratch[:1]
+	scratch[0] = HashInputTypeUInt8
+	scratch[1] = byte(v)
+	return scratch[:2]
 }
 
 func ConvertUInt8(value Value) UInt8Value {
@@ -4497,8 +4503,9 @@ func (v UInt16Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) 
 }
 
 func (v UInt16Value) HashInput(_ *Interpreter, _ func() LocationRange, scratch []byte) []byte {
-	binary.BigEndian.PutUint16(scratch, uint16(v))
-	return scratch[:2]
+	scratch[0] = HashInputTypeUInt16
+	binary.BigEndian.PutUint16(scratch[1:], uint16(v))
+	return scratch[:3]
 }
 
 func ConvertUInt16(value Value) UInt16Value {
@@ -4754,8 +4761,9 @@ func (v UInt32Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) 
 }
 
 func (v UInt32Value) HashInput(_ *Interpreter, _ func() LocationRange, scratch []byte) []byte {
-	binary.BigEndian.PutUint32(scratch, uint32(v))
-	return scratch[:4]
+	scratch[0] = HashInputTypeUInt32
+	binary.BigEndian.PutUint32(scratch[1:], uint32(v))
+	return scratch[:5]
 }
 
 func ConvertUInt32(value Value) UInt32Value {
@@ -5016,8 +5024,9 @@ func (v UInt64Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) 
 }
 
 func (v UInt64Value) HashInput(_ *Interpreter, _ func() LocationRange, scratch []byte) []byte {
-	binary.BigEndian.PutUint64(scratch, uint64(v))
-	return scratch[:8]
+	scratch[0] = HashInputTypeUInt64
+	binary.BigEndian.PutUint64(scratch[1:], uint64(v))
+	return scratch[:9]
 }
 
 func ConvertUInt64(value Value) UInt64Value {
@@ -5339,7 +5348,10 @@ func (v UInt128Value) Equal(_ *Interpreter, _ func() LocationRange, other Value)
 
 func (v UInt128Value) HashInput(_ *Interpreter, _ func() LocationRange, _ []byte) []byte {
 	// TODO: optimize?
-	return UnsignedBigIntToBigEndianBytes(v.BigInt)
+	return append(
+		[]byte{HashInputTypeUInt128},
+		UnsignedBigIntToBigEndianBytes(v.BigInt)...,
+	)
 }
 
 func ConvertUInt128(value Value) UInt128Value {
@@ -5678,7 +5690,10 @@ func (v UInt256Value) Equal(_ *Interpreter, _ func() LocationRange, other Value)
 
 func (v UInt256Value) HashInput(_ *Interpreter, _ func() LocationRange, _ []byte) []byte {
 	// TODO: optimize?
-	return UnsignedBigIntToBigEndianBytes(v.BigInt)
+	return append(
+		[]byte{HashInputTypeUInt256},
+		UnsignedBigIntToBigEndianBytes(v.BigInt)...,
+	)
 }
 
 func ConvertUInt256(value Value) UInt256Value {
@@ -5920,8 +5935,9 @@ func (v Word8Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) b
 }
 
 func (v Word8Value) HashInput(_ *Interpreter, _ func() LocationRange, scratch []byte) []byte {
-	scratch[0] = byte(v)
-	return scratch[:1]
+	scratch[0] = HashInputTypeWord8
+	scratch[1] = byte(v)
+	return scratch[:2]
 }
 
 func ConvertWord8(value Value) Word8Value {
@@ -6120,8 +6136,9 @@ func (v Word16Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) 
 }
 
 func (v Word16Value) HashInput(_ *Interpreter, _ func() LocationRange, scratch []byte) []byte {
-	binary.BigEndian.PutUint16(scratch, uint16(v))
-	return scratch[:2]
+	scratch[0] = HashInputTypeWord16
+	binary.BigEndian.PutUint16(scratch[1:], uint16(v))
+	return scratch[:3]
 }
 
 func ConvertWord16(value Value) Word16Value {
@@ -6323,8 +6340,9 @@ func (v Word32Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) 
 }
 
 func (v Word32Value) HashInput(_ *Interpreter, _ func() LocationRange, scratch []byte) []byte {
-	binary.BigEndian.PutUint32(scratch, uint32(v))
-	return scratch[:4]
+	scratch[0] = HashInputTypeWord32
+	binary.BigEndian.PutUint32(scratch[1:], uint32(v))
+	return scratch[:5]
 }
 
 func ConvertWord32(value Value) Word32Value {
@@ -6526,8 +6544,9 @@ func (v Word64Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) 
 }
 
 func (v Word64Value) HashInput(_ *Interpreter, _ func() LocationRange, scratch []byte) []byte {
-	binary.BigEndian.PutUint64(scratch, uint64(v))
-	return scratch[:8]
+	scratch[0] = HashInputTypeWord64
+	binary.BigEndian.PutUint64(scratch[1:], uint64(v))
+	return scratch[:9]
 }
 
 func ConvertWord64(value Value) Word64Value {
@@ -6825,8 +6844,9 @@ func (v Fix64Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) b
 }
 
 func (v Fix64Value) HashInput(_ *Interpreter, _ func() LocationRange, scratch []byte) []byte {
-	binary.BigEndian.PutUint64(scratch, uint64(v))
-	return scratch[:8]
+	scratch[0] = HashInputTypeFix64
+	binary.BigEndian.PutUint64(scratch[1:], uint64(v))
+	return scratch[:9]
 }
 
 func ConvertFix64(value Value) Fix64Value {
@@ -7089,8 +7109,9 @@ func (v UFix64Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) 
 }
 
 func (v UFix64Value) HashInput(_ *Interpreter, _ func() LocationRange, scratch []byte) []byte {
-	binary.BigEndian.PutUint64(scratch, uint64(v))
-	return scratch[:8]
+	scratch[0] = HashInputTypeUFix64
+	binary.BigEndian.PutUint64(scratch[1:], uint64(v))
+	return scratch[:9]
 }
 
 func ConvertUFix64(value Value) UFix64Value {
@@ -7584,8 +7605,10 @@ func (v *CompositeValue) Equal(interpreter *Interpreter, getLocationRange func()
 
 func (v *CompositeValue) HashInput(interpreter *Interpreter, getLocationRange func() LocationRange, scratch []byte) []byte {
 	if v.Kind == common.CompositeKindEnum {
+		enumHashInput := append([]byte{HashInputTypeEnum}, v.TypeID()...)
 		rawValue := v.GetField(sema.EnumRawValueFieldName)
-		return rawValue.(HashableValue).HashInput(interpreter, getLocationRange, scratch)
+		rawValueHashInput := rawValue.(HashableValue).HashInput(interpreter, getLocationRange, scratch)
+		return append(enumHashInput, rawValueHashInput...)
 	}
 
 	panic(errors.NewUnreachableError())
@@ -9539,7 +9562,7 @@ func (v AddressValue) Equal(_ *Interpreter, _ func() LocationRange, other Value)
 }
 
 func (v AddressValue) HashInput(_ *Interpreter, _ func() LocationRange, _ []byte) []byte {
-	return v[:]
+	return append([]byte{HashInputTypeAddress}, v[:]...)
 }
 
 func (v AddressValue) Hex() string {
@@ -9773,8 +9796,9 @@ func (v PathValue) Equal(_ *Interpreter, _ func() LocationRange, other Value) bo
 }
 
 func (v PathValue) HashInput(_ *Interpreter, _ func() LocationRange, scratch []byte) []byte {
-	scratch[0] = byte(v.Domain)
-	return append(scratch[:1], []byte(v.Identifier)...)
+	scratch[0] = HashInputTypePath
+	scratch[1] = byte(v.Domain)
+	return append(scratch[:2], []byte(v.Identifier)...)
 }
 
 func (PathValue) IsStorable() bool {
