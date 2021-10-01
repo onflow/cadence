@@ -1,3 +1,9 @@
+# v0.16.1 (2021-05-23)
+
+## 🐞 Bug Fixes
+
+- Only wrap a type in an optional if it is not nil (#936) @SupunS 
+
 # v0.16.0 (2021-04-21)
 
 ## 💥 Breaking Changes
