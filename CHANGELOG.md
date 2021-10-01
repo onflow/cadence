@@ -1,3 +1,78 @@
+# v0.19.0 (2021-09-13)
+
+## 💥 Breaking Changes
+
+- Fix export of values (#1067) @turbolent
+- Add encoding/decoding for array value static type (#1035) @SupunS
+
+## ⭐ Features
+
+- Add public account contracts (#1090) @SupunS
+- Add `names` field to auth account contracts (#1089) @SupunS
+- Report a hint when casting to a same type as the expected type (#1056) @SupunS
+- Add encoding/decoding for array value static type (#1035) @SupunS
+- Add walker for values (#1037) @turbolent
+- Add encoding/decoding dictionary static type info (#1036) @SupunS
+- Store static type in array/dictionary values (#1041) @SupunS
+- Infer static-type from imported array/dictionary values (#1052) @SupunS
+
+## 🛠 Improvements
+
+- Add type inferring for func-args when there are no generics (#1033) @SupunS
+- Add container static types (#1125) @SupunS
+- Add container mutation check for arrays and dictionaries (#1103) @SupunS
+- flow-go sync tweaks (#1104) @janezpodhostnik
+- Return a dedicated error when decoding fails due to an unsupported CBOR tag (#1064) @turbolent
+- Remove obsolete fields (#1053) @turbolent
+- Include and consider static types of arrays and dictionaries (#1043) @turbolent
+- Infer array and dictionary static types from expected type during import (#1038) @turbolent
+- Finish storage format changes (#1042) @turbolent
+- Add static types to array values and dictionary values (#1034) @turbolent
+- FlowKit API Update (#1028) @sideninja
+- Produce valid Cadence string literals when formatting strings (#1023) @turbolent
+- Directly declare base values in activation without interpreter (#1022) @turbolent
+- Reuse base activation across all interpreters (#1018) @SupunS
+- Extend the source compatibility suite (#980) @turbolent
+- Update the language server to the latest Cadence version (#1015) @turbolent
+- Convert the maps in the type file to simple arrays (#1086) @jwinkler2083233
+- Update Security to point to website (#1074) @jkan2
+- Gracefully handle the optional-chaining invocation on non-optional member (#1071) @turbolent
+- Add static type sanity check for imported values (#1048) @SupunS
+- Add tests for decoding from old format and encoding in new format (#1046) @SupunS
+- Add more tests for imported array/dictionary value type conformance (#1045) @SupunS
+- Add encoder/decoder v5 (#1039) @SupunS
+- Remove additional check for builtin values during import resolving (#1026) @SupunS
+- Update NPM packages (#1011) @turbolent
+
+## 🐞 Bug Fixes
+
+- Cointainer variances fixes (#1087) @turbolent
+- Check member reads and writes (#1085) @turbolent
+- Include receiver in function type and check it in invocations  (#1084) @turbolent
+- Fix race condition in hash and sign algorithm values (#1096) @SupunS
+- Check run-time type of the argument of getCapability calls (#1083) @turbolent
+- Fix interpretation of optional binding with second value (#1082) @turbolent
+- Check resource construction (#1081) @turbolent
+- Fix address conversion (#1080) @turbolent
+- Gracefully handle errors during transaction and script argument validation (#1070) @turbolent
+- Fix map keys (#1069) @turbolent
+- Fix import of values (#1068) @turbolent
+- Fix export of values (#1067) @turbolent
+- Fix get and revoke key functions (#1065) @turbolent
+- Finish storage format changes (#1042) @turbolent
+- Fix close-brace for struct definition docs in docgen tool (#1019) @SupunS
+- Don't check missing program (#1013) @turbolent
+
+## 📖 Documentation
+
+- Give Resources their own page. (#1130) @10thfloor
+- Fix and improve documentation (#1122) @turbolent
+- Add presentation "Programming Language Implementation / Cadence Implementation" (#990) @turbolent
+- Remove Crypto contract status callouts (#1012) @turbolent
+- Improve the documentation for dictionaries and arrays (#1020) @turbolent
+- Fix operator documentation (#1017) @turbolent
+- Updating broken links in ReadMe (#1097) @kimcodeashian
+
 # v0.18.0 (2021-06-15)
 
 ## 💥 Breaking Changes
