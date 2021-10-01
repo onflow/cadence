@@ -1082,7 +1082,7 @@ func TestRuntimeScriptArguments(t *testing.T) {
 	t.Parallel()
 
 	type testCase struct {
-		label        string
+		name         string
 		script       string
 		args         [][]byte
 		expectedLogs []string
@@ -1091,7 +1091,7 @@ func TestRuntimeScriptArguments(t *testing.T) {
 
 	var tests = []testCase{
 		{
-			label: "No arguments",
+			name: "No arguments",
 			script: `
                 pub fun main() {
                     log("t")
@@ -1101,7 +1101,7 @@ func TestRuntimeScriptArguments(t *testing.T) {
 			expectedLogs: []string{`"t"`},
 		},
 		{
-			label: "Single argument",
+			name: "Single argument",
 			script: `
                 pub fun main(x: Int) {
                     log(x)
@@ -1113,7 +1113,7 @@ func TestRuntimeScriptArguments(t *testing.T) {
 			expectedLogs: []string{"42"},
 		},
 		{
-			label: "Multiple arguments",
+			name: "Multiple arguments",
 			script: `
                 pub fun main(x: Int, y: String) {
                     log(x)
@@ -1127,7 +1127,7 @@ func TestRuntimeScriptArguments(t *testing.T) {
 			expectedLogs: []string{"42", `"foo"`},
 		},
 		{
-			label: "Invalid bytes",
+			name: "Invalid bytes",
 			script: `
                 pub fun main(x: Int) { }
             `,
@@ -1135,12 +1135,12 @@ func TestRuntimeScriptArguments(t *testing.T) {
 				{1, 2, 3, 4}, // not valid JSON-CDC
 			},
 			check: func(t *testing.T, err error) {
-				assert.Error(t, err)
+				require.Error(t, err)
 				assert.IsType(t, &InvalidEntryPointArgumentError{}, errors.Unwrap(err))
 			},
 		},
 		{
-			label: "Type mismatch",
+			name: "Type mismatch",
 			script: `
                 pub fun main(x: Int) {
                     log(x)
@@ -1150,13 +1150,13 @@ func TestRuntimeScriptArguments(t *testing.T) {
 				jsoncdc.MustEncode(cadence.String("foo")),
 			},
 			check: func(t *testing.T, err error) {
-				assert.Error(t, err)
+				require.Error(t, err)
 				assert.IsType(t, &InvalidEntryPointArgumentError{}, errors.Unwrap(err))
 				assert.IsType(t, &InvalidValueTypeError{}, errors.Unwrap(errors.Unwrap(err)))
 			},
 		},
 		{
-			label: "Address",
+			name: "Address",
 			script: `
                 pub fun main(x: Address) {
                     log(x)
@@ -1175,7 +1175,7 @@ func TestRuntimeScriptArguments(t *testing.T) {
 			expectedLogs: []string{"0x1"},
 		},
 		{
-			label: "Array",
+			name: "Array",
 			script: `
                 pub fun main(x: [Int]) {
                     log(x)
@@ -1195,7 +1195,53 @@ func TestRuntimeScriptArguments(t *testing.T) {
 			expectedLogs: []string{"[1, 2, 3]"},
 		},
 		{
-			label: "Dictionary",
+			name: "Constant-sized array, too many elements",
+			script: `
+                pub fun main(x: [Int; 2]) {
+                    log(x)
+                }
+            `,
+			args: [][]byte{
+				jsoncdc.MustEncode(
+					cadence.NewArray(
+						[]cadence.Value{
+							cadence.NewInt(1),
+							cadence.NewInt(2),
+							cadence.NewInt(3),
+						},
+					),
+				),
+			},
+			check: func(t *testing.T, err error) {
+				require.Error(t, err)
+				var invalidEntryPointArgumentErr *InvalidEntryPointArgumentError
+				assert.ErrorAs(t, err, &invalidEntryPointArgumentErr)
+			},
+		},
+		{
+			name: "Constant-sized array, too few elements",
+			script: `
+                pub fun main(x: [Int; 2]) {
+                    log(x)
+                }
+            `,
+			args: [][]byte{
+				jsoncdc.MustEncode(
+					cadence.NewArray(
+						[]cadence.Value{
+							cadence.NewInt(1),
+						},
+					),
+				),
+			},
+			check: func(t *testing.T, err error) {
+				require.Error(t, err)
+				var invalidEntryPointArgumentErr *InvalidEntryPointArgumentError
+				assert.ErrorAs(t, err, &invalidEntryPointArgumentErr)
+			},
+		},
+		{
+			name: "Dictionary",
 			script: `
                 pub fun main(x: {String:Int}) {
                     log(x["y"])
@@ -1216,7 +1262,7 @@ func TestRuntimeScriptArguments(t *testing.T) {
 			expectedLogs: []string{"42"},
 		},
 		{
-			label: "Invalid dictionary",
+			name: "Invalid dictionary",
 			script: `
                 pub fun main(x: {String:String}) {
                     log(x["y"])
@@ -1235,13 +1281,13 @@ func TestRuntimeScriptArguments(t *testing.T) {
 				),
 			},
 			check: func(t *testing.T, err error) {
-				assert.Error(t, err)
+				require.Error(t, err)
 				var argErr interpreter.ContainerMutationError
 				require.ErrorAs(t, err, &argErr)
 			},
 		},
 		{
-			label: "Struct",
+			name: "Struct",
 			script: `
                 pub struct Foo {
                     pub var y: String
@@ -1274,7 +1320,7 @@ func TestRuntimeScriptArguments(t *testing.T) {
 			expectedLogs: []string{`"bar"`},
 		},
 		{
-			label: "Struct in array",
+			name: "Struct in array",
 			script: `
                 pub struct Foo {
                     pub var y: String
@@ -1313,7 +1359,7 @@ func TestRuntimeScriptArguments(t *testing.T) {
 
 	test := func(tt testCase) {
 
-		t.Run(tt.label, func(t *testing.T) {
+		t.Run(tt.name, func(t *testing.T) {
 
 			t.Parallel()
 
