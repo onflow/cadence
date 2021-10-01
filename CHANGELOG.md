@@ -1,3 +1,13 @@
+# v0.19.1 (2021-09-13)
+
+## 🛠 Improvements
+
+- Remove obsolete script/transaction parameter check (#1114) @SupunS 
+
+## 🐞 Bug Fixes
+
+- Fix export errors by properly wrapping in runtime errors (#1139) @SupunS
+
 # v0.19.0 (2021-09-13)
 
 ## 💥 Breaking Changes
