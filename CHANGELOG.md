@@ -1,3 +1,40 @@
+# v0.18.0 (2021-06-15)
+
+## 💥 Breaking Changes
+
+- Add HashAlgorithm hash and hashWithTag functions (#1002) @turbolent
+- Update the Crypto contract (#999) @turbolent
+
+## ⭐ Features
+
+- Add HashAlgorithm hash and hashWithTag functions (#1002) @turbolent
+- Add npm package for the docgen-tool (#1008) @SupunS
+- Add wasm generation for docgen tool (#1005) @SupunS
+
+## 🛠 Improvements
+
+- Make `PublicKey` type importable (#995) @SupunS
+- Update the Crypto contract (#999) @turbolent
+- Add dynamic type importability check for arguments (#1007) @SupunS
+- Language Server NPM package: Add support for Node environment, add tests (#1006) @turbolent
+- Embed markdown templates to docgen tool at compile time (#1004) @SupunS
+- No need for checking resource loss when function definitely halted (#1000) @turbolent
+- Remove the result declaration kind (#1001) @turbolent
+- Update for changes in Flowkit API (#962) @sideninja
+- Add Supun as code owner (#997) @turbolent
+- Disable the wasmtime VM for now (#991) @turbolent
+
+## 🐞 Bug Fixes
+
+- Add dynamic type importability check for arguments (#1007) @SupunS
+- Fix dictionary deferred owner (#992) @turbolent
+- Fix AST walk for transaction declaration (#998) @turbolent
+
+## 📖 Documentation
+
+- Add documentation for the Cadence documentation generator (#1003) @SupunS
+
+
 # v0.17.0 (2021-06-08)
 
 ## ⭐ Features
