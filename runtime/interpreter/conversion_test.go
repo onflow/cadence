@@ -36,8 +36,18 @@ func TestByteArrayValueToByteSlice(t *testing.T) {
 		require.True(t, ok)
 
 		invalid := []Value{
-			NewArrayValueUnownedNonCopying(UInt64Value(500)),
-			NewArrayValueUnownedNonCopying(NewInt256ValueFromBigInt(largeBigInt)),
+			NewArrayValueUnownedNonCopying(
+				VariableSizedStaticType{
+					Type: PrimitiveStaticTypeInt64,
+				},
+				UInt64Value(500),
+			),
+			NewArrayValueUnownedNonCopying(
+				VariableSizedStaticType{
+					Type: PrimitiveStaticTypeInt256,
+				},
+				NewInt256ValueFromBigInt(largeBigInt),
+			),
 			UInt64Value(500),
 			BoolValue(true),
 			NewStringValue("test"),
@@ -52,9 +62,25 @@ func TestByteArrayValueToByteSlice(t *testing.T) {
 	t.Run("valid", func(t *testing.T) {
 
 		invalid := map[Value][]byte{
-			NewArrayValueUnownedNonCopying():                                             {},
-			NewArrayValueUnownedNonCopying(UInt64Value(2), NewUInt128ValueFromUint64(3)): {2, 3},
-			NewArrayValueUnownedNonCopying(UInt8Value(4), NewIntValueFromInt64(5)):       {4, 5},
+			NewArrayValueUnownedNonCopying(
+				VariableSizedStaticType{
+					Type: PrimitiveStaticTypeInteger,
+				},
+			): {},
+			NewArrayValueUnownedNonCopying(
+				VariableSizedStaticType{
+					Type: PrimitiveStaticTypeInteger,
+				},
+				UInt64Value(2),
+				NewUInt128ValueFromUint64(3),
+			): {2, 3},
+			NewArrayValueUnownedNonCopying(
+				VariableSizedStaticType{
+					Type: PrimitiveStaticTypeInteger,
+				},
+				UInt8Value(4),
+				NewIntValueFromInt64(5),
+			): {4, 5},
 		}
 
 		for value, expected := range invalid {

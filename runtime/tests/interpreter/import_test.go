@@ -92,8 +92,12 @@ func TestInterpretVirtualImport(t *testing.T) {
 								func(invocation interpreter.Invocation) interpreter.Value {
 									return interpreter.UInt64Value(42)
 								},
+								nil,
 							),
 						}
+
+						elaboration := sema.NewElaboration()
+						elaboration.CompositeTypes[fooType.ID()] = fooType
 
 						return interpreter.VirtualImport{
 							Globals: []struct {
@@ -105,6 +109,7 @@ func TestInterpretVirtualImport(t *testing.T) {
 									Value: value,
 								},
 							},
+							Elaboration: elaboration,
 						}
 					},
 				),

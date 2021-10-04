@@ -65,15 +65,16 @@ func (interpreter *Interpreter) identifierExpressionGetterSetter(identifierExpre
 // for the target index expression
 //
 func (interpreter *Interpreter) indexExpressionGetterSetter(indexExpression *ast.IndexExpression) getterSetter {
-	typedResult := interpreter.evalExpression(indexExpression.TargetExpression).(ValueIndexableValue)
+	target := interpreter.evalExpression(indexExpression.TargetExpression).(ValueIndexableValue)
 	indexingValue := interpreter.evalExpression(indexExpression.IndexingExpression)
 	getLocationRange := locationRangeGetter(interpreter.Location, indexExpression)
 	return getterSetter{
+		target: target,
 		get: func() Value {
-			return typedResult.Get(interpreter, getLocationRange, indexingValue)
+			return target.Get(interpreter, getLocationRange, indexingValue)
 		},
 		set: func(value Value) {
-			typedResult.Set(interpreter, getLocationRange, indexingValue, value)
+			target.Set(interpreter, getLocationRange, indexingValue, value)
 		},
 	}
 }
@@ -83,9 +84,10 @@ func (interpreter *Interpreter) indexExpressionGetterSetter(indexExpression *ast
 //
 func (interpreter *Interpreter) memberExpressionGetterSetter(memberExpression *ast.MemberExpression) getterSetter {
 	target := interpreter.evalExpression(memberExpression.Expression)
-	getLocationRange := locationRangeGetter(interpreter.Location, memberExpression)
 	identifier := memberExpression.Identifier.Identifier
+	getLocationRange := locationRangeGetter(interpreter.Location, memberExpression)
 	return getterSetter{
+		target: target,
 		get: func() Value {
 			return interpreter.getMember(target, getLocationRange, identifier)
 		},
@@ -383,7 +385,8 @@ func (interpreter *Interpreter) VisitArrayExpression(expression *ast.ArrayExpres
 	values := interpreter.visitExpressionsNonCopying(expression.Values)
 
 	argumentTypes := interpreter.Program.Elaboration.ArrayExpressionArgumentTypes[expression]
-	elementType := interpreter.Program.Elaboration.ArrayExpressionElementType[expression]
+	arrayType := interpreter.Program.Elaboration.ArrayExpressionArrayType[expression]
+	elementType := arrayType.ElementType(false)
 
 	copies := make([]Value, len(values))
 	for i, argument := range values {
@@ -393,7 +396,9 @@ func (interpreter *Interpreter) VisitArrayExpression(expression *ast.ArrayExpres
 		copies[i] = interpreter.copyAndConvert(argument, argumentType, elementType, getLocationRange)
 	}
 
-	return NewArrayValueUnownedNonCopying(copies...)
+	arrayStaticType := ConvertSemaArrayTypeToStaticArrayType(arrayType)
+
+	return NewArrayValueUnownedNonCopying(arrayStaticType, copies...)
 }
 
 func (interpreter *Interpreter) VisitDictionaryExpression(expression *ast.DictionaryExpression) ast.Repr {
@@ -402,7 +407,10 @@ func (interpreter *Interpreter) VisitDictionaryExpression(expression *ast.Dictio
 	entryTypes := interpreter.Program.Elaboration.DictionaryExpressionEntryTypes[expression]
 	dictionaryType := interpreter.Program.Elaboration.DictionaryExpressionType[expression]
 
-	dictionary := NewDictionaryValueUnownedNonCopying()
+	dictionaryStaticType := ConvertSemaDictionaryTypeToStaticDictionaryType(dictionaryType)
+
+	dictionary := NewDictionaryValueUnownedNonCopying(interpreter, dictionaryStaticType)
+
 	for i, dictionaryEntryValues := range values {
 		entryType := entryTypes[i]
 		entry := expression.Entries[i]
@@ -435,14 +443,14 @@ func (interpreter *Interpreter) VisitDictionaryExpression(expression *ast.Dictio
 }
 
 func (interpreter *Interpreter) VisitMemberExpression(expression *ast.MemberExpression) ast.Repr {
-	result := interpreter.evalExpression(expression.Expression)
+	self := interpreter.evalExpression(expression.Expression)
 	if expression.Optional {
-		switch typedResult := result.(type) {
+		switch typeSelf := self.(type) {
 		case NilValue:
-			return typedResult
+			return typeSelf
 
 		case *SomeValue:
-			result = typedResult.Value
+			self = typeSelf.Value
 
 		default:
 			panic(errors.NewUnreachableError())
@@ -451,7 +459,14 @@ func (interpreter *Interpreter) VisitMemberExpression(expression *ast.MemberExpr
 
 	getLocationRange := locationRangeGetter(interpreter.Location, expression)
 	identifier := expression.Identifier.Identifier
-	resultValue := interpreter.getMember(result, getLocationRange, identifier)
+
+	interpreter.checkMemberAccessedType(
+		expression,
+		self,
+		getLocationRange,
+	)
+
+	resultValue := interpreter.getMember(self, getLocationRange, identifier)
 	if resultValue == nil {
 		panic(MissingMemberValueError{
 			Name:          identifier,
@@ -469,6 +484,37 @@ func (interpreter *Interpreter) VisitMemberExpression(expression *ast.MemberExpr
 	}
 
 	return resultValue
+}
+
+// checkMemberAccessedType checks that the dynamic type of the accessed value
+// of the member access matches the expected static type
+//
+func (interpreter *Interpreter) checkMemberAccessedType(
+	memberExpression *ast.MemberExpression,
+	self Value,
+	getLocationRange func() LocationRange,
+) {
+	memberInfo := interpreter.Program.Elaboration.MemberExpressionMemberInfos[memberExpression]
+	accessedType := memberInfo.AccessedType
+	if memberExpression.Optional {
+		accessedType = accessedType.(*sema.OptionalType).Type
+	}
+
+	switch self := self.(type) {
+	case *HostFunctionValue, *ArrayValue, *DictionaryValue:
+		// TODO: dynamic type information incomplete
+		break
+	case *CompositeValue:
+		// Ignore for example transactions
+		// TODO: find a better solution to declare/detect transactions
+		if self.kind == common.CompositeKindUnknown ||
+			self.QualifiedIdentifier() == "" {
+			break
+		}
+		interpreter.ExpectType(self, accessedType, getLocationRange)
+	default:
+		interpreter.ExpectType(self, accessedType, getLocationRange)
+	}
 }
 
 func (interpreter *Interpreter) VisitIndexExpression(expression *ast.IndexExpression) ast.Repr {
@@ -525,6 +571,8 @@ func (interpreter *Interpreter) VisitInvocationExpression(invocationExpression *
 
 	arguments := interpreter.visitExpressionsNonCopying(argumentExpressions)
 
+	receiverType :=
+		interpreter.Program.Elaboration.InvocationExpressionReceiverTypes[invocationExpression]
 	typeParameterTypes :=
 		interpreter.Program.Elaboration.InvocationExpressionTypeArguments[invocationExpression]
 	argumentTypes :=
@@ -532,10 +580,13 @@ func (interpreter *Interpreter) VisitInvocationExpression(invocationExpression *
 	parameterTypes :=
 		interpreter.Program.Elaboration.InvocationExpressionParameterTypes[invocationExpression]
 
-	interpreter.reportFunctionInvocation(invocationExpression)
+	line := invocationExpression.StartPosition().Line
+
+	interpreter.reportFunctionInvocation(line)
 
 	resultValue := interpreter.invokeFunctionValue(
 		function,
+		receiverType,
 		arguments,
 		argumentExpressions,
 		argumentTypes,
@@ -543,6 +594,8 @@ func (interpreter *Interpreter) VisitInvocationExpression(invocationExpression *
 		typeParameterTypes,
 		invocationExpression,
 	)
+
+	interpreter.reportInvokedFunctionReturn(line)
 
 	// If this is invocation is optional chaining, wrap the result
 	// as an optional, as the result is expected to be an optional
@@ -629,7 +682,7 @@ func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingEx
 	switch expression.Operation {
 	case ast.OperationFailableCast, ast.OperationForceCast:
 		dynamicType := value.DynamicType(interpreter, SeenReferences{})
-		isSubType := IsSubType(dynamicType, expectedType)
+		isSubType := interpreter.IsSubType(dynamicType, expectedType)
 
 		switch expression.Operation {
 		case ast.OperationFailableCast:
@@ -642,12 +695,10 @@ func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingEx
 		case ast.OperationForceCast:
 			if !isSubType {
 				getLocationRange := locationRangeGetter(interpreter.Location, expression.Expression)
-				panic(
-					TypeMismatchError{
-						ExpectedType:  expectedType,
-						LocationRange: getLocationRange(),
-					},
-				)
+				panic(ForceCastTypeMismatchError{
+					ExpectedType:  expectedType,
+					LocationRange: getLocationRange(),
+				})
 			}
 
 			return value

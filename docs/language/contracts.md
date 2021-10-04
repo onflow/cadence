@@ -221,7 +221,9 @@ import FungibleToken from 0x42
 let newVault <- create FungibleToken.createVault(initialBalance: 10)
 ```
 
-Contracts have the implicit field `let account: Account`,
+## Account access
+
+Contracts have the implicit field `let account: AuthAccount`,
 which is the account in which the contract is deployed too.
 This gives the contract the ability to e.g. read and write to the account's storage.
 
@@ -294,7 +296,7 @@ let code = "70756220636f6e...".decodeHex()
 
 // `code` has type `[UInt8]`
 
-let signer: Account = ...
+let signer: AuthAccount = ...
 signer.contracts.add(
     name: "Test",
     code: code,
@@ -356,7 +358,7 @@ let code = "70756220636f6e...".decodeHex()
 
 // `code` has type `[UInt8]`
 
-let signer: Account = ...
+let signer: AuthAccount = ...
 signer.contracts.update__experimental(name: "Test", code: code)
 ```
 
@@ -375,7 +377,7 @@ A deployed contract can be get from an account using the `get` function:
 For example, assuming that a contract named `Test` is deployed to an account, the contract can be retrieved as follows:
 
 ```cadence
-let signer: Account = ...
+let signer: AuthAccount = ...
 let contract = signer.contracts.get(name: "Test")
 ```
 
@@ -396,7 +398,7 @@ A deployed contract can be removed from an account using the `remove` function:
 For example, assuming that a contract named `Test` is deployed to an account, the contract can be removed as follows:
 
 ```cadence
-let signer: Account = ...
+let signer: AuthAccount = ...
 let contract = signer.contracts.remove(name: "Test")
 ```
 

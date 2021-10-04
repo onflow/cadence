@@ -26,6 +26,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/runtime/common"
+	checkerUtils "github.com/onflow/cadence/runtime/tests/checker"
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
@@ -34,6 +35,7 @@ func TestCompositeDeferredDecoding(t *testing.T) {
 	t.Parallel()
 
 	t.Run("Simple composite", func(t *testing.T) {
+		t.Parallel()
 
 		members := NewStringValueOrderedMap()
 		members.Set("a", NewStringValue("hello"))
@@ -94,6 +96,8 @@ func TestCompositeDeferredDecoding(t *testing.T) {
 	})
 
 	t.Run("Nested composite", func(t *testing.T) {
+		t.Parallel()
+
 		value := newTestLargeCompositeValue(0)
 
 		encoded, _, err := EncodeValue(value, nil, true, nil)
@@ -116,6 +120,8 @@ func TestCompositeDeferredDecoding(t *testing.T) {
 	})
 
 	t.Run("Field update", func(t *testing.T) {
+		t.Parallel()
+
 		value := newTestLargeCompositeValue(0)
 
 		encoded, _, err := EncodeValue(value, nil, true, nil)
@@ -140,6 +146,7 @@ func TestCompositeDeferredDecoding(t *testing.T) {
 	})
 
 	t.Run("Round trip - without loading", func(t *testing.T) {
+		t.Parallel()
 
 		members := NewStringValueOrderedMap()
 		members.Set("a", NewStringValue("hello"))
@@ -198,6 +205,7 @@ func TestCompositeDeferredDecoding(t *testing.T) {
 	})
 
 	t.Run("Round trip - partially loaded", func(t *testing.T) {
+		t.Parallel()
 
 		members := NewStringValueOrderedMap()
 		members.Set("a", NewStringValue("hello"))
@@ -262,6 +270,7 @@ func TestCompositeDeferredDecoding(t *testing.T) {
 	})
 
 	t.Run("callback", func(t *testing.T) {
+		t.Parallel()
 
 		stringValue := NewStringValue("hello")
 
@@ -333,6 +342,7 @@ func TestCompositeDeferredDecoding(t *testing.T) {
 	})
 
 	t.Run("re-encoding", func(t *testing.T) {
+		t.Parallel()
 
 		members := NewStringValueOrderedMap()
 		members.Set("a", NewStringValue("hello"))
@@ -392,6 +402,8 @@ func TestCompositeDeferredDecoding(t *testing.T) {
 	})
 
 	t.Run("storable and modified", func(t *testing.T) {
+		t.Parallel()
+
 		members := NewStringValueOrderedMap()
 		members.Set("a", NewStringValue("hello"))
 		members.Set("b", BoolValue(true))
@@ -480,7 +492,7 @@ func BenchmarkCompositeDeferredDecoding(b *testing.B) {
 	})
 }
 
-var newTestLargeCompositeValue = func(id int) *CompositeValue {
+func newTestLargeCompositeValue(id int) *CompositeValue {
 	addressFields := NewStringValueOrderedMap()
 	addressFields.Set("street", NewStringValue(fmt.Sprintf("No: %d", id)))
 	addressFields.Set("city", NewStringValue("Vancouver"))
@@ -511,20 +523,28 @@ var newTestLargeCompositeValue = func(id int) *CompositeValue {
 	)
 }
 
-var newTestArrayValue = func(size int) *ArrayValue {
+func newTestArrayValue(size int) *ArrayValue {
 	values := make([]Value, size)
 
 	for i := 0; i < size; i++ {
 		values[i] = newTestLargeCompositeValue(i)
 	}
 
-	return NewArrayValue(values)
+	return NewArrayValueUnownedNonCopying(
+		VariableSizedStaticType{
+			Type: PrimitiveStaticTypeAnyStruct,
+		},
+		values...,
+	)
 }
 
 func TestArrayDeferredDecoding(t *testing.T) {
+
 	t.Parallel()
 
 	t.Run("Simple array", func(t *testing.T) {
+		t.Parallel()
+
 		array := newTestArrayValue(10)
 
 		encoded, _, err := EncodeValue(array, nil, true, nil)
@@ -562,6 +582,7 @@ func TestArrayDeferredDecoding(t *testing.T) {
 	})
 
 	t.Run("Round trip - without loading", func(t *testing.T) {
+		t.Parallel()
 
 		array := newTestArrayValue(2)
 
@@ -578,9 +599,11 @@ func TestArrayDeferredDecoding(t *testing.T) {
 		decodedArray := decoded.(*ArrayValue)
 		assert.NotNil(t, decodedArray.content)
 
-		// Re encode the decoded value
+		// Re-encode the decoded value
 		reEncoded, _, err := EncodeValue(decodedArray, nil, true, nil)
 		require.NoError(t, err)
+
+		require.Equal(t, encoded, reEncoded)
 
 		reDecoded, err := DecodeValue(reEncoded, &testOwner, nil, CurrentEncodingVersion, nil)
 		require.NoError(t, err)
@@ -610,6 +633,7 @@ func TestArrayDeferredDecoding(t *testing.T) {
 	})
 
 	t.Run("re-encoding", func(t *testing.T) {
+		t.Parallel()
 
 		array := newTestArrayValue(2)
 
@@ -641,8 +665,10 @@ func TestArrayDeferredDecoding(t *testing.T) {
 		}
 
 		// Re encode the decoded value
-		_, _, err = EncodeValue(decodedArray, []string{}, true, callback)
+		reEncoded, _, err := EncodeValue(decodedArray, []string{}, true, callback)
 		require.NoError(t, err)
+
+		require.Equal(t, encoded, reEncoded)
 
 		// Elements are not loaded, so they must not be encoded again.
 		// i.e: Callback must be only called once.
@@ -652,6 +678,8 @@ func TestArrayDeferredDecoding(t *testing.T) {
 	})
 
 	t.Run("storable and modified", func(t *testing.T) {
+		t.Parallel()
+
 		array := newTestArrayValue(2)
 
 		encoded, _, err := EncodeValue(array, nil, true, nil)
@@ -669,6 +697,67 @@ func TestArrayDeferredDecoding(t *testing.T) {
 		// elements must not be loaded
 		assert.Nil(t, decodedArray.values)
 		assert.NotNil(t, decodedArray.content)
+	})
+
+	t.Run("Decode with V4", func(t *testing.T) {
+		t.Parallel()
+
+		array := newTestArrayValue(2)
+
+		// Encode
+		encoded, _, err := EncodeValueV4(array, nil, true, nil)
+		require.NoError(t, err)
+
+		// Decode
+		const encodingVersion = 4
+		decoded, err := DecodeValueV4(encoded, &testOwner, nil, encodingVersion, nil)
+		require.NoError(t, err)
+
+		// Value must not be loaded. i.e: the content is available
+		require.IsType(t, &ArrayValue{}, decoded)
+		decodedArray := decoded.(*ArrayValue)
+		assert.NotNil(t, decodedArray.content)
+
+		decodedArray.ensureElementsLoaded()
+
+		// Check the elements
+
+		elements := decodedArray.Elements()
+		require.Len(t, elements, 2)
+
+		for i, element := range elements {
+			require.IsType(t, &CompositeValue{}, element)
+			elementVal := element.(*CompositeValue)
+
+			decodeFieldValue, contains := elementVal.Fields().Get("fname")
+			assert.True(t, contains)
+
+			expected := NewStringValue(fmt.Sprintf("John%d", i))
+
+			assert.Equal(t, expected, decodeFieldValue)
+		}
+	})
+
+	t.Run("Get function member", func(t *testing.T) {
+		t.Parallel()
+
+		array := newTestArrayValue(10)
+
+		encoded, _, err := EncodeValue(array, nil, true, nil)
+		require.NoError(t, err)
+
+		decoded, err := DecodeValue(encoded, &testOwner, nil, CurrentEncodingVersion, nil)
+		require.NoError(t, err)
+
+		require.IsType(t, &ArrayValue{}, decoded)
+		decodedArray := decoded.(*ArrayValue)
+
+		inter := newTestInterpreter(t)
+
+		// Static types are not built at this point
+		member := decodedArray.GetMember(inter, nil, "append")
+		assert.IsType(t, &HostFunctionValue{}, member)
+		assert.IsType(t, FunctionStaticType{}, member.StaticType())
 	})
 }
 
@@ -736,7 +825,9 @@ func TestDictionaryDeferredDecoding(t *testing.T) {
 	t.Parallel()
 
 	t.Run("Simple dictionary", func(t *testing.T) {
-		dictionary := newTestDictionaryValue(10)
+		t.Parallel()
+
+		dictionary := newTestDictionaryValue(t, 10)
 
 		encoded, _, err := EncodeValue(dictionary, nil, true, nil)
 		require.NoError(t, err)
@@ -768,8 +859,9 @@ func TestDictionaryDeferredDecoding(t *testing.T) {
 	})
 
 	t.Run("Round trip - without loading", func(t *testing.T) {
+		t.Parallel()
 
-		dictionary := newTestDictionaryValue(2)
+		dictionary := newTestDictionaryValue(t, 2)
 
 		// Encode
 		encoded, _, err := EncodeValue(dictionary, nil, true, nil)
@@ -791,6 +883,8 @@ func TestDictionaryDeferredDecoding(t *testing.T) {
 		reEncoded, _, err := EncodeValue(decodedDictionary, nil, true, nil)
 		require.NoError(t, err)
 
+		require.Equal(t, encoded, reEncoded)
+
 		reDecoded, err := DecodeValue(reEncoded, &testOwner, nil, CurrentEncodingVersion, nil)
 		require.NoError(t, err)
 
@@ -811,8 +905,9 @@ func TestDictionaryDeferredDecoding(t *testing.T) {
 	})
 
 	t.Run("re-encoding", func(t *testing.T) {
+		t.Parallel()
 
-		dictionary := newTestDictionaryValue(2)
+		dictionary := newTestDictionaryValue(t, 2)
 
 		// Encode
 		encoded, _, err := EncodeValue(dictionary, nil, true, nil)
@@ -848,8 +943,10 @@ func TestDictionaryDeferredDecoding(t *testing.T) {
 		}
 
 		// Re encode the decoded value
-		_, _, err = EncodeValue(decodedDictionary, []string{}, true, callback)
+		reEncoded, _, err := EncodeValue(decodedDictionary, []string{}, true, callback)
 		require.NoError(t, err)
+
+		require.Equal(t, encoded, reEncoded)
 
 		// Entries are not loaded, so they must not be encoded again.
 		// i.e: Callback must be only called once.
@@ -859,6 +956,8 @@ func TestDictionaryDeferredDecoding(t *testing.T) {
 	})
 
 	t.Run("deferred dictionary", func(t *testing.T) {
+		t.Parallel()
+
 		const size = 2
 		values := make([]Value, size*2)
 
@@ -875,7 +974,33 @@ func TestDictionaryDeferredDecoding(t *testing.T) {
 			values[i*2+1] = testResource
 		}
 
-		dictionary := NewDictionaryValueUnownedNonCopying(values...)
+		code := `
+            resource TestResource {
+            }
+        `
+		checker, err := checkerUtils.ParseAndCheckWithOptions(t,
+			code,
+			checkerUtils.ParseAndCheckOptions{},
+		)
+		require.NoError(t, err)
+
+		inter, err := NewInterpreter(
+			ProgramFromChecker(checker),
+			utils.TestLocation,
+		)
+		require.NoError(t, err)
+
+		dictionary := NewDictionaryValueUnownedNonCopying(
+			inter,
+			DictionaryStaticType{
+				KeyType: PrimitiveStaticTypeString,
+				ValueType: CompositeStaticType{
+					Location:            utils.TestLocation,
+					QualifiedIdentifier: "TestResource",
+				},
+			},
+			values...,
+		)
 
 		// Encode
 		encoded, _, err := EncodeValue(dictionary, nil, true, nil)
@@ -893,8 +1018,6 @@ func TestDictionaryDeferredDecoding(t *testing.T) {
 		assert.Nil(t, decodedDictionary.entries)
 		assert.NotNil(t, decodedDictionary.content)
 
-		// Create a dummy interpreter for 'get' function
-		inter, err := NewInterpreter(nil, utils.TestLocation)
 		require.NoError(t, err)
 		inter.storageReadHandler = func(
 			inter *Interpreter,
@@ -921,7 +1044,9 @@ func TestDictionaryDeferredDecoding(t *testing.T) {
 	})
 
 	t.Run("storable and modified", func(t *testing.T) {
-		dictionary := newTestDictionaryValue(2)
+		t.Parallel()
+
+		dictionary := newTestDictionaryValue(t, 2)
 
 		encoded, _, err := EncodeValue(dictionary, nil, true, nil)
 		require.NoError(t, err)
@@ -940,9 +1065,61 @@ func TestDictionaryDeferredDecoding(t *testing.T) {
 		assert.Nil(t, decodedDictionary.entries)
 		assert.NotNil(t, decodedDictionary.content)
 	})
+
+	t.Run("Decode with V4", func(t *testing.T) {
+		t.Parallel()
+
+		dictionary := newTestDictionaryValue(t, 2)
+
+		// Encode
+		encoded, _, err := EncodeValueV4(dictionary, nil, true, nil)
+		require.NoError(t, err)
+
+		// Decode
+		const encodingVersion = 4
+		decoded, err := DecodeValueV4(encoded, &testOwner, nil, encodingVersion, nil)
+		require.NoError(t, err)
+
+		require.IsType(t, &DictionaryValue{}, decoded)
+		decodedDictionary := decoded.(*DictionaryValue)
+
+		decodedDictionary.ensureLoaded()
+
+		// Check the elements
+		require.Equal(t, 2, decodedDictionary.Count())
+
+		i := 0
+		decodedDictionary.Entries().Foreach(func(key string, value Value) {
+			assert.Equal(t, fmt.Sprintf("key%d", i), key)
+			assert.Equal(t, NewStringValue(fmt.Sprintf("value%d", i)), value)
+			i++
+		})
+	})
+
+	t.Run("Get function member", func(t *testing.T) {
+		t.Parallel()
+
+		dictionary := newTestDictionaryValue(t, 2)
+
+		encoded, _, err := EncodeValue(dictionary, nil, true, nil)
+		require.NoError(t, err)
+
+		decoded, err := DecodeValue(encoded, &testOwner, nil, CurrentEncodingVersion, nil)
+		require.NoError(t, err)
+
+		require.IsType(t, &DictionaryValue{}, decoded)
+		decodedDictionary := decoded.(*DictionaryValue)
+
+		inter := newTestInterpreter(t)
+
+		// Static types are not built at this point
+		member := decodedDictionary.GetMember(inter, nil, "remove")
+		assert.IsType(t, &HostFunctionValue{}, member)
+		assert.IsType(t, FunctionStaticType{}, member.StaticType())
+	})
 }
 
-var newTestDictionaryValue = func(size int) *DictionaryValue {
+func newTestDictionaryValue(t testing.TB, size int) *DictionaryValue {
 	values := make([]Value, size*2)
 
 	for i := 0; i < size; i++ {
@@ -950,14 +1127,21 @@ var newTestDictionaryValue = func(size int) *DictionaryValue {
 		values[i*2+1] = NewStringValue(fmt.Sprintf("value%d", i))
 	}
 
-	return NewDictionaryValueUnownedNonCopying(values...)
+	return NewDictionaryValueUnownedNonCopying(
+		newTestInterpreter(t),
+		DictionaryStaticType{
+			KeyType:   PrimitiveStaticTypeString,
+			ValueType: PrimitiveStaticTypeString,
+		},
+		values...,
+	)
 }
 
 func BenchmarkDictionaryDeferredDecoding(b *testing.B) {
 
 	const size = 100
 
-	encoded, _, err := EncodeValue(newTestDictionaryValue(size), nil, true, nil)
+	encoded, _, err := EncodeValue(newTestDictionaryValue(b, size), nil, true, nil)
 	require.NoError(b, err)
 
 	b.Run("Simply decode", func(b *testing.B) {

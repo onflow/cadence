@@ -305,6 +305,18 @@ Both `StoragePath` and `CapabilityPath` are subtypes of `Path`.
   </tr>
 </table>
 
+#### Path Functions
+
+- `cadence•fun toString(): String`
+
+  Returns the string representation of the path.
+
+  ```cadence
+  let storagePath = /storage/path
+
+  storagePath.toString()  // is "/storage/path"
+  ```
+
 ### Account Storage API
 
 Account storage is accessed through the following functions of `AuthAccount`.

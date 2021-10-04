@@ -76,6 +76,7 @@ type Value interface {
 // ValueIndexableValue
 
 type ValueIndexableValue interface {
+	Value
 	Get(interpreter *Interpreter, getLocationRange func() LocationRange, key Value) Value
 	Set(interpreter *Interpreter, getLocationRange func() LocationRange, key Value, value Value)
 }
@@ -83,6 +84,7 @@ type ValueIndexableValue interface {
 // MemberAccessibleValue
 
 type MemberAccessibleValue interface {
+	Value
 	GetMember(interpreter *Interpreter, getLocationRange func() LocationRange, name string) Value
 	SetMember(interpreter *Interpreter, getLocationRange func() LocationRange, name string, value Value)
 }
@@ -90,13 +92,15 @@ type MemberAccessibleValue interface {
 // ConcatenatableValue
 
 type ConcatenatableValue interface {
+	Value
 	Concat(other ConcatenatableValue) Value
 }
 
 // AllAppendableValue
 
 type AllAppendableValue interface {
-	AppendAll(other AllAppendableValue)
+	Value
+	AppendAll(inter *Interpreter, getLocationRange func() LocationRange, other AllAppendableValue)
 }
 
 // EquatableValue
@@ -109,6 +113,7 @@ type EquatableValue interface {
 // DestroyableValue
 
 type DestroyableValue interface {
+	Value
 	Destroy(interpreter *Interpreter, getLocationRange func() LocationRange)
 }
 
@@ -557,6 +562,7 @@ func (v *StringValue) GetMember(_ *Interpreter, _ func() LocationRange, name str
 				otherValue := invocation.Arguments[0].(ConcatenatableValue)
 				return v.Concat(otherValue)
 			},
+			sema.StringTypeConcatFunctionType,
 		)
 
 	case "slice":
@@ -566,6 +572,7 @@ func (v *StringValue) GetMember(_ *Interpreter, _ func() LocationRange, name str
 				to := invocation.Arguments[1].(IntValue)
 				return v.Slice(from, to, invocation.GetLocationRange)
 			},
+			sema.StringTypeSliceFunctionType,
 		)
 
 	case "decodeHex":
@@ -573,6 +580,7 @@ func (v *StringValue) GetMember(_ *Interpreter, _ func() LocationRange, name str
 			func(invocation Invocation) Value {
 				return v.DecodeHex()
 			},
+			sema.StringTypeDecodeHexFunctionType,
 		)
 	}
 
@@ -597,6 +605,8 @@ func (*StringValue) IsStorable() bool {
 	return true
 }
 
+var ByteArrayStaticType = ConvertSemaArrayTypeToStaticArrayType(sema.ByteArrayType)
+
 // DecodeHex hex-decodes this string and returns an array of UInt8 values
 //
 func (v *StringValue) DecodeHex() *ArrayValue {
@@ -612,7 +622,7 @@ func (v *StringValue) DecodeHex() *ArrayValue {
 		values[i] = UInt8Value(b)
 	}
 
-	return NewArrayValueUnownedNonCopying(values...)
+	return NewArrayValueUnownedNonCopying(ByteArrayStaticType, values...)
 }
 
 func (*StringValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -627,13 +637,19 @@ func (*StringValue) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicTyp
 // ArrayValue
 
 type ArrayValue struct {
+	Type     ArrayStaticType
 	values   []Value
 	Owner    *common.Address
 	modified bool
 
 	// Raw element content cache for decoded values.
-	// Only available for decoded values who's elements are not loaded yet.
+	// Includes meta-info (type info, etc) as well as the elements content.
+	// Only available for decoded arrays who's elements are not loaded yet.
 	content []byte
+
+	// Raw content cache for elements.
+	// Only available for decoded arrays who's elements are not loaded yet.
+	elementsContent []byte
 
 	// Value's path to be used during decoding.
 	// Only available for decoded values who's elements are not loaded yet.
@@ -648,13 +664,7 @@ type ArrayValue struct {
 	encodingVersion uint16
 }
 
-func NewArrayValue(values []Value) *ArrayValue {
-	return &ArrayValue{
-		values: values,
-	}
-}
-
-func NewArrayValueUnownedNonCopying(values ...Value) *ArrayValue {
+func NewArrayValueUnownedNonCopying(arrayType ArrayStaticType, values ...Value) *ArrayValue {
 	// NOTE: new value has no owner
 
 	for _, value := range values {
@@ -666,6 +676,7 @@ func NewArrayValueUnownedNonCopying(values ...Value) *ArrayValue {
 	}
 
 	return &ArrayValue{
+		Type:     arrayType,
 		values:   values,
 		modified: true,
 		Owner:    nil,
@@ -679,6 +690,10 @@ func NewDeferredArrayValue(
 	callback DecodingCallback,
 	version uint16,
 ) *ArrayValue {
+
+	// Note: static type for deferred arrays gets populated when the meta info is loaded.
+	// i.e: at `ensureMetaInfoLoaded()` method
+
 	return &ArrayValue{
 		valuePath:       path,
 		content:         content,
@@ -718,12 +733,13 @@ func (v *ArrayValue) DynamicType(interpreter *Interpreter, seenReferences SeenRe
 
 	return &ArrayDynamicType{
 		ElementTypes: elementTypes,
+		StaticType:   v.Type,
 	}
 }
 
 func (v *ArrayValue) StaticType() StaticType {
-	// TODO: store static type in array values
-	return nil
+	v.ensureMetaInfoLoaded()
+	return v.Type
 }
 
 func (v *ArrayValue) Copy() Value {
@@ -731,6 +747,7 @@ func (v *ArrayValue) Copy() Value {
 
 	if v.content != nil {
 		value := &ArrayValue{
+			Type:            v.Type,
 			values:          nil,
 			modified:        true,
 			Owner:           nil,
@@ -747,7 +764,7 @@ func (v *ArrayValue) Copy() Value {
 	for i, value := range v.values {
 		copies[i] = value.Copy()
 	}
-	return NewArrayValueUnownedNonCopying(copies...)
+	return NewArrayValueUnownedNonCopying(v.Type, copies...)
 }
 
 func (v *ArrayValue) GetOwner() *common.Address {
@@ -810,13 +827,18 @@ func (v *ArrayValue) Get(_ *Interpreter, getLocationRange func() LocationRange, 
 	return v.Elements()[index]
 }
 
-func (v *ArrayValue) Set(_ *Interpreter, getLocationRange func() LocationRange, key Value, value Value) {
+func (v *ArrayValue) Set(inter *Interpreter, getLocationRange func() LocationRange, key Value, value Value) {
 	index := key.(NumberValue).ToInt()
-	v.SetIndex(index, value, getLocationRange)
+	v.SetIndex(inter, getLocationRange, index, value)
 }
 
-func (v *ArrayValue) SetIndex(index int, value Value, getLocationRange func() LocationRange) {
+func (v *ArrayValue) SetIndex(inter *Interpreter, getLocationRange func() LocationRange, index int, value Value) {
 	v.checkBounds(index, getLocationRange)
+
+	// Use the getter, to make sure lazily decoded values are properly loaded.
+	arrayStaticType := v.StaticType().(ArrayStaticType)
+
+	inter.checkContainerMutation(arrayStaticType.ElementType(), value, getLocationRange)
 
 	v.modified = true
 	value.SetOwner(v.Owner)
@@ -851,7 +873,13 @@ func (v *ArrayValue) RecursiveString(seenReferences SeenReferences) string {
 	return format.Array(values)
 }
 
-func (v *ArrayValue) Append(element Value) {
+func (v *ArrayValue) Append(inter *Interpreter, getLocationRange func() LocationRange, element Value) {
+
+	// Use the getter, to make sure lazily decoded values are properly loaded.
+	arrayStaticType := v.StaticType().(ArrayStaticType)
+
+	inter.checkContainerMutation(arrayStaticType.ElementType(), element, getLocationRange)
+
 	v.modified = true
 
 	element.SetOwner(v.Owner)
@@ -860,11 +888,18 @@ func (v *ArrayValue) Append(element Value) {
 	v.values = append(v.values, element)
 }
 
-func (v *ArrayValue) AppendAll(other AllAppendableValue) {
-	v.modified = true
-
+func (v *ArrayValue) AppendAll(inter *Interpreter, getLocationRange func() LocationRange, other AllAppendableValue) {
 	otherArray := other.(*ArrayValue)
 	otherElements := otherArray.Elements()
+
+	// Use the getter, to make sure lazily decoded values are properly loaded.
+	arrayStaticType := v.StaticType().(ArrayStaticType)
+
+	for _, element := range otherElements {
+		inter.checkContainerMutation(arrayStaticType.ElementType(), element, getLocationRange)
+	}
+
+	v.modified = true
 
 	for _, element := range otherElements {
 		element.SetOwner(v.Owner)
@@ -874,7 +909,7 @@ func (v *ArrayValue) AppendAll(other AllAppendableValue) {
 	v.values = append(v.values, otherElements...)
 }
 
-func (v *ArrayValue) Insert(index int, element Value, getLocationRange func() LocationRange) {
+func (v *ArrayValue) Insert(inter *Interpreter, getLocationRange func() LocationRange, index int, element Value) {
 	count := v.Count()
 
 	// NOTE: index may be equal to count
@@ -885,6 +920,11 @@ func (v *ArrayValue) Insert(index int, element Value, getLocationRange func() Lo
 			LocationRange: getLocationRange(),
 		})
 	}
+
+	// Use the getter, to make sure lazily decoded values are properly loaded.
+	arrayStaticType := v.StaticType().(ArrayStaticType)
+
+	inter.checkContainerMutation(arrayStaticType.ElementType(), element, getLocationRange)
 
 	v.modified = true
 
@@ -961,7 +1001,7 @@ func (v *ArrayValue) Contains(needleValue Value) BoolValue {
 	return false
 }
 
-func (v *ArrayValue) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
+func (v *ArrayValue) GetMember(inter *Interpreter, getLocationRange func() LocationRange, name string) Value {
 	switch name {
 	case "length":
 		return NewIntValueFromInt64(int64(v.Count()))
@@ -969,18 +1009,24 @@ func (v *ArrayValue) GetMember(_ *Interpreter, _ func() LocationRange, name stri
 	case "append":
 		return NewHostFunctionValue(
 			func(invocation Invocation) Value {
-				v.Append(invocation.Arguments[0])
+				v.Append(inter, getLocationRange, invocation.Arguments[0])
 				return VoidValue{}
 			},
+			sema.ArrayAppendFunctionType(
+				inter.ConvertStaticToSemaType(
+					v.StaticType().(ArrayStaticType).ElementType(),
+				),
+			),
 		)
 
 	case "appendAll":
 		return NewHostFunctionValue(
 			func(invocation Invocation) Value {
 				otherArray := invocation.Arguments[0].(AllAppendableValue)
-				v.AppendAll(otherArray)
+				v.AppendAll(inter, getLocationRange, otherArray)
 				return VoidValue{}
 			},
+			sema.ArrayAppendAllFunctionType(inter.ConvertStaticToSemaType(v.StaticType())),
 		)
 
 	case "concat":
@@ -989,6 +1035,9 @@ func (v *ArrayValue) GetMember(_ *Interpreter, _ func() LocationRange, name stri
 				otherArray := invocation.Arguments[0].(ConcatenatableValue)
 				return v.Concat(otherArray)
 			},
+			sema.ArrayConcatFunctionType(
+				inter.ConvertStaticToSemaType(v.StaticType()),
+			),
 		)
 
 	case "insert":
@@ -996,9 +1045,14 @@ func (v *ArrayValue) GetMember(_ *Interpreter, _ func() LocationRange, name stri
 			func(invocation Invocation) Value {
 				index := invocation.Arguments[0].(NumberValue).ToInt()
 				element := invocation.Arguments[1]
-				v.Insert(index, element, invocation.GetLocationRange)
+				v.Insert(inter, invocation.GetLocationRange, index, element)
 				return VoidValue{}
 			},
+			sema.ArrayInsertFunctionType(
+				inter.ConvertStaticToSemaType(
+					v.StaticType().(ArrayStaticType).ElementType(),
+				),
+			),
 		)
 
 	case "remove":
@@ -1007,6 +1061,11 @@ func (v *ArrayValue) GetMember(_ *Interpreter, _ func() LocationRange, name stri
 				i := invocation.Arguments[0].(NumberValue).ToInt()
 				return v.Remove(i, invocation.GetLocationRange)
 			},
+			sema.ArrayRemoveFunctionType(
+				inter.ConvertStaticToSemaType(
+					v.StaticType().(ArrayStaticType).ElementType(),
+				),
+			),
 		)
 
 	case "removeFirst":
@@ -1014,6 +1073,11 @@ func (v *ArrayValue) GetMember(_ *Interpreter, _ func() LocationRange, name stri
 			func(invocation Invocation) Value {
 				return v.RemoveFirst(invocation.GetLocationRange)
 			},
+			sema.ArrayRemoveFirstFunctionType(
+				inter.ConvertStaticToSemaType(
+					v.StaticType().(ArrayStaticType).ElementType(),
+				),
+			),
 		)
 
 	case "removeLast":
@@ -1021,6 +1085,11 @@ func (v *ArrayValue) GetMember(_ *Interpreter, _ func() LocationRange, name stri
 			func(invocation Invocation) Value {
 				return v.RemoveLast(invocation.GetLocationRange)
 			},
+			sema.ArrayRemoveLastFunctionType(
+				inter.ConvertStaticToSemaType(
+					v.StaticType().(ArrayStaticType).ElementType(),
+				),
+			),
 		)
 
 	case "contains":
@@ -1028,6 +1097,11 @@ func (v *ArrayValue) GetMember(_ *Interpreter, _ func() LocationRange, name stri
 			func(invocation Invocation) Value {
 				return v.Contains(invocation.Arguments[0])
 			},
+			sema.ArrayContainsFunctionType(
+				inter.ConvertStaticToSemaType(
+					v.StaticType().(ArrayStaticType).ElementType(),
+				),
+			),
 		)
 
 	}
@@ -1099,6 +1173,16 @@ func (v *ArrayValue) Equal(other Value, interpreter *Interpreter, loadDeferred b
 		return false
 	}
 
+	if v.Type == nil {
+		if otherArray.Type != nil {
+			return false
+		}
+	} else if otherArray.Type == nil ||
+		!v.Type.Equal(otherArray.Type) {
+
+		return false
+	}
+
 	for i, value := range elements {
 		otherValue := otherElements[i]
 
@@ -1116,19 +1200,42 @@ func (v *ArrayValue) Elements() []Value {
 	return v.values
 }
 
-// Ensures the elements of this array value are loaded.
-func (v *ArrayValue) ensureElementsLoaded() {
+// ensureMetaInfoLoaded ensures loading the meta information of this array value.
+// If the meta info is already loaded, then calling this function won't have any effect.
+// Otherwise, the values are decoded form the cached raw-content.
+//
+// Meta info includes:
+//    - static type
+//
+func (v *ArrayValue) ensureMetaInfoLoaded() {
 	if v.content == nil {
 		return
 	}
 
-	err := decodeArrayElements(v, v.content)
+	err := decodeArrayMetaInfo(v, v.content)
+	if err != nil {
+		panic(err)
+	}
+
+	// Raw content is no longer needed. Clear the cache and free-up the memory.
+	v.content = nil
+}
+
+// Ensures the elements of this array value are loaded.
+func (v *ArrayValue) ensureElementsLoaded() {
+	v.ensureMetaInfoLoaded()
+
+	if v.elementsContent == nil {
+		return
+	}
+
+	err := decodeArrayElements(v, v.elementsContent)
 	if err != nil {
 		panic(err)
 	}
 
 	// Reset the cache
-	v.content = nil
+	v.elementsContent = nil
 	v.valuePath = nil
 	v.decodeCallback = nil
 	v.encodingVersion = 0
@@ -1156,7 +1263,7 @@ type NumberValue interface {
 	ToBigEndianBytes() []byte
 }
 
-func getNumberValueMember(v NumberValue, name string) Value {
+func getNumberValueMember(v NumberValue, name string, typ sema.Type) Value {
 	switch name {
 
 	case sema.ToStringFunctionName:
@@ -1164,12 +1271,18 @@ func getNumberValueMember(v NumberValue, name string) Value {
 			func(invocation Invocation) Value {
 				return NewStringValue(v.String())
 			},
+			sema.ToStringFunctionType,
 		)
 
 	case sema.ToBigEndianBytesFunctionName:
 		return NewHostFunctionValue(
 			func(invocation Invocation) Value {
 				return ByteSliceToByteArrayValue(v.ToBigEndianBytes())
+			},
+			&sema.FunctionType{
+				ReturnTypeAnnotation: sema.NewTypeAnnotation(
+					sema.ByteArrayType,
+				),
 			},
 		)
 
@@ -1179,6 +1292,11 @@ func getNumberValueMember(v NumberValue, name string) Value {
 				other := invocation.Arguments[0].(NumberValue)
 				return v.SaturatingPlus(other)
 			},
+			&sema.FunctionType{
+				ReturnTypeAnnotation: sema.NewTypeAnnotation(
+					typ,
+				),
+			},
 		)
 
 	case sema.NumericTypeSaturatingSubtractFunctionName:
@@ -1186,6 +1304,11 @@ func getNumberValueMember(v NumberValue, name string) Value {
 			func(invocation Invocation) Value {
 				other := invocation.Arguments[0].(NumberValue)
 				return v.SaturatingMinus(other)
+			},
+			&sema.FunctionType{
+				ReturnTypeAnnotation: sema.NewTypeAnnotation(
+					typ,
+				),
 			},
 		)
 
@@ -1195,6 +1318,11 @@ func getNumberValueMember(v NumberValue, name string) Value {
 				other := invocation.Arguments[0].(NumberValue)
 				return v.SaturatingMul(other)
 			},
+			&sema.FunctionType{
+				ReturnTypeAnnotation: sema.NewTypeAnnotation(
+					typ,
+				),
+			},
 		)
 
 	case sema.NumericTypeSaturatingDivideFunctionName:
@@ -1202,6 +1330,11 @@ func getNumberValueMember(v NumberValue, name string) Value {
 			func(invocation Invocation) Value {
 				other := invocation.Arguments[0].(NumberValue)
 				return v.SaturatingDiv(other)
+			},
+			&sema.FunctionType{
+				ReturnTypeAnnotation: sema.NewTypeAnnotation(
+					typ,
+				),
 			},
 		)
 	}
@@ -1456,7 +1589,7 @@ func (v IntValue) BitwiseRightShift(other IntegerValue) IntegerValue {
 }
 
 func (v IntValue) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name)
+	return getNumberValueMember(v, name, sema.IntType)
 }
 
 func (IntValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -1763,7 +1896,7 @@ func (v Int8Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 }
 
 func (v Int8Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name)
+	return getNumberValueMember(v, name, sema.Int8Type)
 }
 
 func (Int8Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -2070,7 +2203,7 @@ func (v Int16Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 }
 
 func (v Int16Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name)
+	return getNumberValueMember(v, name, sema.Int16Type)
 }
 
 func (Int16Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -2379,7 +2512,7 @@ func (v Int32Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 }
 
 func (v Int32Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name)
+	return getNumberValueMember(v, name, sema.Int32Type)
 }
 
 func (Int32Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -2687,7 +2820,7 @@ func (v Int64Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 }
 
 func (v Int64Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name)
+	return getNumberValueMember(v, name, sema.Int64Type)
 }
 
 func (Int64Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -3066,7 +3199,7 @@ func (v Int128Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 }
 
 func (v Int128Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name)
+	return getNumberValueMember(v, name, sema.Int128Type)
 }
 
 func (Int128Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -3444,7 +3577,7 @@ func (v Int256Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 }
 
 func (v Int256Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name)
+	return getNumberValueMember(v, name, sema.Int256Type)
 }
 
 func (Int256Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -3712,7 +3845,7 @@ func (v UIntValue) BitwiseRightShift(other IntegerValue) IntegerValue {
 }
 
 func (v UIntValue) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name)
+	return getNumberValueMember(v, name, sema.UIntType)
 }
 
 func (UIntValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -3950,7 +4083,7 @@ func (v UInt8Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 }
 
 func (v UInt8Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name)
+	return getNumberValueMember(v, name, sema.UInt8Type)
 }
 
 func (UInt8Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -4186,7 +4319,7 @@ func (v UInt16Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 }
 
 func (v UInt16Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name)
+	return getNumberValueMember(v, name, sema.UInt16Type)
 }
 
 func (UInt16Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -4425,7 +4558,7 @@ func (v UInt32Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 }
 
 func (v UInt32Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name)
+	return getNumberValueMember(v, name, sema.UInt32Type)
 }
 
 func (UInt32Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -4667,7 +4800,7 @@ func (v UInt64Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 }
 
 func (v UInt64Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name)
+	return getNumberValueMember(v, name, sema.UInt64Type)
 }
 
 func (UInt64Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -4989,7 +5122,7 @@ func (v UInt128Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 }
 
 func (v UInt128Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name)
+	return getNumberValueMember(v, name, sema.UInt128Type)
 }
 
 func (UInt128Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -5309,7 +5442,7 @@ func (v UInt256Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 }
 
 func (v UInt256Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name)
+	return getNumberValueMember(v, name, sema.UInt256Type)
 }
 
 func (UInt256Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -5492,7 +5625,7 @@ func (v Word8Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 }
 
 func (v Word8Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name)
+	return getNumberValueMember(v, name, sema.Word8Type)
 }
 
 func (Word8Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -5673,7 +5806,7 @@ func (v Word16Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 }
 
 func (v Word16Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name)
+	return getNumberValueMember(v, name, sema.Word16Type)
 }
 
 func (Word16Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -5858,7 +5991,7 @@ func (v Word32Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 }
 
 func (v Word32Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name)
+	return getNumberValueMember(v, name, sema.Word32Type)
 }
 
 func (Word32Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -6043,7 +6176,7 @@ func (v Word64Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 }
 
 func (v Word64Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name)
+	return getNumberValueMember(v, name, sema.Word64Type)
 }
 
 func (Word64Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -6330,7 +6463,7 @@ func ConvertFix64(value Value) Fix64Value {
 }
 
 func (v Fix64Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name)
+	return getNumberValueMember(v, name, sema.Fix64Type)
 }
 
 func (Fix64Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -6583,7 +6716,7 @@ func ConvertUFix64(value Value) UFix64Value {
 }
 
 func (v UFix64Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name)
+	return getNumberValueMember(v, name, sema.UFix64Type)
 }
 
 func (UFix64Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -6706,7 +6839,7 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, getLocationRange func
 			Interpreter:      interpreter,
 		}
 
-		destructor.Invoke(invocation)
+		destructor.invoke(invocation)
 	}
 
 	v.destroyed = true
@@ -6968,16 +7101,7 @@ func (v *CompositeValue) OwnerValue(interpreter *Interpreter) OptionalValue {
 	ownerAccount := interpreter.accountHandler(address)
 
 	// Owner must be of `PublicAccount` type.
-
-	dynamicType := ownerAccount.DynamicType(interpreter, SeenReferences{})
-
-	compositeDynamicType, ok := dynamicType.(CompositeDynamicType)
-
-	if !ok || !sema.PublicAccountType.Equal(compositeDynamicType.StaticType) {
-		panic(&TypeMismatchError{
-			ExpectedType: sema.PublicAccountType,
-		})
-	}
+	interpreter.ExpectType(ownerAccount, sema.PublicAccountType, nil)
 
 	return NewSomeValueOwningNonCopying(ownerAccount)
 }
@@ -7133,7 +7257,7 @@ func (v *CompositeValue) ConformsToDynamicType(
 
 		fieldDynamicType := field.DynamicType(interpreter, SeenReferences{})
 
-		if !IsSubType(fieldDynamicType, member.TypeAnnotation.Type) {
+		if !interpreter.IsSubType(fieldDynamicType, member.TypeAnnotation.Type) {
 			return false
 		}
 
@@ -7278,6 +7402,7 @@ func NewEnumCaseValue(
 // DictionaryValue
 
 type DictionaryValue struct {
+	Type     DictionaryStaticType
 	keys     *ArrayValue
 	entries  *StringValueOrderedMap
 	Owner    *common.Address
@@ -7308,6 +7433,10 @@ type DictionaryValue struct {
 	// Only available for decoded values who's entries are not loaded yet.
 	content []byte
 
+	// Raw content cache for entries.
+	// Only available for decoded values who's entries are not loaded yet.
+	entriesContent []byte
+
 	// Value's path to be used during decoding.
 	// Only available for decoded values who's entries are not loaded yet.
 	valuePath []string
@@ -7321,14 +7450,24 @@ type DictionaryValue struct {
 	encodingVersion uint16
 }
 
-func NewDictionaryValueUnownedNonCopying(keysAndValues ...Value) *DictionaryValue {
+func NewDictionaryValueUnownedNonCopying(
+	interpreter *Interpreter,
+	dictionaryType DictionaryStaticType,
+	keysAndValues ...Value,
+) *DictionaryValue {
+
 	keysAndValuesCount := len(keysAndValues)
 	if keysAndValuesCount%2 != 0 {
 		panic("uneven number of keys and values")
 	}
 
 	result := &DictionaryValue{
-		keys:    NewArrayValueUnownedNonCopying(),
+		Type: dictionaryType,
+		keys: NewArrayValueUnownedNonCopying(
+			VariableSizedStaticType{
+				Type: dictionaryType.KeyType,
+			},
+		),
 		entries: NewStringValueOrderedMap(),
 		// NOTE: new value has no owner
 		Owner:                  nil,
@@ -7340,7 +7479,7 @@ func NewDictionaryValueUnownedNonCopying(keysAndValues ...Value) *DictionaryValu
 	}
 
 	for i := 0; i < keysAndValuesCount; i += 2 {
-		_ = result.Insert(nil, ReturnEmptyLocationRange, keysAndValues[i], keysAndValues[i+1])
+		_ = result.Insert(interpreter, ReturnEmptyLocationRange, keysAndValues[i], keysAndValues[i+1])
 	}
 
 	return result
@@ -7353,6 +7492,10 @@ func NewDeferredDictionaryValue(
 	decodeCallback DecodingCallback,
 	version uint16,
 ) *DictionaryValue {
+
+	// Note: static type for deferred dictionaries gets populated when the meta info is loaded.
+	// i.e: at `ensureMetaInfoLoaded()` method
+
 	return &DictionaryValue{
 		Owner:           owner,
 		deferredOwner:   owner,
@@ -7416,14 +7559,14 @@ func (v *DictionaryValue) Walk(walkChild func(Value)) {
 
 func (v *DictionaryValue) DynamicType(interpreter *Interpreter, seenReferences SeenReferences) DynamicType {
 	keys := v.Keys().Elements()
-	entryTypes := make([]struct{ KeyType, ValueType DynamicType }, len(keys))
+	entryTypes := make([]DictionaryStaticTypeEntry, len(keys))
 
 	for i, key := range keys {
 		// NOTE: Force unwrap, otherwise dynamic type check is for optional type.
 		// This is safe because we are iterating over the keys.
 		value := v.Get(interpreter, ReturnEmptyLocationRange, key).(*SomeValue).Value
 		entryTypes[i] =
-			struct{ KeyType, ValueType DynamicType }{
+			DictionaryStaticTypeEntry{
 				KeyType:   key.DynamicType(interpreter, seenReferences),
 				ValueType: value.DynamicType(interpreter, seenReferences),
 			}
@@ -7431,17 +7574,19 @@ func (v *DictionaryValue) DynamicType(interpreter *Interpreter, seenReferences S
 
 	return &DictionaryDynamicType{
 		EntryTypes: entryTypes,
+		StaticType: v.Type,
 	}
 }
 
 func (v *DictionaryValue) StaticType() StaticType {
-	// TODO: store static type in dictionary values
-	return nil
+	v.ensureMetaInfoLoaded()
+	return v.Type
 }
 
 func (v *DictionaryValue) Copy() Value {
 	if v.content != nil {
 		return &DictionaryValue{
+			Type:                   v.Type,
 			keys:                   v.keys,
 			entries:                v.entries,
 			deferredOwner:          v.deferredOwner,
@@ -7467,6 +7612,7 @@ func (v *DictionaryValue) Copy() Value {
 	})
 
 	return &DictionaryValue{
+		Type:                   v.Type,
 		keys:                   newKeys,
 		entries:                newEntries,
 		deferredOwner:          v.deferredOwner,
@@ -7620,6 +7766,18 @@ func dictionaryKey(keyValue Value) string {
 func (v *DictionaryValue) Set(inter *Interpreter, getLocationRange func() LocationRange, keyValue Value, value Value) {
 	v.modified = true
 
+	// Use the getter, to make sure lazily decoded values are properly loaded.
+	dictionaryStaticType := v.StaticType().(DictionaryStaticType)
+
+	inter.checkContainerMutation(dictionaryStaticType.KeyType, keyValue, getLocationRange)
+	inter.checkContainerMutation(
+		OptionalStaticType{
+			Type: dictionaryStaticType.ValueType,
+		},
+		value,
+		getLocationRange,
+	)
+
 	switch typedValue := value.(type) {
 	case *SomeValue:
 		_ = v.Insert(inter, getLocationRange, keyValue, typedValue.Value)
@@ -7690,7 +7848,13 @@ func (v *DictionaryValue) GetMember(interpreter *Interpreter, getLocationRange f
 			dictionaryValues[i] = value.Copy()
 			i++
 		}
-		return NewArrayValueUnownedNonCopying(dictionaryValues...)
+
+		return NewArrayValueUnownedNonCopying(
+			VariableSizedStaticType{
+				Type: v.Type.ValueType,
+			},
+			dictionaryValues...,
+		)
 
 	case "remove":
 		return NewHostFunctionValue(
@@ -7703,6 +7867,9 @@ func (v *DictionaryValue) GetMember(interpreter *Interpreter, getLocationRange f
 					keyValue,
 				)
 			},
+			sema.DictionaryRemoveFunctionType(
+				interpreter.ConvertStaticToSemaType(v.StaticType()).(*sema.DictionaryType),
+			),
 		)
 
 	case "insert":
@@ -7718,6 +7885,9 @@ func (v *DictionaryValue) GetMember(interpreter *Interpreter, getLocationRange f
 					newValue,
 				)
 			},
+			sema.DictionaryInsertFunctionType(
+				interpreter.ConvertStaticToSemaType(v.StaticType()).(*sema.DictionaryType),
+			),
 		)
 
 	case "containsKey":
@@ -7725,6 +7895,9 @@ func (v *DictionaryValue) GetMember(interpreter *Interpreter, getLocationRange f
 			func(invocation Invocation) Value {
 				return v.ContainsKey(invocation.Arguments[0])
 			},
+			sema.DictionaryContainsKeyFunctionType(
+				interpreter.ConvertStaticToSemaType(v.StaticType()).(*sema.DictionaryType),
+			),
 		)
 
 	}
@@ -7788,6 +7961,13 @@ func (v *DictionaryValue) Remove(inter *Interpreter, getLocationRange func() Loc
 }
 
 func (v *DictionaryValue) Insert(inter *Interpreter, locationRangeGetter func() LocationRange, keyValue, value Value) OptionalValue {
+
+	// Use the getter, to make sure lazily decoded values are properly loaded.
+	dictionaryStaticType := v.StaticType().(DictionaryStaticType)
+
+	inter.checkContainerMutation(dictionaryStaticType.KeyType, keyValue, locationRangeGetter)
+	inter.checkContainerMutation(dictionaryStaticType.ValueType, value, locationRangeGetter)
+
 	v.modified = true
 
 	v.ensureLoaded()
@@ -7813,7 +7993,7 @@ func (v *DictionaryValue) Insert(inter *Interpreter, locationRangeGetter func() 
 		return existingValue
 
 	case NilValue:
-		v.keys.Append(keyValue)
+		v.keys.Append(inter, locationRangeGetter, keyValue)
 		return existingValue
 
 	default:
@@ -7916,6 +8096,10 @@ func (v *DictionaryValue) Equal(other Value, interpreter *Interpreter, loadDefer
 	v.ensureLoaded()
 	otherDictionary.ensureLoaded()
 
+	if !v.Type.Equal(otherDictionary.Type) {
+		return false
+	}
+
 	if !v.keys.Equal(otherDictionary.keys, interpreter, loadDeferred) {
 		return false
 	}
@@ -7953,19 +8137,42 @@ func (v *DictionaryValue) Equal(other Value, interpreter *Interpreter, loadDefer
 	return true
 }
 
-// ensureLoaded ensures the entries of this dictionary value are loaded.
-func (v *DictionaryValue) ensureLoaded() {
+// ensureMetaInfoLoaded ensures loading the meta information of this dictionary value.
+// If the meta info is already loaded, then calling this function won't have any effect.
+// Otherwise, the values are decoded form the cached raw-content.
+//
+// Meta info includes:
+//    - static type
+//
+func (v *DictionaryValue) ensureMetaInfoLoaded() {
 	if v.content == nil {
 		return
 	}
 
-	err := decodeDictionaryEntries(v, v.content)
+	err := decodeDictionaryMetaInfo(v, v.content)
+	if err != nil {
+		panic(err)
+	}
+
+	// Raw content is no longer needed. Clear the cache and free-up the memory.
+	v.content = nil
+}
+
+// ensureLoaded ensures the entries of this dictionary value are loaded.
+func (v *DictionaryValue) ensureLoaded() {
+	v.ensureMetaInfoLoaded()
+
+	if v.entriesContent == nil {
+		return
+	}
+
+	err := decodeDictionaryEntries(v, v.entriesContent)
 	if err != nil {
 		panic(err)
 	}
 
 	// Reset the cache
-	v.content = nil
+	v.entriesContent = nil
 	v.valuePath = nil
 	v.decodeCallback = nil
 	v.encodingVersion = 0
@@ -8042,6 +8249,11 @@ func (v NilValue) RecursiveString(_ SeenReferences) string {
 var nilValueMapFunction = NewHostFunctionValue(
 	func(invocation Invocation) Value {
 		return NilValue{}
+	},
+	&sema.FunctionType{
+		ReturnTypeAnnotation: sema.NewTypeAnnotation(
+			sema.NeverType,
+		),
 	},
 )
 
@@ -8159,7 +8371,7 @@ func (v *SomeValue) RecursiveString(seenReferences SeenReferences) string {
 	return v.Value.RecursiveString(seenReferences)
 }
 
-func (v *SomeValue) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
+func (v *SomeValue) GetMember(inter *Interpreter, _ func() LocationRange, name string) Value {
 	switch name {
 	case "map":
 		return NewHostFunctionValue(
@@ -8176,10 +8388,11 @@ func (v *SomeValue) GetMember(_ *Interpreter, _ func() LocationRange, name strin
 					Interpreter:      invocation.Interpreter,
 				}
 
-				newValue := transformFunction.Invoke(transformInvocation)
+				newValue := transformFunction.invoke(transformInvocation)
 
 				return NewSomeValueOwningNonCopying(newValue)
 			},
+			sema.OptionalTypeMapFunctionType(inter.ConvertStaticToSemaType(v.Value.StaticType())),
 		)
 	}
 
@@ -8304,8 +8517,8 @@ func (v *StorageReferenceValue) ReferencedValue(interpreter *Interpreter) *Value
 
 		if v.BorrowedType != nil {
 			dynamicType := value.DynamicType(interpreter, SeenReferences{})
-			if !IsSubType(dynamicType, v.BorrowedType) {
-				IsSubType(dynamicType, v.BorrowedType)
+			if !interpreter.IsSubType(dynamicType, v.BorrowedType) {
+				interpreter.IsSubType(dynamicType, v.BorrowedType)
 				return nil
 			}
 		}
@@ -8737,6 +8950,7 @@ func (v AddressValue) GetMember(_ *Interpreter, _ func() LocationRange, name str
 			func(invocation Invocation) Value {
 				return NewStringValue(v.String())
 			},
+			sema.ToStringFunctionType,
 		)
 
 	case sema.AddressTypeToBytesFunctionName:
@@ -8745,6 +8959,7 @@ func (v AddressValue) GetMember(_ *Interpreter, _ func() LocationRange, name str
 				address := common.Address(v)
 				return ByteSliceToByteArrayValue(address[:])
 			},
+			sema.AddressTypeToBytesFunctionType,
 		)
 	}
 
@@ -8781,7 +8996,14 @@ func NewAuthAccountValue(
 	fields.Set(sema.AuthAccountAddressField, address)
 	fields.Set(sema.AuthAccountAddPublicKeyField, addPublicKeyFunction)
 	fields.Set(sema.AuthAccountRemovePublicKeyField, removePublicKeyFunction)
-	fields.Set(sema.AuthAccountGetCapabilityField, accountGetCapabilityFunction(address, sema.CapabilityPathType))
+	fields.Set(
+		sema.AuthAccountGetCapabilityField,
+		accountGetCapabilityFunction(
+			address,
+			sema.CapabilityPathType,
+			sema.AuthAccountTypeGetCapabilityFunctionType,
+		),
+	)
 	fields.Set(sema.AuthAccountContractsField, contracts)
 	fields.Set(sema.AuthAccountKeysField, keys)
 
@@ -8845,13 +9067,18 @@ func NewAuthAccountValue(
 	}
 }
 
-func accountGetCapabilityFunction(addressValue AddressValue, pathType sema.Type) *HostFunctionValue {
+func accountGetCapabilityFunction(
+	addressValue AddressValue,
+	pathType sema.Type,
+	funcType *sema.FunctionType,
+) *HostFunctionValue {
+
 	return NewHostFunctionValue(
 		func(invocation Invocation) Value {
 
 			path := invocation.Arguments[0].(PathValue)
 			pathDynamicType := path.DynamicType(invocation.Interpreter, SeenReferences{})
-			if !IsSubType(pathDynamicType, pathType) {
+			if !invocation.Interpreter.IsSubType(pathDynamicType, pathType) {
 				panic(TypeMismatchError{
 					ExpectedType:  pathType,
 					LocationRange: invocation.GetLocationRange(),
@@ -8878,6 +9105,7 @@ func accountGetCapabilityFunction(addressValue AddressValue, pathType sema.Type)
 				BorrowType: borrowStaticType,
 			}
 		},
+		funcType,
 	)
 }
 
@@ -8894,7 +9122,14 @@ func NewPublicAccountValue(
 
 	fields := NewStringValueOrderedMap()
 	fields.Set(sema.PublicAccountAddressField, address)
-	fields.Set(sema.PublicAccountGetCapabilityField, accountGetCapabilityFunction(address, sema.PublicPathType))
+	fields.Set(
+		sema.PublicAccountGetCapabilityField,
+		accountGetCapabilityFunction(
+			address,
+			sema.PublicPathType,
+			sema.PublicAccountTypeGetCapabilityFunctionType,
+		),
+	)
 	fields.Set(sema.PublicAccountKeysField, keys)
 	fields.Set(sema.PublicAccountContractsField, contracts)
 
@@ -9024,6 +9259,25 @@ func (v PathValue) KeyString() string {
 		v.Domain,
 		v.Identifier,
 	)
+}
+
+func (v PathValue) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
+	switch name {
+
+	case sema.ToStringFunctionName:
+		return NewHostFunctionValue(
+			func(invocation Invocation) Value {
+				return NewStringValue(v.String())
+			},
+			sema.ToStringFunctionType,
+		)
+	}
+
+	return nil
+}
+
+func (PathValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
+	panic(errors.NewUnreachableError())
 }
 
 func (v PathValue) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType, _ TypeConformanceResults) bool {
@@ -9355,6 +9609,12 @@ var publicKeyVerifyFunction = NewHostFunctionValue(
 		hashAlgo := invocation.Arguments[3].(*CompositeValue)
 		publicKey := invocation.Self
 
+		invocation.Interpreter.ExpectType(
+			publicKey,
+			sema.PublicKeyType,
+			invocation.GetLocationRange,
+		)
+
 		return invocation.Interpreter.SignatureVerificationHandler(
 			signatureValue,
 			signedDataValue,
@@ -9363,6 +9623,7 @@ var publicKeyVerifyFunction = NewHostFunctionValue(
 			publicKey,
 		)
 	},
+	sema.PublicKeyVerifyFunctionType,
 )
 
 // NewAuthAccountKeysValue constructs a AuthAccount.Keys value.

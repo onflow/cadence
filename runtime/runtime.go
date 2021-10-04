@@ -260,7 +260,13 @@ func (r *interpreterRuntime) ExecuteScript(script Script, context Context) (cade
 		return nil, newError(err, context)
 	}
 
-	return exportValue(value)
+	var exportedValue cadence.Value
+	exportedValue, err = exportValue(value)
+	if err != nil {
+		return nil, newError(err, context)
+	}
+
+	return exportedValue, nil
 }
 
 type interpretFunc func(inter *interpreter.Interpreter) (interpreter.Value, error)
@@ -421,6 +427,7 @@ func (r *interpreterRuntime) InvokeContractFunction(
 			arguments[i],
 			argumentType,
 			context,
+
 			runtimeStorage,
 			interpreterOptions,
 			checkerOptions,
@@ -468,7 +475,13 @@ func (r *interpreterRuntime) InvokeContractFunction(
 		return nil, newError(err, context)
 	}
 
-	return ExportValue(value, inter)
+	var exportedValue cadence.Value
+	exportedValue, err = ExportValue(value, inter)
+	if err != nil {
+		return nil, newError(err, context)
+	}
+
+	return exportedValue, nil
 }
 
 func (r *interpreterRuntime) convertArgument(
@@ -489,6 +502,15 @@ func (r *interpreterRuntime) convertArgument(
 				runtimeStorage,
 				interpreterOptions,
 				checkerOptions,
+			)
+		}
+	case sema.PublicAccountType:
+		// convert addresses to public accounts so there is no need to construct a public account value for the caller
+		if addressValue, ok := argument.(interpreter.AddressValue); ok {
+			return r.getPublicAccount(
+				interpreter.NewAddressValue(addressValue.ToAddress()),
+				context.Interface,
+				runtimeStorage,
 			)
 		}
 	}
@@ -700,7 +722,7 @@ func validateArgumentParams(
 			}
 		}
 
-		arg, err := importValue(inter, value)
+		arg, err := importValue(inter, value, parameterType)
 		if err != nil {
 			return nil, &InvalidEntryPointArgumentError{
 				Index: i,
@@ -718,7 +740,7 @@ func validateArgumentParams(
 		}
 
 		// Check that decoded value is a subtype of static parameter type
-		if !interpreter.IsSubType(dynamicType, parameterType) {
+		if !inter.IsSubType(dynamicType, parameterType) {
 			return nil, &InvalidEntryPointArgumentError{
 				Index: i,
 				Err: &InvalidValueTypeError{
@@ -738,10 +760,47 @@ func validateArgumentParams(
 			}
 		}
 
+		// Ensure static type info is available for all values
+		interpreter.InspectValue(arg, func(value interpreter.Value) bool {
+			if value == nil {
+				return true
+			}
+
+			if !hasValidStaticType(value) {
+				panic(fmt.Errorf("invalid static type for argument: %d", i))
+			}
+
+			return true
+		})
+
 		argumentValues[i] = arg
 	}
 
 	return argumentValues, nil
+}
+
+func hasValidStaticType(value interpreter.Value) bool {
+	switch value := value.(type) {
+	case *interpreter.ArrayValue:
+		switch value.StaticType().(type) {
+		case interpreter.ConstantSizedStaticType, interpreter.VariableSizedStaticType:
+			return true
+		default:
+			return false
+		}
+	case *interpreter.DictionaryValue:
+		dictionaryType, ok := value.StaticType().(interpreter.DictionaryStaticType)
+		if !ok {
+			return false
+		}
+
+		return dictionaryType.KeyType != nil &&
+			dictionaryType.ValueType != nil
+	default:
+		// For other values, static type is NOT inferred.
+		// Hence no need to validate it here.
+		return value.StaticType() != nil
+	}
 }
 
 // ParseAndCheckProgram parses the given code and checks it.
@@ -1223,59 +1282,82 @@ func (r *interpreterRuntime) storageInterpreterOptions(runtimeStorage *runtimeSt
 }
 
 func (r *interpreterRuntime) meteringInterpreterOptions(runtimeInterface Interface) []interpreter.Option {
-	var limit uint64
+	var computationLimit uint64
 	wrapPanic(func() {
-		limit = runtimeInterface.GetComputationLimit()
+		computationLimit = runtimeInterface.GetComputationLimit()
 	})
-	if limit == 0 {
+	if computationLimit == 0 {
 		return nil
 	}
 
-	if limit == math.MaxUint64 {
-		limit--
+	if computationLimit == math.MaxUint64 {
+		computationLimit--
 	}
 
-	var used uint64
+	var computationUsed uint64
 
-	checkLimit := func() {
-		used++
+	checkComputationLimit := func(increase uint64) {
+		computationUsed += increase
 
-		if used <= limit {
+		if computationUsed <= computationLimit {
 			return
 		}
 
 		var err error
 		wrapPanic(func() {
-			err = runtimeInterface.SetComputationUsed(used)
+			err = runtimeInterface.SetComputationUsed(computationUsed)
 		})
 		if err != nil {
 			panic(err)
 		}
 
 		panic(ComputationLimitExceededError{
-			Limit: limit,
+			Limit: computationLimit,
+		})
+	}
+
+	callStackDepth := 0
+	// TODO: make runtime interface function
+	const callStackDepthLimit = 2000
+
+	checkCallStackDepth := func() {
+
+		if callStackDepth <= callStackDepthLimit {
+			return
+		}
+
+		panic(CallStackLimitExceededError{
+			Limit: callStackDepthLimit,
 		})
 	}
 
 	return []interpreter.Option{
 		interpreter.WithOnStatementHandler(
 			func(_ *interpreter.Interpreter, _ ast.Statement) {
-				checkLimit()
+				checkComputationLimit(1)
 			},
 		),
 		interpreter.WithOnLoopIterationHandler(
 			func(_ *interpreter.Interpreter, _ int) {
-				checkLimit()
+				checkComputationLimit(1)
 			},
 		),
 		interpreter.WithOnFunctionInvocationHandler(
 			func(_ *interpreter.Interpreter, _ int) {
-				checkLimit()
+				callStackDepth++
+				checkCallStackDepth()
+
+				checkComputationLimit(1)
+			},
+		),
+		interpreter.WithOnInvokedFunctionReturnHandler(
+			func(_ *interpreter.Interpreter, _ int) {
+				callStackDepth--
 			},
 		),
 		interpreter.WithExitHandler(
 			func() error {
-				return runtimeInterface.SetComputationUsed(used)
+				return runtimeInterface.SetComputationUsed(computationUsed)
 			},
 		),
 	}
@@ -1550,6 +1632,7 @@ func (r *interpreterRuntime) newAddPublicKeyFunction(
 
 			return interpreter.VoidValue{}
 		},
+		sema.AuthAccountTypeAddPublicKeyFunctionType,
 	)
 }
 
@@ -1583,6 +1666,7 @@ func (r *interpreterRuntime) newRemovePublicKeyFunction(
 
 			return interpreter.VoidValue{}
 		},
+		sema.AuthAccountTypeRemovePublicKeyFunctionType,
 	)
 }
 
@@ -2249,6 +2333,7 @@ func (r *interpreterRuntime) newAuthAccountContractsChangeFunction(
 				Code:    newCodeValue,
 			}
 		},
+		sema.AuthAccountContractsTypeAddFunctionType,
 	)
 }
 
@@ -2373,6 +2458,7 @@ func (r *interpreterRuntime) newAccountContractsGetFunction(
 				return interpreter.NilValue{}
 			}
 		},
+		sema.AuthAccountContractsTypeGetFunctionType,
 	)
 }
 
@@ -2464,6 +2550,7 @@ func (r *interpreterRuntime) newAuthAccountContractsRemoveFunction(
 				return interpreter.NilValue{}
 			}
 		},
+		sema.AuthAccountContractsTypeRemoveFunctionType,
 	)
 }
 
@@ -2488,7 +2575,12 @@ func (r *interpreterRuntime) newAccountContractsGetNamesFunction(
 			values[i] = interpreter.NewStringValue(name)
 		}
 
-		return interpreter.NewArrayValueUnownedNonCopying(values...)
+		return interpreter.NewArrayValueUnownedNonCopying(
+			interpreter.VariableSizedStaticType{
+				Type: interpreter.PrimitiveStaticTypeString,
+			},
+			values...,
+		)
 	}
 }
 
@@ -2553,9 +2645,7 @@ func (r *interpreterRuntime) ReadLinked(address common.Address, path cadence.Pat
 				&sema.ReferenceType{
 					Type: sema.AnyType,
 				},
-				func() interpreter.LocationRange {
-					return interpreter.LocationRange{}
-				},
+				interpreter.ReturnEmptyLocationRange,
 			)
 			if err != nil {
 				return nil, err
@@ -2580,7 +2670,10 @@ func NewBlockValue(block Block) interpreter.BlockValue {
 	for i, b := range block.Hash {
 		values[i] = interpreter.UInt8Value(b)
 	}
-	idValue := interpreter.NewArrayValue(values)
+	idValue := interpreter.NewArrayValueUnownedNonCopying(
+		interpreter.ByteArrayStaticType,
+		values...,
+	)
 
 	// timestamp
 	// TODO: verify
@@ -2633,6 +2726,7 @@ func (r *interpreterRuntime) newAccountKeysAddFunction(
 				invocation.Interpreter.PublicKeyValidationHandler,
 			)
 		},
+		sema.AuthAccountKeysTypeAddFunctionType,
 	)
 }
 
@@ -2669,6 +2763,7 @@ func (r *interpreterRuntime) newAccountKeysGetFunction(
 				),
 			)
 		},
+		sema.AccountKeysTypeGetFunctionType,
 	)
 }
 
@@ -2714,6 +2809,7 @@ func (r *interpreterRuntime) newAccountKeysRevokeFunction(
 				),
 			)
 		},
+		sema.AuthAccountKeysTypeRevokeFunctionType,
 	)
 }
 

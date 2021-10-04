@@ -3081,10 +3081,9 @@ func TestCheckInvalidResourceInterfaceUseAsType(t *testing.T) {
       let r: @I <- create R()
     `)
 
-	errs := ExpectCheckerErrors(t, err, 2)
+	errs := ExpectCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.InvalidInterfaceTypeError{}, errs[0])
-	assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
 }
 
 // TestCheckResourceInterfaceUseAsType test if a resource
@@ -3909,10 +3908,13 @@ func TestCheckInvalidResourceMethodBinding(t *testing.T) {
 
 	t.Parallel()
 
+	// TODO: replace AnyStruct return type with ([@R]#(@R): Void)
+	//   once bound function types are supported
+
 	_, err := ParseAndCheck(t, `
       resource R {}
 
-      fun test(): ((@R): Void) {
+      fun test(): AnyStruct {
           let rs <- [<-create R()]
           let append = rs.append
           destroy rs
@@ -4574,10 +4576,9 @@ func TestCheckInvalidResourceInterfaceType(t *testing.T) {
           let ri: @RI <- create R()
         `)
 
-		errs := ExpectCheckerErrors(t, err, 2)
+		errs := ExpectCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.InvalidInterfaceTypeError{}, errs[0])
-		assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
 	})
 
 	t.Run("in array", func(t *testing.T) {
@@ -4589,10 +4590,9 @@ func TestCheckInvalidResourceInterfaceType(t *testing.T) {
           let ri: @[RI] <- [<-create R()]
         `)
 
-		errs := ExpectCheckerErrors(t, err, 2)
+		errs := ExpectCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.InvalidInterfaceTypeError{}, errs[0])
-		assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
 	})
 }
 
@@ -5001,4 +5001,51 @@ func TestCheckOptionalResourceBindingWithSecondValue(t *testing.T) {
       }
     `)
 	require.NoError(t, err)
+}
+
+func TestCheckEmptyResourceCollectionMove(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("Dictionary", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            resource R {
+                init() {
+                }
+            }
+
+            fun foo() {
+               bar(a: <-{})
+            }
+
+            fun bar(a: @{String: R}) {
+                destroy a
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("Array", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            resource R {
+                init() {
+                }
+            }
+
+            fun foo() {
+               bar(a: <-[])
+            }
+
+            fun bar(a: @[R]) {
+                destroy a
+            }
+        `)
+
+		require.NoError(t, err)
+	})
 }

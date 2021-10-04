@@ -43,25 +43,25 @@ var AuthAccountContractsType = func() *CompositeType {
 		NewPublicFunctionMember(
 			authAccountContractsType,
 			AuthAccountContractsTypeAddFunctionName,
-			authAccountContractsTypeAddFunctionType,
+			AuthAccountContractsTypeAddFunctionType,
 			authAccountContractsTypeAddFunctionDocString,
 		),
 		NewPublicFunctionMember(
 			authAccountContractsType,
 			AuthAccountContractsTypeUpdateExperimentalFunctionName,
-			authAccountContractsTypeUpdateExperimentalFunctionType,
+			AuthAccountContractsTypeUpdateExperimentalFunctionType,
 			authAccountContractsTypeUpdateExperimentalFunctionDocString,
 		),
 		NewPublicFunctionMember(
 			authAccountContractsType,
 			AuthAccountContractsTypeGetFunctionName,
-			authAccountContractsTypeGetFunctionType,
+			AuthAccountContractsTypeGetFunctionType,
 			authAccountContractsTypeGetFunctionDocString,
 		),
 		NewPublicFunctionMember(
 			authAccountContractsType,
 			AuthAccountContractsTypeRemoveFunctionName,
-			authAccountContractsTypeRemoveFunctionType,
+			AuthAccountContractsTypeRemoveFunctionType,
 			authAccountContractsTypeRemoveFunctionDocString,
 		),
 		NewPublicConstantFieldMember(
@@ -101,7 +101,7 @@ or if the given name does not match the name of the contract/contract interface 
 Returns the deployed contract.
 `
 
-var authAccountContractsTypeAddFunctionType = &FunctionType{
+var AuthAccountContractsTypeAddFunctionType = &FunctionType{
 	Parameters: []*Parameter{
 		{
 			Identifier: "name",
@@ -112,9 +112,7 @@ var authAccountContractsTypeAddFunctionType = &FunctionType{
 		{
 			Identifier: "code",
 			TypeAnnotation: NewTypeAnnotation(
-				&VariableSizedType{
-					Type: UInt8Type,
-				},
+				ByteArrayType,
 			),
 		},
 	},
@@ -144,7 +142,7 @@ or if the given name does not match the name of the contract/contract interface 
 Returns the deployed contract for the updated contract.
 `
 
-var authAccountContractsTypeUpdateExperimentalFunctionType = &FunctionType{
+var AuthAccountContractsTypeUpdateExperimentalFunctionType = &FunctionType{
 	Parameters: []*Parameter{
 		{
 			Identifier: "name",
@@ -155,9 +153,7 @@ var authAccountContractsTypeUpdateExperimentalFunctionType = &FunctionType{
 		{
 			Identifier: "code",
 			TypeAnnotation: NewTypeAnnotation(
-				&VariableSizedType{
-					Type: UInt8Type,
-				},
+				ByteArrayType,
 			),
 		},
 	},
@@ -172,7 +168,7 @@ Returns the deployed contract for the contract/contract interface with the given
 Returns nil if no contract/contract interface with the given name exists in the account.
 `
 
-var authAccountContractsTypeGetFunctionType = &FunctionType{
+var AuthAccountContractsTypeGetFunctionType = &FunctionType{
 	Parameters: []*Parameter{
 		{
 			Identifier: "name",
@@ -196,7 +192,7 @@ Returns the removed deployed contract, if any.
 Returns nil if no contract/contract interface with the given name exists in the account.
 `
 
-var authAccountContractsTypeRemoveFunctionType = &FunctionType{
+var AuthAccountContractsTypeRemoveFunctionType = &FunctionType{
 	Parameters: []*Parameter{
 		{
 			Identifier:     "name",

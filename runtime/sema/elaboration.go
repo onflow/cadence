@@ -42,11 +42,13 @@ type Elaboration struct {
 	CompositeTypeDeclarations           map[*CompositeType]*ast.CompositeDeclaration
 	InterfaceDeclarationTypes           map[*ast.InterfaceDeclaration]*InterfaceType
 	InterfaceTypeDeclarations           map[*InterfaceType]*ast.InterfaceDeclaration
-	ConstructorFunctionTypes            map[*ast.SpecialFunctionDeclaration]*ConstructorFunctionType
+	ConstructorFunctionTypes            map[*ast.SpecialFunctionDeclaration]*FunctionType
 	FunctionExpressionFunctionType      map[*ast.FunctionExpression]*FunctionType
+	InvocationExpressionReceiverTypes   map[*ast.InvocationExpression]Type
 	InvocationExpressionArgumentTypes   map[*ast.InvocationExpression][]Type
 	InvocationExpressionParameterTypes  map[*ast.InvocationExpression][]Type
 	InvocationExpressionReturnTypes     map[*ast.InvocationExpression]Type
+	InvocationExpressionTypeArguments   map[*ast.InvocationExpression]*TypeParameterTypeOrderedMap
 	CastingStaticValueTypes             map[*ast.CastingExpression]Type
 	CastingTargetTypes                  map[*ast.CastingExpression]Type
 	ReturnStatementValueTypes           map[*ast.ReturnStatement]Type
@@ -56,7 +58,7 @@ type Elaboration struct {
 	MemberExpressionMemberInfos         map[*ast.MemberExpression]MemberInfo
 	MemberExpressionExpectedTypes       map[*ast.MemberExpression]Type
 	ArrayExpressionArgumentTypes        map[*ast.ArrayExpression][]Type
-	ArrayExpressionElementType          map[*ast.ArrayExpression]Type
+	ArrayExpressionArrayType            map[*ast.ArrayExpression]ArrayType
 	DictionaryExpressionType            map[*ast.DictionaryExpression]*DictionaryType
 	DictionaryExpressionEntryTypes      map[*ast.DictionaryExpression][]DictionaryEntryType
 	IntegerExpressionType               map[*ast.IntegerExpression]Type
@@ -69,10 +71,8 @@ type Elaboration struct {
 	InterfaceNestedDeclarations         map[*ast.InterfaceDeclaration]map[string]ast.Declaration
 	PostConditionsRewrite               map[*ast.Conditions]PostConditionsRewrite
 	EmitStatementEventTypes             map[*ast.EmitStatement]*CompositeType
-	// Keyed by qualified identifier
 	CompositeTypes                      map[TypeID]*CompositeType
 	InterfaceTypes                      map[TypeID]*InterfaceType
-	InvocationExpressionTypeArguments   map[*ast.InvocationExpression]*TypeParameterTypeOrderedMap
 	IdentifierInInvocationTypes         map[*ast.IdentifierExpression]Type
 	ImportDeclarationsResolvedLocations map[*ast.ImportDeclaration][]ResolvedLocation
 	GlobalValues                        *StringVariableOrderedMap
@@ -97,11 +97,13 @@ func NewElaboration() *Elaboration {
 		CompositeTypeDeclarations:           map[*CompositeType]*ast.CompositeDeclaration{},
 		InterfaceDeclarationTypes:           map[*ast.InterfaceDeclaration]*InterfaceType{},
 		InterfaceTypeDeclarations:           map[*InterfaceType]*ast.InterfaceDeclaration{},
-		ConstructorFunctionTypes:            map[*ast.SpecialFunctionDeclaration]*ConstructorFunctionType{},
+		ConstructorFunctionTypes:            map[*ast.SpecialFunctionDeclaration]*FunctionType{},
 		FunctionExpressionFunctionType:      map[*ast.FunctionExpression]*FunctionType{},
+		InvocationExpressionReceiverTypes:   map[*ast.InvocationExpression]Type{},
 		InvocationExpressionArgumentTypes:   map[*ast.InvocationExpression][]Type{},
 		InvocationExpressionParameterTypes:  map[*ast.InvocationExpression][]Type{},
 		InvocationExpressionReturnTypes:     map[*ast.InvocationExpression]Type{},
+		InvocationExpressionTypeArguments:   map[*ast.InvocationExpression]*TypeParameterTypeOrderedMap{},
 		CastingStaticValueTypes:             map[*ast.CastingExpression]Type{},
 		CastingTargetTypes:                  map[*ast.CastingExpression]Type{},
 		ReturnStatementValueTypes:           map[*ast.ReturnStatement]Type{},
@@ -111,7 +113,7 @@ func NewElaboration() *Elaboration {
 		MemberExpressionMemberInfos:         map[*ast.MemberExpression]MemberInfo{},
 		MemberExpressionExpectedTypes:       map[*ast.MemberExpression]Type{},
 		ArrayExpressionArgumentTypes:        map[*ast.ArrayExpression][]Type{},
-		ArrayExpressionElementType:          map[*ast.ArrayExpression]Type{},
+		ArrayExpressionArrayType:            map[*ast.ArrayExpression]ArrayType{},
 		DictionaryExpressionType:            map[*ast.DictionaryExpression]*DictionaryType{},
 		DictionaryExpressionEntryTypes:      map[*ast.DictionaryExpression][]DictionaryEntryType{},
 		IntegerExpressionType:               map[*ast.IntegerExpression]Type{},
@@ -126,7 +128,6 @@ func NewElaboration() *Elaboration {
 		EmitStatementEventTypes:             map[*ast.EmitStatement]*CompositeType{},
 		CompositeTypes:                      map[TypeID]*CompositeType{},
 		InterfaceTypes:                      map[TypeID]*InterfaceType{},
-		InvocationExpressionTypeArguments:   map[*ast.InvocationExpression]*TypeParameterTypeOrderedMap{},
 		IdentifierInInvocationTypes:         map[*ast.IdentifierExpression]Type{},
 		ImportDeclarationsResolvedLocations: map[*ast.ImportDeclaration][]ResolvedLocation{},
 		GlobalValues:                        NewStringVariableOrderedMap(),
@@ -162,13 +163,12 @@ func (e *Elaboration) FunctionEntryPointType() (*FunctionType, error) {
 		}
 	}
 
-	invokableType, ok := entryPointValue.Type.(InvokableType)
+	functionType, ok := entryPointValue.Type.(*FunctionType)
 	if !ok {
 		return nil, &InvalidEntryPointTypeError{
 			Type: entryPointValue.Type,
 		}
 	}
 
-	functionType := invokableType.InvocationFunctionType()
 	return functionType, nil
 }

@@ -36,7 +36,7 @@ import (
 //
 type StaticType interface {
 	fmt.Stringer
-	IsStaticType()
+	isStaticType()
 	Equal(other StaticType) bool
 }
 
@@ -47,7 +47,7 @@ type CompositeStaticType struct {
 	QualifiedIdentifier string
 }
 
-func (CompositeStaticType) IsStaticType() {}
+func (CompositeStaticType) isStaticType() {}
 
 func (t CompositeStaticType) String() string {
 	if t.Location == nil {
@@ -73,7 +73,7 @@ type InterfaceStaticType struct {
 	QualifiedIdentifier string
 }
 
-func (InterfaceStaticType) IsStaticType() {}
+func (InterfaceStaticType) isStaticType() {}
 
 func (t InterfaceStaticType) String() string {
 	if t.Location == nil {
@@ -92,13 +92,27 @@ func (t InterfaceStaticType) Equal(other StaticType) bool {
 		otherInterfaceType.QualifiedIdentifier == t.QualifiedIdentifier
 }
 
+// ArrayStaticType
+
+type ArrayStaticType interface {
+	StaticType
+	isArrayStaticType()
+	ElementType() StaticType
+}
+
 // VariableSizedStaticType
 
 type VariableSizedStaticType struct {
 	Type StaticType
 }
 
-func (VariableSizedStaticType) IsStaticType() {}
+func (VariableSizedStaticType) isStaticType() {}
+
+func (VariableSizedStaticType) isArrayStaticType() {}
+
+func (t VariableSizedStaticType) ElementType() StaticType {
+	return t.Type
+}
 
 func (t VariableSizedStaticType) String() string {
 	return fmt.Sprintf("[%s]", t.Type)
@@ -120,7 +134,13 @@ type ConstantSizedStaticType struct {
 	Size int64
 }
 
-func (ConstantSizedStaticType) IsStaticType() {}
+func (ConstantSizedStaticType) isStaticType() {}
+
+func (ConstantSizedStaticType) isArrayStaticType() {}
+
+func (t ConstantSizedStaticType) ElementType() StaticType {
+	return t.Type
+}
 
 func (t ConstantSizedStaticType) String() string {
 	return fmt.Sprintf("[%s; %d]", t.Type, t.Size)
@@ -143,7 +163,7 @@ type DictionaryStaticType struct {
 	ValueType StaticType
 }
 
-func (DictionaryStaticType) IsStaticType() {}
+func (DictionaryStaticType) isStaticType() {}
 
 func (t DictionaryStaticType) String() string {
 	return fmt.Sprintf("{%s: %s}", t.KeyType, t.ValueType)
@@ -165,7 +185,7 @@ type OptionalStaticType struct {
 	Type StaticType
 }
 
-func (OptionalStaticType) IsStaticType() {}
+func (OptionalStaticType) isStaticType() {}
 
 func (t OptionalStaticType) String() string {
 	return fmt.Sprintf("%s?", t.Type)
@@ -192,7 +212,7 @@ type RestrictedStaticType struct {
 // Key types in Go maps must be (transitively) hashable types,
 // and slices are not, but `Restrictions` is one.
 //
-func (*RestrictedStaticType) IsStaticType() {}
+func (*RestrictedStaticType) isStaticType() {}
 
 func (t *RestrictedStaticType) String() string {
 	restrictions := make([]string, len(t.Restrictions))
@@ -231,7 +251,7 @@ type ReferenceStaticType struct {
 	Type       StaticType
 }
 
-func (ReferenceStaticType) IsStaticType() {}
+func (ReferenceStaticType) isStaticType() {}
 
 func (t ReferenceStaticType) String() string {
 	auth := ""
@@ -258,7 +278,7 @@ type CapabilityStaticType struct {
 	BorrowType StaticType
 }
 
-func (CapabilityStaticType) IsStaticType() {}
+func (CapabilityStaticType) isStaticType() {}
 
 func (t CapabilityStaticType) String() string {
 	if t.BorrowType != nil {
@@ -294,8 +314,56 @@ func ConvertSemaToStaticType(t sema.Type) StaticType {
 		}
 
 	case *sema.InterfaceType:
-		return convertToInterfaceStaticType(t)
+		return ConvertSemaInterfaceTypeToStaticInterfaceType(t)
 
+	case sema.ArrayType:
+		return ConvertSemaArrayTypeToStaticArrayType(t)
+
+	case *sema.DictionaryType:
+		return ConvertSemaDictionaryTypeToStaticDictionaryType(t)
+
+	case *sema.OptionalType:
+		return OptionalStaticType{
+			Type: ConvertSemaToStaticType(t.Type),
+		}
+
+	case *sema.RestrictedType:
+		restrictions := make([]InterfaceStaticType, len(t.Restrictions))
+
+		for i, restriction := range t.Restrictions {
+			restrictions[i] = ConvertSemaInterfaceTypeToStaticInterfaceType(restriction)
+		}
+
+		return &RestrictedStaticType{
+			Type:         ConvertSemaToStaticType(t.Type),
+			Restrictions: restrictions,
+		}
+
+	case *sema.ReferenceType:
+		return ConvertSemaReferenceTyoeToStaticReferenceType(t)
+
+	case *sema.CapabilityType:
+		result := CapabilityStaticType{}
+		if t.BorrowType != nil {
+			result.BorrowType = ConvertSemaToStaticType(t.BorrowType)
+		}
+		return result
+
+	case *sema.FunctionType:
+		return FunctionStaticType{
+			Type: t,
+		}
+	}
+
+	primitiveStaticType := ConvertSemaToPrimitiveStaticType(t)
+	if primitiveStaticType == PrimitiveStaticTypeUnknown {
+		return nil
+	}
+	return primitiveStaticType
+}
+
+func ConvertSemaArrayTypeToStaticArrayType(t sema.ArrayType) ArrayStaticType {
+	switch t := t.(type) {
 	case *sema.VariableSizedType:
 		return VariableSizedStaticType{
 			Type: ConvertSemaToStaticType(t.Type),
@@ -307,55 +375,26 @@ func ConvertSemaToStaticType(t sema.Type) StaticType {
 			Size: t.Size,
 		}
 
-	case *sema.DictionaryType:
-		return DictionaryStaticType{
-			KeyType:   ConvertSemaToStaticType(t.KeyType),
-			ValueType: ConvertSemaToStaticType(t.ValueType),
-		}
-
-	case *sema.OptionalType:
-		return OptionalStaticType{
-			Type: ConvertSemaToStaticType(t.Type),
-		}
-
-	case *sema.RestrictedType:
-		restrictions := make([]InterfaceStaticType, len(t.Restrictions))
-
-		for i, restriction := range t.Restrictions {
-			restrictions[i] = convertToInterfaceStaticType(restriction)
-		}
-
-		return &RestrictedStaticType{
-			Type:         ConvertSemaToStaticType(t.Type),
-			Restrictions: restrictions,
-		}
-
-	case *sema.ReferenceType:
-		return convertSemaReferenceToStaticReferenceType(t)
-
-	case *sema.CapabilityType:
-		result := CapabilityStaticType{}
-		if t.BorrowType != nil {
-			result.BorrowType = ConvertSemaToStaticType(t.BorrowType)
-		}
-		return result
+	default:
+		panic(errors.NewUnreachableError())
 	}
-
-	primitiveStaticType := ConvertSemaToPrimitiveStaticType(t)
-	if primitiveStaticType == PrimitiveStaticTypeUnknown {
-		return nil
-	}
-	return primitiveStaticType
 }
 
-func convertSemaReferenceToStaticReferenceType(t *sema.ReferenceType) ReferenceStaticType {
+func ConvertSemaDictionaryTypeToStaticDictionaryType(t *sema.DictionaryType) DictionaryStaticType {
+	return DictionaryStaticType{
+		KeyType:   ConvertSemaToStaticType(t.KeyType),
+		ValueType: ConvertSemaToStaticType(t.ValueType),
+	}
+}
+
+func ConvertSemaReferenceTyoeToStaticReferenceType(t *sema.ReferenceType) ReferenceStaticType {
 	return ReferenceStaticType{
 		Authorized: t.Authorized,
 		Type:       ConvertSemaToStaticType(t.Type),
 	}
 }
 
-func convertToInterfaceStaticType(t *sema.InterfaceType) InterfaceStaticType {
+func ConvertSemaInterfaceTypeToStaticInterfaceType(t *sema.InterfaceType) InterfaceStaticType {
 	return InterfaceStaticType{
 		Location:            t.Location,
 		QualifiedIdentifier: t.QualifiedIdentifier(),
@@ -424,10 +463,105 @@ func ConvertStaticToSemaType(
 			BorrowType: borrowType,
 		}
 
+	case FunctionStaticType:
+		return t.Type
+
 	case PrimitiveStaticType:
 		return t.SemaType()
 
 	default:
 		panic(errors.NewUnreachableError())
 	}
+}
+
+// FunctionStaticType
+
+type FunctionStaticType struct {
+	Type *sema.FunctionType
+}
+
+func (t FunctionStaticType) ReceiverType() StaticType {
+	var receiverType StaticType
+	if t.Type.ReceiverType != nil {
+		receiverType = ConvertSemaToStaticType(t.Type.ReceiverType)
+	}
+	return receiverType
+}
+
+func (t FunctionStaticType) TypeParameters() []*TypeParameter {
+	typeParameters := make([]*TypeParameter, len(t.Type.TypeParameters))
+	for i, typeParameter := range t.Type.TypeParameters {
+		typeParameters[i] = &TypeParameter{
+			Name:      typeParameter.Name,
+			TypeBound: ConvertSemaToStaticType(typeParameter.TypeBound),
+			Optional:  typeParameter.Optional,
+		}
+	}
+
+	return typeParameters
+}
+
+func (t FunctionStaticType) ParameterTypes() []StaticType {
+	parameterTypes := make([]StaticType, len(t.Type.Parameters))
+	for i, parameter := range t.Type.Parameters {
+		parameterTypes[i] = ConvertSemaToStaticType(parameter.TypeAnnotation.Type)
+	}
+
+	return parameterTypes
+}
+
+func (t FunctionStaticType) ReturnType() StaticType {
+	var returnType StaticType
+	if t.Type.ReturnTypeAnnotation != nil {
+		returnType = ConvertSemaToStaticType(t.Type.ReturnTypeAnnotation.Type)
+	}
+
+	return returnType
+}
+
+func (FunctionStaticType) isStaticType() {}
+
+func (t FunctionStaticType) String() string {
+	return t.Type.String()
+}
+
+func (t FunctionStaticType) Equal(other StaticType) bool {
+	otherFunction, ok := other.(*FunctionStaticType)
+	if !ok {
+		return false
+	}
+
+	return t.Type.Equal(otherFunction.Type)
+}
+
+type TypeParameter struct {
+	Name      string
+	TypeBound StaticType
+	Optional  bool
+}
+
+func (p TypeParameter) Equal(other *TypeParameter) bool {
+	if p.TypeBound == nil {
+		if other.TypeBound != nil {
+			return false
+		}
+	} else {
+		if other.TypeBound == nil ||
+			!p.TypeBound.Equal(other.TypeBound) {
+
+			return false
+		}
+	}
+
+	return p.Optional == other.Optional
+}
+
+func (p TypeParameter) String() string {
+	var builder strings.Builder
+	builder.WriteString(p.Name)
+	if p.TypeBound != nil {
+		builder.WriteString(": ")
+		builder.WriteString(p.TypeBound.String())
+	}
+	return builder.String()
 }

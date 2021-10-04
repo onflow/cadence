@@ -103,13 +103,20 @@ func TestExportValue(t *testing.T) {
 			expected: cadence.String("foo"),
 		},
 		{
-			label:    "Array empty",
-			value:    interpreter.NewArrayValueUnownedNonCopying([]interpreter.Value{}...),
+			label: "Array empty",
+			value: interpreter.NewArrayValueUnownedNonCopying(
+				interpreter.VariableSizedStaticType{
+					Type: interpreter.PrimitiveStaticTypeAnyStruct,
+				},
+				[]interpreter.Value{}...),
 			expected: cadence.NewArray([]cadence.Value{}),
 		},
 		{
 			label: "Array (non-empty)",
 			value: interpreter.NewArrayValueUnownedNonCopying(
+				interpreter.VariableSizedStaticType{
+					Type: interpreter.PrimitiveStaticTypeAnyStruct,
+				},
 				[]interpreter.Value{
 					interpreter.NewIntValueFromInt64(42),
 					interpreter.NewStringValue("foo"),
@@ -121,13 +128,24 @@ func TestExportValue(t *testing.T) {
 			}),
 		},
 		{
-			label:    "Dictionary",
-			value:    interpreter.NewDictionaryValueUnownedNonCopying(),
+			label: "Dictionary",
+			value: interpreter.NewDictionaryValueUnownedNonCopying(
+				newTestInterpreter(t),
+				interpreter.DictionaryStaticType{
+					KeyType:   interpreter.PrimitiveStaticTypeString,
+					ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
+				},
+			),
 			expected: cadence.NewDictionary([]cadence.KeyValuePair{}),
 		},
 		{
 			label: "Dictionary (non-empty)",
 			value: interpreter.NewDictionaryValueUnownedNonCopying(
+				newTestInterpreter(t),
+				interpreter.DictionaryStaticType{
+					KeyType:   interpreter.PrimitiveStaticTypeString,
+					ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
+				},
 				interpreter.NewStringValue("a"),
 				interpreter.NewIntValueFromInt64(1),
 				interpreter.NewStringValue("b"),
@@ -285,7 +303,7 @@ func TestExportValue(t *testing.T) {
 			value: interpreter.DeployedContractValue{
 				Address: interpreter.AddressValue{},
 				Name:    interpreter.NewStringValue("C"),
-				Code:    interpreter.NewArrayValue(nil),
+				Code:    interpreter.NewArrayValueUnownedNonCopying(nil),
 			},
 			expected: nil,
 		},
@@ -300,9 +318,10 @@ func TestImportValue(t *testing.T) {
 	t.Parallel()
 
 	type importTest struct {
-		label    string
-		expected interpreter.Value
-		value    cadence.Value
+		label        string
+		expected     interpreter.Value
+		value        cadence.Value
+		expectedType sema.Type
 	}
 
 	test := func(tt importTest) {
@@ -311,7 +330,7 @@ func TestImportValue(t *testing.T) {
 
 			t.Parallel()
 
-			actual, err := importValue(nil, tt.value)
+			actual, err := importValue(nil, tt.value, tt.expectedType)
 
 			if tt.expected == nil {
 				require.Error(t, err)
@@ -359,9 +378,16 @@ func TestImportValue(t *testing.T) {
 			expected: interpreter.NewStringValue("foo"),
 		},
 		{
-			label:    "Array empty",
-			value:    cadence.NewArray([]cadence.Value{}),
-			expected: interpreter.NewArrayValueUnownedNonCopying([]interpreter.Value{}...),
+			label: "Array empty",
+			value: cadence.NewArray([]cadence.Value{}),
+			expected: interpreter.NewArrayValueUnownedNonCopying(
+				interpreter.VariableSizedStaticType{
+					Type: interpreter.PrimitiveStaticTypeAnyStruct,
+				},
+				[]interpreter.Value{}...),
+			expectedType: &sema.VariableSizedType{
+				Type: sema.AnyStructType,
+			},
 		},
 		{
 			label: "Array non-empty",
@@ -370,20 +396,41 @@ func TestImportValue(t *testing.T) {
 				cadence.String("foo"),
 			}),
 			expected: interpreter.NewArrayValueUnownedNonCopying(
+				interpreter.VariableSizedStaticType{
+					Type: interpreter.PrimitiveStaticTypeAnyStruct,
+				},
 				[]interpreter.Value{
 					interpreter.NewIntValueFromInt64(42),
 					interpreter.NewStringValue("foo"),
 				}...,
 			),
+			expectedType: &sema.VariableSizedType{
+				Type: sema.AnyStructType,
+			},
 		},
 		{
-			label:    "Dictionary",
-			expected: interpreter.NewDictionaryValueUnownedNonCopying(),
-			value:    cadence.NewDictionary([]cadence.KeyValuePair{}),
+			label: "Dictionary",
+			expected: interpreter.NewDictionaryValueUnownedNonCopying(
+				newTestInterpreter(t),
+				interpreter.DictionaryStaticType{
+					KeyType:   interpreter.PrimitiveStaticTypeString,
+					ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
+				},
+			),
+			value: cadence.NewDictionary([]cadence.KeyValuePair{}),
+			expectedType: &sema.DictionaryType{
+				KeyType:   sema.StringType,
+				ValueType: sema.AnyStructType,
+			},
 		},
 		{
 			label: "Dictionary (non-empty)",
 			expected: interpreter.NewDictionaryValueUnownedNonCopying(
+				newTestInterpreter(t),
+				interpreter.DictionaryStaticType{
+					KeyType:   interpreter.PrimitiveStaticTypeString,
+					ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
+				},
 				interpreter.NewStringValue("a"),
 				interpreter.NewIntValueFromInt64(1),
 				interpreter.NewStringValue("b"),
@@ -399,6 +446,10 @@ func TestImportValue(t *testing.T) {
 					Value: cadence.NewInt(2),
 				},
 			}),
+			expectedType: &sema.DictionaryType{
+				KeyType:   sema.StringType,
+				ValueType: sema.AnyStructType,
+			},
 		},
 		{
 			label:    "Address",
@@ -610,6 +661,24 @@ func TestExportFixedPointValuesFromScript(t *testing.T) {
 
 		test(fixedPointType, literal)
 	}
+}
+
+func TestExportAddressValue(t *testing.T) {
+
+	t.Parallel()
+
+	script := `
+        pub fun main(): Address {
+            return 0x42
+        }
+    `
+
+	actual := exportValueFromScript(t, script)
+	expected := cadence.BytesToAddress(
+		[]byte{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x42},
+	)
+
+	assert.Equal(t, expected, actual)
 }
 
 func TestExportStructValue(t *testing.T) {
@@ -1416,13 +1485,13 @@ func TestEnumValue(t *testing.T) {
             }
         `
 
-		actual, err := importAndExportValuesFromScript(t, script, enumValue)
+		actual, err := executeTestScript(t, script, enumValue)
 		require.NoError(t, err)
 		assert.Equal(t, enumValue, actual)
 	})
 }
 
-func importAndExportValuesFromScript(t *testing.T, script string, arg cadence.Value) (cadence.Value, error) {
+func executeTestScript(t *testing.T, script string, arg cadence.Value) (cadence.Value, error) {
 	encodedArg, err := json.Encode(arg)
 	require.NoError(t, err)
 
@@ -1693,7 +1762,7 @@ func TestArgumentPassing(t *testing.T) {
 				returnStmt,
 			)
 
-			actual, err := importAndExportValuesFromScript(t, script, test.exportedValue)
+			actual, err := executeTestScript(t, script, test.exportedValue)
 			require.NoError(t, err)
 
 			if !test.skipExport {
@@ -1846,7 +1915,7 @@ func TestComplexStructArgumentPassing(t *testing.T) {
 		"Foo",
 	)
 
-	actual, err := importAndExportValuesFromScript(t, script, complexStructValue)
+	actual, err := executeTestScript(t, script, complexStructValue)
 	require.NoError(t, err)
 	assert.Equal(t, complexStructValue, actual)
 
@@ -1948,7 +2017,7 @@ func TestComplexStructWithAnyStructFields(t *testing.T) {
 		"Foo",
 	)
 
-	actual, err := importAndExportValuesFromScript(t, script, complexStructValue)
+	actual, err := executeTestScript(t, script, complexStructValue)
 	require.NoError(t, err)
 	assert.Equal(t, complexStructValue, actual)
 }
@@ -2041,6 +2110,27 @@ func TestMalformedArgumentPassing(t *testing.T) {
 		},
 	}
 
+	// Struct with nested array with mismatching element type
+	malformedStruct5 := cadence.Struct{
+		StructType: &cadence.StructType{
+			Location:            utils.TestLocation,
+			QualifiedIdentifier: "Bar",
+			Fields: []cadence.Field{
+				{
+					Identifier: "a",
+					Type: cadence.VariableSizedArrayType{
+						ElementType: malformedStructType1,
+					},
+				},
+			},
+		},
+		Fields: []cadence.Value{
+			cadence.NewArray([]cadence.Value{
+				cadence.String("mismatching value"),
+			}),
+		},
+	}
+
 	type argumentPassingTest struct {
 		label           string
 		typeSignature   string
@@ -2096,13 +2186,29 @@ func TestMalformedArgumentPassing(t *testing.T) {
 			expectedErrType: &InvalidValueTypeError{},
 		},
 		{
+			label:         "Nested array with mismatching element",
+			typeSignature: "[[String]]",
+			exportedValue: cadence.NewArray([]cadence.Value{
+				cadence.NewArray([]cadence.Value{
+					cadence.NewInt(5),
+				}),
+			}),
+			expectedErrType: &InvalidValueTypeError{},
+		},
+		{
+			label:           "Inner array with mismatching element",
+			typeSignature:   "Bar",
+			exportedValue:   malformedStruct5,
+			expectedErrType: &MalformedValueError{},
+		},
+		{
 			label:           "Malformed Optional",
 			typeSignature:   "Foo?",
 			exportedValue:   cadence.NewOptional(malformedStruct1),
 			expectedErrType: &MalformedValueError{},
 		},
 		{
-			label:         "Malformed Map",
+			label:         "Malformed dictionary",
 			typeSignature: "{String: Foo}",
 			exportedValue: cadence.NewDictionary([]cadence.KeyValuePair{
 				{
@@ -2156,7 +2262,7 @@ func TestMalformedArgumentPassing(t *testing.T) {
 				test.typeSignature,
 			)
 
-			_, err := importAndExportValuesFromScript(t, script, test.exportedValue)
+			_, err := executeTestScript(t, script, test.exportedValue)
 			require.Error(t, err)
 
 			require.IsType(t, Error{}, err)
@@ -2174,11 +2280,455 @@ func TestMalformedArgumentPassing(t *testing.T) {
 	}
 }
 
+func TestImportExportArrayValue(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("export empty", func(t *testing.T) {
+
+		t.Parallel()
+
+		value := interpreter.NewArrayValueUnownedNonCopying(
+			interpreter.VariableSizedStaticType{
+				Type: interpreter.PrimitiveStaticTypeAnyStruct,
+			},
+		)
+
+		actual, err := exportValueWithInterpreter(value, nil, seenReferences{})
+		require.NoError(t, err)
+
+		assert.Equal(t,
+			cadence.NewArray([]cadence.Value{}),
+			actual,
+		)
+	})
+
+	t.Run("import empty", func(t *testing.T) {
+
+		t.Parallel()
+
+		value := cadence.NewArray([]cadence.Value{})
+
+		actual, err := importValue(
+			nil,
+			value,
+			&sema.VariableSizedType{
+				Type: sema.UInt8Type,
+			},
+		)
+		require.NoError(t, err)
+
+		assert.Equal(t,
+			interpreter.NewArrayValueUnownedNonCopying(
+				interpreter.VariableSizedStaticType{
+					Type: interpreter.PrimitiveStaticTypeUInt8,
+				},
+			),
+			actual,
+		)
+	})
+
+	t.Run("export non-empty", func(t *testing.T) {
+
+		t.Parallel()
+
+		value := interpreter.NewArrayValueUnownedNonCopying(
+			interpreter.VariableSizedStaticType{
+				Type: interpreter.PrimitiveStaticTypeAnyStruct,
+			},
+			interpreter.NewIntValueFromInt64(42),
+			interpreter.NewStringValue("foo"),
+		)
+
+		actual, err := exportValueWithInterpreter(value, nil, seenReferences{})
+		require.NoError(t, err)
+
+		assert.Equal(t,
+			cadence.NewArray([]cadence.Value{
+				cadence.NewInt(42),
+				cadence.String("foo"),
+			}),
+			actual,
+		)
+	})
+
+	t.Run("import non-empty", func(t *testing.T) {
+
+		t.Parallel()
+
+		value := cadence.NewArray([]cadence.Value{
+			cadence.NewInt(42),
+			cadence.String("foo"),
+		})
+
+		actual, err := importValue(
+			nil,
+			value,
+			&sema.VariableSizedType{
+				Type: sema.AnyStructType,
+			},
+		)
+		require.NoError(t, err)
+
+		assert.Equal(t,
+			interpreter.NewArrayValueUnownedNonCopying(
+				interpreter.VariableSizedStaticType{
+					Type: interpreter.PrimitiveStaticTypeAnyStruct,
+				},
+				interpreter.NewIntValueFromInt64(42),
+				interpreter.NewStringValue("foo"),
+			),
+			actual,
+		)
+	})
+
+	t.Run("import nested array with broader expected type", func(t *testing.T) {
+
+		t.Parallel()
+
+		value := cadence.NewArray([]cadence.Value{
+			cadence.NewArray([]cadence.Value{
+				cadence.NewInt8(4),
+				cadence.NewInt8(3),
+			}),
+			cadence.NewArray([]cadence.Value{
+				cadence.NewInt8(42),
+				cadence.NewInt8(54),
+			}),
+		})
+
+		inter, err := interpreter.NewInterpreter(
+			nil,
+			utils.TestLocation,
+		)
+		require.NoError(t, err)
+
+		actual, err := importValue(
+			inter,
+			value,
+			sema.AnyStructType,
+		)
+		require.NoError(t, err)
+
+		assert.Equal(t,
+			interpreter.NewArrayValueUnownedNonCopying(
+				interpreter.VariableSizedStaticType{
+					Type: interpreter.PrimitiveStaticTypeAnyStruct,
+				},
+				interpreter.NewArrayValueUnownedNonCopying(
+					interpreter.VariableSizedStaticType{
+						Type: interpreter.PrimitiveStaticTypeAnyStruct,
+					},
+					interpreter.Int8Value(4),
+					interpreter.Int8Value(3),
+				),
+				interpreter.NewArrayValueUnownedNonCopying(
+					interpreter.VariableSizedStaticType{
+						Type: interpreter.PrimitiveStaticTypeAnyStruct,
+					},
+					interpreter.Int8Value(42),
+					interpreter.Int8Value(54),
+				),
+			),
+			actual,
+		)
+	})
+}
+
+func TestImportExportDictionaryValue(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("export empty", func(t *testing.T) {
+
+		t.Parallel()
+
+		value := interpreter.NewDictionaryValueUnownedNonCopying(
+			newTestInterpreter(t),
+			interpreter.DictionaryStaticType{
+				KeyType:   interpreter.PrimitiveStaticTypeString,
+				ValueType: interpreter.PrimitiveStaticTypeInt,
+			},
+		)
+
+		actual, err := exportValueWithInterpreter(value, nil, seenReferences{})
+		require.NoError(t, err)
+
+		assert.Equal(t,
+			cadence.NewDictionary([]cadence.KeyValuePair{}),
+			actual,
+		)
+	})
+
+	t.Run("import empty", func(t *testing.T) {
+
+		t.Parallel()
+
+		value := cadence.NewDictionary([]cadence.KeyValuePair{})
+
+		actual, err := importValue(
+			nil,
+			value,
+			&sema.DictionaryType{
+				KeyType:   sema.StringType,
+				ValueType: sema.UInt8Type,
+			},
+		)
+		require.NoError(t, err)
+
+		assert.Equal(t,
+			interpreter.NewDictionaryValueUnownedNonCopying(
+				newTestInterpreter(t),
+				interpreter.DictionaryStaticType{
+					KeyType:   interpreter.PrimitiveStaticTypeString,
+					ValueType: interpreter.PrimitiveStaticTypeUInt8,
+				},
+			),
+			actual,
+		)
+	})
+
+	t.Run("export non-empty", func(t *testing.T) {
+
+		t.Parallel()
+
+		value := interpreter.NewDictionaryValueUnownedNonCopying(
+			newTestInterpreter(t),
+			interpreter.DictionaryStaticType{
+				KeyType:   interpreter.PrimitiveStaticTypeString,
+				ValueType: interpreter.PrimitiveStaticTypeInt,
+			},
+			interpreter.NewStringValue("a"), interpreter.NewIntValueFromInt64(1),
+			interpreter.NewStringValue("b"), interpreter.NewIntValueFromInt64(2),
+		)
+
+		actual, err := exportValueWithInterpreter(value, nil, seenReferences{})
+		require.NoError(t, err)
+
+		assert.Equal(t,
+			cadence.NewDictionary([]cadence.KeyValuePair{
+				{
+					Key:   cadence.String("a"),
+					Value: cadence.NewInt(1),
+				},
+				{
+					Key:   cadence.String("b"),
+					Value: cadence.NewInt(2),
+				},
+			}),
+			actual,
+		)
+	})
+
+	t.Run("import non-empty", func(t *testing.T) {
+
+		t.Parallel()
+
+		value := cadence.NewDictionary([]cadence.KeyValuePair{
+			{
+				Key:   cadence.String("a"),
+				Value: cadence.NewInt(1),
+			},
+			{
+				Key:   cadence.String("b"),
+				Value: cadence.NewInt(2),
+			},
+		})
+
+		actual, err := importValue(
+			nil,
+			value,
+			&sema.DictionaryType{
+				KeyType:   sema.StringType,
+				ValueType: sema.IntType,
+			},
+		)
+		require.NoError(t, err)
+
+		assert.Equal(t,
+			interpreter.NewDictionaryValueUnownedNonCopying(
+				newTestInterpreter(t),
+				interpreter.DictionaryStaticType{
+					KeyType:   interpreter.PrimitiveStaticTypeString,
+					ValueType: interpreter.PrimitiveStaticTypeInt,
+				},
+				interpreter.NewStringValue("a"), interpreter.NewIntValueFromInt64(1),
+				interpreter.NewStringValue("b"), interpreter.NewIntValueFromInt64(2),
+			),
+			actual,
+		)
+	})
+
+	t.Run("import nested dictionary with broader expected type", func(t *testing.T) {
+
+		t.Parallel()
+
+		value := cadence.NewDictionary([]cadence.KeyValuePair{
+			{
+				Key: cadence.String("a"),
+				Value: cadence.NewDictionary([]cadence.KeyValuePair{
+					{
+						Key:   cadence.NewInt8(1),
+						Value: cadence.NewInt(100),
+					},
+					{
+						Key:   cadence.NewInt8(2),
+						Value: cadence.String("hello"),
+					},
+				}),
+			},
+			{
+				Key: cadence.String("b"),
+				Value: cadence.NewDictionary([]cadence.KeyValuePair{
+					{
+						Key:   cadence.NewInt8(1),
+						Value: cadence.String("foo"),
+					},
+					{
+						Key:   cadence.NewInt(2),
+						Value: cadence.NewInt(50),
+					},
+				}),
+			},
+		})
+
+		inter, err := interpreter.NewInterpreter(
+			nil,
+			utils.TestLocation,
+		)
+		require.NoError(t, err)
+
+		actual, err := importValue(
+			inter,
+			value,
+			sema.AnyStructType,
+		)
+		require.NoError(t, err)
+
+		assert.Equal(t,
+			interpreter.NewDictionaryValueUnownedNonCopying(
+				newTestInterpreter(t),
+				interpreter.DictionaryStaticType{
+					KeyType:   interpreter.PrimitiveStaticTypeString,
+					ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
+				},
+
+				interpreter.NewStringValue("a"),
+				interpreter.NewDictionaryValueUnownedNonCopying(
+					newTestInterpreter(t),
+					interpreter.DictionaryStaticType{
+						KeyType:   interpreter.PrimitiveStaticTypeNumber,
+						ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
+					},
+					interpreter.Int8Value(1), interpreter.NewIntValueFromInt64(100),
+					interpreter.Int8Value(2), interpreter.NewStringValue("hello"),
+				),
+
+				interpreter.NewStringValue("b"),
+				interpreter.NewDictionaryValueUnownedNonCopying(
+					newTestInterpreter(t),
+					interpreter.DictionaryStaticType{
+						KeyType:   interpreter.PrimitiveStaticTypeNumber,
+						ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
+					},
+					interpreter.Int8Value(1), interpreter.NewStringValue("foo"),
+					interpreter.NewIntValueFromInt64(2), interpreter.NewIntValueFromInt64(50),
+				),
+			),
+			actual,
+		)
+	})
+
+	t.Run("import dictionary with heterogeneous keys", func(t *testing.T) {
+		t.Parallel()
+
+		script :=
+			`pub fun main(arg: Foo) {
+            }
+
+            pub struct Foo {
+                pub var a: AnyStruct
+
+                init() {
+                    self.a = nil
+                }
+            }`
+
+		// Struct with nested malformed dictionary value
+		malformedStruct := cadence.Struct{
+			StructType: &cadence.StructType{
+				Location:            utils.TestLocation,
+				QualifiedIdentifier: "Foo",
+				Fields: []cadence.Field{
+					{
+						Identifier: "a",
+						Type:       cadence.AnyStructType{},
+					},
+				},
+			},
+			Fields: []cadence.Value{
+				cadence.NewDictionary([]cadence.KeyValuePair{
+					{
+						Key:   cadence.String("foo"),
+						Value: cadence.String("value1"),
+					},
+					{
+						Key:   cadence.NewInt(5),
+						Value: cadence.String("value2"),
+					},
+				}),
+			},
+		}
+
+		_, err := executeTestScript(t, script, malformedStruct)
+		require.Error(t, err)
+
+		var argErr *InvalidEntryPointArgumentError
+		require.ErrorAs(t, err, &argErr)
+
+		assert.Contains(t, argErr.Error(), "cannot import dictionary: keys does not belong to the same type")
+	})
+
+	t.Run("nested dictionary with mismatching element", func(t *testing.T) {
+		t.Parallel()
+
+		script :=
+			`pub fun main(arg: {String: {String: String}}) {
+            }
+            `
+
+		dictionary := cadence.NewDictionary(
+			[]cadence.KeyValuePair{
+				{
+					Key: cadence.String("hello"),
+					Value: cadence.NewDictionary(
+						[]cadence.KeyValuePair{
+							{
+								Key:   cadence.String("hello"),
+								Value: cadence.NewInt(6),
+							},
+						},
+					),
+				},
+			},
+		)
+
+		_, err := executeTestScript(t, script, dictionary)
+		require.Error(t, err)
+
+		var argErr interpreter.ContainerMutationError
+		require.ErrorAs(t, err, &argErr)
+	})
+}
+
 func TestStringValueImport(t *testing.T) {
 
 	t.Parallel()
 
 	t.Run("non-utf8", func(t *testing.T) {
+
+		t.Parallel()
+
 		nonUTF8String := "\xbd\xb2\x3d\xbc\x20\xe2"
 		require.False(t, utf8.ValidString(nonUTF8String))
 
@@ -2731,4 +3281,248 @@ func TestPublicKeyImport(t *testing.T) {
 		assert.True(t, publicKeyValidated)
 		assert.Equal(t, value, cadence.NewBool(true))
 	})
+}
+
+func TestImportExportComplex(t *testing.T) {
+
+	t.Parallel()
+
+	// Array
+
+	semaArrayType := &sema.VariableSizedType{
+		Type: sema.AnyStructType,
+	}
+
+	staticArrayType := interpreter.VariableSizedStaticType{
+		Type: interpreter.PrimitiveStaticTypeAnyStruct,
+	}
+
+	externalArrayType := cadence.VariableSizedArrayType{
+		ElementType: cadence.AnyStructType{},
+	}
+
+	internalArrayValue := interpreter.NewArrayValueUnownedNonCopying(
+		staticArrayType,
+		interpreter.NewIntValueFromInt64(42),
+		interpreter.NewStringValue("foo"),
+	)
+
+	externalArrayValue := cadence.NewArray([]cadence.Value{
+		cadence.NewInt(42),
+		cadence.String("foo"),
+	})
+
+	// Dictionary
+
+	semaDictionaryType := &sema.DictionaryType{
+		KeyType:   sema.StringType,
+		ValueType: semaArrayType,
+	}
+
+	staticDictionaryType := interpreter.DictionaryStaticType{
+		KeyType:   interpreter.PrimitiveStaticTypeString,
+		ValueType: staticArrayType,
+	}
+
+	externalDictionaryType := cadence.DictionaryType{
+		KeyType:     cadence.StringType{},
+		ElementType: externalArrayType,
+	}
+
+	internalDictionaryValue := interpreter.NewDictionaryValueUnownedNonCopying(
+		newTestInterpreter(t),
+		staticDictionaryType,
+		interpreter.NewStringValue("a"), internalArrayValue,
+	)
+
+	externalDictionaryValue := cadence.NewDictionary([]cadence.KeyValuePair{
+		{
+			Key:   cadence.String("a"),
+			Value: externalArrayValue,
+		},
+	})
+
+	// Composite
+
+	semaCompositeType := &sema.CompositeType{
+		Location:   utils.TestLocation,
+		Identifier: "Foo",
+		Kind:       common.CompositeKindStructure,
+		Members:    sema.NewStringMemberOrderedMap(),
+		Fields:     []string{"dictionary"},
+	}
+
+	semaCompositeType.Members.Set(
+		"dictionary",
+		sema.NewPublicConstantFieldMember(
+			semaCompositeType,
+			"dictionary",
+			semaDictionaryType,
+			"",
+		),
+	)
+
+	externalCompositeType := &cadence.StructType{
+		Location:            utils.TestLocation,
+		QualifiedIdentifier: "Foo",
+		Fields: []cadence.Field{
+			{
+				Identifier: "dictionary",
+				Type:       externalDictionaryType,
+			},
+		},
+	}
+
+	internalCompositeValueFields := interpreter.NewStringValueOrderedMap()
+	internalCompositeValueFields.Set("dictionary", internalDictionaryValue)
+
+	internalCompositeValue := interpreter.NewCompositeValue(
+		utils.TestLocation,
+		"Foo",
+		common.CompositeKindStructure,
+		internalCompositeValueFields,
+		nil,
+	)
+
+	externalCompositeValue := cadence.Struct{
+		StructType: externalCompositeType,
+		Fields: []cadence.Value{
+			externalDictionaryValue,
+		},
+	}
+
+	t.Run("export", func(t *testing.T) {
+
+		t.Parallel()
+
+		program := interpreter.Program{
+			Elaboration: sema.NewElaboration(),
+		}
+		inter, err := interpreter.NewInterpreter(&program, utils.TestLocation)
+		require.NoError(t, err)
+
+		program.Elaboration.CompositeTypes[semaCompositeType.ID()] = semaCompositeType
+
+		actual, err := exportValueWithInterpreter(internalCompositeValue, inter, seenReferences{})
+		require.NoError(t, err)
+
+		assert.Equal(t,
+			externalCompositeValue,
+			actual,
+		)
+	})
+
+	t.Run("import", func(t *testing.T) {
+
+		t.Parallel()
+
+		program := interpreter.Program{
+			Elaboration: sema.NewElaboration(),
+		}
+		inter, err := interpreter.NewInterpreter(&program, utils.TestLocation)
+		require.NoError(t, err)
+
+		program.Elaboration.CompositeTypes[semaCompositeType.ID()] = semaCompositeType
+
+		actual, err := importValue(
+			inter,
+			externalCompositeValue,
+			semaCompositeType,
+		)
+		require.NoError(t, err)
+
+		assert.Equal(t,
+			internalCompositeValue,
+			actual,
+		)
+	})
+}
+
+func TestStaticTypeAvailability(t *testing.T) {
+	t.Parallel()
+
+	t.Run("inner array", func(t *testing.T) {
+		script := `
+            pub fun main(arg: Foo) {
+            }
+
+            pub struct Foo {
+                pub var a: AnyStruct
+
+                init() {
+                    self.a = nil
+                }
+            }
+        `
+
+		structValue := cadence.Struct{
+			StructType: &cadence.StructType{
+				Location:            utils.TestLocation,
+				QualifiedIdentifier: "Foo",
+				Fields: []cadence.Field{
+					{
+						Identifier: "a",
+						Type:       cadence.AnyStructType{},
+					},
+				},
+			},
+
+			Fields: []cadence.Value{
+				cadence.NewArray([]cadence.Value{
+					cadence.String("foo"),
+					cadence.String("bar"),
+				}),
+			},
+		}
+
+		_, err := executeTestScript(t, script, structValue)
+		require.NoError(t, err)
+	})
+
+	t.Run("inner dictionary", func(t *testing.T) {
+		script := `
+            pub fun main(arg: Foo) {
+            }
+
+            pub struct Foo {
+                pub var a: AnyStruct
+
+                init() {
+                    self.a = nil
+                }
+            }
+        `
+
+		structValue := cadence.Struct{
+			StructType: &cadence.StructType{
+				Location:            utils.TestLocation,
+				QualifiedIdentifier: "Foo",
+				Fields: []cadence.Field{
+					{
+						Identifier: "a",
+						Type:       cadence.AnyStructType{},
+					},
+				},
+			},
+
+			Fields: []cadence.Value{
+				cadence.NewDictionary([]cadence.KeyValuePair{
+					{
+						Key:   cadence.String("foo"),
+						Value: cadence.String("bar"),
+					},
+				}),
+			},
+		}
+
+		_, err := executeTestScript(t, script, structValue)
+		require.NoError(t, err)
+	})
+}
+
+func newTestInterpreter(t *testing.T) *interpreter.Interpreter {
+	inter, err := interpreter.NewInterpreter(nil, utils.TestLocation)
+	require.NoError(t, err)
+
+	return inter
 }

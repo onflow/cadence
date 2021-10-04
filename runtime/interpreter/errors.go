@@ -238,6 +238,20 @@ func (e ForceNilError) Error() string {
 	return "unexpectedly found nil while forcing an Optional value"
 }
 
+// ForceCastTypeMismatchError
+//
+type ForceCastTypeMismatchError struct {
+	ExpectedType sema.Type
+	LocationRange
+}
+
+func (e ForceCastTypeMismatchError) Error() string {
+	return fmt.Sprintf(
+		"unexpectedly found non-`%s` while force-casting value",
+		e.ExpectedType.QualifiedString(),
+	)
+}
+
 // TypeMismatchError
 //
 type TypeMismatchError struct {
@@ -247,7 +261,7 @@ type TypeMismatchError struct {
 
 func (e TypeMismatchError) Error() string {
 	return fmt.Sprintf(
-		"unexpectedly found non-`%s` while force-casting value",
+		"type mismatch: expected %s",
 		e.ExpectedType.QualifiedString(),
 	)
 }
@@ -409,7 +423,7 @@ func (e MissingMemberValueError) Error() string {
 }
 
 // InvocationArgumentTypeError
-
+//
 type InvocationArgumentTypeError struct {
 	Index         int
 	ParameterType sema.Type
@@ -421,6 +435,22 @@ func (e InvocationArgumentTypeError) Error() string {
 		"invalid invocation with argument at index %d: expected %s",
 		e.Index,
 		e.ParameterType.QualifiedString(),
+	)
+}
+
+// InvocationReceiverTypeError
+//
+type InvocationReceiverTypeError struct {
+	SelfType     sema.Type
+	ReceiverType sema.Type
+	LocationRange
+}
+
+func (e InvocationReceiverTypeError) Error() string {
+	return fmt.Sprintf(
+		"invalid invocation on %s: expected %s",
+		e.SelfType.QualifiedString(),
+		e.ReceiverType.QualifiedString(),
 	)
 }
 
@@ -450,5 +480,19 @@ func (e ResourceConstructionError) Error() string {
 		"cannot create resource %s: outside of declaring location %s",
 		e.CompositeType.QualifiedString(),
 		e.CompositeType.Location.String(),
+	)
+}
+
+// ContainerMutationError
+//
+type ContainerMutationError struct {
+	ExpectedType sema.Type
+	LocationRange
+}
+
+func (e ContainerMutationError) Error() string {
+	return fmt.Sprintf(
+		"invalid container update: expected a subtype of '%s'",
+		e.ExpectedType.QualifiedString(),
 	)
 }

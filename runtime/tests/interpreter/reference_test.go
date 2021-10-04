@@ -81,3 +81,347 @@ func TestInterpretResourceReferenceFieldComparison(t *testing.T) {
 		value,
 	)
 }
+
+func TestInterpretContainerVariance(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("invocation of struct function, reference", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+          struct S1 {
+              pub fun getSecret(): Int {
+                  return 0
+              }
+          }
+
+          struct S2 {
+              priv fun getSecret(): Int {
+                  return 42
+              }
+          }
+
+          fun test(): Int {
+              let dict: {Int: &S1} = {}
+              let dictRef = &dict as &{Int: &AnyStruct}
+
+              let s2 = S2()
+              dictRef[0] = &s2 as &AnyStruct
+
+              return dict.values[0].getSecret()
+          }
+        `)
+
+		_, err := inter.Invoke("test")
+		require.Error(t, err)
+
+		var containerMutationErr interpreter.ContainerMutationError
+		require.ErrorAs(t, err, &containerMutationErr)
+	})
+
+	t.Run("invocation of struct function, value", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+          struct S1 {
+              pub fun getSecret(): Int {
+                  return 0
+              }
+          }
+
+          struct S2 {
+              priv fun getSecret(): Int {
+                  return 42
+              }
+          }
+
+          fun test(): Int {
+              let dict: {Int: S1} = {}
+              let dictRef = &dict as &{Int: AnyStruct}
+
+              dictRef[0] = S2()
+
+              return dict.values[0].getSecret()
+          }
+        `)
+
+		_, err := inter.Invoke("test")
+		require.Error(t, err)
+
+		var containerMutationErr interpreter.ContainerMutationError
+		require.ErrorAs(t, err, &containerMutationErr)
+	})
+
+	t.Run("field read, reference", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+         struct S1 {
+             var value: Int
+
+             init() {
+                 self.value = 0
+             }
+         }
+
+         struct S2 {
+             priv var value: Int
+
+             init() {
+                 self.value = 1
+             }
+         }
+
+         fun test(): Int {
+             let dict: {Int: &S1} = {}
+             let dictRef = &dict as &{Int: &AnyStruct}
+
+             let s2 = S2()
+             dictRef[0] = &s2 as &AnyStruct
+
+             return dict.values[0].value
+         }
+       `)
+
+		_, err := inter.Invoke("test")
+		require.Error(t, err)
+
+		var containerMutationError interpreter.ContainerMutationError
+		require.ErrorAs(t, err, &containerMutationError)
+	})
+
+	t.Run("field read, value", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+         struct S1 {
+             var value: Int
+
+             init() {
+                 self.value = 0
+             }
+         }
+
+         struct S2 {
+             priv var value: Int
+
+             init() {
+                 self.value = 1
+             }
+         }
+
+         fun test(): Int {
+             let dict: {Int: S1} = {}
+             let dictRef = &dict as &{Int: AnyStruct}
+
+             dictRef[0] = S2()
+
+             return dict.values[0].value
+         }
+       `)
+
+		_, err := inter.Invoke("test")
+		require.Error(t, err)
+
+		var containerMutationError interpreter.ContainerMutationError
+		require.ErrorAs(t, err, &containerMutationError)
+	})
+
+	t.Run("field write, reference", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+          struct S1 {
+              var value: Int
+
+              init() {
+                  self.value = 0
+              }
+          }
+
+          struct S2 {
+              // field is only publicly readable, not writeable
+              pub var value: Int
+
+              init() {
+                  self.value = 0
+              }
+          }
+
+          fun test() {
+              let dict: {Int: &S1} = {}
+
+              let s2 = S2()
+
+              let dictRef = &dict as &{Int: &AnyStruct}
+              dictRef[0] = &s2 as &AnyStruct
+
+              dict.values[0].value = 1
+
+             // NOTE: intentionally not reading,
+             // the test checks writes
+          }
+        `)
+
+		_, err := inter.Invoke("test")
+		require.Error(t, err)
+
+		var containerMutationError interpreter.ContainerMutationError
+		require.ErrorAs(t, err, &containerMutationError)
+	})
+
+	t.Run("field write, value", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+          struct S1 {
+              var value: Int
+
+              init() {
+                  self.value = 0
+              }
+          }
+
+          struct S2 {
+              // field is only publicly readable, not writeable
+              pub var value: Int
+
+              init() {
+                  self.value = 0
+              }
+          }
+
+          fun test() {
+              let dict: {Int: S1} = {}
+              let dictRef = &dict as &{Int: AnyStruct}
+
+              dictRef[0] = S2()
+
+              dict.values[0].value = 1
+
+             // NOTE: intentionally not reading,
+             // the test checks writes
+          }
+        `)
+
+		_, err := inter.Invoke("test")
+		require.Error(t, err)
+
+		var containerMutationError interpreter.ContainerMutationError
+		require.ErrorAs(t, err, &containerMutationError)
+	})
+
+	t.Run("value transfer", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+          struct S1 {}
+
+          struct S2 {}
+
+          fun test() {
+              let dict: {Int: S1} = {}
+
+              let s2 = S2()
+
+              let dictRef = &dict as &{Int: AnyStruct}
+              dictRef[0] = s2
+
+              let x = dict.values[0]
+          }
+        `)
+
+		_, err := inter.Invoke("test")
+		require.Error(t, err)
+
+		var containerMutationError interpreter.ContainerMutationError
+		require.ErrorAs(t, err, &containerMutationError)
+	})
+
+	t.Run("invocation of function, value", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+          fun f1(): Int {
+              return 0
+          }
+
+          fun f2(): String {
+              return "0"
+          }
+
+          fun test(): Int {
+              let dict: {Int: ((): Int)} = {}
+              let dictRef = &dict as &{Int: AnyStruct}
+
+              dictRef[0] = f2
+
+              return dict.values[0]()
+          }
+        `)
+
+		_, err := inter.Invoke("test")
+		require.Error(t, err)
+
+		var containerMutationError interpreter.ContainerMutationError
+		require.ErrorAs(t, err, &containerMutationError)
+	})
+
+	t.Run("interpreted function argument", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+          fun f(_ value: [UInt8]) {}
+
+          fun test() {
+              let dict: {Int: [UInt8]} = {}
+              let dictRef = &dict as &{Int: AnyStruct}
+
+              dictRef[0] = "not an [UInt8] array, but a String"
+
+              f(dict.values[0])
+          }
+        `)
+
+		_, err := inter.Invoke("test")
+		require.Error(t, err)
+
+		var containerMutationError interpreter.ContainerMutationError
+		require.ErrorAs(t, err, &containerMutationError)
+	})
+
+	t.Run("native function argument", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+          fun f(_ value: [UInt8]) {}
+
+          fun test() {
+              let dict: {Int: [UInt8]} = {}
+              let dictRef = &dict as &{Int: AnyStruct}
+
+              dictRef[0] = "not an [UInt8] array, but a String"
+
+              String.encodeHex(dict.values[0])
+          }
+        `)
+
+		_, err := inter.Invoke("test")
+		require.Error(t, err)
+
+		var containerMutationError interpreter.ContainerMutationError
+		require.ErrorAs(t, err, &containerMutationError)
+	})
+
+}

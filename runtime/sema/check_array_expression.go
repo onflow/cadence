@@ -22,42 +22,43 @@ import "github.com/onflow/cadence/runtime/ast"
 
 func (checker *Checker) VisitArrayExpression(expression *ast.ArrayExpression) ast.Repr {
 
-	inferType := false
-
 	// visit all elements, ensure they are all the same type
 
 	expectedType := UnwrapOptionalType(checker.expectedType)
 
+	inferType := true
+
 	var elementType Type
-	if expectedType != nil {
+	var resultType ArrayType
 
-		switch typ := expectedType.(type) {
+	switch expectedType := expectedType.(type) {
 
-		case *ConstantSizedType:
-			elementType = typ.ElementType(false)
+	case *ConstantSizedType:
+		inferType = false
 
-			literalCount := int64(len(expression.Values))
+		elementType = expectedType.ElementType(false)
+		resultType = expectedType
 
-			if typ.Size != literalCount {
-				checker.report(
-					&ConstantSizedArrayLiteralSizeError{
-						ExpectedSize: typ.Size,
-						ActualSize:   literalCount,
-						Range:        expression.Range,
-					},
-				)
-			}
-
-		case *VariableSizedType:
-			elementType = typ.ElementType(false)
-
-		default:
-			// If the expected type is not an array type, then it could either be an invalid type, or a super type
-			// (like: AnyStruct, etc.). Either case, infer the type from the expression.
-			inferType = true
+		literalCount := int64(len(expression.Values))
+		if expectedType.Size != literalCount {
+			checker.report(
+				&ConstantSizedArrayLiteralSizeError{
+					ExpectedSize: expectedType.Size,
+					ActualSize:   literalCount,
+					Range:        expression.Range,
+				},
+			)
 		}
-	} else {
-		inferType = true
+
+	case *VariableSizedType:
+		inferType = false
+		elementType = expectedType.ElementType(false)
+		resultType = expectedType
+
+	default:
+		// If there is no expected, or the expected type is not an array type,
+		// then it could either be an invalid type, or it is a super type (e.g. AnyStruct).
+		// In either case, infer the type from the expression.
 	}
 
 	argumentTypes := make([]Type, len(expression.Values))
@@ -84,13 +85,13 @@ func (checker *Checker) VisitArrayExpression(expression *ast.ArrayExpression) as
 		elementType = NeverType
 	}
 
-	checker.Elaboration.ArrayExpressionElementType[expression] = elementType
-
 	if inferType {
-		return &VariableSizedType{
+		resultType = &VariableSizedType{
 			Type: elementType,
 		}
 	}
 
-	return expectedType
+	checker.Elaboration.ArrayExpressionArrayType[expression] = resultType
+
+	return resultType
 }

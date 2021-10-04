@@ -85,5 +85,8 @@ func ByteSliceToByteArrayValue(buf []byte) *ArrayValue {
 		values[i] = UInt8Value(b)
 	}
 
-	return NewArrayValueUnownedNonCopying(values...)
+	return NewArrayValueUnownedNonCopying(
+		ByteArrayStaticType,
+		values...,
+	)
 }
