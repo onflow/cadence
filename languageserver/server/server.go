@@ -1333,13 +1333,13 @@ func (s *Server) rangeCompletions(
 			common.DeclarationKindResource,
 			common.DeclarationKindEvent:
 
-			if constructorFunctionType, ok := r.Type.(*sema.ConstructorFunctionType); ok {
+			if functionType, ok := r.Type.(*sema.FunctionType); ok && functionType.IsConstructor {
 				item.Kind = protocol.ConstructorCompletion
 
 				s.prepareParametersCompletionItem(
 					item,
 					r.Identifier,
-					constructorFunctionType.Parameters,
+					functionType.Parameters,
 				)
 
 				isFunctionCompletion = true
@@ -1559,8 +1559,8 @@ func (s *Server) maybeResolveRange(uri protocol.DocumentUri, id string, result *
 		return false
 	}
 
-	if constructorFunctionType, ok := r.Type.(*sema.ConstructorFunctionType); ok {
-		typeString := constructorFunctionType.QualifiedString()
+	if functionType, ok := r.Type.(*sema.FunctionType); ok && functionType.IsConstructor {
+		typeString := functionType.QualifiedString()
 
 		result.Detail = fmt.Sprintf(
 			"(constructor) %s",
