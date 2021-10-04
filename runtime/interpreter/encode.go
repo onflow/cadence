@@ -623,7 +623,7 @@ func (v AddressValue) Encode(e *atree.Encoder) error {
 	if err != nil {
 		return err
 	}
-	return e.CBOR.EncodeBytes(v.ToAddress().Bytes())
+	return e.CBOR.EncodeBytes(v.ToAddress().BytesWithoutLeadingZeros())
 }
 
 // NOTE: NEVER change, only add/increment; ensure uint64
@@ -790,7 +790,7 @@ func encodeLocation(e *cbor.StreamEncoder, l common.Location) error {
 		}
 
 		// Encode address at array index encodedAddressLocationAddressFieldKey
-		err = e.EncodeBytes(l.Address.Bytes())
+		err = e.EncodeBytes(l.Address.BytesWithoutLeadingZeros())
 		if err != nil {
 			return err
 		}
