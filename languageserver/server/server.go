@@ -589,8 +589,8 @@ func (s *Server) Hover(
 }
 
 func documentType(ty sema.Type) string {
-	if invokableType, ok := ty.(sema.InvokableType); ok {
-		return documentFunctionType(invokableType.InvocationFunctionType())
+	if functionType, ok := ty.(*sema.FunctionType); ok {
+		return documentFunctionType(functionType)
 	}
 	return ty.QualifiedString()
 }
@@ -2452,12 +2452,10 @@ func formatNewMember(member *sema.Member, indentation string) string {
 		)
 
 	case common.DeclarationKindFunction:
-		invokableType, ok := member.TypeAnnotation.Type.(sema.InvokableType)
+		functionType, ok := member.TypeAnnotation.Type.(*sema.FunctionType)
 		if !ok {
 			return ""
 		}
-
-		functionType := invokableType.InvocationFunctionType()
 
 		var parametersBuilder strings.Builder
 
