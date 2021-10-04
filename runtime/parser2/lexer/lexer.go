@@ -88,10 +88,11 @@ type TokenStream interface {
 func (l *lexer) Next() Token {
 	token, ok := <-l.tokens
 	if !ok {
+		endPos := l.endPos()
 		pos := ast.Position{
 			Offset: l.endOffset - 1,
-			Line:   l.endPos().line,
-			Column: l.endPos().column - 1,
+			Line:   endPos.line,
+			Column: endPos.column - 1,
 		}
 		token = Token{
 			Type: TokenEOF,
