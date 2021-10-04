@@ -7228,6 +7228,7 @@ type CompositeValue struct {
 	Stringer            func(value *CompositeValue, seenReferences SeenReferences) string
 	isDestroyed         bool
 	typeID              common.TypeID
+	staticType          StaticType
 	dynamicType         DynamicType
 }
 
@@ -7320,11 +7321,16 @@ func (v *CompositeValue) DynamicType(interpreter *Interpreter, _ SeenReferences)
 }
 
 func (v *CompositeValue) StaticType() StaticType {
-	return CompositeStaticType{
-		Location:            v.Location,
-		QualifiedIdentifier: v.QualifiedIdentifier,
-		TypeID:              v.TypeID(),
+	if v.staticType == nil {
+		// NOTE: Instead of using NewCompositeStaticType, which always generates the type ID,
+		// use the TypeID accessor, which may return an already computed type ID
+		v.staticType = CompositeStaticType{
+			Location:            v.Location,
+			QualifiedIdentifier: v.QualifiedIdentifier,
+			TypeID:              v.TypeID(),
+		}
 	}
+	return v.staticType
 }
 
 func (v *CompositeValue) IsDestroyed() bool {
@@ -7783,6 +7789,7 @@ func (v *CompositeValue) DeepCopy(
 		Stringer:            v.Stringer,
 		isDestroyed:         v.isDestroyed,
 		typeID:              v.typeID,
+		staticType:          v.staticType,
 		dynamicType:         v.dynamicType,
 	}
 }
