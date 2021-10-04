@@ -65,6 +65,9 @@ var emptyFunctionType = &sema.FunctionType{
 
 type getterSetter struct {
 	target Value
+	// allowMissing may be true when the got value is nil.
+	// For example, this is the case when a field is initialized 
+	// with the force-assignment operator (which checks the existing value)
 	get    func(allowMissing bool) Value
 	set    func(Value)
 }
