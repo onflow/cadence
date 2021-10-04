@@ -464,9 +464,7 @@ func (interpreter *Interpreter) VisitDictionaryExpression(expression *ast.Dictio
 	entryTypes := interpreter.Program.Elaboration.DictionaryExpressionEntryTypes[expression]
 	dictionaryType := interpreter.Program.Elaboration.DictionaryExpressionType[expression]
 
-	dictionaryStaticType := ConvertSemaDictionaryTypeToStaticDictionaryType(dictionaryType)
-
-	dictionary := NewDictionaryValue(interpreter, dictionaryStaticType)
+	var keyValuePairs []Value
 
 	for i, dictionaryEntryValues := range values {
 		entryType := entryTypes[i]
@@ -488,21 +486,16 @@ func (interpreter *Interpreter) VisitDictionaryExpression(expression *ast.Dictio
 
 		// TODO: panic for duplicate keys?
 
-		// NOTE: important to convert in optional, as assignment to dictionary
-		// is always considered as an optional
-
-		getLocationRange := locationRangeGetter(interpreter.Location, expression)
-
-		// TODO: batch insert to avoid store on each insert
-		_ = dictionary.Insert(
-			interpreter,
-			getLocationRange,
+		keyValuePairs = append(
+			keyValuePairs,
 			key,
 			value,
 		)
 	}
 
-	return dictionary
+	dictionaryStaticType := ConvertSemaDictionaryTypeToStaticDictionaryType(dictionaryType)
+
+	return NewDictionaryValue(interpreter, dictionaryStaticType, keyValuePairs...)
 }
 
 func (interpreter *Interpreter) VisitMemberExpression(expression *ast.MemberExpression) ast.Repr {
