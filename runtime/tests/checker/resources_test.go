@@ -5002,3 +5002,50 @@ func TestCheckOptionalResourceBindingWithSecondValue(t *testing.T) {
     `)
 	require.NoError(t, err)
 }
+
+func TestCheckEmptyResourceCollectionMove(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("Dictionary", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            resource R {
+                init() {
+                }
+            }
+
+            fun foo() {
+               bar(a: <-{})
+            }
+
+            fun bar(a: @{String: R}) {
+                destroy a
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("Array", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            resource R {
+                init() {
+                }
+            }
+
+            fun foo() {
+               bar(a: <-[])
+            }
+
+            fun bar(a: @[R]) {
+                destroy a
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+}
