@@ -163,7 +163,7 @@ type SignatureVerificationHandlerFunc func(
 	signedData *ArrayValue,
 	domainSeparationTag *StringValue,
 	hashAlgorithm *CompositeValue,
-	key *CompositeValue,
+	key MemberAccessibleValue,
 ) BoolValue
 
 // HashHandlerFunc is a function that hashes.
@@ -172,7 +172,7 @@ type HashHandlerFunc func(
 	getLocationRange func() LocationRange,
 	data *ArrayValue,
 	tag *StringValue,
-	hashAlgorithm *CompositeValue,
+	hashAlgorithm MemberAccessibleValue,
 ) *ArrayValue
 
 // ExitHandlerFunc is a function that is called at the end of execution

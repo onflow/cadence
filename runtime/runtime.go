@@ -1124,7 +1124,7 @@ func (r *interpreterRuntime) newInterpreter(
 				signedData *interpreter.ArrayValue,
 				domainSeparationTag *interpreter.StringValue,
 				hashAlgorithm *interpreter.CompositeValue,
-				publicKey *interpreter.CompositeValue,
+				publicKey interpreter.MemberAccessibleValue,
 			) interpreter.BoolValue {
 				return verifySignature(
 					inter,
@@ -1144,7 +1144,7 @@ func (r *interpreterRuntime) newInterpreter(
 				_ func() interpreter.LocationRange,
 				data *interpreter.ArrayValue,
 				tag *interpreter.StringValue,
-				hashAlgorithm *interpreter.CompositeValue,
+				hashAlgorithm interpreter.MemberAccessibleValue,
 			) *interpreter.ArrayValue {
 				return hash(
 					inter,
@@ -2946,19 +2946,14 @@ func (r *interpreterRuntime) newStorage(runtimeInterface Interface) *Storage {
 func NewPublicKeyFromValue(
 	inter *interpreter.Interpreter,
 	getLocationRange func() interpreter.LocationRange,
-	publicKey *interpreter.CompositeValue,
+	publicKey interpreter.MemberAccessibleValue,
 ) (
 	*PublicKey,
 	error,
 ) {
 
 	// publicKey field
-	publicKeyFieldGetter, ok := publicKey.ComputedFields[sema.PublicKeyPublicKeyField]
-	if !ok {
-		return nil, fmt.Errorf("public key value is not set")
-	}
-
-	key := publicKeyFieldGetter(inter, getLocationRange)
+	key := publicKey.GetMember(inter, getLocationRange, sema.PublicKeyPublicKeyField)
 
 	byteArray, err := interpreter.ByteArrayValueToByteSlice(key)
 	if err != nil {
@@ -2966,7 +2961,7 @@ func NewPublicKeyFromValue(
 	}
 
 	// sign algo field
-	signAlgoField := publicKey.GetField(sema.PublicKeySignAlgoField)
+	signAlgoField := publicKey.GetMember(inter, getLocationRange, sema.PublicKeySignAlgoField)
 	if signAlgoField == nil {
 		return nil, errors.New("sign algorithm is not set")
 	}
@@ -2994,7 +2989,7 @@ func NewPublicKeyFromValue(
 
 	// `valid` and `validated` fields
 	var valid, validated bool
-	validField := publicKey.GetField(sema.PublicKeyIsValidField)
+	validField := publicKey.GetMember(inter, getLocationRange, sema.PublicKeyIsValidField)
 	validated = validField != nil
 	if validated {
 		valid = bool(validField.(interpreter.BoolValue))
@@ -3104,7 +3099,7 @@ func verifySignature(
 	signedDataValue *interpreter.ArrayValue,
 	domainSeparationTagValue *interpreter.StringValue,
 	hashAlgorithmValue *interpreter.CompositeValue,
-	publicKeyValue *interpreter.CompositeValue,
+	publicKeyValue interpreter.MemberAccessibleValue,
 	runtimeInterface Interface,
 ) interpreter.BoolValue {
 
@@ -3150,7 +3145,7 @@ func hash(
 	inter *interpreter.Interpreter,
 	dataValue *interpreter.ArrayValue,
 	tagValue *interpreter.StringValue,
-	hashAlgorithmValue *interpreter.CompositeValue,
+	hashAlgorithmValue interpreter.Value,
 	runtimeInterface Interface,
 ) *interpreter.ArrayValue {
 

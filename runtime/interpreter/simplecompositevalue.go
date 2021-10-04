@@ -20,7 +20,6 @@ package interpreter
 
 import (
 	"github.com/onflow/atree"
-	runtimeErrors "github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/format"
 	"github.com/onflow/cadence/runtime/sema"
 )
@@ -110,8 +109,8 @@ func (v *SimpleCompositeValue) GetMember(
 	return nil
 }
 
-func (v *SimpleCompositeValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
-	panic(runtimeErrors.NewUnreachableError())
+func (v *SimpleCompositeValue) SetMember(_ *Interpreter, _ func() LocationRange, name string, value Value) {
+	v.Fields[name] = value
 }
 
 func (v *SimpleCompositeValue) String() string {

@@ -30,7 +30,7 @@ import (
 // Invocation
 //
 type Invocation struct {
-	Self               *CompositeValue
+	Self               MemberAccessibleValue
 	ReceiverType       sema.Type
 	Arguments          []Value
 	ArgumentTypes      []sema.Type
