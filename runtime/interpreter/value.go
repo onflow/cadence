@@ -9636,7 +9636,7 @@ func (AddressValue) DeepRemove(_ *Interpreter) {
 }
 
 func (v AddressValue) ByteSize() uint32 {
-	return 2 + getBytesCBORSize(v.ToAddress().Bytes())
+	return 2 + getBytesCBORSize(v.ToAddress().BytesWithoutLeadingZeros())
 }
 
 func (v AddressValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
