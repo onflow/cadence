@@ -81,8 +81,8 @@ type TokenStream interface {
 	Next() Token
 	// Close provides an opportunity for a TokenStream implementation to clean-up
 	Close()
-	// Code returns the entire TokenStream in source code form, after Close() has been called
-	Code() string
+	// Input returns the whole input as source code
+	Input() string
 }
 
 func (l *lexer) Next() Token {
@@ -109,7 +109,7 @@ func (l *lexer) Close() {
 	l.cancelLexer()
 }
 
-func (l *lexer) Code() string {
+func (l *lexer) Input() string {
 	return l.input
 }
 

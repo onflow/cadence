@@ -424,7 +424,7 @@ func ParseProgramFromTokenStream(input lexer.TokenStream) (program *ast.Program,
 	})
 	if len(errs) > 0 {
 		err = Error{
-			Code:   input.Code(),
+			Code:   input.Input(),
 			Errors: errs,
 		}
 	}
