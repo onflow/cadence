@@ -6299,19 +6299,40 @@ func TestInterpretEmitEvent(t *testing.T) {
 	transferAmountEventType := checker.RequireGlobalType(t, inter.Program.Elaboration, "TransferAmount")
 
 	fields1 := []interpreter.CompositeField{
-		{"to", interpreter.NewIntValueFromInt64(1)},
-		{"from", interpreter.NewIntValueFromInt64(2)},
+		{
+			Name:  "to",
+			Value: interpreter.NewIntValueFromInt64(1),
+		},
+		{
+			Name:  "from",
+			Value: interpreter.NewIntValueFromInt64(2),
+		},
 	}
 
 	fields2 := []interpreter.CompositeField{
-		{"to", interpreter.NewIntValueFromInt64(3)},
-		{"from", interpreter.NewIntValueFromInt64(4)},
+		{
+			Name:  "to",
+			Value: interpreter.NewIntValueFromInt64(3),
+		},
+		{
+			Name:  "from",
+			Value: interpreter.NewIntValueFromInt64(4),
+		},
 	}
 
 	fields3 := []interpreter.CompositeField{
-		{"to", interpreter.NewIntValueFromInt64(1)},
-		{"from", interpreter.NewIntValueFromInt64(2)},
-		{"amount", interpreter.NewIntValueFromInt64(100)},
+		{
+			Name:  "to",
+			Value: interpreter.NewIntValueFromInt64(1),
+		},
+		{
+			Name:  "from",
+			Value: interpreter.NewIntValueFromInt64(2),
+		},
+		{
+			Name:  "amount",
+			Value: interpreter.NewIntValueFromInt64(100),
+		},
 	}
 
 	expectedEvents := []interpreter.Value{

@@ -5340,14 +5340,6 @@ func TestRuntimeMetrics(t *testing.T) {
 	assert.Equal(t, 1, r2.valueDecoded)
 }
 
-type testRead struct {
-	owner, key []byte
-}
-
-func (r testRead) String() string {
-	return string(r.key)
-}
-
 type testWrite struct {
 	owner, key, value []byte
 }

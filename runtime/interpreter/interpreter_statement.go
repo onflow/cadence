@@ -291,8 +291,6 @@ func (interpreter *Interpreter) VisitForStatement(statement *ast.ForStatement) a
 			return result
 		}
 	}
-
-	return nil
 }
 
 func (interpreter *Interpreter) VisitEmitStatement(statement *ast.EmitStatement) ast.Repr {

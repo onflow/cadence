@@ -59,6 +59,7 @@ type NonStorable struct {
 var _ atree.Storable = NonStorable{}
 
 func (s NonStorable) Encode(_ *atree.Encoder) error {
+	//nolint:gosimple
 	return NonStorableValueError{
 		Value: s.Value,
 	}
@@ -7599,8 +7600,6 @@ func (v *CompositeValue) Equal(interpreter *Interpreter, getLocationRange func()
 			return false
 		}
 	}
-
-	return true
 }
 
 func (v *CompositeValue) HashInput(interpreter *Interpreter, getLocationRange func() LocationRange, scratch []byte) []byte {
@@ -7710,11 +7709,7 @@ func (v *CompositeValue) IsStorable() bool {
 	}
 
 	// Composite value's of native/built-in types are not storable for now
-	if v.Location == nil {
-		return false
-	}
-
-	return true
+	return v.Location != nil
 }
 
 func (v *CompositeValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
