@@ -2330,7 +2330,6 @@ func TestRuntimeMalformedArgumentPassing(t *testing.T) {
 			exportedValue: cadence.NewArray([]cadence.Value{
 				malformedStruct1,
 			}),
-			//expectedInvalidEntryPointArgumentErrType: &InvalidValueTypeError{},
 			expectedInvalidEntryPointArgumentErrType: &MalformedValueError{},
 		},
 		{
