@@ -8367,6 +8367,8 @@ func (v *DictionaryValue) Insert(
 	valueComparator := newValueComparator(interpreter, getLocationRange)
 	hashInputProvider := newHashInputProvider(interpreter, getLocationRange)
 
+	// atree only calls Storable() on keyValue if needed,
+	// i.e., if the key is a new key 
 	existingValueStorable, err := v.dictionary.Set(
 		valueComparator,
 		hashInputProvider,
