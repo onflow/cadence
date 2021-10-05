@@ -43,6 +43,8 @@ func TestExportValue(t *testing.T) {
 	type exportTest struct {
 		label        string
 		value        interpreter.Value
+		// Some values need an interpreter to be created (e.g. stored values like arrays, dictionaries, and composites), 
+		// so provide an optional helper function to construct the value
 		valueFactory func(*interpreter.Interpreter) interpreter.Value
 		expected     cadence.Value
 	}
