@@ -20,6 +20,7 @@ package interpreter
 
 import (
 	"encoding/hex"
+	goErrors "errors"
 	"fmt"
 	"math"
 	goRuntime "runtime"
@@ -3705,7 +3706,8 @@ func (interpreter *Interpreter) checkAtreeValue(v atree.Value) {
 		}
 		err = atree.ValidArraySerialization(v, CBORDecMode, CBOREncMode, DecodeStorable, DecodeTypeInfo)
 		if err != nil {
-			if _, ok := err.(NonStorableValueError); !ok {
+			var nonStorableValueErr NonStorableValueError
+			if !goErrors.As(err, &nonStorableValueErr) {
 				atree.PrintArray(v)
 				panic(ExternalError{err})
 			}
@@ -3718,7 +3720,8 @@ func (interpreter *Interpreter) checkAtreeValue(v atree.Value) {
 		}
 		err = atree.ValidMapSerialization(v, CBORDecMode, CBOREncMode, DecodeStorable, DecodeTypeInfo)
 		if err != nil {
-			if _, ok := err.(NonStorableValueError); !ok {
+			var nonStorableValueErr NonStorableValueError
+			if !goErrors.As(err, &nonStorableValueErr) {
 				atree.PrintMap(v)
 				panic(ExternalError{err})
 			}
