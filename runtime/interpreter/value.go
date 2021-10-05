@@ -7599,6 +7599,8 @@ func (v *CompositeValue) Equal(interpreter *Interpreter, getLocationRange func()
 
 		fieldName := string(key.(stringAtreeValue))
 
+		// NOTE: Do NOT use an iterator, iteration order of fields may be different 
+		// (if stored in different account, as storage ID is used as hash seed)
 		otherValue := otherComposite.GetField(fieldName)
 
 		equatableValue, ok := MustConvertStoredValue(value).(EquatableValue)
