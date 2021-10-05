@@ -8304,6 +8304,8 @@ func (v *DictionaryValue) Remove(
 	valueComparator := newValueComparator(interpreter, getLocationRange)
 	hashInputProvider := newHashInputProvider(interpreter, getLocationRange)
 
+	// No need to clean up storable for passed-in key value, 
+	// as atree never calls Storable()
 	existingKeyStorable, existingValueStorable, err := v.dictionary.Remove(
 		valueComparator,
 		hashInputProvider,
