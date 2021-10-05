@@ -1108,99 +1108,102 @@ func TestGetHashInput(t *testing.T) {
 	stringerTests := map[string]testCase{
 		"UInt": {
 			value:    NewUIntValueFromUint64(10),
-			expected: []byte{HashInputTypeUInt, 10},
+			expected: []byte{byte(HashInputTypeUInt), 10},
 		},
 		"UInt8": {
 			value:    UInt8Value(8),
-			expected: []byte{HashInputTypeUInt8, 8},
+			expected: []byte{byte(HashInputTypeUInt8), 8},
 		},
 		"UInt16": {
 			value:    UInt16Value(16),
-			expected: []byte{HashInputTypeUInt16, 0, 16},
+			expected: []byte{byte(HashInputTypeUInt16), 0, 16},
 		},
 		"UInt32": {
 			value:    UInt32Value(32),
-			expected: []byte{HashInputTypeUInt32, 0, 0, 0, 32},
+			expected: []byte{byte(HashInputTypeUInt32), 0, 0, 0, 32},
 		},
 		"UInt64": {
 			value:    UInt64Value(64),
-			expected: []byte{HashInputTypeUInt64, 0, 0, 0, 0, 0, 0, 0, 64},
+			expected: []byte{byte(HashInputTypeUInt64), 0, 0, 0, 0, 0, 0, 0, 64},
 		},
 		"UInt128": {
 			value:    NewUInt128ValueFromUint64(128),
-			expected: []byte{HashInputTypeUInt128, 128},
+			expected: []byte{byte(HashInputTypeUInt128), 128},
 		},
 		"UInt256": {
 			value:    NewUInt256ValueFromUint64(256),
-			expected: []byte{HashInputTypeUInt256, 1, 0},
+			expected: []byte{byte(HashInputTypeUInt256), 1, 0},
 		},
 		"Int": {
 			value:    NewIntValueFromInt64(10),
-			expected: []byte{HashInputTypeInt, 10},
+			expected: []byte{byte(HashInputTypeInt), 10},
 		},
 		"Int8": {
 			value:    Int8Value(-8),
-			expected: []byte{HashInputTypeInt8, 0xf8},
+			expected: []byte{byte(HashInputTypeInt8), 0xf8},
 		},
 		"Int16": {
 			value:    Int16Value(-16),
-			expected: []byte{HashInputTypeInt16, 0xff, 0xf0},
+			expected: []byte{byte(HashInputTypeInt16), 0xff, 0xf0},
 		},
 		"Int32": {
 			value:    Int32Value(-32),
-			expected: []byte{HashInputTypeInt32, 0xff, 0xff, 0xff, 0xe0},
+			expected: []byte{byte(HashInputTypeInt32), 0xff, 0xff, 0xff, 0xe0},
 		},
 		"Int64": {
 			value:    Int64Value(-64),
-			expected: []byte{HashInputTypeInt64, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xc0},
+			expected: []byte{byte(HashInputTypeInt64), 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xc0},
 		},
 		"Int128": {
 			value:    NewInt128ValueFromInt64(-128),
-			expected: []byte{HashInputTypeInt128, 0x80},
+			expected: []byte{byte(HashInputTypeInt128), 0x80},
 		},
 		"Int256": {
 			value:    NewInt256ValueFromInt64(-256),
-			expected: []byte{HashInputTypeInt256, 0xff, 0x0},
+			expected: []byte{byte(HashInputTypeInt256), 0xff, 0x0},
 		},
 		"Word8": {
 			value:    Word8Value(8),
-			expected: []byte{HashInputTypeWord8, 8},
+			expected: []byte{byte(HashInputTypeWord8), 8},
 		},
 		"Word16": {
 			value:    Word16Value(16),
-			expected: []byte{HashInputTypeWord16, 0, 16},
+			expected: []byte{byte(HashInputTypeWord16), 0, 16},
 		},
 		"Word32": {
 			value:    Word32Value(32),
-			expected: []byte{HashInputTypeWord32, 0, 0, 0, 32},
+			expected: []byte{byte(HashInputTypeWord32), 0, 0, 0, 32},
 		},
 		"Word64": {
 			value:    Word64Value(64),
-			expected: []byte{HashInputTypeWord64, 0, 0, 0, 0, 0, 0, 0, 64},
+			expected: []byte{byte(HashInputTypeWord64), 0, 0, 0, 0, 0, 0, 0, 64},
 		},
 		"UFix64": {
 			value:    NewUFix64ValueWithInteger(64),
-			expected: []byte{HashInputTypeUFix64, 0x0, 0x0, 0x0, 0x1, 0x7d, 0x78, 0x40, 0x0},
+			expected: []byte{byte(HashInputTypeUFix64), 0x0, 0x0, 0x0, 0x1, 0x7d, 0x78, 0x40, 0x0},
 		},
 		"Fix64": {
 			value:    NewFix64ValueWithInteger(-32),
-			expected: []byte{HashInputTypeFix64, 0xff, 0xff, 0xff, 0xff, 0x41, 0x43, 0xe0, 0x0},
+			expected: []byte{byte(HashInputTypeFix64), 0xff, 0xff, 0xff, 0xff, 0x41, 0x43, 0xe0, 0x0},
 		},
 		"true": {
 			value:    BoolValue(true),
-			expected: []byte{HashInputTypeBool, 1},
+			expected: []byte{byte(HashInputTypeBool), 1},
 		},
 		"false": {
 			value:    BoolValue(false),
-			expected: []byte{HashInputTypeBool, 0},
+			expected: []byte{byte(HashInputTypeBool), 0},
 		},
 		"String": {
-			value:    NewStringValue("Flow ridah!"),
-			expected: []byte{HashInputTypeString, 0x46, 0x6c, 0x6f, 0x77, 0x20, 0x72, 0x69, 0x64, 0x61, 0x68, 0x21},
+			value: NewStringValue("Flow ridah!"),
+			expected: []byte{
+				byte(HashInputTypeString),
+				0x46, 0x6c, 0x6f, 0x77, 0x20, 0x72, 0x69, 0x64, 0x61, 0x68, 0x21,
+			},
 		},
 		"Address": {
 			value:    NewAddressValue(common.Address{0, 0, 0, 0, 0, 0, 0, 1}),
-			expected: []byte{HashInputTypeAddress, 0, 0, 0, 0, 0, 0, 0, 1},
+			expected: []byte{byte(HashInputTypeAddress), 0, 0, 0, 0, 0, 0, 0, 1},
 		},
 		"enum": {
 			value: func() HashableValue {
@@ -1222,10 +1225,10 @@ func TestGetHashInput(t *testing.T) {
 				)
 			}(),
 			expected: []byte{
-				HashInputTypeEnum,
+				byte(HashInputTypeEnum),
 				// S.test.Foo
 				0x53, 0x2e, 0x74, 0x65, 0x73, 0x74, 0x2e, 0x46, 0x6f, 0x6f,
-				HashInputTypeUInt8,
+				byte(HashInputTypeUInt8),
 				42,
 			},
 		},
@@ -1235,7 +1238,7 @@ func TestGetHashInput(t *testing.T) {
 				Identifier: "foo",
 			},
 			expected: []byte{
-				HashInputTypePath,
+				byte(HashInputTypePath),
 				// domain: storage
 				0x1,
 				// identifier: "foo"
