@@ -30,7 +30,10 @@ import (
 )
 
 func getIntCBORSize(v int64) uint32 {
-	return getUintCBORSize(uint64(-v - 1))
+	if v < 0 {
+		return getUintCBORSize(uint64(-v - 1))
+	}
+	return getUintCBORSize(uint64(v))
 }
 
 func getUintCBORSize(v uint64) uint32 {
