@@ -49,8 +49,13 @@ func newHashInputProvider(interpreter *Interpreter, getLocationRange func() Loca
 // DO *NOT* REPLACE EXISTING TYPES!
 // DO *NOT* ADD NEW TYPES IN BETWEEN!
 
+// HashInputType is a type flag that is included in the hash input for a value,
+// i.e., it should be included in the result of HashableValue.HashInput.
+//
+type HashInputType uint8
+
 const (
-	HashInputTypeBool = iota
+	HashInputTypeBool HashInputType = iota
 	HashInputTypeString
 	HashInputTypeEnum
 	HashInputTypeAddress
