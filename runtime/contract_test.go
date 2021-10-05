@@ -50,7 +50,7 @@ func TestRuntimeContract(t *testing.T) {
 
 		t.Parallel()
 
-		runtime := NewInterpreterRuntime()
+		runtime := newTestInterpreterRuntime()
 
 		var loggedMessages []string
 
@@ -554,7 +554,7 @@ func TestRuntimeImportMultipleContracts(t *testing.T) {
 		},
 	}
 
-	runtime := NewInterpreterRuntime()
+	runtime := newTestInterpreterRuntime()
 
 	nextTransactionLocation := newTransactionLocationGenerator()
 

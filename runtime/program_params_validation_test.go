@@ -74,7 +74,7 @@ func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
 		encodedArg, err = json.Encode(arg)
 		require.NoError(t, err)
 
-		rt := NewInterpreterRuntime()
+		rt := newTestInterpreterRuntime()
 
 		storage := newTestLedger(nil, nil)
 
@@ -541,7 +541,7 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
 		encodedArg, err = json.Encode(arg)
 		require.NoError(t, err)
 
-		rt := NewInterpreterRuntime()
+		rt := newTestInterpreterRuntime()
 
 		storage := newTestLedger(nil, nil)
 

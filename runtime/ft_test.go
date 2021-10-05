@@ -503,7 +503,7 @@ pub fun main(account: Address): UFix64 {
 
 func BenchmarkRuntimeFungibleTokenTransfer(b *testing.B) {
 
-	runtime := NewInterpreterRuntime()
+	runtime := newTestInterpreterRuntime()
 
 	contractsAddress := common.BytesToAddress([]byte{0x1})
 	senderAddress := common.BytesToAddress([]byte{0x2})

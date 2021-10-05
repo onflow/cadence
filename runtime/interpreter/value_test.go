@@ -3080,6 +3080,7 @@ func newTestInterpreter(tb testing.TB) *Interpreter {
 		nil,
 		utils.TestLocation,
 		WithStorage(storage),
+		WithAtreeValidationEnabled(true),
 	)
 	require.NoError(tb, err)
 

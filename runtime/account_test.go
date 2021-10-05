@@ -34,7 +34,7 @@ import (
 )
 
 func TestRuntimeTransaction_AddPublicKey(t *testing.T) {
-	rt := NewInterpreterRuntime()
+	rt := newTestInterpreterRuntime()
 
 	keyA := cadence.NewArray([]cadence.Value{
 		cadence.NewUInt8(1),
@@ -159,7 +159,7 @@ func TestRuntimeAccountKeyConstructor(t *testing.T) {
 
 	t.Parallel()
 
-	rt := NewInterpreterRuntime()
+	rt := newTestInterpreterRuntime()
 
 	script := []byte(`
         pub fun main(): AccountKey {
@@ -204,7 +204,7 @@ func TestRuntimeStoreAccountAPITypes(t *testing.T) {
 		sema.PublicKeyType,
 	} {
 
-		rt := NewInterpreterRuntime()
+		rt := newTestInterpreterRuntime()
 
 		script := []byte(fmt.Sprintf(`
             transaction {
@@ -273,7 +273,7 @@ func TestRuntimeAuthAccountKeys(t *testing.T) {
 		t.Parallel()
 
 		storage := newTestAccountKeyStorage()
-		rt := NewInterpreterRuntime()
+		rt := newTestInterpreterRuntime()
 		runtimeInterface := getAccountKeyTestRuntimeInterface(storage)
 
 		addAuthAccountKey(t, rt, runtimeInterface)
@@ -287,7 +287,7 @@ func TestRuntimeAuthAccountKeys(t *testing.T) {
 		t.Parallel()
 
 		storage := newTestAccountKeyStorage()
-		rt := NewInterpreterRuntime()
+		rt := newTestInterpreterRuntime()
 		runtimeInterface := getAccountKeyTestRuntimeInterface(storage)
 
 		addAuthAccountKey(t, rt, runtimeInterface)
@@ -323,7 +323,7 @@ func TestRuntimeAuthAccountKeys(t *testing.T) {
 		t.Parallel()
 
 		storage := newTestAccountKeyStorage()
-		rt := NewInterpreterRuntime()
+		rt := newTestInterpreterRuntime()
 		runtimeInterface := getAccountKeyTestRuntimeInterface(storage)
 
 		addAuthAccountKey(t, rt, runtimeInterface)
@@ -349,7 +349,7 @@ func TestRuntimeAuthAccountKeys(t *testing.T) {
 		t.Parallel()
 
 		storage := newTestAccountKeyStorage()
-		rt := NewInterpreterRuntime()
+		rt := newTestInterpreterRuntime()
 		runtimeInterface := getAccountKeyTestRuntimeInterface(storage)
 
 		addAuthAccountKey(t, rt, runtimeInterface)
@@ -377,7 +377,7 @@ func TestRuntimeAuthAccountKeys(t *testing.T) {
 		t.Parallel()
 
 		storage := newTestAccountKeyStorage()
-		rt := NewInterpreterRuntime()
+		rt := newTestInterpreterRuntime()
 		runtimeInterface := getAccountKeyTestRuntimeInterface(storage)
 
 		addAuthAccountKey(t, rt, runtimeInterface)
@@ -403,7 +403,7 @@ func TestRuntimeAuthAccountKeysAdd(t *testing.T) {
 
 	t.Parallel()
 
-	rt := NewInterpreterRuntime()
+	rt := newTestInterpreterRuntime()
 
 	pubKey := newBytesValue([]byte{1, 2, 3})
 
@@ -466,7 +466,7 @@ func TestRuntimePublicAccountKeys(t *testing.T) {
 		storage := newTestAccountKeyStorage()
 		storage.keys = append(storage.keys, accountKeyA, accountKeyB)
 
-		runtime := NewInterpreterRuntime()
+		runtime := newTestInterpreterRuntime()
 		runtimeInterface := getAccountKeyTestRuntimeInterface(storage)
 
 		test := accountKeyTestCase{
@@ -507,7 +507,7 @@ func TestRuntimePublicAccountKeys(t *testing.T) {
 		storage := newTestAccountKeyStorage()
 		storage.keys = append(storage.keys, accountKeyA, accountKeyB)
 
-		runtime := NewInterpreterRuntime()
+		runtime := newTestInterpreterRuntime()
 		runtimeInterface := getAccountKeyTestRuntimeInterface(storage)
 
 		test := accountKeyTestCase{
@@ -547,7 +547,7 @@ func TestRuntimePublicAccountKeys(t *testing.T) {
 		storage := newTestAccountKeyStorage()
 		storage.keys = append(storage.keys, accountKeyA, accountKeyB)
 
-		runtime := NewInterpreterRuntime()
+		runtime := newTestInterpreterRuntime()
 		runtimeInterface := getAccountKeyTestRuntimeInterface(storage)
 
 		test := accountKeyTestCase{
@@ -577,7 +577,7 @@ func TestRuntimePublicAccountKeys(t *testing.T) {
 		storage := newTestAccountKeyStorage()
 		storage.keys = append(storage.keys, revokedAccountKeyA, accountKeyB)
 
-		runtime := NewInterpreterRuntime()
+		runtime := newTestInterpreterRuntime()
 		runtimeInterface := getAccountKeyTestRuntimeInterface(storage)
 
 		test := accountKeyTestCase{
@@ -616,7 +616,7 @@ func TestRuntimeHashAlgorithm(t *testing.T) {
 
 	t.Parallel()
 
-	rt := NewInterpreterRuntime()
+	rt := newTestInterpreterRuntime()
 
 	script := []byte(`
         pub fun main(): [HashAlgorithm?] {
@@ -690,7 +690,7 @@ func TestRuntimeSignatureAlgorithm(t *testing.T) {
 
 	t.Parallel()
 
-	rt := NewInterpreterRuntime()
+	rt := newTestInterpreterRuntime()
 
 	script := []byte(`
         pub fun main(): [SignatureAlgorithm?] {
@@ -994,7 +994,7 @@ func TestRuntimePublicKey(t *testing.T) {
 
 	t.Parallel()
 
-	rt := NewInterpreterRuntime()
+	rt := newTestInterpreterRuntime()
 
 	executeScript := func(code string, runtimeInterface Interface) (cadence.Value, error) {
 		return rt.ExecuteScript(
@@ -1318,7 +1318,7 @@ func TestAuthAccountContracts(t *testing.T) {
 	t.Run("get names", func(t *testing.T) {
 		t.Parallel()
 
-		rt := NewInterpreterRuntime()
+		rt := newTestInterpreterRuntime()
 
 		script := []byte(`
             transaction {
@@ -1362,7 +1362,7 @@ func TestAuthAccountContracts(t *testing.T) {
 	t.Run("update names", func(t *testing.T) {
 		t.Parallel()
 
-		rt := NewInterpreterRuntime()
+		rt := newTestInterpreterRuntime()
 
 		script := []byte(`
             transaction {
@@ -1405,7 +1405,7 @@ func TestPublicAccountContracts(t *testing.T) {
 	t.Run("get contract", func(t *testing.T) {
 		t.Parallel()
 
-		rt := NewInterpreterRuntime()
+		rt := newTestInterpreterRuntime()
 
 		script := []byte(`
             pub fun main(): [AnyStruct] {
@@ -1463,7 +1463,7 @@ func TestPublicAccountContracts(t *testing.T) {
 	t.Run("get non existing contract", func(t *testing.T) {
 		t.Parallel()
 
-		rt := NewInterpreterRuntime()
+		rt := newTestInterpreterRuntime()
 
 		script := []byte(`
             pub fun main() {
@@ -1503,7 +1503,7 @@ func TestPublicAccountContracts(t *testing.T) {
 	t.Run("get names", func(t *testing.T) {
 		t.Parallel()
 
-		rt := NewInterpreterRuntime()
+		rt := newTestInterpreterRuntime()
 
 		script := []byte(`
             pub fun main(): [String] {
@@ -1550,7 +1550,7 @@ func TestPublicAccountContracts(t *testing.T) {
 	t.Run("update names", func(t *testing.T) {
 		t.Parallel()
 
-		rt := NewInterpreterRuntime()
+		rt := newTestInterpreterRuntime()
 
 		script := []byte(`
             pub fun main(): [String] {

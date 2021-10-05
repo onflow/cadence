@@ -3697,14 +3697,32 @@ func (interpreter *Interpreter) checkAtreeValue(v atree.Value) {
 		return defaultHIP(value, buffer)
 	}
 
-	var err error
 	switch v := v.(type) {
 	case *atree.Array:
-		err = atree.ValidArray(v, v.Type(), tic, hip)
+		err := atree.ValidArray(v, v.Type(), tic, hip)
+		if err != nil {
+			panic(ExternalError{err})
+		}
+		err = atree.ValidArraySerialization(v, CBORDecMode, CBOREncMode, DecodeStorable, DecodeTypeInfo)
+		if err != nil {
+			if _, ok := err.(NonStorableValueError); !ok {
+				atree.PrintArray(v)
+				panic(ExternalError{err})
+			}
+		}
+
 	case *atree.OrderedMap:
-		err = atree.ValidMap(v, v.Type(), tic, hip)
+		err := atree.ValidMap(v, v.Type(), tic, hip)
+		if err != nil {
+			panic(ExternalError{err})
+		}
+		err = atree.ValidMapSerialization(v, CBORDecMode, CBOREncMode, DecodeStorable, DecodeTypeInfo)
+		if err != nil {
+			if _, ok := err.(NonStorableValueError); !ok {
+				atree.PrintMap(v)
+				panic(ExternalError{err})
+			}
+		}
 	}
-	if err != nil {
-		panic(ExternalError{err})
-	}
+
 }

@@ -41,9 +41,9 @@ func TestExportValue(t *testing.T) {
 	t.Parallel()
 
 	type exportTest struct {
-		label        string
-		value        interpreter.Value
-		// Some values need an interpreter to be created (e.g. stored values like arrays, dictionaries, and composites), 
+		label string
+		value interpreter.Value
+		// Some values need an interpreter to be created (e.g. stored values like arrays, dictionaries, and composites),
 		// so provide an optional helper function to construct the value
 		valueFactory func(*interpreter.Interpreter) interpreter.Value
 		expected     cadence.Value
@@ -1049,7 +1049,7 @@ func TestExportEventValue(t *testing.T) {
 }
 
 func exportEventFromScript(t *testing.T, script string) cadence.Event {
-	rt := NewInterpreterRuntime()
+	rt := newTestInterpreterRuntime()
 
 	var events []cadence.Event
 
@@ -1079,7 +1079,7 @@ func exportEventFromScript(t *testing.T, script string) cadence.Event {
 }
 
 func exportValueFromScript(t *testing.T, script string) cadence.Value {
-	rt := NewInterpreterRuntime()
+	rt := newTestInterpreterRuntime()
 
 	value, err := rt.ExecuteScript(
 		Script{
@@ -1144,7 +1144,7 @@ func TestExportReferenceValue(t *testing.T) {
 
 		// Arrange
 
-		rt := NewInterpreterRuntime()
+		rt := newTestInterpreterRuntime()
 
 		transaction := `
             transaction {
@@ -1638,7 +1638,7 @@ func executeTestScript(t *testing.T, script string, arg cadence.Value) (cadence.
 	encodedArg, err := json.Encode(arg)
 	require.NoError(t, err)
 
-	rt := NewInterpreterRuntime()
+	rt := newTestInterpreterRuntime()
 
 	storage := newTestLedger(nil, nil)
 
@@ -2947,7 +2947,7 @@ func TestRuntimeStringValueImport(t *testing.T) {
 		encodedArg, err := json.Encode(stringValue)
 		require.NoError(t, err)
 
-		rt := NewInterpreterRuntime()
+		rt := newTestInterpreterRuntime()
 
 		validated := false
 
@@ -2992,7 +2992,7 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 		encodedArg, err := json.Encode(arg)
 		require.NoError(t, err)
 
-		rt := NewInterpreterRuntime()
+		rt := newTestInterpreterRuntime()
 
 		return rt.ExecuteScript(
 			Script{
@@ -3349,7 +3349,7 @@ func TestRuntimePublicKeyImport(t *testing.T) {
             }
         `
 
-		rt := NewInterpreterRuntime()
+		rt := newTestInterpreterRuntime()
 
 		storage := newTestLedger(nil, nil)
 
@@ -3421,7 +3421,7 @@ func TestRuntimePublicKeyImport(t *testing.T) {
             }
         `
 
-		rt := NewInterpreterRuntime()
+		rt := newTestInterpreterRuntime()
 
 		storage := newTestLedger(nil, nil)
 
@@ -3501,7 +3501,7 @@ func TestRuntimePublicKeyImport(t *testing.T) {
             }
         `
 
-		rt := NewInterpreterRuntime()
+		rt := newTestInterpreterRuntime()
 
 		publicKeyValidated := false
 

@@ -32,7 +32,7 @@ func TestRuntimeTypeStorage(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := NewInterpreterRuntime()
+	runtime := newTestInterpreterRuntime()
 
 	tx1 := []byte(`
       transaction {
@@ -100,7 +100,7 @@ func TestRuntimeBlockTimestamp(t *testing.T) {
 
 		t.Parallel()
 
-		runtime := NewInterpreterRuntime()
+		runtime := newTestInterpreterRuntime()
 
 		script := []byte(`
 			transaction {
@@ -150,7 +150,7 @@ func TestRuntimeBlockTimestamp(t *testing.T) {
 
 		t.Parallel()
 
-		runtime := NewInterpreterRuntime()
+		runtime := newTestInterpreterRuntime()
 
 		script := []byte(`
 			pub fun main(): [UFix64] {

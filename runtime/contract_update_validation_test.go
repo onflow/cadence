@@ -36,7 +36,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := NewInterpreterRuntime(
+	runtime := newTestInterpreterRuntime(
 		WithContractUpdateValidationEnabled(true),
 	)
 
@@ -1911,7 +1911,7 @@ func TestContractUpdateValidationDisabled(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := NewInterpreterRuntime(
+	runtime := newTestInterpreterRuntime(
 		WithContractUpdateValidationEnabled(false),
 	)
 
