@@ -219,7 +219,6 @@ func exportCompositeValue(
 	for i, field := range fieldNames {
 		fieldName := field.Identifier
 
-		// TODO: provide proper location range
 		fieldValue := v.GetField(fieldName)
 		if fieldValue == nil && v.ComputedFields != nil {
 			if computedField, ok := v.ComputedFields[fieldName]; ok {
