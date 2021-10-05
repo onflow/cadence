@@ -8491,6 +8491,8 @@ func (v *DictionaryValue) Equal(interpreter *Interpreter, getLocationRange func(
 			return true
 		}
 
+		// Do NOT use an iterator, as other value may be stored in another account,
+		// leading to a different iteration order, as the storage ID is used in the seed
 		otherValue, otherValueExists :=
 			otherDictionary.Get(
 				interpreter,
