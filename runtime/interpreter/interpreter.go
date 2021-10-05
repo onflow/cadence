@@ -2782,6 +2782,10 @@ func (interpreter *Interpreter) IsSubType(subType DynamicType, superType sema.Ty
 				return false
 			}
 
+			if typedSuperType.Size != int64(len(typedSubType.ElementTypes)) {
+				return false
+			}
+
 		default:
 			switch superType {
 			case sema.AnyStructType, sema.AnyResourceType:
