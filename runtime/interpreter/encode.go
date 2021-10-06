@@ -30,6 +30,8 @@ import (
 	"github.com/onflow/cadence/runtime/errors"
 )
 
+const cborTagSize = 2
+
 func getIntCBORSize(v int64) uint32 {
 	if v < 0 {
 		return getUintCBORSize(uint64(-v - 1))
