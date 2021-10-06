@@ -887,13 +887,66 @@ func (v *ArrayValue) IsDestroyed() bool {
 }
 
 func (v *ArrayValue) Concat(interpreter *Interpreter, getLocationRange func() LocationRange, other *ArrayValue) Value {
-	// We can directly call DeepCopy on the value, instead of potentially skipping copying
-	// by using interpreter.copyValue, as concatenation is only supported for struct-kinded arrays,
-	// which always must be copied
-	// TODO: optimize by using atree.NewArrayFromBatchData instead
-	newArray := v.DeepCopy(interpreter, getLocationRange, atree.Address{}).(*ArrayValue)
-	newArray.AppendAll(interpreter, getLocationRange, other)
-	return newArray
+
+	first := true
+
+	firstIterator, err := v.array.Iterator()
+	if err != nil {
+		panic(ExternalError{err})
+	}
+
+	secondIterator, err := other.array.Iterator()
+	if err != nil {
+		panic(ExternalError{err})
+	}
+
+	elementType := v.Type.ElementType()
+
+	return NewArrayValueWithIterator(
+		interpreter,
+		v.Type,
+		common.Address{},
+		func() Value {
+
+			var value Value
+
+			if first {
+				atreeValue, err := firstIterator.Next()
+				if err != nil {
+					panic(ExternalError{err})
+				}
+
+				if atreeValue == nil {
+					first = false
+				} else {
+					value = MustConvertStoredValue(atreeValue)
+				}
+			}
+
+			if !first {
+				atreeValue, err := secondIterator.Next()
+				if err != nil {
+					panic(ExternalError{err})
+				}
+
+				if atreeValue != nil {
+					value = MustConvertStoredValue(atreeValue)
+
+					interpreter.checkContainerMutation(elementType, value, getLocationRange)
+				}
+			}
+
+			if value == nil {
+				return nil
+			}
+
+			// We can directly call DeepCopy on the value, instead of potentially skipping copying
+			// by using interpreter.copyValue, as concatenation is only supported for struct-kinded arrays,
+			// which always must be copied
+
+			return value.DeepCopy(interpreter, getLocationRange, atree.Address{})
+		},
+	)
 }
 
 func (v *ArrayValue) GetKey(interpreter *Interpreter, getLocationRange func() LocationRange, key Value) Value {
