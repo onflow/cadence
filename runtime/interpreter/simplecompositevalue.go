@@ -27,9 +27,10 @@ import (
 // SimpleCompositeValue
 
 type SimpleCompositeValue struct {
-	TypeID          sema.TypeID
-	staticType      StaticType
-	dynamicType     DynamicType
+	TypeID      sema.TypeID
+	staticType  StaticType
+	dynamicType DynamicType
+	// FieldNames are the names of the field members (i.e. not functions, and not computed fields), in order
 	FieldNames      []string
 	Fields          map[string]Value
 	ComputedFields  map[string]ComputedField
