@@ -764,13 +764,13 @@ func NewArrayValue(
 	var index int
 	count := len(values)
 
-	array, err := atree.NewArrayFromBatchData(
-		interpreter.Storage,
-		atree.Address(address),
+	return NewArrayValueWithIterator(
+		interpreter,
 		arrayType,
-		func() (atree.Value, error) {
+		address,
+		func() Value {
 			if index >= count {
-				return nil, nil
+				return nil
 			}
 
 			value := values[index]
@@ -785,7 +785,24 @@ func NewArrayValue(
 				atree.Address(address),
 			)
 
-			return value, nil
+			return value
+		},
+	)
+}
+
+func NewArrayValueWithIterator(
+	interpreter *Interpreter,
+	arrayType ArrayStaticType,
+	address common.Address,
+	values func() Value,
+) *ArrayValue {
+
+	array, err := atree.NewArrayFromBatchData(
+		interpreter.Storage,
+		atree.Address(address),
+		arrayType,
+		func() (atree.Value, error) {
+			return values(), nil
 		},
 	)
 	if err != nil {
@@ -8168,64 +8185,68 @@ func (v *DictionaryValue) GetMember(
 		return NewIntValueFromInt64(int64(v.Count()))
 
 	case "keys":
-		dictionaryKeys := make([]Value, v.Count())
 
-		i := 0
-		err := v.dictionary.IterateKeys(func(key atree.Value) (resume bool, err error) {
-
-			// We can directly call DeepCopy on the keys array value, instead of potentially skipping copying
-			// by using interpreter.copyValue, as the keys value is only ever struct-kinded,
-			// which always must be copied
-
-			dictionaryKeys[i] = MustConvertStoredValue(key).
-				DeepCopy(interpreter, getLocationRange, atree.Address{})
-
-			i++
-
-			return true, nil
-		})
+		iterator, err := v.dictionary.Iterator()
 		if err != nil {
 			panic(ExternalError{err})
 		}
 
-		return NewArrayValue(
+		return NewArrayValueWithIterator(
 			interpreter,
 			VariableSizedStaticType{
 				Type: v.Type.KeyType,
 			},
 			common.Address{},
-			dictionaryKeys...,
+			func() Value {
+
+				key, err := iterator.NextKey()
+				if err != nil {
+					panic(ExternalError{err})
+				}
+				if key == nil {
+					return nil
+				}
+
+				// We can directly call DeepCopy on the keys array value,
+				// instead of potentially skipping copying by using interpreter.CopyValue,
+				// as the keys value is only ever struct-kinded, which always must be copied
+
+				return MustConvertStoredValue(key).
+					DeepCopy(interpreter, getLocationRange, atree.Address{})
+			},
 		)
 
 	case "values":
-		dictionaryValues := make([]Value, v.Count())
 
-		i := 0
-		err := v.dictionary.IterateValues(func(value atree.Value) (resume bool, err error) {
-
-			// We can directly call DeepCopy on the value, instead of potentially skipping copying
-			// by using interpreter.copyValue, as the dictionary values returned by the values field here
-			// are only ever struct-kinded, which always must be copied
-
-			dictionaryValues[i] = MustConvertStoredValue(value).
-				DeepCopy(interpreter, getLocationRange, atree.Address{})
-
-			i++
-
-			return true, nil
-		})
+		iterator, err := v.dictionary.Iterator()
 		if err != nil {
 			panic(ExternalError{err})
 		}
 
-		return NewArrayValue(
+		return NewArrayValueWithIterator(
 			interpreter,
 			VariableSizedStaticType{
 				Type: v.Type.ValueType,
 			},
 			common.Address{},
-			dictionaryValues...,
-		)
+			func() Value {
+
+				value, err := iterator.NextValue()
+				if err != nil {
+					panic(ExternalError{err})
+				}
+				if value == nil {
+					return nil
+				}
+
+				// We can directly call DeepCopy on the value,
+				// instead of potentially skipping copying by using interpreter.CopyValue,
+				// as the dictionary values returned by the values field here
+				// are only ever struct-kinded, which always must be copied
+
+				return MustConvertStoredValue(value).
+					DeepCopy(interpreter, getLocationRange, atree.Address{})
+			})
 
 	case "remove":
 		return NewHostFunctionValue(
