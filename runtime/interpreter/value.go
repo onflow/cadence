@@ -125,7 +125,7 @@ type EquatableValue interface {
 	Equal(interpreter *Interpreter, getLocationRange func() LocationRange, other Value) bool
 }
 
-func newValueComparator(interpreter *Interpreter, getLocationRange func() LocationRange) atree.Comparator {
+func newValueComparator(interpreter *Interpreter, getLocationRange func() LocationRange) atree.ValueComparator {
 	return func(storage atree.SlabStorage, atreeValue atree.Value, otherStorable atree.Storable) (bool, error) {
 		value := MustConvertStoredValue(atreeValue)
 		otherValue := StoredValue(otherStorable, storage)

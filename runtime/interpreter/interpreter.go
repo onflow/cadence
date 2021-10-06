@@ -3698,13 +3698,30 @@ func (interpreter *Interpreter) checkAtreeValue(v atree.Value) {
 		return defaultHIP(value, buffer)
 	}
 
+	compare := func(a, b atree.Storable) bool {
+		if x, ok := a.(stringAtreeValue); ok {
+			if y, ok := b.(stringAtreeValue); ok {
+				return x == y
+			}
+			return false
+		}
+
+		if x, ok := StoredValue(a, interpreter.Storage).(EquatableValue); ok {
+			y := StoredValue(b, interpreter.Storage)
+			return x.Equal(interpreter, ReturnEmptyLocationRange, y)
+		}
+
+		// Not all values are comparable, assume valid for now
+		return true
+	}
+
 	switch v := v.(type) {
 	case *atree.Array:
 		err := atree.ValidArray(v, v.Type(), tic, hip)
 		if err != nil {
 			panic(ExternalError{err})
 		}
-		err = atree.ValidArraySerialization(v, CBORDecMode, CBOREncMode, DecodeStorable, DecodeTypeInfo)
+		err = atree.ValidArraySerialization(v, CBORDecMode, CBOREncMode, DecodeStorable, DecodeTypeInfo, compare)
 		if err != nil {
 			var nonStorableValueErr NonStorableValueError
 			if !goErrors.As(err, &nonStorableValueErr) {
@@ -3718,7 +3735,7 @@ func (interpreter *Interpreter) checkAtreeValue(v atree.Value) {
 		if err != nil {
 			panic(ExternalError{err})
 		}
-		err = atree.ValidMapSerialization(v, CBORDecMode, CBOREncMode, DecodeStorable, DecodeTypeInfo)
+		err = atree.ValidMapSerialization(v, CBORDecMode, CBOREncMode, DecodeStorable, DecodeTypeInfo, compare)
 		if err != nil {
 			var nonStorableValueErr NonStorableValueError
 			if !goErrors.As(err, &nonStorableValueErr) {
