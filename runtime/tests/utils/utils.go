@@ -43,6 +43,10 @@ const ImportedLocation = common.StringLocation("imported")
 // If the objects are not equal, this function prints a human-readable diff.
 func AssertEqualWithDiff(t *testing.T, expected, actual interface{}) {
 	if !assert.Equal(t, expected, actual) {
+		// the maximum levels of a struct to recurse into
+		// this prevents infinite recursion from circular references
+		deep.MaxDepth = 100
+
 		diff := deep.Equal(expected, actual)
 
 		if len(diff) != 0 {
