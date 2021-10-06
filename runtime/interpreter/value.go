@@ -884,16 +884,20 @@ func (v *ArrayValue) GetKey(interpreter *Interpreter, getLocationRange func() Lo
 	return v.Get(interpreter, getLocationRange, index)
 }
 
+func (v *ArrayValue) handleIndexOutOfBoundsError(err error, index int, getLocationRange func() LocationRange) {
+	if _, ok := err.(*atree.IndexOutOfBoundsError); ok {
+		panic(ArrayIndexOutOfBoundsError{
+			Index:         index,
+			Size:          v.Count(),
+			LocationRange: getLocationRange(),
+		})
+	}
+}
+
 func (v *ArrayValue) Get(interpreter *Interpreter, getLocationRange func() LocationRange, index int) Value {
 	storable, err := v.array.Get(uint64(index))
 	if err != nil {
-		if _, ok := err.(*atree.IndexOutOfBoundsError); ok {
-			panic(ArrayIndexOutOfBoundsError{
-				Index:         index,
-				Size:          v.Count(),
-				LocationRange: getLocationRange(),
-			})
-		}
+		v.handleIndexOutOfBoundsError(err, index, getLocationRange)
 
 		panic(ExternalError{err})
 	}
@@ -919,13 +923,7 @@ func (v *ArrayValue) Set(interpreter *Interpreter, getLocationRange func() Locat
 
 	existingStorable, err := v.array.Set(uint64(index), element)
 	if err != nil {
-		if _, ok := err.(*atree.IndexOutOfBoundsError); ok {
-			panic(ArrayIndexOutOfBoundsError{
-				Index:         index,
-				Size:          v.Count(),
-				LocationRange: getLocationRange(),
-			})
-		}
+		v.handleIndexOutOfBoundsError(err, index, getLocationRange)
 
 		panic(ExternalError{err})
 	}
@@ -996,13 +994,7 @@ func (v *ArrayValue) Insert(interpreter *Interpreter, getLocationRange func() Lo
 
 	err := v.array.Insert(uint64(index), element)
 	if err != nil {
-		if _, ok := err.(*atree.IndexOutOfBoundsError); ok {
-			panic(ArrayIndexOutOfBoundsError{
-				Index:         index,
-				Size:          v.Count(),
-				LocationRange: getLocationRange(),
-			})
-		}
+		v.handleIndexOutOfBoundsError(err, index, getLocationRange)
 
 		panic(ExternalError{err})
 	}
@@ -1017,13 +1009,7 @@ func (v *ArrayValue) RemoveKey(interpreter *Interpreter, getLocationRange func()
 func (v *ArrayValue) Remove(interpreter *Interpreter, getLocationRange func() LocationRange, index int) Value {
 	storable, err := v.array.Remove(uint64(index))
 	if err != nil {
-		if _, ok := err.(*atree.IndexOutOfBoundsError); ok {
-			panic(ArrayIndexOutOfBoundsError{
-				Index:         index,
-				Size:          v.Count(),
-				LocationRange: getLocationRange(),
-			})
-		}
+		v.handleIndexOutOfBoundsError(err, index, getLocationRange)
 
 		panic(ExternalError{err})
 	}
