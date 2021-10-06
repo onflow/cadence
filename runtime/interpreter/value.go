@@ -66,10 +66,10 @@ func (s NonStorable) Encode(_ *atree.Encoder) error {
 }
 
 func (s NonStorable) ByteSize() uint32 {
-    // Return 1 so that atree split and merge operations don't have to handle special cases. 
-    // Any value larger than 0 and smaller than half of the max slab size works,
-    // but 1 results in less number of slabs which is ideal for non-storable values.
-    return 1
+	// Return 1 so that atree split and merge operations don't have to handle special cases.
+	// Any value larger than 0 and smaller than half of the max slab size works,
+	// but 1 results in less number of slabs which is ideal for non-storable values.
+	return 1
 }
 
 func (s NonStorable) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
@@ -873,7 +873,7 @@ func (v *ArrayValue) Concat(interpreter *Interpreter, getLocationRange func() Lo
 	// We can directly call DeepCopy on the value, instead of potentially skipping copying
 	// by using interpreter.copyValue, as concatenation is only supported for struct-kinded arrays,
 	// which always must be copied
-	// TODO: optimize by using atree.NewArrayFromBatchData instead 
+	// TODO: optimize by using atree.NewArrayFromBatchData instead
 	newArray := v.DeepCopy(interpreter, getLocationRange, atree.Address{}).(*ArrayValue)
 	newArray.AppendAll(interpreter, getLocationRange, other)
 	return newArray
@@ -7300,6 +7300,9 @@ func (v *CompositeValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	})
 }
 
+// Walk iterates over all field values of the composite value.
+// It does NOT walk the computed fields and functions!
+//
 func (v *CompositeValue) Walk(walkChild func(Value)) {
 	v.ForEachField(func(_ string, value Value) {
 		walkChild(value)
@@ -7832,6 +7835,9 @@ func (v *CompositeValue) GetOwner() common.Address {
 	return common.Address(v.StorageID().Address)
 }
 
+// ForEachField iterates over all field-name field-value pairs of the composite value.
+// It does NOT iterate over computed fields and functions!
+//
 func (v *CompositeValue) ForEachField(f func(fieldName string, fieldValue Value)) {
 	err := v.dictionary.Iterate(func(key atree.Value, value atree.Value) (resume bool, err error) {
 		f(
