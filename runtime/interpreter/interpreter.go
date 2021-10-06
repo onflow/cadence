@@ -26,6 +26,7 @@ import (
 	goRuntime "runtime"
 
 	"github.com/onflow/atree"
+
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"

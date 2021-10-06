@@ -23,10 +23,11 @@ import (
 	"testing"
 	"unicode/utf8"
 
-	"github.com/onflow/cadence/encoding/json"
-	"github.com/onflow/cadence/runtime/stdlib"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/onflow/cadence/encoding/json"
+	"github.com/onflow/cadence/runtime/stdlib"
 
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/runtime/common"

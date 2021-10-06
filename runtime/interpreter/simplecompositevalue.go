@@ -20,6 +20,7 @@ package interpreter
 
 import (
 	"github.com/onflow/atree"
+
 	"github.com/onflow/cadence/runtime/format"
 	"github.com/onflow/cadence/runtime/sema"
 )

@@ -23,9 +23,10 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/onflow/cadence/runtime/common"
 	. "github.com/onflow/cadence/runtime/interpreter"
-	"github.com/stretchr/testify/require"
 )
 
 func TestByteArrayValueToByteSlice(t *testing.T) {

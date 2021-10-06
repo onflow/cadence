@@ -24,10 +24,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/onflow/cadence/runtime/tests/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/sha3"
+
+	"github.com/onflow/cadence/runtime/tests/utils"
 
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/runtime/interpreter"

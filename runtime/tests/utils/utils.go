@@ -25,8 +25,9 @@ import (
 	"testing"
 
 	"github.com/go-test/deep"
-	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/onflow/cadence/runtime/interpreter"
 
 	"github.com/onflow/cadence/runtime/common"
 )
