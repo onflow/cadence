@@ -873,6 +873,7 @@ func (v *ArrayValue) Concat(interpreter *Interpreter, getLocationRange func() Lo
 	// We can directly call DeepCopy on the value, instead of potentially skipping copying
 	// by using interpreter.copyValue, as concatenation is only supported for struct-kinded arrays,
 	// which always must be copied
+	// TODO: optimize by using atree.NewArrayFromBatchData instead 
 	newArray := v.DeepCopy(interpreter, getLocationRange, atree.Address{}).(*ArrayValue)
 	newArray.AppendAll(interpreter, getLocationRange, other)
 	return newArray
