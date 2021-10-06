@@ -3145,10 +3145,9 @@ func TestRandomMapOperations(t *testing.T) {
 	// TODO Skip by default
 
 	seed := time.Now().UnixNano()
-	fmt.Printf("Seed used for randomization: %d \n", seed)
+	fmt.Printf("Seed used for test: %d \n", seed)
 	rand.Seed(seed)
 
-	// TODO wrap inmem storage with something else
 	storage := NewInMemoryStorage()
 	inter, err := NewInterpreter(
 		nil,
@@ -3157,45 +3156,163 @@ func TestRandomMapOperations(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	// todo make this a param
-	numberOfValues := rand.Intn(50)
-	keyValues := make([]Value, numberOfValues*2)
+	// TODO make this a param
+	numberOfValues := rand.Intn(1000)
+
 	values := make(map[Value]Value, numberOfValues)
-	var prevValue Value
-	for i := 0; i < numberOfValues*2; i++ {
-		// TODO maybe deep copy values
-		value := generateARandomStorableType()
-		if i%2 == 1 {
-			values[prevValue] = value
+	var testMap, copyOfTestMap *DictionaryValue
+	var storageSize, slabCounts int
+	orgOwner := common.Address([8]byte{'A'})
+
+	t.Run("dictionary construction", func(t *testing.T) {
+		keyValues := make([]Value, numberOfValues*2)
+		var prevValue Value
+		for i := 0; i < numberOfValues*2; i++ {
+			// TODO maybe deep copy values
+			value := generateARandomStorableType()
+			if i%2 == 1 {
+				values[deepCopyBasicValue(prevValue)] = deepCopyBasicValue(value)
+			}
+
+			keyValues[i] = value
+			prevValue = value
 		}
+		testMap = NewDictionaryValueWithAddress(inter,
+			DictionaryStaticType{
+				KeyType:   PrimitiveStaticTypeAnyStruct,
+				ValueType: PrimitiveStaticTypeAnyStruct,
+			},
+			orgOwner,
+			keyValues...,
+		)
+		storageSize, slabCounts = getSlabStorageSize(t, storage)
 
-		keyValues[i] = value
-		prevValue = value
-	}
+		for orgKey, orgValue := range values {
+			v, found := testMap.Get(inter, nil, orgKey)
+			// fmt.Println(">>>", orgKey, ">>>", v, ">>>", orgValue)
+			require.True(t, found)
+			require.Equal(t, v, orgValue)
+			exists := testMap.ContainsKey(inter, nil, orgKey)
+			require.True(t, bool(exists))
+		}
+		require.Equal(t, testMap.Count(), len(values))
+		o := testMap.GetOwner()
+		require.Equal(t, o[:], orgOwner[:])
+	})
 
-	testMap := NewDictionaryValue(inter,
-		DictionaryStaticType{
-			KeyType:   PrimitiveStaticTypeAnyStruct,
-			ValueType: PrimitiveStaticTypeAnyStruct,
-		},
-		keyValues...,
-	)
+	t.Run("test deep copy", func(t *testing.T) {
+		newOwner := atree.Address([8]byte{'B'})
+		copyOfTestMap = testMap.DeepCopy(inter, nil, newOwner).(*DictionaryValue)
 
-	require.Equal(t, testMap.Count(), numberOfValues)
+		for orgKey, orgValue := range values {
+			v, found := copyOfTestMap.Get(inter, nil, orgKey)
+			require.True(t, found)
+			require.Equal(t, v, orgValue)
+			exists := copyOfTestMap.ContainsKey(inter, nil, orgKey)
+			require.True(t, bool(exists))
+		}
+		require.Equal(t, copyOfTestMap.Count(), len(values))
+		o := copyOfTestMap.GetOwner()
+		require.Equal(t, o[:], newOwner[:])
+	})
 
-	// reference :=
+	t.Run("test deep removal", func(t *testing.T) {
+		copyOfTestMap.DeepRemove(inter)
+		err = storage.Remove(copyOfTestMap.StorageID())
+		require.NoError(t, err)
 
-	// randomly move items from the map
+		// deep removal should clean up everything
+		newStorageSize, newSlabCounts := getSlabStorageSize(t, storage)
+		require.Equal(t, slabCounts, newSlabCounts)
+		require.Equal(t, storageSize, newStorageSize)
 
-	//
+		// go over original values again and check no missing data (no side effect should be found)
+		for orgKey, orgValue := range values {
+			v, found := testMap.Get(inter, nil, orgKey)
+			require.True(t, found)
+			require.Equal(t, v, orgValue)
+			exists := testMap.ContainsKey(inter, nil, orgKey)
+			require.True(t, bool(exists))
+		}
+		require.Equal(t, testMap.Count(), len(values))
+		o := testMap.GetOwner()
+		require.Equal(t, o[:], orgOwner[:])
+	})
 
-	// check slab health
+	t.Run("test iterator", func(t *testing.T) {
+		// TODO
+	})
+
+	// temp to prevent test cache
+	// t.Fatal("XXX")
 
 }
 
+func getSlabStorageSize(t *testing.T, storage InMemoryStorage) (totalSize int, slabCounts int) {
+	slabs, err := storage.Encode()
+	require.NoError(t, err)
+	for _, slab := range slabs {
+		totalSize += len(slab)
+		slabCounts++
+	}
+	return
+}
+
+func deepCopyBasicValue(value Value) Value {
+	switch v := value.(type) {
+	case Int8Value:
+		return Int8Value(int8(v))
+	case Int16Value:
+		return Int16Value(int16(v))
+	case Int32Value:
+		return Int32Value(int32(v))
+	case Int64Value:
+		return Int64Value(int64(v))
+	case Int128Value:
+		var n big.Int
+		n.Set(v.BigInt)
+		return Int128Value{BigInt: &n}
+	case Int256Value:
+		var n big.Int
+		n.Set(v.BigInt)
+		return Int256Value{BigInt: &n}
+
+	case UInt8Value:
+		return UInt8Value(uint8(v))
+	case UInt16Value:
+		return UInt16Value(uint16(v))
+	case UInt32Value:
+		return UInt32Value(uint32(v))
+	case UInt64Value:
+		return UInt64Value(uint64(v))
+	case UInt128Value:
+		var n big.Int
+		n.Set(v.BigInt)
+		return UInt128Value{BigInt: &n}
+	case UInt256Value:
+		var n big.Int
+		n.Set(v.BigInt)
+		return UInt256Value{BigInt: &n}
+
+	case *StringValue:
+		b := []byte(v.Str)
+		data := make([]byte, len(b))
+		copy(data, b)
+		return NewStringValue(string(data))
+
+	case AddressValue:
+		b := v[:]
+		data := make([]byte, len(b))
+		copy(data, b)
+		return NewAddressValueFromBytes(data)
+	case Fix64Value:
+		return NewFix64ValueWithInteger(int64(v.ToInt()))
+	}
+	return NilValue{}
+}
+
 func generateARandomStorableType() Value {
-	// TODO change 20
-	switch rand.Intn(20) {
+	switch rand.Intn(22) {
 	// TODO deal with negative numbers
 	case 0:
 		return Int8Value(rand.Intn(255))
@@ -3224,13 +3341,21 @@ func generateARandomStorableType() Value {
 		return UInt256Value{big.NewInt(rand.Int63())}
 
 	case 15, 16, 17, 18: // small string - should be more common
-		data := make([]byte, rand.Intn(255))
+		size := rand.Intn(255)
+		data := make([]byte, size)
 		rand.Read(data)
 		return NewStringValue(string(data))
 	case 19: // large string
-		data := make([]byte, rand.Intn(4048)+255)
+		size := rand.Intn(4048) + 255
+		data := make([]byte, size)
 		rand.Read(data)
 		return NewStringValue(string(data))
+	case 20:
+		data := make([]byte, 8)
+		rand.Read(data)
+		return NewAddressValueFromBytes(data)
+	case 21:
+		return NewFix64ValueWithInteger(rand.Int63n(sema.Fix64TypeMaxInt))
 
 	default:
 		return NilValue{}
