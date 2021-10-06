@@ -52,7 +52,7 @@ func colorizeMeta(meta string) string {
 const errorPrefix = "error"
 const excerptArrow = "--> "
 const excerptDots = "... "
-const maxLineLength = 140
+const maxLineLength = 500
 
 func FormatErrorMessage(message string, useColor bool) string {
 	// prepare prefix
