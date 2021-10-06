@@ -984,17 +984,6 @@ func (v *ArrayValue) InsertKey(interpreter *Interpreter, getLocationRange func()
 
 func (v *ArrayValue) Insert(interpreter *Interpreter, getLocationRange func() LocationRange, index int, element Value) {
 
-	count := v.Count()
-
-	// NOTE: index may be equal to count
-	if index < 0 || index > count {
-		panic(ArrayIndexOutOfBoundsError{
-			Index:         index,
-			Size:          count,
-			LocationRange: getLocationRange(),
-		})
-	}
-
 	interpreter.checkContainerMutation(v.Type.ElementType(), element, getLocationRange)
 
 	element = interpreter.TransferValue(
@@ -1006,6 +995,14 @@ func (v *ArrayValue) Insert(interpreter *Interpreter, getLocationRange func() Lo
 
 	err := v.array.Insert(uint64(index), element)
 	if err != nil {
+		if _, ok := err.(*atree.IndexOutOfBoundsError); ok {
+			panic(ArrayIndexOutOfBoundsError{
+				Index:         index,
+				Size:          v.Count(),
+				LocationRange: getLocationRange(),
+			})
+		}
+
 		panic(ExternalError{err})
 	}
 	interpreter.maybeCheckAtreeValue(v.array)
