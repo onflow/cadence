@@ -52,6 +52,7 @@ func colorizeMeta(meta string) string {
 const errorPrefix = "error"
 const excerptArrow = "--> "
 const excerptDots = "... "
+const maxLineLength = 500
 
 func FormatErrorMessage(message string, useColor bool) string {
 	// prepare prefix
@@ -281,7 +282,13 @@ func (p ErrorPrettyPrinter) writeCodeExcerpts(
 
 			// code line
 			line := lines[excerpt.startPos.Line-1]
-			p.writeString(line)
+			if len(line) > maxLineLength {
+				p.writeString(line[:maxLineLength])
+				p.writeString(excerptDots)
+			} else {
+				p.writeString(line)
+			}
+
 			p.writeString("\n")
 
 			// indicator line
@@ -293,7 +300,11 @@ func (p ErrorPrettyPrinter) writeCodeExcerpts(
 
 			columns := 1
 			if excerpt.endPos != nil && excerpt.endPos.Line == excerpt.startPos.Line {
-				columns = excerpt.endPos.Column - excerpt.startPos.Column + 1
+				endColumn := excerpt.endPos.Column
+				if endColumn >= maxLineLength {
+					endColumn = maxLineLength - 1
+				}
+				columns = endColumn - excerpt.startPos.Column + 1
 			}
 
 			indicator := "-"
