@@ -21,7 +21,10 @@ package interpreter_test
 import (
 	"fmt"
 	"go/types"
+	"math/big"
+	"math/rand"
 	"testing"
+	"time"
 
 	"golang.org/x/tools/go/packages"
 
@@ -3128,5 +3131,102 @@ func TestNonStorable(t *testing.T) {
 
 	_, err = inter.Invoke("foo")
 	require.NoError(t, err)
+
+}
+
+func TestRandomMapOperations(t *testing.T) {
+	// TODO Skip by default
+
+	seed := time.Now().UnixNano()
+	fmt.Printf("Seed used for randomization: %d \n", seed)
+	rand.Seed(seed)
+
+	// TODO wrap inmem storage with something else
+	storage := NewInMemoryStorage()
+	inter, err := NewInterpreter(
+		nil,
+		utils.TestLocation,
+		WithStorage(storage),
+	)
+	require.NoError(t, err)
+
+	// todo make this a param
+	numberOfValues := rand.Intn(50)
+	keyValues := make([]Value, numberOfValues*2)
+	values := make(map[Value]Value, numberOfValues)
+	var prevValue Value
+	for i := 0; i < numberOfValues*2; i++ {
+		// TODO maybe deep copy values
+		value := generateARandomStorableType()
+		if i%2 == 1 {
+			values[prevValue] = value
+		}
+
+		keyValues[i] = value
+		prevValue = value
+	}
+
+	testMap := NewDictionaryValue(inter,
+		DictionaryStaticType{
+			KeyType:   PrimitiveStaticTypeAnyStruct,
+			ValueType: PrimitiveStaticTypeAnyStruct,
+		},
+		keyValues...,
+	)
+
+	require.Equal(t, testMap.Count(), numberOfValues)
+
+	// reference :=
+
+	// randomly move items from the map
+
+	//
+
+	// check slab health
+
+}
+
+func generateARandomStorableType() Value {
+	// TODO change 20
+	switch rand.Intn(20) {
+	// TODO deal with negative numbers
+	case 0:
+		return Int8Value(rand.Intn(255))
+	case 1:
+		return Int16Value(rand.Intn(65535))
+	case 2:
+		return Int32Value(rand.Int31())
+	case 3:
+		return Int64Value(rand.Int63())
+	case 4:
+		return Int128Value{big.NewInt(rand.Int63())}
+	case 5:
+		return Int256Value{big.NewInt(rand.Int63())}
+
+	case 6:
+		return UInt8Value(rand.Intn(255))
+	case 7:
+		return UInt16Value(rand.Intn(65535))
+	case 8:
+		return UInt32Value(rand.Uint32())
+	case 9, 10, 11, 12: // should be more common
+		return UInt64Value(rand.Uint64())
+	case 13:
+		return UInt128Value{big.NewInt(rand.Int63())}
+	case 14:
+		return UInt256Value{big.NewInt(rand.Int63())}
+
+	case 15, 16, 17, 18: // small string - should be more common
+		data := make([]byte, rand.Intn(255))
+		rand.Read(data)
+		return NewStringValue(string(data))
+	case 19: // large string
+		data := make([]byte, rand.Intn(4048)+255)
+		rand.Read(data)
+		return NewStringValue(string(data))
+
+	default:
+		return NilValue{}
+	}
 
 }
