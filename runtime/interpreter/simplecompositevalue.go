@@ -35,7 +35,9 @@ type SimpleCompositeValue struct {
 	Fields          map[string]Value
 	ComputedFields  map[string]ComputedField
 	fieldFormatters map[string]func(Value, SeenReferences) string
-	stringer        func(SeenReferences) string
+	// stringer is an optional function that is used to produce the string representation of the value.
+	// If nil, the FieldNames are used.
+	stringer func(SeenReferences) string
 }
 
 var _ Value = &SimpleCompositeValue{}
