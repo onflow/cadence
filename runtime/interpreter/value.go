@@ -712,23 +712,28 @@ var ByteArrayStaticType = ConvertSemaArrayTypeToStaticArrayType(sema.ByteArrayTy
 // DecodeHex hex-decodes this string and returns an array of UInt8 values
 //
 func (v *StringValue) DecodeHex(interpreter *Interpreter) *ArrayValue {
-	str := v.Str
-
-	bs, err := hex.DecodeString(str)
+	bs, err := hex.DecodeString(v.Str)
 	if err != nil {
 		panic(err)
 	}
 
-	values := make([]Value, len(str)/2)
-	for i, b := range bs {
-		values[i] = UInt8Value(b)
-	}
+	i := 0
 
-	return NewArrayValue(
+	return NewArrayValueWithIterator(
 		interpreter,
 		ByteArrayStaticType,
 		common.Address{},
-		values...,
+		func() Value {
+			if i >= len(bs) {
+				return nil
+			}
+
+			value := UInt8Value(bs[i])
+
+			i++
+
+			return value
+		},
 	)
 }
 
