@@ -7435,10 +7435,13 @@ func (v *CompositeValue) GetMember(interpreter *Interpreter, getLocationRange fu
 		return v.OwnerValue(interpreter, getLocationRange)
 	}
 
+	valueComparator := newValueComparator(interpreter, getLocationRange)
+	hashInputProvider := newHashInputProvider(interpreter, getLocationRange)
+
 	storable, err := v.dictionary.Get(
-		stringAtreeComparator,
-		stringAtreeHashInput,
-		stringAtreeValue(name),
+		valueComparator,
+		hashInputProvider,
+		NewStringValue(name),
 	)
 	if err != nil {
 		if _, ok := err.(*atree.KeyNotFoundError); !ok {
@@ -7548,10 +7551,13 @@ func (v *CompositeValue) SetMember(
 		address,
 	)
 
+	valueComparator := newValueComparator(interpreter, getLocationRange)
+	hashInputProvider := newHashInputProvider(interpreter, getLocationRange)
+
 	existingStorable, err := v.dictionary.Set(
-		stringAtreeComparator,
-		stringAtreeHashInput,
-		stringAtreeValue(name),
+		valueComparator,
+		hashInputProvider,
+		NewStringValue(name),
 		value,
 	)
 	if err != nil {
@@ -7618,12 +7624,15 @@ func formatComposite(typeId string, fields []CompositeField, seenReferences Seen
 	return format.Composite(typeId, preparedFields)
 }
 
-func (v *CompositeValue) GetField(name string) Value {
+func (v *CompositeValue) GetField(interpreter *Interpreter, getLocationRange func() LocationRange, name string) Value {
+
+	valueComparator := newValueComparator(interpreter, getLocationRange)
+	hashInputProvider := newHashInputProvider(interpreter, getLocationRange)
 
 	storable, err := v.dictionary.Get(
-		stringAtreeComparator,
-		stringAtreeHashInput,
-		stringAtreeValue(name),
+		valueComparator,
+		hashInputProvider,
+		NewStringValue(name),
 	)
 	if err != nil {
 		if _, ok := err.(*atree.KeyNotFoundError); ok {
@@ -7662,11 +7671,11 @@ func (v *CompositeValue) Equal(interpreter *Interpreter, getLocationRange func()
 			return true
 		}
 
-		fieldName := string(key.(stringAtreeValue))
+		fieldName := key.(*StringValue).Str
 
 		// NOTE: Do NOT use an iterator, iteration order of fields may be different
 		// (if stored in different account, as storage ID is used as hash seed)
-		otherValue := otherComposite.GetField(fieldName)
+		otherValue := otherComposite.GetField(interpreter, getLocationRange, fieldName)
 
 		equatableValue, ok := MustConvertStoredValue(value).(EquatableValue)
 		if !ok || !equatableValue.Equal(interpreter, getLocationRange, otherValue) {
@@ -7682,7 +7691,7 @@ func (v *CompositeValue) HashInput(interpreter *Interpreter, getLocationRange fu
 			v.TypeID()...,
 		)
 
-		rawValue := v.GetField(sema.EnumRawValueFieldName)
+		rawValue := v.GetField(interpreter, getLocationRange, sema.EnumRawValueFieldName)
 		rawValueHashInput := rawValue.(HashableValue).
 			HashInput(interpreter, getLocationRange, scratch)
 
@@ -7736,7 +7745,7 @@ func (v *CompositeValue) ConformsToDynamicType(
 	}
 
 	for _, fieldName := range compositeType.Fields {
-		value := v.GetField(fieldName)
+		value := v.GetField(interpreter, getLocationRange, fieldName)
 		if value == nil {
 			if v.ComputedFields == nil {
 				return false
@@ -7821,13 +7830,16 @@ func (v *CompositeValue) DeepCopy(
 		panic(ExternalError{err})
 	}
 
+	valueComparator := newValueComparator(interpreter, getLocationRange)
+	hashInputProvider := newHashInputProvider(interpreter, getLocationRange)
+
 	dictionary, err := atree.NewMapFromBatchData(
 		interpreter.Storage,
 		address,
 		atree.NewDefaultDigesterBuilder(),
 		v.dictionary.Type(),
-		stringAtreeComparator,
-		stringAtreeHashInput,
+		valueComparator,
+		hashInputProvider,
 		v.dictionary.Seed(),
 		func() (atree.Value, atree.Value, error) {
 
@@ -7839,13 +7851,13 @@ func (v *CompositeValue) DeepCopy(
 				return nil, nil, nil
 			}
 
-			// NOTE: key is stringAtreeValue
-			// and does not need to be converted or copied
+			key := MustConvertStoredValue(atreeKey)
+			keyCopy := interpreter.CopyValue(getLocationRange, key, address)
 
 			value := MustConvertStoredValue(atreeValue)
 			valueCopy := interpreter.CopyValue(getLocationRange, value, address)
 
-			return atreeKey, valueCopy, nil
+			return keyCopy, valueCopy, nil
 		},
 	)
 	if err != nil {
@@ -7877,9 +7889,8 @@ func (v *CompositeValue) DeepRemove(interpreter *Interpreter) {
 	storage := v.dictionary.Storage
 
 	err := v.dictionary.PopIterate(func(nameStorable atree.Storable, valueStorable atree.Storable) {
-
-		// NOTE: key / field name is stringAtreeValue,
-		// and not a Value, so no need to deep remove
+		name := StoredValue(nameStorable, storage)
+		name.DeepRemove(interpreter)
 		interpreter.removeReferencedSlab(nameStorable)
 
 		value := StoredValue(valueStorable, storage)
@@ -7902,7 +7913,7 @@ func (v *CompositeValue) GetOwner() common.Address {
 func (v *CompositeValue) ForEachField(f func(fieldName string, fieldValue Value)) {
 	err := v.dictionary.Iterate(func(key atree.Value, value atree.Value) (resume bool, err error) {
 		f(
-			string(key.(stringAtreeValue)),
+			MustConvertStoredValue(key).(*StringValue).Str,
 			MustConvertStoredValue(value),
 		)
 		return true, nil
@@ -7918,13 +7929,16 @@ func (v *CompositeValue) StorageID() atree.StorageID {
 
 func (v *CompositeValue) RemoveField(
 	interpreter *Interpreter,
-	_ func() LocationRange,
+	getLocationRange func() LocationRange,
 	name string,
 ) {
+	valueComparator := newValueComparator(interpreter, getLocationRange)
+	hashInputProvider := newHashInputProvider(interpreter, getLocationRange)
+
 	existingKeyStorable, existingValueStorable, err := v.dictionary.Remove(
-		stringAtreeComparator,
-		stringAtreeHashInput,
-		stringAtreeValue(name),
+		valueComparator,
+		hashInputProvider,
+		NewStringValue(name),
 	)
 	if err != nil {
 		if _, ok := err.(*atree.KeyNotFoundError); ok {
@@ -10308,12 +10322,14 @@ func NewPublicKeyValue(
 				Value: publicKey,
 			},
 			{
-				Name:  sema.PublicKeySignAlgoField,
-				Value: publicKeyValue.GetField(sema.PublicKeySignAlgoField),
+				Name: sema.PublicKeySignAlgoField,
+				// TODO: provide proper location range
+				Value: publicKeyValue.GetField(interpreter, ReturnEmptyLocationRange, sema.PublicKeySignAlgoField),
 			},
 			{
-				Name:  sema.PublicKeyIsValidField,
-				Value: publicKeyValue.GetField(sema.PublicKeyIsValidField),
+				Name: sema.PublicKeyIsValidField,
+				// TODO: provide proper location range
+				Value: publicKeyValue.GetField(interpreter, ReturnEmptyLocationRange, sema.PublicKeyIsValidField),
 			},
 		}
 

@@ -246,7 +246,7 @@ func TestInterpretEnumInContract(t *testing.T) {
 	require.IsType(t, &interpreter.CompositeValue{}, c)
 	contract := c.(*interpreter.CompositeValue)
 
-	eValue := contract.GetField("e")
+	eValue := contract.GetField(inter, interpreter.ReturnEmptyLocationRange, "e")
 	require.NotNil(t, eValue)
 
 	require.IsType(t, &interpreter.CompositeValue{}, eValue)

@@ -1055,6 +1055,7 @@ func (r *interpreterRuntime) newInterpreter(
 			) error {
 				return r.emitEvent(
 					inter,
+					getLocationRange,
 					context.Interface,
 					eventValue,
 					eventType,
@@ -1141,13 +1142,14 @@ func (r *interpreterRuntime) newInterpreter(
 		interpreter.WithHashHandler(
 			func(
 				inter *interpreter.Interpreter,
-				_ func() interpreter.LocationRange,
+				getLocationRange func() interpreter.LocationRange,
 				data *interpreter.ArrayValue,
 				tag *interpreter.StringValue,
 				hashAlgorithm interpreter.MemberAccessibleValue,
 			) *interpreter.ArrayValue {
 				return hash(
 					inter,
+					getLocationRange,
 					data,
 					tag,
 					hashAlgorithm,
@@ -1429,6 +1431,7 @@ func (r *interpreterRuntime) getCode(context Context) (code []byte, err error) {
 // emitEvent converts an event value to native Go types and emits it to the runtime interface.
 func (r *interpreterRuntime) emitEvent(
 	inter *interpreter.Interpreter,
+	getLocationRange func() interpreter.LocationRange,
 	runtimeInterface Interface,
 	event *interpreter.CompositeValue,
 	eventType *sema.CompositeType,
@@ -1436,7 +1439,7 @@ func (r *interpreterRuntime) emitEvent(
 	fields := make([]exportableValue, len(eventType.ConstructorParameters))
 
 	for i, parameter := range eventType.ConstructorParameters {
-		value := event.GetField(parameter.Identifier)
+		value := event.GetField(inter, getLocationRange, parameter.Identifier)
 		fields[i] = newExportableValue(value, inter)
 	}
 
@@ -2781,7 +2784,7 @@ func (r *interpreterRuntime) newAccountKeysAddFunction(
 				panic(err)
 			}
 
-			hashAlgo := NewHashAlgorithmFromValue(invocation.Arguments[1])
+			hashAlgo := NewHashAlgorithmFromValue(inter, getLocationRange, invocation.Arguments[1])
 			address := addressValue.ToAddress()
 			weight := invocation.Arguments[2].(interpreter.UFix64Value).ToInt()
 
@@ -2974,7 +2977,7 @@ func NewPublicKeyFromValue(
 		)
 	}
 
-	rawValue := signAlgoValue.GetField(sema.EnumRawValueFieldName)
+	rawValue := signAlgoValue.GetField(inter, getLocationRange, sema.EnumRawValueFieldName)
 	if rawValue == nil {
 		return nil, errors.New("sign algorithm raw value is not set")
 	}
@@ -3055,10 +3058,14 @@ func NewAccountKeyValue(
 	)
 }
 
-func NewHashAlgorithmFromValue(value interpreter.Value) HashAlgorithm {
+func NewHashAlgorithmFromValue(
+	inter *interpreter.Interpreter,
+	getLocationRange func() interpreter.LocationRange,
+	value interpreter.Value,
+) HashAlgorithm {
 	hashAlgoValue := value.(*interpreter.CompositeValue)
 
-	rawValue := hashAlgoValue.GetField(sema.EnumRawValueFieldName)
+	rawValue := hashAlgoValue.GetField(inter, getLocationRange, sema.EnumRawValueFieldName)
 	if rawValue == nil {
 		panic("cannot find hash algorithm raw value")
 	}
@@ -3115,7 +3122,7 @@ func verifySignature(
 
 	domainSeparationTag := domainSeparationTagValue.Str
 
-	hashAlgorithm := NewHashAlgorithmFromValue(hashAlgorithmValue)
+	hashAlgorithm := NewHashAlgorithmFromValue(inter, getLocationRange, hashAlgorithmValue)
 
 	publicKey, err := NewPublicKeyFromValue(inter, getLocationRange, publicKeyValue)
 	if err != nil {
@@ -3143,6 +3150,7 @@ func verifySignature(
 
 func hash(
 	inter *interpreter.Interpreter,
+	getLocationRange func() interpreter.LocationRange,
 	dataValue *interpreter.ArrayValue,
 	tagValue *interpreter.StringValue,
 	hashAlgorithmValue interpreter.Value,
@@ -3159,7 +3167,7 @@ func hash(
 		tag = tagValue.Str
 	}
 
-	hashAlgorithm := NewHashAlgorithmFromValue(hashAlgorithmValue)
+	hashAlgorithm := NewHashAlgorithmFromValue(inter, getLocationRange, hashAlgorithmValue)
 
 	var result []byte
 	wrapPanic(func() {

@@ -1566,7 +1566,11 @@ func (interpreter *Interpreter) declareEnumConstructor(
 			NewVariableWithValue(caseValue)
 	}
 
+	getLocationRange := locationRangeGetter(location, declaration)
+
 	value := EnumConstructorFunction(
+		interpreter,
+		getLocationRange,
 		compositeType,
 		caseValues,
 		constructorNestedVariables,
@@ -1577,6 +1581,8 @@ func (interpreter *Interpreter) declareEnumConstructor(
 }
 
 func EnumConstructorFunction(
+	inter *Interpreter,
+	getLocationRange func() LocationRange,
 	enumType *sema.CompositeType,
 	caseValues []*CompositeValue,
 	nestedVariables map[string]*Variable,
@@ -1587,7 +1593,7 @@ func EnumConstructorFunction(
 	lookupTable := make(map[string]*CompositeValue)
 
 	for _, caseValue := range caseValues {
-		rawValue := caseValue.GetField(sema.EnumRawValueFieldName)
+		rawValue := caseValue.GetField(inter, getLocationRange, sema.EnumRawValueFieldName)
 		rawValueBigEndianBytes := rawValue.(IntegerValue).ToBigEndianBytes()
 		lookupTable[string(rawValueBigEndianBytes)] = caseValue
 	}
@@ -3690,23 +3696,9 @@ func (interpreter *Interpreter) checkAtreeValue(v atree.Value) {
 		panic(errors.NewUnreachableError())
 	}
 
-	defaultHIP := newHashInputProvider(interpreter, ReturnEmptyLocationRange)
-
-	hip := func(value atree.Value, buffer []byte) ([]byte, error) {
-		if _, ok := value.(stringAtreeValue); ok {
-			return stringAtreeHashInput(value, buffer)
-		}
-		return defaultHIP(value, buffer)
-	}
+	hip := newHashInputProvider(interpreter, ReturnEmptyLocationRange)
 
 	compare := func(a, b atree.Storable) bool {
-		if x, ok := a.(stringAtreeValue); ok {
-			if y, ok := b.(stringAtreeValue); ok {
-				return x == y
-			}
-			return false
-		}
-
 		if x, ok := StoredValue(a, interpreter.Storage).(EquatableValue); ok {
 			y := StoredValue(b, interpreter.Storage)
 			return x.Equal(interpreter, ReturnEmptyLocationRange, y)
