@@ -9959,14 +9959,13 @@ func (v PathValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 // CapabilityValue
 
 type CapabilityValue struct {
-	Address         AddressValue
-	Path            PathValue
-	BorrowType      StaticType
-	addressStorable atree.Storable
-	pathStorable    atree.Storable
+	Address    AddressValue
+	Path       PathValue
+	BorrowType StaticType
 }
 
 var _ Value = &CapabilityValue{}
+var _ atree.Storable = &CapabilityValue{}
 var _ EquatableValue = &CapabilityValue{}
 
 func (*CapabilityValue) IsValue() {}
@@ -10074,24 +10073,13 @@ func (*CapabilityValue) IsStorable() bool {
 	return true
 }
 
-func (v *CapabilityValue) Storable(storage atree.SlabStorage, address atree.Address, maxInlineSize uint64) (atree.Storable, error) {
-	var err error
-	v.addressStorable, err = v.Address.Storable(storage, address, maxInlineSize)
-	if err != nil {
-		return nil, err
-	}
-
-	v.pathStorable, err = v.Path.Storable(storage, address, maxInlineSize)
-	if err != nil {
-		return nil, err
-	}
-
+func (v *CapabilityValue) Storable(
+	storage atree.SlabStorage,
+	address atree.Address,
+	maxInlineSize uint64,
+) (atree.Storable, error) {
 	return maybeLargeImmutableStorable(
-		CapabilityStorable{
-			Address:    v.addressStorable,
-			Path:       v.pathStorable,
-			BorrowType: v.BorrowType,
-		},
+		v,
 		storage,
 		address,
 		maxInlineSize,
@@ -10127,53 +10115,15 @@ func (v *CapabilityValue) DeepCopy(
 
 func (v *CapabilityValue) DeepRemove(interpreter *Interpreter) {
 	v.Address.DeepRemove(interpreter)
-	if v.addressStorable != nil {
-		interpreter.removeReferencedSlab(v.addressStorable)
-	}
-
 	v.Path.DeepRemove(interpreter)
-	if v.pathStorable != nil {
-		interpreter.removeReferencedSlab(v.pathStorable)
-	}
 }
 
-type CapabilityStorable struct {
-	Address    atree.Storable
-	Path       atree.Storable
-	BorrowType StaticType
+func (v *CapabilityValue) ByteSize() uint32 {
+	return mustStorableSize(v)
 }
 
-func (s CapabilityStorable) ByteSize() uint32 {
-	return mustStorableSize(s)
-}
-
-func (s CapabilityStorable) StoredValue(storage atree.SlabStorage) (atree.Value, error) {
-
-	// Address
-
-	address := StoredValue(s.Address, storage)
-	addressValue, ok := address.(AddressValue)
-	if !ok {
-		return nil, fmt.Errorf("invalid capability address: %T", address)
-	}
-
-	// Path
-
-	path := StoredValue(s.Path, storage)
-	pathValue, ok := path.(PathValue)
-	if !ok {
-		return nil, fmt.Errorf("invalid capability path: %T", address)
-	}
-
-	// Result
-
-	return &CapabilityValue{
-		Address:         addressValue,
-		Path:            pathValue,
-		BorrowType:      s.BorrowType,
-		addressStorable: s.Address,
-		pathStorable:    s.Path,
-	}, nil
+func (v *CapabilityValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
+	return v, nil
 }
 
 // LinkValue

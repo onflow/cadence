@@ -3117,7 +3117,7 @@ func TestEncodeDecodeCapabilityValue(t *testing.T) {
 		)
 	})
 
-	t.Run("inner path stored separately", func(t *testing.T) {
+	t.Run("larger than max inline size due to path", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -3148,20 +3148,9 @@ func TestEncodeDecodeCapabilityValue(t *testing.T) {
 			encodeDecodeTest{
 				value: expected,
 				encoded: []byte{
-					// tag
-					0xd8, CBORTagCapabilityValue,
-					// array, 3 items follow
-					0x83,
-					// tag for address
-					0xd8, CBORTagAddressValue,
-					// byte sequence, length 1
-					0x40,
-					// path
 					0xd8, atree.CBORTagStorageID,
 					// storage ID
 					0x50, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x42, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
-					// type: nil
-					0xf6,
 				},
 			},
 		)

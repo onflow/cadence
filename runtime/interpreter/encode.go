@@ -690,7 +690,7 @@ const (
 // 					encodedCapabilityValueBorrowTypeFieldKey: StaticType(v.BorrowType),
 // 				},
 // }
-func (s CapabilityStorable) Encode(e *atree.Encoder) error {
+func (v *CapabilityValue) Encode(e *atree.Encoder) error {
 	// Encode tag number and array head
 	err := e.CBOR.EncodeRawBytes([]byte{
 		// tag number
@@ -703,19 +703,19 @@ func (s CapabilityStorable) Encode(e *atree.Encoder) error {
 	}
 
 	// Encode address at array index encodedCapabilityValueAddressFieldKey
-	err = s.Address.Encode(e)
+	err = v.Address.Encode(e)
 	if err != nil {
 		return err
 	}
 
 	// Encode path at array index encodedCapabilityValuePathFieldKey
-	err = s.Path.Encode(e)
+	err = v.Path.Encode(e)
 	if err != nil {
 		return err
 	}
 
 	// Encode borrow type at array index encodedCapabilityValueBorrowTypeFieldKey
-	return EncodeStaticType(e.CBOR, s.BorrowType)
+	return EncodeStaticType(e.CBOR, v.BorrowType)
 }
 
 // NOTE: NEVER change, only add/increment; ensure uint64

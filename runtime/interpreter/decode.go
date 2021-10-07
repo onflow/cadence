@@ -832,24 +832,24 @@ func (d Decoder) decodePath() (PathValue, error) {
 	}, nil
 }
 
-func (d Decoder) decodeCapability() (CapabilityStorable, error) {
+func (d Decoder) decodeCapability() (*CapabilityValue, error) {
 
 	const expectedLength = encodedCapabilityValueLength
 
 	size, err := d.decoder.DecodeArrayHead()
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
-			return CapabilityStorable{}, fmt.Errorf(
+			return nil, fmt.Errorf(
 				"invalid capability encoding: expected [%d]interface{}, got %s",
 				expectedLength,
 				e.ActualType.String(),
 			)
 		}
-		return CapabilityStorable{}, err
+		return nil, err
 	}
 
 	if size != expectedLength {
-		return CapabilityStorable{}, fmt.Errorf(
+		return nil, fmt.Errorf(
 			"invalid capability encoding: expected [%d]interface{}, got [%d]interface{}",
 			expectedLength,
 			size,
@@ -862,20 +862,20 @@ func (d Decoder) decodeCapability() (CapabilityStorable, error) {
 	var num uint64
 	num, err = d.decoder.DecodeTagNumber()
 	if err != nil {
-		return CapabilityStorable{}, fmt.Errorf(
+		return nil, fmt.Errorf(
 			"invalid capability address: %w",
 			err,
 		)
 	}
 	if num != CBORTagAddressValue {
-		return CapabilityStorable{}, fmt.Errorf(
+		return nil, fmt.Errorf(
 			"invalid capability address: wrong tag %d",
 			num,
 		)
 	}
 	address, err := d.decodeAddress()
 	if err != nil {
-		return CapabilityStorable{}, fmt.Errorf(
+		return nil, fmt.Errorf(
 			"invalid capability address: %w",
 			err,
 		)
@@ -884,9 +884,13 @@ func (d Decoder) decodeCapability() (CapabilityStorable, error) {
 	// path
 
 	// Decode path at array index encodedCapabilityValuePathFieldKey
-	path, err := d.decodeStorable()
+	pathStorable, err := d.decodeStorable()
 	if err != nil {
-		return CapabilityStorable{}, fmt.Errorf("invalid capability path: %w", err)
+		return nil, fmt.Errorf("invalid capability path: %w", err)
+	}
+	pathValue, ok := pathStorable.(PathValue)
+	if !ok {
+		return nil, fmt.Errorf("invalid capability path: invalid type %T", pathValue)
 	}
 
 	// Decode borrow type at array index encodedCapabilityValueBorrowTypeFieldKey
@@ -908,12 +912,12 @@ func (d Decoder) decodeCapability() (CapabilityStorable, error) {
 	}
 
 	if err != nil {
-		return CapabilityStorable{}, fmt.Errorf("invalid capability borrow type encoding: %w", err)
+		return nil, fmt.Errorf("invalid capability borrow type encoding: %w", err)
 	}
 
-	return CapabilityStorable{
+	return &CapabilityValue{
 		Address:    address,
-		Path:       path,
+		Path:       pathValue,
 		BorrowType: borrowType,
 	}, nil
 }
