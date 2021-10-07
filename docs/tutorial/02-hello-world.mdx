@@ -7,10 +7,10 @@ title: 2. Hello World
 <Callout type="success">
   Open the starter code for this tutorial in the Flow Playground: <br />
   <a
-    href="https://play.onflow.org/83315e10-8a9d-40d1-9f4a-877ca93eb93c"
+    href="https://play.onflow.org/f51905e8-6030-4641-9324-11a3f1a6091c"
     target="_blank"
   >
-    https://play.onflow.org/83315e10-8a9d-40d1-9f4a-877ca93eb93c
+    https://play.onflow.org/f51905e8-6030-4641-9324-11a3f1a6091c
   </a>
   <br />
   The tutorial will ask you to take various actions to interact with this code.
@@ -53,7 +53,8 @@ An account is divided into two main areas:
    This is the area that stores any number smart contracts that contain type definitions, fields,
    and functions that relate to a common functionality.
    This area also holds contract interfaces, which are basically program guidelines that other contracts can import and implement.
-   This area cannot be directly accessed in a transaction unless the transaction is just reading a copy of the code deployed to an account.
+   This area cannot be directly accessed in a transaction unless the transaction
+   is just returning (aka reading) a copy of the code deployed to an account.
    The owner of an account can directly add, remove, or update/overwrite contracts that are stored in it.
 
 2. The second area is the account storage. This area is where an account stores the objects
@@ -62,7 +63,9 @@ An account is divided into two main areas:
 ### Account Storage
 
 The account storage functions similar to a traditional filesystem;
-Data is stored in paths, links can be created between paths that define different permissions and functionality,
+Data is stored in paths.
+A link can be created from one path (source) to another (target) 
+to change different permissions and functionality of the object in the target path.
 and only the owner of the account has "root" access to modify any of the data or links.
 
 Objects, which can be as simple as an integer to as complex as a `struct` or `resource`(an important type that we'll discuss later!),
@@ -74,8 +77,10 @@ For example, the path `/storage/test` has the domain `storage` and the identifie
 There are only three valid domains which represent the three areas in the account storage: `storage`, `private`, and `public`.
 
 Identifiers are custom and can be any name you want them to be to indicate what is stored in that path.
+It is recommend to make your identifiers very specific so that there is a smaller chance 
+of them conflicting with other projects' identifiers.
 
-### The three main account filesystem domains (Where can I store my stuff?)
+### Account Filesystem Domain Structure (Where can I store my stuff?)
 
 - The `storage` domain is where all objects (such as structs and resource objects representing tokens or NFTs) are stored.
   It is only directly accessible by the owner of the account.
@@ -90,8 +95,8 @@ Identifiers are custom and can be any name you want them to be to indicate what 
 A [Transaction](/cadence/language/transactions) in Flow is defined as an arbitrary-sized block of Cadence code
 that is signed by one or more accounts.
 Transactions have access to the `/storage/` and `/private/` domains of the accounts
-that signed the transaction and can read and write to those domains,
-as well as read and call functions in public contracts and the public domains in other users` accounts.
+that signed the transaction.
+Transactions can also read and call functions in public contracts, and access public domains in other users' accounts.
 
 ## Creating a Smart Contract
 
@@ -105,10 +110,10 @@ First, you'll need to follow this link to open a playground session with the
 Hello World contracts, transactions, and scripts pre-loaded:
 
   <a
-    href="https://play.onflow.org/83315e10-8a9d-40d1-9f4a-877ca93eb93c"
+    href="https://play.onflow.org/f51905e8-6030-4641-9324-11a3f1a6091c"
     target="_blank"
   >
-    https://play.onflow.org/83315e10-8a9d-40d1-9f4a-877ca93eb93c
+    https://play.onflow.org/f51905e8-6030-4641-9324-11a3f1a6091c
   </a>
   
 </Callout>
@@ -310,7 +315,8 @@ pub contract HelloWorld {
     // Here we are storing the newly created HelloAsset resource
     // in the private account storage
     // by specifying a custom path to the resource
-    self.account.save(<-newHello, to: /storage/Hello)
+    // Make sure the path is specific to avoid path collision!
+    self.account.save(<-newHello, to: /storage/HelloAssetTutorial)
 
     log("HelloAsset created and stored")
   }
@@ -344,11 +350,13 @@ pub resource HelloAsset {
 
 Resources are a composite type similar to a struct or a class because they can have any number of fields or functions within them.
 The difference is how code is allowed to interact with them. They are useful when you want to model direct ownership.
-Each instance of a resource exists in exactly one location and cannot be copied.
-They must be explicitly moved from one location to another when accessed.
-They also cannot go out of scope at the end of a function execution.
-They must be explicitly stored somewhere or destroyed.
-These characteristics make it impossible to lose accidentally from a coding mistake.
+
+- Each instance of a resource can only exist in exactly one location and cannot be copied.
+- Resources must be explicitly moved from one location to another when accessed.
+- Resources also cannot go out of scope at the end of a function execution.
+  They must be explicitly stored somewhere or destroyed.
+
+These characteristics make it impossible to accidentally lose a resource from a coding mistake.
 
 Structs from other conventional programming languages are not an ideal way to represent this ownership because they can be copied.
 This means a coding error can easily result in creating multiple copies of the same asset,
@@ -420,7 +428,7 @@ Back to our `init` function, after creating the `HelloAsset` resource,
 it uses the `AuthAccount.save` function to store the resource in the account storage.
 
 ```cadence
-self.account.save(<-newHello, to: /storage/Hello)
+self.account.save(<-newHello, to: /storage/HelloAssetTutorial)
 ```
 
 A contract can refer to its member functions and fields with the keyword `self`.
@@ -441,6 +449,11 @@ When moving a resource to a field, into an array, into a dictionary, or into sto
 there is the possibility that the location already contains a resource.
 Cadence forces the developer to handle the case of an existing resource so that it is not accidentally lost through an overwrite.
 
+It is also very important when choosing the name of your paths to pick an identifier
+that is very specific and unique to your project. Currently, account storage paths are global,
+so there is a chance that projects could use the same storage paths, which could cause path conflicts!
+This could be a headache for you, so choose unique path names to avoid this problem.
+
 Try removing the line of code that saves `newHello` to storage.
 You should see an error for `newHello` that says `loss of resource`.
 This means that you are not handling the resource properly.
@@ -450,7 +463,7 @@ that is not being explicitly stored or destroyed, meaning the program is invalid
 Add the line back to make the contract check properly.
 
 In this case, this is the first transaction we have run with the selected account,
-so we know that the storage spot at `/storage/Hello` is empty.
+so we know that the storage spot at `/storage/HelloAssetTutorial` is empty.
 In real applications, we would likely perform necessary checks and actions with the location we are storing to
 to make sure we don't abort the transaction because of an accidental overwrite.
 
@@ -484,7 +497,7 @@ transaction {
 
         // load the resource from storage, specifying the type to load it as
         // and the path where it is stored
-        let helloResource <- acct.load<@HelloWorld.HelloAsset>(from: /storage/Hello)
+        let helloResource <- acct.load<@HelloWorld.HelloAsset>(from: /storage/HelloAssetTutorial)
 
         // We use optional chaining (?) because the value in storage
         // may or may not exist, and thus is considered optional.
@@ -493,7 +506,7 @@ transaction {
         // Put the resource back in storage at the same spot
         // We use the force-unwrap operator `!` to get the value
         // out of the optional. It aborts if the optional is nil
-        acct.save(<-helloResource!, to: /storage/Hello)
+        acct.save(<-helloResource!, to: /storage/HelloAssetTutorial)
     }
 }
 ```
@@ -504,7 +517,7 @@ and calls the `hello()` function of the stored `HelloAsset` resource.
 To remove an object from storage, we use the `load` method.
 
 ```cadence
-let helloResource <- acct.load<@HelloWorld.HelloAsset>(from: /storage/Hello)
+let helloResource <- acct.load<@HelloWorld.HelloAsset>(from: /storage/HelloAssetTutorial)
 ```
 
 If no object of the specified type is stored under the given path, the function returns `nil`. (This is an [Optional](/cadence/language/values-and-types/#optionals),
@@ -536,8 +549,8 @@ let newResource: HelloAsset?  // could either have a value of type `HelloAsset`
 ```
 
 Optionals allow developers to account for `nil` cases more gracefully.
-Here, we explicitly have to account for the possibility that the `helloResource` object we got with `load` is `nil`.
-(because `load` will return `nil` if there is nothing there to load)
+Here, we explicitly have to account for the possibility that the `helloResource` object we got with `load` is `nil`
+(because `load` will return `nil` if there is nothing there to load).
 
 Using `?` "unwraps" the optional, meaning that it gets the value if it is there, before calling `hello`,
 but only if the value isn't `nil`. If the value is nil, the `?` returns `nil`.
@@ -549,7 +562,7 @@ However, if the stored value was `nil`, the function call would not occur and th
 Next, we use `save` again to put the object back in storage in the same spot:
 
 ```cadence
-acct.save(<-helloResource!, to: /storage/Hello)
+acct.save(<-helloResource!, to: /storage/HelloAssetTutorial)
 ```
 
 Remember, `helloResource` is still an optional, so we have to handle the possibility that it is `nil`.
@@ -612,7 +625,7 @@ transaction {
     // It just creates the capability.
     // The capability is created and stored at /public/Hello, and is
     // also returned from the function.
-    let capability = account.link<&HelloWorld.HelloAsset>(/public/Hello, target: /storage/Hello)
+    let capability = account.link<&HelloWorld.HelloAsset>(/public/HelloAssetTutorial, target: /storage/HelloAssetTutorial)
 
     // Use the capability's borrow method to create a new reference
     // to the object that the capability links to
@@ -681,8 +694,8 @@ First, we create a capability that is linked to the private `HelloAsset` object 
 let capability = account.link<&HelloWorld.HelloAsset>(/public/Hello, target: /storage/Hello)
 ```
 
-The `HelloAsset` object is stored in `/storage/Hello`, which only the account owner can access.
-They want any user in the network to be able to call the `hello` method. So they make a public capability in `/public/Hello`.
+The `HelloAsset` object is stored in `/storage/HelloAssetTutorial`, which only the account owner can access.
+They want any user in the network to be able to call the `hello` method. So they make a public capability in `/public/HelloAssetTutorial`.
 
 To create a capability, we use the `AuthAccount.link` method to link a new capability to an object in storage.
 The type contained in `<>` is the restricted reference type that the capability represents.
@@ -767,7 +780,7 @@ pub fun main() {
     let helloAccount = getAccount(0x02)
 
     // Get the public capability from the public path of the owner's account
-    let helloCapability = helloAccount.getCapability<&HelloWorld.HelloAsset>(/public/Hello)
+    let helloCapability = helloAccount.getCapability<&HelloWorld.HelloAsset>(/public/HelloAssetTutorial)
 
     // borrow a reference for the capability
     let helloReference = helloCapability.borrow()
@@ -796,7 +809,7 @@ Then, it gets the capability that was created in `Create Link`.
 
 ```cadence
 // Get the public capability from the public path of the owner's account
-let helloCapability = helloAccount.getCapability(/public/Hello)
+let helloCapability = helloAccount.getCapability(/public/HelloAssetTutorial)
 ```
 
 To get a capability that is stored in an account, we use the `account.getCapability` function.

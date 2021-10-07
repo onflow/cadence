@@ -559,7 +559,7 @@ An account's storage capacity is a value that is calculated from the amount of F
 that is stored in the account's main FLOW token vault. 
 
 At the end of every transaction, the storage used is compared to the storage capacity.
-If for any account its storage used is greater than its storage capacity, the transaction fails.
+For all accounts involved in the transaction, if the account's storage used is greater than its storage capacity, the transaction will fail.
 
 An account's storage used and storage capacity can be checked using the `storageUsed` and `storageCapacity` fields.
 The fields represent current values of storage which means this would be true:
