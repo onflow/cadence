@@ -8438,11 +8438,20 @@ func (v *DictionaryValue) Insert(
 	interpreter.checkContainerMutation(v.Type.KeyType, keyValue, getLocationRange)
 	interpreter.checkContainerMutation(v.Type.ValueType, value, getLocationRange)
 
+	address := v.dictionary.Address()
+
+	keyValue = interpreter.TransferValue(
+		getLocationRange,
+		keyValue,
+		nil,
+		address,
+	)
+
 	value = interpreter.TransferValue(
 		getLocationRange,
 		value,
 		nil,
-		v.dictionary.Address(),
+		address,
 	)
 
 	valueComparator := newValueComparator(interpreter, getLocationRange)
