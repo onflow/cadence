@@ -521,3 +521,28 @@ func TestDictionaryMutation(t *testing.T) {
 		)
 	})
 }
+
+func TestInterpretContainerMutationAfterNilCoalescing(t *testing.T) {
+
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+      fun test(): String? {
+          let xs: {UInt32: String}? = nil
+          let ys: {UInt32: String} = xs ?? {}
+          ys[0] = "test"
+          return ys[0]
+      }
+    `)
+
+	result, err := inter.Invoke("test")
+	require.NoError(t, err)
+
+	require.Equal(
+		t,
+		interpreter.NewSomeValueOwningNonCopying(
+			interpreter.NewStringValue("test"),
+		),
+		result,
+	)
+}

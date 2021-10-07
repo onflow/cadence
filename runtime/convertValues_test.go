@@ -1711,7 +1711,7 @@ func TestArgumentPassing(t *testing.T) {
 		// TODO: Enable below once https://github.com/onflow/cadence/issues/712 is fixed.
 		// TODO: Add a malformed argument test for capabilities
 		//{
-		//    label:         "Capability",
+		//    name:         "Capability",
 		//    typeSignature: "Capability<&Foo>",
 		//    exportedValue: cadence.Capability{
 		//        Path: cadence.Path{
@@ -1725,7 +1725,7 @@ func TestArgumentPassing(t *testing.T) {
 
 		// TODO: enable once https://github.com/onflow/cadence/issues/491 is fixed.
 		//{
-		//    label:         "Type",
+		//    name:         "Type",
 		//    typeSignature: "Type",
 		//    exportedValue: cadence.TypeValue{
 		//        StaticType: "Foo",
@@ -2170,7 +2170,7 @@ func TestMalformedArgumentPassing(t *testing.T) {
 			expectedErrType: &MalformedValueError{},
 		},
 		{
-			label:         "Array with malformed member",
+			label:         "Variable-size array with malformed element",
 			typeSignature: "[Foo]",
 			exportedValue: cadence.NewArray([]cadence.Value{
 				malformedStruct1,
@@ -2178,10 +2178,28 @@ func TestMalformedArgumentPassing(t *testing.T) {
 			expectedErrType: &MalformedValueError{},
 		},
 		{
-			label:         "Array with wrong size",
-			typeSignature: "[String; 2]",
+			label:         "Constant-size array with malformed element",
+			typeSignature: "[Foo; 1]",
 			exportedValue: cadence.NewArray([]cadence.Value{
 				malformedStruct1,
+			}),
+			expectedErrType: &MalformedValueError{},
+		},
+		{
+			label:         "Constant-size array with too few elements",
+			typeSignature: "[Int; 2]",
+			exportedValue: cadence.NewArray([]cadence.Value{
+				cadence.NewInt(1),
+			}),
+			expectedErrType: &InvalidValueTypeError{},
+		},
+		{
+			label:         "Constant-size array with too many elements",
+			typeSignature: "[Int; 2]",
+			exportedValue: cadence.NewArray([]cadence.Value{
+				cadence.NewInt(1),
+				cadence.NewInt(2),
+				cadence.NewInt(3),
 			}),
 			expectedErrType: &InvalidValueTypeError{},
 		},

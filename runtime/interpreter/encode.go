@@ -1182,7 +1182,7 @@ func (e *EncoderV5) encodeAddressValue(v AddressValue) error {
 	if err != nil {
 		return err
 	}
-	return e.enc.EncodeBytes(v.ToAddress().Bytes())
+	return e.enc.EncodeBytes(v.ToAddress().BytesWithoutLeadingZeros())
 }
 
 // NOTE: NEVER change, only add/increment; ensure uint64
@@ -1342,7 +1342,7 @@ func (e *EncoderV5) encodeLocation(l common.Location) error {
 			return err
 		}
 		// Encode address at array index encodedAddressLocationAddressFieldKeyV5
-		err = e.enc.EncodeBytes(l.Address.Bytes())
+		err = e.enc.EncodeBytes(l.Address.BytesWithoutLeadingZeros())
 		if err != nil {
 			return err
 		}
