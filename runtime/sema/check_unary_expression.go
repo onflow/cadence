@@ -30,7 +30,7 @@ func (checker *Checker) VisitUnaryExpression(expression *ast.UnaryExpression) as
 		expectedType = checker.expectedType
 	}
 
-	valueType := checker.VisitExpression(expression.Expression, expectedType)
+	valueType := checker.VisitExpressionWithForceType(expression.Expression, expectedType, false)
 
 	reportInvalidUnaryOperator := func(expectedType Type) {
 		checker.report(
