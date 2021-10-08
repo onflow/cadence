@@ -95,8 +95,7 @@ type Value interface {
 		results TypeConformanceResults,
 	) bool
 	RecursiveString(seenReferences SeenReferences) string
-	NeedsStoreToAddress(interpreter *Interpreter, address atree.Address) bool
-	IsResourceKinded(interpreter *Interpreter) bool
+	IsResourceAtAddress(interpreter *Interpreter, address atree.Address) bool
 	DeepCopy(interpreter *Interpreter, getLocationRange func() LocationRange, address atree.Address) Value
 	DeepRemove(interpreter *Interpreter)
 }
@@ -256,11 +255,7 @@ func (v TypeValue) Storable(
 	)
 }
 
-func (TypeValue) IsResourceKinded(_ *Interpreter) bool {
-	return false
-}
-
-func (TypeValue) NeedsStoreToAddress(_ *Interpreter, _ atree.Address) bool {
+func (TypeValue) IsResourceAtAddress(_ *Interpreter, _ atree.Address) bool {
 	return false
 }
 
@@ -335,11 +330,7 @@ func (v VoidValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atr
 	return v, nil
 }
 
-func (VoidValue) IsResourceKinded(_ *Interpreter) bool {
-	return false
-}
-
-func (VoidValue) NeedsStoreToAddress(_ *Interpreter, _ atree.Address) bool {
+func (VoidValue) IsResourceAtAddress(_ *Interpreter, _ atree.Address) bool {
 	return false
 }
 
@@ -431,11 +422,7 @@ func (v BoolValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atr
 	return v, nil
 }
 
-func (BoolValue) IsResourceKinded(_ *Interpreter) bool {
-	return false
-}
-
-func (BoolValue) NeedsStoreToAddress(_ *Interpreter, _ atree.Address) bool {
+func (BoolValue) IsResourceAtAddress(_ *Interpreter, _ atree.Address) bool {
 	return false
 }
 
@@ -683,11 +670,7 @@ func (v *StringValue) Storable(storage atree.SlabStorage, address atree.Address,
 	return maybeLargeImmutableStorable(v, storage, address, maxInlineSize)
 }
 
-func (*StringValue) IsResourceKinded(_ *Interpreter) bool {
-	return false
-}
-
-func (*StringValue) NeedsStoreToAddress(_ *Interpreter, _ atree.Address) bool {
+func (*StringValue) IsResourceAtAddress(_ *Interpreter, _ atree.Address) bool {
 	return false
 }
 
@@ -754,9 +737,11 @@ func (*StringValue) ConformsToDynamicType(
 // ArrayValue
 
 type ArrayValue struct {
-	Type        ArrayStaticType
-	array       *atree.Array
-	isDestroyed bool
+	Type             ArrayStaticType
+	semaType         sema.ArrayType
+	array            *atree.Array
+	isDestroyed      bool
+	isResourceKinded *bool
 }
 
 func NewArrayValue(
@@ -1142,7 +1127,7 @@ func (v *ArrayValue) GetMember(inter *Interpreter, _ func() LocationRange, name 
 				return VoidValue{}
 			},
 			sema.ArrayAppendFunctionType(
-				inter.ConvertStaticToSemaType(v.Type.ElementType()),
+				v.SemaType(inter).ElementType(false),
 			),
 		)
 
@@ -1158,7 +1143,7 @@ func (v *ArrayValue) GetMember(inter *Interpreter, _ func() LocationRange, name 
 				return VoidValue{}
 			},
 			sema.ArrayAppendAllFunctionType(
-				inter.ConvertStaticToSemaType(v.Type),
+				v.SemaType(inter),
 			),
 		)
 
@@ -1173,7 +1158,7 @@ func (v *ArrayValue) GetMember(inter *Interpreter, _ func() LocationRange, name 
 				)
 			},
 			sema.ArrayConcatFunctionType(
-				inter.ConvertStaticToSemaType(v.Type),
+				v.SemaType(inter),
 			),
 		)
 
@@ -1191,7 +1176,7 @@ func (v *ArrayValue) GetMember(inter *Interpreter, _ func() LocationRange, name 
 				return VoidValue{}
 			},
 			sema.ArrayInsertFunctionType(
-				inter.ConvertStaticToSemaType(v.Type.ElementType()),
+				v.SemaType(inter).ElementType(false),
 			),
 		)
 
@@ -1206,7 +1191,7 @@ func (v *ArrayValue) GetMember(inter *Interpreter, _ func() LocationRange, name 
 				)
 			},
 			sema.ArrayRemoveFunctionType(
-				inter.ConvertStaticToSemaType(v.Type.ElementType()),
+				v.SemaType(inter).ElementType(false),
 			),
 		)
 
@@ -1219,7 +1204,7 @@ func (v *ArrayValue) GetMember(inter *Interpreter, _ func() LocationRange, name 
 				)
 			},
 			sema.ArrayRemoveFirstFunctionType(
-				inter.ConvertStaticToSemaType(v.Type.ElementType()),
+				v.SemaType(inter).ElementType(false),
 			),
 		)
 
@@ -1232,7 +1217,7 @@ func (v *ArrayValue) GetMember(inter *Interpreter, _ func() LocationRange, name 
 				)
 			},
 			sema.ArrayRemoveLastFunctionType(
-				inter.ConvertStaticToSemaType(v.Type.ElementType()),
+				v.SemaType(inter).ElementType(false),
 			),
 		)
 
@@ -1246,7 +1231,7 @@ func (v *ArrayValue) GetMember(inter *Interpreter, _ func() LocationRange, name 
 				)
 			},
 			sema.ArrayContainsFunctionType(
-				inter.ConvertStaticToSemaType(v.Type.ElementType()),
+				v.SemaType(inter).ElementType(false),
 			),
 		)
 	}
@@ -1336,13 +1321,9 @@ func (v *ArrayValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (a
 	return atree.StorageIDStorable(v.StorageID()), nil
 }
 
-func (v *ArrayValue) IsResourceKinded(interpreter *Interpreter) bool {
-	ty := interpreter.ConvertStaticToSemaType(v.StaticType())
-	return ty.IsResourceType()
-}
-
-func (v *ArrayValue) NeedsStoreToAddress(_ *Interpreter, address atree.Address) bool {
-	return v.StorageID().Address != address
+func (v *ArrayValue) IsResourceAtAddress(interpreter *Interpreter, address atree.Address) bool {
+	return v.StorageID().Address == address &&
+		v.IsResourceKinded(interpreter)
 }
 
 func (v *ArrayValue) DeepCopy(
@@ -1379,9 +1360,11 @@ func (v *ArrayValue) DeepCopy(
 	}
 
 	return &ArrayValue{
-		Type:        v.Type,
-		array:       array,
-		isDestroyed: v.isDestroyed,
+		Type:             v.Type,
+		semaType:         v.semaType,
+		isResourceKinded: v.isResourceKinded,
+		array:            array,
+		isDestroyed:      v.isDestroyed,
 	}
 }
 
@@ -1408,6 +1391,21 @@ func (v *ArrayValue) StorageID() atree.StorageID {
 
 func (v *ArrayValue) GetOwner() common.Address {
 	return common.Address(v.StorageID().Address)
+}
+
+func (v *ArrayValue) SemaType(interpreter *Interpreter) sema.ArrayType {
+	if v.semaType == nil {
+		v.semaType = interpreter.ConvertStaticToSemaType(v.Type).(sema.ArrayType)
+	}
+	return v.semaType
+}
+
+func (v *ArrayValue) IsResourceKinded(interpreter *Interpreter) bool {
+	if v.isResourceKinded == nil {
+		isResourceKinded := v.SemaType(interpreter).IsResourceType()
+		v.isResourceKinded = &isResourceKinded
+	}
+	return *v.isResourceKinded
 }
 
 // NumberValue
@@ -1774,11 +1772,7 @@ func (v IntValue) Storable(storage atree.SlabStorage, address atree.Address, max
 	return maybeLargeImmutableStorable(v, storage, address, maxInlineSize)
 }
 
-func (IntValue) IsResourceKinded(_ *Interpreter) bool {
-	return false
-}
-
-func (IntValue) NeedsStoreToAddress(_ *Interpreter, _ atree.Address) bool {
+func (IntValue) IsResourceAtAddress(_ *Interpreter, _ atree.Address) bool {
 	return false
 }
 
@@ -2097,11 +2091,7 @@ func (v Int8Value) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atr
 	return v, nil
 }
 
-func (Int8Value) IsResourceKinded(_ *Interpreter) bool {
-	return false
-}
-
-func (Int8Value) NeedsStoreToAddress(_ *Interpreter, _ atree.Address) bool {
+func (Int8Value) IsResourceAtAddress(_ *Interpreter, _ atree.Address) bool {
 	return false
 }
 
@@ -2421,11 +2411,7 @@ func (v Int16Value) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (at
 	return v, nil
 }
 
-func (Int16Value) IsResourceKinded(_ *Interpreter) bool {
-	return false
-}
-
-func (Int16Value) NeedsStoreToAddress(_ *Interpreter, _ atree.Address) bool {
+func (Int16Value) IsResourceAtAddress(_ *Interpreter, _ atree.Address) bool {
 	return false
 }
 
@@ -2745,11 +2731,7 @@ func (v Int32Value) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (at
 	return v, nil
 }
 
-func (Int32Value) IsResourceKinded(_ *Interpreter) bool {
-	return false
-}
-
-func (Int32Value) NeedsStoreToAddress(_ *Interpreter, _ atree.Address) bool {
+func (Int32Value) IsResourceAtAddress(_ *Interpreter, _ atree.Address) bool {
 	return false
 }
 
@@ -3068,11 +3050,7 @@ func (v Int64Value) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (at
 	return v, nil
 }
 
-func (Int64Value) IsResourceKinded(_ *Interpreter) bool {
-	return false
-}
-
-func (Int64Value) NeedsStoreToAddress(_ *Interpreter, _ atree.Address) bool {
+func (Int64Value) IsResourceAtAddress(_ *Interpreter, _ atree.Address) bool {
 	return false
 }
 
@@ -3463,11 +3441,7 @@ func (v Int128Value) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (a
 	return v, nil
 }
 
-func (Int128Value) IsResourceKinded(_ *Interpreter) bool {
-	return false
-}
-
-func (Int128Value) NeedsStoreToAddress(_ *Interpreter, _ atree.Address) bool {
+func (Int128Value) IsResourceAtAddress(_ *Interpreter, _ atree.Address) bool {
 	return false
 }
 
@@ -3859,11 +3833,7 @@ func (v Int256Value) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (a
 	return v, nil
 }
 
-func (Int256Value) IsResourceKinded(_ *Interpreter) bool {
-	return false
-}
-
-func (Int256Value) NeedsStoreToAddress(_ *Interpreter, _ atree.Address) bool {
+func (Int256Value) IsResourceAtAddress(_ *Interpreter, _ atree.Address) bool {
 	return false
 }
 
@@ -4145,11 +4115,7 @@ func (v UIntValue) Storable(storage atree.SlabStorage, address atree.Address, ma
 	return maybeLargeImmutableStorable(v, storage, address, maxInlineSize)
 }
 
-func (UIntValue) IsResourceKinded(_ *Interpreter) bool {
-	return false
-}
-
-func (UIntValue) NeedsStoreToAddress(_ *Interpreter, _ atree.Address) bool {
+func (UIntValue) IsResourceAtAddress(_ *Interpreter, _ atree.Address) bool {
 	return false
 }
 
@@ -4399,11 +4365,7 @@ func (v UInt8Value) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (at
 	return v, nil
 }
 
-func (UInt8Value) IsResourceKinded(_ *Interpreter) bool {
-	return false
-}
-
-func (UInt8Value) NeedsStoreToAddress(_ *Interpreter, _ atree.Address) bool {
+func (UInt8Value) IsResourceAtAddress(_ *Interpreter, _ atree.Address) bool {
 	return false
 }
 
@@ -4657,11 +4619,7 @@ func (v UInt16Value) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (a
 	return v, nil
 }
 
-func (UInt16Value) IsResourceKinded(_ *Interpreter) bool {
-	return false
-}
-
-func (UInt16Value) NeedsStoreToAddress(_ *Interpreter, _ atree.Address) bool {
+func (UInt16Value) IsResourceAtAddress(_ *Interpreter, _ atree.Address) bool {
 	return false
 }
 
@@ -4915,11 +4873,7 @@ func (v UInt32Value) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (a
 	return v, nil
 }
 
-func (UInt32Value) IsResourceKinded(_ *Interpreter) bool {
-	return false
-}
-
-func (UInt32Value) NeedsStoreToAddress(_ *Interpreter, _ atree.Address) bool {
+func (UInt32Value) IsResourceAtAddress(_ *Interpreter, _ atree.Address) bool {
 	return false
 }
 
@@ -5176,11 +5130,7 @@ func (v UInt64Value) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (a
 	return v, nil
 }
 
-func (UInt64Value) IsResourceKinded(_ *Interpreter) bool {
-	return false
-}
-
-func (UInt64Value) NeedsStoreToAddress(_ *Interpreter, _ atree.Address) bool {
+func (UInt64Value) IsResourceAtAddress(_ *Interpreter, _ atree.Address) bool {
 	return false
 }
 
@@ -5517,11 +5467,7 @@ func (v UInt128Value) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (
 	return v, nil
 }
 
-func (UInt128Value) IsResourceKinded(_ *Interpreter) bool {
-	return false
-}
-
-func (UInt128Value) NeedsStoreToAddress(_ *Interpreter, _ atree.Address) bool {
+func (UInt128Value) IsResourceAtAddress(_ *Interpreter, _ atree.Address) bool {
 	return false
 }
 
@@ -5859,14 +5805,9 @@ func (v UInt256Value) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (
 	return v, nil
 }
 
-func (UInt256Value) IsResourceKinded(_ *Interpreter) bool {
+func (UInt256Value) IsResourceAtAddress(_ *Interpreter, _ atree.Address) bool {
 	return false
 }
-
-func (UInt256Value) NeedsStoreToAddress(_ *Interpreter, _ atree.Address) bool {
-	return false
-}
-
 func (v UInt256Value) DeepCopy(_ *Interpreter, _ func() LocationRange, _ atree.Address) Value {
 	return v
 }
@@ -6062,11 +6003,7 @@ func (v Word8Value) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (at
 	return v, nil
 }
 
-func (Word8Value) IsResourceKinded(_ *Interpreter) bool {
-	return false
-}
-
-func (Word8Value) NeedsStoreToAddress(_ *Interpreter, _ atree.Address) bool {
+func (Word8Value) IsResourceAtAddress(_ *Interpreter, _ atree.Address) bool {
 	return false
 }
 
@@ -6265,11 +6202,7 @@ func (v Word16Value) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (a
 	return v, nil
 }
 
-func (Word16Value) IsResourceKinded(_ *Interpreter) bool {
-	return false
-}
-
-func (Word16Value) NeedsStoreToAddress(_ *Interpreter, _ atree.Address) bool {
+func (Word16Value) IsResourceAtAddress(_ *Interpreter, _ atree.Address) bool {
 	return false
 }
 
@@ -6469,11 +6402,7 @@ func (v Word32Value) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (a
 	return v, nil
 }
 
-func (Word32Value) IsResourceKinded(_ *Interpreter) bool {
-	return false
-}
-
-func (Word32Value) NeedsStoreToAddress(_ *Interpreter, _ atree.Address) bool {
+func (Word32Value) IsResourceAtAddress(_ *Interpreter, _ atree.Address) bool {
 	return false
 }
 
@@ -6673,11 +6602,7 @@ func (v Word64Value) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (a
 	return v, nil
 }
 
-func (Word64Value) IsResourceKinded(_ *Interpreter) bool {
-	return false
-}
-
-func (Word64Value) NeedsStoreToAddress(_ *Interpreter, _ atree.Address) bool {
+func (Word64Value) IsResourceAtAddress(_ *Interpreter, _ atree.Address) bool {
 	return false
 }
 
@@ -6979,11 +6904,7 @@ func (v Fix64Value) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (at
 	return v, nil
 }
 
-func (Fix64Value) IsResourceKinded(_ *Interpreter) bool {
-	return false
-}
-
-func (Fix64Value) NeedsStoreToAddress(_ *Interpreter, _ atree.Address) bool {
+func (Fix64Value) IsResourceAtAddress(_ *Interpreter, _ atree.Address) bool {
 	return false
 }
 
@@ -7251,11 +7172,7 @@ func (v UFix64Value) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (a
 	return v, nil
 }
 
-func (UFix64Value) IsResourceKinded(_ *Interpreter) bool {
-	return false
-}
-
-func (UFix64Value) NeedsStoreToAddress(_ *Interpreter, _ atree.Address) bool {
+func (UFix64Value) IsResourceAtAddress(_ *Interpreter, _ atree.Address) bool {
 	return false
 }
 
@@ -7811,12 +7728,9 @@ func (v *CompositeValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64
 	return atree.StorageIDStorable(v.StorageID()), nil
 }
 
-func (v *CompositeValue) IsResourceKinded(_ *Interpreter) bool {
-	return v.Kind == common.CompositeKindResource
-}
-
-func (v *CompositeValue) NeedsStoreToAddress(_ *Interpreter, address atree.Address) bool {
-	return v.StorageID().Address != address
+func (v *CompositeValue) IsResourceAtAddress(_ *Interpreter, address atree.Address) bool {
+	return v.Kind == common.CompositeKindResource &&
+		v.StorageID().Address == address
 }
 
 func (v *CompositeValue) DeepCopy(
@@ -7994,9 +7908,11 @@ func NewEnumCaseValue(
 // DictionaryValue
 
 type DictionaryValue struct {
-	Type        DictionaryStaticType
-	dictionary  *atree.OrderedMap
-	isDestroyed bool
+	Type             DictionaryStaticType
+	semaType         *sema.DictionaryType
+	isResourceKinded *bool
+	dictionary       *atree.OrderedMap
+	isDestroyed      bool
 }
 
 func NewDictionaryValue(
@@ -8332,7 +8248,7 @@ func (v *DictionaryValue) GetMember(
 				)
 			},
 			sema.DictionaryRemoveFunctionType(
-				interpreter.ConvertStaticToSemaType(v.StaticType()).(*sema.DictionaryType),
+				v.SemaType(interpreter),
 			),
 		)
 
@@ -8350,7 +8266,7 @@ func (v *DictionaryValue) GetMember(
 				)
 			},
 			sema.DictionaryInsertFunctionType(
-				interpreter.ConvertStaticToSemaType(v.StaticType()).(*sema.DictionaryType),
+				v.SemaType(interpreter),
 			),
 		)
 
@@ -8364,7 +8280,7 @@ func (v *DictionaryValue) GetMember(
 				)
 			},
 			sema.DictionaryContainsKeyFunctionType(
-				interpreter.ConvertStaticToSemaType(v.StaticType()).(*sema.DictionaryType),
+				v.SemaType(interpreter),
 			),
 		)
 
@@ -8619,13 +8535,9 @@ func (v *DictionaryValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint6
 	return atree.StorageIDStorable(v.StorageID()), nil
 }
 
-func (v *DictionaryValue) IsResourceKinded(interpreter *Interpreter) bool {
-	ty := interpreter.ConvertStaticToSemaType(v.StaticType())
-	return ty.IsResourceType()
-}
-
-func (v *DictionaryValue) NeedsStoreToAddress(_ *Interpreter, address atree.Address) bool {
-	return v.StorageID().Address != address
+func (v *DictionaryValue) IsResourceAtAddress(interpreter *Interpreter, address atree.Address) bool {
+	return v.StorageID().Address == address &&
+		v.IsResourceKinded(interpreter)
 }
 
 func (v *DictionaryValue) DeepCopy(
@@ -8674,9 +8586,11 @@ func (v *DictionaryValue) DeepCopy(
 	}
 
 	return &DictionaryValue{
-		Type:        v.Type,
-		dictionary:  dictionary,
-		isDestroyed: v.isDestroyed,
+		Type:             v.Type,
+		semaType:         v.semaType,
+		isResourceKinded: v.isResourceKinded,
+		dictionary:       dictionary,
+		isDestroyed:      v.isDestroyed,
 	}
 }
 
@@ -8708,6 +8622,21 @@ func (v *DictionaryValue) GetOwner() common.Address {
 
 func (v *DictionaryValue) StorageID() atree.StorageID {
 	return v.dictionary.StorageID()
+}
+
+func (v *DictionaryValue) SemaType(interpreter *Interpreter) *sema.DictionaryType {
+	if v.semaType == nil {
+		v.semaType = interpreter.ConvertStaticToSemaType(v.Type).(*sema.DictionaryType)
+	}
+	return v.semaType
+}
+
+func (v *DictionaryValue) IsResourceKinded(interpreter *Interpreter) bool {
+	if v.isResourceKinded == nil {
+		isResourceKinded := v.SemaType(interpreter).IsResourceType()
+		v.isResourceKinded = &isResourceKinded
+	}
+	return *v.isResourceKinded
 }
 
 // OptionalValue
@@ -8812,11 +8741,7 @@ func (v NilValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atre
 	return v, nil
 }
 
-func (NilValue) IsResourceKinded(_ *Interpreter) bool {
-	return false
-}
-
-func (NilValue) NeedsStoreToAddress(_ *Interpreter, _ atree.Address) bool {
+func (NilValue) IsResourceAtAddress(_ *Interpreter, _ atree.Address) bool {
 	return false
 }
 
@@ -8989,12 +8914,8 @@ func (v *SomeValue) Storable(
 	)
 }
 
-func (v *SomeValue) IsResourceKinded(interpreter *Interpreter) bool {
-	return v.Value.IsResourceKinded(interpreter)
-}
-
-func (v *SomeValue) NeedsStoreToAddress(interpreter *Interpreter, address atree.Address) bool {
-	return v.Value.NeedsStoreToAddress(interpreter, address)
+func (v *SomeValue) IsResourceAtAddress(interpreter *Interpreter, address atree.Address) bool {
+	return v.Value.IsResourceAtAddress(interpreter, address)
 }
 
 func (v *SomeValue) DeepCopy(interpreter *Interpreter, getLocationRange func() LocationRange, address atree.Address) Value {
@@ -9294,11 +9215,7 @@ func (v *StorageReferenceValue) Storable(_ atree.SlabStorage, _ atree.Address, _
 	return NonStorable{Value: v}, nil
 }
 
-func (*StorageReferenceValue) IsResourceKinded(_ *Interpreter) bool {
-	return false
-}
-
-func (*StorageReferenceValue) NeedsStoreToAddress(_ *Interpreter, _ atree.Address) bool {
+func (*StorageReferenceValue) IsResourceAtAddress(_ *Interpreter, _ atree.Address) bool {
 	return false
 }
 
@@ -9591,11 +9508,7 @@ func (v *EphemeralReferenceValue) Storable(_ atree.SlabStorage, _ atree.Address,
 	return NonStorable{Value: v}, nil
 }
 
-func (*EphemeralReferenceValue) IsResourceKinded(_ *Interpreter) bool {
-	return false
-}
-
-func (*EphemeralReferenceValue) NeedsStoreToAddress(_ *Interpreter, _ atree.Address) bool {
+func (*EphemeralReferenceValue) IsResourceAtAddress(_ *Interpreter, _ atree.Address) bool {
 	return false
 }
 
@@ -9733,11 +9646,7 @@ func (v AddressValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (
 	return v, nil
 }
 
-func (AddressValue) IsResourceKinded(_ *Interpreter) bool {
-	return false
-}
-
-func (AddressValue) NeedsStoreToAddress(_ *Interpreter, _ atree.Address) bool {
+func (AddressValue) IsResourceAtAddress(_ *Interpreter, _ atree.Address) bool {
 	return false
 }
 
@@ -9932,11 +9841,7 @@ func (v PathValue) Storable(
 	)
 }
 
-func (PathValue) IsResourceKinded(_ *Interpreter) bool {
-	return false
-}
-
-func (PathValue) NeedsStoreToAddress(_ *Interpreter, _ atree.Address) bool {
+func (PathValue) IsResourceAtAddress(_ *Interpreter, _ atree.Address) bool {
 	return false
 }
 
@@ -10086,14 +9991,8 @@ func (v *CapabilityValue) Storable(
 	)
 }
 
-func (*CapabilityValue) IsResourceKinded(_ *Interpreter) bool {
+func (*CapabilityValue) IsResourceAtAddress(_ *Interpreter, _ atree.Address) bool {
 	return false
-}
-
-func (*CapabilityValue) NeedsStoreToAddress(_ *Interpreter, _ atree.Address) bool {
-	// TODO: could be avoided if address would be available and is equal to the target address,
-	//   as the value is immutable
-	return true
 }
 
 func (v *CapabilityValue) DeepCopy(
@@ -10195,11 +10094,7 @@ func (v LinkValue) Storable(storage atree.SlabStorage, address atree.Address, ma
 	return maybeLargeImmutableStorable(v, storage, address, maxInlineSize)
 }
 
-func (LinkValue) IsResourceKinded(_ *Interpreter) bool {
-	return false
-}
-
-func (LinkValue) NeedsStoreToAddress(_ *Interpreter, _ atree.Address) bool {
+func (LinkValue) IsResourceAtAddress(_ *Interpreter, _ atree.Address) bool {
 	return false
 }
 

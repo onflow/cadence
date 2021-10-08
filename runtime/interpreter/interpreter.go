@@ -3631,9 +3631,7 @@ func (interpreter *Interpreter) CopyValue(
 	address atree.Address,
 ) Value {
 
-	if !value.NeedsStoreToAddress(interpreter, address) &&
-		value.IsResourceKinded(interpreter) {
-
+	if value.IsResourceAtAddress(interpreter, address) {
 		return value
 	}
 
@@ -3647,9 +3645,7 @@ func (interpreter *Interpreter) TransferValue(
 	address atree.Address,
 ) Value {
 
-	if !value.NeedsStoreToAddress(interpreter, address) &&
-		value.IsResourceKinded(interpreter) {
-
+	if value.IsResourceAtAddress(interpreter, address) {
 		return value
 	}
 

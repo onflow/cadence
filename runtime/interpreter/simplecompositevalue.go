@@ -176,11 +176,7 @@ func (v *SimpleCompositeValue) Storable(_ atree.SlabStorage, _ atree.Address, _ 
 	return NonStorable{Value: v}, nil
 }
 
-func (v *SimpleCompositeValue) IsResourceKinded(_ *Interpreter) bool {
-	return false
-}
-
-func (v *SimpleCompositeValue) NeedsStoreToAddress(_ *Interpreter, _ atree.Address) bool {
+func (v *SimpleCompositeValue) IsResourceAtAddress(_ *Interpreter, _ atree.Address) bool {
 	return false
 }
 
