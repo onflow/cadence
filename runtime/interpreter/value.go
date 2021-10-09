@@ -993,7 +993,7 @@ func (v *ArrayValue) Set(interpreter *Interpreter, getLocationRange func() Locat
 
 	existingValue.DeepRemove(interpreter)
 
-	interpreter.removeReferencedSlab(existingStorable)
+	interpreter.RemoveReferencedSlab(existingStorable)
 }
 
 func (v *ArrayValue) String() string {
@@ -1377,7 +1377,7 @@ func (v *ArrayValue) DeepRemove(interpreter *Interpreter) {
 	err := v.array.PopIterate(func(storable atree.Storable) {
 		value := StoredValue(storable, storage)
 		value.DeepRemove(interpreter)
-		interpreter.removeReferencedSlab(storable)
+		interpreter.RemoveReferencedSlab(storable)
 	})
 	if err != nil {
 		panic(ExternalError{err})
@@ -7487,7 +7487,7 @@ func (v *CompositeValue) SetMember(
 
 		existingValue.DeepRemove(interpreter)
 
-		interpreter.removeReferencedSlab(existingStorable)
+		interpreter.RemoveReferencedSlab(existingStorable)
 	}
 }
 
@@ -7805,11 +7805,11 @@ func (v *CompositeValue) DeepRemove(interpreter *Interpreter) {
 	err := v.dictionary.PopIterate(func(nameStorable atree.Storable, valueStorable atree.Storable) {
 		name := StoredValue(nameStorable, storage)
 		name.DeepRemove(interpreter)
-		interpreter.removeReferencedSlab(nameStorable)
+		interpreter.RemoveReferencedSlab(nameStorable)
 
 		value := StoredValue(valueStorable, storage)
 		value.DeepRemove(interpreter)
-		interpreter.removeReferencedSlab(valueStorable)
+		interpreter.RemoveReferencedSlab(valueStorable)
 	})
 	if err != nil {
 		panic(ExternalError{err})
@@ -7868,13 +7868,13 @@ func (v *CompositeValue) RemoveField(
 
 	// NOTE: key / field name is stringAtreeValue,
 	// and not a Value, so no need to deep remove
-	interpreter.removeReferencedSlab(existingKeyStorable)
+	interpreter.RemoveReferencedSlab(existingKeyStorable)
 
 	// Value
 
 	existingValue := StoredValue(existingValueStorable, storage)
 	existingValue.DeepRemove(interpreter)
-	interpreter.removeReferencedSlab(existingValueStorable)
+	interpreter.RemoveReferencedSlab(existingValueStorable)
 }
 
 func NewEnumCaseValue(
@@ -8336,7 +8336,7 @@ func (v *DictionaryValue) Remove(
 
 	existingKeyValue := StoredValue(existingKeyStorable, storage)
 	existingKeyValue.DeepRemove(interpreter)
-	interpreter.removeReferencedSlab(existingKeyStorable)
+	interpreter.RemoveReferencedSlab(existingKeyStorable)
 
 	// Value
 
@@ -8604,11 +8604,11 @@ func (v *DictionaryValue) DeepRemove(interpreter *Interpreter) {
 
 		key := StoredValue(keyStorable, storage)
 		key.DeepRemove(interpreter)
-		interpreter.removeReferencedSlab(keyStorable)
+		interpreter.RemoveReferencedSlab(keyStorable)
 
 		value := StoredValue(valueStorable, storage)
 		value.DeepRemove(interpreter)
-		interpreter.removeReferencedSlab(valueStorable)
+		interpreter.RemoveReferencedSlab(valueStorable)
 	})
 	if err != nil {
 		panic(ExternalError{err})
@@ -8930,7 +8930,7 @@ func (v *SomeValue) DeepCopy(interpreter *Interpreter, getLocationRange func() L
 func (v *SomeValue) DeepRemove(interpreter *Interpreter) {
 	v.Value.DeepRemove(interpreter)
 	if v.valueStorable != nil {
-		interpreter.removeReferencedSlab(v.valueStorable)
+		interpreter.RemoveReferencedSlab(v.valueStorable)
 	}
 }
 

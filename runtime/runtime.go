@@ -253,7 +253,7 @@ func (r *interpreterRuntime) ExecuteScript(script Script, context Context) (cade
 		context.Interface,
 	)
 
-	value, _, err := r.interpret(
+	value, inter, err := r.interpret(
 		program,
 		context,
 		storage,
@@ -278,7 +278,8 @@ func (r *interpreterRuntime) ExecuteScript(script Script, context Context) (cade
 	// Even though this function is `ExecuteScript`, that doesn't imply the changes
 	// to storage will be actually persisted
 
-	err = storage.Commit()
+	const commitContractUpdates = true
+	err = storage.Commit(inter, commitContractUpdates)
 	if err != nil {
 		return nil, newError(err, context)
 	}
@@ -493,7 +494,8 @@ func (r *interpreterRuntime) InvokeContractFunction(
 	}
 
 	// Write back all stored values, which were actually just cached, back into storage
-	err = storage.Commit()
+	const commitContractUpdates = true
+	err = storage.Commit(inter, commitContractUpdates)
 	if err != nil {
 		return nil, newError(err, context)
 	}
@@ -628,7 +630,7 @@ func (r *interpreterRuntime) ExecuteTransaction(script Script, context Context) 
 		return authorizerValues
 	}
 
-	_, _, err = r.interpret(
+	_, inter, err := r.interpret(
 		program,
 		context,
 		storage,
@@ -648,7 +650,8 @@ func (r *interpreterRuntime) ExecuteTransaction(script Script, context Context) 
 	}
 
 	// Write back all stored values, which were actually just cached, back into storage
-	err = storage.Commit()
+	const commitContractUpdates = true
+	err = storage.Commit(inter, commitContractUpdates)
 	if err != nil {
 		return newError(err, context)
 	}
@@ -1602,7 +1605,8 @@ func storageUsedGetFunction(
 
 		// NOTE: flush the cached values, so the host environment
 		// can properly calculate the amount of storage used by the account
-		err := storage.Commit()
+		const commitContractUpdates = false
+		err := storage.Commit(inter, commitContractUpdates)
 		if err != nil {
 			panic(err)
 		}
@@ -1713,12 +1717,14 @@ func (r *interpreterRuntime) newRemovePublicKeyFunction(
 // It is only recorded and only written at the end of the execution
 //
 func (r *interpreterRuntime) recordContractValue(
+	inter *interpreter.Interpreter,
 	storage *Storage,
 	addressValue interpreter.AddressValue,
 	name string,
 	contractValue interpreter.Value,
 ) {
 	storage.recordContractUpdate(
+		inter,
 		addressValue.ToAddress(),
 		formatContractKey(name),
 		contractValue,
@@ -2349,7 +2355,10 @@ func (r *interpreterRuntime) newAuthAccountContractsChangeFunction(
 				handleContractUpdateError(err)
 			}
 
+			inter := invocation.Interpreter
+
 			err = r.updateAccountContractCode(
+				inter,
 				program,
 				context,
 				storage,
@@ -2373,8 +2382,6 @@ func (r *interpreterRuntime) newAuthAccountContractsChangeFunction(
 
 				panic(err)
 			}
-
-			inter := invocation.Interpreter
 
 			codeHashValue := CodeToHashValue(inter, code)
 
@@ -2416,6 +2423,7 @@ type updateAccountContractCodeOptions struct {
 // This function is only used for the new account code/contract API.
 //
 func (r *interpreterRuntime) updateAccountContractCode(
+	inter *interpreter.Interpreter,
 	program *interpreter.Program,
 	context Context,
 	storage *Storage,
@@ -2486,6 +2494,7 @@ func (r *interpreterRuntime) updateAccountContractCode(
 		// until the end of the execution of the program
 
 		r.recordContractValue(
+			inter,
 			storage,
 			addressValue,
 			name,
@@ -2595,6 +2604,7 @@ func (r *interpreterRuntime) newAuthAccountContractsRemoveFunction(
 				// until the end of the execution of the program
 
 				r.recordContractValue(
+					inter,
 					storage,
 					addressValue,
 					nameArgument,

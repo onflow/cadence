@@ -34,9 +34,9 @@ import (
 type Storage struct {
 	*atree.PersistentSlabStorage
 	// NOTE: temporary, will be refactored to dictionary
-	deltas          map[interpreter.StorageKey]interpreter.Value
-	cache           map[interpreter.StorageKey]interpreter.Value
-	contractUpdates map[interpreter.StorageKey]interpreter.Value
+	writes          map[interpreter.StorageKey]atree.Storable
+	readCache       map[interpreter.StorageKey]atree.Storable
+	contractUpdates map[interpreter.StorageKey]atree.Storable
 	Ledger          atree.Ledger
 	reportMetric    func(f func(), report func(metrics Metrics, duration time.Duration))
 }
@@ -59,9 +59,9 @@ func NewStorage(
 	return &Storage{
 		Ledger:                ledger,
 		PersistentSlabStorage: persistentSlabStorage,
-		deltas:                map[interpreter.StorageKey]interpreter.Value{},
-		cache:                 map[interpreter.StorageKey]interpreter.Value{},
-		contractUpdates:       map[interpreter.StorageKey]interpreter.Value{},
+		writes:                map[interpreter.StorageKey]atree.Storable{},
+		readCache:             map[interpreter.StorageKey]atree.Storable{},
+		contractUpdates:       map[interpreter.StorageKey]atree.Storable{},
 		reportMetric:          reportMetric,
 	}
 }
@@ -81,12 +81,13 @@ func (s *Storage) ValueExists(
 
 	// Check locally
 
-	if value, ok := s.deltas[storageKey]; ok {
-		return value != nil
+	storable, ok := s.writes[storageKey]
+	if !ok {
+		// Fall back to read cache
+		storable, ok = s.readCache[storageKey]
 	}
-
-	if value, ok := s.cache[storageKey]; ok {
-		return value != nil
+	if ok {
+		return storable != nil
 	}
 
 	// Ask interface
@@ -101,7 +102,7 @@ func (s *Storage) ValueExists(
 	}
 
 	if !exists {
-		s.cache[storageKey] = nil
+		s.readCache[storageKey] = nil
 	}
 
 	return exists
@@ -120,49 +121,55 @@ func (s *Storage) ReadValue(
 		Key:     key,
 	}
 
+	storable := s.readStorable(storageKey)
+	if storable == nil {
+		return interpreter.NilValue{}
+	} else {
+		storedValue := interpreter.StoredValue(storable, s)
+		return interpreter.NewSomeValueNonCopying(storedValue)
+	}
+}
+
+func (s *Storage) readStorable(storageKey interpreter.StorageKey) atree.Storable {
+
 	// Check locally
 
-	if value, ok := s.deltas[storageKey]; ok {
-		if value == nil {
-			return interpreter.NilValue{}
-		}
-
-		return interpreter.NewSomeValueNonCopying(value)
+	localStorable, ok := s.writes[storageKey]
+	if !ok {
+		// Fall back to read cache
+		localStorable, ok = s.readCache[storageKey]
+	}
+	if ok {
+		return localStorable
 	}
 
-	if value, ok := s.cache[storageKey]; ok {
-		if value == nil {
-			return interpreter.NilValue{}
-		}
-
-		return interpreter.NewSomeValueNonCopying(value)
-	}
-
-	// Load and deserialize the stored value (if any)
-	// through the runtime interface
+	// Load data through the runtime interface
 
 	var storedData []byte
 	var err error
 	wrapPanic(func() {
-		storedData, err = s.Ledger.GetValue(address[:], []byte(key))
+		storedData, err = s.Ledger.GetValue(storageKey.Address[:], []byte(storageKey.Key))
 	})
 	if err != nil {
 		panic(err)
 	}
 
+	// No data, keep fact in cache
+
 	if len(storedData) == 0 {
-		s.cache[storageKey] = nil
-		return interpreter.NilValue{}
+		s.readCache[storageKey] = nil
+		return nil
 	}
 
-	var storable atree.Storable
-	var storedValue atree.Value
+	// Existing data, decode and keep in cache
+
+	var readStorable atree.Storable
 
 	decoder := interpreter.CBORDecMode.NewByteStreamDecoder(storedData)
 
 	s.reportMetric(
 		func() {
-			storable, err = interpreter.DecodeStorable(decoder, atree.StorageIDUndefined)
+			readStorable, err = interpreter.DecodeStorable(decoder, atree.StorageIDUndefined)
 		},
 		func(metrics Metrics, duration time.Duration) {
 			metrics.ValueDecoded(duration)
@@ -172,20 +179,13 @@ func (s *Storage) ReadValue(
 		panic(err)
 	}
 
-	storedValue, err = storable.StoredValue(s)
-	if err != nil {
-		panic(err)
-	}
+	s.readCache[storageKey] = readStorable
 
-	value := interpreter.MustConvertStoredValue(storedValue)
-
-	s.cache[storageKey] = value
-
-	return interpreter.NewSomeValueNonCopying(value)
+	return readStorable
 }
 
 func (s *Storage) WriteValue(
-	_ *interpreter.Interpreter,
+	inter *interpreter.Interpreter,
 	address common.Address,
 	key string,
 	value interpreter.OptionalValue,
@@ -195,26 +195,46 @@ func (s *Storage) WriteValue(
 		Key:     key,
 	}
 
-	// Only write locally.
-	// The value is eventually written back through the runtime interface in `Commit`.
+	// Remove existing value, if any
 
-	var writtenValue interpreter.Value
+	existingStorable := s.readStorable(storageKey)
+	if existingStorable != nil {
+		interpreter.StoredValue(existingStorable, s).
+			DeepRemove(inter)
+		inter.RemoveReferencedSlab(existingStorable)
+	}
+
+	// Get storable representation for new value
+
+	var newStorable atree.Storable
 
 	switch typedValue := value.(type) {
 	case *interpreter.SomeValue:
-		writtenValue = typedValue.Value
+		var err error
+		newStorable, err = typedValue.Value.Storable(
+			s,
+			atree.Address(address),
+			atree.MaxInlineElementSize,
+		)
+		if err != nil {
+			panic(err)
+		}
 
 	case interpreter.NilValue:
-		writtenValue = nil
+		break
 
 	default:
 		panic(errors.NewUnreachableError())
 	}
 
-	s.deltas[storageKey] = writtenValue
+	// Only write locally.
+	// The value is eventually written back through the runtime interface in `Commit`.
+
+	s.writes[storageKey] = newStorable
 }
 
 func (s *Storage) recordContractUpdate(
+	inter *interpreter.Interpreter,
 	address common.Address,
 	key string,
 	contract interpreter.Value,
@@ -224,38 +244,80 @@ func (s *Storage) recordContractUpdate(
 		Key:     key,
 	}
 
-	s.contractUpdates[storageKey] = contract
-}
+	// Remove existing, if any
 
-type accountStorageEntry struct {
-	storageKey interpreter.StorageKey
-	value      interpreter.Value
+	existingStorable, ok := s.contractUpdates[storageKey]
+	if ok {
+		interpreter.StoredValue(existingStorable, s).
+			DeepRemove(inter)
+		inter.RemoveReferencedSlab(existingStorable)
+	}
+
+	if contract == nil {
+		// NOTE: do NOT delete the map entry,
+		// otherwise the write is lost
+		s.contractUpdates[storageKey] = nil
+	} else {
+		storable, err := contract.Storable(
+			s,
+			atree.Address(address),
+			atree.MaxInlineElementSize,
+		)
+		if err != nil {
+			panic(err)
+		}
+
+		s.contractUpdates[storageKey] = storable
+	}
 }
 
 // TODO: bring back concurrent encoding
-// Commit serializes/saves all values in the cache in storage (through the runtime interface).
+// Commit serializes/saves all values in the readCache in storage (through the runtime interface).
 //
-func (s *Storage) Commit() error {
+func (s *Storage) Commit(inter *interpreter.Interpreter, commitContractUpdates bool) error {
+
+	type accountStorageEntry struct {
+		storageKey interpreter.StorageKey
+		storable   atree.Storable
+	}
 
 	var accountStorageEntries []accountStorageEntry
 
-	// First, write all values in the account storage and the contract updates
+	// First, write all values in the account storage
 
-	for storageKey, value := range s.deltas { //nolint:maprangecheck
+	for storageKey, storable := range s.writes { //nolint:maprangecheck
 		accountStorageEntries = append(
 			accountStorageEntries,
 			accountStorageEntry{
 				storageKey: storageKey,
-				value:      value,
+				storable:   storable,
 			},
 		)
 	}
 
-	for storageKey, value := range s.contractUpdates { //nolint:maprangecheck
-		accountStorageEntries = append(accountStorageEntries, accountStorageEntry{
-			storageKey: storageKey,
-			value:      value,
-		})
+	// Second, if enabled,
+	// write all contract updates (which were delayed and not observable)
+
+	if commitContractUpdates {
+		for storageKey, storable := range s.contractUpdates { //nolint:maprangecheck
+			accountStorageEntries = append(
+				accountStorageEntries,
+				accountStorageEntry{
+					storageKey: storageKey,
+					storable:   storable,
+				},
+			)
+
+			// If the contract update is overwriting an existing contract value,
+			// it must be properly removed first
+
+			existingStorable := s.readStorable(storageKey)
+			if existingStorable != nil {
+				interpreter.StoredValue(existingStorable, s).
+					DeepRemove(inter)
+				inter.RemoveReferencedSlab(existingStorable)
+			}
+		}
 	}
 
 	// Sort the account storage entries by storage key in lexicographic order
@@ -282,18 +344,15 @@ func (s *Storage) Commit() error {
 		var encoded []byte
 		address := entry.storageKey.Address
 
-		if entry.value != nil {
-			storable, err := entry.value.Storable(s, atree.Address(address), atree.MaxInlineElementSize)
-			if err != nil {
-				return err
-			}
+		if entry.storable != nil {
+			var err error
 
 			var buf bytes.Buffer
 			encoder := atree.NewEncoder(&buf, interpreter.CBOREncMode)
 
 			s.reportMetric(
 				func() {
-					err = storable.Encode(encoder)
+					err = entry.storable.Encode(encoder)
 				},
 				func(metrics Metrics, duration time.Duration) {
 					metrics.ValueEncoded(duration)
@@ -324,7 +383,7 @@ func (s *Storage) Commit() error {
 		}
 	}
 
-	// Commit the underlying slab storage's deltas
+	// Commit the underlying slab storage's writes
 
 	// TODO: report encoding metric for all encoded slabs
 	return s.PersistentSlabStorage.FastCommit(runtime.NumCPU())

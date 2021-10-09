@@ -2368,11 +2368,6 @@ func (interpreter *Interpreter) ReadStored(storageAddress common.Address, key st
 }
 
 func (interpreter *Interpreter) writeStored(storageAddress common.Address, key string, value OptionalValue) {
-
-	if existingValue, ok := interpreter.ReadStored(storageAddress, key).(*SomeValue); ok {
-		existingValue.Value.DeepRemove(interpreter)
-	}
-
 	interpreter.Storage.WriteValue(interpreter, storageAddress, key, value)
 }
 
@@ -3653,12 +3648,12 @@ func (interpreter *Interpreter) TransferValue(
 
 	value.DeepRemove(interpreter)
 
-	interpreter.removeReferencedSlab(storable)
+	interpreter.RemoveReferencedSlab(storable)
 
 	return valueCopy
 }
 
-func (interpreter *Interpreter) removeReferencedSlab(storable atree.Storable) {
+func (interpreter *Interpreter) RemoveReferencedSlab(storable atree.Storable) {
 	storageIDStorable, ok := storable.(atree.StorageIDStorable)
 	if !ok {
 		return

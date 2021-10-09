@@ -1465,3 +1465,46 @@ func decodeCapabilityStaticType(dec *cbor.StreamDecoder) (StaticType, error) {
 		BorrowType: borrowStaticType,
 	}, nil
 }
+
+func decodeCompositeTypeInfo(dec *cbor.StreamDecoder) (atree.TypeInfo, error) {
+
+	length, err := dec.DecodeArrayHead()
+	if err != nil {
+		return nil, err
+	}
+
+	if length != encodedCompositeTypeInfoLength {
+		return nil, fmt.Errorf(
+			"invalid composite type info: expected %d elements, got %d",
+			encodedCompositeTypeInfoLength, length,
+		)
+	}
+
+	location, err := decodeLocation(dec)
+	if err != nil {
+		panic(err)
+	}
+
+	qualifiedIdentifier, err := dec.DecodeString()
+	if err != nil {
+		return nil, err
+	}
+
+	kind, err := dec.DecodeUint64()
+	if err != nil {
+		return nil, err
+	}
+
+	if kind >= uint64(common.CompositeKindCount()) {
+		return nil, fmt.Errorf(
+			"invalid composite ordered map type info: invalid kind %d",
+			kind,
+		)
+	}
+
+	return compositeTypeInfo{
+		location:            location,
+		qualifiedIdentifier: qualifiedIdentifier,
+		kind:                common.CompositeKind(kind),
+	}, nil
+}
