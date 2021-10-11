@@ -2657,6 +2657,11 @@ func (r *interpreterRuntime) ReadLinked(address common.Address, path cadence.Pat
 	)
 }
 
+var BlockIDStaticType = interpreter.ConstantSizedStaticType{
+	Type: interpreter.PrimitiveStaticTypeUInt8,
+	Size: 32,
+}
+
 func NewBlockValue(block Block) interpreter.BlockValue {
 
 	// height
@@ -2671,7 +2676,7 @@ func NewBlockValue(block Block) interpreter.BlockValue {
 		values[i] = interpreter.UInt8Value(b)
 	}
 	idValue := interpreter.NewArrayValueUnownedNonCopying(
-		interpreter.ByteArrayStaticType,
+		BlockIDStaticType,
 		values...,
 	)
 
