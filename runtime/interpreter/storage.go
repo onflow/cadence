@@ -176,7 +176,14 @@ func (i InMemoryStorage) WriteValue(
 		storable, err := value.Value.Storable(
 			i,
 			atree.Address(address),
-			atree.MaxInlineElementSize,
+			// NOTE: we already allocate a register for the account storage value,
+			// so we might as well store all data of the value in it, if possible,
+			// e.g. for a large immutable value.
+			//
+			// Using a smaller number would only result in an additional register
+			// (account storage register would have storage ID storable,
+			// and extra slab / register would contain the actual data of the value).
+			math.MaxUint64,
 		)
 		if err != nil {
 			panic(err)
