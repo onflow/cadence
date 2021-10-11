@@ -415,3 +415,25 @@ func TestCheckFunctionNonExistingField(t *testing.T) {
 
 	assert.IsType(t, &sema.NotDeclaredMemberError{}, errs[0])
 }
+
+
+func TestCheckFunctionType(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+        struct Foo {
+            fun foo(): String {
+                return "hello from foo"
+            }
+        }
+
+        let x = Foo()
+
+        let y: (():String) = x.foo
+
+        let z = y()
+    `)
+
+	assert.NoError(t, err)
+}
