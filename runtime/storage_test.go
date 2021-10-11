@@ -1903,3 +1903,67 @@ func TestRuntimeStorageUsed(t *testing.T) {
 	require.NoError(t, err)
 
 }
+
+func TestSortAccountStorageEntries(t *testing.T) {
+
+	t.Parallel()
+
+	entries := []AccountStorageEntry{
+		{
+			StorageKey: interpreter.StorageKey{
+				Address: common.Address{2},
+				Key:     "a",
+			},
+		},
+		{
+			StorageKey: interpreter.StorageKey{
+				Address: common.Address{1},
+				Key:     "b",
+			},
+		},
+		{
+			StorageKey: interpreter.StorageKey{
+				Address: common.Address{1},
+				Key:     "a",
+			},
+		},
+		{
+			StorageKey: interpreter.StorageKey{
+				Address: common.Address{0},
+				Key:     "x",
+			},
+		},
+	}
+
+	SortAccountStorageEntries(entries)
+
+	require.Equal(t,
+		[]AccountStorageEntry{
+			{
+				StorageKey: interpreter.StorageKey{
+					Address: common.Address{0},
+					Key:     "x",
+				},
+			},
+			{
+				StorageKey: interpreter.StorageKey{
+					Address: common.Address{1},
+					Key:     "a",
+				},
+			},
+			{
+				StorageKey: interpreter.StorageKey{
+					Address: common.Address{1},
+					Key:     "b",
+				},
+			},
+			{
+				StorageKey: interpreter.StorageKey{
+					Address: common.Address{2},
+					Key:     "a",
+				},
+			},
+		},
+		entries,
+	)
+}

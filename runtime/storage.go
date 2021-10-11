@@ -286,26 +286,26 @@ func (s *Storage) recordContractUpdate(
 	}
 }
 
+type AccountStorageEntry struct {
+	StorageKey interpreter.StorageKey
+	Storable   atree.Storable
+}
+
 // TODO: bring back concurrent encoding
 // Commit serializes/saves all values in the readCache in storage (through the runtime interface).
 //
 func (s *Storage) Commit(inter *interpreter.Interpreter, commitContractUpdates bool) error {
 
-	type accountStorageEntry struct {
-		storageKey interpreter.StorageKey
-		storable   atree.Storable
-	}
-
-	var accountStorageEntries []accountStorageEntry
+	var accountStorageEntries []AccountStorageEntry
 
 	// First, write all values in the account storage
 
 	for storageKey, storable := range s.writes { //nolint:maprangecheck
 		accountStorageEntries = append(
 			accountStorageEntries,
-			accountStorageEntry{
-				storageKey: storageKey,
-				storable:   storable,
+			AccountStorageEntry{
+				StorageKey: storageKey,
+				Storable:   storable,
 			},
 		)
 	}
@@ -317,9 +317,9 @@ func (s *Storage) Commit(inter *interpreter.Interpreter, commitContractUpdates b
 		for storageKey, storable := range s.contractUpdates { //nolint:maprangecheck
 			accountStorageEntries = append(
 				accountStorageEntries,
-				accountStorageEntry{
-					storageKey: storageKey,
-					storable:   storable,
+				AccountStorageEntry{
+					StorageKey: storageKey,
+					Storable:   storable,
 				},
 			)
 
@@ -337,29 +337,20 @@ func (s *Storage) Commit(inter *interpreter.Interpreter, commitContractUpdates b
 
 	// Sort the account storage entries by storage key in lexicographic order
 
-	sort.Slice(accountStorageEntries, func(i, j int) bool {
-		a := accountStorageEntries[i].storageKey
-		b := accountStorageEntries[j].storageKey
-
-		if bytes.Compare(a.Address[:], b.Address[:]) < 0 {
-			return true
-		}
-
-		if a.Key < b.Key {
-			return true
-		}
-
-		return false
-	})
+	SortAccountStorageEntries(accountStorageEntries)
 
 	// Write account storage entries in order
 
 	// TODO: bring back concurrent encoding
 	for _, entry := range accountStorageEntries {
 		var encoded []byte
-		address := entry.storageKey.Address
 
-		if entry.storable != nil {
+		storageKey := entry.StorageKey
+		storable := entry.Storable
+
+		address := storageKey.Address
+
+		if storable != nil {
 			var err error
 
 			var buf bytes.Buffer
@@ -367,7 +358,7 @@ func (s *Storage) Commit(inter *interpreter.Interpreter, commitContractUpdates b
 
 			s.reportMetric(
 				func() {
-					err = entry.storable.Encode(encoder)
+					err = storable.Encode(encoder)
 				},
 				func(metrics Metrics, duration time.Duration) {
 					metrics.ValueEncoded(duration)
@@ -389,7 +380,7 @@ func (s *Storage) Commit(inter *interpreter.Interpreter, commitContractUpdates b
 		wrapPanic(func() {
 			err = s.Ledger.SetValue(
 				address[:],
-				[]byte(entry.storageKey.Key),
+				[]byte(storageKey.Key),
 				encoded,
 			)
 		})
@@ -402,4 +393,22 @@ func (s *Storage) Commit(inter *interpreter.Interpreter, commitContractUpdates b
 
 	// TODO: report encoding metric for all encoded slabs
 	return s.PersistentSlabStorage.FastCommit(runtime.NumCPU())
+}
+
+func SortAccountStorageEntries(entries []AccountStorageEntry) {
+	sort.Slice(entries, func(i, j int) bool {
+		a := entries[i].StorageKey
+		b := entries[j].StorageKey
+
+		switch bytes.Compare(a.Address[:], b.Address[:]) {
+		case -1:
+			return true
+		case 0:
+			return a.Key < b.Key
+		case 1:
+			return false
+		default:
+			panic(errors.NewUnreachableError())
+		}
+	})
 }
