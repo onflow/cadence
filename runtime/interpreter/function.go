@@ -81,10 +81,10 @@ func (f *InterpretedFunctionValue) Walk(_ func(Value)) {
 	// NO-OP
 }
 
-var functionDynamicType DynamicType = FunctionDynamicType{}
-
-func (*InterpretedFunctionValue) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
-	return functionDynamicType
+func (f *InterpretedFunctionValue) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
+	return FunctionDynamicType{
+		FuncType: f.Type,
+	}
 }
 
 func (f *InterpretedFunctionValue) StaticType() StaticType {
@@ -122,10 +122,17 @@ func (f *InterpretedFunctionValue) invoke(invocation Invocation) Value {
 	return f.Interpreter.invokeInterpretedFunction(f, invocation)
 }
 
-func (f *InterpretedFunctionValue) ConformsToDynamicType(_ *Interpreter, _ DynamicType, _ TypeConformanceResults) bool {
-	// TODO: once FunctionDynamicType has parameter and return type info,
-	//   check it matches InterpretedFunctionValue's static function type
-	return false
+func (f *InterpretedFunctionValue) ConformsToDynamicType(
+	_ *Interpreter,
+	dynamicType DynamicType,
+	_ TypeConformanceResults,
+) bool {
+	targetType, ok := dynamicType.(FunctionDynamicType)
+	if !ok {
+		return false
+	}
+
+	return f.Type.Equal(targetType.FuncType)
 }
 
 func (*InterpretedFunctionValue) IsStorable() bool {
@@ -171,10 +178,10 @@ func (f *HostFunctionValue) Walk(_ func(Value)) {
 	// NO-OP
 }
 
-var hostFunctionDynamicType DynamicType = FunctionDynamicType{}
-
-func (*HostFunctionValue) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
-	return hostFunctionDynamicType
+func (f *HostFunctionValue) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
+	return FunctionDynamicType{
+		FuncType: f.Type,
+	}
 }
 
 func (f *HostFunctionValue) StaticType() StaticType {
@@ -225,12 +232,17 @@ func (*HostFunctionValue) SetMember(_ *Interpreter, _ func() LocationRange, _ st
 	panic(errors.NewUnreachableError())
 }
 
-func (f *HostFunctionValue) ConformsToDynamicType(_ *Interpreter, _ DynamicType, _ TypeConformanceResults) bool {
-	// TODO: once HostFunctionValue has static function type,
-	//   and FunctionDynamicType has parameter and return type info,
-	//   check they match
+func (f *HostFunctionValue) ConformsToDynamicType(
+	_ *Interpreter,
+	dynamicType DynamicType,
+	_ TypeConformanceResults,
+) bool {
+	targetType, ok := dynamicType.(FunctionDynamicType)
+	if !ok {
+		return false
+	}
 
-	return false
+	return f.Type.Equal(targetType.FuncType)
 }
 
 func (*HostFunctionValue) IsStorable() bool {
@@ -262,10 +274,15 @@ func (f BoundFunctionValue) Walk(_ func(Value)) {
 	// NO-OP
 }
 
-var boundFunctionDynamicType DynamicType = FunctionDynamicType{}
+func (f BoundFunctionValue) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
+	funcStaticType, ok := f.Function.StaticType().(FunctionStaticType)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
 
-func (BoundFunctionValue) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
-	return boundFunctionDynamicType
+	return FunctionDynamicType{
+		FuncType: funcStaticType.Type,
+	}
 }
 
 func (f BoundFunctionValue) StaticType() StaticType {

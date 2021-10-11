@@ -2755,9 +2755,13 @@ func (interpreter *Interpreter) IsSubType(subType DynamicType, superType sema.Ty
 		return sema.IsSubType(typedSubType.StaticType, superType)
 
 	case FunctionDynamicType:
-		// TODO: once support for dynamically casting functions is added,
-		//   ensure that constructor functions are not normal
-		return superType == sema.AnyStructType
+		if superType == sema.AnyStructType {
+			return true
+		}
+
+		superType = sema.UnwrapOptionalType(superType)
+
+		return typedSubType.FuncType.Equal(superType)
 
 	case CompositeDynamicType:
 		return sema.IsSubType(typedSubType.StaticType, superType)
