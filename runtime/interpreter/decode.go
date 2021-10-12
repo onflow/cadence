@@ -1482,7 +1482,7 @@ func decodeCompositeTypeInfo(dec *cbor.StreamDecoder) (atree.TypeInfo, error) {
 
 	location, err := decodeLocation(dec)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
 	qualifiedIdentifier, err := dec.DecodeString()

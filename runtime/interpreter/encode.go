@@ -1289,7 +1289,7 @@ func (c compositeTypeInfo) Encode(e *cbor.StreamEncoder) error {
 
 	err = encodeLocation(e, c.location)
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	err = e.EncodeString(c.qualifiedIdentifier)
