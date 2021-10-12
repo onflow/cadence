@@ -38,14 +38,14 @@ func StoredValue(storable atree.Storable, storage atree.SlabStorage) Value {
 }
 
 func MustConvertStoredValue(value atree.Value) Value {
-	converted, err := convertStoredValue(value)
+	converted, err := ConvertStoredValue(value)
 	if err != nil {
 		panic(err)
 	}
 	return converted
 }
 
-func convertStoredValue(value atree.Value) (Value, error) {
+func ConvertStoredValue(value atree.Value) (Value, error) {
 	switch value := value.(type) {
 	case *atree.Array:
 		return &ArrayValue{

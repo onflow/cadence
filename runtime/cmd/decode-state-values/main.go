@@ -20,186 +20,410 @@
 
 package main
 
-//
-//import (
-//	"bufio"
-//	"compress/gzip"
-//	"encoding/hex"
-//	"encoding/json"
-//	"flag"
-//	"io"
-//	"log"
-//	"os"
-//	"runtime"
-//	"sync"
-//	"sync/atomic"
-//
-//	"github.com/schollz/progressbar/v3"
-//
-//	"github.com/onflow/cadence/runtime/common"
-//	"github.com/onflow/cadence/runtime/interpreter"
-//)
-//
-//var roundtripFlag = flag.Bool("roundtrip", false, "encode and decode the decoded value and ensure equality")
-//var gzipFlag = flag.Bool("gzip", false, "set true if input file is gzipped")
-//
-//type keyPart struct {
-//	Value string
-//}
-//
-//type key struct {
-//	KeyParts []keyPart
-//}
-//
-//type entry struct {
-//	Value string
-//	Key   key
-//}
-//
-//func worker(jobs <-chan entry, wg *sync.WaitGroup, decoded *uint64) {
-//	defer wg.Done()
-//
-//	var err error
-//	var data []byte
-//
-//	for e := range jobs {
-//
-//		data, err = hex.DecodeString(e.Value)
-//		if err != nil {
-//			log.Fatal(err)
-//		}
-//
-//		var version uint16
-//		data, version = interpreter.StripMagic(data)
-//		if version == 0 {
-//			continue
-//		}
-//
-//		rawOwner, err := hex.DecodeString(e.Key.KeyParts[1].Value)
-//		if err != nil {
-//			log.Fatal(err)
-//		}
-//
-//		owner := common.BytesToAddress(rawOwner)
-//
-//		decodeFunction := interpreter.DecodeValue
-//		if version <= 4 {
-//			decodeFunction = interpreter.DecodeValueV4
-//		}
-//
-//		var value interpreter.Value
-//		value, err = decodeFunction(data, &owner, nil, version, nil)
-//		if err != nil {
-//			log.Fatalf("failed to decode value: %s\n%s\n", err, e.Value)
-//		}
-//
-//		atomic.AddUint64(decoded, 1)
-//
-//		if *roundtripFlag {
-//			reEncodeDecode(value, owner)
-//		}
-//	}
-//}
-//
-//func reEncodeDecode(value interpreter.Value, owner common.Address) {
-//	data, deferrals, err := interpreter.EncodeValue(value, nil, true, nil)
-//	if err != nil {
-//		log.Fatalf("failed to encode value: %s\n%s\n", err, value)
-//	}
-//
-//	if len(deferrals.Values) > 0 {
-//		log.Fatalf("re-encoding produced deferred values:\n%s\n", value)
-//	}
-//
-//	if len(deferrals.Moves) > 0 {
-//		log.Fatalf("re-encoding produced deferred moves:\n%s\n", value)
-//	}
-//
-//	newValue, err := interpreter.DecodeValue(data, &owner, nil, interpreter.CurrentEncodingVersion, nil)
-//	if err != nil {
-//		log.Fatalf("failed to decode re-encoded value: %s\n%s\n", err, value)
-//	}
-//
-//	equatableValue, ok := value.(interpreter.EquatableValue)
-//	if !ok {
-//		log.Fatalf("cannot compare unequatable %[1]T\n%[1]s\n", value)
-//	}
-//
-//	if !equatableValue.Equal(newValue, interpreter.ReturnEmptyLocationRange) {
-//		log.Fatalf("values are unequal:\n%s\n%s\n", value, newValue)
-//	}
-//}
-//
-//func main() {
-//	flag.Parse()
-//
-//	args := flag.Args()
-//	if len(args) < 1 {
-//		panic("missing path argument")
-//	}
-//
-//	file, err := os.Open(args[0])
-//	if err != nil {
-//		log.Fatal(err)
-//	}
-//	defer file.Close()
-//
-//	jobs := make(chan entry)
-//
-//	var decoded uint64
-//
-//	var wg sync.WaitGroup
-//
-//	workerCount := runtime.NumCPU()
-//
-//	for i := 0; i < workerCount; i++ {
-//		wg.Add(1)
-//		go worker(jobs, &wg, &decoded)
-//	}
-//
-//	stat, err := file.Stat()
-//	if err != nil {
-//		log.Fatal(err)
-//	}
-//
-//	fileSize := stat.Size()
-//
-//	bar := progressbar.DefaultBytes(fileSize, "(processed JSON bytes)")
-//
-//	progressReader := progressbar.NewReader(file, bar)
-//
-//	var inputReader io.Reader = &progressReader
-//	if *gzipFlag {
-//		gzipReader, err := gzip.NewReader(inputReader)
-//		if err != nil {
-//			log.Fatal(err)
-//		}
-//		defer gzipReader.Close()
-//		inputReader = gzipReader
-//	}
-//
-//	reader := bufio.NewReader(inputReader)
-//
-//	decoder := json.NewDecoder(reader)
-//	for {
-//		var e entry
-//
-//		err = decoder.Decode(&e)
-//		if err != nil {
-//			if err == io.EOF {
-//				break
-//			}
-//			log.Fatal(err)
-//		}
-//
-//		jobs <- e
-//	}
-//
-//	close(jobs)
-//
-//	wg.Wait()
-//
-//	println()
-//
-//	log.Printf("successfully decoded %d values\n", decoded)
-//}
+import (
+	"bufio"
+	"bytes"
+	"compress/gzip"
+	"encoding/hex"
+	"encoding/json"
+	"flag"
+	"io"
+	"log"
+	"os"
+	goRuntime "runtime"
+	"strings"
+
+	"github.com/onflow/atree"
+	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/interpreter"
+	"github.com/schollz/progressbar/v3"
+)
+
+type stringSlice []string
+
+func (s stringSlice) String() string {
+	return strings.Join(s, ", ")
+}
+
+func (s *stringSlice) Set(v string) error {
+	*s = append(*s, v)
+	return nil
+}
+
+var addressesFlag stringSlice
+
+func init() {
+	flag.Var(&addressesFlag, "addresses", "only keep ledger keys for given addresses")
+}
+
+var gzipFlag = flag.Bool("gzip", false, "set true if input file is gzipped")
+var printFlag = flag.Bool("print", false, "print parsed data (filtered, if addresses are given)")
+var loadFlag = flag.Bool("load", false, "load the parsed data")
+
+const keyPartCount = 3
+
+type storageKey [keyPartCount]string
+
+var storage = map[storageKey][]byte{}
+
+var storagePathSeparator = "\x1f"
+
+// '$' + 8 byte index
+const slabKeyLength = 9
+
+func decodeSlab(id atree.StorageID, data []byte) (atree.Slab, error) {
+	return atree.DecodeSlab(
+		id,
+		data,
+		interpreter.CBORDecMode,
+		interpreter.DecodeStorable,
+		interpreter.DecodeTypeInfo,
+	)
+}
+
+func storageIDStorageKey(id atree.StorageID) storageKey {
+	return storageKey{
+		string(id.Address[:]),
+		"",
+		"$" + string(id.Index[:]),
+	}
+}
+
+// slabStorage
+
+type slabStorage struct{}
+
+var _ atree.SlabStorage = &slabStorage{}
+
+func (s *slabStorage) Retrieve(id atree.StorageID) (atree.Slab, bool, error) {
+	data, ok := storage[storageIDStorageKey(id)]
+	if !ok {
+		return nil, false, nil
+	}
+
+	slab, err := decodeSlab(id, data)
+	if err != nil {
+		return nil, true, err
+	}
+
+	return slab, true, nil
+}
+
+func (s *slabStorage) Store(id atree.StorageID, slab atree.Slab) error {
+	panic("unexpected Store call")
+}
+
+func (s *slabStorage) Remove(_ atree.StorageID) error {
+	panic("unexpected Remove call")
+}
+
+func (s *slabStorage) GenerateStorageID(_ atree.Address) (atree.StorageID, error) {
+	panic("unexpected GenerateStorageID call")
+}
+
+func (s *slabStorage) Count() int {
+	return len(storage)
+}
+
+// interpreterStorage
+
+type interpreterStorage struct {
+	*slabStorage
+}
+
+var _ interpreter.Storage = &interpreterStorage{}
+
+func (i interpreterStorage) ValueExists(_ *interpreter.Interpreter, _ common.Address, key string) bool {
+	panic("unexpected ValueExists call")
+}
+
+func (i interpreterStorage) ReadValue(_ *interpreter.Interpreter, _ common.Address, _ string) interpreter.OptionalValue {
+	panic("unexpected ReadValue call")
+}
+
+func (i interpreterStorage) WriteValue(_ *interpreter.Interpreter, _ common.Address, _ string, _ interpreter.OptionalValue) {
+	panic("unexpected WriteValue call")
+}
+
+// load
+
+func load() {
+	log.Println("Loading decoded values ...")
+
+	slabStorage := &slabStorage{}
+
+	interpreterStorage := &interpreterStorage{
+		slabStorage: slabStorage,
+	}
+
+	inter, err := interpreter.NewInterpreter(
+		nil,
+		nil,
+		interpreter.WithStorage(interpreterStorage),
+	)
+	if err != nil {
+		log.Fatalf("Failed to create interpreter: %s", err)
+	}
+
+	bar := progressbar.Default(int64(len(storage)))
+
+	for storageKey, data := range storage {
+		bar.Add(1)
+
+		var isStoragePath bool
+
+		// Check the key is a non-root slab or a storage path
+		key := storageKey[2]
+
+		var address atree.Address
+		copy(address[:], storageKey[0])
+
+		// If the key is for a slab (format '$' + storage index),
+		// then attempt to decode the slab
+
+		isSlab := len(key) == slabKeyLength && key[0] == '$'
+		if isSlab {
+
+			var storageIndex atree.StorageIndex
+			// Skip '$' prefix
+			copy(storageIndex[:], key[1:])
+
+			storageID := atree.StorageID{
+				Address: address,
+				Index:   storageIndex,
+			}
+
+			_, err := decodeSlab(storageID, data)
+			if err != nil {
+				log.Printf(
+					"Failed to decode slab @ 0x%x %s: %s (size: %d)",
+					address,
+					storageID.Index,
+					err,
+					len(data),
+				)
+				continue
+			}
+		} else {
+			// If the key is an account path,
+			// decode the storable, and load the value
+
+			keyParts := strings.SplitN(key, storagePathSeparator, 2)
+
+			isStoragePath = len(keyParts) == 2 &&
+				common.PathDomainFromIdentifier(keyParts[0]) != common.PathDomainUnknown
+
+			if isStoragePath {
+
+				reader := bytes.NewReader(data)
+				decoder := interpreter.CBORDecMode.NewStreamDecoder(reader)
+				storable, err := interpreter.DecodeStorable(decoder, atree.StorageIDUndefined)
+				if err != nil {
+					log.Printf(
+						"Failed to decode storable @ 0x%x %s: %s (data: %x)",
+						address, key, err, data,
+					)
+					continue
+				}
+
+				atreeValue, err := storable.StoredValue(slabStorage)
+				if err != nil {
+					log.Printf(
+						"Failed to load stored value @ 0x%x %s: %s",
+						address, key, err,
+					)
+					continue
+				}
+
+				value, err := interpreter.ConvertStoredValue(atreeValue)
+				if err != nil {
+					log.Printf(
+						"Failed to convert stored value @ 0x%x %s: %s",
+						address, key, err,
+					)
+					continue
+				}
+
+				interpreter.InspectValue(
+					value,
+					func(v interpreter.Value) bool {
+
+						if composite, ok := v.(*interpreter.CompositeValue); ok &&
+							composite.Kind == common.CompositeKindResource {
+
+							uuid := composite.GetField(inter, interpreter.ReturnEmptyLocationRange, "uuid")
+							if _, ok := uuid.(interpreter.UInt64Value); !ok {
+								log.Printf(
+									"Failed to get UUID for resource @ 0x%x %s",
+									address, key,
+								)
+							}
+						}
+
+						return true
+					},
+				)
+
+				goRuntime.GC()
+			}
+		}
+	}
+}
+
+type encodedKeyPart struct {
+	Value string
+}
+
+type encodedKey struct {
+	KeyParts []encodedKeyPart
+}
+
+type encodedEntry struct {
+	Value string
+	Key   encodedKey
+}
+
+func main() {
+	flag.Parse()
+
+	args := flag.Args()
+	if len(args) < 1 {
+		panic("missing path argument")
+	}
+
+	var addresses []common.Address
+
+	for _, hexAddress := range addressesFlag {
+		address, err := common.HexToAddress(hexAddress)
+		if err != nil {
+			log.Fatalf("Invalid address: %s", hexAddress)
+		}
+		addresses = append(addresses, address)
+	}
+
+	file, err := os.Open(args[0])
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer file.Close()
+
+	read(file, addresses)
+
+	if *loadFlag {
+		load()
+	}
+
+	if *printFlag {
+		for key, value := range storage {
+			var keyParts []encodedKeyPart
+
+			for _, keyPart := range key {
+				keyParts = append(keyParts, encodedKeyPart{
+					Value: hex.EncodeToString([]byte(keyPart)),
+				})
+			}
+
+			entry := encodedEntry{
+				Value: hex.EncodeToString(value),
+				Key: encodedKey{
+					KeyParts: keyParts,
+				},
+			}
+
+			encoded, err := json.Marshal(entry)
+			if err != nil {
+				log.Fatal(err)
+			}
+			println(encoded)
+		}
+	}
+}
+
+func read(file *os.File, addresses []common.Address) {
+
+	log.Println("Reading file ...")
+
+	filter := len(addresses) > 0
+
+	stat, err := file.Stat()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fileSize := stat.Size()
+
+	bar := progressbar.DefaultBytes(fileSize, "(processed JSON bytes)")
+
+	progressReader := progressbar.NewReader(file, bar)
+	defer progressReader.Close()
+
+	var inputReader io.Reader = &progressReader
+	if *gzipFlag {
+		gzipReader, err := gzip.NewReader(inputReader)
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer gzipReader.Close()
+		inputReader = gzipReader
+	}
+
+	reader := bufio.NewReader(inputReader)
+
+	decoder := json.NewDecoder(reader)
+
+payloadLoop:
+	for {
+		var e encodedEntry
+
+		err = decoder.Decode(&e)
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+			log.Fatal(err)
+		}
+
+		if len(e.Key.KeyParts) < keyPartCount {
+			log.Fatalf("Invalid storage key parts: %#+v\n", e.Key)
+		}
+
+		var storageKey [keyPartCount]string
+		for i := 0; i < keyPartCount; i++ {
+			keyPart := e.Key.KeyParts[i].Value
+			k, err := hex.DecodeString(keyPart)
+			if err != nil {
+				log.Fatalf(
+					"Failed to hex-decode key part %d of %s (%s): %s",
+					i, e.Key, keyPart, err,
+				)
+			}
+			// Treat bytes as string,
+			// so resulting array of strings can be used as a map key
+			storageKey[i] = string(k)
+		}
+
+		if filter {
+			owner := common.BytesToAddress([]byte(storageKey[0]))
+			var found bool
+			for _, address := range addresses {
+				if owner == address {
+					found = true
+					break
+				}
+			}
+			if !found {
+				continue payloadLoop
+			}
+		}
+
+		data, err := hex.DecodeString(e.Value)
+		if err != nil {
+			log.Fatalf("Invalid value: %s", err)
+		}
+
+		// Ignore empty slabs
+		if len(data) > 0 {
+			storage[storageKey] = data
+		}
+	}
+}
