@@ -416,24 +416,40 @@ func TestCheckFunctionNonExistingField(t *testing.T) {
 	assert.IsType(t, &sema.NotDeclaredMemberError{}, errs[0])
 }
 
-
 func TestCheckFunctionType(t *testing.T) {
 
 	t.Parallel()
 
-	_, err := ParseAndCheck(t, `
-        struct Foo {
+	t.Run("no receiver", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
             fun foo(): String {
                 return "hello from foo"
             }
-        }
 
-        let x = Foo()
+            let y: (():String) = foo
+        `)
 
-        let y: (():String) = x.foo
+		require.NoError(t, err)
+	})
 
-        let z = y()
-    `)
+	t.Run("with receiver", func(t *testing.T) {
+		t.Parallel()
 
-	assert.NoError(t, err)
+		_, err := ParseAndCheck(t, `
+            struct Foo {
+                fun foo(): String {
+                    return "hello from foo"
+                }
+            }
+
+            let x = Foo()
+
+            let y: (():String) = x.foo
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+		require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	})
 }
