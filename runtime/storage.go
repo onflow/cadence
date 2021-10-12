@@ -287,8 +287,9 @@ func (s *Storage) recordContractUpdate(
 }
 
 type AccountStorageEntry struct {
-	StorageKey interpreter.StorageKey
-	Storable   atree.Storable
+	StorageKey       interpreter.StorageKey
+	Storable         atree.Storable
+	IsContractUpdate bool
 }
 
 // TODO: bring back concurrent encoding
@@ -297,6 +298,9 @@ type AccountStorageEntry struct {
 func (s *Storage) Commit(inter *interpreter.Interpreter, commitContractUpdates bool) error {
 
 	var accountStorageEntries []AccountStorageEntry
+
+	// NOTE: ranging over maps is safe (deterministic),
+	// if it is side-effect free and the keys are sorted afterwards
 
 	// First, write all values in the account storage
 
@@ -318,20 +322,11 @@ func (s *Storage) Commit(inter *interpreter.Interpreter, commitContractUpdates b
 			accountStorageEntries = append(
 				accountStorageEntries,
 				AccountStorageEntry{
-					StorageKey: storageKey,
-					Storable:   storable,
+					StorageKey:       storageKey,
+					Storable:         storable,
+					IsContractUpdate: true,
 				},
 			)
-
-			// If the contract update is overwriting an existing contract value,
-			// it must be properly removed first
-
-			existingStorable := s.readStorable(storageKey)
-			if existingStorable != nil {
-				interpreter.StoredValue(existingStorable, s).
-					DeepRemove(inter)
-				inter.RemoveReferencedSlab(existingStorable)
-			}
 		}
 	}
 
@@ -343,12 +338,28 @@ func (s *Storage) Commit(inter *interpreter.Interpreter, commitContractUpdates b
 
 	// TODO: bring back concurrent encoding
 	for _, entry := range accountStorageEntries {
-		var encoded []byte
 
 		storageKey := entry.StorageKey
 		storable := entry.Storable
 
 		address := storageKey.Address
+
+		// If the account storage change is a contract update,
+		// and it is overwriting an existing contract value,
+		// it must be properly removed first:
+		// The removal did not occur during execution,
+		// because contract updates are deferred to the commit
+
+		if entry.IsContractUpdate {
+			existingStorable := s.readStorable(storageKey)
+			if existingStorable != nil {
+				interpreter.StoredValue(existingStorable, s).
+					DeepRemove(inter)
+				inter.RemoveReferencedSlab(existingStorable)
+			}
+		}
+
+		var encoded []byte
 
 		if storable != nil {
 			var err error
