@@ -2761,7 +2761,7 @@ func (interpreter *Interpreter) IsSubType(subType DynamicType, superType sema.Ty
 
 		superType = sema.UnwrapOptionalType(superType)
 
-		return typedSubType.FuncType.Equal(superType)
+		return sema.IsSubType(typedSubType.FuncType, superType)
 
 	case CompositeDynamicType:
 		return sema.IsSubType(typedSubType.StaticType, superType)

@@ -325,11 +325,11 @@ func TestArrayMutation(t *testing.T) {
                 return [callFoo(), callBar()]
             }
 
-            fun foo() {
+            fun foo(): String {
                 return "hello from foo"
             }
 
-            fun bar() {
+            fun bar(): String {
                 return "hello from bar"
             }
         `)
