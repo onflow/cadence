@@ -27,6 +27,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 )
@@ -824,4 +825,30 @@ func TestInterpretSaturatedArithmeticFunctions(t *testing.T) {
 		test(ty, "Multiply", testCase.multiply)
 		test(ty, "Divide", testCase.divide)
 	}
+}
+
+func TestInterpretArithmeticOnSubTypes(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("param subtypes", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            fun test(): Integer {
+		        let x: Integer = 5 as Int8
+                return x * 2
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		require.Error(t, err)
+
+		operandError := &interpreter.InvalidBinaryOperandsError{}
+		require.ErrorAs(t, err, operandError)
+
+		assert.Equal(t, ast.OperationMul, operandError.Operation)
+		assert.Equal(t, interpreter.PrimitiveStaticTypeInt8, operandError.LeftType)
+		assert.Equal(t, interpreter.PrimitiveStaticTypeInt, operandError.RightType)
+	})
 }
