@@ -3546,8 +3546,7 @@ func TestInterpretFunctionTypeCasting(t *testing.T) {
 	t.Run("function casting", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t,
-			fmt.Sprintf(`
+		inter := parseCheckAndInterpret(t, `
                 fun test(): String {
 					let x: AnyStruct = foo
 					let y = x as! ((String):String)
@@ -3558,7 +3557,7 @@ func TestInterpretFunctionTypeCasting(t *testing.T) {
                 fun foo(a: String): String {
                     return a.concat(" from foo")
                 }
-            `),
+            `,
 		)
 
 		result, err := inter.Invoke("test")
@@ -3569,8 +3568,7 @@ func TestInterpretFunctionTypeCasting(t *testing.T) {
 	t.Run("param contravariance", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t,
-			fmt.Sprintf(`
+		inter := parseCheckAndInterpret(t, `
                 fun test(): String {
                     let x = foo as ((String):String)
                     return x("hello")
@@ -3579,7 +3577,7 @@ func TestInterpretFunctionTypeCasting(t *testing.T) {
                 fun foo(a: AnyStruct): String {
                     return (a as! String).concat(" from foo")
                 }
-            `),
+            `,
 		)
 
 		result, err := inter.Invoke("test")
@@ -3590,8 +3588,7 @@ func TestInterpretFunctionTypeCasting(t *testing.T) {
 	t.Run("param contravariance negative", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t,
-			fmt.Sprintf(`
+		inter := parseCheckAndInterpret(t, `
                  fun test(): String {
                      let x = foo as! ((AnyStruct):String)
                      return x("hello")
@@ -3600,7 +3597,7 @@ func TestInterpretFunctionTypeCasting(t *testing.T) {
                 fun foo(a: String): String {
                     return a.concat(" from foo")
                 }
-            `),
+            `,
 		)
 
 		_, err := inter.Invoke("test")
@@ -3610,8 +3607,7 @@ func TestInterpretFunctionTypeCasting(t *testing.T) {
 	t.Run("return type covariance", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t,
-			fmt.Sprintf(`
+		inter := parseCheckAndInterpret(t, `
                 fun test(): AnyStruct {
                     let x = foo as! ((String):AnyStruct)
                     return x("hello")
@@ -3620,7 +3616,7 @@ func TestInterpretFunctionTypeCasting(t *testing.T) {
                 fun foo(a: String): String {
                     return a.concat(" from foo")
                 }
-            `),
+            `,
 		)
 
 		result, err := inter.Invoke("test")
@@ -3631,8 +3627,7 @@ func TestInterpretFunctionTypeCasting(t *testing.T) {
 	t.Run("return type covariance negative", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t,
-			fmt.Sprintf(`
+		inter := parseCheckAndInterpret(t, `
                 fun test(): String {
                     let x = foo as! ((String):String)
                     return x("hello")
@@ -3641,7 +3636,7 @@ func TestInterpretFunctionTypeCasting(t *testing.T) {
                 fun foo(a: String): AnyStruct {
                     return a.concat(" from foo")
                 }
-            `),
+            `,
 		)
 
 		_, err := inter.Invoke("test")
