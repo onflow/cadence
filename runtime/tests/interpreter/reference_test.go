@@ -21,6 +21,9 @@ package interpreter_test
 import (
 	"testing"
 
+	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/sema"
+	"github.com/onflow/cadence/runtime/tests/checker"
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/runtime/interpreter"
@@ -427,5 +430,54 @@ func TestInterpretContainerVariance(t *testing.T) {
 		var containerMutationError interpreter.ContainerMutationError
 		require.ErrorAs(t, err, &containerMutationError)
 	})
+}
 
+func TestInterpretResourceReferenceAfterMove(t *testing.T) {
+
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+        resource R {
+            let value: String
+
+            init(value: String) {
+                self.value = value
+            }
+        }
+
+        fun test(target: &[R]): String {
+            let r <- create R(value: "testValue")
+            let ref = &r as &R
+            target.append(<-r)
+            return ref.value
+        }
+    `)
+
+	address := common.Address{0x1}
+
+	rType := checker.RequireGlobalType(t, inter.Program.Elaboration, "R").(*sema.CompositeType)
+
+	array := interpreter.NewArrayValue(
+		inter,
+		interpreter.VariableSizedStaticType{
+			Type: interpreter.ConvertSemaToStaticType(rType),
+		},
+		address,
+	)
+
+	arrayRef := &interpreter.EphemeralReferenceValue{
+		Authorized:   false,
+		Value:        array,
+		BorrowedType: rType,
+	}
+
+	value, err := inter.Invoke("test", arrayRef)
+	require.NoError(t, err)
+
+	AssertValuesEqual(
+		t,
+		inter,
+		interpreter.NewStringValue("testValue"),
+		value,
+	)
 }
