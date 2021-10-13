@@ -481,3 +481,55 @@ func TestInterpretResourceReferenceAfterMove(t *testing.T) {
 		value,
 	)
 }
+
+func TestInterpretResourceArrayReferenceAfterMove(t *testing.T) {
+
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+        resource R {
+            let value: String
+
+            init(value: String) {
+                self.value = value
+            }
+        }
+
+        fun test(target: &[[R]]): String {
+            let rs <- [<-create R(value: "testValue")]
+            let ref = &rs as &[R]
+            target.append(<-rs)
+            return ref[0].value
+        }
+    `)
+
+	address := common.Address{0x1}
+
+	rType := checker.RequireGlobalType(t, inter.Program.Elaboration, "R").(*sema.CompositeType)
+
+	array := interpreter.NewArrayValue(
+		inter,
+		interpreter.VariableSizedStaticType{
+			Type: interpreter.VariableSizedStaticType{
+				Type: interpreter.ConvertSemaToStaticType(rType),
+			},
+		},
+		address,
+	)
+
+	arrayRef := &interpreter.EphemeralReferenceValue{
+		Authorized:   false,
+		Value:        array,
+		BorrowedType: rType,
+	}
+
+	value, err := inter.Invoke("test", arrayRef)
+	require.NoError(t, err)
+
+	AssertValuesEqual(
+		t,
+		inter,
+		interpreter.NewStringValue("testValue"),
+		value,
+	)
+}
