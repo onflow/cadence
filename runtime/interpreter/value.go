@@ -7344,16 +7344,6 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, getLocationRange func
 	v.isDestroyed = true
 }
 
-func compositeFieldComparator(storage atree.SlabStorage, value atree.Value, other atree.Storable) (bool, error) {
-	a := value.(*StringValue)
-	b := StoredValue(other, storage).(*StringValue)
-	return a.Str == b.Str, nil
-}
-
-func compositeFieldHashInputProvider(value atree.Value, _ []byte) ([]byte, error) {
-	return []byte(value.(*StringValue).Str), nil
-}
-
 func (v *CompositeValue) GetMember(interpreter *Interpreter, getLocationRange func() LocationRange, name string) Value {
 
 	if v.Kind == common.CompositeKindResource &&
@@ -7363,9 +7353,9 @@ func (v *CompositeValue) GetMember(interpreter *Interpreter, getLocationRange fu
 	}
 
 	storable, err := v.dictionary.Get(
-		compositeFieldComparator,
-		compositeFieldHashInputProvider,
-		NewStringValue(name),
+		stringAtreeComparator,
+		stringAtreeHashInput,
+		stringAtreeValue(name),
 	)
 	if err != nil {
 		if _, ok := err.(*atree.KeyNotFoundError); !ok {
@@ -7476,9 +7466,9 @@ func (v *CompositeValue) SetMember(
 	)
 
 	existingStorable, err := v.dictionary.Set(
-		compositeFieldComparator,
-		compositeFieldHashInputProvider,
-		NewStringValue(name),
+		stringAtreeComparator,
+		stringAtreeHashInput,
+		stringAtreeValue(name),
 		value,
 	)
 	if err != nil {
@@ -7545,12 +7535,12 @@ func formatComposite(typeId string, fields []CompositeField, seenReferences Seen
 	return format.Composite(typeId, preparedFields)
 }
 
-func (v *CompositeValue) GetField(interpreter *Interpreter, getLocationRange func() LocationRange, name string) Value {
+func (v *CompositeValue) GetField(_ *Interpreter, _ func() LocationRange, name string) Value {
 
 	storable, err := v.dictionary.Get(
-		compositeFieldComparator,
-		compositeFieldHashInputProvider,
-		NewStringValue(name),
+		stringAtreeComparator,
+		stringAtreeHashInput,
+		stringAtreeValue(name),
 	)
 	if err != nil {
 		if _, ok := err.(*atree.KeyNotFoundError); ok {
@@ -7589,7 +7579,7 @@ func (v *CompositeValue) Equal(interpreter *Interpreter, getLocationRange func()
 			return true
 		}
 
-		fieldName := key.(*StringValue).Str
+		fieldName := string(key.(stringAtreeValue))
 
 		// NOTE: Do NOT use an iterator, iteration order of fields may be different
 		// (if stored in different account, as storage ID is used as hash seed)
@@ -7750,8 +7740,8 @@ func (v *CompositeValue) DeepCopy(
 		address,
 		atree.NewDefaultDigesterBuilder(),
 		v.dictionary.Type(),
-		compositeFieldComparator,
-		compositeFieldHashInputProvider,
+		stringAtreeComparator,
+		stringAtreeHashInput,
 		v.dictionary.Seed(),
 		func() (atree.Value, atree.Value, error) {
 
@@ -7763,13 +7753,13 @@ func (v *CompositeValue) DeepCopy(
 				return nil, nil, nil
 			}
 
-			key := MustConvertStoredValue(atreeKey)
-			keyCopy := interpreter.CopyValue(getLocationRange, key, address)
+			// NOTE: key is stringAtreeValue
+			// and does not need to be converted or copied
 
 			value := MustConvertStoredValue(atreeValue)
 			valueCopy := interpreter.CopyValue(getLocationRange, value, address)
 
-			return keyCopy, valueCopy, nil
+			return atreeKey, valueCopy, nil
 		},
 	)
 	if err != nil {
@@ -7801,8 +7791,8 @@ func (v *CompositeValue) DeepRemove(interpreter *Interpreter) {
 	storage := v.dictionary.Storage
 
 	err := v.dictionary.PopIterate(func(nameStorable atree.Storable, valueStorable atree.Storable) {
-		name := StoredValue(nameStorable, storage)
-		name.DeepRemove(interpreter)
+		// NOTE: key / field name is stringAtreeValue,
+		// and not a Value, so no need to deep remove
 		interpreter.RemoveReferencedSlab(nameStorable)
 
 		value := StoredValue(valueStorable, storage)
@@ -7825,7 +7815,7 @@ func (v *CompositeValue) GetOwner() common.Address {
 func (v *CompositeValue) ForEachField(f func(fieldName string, fieldValue Value)) {
 	err := v.dictionary.Iterate(func(key atree.Value, value atree.Value) (resume bool, err error) {
 		f(
-			MustConvertStoredValue(key).(*StringValue).Str,
+			string(key.(stringAtreeValue)),
 			MustConvertStoredValue(value),
 		)
 		return true, nil
@@ -7844,10 +7834,11 @@ func (v *CompositeValue) RemoveField(
 	getLocationRange func() LocationRange,
 	name string,
 ) {
+
 	existingKeyStorable, existingValueStorable, err := v.dictionary.Remove(
-		compositeFieldComparator,
-		compositeFieldHashInputProvider,
-		NewStringValue(name),
+		stringAtreeComparator,
+		stringAtreeHashInput,
+		stringAtreeValue(name),
 	)
 	if err != nil {
 		if _, ok := err.(*atree.KeyNotFoundError); ok {

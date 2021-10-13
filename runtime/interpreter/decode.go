@@ -96,11 +96,11 @@ func (d Decoder) decodeStorable() (atree.Storable, error) {
 		storable = NilValue{}
 
 	case cbor.TextStringType:
-		str, err := d.decoder.DecodeString()
+		v, err := d.decoder.DecodeString()
 		if err != nil {
 			return nil, err
 		}
-		storable = NewStringValue(str)
+		storable = stringAtreeValue(v)
 
 	case cbor.TagType:
 		var num uint64

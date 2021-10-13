@@ -3687,12 +3687,34 @@ func (interpreter *Interpreter) checkAtreeValue(v atree.Value) {
 		panic(errors.NewUnreachableError())
 	}
 
-	hip := newHashInputProvider(interpreter, ReturnEmptyLocationRange)
+	defaultHIP := newHashInputProvider(interpreter, ReturnEmptyLocationRange)
 
-	compare := func(a, b atree.Storable) bool {
-		if x, ok := StoredValue(a, interpreter.Storage).(EquatableValue); ok {
-			y := StoredValue(b, interpreter.Storage)
-			return x.Equal(interpreter, ReturnEmptyLocationRange, y)
+	hip := func(value atree.Value, buffer []byte) ([]byte, error) {
+		if _, ok := value.(stringAtreeValue); ok {
+			return stringAtreeHashInput(value, buffer)
+		}
+
+		return defaultHIP(value, buffer)
+	}
+
+	compare := func(storable, otherStorable atree.Storable) bool {
+		value, err := storable.StoredValue(interpreter.Storage)
+		if err != nil {
+			panic(err)
+		}
+
+		if _, ok := value.(stringAtreeValue); ok {
+			equal, err := stringAtreeComparator(interpreter.Storage, value, otherStorable)
+			if err != nil {
+				panic(err)
+			}
+
+			return equal
+		}
+
+		if equatableValue, ok := value.(EquatableValue); ok {
+			otherValue := StoredValue(otherStorable, interpreter.Storage)
+			return equatableValue.Equal(interpreter, ReturnEmptyLocationRange, otherValue)
 		}
 
 		// Not all values are comparable, assume valid for now
