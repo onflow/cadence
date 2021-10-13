@@ -436,100 +436,160 @@ func TestInterpretResourceReferenceAfterMove(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
-        resource R {
-            let value: String
+	t.Run("resource", func(t *testing.T) {
 
-            init(value: String) {
-                self.value = value
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            resource R {
+                let value: String
+
+                init(value: String) {
+                    self.value = value
+                }
             }
-        }
 
-        fun test(target: &[R]): String {
-            let r <- create R(value: "testValue")
-            let ref = &r as &R
-            target.append(<-r)
-            return ref.value
-        }
-    `)
-
-	address := common.Address{0x1}
-
-	rType := checker.RequireGlobalType(t, inter.Program.Elaboration, "R").(*sema.CompositeType)
-
-	array := interpreter.NewArrayValue(
-		inter,
-		interpreter.VariableSizedStaticType{
-			Type: interpreter.ConvertSemaToStaticType(rType),
-		},
-		address,
-	)
-
-	arrayRef := &interpreter.EphemeralReferenceValue{
-		Authorized:   false,
-		Value:        array,
-		BorrowedType: rType,
-	}
-
-	value, err := inter.Invoke("test", arrayRef)
-	require.NoError(t, err)
-
-	AssertValuesEqual(
-		t,
-		inter,
-		interpreter.NewStringValue("testValue"),
-		value,
-	)
-}
-
-func TestInterpretResourceArrayReferenceAfterMove(t *testing.T) {
-
-	t.Parallel()
-
-	inter := parseCheckAndInterpret(t, `
-        resource R {
-            let value: String
-
-            init(value: String) {
-                self.value = value
+            fun test(target: &[R]): String {
+                let r <- create R(value: "testValue")
+                let ref = &r as &R
+                target.append(<-r)
+                return ref.value
             }
-        }
+        `)
 
-        fun test(target: &[[R]]): String {
-            let rs <- [<-create R(value: "testValue")]
-            let ref = &rs as &[R]
-            target.append(<-rs)
-            return ref[0].value
-        }
-    `)
+		address := common.Address{0x1}
 
-	address := common.Address{0x1}
+		rType := checker.RequireGlobalType(t, inter.Program.Elaboration, "R").(*sema.CompositeType)
 
-	rType := checker.RequireGlobalType(t, inter.Program.Elaboration, "R").(*sema.CompositeType)
-
-	array := interpreter.NewArrayValue(
-		inter,
-		interpreter.VariableSizedStaticType{
-			Type: interpreter.VariableSizedStaticType{
+		array := interpreter.NewArrayValue(
+			inter,
+			interpreter.VariableSizedStaticType{
 				Type: interpreter.ConvertSemaToStaticType(rType),
 			},
-		},
-		address,
-	)
+			address,
+		)
 
-	arrayRef := &interpreter.EphemeralReferenceValue{
-		Authorized:   false,
-		Value:        array,
-		BorrowedType: rType,
-	}
+		arrayRef := &interpreter.EphemeralReferenceValue{
+			Authorized:   false,
+			Value:        array,
+			BorrowedType: rType,
+		}
 
-	value, err := inter.Invoke("test", arrayRef)
-	require.NoError(t, err)
+		value, err := inter.Invoke("test", arrayRef)
+		require.NoError(t, err)
 
-	AssertValuesEqual(
-		t,
-		inter,
-		interpreter.NewStringValue("testValue"),
-		value,
-	)
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewStringValue("testValue"),
+			value,
+		)
+	})
+
+	t.Run("array", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            resource R {
+                let value: String
+
+                init(value: String) {
+                    self.value = value
+                }
+            }
+
+            fun test(target: &[[R]]): String {
+                let rs <- [<-create R(value: "testValue")]
+                let ref = &rs as &[R]
+                target.append(<-rs)
+                return ref[0].value
+            }
+        `)
+
+		address := common.Address{0x1}
+
+		rType := checker.RequireGlobalType(t, inter.Program.Elaboration, "R").(*sema.CompositeType)
+
+		array := interpreter.NewArrayValue(
+			inter,
+			interpreter.VariableSizedStaticType{
+				Type: interpreter.VariableSizedStaticType{
+					Type: interpreter.ConvertSemaToStaticType(rType),
+				},
+			},
+			address,
+		)
+
+		arrayRef := &interpreter.EphemeralReferenceValue{
+			Authorized:   false,
+			Value:        array,
+			BorrowedType: rType,
+		}
+
+		value, err := inter.Invoke("test", arrayRef)
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewStringValue("testValue"),
+			value,
+		)
+	})
+
+	t.Run("dictionary", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            resource R {
+                let value: String
+
+                init(value: String) {
+                    self.value = value
+                }
+            }
+
+            fun test(target: &[{Int: R}]): String? {
+                let rs <- {1: <-create R(value: "testValue")}
+                let ref = &rs as &{Int: R}
+                target.append(<-rs)
+                return ref[1]?.value
+            }
+        `)
+
+		address := common.Address{0x1}
+
+		rType := checker.RequireGlobalType(t, inter.Program.Elaboration, "R").(*sema.CompositeType)
+
+		array := interpreter.NewArrayValue(
+			inter,
+			interpreter.VariableSizedStaticType{
+				Type: interpreter.DictionaryStaticType{
+					KeyType:   interpreter.PrimitiveStaticTypeInt,
+					ValueType: interpreter.ConvertSemaToStaticType(rType),
+				},
+			},
+			address,
+		)
+
+		arrayRef := &interpreter.EphemeralReferenceValue{
+			Authorized:   false,
+			Value:        array,
+			BorrowedType: rType,
+		}
+
+		value, err := inter.Invoke("test", arrayRef)
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewSomeValueNonCopying(
+				interpreter.NewStringValue("testValue"),
+			),
+			value,
+		)
+	})
 }
