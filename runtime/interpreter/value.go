@@ -7344,16 +7344,6 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, getLocationRange func
 	v.isDestroyed = true
 }
 
-func compositeFieldComparator(storage atree.SlabStorage, value atree.Value, other atree.Storable) (bool, error) {
-	a := value.(*StringValue)
-	b := StoredValue(other, storage).(*StringValue)
-	return a.Str == b.Str, nil
-}
-
-func compositeFieldHashInputProvider(value atree.Value, _ []byte) ([]byte, error) {
-	return []byte(value.(*StringValue).Str), nil
-}
-
 func (v *CompositeValue) GetMember(interpreter *Interpreter, getLocationRange func() LocationRange, name string) Value {
 
 	if v.Kind == common.CompositeKindResource &&
@@ -7362,9 +7352,12 @@ func (v *CompositeValue) GetMember(interpreter *Interpreter, getLocationRange fu
 		return v.OwnerValue(interpreter, getLocationRange)
 	}
 
+	valueComparator := newValueComparator(interpreter, getLocationRange)
+	hashInputProvider := newHashInputProvider(interpreter, getLocationRange)
+
 	storable, err := v.dictionary.Get(
-		compositeFieldComparator,
-		compositeFieldHashInputProvider,
+		valueComparator,
+		hashInputProvider,
 		NewStringValue(name),
 	)
 	if err != nil {
@@ -7475,9 +7468,12 @@ func (v *CompositeValue) SetMember(
 		address,
 	)
 
+	valueComparator := newValueComparator(interpreter, getLocationRange)
+	hashInputProvider := newHashInputProvider(interpreter, getLocationRange)
+
 	existingStorable, err := v.dictionary.Set(
-		compositeFieldComparator,
-		compositeFieldHashInputProvider,
+		valueComparator,
+		hashInputProvider,
 		NewStringValue(name),
 		value,
 	)
@@ -7547,9 +7543,12 @@ func formatComposite(typeId string, fields []CompositeField, seenReferences Seen
 
 func (v *CompositeValue) GetField(interpreter *Interpreter, getLocationRange func() LocationRange, name string) Value {
 
+	valueComparator := newValueComparator(interpreter, getLocationRange)
+	hashInputProvider := newHashInputProvider(interpreter, getLocationRange)
+
 	storable, err := v.dictionary.Get(
-		compositeFieldComparator,
-		compositeFieldHashInputProvider,
+		valueComparator,
+		hashInputProvider,
 		NewStringValue(name),
 	)
 	if err != nil {
@@ -7745,13 +7744,16 @@ func (v *CompositeValue) DeepCopy(
 		panic(ExternalError{err})
 	}
 
+	valueComparator := newValueComparator(interpreter, getLocationRange)
+	hashInputProvider := newHashInputProvider(interpreter, getLocationRange)
+
 	dictionary, err := atree.NewMapFromBatchData(
 		interpreter.Storage,
 		address,
 		atree.NewDefaultDigesterBuilder(),
 		v.dictionary.Type(),
-		compositeFieldComparator,
-		compositeFieldHashInputProvider,
+		valueComparator,
+		hashInputProvider,
 		v.dictionary.Seed(),
 		func() (atree.Value, atree.Value, error) {
 
@@ -7844,9 +7846,12 @@ func (v *CompositeValue) RemoveField(
 	getLocationRange func() LocationRange,
 	name string,
 ) {
+	valueComparator := newValueComparator(interpreter, getLocationRange)
+	hashInputProvider := newHashInputProvider(interpreter, getLocationRange)
+
 	existingKeyStorable, existingValueStorable, err := v.dictionary.Remove(
-		compositeFieldComparator,
-		compositeFieldHashInputProvider,
+		valueComparator,
+		hashInputProvider,
 		NewStringValue(name),
 	)
 	if err != nil {
