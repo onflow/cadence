@@ -521,3 +521,21 @@ func (e NonStorableStaticTypeError) Error() string {
 		e.Type,
 	)
 }
+
+// InvalidBinaryOperandsError
+//
+type InvalidBinaryOperandsError struct {
+	Operation ast.Operation
+	LeftType  StaticType
+	RightType StaticType
+	LocationRange
+}
+
+func (e InvalidBinaryOperandsError) Error() string {
+	return fmt.Sprintf(
+		"cannot apply binary operation %s to types: `%s`, `%s`",
+		e.Operation.Symbol(),
+		e.LeftType.String(),
+		e.RightType.String(),
+	)
+}
