@@ -34,9 +34,10 @@ import (
 	"strings"
 
 	"github.com/onflow/atree"
+	"github.com/schollz/progressbar/v3"
+
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
-	"github.com/schollz/progressbar/v3"
 )
 
 type stringSlice []string
@@ -167,8 +168,8 @@ func load() {
 
 	bar := progressbar.Default(int64(len(storage)))
 
-	for storageKey, data := range storage {
-		bar.Add(1)
+	for storageKey, data := range storage { //nolint:maprangecheck
+		_ = bar.Add(1)
 
 		var isStoragePath bool
 
@@ -314,7 +315,7 @@ func main() {
 	}
 
 	if *printFlag {
-		for key, value := range storage {
+		for key, value := range storage { //nolint:maprangecheck
 			var keyParts []encodedKeyPart
 
 			for _, keyPart := range key {
