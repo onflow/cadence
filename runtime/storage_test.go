@@ -1967,3 +1967,164 @@ func TestSortAccountStorageEntries(t *testing.T) {
 		entries,
 	)
 }
+
+func TestRuntimeMissingSlab1173(t *testing.T) {
+
+	t.Parallel()
+
+	const contract = `
+pub contract Test {
+    pub enum Role: UInt8 {
+        pub case aaa
+        pub case bbb
+    }
+
+    pub resource AAA {
+        pub fun callA(): String {
+            return "AAA"
+        }
+    }
+
+    pub resource BBB {
+        pub fun callB(): String {
+            return "BBB"
+        }
+    }
+
+    pub resource interface Receiver {
+        pub fun receive(as: Role, capability: Capability)
+    }
+
+    pub resource Holder: Receiver {
+        access(self) let roles: { Role: Capability }
+        pub fun receive(as: Role, capability: Capability) {
+            self.roles[as] = capability
+        }
+
+        pub fun borrowA(): &AAA {
+            let role = self.roles[Role.aaa]!
+            return role.borrow<&AAA>()!
+        }
+
+        pub fun borrowB(): &BBB {
+            let role = self.roles[Role.bbb]!
+            return role.borrow<&BBB>()!
+        }
+
+        access(contract) init() {
+            self.roles = {}
+        }
+    }
+
+    access(self) let capabilities: { Role: Capability }
+
+    pub fun createHolder(): @Holder {
+        return <- create Holder()
+    }
+
+    pub fun attach(as: Role, receiver: &AnyResource{Receiver}) {
+        // TODO: Now verify that the owner is valid.
+
+        let capability = self.capabilities[as]!
+        receiver.receive(as: as, capability: capability)
+    }
+
+    init() {
+        self.account.save<@AAA>(<- create AAA(), to: /storage/TestAAA)
+        self.account.save<@BBB>(<- create BBB(), to: /storage/TestBBB)
+
+        self.capabilities = {}
+        self.capabilities[Role.aaa] = self.account.link<&AAA>(/private/TestAAA, target: /storage/TestAAA)!
+        self.capabilities[Role.bbb] = self.account.link<&BBB>(/private/TestBBB, target: /storage/TestBBB)!
+    }
+}
+
+`
+
+	const tx = `
+import Test from 0x1
+
+transaction {
+    prepare(acct: AuthAccount) {}
+    execute {
+        let holder <- Test.createHolder()
+        Test.attach(as: Test.Role.aaa, receiver: &holder as &AnyResource{Test.Receiver})
+        destroy holder
+    }
+}
+`
+
+	runtime := newTestInterpreterRuntime()
+
+	testAddress := common.BytesToAddress([]byte{0x1})
+
+	accountCodes := map[common.LocationID][]byte{}
+
+	var events []cadence.Event
+
+	signerAccount := testAddress
+
+	runtimeInterface := &testRuntimeInterface{
+		getCode: func(location Location) (bytes []byte, err error) {
+			return accountCodes[location.ID()], nil
+		},
+		storage: newTestLedger(nil, nil),
+		getSigningAccounts: func() ([]Address, error) {
+			return []Address{signerAccount}, nil
+		},
+		resolveLocation: singleIdentifierLocationResolver(t),
+		getAccountContractCode: func(address Address, name string) (code []byte, err error) {
+			location := common.AddressLocation{
+				Address: address,
+				Name:    name,
+			}
+			return accountCodes[location.ID()], nil
+		},
+		updateAccountContractCode: func(address Address, name string, code []byte) error {
+			location := common.AddressLocation{
+				Address: address,
+				Name:    name,
+			}
+			accountCodes[location.ID()] = code
+			return nil
+		},
+		emitEvent: func(event cadence.Event) error {
+			events = append(events, event)
+			return nil
+		},
+		decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+			return json.Decode(b)
+		},
+	}
+
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	// Deploy contract
+
+	err := runtime.ExecuteTransaction(
+		Script{
+			Source: utils.DeploymentTransaction(
+				"Test",
+				[]byte(contract),
+			),
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	// Run transaction
+
+	err = runtime.ExecuteTransaction(
+		Script{
+			Source: []byte(tx),
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+}
