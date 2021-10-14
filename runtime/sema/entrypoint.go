@@ -26,7 +26,7 @@ const FunctionEntryPointName = "main"
 
 // FunctionEntryPointDeclaration returns the entry point function declaration, if any.
 //
-// Returns nil if there are multiple function declarations with the same function entry point name, or any other top-level declarations.
+// Returns nil if there are multiple function declarations with the same function entry point name, or a transaction declaration.
 //
 func FunctionEntryPointDeclaration(program *ast.Program) *ast.FunctionDeclaration {
 
