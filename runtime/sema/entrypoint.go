@@ -32,9 +32,7 @@ func FunctionEntryPointDeclaration(program *ast.Program) *ast.FunctionDeclaratio
 
 	functionDeclarations := program.FunctionDeclarations()
 
-	if len(program.CompositeDeclarations()) > 0 ||
-		len(program.InterfaceDeclarations()) > 0 ||
-		len(program.TransactionDeclarations()) > 0 {
+	if len(program.TransactionDeclarations()) > 0 {
 
 		return nil
 	}
