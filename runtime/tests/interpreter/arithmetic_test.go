@@ -906,7 +906,7 @@ func TestInterpretArithmeticOnSubTypes(t *testing.T) {
 					_, err := inter.Invoke("test")
 					require.Error(t, err)
 
-					operandError := &interpreter.InvalidBinaryOperandsError{}
+					operandError := &interpreter.InvalidOperandsError{}
 					require.ErrorAs(t, err, operandError)
 
 					assert.Equal(t, op, operandError.Operation)
@@ -952,7 +952,7 @@ func TestInterpretArithmeticOnSubTypes(t *testing.T) {
 					_, err := inter.Invoke("test")
 					require.Error(t, err)
 
-					operandError := &interpreter.InvalidBinaryOperandsError{}
+					operandError := &interpreter.InvalidOperandsError{}
 					require.ErrorAs(t, err, operandError)
 
 					assert.Equal(t, op, operandError.Operation)
@@ -998,7 +998,7 @@ func TestInterpretArithmeticOnSubTypes(t *testing.T) {
 					_, err := inter.Invoke("test")
 					require.Error(t, err)
 
-					operandError := &interpreter.InvalidBinaryOperandsError{}
+					operandError := &interpreter.InvalidOperandsError{}
 					require.ErrorAs(t, err, operandError)
 
 					assert.Equal(t, op, operandError.Operation)
@@ -1006,6 +1006,84 @@ func TestInterpretArithmeticOnSubTypes(t *testing.T) {
 					assert.Equal(t, interpreter.PrimitiveStaticTypeFix64, operandError.RightType)
 				})
 			}
+		}
+	})
+
+	t.Run("saturating operations", func(t *testing.T) {
+		t.Parallel()
+
+		lhsValues := []interpreter.NumberValue{
+			// Int values
+			interpreter.NewIntValueFromInt64(5),
+			interpreter.Int8Value(5),
+			interpreter.Int16Value(5),
+			interpreter.Int32Value(5),
+			interpreter.Int64Value(5),
+			interpreter.NewInt128ValueFromInt64(5),
+			interpreter.NewInt256ValueFromInt64(5),
+
+			// UInt values
+			interpreter.NewUIntValueFromUint64(5),
+			interpreter.UInt8Value(5),
+			interpreter.UInt16Value(5),
+			interpreter.UInt32Value(5),
+			interpreter.UInt64Value(5),
+			interpreter.NewUInt128ValueFromUint64(5),
+			interpreter.NewUInt256ValueFromUint64(5),
+
+			// Fixed point values
+			interpreter.NewFix64ValueWithInteger(34),
+			interpreter.NewUFix64ValueWithInteger(34),
+		}
+
+		rhsValue := interpreter.Word16Value(2)
+
+		applyOperation := func(
+			lhsType interpreter.StaticType,
+			funcName string,
+			operation func(other interpreter.NumberValue) interpreter.NumberValue,
+		) {
+			t.Run(fmt.Sprintf("%s,%s", funcName, lhsType.String()), func(t *testing.T) {
+				defer func() {
+					r := recover()
+					require.NotNil(t, r)
+
+					err := r.(error)
+					require.Error(t, err)
+
+					operandError := &interpreter.InvalidOperandsError{}
+					require.ErrorAs(t, err, operandError)
+
+					assert.Equal(t, funcName, operandError.FunctionName)
+					assert.Equal(t, lhsType, operandError.LeftType)
+					assert.Equal(t, rhsValue.StaticType(), operandError.RightType)
+				}()
+
+				_ = operation(rhsValue)
+			})
+		}
+
+		for _, lhsValue := range lhsValues {
+			applyOperation(
+				lhsValue.StaticType(),
+				sema.NumericTypeSaturatingAddFunctionName,
+				lhsValue.SaturatingPlus,
+			)
+
+			applyOperation(lhsValue.StaticType(),
+				sema.NumericTypeSaturatingSubtractFunctionName,
+				lhsValue.SaturatingMinus,
+			)
+
+			applyOperation(lhsValue.StaticType(),
+				sema.NumericTypeSaturatingMultiplyFunctionName,
+				lhsValue.SaturatingMul,
+			)
+
+			applyOperation(lhsValue.StaticType(),
+				sema.NumericTypeSaturatingDivideFunctionName,
+				lhsValue.SaturatingDiv,
+			)
 		}
 	})
 }
