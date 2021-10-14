@@ -139,7 +139,7 @@ func TestEntryPointParameters(t *testing.T) {
 		t.Parallel()
 
 		checker, err := ParseAndCheck(t, `
-			pub struct interface SomeInterface {}
+            pub struct interface SomeInterface {}
 
             pub fun main(a: Int) {}
         `)
