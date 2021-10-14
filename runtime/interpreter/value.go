@@ -22,7 +22,6 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"fmt"
-	"github.com/onflow/cadence/runtime/ast"
 	"math"
 	"math/big"
 	"strings"
@@ -31,6 +30,7 @@ import (
 	"github.com/rivo/uniseg"
 	"golang.org/x/text/unicode/norm"
 
+	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/format"
@@ -3307,7 +3307,7 @@ func (v Int32Value) BitwiseOr(other IntegerValue) IntegerValue {
 	o, ok := other.(Int32Value)
 	if !ok {
 		panic(InvalidBinaryOperandsError{
-			Operation: ast.OperationBitwiseXor,
+			Operation: ast.OperationBitwiseOr,
 			LeftType:  v.StaticType(),
 			RightType: other.StaticType(),
 		})
@@ -3346,13 +3346,13 @@ func (v Int32Value) BitwiseLeftShift(other IntegerValue) IntegerValue {
 	o, ok := other.(Int32Value)
 	if !ok {
 		panic(InvalidBinaryOperandsError{
-			Operation: ast.OperationBitwiseRightShift,
+			Operation: ast.OperationBitwiseLeftShift,
 			LeftType:  v.StaticType(),
 			RightType: other.StaticType(),
 		})
 	}
 
-	return v ^ o
+	return v << o
 }
 
 func (v Int32Value) BitwiseRightShift(other IntegerValue) IntegerValue {

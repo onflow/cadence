@@ -843,24 +843,169 @@ func TestInterpretArithmeticOnSubTypes(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("param subtypes", func(t *testing.T) {
+	t.Run("Integer subtypes", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
-            fun test(): Integer {
-		        let x: Integer = 5 as Int8
-                return x * 2
-            }
-        `)
+		operations := []ast.Operation{
+			ast.OperationPlus,
+			ast.OperationMinus,
+			ast.OperationMul,
+			ast.OperationDiv,
+			ast.OperationMod,
+			ast.OperationBitwiseAnd,
+			ast.OperationBitwiseOr,
+			ast.OperationBitwiseXor,
+			ast.OperationBitwiseRightShift,
+			ast.OperationBitwiseLeftShift,
+		}
 
-		_, err := inter.Invoke("test")
-		require.Error(t, err)
+		intSubtypes := []interpreter.StaticType{
+			interpreter.PrimitiveStaticTypeInt,
+			interpreter.PrimitiveStaticTypeInt8,
+			interpreter.PrimitiveStaticTypeInt16,
+			interpreter.PrimitiveStaticTypeInt32,
+			interpreter.PrimitiveStaticTypeInt64,
+			interpreter.PrimitiveStaticTypeInt128,
+			interpreter.PrimitiveStaticTypeInt256,
+			interpreter.PrimitiveStaticTypeUInt,
+			interpreter.PrimitiveStaticTypeUInt8,
+			interpreter.PrimitiveStaticTypeUInt16,
+			interpreter.PrimitiveStaticTypeUInt32,
+			interpreter.PrimitiveStaticTypeUInt64,
+			interpreter.PrimitiveStaticTypeUInt128,
+			interpreter.PrimitiveStaticTypeUInt256,
+			interpreter.PrimitiveStaticTypeWord8,
+			interpreter.PrimitiveStaticTypeWord16,
+			interpreter.PrimitiveStaticTypeWord32,
+			interpreter.PrimitiveStaticTypeWord64,
+		}
 
-		operandError := &interpreter.InvalidBinaryOperandsError{}
-		require.ErrorAs(t, err, operandError)
+		for _, subtype := range intSubtypes {
+			rhsType := interpreter.PrimitiveStaticTypeInt
+			if subtype == rhsType {
+				rhsType = interpreter.PrimitiveStaticTypeUInt
+			}
 
-		assert.Equal(t, ast.OperationMul, operandError.Operation)
-		assert.Equal(t, interpreter.PrimitiveStaticTypeInt8, operandError.LeftType)
-		assert.Equal(t, interpreter.PrimitiveStaticTypeInt, operandError.RightType)
+			for _, op := range operations {
+				t.Run(fmt.Sprintf("%s,%s", op.String(), subtype.String()), func(t *testing.T) {
+					t.Parallel()
+
+					inter := parseCheckAndInterpret(t,
+						fmt.Sprintf(`
+                            fun test() {
+                                let x: Integer = 5 as %s
+                                let y: Integer = 2 as %s
+                                let z: Integer = x %s y
+                            }`,
+							subtype.String(),
+							rhsType.String(),
+							op.Symbol(),
+						),
+					)
+
+					_, err := inter.Invoke("test")
+					require.Error(t, err)
+
+					operandError := &interpreter.InvalidBinaryOperandsError{}
+					require.ErrorAs(t, err, operandError)
+
+					assert.Equal(t, op, operandError.Operation)
+					assert.Equal(t, subtype, operandError.LeftType)
+					assert.Equal(t, rhsType, operandError.RightType)
+				})
+			}
+		}
+	})
+
+	t.Run("Fixed point subtypes", func(t *testing.T) {
+		t.Parallel()
+
+		operations := []ast.Operation{
+			ast.OperationPlus,
+			ast.OperationMinus,
+			ast.OperationMul,
+			ast.OperationDiv,
+			ast.OperationMod,
+		}
+
+		fixedPointSubtypes := []interpreter.StaticType{
+			interpreter.PrimitiveStaticTypeFix64,
+		}
+
+		for _, subtype := range fixedPointSubtypes {
+			for _, op := range operations {
+				t.Run(fmt.Sprintf("%s,%s", op.String(), subtype.String()), func(t *testing.T) {
+					t.Parallel()
+
+					inter := parseCheckAndInterpret(t,
+						fmt.Sprintf(`
+                            fun test() {
+                                let x: FixedPoint = 5.2 as %s
+                                let y: FixedPoint = 3.4 as UFix64
+                                let z: FixedPoint = x %s y
+                            }`,
+							subtype.String(),
+							op.Symbol(),
+						),
+					)
+
+					_, err := inter.Invoke("test")
+					require.Error(t, err)
+
+					operandError := &interpreter.InvalidBinaryOperandsError{}
+					require.ErrorAs(t, err, operandError)
+
+					assert.Equal(t, op, operandError.Operation)
+					assert.Equal(t, subtype, operandError.LeftType)
+					assert.Equal(t, interpreter.PrimitiveStaticTypeUFix64, operandError.RightType)
+				})
+			}
+		}
+	})
+
+	t.Run("Unsigned fixed point subtypes", func(t *testing.T) {
+		t.Parallel()
+
+		operations := []ast.Operation{
+			ast.OperationPlus,
+			ast.OperationMinus,
+			ast.OperationMul,
+			ast.OperationDiv,
+			ast.OperationMod,
+		}
+
+		unsignedFixedPointSubtypes := []interpreter.StaticType{
+			interpreter.PrimitiveStaticTypeUFix64,
+		}
+
+		for _, subtype := range unsignedFixedPointSubtypes {
+			for _, op := range operations {
+				t.Run(fmt.Sprintf("%s,%s", op.String(), subtype.String()), func(t *testing.T) {
+					t.Parallel()
+
+					inter := parseCheckAndInterpret(t,
+						fmt.Sprintf(`
+                            fun test() {
+                                let x: FixedPoint = 5.2 as %s
+                                let y: FixedPoint = 3.4 as Fix64
+                                let z: FixedPoint = x %s y
+                            }`,
+							subtype.String(),
+							op.Symbol(),
+						),
+					)
+
+					_, err := inter.Invoke("test")
+					require.Error(t, err)
+
+					operandError := &interpreter.InvalidBinaryOperandsError{}
+					require.ErrorAs(t, err, operandError)
+
+					assert.Equal(t, op, operandError.Operation)
+					assert.Equal(t, subtype, operandError.LeftType)
+					assert.Equal(t, interpreter.PrimitiveStaticTypeFix64, operandError.RightType)
+				})
+			}
+		}
 	})
 }
