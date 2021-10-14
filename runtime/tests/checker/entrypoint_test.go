@@ -165,7 +165,7 @@ func TestEntryPointParameters(t *testing.T) {
 		t.Parallel()
 
 		checker, err := ParseAndCheck(t, `
-			pub struct SomeStruct {}
+            pub struct SomeStruct {}
 
             transaction(a: Int) {}
         `)
