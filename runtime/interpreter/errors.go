@@ -497,19 +497,27 @@ func (e ContainerMutationError) Error() string {
 	)
 }
 
-// InvalidBinaryOperandsError
+// InvalidOperandsError
 //
-type InvalidBinaryOperandsError struct {
-	Operation ast.Operation
-	LeftType  StaticType
-	RightType StaticType
+type InvalidOperandsError struct {
+	Operation    ast.Operation
+	FunctionName string
+	LeftType     StaticType
+	RightType    StaticType
 	LocationRange
 }
 
-func (e InvalidBinaryOperandsError) Error() string {
+func (e InvalidOperandsError) Error() string {
+	var op string
+	if e.Operation == ast.OperationUnknown {
+		op = e.FunctionName
+	} else {
+		op = e.Operation.Symbol()
+	}
+
 	return fmt.Sprintf(
-		"cannot apply binary operation %s to types: `%s`, `%s`",
-		e.Operation.Symbol(),
+		"cannot apply operation %s to types: `%s`, `%s`",
+		op,
 		e.LeftType.String(),
 		e.RightType.String(),
 	)
