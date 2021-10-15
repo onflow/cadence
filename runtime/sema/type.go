@@ -4937,20 +4937,9 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 			return false
 		}
 
-		// Receiver type
-
-		if typedSubType.ReceiverType != nil {
-			if typedSuperType.ReceiverType == nil {
-				return false
-			}
-
-			if !typedSubType.ReceiverType.Equal(typedSuperType.ReceiverType) {
-				return false
-			}
-
-		} else if typedSuperType.ReceiverType != nil {
-			return false
-		}
+		// Receiver type wouldn't matter for sub-typing.
+		// i.e: In a bound function pointer `f.bar`, `f` is a closure,
+		// and is not part of the function pointer's inputs/outputs.
 
 		// Constructors?
 
