@@ -3547,18 +3547,17 @@ func TestInterpretFunctionTypeCasting(t *testing.T) {
 		t.Parallel()
 
 		inter := parseCheckAndInterpret(t, `
-                fun test(): String {
-					let x: AnyStruct = foo
-					let y = x as! ((String):String)
+            fun test(): String {
+                let x: AnyStruct = foo
+                let y = x as! ((String):String)
 
-                    return y("hello")
-                }
+                return y("hello")
+            }
 
-                fun foo(a: String): String {
-                    return a.concat(" from foo")
-                }
-            `,
-		)
+            fun foo(a: String): String {
+                return a.concat(" from foo")
+            }
+        `)
 
 		result, err := inter.Invoke("test")
 		require.NoError(t, err)
@@ -3569,16 +3568,15 @@ func TestInterpretFunctionTypeCasting(t *testing.T) {
 		t.Parallel()
 
 		inter := parseCheckAndInterpret(t, `
-                fun test(): String {
-                    let x = foo as ((String):String)
-                    return x("hello")
-                }
+            fun test(): String {
+                let x = foo as ((String):String)
+                return x("hello")
+            }
 
-                fun foo(a: AnyStruct): String {
-                    return (a as! String).concat(" from foo")
-                }
-            `,
-		)
+            fun foo(a: AnyStruct): String {
+                return (a as! String).concat(" from foo")
+            }
+        `)
 
 		result, err := inter.Invoke("test")
 		require.NoError(t, err)
@@ -3589,16 +3587,15 @@ func TestInterpretFunctionTypeCasting(t *testing.T) {
 		t.Parallel()
 
 		inter := parseCheckAndInterpret(t, `
-                 fun test(): String {
-                     let x = foo as! ((AnyStruct):String)
-                     return x("hello")
-                }
+            fun test(): String {
+                 let x = foo as! ((AnyStruct):String)
+                 return x("hello")
+            }
 
-                fun foo(a: String): String {
-                    return a.concat(" from foo")
-                }
-            `,
-		)
+            fun foo(a: String): String {
+                return a.concat(" from foo")
+            }
+        `)
 
 		_, err := inter.Invoke("test")
 		require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
@@ -3608,16 +3605,15 @@ func TestInterpretFunctionTypeCasting(t *testing.T) {
 		t.Parallel()
 
 		inter := parseCheckAndInterpret(t, `
-                fun test(): AnyStruct {
-                    let x = foo as! ((String):AnyStruct)
-                    return x("hello")
-                }
+            fun test(): AnyStruct {
+                let x = foo as! ((String):AnyStruct)
+                return x("hello")
+            }
 
-                fun foo(a: String): String {
-                    return a.concat(" from foo")
-                }
-            `,
-		)
+            fun foo(a: String): String {
+                return a.concat(" from foo")
+            }
+        `)
 
 		result, err := inter.Invoke("test")
 		require.NoError(t, err)
@@ -3628,18 +3624,40 @@ func TestInterpretFunctionTypeCasting(t *testing.T) {
 		t.Parallel()
 
 		inter := parseCheckAndInterpret(t, `
-                fun test(): String {
-                    let x = foo as! ((String):String)
-                    return x("hello")
-                }
+            fun test(): String {
+                let x = foo as! ((String):String)
+                return x("hello")
+            }
 
-                fun foo(a: String): AnyStruct {
-                    return a.concat(" from foo")
-                }
-            `,
-		)
+            fun foo(a: String): AnyStruct {
+                return a.concat(" from foo")
+            }
+        `)
 
 		_, err := inter.Invoke("test")
 		require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
+	})
+
+	t.Run("bound function casting", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            fun test(): String {
+                let x = foo()
+                let y: AnyStruct = x.bar
+                let z = y as! ((String):String)
+                return z("hello")
+            }
+
+            struct foo {
+                fun bar(a: String): String {
+                    return a.concat(" from foo.bar")
+                }
+            }
+        `)
+
+		result, err := inter.Invoke("test")
+		require.NoError(t, err)
+		require.Equal(t, interpreter.NewStringValue("hello from foo.bar"), result)
 	})
 }

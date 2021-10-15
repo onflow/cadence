@@ -4938,7 +4938,7 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 		}
 
 		// Receiver type wouldn't matter for sub-typing.
-		// i.e: In a bound function pointer `f.bar`, `f` is a closure,
+		// i.e: In a bound function pointer `x.foo`, `x` is a closure,
 		// and is not part of the function pointer's inputs/outputs.
 
 		// Constructors?
