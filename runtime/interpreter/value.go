@@ -582,6 +582,14 @@ func (v *StringValue) GetMember(_ *Interpreter, _ func() LocationRange, name str
 			},
 			sema.StringTypeDecodeHexFunctionType,
 		)
+
+	case "toLower":
+		return NewHostFunctionValue(
+			func(invocation Invocation) Value {
+				return v.ToLower()
+			},
+			sema.StringTypeToLowerFunctionType,
+		)
 	}
 
 	return nil
@@ -599,6 +607,10 @@ func (v *StringValue) Length() int {
 		v.length = length
 	}
 	return v.length
+}
+
+func (v *StringValue) ToLower() *StringValue {
+	return NewStringValue(strings.ToLower(v.Str))
 }
 
 func (*StringValue) IsStorable() bool {
