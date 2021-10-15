@@ -3169,7 +3169,7 @@ func TestRandomMapOperations(t *testing.T) {
 		var prevValue Value
 		for i := 0; i < numberOfValues*2; i++ {
 			// TODO maybe deep copy values
-			value := generateARandomStorableType()
+			value := generateARandomStorableValue()
 			if i%2 == 1 {
 				values[deepCopyBasicValue(prevValue)] = deepCopyBasicValue(value)
 			}
@@ -3260,6 +3260,12 @@ func getSlabStorageSize(t *testing.T, storage InMemoryStorage) (totalSize int, s
 
 func deepCopyBasicValue(value Value) Value {
 	switch v := value.(type) {
+
+	// Int
+	case IntValue:
+		var n big.Int
+		n.Set(v.BigInt)
+		return NewIntValueFromBigInt(&n)
 	case Int8Value:
 		return Int8Value(int8(v))
 	case Int16Value:
@@ -3271,12 +3277,17 @@ func deepCopyBasicValue(value Value) Value {
 	case Int128Value:
 		var n big.Int
 		n.Set(v.BigInt)
-		return Int128Value{BigInt: &n}
+		return NewInt128ValueFromBigInt(&n)
 	case Int256Value:
 		var n big.Int
 		n.Set(v.BigInt)
-		return Int256Value{BigInt: &n}
+		return NewInt256ValueFromBigInt(&n)
 
+	// Uint
+	case UIntValue:
+		var n big.Int
+		n.Set(v.BigInt)
+		return NewUIntValueFromBigInt(&n)
 	case UInt8Value:
 		return UInt8Value(uint8(v))
 	case UInt16Value:
@@ -3288,11 +3299,20 @@ func deepCopyBasicValue(value Value) Value {
 	case UInt128Value:
 		var n big.Int
 		n.Set(v.BigInt)
-		return UInt128Value{BigInt: &n}
+		return NewUInt128ValueFromBigInt(&n)
 	case UInt256Value:
 		var n big.Int
 		n.Set(v.BigInt)
-		return UInt256Value{BigInt: &n}
+		return NewUInt256ValueFromBigInt(&n)
+
+	case Word8Value:
+		return Word8Value(uint8(v))
+	case Word16Value:
+		return Word16Value(uint16(v))
+	case Word32Value:
+		return Word32Value(uint32(v))
+	case Word64Value:
+		return Word64Value(uint64(v))
 
 	case *StringValue:
 		b := []byte(v.Str)
@@ -3307,13 +3327,17 @@ func deepCopyBasicValue(value Value) Value {
 		return NewAddressValueFromBytes(data)
 	case Fix64Value:
 		return NewFix64ValueWithInteger(int64(v.ToInt()))
+	case UFix64Value:
+		return NewUFix64ValueWithInteger(uint64(v.ToInt()))
 	}
 	return NilValue{}
 }
 
-func generateARandomStorableType() Value {
-	switch rand.Intn(22) {
+func generateARandomStorableValue() Value {
+	switch rand.Intn(29) {
 	// TODO deal with negative numbers
+
+	// Int
 	case 0:
 		return Int8Value(rand.Intn(255))
 	case 1:
@@ -3323,42 +3347,72 @@ func generateARandomStorableType() Value {
 	case 3:
 		return Int64Value(rand.Int63())
 	case 4:
-		return Int128Value{big.NewInt(rand.Int63())}
+		return NewInt128ValueFromInt64(rand.Int63())
 	case 5:
-		return Int256Value{big.NewInt(rand.Int63())}
-
+		return NewInt256ValueFromInt64(rand.Int63())
 	case 6:
-		return UInt8Value(rand.Intn(255))
-	case 7:
-		return UInt16Value(rand.Intn(65535))
-	case 8:
-		return UInt32Value(rand.Uint32())
-	case 9, 10, 11, 12: // should be more common
-		return UInt64Value(rand.Uint64())
-	case 13:
-		return UInt128Value{big.NewInt(rand.Int63())}
-	case 14:
-		return UInt256Value{big.NewInt(rand.Int63())}
+		return NewIntValueFromInt64(rand.Int63())
 
-	case 15, 16, 17, 18: // small string - should be more common
+	// UInt
+	case 7:
+		return NewUIntValueFromUint64(rand.Uint64())
+	case 8:
+		return UInt8Value(rand.Intn(255))
+	case 9:
+		return UInt16Value(rand.Intn(65535))
+	case 10:
+		return UInt32Value(rand.Uint32())
+	case 11, 12, 13, 14: // should be more common
+		return UInt64Value(rand.Uint64())
+	case 15:
+		return NewUInt128ValueFromBigInt(big.NewInt(rand.Int63()))
+	case 16:
+		return NewUInt256ValueFromBigInt(big.NewInt(rand.Int63()))
+
+	// Word
+	case 17:
+		return Word8Value(rand.Intn(255))
+	case 18:
+		return Word16Value(rand.Intn(65535))
+	case 19:
+		return Word32Value(rand.Uint32())
+	case 20:
+		return Word64Value(rand.Uint64())
+
+	// Fixed point
+	case 21:
+		return NewFix64ValueWithInteger(rand.Int63n(sema.Fix64TypeMaxInt))
+	case 22:
+		return NewUFix64ValueWithInteger(
+			uint64(rand.Int63n(
+				int64(sema.UFix64TypeMaxInt),
+			)),
+		)
+
+	// String
+	case 23, 24, 25, 26: // small string - should be more common
 		size := rand.Intn(255)
 		data := make([]byte, size)
 		rand.Read(data)
 		return NewStringValue(string(data))
-	case 19: // large string
+	case 27: // large string
 		size := rand.Intn(4048) + 255
 		data := make([]byte, size)
 		rand.Read(data)
 		return NewStringValue(string(data))
-	case 20:
+
+	// Address
+	case 28:
 		data := make([]byte, 8)
 		rand.Read(data)
 		return NewAddressValueFromBytes(data)
-	case 21:
-		return NewFix64ValueWithInteger(rand.Int63n(sema.Fix64TypeMaxInt))
+
+	// Nil
+	case 29:
+		return NilValue{}
 
 	default:
-		return NilValue{}
+		panic("unsupported")
 	}
 
 }
