@@ -3157,26 +3157,41 @@ func TestRandomMapOperations(t *testing.T) {
 	require.NoError(t, err)
 
 	// TODO make this a param
-	numberOfValues := rand.Intn(1000)
+	numberOfValues := rand.Intn(100_000)
 
-	values := make(map[Value]Value, numberOfValues)
+	entries := make(map[interface{}]Value, numberOfValues)
 	var testMap, copyOfTestMap *DictionaryValue
 	var storageSize, slabCounts int
 	orgOwner := common.Address([8]byte{'A'})
 
 	t.Run("dictionary construction", func(t *testing.T) {
 		keyValues := make([]Value, numberOfValues*2)
-		var prevValue Value
-		for i := 0; i < numberOfValues*2; i++ {
+		for i := 0; i < numberOfValues; i++ {
 			// TODO maybe deep copy values
-			value := generateARandomStorableValue()
-			if i%2 == 1 {
-				values[deepCopyBasicValue(prevValue)] = deepCopyBasicValue(value)
+
+			key := randomHashableValue(inter)
+			value := randomStorableValue(inter)
+
+			var mapKey interface{}
+
+			// Dereference string-keys before putting into go-map,
+			// as go-map hashing treats pointers as unique values.
+			// i.e: Maintain the value as the key, rather than the pointer.
+			switch key := deepCopyBasicValue(key).(type) {
+			case *StringValue:
+				mapKey = *key
+			case Value:
+				mapKey = key
+			default:
+				panic("unreachable")
 			}
 
-			keyValues[i] = value
-			prevValue = value
+			entries[mapKey] = deepCopyBasicValue(value)
+
+			keyValues[i*2] = key
+			keyValues[i*2+1] = value
 		}
+
 		testMap = NewDictionaryValueWithAddress(inter,
 			DictionaryStaticType{
 				KeyType:   PrimitiveStaticTypeAnyStruct,
@@ -3185,17 +3200,20 @@ func TestRandomMapOperations(t *testing.T) {
 			orgOwner,
 			keyValues...,
 		)
+
 		storageSize, slabCounts = getSlabStorageSize(t, storage)
 
-		for orgKey, orgValue := range values {
-			v, found := testMap.Get(inter, nil, orgKey)
-			// fmt.Println(">>>", orgKey, ">>>", v, ">>>", orgValue)
+		for orgKey, orgValue := range entries {
+			key := dictionaryKey(orgKey)
+
+			v, found := testMap.Get(inter, nil, key)
 			require.True(t, found)
-			require.Equal(t, v, orgValue)
-			exists := testMap.ContainsKey(inter, nil, orgKey)
+			require.Equal(t, v, orgValue, "key: %s", orgKey)
+
+			exists := testMap.ContainsKey(inter, nil, key)
 			require.True(t, bool(exists))
 		}
-		require.Equal(t, testMap.Count(), len(values))
+		require.Equal(t, testMap.Count(), len(entries))
 		o := testMap.GetOwner()
 		require.Equal(t, o[:], orgOwner[:])
 	})
@@ -3204,14 +3222,17 @@ func TestRandomMapOperations(t *testing.T) {
 		newOwner := atree.Address([8]byte{'B'})
 		copyOfTestMap = testMap.DeepCopy(inter, nil, newOwner).(*DictionaryValue)
 
-		for orgKey, orgValue := range values {
-			v, found := copyOfTestMap.Get(inter, nil, orgKey)
+		for orgKey, orgValue := range entries {
+			key := dictionaryKey(orgKey)
+
+			v, found := copyOfTestMap.Get(inter, nil, key)
 			require.True(t, found)
 			require.Equal(t, v, orgValue)
-			exists := copyOfTestMap.ContainsKey(inter, nil, orgKey)
+
+			exists := copyOfTestMap.ContainsKey(inter, nil, key)
 			require.True(t, bool(exists))
 		}
-		require.Equal(t, copyOfTestMap.Count(), len(values))
+		require.Equal(t, copyOfTestMap.Count(), len(entries))
 		o := copyOfTestMap.GetOwner()
 		require.Equal(t, o[:], newOwner[:])
 	})
@@ -3227,14 +3248,18 @@ func TestRandomMapOperations(t *testing.T) {
 		require.Equal(t, storageSize, newStorageSize)
 
 		// go over original values again and check no missing data (no side effect should be found)
-		for orgKey, orgValue := range values {
-			v, found := testMap.Get(inter, nil, orgKey)
+		for orgKey, orgValue := range entries {
+			key := dictionaryKey(orgKey)
+
+			v, found := testMap.Get(inter, nil, key)
 			require.True(t, found)
 			require.Equal(t, v, orgValue)
-			exists := testMap.ContainsKey(inter, nil, orgKey)
+
+			exists := testMap.ContainsKey(inter, nil, key)
 			require.True(t, bool(exists))
 		}
-		require.Equal(t, testMap.Count(), len(values))
+
+		require.Equal(t, testMap.Count(), len(entries))
 		o := testMap.GetOwner()
 		require.Equal(t, o[:], orgOwner[:])
 	})
@@ -3246,6 +3271,17 @@ func TestRandomMapOperations(t *testing.T) {
 	// temp to prevent test cache
 	// t.Fatal("XXX")
 
+}
+
+func dictionaryKey(i interface{}) Value {
+	switch key := i.(type) {
+	case StringValue:
+		return &key
+	case Value:
+		return key
+	default:
+		panic("unreachable")
+	}
 }
 
 func getSlabStorageSize(t *testing.T, storage InMemoryStorage) (totalSize int, slabCounts int) {
@@ -3305,14 +3341,8 @@ func deepCopyBasicValue(value Value) Value {
 		n.Set(v.BigInt)
 		return NewUInt256ValueFromBigInt(&n)
 
-	case Word8Value:
-		return Word8Value(uint8(v))
-	case Word16Value:
-		return Word16Value(uint16(v))
-	case Word32Value:
-		return Word32Value(uint32(v))
-	case Word64Value:
-		return Word64Value(uint64(v))
+	case Word8Value, Word16Value, Word32Value, Word64Value:
+		return v
 
 	case *StringValue:
 		b := []byte(v.Str)
@@ -3329,60 +3359,87 @@ func deepCopyBasicValue(value Value) Value {
 		return NewFix64ValueWithInteger(int64(v.ToInt()))
 	case UFix64Value:
 		return NewUFix64ValueWithInteger(uint64(v.ToInt()))
+
+	case PathValue:
+		return PathValue{
+			Domain:     v.Domain,
+			Identifier: v.Identifier,
+		}
+
+	case BoolValue:
+		return v
+
+	default:
+		return NilValue{}
 	}
-	return NilValue{}
 }
 
-func generateARandomStorableValue() Value {
-	switch rand.Intn(29) {
+func randomStorableValue(interpreter *Interpreter) Value {
+	n := rand.Intn(Enum)
+	switch n {
+	case Void:
+		return VoidValue{}
+	case Nil:
+		return NilValue{}
+	default:
+		return generateRandomHashableValue(interpreter, n)
+	}
+}
+
+func randomHashableValue(interpreter *Interpreter) Value {
+	return generateRandomHashableValue(interpreter, rand.Intn(Enum))
+}
+
+func generateRandomHashableValue(interpreter *Interpreter, n int) Value {
+	switch n {
 	// TODO deal with negative numbers
 
 	// Int
-	case 0:
-		return Int8Value(rand.Intn(255))
-	case 1:
-		return Int16Value(rand.Intn(65535))
-	case 2:
-		return Int32Value(rand.Int31())
-	case 3:
-		return Int64Value(rand.Int63())
-	case 4:
-		return NewInt128ValueFromInt64(rand.Int63())
-	case 5:
-		return NewInt256ValueFromInt64(rand.Int63())
-	case 6:
+	case Int:
 		return NewIntValueFromInt64(rand.Int63())
+	case Int8:
+		return Int8Value(rand.Intn(255))
+	case Int16:
+		return Int16Value(rand.Intn(65535))
+	case Int32:
+		return Int32Value(rand.Int31())
+	case Int64:
+		return Int64Value(rand.Int63())
+	case Int128:
+		return NewInt128ValueFromInt64(rand.Int63())
+	case Int256:
+		return NewInt256ValueFromInt64(rand.Int63())
 
 	// UInt
-	case 7:
+	case UInt:
 		return NewUIntValueFromUint64(rand.Uint64())
-	case 8:
+	case UInt8:
 		return UInt8Value(rand.Intn(255))
-	case 9:
+	case UInt16:
 		return UInt16Value(rand.Intn(65535))
-	case 10:
+	case UInt32:
 		return UInt32Value(rand.Uint32())
-	case 11, 12, 13, 14: // should be more common
+	case UInt64_1, UInt64_2, UInt64_3, UInt64_4: // should be more common
 		return UInt64Value(rand.Uint64())
-	case 15:
+	case UInt128:
 		return NewUInt128ValueFromBigInt(big.NewInt(rand.Int63()))
-	case 16:
+	case UInt256:
 		return NewUInt256ValueFromBigInt(big.NewInt(rand.Int63()))
 
 	// Word
-	case 17:
+	case Word8:
 		return Word8Value(rand.Intn(255))
-	case 18:
+	case Word16:
 		return Word16Value(rand.Intn(65535))
-	case 19:
+	case Word32:
 		return Word32Value(rand.Uint32())
-	case 20:
+	case Word64:
 		return Word64Value(rand.Uint64())
 
 	// Fixed point
-	case 21:
+	case Fix64:
 		return NewFix64ValueWithInteger(rand.Int63n(sema.Fix64TypeMaxInt))
-	case 22:
+	case UFix64:
 		return NewUFix64ValueWithInteger(
 			uint64(rand.Int63n(
 				int64(sema.UFix64TypeMaxInt),
@@ -3390,29 +3447,156 @@ func generateARandomStorableValue() Value {
 		)
 
 	// String
-	case 23, 24, 25, 26: // small string - should be more common
+	case String_1, String_2, String_3, String_4: // small string - should be more common
 		size := rand.Intn(255)
 		data := make([]byte, size)
 		rand.Read(data)
 		return NewStringValue(string(data))
-	case 27: // large string
+	case String_5: // large string
 		size := rand.Intn(4048) + 255
 		data := make([]byte, size)
 		rand.Read(data)
 		return NewStringValue(string(data))
 
-	// Address
-	case 28:
+	case Bool_True:
+		return BoolValue(true)
+	case Bool_False:
+		return BoolValue(false)
+
+	case Address:
 		data := make([]byte, 8)
 		rand.Read(data)
 		return NewAddressValueFromBytes(data)
 
-	// Nil
-	case 29:
-		return NilValue{}
+	case Path:
+		randomDomain := rand.Intn(len(common.AllPathDomains))
+		identifier := make([]byte, 8)
+		rand.Read(identifier)
+
+		return PathValue{
+			Domain:     common.AllPathDomains[randomDomain],
+			Identifier: string(identifier),
+		}
+
+	case Enum:
+		typ := rand.Intn(Word64)
+		rawValue := generateRandomHashableValue(interpreter, typ).(NumberValue)
+
+		identifier := make([]byte, 8)
+		rand.Read(identifier)
+
+		return NewEnumCaseValue(
+			interpreter,
+			&sema.CompositeType{
+				Identifier:  string(identifier),
+				EnumRawType: intSubtype(typ),
+				Kind:        common.CompositeKindEnum,
+			},
+			rawValue,
+			nil,
+		)
 
 	default:
-		panic("unsupported")
+		panic(fmt.Sprintf("unsupported:  %d", n))
 	}
-
 }
+
+func intSubtype(n int) sema.Type {
+	switch n {
+	// Int
+	case Int:
+		return sema.IntType
+	case Int8:
+		return sema.Int8Type
+	case Int16:
+		return sema.Int16Type
+	case Int32:
+		return sema.Int32Type
+	case Int64:
+		return sema.Int64Type
+	case Int128:
+		return sema.Int128Type
+	case Int256:
+		return sema.Int256Type
+
+	// UInt
+	case UInt:
+		return sema.UIntType
+	case UInt8:
+		return sema.UInt8Type
+	case UInt16:
+		return sema.UInt16Type
+	case UInt32:
+		return sema.UInt32Type
+	case UInt64_1, UInt64_2, UInt64_3, UInt64_4:
+		return sema.UInt64Type
+	case UInt128:
+		return sema.UInt128Type
+	case UInt256:
+		return sema.UInt256Type
+
+	// Word
+	case Word8:
+		return sema.Word8Type
+	case Word16:
+		return sema.Word16Type
+	case Word32:
+		return sema.Word32Type
+	case Word64:
+		return sema.Word64Type
+
+	default:
+		panic(fmt.Sprintf("unsupported:  %d", n))
+	}
+}
+
+const (
+	// Hashable values
+	Int = iota
+	Int8
+	Int16
+	Int32
+	Int64
+	Int128
+	Int256
+
+	UInt
+	UInt8
+	UInt16
+	UInt32
+	UInt64_1
+	UInt64_2
+	UInt64_3
+	UInt64_4
+	UInt128
+	UInt256
+
+	Word8
+	Word16
+	Word32
+	Word64
+
+	Fix64
+	UFix64
+
+	String_1
+	String_2
+	String_3
+	String_4
+	String_5
+
+	Bool_True
+	Bool_False
+	Path
+	Address
+	Enum
+
+	// Non-hashable values
+
+	Void
+	Nil // `Never?`
+
+	Struct
+	Resource
+	Contract
+)
