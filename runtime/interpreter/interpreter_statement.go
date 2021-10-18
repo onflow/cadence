@@ -70,7 +70,7 @@ func (interpreter *Interpreter) VisitReturnStatement(statement *ast.ReturnStatem
 		getLocationRange := locationRangeGetter(interpreter.Location, statement.Expression)
 
 		// NOTE: copy on return
-		value = interpreter.copyAndConvert(value, valueType, returnType, getLocationRange)
+		value = interpreter.transferAndConvert(value, valueType, returnType, getLocationRange)
 	}
 
 	return functionReturn{value}
@@ -141,14 +141,19 @@ func (interpreter *Interpreter) visitIfStatementWithVariableDeclaration(
 
 		targetType := interpreter.Program.Elaboration.VariableDeclarationTargetTypes[declaration]
 		getLocationRange := locationRangeGetter(interpreter.Location, declaration.Value)
-		unwrappedValueCopy := interpreter.copyAndConvert(someValue.Value, valueType, targetType, getLocationRange)
+		transferredUnwrappedValue := interpreter.transferAndConvert(
+			someValue.Value,
+			valueType,
+			targetType,
+			getLocationRange,
+		)
 
 		interpreter.activations.PushNewWithCurrent()
 		defer interpreter.activations.Pop()
 
 		interpreter.declareVariable(
 			declaration.Identifier.Identifier,
-			unwrappedValueCopy,
+			transferredUnwrappedValue,
 		)
 
 		result = thenBlock.Accept(interpreter)
@@ -253,9 +258,15 @@ func (interpreter *Interpreter) VisitForStatement(statement *ast.ForStatement) a
 	getLocationRange := locationRangeGetter(interpreter.Location, statement)
 
 	value := interpreter.evalExpression(statement.Value)
-	valueCopy := interpreter.CopyValue(getLocationRange, value, atree.Address{})
+	transferredValue := value.Transfer(
+		interpreter,
+		getLocationRange,
+		atree.Address{},
+		false,
+		nil,
+	)
 
-	iterator, err := valueCopy.(*ArrayValue).array.Iterator()
+	iterator, err := transferredValue.(*ArrayValue).array.Iterator()
 	if err != nil {
 		panic(ExternalError{err})
 	}
@@ -357,11 +368,11 @@ func (interpreter *Interpreter) visitVariableDeclaration(
 
 	getLocationRange := locationRangeGetter(interpreter.Location, declaration.Value)
 
-	valueCopy := interpreter.copyAndConvert(result, valueType, targetType, getLocationRange)
+	transferredValue := interpreter.transferAndConvert(result, valueType, targetType, getLocationRange)
 
 	valueCallback(
 		declaration.Identifier.Identifier,
-		valueCopy,
+		transferredValue,
 	)
 
 	if declaration.SecondValue == nil {
@@ -416,13 +427,13 @@ func (interpreter *Interpreter) VisitSwapStatement(swap *ast.SwapStatement) ast.
 	// and left value to right target
 
 	getLocationRange := locationRangeGetter(interpreter.Location, swap.Right)
-	rightValueCopy := interpreter.copyAndConvert(rightValue, rightType, leftType, getLocationRange)
+	transferredRightValue := interpreter.transferAndConvert(rightValue, rightType, leftType, getLocationRange)
 
 	getLocationRange = locationRangeGetter(interpreter.Location, swap.Left)
-	leftValueCopy := interpreter.copyAndConvert(leftValue, leftType, rightType, getLocationRange)
+	transferredLeftValue := interpreter.transferAndConvert(leftValue, leftType, rightType, getLocationRange)
 
-	leftGetterSetter.set(rightValueCopy)
-	rightGetterSetter.set(leftValueCopy)
+	leftGetterSetter.set(transferredRightValue)
+	rightGetterSetter.set(transferredLeftValue)
 
 	return nil
 }

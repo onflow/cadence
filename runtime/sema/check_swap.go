@@ -48,11 +48,11 @@ func (checker *Checker) VisitSwapStatement(swap *ast.SwapStatement) ast.Repr {
 	}
 
 	if leftType.IsResourceType() {
-		checker.elaborateIndexExpressionResourceMove(swap.Left)
+		checker.elaborateNestedResourceMoveExpression(swap.Left)
 	}
 
 	if rightType.IsResourceType() {
-		checker.elaborateIndexExpressionResourceMove(swap.Right)
+		checker.elaborateNestedResourceMoveExpression(swap.Right)
 	}
 
 	return nil

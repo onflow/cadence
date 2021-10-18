@@ -99,8 +99,15 @@ type Value interface {
 		results TypeConformanceResults,
 	) bool
 	RecursiveString(seenReferences SeenReferences) string
-	IsResourceAtAddress(interpreter *Interpreter, address atree.Address) bool
-	DeepCopy(interpreter *Interpreter, getLocationRange func() LocationRange, address atree.Address) Value
+	IsResourceKinded(interpreter *Interpreter) bool
+	NeedsStoreTo(address atree.Address) bool
+	Transfer(
+		interpreter *Interpreter,
+		getLocationRange func() LocationRange,
+		address atree.Address,
+		remove bool,
+		storable atree.Storable,
+	) Value
 	DeepRemove(interpreter *Interpreter)
 }
 
@@ -119,6 +126,7 @@ type ValueIndexableValue interface {
 type MemberAccessibleValue interface {
 	Value
 	GetMember(interpreter *Interpreter, getLocationRange func() LocationRange, name string) Value
+	RemoveMember(interpreter *Interpreter, getLocationRange func() LocationRange, name string) Value
 	SetMember(interpreter *Interpreter, getLocationRange func() LocationRange, name string, value Value)
 }
 
@@ -165,6 +173,7 @@ type TypeValue struct {
 var _ Value = TypeValue{}
 var _ atree.Storable = TypeValue{}
 var _ EquatableValue = TypeValue{}
+var _ MemberAccessibleValue = TypeValue{}
 
 func (TypeValue) IsValue() {}
 
@@ -232,7 +241,13 @@ func (v TypeValue) GetMember(interpreter *Interpreter, _ func() LocationRange, n
 	return nil
 }
 
+func (TypeValue) RemoveMember(_ *Interpreter, _ func() LocationRange, _ string) Value {
+	// Types have no removable members (fields / functions)
+	panic(errors.NewUnreachableError())
+}
+
 func (TypeValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
+	// Types have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
@@ -259,11 +274,24 @@ func (v TypeValue) Storable(
 	)
 }
 
-func (TypeValue) IsResourceAtAddress(_ *Interpreter, _ atree.Address) bool {
+func (TypeValue) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (v TypeValue) DeepCopy(_ *Interpreter, _ func() LocationRange, _ atree.Address) Value {
+func (TypeValue) IsResourceKinded(_ *Interpreter) bool {
+	return false
+}
+
+func (v TypeValue) Transfer(
+	interpreter *Interpreter,
+	_ func() LocationRange,
+	_ atree.Address,
+	remove bool,
+	storable atree.Storable,
+) Value {
+	if remove {
+		interpreter.RemoveReferencedSlab(storable)
+	}
 	return v
 }
 
@@ -338,11 +366,24 @@ func (v VoidValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atr
 	return v, nil
 }
 
-func (VoidValue) IsResourceAtAddress(_ *Interpreter, _ atree.Address) bool {
+func (VoidValue) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (v VoidValue) DeepCopy(_ *Interpreter, _ func() LocationRange, _ atree.Address) Value {
+func (VoidValue) IsResourceKinded(_ *Interpreter) bool {
+	return false
+}
+
+func (v VoidValue) Transfer(
+	interpreter *Interpreter,
+	_ func() LocationRange,
+	_ atree.Address,
+	remove bool,
+	storable atree.Storable,
+) Value {
+	if remove {
+		interpreter.RemoveReferencedSlab(storable)
+	}
 	return v
 }
 
@@ -434,11 +475,24 @@ func (v BoolValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atr
 	return v, nil
 }
 
-func (BoolValue) IsResourceAtAddress(_ *Interpreter, _ atree.Address) bool {
+func (BoolValue) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (v BoolValue) DeepCopy(_ *Interpreter, _ func() LocationRange, _ atree.Address) Value {
+func (BoolValue) IsResourceKinded(_ *Interpreter) bool {
+	return false
+}
+
+func (v BoolValue) Transfer(
+	interpreter *Interpreter,
+	_ func() LocationRange,
+	_ atree.Address,
+	remove bool,
+	storable atree.Storable,
+) Value {
+	if remove {
+		interpreter.RemoveReferencedSlab(storable)
+	}
 	return v
 }
 
@@ -484,6 +538,7 @@ var _ atree.Storable = &StringValue{}
 var _ EquatableValue = &StringValue{}
 var _ HashableValue = &StringValue{}
 var _ ValueIndexableValue = &StringValue{}
+var _ MemberAccessibleValue = &StringValue{}
 
 func (v *StringValue) prepareGraphemes() {
 	if v.graphemes == nil {
@@ -676,6 +731,16 @@ func (v *StringValue) GetMember(interpreter *Interpreter, _ func() LocationRange
 	return nil
 }
 
+func (*StringValue) RemoveMember(_ *Interpreter, _ func() LocationRange, _ string) Value {
+	// Strings have no removable members (fields / functions)
+	panic(errors.NewUnreachableError())
+}
+
+func (*StringValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
+	// Strings have no settable members (fields / functions)
+	panic(errors.NewUnreachableError())
+}
+
 // Length returns the number of characters (grapheme clusters)
 //
 func (v *StringValue) Length() int {
@@ -698,11 +763,24 @@ func (v *StringValue) Storable(storage atree.SlabStorage, address atree.Address,
 	return maybeLargeImmutableStorable(v, storage, address, maxInlineSize)
 }
 
-func (*StringValue) IsResourceAtAddress(_ *Interpreter, _ atree.Address) bool {
+func (*StringValue) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (v *StringValue) DeepCopy(_ *Interpreter, _ func() LocationRange, _ atree.Address) Value {
+func (*StringValue) IsResourceKinded(_ *Interpreter) bool {
+	return false
+}
+
+func (v *StringValue) Transfer(
+	interpreter *Interpreter,
+	_ func() LocationRange,
+	_ atree.Address,
+	remove bool,
+	storable atree.Storable,
+) Value {
+	if remove {
+		interpreter.RemoveReferencedSlab(storable)
+	}
 	return v
 }
 
@@ -752,10 +830,6 @@ func (v *StringValue) DecodeHex(interpreter *Interpreter) *ArrayValue {
 	)
 }
 
-func (*StringValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
-	panic(errors.NewUnreachableError())
-}
-
 func (*StringValue) ConformsToDynamicType(
 	_ *Interpreter,
 	_ func() LocationRange,
@@ -799,12 +873,13 @@ func NewArrayValue(
 
 			index++
 
-			value = interpreter.TransferValue(
+			value = value.Transfer(
+				interpreter,
 				// TODO: provide proper location range
 				ReturnEmptyLocationRange,
-				value,
-				nil,
 				atree.Address(address),
+				true,
+				nil,
 			)
 
 			return value
@@ -841,6 +916,7 @@ var _ Value = &ArrayValue{}
 var _ atree.Value = &ArrayValue{}
 var _ EquatableValue = &ArrayValue{}
 var _ ValueIndexableValue = &ArrayValue{}
+var _ MemberAccessibleValue = &ArrayValue{}
 
 func (*ArrayValue) IsValue() {}
 
@@ -962,11 +1038,13 @@ func (v *ArrayValue) Concat(interpreter *Interpreter, getLocationRange func() Lo
 				return nil
 			}
 
-			// We can directly call DeepCopy on the value, instead of potentially skipping copying
-			// by using interpreter.copyValue, as concatenation is only supported for struct-kinded arrays,
-			// which always must be copied
-
-			return value.DeepCopy(interpreter, getLocationRange, atree.Address{})
+			return value.Transfer(
+				interpreter,
+				getLocationRange,
+				atree.Address{},
+				false,
+				nil,
+			)
 		},
 	)
 }
@@ -1006,11 +1084,12 @@ func (v *ArrayValue) Set(interpreter *Interpreter, getLocationRange func() Locat
 
 	interpreter.checkContainerMutation(v.Type.ElementType(), element, getLocationRange)
 
-	element = interpreter.TransferValue(
+	element = element.Transfer(
+		interpreter,
 		getLocationRange,
-		element,
-		nil,
 		v.array.Address(),
+		true,
+		nil,
 	)
 
 	existingStorable, err := v.array.Set(uint64(index), element)
@@ -1048,11 +1127,12 @@ func (v *ArrayValue) Append(interpreter *Interpreter, getLocationRange func() Lo
 
 	interpreter.checkContainerMutation(v.Type.ElementType(), element, getLocationRange)
 
-	element = interpreter.TransferValue(
+	element = element.Transfer(
+		interpreter,
 		getLocationRange,
-		element,
-		nil,
 		v.array.Address(),
+		true,
+		nil,
 	)
 
 	err := v.array.Append(element)
@@ -1077,11 +1157,12 @@ func (v *ArrayValue) Insert(interpreter *Interpreter, getLocationRange func() Lo
 
 	interpreter.checkContainerMutation(v.Type.ElementType(), element, getLocationRange)
 
-	element = interpreter.TransferValue(
+	element = element.Transfer(
+		interpreter,
 		getLocationRange,
-		element,
-		nil,
 		v.array.Address(),
+		true,
+		nil,
 	)
 
 	err := v.array.Insert(uint64(index), element)
@@ -1109,11 +1190,12 @@ func (v *ArrayValue) Remove(interpreter *Interpreter, getLocationRange func() Lo
 
 	value := StoredValue(storable, interpreter.Storage)
 
-	return interpreter.TransferValue(
+	return value.Transfer(
+		interpreter,
 		getLocationRange,
-		value,
-		storable,
 		atree.Address{},
+		true,
+		storable,
 	)
 }
 
@@ -1271,7 +1353,13 @@ func (v *ArrayValue) GetMember(inter *Interpreter, _ func() LocationRange, name 
 	return nil
 }
 
-func (v *ArrayValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
+func (*ArrayValue) RemoveMember(_ *Interpreter, _ func() LocationRange, _ string) Value {
+	// Arrays have no removable members (fields / functions)
+	panic(errors.NewUnreachableError())
+}
+
+func (*ArrayValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
+	// Arrays have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
@@ -1353,50 +1441,66 @@ func (v *ArrayValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (a
 	return atree.StorageIDStorable(v.StorageID()), nil
 }
 
-func (v *ArrayValue) IsResourceAtAddress(interpreter *Interpreter, address atree.Address) bool {
-	return v.StorageID().Address == address &&
-		v.IsResourceKinded(interpreter)
-}
-
-func (v *ArrayValue) DeepCopy(
+func (v *ArrayValue) Transfer(
 	interpreter *Interpreter,
 	getLocationRange func() LocationRange,
 	address atree.Address,
+	remove bool,
+	storable atree.Storable,
 ) Value {
 
-	iterator, err := v.array.Iterator()
-	if err != nil {
-		panic(ExternalError{err})
+	array := v.array
+
+	needsStoreTo := v.NeedsStoreTo(address)
+	isResourceKinded := v.IsResourceKinded(interpreter)
+
+	if needsStoreTo || !isResourceKinded {
+
+		iterator, err := v.array.Iterator()
+		if err != nil {
+			panic(ExternalError{err})
+		}
+
+		array, err = atree.NewArrayFromBatchData(
+			interpreter.Storage,
+			address,
+			v.array.Type(),
+			func() (atree.Value, error) {
+				value, err := iterator.Next()
+				if err != nil {
+					return nil, err
+				}
+				if value == nil {
+					return nil, nil
+				}
+
+				element := MustConvertStoredValue(value).
+					Transfer(interpreter, getLocationRange, address, false, nil)
+
+				return element, nil
+			},
+		)
+		if err != nil {
+			panic(ExternalError{err})
+		}
+
+		if remove {
+			v.DeepRemove(interpreter)
+			interpreter.RemoveReferencedSlab(storable)
+		}
 	}
 
-	array, err := atree.NewArrayFromBatchData(
-		interpreter.Storage,
-		address,
-		v.array.Type(),
-		func() (atree.Value, error) {
-			value, err := iterator.Next()
-			if err != nil {
-				return nil, err
-			}
-			if value == nil {
-				return nil, nil
-			}
-
-			element := MustConvertStoredValue(value)
-
-			return interpreter.CopyValue(getLocationRange, element, address), nil
-		},
-	)
-	if err != nil {
-		panic(ExternalError{err})
-	}
-
-	return &ArrayValue{
-		Type:             v.Type,
-		semaType:         v.semaType,
-		isResourceKinded: v.isResourceKinded,
-		array:            array,
-		isDestroyed:      v.isDestroyed,
+	if isResourceKinded {
+		v.array = array
+		return v
+	} else {
+		return &ArrayValue{
+			Type:             v.Type,
+			semaType:         v.semaType,
+			isResourceKinded: v.isResourceKinded,
+			array:            array,
+			isDestroyed:      v.isDestroyed,
+		}
 	}
 }
 
@@ -1430,6 +1534,10 @@ func (v *ArrayValue) SemaType(interpreter *Interpreter) sema.ArrayType {
 		v.semaType = interpreter.ConvertStaticToSemaType(v.Type).(sema.ArrayType)
 	}
 	return v.semaType
+}
+
+func (v *ArrayValue) NeedsStoreTo(address atree.Address) bool {
+	return address != v.StorageID().Address
 }
 
 func (v *ArrayValue) IsResourceKinded(interpreter *Interpreter) bool {
@@ -1595,6 +1703,7 @@ var _ NumberValue = IntValue{}
 var _ IntegerValue = IntValue{}
 var _ EquatableValue = IntValue{}
 var _ HashableValue = IntValue{}
+var _ MemberAccessibleValue = IntValue{}
 
 func (IntValue) IsValue() {}
 
@@ -1784,7 +1893,13 @@ func (v IntValue) GetMember(_ *Interpreter, _ func() LocationRange, name string)
 	return getNumberValueMember(v, name, sema.IntType)
 }
 
+func (IntValue) RemoveMember(_ *Interpreter, _ func() LocationRange, _ string) Value {
+	// Numbers have no removable members (fields / functions)
+	panic(errors.NewUnreachableError())
+}
+
 func (IntValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
+	// Numbers have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
@@ -1806,11 +1921,24 @@ func (v IntValue) Storable(storage atree.SlabStorage, address atree.Address, max
 	return maybeLargeImmutableStorable(v, storage, address, maxInlineSize)
 }
 
-func (IntValue) IsResourceAtAddress(_ *Interpreter, _ atree.Address) bool {
+func (IntValue) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (v IntValue) DeepCopy(_ *Interpreter, _ func() LocationRange, _ atree.Address) Value {
+func (IntValue) IsResourceKinded(_ *Interpreter) bool {
+	return false
+}
+
+func (v IntValue) Transfer(
+	interpreter *Interpreter,
+	_ func() LocationRange,
+	_ atree.Address,
+	remove bool,
+	storable atree.Storable,
+) Value {
+	if remove {
+		interpreter.RemoveReferencedSlab(storable)
+	}
 	return v
 }
 
@@ -2109,7 +2237,13 @@ func (v Int8Value) GetMember(_ *Interpreter, _ func() LocationRange, name string
 	return getNumberValueMember(v, name, sema.Int8Type)
 }
 
+func (Int8Value) RemoveMember(_ *Interpreter, _ func() LocationRange, _ string) Value {
+	// Numbers have no removable members (fields / functions)
+	panic(errors.NewUnreachableError())
+}
+
 func (Int8Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
+	// Numbers have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
@@ -2131,11 +2265,24 @@ func (v Int8Value) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atr
 	return v, nil
 }
 
-func (Int8Value) IsResourceAtAddress(_ *Interpreter, _ atree.Address) bool {
+func (Int8Value) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (v Int8Value) DeepCopy(_ *Interpreter, _ func() LocationRange, _ atree.Address) Value {
+func (Int8Value) IsResourceKinded(_ *Interpreter) bool {
+	return false
+}
+
+func (v Int8Value) Transfer(
+	interpreter *Interpreter,
+	_ func() LocationRange,
+	_ atree.Address,
+	remove bool,
+	storable atree.Storable,
+) Value {
+	if remove {
+		interpreter.RemoveReferencedSlab(storable)
+	}
 	return v
 }
 
@@ -2165,6 +2312,7 @@ var _ NumberValue = Int16Value(0)
 var _ IntegerValue = Int16Value(0)
 var _ EquatableValue = Int16Value(0)
 var _ HashableValue = Int16Value(0)
+var _ MemberAccessibleValue = Int16Value(0)
 
 func (Int16Value) IsValue() {}
 
@@ -2433,7 +2581,13 @@ func (v Int16Value) GetMember(_ *Interpreter, _ func() LocationRange, name strin
 	return getNumberValueMember(v, name, sema.Int16Type)
 }
 
+func (Int16Value) RemoveMember(_ *Interpreter, _ func() LocationRange, _ string) Value {
+	// Numbers have no removable members (fields / functions)
+	panic(errors.NewUnreachableError())
+}
+
 func (Int16Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
+	// Numbers have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
@@ -2457,11 +2611,24 @@ func (v Int16Value) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (at
 	return v, nil
 }
 
-func (Int16Value) IsResourceAtAddress(_ *Interpreter, _ atree.Address) bool {
+func (Int16Value) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (v Int16Value) DeepCopy(_ *Interpreter, _ func() LocationRange, _ atree.Address) Value {
+func (Int16Value) IsResourceKinded(_ *Interpreter) bool {
+	return false
+}
+
+func (v Int16Value) Transfer(
+	interpreter *Interpreter,
+	_ func() LocationRange,
+	_ atree.Address,
+	remove bool,
+	storable atree.Storable,
+) Value {
+	if remove {
+		interpreter.RemoveReferencedSlab(storable)
+	}
 	return v
 }
 
@@ -2491,6 +2658,7 @@ var _ NumberValue = Int32Value(0)
 var _ IntegerValue = Int32Value(0)
 var _ EquatableValue = Int32Value(0)
 var _ HashableValue = Int32Value(0)
+var _ MemberAccessibleValue = Int32Value(0)
 
 func (Int32Value) IsValue() {}
 
@@ -2759,7 +2927,13 @@ func (v Int32Value) GetMember(_ *Interpreter, _ func() LocationRange, name strin
 	return getNumberValueMember(v, name, sema.Int32Type)
 }
 
+func (Int32Value) RemoveMember(_ *Interpreter, _ func() LocationRange, _ string) Value {
+	// Numbers have no removable members (fields / functions)
+	panic(errors.NewUnreachableError())
+}
+
 func (Int32Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
+	// Numbers have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
@@ -2783,11 +2957,24 @@ func (v Int32Value) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (at
 	return v, nil
 }
 
-func (Int32Value) IsResourceAtAddress(_ *Interpreter, _ atree.Address) bool {
+func (Int32Value) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (v Int32Value) DeepCopy(_ *Interpreter, _ func() LocationRange, _ atree.Address) Value {
+func (Int32Value) IsResourceKinded(_ *Interpreter) bool {
+	return false
+}
+
+func (v Int32Value) Transfer(
+	interpreter *Interpreter,
+	_ func() LocationRange,
+	_ atree.Address,
+	remove bool,
+	storable atree.Storable,
+) Value {
+	if remove {
+		interpreter.RemoveReferencedSlab(storable)
+	}
 	return v
 }
 
@@ -2817,6 +3004,7 @@ var _ NumberValue = Int64Value(0)
 var _ IntegerValue = Int64Value(0)
 var _ EquatableValue = Int64Value(0)
 var _ HashableValue = Int64Value(0)
+var _ MemberAccessibleValue = Int64Value(0)
 
 func (Int64Value) IsValue() {}
 
@@ -3084,7 +3272,13 @@ func (v Int64Value) GetMember(_ *Interpreter, _ func() LocationRange, name strin
 	return getNumberValueMember(v, name, sema.Int64Type)
 }
 
+func (Int64Value) RemoveMember(_ *Interpreter, _ func() LocationRange, _ string) Value {
+	// Numbers have no removable members (fields / functions)
+	panic(errors.NewUnreachableError())
+}
+
 func (Int64Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
+	// Numbers have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
@@ -3108,11 +3302,24 @@ func (v Int64Value) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (at
 	return v, nil
 }
 
-func (Int64Value) IsResourceAtAddress(_ *Interpreter, _ atree.Address) bool {
+func (Int64Value) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (v Int64Value) DeepCopy(_ *Interpreter, _ func() LocationRange, _ atree.Address) Value {
+func (Int64Value) IsResourceKinded(_ *Interpreter) bool {
+	return false
+}
+
+func (v Int64Value) Transfer(
+	interpreter *Interpreter,
+	_ func() LocationRange,
+	_ atree.Address,
+	remove bool,
+	storable atree.Storable,
+) Value {
+	if remove {
+		interpreter.RemoveReferencedSlab(storable)
+	}
 	return v
 }
 
@@ -3152,6 +3359,7 @@ var _ NumberValue = Int128Value{}
 var _ IntegerValue = Int128Value{}
 var _ EquatableValue = Int128Value{}
 var _ HashableValue = Int128Value{}
+var _ MemberAccessibleValue = Int128Value{}
 
 func (Int128Value) IsValue() {}
 
@@ -3483,7 +3691,13 @@ func (v Int128Value) GetMember(_ *Interpreter, _ func() LocationRange, name stri
 	return getNumberValueMember(v, name, sema.Int128Type)
 }
 
+func (Int128Value) RemoveMember(_ *Interpreter, _ func() LocationRange, _ string) Value {
+	// Numbers have no removable members (fields / functions)
+	panic(errors.NewUnreachableError())
+}
+
 func (Int128Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
+	// Numbers have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
@@ -3505,11 +3719,24 @@ func (v Int128Value) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (a
 	return v, nil
 }
 
-func (Int128Value) IsResourceAtAddress(_ *Interpreter, _ atree.Address) bool {
+func (Int128Value) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (v Int128Value) DeepCopy(_ *Interpreter, _ func() LocationRange, _ atree.Address) Value {
+func (Int128Value) IsResourceKinded(_ *Interpreter) bool {
+	return false
+}
+
+func (v Int128Value) Transfer(
+	interpreter *Interpreter,
+	_ func() LocationRange,
+	_ atree.Address,
+	remove bool,
+	storable atree.Storable,
+) Value {
+	if remove {
+		interpreter.RemoveReferencedSlab(storable)
+	}
 	return v
 }
 
@@ -3550,6 +3777,7 @@ var _ NumberValue = Int256Value{}
 var _ IntegerValue = Int256Value{}
 var _ EquatableValue = Int256Value{}
 var _ HashableValue = Int256Value{}
+var _ MemberAccessibleValue = Int256Value{}
 
 func (Int256Value) IsValue() {}
 
@@ -3881,7 +4109,13 @@ func (v Int256Value) GetMember(_ *Interpreter, _ func() LocationRange, name stri
 	return getNumberValueMember(v, name, sema.Int256Type)
 }
 
+func (Int256Value) RemoveMember(_ *Interpreter, _ func() LocationRange, _ string) Value {
+	// Numbers have no removable members (fields / functions)
+	panic(errors.NewUnreachableError())
+}
+
 func (Int256Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
+	// Numbers have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
@@ -3903,11 +4137,24 @@ func (v Int256Value) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (a
 	return v, nil
 }
 
-func (Int256Value) IsResourceAtAddress(_ *Interpreter, _ atree.Address) bool {
+func (Int256Value) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (v Int256Value) DeepCopy(_ *Interpreter, _ func() LocationRange, _ atree.Address) Value {
+func (Int256Value) IsResourceKinded(_ *Interpreter) bool {
+	return false
+}
+
+func (v Int256Value) Transfer(
+	interpreter *Interpreter,
+	_ func() LocationRange,
+	_ atree.Address,
+	remove bool,
+	storable atree.Storable,
+) Value {
+	if remove {
+		interpreter.RemoveReferencedSlab(storable)
+	}
 	return v
 }
 
@@ -3969,6 +4216,7 @@ var _ NumberValue = UIntValue{}
 var _ IntegerValue = UIntValue{}
 var _ EquatableValue = UIntValue{}
 var _ HashableValue = UIntValue{}
+var _ MemberAccessibleValue = UIntValue{}
 
 func (UIntValue) IsValue() {}
 
@@ -4169,7 +4417,13 @@ func (v UIntValue) GetMember(_ *Interpreter, _ func() LocationRange, name string
 	return getNumberValueMember(v, name, sema.UIntType)
 }
 
+func (UIntValue) RemoveMember(_ *Interpreter, _ func() LocationRange, _ string) Value {
+	// Numbers have no removable members (fields / functions)
+	panic(errors.NewUnreachableError())
+}
+
 func (UIntValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
+	// Numbers have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
@@ -4191,11 +4445,24 @@ func (v UIntValue) Storable(storage atree.SlabStorage, address atree.Address, ma
 	return maybeLargeImmutableStorable(v, storage, address, maxInlineSize)
 }
 
-func (UIntValue) IsResourceAtAddress(_ *Interpreter, _ atree.Address) bool {
+func (UIntValue) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (v UIntValue) DeepCopy(_ *Interpreter, _ func() LocationRange, _ atree.Address) Value {
+func (UIntValue) IsResourceKinded(_ *Interpreter) bool {
+	return false
+}
+
+func (v UIntValue) Transfer(
+	interpreter *Interpreter,
+	_ func() LocationRange,
+	_ atree.Address,
+	remove bool,
+	storable atree.Storable,
+) Value {
+	if remove {
+		interpreter.RemoveReferencedSlab(storable)
+	}
 	return v
 }
 
@@ -4226,6 +4493,7 @@ var _ NumberValue = UInt8Value(0)
 var _ IntegerValue = UInt8Value(0)
 var _ EquatableValue = UInt8Value(0)
 var _ HashableValue = UInt8Value(0)
+var _ MemberAccessibleValue = UInt8Value(0)
 
 func (UInt8Value) IsValue() {}
 
@@ -4425,7 +4693,13 @@ func (v UInt8Value) GetMember(_ *Interpreter, _ func() LocationRange, name strin
 	return getNumberValueMember(v, name, sema.UInt8Type)
 }
 
+func (UInt8Value) RemoveMember(_ *Interpreter, _ func() LocationRange, _ string) Value {
+	// Numbers have no removable members (fields / functions)
+	panic(errors.NewUnreachableError())
+}
+
 func (UInt8Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
+	// Numbers have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
@@ -4447,11 +4721,24 @@ func (v UInt8Value) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (at
 	return v, nil
 }
 
-func (UInt8Value) IsResourceAtAddress(_ *Interpreter, _ atree.Address) bool {
+func (UInt8Value) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (v UInt8Value) DeepCopy(_ *Interpreter, _ func() LocationRange, _ atree.Address) Value {
+func (UInt8Value) IsResourceKinded(_ *Interpreter) bool {
+	return false
+}
+
+func (v UInt8Value) Transfer(
+	interpreter *Interpreter,
+	_ func() LocationRange,
+	_ atree.Address,
+	remove bool,
+	storable atree.Storable,
+) Value {
+	if remove {
+		interpreter.RemoveReferencedSlab(storable)
+	}
 	return v
 }
 
@@ -4481,6 +4768,7 @@ var _ NumberValue = UInt16Value(0)
 var _ IntegerValue = UInt16Value(0)
 var _ EquatableValue = UInt16Value(0)
 var _ HashableValue = UInt16Value(0)
+var _ MemberAccessibleValue = UInt16Value(0)
 
 func (UInt16Value) IsValue() {}
 
@@ -4679,7 +4967,13 @@ func (v UInt16Value) GetMember(_ *Interpreter, _ func() LocationRange, name stri
 	return getNumberValueMember(v, name, sema.UInt16Type)
 }
 
+func (UInt16Value) RemoveMember(_ *Interpreter, _ func() LocationRange, _ string) Value {
+	// Numbers have no removable members (fields / functions)
+	panic(errors.NewUnreachableError())
+}
+
 func (UInt16Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
+	// Numbers have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
@@ -4707,11 +5001,24 @@ func (v UInt16Value) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (a
 	return v, nil
 }
 
-func (UInt16Value) IsResourceAtAddress(_ *Interpreter, _ atree.Address) bool {
+func (UInt16Value) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (v UInt16Value) DeepCopy(_ *Interpreter, _ func() LocationRange, _ atree.Address) Value {
+func (UInt16Value) IsResourceKinded(_ *Interpreter) bool {
+	return false
+}
+
+func (v UInt16Value) Transfer(
+	interpreter *Interpreter,
+	_ func() LocationRange,
+	_ atree.Address,
+	remove bool,
+	storable atree.Storable,
+) Value {
+	if remove {
+		interpreter.RemoveReferencedSlab(storable)
+	}
 	return v
 }
 
@@ -4741,6 +5048,7 @@ var _ NumberValue = UInt32Value(0)
 var _ IntegerValue = UInt32Value(0)
 var _ EquatableValue = UInt32Value(0)
 var _ HashableValue = UInt32Value(0)
+var _ MemberAccessibleValue = UInt32Value(0)
 
 func (UInt32Value) IsValue() {}
 
@@ -4939,7 +5247,13 @@ func (v UInt32Value) GetMember(_ *Interpreter, _ func() LocationRange, name stri
 	return getNumberValueMember(v, name, sema.UInt32Type)
 }
 
+func (UInt32Value) RemoveMember(_ *Interpreter, _ func() LocationRange, _ string) Value {
+	// Numbers have no removable members (fields / functions)
+	panic(errors.NewUnreachableError())
+}
+
 func (UInt32Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
+	// Numbers have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
@@ -4967,11 +5281,24 @@ func (v UInt32Value) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (a
 	return v, nil
 }
 
-func (UInt32Value) IsResourceAtAddress(_ *Interpreter, _ atree.Address) bool {
+func (UInt32Value) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (v UInt32Value) DeepCopy(_ *Interpreter, _ func() LocationRange, _ atree.Address) Value {
+func (UInt32Value) IsResourceKinded(_ *Interpreter) bool {
+	return false
+}
+
+func (v UInt32Value) Transfer(
+	interpreter *Interpreter,
+	_ func() LocationRange,
+	_ atree.Address,
+	remove bool,
+	storable atree.Storable,
+) Value {
+	if remove {
+		interpreter.RemoveReferencedSlab(storable)
+	}
 	return v
 }
 
@@ -5001,6 +5328,7 @@ var _ NumberValue = UInt64Value(0)
 var _ IntegerValue = UInt64Value(0)
 var _ EquatableValue = UInt64Value(0)
 var _ HashableValue = UInt64Value(0)
+var _ MemberAccessibleValue = UInt64Value(0)
 
 func (UInt64Value) IsValue() {}
 
@@ -5202,7 +5530,13 @@ func (v UInt64Value) GetMember(_ *Interpreter, _ func() LocationRange, name stri
 	return getNumberValueMember(v, name, sema.UInt64Type)
 }
 
+func (UInt64Value) RemoveMember(_ *Interpreter, _ func() LocationRange, _ string) Value {
+	// Numbers have no removable members (fields / functions)
+	panic(errors.NewUnreachableError())
+}
+
 func (UInt64Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
+	// Numbers have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
@@ -5230,11 +5564,24 @@ func (v UInt64Value) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (a
 	return v, nil
 }
 
-func (UInt64Value) IsResourceAtAddress(_ *Interpreter, _ atree.Address) bool {
+func (UInt64Value) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (v UInt64Value) DeepCopy(_ *Interpreter, _ func() LocationRange, _ atree.Address) Value {
+func (UInt64Value) IsResourceKinded(_ *Interpreter) bool {
+	return false
+}
+
+func (v UInt64Value) Transfer(
+	interpreter *Interpreter,
+	_ func() LocationRange,
+	_ atree.Address,
+	remove bool,
+	storable atree.Storable,
+) Value {
+	if remove {
+		interpreter.RemoveReferencedSlab(storable)
+	}
 	return v
 }
 
@@ -5274,6 +5621,7 @@ var _ NumberValue = UInt128Value{}
 var _ IntegerValue = UInt128Value{}
 var _ EquatableValue = UInt128Value{}
 var _ HashableValue = UInt128Value{}
+var _ MemberAccessibleValue = UInt128Value{}
 
 func (UInt128Value) IsValue() {}
 
@@ -5547,7 +5895,13 @@ func (v UInt128Value) GetMember(_ *Interpreter, _ func() LocationRange, name str
 	return getNumberValueMember(v, name, sema.UInt128Type)
 }
 
+func (UInt128Value) RemoveMember(_ *Interpreter, _ func() LocationRange, _ string) Value {
+	// Numbers have no removable members (fields / functions)
+	panic(errors.NewUnreachableError())
+}
+
 func (UInt128Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
+	// Numbers have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
@@ -5573,11 +5927,24 @@ func (v UInt128Value) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (
 	return v, nil
 }
 
-func (UInt128Value) IsResourceAtAddress(_ *Interpreter, _ atree.Address) bool {
+func (UInt128Value) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (v UInt128Value) DeepCopy(_ *Interpreter, _ func() LocationRange, _ atree.Address) Value {
+func (UInt128Value) IsResourceKinded(_ *Interpreter) bool {
+	return false
+}
+
+func (v UInt128Value) Transfer(
+	interpreter *Interpreter,
+	_ func() LocationRange,
+	_ atree.Address,
+	remove bool,
+	storable atree.Storable,
+) Value {
+	if remove {
+		interpreter.RemoveReferencedSlab(storable)
+	}
 	return v
 }
 
@@ -5618,6 +5985,7 @@ var _ NumberValue = UInt256Value{}
 var _ IntegerValue = UInt256Value{}
 var _ EquatableValue = UInt256Value{}
 var _ HashableValue = UInt256Value{}
+var _ MemberAccessibleValue = UInt256Value{}
 
 func (UInt256Value) IsValue() {}
 
@@ -5891,7 +6259,13 @@ func (v UInt256Value) GetMember(_ *Interpreter, _ func() LocationRange, name str
 	return getNumberValueMember(v, name, sema.UInt256Type)
 }
 
+func (UInt256Value) RemoveMember(_ *Interpreter, _ func() LocationRange, _ string) Value {
+	// Numbers have no removable members (fields / functions)
+	panic(errors.NewUnreachableError())
+}
+
 func (UInt256Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
+	// Numbers have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
@@ -5917,10 +6291,23 @@ func (v UInt256Value) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (
 	return v, nil
 }
 
-func (UInt256Value) IsResourceAtAddress(_ *Interpreter, _ atree.Address) bool {
+func (UInt256Value) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
-func (v UInt256Value) DeepCopy(_ *Interpreter, _ func() LocationRange, _ atree.Address) Value {
+
+func (UInt256Value) IsResourceKinded(_ *Interpreter) bool {
+	return false
+}
+func (v UInt256Value) Transfer(
+	interpreter *Interpreter,
+	_ func() LocationRange,
+	_ atree.Address,
+	remove bool,
+	storable atree.Storable,
+) Value {
+	if remove {
+		interpreter.RemoveReferencedSlab(storable)
+	}
 	return v
 }
 
@@ -5951,6 +6338,7 @@ var _ NumberValue = Word8Value(0)
 var _ IntegerValue = Word8Value(0)
 var _ EquatableValue = Word8Value(0)
 var _ HashableValue = Word8Value(0)
+var _ MemberAccessibleValue = Word8Value(0)
 
 func (Word8Value) IsValue() {}
 
@@ -6095,7 +6483,13 @@ func (v Word8Value) GetMember(_ *Interpreter, _ func() LocationRange, name strin
 	return getNumberValueMember(v, name, sema.Word8Type)
 }
 
+func (Word8Value) RemoveMember(_ *Interpreter, _ func() LocationRange, _ string) Value {
+	// Numbers have no removable members (fields / functions)
+	panic(errors.NewUnreachableError())
+}
+
 func (Word8Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
+	// Numbers have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
@@ -6121,11 +6515,24 @@ func (v Word8Value) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (at
 	return v, nil
 }
 
-func (Word8Value) IsResourceAtAddress(_ *Interpreter, _ atree.Address) bool {
+func (Word8Value) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (v Word8Value) DeepCopy(_ *Interpreter, _ func() LocationRange, _ atree.Address) Value {
+func (Word8Value) IsResourceKinded(_ *Interpreter) bool {
+	return false
+}
+
+func (v Word8Value) Transfer(
+	interpreter *Interpreter,
+	_ func() LocationRange,
+	_ atree.Address,
+	remove bool,
+	storable atree.Storable,
+) Value {
+	if remove {
+		interpreter.RemoveReferencedSlab(storable)
+	}
 	return v
 }
 
@@ -6155,6 +6562,7 @@ var _ NumberValue = Word16Value(0)
 var _ IntegerValue = Word16Value(0)
 var _ EquatableValue = Word16Value(0)
 var _ HashableValue = Word16Value(0)
+var _ MemberAccessibleValue = Word16Value(0)
 
 func (Word16Value) IsValue() {}
 
@@ -6298,7 +6706,13 @@ func (v Word16Value) GetMember(_ *Interpreter, _ func() LocationRange, name stri
 	return getNumberValueMember(v, name, sema.Word16Type)
 }
 
+func (Word16Value) RemoveMember(_ *Interpreter, _ func() LocationRange, _ string) Value {
+	// Numbers have no removable members (fields / functions)
+	panic(errors.NewUnreachableError())
+}
+
 func (Word16Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
+	// Numbers have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
@@ -6326,11 +6740,24 @@ func (v Word16Value) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (a
 	return v, nil
 }
 
-func (Word16Value) IsResourceAtAddress(_ *Interpreter, _ atree.Address) bool {
+func (Word16Value) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (v Word16Value) DeepCopy(_ *Interpreter, _ func() LocationRange, _ atree.Address) Value {
+func (Word16Value) IsResourceKinded(_ *Interpreter) bool {
+	return false
+}
+
+func (v Word16Value) Transfer(
+	interpreter *Interpreter,
+	_ func() LocationRange,
+	_ atree.Address,
+	remove bool,
+	storable atree.Storable,
+) Value {
+	if remove {
+		interpreter.RemoveReferencedSlab(storable)
+	}
 	return v
 }
 
@@ -6360,6 +6787,7 @@ var _ NumberValue = Word32Value(0)
 var _ IntegerValue = Word32Value(0)
 var _ EquatableValue = Word32Value(0)
 var _ HashableValue = Word32Value(0)
+var _ MemberAccessibleValue = Word32Value(0)
 
 func (Word32Value) IsValue() {}
 
@@ -6504,7 +6932,13 @@ func (v Word32Value) GetMember(_ *Interpreter, _ func() LocationRange, name stri
 	return getNumberValueMember(v, name, sema.Word32Type)
 }
 
+func (Word32Value) RemoveMember(_ *Interpreter, _ func() LocationRange, _ string) Value {
+	// Numbers have no removable members (fields / functions)
+	panic(errors.NewUnreachableError())
+}
+
 func (Word32Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
+	// Numbers have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
@@ -6532,11 +6966,24 @@ func (v Word32Value) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (a
 	return v, nil
 }
 
-func (Word32Value) IsResourceAtAddress(_ *Interpreter, _ atree.Address) bool {
+func (Word32Value) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (v Word32Value) DeepCopy(_ *Interpreter, _ func() LocationRange, _ atree.Address) Value {
+func (Word32Value) IsResourceKinded(_ *Interpreter) bool {
+	return false
+}
+
+func (v Word32Value) Transfer(
+	interpreter *Interpreter,
+	_ func() LocationRange,
+	_ atree.Address,
+	remove bool,
+	storable atree.Storable,
+) Value {
+	if remove {
+		interpreter.RemoveReferencedSlab(storable)
+	}
 	return v
 }
 
@@ -6566,6 +7013,7 @@ var _ NumberValue = Word64Value(0)
 var _ IntegerValue = Word64Value(0)
 var _ EquatableValue = Word64Value(0)
 var _ HashableValue = Word64Value(0)
+var _ MemberAccessibleValue = Word64Value(0)
 
 func (Word64Value) IsValue() {}
 
@@ -6710,7 +7158,13 @@ func (v Word64Value) GetMember(_ *Interpreter, _ func() LocationRange, name stri
 	return getNumberValueMember(v, name, sema.Word64Type)
 }
 
+func (Word64Value) RemoveMember(_ *Interpreter, _ func() LocationRange, _ string) Value {
+	// Numbers have no removable members (fields / functions)
+	panic(errors.NewUnreachableError())
+}
+
 func (Word64Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
+	// Numbers have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
@@ -6738,11 +7192,24 @@ func (v Word64Value) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (a
 	return v, nil
 }
 
-func (Word64Value) IsResourceAtAddress(_ *Interpreter, _ atree.Address) bool {
+func (Word64Value) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (v Word64Value) DeepCopy(_ *Interpreter, _ func() LocationRange, _ atree.Address) Value {
+func (Word64Value) IsResourceKinded(_ *Interpreter) bool {
+	return false
+}
+
+func (v Word64Value) Transfer(
+	interpreter *Interpreter,
+	_ func() LocationRange,
+	_ atree.Address,
+	remove bool,
+	storable atree.Storable,
+) Value {
+	if remove {
+		interpreter.RemoveReferencedSlab(storable)
+	}
 	return v
 }
 
@@ -6786,6 +7253,7 @@ var _ atree.Storable = Fix64Value(0)
 var _ NumberValue = Fix64Value(0)
 var _ EquatableValue = Fix64Value(0)
 var _ HashableValue = Fix64Value(0)
+var _ MemberAccessibleValue = Fix64Value(0)
 
 func (Fix64Value) IsValue() {}
 
@@ -7017,7 +7485,13 @@ func (v Fix64Value) GetMember(_ *Interpreter, _ func() LocationRange, name strin
 	return getNumberValueMember(v, name, sema.Fix64Type)
 }
 
+func (Fix64Value) RemoveMember(_ *Interpreter, _ func() LocationRange, _ string) Value {
+	// Numbers have no removable members (fields / functions)
+	panic(errors.NewUnreachableError())
+}
+
 func (Fix64Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
+	// Numbers have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
@@ -7045,11 +7519,24 @@ func (v Fix64Value) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (at
 	return v, nil
 }
 
-func (Fix64Value) IsResourceAtAddress(_ *Interpreter, _ atree.Address) bool {
+func (Fix64Value) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (v Fix64Value) DeepCopy(_ *Interpreter, _ func() LocationRange, _ atree.Address) Value {
+func (Fix64Value) IsResourceKinded(_ *Interpreter) bool {
+	return false
+}
+
+func (v Fix64Value) Transfer(
+	interpreter *Interpreter,
+	_ func() LocationRange,
+	_ atree.Address,
+	remove bool,
+	storable atree.Storable,
+) Value {
+	if remove {
+		interpreter.RemoveReferencedSlab(storable)
+	}
 	return v
 }
 
@@ -7088,6 +7575,7 @@ var _ atree.Storable = UFix64Value(0)
 var _ NumberValue = UFix64Value(0)
 var _ EquatableValue = UFix64Value(0)
 var _ HashableValue = UFix64Value(0)
+var _ MemberAccessibleValue = UFix64Value(0)
 
 func (UFix64Value) IsValue() {}
 
@@ -7290,7 +7778,13 @@ func (v UFix64Value) GetMember(_ *Interpreter, _ func() LocationRange, name stri
 	return getNumberValueMember(v, name, sema.UFix64Type)
 }
 
+func (UFix64Value) RemoveMember(_ *Interpreter, _ func() LocationRange, _ string) Value {
+	// Numbers have no removable members (fields / functions)
+	panic(errors.NewUnreachableError())
+}
+
 func (UFix64Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
+	// Numbers have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
@@ -7318,11 +7812,24 @@ func (v UFix64Value) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (a
 	return v, nil
 }
 
-func (UFix64Value) IsResourceAtAddress(_ *Interpreter, _ atree.Address) bool {
+func (UFix64Value) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (v UFix64Value) DeepCopy(_ *Interpreter, _ func() LocationRange, _ atree.Address) Value {
+func (UFix64Value) IsResourceKinded(_ *Interpreter) bool {
+	return false
+}
+
+func (v UFix64Value) Transfer(
+	interpreter *Interpreter,
+	_ func() LocationRange,
+	_ atree.Address,
+	remove bool,
+	storable atree.Storable,
+) Value {
+	if remove {
+		interpreter.RemoveReferencedSlab(storable)
+	}
 	return v
 }
 
@@ -7414,6 +7921,7 @@ func NewCompositeValue(
 var _ Value = &CompositeValue{}
 var _ EquatableValue = &CompositeValue{}
 var _ HashableValue = &CompositeValue{}
+var _ MemberAccessibleValue = &CompositeValue{}
 
 func (*CompositeValue) IsValue() {}
 
@@ -7600,6 +8108,45 @@ func (v *CompositeValue) OwnerValue(interpreter *Interpreter, getLocationRange f
 	return NewSomeValueNonCopying(ownerAccount)
 }
 
+func (v *CompositeValue) RemoveMember(
+	interpreter *Interpreter,
+	getLocationRange func() LocationRange,
+	name string,
+) Value {
+
+	// No need to clean up storable for passed-in key value,
+	// as atree never calls Storable()
+	existingKeyStorable, existingValueStorable, err := v.dictionary.Remove(
+		stringAtreeComparator,
+		stringAtreeHashInput,
+		stringAtreeValue(name),
+	)
+	if err != nil {
+		if _, ok := err.(*atree.KeyNotFoundError); ok {
+			return nil
+		}
+		panic(ExternalError{err})
+	}
+	interpreter.maybeCheckAtreeValue(v.dictionary)
+
+	storage := interpreter.Storage
+
+	// Key
+	interpreter.RemoveReferencedSlab(existingKeyStorable)
+
+	// Value
+
+	storedValue := StoredValue(existingValueStorable, storage)
+	return storedValue.
+		Transfer(
+			interpreter,
+			getLocationRange,
+			atree.Address{},
+			true,
+			existingValueStorable,
+		)
+}
+
 func (v *CompositeValue) SetMember(
 	interpreter *Interpreter,
 	getLocationRange func() LocationRange,
@@ -7608,11 +8155,12 @@ func (v *CompositeValue) SetMember(
 ) {
 	address := v.StorageID().Address
 
-	value = interpreter.TransferValue(
+	value = value.Transfer(
+		interpreter,
 		getLocationRange,
-		value,
-		nil,
 		address,
+		true,
+		nil,
 	)
 
 	existingStorable, err := v.dictionary.Set(
@@ -7869,68 +8417,90 @@ func (v *CompositeValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64
 	return atree.StorageIDStorable(v.StorageID()), nil
 }
 
-func (v *CompositeValue) IsResourceAtAddress(_ *Interpreter, address atree.Address) bool {
-	return v.Kind == common.CompositeKindResource &&
-		v.StorageID().Address == address
+func (v *CompositeValue) NeedsStoreTo(address atree.Address) bool {
+	return address != v.StorageID().Address
 }
 
-func (v *CompositeValue) DeepCopy(
+func (v *CompositeValue) IsResourceKinded(_ *Interpreter) bool {
+	return v.Kind == common.CompositeKindResource
+}
+
+func (v *CompositeValue) Transfer(
 	interpreter *Interpreter,
 	getLocationRange func() LocationRange,
 	address atree.Address,
+	remove bool,
+	storable atree.Storable,
 ) Value {
 
-	iterator, err := v.dictionary.Iterator()
-	if err != nil {
-		panic(ExternalError{err})
+	dictionary := v.dictionary
+
+	needsStoreTo := v.NeedsStoreTo(address)
+	isResourceKinded := v.IsResourceKinded(interpreter)
+
+	if needsStoreTo || !isResourceKinded {
+		iterator, err := v.dictionary.Iterator()
+		if err != nil {
+			panic(ExternalError{err})
+		}
+
+		dictionary, err = atree.NewMapFromBatchData(
+			interpreter.Storage,
+			address,
+			atree.NewDefaultDigesterBuilder(),
+			v.dictionary.Type(),
+			stringAtreeComparator,
+			stringAtreeHashInput,
+			v.dictionary.Seed(),
+			func() (atree.Value, atree.Value, error) {
+
+				atreeKey, atreeValue, err := iterator.Next()
+				if err != nil {
+					return nil, nil, err
+				}
+				if atreeKey == nil || atreeValue == nil {
+					return nil, nil, nil
+				}
+
+				// NOTE: key is stringAtreeValue
+				// and does not need to be converted or copied
+
+				value := MustConvertStoredValue(atreeValue).
+					Transfer(interpreter, getLocationRange, address, false, nil)
+
+				return atreeKey, value, nil
+			},
+		)
+		if err != nil {
+			panic(ExternalError{err})
+		}
+
+		if remove {
+			v.DeepRemove(interpreter)
+			interpreter.RemoveReferencedSlab(storable)
+		}
 	}
 
-	dictionary, err := atree.NewMapFromBatchData(
-		interpreter.Storage,
-		address,
-		atree.NewDefaultDigesterBuilder(),
-		v.dictionary.Type(),
-		stringAtreeComparator,
-		stringAtreeHashInput,
-		v.dictionary.Seed(),
-		func() (atree.Value, atree.Value, error) {
-
-			atreeKey, atreeValue, err := iterator.Next()
-			if err != nil {
-				return nil, nil, err
-			}
-			if atreeKey == nil || atreeValue == nil {
-				return nil, nil, nil
-			}
-
-			// NOTE: key is stringAtreeValue
-			// and does not need to be converted or copied
-
-			value := MustConvertStoredValue(atreeValue)
-			valueCopy := interpreter.CopyValue(getLocationRange, value, address)
-
-			return atreeKey, valueCopy, nil
-		},
-	)
-	if err != nil {
-		panic(ExternalError{err})
-	}
-
-	return &CompositeValue{
-		dictionary:          dictionary,
-		Location:            v.Location,
-		QualifiedIdentifier: v.QualifiedIdentifier,
-		Kind:                v.Kind,
-		InjectedFields:      v.InjectedFields,
-		ComputedFields:      v.ComputedFields,
-		NestedVariables:     v.NestedVariables,
-		Functions:           v.Functions,
-		Destructor:          v.Destructor,
-		Stringer:            v.Stringer,
-		isDestroyed:         v.isDestroyed,
-		typeID:              v.typeID,
-		staticType:          v.staticType,
-		dynamicType:         v.dynamicType,
+	if isResourceKinded {
+		v.dictionary = dictionary
+		return v
+	} else {
+		return &CompositeValue{
+			dictionary:          dictionary,
+			Location:            v.Location,
+			QualifiedIdentifier: v.QualifiedIdentifier,
+			Kind:                v.Kind,
+			InjectedFields:      v.InjectedFields,
+			ComputedFields:      v.ComputedFields,
+			NestedVariables:     v.NestedVariables,
+			Functions:           v.Functions,
+			Destructor:          v.Destructor,
+			Stringer:            v.Stringer,
+			isDestroyed:         v.isDestroyed,
+			typeID:              v.typeID,
+			staticType:          v.staticType,
+			dynamicType:         v.dynamicType,
+		}
 	}
 }
 
@@ -7981,7 +8551,7 @@ func (v *CompositeValue) StorageID() atree.StorageID {
 
 func (v *CompositeValue) RemoveField(
 	interpreter *Interpreter,
-	getLocationRange func() LocationRange,
+	_ func() LocationRange,
 	name string,
 ) {
 
@@ -8106,6 +8676,7 @@ var _ Value = &DictionaryValue{}
 var _ atree.Value = &DictionaryValue{}
 var _ EquatableValue = &DictionaryValue{}
 var _ ValueIndexableValue = &DictionaryValue{}
+var _ MemberAccessibleValue = &DictionaryValue{}
 
 func (*DictionaryValue) IsValue() {}
 
@@ -8331,12 +8902,8 @@ func (v *DictionaryValue) GetMember(
 					return nil
 				}
 
-				// We can directly call DeepCopy on the keys array value,
-				// instead of potentially skipping copying by using interpreter.CopyValue,
-				// as the keys value is only ever struct-kinded, which always must be copied
-
 				return MustConvertStoredValue(key).
-					DeepCopy(interpreter, getLocationRange, atree.Address{})
+					Transfer(interpreter, getLocationRange, atree.Address{}, false, nil)
 			},
 		)
 
@@ -8363,13 +8930,8 @@ func (v *DictionaryValue) GetMember(
 					return nil
 				}
 
-				// We can directly call DeepCopy on the value,
-				// instead of potentially skipping copying by using interpreter.CopyValue,
-				// as the dictionary values returned by the values field here
-				// are only ever struct-kinded, which always must be copied
-
 				return MustConvertStoredValue(value).
-					DeepCopy(interpreter, getLocationRange, atree.Address{})
+					Transfer(interpreter, getLocationRange, atree.Address{}, false, nil)
 			})
 
 	case "remove":
@@ -8425,7 +8987,12 @@ func (v *DictionaryValue) GetMember(
 	return nil
 }
 
-func (v *DictionaryValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
+func (*DictionaryValue) RemoveMember(_ *Interpreter, _ func() LocationRange, _ string) Value {
+	// Dictionaries have no removable members (fields / functions)
+	panic(errors.NewUnreachableError())
+}
+
+func (*DictionaryValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
 	// Dictionaries have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
@@ -8476,13 +9043,14 @@ func (v *DictionaryValue) Remove(
 
 	// Value
 
-	existingValue := StoredValue(existingValueStorable, storage)
-	existingValue = interpreter.TransferValue(
-		getLocationRange,
-		existingValue,
-		existingValueStorable,
-		atree.Address{},
-	)
+	existingValue := StoredValue(existingValueStorable, storage).
+		Transfer(
+			interpreter,
+			getLocationRange,
+			atree.Address{},
+			true,
+			existingValueStorable,
+		)
 
 	return NewSomeValueNonCopying(existingValue)
 }
@@ -8506,18 +9074,20 @@ func (v *DictionaryValue) Insert(
 
 	address := v.dictionary.Address()
 
-	keyValue = interpreter.TransferValue(
+	keyValue = keyValue.Transfer(
+		interpreter,
 		getLocationRange,
-		keyValue,
-		nil,
 		address,
+		true,
+		nil,
 	)
 
-	value = interpreter.TransferValue(
+	value = value.Transfer(
+		interpreter,
 		getLocationRange,
-		value,
-		nil,
 		address,
+		true,
+		nil,
 	)
 
 	valueComparator := newValueComparator(interpreter, getLocationRange)
@@ -8540,16 +9110,16 @@ func (v *DictionaryValue) Insert(
 		return NilValue{}
 	}
 
-	existingValue := StoredValue(existingValueStorable, interpreter.Storage)
+	existingValue := StoredValue(existingValueStorable, interpreter.Storage).
+		Transfer(
+			interpreter,
+			getLocationRange,
+			atree.Address{},
+			true,
+			existingValueStorable,
+		)
 
-	resultCopy := interpreter.TransferValue(
-		getLocationRange,
-		existingValue,
-		existingValueStorable,
-		atree.Address{},
-	)
-
-	return NewSomeValueNonCopying(resultCopy)
+	return NewSomeValueNonCopying(existingValue)
 }
 
 type DictionaryEntryValues struct {
@@ -8671,62 +9241,77 @@ func (v *DictionaryValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint6
 	return atree.StorageIDStorable(v.StorageID()), nil
 }
 
-func (v *DictionaryValue) IsResourceAtAddress(interpreter *Interpreter, address atree.Address) bool {
-	return v.StorageID().Address == address &&
-		v.IsResourceKinded(interpreter)
-}
-
-func (v *DictionaryValue) DeepCopy(
+func (v *DictionaryValue) Transfer(
 	interpreter *Interpreter,
 	getLocationRange func() LocationRange,
 	address atree.Address,
+	remove bool,
+	storable atree.Storable,
 ) Value {
 
-	valueComparator := newValueComparator(interpreter, getLocationRange)
-	hashInputProvider := newHashInputProvider(interpreter, getLocationRange)
+	dictionary := v.dictionary
 
-	iterator, err := v.dictionary.Iterator()
-	if err != nil {
-		panic(ExternalError{err})
+	needsStoreTo := v.NeedsStoreTo(address)
+	isResourceKinded := v.IsResourceKinded(interpreter)
+
+	if needsStoreTo || !isResourceKinded {
+
+		valueComparator := newValueComparator(interpreter, getLocationRange)
+		hashInputProvider := newHashInputProvider(interpreter, getLocationRange)
+
+		iterator, err := v.dictionary.Iterator()
+		if err != nil {
+			panic(ExternalError{err})
+		}
+
+		dictionary, err = atree.NewMapFromBatchData(
+			interpreter.Storage,
+			address,
+			atree.NewDefaultDigesterBuilder(),
+			v.dictionary.Type(),
+			valueComparator,
+			hashInputProvider,
+			v.dictionary.Seed(),
+			func() (atree.Value, atree.Value, error) {
+
+				atreeKey, atreeValue, err := iterator.Next()
+				if err != nil {
+					return nil, nil, err
+				}
+				if atreeKey == nil || atreeValue == nil {
+					return nil, nil, nil
+				}
+
+				key := MustConvertStoredValue(atreeKey).
+					Transfer(interpreter, getLocationRange, address, false, nil)
+
+				value := MustConvertStoredValue(atreeValue).
+					Transfer(interpreter, getLocationRange, address, false, nil)
+
+				return key, value, nil
+			},
+		)
+		if err != nil {
+			panic(ExternalError{err})
+		}
+
+		if remove {
+			v.DeepRemove(interpreter)
+			interpreter.RemoveReferencedSlab(storable)
+		}
 	}
 
-	dictionary, err := atree.NewMapFromBatchData(
-		interpreter.Storage,
-		address,
-		atree.NewDefaultDigesterBuilder(),
-		v.dictionary.Type(),
-		valueComparator,
-		hashInputProvider,
-		v.dictionary.Seed(),
-		func() (atree.Value, atree.Value, error) {
-
-			atreeKey, atreeValue, err := iterator.Next()
-			if err != nil {
-				return nil, nil, err
-			}
-			if atreeKey == nil || atreeValue == nil {
-				return nil, nil, nil
-			}
-
-			key := MustConvertStoredValue(atreeKey)
-			keyCopy := interpreter.CopyValue(getLocationRange, key, address)
-
-			value := MustConvertStoredValue(atreeValue)
-			valueCopy := interpreter.CopyValue(getLocationRange, value, address)
-
-			return keyCopy, valueCopy, nil
-		},
-	)
-	if err != nil {
-		panic(ExternalError{err})
-	}
-
-	return &DictionaryValue{
-		Type:             v.Type,
-		semaType:         v.semaType,
-		isResourceKinded: v.isResourceKinded,
-		dictionary:       dictionary,
-		isDestroyed:      v.isDestroyed,
+	if isResourceKinded {
+		v.dictionary = dictionary
+		return v
+	} else {
+		return &DictionaryValue{
+			Type:             v.Type,
+			semaType:         v.semaType,
+			isResourceKinded: v.isResourceKinded,
+			dictionary:       dictionary,
+			isDestroyed:      v.isDestroyed,
+		}
 	}
 }
 
@@ -8767,6 +9352,10 @@ func (v *DictionaryValue) SemaType(interpreter *Interpreter) *sema.DictionaryTyp
 	return v.semaType
 }
 
+func (v *DictionaryValue) NeedsStoreTo(address atree.Address) bool {
+	return address != v.StorageID().Address
+}
+
 func (v *DictionaryValue) IsResourceKinded(interpreter *Interpreter) bool {
 	if v.isResourceKinded == nil {
 		isResourceKinded := v.SemaType(interpreter).IsResourceType()
@@ -8789,6 +9378,7 @@ type NilValue struct{}
 var _ Value = NilValue{}
 var _ atree.Storable = NilValue{}
 var _ EquatableValue = NilValue{}
+var _ MemberAccessibleValue = NilValue{}
 
 func (NilValue) IsValue() {}
 
@@ -8850,7 +9440,13 @@ func (v NilValue) GetMember(_ *Interpreter, _ func() LocationRange, name string)
 	return nil
 }
 
+func (NilValue) RemoveMember(_ *Interpreter, _ func() LocationRange, _ string) Value {
+	// Nil has no removable members (fields / functions)
+	panic(errors.NewUnreachableError())
+}
+
 func (NilValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
+	// Nil has no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
@@ -8877,11 +9473,24 @@ func (v NilValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atre
 	return v, nil
 }
 
-func (NilValue) IsResourceAtAddress(_ *Interpreter, _ atree.Address) bool {
+func (NilValue) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (v NilValue) DeepCopy(_ *Interpreter, _ func() LocationRange, _ atree.Address) Value {
+func (NilValue) IsResourceKinded(_ *Interpreter) bool {
+	return false
+}
+
+func (v NilValue) Transfer(
+	interpreter *Interpreter,
+	_ func() LocationRange,
+	_ atree.Address,
+	remove bool,
+	storable atree.Storable,
+) Value {
+	if remove {
+		interpreter.RemoveReferencedSlab(storable)
+	}
 	return v
 }
 
@@ -8918,6 +9527,7 @@ func NewSomeValueNonCopying(value Value) *SomeValue {
 
 var _ Value = &SomeValue{}
 var _ EquatableValue = &SomeValue{}
+var _ MemberAccessibleValue = &SomeValue{}
 
 func (*SomeValue) IsValue() {}
 
@@ -8995,6 +9605,10 @@ func (v *SomeValue) GetMember(inter *Interpreter, _ func() LocationRange, name s
 	return nil
 }
 
+func (*SomeValue) RemoveMember(_ *Interpreter, _ func() LocationRange, _ string) Value {
+	panic(errors.NewUnreachableError())
+}
+
 func (*SomeValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
 	panic(errors.NewUnreachableError())
 }
@@ -9034,14 +9648,16 @@ func (v *SomeValue) Storable(
 	maxInlineSize uint64,
 ) (atree.Storable, error) {
 
-	var err error
-	v.valueStorable, err = v.Value.Storable(
-		storage,
-		address,
-		maxInlineSize,
-	)
-	if err != nil {
-		return nil, err
+	if v.valueStorable == nil {
+		var err error
+		v.valueStorable, err = v.Value.Storable(
+			storage,
+			address,
+			maxInlineSize,
+		)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return maybeLargeImmutableStorable(
@@ -9054,17 +9670,54 @@ func (v *SomeValue) Storable(
 	)
 }
 
-func (v *SomeValue) IsResourceAtAddress(interpreter *Interpreter, address atree.Address) bool {
-	return v.Value.IsResourceAtAddress(interpreter, address)
+func (v *SomeValue) NeedsStoreTo(address atree.Address) bool {
+	return v.Value.NeedsStoreTo(address)
 }
 
-func (v *SomeValue) DeepCopy(interpreter *Interpreter, getLocationRange func() LocationRange, address atree.Address) Value {
-	valueCopy := interpreter.CopyValue(getLocationRange, v.Value, address)
+func (v *SomeValue) IsResourceKinded(interpreter *Interpreter) bool {
+	return v.Value.IsResourceKinded(interpreter)
+}
 
-	result := NewSomeValueNonCopying(valueCopy)
-	result.isDestroyed = v.isDestroyed
+func (v *SomeValue) Transfer(
+	interpreter *Interpreter,
+	getLocationRange func() LocationRange,
+	address atree.Address,
+	remove bool,
+	storable atree.Storable,
+) Value {
 
-	return result
+	innerValue := v.Value
+	innerStorable := v.valueStorable
+
+	needsStoreTo := v.NeedsStoreTo(address)
+	isResourceKinded := v.IsResourceKinded(interpreter)
+
+	if needsStoreTo || !isResourceKinded {
+
+		innerValue = v.Value.Transfer(interpreter, getLocationRange, address, false, nil)
+
+		var err error
+		innerStorable, err = innerValue.Storable(interpreter.Storage, address, atree.MaxInlineElementSize)
+		if err != nil {
+			panic(ExternalError{err})
+		}
+
+		if remove {
+			v.DeepRemove(interpreter)
+			interpreter.RemoveReferencedSlab(storable)
+		}
+	}
+
+	if isResourceKinded {
+		v.Value = innerValue
+		v.valueStorable = innerStorable
+		return v
+	} else {
+		result := NewSomeValueNonCopying(innerValue)
+		result.valueStorable = innerStorable
+		result.isDestroyed = v.isDestroyed
+		return result
+	}
 }
 
 func (v *SomeValue) DeepRemove(interpreter *Interpreter) {
@@ -9111,6 +9764,7 @@ type StorageReferenceValue struct {
 var _ Value = &StorageReferenceValue{}
 var _ EquatableValue = &StorageReferenceValue{}
 var _ ValueIndexableValue = &StorageReferenceValue{}
+var _ MemberAccessibleValue = &StorageReferenceValue{}
 
 func (*StorageReferenceValue) IsValue() {}
 
@@ -9197,6 +9851,25 @@ func (v *StorageReferenceValue) GetMember(
 	interpreter.checkResourceNotDestroyed(self, getLocationRange)
 
 	return interpreter.getMember(self, getLocationRange, name)
+}
+
+func (v *StorageReferenceValue) RemoveMember(
+	interpreter *Interpreter,
+	getLocationRange func() LocationRange,
+	name string,
+) Value {
+	referencedValue := v.ReferencedValue(interpreter)
+	if referencedValue == nil {
+		panic(DereferenceError{
+			LocationRange: getLocationRange(),
+		})
+	}
+
+	self := *referencedValue
+
+	interpreter.checkResourceNotDestroyed(self, getLocationRange)
+
+	return self.(MemberAccessibleValue).RemoveMember(interpreter, getLocationRange, name)
 }
 
 func (v *StorageReferenceValue) SetMember(
@@ -9361,11 +10034,24 @@ func (v *StorageReferenceValue) Storable(_ atree.SlabStorage, _ atree.Address, _
 	return NonStorable{Value: v}, nil
 }
 
-func (*StorageReferenceValue) IsResourceAtAddress(_ *Interpreter, _ atree.Address) bool {
+func (*StorageReferenceValue) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (v *StorageReferenceValue) DeepCopy(_ *Interpreter, _ func() LocationRange, _ atree.Address) Value {
+func (*StorageReferenceValue) IsResourceKinded(_ *Interpreter) bool {
+	return false
+}
+
+func (v *StorageReferenceValue) Transfer(
+	interpreter *Interpreter,
+	_ func() LocationRange,
+	_ atree.Address,
+	remove bool,
+	storable atree.Storable,
+) Value {
+	if remove {
+		interpreter.RemoveReferencedSlab(storable)
+	}
 	return v
 }
 
@@ -9384,6 +10070,7 @@ type EphemeralReferenceValue struct {
 var _ Value = &EphemeralReferenceValue{}
 var _ EquatableValue = &EphemeralReferenceValue{}
 var _ ValueIndexableValue = &EphemeralReferenceValue{}
+var _ MemberAccessibleValue = &EphemeralReferenceValue{}
 
 func (*EphemeralReferenceValue) IsValue() {}
 
@@ -9474,6 +10161,29 @@ func (v *EphemeralReferenceValue) GetMember(
 	interpreter.checkResourceNotDestroyed(self, getLocationRange)
 
 	return interpreter.getMember(self, getLocationRange, name)
+}
+
+func (v *EphemeralReferenceValue) RemoveMember(
+	interpreter *Interpreter,
+	getLocationRange func() LocationRange,
+	identifier string,
+) Value {
+	referencedValue := v.ReferencedValue()
+	if referencedValue == nil {
+		panic(DereferenceError{
+			LocationRange: getLocationRange(),
+		})
+	}
+
+	self := *referencedValue
+
+	interpreter.checkResourceNotDestroyed(self, getLocationRange)
+
+	if memberAccessibleValue, ok := self.(MemberAccessibleValue); ok {
+		return memberAccessibleValue.RemoveMember(interpreter, getLocationRange, identifier)
+	}
+
+	return nil
 }
 
 func (v *EphemeralReferenceValue) SetMember(
@@ -9654,11 +10364,24 @@ func (v *EphemeralReferenceValue) Storable(_ atree.SlabStorage, _ atree.Address,
 	return NonStorable{Value: v}, nil
 }
 
-func (*EphemeralReferenceValue) IsResourceAtAddress(_ *Interpreter, _ atree.Address) bool {
+func (*EphemeralReferenceValue) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (v *EphemeralReferenceValue) DeepCopy(_ *Interpreter, _ func() LocationRange, _ atree.Address) Value {
+func (*EphemeralReferenceValue) IsResourceKinded(_ *Interpreter) bool {
+	return false
+}
+
+func (v *EphemeralReferenceValue) Transfer(
+	interpreter *Interpreter,
+	_ func() LocationRange,
+	_ atree.Address,
+	remove bool,
+	storable atree.Storable,
+) Value {
+	if remove {
+		interpreter.RemoveReferencedSlab(storable)
+	}
 	return v
 }
 
@@ -9697,6 +10420,7 @@ var _ Value = AddressValue{}
 var _ atree.Storable = AddressValue{}
 var _ EquatableValue = AddressValue{}
 var _ HashableValue = AddressValue{}
+var _ MemberAccessibleValue = AddressValue{}
 
 func (AddressValue) IsValue() {}
 
@@ -9770,7 +10494,13 @@ func (v AddressValue) GetMember(interpreter *Interpreter, _ func() LocationRange
 	return nil
 }
 
+func (AddressValue) RemoveMember(_ *Interpreter, _ func() LocationRange, _ string) Value {
+	// Addresses have no removable members (fields / functions)
+	panic(errors.NewUnreachableError())
+}
+
 func (AddressValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
+	// Addresses have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
@@ -9792,11 +10522,24 @@ func (v AddressValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (
 	return v, nil
 }
 
-func (AddressValue) IsResourceAtAddress(_ *Interpreter, _ atree.Address) bool {
+func (AddressValue) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (v AddressValue) DeepCopy(_ *Interpreter, _ func() LocationRange, _ atree.Address) Value {
+func (AddressValue) IsResourceKinded(_ *Interpreter) bool {
+	return false
+}
+
+func (v AddressValue) Transfer(
+	interpreter *Interpreter,
+	_ func() LocationRange,
+	_ atree.Address,
+	remove bool,
+	storable atree.Storable,
+) Value {
+	if remove {
+		interpreter.RemoveReferencedSlab(storable)
+	}
 	return v
 }
 
@@ -9869,6 +10612,7 @@ var _ Value = PathValue{}
 var _ atree.Storable = PathValue{}
 var _ EquatableValue = PathValue{}
 var _ HashableValue = PathValue{}
+var _ MemberAccessibleValue = PathValue{}
 
 func (PathValue) IsValue() {}
 
@@ -9936,7 +10680,13 @@ func (v PathValue) GetMember(_ *Interpreter, _ func() LocationRange, name string
 	return nil
 }
 
+func (PathValue) RemoveMember(_ *Interpreter, _ func() LocationRange, _ string) Value {
+	// Paths have no removable members (fields / functions)
+	panic(errors.NewUnreachableError())
+}
+
 func (PathValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
+	// Paths have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
@@ -9991,11 +10741,24 @@ func (v PathValue) Storable(
 	)
 }
 
-func (PathValue) IsResourceAtAddress(_ *Interpreter, _ atree.Address) bool {
+func (PathValue) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (v PathValue) DeepCopy(_ *Interpreter, _ func() LocationRange, _ atree.Address) Value {
+func (PathValue) IsResourceKinded(_ *Interpreter) bool {
+	return false
+}
+
+func (v PathValue) Transfer(
+	interpreter *Interpreter,
+	_ func() LocationRange,
+	_ atree.Address,
+	remove bool,
+	storable atree.Storable,
+) Value {
+	if remove {
+		interpreter.RemoveReferencedSlab(storable)
+	}
 	return v
 }
 
@@ -10026,6 +10789,7 @@ type CapabilityValue struct {
 var _ Value = &CapabilityValue{}
 var _ atree.Storable = &CapabilityValue{}
 var _ EquatableValue = &CapabilityValue{}
+var _ MemberAccessibleValue = &CapabilityValue{}
 
 func (*CapabilityValue) IsValue() {}
 
@@ -10094,7 +10858,13 @@ func (v *CapabilityValue) GetMember(interpreter *Interpreter, _ func() LocationR
 	return nil
 }
 
+func (*CapabilityValue) RemoveMember(_ *Interpreter, _ func() LocationRange, _ string) Value {
+	// Capabilities have no removable members (fields / functions)
+	panic(errors.NewUnreachableError())
+}
+
 func (*CapabilityValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
+	// Capabilities have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
@@ -10145,25 +10915,26 @@ func (v *CapabilityValue) Storable(
 	)
 }
 
-func (*CapabilityValue) IsResourceAtAddress(_ *Interpreter, _ atree.Address) bool {
+func (*CapabilityValue) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (v *CapabilityValue) DeepCopy(
-	interpreter *Interpreter,
-	getLocationRange func() LocationRange,
-	address atree.Address,
-) Value {
-	// We can directly call DeepCopy on the child values, instead of potentially skipping copying
-	// by using interpreter.copyValue, as both values are struct-kinded, which always must be copied
-	addressCopy := v.Address.DeepCopy(interpreter, getLocationRange, address).(AddressValue)
-	pathCopy := v.Path.DeepCopy(interpreter, getLocationRange, address).(PathValue)
+func (*CapabilityValue) IsResourceKinded(_ *Interpreter) bool {
+	return false
+}
 
-	return &CapabilityValue{
-		Address:    addressCopy,
-		Path:       pathCopy,
-		BorrowType: v.BorrowType,
+func (v *CapabilityValue) Transfer(
+	interpreter *Interpreter,
+	_ func() LocationRange,
+	_ atree.Address,
+	remove bool,
+	storable atree.Storable,
+) Value {
+	if remove {
+		v.DeepRemove(interpreter)
+		interpreter.RemoveReferencedSlab(storable)
 	}
+	return v
 }
 
 func (v *CapabilityValue) DeepRemove(interpreter *Interpreter) {
@@ -10256,11 +11027,24 @@ func (v LinkValue) Storable(storage atree.SlabStorage, address atree.Address, ma
 	return maybeLargeImmutableStorable(v, storage, address, maxInlineSize)
 }
 
-func (LinkValue) IsResourceAtAddress(_ *Interpreter, _ atree.Address) bool {
+func (LinkValue) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (v LinkValue) DeepCopy(_ *Interpreter, _ func() LocationRange, _ atree.Address) Value {
+func (LinkValue) IsResourceKinded(_ *Interpreter) bool {
+	return false
+}
+
+func (v LinkValue) Transfer(
+	interpreter *Interpreter,
+	_ func() LocationRange,
+	_ atree.Address,
+	remove bool,
+	storable atree.Storable,
+) Value {
+	if remove {
+		interpreter.RemoveReferencedSlab(storable)
+	}
 	return v
 }
 
@@ -10309,9 +11093,7 @@ func NewPublicKeyValue(
 
 	publicKeyValue.ComputedFields = map[string]ComputedField{
 		sema.PublicKeyPublicKeyField: func(interpreter *Interpreter, getLocationRange func() LocationRange) Value {
-			// We can directly call DeepCopy on the key array, instead of potentially skipping copying
-			// by using interpreter.copyValue, as the key array is always struct-kinded, which always must be copied
-			return publicKey.DeepCopy(interpreter, getLocationRange, atree.Address{})
+			return publicKey.Transfer(interpreter, getLocationRange, atree.Address{}, false, nil)
 		},
 	}
 	publicKeyValue.Functions = map[string]FunctionValue{

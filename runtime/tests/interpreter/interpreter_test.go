@@ -24,6 +24,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/onflow/atree"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -7036,6 +7037,169 @@ func TestInterpretVariableDeclarationSecondValue(t *testing.T) {
 		interpreter.NewIntValueFromInt64(1),
 		secondResource.GetField(inter, interpreter.ReturnEmptyLocationRange, "id"),
 	)
+}
+
+func TestInterpretResourceMovingAndBorrowing(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("stack to stack", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            resource R2 {
+                let value: String
+
+                init() {
+                    self.value = "test"
+                }
+            }
+
+            resource R1 {
+                var r2: @R2?
+
+                init() {
+                    self.r2 <- nil
+                }
+
+                destroy() {
+                    destroy self.r2
+                }
+
+                fun moveToStack_Borrow_AndMoveBack(): &R2 {
+                    // The second assignment should not lead to the resource being cleared
+                    let optR2 <- self.r2 <- nil
+                    let r2 <- optR2!
+                    let ref = &r2 as &R2
+                    self.r2 <-! r2
+                    return ref
+                }
+            }
+
+            fun test(): [String?] {
+                let r2 <- create R2()
+                let r1 <- create R1()
+                r1.r2 <-! r2
+                let ref = r1.moveToStack_Borrow_AndMoveBack()
+                let value = r1.r2?.value
+                let refValue = ref.value
+                destroy r1
+                return [value, refValue]
+            }
+        `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewArrayValue(
+				inter,
+				interpreter.VariableSizedStaticType{
+					Type: interpreter.OptionalStaticType{
+						Type: interpreter.PrimitiveStaticTypeString,
+					},
+				},
+				common.Address{},
+				interpreter.NewSomeValueNonCopying(
+					interpreter.NewStringValue("test"),
+				),
+				interpreter.NewSomeValueNonCopying(
+					interpreter.NewStringValue("test"),
+				),
+			),
+			value,
+		)
+
+	})
+
+	t.Run("from account to stack and back", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            resource R2 {
+                let value: String
+
+                init() {
+                    self.value = "test"
+                }
+            }
+
+            resource R1 {
+                var r2: @R2?
+
+                init() {
+                    self.r2 <- nil
+                }
+
+                destroy() {
+                    destroy self.r2
+                }
+
+                fun moveToStack_Borrow_AndMoveBack(): &R2 {
+                    // The second assignment should not lead to the resource being cleared
+                    let optR2 <- self.r2 <- nil
+                    let r2 <- optR2!
+                    let ref = &r2 as &R2
+                    self.r2 <-! r2
+                    return ref
+                }
+            }
+
+            fun createR1(): @R1 {
+                return <- create R1()
+            }
+
+            fun test(r1: &R1): [String?] {
+                let r2 <- create R2()
+                r1.r2 <-! r2
+                let ref = r1.moveToStack_Borrow_AndMoveBack()
+                let value = r1.r2?.value
+                let refValue = ref.value
+                return [value, refValue]
+            }
+        `)
+
+		r1, err := inter.Invoke("createR1")
+		require.NoError(t, err)
+
+		r1 = r1.Transfer(inter, interpreter.ReturnEmptyLocationRange, atree.Address{1}, false, nil)
+
+		r1Type := checker.RequireGlobalType(t, inter.Program.Elaboration, "R1")
+
+		ref := &interpreter.EphemeralReferenceValue{
+			Value:        r1,
+			BorrowedType: r1Type,
+		}
+
+		value, err := inter.Invoke("test", ref)
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewArrayValue(
+				inter,
+				interpreter.VariableSizedStaticType{
+					Type: interpreter.OptionalStaticType{
+						Type: interpreter.PrimitiveStaticTypeString,
+					},
+				},
+				common.Address{},
+				interpreter.NewSomeValueNonCopying(
+					interpreter.NewStringValue("test"),
+				),
+				interpreter.NewSomeValueNonCopying(
+					interpreter.NewStringValue("test"),
+				),
+			),
+			value,
+		)
+
+	})
 }
 
 func TestInterpretCastingIntLiteralToInt8(t *testing.T) {

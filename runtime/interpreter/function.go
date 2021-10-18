@@ -119,11 +119,25 @@ func (f *InterpretedFunctionValue) Storable(_ atree.SlabStorage, _ atree.Address
 	return NonStorable{Value: f}, nil
 }
 
-func (*InterpretedFunctionValue) IsResourceAtAddress(_ *Interpreter, _ atree.Address) bool {
+func (*InterpretedFunctionValue) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (f *InterpretedFunctionValue) DeepCopy(_ *Interpreter, _ func() LocationRange, _ atree.Address) Value {
+func (*InterpretedFunctionValue) IsResourceKinded(_ *Interpreter) bool {
+	return false
+}
+
+func (f *InterpretedFunctionValue) Transfer(
+	interpreter *Interpreter,
+	_ func() LocationRange,
+	_ atree.Address,
+	remove bool,
+	storable atree.Storable,
+) Value {
+	// TODO: actually not needed, value is not storable
+	if remove {
+		interpreter.RemoveReferencedSlab(storable)
+	}
 	return f
 }
 
@@ -161,6 +175,7 @@ func NewHostFunctionValue(
 }
 
 var _ Value = &HostFunctionValue{}
+var _ MemberAccessibleValue = &HostFunctionValue{}
 
 func (*HostFunctionValue) IsValue() {}
 
@@ -201,7 +216,13 @@ func (f *HostFunctionValue) GetMember(_ *Interpreter, _ func() LocationRange, na
 	return nil
 }
 
+func (*HostFunctionValue) RemoveMember(_ *Interpreter, _ func() LocationRange, _ string) Value {
+	// Host functions have no removable members (fields / functions)
+	panic(errors.NewUnreachableError())
+}
+
 func (*HostFunctionValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
+	// Host functions have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
@@ -222,11 +243,25 @@ func (f *HostFunctionValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uin
 	return NonStorable{Value: f}, nil
 }
 
-func (*HostFunctionValue) IsResourceAtAddress(_ *Interpreter, _ atree.Address) bool {
+func (*HostFunctionValue) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (f *HostFunctionValue) DeepCopy(_ *Interpreter, _ func() LocationRange, _ atree.Address) Value {
+func (*HostFunctionValue) IsResourceKinded(_ *Interpreter) bool {
+	return false
+}
+
+func (f *HostFunctionValue) Transfer(
+	interpreter *Interpreter,
+	_ func() LocationRange,
+	_ atree.Address,
+	remove bool,
+	storable atree.Storable,
+) Value {
+	// TODO: actually not needed, value is not storable
+	if remove {
+		interpreter.RemoveReferencedSlab(storable)
+	}
 	return f
 }
 
@@ -319,11 +354,25 @@ func (f BoundFunctionValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uin
 	return NonStorable{Value: f}, nil
 }
 
-func (BoundFunctionValue) IsResourceAtAddress(_ *Interpreter, _ atree.Address) bool {
+func (BoundFunctionValue) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (f BoundFunctionValue) DeepCopy(_ *Interpreter, _ func() LocationRange, _ atree.Address) Value {
+func (BoundFunctionValue) IsResourceKinded(_ *Interpreter) bool {
+	return false
+}
+
+func (f BoundFunctionValue) Transfer(
+	interpreter *Interpreter,
+	_ func() LocationRange,
+	_ atree.Address,
+	remove bool,
+	storable atree.Storable,
+) Value {
+	// TODO: actually not needed, value is not storable
+	if remove {
+		interpreter.RemoveReferencedSlab(storable)
+	}
 	return f
 }
 

@@ -574,8 +574,9 @@ func TestInterpretContainerMutationAfterNilCoalescing(t *testing.T) {
 	result, err := inter.Invoke("test")
 	require.NoError(t, err)
 
-	require.Equal(
+	utils.RequireValuesEqual(
 		t,
+		inter,
 		interpreter.NewSomeValueNonCopying(
 			interpreter.NewStringValue("test"),
 		),
