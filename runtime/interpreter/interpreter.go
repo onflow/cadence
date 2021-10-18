@@ -112,7 +112,12 @@ type OnFunctionInvocationFunc func(
 type OnInvokedFunctionReturnFunc func(
 	inter *Interpreter,
 	line int,
-	functionName string,
+)
+
+// OnRecordTraceFunc is a function thats records a trace.
+type OnRecordTraceFunc func(
+	inter *Interpreter,
+	operationName string,
 	duration time.Duration,
 )
 
@@ -258,6 +263,7 @@ type Interpreter struct {
 	onLoopIteration                OnLoopIterationFunc
 	onFunctionInvocation           OnFunctionInvocationFunc
 	onInvokedFunctionReturn        OnInvokedFunctionReturnFunc
+	onRecordTrace                  OnRecordTraceFunc
 	injectedCompositeFieldsHandler InjectedCompositeFieldsHandlerFunc
 	contractValueHandler           ContractValueHandlerFunc
 	importLocationHandler          ImportLocationHandlerFunc
@@ -270,6 +276,7 @@ type Interpreter struct {
 	interpreted                    bool
 	statement                      ast.Statement
 	atreeValidationEnabled         bool
+	tracingEnabled                 bool
 }
 
 type Option func(*Interpreter) error
@@ -320,6 +327,16 @@ func WithOnFunctionInvocationHandler(handler OnFunctionInvocationFunc) Option {
 func WithOnInvokedFunctionReturnHandler(handler OnInvokedFunctionReturnFunc) Option {
 	return func(interpreter *Interpreter) error {
 		interpreter.SetOnInvokedFunctionReturnHandler(handler)
+		return nil
+	}
+}
+
+// WithOnRecordTraceHandler returns an interpreter option which sets
+// the given function as the on record trace function handler.
+//
+func WithOnRecordTraceHandler(handler OnRecordTraceFunc) Option {
+	return func(interpreter *Interpreter) error {
+		interpreter.SetOnRecordTraceHandler(handler)
 		return nil
 	}
 }
@@ -465,6 +482,16 @@ func WithAtreeValidationEnabled(enabled bool) Option {
 	}
 }
 
+// WithTracingEnabled returns an interpreter option which sets
+// the tracing option.
+//
+func WithTracingEnabled(enabled bool) Option {
+	return func(interpreter *Interpreter) error {
+		interpreter.SetTracingEnabled(enabled)
+		return nil
+	}
+}
+
 // withTypeCodes returns an interpreter option which sets the type codes.
 //
 func withTypeCodes(typeCodes TypeCodes) Option {
@@ -552,6 +579,12 @@ func (interpreter *Interpreter) SetOnInvokedFunctionReturnHandler(function OnInv
 	interpreter.onInvokedFunctionReturn = function
 }
 
+// SetOnRecordTraceHandler sets the function that is triggered when an record trace is called.
+//
+func (interpreter *Interpreter) SetOnRecordTraceHandler(function OnRecordTraceFunc) {
+	interpreter.onRecordTrace = function
+}
+
 // SetStorage sets the value that is used for storage operations.
 func (interpreter *Interpreter) SetStorage(storage Storage) {
 	interpreter.Storage = storage
@@ -628,6 +661,12 @@ func (interpreter *Interpreter) SetAllInterpreters(allInterpreters map[common.Lo
 //
 func (interpreter *Interpreter) SetAtreeValidationEnabled(enabled bool) {
 	interpreter.atreeValidationEnabled = enabled
+}
+
+// SetTracingEnabled sets the tracing option.
+//
+func (interpreter *Interpreter) SetTracingEnabled(enabled bool) {
+	interpreter.tracingEnabled = enabled
 }
 
 // setTypeCodes sets the type codes.
@@ -3501,13 +3540,6 @@ func (interpreter *Interpreter) reportFunctionInvocation(line int) {
 	}
 
 	interpreter.onFunctionInvocation(interpreter, line)
-}
-
-func (interpreter *Interpreter) reportFunctionInvocated(functionName string, duration time.Duration) {
-	if interpreter.onFunctionInvocated == nil {
-		return
-	}
-	interpreter.onFunctionInvocated(interpreter, functionName, duration)
 }
 
 func (interpreter *Interpreter) reportInvokedFunctionReturn(line int) {

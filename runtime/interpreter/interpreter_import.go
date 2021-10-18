@@ -81,4 +81,9 @@ func (interpreter *Interpreter) importResolvedLocation(resolvedLocation sema.Res
 		interpreter.setVariable(name, variable)
 		interpreter.Globals.Set(name, variable)
 	}
+
+	// TODO add tracing for imports
+	// if interpreter.tracingEnabled {
+	// 	interpreter.onRecordTrace("import.")
+	// }
 }

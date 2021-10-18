@@ -1379,7 +1379,7 @@ func (r *interpreterRuntime) meteringInterpreterOptions(runtimeInterface Interfa
 				callStackDepth--
 			},
 		),
-		interpreter.WithOnFunctionInvocatedHandler(
+		interpreter.WithOnRecordTraceHandler(
 			func(intr *interpreter.Interpreter, functionName string, duration time.Duration) {
 				runtimeInterface.RecordTrace(functionName, intr.Location, duration, nil)
 			},

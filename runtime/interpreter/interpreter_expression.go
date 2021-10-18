@@ -589,12 +589,13 @@ func (interpreter *Interpreter) VisitInvocationExpression(invocationExpression *
 
 	// If this is invocation is optional chaining, wrap the result
 	// as an optional, as the result is expected to be an optional
-
 	if isOptionalChaining {
 		resultValue = NewSomeValueNonCopying(resultValue)
 	}
 
-	interpreter.reportFunctionInvocated("function."+invocationExpression.InvokedExpression.String(), time.Since(startTime))
+	if interpreter.tracingEnabled {
+		interpreter.onRecordTrace(interpreter, TracingCadenceFunctionPrefix+invocationExpression.InvokedExpression.String(), time.Since(startTime))
+	}
 
 	return resultValue
 }
