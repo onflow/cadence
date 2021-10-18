@@ -1475,7 +1475,7 @@ func (v *ArrayValue) Transfer(
 				}
 
 				element := MustConvertStoredValue(value).
-					Transfer(interpreter, getLocationRange, address, false, nil)
+					Transfer(interpreter, getLocationRange, address, remove, nil)
 
 				return element, nil
 			},
@@ -1485,7 +1485,14 @@ func (v *ArrayValue) Transfer(
 		}
 
 		if remove {
-			v.DeepRemove(interpreter)
+			err = v.array.PopIterate(func(storable atree.Storable) {
+				interpreter.RemoveReferencedSlab(storable)
+			})
+			if err != nil {
+				panic(ExternalError{err})
+			}
+			interpreter.maybeCheckAtreeValue(v.array)
+
 			interpreter.RemoveReferencedSlab(storable)
 		}
 	}
@@ -8466,7 +8473,7 @@ func (v *CompositeValue) Transfer(
 				// and does not need to be converted or copied
 
 				value := MustConvertStoredValue(atreeValue).
-					Transfer(interpreter, getLocationRange, address, false, nil)
+					Transfer(interpreter, getLocationRange, address, remove, nil)
 
 				return atreeKey, value, nil
 			},
@@ -8476,7 +8483,15 @@ func (v *CompositeValue) Transfer(
 		}
 
 		if remove {
-			v.DeepRemove(interpreter)
+			err = v.dictionary.PopIterate(func(nameStorable atree.Storable, valueStorable atree.Storable) {
+				interpreter.RemoveReferencedSlab(nameStorable)
+				interpreter.RemoveReferencedSlab(valueStorable)
+			})
+			if err != nil {
+				panic(ExternalError{err})
+			}
+			interpreter.maybeCheckAtreeValue(v.dictionary)
+
 			interpreter.RemoveReferencedSlab(storable)
 		}
 	}
@@ -9283,10 +9298,10 @@ func (v *DictionaryValue) Transfer(
 				}
 
 				key := MustConvertStoredValue(atreeKey).
-					Transfer(interpreter, getLocationRange, address, false, nil)
+					Transfer(interpreter, getLocationRange, address, remove, nil)
 
 				value := MustConvertStoredValue(atreeValue).
-					Transfer(interpreter, getLocationRange, address, false, nil)
+					Transfer(interpreter, getLocationRange, address, remove, nil)
 
 				return key, value, nil
 			},
@@ -9296,7 +9311,15 @@ func (v *DictionaryValue) Transfer(
 		}
 
 		if remove {
-			v.DeepRemove(interpreter)
+			err = v.dictionary.PopIterate(func(keyStorable atree.Storable, valueStorable atree.Storable) {
+				interpreter.RemoveReferencedSlab(keyStorable)
+				interpreter.RemoveReferencedSlab(valueStorable)
+			})
+			if err != nil {
+				panic(ExternalError{err})
+			}
+			interpreter.maybeCheckAtreeValue(v.dictionary)
+
 			interpreter.RemoveReferencedSlab(storable)
 		}
 	}
@@ -9694,7 +9717,7 @@ func (v *SomeValue) Transfer(
 
 	if needsStoreTo || !isResourceKinded {
 
-		innerValue = v.Value.Transfer(interpreter, getLocationRange, address, false, nil)
+		innerValue = v.Value.Transfer(interpreter, getLocationRange, address, remove, nil)
 
 		var err error
 		innerStorable, err = innerValue.Storable(interpreter.Storage, address, atree.MaxInlineElementSize)
@@ -9703,7 +9726,7 @@ func (v *SomeValue) Transfer(
 		}
 
 		if remove {
-			v.DeepRemove(interpreter)
+			interpreter.RemoveReferencedSlab(v.valueStorable)
 			interpreter.RemoveReferencedSlab(storable)
 		}
 	}
