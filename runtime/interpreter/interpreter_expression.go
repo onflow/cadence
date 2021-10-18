@@ -104,8 +104,6 @@ func (interpreter *Interpreter) memberExpressionGetterSetter(memberExpression *a
 	identifier := memberExpression.Identifier.Identifier
 	getLocationRange := locationRangeGetter(interpreter.Location, memberExpression)
 	_, isNestedResourceMove := interpreter.Program.Elaboration.IsNestedResourceMoveExpression[memberExpression]
-	// TODO:
-	_ = isNestedResourceMove
 	return getterSetter{
 		target: target,
 		get: func(allowMissing bool) Value {
