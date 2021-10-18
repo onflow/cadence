@@ -434,7 +434,6 @@ func TestArrayMutation(t *testing.T) {
 		funcType := optionalType.Type.(*sema.FunctionType)
 
 		assert.Equal(t, sema.VoidType, funcType.ReturnTypeAnnotation.Type)
-		assert.Nil(t, funcType.ReceiverType)
 		assert.Empty(t, funcType.Parameters)
 	})
 }

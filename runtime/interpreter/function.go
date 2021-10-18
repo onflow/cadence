@@ -31,7 +31,6 @@ import (
 //
 type Invocation struct {
 	Self               *CompositeValue
-	ReceiverType       sema.Type
 	Arguments          []Value
 	ArgumentTypes      []sema.Type
 	TypeParameterTypes *sema.TypeParameterTypeOrderedMap
@@ -313,30 +312,7 @@ func (BoundFunctionValue) SetModified(_ bool) {
 func (BoundFunctionValue) isFunctionValue() {}
 
 func (f BoundFunctionValue) invoke(invocation Invocation) Value {
-	self := f.Self
-	receiverType := invocation.ReceiverType
-
-	if receiverType != nil {
-		selfType := invocation.Interpreter.ConvertStaticToSemaType(self.StaticType())
-
-		if _, ok := receiverType.(*sema.ReferenceType); ok {
-			if _, ok := selfType.(*sema.ReferenceType); !ok {
-				selfType = &sema.ReferenceType{
-					Type: selfType,
-				}
-			}
-		}
-
-		if !sema.IsSubType(selfType, receiverType) {
-			panic(InvocationReceiverTypeError{
-				SelfType:      selfType,
-				ReceiverType:  receiverType,
-				LocationRange: invocation.GetLocationRange(),
-			})
-		}
-	}
-
-	invocation.Self = self
+	invocation.Self = f.Self
 	return f.Function.invoke(invocation)
 }
 
