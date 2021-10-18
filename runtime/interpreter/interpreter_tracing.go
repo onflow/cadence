@@ -20,17 +20,49 @@ package interpreter
 
 import (
 	"time"
+
+	"github.com/opentracing/opentracing-go"
+	"github.com/opentracing/opentracing-go/log"
 )
 
 const (
-	tracingFunctionPrefix = "function."
-	tracingImportPrefix   = "import."
+	tracingFunctionPrefix   = "function."
+	tracingImportPrefix     = "import."
+	tracingArrayPrefix      = "array."
+	tracingDictionaryPrefix = "dictionary."
+	tracingDeepCopyPrefix   = "deepCopy."
 )
 
 func (interpreter *Interpreter) reportFunctionTrace(functionName string, duration time.Duration) {
-	interpreter.onRecordTrace(interpreter, tracingFunctionPrefix+functionName, duration)
+	interpreter.onRecordTrace(interpreter, tracingFunctionPrefix+functionName, duration, nil)
 }
 
 func (interpreter *Interpreter) reportImportTrace(importPath string, duration time.Duration) {
-	interpreter.onRecordTrace(interpreter, tracingImportPrefix+importPath, duration)
+	interpreter.onRecordTrace(interpreter, tracingImportPrefix+importPath, duration, nil)
+}
+
+func (interpreter *Interpreter) reportArrayValueDeepCopyTrace(typeInfo string, count int, duration time.Duration) {
+	logs := []opentracing.LogRecord{
+		{
+			Timestamp: time.Now(),
+			Fields: []log.Field{
+				log.Int("count", count),
+				log.String("type", typeInfo),
+			},
+		},
+	}
+	interpreter.onRecordTrace(interpreter, tracingArrayPrefix+tracingDeepCopyPrefix, duration, logs)
+}
+
+func (interpreter *Interpreter) reportDictionaryValueDeepCopyTrace(typeInfo string, count int, duration time.Duration) {
+	logs := []opentracing.LogRecord{
+		{
+			Timestamp: time.Now(),
+			Fields: []log.Field{
+				log.Int("count", count),
+				log.String("type", typeInfo),
+			},
+		},
+	}
+	interpreter.onRecordTrace(interpreter, tracingDictionaryPrefix+tracingDeepCopyPrefix, duration, logs)
 }

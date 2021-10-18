@@ -31,6 +31,7 @@ import (
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/sema"
+	"github.com/opentracing/opentracing-go"
 )
 
 type controlReturn interface {
@@ -119,6 +120,7 @@ type OnRecordTraceFunc func(
 	inter *Interpreter,
 	operationName string,
 	duration time.Duration,
+	logs []opentracing.LogRecord,
 )
 
 // InjectedCompositeFieldsHandlerFunc is a function that handles storage reads.

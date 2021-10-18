@@ -35,6 +35,7 @@ import (
 	"github.com/onflow/cadence/runtime/parser2"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
+	opentracing "github.com/opentracing/opentracing-go"
 )
 
 type Script struct {
@@ -1380,8 +1381,8 @@ func (r *interpreterRuntime) meteringInterpreterOptions(runtimeInterface Interfa
 			},
 		),
 		interpreter.WithOnRecordTraceHandler(
-			func(intr *interpreter.Interpreter, functionName string, duration time.Duration) {
-				runtimeInterface.RecordTrace(functionName, intr.Location, duration, nil)
+			func(intr *interpreter.Interpreter, functionName string, duration time.Duration, logs []opentracing.LogRecord) {
+				runtimeInterface.RecordTrace(functionName, intr.Location, duration, logs)
 			},
 		),
 

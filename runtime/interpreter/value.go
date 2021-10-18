@@ -25,6 +25,7 @@ import (
 	"math"
 	"math/big"
 	"strings"
+	"time"
 
 	"github.com/onflow/atree"
 	"github.com/rivo/uniseg"
@@ -1288,6 +1289,13 @@ func (v *ArrayValue) DeepCopy(
 	getLocationRange func() LocationRange,
 	address atree.Address,
 ) Value {
+
+	if interpreter.tracingEnabled {
+		startTime := time.Now()
+		defer func() {
+			interpreter.reportArrayValueDeepCopyTrace(v.Type.String(), v.Count(), time.Since(startTime))
+		}()
+	}
 
 	iterator, err := v.array.Iterator()
 	if err != nil {
@@ -7750,7 +7758,6 @@ func (v *CompositeValue) DeepCopy(
 	getLocationRange func() LocationRange,
 	address atree.Address,
 ) Value {
-
 	iterator, err := v.dictionary.Iterator()
 	if err != nil {
 		panic(ExternalError{err})
@@ -8538,6 +8545,13 @@ func (v *DictionaryValue) DeepCopy(
 	getLocationRange func() LocationRange,
 	address atree.Address,
 ) Value {
+
+	if interpreter.tracingEnabled {
+		startTime := time.Now()
+		defer func() {
+			interpreter.reportDictionaryValueDeepCopyTrace(v.Type.String(), v.Count(), time.Since(startTime))
+		}()
+	}
 
 	valueComparator := newValueComparator(interpreter, getLocationRange)
 	hashInputProvider := newHashInputProvider(interpreter, getLocationRange)
