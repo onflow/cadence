@@ -522,7 +522,13 @@ func (interpreter *Interpreter) VisitConditionalExpression(expression *ast.Condi
 
 func (interpreter *Interpreter) VisitInvocationExpression(invocationExpression *ast.InvocationExpression) ast.Repr {
 
-	startTime := time.Now()
+	// tracing
+	if interpreter.tracingEnabled {
+		startTime := time.Now()
+		defer func() {
+			interpreter.reportFunctionTrace(invocationExpression.InvokedExpression.String(), time.Since(startTime))
+		}()
+	}
 
 	// interpret the invoked expression
 	result := interpreter.evalExpression(invocationExpression.InvokedExpression)
@@ -591,10 +597,6 @@ func (interpreter *Interpreter) VisitInvocationExpression(invocationExpression *
 	// as an optional, as the result is expected to be an optional
 	if isOptionalChaining {
 		resultValue = NewSomeValueNonCopying(resultValue)
-	}
-
-	if interpreter.tracingEnabled {
-		interpreter.onRecordTrace(interpreter, TracingCadenceFunctionPrefix+invocationExpression.InvokedExpression.String(), time.Since(startTime))
 	}
 
 	return resultValue

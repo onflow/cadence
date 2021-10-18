@@ -18,4 +18,19 @@
 
 package interpreter
 
-const TracingCadenceFunctionPrefix = "function."
+import (
+	"time"
+)
+
+const (
+	tracingFunctionPrefix = "function."
+	tracingImportPrefix   = "import."
+)
+
+func (interpreter *Interpreter) reportFunctionTrace(functionName string, duration time.Duration) {
+	interpreter.onRecordTrace(interpreter, tracingFunctionPrefix+functionName, duration)
+}
+
+func (interpreter *Interpreter) reportImportTrace(importPath string, duration time.Duration) {
+	interpreter.onRecordTrace(interpreter, tracingImportPrefix+importPath, duration)
+}
