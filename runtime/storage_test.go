@@ -26,6 +26,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/onflow/atree"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -37,10 +38,11 @@ import (
 )
 
 func withWritesToStorage(
+	tb testing.TB,
 	arrayElementCount int,
 	storageItemCount int,
 	onWrite func(owner, key, value []byte),
-	handler func(storage *Storage),
+	handler func(*Storage, *interpreter.Interpreter),
 ) {
 
 	storage := NewStorage(
@@ -65,19 +67,30 @@ func withWritesToStorage(
 	)
 
 	for i := 0; i < arrayElementCount; i++ {
-		array.Append(inter, nil, interpreter.NewIntValueFromInt64(int64(i)))
+		array.Append(
+			inter,
+			interpreter.ReturnEmptyLocationRange,
+			interpreter.NewIntValueFromInt64(int64(i)),
+		)
 	}
 
 	address := common.BytesToAddress([]byte{0x1})
 
 	for i := 0; i < storageItemCount; i++ {
-		storage.deltas[interpreter.StorageKey{
+		storable, err := array.Storable(
+			inter.Storage,
+			atree.Address(address),
+			atree.MaxInlineElementSize,
+		)
+		require.NoError(tb, err)
+
+		storage.writes[interpreter.StorageKey{
 			Address: address,
 			Key:     strconv.Itoa(i),
-		}] = array
+		}] = storable
 	}
 
-	handler(storage)
+	handler(storage, inter)
 }
 
 func TestRuntimeStorageWriteCached(t *testing.T) {
@@ -96,12 +109,19 @@ func TestRuntimeStorageWriteCached(t *testing.T) {
 
 	const arrayElementCount = 100
 	const storageItemCount = 100
-	withWritesToStorage(arrayElementCount, storageItemCount, onWrite, func(storage *Storage) {
-		err := storage.Commit()
-		require.NoError(t, err)
+	withWritesToStorage(
+		t,
+		arrayElementCount,
+		storageItemCount,
+		onWrite,
+		func(storage *Storage, inter *interpreter.Interpreter) {
+			const commitContractUpdates = true
+			err := storage.Commit(inter, commitContractUpdates)
+			require.NoError(t, err)
 
-		require.Len(t, writes, storageItemCount)
-	})
+			require.Len(t, writes, storageItemCount)
+		},
+	)
 }
 
 func TestRuntimeStorageWriteCachedIsDeterministic(t *testing.T) {
@@ -120,29 +140,36 @@ func TestRuntimeStorageWriteCachedIsDeterministic(t *testing.T) {
 
 	const arrayElementCount = 100
 	const storageItemCount = 100
-	withWritesToStorage(arrayElementCount, storageItemCount, onWrite, func(storage *Storage) {
-		err := storage.Commit()
-		require.NoError(t, err)
-
-		previousWrites := make([]testWrite, len(writes))
-		copy(previousWrites, writes)
-
-		// verify for 10 times and check the writes are always deterministic
-		for i := 0; i < 10; i++ {
-			// test that writing again should produce the same result
-			writes = nil
-			err := storage.Commit()
+	withWritesToStorage(
+		t,
+		arrayElementCount,
+		storageItemCount,
+		onWrite,
+		func(storage *Storage, inter *interpreter.Interpreter) {
+			const commitContractUpdates = true
+			err := storage.Commit(inter, commitContractUpdates)
 			require.NoError(t, err)
 
-			for i, previousWrite := range previousWrites {
-				// compare the new write with the old write
-				require.Equal(t, previousWrite, writes[i])
-			}
+			previousWrites := make([]testWrite, len(writes))
+			copy(previousWrites, writes)
 
-			// no additional items
-			require.Len(t, writes, len(previousWrites))
-		}
-	})
+			// verify for 10 times and check the writes are always deterministic
+			for i := 0; i < 10; i++ {
+				// test that writing again should produce the same result
+				writes = nil
+				err := storage.Commit(inter, commitContractUpdates)
+				require.NoError(t, err)
+
+				for i, previousWrite := range previousWrites {
+					// compare the new write with the old write
+					require.Equal(t, previousWrite, writes[i])
+				}
+
+				// no additional items
+				require.Len(t, writes, len(previousWrites))
+			}
+		},
+	)
 }
 
 func BenchmarkRuntimeStorageWriteCached(b *testing.B) {
@@ -158,18 +185,25 @@ func BenchmarkRuntimeStorageWriteCached(b *testing.B) {
 
 	const arrayElementCount = 100
 	const storageItemCount = 100
-	withWritesToStorage(arrayElementCount, storageItemCount, onWrite, func(storage *Storage) {
-		b.ReportAllocs()
-		b.ResetTimer()
+	withWritesToStorage(
+		b,
+		arrayElementCount,
+		storageItemCount,
+		onWrite,
+		func(storage *Storage, inter *interpreter.Interpreter) {
+			b.ReportAllocs()
+			b.ResetTimer()
 
-		for i := 0; i < b.N; i++ {
-			writes = nil
-			err := storage.Commit()
-			require.NoError(b, err)
+			for i := 0; i < b.N; i++ {
+				writes = nil
+				const commitContractUpdates = true
+				err := storage.Commit(inter, commitContractUpdates)
+				require.NoError(b, err)
 
-			require.Len(b, writes, storageItemCount)
-		}
-	})
+				require.Len(b, writes, storageItemCount)
+			}
+		},
+	)
 }
 
 func TestRuntimeStorageWrite(t *testing.T) {
@@ -1723,4 +1757,374 @@ func TestRuntimeStorageRecursiveReference(t *testing.T) {
 	require.Error(t, err)
 
 	require.Contains(t, err.Error(), "cannot store non-storable value")
+}
+
+func TestRuntimeStorageTransfer(t *testing.T) {
+
+	t.Parallel()
+
+	runtime := newTestInterpreterRuntime()
+
+	address1 := common.BytesToAddress([]byte{0x1})
+	address2 := common.BytesToAddress([]byte{0x2})
+
+	ledger := newTestLedger(nil, nil)
+
+	var signers []Address
+
+	runtimeInterface := &testRuntimeInterface{
+		storage: ledger,
+		getSigningAccounts: func() ([]Address, error) {
+			return signers, nil
+		},
+	}
+
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	// Store
+
+	signers = []Address{address1}
+
+	storeTx := []byte(`
+      transaction {
+          prepare(signer: AuthAccount) {
+              signer.save([1], to: /storage/test)
+          }
+       }
+    `)
+
+	err := runtime.ExecuteTransaction(
+		Script{
+			Source: storeTx,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	// Transfer
+
+	signers = []Address{address1, address2}
+
+	transferTx := []byte(`
+      transaction {
+          prepare(signer1: AuthAccount, signer2: AuthAccount) {
+              let value = signer1.load<[Int]>(from: /storage/test)!
+              signer2.save(value, to: /storage/test)
+          }
+       }
+    `)
+
+	err = runtime.ExecuteTransaction(
+		Script{
+			Source: transferTx,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	var nonEmptyKeys int
+	for _, data := range ledger.storedValues {
+		if len(data) > 0 {
+			nonEmptyKeys++
+		}
+	}
+	assert.Equal(t, 2, nonEmptyKeys)
+}
+
+func TestRuntimeStorageUsed(t *testing.T) {
+
+	t.Parallel()
+
+	runtime := newTestInterpreterRuntime()
+
+	ledger := newTestLedger(nil, nil)
+
+	runtimeInterface := &testRuntimeInterface{
+		storage: ledger,
+		getStorageUsed: func(_ Address) (uint64, error) {
+			return 1, nil
+		},
+	}
+
+	// NOTE: do NOT change the contents of this script,
+	// it matters how the array is constructed,
+	// ESPECIALLY the value of the addresses and the number of elements!
+	//
+	// Querying storageUsed commits storage, and this test asserts
+	// that this should not clear temporary slabs
+
+	script := []byte(`
+       pub fun main() {
+            var addresses: [Address]= [
+                0x2a3c4c2581cef731, 0x2a3c4c2581cef731, 0x2a3c4c2581cef731, 0x2a3c4c2581cef731, 0x2a3c4c2581cef731,
+                0x2a3c4c2581cef731, 0x2a3c4c2581cef731, 0x2a3c4c2581cef731, 0x2a3c4c2581cef731, 0x2a3c4c2581cef731,
+                0x2a3c4c2581cef731, 0x2a3c4c2581cef731, 0x2a3c4c2581cef731, 0x2a3c4c2581cef731, 0x2a3c4c2581cef731,
+                0x2a3c4c2581cef731, 0x2a3c4c2581cef731, 0x2a3c4c2581cef731, 0x2a3c4c2581cef731, 0x2a3c4c2581cef731,
+                0x2a3c4c2581cef731, 0x2a3c4c2581cef731, 0x2a3c4c2581cef731, 0x2a3c4c2581cef731, 0x2a3c4c2581cef731,
+                0x2a3c4c2581cef731, 0x2a3c4c2581cef731, 0x2a3c4c2581cef731, 0x2a3c4c2581cef731, 0x2a3c4c2581cef731,
+                0x2a3c4c2581cef731, 0x2a3c4c2581cef731, 0x2a3c4c2581cef731, 0x2a3c4c2581cef731, 0x2a3c4c2581cef731,
+                0x2a3c4c2581cef731, 0x2a3c4c2581cef731, 0x2a3c4c2581cef731, 0x2a3c4c2581cef731, 0x2a3c4c2581cef731,
+                0x2a3c4c2581cef731, 0x2a3c4c2581cef731, 0x2a3c4c2581cef731, 0x2a3c4c2581cef731, 0x2a3c4c2581cef731,
+                0x2a3c4c2581cef731, 0x2a3c4c2581cef731, 0x2a3c4c2581cef731, 0x2a3c4c2581cef731, 0x2a3c4c2581cef731,
+                0x2a3c4c2581cef731, 0x2a3c4c2581cef731, 0x2a3c4c2581cef731, 0x2a3c4c2581cef731, 0x2a3c4c2581cef731,
+                0x2a3c4c2581cef731, 0x2a3c4c2581cef731, 0x2a3c4c2581cef731, 0x2a3c4c2581cef731, 0x2a3c4c2581cef731,
+                0x2a3c4c2581cef731, 0x2a3c4c2581cef731, 0x2a3c4c2581cef731, 0x2a3c4c2581cef731, 0x2a3c4c2581cef731,
+                0x2a3c4c2581cef731, 0x2a3c4c2581cef731, 0x2a3c4c2581cef731, 0x2a3c4c2581cef731, 0x2a3c4c2581cef731,
+                0x2a3c4c2581cef731, 0x2a3c4c2581cef731, 0x2a3c4c2581cef731, 0x2a3c4c2581cef731, 0x2a3c4c2581cef731,
+                0x2a3c4c2581cef731, 0x2a3c4c2581cef731, 0x2a3c4c2581cef731, 0x2a3c4c2581cef731, 0x2a3c4c2581cef731,
+                0x2a3c4c2581cef731, 0x2a3c4c2581cef731, 0x2a3c4c2581cef731, 0x2a3c4c2581cef731, 0x2a3c4c2581cef731,
+                0x2a3c4c2581cef731, 0x2a3c4c2581cef731, 0x2a3c4c2581cef731, 0x2a3c4c2581cef731, 0x2a3c4c2581cef731,
+                0x2a3c4c2581cef731, 0x2a3c4c2581cef731, 0x2a3c4c2581cef731, 0x2a3c4c2581cef731, 0x2a3c4c2581cef731,
+                0x2a3c4c2581cef731, 0x2a3c4c2581cef731, 0x2a3c4c2581cef731, 0x2a3c4c2581cef731
+            ]
+            var count = 0
+            for address in addresses {
+                let account = getAccount(address)
+                var x = account.storageUsed
+            }
+        }
+    `)
+
+	_, err := runtime.ExecuteScript(
+		Script{
+			Source: script,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  common.ScriptLocation{},
+		},
+	)
+	require.NoError(t, err)
+
+}
+
+func TestSortAccountStorageEntries(t *testing.T) {
+
+	t.Parallel()
+
+	entries := []AccountStorageEntry{
+		{
+			StorageKey: interpreter.StorageKey{
+				Address: common.Address{2},
+				Key:     "a",
+			},
+		},
+		{
+			StorageKey: interpreter.StorageKey{
+				Address: common.Address{1},
+				Key:     "b",
+			},
+		},
+		{
+			StorageKey: interpreter.StorageKey{
+				Address: common.Address{1},
+				Key:     "a",
+			},
+		},
+		{
+			StorageKey: interpreter.StorageKey{
+				Address: common.Address{0},
+				Key:     "x",
+			},
+		},
+	}
+
+	SortAccountStorageEntries(entries)
+
+	require.Equal(t,
+		[]AccountStorageEntry{
+			{
+				StorageKey: interpreter.StorageKey{
+					Address: common.Address{0},
+					Key:     "x",
+				},
+			},
+			{
+				StorageKey: interpreter.StorageKey{
+					Address: common.Address{1},
+					Key:     "a",
+				},
+			},
+			{
+				StorageKey: interpreter.StorageKey{
+					Address: common.Address{1},
+					Key:     "b",
+				},
+			},
+			{
+				StorageKey: interpreter.StorageKey{
+					Address: common.Address{2},
+					Key:     "a",
+				},
+			},
+		},
+		entries,
+	)
+}
+
+func TestRuntimeMissingSlab1173(t *testing.T) {
+
+	t.Parallel()
+
+	const contract = `
+pub contract Test {
+    pub enum Role: UInt8 {
+        pub case aaa
+        pub case bbb
+    }
+
+    pub resource AAA {
+        pub fun callA(): String {
+            return "AAA"
+        }
+    }
+
+    pub resource BBB {
+        pub fun callB(): String {
+            return "BBB"
+        }
+    }
+
+    pub resource interface Receiver {
+        pub fun receive(as: Role, capability: Capability)
+    }
+
+    pub resource Holder: Receiver {
+        access(self) let roles: { Role: Capability }
+        pub fun receive(as: Role, capability: Capability) {
+            self.roles[as] = capability
+        }
+
+        pub fun borrowA(): &AAA {
+            let role = self.roles[Role.aaa]!
+            return role.borrow<&AAA>()!
+        }
+
+        pub fun borrowB(): &BBB {
+            let role = self.roles[Role.bbb]!
+            return role.borrow<&BBB>()!
+        }
+
+        access(contract) init() {
+            self.roles = {}
+        }
+    }
+
+    access(self) let capabilities: { Role: Capability }
+
+    pub fun createHolder(): @Holder {
+        return <- create Holder()
+    }
+
+    pub fun attach(as: Role, receiver: &AnyResource{Receiver}) {
+        // TODO: Now verify that the owner is valid.
+
+        let capability = self.capabilities[as]!
+        receiver.receive(as: as, capability: capability)
+    }
+
+    init() {
+        self.account.save<@AAA>(<- create AAA(), to: /storage/TestAAA)
+        self.account.save<@BBB>(<- create BBB(), to: /storage/TestBBB)
+
+        self.capabilities = {}
+        self.capabilities[Role.aaa] = self.account.link<&AAA>(/private/TestAAA, target: /storage/TestAAA)!
+        self.capabilities[Role.bbb] = self.account.link<&BBB>(/private/TestBBB, target: /storage/TestBBB)!
+    }
+}
+
+`
+
+	const tx = `
+import Test from 0x1
+
+transaction {
+    prepare(acct: AuthAccount) {}
+    execute {
+        let holder <- Test.createHolder()
+        Test.attach(as: Test.Role.aaa, receiver: &holder as &AnyResource{Test.Receiver})
+        destroy holder
+    }
+}
+`
+
+	runtime := newTestInterpreterRuntime()
+
+	testAddress := common.BytesToAddress([]byte{0x1})
+
+	accountCodes := map[common.LocationID][]byte{}
+
+	var events []cadence.Event
+
+	signerAccount := testAddress
+
+	runtimeInterface := &testRuntimeInterface{
+		getCode: func(location Location) (bytes []byte, err error) {
+			return accountCodes[location.ID()], nil
+		},
+		storage: newTestLedger(nil, nil),
+		getSigningAccounts: func() ([]Address, error) {
+			return []Address{signerAccount}, nil
+		},
+		resolveLocation: singleIdentifierLocationResolver(t),
+		getAccountContractCode: func(address Address, name string) (code []byte, err error) {
+			location := common.AddressLocation{
+				Address: address,
+				Name:    name,
+			}
+			return accountCodes[location.ID()], nil
+		},
+		updateAccountContractCode: func(address Address, name string, code []byte) error {
+			location := common.AddressLocation{
+				Address: address,
+				Name:    name,
+			}
+			accountCodes[location.ID()] = code
+			return nil
+		},
+		emitEvent: func(event cadence.Event) error {
+			events = append(events, event)
+			return nil
+		},
+		decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+			return json.Decode(b)
+		},
+	}
+
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	// Deploy contract
+
+	err := runtime.ExecuteTransaction(
+		Script{
+			Source: utils.DeploymentTransaction(
+				"Test",
+				[]byte(contract),
+			),
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	// Run transaction
+
+	err = runtime.ExecuteTransaction(
+		Script{
+			Source: []byte(tx),
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
 }

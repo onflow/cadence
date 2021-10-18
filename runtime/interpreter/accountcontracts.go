@@ -31,6 +31,7 @@ var authAccountContractsStaticType StaticType = PrimitiveStaticTypeAuthAccountCo
 var authAccountContractsDynamicType DynamicType = CompositeDynamicType{
 	StaticType: sema.AuthAccountContractsType,
 }
+var authAccountContractsFieldNames []string = nil
 
 func NewAuthAccountContractsValue(
 	address AddressValue,
@@ -66,7 +67,7 @@ func NewAuthAccountContractsValue(
 		authAccountContractsTypeID,
 		authAccountContractsStaticType,
 		authAccountContractsDynamicType,
-		nil,
+		authAccountContractsFieldNames,
 		fields,
 		computedFields,
 		nil,

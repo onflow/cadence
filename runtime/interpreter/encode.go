@@ -25,9 +25,12 @@ import (
 
 	"github.com/fxamacker/cbor/v2"
 	"github.com/onflow/atree"
+
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
 )
+
+const cborTagSize = 2
 
 func getIntCBORSize(v int64) uint32 {
 	if v < 0 {
@@ -693,7 +696,7 @@ const (
 // 					encodedCapabilityValueBorrowTypeFieldKey: StaticType(v.BorrowType),
 // 				},
 // }
-func (s CapabilityStorable) Encode(e *atree.Encoder) error {
+func (v *CapabilityValue) Encode(e *atree.Encoder) error {
 	// Encode tag number and array head
 	err := e.CBOR.EncodeRawBytes([]byte{
 		// tag number
@@ -706,19 +709,19 @@ func (s CapabilityStorable) Encode(e *atree.Encoder) error {
 	}
 
 	// Encode address at array index encodedCapabilityValueAddressFieldKey
-	err = s.Address.Encode(e)
+	err = v.Address.Encode(e)
 	if err != nil {
 		return err
 	}
 
 	// Encode path at array index encodedCapabilityValuePathFieldKey
-	err = s.Path.Encode(e)
+	err = v.Path.Encode(e)
 	if err != nil {
 		return err
 	}
 
 	// Encode borrow type at array index encodedCapabilityValueBorrowTypeFieldKey
-	return EncodeStaticType(e.CBOR, s.BorrowType)
+	return EncodeStaticType(e.CBOR, v.BorrowType)
 }
 
 // NOTE: NEVER change, only add/increment; ensure uint64
@@ -1265,4 +1268,53 @@ func (t CapabilityStaticType) Encode(e *cbor.StreamEncoder) error {
 
 func (t FunctionStaticType) Encode(_ *cbor.StreamEncoder) error {
 	panic(errors.NewUnreachableError())
+}
+
+// compositeTypeInfo
+
+type compositeTypeInfo struct {
+	location            common.Location
+	qualifiedIdentifier string
+	kind                common.CompositeKind
+}
+
+var _ atree.TypeInfo = compositeTypeInfo{}
+
+const encodedCompositeTypeInfoLength = 3
+
+func (c compositeTypeInfo) Encode(e *cbor.StreamEncoder) error {
+	err := e.EncodeRawBytes([]byte{
+		// tag number
+		0xd8, CBORTagCompositeValue,
+		// array, 3 items follow
+		0x83,
+	})
+	if err != nil {
+		return err
+	}
+
+	err = encodeLocation(e, c.location)
+	if err != nil {
+		return err
+	}
+
+	err = e.EncodeString(c.qualifiedIdentifier)
+	if err != nil {
+		return err
+	}
+
+	err = e.EncodeUint64(uint64(c.kind))
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (c compositeTypeInfo) Equal(o atree.TypeInfo) bool {
+	other, ok := o.(compositeTypeInfo)
+	return ok &&
+		common.LocationsMatch(c.location, other.location) &&
+		c.qualifiedIdentifier == other.qualifiedIdentifier &&
+		c.kind == other.kind
 }

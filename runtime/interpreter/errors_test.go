@@ -21,9 +21,10 @@ package interpreter_test
 import (
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/onflow/cadence/runtime/common"
 	. "github.com/onflow/cadence/runtime/interpreter"
-	"github.com/stretchr/testify/require"
 )
 
 func TestOverwriteError_Error(t *testing.T) {

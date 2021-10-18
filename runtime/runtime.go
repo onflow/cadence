@@ -254,7 +254,7 @@ func (r *interpreterRuntime) ExecuteScript(script Script, context Context) (cade
 		context.Interface,
 	)
 
-	value, _, err := r.interpret(
+	value, inter, err := r.interpret(
 		program,
 		context,
 		storage,
@@ -279,7 +279,8 @@ func (r *interpreterRuntime) ExecuteScript(script Script, context Context) (cade
 	// Even though this function is `ExecuteScript`, that doesn't imply the changes
 	// to storage will be actually persisted
 
-	err = storage.Commit()
+	const commitContractUpdates = true
+	err = storage.Commit(inter, commitContractUpdates)
 	if err != nil {
 		return nil, newError(err, context)
 	}
@@ -494,7 +495,8 @@ func (r *interpreterRuntime) InvokeContractFunction(
 	}
 
 	// Write back all stored values, which were actually just cached, back into storage
-	err = storage.Commit()
+	const commitContractUpdates = true
+	err = storage.Commit(inter, commitContractUpdates)
 	if err != nil {
 		return nil, newError(err, context)
 	}
@@ -629,7 +631,7 @@ func (r *interpreterRuntime) ExecuteTransaction(script Script, context Context) 
 		return authorizerValues
 	}
 
-	_, _, err = r.interpret(
+	_, inter, err := r.interpret(
 		program,
 		context,
 		storage,
@@ -649,7 +651,8 @@ func (r *interpreterRuntime) ExecuteTransaction(script Script, context Context) 
 	}
 
 	// Write back all stored values, which were actually just cached, back into storage
-	err = storage.Commit()
+	const commitContractUpdates = true
+	err = storage.Commit(inter, commitContractUpdates)
 	if err != nil {
 		return newError(err, context)
 	}
@@ -1056,6 +1059,7 @@ func (r *interpreterRuntime) newInterpreter(
 			) error {
 				return r.emitEvent(
 					inter,
+					getLocationRange,
 					context.Interface,
 					eventValue,
 					eventType,
@@ -1142,13 +1146,14 @@ func (r *interpreterRuntime) newInterpreter(
 		interpreter.WithHashHandler(
 			func(
 				inter *interpreter.Interpreter,
-				_ func() interpreter.LocationRange,
+				getLocationRange func() interpreter.LocationRange,
 				data *interpreter.ArrayValue,
 				tag *interpreter.StringValue,
 				hashAlgorithm interpreter.MemberAccessibleValue,
 			) *interpreter.ArrayValue {
 				return hash(
 					inter,
+					getLocationRange,
 					data,
 					tag,
 					hashAlgorithm,
@@ -1436,6 +1441,7 @@ func (r *interpreterRuntime) getCode(context Context) (code []byte, err error) {
 // emitEvent converts an event value to native Go types and emits it to the runtime interface.
 func (r *interpreterRuntime) emitEvent(
 	inter *interpreter.Interpreter,
+	getLocationRange func() interpreter.LocationRange,
 	runtimeInterface Interface,
 	event *interpreter.CompositeValue,
 	eventType *sema.CompositeType,
@@ -1443,7 +1449,7 @@ func (r *interpreterRuntime) emitEvent(
 	fields := make([]exportableValue, len(eventType.ConstructorParameters))
 
 	for i, parameter := range eventType.ConstructorParameters {
-		value := event.GetField(parameter.Identifier)
+		value := event.GetField(inter, getLocationRange, parameter.Identifier)
 		fields[i] = newExportableValue(value, inter)
 	}
 
@@ -1606,7 +1612,8 @@ func storageUsedGetFunction(
 
 		// NOTE: flush the cached values, so the host environment
 		// can properly calculate the amount of storage used by the account
-		err := storage.Commit()
+		const commitContractUpdates = false
+		err := storage.Commit(inter, commitContractUpdates)
 		if err != nil {
 			panic(err)
 		}
@@ -1717,12 +1724,14 @@ func (r *interpreterRuntime) newRemovePublicKeyFunction(
 // It is only recorded and only written at the end of the execution
 //
 func (r *interpreterRuntime) recordContractValue(
+	inter *interpreter.Interpreter,
 	storage *Storage,
 	addressValue interpreter.AddressValue,
 	name string,
 	contractValue interpreter.Value,
 ) {
 	storage.recordContractUpdate(
+		inter,
 		addressValue.ToAddress(),
 		formatContractKey(name),
 		contractValue,
@@ -2353,7 +2362,10 @@ func (r *interpreterRuntime) newAuthAccountContractsChangeFunction(
 				handleContractUpdateError(err)
 			}
 
+			inter := invocation.Interpreter
+
 			err = r.updateAccountContractCode(
+				inter,
 				program,
 				context,
 				storage,
@@ -2377,8 +2389,6 @@ func (r *interpreterRuntime) newAuthAccountContractsChangeFunction(
 
 				panic(err)
 			}
-
-			inter := invocation.Interpreter
 
 			codeHashValue := CodeToHashValue(inter, code)
 
@@ -2420,6 +2430,7 @@ type updateAccountContractCodeOptions struct {
 // This function is only used for the new account code/contract API.
 //
 func (r *interpreterRuntime) updateAccountContractCode(
+	inter *interpreter.Interpreter,
 	program *interpreter.Program,
 	context Context,
 	storage *Storage,
@@ -2490,6 +2501,7 @@ func (r *interpreterRuntime) updateAccountContractCode(
 		// until the end of the execution of the program
 
 		r.recordContractValue(
+			inter,
 			storage,
 			addressValue,
 			name,
@@ -2599,6 +2611,7 @@ func (r *interpreterRuntime) newAuthAccountContractsRemoveFunction(
 				// until the end of the execution of the program
 
 				r.recordContractValue(
+					inter,
 					storage,
 					addressValue,
 					nameArgument,
@@ -2740,6 +2753,11 @@ func (r *interpreterRuntime) ReadLinked(address common.Address, path cadence.Pat
 	)
 }
 
+var BlockIDStaticType = interpreter.ConstantSizedStaticType{
+	Type: interpreter.PrimitiveStaticTypeUInt8,
+	Size: 32,
+}
+
 func NewBlockValue(inter *interpreter.Interpreter, block Block) interpreter.Value {
 
 	// height
@@ -2753,9 +2771,10 @@ func NewBlockValue(inter *interpreter.Interpreter, block Block) interpreter.Valu
 	for i, b := range block.Hash {
 		values[i] = interpreter.UInt8Value(b)
 	}
+
 	idValue := interpreter.NewArrayValue(
 		inter,
-		interpreter.ByteArrayStaticType,
+		BlockIDStaticType,
 		common.Address{},
 		values...,
 	)
@@ -2788,7 +2807,7 @@ func (r *interpreterRuntime) newAccountKeysAddFunction(
 				panic(err)
 			}
 
-			hashAlgo := NewHashAlgorithmFromValue(invocation.Arguments[1])
+			hashAlgo := NewHashAlgorithmFromValue(inter, getLocationRange, invocation.Arguments[1])
 			address := addressValue.ToAddress()
 			weight := invocation.Arguments[2].(interpreter.UFix64Value).ToInt()
 
@@ -2981,7 +3000,7 @@ func NewPublicKeyFromValue(
 		)
 	}
 
-	rawValue := signAlgoValue.GetField(sema.EnumRawValueFieldName)
+	rawValue := signAlgoValue.GetField(inter, getLocationRange, sema.EnumRawValueFieldName)
 	if rawValue == nil {
 		return nil, errors.New("sign algorithm raw value is not set")
 	}
@@ -3062,10 +3081,14 @@ func NewAccountKeyValue(
 	)
 }
 
-func NewHashAlgorithmFromValue(value interpreter.Value) HashAlgorithm {
+func NewHashAlgorithmFromValue(
+	inter *interpreter.Interpreter,
+	getLocationRange func() interpreter.LocationRange,
+	value interpreter.Value,
+) HashAlgorithm {
 	hashAlgoValue := value.(*interpreter.CompositeValue)
 
-	rawValue := hashAlgoValue.GetField(sema.EnumRawValueFieldName)
+	rawValue := hashAlgoValue.GetField(inter, getLocationRange, sema.EnumRawValueFieldName)
 	if rawValue == nil {
 		panic("cannot find hash algorithm raw value")
 	}
@@ -3122,7 +3145,7 @@ func verifySignature(
 
 	domainSeparationTag := domainSeparationTagValue.Str
 
-	hashAlgorithm := NewHashAlgorithmFromValue(hashAlgorithmValue)
+	hashAlgorithm := NewHashAlgorithmFromValue(inter, getLocationRange, hashAlgorithmValue)
 
 	publicKey, err := NewPublicKeyFromValue(inter, getLocationRange, publicKeyValue)
 	if err != nil {
@@ -3150,6 +3173,7 @@ func verifySignature(
 
 func hash(
 	inter *interpreter.Interpreter,
+	getLocationRange func() interpreter.LocationRange,
 	dataValue *interpreter.ArrayValue,
 	tagValue *interpreter.StringValue,
 	hashAlgorithmValue interpreter.Value,
@@ -3166,7 +3190,7 @@ func hash(
 		tag = tagValue.Str
 	}
 
-	hashAlgorithm := NewHashAlgorithmFromValue(hashAlgorithmValue)
+	hashAlgorithm := NewHashAlgorithmFromValue(inter, getLocationRange, hashAlgorithmValue)
 
 	var result []byte
 	wrapPanic(func() {

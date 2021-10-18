@@ -191,6 +191,7 @@ func BuiltinValues() StandardLibraryValues {
 		ValueFactory: func(inter *interpreter.Interpreter) interpreter.Value {
 			return cryptoAlgorithmEnumValue(
 				inter,
+				interpreter.ReturnEmptyLocationRange,
 				sema.SignatureAlgorithmType,
 				sema.SignatureAlgorithms,
 				NewSignatureAlgorithmCase,
@@ -208,6 +209,7 @@ func BuiltinValues() StandardLibraryValues {
 		ValueFactory: func(inter *interpreter.Interpreter) interpreter.Value {
 			return cryptoAlgorithmEnumValue(
 				inter,
+				interpreter.ReturnEmptyLocationRange,
 				sema.HashAlgorithmType,
 				sema.HashAlgorithms,
 				NewHashAlgorithmCase,
@@ -334,6 +336,7 @@ func cryptoAlgorithmEnumConstructorType(
 
 func cryptoAlgorithmEnumValue(
 	inter *interpreter.Interpreter,
+	getLocationRange func() interpreter.LocationRange,
 	enumType *sema.CompositeType,
 	enumCases []sema.CryptoAlgorithm,
 	caseConstructor func(inter *interpreter.Interpreter, rawValue uint8) *interpreter.CompositeValue,
@@ -352,6 +355,8 @@ func cryptoAlgorithmEnumValue(
 	}
 
 	return interpreter.EnumConstructorFunction(
+		inter,
+		getLocationRange,
 		enumType,
 		caseValues,
 		constructorNestedVariables,

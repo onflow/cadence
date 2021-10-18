@@ -22,8 +22,10 @@ import (
 	"testing"
 
 	"github.com/onflow/atree"
-	"github.com/onflow/cadence/runtime/sema"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/onflow/cadence/runtime/sema"
 
 	"github.com/onflow/cadence/runtime/common"
 	. "github.com/onflow/cadence/runtime/interpreter"
@@ -79,7 +81,7 @@ func TestCompositeStorage(t *testing.T) {
 		t,
 		inter,
 		BoolValue(true),
-		storedComposite.GetField(fieldName),
+		storedComposite.GetField(inter, ReturnEmptyLocationRange, fieldName),
 	)
 }
 
@@ -418,4 +420,60 @@ func TestDictionaryStorage(t *testing.T) {
 
 		require.IsType(t, storedValue, &DictionaryValue{})
 	})
+}
+
+func TestStorageOverwriteAndRemove(t *testing.T) {
+
+	t.Parallel()
+
+	storage := NewInMemoryStorage()
+
+	inter, err := NewInterpreter(
+		nil,
+		common.AddressLocation{},
+		WithStorage(storage),
+	)
+	require.NoError(t, err)
+
+	array1 := NewArrayValue(
+		inter,
+		VariableSizedStaticType{
+			Type: PrimitiveStaticTypeAnyStruct,
+		},
+		common.Address{},
+		NewStringValue("first"),
+	)
+
+	storage.WriteValue(
+		inter,
+		common.Address{},
+		"test",
+		NewSomeValueNonCopying(array1),
+	)
+
+	// Overwriting delete any existing child slabs
+
+	array2 := NewArrayValue(
+		inter,
+		VariableSizedStaticType{
+			Type: PrimitiveStaticTypeAnyStruct,
+		},
+		common.Address{},
+		NewStringValue("second"),
+	)
+
+	storage.WriteValue(
+		inter,
+		common.Address{},
+		"test",
+		NewSomeValueNonCopying(array2),
+	)
+
+	assert.Len(t, storage.Slabs, 1)
+
+	// Writing nil is deletion and should delete any child slabs
+
+	storage.WriteValue(inter, common.Address{}, "test", NilValue{})
+
+	assert.Len(t, storage.Slabs, 0)
 }

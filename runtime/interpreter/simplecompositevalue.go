@@ -20,6 +20,7 @@ package interpreter
 
 import (
 	"github.com/onflow/atree"
+
 	"github.com/onflow/cadence/runtime/format"
 	"github.com/onflow/cadence/runtime/sema"
 )
@@ -27,14 +28,17 @@ import (
 // SimpleCompositeValue
 
 type SimpleCompositeValue struct {
-	TypeID          sema.TypeID
-	staticType      StaticType
-	dynamicType     DynamicType
+	TypeID      sema.TypeID
+	staticType  StaticType
+	dynamicType DynamicType
+	// FieldNames are the names of the field members (i.e. not functions, and not computed fields), in order
 	FieldNames      []string
 	Fields          map[string]Value
 	ComputedFields  map[string]ComputedField
 	fieldFormatters map[string]func(Value, SeenReferences) string
-	stringer        func(SeenReferences) string
+	// stringer is an optional function that is used to produce the string representation of the value.
+	// If nil, the FieldNames are used.
+	stringer func(SeenReferences) string
 }
 
 var _ Value = &SimpleCompositeValue{}
@@ -67,6 +71,9 @@ func (v *SimpleCompositeValue) Accept(interpreter *Interpreter, visitor Visitor)
 	visitor.VisitSimpleCompositeValue(interpreter, v)
 }
 
+// ForEachField iterates over all field-name field-value pairs of the composite value.
+// It does NOT iterate over computed fields and functions!
+//
 func (v *SimpleCompositeValue) ForEachField(f func(fieldName string, fieldValue Value)) {
 	for _, fieldName := range v.FieldNames {
 		fieldValue := v.Fields[fieldName]
@@ -74,6 +81,9 @@ func (v *SimpleCompositeValue) ForEachField(f func(fieldName string, fieldValue 
 	}
 }
 
+// Walk iterates over all field values of the composite value.
+// It does NOT walk the computed fields and functions!
+//
 func (v *SimpleCompositeValue) Walk(walkChild func(Value)) {
 	v.ForEachField(func(_ string, fieldValue Value) {
 		walkChild(fieldValue)
@@ -166,11 +176,7 @@ func (v *SimpleCompositeValue) Storable(_ atree.SlabStorage, _ atree.Address, _ 
 	return NonStorable{Value: v}, nil
 }
 
-func (v *SimpleCompositeValue) IsResourceKinded(_ *Interpreter) bool {
-	return false
-}
-
-func (v *SimpleCompositeValue) NeedsStoreToAddress(_ *Interpreter, _ atree.Address) bool {
+func (v *SimpleCompositeValue) IsResourceAtAddress(_ *Interpreter, _ atree.Address) bool {
 	return false
 }
 

@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2021 Dapper Labs, Inc.
+ * Copyright 2019-2021 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,6 +24,7 @@ import (
 
 	"github.com/fxamacker/cbor/v2"
 	"github.com/onflow/atree"
+
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/sema"
 )
@@ -838,24 +839,24 @@ func (d Decoder) decodePath() (PathValue, error) {
 	}, nil
 }
 
-func (d Decoder) decodeCapability() (CapabilityStorable, error) {
+func (d Decoder) decodeCapability() (*CapabilityValue, error) {
 
 	const expectedLength = encodedCapabilityValueLength
 
 	size, err := d.decoder.DecodeArrayHead()
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
-			return CapabilityStorable{}, fmt.Errorf(
+			return nil, fmt.Errorf(
 				"invalid capability encoding: expected [%d]interface{}, got %s",
 				expectedLength,
 				e.ActualType.String(),
 			)
 		}
-		return CapabilityStorable{}, err
+		return nil, err
 	}
 
 	if size != expectedLength {
-		return CapabilityStorable{}, fmt.Errorf(
+		return nil, fmt.Errorf(
 			"invalid capability encoding: expected [%d]interface{}, got [%d]interface{}",
 			expectedLength,
 			size,
@@ -868,20 +869,20 @@ func (d Decoder) decodeCapability() (CapabilityStorable, error) {
 	var num uint64
 	num, err = d.decoder.DecodeTagNumber()
 	if err != nil {
-		return CapabilityStorable{}, fmt.Errorf(
+		return nil, fmt.Errorf(
 			"invalid capability address: %w",
 			err,
 		)
 	}
 	if num != CBORTagAddressValue {
-		return CapabilityStorable{}, fmt.Errorf(
+		return nil, fmt.Errorf(
 			"invalid capability address: wrong tag %d",
 			num,
 		)
 	}
 	address, err := d.decodeAddress()
 	if err != nil {
-		return CapabilityStorable{}, fmt.Errorf(
+		return nil, fmt.Errorf(
 			"invalid capability address: %w",
 			err,
 		)
@@ -890,9 +891,13 @@ func (d Decoder) decodeCapability() (CapabilityStorable, error) {
 	// path
 
 	// Decode path at array index encodedCapabilityValuePathFieldKey
-	path, err := d.decodeStorable()
+	pathStorable, err := d.decodeStorable()
 	if err != nil {
-		return CapabilityStorable{}, fmt.Errorf("invalid capability path: %w", err)
+		return nil, fmt.Errorf("invalid capability path: %w", err)
+	}
+	pathValue, ok := pathStorable.(PathValue)
+	if !ok {
+		return nil, fmt.Errorf("invalid capability path: invalid type %T", pathValue)
 	}
 
 	// Decode borrow type at array index encodedCapabilityValueBorrowTypeFieldKey
@@ -914,12 +919,12 @@ func (d Decoder) decodeCapability() (CapabilityStorable, error) {
 	}
 
 	if err != nil {
-		return CapabilityStorable{}, fmt.Errorf("invalid capability borrow type encoding: %w", err)
+		return nil, fmt.Errorf("invalid capability borrow type encoding: %w", err)
 	}
 
-	return CapabilityStorable{
+	return &CapabilityValue{
 		Address:    address,
-		Path:       path,
+		Path:       pathValue,
 		BorrowType: borrowType,
 	}, nil
 }
@@ -1465,5 +1470,48 @@ func decodeCapabilityStaticType(dec *cbor.StreamDecoder) (StaticType, error) {
 
 	return CapabilityStaticType{
 		BorrowType: borrowStaticType,
+	}, nil
+}
+
+func decodeCompositeTypeInfo(dec *cbor.StreamDecoder) (atree.TypeInfo, error) {
+
+	length, err := dec.DecodeArrayHead()
+	if err != nil {
+		return nil, err
+	}
+
+	if length != encodedCompositeTypeInfoLength {
+		return nil, fmt.Errorf(
+			"invalid composite type info: expected %d elements, got %d",
+			encodedCompositeTypeInfoLength, length,
+		)
+	}
+
+	location, err := decodeLocation(dec)
+	if err != nil {
+		return nil, err
+	}
+
+	qualifiedIdentifier, err := dec.DecodeString()
+	if err != nil {
+		return nil, err
+	}
+
+	kind, err := dec.DecodeUint64()
+	if err != nil {
+		return nil, err
+	}
+
+	if kind >= uint64(common.CompositeKindCount()) {
+		return nil, fmt.Errorf(
+			"invalid composite ordered map type info: invalid kind %d",
+			kind,
+		)
+	}
+
+	return compositeTypeInfo{
+		location:            location,
+		qualifiedIdentifier: qualifiedIdentifier,
+		kind:                common.CompositeKind(kind),
 	}, nil
 }

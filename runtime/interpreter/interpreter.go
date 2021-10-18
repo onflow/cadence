@@ -27,6 +27,7 @@ import (
 	"time"
 
 	"github.com/onflow/atree"
+
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
@@ -1609,7 +1610,11 @@ func (interpreter *Interpreter) declareEnumConstructor(
 			NewVariableWithValue(caseValue)
 	}
 
+	getLocationRange := locationRangeGetter(location, declaration)
+
 	value := EnumConstructorFunction(
+		interpreter,
+		getLocationRange,
 		compositeType,
 		caseValues,
 		constructorNestedVariables,
@@ -1620,6 +1625,8 @@ func (interpreter *Interpreter) declareEnumConstructor(
 }
 
 func EnumConstructorFunction(
+	inter *Interpreter,
+	getLocationRange func() LocationRange,
 	enumType *sema.CompositeType,
 	caseValues []*CompositeValue,
 	nestedVariables map[string]*Variable,
@@ -1630,7 +1637,7 @@ func EnumConstructorFunction(
 	lookupTable := make(map[string]*CompositeValue)
 
 	for _, caseValue := range caseValues {
-		rawValue := caseValue.GetField(sema.EnumRawValueFieldName)
+		rawValue := caseValue.GetField(inter, getLocationRange, sema.EnumRawValueFieldName)
 		rawValueBigEndianBytes := rawValue.(IntegerValue).ToBigEndianBytes()
 		lookupTable[string(rawValueBigEndianBytes)] = caseValue
 	}
@@ -2405,11 +2412,6 @@ func (interpreter *Interpreter) ReadStored(storageAddress common.Address, key st
 }
 
 func (interpreter *Interpreter) writeStored(storageAddress common.Address, key string, value OptionalValue) {
-
-	if existingValue, ok := interpreter.ReadStored(storageAddress, key).(*SomeValue); ok {
-		existingValue.Value.DeepRemove(interpreter)
-	}
-
 	interpreter.Storage.WriteValue(interpreter, storageAddress, key, value)
 }
 
@@ -3668,9 +3670,7 @@ func (interpreter *Interpreter) CopyValue(
 	address atree.Address,
 ) Value {
 
-	if !value.NeedsStoreToAddress(interpreter, address) &&
-		value.IsResourceKinded(interpreter) {
-
+	if value.IsResourceAtAddress(interpreter, address) {
 		return value
 	}
 
@@ -3684,9 +3684,7 @@ func (interpreter *Interpreter) TransferValue(
 	address atree.Address,
 ) Value {
 
-	if !value.NeedsStoreToAddress(interpreter, address) &&
-		value.IsResourceKinded(interpreter) {
-
+	if value.IsResourceAtAddress(interpreter, address) {
 		return value
 	}
 
@@ -3694,12 +3692,12 @@ func (interpreter *Interpreter) TransferValue(
 
 	value.DeepRemove(interpreter)
 
-	interpreter.removeReferencedSlab(storable)
+	interpreter.RemoveReferencedSlab(storable)
 
 	return valueCopy
 }
 
-func (interpreter *Interpreter) removeReferencedSlab(storable atree.Storable) {
+func (interpreter *Interpreter) RemoveReferencedSlab(storable atree.Storable) {
 	storageIDStorable, ok := storable.(atree.StorageIDStorable)
 	if !ok {
 		return
@@ -3739,20 +3737,28 @@ func (interpreter *Interpreter) checkAtreeValue(v atree.Value) {
 		if _, ok := value.(stringAtreeValue); ok {
 			return stringAtreeHashInput(value, buffer)
 		}
+
 		return defaultHIP(value, buffer)
 	}
 
-	compare := func(a, b atree.Storable) bool {
-		if x, ok := a.(stringAtreeValue); ok {
-			if y, ok := b.(stringAtreeValue); ok {
-				return x == y
-			}
-			return false
+	compare := func(storable, otherStorable atree.Storable) bool {
+		value, err := storable.StoredValue(interpreter.Storage)
+		if err != nil {
+			panic(err)
 		}
 
-		if x, ok := StoredValue(a, interpreter.Storage).(EquatableValue); ok {
-			y := StoredValue(b, interpreter.Storage)
-			return x.Equal(interpreter, ReturnEmptyLocationRange, y)
+		if _, ok := value.(stringAtreeValue); ok {
+			equal, err := stringAtreeComparator(interpreter.Storage, value, otherStorable)
+			if err != nil {
+				panic(err)
+			}
+
+			return equal
+		}
+
+		if equatableValue, ok := value.(EquatableValue); ok {
+			otherValue := StoredValue(otherStorable, interpreter.Storage)
+			return equatableValue.Equal(interpreter, ReturnEmptyLocationRange, otherValue)
 		}
 
 		// Not all values are comparable, assume valid for now

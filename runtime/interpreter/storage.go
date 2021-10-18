@@ -24,6 +24,7 @@ import (
 
 	"github.com/fxamacker/cbor/v2"
 	"github.com/onflow/atree"
+
 	"github.com/onflow/cadence/runtime/common"
 )
 
@@ -37,14 +38,14 @@ func StoredValue(storable atree.Storable, storage atree.SlabStorage) Value {
 }
 
 func MustConvertStoredValue(value atree.Value) Value {
-	converted, err := convertStoredValue(value)
+	converted, err := ConvertStoredValue(value)
 	if err != nil {
 		panic(err)
 	}
 	return converted
 }
 
-func convertStoredValue(value atree.Value) (Value, error) {
+func ConvertStoredValue(value atree.Value) (Value, error) {
 	switch value := value.(type) {
 	case *atree.Array:
 		return &ArrayValue{
@@ -88,7 +89,7 @@ type StorageKey struct {
 
 type InMemoryStorage struct {
 	*atree.BasicSlabStorage
-	AccountValues map[StorageKey]Value
+	AccountStorage map[StorageKey]atree.Storable
 }
 
 var _ Storage = InMemoryStorage{}
@@ -103,7 +104,7 @@ func NewInMemoryStorage() InMemoryStorage {
 
 	return InMemoryStorage{
 		BasicSlabStorage: slabStorage,
-		AccountValues:    make(map[StorageKey]Value),
+		AccountStorage:   make(map[StorageKey]atree.Storable),
 	}
 }
 
@@ -132,7 +133,7 @@ func (i InMemoryStorage) ValueExists(_ *Interpreter, address common.Address, key
 		Address: address,
 		Key:     key,
 	}
-	_, ok := i.AccountValues[storageKey]
+	_, ok := i.AccountStorage[storageKey]
 	return ok
 }
 
@@ -142,26 +143,56 @@ func (i InMemoryStorage) ReadValue(_ *Interpreter, address common.Address, key s
 		Key:     key,
 	}
 
-	value, ok := i.AccountValues[storageKey]
+	storable, ok := i.AccountStorage[storageKey]
 	if !ok {
 		return NilValue{}
 	}
 
-	return NewSomeValueNonCopying(MustConvertStoredValue(value))
+	storedValue := StoredValue(storable, i)
+	return NewSomeValueNonCopying(storedValue)
 }
 
-func (i InMemoryStorage) WriteValue(_ *Interpreter, address common.Address, key string, value OptionalValue) {
+func (i InMemoryStorage) WriteValue(
+	interpreter *Interpreter,
+	address common.Address,
+	key string,
+	value OptionalValue,
+) {
 	storageKey := StorageKey{
 		Address: address,
 		Key:     key,
 	}
 
+	// Remove existing, if any
+
+	if existingStorable, ok := i.AccountStorage[storageKey]; ok {
+		StoredValue(existingStorable, i).DeepRemove(interpreter)
+		interpreter.RemoveReferencedSlab(existingStorable)
+	}
+
 	switch value := value.(type) {
 	case *SomeValue:
-		i.AccountValues[storageKey] = value.Value
+		// Store new value (as storable)
+		storable, err := value.Value.Storable(
+			i,
+			atree.Address(address),
+			// NOTE: we already allocate a register for the account storage value,
+			// so we might as well store all data of the value in it, if possible,
+			// e.g. for a large immutable value.
+			//
+			// Using a smaller number would only result in an additional register
+			// (account storage register would have storage ID storable,
+			// and extra slab / register would contain the actual data of the value).
+			math.MaxUint64,
+		)
+		if err != nil {
+			panic(err)
+		}
+		i.AccountStorage[storageKey] = storable
 
 	case NilValue:
-		delete(i.AccountValues, storageKey)
+		// Remove entry
+		delete(i.AccountStorage, storageKey)
 	}
 }
 
@@ -239,119 +270,4 @@ func maybeLargeImmutableStorable(
 	}
 
 	return atree.StorageIDStorable(storageID), nil
-}
-
-type compositeTypeInfo struct {
-	location            common.Location
-	qualifiedIdentifier string
-	kind                common.CompositeKind
-}
-
-var _ atree.TypeInfo = compositeTypeInfo{}
-
-const encodedCompositeTypeInfoLength = 3
-
-func (c compositeTypeInfo) Encode(e *cbor.StreamEncoder) error {
-	err := e.EncodeRawBytes([]byte{
-		// tag number
-		0xd8, CBORTagCompositeValue,
-		// array, 3 items follow
-		0x83,
-	})
-	if err != nil {
-		return err
-	}
-
-	err = encodeLocation(e, c.location)
-	if err != nil {
-		panic(err)
-	}
-
-	err = e.EncodeString(c.qualifiedIdentifier)
-	if err != nil {
-		return err
-	}
-
-	err = e.EncodeUint64(uint64(c.kind))
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (c compositeTypeInfo) Equal(o atree.TypeInfo) bool {
-	other, ok := o.(compositeTypeInfo)
-	return ok &&
-		common.LocationsMatch(c.location, other.location) &&
-		c.qualifiedIdentifier == other.qualifiedIdentifier &&
-		c.kind == other.kind
-}
-
-func decodeCompositeTypeInfo(dec *cbor.StreamDecoder) (atree.TypeInfo, error) {
-
-	length, err := dec.DecodeArrayHead()
-	if err != nil {
-		return nil, err
-	}
-
-	if length != encodedCompositeTypeInfoLength {
-		return nil, fmt.Errorf(
-			"invalid composite type info: expected %d elements, got %d",
-			encodedCompositeTypeInfoLength, length,
-		)
-	}
-
-	location, err := decodeLocation(dec)
-	if err != nil {
-		panic(err)
-	}
-
-	qualifiedIdentifier, err := dec.DecodeString()
-	if err != nil {
-		return nil, err
-	}
-
-	kind, err := dec.DecodeUint64()
-	if err != nil {
-		return nil, err
-	}
-
-	if kind >= uint64(common.CompositeKindCount()) {
-		return nil, fmt.Errorf(
-			"invalid composite ordered map type info: invalid kind %d",
-			kind,
-		)
-	}
-
-	return compositeTypeInfo{
-		location:            location,
-		qualifiedIdentifier: qualifiedIdentifier,
-		kind:                common.CompositeKind(kind),
-	}, nil
-}
-
-type stringAtreeValue string
-
-var _ atree.Value = stringAtreeValue("")
-var _ atree.Storable = stringAtreeValue("")
-
-func (v stringAtreeValue) Storable(storage atree.SlabStorage, address atree.Address, maxInlineSize uint64) (atree.Storable, error) {
-	return maybeLargeImmutableStorable(v, storage, address, maxInlineSize)
-}
-
-func (v stringAtreeValue) ByteSize() uint32 {
-	return getBytesCBORSize([]byte(v))
-}
-
-func (v stringAtreeValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
-	return v, nil
-}
-
-func stringAtreeHashInput(v atree.Value, _ []byte) ([]byte, error) {
-	return []byte(v.(stringAtreeValue)), nil
-}
-
-func stringAtreeComparator(_ atree.SlabStorage, v atree.Value, o atree.Storable) (bool, error) {
-	return v.(stringAtreeValue) == o.(stringAtreeValue), nil
 }

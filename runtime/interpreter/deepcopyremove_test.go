@@ -23,10 +23,11 @@ import (
 	"testing"
 
 	"github.com/onflow/atree"
+	"github.com/stretchr/testify/require"
+
 	"github.com/onflow/cadence/runtime/common"
 	. "github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/tests/utils"
-	"github.com/stretchr/testify/require"
 )
 
 func TestValueDeepCopyAndDeepRemove(t *testing.T) {

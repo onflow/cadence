@@ -2174,7 +2174,7 @@ func TestInterpretStructureFieldAssignment(t *testing.T) {
 		t,
 		inter,
 		interpreter.NewIntValueFromInt64(1),
-		test.GetField("foo"),
+		test.GetField(inter, interpreter.ReturnEmptyLocationRange, "foo"),
 	)
 
 	value, err := inter.Invoke("callTest")
@@ -2191,7 +2191,7 @@ func TestInterpretStructureFieldAssignment(t *testing.T) {
 		t,
 		inter,
 		interpreter.NewIntValueFromInt64(3),
-		test.GetField("foo"),
+		test.GetField(inter, interpreter.ReturnEmptyLocationRange, "foo"),
 	)
 }
 
@@ -6567,50 +6567,50 @@ func TestInterpretEmitEventParameterTypes(t *testing.T) {
 				literal: testCase.literal,
 			}
 
-			tests[fmt.Sprintf("[%s]", validType)] =
-				testValue{
-					value: interpreter.NewArrayValue(
-						inter,
-						interpreter.VariableSizedStaticType{
-							Type: interpreter.ConvertSemaToStaticType(testCase.ty),
-						},
-						common.Address{},
-						testCase.value,
-					),
-					literal: fmt.Sprintf("[%s as %s]", testCase, validType),
-				}
-
-			tests[fmt.Sprintf("[%s; 1]", validType)] =
-				testValue{
-					value: interpreter.NewArrayValue(
-						inter,
-						interpreter.ConstantSizedStaticType{
-							Type: interpreter.ConvertSemaToStaticType(testCase.ty),
-							Size: 1,
-						},
-						common.Address{},
-						testCase.value,
-					),
-					literal: fmt.Sprintf("[%s as %s]", testCase, validType),
-				}
-
-			if !testCase.notAsDictionaryKey {
-
-				value := interpreter.NewDictionaryValue(
+		tests[fmt.Sprintf("[%s]", validType)] =
+			testValue{
+				value: interpreter.NewArrayValue(
 					inter,
-					interpreter.DictionaryStaticType{
-						KeyType:   interpreter.ConvertSemaToStaticType(testCase.ty),
-						ValueType: interpreter.ConvertSemaToStaticType(testCase.ty),
+					interpreter.VariableSizedStaticType{
+						Type: interpreter.ConvertSemaToStaticType(testCase.ty),
 					},
-					testCase.value, testCase.value,
-				)
-
-				tests[fmt.Sprintf("{%[1]s: %[1]s}", validType)] =
-					testValue{
-						value:   value,
-						literal: fmt.Sprintf("{%[1]s as %[2]s: %[1]s as %[2]s}", testCase, validType),
-					}
+					common.Address{},
+					testCase.value,
+				),
+				literal: fmt.Sprintf("[%s as %s]", testCase, validType),
 			}
+
+		tests[fmt.Sprintf("[%s; 1]", validType)] =
+			testValue{
+				value: interpreter.NewArrayValue(
+					inter,
+					interpreter.ConstantSizedStaticType{
+						Type: interpreter.ConvertSemaToStaticType(testCase.ty),
+						Size: 1,
+					},
+					common.Address{},
+					testCase.value,
+				),
+				literal: fmt.Sprintf("[%s as %s]", testCase, validType),
+			}
+
+		if !testCase.notAsDictionaryKey {
+
+			value := interpreter.NewDictionaryValue(
+				inter,
+				interpreter.DictionaryStaticType{
+					KeyType:   interpreter.ConvertSemaToStaticType(testCase.ty),
+					ValueType: interpreter.ConvertSemaToStaticType(testCase.ty),
+				},
+				testCase.value, testCase.value,
+			)
+
+			tests[fmt.Sprintf("{%[1]s: %[1]s}", validType)] =
+				testValue{
+					value:   value,
+					literal: fmt.Sprintf("{%[1]s as %[2]s: %[1]s as %[2]s}", testCase, validType),
+				}
+		}
 	}
 
 	for ty, testCase := range tests {
@@ -7013,7 +7013,7 @@ func TestInterpretVariableDeclarationSecondValue(t *testing.T) {
 		t,
 		inter,
 		interpreter.NewIntValueFromInt64(2),
-		firstResource.GetField("id"),
+		firstResource.GetField(inter, interpreter.ReturnEmptyLocationRange, "id"),
 	)
 
 	require.IsType(t,
@@ -7034,7 +7034,7 @@ func TestInterpretVariableDeclarationSecondValue(t *testing.T) {
 		t,
 		inter,
 		interpreter.NewIntValueFromInt64(1),
-		secondResource.GetField("id"),
+		secondResource.GetField(inter, interpreter.ReturnEmptyLocationRange, "id"),
 	)
 }
 

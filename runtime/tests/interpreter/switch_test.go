@@ -21,9 +21,10 @@ package interpreter_test
 import (
 	"testing"
 
-	. "github.com/onflow/cadence/runtime/tests/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	. "github.com/onflow/cadence/runtime/tests/utils"
 
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"

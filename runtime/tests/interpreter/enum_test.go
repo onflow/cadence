@@ -21,9 +21,10 @@ package interpreter_test
 import (
 	"testing"
 
-	. "github.com/onflow/cadence/runtime/tests/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	. "github.com/onflow/cadence/runtime/tests/utils"
 
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
@@ -245,7 +246,7 @@ func TestInterpretEnumInContract(t *testing.T) {
 	require.IsType(t, &interpreter.CompositeValue{}, c)
 	contract := c.(*interpreter.CompositeValue)
 
-	eValue := contract.GetField("e")
+	eValue := contract.GetField(inter, interpreter.ReturnEmptyLocationRange, "e")
 	require.NotNil(t, eValue)
 
 	require.IsType(t, &interpreter.CompositeValue{}, eValue)

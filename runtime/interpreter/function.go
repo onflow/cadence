@@ -22,6 +22,7 @@ import (
 	"fmt"
 
 	"github.com/onflow/atree"
+
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/sema"
@@ -118,11 +119,7 @@ func (f *InterpretedFunctionValue) Storable(_ atree.SlabStorage, _ atree.Address
 	return NonStorable{Value: f}, nil
 }
 
-func (*InterpretedFunctionValue) IsResourceKinded(_ *Interpreter) bool {
-	return false
-}
-
-func (*InterpretedFunctionValue) NeedsStoreToAddress(_ *Interpreter, _ atree.Address) bool {
+func (*InterpretedFunctionValue) IsResourceAtAddress(_ *Interpreter, _ atree.Address) bool {
 	return false
 }
 
@@ -225,11 +222,7 @@ func (f *HostFunctionValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uin
 	return NonStorable{Value: f}, nil
 }
 
-func (*HostFunctionValue) IsResourceKinded(_ *Interpreter) bool {
-	return false
-}
-
-func (*HostFunctionValue) NeedsStoreToAddress(_ *Interpreter, _ atree.Address) bool {
+func (*HostFunctionValue) IsResourceAtAddress(_ *Interpreter, _ atree.Address) bool {
 	return false
 }
 
@@ -326,11 +319,7 @@ func (f BoundFunctionValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uin
 	return NonStorable{Value: f}, nil
 }
 
-func (BoundFunctionValue) IsResourceKinded(_ *Interpreter) bool {
-	return false
-}
-
-func (BoundFunctionValue) NeedsStoreToAddress(_ *Interpreter, _ atree.Address) bool {
+func (BoundFunctionValue) IsResourceAtAddress(_ *Interpreter, _ atree.Address) bool {
 	return false
 }
 

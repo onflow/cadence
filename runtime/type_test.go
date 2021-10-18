@@ -92,7 +92,7 @@ func TestRuntimeTypeStorage(t *testing.T) {
 	assert.Equal(t, `"Int"`, loggedMessage)
 }
 
-func TestRuntimeBlockTimestamp(t *testing.T) {
+func TestRuntimeBlockFieldTypes(t *testing.T) {
 
 	t.Parallel()
 
@@ -103,21 +103,24 @@ func TestRuntimeBlockTimestamp(t *testing.T) {
 		runtime := newTestInterpreterRuntime()
 
 		script := []byte(`
-			transaction {
-				prepare() {
-					let block = getCurrentBlock()
-					var ts: UFix64 = block.timestamp
-					log(ts.isInstance(Type<UFix64>()))
+            transaction {
+                prepare() {
+                    let block = getCurrentBlock()
+                    let id = block.id
+                    log(id.isInstance(Type<[UInt8; 32]>()))
 
-					var div: UFix64 = 4.0
+                    var ts: UFix64 = block.timestamp
+                    log(ts.isInstance(Type<UFix64>()))
 
-					// Shouldn't panic
-					var res = ts/div
-				}
-			}
+                    var div: UFix64 = 4.0
+
+                    // Shouldn't panic
+                    var res = ts/div
+                }
+            }
         `)
 
-		var loggedMessage string
+		var loggedMessages []string
 
 		storage := newTestLedger(nil, nil)
 
@@ -127,7 +130,7 @@ func TestRuntimeBlockTimestamp(t *testing.T) {
 				return nil, nil
 			},
 			log: func(message string) {
-				loggedMessage = message
+				loggedMessages = append(loggedMessages, message)
 			},
 		}
 
@@ -142,7 +145,14 @@ func TestRuntimeBlockTimestamp(t *testing.T) {
 			},
 		)
 		require.NoError(t, err)
-		assert.Equal(t, "true", loggedMessage, "Block.timestamp is not UFix64")
+		assert.Equal(
+			t,
+			[]string{
+				"true",
+				"true",
+			},
+			loggedMessages,
+		)
 
 	})
 
@@ -153,23 +163,33 @@ func TestRuntimeBlockTimestamp(t *testing.T) {
 		runtime := newTestInterpreterRuntime()
 
 		script := []byte(`
-			pub fun main(): [UFix64] {
-				let block = getCurrentBlock()
-				var ts: UFix64 = block.timestamp
+            pub fun main(): [UFix64] {
+                let block = getCurrentBlock()
 
-				var div: UFix64 = 4.0
+                let id = block.id
+                log(id.isInstance(Type<[UInt8; 32]>()))
 
-				// Shouldn't panic
-				var res = ts/div
+                var ts: UFix64 = block.timestamp
+                log(ts.isInstance(Type<UFix64>()))
 
-				return [ts, res]
-			}
+                var div: UFix64 = 4.0
+
+                // Shouldn't panic
+                var res = ts/div
+
+                return [ts, res]
+            }
         `)
 
 		storage := newTestLedger(nil, nil)
 
+		var loggedMessages []string
+
 		runtimeInterface := &testRuntimeInterface{
 			storage: storage,
+			log: func(message string) {
+				loggedMessages = append(loggedMessages, message)
+			},
 		}
 
 		value, err := runtime.ExecuteScript(
@@ -191,5 +211,14 @@ func TestRuntimeBlockTimestamp(t *testing.T) {
 		require.Equal(t, 2, len(values))
 		assert.IsType(t, cadence.UFix64Type{}, values[0].Type())
 		assert.IsType(t, cadence.UFix64Type{}, values[1].Type())
+
+		assert.Equal(
+			t,
+			[]string{
+				"true",
+				"true",
+			},
+			loggedMessages,
+		)
 	})
 }

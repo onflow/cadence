@@ -24,6 +24,7 @@ import (
 	opentracing "github.com/opentracing/opentracing-go"
 
 	"github.com/onflow/atree"
+
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
