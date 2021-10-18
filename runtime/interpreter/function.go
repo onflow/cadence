@@ -30,7 +30,7 @@ import (
 // Invocation
 //
 type Invocation struct {
-	Self               *CompositeValue
+	Self               MemberAccessibleValue
 	ReceiverType       sema.Type
 	Arguments          []Value
 	ArgumentTypes      []sema.Type
@@ -103,7 +103,12 @@ func (f *InterpretedFunctionValue) invoke(invocation Invocation) Value {
 	return f.Interpreter.invokeInterpretedFunction(f, invocation)
 }
 
-func (f *InterpretedFunctionValue) ConformsToDynamicType(_ *Interpreter, _ DynamicType, _ TypeConformanceResults) bool {
+func (f *InterpretedFunctionValue) ConformsToDynamicType(
+	_ *Interpreter,
+	_ func() LocationRange,
+	_ DynamicType,
+	_ TypeConformanceResults,
+) bool {
 	// TODO: once FunctionDynamicType has parameter and return type info,
 	//   check it matches InterpretedFunctionValue's static function type
 	return false
@@ -121,7 +126,7 @@ func (*InterpretedFunctionValue) NeedsStoreToAddress(_ *Interpreter, _ atree.Add
 	return false
 }
 
-func (f *InterpretedFunctionValue) DeepCopy(_ *Interpreter, _ atree.Address) Value {
+func (f *InterpretedFunctionValue) DeepCopy(_ *Interpreter, _ func() LocationRange, _ atree.Address) Value {
 	return f
 }
 
@@ -136,6 +141,7 @@ type HostFunction func(invocation Invocation) Value
 type HostFunctionValue struct {
 	Function        HostFunction
 	NestedVariables map[string]*Variable
+	Type            *sema.FunctionType
 }
 
 func (f *HostFunctionValue) String() string {
@@ -149,9 +155,11 @@ func (f *HostFunctionValue) RecursiveString(_ SeenReferences) string {
 
 func NewHostFunctionValue(
 	function HostFunction,
+	funcType *sema.FunctionType,
 ) *HostFunctionValue {
 	return &HostFunctionValue{
 		Function: function,
+		Type:     funcType,
 	}
 }
 
@@ -173,9 +181,8 @@ func (*HostFunctionValue) DynamicType(_ *Interpreter, _ SeenReferences) DynamicT
 	return hostFunctionDynamicType
 }
 
-func (*HostFunctionValue) StaticType() StaticType {
-	// TODO: add function static type, store static type in host function value
-	return nil
+func (f *HostFunctionValue) StaticType() StaticType {
+	return ConvertSemaToStaticType(f.Type)
 }
 
 func (*HostFunctionValue) isFunctionValue() {}
@@ -201,7 +208,12 @@ func (*HostFunctionValue) SetMember(_ *Interpreter, _ func() LocationRange, _ st
 	panic(errors.NewUnreachableError())
 }
 
-func (f *HostFunctionValue) ConformsToDynamicType(_ *Interpreter, _ DynamicType, _ TypeConformanceResults) bool {
+func (f *HostFunctionValue) ConformsToDynamicType(
+	_ *Interpreter,
+	_ func() LocationRange,
+	_ DynamicType,
+	_ TypeConformanceResults,
+) bool {
 	// TODO: once HostFunctionValue has static function type,
 	//   and FunctionDynamicType has parameter and return type info,
 	//   check they match
@@ -221,7 +233,7 @@ func (*HostFunctionValue) NeedsStoreToAddress(_ *Interpreter, _ atree.Address) b
 	return false
 }
 
-func (f *HostFunctionValue) DeepCopy(_ *Interpreter, _ atree.Address) Value {
+func (f *HostFunctionValue) DeepCopy(_ *Interpreter, _ func() LocationRange, _ atree.Address) Value {
 	return f
 }
 
@@ -298,10 +310,16 @@ func (f BoundFunctionValue) invoke(invocation Invocation) Value {
 
 func (f BoundFunctionValue) ConformsToDynamicType(
 	interpreter *Interpreter,
+	getLocationRange func() LocationRange,
 	dynamicType DynamicType,
 	results TypeConformanceResults,
 ) bool {
-	return f.Function.ConformsToDynamicType(interpreter, dynamicType, results)
+	return f.Function.ConformsToDynamicType(
+		interpreter,
+		getLocationRange,
+		dynamicType,
+		results,
+	)
 }
 
 func (f BoundFunctionValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
@@ -316,7 +334,7 @@ func (BoundFunctionValue) NeedsStoreToAddress(_ *Interpreter, _ atree.Address) b
 	return false
 }
 
-func (f BoundFunctionValue) DeepCopy(_ *Interpreter, _ atree.Address) Value {
+func (f BoundFunctionValue) DeepCopy(_ *Interpreter, _ func() LocationRange, _ atree.Address) Value {
 	return f
 }
 

@@ -149,13 +149,13 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 			argumentCode,
 		))
 
-		runtime := NewInterpreterRuntime()
+		runtime := newTestInterpreterRuntime()
 
 		var accountCode []byte
 		var events []cadence.Event
 
 		runtimeInterface := &testRuntimeInterface{
-			storage: newTestStorage(nil, nil),
+			storage: newTestLedger(nil, nil),
 			getSigningAccounts: func() ([]Address, error) {
 				return []Address{{42}}, nil
 			},

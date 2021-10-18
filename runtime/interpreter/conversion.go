@@ -22,7 +22,7 @@ import (
 	"errors"
 	"math"
 
-	"github.com/onflow/atree"
+	"github.com/onflow/cadence/runtime/common"
 )
 
 func ByteArrayValueToByteSlice(value Value) ([]byte, error) {
@@ -31,36 +31,24 @@ func ByteArrayValueToByteSlice(value Value) ([]byte, error) {
 		return nil, errors.New("value is not an array")
 	}
 
-	result := make([]byte, array.Count())
+	result := make([]byte, 0, array.Count())
 
-	iterator, err := array.array.Iterator()
+	var err error
+	array.Iterate(func(element Value) (resume bool) {
+		var b byte
+		b, err = ByteValueToByte(element)
+		if err != nil {
+			return false
+		}
+
+		result = append(result, b)
+
+		return true
+	})
 	if err != nil {
-		return nil, ExternalError{err}
+		return nil, err
 	}
-
-	index := 0
-	for {
-		var atreeValue atree.Value
-		atreeValue, err = iterator.Next()
-		if err != nil {
-			return nil, ExternalError{err}
-		}
-		if atreeValue == nil {
-			return result, nil
-		}
-
-		// atree.Array iterator returns low-level atree.Value,
-		// convert to high-level interpreter.Value
-		value := MustConvertStoredValue(atreeValue)
-
-		b, err := ByteValueToByte(value)
-		if err != nil {
-			return nil, err
-		}
-
-		result[index] = b
-		index++
-	}
+	return result, nil
 }
 
 func ByteValueToByte(element Value) (byte, error) {
@@ -106,6 +94,7 @@ func ByteSliceToByteArrayValue(interpreter *Interpreter, buf []byte) *ArrayValue
 	return NewArrayValue(
 		interpreter,
 		ByteArrayStaticType,
+		common.Address{},
 		values...,
 	)
 }

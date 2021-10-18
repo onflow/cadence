@@ -30,38 +30,44 @@ import (
 	"github.com/onflow/cadence/runtime/interpreter"
 )
 
-type runtimeStorage struct {
+type Storage struct {
 	*atree.PersistentSlabStorage
-	runtimeInterface Interface
 	// NOTE: temporary, will be refactored to dictionary
 	deltas          map[interpreter.StorageKey]interpreter.Value
 	cache           map[interpreter.StorageKey]interpreter.Value
 	contractUpdates map[interpreter.StorageKey]interpreter.Value
+	Ledger          atree.Ledger
+	reportMetric    func(f func(), report func(metrics Metrics, duration time.Duration))
 }
 
-var _ atree.SlabStorage = &runtimeStorage{}
-var _ interpreter.Storage = &runtimeStorage{}
+var _ atree.SlabStorage = &Storage{}
+var _ interpreter.Storage = &Storage{}
 
-func newRuntimeStorage(runtimeInterface Interface) *runtimeStorage {
-	ledgerStorage := atree.NewLedgerBaseStorage(runtimeInterface)
+func NewStorage(
+	ledger atree.Ledger,
+	reportMetric func(f func(), report func(metrics Metrics, duration time.Duration)),
+) *Storage {
+	ledgerStorage := atree.NewLedgerBaseStorage(ledger)
 	persistentSlabStorage := atree.NewPersistentSlabStorage(
 		ledgerStorage,
 		interpreter.CBOREncMode,
 		interpreter.CBORDecMode,
+		interpreter.DecodeStorable,
+		interpreter.DecodeTypeInfo,
 	)
-	persistentSlabStorage.DecodeStorable = interpreter.DecodeStorable
-	return &runtimeStorage{
+	return &Storage{
+		Ledger:                ledger,
 		PersistentSlabStorage: persistentSlabStorage,
-		runtimeInterface:      runtimeInterface,
 		deltas:                map[interpreter.StorageKey]interpreter.Value{},
 		cache:                 map[interpreter.StorageKey]interpreter.Value{},
 		contractUpdates:       map[interpreter.StorageKey]interpreter.Value{},
+		reportMetric:          reportMetric,
 	}
 }
 
 // ValueExists returns true if a value exists in account storage.
 //
-func (s *runtimeStorage) ValueExists(
+func (s *Storage) ValueExists(
 	_ *interpreter.Interpreter,
 	address common.Address,
 	key string,
@@ -87,7 +93,7 @@ func (s *runtimeStorage) ValueExists(
 	var exists bool
 	var err error
 	wrapPanic(func() {
-		exists, err = s.runtimeInterface.ValueExists(address[:], []byte(key))
+		exists, err = s.Ledger.ValueExists(address[:], []byte(key))
 	})
 	if err != nil {
 		panic(err)
@@ -102,7 +108,7 @@ func (s *runtimeStorage) ValueExists(
 
 // ReadValue returns a value from account storage.
 //
-func (s *runtimeStorage) ReadValue(
+func (s *Storage) ReadValue(
 	_ *interpreter.Interpreter,
 	address common.Address,
 	key string,
@@ -137,7 +143,7 @@ func (s *runtimeStorage) ReadValue(
 	var storedData []byte
 	var err error
 	wrapPanic(func() {
-		storedData, err = s.runtimeInterface.GetValue(address[:], []byte(key))
+		storedData, err = s.Ledger.GetValue(address[:], []byte(key))
 	})
 	if err != nil {
 		panic(err)
@@ -153,11 +159,10 @@ func (s *runtimeStorage) ReadValue(
 
 	decoder := interpreter.CBORDecMode.NewByteStreamDecoder(storedData)
 
-	reportMetric(
+	s.reportMetric(
 		func() {
 			storable, err = interpreter.DecodeStorable(decoder, atree.StorageIDUndefined)
 		},
-		s.runtimeInterface,
 		func(metrics Metrics, duration time.Duration) {
 			metrics.ValueDecoded(duration)
 		},
@@ -178,7 +183,7 @@ func (s *runtimeStorage) ReadValue(
 	return interpreter.NewSomeValueNonCopying(value)
 }
 
-func (s *runtimeStorage) WriteValue(
+func (s *Storage) WriteValue(
 	_ *interpreter.Interpreter,
 	address common.Address,
 	key string,
@@ -190,7 +195,7 @@ func (s *runtimeStorage) WriteValue(
 	}
 
 	// Only write locally.
-	// The value is eventually written back through the runtime interface in `commit`.
+	// The value is eventually written back through the runtime interface in `Commit`.
 
 	var writtenValue interpreter.Value
 
@@ -208,7 +213,7 @@ func (s *runtimeStorage) WriteValue(
 	s.deltas[storageKey] = writtenValue
 }
 
-func (s *runtimeStorage) recordContractUpdate(
+func (s *Storage) recordContractUpdate(
 	address common.Address,
 	key string,
 	contract interpreter.Value,
@@ -227,9 +232,9 @@ type accountStorageEntry struct {
 }
 
 // TODO: bring back concurrent encoding
-// commit serializes/saves all values in the cache in storage (through the runtime interface).
+// Commit serializes/saves all values in the cache in storage (through the runtime interface).
 //
-func (s *runtimeStorage) commit() error {
+func (s *Storage) Commit() error {
 
 	var accountStorageEntries []accountStorageEntry
 
@@ -285,11 +290,10 @@ func (s *runtimeStorage) commit() error {
 			var buf bytes.Buffer
 			encoder := atree.NewEncoder(&buf, interpreter.CBOREncMode)
 
-			reportMetric(
+			s.reportMetric(
 				func() {
 					err = storable.Encode(encoder)
 				},
-				s.runtimeInterface,
 				func(metrics Metrics, duration time.Duration) {
 					metrics.ValueEncoded(duration)
 				},
@@ -308,7 +312,7 @@ func (s *runtimeStorage) commit() error {
 
 		var err error
 		wrapPanic(func() {
-			err = s.runtimeInterface.SetValue(
+			err = s.Ledger.SetValue(
 				address[:],
 				[]byte(entry.storageKey.Key),
 				encoded,

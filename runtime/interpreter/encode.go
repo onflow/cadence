@@ -30,7 +30,10 @@ import (
 )
 
 func getIntCBORSize(v int64) uint32 {
-	return getUintCBORSize(uint64(-v - 1))
+	if v < 0 {
+		return getUintCBORSize(uint64(-v - 1))
+	}
+	return getUintCBORSize(uint64(v))
 }
 
 func getUintCBORSize(v uint64) uint32 {
@@ -89,13 +92,13 @@ const CBORTagBase = 128
 
 const (
 	CBORTagVoidValue = CBORTagBase + iota
-	CBORTagDictionaryValue
+	_                // DO *NOT* REPLACE. Previously used for dictionary values
 	CBORTagSomeValue
 	CBORTagAddressValue
 	CBORTagCompositeValue
 	CBORTagTypeValue
-	CBORTagArrayValue
-	_
+	_ // DO *NOT* REPLACE. Previously used for array values
+	CBORTagStringValue
 	_
 	_
 	_
@@ -233,7 +236,20 @@ func (v BoolValue) Encode(e *atree.Encoder) error {
 // Encode encodes the value as a CBOR string
 //
 func (v *StringValue) Encode(e *atree.Encoder) error {
+	err := e.CBOR.EncodeRawBytes([]byte{
+		// tag number
+		0xd8, CBORTagStringValue,
+	})
+	if err != nil {
+		return err
+	}
 	return e.CBOR.EncodeString(v.Str)
+}
+
+// Encode encodes the value as a CBOR string
+//
+func (v stringAtreeValue) Encode(e *atree.Encoder) error {
+	return e.CBOR.EncodeString(string(v))
 }
 
 // cborVoidValue represents the CBOR value:

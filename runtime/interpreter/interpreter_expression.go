@@ -122,12 +122,6 @@ func (interpreter *Interpreter) memberExpressionGetterSetter(memberExpression *a
 				}
 			}
 
-			interpreter.checkMemberAccessedType(
-				memberExpression,
-				target,
-				getLocationRange,
-			)
-
 			resultValue := interpreter.getMember(target, getLocationRange, identifier)
 			if resultValue == nil && !allowMissing {
 				panic(MissingMemberValueError{
@@ -454,11 +448,13 @@ func (interpreter *Interpreter) VisitArrayExpression(expression *ast.ArrayExpres
 		copies[i] = interpreter.copyAndConvert(argument, argumentType, elementType, getLocationRange)
 	}
 
+	// TODO: cache
 	arrayStaticType := ConvertSemaArrayTypeToStaticArrayType(arrayType)
 
 	return NewArrayValue(
 		interpreter,
 		arrayStaticType,
+		common.Address{},
 		copies...,
 	)
 }
@@ -469,9 +465,7 @@ func (interpreter *Interpreter) VisitDictionaryExpression(expression *ast.Dictio
 	entryTypes := interpreter.Program.Elaboration.DictionaryExpressionEntryTypes[expression]
 	dictionaryType := interpreter.Program.Elaboration.DictionaryExpressionType[expression]
 
-	dictionaryStaticType := ConvertSemaDictionaryTypeToStaticDictionaryType(dictionaryType)
-
-	dictionary := NewDictionaryValue(interpreter, dictionaryStaticType)
+	var keyValuePairs []Value
 
 	for i, dictionaryEntryValues := range values {
 		entryType := entryTypes[i]
@@ -493,57 +487,21 @@ func (interpreter *Interpreter) VisitDictionaryExpression(expression *ast.Dictio
 
 		// TODO: panic for duplicate keys?
 
-		// NOTE: important to convert in optional, as assignment to dictionary
-		// is always considered as an optional
-
-		getLocationRange := locationRangeGetter(interpreter.Location, expression)
-
-		// TODO: batch insert to avoid store on each insert
-		_ = dictionary.Insert(
-			interpreter,
-			getLocationRange,
+		keyValuePairs = append(
+			keyValuePairs,
 			key,
 			value,
 		)
 	}
 
-	return dictionary
+	dictionaryStaticType := ConvertSemaDictionaryTypeToStaticDictionaryType(dictionaryType)
+
+	return NewDictionaryValue(interpreter, dictionaryStaticType, keyValuePairs...)
 }
 
 func (interpreter *Interpreter) VisitMemberExpression(expression *ast.MemberExpression) ast.Repr {
 	const allowMissing = false
 	return interpreter.memberExpressionGetterSetter(expression).get(allowMissing)
-}
-
-// checkMemberAccessedType checks that the dynamic type of the accessed value
-// of the member access matches the expected static type
-//
-func (interpreter *Interpreter) checkMemberAccessedType(
-	memberExpression *ast.MemberExpression,
-	self Value,
-	getLocationRange func() LocationRange,
-) {
-	memberInfo := interpreter.Program.Elaboration.MemberExpressionMemberInfos[memberExpression]
-	accessedType := memberInfo.AccessedType
-	if memberExpression.Optional {
-		accessedType = accessedType.(*sema.OptionalType).Type
-	}
-
-	switch self := self.(type) {
-	case *HostFunctionValue, *ArrayValue, *DictionaryValue:
-		// TODO: dynamic type information incomplete
-		break
-	case *CompositeValue:
-		// Ignore for example transactions
-		// TODO: find a better solution to declare/detect transactions
-		if self.Kind == common.CompositeKindUnknown ||
-			self.QualifiedIdentifier == "" {
-			break
-		}
-		interpreter.ExpectType(self, accessedType, getLocationRange)
-	default:
-		interpreter.ExpectType(self, accessedType, getLocationRange)
-	}
 }
 
 func (interpreter *Interpreter) VisitIndexExpression(expression *ast.IndexExpression) ast.Repr {
@@ -612,7 +570,9 @@ func (interpreter *Interpreter) VisitInvocationExpression(invocationExpression *
 	parameterTypes :=
 		interpreter.Program.Elaboration.InvocationExpressionParameterTypes[invocationExpression]
 
-	interpreter.reportFunctionInvocation(invocationExpression)
+	line := invocationExpression.StartPosition().Line
+
+	interpreter.reportFunctionInvocation(line)
 
 	resultValue := interpreter.invokeFunctionValue(
 		function,
@@ -624,6 +584,8 @@ func (interpreter *Interpreter) VisitInvocationExpression(invocationExpression *
 		typeParameterTypes,
 		invocationExpression,
 	)
+
+	interpreter.reportInvokedFunctionReturn(line)
 
 	// If this is invocation is optional chaining, wrap the result
 	// as an optional, as the result is expected to be an optional

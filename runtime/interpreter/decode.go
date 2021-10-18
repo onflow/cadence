@@ -87,19 +87,19 @@ func (d Decoder) decodeStorable() (atree.Storable, error) {
 		}
 		storable = BoolValue(v)
 
-	case cbor.TextStringType:
-		v, err := d.decoder.DecodeString()
-		if err != nil {
-			return nil, err
-		}
-		storable = d.decodeString(v)
-
 	case cbor.NilType:
 		err := d.decoder.DecodeNil()
 		if err != nil {
 			return nil, err
 		}
 		storable = NilValue{}
+
+	case cbor.TextStringType:
+		v, err := d.decoder.DecodeString()
+		if err != nil {
+			return nil, err
+		}
+		storable = stringAtreeValue(v)
 
 	case cbor.TagType:
 		var num uint64
@@ -119,6 +119,13 @@ func (d Decoder) decodeStorable() (atree.Storable, error) {
 				return nil, err
 			}
 			storable = VoidValue{}
+
+		case CBORTagStringValue:
+			v, err := d.decoder.DecodeString()
+			if err != nil {
+				return nil, err
+			}
+			storable = d.decodeString(v)
 
 		case CBORTagSomeValue:
 			storable, err = d.decodeSome()
@@ -1123,10 +1130,7 @@ func decodeCompositeStaticType(dec *cbor.StreamDecoder) (StaticType, error) {
 		return nil, err
 	}
 
-	return CompositeStaticType{
-		Location:            location,
-		QualifiedIdentifier: qualifiedIdentifier,
-	}, nil
+	return NewCompositeStaticType(location, qualifiedIdentifier), nil
 }
 
 func decodeInterfaceStaticType(dec *cbor.StreamDecoder) (InterfaceStaticType, error) {

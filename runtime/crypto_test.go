@@ -35,7 +35,7 @@ func TestRuntimeCrypto_verify(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := NewInterpreterRuntime()
+	runtime := newTestInterpreterRuntime()
 
 	script := []byte(`
       import Crypto
@@ -69,7 +69,7 @@ func TestRuntimeCrypto_verify(t *testing.T) {
 
 	called := false
 
-	storage := newTestStorage(nil, nil)
+	storage := newTestLedger(nil, nil)
 
 	runtimeInterface := &testRuntimeInterface{
 		storage: storage,
@@ -115,7 +115,7 @@ func TestRuntimeHashAlgorithm_hash(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := NewInterpreterRuntime()
+	runtime := newTestInterpreterRuntime()
 
 	executeScript := func(code string, inter Interface) (cadence.Value, error) {
 		return runtime.ExecuteScript(
@@ -140,7 +140,7 @@ func TestRuntimeHashAlgorithm_hash(t *testing.T) {
 
 		var loggedMessages []string
 
-		storage := newTestStorage(nil, nil)
+		storage := newTestLedger(nil, nil)
 
 		runtimeInterface := &testRuntimeInterface{
 			storage: storage,
@@ -182,7 +182,7 @@ func TestRuntimeHashAlgorithm_hash(t *testing.T) {
 		called := false
 		hashTag := "non-empty-string"
 
-		storage := newTestStorage(nil, nil)
+		storage := newTestLedger(nil, nil)
 
 		runtimeInterface := &testRuntimeInterface{
 			storage: storage,
@@ -213,7 +213,7 @@ func TestRuntimeHashAlgorithm_hash(t *testing.T) {
 		called := false
 		hashTag := ""
 
-		storage := newTestStorage(nil, nil)
+		storage := newTestLedger(nil, nil)
 
 		runtimeInterface := &testRuntimeInterface{
 			storage: storage,
@@ -236,7 +236,7 @@ func TestRuntimeHashingAlgorithmExport(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := NewInterpreterRuntime()
+	runtime := newTestInterpreterRuntime()
 	runtimeInterface := &testRuntimeInterface{}
 
 	testHashAlgorithm := func(algo sema.CryptoAlgorithm) {
@@ -276,7 +276,7 @@ func TestRuntimeSignatureAlgorithmExport(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := NewInterpreterRuntime()
+	runtime := newTestInterpreterRuntime()
 	runtimeInterface := &testRuntimeInterface{}
 
 	testSignatureAlgorithm := func(algo sema.CryptoAlgorithm) {
@@ -316,7 +316,7 @@ func TestRuntimeSignatureAlgorithmImport(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := NewInterpreterRuntime()
+	runtime := newTestInterpreterRuntime()
 	runtimeInterface := &testRuntimeInterface{
 		decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
 			return json.Decode(b)
@@ -387,9 +387,9 @@ func TestRuntimeHashAlgorithmImport(t *testing.T) {
 		var logs []string
 		var hashCalls int
 
-		storage := newTestStorage(nil, nil)
+		storage := newTestLedger(nil, nil)
 
-		runtime := NewInterpreterRuntime()
+		runtime := newTestInterpreterRuntime()
 		runtimeInterface := &testRuntimeInterface{
 			storage: storage,
 			hash: func(data []byte, tag string, hashAlgorithm HashAlgorithm) ([]byte, error) {

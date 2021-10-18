@@ -50,7 +50,7 @@ func TestRuntimeContract(t *testing.T) {
 
 		t.Parallel()
 
-		runtime := NewInterpreterRuntime()
+		runtime := newTestInterpreterRuntime()
 
 		var loggedMessages []string
 
@@ -130,7 +130,7 @@ func TestRuntimeContract(t *testing.T) {
 
 		var events []cadence.Event
 
-		storage := newTestStorage(nil, nil)
+		storage := newTestLedger(nil, nil)
 
 		runtimeInterface := &testRuntimeInterface{
 			storage: storage,
@@ -499,7 +499,7 @@ func TestRuntimeImportMultipleContracts(t *testing.T) {
 	var loggedMessages []string
 
 	runtimeInterface := &testRuntimeInterface{
-		storage: newTestStorage(nil, nil),
+		storage: newTestLedger(nil, nil),
 		getSigningAccounts: func() ([]Address, error) {
 			return []Address{common.BytesToAddress([]byte{0x1})}, nil
 		},
@@ -554,7 +554,7 @@ func TestRuntimeImportMultipleContracts(t *testing.T) {
 		},
 	}
 
-	runtime := NewInterpreterRuntime()
+	runtime := newTestInterpreterRuntime()
 
 	nextTransactionLocation := newTransactionLocationGenerator()
 

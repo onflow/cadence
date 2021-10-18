@@ -91,6 +91,7 @@ func parseCheckAndInterpretWithOptions(
 				return uuid, nil
 			}),
 			interpreter.WithStorage(interpreter.NewInMemoryStorage()),
+			interpreter.WithAtreeValidationEnabled(true),
 		},
 		options.Options...,
 	)
@@ -224,6 +225,7 @@ func TestInterpretConstantAndVariableDeclarations(t *testing.T) {
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeInt,
 			},
+			common.Address{},
 			interpreter.NewIntValueFromInt64(1),
 			interpreter.NewIntValueFromInt64(2),
 		),
@@ -630,6 +632,7 @@ func TestInterpretArrayIndexingAssignment(t *testing.T) {
 		interpreter.VariableSizedStaticType{
 			Type: interpreter.PrimitiveStaticTypeInt,
 		},
+		common.Address{},
 		interpreter.NewIntValueFromInt64(0),
 		interpreter.NewIntValueFromInt64(2),
 	)
@@ -2171,7 +2174,7 @@ func TestInterpretStructureFieldAssignment(t *testing.T) {
 		t,
 		inter,
 		interpreter.NewIntValueFromInt64(1),
-		test.GetField(inter, interpreter.ReturnEmptyLocationRange, "foo"),
+		test.GetField("foo"),
 	)
 
 	value, err := inter.Invoke("callTest")
@@ -2188,7 +2191,7 @@ func TestInterpretStructureFieldAssignment(t *testing.T) {
 		t,
 		inter,
 		interpreter.NewIntValueFromInt64(3),
-		test.GetField(inter, interpreter.ReturnEmptyLocationRange, "foo"),
+		test.GetField("foo"),
 	)
 }
 
@@ -2286,6 +2289,7 @@ func TestInterpretStructCopyOnDeclaration(t *testing.T) {
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeBool,
 			},
+			common.Address{},
 			interpreter.BoolValue(false),
 			interpreter.BoolValue(true),
 		),
@@ -2329,6 +2333,7 @@ func TestInterpretStructCopyOnDeclarationModifiedWithStructFunction(t *testing.T
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeBool,
 			},
+			common.Address{},
 			interpreter.BoolValue(false),
 			interpreter.BoolValue(true),
 		),
@@ -2369,6 +2374,7 @@ func TestInterpretStructCopyOnIdentifierAssignment(t *testing.T) {
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeBool,
 			},
+			common.Address{},
 			interpreter.BoolValue(false),
 			interpreter.BoolValue(true),
 		),
@@ -2409,6 +2415,7 @@ func TestInterpretStructCopyOnIndexingAssignment(t *testing.T) {
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeBool,
 			},
+			common.Address{},
 			interpreter.BoolValue(false),
 			interpreter.BoolValue(true),
 		),
@@ -2456,6 +2463,7 @@ func TestInterpretStructCopyOnMemberAssignment(t *testing.T) {
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeBool,
 			},
+			common.Address{},
 			interpreter.BoolValue(false),
 			interpreter.BoolValue(true),
 		),
@@ -2530,6 +2538,7 @@ func TestInterpretArrayCopy(t *testing.T) {
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeInt,
 			},
+			common.Address{},
 			interpreter.NewIntValueFromInt64(0),
 			interpreter.NewIntValueFromInt64(1),
 		),
@@ -2569,6 +2578,7 @@ func TestInterpretStructCopyInArray(t *testing.T) {
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeInt,
 			},
+			common.Address{},
 			interpreter.NewIntValueFromInt64(2),
 			interpreter.NewIntValueFromInt64(3),
 			interpreter.NewIntValueFromInt64(1),
@@ -4162,12 +4172,11 @@ func TestInterpretDictionaryIndexingAssignmentNew(t *testing.T) {
 	AssertValueSlicesEqual(
 		t,
 		inter,
-
 		[]interpreter.Value{
-			interpreter.NewStringValue("def"),
-			interpreter.NewIntValueFromInt64(42),
 			interpreter.NewStringValue("abc"),
 			interpreter.NewIntValueFromInt64(23),
+			interpreter.NewStringValue("def"),
+			interpreter.NewIntValueFromInt64(42),
 		},
 		dictionaryKeyValues(actualDict),
 	)
@@ -4476,6 +4485,7 @@ func TestInterpretReferenceFailableDowncasting(t *testing.T) {
 								},
 							}
 						},
+						nil,
 					),
 				},
 			}
@@ -5381,10 +5391,10 @@ func TestInterpretDictionaryInsert(t *testing.T) {
 		t,
 		inter,
 		[]interpreter.Value{
-			interpreter.NewStringValue("def"),
-			interpreter.NewIntValueFromInt64(2),
 			interpreter.NewStringValue("abc"),
 			interpreter.NewIntValueFromInt64(3),
+			interpreter.NewStringValue("def"),
+			interpreter.NewIntValueFromInt64(2),
 		},
 		dictionaryKeyValues(actualDict),
 	)
@@ -5421,9 +5431,9 @@ func TestInterpretDictionaryKeys(t *testing.T) {
 		inter,
 
 		[]interpreter.Value{
+			interpreter.NewStringValue("abc"),
 			interpreter.NewStringValue("def"),
 			interpreter.NewStringValue("a"),
-			interpreter.NewStringValue("abc"),
 		},
 		arrayElements(inter, arrayValue),
 	)
@@ -5450,9 +5460,9 @@ func TestInterpretDictionaryValues(t *testing.T) {
 		t,
 		inter,
 		[]interpreter.Value{
+			interpreter.NewIntValueFromInt64(1),
 			interpreter.NewIntValueFromInt64(2),
 			interpreter.NewIntValueFromInt64(3),
-			interpreter.NewIntValueFromInt64(1),
 		},
 		arrayElements(inter, arrayValue),
 	)
@@ -5513,6 +5523,38 @@ func TestInterpretDictionaryKeyTypes(t *testing.T) {
 					interpreter.NewStringValue("test"),
 				),
 				inter.Globals["v"].GetValue(),
+			)
+		})
+	}
+}
+
+func TestInterpretPathToString(t *testing.T) {
+
+	t.Parallel()
+
+	tests := map[string]string{
+		"Path":           `/storage/a`,
+		"StoragePath":    `/storage/a`,
+		"PublicPath":     `/public/a`,
+		"PrivatePath":    `/private/a`,
+		"CapabilityPath": `/private/a`,
+	}
+
+	for ty, val := range tests {
+		t.Run(ty, func(t *testing.T) {
+			inter := parseCheckAndInterpret(t,
+				fmt.Sprintf(
+					`
+					  let x: %s = %s
+					  let y: String = x.toString()
+					`,
+					ty,
+					val,
+				))
+
+			assert.Equal(t,
+				interpreter.NewStringValue(val),
+				inter.Globals["y"].GetValue(),
 			)
 		})
 	}
@@ -5832,6 +5874,7 @@ func TestInterpretSwapVariables(t *testing.T) {
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeInt,
 			},
+			common.Address{},
 			interpreter.NewIntValueFromInt64(3),
 			interpreter.NewIntValueFromInt64(2),
 		),
@@ -5871,6 +5914,7 @@ func TestInterpretSwapArrayAndField(t *testing.T) {
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeInt,
 			},
+			common.Address{},
 			interpreter.NewIntValueFromInt64(2),
 			interpreter.NewIntValueFromInt64(1),
 		),
@@ -6256,19 +6300,40 @@ func TestInterpretEmitEvent(t *testing.T) {
 	transferAmountEventType := checker.RequireGlobalType(t, inter.Program.Elaboration, "TransferAmount")
 
 	fields1 := []interpreter.CompositeField{
-		{"to", interpreter.NewIntValueFromInt64(1)},
-		{"from", interpreter.NewIntValueFromInt64(2)},
+		{
+			Name:  "to",
+			Value: interpreter.NewIntValueFromInt64(1),
+		},
+		{
+			Name:  "from",
+			Value: interpreter.NewIntValueFromInt64(2),
+		},
 	}
 
 	fields2 := []interpreter.CompositeField{
-		{"to", interpreter.NewIntValueFromInt64(3)},
-		{"from", interpreter.NewIntValueFromInt64(4)},
+		{
+			Name:  "to",
+			Value: interpreter.NewIntValueFromInt64(3),
+		},
+		{
+			Name:  "from",
+			Value: interpreter.NewIntValueFromInt64(4),
+		},
 	}
 
 	fields3 := []interpreter.CompositeField{
-		{"to", interpreter.NewIntValueFromInt64(1)},
-		{"from", interpreter.NewIntValueFromInt64(2)},
-		{"amount", interpreter.NewIntValueFromInt64(100)},
+		{
+			Name:  "to",
+			Value: interpreter.NewIntValueFromInt64(1),
+		},
+		{
+			Name:  "from",
+			Value: interpreter.NewIntValueFromInt64(2),
+		},
+		{
+			Name:  "amount",
+			Value: interpreter.NewIntValueFromInt64(100),
+		},
 	}
 
 	expectedEvents := []interpreter.Value{
@@ -6502,48 +6567,50 @@ func TestInterpretEmitEventParameterTypes(t *testing.T) {
 				literal: testCase.literal,
 			}
 
-		tests[fmt.Sprintf("[%s]", validType)] =
-			testValue{
-				value: interpreter.NewArrayValue(
-					inter,
-					interpreter.VariableSizedStaticType{
-						Type: interpreter.ConvertSemaToStaticType(testCase.ty),
-					},
-					testCase.value,
-				),
-				literal: fmt.Sprintf("[%s as %s]", testCase, validType),
-			}
-
-		tests[fmt.Sprintf("[%s; 1]", validType)] =
-			testValue{
-				value: interpreter.NewArrayValue(
-					inter,
-					interpreter.ConstantSizedStaticType{
-						Type: interpreter.ConvertSemaToStaticType(testCase.ty),
-						Size: 1,
-					},
-					testCase.value,
-				),
-				literal: fmt.Sprintf("[%s as %s]", testCase, validType),
-			}
-
-		if !testCase.notAsDictionaryKey {
-
-			value := interpreter.NewDictionaryValue(
-				inter,
-				interpreter.DictionaryStaticType{
-					KeyType:   interpreter.ConvertSemaToStaticType(testCase.ty),
-					ValueType: interpreter.ConvertSemaToStaticType(testCase.ty),
-				},
-				testCase.value, testCase.value,
-			)
-
-			tests[fmt.Sprintf("{%[1]s: %[1]s}", validType)] =
+			tests[fmt.Sprintf("[%s]", validType)] =
 				testValue{
-					value:   value,
-					literal: fmt.Sprintf("{%[1]s as %[2]s: %[1]s as %[2]s}", testCase, validType),
+					value: interpreter.NewArrayValue(
+						inter,
+						interpreter.VariableSizedStaticType{
+							Type: interpreter.ConvertSemaToStaticType(testCase.ty),
+						},
+						common.Address{},
+						testCase.value,
+					),
+					literal: fmt.Sprintf("[%s as %s]", testCase, validType),
 				}
-		}
+
+			tests[fmt.Sprintf("[%s; 1]", validType)] =
+				testValue{
+					value: interpreter.NewArrayValue(
+						inter,
+						interpreter.ConstantSizedStaticType{
+							Type: interpreter.ConvertSemaToStaticType(testCase.ty),
+							Size: 1,
+						},
+						common.Address{},
+						testCase.value,
+					),
+					literal: fmt.Sprintf("[%s as %s]", testCase, validType),
+				}
+
+			if !testCase.notAsDictionaryKey {
+
+				value := interpreter.NewDictionaryValue(
+					inter,
+					interpreter.DictionaryStaticType{
+						KeyType:   interpreter.ConvertSemaToStaticType(testCase.ty),
+						ValueType: interpreter.ConvertSemaToStaticType(testCase.ty),
+					},
+					testCase.value, testCase.value,
+				)
+
+				tests[fmt.Sprintf("{%[1]s: %[1]s}", validType)] =
+					testValue{
+						value:   value,
+						literal: fmt.Sprintf("{%[1]s as %[2]s: %[1]s as %[2]s}", testCase, validType),
+					}
+			}
 	}
 
 	for ty, testCase := range tests {
@@ -6808,6 +6875,7 @@ func TestInterpretReferenceUse(t *testing.T) {
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeInt,
 			},
+			common.Address{},
 			interpreter.NewIntValueFromInt64(1),
 			interpreter.NewIntValueFromInt64(2),
 			interpreter.NewIntValueFromInt64(2),
@@ -6858,6 +6926,7 @@ func TestInterpretReferenceUseAccess(t *testing.T) {
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeInt,
 			},
+			common.Address{},
 			interpreter.NewIntValueFromInt64(0),
 			interpreter.NewIntValueFromInt64(1),
 			interpreter.NewIntValueFromInt64(2),
@@ -6944,7 +7013,7 @@ func TestInterpretVariableDeclarationSecondValue(t *testing.T) {
 		t,
 		inter,
 		interpreter.NewIntValueFromInt64(2),
-		firstResource.GetField(inter, interpreter.ReturnEmptyLocationRange, "id"),
+		firstResource.GetField("id"),
 	)
 
 	require.IsType(t,
@@ -6965,7 +7034,7 @@ func TestInterpretVariableDeclarationSecondValue(t *testing.T) {
 		t,
 		inter,
 		interpreter.NewIntValueFromInt64(1),
-		secondResource.GetField(inter, interpreter.ReturnEmptyLocationRange, "id"),
+		secondResource.GetField("id"),
 	)
 }
 
@@ -7393,6 +7462,7 @@ func TestInterpretFungibleTokenContract(t *testing.T) {
 				Type: interpreter.PrimitiveStaticTypeInt,
 				Size: 2,
 			},
+			common.Address{},
 			interpreter.NewIntValueFromInt64(40),
 			interpreter.NewIntValueFromInt64(60),
 		),
@@ -7438,7 +7508,7 @@ func TestInterpretContractAccountFieldUse(t *testing.T) {
 						_ common.CompositeKind,
 					) map[string]interpreter.Value {
 						return map[string]interpreter.Value{
-							"account": newTestAuthAccountValue(inter, addressValue),
+							"account": newTestAuthAccountValue(addressValue),
 						}
 					},
 				),
@@ -8145,6 +8215,7 @@ func TestInterpretReferenceUseAfterCopy(t *testing.T) {
 				interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeString,
 				},
+				common.Address{},
 				interpreter.NewStringValue("2"),
 				interpreter.NewStringValue("3"),
 			),
@@ -8184,7 +8255,7 @@ func TestInterpretResourceOwnerFieldUse(t *testing.T) {
 		Name: "account",
 		Type: sema.AuthAccountType,
 		ValueFactory: func(inter *interpreter.Interpreter) interpreter.Value {
-			return newTestAuthAccountValue(inter, interpreter.AddressValue(address))
+			return newTestAuthAccountValue(interpreter.AddressValue(address))
 		},
 		Kind: common.DeclarationKindConstant,
 	}
@@ -8201,9 +8272,9 @@ func TestInterpretResourceOwnerFieldUse(t *testing.T) {
 				interpreter.WithPredeclaredValues([]interpreter.ValueDeclaration{
 					valueDeclaration,
 				}),
-				interpreter.WithAccountHandlerFunc(
-					func(inter *interpreter.Interpreter, address interpreter.AddressValue) *interpreter.CompositeValue {
-						return newTestPublicAccountValue(inter, address)
+				interpreter.WithPublicAccountHandlerFunc(
+					func(_ *interpreter.Interpreter, address interpreter.AddressValue) interpreter.Value {
+						return newTestPublicAccountValue(address)
 					},
 				),
 			},
@@ -8226,42 +8297,17 @@ func TestInterpretResourceOwnerFieldUse(t *testing.T) {
 }
 
 func newTestAuthAccountValue(
-	inter *interpreter.Interpreter,
 	addressValue interpreter.AddressValue,
-) *interpreter.CompositeValue {
+) interpreter.Value {
 
 	panicFunction := interpreter.NewHostFunctionValue(
 		func(invocation interpreter.Invocation) interpreter.Value {
 			panic(errors.NewUnreachableError())
 		},
-	)
-
-	contractsValue := interpreter.NewAuthAccountContractsValue(
-		inter,
-		addressValue,
-		panicFunction,
-		panicFunction,
-		panicFunction,
-		panicFunction,
-		func(inter *interpreter.Interpreter) *interpreter.ArrayValue {
-			return interpreter.NewArrayValue(
-				inter,
-				interpreter.VariableSizedStaticType{
-					Type: interpreter.PrimitiveStaticTypeString,
-				},
-			)
-		},
-	)
-
-	keysValue := interpreter.NewAuthAccountKeysValue(
-		inter,
-		panicFunction,
-		panicFunction,
-		panicFunction,
+		stdlib.PanicFunction.Type,
 	)
 
 	return interpreter.NewAuthAccountValue(
-		inter,
 		addressValue,
 		returnZeroUFix64,
 		returnZeroUFix64,
@@ -8271,43 +8317,47 @@ func newTestAuthAccountValue(
 		returnZeroUInt64,
 		panicFunction,
 		panicFunction,
-		contractsValue,
-		keysValue,
+		func() interpreter.Value {
+			return interpreter.NewAuthAccountContractsValue(
+				addressValue,
+				panicFunction,
+				panicFunction,
+				panicFunction,
+				panicFunction,
+				func(inter *interpreter.Interpreter) *interpreter.ArrayValue {
+					return interpreter.NewArrayValue(
+						inter,
+						interpreter.VariableSizedStaticType{
+							Type: interpreter.PrimitiveStaticTypeString,
+						},
+						common.Address{},
+					)
+				},
+			)
+		},
+		func() interpreter.Value {
+			return interpreter.NewAuthAccountKeysValue(
+				addressValue,
+				panicFunction,
+				panicFunction,
+				panicFunction,
+			)
+		},
 	)
 }
 
 func newTestPublicAccountValue(
-	inter *interpreter.Interpreter,
 	addressValue interpreter.AddressValue,
-) *interpreter.CompositeValue {
+) interpreter.Value {
 
 	panicFunction := interpreter.NewHostFunctionValue(
 		func(invocation interpreter.Invocation) interpreter.Value {
 			panic(errors.NewUnreachableError())
 		},
-	)
-
-	keysValue := interpreter.NewPublicAccountKeysValue(
-		inter,
-		panicFunction,
-	)
-
-	contractsValue := interpreter.NewPublicAccountContractsValue(
-		inter,
-		addressValue,
-		panicFunction,
-		func(inter *interpreter.Interpreter) *interpreter.ArrayValue {
-			return interpreter.NewArrayValue(
-				inter,
-				interpreter.VariableSizedStaticType{
-					Type: interpreter.PrimitiveStaticTypeString,
-				},
-			)
-		},
+		stdlib.PanicFunction.Type,
 	)
 
 	return interpreter.NewPublicAccountValue(
-		inter,
 		addressValue,
 		returnZeroUFix64,
 		returnZeroUFix64,
@@ -8315,8 +8365,27 @@ func newTestPublicAccountValue(
 			return 0
 		},
 		returnZeroUInt64,
-		keysValue,
-		contractsValue,
+		func() interpreter.Value {
+			return interpreter.NewPublicAccountKeysValue(
+				addressValue,
+				panicFunction,
+			)
+		},
+		func() interpreter.Value {
+			return interpreter.NewPublicAccountContractsValue(
+				addressValue,
+				panicFunction,
+				func(inter *interpreter.Interpreter) *interpreter.ArrayValue {
+					return interpreter.NewArrayValue(
+						inter,
+						interpreter.VariableSizedStaticType{
+							Type: interpreter.PrimitiveStaticTypeString,
+						},
+						common.Address{},
+					)
+				},
+			)
+		},
 	)
 }
 
@@ -8430,6 +8499,8 @@ func TestInterpretForce(t *testing.T) {
 
 	t.Run("non-nil", func(t *testing.T) {
 
+		t.Parallel()
+
 		inter := parseCheckAndInterpret(t, `
           let x: Int? = 1
           let y = x!
@@ -8454,6 +8525,8 @@ func TestInterpretForce(t *testing.T) {
 
 	t.Run("nil", func(t *testing.T) {
 
+		t.Parallel()
+
 		inter := parseCheckAndInterpret(t, `
           let x: Int? = nil
 
@@ -8470,6 +8543,8 @@ func TestInterpretForce(t *testing.T) {
 
 	t.Run("non-optional", func(t *testing.T) {
 
+		t.Parallel()
+
 		inter := parseCheckAndInterpret(t, `
           let x: Int = 1
           let y = x!
@@ -8482,25 +8557,6 @@ func TestInterpretForce(t *testing.T) {
 			inter.Globals["y"].GetValue(),
 		)
 	})
-}
-
-func permutations(xs [][]byte) (res [][][]byte) {
-	var f func([][]byte, int)
-	f = func(a [][]byte, k int) {
-		if k == len(a) {
-			res = append(res, append([][]byte{}, a...))
-		} else {
-			for i := k; i < len(xs); i++ {
-				a[k], a[i] = a[i], a[k]
-				f(a, k+1)
-				a[k], a[i] = a[i], a[k]
-			}
-		}
-	}
-
-	f(xs, 0)
-
-	return res
 }
 
 func TestInterpretEphemeralReferenceToOptional(t *testing.T) {
@@ -8547,6 +8603,9 @@ func TestInterpretNestedDeclarationOrder(t *testing.T) {
 	t.Parallel()
 
 	t.Run("A, B", func(t *testing.T) {
+
+		t.Parallel()
+
 		_, err := parseCheckAndInterpretWithOptions(t,
 			`
               pub contract Test {
@@ -8578,6 +8637,8 @@ func TestInterpretNestedDeclarationOrder(t *testing.T) {
 	})
 
 	t.Run("B, A", func(t *testing.T) {
+
+		t.Parallel()
 
 		_, err := parseCheckAndInterpretWithOptions(t,
 			`
@@ -8885,6 +8946,7 @@ func TestInterpretInternalAssignment(t *testing.T) {
 			interpreter.VariableSizedStaticType{
 				Type: stringIntDictionaryStaticType,
 			},
+			common.Address{},
 			interpreter.NewDictionaryValue(
 				inter,
 				stringIntDictionaryStaticType,
@@ -9027,5 +9089,88 @@ func BenchmarkNewInterpreter(b *testing.B) {
 			_, err := inter.NewSubInterpreter(nil, nil)
 			require.NoError(b, err)
 		}
+	})
+}
+
+func TestHostFunctionStaticType(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("toString function", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            let x = 5
+            let y = x.toString
+        `)
+
+		value := inter.Globals["y"].GetValue()
+		assert.Equal(
+			t,
+			interpreter.ConvertSemaToStaticType(sema.ToStringFunctionType),
+			value.StaticType(),
+		)
+	})
+
+	t.Run("Type function", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            let x = Type
+            let y = x<Int8>()
+        `)
+
+		value := inter.Globals["x"].GetValue()
+		assert.Equal(
+			t,
+			interpreter.ConvertSemaToStaticType(
+				&sema.FunctionType{
+					ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.MetaType),
+				},
+			),
+			value.StaticType(),
+		)
+
+		value = inter.Globals["y"].GetValue()
+		assert.Equal(
+			t,
+			interpreter.PrimitiveStaticTypeMetaType,
+			value.StaticType(),
+		)
+
+		require.IsType(t, interpreter.TypeValue{}, value)
+		typeValue := value.(interpreter.TypeValue)
+		assert.Equal(t, interpreter.PrimitiveStaticTypeInt8, typeValue.Type)
+	})
+
+	t.Run("toString function", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            let a: Int8 = 5
+            let b: Fix64 = 4.0
+
+            let x = a.toString
+            let y = b.toString
+        `)
+
+		// Both `x` and `y` are two functions that returns a string.
+		// Hence, their types are equal. i.e: Receivers shouldn't matter.
+
+		xValue := inter.Globals["x"].GetValue()
+		assert.Equal(
+			t,
+			interpreter.ConvertSemaToStaticType(sema.ToStringFunctionType),
+			xValue.StaticType(),
+		)
+
+		yValue := inter.Globals["y"].GetValue()
+		assert.Equal(
+			t,
+			interpreter.ConvertSemaToStaticType(sema.ToStringFunctionType),
+			yValue.StaticType(),
+		)
+
+		assert.Equal(t, xValue.StaticType(), yValue.StaticType())
 	})
 }

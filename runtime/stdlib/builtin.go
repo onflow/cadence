@@ -129,7 +129,7 @@ Logs a string representation of the given value
 
 var LogFunction = NewStandardLibraryFunction(
 	"log",
-	logFunctionType,
+	LogFunctionType,
 	logFunctionDocString,
 	func(invocation interpreter.Invocation) interpreter.Value {
 		println(invocation.Arguments[0].String())
@@ -184,13 +184,14 @@ var CreatePublicKeyFunction = NewStandardLibraryFunction(
 func BuiltinValues() StandardLibraryValues {
 	signatureAlgorithmValue := StandardLibraryValue{
 		Name: sema.SignatureAlgorithmTypeName,
-		Type: cryptoAlgorithmEnumType(
+		Type: cryptoAlgorithmEnumConstructorType(
 			sema.SignatureAlgorithmType,
 			sema.SignatureAlgorithms,
 		),
 		ValueFactory: func(inter *interpreter.Interpreter) interpreter.Value {
 			return cryptoAlgorithmEnumValue(
 				inter,
+				sema.SignatureAlgorithmType,
 				sema.SignatureAlgorithms,
 				NewSignatureAlgorithmCase,
 			)
@@ -200,13 +201,14 @@ func BuiltinValues() StandardLibraryValues {
 
 	hashAlgorithmValue := StandardLibraryValue{
 		Name: sema.HashAlgorithmTypeName,
-		Type: cryptoAlgorithmEnumType(
+		Type: cryptoAlgorithmEnumConstructorType(
 			sema.HashAlgorithmType,
 			sema.HashAlgorithms,
 		),
 		ValueFactory: func(inter *interpreter.Interpreter) interpreter.Value {
 			return cryptoAlgorithmEnumValue(
 				inter,
+				sema.HashAlgorithmType,
 				sema.HashAlgorithms,
 				NewHashAlgorithmCase,
 			)
@@ -266,6 +268,7 @@ var hashAlgorithmHashFunction = interpreter.NewHostFunctionValue(
 			hashAlgoValue,
 		)
 	},
+	sema.HashAlgorithmTypeHashFunctionType,
 )
 
 var hashAlgorithmHashWithTagFunction = interpreter.NewHostFunctionValue(
@@ -292,9 +295,14 @@ var hashAlgorithmHashWithTagFunction = interpreter.NewHostFunctionValue(
 			hashAlgoValue,
 		)
 	},
+	sema.HashAlgorithmTypeHashWithTagFunctionType,
 )
 
-func cryptoAlgorithmEnumType(enumType *sema.CompositeType, enumCases []sema.CryptoAlgorithm) *sema.FunctionType {
+func cryptoAlgorithmEnumConstructorType(
+	enumType *sema.CompositeType,
+	enumCases []sema.CryptoAlgorithm,
+) *sema.FunctionType {
+
 	members := make([]*sema.Member, len(enumCases))
 	for i, algo := range enumCases {
 		members[i] = sema.NewPublicConstantFieldMember(
@@ -326,6 +334,7 @@ func cryptoAlgorithmEnumType(enumType *sema.CompositeType, enumCases []sema.Cryp
 
 func cryptoAlgorithmEnumValue(
 	inter *interpreter.Interpreter,
+	enumType *sema.CompositeType,
 	enumCases []sema.CryptoAlgorithm,
 	caseConstructor func(inter *interpreter.Interpreter, rawValue uint8) *interpreter.CompositeValue,
 ) interpreter.Value {
@@ -343,7 +352,7 @@ func cryptoAlgorithmEnumValue(
 	}
 
 	return interpreter.EnumConstructorFunction(
-		inter,
+		enumType,
 		caseValues,
 		constructorNestedVariables,
 	)

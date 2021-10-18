@@ -36,7 +36,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := NewInterpreterRuntime(
+	runtime := newTestInterpreterRuntime(
 		WithContractUpdateValidationEnabled(true),
 	)
 
@@ -1872,7 +1872,7 @@ func getMockedRuntimeInterfaceForTxUpdate(
 		getCode: func(location Location) (bytes []byte, err error) {
 			return accountCodes[location.ID()], nil
 		},
-		storage: newTestStorage(nil, nil),
+		storage: newTestLedger(nil, nil),
 		getSigningAccounts: func() ([]Address, error) {
 			return []Address{common.BytesToAddress([]byte{0x42})}, nil
 		},
@@ -1911,7 +1911,7 @@ func TestContractUpdateValidationDisabled(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := NewInterpreterRuntime(
+	runtime := newTestInterpreterRuntime(
 		WithContractUpdateValidationEnabled(false),
 	)
 

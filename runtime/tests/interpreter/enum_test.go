@@ -137,6 +137,7 @@ func TestInterpretEnumCaseEquality(t *testing.T) {
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeBool,
 			},
+			common.Address{},
 			interpreter.BoolValue(true),
 			interpreter.BoolValue(true),
 			interpreter.BoolValue(true),
@@ -171,6 +172,7 @@ func TestInterpretEnumConstructor(t *testing.T) {
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeBool,
 			},
+			common.Address{},
 			interpreter.BoolValue(true),
 			interpreter.BoolValue(true),
 			interpreter.BoolValue(true),
@@ -204,6 +206,7 @@ func TestInterpretEnumInstance(t *testing.T) {
 			interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeBool,
 			},
+			common.Address{},
 			interpreter.BoolValue(true),
 			interpreter.BoolValue(true),
 		),
@@ -242,7 +245,7 @@ func TestInterpretEnumInContract(t *testing.T) {
 	require.IsType(t, &interpreter.CompositeValue{}, c)
 	contract := c.(*interpreter.CompositeValue)
 
-	eValue := contract.GetField(inter, interpreter.ReturnEmptyLocationRange, "e")
+	eValue := contract.GetField("e")
 	require.NotNil(t, eValue)
 
 	require.IsType(t, &interpreter.CompositeValue{}, eValue)

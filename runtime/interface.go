@@ -55,7 +55,7 @@ type Interface interface {
 	SetValue(owner, key, value []byte) (err error)
 	// ValueExists returns true if the given key exists in the storage, owned by the given account.
 	ValueExists(owner, key []byte) (exists bool, err error)
-	// AllocateStorageIndex Allocates a new storage index under the given account.
+	// AllocateStorageIndex allocates a new storage index under the given account.
 	AllocateStorageIndex(owner []byte) (atree.StorageIndex, error)
 	// CreateAccount creates a new account.
 	CreateAccount(payer Address) (address Address, err error)

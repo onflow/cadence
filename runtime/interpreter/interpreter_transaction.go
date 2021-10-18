@@ -20,7 +20,6 @@ package interpreter
 
 import (
 	"github.com/onflow/cadence/runtime/ast"
-	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/sema"
 )
 
@@ -52,14 +51,17 @@ func (interpreter *Interpreter) declareTransactionEntryPoint(declaration *ast.Tr
 	postConditionsRewrite :=
 		interpreter.Program.Elaboration.PostConditionsRewrite[declaration.PostConditions]
 
-	self := NewCompositeValue(
-		interpreter,
-		interpreter.Location,
-		"",
-		// TODO:
-		common.CompositeKindStructure,
+	staticType := NewCompositeStaticType(interpreter.Location, "")
+
+	self := NewSimpleCompositeValue(
+		staticType.TypeID,
+		staticType,
 		nil,
-		common.Address{},
+		nil,
+		map[string]Value{},
+		nil,
+		nil,
+		nil,
 	)
 
 	transactionFunction := NewHostFunctionValue(
@@ -128,7 +130,12 @@ func (interpreter *Interpreter) declareTransactionEntryPoint(declaration *ast.Tr
 				postConditionsRewrite.RewrittenPostConditions,
 				sema.VoidType,
 			)
-		})
+		},
+
+		// This is an internally used function.
+		// So ideally wouldn't need to perform type checks.
+		nil,
+	)
 
 	interpreter.Transactions = append(
 		interpreter.Transactions,

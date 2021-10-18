@@ -59,8 +59,8 @@ func (a *Address) SetBytes(b []byte) {
 
 // Bytes returns address without leading zeros.
 // The fast path is inlined and handles the most common
-// scenario of address having no leading zeros.  Otherwise,
-// bytes() is called to trim leading zeros.
+// scenario of address having no leading zeros.
+// Otherwise, bytes() is called to trim leading zeros.
 func (a Address) Bytes() []byte {
 	if a[0] != 0 {
 		return a[:]

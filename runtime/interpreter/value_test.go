@@ -83,6 +83,7 @@ func TestOwnerNewArray(t *testing.T) {
 		VariableSizedStaticType{
 			Type: PrimitiveStaticTypeAnyStruct,
 		},
+		common.Address{},
 		value,
 	)
 
@@ -120,13 +121,22 @@ func TestOwnerArrayDeepCopy(t *testing.T) {
 		VariableSizedStaticType{
 			Type: PrimitiveStaticTypeAnyStruct,
 		},
+		common.Address{},
 		value,
 	)
 
-	arrayCopy := array.DeepCopy(inter, atree.Address(newOwner))
+	arrayCopy := array.DeepCopy(
+		inter,
+		ReturnEmptyLocationRange,
+		atree.Address(newOwner),
+	)
 	array = arrayCopy.(*ArrayValue)
 
-	value = array.Get(inter, ReturnEmptyLocationRange, 0).(*CompositeValue)
+	value = array.Get(
+		inter,
+		ReturnEmptyLocationRange,
+		0,
+	).(*CompositeValue)
 
 	assert.Equal(t, newOwner, array.GetOwner())
 	assert.Equal(t, newOwner, value.GetOwner())
@@ -155,7 +165,7 @@ func TestOwnerArrayElement(t *testing.T) {
 
 	value := newTestCompositeValue(inter, oldOwner)
 
-	array := NewArrayValueWithAddress(
+	array := NewArrayValue(
 		inter,
 		VariableSizedStaticType{
 			Type: PrimitiveStaticTypeAnyStruct,
@@ -194,7 +204,7 @@ func TestOwnerArraySetIndex(t *testing.T) {
 	value1 := newTestCompositeValue(inter, oldOwner)
 	value2 := newTestCompositeValue(inter, oldOwner)
 
-	array := NewArrayValueWithAddress(
+	array := NewArrayValue(
 		inter,
 		VariableSizedStaticType{
 			Type: PrimitiveStaticTypeAnyStruct,
@@ -241,7 +251,7 @@ func TestOwnerArrayAppend(t *testing.T) {
 
 	value := newTestCompositeValue(inter, oldOwner)
 
-	array := NewArrayValueWithAddress(
+	array := NewArrayValue(
 		inter,
 		VariableSizedStaticType{
 			Type: PrimitiveStaticTypeAnyStruct,
@@ -283,7 +293,7 @@ func TestOwnerArrayInsert(t *testing.T) {
 
 	value := newTestCompositeValue(inter, oldOwner)
 
-	array := NewArrayValueWithAddress(
+	array := NewArrayValue(
 		inter,
 		VariableSizedStaticType{
 			Type: PrimitiveStaticTypeAnyStruct,
@@ -324,7 +334,7 @@ func TestOwnerArrayRemove(t *testing.T) {
 
 	value := newTestCompositeValue(inter, owner)
 
-	array := NewArrayValueWithAddress(
+	array := NewArrayValue(
 		inter,
 		VariableSizedStaticType{
 			Type: PrimitiveStaticTypeAnyStruct,
@@ -462,11 +472,19 @@ func TestOwnerDictionaryCopy(t *testing.T) {
 		keyValue, value,
 	)
 
-	copyResult := inter.CopyValue(dictionary, atree.Address{})
+	copyResult := inter.CopyValue(
+		ReturnEmptyLocationRange,
+		dictionary,
+		atree.Address{},
+	)
 
 	dictionaryCopy := copyResult.(*DictionaryValue)
 
-	queriedValue, _ := dictionaryCopy.Get(inter, ReturnEmptyLocationRange, keyValue)
+	queriedValue, _ := dictionaryCopy.Get(
+		inter,
+		ReturnEmptyLocationRange,
+		keyValue,
+	)
 	value = queriedValue.(*CompositeValue)
 
 	assert.Equal(t, common.Address{}, dictionaryCopy.GetOwner())
@@ -737,9 +755,17 @@ func TestOwnerCompositeCopy(t *testing.T) {
 		value,
 	)
 
-	composite = inter.CopyValue(composite, atree.Address{}).(*CompositeValue)
+	composite = inter.CopyValue(
+		ReturnEmptyLocationRange,
+		composite,
+		atree.Address{},
+	).(*CompositeValue)
 
-	value = composite.GetMember(inter, ReturnEmptyLocationRange, fieldName).(*CompositeValue)
+	value = composite.GetMember(
+		inter,
+		ReturnEmptyLocationRange,
+		fieldName,
+	).(*CompositeValue)
 
 	assert.Equal(t, common.Address{}, composite.GetOwner())
 	assert.Equal(t, common.Address{}, value.GetOwner())
@@ -861,6 +887,7 @@ func TestStringer(t *testing.T) {
 				VariableSizedStaticType{
 					Type: PrimitiveStaticTypeAnyStruct,
 				},
+				common.Address{},
 				NewIntValueFromInt64(10),
 				NewStringValue("TEST"),
 			),
@@ -924,7 +951,7 @@ func TestStringer(t *testing.T) {
 					common.Address{},
 				)
 
-				compositeValue.Stringer = func(_ SeenReferences) string {
+				compositeValue.Stringer = func(_ *CompositeValue, _ SeenReferences) string {
 					return "y --> bar"
 				}
 
@@ -981,6 +1008,7 @@ func TestStringer(t *testing.T) {
 					VariableSizedStaticType{
 						Type: PrimitiveStaticTypeAnyStruct,
 					},
+					common.Address{},
 				)
 				arrayRef := &EphemeralReferenceValue{Value: array}
 				array.Insert(newTestInterpreter(t), ReturnEmptyLocationRange, 0, arrayRef)
@@ -1033,6 +1061,7 @@ func TestVisitor(t *testing.T) {
 		VariableSizedStaticType{
 			Type: PrimitiveStaticTypeAnyStruct,
 		},
+		common.Address{},
 		value,
 	)
 
@@ -1079,95 +1108,102 @@ func TestGetHashInput(t *testing.T) {
 	stringerTests := map[string]testCase{
 		"UInt": {
 			value:    NewUIntValueFromUint64(10),
-			expected: []byte{10},
+			expected: []byte{byte(HashInputTypeUInt), 10},
 		},
 		"UInt8": {
 			value:    UInt8Value(8),
-			expected: []byte{8},
+			expected: []byte{byte(HashInputTypeUInt8), 8},
 		},
 		"UInt16": {
 			value:    UInt16Value(16),
-			expected: []byte{0, 16},
+			expected: []byte{byte(HashInputTypeUInt16), 0, 16},
 		},
 		"UInt32": {
 			value:    UInt32Value(32),
-			expected: []byte{0, 0, 0, 32},
+			expected: []byte{byte(HashInputTypeUInt32), 0, 0, 0, 32},
 		},
 		"UInt64": {
 			value:    UInt64Value(64),
-			expected: []byte{0, 0, 0, 0, 0, 0, 0, 64},
+			expected: []byte{byte(HashInputTypeUInt64), 0, 0, 0, 0, 0, 0, 0, 64},
 		},
 		"UInt128": {
 			value:    NewUInt128ValueFromUint64(128),
-			expected: []byte{128},
+			expected: []byte{byte(HashInputTypeUInt128), 128},
 		},
 		"UInt256": {
 			value:    NewUInt256ValueFromUint64(256),
-			expected: []byte{1, 0},
+			expected: []byte{byte(HashInputTypeUInt256), 1, 0},
+		},
+		"Int": {
+			value:    NewIntValueFromInt64(10),
+			expected: []byte{byte(HashInputTypeInt), 10},
 		},
 		"Int8": {
 			value:    Int8Value(-8),
-			expected: []byte{0xf8},
+			expected: []byte{byte(HashInputTypeInt8), 0xf8},
 		},
 		"Int16": {
 			value:    Int16Value(-16),
-			expected: []byte{0xff, 0xf0},
+			expected: []byte{byte(HashInputTypeInt16), 0xff, 0xf0},
 		},
 		"Int32": {
 			value:    Int32Value(-32),
-			expected: []byte{0xff, 0xff, 0xff, 0xe0},
+			expected: []byte{byte(HashInputTypeInt32), 0xff, 0xff, 0xff, 0xe0},
 		},
 		"Int64": {
 			value:    Int64Value(-64),
-			expected: []byte{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xc0},
+			expected: []byte{byte(HashInputTypeInt64), 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xc0},
 		},
 		"Int128": {
 			value:    NewInt128ValueFromInt64(-128),
-			expected: []byte{0x80},
+			expected: []byte{byte(HashInputTypeInt128), 0x80},
 		},
 		"Int256": {
 			value:    NewInt256ValueFromInt64(-256),
-			expected: []byte{0xff, 0x0},
+			expected: []byte{byte(HashInputTypeInt256), 0xff, 0x0},
 		},
 		"Word8": {
 			value:    Word8Value(8),
-			expected: []byte{8},
+			expected: []byte{byte(HashInputTypeWord8), 8},
 		},
 		"Word16": {
 			value:    Word16Value(16),
-			expected: []byte{0, 16},
+			expected: []byte{byte(HashInputTypeWord16), 0, 16},
 		},
 		"Word32": {
 			value:    Word32Value(32),
-			expected: []byte{0, 0, 0, 32},
+			expected: []byte{byte(HashInputTypeWord32), 0, 0, 0, 32},
 		},
 		"Word64": {
 			value:    Word64Value(64),
-			expected: []byte{0, 0, 0, 0, 0, 0, 0, 64},
+			expected: []byte{byte(HashInputTypeWord64), 0, 0, 0, 0, 0, 0, 0, 64},
 		},
 		"UFix64": {
 			value:    NewUFix64ValueWithInteger(64),
-			expected: []byte{0x0, 0x0, 0x0, 0x1, 0x7d, 0x78, 0x40, 0x0},
+			expected: []byte{byte(HashInputTypeUFix64), 0x0, 0x0, 0x0, 0x1, 0x7d, 0x78, 0x40, 0x0},
 		},
 		"Fix64": {
 			value:    NewFix64ValueWithInteger(-32),
-			expected: []byte{0xff, 0xff, 0xff, 0xff, 0x41, 0x43, 0xe0, 0x0},
+			expected: []byte{byte(HashInputTypeFix64), 0xff, 0xff, 0xff, 0xff, 0x41, 0x43, 0xe0, 0x0},
 		},
 		"true": {
 			value:    BoolValue(true),
-			expected: []byte{1},
+			expected: []byte{byte(HashInputTypeBool), 1},
 		},
 		"false": {
 			value:    BoolValue(false),
-			expected: []byte{0},
+			expected: []byte{byte(HashInputTypeBool), 0},
 		},
 		"String": {
-			value:    NewStringValue("Flow ridah!"),
-			expected: []byte{0x46, 0x6c, 0x6f, 0x77, 0x20, 0x72, 0x69, 0x64, 0x61, 0x68, 0x21},
+			value: NewStringValue("Flow ridah!"),
+			expected: []byte{
+				byte(HashInputTypeString),
+				0x46, 0x6c, 0x6f, 0x77, 0x20, 0x72, 0x69, 0x64, 0x61, 0x68, 0x21,
+			},
 		},
 		"Address": {
 			value:    NewAddressValue(common.Address{0, 0, 0, 0, 0, 0, 0, 1}),
-			expected: []byte{0, 0, 0, 0, 0, 0, 0, 1},
+			expected: []byte{byte(HashInputTypeAddress), 0, 0, 0, 0, 0, 0, 0, 1},
 		},
 		"enum": {
 			value: func() HashableValue {
@@ -1188,7 +1224,13 @@ func TestGetHashInput(t *testing.T) {
 					common.Address{},
 				)
 			}(),
-			expected: []byte{42},
+			expected: []byte{
+				byte(HashInputTypeEnum),
+				// S.test.Foo
+				0x53, 0x2e, 0x74, 0x65, 0x73, 0x74, 0x2e, 0x46, 0x6f, 0x6f,
+				byte(HashInputTypeUInt8),
+				42,
+			},
 		},
 		"Path": {
 			value: PathValue{
@@ -1196,6 +1238,7 @@ func TestGetHashInput(t *testing.T) {
 				Identifier: "foo",
 			},
 			expected: []byte{
+				byte(HashInputTypePath),
 				// domain: storage
 				0x1,
 				// identifier: "foo"
@@ -1214,7 +1257,7 @@ func TestGetHashInput(t *testing.T) {
 
 			inter := newTestInterpreter(t)
 
-			actual := testCase.value.HashInput(inter, scratch[:])
+			actual := testCase.value.HashInput(inter, ReturnEmptyLocationRange, scratch[:])
 
 			assert.Equal(t,
 				testCase.expected,
@@ -1234,15 +1277,15 @@ func TestBlockValue(t *testing.T) {
 
 	inter := newTestInterpreter(t)
 
-	block := BlockValue{
-		Height:    4,
-		View:      5,
-		ID:        NewArrayValue(inter, ByteArrayStaticType),
-		Timestamp: 5.0,
-	}
+	block := NewBlockValue(
+		4,
+		5,
+		NewArrayValue(inter, ByteArrayStaticType, common.Address{}),
+		5.0,
+	)
 
 	// static type test
-	var actualTs = block.Timestamp
+	var actualTs = block.Fields[sema.BlockTypeTimestampFieldName]
 	const expectedTs UFix64Value = 5.0
 	assert.Equal(t, expectedTs, actualTs)
 }
@@ -1300,11 +1343,21 @@ func TestEphemeralReferenceTypeConformance(t *testing.T) {
 	dynamicType := value.DynamicType(inter, SeenReferences{})
 
 	// Check the dynamic type conformance on a cyclic value.
-	conforms := value.ConformsToDynamicType(inter, dynamicType, TypeConformanceResults{})
+	conforms := value.ConformsToDynamicType(
+		inter,
+		ReturnEmptyLocationRange,
+		dynamicType,
+		TypeConformanceResults{},
+	)
 	assert.True(t, conforms)
 
 	// Check against a non-conforming type
-	conforms = value.ConformsToDynamicType(inter, EphemeralReferenceDynamicType{}, TypeConformanceResults{})
+	conforms = value.ConformsToDynamicType(
+		inter,
+		ReturnEmptyLocationRange,
+		EphemeralReferenceDynamicType{},
+		TypeConformanceResults{},
+	)
 	assert.False(t, conforms)
 }
 
@@ -2008,6 +2061,7 @@ func TestArrayValue_Equal(t *testing.T) {
 			NewArrayValue(
 				inter,
 				uint8ArrayStaticType,
+				common.Address{},
 				UInt8Value(1),
 				UInt8Value(2),
 			).Equal(
@@ -2016,6 +2070,7 @@ func TestArrayValue_Equal(t *testing.T) {
 				NewArrayValue(
 					inter,
 					uint8ArrayStaticType,
+					common.Address{},
 					UInt8Value(1),
 					UInt8Value(2),
 				),
@@ -2033,6 +2088,7 @@ func TestArrayValue_Equal(t *testing.T) {
 			NewArrayValue(
 				inter,
 				uint8ArrayStaticType,
+				common.Address{},
 				UInt8Value(1),
 				UInt8Value(2),
 			).Equal(
@@ -2041,6 +2097,7 @@ func TestArrayValue_Equal(t *testing.T) {
 				NewArrayValue(
 					inter,
 					uint8ArrayStaticType,
+					common.Address{},
 					UInt8Value(2),
 					UInt8Value(3),
 				),
@@ -2058,6 +2115,7 @@ func TestArrayValue_Equal(t *testing.T) {
 			NewArrayValue(
 				inter,
 				uint8ArrayStaticType,
+				common.Address{},
 				UInt8Value(1),
 			).Equal(
 				inter,
@@ -2065,6 +2123,7 @@ func TestArrayValue_Equal(t *testing.T) {
 				NewArrayValue(
 					inter,
 					uint8ArrayStaticType,
+					common.Address{},
 					UInt8Value(1),
 					UInt8Value(2),
 				),
@@ -2082,6 +2141,7 @@ func TestArrayValue_Equal(t *testing.T) {
 			NewArrayValue(
 				inter,
 				uint8ArrayStaticType,
+				common.Address{},
 				UInt8Value(1),
 				UInt8Value(2),
 			).Equal(
@@ -2090,6 +2150,7 @@ func TestArrayValue_Equal(t *testing.T) {
 				NewArrayValue(
 					inter,
 					uint8ArrayStaticType,
+					common.Address{},
 					UInt8Value(1),
 				),
 			),
@@ -2110,12 +2171,14 @@ func TestArrayValue_Equal(t *testing.T) {
 			NewArrayValue(
 				inter,
 				uint8ArrayStaticType,
+				common.Address{},
 			).Equal(
 				inter,
 				ReturnEmptyLocationRange,
 				NewArrayValue(
 					inter,
 					uint16ArrayStaticType,
+					common.Address{},
 				),
 			),
 		)
@@ -2131,12 +2194,14 @@ func TestArrayValue_Equal(t *testing.T) {
 			NewArrayValue(
 				inter,
 				nil,
+				common.Address{},
 			).Equal(
 				inter,
 				ReturnEmptyLocationRange,
 				NewArrayValue(
 					inter,
 					uint8ArrayStaticType,
+					common.Address{},
 				),
 			),
 		)
@@ -2152,12 +2217,14 @@ func TestArrayValue_Equal(t *testing.T) {
 			NewArrayValue(
 				inter,
 				uint8ArrayStaticType,
+				common.Address{},
 			).Equal(
 				inter,
 				ReturnEmptyLocationRange,
 				NewArrayValue(
 					inter,
 					nil,
+					common.Address{},
 				),
 			),
 		)
@@ -2173,12 +2240,14 @@ func TestArrayValue_Equal(t *testing.T) {
 			NewArrayValue(
 				inter,
 				nil,
+				common.Address{},
 			).Equal(
 				inter,
 				ReturnEmptyLocationRange,
 				NewArrayValue(
 					inter,
 					nil,
+					common.Address{},
 				),
 			),
 		)
@@ -2194,6 +2263,7 @@ func TestArrayValue_Equal(t *testing.T) {
 			NewArrayValue(
 				inter,
 				uint8ArrayStaticType,
+				common.Address{},
 				UInt8Value(1),
 			).Equal(
 				inter,
@@ -2400,6 +2470,7 @@ func TestDictionaryValue_Equal(t *testing.T) {
 				NewArrayValue(
 					inter,
 					ByteArrayStaticType,
+					common.Address{},
 					UInt8Value(1),
 					UInt8Value(2),
 				),
@@ -2859,42 +2930,37 @@ func TestPublicKeyValue(t *testing.T) {
 			VariableSizedStaticType{
 				Type: PrimitiveStaticTypeInt,
 			},
+			common.Address{},
 			NewIntValueFromInt64(1),
 			NewIntValueFromInt64(7),
 			NewIntValueFromInt64(3),
 		)
 
-		publicKeyString := "[1, 7, 3]"
-
-		sigAlgo := func() *CompositeValue {
-			fields := []CompositeField{
+		sigAlgo := NewCompositeValue(
+			inter,
+			nil,
+			sema.SignatureAlgorithmType.QualifiedIdentifier(),
+			sema.SignatureAlgorithmType.Kind,
+			[]CompositeField{
 				{
 					Name:  sema.EnumRawValueFieldName,
 					Value: UInt8Value(sema.SignatureAlgorithmECDSA_secp256k1.RawValue()),
 				},
-			}
-
-			return NewCompositeValue(
-				inter,
-				nil,
-				sema.SignatureAlgorithmType.QualifiedIdentifier(),
-				sema.SignatureAlgorithmType.Kind,
-				fields,
-				common.Address{},
-			)
-		}
+			},
+			common.Address{},
+		)
 
 		key := NewPublicKeyValue(
 			inter,
 			ReturnEmptyLocationRange,
 			publicKey,
-			sigAlgo(),
+			sigAlgo,
 			inter.PublicKeyValidationHandler,
 		)
 
-		require.Contains(t,
+		require.Equal(t,
+			"PublicKey(publicKey: [1, 7, 3], signatureAlgorithm: SignatureAlgorithm(rawValue: 2), isValid: true)",
 			key.String(),
-			publicKeyString,
 		)
 	})
 }
@@ -3014,6 +3080,7 @@ func newTestInterpreter(tb testing.TB) *Interpreter {
 		nil,
 		utils.TestLocation,
 		WithStorage(storage),
+		WithAtreeValidationEnabled(true),
 	)
 	require.NoError(tb, err)
 

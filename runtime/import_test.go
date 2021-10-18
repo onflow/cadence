@@ -34,7 +34,7 @@ func TestRuntimeCyclicImport(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := NewInterpreterRuntime()
+	runtime := newTestInterpreterRuntime()
 
 	imported1 := []byte(`
       import p2
@@ -122,7 +122,7 @@ func TestRuntimeExport(t *testing.T) {
 
 		t.Parallel()
 
-		runtime := NewInterpreterRuntime()
+		runtime := newTestInterpreterRuntime()
 
 		script := []byte(`
             pub fun f() {}

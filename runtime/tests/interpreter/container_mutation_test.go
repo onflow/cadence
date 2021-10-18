@@ -21,12 +21,14 @@ package interpreter_test
 import (
 	"testing"
 
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/tests/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
+	"github.com/onflow/cadence/runtime/stdlib"
 )
 
 func TestArrayMutation(t *testing.T) {
@@ -58,6 +60,7 @@ func TestArrayMutation(t *testing.T) {
 				interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeString,
 				},
+				common.Address{},
 				interpreter.NewStringValue("baz"),
 				interpreter.NewStringValue("bar"),
 			),
@@ -128,6 +131,7 @@ func TestArrayMutation(t *testing.T) {
 				interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeString,
 				},
+				common.Address{},
 				interpreter.NewStringValue("foo"),
 				interpreter.NewStringValue("bar"),
 				interpreter.NewStringValue("baz"),
@@ -199,6 +203,7 @@ func TestArrayMutation(t *testing.T) {
 				interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeString,
 				},
+				common.Address{},
 				interpreter.NewStringValue("foo"),
 				interpreter.NewStringValue("baz"),
 				interpreter.NewStringValue("bar"),
@@ -257,6 +262,7 @@ func TestArrayMutation(t *testing.T) {
 				interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeString,
 				},
+				common.Address{},
 				interpreter.NewStringValue("foo"),
 				interpreter.NewStringValue("bar"),
 			),
@@ -282,6 +288,104 @@ func TestArrayMutation(t *testing.T) {
 		require.ErrorAs(t, err, mutationError)
 
 		assert.Equal(t, sema.StringType, mutationError.ExpectedType)
+	})
+
+	t.Run("function array mutation", func(t *testing.T) {
+		t.Parallel()
+
+		standardLibraryFunctions :=
+			stdlib.StandardLibraryFunctions{
+				stdlib.LogFunction,
+			}
+
+		valueDeclarations := standardLibraryFunctions.ToSemaValueDeclarations()
+		values := standardLibraryFunctions.ToInterpreterValueDeclarations()
+
+		inter, err := parseCheckAndInterpretWithOptions(t, `
+                fun test() {
+                    let array: [AnyStruct] = [nil] as [((AnyStruct):Void)?]
+
+                    let x = 5
+                    array[0] =  log
+                }
+            `,
+			ParseCheckAndInterpretOptions{
+				CheckerOptions: []sema.Option{
+					sema.WithPredeclaredValues(valueDeclarations),
+				},
+				Options: []interpreter.Option{
+					interpreter.WithPredeclaredValues(values),
+				},
+			},
+		)
+
+		require.NoError(t, err)
+
+		// TODO: Shouldn't throw an error once dynamic subtyping for functions is implemented.
+		_, err = inter.Invoke("test")
+		require.Error(t, err)
+
+		mutationError := &interpreter.ContainerMutationError{}
+		require.ErrorAs(t, err, mutationError)
+
+		require.IsType(t, &sema.OptionalType{}, mutationError.ExpectedType)
+		optionalType := mutationError.ExpectedType.(*sema.OptionalType)
+
+		require.IsType(t, &sema.FunctionType{}, optionalType.Type)
+		funcType := optionalType.Type.(*sema.FunctionType)
+
+		assert.Equal(t, sema.VoidType, funcType.ReturnTypeAnnotation.Type)
+		assert.Nil(t, funcType.ReceiverType)
+		assert.Len(t, funcType.Parameters, 1)
+		assert.Equal(t, sema.AnyStructType, funcType.Parameters[0].TypeAnnotation.Type)
+	})
+
+	t.Run("invalid function array mutation", func(t *testing.T) {
+		t.Parallel()
+
+		standardLibraryFunctions :=
+			stdlib.StandardLibraryFunctions{
+				stdlib.LogFunction,
+			}
+
+		valueDeclarations := standardLibraryFunctions.ToSemaValueDeclarations()
+		values := standardLibraryFunctions.ToInterpreterValueDeclarations()
+
+		inter, err := parseCheckAndInterpretWithOptions(t, `
+                fun test() {
+                    let array: [AnyStruct] = [nil] as [(():Void)?]
+
+                    let x = 5
+                    array[0] =  log
+                }
+            `,
+			ParseCheckAndInterpretOptions{
+				CheckerOptions: []sema.Option{
+					sema.WithPredeclaredValues(valueDeclarations),
+				},
+				Options: []interpreter.Option{
+					interpreter.WithPredeclaredValues(values),
+				},
+			},
+		)
+
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("test")
+		require.Error(t, err)
+
+		mutationError := &interpreter.ContainerMutationError{}
+		require.ErrorAs(t, err, mutationError)
+
+		require.IsType(t, &sema.OptionalType{}, mutationError.ExpectedType)
+		optionalType := mutationError.ExpectedType.(*sema.OptionalType)
+
+		require.IsType(t, &sema.FunctionType{}, optionalType.Type)
+		funcType := optionalType.Type.(*sema.FunctionType)
+
+		assert.Equal(t, sema.VoidType, funcType.ReturnTypeAnnotation.Type)
+		assert.Nil(t, funcType.ReceiverType)
+		assert.Empty(t, funcType.Parameters)
 	})
 }
 
@@ -451,4 +555,29 @@ func TestDictionaryMutation(t *testing.T) {
 			mutationError.ExpectedType,
 		)
 	})
+}
+
+func TestInterpretContainerMutationAfterNilCoalescing(t *testing.T) {
+
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+      fun test(): String? {
+          let xs: {UInt32: String}? = nil
+          let ys: {UInt32: String} = xs ?? {}
+          ys[0] = "test"
+          return ys[0]
+      }
+    `)
+
+	result, err := inter.Invoke("test")
+	require.NoError(t, err)
+
+	require.Equal(
+		t,
+		interpreter.NewSomeValueNonCopying(
+			interpreter.NewStringValue("test"),
+		),
+		result,
+	)
 }

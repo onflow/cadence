@@ -19,7 +19,6 @@
 package interpreter
 
 import (
-	"bytes"
 	"fmt"
 	"math"
 
@@ -48,44 +47,30 @@ func MustConvertStoredValue(value atree.Value) Value {
 func convertStoredValue(value atree.Value) (Value, error) {
 	switch value := value.(type) {
 	case *atree.Array:
-		// TODO: optimize
-		arrayType, err := decodeArrayTypeInfo(value.Type())
-		if err != nil {
-			return nil, err
-		}
-
 		return &ArrayValue{
+			Type:  value.Type().(ArrayStaticType),
 			array: value,
-			Type:  arrayType,
 		}, nil
 
 	case *atree.OrderedMap:
-		// TODO: optimize
-		info, err := decodeOrderedMapTypeInfo(value.Type())
-		if err != nil {
-			return nil, err
-		}
-
-		switch info := info.(type) {
-		case dictionaryOrderedMapTypeInfo:
+		typeInfo := value.Type()
+		switch typeInfo := typeInfo.(type) {
+		case DictionaryStaticType:
 			return &DictionaryValue{
+				Type:       typeInfo,
 				dictionary: value,
-				Type:       DictionaryStaticType(info),
 			}, nil
 
-		case compositeOrderedMapTypeInfo:
+		case compositeTypeInfo:
 			return &CompositeValue{
 				dictionary:          value,
-				Location:            info.location,
-				QualifiedIdentifier: info.qualifiedIdentifier,
-				Kind:                info.kind,
+				Location:            typeInfo.location,
+				QualifiedIdentifier: typeInfo.qualifiedIdentifier,
+				Kind:                typeInfo.kind,
 			}, nil
 
 		default:
-			return nil, fmt.Errorf(
-				"invalid ordered map info: %T",
-				info,
-			)
+			return nil, fmt.Errorf("invalid ordered map type info: %T", typeInfo)
 		}
 
 	case Value:
@@ -109,12 +94,36 @@ type InMemoryStorage struct {
 var _ Storage = InMemoryStorage{}
 
 func NewInMemoryStorage() InMemoryStorage {
-	slabStorage := atree.NewBasicSlabStorage(CBOREncMode, CBORDecMode)
-	slabStorage.DecodeStorable = DecodeStorable
+	slabStorage := atree.NewBasicSlabStorage(
+		CBOREncMode,
+		CBORDecMode,
+		DecodeStorable,
+		DecodeTypeInfo,
+	)
 
 	return InMemoryStorage{
 		BasicSlabStorage: slabStorage,
 		AccountValues:    make(map[StorageKey]Value),
+	}
+}
+
+func DecodeTypeInfo(dec *cbor.StreamDecoder) (atree.TypeInfo, error) {
+	tag, err := dec.DecodeTagNumber()
+	if err != nil {
+		return nil, err
+	}
+
+	switch tag {
+	case CBORTagConstantSizedStaticType:
+		return decodeConstantSizedStaticType(dec)
+	case CBORTagVariableSizedStaticType:
+		return decodeVariableSizedStaticType(dec)
+	case CBORTagDictionaryStaticType:
+		return decodeDictionaryStaticType(dec)
+	case CBORTagCompositeValue:
+		return decodeCompositeTypeInfo(dec)
+	default:
+		return nil, fmt.Errorf("invalid type info tag: %d", tag)
 	}
 }
 
@@ -232,191 +241,64 @@ func maybeLargeImmutableStorable(
 	return atree.StorageIDStorable(storageID), nil
 }
 
-func encodeArrayTypeInfo(arrayType ArrayStaticType) cbor.RawMessage {
-	var buf bytes.Buffer
-	enc := CBOREncMode.NewStreamEncoder(&buf)
-
-	err := enc.EncodeTagHead(CBORTagArrayValue)
-	if err != nil {
-		panic(ExternalError{err})
-	}
-
-	err = EncodeStaticType(enc, arrayType)
-	if err != nil {
-		panic(ExternalError{err})
-	}
-
-	err = enc.Flush()
-	if err != nil {
-		panic(ExternalError{err})
-	}
-
-	return buf.Bytes()
-}
-
-func decodeArrayTypeInfo(typeInfo cbor.RawMessage) (ArrayStaticType, error) {
-	dec := CBORDecMode.NewByteStreamDecoder(typeInfo)
-
-	tagNumber, err := dec.DecodeTagNumber()
-	if err != nil {
-		panic(ExternalError{err})
-	}
-
-	if tagNumber != CBORTagArrayValue {
-		return nil, fmt.Errorf(
-			"invalid array type info: expected tag %d, got %d",
-			CBORTagArrayValue, tagNumber,
-		)
-	}
-
-	staticType, err := decodeStaticType(dec)
-	if err != nil {
-		return nil, err
-	}
-
-	arrayType, ok := staticType.(ArrayStaticType)
-	if !ok {
-		return nil, fmt.Errorf(
-			"invalid array static type in array type info: %T",
-			staticType,
-		)
-	}
-
-	return arrayType, nil
-}
-
-type orderedMapTypeInfo interface {
-	isOrderedMapTypeInfo()
-}
-
-type dictionaryOrderedMapTypeInfo DictionaryStaticType
-
-func (dictionaryOrderedMapTypeInfo) isOrderedMapTypeInfo() {}
-
-type compositeOrderedMapTypeInfo struct {
+type compositeTypeInfo struct {
 	location            common.Location
 	qualifiedIdentifier string
 	kind                common.CompositeKind
 }
 
-func (compositeOrderedMapTypeInfo) isOrderedMapTypeInfo() {}
+var _ atree.TypeInfo = compositeTypeInfo{}
 
-func encodeDictionaryOrderedMapTypeInfo(dictionaryType DictionaryStaticType) cbor.RawMessage {
-	var buf bytes.Buffer
-	enc := CBOREncMode.NewStreamEncoder(&buf)
+const encodedCompositeTypeInfoLength = 3
 
-	err := enc.EncodeTagHead(CBORTagDictionaryValue)
+func (c compositeTypeInfo) Encode(e *cbor.StreamEncoder) error {
+	err := e.EncodeRawBytes([]byte{
+		// tag number
+		0xd8, CBORTagCompositeValue,
+		// array, 3 items follow
+		0x83,
+	})
 	if err != nil {
-		panic(ExternalError{err})
+		return err
 	}
 
-	err = EncodeStaticType(enc, dictionaryType)
-	if err != nil {
-		panic(ExternalError{err})
-	}
-
-	err = enc.Flush()
-	if err != nil {
-		panic(ExternalError{err})
-	}
-
-	return buf.Bytes()
-}
-
-const encodedCompositeOrderedMapTypeInfoLength = 3
-
-func encodeCompositeOrderedMapTypeInfo(
-	location common.Location,
-	qualifiedIdentifier string,
-	kind common.CompositeKind,
-) cbor.RawMessage {
-	var buf bytes.Buffer
-	enc := CBOREncMode.NewStreamEncoder(&buf)
-
-	err := enc.EncodeTagHead(CBORTagCompositeValue)
-	if err != nil {
-		panic(ExternalError{err})
-	}
-
-	err = enc.EncodeArrayHead(encodedCompositeOrderedMapTypeInfoLength)
-	if err != nil {
-		panic(ExternalError{err})
-	}
-
-	err = encodeLocation(enc, location)
+	err = encodeLocation(e, c.location)
 	if err != nil {
 		panic(err)
 	}
 
-	err = enc.EncodeString(qualifiedIdentifier)
+	err = e.EncodeString(c.qualifiedIdentifier)
 	if err != nil {
-		panic(ExternalError{err})
+		return err
 	}
 
-	err = enc.EncodeUint64(uint64(kind))
+	err = e.EncodeUint64(uint64(c.kind))
 	if err != nil {
-		panic(ExternalError{err})
+		return err
 	}
 
-	err = enc.Flush()
-	if err != nil {
-		panic(ExternalError{err})
-	}
-
-	return buf.Bytes()
+	return nil
 }
 
-func decodeOrderedMapTypeInfo(typeInfo cbor.RawMessage) (orderedMapTypeInfo, error) {
-	dec := CBORDecMode.NewByteStreamDecoder(typeInfo)
-
-	tagNumber, err := dec.DecodeTagNumber()
-	if err != nil {
-		panic(ExternalError{err})
-	}
-
-	switch tagNumber {
-	case CBORTagDictionaryValue:
-		return decodeDictionaryOrderedMapTypeInfo(dec)
-
-	case CBORTagCompositeValue:
-		return decodeCompositeOrderedMapTypeInfo(dec)
-
-	default:
-		return nil, fmt.Errorf(
-			"invalid array type info: expected tag %d, got %d",
-			CBORTagArrayValue, tagNumber,
-		)
-	}
+func (c compositeTypeInfo) Equal(o atree.TypeInfo) bool {
+	other, ok := o.(compositeTypeInfo)
+	return ok &&
+		common.LocationsMatch(c.location, other.location) &&
+		c.qualifiedIdentifier == other.qualifiedIdentifier &&
+		c.kind == other.kind
 }
 
-func decodeDictionaryOrderedMapTypeInfo(dec *cbor.StreamDecoder) (orderedMapTypeInfo, error) {
-	staticType, err := decodeStaticType(dec)
-	if err != nil {
-		return nil, err
-	}
-
-	dictionaryType, ok := staticType.(DictionaryStaticType)
-	if !ok {
-		return nil, fmt.Errorf(
-			"invalid array static type in array type info: %T",
-			staticType,
-		)
-	}
-
-	return dictionaryOrderedMapTypeInfo(dictionaryType), nil
-}
-
-func decodeCompositeOrderedMapTypeInfo(dec *cbor.StreamDecoder) (orderedMapTypeInfo, error) {
+func decodeCompositeTypeInfo(dec *cbor.StreamDecoder) (atree.TypeInfo, error) {
 
 	length, err := dec.DecodeArrayHead()
 	if err != nil {
 		return nil, err
 	}
 
-	if length != encodedCompositeOrderedMapTypeInfoLength {
+	if length != encodedCompositeTypeInfoLength {
 		return nil, fmt.Errorf(
-			"invalid composite ordered map type info: expected %d elements, got %d",
-			encodedCompositeOrderedMapTypeInfoLength, length,
+			"invalid composite type info: expected %d elements, got %d",
+			encodedCompositeTypeInfoLength, length,
 		)
 	}
 
@@ -442,9 +324,34 @@ func decodeCompositeOrderedMapTypeInfo(dec *cbor.StreamDecoder) (orderedMapTypeI
 		)
 	}
 
-	return compositeOrderedMapTypeInfo{
+	return compositeTypeInfo{
 		location:            location,
 		qualifiedIdentifier: qualifiedIdentifier,
 		kind:                common.CompositeKind(kind),
 	}, nil
+}
+
+type stringAtreeValue string
+
+var _ atree.Value = stringAtreeValue("")
+var _ atree.Storable = stringAtreeValue("")
+
+func (v stringAtreeValue) Storable(storage atree.SlabStorage, address atree.Address, maxInlineSize uint64) (atree.Storable, error) {
+	return maybeLargeImmutableStorable(v, storage, address, maxInlineSize)
+}
+
+func (v stringAtreeValue) ByteSize() uint32 {
+	return getBytesCBORSize([]byte(v))
+}
+
+func (v stringAtreeValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
+	return v, nil
+}
+
+func stringAtreeHashInput(v atree.Value, _ []byte) ([]byte, error) {
+	return []byte(v.(stringAtreeValue)), nil
+}
+
+func stringAtreeComparator(_ atree.SlabStorage, v atree.Value, o atree.Storable) (bool, error) {
+	return v.(stringAtreeValue) == o.(stringAtreeValue), nil
 }

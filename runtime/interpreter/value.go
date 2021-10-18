@@ -59,6 +59,7 @@ type NonStorable struct {
 var _ atree.Storable = NonStorable{}
 
 func (s NonStorable) Encode(_ *atree.Encoder) error {
+	//nolint:gosimple
 	return NonStorableValueError{
 		Value: s.Value,
 	}
@@ -84,11 +85,16 @@ type Value interface {
 	Walk(walkChild func(Value))
 	DynamicType(interpreter *Interpreter, seenReferences SeenReferences) DynamicType
 	StaticType() StaticType
-	ConformsToDynamicType(interpreter *Interpreter, dynamicType DynamicType, results TypeConformanceResults) bool
+	ConformsToDynamicType(
+		interpreter *Interpreter,
+		getLocationRange func() LocationRange,
+		dynamicType DynamicType,
+		results TypeConformanceResults,
+	) bool
 	RecursiveString(seenReferences SeenReferences) string
 	NeedsStoreToAddress(interpreter *Interpreter, address atree.Address) bool
 	IsResourceKinded(interpreter *Interpreter) bool
-	DeepCopy(interpreter *Interpreter, address atree.Address) Value
+	DeepCopy(interpreter *Interpreter, getLocationRange func() LocationRange, address atree.Address) Value
 	DeepRemove(interpreter *Interpreter)
 }
 
@@ -119,19 +125,12 @@ type EquatableValue interface {
 	Equal(interpreter *Interpreter, getLocationRange func() LocationRange, other Value) bool
 }
 
-func newValueComparator(interpreter *Interpreter, getLocationRange func() LocationRange) atree.Comparator {
+func newValueComparator(interpreter *Interpreter, getLocationRange func() LocationRange) atree.ValueComparator {
 	return func(storage atree.SlabStorage, atreeValue atree.Value, otherStorable atree.Storable) (bool, error) {
 		value := MustConvertStoredValue(atreeValue)
 		otherValue := StoredValue(otherStorable, storage)
 		return value.(EquatableValue).Equal(interpreter, getLocationRange, otherValue), nil
 	}
-}
-
-// HashableValue
-
-type HashableValue interface {
-	Value
-	HashInput(interpreter *Interpreter, scratch []byte) []byte
 }
 
 // ResourceKindedValue
@@ -231,7 +230,12 @@ func (TypeValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ V
 	panic(errors.NewUnreachableError())
 }
 
-func (v TypeValue) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType, _ TypeConformanceResults) bool {
+func (v TypeValue) ConformsToDynamicType(
+	_ *Interpreter,
+	_ func() LocationRange,
+	dynamicType DynamicType,
+	_ TypeConformanceResults,
+) bool {
 	_, ok := dynamicType.(MetaTypeDynamicType)
 	return ok
 }
@@ -257,7 +261,7 @@ func (TypeValue) NeedsStoreToAddress(_ *Interpreter, _ atree.Address) bool {
 	return false
 }
 
-func (v TypeValue) DeepCopy(_ *Interpreter, _ atree.Address) Value {
+func (v TypeValue) DeepCopy(_ *Interpreter, _ func() LocationRange, _ atree.Address) Value {
 	return v
 }
 
@@ -309,7 +313,12 @@ func (v VoidValue) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
-func (v VoidValue) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType, _ TypeConformanceResults) bool {
+func (v VoidValue) ConformsToDynamicType(
+	_ *Interpreter,
+	_ func() LocationRange,
+	dynamicType DynamicType,
+	_ TypeConformanceResults,
+) bool {
 	_, ok := dynamicType.(VoidDynamicType)
 	return ok
 }
@@ -331,7 +340,7 @@ func (VoidValue) NeedsStoreToAddress(_ *Interpreter, _ atree.Address) bool {
 	return false
 }
 
-func (v VoidValue) DeepCopy(_ *Interpreter, _ atree.Address) Value {
+func (v VoidValue) DeepCopy(_ *Interpreter, _ func() LocationRange, _ atree.Address) Value {
 	return v
 }
 
@@ -388,13 +397,14 @@ func (v BoolValue) Equal(_ *Interpreter, _ func() LocationRange, other Value) bo
 	return bool(v) == bool(otherBool)
 }
 
-func (v BoolValue) HashInput(_ *Interpreter, scratch []byte) []byte {
+func (v BoolValue) HashInput(_ *Interpreter, _ func() LocationRange, scratch []byte) []byte {
+	scratch[0] = byte(HashInputTypeBool)
 	if v {
-		scratch[0] = 1
+		scratch[1] = 1
 	} else {
-		scratch[0] = 0
+		scratch[1] = 0
 	}
-	return scratch[:1]
+	return scratch[:2]
 }
 
 func (v BoolValue) String() string {
@@ -404,7 +414,12 @@ func (v BoolValue) String() string {
 func (v BoolValue) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
-func (v BoolValue) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType, _ TypeConformanceResults) bool {
+func (v BoolValue) ConformsToDynamicType(
+	_ *Interpreter,
+	_ func() LocationRange,
+	dynamicType DynamicType,
+	_ TypeConformanceResults,
+) bool {
 	_, ok := dynamicType.(BoolDynamicType)
 	return ok
 }
@@ -421,7 +436,7 @@ func (BoolValue) NeedsStoreToAddress(_ *Interpreter, _ atree.Address) bool {
 	return false
 }
 
-func (v BoolValue) DeepCopy(_ *Interpreter, _ atree.Address) Value {
+func (v BoolValue) DeepCopy(_ *Interpreter, _ func() LocationRange, _ atree.Address) Value {
 	return v
 }
 
@@ -508,8 +523,11 @@ func (v *StringValue) Equal(_ *Interpreter, _ func() LocationRange, other Value)
 	return v.NormalForm() == otherString.NormalForm()
 }
 
-func (v *StringValue) HashInput(_ *Interpreter, _ []byte) []byte {
-	return []byte(v.Str)
+func (v *StringValue) HashInput(_ *Interpreter, _ func() LocationRange, _ []byte) []byte {
+	return append(
+		[]byte{byte(HashInputTypeString)},
+		v.Str...,
+	)
 }
 
 func (v *StringValue) NormalForm() string {
@@ -619,6 +637,7 @@ func (v *StringValue) GetMember(interpreter *Interpreter, _ func() LocationRange
 				otherArray := invocation.Arguments[0].(*StringValue)
 				return v.Concat(otherArray)
 			},
+			sema.StringTypeConcatFunctionType,
 		)
 
 	case "slice":
@@ -628,6 +647,7 @@ func (v *StringValue) GetMember(interpreter *Interpreter, _ func() LocationRange
 				to := invocation.Arguments[1].(IntValue)
 				return v.Slice(from, to, invocation.GetLocationRange)
 			},
+			sema.StringTypeSliceFunctionType,
 		)
 
 	case "decodeHex":
@@ -635,6 +655,7 @@ func (v *StringValue) GetMember(interpreter *Interpreter, _ func() LocationRange
 			func(invocation Invocation) Value {
 				return v.DecodeHex(invocation.Interpreter)
 			},
+			sema.StringTypeDecodeHexFunctionType,
 		)
 	}
 
@@ -667,7 +688,7 @@ func (*StringValue) NeedsStoreToAddress(_ *Interpreter, _ atree.Address) bool {
 	return false
 }
 
-func (v *StringValue) DeepCopy(_ *Interpreter, _ atree.Address) Value {
+func (v *StringValue) DeepCopy(_ *Interpreter, _ func() LocationRange, _ atree.Address) Value {
 	return v
 }
 
@@ -676,7 +697,7 @@ func (*StringValue) DeepRemove(_ *Interpreter) {
 }
 
 func (v *StringValue) ByteSize() uint32 {
-	return getBytesCBORSize([]byte(v.Str))
+	return 2 + getBytesCBORSize([]byte(v.Str))
 }
 
 func (v *StringValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
@@ -703,6 +724,7 @@ func (v *StringValue) DecodeHex(interpreter *Interpreter) *ArrayValue {
 	return NewArrayValue(
 		interpreter,
 		ByteArrayStaticType,
+		common.Address{},
 		values...,
 	)
 }
@@ -711,7 +733,12 @@ func (*StringValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, 
 	panic(errors.NewUnreachableError())
 }
 
-func (*StringValue) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType, _ TypeConformanceResults) bool {
+func (*StringValue) ConformsToDynamicType(
+	_ *Interpreter,
+	_ func() LocationRange,
+	dynamicType DynamicType,
+	_ TypeConformanceResults,
+) bool {
 	_, ok := dynamicType.(StringDynamicType)
 	return ok
 }
@@ -727,24 +754,9 @@ type ArrayValue struct {
 func NewArrayValue(
 	interpreter *Interpreter,
 	arrayType ArrayStaticType,
-	values ...Value,
-) *ArrayValue {
-	return NewArrayValueWithAddress(
-		interpreter,
-		arrayType,
-		common.Address{},
-		values...,
-	)
-}
-
-func NewArrayValueWithAddress(
-	interpreter *Interpreter,
-	arrayType ArrayStaticType,
 	address common.Address,
 	values ...Value,
 ) *ArrayValue {
-
-	typeInfo := encodeArrayTypeInfo(arrayType)
 
 	var index int
 	count := len(values)
@@ -752,7 +764,7 @@ func NewArrayValueWithAddress(
 	array, err := atree.NewArrayFromBatchData(
 		interpreter.Storage,
 		atree.Address(address),
-		typeInfo,
+		arrayType,
 		func() (atree.Value, error) {
 			if index >= count {
 				return nil, nil
@@ -762,7 +774,13 @@ func NewArrayValueWithAddress(
 
 			index++
 
-			value = interpreter.TransferValue(value, nil, atree.Address(address))
+			value = interpreter.TransferValue(
+				// TODO: provide proper location range
+				ReturnEmptyLocationRange,
+				value,
+				nil,
+				atree.Address(address),
+			)
 
 			return value, nil
 		},
@@ -852,7 +870,7 @@ func (v *ArrayValue) Concat(interpreter *Interpreter, getLocationRange func() Lo
 	// We can directly call DeepCopy on the value, instead of potentially skipping copying
 	// by using interpreter.copyValue, as concatenation is only supported for struct-kinded arrays,
 	// which always must be copied
-	newArray := v.DeepCopy(interpreter, atree.Address{}).(*ArrayValue)
+	newArray := v.DeepCopy(interpreter, getLocationRange, atree.Address{}).(*ArrayValue)
 	newArray.AppendAll(interpreter, getLocationRange, other)
 	return newArray
 }
@@ -888,7 +906,12 @@ func (v *ArrayValue) Set(interpreter *Interpreter, getLocationRange func() Locat
 
 	interpreter.checkContainerMutation(v.Type.ElementType(), element, getLocationRange)
 
-	element = interpreter.TransferValue(element, nil, v.array.Address())
+	element = interpreter.TransferValue(
+		getLocationRange,
+		element,
+		nil,
+		v.array.Address(),
+	)
 
 	existingStorable, err := v.array.Set(uint64(index), element)
 	if err != nil {
@@ -902,6 +925,7 @@ func (v *ArrayValue) Set(interpreter *Interpreter, getLocationRange func() Locat
 
 		panic(ExternalError{err})
 	}
+	interpreter.maybeCheckAtreeValue(v.array)
 
 	existingValue := StoredValue(existingStorable, interpreter.Storage)
 
@@ -930,12 +954,18 @@ func (v *ArrayValue) Append(interpreter *Interpreter, getLocationRange func() Lo
 
 	interpreter.checkContainerMutation(v.Type.ElementType(), element, getLocationRange)
 
-	element = interpreter.TransferValue(element, nil, v.array.Address())
+	element = interpreter.TransferValue(
+		getLocationRange,
+		element,
+		nil,
+		v.array.Address(),
+	)
 
 	err := v.array.Append(element)
 	if err != nil {
 		panic(ExternalError{err})
 	}
+	interpreter.maybeCheckAtreeValue(v.array)
 }
 
 func (v *ArrayValue) AppendAll(interpreter *Interpreter, getLocationRange func() LocationRange, other *ArrayValue) {
@@ -964,12 +994,18 @@ func (v *ArrayValue) Insert(interpreter *Interpreter, getLocationRange func() Lo
 
 	interpreter.checkContainerMutation(v.Type.ElementType(), element, getLocationRange)
 
-	element = interpreter.TransferValue(element, nil, v.array.Address())
+	element = interpreter.TransferValue(
+		getLocationRange,
+		element,
+		nil,
+		v.array.Address(),
+	)
 
 	err := v.array.Insert(uint64(index), element)
 	if err != nil {
 		panic(ExternalError{err})
 	}
+	interpreter.maybeCheckAtreeValue(v.array)
 }
 
 func (v *ArrayValue) RemoveKey(interpreter *Interpreter, getLocationRange func() LocationRange, key Value) Value {
@@ -990,10 +1026,16 @@ func (v *ArrayValue) Remove(interpreter *Interpreter, getLocationRange func() Lo
 
 		panic(ExternalError{err})
 	}
+	interpreter.maybeCheckAtreeValue(v.array)
 
 	value := StoredValue(storable, interpreter.Storage)
 
-	return interpreter.TransferValue(value, storable, atree.Address{})
+	return interpreter.TransferValue(
+		getLocationRange,
+		value,
+		storable,
+		atree.Address{},
+	)
 }
 
 func (v *ArrayValue) RemoveFirst(interpreter *Interpreter, getLocationRange func() LocationRange) Value {
@@ -1022,7 +1064,7 @@ func (v *ArrayValue) Contains(interpreter *Interpreter, getLocationRange func() 
 	return BoolValue(result)
 }
 
-func (v *ArrayValue) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
+func (v *ArrayValue) GetMember(inter *Interpreter, _ func() LocationRange, name string) Value {
 	switch name {
 	case "length":
 		return NewIntValueFromInt64(int64(v.Count()))
@@ -1037,6 +1079,9 @@ func (v *ArrayValue) GetMember(_ *Interpreter, _ func() LocationRange, name stri
 				)
 				return VoidValue{}
 			},
+			sema.ArrayAppendFunctionType(
+				inter.ConvertStaticToSemaType(v.Type.ElementType()),
+			),
 		)
 
 	case "appendAll":
@@ -1050,6 +1095,9 @@ func (v *ArrayValue) GetMember(_ *Interpreter, _ func() LocationRange, name stri
 				)
 				return VoidValue{}
 			},
+			sema.ArrayAppendAllFunctionType(
+				inter.ConvertStaticToSemaType(v.Type),
+			),
 		)
 
 	case "concat":
@@ -1062,6 +1110,9 @@ func (v *ArrayValue) GetMember(_ *Interpreter, _ func() LocationRange, name stri
 					otherArray,
 				)
 			},
+			sema.ArrayConcatFunctionType(
+				inter.ConvertStaticToSemaType(v.Type),
+			),
 		)
 
 	case "insert":
@@ -1077,6 +1128,9 @@ func (v *ArrayValue) GetMember(_ *Interpreter, _ func() LocationRange, name stri
 				)
 				return VoidValue{}
 			},
+			sema.ArrayInsertFunctionType(
+				inter.ConvertStaticToSemaType(v.Type.ElementType()),
+			),
 		)
 
 	case "remove":
@@ -1089,6 +1143,9 @@ func (v *ArrayValue) GetMember(_ *Interpreter, _ func() LocationRange, name stri
 					index,
 				)
 			},
+			sema.ArrayRemoveFunctionType(
+				inter.ConvertStaticToSemaType(v.Type.ElementType()),
+			),
 		)
 
 	case "removeFirst":
@@ -1099,6 +1156,9 @@ func (v *ArrayValue) GetMember(_ *Interpreter, _ func() LocationRange, name stri
 					invocation.GetLocationRange,
 				)
 			},
+			sema.ArrayRemoveFirstFunctionType(
+				inter.ConvertStaticToSemaType(v.Type.ElementType()),
+			),
 		)
 
 	case "removeLast":
@@ -1109,6 +1169,9 @@ func (v *ArrayValue) GetMember(_ *Interpreter, _ func() LocationRange, name stri
 					invocation.GetLocationRange,
 				)
 			},
+			sema.ArrayRemoveLastFunctionType(
+				inter.ConvertStaticToSemaType(v.Type.ElementType()),
+			),
 		)
 
 	case "contains":
@@ -1120,6 +1183,9 @@ func (v *ArrayValue) GetMember(_ *Interpreter, _ func() LocationRange, name stri
 					invocation.Arguments[0],
 				)
 			},
+			sema.ArrayContainsFunctionType(
+				inter.ConvertStaticToSemaType(v.Type.ElementType()),
+			),
 		)
 	}
 
@@ -1136,6 +1202,7 @@ func (v *ArrayValue) Count() int {
 
 func (v *ArrayValue) ConformsToDynamicType(
 	interpreter *Interpreter,
+	getLocationRange func() LocationRange,
 	dynamicType DynamicType,
 	results TypeConformanceResults,
 ) bool {
@@ -1150,7 +1217,12 @@ func (v *ArrayValue) ConformsToDynamicType(
 	index := 0
 
 	v.Iterate(func(element Value) (resume bool) {
-		if !element.ConformsToDynamicType(interpreter, arrayType.ElementTypes[index], results) {
+		if !element.ConformsToDynamicType(
+			interpreter,
+			getLocationRange,
+			arrayType.ElementTypes[index],
+			results,
+		) {
 			result = false
 			return false
 		}
@@ -1211,7 +1283,11 @@ func (v *ArrayValue) NeedsStoreToAddress(_ *Interpreter, address atree.Address) 
 	return v.StorageID().Address != address
 }
 
-func (v *ArrayValue) DeepCopy(interpreter *Interpreter, address atree.Address) Value {
+func (v *ArrayValue) DeepCopy(
+	interpreter *Interpreter,
+	getLocationRange func() LocationRange,
+	address atree.Address,
+) Value {
 
 	iterator, err := v.array.Iterator()
 	if err != nil {
@@ -1233,7 +1309,7 @@ func (v *ArrayValue) DeepCopy(interpreter *Interpreter, address atree.Address) V
 
 			element := MustConvertStoredValue(value)
 
-			return interpreter.CopyValue(element, address), nil
+			return interpreter.CopyValue(getLocationRange, element, address), nil
 		},
 	)
 	if err != nil {
@@ -1261,6 +1337,7 @@ func (v *ArrayValue) DeepRemove(interpreter *Interpreter) {
 	if err != nil {
 		panic(ExternalError{err})
 	}
+	interpreter.maybeCheckAtreeValue(v.array)
 }
 
 func (v *ArrayValue) StorageID() atree.StorageID {
@@ -1293,7 +1370,7 @@ type NumberValue interface {
 	ToBigEndianBytes() []byte
 }
 
-func getNumberValueMember(v NumberValue, name string) Value {
+func getNumberValueMember(v NumberValue, name string, typ sema.Type) Value {
 	switch name {
 
 	case sema.ToStringFunctionName:
@@ -1301,6 +1378,7 @@ func getNumberValueMember(v NumberValue, name string) Value {
 			func(invocation Invocation) Value {
 				return NewStringValue(v.String())
 			},
+			sema.ToStringFunctionType,
 		)
 
 	case sema.ToBigEndianBytesFunctionName:
@@ -1311,6 +1389,11 @@ func getNumberValueMember(v NumberValue, name string) Value {
 					v.ToBigEndianBytes(),
 				)
 			},
+			&sema.FunctionType{
+				ReturnTypeAnnotation: sema.NewTypeAnnotation(
+					sema.ByteArrayType,
+				),
+			},
 		)
 
 	case sema.NumericTypeSaturatingAddFunctionName:
@@ -1318,6 +1401,11 @@ func getNumberValueMember(v NumberValue, name string) Value {
 			func(invocation Invocation) Value {
 				other := invocation.Arguments[0].(NumberValue)
 				return v.SaturatingPlus(other)
+			},
+			&sema.FunctionType{
+				ReturnTypeAnnotation: sema.NewTypeAnnotation(
+					typ,
+				),
 			},
 		)
 
@@ -1327,6 +1415,11 @@ func getNumberValueMember(v NumberValue, name string) Value {
 				other := invocation.Arguments[0].(NumberValue)
 				return v.SaturatingMinus(other)
 			},
+			&sema.FunctionType{
+				ReturnTypeAnnotation: sema.NewTypeAnnotation(
+					typ,
+				),
+			},
 		)
 
 	case sema.NumericTypeSaturatingMultiplyFunctionName:
@@ -1335,6 +1428,11 @@ func getNumberValueMember(v NumberValue, name string) Value {
 				other := invocation.Arguments[0].(NumberValue)
 				return v.SaturatingMul(other)
 			},
+			&sema.FunctionType{
+				ReturnTypeAnnotation: sema.NewTypeAnnotation(
+					typ,
+				),
+			},
 		)
 
 	case sema.NumericTypeSaturatingDivideFunctionName:
@@ -1342,6 +1440,11 @@ func getNumberValueMember(v NumberValue, name string) Value {
 			func(invocation Invocation) Value {
 				other := invocation.Arguments[0].(NumberValue)
 				return v.SaturatingDiv(other)
+			},
+			&sema.FunctionType{
+				ReturnTypeAnnotation: sema.NewTypeAnnotation(
+					typ,
+				),
 			},
 		)
 	}
@@ -1528,9 +1631,12 @@ func (v IntValue) Equal(_ *Interpreter, _ func() LocationRange, other Value) boo
 	return cmp == 0
 }
 
-func (v IntValue) HashInput(_ *Interpreter, _ []byte) []byte {
+func (v IntValue) HashInput(_ *Interpreter, _ func() LocationRange, _ []byte) []byte {
 	// TODO: optimize?
-	return SignedBigIntToBigEndianBytes(v.BigInt)
+	return append(
+		[]byte{byte(HashInputTypeInt)},
+		SignedBigIntToBigEndianBytes(v.BigInt)...,
+	)
 }
 
 func (v IntValue) BitwiseOr(other IntegerValue) IntegerValue {
@@ -1581,7 +1687,7 @@ func (v IntValue) BitwiseRightShift(other IntegerValue) IntegerValue {
 }
 
 func (v IntValue) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name)
+	return getNumberValueMember(v, name, sema.IntType)
 }
 
 func (IntValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -1592,7 +1698,12 @@ func (v IntValue) ToBigEndianBytes() []byte {
 	return SignedBigIntToBigEndianBytes(v.BigInt)
 }
 
-func (v IntValue) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType, _ TypeConformanceResults) bool {
+func (v IntValue) ConformsToDynamicType(
+	_ *Interpreter,
+	_ func() LocationRange,
+	dynamicType DynamicType,
+	_ TypeConformanceResults,
+) bool {
 	numberType, ok := dynamicType.(NumberDynamicType)
 	return ok && sema.IntType.Equal(numberType.StaticType)
 }
@@ -1609,7 +1720,7 @@ func (IntValue) NeedsStoreToAddress(_ *Interpreter, _ atree.Address) bool {
 	return false
 }
 
-func (v IntValue) DeepCopy(_ *Interpreter, _ atree.Address) Value {
+func (v IntValue) DeepCopy(_ *Interpreter, _ func() LocationRange, _ atree.Address) Value {
 	return v
 }
 
@@ -1838,9 +1949,10 @@ func (v Int8Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) bo
 	return v == otherInt8
 }
 
-func (v Int8Value) HashInput(_ *Interpreter, scratch []byte) []byte {
-	scratch[0] = byte(v)
-	return scratch[:1]
+func (v Int8Value) HashInput(_ *Interpreter, _ func() LocationRange, scratch []byte) []byte {
+	scratch[0] = byte(HashInputTypeInt8)
+	scratch[1] = byte(v)
+	return scratch[:2]
 }
 
 func ConvertInt8(value Value) Int8Value {
@@ -1898,7 +2010,7 @@ func (v Int8Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 }
 
 func (v Int8Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name)
+	return getNumberValueMember(v, name, sema.Int8Type)
 }
 
 func (Int8Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -1909,7 +2021,12 @@ func (v Int8Value) ToBigEndianBytes() []byte {
 	return []byte{byte(v)}
 }
 
-func (v Int8Value) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType, _ TypeConformanceResults) bool {
+func (v Int8Value) ConformsToDynamicType(
+	_ *Interpreter,
+	_ func() LocationRange,
+	dynamicType DynamicType,
+	_ TypeConformanceResults,
+) bool {
 	numberType, ok := dynamicType.(NumberDynamicType)
 	return ok && sema.Int8Type.Equal(numberType.StaticType)
 }
@@ -1926,7 +2043,7 @@ func (Int8Value) NeedsStoreToAddress(_ *Interpreter, _ atree.Address) bool {
 	return false
 }
 
-func (v Int8Value) DeepCopy(_ *Interpreter, _ atree.Address) Value {
+func (v Int8Value) DeepCopy(_ *Interpreter, _ func() LocationRange, _ atree.Address) Value {
 	return v
 }
 
@@ -2154,9 +2271,10 @@ func (v Int16Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) b
 	return v == otherInt16
 }
 
-func (v Int16Value) HashInput(_ *Interpreter, scratch []byte) []byte {
-	binary.BigEndian.PutUint16(scratch, uint16(v))
-	return scratch[:2]
+func (v Int16Value) HashInput(_ *Interpreter, _ func() LocationRange, scratch []byte) []byte {
+	scratch[0] = byte(HashInputTypeInt16)
+	binary.BigEndian.PutUint16(scratch[1:], uint16(v))
+	return scratch[:3]
 }
 
 func ConvertInt16(value Value) Int16Value {
@@ -2214,7 +2332,7 @@ func (v Int16Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 }
 
 func (v Int16Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name)
+	return getNumberValueMember(v, name, sema.Int16Type)
 }
 
 func (Int16Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -2227,7 +2345,12 @@ func (v Int16Value) ToBigEndianBytes() []byte {
 	return b
 }
 
-func (v Int16Value) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType, _ TypeConformanceResults) bool {
+func (v Int16Value) ConformsToDynamicType(
+	_ *Interpreter,
+	_ func() LocationRange,
+	dynamicType DynamicType,
+	_ TypeConformanceResults,
+) bool {
 	numberType, ok := dynamicType.(NumberDynamicType)
 	return ok && sema.Int16Type.Equal(numberType.StaticType)
 }
@@ -2244,7 +2367,7 @@ func (Int16Value) NeedsStoreToAddress(_ *Interpreter, _ atree.Address) bool {
 	return false
 }
 
-func (v Int16Value) DeepCopy(_ *Interpreter, _ atree.Address) Value {
+func (v Int16Value) DeepCopy(_ *Interpreter, _ func() LocationRange, _ atree.Address) Value {
 	return v
 }
 
@@ -2472,9 +2595,10 @@ func (v Int32Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) b
 	return v == otherInt32
 }
 
-func (v Int32Value) HashInput(_ *Interpreter, scratch []byte) []byte {
-	binary.BigEndian.PutUint32(scratch, uint32(v))
-	return scratch[:4]
+func (v Int32Value) HashInput(_ *Interpreter, _ func() LocationRange, scratch []byte) []byte {
+	scratch[0] = byte(HashInputTypeInt32)
+	binary.BigEndian.PutUint32(scratch[1:], uint32(v))
+	return scratch[:5]
 }
 
 func ConvertInt32(value Value) Int32Value {
@@ -2532,7 +2656,7 @@ func (v Int32Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 }
 
 func (v Int32Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name)
+	return getNumberValueMember(v, name, sema.Int32Type)
 }
 
 func (Int32Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -2545,7 +2669,12 @@ func (v Int32Value) ToBigEndianBytes() []byte {
 	return b
 }
 
-func (v Int32Value) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType, _ TypeConformanceResults) bool {
+func (v Int32Value) ConformsToDynamicType(
+	_ *Interpreter,
+	_ func() LocationRange,
+	dynamicType DynamicType,
+	_ TypeConformanceResults,
+) bool {
 	numberType, ok := dynamicType.(NumberDynamicType)
 	return ok && sema.Int32Type.Equal(numberType.StaticType)
 }
@@ -2562,7 +2691,7 @@ func (Int32Value) NeedsStoreToAddress(_ *Interpreter, _ atree.Address) bool {
 	return false
 }
 
-func (v Int32Value) DeepCopy(_ *Interpreter, _ atree.Address) Value {
+func (v Int32Value) DeepCopy(_ *Interpreter, _ func() LocationRange, _ atree.Address) Value {
 	return v
 }
 
@@ -2794,9 +2923,10 @@ func (v Int64Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) b
 	return v == otherInt64
 }
 
-func (v Int64Value) HashInput(_ *Interpreter, scratch []byte) []byte {
-	binary.BigEndian.PutUint64(scratch, uint64(v))
-	return scratch[:8]
+func (v Int64Value) HashInput(_ *Interpreter, _ func() LocationRange, scratch []byte) []byte {
+	scratch[0] = byte(HashInputTypeInt64)
+	binary.BigEndian.PutUint64(scratch[1:], uint64(v))
+	return scratch[:9]
 }
 
 func ConvertInt64(value Value) Int64Value {
@@ -2849,7 +2979,7 @@ func (v Int64Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 }
 
 func (v Int64Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name)
+	return getNumberValueMember(v, name, sema.Int64Type)
 }
 
 func (Int64Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -2862,7 +2992,12 @@ func (v Int64Value) ToBigEndianBytes() []byte {
 	return b
 }
 
-func (v Int64Value) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType, _ TypeConformanceResults) bool {
+func (v Int64Value) ConformsToDynamicType(
+	_ *Interpreter,
+	_ func() LocationRange,
+	dynamicType DynamicType,
+	_ TypeConformanceResults,
+) bool {
 	numberType, ok := dynamicType.(NumberDynamicType)
 	return ok && sema.Int64Type.Equal(numberType.StaticType)
 }
@@ -2879,7 +3014,7 @@ func (Int64Value) NeedsStoreToAddress(_ *Interpreter, _ atree.Address) bool {
 	return false
 }
 
-func (v Int64Value) DeepCopy(_ *Interpreter, _ atree.Address) Value {
+func (v Int64Value) DeepCopy(_ *Interpreter, _ func() LocationRange, _ atree.Address) Value {
 	return v
 }
 
@@ -3162,9 +3297,12 @@ func (v Int128Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) 
 	return cmp == 0
 }
 
-func (v Int128Value) HashInput(_ *Interpreter, _ []byte) []byte {
+func (v Int128Value) HashInput(_ *Interpreter, _ func() LocationRange, _ []byte) []byte {
 	// TODO: optimize?
-	return SignedBigIntToBigEndianBytes(v.BigInt)
+	return append(
+		[]byte{byte(HashInputTypeInt128)},
+		SignedBigIntToBigEndianBytes(v.BigInt)...,
+	)
 }
 
 func ConvertInt128(value Value) Int128Value {
@@ -3238,7 +3376,7 @@ func (v Int128Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 }
 
 func (v Int128Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name)
+	return getNumberValueMember(v, name, sema.Int128Type)
 }
 
 func (Int128Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -3249,7 +3387,12 @@ func (v Int128Value) ToBigEndianBytes() []byte {
 	return SignedBigIntToBigEndianBytes(v.BigInt)
 }
 
-func (v Int128Value) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType, _ TypeConformanceResults) bool {
+func (v Int128Value) ConformsToDynamicType(
+	_ *Interpreter,
+	_ func() LocationRange,
+	dynamicType DynamicType,
+	_ TypeConformanceResults,
+) bool {
 	numberType, ok := dynamicType.(NumberDynamicType)
 	return ok && sema.Int128Type.Equal(numberType.StaticType)
 }
@@ -3266,7 +3409,7 @@ func (Int128Value) NeedsStoreToAddress(_ *Interpreter, _ atree.Address) bool {
 	return false
 }
 
-func (v Int128Value) DeepCopy(_ *Interpreter, _ atree.Address) Value {
+func (v Int128Value) DeepCopy(_ *Interpreter, _ func() LocationRange, _ atree.Address) Value {
 	return v
 }
 
@@ -3550,9 +3693,12 @@ func (v Int256Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) 
 	return cmp == 0
 }
 
-func (v Int256Value) HashInput(_ *Interpreter, _ []byte) []byte {
+func (v Int256Value) HashInput(_ *Interpreter, _ func() LocationRange, _ []byte) []byte {
 	// TODO: optimize?
-	return SignedBigIntToBigEndianBytes(v.BigInt)
+	return append(
+		[]byte{byte(HashInputTypeInt256)},
+		SignedBigIntToBigEndianBytes(v.BigInt)...,
+	)
 }
 
 func ConvertInt256(value Value) Int256Value {
@@ -3626,7 +3772,7 @@ func (v Int256Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 }
 
 func (v Int256Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name)
+	return getNumberValueMember(v, name, sema.Int256Type)
 }
 
 func (Int256Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -3637,7 +3783,12 @@ func (v Int256Value) ToBigEndianBytes() []byte {
 	return SignedBigIntToBigEndianBytes(v.BigInt)
 }
 
-func (v Int256Value) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType, _ TypeConformanceResults) bool {
+func (v Int256Value) ConformsToDynamicType(
+	_ *Interpreter,
+	_ func() LocationRange,
+	dynamicType DynamicType,
+	_ TypeConformanceResults,
+) bool {
 	numberType, ok := dynamicType.(NumberDynamicType)
 	return ok && sema.Int256Type.Equal(numberType.StaticType)
 }
@@ -3654,7 +3805,7 @@ func (Int256Value) NeedsStoreToAddress(_ *Interpreter, _ atree.Address) bool {
 	return false
 }
 
-func (v Int256Value) DeepCopy(_ *Interpreter, _ atree.Address) Value {
+func (v Int256Value) DeepCopy(_ *Interpreter, _ func() LocationRange, _ atree.Address) Value {
 	return v
 }
 
@@ -3851,9 +4002,12 @@ func (v UIntValue) Equal(_ *Interpreter, _ func() LocationRange, other Value) bo
 	return cmp == 0
 }
 
-func (v UIntValue) HashInput(_ *Interpreter, _ []byte) []byte {
+func (v UIntValue) HashInput(_ *Interpreter, _ func() LocationRange, _ []byte) []byte {
 	// TODO: optimize?
-	return UnsignedBigIntToBigEndianBytes(v.BigInt)
+	return append(
+		[]byte{byte(HashInputTypeUInt)},
+		UnsignedBigIntToBigEndianBytes(v.BigInt)...,
+	)
 }
 
 func (v UIntValue) BitwiseOr(other IntegerValue) IntegerValue {
@@ -3904,7 +4058,7 @@ func (v UIntValue) BitwiseRightShift(other IntegerValue) IntegerValue {
 }
 
 func (v UIntValue) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name)
+	return getNumberValueMember(v, name, sema.UIntType)
 }
 
 func (UIntValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -3915,7 +4069,12 @@ func (v UIntValue) ToBigEndianBytes() []byte {
 	return UnsignedBigIntToBigEndianBytes(v.BigInt)
 }
 
-func (v UIntValue) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType, _ TypeConformanceResults) bool {
+func (v UIntValue) ConformsToDynamicType(
+	_ *Interpreter,
+	_ func() LocationRange,
+	dynamicType DynamicType,
+	_ TypeConformanceResults,
+) bool {
 	numberType, ok := dynamicType.(NumberDynamicType)
 	return ok && sema.UIntType.Equal(numberType.StaticType)
 }
@@ -3932,7 +4091,7 @@ func (UIntValue) NeedsStoreToAddress(_ *Interpreter, _ atree.Address) bool {
 	return false
 }
 
-func (v UIntValue) DeepCopy(_ *Interpreter, _ atree.Address) Value {
+func (v UIntValue) DeepCopy(_ *Interpreter, _ func() LocationRange, _ atree.Address) Value {
 	return v
 }
 
@@ -4092,9 +4251,10 @@ func (v UInt8Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) b
 	return v == otherUInt8
 }
 
-func (v UInt8Value) HashInput(_ *Interpreter, scratch []byte) []byte {
-	scratch[0] = byte(v)
-	return scratch[:1]
+func (v UInt8Value) HashInput(_ *Interpreter, _ func() LocationRange, scratch []byte) []byte {
+	scratch[0] = byte(HashInputTypeUInt8)
+	scratch[1] = byte(v)
+	return scratch[:2]
 }
 
 func ConvertUInt8(value Value) UInt8Value {
@@ -4152,7 +4312,7 @@ func (v UInt8Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 }
 
 func (v UInt8Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name)
+	return getNumberValueMember(v, name, sema.UInt8Type)
 }
 
 func (UInt8Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -4163,7 +4323,12 @@ func (v UInt8Value) ToBigEndianBytes() []byte {
 	return []byte{byte(v)}
 }
 
-func (v UInt8Value) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType, _ TypeConformanceResults) bool {
+func (v UInt8Value) ConformsToDynamicType(
+	_ *Interpreter,
+	_ func() LocationRange,
+	dynamicType DynamicType,
+	_ TypeConformanceResults,
+) bool {
 	numberType, ok := dynamicType.(NumberDynamicType)
 	return ok && sema.UInt8Type.Equal(numberType.StaticType)
 }
@@ -4180,7 +4345,7 @@ func (UInt8Value) NeedsStoreToAddress(_ *Interpreter, _ atree.Address) bool {
 	return false
 }
 
-func (v UInt8Value) DeepCopy(_ *Interpreter, _ atree.Address) Value {
+func (v UInt8Value) DeepCopy(_ *Interpreter, _ func() LocationRange, _ atree.Address) Value {
 	return v
 }
 
@@ -4338,9 +4503,10 @@ func (v UInt16Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) 
 	return v == otherUInt16
 }
 
-func (v UInt16Value) HashInput(_ *Interpreter, scratch []byte) []byte {
-	binary.BigEndian.PutUint16(scratch, uint16(v))
-	return scratch[:2]
+func (v UInt16Value) HashInput(_ *Interpreter, _ func() LocationRange, scratch []byte) []byte {
+	scratch[0] = byte(HashInputTypeUInt16)
+	binary.BigEndian.PutUint16(scratch[1:], uint16(v))
+	return scratch[:3]
 }
 
 func ConvertUInt16(value Value) UInt16Value {
@@ -4398,7 +4564,7 @@ func (v UInt16Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 }
 
 func (v UInt16Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name)
+	return getNumberValueMember(v, name, sema.UInt16Type)
 }
 
 func (UInt16Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -4411,7 +4577,12 @@ func (v UInt16Value) ToBigEndianBytes() []byte {
 	return b
 }
 
-func (v UInt16Value) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType, _ TypeConformanceResults) bool {
+func (v UInt16Value) ConformsToDynamicType(
+	_ *Interpreter,
+	_ func() LocationRange,
+	dynamicType DynamicType,
+	_ TypeConformanceResults,
+) bool {
 	numberType, ok := dynamicType.(NumberDynamicType)
 	return ok && sema.UInt16Type.Equal(numberType.StaticType)
 }
@@ -4432,7 +4603,7 @@ func (UInt16Value) NeedsStoreToAddress(_ *Interpreter, _ atree.Address) bool {
 	return false
 }
 
-func (v UInt16Value) DeepCopy(_ *Interpreter, _ atree.Address) Value {
+func (v UInt16Value) DeepCopy(_ *Interpreter, _ func() LocationRange, _ atree.Address) Value {
 	return v
 }
 
@@ -4590,9 +4761,10 @@ func (v UInt32Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) 
 	return v == otherUInt32
 }
 
-func (v UInt32Value) HashInput(_ *Interpreter, scratch []byte) []byte {
-	binary.BigEndian.PutUint32(scratch, uint32(v))
-	return scratch[:4]
+func (v UInt32Value) HashInput(_ *Interpreter, _ func() LocationRange, scratch []byte) []byte {
+	scratch[0] = byte(HashInputTypeUInt32)
+	binary.BigEndian.PutUint32(scratch[1:], uint32(v))
+	return scratch[:5]
 }
 
 func ConvertUInt32(value Value) UInt32Value {
@@ -4650,7 +4822,7 @@ func (v UInt32Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 }
 
 func (v UInt32Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name)
+	return getNumberValueMember(v, name, sema.UInt32Type)
 }
 
 func (UInt32Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -4663,7 +4835,12 @@ func (v UInt32Value) ToBigEndianBytes() []byte {
 	return b
 }
 
-func (v UInt32Value) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType, _ TypeConformanceResults) bool {
+func (v UInt32Value) ConformsToDynamicType(
+	_ *Interpreter,
+	_ func() LocationRange,
+	dynamicType DynamicType,
+	_ TypeConformanceResults,
+) bool {
 	numberType, ok := dynamicType.(NumberDynamicType)
 	return ok && sema.UInt32Type.Equal(numberType.StaticType)
 }
@@ -4684,7 +4861,7 @@ func (UInt32Value) NeedsStoreToAddress(_ *Interpreter, _ atree.Address) bool {
 	return false
 }
 
-func (v UInt32Value) DeepCopy(_ *Interpreter, _ atree.Address) Value {
+func (v UInt32Value) DeepCopy(_ *Interpreter, _ func() LocationRange, _ atree.Address) Value {
 	return v
 }
 
@@ -4847,9 +5024,10 @@ func (v UInt64Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) 
 	return v == otherUInt64
 }
 
-func (v UInt64Value) HashInput(_ *Interpreter, scratch []byte) []byte {
-	binary.BigEndian.PutUint64(scratch, uint64(v))
-	return scratch[:8]
+func (v UInt64Value) HashInput(_ *Interpreter, _ func() LocationRange, scratch []byte) []byte {
+	scratch[0] = byte(HashInputTypeUInt64)
+	binary.BigEndian.PutUint64(scratch[1:], uint64(v))
+	return scratch[:9]
 }
 
 func ConvertUInt64(value Value) UInt64Value {
@@ -4905,7 +5083,7 @@ func (v UInt64Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 }
 
 func (v UInt64Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name)
+	return getNumberValueMember(v, name, sema.UInt64Type)
 }
 
 func (UInt64Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -4918,7 +5096,12 @@ func (v UInt64Value) ToBigEndianBytes() []byte {
 	return b
 }
 
-func (v UInt64Value) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType, _ TypeConformanceResults) bool {
+func (v UInt64Value) ConformsToDynamicType(
+	_ *Interpreter,
+	_ func() LocationRange,
+	dynamicType DynamicType,
+	_ TypeConformanceResults,
+) bool {
 	numberType, ok := dynamicType.(NumberDynamicType)
 	return ok && sema.UInt64Type.Equal(numberType.StaticType)
 }
@@ -4939,7 +5122,7 @@ func (UInt64Value) NeedsStoreToAddress(_ *Interpreter, _ atree.Address) bool {
 	return false
 }
 
-func (v UInt64Value) DeepCopy(_ *Interpreter, _ atree.Address) Value {
+func (v UInt64Value) DeepCopy(_ *Interpreter, _ func() LocationRange, _ atree.Address) Value {
 	return v
 }
 
@@ -5164,9 +5347,12 @@ func (v UInt128Value) Equal(_ *Interpreter, _ func() LocationRange, other Value)
 	return cmp == 0
 }
 
-func (v UInt128Value) HashInput(_ *Interpreter, _ []byte) []byte {
+func (v UInt128Value) HashInput(_ *Interpreter, _ func() LocationRange, _ []byte) []byte {
 	// TODO: optimize?
-	return UnsignedBigIntToBigEndianBytes(v.BigInt)
+	return append(
+		[]byte{byte(HashInputTypeUInt128)},
+		UnsignedBigIntToBigEndianBytes(v.BigInt)...,
+	)
 }
 
 func ConvertUInt128(value Value) UInt128Value {
@@ -5240,7 +5426,7 @@ func (v UInt128Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 }
 
 func (v UInt128Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name)
+	return getNumberValueMember(v, name, sema.UInt128Type)
 }
 
 func (UInt128Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -5251,7 +5437,12 @@ func (v UInt128Value) ToBigEndianBytes() []byte {
 	return UnsignedBigIntToBigEndianBytes(v.BigInt)
 }
 
-func (v UInt128Value) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType, _ TypeConformanceResults) bool {
+func (v UInt128Value) ConformsToDynamicType(
+	_ *Interpreter,
+	_ func() LocationRange,
+	dynamicType DynamicType,
+	_ TypeConformanceResults,
+) bool {
 	numberType, ok := dynamicType.(NumberDynamicType)
 	return ok && sema.UInt128Type.Equal(numberType.StaticType)
 }
@@ -5272,7 +5463,7 @@ func (UInt128Value) NeedsStoreToAddress(_ *Interpreter, _ atree.Address) bool {
 	return false
 }
 
-func (v UInt128Value) DeepCopy(_ *Interpreter, _ atree.Address) Value {
+func (v UInt128Value) DeepCopy(_ *Interpreter, _ func() LocationRange, _ atree.Address) Value {
 	return v
 }
 
@@ -5498,9 +5689,12 @@ func (v UInt256Value) Equal(_ *Interpreter, _ func() LocationRange, other Value)
 	return cmp == 0
 }
 
-func (v UInt256Value) HashInput(_ *Interpreter, _ []byte) []byte {
+func (v UInt256Value) HashInput(_ *Interpreter, _ func() LocationRange, _ []byte) []byte {
 	// TODO: optimize?
-	return UnsignedBigIntToBigEndianBytes(v.BigInt)
+	return append(
+		[]byte{byte(HashInputTypeUInt256)},
+		UnsignedBigIntToBigEndianBytes(v.BigInt)...,
+	)
 }
 
 func ConvertUInt256(value Value) UInt256Value {
@@ -5574,7 +5768,7 @@ func (v UInt256Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 }
 
 func (v UInt256Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name)
+	return getNumberValueMember(v, name, sema.UInt256Type)
 }
 
 func (UInt256Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -5585,7 +5779,12 @@ func (v UInt256Value) ToBigEndianBytes() []byte {
 	return UnsignedBigIntToBigEndianBytes(v.BigInt)
 }
 
-func (v UInt256Value) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType, _ TypeConformanceResults) bool {
+func (v UInt256Value) ConformsToDynamicType(
+	_ *Interpreter,
+	_ func() LocationRange,
+	dynamicType DynamicType,
+	_ TypeConformanceResults,
+) bool {
 	numberType, ok := dynamicType.(NumberDynamicType)
 	return ok && sema.UInt256Type.Equal(numberType.StaticType)
 }
@@ -5606,7 +5805,7 @@ func (UInt256Value) NeedsStoreToAddress(_ *Interpreter, _ atree.Address) bool {
 	return false
 }
 
-func (v UInt256Value) DeepCopy(_ *Interpreter, _ atree.Address) Value {
+func (v UInt256Value) DeepCopy(_ *Interpreter, _ func() LocationRange, _ atree.Address) Value {
 	return v
 }
 
@@ -5736,9 +5935,10 @@ func (v Word8Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) b
 	return v == otherWord8
 }
 
-func (v Word8Value) HashInput(_ *Interpreter, scratch []byte) []byte {
-	scratch[0] = byte(v)
-	return scratch[:1]
+func (v Word8Value) HashInput(_ *Interpreter, _ func() LocationRange, scratch []byte) []byte {
+	scratch[0] = byte(HashInputTypeWord8)
+	scratch[1] = byte(v)
+	return scratch[:2]
 }
 
 func ConvertWord8(value Value) Word8Value {
@@ -5771,7 +5971,7 @@ func (v Word8Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 }
 
 func (v Word8Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name)
+	return getNumberValueMember(v, name, sema.Word8Type)
 }
 
 func (Word8Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -5782,7 +5982,12 @@ func (v Word8Value) ToBigEndianBytes() []byte {
 	return []byte{byte(v)}
 }
 
-func (v Word8Value) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType, _ TypeConformanceResults) bool {
+func (v Word8Value) ConformsToDynamicType(
+	_ *Interpreter,
+	_ func() LocationRange,
+	dynamicType DynamicType,
+	_ TypeConformanceResults,
+) bool {
 	numberType, ok := dynamicType.(NumberDynamicType)
 	return ok && sema.Word8Type.Equal(numberType.StaticType)
 }
@@ -5803,7 +6008,7 @@ func (Word8Value) NeedsStoreToAddress(_ *Interpreter, _ atree.Address) bool {
 	return false
 }
 
-func (v Word8Value) DeepCopy(_ *Interpreter, _ atree.Address) Value {
+func (v Word8Value) DeepCopy(_ *Interpreter, _ func() LocationRange, _ atree.Address) Value {
 	return v
 }
 
@@ -5931,9 +6136,10 @@ func (v Word16Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) 
 	return v == otherWord16
 }
 
-func (v Word16Value) HashInput(_ *Interpreter, scratch []byte) []byte {
-	binary.BigEndian.PutUint16(scratch, uint16(v))
-	return scratch[:2]
+func (v Word16Value) HashInput(_ *Interpreter, _ func() LocationRange, scratch []byte) []byte {
+	scratch[0] = byte(HashInputTypeWord16)
+	binary.BigEndian.PutUint16(scratch[1:], uint16(v))
+	return scratch[:3]
 }
 
 func ConvertWord16(value Value) Word16Value {
@@ -5966,7 +6172,7 @@ func (v Word16Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 }
 
 func (v Word16Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name)
+	return getNumberValueMember(v, name, sema.Word16Type)
 }
 
 func (Word16Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -5979,7 +6185,12 @@ func (v Word16Value) ToBigEndianBytes() []byte {
 	return b
 }
 
-func (v Word16Value) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType, _ TypeConformanceResults) bool {
+func (v Word16Value) ConformsToDynamicType(
+	_ *Interpreter,
+	_ func() LocationRange,
+	dynamicType DynamicType,
+	_ TypeConformanceResults,
+) bool {
 	numberType, ok := dynamicType.(NumberDynamicType)
 	return ok && sema.Word16Type.Equal(numberType.StaticType)
 }
@@ -6000,7 +6211,7 @@ func (Word16Value) NeedsStoreToAddress(_ *Interpreter, _ atree.Address) bool {
 	return false
 }
 
-func (v Word16Value) DeepCopy(_ *Interpreter, _ atree.Address) Value {
+func (v Word16Value) DeepCopy(_ *Interpreter, _ func() LocationRange, _ atree.Address) Value {
 	return v
 }
 
@@ -6129,9 +6340,10 @@ func (v Word32Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) 
 	return v == otherWord32
 }
 
-func (v Word32Value) HashInput(_ *Interpreter, scratch []byte) []byte {
-	binary.BigEndian.PutUint32(scratch, uint32(v))
-	return scratch[:4]
+func (v Word32Value) HashInput(_ *Interpreter, _ func() LocationRange, scratch []byte) []byte {
+	scratch[0] = byte(HashInputTypeWord32)
+	binary.BigEndian.PutUint32(scratch[1:], uint32(v))
+	return scratch[:5]
 }
 
 func ConvertWord32(value Value) Word32Value {
@@ -6164,7 +6376,7 @@ func (v Word32Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 }
 
 func (v Word32Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name)
+	return getNumberValueMember(v, name, sema.Word32Type)
 }
 
 func (Word32Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -6177,7 +6389,12 @@ func (v Word32Value) ToBigEndianBytes() []byte {
 	return b
 }
 
-func (v Word32Value) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType, _ TypeConformanceResults) bool {
+func (v Word32Value) ConformsToDynamicType(
+	_ *Interpreter,
+	_ func() LocationRange,
+	dynamicType DynamicType,
+	_ TypeConformanceResults,
+) bool {
 	numberType, ok := dynamicType.(NumberDynamicType)
 	return ok && sema.Word32Type.Equal(numberType.StaticType)
 }
@@ -6198,7 +6415,7 @@ func (Word32Value) NeedsStoreToAddress(_ *Interpreter, _ atree.Address) bool {
 	return false
 }
 
-func (v Word32Value) DeepCopy(_ *Interpreter, _ atree.Address) Value {
+func (v Word32Value) DeepCopy(_ *Interpreter, _ func() LocationRange, _ atree.Address) Value {
 	return v
 }
 
@@ -6327,9 +6544,10 @@ func (v Word64Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) 
 	return v == otherWord64
 }
 
-func (v Word64Value) HashInput(_ *Interpreter, scratch []byte) []byte {
-	binary.BigEndian.PutUint64(scratch, uint64(v))
-	return scratch[:8]
+func (v Word64Value) HashInput(_ *Interpreter, _ func() LocationRange, scratch []byte) []byte {
+	scratch[0] = byte(HashInputTypeWord64)
+	binary.BigEndian.PutUint64(scratch[1:], uint64(v))
+	return scratch[:9]
 }
 
 func ConvertWord64(value Value) Word64Value {
@@ -6362,7 +6580,7 @@ func (v Word64Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 }
 
 func (v Word64Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name)
+	return getNumberValueMember(v, name, sema.Word64Type)
 }
 
 func (Word64Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -6375,7 +6593,12 @@ func (v Word64Value) ToBigEndianBytes() []byte {
 	return b
 }
 
-func (v Word64Value) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType, _ TypeConformanceResults) bool {
+func (v Word64Value) ConformsToDynamicType(
+	_ *Interpreter,
+	_ func() LocationRange,
+	dynamicType DynamicType,
+	_ TypeConformanceResults,
+) bool {
 	numberType, ok := dynamicType.(NumberDynamicType)
 	return ok && sema.Word64Type.Equal(numberType.StaticType)
 }
@@ -6396,7 +6619,7 @@ func (Word64Value) NeedsStoreToAddress(_ *Interpreter, _ atree.Address) bool {
 	return false
 }
 
-func (v Word64Value) DeepCopy(_ *Interpreter, _ atree.Address) Value {
+func (v Word64Value) DeepCopy(_ *Interpreter, _ func() LocationRange, _ atree.Address) Value {
 	return v
 }
 
@@ -6621,9 +6844,10 @@ func (v Fix64Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) b
 	return v == otherFix64
 }
 
-func (v Fix64Value) HashInput(_ *Interpreter, scratch []byte) []byte {
-	binary.BigEndian.PutUint64(scratch, uint64(v))
-	return scratch[:8]
+func (v Fix64Value) HashInput(_ *Interpreter, _ func() LocationRange, scratch []byte) []byte {
+	scratch[0] = byte(HashInputTypeFix64)
+	binary.BigEndian.PutUint64(scratch[1:], uint64(v))
+	return scratch[:9]
 }
 
 func ConvertFix64(value Value) Fix64Value {
@@ -6662,7 +6886,7 @@ func ConvertFix64(value Value) Fix64Value {
 }
 
 func (v Fix64Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name)
+	return getNumberValueMember(v, name, sema.Fix64Type)
 }
 
 func (Fix64Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -6675,7 +6899,12 @@ func (v Fix64Value) ToBigEndianBytes() []byte {
 	return b
 }
 
-func (v Fix64Value) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType, _ TypeConformanceResults) bool {
+func (v Fix64Value) ConformsToDynamicType(
+	_ *Interpreter,
+	_ func() LocationRange,
+	dynamicType DynamicType,
+	_ TypeConformanceResults,
+) bool {
 	numberType, ok := dynamicType.(NumberDynamicType)
 	return ok && sema.Fix64Type.Equal(numberType.StaticType)
 }
@@ -6696,7 +6925,7 @@ func (Fix64Value) NeedsStoreToAddress(_ *Interpreter, _ atree.Address) bool {
 	return false
 }
 
-func (v Fix64Value) DeepCopy(_ *Interpreter, _ atree.Address) Value {
+func (v Fix64Value) DeepCopy(_ *Interpreter, _ func() LocationRange, _ atree.Address) Value {
 	return v
 }
 
@@ -6880,9 +7109,10 @@ func (v UFix64Value) Equal(_ *Interpreter, _ func() LocationRange, other Value) 
 	return v == otherUFix64
 }
 
-func (v UFix64Value) HashInput(_ *Interpreter, scratch []byte) []byte {
-	binary.BigEndian.PutUint64(scratch, uint64(v))
-	return scratch[:8]
+func (v UFix64Value) HashInput(_ *Interpreter, _ func() LocationRange, scratch []byte) []byte {
+	scratch[0] = byte(HashInputTypeUFix64)
+	binary.BigEndian.PutUint64(scratch[1:], uint64(v))
+	return scratch[:9]
 }
 
 func ConvertUFix64(value Value) UFix64Value {
@@ -6928,7 +7158,7 @@ func ConvertUFix64(value Value) UFix64Value {
 }
 
 func (v UFix64Value) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
-	return getNumberValueMember(v, name)
+	return getNumberValueMember(v, name, sema.UFix64Type)
 }
 
 func (UFix64Value) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
@@ -6941,7 +7171,12 @@ func (v UFix64Value) ToBigEndianBytes() []byte {
 	return b
 }
 
-func (v UFix64Value) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType, _ TypeConformanceResults) bool {
+func (v UFix64Value) ConformsToDynamicType(
+	_ *Interpreter,
+	_ func() LocationRange,
+	dynamicType DynamicType,
+	_ TypeConformanceResults,
+) bool {
 	numberType, ok := dynamicType.(NumberDynamicType)
 	return ok && sema.UFix64Type.Equal(numberType.StaticType)
 }
@@ -6962,7 +7197,7 @@ func (UFix64Value) NeedsStoreToAddress(_ *Interpreter, _ atree.Address) bool {
 	return false
 }
 
-func (v UFix64Value) DeepCopy(_ *Interpreter, _ atree.Address) Value {
+func (v UFix64Value) DeepCopy(_ *Interpreter, _ func() LocationRange, _ atree.Address) Value {
 	return v
 }
 
@@ -6990,11 +7225,14 @@ type CompositeValue struct {
 	NestedVariables     map[string]*Variable
 	Functions           map[string]FunctionValue
 	Destructor          FunctionValue
-	Stringer            func(seenReferences SeenReferences) string
+	Stringer            func(value *CompositeValue, seenReferences SeenReferences) string
 	isDestroyed         bool
+	typeID              common.TypeID
+	staticType          StaticType
+	dynamicType         DynamicType
 }
 
-type ComputedField func(*Interpreter) Value
+type ComputedField func(*Interpreter, func() LocationRange) Value
 
 type CompositeField struct {
 	Name  string
@@ -7010,17 +7248,15 @@ func NewCompositeValue(
 	address common.Address,
 ) *CompositeValue {
 
-	typeInfo := encodeCompositeOrderedMapTypeInfo(
-		location,
-		qualifiedIdentifier,
-		kind,
-	)
-
 	dictionary, err := atree.NewMap(
 		interpreter.Storage,
 		atree.Address(address),
 		atree.NewDefaultDigesterBuilder(),
-		typeInfo,
+		compositeTypeInfo{
+			location:            location,
+			qualifiedIdentifier: qualifiedIdentifier,
+			kind:                kind,
+		},
 	)
 	if err != nil {
 		panic(ExternalError{err})
@@ -7036,6 +7272,7 @@ func NewCompositeValue(
 	for _, field := range fields {
 		v.SetMember(
 			interpreter,
+			// TODO: provide proper location range
 			ReturnEmptyLocationRange,
 			field.Name,
 			field.Value,
@@ -7069,17 +7306,31 @@ func (v *CompositeValue) Walk(walkChild func(Value)) {
 }
 
 func (v *CompositeValue) DynamicType(interpreter *Interpreter, _ SeenReferences) DynamicType {
-	staticType := interpreter.getCompositeType(v.Location, v.QualifiedIdentifier)
-	return CompositeDynamicType{
-		StaticType: staticType,
+	if v.dynamicType == nil {
+		var staticType sema.Type
+		if v.Location == nil {
+			staticType = interpreter.getNativeCompositeType(v.QualifiedIdentifier)
+		} else {
+			staticType = interpreter.getUserCompositeType(v.Location, v.TypeID())
+		}
+		v.dynamicType = CompositeDynamicType{
+			StaticType: staticType,
+		}
 	}
+	return v.dynamicType
 }
 
 func (v *CompositeValue) StaticType() StaticType {
-	return CompositeStaticType{
-		Location:            v.Location,
-		QualifiedIdentifier: v.QualifiedIdentifier,
+	if v.staticType == nil {
+		// NOTE: Instead of using NewCompositeStaticType, which always generates the type ID,
+		// use the TypeID accessor, which may return an already computed type ID
+		v.staticType = CompositeStaticType{
+			Location:            v.Location,
+			QualifiedIdentifier: v.QualifiedIdentifier,
+			TypeID:              v.TypeID(),
+		}
 	}
+	return v.staticType
 }
 
 func (v *CompositeValue) IsDestroyed() bool {
@@ -7116,12 +7367,14 @@ func (v *CompositeValue) GetMember(interpreter *Interpreter, getLocationRange fu
 	if v.Kind == common.CompositeKindResource &&
 		name == sema.ResourceOwnerFieldName {
 
-		return v.OwnerValue(interpreter)
+		return v.OwnerValue(interpreter, getLocationRange)
 	}
 
-	valueComparator := newValueComparator(interpreter, getLocationRange)
-
-	storable, err := v.dictionary.Get(valueComparator, interpreter.getHashInput, NewStringValue(name))
+	storable, err := v.dictionary.Get(
+		stringAtreeComparator,
+		stringAtreeHashInput,
+		stringAtreeValue(name),
+	)
 	if err != nil {
 		if _, ok := err.(*atree.KeyNotFoundError); !ok {
 			panic(ExternalError{err})
@@ -7142,7 +7395,7 @@ func (v *CompositeValue) GetMember(interpreter *Interpreter, getLocationRange fu
 
 	if v.ComputedFields != nil {
 		if computedField, ok := v.ComputedFields[name]; ok {
-			return computedField(interpreter)
+			return computedField(interpreter, getLocationRange)
 		}
 	}
 
@@ -7200,17 +7453,17 @@ func (v *CompositeValue) InitializeFunctions(interpreter *Interpreter) {
 	v.Functions = interpreter.typeCodes.CompositeCodes[v.TypeID()].CompositeFunctions
 }
 
-func (v *CompositeValue) OwnerValue(interpreter *Interpreter) OptionalValue {
+func (v *CompositeValue) OwnerValue(interpreter *Interpreter, getLocationRange func() LocationRange) OptionalValue {
 	address := v.StorageID().Address
 
 	if address == (atree.Address{}) {
 		return NilValue{}
 	}
 
-	ownerAccount := interpreter.accountHandler(interpreter, AddressValue(address))
+	ownerAccount := interpreter.publicAccountHandler(interpreter, AddressValue(address))
 
 	// Owner must be of `PublicAccount` type.
-	interpreter.ExpectType(ownerAccount, sema.PublicAccountType, nil)
+	interpreter.ExpectType(ownerAccount, sema.PublicAccountType, getLocationRange)
 
 	return NewSomeValueNonCopying(ownerAccount)
 }
@@ -7223,19 +7476,23 @@ func (v *CompositeValue) SetMember(
 ) {
 	address := v.StorageID().Address
 
-	value = interpreter.TransferValue(value, nil, address)
-
-	valueComparator := newValueComparator(interpreter, getLocationRange)
+	value = interpreter.TransferValue(
+		getLocationRange,
+		value,
+		nil,
+		address,
+	)
 
 	existingStorable, err := v.dictionary.Set(
-		valueComparator,
-		interpreter.getHashInput,
-		NewStringValue(name),
+		stringAtreeComparator,
+		stringAtreeHashInput,
+		stringAtreeValue(name),
 		value,
 	)
 	if err != nil {
 		panic(ExternalError{err})
 	}
+	interpreter.maybeCheckAtreeValue(v.dictionary)
 
 	if existingStorable != nil {
 		existingValue := StoredValue(existingStorable, interpreter.Storage)
@@ -7252,7 +7509,7 @@ func (v *CompositeValue) String() string {
 
 func (v *CompositeValue) RecursiveString(seenReferences SeenReferences) string {
 	if v.Stringer != nil {
-		return v.Stringer(seenReferences)
+		return v.Stringer(v, seenReferences)
 	}
 
 	var fields []CompositeField
@@ -7296,14 +7553,12 @@ func formatComposite(typeId string, fields []CompositeField, seenReferences Seen
 	return format.Composite(typeId, preparedFields)
 }
 
-func (v *CompositeValue) GetField(interpreter *Interpreter, getLocationRange func() LocationRange, name string) Value {
-
-	valueComparator := newValueComparator(interpreter, getLocationRange)
+func (v *CompositeValue) GetField(name string) Value {
 
 	storable, err := v.dictionary.Get(
-		valueComparator,
-		interpreter.getHashInput,
-		NewStringValue(name),
+		stringAtreeComparator,
+		stringAtreeHashInput,
+		stringAtreeValue(name),
 	)
 	if err != nil {
 		if _, ok := err.(*atree.KeyNotFoundError); ok {
@@ -7342,43 +7597,54 @@ func (v *CompositeValue) Equal(interpreter *Interpreter, getLocationRange func()
 			return true
 		}
 
-		fieldName := MustConvertStoredValue(key).(*StringValue).Str
+		fieldName := string(key.(stringAtreeValue))
 
-		otherValue := otherComposite.GetField(
-			interpreter,
-			getLocationRange,
-			fieldName,
-		)
+		// NOTE: Do NOT use an iterator, iteration order of fields may be different
+		// (if stored in different account, as storage ID is used as hash seed)
+		otherValue := otherComposite.GetField(fieldName)
 
 		equatableValue, ok := MustConvertStoredValue(value).(EquatableValue)
 		if !ok || !equatableValue.Equal(interpreter, getLocationRange, otherValue) {
 			return false
 		}
 	}
-
-	return true
 }
 
-func (v *CompositeValue) HashInput(interpreter *Interpreter, scratch []byte) []byte {
+func (v *CompositeValue) HashInput(interpreter *Interpreter, getLocationRange func() LocationRange, scratch []byte) []byte {
 	if v.Kind == common.CompositeKindEnum {
-		rawValue := v.GetField(interpreter, ReturnEmptyLocationRange, sema.EnumRawValueFieldName)
-		return rawValue.(HashableValue).HashInput(interpreter, scratch)
+		enumHashInput := append(
+			[]byte{byte(HashInputTypeEnum)},
+			v.TypeID()...,
+		)
+
+		rawValue := v.GetField(sema.EnumRawValueFieldName)
+		rawValueHashInput := rawValue.(HashableValue).
+			HashInput(interpreter, getLocationRange, scratch)
+
+		return append(
+			enumHashInput,
+			rawValueHashInput...,
+		)
 	}
 
 	panic(errors.NewUnreachableError())
 }
 
 func (v *CompositeValue) TypeID() common.TypeID {
-	location := v.Location
-	if location == nil {
-		return common.TypeID(v.QualifiedIdentifier)
+	if v.typeID == "" {
+		location := v.Location
+		qualifiedIdentifier := v.QualifiedIdentifier
+		if location == nil {
+			return common.TypeID(qualifiedIdentifier)
+		}
+		v.typeID = location.TypeID(qualifiedIdentifier)
 	}
-
-	return location.TypeID(v.QualifiedIdentifier)
+	return v.typeID
 }
 
 func (v *CompositeValue) ConformsToDynamicType(
 	interpreter *Interpreter,
+	getLocationRange func() LocationRange,
 	dynamicType DynamicType,
 	results TypeConformanceResults,
 ) bool {
@@ -7405,7 +7671,7 @@ func (v *CompositeValue) ConformsToDynamicType(
 	}
 
 	for _, fieldName := range compositeType.Fields {
-		value := v.GetField(interpreter, ReturnEmptyLocationRange, fieldName)
+		value := v.GetField(fieldName)
 		if value == nil {
 			if v.ComputedFields == nil {
 				return false
@@ -7416,7 +7682,7 @@ func (v *CompositeValue) ConformsToDynamicType(
 				return false
 			}
 
-			value = fieldGetter(interpreter)
+			value = fieldGetter(interpreter, getLocationRange)
 		}
 
 		member, ok := compositeType.Members.Get(fieldName)
@@ -7430,7 +7696,12 @@ func (v *CompositeValue) ConformsToDynamicType(
 			return false
 		}
 
-		if !value.ConformsToDynamicType(interpreter, fieldDynamicType, results) {
+		if !value.ConformsToDynamicType(
+			interpreter,
+			getLocationRange,
+			fieldDynamicType,
+			results,
+		) {
 			return false
 		}
 	}
@@ -7455,11 +7726,7 @@ func (v *CompositeValue) IsStorable() bool {
 	}
 
 	// Composite value's of native/built-in types are not storable for now
-	if v.Location == nil {
-		return false
-	}
-
-	return true
+	return v.Location != nil
 }
 
 func (v *CompositeValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
@@ -7478,40 +7745,64 @@ func (v *CompositeValue) NeedsStoreToAddress(_ *Interpreter, address atree.Addre
 	return v.StorageID().Address != address
 }
 
-func (v *CompositeValue) DeepCopy(interpreter *Interpreter, address atree.Address) Value {
+func (v *CompositeValue) DeepCopy(
+	interpreter *Interpreter,
+	getLocationRange func() LocationRange,
+	address atree.Address,
+) Value {
 
-	var newFields []CompositeField
+	iterator, err := v.dictionary.Iterator()
+	if err != nil {
+		panic(ExternalError{err})
+	}
 
-	v.ForEachField(func(name string, value Value) {
-		valueCopy := interpreter.CopyValue(value, address)
+	dictionary, err := atree.NewMapFromBatchData(
+		interpreter.Storage,
+		address,
+		atree.NewDefaultDigesterBuilder(),
+		v.dictionary.Type(),
+		stringAtreeComparator,
+		stringAtreeHashInput,
+		v.dictionary.Seed(),
+		func() (atree.Value, atree.Value, error) {
 
-		newFields = append(
-			newFields,
-			CompositeField{
-				Name:  name,
-				Value: valueCopy,
-			},
-		)
-	})
+			atreeKey, atreeValue, err := iterator.Next()
+			if err != nil {
+				return nil, nil, err
+			}
+			if atreeKey == nil || atreeValue == nil {
+				return nil, nil, nil
+			}
 
-	newValue := NewCompositeValue(
-		interpreter,
-		v.Location,
-		v.QualifiedIdentifier,
-		v.Kind,
-		newFields,
-		common.Address(address),
+			// NOTE: key is stringAtreeValue
+			// and does not need to be converted or copied
+
+			value := MustConvertStoredValue(atreeValue)
+			valueCopy := interpreter.CopyValue(getLocationRange, value, address)
+
+			return atreeKey, valueCopy, nil
+		},
 	)
+	if err != nil {
+		panic(ExternalError{err})
+	}
 
-	newValue.InjectedFields = v.InjectedFields
-	newValue.ComputedFields = v.ComputedFields
-	newValue.NestedVariables = v.NestedVariables
-	newValue.Functions = v.Functions
-	newValue.Destructor = v.Destructor
-	newValue.isDestroyed = v.isDestroyed
-	newValue.Stringer = v.Stringer
-
-	return newValue
+	return &CompositeValue{
+		dictionary:          dictionary,
+		Location:            v.Location,
+		QualifiedIdentifier: v.QualifiedIdentifier,
+		Kind:                v.Kind,
+		InjectedFields:      v.InjectedFields,
+		ComputedFields:      v.ComputedFields,
+		NestedVariables:     v.NestedVariables,
+		Functions:           v.Functions,
+		Destructor:          v.Destructor,
+		Stringer:            v.Stringer,
+		isDestroyed:         v.isDestroyed,
+		typeID:              v.typeID,
+		staticType:          v.staticType,
+		dynamicType:         v.dynamicType,
+	}
 }
 
 func (v *CompositeValue) DeepRemove(interpreter *Interpreter) {
@@ -7522,8 +7813,8 @@ func (v *CompositeValue) DeepRemove(interpreter *Interpreter) {
 
 	err := v.dictionary.PopIterate(func(nameStorable atree.Storable, valueStorable atree.Storable) {
 
-		name := StoredValue(nameStorable, storage)
-		name.DeepRemove(interpreter)
+		// NOTE: key / field name is stringAtreeValue,
+		// and not a Value, so no need to deep remove
 		interpreter.removeReferencedSlab(nameStorable)
 
 		value := StoredValue(valueStorable, storage)
@@ -7533,16 +7824,17 @@ func (v *CompositeValue) DeepRemove(interpreter *Interpreter) {
 	if err != nil {
 		panic(ExternalError{err})
 	}
+	interpreter.maybeCheckAtreeValue(v.dictionary)
 }
 
 func (v *CompositeValue) GetOwner() common.Address {
 	return common.Address(v.StorageID().Address)
 }
 
-func (v *CompositeValue) ForEachField(f func(_ string, value Value)) {
+func (v *CompositeValue) ForEachField(f func(fieldName string, fieldValue Value)) {
 	err := v.dictionary.Iterate(func(key atree.Value, value atree.Value) (resume bool, err error) {
 		f(
-			MustConvertStoredValue(key).(*StringValue).Str,
+			string(key.(stringAtreeValue)),
 			MustConvertStoredValue(value),
 		)
 		return true, nil
@@ -7558,17 +7850,13 @@ func (v *CompositeValue) StorageID() atree.StorageID {
 
 func (v *CompositeValue) RemoveField(
 	interpreter *Interpreter,
-	getLocationRange func() LocationRange,
+	_ func() LocationRange,
 	name string,
 ) {
-	keyValue := NewStringValue(name)
-
-	valueComparator := newValueComparator(interpreter, getLocationRange)
-
 	existingKeyStorable, existingValueStorable, err := v.dictionary.Remove(
-		valueComparator,
-		interpreter.getHashInput,
-		keyValue,
+		stringAtreeComparator,
+		stringAtreeHashInput,
+		stringAtreeValue(name),
 	)
 	if err != nil {
 		if _, ok := err.(*atree.KeyNotFoundError); ok {
@@ -7576,13 +7864,14 @@ func (v *CompositeValue) RemoveField(
 		}
 		panic(ExternalError{err})
 	}
+	interpreter.maybeCheckAtreeValue(v.dictionary)
 
 	storage := interpreter.Storage
 
 	// Key
 
-	existingKeyValue := StoredValue(existingKeyStorable, storage)
-	existingKeyValue.DeepRemove(interpreter)
+	// NOTE: key / field name is stringAtreeValue,
+	// and not a Value, so no need to deep remove
 	interpreter.removeReferencedSlab(existingKeyStorable)
 
 	// Value
@@ -7648,8 +7937,6 @@ func NewDictionaryValueWithAddress(
 	keysAndValues ...Value,
 ) *DictionaryValue {
 
-	typeInfo := encodeDictionaryOrderedMapTypeInfo(dictionaryType)
-
 	keysAndValuesCount := len(keysAndValues)
 	if keysAndValuesCount%2 != 0 {
 		panic("uneven number of keys and values")
@@ -7659,7 +7946,7 @@ func NewDictionaryValueWithAddress(
 		interpreter.Storage,
 		atree.Address(address),
 		atree.NewDefaultDigesterBuilder(),
-		typeInfo,
+		dictionaryType,
 	)
 	if err != nil {
 		panic(ExternalError{err})
@@ -7674,6 +7961,7 @@ func NewDictionaryValueWithAddress(
 		key := keysAndValues[i]
 		value := keysAndValues[i+1]
 		// TODO: handle existing value
+		// TODO: provide proper location range
 		_ = v.Insert(interpreter, ReturnEmptyLocationRange, key, value)
 	}
 
@@ -7769,10 +8057,11 @@ func (v *DictionaryValue) ContainsKey(
 ) BoolValue {
 
 	valueComparator := newValueComparator(interpreter, getLocationRange)
+	hashInputProvider := newHashInputProvider(interpreter, getLocationRange)
 
 	_, err := v.dictionary.Get(
 		valueComparator,
-		interpreter.getHashInput,
+		hashInputProvider,
 		keyValue,
 	)
 	if err != nil {
@@ -7791,10 +8080,11 @@ func (v *DictionaryValue) Get(
 ) (Value, bool) {
 
 	valueComparator := newValueComparator(interpreter, getLocationRange)
+	hashInputProvider := newHashInputProvider(interpreter, getLocationRange)
 
 	storable, err := v.dictionary.Get(
 		valueComparator,
-		interpreter.getHashInput,
+		hashInputProvider,
 		keyValue,
 	)
 	if err != nil {
@@ -7874,7 +8164,11 @@ func (v *DictionaryValue) RecursiveString(seenReferences SeenReferences) string 
 	return format.Dictionary(pairs)
 }
 
-func (v *DictionaryValue) GetMember(interpreter *Interpreter, _ func() LocationRange, name string) Value {
+func (v *DictionaryValue) GetMember(
+	interpreter *Interpreter,
+	getLocationRange func() LocationRange,
+	name string,
+) Value {
 
 	switch name {
 	case "length":
@@ -7891,7 +8185,8 @@ func (v *DictionaryValue) GetMember(interpreter *Interpreter, _ func() LocationR
 			// which always must be copied
 
 			dictionaryKeys[i] = MustConvertStoredValue(key).
-				DeepCopy(interpreter, atree.Address{})
+				DeepCopy(interpreter, getLocationRange, atree.Address{})
+
 			i++
 
 			return true, nil
@@ -7905,6 +8200,7 @@ func (v *DictionaryValue) GetMember(interpreter *Interpreter, _ func() LocationR
 			VariableSizedStaticType{
 				Type: v.Type.KeyType,
 			},
+			common.Address{},
 			dictionaryKeys...,
 		)
 
@@ -7919,7 +8215,8 @@ func (v *DictionaryValue) GetMember(interpreter *Interpreter, _ func() LocationR
 			// are only ever struct-kinded, which always must be copied
 
 			dictionaryValues[i] = MustConvertStoredValue(value).
-				DeepCopy(interpreter, atree.Address{})
+				DeepCopy(interpreter, getLocationRange, atree.Address{})
+
 			i++
 
 			return true, nil
@@ -7933,6 +8230,7 @@ func (v *DictionaryValue) GetMember(interpreter *Interpreter, _ func() LocationR
 			VariableSizedStaticType{
 				Type: v.Type.ValueType,
 			},
+			common.Address{},
 			dictionaryValues...,
 		)
 
@@ -7947,6 +8245,9 @@ func (v *DictionaryValue) GetMember(interpreter *Interpreter, _ func() LocationR
 					keyValue,
 				)
 			},
+			sema.DictionaryRemoveFunctionType(
+				interpreter.ConvertStaticToSemaType(v.StaticType()).(*sema.DictionaryType),
+			),
 		)
 
 	case "insert":
@@ -7962,6 +8263,9 @@ func (v *DictionaryValue) GetMember(interpreter *Interpreter, _ func() LocationR
 					newValue,
 				)
 			},
+			sema.DictionaryInsertFunctionType(
+				interpreter.ConvertStaticToSemaType(v.StaticType()).(*sema.DictionaryType),
+			),
 		)
 
 	case "containsKey":
@@ -7973,6 +8277,9 @@ func (v *DictionaryValue) GetMember(interpreter *Interpreter, _ func() LocationR
 					invocation.Arguments[0],
 				)
 			},
+			sema.DictionaryContainsKeyFunctionType(
+				interpreter.ConvertStaticToSemaType(v.StaticType()).(*sema.DictionaryType),
+			),
 		)
 
 	}
@@ -8004,10 +8311,13 @@ func (v *DictionaryValue) Remove(
 ) OptionalValue {
 
 	valueComparator := newValueComparator(interpreter, getLocationRange)
+	hashInputProvider := newHashInputProvider(interpreter, getLocationRange)
 
+	// No need to clean up storable for passed-in key value,
+	// as atree never calls Storable()
 	existingKeyStorable, existingValueStorable, err := v.dictionary.Remove(
 		valueComparator,
-		interpreter.getHashInput,
+		hashInputProvider,
 		keyValue,
 	)
 	if err != nil {
@@ -8016,6 +8326,7 @@ func (v *DictionaryValue) Remove(
 		}
 		panic(ExternalError{err})
 	}
+	interpreter.maybeCheckAtreeValue(v.dictionary)
 
 	storage := interpreter.Storage
 
@@ -8028,7 +8339,12 @@ func (v *DictionaryValue) Remove(
 	// Value
 
 	existingValue := StoredValue(existingValueStorable, storage)
-	existingValue = interpreter.TransferValue(existingValue, existingValueStorable, atree.Address{})
+	existingValue = interpreter.TransferValue(
+		getLocationRange,
+		existingValue,
+		existingValueStorable,
+		atree.Address{},
+	)
 
 	return NewSomeValueNonCopying(existingValue)
 }
@@ -8050,19 +8366,28 @@ func (v *DictionaryValue) Insert(
 	interpreter.checkContainerMutation(v.Type.KeyType, keyValue, getLocationRange)
 	interpreter.checkContainerMutation(v.Type.ValueType, value, getLocationRange)
 
-	value = interpreter.TransferValue(value, nil, v.dictionary.Address())
+	value = interpreter.TransferValue(
+		getLocationRange,
+		value,
+		nil,
+		v.dictionary.Address(),
+	)
 
 	valueComparator := newValueComparator(interpreter, getLocationRange)
+	hashInputProvider := newHashInputProvider(interpreter, getLocationRange)
 
+	// atree only calls Storable() on keyValue if needed,
+	// i.e., if the key is a new key
 	existingValueStorable, err := v.dictionary.Set(
 		valueComparator,
-		interpreter.getHashInput,
+		hashInputProvider,
 		keyValue,
 		value,
 	)
 	if err != nil {
 		panic(ExternalError{err})
 	}
+	interpreter.maybeCheckAtreeValue(v.dictionary)
 
 	if existingValueStorable == nil {
 		return NilValue{}
@@ -8070,7 +8395,12 @@ func (v *DictionaryValue) Insert(
 
 	existingValue := StoredValue(existingValueStorable, interpreter.Storage)
 
-	resultCopy := interpreter.TransferValue(existingValue, existingValueStorable, atree.Address{})
+	resultCopy := interpreter.TransferValue(
+		getLocationRange,
+		existingValue,
+		existingValueStorable,
+		atree.Address{},
+	)
 
 	return NewSomeValueNonCopying(resultCopy)
 }
@@ -8082,6 +8412,7 @@ type DictionaryEntryValues struct {
 
 func (v *DictionaryValue) ConformsToDynamicType(
 	interpreter *Interpreter,
+	getLocationRange func() LocationRange,
 	dynamicType DynamicType,
 	results TypeConformanceResults,
 ) bool {
@@ -8113,7 +8444,12 @@ func (v *DictionaryValue) ConformsToDynamicType(
 		// atree.OrderedMap iteration provides low-level atree.Value,
 		// convert to high-level interpreter.Value
 		entryKey := MustConvertStoredValue(key)
-		if !entryKey.ConformsToDynamicType(interpreter, entryType.KeyType, results) {
+		if !entryKey.ConformsToDynamicType(
+			interpreter,
+			getLocationRange,
+			entryType.KeyType,
+			results,
+		) {
 			return false
 		}
 
@@ -8122,7 +8458,12 @@ func (v *DictionaryValue) ConformsToDynamicType(
 		// atree.OrderedMap iteration provides low-level atree.Value,
 		// convert to high-level interpreter.Value
 		entryValue := MustConvertStoredValue(value)
-		if !entryValue.ConformsToDynamicType(interpreter, entryType.ValueType, results) {
+		if !entryValue.ConformsToDynamicType(
+			interpreter,
+			getLocationRange,
+			entryType.ValueType,
+			results,
+		) {
 			return false
 		}
 
@@ -8159,6 +8500,8 @@ func (v *DictionaryValue) Equal(interpreter *Interpreter, getLocationRange func(
 			return true
 		}
 
+		// Do NOT use an iterator, as other value may be stored in another account,
+		// leading to a different iteration order, as the storage ID is used in the seed
 		otherValue, otherValueExists :=
 			otherDictionary.Get(
 				interpreter,
@@ -8190,41 +8533,56 @@ func (v *DictionaryValue) NeedsStoreToAddress(_ *Interpreter, address atree.Addr
 	return v.StorageID().Address != address
 }
 
-func (v *DictionaryValue) DeepCopy(interpreter *Interpreter, address atree.Address) Value {
+func (v *DictionaryValue) DeepCopy(
+	interpreter *Interpreter,
+	getLocationRange func() LocationRange,
+	address atree.Address,
+) Value {
 
-	dictionary, err := atree.NewMap(
+	valueComparator := newValueComparator(interpreter, getLocationRange)
+	hashInputProvider := newHashInputProvider(interpreter, getLocationRange)
+
+	iterator, err := v.dictionary.Iterator()
+	if err != nil {
+		panic(ExternalError{err})
+	}
+
+	dictionary, err := atree.NewMapFromBatchData(
 		interpreter.Storage,
 		address,
 		atree.NewDefaultDigesterBuilder(),
 		v.dictionary.Type(),
+		valueComparator,
+		hashInputProvider,
+		v.dictionary.Seed(),
+		func() (atree.Value, atree.Value, error) {
+
+			atreeKey, atreeValue, err := iterator.Next()
+			if err != nil {
+				return nil, nil, err
+			}
+			if atreeKey == nil || atreeValue == nil {
+				return nil, nil, nil
+			}
+
+			key := MustConvertStoredValue(atreeKey)
+			keyCopy := interpreter.CopyValue(getLocationRange, key, address)
+
+			value := MustConvertStoredValue(atreeValue)
+			valueCopy := interpreter.CopyValue(getLocationRange, value, address)
+
+			return keyCopy, valueCopy, nil
+		},
 	)
 	if err != nil {
 		panic(ExternalError{err})
 	}
 
-	result := &DictionaryValue{
+	return &DictionaryValue{
 		Type:        v.Type,
 		dictionary:  dictionary,
 		isDestroyed: v.isDestroyed,
 	}
-
-	v.Iterate(func(key, value Value) (resume bool) {
-		// TODO: optimize
-		// NOTE: copy to temporary value, then insert
-		keyCopy := interpreter.CopyValue(key, atree.Address{})
-		valueCopy := interpreter.CopyValue(value, atree.Address{})
-
-		result.Insert(
-			interpreter,
-			ReturnEmptyLocationRange,
-			keyCopy,
-			valueCopy,
-		)
-
-		return true
-	})
-
-	return result
 }
 
 func (v *DictionaryValue) DeepRemove(interpreter *Interpreter) {
@@ -8246,7 +8604,7 @@ func (v *DictionaryValue) DeepRemove(interpreter *Interpreter) {
 	if err != nil {
 		panic(ExternalError{err})
 	}
-
+	interpreter.maybeCheckAtreeValue(v.dictionary)
 }
 
 func (v *DictionaryValue) GetOwner() common.Address {
@@ -8316,6 +8674,11 @@ var nilValueMapFunction = NewHostFunctionValue(
 	func(invocation Invocation) Value {
 		return NilValue{}
 	},
+	&sema.FunctionType{
+		ReturnTypeAnnotation: sema.NewTypeAnnotation(
+			sema.NeverType,
+		),
+	},
 )
 
 func (v NilValue) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
@@ -8331,7 +8694,12 @@ func (NilValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Va
 	panic(errors.NewUnreachableError())
 }
 
-func (v NilValue) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType, _ TypeConformanceResults) bool {
+func (v NilValue) ConformsToDynamicType(
+	_ *Interpreter,
+	_ func() LocationRange,
+	dynamicType DynamicType,
+	_ TypeConformanceResults,
+) bool {
 	_, ok := dynamicType.(NilDynamicType)
 	return ok
 }
@@ -8357,7 +8725,7 @@ func (NilValue) NeedsStoreToAddress(_ *Interpreter, _ atree.Address) bool {
 	return false
 }
 
-func (v NilValue) DeepCopy(_ *Interpreter, _ atree.Address) Value {
+func (v NilValue) DeepCopy(_ *Interpreter, _ func() LocationRange, _ atree.Address) Value {
 	return v
 }
 
@@ -8439,7 +8807,7 @@ func (v *SomeValue) RecursiveString(seenReferences SeenReferences) string {
 	return v.Value.RecursiveString(seenReferences)
 }
 
-func (v *SomeValue) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
+func (v *SomeValue) GetMember(inter *Interpreter, _ func() LocationRange, name string) Value {
 	switch name {
 	case "map":
 		return NewHostFunctionValue(
@@ -8460,6 +8828,7 @@ func (v *SomeValue) GetMember(_ *Interpreter, _ func() LocationRange, name strin
 
 				return NewSomeValueNonCopying(newValue)
 			},
+			sema.OptionalTypeMapFunctionType(inter.ConvertStaticToSemaType(v.Value.StaticType())),
 		)
 	}
 
@@ -8472,11 +8841,17 @@ func (*SomeValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ 
 
 func (v SomeValue) ConformsToDynamicType(
 	interpreter *Interpreter,
+	getLocationRange func() LocationRange,
 	dynamicType DynamicType,
 	results TypeConformanceResults,
 ) bool {
 	someType, ok := dynamicType.(SomeDynamicType)
-	return ok && v.Value.ConformsToDynamicType(interpreter, someType.InnerType, results)
+	return ok && v.Value.ConformsToDynamicType(
+		interpreter,
+		getLocationRange,
+		someType.InnerType,
+		results,
+	)
 }
 
 func (v *SomeValue) Equal(interpreter *Interpreter, getLocationRange func() LocationRange, other Value) bool {
@@ -8527,8 +8902,8 @@ func (v *SomeValue) NeedsStoreToAddress(interpreter *Interpreter, address atree.
 	return v.Value.NeedsStoreToAddress(interpreter, address)
 }
 
-func (v *SomeValue) DeepCopy(interpreter *Interpreter, address atree.Address) Value {
-	valueCopy := interpreter.CopyValue(v.Value, address)
+func (v *SomeValue) DeepCopy(interpreter *Interpreter, getLocationRange func() LocationRange, address atree.Address) Value {
+	valueCopy := interpreter.CopyValue(getLocationRange, v.Value, address)
 
 	result := NewSomeValueNonCopying(valueCopy)
 	result.isDestroyed = v.isDestroyed
@@ -8783,6 +9158,7 @@ func (v *StorageReferenceValue) Equal(_ *Interpreter, _ func() LocationRange, ot
 
 func (v *StorageReferenceValue) ConformsToDynamicType(
 	interpreter *Interpreter,
+	getLocationRange func() LocationRange,
 	dynamicType DynamicType,
 	results TypeConformanceResults,
 ) bool {
@@ -8807,7 +9183,12 @@ func (v *StorageReferenceValue) ConformsToDynamicType(
 		return false
 	}
 
-	return (*referencedValue).ConformsToDynamicType(interpreter, refType.InnerType(), results)
+	return (*referencedValue).ConformsToDynamicType(
+		interpreter,
+		getLocationRange,
+		refType.InnerType(),
+		results,
+	)
 }
 
 func (*StorageReferenceValue) IsStorable() bool {
@@ -8826,7 +9207,7 @@ func (*StorageReferenceValue) NeedsStoreToAddress(_ *Interpreter, _ atree.Addres
 	return false
 }
 
-func (v *StorageReferenceValue) DeepCopy(_ *Interpreter, _ atree.Address) Value {
+func (v *StorageReferenceValue) DeepCopy(_ *Interpreter, _ func() LocationRange, _ atree.Address) Value {
 	return v
 }
 
@@ -9057,6 +9438,7 @@ func (v *EphemeralReferenceValue) Equal(_ *Interpreter, _ func() LocationRange, 
 
 func (v *EphemeralReferenceValue) ConformsToDynamicType(
 	interpreter *Interpreter,
+	getLocationRange func() LocationRange,
 	dynamicType DynamicType,
 	results TypeConformanceResults,
 ) bool {
@@ -9094,7 +9476,12 @@ func (v *EphemeralReferenceValue) ConformsToDynamicType(
 	// doesn't depend on this. It depends on the rest of values of the object tree.
 	results[entry] = true
 
-	result := (*referencedValue).ConformsToDynamicType(interpreter, refType.InnerType(), results)
+	result := (*referencedValue).ConformsToDynamicType(
+		interpreter,
+		getLocationRange,
+		refType.InnerType(),
+		results,
+	)
 
 	results[entry] = result
 
@@ -9117,7 +9504,7 @@ func (*EphemeralReferenceValue) NeedsStoreToAddress(_ *Interpreter, _ atree.Addr
 	return false
 }
 
-func (v *EphemeralReferenceValue) DeepCopy(_ *Interpreter, _ atree.Address) Value {
+func (v *EphemeralReferenceValue) DeepCopy(_ *Interpreter, _ func() LocationRange, _ atree.Address) Value {
 	return v
 }
 
@@ -9193,8 +9580,8 @@ func (v AddressValue) Equal(_ *Interpreter, _ func() LocationRange, other Value)
 	return v == otherAddress
 }
 
-func (v AddressValue) HashInput(_ *Interpreter, _ []byte) []byte {
-	return v[:]
+func (v AddressValue) HashInput(_ *Interpreter, _ func() LocationRange, _ []byte) []byte {
+	return append([]byte{byte(HashInputTypeAddress)}, v[:]...)
 }
 
 func (v AddressValue) Hex() string {
@@ -9213,6 +9600,7 @@ func (v AddressValue) GetMember(interpreter *Interpreter, _ func() LocationRange
 			func(invocation Invocation) Value {
 				return NewStringValue(v.String())
 			},
+			sema.ToStringFunctionType,
 		)
 
 	case sema.AddressTypeToBytesFunctionName:
@@ -9221,6 +9609,7 @@ func (v AddressValue) GetMember(interpreter *Interpreter, _ func() LocationRange
 				address := common.Address(v)
 				return ByteSliceToByteArrayValue(interpreter, address[:])
 			},
+			sema.AddressTypeToBytesFunctionType,
 		)
 	}
 
@@ -9231,7 +9620,12 @@ func (AddressValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, 
 	panic(errors.NewUnreachableError())
 }
 
-func (v AddressValue) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType, _ TypeConformanceResults) bool {
+func (v AddressValue) ConformsToDynamicType(
+	_ *Interpreter,
+	_ func() LocationRange,
+	dynamicType DynamicType,
+	_ TypeConformanceResults,
+) bool {
 	_, ok := dynamicType.(AddressDynamicType)
 	return ok
 }
@@ -9252,7 +9646,7 @@ func (AddressValue) NeedsStoreToAddress(_ *Interpreter, _ atree.Address) bool {
 	return false
 }
 
-func (v AddressValue) DeepCopy(_ *Interpreter, _ atree.Address) Value {
+func (v AddressValue) DeepCopy(_ *Interpreter, _ func() LocationRange, _ atree.Address) Value {
 	return v
 }
 
@@ -9268,104 +9662,12 @@ func (v AddressValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 	return v, nil
 }
 
-// NewAuthAccountValue constructs an auth account value.
-func NewAuthAccountValue(
-	interpreter *Interpreter,
-	address AddressValue,
-	accountBalanceGet func() UFix64Value,
-	accountAvailableBalanceGet func() UFix64Value,
-	storageUsedGet func(interpreter *Interpreter) UInt64Value,
-	storageCapacityGet func() UInt64Value,
-	addPublicKeyFunction FunctionValue,
-	removePublicKeyFunction FunctionValue,
-	contracts *CompositeValue,
-	keys *CompositeValue,
-) *CompositeValue {
+func accountGetCapabilityFunction(
+	addressValue AddressValue,
+	pathType sema.Type,
+	funcType *sema.FunctionType,
+) *HostFunctionValue {
 
-	fields := []CompositeField{
-		{
-			Name:  sema.AuthAccountAddressField,
-			Value: address,
-		},
-		{
-			Name:  sema.AuthAccountAddPublicKeyField,
-			Value: addPublicKeyFunction,
-		},
-		{
-			Name:  sema.AuthAccountRemovePublicKeyField,
-			Value: removePublicKeyFunction,
-		},
-		{
-			Name:  sema.AuthAccountGetCapabilityField,
-			Value: accountGetCapabilityFunction(address, sema.CapabilityPathType),
-		},
-		{
-			Name:  sema.AuthAccountContractsField,
-			Value: contracts,
-		},
-		{
-			Name:  sema.AuthAccountKeysField,
-			Value: keys,
-		},
-	}
-
-	// Computed fields
-	computedFields := map[string]ComputedField{
-		sema.AuthAccountBalanceField: func(*Interpreter) Value {
-			return accountBalanceGet()
-		},
-		sema.AuthAccountAvailableBalanceField: func(*Interpreter) Value {
-			return accountAvailableBalanceGet()
-		},
-		sema.AuthAccountStorageUsedField: func(inter *Interpreter) Value {
-			return storageUsedGet(inter)
-		},
-		sema.AuthAccountStorageCapacityField: func(*Interpreter) Value {
-			return storageCapacityGet()
-		},
-		sema.AuthAccountLoadField: func(inter *Interpreter) Value {
-			return inter.authAccountLoadFunction(address)
-		},
-		sema.AuthAccountCopyField: func(inter *Interpreter) Value {
-			return inter.authAccountCopyFunction(address)
-		},
-		sema.AuthAccountSaveField: func(inter *Interpreter) Value {
-			return inter.authAccountSaveFunction(address)
-		},
-		sema.AuthAccountBorrowField: func(inter *Interpreter) Value {
-			return inter.authAccountBorrowFunction(address)
-		},
-		sema.AuthAccountLinkField: func(inter *Interpreter) Value {
-			return inter.authAccountLinkFunction(address)
-		},
-		sema.AuthAccountUnlinkField: func(inter *Interpreter) Value {
-			return inter.authAccountUnlinkFunction(address)
-		},
-		sema.AuthAccountGetLinkTargetField: func(inter *Interpreter) Value {
-			return inter.accountGetLinkTargetFunction(address)
-		},
-	}
-
-	stringer := func(_ SeenReferences) string {
-		return fmt.Sprintf("AuthAccount(%s)", address)
-	}
-
-	v := NewCompositeValue(
-		interpreter,
-		nil,
-		sema.AuthAccountType.QualifiedIdentifier(),
-		sema.AuthAccountType.Kind,
-		fields,
-		common.Address{},
-	)
-
-	v.ComputedFields = computedFields
-	v.Stringer = stringer
-
-	return v
-}
-
-func accountGetCapabilityFunction(addressValue AddressValue, pathType sema.Type) *HostFunctionValue {
 	return NewHostFunctionValue(
 		func(invocation Invocation) Value {
 
@@ -9398,77 +9700,8 @@ func accountGetCapabilityFunction(addressValue AddressValue, pathType sema.Type)
 				BorrowType: borrowStaticType,
 			}
 		},
+		funcType,
 	)
-}
-
-// NewPublicAccountValue constructs a public account value.
-func NewPublicAccountValue(
-	interpreter *Interpreter,
-	address AddressValue,
-	accountBalanceGet func() UFix64Value,
-	accountAvailableBalanceGet func() UFix64Value,
-	storageUsedGet func(interpreter *Interpreter) UInt64Value,
-	storageCapacityGet func() UInt64Value,
-	keys *CompositeValue,
-	contracts *CompositeValue,
-) *CompositeValue {
-
-	fields := []CompositeField{
-		{
-			Name:  sema.PublicAccountAddressField,
-			Value: address,
-		},
-		{
-			Name:  sema.PublicAccountGetCapabilityField,
-			Value: accountGetCapabilityFunction(address, sema.PublicPathType),
-		},
-		{
-			Name:  sema.PublicAccountKeysField,
-			Value: keys,
-		},
-		{
-			Name:  sema.PublicAccountContractsField,
-			Value: contracts,
-		},
-	}
-
-	// Computed fields
-	computedFields := map[string]ComputedField{
-		sema.PublicAccountBalanceField: func(*Interpreter) Value {
-			return accountBalanceGet()
-		},
-		sema.PublicAccountAvailableBalanceField: func(*Interpreter) Value {
-			return accountAvailableBalanceGet()
-		},
-		sema.PublicAccountStorageUsedField: func(inter *Interpreter) Value {
-			return storageUsedGet(inter)
-		},
-		sema.PublicAccountStorageCapacityField: func(*Interpreter) Value {
-			return storageCapacityGet()
-		},
-		sema.PublicAccountGetTargetLinkField: func(inter *Interpreter) Value {
-			return inter.accountGetLinkTargetFunction(address)
-		},
-	}
-
-	// Stringer function
-	stringer := func(_ SeenReferences) string {
-		return fmt.Sprintf("PublicAccount(%s)", address)
-	}
-
-	v := NewCompositeValue(
-		interpreter,
-		nil,
-		sema.PublicAccountType.QualifiedIdentifier(),
-		sema.PublicAccountType.Kind,
-		fields,
-		common.Address{},
-	)
-
-	v.ComputedFields = computedFields
-	v.Stringer = stringer
-
-	return v
 }
 
 // PathValue
@@ -9534,7 +9767,31 @@ func (v PathValue) RecursiveString(_ SeenReferences) string {
 	return v.String()
 }
 
-func (v PathValue) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType, _ TypeConformanceResults) bool {
+func (v PathValue) GetMember(_ *Interpreter, _ func() LocationRange, name string) Value {
+	switch name {
+
+	case sema.ToStringFunctionName:
+		return NewHostFunctionValue(
+			func(invocation Invocation) Value {
+				return NewStringValue(v.String())
+			},
+			sema.ToStringFunctionType,
+		)
+	}
+
+	return nil
+}
+
+func (PathValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
+	panic(errors.NewUnreachableError())
+}
+
+func (v PathValue) ConformsToDynamicType(
+	_ *Interpreter,
+	_ func() LocationRange,
+	dynamicType DynamicType,
+	_ TypeConformanceResults,
+) bool {
 	switch dynamicType.(type) {
 	case PublicPathDynamicType:
 		return v.Domain == common.PathDomainPublic
@@ -9557,9 +9814,10 @@ func (v PathValue) Equal(_ *Interpreter, _ func() LocationRange, other Value) bo
 		otherPath.Domain == v.Domain
 }
 
-func (v PathValue) HashInput(_ *Interpreter, scratch []byte) []byte {
-	scratch[0] = byte(v.Domain)
-	return append(scratch[:1], []byte(v.Identifier)...)
+func (v PathValue) HashInput(_ *Interpreter, _ func() LocationRange, scratch []byte) []byte {
+	scratch[0] = byte(HashInputTypePath)
+	scratch[1] = byte(v.Domain)
+	return append(scratch[:2], []byte(v.Identifier)...)
 }
 
 func (PathValue) IsStorable() bool {
@@ -9587,7 +9845,7 @@ func (PathValue) NeedsStoreToAddress(_ *Interpreter, _ atree.Address) bool {
 	return false
 }
 
-func (v PathValue) DeepCopy(_ *Interpreter, _ atree.Address) Value {
+func (v PathValue) DeepCopy(_ *Interpreter, _ func() LocationRange, _ atree.Address) Value {
 	return v
 }
 
@@ -9687,7 +9945,12 @@ func (*CapabilityValue) SetMember(_ *Interpreter, _ func() LocationRange, _ stri
 	panic(errors.NewUnreachableError())
 }
 
-func (v *CapabilityValue) ConformsToDynamicType(_ *Interpreter, dynamicType DynamicType, _ TypeConformanceResults) bool {
+func (v *CapabilityValue) ConformsToDynamicType(
+	_ *Interpreter,
+	_ func() LocationRange,
+	dynamicType DynamicType,
+	_ TypeConformanceResults,
+) bool {
 	_, ok := dynamicType.(CapabilityDynamicType)
 	return ok
 }
@@ -9750,11 +10013,15 @@ func (*CapabilityValue) NeedsStoreToAddress(_ *Interpreter, _ atree.Address) boo
 	return true
 }
 
-func (v *CapabilityValue) DeepCopy(interpreter *Interpreter, address atree.Address) Value {
+func (v *CapabilityValue) DeepCopy(
+	interpreter *Interpreter,
+	getLocationRange func() LocationRange,
+	address atree.Address,
+) Value {
 	// We can directly call DeepCopy on the child values, instead of potentially skipping copying
 	// by using interpreter.copyValue, as both values are struct-kinded, which always must be copied
-	addressCopy := v.Address.DeepCopy(interpreter, address).(AddressValue)
-	pathCopy := v.Path.DeepCopy(interpreter, address).(PathValue)
+	addressCopy := v.Address.DeepCopy(interpreter, getLocationRange, address).(AddressValue)
+	pathCopy := v.Path.DeepCopy(interpreter, getLocationRange, address).(PathValue)
 
 	return &CapabilityValue{
 		Address:    addressCopy,
@@ -9853,7 +10120,12 @@ func (v LinkValue) RecursiveString(seenReferences SeenReferences) string {
 	)
 }
 
-func (v LinkValue) ConformsToDynamicType(_ *Interpreter, _ DynamicType, _ TypeConformanceResults) bool {
+func (v LinkValue) ConformsToDynamicType(
+	_ *Interpreter,
+	_ func() LocationRange,
+	_ DynamicType,
+	_ TypeConformanceResults,
+) bool {
 	// There is no dynamic type for links,
 	// as they are not first-class values in programs,
 	// but only stored
@@ -9886,7 +10158,7 @@ func (LinkValue) NeedsStoreToAddress(_ *Interpreter, _ atree.Address) bool {
 	return false
 }
 
-func (v LinkValue) DeepCopy(_ *Interpreter, _ atree.Address) Value {
+func (v LinkValue) DeepCopy(_ *Interpreter, _ func() LocationRange, _ atree.Address) Value {
 	return v
 }
 
@@ -9900,48 +10172,6 @@ func (v LinkValue) ByteSize() uint32 {
 
 func (v LinkValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 	return v, nil
-}
-
-// NewAccountKeyValue constructs an AccountKey value.
-func NewAccountKeyValue(
-	interpreter *Interpreter,
-	keyIndex IntValue,
-	publicKey *CompositeValue,
-	hashAlgo *CompositeValue,
-	weight UFix64Value,
-	isRevoked BoolValue,
-) *CompositeValue {
-	fields := []CompositeField{
-		{
-			Name:  sema.AccountKeyKeyIndexField,
-			Value: keyIndex,
-		},
-		{
-			Name:  sema.AccountKeyPublicKeyField,
-			Value: publicKey,
-		},
-		{
-			Name:  sema.AccountKeyHashAlgoField,
-			Value: hashAlgo,
-		},
-		{
-			Name:  sema.AccountKeyWeightField,
-			Value: weight,
-		},
-		{
-			Name:  sema.AccountKeyIsRevokedField,
-			Value: isRevoked,
-		},
-	}
-
-	return NewCompositeValue(
-		interpreter,
-		nil,
-		sema.AccountKeyType.QualifiedIdentifier(),
-		sema.AccountKeyType.Kind,
-		fields,
-		common.Address{},
-	)
 }
 
 // NewPublicKeyValue constructs a PublicKey value.
@@ -9960,59 +10190,52 @@ func NewPublicKeyValue(
 		},
 	}
 
-	computedFields := map[string]ComputedField{
-		sema.PublicKeyPublicKeyField: func(interpreter *Interpreter) Value {
-			// We can directly call DeepCopy on the key array, instead of potentially skipping copying
-			// by using interpreter.copyValue, as the key array is always struct-kinded, which always must be copied
-			return publicKey.DeepCopy(interpreter, atree.Address{})
-		},
-	}
-
-	functions := map[string]FunctionValue{
-		sema.PublicKeyVerifyFunction: publicKeyVerifyFunction,
-	}
-
 	publicKeyValue := NewCompositeValue(
 		interpreter,
-		nil,
+		sema.PublicKeyType.Location,
 		sema.PublicKeyType.QualifiedIdentifier(),
 		sema.PublicKeyType.Kind,
 		fields,
 		common.Address{},
 	)
 
-	publicKeyValue.ComputedFields = computedFields
-	publicKeyValue.Functions = functions
+	publicKeyValue.ComputedFields = map[string]ComputedField{
+		sema.PublicKeyPublicKeyField: func(interpreter *Interpreter, getLocationRange func() LocationRange) Value {
+			// We can directly call DeepCopy on the key array, instead of potentially skipping copying
+			// by using interpreter.copyValue, as the key array is always struct-kinded, which always must be copied
+			return publicKey.DeepCopy(interpreter, getLocationRange, atree.Address{})
+		},
+	}
+	publicKeyValue.Functions = map[string]FunctionValue{
+		sema.PublicKeyVerifyFunction: publicKeyVerifyFunction,
+	}
 
 	// Validate the public key, and initialize 'isValid' field.
 
 	publicKeyValue.SetMember(
 		interpreter,
-		ReturnEmptyLocationRange,
+		getLocationRange,
 		sema.PublicKeyIsValidField,
 		validatePublicKey(interpreter, getLocationRange, publicKeyValue),
 	)
 
 	// Public key value to string should include the key even though it is a computed field
-	var stringerFields []CompositeField
-	publicKeyValue.Stringer = func(seenReferences SeenReferences) string {
-		if stringerFields == nil {
-			stringerFields = []CompositeField{
-				{
-					Name:  sema.PublicKeyPublicKeyField,
-					Value: publicKey,
-				},
-			}
-			publicKeyValue.ForEachField(func(name string, value Value) {
-				stringerFields = append(
-					stringerFields,
-					CompositeField{
-						Name:  name,
-						Value: value,
-					},
-				)
-			})
+	publicKeyValue.Stringer = func(publicKeyValue *CompositeValue, seenReferences SeenReferences) string {
+		stringerFields := []CompositeField{
+			{
+				Name:  sema.PublicKeyPublicKeyField,
+				Value: publicKey,
+			},
+			{
+				Name:  sema.PublicKeySignAlgoField,
+				Value: publicKeyValue.GetField(sema.PublicKeySignAlgoField),
+			},
+			{
+				Name:  sema.PublicKeyIsValidField,
+				Value: publicKeyValue.GetField(sema.PublicKeyIsValidField),
+			},
 		}
+
 		return formatComposite(
 			string(publicKeyValue.TypeID()),
 			stringerFields,
@@ -10051,101 +10274,5 @@ var publicKeyVerifyFunction = NewHostFunctionValue(
 			publicKey,
 		)
 	},
+	sema.PublicKeyVerifyFunctionType,
 )
-
-// NewAuthAccountKeysValue constructs a AuthAccount.Keys value.
-func NewAuthAccountKeysValue(
-	interpreter *Interpreter,
-	addFunction FunctionValue,
-	getFunction FunctionValue,
-	revokeFunction FunctionValue,
-) *CompositeValue {
-
-	fields := []CompositeField{
-		{
-			Name:  sema.AccountKeysAddFunctionName,
-			Value: addFunction,
-		},
-		{
-			Name:  sema.AccountKeysGetFunctionName,
-			Value: getFunction,
-		},
-		{
-			Name:  sema.AccountKeysRevokeFunctionName,
-			Value: revokeFunction,
-		},
-	}
-
-	return NewCompositeValue(
-		interpreter,
-		nil,
-		sema.AuthAccountKeysType.QualifiedIdentifier(),
-		sema.AuthAccountKeysType.Kind,
-		fields,
-		common.Address{},
-	)
-}
-
-// NewPublicAccountKeysValue constructs a PublicAccount.Keys value.
-func NewPublicAccountKeysValue(
-	interpreter *Interpreter,
-	getFunction FunctionValue,
-) *CompositeValue {
-
-	fields := []CompositeField{
-		{
-			Name:  sema.AccountKeysGetFunctionName,
-			Value: getFunction,
-		},
-	}
-
-	return NewCompositeValue(
-		interpreter,
-		nil,
-		sema.PublicAccountKeysType.QualifiedIdentifier(),
-		sema.PublicAccountKeysType.Kind,
-		fields,
-		common.Address{},
-	)
-}
-
-// PublicAccountContractsValue
-
-func NewPublicAccountContractsValue(
-	interpreter *Interpreter,
-	address AddressValue,
-	getFunction FunctionValue,
-	namesGetter func(interpreter *Interpreter) *ArrayValue,
-) *CompositeValue {
-
-	fields := []CompositeField{
-		{
-			Name:  sema.PublicAccountContractsTypeGetFunctionName,
-			Value: getFunction,
-		},
-	}
-
-	computedFields := map[string]ComputedField{
-		sema.PublicAccountContractsTypeNamesField: func(interpreter *Interpreter) Value {
-			return namesGetter(interpreter)
-		},
-	}
-
-	stringer := func(_ SeenReferences) string {
-		return fmt.Sprintf("PublicAccount.Contracts(%s)", address)
-	}
-
-	v := NewCompositeValue(
-		interpreter,
-		nil,
-		sema.PublicAccountContractsType.QualifiedIdentifier(),
-		sema.PublicAccountContractsType.Kind,
-		fields,
-		common.Address{},
-	)
-
-	v.Stringer = stringer
-	v.ComputedFields = computedFields
-
-	return v
-}

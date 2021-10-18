@@ -221,11 +221,9 @@ func TestInterpretTransactions(t *testing.T) {
         `)
 
 		signer1 := newTestAuthAccountValue(
-			inter,
 			interpreter.AddressValue{0, 0, 0, 0, 0, 0, 0, 1},
 		)
 		signer2 := newTestAuthAccountValue(
-			inter,
 			interpreter.AddressValue{0, 0, 0, 0, 0, 0, 0, 2},
 		)
 
@@ -260,7 +258,6 @@ func TestInterpretTransactions(t *testing.T) {
 
 		prepareArguments := []interpreter.Value{
 			newTestAuthAccountValue(
-				inter,
 				interpreter.AddressValue{},
 			),
 		}
