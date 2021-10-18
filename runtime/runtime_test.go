@@ -620,11 +620,11 @@ func TestRuntimeProgramSetAndGet(t *testing.T) {
 	programsHits := make(map[common.LocationID]bool)
 
 	importedScript := []byte(`
-      transaction {
-          prepare() {}
-          execute {}
-      }
-    `)
+	   transaction {
+		   prepare() {}
+		   execute {}
+	   }
+	 `)
 	importedScriptLocation := common.StringLocation("imported")
 
 	runtime := newTestInterpreterRuntime()
@@ -654,13 +654,13 @@ func TestRuntimeProgramSetAndGet(t *testing.T) {
 	t.Run("empty programs, miss", func(t *testing.T) {
 
 		script := []byte(`
-          import "imported"
-
-          transaction {
-              prepare() {}
-              execute {}
-          }
-        `)
+		   import "imported"
+ 
+		   transaction {
+			   prepare() {}
+			   execute {}
+		   }
+		 `)
 		scriptLocation := common.StringLocation("placeholder")
 
 		// Initial call, should parse script, store program.
@@ -685,13 +685,13 @@ func TestRuntimeProgramSetAndGet(t *testing.T) {
 	t.Run("program previously parsed, hit", func(t *testing.T) {
 
 		script := []byte(`
-          import "imported"
-
-          transaction {
-              prepare() {}
-              execute {}
-          }
-        `)
+		   import "imported"
+ 
+		   transaction {
+			   prepare() {}
+			   execute {}
+		   }
+		 `)
 		scriptLocation := common.StringLocation("placeholder")
 
 		// Call a second time to hit stored programs.
@@ -711,13 +711,13 @@ func TestRuntimeProgramSetAndGet(t *testing.T) {
 	t.Run("imported program previously parsed, hit", func(t *testing.T) {
 
 		script := []byte(`
-          import "imported"
-
-          transaction {
-              prepare() {}
-              execute {}
-          }
-        `)
+		   import "imported"
+ 
+		   transaction {
+			   prepare() {}
+			   execute {}
+		   }
+		 `)
 		scriptLocation := common.StringLocation("placeholder")
 
 		// Call a second time to hit the stored programs
@@ -838,12 +838,12 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
 		{
 			label: "Single argument",
 			script: `
-              transaction(x: Int) {
-                execute {
-                  log(x)
-                }
-              }
-            `,
+			   transaction(x: Int) {
+				 execute {
+				   log(x)
+				 }
+			   }
+			 `,
 			args: [][]byte{
 				jsoncdc.MustEncode(cadence.NewInt(42)),
 			},
@@ -852,16 +852,16 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
 		{
 			label: "Single argument with authorizer",
 			script: `
-              transaction(x: Int) {
-                prepare(signer: AuthAccount) {
-                  log(signer.address)
-                }
-
-                execute {
-                  log(x)
-                }
-              }
-            `,
+			   transaction(x: Int) {
+				 prepare(signer: AuthAccount) {
+				   log(signer.address)
+				 }
+ 
+				 execute {
+				   log(x)
+				 }
+			   }
+			 `,
 			args: [][]byte{
 				jsoncdc.MustEncode(cadence.NewInt(42)),
 			},
@@ -871,13 +871,13 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
 		{
 			label: "Multiple arguments",
 			script: `
-              transaction(x: Int, y: String) {
-                execute {
-                  log(x)
-                  log(y)
-                }
-              }
-            `,
+			   transaction(x: Int, y: String) {
+				 execute {
+				   log(x)
+				   log(y)
+				 }
+			   }
+			 `,
 			args: [][]byte{
 				jsoncdc.MustEncode(cadence.NewInt(42)),
 				jsoncdc.MustEncode(cadence.String("foo")),
@@ -887,8 +887,8 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
 		{
 			label: "Invalid bytes",
 			script: `
-              transaction(x: Int) { execute {} }
-            `,
+			   transaction(x: Int) { execute {} }
+			 `,
 			args: [][]byte{
 				{1, 2, 3, 4}, // not valid JSON-CDC
 			},
@@ -900,12 +900,12 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
 		{
 			label: "Type mismatch",
 			script: `
-              transaction(x: Int) {
-                execute {
-                  log(x)
-                }
-              }
-            `,
+			   transaction(x: Int) {
+				 execute {
+				   log(x)
+				 }
+			   }
+			 `,
 			args: [][]byte{
 				jsoncdc.MustEncode(cadence.String("foo")),
 			},
@@ -918,13 +918,13 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
 		{
 			label: "Address",
 			script: `
-              transaction(x: Address) {
-                execute {
-                  let acct = getAccount(x)
-                  log(acct.address)
-                }
-              }
-            `,
+			   transaction(x: Address) {
+				 execute {
+				   let acct = getAccount(x)
+				   log(acct.address)
+				 }
+			   }
+			 `,
 			args: [][]byte{
 				jsoncdc.MustEncode(
 					cadence.BytesToAddress(
@@ -940,12 +940,12 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
 		{
 			label: "Array",
 			script: `
-              transaction(x: [Int]) {
-                execute {
-                  log(x)
-                }
-              }
-            `,
+			   transaction(x: [Int]) {
+				 execute {
+				   log(x)
+				 }
+			   }
+			 `,
 			args: [][]byte{
 				jsoncdc.MustEncode(
 					cadence.NewArray(
@@ -962,12 +962,12 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
 		{
 			label: "Dictionary",
 			script: `
-              transaction(x: {String:Int}) {
-                execute {
-                  log(x["y"])
-                }
-              }
-            `,
+			   transaction(x: {String:Int}) {
+				 execute {
+				   log(x["y"])
+				 }
+			   }
+			 `,
 			args: [][]byte{
 				jsoncdc.MustEncode(
 					cadence.NewDictionary(
@@ -985,12 +985,12 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
 		{
 			label: "Invalid dictionary",
 			script: `
-              transaction(x: {String:String}) {
-                execute {
-                  log(x["y"])
-                }
-              }
-            `,
+			   transaction(x: {String:String}) {
+				 execute {
+				   log(x["y"])
+				 }
+			   }
+			 `,
 			args: [][]byte{
 				jsoncdc.MustEncode(
 					cadence.NewDictionary(
@@ -1012,20 +1012,20 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
 		{
 			label: "Struct",
 			script: `
-              pub struct Foo {
-                pub var y: String
-
-                init() {
-                  self.y = "initial string"
-                }
-               }
-
-              transaction(x: Foo) {
-                execute {
-                  log(x.y)
-                }
-              }
-            `,
+			   pub struct Foo {
+				 pub var y: String
+ 
+				 init() {
+				   self.y = "initial string"
+				 }
+				}
+ 
+			   transaction(x: Foo) {
+				 execute {
+				   log(x.y)
+				 }
+			   }
+			 `,
 			args: [][]byte{
 				jsoncdc.MustEncode(
 					cadence.
@@ -1047,21 +1047,21 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
 		{
 			label: "Struct in array",
 			script: `
-              pub struct Foo {
-                pub var y: String
-
-                init() {
-                  self.y = "initial string"
-                }
-               }
-
-              transaction(f: [Foo]) {
-                execute {
-                  let x = f[0]
-                  log(x.y)
-                }
-              }
-            `,
+			   pub struct Foo {
+				 pub var y: String
+ 
+				 init() {
+				   self.y = "initial string"
+				 }
+				}
+ 
+			   transaction(f: [Foo]) {
+				 execute {
+				   let x = f[0]
+				   log(x.y)
+				 }
+			   }
+			 `,
 			args: [][]byte{
 				jsoncdc.MustEncode(
 					cadence.NewArray([]cadence.Value{
@@ -1152,20 +1152,20 @@ func TestRuntimeScriptArguments(t *testing.T) {
 		{
 			name: "No arguments",
 			script: `
-                pub fun main() {
-                    log("t")
-                }
-            `,
+				 pub fun main() {
+					 log("t")
+				 }
+			 `,
 			args:         nil,
 			expectedLogs: []string{`"t"`},
 		},
 		{
 			name: "Single argument",
 			script: `
-                pub fun main(x: Int) {
-                    log(x)
-                }
-            `,
+				 pub fun main(x: Int) {
+					 log(x)
+				 }
+			 `,
 			args: [][]byte{
 				jsoncdc.MustEncode(cadence.NewInt(42)),
 			},
@@ -1174,11 +1174,11 @@ func TestRuntimeScriptArguments(t *testing.T) {
 		{
 			name: "Multiple arguments",
 			script: `
-                pub fun main(x: Int, y: String) {
-                    log(x)
-                    log(y)
-                }
-            `,
+				 pub fun main(x: Int, y: String) {
+					 log(x)
+					 log(y)
+				 }
+			 `,
 			args: [][]byte{
 				jsoncdc.MustEncode(cadence.NewInt(42)),
 				jsoncdc.MustEncode(cadence.String("foo")),
@@ -1188,8 +1188,8 @@ func TestRuntimeScriptArguments(t *testing.T) {
 		{
 			name: "Invalid bytes",
 			script: `
-                pub fun main(x: Int) { }
-            `,
+				 pub fun main(x: Int) { }
+			 `,
 			args: [][]byte{
 				{1, 2, 3, 4}, // not valid JSON-CDC
 			},
@@ -1201,10 +1201,10 @@ func TestRuntimeScriptArguments(t *testing.T) {
 		{
 			name: "Type mismatch",
 			script: `
-                pub fun main(x: Int) {
-                    log(x)
-                }
-            `,
+				 pub fun main(x: Int) {
+					 log(x)
+				 }
+			 `,
 			args: [][]byte{
 				jsoncdc.MustEncode(cadence.String("foo")),
 			},
@@ -1217,10 +1217,10 @@ func TestRuntimeScriptArguments(t *testing.T) {
 		{
 			name: "Address",
 			script: `
-                pub fun main(x: Address) {
-                    log(x)
-                }
-            `,
+				 pub fun main(x: Address) {
+					 log(x)
+				 }
+			 `,
 			args: [][]byte{
 				jsoncdc.MustEncode(
 					cadence.BytesToAddress(
@@ -1236,10 +1236,10 @@ func TestRuntimeScriptArguments(t *testing.T) {
 		{
 			name: "Array",
 			script: `
-                pub fun main(x: [Int]) {
-                    log(x)
-                }
-            `,
+				 pub fun main(x: [Int]) {
+					 log(x)
+				 }
+			 `,
 			args: [][]byte{
 				jsoncdc.MustEncode(
 					cadence.NewArray(
@@ -1256,10 +1256,10 @@ func TestRuntimeScriptArguments(t *testing.T) {
 		{
 			name: "Constant-sized array, too many elements",
 			script: `
-                pub fun main(x: [Int; 2]) {
-                    log(x)
-                }
-            `,
+				 pub fun main(x: [Int; 2]) {
+					 log(x)
+				 }
+			 `,
 			args: [][]byte{
 				jsoncdc.MustEncode(
 					cadence.NewArray(
@@ -1280,10 +1280,10 @@ func TestRuntimeScriptArguments(t *testing.T) {
 		{
 			name: "Constant-sized array, too few elements",
 			script: `
-                pub fun main(x: [Int; 2]) {
-                    log(x)
-                }
-            `,
+				 pub fun main(x: [Int; 2]) {
+					 log(x)
+				 }
+			 `,
 			args: [][]byte{
 				jsoncdc.MustEncode(
 					cadence.NewArray(
@@ -1302,10 +1302,10 @@ func TestRuntimeScriptArguments(t *testing.T) {
 		{
 			name: "Dictionary",
 			script: `
-                pub fun main(x: {String:Int}) {
-                    log(x["y"])
-                }
-            `,
+				 pub fun main(x: {String:Int}) {
+					 log(x["y"])
+				 }
+			 `,
 			args: [][]byte{
 				jsoncdc.MustEncode(
 					cadence.NewDictionary(
@@ -1323,10 +1323,10 @@ func TestRuntimeScriptArguments(t *testing.T) {
 		{
 			name: "Invalid dictionary",
 			script: `
-                pub fun main(x: {String:String}) {
-                    log(x["y"])
-                }
-            `,
+				 pub fun main(x: {String:String}) {
+					 log(x["y"])
+				 }
+			 `,
 			args: [][]byte{
 				jsoncdc.MustEncode(
 					cadence.NewDictionary(
@@ -1348,18 +1348,18 @@ func TestRuntimeScriptArguments(t *testing.T) {
 		{
 			name: "Struct",
 			script: `
-                pub struct Foo {
-                    pub var y: String
-
-                    init() {
-                        self.y = "initial string"
-                    }
-                }
-
-                pub fun main(x: Foo) {
-                    log(x.y)
-                }
-            `,
+				 pub struct Foo {
+					 pub var y: String
+ 
+					 init() {
+						 self.y = "initial string"
+					 }
+				 }
+ 
+				 pub fun main(x: Foo) {
+					 log(x.y)
+				 }
+			 `,
 			args: [][]byte{
 				jsoncdc.MustEncode(
 					cadence.
@@ -1381,19 +1381,19 @@ func TestRuntimeScriptArguments(t *testing.T) {
 		{
 			name: "Struct in array",
 			script: `
-                pub struct Foo {
-                    pub var y: String
-
-                    init() {
-                        self.y = "initial string"
-                    }
-                }
-
-                pub fun main(f: [Foo]) {
-                    let x = f[0]
-                    log(x.y)
-                }
-            `,
+				 pub struct Foo {
+					 pub var y: String
+ 
+					 init() {
+						 self.y = "initial string"
+					 }
+				 }
+ 
+				 pub fun main(f: [Foo]) {
+					 let x = f[0]
+					 log(x.y)
+				 }
+			 `,
 			args: [][]byte{
 				jsoncdc.MustEncode(
 					cadence.NewArray([]cadence.Value{
@@ -1550,41 +1550,41 @@ func TestRuntimeStorage(t *testing.T) {
 		   log(s2 != nil)
 		 `,
 		"resource array": `
-          let rs <- signer.load<@[R]>(from: /storage/rs)
-          log(rs == nil)
-          destroy rs
-
-          signer.save(<-[<-createR()], to: /storage/rs)
-          let rs2 <- signer.load<@[R]>(from: /storage/rs)
-          log(rs2 != nil)
-          destroy rs2
-        `,
+		   let rs <- signer.load<@[R]>(from: /storage/rs)
+		   log(rs == nil)
+		   destroy rs
+ 
+		   signer.save(<-[<-createR()], to: /storage/rs)
+		   let rs2 <- signer.load<@[R]>(from: /storage/rs)
+		   log(rs2 != nil)
+		   destroy rs2
+		 `,
 		"struct array": `
-          let s = signer.load<[S]>(from: /storage/s)
-          log(s == nil)
-
-          signer.save([S()], to: /storage/s)
-          let s2 = signer.load<[S]>(from: /storage/s)
-          log(s2 != nil)
-        `,
+		   let s = signer.load<[S]>(from: /storage/s)
+		   log(s == nil)
+ 
+		   signer.save([S()], to: /storage/s)
+		   let s2 = signer.load<[S]>(from: /storage/s)
+		   log(s2 != nil)
+		 `,
 		"resource dictionary": `
-          let rs <- signer.load<@{String: R}>(from: /storage/rs)
-          log(rs == nil)
-          destroy rs
-
-          signer.save(<-{"r": <-createR()}, to: /storage/rs)
-          let rs2 <- signer.load<@{String: R}>(from: /storage/rs)
-          log(rs2 != nil)
-          destroy rs2
-        `,
+		   let rs <- signer.load<@{String: R}>(from: /storage/rs)
+		   log(rs == nil)
+		   destroy rs
+ 
+		   signer.save(<-{"r": <-createR()}, to: /storage/rs)
+		   let rs2 <- signer.load<@{String: R}>(from: /storage/rs)
+		   log(rs2 != nil)
+		   destroy rs2
+		 `,
 		"struct dictionary": `
-          let s = signer.load<{String: S}>(from: /storage/s)
-          log(s == nil)
-
-          signer.save({"s": S()}, to: /storage/s)
-          let rs2 = signer.load<{String: S}>(from: /storage/s)
-          log(rs2 != nil)
-        `,
+		   let s = signer.load<{String: S}>(from: /storage/s)
+		   log(s == nil)
+ 
+		   signer.save({"s": S()}, to: /storage/s)
+		   let rs2 = signer.load<{String: S}>(from: /storage/s)
+		   log(rs2 != nil)
+		 `,
 	}
 
 	for name, code := range tests {
@@ -2568,10 +2568,10 @@ func TestRuntimeScriptParameterTypeNotImportableError(t *testing.T) {
 	runtime := newTestInterpreterRuntime()
 
 	script := []byte(`
-      pub fun main(x: ((): Int)) {
-        return
-      }
-    `)
+	   pub fun main(x: ((): Int)) {
+		 return
+	   }
+	 `)
 
 	runtimeInterface := &testRuntimeInterface{
 		getSigningAccounts: func() ([]Address, error) {
@@ -3076,28 +3076,28 @@ func TestRuntimeInvokeContractFunction(t *testing.T) {
 	}
 
 	contract := []byte(`
-        pub contract Test {
-            pub fun hello() {
-                log("Hello World!")
-            }
-            pub fun helloArg(_ arg: String) {
-                log("Hello ".concat(arg))
-            }
-            pub fun helloMultiArg(arg1: String, arg2: Int, arg3: Address) {
-                log("Hello ".concat(arg1).concat(" ").concat(arg2.toString()).concat(" from ").concat(arg3.toString()))
-            }
-            pub fun helloReturn(_ arg: String): String {
-                log("Hello return!")
-                return arg
-            }
-            pub fun helloAuthAcc(account: AuthAccount) {
-                log("Hello ".concat(account.address.toString()))
-            }
-            pub fun helloPublicAcc(account: PublicAccount) {
-                log("Hello pub ".concat(account.address.toString()))
-            }
-        }
-    `)
+		 pub contract Test {
+			 pub fun hello() {
+				 log("Hello World!")
+			 }
+			 pub fun helloArg(_ arg: String) {
+				 log("Hello ".concat(arg))
+			 }
+			 pub fun helloMultiArg(arg1: String, arg2: Int, arg3: Address) {
+				 log("Hello ".concat(arg1).concat(" ").concat(arg2.toString()).concat(" from ").concat(arg3.toString()))
+			 }
+			 pub fun helloReturn(_ arg: String): String {
+				 log("Hello return!")
+				 return arg
+			 }
+			 pub fun helloAuthAcc(account: AuthAccount) {
+				 log("Hello ".concat(account.address.toString()))
+			 }
+			 pub fun helloPublicAcc(account: PublicAccount) {
+				 log("Hello pub ".concat(account.address.toString()))
+			 }
+		 }
+	 `)
 
 	deploy := utils.DeploymentTransaction("Test", contract)
 
@@ -3355,15 +3355,15 @@ func TestRuntimeContractNestedResource(t *testing.T) {
 	 `)
 
 	tx := []byte(`
-        import Test from 0x01
-
-        transaction {
-
-            prepare(acct: AuthAccount) {
-                log(acct.borrow<&Test.R>(from: /storage/r)?.hello())
-            }
-        }
-    `)
+		 import Test from 0x01
+ 
+		 transaction {
+ 
+			 prepare(acct: AuthAccount) {
+				 log(acct.borrow<&Test.R>(from: /storage/r)?.hello())
+			 }
+		 }
+	 `)
 
 	deploy := utils.DeploymentTransaction("Test", contract)
 
@@ -3451,16 +3451,16 @@ func TestRuntimeStorageLoadedDestructionConcreteType(t *testing.T) {
 	 `)
 
 	tx := []byte(`
-        import Test from 0x01
-
-        transaction {
-
-            prepare(acct: AuthAccount) {
-                let r <- acct.load<@Test.R>(from: /storage/r)
-                destroy r
-            }
-        }
-    `)
+		 import Test from 0x01
+ 
+		 transaction {
+ 
+			 prepare(acct: AuthAccount) {
+				 let r <- acct.load<@Test.R>(from: /storage/r)
+				 destroy r
+			 }
+		 }
+	 `)
 
 	deploy := utils.DeploymentTransaction("Test", contract)
 
@@ -3545,17 +3545,17 @@ func TestRuntimeStorageLoadedDestructionAnyResource(t *testing.T) {
 	 `)
 
 	tx := []byte(`
-        // NOTE: *not* importing concrete implementation.
-        //   Should be imported automatically when loading the value from storage
-
-        transaction {
-
-            prepare(acct: AuthAccount) {
-                let r <- acct.load<@AnyResource>(from: /storage/r)
-                destroy r
-            }
-        }
-    `)
+		 // NOTE: *not* importing concrete implementation.
+		 //   Should be imported automatically when loading the value from storage
+ 
+		 transaction {
+ 
+			 prepare(acct: AuthAccount) {
+				 let r <- acct.load<@AnyResource>(from: /storage/r)
+				 destroy r
+			 }
+		 }
+	 `)
 
 	deploy := utils.DeploymentTransaction("Test", contract)
 
@@ -3641,17 +3641,17 @@ func TestRuntimeStorageLoadedDestructionAfterRemoval(t *testing.T) {
 	 `)
 
 	tx := []byte(`
-        // NOTE: *not* importing concrete implementation.
-        //   Should be imported automatically when loading the value from storage
-
-        transaction {
-
-            prepare(acct: AuthAccount) {
-                let r <- acct.load<@AnyResource>(from: /storage/r)
-                destroy r
-            }
-        }
-    `)
+		 // NOTE: *not* importing concrete implementation.
+		 //   Should be imported automatically when loading the value from storage
+ 
+		 transaction {
+ 
+			 prepare(acct: AuthAccount) {
+				 let r <- acct.load<@AnyResource>(from: /storage/r)
+				 destroy r
+			 }
+		 }
+	 `)
 
 	deploy := utils.DeploymentTransaction("Test", contract)
 	removal := utils.RemovalTransaction("Test")
@@ -4127,65 +4127,65 @@ func TestRuntimeInvokeStoredInterfaceFunction(t *testing.T) {
 	}
 
 	contractInterfaceCode := `
-      pub contract interface TestContractInterface {
-
-          pub resource interface RInterface {
-
-              pub fun check(a: Int, b: Int) {
-                  pre { a > 1 }
-                  post { b > 1 }
-              }
-          }
-      }
-    `
+	   pub contract interface TestContractInterface {
+ 
+		   pub resource interface RInterface {
+ 
+			   pub fun check(a: Int, b: Int) {
+				   pre { a > 1 }
+				   post { b > 1 }
+			   }
+		   }
+	   }
+	 `
 
 	contractCode := `
-      import TestContractInterface from 0x2
-
-      pub contract TestContract: TestContractInterface {
-
-          pub resource R: TestContractInterface.RInterface {
-
-              pub fun check(a: Int, b: Int) {
-                  pre { a < 3 }
-                  post { b < 3 }
-              }
-          }
-
-          pub fun createR(): @R {
-              return <-create R()
-          }
-       }
-    `
+	   import TestContractInterface from 0x2
+ 
+	   pub contract TestContract: TestContractInterface {
+ 
+		   pub resource R: TestContractInterface.RInterface {
+ 
+			   pub fun check(a: Int, b: Int) {
+				   pre { a < 3 }
+				   post { b < 3 }
+			   }
+		   }
+ 
+		   pub fun createR(): @R {
+			   return <-create R()
+		   }
+		}
+	 `
 
 	setupCode := []byte(`
-      import TestContractInterface from 0x2
-      import TestContract from 0x3
-
-      transaction {
-          prepare(signer: AuthAccount) {
-              signer.save(<-TestContract.createR(), to: /storage/r)
-          }
-      }
-    `)
+	   import TestContractInterface from 0x2
+	   import TestContract from 0x3
+ 
+	   transaction {
+		   prepare(signer: AuthAccount) {
+			   signer.save(<-TestContract.createR(), to: /storage/r)
+		   }
+	   }
+	 `)
 
 	makeUseCode := func(a int, b int) []byte {
 		return []byte(
 			fmt.Sprintf(
 				`
-                  import TestContractInterface from 0x2
-
-                  // NOTE: *not* importing concrete implementation.
-                  //   Should be imported automatically when loading the value from storage
-
-                  // import TestContract from 0x3
-
-                  transaction {
-                      prepare(signer: AuthAccount) {
-                          signer.borrow<&AnyResource{TestContractInterface.RInterface}>(from: /storage/r)?.check(a: %d, b: %d)
-                      }
-                  }
-                `,
+				   import TestContractInterface from 0x2
+ 
+				   // NOTE: *not* importing concrete implementation.
+				   //   Should be imported automatically when loading the value from storage
+ 
+				   // import TestContract from 0x3
+ 
+				   transaction {
+					   prepare(signer: AuthAccount) {
+						   signer.borrow<&AnyResource{TestContractInterface.RInterface}>(from: /storage/r)?.check(a: %d, b: %d)
+					   }
+				   }
+				 `,
 				a,
 				b,
 			),
@@ -6589,10 +6589,10 @@ func TestRuntimePanics(t *testing.T) {
 	runtime := newTestInterpreterRuntime()
 
 	script := []byte(`
-      pub fun main() {
-        [1][1]
-      }
-    `)
+	   pub fun main() {
+		 [1][1]
+	   }
+	 `)
 
 	storage := newTestLedger(nil, nil)
 
@@ -6741,18 +6741,18 @@ func TestRuntimeStackOverflow(t *testing.T) {
 	runtime := newTestInterpreterRuntime()
 
 	const contract = `
-
-        pub contract Recurse {
-
-            priv fun recurse() {
-                self.recurse()
-            }
-
-            init() {
-                self.recurse()
-            }
-        }
-    `
+ 
+		 pub contract Recurse {
+ 
+			 priv fun recurse() {
+				 self.recurse()
+			 }
+ 
+			 init() {
+				 self.recurse()
+			 }
+		 }
+	 `
 
 	deployTx := utils.DeploymentTransaction("Recurse", []byte(contract))
 
