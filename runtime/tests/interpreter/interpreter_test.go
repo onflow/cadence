@@ -19,8 +19,10 @@
 package interpreter_test
 
 import (
+	"bytes"
 	"fmt"
 	"math/big"
+	"sort"
 	"strings"
 	"testing"
 
@@ -7199,6 +7201,48 @@ func TestInterpretResourceMovingAndBorrowing(t *testing.T) {
 			value,
 		)
 
+		var permanentSlabs []atree.Slab
+
+		for _, slab := range inter.Storage.(interpreter.InMemoryStorage).Slabs {
+			if slab.ID().Address == (atree.Address{}) {
+				continue
+			}
+
+			permanentSlabs = append(permanentSlabs, slab)
+		}
+
+		require.Equal(t, 2, len(permanentSlabs))
+
+		sort.Slice(permanentSlabs, func(i, j int) bool {
+			a := permanentSlabs[i].ID()
+			b := permanentSlabs[j].ID()
+
+			switch bytes.Compare(a.Address[:], b.Address[:]) {
+			case -1:
+				return true
+			case 0:
+				return bytes.Compare(a.Index[:], b.Index[:]) < 0
+			case 1:
+				return false
+			default:
+				panic(errors.NewUnreachableError())
+			}
+		})
+
+		var storedValues []string
+
+		for _, slab := range permanentSlabs {
+			storedValue := interpreter.StoredValue(slab, inter.Storage)
+			storedValues = append(storedValues, storedValue.String())
+		}
+
+		require.Equal(t,
+			[]string{
+				`S.test.R1(r2: S.test.R2(value: "test", uuid: 2), uuid: 1)`,
+				`S.test.R2(value: "test", uuid: 2)`,
+			},
+			storedValues,
+		)
 	})
 }
 
