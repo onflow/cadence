@@ -9710,7 +9710,6 @@ func (v *SomeValue) Transfer(
 ) Value {
 
 	innerValue := v.Value
-	innerStorable := v.valueStorable
 
 	needsStoreTo := v.NeedsStoreTo(address)
 	isResourceKinded := v.IsResourceKinded(interpreter)
@@ -9718,12 +9717,6 @@ func (v *SomeValue) Transfer(
 	if needsStoreTo || !isResourceKinded {
 
 		innerValue = v.Value.Transfer(interpreter, getLocationRange, address, remove, nil)
-
-		var err error
-		innerStorable, err = innerValue.Storable(interpreter.Storage, address, atree.MaxInlineElementSize)
-		if err != nil {
-			panic(ExternalError{err})
-		}
 
 		if remove {
 			interpreter.RemoveReferencedSlab(v.valueStorable)
@@ -9733,11 +9726,11 @@ func (v *SomeValue) Transfer(
 
 	if isResourceKinded {
 		v.Value = innerValue
-		v.valueStorable = innerStorable
+		v.valueStorable = nil
 		return v
 	} else {
 		result := NewSomeValueNonCopying(innerValue)
-		result.valueStorable = innerStorable
+		result.valueStorable = nil
 		result.isDestroyed = v.isDestroyed
 		return result
 	}
