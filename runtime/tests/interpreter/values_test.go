@@ -67,23 +67,10 @@ func TestRandomMapOperations(t *testing.T) {
 			key := randomHashableValue(inter)
 			value := randomStorableValue(inter, orgOwner, 0)
 
-			var mapKey interface{}
-
-			// Dereference string-keys before putting into go-map,
-			// as go-map hashing treats pointers as unique values.
-			// i.e: Maintain the value as the key, rather than the pointer.
-			switch key := key.(type) {
-			case *interpreter.StringValue:
-				mapKey = *key
-			case interpreter.Value:
-				mapKey = key
-			default:
-				panic("unreachable")
-			}
-
+			mapKey := goMapKey(key)
 			entries[mapKey] = value
 
-			keyValues[i*2] = deepCopyValue(inter, key)
+			keyValues[i*2] = key
 			keyValues[i*2+1] = deepCopyValue(inter, value)
 		}
 
@@ -111,8 +98,19 @@ func TestRandomMapOperations(t *testing.T) {
 
 		require.Equal(t, testMap.Count(), len(entries))
 
-		o := testMap.GetOwner()
-		require.Equal(t, o[:], orgOwner[:])
+		owner := testMap.GetOwner()
+		require.Equal(t, owner[:], orgOwner[:])
+	})
+
+	t.Run("test iterator", func(t *testing.T) {
+		require.Equal(t, testMap.Count(), len(entries))
+
+		testMap.Iterate(func(key, value interpreter.Value) (resume bool) {
+			mapKey := goMapKey(key)
+			orgValue, _ := entries[mapKey]
+			assertEquals(t, inter, orgValue, value)
+			return true
+		})
 	})
 
 	t.Run("test deep copy", func(t *testing.T) {
@@ -136,8 +134,8 @@ func TestRandomMapOperations(t *testing.T) {
 
 		require.Equal(t, copyOfTestMap.Count(), len(entries))
 
-		o := copyOfTestMap.GetOwner()
-		require.Equal(t, o[:], newOwner[:])
+		owner := copyOfTestMap.GetOwner()
+		require.Equal(t, owner[:], newOwner[:])
 	})
 
 	t.Run("test deep removal", func(t *testing.T) {
@@ -164,13 +162,23 @@ func TestRandomMapOperations(t *testing.T) {
 
 		require.Equal(t, testMap.Count(), len(entries))
 
-		o := testMap.GetOwner()
-		require.Equal(t, o[:], orgOwner[:])
+		owner := testMap.GetOwner()
+		require.Equal(t, owner[:], orgOwner[:])
 	})
+}
 
-	t.Run("test iterator", func(t *testing.T) {
-		// TODO
-	})
+func goMapKey(key interpreter.Value) interface{} {
+	// Dereference string-keys before putting into go-map,
+	// as go-map hashing treats pointers as unique values.
+	// i.e: Maintain the value as the key, rather than the pointer.
+	switch key := key.(type) {
+	case *interpreter.StringValue:
+		return *key
+	case interpreter.Value:
+		return key
+	default:
+		panic("unreachable")
+	}
 }
 
 func assertEquals(t *testing.T,
@@ -214,7 +222,7 @@ func assertEquals(t *testing.T,
 		}
 
 	default:
-		require.Equal(t, actual, expected)
+		require.Equal(t, expected, actual)
 	}
 }
 
@@ -636,6 +644,7 @@ func generateCompositeValue(
 		)
 	}
 
+	// Add the type to the elaboration, to short-circuit the type lookup
 	inter.Program.Elaboration.CompositeTypes[compositeType.ID()] = compositeType
 
 	return interpreter.NewCompositeValue(
