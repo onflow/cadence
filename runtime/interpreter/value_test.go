@@ -21,10 +21,7 @@ package interpreter_test
 import (
 	"fmt"
 	"go/types"
-	"math/big"
-	"math/rand"
 	"testing"
-	"time"
 
 	"golang.org/x/tools/go/packages"
 

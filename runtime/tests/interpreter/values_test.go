@@ -11,11 +11,18 @@ import (
 
 	"github.com/onflow/atree"
 
+	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
+
+const containerMaxDepth = 3
+const containerMaxSize = 300
+
+// TODO make this a param
+const valueCount = 1_000
 
 func TestRandomMapOperations(t *testing.T) {
 	// TODO Skip by default
@@ -24,16 +31,27 @@ func TestRandomMapOperations(t *testing.T) {
 	fmt.Printf("Seed used for test: %d \n", seed)
 	rand.Seed(seed)
 
+	//elaboration := sema.NewElaboration()
+
 	storage := interpreter.NewInMemoryStorage()
 	inter, err := interpreter.NewInterpreter(
-		nil,
+		&interpreter.Program{
+			Program:     ast.NewProgram([]ast.Declaration{}),
+			Elaboration: sema.NewElaboration(),
+		},
 		utils.TestLocation,
 		interpreter.WithStorage(storage),
+		interpreter.WithImportLocationHandler(
+			func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
+				return interpreter.VirtualImport{
+					Elaboration: inter.Program.Elaboration,
+				}
+			},
+		),
 	)
 	require.NoError(t, err)
 
-	// TODO make this a param
-	numberOfValues := rand.Intn(100_000)
+	numberOfValues := rand.Intn(valueCount)
 
 	var testMap, copyOfTestMap *interpreter.DictionaryValue
 	var storageSize, slabCounts int
@@ -47,14 +65,14 @@ func TestRandomMapOperations(t *testing.T) {
 			// TODO maybe deep copy values
 
 			key := randomHashableValue(inter)
-			value := randomStorableValue(inter)
+			value := randomStorableValue(inter, orgOwner, 0)
 
 			var mapKey interface{}
 
 			// Dereference string-keys before putting into go-map,
 			// as go-map hashing treats pointers as unique values.
 			// i.e: Maintain the value as the key, rather than the pointer.
-			switch key := deepCopyBasicValue(key).(type) {
+			switch key := key.(type) {
 			case *interpreter.StringValue:
 				mapKey = *key
 			case interpreter.Value:
@@ -63,10 +81,10 @@ func TestRandomMapOperations(t *testing.T) {
 				panic("unreachable")
 			}
 
-			entries[mapKey] = deepCopyBasicValue(value)
+			entries[mapKey] = value
 
-			keyValues[i*2] = key
-			keyValues[i*2+1] = value
+			keyValues[i*2] = deepCopyValue(inter, key)
+			keyValues[i*2+1] = deepCopyValue(inter, value)
 		}
 
 		testMap = interpreter.NewDictionaryValueWithAddress(inter,
@@ -83,11 +101,11 @@ func TestRandomMapOperations(t *testing.T) {
 		for orgKey, orgValue := range entries {
 			key := dictionaryKey(orgKey)
 
-			v, found := testMap.Get(inter, nil, key)
+			v, found := testMap.Get(inter, interpreter.ReturnEmptyLocationRange, key)
 			require.True(t, found)
-			require.Equal(t, v, orgValue, "key: %s", orgKey)
+			assertEquals(t, inter, orgValue, v)
 
-			exists := testMap.ContainsKey(inter, nil, key)
+			exists := testMap.ContainsKey(inter, interpreter.ReturnEmptyLocationRange, key)
 			require.True(t, bool(exists))
 		}
 
@@ -99,17 +117,21 @@ func TestRandomMapOperations(t *testing.T) {
 
 	t.Run("test deep copy", func(t *testing.T) {
 		newOwner := atree.Address([8]byte{'B'})
-		copyOfTestMap = testMap.DeepCopy(inter, nil, newOwner).(*interpreter.DictionaryValue)
+		copyOfTestMap = testMap.DeepCopy(
+			inter,
+			interpreter.ReturnEmptyLocationRange,
+			newOwner,
+		).(*interpreter.DictionaryValue)
 
 		for orgKey, orgValue := range entries {
 			key := dictionaryKey(orgKey)
 
-			v, found := copyOfTestMap.Get(inter, nil, key)
-			require.True(t, found)
-			require.Equal(t, v, orgValue)
-
-			exists := copyOfTestMap.ContainsKey(inter, nil, key)
+			exists := copyOfTestMap.ContainsKey(inter, interpreter.ReturnEmptyLocationRange, key)
 			require.True(t, bool(exists))
+
+			v, found := copyOfTestMap.Get(inter, interpreter.ReturnEmptyLocationRange, key)
+			require.True(t, found)
+			assertEquals(t, inter, orgValue, v)
 		}
 
 		require.Equal(t, copyOfTestMap.Count(), len(entries))
@@ -132,11 +154,11 @@ func TestRandomMapOperations(t *testing.T) {
 		for orgKey, orgValue := range entries {
 			key := dictionaryKey(orgKey)
 
-			v, found := testMap.Get(inter, nil, key)
+			v, found := testMap.Get(inter, interpreter.ReturnEmptyLocationRange, key)
 			require.True(t, found)
-			require.Equal(t, v, orgValue)
+			assertEquals(t, inter, orgValue, v)
 
-			exists := testMap.ContainsKey(inter, nil, key)
+			exists := testMap.ContainsKey(inter, interpreter.ReturnEmptyLocationRange, key)
 			require.True(t, bool(exists))
 		}
 
@@ -149,10 +171,51 @@ func TestRandomMapOperations(t *testing.T) {
 	t.Run("test iterator", func(t *testing.T) {
 		// TODO
 	})
+}
 
-	// temp to prevent test cache
-	// t.Fatal("XXX")
+func assertEquals(t *testing.T,
+	inter *interpreter.Interpreter,
+	expected interpreter.Value,
+	actual interpreter.Value,
+) {
 
+	switch v := actual.(type) {
+	case *interpreter.CompositeValue:
+		require.IsType(t, expected, actual)
+		orgCompositeVal := expected.(*interpreter.CompositeValue)
+
+		orgCompositeVal.ForEachField(func(name string, value interpreter.Value) {
+			assertEquals(t, inter, orgCompositeVal.GetField(name), value)
+		})
+
+	case *interpreter.DictionaryValue:
+		require.IsType(t, expected, actual)
+		orgDictionaryVal := expected.(*interpreter.DictionaryValue)
+
+		require.Equal(t, orgDictionaryVal.Count(), v.Count())
+
+		orgDictionaryVal.Iterate(func(orgKey, orgValue interpreter.Value) (resume bool) {
+			value, ok := v.Get(inter, interpreter.ReturnEmptyLocationRange, orgKey)
+			require.True(t, ok)
+			assertEquals(t, inter, orgValue, value)
+			return true
+		})
+
+	case *interpreter.ArrayValue:
+		require.IsType(t, expected, actual)
+		orgArray := expected.(*interpreter.ArrayValue)
+
+		require.Equal(t, orgArray.Count(), v.Count())
+
+		for i := 0; i < orgArray.Count(); i++ {
+			orgElement := orgArray.Get(inter, interpreter.ReturnEmptyLocationRange, i)
+			element := v.Get(inter, interpreter.ReturnEmptyLocationRange, i)
+			assertEquals(t, inter, orgElement, element)
+		}
+
+	default:
+		require.Equal(t, actual, expected)
+	}
 }
 
 func dictionaryKey(i interface{}) interpreter.Value {
@@ -178,7 +241,7 @@ func getSlabStorageSize(t *testing.T, storage interpreter.InMemoryStorage) (tota
 	return
 }
 
-func deepCopyBasicValue(value interpreter.Value) interpreter.Value {
+func deepCopyValue(inter *interpreter.Interpreter, value interpreter.Value) interpreter.Value {
 	switch v := value.(type) {
 
 	// Int
@@ -256,18 +319,140 @@ func deepCopyBasicValue(value interpreter.Value) interpreter.Value {
 	case interpreter.BoolValue:
 		return v
 
+	case interpreter.VoidValue:
+		return interpreter.VoidValue{}
+
+	case *interpreter.DictionaryValue:
+		keyValues := make([]interpreter.Value, 0, v.Count()*2)
+		v.Iterate(func(key, value interpreter.Value) (resume bool) {
+			keyValues = append(keyValues, deepCopyValue(inter, key))
+			keyValues = append(keyValues, deepCopyValue(inter, value))
+			return true
+		})
+
+		return interpreter.NewDictionaryValueWithAddress(
+			inter,
+			interpreter.DictionaryStaticType{
+				KeyType:   v.Type.KeyType,
+				ValueType: v.Type.ValueType,
+			},
+			v.GetOwner(),
+			keyValues...,
+		)
+	case *interpreter.ArrayValue:
+		elements := make([]interpreter.Value, 0, v.Count())
+		v.Iterate(func(value interpreter.Value) (resume bool) {
+			elements = append(elements, deepCopyValue(inter, value))
+			return true
+		})
+
+		return interpreter.NewArrayValue(
+			inter,
+			v.Type,
+			v.GetOwner(),
+			elements...,
+		)
+	case *interpreter.CompositeValue:
+		fields := make([]interpreter.CompositeField, 0)
+		v.ForEachField(func(name string, value interpreter.Value) {
+			fields = append(fields, interpreter.CompositeField{
+				Name:  name,
+				Value: deepCopyValue(inter, value),
+			})
+		})
+
+		return interpreter.NewCompositeValue(
+			inter,
+			v.Location,
+			v.QualifiedIdentifier,
+			v.Kind,
+			fields,
+			v.GetOwner(),
+		)
 	default:
 		return interpreter.NilValue{}
 	}
 }
 
-func randomStorableValue(inter *interpreter.Interpreter) interpreter.Value {
-	n := rand.Intn(Enum)
+func randomStorableValue(inter *interpreter.Interpreter, owner common.Address, currentDepth int) interpreter.Value {
+	n := 0
+	if currentDepth < containerMaxDepth {
+		n = rand.Intn(Resource)
+	} else {
+		n = rand.Intn(Nil)
+	}
+
 	switch n {
+
+	// Non-hashable
 	case Void:
 		return interpreter.VoidValue{}
 	case Nil:
 		return interpreter.NilValue{}
+	case Dictionary:
+		entryCount := rand.Intn(containerMaxSize)
+		keyValues := make([]interpreter.Value, entryCount*2)
+		entries := make(map[interface{}]interpreter.Value, entryCount)
+
+		for i := 0; i < entryCount; i++ {
+			key := randomHashableValue(inter)
+			value := randomStorableValue(inter, owner, currentDepth+1)
+
+			var mapKey interface{}
+
+			// Dereference string-keys before putting into go-map,
+			// as go-map hashing treats pointers as unique values.
+			// i.e: Maintain the value as the key, rather than the pointer.
+			switch key := deepCopyValue(inter, key).(type) {
+			case *interpreter.StringValue:
+				mapKey = *key
+			case interpreter.Value:
+				mapKey = key
+			default:
+				panic("unreachable")
+			}
+
+			entries[mapKey] = deepCopyValue(inter, value)
+
+			keyValues[i*2] = key
+			keyValues[i*2+1] = value
+		}
+
+		return interpreter.NewDictionaryValueWithAddress(
+			inter,
+			interpreter.DictionaryStaticType{
+				KeyType:   interpreter.PrimitiveStaticTypeAnyStruct,
+				ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
+			},
+			owner,
+			keyValues...,
+		)
+	case Array:
+		elementsCount := rand.Intn(containerMaxSize)
+		elements := make([]interpreter.Value, elementsCount)
+
+		for i := 0; i < elementsCount; i++ {
+			value := randomStorableValue(inter, owner, currentDepth+1)
+			elements[i] = deepCopyValue(inter, value)
+		}
+
+		return interpreter.NewArrayValue(
+			inter,
+			interpreter.VariableSizedStaticType{
+				Type: interpreter.PrimitiveStaticTypeAnyStruct,
+			},
+			owner,
+			elements...,
+		)
+
+	case Struct:
+		return generateCompositeValue(inter, common.CompositeKindStructure, owner, currentDepth)
+	case Resource:
+		return generateCompositeValue(inter, common.CompositeKindResource, owner, currentDepth)
+	case Contract:
+		return generateCompositeValue(inter, common.CompositeKindContract, owner, currentDepth)
+
+	// Hashable
 	default:
 		return generateRandomHashableValue(inter, n)
 	}
@@ -372,13 +557,26 @@ func generateRandomHashableValue(inter *interpreter.Interpreter, n int) interpre
 		identifier := make([]byte, 8)
 		rand.Read(identifier)
 
+		address := make([]byte, 8)
+		rand.Read(address)
+
+		location := common.AddressLocation{
+			Address: common.BytesToAddress(address),
+			Name:    string(identifier),
+		}
+
+		enumType := &sema.CompositeType{
+			Identifier:  string(identifier),
+			EnumRawType: intSubtype(typ),
+			Kind:        common.CompositeKindEnum,
+			Location:    location,
+		}
+
+		inter.Program.Elaboration.CompositeTypes[enumType.ID()] = enumType
+
 		return interpreter.NewEnumCaseValue(
 			inter,
-			&sema.CompositeType{
-				Identifier:  string(identifier),
-				EnumRawType: intSubtype(typ),
-				Kind:        common.CompositeKindEnum,
-			},
+			enumType,
 			rawValue,
 			nil,
 		)
@@ -386,6 +584,68 @@ func generateRandomHashableValue(inter *interpreter.Interpreter, n int) interpre
 	default:
 		panic(fmt.Sprintf("unsupported:  %d", n))
 	}
+}
+
+func generateCompositeValue(
+	inter *interpreter.Interpreter,
+	kind common.CompositeKind,
+	owner common.Address,
+	currentDepth int,
+) interpreter.Value {
+
+	identifier := make([]byte, 8)
+	rand.Read(identifier)
+
+	address := make([]byte, 8)
+	rand.Read(address)
+
+	location := common.AddressLocation{
+		Address: common.BytesToAddress(address),
+		Name:    string(identifier),
+	}
+
+	fieldsCount := rand.Intn(8)
+	fields := make([]interpreter.CompositeField, fieldsCount)
+
+	for i := 0; i < fieldsCount; i++ {
+		fieldName := make([]byte, 8)
+		rand.Read(fieldName)
+
+		fields[i] = interpreter.CompositeField{
+			Name:  string(fieldName),
+			Value: randomStorableValue(inter, owner, currentDepth+1),
+		}
+	}
+
+	compositeType := &sema.CompositeType{
+		Location:   location,
+		Identifier: string(identifier),
+		Kind:       common.CompositeKindContract,
+	}
+
+	compositeType.Members = sema.NewStringMemberOrderedMap()
+	for _, field := range fields {
+		compositeType.Members.Set(
+			field.Name,
+			sema.NewPublicConstantFieldMember(
+				compositeType,
+				field.Name,
+				sema.AnyStructType, // TODO: handle resources
+				"",
+			),
+		)
+	}
+
+	inter.Program.Elaboration.CompositeTypes[compositeType.ID()] = compositeType
+
+	return interpreter.NewCompositeValue(
+		inter,
+		location,
+		string(identifier),
+		kind,
+		fields,
+		owner,
+	)
 }
 
 func intSubtype(n int) sema.Type {
@@ -483,7 +743,12 @@ const (
 	Void
 	Nil // `Never?`
 
+	// Containers
+	Array
+	Dictionary
 	Struct
 	Resource
+
+	// TODO:
 	Contract
 )
