@@ -46,6 +46,10 @@ func (v stringAtreeValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) 
 	return v, nil
 }
 
+func (stringAtreeValue) ChildStorables() []atree.Storable {
+	return nil
+}
+
 func stringAtreeHashInput(v atree.Value, _ []byte) ([]byte, error) {
 	return []byte(v.(stringAtreeValue)), nil
 }
