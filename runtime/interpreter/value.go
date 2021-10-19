@@ -647,6 +647,14 @@ func (v *StringValue) GetMember(interpreter *Interpreter, _ func() LocationRange
 			},
 			sema.StringTypeDecodeHexFunctionType,
 		)
+
+	case "toLower":
+		return NewHostFunctionValue(
+			func(invocation Invocation) Value {
+				return v.ToLower()
+			},
+			sema.StringTypeToLowerFunctionType,
+		)
 	}
 
 	return nil
@@ -664,6 +672,10 @@ func (v *StringValue) Length() int {
 		v.length = length
 	}
 	return v.length
+}
+
+func (v *StringValue) ToLower() *StringValue {
+	return NewStringValue(strings.ToLower(v.Str))
 }
 
 func (v *StringValue) Storable(storage atree.SlabStorage, address atree.Address, maxInlineSize uint64) (atree.Storable, error) {

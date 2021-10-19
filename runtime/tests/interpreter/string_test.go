@@ -186,3 +186,22 @@ func TestInterpretStringUtf8Field(t *testing.T) {
 		result,
 	)
 }
+
+func TestInterpretStringToLower(t *testing.T) {
+
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+      fun test(): String {
+          return "Flowers".toLower()
+      }
+	`)
+
+	result, err := inter.Invoke("test")
+	require.NoError(t, err)
+
+	require.Equal(t,
+		interpreter.NewStringValue("flowers"),
+		result,
+	)
+}
