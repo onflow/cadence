@@ -9,7 +9,7 @@ require (
 	github.com/fxamacker/cbor/v2 v2.2.1-0.20210927235116-3d6d5d1de29b
 	github.com/go-test/deep v1.0.5
 	github.com/logrusorgru/aurora v0.0.0-20200102142835-e9ef32dff381
-	github.com/onflow/atree v0.1.0-beta1.0.20211008192952-6f3786263f8a
+	github.com/onflow/atree v0.1.0-beta1.0.20211018224106-882a748d56aa
 	github.com/rivo/uniseg v0.2.0
 	github.com/schollz/progressbar/v3 v3.8.3
 	github.com/stretchr/testify v1.7.0
