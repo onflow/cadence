@@ -119,7 +119,23 @@ func (interpreter *Interpreter) visitIfStatementWithVariableDeclaration(
 	thenBlock, elseBlock *ast.Block,
 ) controlReturn {
 
-	value := interpreter.evalExpression(declaration.Value)
+	// NOTE: It is *REQUIRED* that the getter for the value is used
+	// instead of just evaluating value expression,
+	// as the value may be an access expression (member access, index access),
+	// which implicitly removes a resource.
+	//
+	// Performing the removal from the container is essential
+	// (and just evaluating the expression does not perform the removal),
+	// because if there is a second value,
+	// the assignment to the value will cause an overwrite of the value.
+	// If the resource was not moved ou of the container,
+	// its contents get deleted.
+
+	const allowMissing = false
+	value := interpreter.assignmentGetterSetter(declaration.Value).get(allowMissing)
+	if value == nil {
+		panic(errors.NewUnreachableError())
+	}
 
 	valueType := interpreter.Program.Elaboration.VariableDeclarationValueTypes[declaration]
 
@@ -359,6 +375,18 @@ func (interpreter *Interpreter) visitVariableDeclaration(
 	targetType := interpreter.Program.Elaboration.VariableDeclarationTargetTypes[declaration]
 	valueType := interpreter.Program.Elaboration.VariableDeclarationValueTypes[declaration]
 	secondValueType := interpreter.Program.Elaboration.VariableDeclarationSecondValueTypes[declaration]
+
+	// NOTE: It is *REQUIRED* that the getter for the value is used
+	// instead of just evaluating value expression,
+	// as the value may be an access expression (member access, index access),
+	// which implicitly removes a resource.
+	//
+	// Performing the removal from the container is essential
+	// (and just evaluating the expression does not perform the removal),
+	// because if there is a second value,
+	// the assignment to the value will cause an overwrite of the value.
+	// If the resource was not moved ou of the container,
+	// its contents get deleted.
 
 	const allowMissing = false
 	result := interpreter.assignmentGetterSetter(declaration.Value).get(allowMissing)
