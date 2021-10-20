@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/atree"
@@ -18,15 +19,15 @@ import (
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
+// TODO: make these program args?
 const containerMaxDepth = 3
-const containerMaxSize = 300
+const containerMaxSize = 1_000
+const innerContainerMaxSize = 300
+const compositeMaxFields = 10
 
-// TODO make this a param
-const valueCount = 1_000
+// TODO: Skip these tests by default
 
 func TestRandomMapOperations(t *testing.T) {
-	// TODO Skip by default
-
 	seed := time.Now().UnixNano()
 	fmt.Printf("Seed used for test: %d \n", seed)
 	rand.Seed(seed)
@@ -49,7 +50,7 @@ func TestRandomMapOperations(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	numberOfValues := rand.Intn(valueCount)
+	numberOfValues := rand.Intn(containerMaxSize)
 
 	var testMap, copyOfTestMap *interpreter.DictionaryValue
 	var storageSize, slabCounts int
@@ -57,7 +58,7 @@ func TestRandomMapOperations(t *testing.T) {
 	entries := make(map[interface{}]interpreter.Value, numberOfValues)
 	orgOwner := common.Address([8]byte{'A'})
 
-	t.Run("dictionary construction", func(t *testing.T) {
+	t.Run("construction", func(t *testing.T) {
 		keyValues := make([]interpreter.Value, numberOfValues*2)
 		for i := 0; i < numberOfValues; i++ {
 			key := randomHashableValue(inter)
@@ -81,6 +82,8 @@ func TestRandomMapOperations(t *testing.T) {
 
 		storageSize, slabCounts = getSlabStorageSize(t, storage)
 
+		require.Equal(t, testMap.Count(), len(entries))
+
 		for orgKey, orgValue := range entries {
 			key := dictionaryKey(orgKey)
 
@@ -92,10 +95,8 @@ func TestRandomMapOperations(t *testing.T) {
 			utils.AssertValuesEqual(t, inter, orgValue, value)
 		}
 
-		require.Equal(t, testMap.Count(), len(entries))
-
 		owner := testMap.GetOwner()
-		require.Equal(t, owner[:], orgOwner[:])
+		assert.Equal(t, owner[:], orgOwner[:])
 	})
 
 	t.Run("iterate", func(t *testing.T) {
@@ -103,7 +104,9 @@ func TestRandomMapOperations(t *testing.T) {
 
 		testMap.Iterate(func(key, value interpreter.Value) (resume bool) {
 			mapKey := goMapKey(key)
-			orgValue, _ := entries[mapKey]
+			orgValue, ok := entries[mapKey]
+			require.True(t, ok)
+
 			utils.AssertValuesEqual(t, inter, orgValue, value)
 			return true
 		})
@@ -117,6 +120,8 @@ func TestRandomMapOperations(t *testing.T) {
 			newOwner,
 		).(*interpreter.DictionaryValue)
 
+		require.Equal(t, copyOfTestMap.Count(), len(entries))
+
 		for orgKey, orgValue := range entries {
 			key := dictionaryKey(orgKey)
 
@@ -128,10 +133,8 @@ func TestRandomMapOperations(t *testing.T) {
 			utils.AssertValuesEqual(t, inter, orgValue, value)
 		}
 
-		require.Equal(t, copyOfTestMap.Count(), len(entries))
-
 		owner := copyOfTestMap.GetOwner()
-		require.Equal(t, owner[:], newOwner[:])
+		assert.Equal(t, owner[:], newOwner[:])
 	})
 
 	t.Run("deep remove", func(t *testing.T) {
@@ -141,8 +144,10 @@ func TestRandomMapOperations(t *testing.T) {
 
 		// deep removal should clean up everything
 		newStorageSize, newSlabCounts := getSlabStorageSize(t, storage)
-		require.Equal(t, slabCounts, newSlabCounts)
-		require.Equal(t, storageSize, newStorageSize)
+		assert.Equal(t, slabCounts, newSlabCounts)
+		assert.Equal(t, storageSize, newStorageSize)
+
+		require.Equal(t, testMap.Count(), len(entries))
 
 		// go over original values again and check no missing data (no side effect should be found)
 		for orgKey, orgValue := range entries {
@@ -156,16 +161,12 @@ func TestRandomMapOperations(t *testing.T) {
 			utils.AssertValuesEqual(t, inter, orgValue, value)
 		}
 
-		require.Equal(t, testMap.Count(), len(entries))
-
 		owner := testMap.GetOwner()
-		require.Equal(t, owner[:], orgOwner[:])
+		assert.Equal(t, owner[:], orgOwner[:])
 	})
 }
 
 func TestRandomArrayOperations(t *testing.T) {
-	// TODO Skip by default
-
 	seed := time.Now().UnixNano()
 	fmt.Printf("Seed used for test: %d \n", seed)
 	rand.Seed(seed)
@@ -188,7 +189,7 @@ func TestRandomArrayOperations(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	numberOfValues := rand.Intn(valueCount / 100)
+	numberOfValues := rand.Intn(containerMaxSize)
 
 	var testArray, copyOfTestArray *interpreter.ArrayValue
 	var storageSize, slabCounts int
@@ -198,7 +199,7 @@ func TestRandomArrayOperations(t *testing.T) {
 
 	values := make([]interpreter.Value, numberOfValues)
 
-	t.Run("array construction", func(t *testing.T) {
+	t.Run("construction", func(t *testing.T) {
 		for i := 0; i < numberOfValues; i++ {
 			value := randomStorableValue(inter, orgOwner, 0)
 			elements[i] = value
@@ -216,15 +217,15 @@ func TestRandomArrayOperations(t *testing.T) {
 
 		storageSize, slabCounts = getSlabStorageSize(t, storage)
 
+		require.Equal(t, testArray.Count(), len(elements))
+
 		for index, orgElement := range elements {
 			element := testArray.Get(inter, interpreter.ReturnEmptyLocationRange, index)
 			utils.AssertValuesEqual(t, inter, orgElement, element)
 		}
 
-		require.Equal(t, testArray.Count(), len(elements))
-
 		owner := testArray.GetOwner()
-		require.Equal(t, owner[:], orgOwner[:])
+		assert.Equal(t, owner[:], orgOwner[:])
 	})
 
 	t.Run("iterate", func(t *testing.T) {
@@ -251,15 +252,15 @@ func TestRandomArrayOperations(t *testing.T) {
 			newOwner,
 		).(*interpreter.ArrayValue)
 
+		require.Equal(t, copyOfTestArray.Count(), len(elements))
+
 		for index, orgElement := range elements {
 			element := copyOfTestArray.Get(inter, interpreter.ReturnEmptyLocationRange, index)
 			utils.AssertValuesEqual(t, inter, orgElement, element)
 		}
 
-		require.Equal(t, copyOfTestArray.Count(), len(elements))
-
 		owner := copyOfTestArray.GetOwner()
-		require.Equal(t, owner[:], newOwner[:])
+		assert.Equal(t, owner[:], newOwner[:])
 	})
 
 	t.Run("deep removal", func(t *testing.T) {
@@ -269,8 +270,10 @@ func TestRandomArrayOperations(t *testing.T) {
 
 		// deep removal should clean up everything
 		newStorageSize, newSlabCounts := getSlabStorageSize(t, storage)
-		require.Equal(t, slabCounts, newSlabCounts)
-		require.Equal(t, storageSize, newStorageSize)
+		assert.Equal(t, slabCounts, newSlabCounts)
+		assert.Equal(t, storageSize, newStorageSize)
+
+		assert.Equal(t, testArray.Count(), len(elements))
 
 		// go over original elements again and check no missing data (no side effect should be found)
 		for index, orgElement := range elements {
@@ -278,10 +281,158 @@ func TestRandomArrayOperations(t *testing.T) {
 			utils.AssertValuesEqual(t, inter, orgElement, element)
 		}
 
-		require.Equal(t, testArray.Count(), len(elements))
-
 		owner := testArray.GetOwner()
-		require.Equal(t, owner[:], orgOwner[:])
+		assert.Equal(t, owner[:], orgOwner[:])
+	})
+}
+
+func TestRandomCompositeValueOperations(t *testing.T) {
+	seed := time.Now().UnixNano()
+	fmt.Printf("Seed used for test: %d \n", seed)
+	rand.Seed(seed)
+
+	storage := interpreter.NewInMemoryStorage()
+	inter, err := interpreter.NewInterpreter(
+		&interpreter.Program{
+			Program:     ast.NewProgram([]ast.Declaration{}),
+			Elaboration: sema.NewElaboration(),
+		},
+		utils.TestLocation,
+		interpreter.WithStorage(storage),
+		interpreter.WithImportLocationHandler(
+			func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
+				return interpreter.VirtualImport{
+					Elaboration: inter.Program.Elaboration,
+				}
+			},
+		),
+	)
+	require.NoError(t, err)
+
+	var testComposite, copyOfTestComposite *interpreter.CompositeValue
+	var storageSize, slabCounts int
+
+	fieldsCount := rand.Intn(compositeMaxFields)
+	orgFields := make(map[string]interpreter.Value, fieldsCount)
+
+	orgOwner := common.Address([8]byte{'A'})
+
+	t.Run("construction", func(t *testing.T) {
+		identifier := make([]byte, 8)
+		rand.Read(identifier)
+
+		location := common.AddressLocation{
+			Address: orgOwner,
+			Name:    string(identifier),
+		}
+
+		fields := make([]interpreter.CompositeField, fieldsCount)
+
+		for i := 0; i < fieldsCount; i++ {
+			fieldName := make([]byte, 8)
+			rand.Read(fieldName)
+
+			field := interpreter.CompositeField{
+				Name:  string(fieldName),
+				Value: randomStorableValue(inter, orgOwner, 0),
+			}
+
+			fields[i] = field
+			orgFields[field.Name] = deepCopyValue(inter, field.Value)
+		}
+
+		kind := common.CompositeKindStructure
+
+		compositeType := &sema.CompositeType{
+			Location:   location,
+			Identifier: string(identifier),
+			Kind:       kind,
+		}
+
+		compositeType.Members = sema.NewStringMemberOrderedMap()
+		for _, field := range fields {
+			compositeType.Members.Set(
+				field.Name,
+				sema.NewPublicConstantFieldMember(
+					compositeType,
+					field.Name,
+					sema.AnyStructType,
+					"",
+				),
+			)
+		}
+
+		// Add the type to the elaboration, to short-circuit the type-lookup
+		inter.Program.Elaboration.CompositeTypes[compositeType.ID()] = compositeType
+
+		testComposite = interpreter.NewCompositeValue(
+			inter,
+			location,
+			string(identifier),
+			kind,
+			fields,
+			orgOwner,
+		)
+
+		storageSize, slabCounts = getSlabStorageSize(t, storage)
+
+		for fieldName, orgFieldValue := range orgFields {
+			fieldValue := testComposite.GetField(fieldName)
+			utils.AssertValuesEqual(t, inter, orgFieldValue, fieldValue)
+		}
+
+		owner := testComposite.GetOwner()
+		assert.Equal(t, owner[:], orgOwner[:])
+	})
+
+	t.Run("iterate", func(t *testing.T) {
+		fieldCount := 0
+		testComposite.ForEachField(func(name string, value interpreter.Value) {
+			orgValue, ok := orgFields[name]
+			require.True(t, ok)
+			utils.AssertValuesEqual(t, inter, orgValue, value)
+			fieldCount++
+		})
+
+		assert.Equal(t, len(orgFields), fieldCount)
+	})
+
+	t.Run("deep copy", func(t *testing.T) {
+		newOwner := atree.Address([8]byte{'B'})
+
+		copyOfTestComposite = testComposite.DeepCopy(
+			inter,
+			interpreter.ReturnEmptyLocationRange,
+			newOwner,
+		).(*interpreter.CompositeValue)
+
+		for name, orgValue := range orgFields {
+			value := copyOfTestComposite.GetField(name)
+			utils.AssertValuesEqual(t, inter, orgValue, value)
+		}
+
+		owner := copyOfTestComposite.GetOwner()
+		assert.Equal(t, owner[:], newOwner[:])
+	})
+
+	t.Run("deep remove", func(t *testing.T) {
+		copyOfTestComposite.DeepRemove(inter)
+		err = storage.Remove(copyOfTestComposite.StorageID())
+		require.NoError(t, err)
+
+		// deep removal should clean up everything
+		newStorageSize, newSlabCounts := getSlabStorageSize(t, storage)
+		assert.Equal(t, slabCounts, newSlabCounts)
+		assert.Equal(t, storageSize, newStorageSize)
+
+		// go over original values again and check no missing data (no side effect should be found)
+		for name, orgValue := range orgFields {
+			value := testComposite.GetField(name)
+			utils.AssertValuesEqual(t, inter, orgValue, value)
+		}
+
+		owner := testComposite.GetOwner()
+		assert.Equal(t, owner[:], orgOwner[:])
 	})
 }
 
@@ -471,7 +622,7 @@ func randomStorableValue(inter *interpreter.Interpreter, owner common.Address, c
 	case Nil:
 		return interpreter.NilValue{}
 	case Dictionary:
-		entryCount := rand.Intn(containerMaxSize)
+		entryCount := rand.Intn(innerContainerMaxSize)
 		keyValues := make([]interpreter.Value, entryCount*2)
 		entries := make(map[interface{}]interpreter.Value, entryCount)
 
@@ -509,7 +660,7 @@ func randomStorableValue(inter *interpreter.Interpreter, owner common.Address, c
 			keyValues...,
 		)
 	case Array:
-		elementsCount := rand.Intn(containerMaxSize)
+		elementsCount := rand.Intn(innerContainerMaxSize)
 		elements := make([]interpreter.Value, elementsCount)
 
 		for i := 0; i < elementsCount; i++ {
@@ -545,7 +696,7 @@ func randomHashableValue(interpreter *interpreter.Interpreter) interpreter.Value
 
 func generateRandomHashableValue(inter *interpreter.Interpreter, n int) interpreter.Value {
 	switch n {
-	// TODO deal with negative numbers
+	// TODO: deal with negative numbers
 
 	// Int
 	case Int:
@@ -685,7 +836,7 @@ func generateCompositeValue(
 		Name:    string(identifier),
 	}
 
-	fieldsCount := rand.Intn(8)
+	fieldsCount := rand.Intn(compositeMaxFields)
 	fields := make([]interpreter.CompositeField, fieldsCount)
 
 	for i := 0; i < fieldsCount; i++ {
@@ -701,7 +852,7 @@ func generateCompositeValue(
 	compositeType := &sema.CompositeType{
 		Location:   location,
 		Identifier: string(identifier),
-		Kind:       common.CompositeKindContract,
+		Kind:       kind,
 	}
 
 	compositeType.Members = sema.NewStringMemberOrderedMap()
@@ -717,7 +868,7 @@ func generateCompositeValue(
 		)
 	}
 
-	// Add the type to the elaboration, to short-circuit the type lookup
+	// Add the type to the elaboration, to short-circuit the type-lookup
 	inter.Program.Elaboration.CompositeTypes[compositeType.ID()] = compositeType
 
 	return interpreter.NewCompositeValue(
