@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math/big"
 	"math/rand"
+	"reflect"
 	"testing"
 	"time"
 
@@ -62,8 +63,6 @@ func TestRandomMapOperations(t *testing.T) {
 	t.Run("dictionary construction", func(t *testing.T) {
 		keyValues := make([]interpreter.Value, numberOfValues*2)
 		for i := 0; i < numberOfValues; i++ {
-			// TODO maybe deep copy values
-
 			key := randomHashableValue(inter)
 			value := randomStorableValue(inter, orgOwner, 0)
 
@@ -88,12 +87,12 @@ func TestRandomMapOperations(t *testing.T) {
 		for orgKey, orgValue := range entries {
 			key := dictionaryKey(orgKey)
 
+			exists := testMap.ContainsKey(inter, interpreter.ReturnEmptyLocationRange, key)
+			require.True(t, bool(exists))
+
 			v, found := testMap.Get(inter, interpreter.ReturnEmptyLocationRange, key)
 			require.True(t, found)
 			assertEquals(t, inter, orgValue, v)
-
-			exists := testMap.ContainsKey(inter, interpreter.ReturnEmptyLocationRange, key)
-			require.True(t, bool(exists))
 		}
 
 		require.Equal(t, testMap.Count(), len(entries))
@@ -152,17 +151,138 @@ func TestRandomMapOperations(t *testing.T) {
 		for orgKey, orgValue := range entries {
 			key := dictionaryKey(orgKey)
 
+			exists := testMap.ContainsKey(inter, interpreter.ReturnEmptyLocationRange, key)
+			require.True(t, bool(exists))
+
 			v, found := testMap.Get(inter, interpreter.ReturnEmptyLocationRange, key)
 			require.True(t, found)
 			assertEquals(t, inter, orgValue, v)
-
-			exists := testMap.ContainsKey(inter, interpreter.ReturnEmptyLocationRange, key)
-			require.True(t, bool(exists))
 		}
 
 		require.Equal(t, testMap.Count(), len(entries))
 
 		owner := testMap.GetOwner()
+		require.Equal(t, owner[:], orgOwner[:])
+	})
+}
+
+func TestRandomArrayOperations(t *testing.T) {
+	// TODO Skip by default
+
+	seed := time.Now().UnixNano()
+	fmt.Printf("Seed used for test: %d \n", seed)
+	rand.Seed(seed)
+
+	storage := interpreter.NewInMemoryStorage()
+	inter, err := interpreter.NewInterpreter(
+		&interpreter.Program{
+			Program:     ast.NewProgram([]ast.Declaration{}),
+			Elaboration: sema.NewElaboration(),
+		},
+		utils.TestLocation,
+		interpreter.WithStorage(storage),
+		interpreter.WithImportLocationHandler(
+			func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
+				return interpreter.VirtualImport{
+					Elaboration: inter.Program.Elaboration,
+				}
+			},
+		),
+	)
+	require.NoError(t, err)
+
+	numberOfValues := rand.Intn(valueCount/100)
+
+	var testArray, copyOfTestArray *interpreter.ArrayValue
+	var storageSize, slabCounts int
+
+	elements := make([]interpreter.Value, numberOfValues)
+	orgOwner := common.Address([8]byte{'A'})
+
+		values := make([]interpreter.Value, numberOfValues)
+
+	t.Run("array construction", func(t *testing.T) {
+		for i := 0; i < numberOfValues; i++ {
+			value := randomStorableValue(inter, orgOwner, 0)
+			elements[i] = value
+			values[i] = deepCopyValue(inter, value)
+		}
+
+		testArray = interpreter.NewArrayValue(
+			inter,
+			interpreter.VariableSizedStaticType{
+				Type: interpreter.PrimitiveStaticTypeAnyStruct,
+			},
+			orgOwner,
+			values...,
+		)
+
+		storageSize, slabCounts = getSlabStorageSize(t, storage)
+
+		for index, orgValue := range elements {
+			v := testArray.Get(inter, interpreter.ReturnEmptyLocationRange, index)
+			assertEquals(t, inter, orgValue, v)
+		}
+
+		require.Equal(t, testArray.Count(), len(elements))
+
+		owner := testArray.GetOwner()
+		require.Equal(t, owner[:], orgOwner[:])
+	})
+
+	t.Run("test iterator", func(t *testing.T) {
+		require.Equal(t, testArray.Count(), len(elements))
+
+		index := 0
+		testArray.Iterate(func(value interpreter.Value) (resume bool) {
+			_ = values
+			orgValue := elements[index]
+			if !reflect.DeepEqual(orgValue, value) {
+				fmt.Println(orgValue, value)
+			}
+			assertEquals(t, inter, orgValue, value)
+			return true
+		})
+	})
+
+	t.Run("test deep copy", func(t *testing.T) {
+		newOwner := atree.Address([8]byte{'B'})
+		copyOfTestArray = testArray.DeepCopy(
+			inter,
+			interpreter.ReturnEmptyLocationRange,
+			newOwner,
+		).(*interpreter.ArrayValue)
+
+		for index, orgValue := range elements {
+			v := copyOfTestArray.Get(inter, interpreter.ReturnEmptyLocationRange, index)
+			assertEquals(t, inter, orgValue, v)
+		}
+
+		require.Equal(t, copyOfTestArray.Count(), len(elements))
+
+		owner := copyOfTestArray.GetOwner()
+		require.Equal(t, owner[:], newOwner[:])
+	})
+
+	t.Run("test deep removal", func(t *testing.T) {
+		copyOfTestArray.DeepRemove(inter)
+		err = storage.Remove(copyOfTestArray.StorageID())
+		require.NoError(t, err)
+
+		// deep removal should clean up everything
+		newStorageSize, newSlabCounts := getSlabStorageSize(t, storage)
+		require.Equal(t, slabCounts, newSlabCounts)
+		require.Equal(t, storageSize, newStorageSize)
+
+		// go over original values again and check no missing data (no side effect should be found)
+		for index, orgValue := range elements {
+			v := testArray.Get(inter, interpreter.ReturnEmptyLocationRange, index)
+			assertEquals(t, inter, orgValue, v)
+		}
+
+		require.Equal(t, testArray.Count(), len(elements))
+
+		owner := testArray.GetOwner()
 		require.Equal(t, owner[:], orgOwner[:])
 	})
 }
