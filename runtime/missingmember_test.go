@@ -31,10 +31,9 @@ import (
 	"github.com/onflow/cadence/runtime/common"
 )
 
-func TestRuntimeMissingMember(t *testing.T) {
+func TestRuntimeMissingMemberFabricant(t *testing.T) {
 
 	runtime := newTestInterpreterRuntime()
-	//runtime := NewInterpreterRuntime()
 
 	testAddress, err := common.HexToAddress("0x1")
 	require.NoError(t, err)
@@ -2036,7 +2035,6 @@ pub contract ItemNFT: NonFungibleToken {
 	var signerAddress common.Address
 
 	storage := newTestLedger(nil, nil)
-	//storage := newTestStorage(nil, nil)
 
 	runtimeInterface := &testRuntimeInterface{
 		getCode: func(location Location) (bytes []byte, err error) {
@@ -2245,7 +2243,7 @@ transaction {
 			Location:  nextTransactionLocation(),
 		},
 	)
-	require.NoError(t, err) // Initialize test account
+	require.NoError(t, err)
 
 	// Create garment datas
 
@@ -2774,6 +2772,1806 @@ transaction(recipientAddr: Address, name: String, garmentWithdrawID: UInt64, mat
 		Context{
 			Interface: runtimeInterface,
 			Location:  common.ScriptLocation{},
+		},
+	)
+	require.NoError(t, err)
+}
+
+func TestRuntimeMissingMemberVersus(t *testing.T) {
+
+	runtime := newTestInterpreterRuntime()
+
+	artistAddress, err := common.HexToAddress("0x1")
+	require.NoError(t, err)
+
+	bidderAddress, err := common.HexToAddress("0x2")
+	require.NoError(t, err)
+
+	contractsAddress, err := common.HexToAddress("0x99ca04281098b33d")
+	require.NoError(t, err)
+
+	ftAddress, err := common.HexToAddress("0x9a0766d93b6608b7")
+	require.NoError(t, err)
+
+	flowTokenAddress, err := common.HexToAddress("0x7e60df042a9c0868")
+	require.NoError(t, err)
+
+	nftAddress, err := common.HexToAddress("0x631e88ae7f1d7c20")
+	require.NoError(t, err)
+
+	const flowTokenContract = `
+import FungibleToken from 0x9a0766d93b6608b7
+
+pub contract FlowToken: FungibleToken {
+
+   // Total supply of Flow tokens in existence
+   pub var totalSupply: UFix64
+
+   // Event that is emitted when the contract is created
+   pub event TokensInitialized(initialSupply: UFix64)
+
+   // Event that is emitted when tokens are withdrawn from a Vault
+   pub event TokensWithdrawn(amount: UFix64, from: Address?)
+
+   // Event that is emitted when tokens are deposited to a Vault
+   pub event TokensDeposited(amount: UFix64, to: Address?)
+
+   // Event that is emitted when new tokens are minted
+   pub event TokensMinted(amount: UFix64)
+
+   // Event that is emitted when tokens are destroyed
+   pub event TokensBurned(amount: UFix64)
+
+   // Event that is emitted when a new minter resource is created
+   pub event MinterCreated(allowedAmount: UFix64)
+
+   // Event that is emitted when a new burner resource is created
+   pub event BurnerCreated()
+
+   // Vault
+   //
+   // Each user stores an instance of only the Vault in their storage
+   // The functions in the Vault and governed by the pre and post conditions
+   // in FungibleToken when they are called.
+   // The checks happen at runtime whenever a function is called.
+   //
+   // Resources can only be created in the context of the contract that they
+   // are defined in, so there is no way for a malicious user to create Vaults
+   // out of thin air. A special Minter resource needs to be defined to mint
+   // new tokens.
+   //
+   pub resource Vault: FungibleToken.Provider, FungibleToken.Receiver, FungibleToken.Balance {
+
+       // holds the balance of a users tokens
+       pub var balance: UFix64
+
+       // initialize the balance at resource creation time
+       init(balance: UFix64) {
+           self.balance = balance
+       }
+
+       // withdraw
+       //
+       // Function that takes an integer amount as an argument
+       // and withdraws that amount from the Vault.
+       // It creates a new temporary Vault that is used to hold
+       // the money that is being transferred. It returns the newly
+       // created Vault to the context that called so it can be deposited
+       // elsewhere.
+       //
+       pub fun withdraw(amount: UFix64): @FungibleToken.Vault {
+           self.balance = self.balance - amount
+           emit TokensWithdrawn(amount: amount, from: self.owner?.address)
+           return <-create Vault(balance: amount)
+       }
+
+       // deposit
+       //
+       // Function that takes a Vault object as an argument and adds
+       // its balance to the balance of the owners Vault.
+       // It is allowed to destroy the sent Vault because the Vault
+       // was a temporary holder of the tokens. The Vault's balance has
+       // been consumed and therefore can be destroyed.
+       pub fun deposit(from: @FungibleToken.Vault) {
+           let vault <- from as! @FlowToken.Vault
+           self.balance = self.balance + vault.balance
+           emit TokensDeposited(amount: vault.balance, to: self.owner?.address)
+           vault.balance = 0.0
+           destroy vault
+       }
+
+       destroy() {
+           FlowToken.totalSupply = FlowToken.totalSupply - self.balance
+       }
+   }
+
+   // createEmptyVault
+   //
+   // Function that creates a new Vault with a balance of zero
+   // and returns it to the calling context. A user must call this function
+   // and store the returned Vault in their storage in order to allow their
+   // account to be able to receive deposits of this token type.
+   //
+   pub fun createEmptyVault(): @FungibleToken.Vault {
+       return <-create Vault(balance: 0.0)
+   }
+
+   pub resource Administrator {
+       // createNewMinter
+       //
+       // Function that creates and returns a new minter resource
+       //
+       pub fun createNewMinter(allowedAmount: UFix64): @Minter {
+           emit MinterCreated(allowedAmount: allowedAmount)
+           return <-create Minter(allowedAmount: allowedAmount)
+       }
+
+       // createNewBurner
+       //
+       // Function that creates and returns a new burner resource
+       //
+       pub fun createNewBurner(): @Burner {
+           emit BurnerCreated()
+           return <-create Burner()
+       }
+   }
+
+   // Minter
+   //
+   // Resource object that token admin accounts can hold to mint new tokens.
+   //
+   pub resource Minter {
+
+       // the amount of tokens that the minter is allowed to mint
+       pub var allowedAmount: UFix64
+
+       // mintTokens
+       //
+       // Function that mints new tokens, adds them to the total supply,
+       // and returns them to the calling context.
+       //
+       pub fun mintTokens(amount: UFix64): @FlowToken.Vault {
+           pre {
+               amount > UFix64(0): "Amount minted must be greater than zero"
+               amount <= self.allowedAmount: "Amount minted must be less than the allowed amount"
+           }
+           FlowToken.totalSupply = FlowToken.totalSupply + amount
+           self.allowedAmount = self.allowedAmount - amount
+           emit TokensMinted(amount: amount)
+           return <-create Vault(balance: amount)
+       }
+
+       init(allowedAmount: UFix64) {
+           self.allowedAmount = allowedAmount
+       }
+   }
+
+   // Burner
+   //
+   // Resource object that token admin accounts can hold to burn tokens.
+   //
+   pub resource Burner {
+
+       // burnTokens
+       //
+       // Function that destroys a Vault instance, effectively burning the tokens.
+       //
+       // Note: the burned tokens are automatically subtracted from the
+       // total supply in the Vault destructor.
+       //
+       pub fun burnTokens(from: @FungibleToken.Vault) {
+           let vault <- from as! @FlowToken.Vault
+           let amount = vault.balance
+           destroy vault
+           emit TokensBurned(amount: amount)
+       }
+   }
+
+   init(adminAccount: AuthAccount) {
+       self.totalSupply = 0.0
+
+       // Create the Vault with the total supply of tokens and save it in storage
+       //
+       let vault <- create Vault(balance: self.totalSupply)
+       adminAccount.save(<-vault, to: /storage/flowTokenVault)
+
+       // Create a public capability to the stored Vault that only exposes
+       // the deposit method through the Receiver interface
+       //
+       adminAccount.link<&FlowToken.Vault{FungibleToken.Receiver}>(
+           /public/flowTokenReceiver,
+           target: /storage/flowTokenVault
+       )
+
+       // Create a public capability to the stored Vault that only exposes
+       // the balance field through the Balance interface
+       //
+       adminAccount.link<&FlowToken.Vault{FungibleToken.Balance}>(
+           /public/flowTokenBalance,
+           target: /storage/flowTokenVault
+       )
+
+       let admin <- create Administrator()
+       adminAccount.save(<-admin, to: /storage/flowTokenAdmin)
+
+       // Emit an event that shows that the contract was initialized
+       emit TokensInitialized(initialSupply: self.totalSupply)
+   }
+}
+
+`
+
+	const auctionDutchContract = `
+import NonFungibleToken from 0x631e88ae7f1d7c20
+import FungibleToken from 0x9a0766d93b6608b7
+import FlowToken from 0x7e60df042a9c0868
+// import Debug from 0x99ca04281098b33d
+// import Clock from 0x99ca04281098b33d
+
+pub contract AuctionDutch {
+
+	pub let CollectionStoragePath: StoragePath
+	pub let CollectionPublicPath: PublicPath
+
+	pub let BidCollectionStoragePath: StoragePath
+	pub let BidCollectionPublicPath: PublicPath
+
+	pub event AuctionDutchBidRejected(bidder: Address)
+	pub event AuctionDutchCreated(name: String, artist: String, number: Int, owner:Address, id: UInt64)
+
+	pub event AuctionDutchBid(amount: UFix64, bidder: Address, auction: UInt64, bid: UInt64)
+	pub event AuctionDutchBidIncreased(amount: UFix64, bidder: Address, auction: UInt64, bid: UInt64)
+	pub event AuctionDutchTick(tickPrice: UFix64, acceptedBids: Int, totalItems: Int, tickTime: UFix64, auction: UInt64)
+	pub event AuctionDutchSettle(price: UFix64, auction: UInt64)
+
+	pub struct Bids {
+		pub let bids: [BidReport]
+		pub let winningPrice: UFix64?
+
+		init(bids: [BidReport], winningPrice: UFix64?) {
+			self.bids =bids
+			self.winningPrice=winningPrice
+		}
+	}
+
+	pub struct BidReport {
+		pub let id: UInt64
+		pub let time: UFix64
+		pub let amount: UFix64
+		pub let bidder: Address
+		pub let winning: Bool
+		pub let confirmed: Bool
+
+		init(id: UInt64, time: UFix64, amount: UFix64, bidder: Address, winning: Bool, confirmed: Bool) {
+			self.id=id
+			self.time=time
+			self.amount=amount
+			self.bidder=bidder
+			self.winning=winning
+			self.confirmed=confirmed
+		}
+	}
+
+	pub struct BidInfo {
+		access(contract) let id: UInt64
+		access(contract) let vaultCap: Capability<&{FungibleToken.Receiver}>
+		access(contract) let nftCap: Capability<&{NonFungibleToken.Receiver}>
+		access(contract) var time: UFix64
+		access(contract) var balance: UFix64
+		access(contract) var winning: Bool
+
+
+		init(id: UInt64, nftCap: Capability<&{NonFungibleToken.Receiver}>, vaultCap: Capability<&{FungibleToken.Receiver}>, time: UFix64, balance: UFix64) {
+			self.id=id
+			self.nftCap= nftCap
+			self.vaultCap=vaultCap
+			self.time=time
+			self.balance=balance
+			self.winning=false
+		}
+
+		pub fun increaseBid(_ amount:UFix64) {
+			self.balance=self.balance+amount
+			self.time = 42.0 // Clock.time()
+		}
+
+		access(contract) fun  withdraw(_ amount: UFix64) {
+			self.balance=self.balance - amount
+		}
+
+		pub fun setWinning(_ value: Bool) {
+			self.winning=value
+		}
+	}
+
+	pub struct Tick {
+		pub let price: UFix64
+		pub let startedAt: UFix64
+
+		init(price: UFix64, startedAt: UFix64) {
+			self.price=price
+			self.startedAt=startedAt
+		}
+	}
+
+	pub struct TickStatus{
+		pub let price: UFix64
+		pub let startedAt: UFix64
+		pub let acceptedBids: Int
+		pub let cumulativeAcceptedBids: Int
+
+		init(price: UFix64, startedAt: UFix64, acceptedBids:Int, cumulativeAcceptedBids:Int) {
+			self.price=price
+			self.startedAt=startedAt
+			self.acceptedBids=acceptedBids
+			self.cumulativeAcceptedBids=cumulativeAcceptedBids
+		}
+	}
+
+	pub resource Auction {
+		access(contract) let nfts: @{UInt64:NonFungibleToken.NFT}
+
+		access(contract) let metadata: {String:String}
+
+		// bids are put into buckets based on the tick they are in.
+		// tick 1 will be the first tick,
+
+		//this is a counter to keep the number of bids so that we can escrow in a separate resource
+		access(contract) var totalBids: UInt64
+
+		//this has to be an array I think, since we need ordering.
+		access(contract) let ticks: [Tick]
+
+		access(contract) let auctionStatus: {UFix64: TickStatus}
+		access(contract) var currentTickIndex: UInt64
+
+		//this is a lookup table for the bid
+		access(contract) let bidInfo: {UInt64: BidInfo}
+
+		access(contract) let winningBids: [UInt64]
+
+		//this is a table of ticks to ordered list of bid ids
+		access(contract) let bids: {UFix64: [UInt64]}
+
+		access(contract) let escrow: @{UInt64: FlowToken.Vault}
+
+		//todo store bids here?
+		access(contract) let ownerVaultCap: Capability<&{FungibleToken.Receiver}>
+		access(contract) let ownerNFTCap: Capability<&{NonFungibleToken.Receiver}>
+		access(contract) let royaltyVaultCap: Capability<&{FungibleToken.Receiver}>
+		access(contract) let royaltyPercentage: UFix64
+		access(contract) let numberOfItems: Int
+		access(contract) var winningBid: UFix64?
+
+
+		init(nfts: @{UInt64 : NonFungibleToken.NFT},
+		metadata: {String: String},
+		ownerVaultCap: Capability<&{FungibleToken.Receiver}>,
+		ownerNFTCap: Capability<&{NonFungibleToken.Receiver}>,
+		royaltyVaultCap: Capability<&{FungibleToken.Receiver}>,
+		royaltyPercentage: UFix64,
+		ticks: [Tick]) {
+			self.metadata=metadata
+			self.totalBids=1
+			self.currentTickIndex=0
+			self.numberOfItems=nfts.length
+			self.ticks=ticks
+			self.auctionStatus={}
+			self.winningBids=[]
+			//create the ticks
+			self.nfts <- nfts
+			self.winningBid=nil
+			var emptyBids : {UFix64: [UInt64]}={}
+			for tick in ticks {
+				emptyBids[tick.startedAt]=[]
+			}
+			self.bids = emptyBids
+			self.bidInfo= {}
+			self.escrow <- {}
+			self.ownerVaultCap=ownerVaultCap
+			self.ownerNFTCap=ownerNFTCap
+			self.royaltyVaultCap=royaltyVaultCap
+			self.royaltyPercentage=royaltyPercentage
+		}
+
+		pub fun startAt() : UFix64 {
+			return self.ticks[0].startedAt
+		}
+
+		access(contract) fun fullfill() {
+			if self.winningBid== nil {
+				// Debug.log("Winning price is not set")
+				panic("Cannot fullfill is not finished")
+			}
+
+			let nftIds= self.nfts.keys
+
+			for id in self.winningBids {
+				let bid= self.bidInfo[id]!
+				if let vault <- self.escrow[bid.id] <- nil {
+					if vault.balance > self.winningBid! {
+						self.ownerVaultCap.borrow()!.deposit(from: <- vault.withdraw(amount: vault.balance-self.winningBid!))
+					}
+					if self.royaltyPercentage != 0.0 {
+						self.royaltyVaultCap.borrow()!.deposit(from: <- vault.withdraw(amount: vault.balance*self.royaltyPercentage))
+					}
+
+					self.ownerVaultCap.borrow()!.deposit(from: <- vault)
+
+					let nftId=nftIds.removeFirst()
+					if let nft <- self.nfts[nftId] <- nil {
+						//TODO: here we might consider adding the nftId that you have won to BidInfo and let the user pull it out
+						self.bidInfo[bid.id]!.nftCap.borrow()!.deposit(token: <- nft)
+					}
+				}
+			}
+			/*
+			//let just return all other money here and fix the issue with gas later
+			//this will blow the gas limit on high number of bids
+			for tick in self.ticks {
+				if let bids=self.bids[tick.startedAt]{
+					for bidId in bids {
+						let bid= self.bidInfo[bidId]!
+						if let vault <- self.escrow[bidId] <- nil {
+							//TODO: check that it is still linked
+							bid.vaultCap.borrow()!.deposit(from: <- vault)
+						}
+					}
+				}
+			}
+			*/
+
+			emit AuctionDutchSettle(price: self.winningBid!, auction: self.uuid)
+		}
+
+		pub fun getBids() : Bids {
+			var bids: [BidReport] =[]
+			var numberWinning=0
+			var winningBid=self.winningBid
+			for tick in self.ticks {
+				let localBids=self.bids[tick.startedAt]!
+				for bid in localBids {
+					let bidInfo= self.bidInfo[bid]!
+					var winning=bidInfo.winning
+					//we have an ongoing auction
+					if self.winningBid == nil && numberWinning != self.numberOfItems {
+						winning=true
+						numberWinning=numberWinning+1
+						if numberWinning== self.numberOfItems {
+							winningBid=bidInfo.balance
+						}
+					}
+					bids.append(BidReport(id: bid, time: bidInfo.time, amount: bidInfo.balance, bidder: bidInfo.vaultCap.address, winning: winning, confirmed:bidInfo.winning))
+				}
+			}
+			return Bids(bids: bids, winningPrice: winningBid)
+		}
+
+		pub fun findWinners() : [UInt64] {
+
+			var bids: [UInt64] =[]
+			for tick in self.ticks {
+				if bids.length == self.numberOfItems {
+					return bids
+				}
+				let localBids=self.bids[tick.startedAt]!
+				if bids.length+localBids.length <= self.numberOfItems {
+					bids.appendAll(localBids)
+					//we have to remove the bids
+					self.bids.remove(key: tick.startedAt)
+				} else {
+					while bids.length < self.numberOfItems {
+						bids.append(localBids.removeFirst())
+					}
+				}
+			}
+			return bids
+		}
+
+		pub fun getTick() : Tick {
+			return self.ticks[self.currentTickIndex]
+		}
+
+		//this should be called something else
+		pub fun isAuctionFinished() : Bool {
+
+			if !self.isLastTick() {
+				//if the startedAt of the next tick is larger then current time not time to tick yet
+				let time = 42.0 // Clock.time()
+				let nextTickStartAt= self.ticks[self.currentTickIndex+1].startedAt
+				// Debug.log("We are not on last tick current tick is "
+				//.concat(self.currentTickIndex.toString())
+				//.concat(" time=").concat(time.toString())
+				//.concat(" nextTickStart=").concat(nextTickStartAt.toString()))
+				if  nextTickStartAt > time {
+					return false
+				}
+
+			}
+			//Debug.log("we are on or after next tick")
+
+			//TODO: need to figure out what will happen if this is the last tick
+			let tick= self.getTick()
+
+			//calculate number of acceptedBids
+			let bids=self.bids[tick.startedAt]!
+
+			let previousAcceptedBids=self.winningBids.length
+			var winning=true
+			for bid in bids {
+
+				let bidInfo= self.bidInfo[bid]!
+				//we do not have enough winning bids so we add this bid as a winning bid
+				if self.winningBids.length < self.numberOfItems {
+					self.winningBids.append(bid)
+					//if we now have enough bids we need to set the winning bid
+					if self.winningBids.length == self.numberOfItems {
+						self.winningBid=bidInfo.balance
+					}
+				}
+
+				//Debug.log("Processing bid ".concat(bid.toString()).concat(" total accepted bids are ").concat(self.winningBids.length.toString()))
+
+				self.bidInfo[bid]!.setWinning(winning)
+
+				if self.winningBids.length == self.numberOfItems {
+					winning=false
+				}
+			}
+
+			//lets advance the tick
+			self.currentTickIndex=self.currentTickIndex+1
+
+			if self.winningBids.length == self.numberOfItems {
+				//this could be done later, but i will just do it here for ease of reading
+				self.auctionStatus[tick.startedAt] = TickStatus(price:tick.price, startedAt: tick.startedAt, acceptedBids: self.numberOfItems - previousAcceptedBids, cumulativeAcceptedBids: self.numberOfItems)
+				log(self.auctionStatus)
+				return true
+			}
+
+			self.auctionStatus[tick.startedAt] = TickStatus(price:tick.price, startedAt: tick.startedAt, acceptedBids: bids.length, cumulativeAcceptedBids: self.winningBids.length)
+			log(self.auctionStatus)
+			return false
+		}
+
+		pub fun isLastTick() : Bool {
+			let tickLength = UInt64(self.ticks.length-1)
+			return self.currentTickIndex==tickLength
+		}
+
+		// taken from bisect_right in  pthon https://stackoverflow.com/questions/2945017/javas-equivalent-to-bisect-in-python
+		pub fun bisect(items: [UInt64], new: BidInfo) : Int {
+			var high=items.length
+			var low=0
+			while low < high {
+				let mid =(low+high)/2
+				let midBidId=items[mid]
+				let midBid=self.bidInfo[midBidId]!
+				if midBid.balance < new.balance || midBid.balance==new.balance && midBid.id > new.id {
+					high=mid
+				} else {
+					low=mid+1
+				}
+			}
+			return low
+		}
+
+		priv fun insertBid(_ bid: BidInfo) {
+			for tick in self.ticks {
+				if tick.price > bid.balance {
+					continue
+				}
+
+				//add the bid to the lookup table
+				self.bidInfo[bid.id]=bid
+
+				let bucket= self.bids[tick.startedAt]!
+				//find the index of the new bid in the ordred bucket bid list
+				let index= self.bisect(items:bucket, new: bid)
+
+				//insert bid and mutate state
+				bucket.insert(at: index, bid.id)
+				self.bids[tick.startedAt]= bucket
+
+				emit AuctionDutchBid(amount: bid.balance, bidder: bid.nftCap.address, auction: self.uuid, bid: bid.id)
+				return
+			}
+		}
+
+		pub fun findTickForBid(_ id:UInt64) : Tick {
+			for tick in self.ticks {
+				let bucket= self.bids[tick.startedAt]!
+				if bucket.contains(id) {
+					return tick
+				}
+			}
+			panic("Could not find bid")
+		}
+
+		pub fun removeBidFromTick(_ id:UInt64, tick: UFix64) {
+			var index=0
+			let bids= self.bids[tick]!
+			while index < bids.length {
+				if bids[index] == id {
+					bids.remove(at: index)
+					self.bids[tick]=bids
+					return
+				}
+				index=index+1
+			}
+		}
+
+		access(contract) fun  cancelBid(id: UInt64) {
+			pre {
+				self.bidInfo[id] != nil: "bid info does not exist"
+				!self.bidInfo[id]!.winning : "bid is already accepted"
+				self.escrow[id] != nil: "escrow for bid does not exist"
+			}
+
+			let bidInfo=self.bidInfo[id]!
+
+			if let escrowVault <- self.escrow[id] <- nil {
+				let oldTick=self.findTickForBid(id)
+				self.removeBidFromTick(id, tick: oldTick.startedAt)
+				self.bidInfo.remove(key: id)
+				bidInfo.vaultCap.borrow()!.deposit(from: <- escrowVault)
+			}
+		}
+
+		access(self) fun findTickForAmount(_ amount: UFix64) : Tick{
+			for t in self.ticks {
+				if t.price > amount {
+					continue
+				}
+				return t
+			}
+			panic("Could not find tick for amount")
+		}
+
+		access(contract) fun getExcessBalance(_ id: UInt64) : UFix64 {
+			let bid=self.bidInfo[id]!
+			if self.winningBid != nil {
+				//if we are done and you are a winning bid you will already have gotten your flow back in fullfillment
+				if !bid.winning {
+					return bid.balance
+				}
+			} else {
+				if bid.balance > self.calculatePrice()  {
+					return bid.balance - self.calculatePrice()
+				}
+			}
+			return 0.0
+		}
+
+		access(contract) fun withdrawExcessFlow(id: UInt64, cap: Capability<&{FungibleToken.Receiver}>)  {
+			let balance= self.getExcessBalance(id)
+			if balance == 0.0 {
+				return
+			}
+
+			let bid=self.bidInfo[id]!
+			if let escrowVault <- self.escrow[id] <- nil {
+				bid.withdraw(balance)
+				let withdrawVault= cap.borrow()!
+				if escrowVault.balance == balance {
+					withdrawVault.deposit(from: <- escrowVault)
+				} else {
+					let tmpVault <- escrowVault.withdraw(amount: balance)
+					withdrawVault.deposit(from: <- tmpVault)
+					let oldVault <- self.escrow[id] <- escrowVault
+					destroy oldVault
+				}
+				self.bidInfo[id]=bid
+			}
+		}
+
+		access(contract) fun getBidInfo(id: UInt64) : BidInfo {
+			return self.bidInfo[id]!
+		}
+
+		access(contract) fun  increaseBid(id: UInt64, vault: @FlowToken.Vault) {
+			pre {
+				self.bidInfo[id] != nil: "bid info doesn not exist"
+				!self.bidInfo[id]!.winning : "bid is already accepted"
+				self.escrow[id] != nil: "escrow for bid does not exist"
+			}
+
+		  let bidInfo=self.bidInfo[id]!
+			if let escrowVault <- self.escrow[id] <- nil {
+				bidInfo.increaseBid(vault.balance)
+				escrowVault.deposit(from: <- vault)
+				self.bidInfo[id]=bidInfo
+				let oldVault <- self.escrow[id] <- escrowVault
+				destroy oldVault
+
+
+				var tick=self.findTickForBid(id)
+				self.removeBidFromTick(id, tick: tick.startedAt)
+				if tick.price < bidInfo.balance {
+					tick=self.findTickForAmount(bidInfo.balance)
+				}
+				let bucket= self.bids[tick.startedAt]!
+				//find the index of the new bid in the ordred bucket bid list
+				let index= self.bisect(items:bucket, new: bidInfo)
+
+				//insert bid and mutate state
+				bucket.insert(at: index, bidInfo.id)
+				self.bids[tick.startedAt]= bucket
+
+				//todo do we need seperate bid for increase?
+				emit AuctionDutchBidIncreased(amount: bidInfo.balance, bidder: bidInfo.nftCap.address, auction: self.uuid, bid: bidInfo.id)
+			} else {
+				destroy vault
+				panic("Cannot get escrow")
+			}
+			//need to check if the bid is in the correct bucket now
+			//emit event
+		}
+
+		pub fun addBid(vault: @FlowToken.Vault, nftCap: Capability<&{NonFungibleToken.Receiver}>, vaultCap: Capability<&{FungibleToken.Receiver}>, time: UFix64) : UInt64{
+
+			let bidId=self.totalBids
+
+			let bid=BidInfo(id: bidId, nftCap: nftCap, vaultCap:vaultCap, time: time, balance: vault.balance)
+			self.insertBid(bid)
+			let oldEscrow <- self.escrow[bidId] <- vault
+			self.totalBids=self.totalBids+(1 as UInt64)
+			destroy oldEscrow
+			return bid.id
+		}
+
+		pub fun calculatePrice() : UFix64{
+			return self.ticks[self.currentTickIndex].price
+		}
+
+		destroy() {
+			//TODO: deposity to ownerNFTCap
+			destroy self.nfts
+			//todo transfer back
+			destroy self.escrow
+		}
+	}
+
+	pub resource interface Public {
+		pub fun getIds() : [UInt64]
+		//TODO: can we just join these two?
+		pub fun getStatus(_ id: UInt64) : AuctionDutchStatus
+		pub fun getBids(_ id: UInt64) : Bids
+		//these methods are only allowed to be called from within this contract, but we want to call them on another users resource
+		access(contract) fun getAuction(_ id:UInt64) : &Auction
+		pub fun bid(id: UInt64, vault: @FungibleToken.Vault, vaultCap: Capability<&{FungibleToken.Receiver}>, nftCap: Capability<&{NonFungibleToken.Receiver}>) : @Bid
+	}
+
+
+	pub struct AuctionDutchStatus {
+
+		pub let status: String
+		pub let startTime: UFix64
+		pub let currentTime: UFix64
+		pub let currentPrice: UFix64
+		pub let totalItems: Int
+		pub let acceptedBids: Int
+		pub let tickStatus: {UFix64:TickStatus}
+		pub let metadata: {String:String}
+
+		init(status:String, currentPrice: UFix64, totalItems: Int, acceptedBids:Int,  startTime: UFix64, tickStatus: {UFix64:TickStatus}, metadata: {String:String}){
+			self.status=status
+			self.currentPrice=currentPrice
+			self.totalItems=totalItems
+			self.acceptedBids=acceptedBids
+			self.startTime=startTime
+			self.currentTime= 42.0 // Clock.time()
+			self.tickStatus=tickStatus
+			self.metadata=metadata
+		}
+	}
+
+	pub resource Collection: Public {
+
+		//TODO: what to do with ended auctions? put them in another collection?
+		//NFTS are gone but we might want to keep some information about it?
+
+		pub let auctions: @{UInt64: Auction}
+
+		init() {
+			self.auctions <- {}
+		}
+
+		pub fun getIds() : [UInt64] {
+			return self.auctions.keys
+		}
+
+		pub fun getStatus(_ id: UInt64) : AuctionDutchStatus{
+			let item= self.getAuction(id)
+			let currentTime= 42.0 // Clock.time()
+
+			var status="Ongoing"
+			var currentPrice= item.calculatePrice()
+			if currentTime < item.startAt() {
+				status="NotStarted"
+			} else if item.winningBid != nil {
+				status="Finished"
+				currentPrice=item.winningBid!
+			}
+
+
+			return AuctionDutchStatus(status: status,
+			currentPrice: currentPrice,
+			totalItems: item.numberOfItems,
+			acceptedBids: item.winningBids.length,
+			startTime: item.startAt(),
+			tickStatus: item.auctionStatus,
+			metadata:item.metadata)
+		}
+
+		pub fun getBids(_ id:UInt64) : Bids {
+			pre {
+				self.auctions[id] != nil: "auction doesn't exist"
+			}
+
+			let item= self.getAuction(id)
+			return item.getBids()
+		}
+
+		access(contract) fun getAuction(_ id:UInt64) : &Auction {
+			pre {
+				self.auctions[id] != nil: "auction doesn't exist"
+			}
+			return &self.auctions[id] as &Auction
+		}
+
+		pub fun bid(id: UInt64, vault: @FungibleToken.Vault, vaultCap: Capability<&{FungibleToken.Receiver}>, nftCap: Capability<&{NonFungibleToken.Receiver}>) : @Bid{
+			//TODO: pre id should exist
+
+			let time= 42.0 // Clock.time()
+			let vault <- vault as! @FlowToken.Vault
+			let auction=self.getAuction(id)
+
+			let price=auction.calculatePrice()
+
+			//the currentPrice is still higher then your bid, this is find we just add your bid to the correct tick bucket
+			if price > vault.balance {
+				let bidId =auction.addBid(vault: <- vault, nftCap:nftCap, vaultCap: vaultCap, time: time)
+				return <- create Bid(capability: AuctionDutch.account.getCapability<&Collection{Public}>(AuctionDutch.CollectionPublicPath), auctionId: id, bidId: bidId)
+			}
+
+			let tooMuchCash=vault.balance - price
+			//you sent in too much flow when you bid so we return some to you and add a valid accepted bid
+			if tooMuchCash != 0.0 {
+				vaultCap.borrow()!.deposit(from: <- vault.withdraw(amount: tooMuchCash))
+			}
+
+			let bidId=auction.addBid(vault: <- vault, nftCap:nftCap, vaultCap: vaultCap, time: time)
+			return <- create Bid(capability: AuctionDutch.account.getCapability<&Collection{Public}>(AuctionDutch.CollectionPublicPath), auctionId: id, bidId: bidId)
+		}
+
+		pub fun tickOrFullfill(_ id:UInt64) {
+			let time= 42.0 // Clock.time()
+			let auction=self.getAuction(id)
+
+			if !auction.isAuctionFinished() {
+				let tick=auction.getTick()
+				//TODO: this emits a tick even even if we do not tick
+				emit AuctionDutchTick(tickPrice: tick.price, acceptedBids: auction.winningBids.length, totalItems: auction.numberOfItems, tickTime: tick.startedAt, auction: id)
+				return
+			}
+
+			auction.fullfill()
+		}
+
+
+		pub fun createAuction( nfts: @{UInt64: NonFungibleToken.NFT}, metadata: {String: String}, startAt: UFix64 startPrice: UFix64, floorPrice: UFix64, decreasePriceFactor: UFix64, decreasePriceAmount: UFix64, tickDuration: UFix64, ownerVaultCap: Capability<&{FungibleToken.Receiver}>, ownerNFTCap: Capability<&{NonFungibleToken.Receiver}> royaltyVaultCap: Capability<&{FungibleToken.Receiver}>, royaltyPercentage: UFix64) {
+
+			let ticks: [Tick] = [Tick(price: startPrice, startedAt: startAt)]
+			var currentPrice=startPrice
+			var currentStartAt=startAt
+			while(currentPrice > floorPrice) {
+				currentPrice=currentPrice * decreasePriceFactor - decreasePriceAmount
+				if currentPrice < floorPrice {
+					currentPrice=floorPrice
+				}
+				currentStartAt=currentStartAt+tickDuration
+				ticks.append(Tick(price: currentPrice, startedAt:currentStartAt))
+			}
+
+			let length=nfts.keys.length
+
+			let auction <- create Auction(nfts: <- nfts, metadata: metadata, ownerVaultCap:ownerVaultCap, ownerNFTCap:ownerNFTCap, royaltyVaultCap:royaltyVaultCap, royaltyPercentage: royaltyPercentage, ticks: ticks)
+
+			emit AuctionDutchCreated(name: metadata["name"] ?? "Unknown name", artist: metadata["artist"] ?? "Unknown artist",  number: length, owner: ownerVaultCap.address, id: auction.uuid)
+
+			let oldAuction <- self.auctions[auction.uuid] <- auction
+			destroy oldAuction
+		}
+
+		destroy () {
+			destroy self.auctions
+		}
+
+	}
+
+	pub fun getBids(_ id: UInt64) : Bids {
+		let account = AuctionDutch.account
+		let cap=account.getCapability<&Collection{Public}>(self.CollectionPublicPath)
+		if let collection = cap.borrow() {
+			return collection.getBids(id)
+		}
+		panic("Could not find auction capability")
+	}
+
+	pub fun getAuctionDutch(_ id: UInt64) : AuctionDutchStatus? {
+		let account = AuctionDutch.account
+		let cap=account.getCapability<&Collection{Public}>(self.CollectionPublicPath)
+		if let collection = cap.borrow() {
+			return collection.getStatus(id)
+		}
+		return nil
+	}
+
+	pub resource Bid {
+
+		pub let capability:Capability<&Collection{Public}>
+		pub let auctionId: UInt64
+		pub let bidId: UInt64
+
+		init(capability:Capability<&Collection{Public}>, auctionId: UInt64, bidId:UInt64) {
+			self.capability=capability
+			self.auctionId=auctionId
+			self.bidId=bidId
+		}
+
+		pub fun getBidInfo() : BidInfo {
+			return self.capability.borrow()!.getAuction(self.auctionId).getBidInfo(id: self.bidId)
+		}
+
+		pub fun getExcessBalance() : UFix64 {
+			return self.capability.borrow()!.getAuction(self.auctionId).getExcessBalance(self.bidId)
+		}
+
+		pub fun increaseBid(vault: @FlowToken.Vault) {
+			self.capability.borrow()!.getAuction(self.auctionId).increaseBid(id: self.bidId, vault: <- vault)
+		}
+
+		pub fun cancelBid() {
+			self.capability.borrow()!.getAuction(self.auctionId).cancelBid(id: self.bidId)
+		}
+
+		pub fun withdrawExcessFlow(_ cap: Capability<&{FungibleToken.Receiver}>) {
+			self.capability.borrow()!.getAuction(self.auctionId).withdrawExcessFlow(id: self.bidId, cap:cap)
+		}
+	}
+
+	pub struct ExcessFlowReport {
+		pub let id: UInt64
+		pub let winning: Bool //TODO: should this be confirmed winning?
+		pub let excessAmount: UFix64
+
+		init(id: UInt64, report: BidInfo, excessAmount: UFix64) {
+			self.id=id
+			self.winning=report.winning
+			self.excessAmount=excessAmount
+		}
+	}
+
+	pub resource interface BidCollectionPublic {
+		pub fun bid(marketplace: Address, id: UInt64, vault: @FungibleToken.Vault, vaultCap: Capability<&{FungibleToken.Receiver}>, nftCap: Capability<&{NonFungibleToken.Receiver}>)
+		pub fun getIds() :[UInt64]
+		pub fun getReport(_ id: UInt64) : ExcessFlowReport
+
+	}
+
+	pub resource BidCollection:BidCollectionPublic {
+
+		access(contract) let bids : @{UInt64: Bid}
+
+		init() {
+			self.bids <- {}
+		}
+
+		pub fun getIds() : [UInt64] {
+			return self.bids.keys
+		}
+
+		pub fun getReport(_ id: UInt64) : ExcessFlowReport {
+			let bid=self.getBid(id)
+			return ExcessFlowReport(id:id, report: bid.getBidInfo(), excessAmount: bid.getExcessBalance())
+		}
+
+		pub fun bid(marketplace: Address, id: UInt64, vault: @FungibleToken.Vault, vaultCap: Capability<&{FungibleToken.Receiver}>, nftCap: Capability<&{NonFungibleToken.Receiver}>)  {
+
+			let dutchAuctionCap=getAccount(marketplace).getCapability<&AuctionDutch.Collection{AuctionDutch.Public}>(AuctionDutch.CollectionPublicPath)
+			let bid <- dutchAuctionCap.borrow()!.bid(id: id, vault: <- vault, vaultCap: vaultCap, nftCap: nftCap)
+			self.bids[bid.uuid] <-! bid
+		}
+
+		pub fun withdrawExcessFlow(id: UInt64, vaultCap: Capability<&{FungibleToken.Receiver}>) {
+			let bid = self.getBid(id)
+			bid.withdrawExcessFlow(vaultCap)
+		}
+
+		pub fun cancelBid(_ id: UInt64) {
+			let bid = self.getBid(id)
+			bid.cancelBid()
+			destroy <- self.bids.remove(key: bid.uuid)
+		}
+
+		pub fun increaseBid(_ id: UInt64, vault: @FungibleToken.Vault) {
+			let vault <- vault as! @FlowToken.Vault
+			let bid = self.getBid(id)
+			bid.increaseBid(vault: <- vault)
+		}
+
+		access(contract) fun getBid(_ id:UInt64) : &Bid {
+			pre {
+				self.bids[id] != nil: "bid doesn't exist"
+			}
+			return &self.bids[id] as &Bid
+		}
+
+
+		destroy() {
+			destroy  self.bids
+		}
+
+	}
+
+	pub fun createEmptyBidCollection() : @BidCollection {
+		return <- create BidCollection()
+	}
+
+	init() {
+		self.CollectionPublicPath= /public/versusAuctionDutchCollection
+		self.CollectionStoragePath= /storage/versusAuctionDutchCollection
+
+		self.BidCollectionPublicPath= /public/versusAuctionDutchBidCollection
+		self.BidCollectionStoragePath= /storage/versusAuctionDutchBidCollection
+
+
+		let account=self.account
+		let collection <- create Collection()
+		account.save(<-collection, to: AuctionDutch.CollectionStoragePath)
+		account.link<&Collection{Public}>(AuctionDutch.CollectionPublicPath, target: AuctionDutch.CollectionStoragePath)
+
+	}
+}
+`
+
+	const contentContract = `
+pub contract Content {
+
+    pub var totalSupply: UInt64
+
+    pub let CollectionStoragePath: StoragePath
+    pub let CollectionPrivatePath: PrivatePath
+
+    pub event ContractInitialized()
+    pub event Withdraw(id: UInt64, from: Address?)
+    pub event Deposit(id: UInt64, to: Address?)
+    pub event Created(id: UInt64)
+
+    pub resource Blob {
+        pub let id: UInt64
+
+        access(contract) var content: String
+
+        init(initID: UInt64, content: String) {
+            self.id = initID
+            self.content=content
+        }
+    }
+
+    //return the content for this NFT
+    pub resource interface PublicContent {
+        pub fun content(_ id: UInt64): String?
+    }
+
+    pub resource Collection: PublicContent {
+        pub var contents: @{UInt64: Blob}
+
+        init () {
+            self.contents <- {}
+        }
+
+        // withdraw removes an NFT from the collection and moves it to the caller
+        pub fun withdraw(withdrawID: UInt64): @Blob {
+            let token <- self.contents.remove(key: withdrawID) ?? panic("missing content")
+
+            emit Withdraw(id: token.id, from: self.owner?.address)
+
+            return <-token
+        }
+
+        // deposit takes a NFT and adds it to the collections dictionary
+        // and adds the ID to the id array
+        pub fun deposit(token: @Blob) {
+
+            let id: UInt64 = token.id
+
+            // add the new token to the dictionary which removes the old one
+            let oldToken <- self.contents[id] <- token
+
+            emit Deposit(id: id, to: self.owner?.address)
+
+            destroy oldToken
+        }
+
+        // getIDs returns an array of the IDs that are in the collection
+        pub fun getIDs(): [UInt64] {
+            return self.contents.keys
+        }
+
+        pub fun content(_ id: UInt64) : String {
+            return self.contents[id]?.content ?? panic("Content blob does not exist")
+        }
+
+        destroy() {
+            destroy self.contents
+        }
+    }
+
+    access(account) fun createEmptyCollection(): @Content.Collection {
+        return <- create Collection()
+    }
+
+
+	access(account) fun createContent(_ content: String) : @Content.Blob {
+
+        var newNFT <- create Blob(initID: Content.totalSupply, content:content)
+        emit Created(id: Content.totalSupply)
+
+        Content.totalSupply = Content.totalSupply + UInt64(1)
+        return <- newNFT
+	}
+
+	init() {
+        // Initialize the total supply
+        self.totalSupply = 0
+        self.CollectionPrivatePath=/private/versusContentCollection
+        self.CollectionStoragePath=/storage/versusContentCollection
+
+        let account =self.account
+        account.save(<- Content.createEmptyCollection(), to: Content.CollectionStoragePath)
+        account.link<&Content.Collection>(Content.CollectionPrivatePath, target: Content.CollectionStoragePath)
+
+        emit ContractInitialized()
+	}
+}
+`
+
+	const artContract = `
+import NonFungibleToken from 0x631e88ae7f1d7c20
+import FungibleToken from 0x9a0766d93b6608b7
+import Content from 0x99ca04281098b33d
+
+/// A NFT contract to store art
+pub contract Art: NonFungibleToken {
+
+	pub let CollectionStoragePath: StoragePath
+	pub let CollectionPublicPath: PublicPath
+
+	pub var totalSupply: UInt64
+
+	pub event ContractInitialized()
+	pub event Withdraw(id: UInt64, from: Address?)
+	pub event Deposit(id: UInt64, to: Address?)
+	pub event Created(id: UInt64, metadata: Metadata)
+	pub event Editioned(id: UInt64, from: UInt64, edition: UInt64, maxEdition: UInt64)
+
+	//The public interface can show metadata and the content for the Art piece
+	pub resource interface Public {
+		pub let id: UInt64
+		pub let metadata: Metadata
+
+		//these three are added because I think they will be in the standard. Atleast dieter thinks it will be needed
+		pub let name: String
+		pub let description: String
+		pub let schema: String?
+
+		pub fun content() : String?
+
+		access(account) let royalty: {String: Royalty}
+		pub fun cacheKey() : String
+
+	}
+
+	pub struct Metadata {
+		pub let name: String
+		pub let artist: String
+		pub let artistAddress:Address
+		pub let description: String
+		pub let type: String
+		pub let edition: UInt64
+		pub let maxEdition: UInt64
+
+
+		init(name: String,
+		artist: String,
+		artistAddress:Address,
+		description: String,
+		type: String,
+		edition: UInt64,
+		maxEdition: UInt64) {
+			self.name=name
+			self.artist=artist
+			self.artistAddress=artistAddress
+			self.description=description
+			self.type=type
+			self.edition=edition
+			self.maxEdition=maxEdition
+		}
+
+	}
+
+	pub struct Royalty{
+		pub let wallet:Capability<&{FungibleToken.Receiver}>
+		pub let cut: UFix64
+
+		/// @param wallet : The wallet to send royalty too
+		init(wallet:Capability<&{FungibleToken.Receiver}>, cut: UFix64 ){
+			self.wallet=wallet
+			self.cut=cut
+		}
+	}
+
+	pub resource NFT: NonFungibleToken.INFT, Public {
+		//TODO: tighten up the permission here.
+		pub let id: UInt64
+		pub let name: String
+		pub let description: String
+
+		pub let schema: String?
+		//content can either be embedded in the NFT as and URL or a pointer to a Content collection to be stored onChain
+		//a pointer will be used for all editions of the same Art when it is editioned
+		pub let contentCapability:Capability<&Content.Collection>?
+		pub let contentId: UInt64?
+		pub let url: String?
+		pub let metadata: Metadata
+		access(account) let royalty: {String: Royalty}
+
+		init(initID: UInt64,
+		metadata: Metadata,
+		contentCapability:Capability<&Content.Collection>?,
+		contentId: UInt64?,
+		url: String?,
+		royalty:{String: Royalty}) {
+
+			self.id = initID
+			self.metadata=metadata
+			self.contentCapability=contentCapability
+			self.contentId=contentId
+			self.url=url
+			self.royalty=royalty
+			self.schema=nil
+			self.name = metadata.name
+			self.description=metadata.description
+		}
+
+		pub fun cacheKey() : String {
+			if self.url != nil {
+				return self.url!
+			}
+			return self.contentId!.toString()
+		}
+
+		//return the content for this NFT
+		pub fun content() : String {
+			if self.url != nil {
+				return self.url!
+			}
+
+			let contentCollection= self.contentCapability!.borrow()!
+			return contentCollection.content(self.contentId!)
+		}
+	}
+
+
+	//Standard NFT collectionPublic interface that can also borrowArt as the correct type
+	pub resource interface CollectionPublic {
+
+		pub fun deposit(token: @NonFungibleToken.NFT)
+		pub fun getIDs(): [UInt64]
+		pub fun borrowNFT(id: UInt64): &NonFungibleToken.NFT
+		pub fun borrowArt(id: UInt64): &{Art.Public}?
+	}
+
+
+	pub resource Collection: CollectionPublic, NonFungibleToken.Provider, NonFungibleToken.Receiver, NonFungibleToken.CollectionPublic {
+		// dictionary of NFT conforming tokens
+		// NFT is a resource type with an UInt64 ID field
+		pub var ownedNFTs: @{UInt64: NonFungibleToken.NFT}
+
+		init () {
+			self.ownedNFTs <- {}
+		}
+
+		// withdraw removes an NFT from the collection and moves it to the caller
+		pub fun withdraw(withdrawID: UInt64): @NonFungibleToken.NFT {
+			let token <- self.ownedNFTs.remove(key: withdrawID) ?? panic("missing NFT")
+
+			emit Withdraw(id: token.id, from: self.owner?.address)
+
+			return <-token
+		}
+
+		// deposit takes a NFT and adds it to the collections dictionary
+		// and adds the ID to the id array
+		pub fun deposit(token: @NonFungibleToken.NFT) {
+			let token <- token as! @Art.NFT
+
+			let id: UInt64 = token.id
+
+			// add the new token to the dictionary which removes the old one
+			let oldToken <- self.ownedNFTs[id] <- token
+
+			emit Deposit(id: id, to: self.owner?.address)
+
+			destroy oldToken
+		}
+
+		// getIDs returns an array of the IDs that are in the collection
+		pub fun getIDs(): [UInt64] {
+			return self.ownedNFTs.keys
+		}
+
+		// borrowNFT gets a reference to an NFT in the collection
+		// so that the caller can read its metadata and call its methods
+		pub fun borrowNFT(id: UInt64): &NonFungibleToken.NFT {
+			return &self.ownedNFTs[id] as &NonFungibleToken.NFT
+		}
+
+		// borrowArt returns a borrowed reference to a Art
+		// so that the caller can read data and call methods from it.
+		//
+		// Parameters: id: The ID of the NFT to get the reference for
+		//
+		// Returns: A reference to the NFT
+		pub fun borrowArt(id: UInt64): &{Art.Public}? {
+			if self.ownedNFTs[id] != nil {
+				let ref = &self.ownedNFTs[id] as auth &NonFungibleToken.NFT
+				return ref as! &Art.NFT
+			} else {
+				return nil
+			}
+		}
+
+
+		destroy() {
+			destroy self.ownedNFTs
+		}
+	}
+
+	// public function that anyone can call to create a new empty collection
+	pub fun createEmptyCollection(): @NonFungibleToken.Collection {
+		return <- create Collection()
+	}
+
+
+
+	pub struct ArtData {
+		pub let metadata: Art.Metadata
+		pub let id: UInt64
+		pub let cacheKey: String
+		init(metadata: Art.Metadata, id: UInt64, cacheKey: String) {
+			self.metadata= metadata
+			self.id=id
+			self.cacheKey=cacheKey
+		}
+	}
+
+
+
+	pub fun getContentForArt(address:Address, artId:UInt64) : String? {
+
+		let account=getAccount(address)
+		if let artCollection= account.getCapability(self.CollectionPublicPath).borrow<&{Art.CollectionPublic}>()  {
+			return artCollection.borrowArt(id: artId)!.content()
+		}
+		return nil
+	}
+
+	// We cannot return the content here since it will be too big to run in a script
+	pub fun getArt(address:Address) : [ArtData] {
+
+		var artData: [ArtData] = []
+		let account=getAccount(address)
+
+		if let artCollection= account.getCapability(self.CollectionPublicPath).borrow<&{Art.CollectionPublic}>()  {
+			for id in artCollection.getIDs() {
+				var art=artCollection.borrowArt(id: id)
+				artData.append(ArtData(
+					metadata: art!.metadata,
+					id: id,
+					cacheKey: art!.cacheKey()))
+				}
+			}
+			return artData
+		}
+
+		//This method can only be called from another contract in the same account. In Versus case it is called from the VersusAdmin that is used to administer the solution
+		access(account) fun createArtWithContent(name: String, artist:String, artistAddress:Address, description: String, url: String, type: String, royalty: {String: Royalty}, edition: UInt64, maxEdition: UInt64) : @Art.NFT {
+			var newNFT <- create NFT(
+				initID: Art.totalSupply,
+				metadata: Metadata(
+					name: name,
+					artist: artist,
+					artistAddress: artistAddress,
+					description:description,
+					type:type,
+					edition:edition,
+					maxEdition: maxEdition
+				),
+				contentCapability:nil,
+				contentId:nil,
+				url:url,
+				royalty:royalty
+			)
+			emit Created(id: Art.totalSupply, metadata: newNFT.metadata)
+
+			Art.totalSupply = Art.totalSupply + UInt64(1)
+			return <- newNFT
+		}
+
+		//This method can only be called from another contract in the same account. In Versus case it is called from the VersusAdmin that is used to administer the solution
+		access(account) fun createArtWithPointer(name: String, artist: String, artistAddress:Address, description: String, type: String, contentCapability:Capability<&Content.Collection>, contentId: UInt64, royalty: {String: Royalty}) : @Art.NFT{
+
+			let metadata=Metadata( name: name, artist: artist, artistAddress: artistAddress, description:description, type:type, edition:1, maxEdition:1)
+			var newNFT <- create NFT(initID: Art.totalSupply,metadata: metadata, contentCapability:contentCapability, contentId:contentId, url:nil, royalty:royalty)
+			emit Created(id: Art.totalSupply, metadata: newNFT.metadata)
+
+			Art.totalSupply = Art.totalSupply + UInt64(1)
+			return <- newNFT
+		}
+
+		//This method can only be called from another contract in the same account. In Versus case it is called from the VersusAdmin that is used to administer the solution
+		access(account) fun makeEdition(original: &NFT, edition: UInt64, maxEdition:UInt64) : @Art.NFT {
+			let metadata=Metadata( name: original.metadata.name, artist:original.metadata.artist, artistAddress:original.metadata.artistAddress, description:original.metadata.description, type:original.metadata.type, edition: edition, maxEdition:maxEdition)
+			var newNFT <- create NFT(initID: Art.totalSupply, metadata: metadata , contentCapability: original.contentCapability, contentId:original.contentId, url:original.url, royalty:original.royalty)
+			emit Created(id: Art.totalSupply, metadata: newNFT.metadata)
+			emit Editioned(id: Art.totalSupply, from: original.id, edition:edition, maxEdition:maxEdition)
+
+			Art.totalSupply = Art.totalSupply + UInt64(1)
+			return <- newNFT
+		}
+
+
+		init() {
+			// Initialize the total supply
+			self.totalSupply = 0
+			self.CollectionPublicPath=/public/versusArtCollection
+			self.CollectionStoragePath=/storage/versusArtCollection
+
+			self.account.save<@NonFungibleToken.Collection>(<- Art.createEmptyCollection(), to: Art.CollectionStoragePath)
+			self.account.link<&{Art.CollectionPublic}>(Art.CollectionPublicPath, target: Art.CollectionStoragePath)
+			emit ContractInitialized()
+		}
+	}
+`
+
+	accountCodes := map[common.LocationID][]byte{
+		common.AddressLocation{
+			Address: ftAddress,
+			Name:    "FungibleToken",
+		}.ID(): []byte(realFungibleTokenContractInterface),
+		common.AddressLocation{
+			Address: nftAddress,
+			Name:    "NonFungibleToken",
+		}.ID(): []byte(realNonFungibleTokenInterface),
+	}
+
+	var events []cadence.Event
+
+	var signerAddress common.Address
+
+	storage := newTestLedger(nil, nil)
+
+	runtimeInterface := &testRuntimeInterface{
+		getCode: func(location Location) (bytes []byte, err error) {
+			return accountCodes[location.ID()], nil
+		},
+		storage: storage,
+		getSigningAccounts: func() ([]Address, error) {
+			return []Address{signerAddress}, nil
+		},
+		resolveLocation: singleIdentifierLocationResolver(t),
+		getAccountContractCode: func(address Address, name string) (code []byte, err error) {
+			location := common.AddressLocation{
+				Address: address,
+				Name:    name,
+			}
+			return accountCodes[location.ID()], nil
+		},
+		updateAccountContractCode: func(address Address, name string, code []byte) error {
+			location := common.AddressLocation{
+				Address: address,
+				Name:    name,
+			}
+			accountCodes[location.ID()] = code
+			return nil
+		},
+		emitEvent: func(event cadence.Event) error {
+			events = append(events, event)
+			return nil
+		},
+		log: func(message string) {
+			println(message)
+		},
+		decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+			return json.Decode(b)
+		},
+	}
+
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	// Deploy FlowToken contract
+
+	signerAddress = flowTokenAddress
+
+	err = runtime.ExecuteTransaction(
+		Script{
+			Source: []byte(fmt.Sprintf(
+				`
+                 transaction {
+
+                     prepare(signer: AuthAccount) {
+                         signer.contracts.add(name: "FlowToken", code: "%s".decodeHex(), signer)
+                     }
+                 }
+               `,
+				hex.EncodeToString([]byte(flowTokenContract)),
+			)),
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	// Deploy contracts
+
+	signerAddress = contractsAddress
+
+	for _, contract := range []struct {
+		name string
+		code string
+	}{
+		{"AuctionDutch", auctionDutchContract},
+		{"Content", contentContract},
+		{"Art", artContract},
+	} {
+
+		err = runtime.ExecuteTransaction(
+			Script{
+				Source: utils.DeploymentTransaction(
+					contract.name,
+					[]byte(contract.code),
+				),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+		require.NoError(t, err)
+	}
+
+	// Setup accounts for Flow Token and mint tokens
+
+	const setupFlowTokenAccountTransaction = `
+import FungibleToken from 0x9a0766d93b6608b7
+import FlowToken from 0x7e60df042a9c0868
+
+transaction {
+
+    prepare(signer: AuthAccount) {
+
+        if signer.borrow<&FlowToken.Vault>(from: /storage/flowTokenVault) == nil {
+            // Create a new flowToken Vault and put it in storage
+            signer.save(<-FlowToken.createEmptyVault(), to: /storage/flowTokenVault)
+
+            // Create a public capability to the Vault that only exposes
+            // the deposit function through the Receiver interface
+            signer.link<&FlowToken.Vault{FungibleToken.Receiver}>(
+                /public/flowTokenReceiver,
+                target: /storage/flowTokenVault
+            )
+
+            // Create a public capability to the Vault that only exposes
+            // the balance field through the Balance interface
+            signer.link<&FlowToken.Vault{FungibleToken.Balance}>(
+                /public/flowTokenBalance,
+                target: /storage/flowTokenVault
+            )
+        }
+    }
+}
+`
+
+	mintAmount, err := cadence.NewUFix64("1000.0")
+	require.NoError(t, err)
+
+	const mintTransaction = `
+import FungibleToken from 0x9a0766d93b6608b7
+import FlowToken from 0x7e60df042a9c0868
+
+transaction(recipient: Address, amount: UFix64) {
+    let tokenAdmin: &FlowToken.Administrator
+    let tokenReceiver: &{FungibleToken.Receiver}
+
+    prepare(signer: AuthAccount) {
+        self.tokenAdmin = signer
+            .borrow<&FlowToken.Administrator>(from: /storage/flowTokenAdmin)
+            ?? panic("Signer is not the token admin")
+
+        self.tokenReceiver = getAccount(recipient)
+            .getCapability(/public/flowTokenReceiver)
+            .borrow<&{FungibleToken.Receiver}>()
+            ?? panic("Unable to borrow receiver reference")
+    }
+
+    execute {
+        let minter <- self.tokenAdmin.createNewMinter(allowedAmount: amount)
+        let mintedVault <- minter.mintTokens(amount: amount)
+
+        self.tokenReceiver.deposit(from: <-mintedVault)
+
+        destroy minter
+    }
+}
+`
+
+	for _, address := range []common.Address{
+		contractsAddress,
+		artistAddress,
+		bidderAddress,
+	} {
+		// Setup account
+
+		signerAddress = address
+
+		err = runtime.ExecuteTransaction(
+			Script{
+				Source: []byte(setupFlowTokenAccountTransaction),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+		require.NoError(t, err)
+
+		// Mint tokens
+
+		signerAddress = flowTokenAddress
+
+		err = runtime.ExecuteTransaction(
+			Script{
+				Source: []byte(mintTransaction),
+				Arguments: encodeArgs([]cadence.Value{
+					cadence.Address(address),
+					mintAmount,
+				}),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+		require.NoError(t, err)
+	}
+
+	// Create auction
+
+	const artCollectionTransaction = `
+	    import FungibleToken from 0x9a0766d93b6608b7
+	    import NonFungibleToken from 0x631e88ae7f1d7c20
+	    import AuctionDutch from 0x99ca04281098b33d
+
+	    transaction() {
+	        prepare(account: AuthAccount) {
+
+                let ownerVaultCap = account.getCapability<&{FungibleToken.Receiver}>(/public/doesNotExist)
+		        let ownerNFTCap = account.getCapability<&{NonFungibleToken.Receiver}>(/public/doesNotExist)
+		        let royaltyVaultCap = account.getCapability<&{FungibleToken.Receiver}>(/public/doesNotExist)
+
+                account.borrow<&AuctionDutch.Collection>(from: AuctionDutch.CollectionStoragePath)!
+                    .createAuction(
+                        nfts: <-{},
+                        metadata: {},
+                        startAt: 42.0,
+                        startPrice: 4.0,
+                        floorPrice: 2.0,
+                        decreasePriceFactor: 0.1,
+                        decreasePriceAmount: 0.1,
+                        tickDuration: 0.1,
+                        ownerVaultCap: ownerVaultCap,
+                        ownerNFTCap: ownerNFTCap,
+                        royaltyVaultCap: royaltyVaultCap,
+                        royaltyPercentage: 0.1
+                    )
+	        }
+	    }
+	`
+
+	signerAddress = contractsAddress
+
+	err = runtime.ExecuteTransaction(
+		Script{
+			Source: []byte(artCollectionTransaction),
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	// Bid
+
+	const bidTransaction = `
+	    import FlowToken from 0x7e60df042a9c0868
+	    import FungibleToken from 0x9a0766d93b6608b7
+	    import NonFungibleToken from 0x631e88ae7f1d7c20
+	    import AuctionDutch from 0x99ca04281098b33d
+
+	    transaction {
+            prepare(signer: AuthAccount) {
+
+                let vault <- signer.borrow<&FlowToken.Vault>(from: /storage/flowTokenVault)!
+                    .withdraw(amount: 4.0)
+
+                let vaultCap = signer.getCapability<&{FungibleToken.Receiver}>(/public/flowTokenReceiver)
+                let nftCap = signer.getCapability<&{NonFungibleToken.Receiver}>(/public/doesNotExist)
+
+                let bid <- getAccount(0x99ca04281098b33d)
+                    .getCapability<&AuctionDutch.Collection{AuctionDutch.Public}>(AuctionDutch.CollectionPublicPath)
+                    .borrow()!
+                    .bid(
+                       id: 0,
+                       vault: <-vault,
+                       vaultCap: vaultCap,
+                       nftCap: nftCap
+                    )
+
+                signer.save(<-bid, to: /storage/bid)
+            }
+	    }
+	`
+
+	signerAddress = bidderAddress
+
+	err = runtime.ExecuteTransaction(
+		Script{
+			Source: []byte(bidTransaction),
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	// Cancel bid
+
+	const cancelBidTransaction = `
+	    import AuctionDutch from 0x99ca04281098b33d
+
+	    transaction {
+            prepare(signer: AuthAccount) {
+                signer.borrow<&AuctionDutch.Bid>(from: /storage/bid)!.cancelBid()
+            }
+	    }
+	`
+
+	signerAddress = bidderAddress
+
+	err = runtime.ExecuteTransaction(
+		Script{
+			Source: []byte(cancelBidTransaction),
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
 		},
 	)
 	require.NoError(t, err)
