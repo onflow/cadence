@@ -636,7 +636,7 @@ func BenchmarkRuntimeFungibleTokenTransfer(b *testing.B) {
 
 	// Benchmark sending tokens from sender to receiver
 
-	semdAmount, err := cadence.NewUFix64("0.00000001")
+	sendAmount, err := cadence.NewUFix64("0.00000001")
 	require.NoError(b, err)
 
 	signerAccount = senderAddress
@@ -650,7 +650,7 @@ func BenchmarkRuntimeFungibleTokenTransfer(b *testing.B) {
 			Script{
 				Source: []byte(realFlowTokenTransferTransaction),
 				Arguments: encodeArgs([]cadence.Value{
-					semdAmount,
+					sendAmount,
 					cadence.Address(receiverAddress),
 				}),
 			},
