@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"math/big"
 	"math/rand"
-	"reflect"
 	"testing"
 	"time"
 
@@ -31,8 +30,6 @@ func TestRandomMapOperations(t *testing.T) {
 	seed := time.Now().UnixNano()
 	fmt.Printf("Seed used for test: %d \n", seed)
 	rand.Seed(seed)
-
-	//elaboration := sema.NewElaboration()
 
 	storage := interpreter.NewInMemoryStorage()
 	inter, err := interpreter.NewInterpreter(
@@ -90,9 +87,9 @@ func TestRandomMapOperations(t *testing.T) {
 			exists := testMap.ContainsKey(inter, interpreter.ReturnEmptyLocationRange, key)
 			require.True(t, bool(exists))
 
-			v, found := testMap.Get(inter, interpreter.ReturnEmptyLocationRange, key)
+			value, found := testMap.Get(inter, interpreter.ReturnEmptyLocationRange, key)
 			require.True(t, found)
-			utils.AssertValuesEqual(t, inter, orgValue, v)
+			utils.AssertValuesEqual(t, inter, orgValue, value)
 		}
 
 		require.Equal(t, testMap.Count(), len(entries))
@@ -101,7 +98,7 @@ func TestRandomMapOperations(t *testing.T) {
 		require.Equal(t, owner[:], orgOwner[:])
 	})
 
-	t.Run("test iterator", func(t *testing.T) {
+	t.Run("iterate", func(t *testing.T) {
 		require.Equal(t, testMap.Count(), len(entries))
 
 		testMap.Iterate(func(key, value interpreter.Value) (resume bool) {
@@ -112,7 +109,7 @@ func TestRandomMapOperations(t *testing.T) {
 		})
 	})
 
-	t.Run("test deep copy", func(t *testing.T) {
+	t.Run("deep copy", func(t *testing.T) {
 		newOwner := atree.Address([8]byte{'B'})
 		copyOfTestMap = testMap.DeepCopy(
 			inter,
@@ -126,9 +123,9 @@ func TestRandomMapOperations(t *testing.T) {
 			exists := copyOfTestMap.ContainsKey(inter, interpreter.ReturnEmptyLocationRange, key)
 			require.True(t, bool(exists))
 
-			v, found := copyOfTestMap.Get(inter, interpreter.ReturnEmptyLocationRange, key)
+			value, found := copyOfTestMap.Get(inter, interpreter.ReturnEmptyLocationRange, key)
 			require.True(t, found)
-			utils.AssertValuesEqual(t, inter, orgValue, v)
+			utils.AssertValuesEqual(t, inter, orgValue, value)
 		}
 
 		require.Equal(t, copyOfTestMap.Count(), len(entries))
@@ -137,7 +134,7 @@ func TestRandomMapOperations(t *testing.T) {
 		require.Equal(t, owner[:], newOwner[:])
 	})
 
-	t.Run("test deep removal", func(t *testing.T) {
+	t.Run("deep remove", func(t *testing.T) {
 		copyOfTestMap.DeepRemove(inter)
 		err = storage.Remove(copyOfTestMap.StorageID())
 		require.NoError(t, err)
@@ -154,9 +151,9 @@ func TestRandomMapOperations(t *testing.T) {
 			exists := testMap.ContainsKey(inter, interpreter.ReturnEmptyLocationRange, key)
 			require.True(t, bool(exists))
 
-			v, found := testMap.Get(inter, interpreter.ReturnEmptyLocationRange, key)
+			value, found := testMap.Get(inter, interpreter.ReturnEmptyLocationRange, key)
 			require.True(t, found)
-			utils.AssertValuesEqual(t, inter, orgValue, v)
+			utils.AssertValuesEqual(t, inter, orgValue, value)
 		}
 
 		require.Equal(t, testMap.Count(), len(entries))
@@ -191,7 +188,7 @@ func TestRandomArrayOperations(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	numberOfValues := rand.Intn(valueCount/100)
+	numberOfValues := rand.Intn(valueCount / 100)
 
 	var testArray, copyOfTestArray *interpreter.ArrayValue
 	var storageSize, slabCounts int
@@ -199,7 +196,7 @@ func TestRandomArrayOperations(t *testing.T) {
 	elements := make([]interpreter.Value, numberOfValues)
 	orgOwner := common.Address([8]byte{'A'})
 
-		values := make([]interpreter.Value, numberOfValues)
+	values := make([]interpreter.Value, numberOfValues)
 
 	t.Run("array construction", func(t *testing.T) {
 		for i := 0; i < numberOfValues; i++ {
@@ -219,9 +216,9 @@ func TestRandomArrayOperations(t *testing.T) {
 
 		storageSize, slabCounts = getSlabStorageSize(t, storage)
 
-		for index, orgValue := range elements {
-			v := testArray.Get(inter, interpreter.ReturnEmptyLocationRange, index)
-			utils.AssertValuesEqual(t, inter, orgValue, v)
+		for index, orgElement := range elements {
+			element := testArray.Get(inter, interpreter.ReturnEmptyLocationRange, index)
+			utils.AssertValuesEqual(t, inter, orgElement, element)
 		}
 
 		require.Equal(t, testArray.Count(), len(elements))
@@ -230,22 +227,23 @@ func TestRandomArrayOperations(t *testing.T) {
 		require.Equal(t, owner[:], orgOwner[:])
 	})
 
-	t.Run("test iterator", func(t *testing.T) {
+	t.Run("iterate", func(t *testing.T) {
 		require.Equal(t, testArray.Count(), len(elements))
 
 		index := 0
-		testArray.Iterate(func(value interpreter.Value) (resume bool) {
-			_ = values
-			orgValue := elements[index]
-			if !reflect.DeepEqual(orgValue, value) {
-				fmt.Println(orgValue, value)
-			}
-			utils.AssertValuesEqual(t, inter, orgValue, value)
+		testArray.Iterate(func(element interpreter.Value) (resume bool) {
+			orgElement := elements[index]
+			utils.AssertValuesEqual(t, inter, orgElement, element)
+
+			elementByIndex := testArray.Get(inter, interpreter.ReturnEmptyLocationRange, index)
+			utils.AssertValuesEqual(t, inter, element, elementByIndex)
+
+			index++
 			return true
 		})
 	})
 
-	t.Run("test deep copy", func(t *testing.T) {
+	t.Run("deep copy", func(t *testing.T) {
 		newOwner := atree.Address([8]byte{'B'})
 		copyOfTestArray = testArray.DeepCopy(
 			inter,
@@ -253,9 +251,9 @@ func TestRandomArrayOperations(t *testing.T) {
 			newOwner,
 		).(*interpreter.ArrayValue)
 
-		for index, orgValue := range elements {
-			v := copyOfTestArray.Get(inter, interpreter.ReturnEmptyLocationRange, index)
-			utils.AssertValuesEqual(t, inter, orgValue, v)
+		for index, orgElement := range elements {
+			element := copyOfTestArray.Get(inter, interpreter.ReturnEmptyLocationRange, index)
+			utils.AssertValuesEqual(t, inter, orgElement, element)
 		}
 
 		require.Equal(t, copyOfTestArray.Count(), len(elements))
@@ -264,7 +262,7 @@ func TestRandomArrayOperations(t *testing.T) {
 		require.Equal(t, owner[:], newOwner[:])
 	})
 
-	t.Run("test deep removal", func(t *testing.T) {
+	t.Run("deep removal", func(t *testing.T) {
 		copyOfTestArray.DeepRemove(inter)
 		err = storage.Remove(copyOfTestArray.StorageID())
 		require.NoError(t, err)
@@ -274,10 +272,10 @@ func TestRandomArrayOperations(t *testing.T) {
 		require.Equal(t, slabCounts, newSlabCounts)
 		require.Equal(t, storageSize, newStorageSize)
 
-		// go over original values again and check no missing data (no side effect should be found)
-		for index, orgValue := range elements {
-			v := testArray.Get(inter, interpreter.ReturnEmptyLocationRange, index)
-			utils.AssertValuesEqual(t, inter, orgValue, v)
+		// go over original elements again and check no missing data (no side effect should be found)
+		for index, orgElement := range elements {
+			element := testArray.Get(inter, interpreter.ReturnEmptyLocationRange, index)
+			utils.AssertValuesEqual(t, inter, orgElement, element)
 		}
 
 		require.Equal(t, testArray.Count(), len(elements))
