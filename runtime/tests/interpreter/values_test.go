@@ -92,7 +92,7 @@ func TestRandomMapOperations(t *testing.T) {
 
 			v, found := testMap.Get(inter, interpreter.ReturnEmptyLocationRange, key)
 			require.True(t, found)
-			assertEquals(t, inter, orgValue, v)
+			utils.AssertValuesEqual(t, inter, orgValue, v)
 		}
 
 		require.Equal(t, testMap.Count(), len(entries))
@@ -107,7 +107,7 @@ func TestRandomMapOperations(t *testing.T) {
 		testMap.Iterate(func(key, value interpreter.Value) (resume bool) {
 			mapKey := goMapKey(key)
 			orgValue, _ := entries[mapKey]
-			assertEquals(t, inter, orgValue, value)
+			utils.AssertValuesEqual(t, inter, orgValue, value)
 			return true
 		})
 	})
@@ -128,7 +128,7 @@ func TestRandomMapOperations(t *testing.T) {
 
 			v, found := copyOfTestMap.Get(inter, interpreter.ReturnEmptyLocationRange, key)
 			require.True(t, found)
-			assertEquals(t, inter, orgValue, v)
+			utils.AssertValuesEqual(t, inter, orgValue, v)
 		}
 
 		require.Equal(t, copyOfTestMap.Count(), len(entries))
@@ -156,7 +156,7 @@ func TestRandomMapOperations(t *testing.T) {
 
 			v, found := testMap.Get(inter, interpreter.ReturnEmptyLocationRange, key)
 			require.True(t, found)
-			assertEquals(t, inter, orgValue, v)
+			utils.AssertValuesEqual(t, inter, orgValue, v)
 		}
 
 		require.Equal(t, testMap.Count(), len(entries))
@@ -221,7 +221,7 @@ func TestRandomArrayOperations(t *testing.T) {
 
 		for index, orgValue := range elements {
 			v := testArray.Get(inter, interpreter.ReturnEmptyLocationRange, index)
-			assertEquals(t, inter, orgValue, v)
+			utils.AssertValuesEqual(t, inter, orgValue, v)
 		}
 
 		require.Equal(t, testArray.Count(), len(elements))
@@ -240,7 +240,7 @@ func TestRandomArrayOperations(t *testing.T) {
 			if !reflect.DeepEqual(orgValue, value) {
 				fmt.Println(orgValue, value)
 			}
-			assertEquals(t, inter, orgValue, value)
+			utils.AssertValuesEqual(t, inter, orgValue, value)
 			return true
 		})
 	})
@@ -255,7 +255,7 @@ func TestRandomArrayOperations(t *testing.T) {
 
 		for index, orgValue := range elements {
 			v := copyOfTestArray.Get(inter, interpreter.ReturnEmptyLocationRange, index)
-			assertEquals(t, inter, orgValue, v)
+			utils.AssertValuesEqual(t, inter, orgValue, v)
 		}
 
 		require.Equal(t, copyOfTestArray.Count(), len(elements))
@@ -277,7 +277,7 @@ func TestRandomArrayOperations(t *testing.T) {
 		// go over original values again and check no missing data (no side effect should be found)
 		for index, orgValue := range elements {
 			v := testArray.Get(inter, interpreter.ReturnEmptyLocationRange, index)
-			assertEquals(t, inter, orgValue, v)
+			utils.AssertValuesEqual(t, inter, orgValue, v)
 		}
 
 		require.Equal(t, testArray.Count(), len(elements))
@@ -298,51 +298,6 @@ func goMapKey(key interpreter.Value) interface{} {
 		return key
 	default:
 		panic("unreachable")
-	}
-}
-
-func assertEquals(t *testing.T,
-	inter *interpreter.Interpreter,
-	expected interpreter.Value,
-	actual interpreter.Value,
-) {
-
-	switch v := actual.(type) {
-	case *interpreter.CompositeValue:
-		require.IsType(t, expected, actual)
-		orgCompositeVal := expected.(*interpreter.CompositeValue)
-
-		orgCompositeVal.ForEachField(func(name string, value interpreter.Value) {
-			assertEquals(t, inter, orgCompositeVal.GetField(name), value)
-		})
-
-	case *interpreter.DictionaryValue:
-		require.IsType(t, expected, actual)
-		orgDictionaryVal := expected.(*interpreter.DictionaryValue)
-
-		require.Equal(t, orgDictionaryVal.Count(), v.Count())
-
-		orgDictionaryVal.Iterate(func(orgKey, orgValue interpreter.Value) (resume bool) {
-			value, ok := v.Get(inter, interpreter.ReturnEmptyLocationRange, orgKey)
-			require.True(t, ok)
-			assertEquals(t, inter, orgValue, value)
-			return true
-		})
-
-	case *interpreter.ArrayValue:
-		require.IsType(t, expected, actual)
-		orgArray := expected.(*interpreter.ArrayValue)
-
-		require.Equal(t, orgArray.Count(), v.Count())
-
-		for i := 0; i < orgArray.Count(); i++ {
-			orgElement := orgArray.Get(inter, interpreter.ReturnEmptyLocationRange, i)
-			element := v.Get(inter, interpreter.ReturnEmptyLocationRange, i)
-			assertEquals(t, inter, orgElement, element)
-		}
-
-	default:
-		require.Equal(t, expected, actual)
 	}
 }
 
