@@ -50,3 +50,24 @@ func TestCheckIncompleteDictionaryType(t *testing.T) {
 		RequireGlobalValue(t, checker.Elaboration, "dict"),
 	)
 }
+
+func TestCheckMetaKeyType(t *testing.T) {
+
+	t.Parallel()
+
+	checker, err := ParseAndCheck(t,
+		`
+          let dict: {Type:String} = {}
+        `,
+	)
+
+	require.NoError(t, err)
+
+	assert.IsType(t,
+		&sema.DictionaryType{
+			KeyType:   sema.MetaType,
+			ValueType: sema.StringType,
+		},
+		RequireGlobalValue(t, checker.Elaboration, "dict"),
+	)
+}
