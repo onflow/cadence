@@ -434,6 +434,24 @@ func TestRandomCompositeValueOperations(t *testing.T) {
 		owner := testComposite.GetOwner()
 		assert.Equal(t, owner[:], orgOwner[:])
 	})
+
+	t.Run("remove field", func(t *testing.T) {
+		newOwner := atree.Address([8]byte{'c'})
+
+		composite := testComposite.DeepCopy(
+			inter,
+			interpreter.ReturnEmptyLocationRange,
+			newOwner,
+		).(*interpreter.CompositeValue)
+
+		require.NoError(t, err)
+
+		for name, _ := range orgFields {
+			composite.RemoveField(inter, interpreter.ReturnEmptyLocationRange, name)
+			value := composite.GetField(name)
+			assert.Nil(t, value)
+		}
+	})
 }
 
 func goMapKey(key interpreter.Value) interface{} {
