@@ -21,6 +21,7 @@ package interpreter_test
 import (
 	"testing"
 
+	"github.com/onflow/atree"
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/runtime/common"
@@ -599,53 +600,178 @@ func TestInterpretReferenceUseAfterShiftStatementMove(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
-        resource R2 {
-            let value: String
+	t.Run("container on stack", func(t *testing.T) {
 
-            init() {
-                self.value = "test"
-            }
-        }
+		t.Parallel()
 
-        resource R1 {
-            var r2: @R2?
+		inter := parseCheckAndInterpret(t, `
+          resource R2 {
+              let value: String
 
-            init() {
-                self.r2 <- nil
-            }
+              init() {
+                  self.value = "test"
+              }
+          }
 
-            destroy() {
-                destroy self.r2
-            }
+          resource R1 {
+              var r2: @R2?
 
-            fun borrowR2(): &R2? {
-                let optR2 <- self.r2 <- nil
-                let r2 <- optR2!
-                let ref = &r2 as &R2
-                self.r2 <-! r2
-                return ref
-            }
-        }
+              init() {
+                  self.r2 <- nil
+              }
 
-        fun test(): String {
-            let r2 <- create R2()
-            let r1 <- create R1()
-            r1.r2 <-! r2
-            let optRef = r1.borrowR2()
-            let value = optRef!.value
-            destroy r1
-            return value
-        }
-    `)
+              destroy() {
+                  destroy self.r2
+              }
 
-	value, err := inter.Invoke("test")
-	require.NoError(t, err)
+              fun borrowR2(): &R2? {
+                  let optR2 <- self.r2 <- nil
+                  let r2 <- optR2!
+                  let ref = &r2 as &R2
+                  self.r2 <-! r2
+                  return ref
+              }
+          }
 
-	AssertValuesEqual(
-		t,
-		inter,
-		interpreter.NewStringValue("test"),
-		value,
-	)
+          fun test(): String {
+              let r2 <- create R2()
+              let r1 <- create R1()
+              r1.r2 <-! r2
+              let optRef = r1.borrowR2()
+              let value = optRef!.value
+              destroy r1
+              return value
+          }
+        `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewStringValue("test"),
+			value,
+		)
+
+	})
+
+	t.Run("container in account", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter, err := parseCheckAndInterpretWithOptions(t,
+			`
+              resource R2 {
+                  let value: String
+
+                  init() {
+                      self.value = "test"
+                  }
+              }
+
+              resource R1 {
+                  var r2: @R2?
+
+                  init() {
+                      self.r2 <- nil
+                  }
+
+                  destroy() {
+                      destroy self.r2
+                  }
+
+                  fun borrowR2(): &R2? {
+                      let optR2 <- self.r2 <- nil
+                      let r2 <- optR2!
+                      let ref = &r2 as &R2
+                      self.r2 <-! r2
+                      return ref
+                  }
+              }
+
+              fun createR1(): @R1 {
+                  return <- create R1()
+              }
+
+              fun getOwnerR1(r1: &R1): Address? {
+                  return r1.owner?.address
+              }
+
+              fun getOwnerR2(r1: &R1): Address? {
+                  return r1.r2?.owner?.address
+              }
+
+              fun test(r1: &R1): String {
+                  let r2 <- create R2()
+                  r1.r2 <-! r2
+                  let optRef = r1.borrowR2()
+                  let value = optRef!.value
+                  return value
+              }
+            `,
+			ParseCheckAndInterpretOptions{
+				Options: []interpreter.Option{
+					interpreter.WithPublicAccountHandlerFunc(
+						func(_ *interpreter.Interpreter, address interpreter.AddressValue) interpreter.Value {
+							return newTestPublicAccountValue(address)
+						},
+					),
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		r1, err := inter.Invoke("createR1")
+		require.NoError(t, err)
+
+		r1 = r1.Transfer(inter, interpreter.ReturnEmptyLocationRange, atree.Address{1}, false, nil)
+
+		r1Type := checker.RequireGlobalType(t, inter.Program.Elaboration, "R1")
+
+		ref := &interpreter.EphemeralReferenceValue{
+			Value:        r1,
+			BorrowedType: r1Type,
+		}
+
+		// Test
+
+		value, err := inter.Invoke("test", ref)
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewStringValue("test"),
+			value,
+		)
+
+		// Check R1 owner
+
+		r1Address, err := inter.Invoke("getOwnerR1", ref)
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewSomeValueNonCopying(
+				interpreter.AddressValue{1},
+			),
+			r1Address,
+		)
+
+		// Check R2 owner
+
+		r2Address, err := inter.Invoke("getOwnerR2", ref)
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewSomeValueNonCopying(
+				interpreter.AddressValue{1},
+			),
+			r2Address,
+		)
+	})
 }
