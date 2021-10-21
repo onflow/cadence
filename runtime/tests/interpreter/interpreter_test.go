@@ -3738,11 +3738,11 @@ func TestInterpretDictionaryIndexingType(t *testing.T) {
 	t.Parallel()
 
 	inter := parseCheckAndInterpret(t, `
-      let x : {Type : String} = {Int16: "a", String: "b", AnyStruct : "c"}
-      let a = x[Int16]
-      let b = x[String]
-      let c = x[AnyStruct]
-	  let d = x[Int]
+      let x : {Type : String} = {Type<Int16>(): "a", Type<String>(): "b", Type<AnyStruct>() : "c"}
+      let a = x[Type<Int16>()]
+      let b = x[Type<String>()]
+      let c = x[Type<AnyStruct>()]
+	  let d = x[Type<Int>()]
     `)
 
 	assert.Equal(t,
