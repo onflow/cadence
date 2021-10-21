@@ -3646,7 +3646,7 @@ pub contract AuctionDutch {
 			return <- create Bid(capability: AuctionDutch.account.getCapability<&Collection{Public}>(AuctionDutch.CollectionPublicPath), auctionId: id, bidId: bidId)
 		}
 
-		pub fun tickOrFullfill(_ id:UInt64) {
+		pub fun tickOrFulfill(_ id:UInt64) {
 			let time= 42.0 // Clock.time()
 			let auction=self.getAuction(id)
 
@@ -3657,7 +3657,7 @@ pub contract AuctionDutch {
 				return
 			}
 
-			auction.fullfill()
+			auction.fulfill()
 		}
 
 
