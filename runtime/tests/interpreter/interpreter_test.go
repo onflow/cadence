@@ -3733,6 +3733,45 @@ func TestInterpretDictionaryIndexingInt(t *testing.T) {
 	)
 }
 
+func TestInterpretDictionaryIndexingType(t *testing.T) {
+
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+      let x : {Type : String} = {Int16: "a", String: "b", AnyStruct : "c"}
+      let a = x[Int16]
+      let b = x[String]
+      let c = x[AnyStruct]
+	  let d = x[Int]
+    `)
+
+	assert.Equal(t,
+		interpreter.NewSomeValueOwningNonCopying(
+			interpreter.NewStringValue("a"),
+		),
+		inter.Globals["a"].GetValue(),
+	)
+
+	assert.Equal(t,
+		interpreter.NewSomeValueOwningNonCopying(
+			interpreter.NewStringValue("b"),
+		),
+		inter.Globals["b"].GetValue(),
+	)
+
+	assert.Equal(t,
+		interpreter.NewSomeValueOwningNonCopying(
+			interpreter.NewStringValue("c"),
+		),
+		inter.Globals["c"].GetValue(),
+	)
+
+	assert.Equal(t,
+		interpreter.NilValue{},
+		inter.Globals["d"].GetValue(),
+	)
+}
+
 func TestInterpretDictionaryIndexingAssignmentExisting(t *testing.T) {
 
 	t.Parallel()
