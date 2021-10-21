@@ -1,6 +1,7 @@
 package interpreter
 
 import (
+	"flag"
 	"fmt"
 	"math/big"
 	"math/rand"
@@ -25,9 +26,13 @@ const containerMaxSize = 1_000
 const innerContainerMaxSize = 300
 const compositeMaxFields = 10
 
-// TODO: Skip these tests by default
+var runSmokeTests = flag.Bool("runSmokeTests", false, "Run smoke tests on values")
 
 func TestRandomMapOperations(t *testing.T) {
+	if !*runSmokeTests {
+		t.SkipNow()
+	}
+
 	seed := time.Now().UnixNano()
 	fmt.Printf("Seed used for map opearations test: %d \n", seed)
 	rand.Seed(seed)
@@ -167,6 +172,10 @@ func TestRandomMapOperations(t *testing.T) {
 }
 
 func TestRandomArrayOperations(t *testing.T) {
+	if !*runSmokeTests {
+		t.SkipNow()
+	}
+
 	seed := time.Now().UnixNano()
 	fmt.Printf("Seed used for array opearations test: %d \n", seed)
 	rand.Seed(seed)
@@ -287,6 +296,10 @@ func TestRandomArrayOperations(t *testing.T) {
 }
 
 func TestRandomCompositeValueOperations(t *testing.T) {
+	if !*runSmokeTests {
+		t.SkipNow()
+	}
+
 	seed := time.Now().UnixNano()
 	fmt.Printf("Seed used for compsoite opearations test: %d \n", seed)
 	rand.Seed(seed)
@@ -491,6 +504,7 @@ func getSlabStorageSize(t *testing.T, storage interpreter.InMemoryStorage) (tota
 	return
 }
 
+// deepCopyValue deep copies values at a higher level
 func deepCopyValue(inter *interpreter.Interpreter, value interpreter.Value) interpreter.Value {
 	switch v := value.(type) {
 
@@ -619,15 +633,30 @@ func deepCopyValue(inter *interpreter.Interpreter, value interpreter.Value) inte
 			fields,
 			v.GetOwner(),
 		)
-	default:
+	case interpreter.LinkValue:
+		return interpreter.LinkValue{
+			TargetPath: deepCopyValue(inter, v.TargetPath).(interpreter.PathValue),
+			Type:       v.Type,
+		}
+	case *interpreter.CapabilityValue:
+		return &interpreter.CapabilityValue{
+			Address:    deepCopyValue(inter, v.Address).(interpreter.AddressValue),
+			Path:       deepCopyValue(inter, v.Path).(interpreter.PathValue),
+			BorrowType: v.BorrowType,
+		}
+	case *interpreter.SomeValue:
+		return interpreter.NewSomeValueNonCopying(deepCopyValue(inter, v.Value))
+	case interpreter.NilValue:
 		return interpreter.NilValue{}
+	default:
+		panic("unreachable")
 	}
 }
 
 func randomStorableValue(inter *interpreter.Interpreter, owner common.Address, currentDepth int) interpreter.Value {
 	n := 0
 	if currentDepth < containerMaxDepth {
-		n = rand.Intn(Resource)
+		n = rand.Intn(Composite)
 	} else {
 		n = rand.Intn(Nil)
 	}
@@ -640,65 +669,29 @@ func randomStorableValue(inter *interpreter.Interpreter, owner common.Address, c
 	case Nil:
 		return interpreter.NilValue{}
 	case Dictionary_1, Dictionary_2:
-		entryCount := rand.Intn(innerContainerMaxSize)
-		keyValues := make([]interpreter.Value, entryCount*2)
-		entries := make(map[interface{}]interpreter.Value, entryCount)
-
-		for i := 0; i < entryCount; i++ {
-			key := randomHashableValue(inter)
-			value := randomStorableValue(inter, owner, currentDepth+1)
-
-			var mapKey interface{}
-
-			// Dereference string-keys before putting into go-map,
-			// as go-map hashing treats pointers as unique values.
-			// i.e: Maintain the value as the key, rather than the pointer.
-			switch key := deepCopyValue(inter, key).(type) {
-			case *interpreter.StringValue:
-				mapKey = *key
-			case interpreter.Value:
-				mapKey = key
-			default:
-				panic("unreachable")
-			}
-
-			entries[mapKey] = deepCopyValue(inter, value)
-
-			keyValues[i*2] = key
-			keyValues[i*2+1] = value
-		}
-
-		return interpreter.NewDictionaryValueWithAddress(
-			inter,
-			interpreter.DictionaryStaticType{
-				KeyType:   interpreter.PrimitiveStaticTypeAnyStruct,
-				ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
-			},
-			owner,
-			keyValues...,
-		)
+		return randomDictionaryValue(inter, owner, currentDepth)
 	case Array_1, Array_2:
-		elementsCount := rand.Intn(innerContainerMaxSize)
-		elements := make([]interpreter.Value, elementsCount)
-
-		for i := 0; i < elementsCount; i++ {
-			value := randomStorableValue(inter, owner, currentDepth+1)
-			elements[i] = deepCopyValue(inter, value)
-		}
-
-		return interpreter.NewArrayValue(
-			inter,
-			interpreter.VariableSizedStaticType{
-				Type: interpreter.PrimitiveStaticTypeAnyStruct,
+		return randomArrayValue(inter, owner, currentDepth)
+	case Composite:
+		return randomCompositeValue(inter, common.CompositeKindStructure, owner, currentDepth)
+	case Capability:
+		return &interpreter.CapabilityValue{
+			Address: randomAddressValue(),
+			Path:    randomPathValue(),
+			BorrowType: interpreter.ReferenceStaticType{
+				Authorized: false,
+				Type:       interpreter.PrimitiveStaticTypeAnyStruct,
 			},
-			owner,
-			elements...,
-		)
-
-	case Struct:
-		return generateCompositeValue(inter, common.CompositeKindStructure, owner, currentDepth)
-	case Resource:
-		return generateCompositeValue(inter, common.CompositeKindResource, owner, currentDepth)
+		}
+	case Link:
+		return interpreter.LinkValue{
+			TargetPath: randomPathValue(),
+			Type:       interpreter.PrimitiveStaticTypeAnyStruct,
+		}
+	case Some:
+		return &interpreter.SomeValue{
+			Value: randomStorableValue(inter, owner, currentDepth+1),
+		}
 
 	// Hashable
 	default:
@@ -784,22 +777,15 @@ func generateRandomHashableValue(inter *interpreter.Interpreter, n int) interpre
 		return interpreter.BoolValue(false)
 
 	case Address:
-		data := make([]byte, 8)
-		rand.Read(data)
-		return interpreter.NewAddressValueFromBytes(data)
+		return randomAddressValue()
 
 	case Path:
-		randomDomain := rand.Intn(len(common.AllPathDomains))
-		identifier := make([]byte, 8)
-		rand.Read(identifier)
-
-		return interpreter.PathValue{
-			Domain:     common.AllPathDomains[randomDomain],
-			Identifier: string(identifier),
-		}
+		return randomPathValue()
 
 	case Enum:
+		// Get a random integer subtype to be used as the raw-type of enum
 		typ := rand.Intn(Word64)
+
 		rawValue := generateRandomHashableValue(inter, typ).(interpreter.NumberValue)
 
 		identifier := make([]byte, 8)
@@ -834,7 +820,88 @@ func generateRandomHashableValue(inter *interpreter.Interpreter, n int) interpre
 	}
 }
 
-func generateCompositeValue(
+func randomAddressValue() interpreter.AddressValue {
+	data := make([]byte, 8)
+	rand.Read(data)
+	return interpreter.NewAddressValueFromBytes(data)
+}
+
+func randomPathValue() interpreter.PathValue {
+	randomDomain := rand.Intn(len(common.AllPathDomains))
+	identifier := make([]byte, 8)
+	rand.Read(identifier)
+
+	return interpreter.PathValue{
+		Domain:     common.AllPathDomains[randomDomain],
+		Identifier: string(identifier),
+	}
+}
+
+func randomDictionaryValue(
+	inter *interpreter.Interpreter,
+	owner common.Address,
+	currentDepth int,
+) interpreter.Value {
+
+	entryCount := rand.Intn(innerContainerMaxSize)
+	keyValues := make([]interpreter.Value, entryCount*2)
+	entries := make(map[interface{}]interpreter.Value, entryCount)
+
+	for i := 0; i < entryCount; i++ {
+		key := randomHashableValue(inter)
+		value := randomStorableValue(inter, owner, currentDepth+1)
+
+		var mapKey interface{}
+
+		// Dereference string-keys before putting into go-map,
+		// as go-map hashing treats pointers as unique values.
+		// i.e: Maintain the value as the key, rather than the pointer.
+		switch key := deepCopyValue(inter, key).(type) {
+		case *interpreter.StringValue:
+			mapKey = *key
+		case interpreter.Value:
+			mapKey = key
+		default:
+			panic("unreachable")
+		}
+
+		entries[mapKey] = deepCopyValue(inter, value)
+
+		keyValues[i*2] = key
+		keyValues[i*2+1] = value
+	}
+
+	return interpreter.NewDictionaryValueWithAddress(
+		inter,
+		interpreter.DictionaryStaticType{
+			KeyType:   interpreter.PrimitiveStaticTypeAnyStruct,
+			ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
+		},
+		owner,
+		keyValues...,
+	)
+}
+
+func randomArrayValue(inter *interpreter.Interpreter, owner common.Address, currentDepth int) interpreter.Value {
+	elementsCount := rand.Intn(innerContainerMaxSize)
+	elements := make([]interpreter.Value, elementsCount)
+
+	for i := 0; i < elementsCount; i++ {
+		value := randomStorableValue(inter, owner, currentDepth+1)
+		elements[i] = deepCopyValue(inter, value)
+	}
+
+	return interpreter.NewArrayValue(
+		inter,
+		interpreter.VariableSizedStaticType{
+			Type: interpreter.PrimitiveStaticTypeAnyStruct,
+		},
+		owner,
+		elements...,
+	)
+}
+
+func randomCompositeValue(
 	inter *interpreter.Interpreter,
 	kind common.CompositeKind,
 	owner common.Address,
@@ -991,12 +1058,12 @@ const (
 
 	Void
 	Nil // `Never?`
-
-	// Containers
+	Capability
+	Link
+	Some
 	Array_1
 	Array_2
 	Dictionary_1
 	Dictionary_2
-	Struct
-	Resource
+	Composite
 )
