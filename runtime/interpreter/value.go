@@ -139,6 +139,10 @@ func (TypeValue) Walk(_ func(Value)) {
 	// NO-OP
 }
 
+func (v TypeValue) KeyString() string {
+	return v.Type.String()
+}
+
 var metaTypeDynamicType DynamicType = MetaTypeDynamicType{}
 
 func (TypeValue) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
