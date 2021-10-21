@@ -639,7 +639,7 @@ func randomStorableValue(inter *interpreter.Interpreter, owner common.Address, c
 		return interpreter.VoidValue{}
 	case Nil:
 		return interpreter.NilValue{}
-	case Dictionary:
+	case Dictionary_1, Dictionary_2:
 		entryCount := rand.Intn(innerContainerMaxSize)
 		keyValues := make([]interpreter.Value, entryCount*2)
 		entries := make(map[interface{}]interpreter.Value, entryCount)
@@ -677,7 +677,7 @@ func randomStorableValue(inter *interpreter.Interpreter, owner common.Address, c
 			owner,
 			keyValues...,
 		)
-	case Array:
+	case Array_1, Array_2:
 		elementsCount := rand.Intn(innerContainerMaxSize)
 		elements := make([]interpreter.Value, elementsCount)
 
@@ -993,8 +993,10 @@ const (
 	Nil // `Never?`
 
 	// Containers
-	Array
-	Dictionary
+	Array_1
+	Array_2
+	Dictionary_1
+	Dictionary_2
 	Struct
 	Resource
 )
