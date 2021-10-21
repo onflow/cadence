@@ -140,6 +140,7 @@ func (TypeValue) Walk(_ func(Value)) {
 }
 
 func (v TypeValue) KeyString() string {
+	// When used as keys, TypeValues should only match if their underlying StaticType is the same
 	return v.Type.String()
 }
 
