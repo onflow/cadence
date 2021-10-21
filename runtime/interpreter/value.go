@@ -76,6 +76,10 @@ func (s NonStorable) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 	return s.Value, nil
 }
 
+func (NonStorable) ChildStorables() []atree.Storable {
+	return nil
+}
+
 // Value
 
 type Value interface {
@@ -275,6 +279,10 @@ func (v TypeValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 	return v, nil
 }
 
+func (TypeValue) ChildStorables() []atree.Storable {
+	return nil
+}
+
 // VoidValue
 
 type VoidValue struct{}
@@ -348,6 +356,10 @@ func (v VoidValue) ByteSize() uint32 {
 
 func (v VoidValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 	return v, nil
+}
+
+func (VoidValue) ChildStorables() []atree.Storable {
+	return nil
 }
 
 // BoolValue
@@ -440,6 +452,10 @@ func (v BoolValue) ByteSize() uint32 {
 
 func (v BoolValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 	return v, nil
+}
+
+func (BoolValue) ChildStorables() []atree.Storable {
+	return nil
 }
 
 // StringValue
@@ -700,6 +716,10 @@ func (v *StringValue) ByteSize() uint32 {
 
 func (v *StringValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 	return v, nil
+}
+
+func (*StringValue) ChildStorables() []atree.Storable {
+	return nil
 }
 
 var ByteArrayStaticType = ConvertSemaArrayTypeToStaticArrayType(sema.ByteArrayType)
@@ -1571,6 +1591,8 @@ func ConvertInt(value Value) IntValue {
 
 var _ Value = IntValue{}
 var _ atree.Storable = IntValue{}
+var _ NumberValue = IntValue{}
+var _ IntegerValue = IntValue{}
 var _ EquatableValue = IntValue{}
 var _ HashableValue = IntValue{}
 
@@ -1805,12 +1827,18 @@ func (v IntValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 	return v, nil
 }
 
+func (IntValue) ChildStorables() []atree.Storable {
+	return nil
+}
+
 // Int8Value
 
 type Int8Value int8
 
 var _ Value = Int8Value(0)
 var _ atree.Storable = Int8Value(0)
+var _ NumberValue = Int8Value(0)
+var _ IntegerValue = Int8Value(0)
 var _ EquatableValue = Int8Value(0)
 var _ HashableValue = Int8Value(0)
 
@@ -2123,12 +2151,18 @@ func (v Int8Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 	return v, nil
 }
 
+func (Int8Value) ChildStorables() []atree.Storable {
+	return nil
+}
+
 // Int16Value
 
 type Int16Value int16
 
 var _ Value = Int16Value(0)
 var _ atree.Storable = Int16Value(0)
+var _ NumberValue = Int16Value(0)
+var _ IntegerValue = Int16Value(0)
 var _ EquatableValue = Int16Value(0)
 var _ HashableValue = Int16Value(0)
 
@@ -2443,12 +2477,18 @@ func (v Int16Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 	return v, nil
 }
 
+func (Int16Value) ChildStorables() []atree.Storable {
+	return nil
+}
+
 // Int32Value
 
 type Int32Value int32
 
 var _ Value = Int32Value(0)
 var _ atree.Storable = Int32Value(0)
+var _ NumberValue = Int32Value(0)
+var _ IntegerValue = Int32Value(0)
 var _ EquatableValue = Int32Value(0)
 var _ HashableValue = Int32Value(0)
 
@@ -2763,12 +2803,18 @@ func (v Int32Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 	return v, nil
 }
 
+func (Int32Value) ChildStorables() []atree.Storable {
+	return nil
+}
+
 // Int64Value
 
 type Int64Value int64
 
 var _ Value = Int64Value(0)
 var _ atree.Storable = Int64Value(0)
+var _ NumberValue = Int64Value(0)
+var _ IntegerValue = Int64Value(0)
 var _ EquatableValue = Int64Value(0)
 var _ HashableValue = Int64Value(0)
 
@@ -3082,6 +3128,10 @@ func (v Int64Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 	return v, nil
 }
 
+func (Int64Value) ChildStorables() []atree.Storable {
+	return nil
+}
+
 // Int128Value
 
 type Int128Value struct {
@@ -3098,6 +3148,8 @@ func NewInt128ValueFromBigInt(value *big.Int) Int128Value {
 
 var _ Value = Int128Value{}
 var _ atree.Storable = Int128Value{}
+var _ NumberValue = Int128Value{}
+var _ IntegerValue = Int128Value{}
 var _ EquatableValue = Int128Value{}
 var _ HashableValue = Int128Value{}
 
@@ -3474,6 +3526,10 @@ func (v Int128Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 	return v, nil
 }
 
+func (Int128Value) ChildStorables() []atree.Storable {
+	return nil
+}
+
 // Int256Value
 
 type Int256Value struct {
@@ -3490,6 +3546,8 @@ func NewInt256ValueFromBigInt(value *big.Int) Int256Value {
 
 var _ Value = Int256Value{}
 var _ atree.Storable = Int256Value{}
+var _ NumberValue = Int256Value{}
+var _ IntegerValue = Int256Value{}
 var _ EquatableValue = Int256Value{}
 var _ HashableValue = Int256Value{}
 
@@ -3866,6 +3924,10 @@ func (v Int256Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 	return v, nil
 }
 
+func (Int256Value) ChildStorables() []atree.Storable {
+	return nil
+}
+
 // UIntValue
 
 type UIntValue struct {
@@ -3903,6 +3965,8 @@ func ConvertUInt(value Value) UIntValue {
 
 var _ Value = UIntValue{}
 var _ atree.Storable = UIntValue{}
+var _ NumberValue = UIntValue{}
+var _ IntegerValue = UIntValue{}
 var _ EquatableValue = UIntValue{}
 var _ HashableValue = UIntValue{}
 
@@ -4148,12 +4212,18 @@ func (v UIntValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 	return v, nil
 }
 
+func (UIntValue) ChildStorables() []atree.Storable {
+	return nil
+}
+
 // UInt8Value
 
 type UInt8Value uint8
 
 var _ Value = UInt8Value(0)
 var _ atree.Storable = UInt8Value(0)
+var _ NumberValue = UInt8Value(0)
+var _ IntegerValue = UInt8Value(0)
 var _ EquatableValue = UInt8Value(0)
 var _ HashableValue = UInt8Value(0)
 
@@ -4397,12 +4467,18 @@ func (v UInt8Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 	return v, nil
 }
 
+func (UInt8Value) ChildStorables() []atree.Storable {
+	return nil
+}
+
 // UInt16Value
 
 type UInt16Value uint16
 
 var _ Value = UInt16Value(0)
 var _ atree.Storable = UInt16Value(0)
+var _ NumberValue = UInt16Value(0)
+var _ IntegerValue = UInt16Value(0)
 var _ EquatableValue = UInt16Value(0)
 var _ HashableValue = UInt16Value(0)
 
@@ -4651,12 +4727,18 @@ func (v UInt16Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 	return v, nil
 }
 
+func (UInt16Value) ChildStorables() []atree.Storable {
+	return nil
+}
+
 // UInt32Value
 
 type UInt32Value uint32
 
 var _ Value = UInt32Value(0)
 var _ atree.Storable = UInt32Value(0)
+var _ NumberValue = UInt32Value(0)
+var _ IntegerValue = UInt32Value(0)
 var _ EquatableValue = UInt32Value(0)
 var _ HashableValue = UInt32Value(0)
 
@@ -4905,12 +4987,18 @@ func (v UInt32Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 	return v, nil
 }
 
+func (UInt32Value) ChildStorables() []atree.Storable {
+	return nil
+}
+
 // UInt64Value
 
 type UInt64Value uint64
 
 var _ Value = UInt64Value(0)
 var _ atree.Storable = UInt64Value(0)
+var _ NumberValue = UInt64Value(0)
+var _ IntegerValue = UInt64Value(0)
 var _ EquatableValue = UInt64Value(0)
 var _ HashableValue = UInt64Value(0)
 
@@ -5162,6 +5250,10 @@ func (v UInt64Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 	return v, nil
 }
 
+func (UInt64Value) ChildStorables() []atree.Storable {
+	return nil
+}
+
 // UInt128Value
 
 type UInt128Value struct {
@@ -5178,6 +5270,8 @@ func NewUInt128ValueFromBigInt(value *big.Int) UInt128Value {
 
 var _ Value = UInt128Value{}
 var _ atree.Storable = UInt128Value{}
+var _ NumberValue = UInt128Value{}
+var _ IntegerValue = UInt128Value{}
 var _ EquatableValue = UInt128Value{}
 var _ HashableValue = UInt128Value{}
 
@@ -5500,6 +5594,10 @@ func (v UInt128Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 	return v, nil
 }
 
+func (UInt128Value) ChildStorables() []atree.Storable {
+	return nil
+}
+
 // UInt256Value
 
 type UInt256Value struct {
@@ -5516,6 +5614,8 @@ func NewUInt256ValueFromBigInt(value *big.Int) UInt256Value {
 
 var _ Value = UInt256Value{}
 var _ atree.Storable = UInt256Value{}
+var _ NumberValue = UInt256Value{}
+var _ IntegerValue = UInt256Value{}
 var _ EquatableValue = UInt256Value{}
 var _ HashableValue = UInt256Value{}
 
@@ -5837,12 +5937,18 @@ func (v UInt256Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 	return v, nil
 }
 
+func (UInt256Value) ChildStorables() []atree.Storable {
+	return nil
+}
+
 // Word8Value
 
 type Word8Value uint8
 
 var _ Value = Word8Value(0)
 var _ atree.Storable = Word8Value(0)
+var _ NumberValue = Word8Value(0)
+var _ IntegerValue = Word8Value(0)
 var _ EquatableValue = Word8Value(0)
 var _ HashableValue = Word8Value(0)
 
@@ -6035,12 +6141,18 @@ func (v Word8Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 	return v, nil
 }
 
+func (Word8Value) ChildStorables() []atree.Storable {
+	return nil
+}
+
 // Word16Value
 
 type Word16Value uint16
 
 var _ Value = Word16Value(0)
 var _ atree.Storable = Word16Value(0)
+var _ NumberValue = Word16Value(0)
+var _ IntegerValue = Word16Value(0)
 var _ EquatableValue = Word16Value(0)
 var _ HashableValue = Word16Value(0)
 
@@ -6234,12 +6346,18 @@ func (v Word16Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 	return v, nil
 }
 
+func (Word16Value) ChildStorables() []atree.Storable {
+	return nil
+}
+
 // Word32Value
 
 type Word32Value uint32
 
 var _ Value = Word32Value(0)
 var _ atree.Storable = Word32Value(0)
+var _ NumberValue = Word32Value(0)
+var _ IntegerValue = Word32Value(0)
 var _ EquatableValue = Word32Value(0)
 var _ HashableValue = Word32Value(0)
 
@@ -6434,12 +6552,18 @@ func (v Word32Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 	return v, nil
 }
 
+func (Word32Value) ChildStorables() []atree.Storable {
+	return nil
+}
+
 // Word64Value
 
 type Word64Value uint64
 
 var _ Value = Word64Value(0)
 var _ atree.Storable = Word64Value(0)
+var _ NumberValue = Word64Value(0)
+var _ IntegerValue = Word64Value(0)
 var _ EquatableValue = Word64Value(0)
 var _ HashableValue = Word64Value(0)
 
@@ -6634,6 +6758,10 @@ func (v Word64Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 	return v, nil
 }
 
+func (Word64Value) ChildStorables() []atree.Storable {
+	return nil
+}
+
 // Fix64Value
 //
 type Fix64Value int64
@@ -6655,6 +6783,7 @@ func NewFix64ValueWithInteger(integer int64) Fix64Value {
 
 var _ Value = Fix64Value(0)
 var _ atree.Storable = Fix64Value(0)
+var _ NumberValue = Fix64Value(0)
 var _ EquatableValue = Fix64Value(0)
 var _ HashableValue = Fix64Value(0)
 
@@ -6936,6 +7065,10 @@ func (v Fix64Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 	return v, nil
 }
 
+func (Fix64Value) ChildStorables() []atree.Storable {
+	return nil
+}
+
 // UFix64Value
 //
 type UFix64Value uint64
@@ -6952,6 +7085,7 @@ func NewUFix64ValueWithInteger(integer uint64) UFix64Value {
 
 var _ Value = UFix64Value(0)
 var _ atree.Storable = UFix64Value(0)
+var _ NumberValue = UFix64Value(0)
 var _ EquatableValue = UFix64Value(0)
 var _ HashableValue = UFix64Value(0)
 
@@ -7202,6 +7336,10 @@ func (v UFix64Value) ByteSize() uint32 {
 
 func (v UFix64Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 	return v, nil
+}
+
+func (UFix64Value) ChildStorables() []atree.Storable {
+	return nil
 }
 
 // CompositeValue
@@ -8759,6 +8897,10 @@ func (v NilValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 	return v, nil
 }
 
+func (NilValue) ChildStorables() []atree.Storable {
+	return nil
+}
+
 // SomeValue
 
 type SomeValue struct {
@@ -8949,6 +9091,12 @@ func (s SomeStorable) StoredValue(storage atree.SlabStorage) (atree.Value, error
 		Value:         value,
 		valueStorable: s.Storable,
 	}, nil
+}
+
+func (s SomeStorable) ChildStorables() []atree.Storable {
+	return []atree.Storable{
+		s.Storable,
+	}
 }
 
 // StorageReferenceValue
@@ -9664,6 +9812,10 @@ func (v AddressValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 	return v, nil
 }
 
+func (AddressValue) ChildStorables() []atree.Storable {
+	return nil
+}
+
 func accountGetCapabilityFunction(
 	addressValue AddressValue,
 	pathType sema.Type,
@@ -9859,6 +10011,10 @@ func (v PathValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 	return v, nil
 }
 
+func (PathValue) ChildStorables() []atree.Storable {
+	return nil
+}
+
 // CapabilityValue
 
 type CapabilityValue struct {
@@ -10023,6 +10179,13 @@ func (v *CapabilityValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) 
 	return v, nil
 }
 
+func (v *CapabilityValue) ChildStorables() []atree.Storable {
+	return []atree.Storable{
+		v.Address,
+		v.Path,
+	}
+}
+
 // LinkValue
 
 type LinkValue struct {
@@ -10031,6 +10194,7 @@ type LinkValue struct {
 }
 
 var _ Value = LinkValue{}
+var _ atree.Value = LinkValue{}
 var _ EquatableValue = LinkValue{}
 
 func (LinkValue) IsValue() {}
@@ -10110,6 +10274,12 @@ func (v LinkValue) ByteSize() uint32 {
 
 func (v LinkValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 	return v, nil
+}
+
+func (v LinkValue) ChildStorables() []atree.Storable {
+	return []atree.Storable{
+		v.TargetPath,
+	}
 }
 
 // NewPublicKeyValue constructs a PublicKey value.
