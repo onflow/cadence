@@ -29,7 +29,7 @@ const compositeMaxFields = 10
 
 func TestRandomMapOperations(t *testing.T) {
 	seed := time.Now().UnixNano()
-	fmt.Printf("Seed used for test: %d \n", seed)
+	fmt.Printf("Seed used for map opearations test: %d \n", seed)
 	rand.Seed(seed)
 
 	storage := interpreter.NewInMemoryStorage()
@@ -168,7 +168,7 @@ func TestRandomMapOperations(t *testing.T) {
 
 func TestRandomArrayOperations(t *testing.T) {
 	seed := time.Now().UnixNano()
-	fmt.Printf("Seed used for test: %d \n", seed)
+	fmt.Printf("Seed used for array opearations test: %d \n", seed)
 	rand.Seed(seed)
 
 	storage := interpreter.NewInMemoryStorage()
@@ -288,7 +288,7 @@ func TestRandomArrayOperations(t *testing.T) {
 
 func TestRandomCompositeValueOperations(t *testing.T) {
 	seed := time.Now().UnixNano()
-	fmt.Printf("Seed used for test: %d \n", seed)
+	fmt.Printf("Seed used for compsoite opearations test: %d \n", seed)
 	rand.Seed(seed)
 
 	storage := interpreter.NewInMemoryStorage()
@@ -377,7 +377,7 @@ func TestRandomCompositeValueOperations(t *testing.T) {
 		storageSize, slabCounts = getSlabStorageSize(t, storage)
 
 		for fieldName, orgFieldValue := range orgFields {
-			fieldValue := testComposite.GetField(fieldName)
+			fieldValue := testComposite.GetField(inter, interpreter.ReturnEmptyLocationRange, fieldName)
 			utils.AssertValuesEqual(t, inter, orgFieldValue, fieldValue)
 		}
 
@@ -407,7 +407,7 @@ func TestRandomCompositeValueOperations(t *testing.T) {
 		).(*interpreter.CompositeValue)
 
 		for name, orgValue := range orgFields {
-			value := copyOfTestComposite.GetField(name)
+			value := copyOfTestComposite.GetField(inter, interpreter.ReturnEmptyLocationRange, name)
 			utils.AssertValuesEqual(t, inter, orgValue, value)
 		}
 
@@ -427,7 +427,7 @@ func TestRandomCompositeValueOperations(t *testing.T) {
 
 		// go over original values again and check no missing data (no side effect should be found)
 		for name, orgValue := range orgFields {
-			value := testComposite.GetField(name)
+			value := testComposite.GetField(inter, interpreter.ReturnEmptyLocationRange, name)
 			utils.AssertValuesEqual(t, inter, orgValue, value)
 		}
 
@@ -448,7 +448,7 @@ func TestRandomCompositeValueOperations(t *testing.T) {
 
 		for name, _ := range orgFields {
 			composite.RemoveField(inter, interpreter.ReturnEmptyLocationRange, name)
-			value := composite.GetField(name)
+			value := composite.GetField(inter, interpreter.ReturnEmptyLocationRange, name)
 			assert.Nil(t, value)
 		}
 	})
@@ -699,8 +699,6 @@ func randomStorableValue(inter *interpreter.Interpreter, owner common.Address, c
 		return generateCompositeValue(inter, common.CompositeKindStructure, owner, currentDepth)
 	case Resource:
 		return generateCompositeValue(inter, common.CompositeKindResource, owner, currentDepth)
-	case Contract:
-		return generateCompositeValue(inter, common.CompositeKindContract, owner, currentDepth)
 
 	// Hashable
 	default:
@@ -999,7 +997,4 @@ const (
 	Dictionary
 	Struct
 	Resource
-
-	// TODO:
-	Contract
 )
