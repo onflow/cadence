@@ -127,12 +127,12 @@ func (interpreter *Interpreter) memberExpressionGetterSetter(memberExpression *a
 				resultValue = target.(MemberAccessibleValue).RemoveMember(interpreter, getLocationRange, identifier)
 			} else {
 				resultValue = interpreter.getMember(target, getLocationRange, identifier)
-				if resultValue == nil && !allowMissing {
-					panic(MissingMemberValueError{
-						Name:          identifier,
-						LocationRange: getLocationRange(),
-					})
-				}
+			}
+			if resultValue == nil && !allowMissing {
+				panic(MissingMemberValueError{
+					Name:          identifier,
+					LocationRange: getLocationRange(),
+				})
 			}
 
 			// If the member access is optional chaining, only wrap the result value
