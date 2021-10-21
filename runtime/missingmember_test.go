@@ -23,8 +23,9 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/onflow/cadence/runtime/tests/utils"
 	"github.com/stretchr/testify/require"
+
+	"github.com/onflow/cadence/runtime/tests/utils"
 
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/encoding/json"
@@ -1759,7 +1760,7 @@ pub contract ItemNFT: NonFungibleToken {
 
        // deposit takes a Item and adds it to the Collections dictionary
        //
-       // Paramters: token: the NFT to be deposited in the collection
+       // Parameters: token: the NFT to be deposited in the collection
        //
        pub fun deposit(token: @NonFungibleToken.NFT) {
            //todo: someFunction that transfers royalty
@@ -3178,10 +3179,10 @@ pub contract AuctionDutch {
 			return self.ticks[0].startedAt
 		}
 
-		access(contract) fun fullfill() {
+		access(contract) fun fulfill() {
 			if self.winningBid== nil {
 				// Debug.log("Winning price is not set")
-				panic("Cannot fullfill is not finished")
+				panic("Cannot fulfill is not finished")
 			}
 
 			let nftIds= self.nfts.keys
@@ -3498,7 +3499,7 @@ pub contract AuctionDutch {
 				bucket.insert(at: index, bidInfo.id)
 				self.bids[tick.startedAt]= bucket
 
-				//todo do we need seperate bid for increase?
+				//todo do we need separate bid for increase?
 				emit AuctionDutchBidIncreased(amount: bidInfo.balance, bidder: bidInfo.nftCap.address, auction: self.uuid, bid: bidInfo.id)
 			} else {
 				destroy vault
