@@ -41,7 +41,6 @@ func (interpreter *Interpreter) InvokeFunctionValue(
 
 	return interpreter.invokeFunctionValue(
 		function,
-		nil,
 		arguments,
 		nil,
 		argumentTypes,
@@ -53,7 +52,6 @@ func (interpreter *Interpreter) InvokeFunctionValue(
 
 func (interpreter *Interpreter) invokeFunctionValue(
 	function FunctionValue,
-	receiverType sema.Type,
 	arguments []Value,
 	expressions []ast.Expression,
 	argumentTypes []sema.Type,
@@ -87,7 +85,6 @@ func (interpreter *Interpreter) invokeFunctionValue(
 	getLocationRange := locationRangeGetter(interpreter.Location, invocationPosition)
 
 	invocation := Invocation{
-		ReceiverType:       receiverType,
 		Arguments:          argumentCopies,
 		ArgumentTypes:      argumentTypes,
 		TypeParameterTypes: typeParameterTypes,
