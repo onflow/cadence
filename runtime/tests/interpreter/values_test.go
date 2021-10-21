@@ -633,11 +633,6 @@ func deepCopyValue(inter *interpreter.Interpreter, value interpreter.Value) inte
 			fields,
 			v.GetOwner(),
 		)
-	case interpreter.LinkValue:
-		return interpreter.LinkValue{
-			TargetPath: deepCopyValue(inter, v.TargetPath).(interpreter.PathValue),
-			Type:       v.Type,
-		}
 	case *interpreter.CapabilityValue:
 		return &interpreter.CapabilityValue{
 			Address:    deepCopyValue(inter, v.Address).(interpreter.AddressValue),
@@ -682,11 +677,6 @@ func randomStorableValue(inter *interpreter.Interpreter, owner common.Address, c
 				Authorized: false,
 				Type:       interpreter.PrimitiveStaticTypeAnyStruct,
 			},
-		}
-	case Link:
-		return interpreter.LinkValue{
-			TargetPath: randomPathValue(),
-			Type:       interpreter.PrimitiveStaticTypeAnyStruct,
 		}
 	case Some:
 		return &interpreter.SomeValue{
@@ -1059,7 +1049,6 @@ const (
 	Void
 	Nil // `Never?`
 	Capability
-	Link
 	Some
 	Array_1
 	Array_2
