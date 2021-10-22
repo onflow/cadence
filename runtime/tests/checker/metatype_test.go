@@ -140,6 +140,86 @@ func TestCheckIsInstance(t *testing.T) {
 	}
 }
 
+func TestCheckIsSubtype(t *testing.T) {
+
+	t.Parallel()
+
+	cases := []struct {
+		name  string
+		code  string
+		valid bool
+	}{
+		{
+			name: "string is a subtype of string",
+			code: `
+              let stringType = Type<String>()
+              let result = stringType.isSubtype(stringType)
+            `,
+			valid: true,
+		},
+		{
+			name: "int is a subtype of int",
+			code: `
+              let intType = Type<Int>()
+              let result = intType.isSubtype(intType)
+            `,
+			valid: true,
+		},
+		{
+			name: "resource is a subtype of resource",
+			code: `
+              resource R {}
+              let rType = Type<@R>()
+              let result = rType.isSubtype(rType)
+            `,
+			valid: true,
+		},
+		{
+			name: "Int is an instance of Int?",
+			code: `
+              let result = Type<Int>().isSubtype(Type<Int?>())
+            `,
+			valid: true,
+		},
+		{
+			name: "isSubtype must take a type",
+			code: `
+              let result = Type<Int>().isSubtype(3)
+            `,
+			valid: false,
+		},
+		{
+			name: "isSubtype must take an argument",
+			code: `
+              let result = Type<Int>().isSubtype()
+            `,
+			valid: false,
+		},
+		{
+			name: "isSubtype must take fewer than two arguments",
+			code: `
+              let result = Type<Int>().isSubtype(Type<Int?>(), Type<Int?>())
+            `,
+			valid: false,
+		},
+	}
+
+	for _, testCase := range cases {
+		t.Run(testCase.name, func(t *testing.T) {
+			checker, err := ParseAndCheck(t, testCase.code)
+			if testCase.valid {
+				require.NoError(t, err)
+				assert.Equal(t,
+					sema.BoolType,
+					RequireGlobalValue(t, checker.Elaboration, "result"),
+				)
+			} else {
+				require.Error(t, err)
+			}
+		})
+	}
+}
+
 func TestCheckIsInstance_Redeclaration(t *testing.T) {
 
 	t.Parallel()

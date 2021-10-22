@@ -27,6 +27,10 @@ const typeIdentifierDocString = `
 The fully-qualified identifier of the type
 `
 
+const typeSubtypeDocString = `
+Returns true if this type is a subtype of the given type at runtime
+`
+
 // MetaType represents the type of a type.
 //
 var MetaType = &SimpleType{
@@ -39,7 +43,23 @@ var MetaType = &SimpleType{
 	Equatable:            true,
 	ExternallyReturnable: true,
 	Importable:           true,
-	Members: func(t *SimpleType) map[string]MemberResolver {
+}
+
+var isSubtypeFunctionType = &FunctionType{
+	Parameters: []*Parameter{
+		{
+			Label:          ArgumentLabelNotRequired,
+			Identifier:     "otherType",
+			TypeAnnotation: NewTypeAnnotation(MetaType),
+		},
+	},
+	ReturnTypeAnnotation: NewTypeAnnotation(
+		BoolType,
+	),
+}
+
+func init() {
+	MetaType.Members = func(t *SimpleType) map[string]MemberResolver {
 		return map[string]MemberResolver{
 			"identifier": {
 				Kind: common.DeclarationKindField,
@@ -52,6 +72,17 @@ var MetaType = &SimpleType{
 					)
 				},
 			},
+			"isSubtype": {
+				Kind: common.DeclarationKindFunction,
+				Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
+					return NewPublicFunctionMember(
+						t,
+						identifier,
+						isSubtypeFunctionType,
+						typeSubtypeDocString,
+					)
+				},
+			},
 		}
-	},
+	}
 }
