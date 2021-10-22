@@ -42,7 +42,7 @@ func TestCheckIncompleteDictionaryType(t *testing.T) {
 
 	require.NoError(t, err)
 
-	assert.IsType(t,
+	assert.Equal(t,
 		&sema.DictionaryType{
 			KeyType:   sema.IntType,
 			ValueType: sema.InvalidType,
@@ -57,13 +57,13 @@ func TestCheckMetaKeyType(t *testing.T) {
 
 	checker, err := ParseAndCheck(t,
 		`
-		let dict : {Type : String} = {Type<Int>(): "a"}
+		let dict: {Type: String} = {Type<Int>(): "a"}
         `,
 	)
 
 	require.NoError(t, err)
 
-	assert.IsType(t,
+	assert.Equal(t,
 		&sema.DictionaryType{
 			KeyType:   sema.MetaType,
 			ValueType: sema.StringType,
