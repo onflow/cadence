@@ -562,7 +562,7 @@ func (t FunctionStaticType) String() string {
 }
 
 func (t FunctionStaticType) Equal(other StaticType) bool {
-	otherFunction, ok := other.(*FunctionStaticType)
+	otherFunction, ok := other.(FunctionStaticType)
 	if !ok {
 		return false
 	}
