@@ -211,6 +211,24 @@ func (v TypeValue) GetMember(inter *Interpreter, _ func() LocationRange, name st
 			typeID = string(inter.ConvertStaticToSemaType(staticType).ID())
 		}
 		return NewStringValue(typeID)
+	case "isSubtype":
+		return NewHostFunctionValue(
+			func(invocation Invocation) Value {
+				staticType := v.Type
+				otherStaticType := invocation.Arguments[0].(TypeValue).Type
+
+				// if either type is unknown, the subtype relation is false, as it doesn't make sense to even ask this question
+				if staticType == nil || otherStaticType == nil {
+					return BoolValue(false)
+				}
+				result := sema.IsSubType(
+					inter.ConvertStaticToSemaType(staticType),
+					inter.ConvertStaticToSemaType(otherStaticType),
+				)
+				return BoolValue(result)
+			},
+			sema.StringTypeConcatFunctionType,
+		)
 	}
 
 	return nil
