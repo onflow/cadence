@@ -28,7 +28,7 @@ The fully-qualified identifier of the type
 `
 
 const metaTypeSubtypeDocString = `
-Returns true if this type is a subtype of the given type at runtime
+Returns true if this type is a subtype of the given type at run-time
 `
 
 // MetaType represents the type of a type.
