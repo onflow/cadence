@@ -3741,7 +3741,12 @@ func TestInterpretDictionaryIndexingType(t *testing.T) {
 	  struct TestStruct {}
 	  resource TestResource {}
 
-      let x : {Type : String} = {Type<Int16>(): "a", Type<String>(): "b", Type<AnyStruct>() : "c", Type<@TestResource>() : "f"}
+      let x : {Type : String} = {
+	    Type<Int16>(): "a", 
+	    Type<String>(): "b", 
+	    Type<AnyStruct>() : "c", 
+	    Type<@TestResource>() : "f"
+	  }
 
       let a = x[Type<Int16>()]
       let b = x[Type<String>()]
