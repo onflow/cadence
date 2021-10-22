@@ -3715,10 +3715,15 @@ func (interpreter *Interpreter) checkAtreeValue(v atree.Value) {
 		if err != nil {
 			panic(ExternalError{err})
 		}
+
 		err = atree.ValidArraySerialization(v, CBORDecMode, CBOREncMode, DecodeStorable, DecodeTypeInfo, compare)
 		if err != nil {
 			var nonStorableValueErr NonStorableValueError
-			if !goErrors.As(err, &nonStorableValueErr) {
+			var nonStorableStaticTypeErr NonStorableStaticTypeError
+
+			if !(goErrors.As(err, &nonStorableValueErr) ||
+				goErrors.As(err, &nonStorableStaticTypeErr)) {
+
 				atree.PrintArray(v)
 				panic(ExternalError{err})
 			}
@@ -3729,10 +3734,15 @@ func (interpreter *Interpreter) checkAtreeValue(v atree.Value) {
 		if err != nil {
 			panic(ExternalError{err})
 		}
+
 		err = atree.ValidMapSerialization(v, CBORDecMode, CBOREncMode, DecodeStorable, DecodeTypeInfo, compare)
 		if err != nil {
 			var nonStorableValueErr NonStorableValueError
-			if !goErrors.As(err, &nonStorableValueErr) {
+			var nonStorableStaticTypeErr NonStorableStaticTypeError
+
+			if !(goErrors.As(err, &nonStorableValueErr) ||
+				goErrors.As(err, &nonStorableStaticTypeErr)) {
+
 				atree.PrintMap(v)
 				panic(ExternalError{err})
 			}
