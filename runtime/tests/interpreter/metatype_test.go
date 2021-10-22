@@ -424,7 +424,7 @@ func TestInterpretIsSubtype(t *testing.T) {
 		{
 			name: "Int? is a subtype of Int",
 			code: `
-              let result = Type<Int>().isSubtype(Type<Int?>())
+              let result = Type<Int?>().isSubtype(Type<Int>())
             `,
 			result: false,
 		},
