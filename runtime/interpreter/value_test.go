@@ -125,10 +125,12 @@ func TestOwnerArrayDeepCopy(t *testing.T) {
 		value,
 	)
 
-	arrayCopy := array.DeepCopy(
+	arrayCopy := array.Transfer(
 		inter,
 		ReturnEmptyLocationRange,
 		atree.Address(newOwner),
+		false,
+		nil,
 	)
 	array = arrayCopy.(*ArrayValue)
 
@@ -472,10 +474,12 @@ func TestOwnerDictionaryCopy(t *testing.T) {
 		keyValue, value,
 	)
 
-	copyResult := inter.CopyValue(
+	copyResult := dictionary.Transfer(
+		inter,
 		ReturnEmptyLocationRange,
-		dictionary,
 		atree.Address{},
+		false,
+		nil,
 	)
 
 	dictionaryCopy := copyResult.(*DictionaryValue)
@@ -755,10 +759,12 @@ func TestOwnerCompositeCopy(t *testing.T) {
 		value,
 	)
 
-	composite = inter.CopyValue(
+	composite = composite.Transfer(
+		inter,
 		ReturnEmptyLocationRange,
-		composite,
 		atree.Address{},
+		false,
+		nil,
 	).(*CompositeValue)
 
 	value = composite.GetMember(

@@ -65,7 +65,7 @@ func (interpreter *Interpreter) invokeFunctionValue(
 ) Value {
 
 	parameterTypeCount := len(parameterTypes)
-	argumentCopies := make([]Value, len(arguments))
+	transferredArguments := make([]Value, len(arguments))
 
 	for i, argument := range arguments {
 		argumentType := argumentTypes[i]
@@ -81,9 +81,20 @@ func (interpreter *Interpreter) invokeFunctionValue(
 
 		if i < parameterTypeCount {
 			parameterType := parameterTypes[i]
-			argumentCopies[i] = interpreter.copyAndConvert(argument, argumentType, parameterType, getLocationRange)
+			transferredArguments[i] = interpreter.transferAndConvert(
+				argument,
+				argumentType,
+				parameterType,
+				getLocationRange,
+			)
 		} else {
-			argumentCopies[i] = interpreter.CopyValue(getLocationRange, argument, atree.Address{})
+			transferredArguments[i] = argument.Transfer(
+				interpreter,
+				getLocationRange,
+				atree.Address{},
+				false,
+				nil,
+			)
 		}
 	}
 
@@ -91,7 +102,7 @@ func (interpreter *Interpreter) invokeFunctionValue(
 
 	invocation := Invocation{
 		ReceiverType:       receiverType,
-		Arguments:          argumentCopies,
+		Arguments:          transferredArguments,
 		ArgumentTypes:      argumentTypes,
 		TypeParameterTypes: typeParameterTypes,
 		GetLocationRange:   getLocationRange,

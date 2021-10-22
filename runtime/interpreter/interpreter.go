@@ -1189,9 +1189,9 @@ func (interpreter *Interpreter) visitAssignment(
 
 	value := interpreter.evalExpression(valueExpression)
 
-	valueCopy := interpreter.copyAndConvert(value, valueType, targetType, getLocationRange)
+	transferredValue := interpreter.transferAndConvert(value, valueType, targetType, getLocationRange)
 
-	getterSetter.set(valueCopy)
+	getterSetter.set(transferredValue)
 }
 
 // NOTE: only called for top-level composite declarations
@@ -1842,16 +1842,22 @@ func (interpreter *Interpreter) checkValueTransferTargetType(value Value, target
 	return false
 }
 
-func (interpreter *Interpreter) copyAndConvert(
+func (interpreter *Interpreter) transferAndConvert(
 	value Value,
 	valueType, targetType sema.Type,
 	getLocationRange func() LocationRange,
 ) Value {
 
-	valueCopy := interpreter.CopyValue(getLocationRange, value, atree.Address{})
+	transferredValue := value.Transfer(
+		interpreter,
+		getLocationRange,
+		atree.Address{},
+		false,
+		nil,
+	)
 
 	result := interpreter.ConvertAndBox(
-		valueCopy,
+		transferredValue,
 		valueType,
 		targetType,
 	)
@@ -2974,11 +2980,12 @@ func (interpreter *Interpreter) authAccountSaveFunction(addressValue AddressValu
 				)
 			}
 
-			value = interpreter.TransferValue(
+			value = value.Transfer(
+				interpreter,
 				getLocationRange,
-				value,
-				nil,
 				atree.Address(address),
+				true,
+				nil,
 			)
 
 			// Write new value
@@ -3036,7 +3043,19 @@ func (interpreter *Interpreter) authAccountReadFunction(addressValue AddressValu
 					return NilValue{}
 				}
 
-				valueCopy := interpreter.CopyValue(invocation.GetLocationRange, value, atree.Address{})
+				inter := invocation.Interpreter
+				getLocationRange := invocation.GetLocationRange
+
+				// We could also pass remove=true and the storable stored in storage,
+				// but passing remove=false here and writing nil below has the same effect
+				// TODO: potentially refactor and get storable in storage, pass it and remove=true
+				transferredValue := value.Transfer(
+					inter,
+					getLocationRange,
+					atree.Address{},
+					false,
+					nil,
+				)
 
 				// Remove the value from storage,
 				// but only if the type check succeeded.
@@ -3044,7 +3063,7 @@ func (interpreter *Interpreter) authAccountReadFunction(addressValue AddressValu
 					interpreter.writeStored(address, key, NilValue{})
 				}
 
-				return valueCopy
+				return transferredValue
 
 			default:
 				panic(errors.NewUnreachableError())
@@ -3618,39 +3637,6 @@ func (interpreter *Interpreter) checkResourceNotDestroyed(value Value, getLocati
 	panic(InvalidatedResourceError{
 		LocationRange: getLocationRange(),
 	})
-}
-
-func (interpreter *Interpreter) CopyValue(
-	getLocationRange func() LocationRange,
-	value Value,
-	address atree.Address,
-) Value {
-
-	if value.IsResourceAtAddress(interpreter, address) {
-		return value
-	}
-
-	return value.DeepCopy(interpreter, getLocationRange, address)
-}
-
-func (interpreter *Interpreter) TransferValue(
-	getLocationRange func() LocationRange,
-	value Value,
-	storable atree.Storable,
-	address atree.Address,
-) Value {
-
-	if value.IsResourceAtAddress(interpreter, address) {
-		return value
-	}
-
-	valueCopy := value.DeepCopy(interpreter, getLocationRange, address)
-
-	value.DeepRemove(interpreter)
-
-	interpreter.RemoveReferencedSlab(storable)
-
-	return valueCopy
 }
 
 func (interpreter *Interpreter) RemoveReferencedSlab(storable atree.Storable) {
