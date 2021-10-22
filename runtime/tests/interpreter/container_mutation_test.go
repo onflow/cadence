@@ -291,25 +291,38 @@ func TestArrayMutation(t *testing.T) {
 		assert.Equal(t, sema.StringType, mutationError.ExpectedType)
 	})
 
-	t.Run("function array mutation", func(t *testing.T) {
+	t.Run("host function array mutation", func(t *testing.T) {
 		t.Parallel()
+
+		invoked := false
 
 		standardLibraryFunctions :=
 			stdlib.StandardLibraryFunctions{
-				stdlib.LogFunction,
+				stdlib.NewStandardLibraryFunction(
+					"log",
+					stdlib.LogFunctionType,
+					"",
+					func(invocation interpreter.Invocation) interpreter.Value {
+						invoked = true
+						assert.Equal(t, "\"hello\"", invocation.Arguments[0].String())
+						return interpreter.VoidValue{}
+					},
+				),
 			}
 
 		valueDeclarations := standardLibraryFunctions.ToSemaValueDeclarations()
 		values := standardLibraryFunctions.ToInterpreterValueDeclarations()
 
 		inter, err := parseCheckAndInterpretWithOptions(t, `
-                fun test() {
-                    let array: [AnyStruct] = [nil] as [((AnyStruct):Void)?]
+            fun test() {
+                let array: [AnyStruct] = [nil] as [((AnyStruct):Void)?]
 
-                    let x = 5
-                    array[0] =  log
-                }
-            `,
+                let x = 5
+                array[0] =  log
+
+                let logger = array[0] as! ((AnyStruct):Void)
+                logger("hello")
+            }`,
 			ParseCheckAndInterpretOptions{
 				CheckerOptions: []sema.Option{
 					sema.WithPredeclaredValues(valueDeclarations),
@@ -322,23 +335,104 @@ func TestArrayMutation(t *testing.T) {
 
 		require.NoError(t, err)
 
-		// TODO: Shouldn't throw an error once dynamic subtyping for functions is implemented.
 		_, err = inter.Invoke("test")
-		require.Error(t, err)
+		require.NoError(t, err)
 
-		mutationError := &interpreter.ContainerMutationError{}
-		require.ErrorAs(t, err, mutationError)
+		assert.True(t, invoked)
+	})
 
-		require.IsType(t, &sema.OptionalType{}, mutationError.ExpectedType)
-		optionalType := mutationError.ExpectedType.(*sema.OptionalType)
+	t.Run("function array mutation", func(t *testing.T) {
+		t.Parallel()
 
-		require.IsType(t, &sema.FunctionType{}, optionalType.Type)
-		funcType := optionalType.Type.(*sema.FunctionType)
+		inter := parseCheckAndInterpret(t, `
+            fun test(): [String] {
+                let array: [AnyStruct] = [nil, nil] as [(():String)?]
 
-		assert.Equal(t, sema.VoidType, funcType.ReturnTypeAnnotation.Type)
-		assert.Nil(t, funcType.ReceiverType)
-		assert.Len(t, funcType.Parameters, 1)
-		assert.Equal(t, sema.AnyStructType, funcType.Parameters[0].TypeAnnotation.Type)
+                array[0] =  foo
+                array[1] =  bar
+
+                let callFoo = array[0] as! (():String)
+                let callBar = array[1] as! (():String)
+                return [callFoo(), callBar()]
+            }
+
+            fun foo(): String {
+                return "hello from foo"
+            }
+
+            fun bar(): String {
+                return "hello from bar"
+            }
+        `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		require.IsType(t, &interpreter.ArrayValue{}, value)
+		array := value.(*interpreter.ArrayValue)
+
+		require.Equal(t, 2, array.Count())
+		assert.Equal(
+			t,
+			interpreter.NewStringValue("hello from foo"),
+			array.Get(inter, interpreter.ReturnEmptyLocationRange, 0),
+		)
+		assert.Equal(
+			t,
+			interpreter.NewStringValue("hello from bar"),
+			array.Get(inter, interpreter.ReturnEmptyLocationRange, 1),
+		)
+	})
+
+	t.Run("bound function array mutation", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            struct Foo {
+                fun foo(): String {
+                    return "hello from foo"
+                }
+            }
+
+            struct Bar {
+                fun bar(): String {
+                    return "hello from bar"
+                }
+            }
+
+            fun test(): [String] {
+                let array: [AnyStruct] = [nil, nil] as [(():String)?]
+
+                let a = Foo()
+                let b = Bar()
+
+                array[0] =  a.foo
+                array[1] =  b.bar
+
+                let callFoo = array[0] as! (():String)
+                let callBar = array[1] as! (():String)
+
+                return [callFoo(), callBar()]
+            }
+        `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		require.IsType(t, &interpreter.ArrayValue{}, value)
+		array := value.(*interpreter.ArrayValue)
+
+		require.Equal(t, 2, array.Count())
+		assert.Equal(
+			t,
+			interpreter.NewStringValue("hello from foo"),
+			array.Get(inter, interpreter.ReturnEmptyLocationRange, 0),
+		)
+		assert.Equal(
+			t,
+			interpreter.NewStringValue("hello from bar"),
+			array.Get(inter, interpreter.ReturnEmptyLocationRange, 1),
+		)
 	})
 
 	t.Run("invalid function array mutation", func(t *testing.T) {
@@ -385,7 +479,6 @@ func TestArrayMutation(t *testing.T) {
 		funcType := optionalType.Type.(*sema.FunctionType)
 
 		assert.Equal(t, sema.VoidType, funcType.ReturnTypeAnnotation.Type)
-		assert.Nil(t, funcType.ReceiverType)
 		assert.Empty(t, funcType.Parameters)
 	})
 }
