@@ -3,6 +3,7 @@ package interpreter
 import (
 	"flag"
 	"fmt"
+	"math"
 	"math/big"
 	"math/rand"
 	"testing"
@@ -653,7 +654,7 @@ func randomStorableValue(inter *interpreter.Interpreter, owner common.Address, c
 	if currentDepth < containerMaxDepth {
 		n = rand.Intn(Composite)
 	} else {
-		n = rand.Intn(Nil)
+		n = rand.Intn(Capability)
 	}
 
 	switch n {
@@ -695,31 +696,30 @@ func randomHashableValue(interpreter *interpreter.Interpreter) interpreter.Value
 
 func generateRandomHashableValue(inter *interpreter.Interpreter, n int) interpreter.Value {
 	switch n {
-	// TODO: deal with negative numbers
 
 	// Int
 	case Int:
-		return interpreter.NewIntValueFromInt64(rand.Int63())
+		return interpreter.NewIntValueFromInt64(int64(sign()) * rand.Int63())
 	case Int8:
-		return interpreter.Int8Value(rand.Intn(255))
+		return interpreter.Int8Value(sign() * rand.Intn(math.MaxUint8))
 	case Int16:
-		return interpreter.Int16Value(rand.Intn(65535))
+		return interpreter.Int16Value(sign() * rand.Intn(math.MaxUint16))
 	case Int32:
-		return interpreter.Int32Value(rand.Int31())
+		return interpreter.Int32Value(int32(sign()) * rand.Int31())
 	case Int64:
-		return interpreter.Int64Value(rand.Int63())
+		return interpreter.Int64Value(int64(sign()) * rand.Int63())
 	case Int128:
-		return interpreter.NewInt128ValueFromInt64(rand.Int63())
+		return interpreter.NewInt128ValueFromInt64(int64(sign()) * rand.Int63())
 	case Int256:
-		return interpreter.NewInt256ValueFromInt64(rand.Int63())
+		return interpreter.NewInt256ValueFromInt64(int64(sign()) * rand.Int63())
 
 	// UInt
 	case UInt:
 		return interpreter.NewUIntValueFromUint64(rand.Uint64())
 	case UInt8:
-		return interpreter.UInt8Value(rand.Intn(255))
+		return interpreter.UInt8Value(rand.Intn(math.MaxUint8))
 	case UInt16:
-		return interpreter.UInt16Value(rand.Intn(65535))
+		return interpreter.UInt16Value(rand.Intn(math.MaxUint16))
 	case UInt32:
 		return interpreter.UInt32Value(rand.Uint32())
 	case UInt64_1, UInt64_2, UInt64_3, UInt64_4: // should be more common
@@ -731,9 +731,9 @@ func generateRandomHashableValue(inter *interpreter.Interpreter, n int) interpre
 
 	// Word
 	case Word8:
-		return interpreter.Word8Value(rand.Intn(255))
+		return interpreter.Word8Value(rand.Intn(math.MaxUint8))
 	case Word16:
-		return interpreter.Word16Value(rand.Intn(65535))
+		return interpreter.Word16Value(rand.Intn(math.MaxUint16))
 	case Word32:
 		return interpreter.Word32Value(rand.Uint32())
 	case Word64:
@@ -741,7 +741,7 @@ func generateRandomHashableValue(inter *interpreter.Interpreter, n int) interpre
 
 	// Fixed point
 	case Fix64:
-		return interpreter.NewFix64ValueWithInteger(rand.Int63n(sema.Fix64TypeMaxInt))
+		return interpreter.NewFix64ValueWithInteger(int64(sign()) * rand.Int63n(sema.Fix64TypeMaxInt))
 	case UFix64:
 		return interpreter.NewUFix64ValueWithInteger(
 			uint64(rand.Int63n(
@@ -808,6 +808,14 @@ func generateRandomHashableValue(inter *interpreter.Interpreter, n int) interpre
 	default:
 		panic(fmt.Sprintf("unsupported:  %d", n))
 	}
+}
+
+func sign() int {
+	if rand.Intn(2) == 1 {
+		return 1
+	}
+
+	return -1
 }
 
 func randomAddressValue() interpreter.AddressValue {
@@ -1049,6 +1057,8 @@ const (
 	Void
 	Nil // `Never?`
 	Capability
+
+	// Containers
 	Some
 	Array_1
 	Array_2
