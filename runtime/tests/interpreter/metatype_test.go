@@ -403,28 +403,28 @@ func TestInterpretIsSubtype(t *testing.T) {
 		{
 			name: "String is a subtype of String",
 			code: `
-              let result = Type<String>().isSubtype(Type<String>())
+              let result = Type<String>().isSubtype(of: Type<String>())
             `,
 			result: true,
 		},
 		{
 			name: "Int is a subtype of Int",
 			code: `
-              let result = Type<Int>().isSubtype(Type<Int>())
+              let result = Type<Int>().isSubtype(of: Type<Int>())
             `,
 			result: true,
 		},
 		{
 			name: "Int is a subtype of Int?",
 			code: `
-              let result = Type<Int>().isSubtype(Type<Int?>())
+              let result = Type<Int>().isSubtype(of: Type<Int?>())
             `,
 			result: true,
 		},
 		{
 			name: "Int? is a subtype of Int",
 			code: `
-              let result = Type<Int?>().isSubtype(Type<Int>())
+              let result = Type<Int?>().isSubtype(of: Type<Int>())
             `,
 			result: false,
 		},
@@ -432,7 +432,7 @@ func TestInterpretIsSubtype(t *testing.T) {
 			name: "resource is a subtype of AnyResource",
 			code: `
               resource R {}
-              let result = Type<@R>().isSubtype(Type<@AnyResource>())
+              let result = Type<@R>().isSubtype(of: Type<@AnyResource>())
             `,
 			result: true,
 		},
@@ -440,7 +440,7 @@ func TestInterpretIsSubtype(t *testing.T) {
 			name: "struct is a subtype of AnyStruct",
 			code: `
               struct S {}
-              let result = Type<S>().isSubtype(Type<AnyStruct>())
+              let result = Type<S>().isSubtype(of: Type<AnyStruct>())
             `,
 			result: true,
 		},
@@ -448,7 +448,7 @@ func TestInterpretIsSubtype(t *testing.T) {
 			name: "Int is not a subtype of resource",
 			code: `
               resource R {}
-              let result = Type<Int>().isSubtype(Type<@R>())
+              let result = Type<Int>().isSubtype(of: Type<@R>())
             `,
 			result: false,
 		},
@@ -456,7 +456,7 @@ func TestInterpretIsSubtype(t *testing.T) {
 			name: "resource is not a subtype of String",
 			code: `
 			  resource R {}
-			  let result = Type<@R>().isSubtype(Type<String>())
+			  let result = Type<@R>().isSubtype(of: Type<String>())
             `,
 			result: false,
 		},
@@ -465,7 +465,7 @@ func TestInterpretIsSubtype(t *testing.T) {
 			code: `
               resource R {}
               resource S {}
-              let result = Type<@R>().isSubtype(Type<@S>())
+              let result = Type<@R>().isSubtype(of: Type<@S>())
             `,
 			result: false,
 		},
@@ -474,21 +474,21 @@ func TestInterpretIsSubtype(t *testing.T) {
 			code: `
               resource R {}
               resource S {}
-              let result = Type<@R>().isSubtype(Type<@S>())
+              let result = Type<@R>().isSubtype(of: Type<@S>())
             `,
 			result: false,
 		},
 		{
 			name: "Int is not a subtype of an unknown type",
 			code: `
-              let result = Type<Int>().isSubtype(unknownType)
+              let result = Type<Int>().isSubtype(of: unknownType)
             `,
 			result: false,
 		},
 		{
 			name: "unknown type is not a subtype of Int",
 			code: `
-              let result = unknownType.isSubtype(Type<Int>())
+              let result = unknownType.isSubtype(of: Type<Int>())
             `,
 			result: false,
 		},

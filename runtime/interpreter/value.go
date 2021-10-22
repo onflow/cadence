@@ -227,7 +227,7 @@ func (v TypeValue) GetMember(inter *Interpreter, _ func() LocationRange, name st
 				)
 				return BoolValue(result)
 			},
-			sema.StringTypeConcatFunctionType,
+			sema.MetaTypeIsSubtypeFunctionType,
 		)
 	}
 

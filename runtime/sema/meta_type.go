@@ -23,11 +23,11 @@ import (
 	"github.com/onflow/cadence/runtime/common"
 )
 
-const typeIdentifierDocString = `
+const metaTypeIdentifierDocString = `
 The fully-qualified identifier of the type
 `
 
-const typeSubtypeDocString = `
+const metaTypeSubtypeDocString = `
 Returns true if this type is a subtype of the given type at runtime
 `
 
@@ -45,10 +45,10 @@ var MetaType = &SimpleType{
 	Importable:           true,
 }
 
-var isSubtypeFunctionType = &FunctionType{
+var MetaTypeIsSubtypeFunctionType = &FunctionType{
 	Parameters: []*Parameter{
 		{
-			Label:          ArgumentLabelNotRequired,
+			Label:          "of",
 			Identifier:     "otherType",
 			TypeAnnotation: NewTypeAnnotation(MetaType),
 		},
@@ -68,7 +68,7 @@ func init() {
 						t,
 						identifier,
 						StringType,
-						typeIdentifierDocString,
+						metaTypeIdentifierDocString,
 					)
 				},
 			},
@@ -78,8 +78,8 @@ func init() {
 					return NewPublicFunctionMember(
 						t,
 						identifier,
-						isSubtypeFunctionType,
-						typeSubtypeDocString,
+						MetaTypeIsSubtypeFunctionType,
+						metaTypeSubtypeDocString,
 					)
 				},
 			},

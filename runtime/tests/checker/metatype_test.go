@@ -153,7 +153,7 @@ func TestCheckIsSubtype(t *testing.T) {
 			name: "string is a subtype of string",
 			code: `
               let stringType = Type<String>()
-              let result = stringType.isSubtype(stringType)
+              let result = stringType.isSubtype(of: stringType)
             `,
 			valid: true,
 		},
@@ -161,7 +161,7 @@ func TestCheckIsSubtype(t *testing.T) {
 			name: "int is a subtype of int",
 			code: `
               let intType = Type<Int>()
-              let result = intType.isSubtype(intType)
+              let result = intType.isSubtype(of: intType)
             `,
 			valid: true,
 		},
@@ -170,21 +170,21 @@ func TestCheckIsSubtype(t *testing.T) {
 			code: `
               resource R {}
               let rType = Type<@R>()
-              let result = rType.isSubtype(rType)
+              let result = rType.isSubtype(of: rType)
             `,
 			valid: true,
 		},
 		{
 			name: "Int is an instance of Int?",
 			code: `
-              let result = Type<Int>().isSubtype(Type<Int?>())
+              let result = Type<Int>().isSubtype(of: Type<Int?>())
             `,
 			valid: true,
 		},
 		{
 			name: "isSubtype must take a type",
 			code: `
-              let result = Type<Int>().isSubtype(3)
+              let result = Type<Int>().isSubtype(of: 3)
             `,
 			valid: false,
 		},
@@ -196,9 +196,16 @@ func TestCheckIsSubtype(t *testing.T) {
 			valid: false,
 		},
 		{
+			name: "isSubtype argument must be named",
+			code: `
+              let result = Type<Int>().isSubtype(Type<Int?>())
+            `,
+			valid: false,
+		},
+		{
 			name: "isSubtype must take fewer than two arguments",
 			code: `
-              let result = Type<Int>().isSubtype(Type<Int?>(), Type<Int?>())
+              let result = Type<Int>().isSubtype(of: Type<Int?>(), Type<Int?>())
             `,
 			valid: false,
 		},
