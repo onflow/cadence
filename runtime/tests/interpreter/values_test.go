@@ -8,6 +8,7 @@ import (
 	"math/rand"
 	"testing"
 	"time"
+	"unicode/utf8"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -61,17 +62,16 @@ func TestRandomMapOperations(t *testing.T) {
 	var testMap, copyOfTestMap *interpreter.DictionaryValue
 	var storageSize, slabCounts int
 
-	entries := make(map[interface{}]interpreter.Value, numberOfValues)
+	entries := newValueMap(numberOfValues)
 	orgOwner := common.Address([8]byte{'A'})
 
 	t.Run("construction", func(t *testing.T) {
 		keyValues := make([]interpreter.Value, numberOfValues*2)
 		for i := 0; i < numberOfValues; i++ {
-			key := randomHashableValue(inter)
+			key := randomHashableValue(inter, orgOwner)
 			value := randomStorableValue(inter, orgOwner, 0)
 
-			mapKey := goMapKey(key)
-			entries[mapKey] = value
+			entries.put(inter, key, value)
 
 			keyValues[i*2] = key
 			keyValues[i*2+1] = deepCopyValue(inter, value)
@@ -88,30 +88,27 @@ func TestRandomMapOperations(t *testing.T) {
 
 		storageSize, slabCounts = getSlabStorageSize(t, storage)
 
-		require.Equal(t, testMap.Count(), len(entries))
+		require.Equal(t, testMap.Count(), entries.size())
 
-		for orgKey, orgValue := range entries {
-			key := dictionaryKey(orgKey)
-
-			exists := testMap.ContainsKey(inter, interpreter.ReturnEmptyLocationRange, key)
+		entries.foreach(func(orgKey, orgValue interpreter.Value) {
+			exists := testMap.ContainsKey(inter, interpreter.ReturnEmptyLocationRange, orgKey)
 			require.True(t, bool(exists))
 
-			value, found := testMap.Get(inter, interpreter.ReturnEmptyLocationRange, key)
+			value, found := testMap.Get(inter, interpreter.ReturnEmptyLocationRange, orgKey)
 			require.True(t, found)
 			utils.AssertValuesEqual(t, inter, orgValue, value)
-		}
+		})
 
 		owner := testMap.GetOwner()
 		assert.Equal(t, owner[:], orgOwner[:])
 	})
 
 	t.Run("iterate", func(t *testing.T) {
-		require.Equal(t, testMap.Count(), len(entries))
+		require.Equal(t, testMap.Count(), entries.size())
 
 		testMap.Iterate(func(key, value interpreter.Value) (resume bool) {
-			mapKey := goMapKey(key)
-			orgValue, ok := entries[mapKey]
-			require.True(t, ok)
+			orgValue, ok := entries.get(key)
+			require.True(t, ok, "cannot fine key: %v", key)
 
 			utils.AssertValuesEqual(t, inter, orgValue, value)
 			return true
@@ -126,18 +123,16 @@ func TestRandomMapOperations(t *testing.T) {
 			newOwner,
 		).(*interpreter.DictionaryValue)
 
-		require.Equal(t, copyOfTestMap.Count(), len(entries))
+		require.Equal(t, copyOfTestMap.Count(), entries.size())
 
-		for orgKey, orgValue := range entries {
-			key := dictionaryKey(orgKey)
-
-			exists := copyOfTestMap.ContainsKey(inter, interpreter.ReturnEmptyLocationRange, key)
+		entries.foreach(func(orgKey, orgValue interpreter.Value) {
+			exists := copyOfTestMap.ContainsKey(inter, interpreter.ReturnEmptyLocationRange, orgKey)
 			require.True(t, bool(exists))
 
-			value, found := copyOfTestMap.Get(inter, interpreter.ReturnEmptyLocationRange, key)
+			value, found := copyOfTestMap.Get(inter, interpreter.ReturnEmptyLocationRange, orgKey)
 			require.True(t, found)
 			utils.AssertValuesEqual(t, inter, orgValue, value)
-		}
+		})
 
 		owner := copyOfTestMap.GetOwner()
 		assert.Equal(t, owner[:], newOwner[:])
@@ -153,19 +148,17 @@ func TestRandomMapOperations(t *testing.T) {
 		assert.Equal(t, slabCounts, newSlabCounts)
 		assert.Equal(t, storageSize, newStorageSize)
 
-		require.Equal(t, testMap.Count(), len(entries))
+		require.Equal(t, testMap.Count(), entries.size())
 
 		// go over original values again and check no missing data (no side effect should be found)
-		for orgKey, orgValue := range entries {
-			key := dictionaryKey(orgKey)
-
-			exists := testMap.ContainsKey(inter, interpreter.ReturnEmptyLocationRange, key)
+		entries.foreach(func(orgKey, orgValue interpreter.Value) {
+			exists := testMap.ContainsKey(inter, interpreter.ReturnEmptyLocationRange, orgKey)
 			require.True(t, bool(exists))
 
-			value, found := testMap.Get(inter, interpreter.ReturnEmptyLocationRange, key)
+			value, found := testMap.Get(inter, interpreter.ReturnEmptyLocationRange, orgKey)
 			require.True(t, found)
 			utils.AssertValuesEqual(t, inter, orgValue, value)
-		}
+		})
 
 		owner := testMap.GetOwner()
 		assert.Equal(t, owner[:], orgOwner[:])
@@ -332,12 +325,11 @@ func TestRandomCompositeValueOperations(t *testing.T) {
 	orgOwner := common.Address([8]byte{'A'})
 
 	t.Run("construction", func(t *testing.T) {
-		identifier := make([]byte, 8)
-		rand.Read(identifier)
+		identifier := randomUTF8String()
 
 		location := common.AddressLocation{
 			Address: orgOwner,
-			Name:    string(identifier),
+			Name:    identifier,
 		}
 
 		fields := make([]interpreter.CompositeField, fieldsCount)
@@ -359,7 +351,7 @@ func TestRandomCompositeValueOperations(t *testing.T) {
 
 		compositeType := &sema.CompositeType{
 			Location:   location,
-			Identifier: string(identifier),
+			Identifier: identifier,
 			Kind:       kind,
 		}
 
@@ -382,7 +374,7 @@ func TestRandomCompositeValueOperations(t *testing.T) {
 		testComposite = interpreter.NewCompositeValue(
 			inter,
 			location,
-			string(identifier),
+			identifier,
 			kind,
 			fields,
 			orgOwner,
@@ -634,6 +626,7 @@ func deepCopyValue(inter *interpreter.Interpreter, value interpreter.Value) inte
 			fields,
 			v.GetOwner(),
 		)
+
 	case *interpreter.CapabilityValue:
 		return &interpreter.CapabilityValue{
 			Address:    deepCopyValue(inter, v.Address).(interpreter.AddressValue),
@@ -686,15 +679,15 @@ func randomStorableValue(inter *interpreter.Interpreter, owner common.Address, c
 
 	// Hashable
 	default:
-		return generateRandomHashableValue(inter, n)
+		return generateRandomHashableValue(inter, owner, n)
 	}
 }
 
-func randomHashableValue(interpreter *interpreter.Interpreter) interpreter.Value {
-	return generateRandomHashableValue(interpreter, randomInt(Enum))
+func randomHashableValue(interpreter *interpreter.Interpreter, owner common.Address) interpreter.Value {
+	return generateRandomHashableValue(interpreter, owner, randomInt(Enum))
 }
 
-func generateRandomHashableValue(inter *interpreter.Interpreter, n int) interpreter.Value {
+func generateRandomHashableValue(inter *interpreter.Interpreter, owner common.Address, n int) interpreter.Value {
 	switch n {
 
 	// Int
@@ -776,21 +769,20 @@ func generateRandomHashableValue(inter *interpreter.Interpreter, n int) interpre
 		// Get a random integer subtype to be used as the raw-type of enum
 		typ := randomInt(Word64)
 
-		rawValue := generateRandomHashableValue(inter, typ).(interpreter.NumberValue)
+		rawValue := generateRandomHashableValue(inter, owner, typ).(interpreter.NumberValue)
 
-		identifier := make([]byte, 8)
-		rand.Read(identifier)
+		identifier := randomUTF8String()
 
 		address := make([]byte, 8)
 		rand.Read(address)
 
 		location := common.AddressLocation{
 			Address: common.BytesToAddress(address),
-			Name:    string(identifier),
+			Name:    identifier,
 		}
 
 		enumType := &sema.CompositeType{
-			Identifier:  string(identifier),
+			Identifier:  identifier,
 			EnumRawType: intSubtype(typ),
 			Kind:        common.CompositeKindEnum,
 			Location:    location,
@@ -798,12 +790,25 @@ func generateRandomHashableValue(inter *interpreter.Interpreter, n int) interpre
 
 		inter.Program.Elaboration.CompositeTypes[enumType.ID()] = enumType
 
-		return interpreter.NewEnumCaseValue(
+		enum := interpreter.NewCompositeValue(
 			inter,
-			enumType,
-			rawValue,
-			nil,
+			location,
+			enumType.QualifiedIdentifier(),
+			enumType.Kind,
+			[]interpreter.CompositeField{
+				{
+					Name:  sema.EnumRawValueFieldName,
+					Value: rawValue,
+				},
+			},
+			owner,
 		)
+
+		if enum.GetField(nil, interpreter.ReturnEmptyLocationRange, sema.EnumRawValueFieldName) == nil {
+			panic("enum without raw value")
+		}
+
+		return enum
 
 	default:
 		panic(fmt.Sprintf("unsupported:  %d", n))
@@ -826,12 +831,11 @@ func randomAddressValue() interpreter.AddressValue {
 
 func randomPathValue() interpreter.PathValue {
 	randomDomain := rand.Intn(len(common.AllPathDomains))
-	identifier := make([]byte, 8)
-	rand.Read(identifier)
+	identifier := randomUTF8String()
 
 	return interpreter.PathValue{
 		Domain:     common.AllPathDomains[randomDomain],
-		Identifier: string(identifier),
+		Identifier: identifier,
 	}
 }
 
@@ -843,28 +847,10 @@ func randomDictionaryValue(
 
 	entryCount := randomInt(innerContainerMaxSize)
 	keyValues := make([]interpreter.Value, entryCount*2)
-	entries := make(map[interface{}]interpreter.Value, entryCount)
 
 	for i := 0; i < entryCount; i++ {
-		key := randomHashableValue(inter)
+		key := randomHashableValue(inter, owner)
 		value := randomStorableValue(inter, owner, currentDepth+1)
-
-		var mapKey interface{}
-
-		// Dereference string-keys before putting into go-map,
-		// as go-map hashing treats pointers as unique values.
-		// i.e: Maintain the value as the key, rather than the pointer.
-		switch key := deepCopyValue(inter, key).(type) {
-		case *interpreter.StringValue:
-			mapKey = *key
-		case interpreter.Value:
-			mapKey = key
-		default:
-			panic("unreachable")
-		}
-
-		entries[mapKey] = deepCopyValue(inter, value)
-
 		keyValues[i*2] = key
 		keyValues[i*2+1] = value
 	}
@@ -910,33 +896,31 @@ func randomCompositeValue(
 	currentDepth int,
 ) interpreter.Value {
 
-	identifier := make([]byte, 8)
-	rand.Read(identifier)
+	identifier := randomUTF8String()
 
 	address := make([]byte, 8)
 	rand.Read(address)
 
 	location := common.AddressLocation{
 		Address: common.BytesToAddress(address),
-		Name:    string(identifier),
+		Name:    identifier,
 	}
 
 	fieldsCount := randomInt(compositeMaxFields)
 	fields := make([]interpreter.CompositeField, fieldsCount)
 
 	for i := 0; i < fieldsCount; i++ {
-		fieldName := make([]byte, 8)
-		rand.Read(fieldName)
+		fieldName := randomUTF8String()
 
 		fields[i] = interpreter.CompositeField{
-			Name:  string(fieldName),
+			Name:  fieldName,
 			Value: randomStorableValue(inter, owner, currentDepth+1),
 		}
 	}
 
 	compositeType := &sema.CompositeType{
 		Location:   location,
-		Identifier: string(identifier),
+		Identifier: identifier,
 		Kind:       kind,
 	}
 
@@ -959,7 +943,7 @@ func randomCompositeValue(
 	return interpreter.NewCompositeValue(
 		inter,
 		location,
-		string(identifier),
+		identifier,
 		kind,
 		fields,
 		owner,
@@ -1070,3 +1054,84 @@ const (
 	Dictionary_2
 	Composite
 )
+
+type valueMap struct {
+	values map[interface{}]interpreter.Value
+	keys   map[interface{}]interpreter.Value
+}
+
+func newValueMap(size int) *valueMap {
+	return &valueMap{
+		values: make(map[interface{}]interpreter.Value, size),
+		keys:   make(map[interface{}]interpreter.Value, size),
+	}
+}
+
+type enumKey struct {
+	location            common.Location
+	qualifiedIdentifier string
+	kind                common.CompositeKind
+	rawValue            interpreter.Value
+}
+
+func (m *valueMap) put(inter *interpreter.Interpreter, key, value interpreter.Value) {
+	internalKey := m.internalKey(key)
+
+	// Deep copy enum keys. This should be fine since we use an internal key for enums.
+	// Deep copying other values would mess key-lookup.
+	if _, ok := key.(*interpreter.CompositeValue); ok {
+		key = deepCopyValue(inter, key)
+	}
+
+	m.keys[internalKey] = key
+	m.values[internalKey] = deepCopyValue(inter, value)
+}
+
+func (m *valueMap) get(key interpreter.Value) (interpreter.Value, bool) {
+	internalKey := m.internalKey(key)
+	value, ok := m.values[internalKey]
+	return value, ok
+}
+
+func (m *valueMap) foreach(apply func(key, value interpreter.Value)) {
+	for internalKey, key := range m.keys {
+		value := m.values[internalKey]
+		apply(key, value)
+	}
+}
+
+func (m *valueMap) internalKey(key interpreter.Value) interface{} {
+	switch key := key.(type) {
+	case *interpreter.StringValue:
+		return *key
+	case *interpreter.CompositeValue:
+		return enumKey{
+			location:            key.Location,
+			qualifiedIdentifier: key.QualifiedIdentifier,
+			kind:                key.Kind,
+			rawValue: key.GetField(
+				nil,
+				interpreter.ReturnEmptyLocationRange,
+				sema.EnumRawValueFieldName,
+			),
+		}
+	case interpreter.Value:
+		return key
+	default:
+		panic("unreachable")
+	}
+}
+
+func (m *valueMap) size() int {
+	return len(m.keys)
+}
+
+func randomUTF8String() string {
+	for {
+		identifier := make([]byte, 8)
+		rand.Read(identifier)
+		if utf8.Valid(identifier) {
+			return string(identifier)
+		}
+	}
+}
