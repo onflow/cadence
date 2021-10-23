@@ -56,7 +56,7 @@ func TestRandomMapOperations(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	numberOfValues := rand.Intn(containerMaxSize)
+	numberOfValues := randomInt(containerMaxSize)
 
 	var testMap, copyOfTestMap *interpreter.DictionaryValue
 	var storageSize, slabCounts int
@@ -199,7 +199,7 @@ func TestRandomArrayOperations(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	numberOfValues := rand.Intn(containerMaxSize)
+	numberOfValues := randomInt(containerMaxSize)
 
 	var testArray, copyOfTestArray *interpreter.ArrayValue
 	var storageSize, slabCounts int
@@ -326,7 +326,7 @@ func TestRandomCompositeValueOperations(t *testing.T) {
 	var testComposite, copyOfTestComposite *interpreter.CompositeValue
 	var storageSize, slabCounts int
 
-	fieldsCount := rand.Intn(compositeMaxFields)
+	fieldsCount := randomInt(compositeMaxFields)
 	orgFields := make(map[string]interpreter.Value, fieldsCount)
 
 	orgOwner := common.Address([8]byte{'A'})
@@ -652,9 +652,9 @@ func deepCopyValue(inter *interpreter.Interpreter, value interpreter.Value) inte
 func randomStorableValue(inter *interpreter.Interpreter, owner common.Address, currentDepth int) interpreter.Value {
 	n := 0
 	if currentDepth < containerMaxDepth {
-		n = rand.Intn(Composite)
+		n = randomInt(Composite)
 	} else {
-		n = rand.Intn(Capability)
+		n = randomInt(Capability)
 	}
 
 	switch n {
@@ -691,7 +691,7 @@ func randomStorableValue(inter *interpreter.Interpreter, owner common.Address, c
 }
 
 func randomHashableValue(interpreter *interpreter.Interpreter) interpreter.Value {
-	return generateRandomHashableValue(interpreter, rand.Intn(Enum))
+	return generateRandomHashableValue(interpreter, randomInt(Enum))
 }
 
 func generateRandomHashableValue(inter *interpreter.Interpreter, n int) interpreter.Value {
@@ -701,9 +701,9 @@ func generateRandomHashableValue(inter *interpreter.Interpreter, n int) interpre
 	case Int:
 		return interpreter.NewIntValueFromInt64(int64(sign()) * rand.Int63())
 	case Int8:
-		return interpreter.Int8Value(sign() * rand.Intn(math.MaxUint8))
+		return interpreter.Int8Value(randomInt(math.MaxUint8))
 	case Int16:
-		return interpreter.Int16Value(sign() * rand.Intn(math.MaxUint16))
+		return interpreter.Int16Value(randomInt(math.MaxUint16))
 	case Int32:
 		return interpreter.Int32Value(int32(sign()) * rand.Int31())
 	case Int64:
@@ -717,23 +717,23 @@ func generateRandomHashableValue(inter *interpreter.Interpreter, n int) interpre
 	case UInt:
 		return interpreter.NewUIntValueFromUint64(rand.Uint64())
 	case UInt8:
-		return interpreter.UInt8Value(rand.Intn(math.MaxUint8))
+		return interpreter.UInt8Value(randomInt(math.MaxUint8))
 	case UInt16:
-		return interpreter.UInt16Value(rand.Intn(math.MaxUint16))
+		return interpreter.UInt16Value(randomInt(math.MaxUint16))
 	case UInt32:
 		return interpreter.UInt32Value(rand.Uint32())
 	case UInt64_1, UInt64_2, UInt64_3, UInt64_4: // should be more common
 		return interpreter.UInt64Value(rand.Uint64())
 	case UInt128:
-		return interpreter.NewUInt128ValueFromBigInt(big.NewInt(rand.Int63()))
+		return interpreter.NewUInt128ValueFromUint64(rand.Uint64())
 	case UInt256:
-		return interpreter.NewUInt256ValueFromBigInt(big.NewInt(rand.Int63()))
+		return interpreter.NewUInt256ValueFromUint64(rand.Uint64())
 
 	// Word
 	case Word8:
-		return interpreter.Word8Value(rand.Intn(math.MaxUint8))
+		return interpreter.Word8Value(randomInt(math.MaxUint8))
 	case Word16:
-		return interpreter.Word16Value(rand.Intn(math.MaxUint16))
+		return interpreter.Word16Value(randomInt(math.MaxUint16))
 	case Word32:
 		return interpreter.Word32Value(rand.Uint32())
 	case Word64:
@@ -751,12 +751,12 @@ func generateRandomHashableValue(inter *interpreter.Interpreter, n int) interpre
 
 	// String
 	case String_1, String_2, String_3, String_4: // small string - should be more common
-		size := rand.Intn(255)
+		size := randomInt(255)
 		data := make([]byte, size)
 		rand.Read(data)
 		return interpreter.NewStringValue(string(data))
 	case String_5: // large string
-		size := rand.Intn(4048) + 255
+		size := randomInt(4048) + 255
 		data := make([]byte, size)
 		rand.Read(data)
 		return interpreter.NewStringValue(string(data))
@@ -774,7 +774,7 @@ func generateRandomHashableValue(inter *interpreter.Interpreter, n int) interpre
 
 	case Enum:
 		// Get a random integer subtype to be used as the raw-type of enum
-		typ := rand.Intn(Word64)
+		typ := randomInt(Word64)
 
 		rawValue := generateRandomHashableValue(inter, typ).(interpreter.NumberValue)
 
@@ -811,7 +811,7 @@ func generateRandomHashableValue(inter *interpreter.Interpreter, n int) interpre
 }
 
 func sign() int {
-	if rand.Intn(2) == 1 {
+	if randomInt(1) == 1 {
 		return 1
 	}
 
@@ -841,7 +841,7 @@ func randomDictionaryValue(
 	currentDepth int,
 ) interpreter.Value {
 
-	entryCount := rand.Intn(innerContainerMaxSize)
+	entryCount := randomInt(innerContainerMaxSize)
 	keyValues := make([]interpreter.Value, entryCount*2)
 	entries := make(map[interface{}]interpreter.Value, entryCount)
 
@@ -880,8 +880,12 @@ func randomDictionaryValue(
 	)
 }
 
+func randomInt(upperBound int) int {
+	return rand.Intn(upperBound + 1)
+}
+
 func randomArrayValue(inter *interpreter.Interpreter, owner common.Address, currentDepth int) interpreter.Value {
-	elementsCount := rand.Intn(innerContainerMaxSize)
+	elementsCount := randomInt(innerContainerMaxSize)
 	elements := make([]interpreter.Value, elementsCount)
 
 	for i := 0; i < elementsCount; i++ {
@@ -917,7 +921,7 @@ func randomCompositeValue(
 		Name:    string(identifier),
 	}
 
-	fieldsCount := rand.Intn(compositeMaxFields)
+	fieldsCount := randomInt(compositeMaxFields)
 	fields := make([]interpreter.CompositeField, fieldsCount)
 
 	for i := 0; i < fieldsCount; i++ {
