@@ -89,6 +89,17 @@ var CompositeTypeFunctionType = &FunctionType{
 	ReturnTypeAnnotation: NewTypeAnnotation(&OptionalType{MetaType}),
 }
 
+var InterfaceTypeFunctionType = &FunctionType{
+	Parameters: []*Parameter{
+		{
+			Label:          ArgumentLabelNotRequired,
+			Identifier:     "identifier",
+			TypeAnnotation: NewTypeAnnotation(StringType),
+		},
+	},
+	ReturnTypeAnnotation: NewTypeAnnotation(&OptionalType{MetaType}),
+}
+
 func RuntimeTypeConstructors() []*RuntimeTypeConstructor {
 	var functions []*RuntimeTypeConstructor
 
@@ -125,6 +136,13 @@ func RuntimeTypeConstructors() []*RuntimeTypeConstructor {
 			"CompositeType",
 			CompositeTypeFunctionType,
 			"Creates a run-time type representing the composite type associated with the given type identifier. Returns nil if the identifier does not correspond to any composite type",
+		})
+
+	functions = append(functions,
+		&RuntimeTypeConstructor{
+			"InterfaceType",
+			InterfaceTypeFunctionType,
+			"Creates a run-time type representing the interface type associated with the given type identifier. Returns nil if the identifier does not correspond to any interface type",
 		})
 
 	return functions

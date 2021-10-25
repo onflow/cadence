@@ -548,7 +548,31 @@ func NewInterpreter(program *Program, location common.Location, options ...Optio
 						Location:            location,
 					}}
 			},
-			sema.ConstantSizedArrayTypeFunctionType,
+			sema.CompositeTypeFunctionType,
+		),
+	)
+
+	defineBaseValue(baseActivation,
+		"InterfaceType",
+		NewHostFunctionValue(
+			func(invocation Invocation) Value {
+				typeID := string(invocation.Arguments[0].(*StringValue).Str)
+				location, name, err := common.DecodeTypeID(typeID)
+
+				// if the typeID is invalid, return nil
+				if err != nil ||
+					location == nil ||
+					interpreter.getElaboration(location).InterfaceTypes[location.TypeID(name)] == nil {
+					return NilValue{}
+				}
+
+				return TypeValue{
+					Type: InterfaceStaticType{
+						QualifiedIdentifier: name,
+						Location:            location,
+					}}
+			},
+			sema.InterfaceTypeFunctionType,
 		),
 	)
 

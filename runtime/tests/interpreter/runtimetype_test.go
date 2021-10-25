@@ -336,3 +336,49 @@ func TestInterpretCompositeType(t *testing.T) {
 		inter.Globals["e"].GetValue(),
 	)
 }
+
+func TestInterpretInterfaceType(t *testing.T) {
+
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+	  resource interface R {}
+	  struct interface S {}
+	  struct B {}
+
+	  let a = InterfaceType("S.test.R")!
+      let b = InterfaceType("S.test.S")! 
+	  let c = InterfaceType("S.test.A")
+	  let d = InterfaceType("S.test.B")  
+    `)
+
+	assert.Equal(t,
+		interpreter.TypeValue{
+			Type: interpreter.InterfaceStaticType{
+				QualifiedIdentifier: "R",
+				Location:            utils.TestLocation,
+			},
+		},
+		inter.Globals["a"].GetValue(),
+	)
+
+	assert.Equal(t,
+		interpreter.TypeValue{
+			Type: interpreter.InterfaceStaticType{
+				QualifiedIdentifier: "S",
+				Location:            utils.TestLocation,
+			},
+		},
+		inter.Globals["b"].GetValue(),
+	)
+
+	assert.Equal(t,
+		interpreter.NilValue{},
+		inter.Globals["c"].GetValue(),
+	)
+
+	assert.Equal(t,
+		interpreter.NilValue{},
+		inter.Globals["d"].GetValue(),
+	)
+}
