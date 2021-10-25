@@ -508,6 +508,26 @@ func NewInterpreter(program *Program, location common.Location, options ...Optio
 	// Use the base activation as the parent.
 	interpreter.activations.PushNewWithParent(baseActivation)
 
+	// We assign this here because it depends on the interpreter, so this breaks the initialization cycle
+	defineBaseValue(baseActivation, "DictionaryType", NewHostFunctionValue(
+		func(invocation Invocation) Value {
+
+			keyType := invocation.Arguments[0].(TypeValue).Type
+
+			// if the given key is not a valid dictionary key, it wouldn't make sense to create this type
+			if keyType == nil || !sema.IsValidDictionaryKeyType(invocation.Interpreter.ConvertStaticToSemaType(keyType)) {
+				return NilValue{}
+			}
+
+			return TypeValue{
+				Type: DictionaryStaticType{
+					KeyType:   keyType,
+					ValueType: invocation.Arguments[1].(TypeValue).Type,
+				}}
+		},
+		sema.DictionaryTypeFunctionType,
+	))
+
 	defaultOptions := []Option{
 		WithAllInterpreters(map[common.LocationID]*Interpreter{}),
 		withTypeCodes(TypeCodes{
@@ -2641,7 +2661,7 @@ type runtimeTypeConstructor struct {
 	converter *HostFunctionValue
 }
 
-// Converter functions are stateless functions. Hence they can be re-used across interpreters.
+// Constructor functions are stateless functions. Hence they can be re-used across interpreters.
 //
 var runtimeTypeConstructorValues = func() []runtimeTypeConstructor {
 

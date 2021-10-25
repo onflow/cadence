@@ -209,3 +209,77 @@ func TestInterpretConstantSizedArrayType(t *testing.T) {
 		inter.Globals["e"].GetValue(),
 	)
 }
+
+func TestInterpretDictionaryType(t *testing.T) {
+
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+      let a = DictionaryType(Type<String>(), Type<Int>())!
+      let b = DictionaryType(Type<Int>(), Type<String>())!
+
+	  resource R {}
+	  let c = DictionaryType(Type<Int>(), Type<@R>())!
+      let d = DictionaryType(Type<Bool>(), a)!
+
+	  let e = Type<{String: Int}>()!
+	  
+	  let f = DictionaryType(Type<[Bool]>(), Type<Int>())
+    `)
+
+	assert.Equal(t,
+		interpreter.TypeValue{
+			Type: interpreter.DictionaryStaticType{
+				KeyType:   interpreter.PrimitiveStaticTypeString,
+				ValueType: interpreter.PrimitiveStaticTypeInt,
+			},
+		},
+		inter.Globals["a"].GetValue(),
+	)
+
+	assert.Equal(t,
+		interpreter.TypeValue{
+			Type: interpreter.DictionaryStaticType{
+				KeyType:   interpreter.PrimitiveStaticTypeInt,
+				ValueType: interpreter.PrimitiveStaticTypeString,
+			},
+		},
+		inter.Globals["b"].GetValue(),
+	)
+
+	assert.Equal(t,
+		interpreter.TypeValue{
+			Type: interpreter.DictionaryStaticType{
+				ValueType: interpreter.CompositeStaticType{
+					Location:            utils.TestLocation,
+					QualifiedIdentifier: "R",
+				},
+				KeyType: interpreter.PrimitiveStaticTypeInt,
+			},
+		},
+		inter.Globals["c"].GetValue(),
+	)
+
+	assert.Equal(t,
+		interpreter.TypeValue{
+			Type: interpreter.DictionaryStaticType{
+				ValueType: interpreter.DictionaryStaticType{
+					KeyType:   interpreter.PrimitiveStaticTypeString,
+					ValueType: interpreter.PrimitiveStaticTypeInt,
+				},
+				KeyType: interpreter.PrimitiveStaticTypeBool,
+			},
+		},
+		inter.Globals["d"].GetValue(),
+	)
+
+	assert.Equal(t,
+		inter.Globals["a"].GetValue(),
+		inter.Globals["e"].GetValue(),
+	)
+
+	assert.Equal(t,
+		interpreter.NilValue{},
+		inter.Globals["f"].GetValue(),
+	)
+}

@@ -27,7 +27,7 @@ import (
 	"github.com/onflow/cadence/runtime/sema"
 )
 
-func TestCheckOptionalType(t *testing.T) {
+func TestCheckOptionalTypeConstructor(t *testing.T) {
 
 	t.Parallel()
 
@@ -98,7 +98,7 @@ func TestCheckOptionalType(t *testing.T) {
 	}
 }
 
-func TestCheckVariableSizedArrayType(t *testing.T) {
+func TestCheckVariableSizedArrayTypeConstructor(t *testing.T) {
 
 	t.Parallel()
 
@@ -169,7 +169,7 @@ func TestCheckVariableSizedArrayType(t *testing.T) {
 	}
 }
 
-func TestCheckConstantSizedArrayType(t *testing.T) {
+func TestCheckConstantSizedArrayTypeConstructor(t *testing.T) {
 
 	t.Parallel()
 
@@ -245,6 +245,92 @@ func TestCheckConstantSizedArrayType(t *testing.T) {
 				require.NoError(t, err)
 				assert.Equal(t,
 					sema.MetaType,
+					RequireGlobalValue(t, checker.Elaboration, "result"),
+				)
+			} else {
+				require.Error(t, err)
+			}
+		})
+	}
+}
+
+func TestCheckDictionaryTypeConstructor(t *testing.T) {
+
+	t.Parallel()
+
+	cases := []struct {
+		name  string
+		code  string
+		valid bool
+	}{
+		{
+			name: "String/Int",
+			code: `
+              let result = DictionaryType(Type<String>(), Type<Int>())
+            `,
+			valid: true,
+		},
+		{
+			name: "Int/String",
+			code: `
+				let result = DictionaryType(Type<Int>(), Type<String>())
+            `,
+			valid: true,
+		},
+		{
+			name: "resource/struct",
+			code: `
+              resource R {}
+			  struct S {}
+              let result = DictionaryType(Type<@R>(), Type<S>())
+            `,
+			valid: true,
+		},
+		{
+			name: "type mismatch first arg",
+			code: `
+              let result = DictionaryType(3, Type<String>())
+            `,
+			valid: false,
+		},
+		{
+			name: "type mismatch second arg",
+			code: `
+			let result = DictionaryType(Type<String>(), "")
+            `,
+			valid: false,
+		},
+		{
+			name: "too many args",
+			code: `
+              let result = DictionaryType(Type<Int>(), Type<Int>(), 4)
+            `,
+			valid: false,
+		},
+		{
+			name: "one arg",
+			code: `
+              let result = DictionaryType(Type<Int>())
+            `,
+			valid: false,
+		},
+		{
+			name: "no args",
+			code: `
+              let result = DictionaryType()
+            `,
+			valid: false,
+		},
+	}
+
+	for _, testCase := range cases {
+		t.Run(testCase.name, func(t *testing.T) {
+			checker, err := ParseAndCheck(t, testCase.code)
+
+			if testCase.valid {
+				require.NoError(t, err)
+				assert.Equal(t,
+					&sema.OptionalType{Type: sema.MetaType},
 					RequireGlobalValue(t, checker.Elaboration, "result"),
 				)
 			} else {

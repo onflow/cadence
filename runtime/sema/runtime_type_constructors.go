@@ -62,6 +62,22 @@ var ConstantSizedArrayTypeFunctionType = &FunctionType{
 	ReturnTypeAnnotation: NewTypeAnnotation(MetaType),
 }
 
+var DictionaryTypeFunctionType = &FunctionType{
+	Parameters: []*Parameter{
+		{
+			Label:          ArgumentLabelNotRequired,
+			Identifier:     "key",
+			TypeAnnotation: NewTypeAnnotation(MetaType),
+		},
+		{
+			Label:          ArgumentLabelNotRequired,
+			Identifier:     "value",
+			TypeAnnotation: NewTypeAnnotation(MetaType),
+		},
+	},
+	ReturnTypeAnnotation: NewTypeAnnotation(&OptionalType{MetaType}),
+}
+
 func RuntimeTypeConstructors() []*RuntimeTypeConstructor {
 	var functions []*RuntimeTypeConstructor
 
@@ -84,6 +100,13 @@ func RuntimeTypeConstructors() []*RuntimeTypeConstructor {
 			"ConstantSizedArrayType",
 			ConstantSizedArrayTypeFunctionType,
 			"Creates a run-time type representing a constant-sized array type of the given run-time type with the specifized size",
+		})
+
+	functions = append(functions,
+		&RuntimeTypeConstructor{
+			"DictionaryType",
+			DictionaryTypeFunctionType,
+			"Creates a run-time type representing a dictionary type of the given run-time key and value types. Returns nil if the key type is not a valid dictionary key",
 		})
 
 	return functions
