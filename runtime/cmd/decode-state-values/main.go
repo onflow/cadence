@@ -30,7 +30,6 @@ import (
 	"io"
 	"log"
 	"os"
-	goRuntime "runtime"
 	"strings"
 
 	"github.com/onflow/atree"
@@ -264,8 +263,6 @@ func load() {
 						return true
 					},
 				)
-
-				goRuntime.GC()
 			}
 		}
 	}
