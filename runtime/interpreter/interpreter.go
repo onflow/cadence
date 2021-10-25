@@ -515,7 +515,7 @@ func NewInterpreter(program *Program, location common.Location, options ...Optio
 			keyType := invocation.Arguments[0].(TypeValue).Type
 
 			// if the given key is not a valid dictionary key, it wouldn't make sense to create this type
-			if keyType == nil || !sema.IsValidDictionaryKeyType(invocation.Interpreter.ConvertStaticToSemaType(keyType)) {
+			if keyType == nil || !sema.IsValidDictionaryKeyType(interpreter.ConvertStaticToSemaType(keyType)) {
 				return NilValue{}
 			}
 
@@ -527,6 +527,30 @@ func NewInterpreter(program *Program, location common.Location, options ...Optio
 		},
 		sema.DictionaryTypeFunctionType,
 	))
+
+	defineBaseValue(baseActivation,
+		"CompositeType",
+		NewHostFunctionValue(
+			func(invocation Invocation) Value {
+				typeID := string(invocation.Arguments[0].(*StringValue).Str)
+				location, name, err := common.DecodeTypeID(typeID)
+
+				// if the typeID is invalid, return nil
+				if err != nil ||
+					location == nil && sema.NativeCompositeTypes[typeID] == nil ||
+					interpreter.getElaboration(location).CompositeTypes[location.TypeID(name)] == nil {
+					return NilValue{}
+				}
+
+				return TypeValue{
+					Type: CompositeStaticType{
+						QualifiedIdentifier: name,
+						Location:            location,
+					}}
+			},
+			sema.ConstantSizedArrayTypeFunctionType,
+		),
+	)
 
 	defaultOptions := []Option{
 		WithAllInterpreters(map[common.LocationID]*Interpreter{}),

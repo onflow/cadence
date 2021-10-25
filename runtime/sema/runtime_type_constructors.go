@@ -78,6 +78,17 @@ var DictionaryTypeFunctionType = &FunctionType{
 	ReturnTypeAnnotation: NewTypeAnnotation(&OptionalType{MetaType}),
 }
 
+var CompositeTypeFunctionType = &FunctionType{
+	Parameters: []*Parameter{
+		{
+			Label:          ArgumentLabelNotRequired,
+			Identifier:     "identifier",
+			TypeAnnotation: NewTypeAnnotation(StringType),
+		},
+	},
+	ReturnTypeAnnotation: NewTypeAnnotation(&OptionalType{MetaType}),
+}
+
 func RuntimeTypeConstructors() []*RuntimeTypeConstructor {
 	var functions []*RuntimeTypeConstructor
 
@@ -107,6 +118,13 @@ func RuntimeTypeConstructors() []*RuntimeTypeConstructor {
 			"DictionaryType",
 			DictionaryTypeFunctionType,
 			"Creates a run-time type representing a dictionary type of the given run-time key and value types. Returns nil if the key type is not a valid dictionary key",
+		})
+
+	functions = append(functions,
+		&RuntimeTypeConstructor{
+			"CompositeType",
+			CompositeTypeFunctionType,
+			"Creates a run-time type representing the composite type associated with the given type identifier. Returns nil if the identifier does not correspond to any composite type",
 		})
 
 	return functions

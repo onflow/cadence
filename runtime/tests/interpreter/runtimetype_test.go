@@ -283,3 +283,56 @@ func TestInterpretDictionaryType(t *testing.T) {
 		inter.Globals["f"].GetValue(),
 	)
 }
+
+func TestInterpretCompositeType(t *testing.T) {
+
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+	  resource R {}
+	  struct S {}
+	  struct interface B {}
+
+	  let a = CompositeType("S.test.R")!
+      let b = CompositeType("S.test.S")! 
+	  let c = CompositeType("S.test.A")
+	  let d = CompositeType("S.test.B")  
+
+	  let e = Type<@R>()
+    `)
+
+	assert.Equal(t,
+		interpreter.TypeValue{
+			Type: interpreter.CompositeStaticType{
+				QualifiedIdentifier: "R",
+				Location:            utils.TestLocation,
+			},
+		},
+		inter.Globals["a"].GetValue(),
+	)
+
+	assert.Equal(t,
+		interpreter.TypeValue{
+			Type: interpreter.CompositeStaticType{
+				QualifiedIdentifier: "S",
+				Location:            utils.TestLocation,
+			},
+		},
+		inter.Globals["b"].GetValue(),
+	)
+
+	assert.Equal(t,
+		interpreter.NilValue{},
+		inter.Globals["c"].GetValue(),
+	)
+
+	assert.Equal(t,
+		interpreter.NilValue{},
+		inter.Globals["d"].GetValue(),
+	)
+
+	assert.Equal(t,
+		inter.Globals["a"].GetValue(),
+		inter.Globals["e"].GetValue(),
+	)
+}

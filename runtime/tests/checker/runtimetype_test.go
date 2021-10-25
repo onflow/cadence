@@ -339,3 +339,59 @@ func TestCheckDictionaryTypeConstructor(t *testing.T) {
 		})
 	}
 }
+
+func TestCheckCompositeTypeConstructor(t *testing.T) {
+
+	t.Parallel()
+
+	cases := []struct {
+		name  string
+		code  string
+		valid bool
+	}{
+		{
+			name: "R",
+			code: `
+              let result = CompositeType("R")
+            `,
+			valid: true,
+		},
+		{
+			name: "type mismatch",
+			code: `
+              let result = DictionaryType(3)
+            `,
+			valid: false,
+		},
+		{
+			name: "too many args",
+			code: `
+              let result = DictionaryType("", 3)
+            `,
+			valid: false,
+		},
+		{
+			name: "no args",
+			code: `
+              let result = DictionaryType()
+            `,
+			valid: false,
+		},
+	}
+
+	for _, testCase := range cases {
+		t.Run(testCase.name, func(t *testing.T) {
+			checker, err := ParseAndCheck(t, testCase.code)
+
+			if testCase.valid {
+				require.NoError(t, err)
+				assert.Equal(t,
+					&sema.OptionalType{Type: sema.MetaType},
+					RequireGlobalValue(t, checker.Elaboration, "result"),
+				)
+			} else {
+				require.Error(t, err)
+			}
+		})
+	}
+}
