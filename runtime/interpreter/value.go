@@ -246,6 +246,9 @@ func (v TypeValue) GetMember(interpreter *Interpreter, _ func() LocationRange, n
 				if staticType == nil || otherStaticType == nil {
 					return BoolValue(false)
 				}
+
+				inter := invocation.Interpreter
+
 				result := sema.IsSubType(
 					inter.ConvertStaticToSemaType(staticType),
 					inter.ConvertStaticToSemaType(otherStaticType),
