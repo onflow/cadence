@@ -538,7 +538,7 @@ and can be used to read fields or call functions on the object they reference. T
 
 There are many different situations in which you would create a capability to your fungible token vault.
 You might want a simple way to call methods on your `Vault` from anywhere in a transaction.
-You could also send a capavility that only exposes withdraw function in your `Vault` so that others can transfer tokens for you.
+You could also send a capability that only exposes withdraw function in your `Vault` so that others can transfer tokens for you.
 You could also have one that only exposes the `Balance` interface, so that others can check how many tokens you own.
 There could also be a function that takes a capability to a `Vault` as an argument, borrows a reference to the capability,
 makes a single function call on the reference, then finishes and destroys the reference.
