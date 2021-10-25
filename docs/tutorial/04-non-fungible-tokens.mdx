@@ -414,7 +414,7 @@ The owning resource has control over it and therefore controls the type of acces
 In the NFT Collection, all the functions and fields are public,
 but we do not want everyone in the network to be able to call our `withdraw` function.
 This is where Cadence's second layer of access control comes in.
-adence utilizes capability security, which means that for any given object, a user is allowed to access a field or method of that object if they either:
+Cadence utilizes capability security, which means that for any given object, a user is allowed to access a field or method of that object if they either:
 
 - Are the owner of the object
 - Have a valid reference to that field or method (note that references can only be created from capabilities, and capabilities can only be created by the owner of the object)
