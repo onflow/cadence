@@ -2578,6 +2578,7 @@ func init() {
 func defineBaseFunctions(activation *VariableActivation) {
 	defineConverterFunctions(activation)
 	defineTypeFunction(activation)
+	defineRuntimeTypeConstructorFunctions(activation)
 	defineStringFunction(activation)
 }
 
@@ -2632,6 +2633,48 @@ var converterFunctionValues = func() []converterFunction {
 func defineConverterFunctions(activation *VariableActivation) {
 	for _, converterFunc := range converterFunctionValues {
 		defineBaseValue(activation, converterFunc.name, converterFunc.converter)
+	}
+}
+
+type runtimeTypeConstructor struct {
+	name      string
+	converter *HostFunctionValue
+}
+
+// Converter functions are stateless functions. Hence they can be re-used across interpreters.
+//
+var runtimeTypeConstructorValues = func() []runtimeTypeConstructor {
+
+	var converterFuncValues []runtimeTypeConstructor
+
+	converterFuncValues = append(converterFuncValues, runtimeTypeConstructor{
+		name: "OptionalType",
+		converter: NewHostFunctionValue(
+			func(invocation Invocation) Value {
+				switch arg := invocation.Arguments[0].(TypeValue).Type.(type) {
+				// Optionality is an idempotent operation
+				case OptionalStaticType:
+					return TypeValue{
+						Type: OptionalStaticType{
+							Type: arg.Type,
+						}}
+				default:
+					return TypeValue{
+						Type: OptionalStaticType{
+							Type: arg,
+						}}
+				}
+			},
+			sema.OptionalTypeFunctionType,
+		),
+	})
+
+	return converterFuncValues
+}()
+
+func defineRuntimeTypeConstructorFunctions(activation *VariableActivation) {
+	for _, constructorFunc := range runtimeTypeConstructorValues {
+		defineBaseValue(activation, constructorFunc.name, constructorFunc.converter)
 	}
 }
 

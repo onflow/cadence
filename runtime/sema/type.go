@@ -3219,6 +3219,15 @@ func init() {
 			"Creates a run-time type representing the given static type as a value",
 		),
 	)
+
+	for _, v := range RuntimeTypeConstructors() {
+		BaseValueActivation.Set(v.Name,
+			baseFunctionVariable(
+				v.Name,
+				v.Value,
+				v.Description,
+			))
+	}
 }
 
 // CompositeType
