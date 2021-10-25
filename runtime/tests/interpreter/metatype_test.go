@@ -21,6 +21,7 @@ package interpreter_test
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/runtime/common"
@@ -529,8 +530,10 @@ func TestInterpretIsSubtype(t *testing.T) {
 		{
 			Name: "unknownType",
 			Type: sema.MetaType,
-			Value: interpreter.TypeValue{
-				Type: nil,
+			ValueFactory: func(_ *interpreter.Interpreter) interpreter.Value {
+				return interpreter.TypeValue{
+					Type: nil,
+				}
 			},
 			Kind: common.DeclarationKindConstant,
 		},
