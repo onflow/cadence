@@ -109,7 +109,7 @@ func (s *slabStorage) Retrieve(id atree.StorageID) (atree.Slab, bool, error) {
 	return slab, true, nil
 }
 
-func (s *slabStorage) Store(id atree.StorageID, slab atree.Slab) error {
+func (s *slabStorage) Store(_ atree.StorageID, _ atree.Slab) error {
 	panic("unexpected Store call")
 }
 
@@ -119,6 +119,10 @@ func (s *slabStorage) Remove(_ atree.StorageID) error {
 
 func (s *slabStorage) GenerateStorageID(_ atree.Address) (atree.StorageID, error) {
 	panic("unexpected GenerateStorageID call")
+}
+
+func (s *slabStorage) SlabIterator() (atree.SlabIterator, error) {
+	panic("unexpected SlabIterator call")
 }
 
 func (s *slabStorage) Count() int {
@@ -143,6 +147,10 @@ func (i interpreterStorage) ReadValue(_ *interpreter.Interpreter, _ common.Addre
 
 func (i interpreterStorage) WriteValue(_ *interpreter.Interpreter, _ common.Address, _ string, _ interpreter.OptionalValue) {
 	panic("unexpected WriteValue call")
+}
+
+func (i interpreterStorage) CheckHealth() error {
+	panic("unexpected CheckHealth call")
 }
 
 // load

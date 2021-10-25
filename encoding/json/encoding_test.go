@@ -688,6 +688,8 @@ func exportFromScript(t *testing.T, code string) cadence.Value {
 				return uuid, nil
 			},
 		),
+		interpreter.WithAtreeStorageValidationEnabled(true),
+		interpreter.WithAtreeValueValidationEnabled(true),
 		interpreter.WithStorage(
 			interpreter.NewInMemoryStorage(),
 		),

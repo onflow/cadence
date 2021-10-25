@@ -52,11 +52,7 @@ func withWritesToStorage(
 		},
 	)
 
-	inter, _ := interpreter.NewInterpreter(
-		nil,
-		utils.TestLocation,
-		interpreter.WithStorage(storage),
-	)
+	inter := newTestInterpreter(tb)
 
 	array := interpreter.NewArrayValue(
 		inter,
@@ -1099,6 +1095,10 @@ func TestRuntimeTopShotBatchTransfer(t *testing.T) {
 }
 
 func TestRuntimeBatchMintAndTransfer(t *testing.T) {
+
+	if testing.Short() {
+		t.Skip()
+	}
 
 	t.Parallel()
 
