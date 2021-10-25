@@ -2682,6 +2682,20 @@ var runtimeTypeConstructorValues = func() []runtimeTypeConstructor {
 		),
 	})
 
+	converterFuncValues = append(converterFuncValues, runtimeTypeConstructor{
+		name: "ConstantSizedArrayType",
+		converter: NewHostFunctionValue(
+			func(invocation Invocation) Value {
+				return TypeValue{
+					Type: ConstantSizedStaticType{
+						Type: invocation.Arguments[0].(TypeValue).Type,
+						Size: int64(invocation.Arguments[1].(IntValue).ToInt()),
+					}}
+			},
+			sema.ConstantSizedArrayTypeFunctionType,
+		),
+	})
+
 	return converterFuncValues
 }()
 

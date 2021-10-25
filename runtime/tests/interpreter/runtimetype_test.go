@@ -37,6 +37,8 @@ func TestInterpretOptionalType(t *testing.T) {
 	  resource R {}
 	  let c = OptionalType(Type<@R>())
       let d = OptionalType(a)
+
+	  let e = Type<String?>()
     `)
 
 	assert.Equal(t,
@@ -73,9 +75,14 @@ func TestInterpretOptionalType(t *testing.T) {
 		inter.Globals["a"].GetValue(),
 		inter.Globals["d"].GetValue(),
 	)
+
+	assert.Equal(t,
+		inter.Globals["a"].GetValue(),
+		inter.Globals["e"].GetValue(),
+	)
 }
 
-func TestInterpretArrayType(t *testing.T) {
+func TestInterpretVariableSizedArrayType(t *testing.T) {
 
 	t.Parallel()
 
@@ -86,6 +93,8 @@ func TestInterpretArrayType(t *testing.T) {
 	  resource R {}
 	  let c = VariableSizedArrayType(Type<@R>())
       let d = VariableSizedArrayType(a)
+
+	  let e = Type<[String]>()
     `)
 
 	assert.Equal(t,
@@ -127,5 +136,76 @@ func TestInterpretArrayType(t *testing.T) {
 			},
 		},
 		inter.Globals["d"].GetValue(),
+	)
+	assert.Equal(t,
+		inter.Globals["a"].GetValue(),
+		inter.Globals["e"].GetValue(),
+	)
+}
+
+func TestInterpretConstantSizedArrayType(t *testing.T) {
+
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+      let a = ConstantSizedArrayType(Type<String>(), 10)
+      let b = ConstantSizedArrayType(Type<Int>(), 5) 
+
+	  resource R {}
+	  let c = ConstantSizedArrayType(Type<@R>(), 400)
+      let d = ConstantSizedArrayType(a, 6)
+
+	  let e = Type<[String; 10]>()
+    `)
+
+	assert.Equal(t,
+		interpreter.TypeValue{
+			Type: interpreter.ConstantSizedStaticType{
+				Type: interpreter.PrimitiveStaticTypeString,
+				Size: int64(10),
+			},
+		},
+		inter.Globals["a"].GetValue(),
+	)
+
+	assert.Equal(t,
+		interpreter.TypeValue{
+			Type: interpreter.ConstantSizedStaticType{
+				Type: interpreter.PrimitiveStaticTypeInt,
+				Size: int64(5),
+			},
+		},
+		inter.Globals["b"].GetValue(),
+	)
+
+	assert.Equal(t,
+		interpreter.TypeValue{
+			Type: interpreter.ConstantSizedStaticType{
+				Type: interpreter.CompositeStaticType{
+					Location:            utils.TestLocation,
+					QualifiedIdentifier: "R",
+				},
+				Size: int64(400),
+			},
+		},
+		inter.Globals["c"].GetValue(),
+	)
+
+	assert.Equal(t,
+		interpreter.TypeValue{
+			Type: interpreter.ConstantSizedStaticType{
+				Type: interpreter.ConstantSizedStaticType{
+					Type: interpreter.PrimitiveStaticTypeString,
+					Size: int64(10),
+				},
+				Size: int64(6),
+			},
+		},
+		inter.Globals["d"].GetValue(),
+	)
+
+	assert.Equal(t,
+		inter.Globals["a"].GetValue(),
+		inter.Globals["e"].GetValue(),
 	)
 }

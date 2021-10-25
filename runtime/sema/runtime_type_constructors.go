@@ -46,6 +46,22 @@ var VariableSizedArrayTypeFunctionType = &FunctionType{
 	ReturnTypeAnnotation: NewTypeAnnotation(MetaType),
 }
 
+var ConstantSizedArrayTypeFunctionType = &FunctionType{
+	Parameters: []*Parameter{
+		{
+			Label:          ArgumentLabelNotRequired,
+			Identifier:     "type",
+			TypeAnnotation: NewTypeAnnotation(MetaType),
+		},
+		{
+			Label:          ArgumentLabelNotRequired,
+			Identifier:     "size",
+			TypeAnnotation: NewTypeAnnotation(IntType),
+		},
+	},
+	ReturnTypeAnnotation: NewTypeAnnotation(MetaType),
+}
+
 func RuntimeTypeConstructors() []*RuntimeTypeConstructor {
 	var functions []*RuntimeTypeConstructor
 
@@ -61,6 +77,13 @@ func RuntimeTypeConstructors() []*RuntimeTypeConstructor {
 			"VariableSizedArrayType",
 			VariableSizedArrayTypeFunctionType,
 			"Creates a run-time type representing a variable-sized array type of the given run-time type",
+		})
+
+	functions = append(functions,
+		&RuntimeTypeConstructor{
+			"ConstantSizedArrayType",
+			ConstantSizedArrayTypeFunctionType,
+			"Creates a run-time type representing a constant-sized array type of the given run-time type with the specifized size",
 		})
 
 	return functions

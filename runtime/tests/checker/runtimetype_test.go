@@ -168,3 +168,88 @@ func TestCheckVariableSizedArrayType(t *testing.T) {
 		})
 	}
 }
+
+func TestCheckConstantSizedArrayType(t *testing.T) {
+
+	t.Parallel()
+
+	cases := []struct {
+		name  string
+		code  string
+		valid bool
+	}{
+		{
+			name: "String",
+			code: `
+              let result = ConstantSizedArrayType(Type<String>(), 3)
+            `,
+			valid: true,
+		},
+		{
+			name: "Int",
+			code: `
+				let result = ConstantSizedArrayType(Type<Int>(), 2)
+            `,
+			valid: true,
+		},
+		{
+			name: "resource",
+			code: `
+              resource R {}
+              let result = ConstantSizedArrayType(Type<@R>(), 4)
+            `,
+			valid: true,
+		},
+		{
+			name: "type mismatch first arg",
+			code: `
+              let result = ConstantSizedArrayType(3, 4)
+            `,
+			valid: false,
+		},
+		{
+			name: "type mismatch second arg",
+			code: `
+              let result = ConstantSizedArrayType(Type<Int>(), "")
+            `,
+			valid: false,
+		},
+		{
+			name: "too many args",
+			code: `
+              let result = ConstantSizedArrayType(Type<Int>(), 3, 4)
+            `,
+			valid: false,
+		},
+		{
+			name: "one arg",
+			code: `
+              let result = ConstantSizedArrayType(Type<Int>())
+            `,
+			valid: false,
+		},
+		{
+			name: "no args",
+			code: `
+              let result = ConstantSizedArrayType()
+            `,
+			valid: false,
+		},
+	}
+
+	for _, testCase := range cases {
+		t.Run(testCase.name, func(t *testing.T) {
+			checker, err := ParseAndCheck(t, testCase.code)
+
+			if testCase.valid {
+				require.NoError(t, err)
+				assert.Equal(t,
+					sema.MetaType,
+					RequireGlobalValue(t, checker.Elaboration, "result"),
+				)
+			} else {
+				require.Error(t, err)
+			}
+		})
+	}
+}
