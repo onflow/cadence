@@ -576,6 +576,35 @@ func NewInterpreter(program *Program, location common.Location, options ...Optio
 		),
 	)
 
+	defineBaseValue(baseActivation,
+		"FunctionType",
+		NewHostFunctionValue(
+			func(invocation Invocation) Value {
+				params := invocation.Arguments[0].(*ArrayValue).values
+				ret := interpreter.ConvertStaticToSemaType(invocation.Arguments[1].(TypeValue).Type)
+				paramTypes := make([]*sema.Parameter, 0)
+				for _, param := range params {
+					paramTypes = append(paramTypes, &sema.Parameter{
+						TypeAnnotation: &sema.TypeAnnotation{
+							Type: interpreter.ConvertStaticToSemaType(param.(TypeValue).Type),
+						},
+					})
+				}
+
+				return TypeValue{
+					Type: FunctionStaticType{
+						Type: &sema.FunctionType{
+							ReturnTypeAnnotation: &sema.TypeAnnotation{
+								Type: ret,
+							},
+							Parameters: paramTypes,
+						},
+					}}
+			},
+			sema.FunctionTypeFunctionType,
+		),
+	)
+
 	defaultOptions := []Option{
 		WithAllInterpreters(map[common.LocationID]*Interpreter{}),
 		withTypeCodes(TypeCodes{

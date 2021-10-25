@@ -451,3 +451,87 @@ func TestCheckInterfaceTypeConstructor(t *testing.T) {
 		})
 	}
 }
+
+func TestCheckFunctionTypeConstructor(t *testing.T) {
+
+	t.Parallel()
+
+	cases := []struct {
+		name  string
+		code  string
+		valid bool
+	}{
+		{
+			name: "(String): Int",
+			code: `
+              let result = FunctionType([Type<String>()], Type<Int>())
+            `,
+			valid: true,
+		},
+		{
+			name: "(String, Int): Bool",
+			code: `
+				let result = FunctionType([Type<String>(), Type<Int>()], Type<Bool>())
+            `,
+			valid: true,
+		},
+		{
+			name: "type mismatch first arg",
+			code: `
+              let result = FunctionType(Type<String>(), Type<String>())
+            `,
+			valid: false,
+		},
+		{
+			name: "type mismatch nested first arg",
+			code: `
+              let result = FunctionType([Type<String>(), 3], Type<String>())
+            `,
+			valid: false,
+		},
+		{
+			name: "type mismatch second arg",
+			code: `
+              let result = FunctionType([Type<String>(), Type<Int>()], "")
+            `,
+			valid: false,
+		},
+		{
+			name: "too many args",
+			code: `
+              let result = FunctionType([Type<String>(), Type<Int>()], Type<String>(), 4)
+            `,
+			valid: false,
+		},
+		{
+			name: "one arg",
+			code: `
+              let result = FunctionType([Type<String>(), Type<Int>()])
+            `,
+			valid: false,
+		},
+		{
+			name: "no args",
+			code: `
+              let result = FunctionType()
+            `,
+			valid: false,
+		},
+	}
+
+	for _, testCase := range cases {
+		t.Run(testCase.name, func(t *testing.T) {
+			checker, err := ParseAndCheck(t, testCase.code)
+
+			if testCase.valid {
+				require.NoError(t, err)
+				assert.Equal(t,
+					sema.MetaType,
+					RequireGlobalValue(t, checker.Elaboration, "result"),
+				)
+			} else {
+				require.Error(t, err)
+			}
+		})
+	}
+}

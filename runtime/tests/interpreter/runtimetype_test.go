@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	"github.com/onflow/cadence/runtime/interpreter"
+	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/tests/utils"
 	"github.com/stretchr/testify/assert"
 )
@@ -379,6 +380,63 @@ func TestInterpretInterfaceType(t *testing.T) {
 
 	assert.Equal(t,
 		interpreter.NilValue{},
+		inter.Globals["d"].GetValue(),
+	)
+}
+
+func TestInterpretFunctionType(t *testing.T) {
+
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+	  let a = FunctionType([Type<String>()], Type<Int>())
+      let b = FunctionType([Type<String>(), Type<Int>()], Type<Bool>())
+	  let c = FunctionType([], Type<String>())
+	  
+	  let d = Type<((String): Int)>();
+    `)
+
+	assert.Equal(t,
+		interpreter.TypeValue{
+			Type: interpreter.FunctionStaticType{
+				Type: &sema.FunctionType{
+					Parameters:           []*sema.Parameter{{TypeAnnotation: &sema.TypeAnnotation{Type: sema.StringType}}},
+					ReturnTypeAnnotation: &sema.TypeAnnotation{Type: sema.IntType},
+				},
+			},
+		},
+		inter.Globals["a"].GetValue(),
+	)
+
+	assert.Equal(t,
+		interpreter.TypeValue{
+			Type: interpreter.FunctionStaticType{
+				Type: &sema.FunctionType{
+					Parameters: []*sema.Parameter{
+						{TypeAnnotation: &sema.TypeAnnotation{Type: sema.StringType}},
+						{TypeAnnotation: &sema.TypeAnnotation{Type: sema.IntType}},
+					},
+					ReturnTypeAnnotation: &sema.TypeAnnotation{Type: sema.BoolType},
+				},
+			},
+		},
+		inter.Globals["b"].GetValue(),
+	)
+
+	assert.Equal(t,
+		interpreter.TypeValue{
+			Type: interpreter.FunctionStaticType{
+				Type: &sema.FunctionType{
+					Parameters:           []*sema.Parameter{},
+					ReturnTypeAnnotation: &sema.TypeAnnotation{Type: sema.StringType},
+				},
+			},
+		},
+		inter.Globals["c"].GetValue(),
+	)
+
+	assert.Equal(t,
+		inter.Globals["a"].GetValue(),
 		inter.Globals["d"].GetValue(),
 	)
 }
