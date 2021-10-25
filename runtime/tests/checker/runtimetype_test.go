@@ -97,3 +97,74 @@ func TestCheckOptionalType(t *testing.T) {
 		})
 	}
 }
+
+func TestCheckVariableSizedArrayType(t *testing.T) {
+
+	t.Parallel()
+
+	cases := []struct {
+		name  string
+		code  string
+		valid bool
+	}{
+		{
+			name: "String",
+			code: `
+              let result = VariableSizedArrayType(Type<String>())
+            `,
+			valid: true,
+		},
+		{
+			name: "Int",
+			code: `
+				let result = VariableSizedArrayType(Type<Int>())
+            `,
+			valid: true,
+		},
+		{
+			name: "resource",
+			code: `
+              resource R {}
+              let result = VariableSizedArrayType(Type<@R>())
+            `,
+			valid: true,
+		},
+		{
+			name: "type mismatch",
+			code: `
+              let result = VariableSizedArrayType(3)
+            `,
+			valid: false,
+		},
+		{
+			name: "too many args",
+			code: `
+              let result = VariableSizedArrayType(Type<Int>(), Type<Int>())
+            `,
+			valid: false,
+		},
+		{
+			name: "too few args",
+			code: `
+              let result = VariableSizedArrayType()
+            `,
+			valid: false,
+		},
+	}
+
+	for _, testCase := range cases {
+		t.Run(testCase.name, func(t *testing.T) {
+			checker, err := ParseAndCheck(t, testCase.code)
+
+			if testCase.valid {
+				require.NoError(t, err)
+				assert.Equal(t,
+					sema.MetaType,
+					RequireGlobalValue(t, checker.Elaboration, "result"),
+				)
+			} else {
+				require.Error(t, err)
+			}
+		})
+	}
+}

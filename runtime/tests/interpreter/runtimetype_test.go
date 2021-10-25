@@ -74,3 +74,58 @@ func TestInterpretOptionalType(t *testing.T) {
 		inter.Globals["d"].GetValue(),
 	)
 }
+
+func TestInterpretArrayType(t *testing.T) {
+
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+      let a = VariableSizedArrayType(Type<String>())
+      let b = VariableSizedArrayType(Type<Int>()) 
+
+	  resource R {}
+	  let c = VariableSizedArrayType(Type<@R>())
+      let d = VariableSizedArrayType(a)
+    `)
+
+	assert.Equal(t,
+		interpreter.TypeValue{
+			Type: interpreter.VariableSizedStaticType{
+				Type: interpreter.PrimitiveStaticTypeString,
+			},
+		},
+		inter.Globals["a"].GetValue(),
+	)
+
+	assert.Equal(t,
+		interpreter.TypeValue{
+			Type: interpreter.VariableSizedStaticType{
+				Type: interpreter.PrimitiveStaticTypeInt,
+			},
+		},
+		inter.Globals["b"].GetValue(),
+	)
+
+	assert.Equal(t,
+		interpreter.TypeValue{
+			Type: interpreter.VariableSizedStaticType{
+				Type: interpreter.CompositeStaticType{
+					Location:            utils.TestLocation,
+					QualifiedIdentifier: "R",
+				},
+			},
+		},
+		inter.Globals["c"].GetValue(),
+	)
+
+	assert.Equal(t,
+		interpreter.TypeValue{
+			Type: interpreter.VariableSizedStaticType{
+				Type: interpreter.VariableSizedStaticType{
+					Type: interpreter.PrimitiveStaticTypeString,
+				},
+			},
+		},
+		inter.Globals["d"].GetValue(),
+	)
+}

@@ -35,6 +35,17 @@ var OptionalTypeFunctionType = &FunctionType{
 	ReturnTypeAnnotation: NewTypeAnnotation(MetaType),
 }
 
+var VariableSizedArrayTypeFunctionType = &FunctionType{
+	Parameters: []*Parameter{
+		{
+			Label:          ArgumentLabelNotRequired,
+			Identifier:     "type",
+			TypeAnnotation: NewTypeAnnotation(MetaType),
+		},
+	},
+	ReturnTypeAnnotation: NewTypeAnnotation(MetaType),
+}
+
 func RuntimeTypeConstructors() []*RuntimeTypeConstructor {
 	var functions []*RuntimeTypeConstructor
 
@@ -42,7 +53,14 @@ func RuntimeTypeConstructors() []*RuntimeTypeConstructor {
 		&RuntimeTypeConstructor{
 			"OptionalType",
 			OptionalTypeFunctionType,
-			"Creates a run-time type representing an optional version of the given run-type type",
+			"Creates a run-time type representing an optional version of the given run-time type",
+		})
+
+	functions = append(functions,
+		&RuntimeTypeConstructor{
+			"VariableSizedArrayType",
+			VariableSizedArrayTypeFunctionType,
+			"Creates a run-time type representing a variable-sized array type of the given run-time type",
 		})
 
 	return functions

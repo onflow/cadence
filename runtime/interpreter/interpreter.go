@@ -2669,6 +2669,19 @@ var runtimeTypeConstructorValues = func() []runtimeTypeConstructor {
 		),
 	})
 
+	converterFuncValues = append(converterFuncValues, runtimeTypeConstructor{
+		name: "VariableSizedArrayType",
+		converter: NewHostFunctionValue(
+			func(invocation Invocation) Value {
+				return TypeValue{
+					Type: VariableSizedStaticType{
+						Type: invocation.Arguments[0].(TypeValue).Type,
+					}}
+			},
+			sema.VariableSizedArrayTypeFunctionType,
+		),
+	})
+
 	return converterFuncValues
 }()
 
