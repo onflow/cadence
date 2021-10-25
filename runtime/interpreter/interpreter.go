@@ -238,6 +238,7 @@ type Storage interface {
 	ValueExists(interpreter *Interpreter, address common.Address, key string) bool
 	ReadValue(interpreter *Interpreter, address common.Address, key string) OptionalValue
 	WriteValue(interpreter *Interpreter, address common.Address, key string, value OptionalValue)
+	CheckHealth() error
 }
 
 type Interpreter struct {
@@ -267,7 +268,8 @@ type Interpreter struct {
 	ExitHandler                    ExitHandlerFunc
 	interpreted                    bool
 	statement                      ast.Statement
-	atreeValidationEnabled         bool
+	atreeValueValidationEnabled    bool
+	atreeStorageValidationEnabled  bool
 }
 
 type Option func(*Interpreter) error
@@ -453,12 +455,22 @@ func WithAllInterpreters(allInterpreters map[common.LocationID]*Interpreter) Opt
 	}
 }
 
-// WithAtreeValidationEnabled returns an interpreter option which sets
+// WithAtreeValueValidationEnabled returns an interpreter option which sets
 // the atree validation option.
 //
-func WithAtreeValidationEnabled(enabled bool) Option {
+func WithAtreeValueValidationEnabled(enabled bool) Option {
 	return func(interpreter *Interpreter) error {
-		interpreter.SetAtreeValidationEnabled(enabled)
+		interpreter.SetAtreeValueValidationEnabled(enabled)
+		return nil
+	}
+}
+
+// WithAtreeStorageValidationEnabled returns an interpreter option which sets
+// the atree validation option.
+//
+func WithAtreeStorageValidationEnabled(enabled bool) Option {
+	return func(interpreter *Interpreter) error {
+		interpreter.SetAtreeStorageValidationEnabled(enabled)
 		return nil
 	}
 }
@@ -622,10 +634,16 @@ func (interpreter *Interpreter) SetAllInterpreters(allInterpreters map[common.Lo
 	}
 }
 
-// SetAtreeValidationEnabled sets the atree validation option.
+// SetAtreeValueValidationEnabled sets the atree value validation option.
 //
-func (interpreter *Interpreter) SetAtreeValidationEnabled(enabled bool) {
-	interpreter.atreeValidationEnabled = enabled
+func (interpreter *Interpreter) SetAtreeValueValidationEnabled(enabled bool) {
+	interpreter.atreeValueValidationEnabled = enabled
+}
+
+// SetAtreeStorageValidationEnabled sets the atree storage validation option.
+//
+func (interpreter *Interpreter) SetAtreeStorageValidationEnabled(enabled bool) {
+	interpreter.atreeStorageValidationEnabled = enabled
 }
 
 // setTypeCodes sets the type codes.
@@ -2347,7 +2365,8 @@ func (interpreter *Interpreter) NewSubInterpreter(
 		WithImportLocationHandler(interpreter.importLocationHandler),
 		WithUUIDHandler(interpreter.uuidHandler),
 		WithAllInterpreters(interpreter.allInterpreters),
-		WithAtreeValidationEnabled(interpreter.atreeValidationEnabled),
+		WithAtreeValueValidationEnabled(interpreter.atreeValueValidationEnabled),
+		WithAtreeStorageValidationEnabled(interpreter.atreeStorageValidationEnabled),
 		withTypeCodes(interpreter.typeCodes),
 		WithPublicAccountHandlerFunc(interpreter.publicAccountHandler),
 		WithPublicKeyValidationHandler(interpreter.PublicKeyValidationHandler),
@@ -3654,13 +3673,19 @@ func (interpreter *Interpreter) RemoveReferencedSlab(storable atree.Storable) {
 	}
 }
 
-func (interpreter *Interpreter) maybeCheckAtreeValue(v atree.Value) {
-	if interpreter.atreeValidationEnabled {
-		interpreter.checkAtreeValue(v)
+func (interpreter *Interpreter) maybeValidateAtreeValue(v atree.Value) {
+	if interpreter.atreeValueValidationEnabled {
+		interpreter.validateAtreeValue(v)
+	}
+	if interpreter.atreeStorageValidationEnabled {
+		err := interpreter.Storage.CheckHealth()
+		if err != nil {
+			panic(ExternalError{err})
+		}
 	}
 }
 
-func (interpreter *Interpreter) checkAtreeValue(v atree.Value) {
+func (interpreter *Interpreter) validateAtreeValue(v atree.Value) {
 	tic := func(info atree.TypeInfo, other atree.TypeInfo) bool {
 		switch info := info.(type) {
 		case ConstantSizedStaticType:

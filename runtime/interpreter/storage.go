@@ -196,6 +196,11 @@ func (i InMemoryStorage) WriteValue(
 	}
 }
 
+func (i InMemoryStorage) CheckHealth() error {
+	_, err := atree.CheckStorageHealth(i, -1)
+	return err
+}
+
 type writeCounter struct {
 	length uint64
 }

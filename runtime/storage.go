@@ -20,6 +20,7 @@ package runtime
 
 import (
 	"bytes"
+	"fmt"
 	"math"
 	"runtime"
 	"sort"
@@ -422,4 +423,119 @@ func SortAccountStorageEntries(entries []AccountStorageEntry) {
 			panic(errors.NewUnreachableError())
 		}
 	})
+}
+
+func (s *Storage) CheckHealth() error {
+	// Check slab storage health
+	rootSlabIDs, err := atree.CheckStorageHealth(s, -1)
+	if err != nil {
+		return err
+	}
+
+	// Find account / non-temporary root slab IDs
+
+	accountRootSlabIDs := make(map[atree.StorageID]struct{}, len(rootSlabIDs))
+
+	for rootSlabID := range rootSlabIDs {
+		if rootSlabID.Address == (atree.Address{}) {
+			continue
+		}
+
+		accountRootSlabIDs[rootSlabID] = struct{}{}
+	}
+
+	// Gather all top-level storables in account storage
+
+	var accountStorables []atree.Storable
+
+	addAccountStorable := func(storable atree.Storable) {
+		accountStorables = append(accountStorables, storable)
+	}
+
+	for _, storable := range s.contractUpdates {
+		if storable == nil {
+			continue
+		}
+		addAccountStorable(storable)
+	}
+
+	for key, storable := range s.writes {
+		if storable == nil {
+			continue
+		}
+
+		if _, ok := s.contractUpdates[key]; ok {
+			continue
+		}
+
+		addAccountStorable(storable)
+	}
+
+	for key, storable := range s.readCache {
+		if storable == nil {
+			continue
+		}
+
+		if _, ok := s.contractUpdates[key]; ok {
+			continue
+		}
+
+		if _, ok := s.writes[key]; ok {
+			continue
+		}
+
+		addAccountStorable(storable)
+	}
+
+	// Check that each storage ID storable in account storage
+	// (top-level or nested) refers to an existing slab.
+
+	found := map[atree.StorageID]struct{}{}
+
+	for len(accountStorables) > 0 {
+
+		var next []atree.Storable
+
+		for _, storable := range accountStorables {
+
+			storageIDStorable, ok := storable.(atree.StorageIDStorable)
+			if !ok {
+				next = append(next, storable.ChildStorables()...)
+				continue
+			}
+
+			storageID := atree.StorageID(storageIDStorable)
+
+			if _, ok := accountRootSlabIDs[storageID]; !ok {
+				return fmt.Errorf("account storage points to non-existing slab %s", storageID)
+			}
+
+			found[storageID] = struct{}{}
+		}
+
+		accountStorables = next
+	}
+
+	// Check that all slabs in slab storage
+	// are referenced by storables in account storage.
+	// If a slab is not referenced, it is garbage.
+
+	if len(accountRootSlabIDs) > len(found) {
+		var unreferencedRootSlabIDs []atree.StorageID
+
+		for accountRootSlabID := range accountRootSlabIDs {
+			if _, ok := found[accountRootSlabID]; ok {
+				continue
+			}
+
+			unreferencedRootSlabIDs = append(
+				unreferencedRootSlabIDs,
+				accountRootSlabID,
+			)
+		}
+
+		return fmt.Errorf("slabs not referenced from account storage: %s", unreferencedRootSlabIDs)
+	}
+
+	return nil
 }

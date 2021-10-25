@@ -94,7 +94,8 @@ func parseCheckAndInterpretWithOptions(
 				return uuid, nil
 			}),
 			interpreter.WithStorage(interpreter.NewInMemoryStorage()),
-			interpreter.WithAtreeValidationEnabled(true),
+			interpreter.WithAtreeValueValidationEnabled(true),
+			interpreter.WithAtreeStorageValidationEnabled(true),
 		},
 		options.Options...,
 	)
