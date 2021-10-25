@@ -1284,14 +1284,8 @@ func TestExportTypeValue(t *testing.T) {
 		err = checker.Check()
 		require.NoError(t, err)
 
-		storage := interpreter.NewInMemoryStorage()
-
-		inter, err := interpreter.NewInterpreter(
-			interpreter.ProgramFromChecker(checker),
-			TestLocation,
-			interpreter.WithStorage(storage),
-		)
-		require.NoError(t, err)
+		inter := newTestInterpreter(t)
+		inter.Program = interpreter.ProgramFromChecker(checker)
 
 		ty := interpreter.TypeValue{
 			Type: &interpreter.RestrictedStaticType{
@@ -1360,14 +1354,8 @@ func TestExportCapabilityValue(t *testing.T) {
 		err = checker.Check()
 		require.NoError(t, err)
 
-		storage := interpreter.NewInMemoryStorage()
-
-		inter, err := interpreter.NewInterpreter(
-			interpreter.ProgramFromChecker(checker),
-			TestLocation,
-			interpreter.WithStorage(storage),
-		)
-		require.NoError(t, err)
+		inter := newTestInterpreter(t)
+		inter.Program = interpreter.ProgramFromChecker(checker)
 
 		capability := &interpreter.CapabilityValue{
 			Address: interpreter.AddressValue{0x1},
@@ -1457,14 +1445,8 @@ func TestExportLinkValue(t *testing.T) {
 		err = checker.Check()
 		require.NoError(t, err)
 
-		storage := interpreter.NewInMemoryStorage()
-
-		inter, err := interpreter.NewInterpreter(
-			interpreter.ProgramFromChecker(checker),
-			TestLocation,
-			interpreter.WithStorage(storage),
-		)
-		require.NoError(t, err)
+		inter := newTestInterpreter(t)
+		inter.Program = interpreter.ProgramFromChecker(checker)
 
 		capability := interpreter.LinkValue{
 			TargetPath: interpreter.PathValue{
@@ -3546,14 +3528,8 @@ func TestRuntimeImportExportComplex(t *testing.T) {
 		Elaboration: sema.NewElaboration(),
 	}
 
-	storage := interpreter.NewInMemoryStorage()
-
-	inter, err := interpreter.NewInterpreter(
-		&program,
-		TestLocation,
-		interpreter.WithStorage(storage),
-	)
-	require.NoError(t, err)
+	inter := newTestInterpreter(t)
+	inter.Program = &program
 
 	// Array
 
@@ -3689,14 +3665,8 @@ func TestRuntimeImportExportComplex(t *testing.T) {
 			Elaboration: sema.NewElaboration(),
 		}
 
-		storage := interpreter.NewInMemoryStorage()
-
-		inter, err := interpreter.NewInterpreter(
-			&program,
-			TestLocation,
-			interpreter.WithStorage(storage),
-		)
-		require.NoError(t, err)
+		inter := newTestInterpreter(t)
+		inter.Program = &program
 
 		program.Elaboration.CompositeTypes[semaCompositeType.ID()] = semaCompositeType
 
@@ -3799,15 +3769,17 @@ func TestRuntimeStaticTypeAvailability(t *testing.T) {
 	})
 }
 
-func newTestInterpreter(t *testing.T) *interpreter.Interpreter {
+func newTestInterpreter(tb testing.TB) *interpreter.Interpreter {
 	storage := interpreter.NewInMemoryStorage()
 
 	inter, err := interpreter.NewInterpreter(
 		nil,
 		TestLocation,
 		interpreter.WithStorage(storage),
+		interpreter.WithAtreeValueValidationEnabled(true),
+		interpreter.WithAtreeStorageValidationEnabled(true),
 	)
-	require.NoError(t, err)
+	require.NoError(tb, err)
 
 	return inter
 }

@@ -28,8 +28,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/sha3"
 
-	"github.com/onflow/cadence/runtime/tests/utils"
-
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
@@ -72,14 +70,7 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 
 		codeHashValue := event.Fields[codeHashParameterIndex]
 
-		storage := interpreter.NewInMemoryStorage()
-
-		inter, err := interpreter.NewInterpreter(
-			nil,
-			utils.TestLocation,
-			interpreter.WithStorage(storage),
-		)
-		require.NoError(t, err)
+		inter := newTestInterpreter(t)
 
 		codeHash, err := importValue(inter, codeHashValue, sema.ByteArrayType)
 		require.NoError(t, err)

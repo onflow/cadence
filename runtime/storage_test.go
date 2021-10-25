@@ -52,11 +52,7 @@ func withWritesToStorage(
 		},
 	)
 
-	inter, _ := interpreter.NewInterpreter(
-		nil,
-		utils.TestLocation,
-		interpreter.WithStorage(storage),
-	)
+	inter := newTestInterpreter(tb)
 
 	array := interpreter.NewArrayValue(
 		inter,
