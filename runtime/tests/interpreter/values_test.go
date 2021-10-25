@@ -334,9 +334,16 @@ func TestRandomCompositeValueOperations(t *testing.T) {
 
 		fields := make([]interpreter.CompositeField, fieldsCount)
 
-		for i := 0; i < fieldsCount; i++ {
-			fieldName := make([]byte, 8)
-			rand.Read(fieldName)
+		fieldNames := make(map[string]interface{}, fieldsCount)
+
+		for i := 0; i < fieldsCount; {
+			fieldName := randomUTF8String()
+
+			// avoid duplicate field names
+			if _, ok := fieldNames[fieldName]; ok {
+				continue
+			}
+			fieldNames[fieldName] = struct{}{}
 
 			field := interpreter.CompositeField{
 				Name:  string(fieldName),
@@ -345,6 +352,8 @@ func TestRandomCompositeValueOperations(t *testing.T) {
 
 			fields[i] = field
 			orgFields[field.Name] = deepCopyValue(inter, field.Value)
+
+			i++
 		}
 
 		kind := common.CompositeKindStructure
@@ -1127,6 +1136,7 @@ func (m *valueMap) size() int {
 }
 
 func randomUTF8String() string {
+	// TODO: Optimize
 	for {
 		identifier := make([]byte, 8)
 		rand.Read(identifier)
