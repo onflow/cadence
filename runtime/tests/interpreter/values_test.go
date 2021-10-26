@@ -74,7 +74,7 @@ func TestRandomMapOperations(t *testing.T) {
 			entries.put(inter, key, value)
 
 			keyValues[i*2] = key
-			keyValues[i*2+1] = deepCopyValue(inter, value)
+			keyValues[i*2+1] = value
 		}
 
 		testMap = interpreter.NewDictionaryValueWithAddress(inter,
@@ -90,13 +90,15 @@ func TestRandomMapOperations(t *testing.T) {
 
 		require.Equal(t, testMap.Count(), entries.size())
 
-		entries.foreach(func(orgKey, orgValue interpreter.Value) {
+		entries.foreach(func(orgKey, orgValue interpreter.Value) (exit bool) {
 			exists := testMap.ContainsKey(inter, interpreter.ReturnEmptyLocationRange, orgKey)
 			require.True(t, bool(exists))
 
 			value, found := testMap.Get(inter, interpreter.ReturnEmptyLocationRange, orgKey)
 			require.True(t, found)
 			utils.AssertValuesEqual(t, inter, orgValue, value)
+
+			return false
 		})
 
 		owner := testMap.GetOwner()
@@ -125,13 +127,15 @@ func TestRandomMapOperations(t *testing.T) {
 
 		require.Equal(t, copyOfTestMap.Count(), entries.size())
 
-		entries.foreach(func(orgKey, orgValue interpreter.Value) {
+		entries.foreach(func(orgKey, orgValue interpreter.Value) (exit bool) {
 			exists := copyOfTestMap.ContainsKey(inter, interpreter.ReturnEmptyLocationRange, orgKey)
 			require.True(t, bool(exists))
 
 			value, found := copyOfTestMap.Get(inter, interpreter.ReturnEmptyLocationRange, orgKey)
 			require.True(t, found)
 			utils.AssertValuesEqual(t, inter, orgValue, value)
+
+			return false
 		})
 
 		owner := copyOfTestMap.GetOwner()
@@ -151,17 +155,113 @@ func TestRandomMapOperations(t *testing.T) {
 		require.Equal(t, testMap.Count(), entries.size())
 
 		// go over original values again and check no missing data (no side effect should be found)
-		entries.foreach(func(orgKey, orgValue interpreter.Value) {
+		entries.foreach(func(orgKey, orgValue interpreter.Value) (exit bool) {
 			exists := testMap.ContainsKey(inter, interpreter.ReturnEmptyLocationRange, orgKey)
 			require.True(t, bool(exists))
 
 			value, found := testMap.Get(inter, interpreter.ReturnEmptyLocationRange, orgKey)
 			require.True(t, found)
 			utils.AssertValuesEqual(t, inter, orgValue, value)
+
+			return false
 		})
 
 		owner := testMap.GetOwner()
 		assert.Equal(t, owner[:], orgOwner[:])
+	})
+
+	t.Run("insert", func(t *testing.T) {
+		newEntries := newValueMap(numberOfValues)
+
+		dictionary := interpreter.NewDictionaryValueWithAddress(inter,
+			interpreter.DictionaryStaticType{
+				KeyType:   interpreter.PrimitiveStaticTypeAnyStruct,
+				ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
+			},
+			orgOwner,
+		)
+
+		storageSize, slabCounts = getSlabStorageSize(t, storage)
+
+		// Insert
+		for i := 0; i < numberOfValues; i++ {
+			key := randomHashableValue(inter, orgOwner)
+			value := randomStorableValue(inter, orgOwner, 0)
+
+			newEntries.put(inter, key, value)
+
+			_ = dictionary.Insert(inter, interpreter.ReturnEmptyLocationRange, key, value)
+		}
+
+		require.Equal(t, newEntries.size(), dictionary.Count())
+
+		// Go over original values again and check no missing data (no side effect should be found)
+		newEntries.foreach(func(orgKey, orgValue interpreter.Value) (exit bool) {
+			exists := dictionary.ContainsKey(inter, interpreter.ReturnEmptyLocationRange, orgKey)
+			require.True(t, bool(exists))
+
+			value, found := dictionary.Get(inter, interpreter.ReturnEmptyLocationRange, orgKey)
+			require.True(t, found)
+			utils.AssertValuesEqual(t, inter, orgValue, value)
+
+			return false
+		})
+	})
+
+	t.Run("remove", func(t *testing.T) {
+		newEntries := newValueMap(numberOfValues)
+
+		keyValues := make([][2]interpreter.Value, numberOfValues)
+		for i := 0; i < numberOfValues; i++ {
+			key := randomHashableValue(inter, orgOwner)
+			value := randomStorableValue(inter, orgOwner, 0)
+
+			newEntries.put(inter, key, value)
+
+			keyValues[i][0] = key
+			keyValues[i][1] = value
+		}
+
+		dictionary := interpreter.NewDictionaryValueWithAddress(inter,
+			interpreter.DictionaryStaticType{
+				KeyType:   interpreter.PrimitiveStaticTypeAnyStruct,
+				ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
+			},
+			orgOwner,
+		)
+
+		require.Equal(t, 0, dictionary.Count())
+
+		// Get the initial storage size before inserting values
+		startingStorageSize, startingSlabCounts := getSlabStorageSize(t, storage)
+
+		// Insert
+		for _, keyValue := range keyValues {
+			dictionary.Insert(inter, interpreter.ReturnEmptyLocationRange, keyValue[0], keyValue[1])
+		}
+
+		require.Equal(t, newEntries.size(), dictionary.Count())
+
+		// Remove
+		newEntries.foreach(func(orgKey, orgValue interpreter.Value) (exit bool) {
+			removedValue := dictionary.Remove(inter, interpreter.ReturnEmptyLocationRange, orgKey)
+
+			assert.IsType(t, &interpreter.SomeValue{}, removedValue)
+			someValue := removedValue.(*interpreter.SomeValue)
+
+			// Removed value must be same as the original value
+			utils.AssertValuesEqual(t, inter, orgValue, someValue.Value)
+
+			return false
+		})
+
+		require.Equal(t, 0, dictionary.Count())
+
+		storageSize, slabCounts := getSlabStorageSize(t, storage)
+
+		// Storage size after removals should be same as the size before insertion.
+		assert.Equal(t, startingStorageSize, storageSize)
+		assert.Equal(t, startingSlabCounts, slabCounts)
 	})
 }
 
@@ -1102,10 +1202,14 @@ func (m *valueMap) get(key interpreter.Value) (interpreter.Value, bool) {
 	return value, ok
 }
 
-func (m *valueMap) foreach(apply func(key, value interpreter.Value)) {
+func (m *valueMap) foreach(apply func(key, value interpreter.Value) (exit bool)) {
 	for internalKey, key := range m.keys {
 		value := m.values[internalKey]
-		apply(key, value)
+		exit := apply(key, value)
+
+		if exit {
+			return
+		}
 	}
 }
 
