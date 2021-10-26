@@ -84,6 +84,10 @@ type Elaboration struct {
 	EffectivePredeclaredTypes           map[string]TypeDeclaration
 	isChecking                          bool
 	ReferenceExpressionBorrowTypes      map[*ast.ReferenceExpression]*ReferenceType
+
+	// Only to make the go-compiler happy with semver compatibility.
+	// TODO: Remove
+	IsResourceMoveIndexExpression map[*ast.IndexExpression]bool
 }
 
 func NewElaboration() *Elaboration {
