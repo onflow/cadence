@@ -6,9 +6,9 @@ import (
 	"math"
 	"math/big"
 	"math/rand"
+	"strings"
 	"testing"
 	"time"
-	"unicode/utf8"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -103,7 +103,7 @@ func TestRandomMapOperations(t *testing.T) {
 		})
 
 		owner := testMap.GetOwner()
-		assert.Equal(t, owner[:], orgOwner[:])
+		assert.Equal(t, orgOwner[:], owner[:])
 	})
 
 	t.Run("iterate", func(t *testing.T) {
@@ -120,13 +120,15 @@ func TestRandomMapOperations(t *testing.T) {
 
 	t.Run("deep copy", func(t *testing.T) {
 		newOwner := atree.Address([8]byte{'B'})
-		copyOfTestMap = testMap.DeepCopy(
+		copyOfTestMap = testMap.Transfer(
 			inter,
 			interpreter.ReturnEmptyLocationRange,
 			newOwner,
+			false,
+			nil,
 		).(*interpreter.DictionaryValue)
 
-		require.Equal(t, copyOfTestMap.Count(), entries.size())
+		require.Equal(t, entries.size(), copyOfTestMap.Count())
 
 		entries.foreach(func(orgKey, orgValue interpreter.Value) (exit bool) {
 			exists := copyOfTestMap.ContainsKey(inter, interpreter.ReturnEmptyLocationRange, orgKey)
@@ -140,7 +142,7 @@ func TestRandomMapOperations(t *testing.T) {
 		})
 
 		owner := copyOfTestMap.GetOwner()
-		assert.Equal(t, owner[:], newOwner[:])
+		assert.Equal(t, newOwner[:], owner[:])
 	})
 
 	t.Run("deep remove", func(t *testing.T) {
@@ -153,7 +155,7 @@ func TestRandomMapOperations(t *testing.T) {
 		assert.Equal(t, slabCounts, newSlabCounts)
 		assert.Equal(t, storageSize, newStorageSize)
 
-		require.Equal(t, testMap.Count(), entries.size())
+		require.Equal(t, entries.size(), testMap.Count())
 
 		// go over original values again and check no missing data (no side effect should be found)
 		entries.foreach(func(orgKey, orgValue interpreter.Value) (exit bool) {
@@ -168,7 +170,7 @@ func TestRandomMapOperations(t *testing.T) {
 		})
 
 		owner := testMap.GetOwner()
-		assert.Equal(t, owner[:], orgOwner[:])
+		assert.Equal(t, orgOwner[:], owner[:])
 	})
 
 	t.Run("insert", func(t *testing.T) {
@@ -258,6 +260,7 @@ func TestRandomMapOperations(t *testing.T) {
 			return false
 		})
 
+		// Dictionary must be empty
 		require.Equal(t, 0, dictionary.Count())
 
 		storageSize, slabCounts := getSlabStorageSize(t, storage)
@@ -323,7 +326,7 @@ func TestRandomArrayOperations(t *testing.T) {
 
 		storageSize, slabCounts = getSlabStorageSize(t, storage)
 
-		require.Equal(t, testArray.Count(), len(elements))
+		require.Equal(t, len(elements), testArray.Count())
 
 		for index, orgElement := range elements {
 			element := testArray.Get(inter, interpreter.ReturnEmptyLocationRange, index)
@@ -331,7 +334,7 @@ func TestRandomArrayOperations(t *testing.T) {
 		}
 
 		owner := testArray.GetOwner()
-		assert.Equal(t, owner[:], orgOwner[:])
+		assert.Equal(t, orgOwner[:], owner[:])
 	})
 
 	t.Run("iterate", func(t *testing.T) {
@@ -352,13 +355,15 @@ func TestRandomArrayOperations(t *testing.T) {
 
 	t.Run("deep copy", func(t *testing.T) {
 		newOwner := atree.Address([8]byte{'B'})
-		copyOfTestArray = testArray.DeepCopy(
+		copyOfTestArray = testArray.Transfer(
 			inter,
 			interpreter.ReturnEmptyLocationRange,
 			newOwner,
+			false,
+			nil,
 		).(*interpreter.ArrayValue)
 
-		require.Equal(t, copyOfTestArray.Count(), len(elements))
+		require.Equal(t, len(elements), copyOfTestArray.Count())
 
 		for index, orgElement := range elements {
 			element := copyOfTestArray.Get(inter, interpreter.ReturnEmptyLocationRange, index)
@@ -366,7 +371,7 @@ func TestRandomArrayOperations(t *testing.T) {
 		}
 
 		owner := copyOfTestArray.GetOwner()
-		assert.Equal(t, owner[:], newOwner[:])
+		assert.Equal(t, newOwner[:], owner[:])
 	})
 
 	t.Run("deep removal", func(t *testing.T) {
@@ -379,7 +384,7 @@ func TestRandomArrayOperations(t *testing.T) {
 		assert.Equal(t, slabCounts, newSlabCounts)
 		assert.Equal(t, storageSize, newStorageSize)
 
-		assert.Equal(t, testArray.Count(), len(elements))
+		assert.Equal(t, len(elements), testArray.Count())
 
 		// go over original elements again and check no missing data (no side effect should be found)
 		for index, orgElement := range elements {
@@ -388,7 +393,7 @@ func TestRandomArrayOperations(t *testing.T) {
 		}
 
 		owner := testArray.GetOwner()
-		assert.Equal(t, owner[:], orgOwner[:])
+		assert.Equal(t, orgOwner[:], owner[:])
 	})
 }
 
@@ -500,7 +505,7 @@ func TestRandomCompositeValueOperations(t *testing.T) {
 		}
 
 		owner := testComposite.GetOwner()
-		assert.Equal(t, owner[:], orgOwner[:])
+		assert.Equal(t, orgOwner[:], owner[:])
 	})
 
 	t.Run("iterate", func(t *testing.T) {
@@ -518,10 +523,12 @@ func TestRandomCompositeValueOperations(t *testing.T) {
 	t.Run("deep copy", func(t *testing.T) {
 		newOwner := atree.Address([8]byte{'B'})
 
-		copyOfTestComposite = testComposite.DeepCopy(
+		copyOfTestComposite = testComposite.Transfer(
 			inter,
 			interpreter.ReturnEmptyLocationRange,
 			newOwner,
+			false,
+			nil,
 		).(*interpreter.CompositeValue)
 
 		for name, orgValue := range orgFields {
@@ -530,7 +537,7 @@ func TestRandomCompositeValueOperations(t *testing.T) {
 		}
 
 		owner := copyOfTestComposite.GetOwner()
-		assert.Equal(t, owner[:], newOwner[:])
+		assert.Equal(t, newOwner[:], owner[:])
 	})
 
 	t.Run("deep remove", func(t *testing.T) {
@@ -550,16 +557,18 @@ func TestRandomCompositeValueOperations(t *testing.T) {
 		}
 
 		owner := testComposite.GetOwner()
-		assert.Equal(t, owner[:], orgOwner[:])
+		assert.Equal(t, orgOwner[:], owner[:])
 	})
 
 	t.Run("remove field", func(t *testing.T) {
 		newOwner := atree.Address([8]byte{'c'})
 
-		composite := testComposite.DeepCopy(
+		composite := testComposite.Transfer(
 			inter,
 			interpreter.ReturnEmptyLocationRange,
 			newOwner,
+			false,
+			nil,
 		).(*interpreter.CompositeValue)
 
 		require.NoError(t, err)
@@ -832,14 +841,10 @@ func generateRandomHashableValue(inter *interpreter.Interpreter, owner common.Ad
 	// String
 	case String_1, String_2, String_3, String_4: // small string - should be more common
 		size := randomInt(255)
-		data := make([]byte, size)
-		rand.Read(data)
-		return interpreter.NewStringValue(string(data))
+		return interpreter.NewStringValue(randomUTF8StringOfSize(size))
 	case String_5: // large string
 		size := randomInt(4048) + 255
-		data := make([]byte, size)
-		rand.Read(data)
-		return interpreter.NewStringValue(string(data))
+		return interpreter.NewStringValue(randomUTF8StringOfSize(size))
 
 	case Bool_True:
 		return interpreter.BoolValue(true)
@@ -1218,12 +1223,11 @@ func (m *valueMap) size() int {
 }
 
 func randomUTF8String() string {
-	// TODO: Optimize
-	for {
-		identifier := make([]byte, 8)
-		rand.Read(identifier)
-		if utf8.Valid(identifier) {
-			return string(identifier)
-		}
-	}
+	return randomUTF8StringOfSize(8)
+}
+
+func randomUTF8StringOfSize(size int) string {
+	identifier := make([]byte, size)
+	rand.Read(identifier)
+	return strings.ToValidUTF8(string(identifier), "$")
 }
