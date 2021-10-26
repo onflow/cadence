@@ -479,7 +479,6 @@ func (checker *Checker) checkInvocation(
 
 	// Save types in the elaboration
 
-	checker.Elaboration.InvocationExpressionReceiverTypes[invocationExpression] = functionType.ReceiverType
 	checker.Elaboration.InvocationExpressionTypeArguments[invocationExpression] = typeArguments
 	checker.Elaboration.InvocationExpressionParameterTypes[invocationExpression] = parameterTypes
 	checker.Elaboration.InvocationExpressionReturnTypes[invocationExpression] = returnType

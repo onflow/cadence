@@ -32,6 +32,16 @@ Type<Int>() == Type<Int>()
 Type<Int>() != Type<String>()
 ```
 
+The method `fun isSubtype(of otherType: Type): Bool` can be used to compare the run-time types of values.
+
+```cadence
+Type<Int>().isSubtype(of: Type<Int>()) // true
+
+Type<Int>().isSubtype(of: Type<String>()) // false
+
+Type<Int>().isSubtype(of: Type<Int?>()) // true
+```
+
 To get the run-time type's fully qualified type identifier, use the `let identifier: String` field:
 
 ```cadence

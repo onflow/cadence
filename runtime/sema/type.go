@@ -2188,7 +2188,6 @@ func (p TypeParameter) checkTypeBound(ty Type, typeRange ast.Range) error {
 
 func formatFunctionType(
 	spaces bool,
-	receiverType string,
 	typeParameters []string,
 	parameters []string,
 	returnTypeAnnotation string,
@@ -2196,11 +2195,6 @@ func formatFunctionType(
 
 	var builder strings.Builder
 	builder.WriteRune('(')
-
-	if receiverType != "" {
-		builder.WriteString(receiverType)
-		builder.WriteRune('#')
-	}
 
 	if len(typeParameters) > 0 {
 		builder.WriteRune('<')
@@ -2237,7 +2231,6 @@ func formatFunctionType(
 // FunctionType
 //
 type FunctionType struct {
-	ReceiverType             Type
 	IsConstructor            bool
 	TypeParameters           []*TypeParameter
 	Parameters               []*Parameter
@@ -2266,11 +2259,6 @@ func (t *FunctionType) CheckArgumentExpressions(
 
 func (t *FunctionType) String() string {
 
-	var receiverType string
-	if t.ReceiverType != nil {
-		receiverType = t.ReceiverType.String()
-	}
-
 	typeParameters := make([]string, len(t.TypeParameters))
 
 	for i, typeParameter := range t.TypeParameters {
@@ -2287,7 +2275,6 @@ func (t *FunctionType) String() string {
 
 	return formatFunctionType(
 		true,
-		receiverType,
 		typeParameters,
 		parameters,
 		returnTypeAnnotation,
@@ -2295,11 +2282,6 @@ func (t *FunctionType) String() string {
 }
 
 func (t *FunctionType) QualifiedString() string {
-
-	var receiverType string
-	if t.ReceiverType != nil {
-		receiverType = t.ReceiverType.QualifiedString()
-	}
 
 	typeParameters := make([]string, len(t.TypeParameters))
 
@@ -2317,7 +2299,6 @@ func (t *FunctionType) QualifiedString() string {
 
 	return formatFunctionType(
 		true,
-		receiverType,
 		typeParameters,
 		parameters,
 		returnTypeAnnotation,
@@ -2326,11 +2307,6 @@ func (t *FunctionType) QualifiedString() string {
 
 // NOTE: parameter names and argument labels are *not* part of the ID!
 func (t *FunctionType) ID() TypeID {
-
-	var receiverType string
-	if t.ReceiverType != nil {
-		receiverType = string(t.ReceiverType.ID())
-	}
 
 	typeParameters := make([]string, len(t.TypeParameters))
 
@@ -2349,7 +2325,6 @@ func (t *FunctionType) ID() TypeID {
 	return TypeID(
 		formatFunctionType(
 			false,
-			receiverType,
 			typeParameters,
 			parameters,
 			returnTypeAnnotation,
@@ -2401,21 +2376,6 @@ func (t *FunctionType) Equal(other Type) bool {
 
 	if !t.ReturnTypeAnnotation.Type.
 		Equal(otherFunction.ReturnTypeAnnotation.Type) {
-		return false
-	}
-
-	// receiver type
-
-	if t.ReceiverType != nil {
-		if otherFunction.ReceiverType == nil {
-			return false
-		}
-
-		if !t.ReceiverType.Equal(otherFunction.ReceiverType) {
-			return false
-		}
-
-	} else if otherFunction.ReceiverType != nil {
 		return false
 	}
 
@@ -4937,20 +4897,9 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 			return false
 		}
 
-		// Receiver type
-
-		if typedSubType.ReceiverType != nil {
-			if typedSuperType.ReceiverType == nil {
-				return false
-			}
-
-			if !typedSubType.ReceiverType.Equal(typedSuperType.ReceiverType) {
-				return false
-			}
-
-		} else if typedSuperType.ReceiverType != nil {
-			return false
-		}
+		// Receiver type wouldn't matter for sub-typing.
+		// i.e: In a bound function pointer `x.foo`, `x` is a closure,
+		// and is not part of the function pointer's inputs/outputs.
 
 		// Constructors?
 

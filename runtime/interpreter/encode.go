@@ -27,7 +27,6 @@ import (
 	"github.com/onflow/atree"
 
 	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/errors"
 )
 
 const cborTagSize = 2
@@ -1267,7 +1266,9 @@ func (t CapabilityStaticType) Encode(e *cbor.StreamEncoder) error {
 }
 
 func (t FunctionStaticType) Encode(_ *cbor.StreamEncoder) error {
-	panic(errors.NewUnreachableError())
+	return NonStorableStaticTypeError{
+		Type: t,
+	}
 }
 
 // compositeTypeInfo

@@ -21,6 +21,7 @@ package interpreter_test
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/runtime/common"
@@ -415,6 +416,145 @@ func TestInterpretIsInstance(t *testing.T) {
 			AssertValuesEqual(
 				t,
 				inter,
+				interpreter.BoolValue(testCase.result),
+				inter.Globals["result"].GetValue(),
+			)
+		})
+	}
+}
+
+func TestInterpretIsSubtype(t *testing.T) {
+
+	t.Parallel()
+
+	cases := []struct {
+		name   string
+		code   string
+		result bool
+	}{
+		{
+			name: "String is a subtype of String",
+			code: `
+              let result = Type<String>().isSubtype(of: Type<String>())
+            `,
+			result: true,
+		},
+		{
+			name: "Int is a subtype of Int",
+			code: `
+              let result = Type<Int>().isSubtype(of: Type<Int>())
+            `,
+			result: true,
+		},
+		{
+			name: "Int is a subtype of Int?",
+			code: `
+              let result = Type<Int>().isSubtype(of: Type<Int?>())
+            `,
+			result: true,
+		},
+		{
+			name: "Int? is a subtype of Int",
+			code: `
+              let result = Type<Int?>().isSubtype(of: Type<Int>())
+            `,
+			result: false,
+		},
+		{
+			name: "resource is a subtype of AnyResource",
+			code: `
+              resource R {}
+              let result = Type<@R>().isSubtype(of: Type<@AnyResource>())
+            `,
+			result: true,
+		},
+		{
+			name: "struct is a subtype of AnyStruct",
+			code: `
+              struct S {}
+              let result = Type<S>().isSubtype(of: Type<AnyStruct>())
+            `,
+			result: true,
+		},
+		{
+			name: "Int is not a subtype of resource",
+			code: `
+              resource R {}
+              let result = Type<Int>().isSubtype(of: Type<@R>())
+            `,
+			result: false,
+		},
+		{
+			name: "resource is not a subtype of String",
+			code: `
+			  resource R {}
+			  let result = Type<@R>().isSubtype(of: Type<String>())
+            `,
+			result: false,
+		},
+		{
+			name: "resource R is not a subtype of resource S",
+			code: `
+              resource R {}
+              resource S {}
+              let result = Type<@R>().isSubtype(of: Type<@S>())
+            `,
+			result: false,
+		},
+		{
+			name: "resource R is not a subtype of resource S",
+			code: `
+              resource R {}
+              resource S {}
+              let result = Type<@R>().isSubtype(of: Type<@S>())
+            `,
+			result: false,
+		},
+		{
+			name: "Int is not a subtype of an unknown type",
+			code: `
+              let result = Type<Int>().isSubtype(of: unknownType)
+            `,
+			result: false,
+		},
+		{
+			name: "unknown type is not a subtype of Int",
+			code: `
+              let result = unknownType.isSubtype(of: Type<Int>())
+            `,
+			result: false,
+		},
+	}
+
+	valueDeclarations := stdlib.StandardLibraryValues{
+		{
+			Name: "unknownType",
+			Type: sema.MetaType,
+			ValueFactory: func(_ *interpreter.Interpreter) interpreter.Value {
+				return interpreter.TypeValue{
+					Type: nil,
+				}
+			},
+			Kind: common.DeclarationKindConstant,
+		},
+	}
+
+	semaValueDeclarations := valueDeclarations.ToSemaValueDeclarations()
+	interpreterValueDeclarations := valueDeclarations.ToInterpreterValueDeclarations()
+
+	for _, testCase := range cases {
+		t.Run(testCase.name, func(t *testing.T) {
+			inter, err := parseCheckAndInterpretWithOptions(t, testCase.code, ParseCheckAndInterpretOptions{
+				CheckerOptions: []sema.Option{
+					sema.WithPredeclaredValues(semaValueDeclarations),
+				},
+				Options: []interpreter.Option{
+					interpreter.WithPredeclaredValues(interpreterValueDeclarations),
+				},
+			})
+			require.NoError(t, err)
+
+			assert.Equal(t,
 				interpreter.BoolValue(testCase.result),
 				inter.Globals["result"].GetValue(),
 			)

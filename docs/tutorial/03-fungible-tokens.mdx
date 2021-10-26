@@ -33,7 +33,7 @@ Usually, a central ledger keeps track of a user's token balances. With Cadence, 
 ### Flow Network Token
 
 In Flow, the native network token will be implemented as a normal fungible token smart contract using a smart contract similar to the one in this tutorial.
-There will be special contracts and hooks that allow it be used for transaction execution payments and staking,
+There will be special contracts and hooks that allow it to be used for transaction execution payments and staking,
 but besides that, developers and users will be able to treat it and use it just like any other token in the network!
 
 We're going to take you through these steps to get comfortable with the fungible token:
@@ -486,9 +486,9 @@ pub contract ExampleToken {
 
 Click the `Deploy` button at the bottom right of the editor to deploy the code.
 
-</Callout>>
+</Callout>
 
-<Img src="https://storage.googleapis.com/flow-resources/documentation-assets/cadence-tuts/playground-deploy" />
+<img src="https://storage.googleapis.com/flow-resources/documentation-assets/cadence-tuts/playground-deploy" />
 
 This deployment stores the contract for the fungible token in your active account (account `0x01`) so that it can be imported into transactions.
 
@@ -538,7 +538,7 @@ and can be used to read fields or call functions on the object they reference. T
 
 There are many different situations in which you would create a capability to your fungible token vault.
 You might want a simple way to call methods on your `Vault` from anywhere in a transaction.
-You could also send a capavility that only exposes withdraw function in your `Vault` so that others can transfer tokens for you.
+You could also send a capability that only exposes withdraw function in your `Vault` so that others can transfer tokens for you.
 You could also have one that only exposes the `Balance` interface, so that others can check how many tokens you own.
 There could also be a function that takes a capability to a `Vault` as an argument, borrows a reference to the capability,
 makes a single function call on the reference, then finishes and destroys the reference.

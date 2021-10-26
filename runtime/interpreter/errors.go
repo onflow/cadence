@@ -508,3 +508,16 @@ func (e NonStorableValueError) Error() string {
 		e.Value,
 	)
 }
+
+// NonStorableStaticTypeError
+//
+type NonStorableStaticTypeError struct {
+	Type StaticType
+}
+
+func (e NonStorableStaticTypeError) Error() string {
+	return fmt.Sprintf(
+		"cannot store non-storable static type: %s",
+		e.Type,
+	)
+}

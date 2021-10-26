@@ -32,7 +32,6 @@ import (
 //
 type Invocation struct {
 	Self               MemberAccessibleValue
-	ReceiverType       sema.Type
 	Arguments          []Value
 	ArgumentTypes      []sema.Type
 	TypeParameterTypes *sema.TypeParameterTypeOrderedMap
@@ -84,10 +83,10 @@ func (f *InterpretedFunctionValue) Walk(_ func(Value)) {
 	// NO-OP
 }
 
-var functionDynamicType DynamicType = FunctionDynamicType{}
-
-func (*InterpretedFunctionValue) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
-	return functionDynamicType
+func (f *InterpretedFunctionValue) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
+	return FunctionDynamicType{
+		FuncType: f.Type,
+	}
 }
 
 func (f *InterpretedFunctionValue) StaticType() StaticType {
@@ -107,23 +106,40 @@ func (f *InterpretedFunctionValue) invoke(invocation Invocation) Value {
 func (f *InterpretedFunctionValue) ConformsToDynamicType(
 	_ *Interpreter,
 	_ func() LocationRange,
-	_ DynamicType,
+	dynamicType DynamicType,
 	_ TypeConformanceResults,
 ) bool {
-	// TODO: once FunctionDynamicType has parameter and return type info,
-	//   check it matches InterpretedFunctionValue's static function type
-	return false
+	targetType, ok := dynamicType.(FunctionDynamicType)
+	if !ok {
+		return false
+	}
+
+	return f.Type.Equal(targetType.FuncType)
 }
 
 func (f *InterpretedFunctionValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
 	return NonStorable{Value: f}, nil
 }
 
-func (*InterpretedFunctionValue) IsResourceAtAddress(_ *Interpreter, _ atree.Address) bool {
+func (*InterpretedFunctionValue) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (f *InterpretedFunctionValue) DeepCopy(_ *Interpreter, _ func() LocationRange, _ atree.Address) Value {
+func (*InterpretedFunctionValue) IsResourceKinded(_ *Interpreter) bool {
+	return false
+}
+
+func (f *InterpretedFunctionValue) Transfer(
+	interpreter *Interpreter,
+	_ func() LocationRange,
+	_ atree.Address,
+	remove bool,
+	storable atree.Storable,
+) Value {
+	// TODO: actually not needed, value is not storable
+	if remove {
+		interpreter.RemoveReferencedSlab(storable)
+	}
 	return f
 }
 
@@ -161,6 +177,7 @@ func NewHostFunctionValue(
 }
 
 var _ Value = &HostFunctionValue{}
+var _ MemberAccessibleValue = &HostFunctionValue{}
 
 func (*HostFunctionValue) IsValue() {}
 
@@ -172,10 +189,10 @@ func (f *HostFunctionValue) Walk(_ func(Value)) {
 	// NO-OP
 }
 
-var hostFunctionDynamicType DynamicType = FunctionDynamicType{}
-
-func (*HostFunctionValue) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
-	return hostFunctionDynamicType
+func (f *HostFunctionValue) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
+	return FunctionDynamicType{
+		FuncType: f.Type,
+	}
 }
 
 func (f *HostFunctionValue) StaticType() StaticType {
@@ -201,32 +218,53 @@ func (f *HostFunctionValue) GetMember(_ *Interpreter, _ func() LocationRange, na
 	return nil
 }
 
+func (*HostFunctionValue) RemoveMember(_ *Interpreter, _ func() LocationRange, _ string) Value {
+	// Host functions have no removable members (fields / functions)
+	panic(errors.NewUnreachableError())
+}
+
 func (*HostFunctionValue) SetMember(_ *Interpreter, _ func() LocationRange, _ string, _ Value) {
+	// Host functions have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
 func (f *HostFunctionValue) ConformsToDynamicType(
 	_ *Interpreter,
 	_ func() LocationRange,
-	_ DynamicType,
+	dynamicType DynamicType,
 	_ TypeConformanceResults,
 ) bool {
-	// TODO: once HostFunctionValue has static function type,
-	//   and FunctionDynamicType has parameter and return type info,
-	//   check they match
+	targetType, ok := dynamicType.(FunctionDynamicType)
+	if !ok {
+		return false
+	}
 
-	return false
+	return f.Type.Equal(targetType.FuncType)
 }
 
 func (f *HostFunctionValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
 	return NonStorable{Value: f}, nil
 }
 
-func (*HostFunctionValue) IsResourceAtAddress(_ *Interpreter, _ atree.Address) bool {
+func (*HostFunctionValue) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (f *HostFunctionValue) DeepCopy(_ *Interpreter, _ func() LocationRange, _ atree.Address) Value {
+func (*HostFunctionValue) IsResourceKinded(_ *Interpreter) bool {
+	return false
+}
+
+func (f *HostFunctionValue) Transfer(
+	interpreter *Interpreter,
+	_ func() LocationRange,
+	_ atree.Address,
+	remove bool,
+	storable atree.Storable,
+) Value {
+	// TODO: actually not needed, value is not storable
+	if remove {
+		interpreter.RemoveReferencedSlab(storable)
+	}
 	return f
 }
 
@@ -261,10 +299,15 @@ func (f BoundFunctionValue) Walk(_ func(Value)) {
 	// NO-OP
 }
 
-var boundFunctionDynamicType DynamicType = FunctionDynamicType{}
+func (f BoundFunctionValue) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
+	funcStaticType, ok := f.Function.StaticType().(FunctionStaticType)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
 
-func (BoundFunctionValue) DynamicType(_ *Interpreter, _ SeenReferences) DynamicType {
-	return boundFunctionDynamicType
+	return FunctionDynamicType{
+		FuncType: funcStaticType.Type,
+	}
 }
 
 func (f BoundFunctionValue) StaticType() StaticType {
@@ -274,30 +317,7 @@ func (f BoundFunctionValue) StaticType() StaticType {
 func (BoundFunctionValue) isFunctionValue() {}
 
 func (f BoundFunctionValue) invoke(invocation Invocation) Value {
-	self := f.Self
-	receiverType := invocation.ReceiverType
-
-	if receiverType != nil {
-		selfType := invocation.Interpreter.ConvertStaticToSemaType(self.StaticType())
-
-		if _, ok := receiverType.(*sema.ReferenceType); ok {
-			if _, ok := selfType.(*sema.ReferenceType); !ok {
-				selfType = &sema.ReferenceType{
-					Type: selfType,
-				}
-			}
-		}
-
-		if !sema.IsSubType(selfType, receiverType) {
-			panic(InvocationReceiverTypeError{
-				SelfType:      selfType,
-				ReceiverType:  receiverType,
-				LocationRange: invocation.GetLocationRange(),
-			})
-		}
-	}
-
-	invocation.Self = self
+	invocation.Self = f.Self
 	return f.Function.invoke(invocation)
 }
 
@@ -319,11 +339,25 @@ func (f BoundFunctionValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uin
 	return NonStorable{Value: f}, nil
 }
 
-func (BoundFunctionValue) IsResourceAtAddress(_ *Interpreter, _ atree.Address) bool {
+func (BoundFunctionValue) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (f BoundFunctionValue) DeepCopy(_ *Interpreter, _ func() LocationRange, _ atree.Address) Value {
+func (BoundFunctionValue) IsResourceKinded(_ *Interpreter) bool {
+	return false
+}
+
+func (f BoundFunctionValue) Transfer(
+	interpreter *Interpreter,
+	_ func() LocationRange,
+	_ atree.Address,
+	remove bool,
+	storable atree.Storable,
+) Value {
+	// TODO: actually not needed, value is not storable
+	if remove {
+		interpreter.RemoveReferencedSlab(storable)
+	}
 	return f
 }
 

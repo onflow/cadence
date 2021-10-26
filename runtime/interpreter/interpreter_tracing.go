@@ -30,7 +30,7 @@ const (
 	tracingImportPrefix     = "import."
 	tracingArrayPrefix      = "array."
 	tracingDictionaryPrefix = "dictionary."
-	tracingDeepCopyPrefix   = "deepCopy."
+	tracingTransferPrefix   = "transfer."
 )
 
 func (interpreter *Interpreter) reportFunctionTrace(functionName string, duration time.Duration) {
@@ -41,7 +41,7 @@ func (interpreter *Interpreter) reportImportTrace(importPath string, duration ti
 	interpreter.onRecordTrace(interpreter, tracingImportPrefix+importPath, duration, nil)
 }
 
-func (interpreter *Interpreter) reportArrayValueDeepCopyTrace(typeInfo string, count int, duration time.Duration) {
+func (interpreter *Interpreter) reportArrayValueTransferTrace(typeInfo string, count int, duration time.Duration) {
 	logs := []opentracing.LogRecord{
 		{
 			Timestamp: time.Now(),
@@ -51,10 +51,10 @@ func (interpreter *Interpreter) reportArrayValueDeepCopyTrace(typeInfo string, c
 			},
 		},
 	}
-	interpreter.onRecordTrace(interpreter, tracingArrayPrefix+tracingDeepCopyPrefix, duration, logs)
+	interpreter.onRecordTrace(interpreter, tracingArrayPrefix+tracingTransferPrefix, duration, logs)
 }
 
-func (interpreter *Interpreter) reportDictionaryValueDeepCopyTrace(typeInfo string, count int, duration time.Duration) {
+func (interpreter *Interpreter) reportDictionaryValueTransferTrace(typeInfo string, count int, duration time.Duration) {
 	logs := []opentracing.LogRecord{
 		{
 			Timestamp: time.Now(),
@@ -64,5 +64,5 @@ func (interpreter *Interpreter) reportDictionaryValueDeepCopyTrace(typeInfo stri
 			},
 		},
 	}
-	interpreter.onRecordTrace(interpreter, tracingDictionaryPrefix+tracingDeepCopyPrefix, duration, logs)
+	interpreter.onRecordTrace(interpreter, tracingDictionaryPrefix+tracingTransferPrefix, duration, logs)
 }

@@ -248,6 +248,7 @@ type Storage interface {
 	ValueExists(interpreter *Interpreter, address common.Address, key string) bool
 	ReadValue(interpreter *Interpreter, address common.Address, key string) OptionalValue
 	WriteValue(interpreter *Interpreter, address common.Address, key string, value OptionalValue)
+	CheckHealth() error
 }
 
 type Interpreter struct {
@@ -278,7 +279,8 @@ type Interpreter struct {
 	ExitHandler                    ExitHandlerFunc
 	interpreted                    bool
 	statement                      ast.Statement
-	atreeValidationEnabled         bool
+	atreeValueValidationEnabled    bool
+	atreeStorageValidationEnabled  bool
 	tracingEnabled                 bool
 }
 
@@ -475,12 +477,22 @@ func WithAllInterpreters(allInterpreters map[common.LocationID]*Interpreter) Opt
 	}
 }
 
-// WithAtreeValidationEnabled returns an interpreter option which sets
+// WithAtreeValueValidationEnabled returns an interpreter option which sets
 // the atree validation option.
 //
-func WithAtreeValidationEnabled(enabled bool) Option {
+func WithAtreeValueValidationEnabled(enabled bool) Option {
 	return func(interpreter *Interpreter) error {
-		interpreter.SetAtreeValidationEnabled(enabled)
+		interpreter.SetAtreeValueValidationEnabled(enabled)
+		return nil
+	}
+}
+
+// WithAtreeStorageValidationEnabled returns an interpreter option which sets
+// the atree validation option.
+//
+func WithAtreeStorageValidationEnabled(enabled bool) Option {
+	return func(interpreter *Interpreter) error {
+		interpreter.SetAtreeStorageValidationEnabled(enabled)
 		return nil
 	}
 }
@@ -660,10 +672,16 @@ func (interpreter *Interpreter) SetAllInterpreters(allInterpreters map[common.Lo
 	}
 }
 
-// SetAtreeValidationEnabled sets the atree validation option.
+// SetAtreeValueValidationEnabled sets the atree value validation option.
 //
-func (interpreter *Interpreter) SetAtreeValidationEnabled(enabled bool) {
-	interpreter.atreeValidationEnabled = enabled
+func (interpreter *Interpreter) SetAtreeValueValidationEnabled(enabled bool) {
+	interpreter.atreeValueValidationEnabled = enabled
+}
+
+// SetAtreeStorageValidationEnabled sets the atree storage validation option.
+//
+func (interpreter *Interpreter) SetAtreeStorageValidationEnabled(enabled bool) {
+	interpreter.atreeStorageValidationEnabled = enabled
 }
 
 // SetTracingEnabled sets the tracing option.
@@ -1233,9 +1251,9 @@ func (interpreter *Interpreter) visitAssignment(
 
 	value := interpreter.evalExpression(valueExpression)
 
-	valueCopy := interpreter.copyAndConvert(value, valueType, targetType, getLocationRange)
+	transferredValue := interpreter.transferAndConvert(value, valueType, targetType, getLocationRange)
 
-	getterSetter.set(valueCopy)
+	getterSetter.set(transferredValue)
 }
 
 // NOTE: only called for top-level composite declarations
@@ -1886,16 +1904,22 @@ func (interpreter *Interpreter) checkValueTransferTargetType(value Value, target
 	return false
 }
 
-func (interpreter *Interpreter) copyAndConvert(
+func (interpreter *Interpreter) transferAndConvert(
 	value Value,
 	valueType, targetType sema.Type,
 	getLocationRange func() LocationRange,
 ) Value {
 
-	valueCopy := interpreter.CopyValue(getLocationRange, value, atree.Address{})
+	transferredValue := value.Transfer(
+		interpreter,
+		getLocationRange,
+		atree.Address{},
+		false,
+		nil,
+	)
 
 	result := interpreter.ConvertAndBox(
-		valueCopy,
+		transferredValue,
 		valueType,
 		targetType,
 	)
@@ -2385,7 +2409,8 @@ func (interpreter *Interpreter) NewSubInterpreter(
 		WithImportLocationHandler(interpreter.importLocationHandler),
 		WithUUIDHandler(interpreter.uuidHandler),
 		WithAllInterpreters(interpreter.allInterpreters),
-		WithAtreeValidationEnabled(interpreter.atreeValidationEnabled),
+		WithAtreeValueValidationEnabled(interpreter.atreeValueValidationEnabled),
+		WithAtreeStorageValidationEnabled(interpreter.atreeStorageValidationEnabled),
 		withTypeCodes(interpreter.typeCodes),
 		WithPublicAccountHandlerFunc(interpreter.publicAccountHandler),
 		WithPublicKeyValidationHandler(interpreter.PublicKeyValidationHandler),
@@ -2796,9 +2821,11 @@ func (interpreter *Interpreter) IsSubType(subType DynamicType, superType sema.Ty
 		return sema.IsSubType(typedSubType.StaticType, superType)
 
 	case FunctionDynamicType:
-		// TODO: once support for dynamically casting functions is added,
-		//   ensure that constructor functions are not normal
-		return superType == sema.AnyStructType
+		if superType == sema.AnyStructType {
+			return true
+		}
+
+		return sema.IsSubType(typedSubType.FuncType, superType)
 
 	case CompositeDynamicType:
 		return sema.IsSubType(typedSubType.StaticType, superType)
@@ -3018,11 +3045,12 @@ func (interpreter *Interpreter) authAccountSaveFunction(addressValue AddressValu
 				)
 			}
 
-			value = interpreter.TransferValue(
+			value = value.Transfer(
+				interpreter,
 				getLocationRange,
-				value,
-				nil,
 				atree.Address(address),
+				true,
+				nil,
 			)
 
 			// Write new value
@@ -3080,7 +3108,19 @@ func (interpreter *Interpreter) authAccountReadFunction(addressValue AddressValu
 					return NilValue{}
 				}
 
-				valueCopy := interpreter.CopyValue(invocation.GetLocationRange, value, atree.Address{})
+				inter := invocation.Interpreter
+				getLocationRange := invocation.GetLocationRange
+
+				// We could also pass remove=true and the storable stored in storage,
+				// but passing remove=false here and writing nil below has the same effect
+				// TODO: potentially refactor and get storable in storage, pass it and remove=true
+				transferredValue := value.Transfer(
+					inter,
+					getLocationRange,
+					atree.Address{},
+					false,
+					nil,
+				)
 
 				// Remove the value from storage,
 				// but only if the type check succeeded.
@@ -3088,7 +3128,7 @@ func (interpreter *Interpreter) authAccountReadFunction(addressValue AddressValu
 					interpreter.writeStored(address, key, NilValue{})
 				}
 
-				return valueCopy
+				return transferredValue
 
 			default:
 				panic(errors.NewUnreachableError())
@@ -3664,39 +3704,6 @@ func (interpreter *Interpreter) checkResourceNotDestroyed(value Value, getLocati
 	})
 }
 
-func (interpreter *Interpreter) CopyValue(
-	getLocationRange func() LocationRange,
-	value Value,
-	address atree.Address,
-) Value {
-
-	if value.IsResourceAtAddress(interpreter, address) {
-		return value
-	}
-
-	return value.DeepCopy(interpreter, getLocationRange, address)
-}
-
-func (interpreter *Interpreter) TransferValue(
-	getLocationRange func() LocationRange,
-	value Value,
-	storable atree.Storable,
-	address atree.Address,
-) Value {
-
-	if value.IsResourceAtAddress(interpreter, address) {
-		return value
-	}
-
-	valueCopy := value.DeepCopy(interpreter, getLocationRange, address)
-
-	value.DeepRemove(interpreter)
-
-	interpreter.RemoveReferencedSlab(storable)
-
-	return valueCopy
-}
-
 func (interpreter *Interpreter) RemoveReferencedSlab(storable atree.Storable) {
 	storageIDStorable, ok := storable.(atree.StorageIDStorable)
 	if !ok {
@@ -3710,13 +3717,19 @@ func (interpreter *Interpreter) RemoveReferencedSlab(storable atree.Storable) {
 	}
 }
 
-func (interpreter *Interpreter) maybeCheckAtreeValue(v atree.Value) {
-	if interpreter.atreeValidationEnabled {
-		interpreter.checkAtreeValue(v)
+func (interpreter *Interpreter) maybeValidateAtreeValue(v atree.Value) {
+	if interpreter.atreeValueValidationEnabled {
+		interpreter.validateAtreeValue(v)
+	}
+	if interpreter.atreeStorageValidationEnabled {
+		err := interpreter.Storage.CheckHealth()
+		if err != nil {
+			panic(ExternalError{err})
+		}
 	}
 }
 
-func (interpreter *Interpreter) checkAtreeValue(v atree.Value) {
+func (interpreter *Interpreter) validateAtreeValue(v atree.Value) {
 	tic := func(info atree.TypeInfo, other atree.TypeInfo) bool {
 		switch info := info.(type) {
 		case ConstantSizedStaticType:
@@ -3771,10 +3784,15 @@ func (interpreter *Interpreter) checkAtreeValue(v atree.Value) {
 		if err != nil {
 			panic(ExternalError{err})
 		}
+
 		err = atree.ValidArraySerialization(v, CBORDecMode, CBOREncMode, DecodeStorable, DecodeTypeInfo, compare)
 		if err != nil {
 			var nonStorableValueErr NonStorableValueError
-			if !goErrors.As(err, &nonStorableValueErr) {
+			var nonStorableStaticTypeErr NonStorableStaticTypeError
+
+			if !(goErrors.As(err, &nonStorableValueErr) ||
+				goErrors.As(err, &nonStorableStaticTypeErr)) {
+
 				atree.PrintArray(v)
 				panic(ExternalError{err})
 			}
@@ -3785,10 +3803,15 @@ func (interpreter *Interpreter) checkAtreeValue(v atree.Value) {
 		if err != nil {
 			panic(ExternalError{err})
 		}
+
 		err = atree.ValidMapSerialization(v, CBORDecMode, CBOREncMode, DecodeStorable, DecodeTypeInfo, compare)
 		if err != nil {
 			var nonStorableValueErr NonStorableValueError
-			if !goErrors.As(err, &nonStorableValueErr) {
+			var nonStorableStaticTypeErr NonStorableStaticTypeError
+
+			if !(goErrors.As(err, &nonStorableValueErr) ||
+				goErrors.As(err, &nonStorableStaticTypeErr)) {
+
 				atree.PrintMap(v)
 				panic(ExternalError{err})
 			}

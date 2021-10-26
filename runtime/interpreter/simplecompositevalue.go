@@ -21,6 +21,7 @@ package interpreter
 import (
 	"github.com/onflow/atree"
 
+	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/format"
 	"github.com/onflow/cadence/runtime/sema"
 )
@@ -42,6 +43,7 @@ type SimpleCompositeValue struct {
 }
 
 var _ Value = &SimpleCompositeValue{}
+var _ MemberAccessibleValue = &SimpleCompositeValue{}
 
 func NewSimpleCompositeValue(
 	typeID sema.TypeID,
@@ -119,6 +121,11 @@ func (v *SimpleCompositeValue) GetMember(
 	return nil
 }
 
+func (*SimpleCompositeValue) RemoveMember(_ *Interpreter, _ func() LocationRange, _ string) Value {
+	// Simple composite values have no removable members (fields / functions)
+	panic(errors.NewUnreachableError())
+}
+
 func (v *SimpleCompositeValue) SetMember(_ *Interpreter, _ func() LocationRange, name string, value Value) {
 	v.Fields[name] = value
 }
@@ -176,11 +183,25 @@ func (v *SimpleCompositeValue) Storable(_ atree.SlabStorage, _ atree.Address, _ 
 	return NonStorable{Value: v}, nil
 }
 
-func (v *SimpleCompositeValue) IsResourceAtAddress(_ *Interpreter, _ atree.Address) bool {
+func (*SimpleCompositeValue) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (v *SimpleCompositeValue) DeepCopy(_ *Interpreter, _ func() LocationRange, _ atree.Address) Value {
+func (v *SimpleCompositeValue) IsResourceKinded(_ *Interpreter) bool {
+	return false
+}
+
+func (v *SimpleCompositeValue) Transfer(
+	interpreter *Interpreter,
+	_ func() LocationRange,
+	_ atree.Address,
+	remove bool,
+	storable atree.Storable,
+) Value {
+	// TODO: actually not needed, value is not storable
+	if remove {
+		interpreter.RemoveReferencedSlab(storable)
+	}
 	return v
 }
 

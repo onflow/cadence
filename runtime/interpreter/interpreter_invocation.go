@@ -43,7 +43,6 @@ func (interpreter *Interpreter) InvokeFunctionValue(
 
 	return interpreter.invokeFunctionValue(
 		function,
-		nil,
 		arguments,
 		nil,
 		argumentTypes,
@@ -55,7 +54,6 @@ func (interpreter *Interpreter) InvokeFunctionValue(
 
 func (interpreter *Interpreter) invokeFunctionValue(
 	function FunctionValue,
-	receiverType sema.Type,
 	arguments []Value,
 	expressions []ast.Expression,
 	argumentTypes []sema.Type,
@@ -65,7 +63,7 @@ func (interpreter *Interpreter) invokeFunctionValue(
 ) Value {
 
 	parameterTypeCount := len(parameterTypes)
-	argumentCopies := make([]Value, len(arguments))
+	transferredArguments := make([]Value, len(arguments))
 
 	for i, argument := range arguments {
 		argumentType := argumentTypes[i]
@@ -81,17 +79,27 @@ func (interpreter *Interpreter) invokeFunctionValue(
 
 		if i < parameterTypeCount {
 			parameterType := parameterTypes[i]
-			argumentCopies[i] = interpreter.copyAndConvert(argument, argumentType, parameterType, getLocationRange)
+			transferredArguments[i] = interpreter.transferAndConvert(
+				argument,
+				argumentType,
+				parameterType,
+				getLocationRange,
+			)
 		} else {
-			argumentCopies[i] = interpreter.CopyValue(getLocationRange, argument, atree.Address{})
+			transferredArguments[i] = argument.Transfer(
+				interpreter,
+				getLocationRange,
+				atree.Address{},
+				false,
+				nil,
+			)
 		}
 	}
 
 	getLocationRange := locationRangeGetter(interpreter.Location, invocationPosition)
 
 	invocation := Invocation{
-		ReceiverType:       receiverType,
-		Arguments:          argumentCopies,
+		Arguments:          transferredArguments,
 		ArgumentTypes:      argumentTypes,
 		TypeParameterTypes: typeParameterTypes,
 		GetLocationRange:   getLocationRange,

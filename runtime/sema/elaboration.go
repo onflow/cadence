@@ -44,7 +44,6 @@ type Elaboration struct {
 	InterfaceTypeDeclarations           map[*InterfaceType]*ast.InterfaceDeclaration
 	ConstructorFunctionTypes            map[*ast.SpecialFunctionDeclaration]*FunctionType
 	FunctionExpressionFunctionType      map[*ast.FunctionExpression]*FunctionType
-	InvocationExpressionReceiverTypes   map[*ast.InvocationExpression]Type
 	InvocationExpressionArgumentTypes   map[*ast.InvocationExpression][]Type
 	InvocationExpressionParameterTypes  map[*ast.InvocationExpression][]Type
 	InvocationExpressionReturnTypes     map[*ast.InvocationExpression]Type
@@ -66,7 +65,9 @@ type Elaboration struct {
 	TransactionDeclarationTypes         map[*ast.TransactionDeclaration]*TransactionType
 	SwapStatementLeftTypes              map[*ast.SwapStatement]Type
 	SwapStatementRightTypes             map[*ast.SwapStatement]Type
-	IsResourceMoveIndexExpression       map[*ast.IndexExpression]bool
+	// IsNestedResourceMoveExpression indicates if the access the index or member expression
+	// is implicitly moving a resource out of the container, e.g. in a shift or swap statement.
+	IsNestedResourceMoveExpression      map[ast.Expression]struct{}
 	CompositeNestedDeclarations         map[*ast.CompositeDeclaration]map[string]ast.Declaration
 	InterfaceNestedDeclarations         map[*ast.InterfaceDeclaration]map[string]ast.Declaration
 	PostConditionsRewrite               map[*ast.Conditions]PostConditionsRewrite
@@ -99,7 +100,6 @@ func NewElaboration() *Elaboration {
 		InterfaceTypeDeclarations:           map[*InterfaceType]*ast.InterfaceDeclaration{},
 		ConstructorFunctionTypes:            map[*ast.SpecialFunctionDeclaration]*FunctionType{},
 		FunctionExpressionFunctionType:      map[*ast.FunctionExpression]*FunctionType{},
-		InvocationExpressionReceiverTypes:   map[*ast.InvocationExpression]Type{},
 		InvocationExpressionArgumentTypes:   map[*ast.InvocationExpression][]Type{},
 		InvocationExpressionParameterTypes:  map[*ast.InvocationExpression][]Type{},
 		InvocationExpressionReturnTypes:     map[*ast.InvocationExpression]Type{},
@@ -121,7 +121,7 @@ func NewElaboration() *Elaboration {
 		TransactionDeclarationTypes:         map[*ast.TransactionDeclaration]*TransactionType{},
 		SwapStatementLeftTypes:              map[*ast.SwapStatement]Type{},
 		SwapStatementRightTypes:             map[*ast.SwapStatement]Type{},
-		IsResourceMoveIndexExpression:       map[*ast.IndexExpression]bool{},
+		IsNestedResourceMoveExpression:      map[ast.Expression]struct{}{},
 		CompositeNestedDeclarations:         map[*ast.CompositeDeclaration]map[string]ast.Declaration{},
 		InterfaceNestedDeclarations:         map[*ast.InterfaceDeclaration]map[string]ast.Declaration{},
 		PostConditionsRewrite:               map[*ast.Conditions]PostConditionsRewrite{},
