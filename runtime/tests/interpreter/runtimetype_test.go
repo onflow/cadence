@@ -635,3 +635,68 @@ func TestInterpretReferenceType(t *testing.T) {
 		inter.Globals["i"].GetValue(),
 	)
 }*/
+
+func TestInterpretCapabilityType(t *testing.T) {
+
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+      let a = CapabilityType(Type<&String>())!
+      let b = CapabilityType(Type<&Int>())!
+
+	  resource R {}
+	  let c = CapabilityType(Type<&R>())!
+      let d = CapabilityType(Type<String>())
+
+	  let e = Type<Capability<&String>>()
+    `)
+
+	assert.Equal(t,
+		interpreter.TypeValue{
+			Type: interpreter.CapabilityStaticType{
+				BorrowType: interpreter.ReferenceStaticType{
+					Type:       interpreter.PrimitiveStaticTypeString,
+					Authorized: false,
+				},
+			},
+		},
+		inter.Globals["a"].GetValue(),
+	)
+
+	assert.Equal(t,
+		interpreter.TypeValue{
+			Type: interpreter.CapabilityStaticType{
+				BorrowType: interpreter.ReferenceStaticType{
+					Type:       interpreter.PrimitiveStaticTypeInt,
+					Authorized: false,
+				},
+			},
+		},
+		inter.Globals["b"].GetValue(),
+	)
+
+	assert.Equal(t,
+		interpreter.TypeValue{
+			Type: interpreter.CapabilityStaticType{
+				BorrowType: interpreter.ReferenceStaticType{
+					Type: interpreter.CompositeStaticType{
+						QualifiedIdentifier: "R",
+						Location:            utils.TestLocation,
+					},
+					Authorized: false,
+				},
+			},
+		},
+		inter.Globals["c"].GetValue(),
+	)
+
+	assert.Equal(t,
+		interpreter.NilValue{},
+		inter.Globals["d"].GetValue(),
+	)
+
+	assert.Equal(t,
+		inter.Globals["a"].GetValue(),
+		inter.Globals["e"].GetValue(),
+	)
+}

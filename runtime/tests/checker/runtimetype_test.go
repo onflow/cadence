@@ -699,3 +699,74 @@ func TestCheckRestrictedTypeConstructor(t *testing.T) {
 		})
 	}
 }
+
+func TestCheckCapabilityTypeConstructor(t *testing.T) {
+
+	t.Parallel()
+
+	cases := []struct {
+		name  string
+		code  string
+		valid bool
+	}{
+		{
+			name: "&String",
+			code: `
+              let result = CapabilityType(Type<&String>())
+            `,
+			valid: true,
+		},
+		{
+			name: "&Int",
+			code: `
+				let result = CapabilityType(Type<&Int>())
+            `,
+			valid: true,
+		},
+		{
+			name: "resource",
+			code: `
+              resource R {}
+              let result = CapabilityType(Type<@R>())
+            `,
+			valid: true,
+		},
+		{
+			name: "type mismatch",
+			code: `
+              let result = CapabilityType(3)
+            `,
+			valid: false,
+		},
+		{
+			name: "too many args",
+			code: `
+              let result = CapabilityType(Type<Int>(), Type<Int>())
+            `,
+			valid: false,
+		},
+		{
+			name: "too few args",
+			code: `
+              let result = CapabilityType()
+            `,
+			valid: false,
+		},
+	}
+
+	for _, testCase := range cases {
+		t.Run(testCase.name, func(t *testing.T) {
+			checker, err := ParseAndCheck(t, testCase.code)
+
+			if testCase.valid {
+				require.NoError(t, err)
+				assert.Equal(t,
+					&sema.OptionalType{Type: sema.MetaType},
+					RequireGlobalValue(t, checker.Elaboration, "result"),
+				)
+			} else {
+				require.Error(t, err)
+			}
+		})
+	}
+}

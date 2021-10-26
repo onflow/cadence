@@ -148,6 +148,17 @@ var ReferenceTypeFunctionType = &FunctionType{
 	ReturnTypeAnnotation: NewTypeAnnotation(MetaType),
 }
 
+var CapabilityTypeFunctionType = &FunctionType{
+	Parameters: []*Parameter{
+		{
+			Label:          ArgumentLabelNotRequired,
+			Identifier:     "type",
+			TypeAnnotation: NewTypeAnnotation(MetaType),
+		},
+	},
+	ReturnTypeAnnotation: NewTypeAnnotation(&OptionalType{MetaType}),
+}
+
 func RuntimeTypeConstructors() []*RuntimeTypeConstructor {
 	var functions = []*RuntimeTypeConstructor{
 		{
@@ -202,6 +213,12 @@ func RuntimeTypeConstructors() []*RuntimeTypeConstructor {
 			"RestrictedType",
 			RestrictedTypeFunctionType,
 			"Creates a run-time type representing a restricted type of the first argument, restricted by the interface identifiers in the second argument. Returns nil if the restriction is not valid.",
+		},
+
+		{
+			"CapabilityType",
+			CapabilityTypeFunctionType,
+			"Creates a run-time type representing a capability type of the given reference type. Returns nil if the type is not a reference.",
 		},
 	}
 

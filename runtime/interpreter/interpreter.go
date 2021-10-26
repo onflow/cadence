@@ -2801,71 +2801,85 @@ type runtimeTypeConstructor struct {
 //
 var runtimeTypeConstructorValues = func() []runtimeTypeConstructor {
 
-	var converterFuncValues []runtimeTypeConstructor
-
-	converterFuncValues = append(converterFuncValues, runtimeTypeConstructor{
-		name: "OptionalType",
-		converter: NewHostFunctionValue(
-			func(invocation Invocation) Value {
-				switch arg := invocation.Arguments[0].(TypeValue).Type.(type) {
-				// Optionality is an idempotent operation
-				case OptionalStaticType:
+	var converterFuncValues = []runtimeTypeConstructor{
+		{
+			name: "OptionalType",
+			converter: NewHostFunctionValue(
+				func(invocation Invocation) Value {
+					switch arg := invocation.Arguments[0].(TypeValue).Type.(type) {
+					// Optionality is an idempotent operation
+					case OptionalStaticType:
+						return TypeValue{
+							Type: OptionalStaticType{
+								Type: arg.Type,
+							}}
+					default:
+						return TypeValue{
+							Type: OptionalStaticType{
+								Type: arg,
+							}}
+					}
+				},
+				sema.OptionalTypeFunctionType,
+			),
+		},
+		{
+			name: "VariableSizedArrayType",
+			converter: NewHostFunctionValue(
+				func(invocation Invocation) Value {
 					return TypeValue{
-						Type: OptionalStaticType{
-							Type: arg.Type,
+						Type: VariableSizedStaticType{
+							Type: invocation.Arguments[0].(TypeValue).Type,
 						}}
-				default:
+				},
+				sema.VariableSizedArrayTypeFunctionType,
+			),
+		},
+		{
+			name: "ConstantSizedArrayType",
+			converter: NewHostFunctionValue(
+				func(invocation Invocation) Value {
 					return TypeValue{
-						Type: OptionalStaticType{
-							Type: arg,
+						Type: ConstantSizedStaticType{
+							Type: invocation.Arguments[0].(TypeValue).Type,
+							Size: int64(invocation.Arguments[1].(IntValue).ToInt()),
 						}}
-				}
-			},
-			sema.OptionalTypeFunctionType,
-		),
-	})
-
-	converterFuncValues = append(converterFuncValues, runtimeTypeConstructor{
-		name: "VariableSizedArrayType",
-		converter: NewHostFunctionValue(
-			func(invocation Invocation) Value {
-				return TypeValue{
-					Type: VariableSizedStaticType{
-						Type: invocation.Arguments[0].(TypeValue).Type,
-					}}
-			},
-			sema.VariableSizedArrayTypeFunctionType,
-		),
-	})
-
-	converterFuncValues = append(converterFuncValues, runtimeTypeConstructor{
-		name: "ConstantSizedArrayType",
-		converter: NewHostFunctionValue(
-			func(invocation Invocation) Value {
-				return TypeValue{
-					Type: ConstantSizedStaticType{
-						Type: invocation.Arguments[0].(TypeValue).Type,
-						Size: int64(invocation.Arguments[1].(IntValue).ToInt()),
-					}}
-			},
-			sema.ConstantSizedArrayTypeFunctionType,
-		),
-	})
-
-	converterFuncValues = append(converterFuncValues, runtimeTypeConstructor{
-		name: "ReferenceType",
-		converter: NewHostFunctionValue(
-			func(invocation Invocation) Value {
-				return TypeValue{
-					Type: ReferenceStaticType{
-						Authorized: bool(invocation.Arguments[0].(BoolValue)),
-						Type:       invocation.Arguments[1].(TypeValue).Type,
-					}}
-			},
-			sema.ReferenceTypeFunctionType,
-		),
-	})
-
+				},
+				sema.ConstantSizedArrayTypeFunctionType,
+			),
+		},
+		{
+			name: "ReferenceType",
+			converter: NewHostFunctionValue(
+				func(invocation Invocation) Value {
+					return TypeValue{
+						Type: ReferenceStaticType{
+							Authorized: bool(invocation.Arguments[0].(BoolValue)),
+							Type:       invocation.Arguments[1].(TypeValue).Type,
+						}}
+				},
+				sema.ReferenceTypeFunctionType,
+			),
+		},
+		{
+			name: "CapabilityType",
+			converter: NewHostFunctionValue(
+				func(invocation Invocation) Value {
+					switch ty := invocation.Arguments[0].(TypeValue).Type.(type) {
+					case ReferenceStaticType:
+						return TypeValue{
+							Type: CapabilityStaticType{
+								BorrowType: ty,
+							}}
+					// Capabilities must hold references
+					default:
+						return NilValue{}
+					}
+				},
+				sema.CapabilityTypeFunctionType,
+			),
+		},
+	}
 	return converterFuncValues
 }()
 
