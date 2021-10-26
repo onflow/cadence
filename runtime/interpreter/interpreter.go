@@ -509,24 +509,26 @@ func NewInterpreter(program *Program, location common.Location, options ...Optio
 	interpreter.activations.PushNewWithParent(baseActivation)
 
 	// We assign this here because it depends on the interpreter, so this breaks the initialization cycle
-	defineBaseValue(baseActivation, "DictionaryType", NewHostFunctionValue(
-		func(invocation Invocation) Value {
+	defineBaseValue(baseActivation,
+		"DictionaryType",
+		NewHostFunctionValue(
+			func(invocation Invocation) Value {
 
-			keyType := invocation.Arguments[0].(TypeValue).Type
+				keyType := invocation.Arguments[0].(TypeValue).Type
 
-			// if the given key is not a valid dictionary key, it wouldn't make sense to create this type
-			if keyType == nil || !sema.IsValidDictionaryKeyType(interpreter.ConvertStaticToSemaType(keyType)) {
-				return NilValue{}
-			}
+				// if the given key is not a valid dictionary key, it wouldn't make sense to create this type
+				if keyType == nil || !sema.IsValidDictionaryKeyType(interpreter.ConvertStaticToSemaType(keyType)) {
+					return NilValue{}
+				}
 
-			return TypeValue{
-				Type: DictionaryStaticType{
-					KeyType:   keyType,
-					ValueType: invocation.Arguments[1].(TypeValue).Type,
-				}}
-		},
-		sema.DictionaryTypeFunctionType,
-	))
+				return TypeValue{
+					Type: DictionaryStaticType{
+						KeyType:   keyType,
+						ValueType: invocation.Arguments[1].(TypeValue).Type,
+					}}
+			},
+			sema.DictionaryTypeFunctionType,
+		))
 
 	defineBaseValue(baseActivation,
 		"CompositeType",
