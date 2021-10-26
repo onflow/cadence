@@ -508,105 +508,6 @@ func NewInterpreter(program *Program, location common.Location, options ...Optio
 	// Use the base activation as the parent.
 	interpreter.activations.PushNewWithParent(baseActivation)
 
-	// We assign this here because it depends on the interpreter, so this breaks the initialization cycle
-	defineBaseValue(baseActivation,
-		"DictionaryType",
-		NewHostFunctionValue(
-			func(invocation Invocation) Value {
-
-				keyType := invocation.Arguments[0].(TypeValue).Type
-
-				// if the given key is not a valid dictionary key, it wouldn't make sense to create this type
-				if keyType == nil || !sema.IsValidDictionaryKeyType(interpreter.ConvertStaticToSemaType(keyType)) {
-					return NilValue{}
-				}
-
-				return TypeValue{
-					Type: DictionaryStaticType{
-						KeyType:   keyType,
-						ValueType: invocation.Arguments[1].(TypeValue).Type,
-					}}
-			},
-			sema.DictionaryTypeFunctionType,
-		))
-
-	defineBaseValue(baseActivation,
-		"CompositeType",
-		NewHostFunctionValue(
-			func(invocation Invocation) Value {
-				typeID := string(invocation.Arguments[0].(*StringValue).Str)
-				location, name, err := common.DecodeTypeID(typeID)
-
-				// if the typeID is invalid, return nil
-				if err != nil ||
-					location == nil && sema.NativeCompositeTypes[typeID] == nil ||
-					interpreter.getElaboration(location).CompositeTypes[location.TypeID(name)] == nil {
-					return NilValue{}
-				}
-
-				return TypeValue{
-					Type: CompositeStaticType{
-						QualifiedIdentifier: name,
-						Location:            location,
-					}}
-			},
-			sema.CompositeTypeFunctionType,
-		),
-	)
-
-	defineBaseValue(baseActivation,
-		"InterfaceType",
-		NewHostFunctionValue(
-			func(invocation Invocation) Value {
-				typeID := string(invocation.Arguments[0].(*StringValue).Str)
-				location, name, err := common.DecodeTypeID(typeID)
-
-				// if the typeID is invalid, return nil
-				if err != nil ||
-					location == nil ||
-					interpreter.getElaboration(location).InterfaceTypes[location.TypeID(name)] == nil {
-					return NilValue{}
-				}
-
-				return TypeValue{
-					Type: InterfaceStaticType{
-						QualifiedIdentifier: name,
-						Location:            location,
-					}}
-			},
-			sema.InterfaceTypeFunctionType,
-		),
-	)
-
-	defineBaseValue(baseActivation,
-		"FunctionType",
-		NewHostFunctionValue(
-			func(invocation Invocation) Value {
-				params := invocation.Arguments[0].(*ArrayValue).values
-				ret := interpreter.ConvertStaticToSemaType(invocation.Arguments[1].(TypeValue).Type)
-				paramTypes := make([]*sema.Parameter, 0)
-				for _, param := range params {
-					paramTypes = append(paramTypes, &sema.Parameter{
-						TypeAnnotation: &sema.TypeAnnotation{
-							Type: interpreter.ConvertStaticToSemaType(param.(TypeValue).Type),
-						},
-					})
-				}
-
-				return TypeValue{
-					Type: FunctionStaticType{
-						Type: &sema.FunctionType{
-							ReturnTypeAnnotation: &sema.TypeAnnotation{
-								Type: ret,
-							},
-							Parameters: paramTypes,
-						},
-					}}
-			},
-			sema.FunctionTypeFunctionType,
-		),
-	)
-
 	defaultOptions := []Option{
 		WithAllInterpreters(map[common.LocationID]*Interpreter{}),
 		withTypeCodes(TypeCodes{
@@ -2672,6 +2573,106 @@ func init() {
 			panic(fmt.Sprintf("missing converter for number type: %s", numberType))
 		}
 	}
+
+	// We assign this here because it depends on the interpreter, so this breaks the initialization cycle
+	defineBaseValue(baseActivation,
+		"DictionaryType",
+		NewHostFunctionValue(
+			func(invocation Invocation) Value {
+
+				keyType := invocation.Arguments[0].(TypeValue).Type
+
+				// if the given key is not a valid dictionary key, it wouldn't make sense to create this type
+				if keyType == nil || !sema.IsValidDictionaryKeyType(invocation.Interpreter.ConvertStaticToSemaType(keyType)) {
+					return NilValue{}
+				}
+
+				return TypeValue{
+					Type: DictionaryStaticType{
+						KeyType:   keyType,
+						ValueType: invocation.Arguments[1].(TypeValue).Type,
+					}}
+			},
+			sema.DictionaryTypeFunctionType,
+		))
+
+	defineBaseValue(baseActivation,
+		"CompositeType",
+		NewHostFunctionValue(
+			func(invocation Invocation) Value {
+				typeID := string(invocation.Arguments[0].(*StringValue).Str)
+				location, name, err := common.DecodeTypeID(typeID)
+
+				// if the typeID is invalid, return nil
+				if err != nil ||
+					location == nil && sema.NativeCompositeTypes[typeID] == nil ||
+					invocation.Interpreter.getElaboration(location).CompositeTypes[location.TypeID(name)] == nil {
+					return NilValue{}
+				}
+
+				return TypeValue{
+					Type: CompositeStaticType{
+						QualifiedIdentifier: name,
+						Location:            location,
+					}}
+			},
+			sema.CompositeTypeFunctionType,
+		),
+	)
+
+	defineBaseValue(baseActivation,
+		"InterfaceType",
+		NewHostFunctionValue(
+			func(invocation Invocation) Value {
+				typeID := string(invocation.Arguments[0].(*StringValue).Str)
+				location, name, err := common.DecodeTypeID(typeID)
+
+				// if the typeID is invalid, return nil
+				if err != nil ||
+					location == nil ||
+					invocation.Interpreter.getElaboration(location).InterfaceTypes[location.TypeID(name)] == nil {
+					return NilValue{}
+				}
+
+				return TypeValue{
+					Type: InterfaceStaticType{
+						QualifiedIdentifier: name,
+						Location:            location,
+					}}
+			},
+			sema.InterfaceTypeFunctionType,
+		),
+	)
+
+	defineBaseValue(baseActivation,
+		"FunctionType",
+		NewHostFunctionValue(
+			func(invocation Invocation) Value {
+				params := invocation.Arguments[0].(*ArrayValue).values
+				ret := invocation.Interpreter.ConvertStaticToSemaType(invocation.Arguments[1].(TypeValue).Type)
+				paramTypes := make([]*sema.Parameter, 0)
+				for _, param := range params {
+					paramTypes = append(paramTypes, &sema.Parameter{
+						TypeAnnotation: &sema.TypeAnnotation{
+							Type: invocation.Interpreter.ConvertStaticToSemaType(param.(TypeValue).Type),
+						},
+					})
+				}
+
+				return TypeValue{
+					Type: FunctionStaticType{
+						Type: &sema.FunctionType{
+							ReturnTypeAnnotation: &sema.TypeAnnotation{
+								Type: ret,
+							},
+							Parameters: paramTypes,
+						},
+					}}
+			},
+			sema.FunctionTypeFunctionType,
+		),
+	)
+
 }
 
 func defineBaseFunctions(activation *VariableActivation) {

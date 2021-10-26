@@ -295,9 +295,9 @@ func TestInterpretCompositeType(t *testing.T) {
 	  struct interface B {}
 
 	  let a = CompositeType("S.test.R")!
-      let b = CompositeType("S.test.S")! 
+      let b = CompositeType("S.test.S")!
 	  let c = CompositeType("S.test.A")
-	  let d = CompositeType("S.test.B")  
+	  let d = CompositeType("S.test.B")
 
 	  let e = Type<@R>()
     `)
@@ -348,9 +348,9 @@ func TestInterpretInterfaceType(t *testing.T) {
 	  struct B {}
 
 	  let a = InterfaceType("S.test.R")!
-      let b = InterfaceType("S.test.S")! 
+      let b = InterfaceType("S.test.S")!
 	  let c = InterfaceType("S.test.A")
-	  let d = InterfaceType("S.test.B")  
+	  let d = InterfaceType("S.test.B")
     `)
 
 	assert.Equal(t,
@@ -392,7 +392,7 @@ func TestInterpretFunctionType(t *testing.T) {
 	  let a = FunctionType([Type<String>()], Type<Int>())
       let b = FunctionType([Type<String>(), Type<Int>()], Type<Bool>())
 	  let c = FunctionType([], Type<String>())
-	  
+
 	  let d = Type<((String): Int)>();
     `)
 
