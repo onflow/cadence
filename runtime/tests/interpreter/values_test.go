@@ -454,7 +454,7 @@ func TestRandomCompositeValueOperations(t *testing.T) {
 			fieldNames[fieldName] = struct{}{}
 
 			field := interpreter.CompositeField{
-				Name:  string(fieldName),
+				Name:  fieldName,
 				Value: randomStorableValue(inter, orgOwner, 0),
 			}
 
@@ -573,7 +573,7 @@ func TestRandomCompositeValueOperations(t *testing.T) {
 
 		require.NoError(t, err)
 
-		for name, _ := range orgFields {
+		for name := range orgFields {
 			composite.RemoveField(inter, interpreter.ReturnEmptyLocationRange, name)
 			value := composite.GetField(inter, interpreter.ReturnEmptyLocationRange, name)
 			assert.Nil(t, value)
@@ -602,14 +602,11 @@ func deepCopyValue(inter *interpreter.Interpreter, value interpreter.Value) inte
 		var n big.Int
 		n.Set(v.BigInt)
 		return interpreter.NewIntValueFromBigInt(&n)
-	case interpreter.Int8Value:
-		return interpreter.Int8Value(int8(v))
-	case interpreter.Int16Value:
-		return interpreter.Int16Value(int16(v))
-	case interpreter.Int32Value:
-		return interpreter.Int32Value(int32(v))
-	case interpreter.Int64Value:
-		return interpreter.Int64Value(int64(v))
+	case interpreter.Int8Value,
+		interpreter.Int16Value,
+		interpreter.Int32Value,
+		interpreter.Int64Value:
+		return v
 	case interpreter.Int128Value:
 		var n big.Int
 		n.Set(v.BigInt)
@@ -624,14 +621,11 @@ func deepCopyValue(inter *interpreter.Interpreter, value interpreter.Value) inte
 		var n big.Int
 		n.Set(v.BigInt)
 		return interpreter.NewUIntValueFromBigInt(&n)
-	case interpreter.UInt8Value:
-		return interpreter.UInt8Value(uint8(v))
-	case interpreter.UInt16Value:
-		return interpreter.UInt16Value(uint16(v))
-	case interpreter.UInt32Value:
-		return interpreter.UInt32Value(uint32(v))
-	case interpreter.UInt64Value:
-		return interpreter.UInt64Value(uint64(v))
+	case interpreter.UInt8Value,
+		interpreter.UInt16Value,
+		interpreter.UInt32Value,
+		interpreter.UInt64Value:
+		return v
 	case interpreter.UInt128Value:
 		var n big.Int
 		n.Set(v.BigInt)
