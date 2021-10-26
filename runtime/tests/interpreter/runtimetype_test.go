@@ -510,7 +510,7 @@ func TestInterpretReferenceType(t *testing.T) {
 	)
 }
 
-/*func TestInterpretRestrictedType(t *testing.T) {
+func TestInterpretRestrictedType(t *testing.T) {
 
 	t.Parallel()
 
@@ -580,10 +580,7 @@ func TestInterpretReferenceType(t *testing.T) {
 	assert.Equal(t,
 		interpreter.TypeValue{
 			Type: &interpreter.RestrictedStaticType{
-				Type: interpreter.CompositeStaticType{
-					QualifiedIdentifier: "A",
-					Location:            utils.TestLocation,
-				},
+				Type: interpreter.PrimitiveStaticTypeAnyResource,
 				Restrictions: []interpreter.InterfaceStaticType{
 					{
 						QualifiedIdentifier: "R",
@@ -598,10 +595,7 @@ func TestInterpretReferenceType(t *testing.T) {
 	assert.Equal(t,
 		interpreter.TypeValue{
 			Type: &interpreter.RestrictedStaticType{
-				Type: interpreter.CompositeStaticType{
-					QualifiedIdentifier: "B",
-					Location:            utils.TestLocation,
-				},
+				Type: interpreter.PrimitiveStaticTypeAnyStruct,
 				Restrictions: []interpreter.InterfaceStaticType{
 					{
 						QualifiedIdentifier: "S",
@@ -647,7 +641,7 @@ func TestInterpretReferenceType(t *testing.T) {
 		inter.Globals["b"].GetValue(),
 		inter.Globals["i"].GetValue(),
 	)
-}*/
+}
 
 func TestInterpretCapabilityType(t *testing.T) {
 
