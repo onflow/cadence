@@ -19,7 +19,6 @@
 package interpreter_test
 
 import (
-	"bytes"
 	"fmt"
 	"math/big"
 	"sort"
@@ -7217,17 +7216,7 @@ func TestInterpretResourceMovingAndBorrowing(t *testing.T) {
 		sort.Slice(permanentSlabs, func(i, j int) bool {
 			a := permanentSlabs[i].ID()
 			b := permanentSlabs[j].ID()
-
-			switch bytes.Compare(a.Address[:], b.Address[:]) {
-			case -1:
-				return true
-			case 0:
-				return bytes.Compare(a.Index[:], b.Index[:]) < 0
-			case 1:
-				return false
-			default:
-				panic(errors.NewUnreachableError())
-			}
+			return a.Compare(b) < 0
 		})
 
 		var storedValues []string

@@ -411,17 +411,7 @@ func SortAccountStorageEntries(entries []AccountStorageEntry) {
 	sort.Slice(entries, func(i, j int) bool {
 		a := entries[i].StorageKey
 		b := entries[j].StorageKey
-
-		switch bytes.Compare(a.Address[:], b.Address[:]) {
-		case -1:
-			return true
-		case 0:
-			return a.Key < b.Key
-		case 1:
-			return false
-		default:
-			panic(errors.NewUnreachableError())
-		}
+		return a.IsLess(b)
 	})
 }
 
@@ -436,7 +426,8 @@ func (s *Storage) CheckHealth() error {
 
 	accountRootSlabIDs := make(map[atree.StorageID]struct{}, len(rootSlabIDs))
 
-	for rootSlabID := range rootSlabIDs {
+	// NOTE: map range is safe, as it creates a subset
+	for rootSlabID := range rootSlabIDs { //nolint:maprangecheck
 		if rootSlabID.Address == (atree.Address{}) {
 			continue
 		}
@@ -446,20 +437,34 @@ func (s *Storage) CheckHealth() error {
 
 	// Gather all top-level storables in account storage
 
-	var accountStorables []atree.Storable
-
-	addAccountStorable := func(storable atree.Storable) {
-		accountStorables = append(accountStorables, storable)
+	var accountStorables []struct {
+		interpreter.StorageKey
+		atree.Storable
 	}
 
-	for _, storable := range s.contractUpdates {
+	addAccountStorable := func(key interpreter.StorageKey, storable atree.Storable) {
+		accountStorables = append(
+			accountStorables,
+			struct {
+				interpreter.StorageKey
+				atree.Storable
+			}{
+				StorageKey: key,
+				Storable:   storable,
+			},
+		)
+	}
+
+	// NOTE: map range is safe, as account storables will get sorted
+	for key, storable := range s.contractUpdates { //nolint:maprangecheck
 		if storable == nil {
 			continue
 		}
-		addAccountStorable(storable)
+		addAccountStorable(key, storable)
 	}
 
-	for key, storable := range s.writes {
+	// NOTE: map range is safe, as account storables will get sorted
+	for key, storable := range s.writes { //nolint:maprangecheck
 		if storable == nil {
 			continue
 		}
@@ -468,10 +473,11 @@ func (s *Storage) CheckHealth() error {
 			continue
 		}
 
-		addAccountStorable(storable)
+		addAccountStorable(key, storable)
 	}
 
-	for key, storable := range s.readCache {
+	// NOTE: map range is safe, as account storables will get sorted
+	for key, storable := range s.readCache { //nolint:maprangecheck
 		if storable == nil {
 			continue
 		}
@@ -484,8 +490,14 @@ func (s *Storage) CheckHealth() error {
 			continue
 		}
 
-		addAccountStorable(storable)
+		addAccountStorable(key, storable)
 	}
+
+	sort.Slice(accountStorables, func(i, j int) bool {
+		a := accountStorables[i]
+		b := accountStorables[j]
+		return a.StorageKey.IsLess(b.StorageKey)
+	})
 
 	// Check that each storage ID storable in account storage
 	// (top-level or nested) refers to an existing slab.
@@ -494,13 +506,27 @@ func (s *Storage) CheckHealth() error {
 
 	for len(accountStorables) > 0 {
 
-		var next []atree.Storable
+		var next []struct {
+			interpreter.StorageKey
+			atree.Storable
+		}
 
-		for _, storable := range accountStorables {
+		for _, accountStorableEntry := range accountStorables {
+			storable := accountStorableEntry.Storable
 
 			storageIDStorable, ok := storable.(atree.StorageIDStorable)
 			if !ok {
-				next = append(next, storable.ChildStorables()...)
+				for _, childStorable := range storable.ChildStorables() {
+					next = append(next, struct {
+						interpreter.StorageKey
+						atree.Storable
+					}{
+						// storage key is not necessary unused:
+						// it was only used for sorting the initial set of storables,
+						// the child storables do not have a storage key and are already sorted.
+						Storable: childStorable,
+					})
+				}
 				continue
 			}
 
@@ -523,7 +549,7 @@ func (s *Storage) CheckHealth() error {
 	if len(accountRootSlabIDs) > len(found) {
 		var unreferencedRootSlabIDs []atree.StorageID
 
-		for accountRootSlabID := range accountRootSlabIDs {
+		for accountRootSlabID := range accountRootSlabIDs { //nolint:maprangecheck
 			if _, ok := found[accountRootSlabID]; ok {
 				continue
 			}
@@ -533,6 +559,12 @@ func (s *Storage) CheckHealth() error {
 				accountRootSlabID,
 			)
 		}
+
+		sort.Slice(unreferencedRootSlabIDs, func(i, j int) bool {
+			a := unreferencedRootSlabIDs[i]
+			b := unreferencedRootSlabIDs[j]
+			return a.Compare(b) < 0
+		})
 
 		return fmt.Errorf("slabs not referenced from account storage: %s", unreferencedRootSlabIDs)
 	}

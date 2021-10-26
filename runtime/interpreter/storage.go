@@ -19,11 +19,14 @@
 package interpreter
 
 import (
+	"bytes"
 	"fmt"
 	"math"
 
 	"github.com/fxamacker/cbor/v2"
 	"github.com/onflow/atree"
+
+	"github.com/onflow/cadence/runtime/errors"
 
 	"github.com/onflow/cadence/runtime/common"
 )
@@ -85,6 +88,19 @@ func ConvertStoredValue(value atree.Value) (Value, error) {
 type StorageKey struct {
 	Address common.Address
 	Key     string
+}
+
+func (k StorageKey) IsLess(o StorageKey) bool {
+	switch bytes.Compare(k.Address[:], o.Address[:]) {
+	case -1:
+		return true
+	case 0:
+		return k.Key < o.Key
+	case 1:
+		return false
+	default:
+		panic(errors.NewUnreachableError())
+	}
 }
 
 type InMemoryStorage struct {
