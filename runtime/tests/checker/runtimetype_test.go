@@ -613,3 +613,89 @@ func TestCheckReferenceTypeConstructor(t *testing.T) {
 		})
 	}
 }
+
+func TestCheckRestrictedTypeConstructor(t *testing.T) {
+
+	t.Parallel()
+
+	cases := []struct {
+		name  string
+		code  string
+		valid bool
+	}{
+		{
+			name: "S{I1, I2}",
+			code: `
+              let result = RestrictedType("S", ["I1", "I2"])
+            `,
+			valid: true,
+		},
+		{
+			name: "S{}",
+			code: `
+				struct S {}
+				let result = RestrictedType("S", [])
+            `,
+			valid: true,
+		},
+		{
+			name: "{S}",
+			code: `
+				struct S {}
+				let result = RestrictedType(nil, ["S"])
+            `,
+			valid: true,
+		},
+		{
+			name: "type mismatch first arg",
+			code: `
+              let result = RestrictedType(3, ["I"])
+            `,
+			valid: false,
+		},
+		{
+			name: "type mismatch second arg",
+			code: `
+              let result = RestrictedType("A", [3])
+            `,
+			valid: false,
+		},
+		{
+			name: "too many args",
+			code: `
+              let result = RestrictedType("A", ["I1"], [])
+            `,
+			valid: false,
+		},
+		{
+			name: "one arg",
+			code: `
+              let result = RestrictedType("A")
+            `,
+			valid: false,
+		},
+		{
+			name: "no args",
+			code: `
+              let result = RestrictedType()
+            `,
+			valid: false,
+		},
+	}
+
+	for _, testCase := range cases {
+		t.Run(testCase.name, func(t *testing.T) {
+			checker, err := ParseAndCheck(t, testCase.code)
+
+			if testCase.valid {
+				require.NoError(t, err)
+				assert.Equal(t,
+					&sema.OptionalType{Type: sema.MetaType},
+					RequireGlobalValue(t, checker.Elaboration, "result"),
+				)
+			} else {
+				require.Error(t, err)
+			}
+		})
+	}
+}

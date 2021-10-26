@@ -2673,6 +2673,62 @@ func init() {
 		),
 	)
 
+	/*defineBaseValue(baseActivation,
+		"RestrictedType",
+		NewHostFunctionValue(
+			func(invocation Invocation) Value {
+				restrictedIDs := invocation.Arguments[0].(*ArrayValue).values
+
+				restrictions := make([]InterfaceStaticType, 0)
+				for _, typeID := range restrictedIDs {
+					location, name, err := common.DecodeTypeID(string(typeID.(*StringValue).Str))
+					// if the typeID is invalid, return nil
+					if err != nil ||
+						location == nil ||
+						invocation.Interpreter.getElaboration(location).InterfaceTypes[location.TypeID(name)] == nil {
+						return NilValue{}
+					}
+
+					intf := InterfaceStaticType{
+						QualifiedIdentifier: name,
+						Location:            location,
+					}
+
+					restrictions = append(restrictions, intf)
+				}
+
+				switch typeID := invocation.Arguments[0].(type) {
+				case NilValue:
+					return TypeValue{
+						Type: &RestrictedStaticType{
+							Type:         PrimitiveStaticTypeAnyStruct,
+							Restrictions: restrictions,
+						},
+					}
+				case *StringValue:
+					location, name, err := common.DecodeTypeID(string(typeID.Str))
+					// if the typeID is invalid, return nil
+					if err != nil ||
+						location == nil && sema.NativeCompositeTypes[typeID.Str] == nil ||
+						invocation.Interpreter.getElaboration(location).CompositeTypes[location.TypeID(name)] == nil {
+						return NilValue{}
+					}
+					return TypeValue{
+						Type: &RestrictedStaticType{
+							Type: CompositeStaticType{
+								QualifiedIdentifier: name,
+								Location:            location,
+							},
+							Restrictions: restrictions,
+						},
+					}
+				default:
+					panic(errors.NewUnreachableError())
+				}
+			},
+			sema.RestrictedTypeFunctionType,
+		),
+	)*/
 }
 
 func defineBaseFunctions(activation *VariableActivation) {

@@ -116,6 +116,22 @@ var FunctionTypeFunctionType = &FunctionType{
 	ReturnTypeAnnotation: NewTypeAnnotation(MetaType),
 }
 
+var RestrictedTypeFunctionType = &FunctionType{
+	Parameters: []*Parameter{
+		{
+			Label:          ArgumentLabelNotRequired,
+			Identifier:     "typeID",
+			TypeAnnotation: NewTypeAnnotation(&OptionalType{StringType}),
+		},
+		{
+			Label:          ArgumentLabelNotRequired,
+			Identifier:     "restrictions",
+			TypeAnnotation: NewTypeAnnotation(&VariableSizedType{Type: StringType}),
+		},
+	},
+	ReturnTypeAnnotation: NewTypeAnnotation(&OptionalType{MetaType}),
+}
+
 var ReferenceTypeFunctionType = &FunctionType{
 	Parameters: []*Parameter{
 		{
@@ -180,6 +196,12 @@ func RuntimeTypeConstructors() []*RuntimeTypeConstructor {
 			"ReferenceType",
 			ReferenceTypeFunctionType,
 			"Creates a run-time type representing a reference type of the given type, with authorization provided by the first argument.",
+		},
+
+		{
+			"RestrictedType",
+			RestrictedTypeFunctionType,
+			"Creates a run-time type representing a restricted type of the first argument, restricted by the interface identifiers in the second argument. Returns nil if the restriction is not valid.",
 		},
 	}
 

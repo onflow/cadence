@@ -496,3 +496,142 @@ func TestInterpretReferenceType(t *testing.T) {
 		inter.Globals["d"].GetValue(),
 	)
 }
+
+/*func TestInterpretRestrictedType(t *testing.T) {
+
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+	  resource interface R {}
+	  struct interface S {}
+	  resource A : R {}
+	  struct B : S {}
+
+	  struct interface S2 {
+		  pub let foo : Int
+	  }
+
+	  let a = RestrictedType("S.test.A",["S.test.R"])!
+	  let b = RestrictedType("S.test.B",["S.test.S"])!
+
+	  let c = RestrictedType("S.test.B",["S.test.R"])
+	  let d = RestrictedType("S.test.A",["S.test.S"])
+	  let e = RestrictedType("S.test.B",["S.test.S2"])
+
+	  let f = RestrictedType("S.test.B",["X"])
+	  let g = RestrictedType("S.test.N",["S.test.S2"])
+
+	  let h = Type<@A{R}>()
+	  let i = Type<B{S}>()
+
+	  let j = RestrictedType(nil,["S.test.R"])!
+	  let k = RestrictedType(nil,["S.test.S"])!
+    `)
+
+	assert.Equal(t,
+		interpreter.TypeValue{
+			Type: &interpreter.RestrictedStaticType{
+				Type: interpreter.CompositeStaticType{
+					QualifiedIdentifier: "A",
+					Location:            utils.TestLocation,
+				},
+				Restrictions: []interpreter.InterfaceStaticType{
+					{
+						QualifiedIdentifier: "R",
+						Location:            utils.TestLocation,
+					},
+				},
+			},
+		},
+		inter.Globals["a"].GetValue(),
+	)
+
+	assert.Equal(t,
+		interpreter.TypeValue{
+			Type: &interpreter.RestrictedStaticType{
+				Type: interpreter.CompositeStaticType{
+					QualifiedIdentifier: "B",
+					Location:            utils.TestLocation,
+				},
+				Restrictions: []interpreter.InterfaceStaticType{
+					{
+						QualifiedIdentifier: "S",
+						Location:            utils.TestLocation,
+					},
+				},
+			},
+		},
+		inter.Globals["b"].GetValue(),
+	)
+
+	assert.Equal(t,
+		interpreter.TypeValue{
+			Type: &interpreter.RestrictedStaticType{
+				Type: interpreter.CompositeStaticType{
+					QualifiedIdentifier: "A",
+					Location:            utils.TestLocation,
+				},
+				Restrictions: []interpreter.InterfaceStaticType{
+					{
+						QualifiedIdentifier: "R",
+						Location:            utils.TestLocation,
+					},
+				},
+			},
+		},
+		inter.Globals["j"].GetValue(),
+	)
+
+	assert.Equal(t,
+		interpreter.TypeValue{
+			Type: &interpreter.RestrictedStaticType{
+				Type: interpreter.CompositeStaticType{
+					QualifiedIdentifier: "B",
+					Location:            utils.TestLocation,
+				},
+				Restrictions: []interpreter.InterfaceStaticType{
+					{
+						QualifiedIdentifier: "S",
+						Location:            utils.TestLocation,
+					},
+				},
+			},
+		},
+		inter.Globals["k"].GetValue(),
+	)
+
+	assert.Equal(t,
+		interpreter.NilValue{},
+		inter.Globals["c"].GetValue(),
+	)
+
+	assert.Equal(t,
+		interpreter.NilValue{},
+		inter.Globals["d"].GetValue(),
+	)
+
+	assert.Equal(t,
+		interpreter.NilValue{},
+		inter.Globals["e"].GetValue(),
+	)
+
+	assert.Equal(t,
+		interpreter.NilValue{},
+		inter.Globals["f"].GetValue(),
+	)
+
+	assert.Equal(t,
+		interpreter.NilValue{},
+		inter.Globals["g"].GetValue(),
+	)
+
+	assert.Equal(t,
+		inter.Globals["a"].GetValue(),
+		inter.Globals["h"].GetValue(),
+	)
+
+	assert.Equal(t,
+		inter.Globals["b"].GetValue(),
+		inter.Globals["i"].GetValue(),
+	)
+}*/
