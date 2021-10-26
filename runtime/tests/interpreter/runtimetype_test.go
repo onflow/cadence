@@ -440,3 +440,59 @@ func TestInterpretFunctionType(t *testing.T) {
 		inter.Globals["d"].GetValue(),
 	)
 }
+
+func TestInterpretReferenceType(t *testing.T) {
+
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+	  resource R {}
+	  struct S {}
+
+	  let a = ReferenceType(true, Type<@R>())
+      let b = ReferenceType(false, Type<String>())
+	  let c = ReferenceType(true, Type<S>()) 
+	  let d = Type<auth &R>()
+    `)
+
+	assert.Equal(t,
+		interpreter.TypeValue{
+			Type: interpreter.ReferenceStaticType{
+				Type: interpreter.CompositeStaticType{
+					QualifiedIdentifier: "R",
+					Location:            utils.TestLocation,
+				},
+				Authorized: true,
+			},
+		},
+		inter.Globals["a"].GetValue(),
+	)
+
+	assert.Equal(t,
+		interpreter.TypeValue{
+			Type: interpreter.ReferenceStaticType{
+				Type:       interpreter.PrimitiveStaticTypeString,
+				Authorized: false,
+			},
+		},
+		inter.Globals["b"].GetValue(),
+	)
+
+	assert.Equal(t,
+		interpreter.TypeValue{
+			Type: interpreter.ReferenceStaticType{
+				Type: interpreter.CompositeStaticType{
+					QualifiedIdentifier: "S",
+					Location:            utils.TestLocation,
+				},
+				Authorized: true,
+			},
+		},
+		inter.Globals["c"].GetValue(),
+	)
+
+	assert.Equal(t,
+		inter.Globals["a"].GetValue(),
+		inter.Globals["d"].GetValue(),
+	)
+}

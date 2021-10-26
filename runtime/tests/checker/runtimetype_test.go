@@ -535,3 +535,81 @@ func TestCheckFunctionTypeConstructor(t *testing.T) {
 		})
 	}
 }
+
+func TestCheckReferenceTypeConstructor(t *testing.T) {
+
+	t.Parallel()
+
+	cases := []struct {
+		name  string
+		code  string
+		valid bool
+	}{
+		{
+			name: "auth &R",
+			code: `
+			  resource R {}
+              let result = ReferenceType(true, Type<@R>())
+            `,
+			valid: true,
+		},
+		{
+			name: "&String",
+			code: `
+				let result = ReferenceType(false, Type<String>())
+            `,
+			valid: true,
+		},
+		{
+			name: "type mismatch first arg",
+			code: `
+              let result = ReferenceType("", Type<Int>())
+            `,
+			valid: false,
+		},
+		{
+			name: "type mismatch second arg",
+			code: `
+              let result = ReferenceType(true, "")
+            `,
+			valid: false,
+		},
+		{
+			name: "too many args",
+			code: `
+              let result = ReferenceType(true, Type<String>(), Type<Int>())
+            `,
+			valid: false,
+		},
+		{
+			name: "one arg",
+			code: `
+              let result = ReferenceType(true)
+            `,
+			valid: false,
+		},
+		{
+			name: "no args",
+			code: `
+              let result = ReferenceType()
+            `,
+			valid: false,
+		},
+	}
+
+	for _, testCase := range cases {
+		t.Run(testCase.name, func(t *testing.T) {
+			checker, err := ParseAndCheck(t, testCase.code)
+
+			if testCase.valid {
+				require.NoError(t, err)
+				assert.Equal(t,
+					sema.MetaType,
+					RequireGlobalValue(t, checker.Elaboration, "result"),
+				)
+			} else {
+				require.Error(t, err)
+			}
+		})
+	}
+}

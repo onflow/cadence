@@ -2796,6 +2796,20 @@ var runtimeTypeConstructorValues = func() []runtimeTypeConstructor {
 		),
 	})
 
+	converterFuncValues = append(converterFuncValues, runtimeTypeConstructor{
+		name: "ReferenceType",
+		converter: NewHostFunctionValue(
+			func(invocation Invocation) Value {
+				return TypeValue{
+					Type: ReferenceStaticType{
+						Authorized: bool(invocation.Arguments[0].(BoolValue)),
+						Type:       invocation.Arguments[1].(TypeValue).Type,
+					}}
+			},
+			sema.ReferenceTypeFunctionType,
+		),
+	})
+
 	return converterFuncValues
 }()
 

@@ -116,57 +116,72 @@ var FunctionTypeFunctionType = &FunctionType{
 	ReturnTypeAnnotation: NewTypeAnnotation(MetaType),
 }
 
-func RuntimeTypeConstructors() []*RuntimeTypeConstructor {
-	var functions []*RuntimeTypeConstructor
+var ReferenceTypeFunctionType = &FunctionType{
+	Parameters: []*Parameter{
+		{
+			Label:          ArgumentLabelNotRequired,
+			Identifier:     "authorized",
+			TypeAnnotation: NewTypeAnnotation(BoolType),
+		},
+		{
+			Label:          ArgumentLabelNotRequired,
+			Identifier:     "type",
+			TypeAnnotation: NewTypeAnnotation(MetaType),
+		},
+	},
+	ReturnTypeAnnotation: NewTypeAnnotation(MetaType),
+}
 
-	functions = append(functions,
-		&RuntimeTypeConstructor{
+func RuntimeTypeConstructors() []*RuntimeTypeConstructor {
+	var functions = []*RuntimeTypeConstructor{
+		{
 			"OptionalType",
 			OptionalTypeFunctionType,
 			"Creates a run-time type representing an optional version of the given run-time type.",
-		})
+		},
 
-	functions = append(functions,
-		&RuntimeTypeConstructor{
+		{
 			"VariableSizedArrayType",
 			VariableSizedArrayTypeFunctionType,
 			"Creates a run-time type representing a variable-sized array type of the given run-time type.",
-		})
+		},
 
-	functions = append(functions,
-		&RuntimeTypeConstructor{
+		{
 			"ConstantSizedArrayType",
 			ConstantSizedArrayTypeFunctionType,
 			"Creates a run-time type representing a constant-sized array type of the given run-time type with the specifized size.",
-		})
+		},
 
-	functions = append(functions,
-		&RuntimeTypeConstructor{
+		{
 			"DictionaryType",
 			DictionaryTypeFunctionType,
 			"Creates a run-time type representing a dictionary type of the given run-time key and value types. Returns nil if the key type is not a valid dictionary key.",
-		})
+		},
 
-	functions = append(functions,
-		&RuntimeTypeConstructor{
+		{
 			"CompositeType",
 			CompositeTypeFunctionType,
 			"Creates a run-time type representing the composite type associated with the given type identifier. Returns nil if the identifier does not correspond to any composite type.",
-		})
+		},
 
-	functions = append(functions,
-		&RuntimeTypeConstructor{
+		{
 			"InterfaceType",
 			InterfaceTypeFunctionType,
 			"Creates a run-time type representing the interface type associated with the given type identifier. Returns nil if the identifier does not correspond to any interface type.",
-		})
+		},
 
-	functions = append(functions,
-		&RuntimeTypeConstructor{
+		{
 			"FunctionType",
 			FunctionTypeFunctionType,
 			"Creates a run-time type representing a function type associated with the given parameters and return type.",
-		})
+		},
+
+		{
+			"ReferenceType",
+			ReferenceTypeFunctionType,
+			"Creates a run-time type representing a reference type of the given type, with authorization provided by the first argument.",
+		},
+	}
 
 	return functions
 }
