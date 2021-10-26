@@ -63,7 +63,7 @@ func TestRandomMapOperations(t *testing.T) {
 	var storageSize, slabCounts int
 
 	entries := newValueMap(numberOfValues)
-	orgOwner := common.Address([8]byte{'A'})
+	orgOwner := common.Address{'A'}
 
 	t.Run("construction", func(t *testing.T) {
 		keyValues := make([]interpreter.Value, numberOfValues*2)
@@ -77,7 +77,8 @@ func TestRandomMapOperations(t *testing.T) {
 			keyValues[i*2+1] = value
 		}
 
-		testMap = interpreter.NewDictionaryValueWithAddress(inter,
+		testMap = interpreter.NewDictionaryValueWithAddress(
+			inter,
 			interpreter.DictionaryStaticType{
 				KeyType:   interpreter.PrimitiveStaticTypeAnyStruct,
 				ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
@@ -173,7 +174,8 @@ func TestRandomMapOperations(t *testing.T) {
 	t.Run("insert", func(t *testing.T) {
 		newEntries := newValueMap(numberOfValues)
 
-		dictionary := interpreter.NewDictionaryValueWithAddress(inter,
+		dictionary := interpreter.NewDictionaryValueWithAddress(
+			inter,
 			interpreter.DictionaryStaticType{
 				KeyType:   interpreter.PrimitiveStaticTypeAnyStruct,
 				ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
@@ -222,7 +224,8 @@ func TestRandomMapOperations(t *testing.T) {
 			keyValues[i][1] = value
 		}
 
-		dictionary := interpreter.NewDictionaryValueWithAddress(inter,
+		dictionary := interpreter.NewDictionaryValueWithAddress(
+			inter,
 			interpreter.DictionaryStaticType{
 				KeyType:   interpreter.PrimitiveStaticTypeAnyStruct,
 				ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
@@ -298,7 +301,7 @@ func TestRandomArrayOperations(t *testing.T) {
 	var storageSize, slabCounts int
 
 	elements := make([]interpreter.Value, numberOfValues)
-	orgOwner := common.Address([8]byte{'A'})
+	orgOwner := common.Address{'A'}
 
 	values := make([]interpreter.Value, numberOfValues)
 
@@ -422,7 +425,7 @@ func TestRandomCompositeValueOperations(t *testing.T) {
 	fieldsCount := randomInt(compositeMaxFields)
 	orgFields := make(map[string]interpreter.Value, fieldsCount)
 
-	orgOwner := common.Address([8]byte{'A'})
+	orgOwner := common.Address{'A'}
 
 	t.Run("construction", func(t *testing.T) {
 		identifier := randomUTF8String()
@@ -567,31 +570,6 @@ func TestRandomCompositeValueOperations(t *testing.T) {
 			assert.Nil(t, value)
 		}
 	})
-}
-
-func goMapKey(key interpreter.Value) interface{} {
-	// Dereference string-keys before putting into go-map,
-	// as go-map hashing treats pointers as unique values.
-	// i.e: Maintain the value as the key, rather than the pointer.
-	switch key := key.(type) {
-	case *interpreter.StringValue:
-		return *key
-	case interpreter.Value:
-		return key
-	default:
-		panic("unreachable")
-	}
-}
-
-func dictionaryKey(i interface{}) interpreter.Value {
-	switch key := i.(type) {
-	case interpreter.StringValue:
-		return &key
-	case interpreter.Value:
-		return key
-	default:
-		panic("unreachable")
-	}
 }
 
 func getSlabStorageSize(t *testing.T, storage interpreter.InMemoryStorage) (totalSize int, slabCounts int) {
