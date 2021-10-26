@@ -300,6 +300,9 @@ func TestInterpretCompositeType(t *testing.T) {
 	  let d = CompositeType("S.test.B")
 
 	  let e = Type<@R>()
+
+	  enum F: UInt8 {}
+	  let f = CompositeType("S.test.F")!
     `)
 
 	assert.Equal(t,
@@ -335,6 +338,16 @@ func TestInterpretCompositeType(t *testing.T) {
 	assert.Equal(t,
 		inter.Globals["a"].GetValue(),
 		inter.Globals["e"].GetValue(),
+	)
+
+	assert.Equal(t,
+		interpreter.TypeValue{
+			Type: interpreter.CompositeStaticType{
+				QualifiedIdentifier: "F",
+				Location:            utils.TestLocation,
+			},
+		},
+		inter.Globals["f"].GetValue(),
 	)
 }
 
