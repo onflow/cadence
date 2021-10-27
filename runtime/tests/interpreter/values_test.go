@@ -185,8 +185,6 @@ func TestRandomMapOperations(t *testing.T) {
 			orgOwner,
 		)
 
-		storageSize, slabCounts = getSlabStorageSize(t, storage)
-
 		// Insert
 		for i := 0; i < numberOfValues; i++ {
 			key := randomHashableValue(inter, orgOwner)
@@ -306,9 +304,8 @@ func TestRandomArrayOperations(t *testing.T) {
 	elements := make([]interpreter.Value, numberOfValues)
 	orgOwner := common.Address{'A'}
 
-	values := make([]interpreter.Value, numberOfValues)
-
 	t.Run("construction", func(t *testing.T) {
+		values := make([]interpreter.Value, numberOfValues)
 		for i := 0; i < numberOfValues; i++ {
 			value := randomStorableValue(inter, orgOwner, 0)
 			elements[i] = value
@@ -394,6 +391,123 @@ func TestRandomArrayOperations(t *testing.T) {
 
 		owner := testArray.GetOwner()
 		assert.Equal(t, orgOwner[:], owner[:])
+	})
+
+	t.Run("insert", func(t *testing.T) {
+		newElements := make([]interpreter.Value, numberOfValues)
+
+		testArray = interpreter.NewArrayValue(
+			inter,
+			interpreter.VariableSizedStaticType{
+				Type: interpreter.PrimitiveStaticTypeAnyStruct,
+			},
+			orgOwner,
+		)
+
+		require.Equal(t, 0, testArray.Count())
+
+		for i := 0; i < numberOfValues; i++ {
+			element := randomStorableValue(inter, orgOwner, 0)
+			newElements[i] = element
+
+			testArray.Insert(
+				inter,
+				interpreter.ReturnEmptyLocationRange,
+				i,
+				deepCopyValue(inter, element),
+			)
+		}
+
+		require.Equal(t, len(newElements), testArray.Count())
+
+		// Go over original values again and check no missing data (no side effect should be found)
+		for index, element := range newElements {
+			value := testArray.Get(inter, interpreter.ReturnEmptyLocationRange, index)
+			utils.AssertValuesEqual(t, inter, element, value)
+		}
+	})
+
+	t.Run("append", func(t *testing.T) {
+		newElements := make([]interpreter.Value, numberOfValues)
+
+		testArray = interpreter.NewArrayValue(
+			inter,
+			interpreter.VariableSizedStaticType{
+				Type: interpreter.PrimitiveStaticTypeAnyStruct,
+			},
+			orgOwner,
+		)
+
+		require.Equal(t, 0, testArray.Count())
+
+		for i := 0; i < numberOfValues; i++ {
+			element := randomStorableValue(inter, orgOwner, 0)
+			newElements[i] = element
+
+			testArray.Append(
+				inter,
+				interpreter.ReturnEmptyLocationRange,
+				deepCopyValue(inter, element),
+			)
+		}
+
+		require.Equal(t, len(newElements), testArray.Count())
+
+		// Go over original values again and check no missing data (no side effect should be found)
+		for index, element := range newElements {
+			value := testArray.Get(inter, interpreter.ReturnEmptyLocationRange, index)
+			utils.AssertValuesEqual(t, inter, element, value)
+		}
+	})
+
+	t.Run("remove", func(t *testing.T) {
+		newElements := make([]interpreter.Value, numberOfValues)
+
+		for i := 0; i < numberOfValues; i++ {
+			newElements[i] = randomStorableValue(inter, orgOwner, 0)
+		}
+
+		testArray = interpreter.NewArrayValue(
+			inter,
+			interpreter.VariableSizedStaticType{
+				Type: interpreter.PrimitiveStaticTypeAnyStruct,
+			},
+			orgOwner,
+		)
+
+		require.Equal(t, 0, testArray.Count())
+
+		// Get the initial storage size before inserting values
+		startingStorageSize, startingSlabCounts := getSlabStorageSize(t, storage)
+
+		// Insert
+		for index, element := range newElements {
+			testArray.Insert(
+				inter,
+				interpreter.ReturnEmptyLocationRange,
+				index,
+				deepCopyValue(inter, element),
+			)
+		}
+
+		require.Equal(t, len(newElements), testArray.Count())
+
+		// Remove
+		for _, element := range newElements {
+			removedValue := testArray.Remove(inter, interpreter.ReturnEmptyLocationRange, 0)
+
+			// Removed value must be same as the original value
+			utils.AssertValuesEqual(t, inter, element, removedValue)
+		}
+
+		// Array must be empty
+		require.Equal(t, 0, testArray.Count())
+
+		storageSize, slabCounts := getSlabStorageSize(t, storage)
+
+		// Storage size after removals should be same as the size before insertion.
+		assert.Equal(t, startingStorageSize, storageSize)
+		assert.Equal(t, startingSlabCounts, slabCounts)
 	})
 }
 
