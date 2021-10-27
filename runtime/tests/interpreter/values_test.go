@@ -269,6 +269,72 @@ func TestRandomMapOperations(t *testing.T) {
 		assert.Equal(t, startingStorageSize, storageSize)
 		assert.Equal(t, startingSlabCounts, slabCounts)
 	})
+
+	t.Run("remove enum", func(t *testing.T) {
+
+		const elementCount = 1
+
+		// Step 1: Create a new dictionary
+		// Slab count is 1
+		dictionary := interpreter.NewDictionaryValueWithAddress(
+			inter,
+			interpreter.DictionaryStaticType{
+				KeyType:   interpreter.PrimitiveStaticTypeAnyStruct,
+				ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
+			},
+			orgOwner,
+		)
+
+		require.Equal(t, 0, dictionary.Count())
+
+		// Get the initial storage size after creating empty dictionary
+		startingStorageSize, startingSlabCounts := getSlabStorageSize(t, storage)
+
+		newEntries := newValueMap(elementCount)
+
+		// Step 2: Create enum value as key
+		// Slab count is 3
+		keyValues := make([][2]interpreter.Value, elementCount)
+		for i := 0; i < elementCount; i++ {
+			// Create a random enum as key
+			key := generateRandomHashableValue(inter, orgOwner, Enum)
+			value := interpreter.VoidValue{}
+
+			newEntries.put(inter, key, value)
+
+			keyValues[i][0] = key
+			keyValues[i][1] = value
+		}
+
+		// Step 3: Insert
+		// Slab count is 4
+		for _, keyValue := range keyValues {
+			dictionary.Insert(inter, interpreter.ReturnEmptyLocationRange, keyValue[0], keyValue[1])
+		}
+
+		// Step 4: Remove
+		// After all elements are remove, slab count is 3
+		newEntries.foreach(func(orgKey, orgValue interpreter.Value) (exit bool) {
+			removedValue := dictionary.Remove(inter, interpreter.ReturnEmptyLocationRange, orgKey)
+
+			assert.IsType(t, &interpreter.SomeValue{}, removedValue)
+			someValue := removedValue.(*interpreter.SomeValue)
+
+			// Removed value must be same as the original value
+			utils.AssertValuesEqual(t, inter, orgValue, someValue.Value)
+
+			return false
+		})
+
+		// Dictionary must be empty
+		require.Equal(t, 0, dictionary.Count())
+
+		storageSize, slabCounts = getSlabStorageSize(t, storage)
+
+		// Storage size after removals should be same as the size before insertion.
+		assert.Equal(t, startingStorageSize, storageSize)
+		assert.Equal(t, startingSlabCounts, slabCounts)
+	})
 }
 
 func TestRandomArrayOperations(t *testing.T) {
