@@ -268,12 +268,8 @@ func TestRandomMapOperations(t *testing.T) {
 		assert.Equal(t, startingSlabCounts, slabCounts)
 	})
 
-	t.Run("remove enum", func(t *testing.T) {
+	t.Run("remove enum key", func(t *testing.T) {
 
-		const elementCount = 1
-
-		// Step 1: Create a new dictionary
-		// Slab count is 1
 		dictionary := interpreter.NewDictionaryValueWithAddress(
 			inter,
 			interpreter.DictionaryStaticType{
@@ -288,14 +284,12 @@ func TestRandomMapOperations(t *testing.T) {
 		// Get the initial storage size after creating empty dictionary
 		startingStorageSize, startingSlabCounts := getSlabStorageSize(t, storage)
 
-		newEntries := newValueMap(elementCount)
+		newEntries := newValueMap(numberOfValues)
 
-		// Step 2: Create enum value as key
-		// Slab count is 3
-		keyValues := make([][2]interpreter.Value, elementCount)
-		for i := 0; i < elementCount; i++ {
+		keyValues := make([][2]interpreter.Value, numberOfValues)
+		for i := 0; i < numberOfValues; i++ {
 			// Create a random enum as key
-			key := generateRandomHashableValue(inter, orgOwner, Enum)
+			key := generateRandomHashableValue(inter, Enum)
 			value := interpreter.VoidValue{}
 
 			newEntries.put(inter, key, value)
@@ -304,14 +298,12 @@ func TestRandomMapOperations(t *testing.T) {
 			keyValues[i][1] = value
 		}
 
-		// Step 3: Insert
-		// Slab count is 4
+		// Insert
 		for _, keyValue := range keyValues {
 			dictionary.Insert(inter, interpreter.ReturnEmptyLocationRange, keyValue[0], keyValue[1])
 		}
 
-		// Step 4: Remove
-		// After all elements are remove, slab count is 3
+		// Remove
 		newEntries.foreach(func(orgKey, orgValue interpreter.Value) (exit bool) {
 			removedValue := dictionary.Remove(inter, interpreter.ReturnEmptyLocationRange, orgKey)
 
