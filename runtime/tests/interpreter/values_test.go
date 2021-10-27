@@ -68,8 +68,8 @@ func TestRandomMapOperations(t *testing.T) {
 	t.Run("construction", func(t *testing.T) {
 		keyValues := make([]interpreter.Value, numberOfValues*2)
 		for i := 0; i < numberOfValues; i++ {
-			key := randomHashableValue(inter, orgOwner)
-			value := randomStorableValue(inter, orgOwner, 0)
+			key := randomHashableValue(inter)
+			value := randomStorableValue(inter, 0)
 
 			entries.put(inter, key, value)
 
@@ -185,12 +185,10 @@ func TestRandomMapOperations(t *testing.T) {
 			orgOwner,
 		)
 
-		storageSize, slabCounts = getSlabStorageSize(t, storage)
-
 		// Insert
 		for i := 0; i < numberOfValues; i++ {
-			key := randomHashableValue(inter, orgOwner)
-			value := randomStorableValue(inter, orgOwner, 0)
+			key := randomHashableValue(inter)
+			value := randomStorableValue(inter, 0)
 
 			newEntries.put(inter, key, value)
 
@@ -217,8 +215,8 @@ func TestRandomMapOperations(t *testing.T) {
 
 		keyValues := make([][2]interpreter.Value, numberOfValues)
 		for i := 0; i < numberOfValues; i++ {
-			key := randomHashableValue(inter, orgOwner)
-			value := randomStorableValue(inter, orgOwner, 0)
+			key := randomHashableValue(inter)
+			value := randomStorableValue(inter, 0)
 
 			newEntries.put(inter, key, value)
 
@@ -372,11 +370,10 @@ func TestRandomArrayOperations(t *testing.T) {
 	elements := make([]interpreter.Value, numberOfValues)
 	orgOwner := common.Address{'A'}
 
-	values := make([]interpreter.Value, numberOfValues)
-
 	t.Run("construction", func(t *testing.T) {
+		values := make([]interpreter.Value, numberOfValues)
 		for i := 0; i < numberOfValues; i++ {
-			value := randomStorableValue(inter, orgOwner, 0)
+			value := randomStorableValue(inter, 0)
 			elements[i] = value
 			values[i] = deepCopyValue(inter, value)
 		}
@@ -461,6 +458,123 @@ func TestRandomArrayOperations(t *testing.T) {
 		owner := testArray.GetOwner()
 		assert.Equal(t, orgOwner[:], owner[:])
 	})
+
+	t.Run("insert", func(t *testing.T) {
+		newElements := make([]interpreter.Value, numberOfValues)
+
+		testArray = interpreter.NewArrayValue(
+			inter,
+			interpreter.VariableSizedStaticType{
+				Type: interpreter.PrimitiveStaticTypeAnyStruct,
+			},
+			orgOwner,
+		)
+
+		require.Equal(t, 0, testArray.Count())
+
+		for i := 0; i < numberOfValues; i++ {
+			element := randomStorableValue(inter, 0)
+			newElements[i] = element
+
+			testArray.Insert(
+				inter,
+				interpreter.ReturnEmptyLocationRange,
+				i,
+				deepCopyValue(inter, element),
+			)
+		}
+
+		require.Equal(t, len(newElements), testArray.Count())
+
+		// Go over original values again and check no missing data (no side effect should be found)
+		for index, element := range newElements {
+			value := testArray.Get(inter, interpreter.ReturnEmptyLocationRange, index)
+			utils.AssertValuesEqual(t, inter, element, value)
+		}
+	})
+
+	t.Run("append", func(t *testing.T) {
+		newElements := make([]interpreter.Value, numberOfValues)
+
+		testArray = interpreter.NewArrayValue(
+			inter,
+			interpreter.VariableSizedStaticType{
+				Type: interpreter.PrimitiveStaticTypeAnyStruct,
+			},
+			orgOwner,
+		)
+
+		require.Equal(t, 0, testArray.Count())
+
+		for i := 0; i < numberOfValues; i++ {
+			element := randomStorableValue(inter, 0)
+			newElements[i] = element
+
+			testArray.Append(
+				inter,
+				interpreter.ReturnEmptyLocationRange,
+				deepCopyValue(inter, element),
+			)
+		}
+
+		require.Equal(t, len(newElements), testArray.Count())
+
+		// Go over original values again and check no missing data (no side effect should be found)
+		for index, element := range newElements {
+			value := testArray.Get(inter, interpreter.ReturnEmptyLocationRange, index)
+			utils.AssertValuesEqual(t, inter, element, value)
+		}
+	})
+
+	t.Run("remove", func(t *testing.T) {
+		newElements := make([]interpreter.Value, numberOfValues)
+
+		for i := 0; i < numberOfValues; i++ {
+			newElements[i] = randomStorableValue(inter, 0)
+		}
+
+		testArray = interpreter.NewArrayValue(
+			inter,
+			interpreter.VariableSizedStaticType{
+				Type: interpreter.PrimitiveStaticTypeAnyStruct,
+			},
+			orgOwner,
+		)
+
+		require.Equal(t, 0, testArray.Count())
+
+		// Get the initial storage size before inserting values
+		startingStorageSize, startingSlabCounts := getSlabStorageSize(t, storage)
+
+		// Insert
+		for index, element := range newElements {
+			testArray.Insert(
+				inter,
+				interpreter.ReturnEmptyLocationRange,
+				index,
+				deepCopyValue(inter, element),
+			)
+		}
+
+		require.Equal(t, len(newElements), testArray.Count())
+
+		// Remove
+		for _, element := range newElements {
+			removedValue := testArray.Remove(inter, interpreter.ReturnEmptyLocationRange, 0)
+
+			// Removed value must be same as the original value
+			utils.AssertValuesEqual(t, inter, element, removedValue)
+		}
+
+		// Array must be empty
+		require.Equal(t, 0, testArray.Count())
+
+		storageSize, slabCounts := getSlabStorageSize(t, storage)
+
+		// Storage size after removals should be same as the size before insertion.
+		assert.Equal(t, startingStorageSize, storageSize)
+		assert.Equal(t, startingSlabCounts, slabCounts)
+	})
 }
 
 func TestRandomCompositeValueOperations(t *testing.T) {
@@ -520,8 +634,8 @@ func TestRandomCompositeValueOperations(t *testing.T) {
 			fieldNames[fieldName] = struct{}{}
 
 			field := interpreter.CompositeField{
-				Name:  string(fieldName),
-				Value: randomStorableValue(inter, orgOwner, 0),
+				Name:  fieldName,
+				Value: randomStorableValue(inter, 0),
 			}
 
 			fields[i] = field
@@ -639,7 +753,7 @@ func TestRandomCompositeValueOperations(t *testing.T) {
 
 		require.NoError(t, err)
 
-		for name, _ := range orgFields {
+		for name := range orgFields {
 			composite.RemoveField(inter, interpreter.ReturnEmptyLocationRange, name)
 			value := composite.GetField(inter, interpreter.ReturnEmptyLocationRange, name)
 			assert.Nil(t, value)
@@ -651,7 +765,11 @@ func getSlabStorageSize(t *testing.T, storage interpreter.InMemoryStorage) (tota
 	slabs, err := storage.Encode()
 	require.NoError(t, err)
 
-	for _, slab := range slabs {
+	for id, slab := range slabs {
+		if id.Address == atree.AddressUndefined {
+			continue
+		}
+
 		totalSize += len(slab)
 		slabCounts++
 	}
@@ -668,14 +786,11 @@ func deepCopyValue(inter *interpreter.Interpreter, value interpreter.Value) inte
 		var n big.Int
 		n.Set(v.BigInt)
 		return interpreter.NewIntValueFromBigInt(&n)
-	case interpreter.Int8Value:
-		return interpreter.Int8Value(int8(v))
-	case interpreter.Int16Value:
-		return interpreter.Int16Value(int16(v))
-	case interpreter.Int32Value:
-		return interpreter.Int32Value(int32(v))
-	case interpreter.Int64Value:
-		return interpreter.Int64Value(int64(v))
+	case interpreter.Int8Value,
+		interpreter.Int16Value,
+		interpreter.Int32Value,
+		interpreter.Int64Value:
+		return v
 	case interpreter.Int128Value:
 		var n big.Int
 		n.Set(v.BigInt)
@@ -690,14 +805,11 @@ func deepCopyValue(inter *interpreter.Interpreter, value interpreter.Value) inte
 		var n big.Int
 		n.Set(v.BigInt)
 		return interpreter.NewUIntValueFromBigInt(&n)
-	case interpreter.UInt8Value:
-		return interpreter.UInt8Value(uint8(v))
-	case interpreter.UInt16Value:
-		return interpreter.UInt16Value(uint16(v))
-	case interpreter.UInt32Value:
-		return interpreter.UInt32Value(uint32(v))
-	case interpreter.UInt64Value:
-		return interpreter.UInt64Value(uint64(v))
+	case interpreter.UInt8Value,
+		interpreter.UInt16Value,
+		interpreter.UInt32Value,
+		interpreter.UInt64Value:
+		return v
 	case interpreter.UInt128Value:
 		var n big.Int
 		n.Set(v.BigInt)
@@ -804,7 +916,7 @@ func deepCopyValue(inter *interpreter.Interpreter, value interpreter.Value) inte
 	}
 }
 
-func randomStorableValue(inter *interpreter.Interpreter, owner common.Address, currentDepth int) interpreter.Value {
+func randomStorableValue(inter *interpreter.Interpreter, currentDepth int) interpreter.Value {
 	n := 0
 	if currentDepth < containerMaxDepth {
 		n = randomInt(Composite)
@@ -820,11 +932,11 @@ func randomStorableValue(inter *interpreter.Interpreter, owner common.Address, c
 	case Nil:
 		return interpreter.NilValue{}
 	case Dictionary_1, Dictionary_2:
-		return randomDictionaryValue(inter, owner, currentDepth)
+		return randomDictionaryValue(inter, currentDepth)
 	case Array_1, Array_2:
-		return randomArrayValue(inter, owner, currentDepth)
+		return randomArrayValue(inter, currentDepth)
 	case Composite:
-		return randomCompositeValue(inter, common.CompositeKindStructure, owner, currentDepth)
+		return randomCompositeValue(inter, common.CompositeKindStructure, currentDepth)
 	case Capability:
 		return &interpreter.CapabilityValue{
 			Address: randomAddressValue(),
@@ -836,20 +948,20 @@ func randomStorableValue(inter *interpreter.Interpreter, owner common.Address, c
 		}
 	case Some:
 		return &interpreter.SomeValue{
-			Value: randomStorableValue(inter, owner, currentDepth+1),
+			Value: randomStorableValue(inter, currentDepth+1),
 		}
 
 	// Hashable
 	default:
-		return generateRandomHashableValue(inter, owner, n)
+		return generateRandomHashableValue(inter, n)
 	}
 }
 
-func randomHashableValue(interpreter *interpreter.Interpreter, owner common.Address) interpreter.Value {
-	return generateRandomHashableValue(interpreter, owner, randomInt(Enum))
+func randomHashableValue(interpreter *interpreter.Interpreter) interpreter.Value {
+	return generateRandomHashableValue(interpreter, randomInt(Enum))
 }
 
-func generateRandomHashableValue(inter *interpreter.Interpreter, owner common.Address, n int) interpreter.Value {
+func generateRandomHashableValue(inter *interpreter.Interpreter, n int) interpreter.Value {
 	switch n {
 
 	// Int
@@ -927,7 +1039,7 @@ func generateRandomHashableValue(inter *interpreter.Interpreter, owner common.Ad
 		// Get a random integer subtype to be used as the raw-type of enum
 		typ := randomInt(Word64)
 
-		rawValue := generateRandomHashableValue(inter, owner, typ).(interpreter.NumberValue)
+		rawValue := generateRandomHashableValue(inter, typ).(interpreter.NumberValue)
 
 		identifier := randomUTF8String()
 
@@ -959,7 +1071,7 @@ func generateRandomHashableValue(inter *interpreter.Interpreter, owner common.Ad
 					Value: rawValue,
 				},
 			},
-			owner,
+			common.Address{},
 		)
 
 		if enum.GetField(nil, interpreter.ReturnEmptyLocationRange, sema.EnumRawValueFieldName) == nil {
@@ -999,7 +1111,6 @@ func randomPathValue() interpreter.PathValue {
 
 func randomDictionaryValue(
 	inter *interpreter.Interpreter,
-	owner common.Address,
 	currentDepth int,
 ) interpreter.Value {
 
@@ -1007,8 +1118,8 @@ func randomDictionaryValue(
 	keyValues := make([]interpreter.Value, entryCount*2)
 
 	for i := 0; i < entryCount; i++ {
-		key := randomHashableValue(inter, owner)
-		value := randomStorableValue(inter, owner, currentDepth+1)
+		key := randomHashableValue(inter)
+		value := randomStorableValue(inter, currentDepth+1)
 		keyValues[i*2] = key
 		keyValues[i*2+1] = value
 	}
@@ -1019,7 +1130,7 @@ func randomDictionaryValue(
 			KeyType:   interpreter.PrimitiveStaticTypeAnyStruct,
 			ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
 		},
-		owner,
+		common.Address{},
 		keyValues...,
 	)
 }
@@ -1028,12 +1139,12 @@ func randomInt(upperBound int) int {
 	return rand.Intn(upperBound + 1)
 }
 
-func randomArrayValue(inter *interpreter.Interpreter, owner common.Address, currentDepth int) interpreter.Value {
+func randomArrayValue(inter *interpreter.Interpreter, currentDepth int) interpreter.Value {
 	elementsCount := randomInt(innerContainerMaxSize)
 	elements := make([]interpreter.Value, elementsCount)
 
 	for i := 0; i < elementsCount; i++ {
-		value := randomStorableValue(inter, owner, currentDepth+1)
+		value := randomStorableValue(inter, currentDepth+1)
 		elements[i] = deepCopyValue(inter, value)
 	}
 
@@ -1042,7 +1153,7 @@ func randomArrayValue(inter *interpreter.Interpreter, owner common.Address, curr
 		interpreter.VariableSizedStaticType{
 			Type: interpreter.PrimitiveStaticTypeAnyStruct,
 		},
-		owner,
+		common.Address{},
 		elements...,
 	)
 }
@@ -1050,7 +1161,6 @@ func randomArrayValue(inter *interpreter.Interpreter, owner common.Address, curr
 func randomCompositeValue(
 	inter *interpreter.Interpreter,
 	kind common.CompositeKind,
-	owner common.Address,
 	currentDepth int,
 ) interpreter.Value {
 
@@ -1072,7 +1182,7 @@ func randomCompositeValue(
 
 		fields[i] = interpreter.CompositeField{
 			Name:  fieldName,
-			Value: randomStorableValue(inter, owner, currentDepth+1),
+			Value: randomStorableValue(inter, currentDepth+1),
 		}
 	}
 
@@ -1104,7 +1214,7 @@ func randomCompositeValue(
 		identifier,
 		kind,
 		fields,
-		owner,
+		common.Address{},
 	)
 }
 

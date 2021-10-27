@@ -59,6 +59,8 @@ func init() {
 var gzipFlag = flag.Bool("gzip", false, "set true if input file is gzipped")
 var printFlag = flag.Bool("print", false, "print parsed data (filtered, if addresses are given)")
 var loadFlag = flag.Bool("load", false, "load the parsed data")
+var checkSlabsFlag = flag.Bool("check-slabs", false, "check slabs")
+var checkValuesFlag = flag.Bool("check-values", false, "check values")
 
 const keyPartCount = 3
 
@@ -70,6 +72,20 @@ var storagePathSeparator = "\x1f"
 
 // '$' + 8 byte index
 const slabKeyLength = 9
+
+func isSlabStorageKey(key string) bool {
+	return len(key) == slabKeyLength && key[0] == '$'
+}
+
+func storageKeySlabStorageID(address atree.Address, key string) atree.StorageID {
+	if !isSlabStorageKey(key) {
+		return atree.StorageIDUndefined
+	}
+	var result atree.StorageID
+	result.Address = address
+	copy(result.Index[:], key[1:])
+	return result
+}
 
 func decodeSlab(id atree.StorageID, data []byte) (atree.Slab, error) {
 	return atree.DecodeSlab(
@@ -122,7 +138,54 @@ func (s *slabStorage) GenerateStorageID(_ atree.Address) (atree.StorageID, error
 }
 
 func (s *slabStorage) SlabIterator() (atree.SlabIterator, error) {
-	panic("unexpected SlabIterator call")
+	var slabs []struct {
+		atree.StorageID
+		storageKey
+	}
+
+	for key := range storage {
+
+		var address atree.Address
+		copy(address[:], key[0])
+		storageID := storageKeySlabStorageID(address, key[2])
+		if storageID == atree.StorageIDUndefined {
+			continue
+		}
+
+		slabs = append(slabs, struct {
+			atree.StorageID
+			storageKey
+		}{
+			StorageID:  storageID,
+			storageKey: key,
+		})
+	}
+
+	var i int
+
+	bar := progressbar.Default(int64(len(slabs)))
+
+	return func() (atree.StorageID, atree.Slab) {
+		if i >= len(slabs) {
+			_ = bar.Close()
+			return atree.StorageIDUndefined, nil
+		}
+
+		slabEntry := slabs[i]
+		i++
+
+		_ = bar.Add(1)
+
+		storageID := slabEntry.StorageID
+		data := storage[slabEntry.storageKey]
+
+		slab, err := decodeSlab(storageID, data)
+		if err != nil {
+			log.Fatalf("failed to decode slab @ %s", storageID)
+		}
+
+		return storageID, slab
+	}, nil
 }
 
 func (s *slabStorage) Count() int {
@@ -156,9 +219,19 @@ func (i interpreterStorage) CheckHealth() error {
 // load
 
 func load() {
-	log.Println("Loading decoded values ...")
+
+	log.Println("Validating slabs ...")
 
 	slabStorage := &slabStorage{}
+
+	if *checkSlabsFlag {
+		_, err := atree.CheckStorageHealth(slabStorage, -1)
+		if err != nil {
+			log.Fatalf("Slab storage problem: %s", err)
+		}
+	}
+
+	log.Println("Loading decoded values ...")
 
 	interpreterStorage := &interpreterStorage{
 		slabStorage: slabStorage,
@@ -189,28 +262,30 @@ func load() {
 		// If the key is for a slab (format '$' + storage index),
 		// then attempt to decode the slab
 
-		isSlab := len(key) == slabKeyLength && key[0] == '$'
-		if isSlab {
+		if isSlabStorageKey(key) {
 
-			var storageIndex atree.StorageIndex
-			// Skip '$' prefix
-			copy(storageIndex[:], key[1:])
+			// Only decode each slab if it was not already decoded
+			// for the slab health check
 
-			storageID := atree.StorageID{
-				Address: address,
-				Index:   storageIndex,
-			}
+			if !*checkSlabsFlag {
 
-			_, err := decodeSlab(storageID, data)
-			if err != nil {
-				log.Printf(
-					"Failed to decode slab @ 0x%x %s: %s (size: %d)",
-					address,
-					storageID.Index,
-					err,
-					len(data),
-				)
-				continue
+				var storageIndex atree.StorageIndex
+				// Skip '$' prefix
+				copy(storageIndex[:], key[1:])
+
+				storageID := atree.StorageID{
+					Address: address,
+					Index:   storageIndex,
+				}
+
+				_, err := decodeSlab(storageID, data)
+				if err != nil {
+					log.Printf(
+						"Failed to decode slab @ %s: %s (size: %d)",
+						storageID, err, len(data),
+					)
+					continue
+				}
 			}
 		} else {
 			// If the key is an account path,
@@ -271,6 +346,10 @@ func load() {
 						return true
 					},
 				)
+
+				if *checkValuesFlag {
+					inter.ValidateAtreeValue(value)
+				}
 			}
 		}
 	}
