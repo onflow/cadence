@@ -2600,7 +2600,7 @@ func init() {
 		"CompositeType",
 		NewHostFunctionValue(
 			func(invocation Invocation) Value {
-				typeID := string(invocation.Arguments[0].(*StringValue).Str)
+				typeID := invocation.Arguments[0].(*StringValue).Str
 				location, name, err := common.DecodeTypeID(typeID)
 
 				// if the typeID is invalid, return nil
@@ -2624,7 +2624,7 @@ func init() {
 		"InterfaceType",
 		NewHostFunctionValue(
 			func(invocation Invocation) Value {
-				typeID := string(invocation.Arguments[0].(*StringValue).Str)
+				typeID := invocation.Arguments[0].(*StringValue).Str
 				location, name, err := common.DecodeTypeID(typeID)
 
 				// if the typeID is invalid, return nil
@@ -2688,7 +2688,7 @@ func RestrictedTypeFunction(invocation Invocation) Value {
 	staticRestrictions := make([]InterfaceStaticType, 0)
 	semaRestrictions := make([]*sema.InterfaceType, 0)
 	for _, typeID := range restrictedIDs {
-		location, name, err := common.DecodeTypeID(string(typeID.(*StringValue).Str))
+		location, name, err := common.DecodeTypeID(typeID.(*StringValue).Str)
 		// if the typeID is invalid, return nil
 		if err != nil ||
 			location == nil ||
@@ -2711,7 +2711,7 @@ func RestrictedTypeFunction(invocation Invocation) Value {
 	case NilValue:
 		semaType = nil
 	case *SomeValue:
-		location, name, err := common.DecodeTypeID(string(typeID.Value.(*StringValue).Str))
+		location, name, err := common.DecodeTypeID(typeID.Value.(*StringValue).Str)
 		// if the typeID is invalid, return nil
 		if err != nil ||
 			location == nil && sema.NativeCompositeTypes[typeID.Value.(*StringValue).Str] == nil ||
