@@ -24,7 +24,7 @@ import (
 
 // TODO: make these program args?
 const containerMaxDepth = 3
-const containerMaxSize = 1_00
+const containerMaxSize = 1_000
 const innerContainerMaxSize = 300
 const compositeMaxFields = 10
 
