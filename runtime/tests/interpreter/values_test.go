@@ -267,6 +267,64 @@ func TestRandomMapOperations(t *testing.T) {
 		assert.Equal(t, startingStorageSize, storageSize)
 		assert.Equal(t, startingSlabCounts, slabCounts)
 	})
+
+	t.Run("remove enum key", func(t *testing.T) {
+
+		dictionary := interpreter.NewDictionaryValueWithAddress(
+			inter,
+			interpreter.DictionaryStaticType{
+				KeyType:   interpreter.PrimitiveStaticTypeAnyStruct,
+				ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
+			},
+			orgOwner,
+		)
+
+		require.Equal(t, 0, dictionary.Count())
+
+		// Get the initial storage size after creating empty dictionary
+		startingStorageSize, startingSlabCounts := getSlabStorageSize(t, storage)
+
+		newEntries := newValueMap(numberOfValues)
+
+		keyValues := make([][2]interpreter.Value, numberOfValues)
+		for i := 0; i < numberOfValues; i++ {
+			// Create a random enum as key
+			key := generateRandomHashableValue(inter, Enum)
+			value := interpreter.VoidValue{}
+
+			newEntries.put(inter, key, value)
+
+			keyValues[i][0] = key
+			keyValues[i][1] = value
+		}
+
+		// Insert
+		for _, keyValue := range keyValues {
+			dictionary.Insert(inter, interpreter.ReturnEmptyLocationRange, keyValue[0], keyValue[1])
+		}
+
+		// Remove
+		newEntries.foreach(func(orgKey, orgValue interpreter.Value) (exit bool) {
+			removedValue := dictionary.Remove(inter, interpreter.ReturnEmptyLocationRange, orgKey)
+
+			assert.IsType(t, &interpreter.SomeValue{}, removedValue)
+			someValue := removedValue.(*interpreter.SomeValue)
+
+			// Removed value must be same as the original value
+			utils.AssertValuesEqual(t, inter, orgValue, someValue.Value)
+
+			return false
+		})
+
+		// Dictionary must be empty
+		require.Equal(t, 0, dictionary.Count())
+
+		storageSize, slabCounts = getSlabStorageSize(t, storage)
+
+		// Storage size after removals should be same as the size before insertion.
+		assert.Equal(t, startingStorageSize, storageSize)
+		assert.Equal(t, startingSlabCounts, slabCounts)
+	})
 }
 
 func TestRandomArrayOperations(t *testing.T) {
