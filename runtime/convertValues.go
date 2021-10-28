@@ -445,6 +445,11 @@ func importValue(inter *interpreter.Interpreter, value cadence.Value, expectedTy
 			v.Fields,
 			expectedType,
 		)
+	case cadence.TypeValue:
+		return importTypeValue(
+			inter,
+			v.StaticType,
+		)
 	}
 
 	return nil, fmt.Errorf("cannot import value of type %T", value)
@@ -455,6 +460,18 @@ func importPathValue(v cadence.Path) interpreter.PathValue {
 		Domain:     common.PathDomainFromIdentifier(v.Domain),
 		Identifier: v.Identifier,
 	}
+}
+
+func importTypeValue(
+	_ *interpreter.Interpreter,
+	v cadence.Type,
+) (
+	*interpreter.TypeValue,
+	error,
+) {
+	return &interpreter.TypeValue{
+		Type: ImportType(v),
+	}, nil
 }
 
 func importOptionalValue(

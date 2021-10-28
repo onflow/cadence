@@ -589,6 +589,414 @@ func TestImportValue(t *testing.T) {
 			},
 			expected: nil,
 		},
+		{
+			label:    "Type<Int>()",
+			value:    cadence.NewTypeValue(cadence.IntType{}),
+			expected: &interpreter.TypeValue{Type: interpreter.PrimitiveStaticTypeInt},
+		},
+	} {
+		test(tt)
+	}
+}
+
+func TestImportRuntimeType(t *testing.T) {
+	t.Parallel()
+
+	type importTest struct {
+		label    string
+		expected interpreter.StaticType
+		actual   cadence.Type
+	}
+
+	test := func(tt importTest) {
+		t.Run(tt.label, func(t *testing.T) {
+			t.Parallel()
+			actual := ImportType(tt.actual)
+			assert.Equal(t, tt.expected, actual)
+
+		})
+	}
+
+	for _, tt := range []importTest{
+		{
+			label:    "Any",
+			actual:   cadence.AnyType{},
+			expected: interpreter.PrimitiveStaticTypeAny,
+		},
+		{
+			label:    "AnyStruct",
+			actual:   cadence.AnyStructType{},
+			expected: interpreter.PrimitiveStaticTypeAnyStruct,
+		},
+		{
+			label:    "AnyResource",
+			actual:   cadence.AnyResourceType{},
+			expected: interpreter.PrimitiveStaticTypeAnyResource,
+		},
+		{
+			label:    "MetaType",
+			actual:   cadence.MetaType{},
+			expected: interpreter.PrimitiveStaticTypeMetaType,
+		},
+		{
+			label:    "Void",
+			actual:   cadence.VoidType{},
+			expected: interpreter.PrimitiveStaticTypeVoid,
+		},
+		{
+			label:    "Never",
+			actual:   cadence.NeverType{},
+			expected: interpreter.PrimitiveStaticTypeNever,
+		},
+		{
+			label:    "Bool",
+			actual:   cadence.BoolType{},
+			expected: interpreter.PrimitiveStaticTypeBool,
+		},
+		{
+			label:    "String",
+			actual:   cadence.StringType{},
+			expected: interpreter.PrimitiveStaticTypeString,
+		},
+		{
+			label:    "Character",
+			actual:   cadence.CharacterType{},
+			expected: interpreter.PrimitiveStaticTypeCharacter,
+		},
+		{
+			label:    "Addresss",
+			actual:   cadence.AddressType{},
+			expected: interpreter.PrimitiveStaticTypeAddress,
+		},
+		{
+			label:    "Number",
+			actual:   cadence.NumberType{},
+			expected: interpreter.PrimitiveStaticTypeNumber,
+		},
+		{
+			label:    "SignedNumber",
+			actual:   cadence.SignedNumberType{},
+			expected: interpreter.PrimitiveStaticTypeSignedNumber,
+		},
+		{
+			label:    "Integer",
+			actual:   cadence.IntegerType{},
+			expected: interpreter.PrimitiveStaticTypeInteger,
+		},
+		{
+			label:    "SignedInteger",
+			actual:   cadence.SignedIntegerType{},
+			expected: interpreter.PrimitiveStaticTypeSignedInteger,
+		},
+		{
+			label:    "FixedPoint",
+			actual:   cadence.FixedPointType{},
+			expected: interpreter.PrimitiveStaticTypeFixedPoint,
+		},
+		{
+			label:    "SignedFixedPoint",
+			actual:   cadence.SignedFixedPointType{},
+			expected: interpreter.PrimitiveStaticTypeSignedFixedPoint,
+		},
+		{
+			label:    "Int",
+			actual:   cadence.IntType{},
+			expected: interpreter.PrimitiveStaticTypeInt,
+		},
+		{
+			label:    "Int8",
+			actual:   cadence.Int8Type{},
+			expected: interpreter.PrimitiveStaticTypeInt8,
+		},
+		{
+			label:    "Int16",
+			actual:   cadence.Int16Type{},
+			expected: interpreter.PrimitiveStaticTypeInt16,
+		},
+		{
+			label:    "Int32",
+			actual:   cadence.Int32Type{},
+			expected: interpreter.PrimitiveStaticTypeInt32,
+		},
+		{
+			label:    "Int64",
+			actual:   cadence.Int64Type{},
+			expected: interpreter.PrimitiveStaticTypeInt64,
+		},
+		{
+			label:    "Int128",
+			actual:   cadence.Int128Type{},
+			expected: interpreter.PrimitiveStaticTypeInt128,
+		},
+		{
+			label:    "Int256",
+			actual:   cadence.Int256Type{},
+			expected: interpreter.PrimitiveStaticTypeInt256,
+		},
+		{
+			label:    "UInt",
+			actual:   cadence.UIntType{},
+			expected: interpreter.PrimitiveStaticTypeUInt,
+		},
+		{
+			label:    "UInt8",
+			actual:   cadence.UInt8Type{},
+			expected: interpreter.PrimitiveStaticTypeUInt8,
+		},
+		{
+			label:    "UInt16",
+			actual:   cadence.UInt16Type{},
+			expected: interpreter.PrimitiveStaticTypeUInt16,
+		},
+		{
+			label:    "UInt32",
+			actual:   cadence.UInt32Type{},
+			expected: interpreter.PrimitiveStaticTypeUInt32,
+		},
+		{
+			label:    "UInt64",
+			actual:   cadence.UInt64Type{},
+			expected: interpreter.PrimitiveStaticTypeUInt64,
+		},
+		{
+			label:    "UInt128",
+			actual:   cadence.UInt128Type{},
+			expected: interpreter.PrimitiveStaticTypeUInt128,
+		},
+		{
+			label:    "UInt256",
+			actual:   cadence.UInt256Type{},
+			expected: interpreter.PrimitiveStaticTypeUInt256,
+		},
+		{
+			label:    "Word8",
+			actual:   cadence.Word8Type{},
+			expected: interpreter.PrimitiveStaticTypeWord8,
+		},
+		{
+			label:    "Word16",
+			actual:   cadence.Word16Type{},
+			expected: interpreter.PrimitiveStaticTypeWord16,
+		},
+		{
+			label:    "Word32",
+			actual:   cadence.Word32Type{},
+			expected: interpreter.PrimitiveStaticTypeWord32,
+		},
+		{
+			label:    "Word64",
+			actual:   cadence.Word64Type{},
+			expected: interpreter.PrimitiveStaticTypeWord64,
+		},
+		{
+			label:    "Fix64",
+			actual:   cadence.Fix64Type{},
+			expected: interpreter.PrimitiveStaticTypeFix64,
+		},
+		{
+			label:    "UFix64",
+			actual:   cadence.UFix64Type{},
+			expected: interpreter.PrimitiveStaticTypeUFix64,
+		},
+		{
+			label:    "Block",
+			actual:   cadence.BlockType{},
+			expected: interpreter.PrimitiveStaticTypeBlock,
+		},
+		{
+			label:    "CapabilityPath",
+			actual:   cadence.CapabilityPathType{},
+			expected: interpreter.PrimitiveStaticTypeCapabilityPath,
+		},
+		{
+			label:    "StoragePath",
+			actual:   cadence.StoragePathType{},
+			expected: interpreter.PrimitiveStaticTypeStoragePath,
+		},
+		{
+			label:    "PublicPath",
+			actual:   cadence.PublicPathType{},
+			expected: interpreter.PrimitiveStaticTypePublicPath,
+		},
+		{
+			label:    "PrivatePath",
+			actual:   cadence.PrivatePathType{},
+			expected: interpreter.PrimitiveStaticTypePrivatePath,
+		},
+		{
+			label: "Optional",
+			actual: cadence.OptionalType{
+				Type: cadence.IntType{},
+			},
+			expected: interpreter.OptionalStaticType{
+				Type: interpreter.PrimitiveStaticTypeInt,
+			},
+		},
+		{
+			label: "VariableSizedArray",
+			actual: cadence.VariableSizedArrayType{
+				ElementType: cadence.IntType{},
+			},
+			expected: interpreter.VariableSizedStaticType{
+				Type: interpreter.PrimitiveStaticTypeInt,
+			},
+		},
+		{
+			label: "ConstantSizedArray",
+			actual: cadence.ConstantSizedArrayType{
+				ElementType: cadence.IntType{},
+				Size:        3,
+			},
+			expected: interpreter.ConstantSizedStaticType{
+				Type: interpreter.PrimitiveStaticTypeInt,
+				Size: 3,
+			},
+		},
+		{
+			label: "Dictionary",
+			actual: cadence.DictionaryType{
+				ElementType: cadence.IntType{},
+				KeyType:     cadence.StringType{},
+			},
+			expected: interpreter.DictionaryStaticType{
+				KeyType:   interpreter.PrimitiveStaticTypeString,
+				ValueType: interpreter.PrimitiveStaticTypeInt,
+			},
+		},
+		{
+			label: "Reference",
+			actual: cadence.ReferenceType{
+				Authorized: false,
+				Type:       cadence.IntType{},
+			},
+			expected: interpreter.ReferenceStaticType{
+				Authorized: false,
+				Type:       interpreter.PrimitiveStaticTypeInt,
+			},
+		},
+		{
+			label: "Capability",
+			actual: cadence.CapabilityType{
+				BorrowType: cadence.IntType{},
+			},
+			expected: interpreter.CapabilityStaticType{
+				BorrowType: interpreter.PrimitiveStaticTypeInt,
+			},
+		},
+		{
+			label: "Struct",
+			actual: &cadence.StructType{
+				Location:            utils.TestLocation,
+				QualifiedIdentifier: "S",
+			},
+			expected: interpreter.CompositeStaticType{
+				Location:            utils.TestLocation,
+				QualifiedIdentifier: "S",
+			},
+		},
+		{
+			label: "Resource",
+			actual: &cadence.ResourceType{
+				Location:            utils.TestLocation,
+				QualifiedIdentifier: "S",
+			},
+			expected: interpreter.CompositeStaticType{
+				Location:            utils.TestLocation,
+				QualifiedIdentifier: "S",
+			},
+		},
+		{
+			label: "Contract",
+			actual: &cadence.ContractType{
+				Location:            utils.TestLocation,
+				QualifiedIdentifier: "S",
+			},
+			expected: interpreter.CompositeStaticType{
+				Location:            utils.TestLocation,
+				QualifiedIdentifier: "S",
+			},
+		},
+		{
+			label: "Event",
+			actual: &cadence.EventType{
+				Location:            utils.TestLocation,
+				QualifiedIdentifier: "S",
+			},
+			expected: interpreter.CompositeStaticType{
+				Location:            utils.TestLocation,
+				QualifiedIdentifier: "S",
+			},
+		},
+		{
+			label: "Enum",
+			actual: &cadence.EnumType{
+				Location:            utils.TestLocation,
+				QualifiedIdentifier: "S",
+			},
+			expected: interpreter.CompositeStaticType{
+				Location:            utils.TestLocation,
+				QualifiedIdentifier: "S",
+			},
+		},
+		{
+			label: "StructInterface",
+			actual: &cadence.StructInterfaceType{
+				Location:            utils.TestLocation,
+				QualifiedIdentifier: "S",
+			},
+			expected: interpreter.InterfaceStaticType{
+				Location:            utils.TestLocation,
+				QualifiedIdentifier: "S",
+			},
+		},
+		{
+			label: "ResourceInterface",
+			actual: &cadence.ResourceInterfaceType{
+				Location:            utils.TestLocation,
+				QualifiedIdentifier: "S",
+			},
+			expected: interpreter.InterfaceStaticType{
+				Location:            utils.TestLocation,
+				QualifiedIdentifier: "S",
+			},
+		},
+		{
+			label: "ContractInterface",
+			actual: &cadence.ContractInterfaceType{
+				Location:            utils.TestLocation,
+				QualifiedIdentifier: "S",
+			},
+			expected: interpreter.InterfaceStaticType{
+				Location:            utils.TestLocation,
+				QualifiedIdentifier: "S",
+			},
+		},
+		{
+			label: "RestrictedType",
+			actual: cadence.RestrictedType{
+				Type: &cadence.StructType{
+					Location:            utils.TestLocation,
+					QualifiedIdentifier: "S",
+				},
+				Restrictions: []cadence.Type{
+					&cadence.StructInterfaceType{
+						Location:            utils.TestLocation,
+						QualifiedIdentifier: "T",
+					}},
+			},
+			expected: &interpreter.RestrictedStaticType{
+				Type: interpreter.CompositeStaticType{
+					Location:            utils.TestLocation,
+					QualifiedIdentifier: "S",
+				},
+				Restrictions: []interpreter.InterfaceStaticType{
+					{
+						Location:            utils.TestLocation,
+						QualifiedIdentifier: "T",
+					},
+				},
+			},
+		},
 	} {
 		test(tt)
 	}

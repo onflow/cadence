@@ -1235,6 +1235,12 @@ func (TypeValue) Type() Type {
 	return MetaType{}
 }
 
+func NewTypeValue(t Type) TypeValue {
+	return TypeValue{
+		StaticType: t,
+	}
+}
+
 func (TypeValue) ToGoValue() interface{} {
 	return nil
 }

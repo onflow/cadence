@@ -24,6 +24,7 @@ import (
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
+	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 )
 
@@ -390,4 +391,156 @@ func exportCapabilityType(t *sema.CapabilityType, results map[sema.TypeID]cadenc
 	return cadence.CapabilityType{
 		BorrowType: borrowType,
 	}.WithID(string(t.ID()))
+}
+
+func importInterfaceType(t cadence.InterfaceType) interpreter.InterfaceStaticType {
+	return interpreter.InterfaceStaticType{
+		Location:            t.InterfaceTypeLocation(),
+		QualifiedIdentifier: t.InterfaceTypeQualifiedIdentifier(),
+	}
+}
+
+func importCompositeType(t cadence.CompositeType) interpreter.CompositeStaticType {
+	return interpreter.CompositeStaticType{
+		Location:            t.CompositeTypeLocation(),
+		QualifiedIdentifier: t.CompositeTypeQualifiedIdentifier(),
+	}
+}
+
+func ImportType(t cadence.Type) interpreter.StaticType {
+	switch t := t.(type) {
+	case cadence.AnyType:
+		return interpreter.PrimitiveStaticTypeAny
+	case cadence.AnyStructType:
+		return interpreter.PrimitiveStaticTypeAnyStruct
+	case cadence.AnyResourceType:
+		return interpreter.PrimitiveStaticTypeAnyResource
+	case cadence.OptionalType:
+		return interpreter.OptionalStaticType{
+			Type: ImportType(t.Type),
+		}
+	case cadence.MetaType:
+		return interpreter.PrimitiveStaticTypeMetaType
+	case cadence.VoidType:
+		return interpreter.PrimitiveStaticTypeVoid
+	case cadence.NeverType:
+		return interpreter.PrimitiveStaticTypeNever
+	case cadence.BoolType:
+		return interpreter.PrimitiveStaticTypeBool
+	case cadence.StringType:
+		return interpreter.PrimitiveStaticTypeString
+	case cadence.CharacterType:
+		return interpreter.PrimitiveStaticTypeCharacter
+	case cadence.AddressType:
+		return interpreter.PrimitiveStaticTypeAddress
+	case cadence.NumberType:
+		return interpreter.PrimitiveStaticTypeNumber
+	case cadence.SignedNumberType:
+		return interpreter.PrimitiveStaticTypeSignedNumber
+	case cadence.IntegerType:
+		return interpreter.PrimitiveStaticTypeInteger
+	case cadence.SignedIntegerType:
+		return interpreter.PrimitiveStaticTypeSignedInteger
+	case cadence.FixedPointType:
+		return interpreter.PrimitiveStaticTypeFixedPoint
+	case cadence.SignedFixedPointType:
+		return interpreter.PrimitiveStaticTypeSignedFixedPoint
+	case cadence.IntType:
+		return interpreter.PrimitiveStaticTypeInt
+	case cadence.Int8Type:
+		return interpreter.PrimitiveStaticTypeInt8
+	case cadence.Int16Type:
+		return interpreter.PrimitiveStaticTypeInt16
+	case cadence.Int32Type:
+		return interpreter.PrimitiveStaticTypeInt32
+	case cadence.Int64Type:
+		return interpreter.PrimitiveStaticTypeInt64
+	case cadence.Int128Type:
+		return interpreter.PrimitiveStaticTypeInt128
+	case cadence.Int256Type:
+		return interpreter.PrimitiveStaticTypeInt256
+	case cadence.UIntType:
+		return interpreter.PrimitiveStaticTypeUInt
+	case cadence.UInt8Type:
+		return interpreter.PrimitiveStaticTypeUInt8
+	case cadence.UInt16Type:
+		return interpreter.PrimitiveStaticTypeUInt16
+	case cadence.UInt32Type:
+		return interpreter.PrimitiveStaticTypeUInt32
+	case cadence.UInt64Type:
+		return interpreter.PrimitiveStaticTypeUInt64
+	case cadence.UInt128Type:
+		return interpreter.PrimitiveStaticTypeUInt128
+	case cadence.UInt256Type:
+		return interpreter.PrimitiveStaticTypeUInt256
+	case cadence.Word8Type:
+		return interpreter.PrimitiveStaticTypeWord8
+	case cadence.Word16Type:
+		return interpreter.PrimitiveStaticTypeWord16
+	case cadence.Word32Type:
+		return interpreter.PrimitiveStaticTypeWord32
+	case cadence.Word64Type:
+		return interpreter.PrimitiveStaticTypeWord64
+	case cadence.Fix64Type:
+		return interpreter.PrimitiveStaticTypeFix64
+	case cadence.UFix64Type:
+		return interpreter.PrimitiveStaticTypeUFix64
+	case cadence.VariableSizedArrayType:
+		return interpreter.VariableSizedStaticType{
+			Type: ImportType(t.ElementType),
+		}
+	case cadence.ConstantSizedArrayType:
+		return interpreter.ConstantSizedStaticType{
+			Type: ImportType(t.ElementType),
+			Size: int64(t.Size),
+		}
+	case cadence.DictionaryType:
+		return interpreter.DictionaryStaticType{
+			KeyType:   ImportType(t.KeyType),
+			ValueType: ImportType(t.ElementType),
+		}
+	case *cadence.StructType,
+		*cadence.ResourceType,
+		*cadence.EventType,
+		*cadence.ContractType,
+		*cadence.EnumType:
+		return importCompositeType(t.(cadence.CompositeType))
+	case *cadence.StructInterfaceType,
+		*cadence.ResourceInterfaceType,
+		*cadence.ContractInterfaceType:
+		return importInterfaceType(t.(cadence.InterfaceType))
+	case cadence.ReferenceType:
+		return interpreter.ReferenceStaticType{
+			Authorized: t.Authorized,
+			Type:       ImportType(t.Type),
+		}
+	case cadence.RestrictedType:
+		restrictions := make([]interpreter.InterfaceStaticType, 0, len(t.Restrictions))
+		for _, restriction := range t.Restrictions {
+			intf, ok := restriction.(cadence.InterfaceType)
+			if !ok {
+				panic(fmt.Sprintf("cannot export type of type %T", t))
+			}
+			restrictions = append(restrictions, importInterfaceType(intf))
+		}
+		return &interpreter.RestrictedStaticType{
+			Type:         ImportType(t.Type),
+			Restrictions: restrictions,
+		}
+	case cadence.BlockType:
+		return interpreter.PrimitiveStaticTypeBlock
+	case cadence.CapabilityPathType:
+		return interpreter.PrimitiveStaticTypeCapabilityPath
+	case cadence.StoragePathType:
+		return interpreter.PrimitiveStaticTypeStoragePath
+	case cadence.PublicPathType:
+		return interpreter.PrimitiveStaticTypePublicPath
+	case cadence.PrivatePathType:
+		return interpreter.PrimitiveStaticTypePrivatePath
+	case cadence.CapabilityType:
+		return interpreter.CapabilityStaticType{
+			BorrowType: ImportType(t.BorrowType),
+		}
+	}
+	panic(fmt.Sprintf("cannot export type of type %T", t))
 }
