@@ -325,6 +325,85 @@ func TestRandomMapOperations(t *testing.T) {
 		assert.Equal(t, startingStorageSize, storageSize)
 		assert.Equal(t, startingSlabCounts, slabCounts)
 	})
+
+	t.Run("random insert & remove", func(t *testing.T) {
+		keyValues := make([][2]interpreter.Value, numberOfValues)
+		for i := 0; i < numberOfValues; i++ {
+			keyValues[i][0] = randomHashableValue(inter)
+			keyValues[i][1] = randomStorableValue(inter, 0)
+		}
+
+		dictionary := interpreter.NewDictionaryValueWithAddress(
+			inter,
+			interpreter.DictionaryStaticType{
+				KeyType:   interpreter.PrimitiveStaticTypeAnyStruct,
+				ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
+			},
+			orgOwner,
+		)
+
+		require.Equal(t, 0, dictionary.Count())
+
+		// Get the initial storage size before inserting values
+		startingStorageSize, startingSlabCounts := getSlabStorageSize(t, storage)
+
+		insertCount := 0
+		deleteCount := 0
+
+		isInsert := func() bool {
+			if dictionary.Count() == 0 {
+				return true
+			}
+
+			if insertCount >= numberOfValues {
+				return false
+			}
+
+			return randomInt(1) == 1
+		}
+
+		for insertCount < numberOfValues || dictionary.Count() > 0 {
+			// Perform a random operation out of insert/remove
+			if isInsert() {
+				key := keyValues[insertCount][0]
+				if _, ok := key.(*interpreter.CompositeValue); ok {
+					key = deepCopyValue(inter, key)
+				}
+
+				value := deepCopyValue(inter, keyValues[insertCount][1])
+
+				dictionary.Insert(
+					inter,
+					interpreter.ReturnEmptyLocationRange,
+					key,
+					value,
+				)
+				insertCount++
+			} else {
+				key := keyValues[deleteCount][0]
+				orgValue := keyValues[deleteCount][1]
+
+				removedValue := dictionary.Remove(inter, interpreter.ReturnEmptyLocationRange, key)
+
+				assert.IsType(t, &interpreter.SomeValue{}, removedValue)
+				someValue := removedValue.(*interpreter.SomeValue)
+
+				// Removed value must be same as the original value
+				utils.AssertValuesEqual(t, inter, orgValue, someValue.Value)
+
+				deleteCount++
+			}
+		}
+
+		// Dictionary must be empty
+		require.Equal(t, 0, dictionary.Count())
+
+		storageSize, slabCounts := getSlabStorageSize(t, storage)
+
+		// Storage size after removals should be same as the size before insertion.
+		assert.Equal(t, startingStorageSize, storageSize)
+		assert.Equal(t, startingSlabCounts, slabCounts)
+	})
 }
 
 func TestRandomArrayOperations(t *testing.T) {
@@ -559,6 +638,73 @@ func TestRandomArrayOperations(t *testing.T) {
 		}
 
 		// Array must be empty
+		require.Equal(t, 0, testArray.Count())
+
+		storageSize, slabCounts := getSlabStorageSize(t, storage)
+
+		// Storage size after removals should be same as the size before insertion.
+		assert.Equal(t, startingStorageSize, storageSize)
+		assert.Equal(t, startingSlabCounts, slabCounts)
+	})
+
+	t.Run("random insert & remove", func(t *testing.T) {
+		elements := make([]interpreter.Value, numberOfValues)
+
+		for i := 0; i < numberOfValues; i++ {
+			elements[i] = randomStorableValue(inter, 0)
+		}
+
+		testArray = interpreter.NewArrayValue(
+			inter,
+			interpreter.VariableSizedStaticType{
+				Type: interpreter.PrimitiveStaticTypeAnyStruct,
+			},
+			orgOwner,
+		)
+
+		require.Equal(t, 0, testArray.Count())
+
+		// Get the initial storage size before inserting values
+		startingStorageSize, startingSlabCounts := getSlabStorageSize(t, storage)
+
+		insertCount := 0
+		deleteCount := 0
+
+		isInsert := func() bool {
+			if testArray.Count() == 0 {
+				return true
+			}
+
+			if insertCount >= numberOfValues {
+				return false
+			}
+
+			return randomInt(1) == 1
+		}
+
+		for insertCount < numberOfValues || testArray.Count() > 0 {
+			// Perform a random operation out of insert/remove
+			if isInsert() {
+				value := deepCopyValue(inter, elements[insertCount])
+
+				testArray.Append(
+					inter,
+					interpreter.ReturnEmptyLocationRange,
+					value,
+				)
+				insertCount++
+			} else {
+				orgValue := elements[deleteCount]
+				removedValue := testArray.RemoveFirst(inter, interpreter.ReturnEmptyLocationRange)
+
+				// Removed value must be same as the original value
+				utils.AssertValuesEqual(t, inter, orgValue, removedValue)
+
+				deleteCount++
+			}
+		}
+
+		// Dictionary must be empty
 		require.Equal(t, 0, testArray.Count())
 
 		storageSize, slabCounts := getSlabStorageSize(t, storage)
