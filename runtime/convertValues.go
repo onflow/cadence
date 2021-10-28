@@ -305,26 +305,26 @@ func exportPathValue(v interpreter.PathValue) cadence.Path {
 }
 
 func exportTypeValue(v interpreter.TypeValue, inter *interpreter.Interpreter) cadence.TypeValue {
-	var typeID string
-	staticType := v.Type
-	if staticType != nil {
-		typeID = string(inter.ConvertStaticToSemaType(staticType).ID())
+	var typ sema.Type
+	if v.Type != nil {
+		typ = inter.ConvertStaticToSemaType(v.Type)
 	}
 	return cadence.TypeValue{
-		StaticType: typeID,
+		StaticType: ExportType(typ, map[sema.TypeID]cadence.Type{}),
 	}
 }
 
 func exportCapabilityValue(v interpreter.CapabilityValue, inter *interpreter.Interpreter) cadence.Capability {
-	var borrowType string
+	var borrowType sema.Type
+
 	if v.BorrowType != nil {
-		borrowType = string(inter.ConvertStaticToSemaType(v.BorrowType).ID())
+		borrowType = inter.ConvertStaticToSemaType(v.BorrowType)
 	}
 
 	return cadence.Capability{
 		Path:       exportPathValue(v.Path),
 		Address:    cadence.NewAddress(v.Address),
-		BorrowType: borrowType,
+		BorrowType: ExportType(borrowType, map[sema.TypeID]cadence.Type{}),
 	}
 }
 

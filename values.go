@@ -1226,8 +1226,7 @@ func (v Path) String() string {
 // TypeValue
 
 type TypeValue struct {
-	// TODO: a future version might want to export the whole type
-	StaticType string
+	StaticType Type
 }
 
 func (TypeValue) isValue() {}
@@ -1241,16 +1240,15 @@ func (TypeValue) ToGoValue() interface{} {
 }
 
 func (v TypeValue) String() string {
-	return format.TypeValue(v.StaticType)
+	return format.TypeValue(v.StaticType.ID())
 }
 
 // Capability
 
 type Capability struct {
-	Path    Path
-	Address Address
-	// TODO: a future version might want to export the whole type
-	BorrowType string
+	Path       Path
+	Address    Address
+	BorrowType Type
 }
 
 func (Capability) isValue() {}
@@ -1265,7 +1263,7 @@ func (Capability) ToGoValue() interface{} {
 
 func (v Capability) String() string {
 	return format.Capability(
-		v.BorrowType,
+		v.BorrowType.ID(),
 		v.Address.String(),
 		v.Path.String(),
 	)

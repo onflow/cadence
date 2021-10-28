@@ -585,7 +585,7 @@ func TestImportValue(t *testing.T) {
 					Domain:     "public",
 					Identifier: "test",
 				},
-				BorrowType: "Int",
+				BorrowType: cadence.IntType{},
 			},
 			expected: nil,
 		},
@@ -1079,7 +1079,7 @@ func TestExportTypeValue(t *testing.T) {
 
 		actual := exportValueFromScript(t, script)
 		expected := cadence.TypeValue{
-			StaticType: "Int",
+			StaticType: cadence.IntType{},
 		}
 
 		assert.Equal(t, expected, actual)
@@ -1099,7 +1099,7 @@ func TestExportTypeValue(t *testing.T) {
 
 		actual := exportValueFromScript(t, script)
 		expected := cadence.TypeValue{
-			StaticType: "S.test.S",
+			StaticType: &cadence.StructType{QualifiedIdentifier: "S", Location: utils.TestLocation, Fields: []cadence.Field{}},
 		}
 
 		assert.Equal(t, expected, actual)
@@ -1116,7 +1116,7 @@ func TestExportTypeValue(t *testing.T) {
 		require.NoError(t, err)
 
 		expected := cadence.TypeValue{
-			StaticType: "",
+			StaticType: nil,
 		}
 
 		assert.Equal(t, expected, actual)
@@ -1166,7 +1166,12 @@ func TestExportTypeValue(t *testing.T) {
 
 		assert.Equal(t,
 			cadence.TypeValue{
-				StaticType: "S.test.S{S.test.SI}",
+				StaticType: cadence.RestrictedType{
+					Type: &cadence.StructType{QualifiedIdentifier: "S", Location: utils.TestLocation, Fields: []cadence.Field{}},
+					Restrictions: []cadence.Type{
+						&cadence.StructInterfaceType{QualifiedIdentifier: "SI", Location: utils.TestLocation, Fields: []cadence.Field{}},
+					},
+				}.WithID("S.test.S{S.test.SI}"),
 			},
 			actual,
 		)
@@ -1198,7 +1203,7 @@ func TestExportCapabilityValue(t *testing.T) {
 				Identifier: "foo",
 			},
 			Address:    cadence.Address{0x1},
-			BorrowType: "Int",
+			BorrowType: cadence.IntType{},
 		}
 
 		assert.Equal(t, expected, actual)
@@ -1243,7 +1248,7 @@ func TestExportCapabilityValue(t *testing.T) {
 				Identifier: "foo",
 			},
 			Address:    cadence.Address{0x1},
-			BorrowType: "S.test.S",
+			BorrowType: &cadence.StructType{QualifiedIdentifier: "S", Location: utils.TestLocation, Fields: []cadence.Field{}},
 		}
 
 		assert.Equal(t, expected, actual)

@@ -29,6 +29,9 @@ import (
 
 // ExportType converts a runtime type to its corresponding Go representation.
 func ExportType(t sema.Type, results map[sema.TypeID]cadence.Type) cadence.Type {
+	if t == nil {
+		return nil
+	}
 
 	typeID := t.ID()
 	if result, ok := results[typeID]; ok {
