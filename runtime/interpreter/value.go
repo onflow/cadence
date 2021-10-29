@@ -6896,7 +6896,10 @@ func (v *CompositeValue) Walk(walkChild func(Value)) {
 }
 
 func (v *CompositeValue) DynamicType(interpreter *Interpreter, _ SeenReferences) DynamicType {
-	staticType := interpreter.getCompositeType(v.Location(), v.QualifiedIdentifier())
+	staticType, err := interpreter.getCompositeType(v.Location(), v.QualifiedIdentifier())
+	if err != nil {
+		panic(err)
+	}
 	return CompositeDynamicType{
 		StaticType: staticType,
 	}

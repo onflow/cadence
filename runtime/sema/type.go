@@ -3220,12 +3220,13 @@ func init() {
 		),
 	)
 
-	for _, v := range RuntimeTypeConstructors() {
-		BaseValueActivation.Set(v.Name,
+	for _, v := range runtimeTypeConstructors {
+		BaseValueActivation.Set(
+			v.Name,
 			baseFunctionVariable(
 				v.Name,
 				v.Value,
-				v.Description,
+				v.DocString,
 			))
 	}
 }

@@ -19,9 +19,9 @@
 package sema
 
 type RuntimeTypeConstructor struct {
-	Name        string
-	Value       *FunctionType
-	Description string
+	Name      string
+	Value     *FunctionType
+	DocString string
 }
 
 var OptionalTypeFunctionType = &FunctionType{
@@ -49,12 +49,10 @@ var VariableSizedArrayTypeFunctionType = &FunctionType{
 var ConstantSizedArrayTypeFunctionType = &FunctionType{
 	Parameters: []*Parameter{
 		{
-			Label:          ArgumentLabelNotRequired,
 			Identifier:     "type",
 			TypeAnnotation: NewTypeAnnotation(MetaType),
 		},
 		{
-			Label:          ArgumentLabelNotRequired,
 			Identifier:     "size",
 			TypeAnnotation: NewTypeAnnotation(IntType),
 		},
@@ -65,12 +63,10 @@ var ConstantSizedArrayTypeFunctionType = &FunctionType{
 var DictionaryTypeFunctionType = &FunctionType{
 	Parameters: []*Parameter{
 		{
-			Label:          ArgumentLabelNotRequired,
 			Identifier:     "key",
 			TypeAnnotation: NewTypeAnnotation(MetaType),
 		},
 		{
-			Label:          ArgumentLabelNotRequired,
 			Identifier:     "value",
 			TypeAnnotation: NewTypeAnnotation(MetaType),
 		},
@@ -103,12 +99,10 @@ var InterfaceTypeFunctionType = &FunctionType{
 var FunctionTypeFunctionType = &FunctionType{
 	Parameters: []*Parameter{
 		{
-			Label:          ArgumentLabelNotRequired,
 			Identifier:     "parameters",
 			TypeAnnotation: NewTypeAnnotation(&VariableSizedType{Type: MetaType}),
 		},
 		{
-			Label:          ArgumentLabelNotRequired,
 			Identifier:     "return",
 			TypeAnnotation: NewTypeAnnotation(MetaType),
 		},
@@ -119,12 +113,10 @@ var FunctionTypeFunctionType = &FunctionType{
 var RestrictedTypeFunctionType = &FunctionType{
 	Parameters: []*Parameter{
 		{
-			Label:          ArgumentLabelNotRequired,
-			Identifier:     "typeID",
+			Identifier:     "identifier",
 			TypeAnnotation: NewTypeAnnotation(&OptionalType{StringType}),
 		},
 		{
-			Label:          ArgumentLabelNotRequired,
 			Identifier:     "restrictions",
 			TypeAnnotation: NewTypeAnnotation(&VariableSizedType{Type: StringType}),
 		},
@@ -135,12 +127,10 @@ var RestrictedTypeFunctionType = &FunctionType{
 var ReferenceTypeFunctionType = &FunctionType{
 	Parameters: []*Parameter{
 		{
-			Label:          ArgumentLabelNotRequired,
 			Identifier:     "authorized",
 			TypeAnnotation: NewTypeAnnotation(BoolType),
 		},
 		{
-			Label:          ArgumentLabelNotRequired,
 			Identifier:     "type",
 			TypeAnnotation: NewTypeAnnotation(MetaType),
 		},
@@ -159,68 +149,64 @@ var CapabilityTypeFunctionType = &FunctionType{
 	ReturnTypeAnnotation: NewTypeAnnotation(&OptionalType{MetaType}),
 }
 
-func RuntimeTypeConstructors() []*RuntimeTypeConstructor {
-	var functions = []*RuntimeTypeConstructor{
-		{
-			"OptionalType",
-			OptionalTypeFunctionType,
-			"Creates a run-time type representing an optional version of the given run-time type.",
-		},
+var runtimeTypeConstructors = []*RuntimeTypeConstructor{
+	{
+		"OptionalType",
+		OptionalTypeFunctionType,
+		"Creates a run-time type representing an optional version of the given run-time type.",
+	},
 
-		{
-			"VariableSizedArrayType",
-			VariableSizedArrayTypeFunctionType,
-			"Creates a run-time type representing a variable-sized array type of the given run-time type.",
-		},
+	{
+		"VariableSizedArrayType",
+		VariableSizedArrayTypeFunctionType,
+		"Creates a run-time type representing a variable-sized array type of the given run-time type.",
+	},
 
-		{
-			"ConstantSizedArrayType",
-			ConstantSizedArrayTypeFunctionType,
-			"Creates a run-time type representing a constant-sized array type of the given run-time type with the specifized size.",
-		},
+	{
+		"ConstantSizedArrayType",
+		ConstantSizedArrayTypeFunctionType,
+		"Creates a run-time type representing a constant-sized array type of the given run-time type with the specifized size.",
+	},
 
-		{
-			"DictionaryType",
-			DictionaryTypeFunctionType,
-			"Creates a run-time type representing a dictionary type of the given run-time key and value types. Returns nil if the key type is not a valid dictionary key.",
-		},
+	{
+		"DictionaryType",
+		DictionaryTypeFunctionType,
+		"Creates a run-time type representing a dictionary type of the given run-time key and value types. Returns nil if the key type is not a valid dictionary key.",
+	},
 
-		{
-			"CompositeType",
-			CompositeTypeFunctionType,
-			"Creates a run-time type representing the composite type associated with the given type identifier. Returns nil if the identifier does not correspond to any composite type.",
-		},
+	{
+		"CompositeType",
+		CompositeTypeFunctionType,
+		"Creates a run-time type representing the composite type associated with the given type identifier. Returns nil if the identifier does not correspond to any composite type.",
+	},
 
-		{
-			"InterfaceType",
-			InterfaceTypeFunctionType,
-			"Creates a run-time type representing the interface type associated with the given type identifier. Returns nil if the identifier does not correspond to any interface type.",
-		},
+	{
+		"InterfaceType",
+		InterfaceTypeFunctionType,
+		"Creates a run-time type representing the interface type associated with the given type identifier. Returns nil if the identifier does not correspond to any interface type.",
+	},
 
-		{
-			"FunctionType",
-			FunctionTypeFunctionType,
-			"Creates a run-time type representing a function type associated with the given parameters and return type.",
-		},
+	{
+		"FunctionType",
+		FunctionTypeFunctionType,
+		"Creates a run-time type representing a function type associated with the given parameters and return type.",
+	},
 
-		{
-			"ReferenceType",
-			ReferenceTypeFunctionType,
-			"Creates a run-time type representing a reference type of the given type, with authorization provided by the first argument.",
-		},
+	{
+		"ReferenceType",
+		ReferenceTypeFunctionType,
+		"Creates a run-time type representing a reference type of the given type, with authorization provided by the first argument.",
+	},
 
-		{
-			"RestrictedType",
-			RestrictedTypeFunctionType,
-			"Creates a run-time type representing a restricted type of the first argument, restricted by the interface identifiers in the second argument. Returns nil if the restriction is not valid.",
-		},
+	{
+		"RestrictedType",
+		RestrictedTypeFunctionType,
+		"Creates a run-time type representing a restricted type of the first argument, restricted by the interface identifiers in the second argument. Returns nil if the restriction is not valid.",
+	},
 
-		{
-			"CapabilityType",
-			CapabilityTypeFunctionType,
-			"Creates a run-time type representing a capability type of the given reference type. Returns nil if the type is not a reference.",
-		},
-	}
-
-	return functions
+	{
+		"CapabilityType",
+		CapabilityTypeFunctionType,
+		"Creates a run-time type representing a capability type of the given reference type. Returns nil if the type is not a reference.",
+	},
 }

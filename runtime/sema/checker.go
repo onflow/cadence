@@ -938,9 +938,7 @@ func (checker *Checker) ConvertType(t ast.Type) Type {
 	panic(&astTypeConversionError{invalidASTType: t})
 }
 
-func CheckRestrictedType(restrictedType Type, restrictions []*InterfaceType) (Type, []func(*ast.RestrictedType) error) {
-	var errs []func(*ast.RestrictedType) error
-
+func CheckRestrictedType(restrictedType Type, restrictions []*InterfaceType, report func(func(*ast.RestrictedType) error)) Type {
 	restrictionRanges := make(map[*InterfaceType]func(*ast.RestrictedType) ast.Range, len(restrictions))
 	restrictionsCompositeKind := common.CompositeKindUnknown
 	memberSet := map[string]*InterfaceType{}
@@ -952,20 +950,19 @@ func CheckRestrictedType(restrictedType Type, restrictions []*InterfaceType) (Ty
 			restrictionsCompositeKind = restrictionCompositeKind
 
 		} else if restrictionCompositeKind != restrictionsCompositeKind {
-			errs = append(errs, func(t *ast.RestrictedType) error {
+			report(func(t *ast.RestrictedType) error {
 				return &RestrictionCompositeKindMismatchError{
 					CompositeKind:         restrictionCompositeKind,
 					PreviousCompositeKind: restrictionsCompositeKind,
 					Range:                 ast.NewRangeFromPositioned(t.Restrictions[i]),
 				}
 			})
-
 		}
 
 		// The restriction must not be duplicated
 
 		if _, exists := restrictionRanges[restrictionInterfaceType]; exists {
-			errs = append(errs, func(t *ast.RestrictedType) error {
+			report(func(t *ast.RestrictedType) error {
 				return &InvalidRestrictionTypeDuplicateError{
 					Type:  restrictionInterfaceType,
 					Range: ast.NewRangeFromPositioned(t.Restrictions[i]),
@@ -1000,7 +997,7 @@ func CheckRestrictedType(restrictedType Type, restrictions []*InterfaceType) (Ty
 					!previousMemberType.IsInvalidType() &&
 					!memberType.Equal(previousMemberType) {
 
-					errs = append(errs, func(t *ast.RestrictedType) error {
+					report(func(t *ast.RestrictedType) error {
 						return &RestrictionMemberClashError{
 							Name:                  name,
 							RedeclaringType:       restrictionInterfaceType,
@@ -1028,7 +1025,7 @@ func CheckRestrictedType(restrictedType Type, restrictions []*InterfaceType) (Ty
 
 			restrictedType = InvalidType
 
-			errs = append(errs, func(t *ast.RestrictedType) error {
+			report(func(t *ast.RestrictedType) error {
 				return &AmbiguousRestrictedTypeError{Range: ast.NewRangeFromPositioned(t)}
 			})
 
@@ -1047,7 +1044,7 @@ func CheckRestrictedType(restrictedType Type, restrictions []*InterfaceType) (Ty
 	// or `AnyResource`/`AnyStruct`
 
 	reportInvalidRestrictedType := func() {
-		errs = append(errs, func(t *ast.RestrictedType) error {
+		report(func(t *ast.RestrictedType) error {
 			return &InvalidRestrictedTypeError{
 				Type:  restrictedType,
 				Range: ast.NewRangeFromPositioned(t.Type),
@@ -1098,7 +1095,7 @@ func CheckRestrictedType(restrictedType Type, restrictions []*InterfaceType) (Ty
 			// of the composite (restricted type)
 
 			if !conformances.Includes(restriction) {
-				errs = append(errs, func(t *ast.RestrictedType) error {
+				report(func(t *ast.RestrictedType) error {
 					return &InvalidNonConformanceRestrictionError{
 						Type:  restriction,
 						Range: restrictionRanges[restriction](t),
@@ -1107,7 +1104,7 @@ func CheckRestrictedType(restrictedType Type, restrictions []*InterfaceType) (Ty
 			}
 		}
 	}
-	return restrictedType, errs
+	return restrictedType
 }
 
 func (checker *Checker) convertRestrictedType(t *ast.RestrictedType) Type {
@@ -1147,14 +1144,13 @@ func (checker *Checker) convertRestrictedType(t *ast.RestrictedType) Type {
 		restrictions = append(restrictions, restrictionInterfaceType)
 	}
 
-	restrictedType, errs := CheckRestrictedType(restrictedType, restrictions)
-
-	for _, err := range errs {
-		/* ast information is only needed to report errors, so we only provide it when we wish to
-		   report an error. Consumers of CheckRestrictedType that only wish to know if errors exist
-		   can pass nil */
-		checker.report(err(t))
-	}
+	restrictedType = CheckRestrictedType(
+		restrictedType,
+		restrictions,
+		func(getError func(*ast.RestrictedType) error) {
+			checker.report(getError(t))
+		},
+	)
 
 	return &RestrictedType{
 		Type:         restrictedType,

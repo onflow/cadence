@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2021 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -35,11 +35,11 @@ func TestInterpretOptionalType(t *testing.T) {
       let a = OptionalType(Type<String>())
       let b = OptionalType(Type<Int>()) 
 
-	  resource R {}
-	  let c = OptionalType(Type<@R>())
+      resource R {}
+      let c = OptionalType(Type<@R>())
       let d = OptionalType(a)
 
-	  let e = Type<String?>()
+      let e = Type<String?>()
     `)
 
 	assert.Equal(t,
@@ -73,7 +73,13 @@ func TestInterpretOptionalType(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		inter.Globals["a"].GetValue(),
+		interpreter.TypeValue{
+			Type: interpreter.OptionalStaticType{
+				Type: interpreter.OptionalStaticType{
+					Type: interpreter.PrimitiveStaticTypeString,
+				},
+			},
+		},
 		inter.Globals["d"].GetValue(),
 	)
 
@@ -91,11 +97,11 @@ func TestInterpretVariableSizedArrayType(t *testing.T) {
       let a = VariableSizedArrayType(Type<String>())
       let b = VariableSizedArrayType(Type<Int>()) 
 
-	  resource R {}
-	  let c = VariableSizedArrayType(Type<@R>())
+      resource R {}
+      let c = VariableSizedArrayType(Type<@R>())
       let d = VariableSizedArrayType(a)
 
-	  let e = Type<[String]>()
+      let e = Type<[String]>()
     `)
 
 	assert.Equal(t,
@@ -152,11 +158,11 @@ func TestInterpretConstantSizedArrayType(t *testing.T) {
       let a = ConstantSizedArrayType(Type<String>(), 10)
       let b = ConstantSizedArrayType(Type<Int>(), 5) 
 
-	  resource R {}
-	  let c = ConstantSizedArrayType(Type<@R>(), 400)
+      resource R {}
+      let c = ConstantSizedArrayType(Type<@R>(), 400)
       let d = ConstantSizedArrayType(a, 6)
 
-	  let e = Type<[String; 10]>()
+      let e = Type<[String; 10]>()
     `)
 
 	assert.Equal(t,
@@ -219,13 +225,13 @@ func TestInterpretDictionaryType(t *testing.T) {
       let a = DictionaryType(Type<String>(), Type<Int>())!
       let b = DictionaryType(Type<Int>(), Type<String>())!
 
-	  resource R {}
-	  let c = DictionaryType(Type<Int>(), Type<@R>())!
+      resource R {}
+      let c = DictionaryType(Type<Int>(), Type<@R>())!
       let d = DictionaryType(Type<Bool>(), a)!
 
-	  let e = Type<{String: Int}>()!
-	  
-	  let f = DictionaryType(Type<[Bool]>(), Type<Int>())
+      let e = Type<{String: Int}>()!
+      
+      let f = DictionaryType(Type<[Bool]>(), Type<Int>())
     `)
 
 	assert.Equal(t,
@@ -290,19 +296,19 @@ func TestInterpretCompositeType(t *testing.T) {
 	t.Parallel()
 
 	inter := parseCheckAndInterpret(t, `
-	  resource R {}
-	  struct S {}
-	  struct interface B {}
+      resource R {}
+      struct S {}
+      struct interface B {}
 
-	  let a = CompositeType("S.test.R")!
+      let a = CompositeType("S.test.R")!
       let b = CompositeType("S.test.S")!
-	  let c = CompositeType("S.test.A")
-	  let d = CompositeType("S.test.B")
+      let c = CompositeType("S.test.A")
+      let d = CompositeType("S.test.B")
 
-	  let e = Type<@R>()
+      let e = Type<@R>()
 
-	  enum F: UInt8 {}
-	  let f = CompositeType("S.test.F")!
+      enum F: UInt8 {}
+      let f = CompositeType("S.test.F")!
     `)
 
 	assert.Equal(t,
@@ -356,14 +362,14 @@ func TestInterpretInterfaceType(t *testing.T) {
 	t.Parallel()
 
 	inter := parseCheckAndInterpret(t, `
-	  resource interface R {}
-	  struct interface S {}
-	  struct B {}
+      resource interface R {}
+      struct interface S {}
+      struct B {}
 
-	  let a = InterfaceType("S.test.R")!
+      let a = InterfaceType("S.test.R")!
       let b = InterfaceType("S.test.S")!
-	  let c = InterfaceType("S.test.A")
-	  let d = InterfaceType("S.test.B")
+      let c = InterfaceType("S.test.A")
+      let d = InterfaceType("S.test.B")
     `)
 
 	assert.Equal(t,
@@ -402,11 +408,11 @@ func TestInterpretFunctionType(t *testing.T) {
 	t.Parallel()
 
 	inter := parseCheckAndInterpret(t, `
-	  let a = FunctionType([Type<String>()], Type<Int>())
+      let a = FunctionType([Type<String>()], Type<Int>())
       let b = FunctionType([Type<String>(), Type<Int>()], Type<Bool>())
-	  let c = FunctionType([], Type<String>())
+      let c = FunctionType([], Type<String>())
 
-	  let d = Type<((String): Int)>();
+      let d = Type<((String): Int)>();
     `)
 
 	assert.Equal(t,
@@ -459,13 +465,13 @@ func TestInterpretReferenceType(t *testing.T) {
 	t.Parallel()
 
 	inter := parseCheckAndInterpret(t, `
-	  resource R {}
-	  struct S {}
+      resource R {}
+      struct S {}
 
-	  let a = ReferenceType(true, Type<@R>())
+      let a = ReferenceType(true, Type<@R>())
       let b = ReferenceType(false, Type<String>())
-	  let c = ReferenceType(true, Type<S>()) 
-	  let d = Type<auth &R>()
+      let c = ReferenceType(true, Type<S>()) 
+      let d = Type<auth &R>()
     `)
 
 	assert.Equal(t,
@@ -515,30 +521,30 @@ func TestInterpretRestrictedType(t *testing.T) {
 	t.Parallel()
 
 	inter := parseCheckAndInterpret(t, `
-	  resource interface R {}
-	  struct interface S {}
-	  resource A : R {}
-	  struct B : S {}
+      resource interface R {}
+      struct interface S {}
+      resource A : R {}
+      struct B : S {}
 
-	  struct interface S2 {
-		  pub let foo : Int
-	  }
+      struct interface S2 {
+        pub let foo : Int
+      }
 
-	  let a = RestrictedType("S.test.A",["S.test.R"])!
-	  let b = RestrictedType("S.test.B",["S.test.S"])!
+      let a = RestrictedType("S.test.A",["S.test.R"])!
+      let b = RestrictedType("S.test.B",["S.test.S"])!
 
-	  let c = RestrictedType("S.test.B",["S.test.R"])
-	  let d = RestrictedType("S.test.A",["S.test.S"])
-	  let e = RestrictedType("S.test.B",["S.test.S2"])
+      let c = RestrictedType("S.test.B",["S.test.R"])
+      let d = RestrictedType("S.test.A",["S.test.S"])
+      let e = RestrictedType("S.test.B",["S.test.S2"])
 
-	  let f = RestrictedType("S.test.B",["X"])
-	  let g = RestrictedType("S.test.N",["S.test.S2"])
+      let f = RestrictedType("S.test.B",["X"])
+      let g = RestrictedType("S.test.N",["S.test.S2"])
 
-	  let h = Type<@A{R}>()
-	  let i = Type<B{S}>()
+      let h = Type<@A{R}>()
+      let i = Type<B{S}>()
 
-	  let j = RestrictedType(nil,["S.test.R"])!
-	  let k = RestrictedType(nil,["S.test.S"])!
+      let j = RestrictedType(nil,["S.test.R"])!
+      let k = RestrictedType(nil,["S.test.S"])!
     `)
 
 	assert.Equal(t,
@@ -651,11 +657,11 @@ func TestInterpretCapabilityType(t *testing.T) {
       let a = CapabilityType(Type<&String>())!
       let b = CapabilityType(Type<&Int>())!
 
-	  resource R {}
-	  let c = CapabilityType(Type<&R>())!
+      resource R {}
+      let c = CapabilityType(Type<&R>())!
       let d = CapabilityType(Type<String>())
 
-	  let e = Type<Capability<&String>>()
+      let e = Type<Capability<&String>>()
     `)
 
 	assert.Equal(t,

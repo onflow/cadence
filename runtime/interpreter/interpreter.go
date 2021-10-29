@@ -2575,7 +2575,8 @@ func init() {
 	}
 
 	// We assign this here because it depends on the interpreter, so this breaks the initialization cycle
-	defineBaseValue(baseActivation,
+	defineBaseValue(
+		baseActivation,
 		"DictionaryType",
 		NewHostFunctionValue(
 			func(invocation Invocation) Value {
@@ -2587,85 +2588,90 @@ func init() {
 					return NilValue{}
 				}
 
-				return TypeValue{
+				return NewSomeValueOwningNonCopying(TypeValue{
 					Type: DictionaryStaticType{
 						KeyType:   keyType,
 						ValueType: invocation.Arguments[1].(TypeValue).Type,
-					}}
+					}})
 			},
 			sema.DictionaryTypeFunctionType,
 		))
 
-	defineBaseValue(baseActivation,
+	defineBaseValue(
+		baseActivation,
 		"CompositeType",
 		NewHostFunctionValue(
 			func(invocation Invocation) Value {
 				typeID := invocation.Arguments[0].(*StringValue).Str
-				location, name, err := common.DecodeTypeID(typeID)
+				location, qualifiedIdentifier, err := common.DecodeTypeID(typeID)
 
 				// if the typeID is invalid, return nil
-				if err != nil ||
-					location == nil && sema.NativeCompositeTypes[typeID] == nil ||
-					invocation.Interpreter.getElaboration(location).CompositeTypes[location.TypeID(name)] == nil {
+				if err != nil || location == nil {
 					return NilValue{}
 				}
 
-				return TypeValue{
+				_, err = invocation.Interpreter.getCompositeType(location, qualifiedIdentifier)
+				if err != nil {
+					return NilValue{}
+				}
+
+				return NewSomeValueOwningNonCopying(TypeValue{
 					Type: CompositeStaticType{
-						QualifiedIdentifier: name,
+						QualifiedIdentifier: qualifiedIdentifier,
 						Location:            location,
-					}}
+					}})
 			},
 			sema.CompositeTypeFunctionType,
 		),
 	)
 
-	defineBaseValue(baseActivation,
+	defineBaseValue(
+		baseActivation,
 		"InterfaceType",
 		NewHostFunctionValue(
 			func(invocation Invocation) Value {
 				typeID := invocation.Arguments[0].(*StringValue).Str
-				location, name, err := common.DecodeTypeID(typeID)
+				location, qualifiedIdentifier, err := common.DecodeTypeID(typeID)
 
 				// if the typeID is invalid, return nil
-				if err != nil ||
-					location == nil ||
-					invocation.Interpreter.getElaboration(location).InterfaceTypes[location.TypeID(name)] == nil {
+				if err != nil || location == nil {
 					return NilValue{}
 				}
 
-				return TypeValue{
+				_, err = invocation.Interpreter.getInterfaceType(location, qualifiedIdentifier)
+				if err != nil {
+					return NilValue{}
+				}
+
+				return NewSomeValueOwningNonCopying(TypeValue{
 					Type: InterfaceStaticType{
-						QualifiedIdentifier: name,
+						QualifiedIdentifier: qualifiedIdentifier,
 						Location:            location,
-					}}
+					}})
 			},
 			sema.InterfaceTypeFunctionType,
 		),
 	)
 
-	defineBaseValue(baseActivation,
+	defineBaseValue(
+		baseActivation,
 		"FunctionType",
 		NewHostFunctionValue(
 			func(invocation Invocation) Value {
-				params := invocation.Arguments[0].(*ArrayValue).values
-				ret := invocation.Interpreter.ConvertStaticToSemaType(invocation.Arguments[1].(TypeValue).Type)
-				paramTypes := make([]*sema.Parameter, 0)
-				for _, param := range params {
-					paramTypes = append(paramTypes, &sema.Parameter{
-						TypeAnnotation: &sema.TypeAnnotation{
-							Type: invocation.Interpreter.ConvertStaticToSemaType(param.(TypeValue).Type),
-						},
+				parameters := invocation.Arguments[0].(*ArrayValue).values
+				returnType := invocation.Interpreter.ConvertStaticToSemaType(invocation.Arguments[1].(TypeValue).Type)
+				parameterTypes := make([]*sema.Parameter, 0, len(parameters))
+				for _, param := range parameters {
+					parameterTypes = append(parameterTypes, &sema.Parameter{
+						TypeAnnotation: sema.NewTypeAnnotation(invocation.Interpreter.ConvertStaticToSemaType(param.(TypeValue).Type)),
 					})
 				}
 
 				return TypeValue{
 					Type: FunctionStaticType{
 						Type: &sema.FunctionType{
-							ReturnTypeAnnotation: &sema.TypeAnnotation{
-								Type: ret,
-							},
-							Parameters: paramTypes,
+							ReturnTypeAnnotation: sema.NewTypeAnnotation(returnType),
+							Parameters:           parameterTypes,
 						},
 					}}
 			},
@@ -2673,7 +2679,8 @@ func init() {
 		),
 	)
 
-	defineBaseValue(baseActivation,
+	defineBaseValue(
+		baseActivation,
 		"RestrictedType",
 		NewHostFunctionValue(
 			RestrictedTypeFunction,
@@ -2685,24 +2692,27 @@ func init() {
 func RestrictedTypeFunction(invocation Invocation) Value {
 	restrictedIDs := invocation.Arguments[1].(*ArrayValue).values
 
-	staticRestrictions := make([]InterfaceStaticType, 0)
-	semaRestrictions := make([]*sema.InterfaceType, 0)
+	staticRestrictions := make([]InterfaceStaticType, 0, len(restrictedIDs))
+	semaRestrictions := make([]*sema.InterfaceType, 0, len(restrictedIDs))
 	for _, typeID := range restrictedIDs {
-		location, name, err := common.DecodeTypeID(typeID.(*StringValue).Str)
+		location, qualifiedIdentifier, err := common.DecodeTypeID(typeID.(*StringValue).Str)
 		// if the typeID is invalid, return nil
-		if err != nil ||
-			location == nil ||
-			invocation.Interpreter.getElaboration(location).InterfaceTypes[location.TypeID(name)] == nil {
+		if err != nil || location == nil {
 			return NilValue{}
 		}
 
-		intf := InterfaceStaticType{
-			QualifiedIdentifier: name,
+		_, err = invocation.Interpreter.getInterfaceType(location, qualifiedIdentifier)
+		if err != nil {
+			return NilValue{}
+		}
+
+		restrictionInterface := InterfaceStaticType{
+			QualifiedIdentifier: qualifiedIdentifier,
 			Location:            location,
 		}
 
-		staticRestrictions = append(staticRestrictions, intf)
-		semaRestrictions = append(semaRestrictions, invocation.Interpreter.ConvertStaticToSemaType(intf).(*sema.InterfaceType))
+		staticRestrictions = append(staticRestrictions, restrictionInterface)
+		semaRestrictions = append(semaRestrictions, invocation.Interpreter.ConvertStaticToSemaType(restrictionInterface).(*sema.InterfaceType))
 	}
 
 	var semaType sema.Type
@@ -2711,32 +2721,39 @@ func RestrictedTypeFunction(invocation Invocation) Value {
 	case NilValue:
 		semaType = nil
 	case *SomeValue:
-		location, name, err := common.DecodeTypeID(typeID.Value.(*StringValue).Str)
+		location, qualifiedIdentifier, err := common.DecodeTypeID(typeID.Value.(*StringValue).Str)
 		// if the typeID is invalid, return nil
-		if err != nil ||
-			location == nil && sema.NativeCompositeTypes[typeID.Value.(*StringValue).Str] == nil ||
-			invocation.Interpreter.getElaboration(location).CompositeTypes[location.TypeID(name)] == nil {
+		if err != nil || location == nil {
 			return NilValue{}
 		}
-		semaType = invocation.Interpreter.ConvertStaticToSemaType(CompositeStaticType{
-			QualifiedIdentifier: name,
-			Location:            location,
-		})
+		semaType, err = invocation.Interpreter.getCompositeType(location, qualifiedIdentifier)
+		if err != nil {
+			return NilValue{}
+		}
+
 	default:
 		panic(errors.NewUnreachableError())
 	}
 
-	ty, errs := sema.CheckRestrictedType(semaType, semaRestrictions)
+	ok := true
+	ty := sema.CheckRestrictedType(
+		semaType,
+		semaRestrictions,
+		func(_ func(*ast.RestrictedType) error) {
+			ok = false
+		},
+	)
+
 	// if the restricted type would have failed to typecheck statically, we return nil
-	if len(errs) != 0 {
+	if !ok {
 		return NilValue{}
 	}
-	return TypeValue{
+	return NewSomeValueOwningNonCopying(TypeValue{
 		Type: &RestrictedStaticType{
 			Type:         ConvertSemaToStaticType(ty),
 			Restrictions: staticRestrictions,
 		},
-	}
+	})
 }
 
 func defineBaseFunctions(activation *VariableActivation) {
@@ -2807,92 +2824,80 @@ type runtimeTypeConstructor struct {
 
 // Constructor functions are stateless functions. Hence they can be re-used across interpreters.
 //
-var runtimeTypeConstructorValues = func() []runtimeTypeConstructor {
+var runtimeTypeConstructors = []runtimeTypeConstructor{
+	{
+		name: "OptionalType",
+		converter: NewHostFunctionValue(
+			func(invocation Invocation) Value {
+				return TypeValue{
+					Type: OptionalStaticType{
+						Type: invocation.Arguments[0].(TypeValue).Type,
+					}}
 
-	var converterFuncValues = []runtimeTypeConstructor{
-		{
-			name: "OptionalType",
-			converter: NewHostFunctionValue(
-				func(invocation Invocation) Value {
-					switch arg := invocation.Arguments[0].(TypeValue).Type.(type) {
-					// Optionality is an idempotent operation
-					case OptionalStaticType:
-						return TypeValue{
-							Type: OptionalStaticType{
-								Type: arg.Type,
-							}}
-					default:
-						return TypeValue{
-							Type: OptionalStaticType{
-								Type: arg,
-							}}
-					}
-				},
-				sema.OptionalTypeFunctionType,
-			),
-		},
-		{
-			name: "VariableSizedArrayType",
-			converter: NewHostFunctionValue(
-				func(invocation Invocation) Value {
+			},
+			sema.OptionalTypeFunctionType,
+		),
+	},
+	{
+		name: "VariableSizedArrayType",
+		converter: NewHostFunctionValue(
+			func(invocation Invocation) Value {
+				return TypeValue{
+					Type: VariableSizedStaticType{
+						Type: invocation.Arguments[0].(TypeValue).Type,
+					}}
+			},
+			sema.VariableSizedArrayTypeFunctionType,
+		),
+	},
+	{
+		name: "ConstantSizedArrayType",
+		converter: NewHostFunctionValue(
+			func(invocation Invocation) Value {
+				return TypeValue{
+					Type: ConstantSizedStaticType{
+						Type: invocation.Arguments[0].(TypeValue).Type,
+						Size: int64(invocation.Arguments[1].(IntValue).ToInt()),
+					}}
+			},
+			sema.ConstantSizedArrayTypeFunctionType,
+		),
+	},
+	{
+		name: "ReferenceType",
+		converter: NewHostFunctionValue(
+			func(invocation Invocation) Value {
+				return TypeValue{
+					Type: ReferenceStaticType{
+						Authorized: bool(invocation.Arguments[0].(BoolValue)),
+						Type:       invocation.Arguments[1].(TypeValue).Type,
+					}}
+			},
+			sema.ReferenceTypeFunctionType,
+		),
+	},
+	{
+		name: "CapabilityType",
+		converter: NewHostFunctionValue(
+			func(invocation Invocation) Value {
+				switch ty := invocation.Arguments[0].(TypeValue).Type.(type) {
+				case ReferenceStaticType:
 					return TypeValue{
-						Type: VariableSizedStaticType{
-							Type: invocation.Arguments[0].(TypeValue).Type,
+						Type: CapabilityStaticType{
+							BorrowType: ty,
 						}}
-				},
-				sema.VariableSizedArrayTypeFunctionType,
-			),
-		},
-		{
-			name: "ConstantSizedArrayType",
-			converter: NewHostFunctionValue(
-				func(invocation Invocation) Value {
-					return TypeValue{
-						Type: ConstantSizedStaticType{
-							Type: invocation.Arguments[0].(TypeValue).Type,
-							Size: int64(invocation.Arguments[1].(IntValue).ToInt()),
-						}}
-				},
-				sema.ConstantSizedArrayTypeFunctionType,
-			),
-		},
-		{
-			name: "ReferenceType",
-			converter: NewHostFunctionValue(
-				func(invocation Invocation) Value {
-					return TypeValue{
-						Type: ReferenceStaticType{
-							Authorized: bool(invocation.Arguments[0].(BoolValue)),
-							Type:       invocation.Arguments[1].(TypeValue).Type,
-						}}
-				},
-				sema.ReferenceTypeFunctionType,
-			),
-		},
-		{
-			name: "CapabilityType",
-			converter: NewHostFunctionValue(
-				func(invocation Invocation) Value {
-					switch ty := invocation.Arguments[0].(TypeValue).Type.(type) {
-					case ReferenceStaticType:
-						return TypeValue{
-							Type: CapabilityStaticType{
-								BorrowType: ty,
-							}}
-					// Capabilities must hold references
-					default:
-						return NilValue{}
-					}
-				},
-				sema.CapabilityTypeFunctionType,
-			),
-		},
-	}
-	return converterFuncValues
-}()
+				// Capabilities must hold references
+				default:
+					return NilValue{}
+				}
+			},
+			sema.CapabilityTypeFunctionType,
+		),
+	},
+}
 
 func defineRuntimeTypeConstructorFunctions(activation *VariableActivation) {
-	for _, constructorFunc := range runtimeTypeConstructorValues {
+	for _, constructorFunc := range runtimeTypeConstructors {
 		defineBaseValue(activation, constructorFunc.name, constructorFunc.converter)
 	}
 }
@@ -3642,10 +3647,18 @@ func (interpreter *Interpreter) ConvertStaticToSemaType(staticType StaticType) s
 	return ConvertStaticToSemaType(
 		staticType,
 		func(location common.Location, qualifiedIdentifier string) *sema.InterfaceType {
-			return interpreter.getInterfaceType(location, qualifiedIdentifier)
+			intertfaceType, err := interpreter.getInterfaceType(location, qualifiedIdentifier)
+			if err != nil {
+				panic(err)
+			}
+			return intertfaceType
 		},
 		func(location common.Location, qualifiedIdentifier string) *sema.CompositeType {
-			return interpreter.getCompositeType(location, qualifiedIdentifier)
+			compositeType, err := interpreter.getCompositeType(location, qualifiedIdentifier)
+			if err != nil {
+				panic(err)
+			}
+			return compositeType
 		},
 	)
 }
@@ -3689,54 +3702,54 @@ func (interpreter *Interpreter) GetContractComposite(contractLocation common.Add
 	return contractValue, nil
 }
 
-func (interpreter *Interpreter) getCompositeType(location common.Location, qualifiedIdentifier string) *sema.CompositeType {
+func (interpreter *Interpreter) getCompositeType(location common.Location, qualifiedIdentifier string) (*sema.CompositeType, error) {
 	if location == nil {
 		ty := sema.NativeCompositeTypes[qualifiedIdentifier]
 		if ty == nil {
-			panic(TypeLoadingError{
+			return nil, TypeLoadingError{
 				TypeID: common.TypeID(qualifiedIdentifier),
-			})
+			}
 		}
 
-		return ty
+		return ty, nil
 	}
 
 	typeID := location.TypeID(qualifiedIdentifier)
 
 	elaboration := interpreter.getElaboration(location)
 	if elaboration == nil {
-		panic(TypeLoadingError{
+		return nil, TypeLoadingError{
 			TypeID: typeID,
-		})
+		}
 	}
 
 	ty := elaboration.CompositeTypes[typeID]
 	if ty == nil {
-		panic(TypeLoadingError{
+		return nil, TypeLoadingError{
 			TypeID: typeID,
-		})
+		}
 	}
 
-	return ty
+	return ty, nil
 }
 
-func (interpreter *Interpreter) getInterfaceType(location common.Location, qualifiedIdentifier string) *sema.InterfaceType {
+func (interpreter *Interpreter) getInterfaceType(location common.Location, qualifiedIdentifier string) (*sema.InterfaceType, error) {
 	typeID := location.TypeID(qualifiedIdentifier)
 
 	elaboration := interpreter.getElaboration(location)
 	if elaboration == nil {
-		panic(TypeLoadingError{
+		return nil, TypeLoadingError{
 			TypeID: typeID,
-		})
+		}
 	}
 
 	ty := elaboration.InterfaceTypes[typeID]
 	if ty == nil {
-		panic(TypeLoadingError{
+		return nil, TypeLoadingError{
 			TypeID: typeID,
-		})
+		}
 	}
-	return ty
+	return ty, nil
 }
 
 func (interpreter *Interpreter) reportLoopIteration(pos ast.HasPosition) {
