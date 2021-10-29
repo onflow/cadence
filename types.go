@@ -781,18 +781,6 @@ func (t FunctionType) WithID(id string) FunctionType {
 	return t
 }
 
-// ResourcePointer
-
-type ResourcePointer struct {
-	TypeName string
-}
-
-func (ResourcePointer) isType() {}
-
-func (t ResourcePointer) ID() string {
-	return t.TypeName
-}
-
 // ReferenceType
 
 type ReferenceType struct {
