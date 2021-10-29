@@ -450,6 +450,13 @@ func importValue(inter *interpreter.Interpreter, value cadence.Value, expectedTy
 			inter,
 			v.StaticType,
 		)
+	case cadence.Capability:
+		return importCapability(
+			inter,
+			v.Path,
+			v.Address,
+			v.BorrowType,
+		)
 	}
 
 	return nil, fmt.Errorf("cannot import value of type %T", value)
@@ -472,6 +479,31 @@ func importTypeValue(
 	return interpreter.TypeValue{
 		Type: ImportType(v),
 	}, nil
+}
+
+func importCapability(
+	_ *interpreter.Interpreter,
+	path cadence.Path,
+	address cadence.Address,
+	borrowType cadence.Type,
+) (
+	interpreter.CapabilityValue,
+	error,
+) {
+
+	switch borrowType.(type) {
+	case cadence.ReferenceType:
+		return interpreter.CapabilityValue{
+			Path:       importPathValue(path),
+			Address:    interpreter.NewAddressValueFromBytes(address.Bytes()),
+			BorrowType: ImportType(borrowType),
+		}, nil
+	}
+	return interpreter.CapabilityValue{}, fmt.Errorf(
+		"cannot import capability of type '%s', '%s' must be a reference type",
+		borrowType.ID(),
+		borrowType.ID(),
+	)
 }
 
 func importOptionalValue(

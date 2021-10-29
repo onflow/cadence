@@ -281,7 +281,7 @@ func TestScriptParameterTypeValidation(t *testing.T) {
         `
 
 		err := executeScript(t, script, cadence.NewOptional(nil))
-		expectNonImportableError(t, err)
+		assert.NoError(t, err)
 	})
 
 	t.Run("Non-Importable Dictionary", func(t *testing.T) {
@@ -757,12 +757,7 @@ func TestTransactionParameterTypeValidation(t *testing.T) {
         `
 
 		err := executeTransaction(t, script, cadence.NewOptional(nil))
-
-		expectCheckerErrors(
-			t,
-			err,
-			&sema.InvalidNonImportableTransactionParameterTypeError{},
-		)
+		assert.NoError(t, err)
 	})
 
 	t.Run("Non-Importable Dictionary", func(t *testing.T) {

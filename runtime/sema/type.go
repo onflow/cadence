@@ -5599,7 +5599,7 @@ func (*CapabilityType) IsExternallyReturnable(_ map[*Member]bool) bool {
 }
 
 func (t *CapabilityType) IsImportable(_ map[*Member]bool) bool {
-	return false
+	return true
 }
 
 func (*CapabilityType) IsEquatable() bool {

@@ -283,7 +283,7 @@ type CapabilityDynamicType struct {
 func (CapabilityDynamicType) IsDynamicType() {}
 
 func (CapabilityDynamicType) IsImportable() bool {
-	return false
+	return true
 }
 
 // DeployedContractDynamicType
