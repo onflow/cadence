@@ -428,8 +428,8 @@ func (t VariableSizedArrayType) ID() string {
 	return fmt.Sprintf("[%s]", t.ElementType.ID())
 }
 
-func (v VariableSizedArrayType) Element() Type {
-	return v.ElementType
+func (t VariableSizedArrayType) Element() Type {
+	return t.ElementType
 }
 
 // ConstantSizedArrayType
@@ -445,8 +445,8 @@ func (t ConstantSizedArrayType) ID() string {
 	return fmt.Sprintf("[%s;%d]", t.ElementType.ID(), t.Size)
 }
 
-func (v ConstantSizedArrayType) Element() Type {
-	return v.ElementType
+func (t ConstantSizedArrayType) Element() Type {
+	return t.ElementType
 }
 
 // DictionaryType
@@ -901,7 +901,7 @@ type EnumType struct {
 	Initializers        [][]Parameter
 }
 
-func (t *EnumType) isType() {}
+func (*EnumType) isType() {}
 
 func (t *EnumType) ID() string {
 	if t.Location == nil {
