@@ -83,6 +83,46 @@ let type: Type = something.getType()
 // `type` is `Type<@Collectible>()`
 ```
 
+### Constructing a Run-time Type
+
+Run-time types can also be constructed from type identifier strings using built-in constructor functions. 
+
+```cadence
+fun CompositeType(typeID: String): Type?
+fun InterfaceType(typeID: String): Type?
+fun RestrictedType(type type : String, restrictions restrictions : [String]) : Type?
+```
+
+Given a type identifer (as well as a list of identifiers for restricting interfaces
+in the case of `RestrictedType`), these functions will look up nominal types and
+produce their run-time equivalents. If the provided identifiers do not correspond
+to any types, or (in the case of `RestrictedType`) the provided combination of 
+identifiers would not type-check statically, these functions will produce `nil`.
+
+```cadence
+struct Test {}
+struct interface I {}
+let type: Type = CompositeType("A.0000000000000001.Test")
+// `type` is `Type<Test>`
+
+let type2: Type = RestrictedType(type.identifier, ["A.0000000000000001.I"])
+// `type2` is `Type<Test{I}>`
+```
+
+Other built-in functions will construct compound types from other run-types.
+
+```cadence
+fun OptionalType(type: Type): Type
+fun VariableSizedArrayType(type type: Type): Type
+fun ConstantSizedArrayType(type type: Type, size size : Int): Type
+fun FunctionType(params : [Type], return : Type) : Type
+// returns `nil` if `key` is not valid dictionary key type
+fun DictionaryType(key key k: Type, value value v: Type): Type?
+// returns `nil` if `type` is not a reference type
+fun CapabilityType(type : Type) : Type?
+fun ReferenceType(authorized authorized : bool, type type : Type) : Type
+```
+
 ### Asserting the Type of a Value
 
 The method `fun isInstance(_ type: Type): Bool` can be used to check if a value has a certain type,
