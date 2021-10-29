@@ -90,28 +90,28 @@ func (d *Decoder) Decode() (value cadence.Value, err error) {
 }
 
 const (
-	typeKey          = "type"
-	kindKey          = "kind"
-	valueKey         = "value"
-	keyKey           = "key"
-	nameKey          = "name"
-	fieldsKey        = "fields"
-	initializersKey  = "initializers"
-	idKey            = "id"
-	targetPathKey    = "targetPath"
-	borrowTypeKey    = "borrowType"
-	domainKey        = "domain"
-	identifierKey    = "identifier"
-	staticTypeKey    = "staticType"
-	addressKey       = "address"
-	pathKey          = "path"
-	primaryTypeKey   = "primaryType"
-	secondaryTypeKey = "secondaryType"
-	typeIDKey        = "typeID"
-	restrictionsKey  = "restrictions"
-	labelKey         = "label"
-	parametersKey    = "parameters"
-	returnKey        = "return"
+	typeKey         = "type"
+	kindKey         = "kind"
+	valueKey        = "value"
+	keyKey          = "key"
+	nameKey         = "name"
+	fieldsKey       = "fields"
+	initializersKey = "initializers"
+	idKey           = "id"
+	targetPathKey   = "targetPath"
+	borrowTypeKey   = "borrowType"
+	domainKey       = "domain"
+	identifierKey   = "identifier"
+	staticTypeKey   = "staticType"
+	addressKey      = "address"
+	pathKey         = "path"
+	authorizedKey   = "authorized"
+	sizeKey         = "size"
+	typeIDKey       = "typeID"
+	restrictionsKey = "restrictions"
+	labelKey        = "label"
+	parametersKey   = "parameters"
+	returnKey       = "return"
 )
 
 var ErrInvalidJSONCadence = errors.New("invalid JSON Cadence structure")
@@ -664,7 +664,7 @@ func decodeParamType(valueJSON interface{}) cadence.Parameter {
 }
 
 func decodeParamTypes(params []interface{}) []cadence.Parameter {
-	parameters := make([]cadence.Parameter, 0)
+	parameters := make([]cadence.Parameter, 0, len(params))
 
 	for _, param := range params {
 		parameters = append(parameters, decodeParamType(param))
@@ -674,7 +674,7 @@ func decodeParamTypes(params []interface{}) []cadence.Parameter {
 }
 
 func decodeFieldTypes(fs []interface{}) []cadence.Field {
-	fields := make([]cadence.Field, 0)
+	fields := make([]cadence.Field, 0, len(fs))
 
 	for _, field := range fs {
 		fields = append(fields, decodeFieldType(field))
@@ -701,11 +701,11 @@ func decodeFunctionType(returnValue, parametersValue, id interface{}) cadence.Ty
 	}.WithID(toString(id))
 }
 
-func decodeNominalType(obj jsonObject, kind, typeID string, fs, initializers interface{}) cadence.Type {
-	fields := decodeFieldTypes(toSlice(fs))
-	inits := make([][]cadence.Parameter, 0)
+func decodeNominalType(obj jsonObject, kind, typeID string, fs, initializers []interface{}) cadence.Type {
+	fields := decodeFieldTypes(fs)
+	inits := make([][]cadence.Parameter, 0, len(initializers))
 
-	for _, params := range toSlice(initializers) {
+	for _, params := range initializers {
 		inits = append(inits, decodeParamTypes(toSlice(params)))
 	}
 
@@ -777,114 +777,76 @@ func decodeNominalType(obj jsonObject, kind, typeID string, fs, initializers int
 	panic(ErrInvalidJSONCadence)
 }
 
+func decodeRestricedType(
+	typeValue interface{},
+	restrictionsValue []interface{},
+	typeIDValue string,
+) cadence.Type {
+	typ := decodeType(typeValue)
+	restrictions := make([]cadence.Type, 0, len(restrictionsValue))
+	for _, restriction := range restrictionsValue {
+		restrictions = append(restrictions, decodeType(restriction))
+	}
+
+	return cadence.RestrictedType{
+		Type:         typ,
+		Restrictions: restrictions,
+	}.WithID(typeIDValue)
+}
+
 func decodeType(valueJSON interface{}) cadence.Type {
 	if valueJSON == "" {
 		return nil
 	}
 	obj := toObject(valueJSON)
+	kindValue := toString(obj.Get(kindKey))
 
-	returnValue, returnOk := obj[returnKey]
-
-	// function type
-	if returnOk {
+	switch kindValue {
+	case "Function":
+		returnValue := obj.Get(returnKey)
 		parametersValue := obj.Get(parametersKey)
 		idValue := obj.Get(typeIDKey)
 		return decodeFunctionType(returnValue, parametersValue, idValue)
-	}
-
-	restrictionsValue, restrictionOk := obj[restrictionsKey]
-
-	// function type
-	if restrictionOk {
+	case "Restriction":
+		restrictionsValue := obj.Get(restrictionsKey)
 		typeIDValue := toString(obj.Get(typeIDKey))
-		typeValue := decodeType(obj.Get(typeKey))
-		restrictions := make([]cadence.Type, 0)
-
-		for _, restriction := range toSlice(restrictionsValue) {
-			restrictions = append(restrictions, decodeType(restriction))
+		typeValue := obj.Get(typeKey)
+		return decodeRestricedType(typeValue, toSlice(restrictionsValue), typeIDValue)
+	case "Optional":
+		return cadence.OptionalType{
+			Type: decodeType(obj.Get(typeKey)),
 		}
-
-		return cadence.RestrictedType{
-			Type:         typeValue,
-			Restrictions: restrictions,
-		}.WithID(typeIDValue)
-	}
-
-	kindValue := toString(obj.Get(kindKey))
-
-	fieldsValue, fieldsOk := obj[fieldsKey]
-
-	// nominal type
-	if fieldsOk {
-		typeIDValue := toString(obj.Get(typeIDKey))
-		initValue := obj.Get(initializersKey)
-		return decodeNominalType(obj, kindValue, typeIDValue, fieldsValue, initValue)
-	}
-
-	typeValue, typeOk := obj[typeKey]
-
-	// unary type
-	if typeOk {
-		ty := decodeType(typeValue)
-		switch kindValue {
-		case "Optional":
-			return cadence.OptionalType{
-				Type: ty,
-			}
-		case "VariableSizedArray":
-			return cadence.VariableSizedArrayType{
-				ElementType: ty,
-			}
-		case "Capability":
-			return cadence.CapabilityType{
-				BorrowType: ty,
-			}.WithID("Capability<" + ty.ID() + ">")
-		default:
+	case "VariableSizedArray":
+		return cadence.VariableSizedArrayType{
+			ElementType: decodeType(obj.Get(typeKey)),
+		}
+	case "Capability":
+		return cadence.CapabilityType{
+			BorrowType: decodeType(obj.Get(typeKey)),
+		}
+	case "Dictionary":
+		return cadence.DictionaryType{
+			KeyType:     decodeType(obj.Get(keyKey)),
+			ElementType: decodeType(obj.Get(valueKey)),
+		}
+	case "ConstantSizedArray":
+		size, err := strconv.ParseUint(toString(obj.Get(sizeKey)), 10, 32)
+		if err != nil {
 			panic(ErrInvalidJSONCadence)
 		}
-	}
-
-	primaryTypeValue, primaryOk := obj[primaryTypeKey]
-
-	// binary type
-	if primaryOk {
-		secondaryTypeValue := obj.Get(secondaryTypeKey)
-		primaryType := decodeType(primaryTypeValue)
-
-		switch kindValue {
-		case "Dictionary":
-			return cadence.DictionaryType{
-				KeyType:     primaryType,
-				ElementType: decodeType(secondaryTypeValue),
-			}
-		case "ConstantSizedArray":
-			size, err := strconv.ParseUint(toString(secondaryTypeValue), 10, 64)
-			if err != nil {
-				panic(ErrInvalidJSONCadence)
-			}
-			return cadence.ConstantSizedArrayType{
-				ElementType: primaryType,
-				Size:        uint(size),
-			}
-		case "Reference":
-			auth, err := strconv.ParseBool(toString(secondaryTypeValue))
-			if err != nil {
-				panic(ErrInvalidJSONCadence)
-			}
-			id := "&" + primaryType.ID()
-			if auth {
-				id = "auth" + id
-			}
-			return cadence.ReferenceType{
-				Type:       primaryType,
-				Authorized: auth,
-			}.WithID(id)
-		default:
+		return cadence.ConstantSizedArrayType{
+			ElementType: decodeType(obj.Get(typeKey)),
+			Size:        uint(size),
+		}
+	case "Reference":
+		auth, err := strconv.ParseBool(toString(obj.Get(authorizedKey)))
+		if err != nil {
 			panic(ErrInvalidJSONCadence)
 		}
-	}
-
-	switch kindValue {
+		return cadence.ReferenceType{
+			Type:       decodeType(obj.Get(typeKey)),
+			Authorized: auth,
+		}
 	case "Any":
 		return cadence.AnyType{}
 	case "AnyStruct":
@@ -970,7 +932,10 @@ func decodeType(valueJSON interface{}) cadence.Type {
 	case "PrivatePath":
 		return cadence.PrivatePathType{}
 	default:
-		panic(ErrInvalidJSONCadence)
+		fieldsValue := obj.Get(fieldsKey)
+		typeIDValue := toString(obj.Get(typeIDKey))
+		initValue := obj.Get(initializersKey)
+		return decodeNominalType(obj, kindValue, typeIDValue, toSlice(fieldsValue), toSlice(initValue))
 	}
 }
 

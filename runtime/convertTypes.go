@@ -362,7 +362,7 @@ func exportReferenceType(t *sema.ReferenceType, results map[sema.TypeID]cadence.
 	return cadence.ReferenceType{
 		Authorized: t.Authorized,
 		Type:       convertedType,
-	}.WithID(string(t.ID()))
+	}
 }
 
 func exportRestrictedType(t *sema.RestrictedType, results map[sema.TypeID]cadence.Type) cadence.RestrictedType {
@@ -390,7 +390,7 @@ func exportCapabilityType(t *sema.CapabilityType, results map[sema.TypeID]cadenc
 
 	return cadence.CapabilityType{
 		BorrowType: borrowType,
-	}.WithID(string(t.ID()))
+	}
 }
 
 func importInterfaceType(t cadence.InterfaceType) interpreter.InterfaceStaticType {

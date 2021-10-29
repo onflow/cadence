@@ -1076,7 +1076,7 @@ func TestEncodeType(t *testing.T) {
 				},
 			},
 			`{"type":"Type","value":{"staticType":{"kind":"ConstantSizedArray", 
-			"primaryType" : {"kind" : "Int"}, "secondaryType" : "3"}}}`,
+			"type" : {"kind" : "Int"}, "size" : "3"}}}`,
 		)
 
 	})
@@ -1092,7 +1092,7 @@ func TestEncodeType(t *testing.T) {
 				},
 			},
 			`{"type":"Type","value":{"staticType":{"kind":"Dictionary", 
-			"primaryType" : {"kind" : "Int"}, "secondaryType" : {"kind" : "String"}}}}`,
+			"key" : {"kind" : "Int"}, "value" : {"kind" : "String"}}}}`,
 		)
 
 	})
@@ -1377,10 +1377,10 @@ func TestEncodeType(t *testing.T) {
 				StaticType: cadence.ReferenceType{
 					Authorized: false,
 					Type:       cadence.IntType{},
-				}.WithID("&Int"),
+				},
 			},
 			`{"type":"Type","value":{"staticType":{"kind":"Reference", 
-			"primaryType" : {"kind" : "Int"}, "secondaryType" : "false"}}}`,
+			"type" : {"kind" : "Int"}, "authorized" : "false"}}}`,
 		)
 
 	})
@@ -1398,7 +1398,9 @@ func TestEncodeType(t *testing.T) {
 				}.WithID("Foo"),
 			},
 			`{"type":"Type","value":{"staticType":
-				{	"typeID":"Foo", 
+				{	
+					"kind" : "Function",
+					"typeID":"Foo", 
 					"return" : {"kind" : "Int"}, 
 					"parameters" : [
 						{"label" : "qux", "id" : "baz", "type": {"kind" : "String"}}
@@ -1416,14 +1418,14 @@ func TestEncodeType(t *testing.T) {
 			cadence.TypeValue{
 				StaticType: cadence.CapabilityType{
 					BorrowType: cadence.IntType{},
-				}.WithID("Capability<Int>"),
+				},
 			},
 			`{"type":"Type","value":{"staticType":{"kind":"Capability", "type" : {"kind" : "Int"}}}}`,
 		)
 
 	})
 
-	t.Run("with static function", func(t *testing.T) {
+	t.Run("with static restricted type", func(t *testing.T) {
 
 		testEncodeAndDecode(
 			t,
@@ -1436,7 +1438,9 @@ func TestEncodeType(t *testing.T) {
 				}.WithID("Int{String}"),
 			},
 			`{"type":"Type","value":{"staticType":
-				{	"typeID":"Int{String}", 
+				{	
+					"kind": "Restriction",
+					"typeID":"Int{String}", 
 					"type" : {"kind" : "Int"}, 
 					"restrictions" : [
 						{"kind" : "String"}

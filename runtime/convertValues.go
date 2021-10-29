@@ -466,10 +466,10 @@ func importTypeValue(
 	_ *interpreter.Interpreter,
 	v cadence.Type,
 ) (
-	*interpreter.TypeValue,
+	interpreter.TypeValue,
 	error,
 ) {
-	return &interpreter.TypeValue{
+	return interpreter.TypeValue{
 		Type: ImportType(v),
 	}, nil
 }

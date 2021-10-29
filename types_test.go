@@ -79,14 +79,13 @@ func TestType_ID(t *testing.T) {
 		{BlockType{}, "Block"},
 		{MetaType{}, "Type"},
 		{
-			CapabilityType{}.
-				WithID("Capability"),
+			CapabilityType{},
 			"Capability",
 		},
 		{
 			CapabilityType{
 				BorrowType: IntType{},
-			}.WithID("Capability<Int>"),
+			},
 			"Capability<Int>",
 		},
 		{

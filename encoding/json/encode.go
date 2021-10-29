@@ -157,13 +157,26 @@ type jsonUnaryType struct {
 	Type jsonValue `json:"type"`
 }
 
-type jsonBinaryType struct {
-	Kind          string    `json:"kind"`
-	PrimaryType   jsonValue `json:"primaryType"`
-	SecondaryType jsonValue `json:"secondaryType"`
+type jsonConstantSizedArrayType struct {
+	Kind string    `json:"kind"`
+	Type jsonValue `json:"type"`
+	Size jsonValue `json:"size"`
+}
+
+type jsonDictionaryType struct {
+	Kind      string    `json:"kind"`
+	KeyType   jsonValue `json:"key"`
+	ValueType jsonValue `json:"value"`
+}
+
+type jsonReferenceType struct {
+	Kind       string    `json:"kind"`
+	Type       jsonValue `json:"type"`
+	Authorized jsonValue `json:"authorized"`
 }
 
 type jsonRestrictedType struct {
+	Kind         string      `json:"kind"`
 	TypeID       string      `json:"typeID"`
 	Type         jsonValue   `json:"type"`
 	Restrictions []jsonValue `json:"restrictions"`
@@ -176,6 +189,7 @@ type jsonParameterType struct {
 }
 
 type jsonFunctionType struct {
+	Kind       string              `json:"kind"`
 	TypeID     string              `json:"typeID"`
 	Parameters []jsonParameterType `json:"parameters"`
 	Return     jsonValue           `json:"return"`
@@ -596,47 +610,47 @@ func preparePath(x cadence.Path) jsonValue {
 	}
 }
 
-func prepareParameterType(x cadence.Parameter) jsonParameterType {
+func prepareParameterType(parameterType cadence.Parameter) jsonParameterType {
 	return jsonParameterType{
-		Label: x.Label,
-		Id:    x.Identifier,
-		Type:  prepareType(x.Type),
+		Label: parameterType.Label,
+		Id:    parameterType.Identifier,
+		Type:  prepareType(parameterType.Type),
 	}
 }
 
-func prepareFieldType(x cadence.Field) jsonFieldType {
+func prepareFieldType(fieldType cadence.Field) jsonFieldType {
 	return jsonFieldType{
-		Id:   x.Identifier,
-		Type: prepareType(x.Type),
+		Id:   fieldType.Identifier,
+		Type: prepareType(fieldType.Type),
 	}
 }
 
-func prepareFields(x []cadence.Field) []jsonFieldType {
+func prepareFields(fieldTypes []cadence.Field) []jsonFieldType {
 	fields := make([]jsonFieldType, 0)
-	for _, field := range x {
+	for _, field := range fieldTypes {
 		fields = append(fields, prepareFieldType(field))
 	}
 	return fields
 }
 
-func prepareParameters(x []cadence.Parameter) []jsonParameterType {
+func prepareParameters(parameterTypes []cadence.Parameter) []jsonParameterType {
 	parameters := make([]jsonParameterType, 0)
-	for _, param := range x {
+	for _, param := range parameterTypes {
 		parameters = append(parameters, prepareParameterType(param))
 	}
 	return parameters
 }
 
-func prepareInitializers(x [][]cadence.Parameter) [][]jsonParameterType {
+func prepareInitializers(initializerTypes [][]cadence.Parameter) [][]jsonParameterType {
 	initializers := make([][]jsonParameterType, 0)
-	for _, params := range x {
+	for _, params := range initializerTypes {
 		initializers = append(initializers, prepareParameters(params))
 	}
 	return initializers
 }
 
-func prepareType(x cadence.Type) jsonValue {
-	switch x := x.(type) {
+func prepareType(typ cadence.Type) jsonValue {
+	switch typ := typ.(type) {
 	case cadence.AnyType,
 		cadence.AnyStructType,
 		cadence.AnyResourceType,
@@ -680,144 +694,146 @@ func prepareType(x cadence.Type) jsonValue {
 		cadence.PublicPathType,
 		cadence.PrivatePathType:
 		return jsonSimpleType{
-			Kind: x.ID(),
+			Kind: typ.ID(),
 		}
 	case cadence.OptionalType:
 		return jsonUnaryType{
 			Kind: "Optional",
-			Type: prepareType(x.Type),
+			Type: prepareType(typ.Type),
 		}
 	case cadence.VariableSizedArrayType:
 		return jsonUnaryType{
 			Kind: "VariableSizedArray",
-			Type: prepareType(x.ElementType),
+			Type: prepareType(typ.ElementType),
 		}
 	case cadence.ConstantSizedArrayType:
-		return jsonBinaryType{
-			Kind:          "ConstantSizedArray",
-			PrimaryType:   prepareType(x.ElementType),
-			SecondaryType: strconv.FormatUint(uint64(x.Size), 10),
+		return jsonConstantSizedArrayType{
+			Kind: "ConstantSizedArray",
+			Type: prepareType(typ.ElementType),
+			Size: strconv.FormatUint(uint64(typ.Size), 10),
 		}
 	case cadence.DictionaryType:
-		return jsonBinaryType{
-			Kind:          "Dictionary",
-			PrimaryType:   prepareType(x.KeyType),
-			SecondaryType: prepareType(x.ElementType),
+		return jsonDictionaryType{
+			Kind:      "Dictionary",
+			KeyType:   prepareType(typ.KeyType),
+			ValueType: prepareType(typ.ElementType),
 		}
 	case *cadence.StructType:
 		return jsonNominalType{
 			Kind:         "Struct",
 			Type:         "",
-			TypeID:       string(x.Location.TypeID(x.QualifiedIdentifier)),
-			Fields:       prepareFields(x.Fields),
-			Initializers: prepareInitializers(x.Initializers),
+			TypeID:       string(typ.Location.TypeID(typ.QualifiedIdentifier)),
+			Fields:       prepareFields(typ.Fields),
+			Initializers: prepareInitializers(typ.Initializers),
 		}
 	case *cadence.ResourceType:
 		return jsonNominalType{
 			Kind:         "Resource",
 			Type:         "",
-			TypeID:       string(x.Location.TypeID(x.QualifiedIdentifier)),
-			Fields:       prepareFields(x.Fields),
-			Initializers: prepareInitializers(x.Initializers),
+			TypeID:       string(typ.Location.TypeID(typ.QualifiedIdentifier)),
+			Fields:       prepareFields(typ.Fields),
+			Initializers: prepareInitializers(typ.Initializers),
 		}
 	case *cadence.EventType:
 		return jsonNominalType{
 			Kind:         "Event",
 			Type:         "",
-			TypeID:       string(x.Location.TypeID(x.QualifiedIdentifier)),
-			Fields:       prepareFields(x.Fields),
-			Initializers: [][]jsonParameterType{prepareParameters(x.Initializer)},
+			TypeID:       string(typ.Location.TypeID(typ.QualifiedIdentifier)),
+			Fields:       prepareFields(typ.Fields),
+			Initializers: [][]jsonParameterType{prepareParameters(typ.Initializer)},
 		}
 	case *cadence.ContractType:
 		return jsonNominalType{
 			Kind:         "Contract",
 			Type:         "",
-			TypeID:       string(x.Location.TypeID(x.QualifiedIdentifier)),
-			Fields:       prepareFields(x.Fields),
-			Initializers: prepareInitializers(x.Initializers),
+			TypeID:       string(typ.Location.TypeID(typ.QualifiedIdentifier)),
+			Fields:       prepareFields(typ.Fields),
+			Initializers: prepareInitializers(typ.Initializers),
 		}
 	case *cadence.StructInterfaceType:
 		return jsonNominalType{
 			Kind:         "StructInterface",
 			Type:         "",
-			TypeID:       string(x.Location.TypeID(x.QualifiedIdentifier)),
-			Fields:       prepareFields(x.Fields),
-			Initializers: prepareInitializers(x.Initializers),
+			TypeID:       string(typ.Location.TypeID(typ.QualifiedIdentifier)),
+			Fields:       prepareFields(typ.Fields),
+			Initializers: prepareInitializers(typ.Initializers),
 		}
 	case *cadence.ResourceInterfaceType:
 		return jsonNominalType{
 			Kind:         "ResourceInterface",
 			Type:         "",
-			TypeID:       string(x.Location.TypeID(x.QualifiedIdentifier)),
-			Fields:       prepareFields(x.Fields),
-			Initializers: prepareInitializers(x.Initializers),
+			TypeID:       string(typ.Location.TypeID(typ.QualifiedIdentifier)),
+			Fields:       prepareFields(typ.Fields),
+			Initializers: prepareInitializers(typ.Initializers),
 		}
 	case *cadence.ContractInterfaceType:
 		return jsonNominalType{
 			Kind:         "ContractInterface",
 			Type:         "",
-			TypeID:       string(x.Location.TypeID(x.QualifiedIdentifier)),
-			Fields:       prepareFields(x.Fields),
-			Initializers: prepareInitializers(x.Initializers),
+			TypeID:       string(typ.Location.TypeID(typ.QualifiedIdentifier)),
+			Fields:       prepareFields(typ.Fields),
+			Initializers: prepareInitializers(typ.Initializers),
 		}
 	case cadence.Function:
 		return jsonFunctionType{
-			TypeID:     x.ID(),
-			Return:     prepareType(x.ReturnType),
-			Parameters: prepareParameters(x.Parameters),
+			Kind:       "Function",
+			TypeID:     typ.ID(),
+			Return:     prepareType(typ.ReturnType),
+			Parameters: prepareParameters(typ.Parameters),
 		}
 	case cadence.ReferenceType:
-		return jsonBinaryType{
-			Kind:          "Reference",
-			SecondaryType: strconv.FormatBool(x.Authorized),
-			PrimaryType:   prepareType(x.Type),
+		return jsonReferenceType{
+			Kind:       "Reference",
+			Authorized: strconv.FormatBool(typ.Authorized),
+			Type:       prepareType(typ.Type),
 		}
 	case cadence.RestrictedType:
 		restrictions := make([]jsonValue, 0)
-		for _, restriction := range x.Restrictions {
+		for _, restriction := range typ.Restrictions {
 			restrictions = append(restrictions, prepareType(restriction))
 		}
 		return jsonRestrictedType{
-			TypeID:       x.ID(),
-			Type:         prepareType(x.Type),
+			Kind:         "Restriction",
+			TypeID:       typ.ID(),
+			Type:         prepareType(typ.Type),
 			Restrictions: restrictions,
 		}
 	case cadence.CapabilityType:
 		return jsonUnaryType{
 			Kind: "Capability",
-			Type: prepareType(x.BorrowType),
+			Type: prepareType(typ.BorrowType),
 		}
 	case *cadence.EnumType:
 		return jsonNominalType{
 			Kind:         "Enum",
-			TypeID:       string(x.Location.TypeID(x.QualifiedIdentifier)),
-			Fields:       prepareFields(x.Fields),
-			Initializers: prepareInitializers(x.Initializers),
-			Type:         prepareType(x.RawType),
+			TypeID:       string(typ.Location.TypeID(typ.QualifiedIdentifier)),
+			Fields:       prepareFields(typ.Fields),
+			Initializers: prepareInitializers(typ.Initializers),
+			Type:         prepareType(typ.RawType),
 		}
 	case nil:
 		return ""
 	default:
-		panic(fmt.Errorf("unsupported type: %T, %v", x, x))
+		panic(fmt.Errorf("unsupported type: %T, %v", typ, typ))
 	}
 }
 
-func prepareTypeValue(x cadence.TypeValue) jsonValue {
+func prepareTypeValue(typeValue cadence.TypeValue) jsonValue {
 	return jsonValueObject{
 		Type: typeTypeStr,
 		Value: jsonTypeValue{
-			StaticType: prepareType(x.StaticType),
+			StaticType: prepareType(typeValue.StaticType),
 		},
 	}
 }
 
-func prepareCapability(x cadence.Capability) jsonValue {
+func prepareCapability(capability cadence.Capability) jsonValue {
 	return jsonValueObject{
 		Type: capabilityTypeStr,
 		Value: jsonCapabilityValue{
-			Path:       preparePath(x.Path),
-			Address:    encodeBytes(x.Address.Bytes()),
-			BorrowType: prepareType(x.BorrowType),
+			Path:       preparePath(capability.Path),
+			Address:    encodeBytes(capability.Address.Bytes()),
+			BorrowType: prepareType(capability.BorrowType),
 		},
 	}
 }

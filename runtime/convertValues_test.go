@@ -592,7 +592,7 @@ func TestImportValue(t *testing.T) {
 		{
 			label:    "Type<Int>()",
 			value:    cadence.NewTypeValue(cadence.IntType{}),
-			expected: &interpreter.TypeValue{Type: interpreter.PrimitiveStaticTypeInt},
+			expected: interpreter.TypeValue{Type: interpreter.PrimitiveStaticTypeInt},
 		},
 	} {
 		test(tt)
