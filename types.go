@@ -71,19 +71,6 @@ func (t OptionalType) ID() string {
 	return fmt.Sprintf("%s?", t.Type.ID())
 }
 
-// Variable
-
-type Variable struct {
-	Type Type
-}
-
-func (Variable) isType() {}
-
-// TODO:
-func (Variable) ID() string {
-	panic("not implemented")
-}
-
 // MetaType
 
 type MetaType struct{}
