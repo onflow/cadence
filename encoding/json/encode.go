@@ -556,7 +556,7 @@ func prepareComposite(kind, id string, fieldTypes []cadence.Field, fields []cade
 	nonFunctionFieldTypes := make([]cadence.Field, 0)
 
 	for _, field := range fieldTypes {
-		if _, ok := field.Type.(cadence.Function); !ok {
+		if _, ok := field.Type.(cadence.FunctionType); !ok {
 			nonFunctionFieldTypes = append(nonFunctionFieldTypes, field)
 		}
 	}

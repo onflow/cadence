@@ -350,7 +350,7 @@ func exportFunctionType(t *sema.FunctionType, results map[sema.TypeID]cadence.Ty
 
 	convertedReturnType := ExportType(t.ReturnTypeAnnotation.Type, results)
 
-	return cadence.Function{
+	return cadence.FunctionType{
 		Parameters: convertedParameters,
 		ReturnType: convertedReturnType,
 	}.WithID(string(t.ID()))

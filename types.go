@@ -777,19 +777,19 @@ func (t *ContractInterfaceType) InterfaceInitializers() [][]Parameter {
 
 // Function
 
-type Function struct {
+type FunctionType struct {
 	typeID     string
 	Parameters []Parameter
 	ReturnType Type
 }
 
-func (t Function) isType() {}
+func (FunctionType) isType() {}
 
-func (t Function) ID() string {
+func (t FunctionType) ID() string {
 	return t.typeID
 }
 
-func (t Function) WithID(id string) Function {
+func (t FunctionType) WithID(id string) FunctionType {
 	t.typeID = id
 	return t
 }
