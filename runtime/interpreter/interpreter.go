@@ -2710,23 +2710,17 @@ var ConverterDeclarations = []ValueConverterDeclaration{
 	{
 		name:         sema.PublicPathType.Name,
 		functionType: sema.PublicPathConverterType,
-		convert: func(value Value) Value {
-			return ConvertPublicPath(value)
-		},
+		convert:      ConvertPublicPath,
 	},
 	{
 		name:         sema.PrivatePathType.Name,
 		functionType: sema.PrivatePathConverterType,
-		convert: func(value Value) Value {
-			return ConvertPrivatePath(value)
-		},
+		convert:      ConvertPrivatePath,
 	},
 	{
 		name:         sema.StoragePathType.Name,
 		functionType: sema.StoragePathConverterType,
-		convert: func(value Value) Value {
-			return ConvertStoragePath(value)
-		},
+		convert:      ConvertStoragePath,
 	},
 }
 
