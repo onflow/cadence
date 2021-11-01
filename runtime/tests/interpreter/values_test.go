@@ -119,7 +119,7 @@ func TestRandomMapOperations(t *testing.T) {
 	})
 
 	t.Run("deep copy", func(t *testing.T) {
-		newOwner := atree.Address([8]byte{'B'})
+		newOwner := atree.Address{'B'}
 		copyOfTestMap = testMap.Transfer(
 			inter,
 			interpreter.ReturnEmptyLocationRange,
@@ -488,7 +488,7 @@ func TestRandomArrayOperations(t *testing.T) {
 	})
 
 	t.Run("deep copy", func(t *testing.T) {
-		newOwner := atree.Address([8]byte{'B'})
+		newOwner := atree.Address{'B'}
 		copyOfTestArray = testArray.Transfer(
 			inter,
 			interpreter.ReturnEmptyLocationRange,
@@ -839,7 +839,7 @@ func TestRandomCompositeValueOperations(t *testing.T) {
 	})
 
 	t.Run("deep copy", func(t *testing.T) {
-		newOwner := atree.Address([8]byte{'B'})
+		newOwner := atree.Address{'B'}
 
 		copyOfTestComposite = testComposite.Transfer(
 			inter,
@@ -879,7 +879,7 @@ func TestRandomCompositeValueOperations(t *testing.T) {
 	})
 
 	t.Run("remove field", func(t *testing.T) {
-		newOwner := atree.Address([8]byte{'c'})
+		newOwner := atree.Address{'c'}
 
 		composite := testComposite.Transfer(
 			inter,
