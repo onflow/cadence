@@ -160,7 +160,7 @@ type jsonUnaryType struct {
 type jsonConstantSizedArrayType struct {
 	Kind string    `json:"kind"`
 	Type jsonValue `json:"type"`
-	Size jsonValue `json:"size"`
+	Size uint      `json:"size"`
 }
 
 type jsonDictionaryType struct {
@@ -172,7 +172,7 @@ type jsonDictionaryType struct {
 type jsonReferenceType struct {
 	Kind       string    `json:"kind"`
 	Type       jsonValue `json:"type"`
-	Authorized jsonValue `json:"authorized"`
+	Authorized bool      `json:"authorized"`
 }
 
 type jsonRestrictedType struct {
@@ -687,6 +687,7 @@ func prepareType(typ cadence.Type) jsonValue {
 		cadence.Word32Type,
 		cadence.Word64Type,
 		cadence.Fix64Type,
+		cadence.UFix64Type,
 		cadence.BlockType,
 		cadence.PathType,
 		cadence.CapabilityPathType,
@@ -710,7 +711,7 @@ func prepareType(typ cadence.Type) jsonValue {
 		return jsonConstantSizedArrayType{
 			Kind: "ConstantSizedArray",
 			Type: prepareType(typ.ElementType),
-			Size: strconv.FormatUint(uint64(typ.Size), 10),
+			Size: typ.Size,
 		}
 	case cadence.DictionaryType:
 		return jsonDictionaryType{
@@ -784,7 +785,7 @@ func prepareType(typ cadence.Type) jsonValue {
 	case cadence.ReferenceType:
 		return jsonReferenceType{
 			Kind:       "Reference",
-			Authorized: strconv.FormatBool(typ.Authorized),
+			Authorized: typ.Authorized,
 			Type:       prepareType(typ.Type),
 		}
 	case cadence.RestrictedType:

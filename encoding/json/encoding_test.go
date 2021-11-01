@@ -1076,7 +1076,7 @@ func TestEncodeType(t *testing.T) {
 				},
 			},
 			`{"type":"Type","value":{"staticType":{"kind":"ConstantSizedArray", 
-			"type" : {"kind" : "Int"}, "size" : "3"}}}`,
+			"type" : {"kind" : "Int"}, "size" : 3}}}`,
 		)
 
 	})
@@ -1380,7 +1380,7 @@ func TestEncodeType(t *testing.T) {
 				},
 			},
 			`{"type":"Type","value":{"staticType":{"kind":"Reference", 
-			"type" : {"kind" : "Int"}, "authorized" : "false"}}}`,
+			"type" : {"kind" : "Int"}, "authorized" : false}}}`,
 		)
 
 	})

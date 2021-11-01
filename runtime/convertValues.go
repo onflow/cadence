@@ -491,19 +491,21 @@ func importCapability(
 	error,
 ) {
 
-	switch borrowType.(type) {
-	case cadence.ReferenceType:
-		return interpreter.CapabilityValue{
-			Path:       importPathValue(path),
-			Address:    interpreter.NewAddressValueFromBytes(address.Bytes()),
-			BorrowType: ImportType(borrowType),
-		}, nil
+	_, ok := borrowType.(cadence.ReferenceType)
+
+	if !ok {
+		return interpreter.CapabilityValue{}, fmt.Errorf(
+			"cannot import capability: expected reference, got '%s'",
+			borrowType.ID(),
+		)
 	}
-	return interpreter.CapabilityValue{}, fmt.Errorf(
-		"cannot import capability of type '%s', '%s' must be a reference type",
-		borrowType.ID(),
-		borrowType.ID(),
-	)
+
+	return interpreter.CapabilityValue{
+		Path:       importPathValue(path),
+		Address:    interpreter.NewAddressValueFromBytes(address.Bytes()),
+		BorrowType: ImportType(borrowType),
+	}, nil
+
 }
 
 func importOptionalValue(

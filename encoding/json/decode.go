@@ -830,19 +830,13 @@ func decodeType(valueJSON interface{}) cadence.Type {
 			ElementType: decodeType(obj.Get(valueKey)),
 		}
 	case "ConstantSizedArray":
-		size, err := strconv.ParseUint(toString(obj.Get(sizeKey)), 10, 32)
-		if err != nil {
-			panic(ErrInvalidJSONCadence)
-		}
+		size := toUInt(obj.Get(sizeKey))
 		return cadence.ConstantSizedArrayType{
 			ElementType: decodeType(obj.Get(typeKey)),
-			Size:        uint(size),
+			Size:        size,
 		}
 	case "Reference":
-		auth, err := strconv.ParseBool(toString(obj.Get(authorizedKey)))
-		if err != nil {
-			panic(ErrInvalidJSONCadence)
-		}
+		auth := toBool(obj.Get(authorizedKey))
 		return cadence.ReferenceType{
 			Type:       decodeType(obj.Get(typeKey)),
 			Authorized: auth,
@@ -1007,6 +1001,16 @@ func toBool(valueJSON interface{}) bool {
 	}
 
 	return v
+}
+
+func toUInt(valueJSON interface{}) uint {
+	v, isNum := valueJSON.(float64)
+	if !isNum {
+		// TODO: improve error message
+		panic(ErrInvalidJSONCadence)
+	}
+
+	return uint(v)
 }
 
 func toString(valueJSON interface{}) string {

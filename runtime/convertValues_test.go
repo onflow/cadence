@@ -3299,7 +3299,7 @@ func TestCapabilityValueImport(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("Capability<&Int>", func(t *testing.T) {
+	t.Run("public Capability<&Int>", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -3307,7 +3307,7 @@ func TestCapabilityValueImport(t *testing.T) {
 			BorrowType: cadence.ReferenceType{Type: cadence.IntType{}},
 			Address:    cadence.Address{0x1},
 			Path: cadence.Path{
-				Domain:     common.PathDomainStorage.Identifier(),
+				Domain:     common.PathDomainPublic.Identifier(),
 				Identifier: "foo",
 			},
 		}
@@ -3328,7 +3328,7 @@ func TestCapabilityValueImport(t *testing.T) {
 				return json.Decode(b)
 			},
 			log: func(s string) {
-				assert.Equal(t, s, "Capability<&Int>(address: 0x100000000000000, path: /storage/foo)")
+				assert.Equal(t, s, "Capability<&Int>(address: 0x100000000000000, path: /public/foo)")
 			},
 		}
 
