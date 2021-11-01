@@ -105,3 +105,44 @@ func TestCheckPath(t *testing.T) {
 		assert.IsType(t, &sema.InvalidPathDomainError{}, errs[0])
 	})
 }
+
+func TestConvertStringToPath(t *testing.T) {
+	t.Parallel()
+
+	domainTypes := map[common.PathDomain]sema.Type{
+		common.PathDomainStorage: sema.StoragePathType,
+		common.PathDomainPublic:  sema.PublicPathType,
+		common.PathDomainPrivate: sema.PrivatePathType,
+	}
+
+	test := func(domain common.PathDomain) {
+
+		t.Run(fmt.Sprintf("valid: %s", domain.Identifier()), func(t *testing.T) {
+
+			t.Parallel()
+
+			domainType := domainTypes[domain]
+
+			checker, err := ParseAndCheck(t,
+				fmt.Sprintf(
+					`
+                      let x: %[1]s? = %[1]s("/%[2]s/foo")
+                    `,
+					domainType.String(),
+					domain.Identifier(),
+				),
+			)
+
+			require.NoError(t, err)
+
+			assert.IsType(t,
+				&sema.OptionalType{Type: domainTypes[domain]},
+				RequireGlobalValue(t, checker.Elaboration, "x"),
+			)
+		})
+	}
+
+	for _, domain := range common.AllPathDomainsByIdentifier {
+		test(domain)
+	}
+}
