@@ -90,7 +90,7 @@ Run-time types can also be constructed from type identifier strings using built-
 ```cadence
 fun CompositeType(typeID: String): Type?
 fun InterfaceType(typeID: String): Type?
-fun RestrictedType(type type : String, restrictions restrictions : [String]) : Type?
+fun RestrictedType(typeID: String?, restrictions: [String]) : Type?
 ```
 
 Given a type identifer (as well as a list of identifiers for restricting interfaces
@@ -113,14 +113,14 @@ Other built-in functions will construct compound types from other run-types.
 
 ```cadence
 fun OptionalType(type: Type): Type
-fun VariableSizedArrayType(type type: Type): Type
-fun ConstantSizedArrayType(type type: Type, size size : Int): Type
-fun FunctionType(params : [Type], return : Type) : Type
+fun VariableSizedArrayType(type: Type): Type
+fun ConstantSizedArrayType(type: Type, size: Int): Type
+fun FunctionType(params: [Type], return: Type) : Type
 // returns `nil` if `key` is not valid dictionary key type
-fun DictionaryType(key key k: Type, value value v: Type): Type?
+fun DictionaryType(key: Type, value: Type): Type?
 // returns `nil` if `type` is not a reference type
-fun CapabilityType(type : Type) : Type?
-fun ReferenceType(authorized authorized : bool, type type : Type) : Type
+fun CapabilityType(type: Type) : Type?
+fun ReferenceType(authorized: bool, type: Type) : Type
 ```
 
 ### Asserting the Type of a Value

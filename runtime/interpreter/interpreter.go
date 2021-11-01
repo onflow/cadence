@@ -2584,7 +2584,8 @@ func init() {
 				keyType := invocation.Arguments[0].(TypeValue).Type
 
 				// if the given key is not a valid dictionary key, it wouldn't make sense to create this type
-				if keyType == nil || !sema.IsValidDictionaryKeyType(invocation.Interpreter.ConvertStaticToSemaType(keyType)) {
+				if keyType == nil ||
+					!sema.IsValidDictionaryKeyType(invocation.Interpreter.ConvertStaticToSemaType(keyType)) {
 					return NilValue{}
 				}
 
@@ -2610,16 +2611,14 @@ func init() {
 					return NilValue{}
 				}
 
-				_, err = invocation.Interpreter.getCompositeType(location, qualifiedIdentifier)
+				composite, err := invocation.Interpreter.getCompositeType(location, qualifiedIdentifier)
 				if err != nil {
 					return NilValue{}
 				}
 
 				return NewSomeValueOwningNonCopying(TypeValue{
-					Type: CompositeStaticType{
-						QualifiedIdentifier: qualifiedIdentifier,
-						Location:            location,
-					}})
+					Type: ConvertSemaToStaticType(composite),
+				})
 			},
 			sema.CompositeTypeFunctionType,
 		),
@@ -2638,16 +2637,14 @@ func init() {
 					return NilValue{}
 				}
 
-				_, err = invocation.Interpreter.getInterfaceType(location, qualifiedIdentifier)
+				interfaceType, err := invocation.Interpreter.getInterfaceType(location, qualifiedIdentifier)
 				if err != nil {
 					return NilValue{}
 				}
 
 				return NewSomeValueOwningNonCopying(TypeValue{
-					Type: InterfaceStaticType{
-						QualifiedIdentifier: qualifiedIdentifier,
-						Location:            location,
-					}})
+					Type: ConvertSemaToStaticType(interfaceType),
+				})
 			},
 			sema.InterfaceTypeFunctionType,
 		),
@@ -2662,9 +2659,12 @@ func init() {
 				returnType := invocation.Interpreter.ConvertStaticToSemaType(invocation.Arguments[1].(TypeValue).Type)
 				parameterTypes := make([]*sema.Parameter, 0, len(parameters))
 				for _, param := range parameters {
-					parameterTypes = append(parameterTypes, &sema.Parameter{
-						TypeAnnotation: sema.NewTypeAnnotation(invocation.Interpreter.ConvertStaticToSemaType(param.(TypeValue).Type)),
-					})
+					parameterTypes = append(
+						parameterTypes,
+						&sema.Parameter{
+							TypeAnnotation: sema.NewTypeAnnotation(invocation.Interpreter.ConvertStaticToSemaType(param.(TypeValue).Type)),
+						},
+					)
 				}
 
 				return TypeValue{
@@ -2701,18 +2701,13 @@ func RestrictedTypeFunction(invocation Invocation) Value {
 			return NilValue{}
 		}
 
-		_, err = invocation.Interpreter.getInterfaceType(location, qualifiedIdentifier)
+		restrictionInterface, err := invocation.Interpreter.getInterfaceType(location, qualifiedIdentifier)
 		if err != nil {
 			return NilValue{}
 		}
 
-		restrictionInterface := InterfaceStaticType{
-			QualifiedIdentifier: qualifiedIdentifier,
-			Location:            location,
-		}
-
-		staticRestrictions = append(staticRestrictions, restrictionInterface)
-		semaRestrictions = append(semaRestrictions, invocation.Interpreter.ConvertStaticToSemaType(restrictionInterface).(*sema.InterfaceType))
+		staticRestrictions = append(staticRestrictions, ConvertSemaToStaticType(restrictionInterface).(InterfaceStaticType))
+		semaRestrictions = append(semaRestrictions, restrictionInterface)
 	}
 
 	var semaType sema.Type
@@ -3647,11 +3642,11 @@ func (interpreter *Interpreter) ConvertStaticToSemaType(staticType StaticType) s
 	return ConvertStaticToSemaType(
 		staticType,
 		func(location common.Location, qualifiedIdentifier string) *sema.InterfaceType {
-			intertfaceType, err := interpreter.getInterfaceType(location, qualifiedIdentifier)
+			interfaceType, err := interpreter.getInterfaceType(location, qualifiedIdentifier)
 			if err != nil {
 				panic(err)
 			}
-			return intertfaceType
+			return interfaceType
 		},
 		func(location common.Location, qualifiedIdentifier string) *sema.CompositeType {
 			compositeType, err := interpreter.getCompositeType(location, qualifiedIdentifier)
