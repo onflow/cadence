@@ -26,6 +26,7 @@ import (
 
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
+	"github.com/onflow/cadence/runtime/sema"
 )
 
 func TestInterpretPath(t *testing.T) {
@@ -53,5 +54,88 @@ func TestInterpretPath(t *testing.T) {
 				inter.Globals["x"].GetValue(),
 			)
 		})
+	}
+}
+
+func TestConvertStringToPath(t *testing.T) {
+	t.Parallel()
+
+	domainTypes := map[common.PathDomain]sema.Type{
+		common.PathDomainStorage: sema.StoragePathType,
+		common.PathDomainPublic:  sema.PublicPathType,
+		common.PathDomainPrivate: sema.PrivatePathType,
+	}
+
+	test := func(domain common.PathDomain) {
+
+		t.Run(fmt.Sprintf("valid: %s", domain.Identifier()), func(t *testing.T) {
+
+			t.Parallel()
+
+			domainType := domainTypes[domain]
+
+			inter := parseCheckAndInterpret(t,
+				fmt.Sprintf(
+					`
+                      let x = %[1]s("foo")!
+                    `,
+					domainType.String(),
+				),
+			)
+
+			assert.Equal(t,
+				interpreter.PathValue{
+					Domain:     domain,
+					Identifier: "foo",
+				},
+				inter.Globals["x"].GetValue(),
+			)
+		})
+
+		t.Run(fmt.Sprintf("invalid identifier 2: %s", domain.Identifier()), func(t *testing.T) {
+
+			t.Parallel()
+
+			domainType := domainTypes[domain]
+
+			inter := parseCheckAndInterpret(t,
+				fmt.Sprintf(
+					`
+                      let x = %[1]s("2")
+                    `,
+					domainType.String(),
+				),
+			)
+
+			assert.Equal(t,
+				interpreter.NilValue{},
+				inter.Globals["x"].GetValue(),
+			)
+		})
+
+		t.Run(fmt.Sprintf("invalid identifier -: %s", domain.Identifier()), func(t *testing.T) {
+
+			t.Parallel()
+
+			domainType := domainTypes[domain]
+
+			inter := parseCheckAndInterpret(t,
+				fmt.Sprintf(
+					`
+                      let x = %[1]s("fo-o")
+                    `,
+					domainType.String(),
+				),
+			)
+
+			assert.Equal(t,
+				interpreter.NilValue{},
+				inter.Globals["x"].GetValue(),
+			)
+		})
+	}
+
+	for _, domain := range common.AllPathDomainsByIdentifier {
+		test(domain)
 	}
 }

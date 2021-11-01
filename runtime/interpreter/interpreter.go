@@ -2547,6 +2547,24 @@ var converterDeclarations = []valueConverterDeclaration{
 			return ConvertAddress(value)
 		},
 	},
+	{
+		name: sema.PublicPathType.Name,
+		convert: func(value Value) Value {
+			return ConvertPublicPath(value)
+		},
+	},
+	{
+		name: sema.PrivatePathType.Name,
+		convert: func(value Value) Value {
+			return ConvertPrivatePath(value)
+		},
+	},
+	{
+		name: sema.StoragePathType.Name,
+		convert: func(value Value) Value {
+			return ConvertStoragePath(value)
+		},
+	},
 }
 
 func init() {
