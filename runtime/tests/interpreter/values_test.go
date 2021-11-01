@@ -28,7 +28,7 @@ const containerMaxSize = 1_000
 const innerContainerMaxSize = 300
 const compositeMaxFields = 10
 
-var runSmokeTests = flag.Bool("runSmokeTests", true, "Run smoke tests on values")
+var runSmokeTests = flag.Bool("runSmokeTests", false, "Run smoke tests on values")
 
 func TestRandomMapOperations(t *testing.T) {
 	if !*runSmokeTests {
@@ -103,7 +103,7 @@ func TestRandomMapOperations(t *testing.T) {
 		})
 
 		owner := testMap.GetOwner()
-		assert.Equal(t, orgOwner[:], owner[:])
+		assert.Equal(t, orgOwner, owner)
 	})
 
 	t.Run("iterate", func(t *testing.T) {
@@ -170,7 +170,7 @@ func TestRandomMapOperations(t *testing.T) {
 		})
 
 		owner := testMap.GetOwner()
-		assert.Equal(t, orgOwner[:], owner[:])
+		assert.Equal(t, orgOwner, owner)
 	})
 
 	t.Run("insert", func(t *testing.T) {
@@ -468,7 +468,7 @@ func TestRandomArrayOperations(t *testing.T) {
 		}
 
 		owner := testArray.GetOwner()
-		assert.Equal(t, orgOwner[:], owner[:])
+		assert.Equal(t, orgOwner, owner)
 	})
 
 	t.Run("iterate", func(t *testing.T) {
@@ -527,7 +527,7 @@ func TestRandomArrayOperations(t *testing.T) {
 		}
 
 		owner := testArray.GetOwner()
-		assert.Equal(t, orgOwner[:], owner[:])
+		assert.Equal(t, orgOwner, owner)
 	})
 
 	t.Run("insert", func(t *testing.T) {
@@ -823,7 +823,7 @@ func TestRandomCompositeValueOperations(t *testing.T) {
 		}
 
 		owner := testComposite.GetOwner()
-		assert.Equal(t, orgOwner[:], owner[:])
+		assert.Equal(t, orgOwner, owner)
 	})
 
 	t.Run("iterate", func(t *testing.T) {
@@ -875,7 +875,7 @@ func TestRandomCompositeValueOperations(t *testing.T) {
 		}
 
 		owner := testComposite.GetOwner()
-		assert.Equal(t, orgOwner[:], owner[:])
+		assert.Equal(t, orgOwner, owner)
 	})
 
 	t.Run("remove field", func(t *testing.T) {
