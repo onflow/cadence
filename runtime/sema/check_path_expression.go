@@ -19,40 +19,59 @@
 package sema
 
 import (
+	"regexp"
+
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 )
 
 func (checker *Checker) VisitPathExpression(expression *ast.PathExpression) ast.Repr {
 
-	ty, err := CheckPathLiteral(expression)
-	checker.report(err)
+	ty := CheckPathLiteral(
+		expression.Domain.Identifier,
+		expression.Identifier.Identifier,
+		func(errFunc func(err *ast.PathExpression) error) {
+			checker.report(errFunc(expression))
+		},
+	)
 
 	return ty
 }
 
-func CheckPathLiteral(expression *ast.PathExpression) (Type, error) {
+func CheckPathLiteral(domainString, identifier string, report func(func(err *ast.PathExpression) error)) Type {
 
 	// Check that the domain is valid
-
-	domainIdentifier := expression.Domain
-
-	domain, ok := common.AllPathDomainsByIdentifier[domainIdentifier.Identifier]
+	domain, ok := common.AllPathDomainsByIdentifier[domainString]
 	if !ok {
-		return PathType, &InvalidPathDomainError{
-			ActualDomain: domainIdentifier.Identifier,
-			Range:        ast.NewRangeFromPositioned(domainIdentifier),
-		}
+		report(func(expression *ast.PathExpression) error {
+			return &InvalidPathDomainError{
+				ActualDomain: domainString,
+				Range:        ast.NewRangeFromPositioned(expression.Domain),
+			}
+		})
+		return PathType
+	}
+
+	// Check that the identifier is valid
+	isValidIdentifier := regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*$`).MatchString
+	if !isValidIdentifier(identifier) {
+		report(func(expression *ast.PathExpression) error {
+			return &InvalidPathIdentifierError{
+				ActualIdentifier: identifier,
+				Range:            ast.NewRangeFromPositioned(expression.Identifier),
+			}
+		})
+		return PathType
 	}
 
 	switch domain {
 	case common.PathDomainStorage:
-		return StoragePathType, nil
+		return StoragePathType
 	case common.PathDomainPublic:
-		return PublicPathType, nil
+		return PublicPathType
 	case common.PathDomainPrivate:
-		return PrivatePathType, nil
+		return PrivatePathType
 	default:
-		return PathType, nil
+		return PathType
 	}
 }

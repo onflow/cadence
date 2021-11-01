@@ -13791,6 +13791,78 @@ func (PathValue) ChildStorables() []atree.Storable {
 	return nil
 }
 
+func ConvertPublicPath(value Value) Value {
+	stringValue, ok := value.(*StringValue)
+	if !ok {
+		return NilValue{}
+	}
+
+	ok = true
+	_ = sema.CheckPathLiteral(
+		"public",
+		stringValue.Str,
+		func(func(*ast.PathExpression) error) {
+			ok = false
+		},
+	)
+	if !ok {
+		return NilValue{}
+	}
+
+	return NewSomeValueNonCopying(PathValue{
+		Domain:     common.PathDomainPublic,
+		Identifier: stringValue.Str,
+	})
+}
+
+func ConvertPrivatePath(value Value) Value {
+	stringValue, ok := value.(*StringValue)
+	if !ok {
+		return NilValue{}
+	}
+
+	ok = true
+	_ = sema.CheckPathLiteral(
+		"private",
+		stringValue.Str,
+		func(func(*ast.PathExpression) error) {
+			ok = false
+		},
+	)
+	if !ok {
+		return NilValue{}
+	}
+
+	return NewSomeValueNonCopying(PathValue{
+		Domain:     common.PathDomainPrivate,
+		Identifier: stringValue.Str,
+	})
+}
+
+func ConvertStoragePath(value Value) Value {
+	stringValue, ok := value.(*StringValue)
+	if !ok {
+		return NilValue{}
+	}
+
+	ok = true
+	_ = sema.CheckPathLiteral(
+		"storage",
+		stringValue.Str,
+		func(func(*ast.PathExpression) error) {
+			ok = false
+		},
+	)
+	if !ok {
+		return NilValue{}
+	}
+
+	return NewSomeValueNonCopying(PathValue{
+		Domain:     common.PathDomainStorage,
+		Identifier: stringValue.Str,
+	})
+}
+
 // CapabilityValue
 
 type CapabilityValue struct {

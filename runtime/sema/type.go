@@ -3241,6 +3241,30 @@ func suggestFixedPointLiteralConversionReplacement(
 	}
 }
 
+var PublicPathConverterType = &FunctionType{
+	Parameters: []*Parameter{{
+		Identifier:     "path",
+		TypeAnnotation: NewTypeAnnotation(StringType),
+	}},
+	ReturnTypeAnnotation: NewTypeAnnotation(&OptionalType{Type: PublicPathType}),
+}
+
+var PrivatePathConverterType = &FunctionType{
+	Parameters: []*Parameter{{
+		Identifier:     "path",
+		TypeAnnotation: NewTypeAnnotation(StringType),
+	}},
+	ReturnTypeAnnotation: NewTypeAnnotation(&OptionalType{Type: PrivatePathType}),
+}
+
+var StoragePathConverterType = &FunctionType{
+	Parameters: []*Parameter{{
+		Identifier:     "path",
+		TypeAnnotation: NewTypeAnnotation(StringType),
+	}},
+	ReturnTypeAnnotation: NewTypeAnnotation(&OptionalType{Type: StoragePathType}),
+}
+
 func init() {
 
 	// Declare the run-time type construction function
@@ -3269,13 +3293,7 @@ func init() {
 		PublicPathType.String(),
 		baseFunctionVariable(
 			PublicPathType.String(),
-			&FunctionType{
-				Parameters: []*Parameter{{
-					Identifier:     "path",
-					TypeAnnotation: NewTypeAnnotation(StringType),
-				}},
-				ReturnTypeAnnotation: NewTypeAnnotation(&OptionalType{Type: PublicPathType}),
-			},
+			PublicPathConverterType,
 			"Converts the given string into a public path. Returns nil if the string does not specify a public path",
 		),
 	)
@@ -3284,13 +3302,7 @@ func init() {
 		PrivatePathType.String(),
 		baseFunctionVariable(
 			PrivatePathType.String(),
-			&FunctionType{
-				Parameters: []*Parameter{{
-					Identifier:     "path",
-					TypeAnnotation: NewTypeAnnotation(StringType),
-				}},
-				ReturnTypeAnnotation: NewTypeAnnotation(&OptionalType{Type: PrivatePathType}),
-			},
+			PrivatePathConverterType,
 			"Converts the given string into a private path. Returns nil if the string does not specify a private path",
 		),
 	)
@@ -3299,13 +3311,7 @@ func init() {
 		StoragePathType.String(),
 		baseFunctionVariable(
 			StoragePathType.String(),
-			&FunctionType{
-				Parameters: []*Parameter{{
-					Identifier:     "path",
-					TypeAnnotation: NewTypeAnnotation(StringType),
-				}},
-				ReturnTypeAnnotation: NewTypeAnnotation(&OptionalType{Type: StoragePathType}),
-			},
+			StoragePathConverterType,
 			"Converts the given string into a storage path. Returns nil if the string does not specify a storage path",
 		),
 	)
